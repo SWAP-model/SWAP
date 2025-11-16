@@ -13,8 +13,7 @@ clean = "rm -rf builddir builddir_windows builddir_windows_native"
 setup-ifx = 'bash -c "source /opt/intel/oneapi/setvars.sh && exec bash"'
 
 test-linux = { cmd = "cd tests/cases/1.hupselbrook && cp swap_linux.swp.template swap.swp && ./run_swap.sh" }
-test-windows = { cmd = "cd tests/cases/1.hupselbrook && copy swap_windows.swp.template swap.swp && run_swap.cmd" }
-test-mingw = { cmd = "cd tests/cases/1.hupselbrook && copy swap_windows.swp.template swap.swp && run_swap.cmd" }
+test-windows = { cmd = "cd tests/cases/1.hupselbrook && cp swap_windows.swp.template swap.swp && run_swap.cmd" }
 
 [dependencies]
 python = "3.11.*"

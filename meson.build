@@ -123,13 +123,7 @@ ttutil_url = 'https://github.com/SWAP-model/ttutil/releases/download/v@0@/@1@'.f
 if not fs.exists(ttutil_lib_path)
     # Create directory
     run_command('mkdir', '-p', ttutil_lib_dir, check: true)
-    
-    # Download library
-    download_result = run_command('wget', ttutil_url, '-O', ttutil_lib_path, check: false)
-    if download_result.returncode() != 0
-        # Fallback to curl if wget is not available
-        run_command('curl', '-L', ttutil_url, '-o', ttutil_lib_path, check: true)
-    endif
+    run_command('curl', '-L', ttutil_url, '-o', ttutil_lib_path, check: true)
 endif
 
 # Create ttutil dependency
