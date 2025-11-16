@@ -35,8 +35,114 @@ jobs:
       build-dir: builddir_windows
       runner: ubuntu-latest
 
+  test-linux:
+    needs: build-linux
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Pixi
+        uses: prefix-dev/setup-pixi@v0.8.1
+        with:
+          pixi-version: v0.34.0
+          cache: true
+
+      - name: Download Linux executable
+        uses: actions/download-artifact@v4
+        with:
+          name: linux-bins
+          path: dist/linux
+
+      - name: Setup test directory
+        run: |
+          mkdir -p builddir
+          cp dist/linux/swap${{ needs.build-linux.outputs.version }}-linux builddir/swap
+          chmod +x builddir/swap
+
+      - name: Run Linux test
+        run: |
+          echo "Running Linux test..."
+          if pixi run test-linux; then
+            echo "Linux test completed successfully"
+          else
+            echo "Linux test failed"
+            exit 1
+          fi
+
+  test-windows:
+    needs: build-windows
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Pixi
+        uses: prefix-dev/setup-pixi@v0.8.1
+        with:
+          pixi-version: v0.34.0
+          cache: true
+
+      - name: Download Windows executable
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-bins
+          path: dist/windows
+
+      - name: Setup test directory
+        shell: powershell
+        run: |
+          New-Item -ItemType Directory -Force -Path builddir_windows_native
+          Copy-Item "dist/windows/swap${{ needs.build-windows.outputs.version }}-windows.exe" -Destination "builddir_windows_native/swap.exe"
+
+      - name: Run Windows test
+        shell: cmd
+        run: |
+          echo Running Windows test...
+          pixi run test-windows
+          if %errorlevel% equ 0 (
+            echo Windows test completed successfully
+          ) else (
+            echo Windows test failed
+            exit /b 1
+          )
+
+  test-mingw:
+    needs: build-mingw
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Pixi
+        uses: prefix-dev/setup-pixi@v0.8.1
+        with:
+          pixi-version: v0.34.0
+          cache: true
+
+      - name: Download MinGW executable
+        uses: actions/download-artifact@v4
+        with:
+          name: mingw-bins
+          path: dist/mingw
+
+      - name: Setup test directory
+        shell: powershell
+        run: |
+          New-Item -ItemType Directory -Force -Path builddir_windows
+          Copy-Item "dist/mingw/swap${{ needs.build-mingw.outputs.version }}-mingw.exe" -Destination "builddir_windows/swap.exe"
+
+      - name: Run MinGW test
+        shell: cmd
+        run: |
+          echo Running MinGW test...
+          pixi run test-mingw
+          if %errorlevel% equ 0 (
+            echo MinGW test completed successfully
+          ) else (
+            echo MinGW test failed
+            exit /b 1
+          )
+
   release:
-    needs: [build-linux, build-windows, build-mingw]
+    needs: [build-linux, build-windows, build-mingw, test-linux, test-windows, test-mingw]
     runs-on: ubuntu-latest
     permissions:
       contents: write
