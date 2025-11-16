@@ -133,7 +133,7 @@ jobs:
         shell: cmd
         run: |
           echo Running MinGW test...
-          pixi run test-mingw
+          pixi run test-windows
           if %errorlevel% equ 0 (
             echo MinGW test completed successfully
           ) else (
