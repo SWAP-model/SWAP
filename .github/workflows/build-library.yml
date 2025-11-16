@@ -1,0 +1,126 @@
+name: Build Executables
+
+on:
+  workflow_call:
+    inputs:
+      library-name:
+        required: true
+        type: string
+        description: 'Name of the executable (e.g., swap, ttutil, etc.)'
+      platform:
+        required: true
+        type: string
+        description: 'Platform name (linux, windows, or mingw)'
+      build-command:
+        required: true
+        type: string
+        description: 'Build command to run'
+      build-dir:
+        required: true
+        type: string
+        description: 'Directory containing built artifacts'
+      runner:
+        required: true
+        type: string
+        description: 'Runner type (ubuntu-latest or windows-latest)'
+    outputs:
+      version:
+        description: 'Version extracted from pixi.toml'
+        value: ${{ jobs.build.outputs.version }}
+
+jobs:
+  build:
+    runs-on: ${{ inputs.runner }}
+    outputs:
+      version: ${{ steps.get_version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Pixi
+        uses: prefix-dev/setup-pixi@v0.8.3
+
+      - name: Set up MinGW for cross-compilation
+        if: inputs.platform == 'mingw'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-mingw-w64-x86-64 gfortran-mingw-w64-x86-64
+
+      - name: Set up Intel oneAPI Fortran (ifx)
+        if: inputs.platform != 'mingw'
+        uses: fortran-lang/setup-fortran@v1
+        with:
+          compiler: intel
+
+      - name: Install environment
+        run: pixi install
+
+      - name: Extract version from pixi.toml (Linux)
+        if: inputs.platform == 'linux' || inputs.platform == 'mingw'
+        id: get_version_linux
+        run: |
+          VERSION=$(grep '^version' pixi.toml | head -n1 | awk -F'"' '{print $2}')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Version: $VERSION"
+
+      - name: Extract version from pixi.toml (Windows)
+        if: inputs.platform == 'windows'
+        id: get_version_windows
+        run: |
+          $VERSION = (Get-Content pixi.toml | Where-Object { $_ -match '^version' } | Select-Object -First 1) -replace '.*"(.*)".*', '$1'
+          echo "version=$VERSION" >> $env:GITHUB_OUTPUT
+          echo "Version: $VERSION"
+
+      - name: Set version output
+        id: get_version
+        run: |
+          if [ "${{ inputs.platform }}" = "linux" ] || [ "${{ inputs.platform }}" = "mingw" ]; then
+            echo "version=${{ steps.get_version_linux.outputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "version=${{ steps.get_version_windows.outputs.version }}" >> $GITHUB_OUTPUT
+          fi
+        shell: bash
+
+      - name: Build static executables with Meson
+        run: ${{ inputs.build-command }}
+
+      - name: Archive executables (Linux)
+        if: inputs.platform == 'linux'
+        run: |
+          mkdir -p dist
+          ls -la ${{ inputs.build-dir }}/
+          if [ -f ${{ inputs.build-dir }}/swap ]; then
+            cp ${{ inputs.build-dir }}/swap dist/${{ inputs.library-name }}${{ steps.get_version.outputs.version }}-${{ inputs.platform }}
+          else
+            echo "No executable found in ${{ inputs.build-dir }}/"
+            exit 1
+          fi
+
+      - name: Archive executables (MinGW)
+        if: inputs.platform == 'mingw'
+        run: |
+          mkdir -p dist
+          ls -la ${{ inputs.build-dir }}/
+          if [ -f ${{ inputs.build-dir }}/swap.exe ]; then
+            cp ${{ inputs.build-dir }}/swap.exe dist/${{ inputs.library-name }}${{ steps.get_version.outputs.version }}-${{ inputs.platform }}.exe
+          else
+            echo "No executable found in ${{ inputs.build-dir }}/"
+            exit 1
+          fi
+
+      - name: Archive executables (Windows)
+        if: inputs.platform == 'windows'
+        run: |
+          mkdir -p dist
+          Get-ChildItem ${{ inputs.build-dir }}/
+          if (Test-Path "${{ inputs.build-dir }}/swap.exe") {
+            Copy-Item ${{ inputs.build-dir }}/swap.exe dist/${{ inputs.library-name }}${{ steps.get_version.outputs.version }}-${{ inputs.platform }}.exe
+          } else {
+            Write-Error "No executable found in ${{ inputs.build-dir }}/"
+            exit 1
+          }
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.platform }}-bins
+          path: dist/

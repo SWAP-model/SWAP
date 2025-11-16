@@ -1,0 +1,21 @@
+mdbib/
+ford_docs/
+site/
+# pixi environments
+.pixi
+*.egg-info
+# Meson build artifacts
+build/
+meson-logs/
+meson-private/
+meson-info/
+*.ninja
+*.ninja_log
+*.ninja_deps
+compile_commands.json
+
+# SWAP results and temporary files
+result.*
+swap.ok
+*swap.log
+reruns.log

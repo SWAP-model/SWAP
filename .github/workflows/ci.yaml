@@ -1,0 +1,83 @@
+name: build-and-release
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-linux:
+    uses: ./.github/workflows/build-library.yml
+    with:
+      library-name: swap
+      platform: linux
+      build-command: pixi run build-linux
+      build-dir: builddir
+      runner: ubuntu-latest
+    permissions:
+      contents: write
+
+  build-windows:
+    uses: ./.github/workflows/build-library.yml
+    with:
+      library-name: swap
+      platform: windows
+      build-command: pixi run build-windows-native
+      build-dir: builddir_windows_native
+      runner: windows-latest
+
+  build-mingw:
+    uses: ./.github/workflows/build-library.yml
+    with:
+      library-name: swap
+      platform: mingw
+      build-command: pixi run build-windows-cross
+      build-dir: builddir_windows
+      runner: ubuntu-latest
+
+  release:
+    needs: [build-linux, build-windows, build-mingw]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download Linux artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: linux-bins
+          path: dist/linux
+
+      - name: Download Windows artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-bins
+          path: dist/windows
+
+      - name: Download MinGW artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: mingw-bins
+          path: dist/mingw
+          
+      - name: Create git tag from build version
+        id: tag_version
+        run: |
+          VERSION="${{ needs.build-linux.outputs.version }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag "v$VERSION"
+          git push origin "v$VERSION"
+          echo "tag=v$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/linux/swap${{ needs.build-linux.outputs.version }}-linux
+            dist/windows/swap${{ needs.build-linux.outputs.version }}-windows.exe
+            dist/mingw/swap${{ needs.build-linux.outputs.version }}-mingw.exe
+          tag_name: ${{ steps.tag_version.outputs.tag }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

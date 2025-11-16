@@ -1,0 +1,20 @@
+[workspace]
+authors = ["zawadzkim <zawadzkimat@outlook.com>"]
+channels = ["conda-forge"]
+name = "swap"
+platforms = ["linux-64", "win-64"]
+version = "4.2.0"
+
+[tasks]
+build-linux = "FC=ifx meson setup builddir && meson compile -C builddir"
+build-windows-cross = "meson setup builddir_windows --cross-file cross_mingw.txt && meson compile -C builddir_windows"
+build-windows-native = "FC=ifx meson setup builddir_windows_native && meson compile -C builddir_windows_native"
+clean = "rm -rf builddir builddir_windows builddir_windows_native"
+setup-ifx = 'bash -c "source /opt/intel/oneapi/setvars.sh && exec bash"'
+
+test-linux = { cmd = "cd tests/cases/1.hupselbrook && cp swap_linux.swp.template swap.swp && ./run_swap.sh" }
+test-windows = { cmd = "cd tests/cases/1.hupselbrook && copy swap_windows.swp.template swap.swp && run_swap.cmd" }
+
+[dependencies]
+python = "3.11.*"
+meson = "==1.7"
