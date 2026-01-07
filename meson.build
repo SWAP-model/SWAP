@@ -17,9 +17,20 @@ if fc.get_id() == 'intel'
         '-fp-model', 'source'
     ], language : 'fortran')
     
-    # For Windows native compilation with Intel
+    # Static linking for all Intel builds
     if host_machine.system() == 'windows'
-        add_project_link_arguments(['-static'], language : 'fortran')
+        # Windows: Use static multithreaded runtime and static Intel libraries
+        add_project_link_arguments([
+            '/MT',              # Use static multithreaded runtime
+            '/libs:static',     # Link Intel libraries statically
+            '/threads',         # Enable threading support
+        ], language : 'fortran')
+    else
+        # Linux: Statically link Intel runtime libraries
+        # System libraries (libc, libm) remain dynamically linked
+        add_project_link_arguments([
+            '-static-intel',    # Statically link Intel-specific libraries
+        ], language : 'fortran')
     endif
     
 # MinGW Fortran compiler settings for Windows cross-compilation 
