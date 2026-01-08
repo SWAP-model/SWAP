@@ -154,7 +154,7 @@ if host_machine.system() == 'windows'
         executable_name = 'swap'
     else
         # Windows native compilation with Intel
-        link_args = ['-static']
+        link_args = []
         executable_name = 'swap'
     endif
 else
