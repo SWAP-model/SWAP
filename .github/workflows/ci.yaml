@@ -17,14 +17,17 @@ jobs:
     permissions:
       contents: write
 
-  build-windows:
-    uses: ./.github/workflows/build-library.yml
-    with:
-      library-name: swap
-      platform: windows
-      build-command: pixi run build-windows-native
-      build-dir: builddir_windows_native
-      runner: windows-latest
+  # NOTE: Windows Intel Fortran (ifx) build disabled due to unresolved
+  # static linking issues with Intel runtime DLLs (libmmd.dll).
+  # Use MinGW cross-compilation instead for Windows executables.
+  # build-windows:
+  #   uses: ./.github/workflows/build-library.yml
+  #   with:
+  #     library-name: swap
+  #     platform: windows
+  #     build-command: pixi run build-windows-native
+  #     build-dir: builddir_windows_native
+  #     runner: windows-latest
 
   build-mingw:
     uses: ./.github/workflows/build-library.yml
@@ -69,41 +72,42 @@ jobs:
             exit 1
           fi
 
-  test-windows:
-    needs: build-windows
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Pixi
-        uses: prefix-dev/setup-pixi@v0.9.3
-        with:
-          pixi-version: v0.47.0
-          cache: true
-
-      - name: Download Windows executable
-        uses: actions/download-artifact@v4
-        with:
-          name: windows-bins
-          path: dist/windows
-
-      - name: Setup test directory
-        shell: powershell
-        run: |
-          New-Item -ItemType Directory -Force -Path builddir_windows_native
-          Copy-Item "dist/windows/swap${{ needs.build-windows.outputs.version }}-windows.exe" -Destination "builddir_windows_native/swap.exe"
-
-      - name: Run Windows test
-        shell: cmd
-        run: |
-          echo Running Windows test...
-          pixi run test-windows
-          if %errorlevel% equ 0 (
-            echo Windows test completed successfully
-          ) else (
-            echo Windows test failed
-            exit /b 1
-          )
+  # NOTE: Windows Intel test disabled - build is disabled
+  # test-windows:
+  #   needs: build-windows
+  #   runs-on: windows-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #
+  #     - name: Setup Pixi
+  #       uses: prefix-dev/setup-pixi@v0.9.3
+  #       with:
+  #         pixi-version: v0.47.0
+  #         cache: true
+  #
+  #     - name: Download Windows executable
+  #       uses: actions/download-artifact@v4
+  #       with:
+  #         name: windows-bins
+  #         path: dist/windows
+  #
+  #     - name: Setup test directory
+  #       shell: powershell
+  #       run: |
+  #         New-Item -ItemType Directory -Force -Path builddir_windows_native
+  #         Copy-Item "dist/windows/swap${{ needs.build-windows.outputs.version }}-windows.exe" -Destination "builddir_windows_native/swap.exe"
+  #
+  #     - name: Run Windows test
+  #       shell: cmd
+  #       run: |
+  #         echo Running Windows test...
+  #         pixi run test-windows
+  #         if %errorlevel% equ 0 (
+  #           echo Windows test completed successfully
+  #         ) else (
+  #           echo Windows test failed
+  #           exit /b 1
+  #         )
 
   test-mingw:
     needs: build-mingw
@@ -142,7 +146,8 @@ jobs:
           )
 
   release:
-    needs: [build-linux, build-windows, build-mingw, test-linux, test-windows, test-mingw]
+    # needs: [build-linux, build-windows, build-mingw, test-linux, test-windows, test-mingw]
+    needs: [build-linux, build-mingw, test-linux, test-mingw]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -155,11 +160,12 @@ jobs:
           name: linux-bins
           path: dist/linux
 
-      - name: Download Windows artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: windows-bins
-          path: dist/windows
+      # NOTE: Windows Intel build artifact download removed (build disabled)
+      # - name: Download Windows artifact
+      #   uses: actions/download-artifact@v4
+      #   with:
+      #     name: windows-bins
+      #     path: dist/windows
 
       - name: Download MinGW artifact
         uses: actions/download-artifact@v4
@@ -182,7 +188,6 @@ jobs:
         with:
           files: |
             dist/linux/swap${{ needs.build-linux.outputs.version }}-linux
-            dist/windows/swap${{ needs.build-linux.outputs.version }}-windows.exe
             dist/mingw/swap${{ needs.build-linux.outputs.version }}-mingw.exe
           tag_name: ${{ steps.tag_version.outputs.tag }}
         env:
