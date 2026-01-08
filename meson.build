@@ -19,12 +19,14 @@ if fc.get_id() == 'intel'
     
     # Static linking for all Intel builds
     if host_machine.system() == 'windows'
-        # Windows: Use static multithreaded runtime and static Intel libraries
+        # Windows: Use static multithreaded runtime and explicit static Intel libraries
         add_project_link_arguments([
-            '/MT',              # Use static multithreaded runtime
-            '/libs:static',     # Link Intel libraries statically
-            '/threads',         # Enable threading support
-            '/Qstatic',         # Force all Intel libraries to be static (if available)
+            '/MT',                      # Static multithreaded runtime
+            '/Qmkl:static',            # Force static MKL if used
+            'libmmt.lib',              # Static math library
+            'libifcoremt.lib',         # Static Fortran core
+            'libircmt.lib',            # Static compiler runtime
+            '/threads',                 # Enable threading support
         ], language : 'fortran')
     else
         # Linux: Statically link Intel runtime libraries
