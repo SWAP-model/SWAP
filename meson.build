@@ -24,6 +24,7 @@ if fc.get_id() == 'intel'
             '/MT',              # Use static multithreaded runtime
             '/libs:static',     # Link Intel libraries statically
             '/threads',         # Enable threading support
+            '/Qstatic',         # Force all Intel libraries to be static (if available)
         ], language : 'fortran')
     else
         # Linux: Statically link Intel runtime libraries
