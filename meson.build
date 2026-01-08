@@ -18,16 +18,19 @@ if fc.get_id() == 'intel'
     ], language : 'fortran')
     
     if host_machine.system() == 'windows'
-        # Windows: Static linking for ifx (Intel LLVM Fortran)
-        # For ifx, we need to explicitly exclude dynamic libs and specify static ones
+        # Windows Intel (ifx): Force Release mode + Static Runtime
+        
+        # 1. Compile args: Force Multithreaded Static (/MT)
         add_project_arguments([
-            '/MT',                           # Static multithreaded C runtime
-            '/Qm64',                         # 64-bit target
+            '/MT',               # Critical: Use static CRT (libcmt.lib), NOT dynamic (msvcrt.dll)
+            '/O2',               # Ensure Optimization (Release mode)
+            '/DNDEBUG',          # Disable Debug assertions
         ], language : 'fortran')
-        # Tell linker to use static Intel libraries
+        
+        # 2. Link args: Force static link of Intel libs
         add_project_link_arguments([
-            '/NODEFAULTLIB:libmmd',          # Exclude dynamic math lib
-            '/DEFAULTLIB:libmmt',            # Use static math lib explicitly
+            '/Qstatic',          # Force static linking of Intel-specific libraries
+            '/MT',               # Repeat /MT to ensure linker knows we want static CRT
         ], language : 'fortran')
     else
         # Linux: Statically link Intel runtime libraries
@@ -155,7 +158,7 @@ if host_machine.system() == 'windows'
     else
         # Windows native compilation with Intel
         # No additional link args needed - static libs already specified above
-        link_args = []
+        link_args = ['/SUBSYSTEM:CONSOLE']
         executable_name = 'swap'
     endif
 else
