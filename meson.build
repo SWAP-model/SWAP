@@ -17,21 +17,22 @@ if fc.get_id() == 'intel'
         '-fp-model', 'source'
     ], language : 'fortran')
     
-    if host_machine.system() == 'windows'
-        # Windows Intel (ifx): Force Release mode + Static Runtime
-        
-        # 1. Compile args: Force Multithreaded Static (/MT)
-        add_project_arguments([
-            '/MT',               # Critical: Use static CRT (libcmt.lib), NOT dynamic (msvcrt.dll)
-            '/O2',               # Ensure Optimization (Release mode)
-            '/DNDEBUG',          # Disable Debug assertions
-        ], language : 'fortran')
-        
-        # 2. Link args: Force static link of Intel libs
-        add_project_link_arguments([
-            '-static-intel'
-        ], language : 'fortran')
-    else
+    # NOTE: Windows Intel Fortran (ifx) static linking remains problematic.
+    # Despite multiple attempts (/MT, -static-intel, /NODEFAULTLIB, etc.),
+    # the executable still requires Intel runtime DLLs (libmmd.dll).
+    # This appears to be a known limitation of ifx on Windows.
+    # Use MinGW cross-compilation for fully static Windows executables.
+    
+    # Commented out Windows Intel build - uncomment to re-enable testing
+    # if host_machine.system() == 'windows'
+    #     add_project_arguments([
+    #         '/MT',                           # Static multithreaded C runtime
+    #     ], language : 'fortran')
+    #     add_project_link_arguments([
+    #         '-static-intel'                  # Attempt static Intel libraries
+    #     ], language : 'fortran')
+    # else
+    if host_machine.system() != 'windows'
         # Linux: Statically link Intel runtime libraries
         # System libraries (libc, libm) remain dynamically linked
         add_project_link_arguments([
