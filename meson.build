@@ -18,13 +18,16 @@ if fc.get_id() == 'intel'
     ], language : 'fortran')
     
     if host_machine.system() == 'windows'
-        # Windows: Static linking for Intel Fortran
-        # Use /MT for static runtime and explicit library names
+        # Windows: Static linking for ifx (Intel LLVM Fortran)
+        # For ifx, we need to explicitly exclude dynamic libs and specify static ones
+        add_project_arguments([
+            '/MT',                           # Static multithreaded C runtime
+            '/Qm64',                         # 64-bit target
+        ], language : 'fortran')
+        # Tell linker to use static Intel libraries
         add_project_link_arguments([
-            '/MT',                      # Static multithreaded runtime
-            'libmmd.lib',               # Static math library
-            'libifcoremt.lib',          # Static Fortran core
-            'libircmt.lib',             # Static compiler runtime
+            '/NODEFAULTLIB:libmmd',          # Exclude dynamic math lib
+            '/DEFAULTLIB:libmmt',            # Use static math lib explicitly
         ], language : 'fortran')
     else
         # Linux: Statically link Intel runtime libraries
