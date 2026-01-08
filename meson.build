@@ -29,8 +29,7 @@ if fc.get_id() == 'intel'
         
         # 2. Link args: Force static link of Intel libs
         add_project_link_arguments([
-            '/Qstatic',          # Force static linking of Intel-specific libraries
-            '/MT',               # Repeat /MT to ensure linker knows we want static CRT
+            '-static-intel'
         ], language : 'fortran')
     else
         # Linux: Statically link Intel runtime libraries
