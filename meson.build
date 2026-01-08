@@ -18,16 +18,11 @@ if fc.get_id() == 'intel'
     ], language : 'fortran')
     
     if host_machine.system() == 'windows'
-        # Windows: Match the working 4.2.0 configuration
-        # Add /libs:static to BOTH compile and link stages
-        add_project_arguments([
-            '/libs:static',     # Static Intel libraries (compile time)
-            '/threads',         # Threading support
-        ], language : 'fortran')
-        
+        # Windows: Force static linking for ifx compiler
         add_project_link_arguments([
-            '/SUBSYSTEM:CONSOLE',   # Console application
-            '/INCREMENTAL:NO',      # No incremental linking  
+            '/Qstatic',           # Force static linking of Intel runtime libraries
+            '/SUBSYSTEM:CONSOLE', # Console application
+            '/INCREMENTAL:NO',    # No incremental linking
         ], language : 'fortran')
     else
         # Linux: Statically link Intel runtime libraries
@@ -154,7 +149,7 @@ if host_machine.system() == 'windows'
         executable_name = 'swap'
     else
         # Windows native compilation with Intel
-        link_args = []
+        link_args = ['Qstatic']
         executable_name = 'swap'
     endif
 else
