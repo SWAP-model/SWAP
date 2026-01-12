@@ -172,3 +172,13 @@ executable(executable_name, sources,
     link_args : link_args,
     install : false
 )
+
+# Build SWAP BMI shared library for Python
+bmi_sources = sources + ['src/swap_bmi.f90']
+
+shared_library('swap',
+    bmi_sources,
+    dependencies: [ttutil_dep],
+    install: true,
+    install_dir: get_option('libdir')
+)
