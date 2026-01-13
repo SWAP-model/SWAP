@@ -15,7 +15,9 @@ meson-info/
 compile_commands.json
 
 # SWAP results and temporary files
-result.*
+result*
 swap.ok
 *swap.log
 reruns.log
+swap.swp
+*.zip
