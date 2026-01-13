@@ -110,7 +110,7 @@
   SWIRG = 0                  ! Switch, output of irrigation gifts [Y=1, N=0]
 
 * Specific CSV output file? (default: no)
-  SWCSV = 0                  ! Switch, output of variables to be specified [Y=1, N=0]
+  SWCSV = 1                  ! Switch, output of variables to be specified [Y=1, N=0]
 
   INLIST_CSV = 'rain,irrig,interc,runoff,drainage,dstor,epot,eact,tpot,tact,qbottom,gwl'
 
