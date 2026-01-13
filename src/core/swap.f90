@@ -67,6 +67,8 @@ use variables, only : flyearstart, fldaystart, flswapshared, flsurfacewater, flm
                       flsolute, flcropnut, flirrigate, flagetracer, flrunend, flmeteodt, fletsine, swfrost, fldtreduce, &
                       swusecn, fldrain, fldecdt, fldecmprat, fldayend, flcropcalendar, flmaxitertime, floutput,         &
                       floutputshort, flharvestday, flcropoutput, swcrp, flirrigationoutput, swend, project
+use swap_core_state, only: core_state
+use swap_state,      only: swap_state_sync_from_globals
 ! for debugging
 !use variables, only : iqrot, iptra, cnrai, t1900, Tstart, Tend, numnod, dz, theta, dt, h, arai, rainamount, lai
 
@@ -108,6 +110,9 @@ if (iTask == 1) then
 !  initialize time variables and switches/flags
    call TimeControl(1)
 
+!  sync freshly initialized globals into the shared state object (POC for Option B)
+   call swap_state_sync_from_globals(core_state)
+
 !  calculate grid parameters
    call CalcGrid
    call DoTillage(1)
@@ -115,7 +120,7 @@ if (iTask == 1) then
 
 !  initialize SoilWater rate/state variables
    call SoilWater(1)
-   if (swuseCN == 1) call CNmethod(1)
+   if (swuseCN == 1) call CNmethod(1, core_state)
 
 !  initialize SurfaceWater management variables
    if (flSurfaceWater) call SurfaceWater(1)
@@ -185,10 +190,10 @@ if (iTask == 2) then
          if (iCaller /= 0) call handle_exchange(23, flError)   ! LAI, RD
 
 !        calculate Irrigation rate/state variables
-         if (flIrrigate) call Irrigation(2)
+         if (flIrrigate) call Irrigation(2, core_state)
 
 !        process Meteo data
-         call ProcessMeteoDay
+         call ProcessMeteoDay(core_state)
          call DoTillage(2)
 
       end if
@@ -318,6 +323,9 @@ if (iTask == 2) then
 !  Specific for exchange when called as DLL
    if (iCaller /= 0) call handle_exchange(29, flError)
 
+!  update exported state after dynamic loop
+   call swap_state_sync_from_globals(core_state)
+
    return
 end if
 
@@ -348,6 +356,9 @@ if (iTask == 3) then
 
 !  Specific for exchange when called as DLL
    if (iCaller /= 0) call handle_exchange(31, flError)
+
+!  final sync of globals into state
+   call swap_state_sync_from_globals(core_state)
 
    return
 end if

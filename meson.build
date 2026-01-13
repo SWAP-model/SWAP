@@ -2,6 +2,15 @@ project('swap', 'fortran', version : '4.2.0', default_options : ['warning_level=
 
 fc = meson.get_compiler('fortran')
 fs = import('fs')
+src_inc = include_directories(
+    'src',
+    'src/core',
+    'src/io',
+    'src/soil',
+    'src/crop',
+    'src/atmos',
+    'src/solute'
+)
 
 # Intel Fortran compiler settings
 if fc.get_id() == 'intel'
@@ -58,64 +67,65 @@ elif fc.get_id() == 'gcc' and host_machine.system() == 'windows'
     add_project_link_arguments(['-static', '-mconsole'], language : 'fortran')
 endif
 
-# Source files in the exact order from the original Intel compilation script
+# Source files grouped by subfolder (preserve original order where possible)
 sources = [
-  'src/variables.f90',
-  'src/swap_csv_output.f90', 
-  'src/sptabulated.f90',
-  'src/wofost_soil_declarations.f90',
-  'src/wofost_soil_interface.f90',
-  'src/WC_K_models_04_11.f90',
-  'src/tillage.f90',
-  'src/wofostnut.f90',
-  'src/tridag.f90',
-  'src/checkmassbal.f90',
-  'src/wofost_soil_watern.f90',
-  'src/fluxes.f90',
-  'src/calcgwl.f90',
-  'src/hysteresis.f90',
-  'src/penmon.f90',
-  'src/divdra.f90',
-  'src/sharedsimulation.f90',
-  'src/watstor.f90',
-  'src/sharedexchange.f90',
-  'src/convertdiscrvert.f90',
-  'src/meteoday.f90',
-  'src/oxygenstress.f90',
-  'src/irrigation.f90',
-  'src/rootextraction.f90',
-  'src/frozencond.f90',
-  'src/solute.f90',
-  'src/integral.f90',
-  'src/wofost_soil_cropresidues.f90',
-  'src/readswap.f90',
-  'src/timecontrol.f90',
-  'src/temperature.f90',
-  'src/management_soil.f90',
-  'src/wofost_soil_rateconstants.f90',
-  'src/soilwater.f90',
-  'src/initialize.f90',
-  'src/wofost_soil_balancecheck.f90',
-  'src/readmeteo.f90',
-  'src/drainage.f90',
-  'src/swapoutput.f90',
-  'src/macrorate.f90',
-  'src/calcgrid.f90',
-  'src/wofost_soil_parameters.f90',
-  'src/snow.f90',
-  'src/boundtop.f90',
-  'src/wofost_soil_amendments.f90',
-  'src/swap.f90',
-  'src/macroporeoutput.f90',
-  'src/wofost_soil_orgmatn.f90',
-  'src/headcalc.f90',
-  'src/boundbottom.f90',
-  'src/cropgrowth.f90',
-  'src/surfacewater.f90',
-  'src/macropore.f90',
-  'src/functions.f90',
-  'src/meteodt.f90',
-  'src/swap_main.f90'
+    'src/core/variables.f90',
+    'src/core/swap_state.f90',              # NEW: State object module (after variables)
+    'src/io/swap_csv_output.f90', 
+    'src/crop/sptabulated.f90',
+    'src/crop/wofost_soil_declarations.f90',
+    'src/crop/wofost_soil_interface.f90',
+    'src/soil/WC_K_models_04_11.f90',
+    'src/crop/tillage.f90',
+    'src/crop/wofostnut.f90',
+    'src/soil/tridag.f90',
+    'src/core/checkmassbal.f90',
+    'src/crop/wofost_soil_watern.f90',
+    'src/soil/fluxes.f90',
+    'src/soil/calcgwl.f90',
+    'src/soil/hysteresis.f90',
+    'src/atmos/penmon.f90',
+    'src/soil/divdra.f90',
+    'src/io/sharedsimulation.f90',
+    'src/soil/watstor.f90',
+    'src/io/sharedexchange.f90',
+    'src/core/convertdiscrvert.f90',
+    'src/atmos/meteoday.f90',
+    'src/soil/oxygenstress.f90',
+    'src/crop/irrigation.f90',
+    'src/crop/rootextraction.f90',
+    'src/soil/frozencond.f90',
+    'src/solute/solute.f90',
+    'src/core/integral.f90',
+    'src/crop/wofost_soil_cropresidues.f90',
+    'src/io/readswap.f90',
+    'src/core/timecontrol.f90',
+    'src/atmos/temperature.f90',
+    'src/crop/management_soil.f90',
+    'src/crop/wofost_soil_rateconstants.f90',
+    'src/soil/soilwater.f90',
+    'src/core/initialize.f90',
+    'src/crop/wofost_soil_balancecheck.f90',
+    'src/io/readmeteo.f90',
+    'src/soil/drainage.f90',
+    'src/io/swapoutput.f90',
+    'src/soil/macrorate.f90',
+    'src/soil/calcgrid.f90',
+    'src/crop/wofost_soil_parameters.f90',
+    'src/atmos/snow.f90',
+    'src/soil/boundtop.f90',
+    'src/crop/wofost_soil_amendments.f90',
+    'src/core/swap.f90',
+    'src/soil/macroporeoutput.f90',
+    'src/crop/wofost_soil_orgmatn.f90',
+    'src/soil/headcalc.f90',
+    'src/soil/boundbottom.f90',
+    'src/crop/cropgrowth.f90',
+    'src/soil/surfacewater.f90',
+    'src/soil/macropore.f90',
+    'src/core/functions.f90',
+    'src/atmos/meteodt.f90',
+    'src/core/swap_main.f90'
 ]
 
 # Download ttutil library dependency from GitHub releases
@@ -170,15 +180,17 @@ endif
 executable(executable_name, sources,
     dependencies: [ttutil_dep],
     link_args : link_args,
+    include_directories: src_inc,
     install : false
 )
 
 # Build SWAP BMI shared library for Python
-bmi_sources = sources + ['src/swap_bmi.f90']
+bmi_sources = sources + ['src/core/swap_bmi.f90']
 
 shared_library('swap',
     bmi_sources,
     dependencies: [ttutil_dep],
+    include_directories: src_inc,
     install: true,
     install_dir: get_option('libdir')
 )
