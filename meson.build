@@ -91,6 +91,7 @@ sources = [
     'src/core/swap_log.f90',        # Logging (compile first, no dependencies)
     'src/core/swap_state_mod.f90',  # State types (depends on swap_log)
     'src/core/variables.f90',
+    'src/core/swap_state_sync.f90', # State sync (depends on swap_state_mod, variables)
     'src/core/initialize.f90',
     'src/core/timecontrol.f90',
     
