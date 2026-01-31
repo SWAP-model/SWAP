@@ -234,7 +234,7 @@ end module MeteoVars
 
 ! SUBROUTINE 3.
 ! ----------------------------------------------------------------------
-      subroutine ProcessMeteoDay(state)
+      subroutine ProcessMeteoDay
 ! ----------------------------------------------------------------------
 !     Last modified      : February 2014
 !     Purpose            : processing of
@@ -242,9 +242,7 @@ end module MeteoVars
 
       use Variables
       use MeteoVars
-      use swap_state, only: swap_state_t
       implicit none
-      type(swap_state_t), intent(inout) :: state
       include  'params.fi'
       real(8)  rcs,afgen
       data     rcs/0.15d0/
@@ -566,7 +564,7 @@ end module MeteoVars
            graidt  = rainflux
            nraidt  = netrainflux
            if (swuseCN == 1) then
-               call CNmethod(2, state)
+               call CNmethod(2)
                nraidt = nraidt - Runoff_CN
            end if
            aintcdt = rainflux - netrainflux  ! aintcdt involves ONLY interception of RAIN
@@ -1179,24 +1177,20 @@ end module MeteoVars
       end subroutine Reduceva
 
 
-subroutine CNmethod(Itask, state)
+subroutine CNmethod(Itask)
 use variables, only: CNref, CNdry, CNwet, ThetaRef, theta, nraidt, Runoff_CN, zbotcp, dz, numnod, t1900, wc_cor, iCNtab, CNtimTAB, CNrefTAB, melt, wc10
-use swap_state, only: swap_state_t
 implicit none
 ! global
 integer, intent(in)  :: Itask
-type(swap_state_t), intent(inout) :: state
 ! local
-integer              :: i, Nod10, iCN
-real(8)              :: wc1, wc2, CN, S, Ia, watcon, Z10
+integer              :: i
+integer, save        :: Nod10, iCN   !, t1900_old
+real(8)              :: wc1, wc2, CN, S, Ia, watcon
+real(8), save        :: Z10
 
 select case (Itask)
 ! initialization; calculate and store some constants
 case (1)
-   ! Load state variables
-   Nod10 = state%cn_Nod10
-   iCN = state%cn_iCN
-   Z10 = state%cn_Z10
 
    iCN = 0
    ! check if times in CNtimeTAB are in ascending order
@@ -1230,19 +1224,10 @@ case (1)
    end do
    ThetaRef = ThetaRef/Z10
    
-   ! Save state variables
-   state%cn_Nod10 = Nod10
-   state%cn_iCN = iCN
-   state%cn_Z10 = Z10
-   
    !!!t1900_old = int(t1900) - 1 ! for testing intermediate output
    
 ! dynamic part: calculate runoff   
 case (2)
-   ! Load state variables
-   Nod10 = state%cn_Nod10
-   iCN = state%cn_iCN
-   Z10 = state%cn_Z10
    
    ! see if t1900 has moved ahead in CNtimTAB; iCN can nver exceed last entry
    if (iCN < iCNtab .and. t1900 >= CNtimTAB(iCN+1)) iCN = iCN + 1
@@ -1271,11 +1256,6 @@ case (2)
    else
       Runoff_CN = 0.0d0
    end if
-   
-   ! Save state variables
-   state%cn_Nod10 = Nod10
-   state%cn_iCN = iCN
-   state%cn_Z10 = Z10
    
    ! for testing intermediate output
    !!!if (int(t1900) > t1900_old) then

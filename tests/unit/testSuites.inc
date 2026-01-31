@@ -1,0 +1,4 @@
+ADD_TEST_SUITE(test_functions_suite)
+ADD_TEST_SUITE(test_ttutil_suite)
+ADD_TEST_SUITE(test_van_genuchten_suite)
+ADD_TEST_SUITE(test_datetime_suite)

@@ -7,6 +7,6 @@
 echo "Press Enter to continue... (automated)"
 printf '\n'
 
-rm swap.swp swap_swap.log swap.ok result.* reruns.log
+rm swap.swp swap_swap.log swap.ok result.* reruns.log *.tmp
 
 echo "SWAP run completed and temporary files removed."

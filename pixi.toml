@@ -5,6 +5,9 @@ name = "swap"
 platforms = ["linux-64", "win-64"]
 version = "4.2.0"
 
+[activation]
+env = { PFUNIT_ROOT = "$PIXI_PROJECT_ROOT/tests/pFUnit/build/install_gfortran/PFUNIT-4.15" }
+
 [tasks]
 build-linux = "FC=ifx meson setup builddir && meson compile -C builddir"
 build-windows-cross = "meson setup builddir_windows --cross-file cross_mingw.txt && meson compile -C builddir_windows"
@@ -12,8 +15,23 @@ build-windows-native = "FC=ifx meson setup builddir_windows_native && meson comp
 clean = "rm -rf builddir builddir_windows builddir_windows_native"
 setup-ifx = 'bash -c "source /opt/intel/oneapi/setvars.sh && exec bash"'
 
+test-linux-hupselbrook = { cmd = "cd tests/cases/1.hupselbrook && cp swap_linux.swp.template swap.swp && ./run_swap.sh" }
+test-linux-grassgrowth = { cmd = "cd tests/cases/2.grassgrowth && cp swap_linux.swp.template swap.swp && ./run_swap.sh" }
+test-linux-macropore = { cmd = "cd tests/cases/3.macroporeflow && cp swap_linux.swp.template swap.swp && ./run_swap.sh" }
+test-linux-oxygenstress = { cmd = "cd tests/cases/4.oxygenstress && cp swap_linux.swp.template swap.swp && ./run_swap.sh" }
+test-linux-salinitystress = { cmd = "cd tests/cases/5.salinitystress && cp swap_linux.swp.template swap.swp && ./run_swap.sh" }
+test-linux-surfacewater = { cmd = "cd tests/cases/6.surfacewater && cp swap_linux.swp.template swap.swp && ./run_swap.sh" }
+
+test-windows-hupselbrook = { cmd = "cd tests/cases/1.hupselbrook && cp swap_windows.swp.template swap.swp && run_swap.cmd" }
+test-windows-grassgrowth = { cmd = "cd tests/cases/2.grassgrowth && cp swap_windows.swp.template swap.swp && run_swap.cmd" }
+test-windows-macropore = { cmd = "cd tests/cases/3.macroporeflow && cp swap_windows.swp.template swap.swp && run_swap.cmd" }
+test-windows-oxygenstress = { cmd = "cd tests/cases/4.oxygenstress && cp swap_windows.swp.template swap.swp && run_swap.cmd" }
+test-windows-salinitystress = { cmd = "cd tests/cases/5.salinitystress && cp swap_windows.swp.template swap.swp && run_swap.cmd" }
+test-windows-surfacewater = { cmd = "cd tests/cases/6.surfacewater && cp swap_windows.swp.template swap.swp && run_swap.cmd" }
+
 test-linux = { cmd = "cd tests/cases/1.hupselbrook && cp swap_linux.swp.template swap.swp && ./run_swap.sh" }
 test-windows = { cmd = "cd tests/cases/1.hupselbrook && cp swap_windows.swp.template swap.swp && run_swap.cmd" }
+
 regression = "python tests/regression/test_output_regression.py"
 
 [dependencies]

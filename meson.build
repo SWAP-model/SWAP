@@ -7,9 +7,14 @@ src_inc = include_directories(
     'src/core',
     'src/io',
     'src/soil',
+    'src/atmosphere',
     'src/crop',
-    'src/atmos',
-    'src/solute'
+    'src/drainage',
+    'src/boundary',
+    'src/macropore',
+    'src/solute',
+    'src/heat',
+    'src/utils'
 )
 
 # Intel Fortran compiler settings
@@ -49,6 +54,19 @@ if fc.get_id() == 'intel'
         ], language : 'fortran')
     endif
     
+# GCC/gfortran compiler settings for Linux
+elif fc.get_id() == 'gcc' and host_machine.system() == 'linux'
+    add_project_arguments([
+        '-O2',
+        '-ffree-line-length-none',  # Remove line length limit
+        '-Wno-line-truncation',
+        '-Wno-compare-reals', 
+        '-Wno-missing-include-dirs',  # Ignore missing include directories
+        '-Wno-unused-variable',       # Ignore unused variable warnings  
+        '-Wno-unused-dummy-argument', # Ignore unused dummy argument warnings
+        '-std=legacy',                # Allow legacy Fortran features
+    ], language : 'fortran')
+    
 # MinGW Fortran compiler settings for Windows cross-compilation 
 elif fc.get_id() == 'gcc' and host_machine.system() == 'windows'
     add_project_arguments([
@@ -67,64 +85,88 @@ elif fc.get_id() == 'gcc' and host_machine.system() == 'windows'
     add_project_link_arguments(['-static', '-mconsole'], language : 'fortran')
 endif
 
-# Source files grouped by subfolder (preserve original order where possible)
+# Source files grouped by subfolder (organized by functional module)
 sources = [
+    # Core module - framework and state management
+    'src/core/swap_log.f90',        # Logging (compile first, no dependencies)
+    'src/core/swap_state_mod.f90',  # State types (depends on swap_log)
     'src/core/variables.f90',
-    'src/core/swap_state.f90',              # NEW: State object module (after variables)
-    'src/io/swap_csv_output.f90', 
-    'src/crop/sptabulated.f90',
+    'src/core/initialize.f90',
+    'src/core/timecontrol.f90',
+    
+    # Soil module - physics, hydraulics, numerical solution
+    'src/soil/sptabulated.f90',
+    'src/soil/WC_K_models_04_11.f90',
+    'src/soil/tridag.f90',
+    'src/soil/functions.f90',
+    'src/soil/hysteresis.f90',
+    'src/soil/calcgrid.f90',
+    'src/soil/calcgwl.f90',
+    'src/soil/watstor.f90',
+    'src/soil/fluxes.f90',
+    'src/soil/headcalc.f90',
+    'src/soil/soilwater.f90',
+    'src/soil/integral.f90',
+    'src/soil/checkmassbal.f90',
+    'src/soil/convertdiscrvert.f90',
+    
+    # I/O module - input parsing and output generation
+    'src/io/swap_csv_output.f90',
+    'src/io/readswap.f90',
+    'src/io/readmeteo.f90',
+    'src/io/swapoutput.f90',
+    
+    # Atmosphere module - meteorology and ET
+    'src/atmosphere/penmon.f90',
+    'src/atmosphere/meteoday.f90',
+    'src/atmosphere/meteodt.f90',
+    'src/atmosphere/snow.f90',
+    
+    # Heat module - soil temperature
+    'src/heat/temperature.f90',
+    'src/heat/frozencond.f90',
+    
+    # Boundary module - top and bottom conditions
+    'src/boundary/boundtop.f90',
+    'src/boundary/boundbottom.f90',
+    
+    # Drainage module - lateral drainage and surface water
+    'src/drainage/drainage.f90',
+    'src/drainage/divdra.f90',
+    'src/drainage/surfacewater.f90',
+    
+    # Macropore module - preferential flow
+    'src/macropore/macropore.f90',
+    'src/macropore/macrorate.f90',
+    'src/macropore/macroporeoutput.f90',
+    
+    # Solute module - solute transport
+    'src/solute/solute.f90',
+    
+    # Crop module - growth, nutrients, management
     'src/crop/wofost_soil_declarations.f90',
     'src/crop/wofost_soil_interface.f90',
-    'src/soil/WC_K_models_04_11.f90',
-    'src/crop/tillage.f90',
-    'src/crop/wofostnut.f90',
-    'src/soil/tridag.f90',
-    'src/core/checkmassbal.f90',
-    'src/crop/wofost_soil_watern.f90',
-    'src/soil/fluxes.f90',
-    'src/soil/calcgwl.f90',
-    'src/soil/hysteresis.f90',
-    'src/atmos/penmon.f90',
-    'src/soil/divdra.f90',
-    'src/io/sharedsimulation.f90',
-    'src/soil/watstor.f90',
-    'src/io/sharedexchange.f90',
-    'src/core/convertdiscrvert.f90',
-    'src/atmos/meteoday.f90',
-    'src/soil/oxygenstress.f90',
-    'src/crop/irrigation.f90',
-    'src/crop/rootextraction.f90',
-    'src/soil/frozencond.f90',
-    'src/solute/solute.f90',
-    'src/core/integral.f90',
-    'src/crop/wofost_soil_cropresidues.f90',
-    'src/io/readswap.f90',
-    'src/core/timecontrol.f90',
-    'src/atmos/temperature.f90',
-    'src/crop/management_soil.f90',
-    'src/crop/wofost_soil_rateconstants.f90',
-    'src/soil/soilwater.f90',
-    'src/core/initialize.f90',
-    'src/crop/wofost_soil_balancecheck.f90',
-    'src/io/readmeteo.f90',
-    'src/soil/drainage.f90',
-    'src/io/swapoutput.f90',
-    'src/soil/macrorate.f90',
-    'src/soil/calcgrid.f90',
     'src/crop/wofost_soil_parameters.f90',
-    'src/atmos/snow.f90',
-    'src/soil/boundtop.f90',
-    'src/crop/wofost_soil_amendments.f90',
-    'src/core/swap.f90',
-    'src/soil/macroporeoutput.f90',
+    'src/crop/wofost_soil_rateconstants.f90',
     'src/crop/wofost_soil_orgmatn.f90',
-    'src/soil/headcalc.f90',
-    'src/soil/boundbottom.f90',
+    'src/crop/wofost_soil_watern.f90',
+    'src/crop/wofost_soil_amendments.f90',
+    'src/crop/wofost_soil_cropresidues.f90',
+    'src/crop/wofost_soil_balancecheck.f90',
+    'src/crop/wofostnut.f90',
+    'src/crop/oxygenstress.f90',
+    'src/crop/rootextraction.f90',
+    'src/crop/irrigation.f90',
+    'src/crop/tillage.f90',
+    'src/crop/management_soil.f90',
     'src/crop/cropgrowth.f90',
-    'src/soil/surfacewater.f90',
-    'src/soil/macropore.f90',
-    'src/core/functions.f90',
-    'src/atmos/meteodt.f90',
+    
+    # Utils module - shared simulation utilities
+    'src/utils/sharedexchange.f90',
+    'src/utils/sharedsimulation.f90',
+    
+    # Core module - main model routines (must come last due to dependencies)
+    'src/core/swap.f90',
     'src/core/swap_main.f90'
 ]
 
@@ -132,26 +174,43 @@ sources = [
 ttutil_version = '4.2.7'
 ttutil_lib_dir = join_paths(meson.current_build_dir(), 'lib')
 
-# Determine platform-specific library name
+# Determine platform-specific library name and path
 if host_machine.system() == 'windows' and fc.get_id() != 'gcc'
     # Native Windows compilation with Intel Fortran
     ttutil_filename = 'libttutil@0@-windows.a'.format(ttutil_version)
+    ttutil_lib_path = join_paths(ttutil_lib_dir, 'libttutil.a')
+    ttutil_url = 'https://github.com/SWAP-model/ttutil/releases/download/v@0@/@1@'.format(ttutil_version, ttutil_filename)
+    # Download ttutil library if not present
+    if not fs.exists(ttutil_lib_path)
+        run_command('mkdir', '-p', ttutil_lib_dir, check: true)
+        run_command('curl', '-L', ttutil_url, '-o', ttutil_lib_path, check: true)
+    endif
 elif host_machine.system() == 'windows' and fc.get_id() == 'gcc'
     # MinGW cross-compilation 
     ttutil_filename = 'libttutil@0@-mingw.a'.format(ttutil_version)
+    ttutil_lib_path = join_paths(ttutil_lib_dir, 'libttutil.a')
+    ttutil_url = 'https://github.com/SWAP-model/ttutil/releases/download/v@0@/@1@'.format(ttutil_version, ttutil_filename)
+    # Download ttutil library if not present
+    if not fs.exists(ttutil_lib_path)
+        run_command('mkdir', '-p', ttutil_lib_dir, check: true)
+        run_command('curl', '-L', ttutil_url, '-o', ttutil_lib_path, check: true)
+    endif
+elif fc.get_id() == 'gcc' and host_machine.system() == 'linux'
+    # Linux gfortran - use local ttutil from sibling directory
+    ttutil_lib_path = join_paths(meson.current_source_dir(), '../ttutil/builddir_gfortran/libttutil427_gfortran.a')
+    if not fs.exists(ttutil_lib_path)
+        error('ttutil gfortran library not found. Build it first: cd ../ttutil && pixi run build-linux-gfortran')
+    endif
 else
-    # Linux compilation
+    # Linux Intel compilation
     ttutil_filename = 'libttutil@0@-linux.a'.format(ttutil_version)
-endif
-
-ttutil_lib_path = join_paths(ttutil_lib_dir, 'libttutil.a')
-ttutil_url = 'https://github.com/SWAP-model/ttutil/releases/download/v@0@/@1@'.format(ttutil_version, ttutil_filename)
-
-# Download ttutil library if not present
-if not fs.exists(ttutil_lib_path)
-    # Create directory
-    run_command('mkdir', '-p', ttutil_lib_dir, check: true)
-    run_command('curl', '-L', ttutil_url, '-o', ttutil_lib_path, check: true)
+    ttutil_lib_path = join_paths(ttutil_lib_dir, 'libttutil.a')
+    ttutil_url = 'https://github.com/SWAP-model/ttutil/releases/download/v@0@/@1@'.format(ttutil_version, ttutil_filename)
+    # Download ttutil library if not present
+    if not fs.exists(ttutil_lib_path)
+        run_command('mkdir', '-p', ttutil_lib_dir, check: true)
+        run_command('curl', '-L', ttutil_url, '-o', ttutil_lib_path, check: true)
+    endif
 endif
 
 # Create ttutil dependency
@@ -184,13 +243,30 @@ executable(executable_name, sources,
     install : false
 )
 
-# Build SWAP BMI shared library for Python
-bmi_sources = sources + ['src/core/swap_bmi.f90']
+# Build standalone state module test (no pFUnit required)
+state_test_sources = [
+    'src/core/swap_log.f90',
+    'src/core/swap_state_mod.f90',
+    'tests/unit/core/test_state_standalone.f90',
+]
 
-shared_library('swap',
-    bmi_sources,
-    dependencies: [ttutil_dep],
+executable('test_state', state_test_sources,
     include_directories: src_inc,
-    install: true,
-    install_dir: get_option('libdir')
+    install: false
 )
+
+# Build SWAP BMI shared library for Python (requires swap_bmi.f90)
+# Uncomment when BMI interface is implemented:
+# bmi_sources = sources + ['src/core/swap_bmi.f90']
+# shared_library('swap',
+#     bmi_sources,
+#     dependencies: [ttutil_dep],
+#     include_directories: src_inc,
+#     install: true,
+#     install_dir: get_option('libdir')
+# )
+
+# Optional pFUnit unit tests (off by default)
+if get_option('enable_pfunit')
+    subdir('tests/unit')
+endif

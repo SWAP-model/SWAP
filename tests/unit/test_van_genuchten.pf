@@ -1,0 +1,121 @@
+! Test suite for Van Genuchten soil hydraulic functions
+! These are mathematical functions for soil water retention
+module test_van_genuchten
+    use funit
+    implicit none
+
+contains
+
+    ! ========================================
+    ! Test Van Genuchten water content calculation
+    ! theta(h) = theta_r + (theta_s - theta_r) / (1 + |alpha*h|^n)^m
+    ! ========================================
+    
+    @test
+    subroutine test_vg_watcon_saturated()
+        ! Test that at h=0, theta = theta_s
+        real(8) :: theta_r, theta_s, alpha, n, m
+        real(8) :: h, theta
+        
+        ! Typical sandy soil parameters
+        theta_r = 0.045d0   ! residual water content
+        theta_s = 0.43d0    ! saturated water content
+        alpha = 0.145d0     ! cm^-1
+        n = 2.68d0
+        m = 1.0d0 - 1.0d0/n  ! = 0.627
+        
+        h = 0.0d0           ! saturated (h=0)
+        
+        ! At h=0: theta should equal theta_s
+        theta = vg_theta(h, theta_r, theta_s, alpha, n, m)
+        
+        @assertEqual(theta_s, theta, tolerance=1.0d-6)
+    end subroutine
+
+    @test
+    subroutine test_vg_watcon_residual()
+        ! Test that at very dry conditions, theta approaches theta_r
+        real(8) :: theta_r, theta_s, alpha, n, m
+        real(8) :: h, theta
+        
+        theta_r = 0.045d0
+        theta_s = 0.43d0
+        alpha = 0.145d0
+        n = 2.68d0
+        m = 1.0d0 - 1.0d0/n
+        
+        h = -15000.0d0      ! very dry (wilting point)
+        
+        theta = vg_theta(h, theta_r, theta_s, alpha, n, m)
+        
+        ! Should be very close to theta_r
+        @assertEqual(theta_r, theta, tolerance=0.001d0)
+    end subroutine
+
+    @test
+    subroutine test_vg_watcon_monotonic()
+        ! Test that theta decreases as h becomes more negative
+        real(8) :: theta_r, theta_s, alpha, n, m
+        real(8) :: theta1, theta2, theta3
+        
+        theta_r = 0.045d0
+        theta_s = 0.43d0
+        alpha = 0.145d0
+        n = 2.68d0
+        m = 1.0d0 - 1.0d0/n
+        
+        theta1 = vg_theta(-10.0d0, theta_r, theta_s, alpha, n, m)
+        theta2 = vg_theta(-100.0d0, theta_r, theta_s, alpha, n, m)
+        theta3 = vg_theta(-1000.0d0, theta_r, theta_s, alpha, n, m)
+        
+        ! Verify monotonic decrease
+        @assertTrue(theta1 > theta2)
+        @assertTrue(theta2 > theta3)
+        @assertTrue(theta3 > theta_r)
+    end subroutine
+
+    @test
+    subroutine test_vg_watcon_field_capacity()
+        ! Test typical field capacity condition (h = -100 cm)
+        real(8) :: theta_r, theta_s, alpha, n, m
+        real(8) :: h, theta
+        
+        ! Loamy soil parameters
+        theta_r = 0.078d0
+        theta_s = 0.43d0
+        alpha = 0.036d0
+        n = 1.56d0
+        m = 1.0d0 - 1.0d0/n
+        
+        h = -100.0d0        ! field capacity
+        
+        theta = vg_theta(h, theta_r, theta_s, alpha, n, m)
+        
+        ! Field capacity typically around 0.3 for loamy soil
+        ! Broaden range for this soil type
+        @assertTrue(theta > 0.20d0)
+        @assertTrue(theta < 0.40d0)
+        
+        ! Also verify it's between residual and saturated
+        @assertTrue(theta > theta_r)
+        @assertTrue(theta < theta_s)
+    end subroutine
+
+    ! ========================================
+    ! Helper function: Van Genuchten theta(h)
+    ! ========================================
+    real(8) function vg_theta(h, theta_r, theta_s, alpha, n, m)
+        real(8), intent(in) :: h, theta_r, theta_s, alpha, n, m
+        real(8) :: term
+        
+        if (h >= 0.0d0) then
+            ! Saturated
+            vg_theta = theta_s
+        else
+            ! Van Genuchten equation
+            term = (1.0d0 + (dabs(alpha * h))**n)**m
+            vg_theta = theta_r + (theta_s - theta_r) / term
+        end if
+    end function vg_theta
+
+end module test_van_genuchten

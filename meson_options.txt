@@ -1,0 +1,1 @@
+option('enable_pfunit', type: 'boolean', value: false, description: 'Build pFUnit-based unit tests')

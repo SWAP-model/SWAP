@@ -360,8 +360,8 @@
       real(8)   sicact             ! amount of water stored on canopy (cm)
       real(8)   siccaplai          ! interception storage per unit of LAI (cm/LAI)
       real(8)   q10                ! Relative increase of respiration rate with temperature (/10 oC)
-      real(8)   q10_microbial      ! Relative increase in microbial respiration at temperature increase of 10 ï¿½C [1.0..4.0 -, R]
-      real(8)   q10_root           ! Relative increase in root respiration at temperature increase of 10 ï¿½C [1.0..4.0 -, R]
+      real(8)   q10_microbial      ! Relative increase in microbial respiration at temperature increase of 10 ºC [1.0..4.0 -, R]
+      real(8)   q10_root           ! Relative increase in root respiration at temperature increase of 10 ºC [1.0..4.0 -, R]
       real(8)   rdrrtb(30)         ! Array with relative death rates of roots (kg/kg/d) as function of development stage (-)
       real(8)   rdrstb(30)         ! Array with relative death rates of stems (kg/kg/d) as function of development stage (-)
       real(8)   reltr              ! relative transpiration factor that reduces crop growth (-)
@@ -386,7 +386,7 @@
       real(8)   spa                ! Specific pod area (ha/kg)
       real(8)   span               ! Life span of leaves at optimum conditions (T)
       real(8)   spec_weight_root_tissue ! Specific weight of non-airfilled root tissue [0.d0..1.d5 kg root/m3 root, R]
-      real(8)   specific_resp_humus ! Respiration rate of humus at 25 ï¿½C [0.0..1.0 kg O2/kg C/d, R] 
+      real(8)   specific_resp_humus ! Respiration rate of humus at 25 ºC [0.0..1.0 kg O2/kg C/d, R] 
       real(8)   srl                ! Specific root length [0.d0..1.d10 m root/kg root, R]      
       real(8)   ssa                ! Specific stem area (ha/kg)
       real(8)   tadw               ! Dry weight of plant minus roots of actual growth (kg/ha)
@@ -670,7 +670,7 @@
       real(8)   disnod(macp+1)     ! Distance between actual node and upper node (L)
       real(8)   drainl(Madr)       ! Drainage level (maximum of depth of drain and surface water level) (L)
       real(8)   drares(Madr)       ! Array with drainage resistance (T) for each drainage level
-      real(8), target   ::   dz(macp)           ! Compartment thickness (L)
+      real(8)   dz(macp)           ! Compartment thickness (L)
       real(8)   dznew(macp)        ! Desired thickness of compartments for soil water quality models (L)
       real(8)   entres             ! Drain entry resistance (T)
       real(8)   es0                !  potential evaporation rate from a wet bare soil [mm/d]
@@ -686,7 +686,7 @@
       real(8)   gwlinp             ! Prescribed groundwater level (L) for current time
       real(8)   gwlm1              ! Groundwater level (L) at former time level
       real(8)   gwltab(mabbc*2)    ! Array with prescribed groundwater level (L) as function of time (T)
-      real(8), target   ::   h(macp)            ! Soil water pressure head (L)
+      real(8)   h(macp)            ! Soil water pressure head (L)
       real(8)   h_enpr(macp)       ! Soil water Entry Pressure head for Modified MualemVanGenuchten curve (L)
       real(8)   haqtab(mabbc*2)    ! Array with specified hydraulic head in deep aquifer (L) as function of time (T)
       real(8)   hatm               ! Pressure head of air (L) near the soil surface
@@ -712,7 +712,7 @@
       real(8)   inq(macp+1)        ! Array with intermediate amounts of water flow between current and upper compartment (L)
       real(8)   inqdra(Madr,macp)  ! Array with intermediate amounts of lateral drainage for each level and compartment (L)
       real(8)   inqdra_in(Madr,macp), inqdra_out(Madr,macp)
-      real(8), target   ::   inqrot(macp)       ! Array with intermediate amounts of extracted water by roots for each compartment (L)
+      real(8)   inqrot(macp)       ! Array with intermediate amounts of extracted water by roots for each compartment (L)
       real(8)   inqssdi(macp)      ! Array with intermediate amounts of subsurface drip irrigation for each compartment (L)
       real(8)   qpotrot_day(macp)  ! Array with amounts of potential extracted water by roots for each compartment since start of day (L)
       real(8)   qredtot_day(macp)  ! Array with amounts of reduction of extracted water by roots for each compartment since start of day (L)
@@ -816,7 +816,7 @@
       real(8)   taccur             ! Maximum absolute difference between simulated and calculated potential transpiration rate (cm/d)
       real(8)   Tactual            ! Actual transpiration at former iteration in JongvanLier (cm/d)
       real(8)   tau                ! Minimum pressure head difference (L) to change from wetting to drying in case of hysteresis
-      real(8), target   ::   theta(macp)        ! Volumic soil water content (-)
+      real(8)   theta(macp)        ! Volumic soil water content (-)
       real(8)   thetar(macp)       ! Residual volumic soil water content (-) for each numerical compartment
       real(8)   thetas(macp)       ! Saturated volumic soil water content (-) for each numerical compartment
       real(8)   thetm1(macp)       ! Volumic soil water content (-) at former time level
@@ -828,7 +828,7 @@
       real(8)   vtair              ! Total depth of air in the soil column (L)
       real(8)   wbalance           ! Cumulative water balance error (L)
       real(8)   wetper(Madr)       ! Array with wet perimeter of drain (L) for each drainage level
-      real(8), target   ::   z(macp)            ! Depth of a node (L)
+      real(8)   z(macp)            ! Depth of a node (L)
       real(8)   ztopcp(macp)       ! Depth of top    boundary of layer(node) (L)
       real(8)   zbotcp(macp)       ! Depth of bottom boundary of layer(node) (L)
       real(8)   zfrostbot          ! Depth of bottom of frost layer (L)
@@ -861,16 +861,16 @@
       real(8)   pclay(maho)        ! Array with gravimetric clay content (g/g mineral parts) for each soil layer
       real(8)   psand(maho)        ! Array with gravimetric sand content (g/g mineral parts) for each soil layer
       real(8)   psilt(maho)        ! Array with gravimetric silt content (g/g mineral parts) for each soil layer
-      real(8)   tampli             ! Amplitude of prescribed annual temperature wave (ï¿½C) at soil surface
-      real(8)   tebot              ! Temperatures (ï¿½C) at bottom of soil profile
-      real(8)   tembtab(mabbc*2)   ! Array with specified bottom temperature (ï¿½C) as function of time (T)
-      real(8)   temtoptab(mabbc*2) ! Array with specified soil surface temperature (ï¿½C) as function of time (T)
-      real(8)   tfroststa          ! Soil temperature (ï¿½C) where reduction of water fluxes starts
-      real(8)   tfrostend          ! Soil temperature (ï¿½C) where reduction of water fluxes ends
+      real(8)   tampli             ! Amplitude of prescribed annual temperature wave (ºC) at soil surface
+      real(8)   tebot              ! Temperatures (ºC) at bottom of soil profile
+      real(8)   tembtab(mabbc*2)   ! Array with specified bottom temperature (ºC) as function of time (T)
+      real(8)   temtoptab(mabbc*2) ! Array with specified soil surface temperature (ºC) as function of time (T)
+      real(8)   tfroststa          ! Soil temperature (ºC) where reduction of water fluxes starts
+      real(8)   tfrostend          ! Soil temperature (ºC) where reduction of water fluxes ends
       real(8)   timref             ! Time in the year (T) with top of prescribed sine temperature wave
-      real(8)   tmean              ! Prescribed mean annual temperature (ï¿½C) at soil surface
-      real(8)   tsoil(macp)        ! Array with soil temperatures (ï¿½C) for each compartment
-      real(8)   tetop              ! Temperatures (ï¿½C) at top of soil profile (under snow cover)
+      real(8)   tmean              ! Prescribed mean annual temperature (ºC) at soil surface
+      real(8)   tsoil(macp)        ! Array with soil temperatures (ºC) for each compartment
+      real(8)   tetop              ! Temperatures (ºC) at top of soil profile (under snow cover)
       real(8)   zh(macp)           ! Array with soil depths (L) used to specify initial soil temperatures
       real(8)   heacap(macp)       ! Array with heat capacity for all compartments (J/cm3/K)
       real(8)   heacon(macp)       ! Array with heat conductivity for all compartments (J/cm/K/d)

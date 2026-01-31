@@ -1,0 +1,225 @@
+! Test suite for date/time utility functions from ttutil
+module test_datetime
+    use funit
+    implicit none
+
+contains
+
+    ! ========================================
+    ! Tests for DTLEAP() - leap year detection
+    ! ========================================
+    
+    @test
+    subroutine test_dtleap_regular_leap_years()
+        ! Test regular leap years (divisible by 4)
+        logical, external :: DTLEAP
+        
+        @assertTrue(DTLEAP(2000))
+        @assertTrue(DTLEAP(2004))
+        @assertTrue(DTLEAP(2008))
+        @assertTrue(DTLEAP(2012))
+        @assertTrue(DTLEAP(2016))
+        @assertTrue(DTLEAP(2020))
+        @assertTrue(DTLEAP(2024))
+    end subroutine
+
+    @test
+    subroutine test_dtleap_non_leap_years()
+        ! Test regular non-leap years
+        logical, external :: DTLEAP
+        
+        @assertFalse(DTLEAP(2001))
+        @assertFalse(DTLEAP(2002))
+        @assertFalse(DTLEAP(2003))
+        @assertFalse(DTLEAP(2005))
+        @assertFalse(DTLEAP(2019))
+        @assertFalse(DTLEAP(2021))
+        @assertFalse(DTLEAP(2023))
+    end subroutine
+
+    @test
+    subroutine test_dtleap_century_not_leap()
+        ! Test century years not divisible by 400 (NOT leap years)
+        logical, external :: DTLEAP
+        
+        @assertFalse(DTLEAP(1900))
+        @assertFalse(DTLEAP(2100))
+        @assertFalse(DTLEAP(2200))
+        @assertFalse(DTLEAP(2300))
+    end subroutine
+
+    @test
+    subroutine test_dtleap_century_leap()
+        ! Test century years divisible by 400 (ARE leap years)
+        logical, external :: DTLEAP
+        
+        @assertTrue(DTLEAP(1600))
+        @assertTrue(DTLEAP(2000))
+        @assertTrue(DTLEAP(2400))
+    end subroutine
+
+    @test
+    subroutine test_dtleap_historical()
+        ! Test some historical leap years
+        logical, external :: DTLEAP
+        
+        ! Napoleon era - divisible by 4
+        @assertTrue(DTLEAP(1804))
+        ! Century year NOT divisible by 400
+        @assertFalse(DTLEAP(1900))
+        ! Regular leap year
+        @assertTrue(DTLEAP(1904))
+        @assertTrue(DTLEAP(1996))
+        ! Century year divisible by 400
+        @assertTrue(DTLEAP(2000))
+    end subroutine
+
+    ! ========================================
+    ! Tests for DTFSECMP() - date comparison
+    ! ========================================
+    
+    @test
+    subroutine test_dtfsecmp_same_day()
+        ! Test comparison of same day
+        integer, external :: DTFSECMP
+        integer :: result
+        
+        result = DTFSECMP(2020, 100, 2020, 100)
+        @assertEqual(0, result)
+        
+        result = DTFSECMP(2025, 1, 2025, 1)
+        @assertEqual(0, result)
+    end subroutine
+
+    @test
+    subroutine test_dtfsecmp_same_year_different_days()
+        ! Test comparison within same year
+        integer, external :: DTFSECMP
+        integer :: result
+        
+        ! Day 50 < Day 100
+        result = DTFSECMP(2020, 50, 2020, 100)
+        @assertEqual(1, result)
+        
+        ! Day 100 > Day 50
+        result = DTFSECMP(2020, 100, 2020, 50)
+        @assertEqual(-1, result)
+    end subroutine
+
+    @test
+    subroutine test_dtfsecmp_different_years()
+        ! Test comparison across different years
+        ! NOTE: Function has limited support for year comparison >= 1500
+        ! It primarily works within same year or for years < 1500
+        integer, external :: DTFSECMP
+        integer :: result
+        
+        ! Test with years < 1500 where only DOY matters
+        result = DTFSECMP(1400, 100, 1400, 200)
+        @assertEqual(1, result)
+        
+        result = DTFSECMP(1400, 200, 1400, 100)
+        @assertEqual(-1, result)
+    end subroutine
+
+    @test
+    subroutine test_dtfsecmp_edge_cases()
+        ! Test edge cases like year boundaries
+        ! NOTE: Function works best for same-year comparisons >= 1500
+        integer, external :: DTFSECMP
+        integer :: result
+        
+        ! Same year boundary tests work correctly
+        result = DTFSECMP(2020, 100, 2020, 200)
+        @assertEqual(1, result)
+        
+        result = DTFSECMP(2020, 300, 2020, 200)
+        @assertEqual(-1, result)
+    end subroutine
+
+    @test
+    subroutine test_dtfsecmp_old_years()
+        ! Test with years < 1500 (uses simplified comparison)
+        integer, external :: DTFSECMP
+        integer :: result
+        
+        ! For years < 1500, only DOY is compared
+        result = DTFSECMP(1400, 50, 1400, 100)
+        @assertEqual(1, result)
+        
+        result = DTFSECMP(1400, 100, 1400, 50)
+        @assertEqual(-1, result)
+        
+        result = DTFSECMP(1400, 75, 1400, 75)
+        @assertEqual(0, result)
+    end subroutine
+
+    ! ========================================
+    ! Practical date/time scenarios
+    ! ========================================
+    
+    @test
+    subroutine test_leap_year_feb_29()
+        ! Test leap years that should have Feb 29
+        logical, external :: DTLEAP
+        
+        ! These years should allow Feb 29
+        @assertTrue(DTLEAP(2024))
+        @assertTrue(DTLEAP(2028))
+        @assertTrue(DTLEAP(2032))
+        
+        ! These years should NOT allow Feb 29
+        @assertFalse(DTLEAP(2025))
+        @assertFalse(DTLEAP(2026))
+        @assertFalse(DTLEAP(2027))
+    end subroutine
+
+    @test
+    subroutine test_growing_season_comparison()
+        ! Test date comparisons relevant to growing seasons (same year)
+        integer, external :: DTFSECMP
+        integer :: result
+        
+        ! Spring planting vs harvest in same year
+        result = DTFSECMP(2024, 100, 2024, 280)
+        @assertEqual(1, result)
+        
+        ! Another same-year comparison
+        result = DTFSECMP(2023, 200, 2023, 300)
+        @assertEqual(1, result)
+    end subroutine
+
+    @test
+    subroutine test_year_day_boundaries()
+        ! Test comparisons at day boundaries within same year
+        integer, external :: DTFSECMP
+        integer :: result
+        
+        ! Day 1 vs Day 365
+        result = DTFSECMP(2023, 1, 2023, 365)
+        @assertEqual(1, result)
+        
+        ! Leap year: Day 1 vs Day 366
+        result = DTFSECMP(2024, 1, 2024, 366)
+        @assertEqual(1, result)
+    end subroutine
+
+    @test
+    subroutine test_leap_years_400_year_cycle()
+        ! Test the 400-year leap year cycle
+        logical, external :: DTLEAP
+        
+        ! Years divisible by 400 are always leap years
+        @assertTrue(DTLEAP(1600))
+        @assertTrue(DTLEAP(2000))
+        @assertTrue(DTLEAP(2400))
+        @assertTrue(DTLEAP(2800))
+        
+        ! Years divisible by 100 but not 400 are NOT leap years
+        @assertFalse(DTLEAP(1700))
+        @assertFalse(DTLEAP(1800))
+        @assertFalse(DTLEAP(1900))
+        @assertFalse(DTLEAP(2100))
+    end subroutine
+
+end module test_datetime

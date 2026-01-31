@@ -1,0 +1,128 @@
+! Unit tests for pure utility functions from functions.f90
+module test_functions
+    use funit
+    implicit none
+
+contains
+
+    ! ========================================
+    ! Tests for afgen() - linear interpolation
+    ! ========================================
+    
+    @test
+    subroutine test_afgen_linear_interpolation()
+        ! Test basic linear interpolation
+        real(8) :: table(6)
+        real(8) :: result
+        real(8), external :: afgen
+        
+        ! Setup: simple linear table
+        ! x values: 0, 10, 20
+        ! y values: 0, 100, 200
+        table(1) = 0.0d0
+        table(2) = 0.0d0
+        table(3) = 10.0d0
+        table(4) = 100.0d0
+        table(5) = 20.0d0
+        table(6) = 200.0d0
+        
+        ! Test interpolation at x=5 (should be y=50)
+        result = afgen(table, 6, 5.0d0)
+        @assertEqual(50.0d0, result, tolerance=1.0d-6)
+        
+        ! Test at x=15 (should be y=150)
+        result = afgen(table, 6, 15.0d0)
+        @assertEqual(150.0d0, result, tolerance=1.0d-6)
+    end subroutine
+
+    @test
+    subroutine test_afgen_exact_points()
+        ! Test that afgen returns exact values at table points
+        real(8) :: table(6)
+        real(8) :: result
+        real(8), external :: afgen
+        
+        table(1) = 1.0d0
+        table(2) = 5.0d0
+        table(3) = 3.0d0
+        table(4) = 15.0d0
+        table(5) = 5.0d0
+        table(6) = 25.0d0
+        
+        ! Test at exact x values
+        result = afgen(table, 6, 1.0d0)
+        @assertEqual(5.0d0, result, tolerance=1.0d-6)
+        
+        result = afgen(table, 6, 3.0d0)
+        @assertEqual(15.0d0, result, tolerance=1.0d-6)
+        
+        result = afgen(table, 6, 5.0d0)
+        @assertEqual(25.0d0, result, tolerance=1.0d-6)
+    end subroutine
+
+    @test
+    subroutine test_afgen_extrapolation_low()
+        ! Test extrapolation below table range
+        real(8) :: table(6)
+        real(8) :: result
+        real(8), external :: afgen
+        
+        table(1) = 10.0d0
+        table(2) = 100.0d0
+        table(3) = 20.0d0
+        table(4) = 200.0d0
+        table(5) = 30.0d0
+        table(6) = 300.0d0
+        
+        ! Test extrapolation below range (x=5, should return y at x=10)
+        result = afgen(table, 6, 5.0d0)
+        @assertEqual(100.0d0, result, tolerance=1.0d-6)
+    end subroutine
+
+    @test
+    subroutine test_afgen_extrapolation_high()
+        ! Test extrapolation above table range
+        real(8) :: table(6)
+        real(8) :: result
+        real(8), external :: afgen
+        
+        table(1) = 10.0d0
+        table(2) = 100.0d0
+        table(3) = 20.0d0
+        table(4) = 200.0d0
+        table(5) = 30.0d0
+        table(6) = 300.0d0
+        
+        ! Test extrapolation above range (x=50, should return y at x=30)
+        result = afgen(table, 6, 50.0d0)
+        @assertEqual(300.0d0, result, tolerance=1.0d-6)
+    end subroutine
+
+    @test
+    subroutine test_afgen_nonlinear_slope()
+        ! Test with non-uniform spacing (not linear overall but piecewise linear)
+        real(8) :: table(8)
+        real(8) :: result
+        real(8), external :: afgen
+        
+        ! First segment: steep slope (x=0 to 10, y=0 to 100)
+        ! Second segment: gentle slope (x=10 to 30, y=100 to 120)
+        table(1) = 0.0d0
+        table(2) = 0.0d0
+        table(3) = 10.0d0
+        table(4) = 100.0d0
+        table(5) = 30.0d0
+        table(6) = 120.0d0
+        table(7) = 50.0d0
+        table(8) = 200.0d0
+        
+        ! Test in first segment (x=5, steep slope)
+        result = afgen(table, 8, 5.0d0)
+        @assertEqual(50.0d0, result, tolerance=1.0d-6)
+        
+        ! Test in second segment (x=20, gentle slope)
+        result = afgen(table, 8, 20.0d0)
+        @assertEqual(110.0d0, result, tolerance=1.0d-6)
+    end subroutine
+
+end module test_functions
