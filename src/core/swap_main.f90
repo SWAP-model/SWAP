@@ -16,6 +16,7 @@ program swap_main
 ! ----------------------------------------------------------------------
 
 use variables, only: logf
+use swap_log, only: log_init, log_close, LOGLEVEL_DEBUG, LOGLEVEL_INFO
 implicit none
 
 ! because subroutine swap has optional arguments, we must define the interface
@@ -35,6 +36,10 @@ integer, save        :: iset, insets, iun1, iun2
 
 ! functions
 integer              :: getun
+
+! Initialize logging (set to LOGLEVEL_DEBUG for verbose output, LOGLEVEL_INFO for normal)
+! Note: Most iteration-level debug logs are now disabled for performance
+call log_init(log_level=LOGLEVEL_INFO, log_file='swap_debug.log')
 
 ! open logfile and read rerun file
 iun1 = getun (400,900)
@@ -70,6 +75,7 @@ close (iun2)
 ! write message on screen
 write(*,'(a)')' Swap normal completion!'
 close(logf)
+call log_close()
 call CloseTempFil
 Call Exit(100)
 

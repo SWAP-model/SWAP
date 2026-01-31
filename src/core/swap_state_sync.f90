@@ -228,7 +228,8 @@ contains
         integer, intent(in) :: n_nod, n_lay
         integer :: i
         
-        ! Note: Arrays must be allocated in state before calling this
+        call log_debug('soil_sync', 'Starting soil_state_from_variables')
+        
         ! Primary state variables (node-based)
         if (allocated(sstate%h) .and. n_nod > 0) then
             do i = 1, min(n_nod, size(sstate%h))

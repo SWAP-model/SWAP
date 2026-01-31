@@ -8,6 +8,7 @@
 ! ----------------------------------------------------------------------
      use doln
       use Variables
+      use swap_log, only: log_debug, log_info, to_str
       implicit none
 
 ! --- local variables
@@ -20,6 +21,7 @@
       case (1)
 
 ! === initialize Soilwater rate/state variables ========================
+      call log_debug('soilwater', 'Task 1: Initializing soil water state')
 
 ! --- initialize miscellaneous
       hatm = -2.75d+05
@@ -223,6 +225,10 @@
 
 ! --- initial groundwater level
       call calcgwl ()
+
+      call log_info('soilwater', 'Soil state initialized: gwl=' // to_str(real(gwl,4)) // &
+                    ' cm, numnod=' // to_str(numnod) // ', numlay=' // to_str(numlay) // &
+                    ', volini=' // to_str(real(volini,4)) // ' cm')
 
       return
 

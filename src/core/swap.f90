@@ -72,6 +72,7 @@ use variables, only : flyearstart, fldaystart, flswapshared, flsurfacewater, flm
 
 use tillage,   only : DoTillage
 use swap_exchange
+use swap_log, only: log_info, to_str
 implicit none
 
 ! global
@@ -151,6 +152,8 @@ if (iTask == 1) then
 
 !  Specific for exchange when called as DLL
    if (iCaller /= 0) call handle_exchange(11, flError)
+
+   call log_info('swap', 'Initialization complete for project: ' // trim(project))
 
    return
 end if
@@ -348,6 +351,8 @@ if (iTask == 3) then
 
 !  Specific for exchange when called as DLL
    if (iCaller /= 0) call handle_exchange(31, flError)
+
+   call log_info('swap', 'Simulation complete for project: ' // trim(project))
 
    return
 end if

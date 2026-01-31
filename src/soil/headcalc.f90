@@ -8,6 +8,7 @@
 !                          and conductivities for next time step
 ! ----------------------------------------------------------------------
       use variables
+      use swap_log, only: log_debug, log_info, log_warn, to_str
       implicit none
 
 ! ----------------------------------------------------------------------

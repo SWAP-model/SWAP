@@ -13,6 +13,7 @@
 ! ----------------------------------------------------------------------
       use variables, only: disnod,logf,swscre,swbotb,flmacropore,numnod,gwlinp,h,z,pond,t1900,  &
                            gwl,nodgwl,bpegwl,npegwl,pegwl,nodgwlflcpzo,gwlflcpzo,CritUndSatVol
+      use swap_log, only: log_debug, to_str
 
       implicit none
 ! --- global
