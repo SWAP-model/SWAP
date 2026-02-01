@@ -280,6 +280,30 @@ executable('test_drainage_state', drainage_state_test_sources,
     install: false
 )
 
+# Build solute state test (tests solute_state_t)
+solute_state_test_sources = [
+    'src/core/swap_log.f90',
+    'src/core/swap_state_mod.f90',
+    'tests/unit/solute/test_solute_state.f90',
+]
+
+executable('test_solute_state', solute_state_test_sources,
+    include_directories: src_inc,
+    install: false
+)
+
+# Build heat state test (tests heat_state_t)
+heat_state_test_sources = [
+    'src/core/swap_log.f90',
+    'src/core/swap_state_mod.f90',
+    'tests/unit/heat/test_heat_state.f90',
+]
+
+executable('test_heat_state', heat_state_test_sources,
+    include_directories: src_inc,
+    install: false
+)
+
 # Build state sync test (tests SAVE variable migration)
 state_sync_test_sources = [
     'src/core/swap_log.f90',

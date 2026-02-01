@@ -14,7 +14,7 @@
 ! ----------------------------------------------------------------------
 ! --- local
       integer   i,j, itry,  MaxIt1, ndr, NN, iBackTr
-      real(8)   ArMpSs, dFdhL(macp), dFdhM(macp), dFdhU(macp), difh(macp)
+      real(8)   dFdhL(macp), dFdhM(macp), dFdhU(macp), difh(macp)
       real(8)   F(macp), factor, Fmax, QMpLatSsSav,qv(macp+1)
       real(8)   factmax, sink(macp), source(macp), sum, sum1, sumold, deviat
       real(8)   hold(macp)

@@ -16,7 +16,7 @@
 
 ! ----------------------------------------------------------------------
 ! --- local variables
-      real(8) ArMpSs,h0,hcomean,k1Atm,p1,p2,p2Mp,q1,RsRoMp
+      real(8) h0,hcomean,k1Atm,p1,p2,p2Mp,q1,RsRoMp
       
       ! Hydraulic conductivity for complete frozen soils (constant)
       real(8), parameter :: hconode_vsmall = 1.0d-10

@@ -736,6 +736,13 @@ module swap_state_mod
     ! Solute Transport State
     ! ===========================================================================
     type :: solute_state_t
+        ! Configuration switches
+        integer :: swsolu = 0                  ! Switch for solute transport simulation
+        integer :: swsp = 0                    ! Switch for sorption simulation
+        integer :: swbr = 0                    ! Switch for breakthrough curve
+        integer :: swbotbc = 1                 ! Switch for bottom BC
+        integer :: nconc = 0                   ! Number of initial concentrations
+        
         ! Concentrations
         real(8), allocatable :: cml(:)         ! Mobile concentration (mg/cm3)
         real(8), allocatable :: cmsy(:)        ! Total concentration
@@ -745,6 +752,7 @@ module swap_state_mod
         real(8) :: cseep = 0.0d0               ! Seepage concentration
         real(8) :: cpre = 0.0d0                ! Precipitation concentration
         real(8) :: cirr = 0.0d0                ! Irrigation concentration
+        real(8) :: cref = 1.0d0                ! Reference concentration for Freundlich
         
         ! Cumulative amounts
         real(8) :: sampro = 0.0d0              ! Total in profile
@@ -779,11 +787,47 @@ module swap_state_mod
         real(8) :: icAgeSur = 0.0d0
         real(8), allocatable :: icAgeDra(:)
         
+        ! Age tracer boundary/pond state (persists between timesteps)
+        real(8) :: Ageirr = 0.0d0              ! Age of irrigation water
+        real(8) :: Agedrain = 0.0d0            ! Age of drainage water
+        real(8) :: Agepre = 0.0d0              ! Age of precipitation
+        real(8) :: Agepond = 0.0d0             ! Age of ponding water
+        real(8) :: Agepondm1 = 0.0d0           ! Age of ponding (prev timestep)
+        real(8) :: icAgetopupw = 0.0d0         ! Incremental age leaving top
+        real(8) :: icAgetopdwn = 0.0d0         ! Incremental age entering top
+        real(8) :: ArMpSs = 0.0d0              ! Area fraction macropores at surface
+        
+        ! Transport parameters
+        real(8) :: ddif = 0.0d0                ! Molecular diffusion coefficient
+        real(8) :: frexp = 1.0d0               ! Freundlich exponent
+        real(8) :: tscf = 1.0d0                ! Relative uptake by roots
+        real(8) :: dtsolu = 0.0d0              ! Max time step for solute
+        
+        ! Decomposition parameters
+        real(8) :: gampar = 0.0d0              ! Temp reduction factor
+        real(8) :: bexp = 0.7d0                ! Dryness exponent
+        real(8) :: rtheta = 0.01d0             ! Min theta for decomposition
+        real(8) :: decsat = 0.0d0              ! Decomposition in aquifer
+        
+        ! Aquifer parameters for breakthrough
+        real(8) :: daquif = 0.0d0              ! Aquifer thickness
+        real(8) :: poros = 0.0d0               ! Aquifer porosity
+        real(8) :: kfsat = 0.0d0               ! Adsorption in aquifer
+        
+        ! Salt stress parameters
+        real(8) :: salthead = 0.0d0            ! Salt to osmotic head
+        real(8) :: saltmax = 0.0d0             ! Threshold concentration
+        real(8) :: saltslope = 0.0d0           ! Uptake decline
+        
         ! Parameters per layer
         real(8), allocatable :: ldis(:)        ! Dispersion length
         real(8), allocatable :: kf(:)          ! Freundlich coefficient
         real(8), allocatable :: decpot(:)      ! Potential decomposition rate
         real(8), allocatable :: fdepth(:)      ! Depth reduction factor
+        
+        ! Tables
+        real(8), allocatable :: cseeptab(:)    ! Seepage concentration table
+        real(8), allocatable :: zc(:)          ! Depths for initial concentrations
         
         ! Flags
         logical :: flsolute = .false.
@@ -794,6 +838,14 @@ module swap_state_mod
     ! Heat Flow State
     ! ===========================================================================
     type :: heat_state_t
+        ! Configuration switches
+        integer :: swhea = 0                   ! Switch for heat flow simulation
+        integer :: swcalt = 1                  ! Method: 1=analytical, 2=numerical
+        integer :: swtopbhea = 1               ! Top BC: 1=air temp, 2=measured
+        integer :: swbotbhea = 1               ! Bottom BC: 1=zero flux, 2=prescribed
+        integer :: swfrost = 0                 ! Switch for frost reduction
+        integer :: nheat = 0                   ! Number of initial temperatures
+        
         ! Soil temperatures
         real(8), allocatable :: tsoil(:)       ! Temperature per compartment (°C)
         real(8) :: tetop = 0.0d0               ! Top temperature
@@ -802,6 +854,9 @@ module swap_state_mod
         ! Thermal properties per compartment
         real(8), allocatable :: heacap(:)      ! Heat capacity (J/cm3/K)
         real(8), allocatable :: heacon(:)      ! Heat conductivity (J/cm/K/d)
+        
+        ! Frost reduction factor per compartment
+        real(8), allocatable :: rfcp(:)        ! Reduction factor for frozen conditions
         
         ! Soil composition per compartment
         real(8), allocatable :: fclay(:)       ! Clay content
@@ -819,6 +874,11 @@ module swap_state_mod
         real(8) :: tampli = 0.0d0              ! Surface temperature amplitude
         real(8) :: timref = 0.0d0              ! Time of max temperature
         real(8) :: ddamp = 0.0d0               ! Damping depth
+        
+        ! Boundary condition tables
+        real(8), allocatable :: tembtab(:)     ! Bottom temperature table
+        real(8), allocatable :: temtoptab(:)   ! Top temperature table
+        real(8), allocatable :: zh(:)          ! Depths for initial temperatures
         
         ! Frost
         real(8) :: zfrosttop = 0.0d0           ! Top of frost layer
@@ -1317,10 +1377,20 @@ contains
         allocate(solute%decpot(numlay))
         allocate(solute%fdepth(numlay))
         allocate(solute%icAgeDra(nrlevs))
+        allocate(solute%cseeptab(2*MABBC))
+        allocate(solute%zc(numnod))
         
         solute%cml = 0.0d0
         solute%cmsy = 0.0d0
         solute%ldis = 0.0d0
+        solute%kf = 0.0d0
+        solute%decpot = 0.0d0
+        solute%fdepth = 1.0d0
+        solute%icAgeDra = 0.0d0
+        solute%cseeptab = 0.0d0
+        solute%zc = 0.0d0
+        
+        call log_debug('solute_init', 'Allocated solute arrays for ' // to_str(numnod) // ' nodes')
         
     end subroutine solute_state_init
     
@@ -1331,6 +1401,7 @@ contains
         allocate(heat%tsoil(numnod))
         allocate(heat%heacap(numnod))
         allocate(heat%heacon(numnod))
+        allocate(heat%rfcp(numnod))
         allocate(heat%fclay(numnod))
         allocate(heat%forg(numnod))
         allocate(heat%fquartz(numnod))
@@ -1338,10 +1409,22 @@ contains
         allocate(heat%psand(numlay))
         allocate(heat%psilt(numlay))
         allocate(heat%orgmat(numlay))
+        allocate(heat%tembtab(2*MABBC))
+        allocate(heat%temtoptab(2*MABBC))
+        allocate(heat%zh(numnod))
         
         heat%tsoil = 10.0d0  ! Default temperature
         heat%heacap = 0.0d0
         heat%heacon = 0.0d0
+        heat%rfcp = 1.0d0    ! No reduction by default
+        heat%fclay = 0.0d0
+        heat%forg = 0.0d0
+        heat%fquartz = 0.0d0
+        heat%tembtab = 0.0d0
+        heat%temtoptab = 0.0d0
+        heat%zh = 0.0d0
+        
+        call log_debug('heat_init', 'Allocated heat arrays for ' // to_str(numnod) // ' nodes')
         
     end subroutine heat_state_init
     
@@ -1507,6 +1590,43 @@ contains
         
     end subroutine boundary_state_finalize
     
+    !> @brief Finalize solute state (deallocate arrays)
+    subroutine solute_state_finalize(solute)
+        type(solute_state_t), intent(inout) :: solute
+        
+        if (allocated(solute%cml)) deallocate(solute%cml)
+        if (allocated(solute%cmsy)) deallocate(solute%cmsy)
+        if (allocated(solute%icAgeDra)) deallocate(solute%icAgeDra)
+        if (allocated(solute%ldis)) deallocate(solute%ldis)
+        if (allocated(solute%kf)) deallocate(solute%kf)
+        if (allocated(solute%decpot)) deallocate(solute%decpot)
+        if (allocated(solute%fdepth)) deallocate(solute%fdepth)
+        if (allocated(solute%cseeptab)) deallocate(solute%cseeptab)
+        if (allocated(solute%zc)) deallocate(solute%zc)
+        
+    end subroutine solute_state_finalize
+    
+    !> @brief Finalize heat state (deallocate arrays)
+    subroutine heat_state_finalize(heat)
+        type(heat_state_t), intent(inout) :: heat
+        
+        if (allocated(heat%tsoil)) deallocate(heat%tsoil)
+        if (allocated(heat%heacap)) deallocate(heat%heacap)
+        if (allocated(heat%heacon)) deallocate(heat%heacon)
+        if (allocated(heat%rfcp)) deallocate(heat%rfcp)
+        if (allocated(heat%fclay)) deallocate(heat%fclay)
+        if (allocated(heat%forg)) deallocate(heat%forg)
+        if (allocated(heat%fquartz)) deallocate(heat%fquartz)
+        if (allocated(heat%pclay)) deallocate(heat%pclay)
+        if (allocated(heat%psand)) deallocate(heat%psand)
+        if (allocated(heat%psilt)) deallocate(heat%psilt)
+        if (allocated(heat%orgmat)) deallocate(heat%orgmat)
+        if (allocated(heat%tembtab)) deallocate(heat%tembtab)
+        if (allocated(heat%temtoptab)) deallocate(heat%temtoptab)
+        if (allocated(heat%zh)) deallocate(heat%zh)
+        
+    end subroutine heat_state_finalize
+    
     !> @brief Finalize (deallocate) SWAP state
     !> @param state The state to finalize
     subroutine swap_state_finalize(state)
@@ -1516,6 +1636,8 @@ contains
         call drain_state_finalize(state%drain)
         call surfacewater_state_finalize(state%surfwater)
         call boundary_state_finalize(state%boundary)
+        call solute_state_finalize(state%solute)
+        call heat_state_finalize(state%heat)
         
         state%initialized = .false.
         

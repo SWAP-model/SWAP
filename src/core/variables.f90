@@ -973,6 +973,16 @@
       logical   flsolute           ! Flag indicating simulation of solute transport
       logical   flAgeTracer        ! Flag indicating simulation of Ageing (groundwater age)
 
+! --- age tracer state variables (moved from local SAVE in AgeTracer subroutine)
+      real(8)   Ageirr             ! Age of irrigation water (d)
+      real(8)   Agedrain           ! Age of drainage water (d)
+      real(8)   Agepre             ! Age of precipitation (d)
+      real(8)   Agepond            ! Age of ponding water (d)
+      real(8)   Agepondm1          ! Age of ponding water previous timestep (d)
+      real(8)   icAgetopupw        ! Incremental age leaving top compartment upward (d)
+      real(8)   icAgetopdwn        ! Incremental age entering top compartment downward (d)
+      real(8)   ArMpSs             ! Area fraction of macropores at soil surface (-)
+
 ! --- macropore Input parameters
       integer NumSbDm              ! Number of Subdomains in IC domain (-)
       integer SwDarcy              ! Switch for eliminating Darcy flow unsaturated zone

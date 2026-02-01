@@ -7,24 +7,27 @@
 !     purpose            : calculation of solute concentrations
 ! ----------------------------------------------------------------------
       use Variables
+      use swap_log, only: log_debug, to_str
       implicit none
 
 !     local variables
       integer level,i,task
       real(8) cmlav,ftemp,ftheta,decact,cfluxt,cfluxb
-      real(8) cdrtot,ctrans,crot,dispr,old,dummy,rer,vpore
+      real(8) cdrtot,ctrans,crot,dispr,old,dummy,vpore
       real(8) isqdra,afgen,tab(mabbc*2)
-      real(8) tcumsol,vsmall
-      real(8) ArMpSs
+      real(8) tcumsol
       logical differ
-!     some local constants (to save)
-      real(8), dimension(macp), save :: thetav, diffus, dispr1, vpore2, ddiffwcs, bdenskf, bdenskfcref, bdenskfsatporos, decpotfdepth
+!     work arrays for intermediate calculations (recomputed each timestep)
+      real(8), dimension(macp) :: thetav, diffus, dispr1, vpore2, ddiffwcs, bdenskf, bdenskfcref, bdenskfsatporos, decpotfdepth
       
-      parameter (rer    = 1.d-3)
-      parameter (vsmall = 1.d-15)
+      ! Small constants for numerical stability
+      real(8), parameter :: rer = 1.0d-3
+      real(8), parameter :: vsmall = 1.0d-15
 
 ! ----------------------------------------------------------------------
 
+      call log_debug('solute', 'Entering solute task=' // to_str(task))
+      
       select case (task)
       case (1)
 
@@ -293,26 +296,21 @@
 
 !     local variables
       integer level,i
-      real(8) ArMpSs
       real(8) Agemlav,thetav,Agefluxt,Agefluxb
       real(8) Agedrtot,Agerot,dispr,diffus,dummy
       real(8) vpore,isqdra,afgen,tab(mabbc*2)
       real(8) tcumsol
 ! 
-      real(8) Ageirr,Agedrain,Agepre
 !      real(8) Ageevp
       real(8) Ageml(macp)    ! Array with age mass solute concentration (M/L3 water) 
       real(8) Agemsy(macp)   ! Array with dissolved solute concentration (M/L3 soil volume) 
       real(8) Agesurf
-      real(8) Agepond
-      real(8) Agepondm1
       real(8) AgeProd
       real(8) sum0,sum1,deltaz,zzbot,zztop
-      real(8) icAgeTopupw        ! Incremental (over output interval) age (d) of groundwater leaving top comp.
-      real(8) icAgeTopdwn        ! Incremental (over output interval) age (d) of groundwater entering top comp.
 
-      save  Ageirr,Agedrain,Agepre,Agepond,Agepondm1
-      save  icAgetopupw,icAgetopdwn,ArMpSs
+! Note: Ageirr, Agedrain, Agepre, Agepond, Agepondm1, icAgetopupw, icAgetopdwn, ArMpSs
+! are now module-level variables in variables.f90 (synced via state%solute)
+! This enables multi-instance execution
 
 
 

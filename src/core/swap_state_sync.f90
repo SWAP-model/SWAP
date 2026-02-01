@@ -52,6 +52,10 @@ module swap_state_sync
     public :: surfacewater_state_to_variables
     public :: boundary_state_from_variables
     public :: boundary_state_to_variables
+    public :: solute_state_from_variables
+    public :: solute_state_to_variables
+    public :: heat_state_from_variables
+    public :: heat_state_to_variables
 
 contains
 
@@ -70,6 +74,8 @@ contains
         call irrigation_state_from_variables(state%irrig)
         call drainage_state_from_variables(state%drain, state%nrlevs, state%numnod)
         call boundary_state_from_variables(state%boundary, MADAY)
+        call solute_state_from_variables(state%solute, state%numnod, state%numlay, state%nrlevs)
+        call heat_state_from_variables(state%heat, state%numnod, state%numlay)
         
         call log_info('sync', 'State synchronized from variables')
     end subroutine state_from_variables
@@ -89,6 +95,8 @@ contains
         call irrigation_state_to_variables(state%irrig)
         call drainage_state_to_variables(state%drain, state%nrlevs)
         call boundary_state_to_variables(state%boundary, MADAY)
+        call solute_state_to_variables(state%solute, state%numnod, state%numlay, state%nrlevs)
+        call heat_state_to_variables(state%heat, state%numnod, state%numlay)
         
         call log_info('sync', 'Variables synchronized from state')
     end subroutine state_to_variables
@@ -1350,5 +1358,449 @@ contains
         
         call log_debug('sync', 'boundary_state_to_variables: swbotb=' // to_str(bstate%swbotb))
     end subroutine boundary_state_to_variables
+
+    ! ==========================================================================
+    ! Solute State Synchronization
+    ! ==========================================================================
+    subroutine solute_state_from_variables(solu, n_nod, n_lay, n_lev)
+        type(solute_state_t), intent(inout) :: solu
+        integer, intent(in) :: n_nod, n_lay, n_lev
+        integer :: i
+        
+        ! Configuration switches
+        solu%swsolu = swsolu
+        solu%swsp = swsp
+        solu%swbr = swbr
+        solu%swbotbc = swbotbc
+        solu%nconc = nconc
+        
+        ! Concentrations - arrays
+        if (allocated(solu%cml) .and. n_nod > 0) then
+            do i = 1, min(n_nod, size(solu%cml))
+                solu%cml(i) = cml(i)
+                solu%cmsy(i) = cmsy(i)
+            end do
+        end if
+        
+        ! Concentrations - scalars
+        solu%cpond = cpond
+        solu%csurf = csurf
+        solu%cdrain = cdrain
+        solu%cseep = cseep
+        solu%cpre = cpre
+        solu%cirr = cirr
+        solu%cref = cref
+        
+        ! Cumulative amounts
+        solu%sampro = sampro
+        solu%samini = samini
+        solu%sqbot = sqbot
+        solu%sqdra = sqdra
+        solu%sqprec = sqprec
+        solu%sqirrig = sqirrig
+        solu%sqsur = sqsur
+        solu%sqrap = sqrap
+        solu%dectot = dectot
+        solu%rottot = rottot
+        solu%solbal = solbal
+        
+        ! Intermediate amounts
+        solu%imsqbot = imsqbot
+        solu%imsqdra = imsqdra
+        solu%imsqprec = imsqprec
+        solu%imsqirrig = imsqirrig
+        solu%imdectot = imdectot
+        solu%imrottot = imrottot
+        solu%isqbot = isqbot
+        solu%isqtop = isqtop
+        
+        ! Macropore solute
+        solu%samcra = samcra
+        
+        ! Age tracer
+        solu%AgeGwl1m = AgeGwl1m
+        solu%icAgeBot = icAgeBot
+        solu%icAgeRot = icAgeRot
+        solu%icAgeSur = icAgeSur
+        if (allocated(solu%icAgeDra) .and. n_lev > 0) then
+            do i = 1, min(n_lev, size(solu%icAgeDra))
+                solu%icAgeDra(i) = icAgeDra(i)
+            end do
+        end if
+        
+        ! Transport parameters
+        solu%ddif = ddif
+        solu%frexp = frexp
+        solu%tscf = tscf
+        solu%dtsolu = dtsolu
+        
+        ! Decomposition parameters
+        solu%gampar = gampar
+        solu%bexp = bexp
+        solu%rtheta = rtheta
+        solu%decsat = decsat
+        
+        ! Aquifer parameters
+        solu%daquif = daquif
+        solu%poros = poros
+        solu%kfsat = kfsat
+        
+        ! Salt stress parameters
+        solu%salthead = salthead
+        solu%saltmax = saltmax
+        solu%saltslope = saltslope
+        
+        ! Parameters per layer
+        if (allocated(solu%ldis) .and. n_lay > 0) then
+            do i = 1, min(n_lay, size(solu%ldis))
+                solu%ldis(i) = ldis(i)
+                solu%kf(i) = kf(i)
+                solu%decpot(i) = decpot(i)
+                solu%fdepth(i) = fdepth(i)
+            end do
+        end if
+        
+        ! Tables
+        if (allocated(solu%cseeptab)) then
+            do i = 1, min(size(solu%cseeptab), size(cseeptab))
+                solu%cseeptab(i) = cseeptab(i)
+            end do
+        end if
+        if (allocated(solu%zc) .and. n_nod > 0) then
+            do i = 1, min(n_nod, size(solu%zc))
+                solu%zc(i) = zc(i)
+            end do
+        end if
+        
+        ! Flags
+        solu%flsolute = flsolute
+        solu%flAgeTracer = flAgeTracer
+        
+        ! Age tracer boundary/pond state
+        solu%Ageirr = Ageirr
+        solu%Agedrain = Agedrain
+        solu%Agepre = Agepre
+        solu%Agepond = Agepond
+        solu%Agepondm1 = Agepondm1
+        solu%icAgetopupw = icAgetopupw
+        solu%icAgetopdwn = icAgetopdwn
+        solu%ArMpSs = ArMpSs
+        
+        call log_debug('sync', 'solute_state_from_variables: swsolu=' // to_str(solu%swsolu))
+    end subroutine solute_state_from_variables
+    
+    subroutine solute_state_to_variables(solu, n_nod, n_lay, n_lev)
+        type(solute_state_t), intent(in) :: solu
+        integer, intent(in) :: n_nod, n_lay, n_lev
+        integer :: i
+        
+        ! Configuration switches
+        swsolu = solu%swsolu
+        swsp = solu%swsp
+        swbr = solu%swbr
+        swbotbc = solu%swbotbc
+        nconc = solu%nconc
+        
+        ! Concentrations - arrays
+        if (allocated(solu%cml) .and. n_nod > 0) then
+            do i = 1, min(n_nod, size(solu%cml))
+                cml(i) = solu%cml(i)
+                cmsy(i) = solu%cmsy(i)
+            end do
+        end if
+        
+        ! Concentrations - scalars
+        cpond = solu%cpond
+        csurf = solu%csurf
+        cdrain = solu%cdrain
+        cseep = solu%cseep
+        cpre = solu%cpre
+        cirr = solu%cirr
+        cref = solu%cref
+        
+        ! Cumulative amounts
+        sampro = solu%sampro
+        samini = solu%samini
+        sqbot = solu%sqbot
+        sqdra = solu%sqdra
+        sqprec = solu%sqprec
+        sqirrig = solu%sqirrig
+        sqsur = solu%sqsur
+        sqrap = solu%sqrap
+        dectot = solu%dectot
+        rottot = solu%rottot
+        solbal = solu%solbal
+        
+        ! Intermediate amounts
+        imsqbot = solu%imsqbot
+        imsqdra = solu%imsqdra
+        imsqprec = solu%imsqprec
+        imsqirrig = solu%imsqirrig
+        imdectot = solu%imdectot
+        imrottot = solu%imrottot
+        isqbot = solu%isqbot
+        isqtop = solu%isqtop
+        
+        ! Macropore solute
+        samcra = solu%samcra
+        
+        ! Age tracer
+        AgeGwl1m = solu%AgeGwl1m
+        icAgeBot = solu%icAgeBot
+        icAgeRot = solu%icAgeRot
+        icAgeSur = solu%icAgeSur
+        if (allocated(solu%icAgeDra) .and. n_lev > 0) then
+            do i = 1, min(n_lev, size(solu%icAgeDra))
+                icAgeDra(i) = solu%icAgeDra(i)
+            end do
+        end if
+        
+        ! Transport parameters
+        ddif = solu%ddif
+        frexp = solu%frexp
+        tscf = solu%tscf
+        dtsolu = solu%dtsolu
+        
+        ! Decomposition parameters
+        gampar = solu%gampar
+        bexp = solu%bexp
+        rtheta = solu%rtheta
+        decsat = solu%decsat
+        
+        ! Aquifer parameters
+        daquif = solu%daquif
+        poros = solu%poros
+        kfsat = solu%kfsat
+        
+        ! Salt stress parameters
+        salthead = solu%salthead
+        saltmax = solu%saltmax
+        saltslope = solu%saltslope
+        
+        ! Parameters per layer
+        if (allocated(solu%ldis) .and. n_lay > 0) then
+            do i = 1, min(n_lay, size(solu%ldis))
+                ldis(i) = solu%ldis(i)
+                kf(i) = solu%kf(i)
+                decpot(i) = solu%decpot(i)
+                fdepth(i) = solu%fdepth(i)
+            end do
+        end if
+        
+        ! Tables
+        if (allocated(solu%cseeptab)) then
+            do i = 1, min(size(solu%cseeptab), size(cseeptab))
+                cseeptab(i) = solu%cseeptab(i)
+            end do
+        end if
+        if (allocated(solu%zc) .and. n_nod > 0) then
+            do i = 1, min(n_nod, size(solu%zc))
+                zc(i) = solu%zc(i)
+            end do
+        end if
+        
+        ! Flags
+        flsolute = solu%flsolute
+        flAgeTracer = solu%flAgeTracer
+        
+        ! Age tracer boundary/pond state
+        Ageirr = solu%Ageirr
+        Agedrain = solu%Agedrain
+        Agepre = solu%Agepre
+        Agepond = solu%Agepond
+        Agepondm1 = solu%Agepondm1
+        icAgetopupw = solu%icAgetopupw
+        icAgetopdwn = solu%icAgetopdwn
+        ArMpSs = solu%ArMpSs
+        
+        call log_debug('sync', 'solute_state_to_variables: swsolu=' // to_str(solu%swsolu))
+    end subroutine solute_state_to_variables
+
+    ! ==========================================================================
+    ! Heat State Synchronization
+    ! ==========================================================================
+    subroutine heat_state_from_variables(hstate, n_nod, n_lay)
+        type(heat_state_t), intent(inout) :: hstate
+        integer, intent(in) :: n_nod, n_lay
+        integer :: i
+        
+        ! Configuration switches
+        hstate%swhea = swhea
+        hstate%swcalt = swcalt
+        hstate%swtopbhea = swtopbhea
+        hstate%swbotbhea = swbotbhea
+        hstate%swfrost = swfrost
+        hstate%nheat = nheat
+        
+        ! Soil temperatures
+        if (allocated(hstate%tsoil) .and. n_nod > 0) then
+            do i = 1, min(n_nod, size(hstate%tsoil))
+                hstate%tsoil(i) = tsoil(i)
+            end do
+        end if
+        hstate%tetop = tetop
+        hstate%tebot = tebot
+        
+        ! Thermal properties per compartment
+        if (allocated(hstate%heacap) .and. n_nod > 0) then
+            do i = 1, min(n_nod, size(hstate%heacap))
+                hstate%heacap(i) = heacap(i)
+                hstate%heacon(i) = heacon(i)
+            end do
+        end if
+        
+        ! Frost reduction factor
+        if (allocated(hstate%rfcp) .and. n_nod > 0) then
+            do i = 1, min(n_nod, size(hstate%rfcp))
+                hstate%rfcp(i) = rfcp(i)
+            end do
+        end if
+        
+        ! Soil composition per compartment
+        if (allocated(hstate%fclay) .and. n_nod > 0) then
+            do i = 1, min(n_nod, size(hstate%fclay))
+                hstate%fclay(i) = fclay(i)
+                hstate%forg(i) = forg(i)
+                hstate%fquartz(i) = fquartz(i)
+            end do
+        end if
+        
+        ! Soil composition per layer
+        if (allocated(hstate%pclay) .and. n_lay > 0) then
+            do i = 1, min(n_lay, size(hstate%pclay))
+                hstate%pclay(i) = pclay(i)
+                hstate%psand(i) = psand(i)
+                hstate%psilt(i) = psilt(i)
+                hstate%orgmat(i) = orgmat(i)
+            end do
+        end if
+        
+        ! Boundary conditions
+        hstate%tmean = tmean
+        hstate%tampli = tampli
+        hstate%timref = timref
+        hstate%ddamp = ddamp
+        
+        ! Boundary condition tables
+        if (allocated(hstate%tembtab)) then
+            do i = 1, min(size(hstate%tembtab), size(tembtab))
+                hstate%tembtab(i) = tembtab(i)
+            end do
+        end if
+        if (allocated(hstate%temtoptab)) then
+            do i = 1, min(size(hstate%temtoptab), size(temtoptab))
+                hstate%temtoptab(i) = temtoptab(i)
+            end do
+        end if
+        if (allocated(hstate%zh) .and. n_nod > 0) then
+            do i = 1, min(n_nod, size(hstate%zh))
+                hstate%zh(i) = zh(i)
+            end do
+        end if
+        
+        ! Frost
+        hstate%zfrosttop = zfrosttop
+        hstate%zfrostbot = zfrostbot
+        hstate%tfroststa = tfroststa
+        hstate%tfrostend = tfrostend
+        hstate%nodfrostbot = nodfrostbot
+        
+        ! Flags
+        hstate%fltemperature = fltemperature
+        
+        call log_debug('sync', 'heat_state_from_variables: swhea=' // to_str(hstate%swhea))
+    end subroutine heat_state_from_variables
+    
+    subroutine heat_state_to_variables(hstate, n_nod, n_lay)
+        type(heat_state_t), intent(in) :: hstate
+        integer, intent(in) :: n_nod, n_lay
+        integer :: i
+        
+        ! Configuration switches
+        swhea = hstate%swhea
+        swcalt = hstate%swcalt
+        swtopbhea = hstate%swtopbhea
+        swbotbhea = hstate%swbotbhea
+        swfrost = hstate%swfrost
+        nheat = hstate%nheat
+        
+        ! Soil temperatures
+        if (allocated(hstate%tsoil) .and. n_nod > 0) then
+            do i = 1, min(n_nod, size(hstate%tsoil))
+                tsoil(i) = hstate%tsoil(i)
+            end do
+        end if
+        tetop = hstate%tetop
+        tebot = hstate%tebot
+        
+        ! Thermal properties per compartment
+        if (allocated(hstate%heacap) .and. n_nod > 0) then
+            do i = 1, min(n_nod, size(hstate%heacap))
+                heacap(i) = hstate%heacap(i)
+                heacon(i) = hstate%heacon(i)
+            end do
+        end if
+        
+        ! Frost reduction factor
+        if (allocated(hstate%rfcp) .and. n_nod > 0) then
+            do i = 1, min(n_nod, size(hstate%rfcp))
+                rfcp(i) = hstate%rfcp(i)
+            end do
+        end if
+        
+        ! Soil composition per compartment
+        if (allocated(hstate%fclay) .and. n_nod > 0) then
+            do i = 1, min(n_nod, size(hstate%fclay))
+                fclay(i) = hstate%fclay(i)
+                forg(i) = hstate%forg(i)
+                fquartz(i) = hstate%fquartz(i)
+            end do
+        end if
+        
+        ! Soil composition per layer
+        if (allocated(hstate%pclay) .and. n_lay > 0) then
+            do i = 1, min(n_lay, size(hstate%pclay))
+                pclay(i) = hstate%pclay(i)
+                psand(i) = hstate%psand(i)
+                psilt(i) = hstate%psilt(i)
+                orgmat(i) = hstate%orgmat(i)
+            end do
+        end if
+        
+        ! Boundary conditions
+        tmean = hstate%tmean
+        tampli = hstate%tampli
+        timref = hstate%timref
+        ddamp = hstate%ddamp
+        
+        ! Boundary condition tables
+        if (allocated(hstate%tembtab)) then
+            do i = 1, min(size(hstate%tembtab), size(tembtab))
+                tembtab(i) = hstate%tembtab(i)
+            end do
+        end if
+        if (allocated(hstate%temtoptab)) then
+            do i = 1, min(size(hstate%temtoptab), size(temtoptab))
+                temtoptab(i) = hstate%temtoptab(i)
+            end do
+        end if
+        if (allocated(hstate%zh) .and. n_nod > 0) then
+            do i = 1, min(n_nod, size(hstate%zh))
+                zh(i) = hstate%zh(i)
+            end do
+        end if
+        
+        ! Frost
+        zfrosttop = hstate%zfrosttop
+        zfrostbot = hstate%zfrostbot
+        tfroststa = hstate%tfroststa
+        tfrostend = hstate%tfrostend
+        nodfrostbot = hstate%nodfrostbot
+        
+        ! Flags
+        fltemperature = hstate%fltemperature
+        
+        call log_debug('sync', 'heat_state_to_variables: swhea=' // to_str(hstate%swhea))
+    end subroutine heat_state_to_variables
 
 end module swap_state_sync

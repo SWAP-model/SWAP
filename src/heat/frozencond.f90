@@ -10,6 +10,7 @@
 ! ----------------------------------------------------------------------
 ! global
       use variables
+      use swap_log, only: log_debug, to_str
       implicit none
 
 ! local
@@ -18,6 +19,8 @@
 
 ! ----------------------------------------------------------------------
 
+      call log_debug('frozencond', 'Entering FrozenCond')
+      
 !    reduction factor
       do node=1,numnod
          rfcp(node) = 1.0d0
@@ -88,6 +91,7 @@
 ! ----------------------------------------------------------------------
 !     Swap modules for data communication
       use variables
+      use swap_log, only: log_debug
       implicit none
 
 !     global - in
@@ -102,12 +106,16 @@
 !     local
       integer node,level,layercp(macp),leveldeepest
       real(8) volair,ksatcp(macp),cofanicp(macp),qdratot
-      real(8) hconode_vsmall,zdeepest,ztop
+      real(8) zdeepest,ztop
       logical frozencomp
-      data    hconode_vsmall  /1.0d-10/  ! Hydraulic conductivity for complete frozen soils
+      
+      ! Hydraulic conductivity for complete frozen soils (constant)
+      real(8), parameter :: hconode_vsmall = 1.0d-10
 
 ! ----------------------------------------------------------------------
 
+      call log_debug('frozenbounds', 'Entering FrozenBounds')
+      
 !     initialize qbot
       qbot = qbot_nonfrozen
 

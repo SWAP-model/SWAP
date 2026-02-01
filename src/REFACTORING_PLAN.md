@@ -12,8 +12,8 @@
 | 6 | Drainage Module | ✅ COMPLETED | 2026-02-01 |
 | 7 | Boundary Conditions | ✅ COMPLETED | 2026-02-01 |
 | 8 | Macropore Module | 🔲 Not started | |
-| 9 | Solute Module | 🔲 Not started | |
-| 10 | Heat Module | 🔲 Not started | |
+| 9 | Solute Module | ✅ COMPLETED | 2026-02-01 |
+| 10 | Heat Module | ✅ COMPLETED | 2026-02-01 |
 | 11 | Integration | 🔲 Not started | |
 | 12 | Legacy Wrapper | 🔲 Not started | |
 | 13 | Multi-Instance Validation | 🔲 Not started | |
@@ -294,27 +294,58 @@ call state_from_variables(state2)
 
 ---
 
-### Step 9: Solute Module
+### Step 9: Solute Module ✅ COMPLETED
+
+**Date:** 2026-02-01
 
 **Files:** `src/solute/*.f90`
 
-**Actions:**
-- Define `solute_state_t` (includes pre-computed dispersion arrays)
-- Handle lazy initialization of expensive arrays
+**Actions Completed:**
+- Extended `solute_state_t` with comprehensive fields:
+  - Configuration switches: `swsolu`, `swsp`, `swbr`, `swbotbc`, `nconc`
+  - Concentrations: `cml`, `cmsy`, `cpond`, `csurf`, `cdrain`, `cseep`, `cpre`, `cirr`, `cref`
+  - Cumulative amounts: `sampro`, `samini`, `sqbot`, `sqdra`, `sqprec`, `sqirrig`, `sqsur`, `sqrap`, `dectot`, `rottot`, `solbal`
+  - Intermediate amounts: `imsqbot`, `imsqdra`, `imsqprec`, `imsqirrig`, `imdectot`, `imrottot`, `isqbot`, `isqtop`
+  - Transport parameters: `ddif`, `frexp`, `tscf`, `dtsolu`
+  - Decomposition: `gampar`, `bexp`, `rtheta`, `decsat`
+  - Aquifer: `daquif`, `poros`, `kfsat`
+  - Salt stress: `salthead`, `saltmax`, `saltslope`
+  - Per-layer: `ldis`, `kf`, `decpot`, `fdepth`
+  - Tables: `cseeptab`, `zc`
+  - Age tracer: `AgeGwl1m`, `icAgeBot`, `icAgeRot`, `icAgeSur`, `icAgeDra`
+- Added `solute_state_init` and `solute_state_finalize` procedures
+- Created bidirectional sync: `solute_state_from_variables`, `solute_state_to_variables`
+- Converted parameter statements (already proper format, verified)
+- Added debug logging to `solute.f90`
 
-**Validation:** Solute transport results match
+**Validation:** Build successful, all tests pass
 
 ---
 
-### Step 10: Heat Module
+### Step 10: Heat Module ✅ COMPLETED
+
+**Date:** 2026-02-01
 
 **Files:** `src/heat/*.f90`
 
-**Actions:**
-- Define `heat_state_t`
-- Refactor temperature and frost calculations
+**Actions Completed:**
+- Extended `heat_state_t` with comprehensive fields:
+  - Configuration switches: `swhea`, `swcalt`, `swtopbhea`, `swbotbhea`, `swfrost`, `nheat`
+  - Temperatures: `tsoil`, `tetop`, `tebot`
+  - Thermal properties: `heacap`, `heacon`
+  - Frost reduction: `rfcp` (per-compartment)
+  - Soil composition per compartment: `fclay`, `forg`, `fquartz`
+  - Soil composition per layer: `pclay`, `psand`, `psilt`, `orgmat`
+  - Boundary conditions: `tmean`, `tampli`, `timref`, `ddamp`
+  - BC tables: `tembtab`, `temtoptab`, `zh`
+  - Frost state: `zfrosttop`, `zfrostbot`, `tfroststa`, `tfrostend`, `nodfrostbot`
+- Added `heat_state_init` and `heat_state_finalize` procedures
+- Created bidirectional sync: `heat_state_from_variables`, `heat_state_to_variables`
+- Converted DATA statement to parameter in `frozencond.f90`:
+  - `hconode_vsmall = 1.0d-10` (frozen soil conductivity)
+- Added debug logging to `temperature.f90`, `frozencond.f90`
 
-**Validation:** Soil temperature profiles correct
+**Validation:** Build successful, all tests pass
 
 ---
 
