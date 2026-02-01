@@ -410,3 +410,69 @@ After correctness is verified:
 - [ ] No global/module-level SAVE except in legacy wrapper
 - [ ] BMI interface uses new state types
 - [ ] External interface 100% backward compatible
+
+
+## Next Steps: Modern Fortran Libraries & ttutil Replacement
+
+**Branch:** `feature/stdlib-integration` (to be created after state refactoring is complete)
+
+### Objective
+
+Replace the legacy ttutil library with modern, well-maintained community-driven Fortran libraries to improve maintainability and reduce technical debt.
+
+### Current ttutil Usage in SWAP
+
+| Category | Functions | Call Count | Replacement |
+|----------|-----------|------------|-------------|
+| Input Parsing | `rdsdor`, `rdsinr`, `rdfdor`, `rdador`, `rdscha`, `rdinit`... | ~1,170 | **TOML-F** |
+| Error Handling | `fatalerr`, `warn` | ~325 | **stdlib_assert** / `swap_log` |
+| Date/Time | `dtdpst`, `dtardp`, `dtdpar` | ~83 | **stdlib** or custom module |
+| File I/O | `fopens`, `writehead`, `addstr` | ~88 | **stdlib_io** |
+| String Ops | `upperc`, `words` | ~15 | **stdlib_ascii** / **stdlib_strings** |
+
+### Recommended Libraries
+
+1. **Fortran-stdlib** (fortran-lang/stdlib)
+   - Provides: strings, sorting, IO, assertions, hashmaps, statistics
+   - Supports Intel Fortran 2024.1+
+   - Build: Meson subproject
+
+2. **TOML-F** (toml-f/toml-f)
+   - Replace `.swp` format with `.toml` configuration files
+   - Human-readable, IDE-friendly, built-in validation
+   - Already used in swap-mf6 project
+
+3. **datetime-fortran** (wavebitscientific/datetime-fortran) - optional
+   - Modern date/time handling
+   - Replaces ttutil's `dt*` functions
+
+### Migration Phases
+
+**Phase 1: Build System Setup**
+- Add stdlib as Meson subproject
+- Verify Intel Fortran compatibility
+- Create wrapper module for gradual migration
+
+**Phase 2: New Code Uses Modern Libs**
+- Use `stdlib_assert` in new/refactored code
+- Use TOML-F for any new configuration needs
+- Document patterns for team
+
+**Phase 3: Input Format Migration (major effort)**
+- Design TOML schema equivalent to `.swp` format
+- Create Python migration tool: `.swp` → `.toml`
+- Incrementally replace `rd*` calls with TOML-F reads
+- Maintain backwards compatibility with `.swp` during transition
+
+**Phase 4: Utility Replacement**
+- Replace `fatalerr`/`warn` → stdlib_assert or keep `swap_log`
+- Replace `dt*` → stdlib datetime
+- Replace `upperc`/`words` → stdlib_ascii/strings
+
+### Benefits
+
+- **Maintainability**: Community-maintained libraries with active development
+- **Modern Fortran**: Take advantage of F2008/F2018 features
+- **IDE Support**: TOML files have syntax highlighting, validation
+- **Reduced Boilerplate**: stdlib provides tested, optimized implementations
+- **Future-Proof**: Aligned with fortran-lang community standards
