@@ -256,6 +256,44 @@ executable('test_state', state_test_sources,
     install: false
 )
 
+# Build soil state sync test (tests soil_state_t structure)
+soil_state_test_sources = [
+    'src/core/swap_log.f90',
+    'src/core/swap_state_mod.f90',
+    'tests/unit/soil/test_soil_state.f90',
+]
+
+executable('test_soil_state', soil_state_test_sources,
+    include_directories: src_inc,
+    install: false
+)
+
+# Build drainage state test (tests drainage_state_t and surfacewater_state_t)
+drainage_state_test_sources = [
+    'src/core/swap_log.f90',
+    'src/core/swap_state_mod.f90',
+    'tests/unit/drainage/test_drainage_state.f90',
+]
+
+executable('test_drainage_state', drainage_state_test_sources,
+    include_directories: src_inc,
+    install: false
+)
+
+# Build state sync test (tests SAVE variable migration)
+state_sync_test_sources = [
+    'src/core/swap_log.f90',
+    'src/core/swap_state_mod.f90',
+    'src/core/variables.f90',
+    'src/core/swap_state_sync.f90',
+    'tests/unit/core/test_state_sync.f90',
+]
+
+executable('test_state_sync', state_sync_test_sources,
+    include_directories: src_inc,
+    install: false
+)
+
 # Build SWAP BMI shared library for Python (requires swap_bmi.f90)
 # Uncomment when BMI interface is implemented:
 # bmi_sources = sources + ['src/core/swap_bmi.f90']

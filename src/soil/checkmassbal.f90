@@ -12,7 +12,8 @@
 ! ---------------------------------------------------------------------
       use variables, only: DayCum,nrlevs,NumNodNew,IcTopMp,FlMacropore,outfil,pathwork,DZNew,    &
                            CritDevMasBal,ievap,igird,igrai,igSnow,inird,inrai,IPondBeg,IQInTopVrtDm1,IQInTopLatDm1,IQInTopVrtDm2, &
-                           IQInTopLatDm2,ISsnowBeg,iruno,irunon,isnrai,iSubl,pond,Ssnow,IWaSrDm1Beg,IWaSrDm2Beg,WaSrDm1,WaSrDm2
+                           IQInTopLatDm2,ISsnowBeg,iruno,irunon,isnrai,iSubl,pond,Ssnow,IWaSrDm1Beg,IWaSrDm2Beg,WaSrDm1,WaSrDm2, &
+                           dev_cmb
       implicit none
       include 'arrays.fi'
 ! -   global
@@ -23,7 +24,7 @@
       logical FlOpenFileDev
 
 ! -   local
-      integer Dev, Level, getun, ic
+      integer Level, getun, ic
       real(8) DevMasBalDm1,DevMasBalDm2, DevMasBalCmp(MaCp)
       real(8) DevMasBalPnd, DevMasBalPrf, IQExcMtxDm1
       real(8) IQExcMtxDm2,IQInTopLatDm,  IQInTopPreDm, IQOutDrRap
@@ -33,8 +34,7 @@
       logical FlWriteDevCmp(MaCp), FlWriteDev, FlWriteDevDm1 
       logical FlWriteDevDm2, FlWriteDevPnd, FlWriteDevPrf
       
-!     save values of locals
-      save    dev
+      ! SAVE removed - dev_cmb now in variables.f90 module
 
 ! ----------------------------------------------------------------------
 ! --- Checking of mass balances of sub systems per period OutPer
@@ -153,39 +153,40 @@
 
 !
 ! --- In case of deviations of mass balance open file 'xxxxx.dwb.csv'
+      ! Changes here are include renaming dev to dev_cmb and moving to variables.f90
 
       if (FlWriteDev .and. .not.FlOpenFileDev) then
          filnam = trim(pathwork)//trim(outfil)//'.dwb'
-         dev = getun (20,90)
-         call fopens(dev,filnam,'new','del')
-         write(dev,1)
-         if (FlMacropore) write(dev,2)
+         dev_cmb = getun (20,90)
+         call fopens(dev_cmb,filnam,'new','del')
+         write(dev_cmb,1)
+         if (FlMacropore) write(dev_cmb,2)
          FlOpenFileDev = .true.
       endif
 
 !   - Write deviations of water balance Top system
-      if (FlWriteDevPnd) write(dev,3) daycum, DevMasBalPnd,             &
+      if (FlWriteDevPnd) write(dev_cmb,3) daycum, DevMasBalPnd,         &
      &    igrai, igsnow, igird, irunon, isnrai, igrai-inrai,igird-inird,&
      &    isubl,ievap, iruno, inqNew(1), Pond, IPondBeg, Ssnow,         &
      &    ISsnowBeg,IQInTopPreDm, IQInTopLatDm
 
 !   - Write deviations of water balance whole Profile
-      if (FlWriteDevPrf) write(dev,4) daycum, DevMasBalPrf,             &
+      if (FlWriteDevPrf) write(dev_cmb,4) daycum, DevMasBalPrf,         &
      &    inqNew(1), inqNew(NumNodNew+1), QrotPrf, QdraPrf, WaSrPrf,    &
      &    WaSrPrfBeg, IQExcMtxDm1, IQExcMtxDm2
 
 !   - Write deviations of water balance of Individual Soil Compartments
       do ic= 1, numnodnew
-         if (FlWriteDevCmp(ic)) write(dev,5) daycum,ic,DevMasBalCmp(ic),&
+         if (FlWriteDevCmp(ic)) write(dev_cmb,5) daycum,ic,DevMasBalCmp(ic),&
      &      inqNew(ic), inqNew(ic+1), inqrotNew(ic), Qdra(ic), WaSr(ic),&
      &      WaSrBeg(ic), IQExcMtxDm1CpNew(ic), IQExcMtxDm2CpNew(ic)
       enddo
 
 !   - Write deviations of water balance Macropore Domains
-      if (FlWriteDevDm1) write(dev,6) daycum, DevMasBalDm1,             &
+      if (FlWriteDevDm1) write(dev_cmb,6) daycum, DevMasBalDm1,         &
      &   IQInTopVrtDm1, IQInTopLatDm1, IQExcMtxDm1, WaSrDm1,            &
      &   IWaSrDm1Beg, IQOutDrRap
-      if (FlWriteDevDm2) write(dev,7) daycum, DevMasBalDm2,             &
+      if (FlWriteDevDm2) write(dev_cmb,7) daycum, DevMasBalDm2,         &
      &   IQInTopVrtDm2, IQInTopLatDm2, IQExcMtxDm2, WaSrDm2,            &
      &   IWaSrDm2Beg
 !

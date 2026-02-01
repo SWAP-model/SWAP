@@ -23,8 +23,7 @@
       character(len=11) datetmp
       logical   flnonconv,flnonconv1(macp), flnonconv2(macp), flnonconv3
       logical   flunsatok(3)       ! Flag indicating the performance of the iteration process
-      logical   flwarn,flboth
-      integer   iwarn, NStep
+      logical   flboth
       integer   nodncr
       logical   flcaprise
 
@@ -49,13 +48,14 @@
       real(8) a(macp,3), a1(macp,1), b(macp), d, q1
       logical flok
 
-!     save values of local variables
-      save    flwarn,iwarn,nstep
+
+!     Note: flwarn_hc, iwarn_hc, nstep_hc moved to variables.f90 module
+!     (previously local SAVE variables - now global for multi-instance support)
 
 
       if (fldaystart) then
-         flwarn = .true.
-         iwarn = 0
+         flwarn_hc = .true.
+         iwarn_hc = 0
       endif
       call dtdpst                                                       &
      &        ('year-month-day,hour:minute:seconds',t1900,datetime)
@@ -698,17 +698,27 @@
          sumold = sum
 
          if(.not.flnonconv )then !  convergence has been reached
-        
+        !! Replaced the Nstep with the variable from the main variables.f90 file, the
+        !! build still works as before.
             if (FlMacropore) then
+               ! Debug logging for macropore convergence tracking
+               call log_debug('headcalc', 'Macropore converged: dt=' // to_str(dt) // &
+                  ', dtold=' // to_str(dtold) // ', nstep_hc=' // to_str(nstep_hc) // &
+                  ', IDecMpRat=' // to_str(IDecMpRat))
+               
                FlDecMpRat = .false.
                if (IDecMpRat.gt.0) then
-                  if (NStep.lt.10) then
-                     NStep = NStep + 1
+                  if (nstep_hc.lt.10) then
+                     nstep_hc = nstep_hc + 1
+                     call log_debug('headcalc', 'nstep_hc incremented to ' // to_str(nstep_hc))
                   endif
-                  if (dt.gt.dtold .or. NStep.gt.10) then
+                  if (dt.gt.dtold .or. nstep_hc.gt.10) then
+                     call log_debug('headcalc', 'Resetting nstep_hc: dt>dtold=' // &
+                        to_str(dt.gt.dtold) // ', nstep_hc>10=' // to_str(nstep_hc.gt.10))
                      dtold = dt
-                     NStep = 0
+                     nstep_hc = 0
                      IDecMpRat = IDecMpRat - 1
+                     call log_debug('headcalc', 'IDecMpRat decremented to ' // to_str(IDecMpRat))
                   endif
                endif
             endif
@@ -779,6 +789,9 @@
          IDecMpRat  = IDecMpRat + 1
          FlDecMpRat = .true.
          dtold = dt
+         
+         call log_debug('headcalc', 'Macropore non-convergence retry: IDecMpRat=' // &
+            to_str(IDecMpRat) // ', dt=' // to_str(dt))
 
 !         write(104,'(f10.6,i5)') t, IDecMpRat
 
@@ -786,16 +799,16 @@
 
       else
 ! ---         write warning to screen and log file
-         if (flwarn .and. iwarn.lt.5) then
-            iwarn = iwarn + 1
+         if (flwarn_hc .and. iwarn_hc.lt.5) then
+            iwarn_hc = iwarn_hc + 1
             call dtdpst                                                 &
      &        ('year-month-day,hour:minute:seconds',t1900,datetime)
             messag = ' No convergence was reached of Richards'//        &
      &        ' equation at '//datetime//                               &
      &        ' no more than 4 warnings per date - SWAP did continue !'
             call warn ('Headcalc',messag,logf,swscre)
-            if (iwarn.gt.4) then
-              flwarn = .false.  
+            if (iwarn_hc.gt.4) then
+              flwarn_hc = .false.  
             endif
          endif
 

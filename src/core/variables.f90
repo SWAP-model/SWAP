@@ -164,6 +164,12 @@
       integer   swMetFilAll        ! Switch indicating that metfil contains data for all years (limited usage)
       character(len=80) pathatm    ! Path to folder with meteorological input files
       character(len=200) rainfil   ! Name of input file with detailed rainfall intensities
+!   - atmosphere SAVE variable state (refactored from local SAVE)
+      ! real(8)   tsunrise_atm       ! Time of sunrise (fraction of day) - from meteodt.f90 ETSine
+      ! real(8)   tsunset_atm        ! Time of sunset (fraction of day) - from meteodt.f90 ETSine  
+      ! integer   nod10_cn           ! Node at -10cm for CN runoff method - from meteoday.f90 CNmethod
+      ! integer   icn_atm            ! Current position in CN time table - from meteoday.f90 CNmethod
+      ! real(8)   z10_cn             ! Depth to node 10 for CN method - from meteoday.f90 CNmethod
 !   - meteo output variables for PEARL
       real(4)   out_etr            ! Reference evapotranspiration  of current day (m/d)
       real(4)   out_hum            ! Air humidity  of current day (kPa)
@@ -360,8 +366,8 @@
       real(8)   sicact             ! amount of water stored on canopy (cm)
       real(8)   siccaplai          ! interception storage per unit of LAI (cm/LAI)
       real(8)   q10                ! Relative increase of respiration rate with temperature (/10 oC)
-      real(8)   q10_microbial      ! Relative increase in microbial respiration at temperature increase of 10 ºC [1.0..4.0 -, R]
-      real(8)   q10_root           ! Relative increase in root respiration at temperature increase of 10 ºC [1.0..4.0 -, R]
+      real(8)   q10_microbial      ! Relative increase in microbial respiration at temperature increase of 10 ï¿½C [1.0..4.0 -, R]
+      real(8)   q10_root           ! Relative increase in root respiration at temperature increase of 10 ï¿½C [1.0..4.0 -, R]
       real(8)   rdrrtb(30)         ! Array with relative death rates of roots (kg/kg/d) as function of development stage (-)
       real(8)   rdrstb(30)         ! Array with relative death rates of stems (kg/kg/d) as function of development stage (-)
       real(8)   reltr              ! relative transpiration factor that reduces crop growth (-)
@@ -386,7 +392,7 @@
       real(8)   spa                ! Specific pod area (ha/kg)
       real(8)   span               ! Life span of leaves at optimum conditions (T)
       real(8)   spec_weight_root_tissue ! Specific weight of non-airfilled root tissue [0.d0..1.d5 kg root/m3 root, R]
-      real(8)   specific_resp_humus ! Respiration rate of humus at 25 ºC [0.0..1.0 kg O2/kg C/d, R] 
+      real(8)   specific_resp_humus ! Respiration rate of humus at 25 ï¿½C [0.0..1.0 kg O2/kg C/d, R] 
       real(8)   srl                ! Specific root length [0.d0..1.d10 m root/kg root, R]      
       real(8)   ssa                ! Specific stem area (ha/kg)
       real(8)   tadw               ! Dry weight of plant minus roots of actual growth (kg/ha)
@@ -528,6 +534,10 @@
       real(8)   CritDevh2Cp        ! Convergence criterium for Richards equation: absolute difference in pressure heads (L)
       real(8)   CritDevPondDt
       logical   fldumpconvcrit     ! flag to generate additional output about convergence-warnings from subr Headcalc
+      logical   flwarn_hc          ! Headcalc warning flag (previously SAVE variable)
+      integer   iwarn_hc           ! Headcalc warning counter (previously SAVE variable)
+      integer   nstep_hc           ! Headcalc step counter (previously SAVE variable)
+      integer   dev_cmb            ! Mass balance deviation file unit (previously SAVE in checkmassbal)
       logical   flksatexm          ! flag Ksatexm variable present in input file 
       logical   fluseksatexm(macp) ! flag per node: yes/no make use of Ksatexm (Ksat examined in lab or field) extension in h-range [-2,0]
       logical   flMaxIterTime      ! flag to enable input of Maximum cputime
@@ -861,16 +871,16 @@
       real(8)   pclay(maho)        ! Array with gravimetric clay content (g/g mineral parts) for each soil layer
       real(8)   psand(maho)        ! Array with gravimetric sand content (g/g mineral parts) for each soil layer
       real(8)   psilt(maho)        ! Array with gravimetric silt content (g/g mineral parts) for each soil layer
-      real(8)   tampli             ! Amplitude of prescribed annual temperature wave (ºC) at soil surface
-      real(8)   tebot              ! Temperatures (ºC) at bottom of soil profile
-      real(8)   tembtab(mabbc*2)   ! Array with specified bottom temperature (ºC) as function of time (T)
-      real(8)   temtoptab(mabbc*2) ! Array with specified soil surface temperature (ºC) as function of time (T)
-      real(8)   tfroststa          ! Soil temperature (ºC) where reduction of water fluxes starts
-      real(8)   tfrostend          ! Soil temperature (ºC) where reduction of water fluxes ends
+      real(8)   tampli             ! Amplitude of prescribed annual temperature wave (ï¿½C) at soil surface
+      real(8)   tebot              ! Temperatures (ï¿½C) at bottom of soil profile
+      real(8)   tembtab(mabbc*2)   ! Array with specified bottom temperature (ï¿½C) as function of time (T)
+      real(8)   temtoptab(mabbc*2) ! Array with specified soil surface temperature (ï¿½C) as function of time (T)
+      real(8)   tfroststa          ! Soil temperature (ï¿½C) where reduction of water fluxes starts
+      real(8)   tfrostend          ! Soil temperature (ï¿½C) where reduction of water fluxes ends
       real(8)   timref             ! Time in the year (T) with top of prescribed sine temperature wave
-      real(8)   tmean              ! Prescribed mean annual temperature (ºC) at soil surface
-      real(8)   tsoil(macp)        ! Array with soil temperatures (ºC) for each compartment
-      real(8)   tetop              ! Temperatures (ºC) at top of soil profile (under snow cover)
+      real(8)   tmean              ! Prescribed mean annual temperature (ï¿½C) at soil surface
+      real(8)   tsoil(macp)        ! Array with soil temperatures (ï¿½C) for each compartment
+      real(8)   tetop              ! Temperatures (ï¿½C) at top of soil profile (under snow cover)
       real(8)   zh(macp)           ! Array with soil depths (L) used to specify initial soil temperatures
       real(8)   heacap(macp)       ! Array with heat capacity for all compartments (J/cm3/K)
       real(8)   heacon(macp)       ! Array with heat conductivity for all compartments (J/cm/K/d)

@@ -32,7 +32,21 @@ test-windows-surfacewater = { cmd = "cd tests/cases/6.surfacewater && cp swap_wi
 test-linux = { cmd = "cd tests/cases/1.hupselbrook && cp swap_linux.swp.template swap.swp && ./run_swap.sh" }
 test-windows = { cmd = "cd tests/cases/1.hupselbrook && cp swap_windows.swp.template swap.swp && run_swap.cmd" }
 
-regression = "python tests/regression/test_output_regression.py"
+# Unit tests for state module refactoring
+test-unit = { cmd = "./builddir/test_state && ./builddir/test_state_sync && ./builddir/test_soil_state && ./builddir/test_drainage_state", depends-on = ["build-linux"] }
+test-unit-state = { cmd = "./builddir/test_state", depends-on = ["build-linux"] }
+test-unit-sync = { cmd = "./builddir/test_state_sync", depends-on = ["build-linux"] }
+test-unit-soil = { cmd = "./builddir/test_soil_state", depends-on = ["build-linux"] }
+test-unit-drainage = { cmd = "./builddir/test_drainage_state", depends-on = ["build-linux"] }
+
+regression_hupselbrook = "python tests/regression/test_output_regression.py hupselbrook"
+regression_macropore = "python tests/regression/test_output_regression.py macropore"
+regression_grassgrowth = "python tests/regression/test_output_regression.py grassgrowth"
+regression_oxygenstress = "python tests/regression/test_output_regression.py oxygenstress"
+regression_salinitystress = "python tests/regression/test_output_regression.py salinitystress"
+regression_surfacewater = "python tests/regression/test_output_regression.py surfacewater"
+regression_all = "python tests/regression/test_output_regression.py"
+
 
 [dependencies]
 python = "3.11.*"

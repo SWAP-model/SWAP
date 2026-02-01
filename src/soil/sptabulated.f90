@@ -3844,7 +3844,7 @@ end module TSPACK
       real(8) :: sptab(7,macp,matab)
       real(8) :: x(2), y(2), yp(2), sig(2)
       integer ientrytab(macp,0:matabentries), node    
-      save
+      ! SAVE removed - all local variables are temporary computation values
 
 !     'ye' is only used as 'inverse' = 1. The option that requires this is not yet operationel
 !     (combination of sophys-tables (swsophy=1) and swdiscrvert=1).

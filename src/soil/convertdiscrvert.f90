@@ -75,9 +75,11 @@
       integer   lay,node,nodeN,nodeNew(macp,2),i,level
       real(8)   disnodNew(macp+1),prhead,total,zNew(macp)
       real(8)   CofgenNew(21,macp)
-      character(len=80) Message,ModuleName
+      character(len=80) Message
+      character(len=*), parameter :: ModuleName = 'ConvertDiscrVert'
 
-      SAVE
+      ! SAVE statement removed - local variables are temporary work arrays
+      ! ModuleName converted to parameter for proper initialization
 
 ! --- error in call of part
       if (part.lt.1 .or. part.gt.2) then

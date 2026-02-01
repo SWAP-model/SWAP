@@ -51,6 +51,13 @@ module swap_state_mod
     ! Initialization procedures
     public :: swap_state_init
     public :: io_handles_init
+    public :: drainage_state_init
+    public :: surfacewater_state_init
+    
+    ! Finalization procedures
+    public :: swap_state_finalize
+    public :: drain_state_finalize
+    public :: surfacewater_state_finalize
 
     ! ===========================================================================
     ! Time and Control State
@@ -254,6 +261,11 @@ module swap_state_mod
         real(8) :: ldwet = 0.0d0               ! Dry period length (Black)
         real(8) :: cofred = 0.0d0              ! Reduction coefficient
         
+        ! Headcalc iteration tracking (from headcalc.f90 SAVE variables)
+        logical :: flwarn_hc = .true.          ! Warning flag for headcalc
+        integer :: iwarn_hc = 0                ! Warning counter
+        integer :: nstep_hc = 0                ! Step counter in headcalc
+        
         ! Flags
         logical :: FlRunoff = .false.
         logical :: fldrain = .false.
@@ -340,7 +352,14 @@ module swap_state_mod
         logical :: flmetdetail = .false.
         logical :: flrainintens = .false.
         logical :: flupdmetdet = .false.
+        !         ! ETSine sub-daily state (from meteodt.f90 SAVE)
+        ! real(8) :: tsunrise = 0.0d0            ! Time of sunrise (fraction of day)
+        ! real(8) :: tsunset = 0.0d0             ! Time of sunset (fraction of day)
         
+        ! ! CN runoff method state (from meteoday.f90 SAVE)
+        ! integer :: nod10_cn = 0                ! Node at -10cm for CN method
+        ! integer :: icn = 0                     ! Current position in CN time table
+        ! real(8) :: z10_cn = 0.0d0              ! Depth to node 10 for CN method
         ! Paths and files
         character(len=200) :: metfil = ''
         character(len=200) :: rainfil = ''
@@ -505,15 +524,21 @@ module swap_state_mod
         ! Spatial drainage arrays
         real(8), allocatable :: qdra(:,:)       ! Drainage flux (level,node)
         real(8), allocatable :: inqdra(:,:)     ! Intermediate drainage (level,node)
+        real(8), allocatable :: inqdra_in(:,:)  ! Intermediate infiltration flux per level/node
+        real(8), allocatable :: inqdra_out(:,:) ! Intermediate drainage out per level/node
         real(8), allocatable :: qdraincomp(:)   ! Drainage per compartment
         
         ! Totals
         real(8) :: qdrtot = 0.0d0              ! Total drainage flux
         real(8) :: iqdra = 0.0d0               ! Intermediate drainage
+        real(8) :: cqdra = 0.0d0               ! Cumulative total lateral drainage
         
         ! Parameters
         integer :: nrlevs = 0                  ! Number of drainage levels
+        integer :: nrpri = 0                   ! Number of primary drainage levels
         integer :: dramet = 0                  ! Drainage method switch
+        integer :: swdivd = 0                  ! Distribution of drainage over profile
+        integer :: swdislay = 0                ! Discharge layer option
         real(8) :: basegw = 0.0d0              ! Impervious layer depth
         real(8) :: entres = 0.0d0              ! Drain entry resistance
         real(8) :: shape = 0.0d0               ! Shape factor
@@ -524,6 +549,28 @@ module swap_state_mod
         real(8), allocatable :: L(:)           ! Drain spacing
         real(8), allocatable :: wetper(:)      ! Wet perimeter
         real(8), allocatable :: zbotdr(:)      ! Drain bottom depth
+        real(8), allocatable :: rdrain(:)      ! Drainage resistance per level
+        real(8), allocatable :: rinfi(:)       ! Infiltration resistance per level
+        real(8), allocatable :: rentry(:)      ! Entry resistance per level
+        real(8), allocatable :: rexit(:)       ! Exit resistance per level
+        real(8), allocatable :: gwlinf(:)      ! GWL below which no infiltration
+        real(8), allocatable :: widthr(:)      ! Width of drain/channel
+        real(8), allocatable :: taludr(:)      ! Talus slope of drain
+        integer, allocatable :: swallo(:)      ! Allow drainage/infiltration per level
+        integer, allocatable :: swdtyp(:)      ! Drainage type per level (0=channel, 1=tube, 2=interflow)
+        integer, allocatable :: swtopdislay(:) ! Top of discharge layer option
+        real(8), allocatable :: zTopDisLay(:)  ! Top of discharge layer
+        real(8), allocatable :: fTopDisLay(:)  ! Fraction for discharge layer top
+        
+        ! Interflow parameters
+        real(8) :: cofintfl = 0.0d0            ! Interflow coefficient
+        real(8) :: expintfl = 0.0d0            ! Interflow exponent
+        integer :: swnrsrf = 0                 ! Interflow switch
+        integer :: SwTopnrsrf = 0              ! Interflow top switch
+        real(8) :: rsurfdeep = 0.0d0           ! Deep interflow resistance
+        real(8) :: rsurfshallow = 0.0d0        ! Shallow interflow resistance
+        real(8) :: FacDpthInf = 0.0d0          ! Factor for infiltration depth
+        integer :: Swdivdinf = 0               ! Infiltration distribution switch
         
         ! Flags
         logical :: fldrain = .false.
@@ -537,19 +584,47 @@ module swap_state_mod
     ! Boundary Conditions State
     ! ===========================================================================
     type :: boundary_state_t
-        ! Bottom boundary
-        integer :: swbotb = 0                  ! Bottom BC type
+        ! Bottom boundary - configuration
+        integer :: swbotb = 0                  ! Bottom BC type (1-8)
+        integer :: swbotb3Impl = 0             ! Implicit solution switch for BC type 3
+        integer :: SwBotb3ResVert = 0          ! Suppress vertical resistance for BC type 3
+        integer :: swqhbot = 0                 ! Flux-GWL relationship type
+        integer :: swcofqhc = 0                ! Additional flux switch
+        integer :: sw2 = 0                     ! Sub-switch for BC type 2
+        integer :: sw3 = 0                     ! Sub-switch for BC type 3
+        integer :: sw4 = 0                     ! Sub-switch for BC type 4 (extra flux)
+        
+        ! Bottom boundary - values
         real(8) :: qbot = 0.0d0                ! Bottom flux
+        real(8) :: qbot_nonfrozen = 0.0d0      ! Bottom flux for non-frozen soil
         real(8) :: hbot = 0.0d0                ! Bottom pressure head
+        real(8) :: iqbot = 0.0d0               ! Intermediate bottom flux
+        real(8) :: cqbot = 0.0d0               ! Cumulative bottom flux
+        real(8) :: cqbotdo = 0.0d0             ! Cumulative downward bottom flux
+        real(8) :: cqbotup = 0.0d0             ! Cumulative upward bottom flux
+        real(8) :: deepgw = 0.0d0              ! Hydraulic head in aquifer
+        
+        ! Aquifer parameters
         real(8) :: aqave = 0.0d0               ! Average aquifer head
         real(8) :: aqamp = 0.0d0               ! Aquifer head amplitude
+        real(8) :: aqper = 0.0d0               ! Period of prescribed sine wave
+        real(8) :: aqtmax = 0.0d0              ! Time with maximum head
         real(8) :: rimlay = 0.0d0              ! Aquitard resistance
         real(8) :: hdrain = 0.0d0              ! Mean drainage level
+        real(8) :: shape = 0.0d0               ! Shape factor
+        
+        ! Sine function parameters for bottom flux
+        real(8) :: sinave = 0.0d0              ! Average bottom flux
+        real(8) :: sinamp = 0.0d0              ! Amplitude of bottom flux
+        real(8) :: sinmax = 0.0d0              ! Time of maximum flux
         
         ! Flux-head relationships
         real(8) :: cofqha = 0.0d0              ! Coefficient A (exp function)
         real(8) :: cofqhb = 0.0d0              ! Coefficient B
         real(8) :: cofqhc = 0.0d0              ! Coefficient C
+        
+        ! Lysimeter parameters
+        real(8) :: hplate = 0.0d0              ! Pressure head of ceramic plate
         
         ! Prescribed tables
         real(8), allocatable :: gwltab(:)      ! GWL vs time
@@ -557,19 +632,41 @@ module swap_state_mod
         real(8), allocatable :: qbotab(:)      ! Bottom flux vs time
         real(8), allocatable :: hbotab(:)      ! Bottom h vs time
         
-        ! Top boundary
+        ! Top boundary - configuration
+        integer :: swpondmx = 0                ! Time-dependent pondmx switch
+        integer :: swredu = 0                  ! Soil evaporation reduction switch
+        
+        ! Top boundary - values
         real(8) :: pondmx = 0.0d0              ! Max ponding depth
         real(8) :: hatm = 0.0d0                ! Atmospheric pressure head
+        real(8) :: hsurf = 0.0d0               ! Surface pressure head
         real(8) :: rsro = 0.0d0                ! Runoff resistance
+        real(8) :: rsroexp = 0.0d0             ! Runoff exponent
         real(8) :: runon = 0.0d0               ! Runon flux
         real(8) :: runots = 0.0d0              ! Runoff during timestep
+        real(8) :: crunoff = 0.0d0             ! Cumulative runoff
+        real(8) :: crunon = 0.0d0              ! Cumulative runon
+        real(8) :: iruno = 0.0d0               ! Intermediate runoff
+        real(8) :: irunon = 0.0d0              ! Intermediate runon
+        
+        ! Top boundary - surface/ponding
+        real(8) :: qtop = 0.0d0                ! Surface flux
+        real(8) :: q0 = 0.0d0                  ! Net surface flux (precip-evap)
+        real(8) :: h0max = 0.0d0               ! Max ponding without runoff
+        real(8) :: k1max = 0.0d0               ! Max conductivity at surface
+        real(8) :: QMpLatSs = 0.0d0            ! Lateral inflow to macropores at surface
+        
+        ! Runon table
+        real(8), allocatable :: runonarr(:)    ! Daily runon values
+        real(8), allocatable :: pondmxtab(:)   ! Time-dependent pondmx table
         
         ! Inundation
         real(8) :: cinund = 0.0d0              ! Cumulative inundation
         
         ! Flags
-        logical :: FlRunoff = .false.
-        logical :: flrunon = .false.
+        logical :: FlRunoff = .false.          ! Runoff potential possible
+        logical :: flrunon = .false.           ! Runon exists
+        logical :: ftoph = .false.             ! Pressure head prescribed at surface
     end type boundary_state_t
 
     ! ===========================================================================
@@ -770,24 +867,63 @@ module swap_state_mod
     ! Surface Water State (for extended drainage)
     ! ===========================================================================
     type :: surfacewater_state_t
+        ! Water levels
         real(8) :: wlp = 0.0d0                 ! Primary water level
         real(8) :: wls = 0.0d0                 ! Secondary water level
         real(8) :: wlsold = 0.0d0              ! Previous sec water level
+        real(8) :: wlstar = 0.0d0              ! Target water level
+        real(8) :: hwlman = 0.0d0              ! Managed water level
+        real(8) :: vtair = 0.0d0               ! Total air volume in profile
+        real(8), allocatable :: wlsbak(:)      ! Last 4 water levels for oscillation check
+        
+        ! Storage
         real(8) :: swst = 0.0d0                ! Surface water storage
         real(8) :: swstini = 0.0d0             ! Initial storage
-        real(8) :: osswlm = 0.0d0
-        real(8) :: wlstar = 0.0d0
-        real(8) :: hwlman = 0.0d0              ! Managed water level
-        real(8) :: qdrd = 0.0d0                ! Drainage discharge
+        
+        ! Fluxes
+        real(8) :: qdrd = 0.0d0                ! Drainage discharge to secondary
         real(8) :: cqdrd = 0.0d0               ! Cumulative drainage discharge
         real(8) :: cwsupp = 0.0d0              ! Cumulative water supply
         real(8) :: cwout = 0.0d0               ! Cumulative water out
+        real(8) :: runots = 0.0d0              ! Runoff during timestep
+        real(8) :: QRapDra = 0.0d0             ! Rapid drainage flux
         
+        ! Management parameters
         integer :: imper = 0                   ! Current management period
         integer :: nmper = 0                   ! Number of management periods
+        integer :: numadj = 0                  ! Number of adjustments
+        integer :: swsrf = 0                   ! Surface water switch
+        integer :: swsec = 0                   ! Secondary water switch
+        integer :: swqhr = 0                   ! Q-h relation switch
+        real(8) :: osswlm = 0.0d0              ! Oscillation tolerance
+        real(8), allocatable :: impend(:)      ! Management period end dates
+        integer, allocatable :: swman(:)       ! Management type per period
+        real(8), allocatable :: hbweir(:)      ! Weir crest level per period
+        real(8), allocatable :: wldip(:)       ! Dip below target for supply
+        real(8), allocatable :: alphaw(:)      ! Weir discharge coef a
+        real(8), allocatable :: betaw(:)       ! Weir discharge coef b
+        real(8), allocatable :: wscap(:)       ! Max supply capacity per period
+        real(8), allocatable :: dropr(:)       ! Max drop rate per period
+        real(8), allocatable :: intwl(:)       ! Adjustment interval per period
+        integer, allocatable :: nphase(:)      ! Number of phases per period
+        real(8), allocatable :: gwlcrit(:,:)   ! Critical gwl per period/phase
+        real(8), allocatable :: wlsman(:,:)    ! Target level per period/phase
+        real(8), allocatable :: vcrit(:,:)     ! Critical air volume per period/phase
+        real(8), allocatable :: hcrit(:,:)     ! Critical pressure head per period/phase
+        integer, allocatable :: nodhd(:)       ! Node for head criterion per period
         
+        ! Lookup tables
+        real(8), allocatable :: wlstab(:)      ! Water level vs time table
+        real(8), allocatable :: wlptab(:)      ! Primary water level table
+        real(8), allocatable :: sttab(:,:)     ! Storage-level table
+        real(8), allocatable :: owltab(:,:)    ! Open water level tables per drain level
+        real(8), allocatable :: qqhtab(:,:)    ! Q-H table per period
+        
+        ! Flags
         logical :: flsurfacewater = .false.
         logical :: overfl = .false.
+        logical :: fldecdt = .false.           ! Decrease timestep flag
+        logical :: fldtmin = .false.           ! At minimum timestep flag
     end type surfacewater_state_t
 
     ! ===========================================================================
@@ -911,6 +1047,11 @@ contains
         call log_debug('state_init', 'Initializing boundary state...')
         call boundary_state_init(state%boundary)
         
+        ! Initialize surfacewater state with reasonable defaults
+        ! nmper=10 (management periods), mamte=100 (meteo entries), maowl=100 (water level entries)
+        call log_debug('state_init', 'Initializing surfacewater state...')
+        call surfacewater_state_init(state%surfwater, 10, 100, 100, nlev)
+        
         state%initialized = .true.
         
         call log_info('state_init', 'SWAP state initialized: ' // &
@@ -1001,26 +1142,130 @@ contains
         type(drainage_state_t), intent(inout) :: drain
         integer, intent(in) :: nrlevs, numnod
         
+        ! Drainage fluxes per level
         allocate(drain%qdrain(nrlevs))
         allocate(drain%cqdrain(nrlevs))
         allocate(drain%cqdrainin(nrlevs))
         allocate(drain%cqdrainout(nrlevs))
         allocate(drain%drainl(nrlevs))
+        
+        ! Spatial arrays
+        allocate(drain%qdra(nrlevs, numnod))
+        allocate(drain%inqdra(nrlevs, numnod))
+        allocate(drain%inqdra_in(nrlevs, numnod))
+        allocate(drain%inqdra_out(nrlevs, numnod))
+        allocate(drain%qdraincomp(numnod))
+        
+        ! Resistances and geometry per level
         allocate(drain%drares(nrlevs))
         allocate(drain%infres(nrlevs))
         allocate(drain%L(nrlevs))
         allocate(drain%wetper(nrlevs))
         allocate(drain%zbotdr(nrlevs))
-        allocate(drain%qdra(nrlevs, numnod))
-        allocate(drain%inqdra(nrlevs, numnod))
-        allocate(drain%qdraincomp(numnod))
+        allocate(drain%rdrain(nrlevs))
+        allocate(drain%rinfi(nrlevs))
+        allocate(drain%rentry(nrlevs))
+        allocate(drain%rexit(nrlevs))
+        allocate(drain%gwlinf(nrlevs))
+        allocate(drain%widthr(nrlevs))
+        allocate(drain%taludr(nrlevs))
+        allocate(drain%swallo(nrlevs))
+        allocate(drain%swdtyp(nrlevs))
+        allocate(drain%swtopdislay(nrlevs))
+        allocate(drain%zTopDisLay(nrlevs))
+        allocate(drain%fTopDisLay(nrlevs))
         
+        ! Initialize to zero
         drain%qdrain = 0.0d0
         drain%cqdrain = 0.0d0
+        drain%cqdrainin = 0.0d0
+        drain%cqdrainout = 0.0d0
+        drain%drainl = 0.0d0
         drain%qdra = 0.0d0
+        drain%inqdra = 0.0d0
+        drain%inqdra_in = 0.0d0
+        drain%inqdra_out = 0.0d0
+        drain%qdraincomp = 0.0d0
+        drain%drares = 0.0d0
+        drain%infres = 0.0d0
+        drain%L = 0.0d0
+        drain%wetper = 0.0d0
+        drain%zbotdr = 0.0d0
+        drain%rdrain = 0.0d0
+        drain%rinfi = 0.0d0
+        drain%rentry = 0.0d0
+        drain%rexit = 0.0d0
+        drain%gwlinf = 0.0d0
+        drain%widthr = 0.0d0
+        drain%taludr = 0.0d0
+        drain%swallo = 0
+        drain%swdtyp = 0
+        drain%swtopdislay = 0
+        drain%zTopDisLay = 0.0d0
+        drain%fTopDisLay = 0.0d0
         drain%nrlevs = nrlevs
         
     end subroutine drainage_state_init
+    
+    subroutine surfacewater_state_init(swstate, nmper, mamte, maowl, nrlevs)
+        type(surfacewater_state_t), intent(inout) :: swstate
+        integer, intent(in) :: nmper   ! Max management periods
+        integer, intent(in) :: mamte   ! Max meteo entries for gwl phases
+        integer, intent(in) :: maowl   ! Max open water level entries
+        integer, intent(in) :: nrlevs  ! Number of drainage levels
+        
+        ! Water level history for oscillation check
+        allocate(swstate%wlsbak(4))
+        
+        ! Management period arrays
+        allocate(swstate%impend(nmper))
+        allocate(swstate%swman(nmper))
+        allocate(swstate%hbweir(nmper))
+        allocate(swstate%wldip(nmper))
+        allocate(swstate%alphaw(nmper))
+        allocate(swstate%betaw(nmper))
+        allocate(swstate%wscap(nmper))
+        allocate(swstate%dropr(nmper))
+        allocate(swstate%intwl(nmper))
+        allocate(swstate%nphase(nmper))
+        allocate(swstate%nodhd(nmper))
+        allocate(swstate%gwlcrit(nmper, mamte))
+        allocate(swstate%wlsman(nmper, mamte))
+        allocate(swstate%vcrit(nmper, mamte))
+        allocate(swstate%hcrit(nmper, mamte))
+        
+        ! Lookup tables
+        allocate(swstate%wlstab(2*maowl))
+        allocate(swstate%wlptab(2*maowl))
+        allocate(swstate%sttab(22, 2))
+        allocate(swstate%owltab(nrlevs, 2*maowl))
+        allocate(swstate%qqhtab(nmper, 22))
+        
+        ! Initialize
+        swstate%wlsbak = 0.0d0
+        swstate%impend = 0.0d0
+        swstate%swman = 0
+        swstate%hbweir = 0.0d0
+        swstate%wldip = 0.0d0
+        swstate%alphaw = 0.0d0
+        swstate%betaw = 0.0d0
+        swstate%wscap = 0.0d0
+        swstate%dropr = 0.0d0
+        swstate%intwl = 0.0d0
+        swstate%nphase = 0
+        swstate%nodhd = 0
+        swstate%gwlcrit = 0.0d0
+        swstate%wlsman = 0.0d0
+        swstate%vcrit = 0.0d0
+        swstate%hcrit = 0.0d0
+        swstate%wlstab = 0.0d0
+        swstate%wlptab = 0.0d0
+        swstate%sttab = 0.0d0
+        swstate%owltab = 0.0d0
+        swstate%qqhtab = 0.0d0
+        swstate%nmper = nmper
+        
+    end subroutine surfacewater_state_init
     
     subroutine crop_state_init(crop, ncrop)
         type(crop_state_t), intent(inout) :: crop
@@ -1100,8 +1345,15 @@ contains
         
     end subroutine heat_state_init
     
-    subroutine boundary_state_init(boundary)
+    subroutine boundary_state_init(boundary, nday)
         type(boundary_state_t), intent(inout) :: boundary
+        integer, intent(in), optional :: nday
+        
+        integer :: nd
+        
+        ! Default number of days
+        nd = MADAY
+        if (present(nday)) nd = nday
         
         ! Allocate tables with reasonable default sizes
         ! These may need to be reallocated based on input
@@ -1109,11 +1361,15 @@ contains
         allocate(boundary%haqtab(2*MABBC))
         allocate(boundary%qbotab(2*MABBC))
         allocate(boundary%hbotab(2*MABBC))
+        allocate(boundary%runonarr(nd))
+        allocate(boundary%pondmxtab(2*MAIRG))
         
         boundary%gwltab = 0.0d0
         boundary%haqtab = 0.0d0
         boundary%qbotab = 0.0d0
         boundary%hbotab = 0.0d0
+        boundary%runonarr = 0.0d0
+        boundary%pondmxtab = 0.0d0
         
     end subroutine boundary_state_init
     
@@ -1147,5 +1403,122 @@ contains
         io%files_open = .false.
         
     end subroutine io_handles_init
+    
+    !> @brief Finalize soil state (deallocate arrays)
+    subroutine soil_state_finalize(soil)
+        type(soil_state_t), intent(inout) :: soil
+        
+        ! Node-based arrays
+        if (allocated(soil%h)) deallocate(soil%h)
+        if (allocated(soil%theta)) deallocate(soil%theta)
+        if (allocated(soil%k)) deallocate(soil%k)
+        if (allocated(soil%z)) deallocate(soil%z)
+        if (allocated(soil%dz)) deallocate(soil%dz)
+        if (allocated(soil%hm1)) deallocate(soil%hm1)
+        if (allocated(soil%thetm1)) deallocate(soil%thetm1)
+        if (allocated(soil%q)) deallocate(soil%q)
+        if (allocated(soil%qrot)) deallocate(soil%qrot)
+        if (allocated(soil%kmean)) deallocate(soil%kmean)
+        if (allocated(soil%rfcp)) deallocate(soil%rfcp)
+        
+        ! Layer-based arrays
+        if (allocated(soil%bdens)) deallocate(soil%bdens)
+        if (allocated(soil%paramvg)) deallocate(soil%paramvg)
+        
+    end subroutine soil_state_finalize
+    
+    !> @brief Finalize drainage state (deallocate arrays)
+    subroutine drain_state_finalize(drain)
+        type(drainage_state_t), intent(inout) :: drain
+        
+        ! Flux arrays
+        if (allocated(drain%qdrain)) deallocate(drain%qdrain)
+        if (allocated(drain%cqdrain)) deallocate(drain%cqdrain)
+        if (allocated(drain%cqdrainin)) deallocate(drain%cqdrainin)
+        if (allocated(drain%cqdrainout)) deallocate(drain%cqdrainout)
+        if (allocated(drain%drainl)) deallocate(drain%drainl)
+        
+        ! Spatial arrays
+        if (allocated(drain%qdra)) deallocate(drain%qdra)
+        if (allocated(drain%inqdra)) deallocate(drain%inqdra)
+        if (allocated(drain%inqdra_in)) deallocate(drain%inqdra_in)
+        if (allocated(drain%inqdra_out)) deallocate(drain%inqdra_out)
+        if (allocated(drain%qdraincomp)) deallocate(drain%qdraincomp)
+        
+        ! Resistance/geometry arrays
+        if (allocated(drain%drares)) deallocate(drain%drares)
+        if (allocated(drain%infres)) deallocate(drain%infres)
+        if (allocated(drain%L)) deallocate(drain%L)
+        if (allocated(drain%wetper)) deallocate(drain%wetper)
+        if (allocated(drain%zbotdr)) deallocate(drain%zbotdr)
+        if (allocated(drain%rdrain)) deallocate(drain%rdrain)
+        if (allocated(drain%rinfi)) deallocate(drain%rinfi)
+        if (allocated(drain%rentry)) deallocate(drain%rentry)
+        if (allocated(drain%rexit)) deallocate(drain%rexit)
+        if (allocated(drain%gwlinf)) deallocate(drain%gwlinf)
+        if (allocated(drain%widthr)) deallocate(drain%widthr)
+        if (allocated(drain%taludr)) deallocate(drain%taludr)
+        if (allocated(drain%swallo)) deallocate(drain%swallo)
+        if (allocated(drain%swdtyp)) deallocate(drain%swdtyp)
+        if (allocated(drain%swtopdislay)) deallocate(drain%swtopdislay)
+        if (allocated(drain%zTopDisLay)) deallocate(drain%zTopDisLay)
+        if (allocated(drain%fTopDisLay)) deallocate(drain%fTopDisLay)
+        
+    end subroutine drain_state_finalize
+    
+    !> @brief Finalize surfacewater state (deallocate arrays)
+    subroutine surfacewater_state_finalize(swstate)
+        type(surfacewater_state_t), intent(inout) :: swstate
+        
+        if (allocated(swstate%wlsbak)) deallocate(swstate%wlsbak)
+        if (allocated(swstate%impend)) deallocate(swstate%impend)
+        if (allocated(swstate%swman)) deallocate(swstate%swman)
+        if (allocated(swstate%hbweir)) deallocate(swstate%hbweir)
+        if (allocated(swstate%wldip)) deallocate(swstate%wldip)
+        if (allocated(swstate%alphaw)) deallocate(swstate%alphaw)
+        if (allocated(swstate%betaw)) deallocate(swstate%betaw)
+        if (allocated(swstate%wscap)) deallocate(swstate%wscap)
+        if (allocated(swstate%dropr)) deallocate(swstate%dropr)
+        if (allocated(swstate%intwl)) deallocate(swstate%intwl)
+        if (allocated(swstate%nphase)) deallocate(swstate%nphase)
+        if (allocated(swstate%nodhd)) deallocate(swstate%nodhd)
+        if (allocated(swstate%gwlcrit)) deallocate(swstate%gwlcrit)
+        if (allocated(swstate%wlsman)) deallocate(swstate%wlsman)
+        if (allocated(swstate%vcrit)) deallocate(swstate%vcrit)
+        if (allocated(swstate%hcrit)) deallocate(swstate%hcrit)
+        if (allocated(swstate%wlstab)) deallocate(swstate%wlstab)
+        if (allocated(swstate%wlptab)) deallocate(swstate%wlptab)
+        if (allocated(swstate%sttab)) deallocate(swstate%sttab)
+        if (allocated(swstate%owltab)) deallocate(swstate%owltab)
+        if (allocated(swstate%qqhtab)) deallocate(swstate%qqhtab)
+        
+    end subroutine surfacewater_state_finalize
+    
+    !> @brief Finalize boundary state (deallocate arrays)
+    subroutine boundary_state_finalize(boundary)
+        type(boundary_state_t), intent(inout) :: boundary
+        
+        if (allocated(boundary%gwltab)) deallocate(boundary%gwltab)
+        if (allocated(boundary%haqtab)) deallocate(boundary%haqtab)
+        if (allocated(boundary%qbotab)) deallocate(boundary%qbotab)
+        if (allocated(boundary%hbotab)) deallocate(boundary%hbotab)
+        if (allocated(boundary%runonarr)) deallocate(boundary%runonarr)
+        if (allocated(boundary%pondmxtab)) deallocate(boundary%pondmxtab)
+        
+    end subroutine boundary_state_finalize
+    
+    !> @brief Finalize (deallocate) SWAP state
+    !> @param state The state to finalize
+    subroutine swap_state_finalize(state)
+        type(swap_state_t), intent(inout) :: state
+        
+        call soil_state_finalize(state%soil)
+        call drain_state_finalize(state%drain)
+        call surfacewater_state_finalize(state%surfwater)
+        call boundary_state_finalize(state%boundary)
+        
+        state%initialized = .false.
+        
+    end subroutine swap_state_finalize
 
 end module swap_state_mod

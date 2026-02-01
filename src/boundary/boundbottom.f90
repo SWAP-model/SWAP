@@ -7,6 +7,7 @@
 !     purpose            : determine soil profile bottom boundary conditions
 ! ----------------------------------------------------------------------
       use variables
+      use swap_log, only: log_debug, to_str
       implicit none
 
 ! --- local variables
@@ -18,6 +19,8 @@
       character(len=300) messag
 
 ! ----------------------------------------------------------------------
+      call log_debug('boundbottom', 'Starting bottom BC, swbotb=' // to_str(swbotb))
+      
       twopi = 8.0d0*datan(1.0d0)
       freq  = twopi/365.0d0
 ! ----------------------------------------------------------------------

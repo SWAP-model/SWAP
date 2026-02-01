@@ -7,22 +7,24 @@
 !     purpose            : determine soil profile top boundary condition      
 ! ----------------------------------------------------------------------
       use variables
+      use swap_log, only: log_debug, to_str
       implicit none
 
 ! --- local variables
       real(8) emax,ks,theatm,ksurf
       real(8) watcon,hconduc
 
-
-
 ! ----------------------------------------------------------------------
 ! --- local variables
-      real(8) ArMpSs,h0,hcomean,hconode_vsmall,k1Atm,p1,p2,p2Mp,q1,RsRoMp
-
-      data    hconode_vsmall  /1.0d-10/  ! Hydraulic conductivity for complete frozen soils
+      real(8) ArMpSs,h0,hcomean,k1Atm,p1,p2,p2Mp,q1,RsRoMp
+      
+      ! Hydraulic conductivity for complete frozen soils (constant)
+      real(8), parameter :: hconode_vsmall = 1.0d-10
 
 ! ----------------------------------------------------------------------
 ! --- Initialisation
+
+      call log_debug('boundtop', 'Starting top boundary calculation')
 
 ! --- runon of present day
       if (flDayStart .and. flrunon) runon = runonarr(daycum+1)      

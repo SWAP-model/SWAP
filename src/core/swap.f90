@@ -66,7 +66,8 @@ subroutine swap(iCaller, iTask, toswap, fromswap)
 use variables, only : flyearstart, fldaystart, flswapshared, flsurfacewater, flmacropore, fltemperature, flsnow,        &
                       flsolute, flcropnut, flirrigate, flagetracer, flrunend, flmeteodt, fletsine, swfrost, fldtreduce, &
                       swusecn, fldrain, fldecdt, fldecmprat, fldayend, flcropcalendar, flmaxitertime, floutput,         &
-                      floutputshort, flharvestday, flcropoutput, swcrp, flirrigationoutput, swend, project
+                      floutputshort, flharvestday, flcropoutput, swcrp, flirrigationoutput, swend, project, &
+                      daynr, iyear
 ! for debugging
 !use variables, only : iqrot, iptra, cnrai, t1900, Tstart, Tend, numnod, dz, theta, dt, h, arai, rainamount, lai
 

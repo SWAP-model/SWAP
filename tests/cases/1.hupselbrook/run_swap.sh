@@ -1,8 +1,13 @@
 #!/bin/bash
 
 # Run SWAP on Linux
-../../../builddir/swap
-
+if [ "$1" = "original" ]; then
+    echo "Running with the original SWAP executable..."
+    ../../../swap_org/linux/swap420
+else
+    echo "Running with the development version of the SWAP executable..."
+    ../../../builddir/swap
+fi
 # For automation: simulate pressing Enter so the script doesn't block
 echo "Press Enter to continue... (automated)"
 printf '\n'

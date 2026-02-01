@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Regression check for SWAP output CSV (Hupselbrook case).
+"""Regression checks for SWAP output CSV files.
 
-Runs the bundled test case in an isolated temp directory, aggregates the
-`result_output.csv` file, and compares annual stats against a stored fixture.
+Runs test cases in isolated temp directories, aggregates the
+`result_output.csv` files, and compares annual stats against stored fixtures.
 Fails with a non-zero exit if values differ beyond tolerance.
 """
 
@@ -11,29 +11,75 @@ import json
 import math
 import shutil
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
+from typing import NamedTuple
 
-CASE_DIR = Path(__file__).resolve().parent.parent / "cases" / "1.hupselbrook"
-FIXTURE = Path(__file__).resolve().parent / "hupselbrook_expected.json"
+TESTS_DIR = Path(__file__).resolve().parent.parent
 SWAP_BIN = Path(__file__).resolve().parents[2] / "builddir" / "swap"
 TOL = 1e-2  # cm tolerance on aggregated values
 
-# Columns treated as sums; GWL is averaged per year
-FLUX_VARS = [
-    "RAIN",
-    "IRRIG",
-    "INTERC",
-    "RUNOFF",
-    "EPOT",
-    "EACT",
-    "DRAINAGE",
-    "QBOTTOM",
-    "TPOT",
-    "TACT",
-    "DSTOR",
-]
-STATE_VARS = ["GWL"]
+
+class CaseConfig(NamedTuple):
+    """Configuration for a test case."""
+    name: str
+    case_dir: str  # relative path from tests/cases
+    fixture: str   # fixture filename in tests/regression
+    flux_vars: list[str]  # summed annually
+    state_vars: list[str]  # averaged annually
+    cumul_vars: list[str] = []  # last value per year (for cumulative outputs)
+
+
+# Registered test cases
+CASES = {
+    "hupselbrook": CaseConfig(
+        name="hupselbrook",
+        case_dir="1.hupselbrook",
+        fixture="hupselbrook_expected.json",
+        flux_vars=["RAIN", "IRRIG", "INTERC", "RUNOFF", "EPOT", "EACT",
+                   "DRAINAGE", "QBOTTOM", "TPOT", "TACT", "DSTOR"],
+        state_vars=["GWL"],
+    ),
+    "macropore": CaseConfig(
+        name="macropore",
+        case_dir="3.macroporeflow",
+        fixture="macropore_expected.json",
+        flux_vars=["DRAINAGE"],
+        state_vars=["GWL"],
+    ),
+    "grassgrowth": CaseConfig(
+        name="grassgrowth",
+        case_dir="2.grassgrowth",
+        fixture="grassgrowth_expected.json",
+        flux_vars=[],
+        state_vars=[],
+        cumul_vars=["PGRASSDM", "GRASSDM", "PMOWDM", "MOWDM"],
+    ),
+    "oxygenstress": CaseConfig(
+        name="oxygenstress",
+        case_dir="4.oxygenstress",
+        fixture="oxygenstress_expected.json",
+        flux_vars=[],
+        state_vars=["TREDDRY", "TREDWET"],
+        cumul_vars=["PGRASSDM", "GRASSDM", "PMOWDM", "MOWDM"],
+    ),
+    "salinitystress": CaseConfig(
+        name="salinitystress",
+        case_dir="5.salinitystress",
+        fixture="salinitystress_expected.json",
+        flux_vars=[],
+        state_vars=["TREDDRY", "TREDWET", "TREDSOL", "CPWSO", "CWSO",
+                    "CONC[-5.0]", "CONC[-25.0]", "CONC[-55.0]"],
+    ),
+    "surfacewater": CaseConfig(
+        name="surfacewater",
+        case_dir="6.surfacewater",
+        fixture="surfacewater_expected.json",
+        flux_vars=[],
+        state_vars=["GWL", "POND"],
+    ),
+}
 
 
 def load_fixture(path: Path):
@@ -41,8 +87,16 @@ def load_fixture(path: Path):
         return json.load(f)
 
 
-def aggregate(csv_path: Path):
-    """Aggregate monthly CSV into annual stats (sum for flux, mean for GWL)."""
+def aggregate(csv_path: Path, flux_vars: list[str], state_vars: list[str], cumul_vars: list[str] = None):
+    """Aggregate daily CSV into annual stats.
+    
+    - flux_vars: summed annually
+    - state_vars: averaged annually  
+    - cumul_vars: last value per year (for cumulative outputs)
+    """
+    if cumul_vars is None:
+        cumul_vars = []
+    all_vars = flux_vars + state_vars + cumul_vars
     years = {}
     with csv_path.open() as f:
         reader = csv.reader(f)
@@ -58,92 +112,179 @@ def aggregate(csv_path: Path):
         if not rec.get("DATETIME"):
             continue
         year = rec["DATETIME"].split("-")[0]
-        yr = years.setdefault(year, {k: [] for k in FLUX_VARS + STATE_VARS})
-        for k in FLUX_VARS:
-            if k in rec and rec[k]:
-                yr[k].append(float(rec[k]))
-        for k in STATE_VARS:
+        yr = years.setdefault(year, {k: [] for k in all_vars})
+        for k in all_vars:
             if k in rec and rec[k]:
                 yr[k].append(float(rec[k]))
 
     annual = {}
     for year, vals in years.items():
         annual[year] = {}
-        for k in FLUX_VARS:
+        for k in flux_vars:
             if vals[k]:
                 annual[year][k] = round(sum(vals[k]), 2)
-        for k in STATE_VARS:
+        for k in state_vars:
             if vals[k]:
                 annual[year][k] = round(sum(vals[k]) / len(vals[k]), 2)
+        for k in cumul_vars:
+            if vals[k]:
+                annual[year][k] = round(vals[k][-1], 2)  # last value
 
     # totals/means across years
     totals = {}
     means = {}
     n_years = len(annual)
-    for k in FLUX_VARS:
+    for k in flux_vars:
         totals[k] = round(sum(annual[y].get(k, 0.0) for y in annual), 2)
         means[k] = round(totals[k] / n_years, 2)
-    for k in STATE_VARS:
+    for k in state_vars:
+        means[k] = round(sum(annual[y].get(k, 0.0) for y in annual) / n_years, 2)
+    for k in cumul_vars:
         means[k] = round(sum(annual[y].get(k, 0.0) for y in annual) / n_years, 2)
 
     return annual, totals, means
 
 
 def compare(expected, actual_years, actual_totals, actual_means):
+    """Compare expected vs actual values and collect all mismatches."""
+    mismatches = []
+    
     def check_block(block_name, exp_block, act_block):
         for year_or_key, exp_vals in exp_block.items():
             if isinstance(exp_vals, dict):
                 act_vals = act_block.get(year_or_key, {})
                 for var, exp_val in exp_vals.items():
                     act_val = act_vals.get(var)
-                    if act_val is None or not math.isclose(act_val, exp_val, abs_tol=TOL):
-                        raise AssertionError(
-                            f"Mismatch {block_name}:{year_or_key}:{var}: expected {exp_val}, got {act_val}"
-                        )
+                    matches = act_val is not None and math.isclose(act_val, exp_val, abs_tol=TOL)
+                    if not matches:
+                        mismatches.append({
+                            "block": block_name,
+                            "year": year_or_key,
+                            "var": var,
+                            "expected": exp_val,
+                            "actual": act_val,
+                            "diff": abs(act_val - exp_val) if act_val is not None else None
+                        })
             else:
                 act_val = act_block.get(year_or_key)
-                if act_val is None or not math.isclose(act_val, exp_vals, abs_tol=TOL):
-                    raise AssertionError(
-                        f"Mismatch {block_name}:{year_or_key}: expected {exp_vals}, got {act_val}"
-                    )
+                matches = act_val is not None and math.isclose(act_val, exp_vals, abs_tol=TOL)
+                if not matches:
+                    mismatches.append({
+                        "block": block_name,
+                        "year": year_or_key,
+                        "var": "-",
+                        "expected": exp_vals,
+                        "actual": act_val,
+                        "diff": abs(act_val - exp_vals) if act_val is not None else None
+                    })
 
     check_block("years", expected["years"], actual_years)
-    check_block("total", expected["total"], actual_totals)
-    check_block("mean", expected["mean"], actual_means)
+    if "total" in expected:
+        check_block("total", expected["total"], actual_totals)
+    if "mean" in expected:
+        check_block("mean", expected["mean"], actual_means)
+    
+    if mismatches:
+        # Build comparison table
+        lines = ["\n  Mismatches found (tolerance={:.0e}):".format(TOL)]
+        lines.append("  {:>6} {:>12} {:>14} {:>14} {:>12}".format(
+            "Year", "Variable", "Expected", "Actual", "Diff"))
+        lines.append("  " + "-" * 60)
+        for m in mismatches:
+            diff_str = f"{m['diff']:.4f}" if m['diff'] is not None else "N/A"
+            act_str = f"{m['actual']:.4f}" if m['actual'] is not None else "None"
+            lines.append("  {:>6} {:>12} {:>14.4f} {:>14} {:>12}".format(
+                m['year'], m['var'], m['expected'], act_str, diff_str))
+        
+        raise AssertionError("\n".join(lines))
+
+
+def run_case(case: CaseConfig) -> bool:
+    """Run a single test case. Returns True on success, False on failure."""
+    case_dir = TESTS_DIR / "cases" / case.case_dir
+    fixture_path = TESTS_DIR / "regression" / case.fixture
+
+    if not case_dir.exists():
+        print(f"✗ {case.name}: case directory not found at {case_dir}")
+        return False
+
+    if not fixture_path.exists():
+        print(f"✗ {case.name}: fixture not found at {fixture_path}")
+        return False
+
+    expected = load_fixture(fixture_path)
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmp = Path(tmpdir)
+        # copy case files to temp sandbox
+        shutil.copytree(case_dir, tmp / "case", dirs_exist_ok=True)
+        workdir = tmp / "case"
+
+        # ensure template is named swap.swp
+        swap_file = workdir / "swap.swp"
+        if not swap_file.exists():
+            template = workdir / "swap_linux.swp.template"
+            if template.exists():
+                shutil.copy(template, swap_file)
+            else:
+                # try other common names
+                for alt in workdir.glob("*.swp"):
+                    shutil.copy(alt, swap_file)
+                    break
+
+        # run swap
+        proc = subprocess.run([str(SWAP_BIN)], cwd=workdir, capture_output=True, text=True)
+        if proc.returncode not in (0, 100):  # swap_main exits with 100 on success
+            print(f"✗ {case.name}: swap failed with code {proc.returncode}")
+            print(f"stdout:\n{proc.stdout}")
+            print(f"stderr:\n{proc.stderr}")
+            return False
+
+        csv_path = workdir / "result_output.csv"
+        if not csv_path.exists():
+            print(f"✗ {case.name}: result_output.csv not produced")
+            return False
+
+        try:
+            cumul_vars = case.cumul_vars if hasattr(case, 'cumul_vars') else []
+            annual, totals, means = aggregate(csv_path, case.flux_vars, case.state_vars, cumul_vars)
+            compare(expected, annual, totals, means)
+        except AssertionError as e:
+            print(f"✗ {case.name}: {e}")
+            return False
+
+    print(f"✓ {case.name}: regression ok (annual stats match fixture)")
+    return True
 
 
 def main():
     if not SWAP_BIN.exists():
         raise SystemExit(f"swap binary not found at {SWAP_BIN}; build first (pixi run build-linux)")
 
-    expected = load_fixture(FIXTURE)
+    # Parse command line to select cases
+    args = sys.argv[1:]
+    if args:
+        selected = []
+        for arg in args:
+            if arg in CASES:
+                selected.append(CASES[arg])
+            else:
+                print(f"Unknown case: {arg}. Available: {', '.join(CASES.keys())}")
+                sys.exit(1)
+    else:
+        selected = list(CASES.values())
 
-    with tempfile.TemporaryDirectory() as tmpdir:
-        tmp = Path(tmpdir)
-        # copy case files to temp sandbox
-        shutil.copytree(CASE_DIR, tmp / "case", dirs_exist_ok=True)
-        workdir = tmp / "case"
+    passed = 0
+    failed = 0
+    for case in selected:
+        if run_case(case):
+            passed += 1
+        else:
+            failed += 1
 
-        # ensure template is named swap.swp
-        swap_file = workdir / "swap.swp"
-        if not swap_file.exists():
-            shutil.copy(workdir / "swap_linux.swp.template", swap_file)
-
-        # run swap
-        proc = subprocess.run([str(SWAP_BIN)], cwd=workdir, capture_output=True, text=True)
-        if proc.returncode not in (0, 100):  # swap_main exits with 100 on success
-            raise SystemExit(
-                f"swap failed with code {proc.returncode}\nstdout:\n{proc.stdout}\nstderr:\n{proc.stderr}"
-            )
-
-        csv_path = workdir / "result_output.csv"
-        if not csv_path.exists():
-            raise SystemExit("result_output.csv not produced")
-
-        annual, totals, means = aggregate(csv_path)
-        compare(expected, annual, totals, means)
-
-    print("✓ regression ok (hupselbrook annual stats match fixture)")
+    print(f"\n{passed} passed, {failed} failed")
+    if failed:
+        sys.exit(1)
 
 
 if __name__ == "__main__":

@@ -25,7 +25,8 @@
       character(len=200) messag
       character(len=19) datexti
 
-      save
+      ! SAVE statement removed - all local variables are reset at start of each call
+      ! (legacy code that was unnecessary)
 ! ----------------------------------------------------------------------
 
 ! --- set initial values

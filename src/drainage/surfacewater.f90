@@ -8,6 +8,7 @@
 ! ----------------------------------------------------------------------
 !     global
       use Variables
+      use swap_log, only: log_debug, to_str
       implicit none 
       integer task
 
@@ -18,6 +19,8 @@
       integer nodeTopDisLay(madr)
       character(len=300) messag
 !cd     real(8) qdrain_old(madr), qdrain_new(madr)
+
+      call log_debug('surfacewater', 'SurfaceWater called with task=' // to_str(task))
 
 ! ----------------------------------------------------------------------
       select case (task)
@@ -285,8 +288,7 @@
       real(8) swsttara,qhtab,rday,wsmax
       character(len=200) messag
       character(len=19)  datetime
-
-      save
+! removed the blanket save statement to avoid issues in parallel runs
 !-----------------------------------------------------------------------
 ! --- resetting of flag for overflowing of automatic weir
       overfl = .false.

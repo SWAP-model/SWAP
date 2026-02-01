@@ -39,7 +39,7 @@ integer              :: getun
 
 ! Initialize logging (set to LOGLEVEL_DEBUG for verbose output, LOGLEVEL_INFO for normal)
 ! Note: Most iteration-level debug logs are now disabled for performance
-call log_init(log_level=LOGLEVEL_INFO, log_file='swap_debug.log')
+call log_init(log_level=LOGLEVEL_DEBUG, log_file='swap_debug.log')
 
 ! open logfile and read rerun file
 iun1 = getun (400,900)

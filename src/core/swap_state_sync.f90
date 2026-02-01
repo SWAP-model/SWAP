@@ -48,6 +48,10 @@ module swap_state_sync
     public :: irrigation_state_to_variables
     public :: drainage_state_from_variables
     public :: drainage_state_to_variables
+    public :: surfacewater_state_from_variables
+    public :: surfacewater_state_to_variables
+    public :: boundary_state_from_variables
+    public :: boundary_state_to_variables
 
 contains
 
@@ -65,6 +69,7 @@ contains
         call crop_state_from_variables(state%crop, state%ncrop)
         call irrigation_state_from_variables(state%irrig)
         call drainage_state_from_variables(state%drain, state%nrlevs, state%numnod)
+        call boundary_state_from_variables(state%boundary, MADAY)
         
         call log_info('sync', 'State synchronized from variables')
     end subroutine state_from_variables
@@ -83,6 +88,7 @@ contains
         call crop_state_to_variables(state%crop, state%ncrop)
         call irrigation_state_to_variables(state%irrig)
         call drainage_state_to_variables(state%drain, state%nrlevs)
+        call boundary_state_to_variables(state%boundary, MADAY)
         
         call log_info('sync', 'Variables synchronized from state')
     end subroutine state_to_variables
@@ -237,18 +243,70 @@ contains
                 sstate%theta(i) = theta(i)
                 sstate%k(i) = k(i)
             end do
+            call log_debug('soil_sync', 'Copied h, theta, k arrays for ' // to_str(n_nod) // ' nodes')
+        end if
+        
+        ! Previous timestep values
+        if (allocated(sstate%hm1) .and. n_nod > 0) then
+            do i = 1, min(n_nod, size(sstate%hm1))
+                sstate%hm1(i) = hm1(i)
+                sstate%thetm1(i) = thetm1(i)
+            end do
+        end if
+        
+        ! Fluxes
+        if (allocated(sstate%q) .and. n_nod > 0) then
+            do i = 1, min(n_nod+1, size(sstate%q))
+                sstate%q(i) = q(i)
+            end do
+        end if
+        
+        if (allocated(sstate%qrot)) then
+            do i = 1, min(n_nod, size(sstate%qrot))
+                sstate%qrot(i) = qrot(i)
+            end do
         end if
         
         ! Groundwater
         sstate%gwl = gwl
+        sstate%gwlm1 = gwlm1
+        sstate%gwli = gwli
+        sstate%gwlinp = gwlinp
         sstate%nodgwl = nodgwl
+        sstate%npegwl = npegwl
+        sstate%bpegwl = bpegwl
+        sstate%fllowgwl = fllowgwl
+        
+        ! Surface/ponding
         sstate%pond = pond
+        sstate%pondm1 = pondm1
+        sstate%pondmx = pondmx
+        sstate%qtop = qtop
+        sstate%qbot = qbot
         
         ! Cumulative fluxes
         sstate%cqbot = cqbot
+        sstate%cqbotdo = cqbotdo
+        sstate%cqbotup = cqbotup
+        sstate%cqtdo = cqtdo
+        sstate%cqtup = cqtup
+        sstate%cqrot = cqrot
+        sstate%cqdra = cqdra
         sstate%crunoff = crunoff
+        sstate%crunon = crunon
         
-        ! Scalars
+        ! Storage
+        sstate%volact = volact
+        sstate%volini = volini
+        sstate%volm1 = volm1
+        
+        ! Evaporation reduction (Boesten/Black)
+        sstate%saev = saev
+        sstate%spev = spev
+        sstate%ldwet = ldwet
+        sstate%cofred = cofred
+        
+        ! Iteration control
         sstate%numnod = numnod
         sstate%numlay = numlay
         sstate%nsublay = nsublay
@@ -256,15 +314,29 @@ contains
         sstate%msteps = msteps
         sstate%CritDevh1Cp = CritDevh1Cp
         sstate%CritDevh2Cp = CritDevh2Cp
-        sstate%FlRunoff = FlRunoff
+        sstate%CritDevMasBal = CritDevMasBal
+        sstate%gwlconv = gwlconv
         
-        call log_debug('sync', 'soil_state_from_variables: gwl=' // to_str(real(gwl,4)))
+        ! Flags
+        sstate%FlRunoff = FlRunoff
+        sstate%fldrain = fldrain
+        sstate%swhyst = swhyst
+        
+        ! Headcalc iteration tracking (formerly SAVE variables)
+        sstate%flwarn_hc = flwarn_hc
+        sstate%iwarn_hc = iwarn_hc
+        sstate%nstep_hc = nstep_hc
+        
+        call log_debug('soil_sync', 'soil_state_from_variables complete: gwl=' // &
+                       to_str(real(gwl,4)) // ', pond=' // to_str(real(pond,4)))
     end subroutine soil_state_from_variables
 
     subroutine soil_state_to_variables(sstate, n_nod, n_lay)
         type(soil_state_t), intent(in) :: sstate
         integer, intent(in) :: n_nod, n_lay
         integer :: i
+        
+        call log_debug('soil_sync', 'Starting soil_state_to_variables')
         
         ! Primary state variables (node-based)
         if (allocated(sstate%h) .and. n_nod > 0) then
@@ -273,18 +345,70 @@ contains
                 theta(i) = sstate%theta(i)
                 k(i) = sstate%k(i)
             end do
+            call log_debug('soil_sync', 'Restored h, theta, k arrays for ' // to_str(n_nod) // ' nodes')
+        end if
+        
+        ! Previous timestep values
+        if (allocated(sstate%hm1) .and. n_nod > 0) then
+            do i = 1, min(n_nod, size(sstate%hm1))
+                hm1(i) = sstate%hm1(i)
+                thetm1(i) = sstate%thetm1(i)
+            end do
+        end if
+        
+        ! Fluxes
+        if (allocated(sstate%q) .and. n_nod > 0) then
+            do i = 1, min(n_nod+1, size(sstate%q))
+                q(i) = sstate%q(i)
+            end do
+        end if
+        
+        if (allocated(sstate%qrot)) then
+            do i = 1, min(n_nod, size(sstate%qrot))
+                qrot(i) = sstate%qrot(i)
+            end do
         end if
         
         ! Groundwater
         gwl = sstate%gwl
+        gwlm1 = sstate%gwlm1
+        gwli = sstate%gwli
+        gwlinp = sstate%gwlinp
         nodgwl = sstate%nodgwl
+        npegwl = sstate%npegwl
+        bpegwl = sstate%bpegwl
+        fllowgwl = sstate%fllowgwl
+        
+        ! Surface/ponding
         pond = sstate%pond
+        pondm1 = sstate%pondm1
+        pondmx = sstate%pondmx
+        qtop = sstate%qtop
+        qbot = sstate%qbot
         
         ! Cumulative fluxes
         cqbot = sstate%cqbot
+        cqbotdo = sstate%cqbotdo
+        cqbotup = sstate%cqbotup
+        cqtdo = sstate%cqtdo
+        cqtup = sstate%cqtup
+        cqrot = sstate%cqrot
+        cqdra = sstate%cqdra
         crunoff = sstate%crunoff
+        crunon = sstate%crunon
         
-        ! Scalars
+        ! Storage
+        volact = sstate%volact
+        volini = sstate%volini
+        volm1 = sstate%volm1
+        
+        ! Evaporation reduction (Boesten/Black)
+        saev = sstate%saev
+        spev = sstate%spev
+        ldwet = sstate%ldwet
+        cofred = sstate%cofred
+        
+        ! Iteration control
         numnod = sstate%numnod
         numlay = sstate%numlay
         nsublay = sstate%nsublay
@@ -292,9 +416,21 @@ contains
         msteps = sstate%msteps
         CritDevh1Cp = sstate%CritDevh1Cp
         CritDevh2Cp = sstate%CritDevh2Cp
-        FlRunoff = sstate%FlRunoff
+        CritDevMasBal = sstate%CritDevMasBal
+        gwlconv = sstate%gwlconv
         
-        call log_debug('sync', 'soil_state_to_variables: gwl=' // to_str(real(sstate%gwl,4)))
+        ! Flags
+        FlRunoff = sstate%FlRunoff
+        fldrain = sstate%fldrain
+        swhyst = sstate%swhyst
+        
+        ! Headcalc iteration tracking (formerly SAVE variables)
+        flwarn_hc = sstate%flwarn_hc
+        iwarn_hc = sstate%iwarn_hc
+        nstep_hc = sstate%nstep_hc
+        
+        call log_debug('soil_sync', 'soil_state_to_variables complete: gwl=' // &
+                       to_str(real(sstate%gwl,4)) // ', pond=' // to_str(real(sstate%pond,4)))
     end subroutine soil_state_to_variables
 
     ! ==========================================================================
@@ -370,6 +506,15 @@ contains
         astate%rainfil = rainfil
         astate%pathatm = pathatm
         
+        ! ! ETSine SAVE variables (from meteodt.f90)
+        ! astate%tsunrise = tsunrise_atm
+        ! astate%tsunset = tsunset_atm
+        
+        ! ! CN runoff method SAVE variables (from meteoday.f90)
+        ! astate%nod10_cn = nod10_cn
+        ! astate%icn = icn_atm
+        ! astate%z10_cn = z10_cn
+        
         call log_debug('sync', 'atmosphere_state_from_variables: tav=' // to_str(real(tav,4)))
     end subroutine atmosphere_state_from_variables
 
@@ -442,6 +587,15 @@ contains
         metfil = astate%metfil
         rainfil = astate%rainfil
         pathatm = astate%pathatm
+        
+        ! ! ETSine SAVE variables (from meteodt.f90)
+        ! tsunrise_atm = astate%tsunrise
+        ! tsunset_atm = astate%tsunset
+        
+        ! ! CN runoff method SAVE variables (from meteoday.f90)
+        ! nod10_cn = astate%nod10_cn
+        ! icn_atm = astate%icn
+        ! z10_cn = astate%z10_cn
         
         call log_debug('sync', 'atmosphere_state_to_variables: tav=' // to_str(real(astate%tav,4)))
     end subroutine atmosphere_state_to_variables
@@ -712,13 +866,71 @@ contains
         if (allocated(dstate%qdrain) .and. n_levs > 0) then
             do i = 1, min(n_levs, size(dstate%qdrain))
                 dstate%qdrain(i) = qdrain(i)
+                dstate%cqdrain(i) = cqdrain(i)
+                dstate%cqdrainin(i) = cqdrainin(i)
+                dstate%cqdrainout(i) = cqdrainout(i)
+                dstate%drainl(i) = drainl(i)
+                dstate%drares(i) = drares(i)
+                dstate%infres(i) = infres(i)
+                dstate%L(i) = l(i)
+                dstate%wetper(i) = wetper(i)
+                dstate%zbotdr(i) = zbotdr(i)
+                dstate%rdrain(i) = rdrain(i)
+                dstate%rinfi(i) = rinfi(i)
+                dstate%rentry(i) = rentry(i)
+                dstate%rexit(i) = rexit(i)
+                dstate%gwlinf(i) = gwlinf(i)
+                dstate%widthr(i) = widthr(i)
+                dstate%taludr(i) = taludr(i)
+                dstate%swallo(i) = swallo(i)
+                dstate%swdtyp(i) = swdtyp(i)
+                dstate%swtopdislay(i) = swtopdislay(i)
+                dstate%zTopDisLay(i) = zTopDisLay(i)
+                dstate%fTopDisLay(i) = fTopDisLay(i)
+            end do
+        end if
+        
+        ! Spatial arrays
+        if (allocated(dstate%qdra) .and. n_levs > 0 .and. n_nod > 0) then
+            do i = 1, min(n_levs, size(dstate%qdra, 1))
+                do j = 1, min(n_nod, size(dstate%qdra, 2))
+                    dstate%qdra(i,j) = qdra(i,j)
+                    dstate%inqdra(i,j) = inqdra(i,j)
+                    dstate%inqdra_in(i,j) = inqdra_in(i,j)
+                    dstate%inqdra_out(i,j) = inqdra_out(i,j)
+                end do
+            end do
+        end if
+        
+        if (allocated(dstate%qdraincomp) .and. n_nod > 0) then
+            do j = 1, min(n_nod, size(dstate%qdraincomp))
+                dstate%qdraincomp(j) = qdraincomp(j)
             end do
         end if
         
         ! Scalars
         dstate%qdrtot = qdrtot
+        dstate%iqdra = iqdra
+        dstate%cqdra = cqdra
         dstate%nrlevs = nrlevs
+        dstate%nrpri = nrpri
         dstate%dramet = dramet
+        dstate%swdivd = swdivd
+        dstate%swdislay = swdislay
+        dstate%basegw = basegw
+        dstate%entres = entres
+        dstate%shape = shape
+        
+        ! Interflow parameters
+        dstate%cofintfl = cofintfl
+        dstate%expintfl = expintfl
+        dstate%swnrsrf = swnrsrf
+        dstate%SwTopnrsrf = SwTopnrsrf
+        dstate%rsurfdeep = rsurfdeep
+        dstate%rsurfshallow = rsurfshallow
+        dstate%FacDpthInf = FacDpthInf
+        dstate%Swdivdinf = Swdivdinf
+        
         dstate%fldrain = fldrain
         
         call log_debug('sync', 'drainage_state_from_variables: nrlevs=' // to_str(nrlevs))
@@ -727,22 +939,416 @@ contains
     subroutine drainage_state_to_variables(dstate, n_levs)
         type(drainage_state_t), intent(in) :: dstate
         integer, intent(in) :: n_levs
-        integer :: i
+        integer :: i, j, n_nod
+        
+        ! Determine number of nodes from array size
+        n_nod = 0
+        if (allocated(dstate%qdra)) n_nod = size(dstate%qdra, 2)
         
         ! Copy drainage fluxes per level
         if (allocated(dstate%qdrain) .and. n_levs > 0) then
             do i = 1, min(n_levs, size(dstate%qdrain))
                 qdrain(i) = dstate%qdrain(i)
+                cqdrain(i) = dstate%cqdrain(i)
+                cqdrainin(i) = dstate%cqdrainin(i)
+                cqdrainout(i) = dstate%cqdrainout(i)
+                drainl(i) = dstate%drainl(i)
+                drares(i) = dstate%drares(i)
+                infres(i) = dstate%infres(i)
+                l(i) = dstate%L(i)
+                wetper(i) = dstate%wetper(i)
+                zbotdr(i) = dstate%zbotdr(i)
+                rdrain(i) = dstate%rdrain(i)
+                rinfi(i) = dstate%rinfi(i)
+                rentry(i) = dstate%rentry(i)
+                rexit(i) = dstate%rexit(i)
+                gwlinf(i) = dstate%gwlinf(i)
+                widthr(i) = dstate%widthr(i)
+                taludr(i) = dstate%taludr(i)
+                swallo(i) = dstate%swallo(i)
+                swdtyp(i) = dstate%swdtyp(i)
+                swtopdislay(i) = dstate%swtopdislay(i)
+                zTopDisLay(i) = dstate%zTopDisLay(i)
+                fTopDisLay(i) = dstate%fTopDisLay(i)
+            end do
+        end if
+        
+        ! Spatial arrays
+        if (allocated(dstate%qdra) .and. n_levs > 0 .and. n_nod > 0) then
+            do i = 1, min(n_levs, size(dstate%qdra, 1))
+                do j = 1, min(n_nod, size(dstate%qdra, 2))
+                    qdra(i,j) = dstate%qdra(i,j)
+                    inqdra(i,j) = dstate%inqdra(i,j)
+                    inqdra_in(i,j) = dstate%inqdra_in(i,j)
+                    inqdra_out(i,j) = dstate%inqdra_out(i,j)
+                end do
+            end do
+        end if
+        
+        if (allocated(dstate%qdraincomp) .and. n_nod > 0) then
+            do j = 1, min(n_nod, size(dstate%qdraincomp))
+                qdraincomp(j) = dstate%qdraincomp(j)
             end do
         end if
         
         ! Scalars
         qdrtot = dstate%qdrtot
+        iqdra = dstate%iqdra
+        cqdra = dstate%cqdra
         nrlevs = dstate%nrlevs
+        nrpri = dstate%nrpri
         dramet = dstate%dramet
+        swdivd = dstate%swdivd
+        swdislay = dstate%swdislay
+        basegw = dstate%basegw
+        entres = dstate%entres
+        shape = dstate%shape
+        
+        ! Interflow parameters
+        cofintfl = dstate%cofintfl
+        expintfl = dstate%expintfl
+        swnrsrf = dstate%swnrsrf
+        SwTopnrsrf = dstate%SwTopnrsrf
+        rsurfdeep = dstate%rsurfdeep
+        rsurfshallow = dstate%rsurfshallow
+        FacDpthInf = dstate%FacDpthInf
+        Swdivdinf = dstate%Swdivdinf
+        
         fldrain = dstate%fldrain
         
         call log_debug('sync', 'drainage_state_to_variables: nrlevs=' // to_str(dstate%nrlevs))
     end subroutine drainage_state_to_variables
+
+    ! ==========================================================================
+    ! Surface Water State Synchronization
+    ! ==========================================================================
+    subroutine surfacewater_state_from_variables(swstate, n_mper, n_levs)
+        type(surfacewater_state_t), intent(inout) :: swstate
+        integer, intent(in) :: n_mper, n_levs
+        integer :: i, j
+        
+        ! Water levels
+        swstate%wlp = wlp
+        swstate%wls = wls
+        swstate%wlsold = wlsold
+        swstate%wlstar = wlstar
+        swstate%hwlman = hwlman
+        swstate%vtair = vtair
+        
+        ! Water level history
+        if (allocated(swstate%wlsbak)) then
+            do i = 1, min(4, size(swstate%wlsbak))
+                swstate%wlsbak(i) = wlsbak(i)
+            end do
+        end if
+        
+        ! Storage and fluxes
+        swstate%swst = swst
+        swstate%swstini = swstini
+        swstate%qdrd = qdrd
+        swstate%cqdrd = cqdrd
+        swstate%cwsupp = cwsupp
+        swstate%cwout = cwout
+        swstate%runots = runots
+        swstate%QRapDra = QRapDra
+        
+        ! Management
+        swstate%imper = imper
+        swstate%nmper = nmper
+        swstate%numadj = numadj
+        swstate%swsrf = swsrf
+        swstate%swsec = swsec
+        swstate%swqhr = swqhr
+        swstate%osswlm = osswlm
+        swstate%overfl = overfl
+        swstate%fldecdt = fldecdt
+        swstate%fldtmin = fldtmin
+        
+        call log_debug('sync', 'surfacewater_state_from_variables: nmper=' // to_str(nmper))
+    end subroutine surfacewater_state_from_variables
+
+    subroutine surfacewater_state_to_variables(swstate, n_mper)
+        type(surfacewater_state_t), intent(in) :: swstate
+        integer, intent(in) :: n_mper
+        integer :: i
+        
+        ! Water levels
+        wlp = swstate%wlp
+        wls = swstate%wls
+        wlsold = swstate%wlsold
+        wlstar = swstate%wlstar
+        hwlman = swstate%hwlman
+        vtair = swstate%vtair
+        
+        ! Water level history
+        if (allocated(swstate%wlsbak)) then
+            do i = 1, min(4, size(swstate%wlsbak))
+                wlsbak(i) = swstate%wlsbak(i)
+            end do
+        end if
+        
+        ! Storage and fluxes
+        swst = swstate%swst
+        swstini = swstate%swstini
+        qdrd = swstate%qdrd
+        cqdrd = swstate%cqdrd
+        cwsupp = swstate%cwsupp
+        cwout = swstate%cwout
+        runots = swstate%runots
+        QRapDra = swstate%QRapDra
+        
+        ! Management
+        imper = swstate%imper
+        nmper = swstate%nmper
+        numadj = swstate%numadj
+        swsrf = swstate%swsrf
+        swsec = swstate%swsec
+        swqhr = swstate%swqhr
+        osswlm = swstate%osswlm
+        overfl = swstate%overfl
+        fldecdt = swstate%fldecdt
+        fldtmin = swstate%fldtmin
+        
+        call log_debug('sync', 'surfacewater_state_to_variables: nmper=' // to_str(swstate%nmper))
+    end subroutine surfacewater_state_to_variables
+
+    ! ==========================================================================
+    ! Boundary State Synchronization
+    ! ==========================================================================
+    subroutine boundary_state_from_variables(bstate, n_day)
+        type(boundary_state_t), intent(inout) :: bstate
+        integer, intent(in) :: n_day
+        integer :: i
+        
+        ! Bottom boundary - configuration
+        bstate%swbotb = swbotb
+        bstate%swbotb3Impl = swbotb3Impl
+        bstate%SwBotb3ResVert = SwBotb3ResVert
+        bstate%swqhbot = swqhbot
+        bstate%swcofqhc = swcofqhc
+        bstate%sw2 = sw2
+        bstate%sw3 = sw3
+        bstate%sw4 = sw4
+        
+        ! Bottom boundary - values
+        bstate%qbot = qbot
+        bstate%qbot_nonfrozen = qbot_nonfrozen
+        bstate%hbot = hbot
+        bstate%iqbot = iqbot
+        bstate%cqbot = cqbot
+        bstate%cqbotdo = cqbotdo
+        bstate%cqbotup = cqbotup
+        bstate%deepgw = deepgw
+        
+        ! Aquifer parameters
+        bstate%aqave = aqave
+        bstate%aqamp = aqamp
+        bstate%aqper = aqper
+        bstate%aqtmax = aqtmax
+        bstate%rimlay = rimlay
+        bstate%hdrain = hdrain
+        bstate%shape = shape
+        
+        ! Sine function parameters
+        bstate%sinave = sinave
+        bstate%sinamp = sinamp
+        bstate%sinmax = sinmax
+        
+        ! Flux-head relationships
+        bstate%cofqha = cofqha
+        bstate%cofqhb = cofqhb
+        bstate%cofqhc = cofqhc
+        
+        ! Lysimeter
+        bstate%hplate = hplate
+        
+        ! Tables - copy if allocated
+        if (allocated(bstate%gwltab)) then
+            do i = 1, min(size(bstate%gwltab), size(gwltab))
+                bstate%gwltab(i) = gwltab(i)
+            end do
+        end if
+        if (allocated(bstate%haqtab)) then
+            do i = 1, min(size(bstate%haqtab), size(haqtab))
+                bstate%haqtab(i) = haqtab(i)
+            end do
+        end if
+        if (allocated(bstate%qbotab)) then
+            do i = 1, min(size(bstate%qbotab), size(qbotab))
+                bstate%qbotab(i) = qbotab(i)
+            end do
+        end if
+        if (allocated(bstate%hbotab)) then
+            do i = 1, min(size(bstate%hbotab), size(hbotab))
+                bstate%hbotab(i) = hbotab(i)
+            end do
+        end if
+        
+        ! Top boundary - configuration
+        bstate%swpondmx = swpondmx
+        bstate%swredu = swredu
+        
+        ! Top boundary - values
+        bstate%pondmx = pondmx
+        bstate%hatm = hatm
+        bstate%hsurf = hsurf
+        bstate%rsro = rsro
+        bstate%rsroexp = rsroexp
+        bstate%runon = runon
+        bstate%runots = runots
+        bstate%crunoff = crunoff
+        bstate%crunon = crunon
+        bstate%iruno = iruno
+        bstate%irunon = irunon
+        
+        ! Surface/ponding
+        bstate%qtop = qtop
+        bstate%q0 = q0
+        bstate%h0max = h0max
+        bstate%k1max = k1max
+        bstate%QMpLatSs = QMpLatSs
+        
+        ! Runon array
+        if (allocated(bstate%runonarr)) then
+            do i = 1, min(size(bstate%runonarr), n_day)
+                bstate%runonarr(i) = runonarr(i)
+            end do
+        end if
+        
+        ! Ponding table
+        if (allocated(bstate%pondmxtab)) then
+            do i = 1, min(size(bstate%pondmxtab), size(pondmxtab))
+                bstate%pondmxtab(i) = pondmxtab(i)
+            end do
+        end if
+        
+        ! Inundation
+        bstate%cinund = cinund
+        
+        ! Flags
+        bstate%FlRunoff = FlRunoff
+        bstate%flrunon = flrunon
+        bstate%ftoph = ftoph
+        
+        call log_debug('sync', 'boundary_state_from_variables: swbotb=' // to_str(swbotb))
+    end subroutine boundary_state_from_variables
+
+    subroutine boundary_state_to_variables(bstate, n_day)
+        type(boundary_state_t), intent(in) :: bstate
+        integer, intent(in) :: n_day
+        integer :: i
+        
+        ! Bottom boundary - configuration
+        swbotb = bstate%swbotb
+        swbotb3Impl = bstate%swbotb3Impl
+        SwBotb3ResVert = bstate%SwBotb3ResVert
+        swqhbot = bstate%swqhbot
+        swcofqhc = bstate%swcofqhc
+        sw2 = bstate%sw2
+        sw3 = bstate%sw3
+        sw4 = bstate%sw4
+        
+        ! Bottom boundary - values
+        qbot = bstate%qbot
+        qbot_nonfrozen = bstate%qbot_nonfrozen
+        hbot = bstate%hbot
+        iqbot = bstate%iqbot
+        cqbot = bstate%cqbot
+        cqbotdo = bstate%cqbotdo
+        cqbotup = bstate%cqbotup
+        deepgw = bstate%deepgw
+        
+        ! Aquifer parameters
+        aqave = bstate%aqave
+        aqamp = bstate%aqamp
+        aqper = bstate%aqper
+        aqtmax = bstate%aqtmax
+        rimlay = bstate%rimlay
+        hdrain = bstate%hdrain
+        shape = bstate%shape
+        
+        ! Sine function parameters
+        sinave = bstate%sinave
+        sinamp = bstate%sinamp
+        sinmax = bstate%sinmax
+        
+        ! Flux-head relationships
+        cofqha = bstate%cofqha
+        cofqhb = bstate%cofqhb
+        cofqhc = bstate%cofqhc
+        
+        ! Lysimeter
+        hplate = bstate%hplate
+        
+        ! Tables - copy if allocated
+        if (allocated(bstate%gwltab)) then
+            do i = 1, min(size(bstate%gwltab), size(gwltab))
+                gwltab(i) = bstate%gwltab(i)
+            end do
+        end if
+        if (allocated(bstate%haqtab)) then
+            do i = 1, min(size(bstate%haqtab), size(haqtab))
+                haqtab(i) = bstate%haqtab(i)
+            end do
+        end if
+        if (allocated(bstate%qbotab)) then
+            do i = 1, min(size(bstate%qbotab), size(qbotab))
+                qbotab(i) = bstate%qbotab(i)
+            end do
+        end if
+        if (allocated(bstate%hbotab)) then
+            do i = 1, min(size(bstate%hbotab), size(hbotab))
+                hbotab(i) = bstate%hbotab(i)
+            end do
+        end if
+        
+        ! Top boundary - configuration
+        swpondmx = bstate%swpondmx
+        swredu = bstate%swredu
+        
+        ! Top boundary - values
+        pondmx = bstate%pondmx
+        hatm = bstate%hatm
+        hsurf = bstate%hsurf
+        rsro = bstate%rsro
+        rsroexp = bstate%rsroexp
+        runon = bstate%runon
+        runots = bstate%runots
+        crunoff = bstate%crunoff
+        crunon = bstate%crunon
+        iruno = bstate%iruno
+        irunon = bstate%irunon
+        
+        ! Surface/ponding
+        qtop = bstate%qtop
+        q0 = bstate%q0
+        h0max = bstate%h0max
+        k1max = bstate%k1max
+        QMpLatSs = bstate%QMpLatSs
+        
+        ! Runon array
+        if (allocated(bstate%runonarr)) then
+            do i = 1, min(size(bstate%runonarr), n_day)
+                runonarr(i) = bstate%runonarr(i)
+            end do
+        end if
+        
+        ! Ponding table
+        if (allocated(bstate%pondmxtab)) then
+            do i = 1, min(size(bstate%pondmxtab), size(pondmxtab))
+                pondmxtab(i) = bstate%pondmxtab(i)
+            end do
+        end if
+        
+        ! Inundation
+        cinund = bstate%cinund
+        
+        ! Flags
+        FlRunoff = bstate%FlRunoff
+        flrunon = bstate%flrunon
+        ftoph = bstate%ftoph
+        
+        call log_debug('sync', 'boundary_state_to_variables: swbotb=' // to_str(bstate%swbotb))
+    end subroutine boundary_state_to_variables
 
 end module swap_state_sync

@@ -198,7 +198,11 @@
       CritDevh1Cp        = 0.0d0 
       CritDevh2Cp        = 0.0d0 
       CritDevPondDt      = 0.0d0 
-      fldumpconvcrit     = .false. 
+      fldumpconvcrit     = .false.
+      flwarn_hc          = .true.     ! Initialize headcalc warning flag (previously SAVE variable)
+      iwarn_hc           = 0          ! Initialize headcalc warning counter (previously SAVE variable)
+      nstep_hc           = 0          ! Initialize headcalc step counter (previously SAVE variable) 
+      dev_cmb            = 0          ! Initialize mass balance deviation file unit (previously SAVE in checkmassbal)
       flksatexm          = .false. 
       fluseksatexm       = .false. 
       FlRunoff           = .false. 

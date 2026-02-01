@@ -878,7 +878,7 @@
       real(8)  mn,mx,x
 !**    local parameters
       character(len=52) messag
-      save
+      ! SAVE removed - messag is temporary and written before use
 
       if (mx.lt.mn) then
 !*        minimum is larger than maximum, should generate an error
