@@ -705,24 +705,93 @@ module swap_state_mod
         real(8) :: cQMpInMtxSatDm2 = 0.0d0
         real(8) :: cQMpOutMtxUnsDm1 = 0.0d0
         real(8) :: cQMpOutMtxUnsDm2 = 0.0d0
+        real(8) :: cQMpInIntSatDm1 = 0.0d0
+        real(8) :: cQMpInIntSatDm2 = 0.0d0
+        real(8) :: cQMpInTopLatDm1 = 0.0d0
+        real(8) :: cQMpInTopLatDm2 = 0.0d0
+        real(8) :: cQMpInTopVrtDm1 = 0.0d0
+        real(8) :: cQMpInTopVrtDm2 = 0.0d0
+        real(8) :: cQMpOutMtxSatDm1 = 0.0d0
+        real(8) :: cQMpOutMtxSatDm2 = 0.0d0
+        
+        ! Incremental fluxes
+        real(8) :: iQMpOutDrRap = 0.0d0
+        real(8) :: iQInTopLatDm1 = 0.0d0
+        real(8) :: iQInTopLatDm2 = 0.0d0
+        real(8) :: iQInTopVrtDm1 = 0.0d0
+        real(8) :: iQInTopVrtDm2 = 0.0d0
+        real(8) :: IWaSrDm1Beg = 0.0d0
+        real(8) :: IWaSrDm2Beg = 0.0d0
         
         ! Per-compartment arrays
         real(8), allocatable :: DiPoCp(:)      ! Polygon diameter
         real(8), allocatable :: FrArMtrx(:)    ! Matrix area fraction
         real(8), allocatable :: VlMpDyCp(:)    ! Dynamic macropore volume
         real(8), allocatable :: VlMpStCp(:)    ! Static macropore volume
+        real(8), allocatable :: VlMpStDm1(:)   ! Static volume domain 1
+        real(8), allocatable :: VlMpStDm2(:)   ! Static volume domain 2
         real(8), allocatable :: QExcMpMtx(:)   ! Exchange flux
         real(8), allocatable :: SubsidCp(:)    ! Vertical subsidence
         real(8), allocatable :: PpDmCp(:,:)    ! Domain proportion
+        real(8), allocatable :: dFdhMp(:)      ! Contribution to derivative
+        real(8), allocatable :: iQOutDrRapCp(:)    ! Incremental rapid drainage per comp
+        real(8), allocatable :: iQExcMtxDm1Cp(:)   ! Incremental exchange domain 1
+        real(8), allocatable :: iQExcMtxDm2Cp(:)   ! Incremental exchange domain 2
+        real(8), allocatable :: IAvFrMpWlWtDm1(:)  ! Avg wet wall fraction MB
+        real(8), allocatable :: IAvFrMpWlWtDm2(:)  ! Avg wet wall fraction IC
+        
+        ! Work arrays from SAVE (task persistence)
+        integer, allocatable :: ICpBtDm(:)     ! Bottom compartment per domain
+        integer, allocatable :: ICpTpWaSrDm(:) ! Top compartment water storage per domain
+        real(8), allocatable :: ArMpTpDm(:)    ! Area at top per domain
+        real(8), allocatable :: AwlCorFac(:)   ! Correction factor
+        real(8), allocatable :: FrMpWalWet(:,:)    ! Wet macropore wall fraction
+        real(8), allocatable :: KDCrRlRef(:)   ! Reference crack conductivity
+        real(8), allocatable :: QExcMtxDmCp(:,:)   ! Exchange flux per domain/comp
+        real(8), allocatable :: QInIntSatDmCp(:,:) ! Interflow in per domain/comp
+        real(8), allocatable :: QInMtxSatDmCp(:,:) ! Matrix sat inflow per domain/comp
+        real(8), allocatable :: QInTopLatDm(:)     ! Top lateral inflow per domain
+        real(8), allocatable :: QInTopVrtDm(:)     ! Top vertical inflow per domain
+        real(8), allocatable :: QOutDrRapCp(:)     ! Rapid drainage out per comp
+        real(8), allocatable :: QOutMtxSatDmCp(:,:)    ! Matrix sat outflow per domain/comp
+        real(8), allocatable :: QOutMtxUnsDmCp(:,:)    ! Matrix unsat outflow per domain/comp
+        real(8), allocatable :: SorpDmCp(:,:)      ! Sorptivity per domain/comp
+        real(8), allocatable :: ThtSrpRefDmCp(:,:) ! Reference theta for sorption
+        real(8), allocatable :: TimAbsCumDmCp(:,:) ! Cumulative absorption time
+        real(8), allocatable :: VlMpDm(:)          ! Macropore volume per domain
+        real(8), allocatable :: VlMpDmCp(:,:)      ! Macropore volume per domain/comp
+        real(8), allocatable :: WaSrMpDm(:)        ! Water storage per domain
+        real(8), allocatable :: WaSrMpDmCp(:,:)    ! Water storage per domain/comp
+        real(8), allocatable :: ZBtDm(:)           ! Bottom depth per domain
+        real(8), allocatable :: ZWaLevDm(:)        ! Water level per domain
+        logical, allocatable :: flDraTub(:)        ! Drain tube flag per level
+        logical, allocatable :: FlEndSrpEvt(:,:)   ! End sorption event flag
+        
+        ! State tracking
+        real(8) :: WaSrMp = 0.0d0              ! Total water storage in macropores
+        integer :: ICpBtPerZon = 0             ! Bottom compartment percolation zone
+        integer :: ICpSatGWl = 0               ! Saturated compartment at GWL
+        integer :: ICpSatPeGWl = 0             ! Saturated perched GWL compartment
+        integer :: ICpTpPerZon = 0             ! Top compartment percolation zone
+        integer :: ICpTpSatZon = 0             ! Top compartment saturated zone
+        integer :: NnCrAr = 0                  ! Number of crack areas
+        logical :: flBegin = .true.            ! Beginning of simulation flag
         
         ! Domain configuration
         integer :: NumDm = 0                   ! Number of domains
         integer :: NumSbDm = 0                 ! Subdomains in IC
         integer :: IcTopMP = 0                 ! Top compartment with macropores
+        integer :: NumLevRapDra = 0            ! Number of rapid drainage levels
         real(8) :: Z_Tp = 0.0d0                ! Top depth of macropores
         real(8) :: Z_St = 0.0d0                ! Bottom of static macropores
         real(8) :: Z_Ic = 0.0d0                ! Bottom of IC domain
         real(8) :: Z_Ah = 0.0d0                ! Bottom of A-horizon
+        real(8) :: ArMpTp = 0.0d0              ! Area fraction at top of macropores
+        real(8) :: ArMpSs = 0.0d0              ! Area fraction at soil surface
+        real(8) :: KsatCovLay = 0.0d0          ! Saturated K of covering layer
+        real(8) :: KsMpSs = 0.0d0              ! Vertical K of macropores at surface
+        real(8) :: PpIcTpMp = 0.0d0            ! Proportion IC at top macropores
+        real(8) :: dtold = 0.0d0               ! Previous timestep length
         
         ! Groundwater tracking
         real(8) :: GWlFlCpZo = 0.0d0           ! GWL of full capillary zone
@@ -1102,7 +1171,7 @@ contains
         call crop_state_init(state%crop, nc)
         
         call log_debug('state_init', 'Initializing macropore state...')
-        call macropore_state_init(state%macro, numnod, MADM)
+        call macropore_state_init(state%macro, numnod, MADM, MADR)
         
         call log_debug('state_init', 'Initializing solute state...')
         call solute_state_init(state%solute, numnod, numlay, nlev)
@@ -1352,23 +1421,95 @@ contains
         
     end subroutine crop_state_init
     
-    subroutine macropore_state_init(macro, numnod, maxdom)
+    subroutine macropore_state_init(macro, numnod, maxdom, maxdra)
         type(macropore_state_t), intent(inout) :: macro
-        integer, intent(in) :: numnod, maxdom
+        integer, intent(in) :: numnod, maxdom, maxdra
         
+        ! Original per-compartment arrays
         allocate(macro%DiPoCp(numnod))
         allocate(macro%FrArMtrx(numnod))
         allocate(macro%VlMpDyCp(numnod))
         allocate(macro%VlMpStCp(numnod))
+        allocate(macro%VlMpStDm1(numnod))
+        allocate(macro%VlMpStDm2(numnod))
         allocate(macro%QExcMpMtx(numnod))
         allocate(macro%SubsidCp(numnod))
         allocate(macro%PpDmCp(maxdom, numnod))
+        allocate(macro%dFdhMp(numnod))
+        allocate(macro%iQOutDrRapCp(numnod))
+        allocate(macro%iQExcMtxDm1Cp(numnod))
+        allocate(macro%iQExcMtxDm2Cp(numnod))
+        allocate(macro%IAvFrMpWlWtDm1(numnod))
+        allocate(macro%IAvFrMpWlWtDm2(numnod))
         
+        ! Work arrays from SAVE (task persistence)
+        allocate(macro%ICpBtDm(maxdom))
+        allocate(macro%ICpTpWaSrDm(maxdom))
+        allocate(macro%ArMpTpDm(maxdom))
+        allocate(macro%AwlCorFac(numnod))
+        allocate(macro%FrMpWalWet(maxdom, numnod))
+        allocate(macro%KDCrRlRef(maxdra))
+        allocate(macro%QExcMtxDmCp(maxdom, numnod))
+        allocate(macro%QInIntSatDmCp(maxdom, numnod))
+        allocate(macro%QInMtxSatDmCp(maxdom, numnod))
+        allocate(macro%QInTopLatDm(maxdom))
+        allocate(macro%QInTopVrtDm(maxdom))
+        allocate(macro%QOutDrRapCp(numnod))
+        allocate(macro%QOutMtxSatDmCp(maxdom, numnod))
+        allocate(macro%QOutMtxUnsDmCp(maxdom, numnod))
+        allocate(macro%SorpDmCp(maxdom, numnod))
+        allocate(macro%ThtSrpRefDmCp(maxdom, numnod))
+        allocate(macro%TimAbsCumDmCp(maxdom, numnod))
+        allocate(macro%VlMpDm(maxdom))
+        allocate(macro%VlMpDmCp(maxdom, numnod))
+        allocate(macro%WaSrMpDm(maxdom))
+        allocate(macro%WaSrMpDmCp(maxdom, numnod))
+        allocate(macro%ZBtDm(maxdom))
+        allocate(macro%ZWaLevDm(maxdom))
+        allocate(macro%flDraTub(maxdra))
+        allocate(macro%FlEndSrpEvt(maxdom, numnod))
+        
+        ! Initialize per-compartment arrays
         macro%DiPoCp = 0.0d0
         macro%FrArMtrx = 1.0d0
         macro%VlMpDyCp = 0.0d0
         macro%VlMpStCp = 0.0d0
+        macro%VlMpStDm1 = 0.0d0
+        macro%VlMpStDm2 = 0.0d0
         macro%QExcMpMtx = 0.0d0
+        macro%dFdhMp = 0.0d0
+        macro%iQOutDrRapCp = 0.0d0
+        macro%iQExcMtxDm1Cp = 0.0d0
+        macro%iQExcMtxDm2Cp = 0.0d0
+        macro%IAvFrMpWlWtDm1 = 0.0d0
+        macro%IAvFrMpWlWtDm2 = 0.0d0
+        
+        ! Initialize work arrays
+        macro%ICpBtDm = 0
+        macro%ICpTpWaSrDm = 0
+        macro%ArMpTpDm = 0.0d0
+        macro%AwlCorFac = 0.0d0
+        macro%FrMpWalWet = 0.0d0
+        macro%KDCrRlRef = 0.0d0
+        macro%QExcMtxDmCp = 0.0d0
+        macro%QInIntSatDmCp = 0.0d0
+        macro%QInMtxSatDmCp = 0.0d0
+        macro%QInTopLatDm = 0.0d0
+        macro%QInTopVrtDm = 0.0d0
+        macro%QOutDrRapCp = 0.0d0
+        macro%QOutMtxSatDmCp = 0.0d0
+        macro%QOutMtxUnsDmCp = 0.0d0
+        macro%SorpDmCp = 0.0d0
+        macro%ThtSrpRefDmCp = 0.0d0
+        macro%TimAbsCumDmCp = 0.0d0
+        macro%VlMpDm = 0.0d0
+        macro%VlMpDmCp = 0.0d0
+        macro%WaSrMpDm = 0.0d0
+        macro%WaSrMpDmCp = 0.0d0
+        macro%ZBtDm = 0.0d0
+        macro%ZWaLevDm = 0.0d0
+        macro%flDraTub = .false.
+        macro%FlEndSrpEvt = .false.
         
     end subroutine macropore_state_init
     

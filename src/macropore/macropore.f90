@@ -19,29 +19,13 @@
       implicit NONE
 
 ! ----------------------------------------------------------------------
-! --- local
-      integer ICpBtDm(MaDm), ICpBtPerZon, ICpSatGWl
-      integer ICpSatPeGWl, ICpTpPerZon, ICpTpSatZon, ICpTpWaSrDm(MaDm)
-      integer ITask, NnCrAr
-      real(8) ArMpTpDm(MaDm), AwlCorFac(MaCp),FrMpWalWet(MaDm,MaCp) 
-      real(8) KDCrRlRef(MaDr), QExcMtxDmCp(MaDm,MaCp) 
-      real(8) QInIntSatDmCp(MaDm,MaCp), QInMtxSatDmCp(MaDm,MaCp)
-      real(8) QInTopLatDm(MaDm), QInTopVrtDm(MaDm), QOutDrRapCp(MaCp)
-      real(8) QOutMtxSatDmCp(MaDm,MaCp), QOutMtxUnsDmCp(MaDm,MaCp)
-      real(8) SorpDmCp(MaDm,MaCp), ThtSrpRefDmCp(MaDm,MaCp)
-      real(8) TimAbsCumDmCp(MaDm,MaCp), VlMpDm(MaDm),VlMpDmCp(MaDm,MaCp)
-      real(8) WaSrMpDm(MaDm), WaSrMpDmCp(MaDm,MaCp), WaSrMp 
-      real(8) ZBtDm(MaDm), ZWaLevDm(MaDm)
-      logical flBegin,flDraTub(Madr), FlEndSrpEvt(MaDm,MaCp)
+! --- local (ITask only - all work arrays moved to variables.f90 for multi-instance support)
+      integer ITask
 
 !      integer itel
 
 !      character(len=1) comma
 !      comma= ','
-
-!     save local variables
-      save    
-
 
 ! ----------------------------------------------------------------------
       select case (itask)
@@ -682,7 +666,14 @@
 !     Functions called   : watcon, SHRINK
 !     File usage         : -           
 ! ----------------------------------------------------------------------
-      use Variables
+! --- Exclude work arrays passed as arguments (now module-level in variables.f90)
+      use Variables, ICpBtDm_v => ICpBtDm, ICpTpWaSrDm_v => ICpTpWaSrDm, &
+     &    NnCrAr_v => NnCrAr, AwlCorFac_v => AwlCorFac, KDCrRlRef_v => KDCrRlRef, &
+     &    QExcMtxDmCp_v => QExcMtxDmCp, QInTopLatDm_v => QInTopLatDm, &
+     &    QInTopVrtDm_v => QInTopVrtDm, QOutDrRapCp_v => QOutDrRapCp, &
+     &    SorpDmCp_v => SorpDmCp, ThtSrpRefDmCp_v => ThtSrpRefDmCp, &
+     &    TimAbsCumDmCp_v => TimAbsCumDmCp, VlMpDmCp_v => VlMpDmCp, &
+     &    WaSrMpDm_v => WaSrMpDm, flDraTub_v => flDraTub, FlEndSrpEvt_v => FlEndSrpEvt
       implicit NONE
 
 ! --- global                                                       
@@ -1126,7 +1117,12 @@
 !     Functions called   : -
 !     File usage         : -           
 ! ----------------------------------------------------------------------
-      use Variables
+! --- Exclude work arrays passed as arguments (now module-level in variables.f90)
+      use Variables, flBegin_v => flBegin, FrMpWalWet_v => FrMpWalWet, &
+     &    QInIntSatDmCp_v => QInIntSatDmCp, QInMtxSatDmCp_v => QInMtxSatDmCp, &
+     &    QInTopLatDm_v => QInTopLatDm, QInTopVrtDm_v => QInTopVrtDm, &
+     &    QOutDrRapCp_v => QOutDrRapCp, QOutMtxSatDmCp_v => QOutMtxSatDmCp, &
+     &    QOutMtxUnsDmCp_v => QOutMtxUnsDmCp
       implicit NONE
 
 ! --- global                                                       In
@@ -1294,7 +1290,19 @@
 !     Functions called   : SHRINK
 !     File usage         : -           
 ! ----------------------------------------------------------------------
-      use Variables
+! --- Exclude work arrays passed as arguments (now module-level in variables.f90)
+      use Variables, NnCrAr_v => NnCrAr, FlEndSrpEvt_v => FlEndSrpEvt, &
+     &    QExcMtxDmCp_v => QExcMtxDmCp, QInTopLatDm_v => QInTopLatDm, &
+     &    QInTopVrtDm_v => QInTopVrtDm, QOutDrRapCp_v => QOutDrRapCp, &
+     &    WaSrMpDm_v => WaSrMpDm, ICpBtDm_v => ICpBtDm, &
+     &    ICpBtPerZon_v => ICpBtPerZon, ICpSatGWl_v => ICpSatGWl, &
+     &    ICpSatPeGWl_v => ICpSatPeGWl, ICpTpPerZon_v => ICpTpPerZon, &
+     &    ICpTpSatZon_v => ICpTpSatZon, ICpTpWaSrDm_v => ICpTpWaSrDm, &
+     &    ArMpTpDm_v => ArMpTpDm, AwlCorFac_v => AwlCorFac, &
+     &    FrMpWalWet_v => FrMpWalWet, SorpDmCp_v => SorpDmCp, &
+     &    ThtSrpRefDmCp_v => ThtSrpRefDmCp, TimAbsCumDmCp_v => TimAbsCumDmCp, &
+     &    VlMpDm_v => VlMpDm, VlMpDmCp_v => VlMpDmCp, WaSrMp_v => WaSrMp, &
+     &    WaSrMpDmCp_v => WaSrMpDmCp, ZBtDm_v => ZBtDm, ZWaLevDm_v => ZWaLevDm
       implicit NONE
 
 ! --- global                                                       In

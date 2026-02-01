@@ -1091,6 +1091,41 @@
       logical flInitDraBas         ! Flag indicating initialization of basis for rapid drainage
       logical flmacropore          ! Flag indicating simulation of macropore flow
 
+! --- macropore work arrays (previously local SAVE in macropore.f90)
+      integer ICpBtDm(MaDm)        ! Compartment number of bottom domain (-)
+      integer ICpBtPerZon          ! Compartment number of bottom of percolation zone (-)
+      integer ICpSatGWl            ! Compartment at saturated groundwater level (-)
+      integer ICpSatPeGWl          ! Compartment at saturated perched groundwater level (-)
+      integer ICpTpPerZon          ! Compartment number of top of percolation zone (-)
+      integer ICpTpSatZon          ! Compartment number of top of saturated zone (-)
+      integer ICpTpWaSrDm(MaDm)    ! Compartment number of top of water storage per domain (-)
+      integer NnCrAr               ! Number of crack areas (-)
+      real(8) ArMpTpDm(MaDm)       ! Area fraction of macropores at top per domain (-)
+      real(8) AwlCorFac(MaCp)      ! Correction factor for wet macropore wall (-)
+      real(8) FrMpWalWet(MaDm,MaCp) ! Fraction of wet macropore wall per domain/compartment (-)
+      real(8) KDCrRlRef(MaDr)      ! Reference conductivity for crack flow per drainage level (L/T)
+      real(8) QExcMtxDmCp(MaDm,MaCp) ! Exchange flux between matrix and macropores per domain/compartment (L/T)
+      real(8) QInIntSatDmCp(MaDm,MaCp) ! Interflow into macropores from perched groundwater per domain/compartment (L/T)
+      real(8) QInMtxSatDmCp(MaDm,MaCp) ! Inflow from saturated matrix per domain/compartment (L/T)
+      real(8) QInTopLatDm(MaDm)    ! Lateral overland flow into macropores per domain (L/T)
+      real(8) QInTopVrtDm(MaDm)    ! Vertical inflow at top into macropores per domain (L/T)
+      real(8) QOutDrRapCp(MaCp)    ! Rapid drainage outflow per compartment (L/T)
+      real(8) QOutMtxSatDmCp(MaDm,MaCp) ! Outflow to saturated matrix per domain/compartment (L/T)
+      real(8) QOutMtxUnsDmCp(MaDm,MaCp) ! Outflow to unsaturated matrix per domain/compartment (L/T)
+      real(8) SorpDmCp(MaDm,MaCp)  ! Sorptivity per domain/compartment (L/T^0.5)
+      real(8) ThtSrpRefDmCp(MaDm,MaCp) ! Reference theta for sorption per domain/compartment (-)
+      real(8) TimAbsCumDmCp(MaDm,MaCp) ! Cumulative absorption time per domain/compartment (T)
+      real(8) VlMpDm(MaDm)         ! Macropore volume per domain (L)
+      real(8) VlMpDmCp(MaDm,MaCp)  ! Macropore volume per domain/compartment (L)
+      real(8) WaSrMp               ! Total water storage in macropores (L)
+      real(8) WaSrMpDm(MaDm)       ! Water storage per domain (L)
+      real(8) WaSrMpDmCp(MaDm,MaCp) ! Water storage per domain/compartment (L)
+      real(8) ZBtDm(MaDm)          ! Bottom depth per domain (L)
+      real(8) ZWaLevDm(MaDm)       ! Water level per domain (L)
+      logical flBegin              ! Flag indicating beginning of macropore simulation
+      logical flDraTub(MaDr)       ! Flag indicating drain tube per drainage level
+      logical FlEndSrpEvt(MaDm,MaCp) ! Flag indicating end of sorption event per domain/compartment
+
 ! --- surface water variables
       integer swswb,swdrf,swsrf,swallo(Madr),swdtyp(Madr),swnrsrf
       integer swqhr,swsec,nrpri,nrsec,nmper,swman(mamp),SwTopnrsrf

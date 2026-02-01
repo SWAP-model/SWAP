@@ -1811,4 +1811,345 @@ contains
         call log_debug('sync', 'heat_state_to_variables: swhea=' // to_str(hstate%swhea))
     end subroutine heat_state_to_variables
 
+    ! ===========================================================================
+    ! Macropore State Sync
+    ! ===========================================================================
+    subroutine macropore_state_from_variables(mstate, n_nod, n_dom, n_dra)
+        use variables, only: VlMp, VlMpDm1, VlMpDm2, WaSrDm1, WaSrDm2, &
+            WaSrDm1Ini, WaSrDm2Ini, WaLevDm1, QMaPo, QRapDra, QMpLatSs, &
+            QInTopLatDm1, QInTopLatDm2, QInTopVrtDm1, QInTopVrtDm2, &
+            cQMpLatSs, cQMpOutDrRap, cQMpInMtxSatDm1, cQMpInMtxSatDm2, &
+            cQMpOutMtxUnsDm1, cQMpOutMtxUnsDm2, cQMpInIntSatDm1, cQMpInIntSatDm2, &
+            cQMpInTopLatDm1, cQMpInTopLatDm2, cQMpInTopVrtDm1, cQMpInTopVrtDm2, &
+            cQMpOutMtxSatDm1, cQMpOutMtxSatDm2, &
+            iQMpOutDrRap, iQInTopLatDm1, iQInTopLatDm2, iQInTopVrtDm1, iQInTopVrtDm2, &
+            IWaSrDm1Beg, IWaSrDm2Beg, &
+            DiPoCp, FrArMtrx, VlMpDyCp, VlMpStCp, VlMpStDm1, VlMpStDm2, &
+            QExcMpMtx, SubsidCp, PpDmCp, dFdhMp, iQOutDrRapCp, &
+            iQExcMtxDm1Cp, iQExcMtxDm2Cp, IAvFrMpWlWtDm1, IAvFrMpWlWtDm2, &
+            ICpBtDm, ICpTpWaSrDm, ArMpTpDm, AwlCorFac, FrMpWalWet, KDCrRlRef, &
+            QExcMtxDmCp, QInIntSatDmCp, QInMtxSatDmCp, QInTopLatDm, QInTopVrtDm, &
+            QOutDrRapCp, QOutMtxSatDmCp, QOutMtxUnsDmCp, &
+            SorpDmCp, ThtSrpRefDmCp, TimAbsCumDmCp, &
+            VlMpDm, VlMpDmCp, WaSrMp, WaSrMpDm, WaSrMpDmCp, &
+            ZBtDm, ZWaLevDm, flDraTub, FlEndSrpEvt, &
+            ICpBtPerZon, ICpSatGWl, ICpSatPeGWl, ICpTpPerZon, ICpTpSatZon, NnCrAr, flBegin, &
+            NumDm, NumSbDm, IcTopMP, NumLevRapDra, Z_Tp, Z_St, Z_Ic, Z_Ah, &
+            ArMpTp, ArMpSs, KsatCovLay, KsMpSs, PpIcTpMp, dtold, &
+            GWlFlCpZo, NodGWlFlCpZo, ZDraBas, IDecMpRat, FlDecMpRat, flInitDraBas, &
+            flmacropore
+        type(macropore_state_t), intent(inout) :: mstate
+        integer, intent(in) :: n_nod, n_dom, n_dra
+        
+        integer :: i, j
+        
+        ! Domain water storage
+        mstate%VlMp = VlMp
+        mstate%VlMpDm1 = VlMpDm1
+        mstate%VlMpDm2 = VlMpDm2
+        mstate%WaSrDm1 = WaSrDm1
+        mstate%WaSrDm2 = WaSrDm2
+        mstate%WaSrDm1Ini = WaSrDm1Ini
+        mstate%WaSrDm2Ini = WaSrDm2Ini
+        mstate%WaLevDm1 = WaLevDm1
+        
+        ! Fluxes
+        mstate%QMaPo = QMaPo
+        mstate%QRapDra = QRapDra
+        mstate%QMpLatSs = QMpLatSs
+        mstate%QInTopLatDm1 = QInTopLatDm1
+        mstate%QInTopLatDm2 = QInTopLatDm2
+        mstate%QInTopVrtDm1 = QInTopVrtDm1
+        mstate%QInTopVrtDm2 = QInTopVrtDm2
+        
+        ! Cumulative fluxes
+        mstate%cQMpLatSs = cQMpLatSs
+        mstate%cQMpOutDrRap = cQMpOutDrRap
+        mstate%cQMpInMtxSatDm1 = cQMpInMtxSatDm1
+        mstate%cQMpInMtxSatDm2 = cQMpInMtxSatDm2
+        mstate%cQMpOutMtxUnsDm1 = cQMpOutMtxUnsDm1
+        mstate%cQMpOutMtxUnsDm2 = cQMpOutMtxUnsDm2
+        mstate%cQMpInIntSatDm1 = cQMpInIntSatDm1
+        mstate%cQMpInIntSatDm2 = cQMpInIntSatDm2
+        mstate%cQMpInTopLatDm1 = cQMpInTopLatDm1
+        mstate%cQMpInTopLatDm2 = cQMpInTopLatDm2
+        mstate%cQMpInTopVrtDm1 = cQMpInTopVrtDm1
+        mstate%cQMpInTopVrtDm2 = cQMpInTopVrtDm2
+        mstate%cQMpOutMtxSatDm1 = cQMpOutMtxSatDm1
+        mstate%cQMpOutMtxSatDm2 = cQMpOutMtxSatDm2
+        
+        ! Incremental fluxes
+        mstate%iQMpOutDrRap = iQMpOutDrRap
+        mstate%iQInTopLatDm1 = iQInTopLatDm1
+        mstate%iQInTopLatDm2 = iQInTopLatDm2
+        mstate%iQInTopVrtDm1 = iQInTopVrtDm1
+        mstate%iQInTopVrtDm2 = iQInTopVrtDm2
+        mstate%IWaSrDm1Beg = IWaSrDm1Beg
+        mstate%IWaSrDm2Beg = IWaSrDm2Beg
+        
+        ! Per-compartment arrays
+        do i = 1, n_nod
+            mstate%DiPoCp(i) = DiPoCp(i)
+            mstate%FrArMtrx(i) = FrArMtrx(i)
+            mstate%VlMpDyCp(i) = VlMpDyCp(i)
+            mstate%VlMpStCp(i) = VlMpStCp(i)
+            mstate%VlMpStDm1(i) = VlMpStDm1(i)
+            mstate%VlMpStDm2(i) = VlMpStDm2(i)
+            mstate%QExcMpMtx(i) = QExcMpMtx(i)
+            mstate%SubsidCp(i) = SubsidCp(i)
+            mstate%dFdhMp(i) = dFdhMp(i)
+            mstate%iQOutDrRapCp(i) = iQOutDrRapCp(i)
+            mstate%iQExcMtxDm1Cp(i) = iQExcMtxDm1Cp(i)
+            mstate%iQExcMtxDm2Cp(i) = iQExcMtxDm2Cp(i)
+            mstate%IAvFrMpWlWtDm1(i) = IAvFrMpWlWtDm1(i)
+            mstate%IAvFrMpWlWtDm2(i) = IAvFrMpWlWtDm2(i)
+            mstate%AwlCorFac(i) = AwlCorFac(i)
+            mstate%QOutDrRapCp(i) = QOutDrRapCp(i)
+            do j = 1, n_dom
+                mstate%PpDmCp(j, i) = PpDmCp(j, i)
+                mstate%FrMpWalWet(j, i) = FrMpWalWet(j, i)
+                mstate%QExcMtxDmCp(j, i) = QExcMtxDmCp(j, i)
+                mstate%QInIntSatDmCp(j, i) = QInIntSatDmCp(j, i)
+                mstate%QInMtxSatDmCp(j, i) = QInMtxSatDmCp(j, i)
+                mstate%QOutMtxSatDmCp(j, i) = QOutMtxSatDmCp(j, i)
+                mstate%QOutMtxUnsDmCp(j, i) = QOutMtxUnsDmCp(j, i)
+                mstate%SorpDmCp(j, i) = SorpDmCp(j, i)
+                mstate%ThtSrpRefDmCp(j, i) = ThtSrpRefDmCp(j, i)
+                mstate%TimAbsCumDmCp(j, i) = TimAbsCumDmCp(j, i)
+                mstate%VlMpDmCp(j, i) = VlMpDmCp(j, i)
+                mstate%WaSrMpDmCp(j, i) = WaSrMpDmCp(j, i)
+                mstate%FlEndSrpEvt(j, i) = FlEndSrpEvt(j, i)
+            end do
+        end do
+        
+        ! Domain arrays
+        do j = 1, n_dom
+            mstate%ICpBtDm(j) = ICpBtDm(j)
+            mstate%ICpTpWaSrDm(j) = ICpTpWaSrDm(j)
+            mstate%ArMpTpDm(j) = ArMpTpDm(j)
+            mstate%QInTopLatDm(j) = QInTopLatDm(j)
+            mstate%QInTopVrtDm(j) = QInTopVrtDm(j)
+            mstate%VlMpDm(j) = VlMpDm(j)
+            mstate%WaSrMpDm(j) = WaSrMpDm(j)
+            mstate%ZBtDm(j) = ZBtDm(j)
+            mstate%ZWaLevDm(j) = ZWaLevDm(j)
+        end do
+        
+        ! Drainage level arrays
+        do i = 1, n_dra
+            mstate%KDCrRlRef(i) = KDCrRlRef(i)
+            mstate%flDraTub(i) = flDraTub(i)
+        end do
+        
+        ! State tracking
+        mstate%WaSrMp = WaSrMp
+        mstate%ICpBtPerZon = ICpBtPerZon
+        mstate%ICpSatGWl = ICpSatGWl
+        mstate%ICpSatPeGWl = ICpSatPeGWl
+        mstate%ICpTpPerZon = ICpTpPerZon
+        mstate%ICpTpSatZon = ICpTpSatZon
+        mstate%NnCrAr = NnCrAr
+        mstate%flBegin = flBegin
+        
+        ! Domain configuration
+        mstate%NumDm = NumDm
+        mstate%NumSbDm = NumSbDm
+        mstate%IcTopMP = IcTopMP
+        mstate%NumLevRapDra = NumLevRapDra
+        mstate%Z_Tp = Z_Tp
+        mstate%Z_St = Z_St
+        mstate%Z_Ic = Z_Ic
+        mstate%Z_Ah = Z_Ah
+        mstate%ArMpTp = ArMpTp
+        mstate%ArMpSs = ArMpSs
+        mstate%KsatCovLay = KsatCovLay
+        mstate%KsMpSs = KsMpSs
+        mstate%PpIcTpMp = PpIcTpMp
+        mstate%dtold = dtold
+        
+        ! Groundwater tracking
+        mstate%GWlFlCpZo = GWlFlCpZo
+        mstate%NodGWlFlCpZo = NodGWlFlCpZo
+        mstate%ZDraBas = ZDraBas
+        
+        ! Iteration control
+        mstate%IDecMpRat = IDecMpRat
+        mstate%FlDecMpRat = FlDecMpRat
+        mstate%flInitDraBas = flInitDraBas
+        
+        ! Flags
+        mstate%flmacropore = flmacropore
+        
+        call log_debug('sync', 'macropore_state_from_variables: flmacropore=' // to_str(flmacropore))
+    end subroutine macropore_state_from_variables
+    
+    subroutine macropore_state_to_variables(mstate, n_nod, n_dom, n_dra)
+        use variables, only: VlMp, VlMpDm1, VlMpDm2, WaSrDm1, WaSrDm2, &
+            WaSrDm1Ini, WaSrDm2Ini, WaLevDm1, QMaPo, QRapDra, QMpLatSs, &
+            QInTopLatDm1, QInTopLatDm2, QInTopVrtDm1, QInTopVrtDm2, &
+            cQMpLatSs, cQMpOutDrRap, cQMpInMtxSatDm1, cQMpInMtxSatDm2, &
+            cQMpOutMtxUnsDm1, cQMpOutMtxUnsDm2, cQMpInIntSatDm1, cQMpInIntSatDm2, &
+            cQMpInTopLatDm1, cQMpInTopLatDm2, cQMpInTopVrtDm1, cQMpInTopVrtDm2, &
+            cQMpOutMtxSatDm1, cQMpOutMtxSatDm2, &
+            iQMpOutDrRap, iQInTopLatDm1, iQInTopLatDm2, iQInTopVrtDm1, iQInTopVrtDm2, &
+            IWaSrDm1Beg, IWaSrDm2Beg, &
+            DiPoCp, FrArMtrx, VlMpDyCp, VlMpStCp, VlMpStDm1, VlMpStDm2, &
+            QExcMpMtx, SubsidCp, PpDmCp, dFdhMp, iQOutDrRapCp, &
+            iQExcMtxDm1Cp, iQExcMtxDm2Cp, IAvFrMpWlWtDm1, IAvFrMpWlWtDm2, &
+            ICpBtDm, ICpTpWaSrDm, ArMpTpDm, AwlCorFac, FrMpWalWet, KDCrRlRef, &
+            QExcMtxDmCp, QInIntSatDmCp, QInMtxSatDmCp, QInTopLatDm, QInTopVrtDm, &
+            QOutDrRapCp, QOutMtxSatDmCp, QOutMtxUnsDmCp, &
+            SorpDmCp, ThtSrpRefDmCp, TimAbsCumDmCp, &
+            VlMpDm, VlMpDmCp, WaSrMp, WaSrMpDm, WaSrMpDmCp, &
+            ZBtDm, ZWaLevDm, flDraTub, FlEndSrpEvt, &
+            ICpBtPerZon, ICpSatGWl, ICpSatPeGWl, ICpTpPerZon, ICpTpSatZon, NnCrAr, flBegin, &
+            NumDm, NumSbDm, IcTopMP, NumLevRapDra, Z_Tp, Z_St, Z_Ic, Z_Ah, &
+            ArMpTp, ArMpSs, KsatCovLay, KsMpSs, PpIcTpMp, dtold, &
+            GWlFlCpZo, NodGWlFlCpZo, ZDraBas, IDecMpRat, FlDecMpRat, flInitDraBas, &
+            flmacropore
+        type(macropore_state_t), intent(in) :: mstate
+        integer, intent(in) :: n_nod, n_dom, n_dra
+        
+        integer :: i, j
+        
+        ! Domain water storage
+        VlMp = mstate%VlMp
+        VlMpDm1 = mstate%VlMpDm1
+        VlMpDm2 = mstate%VlMpDm2
+        WaSrDm1 = mstate%WaSrDm1
+        WaSrDm2 = mstate%WaSrDm2
+        WaSrDm1Ini = mstate%WaSrDm1Ini
+        WaSrDm2Ini = mstate%WaSrDm2Ini
+        WaLevDm1 = mstate%WaLevDm1
+        
+        ! Fluxes
+        QMaPo = mstate%QMaPo
+        QRapDra = mstate%QRapDra
+        QMpLatSs = mstate%QMpLatSs
+        QInTopLatDm1 = mstate%QInTopLatDm1
+        QInTopLatDm2 = mstate%QInTopLatDm2
+        QInTopVrtDm1 = mstate%QInTopVrtDm1
+        QInTopVrtDm2 = mstate%QInTopVrtDm2
+        
+        ! Cumulative fluxes
+        cQMpLatSs = mstate%cQMpLatSs
+        cQMpOutDrRap = mstate%cQMpOutDrRap
+        cQMpInMtxSatDm1 = mstate%cQMpInMtxSatDm1
+        cQMpInMtxSatDm2 = mstate%cQMpInMtxSatDm2
+        cQMpOutMtxUnsDm1 = mstate%cQMpOutMtxUnsDm1
+        cQMpOutMtxUnsDm2 = mstate%cQMpOutMtxUnsDm2
+        cQMpInIntSatDm1 = mstate%cQMpInIntSatDm1
+        cQMpInIntSatDm2 = mstate%cQMpInIntSatDm2
+        cQMpInTopLatDm1 = mstate%cQMpInTopLatDm1
+        cQMpInTopLatDm2 = mstate%cQMpInTopLatDm2
+        cQMpInTopVrtDm1 = mstate%cQMpInTopVrtDm1
+        cQMpInTopVrtDm2 = mstate%cQMpInTopVrtDm2
+        cQMpOutMtxSatDm1 = mstate%cQMpOutMtxSatDm1
+        cQMpOutMtxSatDm2 = mstate%cQMpOutMtxSatDm2
+        
+        ! Incremental fluxes
+        iQMpOutDrRap = mstate%iQMpOutDrRap
+        iQInTopLatDm1 = mstate%iQInTopLatDm1
+        iQInTopLatDm2 = mstate%iQInTopLatDm2
+        iQInTopVrtDm1 = mstate%iQInTopVrtDm1
+        iQInTopVrtDm2 = mstate%iQInTopVrtDm2
+        IWaSrDm1Beg = mstate%IWaSrDm1Beg
+        IWaSrDm2Beg = mstate%IWaSrDm2Beg
+        
+        ! Per-compartment arrays
+        do i = 1, n_nod
+            DiPoCp(i) = mstate%DiPoCp(i)
+            FrArMtrx(i) = mstate%FrArMtrx(i)
+            VlMpDyCp(i) = mstate%VlMpDyCp(i)
+            VlMpStCp(i) = mstate%VlMpStCp(i)
+            VlMpStDm1(i) = mstate%VlMpStDm1(i)
+            VlMpStDm2(i) = mstate%VlMpStDm2(i)
+            QExcMpMtx(i) = mstate%QExcMpMtx(i)
+            SubsidCp(i) = mstate%SubsidCp(i)
+            dFdhMp(i) = mstate%dFdhMp(i)
+            iQOutDrRapCp(i) = mstate%iQOutDrRapCp(i)
+            iQExcMtxDm1Cp(i) = mstate%iQExcMtxDm1Cp(i)
+            iQExcMtxDm2Cp(i) = mstate%iQExcMtxDm2Cp(i)
+            IAvFrMpWlWtDm1(i) = mstate%IAvFrMpWlWtDm1(i)
+            IAvFrMpWlWtDm2(i) = mstate%IAvFrMpWlWtDm2(i)
+            AwlCorFac(i) = mstate%AwlCorFac(i)
+            QOutDrRapCp(i) = mstate%QOutDrRapCp(i)
+            do j = 1, n_dom
+                PpDmCp(j, i) = mstate%PpDmCp(j, i)
+                FrMpWalWet(j, i) = mstate%FrMpWalWet(j, i)
+                QExcMtxDmCp(j, i) = mstate%QExcMtxDmCp(j, i)
+                QInIntSatDmCp(j, i) = mstate%QInIntSatDmCp(j, i)
+                QInMtxSatDmCp(j, i) = mstate%QInMtxSatDmCp(j, i)
+                QOutMtxSatDmCp(j, i) = mstate%QOutMtxSatDmCp(j, i)
+                QOutMtxUnsDmCp(j, i) = mstate%QOutMtxUnsDmCp(j, i)
+                SorpDmCp(j, i) = mstate%SorpDmCp(j, i)
+                ThtSrpRefDmCp(j, i) = mstate%ThtSrpRefDmCp(j, i)
+                TimAbsCumDmCp(j, i) = mstate%TimAbsCumDmCp(j, i)
+                VlMpDmCp(j, i) = mstate%VlMpDmCp(j, i)
+                WaSrMpDmCp(j, i) = mstate%WaSrMpDmCp(j, i)
+                FlEndSrpEvt(j, i) = mstate%FlEndSrpEvt(j, i)
+            end do
+        end do
+        
+        ! Domain arrays
+        do j = 1, n_dom
+            ICpBtDm(j) = mstate%ICpBtDm(j)
+            ICpTpWaSrDm(j) = mstate%ICpTpWaSrDm(j)
+            ArMpTpDm(j) = mstate%ArMpTpDm(j)
+            QInTopLatDm(j) = mstate%QInTopLatDm(j)
+            QInTopVrtDm(j) = mstate%QInTopVrtDm(j)
+            VlMpDm(j) = mstate%VlMpDm(j)
+            WaSrMpDm(j) = mstate%WaSrMpDm(j)
+            ZBtDm(j) = mstate%ZBtDm(j)
+            ZWaLevDm(j) = mstate%ZWaLevDm(j)
+        end do
+        
+        ! Drainage level arrays
+        do i = 1, n_dra
+            KDCrRlRef(i) = mstate%KDCrRlRef(i)
+            flDraTub(i) = mstate%flDraTub(i)
+        end do
+        
+        ! State tracking
+        WaSrMp = mstate%WaSrMp
+        ICpBtPerZon = mstate%ICpBtPerZon
+        ICpSatGWl = mstate%ICpSatGWl
+        ICpSatPeGWl = mstate%ICpSatPeGWl
+        ICpTpPerZon = mstate%ICpTpPerZon
+        ICpTpSatZon = mstate%ICpTpSatZon
+        NnCrAr = mstate%NnCrAr
+        flBegin = mstate%flBegin
+        
+        ! Domain configuration
+        NumDm = mstate%NumDm
+        NumSbDm = mstate%NumSbDm
+        IcTopMP = mstate%IcTopMP
+        NumLevRapDra = mstate%NumLevRapDra
+        Z_Tp = mstate%Z_Tp
+        Z_St = mstate%Z_St
+        Z_Ic = mstate%Z_Ic
+        Z_Ah = mstate%Z_Ah
+        ArMpTp = mstate%ArMpTp
+        ArMpSs = mstate%ArMpSs
+        KsatCovLay = mstate%KsatCovLay
+        KsMpSs = mstate%KsMpSs
+        PpIcTpMp = mstate%PpIcTpMp
+        dtold = mstate%dtold
+        
+        ! Groundwater tracking
+        GWlFlCpZo = mstate%GWlFlCpZo
+        NodGWlFlCpZo = mstate%NodGWlFlCpZo
+        ZDraBas = mstate%ZDraBas
+        
+        ! Iteration control
+        IDecMpRat = mstate%IDecMpRat
+        FlDecMpRat = mstate%FlDecMpRat
+        flInitDraBas = mstate%flInitDraBas
+        
+        ! Flags
+        flmacropore = mstate%flmacropore
+        
+        call log_debug('sync', 'macropore_state_to_variables: flmacropore=' // to_str(mstate%flmacropore))
+    end subroutine macropore_state_to_variables
+
 end module swap_state_sync

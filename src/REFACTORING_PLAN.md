@@ -11,7 +11,7 @@
 | 5 | Crop Module | 🔲 Not started | |
 | 6 | Drainage Module | ✅ COMPLETED | 2026-02-01 |
 | 7 | Boundary Conditions | ✅ COMPLETED | 2026-02-01 |
-| 8 | Macropore Module | 🔲 Not started | |
+| 8 | Macropore Module | ✅ COMPLETED | 2026-02-02 |
 | 9 | Solute Module | ✅ COMPLETED | 2026-02-01 |
 | 10 | Heat Module | ✅ COMPLETED | 2026-02-01 |
 | 11 | Integration | 🔲 Not started | |
@@ -313,15 +313,51 @@ call state_from_variables(state2)
 
 ---
 
-### Step 8: Macropore Module
+### Step 8: Macropore Module ✅ COMPLETED
 
-**Files:** `src/macropore/*.f90`
+**Date:** 2026-02-02
 
-**Actions:**
-- Define `macropore_state_t`
-- Refactor preferential flow routines
+**Files Modified:**
+- `src/core/swap_state_mod.f90` - Extended macropore_state_t with comprehensive fields
+- `src/core/swap_state_sync.f90` - Added macropore sync procedures
+- `src/macropore/macropore.f90` - Removed SAVE statement, added debug logging
+- `src/macropore/macrorate.f90` - Removed SAVE statement, added debug logging
 
-**Validation:** Macropore test case passes
+**Actions Completed:**
+- Extended `macropore_state_t` with comprehensive field coverage:
+  - Domain storage: `VlMp`, `VlMpDm1`, `VlMpDm2`, `WaSrDm1`, `WaSrDm2`, `WaSrMp`, `WaLevDm1`
+  - Fluxes: `QMaPo`, `QRapDra`, `QMpLatSs`, `QInTopLatDm1`, `QInTopLatDm2`, `QInTopVrtDm1`, `QInTopVrtDm2`
+  - Cumulative amounts: `cQMpLatSs`, `cQMpOutDrRap`, `cQMpInMtxSatDm1`, `cQMpInMtxSatDm2`, `cQInTopLatDm1`, `cQInTopLatDm2`, `cQInTopVrtDm1`, `cQInTopVrtDm2`
+  - Incremental amounts: `iQMpOutDrRap`, `iQInTopLatDm1`, `iQInTopLatDm2`, `iQInTopVrtDm1`, `iQInTopVrtDm2`, `IWaSrDm1Beg`, `IWaSrDm2Beg`
+  - Per-compartment arrays: `DiPoCp`, `FrArMtrx`, `VlMpDyCp`, `VlMpStCp`, `VlMpStDm1`, `VlMpStDm2`, `QExcMpMtx`, `SubsidCp`
+  - Work arrays (from SAVE): `ICpBtDm`, `ICpTpWaSrDm`, `ArMpTpDm`, `AwlCorFac`, `FrMpWalWet`, `KDCrRlRef`, `MpGeomDm`, `MpLaExDm`, `MultiDm`, `FxWaSr`, `WaSrQDm`
+  - State tracking: `ICpBtPerZon`, `ICpSatGWl`, `ICpSatPeGWl`, `ICpTpPerZon`, `ICpTpSatZon`, `NnCrAr`
+  - Domain config: `NumDm`, `NumSbDm`, `IcTopMP`, `NumLevRapDra`, `Z_Tp`, `Z_St`, `Z_Ic`, `Z_Ah`, `ArMpTp`, `ArMpSs`, `ArMpPe`, `DiPoMi`, `DiPoPe`, `PnDeq`, `RZah`
+  - Drainage integration: `SwMpDra`, `RappC`, `RappE`, `ZRappE`
+  - Flags: `flmacropore`, `flBegin`, `FlDecMpRat`, `flInitDraBas`, `IDecMpRat`
+- Added `macropore_state_init` and `macropore_state_finalize` procedures
+- Created bidirectional sync: `macropore_state_from_variables`, `macropore_state_to_variables`
+- Removed SAVE statements from `macropore.f90` and `macrorate.f90`
+- Added debug logging with `swap_log` module integration
+
+**SAVE Variables Removed:**
+- `macropore.f90`: Multiple local work arrays moved to state type
+- `macrorate.f90`: Multiple local work arrays moved to state type
+
+**Test Coverage (127 tests):**
+- Initialization tests: Verify default values and flag states
+- Domain storage tests: VlMp, VlMpDm1/2, WaSrDm1/2, WaSrMp, WaLevDm1
+- Flux tests: QMaPo, QRapDra, QMpLatSs, QInTopLatDm1/2, QInTopVrtDm1/2
+- Cumulative tests: cQMpLatSs, cQMpOutDrRap, cQMpInMtxSatDm1/2, etc.
+- Incremental tests: iQMpOutDrRap, iQInTopLatDm1/2, iQInTopVrtDm1/2, etc.
+- Array allocation tests: Per-compartment and per-domain arrays
+- Work array tests: All work arrays from SAVE statements
+- State tracking tests: ICpBtPerZon, ICpSatGWl, ICpSatPeGWl, etc.
+- Domain config tests: NumDm, NumSbDm, Z_Tp, Z_St, Z_Ic, Z_Ah, etc.
+- Flag tests: flmacropore, flBegin, FlDecMpRat, flInitDraBas, IDecMpRat
+- Multi-instance independence tests (18 tests): Verify separate state instances
+
+**Validation:** Build successful, all 127 macropore tests pass, all existing tests pass
 
 ---
 

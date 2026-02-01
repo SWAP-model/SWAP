@@ -14,7 +14,21 @@
 !     Subroutines called : ABSORPTION, RAPIDDRAIN, SATFLOW                               
 !     Functions called   : VOLUNDR
 ! ----------------------------------------------------------------------
-      use Variables
+! --- Exclude work arrays passed as arguments (now module-level in variables.f90)
+      use Variables, ICpBtDm_v => ICpBtDm, ICpTpWaSrDm_v => ICpTpWaSrDm, &
+     &    ArMpTpDm_v => ArMpTpDm, AwlCorFac_v => AwlCorFac, &
+     &    FrMpWalWet_v => FrMpWalWet, KDCrRlRef_v => KDCrRlRef, &
+     &    SorpDmCp_v => SorpDmCp, ThtSrpRefDmCp_v => ThtSrpRefDmCp, &
+     &    TimAbsCumDmCp_v => TimAbsCumDmCp, VlMpDm_v => VlMpDm, &
+     &    VlMpDmCp_v => VlMpDmCp, WaSrMp_v => WaSrMp, WaSrMpDm_v => WaSrMpDm, &
+     &    ZBtDm_v => ZBtDm, ZWaLevDm_v => ZWaLevDm, flDraTub_v => flDraTub, &
+     &    QExcMtxDmCp_v => QExcMtxDmCp, QInIntSatDmCp_v => QInIntSatDmCp, &
+     &    QInMtxSatDmCp_v => QInMtxSatDmCp, QInTopLatDm_v => QInTopLatDm, &
+     &    QInTopVrtDm_v => QInTopVrtDm, QOutDrRapCp_v => QOutDrRapCp, &
+     &    QOutMtxSatDmCp_v => QOutMtxSatDmCp, QOutMtxUnsDmCp_v => QOutMtxUnsDmCp, &
+     &    FlEndSrpEvt_v => FlEndSrpEvt, ICpBtPerZon_v => ICpBtPerZon, &
+     &    ICpSatGWl_v => ICpSatGWl, ICpSatPeGWl_v => ICpSatPeGWl, &
+     &    ICpTpPerZon_v => ICpTpPerZon, ICpTpSatZon_v => ICpTpSatZon
       implicit NONE
 
 ! --- global                                                          In
@@ -391,7 +405,10 @@
 !                        : and the SATURATED soil matrix
 !     Functions called   : -
 ! ----------------------------------------------------------------------
-      use Variables
+! --- Exclude work arrays passed as arguments (now module-level in variables.f90)
+      use Variables, ICpBtDm_v => ICpBtDm, ICpTpWaSrDm_v => ICpTpWaSrDm, &
+     &    FrMpWalWet_v => FrMpWalWet, ZWaLevDm_v => ZWaLevDm, &
+     &    QInMtxSatDmCp_v => QInMtxSatDmCp, QOutMtxSatDmCp_v => QOutMtxSatDmCp
       implicit NONE
 
 ! --- global                                                          In
@@ -567,7 +584,14 @@
 !                          and by pressure head gradient with Darcy
 !     Functions called   : moiscap
 ! ----------------------------------------------------------------------
-      use Variables
+! --- Exclude work arrays passed as arguments (now module-level in variables.f90)
+      use Variables, ICpBtDm_v => ICpBtDm, ICpBtPerZon_v => ICpBtPerZon, &
+     &    ICpTpPerZon_v => ICpTpPerZon, ICpTpSatZon_v => ICpTpSatZon, &
+     &    ICpTpWaSrDm_v => ICpTpWaSrDm, AwlCorFac_v => AwlCorFac, &
+     &    FrMpWalWet_v => FrMpWalWet, QOutMtxUnsDmCp_v => QOutMtxUnsDmCp, &
+     &    SorpDmCp_v => SorpDmCp, ThtSrpRefDmCp_v => ThtSrpRefDmCp, &
+     &    TimAbsCumDmCp_v => TimAbsCumDmCp, FlEndSrpEvt_v => FlEndSrpEvt, &
+     &    ZWaLevDm_v => ZWaLevDm
       implicit NONE
 
 ! --- global                                                          In
@@ -729,7 +753,11 @@
 !     Date               : April 2008                                      
 !     Purpose            : To calculate rapid drainage from Main Bypass flow domain
 ! ----------------------------------------------------------------------
-      use Variables
+! --- Exclude work arrays passed as arguments (now module-level in variables.f90)
+      use Variables, ICpBtDm_v => ICpBtDm, ICpTpWaSrDm_v => ICpTpWaSrDm, &
+     &    flDraTub_v => flDraTub, FrMpWalWet_v => FrMpWalWet, &
+     &    KDCrRlRef_v => KDCrRlRef, VlMpDmCp_v => VlMpDmCp, &
+     &    WaSrMpDm_v => WaSrMpDm, ZBtDm_v => ZBtDm, ZWaLevDm_v => ZWaLevDm
       implicit NONE
 
 ! --- global                                                          In
@@ -820,7 +848,9 @@
 !     Purpose            : calculates volume of macropores under drain or 
 !                        : groundwater level
 ! ----------------------------------------------------------------------
-      use Variables
+! --- Exclude work arrays passed as arguments (now module-level in variables.f90)
+      use Variables, ICpBtDm_v => ICpBtDm, VlMpDmCp_v => VlMpDmCp, &
+     &    ZBtDm_v => ZBtDm
       implicit NONE
 
 ! --- global
