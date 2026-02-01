@@ -314,42 +314,42 @@
 !     Last modified      : october 2008
 !     Purpose            : distributes potential transpiration and evaporation
 !                          according to sine wave during photoperiodic daylight
+!     Note: tsunrise_atm and tsunset_atm are now module-level in variables.f90
 ! ----------------------------------------------------------------------
       use variables
       implicit none
 
 ! --- local
       real(8)   daytime,pi,dayl,sinld,cosld,fraction
-      real(8), save  :: tsunrise, tsunset
       data      pi/3.14159265d0/    ! number pi [-]
 
       if (fldaystart) then
 ! ---   determine duration photoperiodic daylight in hours
         call astro(daynr,lat,rad,dayl,daylp,sinld,cosld,difpp,          &
      &             atmtr,dsinbe)
-! ---   determine tsunrise, tsunset and daytime
-        tsunrise = 0.5d0 - daylp / 48.d0
-        tsunset = 0.5d0 + daylp / 48.d0
+! ---   determine tsunrise_atm, tsunset_atm and daytime
+        tsunrise_atm = 0.5d0 - daylp / 48.d0
+        tsunset_atm = 0.5d0 + daylp / 48.d0
       endif
 
 ! --- set time as fraction of the day
       daytime = t1900 + dt - int(t1900)
 
 ! --- determine fraction of fluxes according to sine wave during this time step
-      if (daytime.lt.tsunrise) then
+      if (daytime.lt.tsunrise_atm) then
         fraction = 0.d0
-      elseif (daytime.gt.tsunrise .and. (daytime-dt).lt.tsunrise) then
-        fraction = 0.5d0 * (dcos(pi/2.d0 + (tsunrise - 0.5d0)/          &
-     &     (tsunset-tsunrise)*pi) - dcos(pi/2.d0 + (daytime - 0.5d0)/   &
-     &     (tsunset-tsunrise)*pi))
-      elseif ((daytime-dt).gt.tsunrise .and. (daytime).lt.tsunset) then
+      elseif (daytime.gt.tsunrise_atm .and. (daytime-dt).lt.tsunrise_atm) then
+        fraction = 0.5d0 * (dcos(pi/2.d0 + (tsunrise_atm - 0.5d0)/          &
+     &     (tsunset_atm-tsunrise_atm)*pi) - dcos(pi/2.d0 + (daytime - 0.5d0)/   &
+     &     (tsunset_atm-tsunrise_atm)*pi))
+      elseif ((daytime-dt).gt.tsunrise_atm .and. (daytime).lt.tsunset_atm) then
         fraction = 0.5d0 * (dcos(pi/2.d0 + (daytime - dt - 0.5d0)/      &
-     &     (tsunset-tsunrise)*pi) - dcos(pi/2.d0 + (daytime - 0.5d0)/   &
-     &     (tsunset-tsunrise)*pi))
-      elseif (daytime.gt.tsunset .and. (daytime-dt).lt.tsunset) then
+     &     (tsunset_atm-tsunrise_atm)*pi) - dcos(pi/2.d0 + (daytime - 0.5d0)/   &
+     &     (tsunset_atm-tsunrise_atm)*pi))
+      elseif (daytime.gt.tsunset_atm .and. (daytime-dt).lt.tsunset_atm) then
         fraction = 0.5d0 * (dcos(pi/2.d0 + (daytime - dt - 0.5d0)/      &
-     &     (tsunset-tsunrise)*pi) - dcos(pi/2.d0 + (tsunset - 0.5d0)/   &
-     &     (tsunset-tsunrise)*pi))
+     &     (tsunset_atm-tsunrise_atm)*pi) - dcos(pi/2.d0 + (tsunset_atm - 0.5d0)/   &
+     &     (tsunset_atm-tsunrise_atm)*pi))
       else
         fraction = 0.d0
       endif

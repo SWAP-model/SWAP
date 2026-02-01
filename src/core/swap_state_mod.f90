@@ -352,14 +352,20 @@ module swap_state_mod
         logical :: flmetdetail = .false.
         logical :: flrainintens = .false.
         logical :: flupdmetdet = .false.
-        !         ! ETSine sub-daily state (from meteodt.f90 SAVE)
-        ! real(8) :: tsunrise = 0.0d0            ! Time of sunrise (fraction of day)
-        ! real(8) :: tsunset = 0.0d0             ! Time of sunset (fraction of day)
         
-        ! ! CN runoff method state (from meteoday.f90 SAVE)
-        ! integer :: nod10_cn = 0                ! Node at -10cm for CN method
-        ! integer :: icn = 0                     ! Current position in CN time table
-        ! real(8) :: z10_cn = 0.0d0              ! Depth to node 10 for CN method
+        ! ETSine sub-daily state (from meteodt.f90 SAVE)
+        real(8) :: tsunrise = 0.0d0            ! Time of sunrise (fraction of day)
+        real(8) :: tsunset = 0.0d0             ! Time of sunset (fraction of day)
+        
+        ! CN runoff method state (from meteoday.f90 SAVE)
+        integer :: nod10_cn = 0                ! Node at -10cm for CN method
+        integer :: icn_atm = 0                 ! Current position in CN time table
+        real(8) :: z10_cn = 0.0d0              ! Depth to node 10 for CN method
+        
+        ! Additional evaporation parameters
+        real(8) :: empreva = 0.0d0             ! Reduced soil evaporation flux (L/T)
+        real(8) :: fprecnosnow = 0.0d0         ! Ratio rain (excl snow) / gross rain
+        
         ! Paths and files
         character(len=200) :: metfil = ''
         character(len=200) :: rainfil = ''

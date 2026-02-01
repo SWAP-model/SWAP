@@ -304,6 +304,18 @@ executable('test_heat_state', heat_state_test_sources,
     install: false
 )
 
+# Build atmosphere state test (tests atmosphere_state_t)
+atmosphere_state_test_sources = [
+    'src/core/swap_log.f90',
+    'src/core/swap_state_mod.f90',
+    'tests/unit/atmosphere/test_atmosphere_state.f90',
+]
+
+executable('test_atmosphere_state', atmosphere_state_test_sources,
+    include_directories: src_inc,
+    install: false
+)
+
 # Build state sync test (tests SAVE variable migration)
 state_sync_test_sources = [
     'src/core/swap_log.f90',

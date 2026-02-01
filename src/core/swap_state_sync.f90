@@ -514,14 +514,18 @@ contains
         astate%rainfil = rainfil
         astate%pathatm = pathatm
         
-        ! ! ETSine SAVE variables (from meteodt.f90)
-        ! astate%tsunrise = tsunrise_atm
-        ! astate%tsunset = tsunset_atm
+        ! ETSine SAVE variables (from meteodt.f90)
+        astate%tsunrise = tsunrise_atm
+        astate%tsunset = tsunset_atm
         
-        ! ! CN runoff method SAVE variables (from meteoday.f90)
-        ! astate%nod10_cn = nod10_cn
-        ! astate%icn = icn_atm
-        ! astate%z10_cn = z10_cn
+        ! CN runoff method SAVE variables (from meteoday.f90)
+        astate%nod10_cn = nod10_cn
+        astate%icn_atm = icn_atm
+        astate%z10_cn = z10_cn
+        
+        ! Additional evaporation parameters
+        astate%empreva = empreva
+        astate%fprecnosnow = fprecnosnow
         
         call log_debug('sync', 'atmosphere_state_from_variables: tav=' // to_str(real(tav,4)))
     end subroutine atmosphere_state_from_variables
@@ -596,14 +600,18 @@ contains
         rainfil = astate%rainfil
         pathatm = astate%pathatm
         
-        ! ! ETSine SAVE variables (from meteodt.f90)
-        ! tsunrise_atm = astate%tsunrise
-        ! tsunset_atm = astate%tsunset
+        ! ETSine SAVE variables (from meteodt.f90)
+        tsunrise_atm = astate%tsunrise
+        tsunset_atm = astate%tsunset
         
-        ! ! CN runoff method SAVE variables (from meteoday.f90)
-        ! nod10_cn = astate%nod10_cn
-        ! icn_atm = astate%icn
-        ! z10_cn = astate%z10_cn
+        ! CN runoff method SAVE variables (from meteoday.f90)
+        nod10_cn = astate%nod10_cn
+        icn_atm = astate%icn_atm
+        z10_cn = astate%z10_cn
+        
+        ! Additional evaporation parameters
+        empreva = astate%empreva
+        fprecnosnow = astate%fprecnosnow
         
         call log_debug('sync', 'atmosphere_state_to_variables: tav=' // to_str(real(astate%tav,4)))
     end subroutine atmosphere_state_to_variables

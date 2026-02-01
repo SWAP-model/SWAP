@@ -902,7 +902,7 @@ end module MeteoVars
 !     Local variables
       INTEGER(4)    k
 !-------------------------------------------------------------------------------------
-      SAVE
+!     Note: SAVE removed - no variables need persistence between calls
 !-------------------------------------------------------------------------------------
 !
 !
@@ -1178,40 +1178,40 @@ end module MeteoVars
 
 
 subroutine CNmethod(Itask)
-use variables, only: CNref, CNdry, CNwet, ThetaRef, theta, nraidt, Runoff_CN, zbotcp, dz, numnod, t1900, wc_cor, iCNtab, CNtimTAB, CNrefTAB, melt, wc10
+use variables, only: CNref, CNdry, CNwet, ThetaRef, theta, nraidt, Runoff_CN, zbotcp, dz, numnod, t1900, wc_cor, iCNtab, CNtimTAB, CNrefTAB, melt, wc10, &
+                     nod10_cn, icn_atm, z10_cn
 implicit none
 ! global
 integer, intent(in)  :: Itask
 ! local
 integer              :: i
-integer, save        :: Nod10, iCN   !, t1900_old
 real(8)              :: wc1, wc2, CN, S, Ia, watcon
-real(8), save        :: Z10
+! Note: Nod10, iCN, Z10 are now module-level in variables.f90 as nod10_cn, icn_atm, z10_cn
 
 select case (Itask)
 ! initialization; calculate and store some constants
 case (1)
 
-   iCN = 0
+   icn_atm = 0
    ! check if times in CNtimeTAB are in ascending order
    ! set initial position in CNtimTAB
    do i = 2, iCNtab
       if (CNtimTAB(i) < CNtimTAB(i-1)) call fatalerr ('CNmethod', 'CNtimTAB not in ascending order')
-      if (t1900 >= CNtimTAB(i-1) .and. t1900 < CNtimTAB(i)) iCN = i-1
+      if (t1900 >= CNtimTAB(i-1) .and. t1900 < CNtimTAB(i)) icn_atm = i-1
    end do
    ! error if start time t1900 not in CNtimTAB
-   if (iCN == 0) call fatalerr ('CNmethod', 'Start time of simulation not present in CNtimTAB')
+   if (icn_atm == 0) call fatalerr ('CNmethod', 'Start time of simulation not present in CNtimTAB')
    
 !  to be replaced by average for layer 0-10 cm
    do i = 1, numnod
       if (zbotcp(i) < -10.0d0) then
-         Nod10 = i-1
-         Z10 = -zbotcp(Nod10)
+         nod10_cn = i-1
+         z10_cn = -zbotcp(nod10_cn)
          exit
       end if
    end do
    ThetaRef = 0.0d0
-   do i = 1, Nod10
+   do i = 1, nod10_cn
       if (wc_cor == 1) then
          wc1 = watcon(i,-100.0d0)
          wc2 = watcon(i,-16000.0d0)
@@ -1222,26 +1222,26 @@ case (1)
          ThetaRef = ThetaRef + (wc1+wc2)*0.5d0*dz(i)
       end if
    end do
-   ThetaRef = ThetaRef/Z10
+   ThetaRef = ThetaRef/z10_cn
    
    !!!t1900_old = int(t1900) - 1 ! for testing intermediate output
    
 ! dynamic part: calculate runoff   
 case (2)
    
-   ! see if t1900 has moved ahead in CNtimTAB; iCN can nver exceed last entry
-   if (iCN < iCNtab .and. t1900 >= CNtimTAB(iCN+1)) iCN = iCN + 1
-   CNref = CNrefTAB(iCN)
+   ! see if t1900 has moved ahead in CNtimTAB; icn_atm can never exceed last entry
+   if (icn_atm < iCNtab .and. t1900 >= CNtimTAB(icn_atm+1)) icn_atm = icn_atm + 1
+   CNref = CNrefTAB(icn_atm)
    CN    = CNref
    CNdry =  4.2d0*CNref/(10.0d0-0.058d0*CNref)
    CNwet = 23.0d0*CNref/(10.0d0+0.13d0*CNref)
 
    if (wc_cor > 0) then
       wc10 = 0.0d0
-      do i = 1, Nod10
+      do i = 1, nod10_cn
          wc10 = wc10 + theta(i)*dz(i)
       end do
-      wc10 = wc10/Z10
+      wc10 = wc10/z10_cn
       if (wc10 < ThetaRef) then
          CN = CNdry + wc10/ThetaRef*(CNref-CNdry)
       else

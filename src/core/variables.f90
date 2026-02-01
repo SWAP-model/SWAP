@@ -165,11 +165,11 @@
       character(len=80) pathatm    ! Path to folder with meteorological input files
       character(len=200) rainfil   ! Name of input file with detailed rainfall intensities
 !   - atmosphere SAVE variable state (refactored from local SAVE)
-      ! real(8)   tsunrise_atm       ! Time of sunrise (fraction of day) - from meteodt.f90 ETSine
-      ! real(8)   tsunset_atm        ! Time of sunset (fraction of day) - from meteodt.f90 ETSine  
-      ! integer   nod10_cn           ! Node at -10cm for CN runoff method - from meteoday.f90 CNmethod
-      ! integer   icn_atm            ! Current position in CN time table - from meteoday.f90 CNmethod
-      ! real(8)   z10_cn             ! Depth to node 10 for CN method - from meteoday.f90 CNmethod
+      real(8)   tsunrise_atm       ! Time of sunrise (fraction of day) - from meteodt.f90 ETSine
+      real(8)   tsunset_atm        ! Time of sunset (fraction of day) - from meteodt.f90 ETSine  
+      integer   nod10_cn           ! Node at -10cm for CN runoff method - from meteoday.f90 CNmethod
+      integer   icn_atm            ! Current position in CN time table - from meteoday.f90 CNmethod
+      real(8)   z10_cn             ! Depth to node 10 for CN method - from meteoday.f90 CNmethod
 !   - meteo output variables for PEARL
       real(4)   out_etr            ! Reference evapotranspiration  of current day (m/d)
       real(4)   out_hum            ! Air humidity  of current day (kPa)
