@@ -31,8 +31,8 @@
       character(len=80) filnam
       character(len=200) messag
 
-!     save local variables
-      save    
+!     SAVE removed - persistent state now in variables.f90 module (dayfix)
+!     save    
 
 !     dcs(1)  = Amount of under- or over-irrigation (L) in case of a scheduled irrigation event
 !     dcs(2)  = Prescribed fixed irrigation depth (L) for each scheduled irrigation event
@@ -484,32 +484,33 @@
 subroutine SSDI_irrigation(iTask)
 
 use variables, only: swpfile, logf, mairg, numnod, tend, tstart, t1900, zbotcp, irrigevent, qssdi, qssdisum, dt_SSDI_event,   &
-                     h, theta, iptra_day, iqreddry_day, iqredsol_day
+                     h, theta, iptra_day, iqreddry_day, iqredsol_day, &
+                     swssdi_irr, nod_ssdi_irr, ssdi_schedule_irr, ssdi_sched_type_irr, &
+                     nod_ssdi_sensor_irr, ssdi_threshold_irr, ssdi_threshold_z_irr, &
+                     ssdi_amount_irr, ssdi_appl_rate_irr, sw_interval_irr, days_interval_irr, &
+                     days_counter_irr, nirri_ssdi_irr, ssdi_date_irr, ssdi_rate_f_irr, ssdi_amount_f_irr
 
 implicit none
 ! global
 integer, intent(in) :: iTask
 
-! local, saved
-integer,                   save :: swssdi             ! switch indicating if ssdi is active in current simulation
-integer, dimension(2),     save :: nod_ssdi           ! upper and lower nodes where ssdi takes place
-integer,                   save :: ssdi_schedule      ! switch indicating type of scedule (0 = fixed dates; 1 = following internal schedule)
-! specific is ssdi_schedule = 1
-integer,                   save :: ssdi_sched_type    ! type of internal schedule: 1 = Tact/Tpot; 2 = pressure head; 3 = water content
-integer,                   save :: nod_ssdi_sensor    ! node where sensor is located (if ssdi_sched_type > 1)
-real(8),                   save :: ssdi_threshold     ! Threshold value for ssdi_sched_type
-real(8),                   save :: ssdi_threshold_z   ! Depth for threshold value
-real(8),                   save :: ssdi_amount        ! Amount of scheduled irirgation (input as mm, converted to cm)
-real(8),                   save :: ssdi_appl_rate     ! Application rate (inputs as mm/h, converted to cm/d)
-integer,                   save :: sw_interval        ! Switch indicating whether (1) or not (0)there must be a minimum number of days between succesive SSDI applications
-integer,                   save :: days_interval      ! Miminmum number of days between succesive SSDI applications (d)
-integer,                   save :: days_counter       ! Number of days since previsou SSDI application (d)
-
-! specific is ssdi_schedule = 0
-integer,                   save :: nirri              ! ssdi counter; entry point in array of ssdi dates
-real(8), dimension(mairg), save :: ssdi_date          ! Array with fixed irrigation dates
-real(8), dimension(mairg), save :: ssdi_rate_f        ! Array with fixed irrigation rates (cm/d; input as mm/d)
-real(8), dimension(mairg), save :: ssdi_amount_f      ! Array with fixed irrigation amounts (cm; input as mm)
+! local aliases for module variables (for minimal code changes)
+integer                         :: swssdi
+integer, dimension(2)           :: nod_ssdi
+integer                         :: ssdi_schedule
+integer                         :: ssdi_sched_type
+integer                         :: nod_ssdi_sensor
+real(8)                         :: ssdi_threshold
+real(8)                         :: ssdi_threshold_z
+real(8)                         :: ssdi_amount
+real(8)                         :: ssdi_appl_rate
+integer                         :: sw_interval
+integer                         :: days_interval
+integer                         :: days_counter
+integer                         :: nirri
+real(8), dimension(mairg)       :: ssdi_date
+real(8), dimension(mairg)       :: ssdi_rate_f
+real(8), dimension(mairg)       :: ssdi_amount_f
 
 ! local, help
 integer                         :: i, j, swp, ifnd
@@ -520,6 +521,24 @@ character(len=132)              :: ssdi_file
 ! functions
 integer :: getun2
 logical :: rdinqr
+
+   ! Load state from module variables at entry
+   swssdi = swssdi_irr
+   nod_ssdi = nod_ssdi_irr
+   ssdi_schedule = ssdi_schedule_irr
+   ssdi_sched_type = ssdi_sched_type_irr
+   nod_ssdi_sensor = nod_ssdi_sensor_irr
+   ssdi_threshold = ssdi_threshold_irr
+   ssdi_threshold_z = ssdi_threshold_z_irr
+   ssdi_amount = ssdi_amount_irr
+   ssdi_appl_rate = ssdi_appl_rate_irr
+   sw_interval = sw_interval_irr
+   days_interval = days_interval_irr
+   days_counter = days_counter_irr
+   nirri = nirri_ssdi_irr
+   ssdi_date = ssdi_date_irr
+   ssdi_rate_f = ssdi_rate_f_irr
+   ssdi_amount_f = ssdi_amount_f_irr
 
    select case  (iTask)
    case (1)
@@ -646,6 +665,24 @@ logical :: rdinqr
    case default
       call fatalerr ('SSDI_irrigation', 'Illegal value for iTask')
    end select
+   
+   ! Save state back to module variables at exit
+   swssdi_irr = swssdi
+   nod_ssdi_irr = nod_ssdi
+   ssdi_schedule_irr = ssdi_schedule
+   ssdi_sched_type_irr = ssdi_sched_type
+   nod_ssdi_sensor_irr = nod_ssdi_sensor
+   ssdi_threshold_irr = ssdi_threshold
+   ssdi_threshold_z_irr = ssdi_threshold_z
+   ssdi_amount_irr = ssdi_amount
+   ssdi_appl_rate_irr = ssdi_appl_rate
+   sw_interval_irr = sw_interval
+   days_interval_irr = days_interval
+   days_counter_irr = days_counter
+   nirri_ssdi_irr = nirri
+   ssdi_date_irr = ssdi_date
+   ssdi_rate_f_irr = ssdi_rate_f
+   ssdi_amount_f_irr = ssdi_amount_f
    
 !---------------------------
    contains

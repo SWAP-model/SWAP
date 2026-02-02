@@ -31,6 +31,29 @@
       integer   iyear              ! Year number of calendar year
       integer   iyearm1            ! Year number of previous calendar year
       integer   logf               ! Internal number of logbook output file *.LOG
+      
+      ! Oxygen stress persistent state (moved from O2_pars module and OxygenStress subroutine)
+      real(8)   o2_w_root          ! Dry weight per root length (kg/m)
+      real(8)   o2_w_root_z0       ! Root weight at depth
+      real(8)   o2_soil_temp       ! Soil temperature (K)
+      real(8)   o2_sat_water_cont  ! Saturated water content
+      real(8)   o2_gas_filled_porosity ! Gas-filled porosity
+      real(8)   o2_d_o2inwater     ! O2 diffusion in water
+      real(8)   o2_d_root          ! Diffusion in root
+      real(8)   o2_d_soil          ! Soil diffusion
+      real(8)   o2_perc_org_mat    ! Organic matter percentage
+      real(8)   o2_soil_density    ! Soil density (kg/m3)
+      real(8)   o2_depth           ! Compartment thickness (m)
+      real(8)   o2_shape_factor_microbialr ! Shape factor microbial resp
+      real(8)   o2_root_radius     ! Root radius (m)
+      real(8)   o2_r_microbial_z0  ! Microbial respiration rate
+      real(8)   o2_waterfilm_thickness ! Water film thickness
+      real(8)   o2_bunsencoeff     ! Bunsen coefficient
+      real(8)   o2_c_min_micro     ! Min O2 for microbial resp
+      real(8)   o2_c_macro         ! Macropore O2 conc
+      real(8)   o2_ctopnode        ! Top node O2 conc
+      logical   o2_initialized     ! Initialization flag
+      
       integer   period             ! Length of prescribed output interval (T)
       integer   swheader           ! Switch for printing of header in output files at each balance period: 0 = no; 1 = yes
       integer   swodat             ! Switch for extra, specific output dates in the input file: 0 = no; 1 = yes
@@ -518,6 +541,39 @@
       real(8)   fstr
       real(8)   amFERT             ! amount of applied Fertilizer (kg/ha/d N)
 
+! --- tillage variables (bridge for tillage module)
+      integer   till_swtill                       ! Switch: 0=no tillage, 1=tillage
+      integer   till_i_n_model                    ! Switch for n-parameter treatment (1-3)
+      integer   till_iRedist                      ! Redistribution type after MvG change
+      integer   till_Ntill                        ! Number of tabulated tillage events
+      integer   till_iTill                        ! Current tillage event index
+      integer   till_Ntypes                       ! Number of tillage types
+      integer   till_MaxNumSoilHo                 ! Max soil horizons in tillage zone
+      integer   till_MaxNumSoilCP                 ! Max soil compartments in tillage zone
+      real(8)   till_Max_Z_tillage                ! Max possible depth of tillage (cm)
+      real(8), dimension(:), allocatable :: till_Date_tillage   ! Tillage dates
+      real(8), dimension(:), allocatable :: till_Z_tillage      ! Tillage depths (cm)
+      real(8), dimension(:), allocatable :: till_I_tillage      ! Tillage intensity (0-1)
+      integer, dimension(:), allocatable :: till_Type_Tillage   ! Tillage type index
+      integer, dimension(:), allocatable :: till_iType_Tillage  ! Tillage type identifier
+      integer, dimension(:), allocatable :: till_iTT1           ! First position in type table
+      integer, dimension(:), allocatable :: till_iTT2           ! Last position in type table
+      real(8), dimension(:), allocatable :: till_TAB_Rho_tillage ! Bulk density after tillage
+      real(8), dimension(:), allocatable :: till_TAB_Rho_cons   ! Consolidated bulk density
+      real(8), dimension(:), allocatable :: till_TAB_K_R_cons   ! Consolidation rate constant
+      real(8), dimension(:), allocatable :: till_TAB_Rho_match  ! Matching point density
+      real(8), dimension(:), allocatable :: till_TAB_N_match    ! Matching point n-value
+      real(8), dimension(:), allocatable :: till_Rho_tillage    ! Post-tillage bulk density per layer
+      real(8), dimension(:), allocatable :: till_Rho_cons       ! Consolidated density per layer
+      real(8), dimension(:), allocatable :: till_Rho_last       ! Previous density per layer
+      real(8), dimension(:), allocatable :: till_K_R_cons       ! Consolidation rate per layer
+      real(8), dimension(:), allocatable :: till_Rho_match      ! Matching point density per layer
+      real(8), dimension(:), allocatable :: till_N_match        ! Matching point n per layer
+      real(8), dimension(:), allocatable :: till_Slope_match    ! Slope at matching point per layer
+      real(8)   till_sumDWC                       ! Sum of water content changes
+      real(8)   till_sumAvail1                    ! Available pore space
+      real(8)   till_sumAvail2                    ! Available water
+
 ! --- soilwater variables
       integer   iHWCKmodel(maho)   ! indicator what type of water retention and hydraulic conductivity model is used (per soil layer)
                                    ! 1 = MvG (default), 2 = exponential, 3 = MvG bi-modal
@@ -649,6 +705,16 @@
       real(8)   basegw             ! Depth of impervious layer (L) for drainage according to Hooghoudt or Ernst
       real(8)   bdens(maho)        ! Array with dry bulk density for each soil layer (M/L3)
       real(8)   c_top(macp)        ! Oxygen concentration at top of compartment(kg/m3)
+      
+      ! Oxygen stress per-node arrays (scaffolding from OxygenStress subroutine)
+      real(8)   o2_d_soil_term1(macp)     ! Pre-calculated soil diffusion term1 per node
+      real(8)   o2_d_soil_term2(macp)     ! Pre-calculated soil diffusion term2 per node
+      real(8)   o2_gfp100(macp)           ! Gas-filled porosity * 100 per node
+      real(8)   o2_capac_term(macp)       ! Water capacity term per node
+      real(8)   o2_nmin1(macp)            ! N-1 per node for VG equation
+      real(8)   o2_mplus1(macp)           ! M+1 per node for VG equation
+      logical   o2_ini_stress             ! O2 stress initialization flag (initialized to .true. via data statement)
+      
       real(8)   cfbs               ! Coefficient (-) to convert potential evapotranspiration into potential evaporation
       real(8)   cgird              ! Cumulative amount of gross irrigation (L)
       real(8)   cinund             ! Cumulative amount of inundation (L)
@@ -791,6 +857,25 @@
       real(8)   qredfrs(macp)      ! Array with reduction of root water extraction due to frost conditions for each compartment (L/T)
       real(8)   qssdi(macp)        ! Array with water input via subsurface drip irrigation for each compartment (L/T)
       real(8)   dt_SSDI_event      ! Length of SSDI irrigation event (T)
+      
+      ! SSDI persistent state (moved from irrigation.f90 local SAVE)
+      integer   swssdi_irr         ! Switch: SSDI active (0=no, 1=yes)
+      integer   nod_ssdi_irr(2)    ! Upper and lower nodes for SSDI
+      integer   ssdi_schedule_irr  ! Schedule type (0=fixed dates, 1=internal)
+      integer   ssdi_sched_type_irr ! Internal schedule type (1=Tact/Tpot, 2=h, 3=theta)
+      integer   nod_ssdi_sensor_irr ! Sensor node (if ssdi_sched_type > 1)
+      real(8)   ssdi_threshold_irr ! Threshold value for scheduling
+      real(8)   ssdi_threshold_z_irr ! Depth for threshold value
+      real(8)   ssdi_amount_irr    ! Amount of scheduled irrigation (cm)
+      real(8)   ssdi_appl_rate_irr ! Application rate (cm/d)
+      integer   sw_interval_irr    ! Switch for minimum interval
+      integer   days_interval_irr  ! Minimum days between applications
+      integer   days_counter_irr   ! Days since previous application
+      integer   nirri_ssdi_irr     ! SSDI counter/entry point
+      real(8)   ssdi_date_irr(mairg)   ! Fixed irrigation dates
+      real(8)   ssdi_rate_f_irr(mairg) ! Fixed irrigation rates (cm/d)
+      real(8)   ssdi_amount_f_irr(mairg) ! Fixed irrigation amounts (cm)
+      
       real(8)   qtop               ! Water flux through soil surface (L/T)
       real(8)   relsatthr(maho)    ! Array with relative saturation (-) for each soil layer: to interpolate VG and Ksatexm
       real(8)   ResultsOxygenStress(19,macp) ! array with results for OxygenStress; for output only 
@@ -1183,5 +1268,8 @@
       integer   swWrtNonox         ! switch for checking oxygen stress of root zone development
       logical   flWrtNonox         ! Flag indicating whether root development is retatarded by oxygen stress 
       real(8)   aeratecrit         ! threshold to stop root zone development in case of oxygenstress; 0.0 minimum oxygen stress, 1.0 maximum oxygenstress [0.0001..1.0 -, R]
+
+      ! Initialize o2_ini_stress to .true. (needed for first call to OxygenStress)
+      data o2_ini_stress /.true./
 
       end module variables

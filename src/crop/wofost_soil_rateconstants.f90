@@ -85,8 +85,9 @@
       implicit none
 !     response to moisture conditions according to Bril et al (SONICG),
 !     adjusted for near saturation conditions according to ANIMO (Groenendijk et al, 2005)
-      real(8):: Fred_W, WFPS, WFPScrit, Denumer, A2, A1, A0, Recfanaer
-      data Recfanaer/ 0.01d0 /
+      real(8):: Fred_W, WFPS, WFPScrit, Denumer, A2, A1, A0
+      ! Constant (converted from DATA to PARAMETER for multi-instance compatibility)
+      real(8), parameter :: Recfanaer = 0.01d0
 
       If(Wfps .Le. Wfpscrit)Then
          Fred_W  = 6.d0*Wfps**2/(1.d0+9.d0*Wfps**4)

@@ -46,18 +46,29 @@ module swap_state_mod
     public :: heat_state_t
     public :: snow_state_t
     public :: irrigation_state_t
+    public :: tillage_state_t
     public :: surfacewater_state_t
+    public :: wofost_soil_state_t
+    public :: oxygenstress_state_t
     
     ! Initialization procedures
     public :: swap_state_init
     public :: io_handles_init
     public :: drainage_state_init
     public :: surfacewater_state_init
+    public :: irrigation_state_init
+    public :: tillage_state_init
+    public :: wofost_soil_state_init
+    public :: oxygenstress_state_init
     
     ! Finalization procedures
     public :: swap_state_finalize
     public :: drain_state_finalize
     public :: surfacewater_state_finalize
+    public :: irrigation_state_finalize
+    public :: tillage_state_finalize
+    public :: wofost_soil_state_finalize
+    public :: oxygenstress_state_finalize
 
     ! ===========================================================================
     ! Time and Control State
@@ -514,7 +525,293 @@ module swap_state_mod
         
         logical :: flirrigate = .false.        ! Irrigation in simulation
         logical :: flheadirg = .false.         ! Print irrigation header
+        
+        ! SSDI (subsurface drip irrigation) state
+        integer :: swssdi = 0                  ! Switch: SSDI active (0=no, 1=yes)
+        integer, dimension(2) :: nod_ssdi = 0  ! Upper and lower nodes for SSDI
+        integer :: ssdi_schedule = 0           ! Schedule type (0=fixed dates, 1=internal)
+        integer :: ssdi_sched_type = 0         ! Internal schedule type (1=Tact/Tpot, 2=h, 3=theta)
+        integer :: nod_ssdi_sensor = 0         ! Sensor node (if ssdi_sched_type > 1)
+        real(8) :: ssdi_threshold = 0.0d0      ! Threshold value for scheduling
+        real(8) :: ssdi_threshold_z = 0.0d0    ! Depth for threshold value
+        real(8) :: ssdi_amount = 0.0d0         ! Amount of scheduled irrigation (cm)
+        real(8) :: ssdi_appl_rate = 0.0d0      ! Application rate (cm/d)
+        integer :: sw_interval = 0             ! Switch for minimum interval
+        integer :: days_interval = 0           ! Minimum days between applications
+        integer :: days_counter = 0            ! Days since previous application
+        integer :: nirri_ssdi = 0              ! SSDI counter/entry point
+        real(8), allocatable :: ssdi_date(:)   ! Fixed irrigation dates
+        real(8), allocatable :: ssdi_rate_f(:) ! Fixed irrigation rates (cm/d)
+        real(8), allocatable :: ssdi_amount_f(:) ! Fixed irrigation amounts (cm)
     end type irrigation_state_t
+
+    ! ===========================================================================
+    ! Tillage State
+    ! ===========================================================================
+    type :: tillage_state_t
+        ! Switches and configuration
+        integer :: swtill = 0                  ! Switch: 0=no tillage, 1=tillage
+        integer :: i_n_model = 2               ! Switch for n-parameter treatment (1-3)
+        integer :: iRedist = 2                 ! Redistribution type after MvG change
+        
+        ! Event counters
+        integer :: Ntill = 0                   ! Number of tabulated tillage events
+        integer :: iTill = 1                   ! Current tillage event index
+        integer :: Ntypes = 0                  ! Number of tillage types
+        integer :: MaxNumSoilHo = 0            ! Max soil horizons in tillage zone
+        integer :: MaxNumSoilCP = 0            ! Max soil compartments in tillage zone
+        
+        ! Tillage depth
+        real(8) :: Max_Z_tillage = 0.0d0       ! Max possible depth of tillage (cm)
+        
+        ! Tabulated input per tillage event (size: Ntill)
+        real(8), allocatable :: Date_tillage(:)   ! Tillage dates
+        real(8), allocatable :: Z_tillage(:)      ! Tillage depths (cm)
+        real(8), allocatable :: I_tillage(:)      ! Tillage intensity (0-1)
+        integer, allocatable :: Type_Tillage(:)   ! Tillage type index
+        
+        ! Tabulated input per tillage type (size: Ntypes)
+        integer, allocatable :: iType_Tillage(:)  ! Tillage type identifier
+        integer, allocatable :: iTT1(:)           ! First position in type table
+        integer, allocatable :: iTT2(:)           ! Last position in type table
+        real(8), allocatable :: TAB_Rho_tillage(:) ! Bulk density after tillage
+        real(8), allocatable :: TAB_Rho_cons(:)    ! Consolidated bulk density
+        real(8), allocatable :: TAB_K_R_cons(:)    ! Consolidation rate constant
+        real(8), allocatable :: TAB_Rho_match(:)   ! Matching point density
+        real(8), allocatable :: TAB_N_match(:)     ! Matching point n-value
+        
+        ! Per-layer state (size: NumLay)
+        real(8), allocatable :: Rho_tillage(:)    ! Post-tillage bulk density per layer
+        real(8), allocatable :: Rho_cons(:)       ! Consolidated density per layer
+        real(8), allocatable :: Rho_last(:)       ! Previous density per layer
+        real(8), allocatable :: K_R_cons(:)       ! Consolidation rate per layer
+        real(8), allocatable :: Rho_match(:)      ! Matching point density per layer
+        real(8), allocatable :: N_match(:)        ! Matching point n per layer
+        real(8), allocatable :: Slope_match(:)    ! Slope at matching point per layer
+        
+        ! Water redistribution tracking
+        real(8) :: sumDWC = 0.0d0              ! Sum of water content changes
+        real(8) :: sumAvail1 = 0.0d0           ! Available pore space
+        real(8) :: sumAvail2 = 0.0d0           ! Available water
+    end type tillage_state_t
+
+    ! ===========================================================================
+    ! WOFOST Soil Nutrient State
+    ! ===========================================================================
+    type :: wofost_soil_state_t
+        ! Interface variables (from wofost_soil_interface.f90)
+        real(8) :: idwrt = 0.0d0               ! Increment dead root weight
+        real(8) :: idwlv = 0.0d0               ! Increment dead leaf weight
+        real(8) :: idwst = 0.0d0               ! Increment dead stem weight
+        real(8) :: idwso = 0.0d0               ! Increment dead storage organ weight
+        real(8) :: iNLOSSL = 0.0d0             ! N loss from leaves
+        real(8) :: iNLOSSR = 0.0d0             ! N loss from roots
+        real(8) :: iNLOSSS = 0.0d0             ! N loss from stems
+        real(8) :: iNLOSSO = 0.0d0             ! N loss from storage organs
+        real(8) :: NdemandSoil = 0.0d0         ! Total N demand (kg/ha N)
+        real(8) :: NsupplySoil = 0.0d0         ! Total mineral N from soil (kg/ha N)
+        real(8) :: Ndemand = 0.0d0             ! Total N demand (kg/m2 N)
+        real(8) :: Nsupply = 0.0d0             ! Total mineral N supply (kg/m2 N)
+        real(8) :: LaiCritNupt = 0.0d0         ! Critical LAI for N-uptake
+        
+        ! Soil water and temperature from SWAP
+        real(8) :: dz_WSN = 0.0d0              ! Soil layer thickness
+        real(8) :: WFrac_t = 0.0d0             ! Water fraction at time t
+        real(8) :: WFrac_t0 = 0.0d0            ! Water fraction at time t0
+        real(8) :: Wflux_out = 0.0d0           ! Water flux out
+        real(8) :: Wflux_transp = 0.0d0        ! Transpiration flux
+        real(8) :: Wflux_inBot = 0.0d0         ! Water flux in bottom
+        real(8) :: Wflux_inTop = 0.0d0         ! Water flux in top
+        real(8) :: Wflux_inLat = 0.0d0         ! Lateral water flux in
+        real(8) :: SoilEvap = 0.0d0            ! Soil evaporation
+        real(8) :: Temp_wsn = 0.0d0            ! Temperature for WSN
+        real(8) :: t_WSNold = 0.0d0            ! Previous time for WSN
+        
+        ! Response function parameters
+        real(8) :: Temp_ref = 0.0d0            ! Reference temperature
+        real(8) :: WFrac_sat = 0.0d0           ! Saturated water fraction
+        
+        ! Organic matter model parameters (maxfn = 8)
+        integer :: nf = 0                      ! Number of fractions
+        real(8), dimension(8) :: RateconFOM_ref = 0.0d0  ! FOM rate constant ref
+        real(8) :: RateconBio_ref = 0.0d0      ! Biomass rate constant ref
+        real(8) :: RateconHum_ref = 0.0d0      ! Humus rate constant ref
+        real(8) :: RateconHum_exp = 0.0d0      ! Humus rate constant exponent
+        real(8) :: tstartHumexp = 0.0d0        ! Start time for Hum exponent
+        real(8) :: t1900Soil = 0.0d0           ! Reference time 1900
+        real(8), dimension(8) :: RateconFOM = 0.0d0      ! FOM rate constants
+        real(8) :: RateconBio = 0.0d0          ! Biomass rate constant
+        real(8) :: RateconHum = 0.0d0          ! Humus rate constant
+        real(8), dimension(8) :: AsfaFOM_Bio = 0.0d0     ! Assimilation FOM->Bio
+        real(8), dimension(8) :: AsfaFOM_Hum = 0.0d0     ! Assimilation FOM->Hum
+        real(8) :: AsfaBio = 0.0d0             ! Assimilation Bio
+        real(8) :: AsfaHum = 0.0d0             ! Assimilation Hum
+        real(8), dimension(8) :: CFracFOM = 0.0d0        ! C fraction FOM
+        real(8) :: CFracBio = 0.0d0            ! C fraction Bio
+        real(8) :: CFracHum = 0.0d0            ! C fraction Hum
+        real(8), dimension(8) :: NFracFOM = 0.0d0        ! N fraction FOM
+        real(8) :: NFracBio = 0.0d0            ! N fraction Bio
+        real(8) :: NFracHum = 0.0d0            ! N fraction Hum
+        real(8) :: NFracFOMmin = 0.0d0         ! Min N fraction FOM
+        real(8) :: NFracFOMmax = 0.0d0         ! Max N fraction FOM
+        real(8) :: AsfaMin = 0.0d0             ! Min assimilation factor
+        real(8) :: AsfaMax = 0.0d0             ! Max assimilation factor
+        
+        ! Organic matter state variables
+        real(8), dimension(8) :: FOM_t0 = 0.0d0          ! FOM at t0
+        real(8) :: Bio_t0 = 0.0d0              ! Biomass at t0
+        real(8) :: Hum_t0 = 0.0d0              ! Humus at t0
+        real(8), dimension(8) :: FOM_t = 0.0d0           ! FOM at t
+        real(8) :: Bio_t = 0.0d0               ! Biomass at t
+        real(8) :: Hum_t = 0.0d0               ! Humus at t
+        real(8) :: Cdissi = 0.0d0              ! C dissimilation
+        
+        ! Mineral nitrogen model
+        real(8) :: RateConNitrif_ref = 0.0d0   ! Nitrification rate ref
+        real(8) :: RateConDenitr_ref = 0.0d0   ! Denitrification rate ref
+        real(8) :: RateConNitrif = 0.0d0       ! Nitrification rate
+        real(8) :: RateConDenitr = 0.0d0       ! Denitrification rate
+        real(8) :: TCSF_N = 0.0d0              ! Temperature correction
+        real(8) :: Nminer = 0.0d0              ! N mineralization
+        real(8) :: Ratecon = 0.0d0             ! Rate constant
+        
+        ! Ammonium and nitrate concentrations
+        real(8) :: DryBD = 0.0d0               ! Dry bulk density
+        real(8) :: SorpCoef = 0.0d0            ! Sorption coefficient
+        real(8) :: cNH4_t0 = 0.0d0             ! NH4 at t0
+        real(8) :: cNH4_t = 0.0d0              ! NH4 at t
+        real(8) :: cNH4_av = 0.0d0             ! NH4 average
+        real(8) :: cNO3_t0 = 0.0d0             ! NO3 at t0
+        real(8) :: cNO3_t = 0.0d0              ! NO3 at t
+        real(8) :: cNO3_av = 0.0d0             ! NO3 average
+        
+        ! Boundary concentrations
+        real(8) :: cNH4N_top = 0.0d0           ! NH4-N at top
+        real(8) :: cNH4N_lat = 0.0d0           ! NH4-N lateral
+        real(8) :: cNH4N_seep = 0.0d0          ! NH4-N seepage
+        real(8) :: cNO3N_top = 0.0d0           ! NO3-N at top
+        real(8) :: cNO3N_lat = 0.0d0           ! NO3-N lateral
+        real(8) :: cNO3N_seep = 0.0d0          ! NO3-N seepage
+        real(8) :: wsn_Cseep = 0.0d0           ! WOFOST seepage concentration
+        real(8) :: wsn_Ctop = 0.0d0            ! WOFOST top concentration
+        real(8) :: wsn_Clat = 0.0d0            ! WOFOST lateral concentration
+        
+        ! Time control
+        real(8) :: dt_WSN = 0.0d0              ! Time step for WSN
+        
+        ! Response function parameters
+        real(8) :: WFPSCrit = 0.0d0            ! Critical WFPS
+        real(8) :: WFPScrit2 = 0.0d0           ! Second critical WFPS
+        real(8) :: CdissiHalf = 0.0d0          ! Half C dissimilation
+        real(8) :: WFPS = 0.0d0                ! Water-filled pore space
+        real(8) :: red_T = 0.0d0               ! Temperature reduction
+        real(8) :: red_W = 0.0d0               ! Water reduction
+        real(8) :: red_W_Nit = 0.0d0           ! Water reduction nitrification
+        real(8) :: red_W_Den = 0.0d0           ! Water reduction denitrification
+        real(8) :: red_Resp = 0.0d0            ! Respiration reduction
+        
+        ! N supply tracking
+        real(8) :: NsupplyNH4N = 0.0d0         ! NH4-N supply
+        real(8) :: NsupplyNO3N = 0.0d0         ! NO3-N supply
+        
+        ! Old values for balance (scalars - summed across fractions)
+        real(8) :: FOM_old = 0.0d0             ! Old FOM (summed)
+        real(8) :: Bio_old = 0.0d0             ! Old biomass
+        real(8) :: Hum_old = 0.0d0             ! Old humus
+        real(8) :: NFOM_old = 0.0d0            ! Old N in FOM (summed)
+        real(8) :: NBio_old = 0.0d0            ! Old N in biomass
+        real(8) :: NHum_old = 0.0d0            ! Old N in humus
+        real(8) :: NH4_old = 0.0d0             ! Old NH4
+        real(8) :: NO3_old = 0.0d0             ! Old NO3
+        
+        ! Crop residue tracking
+        real(8) :: iNLOSSL_1 = 0.0d0           ! N loss leaves (prev step)
+        real(8) :: iNLOSSR_1 = 0.0d0           ! N loss roots (prev step)
+        real(8) :: iNLOSSS_1 = 0.0d0           ! N loss stems (prev step)
+        real(8) :: iNLOSSO_1 = 0.0d0           ! N loss storage organs (prev step)
+        real(8) :: idwrt_1 = 0.0d0             ! Dead root (prev step)
+        real(8) :: idwlv_1 = 0.0d0             ! Dead leaves (prev step)
+        real(8) :: idwst_1 = 0.0d0             ! Dead stems (prev step)
+        real(8) :: idwso_1 = 0.0d0             ! Dead storage organs (prev step)
+        
+        ! ANIMO crop_ext tracking
+        real(8) :: Ntotuptake = 0.0d0          ! Total N uptake
+        real(8) :: Ptotuptake = 0.0d0          ! Total P uptake
+        real(8) :: DMcressur = 0.0d0           ! Crop residue surface DM
+        real(8) :: Ncressurf = 0.0d0           ! Crop residue surface N
+        real(8) :: Pcressurf = 0.0d0           ! Crop residue surface P
+        real(8) :: DMcresbott = 0.0d0          ! Crop residue bottom DM
+        real(8) :: Ncresbott = 0.0d0           ! Crop residue bottom N
+        real(8) :: Pcresbott = 0.0d0           ! Crop residue bottom P
+        
+        ! Amendment state
+        integer :: iAmendTime = 0              ! Current amendment time index
+        integer :: isme = 0                    ! Soil management event index
+        real(8) :: NH4N_volat = 0.0d0          ! NH4-N volatilization
+        real(8) :: NH4N_amend = 0.0d0          ! NH4-N from amendment
+        real(8) :: NO3N_amend = 0.0d0          ! NO3-N from amendment
+        real(8) :: NH4N_cres = 0.0d0           ! NH4-N from crop residue
+        real(8) :: NO3N_cres = 0.0d0           ! NO3-N from crop residue
+        
+        ! File unit numbers
+        integer :: nut = -1                    ! Nutrient output file unit
+        integer :: cropext = -1                ! Crop extension file unit
+        
+        ! Flags
+        logical :: flCropExt = .false.         ! Crop extension file flag
+    end type wofost_soil_state_t
+
+    ! ===========================================================================
+    ! Oxygen Stress State (from O2_pars module and OxygenStress subroutine)
+    ! ===========================================================================
+    type :: oxygenstress_state_t
+        ! Root properties (from O2_pars module)
+        real(8) :: w_root = 0.0d0              ! Dry weight per root length (kg/m)
+        real(8) :: w_root_z0 = 0.0d0           ! Root weight at depth
+        real(8) :: root_radius = 0.0d0         ! Root radius (m)
+        
+        ! Soil physical state
+        real(8) :: soil_temp = 0.0d0           ! Soil temperature (K)
+        real(8) :: sat_water_cont = 0.0d0      ! Saturated water content
+        real(8) :: gas_filled_porosity = 0.0d0 ! Gas-filled porosity
+        
+        ! Diffusion coefficients
+        real(8) :: d_o2inwater = 0.0d0         ! O2 diffusion in water
+        real(8) :: d_root = 0.0d0              ! Diffusion in root
+        real(8) :: d_soil = 0.0d0              ! Soil diffusion
+        
+        ! Soil properties
+        real(8) :: perc_org_mat = 0.0d0        ! Organic matter percentage
+        real(8) :: soil_density = 0.0d0        ! Soil density (kg/m3)
+        real(8) :: depth = 0.0d0               ! Compartment thickness (m)
+        
+        ! Shape factors
+        real(8) :: shape_factor_microbialr = 0.0d0
+        
+        ! Respiration state
+        real(8) :: r_microbial_z0 = 0.0d0      ! Microbial respiration rate
+        
+        ! Water film / O2 transport
+        real(8) :: waterfilm_thickness = 0.0d0
+        real(8) :: bunsencoeff = 0.0d0
+        
+        ! O2 concentrations
+        real(8) :: c_min_micro = 0.0d0         ! Min O2 for microbial resp
+        real(8) :: c_macro = 0.0d0             ! Macropore O2 conc
+        real(8) :: ctopnode = 0.0d0            ! Top node O2 conc
+        
+        ! Pre-calculated constants per node (from OxygenStress subroutine SAVE)
+        real(8), allocatable :: d_soil_term1(:)
+        real(8), allocatable :: d_soil_term2(:)
+        real(8), allocatable :: gfp100(:)
+        real(8), allocatable :: Capac_term(:)
+        real(8), allocatable :: Nmin1(:)
+        real(8), allocatable :: Mplus1(:)
+        
+        ! Initialization flags
+        logical :: ini_stress = .true.         ! O2 stress initialization flag (from OxygenStress)
+        logical :: initialized = .false.       ! Overall initialization flag
+    end type oxygenstress_state_t
 
     ! ===========================================================================
     ! Drainage State
@@ -1107,6 +1404,7 @@ module swap_state_mod
         type(atmosphere_state_t) :: atm
         type(crop_state_t)       :: crop
         type(irrigation_state_t) :: irrig
+        type(tillage_state_t)    :: tillage
         type(drainage_state_t)   :: drain
         type(boundary_state_t)   :: boundary
         type(macropore_state_t)  :: macro
@@ -1114,6 +1412,8 @@ module swap_state_mod
         type(heat_state_t)       :: heat
         type(snow_state_t)       :: snow
         type(surfacewater_state_t) :: surfwater
+        type(wofost_soil_state_t) :: wofost_soil
+        type(oxygenstress_state_t) :: oxystress
         
         ! Model configuration (set once at initialization)
         integer :: numnod = 0                  ! Number of compartments
@@ -1186,6 +1486,9 @@ contains
         ! nmper=10 (management periods), mamte=100 (meteo entries), maowl=100 (water level entries)
         call log_debug('state_init', 'Initializing surfacewater state...')
         call surfacewater_state_init(state%surfwater, 10, 100, 100, nlev)
+        
+        call log_debug('state_init', 'Initializing oxygen stress state...')
+        call oxygenstress_state_init(state%oxystress, numnod)
         
         state%initialized = .true.
         
@@ -1774,6 +2077,188 @@ contains
         
     end subroutine heat_state_finalize
     
+    !> @brief Initialize irrigation state with allocated arrays
+    subroutine irrigation_state_init(istate, maxirrig)
+        type(irrigation_state_t), intent(inout) :: istate
+        integer, intent(in) :: maxirrig          ! Maximum number of irrigation events
+        
+        ! Allocate SSDI arrays
+        if (.not. allocated(istate%ssdi_date)) allocate(istate%ssdi_date(maxirrig))
+        if (.not. allocated(istate%ssdi_rate_f)) allocate(istate%ssdi_rate_f(maxirrig))
+        if (.not. allocated(istate%ssdi_amount_f)) allocate(istate%ssdi_amount_f(maxirrig))
+        
+        ! Initialize arrays to zero
+        istate%ssdi_date = 0.0d0
+        istate%ssdi_rate_f = 0.0d0
+        istate%ssdi_amount_f = 0.0d0
+        
+    end subroutine irrigation_state_init
+    
+    !> @brief Finalize irrigation state (deallocate arrays)
+    subroutine irrigation_state_finalize(istate)
+        type(irrigation_state_t), intent(inout) :: istate
+        
+        if (allocated(istate%ssdi_date)) deallocate(istate%ssdi_date)
+        if (allocated(istate%ssdi_rate_f)) deallocate(istate%ssdi_rate_f)
+        if (allocated(istate%ssdi_amount_f)) deallocate(istate%ssdi_amount_f)
+        
+    end subroutine irrigation_state_finalize
+    
+    !> @brief Initialize tillage state with allocated arrays
+    subroutine tillage_state_init(tstate, numlay, maxtill, maxtypes)
+        type(tillage_state_t), intent(inout) :: tstate
+        integer, intent(in) :: numlay             ! Number of soil layers
+        integer, intent(in) :: maxtill            ! Maximum number of tillage events
+        integer, intent(in) :: maxtypes           ! Maximum number of tillage types
+        
+        ! Allocate per-event arrays
+        if (.not. allocated(tstate%Date_tillage)) allocate(tstate%Date_tillage(maxtill + 1))
+        if (.not. allocated(tstate%Z_tillage)) allocate(tstate%Z_tillage(maxtill))
+        if (.not. allocated(tstate%I_tillage)) allocate(tstate%I_tillage(maxtill))
+        if (.not. allocated(tstate%Type_Tillage)) allocate(tstate%Type_Tillage(maxtill))
+        
+        ! Allocate per-type arrays
+        if (.not. allocated(tstate%iType_Tillage)) allocate(tstate%iType_Tillage(maxtypes))
+        if (.not. allocated(tstate%iTT1)) allocate(tstate%iTT1(maxtill))
+        if (.not. allocated(tstate%iTT2)) allocate(tstate%iTT2(maxtill))
+        if (.not. allocated(tstate%TAB_Rho_tillage)) allocate(tstate%TAB_Rho_tillage(maxtypes))
+        if (.not. allocated(tstate%TAB_Rho_cons)) allocate(tstate%TAB_Rho_cons(maxtypes))
+        if (.not. allocated(tstate%TAB_K_R_cons)) allocate(tstate%TAB_K_R_cons(maxtypes))
+        if (.not. allocated(tstate%TAB_Rho_match)) allocate(tstate%TAB_Rho_match(maxtypes))
+        if (.not. allocated(tstate%TAB_N_match)) allocate(tstate%TAB_N_match(maxtypes))
+        
+        ! Allocate per-layer arrays
+        if (.not. allocated(tstate%Rho_tillage)) allocate(tstate%Rho_tillage(numlay))
+        if (.not. allocated(tstate%Rho_cons)) allocate(tstate%Rho_cons(numlay))
+        if (.not. allocated(tstate%Rho_last)) allocate(tstate%Rho_last(numlay))
+        if (.not. allocated(tstate%K_R_cons)) allocate(tstate%K_R_cons(numlay))
+        if (.not. allocated(tstate%Rho_match)) allocate(tstate%Rho_match(numlay))
+        if (.not. allocated(tstate%N_match)) allocate(tstate%N_match(numlay))
+        if (.not. allocated(tstate%Slope_match)) allocate(tstate%Slope_match(numlay))
+        
+        ! Initialize arrays to zero
+        tstate%Date_tillage = 0.0d0
+        tstate%Z_tillage = 0.0d0
+        tstate%I_tillage = 0.0d0
+        tstate%Type_Tillage = 0
+        tstate%iType_Tillage = 0
+        tstate%iTT1 = 0
+        tstate%iTT2 = 0
+        tstate%TAB_Rho_tillage = 0.0d0
+        tstate%TAB_Rho_cons = 0.0d0
+        tstate%TAB_K_R_cons = 0.0d0
+        tstate%TAB_Rho_match = 0.0d0
+        tstate%TAB_N_match = 0.0d0
+        tstate%Rho_tillage = 0.0d0
+        tstate%Rho_cons = 0.0d0
+        tstate%Rho_last = 0.0d0
+        tstate%K_R_cons = 0.0d0
+        tstate%Rho_match = 0.0d0
+        tstate%N_match = 0.0d0
+        tstate%Slope_match = 0.0d0
+        
+    end subroutine tillage_state_init
+    
+    !> @brief Finalize tillage state (deallocate arrays)
+    subroutine tillage_state_finalize(tstate)
+        type(tillage_state_t), intent(inout) :: tstate
+        
+        ! Deallocate per-event arrays
+        if (allocated(tstate%Date_tillage)) deallocate(tstate%Date_tillage)
+        if (allocated(tstate%Z_tillage)) deallocate(tstate%Z_tillage)
+        if (allocated(tstate%I_tillage)) deallocate(tstate%I_tillage)
+        if (allocated(tstate%Type_Tillage)) deallocate(tstate%Type_Tillage)
+        
+        ! Deallocate per-type arrays
+        if (allocated(tstate%iType_Tillage)) deallocate(tstate%iType_Tillage)
+        if (allocated(tstate%iTT1)) deallocate(tstate%iTT1)
+        if (allocated(tstate%iTT2)) deallocate(tstate%iTT2)
+        if (allocated(tstate%TAB_Rho_tillage)) deallocate(tstate%TAB_Rho_tillage)
+        if (allocated(tstate%TAB_Rho_cons)) deallocate(tstate%TAB_Rho_cons)
+        if (allocated(tstate%TAB_K_R_cons)) deallocate(tstate%TAB_K_R_cons)
+        if (allocated(tstate%TAB_Rho_match)) deallocate(tstate%TAB_Rho_match)
+        if (allocated(tstate%TAB_N_match)) deallocate(tstate%TAB_N_match)
+        
+        ! Deallocate per-layer arrays
+        if (allocated(tstate%Rho_tillage)) deallocate(tstate%Rho_tillage)
+        if (allocated(tstate%Rho_cons)) deallocate(tstate%Rho_cons)
+        if (allocated(tstate%Rho_last)) deallocate(tstate%Rho_last)
+        if (allocated(tstate%K_R_cons)) deallocate(tstate%K_R_cons)
+        if (allocated(tstate%Rho_match)) deallocate(tstate%Rho_match)
+        if (allocated(tstate%N_match)) deallocate(tstate%N_match)
+        if (allocated(tstate%Slope_match)) deallocate(tstate%Slope_match)
+        
+        ! Reset scalar values
+        tstate%swtill = 0
+        tstate%Ntill = 0
+        tstate%iTill = 1
+        tstate%Ntypes = 0
+        
+    end subroutine tillage_state_finalize
+    
+    !> @brief Initialize WOFOST soil state (no dynamic allocations needed)
+    subroutine wofost_soil_state_init(wstate)
+        type(wofost_soil_state_t), intent(inout) :: wstate
+        
+        ! Most fields have default initialization
+        ! This subroutine is provided for completeness
+        wstate%nut = -1
+        wstate%cropext = -1
+        wstate%flCropExt = .false.
+        
+    end subroutine wofost_soil_state_init
+    
+    !> @brief Finalize WOFOST soil state (no dynamic allocations)
+    subroutine wofost_soil_state_finalize(wstate)
+        type(wofost_soil_state_t), intent(inout) :: wstate
+        
+        ! No dynamic allocations to deallocate
+        ! Reset file units
+        wstate%nut = -1
+        wstate%cropext = -1
+        
+    end subroutine wofost_soil_state_finalize
+    
+    !> @brief Initialize oxygen stress state
+    subroutine oxygenstress_state_init(ostate, n_nod)
+        type(oxygenstress_state_t), intent(inout) :: ostate
+        integer, intent(in) :: n_nod
+        
+        ! Allocate per-node arrays
+        if (.not. allocated(ostate%d_soil_term1)) allocate(ostate%d_soil_term1(n_nod))
+        if (.not. allocated(ostate%d_soil_term2)) allocate(ostate%d_soil_term2(n_nod))
+        if (.not. allocated(ostate%gfp100)) allocate(ostate%gfp100(n_nod))
+        if (.not. allocated(ostate%Capac_term)) allocate(ostate%Capac_term(n_nod))
+        if (.not. allocated(ostate%Nmin1)) allocate(ostate%Nmin1(n_nod))
+        if (.not. allocated(ostate%Mplus1)) allocate(ostate%Mplus1(n_nod))
+        
+        ! Initialize arrays
+        ostate%d_soil_term1 = 0.0d0
+        ostate%d_soil_term2 = 0.0d0
+        ostate%gfp100 = 0.0d0
+        ostate%Capac_term = 0.0d0
+        ostate%Nmin1 = 0.0d0
+        ostate%Mplus1 = 0.0d0
+        
+        ostate%initialized = .false.
+        
+    end subroutine oxygenstress_state_init
+    
+    !> @brief Finalize oxygen stress state
+    subroutine oxygenstress_state_finalize(ostate)
+        type(oxygenstress_state_t), intent(inout) :: ostate
+        
+        if (allocated(ostate%d_soil_term1)) deallocate(ostate%d_soil_term1)
+        if (allocated(ostate%d_soil_term2)) deallocate(ostate%d_soil_term2)
+        if (allocated(ostate%gfp100)) deallocate(ostate%gfp100)
+        if (allocated(ostate%Capac_term)) deallocate(ostate%Capac_term)
+        if (allocated(ostate%Nmin1)) deallocate(ostate%Nmin1)
+        if (allocated(ostate%Mplus1)) deallocate(ostate%Mplus1)
+        
+        ostate%initialized = .false.
+        
+    end subroutine oxygenstress_state_finalize
+    
     !> @brief Finalize (deallocate) SWAP state
     !> @param state The state to finalize
     subroutine swap_state_finalize(state)
@@ -1785,6 +2270,10 @@ contains
         call boundary_state_finalize(state%boundary)
         call solute_state_finalize(state%solute)
         call heat_state_finalize(state%heat)
+        call irrigation_state_finalize(state%irrig)
+        call tillage_state_finalize(state%tillage)
+        call wofost_soil_state_finalize(state%wofost_soil)
+        call oxygenstress_state_finalize(state%oxystress)
         
         state%initialized = .false.
         

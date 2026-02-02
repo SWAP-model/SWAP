@@ -44,7 +44,7 @@
       real(8)  afgen
       real(8)  TBGMR,NOPTMR,NUPGMR,NRMR,NFGMR
       real(8)  TINY
-      SAVE        
+      ! SAVE removed - no persistent state needed (work variables only)        
 
 !     vegetative living above-ground biomass (kg DM ha-1)
       TBGMR = WLV + WST     
@@ -97,7 +97,7 @@
 !     local
       real(8)  FRTMOD,FLOLD,FLVMOD
 
-      SAVE        
+      ! SAVE removed - no persistent state needed        
      
       IF(TRANRF .LT. NNI) THEN
 
@@ -142,7 +142,7 @@
       real(8)  WLV,WST,FRNX,NMAXLV,NMAXST,NOPTMR
 !     local
       real(8)  NOPTL,NOPTS,TBGMR
-      SAVE        
+      ! SAVE removed - no persistent state needed        
       
 !    * Total vegetative living above-ground biomass (kg DM ha-1)     
       TBGMR = WLV + WST 
@@ -171,7 +171,7 @@
 !     global
       real(8)  WLV,WST,WRT,WSO,NMAXLV,NMAXST,NMAXRT,NMAXSO
       real(8)  ANLV,ANST,ANRT,ANSO,TCNT,NDEML,NDEMS,NDEMR,NDEMSO
-      SAVE        
+      ! SAVE removed - no persistent state needed        
 
       NDEML  =  MAX (NMAXLV*WLV  - ANLV, 0.0d0)
       NDEMS  =  MAX (NMAXST*WST  - ANST, 0.0d0)
@@ -194,7 +194,7 @@
 !     global
       real(8)  ANLV,ANST,ANRT,WLV,WST,WRT,RNFLV,RNFST,RNFRT
       real(8)  FNTRT,ATNLV,ATNST,ATNRT,ATN
-      SAVE        
+      ! SAVE removed - no persistent state needed        
 
       ATNLV = MAX (0.d0 , ANLV-WLV*RNFLV)
       ATNST = MAX (0.d0 , ANST-WST*RNFST)
@@ -215,7 +215,7 @@
 !     global
       real(8)  RNSO,ATNLV,ATNST,ATNRT,ATN,RNTLV,RNTST,RNTRT
 !     local
-      SAVE        
+      ! SAVE removed - no persistent state needed        
 
       RNTLV = 0.d0
       if(ATN.gt.1.0d-5)  RNTLV= RNSO* ATNLV/ ATN
@@ -242,7 +242,7 @@
       real(8)  NDEML,NDEMS,NDEMR,NUPTR,NFIXTR,NDEMTO,RNULV,RNUST,RNURT
 !     local
 
-      SAVE        
+      ! SAVE removed - no persistent state needed        
       
       RNULV = 0.d0
       RNUST = 0.d0
@@ -271,7 +271,7 @@
 !     global
       real(8)  DRLV,DRRT,DRST,RNFLV,RNFRT,RNFST,RNLDLV,RNLDRT,RNLDST
 
-      SAVE        
+      ! SAVE removed - no persistent state needed        
 
       RNLDLV= RNFLV * DRLV
       RNLDRT= RNFRT * DRRT
@@ -296,7 +296,7 @@
       real(8)  RNLDLV,RNLDST,RNLDRT,NFIXTT,NNI,NLOSSLDeceasedLvToSoil
 
 
-      SAVE        
+      ! SAVE removed - no persistent state needed        
       
       NLOSSL = 0.0d0
       NLOSSR = 0.0d0
@@ -336,7 +336,7 @@
       real(8)  ANLV,ANST,ANRT,ANSO,ANLVI,ANSTI,ANRTI,ANSOI
 !     local
       real(8)  NMAXLVI,NMAXSTI,NMAXRTI,afgen
-      SAVE        
+      ! SAVE removed - no persistent state needed        
 
       NMAXLVI= afgen (NMXLV, 30, DVS)
       NMAXSTI= LSNR * NMAXLVI

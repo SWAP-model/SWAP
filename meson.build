@@ -328,11 +328,25 @@ executable('test_macropore_state', macropore_state_test_sources,
     install: false
 )
 
+# Build tillage state test (tests tillage_state_t)
+tillage_state_test_sources = [
+    'src/core/swap_log.f90',
+    'src/core/swap_state_mod.f90',
+    'tests/unit/crop/test_tillage_state.f90',
+]
+
+executable('test_tillage_state', tillage_state_test_sources,
+    include_directories: src_inc,
+    install: false
+)
+
 # Build state sync test (tests SAVE variable migration)
 state_sync_test_sources = [
     'src/core/swap_log.f90',
     'src/core/swap_state_mod.f90',
     'src/core/variables.f90',
+    'src/crop/wofost_soil_declarations.f90',
+    'src/crop/wofost_soil_interface.f90',
     'src/core/swap_state_sync.f90',
     'tests/unit/core/test_state_sync.f90',
 ]

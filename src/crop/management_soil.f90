@@ -53,8 +53,9 @@
       real(8) :: AppAgeArableSt, AppAgeArableSo
       real(8) :: AppAgeGrassRt, AppAgeGrassLv, AppAgeGrassSt
       logical :: rdinqr
-      
-      save
+
+      ! SAVE removed - isme and nut are already module variables in wofost_soil_declarations
+      ! save
 
       select case (task)
       case (1)
@@ -873,6 +874,8 @@
       case default
          call fatalerr ('SoilManagement', 'Illegal value for TASK')
       end select
+
+      ! isme and nut are module variables in wofost_soil_declarations - no local save needed
 
       return
       end

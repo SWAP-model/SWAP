@@ -61,17 +61,21 @@
 !        in their calls. This has not yet been implemented.
     
 module O2_pars
-   use variables, only: c_mroot,f_senes,max_resp_factor,q10_root,q10_microbial,shape_factor_rootr,specific_resp_humus,ztopcp
-   real(8), save :: w_root,w_root_z0
-   real(8), save :: soil_temp
-   real(8), save :: sat_water_cont,gas_filled_porosity
-   real(8), save :: d_o2inwater,d_root,perc_org_mat,soil_density
-   real(8), save :: d_soil   
-   real(8), save :: depth
-   real(8), save :: shape_factor_microbialr,root_radius
-   real(8), save :: r_microbial_z0
-   real(8), save :: waterfilm_thickness,bunsencoeff
-   real(8), save :: c_min_micro,c_macro,ctopnode
+   ! ## MH: O2_pars module provides access to oxygen stress variables
+   ! Phase 1 scaffolding: variables now stored in variables module with o2_ prefix
+   ! This module provides the original names as aliases for backward compatibility
+   use variables, only: c_mroot,f_senes,max_resp_factor,q10_root,q10_microbial,shape_factor_rootr,specific_resp_humus,ztopcp, &
+                        ! Oxygen stress persistent state aliases (original_name => module_name)
+                        w_root => o2_w_root, w_root_z0 => o2_w_root_z0, &
+                        soil_temp => o2_soil_temp, sat_water_cont => o2_sat_water_cont, &
+                        gas_filled_porosity => o2_gas_filled_porosity, d_o2inwater => o2_d_o2inwater, &
+                        d_root => o2_d_root, d_soil => o2_d_soil, perc_org_mat => o2_perc_org_mat, &
+                        soil_density => o2_soil_density, depth => o2_depth, &
+                        shape_factor_microbialr => o2_shape_factor_microbialr, root_radius => o2_root_radius, &
+                        r_microbial_z0 => o2_r_microbial_z0, waterfilm_thickness => o2_waterfilm_thickness, &
+                        bunsencoeff => o2_bunsencoeff, c_min_micro => o2_c_min_micro, &
+                        c_macro => o2_c_macro, ctopnode => o2_ctopnode
+   implicit none
 end module O2_pars
 
 ! ## MH      subroutine OxygenStress(node,rwu_factor,ResultsOxStr) 
@@ -109,22 +113,33 @@ end module O2_pars
       
       parameter (pi = 3.1415926535d0)
       real(8), parameter         :: Fac3230 = 32.0d0/30.0d0      ! ## MH
+      ! Phase 1 scaffolding: use module-level arrays from variables module instead of local SAVE arrays
+      ! Local aliases are loaded from module variables with o2_ prefix after initialization
       real(8), dimension(macp)   :: d_soil_term1, d_soil_term2, gfp100
       real(8), dimension(macp)   :: Capac_term, Nmin1, Mplus1
-      logical                    :: ini = .true.
-
-!     save values of locals
-      save
-      !save   waterfilm_thickness,r_microbial_z0,d_soil
-      !save   d_soil_term1, d_soil_term2, ini, gfp100
 
 !## MH : some initial calculations      
-      if (ini) then
+      if (o2_ini_stress) then
          if (iHWCKmodel(layer(node)) == 3) then
             call fatalerr ('OxygenStress', 'Combination of OxygenStress and bi-modal MvG (iHWCKmodel=3) is not (yet) possible!')
          end if
          call calc_ini_pars (numnod)
-         ini = .false.
+         ! Save to module arrays after initialization
+         o2_d_soil_term1 = d_soil_term1
+         o2_d_soil_term2 = d_soil_term2
+         o2_gfp100 = gfp100
+         o2_capac_term = Capac_term
+         o2_nmin1 = Nmin1
+         o2_mplus1 = Mplus1
+         o2_ini_stress = .false.
+      else
+         ! Load module arrays at entry for scaffolding (after first call)
+         d_soil_term1 = o2_d_soil_term1
+         d_soil_term2 = o2_d_soil_term2
+         gfp100 = o2_gfp100
+         Capac_term = o2_capac_term
+         Nmin1 = o2_nmin1
+         Mplus1 = o2_mplus1
       end if
 !## MH: end
 
@@ -773,7 +788,8 @@ end module O2_pars
       real(8) length_density_gas_pores
       logical, parameter :: flUseQromb = .true. !## MH: (use Romberg integration; else use orginal trapezoidal integration)
       
-      save s
+      ! Phase 1 scaffolding: s is used for integration accumulation within this routine
+      ! No SAVE needed as s is always set before use by QROMBD/TRAPZD calls
 
       real(8) pi
       parameter (pi = 3.1415926535897932d0)

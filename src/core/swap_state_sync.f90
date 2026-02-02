@@ -28,6 +28,11 @@ module swap_state_sync
     use swap_state_mod
     use swap_log, only: log_debug, log_info, to_str
     use variables  ! The legacy module with all global variables
+    ! Import Wofost_Soil with renaming to avoid conflicts with variables.f90
+    use Wofost_Soil_Declarations, wsn_Cseep_mod => Cseep, &
+                                  wsn_Ctop_mod => Ctop, &
+                                  wsn_Clat_mod => Clat
+    use Wofost_Soil_Interface
     implicit none
     private
 
@@ -46,6 +51,8 @@ module swap_state_sync
     public :: crop_state_to_variables
     public :: irrigation_state_from_variables
     public :: irrigation_state_to_variables
+    public :: tillage_state_from_variables
+    public :: tillage_state_to_variables
     public :: drainage_state_from_variables
     public :: drainage_state_to_variables
     public :: surfacewater_state_from_variables
@@ -56,6 +63,10 @@ module swap_state_sync
     public :: solute_state_to_variables
     public :: heat_state_from_variables
     public :: heat_state_to_variables
+    public :: wofost_soil_state_from_variables
+    public :: wofost_soil_state_to_variables
+    public :: oxygenstress_state_from_variables
+    public :: oxygenstress_state_to_variables
 
 contains
 
@@ -72,10 +83,12 @@ contains
         call atmosphere_state_from_variables(state%atm)
         call crop_state_from_variables(state%crop, state%ncrop)
         call irrigation_state_from_variables(state%irrig)
+        call tillage_state_from_variables(state%tillage, state%numlay)
         call drainage_state_from_variables(state%drain, state%nrlevs, state%numnod)
         call boundary_state_from_variables(state%boundary, MADAY)
         call solute_state_from_variables(state%solute, state%numnod, state%numlay, state%nrlevs)
         call heat_state_from_variables(state%heat, state%numnod, state%numlay)
+        call oxygenstress_state_from_variables(state%oxystress, state%numnod)
         
         call log_info('sync', 'State synchronized from variables')
     end subroutine state_from_variables
@@ -93,10 +106,12 @@ contains
         call atmosphere_state_to_variables(state%atm)
         call crop_state_to_variables(state%crop, state%ncrop)
         call irrigation_state_to_variables(state%irrig)
+        call tillage_state_to_variables(state%tillage, state%numlay)
         call drainage_state_to_variables(state%drain, state%nrlevs)
         call boundary_state_to_variables(state%boundary, MADAY)
         call solute_state_to_variables(state%solute, state%numnod, state%numlay, state%nrlevs)
         call heat_state_to_variables(state%heat, state%numnod, state%numlay)
+        call oxygenstress_state_to_variables(state%oxystress, state%numnod)
         
         call log_info('sync', 'Variables synchronized from state')
     end subroutine state_to_variables
@@ -847,6 +862,24 @@ contains
         istate%flirrigate = flirrigate
         istate%flheadirg = flheadirg
         
+        ! SSDI state
+        istate%swssdi = swssdi_irr
+        istate%nod_ssdi = nod_ssdi_irr
+        istate%ssdi_schedule = ssdi_schedule_irr
+        istate%ssdi_sched_type = ssdi_sched_type_irr
+        istate%nod_ssdi_sensor = nod_ssdi_sensor_irr
+        istate%ssdi_threshold = ssdi_threshold_irr
+        istate%ssdi_threshold_z = ssdi_threshold_z_irr
+        istate%ssdi_amount = ssdi_amount_irr
+        istate%ssdi_appl_rate = ssdi_appl_rate_irr
+        istate%sw_interval = sw_interval_irr
+        istate%days_interval = days_interval_irr
+        istate%days_counter = days_counter_irr
+        istate%nirri_ssdi = nirri_ssdi_irr
+        if (allocated(istate%ssdi_date)) istate%ssdi_date = ssdi_date_irr(1:size(istate%ssdi_date))
+        if (allocated(istate%ssdi_rate_f)) istate%ssdi_rate_f = ssdi_rate_f_irr(1:size(istate%ssdi_rate_f))
+        if (allocated(istate%ssdi_amount_f)) istate%ssdi_amount_f = ssdi_amount_f_irr(1:size(istate%ssdi_amount_f))
+        
         call log_debug('sync', 'irrigation_state_from_variables')
     end subroutine irrigation_state_from_variables
 
@@ -866,6 +899,24 @@ contains
         
         flirrigate = istate%flirrigate
         flheadirg = istate%flheadirg
+        
+        ! SSDI state
+        swssdi_irr = istate%swssdi
+        nod_ssdi_irr = istate%nod_ssdi
+        ssdi_schedule_irr = istate%ssdi_schedule
+        ssdi_sched_type_irr = istate%ssdi_sched_type
+        nod_ssdi_sensor_irr = istate%nod_ssdi_sensor
+        ssdi_threshold_irr = istate%ssdi_threshold
+        ssdi_threshold_z_irr = istate%ssdi_threshold_z
+        ssdi_amount_irr = istate%ssdi_amount
+        ssdi_appl_rate_irr = istate%ssdi_appl_rate
+        sw_interval_irr = istate%sw_interval
+        days_interval_irr = istate%days_interval
+        days_counter_irr = istate%days_counter
+        nirri_ssdi_irr = istate%nirri_ssdi
+        if (allocated(istate%ssdi_date)) ssdi_date_irr(1:size(istate%ssdi_date)) = istate%ssdi_date
+        if (allocated(istate%ssdi_rate_f)) ssdi_rate_f_irr(1:size(istate%ssdi_rate_f)) = istate%ssdi_rate_f
+        if (allocated(istate%ssdi_amount_f)) ssdi_amount_f_irr(1:size(istate%ssdi_amount_f)) = istate%ssdi_amount_f
         
         call log_debug('sync', 'irrigation_state_to_variables')
     end subroutine irrigation_state_to_variables
@@ -2151,5 +2202,658 @@ contains
         
         call log_debug('sync', 'macropore_state_to_variables: flmacropore=' // to_str(mstate%flmacropore))
     end subroutine macropore_state_to_variables
+
+    ! ==========================================================================
+    ! WOFOST Soil State Synchronization
+    ! ==========================================================================
+    subroutine wofost_soil_state_from_variables(wstate)
+        type(wofost_soil_state_t), intent(inout) :: wstate
+        integer :: i
+        
+        ! Interface variables (from wofost_soil_interface.f90)
+        wstate%idwrt = idwrt
+        wstate%idwlv = idwlv
+        wstate%idwst = idwst
+        wstate%idwso = idwso
+        wstate%iNLOSSL = iNLOSSL
+        wstate%iNLOSSR = iNLOSSR
+        wstate%iNLOSSS = iNLOSSS
+        wstate%iNLOSSO = iNLOSSO
+        wstate%NdemandSoil = NdemandSoil
+        wstate%NsupplySoil = NsupplySoil
+        wstate%Ndemand = Ndemand
+        wstate%Nsupply = Nsupply
+        wstate%LaiCritNupt = LaiCritNupt
+        
+        ! Soil water and temperature from SWAP (from wofost_soil_declarations.f90)
+        wstate%dz_WSN = dz_WSN
+        wstate%WFrac_t = WFrac_t
+        wstate%WFrac_t0 = WFrac_t0
+        wstate%Wflux_out = Wflux_out
+        wstate%Wflux_transp = Wflux_transp
+        wstate%Wflux_inBot = Wflux_inBot
+        wstate%Wflux_inTop = Wflux_inTop
+        wstate%Wflux_inLat = Wflux_inLat
+        wstate%SoilEvap = SoilEvap
+        wstate%Temp_wsn = Temp
+        wstate%t_WSNold = t_WSNold
+        
+        ! Response function parameters
+        wstate%Temp_ref = Temp_ref
+        wstate%WFrac_sat = WFrac_sat
+        
+        ! Organic matter model parameters
+        wstate%nf = nf
+        do i = 1, 8
+            if (i <= maxfn) then
+                wstate%RateconFOM_ref(i) = RateconFOM_ref(i)
+                wstate%RateconFOM(i) = RateconFOM(i)
+                wstate%AsfaFOM_Bio(i) = AsfaFOM_Bio(i)
+                wstate%AsfaFOM_Hum(i) = AsfaFOM_Hum(i)
+                wstate%CFracFOM(i) = CFracFOM(i)
+                wstate%NFracFOM(i) = NFracFOM(i)
+                wstate%FOM_t0(i) = FOM_t0(i)
+                wstate%FOM_t(i) = FOM_t(i)
+            endif
+        enddo
+        wstate%RateconBio_ref = RateconBio_ref
+        wstate%RateconHum_ref = RateconHum_ref
+        wstate%RateconHum_exp = RateconHum_exp
+        wstate%tstartHumexp = tstartHumexp
+        wstate%t1900Soil = t1900Soil
+        wstate%RateconBio = RateconBio
+        wstate%RateconHum = RateconHum
+        wstate%AsfaBio = AsfaBio
+        wstate%AsfaHum = AsfaHum
+        wstate%CFracBio = CFracBio
+        wstate%CFracHum = CFracHum
+        wstate%NFracBio = NFracBio
+        wstate%NFracHum = NFracHum
+        wstate%NFracFOMmin = NFracFOMmin
+        wstate%NFracFOMmax = NFracFOMmax
+        wstate%AsfaMin = AsfaMin
+        wstate%AsfaMax = AsfaMax
+        
+        ! Organic matter state variables
+        wstate%Bio_t0 = Bio_t0
+        wstate%Hum_t0 = Hum_t0
+        wstate%Bio_t = Bio_t
+        wstate%Hum_t = Hum_t
+        wstate%Cdissi = Cdissi
+        
+        ! Mineral nitrogen model
+        wstate%RateConNitrif_ref = RateConNitrif_ref
+        wstate%RateConDenitr_ref = RateConDenitr_ref
+        wstate%RateConNitrif = RateConNitrif
+        wstate%RateConDenitr = RateConDenitr
+        wstate%TCSF_N = TCSF_N
+        wstate%Nminer = Nminer
+        wstate%Ratecon = Ratecon
+        
+        ! Ammonium and nitrate concentrations
+        wstate%DryBD = DryBD
+        wstate%SorpCoef = SorpCoef
+        wstate%cNH4_t0 = cNH4_t0
+        wstate%cNH4_t = cNH4_t
+        wstate%cNH4_av = cNH4_av
+        wstate%cNO3_t0 = cNO3_t0
+        wstate%cNO3_t = cNO3_t
+        wstate%cNO3_av = cNO3_av
+        
+        ! Boundary concentrations
+        wstate%cNH4N_top = cNH4N_top
+        wstate%cNH4N_lat = cNH4N_lat
+        wstate%cNH4N_seep = cNH4N_seep
+        wstate%cNO3N_top = cNO3N_top
+        wstate%cNO3N_lat = cNO3N_lat
+        wstate%cNO3N_seep = cNO3N_seep
+        wstate%wsn_Cseep = wsn_Cseep_mod
+        wstate%wsn_Ctop = wsn_Ctop_mod
+        wstate%wsn_Clat = wsn_Clat_mod
+        
+        ! Time control
+        wstate%dt_WSN = dt_WSN
+        
+        ! Response function parameters
+        wstate%WFPSCrit = WFPSCrit
+        wstate%WFPScrit2 = WFPScrit2
+        wstate%CdissiHalf = CdissiHalf
+        wstate%WFPS = WFPS
+        wstate%red_T = red_T
+        wstate%red_W = red_W
+        wstate%red_W_Nit = red_W_Nit
+        wstate%red_W_Den = red_W_Den
+        wstate%red_Resp = red_Resp
+        
+        ! N supply tracking
+        wstate%NsupplyNH4N = NsupplyNH4N
+        wstate%NsupplyNO3N = NsupplyNO3N
+        
+        ! Old values for balance (scalars in module, summed across fractions)
+        wstate%FOM_old = FOM_old
+        wstate%NFOM_old = NFOM_old
+        wstate%Bio_old = Bio_old
+        wstate%Hum_old = Hum_old
+        wstate%NBio_old = NBio_old
+        wstate%NHum_old = NHum_old
+        wstate%NH4_old = NH4_old
+        wstate%NO3_old = NO3_old
+        
+        ! Crop residue tracking
+        wstate%iNLOSSL_1 = iNLOSSL_1
+        wstate%iNLOSSR_1 = iNLOSSR_1
+        wstate%iNLOSSS_1 = iNLOSSS_1
+        wstate%iNLOSSO_1 = iNLOSSO_1
+        wstate%idwrt_1 = idwrt_1
+        wstate%idwlv_1 = idwlv_1
+        wstate%idwst_1 = idwst_1
+        wstate%idwso_1 = idwso_1
+        
+        ! ANIMO crop_ext tracking
+        wstate%Ntotuptake = Ntotuptake
+        wstate%Ptotuptake = Ptotuptake
+        wstate%DMcressur = DMcressur
+        wstate%Ncressurf = Ncressurf
+        wstate%Pcressurf = Pcressurf
+        wstate%DMcresbott = DMcresbott
+        wstate%Ncresbott = Ncresbott
+        wstate%Pcresbott = Pcresbott
+        
+        ! Amendment state
+        wstate%iAmendTime = iAmendTime
+        wstate%isme = isme
+        wstate%NH4N_volat = NH4N_volat
+        wstate%NH4N_amend = NH4N_amend
+        wstate%NO3N_amend = NO3N_amend
+        wstate%NH4N_cres = NH4N_cres
+        wstate%NO3N_cres = NO3N_cres
+        
+        ! File unit numbers
+        wstate%nut = nut
+        wstate%cropext = cropext
+        
+        ! Flags
+        wstate%flCropExt = flCropExt
+        
+        call log_debug('sync', 'wofost_soil_state_from_variables')
+    end subroutine wofost_soil_state_from_variables
+
+    subroutine wofost_soil_state_to_variables(wstate)
+        type(wofost_soil_state_t), intent(in) :: wstate
+        integer :: i
+        
+        ! Interface variables (to wofost_soil_interface.f90)
+        idwrt = wstate%idwrt
+        idwlv = wstate%idwlv
+        idwst = wstate%idwst
+        idwso = wstate%idwso
+        iNLOSSL = wstate%iNLOSSL
+        iNLOSSR = wstate%iNLOSSR
+        iNLOSSS = wstate%iNLOSSS
+        iNLOSSO = wstate%iNLOSSO
+        NdemandSoil = wstate%NdemandSoil
+        NsupplySoil = wstate%NsupplySoil
+        Ndemand = wstate%Ndemand
+        Nsupply = wstate%Nsupply
+        LaiCritNupt = wstate%LaiCritNupt
+        
+        ! Soil water and temperature from SWAP (to wofost_soil_declarations.f90)
+        dz_WSN = wstate%dz_WSN
+        WFrac_t = wstate%WFrac_t
+        WFrac_t0 = wstate%WFrac_t0
+        Wflux_out = wstate%Wflux_out
+        Wflux_transp = wstate%Wflux_transp
+        Wflux_inBot = wstate%Wflux_inBot
+        Wflux_inTop = wstate%Wflux_inTop
+        Wflux_inLat = wstate%Wflux_inLat
+        SoilEvap = wstate%SoilEvap
+        Temp = wstate%Temp_wsn
+        t_WSNold = wstate%t_WSNold
+        
+        ! Response function parameters
+        Temp_ref = wstate%Temp_ref
+        WFrac_sat = wstate%WFrac_sat
+        
+        ! Organic matter model parameters
+        nf = wstate%nf
+        do i = 1, 8
+            if (i <= maxfn) then
+                RateconFOM_ref(i) = wstate%RateconFOM_ref(i)
+                RateconFOM(i) = wstate%RateconFOM(i)
+                AsfaFOM_Bio(i) = wstate%AsfaFOM_Bio(i)
+                AsfaFOM_Hum(i) = wstate%AsfaFOM_Hum(i)
+                CFracFOM(i) = wstate%CFracFOM(i)
+                NFracFOM(i) = wstate%NFracFOM(i)
+                FOM_t0(i) = wstate%FOM_t0(i)
+                FOM_t(i) = wstate%FOM_t(i)
+            endif
+        enddo
+        RateconBio_ref = wstate%RateconBio_ref
+        RateconHum_ref = wstate%RateconHum_ref
+        RateconHum_exp = wstate%RateconHum_exp
+        tstartHumexp = wstate%tstartHumexp
+        t1900Soil = wstate%t1900Soil
+        RateconBio = wstate%RateconBio
+        RateconHum = wstate%RateconHum
+        AsfaBio = wstate%AsfaBio
+        AsfaHum = wstate%AsfaHum
+        CFracBio = wstate%CFracBio
+        CFracHum = wstate%CFracHum
+        NFracBio = wstate%NFracBio
+        NFracHum = wstate%NFracHum
+        NFracFOMmin = wstate%NFracFOMmin
+        NFracFOMmax = wstate%NFracFOMmax
+        AsfaMin = wstate%AsfaMin
+        AsfaMax = wstate%AsfaMax
+        
+        ! Organic matter state variables
+        Bio_t0 = wstate%Bio_t0
+        Hum_t0 = wstate%Hum_t0
+        Bio_t = wstate%Bio_t
+        Hum_t = wstate%Hum_t
+        Cdissi = wstate%Cdissi
+        
+        ! Mineral nitrogen model
+        RateConNitrif_ref = wstate%RateConNitrif_ref
+        RateConDenitr_ref = wstate%RateConDenitr_ref
+        RateConNitrif = wstate%RateConNitrif
+        RateConDenitr = wstate%RateConDenitr
+        TCSF_N = wstate%TCSF_N
+        Nminer = wstate%Nminer
+        Ratecon = wstate%Ratecon
+        
+        ! Ammonium and nitrate concentrations
+        DryBD = wstate%DryBD
+        SorpCoef = wstate%SorpCoef
+        cNH4_t0 = wstate%cNH4_t0
+        cNH4_t = wstate%cNH4_t
+        cNH4_av = wstate%cNH4_av
+        cNO3_t0 = wstate%cNO3_t0
+        cNO3_t = wstate%cNO3_t
+        cNO3_av = wstate%cNO3_av
+        
+        ! Boundary concentrations
+        cNH4N_top = wstate%cNH4N_top
+        cNH4N_lat = wstate%cNH4N_lat
+        cNH4N_seep = wstate%cNH4N_seep
+        cNO3N_top = wstate%cNO3N_top
+        cNO3N_lat = wstate%cNO3N_lat
+        cNO3N_seep = wstate%cNO3N_seep
+        wsn_Cseep_mod = wstate%wsn_Cseep
+        wsn_Ctop_mod = wstate%wsn_Ctop
+        wsn_Clat_mod = wstate%wsn_Clat
+        
+        ! Time control
+        dt_WSN = wstate%dt_WSN
+        
+        ! Response function parameters
+        WFPSCrit = wstate%WFPSCrit
+        WFPScrit2 = wstate%WFPScrit2
+        CdissiHalf = wstate%CdissiHalf
+        WFPS = wstate%WFPS
+        red_T = wstate%red_T
+        red_W = wstate%red_W
+        red_W_Nit = wstate%red_W_Nit
+        red_W_Den = wstate%red_W_Den
+        red_Resp = wstate%red_Resp
+        
+        ! N supply tracking
+        NsupplyNH4N = wstate%NsupplyNH4N
+        NsupplyNO3N = wstate%NsupplyNO3N
+        
+        ! Old values for balance (scalars in module)
+        FOM_old = wstate%FOM_old
+        NFOM_old = wstate%NFOM_old
+        Bio_old = wstate%Bio_old
+        Hum_old = wstate%Hum_old
+        NBio_old = wstate%NBio_old
+        NHum_old = wstate%NHum_old
+        NH4_old = wstate%NH4_old
+        NO3_old = wstate%NO3_old
+        
+        ! Crop residue tracking
+        iNLOSSL_1 = wstate%iNLOSSL_1
+        iNLOSSR_1 = wstate%iNLOSSR_1
+        iNLOSSS_1 = wstate%iNLOSSS_1
+        iNLOSSO_1 = wstate%iNLOSSO_1
+        idwrt_1 = wstate%idwrt_1
+        idwlv_1 = wstate%idwlv_1
+        idwst_1 = wstate%idwst_1
+        idwso_1 = wstate%idwso_1
+        
+        ! ANIMO crop_ext tracking
+        Ntotuptake = wstate%Ntotuptake
+        Ptotuptake = wstate%Ptotuptake
+        DMcressur = wstate%DMcressur
+        Ncressurf = wstate%Ncressurf
+        Pcressurf = wstate%Pcressurf
+        DMcresbott = wstate%DMcresbott
+        Ncresbott = wstate%Ncresbott
+        Pcresbott = wstate%Pcresbott
+        
+        ! Amendment state
+        iAmendTime = wstate%iAmendTime
+        isme = wstate%isme
+        NH4N_volat = wstate%NH4N_volat
+        NH4N_amend = wstate%NH4N_amend
+        NO3N_amend = wstate%NO3N_amend
+        NH4N_cres = wstate%NH4N_cres
+        NO3N_cres = wstate%NO3N_cres
+        
+        ! File unit numbers
+        nut = wstate%nut
+        cropext = wstate%cropext
+        
+        ! Flags
+        flCropExt = wstate%flCropExt
+        
+        call log_debug('sync', 'wofost_soil_state_to_variables')
+    end subroutine wofost_soil_state_to_variables
+
+    ! ==========================================================================
+    ! Oxygen Stress State Synchronization
+    ! ==========================================================================
+    subroutine oxygenstress_state_from_variables(ostate, numnod)
+        type(oxygenstress_state_t), intent(inout) :: ostate
+        integer, intent(in) :: numnod
+        
+        ! O2_pars module variables (now in variables module with o2_ prefix)
+        ostate%w_root = o2_w_root
+        ostate%w_root_z0 = o2_w_root_z0
+        ostate%soil_temp = o2_soil_temp
+        ostate%sat_water_cont = o2_sat_water_cont
+        ostate%gas_filled_porosity = o2_gas_filled_porosity
+        ostate%d_o2inwater = o2_d_o2inwater
+        ostate%d_root = o2_d_root
+        ostate%d_soil = o2_d_soil
+        ostate%perc_org_mat = o2_perc_org_mat
+        ostate%soil_density = o2_soil_density
+        ostate%depth = o2_depth
+        ostate%shape_factor_microbialr = o2_shape_factor_microbialr
+        ostate%root_radius = o2_root_radius
+        ostate%r_microbial_z0 = o2_r_microbial_z0
+        ostate%waterfilm_thickness = o2_waterfilm_thickness
+        ostate%bunsencoeff = o2_bunsencoeff
+        ostate%c_min_micro = o2_c_min_micro
+        ostate%c_macro = o2_c_macro
+        ostate%ctopnode = o2_ctopnode
+        ostate%initialized = o2_initialized
+        
+        ! OxygenStress subroutine per-node arrays
+        ostate%d_soil_term1(1:numnod) = o2_d_soil_term1(1:numnod)
+        ostate%d_soil_term2(1:numnod) = o2_d_soil_term2(1:numnod)
+        ostate%gfp100(1:numnod) = o2_gfp100(1:numnod)
+        ostate%capac_term(1:numnod) = o2_capac_term(1:numnod)
+        ostate%nmin1(1:numnod) = o2_nmin1(1:numnod)
+        ostate%mplus1(1:numnod) = o2_mplus1(1:numnod)
+        ostate%ini_stress = o2_ini_stress
+        
+        call log_debug('sync', 'oxygenstress_state_from_variables')
+    end subroutine oxygenstress_state_from_variables
+    
+    subroutine oxygenstress_state_to_variables(ostate, numnod)
+        type(oxygenstress_state_t), intent(in) :: ostate
+        integer, intent(in) :: numnod
+        
+        ! O2_pars module variables (now in variables module with o2_ prefix)
+        o2_w_root = ostate%w_root
+        o2_w_root_z0 = ostate%w_root_z0
+        o2_soil_temp = ostate%soil_temp
+        o2_sat_water_cont = ostate%sat_water_cont
+        o2_gas_filled_porosity = ostate%gas_filled_porosity
+        o2_d_o2inwater = ostate%d_o2inwater
+        o2_d_root = ostate%d_root
+        o2_d_soil = ostate%d_soil
+        o2_perc_org_mat = ostate%perc_org_mat
+        o2_soil_density = ostate%soil_density
+        o2_depth = ostate%depth
+        o2_shape_factor_microbialr = ostate%shape_factor_microbialr
+        o2_root_radius = ostate%root_radius
+        o2_r_microbial_z0 = ostate%r_microbial_z0
+        o2_waterfilm_thickness = ostate%waterfilm_thickness
+        o2_bunsencoeff = ostate%bunsencoeff
+        o2_c_min_micro = ostate%c_min_micro
+        o2_c_macro = ostate%c_macro
+        o2_ctopnode = ostate%ctopnode
+        o2_initialized = ostate%initialized
+        
+        ! OxygenStress subroutine per-node arrays
+        o2_d_soil_term1(1:numnod) = ostate%d_soil_term1(1:numnod)
+        o2_d_soil_term2(1:numnod) = ostate%d_soil_term2(1:numnod)
+        o2_gfp100(1:numnod) = ostate%gfp100(1:numnod)
+        o2_capac_term(1:numnod) = ostate%capac_term(1:numnod)
+        o2_nmin1(1:numnod) = ostate%nmin1(1:numnod)
+        o2_mplus1(1:numnod) = ostate%mplus1(1:numnod)
+        o2_ini_stress = ostate%ini_stress
+        
+        call log_debug('sync', 'oxygenstress_state_to_variables')
+    end subroutine oxygenstress_state_to_variables
+
+    ! ==========================================================================
+    ! Tillage State Synchronization
+    ! ==========================================================================
+    subroutine tillage_state_from_variables(tstate, numlay)
+        type(tillage_state_t), intent(inout) :: tstate
+        integer, intent(in) :: numlay
+        integer :: ntill, ntypes
+        
+        ! Scalar values
+        tstate%swtill = till_swtill
+        tstate%i_n_model = till_i_n_model
+        tstate%iRedist = till_iRedist
+        tstate%Ntill = till_Ntill
+        tstate%iTill = till_iTill
+        tstate%Ntypes = till_Ntypes
+        tstate%MaxNumSoilHo = till_MaxNumSoilHo
+        tstate%MaxNumSoilCP = till_MaxNumSoilCP
+        tstate%Max_Z_tillage = till_Max_Z_tillage
+        tstate%sumDWC = till_sumDWC
+        tstate%sumAvail1 = till_sumAvail1
+        tstate%sumAvail2 = till_sumAvail2
+        
+        ! Per-event arrays (only sync if allocated)
+        ntill = till_Ntill
+        if (ntill > 0) then
+            if (allocated(tstate%Date_tillage) .and. allocated(till_Date_tillage)) then
+                tstate%Date_tillage(1:min(ntill+1, size(tstate%Date_tillage))) = &
+                    till_Date_tillage(1:min(ntill+1, size(till_Date_tillage)))
+            end if
+            if (allocated(tstate%Z_tillage) .and. allocated(till_Z_tillage)) then
+                tstate%Z_tillage(1:min(ntill, size(tstate%Z_tillage))) = &
+                    till_Z_tillage(1:min(ntill, size(till_Z_tillage)))
+            end if
+            if (allocated(tstate%I_tillage) .and. allocated(till_I_tillage)) then
+                tstate%I_tillage(1:min(ntill, size(tstate%I_tillage))) = &
+                    till_I_tillage(1:min(ntill, size(till_I_tillage)))
+            end if
+            if (allocated(tstate%Type_Tillage) .and. allocated(till_Type_Tillage)) then
+                tstate%Type_Tillage(1:min(ntill, size(tstate%Type_Tillage))) = &
+                    till_Type_Tillage(1:min(ntill, size(till_Type_Tillage)))
+            end if
+            if (allocated(tstate%iTT1) .and. allocated(till_iTT1)) then
+                tstate%iTT1(1:min(ntill, size(tstate%iTT1))) = &
+                    till_iTT1(1:min(ntill, size(till_iTT1)))
+            end if
+            if (allocated(tstate%iTT2) .and. allocated(till_iTT2)) then
+                tstate%iTT2(1:min(ntill, size(tstate%iTT2))) = &
+                    till_iTT2(1:min(ntill, size(till_iTT2)))
+            end if
+        end if
+        
+        ! Per-type arrays
+        ntypes = till_Ntypes
+        if (ntypes > 0) then
+            if (allocated(tstate%iType_Tillage) .and. allocated(till_iType_Tillage)) then
+                tstate%iType_Tillage(1:min(ntypes, size(tstate%iType_Tillage))) = &
+                    till_iType_Tillage(1:min(ntypes, size(till_iType_Tillage)))
+            end if
+            if (allocated(tstate%TAB_Rho_tillage) .and. allocated(till_TAB_Rho_tillage)) then
+                tstate%TAB_Rho_tillage(1:min(ntypes, size(tstate%TAB_Rho_tillage))) = &
+                    till_TAB_Rho_tillage(1:min(ntypes, size(till_TAB_Rho_tillage)))
+            end if
+            if (allocated(tstate%TAB_Rho_cons) .and. allocated(till_TAB_Rho_cons)) then
+                tstate%TAB_Rho_cons(1:min(ntypes, size(tstate%TAB_Rho_cons))) = &
+                    till_TAB_Rho_cons(1:min(ntypes, size(till_TAB_Rho_cons)))
+            end if
+            if (allocated(tstate%TAB_K_R_cons) .and. allocated(till_TAB_K_R_cons)) then
+                tstate%TAB_K_R_cons(1:min(ntypes, size(tstate%TAB_K_R_cons))) = &
+                    till_TAB_K_R_cons(1:min(ntypes, size(till_TAB_K_R_cons)))
+            end if
+            if (allocated(tstate%TAB_Rho_match) .and. allocated(till_TAB_Rho_match)) then
+                tstate%TAB_Rho_match(1:min(ntypes, size(tstate%TAB_Rho_match))) = &
+                    till_TAB_Rho_match(1:min(ntypes, size(till_TAB_Rho_match)))
+            end if
+            if (allocated(tstate%TAB_N_match) .and. allocated(till_TAB_N_match)) then
+                tstate%TAB_N_match(1:min(ntypes, size(tstate%TAB_N_match))) = &
+                    till_TAB_N_match(1:min(ntypes, size(till_TAB_N_match)))
+            end if
+        end if
+        
+        ! Per-layer arrays
+        if (numlay > 0) then
+            if (allocated(tstate%Rho_tillage) .and. allocated(till_Rho_tillage)) then
+                tstate%Rho_tillage(1:min(numlay, size(tstate%Rho_tillage))) = &
+                    till_Rho_tillage(1:min(numlay, size(till_Rho_tillage)))
+            end if
+            if (allocated(tstate%Rho_cons) .and. allocated(till_Rho_cons)) then
+                tstate%Rho_cons(1:min(numlay, size(tstate%Rho_cons))) = &
+                    till_Rho_cons(1:min(numlay, size(till_Rho_cons)))
+            end if
+            if (allocated(tstate%Rho_last) .and. allocated(till_Rho_last)) then
+                tstate%Rho_last(1:min(numlay, size(tstate%Rho_last))) = &
+                    till_Rho_last(1:min(numlay, size(till_Rho_last)))
+            end if
+            if (allocated(tstate%K_R_cons) .and. allocated(till_K_R_cons)) then
+                tstate%K_R_cons(1:min(numlay, size(tstate%K_R_cons))) = &
+                    till_K_R_cons(1:min(numlay, size(till_K_R_cons)))
+            end if
+            if (allocated(tstate%Rho_match) .and. allocated(till_Rho_match)) then
+                tstate%Rho_match(1:min(numlay, size(tstate%Rho_match))) = &
+                    till_Rho_match(1:min(numlay, size(till_Rho_match)))
+            end if
+            if (allocated(tstate%N_match) .and. allocated(till_N_match)) then
+                tstate%N_match(1:min(numlay, size(tstate%N_match))) = &
+                    till_N_match(1:min(numlay, size(till_N_match)))
+            end if
+            if (allocated(tstate%Slope_match) .and. allocated(till_Slope_match)) then
+                tstate%Slope_match(1:min(numlay, size(tstate%Slope_match))) = &
+                    till_Slope_match(1:min(numlay, size(till_Slope_match)))
+            end if
+        end if
+        
+        call log_debug('sync', 'tillage_state_from_variables')
+    end subroutine tillage_state_from_variables
+    
+    subroutine tillage_state_to_variables(tstate, numlay)
+        type(tillage_state_t), intent(in) :: tstate
+        integer, intent(in) :: numlay
+        integer :: ntill, ntypes
+        
+        ! Scalar values
+        till_swtill = tstate%swtill
+        till_i_n_model = tstate%i_n_model
+        till_iRedist = tstate%iRedist
+        till_Ntill = tstate%Ntill
+        till_iTill = tstate%iTill
+        till_Ntypes = tstate%Ntypes
+        till_MaxNumSoilHo = tstate%MaxNumSoilHo
+        till_MaxNumSoilCP = tstate%MaxNumSoilCP
+        till_Max_Z_tillage = tstate%Max_Z_tillage
+        till_sumDWC = tstate%sumDWC
+        till_sumAvail1 = tstate%sumAvail1
+        till_sumAvail2 = tstate%sumAvail2
+        
+        ! Per-event arrays
+        ntill = tstate%Ntill
+        if (ntill > 0) then
+            if (allocated(till_Date_tillage) .and. allocated(tstate%Date_tillage)) then
+                till_Date_tillage(1:min(ntill+1, size(till_Date_tillage))) = &
+                    tstate%Date_tillage(1:min(ntill+1, size(tstate%Date_tillage)))
+            end if
+            if (allocated(till_Z_tillage) .and. allocated(tstate%Z_tillage)) then
+                till_Z_tillage(1:min(ntill, size(till_Z_tillage))) = &
+                    tstate%Z_tillage(1:min(ntill, size(tstate%Z_tillage)))
+            end if
+            if (allocated(till_I_tillage) .and. allocated(tstate%I_tillage)) then
+                till_I_tillage(1:min(ntill, size(till_I_tillage))) = &
+                    tstate%I_tillage(1:min(ntill, size(tstate%I_tillage)))
+            end if
+            if (allocated(till_Type_Tillage) .and. allocated(tstate%Type_Tillage)) then
+                till_Type_Tillage(1:min(ntill, size(till_Type_Tillage))) = &
+                    tstate%Type_Tillage(1:min(ntill, size(tstate%Type_Tillage)))
+            end if
+            if (allocated(till_iTT1) .and. allocated(tstate%iTT1)) then
+                till_iTT1(1:min(ntill, size(till_iTT1))) = &
+                    tstate%iTT1(1:min(ntill, size(tstate%iTT1)))
+            end if
+            if (allocated(till_iTT2) .and. allocated(tstate%iTT2)) then
+                till_iTT2(1:min(ntill, size(till_iTT2))) = &
+                    tstate%iTT2(1:min(ntill, size(tstate%iTT2)))
+            end if
+        end if
+        
+        ! Per-type arrays
+        ntypes = tstate%Ntypes
+        if (ntypes > 0) then
+            if (allocated(till_iType_Tillage) .and. allocated(tstate%iType_Tillage)) then
+                till_iType_Tillage(1:min(ntypes, size(till_iType_Tillage))) = &
+                    tstate%iType_Tillage(1:min(ntypes, size(tstate%iType_Tillage)))
+            end if
+            if (allocated(till_TAB_Rho_tillage) .and. allocated(tstate%TAB_Rho_tillage)) then
+                till_TAB_Rho_tillage(1:min(ntypes, size(till_TAB_Rho_tillage))) = &
+                    tstate%TAB_Rho_tillage(1:min(ntypes, size(tstate%TAB_Rho_tillage)))
+            end if
+            if (allocated(till_TAB_Rho_cons) .and. allocated(tstate%TAB_Rho_cons)) then
+                till_TAB_Rho_cons(1:min(ntypes, size(till_TAB_Rho_cons))) = &
+                    tstate%TAB_Rho_cons(1:min(ntypes, size(tstate%TAB_Rho_cons)))
+            end if
+            if (allocated(till_TAB_K_R_cons) .and. allocated(tstate%TAB_K_R_cons)) then
+                till_TAB_K_R_cons(1:min(ntypes, size(till_TAB_K_R_cons))) = &
+                    tstate%TAB_K_R_cons(1:min(ntypes, size(tstate%TAB_K_R_cons)))
+            end if
+            if (allocated(till_TAB_Rho_match) .and. allocated(tstate%TAB_Rho_match)) then
+                till_TAB_Rho_match(1:min(ntypes, size(till_TAB_Rho_match))) = &
+                    tstate%TAB_Rho_match(1:min(ntypes, size(tstate%TAB_Rho_match)))
+            end if
+            if (allocated(till_TAB_N_match) .and. allocated(tstate%TAB_N_match)) then
+                till_TAB_N_match(1:min(ntypes, size(till_TAB_N_match))) = &
+                    tstate%TAB_N_match(1:min(ntypes, size(tstate%TAB_N_match)))
+            end if
+        end if
+        
+        ! Per-layer arrays
+        if (numlay > 0) then
+            if (allocated(till_Rho_tillage) .and. allocated(tstate%Rho_tillage)) then
+                till_Rho_tillage(1:min(numlay, size(till_Rho_tillage))) = &
+                    tstate%Rho_tillage(1:min(numlay, size(tstate%Rho_tillage)))
+            end if
+            if (allocated(till_Rho_cons) .and. allocated(tstate%Rho_cons)) then
+                till_Rho_cons(1:min(numlay, size(till_Rho_cons))) = &
+                    tstate%Rho_cons(1:min(numlay, size(tstate%Rho_cons)))
+            end if
+            if (allocated(till_Rho_last) .and. allocated(tstate%Rho_last)) then
+                till_Rho_last(1:min(numlay, size(till_Rho_last))) = &
+                    tstate%Rho_last(1:min(numlay, size(tstate%Rho_last)))
+            end if
+            if (allocated(till_K_R_cons) .and. allocated(tstate%K_R_cons)) then
+                till_K_R_cons(1:min(numlay, size(till_K_R_cons))) = &
+                    tstate%K_R_cons(1:min(numlay, size(tstate%K_R_cons)))
+            end if
+            if (allocated(till_Rho_match) .and. allocated(tstate%Rho_match)) then
+                till_Rho_match(1:min(numlay, size(till_Rho_match))) = &
+                    tstate%Rho_match(1:min(numlay, size(tstate%Rho_match)))
+            end if
+            if (allocated(till_N_match) .and. allocated(tstate%N_match)) then
+                till_N_match(1:min(numlay, size(till_N_match))) = &
+                    tstate%N_match(1:min(numlay, size(tstate%N_match)))
+            end if
+            if (allocated(till_Slope_match) .and. allocated(tstate%Slope_match)) then
+                till_Slope_match(1:min(numlay, size(till_Slope_match))) = &
+                    tstate%Slope_match(1:min(numlay, size(tstate%Slope_match)))
+            end if
+        end if
+        
+        call log_debug('sync', 'tillage_state_to_variables')
+    end subroutine tillage_state_to_variables
 
 end module swap_state_sync

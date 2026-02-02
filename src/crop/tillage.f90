@@ -4,41 +4,34 @@
 module tillage
 
    use variables, only: t1900, date, swpfile, swhyst, swsolu, swoxygen, flCropNut, flMacroPore, flksatexm, zbotcp, NumNod, Bdens, layer, nraida, ParamVG, CofGen, &
-                        NumLay, pond, theta, h, dz, disnod, botcom, psilt, pclay, SwDiscrvert, tend
-                        !, thetsl
+                        NumLay, pond, theta, h, dz, disnod, botcom, psilt, pclay, SwDiscrvert, tend, &
+                        ! Tillage bridge variables with renaming (SAVE statements removed)
+                        swtill => till_swtill, Ntill => till_Ntill, iTill => till_iTill, &
+                        Ntypes => till_Ntypes, i_n_model => till_i_n_model, iRedist => till_iRedist, &
+                        MaxNumSoilHo => till_MaxNumSoilHo, MaxNumSoilCP => till_MaxNumSoilCP, &
+                        Max_Z_tillage => till_Max_Z_tillage, &
+                        Date_tillage => till_Date_tillage, Z_tillage => till_Z_tillage, &
+                        I_tillage => till_I_tillage, Type_Tillage => till_Type_Tillage, &
+                        iType_Tillage => till_iType_Tillage, iTT1 => till_iTT1, iTT2 => till_iTT2, &
+                        TAB_Rho_tillage => till_TAB_Rho_tillage, TAB_Rho_cons => till_TAB_Rho_cons, &
+                        TAB_K_R_cons => till_TAB_K_R_cons, &
+                        TAB_Rho_match => till_TAB_Rho_match, TAB_N_match => till_TAB_N_match, &
+                        Rho_tillage => till_Rho_tillage, Rho_cons => till_Rho_cons, &
+                        Rho_last => till_Rho_last, K_R_cons => till_K_R_cons, &
+                        Rho_match => till_Rho_match, N_match => till_N_match, Slope_match => till_Slope_match, &
+                        sumDWC => till_sumDWC, sumAvail1 => till_sumAvail1, sumAvail2 => till_sumAvail2
    
    implicit none
 
-   ! local (to be saved)
-   integer,                            save  :: swtill                              ! switch: 0 = no tillage; 1 = tillage
-   integer,                            save  :: Ntill                               ! # of tabulated tillage events
-   integer,                            save  :: iTill
-   integer,                            save  :: Ntypes                              ! # of tabulated tillage types
-   integer,                            save  :: i_n_model                           ! switch for how to treat change in n-parameter: 
-                                                                                    ! 1: do not change n; 2: change n based on silt/clay ratio (default); 3: change n based on matching point
-   integer,                            save  :: iRedist                             ! type of redistribution after each change in MvG: 0 = not (do not use!); 1 = simpel; 2 = complex (default)
-   integer,                            save  :: MaxNumSoilHo, MaxNumSoilCP
-   real(8),                            save  :: Max_Z_tillage                       ! max. possible depth of tillage (cm)
-   real(8), dimension(:), allocatable, save  :: Date_tillage, Z_tillage, I_tillage  ! tabulated informatino per tillage event
-   integer, dimension(:), allocatable, save  :: Type_Tillage
-
-   integer, dimension(:), allocatable, save  :: iType_Tillage, iTT1, iTT2
-   real(8), dimension(:), allocatable, save  :: TAB_Rho_tillage, TAB_Rho_cons
-   real(8), dimension(:), allocatable, save  :: TAB_K_R_cons
-   real(8), dimension(:), allocatable, save  :: TAB_Rho_match, TAB_N_match
-   
-   real(8), dimension(:), allocatable, save  :: Rho_tillage, Rho_cons, Rho_last
-   real(8), dimension(:), allocatable, save  :: K_R_cons
-   real(8), dimension(:), allocatable, save  :: Rho_match, N_match, Slope_match
-
-   real(8),                            save  :: sumDWC, sumAvail1, sumAvail2
+   ! SAVE removed - persistent state now in variables module with till_ prefix
+   ! Variables are imported with their original names via renaming in the USE statement above
 
 !  by default: all in this module is private (local)
    private
 !  except for these public routines/functions
    public :: DoTillage
 !  and except for these public variables
-   public :: swtill
+   public :: swtill  ! Alias to till_swtill from variables module
    
    contains
 

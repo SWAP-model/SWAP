@@ -22,11 +22,15 @@
       real(8) :: A1, A2, B1, B2
       real(8) :: WFrac_av, C_av1
       real(8) :: Hv, Hv1, Hv2, Hv3, Ttry
-      real(8) :: Small, Vsmall, Vvsmall, Zero, Half, One
       Logical :: Hv1nil,Hvnil
 
-      Data       Zero, Small, Vsmall, Vvsmall, Half, One                &
-     &           /0.0d+00, 1.0d-08, 1.0d-12, 1.0d-20, 0.5d+00, 1.0d+00/
+      ! Constants (converted from DATA to PARAMETER for multi-instance compatibility)
+      real(8), parameter :: Zero = 0.0d+00
+      real(8), parameter :: Small = 1.0d-08
+      real(8), parameter :: Vsmall = 1.0d-12
+      real(8), parameter :: Vvsmall = 1.0d-20
+      real(8), parameter :: Half = 0.5d+00
+      real(8), parameter :: One = 1.0d+00
       
 
 !        help variables in analytical solution and test for small values
@@ -196,9 +200,8 @@
       real(8) :: A1,A2,B1,B2
       real(8) :: Avsocf,Hv,Hv1,Mto,Rhbd,T
 !                                                        Local Variables
-      real(8) :: One
-
-      Data    One /1.0d+00/
+      ! Constant (converted from DATA to PARAMETER for multi-instance compatibility)
+      real(8), parameter :: One = 1.0d+00
 
       select case (Iflsol)
       case (1)
