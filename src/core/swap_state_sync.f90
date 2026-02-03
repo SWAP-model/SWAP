@@ -67,8 +67,34 @@ module swap_state_sync
     public :: wofost_soil_state_to_variables
     public :: oxygenstress_state_from_variables
     public :: oxygenstress_state_to_variables
+    
+    ! State summary logging (for daily debugging)
+    public :: log_state_summary
 
 contains
+
+    ! ==========================================================================
+    ! State Summary Logging - call once per day for debugging
+    ! ==========================================================================
+    subroutine log_state_summary(state)
+        type(swap_state_t), intent(in) :: state
+        
+        call log_debug('state', '=== Daily State Summary ===')
+        call log_debug('state', 'Time: year=' // to_str(state%time%iyear) // &
+                       ', day=' // to_str(state%time%daynr) // &
+                       ', daycum=' // to_str(state%time%daycum))
+        call log_debug('state', 'Soil: gwl=' // to_str(state%soil%gwl) // &
+                       ', pond=' // to_str(state%soil%pond) // &
+                       ', volact=' // to_str(state%soil%volact))
+        call log_debug('state', 'Atm: tav=' // to_str(state%atm%tav) // &
+                       ', grai=' // to_str(state%atm%grai) // &
+                       ', ptra=' // to_str(state%atm%ptra))
+        call log_debug('state', 'Crop: lai=' // to_str(state%crop%lai) // &
+                       ', dvs=' // to_str(state%crop%dvs) // &
+                       ', rd=' // to_str(state%crop%rd))
+        call log_debug('state', 'Drain: qdrain(1)=' // to_str(state%drain%qdrain(1)))
+        call log_debug('state', '===========================')
+    end subroutine log_state_summary
 
     ! ==========================================================================
     ! Master Synchronization: Variables -> State
@@ -76,8 +102,7 @@ contains
     subroutine state_from_variables(state)
         type(swap_state_t), intent(inout) :: state
         
-        call log_debug('sync', 'Syncing all variables -> state')
-        
+        ! No per-call logging - use log_state_summary for daily summaries
         call time_state_from_variables(state%time)
         call soil_state_from_variables(state%soil, state%numnod, state%numlay)
         call atmosphere_state_from_variables(state%atm)
@@ -89,8 +114,6 @@ contains
         call solute_state_from_variables(state%solute, state%numnod, state%numlay, state%nrlevs)
         call heat_state_from_variables(state%heat, state%numnod, state%numlay)
         call oxygenstress_state_from_variables(state%oxystress, state%numnod)
-        
-        call log_info('sync', 'State synchronized from variables')
     end subroutine state_from_variables
 
     ! ==========================================================================
