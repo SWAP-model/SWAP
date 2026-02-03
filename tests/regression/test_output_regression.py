@@ -1,10 +1,11 @@
-#!/usr/bin/env python3
 """Regression checks for SWAP output CSV files.
+
 
 Runs test cases in isolated temp directories, aggregates the
 `result_output.csv` files, and compares annual stats against stored fixtures.
 Fails with a non-zero exit if values differ beyond tolerance.
 """
+
 
 import csv
 import json
@@ -13,12 +14,15 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 from pathlib import Path
 from typing import NamedTuple
+
 
 TESTS_DIR = Path(__file__).resolve().parent.parent
 SWAP_BIN = Path(__file__).resolve().parents[2] / "builddir" / "swap"
 TOL = 1e-2  # cm tolerance on aggregated values
+
 
 
 class CaseConfig(NamedTuple):
@@ -29,6 +33,7 @@ class CaseConfig(NamedTuple):
     flux_vars: list[str]  # summed annually
     state_vars: list[str]  # averaged annually
     cumul_vars: list[str] = []  # last value per year (for cumulative outputs)
+
 
 
 # Registered test cases
@@ -82,14 +87,16 @@ CASES = {
 }
 
 
+
 def load_fixture(path: Path):
     with path.open() as f:
         return json.load(f)
 
 
+
 def aggregate(csv_path: Path, flux_vars: list[str], state_vars: list[str], cumul_vars: list[str] = None):
     """Aggregate daily CSV into annual stats.
-    
+
     - flux_vars: summed annually
     - state_vars: averaged annually  
     - cumul_vars: last value per year (for cumulative outputs)
@@ -108,6 +115,7 @@ def aggregate(csv_path: Path, flux_vars: list[str], state_vars: list[str], cumul
             break
         data = list(csv.DictReader(f, fieldnames=headers))
 
+
     for rec in data:
         if not rec.get("DATETIME"):
             continue
@@ -116,6 +124,7 @@ def aggregate(csv_path: Path, flux_vars: list[str], state_vars: list[str], cumul
         for k in all_vars:
             if k in rec and rec[k]:
                 yr[k].append(float(rec[k]))
+
 
     annual = {}
     for year, vals in years.items():
@@ -130,6 +139,7 @@ def aggregate(csv_path: Path, flux_vars: list[str], state_vars: list[str], cumul
             if vals[k]:
                 annual[year][k] = round(vals[k][-1], 2)  # last value
 
+
     # totals/means across years
     totals = {}
     means = {}
@@ -142,13 +152,15 @@ def aggregate(csv_path: Path, flux_vars: list[str], state_vars: list[str], cumul
     for k in cumul_vars:
         means[k] = round(sum(annual[y].get(k, 0.0) for y in annual) / n_years, 2)
 
+
     return annual, totals, means
+
 
 
 def compare(expected, actual_years, actual_totals, actual_means):
     """Compare expected vs actual values and collect all mismatches."""
     mismatches = []
-    
+
     def check_block(block_name, exp_block, act_block):
         for year_or_key, exp_vals in exp_block.items():
             if isinstance(exp_vals, dict):
@@ -178,12 +190,13 @@ def compare(expected, actual_years, actual_totals, actual_means):
                         "diff": abs(act_val - exp_vals) if act_val is not None else None
                     })
 
+
     check_block("years", expected["years"], actual_years)
     if "total" in expected:
         check_block("total", expected["total"], actual_totals)
     if "mean" in expected:
         check_block("mean", expected["mean"], actual_means)
-    
+
     if mismatches:
         # Build comparison table
         lines = ["\n  Mismatches found (tolerance={:.0e}):".format(TOL)]
@@ -195,8 +208,9 @@ def compare(expected, actual_years, actual_totals, actual_means):
             act_str = f"{m['actual']:.4f}" if m['actual'] is not None else "None"
             lines.append("  {:>6} {:>12} {:>14.4f} {:>14} {:>12}".format(
                 m['year'], m['var'], m['expected'], act_str, diff_str))
-        
+
         raise AssertionError("\n".join(lines))
+
 
 
 def run_case(case: CaseConfig) -> bool:
@@ -204,21 +218,37 @@ def run_case(case: CaseConfig) -> bool:
     case_dir = TESTS_DIR / "cases" / case.case_dir
     fixture_path = TESTS_DIR / "regression" / case.fixture
 
+
     if not case_dir.exists():
         print(f"✗ {case.name}: case directory not found at {case_dir}")
         return False
+
 
     if not fixture_path.exists():
         print(f"✗ {case.name}: fixture not found at {fixture_path}")
         return False
 
+
     expected = load_fixture(fixture_path)
+
 
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp = Path(tmpdir)
-        # copy case files to temp sandbox
-        shutil.copytree(case_dir, tmp / "case", dirs_exist_ok=True)
+
+        # Copy case files, excluding any pre-existing output files
+        shutil.copytree(
+            case_dir, 
+            tmp / "case",
+            ignore=shutil.ignore_patterns(
+                'result_output.csv',
+                'result_*.csv',
+                '*.log',
+                'output.*',
+                '*.out'
+            )
+        )
         workdir = tmp / "case"
+
 
         # ensure template is named swap.swp
         swap_file = workdir / "swap.swp"
@@ -232,18 +262,36 @@ def run_case(case: CaseConfig) -> bool:
                     shutil.copy(alt, swap_file)
                     break
 
+
+        # Record time before running to verify output is fresh
+        before_run = time.time()
+
+
         # run swap
         proc = subprocess.run([str(SWAP_BIN)], cwd=workdir, capture_output=True, text=True)
-        if proc.returncode not in (0, 100):  # swap_main exits with 100 on success
-            print(f"✗ {case.name}: swap failed with code {proc.returncode}")
-            print(f"stdout:\n{proc.stdout}")
-            print(f"stderr:\n{proc.stderr}")
+
+        # Check exit code (swap_main exits with 100 on success)
+        if proc.returncode != 100:
+            print(f"✗ {case.name}: swap failed with exit code {proc.returncode} (expected 100)")
+            if proc.stdout:
+                print(f"stdout:\n{proc.stdout}")
+            if proc.stderr:
+                print(f"stderr:\n{proc.stderr}")
             return False
+
 
         csv_path = workdir / "result_output.csv"
         if not csv_path.exists():
             print(f"✗ {case.name}: result_output.csv not produced")
             return False
+
+
+        # Verify the CSV was created by this run (not a pre-existing file)
+        if csv_path.stat().st_mtime < before_run:
+            print(f"✗ {case.name}: result_output.csv exists but was not created by this run")
+            print(f"   File timestamp: {csv_path.stat().st_mtime}, run started at: {before_run}")
+            return False
+
 
         try:
             cumul_vars = case.cumul_vars if hasattr(case, 'cumul_vars') else []
@@ -253,13 +301,16 @@ def run_case(case: CaseConfig) -> bool:
             print(f"✗ {case.name}: {e}")
             return False
 
+
     print(f"✓ {case.name}: regression ok (annual stats match fixture)")
     return True
+
 
 
 def main():
     if not SWAP_BIN.exists():
         raise SystemExit(f"swap binary not found at {SWAP_BIN}; build first (pixi run build-linux)")
+
 
     # Parse command line to select cases
     args = sys.argv[1:]
@@ -274,6 +325,7 @@ def main():
     else:
         selected = list(CASES.values())
 
+
     passed = 0
     failed = 0
     for case in selected:
@@ -282,9 +334,11 @@ def main():
         else:
             failed += 1
 
+
     print(f"\n{passed} passed, {failed} failed")
     if failed:
         sys.exit(1)
+
 
 
 if __name__ == "__main__":
