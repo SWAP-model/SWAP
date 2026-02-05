@@ -9,7 +9,7 @@ version = "4.2.0"
 env = { PFUNIT_ROOT = "$PIXI_PROJECT_ROOT/tests/pFUnit/build/install_gfortran/PFUNIT-4.15" }
 
 [tasks]
-build-linux = 'bash -c "source /opt/intel/oneapi/setvars.sh && FC=ifx meson setup builddir && meson compile -C builddir"'
+build-linux = 'bash -c "[ -z \"$ONEAPI_ROOT\" ] && source /opt/intel/oneapi/setvars.sh; FC=ifx meson setup builddir && meson compile -C builddir"'
 build-windows-cross = "meson setup builddir_windows --cross-file cross_mingw.txt && meson compile -C builddir_windows"
 build-windows-native = "FC=ifx meson setup builddir_windows_native && meson compile -C builddir_windows_native"
 clean = "rm -rf builddir builddir_windows builddir_windows_native"

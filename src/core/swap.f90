@@ -47,7 +47,7 @@ module swap_exchange
 end module swap_exchange
 
 ! -----------------------------------------------------------------------------------------------------------------------
-subroutine swap(iCaller, iTask, toswap, fromswap)
+subroutine swap(iCaller, iTask, state, toswap, fromswap)
 
 ! The model swap can perform three major tasks (iTask):
 !    1 - initialization
@@ -63,21 +63,23 @@ subroutine swap(iCaller, iTask, toswap, fromswap)
 !dec$ attributes dllexport :: SWAP
 
 !     swap modules for data communication
+use swap_state_mod, only: swap_state_t, swap_state_init, swap_state_finalize
 use variables, only : flyearstart, fldaystart, flswapshared, flsurfacewater, flmacropore, fltemperature, flsnow,        &
                       flsolute, flcropnut, flirrigate, flagetracer, flrunend, flmeteodt, fletsine, swfrost, fldtreduce, &
                       swusecn, fldrain, fldecdt, fldecmprat, fldayend, flcropcalendar, flmaxitertime, floutput,         &
                       floutputshort, flharvestday, flcropoutput, swcrp, flirrigationoutput, swend, project, &
-                      daynr, iyear
+                      daynr, iyear, numnod, numlay
 ! for debugging
 !use variables, only : iqrot, iptra, cnrai, t1900, Tstart, Tend, numnod, dz, theta, dt, h, arai, rainamount, lai
 
 use tillage,   only : DoTillage
 use swap_exchange
-use swap_log, only: log_info, to_str
+use swap_log, only: log_info, log_debug, to_str
 implicit none
 
 ! global
 integer,           intent(in)              :: iCaller, iTask
+type(swap_state_t), intent(inout)          :: state
 type(swap_input),  intent(in),    optional :: toswap
 type(swap_output), intent(out),   optional :: fromswap
 
@@ -112,6 +114,11 @@ if (iTask == 1) then
 
 !  calculate grid parameters
    call CalcGrid
+   
+!  Initialize state container now that grid dimensions are known
+   call swap_state_init(state, numnod, numlay)
+   call log_debug('swap', 'State container initialized: numnod=' // to_str(numnod) // ', numlay=' // to_str(numlay))
+   
    call DoTillage(1)
    call SSDI_irrigation(1)
 
@@ -352,6 +359,9 @@ if (iTask == 3) then
 
 !  Specific for exchange when called as DLL
    if (iCaller /= 0) call handle_exchange(31, flError)
+
+!  Finalize state container
+   call swap_state_finalize(state)
 
    call log_info('swap', 'Simulation complete for project: ' // trim(project))
 
