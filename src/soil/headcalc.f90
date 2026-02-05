@@ -8,7 +8,6 @@
 !                          and conductivities for next time step
 ! ----------------------------------------------------------------------
       use variables
-      use swap_log, only: log_debug, log_info, log_warn, to_str
       implicit none
 
 ! ----------------------------------------------------------------------
@@ -701,24 +700,16 @@
         !! Replaced the Nstep with the variable from the main variables.f90 file, the
         !! build still works as before.
             if (FlMacropore) then
-               ! Debug logging for macropore convergence tracking
-               call log_debug('headcalc', 'Macropore converged: dt=' // to_str(dt) // &
-                  ', dtold=' // to_str(dtold) // ', nstep_hc=' // to_str(nstep_hc) // &
-                  ', IDecMpRat=' // to_str(IDecMpRat))
                
                FlDecMpRat = .false.
                if (IDecMpRat.gt.0) then
                   if (nstep_hc.lt.10) then
                      nstep_hc = nstep_hc + 1
-                     call log_debug('headcalc', 'nstep_hc incremented to ' // to_str(nstep_hc))
                   endif
                   if (dt.gt.dtold .or. nstep_hc.gt.10) then
-                     call log_debug('headcalc', 'Resetting nstep_hc: dt>dtold=' // &
-                        to_str(dt.gt.dtold) // ', nstep_hc>10=' // to_str(nstep_hc.gt.10))
                      dtold = dt
                      nstep_hc = 0
                      IDecMpRat = IDecMpRat - 1
-                     call log_debug('headcalc', 'IDecMpRat decremented to ' // to_str(IDecMpRat))
                   endif
                endif
             endif
@@ -789,9 +780,6 @@
          IDecMpRat  = IDecMpRat + 1
          FlDecMpRat = .true.
          dtold = dt
-         
-         call log_debug('headcalc', 'Macropore non-convergence retry: IDecMpRat=' // &
-            to_str(IDecMpRat) // ', dt=' // to_str(dt))
 
 !         write(104,'(f10.6,i5)') t, IDecMpRat
 

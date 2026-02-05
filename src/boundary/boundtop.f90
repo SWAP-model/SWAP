@@ -24,8 +24,6 @@
 ! ----------------------------------------------------------------------
 ! --- Initialisation
 
-      call log_debug('boundtop', 'Starting top boundary calculation')
-
 ! --- runon of present day
       if (flDayStart .and. flrunon) runon = runonarr(daycum+1)      
 

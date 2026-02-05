@@ -10,7 +10,6 @@
 ! ----------------------------------------------------------------------  
       use variables, only: dramet,gwl,zbotdr,basegw,l,qdrain,ipos,khtop,khbot,kvtop,kvbot,entres,wetper,zintf,geofac,swdtyp,      &
                            owltab,t1900,swallo,drares,infres,qdrtab,nrlevs,swnrsrf,cofintfl,expintfl,dt,shape,FlMacropore,NumLevRapDra,ZDraBas,swliminf,nowltab
-      use swap_log, only: log_debug, to_str
       implicit none
       !include 'arrays.fi'
 
@@ -191,7 +190,6 @@
 ! ----------------------------------------------------------------------
 
       use variables
-      use swap_log, only: log_debug, to_str
       implicit none
 
 !     local
@@ -200,9 +198,6 @@
       real(8) afgen   !, temptab(2*maowl)
       integer nodeTopDisLay(madr)
       CHARACTER(len=33) messag
-
-      call log_debug('drainage', 'Calculating drainage: gwl=' // to_str(gwl) // &
-                     ' nrlevs=' // to_str(nrlevs))
 
 !   - In case of macropores: initialise drainage basis for rapid drainage through macropores
       if (flInitDraBas) then

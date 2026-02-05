@@ -23,7 +23,7 @@
 ! ==============================================================================
 
 module swap_state_mod
-    use swap_log, only: log_debug, log_info, log_warn, log_error, to_str
+    use swap_log, only: log_info, log_error, to_str
     implicit none
     private
 
@@ -1441,18 +1441,11 @@ contains
         
         integer :: nlev, nc
         
-        call log_debug('state_init', 'Starting swap_state_init')
-        call log_debug('state_init', 'numnod=' // trim(to_str(numnod)) // &
-                       ', numlay=' // trim(to_str(numlay)))
-        
         ! Set defaults for optional parameters
         nlev = 1
         nc = 1
         if (present(nrlevs)) nlev = nrlevs
         if (present(ncrop)) nc = ncrop
-        
-        call log_debug('state_init', 'nrlevs=' // trim(to_str(nlev)) // &
-                       ', ncrop=' // trim(to_str(nc)))
         
         ! Store configuration
         state%numnod = numnod
@@ -1461,33 +1454,24 @@ contains
         state%ncrop = nc
         
         ! Initialize sub-states
-        call log_debug('state_init', 'Initializing soil state...')
         call soil_state_init(state%soil, numnod, numlay)
         
-        call log_debug('state_init', 'Initializing drainage state...')
         call drainage_state_init(state%drain, nlev, numnod)
         
-        call log_debug('state_init', 'Initializing crop state...')
         call crop_state_init(state%crop, nc)
         
-        call log_debug('state_init', 'Initializing macropore state...')
         call macropore_state_init(state%macro, numnod, MADM, MADR)
         
-        call log_debug('state_init', 'Initializing solute state...')
         call solute_state_init(state%solute, numnod, numlay, nlev)
         
-        call log_debug('state_init', 'Initializing heat state...')
         call heat_state_init(state%heat, numnod, numlay)
         
-        call log_debug('state_init', 'Initializing boundary state...')
         call boundary_state_init(state%boundary)
         
         ! Initialize surfacewater state with reasonable defaults
         ! nmper=10 (management periods), mamte=100 (meteo entries), maowl=100 (water level entries)
-        call log_debug('state_init', 'Initializing surfacewater state...')
         call surfacewater_state_init(state%surfwater, 10, 100, 100, nlev)
         
-        call log_debug('state_init', 'Initializing oxygen stress state...')
         call oxygenstress_state_init(state%oxystress, numnod)
         
         state%initialized = .true.
@@ -1503,9 +1487,6 @@ contains
         integer, intent(in) :: numnod, numlay
         
         integer :: alloc_stat
-        
-        call log_debug('soil_init', 'Allocating node-based arrays (n=' // &
-                       trim(to_str(numnod)) // ')')
         
         ! Allocate node-based arrays
         allocate(soil%h(numnod), stat=alloc_stat)
@@ -1545,9 +1526,6 @@ contains
         allocate(soil%layer(numnod))
         allocate(soil%indeks(numnod))
         
-        call log_debug('soil_init', 'Allocating layer-based arrays (n=' // &
-                       trim(to_str(numlay)) // ')')
-        
         ! Allocate layer-based arrays
         allocate(soil%bdens(numlay))
         allocate(soil%cofani(numlay))
@@ -1559,7 +1537,6 @@ contains
         allocate(soil%paramvg(21, numlay))
         allocate(soil%cofgen(21, numnod))
         
-        call log_debug('soil_init', 'Initializing arrays to zero')
         
         ! Initialize to zero
         soil%h = 0.0d0
@@ -1840,7 +1817,6 @@ contains
         solute%cseeptab = 0.0d0
         solute%zc = 0.0d0
         
-        call log_debug('solute_init', 'Allocated solute arrays for ' // to_str(numnod) // ' nodes')
         
     end subroutine solute_state_init
     
@@ -1874,7 +1850,6 @@ contains
         heat%temtoptab = 0.0d0
         heat%zh = 0.0d0
         
-        call log_debug('heat_init', 'Allocated heat arrays for ' // to_str(numnod) // ' nodes')
         
     end subroutine heat_state_init
     

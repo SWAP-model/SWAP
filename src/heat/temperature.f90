@@ -7,7 +7,6 @@
 !     purpose            : calculate soil temperatures
 ! ----------------------------------------------------------------------
       use variables
-      use swap_log, only: log_debug, to_str
       implicit none 
 
 ! --- global
@@ -25,7 +24,6 @@
 ! Note: No SAVE needed - these are work arrays recomputed each timestep
 ! ----------------------------------------------------------------------
 
-      call log_debug('temperature', 'Entering temperature task=' // to_str(task))
       
       select case (task)
       case (1)

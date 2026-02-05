@@ -26,7 +26,7 @@
 
 module swap_state_sync
     use swap_state_mod
-    use swap_log, only: log_debug, log_info, to_str
+    use swap_log, only: log_info, to_str
     use variables  ! The legacy module with all global variables
     ! Import Wofost_Soil with renaming to avoid conflicts with variables.f90
     use Wofost_Soil_Declarations, wsn_Cseep_mod => Cseep, &
@@ -79,21 +79,13 @@ contains
     subroutine log_state_summary(state)
         type(swap_state_t), intent(in) :: state
         
-        call log_debug('state', '=== Daily State Summary ===')
-        call log_debug('state', 'Time: year=' // to_str(state%time%iyear) // &
-                       ', day=' // to_str(state%time%daynr) // &
-                       ', daycum=' // to_str(state%time%daycum))
-        call log_debug('state', 'Soil: gwl=' // to_str(state%soil%gwl) // &
-                       ', pond=' // to_str(state%soil%pond) // &
-                       ', volact=' // to_str(state%soil%volact))
-        call log_debug('state', 'Atm: tav=' // to_str(state%atm%tav) // &
-                       ', grai=' // to_str(state%atm%grai) // &
-                       ', ptra=' // to_str(state%atm%ptra))
-        call log_debug('state', 'Crop: lai=' // to_str(state%crop%lai) // &
-                       ', dvs=' // to_str(state%crop%dvs) // &
-                       ', rd=' // to_str(state%crop%rd))
-        call log_debug('state', 'Drain: qdrain(1)=' // to_str(state%drain%qdrain(1)))
-        call log_debug('state', '===========================')
+        call log_info('state', 'Day ' // to_str(state%time%daynr) // &
+                      ' y=' // to_str(state%time%iyear) // &
+                      ' gwl=' // to_str(state%soil%gwl) // &
+                      ' pond=' // to_str(state%soil%pond) // &
+                      ' lai=' // to_str(state%crop%lai) // &
+                      ' grai=' // to_str(state%atm%grai) // &
+                      ' ptra=' // to_str(state%atm%ptra))
     end subroutine log_state_summary
 
     ! ==========================================================================
@@ -122,7 +114,6 @@ contains
     subroutine state_to_variables(state)
         type(swap_state_t), intent(in) :: state
         
-        call log_debug('sync', 'Syncing state -> all variables')
         
         call time_state_to_variables(state%time)
         call soil_state_to_variables(state%soil, state%numnod, state%numlay)
@@ -204,7 +195,6 @@ contains
         tstate%project = project
         tstate%swpfile = swpfile
         
-        call log_debug('sync', 'time_state_from_variables: day=' // to_str(daynr) // ', year=' // to_str(iyear))
     end subroutine time_state_from_variables
 
     subroutine time_state_to_variables(tstate)
@@ -269,7 +259,6 @@ contains
         project = tstate%project
         swpfile = tstate%swpfile
         
-        call log_debug('sync', 'time_state_to_variables: day=' // to_str(tstate%daynr) // ', year=' // to_str(tstate%iyear))
     end subroutine time_state_to_variables
 
     ! ==========================================================================
@@ -280,7 +269,6 @@ contains
         integer, intent(in) :: n_nod, n_lay
         integer :: i
         
-        call log_debug('soil_sync', 'Starting soil_state_from_variables')
         
         ! Primary state variables (node-based)
         if (allocated(sstate%h) .and. n_nod > 0) then
@@ -289,7 +277,6 @@ contains
                 sstate%theta(i) = theta(i)
                 sstate%k(i) = k(i)
             end do
-            call log_debug('soil_sync', 'Copied h, theta, k arrays for ' // to_str(n_nod) // ' nodes')
         end if
         
         ! Previous timestep values
@@ -373,8 +360,6 @@ contains
         sstate%iwarn_hc = iwarn_hc
         sstate%nstep_hc = nstep_hc
         
-        call log_debug('soil_sync', 'soil_state_from_variables complete: gwl=' // &
-                       to_str(real(gwl,4)) // ', pond=' // to_str(real(pond,4)))
     end subroutine soil_state_from_variables
 
     subroutine soil_state_to_variables(sstate, n_nod, n_lay)
@@ -382,7 +367,6 @@ contains
         integer, intent(in) :: n_nod, n_lay
         integer :: i
         
-        call log_debug('soil_sync', 'Starting soil_state_to_variables')
         
         ! Primary state variables (node-based)
         if (allocated(sstate%h) .and. n_nod > 0) then
@@ -391,7 +375,6 @@ contains
                 theta(i) = sstate%theta(i)
                 k(i) = sstate%k(i)
             end do
-            call log_debug('soil_sync', 'Restored h, theta, k arrays for ' // to_str(n_nod) // ' nodes')
         end if
         
         ! Previous timestep values
@@ -475,8 +458,6 @@ contains
         iwarn_hc = sstate%iwarn_hc
         nstep_hc = sstate%nstep_hc
         
-        call log_debug('soil_sync', 'soil_state_to_variables complete: gwl=' // &
-                       to_str(real(sstate%gwl,4)) // ', pond=' // to_str(real(sstate%pond,4)))
     end subroutine soil_state_to_variables
 
     ! ==========================================================================
@@ -565,7 +546,6 @@ contains
         astate%empreva = empreva
         astate%fprecnosnow = fprecnosnow
         
-        call log_debug('sync', 'atmosphere_state_from_variables: tav=' // to_str(real(tav,4)))
     end subroutine atmosphere_state_from_variables
 
     subroutine atmosphere_state_to_variables(astate)
@@ -651,7 +631,6 @@ contains
         empreva = astate%empreva
         fprecnosnow = astate%fprecnosnow
         
-        call log_debug('sync', 'atmosphere_state_to_variables: tav=' // to_str(real(astate%tav,4)))
     end subroutine atmosphere_state_to_variables
 
     ! ==========================================================================
@@ -758,7 +737,6 @@ contains
         ! Path
         cstate%pathcrop = pathcrop
         
-        call log_debug('sync', 'crop_state_from_variables: dvs=' // to_str(real(dvs,4)) // ', lai=' // to_str(real(lai,4)))
     end subroutine crop_state_from_variables
 
     subroutine crop_state_to_variables(cstate, n_crop)
@@ -862,7 +840,6 @@ contains
         ! Path
         pathcrop = cstate%pathcrop
         
-        call log_debug('sync', 'crop_state_to_variables: dvs=' // to_str(real(cstate%dvs,4)) // ', lai=' // to_str(real(cstate%lai,4)))
     end subroutine crop_state_to_variables
 
     ! ==========================================================================
@@ -903,7 +880,6 @@ contains
         if (allocated(istate%ssdi_rate_f)) istate%ssdi_rate_f = ssdi_rate_f_irr(1:size(istate%ssdi_rate_f))
         if (allocated(istate%ssdi_amount_f)) istate%ssdi_amount_f = ssdi_amount_f_irr(1:size(istate%ssdi_amount_f))
         
-        call log_debug('sync', 'irrigation_state_from_variables')
     end subroutine irrigation_state_from_variables
 
     subroutine irrigation_state_to_variables(istate)
@@ -941,7 +917,6 @@ contains
         if (allocated(istate%ssdi_rate_f)) ssdi_rate_f_irr(1:size(istate%ssdi_rate_f)) = istate%ssdi_rate_f
         if (allocated(istate%ssdi_amount_f)) ssdi_amount_f_irr(1:size(istate%ssdi_amount_f)) = istate%ssdi_amount_f
         
-        call log_debug('sync', 'irrigation_state_to_variables')
     end subroutine irrigation_state_to_variables
 
     ! ==========================================================================
@@ -1023,7 +998,6 @@ contains
         
         dstate%fldrain = fldrain
         
-        call log_debug('sync', 'drainage_state_from_variables: nrlevs=' // to_str(nrlevs))
     end subroutine drainage_state_from_variables
 
     subroutine drainage_state_to_variables(dstate, n_levs)
@@ -1106,7 +1080,6 @@ contains
         
         fldrain = dstate%fldrain
         
-        call log_debug('sync', 'drainage_state_to_variables: nrlevs=' // to_str(dstate%nrlevs))
     end subroutine drainage_state_to_variables
 
     ! ==========================================================================
@@ -1154,7 +1127,6 @@ contains
         swstate%fldecdt = fldecdt
         swstate%fldtmin = fldtmin
         
-        call log_debug('sync', 'surfacewater_state_from_variables: nmper=' // to_str(nmper))
     end subroutine surfacewater_state_from_variables
 
     subroutine surfacewater_state_to_variables(swstate, n_mper)
@@ -1199,7 +1171,6 @@ contains
         fldecdt = swstate%fldecdt
         fldtmin = swstate%fldtmin
         
-        call log_debug('sync', 'surfacewater_state_to_variables: nmper=' // to_str(swstate%nmper))
     end subroutine surfacewater_state_to_variables
 
     ! ==========================================================================
@@ -1320,7 +1291,6 @@ contains
         bstate%flrunon = flrunon
         bstate%ftoph = ftoph
         
-        call log_debug('sync', 'boundary_state_from_variables: swbotb=' // to_str(swbotb))
     end subroutine boundary_state_from_variables
 
     subroutine boundary_state_to_variables(bstate, n_day)
@@ -1438,7 +1408,6 @@ contains
         flrunon = bstate%flrunon
         ftoph = bstate%ftoph
         
-        call log_debug('sync', 'boundary_state_to_variables: swbotb=' // to_str(bstate%swbotb))
     end subroutine boundary_state_to_variables
 
     ! ==========================================================================
@@ -1568,7 +1537,6 @@ contains
         solu%icAgetopdwn = icAgetopdwn
         solu%ArMpSs = ArMpSs
         
-        call log_debug('sync', 'solute_state_from_variables: swsolu=' // to_str(solu%swsolu))
     end subroutine solute_state_from_variables
     
     subroutine solute_state_to_variables(solu, n_nod, n_lay, n_lev)
@@ -1695,7 +1663,6 @@ contains
         icAgetopdwn = solu%icAgetopdwn
         ArMpSs = solu%ArMpSs
         
-        call log_debug('sync', 'solute_state_to_variables: swsolu=' // to_str(solu%swsolu))
     end subroutine solute_state_to_variables
 
     ! ==========================================================================
@@ -1790,7 +1757,6 @@ contains
         ! Flags
         hstate%fltemperature = fltemperature
         
-        call log_debug('sync', 'heat_state_from_variables: swhea=' // to_str(hstate%swhea))
     end subroutine heat_state_from_variables
     
     subroutine heat_state_to_variables(hstate, n_nod, n_lay)
@@ -1882,7 +1848,6 @@ contains
         ! Flags
         fltemperature = hstate%fltemperature
         
-        call log_debug('sync', 'heat_state_to_variables: swhea=' // to_str(hstate%swhea))
     end subroutine heat_state_to_variables
 
     ! ===========================================================================
@@ -2054,7 +2019,6 @@ contains
         ! Flags
         mstate%flmacropore = flmacropore
         
-        call log_debug('sync', 'macropore_state_from_variables: flmacropore=' // to_str(flmacropore))
     end subroutine macropore_state_from_variables
     
     subroutine macropore_state_to_variables(mstate, n_nod, n_dom, n_dra)
@@ -2223,7 +2187,6 @@ contains
         ! Flags
         flmacropore = mstate%flmacropore
         
-        call log_debug('sync', 'macropore_state_to_variables: flmacropore=' // to_str(mstate%flmacropore))
     end subroutine macropore_state_to_variables
 
     ! ==========================================================================
@@ -2398,7 +2361,6 @@ contains
         ! Flags
         wstate%flCropExt = flCropExt
         
-        call log_debug('sync', 'wofost_soil_state_from_variables')
     end subroutine wofost_soil_state_from_variables
 
     subroutine wofost_soil_state_to_variables(wstate)
@@ -2570,7 +2532,6 @@ contains
         ! Flags
         flCropExt = wstate%flCropExt
         
-        call log_debug('sync', 'wofost_soil_state_to_variables')
     end subroutine wofost_soil_state_to_variables
 
     ! ==========================================================================
@@ -2611,7 +2572,6 @@ contains
         ostate%mplus1(1:numnod) = o2_mplus1(1:numnod)
         ostate%ini_stress = o2_ini_stress
         
-        call log_debug('sync', 'oxygenstress_state_from_variables')
     end subroutine oxygenstress_state_from_variables
     
     subroutine oxygenstress_state_to_variables(ostate, numnod)
@@ -2649,7 +2609,6 @@ contains
         o2_mplus1(1:numnod) = ostate%mplus1(1:numnod)
         o2_ini_stress = ostate%ini_stress
         
-        call log_debug('sync', 'oxygenstress_state_to_variables')
     end subroutine oxygenstress_state_to_variables
 
     ! ==========================================================================
@@ -2764,7 +2723,6 @@ contains
             end if
         end if
         
-        call log_debug('sync', 'tillage_state_from_variables')
     end subroutine tillage_state_from_variables
     
     subroutine tillage_state_to_variables(tstate, numlay)
@@ -2876,7 +2834,6 @@ contains
             end if
         end if
         
-        call log_debug('sync', 'tillage_state_to_variables')
     end subroutine tillage_state_to_variables
 
 end module swap_state_sync

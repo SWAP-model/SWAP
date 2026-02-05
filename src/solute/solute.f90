@@ -7,7 +7,6 @@
 !     purpose            : calculation of solute concentrations
 ! ----------------------------------------------------------------------
       use Variables
-      use swap_log, only: log_debug, to_str
       implicit none
 
 !     local variables
@@ -26,7 +25,6 @@
 
 ! ----------------------------------------------------------------------
 
-      call log_debug('solute', 'Entering solute task=' // to_str(task))
       
       select case (task)
       case (1)

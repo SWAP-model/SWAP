@@ -1,7 +1,7 @@
 ! File VersionID:
 !   $Id: frozencond.f90 368 2018-01-11 15:44:15Z heine003 $
 ! ----------------------------------------------------------------------
-      subroutine FrozenCond
+      subroutine FrozenCond(heat, soil)
 ! ----------------------------------------------------------------------
 !     date               : sept 2005
 !     purpose            : if Soil temperatures are simulated, determine 
@@ -9,9 +9,11 @@
 !                          frozen conditions
 ! ----------------------------------------------------------------------
 ! global
-      use variables
-      use swap_log, only: log_debug, to_str
+      use swap_state_mod, only: heat_state_t, soil_state_t
       implicit none
+
+      type(heat_state_t), intent(inout) :: heat
+      type(soil_state_t), intent(in)    :: soil
 
 ! local
       integer node
@@ -19,63 +21,64 @@
 
 ! ----------------------------------------------------------------------
 
-      call log_debug('frozencond', 'Entering FrozenCond')
-      
 !    reduction factor
-      do node=1,numnod
-         rfcp(node) = 1.0d0
-         if (swfrost.eq.1)then
-           if(tsoil(node).ge.tfroststa)then
-              rfcp(node) = 1.0d0
-           else if(tsoil(node).le.tfrostend) then
-              rfcp(node) = 0.0d0
-           else if(tsoil(node).lt.tfroststa .and.                       &
-     &             tsoil(node).gt.tfrostend) then 
-              rfcp(node) = (tsoil(node)-tfrostend)/(tfroststa-tfrostend)
+      do node=1,soil%numnod
+         heat%rfcp(node) = 1.0d0
+         if (heat%swfrost.eq.1)then
+           if(heat%tsoil(node).ge.heat%tfroststa)then
+              heat%rfcp(node) = 1.0d0
+           else if(heat%tsoil(node).le.heat%tfrostend) then
+              heat%rfcp(node) = 0.0d0
+           else if(heat%tsoil(node).lt.heat%tfroststa .and.             &
+     &             heat%tsoil(node).gt.heat%tfrostend) then 
+              heat%rfcp(node) = (heat%tsoil(node)-heat%tfrostend)/      &
+     &                          (heat%tfroststa-heat%tfrostend)
            endif
          endif
       end do
 
  
 !     frozen soil : frozen depth z and frozen node nr
-      flthaw       = .true.
-      nodfrostbot  = -1
-      zfrostbot    = 0.0d0
+      flthaw              = .true.
+      heat%nodfrostbot    = -1
+      heat%zfrostbot      = 0.0d0
 !      nodfrosttop  = -1
-      zfrosttop    = 0.0d0
+      heat%zfrosttop      = 0.0d0
 
-      node = numnod
+      node = soil%numnod
       do while (flthaw .and. node.gt.1)
          node = node - 1 
-         if(tsoil(node) .le. tfrostend+1.0d-6)then
-            zfrostbot = z(node+1) + disnod(node+1) *                    &
-     &           (tfrostend-tsoil(node+1)) / (tsoil(node)-tsoil(node+1))
-            flthaw      =.false.
-            nodfrostbot = node
+         if(heat%tsoil(node) .le. heat%tfrostend+1.0d-6)then
+            heat%zfrostbot = soil%z(node+1) + soil%disnod(node+1) *     &
+     &           (heat%tfrostend-heat%tsoil(node+1)) /                  &
+     &           (heat%tsoil(node)-heat%tsoil(node+1))
+            flthaw             =.false.
+            heat%nodfrostbot   = node
          endif
       end do
 
       if(.not.flthaw)then
          flthaw  = .true.
          node = 0
-         do while (flthaw .and. node.lt.nodfrostbot)
+         do while (flthaw .and. node.lt.heat%nodfrostbot)
             node = node + 1 
-            if(tsoil(node) .le. tfrostend+1.0d-6)then
+            if(heat%tsoil(node) .le. heat%tfrostend+1.0d-6)then
                if(node.eq.1) then
-                  if(tetop.le.tfrostend) then
-                     zfrosttop = 0.0d0
+                  if(heat%tetop.le.heat%tfrostend) then
+                     heat%zfrosttop = 0.0d0
                   else
-                     zfrosttop = z(node) - (z(node) - 0.0d0) *          &
-     &             (tsoil(node)-tfrostend) / (tsoil(node)-tetop)
+                     heat%zfrosttop = soil%z(node) -                    &
+     &             (soil%z(node) - 0.0d0) *                             &
+     &             (heat%tsoil(node)-heat%tfrostend) /                  &
+     &             (heat%tsoil(node)-heat%tetop)
                   endif
                else
-!                  zfrosttop = z(node) - (z(node) - z(node-1)) *         &
-                  zfrosttop = z(node) + disnod(node) *                  &
-     &             (tsoil(node)-tfrostend) / (tsoil(node)-tsoil(node-1))
+                  heat%zfrosttop = soil%z(node) + soil%disnod(node) *   &
+     &             (heat%tsoil(node)-heat%tfrostend) /                  &
+     &             (heat%tsoil(node)-heat%tsoil(node-1))
                endif
-               zfrosttop = min(0.0d0,zfrosttop)
+               heat%zfrosttop = min(0.0d0,heat%zfrosttop)
                flthaw      =.false.
-!               nodfrosttop = node
             endif
          end do
       end if
@@ -91,7 +94,6 @@
 ! ----------------------------------------------------------------------
 !     Swap modules for data communication
       use variables
-      use swap_log, only: log_debug
       implicit none
 
 !     global - in
@@ -114,8 +116,6 @@
 
 ! ----------------------------------------------------------------------
 
-      call log_debug('frozenbounds', 'Entering FrozenBounds')
-      
 !     initialize qbot
       qbot = qbot_nonfrozen
 

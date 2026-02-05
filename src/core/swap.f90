@@ -64,6 +64,8 @@ subroutine swap(iCaller, iTask, state, toswap, fromswap)
 
 !     swap modules for data communication
 use swap_state_mod, only: swap_state_t, swap_state_init, swap_state_finalize
+use swap_state_sync, only: state_from_variables, state_to_variables, heat_state_to_variables, &
+                          log_state_summary
 use variables, only : flyearstart, fldaystart, flswapshared, flsurfacewater, flmacropore, fltemperature, flsnow,        &
                       flsolute, flcropnut, flirrigate, flagetracer, flrunend, flmeteodt, fletsine, swfrost, fldtreduce, &
                       swusecn, fldrain, fldecdt, fldecmprat, fldayend, flcropcalendar, flmaxitertime, floutput,         &
@@ -74,7 +76,7 @@ use variables, only : flyearstart, fldaystart, flswapshared, flsurfacewater, flm
 
 use tillage,   only : DoTillage
 use swap_exchange
-use swap_log, only: log_info, log_debug, to_str
+use swap_log, only: log_info
 implicit none
 
 ! global
@@ -117,7 +119,6 @@ if (iTask == 1) then
    
 !  Initialize state container now that grid dimensions are known
    call swap_state_init(state, numnod, numlay)
-   call log_debug('swap', 'State container initialized: numnod=' // to_str(numnod) // ', numlay=' // to_str(numlay))
    
    call DoTillage(1)
    call SSDI_irrigation(1)
@@ -160,6 +161,9 @@ if (iTask == 1) then
 
 !  Specific for exchange when called as DLL
    if (iCaller /= 0) call handle_exchange(11, flError)
+
+!  Populate state container from initialized variables (one-time sync after init)
+   call state_from_variables(state)
 
    call log_info('swap', 'Initialization complete for project: ' // trim(project))
 
@@ -214,7 +218,11 @@ if (iTask == 2) then
       if (flSnow .and. flDayStart) call Snow(2)
 
 !     calculate reduction for conductivities for frozen conditions
-      if (SwFrost.eq.1) call FrozenCond
+!     FrozenCond uses state; sync back to variables for FrozenBounds (temporary bridge)
+      if (SwFrost.eq.1) then
+         call FrozenCond(state%heat, state%soil)
+         call heat_state_to_variables(state%heat, numnod, numlay)
+      end if
 
 !     calculate potential and actual root water extraction profile
       call RootExtraction
@@ -295,6 +303,10 @@ if (iTask == 2) then
 !                     and determine if time step needs to be changed due to dt_SSDI_event
          call SSDI_irrigation(2)
          call TimeControl(9)
+
+!        Daily state snapshot: sync variables->state and log summary
+         call state_from_variables(state)
+         call log_state_summary(state)
 
       end if
 

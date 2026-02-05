@@ -8,7 +8,6 @@
 ! ----------------------------------------------------------------------
 !     global
       use Variables
-      use swap_log, only: log_debug, to_str
       implicit none 
       integer task
 
@@ -20,7 +19,6 @@
       character(len=300) messag
 !cd     real(8) qdrain_old(madr), qdrain_new(madr)
 
-      call log_debug('surfacewater', 'SurfaceWater called with task=' // to_str(task))
 
 ! ----------------------------------------------------------------------
       select case (task)

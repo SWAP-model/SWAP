@@ -8,7 +8,7 @@
 ! ----------------------------------------------------------------------
      use doln
       use Variables
-      use swap_log, only: log_debug, log_info, to_str
+      use swap_log, only: log_info, to_str
       implicit none
 
 ! --- local variables
@@ -21,7 +21,6 @@
       case (1)
 
 ! === initialize Soilwater rate/state variables ========================
-      call log_debug('soilwater', 'Task 1: Initializing soil water state')
 
 ! --- initialize miscellaneous
       hatm = -2.75d+05
