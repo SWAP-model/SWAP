@@ -71,7 +71,9 @@ use variables, only : flyearstart, fldaystart, flswapshared, flsurfacewater, flm
                       swusecn, fldrain, fldecdt, fldecmprat, fldayend, flcropcalendar, flmaxitertime, floutput,         &
                       floutputshort, flharvestday, flcropoutput, swcrp, flirrigationoutput, swend, project, &
                       daynr, iyear, numnod, numlay
-! for debugging
+use drainage_mod, only: drainage
+use surfacewater_mod, only: SurfaceWater
+                      ! for debugging
 !use variables, only : iqrot, iptra, cnrai, t1900, Tstart, Tend, numnod, dz, theta, dt, h, arai, rainamount, lai
 
 use tillage,   only : DoTillage

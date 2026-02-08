@@ -1,28 +1,101 @@
-! File VersionID:
-!   $Id: divdra.f90 370 2018-02-09 13:29:10Z heine003 $
-! ----------------------------------------------------------------------
-      SUBROUTINE DIVDRA( NumComp, NumDrain,ThickComp,ksatfit,ksatexm,   &
+module distribute_drainage
+!> Distribute Drainage - Lateral waterflux simulation in saturated zone
+!!
+!! This module provides routines for simulating lateral water fluxes in the saturated zone
+!! of soil profiles, with support for multiple drainage systems and infiltration scenarios.
+!!
+!! The module implements the distribution of drainage and infiltration fluxes over
+!! model discharge layers based on transmissivity-weighted allocation. It handles:
+!!
+!! * Multiple drainage systems with varying spacing and depths
+!! * Anisotropic hydraulic conductivity (horizontal vs vertical)
+!! * Interflow (surface runoff) as highest-order drainage
+!! * Separate distribution of infiltration fluxes from surface water
+!! * Dynamic groundwater level effects on discharge layer geometry
+!!
+!!### Physical Background
+!!
+!! The approach divides the saturated zone into model discharge layers, with each
+!! drainage system associated with a specific layer. Fluxes are distributed within
+!! each layer proportionally to the local horizontal transmissivity:
+!!
+!! \[ T = \sum_{i} K_{h,i} \cdot \Delta z_i \]
+!!
+!! where \(K_{h,i}\) is the horizontal saturated hydraulic conductivity and
+!! \(\Delta z_i\) is the thickness of compartment \(i\).
+!!
+!! The maximum depth of each discharge layer is constrained by:
+!!
+!! \[ D_{max} = 0.25 \cdot L \cdot \sqrt{\frac{K_v}{K_h}} + z_{wt} \]
+!!
+!! where \(L\) is drain spacing, \(K_v/K_h\) is the anisotropy factor, and
+!! \(z_{wt}\) is the groundwater level.
+!!
+!!### Module History
+!!
+!! @history
+!! - **1999-09-29**: Initial implementation (J. Kroes)
+!! - **2003-07-03**: Added anisotropy factor COFANI = Khor/Kvert (J. Kroes)
+!! - **2004-09-30**: Added interflow discharge layer option (R. Hendriks)
+!! - **2010-10-29**: Added Lev2Comp helper subroutine
+!! - **2018-01-28**: Fixed transmissivity bug for infiltration (R. Hendriks)
+!! - **2026**: Converted to module structure for modernization
+!! @endhistory
+!!
+!!### References
+!!
+!! The drainage flux distribution follows the approach described in the SWAP model
+!! documentation (van Dam et al., 2008). The infiltration flux distribution extension
+!! is documented in Hendriks (2010).
+!!
+!!@note
+!! This module requires the `variables` module for groundwater table data (`nowltab`)
+!! and the `arrays.fi` include file for array dimension parameters (MACP, MADR, MAHO, MAOWL).
+!!@endnote
+!!
+!!
+    implicit none
+
+    contains
+
+SUBROUTINE divdra( NumComp, NumDrain,ThickComp,ksatfit,ksatexm,   &
      &                   fluseksatexm,layer,                            &
      &                   cofani, gwlev, DistDrain, FluxDr,FluxDrComp,   &
      &                   Swdivdinf,Swnrsrf,SwTopnrsrf,Zbotdr,           &  !  Divdra, infiltration
      &                   dt,FacDpthInf,owltab,t1900)                       !  Divdra, infiltration
-! ----------------------------------------------------------------------
-!     Date               : 29/9/99
-!     Purpose            : Simulation of lateral waterfluxes in the
-!                          saturated zone. In two steps:
-!                          1. Calculate bottom-boundaries of
-!                             model_discharge_layers;
-!                          2. Distribute drainage fluxes over each
-!                             model_discharge_layer.
-!                          
-!     Subroutines called : Lev2Comp                                          
-!     Functions called   : -                                     
-!     File usage         : -
-!     Differences SWAP/SWAPS: None
-!     Remarks            : Joop Kroes (July 3,2003): COFANI = Khor/Kvert
-! ----------------------------------------------------------------------
-      use variables, only: nowltab
-      IMPLICIT NONE
+    !! Distribute drainage and infiltration fluxes over soil compartments
+    !!
+    !! This is the main workhorse subroutine that distributes lateral drainage and
+    !! infiltration fluxes across soil compartments based on transmissivity weighting.
+    !!
+    !! The algorithm proceeds through 10 major steps:
+    !!
+    !! 1. Calculate horizontal and vertical saturated conductivities for each compartment
+    !! 2. Find compartment containing the groundwater level
+    !! 3. Handle interflow (surface runoff) as highest-order drainage if enabled
+    !! 4. Calculate profile-averaged anisotropy factor and cumulative transmissivity
+    !! 5. Determine maximum depth for each discharge layer
+    !! 6. Sort drainage systems by priority (spacing × depth factor)
+    !! 7. Calculate bottom of first-order discharge layer
+    !! 8. Calculate bottoms of higher-order discharge layers
+    !! 9. Apply depth constraints based on drain spacing and anisotropy
+    !! 10. Distribute fluxes proportionally to transmissivity within each layer
+    !!
+    !! If separate infiltration distribution is enabled (`Swdivdinf=1`), infiltration
+    !! fluxes are distributed with a parabolic weighting that accounts for both
+    !! saturated and unsaturated zone transmissivity.
+    !!
+    !!@note
+    !! The transmissivity-weighted distribution assumes that lateral flow is proportional
+    !! to the product of hydraulic conductivity and thickness at each depth.
+    !!@endnote
+    !!
+    !!@warning
+    !! This subroutine modifies `FluxDrComp` in place. Ensure it is properly initialized
+    !! before calling.
+    !!@endwarning
+        
+     use variables, only: nowltab
       Include 'arrays.fi'
 
       INTEGER DrainSequence(Madr),Icomp,idr,iidr
@@ -461,23 +534,41 @@
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!  Divdra, Infiltration !!!!!!!!!!!!!!!!!!!!!!!!
 
       return
-      end
+      end subroutine divdra
 
 ! File VersionID:
 !   $Id: divdra.f90 370 2018-02-09 13:29:10Z heine003 $
 ! ----------------------------------------------------------------------
       SUBROUTINE Lev2Comp(NumComp,Level,ThickComp,         NumCom2Lev,  &
      &                    ThickCum,ThickCompAbvLev,ThickCompBlwLev)
-
-! ----------------------------------------------------------------------
-!     Date               : 29/10/10
-!     Purpose            : Find Compartment with Level and its part
-!                          Above and Under this Level  
-!     Subroutines called : -                                           
-!     Functions called   : -                                     
-!     File usage         : -
-! ----------------------------------------------------------------------
-      IMPLICIT NONE
+    !! Find compartment containing a specified depth level
+    !!
+    !! This helper subroutine locates which soil compartment contains a given
+    !! depth level (measured from the soil surface) and calculates how the
+    !! compartment is split by that level.
+    !!
+    !! The routine accumulates compartment thicknesses from top to bottom until
+    !! the specified level is reached, then computes the portions of that
+    !! compartment lying above and below the level.
+    !!
+    !!@note
+    !! Depths are measured positive downward from the soil surface (cm below surface).
+    !!@endnote
+    !!
+    !!@warning
+    !! If the specified level exceeds the total soil profile depth, the routine
+    !! calls `fatalerr` to terminate execution.
+    !!@endwarning
+    !!@note 
+    !! ----------------------------------------------------------------------
+    !!     Date               : 29/10/10
+    !!     Purpose            : Find Compartment with Level and its part
+    !!                          Above and Under this Level  
+    !!     Subroutines called : -                                           
+    !!     Functions called   : -                                     
+    !!     File usage         : -
+    !! ----------------------------------------------------------------------
+    !!@endnote
       Include 'arrays.fi'
 
       integer NumCom2Lev, NumComp
@@ -502,4 +593,5 @@
       ThickCompAbvLev = ThickComp(NumCom2Lev) - ThickCompBlwLev
 
       return
-      end
+      end subroutine Lev2Comp
+    end module distribute_drainage

@@ -1,12 +1,36 @@
-! File VersionID:
-!   $Id: surfacewater.f90 368 2018-01-11 15:44:15Z heine003 $
-! ----------------------------------------------------------------------
-      subroutine SurfaceWater(task)
-! ----------------------------------------------------------------------
-!     date               : december 2004
-!     purpose            : calculate surface water balance
-! ----------------------------------------------------------------------
-!     global
+module surfacewater_mod
+!! Module for calculating surface water balance and drainage fluxes
+!!
+!! This module handles the surface water system dynamics including:
+!!
+!! * Lateral drainage fluxes from soil to surface water
+!! * Surface water level management (automatic weirs, fixed weirs)
+!! * Water supply and discharge calculations
+!! * Distribution of drainage over soil compartments
+!!
+!! The module supports both input-based and simulated surface water levels
+!! and includes functionality for macropore drainage and extended drainage systems.
+!!
+!! @note The surface water calculations are sensitive to timestep size and may
+!! trigger automatic timestep reduction if oscillations occur.
+!! @endnote
+      use distribute_drainage, only: DIVDRA
+      use drainage_mod, only: bocodre
+      implicit none
+      contains
+
+subroutine SurfaceWater(task)
+      !! Main driver subroutine for surface water calculations
+      !!
+      !! This subroutine is called with different task numbers to perform
+      !! different stages of the surface water calculation:
+      !!
+      !! * Task 1: Initialization - read drainage input data and initialize variables
+      !! * Task 2: Calculate lateral drainage fluxes to surface water
+      !! * Task 3: Calculate surface water balance
+      !!
+      !! The subroutine manages the partitioning of drainage fluxes over soil
+      !! compartments and handles both primary and secondary drainage systems.
       use Variables
       implicit none 
       integer task
@@ -212,65 +236,83 @@
       end
 
 
-! ----------------------------------------------------------------------
+
       SUBROUTINE WLEVBAL ()
-! ----------------------------------------------------------------------
-!     UpDate             : 20080109
-!     Date               : 19990929
-!     Purpose            : calculate surf. water level from water balance
-
-! --- Set target level wlstar:
-! --- SWMAN = 1: HBWEIR
-! --- SWMAN = 2: from table (4e #2) and within adjustment period and 
-! --- taking into account the maximum drop rate. 
-! --- Calculate level for maximum supply wlstara ( = wlstar-wldip)
-
-! --- Calculate storage at wlstar and at wlstara
-! ---   If wlstara is above deepest bottom level then water supply 
-! ---   capacity is set to maximum value otherwise both swsttara and
-! ---   wsmax are set to zero
-
-! --- Calculate max. new storage: old + incoming/outgoing fluxes
-! --- 1 System falls dry: set supply to maximum,
-!       set wls at bottom of deepest channel
-! --- 2 System will not become full: set supply to maximum
-!       calculate new level from storage
-! --- 3 System becomes full under maximum supply conditions,
-! ---   Determine how, first without supply
-! --- 3a wlstara cannot be reached: calculate required supply,
-! ---    to reach wlstara and set wls to wlstara
-! --- 3b system can be filled above wlstara, however no discharge:
-! ---    wls is calculated from storage and is somewhere between
-! ---    wlstar and wlstara, no supply, no discharge
-! --- 3c wlstar can be reached :wsupp = 0;
-! ---    Now check whether there are automatic weirs for keeping the 
-! ---    level at target value or that the discharge relationship
-! ---    determines new level:
-! --- 3c1 SWMAN=2: calculate discharge
-! ---     check whether there is enough discharge capacity:
-! ---     in case SWQHR = 1: calculate discap
-! ---     in case SWQHR = 2: find discap from table
-! ---     if sufficient capacity wls = wlstar otherwise set overflow
-! --- 3c2 SWMAN=1 or overflow
-! ---     Calculate highest possible discharge, if still unsufficient 
-! ---     to handle present drain fluxes: stop - system overflow
-! ---     otherwise start iteration procedure to determine new level,
-! ---     storage and discharge:
-
-! ***********************************************
-! --- Iteration Procedure:
-! --- Establish lower and upper bounds: hbweir(imper) and +100cm
-! --- Calculate storage and discharge for point halfway: swsti, wdisi
-! --- Calculate new storage: if higher than swsti then adjust lower
-! --- bound to point halfway otherwise adapt upper bound to point halfway
-! --- Continue until upper and lower bounds converge (< 0.001 cm)   
-! --- Ready: update wls, swst and wdis
-! ***********************************************
-
-!     Subroutines called :                          
-!     Functions called   : swstlev                          
-!     File usage         :
-! ----------------------------------------------------------------------
+      !! Calculate surface water level from water balance (simulated level)
+      !!
+      !! This subroutine determines the surface water level based on a complete
+      !! water balance calculation. It handles:
+      !!
+      !! * Target level determination (automatic or fixed weir)
+      !! * Storage calculation at target levels
+      !! * Supply and discharge calculations
+      !! * Overflow conditions
+      !! * Ponding limitations
+      !!
+      !! The routine uses an iterative procedure to balance incoming drainage
+      !! with discharge through weirs or open channels.
+      !!
+      !! @warning May trigger timestep reduction if water level oscillations
+      !! exceed threshold or if ponding becomes excessive.
+      !! @endwarning
+      !! @note
+      !! ----------------------------------------------------------------------
+      !!     UpDate             : 20080109
+      !!     Date               : 19990929
+      !!     Purpose            : calculate surf. water level from water balance
+      !!
+      !! --- Set target level wlstar:
+      !! --- SWMAN = 1: HBWEIR
+      !! --- SWMAN = 2: from table (4e #2) and within adjustment period and 
+      !! --- taking into account the maximum drop rate. 
+      !! --- Calculate level for maximum supply wlstara ( = wlstar-wldip)
+      !!
+      !! --- Calculate storage at wlstar and at wlstara
+      !! ---   If wlstara is above deepest bottom level then water supply 
+      !! ---   capacity is set to maximum value otherwise both swsttara and
+      !! ---   wsmax are set to zero
+      !!
+      !! --- Calculate max. new storage: old + incoming/outgoing fluxes
+      !! --- 1 System falls dry: set supply to maximum,
+      !!       set wls at bottom of deepest channel
+      !! --- 2 System will not become full: set supply to maximum
+      !!       calculate new level from storage
+      !! --- 3 System becomes full under maximum supply conditions,
+      !! ---   Determine how, first without supply
+      !! --- 3a wlstara cannot be reached: calculate required supply,
+      !! ---    to reach wlstara and set wls to wlstara
+      !! --- 3b system can be filled above wlstara, however no discharge:
+      !! ---    wls is calculated from storage and is somewhere between
+      !! ---    wlstar and wlstara, no supply, no discharge
+      !! --- 3c wlstar can be reached :wsupp = 0;
+      !! ---    Now check whether there are automatic weirs for keeping the 
+      !! ---    level at target value or that the discharge relationship
+      !! ---    determines new level:
+      !! --- 3c1 SWMAN=2: calculate discharge
+      !! ---     check whether there is enough discharge capacity:
+      !! ---     in case SWQHR = 1: calculate discap
+      !! ---     in case SWQHR = 2: find discap from table
+      !! ---     if sufficient capacity wls = wlstar otherwise set overflow
+      !! --- 3c2 SWMAN=1 or overflow
+      !! ---     Calculate highest possible discharge, if still unsufficient 
+      !! ---     to handle present drain fluxes: stop - system overflow
+      !! ---     otherwise start iteration procedure to determine new level,
+      !! ---     storage and discharge:
+      !!
+      !! ***********************************************
+      !! --- Iteration Procedure:
+      !! --- Establish lower and upper bounds: hbweir(imper) and +100cm
+      !! --- Calculate storage and discharge for point halfway: swsti, wdisi
+      !! --- Calculate new storage: if higher than swsti then adjust lower
+      !! --- bound to point halfway otherwise adapt upper bound to point halfway
+      !! --- Continue until upper and lower bounds converge (< 0.001 cm)   
+      !! --- Ready: update wls, swst and wdis
+      !! ***********************************************
+      !!
+      !!     Subroutines called :                          
+      !!     Functions called   : swstlev                          
+      !!     File usage         :
+      !!@endnote
       use variables, only: tcum,NRPRI,impend,nmper,swman,imper,wlstar,wls,hbweir,gwl,wlsman,gwlcrit,nphase,dropr,sttab,wscap,   &
                            dt,runots,QRapDra,swst,zbotdr,alphaw,betaw,qdrd,cqdrd,cwsupp,cwout,wlsbak,osswlm,T,NUMNOD,THETAS,THETA,DZ,VCRIT,NODHD,HCRIT, &
                            H,SWQHR,QQHTAB,wldip,hwlman,vtair,overfl,numadj,intwl,t1900,logf,swscre,fldecdt,fldtmin,rsro,pond,pondmx
@@ -562,20 +604,32 @@
 
 ! ----------------------------------------------------------------------
       subroutine WBALLEV ()
-! ----------------------------------------------------------------------
-!     Date               : 29/9/99
-!     Purpose            : close surface water balance using 
-!                          given (input) surface water levels   
-
-! --- Compare storage at T + drainage fluxes with storage at T+DT
-! --- The difference will be either discharge or supply
-! --- Update totals (of discharge, supply and qdrd)
-
-!     Subroutines called :                          
-!     Functions called   : swstlev                          
-!     File usage         :
-!     Differences SWAP/SWAPS: None        
-! ----------------------------------------------------------------------
+      !! Close surface water balance using given input surface water levels
+      !!
+      !! This subroutine handles the case where surface water levels are
+      !! provided as input rather than calculated. It:
+      !!
+      !! * Fetches the water level from input time series
+      !! * Calculates surface water storage at previous and current time
+      !! * Determines supply or discharge as the residual of the water balance
+      !! * Updates cumulative water balance terms
+      !!
+      !! The difference between storage at time t and t+dt, accounting for
+      !! drainage fluxes, determines whether supply or discharge occurred.
+      !!@note
+      !!     Date               : 29/9/99
+      !!     Purpose            : close surface water balance using 
+      !!                          given (input) surface water levels   
+      !!
+      !! --- Compare storage at T + drainage fluxes with storage at T+DT
+      !! --- The difference will be either discharge or supply
+      !! --- Update totals (of discharge, supply and qdrd)
+      !!
+      !!     Subroutines called :                          
+      !!     Functions called   : swstlev                          
+      !!     File usage         :
+      !!     Differences SWAP/SWAPS: None        
+      !!@endnote
       use variables, only: wls,wlstab,swst,dt,runots,QRapDra,qdrd,cqdrd,cwsupp,cwout,WLSOLD,t1900
       IMPLICIT NONE
       include 'arrays.fi'
@@ -621,3 +675,4 @@
       end
 
 
+end module surfacewater_mod

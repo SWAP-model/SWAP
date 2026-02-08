@@ -712,7 +712,7 @@
 
  200  format(/,                                                         &
      & '                         cm,  cm3/cm3,         cm,       cm/d,',&
-     & '       cm/d,       cm/d,       cm/d,     ºC,     mg/cm3,     ', &
+     & '       cm/d,       cm/d,       cm/d,     ï¿½C,     mg/cm3,     ', &
      &'mg/cm3,   mg/cm2/d,     cm,     cm,  nr,   nr',/                 &
      & '      date,    time,  depth, wcontent,      phead,    hconduc,',&
      & '   drainage,    rootext,  waterflux,   temp,    solute1,    ',  &
@@ -720,7 +720,7 @@
 
  210  format(/,                                                         &
      & '                 cm,  cm3/cm3,         cm,       cm/d,',        &
-     & '       cm/d,       cm/d,       cm/d,     ºC,     mg/cm3,     ', &
+     & '       cm/d,       cm/d,       cm/d,     ï¿½C,     mg/cm3,     ', &
      &'mg/cm3,   mg/cm2/d,     cm,     cm,  nr,   nr',/                 &
      & '       date,  depth, wcontent,      phead,    hconduc,',        &
      & '   drainage,    rootext,  waterflux,   temp,    solute1,    ',  &
@@ -3498,6 +3498,8 @@
 ! ----------------------------------------------------------------------
 
       use variables
+      use drainage_mod, only: drainage
+      use surfacewater_mod, only: SurfaceWater
       implicit none
 
 ! --- global variables ------------------

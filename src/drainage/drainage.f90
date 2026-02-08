@@ -1,23 +1,152 @@
-! File VersionID:
-!   $Id: drainage.f90 368 2018-01-11 15:44:15Z heine003 $
-! ----------------------------------------------------------------------
-      subroutine bocodrb (dh)
+!> Drainage Module - Lateral water flux calculations for subsurface drainage systems
+!!
+!! This module provides comprehensive routines for simulating lateral drainage and 
+!! infiltration fluxes in soil profiles with subsurface drainage systems. It supports
+!! multiple drainage calculation methods and handles complex interactions between 
+!! groundwater, surface water, and drainage systems.
+!!
+!!### Calculation Methods
+!!
+!! The module supports three primary drainage calculation approaches:
+!!
+!! 1. **Table lookup (dramet=1)**: Direct interpolation from groundwater level vs flux tables
+!! 2. **Hooghoudt/Ernst equations (dramet=2)**: Analytical solutions based on drainage theory
+!! 3. **Resistance method (dramet=3)**: Flux calculated from drainage/infiltration resistances
+!!
+!!### Key Features
+!!
+!! - Multiple drainage levels (up to `nrlevs` systems)
+!! - Layered soil profiles with anisotropic hydraulic conductivity
+!! - Surface water - groundwater interaction
+!! - Macropore rapid drainage pathways
+!! - Interflow (surface runoff) simulation
+!! - Dynamic wetted perimeter for open channels
+!! - Storage capacity constraints for surface water systems
+!! - Flux distribution over soil compartments using [[DIVDRA]]
+!!
+!!### Physical Concepts
+!!
+!! **Drainage resistance components:**
+!!
+!! - \(R_{ver}\): Vertical resistance from water table to drain level
+!! - \(R_{hor}\): Horizontal resistance (radial flow to drains)
+!! - \(R_{rad}\): Radial resistance near the drain
+!! - \(R_{entry}\): Entry resistance into drain
+!!
+!! Total drainage flux: \(q = \frac{dh}{R_{tot}}\) where \(dh\) is head difference
+!!
+!! **Equivalent depth** for radial flow (Hooghoudt):
+!!
+!! \[ d_{eq} = \frac{\pi L}{8\left[\ln(L/r_0) + f(\pi d/L)\right]} \]
+!!
+!! where \(L\) is drain spacing, \(r_0\) is drain radius, and \(d\) is thickness
+!! of saturated zone below drains.
+!!
+!!### Module Dependencies
+!!
+!! - **distribute_drainage**: Provides [[DIVDRA]] for flux distribution over compartments
+!! - **variables**: Global state variables (gwl, qdrain, etc.)
+!! - **params.fi**: Physical constants including `small`
+!!
+!!### Module History
+!!
+!!@history
+!! - **2002-07**: Initial implementation
+!! - **2004-08**: Added [[drainage]] main routine
+!! - **2014-12**: Major update and refactoring
+!! - **2017-09**: Added infiltration head limiting (P. van Walsum)
+!! - **2026**: Converted to modern module structure
+!!@endhistory
+!!
+!!### References
+!!
+!! - Hooghoudt, S.B. (1940): Bijdragen tot de kennis van eenige natuurkundige 
+!!   grootheden van den grond. Verslagen Landbouwkundige Onderzoekingen 46(14)
+!! - Ernst, L.F. (1956): Calculation of the steady flow of groundwater in vertical 
+!!   cross sections. Netherlands Journal of Agricultural Science 4: 126-131
+!! - van Dam, J.C. et al. (2008): SWAP version 3.2. Theory description and user manual.
+!!   Wageningen University and Research Centre.
+!!
+module drainage_mod
+  use distribute_drainage, only: DIVDRA
+    implicit none
 
-! ----------------------------------------------------------------------
-!     update             : Dec 2014
-!     date               : July 2002
-!     purpose            : calculates lateral drainage fluxes
-! ----------------------------------------------------------------------  
+    include  'params.fi'
+
+    interface
+      function afgen(table, n, x)
+          real(8) :: afgen
+          integer, intent(in) :: n
+          real(8), intent(in) :: table(n), x
+      end function afgen
+    end interface
+    contains
+
+    subroutine bocodrb (dh)
+    !> Calculate drainage flux using Hooghoudt/Ernst or resistance methods
+    !!
+    !! This subroutine calculates the total drainage flux for a single drainage system
+    !! or multiple levels based on the hydraulic head difference between groundwater
+    !! level and drainage base level. 
+    !!
+    !!### Calculation Methods
+    !!
+    !!#### Method 1: Table Lookup (dramet=1)
+    !! Direct interpolation from pre-calculated gwl-flux tables.
+    !!
+    !!#### Method 2: Hooghoudt/Ernst Analytical (dramet=2)
+    !!
+    !! Uses classical drainage equations with five geometric configurations:
+    !!
+    !! - **ipos=1**: Homogeneous soil on impervious layer
+    !! - **ipos=2**: Homogeneous soil, drain above impervious layer  
+    !! - **ipos=3**: Two-layer soil, drain at interface
+    !! - **ipos=4**: Drain in bottom layer of two-layer system
+    !! - **ipos=5**: Drain in top layer of two-layer system
+    !!
+    !! For each case, calculates equivalent depth and combines resistance components.
+    !!
+    !!#### Method 3: Resistance Method (dramet=3)
+    !!
+    !! Loops over all drainage levels. For each level:
+    !!
+    !! 1. Get surface water level from time series table
+    !! 2. Calculate head difference \(dh = gwl - swl\)
+    !! 3. Apply flux equation based on flow direction:
+    !!    - Drainage: \(q = dh / R_{drain}\)
+    !!    - Infiltration: \(q = dh / R_{infil}\)
+    !!    - Interflow: \(q = C \cdot dh^E\) (power law)
+    !!
+    !!### Equivalent Depth Calculation
+    !!
+    !! For \(x = 2\pi d/L\):
+    !!
+    !! - If \(x > 0.5\): Use series expansion
+    !!   \[ f(x) = \sum_{i=1,3,5} \frac{4e^{-2ix}}{i(1-e^{-2ix})} \]
+    !!
+    !! - If \(x < 0.5\): Use logarithmic approximation
+    !!   \[ f(x) = \frac{\pi^2}{4x} + \ln\left(\frac{x}{2\pi}\right) \]
+    !!
+    !!### Special Features
+    !!
+    !! - Limits contributing layer below drains to maximum \(L/4\)
+    !! - Handles dry channel conditions (sets drainage to zero)
+    !! - Updates macropore drainage basis (`ZDraBas`) if enabled
+    !! - Constrains infiltration head to water depth in channel (optional)
+    !!
+    !!@note
+    !! For dramet=2, only infiltration is prevented (dh<0). For dramet=3, 
+    !! bidirectional flow is allowed based on resistance values.
+    !!@endnote
+    !!
       use variables, only: dramet,gwl,zbotdr,basegw,l,qdrain,ipos,khtop,khbot,kvtop,kvbot,entres,wetper,zintf,geofac,swdtyp,      &
                            owltab,t1900,swallo,drares,infres,qdrtab,nrlevs,swnrsrf,cofintfl,expintfl,dt,shape,FlMacropore,NumLevRapDra,ZDraBas,swliminf,nowltab
-      implicit none
-      !include 'arrays.fi'
 
-! --- global
-      real(8) dh
+  ! --- global
+        real(8) dh
 
-! ----------------------------------------------------------------------
-! --- local
+  ! ---------------------------------------------------------------------- 
+  ! --- local
       real(8) afgen
       integer i,lev
 
@@ -29,16 +158,15 @@
       parameter (pi=3.14159d0)
 
       character(len=200) messag
-      include  'params.fi'
-! ----------------------------------------------------------------------
+  ! ----------------------------------------------------------------------
 
       gwldra = gwl
 
-! --- drainage flux calculated according to hooghoudt or ernst
+  ! --- drainage flux calculated according to hooghoudt or ernst
       if (dramet.eq.2) then
         if (shape .gt. small) dh = (gwldra-zbotdr(1)) / shape
 
-! --- contributing layer below drains limited to 1/4 l
+  ! --- contributing layer below drains limited to 1/4 l
         zimp = max (basegw,zbotdr(1)-0.25*l(1))
         dbot = (zbotdr(1)-zimp)  
         if (dbot.lt.0.0d0) then
@@ -48,23 +176,23 @@
           call fatalerr ('Bocodrb',messag)
         endif
               
-! --- no infiltration allowed
+  ! --- no infiltration allowed
         if (dh.lt.1.0d-10) then
           qdrain(1) = 0.0d0
           return
         endif
 
-! --- case 1: homogeneous, on top of impervious layer
+  ! --- case 1: homogeneous, on top of impervious layer
         if (ipos.eq.1) then
 
-! --- calculation of drainage resistance and drainage flux
+  ! --- calculation of drainage resistance and drainage flux
           totres = l(1)*l(1)/(4*khtop*abs(dh)) + entres
           qdrain(1) = dh/totres 
 
-! --- case 2,3: in homogeneous profile or at interface of 2 layers
+  ! --- case 2,3: in homogeneous profile or at interface of 2 layers
         elseif (ipos.eq.2.or.ipos.eq.3) then
 
-! --- calculation of equivalent depth
+  ! --- calculation of equivalent depth
           x = 2*pi*dbot/l(1)
           if (x.gt.0.5d0) then
             fx = 0.0d0
@@ -82,7 +210,7 @@
           endif 
           if (eqd.gt.dbot) eqd = dbot
 
-! --- calculation of drainage resistance & drainage flux
+  ! --- calculation of drainage resistance & drainage flux
           if (ipos.eq.2) then
             totres = l(1)*l(1)/(8*khtop*eqd+4*khtop*abs(dh)) + entres 
           elseif (ipos.eq.3) then
@@ -90,7 +218,7 @@
           endif
           qdrain(1) = dh/totres 
 
-! --- case 4: drain in bottom layer
+  ! --- case 4: drain in bottom layer
         elseif (ipos.eq.4) then
           if (zbotdr(1).gt.zintf) then
             messag = 'At the drainage section, the level of the'        &
@@ -105,7 +233,7 @@
           totres = rver+rhor+rrad+entres
           qdrain(1) = dh/totres 
 
-! --- case 5 : drain in top layer
+  ! --- case 5 : drain in top layer
         elseif (ipos.eq.5) then
           if (zbotdr(1).lt.zintf) then
             messag = 'At the drainage section, the level of the'        &
@@ -122,35 +250,35 @@
           qdrain(1) = dh/totres
         endif
 
-! --- drainage flux calc. using given drainage/infiltration resistance
+  ! --- drainage flux calc. using given drainage/infiltration resistance
       elseif (dramet.eq.3) then
 
         do lev = 1,nrlevs
           fldry = .false.
 
-! ---     first copy to 1-dimensional table temptab
-!          do i = 1,2*nowltab(lev)
-!          do i = 1,2*maowl 
-!            temptab(i) = owltab(lev,i)
-!          end do
-!          x = afgen(temptab,2*nowltab(lev),t1900+dt-1.d0)
-!          x = afgen(temptab,2*maowl,t1900+dt-1.d0)
+  ! ---     first copy to 1-dimensional table temptab
+  !          do i = 1,2*nowltab(lev)
+  !          do i = 1,2*maowl 
+  !            temptab(i) = owltab(lev,i)
+  !          end do
+  !          x = afgen(temptab,2*nowltab(lev),t1900+dt-1.d0)
+  !          x = afgen(temptab,2*maowl,t1900+dt-1.d0)
           x = afgen(owltab(lev,1:2*nowltab(lev)),2*nowltab(lev),t1900+dt-1.d0)
-!          x = afgen(owltab(lev,1:2*maowl),2*maowl,t1900+dt-1.d0)
+  !          x = afgen(owltab(lev,1:2*maowl),2*maowl,t1900+dt-1.d0)
           if ( (x-zbotdr(lev)) .lt. 1.0d-3) then
             fldry = .true.
           endif
           dh = gwldra- x
           if (fldry) dh = gwldra-zbotdr(lev)
-! ---     drainage basis for rapid drainage through macropores
+  ! ---     drainage basis for rapid drainage through macropores
           if (FlMacropore .and. lev.eq.NumLevRapdra .and. swdtyp(lev).eq.2) then
             ZDraBas= dmax1(x,zbotdr(NumLevRapDra))
           endif
 
-! ---     drainage              
+  ! ---     drainage              
           if (dh.ge.0.0d0) then
 
-! ---       interflow flux calculated by a power function
+  ! ---       interflow flux calculated by a power function
             if ((lev.eq.nrlevs).and.(swnrsrf.eq.1)) then
               qdrain(lev) = cofintfl*dh**expintfl              
             else
@@ -158,54 +286,108 @@
               if (swallo(lev).eq.2 ) qdrain(lev) = 0.0d0
             endif
 
-! ---     infiltration
+  ! ---     infiltration
           else
-! Pvw_begin , implemented by KRO_20170907
-!           Limit the infiltration head (-dh, dh<0. here) to the waterdepth in the channel
+  ! Pvw_begin , implemented by KRO_20170907
+  !           Limit the infiltration head (-dh, dh<0. here) to the waterdepth in the channel
             if(swdtyp(lev).eq.2) then
               if(swliminf.eq.1) then
                 dh = max(dh,(zbotdr(lev)-x))
               endif
             endif
-! Pvw_end   , implemented by KRO_20170907
+  ! Pvw_end   , implemented by KRO_20170907
             qdrain(lev) = dh/infres(lev)
             if (swallo(lev).eq.3.or.fldry ) qdrain(lev) = 0.0d0
           endif
         end do
 
 
-! --- drainage flux from table with gwlevel - flux data pairs
+  ! --- drainage flux from table with gwlevel - flux data pairs
       elseif (dramet.eq.1) then
         qdrain(1) = afgen (qdrtab,50,abs(gwldra))
       endif
 
       return
-      end
+  end subroutine bocodrb
 
-! ----------------------------------------------------------------------
-      subroutine drainage 
-! ----------------------------------------------------------------------
-!     Date               : Aug 2004   
-!     Purpose            : calculate drainage rate and state variables 
-! ----------------------------------------------------------------------
+  subroutine drainage 
+    !> Main drainage orchestration routine
+    !!
+    !! This subroutine coordinates all drainage-related calculations for each time step,
+    !! including initialization, flux calculation, distribution, and flux accounting.
+    !!
+    !!### Algorithm Workflow
+    !!
+    !! **1. Initialization (first call only)**
+    !! - Set macropore drainage basis level
+    !! - Extract from drain bottom or surface water table
+    !!
+    !! **2. Reset flux accumulators**
+    !! - Zero intermediate fluxes if `flzerointr = .true.`
+    !! - Zero cumulative fluxes if `flzerocumu = .true.`
+    !!
+    !! **3. Handle deep groundwater**
+    !! - Return with zero drainage if gwl > 998 cm (below profile)
+    !!
+    !! **4. Calculate total drainage rates**
+    !! - Call [[bocodrb]] to compute `qdrain(level)` for all levels
+    !! - Returns head difference `dh` for optional use
+    !!
+    !! **5. Distribute fluxes over compartments**
+    !! 
+    !! Two distribution options controlled by `swdivd`:
+    !!
+    !! - **swdivd = 0**: All flux through bottom compartment only
+    !! - **swdivd = 1**: Distributed using [[DIVDRA]] based on transmissivity
+    !!
+    !! **6. Adjust discharge layer tops (optional)**
+    !!
+    !! If `swdislay = 1` or `2`, recalculate top of discharge layers:
+    !!
+    !! \[ z_{top} = f \cdot gwl + (1-f) \cdot (gwl - dh) \]
+    !!
+    !! Then redistribute fluxes to exclude compartments above new top.
+    !!
+    !! **7. Sum total drainage**
+    !! - Calculate `qdrtot` as sum of all level fluxes
+    !!
+    !!### Flux Distribution Options
+    !!
+    !! | swdivd | Description | Vertical profile |
+    !! |--------|-------------|------------------|
+    !! | 0 | Bottom only | All flux at `numnod` |
+    !! | 1 | Transmissivity-weighted | Distributed over discharge layer |
+    !!
+    !!### Discharge Layer Adjustment
+    !!
+    !! | swdislay | swtopdislay | Behavior |
+    !! |----------|-------------|----------|
+    !! | 0 | - | Fixed discharge layer |
+    !! | 1 | 1 | User-specified top level |
+    !! | 2 | 1 | Dynamic top based on gwl and dh |
+    !!
+    !!@note
+    !! The `flInitDraBas` flag ensures macropore initialization happens only once
+    !! per simulation. The routine returns early after initialization.
+    !!@endnote
+    !!
 
       use variables
-      implicit none
 
-!     local
+    !     local
       integer node,level
       real(8) zCum,difzTopDisLay(madr),ratio,ratiodz,sumqdr(madr),dh
       real(8) afgen   !, temptab(2*maowl)
       integer nodeTopDisLay(madr)
       CHARACTER(len=33) messag
 
-!   - In case of macropores: initialise drainage basis for rapid drainage through macropores
+    !   - In case of macropores: initialise drainage basis for rapid drainage through macropores
       if (flInitDraBas) then
          if (NumLevRapDra.gt.nrlevs) then
             messag = ' NUMLEVRAPDRA greater then NRLEVS'
             call fatalerr('MacroRead',messag)
          endif
-!
+
          if (dramet.lt.3) then
             ZDraBas = zbotdr(1)
          else
@@ -219,14 +401,14 @@
                ZDraBas = afgen(owltab(NumLevRapDra,1:2*nowltab(NumLevRapDra)),2*nowltab(NumLevRapDra),t1900)
             endif
          endif
-!
+
          flInitDraBas = .false.
-!
+
          Return
-!
+
       endif
 
-! --- reset intermediate soil water fluxes
+    ! --- reset intermediate soil water fluxes
       if (flzerointr) then
         do node = 1,numnod
           do level = 1,nrlevs
@@ -238,7 +420,7 @@
         iqdra = 0.0d0
       endif
 
-! --- reset cumulative soil water fluxes
+    ! --- reset cumulative soil water fluxes
       if (flzerocumu) then
         cqdra = 0.0d0
         do level = 1,nrlevs
@@ -248,7 +430,7 @@
         enddo
       endif
 
-! --- reset to zero if groundwater level under soil profile and return
+    ! --- reset to zero if groundwater level under soil profile and return
       if (gwl.gt.998.0d0) then
         do level = 1,nrlevs
           qdrain(level) = 0.0d0
@@ -256,15 +438,15 @@
         return
       endif
 
-! --- calculate total drainage rate and state variables
+    ! --- calculate total drainage rate and state variables
       call bocodrb (dh)
 
-! --- partition drainage flux over compartments
+    ! --- partition drainage flux over compartments
       if (swdivd.eq.1) then
          call divdra (numnod,nrlevs,dz,ksatfit,ksatexm,fluseksatexm,    &
      &      layer,cofani,gwl,l,qdrain,qdra,Swdivdinf,Swnrsrf,           &
      &      SwTopnrsrf,Zbotdr,dt,FacDpthInf,owltab,t1900)                  !  Divdra, infiltration
-!       redistribute qdrain with new top boundary for discharge layers
+    !       redistribute qdrain with new top boundary for discharge layers
         if(swdislay.eq.2) then
             do level=1,nrlevs
                if(swtopdislay(level).eq.1)  then
@@ -276,14 +458,14 @@
         if(swdislay.eq.1 .or. swdislay.eq.2) then
             do level=1,nrlevs
                if(swtopdislay(level).eq.1)  then
-!                 find node nr of new top of discharge layer
+    !                 find node nr of new top of discharge layer
                   nodeTopDisLay(level) = 1
                   zCum               = - dz(1)
                   do while (zTopDisLay(level) .lt. zCum)
                      nodeTopDisLay(level) = nodeTopDisLay(level) + 1
                      zCum              = zCum - dz(nodeTopDisLay(level))
                   enddo
-!                 saturated part (difzTopDisLay(lev)) of compartment containing waterlevel
+    !                 saturated part (difzTopDisLay(lev)) of compartment containing waterlevel
                   difzTopDisLay(level) = zTopDisLay(level) - zCum
                   ratiodz =                                             &
      &                     difzTopDisLay(level)/dz(nodeTopDisLay(level))
@@ -297,7 +479,7 @@
                   else
                      ratio = qdrain(level)/sumqdr(level)
                   end if
-!                 redistribute drainwater fluxes
+    !                 redistribute drainwater fluxes
                   do node = 1,nodeTopDisLay(level)-1
                      qdra(level,node) = 0.0d0
                   end do           
@@ -310,7 +492,7 @@
             end do           
          endif
       else
-! --- drainage flux through lowest compartment 
+    ! --- drainage flux through lowest compartment 
         do level = 1,nrlevs
           do node = 1,numnod-1
             qdra(level,node) = 0.0d0
@@ -325,27 +507,81 @@
       end do
 
       return
-      end 
+  end subroutine drainage
 
-! ----------------------------------------------------------------------
-      subroutine bocodre (dh)
-! ----------------------------------------------------------------------
-!     Date               : 5/5/2001
-!     Purpose            :        
-! --- Calculate drainage/infiltration fluxes for all levels: qdrain(level).
-! --- Summate fluxes to secondary system: qdrd
-! --- Given present storage (swst), qdrd and wscap(imper), check if the
-! --- system falls dry. If so reduce drainage fluxes proportionally in 
-! --- such a way that total drainage flux equals available amount 
-! --- ( = swst + wscap).
-!     Subroutines called : -                                           
-!     Functions called   : -                                     
-!     File usage         : -  Error handling
-! ----------------------------------------------------------------------  
-      use variables, only: swsec,swsrf,nrlevs,nrpri,gwl,zbotdr,taludr,widthr,pond,pondmx,swdtyp,dt,wls,wlp,drainl,l,rdrain,rinfi,      &
+  subroutine bocodre (dh)    
+    !> Calculate drainage/infiltration with surface water management
+    !!
+    !! This subroutine handles drainage calculations when surface water management
+    !! is active (`swsrf >= 2`), including interactions with secondary drainage systems
+    !! and storage capacity constraints.
+    !!
+    !!### Key Features
+    !!
+    !! **Dynamic wetted perimeter for open channels:**
+    !!
+    !! For trapezoidal channels: 
+    !! \[ P_{wet} = w + 2\sqrt{h^2 + (h/s)^2} \]
+    !! where \(w\) is bottom width, \(h\) is water depth, \(s\) is side slope.
+    !!
+    !! **Drainage base level determination:**
+    !! - If only gwl above bottom: drain bottom is base
+    !! - If surface water above bottom: surface level is base
+    !! - Updates macropore drainage basis
+    !!
+    !! **Resistance calculation:**
+    !! - Drainage (dh>0): Uses `rdrain` and `rentry`
+    !! - Infiltration (dh<0): Uses `rinfi` and `rexit`
+    !! - Surface drainage: Dynamic resistance based on head
+    !!
+    !! **Interflow power law:**
+    !! \[ q = C_{intfl} \cdot dh^{E_{intfl}} \]
+    !!
+    !!### Storage Constraint Handling
+    !!
+    !! For secondary systems (`swsec=2`, `swsrf>=2`):
+    !!
+    !! 1. Calculate potential storage change: \(\Delta V = (q_{tot} + q_{cap}) \cdot \Delta t\)
+    !! 2. Check if storage becomes negative
+    !! 3. If yes, reduce all secondary level fluxes proportionally:
+    !!    \[ q_{adj} = q_{orig} \cdot \frac{q_{max}}{q_{tot}} \]
+    !!    where \(q_{max} = -(Storage + q_{cap} \cdot \Delta t) / \Delta t\)
+    !!
+    !!### Surface Drainage (Vacuum Cleaner)
+    !!
+    !! When `swnrsrf=1` for top level:
+    !! - Resistance decreases with increasing head
+    !! - Minimum resistance constrained by `rsurfshallow`
+    !! - \(R_d = R_{deep} - dh\)
+    !!
+    !!@note
+    !! The `imper` variable tracks the current surface water management period.
+    !! Periods are defined by `impend` array.
+    !!@endnote
+    !!
+    !!@warning
+    !! Uses GOTO statement for management period search (line 800). 
+    !! This is legacy code structure that should be refactored to DO/IF constructs.
+    !!@endwarning
+    !!
+    !!@note
+    !! ----------------------------------------------------------------------
+    !!     Date               : 5/5/2001
+    !!     Purpose            :        
+    !! --- Calculate drainage/infiltration fluxes for all levels: qdrain(level).
+    !! --- Summate fluxes to secondary system: qdrd
+    !! --- Given present storage (swst), qdrd and wscap(imper), check if the
+    !! --- system falls dry. If so reduce drainage fluxes proportionally in 
+    !! --- such a way that total drainage flux equals available amount 
+    !! --- ( = swst + wscap).
+    !!     Subroutines called : -                                           
+    !!     Functions called   : -                                     
+    !!     File usage         : -  Error handling
+    !! ----------------------------------------------------------------------  
+    !!@endnote
+  use variables, only: swsec,swsrf,nrlevs,nrpri,gwl,zbotdr,taludr,widthr,pond,pondmx,swdtyp,dt,wls,wlp,drainl,l,rdrain,rinfi,      &
                            rentry,rexit,gwlinf,wetper,qdrain,qdrd,impend,nmper,wscap,swst,swnrsrf,rsurfdeep,rsurfshallow,cofintfl,          &
                            expintfl,t1900,FlMacropore,NumLevRapdra,ZDraBas
-      IMPLICIT NONE
 
 ! --- global
       real(8) dh
@@ -513,5 +749,6 @@
       endif
 
       return
-      end
+    end subroutine bocodre
 
+  end module drainage_mod

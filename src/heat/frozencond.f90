@@ -94,6 +94,7 @@
 ! ----------------------------------------------------------------------
 !     Swap modules for data communication
       use variables
+      use distribute_drainage, only: DIVDRA
       implicit none
 
 !     global - in
