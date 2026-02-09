@@ -1,3 +1,4 @@
+module drainage_mod
 !> Drainage Module - Lateral water flux calculations for subsurface drainage systems
 !!
 !! This module provides comprehensive routines for simulating lateral drainage and
@@ -67,7 +68,6 @@
 !! - van Dam, J.C. et al. (2008): SWAP version 3.2. Theory description and user manual.
 !!   Wageningen University and Research Centre.
 !!
-module drainage_mod
    use distribute_drainage, only: DIVDRA
    implicit none
 
@@ -307,10 +307,10 @@ owltab,t1900,swallo,drares,infres,qdrtab,nrlevs,swnrsrf,cofintfl,expintfl,dt,sha
             end if
 
             return
-            end subroutine bocodrb
+    end subroutine bocodrb
 
-            subroutine drainage
-               !> Main drainage orchestration routine
+    subroutine drainage
+    !> Main drainage orchestration routine
     !!
     !! This subroutine coordinates all drainage-related calculations for each time step,
     !! including initialization, flux calculation, distribution, and flux accounting.

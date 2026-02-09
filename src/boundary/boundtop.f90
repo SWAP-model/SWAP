@@ -1,15 +1,82 @@
-! File VersionID:
-!   $Id: boundtop.f90 368 2018-01-11 15:44:15Z heine003 $
-! ----------------------------------------------------------------------
-      subroutine boundtop 
-! ----------------------------------------------------------------------
-!     date               : August 2004 - June 2012
-!     purpose            : determine soil profile top boundary condition      
-! ----------------------------------------------------------------------
+      
+module boundtop_mod
+!> Module for soil profile top boundary conditions
+!! 
+!! This module determines the top (surface) boundary condition for the SWAP
+!! hydrological model. It handles atmospheric demand, soil evaporation,
+!! precipitation infiltration, surface ponding, runoff generation, and
+!! interactions with macropore flow at the soil surface.
+!!
+!! The module implements a switching boundary condition that can alternate
+!! between pressure head (ponding) and flux (atmospheric demand) boundary
+!! types depending on soil saturation and infiltration capacity.
+!!
+!! @author Original SWAP team
+!! @date August 2004 - June 2012
+!! @date Modified February 2026 (modularization)
+!! @note
+!! File VersionID:
+!!   $Id: boundtop.f90 368 2018-01-11 15:44:15Z heine003 $
+!! @endnote
+!! ----------------------------------------------------------------------
       use variables
       use swap_log, only: log_debug, to_str
       implicit none
+      Include 'arrays.fi'
 
+      private
+      public :: boundtop, PONDRUNOFF
+
+contains
+
+   subroutine boundtop
+   ! ----------------------------------------------------------------------
+   !> Determine soil profile top boundary condition
+   !!
+   !! This subroutine calculates the surface boundary condition by evaluating
+   !! atmospheric demand (precipitation, evaporation) against soil hydraulic
+   !! properties to determine whether flux or pressure head conditions apply.
+   !!
+   !! ## Algorithm Overview
+   !!
+   !! 1. Calculate soil evaporation based on hydraulic conductivity and
+   !!    atmospheric demand (limited by Darcy's law)
+   !! 2. Compute net surface flux (precipitation + runon - evaporation)
+   !! 3. Check if atmospheric demand condition applies (flux boundary)
+   !! 4. If soil cannot accept the flux, switch to ponding (pressure boundary)
+   !! 5. Calculate potential macropore infiltration if applicable
+   !!
+   !! ## Boundary Condition Types
+   !!
+   !! The subroutine sets either:
+   !! - **Flux boundary** (`ftoph = .false.`): When soil can accept atmospheric flux
+   !! - **Pressure head boundary** (`ftoph = .true.`): When ponding occurs
+   !!
+   !! ## Global Variables Modified
+   !!
+   !! - `ftoph`: Boundary type flag (flux=.false., pressure=.true.)
+   !! - `hsurf`: Pressure head at surface [cm]
+   !! - `qtop`: Surface flux [cm/d]
+   !! - `pond`: Ponding height [cm]
+   !! - `runots`: Surface runoff [cm/d]
+   !! - `reva`: Actual soil evaporation [cm/d]
+   !! - `kmean(1)`: Mean hydraulic conductivity at top boundary [cm/d]
+   !! - `QMpLatSs`: Lateral overland flow into macropores at surface [cm/d]
+   !!
+   !! @note This subroutine operates on global state from the `variables`
+   !!       module including atmospheric inputs, soil properties, and
+   !!       hydraulic state variables.
+   !!
+   !! @warning The subroutine may return early if atmospheric demand
+   !!          condition applies, leaving `qtop` undefined for ponding cases.
+   !! @note
+   !! ----------------------------------------------------------------------
+   !! ----------------------------------------------------------------------
+   !!     date               : August 2004 - June 2012
+   !!     purpose            : determine soil profile top boundary condition      
+   !! ----------------------------------------------------------------------
+   !! @endnote
+   implicit none
 ! --- local variables
       real(8) emax,ks,theatm,ksurf
       real(8) watcon,hconduc
@@ -119,7 +186,7 @@
       endif
 !  
       return
-      end
+      end subroutine boundtop
 
 
 ! ----------------------------------------------------------------------
@@ -134,8 +201,7 @@
 ! ----------------------------------------------------------------------
       use variables, only: swdra,FlMacropore,FlRunoff,disnod,dt,h,H0max,k1max,pondm1,pondmx,q0,rsro,rsroexp, &
                            QMpLatSs,hsurf,pond,runots,swpondmx,pondmxtab,t1900
-      IMPLICIT NONE
-      Include 'arrays.fi'
+      implicit none
 
 ! --- global                                                       In
 
@@ -234,6 +300,6 @@
       hsurf  = pond
 
       return
-      end
+      end subroutine pondrunoff
 
-
+end module boundtop_mod

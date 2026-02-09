@@ -79,6 +79,7 @@ use surfacewater_mod, only: SurfaceWater
 use tillage,   only : DoTillage
 use swap_exchange
 use swap_log, only: log_info
+use boundbottom_mod, only: BoundBottom
 implicit none
 
 ! global

@@ -8,6 +8,8 @@
 !                          and conductivities for next time step
 ! ----------------------------------------------------------------------
       use variables
+      use boundbottom_mod, only: BoundBottom
+      use boundtop_mod, only: boundtop, PONDRUNOFF
       implicit none
 
 ! ----------------------------------------------------------------------
