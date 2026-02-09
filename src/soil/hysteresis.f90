@@ -8,6 +8,7 @@
 !                          model parameters            
 ! ----------------------------------------------------------------------
       use variables, only: numnod,layer,h,hm1,indeks,tau,paramvg,cofgen,dimoca,theta,disnod
+      use soilhydraulics_utils, only: moiscap, prhead
       implicit none
       include 'arrays.fi'
 
@@ -17,7 +18,7 @@
 
 ! --- local
       integer node,lay,indtem(macp)
-      real(8) moiscap,delp,sew,sed,fvalue,prhead
+      real(8) delp,sew,sed,fvalue
       real(8) thetar(macp),thetas(macp),alfamg(macp)
 ! ----------------------------------------------------------------------
 

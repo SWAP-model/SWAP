@@ -675,6 +675,7 @@
      &    SorpDmCp_v => SorpDmCp, ThtSrpRefDmCp_v => ThtSrpRefDmCp, &
      &    TimAbsCumDmCp_v => TimAbsCumDmCp, VlMpDmCp_v => VlMpDmCp, &
      &    WaSrMpDm_v => WaSrMpDm, flDraTub_v => flDraTub, FlEndSrpEvt_v => FlEndSrpEvt
+      use soilhydraulics_utils, only: watcon
       implicit NONE
 
 ! --- global                                                       
@@ -691,7 +692,7 @@
       integer ic, ICpBot, ICpBtMB, ICpHRef, id, il, ir, Itask
       real(8) DZTot, FrW, FrWet, HHydrStat, KCrRlRef, ThethydrStat
       real(8) VlMpDyRl, VlMpRl, VlShriRl, WdthCr, Zhlp
-      real(8) SHRINK, watcon, Z_Bot, Zref
+      real(8) SHRINK,  Z_Bot, Zref
       logical flRigid
 
 ! ----------------------------------------------------------------------
@@ -865,6 +866,7 @@
 !     Functions called   : moiscap, hconduc, prhead, watcon 
 ! ----------------------------------------------------------------------
       use Variables
+      use soilhydraulics_utils, only: watcon, moiscap, hconduc, prhead
       implicit NONE
 
 ! --- global                                                       In
@@ -873,8 +875,8 @@
 ! --- local
       integer in, is, it, itIntv, Node, Nsteps
       real(8) Dum, Diffus_h(1000), difmoiscap
-      real(8) moiscap, hconduc, Head, Mpow, K_h, prhead, S, S0, Shlp
-      real(8) SpF4_2, watcon, Thet(1000), ThetpF4_2, ThetStep  
+      real(8) Head, Mpow, K_h, S, S0, Shlp
+      real(8) SpF4_2, Thet(1000), ThetpF4_2, ThetStep  
 
       data   ThetStep / 1.0d-3 /
 ! ----------------------------------------------------------------------   

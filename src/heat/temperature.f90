@@ -7,13 +7,14 @@
 !     purpose            : calculate soil temperatures
 ! ----------------------------------------------------------------------
       use variables
+      use array_utils, only: afgen
       implicit none 
 
 ! --- global
       integer task
 ! --- local
       integer i,lay, ierror
-      real(8) tmpold(macp),tab(mabbc*2),dummy,afgen,gmineral
+      real(8) tmpold(macp),tab(mabbc*2),dummy,gmineral
       real(8) thoma(macp),thomb(macp),thomc(macp),thomf(macp)
       real(8) theave(macp),heacnd(macp)
       real(8) heaconbot,qhbot

@@ -242,9 +242,10 @@ end module MeteoVars
 
       use Variables
       use MeteoVars
+      use array_utils, only: afgen
       implicit none
       include  'params.fi'
-      real(8)  rcs,afgen
+      real(8)  rcs
       data     rcs/0.15d0/
 
 ! 3: Interception: VonHHBraden and Gash
@@ -709,6 +710,7 @@ end module MeteoVars
 !       O   - aintc
 ! ----------------------------------------------------------------------
       use variables, only: grai,gird,avevaptb,avprectb,pfreetb,pstemtb,scanopytb,isua,t
+      use array_utils, only: afgen
       implicit none
       include 'arrays.fi'
 
@@ -716,7 +718,6 @@ end module MeteoVars
       real(8)   aintc              ! Amount of rainfall interception during current day (L) in cm
 
 ! --- local
-      real(8)   afgen
       real(8)   avevap             ! Gash interception model: average evaporation intensity during shower (-) as function of time (T)
       real(8)   avprec             ! Gash interception model: average rainfall intensity (-) as function of time (T)
       real(8)   cGash              ! slope of dPi/dPgross before saturation of canopy
@@ -1180,12 +1181,13 @@ end module MeteoVars
 subroutine CNmethod(Itask)
 use variables, only: CNref, CNdry, CNwet, ThetaRef, theta, nraidt, Runoff_CN, zbotcp, dz, numnod, t1900, wc_cor, iCNtab, CNtimTAB, CNrefTAB, melt, wc10, &
                      nod10_cn, icn_atm, z10_cn
+use soilhydraulics_utils, only: watcon
 implicit none
 ! global
 integer, intent(in)  :: Itask
 ! local
 integer              :: i
-real(8)              :: wc1, wc2, CN, S, Ia, watcon
+real(8)              :: wc1, wc2, CN, S, Ia
 ! Note: Nod10, iCN, Z10 are now module-level in variables.f90 as nod10_cn, icn_atm, z10_cn
 
 select case (Itask)

@@ -592,6 +592,7 @@
      &    SorpDmCp_v => SorpDmCp, ThtSrpRefDmCp_v => ThtSrpRefDmCp, &
      &    TimAbsCumDmCp_v => TimAbsCumDmCp, FlEndSrpEvt_v => FlEndSrpEvt, &
      &    ZWaLevDm_v => ZWaLevDm
+      use soilhydraulics_utils, only: moiscap
       implicit NONE
 
 ! --- global                                                          In
@@ -608,7 +609,7 @@
 ! --- local
       integer ic, ICpBtUnsMtxDm, Lay
       real(8) AbsDarc, AbsSorp, CritSatDefMtx, DelH, DelHDmCp(MaDm,MaCp)
-      real(8) Deriv, HMp, moiscap, QSorpMax, RecRes, SatDefMtx
+      real(8) Deriv, HMp, QSorpMax, RecRes, SatDefMtx
       real(8) SorpAct, SorpFac, Time
       logical FlSorp(MaDm,MaCp)
 

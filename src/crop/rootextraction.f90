@@ -12,11 +12,12 @@
 !                 water pressure head and salinity concentration for each node
 ! ----------------------------------------------------------------------
       use variables
+      use array_utils, only: afgen
       implicit none
 
 ! --- local variables
       integer node
-      real(8) top,bot,afgen,hlim3,hlim2,qred
+      real(8) top,bot,hlim3,hlim2,qred
       real(8) alpdry,alpwet,alpsol,alpfrs,alptot,vsmall
       real(8) alpdrycom,alpwetcom,alpsolcom,alpfrscom,alptotcom
       real(8) rd_noddrz, redtot
@@ -276,11 +277,12 @@
 !                 De Jong van Lier et al. (2013)
 ! ----------------------------------------------------------------------
       use variables
+      use array_utils, only: afgen
       implicit none
 
 ! --- local variables
       integer node,counter
-      real(8) afgen,Fy3
+      real(8) Fy3
       real(8) y1,y2,y3,Fy1,Fy2,hwet,ratio
       real(8) hleafm1,hrootm1(macp)
       real(8) reldepth,rdensity,phi,meandepth
@@ -717,11 +719,12 @@
 ! ----------------------------------------------------------------------
 
       use Variables
+      use soilhydraulics_utils, only: watcon, hconduc
       implicit none
 
 ! --- local variables
       integer task,lay,count,start,node,i
-      real(8) phead1,phead2,wcontent,conduc1,conduc2,watcon,hconduc
+      real(8) phead1,phead2,wcontent,conduc1,conduc2
       real(8) logphead,hosm,hsalt,mfluxsalt,phead,outcome
 
       select case (task)

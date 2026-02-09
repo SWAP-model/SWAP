@@ -1896,6 +1896,7 @@
 ! --- global
       use variables
       use doln
+      use soilhydraulics_utils, only: watcon, moiscap, hconduc!, dhconduc
       implicit none
 
 ! --- local variables ------------------
@@ -1903,7 +1904,7 @@
       character(len=80)  filtext
       character(len=1)   comma
       integer   getun,soi,lay,hh,numhead,node
-      real(8)   watcon,moiscap,hconduc,relsat, dhx!, dkx, dhconduc
+      real(8)   relsat, dhx!, dkx, 
       real(8)   dimocax,kx,thetax, FrArMtrx1,rfcpx
       parameter (numhead = 341)
       real(8)   hx(numhead)
@@ -2389,6 +2390,7 @@
                            WalevDm1,VlMpDm1,WaSrDm1,VlMpDm2,WaSrDm2,IQInTopVrtDm1,IQInTopLatDm1,            &
                            IQInTopVrtDm2,IQInTopLatDm2,        &
                            CritDevMasBal,tcum,nod1lay,out_etr,out_hum,out_rad,out_tmn,out_tmx,out_wet,out_win, FlOpenFileDev
+      use soilhydraulics_utils, only: watcon
       implicit none
       include 'arrays.fi'
 
@@ -2400,7 +2402,7 @@
       integer   swop,botcomNew(maho)
       integer   datea(6)
       real(4)   fsec
-      real(8)   timjan1,dval(maho),watcon
+      real(8)   timjan1,dval(maho)
       real(8)   hNew(macp),inqNew(macp+1)
       real(8)   inqdraNew(Madr,macp),thetaNew(macp),inqrotNew(macp)
       real(8)   TsoilNew(0:macp),tsoili(0:macp)
@@ -2673,6 +2675,7 @@
                            project,tstart,tend,swdiscrvert,numnodnew,dznew,SwAfo,FlMacropore,Ssnow,igSnow,isnrai,iSubl,irunon, &
                            WalevDm1,VlMpDm1,WaSrDm1,VlMpDm2,WaSrDm2,IQInTopVrtDm1,IQInTopLatDm1,   &
                            IQInTopVrtDm2,IQInTopLatDm2,CritDevMasBal,tcum,nod1lay, FlOpenFileDev
+      use soilhydraulics_utils, only: watcon
       implicit none
       include 'arrays.fi'
 
@@ -2685,7 +2688,7 @@
       integer   botcomNew(maho)
       integer   datea(6)
       real(4)   fsec
-      real(8)   timjan1,dval(maho),watcon
+      real(8)   timjan1,dval(maho)
       real(8)   hNew(macp),inqNew(macp+1)
       real(8)   inqdraNew(Madr,macp),thetaNew(macp),inqrotNew(macp)
       real(8)   TsoilNew(0:macp),tsoili(0:macp)

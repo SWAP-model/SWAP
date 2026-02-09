@@ -10,6 +10,8 @@
       use variables
       use boundbottom_mod, only: BoundBottom
       use boundtop_mod, only: boundtop, PONDRUNOFF
+      use array_utils, only: afgen
+      use soilhydraulics_utils, only: watcon, hconduc, moiscap, hcomean, dhconduc
       implicit none
 
 ! ----------------------------------------------------------------------
@@ -28,9 +30,6 @@
       integer   nodncr
       logical   flcaprise
 
-! functions
-      real(8)   watcon, hconduc, moiscap, hcomean, afgen
-
 ! criteria
       real(8) CritDevBalCp, CritDevBalTot, Critdz
 
@@ -43,7 +42,7 @@
       real(8) hgrad(macp+1), dkdh(macp)
 
 !  functions
-      real(8) dhconduc, dkmean
+      real(8) dkmean
 
       integer indx(macp), ierror
       real(8) a(macp,3), a1(macp,1), b(macp), d, q1

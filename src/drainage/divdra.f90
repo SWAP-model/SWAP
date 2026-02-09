@@ -96,6 +96,7 @@ contains
     !!@endwarning
 
       use variables, only: nowltab
+      use array_utils, only: afgen
       Include 'arrays.fi'
 
       INTEGER DrainSequence(Madr), Icomp, idr, iidr
@@ -124,7 +125,7 @@ contains
       real(8) dt, FacDpthInf, owltab(Madr, 2*maowl), t1900
 
       integer NumComDpthInf, NumComSrfLev
-      real(8) afgen, CumKD, DpthInflay, FDisInf(Madr), FDisInfmin
+      real(8) CumKD, DpthInflay, FDisInf(Madr), FDisInfmin
       real(8) FluxComWatLev, KD(Macp), RQmax, SurfLev   !, temptab(2*maowl)
       real(8) ThickCompAbvDpthInf, ThickCompBlwSrfLev
       real(8) ThickCompUnsWatLev, TransmisSat, TransmisTot

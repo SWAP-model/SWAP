@@ -59,6 +59,7 @@
       use variables, only: SwDiscrvert,nrlevs,numlay,botcom,numnod,dz,h,theta,inq,inqrot,inqdra,                           &
                            IThetaBeg,cofgen,numnodNew,dzNew,DiPoCp,FrArMtrx,IAvFrMpWlWtDm1,IAvFrMpWlWtDm2,           &
                            IQExcMtxDm1Cp,IQExcMtxDm2Cp,IQOutDrRapCp,VlMpStDm1,VlMpStDm2
+      use soilhydraulics_utils, only: prhead
       IMPLICIT NONE
       include 'arrays.fi'
 !     global
@@ -73,7 +74,7 @@
 
 !     local
       integer   lay,node,nodeN,nodeNew(macp,2),i,level
-      real(8)   disnodNew(macp+1),prhead,total,zNew(macp)
+      real(8)   disnodNew(macp+1),total,zNew(macp)
       real(8)   CofgenNew(21,macp)
       character(len=80) Message
       character(len=*), parameter :: ModuleName = 'ConvertDiscrVert'

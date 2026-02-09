@@ -64,6 +64,7 @@
 !       O   - arai,rainfluxarray,raintimearray
 ! ----------------------------------------------------------------------
       use variables, only: swrain,yearmeteo,dtmin,raintab,tcum,tend,tstart,wet,nmrain,timjan1,rainamount,rainrec,arai,rainfluxarray,raintimearray
+      use array_utils, only: afgen
       implicit none
       include 'arrays.fi'
 
@@ -71,7 +72,7 @@
 
 ! --- local
       integer   i,iendyear,j,l,nlack,nn,rday,rdaya(367),rdayold
-      real(8)   afgen,araihlp(367),day(mrain),rainam(mrain),rainflux
+      real(8)   araihlp(367),day(mrain),rainam(mrain),rainflux
       real(8)   raintime,ratimar(mrain),tendyear,vsmall,wght,wwet(368)
       vsmall    = 1.0d-8
 

@@ -7,13 +7,14 @@
 !     purpose            : calculation of solute concentrations
 ! ----------------------------------------------------------------------
       use Variables
+      use array_utils, only: afgen
       implicit none
 
 !     local variables
       integer level,i,task
       real(8) cmlav,ftemp,ftheta,decact,cfluxt,cfluxb
       real(8) cdrtot,ctrans,crot,dispr,old,dummy,vpore
-      real(8) isqdra,afgen,tab(mabbc*2)
+      real(8) isqdra,tab(mabbc*2)
       real(8) tcumsol
       logical differ
 !     work arrays for intermediate calculations (recomputed each timestep)
@@ -287,6 +288,7 @@
 !                        : "Direct simulation of groundwater age, WRR vol.32, p 289-296"
 ! ----------------------------------------------------------------------
       use Variables
+      use array_utils, only: afgen
       implicit none
 
 !     global
@@ -296,7 +298,7 @@
       integer level,i
       real(8) Agemlav,thetav,Agefluxt,Agefluxb
       real(8) Agedrtot,Agerot,dispr,diffus,dummy
-      real(8) vpore,isqdra,afgen,tab(mabbc*2)
+      real(8) vpore,isqdra,tab(mabbc*2)
       real(8) tcumsol
 ! 
 !      real(8) Ageevp

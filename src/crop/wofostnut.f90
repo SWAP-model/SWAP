@@ -31,7 +31,7 @@
      &                   NMAXLV,NMAXST,NMAXRT,LRNR,LSNR,                &
      &                   NNI,RNFLV,RNFST,FRNX,FSTR)
 
-
+      use array_utils, only: afgen
 !* 3.1 declarations
       implicit none
 !     global
@@ -41,7 +41,6 @@
       real(8)  NMAXLV,NMAXST,NMAXRT,LRNR,LSNR
       real(8)  NNI,RNFLV,RNFST,FRNX,FSTR              ! ,RNFRT,FNTRT
 !     local
-      real(8)  afgen
       real(8)  TBGMR,NOPTMR,NUPGMR,NRMR,NFGMR
       real(8)  TINY
       ! SAVE removed - no persistent state needed (work variables only)        
@@ -328,14 +327,14 @@
 
       SUBROUTINE NUTREMRG(NMXLV,LSNR,LRNR,WLV,WST,WRT,                  &
      &      ANLV,ANST,ANRT,ANSO,ANLVI,ANSTI,ANRTI,ANSOI,DVS)
-
+      use array_utils, only: afgen
       implicit none
 !     global
 !      integer  ILNMXL  
       real(8)  NMXLV(30),LSNR,LRNR,WLV,WST,WRT,DVS
       real(8)  ANLV,ANST,ANRT,ANSO,ANLVI,ANSTI,ANRTI,ANSOI
 !     local
-      real(8)  NMAXLVI,NMAXSTI,NMAXRTI,afgen
+      real(8)  NMAXLVI,NMAXSTI,NMAXRTI
       ! SAVE removed - no persistent state needed        
 
       NMAXLVI= afgen (NMXLV, 30, DVS)

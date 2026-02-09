@@ -69,17 +69,11 @@ module drainage_mod
 !!   Wageningen University and Research Centre.
 !!
    use distribute_drainage, only: DIVDRA
+   use array_utils, only: afgen
    implicit none
 
    include 'params.fi'
 
-   interface
-      function afgen(table, n, x)
-         real(8) :: afgen
-         integer, intent(in) :: n
-         real(8), intent(in) :: table(n), x
-      end function afgen
-   end interface
 contains
 
    subroutine bocodrb(dh)
@@ -141,13 +135,13 @@ contains
     !!
       use variables, only: dramet,gwl,zbotdr,basegw,l,qdrain,ipos,khtop,khbot,kvtop,kvbot,entres,wetper,zintf,geofac,swdtyp,      &
 owltab,t1900,swallo,drares,infres,qdrtab,nrlevs,swnrsrf,cofintfl,expintfl,dt,shape,FlMacropore,NumLevRapDra,ZDraBas,swliminf,nowltab
+      use array_utils, only: afgen
 
       ! --- global
       real(8) dh
 
       ! ----------------------------------------------------------------------
       ! --- local
-      real(8) afgen
       integer i, lev
 
       real(8) zimp, dbot, pi, totres, x, fx, eqd, rver, rhor, rrad
@@ -372,11 +366,11 @@ owltab,t1900,swallo,drares,infres,qdrtab,nrlevs,swnrsrf,cofintfl,expintfl,dt,sha
     !!
 
                use variables
-
+               use array_utils, only: afgen
                !     local
                integer node, level
                real(8) zCum, difzTopDisLay(madr), ratio, ratiodz, sumqdr(madr), dh
-               real(8) afgen   !, temptab(2*maowl)
+               !, temptab(2*maowl) ????
                integer nodeTopDisLay(madr)
                CHARACTER(len=33) messag
 

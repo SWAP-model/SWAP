@@ -62,7 +62,6 @@ sources = [
     'src/soil/sptabulated.f90',
     'src/soil/WC_K_models_04_11.f90',
     'src/soil/tridag.f90',
-    'src/soil/functions.f90',
     'src/soil/hysteresis.f90',
     'src/soil/calcgrid.f90',
     'src/soil/calcgwl.f90',

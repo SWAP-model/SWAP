@@ -52,12 +52,14 @@ contains
 !!     purpose            : determine soil profile bottom boundary conditions
 !! ----------------------------------------------------------------------
 !! @endnote
+        use array_utils, only: afgen
+        use soilhydraulics_utils, only: watcon, hconduc
         ! --- local variables
-        integer node, nodnumgwl
+        
+    integer node, nodnumgwl
 
         real(8) cvalprof, gwlmean, thetabot, twopi, freq
         real(8) satnodgwl
-        real(8) watcon, hconduc, afgen
         character(len=300) messag
 
         ! ----------------------------------------------------------------------

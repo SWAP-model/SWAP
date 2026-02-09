@@ -21,6 +21,7 @@ module boundtop_mod
 !! ----------------------------------------------------------------------
       use variables
       use swap_log, only: log_debug, to_str
+      use surfacewater_utils, only: runoff
       implicit none
       Include 'arrays.fi'
 
@@ -76,14 +77,14 @@ contains
    !!     purpose            : determine soil profile top boundary condition      
    !! ----------------------------------------------------------------------
    !! @endnote
+   use soilhydraulics_utils, only: watcon, hconduc, hcomean
    implicit none
 ! --- local variables
       real(8) emax,ks,theatm,ksurf
-      real(8) watcon,hconduc
 
 ! ----------------------------------------------------------------------
 ! --- local variables
-      real(8) h0,hcomean,k1Atm,p1,p2,p2Mp,q1,RsRoMp
+      real(8) h0,k1Atm,p1,p2,p2Mp,q1,RsRoMp
       
       ! Hydraulic conductivity for complete frozen soils (constant)
       real(8), parameter :: hconode_vsmall = 1.0d-10
@@ -201,6 +202,8 @@ contains
 ! ----------------------------------------------------------------------
       use variables, only: swdra,FlMacropore,FlRunoff,disnod,dt,h,H0max,k1max,pondm1,pondmx,q0,rsro,rsroexp, &
                            QMpLatSs,hsurf,pond,runots,swpondmx,pondmxtab,t1900
+      use array_utils, only: afgen
+      use surfacewater_utils, only: runoff
       implicit none
 
 ! --- global                                                       In
@@ -208,7 +211,7 @@ contains
 ! ----------------------------------------------------------------------
 ! --- local variables
       INTEGER i
-      real(8) h0,h0min,p1,p2,runoff,afgen
+      real(8) h0,h0min,p1,p2
       real(8) q0hlp
 
 ! ----------------------------------------------------------------------

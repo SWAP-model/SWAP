@@ -257,12 +257,12 @@ module tillage
    
 ! **************************************************** Adapt_WC_H *********************************************************
    subroutine Adapt_WC_H (TEST)
+   use soilhydraulics_utils, only: watcon, hconduc, prhead
    implicit none
    
    integer                          :: i
    real(8)                          :: sumWCtmin1, sumWCt, dwc, wcr, wcs, summ, dif
    real(8), dimension(MaxNumSoilCP) :: wc, hold, wcold
-   real(8)                          :: watcon, prhead, hconduc   ! functions called
    logical                          :: TEST
    
    if (TEST) then

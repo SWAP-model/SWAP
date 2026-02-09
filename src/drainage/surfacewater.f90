@@ -32,12 +32,12 @@ subroutine SurfaceWater(task)
       !! The subroutine manages the partitioning of drainage fluxes over soil
       !! compartments and handles both primary and secondary drainage systems.
       use Variables
+      use array_utils, only: afgen
       implicit none 
       integer task
 
 !     local
       integer level, node
-      real(8) afgen
       real(8) zCum,difzTopDisLay(madr),ratio,ratiodz,sumqdr(madr),dh
       integer nodeTopDisLay(madr)
       character(len=300) messag
@@ -316,6 +316,7 @@ subroutine SurfaceWater(task)
       use variables, only: tcum,NRPRI,impend,nmper,swman,imper,wlstar,wls,hbweir,gwl,wlsman,gwlcrit,nphase,dropr,sttab,wscap,   &
                            dt,runots,QRapDra,swst,zbotdr,alphaw,betaw,qdrd,cqdrd,cwsupp,cwout,wlsbak,osswlm,T,NUMNOD,THETAS,THETA,DZ,VCRIT,NODHD,HCRIT, &
                            H,SWQHR,QQHTAB,wldip,hwlman,vtair,overfl,numadj,intwl,t1900,logf,swscre,fldecdt,fldtmin,rsro,pond,pondmx
+      use surfacewater_utils, only: wlevst, swstlev, qhtab
       IMPLICIT NONE
 
 ! --- global
@@ -324,8 +325,8 @@ subroutine SurfaceWater(task)
       INTEGER iphase,NODE,Intday
       real(8) wlstx,swsttar,dvmax,swstmax,wsupp,wdis,wlstarb
       real(8) wover,discap,wlsl,wlsu,wlsi,swsti,wdisi,swstn
-      real(8) wprod1,wprod2,oscil,wlevst,swstlev,wlstara
-      real(8) swsttara,qhtab,rday,wsmax
+      real(8) wprod1,wprod2,oscil,wlstara
+      real(8) swsttara,rday,wsmax
       character(len=200) messag
       character(len=19)  datetime
 ! removed the blanket save statement to avoid issues in parallel runs
@@ -631,13 +632,15 @@ subroutine SurfaceWater(task)
       !!     Differences SWAP/SWAPS: None        
       !!@endnote
       use variables, only: wls,wlstab,swst,dt,runots,QRapDra,qdrd,cqdrd,cwsupp,cwout,WLSOLD,t1900
+      use array_utils, only: afgen
+      use surfacewater_utils, only: swstlev
       IMPLICIT NONE
       include 'arrays.fi'
       
 ! --- global
 
 ! --- local
-      real(8) swstold,swstrest,wdis,wsupp,swstlev,afgen
+      real(8) swstold,swstrest,wdis,wsupp
 
 ! ----------------------------------------------------------------------
 ! --- wlsold gets w-level of previous time step

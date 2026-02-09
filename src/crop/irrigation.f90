@@ -11,6 +11,8 @@
 ! ----------------------------------------------------------------------
 ! --  global variables
       use variables
+      use array_utils, only: afgen
+      use soilhydraulics_utils, only: watcon
       implicit none
 
 ! --  local variables
@@ -20,7 +22,7 @@
       integer yearendcrp, yearstacrp
       real(8) frlow,phlo,phhi,phme,awlh,awmh,awah,cdef
       real(8) wclo,wcme,wchi,wcac,tps1,tps2,tps3,tps4,tps5,depl,phcrit
-      real(8) watcon,dps1,dps2,afgen,Tred
+      real(8) dps1,dps2,Tred
       real(8) dvstage(7),trel(7),raw(7),taw(7),dwa(7),hcri(7),tcri(7)
       real(8) di(7),fid(7),irgdepmax,irgdepmin,irgthreshold
       real(4) fsec

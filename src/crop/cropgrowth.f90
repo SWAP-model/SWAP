@@ -10,12 +10,12 @@
 ! ----------------------------------------------------------------------
 
       use variables
+      use array_utils, only: afgen
       implicit none
 
       integer task
       integer i, node
       real(8) sumtmin
-      real(8) afgen
       
       ! assimilation
       real(8) dayl,cosld,sinld
@@ -362,11 +362,13 @@
 !     purpose            : simple crop growth routine for swap 
 ! ----------------------------------------------------------------------
       use variables
+      use soilhydraulics_utils, only: watcon
+      use array_utils, only: afgen
       implicit none
 
 ! --- local variables
       integer   i,task,lcc,swhydrlift
-      real(8)   dummy,afgen,dtsum,dvr,watcon
+      real(8)   dummy,dtsum,dvr
       
 ! --- rooting
       real(8)   rrpot,rr
@@ -835,11 +837,11 @@
 !                          atmosphere (Lintul4) added by Iwan Supit
 ! ----------------------------------------------------------------------
       use variables
-
+      use array_utils, only: afgen
       implicit none
  
       integer   ifindi,indexyr
-      real(8)   CO2,afgen
+      real(8)   CO2
       character(len=200) messag
       
       ! initialize CO2 impact
@@ -872,12 +874,14 @@
 ! ----------------------------------------------------------------------
       use variables
       use wofost_soil_interface
+      use array_utils, only: interpol, afgen, insw
+      use soilhydraulics_utils, only: watcon
 
       implicit none
  
       integer   i1,task,swhydrlift,i
 
-      real(8)   afgen,asrc,ccheck,cvf
+      real(8)   asrc,ccheck,cvf
       real(8)   laicr,lasum,mres
       real(8)   dalv,delt,dmi
       real(8)   drrt,drst,dslv,dteff,dtsum,dvr
@@ -885,7 +889,7 @@
       real(8)   fysdel,gass,gla,grlv,grrt,grst,grso
       real(8)   gwso,gwst,rmres
       real(8)   slat,teff,twlv,twst
-      real(8)   lasumpot,watcon
+      real(8)   lasumpot
       real(8)   gasspot,rmrespot,mrespot,asrcpot,dmipot
       real(8)   admipot,grrtpot,drrtpot,gwrtpot,grlvpot
       real(8)   dslvpot,restpot,dalvpot,drlvpot,gwsopot
@@ -907,7 +911,6 @@
       real(8) NSLA, RNFRT, TCNT !,RNFLV,RNFST
       real(8) DVSNLT, DVSNT, RDRNS, FNTRT !, FRNX
       integer getun2
-      real(8) INSW
       !real(8) NMAXLV,NMAXST,NMAXRT,NNI,FSTR
       !real(8) NMXLV(30)
       integer ILNMXL
@@ -953,7 +956,7 @@
 
 ! --- only for vernalisation
       logical flvernalised
-      real(8) r,vern,vernfac,vernrate,interpol
+      real(8) r,vern,vernfac,vernrate
 
       save
 ! ----------------------------------------------------------------------
@@ -1985,13 +1988,15 @@
 !     Purpose            : detailed grass growth routine 
 ! ----------------------------------------------------------------------
       use variables
+      use array_utils, only: afgen
+      use soilhydraulics_utils, only: watcon
       implicit none
  
       integer   i1,task
       integer   idelaypot,idelay,i,swhydrlift
 
       real(8)   laicr,lasum,mres,grazlivinglv,grazlivinglvpot
-      real(8)   admi,afgen,asrc,ccheck,cvf
+      real(8)   admi,asrc,ccheck,cvf
       real(8)   dalv,delt,dmi
       real(8)   drrt,drst,dslv,dslv1,dslv2,dslvt,dteff
       real(8)   fcheck,fl,fr,fs,drlv
@@ -2008,7 +2013,7 @@
       real(8)   dummy
       real(8)   dmharvest,dmlastharvest,dmgrazing
       real(8)   lsdb(100)
-      real(8)   watcon,uptgraz,tagprest,lossgraz
+      real(8)   uptgraz,tagprest,lossgraz
       real(8)   uptgrazpot,lossgrazpot
       integer   daylastharvest,swharvest,daysgrazpot,daysgraz
       integer   swdmmow,swdmgrz

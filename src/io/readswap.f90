@@ -2034,6 +2034,7 @@
                            swjarvis,swcompensate,swstressor,alphacrit,dcritrtz,                                                                     &
                            swWrtNonox,aeratecrit,swinter,cofab,pfreetb,pstemtb,scanopytb,avprectb,avevaptb,fimin,siccaplai,sicact,dvsend,swharv,    &
                            swrd,rdtb,rdi,rri,rdc,swdmi2rd,swrdc,rdctb,rd,rdpot
+      use array_utils, only: afgen
       implicit  none
       include  'arrays.fi'
       
@@ -2048,7 +2049,6 @@
       real(8)              tinter(magrs),pfree(magrs),pstem(magrs)
       real(8)              scanopy(magrs),avprec(magrs),avevap(magrs)
       character(len=200)   message,filnam
-      real(8)              afgen
       logical              rdinqr
 ! ----------------------------------------------------------------------
 
@@ -2522,7 +2522,7 @@
                            flco2,co2amaxtb,co2efftb,co2tratb,co2year,co2ppm,swpotrelmf,relmf,swinter,cofab,pfreetb,pstemtb,scanopytb,                             &
                            avprectb,avevaptb,fimin,siccaplai,sicact,swrd,rdtb,rdi,rri,rdc,swdmi2rd,rlwtb,wrtmax,swrdc,rdctb,rd,rdpot,glaiex,glaiexpot,tsumgerm,   &
                            sowdelay,prepdelay
-       
+      use array_utils, only: afgen
       implicit none
       include  'arrays.fi'
 
@@ -2552,7 +2552,7 @@
       real(8)              scanopy(magrs),avprec(magrs),avevap(magrs)
       real(8)              dvsinput(magrs),cfinput(magrs),chinput(magrs)
       real(8)              laiinput(magrs),cfeicinput(magrs)
-      real(8)              sum,afgen,depth,rootdis(202)
+      real(8)              sum,depth,rootdis(202)
       character(len=200)   message,filnam
       logical              rdinqr
 
@@ -3440,6 +3440,7 @@
                            albedo,swpotrelmf,relmf,swinter,cofab,pfreetb,pstemtb,scanopytb,avprectb,avevaptb,                                                    &
                            fimin,siccaplai,sicact,swrd,rdtb,rdi,rri,rdc,swdmi2rd,rlwtb,wrtmax,swrdc,rdctb,rd,rdpot,                                              &
                            swtsum,tsumtime,tsumtemp,tsumdepth,glaiex,glaiexpot
+      use array_utils, only: afgen
       implicit none
       include  'arrays.fi'
 
@@ -3460,7 +3461,7 @@
       real(8)   hlossmow(100),lossmow(100)
       real(8)   hlossgrz(100),lossgrz(100)
       real(8)   DaysGrazing(100),UptGrazing(100),LossGrazing(100),dmmowdelay(100)
-      real(8)   afgen,sum
+      real(8)   sum
       logical   swMow,swGrz,swDew,RDinqr
 
       character(len=200) message,filnam
@@ -4273,6 +4274,8 @@
                            gwlcrit,wlstab,sttab,swstini,swst,wlsbak,swsrf,nphase,hcrit,hdepth,vcrit,nodhd,numnod,dz,wldip,numadj,logf,intwl,       &
                            swnrsrf,rsurfdeep,rsurfshallow,t1900,cofintfl,expintfl,swscre,swdivd,cofani,numlay,tstart,tend,swdislay,swtopdislay,ztopdislay,&
                            ftopdislay,SwTopnrsrf,swdivdinf,FacDpthInf
+      use surfacewater_utils, only: swstlev
+      use array_utils, only: afgen
       implicit none
       include 'arrays.fi'
 
@@ -4289,7 +4292,7 @@
       real(8)   wlsman_t(mamp*mamte),gwlcrit_t(mamp*mamte)
       real(8)   hcrit_t(mamp*mamte),vcrit_t(mamp*mamte)
       real(8)   dates(mabbc)
-      real(8)   wdepth,wbreadth,wvolum,dep,swstlev,sofcu,altcu,afgen
+      real(8)   wdepth,wbreadth,wvolum,dep,sofcu,altcu
       logical   flweir(mamp),exists(mamp),flzero(mamp),rdinqr,rdinar
       character(len=80)  filnam
       character(len=200) messag

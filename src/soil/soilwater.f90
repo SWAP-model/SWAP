@@ -9,12 +9,14 @@
      use doln
       use Variables
       use swap_log, only: log_info, to_str
+      use array_utils, only: afgen
+      use soilhydraulics_utils, only: watcon, hconduc, moiscap, hcomean
       implicit none
 
 ! --- local variables
       integer task,lay,node,i,j
 
-      real(8) tab(mabbc*2),afgen,watcon,moiscap,hconduc,hcomean
+      real(8) tab(mabbc*2)
       character(len=200) messag
 
       select case (task)

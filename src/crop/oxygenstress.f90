@@ -88,7 +88,7 @@ end module O2_pars
       use O2_pars, only: w_root,w_root_z0, soil_temp, sat_water_cont,gas_filled_porosity, d_o2inwater,d_root,        &
                          perc_org_mat,soil_density,depth, shape_factor_microbialr,root_radius, waterfilm_thickness,  &
                          bunsencoeff, c_min_micro, c_macro,ctopnode,r_microbial_z0, d_soil
-      
+      use array_utils, only: afgen
       implicit none
 
 ! --- local
@@ -101,7 +101,7 @@ end module O2_pars
       real(8) soilphystab(7,matab)
       real(8) diff_water_cap_actual
       integer numrec_tab
-      real(8) rdepth,rdens,afgen   !RB20140110
+      real(8) rdepth,rdens   !RB20140110
       real(8) rdepth_top,rdens_top !RB20140114 
 
 ! ## MH : why ResultsOxStr as argument and locally stored, whereas ResultsOxygenStress was already globally defined in varibles ???
@@ -343,6 +343,8 @@ end module O2_pars
    contains
    
    subroutine calc_ini_pars (numnod)
+   use soilhydraulics_utils, only: watcon
+      implicit none
 !## MH : these constant can be calculated only once at initial call to OxygenStress
 !## MH : results are stored and saved per node
 !## MH : since it is part of subroutine OxygenStress (via the previous statement "contains")
@@ -352,7 +354,7 @@ end module O2_pars
    real(8), parameter :: h500      = -500.0d0
    real(8), parameter :: log10h100 = dlog10(-h100)
    real(8), parameter :: log10h500 = dlog10(-h500)
-   real(8) theta100,theta500,campbell_b,watcon
+   real(8) theta100,theta500,campbell_b
 
    do i = 1, numnod
 ! --- get theta at h=-100 cm and at h=-500 cm; for diffusion coef
@@ -492,13 +494,13 @@ end module O2_pars
       
       subroutine GET_MAX_RESP_FACTOR (max_resp_factor_gmrf)
       use Variables
+      use array_utils, only: afgen
       implicit none
 ! --- Procedure to derive max_resp_factor, 
 ! --- i.e. the ratio between total respiration and maintenance respiration [-]
 ! --- This ratio is either given in the input file (for a static crop) 
 ! --- or calculated from a series of equations taken from WOFOST (for a dynamic crop)
 
-      real(8) afgen
       real(8) rmres_gmrf,teff_gmrf,mres_gmrf,asrc_gmrf
       real(8) fr_gmrf,fl_gmrf,fs_gmrf,fo_gmrf   
       real(8) cvf_gmrf
