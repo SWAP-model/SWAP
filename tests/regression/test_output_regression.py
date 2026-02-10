@@ -1,20 +1,21 @@
 """Regression checks for SWAP output CSV files.
 
-
 Runs test cases in isolated temp directories, aggregates the
 `result_output.csv` files, and compares annual stats against stored fixtures.
 Fails with a non-zero exit if values differ beyond tolerance.
 """
 
-
 import csv
 import json
 import math
+import os
 import shutil
 import subprocess
 import sys
 import tempfile
 import time
+from concurrent.futures import ProcessPoolExecutor
+import concurrent.futures
 from pathlib import Path
 from typing import NamedTuple
 
@@ -22,7 +23,6 @@ from typing import NamedTuple
 TESTS_DIR = Path(__file__).resolve().parent.parent
 SWAP_BIN = Path(__file__).resolve().parents[2] / "builddir" / "swap"
 TOL = 1e-2  # cm tolerance on aggregated values
-
 
 
 class CaseConfig(NamedTuple):
@@ -34,6 +34,7 @@ class CaseConfig(NamedTuple):
     state_vars: list[str]  # averaged annually
     cumul_vars: list[str] = []  # last value per year (for cumulative outputs)
 
+    input_files: dict[str, str] = {}
 
 
 # Registered test cases
@@ -45,6 +46,12 @@ CASES = {
         flux_vars=["RAIN", "IRRIG", "INTERC", "RUNOFF", "EPOT", "EACT",
                    "DRAINAGE", "QBOTTOM", "TPOT", "TACT", "DSTOR"],
         state_vars=["GWL"],
+        input_files={
+                "swp": "swap_linux.swp.template",
+                "metfile": "283.csv",
+                "cropfiles": ["grassd.crp", "maizes.crp", "potatod.crp"],
+                "drafile": "swap.dra"
+        }
     ),
     "macropore": CaseConfig(
         name="macropore",
@@ -87,11 +94,9 @@ CASES = {
 }
 
 
-
 def load_fixture(path: Path):
     with path.open() as f:
         return json.load(f)
-
 
 
 def aggregate(csv_path: Path, flux_vars: list[str], state_vars: list[str], cumul_vars: list[str] = None):
@@ -115,7 +120,6 @@ def aggregate(csv_path: Path, flux_vars: list[str], state_vars: list[str], cumul
             break
         data = list(csv.DictReader(f, fieldnames=headers))
 
-
     for rec in data:
         if not rec.get("DATETIME"):
             continue
@@ -124,7 +128,6 @@ def aggregate(csv_path: Path, flux_vars: list[str], state_vars: list[str], cumul
         for k in all_vars:
             if k in rec and rec[k]:
                 yr[k].append(float(rec[k]))
-
 
     annual = {}
     for year, vals in years.items():
@@ -139,7 +142,6 @@ def aggregate(csv_path: Path, flux_vars: list[str], state_vars: list[str], cumul
             if vals[k]:
                 annual[year][k] = round(vals[k][-1], 2)  # last value
 
-
     # totals/means across years
     totals = {}
     means = {}
@@ -152,9 +154,7 @@ def aggregate(csv_path: Path, flux_vars: list[str], state_vars: list[str], cumul
     for k in cumul_vars:
         means[k] = round(sum(annual[y].get(k, 0.0) for y in annual) / n_years, 2)
 
-
     return annual, totals, means
-
 
 
 def compare(expected, actual_years, actual_totals, actual_means):
@@ -190,7 +190,6 @@ def compare(expected, actual_years, actual_totals, actual_means):
                         "diff": abs(act_val - exp_vals) if act_val is not None else None
                     })
 
-
     check_block("years", expected["years"], actual_years)
     if "total" in expected:
         check_block("total", expected["total"], actual_totals)
@@ -211,26 +210,64 @@ def compare(expected, actual_years, actual_totals, actual_means):
 
         raise AssertionError("\n".join(lines))
 
+def load_case(case_name: str):
+    """load case with pyswap
+    Currently in development. Problem with pyswap is now that it cannot auto-detect all config files and they have to by specified manually. Also, pyswap does not support
+    the detailed rain files and meteo files with .YYY extension.
+    """
+    import pyswap as psp
+    case_dir = TESTS_DIR / "swap-cases" / case_name
+    if not case_dir.exists():
+        raise FileNotFoundError(f"Case directory not found: {case_dir}")
+    
+    meta = psp.components.Metadata(
+        project="SWAP Regression Tests",
+        author="Test Author",
+        email="test@email.com",
+        institution="Test Institution",
+        description=f"Test case for {case_name}",
+        swap_ver="4.2.0"
+    )
 
+    files = {
+        
+    }
 
-def run_case(case: CaseConfig) -> bool:
-    """Run a single test case. Returns True on success, False on failure."""
-    case_dir = TESTS_DIR / "cases" / case.case_dir
+    met = psp.load_met(case_dir / "met.csv")
+    grassd = psp.load_crp(case_dir / "grassd.crp")
+    maizes = psp.load_crp(case_dir / "maizes.crp")
+    potatod = psp.load_crp(case_dir / "potatod.crp")
+    drainage = psp.load_dra(case_dir / "drainage.dra")
+    ml: psp.Model = psp.load_swp(case_dir / "swap_linux.swp.template", meta)
+
+    ml.crop.cropfiles = {
+        "grassd": grassd,
+        "maizes": maizes,
+        "potatod": potatod
+    }
+    ml.lateraldrainage.drafile = drainage
+    ml.meteorology.metfile = met
+
+    return ml
+
+def run_case(case: CaseConfig) -> tuple[bool, float]:
+    """Run a single test case. Returns (success, execution_time) tuple."""
+    start_time = time.perf_counter()
+    
+    case_dir = TESTS_DIR / "swap-cases" / case.case_dir
     fixture_path = TESTS_DIR / "regression" / case.fixture
-
 
     if not case_dir.exists():
         print(f"✗ {case.name}: case directory not found at {case_dir}")
-        return False
-
+        elapsed = time.perf_counter() - start_time
+        return False, elapsed
 
     if not fixture_path.exists():
         print(f"✗ {case.name}: fixture not found at {fixture_path}")
-        return False
-
+        elapsed = time.perf_counter() - start_time
+        return False, elapsed
 
     expected = load_fixture(fixture_path)
-
 
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp = Path(tmpdir)
@@ -249,7 +286,6 @@ def run_case(case: CaseConfig) -> bool:
         )
         workdir = tmp / "case"
 
-
         # ensure template is named swap.swp
         swap_file = workdir / "swap.swp"
         if not swap_file.exists():
@@ -262,10 +298,8 @@ def run_case(case: CaseConfig) -> bool:
                     shutil.copy(alt, swap_file)
                     break
 
-
         # Record time before running to verify output is fresh
         before_run = time.time()
-
 
         # run swap
         proc = subprocess.run([str(SWAP_BIN)], cwd=workdir, capture_output=True, text=True)
@@ -277,21 +311,21 @@ def run_case(case: CaseConfig) -> bool:
                 print(f"stdout:\n{proc.stdout}")
             if proc.stderr:
                 print(f"stderr:\n{proc.stderr}")
-            return False
-
+            elapsed = time.perf_counter() - start_time
+            return False, elapsed
 
         csv_path = workdir / "result_output.csv"
         if not csv_path.exists():
             print(f"✗ {case.name}: result_output.csv not produced")
-            return False
-
+            elapsed = time.perf_counter() - start_time
+            return False, elapsed
 
         # Verify the CSV was created by this run (not a pre-existing file)
         if csv_path.stat().st_mtime < before_run:
             print(f"✗ {case.name}: result_output.csv exists but was not created by this run")
             print(f"   File timestamp: {csv_path.stat().st_mtime}, run started at: {before_run}")
-            return False
-
+            elapsed = time.perf_counter() - start_time
+            return False, elapsed
 
         try:
             cumul_vars = case.cumul_vars if hasattr(case, 'cumul_vars') else []
@@ -299,18 +333,19 @@ def run_case(case: CaseConfig) -> bool:
             compare(expected, annual, totals, means)
         except AssertionError as e:
             print(f"✗ {case.name}: {e}")
-            return False
+            elapsed = time.perf_counter() - start_time
+            return False, elapsed
 
-
-    print(f"✓ {case.name}: regression ok (annual stats match fixture)")
-    return True
-
+    elapsed = time.perf_counter() - start_time
+    print(f"✓ {case.name}: regression ok (annual stats match fixture) [{elapsed:.2f}s]")
+    return True, elapsed
 
 
 def main():
+    overall_start = time.perf_counter()
+    
     if not SWAP_BIN.exists():
         raise SystemExit(f"swap binary not found at {SWAP_BIN}; build first (pixi run build-linux)")
-
 
     # Parse command line to select cases
     args = sys.argv[1:]
@@ -325,20 +360,48 @@ def main():
     else:
         selected = list(CASES.values())
 
+    # Determine number of workers (defaults to CPU count)
+    max_workers = min(len(selected), os.cpu_count() or 1)
+    
+    print(f"Running {len(selected)} test case(s) with {max_workers} worker(s)...\n")
+    
+    # Run cases in parallel
+    with ProcessPoolExecutor(max_workers=max_workers) as executor:
+        # Submit all tasks
+        future_to_case = {executor.submit(run_case, case): case for case in selected}
+        
+        passed = 0
+        failed = 0
+        timings = []
+        
+        # Process results as they complete
+        for future in concurrent.futures.as_completed(future_to_case):
+            case = future_to_case[future]
+            try:
+                success, elapsed = future.result()
+                timings.append((case.name, elapsed))
+                if success:
+                    passed += 1
+                else:
+                    failed += 1
+            except Exception as exc:
+                print(f'✗ {case.name} generated an exception: {exc}')
+                failed += 1
 
-    passed = 0
-    failed = 0
-    for case in selected:
-        if run_case(case):
-            passed += 1
-        else:
-            failed += 1
-
-
-    print(f"\n{passed} passed, {failed} failed")
+    overall_elapsed = time.perf_counter() - overall_start
+    
+    # Print summary with timing information
+    print(f"\n{'='*60}")
+    print(f"Results: {passed} passed, {failed} failed")
+    print(f"Total execution time: {overall_elapsed:.2f}s")
+    
+    if timings:
+        print(f"\nIndividual test timings:")
+        for name, elapsed in sorted(timings, key=lambda x: x[1], reverse=True):
+            print(f"  {name:20s} {elapsed:6.2f}s")
+    
     if failed:
         sys.exit(1)
-
 
 
 if __name__ == "__main__":

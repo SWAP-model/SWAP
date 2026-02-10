@@ -8,28 +8,69 @@ version = "4.2.0"
 [activation]
 env = { PFUNIT_ROOT = "$PIXI_PROJECT_ROOT/tests/pFUnit/build/install_gfortran/PFUNIT-4.15" }
 
+[dependencies]
+python = "3.11.*"
+meson = "==1.7"
+
+[pypi-dependencies]
+fprettify = ">=0.3.7, <0.4"
+
+#============================================================================
+# FEATURES - Modular dependency groups
+#============================================================================
+
+# ---- Testing Feature ----
+[feature.test.dependencies]
+python = "3.11.*"
+pytest = ">=8.0"
+pytest-xdist = ">=3.5"
+pytest-timeout = ">=2.2"
+pandas = "<3.0"
+
+[feature.test.pypi-dependencies]
+pyswap = ">=0.3.9"
+
+[feature.test.tasks]
+# Main regression task with optional arguments
+# Usage: 
+#   pixi run -e test regression              # runs all cases
+#   pixi run -e test regression hupselbrook  # runs single case
+#   pixi run -e test regression --log-timing # runs all with timing
+regression = { cmd = "python tests/regression/test_output_regression.py", depends-on = ["build-linux"] }
+
+[environments]
+default = { solve-group = "default" }
+test = { features = ["test"], solve-group = "default" }
+
+
+
 [tasks]
+#============================================================================
+# BUILD TASKS
+#============================================================================
 build-linux = 'bash -c "[ -z \"$ONEAPI_ROOT\" ] && source /opt/intel/oneapi/setvars.sh; FC=ifx meson setup builddir && meson compile -C builddir"'
 build-windows-cross = "meson setup builddir_windows --cross-file cross_mingw.txt && meson compile -C builddir_windows"
-build-windows-native = "FC=ifx meson setup builddir_windows_native && meson compile -C builddir_windows_native"
 clean = "rm -rf builddir builddir_windows builddir_windows_native"
 
-test-linux-hupselbrook = { cmd = "cd tests/cases/1.hupselbrook && cp swap_linux.swp.template swap.swp && ./run_swap.sh" }
-test-linux-grassgrowth = { cmd = "cd tests/cases/2.grassgrowth && cp swap_linux.swp.template swap.swp && ./run_swap.sh" }
-test-linux-macropore = { cmd = "cd tests/cases/3.macroporeflow && cp swap_linux.swp.template swap.swp && ./run_swap.sh" }
-test-linux-oxygenstress = { cmd = "cd tests/cases/4.oxygenstress && cp swap_linux.swp.template swap.swp && ./run_swap.sh" }
-test-linux-salinitystress = { cmd = "cd tests/cases/5.salinitystress && cp swap_linux.swp.template swap.swp && ./run_swap.sh" }
-test-linux-surfacewater = { cmd = "cd tests/cases/6.surfacewater && cp swap_linux.swp.template swap.swp && ./run_swap.sh" }
+#============================================================================
+# RUN TASKS - Using run_swap.sh script
+#============================================================================
+# Run test cases with newly built executable (builddir/swap)
+# These tasks are for development. The builddir directory has to be created with one of the build tasks. In case you want to run
+# the cases with the reference executable, then please create a swap_org directory in the root of the project and unzip the contents of the
+# file downloaded from the official repository of WUR containing SWAP 4.2.0 source code and executables. This might change in the future.
+# Usage: pixi run run-swap --case <case_name> [--keep-csv]
+# Usage: pixi run run-swap -c <case_name> [-k]
+# Example: pixi run swap hupselbrook
+swap = { cmd = "cd tests/swap-cases && ./run_case.sh --exec ../../builddir/swap", depends-on = ["build-linux"] }
+swap-win = { cmd = "cd tests/swap-cases && ./run_case.cmd --exec ../../builddir_windows/swap.exe", depends-on = ["build-windows-cross"] }
 
-test-windows-hupselbrook = { cmd = "cd tests/cases/1.hupselbrook && cp swap_windows.swp.template swap.swp && run_swap.cmd" }
-test-windows-grassgrowth = { cmd = "cd tests/cases/2.grassgrowth && cp swap_windows.swp.template swap.swp && run_swap.cmd" }
-test-windows-macropore = { cmd = "cd tests/cases/3.macroporeflow && cp swap_windows.swp.template swap.swp && run_swap.cmd" }
-test-windows-oxygenstress = { cmd = "cd tests/cases/4.oxygenstress && cp swap_windows.swp.template swap.swp && run_swap.cmd" }
-test-windows-salinitystress = { cmd = "cd tests/cases/5.salinitystress && cp swap_windows.swp.template swap.swp && run_swap.cmd" }
-test-windows-surfacewater = { cmd = "cd tests/cases/6.surfacewater && cp swap_windows.swp.template swap.swp && run_swap.cmd" }
+# Run test cases with original/system executable
+# Usage: pixi run run-swap-original <case_name> [executable_path] [--keep-csv]
+# Example: pixi run run-swap-original hupselbrook ./swap_original
+swap-ref = { cmd = "cd tests/swap-cases && ./run_case.sh --exec /home/zawadzkim/Code/swap/swap_org/linux/swap420" }
+swap-win-ref = { cmd = "cd tests/swap-cases && ./run_case.cmd --exec ../../builddir_windows/swap.exe", depends-on = ["build-windows-cross"] }
 
-test-linux = { cmd = "cd tests/cases/1.hupselbrook && cp swap_linux.swp.template swap.swp && ./run_swap.sh" }
-test-windows = { cmd = "cd tests/cases/1.hupselbrook && cp swap_windows.swp.template swap.swp && run_swap.cmd" }
 
 # Unit tests for state module refactoring
 test-unit = { cmd = "./builddir/test_state && ./builddir/test_state_sync && ./builddir/test_soil_state && ./builddir/test_drainage_state && ./builddir/test_atmosphere_state && ./builddir/test_heat_state && ./builddir/test_macropore_state && ./builddir/test_solute_state && ./builddir/test_tillage_state", depends-on = ["build-linux"] }
@@ -42,16 +83,3 @@ test-unit-heat = { cmd = "./builddir/test_heat_state", depends-on = ["build-linu
 test-unit-macropore = { cmd = "./builddir/test_macropore_state", depends-on = ["build-linux"] }
 test-unit-solute = { cmd = "./builddir/test_solute_state", depends-on = ["build-linux"] }
 test-unit-tillage = { cmd = "./builddir/test_tillage_state", depends-on = ["build-linux"] }
-
-regression_hupselbrook = "python tests/regression/test_output_regression.py hupselbrook"
-regression_macropore = "python tests/regression/test_output_regression.py macropore"
-regression_grassgrowth = "python tests/regression/test_output_regression.py grassgrowth"
-regression_oxygenstress = "python tests/regression/test_output_regression.py oxygenstress"
-regression_salinitystress = "python tests/regression/test_output_regression.py salinitystress"
-regression_surfacewater = "python tests/regression/test_output_regression.py surfacewater"
-regression_all = "python tests/regression/test_output_regression.py"
-
-
-[dependencies]
-python = "3.11.*"
-meson = "==1.7"

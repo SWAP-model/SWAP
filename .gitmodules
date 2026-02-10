@@ -1,3 +1,4 @@
 [submodule "tests/swap-cases"]
 	path = tests/swap-cases
-	url = /home/zawadzkim/Code/swap-cases
+	url = https://github.com/SWAP-model/swap-cases.git
+	branch = main
