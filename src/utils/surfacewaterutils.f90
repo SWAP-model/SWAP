@@ -1,13 +1,13 @@
+!> Module containing surface water level and storage conversion utilities
+!!
+!! This module provides functions for converting between:
+!! - Surface water storage and water level
+!! - Water level and discharge
+!! - Calculating surface runoff
+!!
+!! @author Original SWAP team
+!! @date February 2026 (modularization)
 module surfacewater_utils
-   !> Module containing surface water level and storage conversion utilities
-   !!
-   !! This module provides functions for converting between:
-   !! - Surface water storage and water level
-   !! - Water level and discharge
-   !! - Calculating surface runoff
-   !!
-   !! @author Original SWAP team
-   !! @date February 2026 (modularization)
    use iso_fortran_env, only: real64
    use variables, only: sttab, imper, hqhtab, qqhtab, swdra, pond, pondmx, rsro, rsroexp, wls, swst, dt
    
@@ -16,27 +16,27 @@ module surfacewater_utils
    private
    public :: wlevst, swstlev, qhtab, runoff
 contains
-! ----------------------------------------------------------------------
+
+   !> Calculate surface water level from surface water storage using table lookup
+   !!
+   !! This function performs linear interpolation in the storage-level table (`sttab`)
+   !! to determine the water level corresponding to a given storage amount.
+   !!
+   !! Called from: surfacewater.f90
+   !!### Algorithm
+   !!
+   !! 1. Check if storage is within valid table range
+   !! 2. Search through table to find bounding entries
+   !! 3. Linear interpolation: \( wl = wl_i + \frac{st - st_i}{st_{i+1} - st_i} \cdot (wl_{i+1} - wl_i) \)
+   !!
+   !!@note
+   !! Table `sttab` is ordered with highest storage at index 1, decreasing to index 22.
+   !!@endnote
+   !!
+   !!@warning
+   !! Function terminates with fatal error if storage is outside table bounds.
+   !!@endwarning
    function wlevst(swstor)
-      !> Calculate surface water level from surface water storage using table lookup
-      !!
-      !! This function performs linear interpolation in the storage-level table (`sttab`)
-      !! to determine the water level corresponding to a given storage amount.
-      !!
-      !! Called from: surfacewater.f90
-      !!### Algorithm
-      !!
-      !! 1. Check if storage is within valid table range
-      !! 2. Search through table to find bounding entries
-      !! 3. Linear interpolation: \( wl = wl_i + \frac{st - st_i}{st_{i+1} - st_i} \cdot (wl_{i+1} - wl_i) \)
-      !!
-      !!@note
-      !! Table `sttab` is ordered with highest storage at index 1, decreasing to index 22.
-      !!@endnote
-      !!
-      !!@warning
-      !! Function terminates with fatal error if storage is outside table bounds.
-      !!@endwarning
       implicit none
       
       ! Arguments
@@ -69,27 +69,27 @@ contains
       
    end function wlevst
 
-! ----------------------------------------------------------------------
+
+   !> Calculate surface water storage from surface water level
+   !!
+   !! This function performs linear interpolation in the level-storage table (`sttab`)
+   !! to determine the storage amount corresponding to a given water level.
+   !!
+      !! Called from: surfacewater.f90, readswap.f90
+   !!### Algorithm
+   !!
+   !! 1. Check if level is within valid table range
+   !! 2. Search through table to find bounding entries
+   !! 3. Linear interpolation: \( st = st_i + \frac{wl - wl_i}{wl_{i+1} - wl_i} \cdot (st_{i+1} - st_i) \)
+   !!
+   !!@note
+   !! This is the inverse operation of [[wlevst]].
+   !!@endnote
+   !!
+   !!@warning
+   !! Function terminates with fatal error if water level is outside table bounds.
+   !!@endwarning
    function swstlev(wlev)
-      !> Calculate surface water storage from surface water level
-      !!
-      !! This function performs linear interpolation in the level-storage table (`sttab`)
-      !! to determine the storage amount corresponding to a given water level.
-      !!
-        !! Called from: surfacewater.f90, readswap.f90
-      !!### Algorithm
-      !!
-      !! 1. Check if level is within valid table range
-      !! 2. Search through table to find bounding entries
-      !! 3. Linear interpolation: \( st = st_i + \frac{wl - wl_i}{wl_{i+1} - wl_i} \cdot (st_{i+1} - st_i) \)
-      !!
-      !!@note
-      !! This is the inverse operation of [[wlevst]].
-      !!@endnote
-      !!
-      !!@warning
-      !! Function terminates with fatal error if water level is outside table bounds.
-      !!@endwarning
       implicit none
       
       ! Arguments
@@ -121,23 +121,24 @@ contains
       swstlev = sttab(i+1,2) + dwl * (sttab(i,2) - sttab(i+1,2))
       
    end function swstlev
-! ----------------------------------------------------------------------
+
+
+   !> Calculate surface water discharge from water level using table
+   !!
+   !! This function performs linear interpolation in the water level-discharge table
+   !! (`hqhtab`, `qqhtab`) for the current management period to determine discharge
+   !! corresponding to a given water level.
+   !!
+   !!### Algorithm
+   !!
+   !! 1. Find table entries bracketing the current water level
+   !! 2. Linear interpolation: \( Q = Q_i + \frac{h - h_i}{h_{i-1} - h_i} \cdot (Q_{i-1} - Q_i) \)
+   !!
+   !!@note
+   !! Uses management period index `imper` to select appropriate rating curve.
+   !! Different periods can have different level-discharge relationships.
+   !!@endnote
    function qhtab(wlev)
-      !> Calculate surface water discharge from water level using table
-      !!
-      !! This function performs linear interpolation in the water level-discharge table
-      !! (`hqhtab`, `qqhtab`) for the current management period to determine discharge
-      !! corresponding to a given water level.
-      !!
-      !!### Algorithm
-      !!
-      !! 1. Find table entries bracketing the current water level
-      !! 2. Linear interpolation: \( Q = Q_i + \frac{h - h_i}{h_{i-1} - h_i} \cdot (Q_{i-1} - Q_i) \)
-      !!
-      !!@note
-      !! Uses management period index `imper` to select appropriate rating curve.
-      !! Different periods can have different level-discharge relationships.
-      !!@endnote
       implicit none
       
       ! Arguments
@@ -159,36 +160,36 @@ contains
    end function qhtab
 
 
+   !> Calculate surface runoff from ponded water
+   !!
+   !! This function calculates runoff flux when ponding exceeds the maximum allowed
+   !! ponding depth (`pondmx`). Three calculation modes are supported based on
+   !! drainage configuration.
+   !!
+   !!### Calculation Methods
+   !!
+   !!#### Mode 1: No surface drainage system (swdra ≠ 2)
+   !!
+   !! - If resistance negligible (`rsro < 0.001`): Instantaneous drainage
+   !!   \[ Q_{ro} = pond - pond_{max} \]
+   !!
+   !! - If resistance specified: Power law drainage
+   !!   \[ Q_{ro} = \frac{\Delta t}{R_{sro}} \cdot (pond - pond_{max})^{E_{sro}} \]
+   !!
+   !!#### Mode 2: With surface drainage system (swdra = 2)
+   !!
+   !! **Excess ponding (pond > max(pondmx, wls)):**
+   !!   \[ Q_{ro} = \frac{\Delta t}{R_{sro}} \cdot (pond - \max(pond_{max}, wl_s))^{E_{sro}} \]
+   !!
+   !! **Below surface level (pond < wls):** Inundation from surface water
+   !!   \[ Q_{ro} = -\min(inun_{max}, wl_s - \max(pond, pond_{max})) \]
+   !!   where \( inun_{max} = swst - swstlev(pond) \)
+   !!
+   !!@note
+   !! Positive runoff indicates drainage from soil surface to surface water system.
+   !! Negative runoff indicates inundation from surface water onto soil surface.
+   !!@endnote
    function runoff()
-      !> Calculate surface runoff from ponded water
-      !!
-      !! This function calculates runoff flux when ponding exceeds the maximum allowed
-      !! ponding depth (`pondmx`). Three calculation modes are supported based on
-      !! drainage configuration.
-      !!
-      !!### Calculation Methods
-      !!
-      !!#### Mode 1: No surface drainage system (swdra ≠ 2)
-      !!
-      !! - If resistance negligible (`rsro < 0.001`): Instantaneous drainage
-      !!   \[ Q_{ro} = pond - pond_{max} \]
-      !!
-      !! - If resistance specified: Power law drainage
-      !!   \[ Q_{ro} = \frac{\Delta t}{R_{sro}} \cdot (pond - pond_{max})^{E_{sro}} \]
-      !!
-      !!#### Mode 2: With surface drainage system (swdra = 2)
-      !!
-      !! **Excess ponding (pond > max(pondmx, wls)):**
-      !!   \[ Q_{ro} = \frac{\Delta t}{R_{sro}} \cdot (pond - \max(pond_{max}, wl_s))^{E_{sro}} \]
-      !!
-      !! **Below surface level (pond < wls):** Inundation from surface water
-      !!   \[ Q_{ro} = -\min(inun_{max}, wl_s - \max(pond, pond_{max})) \]
-      !!   where \( inun_{max} = swst - swstlev(pond) \)
-      !!
-      !!@note
-      !! Positive runoff indicates drainage from soil surface to surface water system.
-      !! Negative runoff indicates inundation from surface water onto soil surface.
-      !!@endnote
       implicit none
       
       ! Function result
