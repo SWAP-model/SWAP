@@ -62,7 +62,6 @@ contains
     use array_utils, only: afgen
     use swap_array_dimensions, only: magrs
     implicit none
-    ! include 'arrays.fi'
 
     ! Arguments
     real(8), intent(out) :: aintc  ! Amount of rainfall interception during current day [cm/d]

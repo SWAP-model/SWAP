@@ -12,6 +12,7 @@
       use boundtop_mod, only: boundtop, PONDRUNOFF
       use array_utils, only: afgen
       use soilhydraulics_utils, only: watcon, hconduc, moiscap, hcomean, dhconduc
+      use swap_constants, only: nihil
       implicit none
 
 ! ----------------------------------------------------------------------
@@ -37,7 +38,6 @@
       data    CritDevBalTot  / 1.0d-5 / 
       data    Critdz         / 1.0d-5 / 
       data    ndr            / 5 / 
-      include 'params.fi'
 
       real(8) hgrad(macp+1), dkdh(macp)
 

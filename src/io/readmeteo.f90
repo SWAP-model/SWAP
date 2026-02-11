@@ -268,8 +268,9 @@
 !       O   - nmrain,rainamount,raintimearray
 ! ----------------------------------------------------------------------
       use variables, only: logf,yearmeteo,pathatm,rainfil,nmrain,rainamount,raintimearray
+      use swap_array_dimensions, only: mrain
+      
       implicit none
-      include 'arrays.fi'
 
 ! --- global
 

@@ -105,8 +105,8 @@
 !     functions called   : -
 !     file usage         : 
 ! ---------------------------------------------------------------------
-      implicit none
-      include 'arrays.fi'
+      
+      use swap_array_dimensions, only: macp, maout
 
 !     global
       integer   bma,IcTopMp,numnod,ioutdat,getun, task

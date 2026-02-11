@@ -211,8 +211,8 @@
 !* HeaCon - thermal conductivity (W/m/K)                               *
 !***********************************************************************
       use variables, only: NumNod,THETAS,FQUARTZ,FCLAY,FORG
+            use swap_array_dimensions, only: macp
       Implicit None
-      Include 'arrays.fi'
   
 !     (i) Global declarations                                          
 !     (i.i) Input

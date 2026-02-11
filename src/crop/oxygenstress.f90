@@ -1525,8 +1525,8 @@ end module O2_pars
 !     purpose            : Calculate oxygen stress according to reproduction function
 ! ----------------------------------------------------------------------
       use variables, only: zbotcp
+      use swap_array_dimensions, only: macp
       implicit none
-      include 'arrays.fi'
 
 ! --- global
       integer node,i

@@ -20,7 +20,7 @@
       logical   flprintdt          ! Flag indicating output every dt 
       logical   flprintshort       ! Flag indicating several output times during a day
       logical   floutputshort      ! Flag indicating time for output during a day is reached
-      integer   nprintcount        ! Counter for output during a day
+      integer   nprintcount        ! Counter for output during a day 
       integer   cntper             ! Day number of intermediate period
       integer   daycum             ! Day number from start of simulation
       integer   daynr              ! Day number of calendar year

@@ -3,7 +3,6 @@ module et_mod
 ! Subroutines:
 ! - PenMon (assumed from call)  ! Penman-Monteith ET calculation
 ! - reduceva                     ! Soil evaporation reduction (Black/Boesten-Stroosnijder)
-
     implicit none
     private
 
@@ -14,6 +13,8 @@ contains
      & daylp,flmetdetail,irecord,nmetdetail,albedo,tmn,tmx,rsw,difpp,   &
      & dsinbe,atmtr,Edirect,Tdirect,Tdirectwet,rsoil,swdivide,kdif,kdir,&
      & lai,Edirectpond)
+use swap_constants, only: vlarge, small
+
 ! ----------------------------------------------------------------------
 !     date               : 14/01/99
 !     purpose            : calculation of potential evaporation & 
@@ -60,8 +61,8 @@ contains
 !     Vcover  vegetation cover [-] ...................i
 ! ----------------------------------------------------------------------
       implicit none
-      include 'params.fi'
-! global
+
+      ! global
       integer daynr,swcf,logf,swscre,irecord,nmetdetail,swdivide
       real(8) lat,alt,altw,albedo,tmn,tmx,ch,difpp,dsinbe
       real(8) a,b,rcs,rsc,rsw,es0,et0,ew0,hum,rad,tav,win,atmtr

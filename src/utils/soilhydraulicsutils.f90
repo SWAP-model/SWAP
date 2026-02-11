@@ -534,8 +534,9 @@ contains
       !!     cofgen_in and h_in are requied as input (and cannot be imported from variables as cofgen and h)
       !! @endnote
       use variables, only: swsophy, numtab, sptab, ientrytab, iHWCKmodel, layer
+      use swap_array_dimensions, only: macp
+
       implicit none
-      include 'arrays.fi'
 
       ! Arguments
       integer, intent(in) :: node

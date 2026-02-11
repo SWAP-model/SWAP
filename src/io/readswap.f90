@@ -1749,8 +1749,9 @@
       use variables, only: swallo,swdtyp,flMacroPore,dramet,dra,ipos,nrlevs,logf,swdivd,l,zbotdr,owltab,drares,infres,qdrtab,basegw,     &
                            wetper,khtop,khbot,kvtop,kvbot,zintf,entres,geofac,drfil,pathdrain,numlay,cofani,swnrsrf,swscre,cofintfl,expintfl,     &
                            swdislay,swtopdislay,ztopdislay,ftopdislay,shape,SwTopnrsrf,swdivdinf,FacDpthInf,swliminf,nowltab
+      
+      use swap_array_dimensions, only: maowl, maho, madr
       implicit none
-      include 'arrays.fi'
 
 ! ----------------------------------------------------------------------
 ! --- local
@@ -2035,8 +2036,8 @@
                            swWrtNonox,aeratecrit,swinter,cofab,pfreetb,pstemtb,scanopytb,avprectb,avevaptb,fimin,siccaplai,sicact,dvsend,swharv,    &
                            swrd,rdtb,rdi,rri,rdc,swdmi2rd,swrdc,rdctb,rd,rdpot
       use array_utils, only: afgen
+      use swap_array_dimensions, only: magrs, mayrs
       implicit  none
-      include  'arrays.fi'
       
       integer              icrop,lcc,swhydrlift
       character(len=*)     crpfil
@@ -2523,8 +2524,8 @@
                            avprectb,avevaptb,fimin,siccaplai,sicact,swrd,rdtb,rdi,rri,rdc,swdmi2rd,rlwtb,wrtmax,swrdc,rdctb,rd,rdpot,glaiex,glaiexpot,tsumgerm,   &
                            sowdelay,prepdelay
       use array_utils, only: afgen
+      use swap_array_dimensions, only: magrs, mayrs
       implicit none
-      include  'arrays.fi'
 
       integer icrop,swhydrlift
       character(len=*)   crpfil
@@ -3441,8 +3442,8 @@
                            fimin,siccaplai,sicact,swrd,rdtb,rdi,rri,rdc,swdmi2rd,rlwtb,wrtmax,swrdc,rdctb,rd,rdpot,                                              &
                            swtsum,tsumtime,tsumtemp,tsumdepth,glaiex,glaiexpot
       use array_utils, only: afgen
+      use swap_array_dimensions, only: magrs, mayrs
       implicit none
-      include  'arrays.fi'
 
       integer           icrop,swhydrlift,swharvest,swdmmow,swlossmow,swlossgrz,swdmgrz
       integer           daylastharvest,maxdaymow,maxdaygrz
@@ -4276,8 +4277,9 @@
                            ftopdislay,SwTopnrsrf,swdivdinf,FacDpthInf
       use surfacewater_utils, only: swstlev
       use array_utils, only: afgen
+      use swap_array_dimensions, only: madr, mamp, mamte, mawlp, mabbc, mawls, maho
+
       implicit none
-      include 'arrays.fi'
 
 ! --- global
       real(8)   wls1,wlp1

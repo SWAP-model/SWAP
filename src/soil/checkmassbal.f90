@@ -14,9 +14,10 @@
                            CritDevMasBal,ievap,igird,igrai,igSnow,inird,inrai,IPondBeg,IQInTopVrtDm1,IQInTopLatDm1,IQInTopVrtDm2, &
                            IQInTopLatDm2,ISsnowBeg,iruno,irunon,isnrai,iSubl,pond,Ssnow,IWaSrDm1Beg,IWaSrDm2Beg,WaSrDm1,WaSrDm2, &
                            dev_cmb
+      use swap_array_dimensions, only: macp, madr
       implicit none
-      include 'arrays.fi'
-! -   global
+
+      ! -   global
       real(8) IQExcMtxDm1CpNew(macp), IQExcMtxDm2CpNew(macp)
       real(8) inqdraNew(Madr,macp)
       real(8) inqNew(macp+1), IQOutDrRapCpNew(macp), inqrotNew(macp)

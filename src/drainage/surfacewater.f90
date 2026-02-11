@@ -634,8 +634,8 @@ subroutine SurfaceWater(task)
       use variables, only: wls,wlstab,swst,dt,runots,QRapDra,qdrd,cqdrd,cwsupp,cwout,WLSOLD,t1900
       use array_utils, only: afgen
       use surfacewater_utils, only: swstlev
+      use swap_array_dimensions, only: mawls
       IMPLICIT NONE
-      include 'arrays.fi'
       
 ! --- global
 

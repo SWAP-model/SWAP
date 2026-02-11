@@ -1664,8 +1664,8 @@
 ! ---------------------------------------------------------------------
       use variables, only: daynr,daycum,date,outper,project,nrlevs,outfil,pathwork,numnod,z,cml,            &
                            AgeGwl1m,icAgeBot,icAgeDra,icAgeRot,icAgeSur,inqdra
-      implicit none
-      include 'arrays.fi'
+      use swap_array_dimensions, only: madr
+                           implicit none
 
 ! --- global
       integer   agep,agee,ageq,task
@@ -2391,8 +2391,9 @@
                            IQInTopVrtDm2,IQInTopLatDm2,        &
                            CritDevMasBal,tcum,nod1lay,out_etr,out_hum,out_rad,out_tmn,out_tmx,out_wet,out_win, FlOpenFileDev
       use soilhydraulics_utils, only: watcon
+      use swap_array_dimensions, only: maho, macp, madr
       implicit none
-      include 'arrays.fi'
+      
 
 ! -   global
       integer   task
@@ -2676,8 +2677,8 @@
                            WalevDm1,VlMpDm1,WaSrDm1,VlMpDm2,WaSrDm2,IQInTopVrtDm1,IQInTopLatDm1,   &
                            IQInTopVrtDm2,IQInTopLatDm2,CritDevMasBal,tcum,nod1lay, FlOpenFileDev
       use soilhydraulics_utils, only: watcon
+      use swap_array_dimensions, only: maho, macp, madr
       implicit none
-      include 'arrays.fi'
 
 ! -   global
       integer   task
@@ -2978,8 +2979,9 @@
 !                          drainage to  OUTNAM.DRF file
 ! ---------------------------------------------------------------------
       use variables, only: outfil,drf,pathwork,daynr,date,nrpri,nrlevs,cqdrain,cqdrd,crunoff,cQMpOutDrRap,flheader
+      use swap_array_dimensions, only: madr
+      
       implicit none
-      include 'arrays.fi'
 
 ! --- global
       integer   task
@@ -3439,8 +3441,9 @@
 ! local
 ! ----------------------------------------------------------------------
       use variables, only: numnod,dz,numnodnew,dznew
+      use swap_array_dimensions, only: macp
+      
       implicit none
-      include 'arrays.fi'
 
 ! global
 

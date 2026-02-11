@@ -290,8 +290,6 @@
       logical flconverg,flstress
       character(len=200) messag
   
-! not used:      include 'params.fi'
-
 ! --- initialization
       phi = 3.1415926d0
       counter = 0

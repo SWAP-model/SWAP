@@ -70,9 +70,8 @@ module drainage_mod
 !!
    use distribute_drainage, only: DIVDRA
    use array_utils, only: afgen
+   use swap_constants, only: small
    implicit none
-
-   include 'params.fi'
 
 contains
 

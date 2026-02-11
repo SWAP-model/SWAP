@@ -3833,8 +3833,8 @@ end module TSPACK
       use doln
       use doTSPACK
       use TSPACK
+      use swap_array_dimensions, only: macp, matab, matabentries
       implicit none
-      include 'arrays.fi'
 
       integer k, klo, khi, n, inverse, maxtry, ntry, ind1, ind2, ind3, iWhat
       real(8) xe, ye, dyedxe
@@ -4002,9 +4002,11 @@ end module TSPACK
       subroutine PreProcTabulatedFunction(flag,n,x,y,dydx,sigma)
       use doTSPACK
       use TSPACK
+      use swap_array_dimensions, only: matab
+      
       implicit none
-      include 'arrays.fi'
 
+      
       integer  i,n, flag
       real(8)  y(matab), dydx(matab), sigma(matab)
       integer  ic(2), INCFD, NWK, IERR

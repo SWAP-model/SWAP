@@ -60,9 +60,10 @@
                            IThetaBeg,cofgen,numnodNew,dzNew,DiPoCp,FrArMtrx,IAvFrMpWlWtDm1,IAvFrMpWlWtDm2,           &
                            IQExcMtxDm1Cp,IQExcMtxDm2Cp,IQOutDrRapCp,VlMpStDm1,VlMpStDm2
       use soilhydraulics_utils, only: prhead
+      use swap_array_dimensions, only: macp, maho, madr
       IMPLICIT NONE
-      include 'arrays.fi'
-!     global
+
+      !     global
       integer   part,Swop
       integer   botcomNew(maho)
       real(8)   hNew(macp),thetaNew(macp),inqrotNew(macp),inqNew(macp+1),inqdraNew(Madr,macp),Tsoil(0:macp),TsoilNew(0:macp)

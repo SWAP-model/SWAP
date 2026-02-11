@@ -51,13 +51,14 @@ endif
 # ============================================================================
 sources = [
     # Core
+    'src/core/arrays.f90',
+    'src/core/constants.f90',
     'src/core/swap_log.f90',
     'src/core/swap_state_mod.f90',
     'src/core/variables.f90',
     'src/core/swap_state_sync.f90',
     'src/core/initialize.f90',
     'src/core/timecontrol.f90',
-    'src/core/arrays.f90',
     
     # Soil
     'src/soil/sptabulated.f90',

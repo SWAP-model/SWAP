@@ -97,7 +97,7 @@ contains
 
       use variables, only: nowltab
       use array_utils, only: afgen
-      Include 'arrays.fi'
+      use swap_array_dimensions, only: macp, madr, maho, maowl
 
       INTEGER DrainSequence(Madr), Icomp, idr, iidr
       INTEGER idum, jdr, NumComWatLev, NumComBotDislay(Madr), NumActDrain
@@ -570,7 +570,7 @@ contains
     !!     File usage         : -
     !! ----------------------------------------------------------------------
     !!@endnote
-            Include 'arrays.fi'
+        use swap_array_dimensions, only: macp
 
             integer NumCom2Lev, NumComp
 

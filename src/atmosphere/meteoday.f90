@@ -459,8 +459,9 @@ contains
     use array_utils, only: afgen
     use runoff_mod, only: CNmethod
     use interception_mod, only: VonHHBraden, Gash, ruttervw, msw1eic, DivIntercep
+    use swap_constants, only: nihil, small
     implicit none
-    include  'params.fi'
+
     real(8)  rcs
     data     rcs/0.15d0/
 

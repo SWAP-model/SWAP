@@ -107,8 +107,8 @@ contains
    subroutine ProcessRainEvents()
       use variables, only: swrain,yearmeteo,dtmin,raintab,tcum,tend,tstart,wet,nmrain,timjan1,rainamount,rainrec,arai,rainfluxarray,raintimearray
       use array_utils, only: afgen
+      use swap_array_dimensions, only: mrain
       implicit none
-      include 'arrays.fi'
 
       ! --- local
       integer i, iendyear, j, l, nlack, nn, rday, rdaya(367), rdayold

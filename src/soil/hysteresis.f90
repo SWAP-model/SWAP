@@ -9,9 +9,10 @@
 ! ----------------------------------------------------------------------
       use variables, only: numnod,layer,h,hm1,indeks,tau,paramvg,cofgen,dimoca,theta,disnod
       use soilhydraulics_utils, only: moiscap, prhead
-      implicit none
-      include 'arrays.fi'
+      use swap_array_dimensions, only: macp
 
+      implicit none
+      
 ! --- global
 
 ! ----------------------------------------------------------------------

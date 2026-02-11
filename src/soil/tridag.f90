@@ -15,9 +15,9 @@
 !*            R -      known vector                                    *
 !* Output:    U -      solved vector                                   *
 !***********************************************************************
-      implicit none
-      include 'arrays.fi'
 
+         use swap_array_dimensions, only: macp
+         implicit none
 ! --- global declarations
 ! --- (i.i) input
       integer   n, ierror

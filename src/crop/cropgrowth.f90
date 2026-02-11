@@ -11,6 +11,7 @@
 
       use variables
       use array_utils, only: afgen
+      use swap_constants, only: tiny
       implicit none
 
       integer task
@@ -23,7 +24,6 @@
       real(8) dtgapot,dtga
       ! only for bulb crops (tulips etc..)
       real(8) respmo,decrmo,remo,factblb
-      include 'params.fi'
 
       select case (task)
 
@@ -364,6 +364,7 @@
       use variables
       use soilhydraulics_utils, only: watcon
       use array_utils, only: afgen
+      use swap_constants, only: tiny, nihil
       implicit none
 
 ! --- local variables
@@ -373,7 +374,6 @@
 ! --- rooting
       real(8)   rrpot,rr
       
-      include 'params.fi'
       save
 ! ----------------------------------------------------------------------
 
@@ -669,10 +669,9 @@
 !     purpose            : Crop growth
 ! ----------------------------------------------------------------------
       use variables
-      
+      use swap_constants, only: small
       implicit none
  
-      include 'params.fi'
       integer  task,node
       real(8)  drz1,hrz1,pFz1
       real(8)  tsumemesub      
@@ -876,7 +875,7 @@
       use wofost_soil_interface
       use array_utils, only: interpol, afgen, insw
       use soilhydraulics_utils, only: watcon
-
+        use swap_constants, only: tiny, nihil
       implicit none
  
       integer   i1,task,swhydrlift,i
@@ -952,7 +951,6 @@
       real(8) wstem
 
       parameter (delt=1.0d0)
-      include 'params.fi'
 
 ! --- only for vernalisation
       logical flvernalised
@@ -1990,6 +1988,8 @@
       use variables
       use array_utils, only: afgen
       use soilhydraulics_utils, only: watcon
+      use swap_constants, only: tiny, nihil
+      
       implicit none
  
       integer   i1,task
@@ -2038,7 +2038,6 @@
       logical   flearlyhrvendpot,flearlyhrvendact
       
       parameter (delt=1.0d0)
-      include 'params.fi'
 
       save
 ! ----------------------------------------------------------------------
@@ -3673,8 +3672,9 @@
 !     Date               : March 2015  
 !     Purpose            : open and write crop output OM balance files 
 ! ----------------------------------------------------------------------
-      implicit none
-      include 'params.fi'
+      
+     use swap_constants, only: tiny, nihil
+     implicit none
 
 ! --- global variables ------------------
       character(len=11) date

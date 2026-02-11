@@ -23,7 +23,6 @@ module boundtop_mod
       use swap_log, only: log_debug, to_str
       use surfacewater_utils, only: runoff
       implicit none
-      Include 'arrays.fi'
 
       private
       public :: boundtop, PONDRUNOFF
