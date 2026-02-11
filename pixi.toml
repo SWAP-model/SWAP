@@ -38,10 +38,32 @@ pyswap = ">=0.3.9"
 #   pixi run -e test regression --log-timing # runs all with timing
 regression = { cmd = "python tests/regression/test_output_regression.py", depends-on = ["build-linux"] }
 
+# ---- Documentation Feature ----
+[feature.docs.dependencies]
+ford = ">=7.0"
+python = "3.11.*"
+
+[feature.docs.tasks]
+# Generate FORD documentation
+# Usage: pixi run -e docs docs-build
+docs-build = "ford docs.md"
+# Serve documentation locally
+# Usage: pixi run -e docs docs-serve
+docs-serve = { cmd = "python -m http.server --directory docs/api 8001", depends-on = ["docs-build"] }
+# Open documentation in browser (Linux)
+# Usage: pixi run -e docs docs-open
+docs-open = { cmd = "xdg-open doc/index.html || open doc/index.html", depends-on = ["docs-build"] }
+# Clean generated documentation
+# Usage: pixi run -e docs docs-clean
+docs-clean = "rm -rf doc api-doc"
+# Full rebuild: clean and build
+# Usage: pixi run -e docs docs-rebuild
+docs-rebuild = { depends-on = ["docs-clean", "docs-build"] }
+
 [environments]
 default = { solve-group = "default" }
 test = { features = ["test"], solve-group = "default" }
-
+docs = { features = ["docs"], solve-group = "default" }
 
 
 [tasks]
@@ -71,6 +93,7 @@ swap-win = { cmd = "cd tests/swap-cases && ./run_case.cmd --exec ../../builddir_
 swap-ref = { cmd = "cd tests/swap-cases && ./run_case.sh --exec /home/zawadzkim/Code/swap/swap_org/linux/swap420" }
 swap-win-ref = { cmd = "cd tests/swap-cases && ./run_case.cmd --exec ../../builddir_windows/swap.exe", depends-on = ["build-windows-cross"] }
 
+lint = { cmd = "fprettify" }
 
 # Unit tests for state module refactoring
 test-unit = { cmd = "./builddir/test_state && ./builddir/test_state_sync && ./builddir/test_soil_state && ./builddir/test_drainage_state && ./builddir/test_atmosphere_state && ./builddir/test_heat_state && ./builddir/test_macropore_state && ./builddir/test_solute_state && ./builddir/test_tillage_state", depends-on = ["build-linux"] }

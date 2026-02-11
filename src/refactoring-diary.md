@@ -109,3 +109,13 @@ Recommendation for For SWAP refactoring, go straight to Phase 3 (ASSOCIATE + dir
     - Avoids the pointer "trap" of appearing cleaner than it is
 
 I also discovered a great linter. There are several things I need to get in order with the comments to the code, but ok. Everything at te right time. Although there are also other issues with that linter. Will need to look into it...
+
+2026-02-10
+
+Q:
+I'm afraid a lot of SWAP code does just that, they update state instead of computing output
+A:
+You're describing a classic challenge with legacy scientific Fortran codes! SWAP (Soil Water Atmosphere Plant model) likely has decades of evolutionary development, and what you're encountering is extremely common in models from that era.
+The Legacy Pattern
+
+Many older Fortran models (pre-Fortran 90) used subroutines as "mini-programs" that directly manipulated global state through common blocks or argument mutation, rather than following modern functional decomposition principles. When these codes are modernized, the intent attributes expose these design patterns that were previously invisible.

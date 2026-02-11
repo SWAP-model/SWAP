@@ -21,3 +21,5 @@ swap.ok
 reruns.log
 swap.swp
 *.zip
+api/
+api/src/

@@ -1,0 +1,95 @@
+/* Custom FORD Documentation Styling for SWAP */
+
+/* Improve code block readability */
+pre {
+  background-color: #f5f5f5;
+  border-left: 3px solid #3498db;
+  padding: 1em;
+  overflow-x: auto;
+  font-size: 0.9em;
+}
+
+code {
+  background-color: #f5f5f5;
+  padding: 0.2em 0.4em;
+  border-radius: 3px;
+  font-family: 'Courier New', Courier, monospace;
+}
+
+/* Enhance procedure/function documentation */
+.proc-card {
+  border-left: 4px solid #2ecc71;
+  margin-bottom: 1.5em;
+}
+
+.type-card {
+  border-left: 4px solid #9b59b6;
+}
+
+/* Improve navigation */
+.sidebar {
+  font-size: 0.95em;
+}
+
+.sidebar a {
+  transition: all 0.2s ease;
+}
+
+.sidebar a:hover {
+  background-color: #ecf0f1;
+  padding-left: 0.5em;
+}
+
+/* Better tables */
+table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1em 0;
+}
+
+table th {
+  background-color: #34495e;
+  color: white;
+  padding: 0.75em;
+  text-align: left;
+}
+
+table td {
+  padding: 0.75em;
+  border-bottom: 1px solid #ecf0f1;
+}
+
+table tr:hover {
+  background-color: #f8f9fa;
+}
+
+/* Warning and note boxes */
+.note {
+  background-color: #e8f4f8;
+  border-left: 4px solid #3498db;
+  padding: 1em;
+  margin: 1em 0;
+}
+
+.warning {
+  background-color: #fef5e7;
+  border-left: 4px solid #f39c12;
+  padding: 1em;
+  margin: 1em 0;
+}
+
+/* Improve parameter documentation */
+.param-list {
+  margin-left: 1em;
+}
+
+.param-list dt {
+  font-weight: bold;
+  color: #2c3e50;
+  margin-top: 0.5em;
+}
+
+.param-list dd {
+  margin-left: 2em;
+  color: #555;
+}
