@@ -85,6 +85,13 @@ use meteo_mod, only: ProcessMeteoDay
 use meteo_process_mod, only: ReadMeteoDay
 use snow_mod, only: snow
 use meteodt_mod, only: MeteoDT
+use frozencond_mod, only: FrozenCond, FrozenBounds
+use temperature_mod, only: Temperature
+use macropore_mod, only: macropore
+use macroporeoutput_mod, only: MacroPoreOutput
+use solute_mod, only: solute, AgeTracer
+use soilgrid_mod, only: CalcGrid, ConvertDiscrVert
+use soilhydraulics_mod, only: soilwater, SoilWaterStateVar
 implicit none
 
 ! global

@@ -3,7 +3,6 @@ project: SWAP - Soil-Water-Atmosphere-Plant model
 summary: SWAP (Soil Water Atmosphere Plant) is a physically-based, one-dimensional vertical simulation model for simulating transport processes in the  Soil-Plant-Atmosphere continuum at field scale level.
 project_github: https://github.com/SWAP-model/SWAP
 author: SWAP Team
-author_email: team@swap.com
 github: https://github.com/SWAP-model/SWAP
 website: https://www.swap.alterra.nl/
 src_dir: ./src

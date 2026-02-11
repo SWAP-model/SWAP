@@ -1,6 +1,13 @@
 ! File VersionID:
 !   $Id: solute.f90 341 2017-09-29 18:12:25Z kroes006 $
 ! ----------------------------------------------------------------------
+module solute_mod
+   implicit none
+   private
+   public :: solute, AgeTracer
+
+contains
+      
       subroutine solute (task)
 ! ----------------------------------------------------------------------
 !     date               : december 2007; code update: June, 2019
@@ -515,3 +522,4 @@
 
       return
       end
+   end module solute_mod

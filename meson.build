@@ -61,28 +61,20 @@ sources = [
     'src/core/timecontrol.f90',
     
     # Soil
+    'src/soil/soilgrid.f90',
+    'src/soil/waterbalance.f90',
+    'src/soil/soilhydraulics.f90',
     'src/soil/sptabulated.f90',
     'src/soil/WC_K_models_04_11.f90',
-    'src/soil/tridag.f90',
-    'src/soil/hysteresis.f90',
-    'src/soil/calcgrid.f90',
-    'src/soil/calcgwl.f90',
-    'src/soil/watstor.f90',
-    'src/soil/fluxes.f90',
-    'src/soil/headcalc.f90',
-    'src/soil/soilwater.f90',
-    'src/soil/integral.f90',
-    'src/soil/checkmassbal.f90',
-    'src/soil/convertdiscrvert.f90',
     
     # I/O
     'src/io/swap_csv_output.f90',
     'src/io/readswap.f90',
     'src/io/readmeteo.f90',
     'src/io/swapoutput.f90',
+    'src/io/macroporeoutput.f90',
     
     # Atmosphere & Heat
-    'src/atmosphere/penmon.f90',
     'src/atmosphere/interception.f90',
     'src/atmosphere/et.f90',
     'src/atmosphere/precipitation.f90',
@@ -102,7 +94,6 @@ sources = [
     # Macropore & Solute
     'src/macropore/macropore.f90',
     'src/macropore/macrorate.f90',
-    'src/macropore/macroporeoutput.f90',
     'src/solute/solute.f90',
     
     # Crop
@@ -129,6 +120,7 @@ sources = [
     'src/utils/arrayutils.f90',
     'src/utils/surfacewaterutils.f90',
     'src/utils/soilhydraulicsutils.f90',
+    'src/utils/numericalsolvers.f90',
     
     # Main (last)
     'src/core/swap.f90',

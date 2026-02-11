@@ -1,23 +1,36 @@
-!> Rainfall interception calculations using various methods
-! Subroutines:
-! - VonHHBraden      ! Von Hoyningen-Hune and Braden method
-! - Gash             ! Gash (1995) forest interception method
-! - ruttervw         ! Adapted Rutter method wrapper
-! - msw1eic          ! Sparse Gash concept implementation
-! - DivIntercep      ! Divide interception into rain/irrigation parts
+!> @brief Rainfall interception calculations using various methods
+!>
+!> This module provides different interception calculation methods for simulating
+!> the interception of rainfall and irrigation water by vegetation canopy. It includes
+!> methods ranging from simple empirical relationships to complex analytical solutions
+!> based on canopy storage and evaporation dynamics.
+!>
+!> Available methods:
+!> - Von Hoyningen-Hune and Braden: Exponential relationship between LAI and interception
+!> - Gash (1995): Analytical model for forest interception
+!> - Adapted Rutter method: Sparse Gash concept for detailed canopy storage simulation
+!>
+!> @author Original SWAP team
+!> @date Last modified: July 2012
 module interception_mod
 
     public :: VonHHBraden, Gash, ruttervw, msw1eic, DivIntercep
 
 contains
 
-  !> Calculate interception using Von Hoyningen-Hune and Braden method
+  !> @brief Calculate interception using Von Hoyningen-Hune and Braden method
+  !>
+  !> This method uses an exponential relationship between leaf area index (LAI)
+  !> and soil cover to calculate rainfall interception. The intercepted water
+  !> is assumed to evaporate directly from the canopy.
   !>
   !> @param[out] aintc Amount of rainfall interception during current day [cm/d]
   !>
   !> @note
   !> Last modified: July 2012
-  !> Uses exponential relation between soil cover and LAI
+  !>
+  !> Uses exponential relation between soil cover and LAI.
+  !>
   !> Input from variables module: grai, gird, kdif, kdir, cofab, lai, isua
   !> @endnote
   subroutine VonHHBraden (aintc)
@@ -49,13 +62,22 @@ contains
 
   end subroutine VonHHBraden
 
-  !> Calculate interception for forests according to Gash (1995)
+  !> @brief Calculate interception for forests according to Gash (1995)
+  !>
+  !> Implements the analytical Gash model for forest rainfall interception.
+  !> The model distinguishes between different phases of interception (wetting,
+  !> saturation, and drying) and accounts for free throughfall and stem flow.
   !>
   !> @param[out] aintc Amount of rainfall interception during current day [cm/d]
   !>
   !> @note
   !> Last modified: July 2012
-  !> Input from variables module: grai, gird, avevaptb, avprectb, pfreetb, pstemtb, scanopytb, isua, t
+  !>
+  !> Reference: Gash, J.H.C. (1995). An analytical framework for estimating
+  !> evaporation using rainfall and forest data.
+  !>
+  !> Input from variables module: grai, gird, avevaptb, avprectb, pfreetb,
+  !> pstemtb, scanopytb, isua, t
   !> @endnote
   subroutine Gash (aintc)
     use variables, only: grai,gird,avevaptb,avprectb,pfreetb,pstemtb,scanopytb,isua,t
@@ -109,7 +131,11 @@ contains
 
   end subroutine Gash
 
-  !> Simulate interception using adapted Rutter method (wrapper for msw1eic)
+  !> @brief Simulate interception using adapted Rutter method (wrapper for msw1eic)
+  !>
+  !> This subroutine serves as a wrapper for the msw1eic routine, which implements
+  !> the Sparse Gash analytical model. It converts between SWAP and MetaSWAP data
+  !> structures and handles the interception storage dynamics on the vegetation canopy.
   !>
   !> @param[in]  gctp  Soil cover [-]
   !> @param[out] aintc Intercepted rainfall [cm/d]
@@ -117,10 +143,15 @@ contains
   !>
   !> @note
   !> Author: Paul van Walsum
+  !>
   !> Date: 08/06/2012
-  !> Adapted Rutter method of Van Walsum & Supit (2012)
+  !>
+  !> Adapted Rutter method of Van Walsum & Supit (2012).
+  !>
   !> Input from variables module: logf, dt, sicact, siccapact, fimin, ew0, grai
-  !> sicact (storage on vegetation canopy [cm]) is both input and output via variables module
+  !>
+  !> sicact (storage on vegetation canopy [cm]) is both input and output via
+  !> variables module
   !> @endnote
   subroutine ruttervw (gctp,aintc,eintc)
     use variables, only: logf,dt,sicact,siccapact,fimin,ew0,grai
@@ -161,34 +192,44 @@ contains
 
   end subroutine ruttervw
 
-  !> Interception simulation with Sparse Gash concept
+  !> @brief Interception simulation with Sparse Gash concept
   !>
-  !> Modified for relationship with saturation degree of canopy
+  !> This subroutine implements a detailed analytical solution for canopy interception
+  !> based on the Sparse Gash concept. It accounts for the saturation degree of the canopy
+  !> and solves a linear differential equation to track interception storage and evaporation
+  !> dynamics during rainfall events.
   !>
-  !> @param[in]    nuk        Number of SVATs [-]
-  !> @param[in]    ibd        Existence flag for SVAT (0/1) [-]
-  !> @param[in]    dc         Near-zero real [-]
+  !> The model distinguishes between periods when the canopy is filling, saturated, or drying,
+  !> and calculates the appropriate evaporation rate for each phase.
+  !>
+  !> @param[in]    nuk        Number of SVATs (Soil Vegetation Atmosphere Transfer units) [-]
+  !> @param[in]    ibd        Existence flag for SVAT (0=inactive, 1=active) [-]
+  !> @param[in]    dc         Near-zero real value for numerical comparisons [-]
   !> @param[in]    dtsw       Time step [d]
-  !> @param[in]    csk        Soil cover [m²/m²]
+  !> @param[in]    csk        Soil cover fraction [m²/m²]
   !> @param[in]    vxick      Interception capacity of canopy [cm]
   !> @param[in]    fecmnk     Minimum relative canopy evaporation factor [-]
-  !> @param[in]    ETw0       Evaporation from wet canopy [cm/d]
-  !> @param[in]    Pgdtsw     Gross rainfall + sprinkling [cm]
+  !> @param[in]    ETw0       Evaporation rate from wet canopy [cm/d]
+  !> @param[in]    Pgdtsw     Gross rainfall plus sprinkling irrigation [cm]
   !> @param[inout] Sic        Interception storage of SVAT [cm]
   !> @param[inout] Sicolddtsw Interception storage at start of time step [cm]
-  !> @param[out]   Picdtsw    Intercepted precipitation [cm]
-  !> @param[out]   Eicdtsw    Interception evaporation [cm]
-  !> @param[out]   tcap       Time to full interception reservoir [d]
+  !> @param[out]   Picdtsw    Intercepted precipitation during time step [cm]
+  !> @param[out]   Eicdtsw    Interception evaporation during time step [cm]
+  !> @param[out]   tcap       Time to fill interception reservoir [d]
   !> @param[out]   beta       Coefficient of differential equation [1/d]
   !> @param[out]   zeta       Coefficient of differential equation [cm/d]
   !> @param[out]   fricdtsw   Fraction of time used by interception evaporation [-]
-  !> @param[in]    ib         Unit number of log file [-]
+  !> @param[in]    ib         Unit number of log file for error messages [-]
   !>
   !> @note
   !> Copyright: 2009 Alterra
+  !>
   !> File: MSW1EIC.FOR
+  !>
   !> This program, or parts thereof, may not be reproduced, modified or transferred
   !> to third parties without written permission.
+  !>
+  !> Modified for relationship with saturation degree of canopy.
   !> @endnote
   subroutine msw1eic(nuk,ibd,dc,dtsw,csk,vxick,fecmnk,ETw0,Pgdtsw, &
                      Sic,Sicolddtsw,Picdtsw,Eicdtsw,tcap,beta,zeta, &
@@ -216,7 +257,7 @@ contains
     integer(4), intent(in)    :: ib
 
     ! Local variables
-    integer(4) :: k  ! Index for SVATs
+    integer(4) :: k                ! Index for SVATs
 
 !$OMP PARALLEL DO
 !$OMP&  DEFAULT(SHARED)
@@ -334,15 +375,19 @@ contains
 
   end subroutine msw1eic
 
-  !> Divide interception into rain and irrigation parts
+  !> @brief Divide interception into rain and irrigation parts
   !>
-  !> Calculates net rain and net sprinkling irrigation after interception
+  !> This subroutine partitions the total interception amount between rainfall
+  !> and irrigation water, and calculates the net amounts that reach the soil surface.
+  !> It accounts for snow and handles cases with and without separate irrigation tracking.
   !>
-  !> @param[in] aintc Total interception [cm/d]
+  !> @param[in] aintc Total interception amount [cm/d]
   !>
   !> @note
   !> Last modified: February 2014
+  !>
   !> Input from variables module: isua, gird, grai, gsnow, snrai
+  !>
   !> Output to variables module: nird, nraida
   !> @endnote
   subroutine DivIntercep (aintc)
@@ -350,7 +395,7 @@ contains
     implicit none
 
     ! Arguments
-    real(8), intent(in) :: aintc  ! Total interception [cm/d]
+    real(8), intent(in) :: aintc   ! Total interception [cm/d]
 
     ! Divide interception into rain and irrigation parts
     ! and calculate net rain and net sprinkling irrigation

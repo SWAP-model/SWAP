@@ -20,12 +20,12 @@ module soilhydraulics_utils
    implicit none
    
    private
-   public :: watcon, moiscap, hconduc, dhconduc, prhead, hcomean
+   public :: watcon, moiscap, hconduc, dhconduc, prhead, hcomean, dkmean
 
 contains
 
+   !> Calculate mean hydraulic conductivity between two nodes
    function hcomean(swkmean, kup, klow, dzup, dzlow)
-      !> Calculate mean hydraulic conductivity between two nodes
       implicit none
       
       ! Arguments
@@ -62,8 +62,8 @@ contains
       
    end function hcomean
    
+   !> Calculate water content from pressure head
    function watcon(node, head)
-      !> Calculate water content from pressure head
       implicit none
       
       ! Arguments
@@ -187,8 +187,8 @@ contains
       
    end function watcon
 
+   !> Calculate differential moisture capacity (as a function of pressure head)
    function moiscap(node, head)
-      !> Calculate differential moisture capacity (as a function of pressure head)
       implicit none
       
       ! Arguments
@@ -322,8 +322,8 @@ contains
       
    end function moiscap
 
+   !> Calculate derivative of hydraulic conductivity (as a function of pressure head)
    function dhconduc(node, head, theta, dimocap, rfcp)
-      !> Calculate derivative of hydraulic conductivity (as a function of pressure head)
       implicit none
       
       ! Arguments
@@ -400,8 +400,8 @@ contains
       
    end function dhconduc
 
+   !> Calculate hydraulic conductivity (as a function of THETA)
    function hconduc(node, head, theta, rfcp)
-      !> Calculate hydraulic conductivity (as a function of THETA)
       implicit none
       
       ! Arguments
@@ -527,12 +527,12 @@ contains
       
    end function hconduc
 
+   !> Calculate pressure head from water content
+   !! @note
+   !! MH: since in routine convertdiscrvert prhead needs to be called with NEW distribution of cofgen and h,
+   !!     cofgen_in and h_in are requied as input (and cannot be imported from variables as cofgen and h)
+   !! @endnote
    function prhead(node, disnod, wcon, cofgen_in, h_in)
-      !> Calculate pressure head from water content
-      !! @note
-      !! MH: since in routine convertdiscrvert prhead needs to be called with NEW distribution of cofgen and h,
-      !!     cofgen_in and h_in are requied as input (and cannot be imported from variables as cofgen and h)
-      !! @endnote
       use variables, only: swsophy, numtab, sptab, ientrytab, iHWCKmodel, layer
       use swap_array_dimensions, only: macp
 
@@ -613,4 +613,29 @@ contains
       
    end function prhead
 
+   !> Calculate derivative of mean hydraulic conductivity with respect to main node conductivity
+   !!
+   !! d(hcomean)/d(kmain); note kmain = kup in hcomean and ksub = klow in hcomean; dzmain = dzup in hcomena, and dzub = dzlow in hcomean
+   function dkmean(swkmean,kmain,ksub,dzmain,dzsub)
+      implicit none
+      integer swkmean
+      real(8) kmain, ksub, dzmain, dzsub, a
+      real(8) dkmean
+      
+      if (swkmean.eq.1) then
+         dkmean = 0.5d0
+      else if (swkmean.eq.2) then
+         dkmean = dzmain/(dzmain+dzsub)
+      else if (swkmean.eq.3) then
+         dkmean = 0.5d0 * dsqrt(ksub / kmain)
+      else if (swkmean.eq.4) then
+         a = dzmain/(dzmain+dzsub)
+         dkmean = a * (ksub / kmain) ** (1.0d0 - a)
+      else if (swkmean.eq.5) then
+         dkmean = 0.5d0/(((0.5d0/kmain)+(0.5/ksub))**2 * kmain**2)
+      else if (swkmean.eq.6) then
+         a = dzmain/(dzmain+dzsub)
+         dkmean = a/(((a/kmain)+((1.0d0-a)/ksub))**2 * kmain**2)
+      end if
+   end function dkmean
 end module soilhydraulics_utils

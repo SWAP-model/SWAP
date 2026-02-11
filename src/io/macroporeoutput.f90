@@ -1,6 +1,13 @@
 ! File VersionID:
 !   $Id: macroporeoutput.f90 341 2017-09-29 18:12:25Z kroes006 $
 ! ----------------------------------------------------------------------
+module macroporeoutput_mod
+      implicit none
+      private
+      public :: MacroPoreOutput
+
+      contains
+      
       subroutine MacroPoreOutput(task) 
 ! ----------------------------------------------------------------------
 !     Date               : Aug 2004   
@@ -235,7 +242,7 @@
       end select
 
       return
-      end
+      end subroutine outbma
 
 ! ----------------------------------------------------------------------
       subroutine outshrinkchar ()
@@ -246,6 +253,7 @@
 ! ---------------------------------------------------------------------
 ! --- global
       use Variables
+      use macropore_mod, only: SHRINK
       implicit none 
 
 ! --- local variables ------------------
@@ -253,7 +261,7 @@
       character(len=80)  filtext
       character(len=1)   comma
       integer   getun,shr,lay,i
-      real(8)   MoisR, SHRINK, Thet, VlSolidRel, VoidR, VRhlp
+      real(8)   MoisR, Thet, VlSolidRel, VoidR, VRhlp
 ! ---------------------------------------------------------------------
       comma = ',' 
 
@@ -290,4 +298,6 @@
       close (shr)
 
       return
-      end
+      end subroutine outshrinkchar
+
+      end module macroporeoutput_mod

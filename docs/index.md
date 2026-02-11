@@ -1,7 +1,8 @@
 ---
-title: Wohoo!
-project: My Fortran project
-author: Me
+title: Getting started
+author: Mateusz Zawadzki
 ---
 
-This is my Fortran project!
+# Getting started
+
+In this section we explore how to get started with using this version of SWAP codebase.

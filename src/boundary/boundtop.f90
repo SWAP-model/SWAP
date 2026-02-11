@@ -1,5 +1,3 @@
-      
-module boundtop_mod
 !> Module for soil profile top boundary conditions
 !! 
 !! This module determines the top (surface) boundary condition for the SWAP
@@ -18,7 +16,7 @@ module boundtop_mod
 !! File VersionID:
 !!   $Id: boundtop.f90 368 2018-01-11 15:44:15Z heine003 $
 !! @endnote
-!! ----------------------------------------------------------------------
+module boundtop_mod
       use variables
       use swap_log, only: log_debug, to_str
       use surfacewater_utils, only: runoff
@@ -29,7 +27,6 @@ module boundtop_mod
 
 contains
 
-   subroutine boundtop
    ! ----------------------------------------------------------------------
    !> Determine soil profile top boundary condition
    !!
@@ -76,6 +73,7 @@ contains
    !!     purpose            : determine soil profile top boundary condition      
    !! ----------------------------------------------------------------------
    !! @endnote
+   subroutine boundtop
    use soilhydraulics_utils, only: watcon, hconduc, hcomean
    implicit none
 ! --- local variables

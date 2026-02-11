@@ -1820,6 +1820,7 @@
 ! ---------------------------------------------------------------------
 ! --- global
       use variables
+      use temperature_mod, only: devries
 
 ! --- local variables ------------------
       character(len=300) filnam
@@ -2392,6 +2393,8 @@
                            CritDevMasBal,tcum,nod1lay,out_etr,out_hum,out_rad,out_tmn,out_tmx,out_wet,out_win, FlOpenFileDev
       use soilhydraulics_utils, only: watcon
       use swap_array_dimensions, only: maho, macp, madr
+      use soilgrid_mod, only: convertdiscrvert
+      use soilwaterbalance_mod, only: checkmassbal
       implicit none
       
 
@@ -2678,6 +2681,8 @@
                            IQInTopVrtDm2,IQInTopLatDm2,CritDevMasBal,tcum,nod1lay, FlOpenFileDev
       use soilhydraulics_utils, only: watcon
       use swap_array_dimensions, only: maho, macp, madr
+      use soilgrid_mod, only: convertdiscrvert
+      use soilwaterbalance_mod, only: checkmassbal
       implicit none
 
 ! -   global
@@ -3506,6 +3511,8 @@
       use variables
       use drainage_mod, only: drainage
       use surfacewater_mod, only: SurfaceWater
+      use frozencond_mod, only: FrozenBounds
+      use soilhydraulics_mod, only: headcalc, SoilWaterStateVar
       implicit none
 
 ! --- global variables ------------------

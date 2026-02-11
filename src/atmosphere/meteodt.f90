@@ -1,10 +1,24 @@
-!> Detailed meteorological processing at sub-daily time steps
-!!     This file contains the following subroutines, in order of calling:
-!!     1. MeteoDT           : main routine                       ; called in SWAP and ReadMeteo (optional)
-!!     2. ProcessRainEvents : processes input data on rain events; called in MeteoDT (optional)
-!!     3. ProcessMeteoTsteps: processes meteo input data per dt  ; called in MeteoDT (optional)
-!!     4. ETSine            : distributes potential transpiration &
-!!                            evaporationaccording to sine wave  ; called in MeteoDT (optional)
+!> Meteorological data processing module for sub-daily time steps
+!!
+!! This module provides routines for processing meteorological data at sub-daily
+!! time steps, including rainfall event processing, detailed meteorological input
+!! handling, and diurnal distribution of evapotranspiration.
+!!
+!! ## Module Contents
+!!
+!! ### Public Routines
+!! - [[MeteoDT]]: Main coordinator for sub-daily meteorological processing
+!!
+!! ### Private Routines
+!! - [[ProcessRainEvents]]: Process rainfall events for an entire calendar year
+!! - [[ProcessMeteoTsteps]]: Update meteorological fluxes for current time step
+!! - [[ETSine]]: Distribute potential ET according to diurnal sine wave
+!!
+!! ## Calling Sequence
+!! 1. [[MeteoDT]] (main routine) - called in SWAP and ReadMeteo (optional)
+!! 2. [[ProcessRainEvents]] - processes input data on rain events; called in MeteoDT (optional)
+!! 3. [[ProcessMeteoTsteps]] - processes meteo input data per dt; called in MeteoDT (optional)
+!! 4. [[ETSine]] - distributes potential transpiration & evaporation according to sine wave; called in MeteoDT (optional)
 module meteodt_mod
 
    implicit none

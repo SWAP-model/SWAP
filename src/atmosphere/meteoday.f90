@@ -1,56 +1,67 @@
-! File VersionID:
-!   $Id: meteoday.f90 372 2018-03-13 10:01:20Z heine003 $
-!
-!     This file contains the following subroutines, in order of calling:
-!     1. MeteoDay          : main routine                       ; called in SWAP
-!     2. ResetMetFlx       : resets meteorological fluxes       ; called in MeteoDay
-!     3. ProcessMeteoDays  : processes meteo input data per day ; called in MeteoDay
-!     4-6.                 : calculate interception according to:
-!     4. VonHHBraden         - Von Hoyningen-Hune and Braden    ; called in ProcessMeteoDays (optional)
-!     5. Gash                - Gash                             ; called in ProcessMeteoDays (optional)
-!     6. Ruttervw            - Rutter (adapted)                 ; called in ProcessMeteoDays (optional)
-!     7. DivIntercep       : divides interception into rain part
-!                                              & sprinkling part; called in ProcessMeteoDays
-!     8. Reduceva          : calc. reduction of soil evaporation; called in ProcessMeteoDays, ProcessMeteoTsteps, ETSine
-! //[ ] write a module around the CNmethod, leave it open as runoff_mod for future additions to runoff calculation (e.g. Green-Ampt, TOPMODEL, etc.)
-! //[ ] add more documentation to the CNmethod subroutine and runoff_mod.
-! New dependency hierchy in the meteoday.f90 file:
-! Level 1 (No dependencies on other meteo modules):
-!   ├─ meteo_process_mod
-!   ├─ interception_mod
-!   ├─ et_mod
-!   └─ runoff_mod
-
-! Level 2 (Uses Level 1):
-!   └─ precipitation_mod
-
-! Level 3 (Orchestrator):
-!   └─ meteo_mod (uses all above)
-
+!> Module containing shared meteorological variables
+!!
+!! This module provides shared variables for communication between meteorological
+!! processing routines (ReadMeteoDay and ProcessMeteoDay). Variables are used to
+!! store temporary meteorological data, intermediate calculations, and results
+!! during the processing of daily or sub-daily meteorological inputs.
+!!
+!! ## Variable Categories
+!! - Loop control: count, first, i, irecord, last, ndayparts
+!! - Meteorological arrays: arain(96), awind(96)
+!! - Interception: restint, interc, aintc, eintc
+!! - Flux components: netrainflux, rainflux, Edirect, Tdirect, Tdirectwet, Edirectpond
+!! - Meteorological scalars: etr, gctp, hum, svp, wfrac, win, dttp, sumtav
+!!
+!! @author Original SWAP development team
+!! @date Refactored February 2026
 module MeteoVars
-!  for availability in both ReadMeteoDay and ProcessMeteoDay
-   integer   count,first,i,irecord,last,ndayparts
-   real(8)   arain(96),awind(96),restint,interc,Edirectpond
-   real(8)   aintc,dttp,eintc,etr,gctp,hum,netrainflux,rainflux
-   real(8)   sumtav,svp,wfrac,win,Edirect,Tdirect,Tdirectwet
+   implicit none
+   
+   integer   count           !! Loop counter for meteorological records
+   integer   first           !! First record index in processing range
+   integer   i               !! General loop counter
+   integer   irecord         !! Current record index
+   integer   last            !! Last record index in processing range
+   integer   ndayparts       !! Number of timesteps per day (1 for daily, >1 for sub-daily)
+   
+   real(8)   arain(96)       !! Array of precipitation values (cm)
+   real(8)   awind(96)       !! Array of wind speed values (m/s)
+   real(8)   restint         !! Remaining interception from previous timestep (cm)
+   real(8)   interc          !! Current interception amount (cm)
+   real(8)   Edirectpond     !! Direct evaporation from ponded water (mm/d)
+   real(8)   aintc           !! Daily interception (cm)
+   real(8)   dttp            !! Timestep duration for interception calculations (d)
+   real(8)   eintc           !! Evaporated interception (cm)
+   real(8)   etr             !! Reference evapotranspiration (mm/d)
+   real(8)   gctp            !! Ground cover at current timestep (fraction)
+   real(8)   hum             !! Humidity or vapor pressure (kPa)
+   real(8)   netrainflux     !! Net rainfall flux after interception (cm)
+   real(8)   rainflux        !! Gross rainfall flux (cm)
+   real(8)   sumtav          !! Sum of temperatures for averaging
+   real(8)   svp             !! Saturated vapor pressure (kPa)
+   real(8)   wfrac           !! Wet fraction of crop canopy (fraction)
+   real(8)   win             !! Wind speed (m/s)
+   real(8)   Edirect         !! Direct soil evaporation (mm/d)
+   real(8)   Tdirect         !! Direct transpiration (mm/d)
+   real(8)   Tdirectwet      !! Direct transpiration from wet canopy (mm/d)
 end module MeteoVars
 
+!> Module for surface runoff calculation using the SCS Curve Number method
+!!
+!! This module implements the USDA Soil Conservation Service (SCS) Curve Number (CN) method
+!! for estimating direct surface runoff from rainfall events. The method accounts for:
+!! - Time-varying CN values through lookup tables
+!! - Soil moisture corrections (dry, normal, and wet conditions)
+!! - Snowmelt contribution to runoff
+!!
+!! The CN method relates runoff to rainfall through the empirical equation:
+!! \[ Q = \frac{(P - I_a)^2}{P - I_a + S} \]
+!! where \(Q\) is runoff depth, \(P\) is precipitation depth, \(I_a\) is initial abstraction,
+!! and \(S\) is maximum potential retention.
+!!
+!! @author Original SWAP development team
+!! @date Refactored February 2026
 module runoff_mod
-  !> Module for surface runoff calculation using the SCS Curve Number method
-  !!
-  !! This module implements the USDA Soil Conservation Service (SCS) Curve Number (CN) method
-  !! for estimating direct surface runoff from rainfall events. The method accounts for:
-  !! - Time-varying CN values through lookup tables
-  !! - Soil moisture corrections (dry, normal, and wet conditions)
-  !! - Snowmelt contribution to runoff
-  !!
-  !! The CN method relates runoff to rainfall through the empirical equation:
-  !! \[ Q = \frac{(P - I_a)^2}{P - I_a + S} \]
-  !! where \(Q\) is runoff depth, \(P\) is precipitation depth, \(I_a\) is initial abstraction,
-  !! and \(S\) is maximum potential retention.
-  !!
-  !! @author Original SWAP development team
-  !! @date Refactored February 2026
    use soilhydraulics_utils, only: watcon
    implicit none
    private
@@ -204,46 +215,46 @@ module meteo_process_mod
 
 contains
 
+  !> Read meteorological data for the current simulation day
+  !!
+  !! Retrieves meteorological forcing data from pre-loaded arrays and performs
+  !! initial processing including:
+  !! - Data availability checking and error handling
+  !! - Unit conversions (mm to cm for precipitation, period averages for detailed meteo)
+  !! - Temperature-based calculations (24h average, daytime average)
+  !! - Vapor pressure and relative humidity computations
+  !! - Rain/snow partitioning based on temperature thresholds
+  !!
+  !! ## Operating Modes
+  !!
+  !! ### Daily Meteo (swmetdetail=0)
+  !! - Reads single daily values for: radiation, min/max temperature, humidity, wind, 
+  !!   precipitation, reference ET
+  !! - Calculates saturated vapor pressure using Tetens equation
+  !! - Partitions precipitation into rain/snow using transition temperatures
+  !!
+  !! ### Detailed Meteo (swmetdetail=1)
+  !! - Reads sub-daily records (typically hourly or 3-hourly)
+  !! - Validates record numbers and timestamps
+  !! - Converts precipitation from mm/period to cm
+  !! - Snow calculations disabled for detailed mode
+  !!
+  !! ## Temperature-Based Snow Partitioning
+  !! When snow calculations are enabled (swsnow=1):
+  !! - \( T_{av} > T_{rain} \): All precipitation as rain
+  !! - \( T_{av} < T_{snow} \): All precipitation as snow
+  !! - \( T_{snow} < T_{av} < T_{rain} \): Linear interpolation between rain and snow
+  !!
+  !! @warning Requires meteorological data to be pre-loaded into module variables
+  !! @warning Simulation must start within the time range of available meteo data
+  !!
+  !! @note
+  !! **Original documentation:**
+  !! Last modified: March 2014
+  !! Purpose: Returns meteorological fluxes of current day or of parts of a day 
+  !! (detailed meteo input)
+  !! @endnote
   subroutine ReadMeteoDay
-   !> Read meteorological data for the current simulation day
-   !!
-   !! Retrieves meteorological forcing data from pre-loaded arrays and performs
-   !! initial processing including:
-   !! - Data availability checking and error handling
-   !! - Unit conversions (mm to cm for precipitation, period averages for detailed meteo)
-   !! - Temperature-based calculations (24h average, daytime average)
-   !! - Vapor pressure and relative humidity computations
-   !! - Rain/snow partitioning based on temperature thresholds
-   !!
-   !! ## Operating Modes
-   !!
-   !! ### Daily Meteo (swmetdetail=0)
-   !! - Reads single daily values for: radiation, min/max temperature, humidity, wind, 
-   !!   precipitation, reference ET
-   !! - Calculates saturated vapor pressure using Tetens equation
-   !! - Partitions precipitation into rain/snow using transition temperatures
-   !!
-   !! ### Detailed Meteo (swmetdetail=1)
-   !! - Reads sub-daily records (typically hourly or 3-hourly)
-   !! - Validates record numbers and timestamps
-   !! - Converts precipitation from mm/period to cm
-   !! - Snow calculations disabled for detailed mode
-   !!
-   !! ## Temperature-Based Snow Partitioning
-   !! When snow calculations are enabled (swsnow=1):
-   !! - \( T_{av} > T_{rain} \): All precipitation as rain
-   !! - \( T_{av} < T_{snow} \): All precipitation as snow
-   !! - \( T_{snow} < T_{av} < T_{rain} \): Linear interpolation between rain and snow
-   !!
-   !! @warning Requires meteorological data to be pre-loaded into module variables
-   !! @warning Simulation must start within the time range of available meteo data
-   !!
-   !! @note
-   !! **Original documentation:**
-   !! Last modified: March 2014
-   !! Purpose: Returns meteorological fluxes of current day or of parts of a day 
-   !! (detailed meteo input)
-   !! @endnote
       use variables
       use MeteoVars
       use precipitation_mod, only: PartitionPrecipitation
@@ -261,161 +272,181 @@ contains
 
     ! 1: Check whether meteo data are available of today; pass on weather of today
     ! 1.0 Daily Meteo 0000000000000000000000000000000000000000000000000000000 Daily Meteo
-    !
-      if (swmetdetail.eq.0) then
+    
+    if (swmetdetail.eq.0) then
 
-    !   - Check availability of meteo data of today
-        if (daymeteo.lt.daynrfirst .or. daymeteo.gt.daynrlast) then
-          messag ='In meteo file no meteo data are'//                   &
-     &    ' available for '//date//'. First adapt meteo file!'
+      ! Check availability of meteo data of today
+      if (daymeteo.lt.daynrfirst .or. daymeteo.gt.daynrlast) then
+        messag ='In meteo file no meteo data are'// &
+                ' available for '//date//'. First adapt meteo file!'
+        call fatalerr ('meteo',messag)
+      end if
+
+      ! Pass on weather values of today
+      rad  = arad(daymeteo+1-daynrfirst)
+      tmn  = atmn(daymeteo+1-daynrfirst)
+      tmx  = atmx(daymeteo+1-daynrfirst)
+      hum  = ahum(daymeteo+1-daynrfirst)
+      win  = awin(daymeteo+1-daynrfirst)
+      grai = arai(daymeteo+1-daynrfirst)
+      etr  = aetr(daymeteo+1-daynrfirst)
+
+      ! If hum is missing or tav cannot be calculated: set rh at -99.0
+      rh = 1.0d0
+      if (hum.lt.-98.0d0 .or. tmn.lt.-98.0d0 .or. tmx.lt.-98.0d0) &
+        rh=-99.0d0
+
+      ! Calculate 24h average temperature
+      tav = (tmx+tmn)*0.5d0
+      ! Calculate average day temperature
+      tavd = (tmx+tav)*0.5d0
+
+      if (rh.ge.-98.0d0) then
+        ! Calculate saturated vapour pressure [kpa]
+        svp = 0.3055d0*(dexp(17.27d0*tmn/(tmn+237.3d0)) + &
+                        dexp(17.27d0*tmx/(tmx+237.3d0)))
+        ! Calculate relative humidity [fraction]
+        rh = min(hum/svp,1.0d0)
+      endif
+
+      ! CFO file for PEARL: save meteo variables of today for output
+      out_rad = real(rad)
+      out_tmn = real(tmn)
+      out_tmx = real(tmx)
+      out_hum = real(hum)
+      out_win = real(win)
+      out_etr = real(etr)*0.001
+      if (swrain.eq.2) then
+        out_wet = real(wet(daymeteo+1-daynrfirst))
+      else
+        out_wet = -1.0
+      endif
+    
+    ! end 1 Daily Meteo 00000000000000000000000000000000000000000000000000000 Daily Meteo
+    
+    ! 1.1 Detailed Meteo 1111111111111111111111111111111111111111111111111111 Detailed Meteo
+    
+    elseif (swmetdetail.eq.1) then
+
+      ! Check availability of meteo data of today
+      ! Compose filename meteorological file for use in warnings
+      write (ext,'(i3.3)') mod(yearmeteo,1000)
+      filnam = trim(pathatm)//trim(metfil)//'.'//trim(ext)
+
+      do i = 1, nmetdetail
+        irectotal = irectotal + 1
+        if (i .ne. detrecord(irectotal)) then
+          messag='In meteo file '//trim(filnam)//' record number(s)'// &
+                 ' are not correct at '//date//'. First adapt meteo file!'
+          call fatalerr ('meteo',messag)
+        end if
+        call dtdpst('year-month-day', &
+                    dettime(irectotal)+0.1d0,detdate)
+        call dtdpst('year-month-day',t1900+0.1d0,date)
+        if (detdate .ne. date) then
+          messag ='In meteo file '//trim(filnam)//' the amount of '// &
+                  'records deviate near '//date//'. First adapt meteo file!'
           call fatalerr ('meteo',messag)
         end if
 
-    !   - Pass on weather values of today
-        rad  = arad(daymeteo+1-daynrfirst)
-        tmn  = atmn(daymeteo+1-daynrfirst)
-        tmx  = atmx(daymeteo+1-daynrfirst)
-        hum  = ahum(daymeteo+1-daynrfirst)
-        win  = awin(daymeteo+1-daynrfirst)
-        grai = arai(daymeteo+1-daynrfirst)
-        etr  = aetr(daymeteo+1-daynrfirst)
-
-    !   - If hum is missing or tav cannot be calculated: set rh at -99.0
-        rh = 1.0d0
-        if (hum.lt.-98.0d0 .or. tmn.lt.-98.0d0 .or. tmx.lt.-98.0d0)     &
-     &      rh=-99.0d0
-
-    !   - Calculate 24h average temperature
-        tav = (tmx+tmn)*0.5d0
-    !   - Calculate average day temperature
-        tavd = (tmx+tav)*0.5d0
-
-        if (rh.ge.-98.0d0) then
-    !   - Calculate saturated vapour pressure [kpa]
-        svp = 0.3055d0*(dexp(17.27d0*tmn/(tmn+237.3d0)) +               &
-     &                  dexp(17.27d0*tmx/(tmx+237.3d0)))
-    !   - Calculate relative humidity [fraction]
-          rh = min(hum/svp,1.0d0)
-        endif
-
-    !   - CFO file for PEARL: save meteo variables of today for output
-        out_rad = real(rad)
-        out_tmn = real(tmn)
-        out_tmx = real(tmx)
-        out_hum = real(hum)
-        out_win = real(win)
-        out_etr = real(etr)*0.001
-        if (swrain.eq.2) then
-          out_wet = real(wet(daymeteo+1-daynrfirst))
-        else
-          out_wet = -1.0
-        endif
-    !
-    ! end 1 Daily Meteo 00000000000000000000000000000000000000000000000000000 Daily Meteo
-    !!
-    ! 1.1 Detailed Meteo 1111111111111111111111111111111111111111111111111111 Detailed Meteo
-    !
-      elseif (swmetdetail.eq.1) then
-
-    !   - Check availability of meteo data of today
-    !     + compose filename meteorological file for use in warnings
-        write (ext,'(i3.3)') mod(yearmeteo,1000)
-        filnam = trim(pathatm)//trim(metfil)//'.'//trim(ext)
-
-        do i = 1, nmetdetail
-          irectotal = irectotal + 1
-          if (i .ne. detrecord(irectotal)) then
-            messag='In meteo file '//trim(filnam)//' record number(s)'//&
-     &      ' are not correct at '//date//'. First adapt meteo file!'
-            call fatalerr ('meteo',messag)
-          end if
-          call dtdpst('year-month-day',                               &
-     &                 dettime(irectotal)+0.1d0,detdate)
-          call dtdpst('year-month-day',t1900+0.1d0,date)
-          if (detdate .ne. date) then
-            messag ='In meteo file '//trim(filnam)//' the amount of '// &
-     &      'records deviate near '//date//'. First adapt meteo file!'
-            call fatalerr ('meteo',messag)
-          end if
-
-    !   - Pass on weather records of today
-          arad(i)  = detrad(irectotal)
-          ahum(i)  = dethum(irectotal)
-          atav(i)  = dettav(irectotal)
-          awind(i) = detwind(irectotal)
-          arain(i) = detrain(irectotal) * 0.1d0 ! convert from mm to cm
-        enddo
-      endif
-    !
+        ! Pass on weather records of today
+        arad(i)  = detrad(irectotal)
+        ahum(i)  = dethum(irectotal)
+        atav(i)  = dettav(irectotal)
+        awind(i) = detwind(irectotal)
+        arain(i) = detrain(irectotal) * 0.1d0 ! convert from mm to cm
+      enddo
+    endif
+    
     ! end 1 Detailed Meteo 11111111111111111111111111111111111111111111111111 Detailed Meteo
     ! end 1.
 
-   ! Call precipitation partitioning module
-   call PartitionPrecipitation(swmetdetail, swsnow, tav, TePrRain, TePrSnow, &
-                               ssnow, nmetdetail, arain, grai, gsnow, snrai, &
-                               fprecnosnow, restint)
-      return
+    ! Call precipitation partitioning module
+    call PartitionPrecipitation(swmetdetail, swsnow, tav, TePrRain, TePrSnow, &
+                                ssnow, nmetdetail, arain, grai, gsnow, snrai, &
+                                fprecnosnow, restint)
+    return
   end subroutine ReadMeteoDay
 
 
+  !> Reset intermediate and cumulative meteorological flux counters
+  !!
+  !! Manages the zeroing of meteorological flux accumulators based on control flags.
+  !! This allows for flexible reporting periods (e.g., daily, seasonal, annual totals).
+  !!
+  !! ## Reset Operations
+  !!
+  !! ### Intermediate fluxes (flzerointr = .true.)
+  !! Typically reset at shorter intervals (e.g., daily):
+  !! - `iprec`: Intermediate precipitation
+  !! - `igrai`: Intermediate gross rainfall
+  !! - `inrai`: Intermediate net rainfall
+  !!
+  !! ### Cumulative fluxes (flzerocumu = .true.)
+  !! Typically reset at longer intervals (e.g., seasonal, annual):
+  !! - `cgrai`: Cumulative gross rainfall
+  !! - `cnrai`: Cumulative net rainfall  
+  !! - `caintc`: Cumulative interception
+  !!
+  !! @note Control flags `flzerointr` and `flzerocumu` are set by the main 
+  !! controller based on the reporting schedule
+  !!
+  !! @note
+  !! **Original documentation:**
+  !! Last modified: February 2014
+  !! Purpose: Reset intermediate and cumulative meteorological fluxes
+  !! Interface: I - flzerointr, flzerocumu, caintc, cgrai, cnrai, igrai, inrai, iprec
+  !!            O - caintc, cgrai, cnrai, igrai, inrai, iprec
+  !! @endnote
   subroutine ResetMetFlx ()
-   !> Reset intermediate and cumulative meteorological flux counters
-   !!
-   !! Manages the zeroing of meteorological flux accumulators based on control flags.
-   !! This allows for flexible reporting periods (e.g., daily, seasonal, annual totals).
-   !!
-   !! ## Reset Operations
-   !!
-   !! ### Intermediate fluxes (flzerointr = .true.)
-   !! Typically reset at shorter intervals (e.g., daily):
-   !! - `iprec`: Intermediate precipitation
-   !! - `igrai`: Intermediate gross rainfall
-   !! - `inrai`: Intermediate net rainfall
-   !!
-   !! ### Cumulative fluxes (flzerocumu = .true.)
-   !! Typically reset at longer intervals (e.g., seasonal, annual):
-   !! - `cgrai`: Cumulative gross rainfall
-   !! - `cnrai`: Cumulative net rainfall  
-   !! - `caintc`: Cumulative interception
-   !!
-   !! @note Control flags `flzerointr` and `flzerocumu` are set by the main 
-   !! controller based on the reporting schedule
-   !!
-   !! @note
-   !! **Original documentation:**
-   !! Last modified: February 2014
-   !! Purpose: Reset intermediate and cumulative meteorological fluxes
-   !! Interface: I - flzerointr, flzerocumu, caintc, cgrai, cnrai, igrai, inrai, iprec
-   !!            O - caintc, cgrai, cnrai, igrai, inrai, iprec
-   !! @endnote
       use variables, only: flzerointr,flzerocumu,caintc,cgrai,cnrai,igrai,inrai,iprec
       implicit none
 
     ! --- local
 
-    ! --- reset cumulative intermediate fluxes
-      if (flzerointr) then
-        iprec = 0.0d0
-        igrai = 0.0d0
-        inrai = 0.0d0
-      endif
+    ! Reset cumulative intermediate fluxes
+    if (flzerointr) then
+      iprec = 0.0d0
+      igrai = 0.0d0
+      inrai = 0.0d0
+    endif
 
-    ! --- reset cumulative meteorological fluxes
-      if (flzerocumu) then
-        cgrai = 0.0d0
-        cnrai = 0.0d0
-        caintc = 0.0d0
-      endif
+    ! Reset cumulative meteorological fluxes
+    if (flzerocumu) then
+      cgrai = 0.0d0
+      cnrai = 0.0d0
+      caintc = 0.0d0
+    endif
 
-      return
+    return
   end subroutine ResetMetFlx
 
 end module meteo_process_mod
 
+!> Main meteorological processing coordinator module
+!!
+!! This module serves as the primary coordinator for daily meteorological processing
+!! in the SWAP model. It orchestrates the calculation of evapotranspiration components,
+!! interception, and partitioning between soil evaporation and transpiration.
+!!
+!! The module integrates functionality from several specialized modules:
+!! - meteo_process_mod: Reading and resetting meteorological data
+!! - interception_mod: Various interception calculation methods
+!! - et_mod: Evapotranspiration calculations (Penman-Monteith)
+!! - runoff_mod: Surface runoff calculations (SCS Curve Number method)
+!!
+!! ## Main Functionality
+!! The ProcessMeteoDay subroutine handles:
+!! - Daily and sub-daily meteorological data processing
+!! - Interception calculations using multiple methods (Von Hoyningen-Hune & Braden, Gash, Rutter)
+!! - Reference evapotranspiration via Penman-Monteith or user input
+!! - Partitioning of atmospheric demand into soil evaporation and transpiration
+!! - Wet fraction calculations for crop canopy
+!! - Atmospheric CO2 corrections for transpiration
+!!
+!! @author Original SWAP development team
+!! @date Last modified February 2014, refactored February 2026
 module meteo_mod
-  !> Main meteorological processing coordinator
-  ! Subroutines:
-  ! - ProcessMeteoDay  ! Main daily processing orchestrator
   
   use meteo_process_mod, only: ReadMeteoDay, ResetMetFlx
   use interception_mod, only: VonHHBraden, Gash, ruttervw, DivIntercep
@@ -430,29 +461,30 @@ module meteo_mod
 contains
 
   !> Process daily meteorological data and calculate evapotranspiration components
-  !>
-  !> Main orchestrator for daily meteorological processing. Performs:
-  !> - Interception calculations (Von Hoyningen-Hune & Braden, Gash, or Rutter methods)
-  !> - Reference evapotranspiration calculation or input processing
-  !> - Potential soil evaporation and transpiration partitioning
-  !> - Wet fraction calculations for crop canopy
-  !> - Sub-daily timestep handling for detailed meteorology
-  !>
-  !> ## Processing Steps
-  !> 1. Calculate interception and net rainfall/irrigation
-  !> 2. Loop over day parts (1 for daily, nmetdetail for sub-daily)
-  !> 3. Calculate ET0, EW0, ES0 via Penman-Monteith or use specified values
-  !> 4. Apply interception for adapted Rutter model (if selected)
-  !> 5. Calculate wet fraction of canopy
-  !> 6. Partition into potential soil evaporation and transpiration
-  !> 7. Apply atmospheric CO2 corrections if enabled
-  !> 8. Aggregate results for detailed meteorology
-  !>
-  !> @note
-  !> Last modified: February 2014
-  !> Supports both daily (swmetdetail=0) and detailed (swmetdetail=1) meteorology
-  !> Uses module variables from Variables and MeteoVars
-  !> @endnote
+  !!
+  !! Main orchestrator for daily meteorological processing. Performs:
+  !! - Interception calculations (Von Hoyningen-Hune & Braden, Gash, or Rutter methods)
+  !! - Reference evapotranspiration calculation or input processing
+  !! - Potential soil evaporation and transpiration partitioning
+  !! - Wet fraction calculations for crop canopy
+  !! - Sub-daily timestep handling for detailed meteorology
+  !!
+  !! ## Processing Steps
+  !! 1. Calculate interception and net rainfall/irrigation
+  !! 2. Loop over day parts (1 for daily, nmetdetail for sub-daily)
+  !! 3. Calculate ET0, EW0, ES0 via Penman-Monteith or use specified values
+  !! 4. Apply interception for adapted Rutter model (if selected)
+  !! 5. Calculate wet fraction of canopy
+  !! 6. Partition into potential soil evaporation and transpiration
+  !! 7. Apply atmospheric CO2 corrections if enabled
+  !! 8. Aggregate results for detailed meteorology
+  !!
+  !! @note
+  !! **Original documentation:**
+  !! Last modified: February 2014
+  !! Supports both daily (swmetdetail=0) and detailed (swmetdetail=1) meteorology
+  !! Uses module variables from Variables and MeteoVars
+  !! @endnote
   subroutine ProcessMeteoDay
     use Variables
     use MeteoVars
@@ -501,29 +533,29 @@ contains
 
       ! === Section 4: Calculate evapotranspiration (et0, ew0, es0) ===
       ! Reference evapotranspiration has been specified
-         if (swmetdetail.eq.0 .and. swetr.eq.1) then
-           if (.not. flCropEmergence) then
-            ! no crop
-             et0 = 0.0d0
-             ew0 = 0.0d0
-             es0 = etr
-             if (swcfbs.eq.1) es0 = cfbs*etr
-           else
-            ! crop is present
-             if (swcf.eq.1 .or. swcf.eq.3) then
-                et0 = cf*etr
-                if (swcf .eq. 1) then
-                   ew0 = cf*etr
-                else
-                   ew0 = cfeic*etr
-                endif
-             endif
-             es0 = etr
-             if (swcfbs.eq.1) es0 = cfbs*etr
-           endif
+      if (swmetdetail.eq.0 .and. swetr.eq.1) then
+        if (.not. flCropEmergence) then
+          ! no crop
+          et0 = 0.0d0
+          ew0 = 0.0d0
+          es0 = etr
+          if (swcfbs.eq.1) es0 = cfbs*etr
+        else
+          ! crop is present
+          if (swcf.eq.1 .or. swcf.eq.3) then
+            et0 = cf*etr
+            if (swcf .eq. 1) then
+              ew0 = cf*etr
+            else
+              ew0 = cfeic*etr
+            endif
+          endif
+          es0 = etr
+          if (swcfbs.eq.1) es0 = cfbs*etr
+        endif
 
-        ! Reference evapotranspiration must be calculated
-         elseif (swmetdetail.eq.1 .or. swetr.eq.0) then
+      ! Reference evapotranspiration must be calculated
+      elseif (swmetdetail.eq.1 .or. swetr.eq.0) then
 
         if (swmetdetail.eq.1) then
           ! Define weather variables of current record
@@ -542,43 +574,43 @@ contains
                      Edirect,Tdirect,Tdirectwet,rsoil,swdivide,kdif,kdir, &
                      lai,Edirectpond)
 
-           if (.not. flCropEmergence) then
-            ! no crop
-             if (swcfbs .eq. 1) then
-               if (swcf .eq. 1) then
-                 es0 = cfbs*et0
-               else
-                 es0 = cfbs*es0
-               endif
-             endif
-             et0 = 0.0d0
-             if (swmetdetail.eq.1 .and. (swcf.eq.1 .or. swcf.eq.3)) then
-               if (swcf.eq.1) then
-                 ew0 = cf*ew0
-               else
-                 ew0 = cfeic*ew0
-               endif
-             endif
-           else
-            ! crop is present
-             if (swcfbs .eq. 1) then
-               if (swcf .eq. 1) then
-                 es0 = cfbs*et0
-               else
-                 es0 = cfbs*es0
-               endif
-             endif
-             if (swcf.eq.1 .or. swcf.eq.3) then
-               et0 = cf*et0
-               if (swcf.eq.1) then
-                 ew0 = cf*ew0
-               else
-                 ew0 = cfeic*ew0
-               endif
-             endif
-           endif
-
+        if (.not. flCropEmergence) then
+          ! no crop
+          if (swcfbs .eq. 1) then
+            if (swcf .eq. 1) then
+              es0 = cfbs*et0
+            else
+              es0 = cfbs*es0
+            endif
+          endif
+          et0 = 0.0d0
+          if (swmetdetail.eq.1 .and. (swcf.eq.1 .or. swcf.eq.3)) then
+            if (swcf.eq.1) then
+              ew0 = cf*ew0
+            else
+              ew0 = cfeic*ew0
+            endif
+          endif
+        else
+          ! crop is present
+          if (swcfbs .eq. 1) then
+            if (swcf .eq. 1) then
+              es0 = cfbs*et0
+            else
+              es0 = cfbs*es0
+            endif
+          endif
+          if (swcf.eq.1 .or. swcf.eq.3) then
+            et0 = cf*et0
+            if (swcf.eq.1) then
+              ew0 = cf*ew0
+            else
+              ew0 = cfeic*ew0
+            endif
+          endif
         endif
+
+      endif
 
       ! === Section 5: Interception option NHI (adapted Rutter model) ===
 
@@ -829,13 +861,3 @@ contains
 
   end subroutine ProcessMeteoDay
 end module meteo_mod
-
-
-
-
-
-
-
-
-
-

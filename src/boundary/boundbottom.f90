@@ -18,40 +18,40 @@ module boundbottom_mod
 
 contains
 
+    !> Determine soil profile bottom boundary conditions
+    !!
+    !! This subroutine calculates the bottom boundary condition for the soil
+    !! profile based on the selected boundary type (`swbotb`). It handles:
+    !!
+    !! - Given groundwater levels (swbotb=1)
+    !! - Regional bottom flux, prescribed or free drainage (swbotb=±2)
+    !! - Seepage/infiltration from deep groundwater (swbotb=3)
+    !! - Flux as function of pressure head (swbotb=4)
+    !! - Given pressure head at bottom (swbotb=5)
+    !! - Zero flux (swbotb=6)
+    !! - Free drainage (swbotb=7)
+    !! - Lysimeter with free drainage (swbotb=8)
+    !!
+    !! The subroutine updates global variables `qbot` (bottom flux) and
+    !! `qbot_nonfrozen`, and may modify `kmean(numnod+1)` for pressure
+    !! head boundaries.
+    !!
+    !! @note This subroutine operates on global state from the `variables`
+    !!       module including `swbotb`, `h`, `numnod`, `qbot`, etc.
+    !!
+    !! @warning If oven-dry conditions (h < -1.0E7) occur at the bottom node
+    !!          with swbotb=2, the boundary automatically switches to free
+    !!          drainage (swbotb=-2) and a warning is issued.
+    !! @note
+    !! File VersionID:
+    !!   $Id: boundbottom.f90 362 2018-01-08 13:08:33Z kroes006 $
+    !! ----------------------------------------------------------------------
+    !! ----------------------------------------------------------------------
+    !!     date               : August 2004 / Sept 2005
+    !!     purpose            : determine soil profile bottom boundary conditions
+    !! ----------------------------------------------------------------------
+    !! @endnote
     subroutine BoundBottom
-!> Determine soil profile bottom boundary conditions
-!!
-!! This subroutine calculates the bottom boundary condition for the soil
-!! profile based on the selected boundary type (`swbotb`). It handles:
-!!
-!! - Given groundwater levels (swbotb=1)
-!! - Regional bottom flux, prescribed or free drainage (swbotb=±2)
-!! - Seepage/infiltration from deep groundwater (swbotb=3)
-!! - Flux as function of pressure head (swbotb=4)
-!! - Given pressure head at bottom (swbotb=5)
-!! - Zero flux (swbotb=6)
-!! - Free drainage (swbotb=7)
-!! - Lysimeter with free drainage (swbotb=8)
-!!
-!! The subroutine updates global variables `qbot` (bottom flux) and
-!! `qbot_nonfrozen`, and may modify `kmean(numnod+1)` for pressure
-!! head boundaries.
-!!
-!! @note This subroutine operates on global state from the `variables`
-!!       module including `swbotb`, `h`, `numnod`, `qbot`, etc.
-!!
-!! @warning If oven-dry conditions (h < -1.0E7) occur at the bottom node
-!!          with swbotb=2, the boundary automatically switches to free
-!!          drainage (swbotb=-2) and a warning is issued.
-!! @note
-!! File VersionID:
-!!   $Id: boundbottom.f90 362 2018-01-08 13:08:33Z kroes006 $
-!! ----------------------------------------------------------------------
-!! ----------------------------------------------------------------------
-!!     date               : August 2004 / Sept 2005
-!!     purpose            : determine soil profile bottom boundary conditions
-!! ----------------------------------------------------------------------
-!! @endnote
         use array_utils, only: afgen
         use soilhydraulics_utils, only: watcon, hconduc
         ! --- local variables

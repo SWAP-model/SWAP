@@ -1,7 +1,14 @@
 ! File VersionID:
 !   $Id: macrorate.f90 370 2018-02-09 13:29:10Z heine003 $
 ! ----------------------------------------------------------------------
-      SUBROUTINE MACRORATE(ITask,ICpBtDm,ICpBtPerZon,ICpSatGWl,         &
+module macrorate_mod
+   implicit none
+   private
+   public :: macrorate
+
+contains
+
+SUBROUTINE MACRORATE(ITask,ICpBtDm,ICpBtPerZon,ICpSatGWl,         &
      &            ICpSatPeGWl,ICpTpPerZon,ICpTpSatZon,ICpTpWaSrDm,      &
      &            ArMpTpDm,AwlCorFac,FrMpWalWet,KDCrRlRef,SorpDmCp,     &
      &            ThtSrpRefDmCp,TimAbsCumDmCp,VlMpDm,VlMpDmCp,WaSrMp,   &
@@ -59,7 +66,7 @@
       real(8) FlwOutMtxUnsDmCpPot(MaDm,MaCp), FlwOutMtxUnsDmPot(MaDm)
       real(8) FrReduQ, FrXtr, Pp, PpTot, SatDefDm(MaDm)
       real(8) SatDefDmRel(MaDm), SatDefTot, VlMpUndrDrL, VlMpUndrGwL
-      real(8) VOLUNDR, WaSrMpDmMax, WaSrMpDmMin, WaSrMpDmTmp
+      real(8) WaSrMpDmMax, WaSrMpDmMin, WaSrMpDmTmp
       real(8) Ld, pi, r0, w_geom, Henpr1  
 
       data    pi /3.14159d0/
@@ -773,7 +780,7 @@
 ! --- local
       integer ic
       real(8) DelH, KDCrRl, KDCrRlCp(MaCp), RapDraRes
-      real(8) VOLUNDR, WaSrDrainabl, WthCr
+      real(8) WaSrDrainabl, WthCr
 ! ----------------------------------------------------------------------
 !
 ! --- Check whether this subroutine is relevant for this macropore domain
@@ -875,3 +882,5 @@
      &                     VOLUNDR - (ZHlp-Level)*VlMpDmCp(id,ic)/DZ(ic)
       return
       END
+
+      end module macrorate_mod
