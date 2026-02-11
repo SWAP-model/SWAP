@@ -1,366 +1,439 @@
-! File VersionID:
-!   $Id: meteodt.f90 362 2018-01-08 13:08:33Z kroes006 $
-!
-!     This file contains the following subroutines, in order of calling:
-!     1. MeteoDT           : main routine                       ; called in SWAP and ReadMeteo (optional)                          
-!     2. ProcessRainEvents : processes input data on rain events; called in MeteoDT (optional)  
-!     3. ProcessMeteoTsteps: processes meteo input data per dt  ; called in MeteoDT (optional) 
-!     4. ETSine            : distributes potential transpiration &
-!                            evaporationaccording to sine wave  ; called in MeteoDT (optional)
+!> Detailed meteorological processing at sub-daily time steps
+!!     This file contains the following subroutines, in order of calling:
+!!     1. MeteoDT           : main routine                       ; called in SWAP and ReadMeteo (optional)
+!!     2. ProcessRainEvents : processes input data on rain events; called in MeteoDT (optional)
+!!     3. ProcessMeteoTsteps: processes meteo input data per dt  ; called in MeteoDT (optional)
+!!     4. ETSine            : distributes potential transpiration &
+!!                            evaporationaccording to sine wave  ; called in MeteoDT (optional)
+module meteodt_mod
 
-! SUBROUTINE 1.
-! ----------------------------------------------------------------------
-      subroutine MeteoDT
-! ----------------------------------------------------------------------
-!     Last modified      : February 2014              
-!     Purpose            : returns meteorological fluxes of current day
-!                        : or of parts of a day (detailed meteo input)
-! ----------------------------------------------------------------------
+   implicit none
+   private
+   public :: MeteoDT
+
+contains
+
+   !> Main coordinator for sub-daily meteorological processing
+  !!
+  !! This subroutine orchestrates the processing of meteorological data at sub-daily
+  !! time steps. It handles:
+  !! - Rain event processing at the beginning of each year (for swrain 1-3)
+  !! - Updating meteorological fluxes at each time step
+  !! - Distributing potential ET according to diurnal sine wave (if enabled)
+  !!
+  !! ## Processing Sequence
+  !! 1. **Year initialization**: Process rain events for entire year (if flYearStart=true)
+  !! 2. **Time step processing**: Update rain/meteo fluxes for current time step (if flMeteoDT=true)
+  !! 3. **ET distribution**: Apply sine wave distribution to potential ET (if flETSine=true)
+  !!
+  !! Control flags determine which processing steps are active:
+  !! - `flRainIntens`: Use rainfall intensities/durations (swrain 1-3)
+  !! - `flMeteoDT`: Process meteorological data at sub-daily time steps
+  !! - `flETSine`: Distribute ET according to photoperiod-based sine wave
+  !!
+  !! @note
+  !! **Original documentation:**
+  !! Last modified: February 2014
+  !! Purpose: Returns meteorological fluxes of current day or of parts of a day
+  !! (detailed meteo input)
+  !! @endnote
+   subroutine MeteoDT
       use variables
       implicit none
 
-! ----------------------------------------------------------------------
+      ! --- meteo input handling on yearly and daily basis ---
 
-! ----------------------------------------------------------------------
-! --- meteo input handling on yearly and daily basis -------------------
-! ----------------------------------------------------------------------
-
-! --- beginning of year: process rain events
+      ! Beginning of year: process rain events
       if (flYearStart .and. flRainIntens) then
          call ProcessRainEvents()
-!
-        flYearStart = .false.
-      endif
+         flYearStart = .false.
+      end if
 
+      ! --- calculations of meteo variables on time step basis ---
 
-! ----------------------------------------------------------------------
-! --- calculations of meteo variables on time step basis ---------------
-! ----------------------------------------------------------------------
-
-! --- update actual rain record and set precipitation fluxes per time step
-!     or update actual meteo record and set meteo fluxes per time step
+      ! Update actual rain record and set precipitation fluxes per time step
+      ! or update actual meteo record and set meteo fluxes per time step
       if (flMeteoDT) then
          call ProcessMeteoTsteps
-      endif
+      end if
 
-! --- distribute potential transpiration and evaporation according to sine wave
+      ! Distribute potential transpiration and evaporation according to sine wave
       if (flETSine) then
          call ETSine
-      endif
+      end if
+   end subroutine MeteoDT
 
-      return     
-      end subroutine MeteoDT
-
-
-! SUBROUTINE 2.
-! ----------------------------------------------------------------------
-      subroutine ProcessRainEvents()
-! ----------------------------------------------------------------------
-!     Last modified      : February 2014
-!     Purpose            : process rain events of one calendar year 
-!     Interface:
-!       I   - swrain,daynrfirst,daynrlast,yearmeteo,dtmin,raintab,tcum,
-!             tend,tstart,wet,nmrain,timjan1,rainamount,rainrec
-!       O   - arai,rainfluxarray,raintimearray
-! ----------------------------------------------------------------------
+   !> Process rainfall events for an entire calendar year
+  !!
+  !! Converts daily or event-based rainfall input into time-stamped rain flux arrays
+  !! that can be used for sub-daily time step calculations. The processing differs
+  !! depending on the rainfall input mode (swrain).
+  !!
+  !! ## Processing by Input Mode
+  !!
+  !! ### swrain=1 (Daily sums + mean intensities)
+  !! - Uses lookup table (raintab) to determine rainfall intensity for each day
+  !! - Calculates duration from: duration = amount / intensity
+  !! - Creates timestamped events with uniform intensity during each rain period
+  !!
+  !! ### swrain=2 (Daily sums + durations)
+  !! - Uses specified wet period durations (wet array)
+  !! - Distributes daily amount uniformly over specified duration
+  !!
+  !! ### swrain=3 (Event-based input)
+  !! - Processes pre-defined rain events from input file
+  !! - Calculates daily totals (arai) by accumulating events
+  !! - Handles events spanning multiple days by weighted allocation
+  !!
+  !! ## Output Arrays
+  !! Creates two parallel arrays for rain flux time series:
+  !! - `raintimearray(i)`: Time of event closure (days since start)
+  !! - `rainfluxarray(i)`: Rainfall intensity during period [i-1, i] (cm/d)
+  !!
+  !! The flux at time i applies to the interval from time i-1 to time i.
+  !!
+  !! @warning Must be called at the beginning of each calendar year
+  !! @warning Arrays sized to accommodate entire year of events
+  !!
+  !! @note
+  !! **Original documentation:**
+  !! Last modified: February 2014
+  !! Purpose: Process rain events of one calendar year
+  !! Interface:
+  !! - I: swrain, yearmeteo, dtmin, raintab, tcum, tend, tstart, wet,
+  !!      nmrain, timjan1, rainamount, rainrec
+  !! - O: arai, rainfluxarray, raintimearray
+  !! @endnote
+   subroutine ProcessRainEvents()
       use variables, only: swrain,yearmeteo,dtmin,raintab,tcum,tend,tstart,wet,nmrain,timjan1,rainamount,rainrec,arai,rainfluxarray,raintimearray
       use array_utils, only: afgen
       implicit none
       include 'arrays.fi'
 
-! --- global
+      ! --- local
+      integer i, iendyear, j, l, nlack, nn, rday, rdaya(367), rdayold
+      real(8) araihlp(367), day(mrain), rainam(mrain), rainflux
+      real(8) raintime, ratimar(mrain), tendyear, vsmall, wght, wwet(368)
+      vsmall = 1.0d-8
 
-! --- local
-      integer   i,iendyear,j,l,nlack,nn,rday,rdaya(367),rdayold
-      real(8)   araihlp(367),day(mrain),rainam(mrain),rainflux
-      real(8)   raintime,ratimar(mrain),tendyear,vsmall,wght,wwet(368)
-      vsmall    = 1.0d-8
+      ! === Process rain events on yearly basis ===
 
-! ----------------------------------------------------------------------
-! --- process rain events on yearly basis ------------------------------
-! ----------------------------------------------------------------------
-
-! --- for rain options 1 and 2: convert daily rain quantities and intensities or durations
-!     into rain events by creating raintime and rainflux arrays conform rain option 3 
-      if (swrain.eq.1 .or. swrain.eq.2) then
+      ! For rain options 1 and 2: convert daily rain quantities and intensities or durations
+      ! into rain events by creating raintime and rainflux arrays conform rain option 3
+      if (swrain .eq. 1 .or. swrain .eq. 2) then
          rainrec = 1
          do i = 1, nmrain
-           if (raintimearray(i+1).gt.tstart-vsmall) then
-             rainrec = rainrec + 1
-!   - beginning (00:00) of days of current year within simulation period
-             day(rainrec)    = raintimearray(i+1) - timjan1 + 1.d0 
-             rainam(rainrec) = 0.1d0 * rainamount(i)  ! convert from mm to cm
-             wwet(rainrec)   = wet(i) 
-           endif
-         enddo
+            if (raintimearray(i + 1) .gt. tstart - vsmall) then
+               rainrec = rainrec + 1
+               ! Beginning (00:00) of days of current year within simulation period
+               day(rainrec) = raintimearray(i + 1) - timjan1 + 1.d0
+               rainam(rainrec) = 0.1d0*rainamount(i)  ! convert from mm to cm
+               wwet(rainrec) = wet(i)
+            end if
+         end do
 
-!   - set first record of raintime and rainflux (= 0)
+         ! Set first record of raintime and rainflux (= 0)
          raintimearray(1) = tcum + dtmin
-         rainam(1)        = 0.d0
+         rainam(1) = 0.d0
          rainfluxarray(1) = 0.d0
-         
-!   - set rest of records of raimtime and rainflux (only when rainam[ount] > 0)     
-         nmrain   = rainrec + 1 
+
+         ! Set rest of records of raintime and rainflux (only when rainam[ount] > 0)
+         nmrain = rainrec + 1
          rainrec = 0
          do i = 2, nmrain
-           if (rainam(i).gt.vsmall) then
-             if (swrain.eq.1) then  
-!          + mean rainfall intensities are specified
-               rainflux = afgen(raintab,60,day(i))
-               raintime = dmin1(0.99d0,rainam(i)/rainflux)
+            if (rainam(i) .gt. vsmall) then
+               if (swrain .eq. 1) then
+                  ! Mean rainfall intensities are specified
+                  rainflux = afgen(raintab, 60, day(i))
+                  raintime = dmin1(0.99d0, rainam(i)/rainflux)
 
-             elseif (swrain.eq.2) then
-!          + rainfall durations are specified
-               raintime = wwet(i)
-             endif
-             
-             if (i.eq.2) then
-               rainrec = rainrec + 1
-             else
-!          + first raintime of a day: closure of last period of former day with rain = 0
-               rainrec = rainrec + 2
-               raintimearray(rainrec) = dble(i-2) + tcum
-               rainfluxarray(rainrec) = 0.d0
-             endif
-!          + second raintime of a day: closure of first period of the day, rain = rainam
-             raintimearray(rainrec+1)  = dble(i-2) + tcum + raintime
-             rainfluxarray(rainrec+1)  = rainam(i) / raintime    
-   
-           endif
-         enddo
+               elseif (swrain .eq. 2) then
+                  ! Rainfall durations are specified
+                  raintime = wwet(i)
+               end if
 
-! ---    extend array with records at end of current year
+               if (i .eq. 2) then
+                  rainrec = rainrec + 1
+               else
+                  ! First raintime of a day: closure of last period of former day with rain = 0
+                  rainrec = rainrec + 2
+                  raintimearray(rainrec) = dble(i - 2) + tcum
+                  rainfluxarray(rainrec) = 0.d0
+               end if
+               ! Second raintime of a day: closure of first period of the day, rain = rainam
+               raintimearray(rainrec + 1) = dble(i - 2) + tcum + raintime
+               rainfluxarray(rainrec + 1) = rainam(i)/raintime
+
+            end if
+         end do
+
+         ! Extend array with records at end of current year
          tendyear = 365.d0
-         if (mod(yearmeteo,4).eq.0) tendyear = 366.d0
-         raintimearray(rainrec+2) = tcum + tendyear + dtmin
-         rainfluxarray(rainrec+2) = 0.d0
+         if (mod(yearmeteo, 4) .eq. 0) tendyear = 366.d0
+         raintimearray(rainrec + 2) = tcum + tendyear + dtmin
+         rainfluxarray(rainrec + 2) = 0.d0
 
-! --- in case of rain events: 1 calculate daily values
-!                             2 fill raintimearray and rainfluxarray 
-      elseif (swrain.eq.3) then
+         ! In case of rain events: 1) calculate daily values, 2) fill raintimearray and rainfluxarray
+      elseif (swrain .eq. 3) then
 
-! --- total amount of rain per meteo day arai
-!   - initialize array with sum of rain
+         ! Total amount of rain per meteo day arai
+         ! Initialize array with sum of rain
          do i = 1, 366
-           araihlp(i)  = 0.d0
-         enddo
+            araihlp(i) = 0.d0
+         end do
 
-!   - less rain days than meteo days? Fill gap with dummies
-         rdayold = int(raintimearray(1)-timjan1) + 1  ! first day with rain record of the year
+         ! Less rain days than meteo days? Fill gap with dummies
+         rdayold = int(raintimearray(1) - timjan1) + 1  ! first day with rain record of the year
          nlack = rdayold - 1
          do j = 1, nlack
-           rdaya(j) = j
-           araihlp(j)  = 0.d0
-         enddo
+            rdaya(j) = j
+            araihlp(j) = 0.d0
+         end do
          rdaya(j) = rdayold
-         araihlp(j)  = 0.d0
-!   - fill array of daily sums of rain with real values         
+         araihlp(j) = 0.d0
+
+         ! Fill array of daily sums of rain with real values
          do i = 1, nmrain
-           rday = int(raintimearray(i)-timjan1) + 1
-           if (rday.gt.rdayold) then
-             do l = 1, rday-rdayold-1
+            rday = int(raintimearray(i) - timjan1) + 1
+            if (rday .gt. rdayold) then
+               do l = 1, rday - rdayold - 1
+                  j = j + 1
+                  rdaya(j) = rdaya(j - 1) + 1
+                  araihlp(j) = 0.d0
+               end do
+               ! In case of rain event exceeding current day, calculate weights for assigning parts to current and next day
+               wght = (1.d0 - (raintimearray(i - 1) - dble(int(raintimearray(i - 1)))))/ &
+                      (raintimearray(i) - raintimearray(i - 1))
+               araihlp(j) = araihlp(j) + rainamount(i)*wght
+               rdayold = rday
                j = j + 1
-               rdaya(j) = rdaya(j-1) + 1
-               araihlp(j)  = 0.d0
-             enddo
-!   - in case of rain event exceding current day, calculate weights for assigning parts to current and next day              
-             wght =                                                     &
-     &        (1.d0-(raintimearray(i-1)-dble(int(raintimearray(i-1)))))/&
-     &        (raintimearray(i)-raintimearray(i-1))
-             araihlp(j) = araihlp(j) + rainamount(i) * wght
-             rdayold  = rday 
-             j = j + 1
-             rdaya(j) = rday
-             araihlp(j) = araihlp(j) + rainamount(i) * (1.d0 - wght)
-           else
-             if (i.gt.1) then
-               araihlp(j) = araihlp(j) + rainamount(i)
-             endif
-           endif
-         enddo
-         
-!   - rain days missing at the end of the year? Fill gap with dummies     
+               rdaya(j) = rday
+               araihlp(j) = araihlp(j) + rainamount(i)*(1.d0 - wght)
+            else
+               if (i .gt. 1) then
+                  araihlp(j) = araihlp(j) + rainamount(i)
+               end if
+            end if
+         end do
+
+         ! Rain days missing at the end of the year? Fill gap with dummies
          iendyear = 365
-         if (mod(yearmeteo,4).eq.0) iendyear = 366   
+         if (mod(yearmeteo, 4) .eq. 0) iendyear = 366
          nlack = iendyear - j
          do i = 1, nlack
-           rdaya(j+i) = j + i
-           araihlp(j+i)  = 0.d0
-         enddo
+            rdaya(j + i) = j + i
+            araihlp(j + i) = 0.d0
+         end do
 
-!   - save help array araihlp into arai
-         do i =1,366
+         ! Save help array araihlp into arai
+         do i = 1, 366
             arai(i) = araihlp(i)
-!            write(117,*) i, arai(i),araihlp(i+1)
-         enddo
+         end do
 
-! --- assign values to raintimearray and rainam array for calculating rainfluxarray
-!   - find time gap without rain events at the beginning of teh year
+         ! Assign values to raintimearray and rainam array for calculating rainfluxarray
+         ! Find time gap without rain events at the beginning of the year
          rainrec = 1
          ratimar(1) = raintimearray(1) - tstart
          i = 1
-         do while (ratimar(i).lt.vsmall)
-           i = i + 1
-           ratimar(i) = raintimearray(i) - tstart
-         enddo
-         do while (rainamount(i).lt.vsmall .and.                        &
-     &             rainamount(i+1).lt.vsmall)
-           i = i + 1
-           ratimar(i) = raintimearray(i) - tstart
-         enddo
+         do while (ratimar(i) .lt. vsmall)
+            i = i + 1
+            ratimar(i) = raintimearray(i) - tstart
+         end do
+         do while (rainamount(i) .lt. vsmall .and. rainamount(i + 1) .lt. vsmall)
+            i = i + 1
+            ratimar(i) = raintimearray(i) - tstart
+         end do
 
-! --- fill arrays with real values of rain events
+         ! Fill arrays with real values of rain events
          nn = i
          do i = nn, nmrain
-           ratimar(i+1) = raintimearray(i+1) - tstart
-           rainrec = rainrec + 1
-           raintimearray(rainrec) = ratimar(i)
-           rainam(rainrec) = 0.1d0 * rainamount(i)  ! convert from mm to cm    
-         enddo
+            ratimar(i + 1) = raintimearray(i + 1) - tstart
+            rainrec = rainrec + 1
+            raintimearray(rainrec) = ratimar(i)
+            rainam(rainrec) = 0.1d0*rainamount(i)  ! convert from mm to cm
+         end do
          nmrain = rainrec
 
-!   - set first record of arrays
+         ! Set first record of arrays
          raintimearray(1) = tcum + dtmin
          rainfluxarray(1) = 0.0d0
 
-! --- calculate rainfluxes (cm/d) and fill rainfluxarray 
-!     Flx(t1) = P(t1) / (T(t1)-T(t0))  = counts for time interval T(t0) -> T(t1)
-!     Flx = flux, P = quantity of rain, T = time
+         ! Calculate rainfluxes (cm/d) and fill rainfluxarray
+         ! Flx(t1) = P(t1) / (T(t1)-T(t0))  = counts for time interval T(t0) -> T(t1)
+         ! Flx = flux, P = quantity of rain, T = time
          do i = 2, nmrain
-            rainfluxarray(i) = rainam(i) /                              &
-     &                         (raintimearray(i)-raintimearray(i-1))
+            rainfluxarray(i) = rainam(i)/(raintimearray(i) - raintimearray(i - 1))
          end do
-         
-! --- set final values of raintimearray and corresponding rainfluxarray         
-         raintimearray(nmrain+1) = dmax1(tend+1.1d0-tstart,             &
-     &                                   raintimearray(nmrain)+1.d0)
-         rainfluxarray(nmrain+1) = 0.d0
+
+         ! Set final values of raintimearray and corresponding rainfluxarray
+         raintimearray(nmrain + 1) = dmax1(tend + 1.1d0 - tstart, raintimearray(nmrain) + 1.d0)
+         rainfluxarray(nmrain + 1) = 0.d0
          nmrain = nmrain + 1
 
-      endif
+      end if
 
-! --- for swrain = 1-3: determine start rain record
+      ! For swrain = 1-3: determine start rain record
       rainrec = 1
 
       return
-      end subroutine ProcessRainEvents  
-          
+   end subroutine ProcessRainEvents
 
-! SUBROUTINE 3.
-! ----------------------------------------------------------------------
-      subroutine ProcessMeteoTsteps
-! ----------------------------------------------------------------------
-!     Last modified      : February 2014
-!     Purpose            : calculations of meteo variables on time step 
-!                          basis (in case of precipitation intensities 
-!                          [swrain 1-3] or detailed meteo input) 
-! ----------------------------------------------------------------------
+   !> Update meteorological fluxes for current time step
+  !!
+  !! Handles two types of sub-daily meteorological processing:
+  !! 1. **Rainfall intensity mode** (flrainintens=true): Updates precipitation fluxes
+  !!    based on rain event time series
+  !! 2. **Detailed meteorology mode** (flmetdetail=true): Updates all meteorological
+  !!    variables including ET and precipitation from detailed input records
+  !!
+  !! ## Rainfall Intensity Processing (swrain 1-3)
+  !! - Retrieves rainfall flux from event arrays for current time step
+  !! - Applies snow/rain partitioning (fprecnosnow)
+  !! - Applies interception correction (finterception)
+  !! - Calculates time until next rain event (dtEventRain)
+  !!
+  !! ## Detailed Meteorology Processing (swmetdetail=1)
+  !! - Updates to next meteorological record when needed (flUpdMetDet=true)
+  !! - Sets potential transpiration (ptra) and evaporation (peva)
+  !! - Sets gross and net rainfall rates (graidt, nraidt)
+  !! - Calculates actual soil evaporation considering surface wetness
+  !!
+  !! The routine is called at every time step when sub-daily processing is active.
+  !!
+  !! @note
+  !! **Original documentation:**
+  !! Last modified: February 2014
+  !! Purpose: Calculations of meteo variables on time step basis
+  !! (in case of precipitation intensities [swrain 1-3] or detailed meteo input)
+  !! @endnote
+   subroutine ProcessMeteoTsteps
       use variables
+      use et_mod, only: reduceva
       implicit none
 
-! --- local
-!      real(8)   dtCrit
-
-!     critical time-interval 
-!      dtCrit = 1.d-6
-! ----------------------------------------------------------------------
-!
-! === Precipitation intensities ========================================
+      ! === Precipitation intensities ===
 
       if (flrainintens) then
-! --- per time step: set precipitation fluxes for current time step
-         graidt  = fprecnosnow * rainfluxarray(rainrec)
-         nraidt  = finterception * graidt
-         aintcdt = (1.d0-finterception) * graidt
-         !!!if (swuseCN == 1) then
-         !!!   call CNmethod(2)
-         !!!   nraidt  = nraidt - Runoff_CN
-         !!!end if
+         ! Per time step: set precipitation fluxes for current time step
+         graidt = fprecnosnow*rainfluxarray(rainrec)
+         nraidt = finterception*graidt
+         aintcdt = (1.d0 - finterception)*graidt
 
-! --- calculate minimum time step length for occurence of next rain event 
-!     (tcum + dt = time at end of current timestep)
+         ! Calculate minimum time step length for occurrence of next rain event
+         ! (tcum + dt = time at end of current timestep)
          dtEventRain = raintimearray(rainrec) - (tcum + dt)
 
-!
-! === Detailed meteo ===================================================
+         ! === Detailed meteo ===
 
       elseif (flmetdetail) then
 
-        if (flUpdMetDet) then
-! --- per meteo time interval: update actual meteo record and set fluxes  
-!                              for current time of detailed meteo input
-          wrecord = wrecord + 1
-          ptra    = tpot(wrecord)
-          peva    = epot(wrecord)
-          graidt  = grain(wrecord)
-          nraidt  = nrain(wrecord)
-          aintcdt = graidt - nraidt
-!
-          flUpdMetDet = .false.
-        endif
-!
-! --- per time step: calculate soil evaporation rate of current time step
-        call reduceva (2,nraida)
+         if (flUpdMetDet) then
+            ! Per meteo time interval: update actual meteo record and set fluxes
+            ! for current time of detailed meteo input
+            wrecord = wrecord + 1
+            ptra = tpot(wrecord)
+            peva = epot(wrecord)
+            graidt = grain(wrecord)
+            nraidt = nrain(wrecord)
+            aintcdt = graidt - nraidt
 
-      endif
-       
-      return     
-      end subroutine ProcessMeteoTsteps
+            flUpdMetDet = .false.
+         end if
 
+         ! Per time step: calculate soil evaporation rate of current time step
+         call reduceva(2, nraida)
 
-! SUBROUTINE 4.
-! ----------------------------------------------------------------------
-      subroutine ETSine
-! ----------------------------------------------------------------------
-!     Last modified      : october 2008
-!     Purpose            : distributes potential transpiration and evaporation
-!                          according to sine wave during photoperiodic daylight
-!     Note: tsunrise_atm and tsunset_atm are now module-level in variables.f90
-! ----------------------------------------------------------------------
-      use variables
-      implicit none
-
-! --- local
-      real(8)   daytime,pi,dayl,sinld,cosld,fraction
-      data      pi/3.14159265d0/    ! number pi [-]
-
-      if (fldaystart) then
-! ---   determine duration photoperiodic daylight in hours
-        call astro(daynr,lat,rad,dayl,daylp,sinld,cosld,difpp,          &
-     &             atmtr,dsinbe)
-! ---   determine tsunrise_atm, tsunset_atm and daytime
-        tsunrise_atm = 0.5d0 - daylp / 48.d0
-        tsunset_atm = 0.5d0 + daylp / 48.d0
-      endif
-
-! --- set time as fraction of the day
-      daytime = t1900 + dt - int(t1900)
-
-! --- determine fraction of fluxes according to sine wave during this time step
-      if (daytime.lt.tsunrise_atm) then
-        fraction = 0.d0
-      elseif (daytime.gt.tsunrise_atm .and. (daytime-dt).lt.tsunrise_atm) then
-        fraction = 0.5d0 * (dcos(pi/2.d0 + (tsunrise_atm - 0.5d0)/          &
-     &     (tsunset_atm-tsunrise_atm)*pi) - dcos(pi/2.d0 + (daytime - 0.5d0)/   &
-     &     (tsunset_atm-tsunrise_atm)*pi))
-      elseif ((daytime-dt).gt.tsunrise_atm .and. (daytime).lt.tsunset_atm) then
-        fraction = 0.5d0 * (dcos(pi/2.d0 + (daytime - dt - 0.5d0)/      &
-     &     (tsunset_atm-tsunrise_atm)*pi) - dcos(pi/2.d0 + (daytime - 0.5d0)/   &
-     &     (tsunset_atm-tsunrise_atm)*pi))
-      elseif (daytime.gt.tsunset_atm .and. (daytime-dt).lt.tsunset_atm) then
-        fraction = 0.5d0 * (dcos(pi/2.d0 + (daytime - dt - 0.5d0)/      &
-     &     (tsunset_atm-tsunrise_atm)*pi) - dcos(pi/2.d0 + (tsunset_atm - 0.5d0)/   &
-     &     (tsunset_atm-tsunrise_atm)*pi))
-      else
-        fraction = 0.d0
-      endif
-
-! --- set E and T fluxes
-      peva = pevaday * fraction / dt
-      ptra = ptraday * fraction / dt
-
-! --- actual soil evaporation rate of current moment 
-      call reduceva (2,nraida)
+      end if
 
       return
-      end subroutine ETSine
+   end subroutine ProcessMeteoTsteps
+
+   !> Distribute potential evapotranspiration according to diurnal sine wave
+  !!
+  !! Calculates time-varying potential transpiration and evaporation rates that follow
+  !! a sine wave pattern during daylight hours. This provides a more realistic representation
+  !! of diurnal ET dynamics compared to constant daily rates.
+  !!
+  !! ## Mathematical Approach
+  !! The sine wave is centered at solar noon and extends over the photoperiodic daylength:
+  !! - Before sunrise: ET = 0
+  !! - During daylight: ET follows sine curve (maximum at noon)
+  !! - After sunset: ET = 0
+  !!
+  !! The sine wave integral over the day equals the daily total (ptraday, pevaday),
+  !! ensuring mass conservation.
+  !!
+  !! ## Implementation Details
+  !! At day start (fldaystart=true):
+  !! - Calculates photoperiodic daylength (daylp) using astronomical relationships
+  !! - Determines sunrise time (tsunrise_atm) and sunset time (tsunset_atm)
+  !!
+  !! At each time step:
+  !! - Determines fraction of daily ET for current time interval
+  !! - Accounts for time steps spanning sunrise or sunset transitions
+  !! - Calculates instantaneous rates: ptra, peva (cm/d)
+  !! - Updates actual soil evaporation considering surface moisture
+  !!
+  !! ## State Variables
+  !! - `tsunrise_atm`: Time of sunrise (fraction of day, 0-1)
+  !! - `tsunset_atm`: Time of sunset (fraction of day, 0-1)
+  !!
+  !! Both are module-level variables in variables.f90
+  !!
+  !! @note
+  !! **Original documentation:**
+  !! Last modified: October 2008
+  !! Purpose: Distributes potential transpiration and evaporation according to
+  !! sine wave during photoperiodic daylight
+  !! Note: tsunrise_atm and tsunset_atm are now module-level in variables.f90
+  !! @endnote
+   subroutine ETSine
+      use variables
+      use et_mod, only: reduceva
+      implicit none
+
+      ! --- local
+      real(8) daytime, pi, dayl, sinld, cosld, fraction
+      data pi/3.14159265d0/    ! number pi [-]
+
+      if (fldaystart) then
+         ! Determine duration photoperiodic daylight in hours
+         call astro(daynr, lat, rad, dayl, daylp, sinld, cosld, difpp, atmtr, dsinbe)
+         ! Determine tsunrise_atm, tsunset_atm and daytime
+         tsunrise_atm = 0.5d0 - daylp/48.d0
+         tsunset_atm = 0.5d0 + daylp/48.d0
+      end if
+
+      ! Set time as fraction of the day
+      daytime = t1900 + dt - int(t1900)
+
+      ! Determine fraction of fluxes according to sine wave during this time step
+      if (daytime .lt. tsunrise_atm) then
+         fraction = 0.d0
+      elseif (daytime .gt. tsunrise_atm .and. (daytime - dt) .lt. tsunrise_atm) then
+         fraction = 0.5d0*(dcos(pi/2.d0 + (tsunrise_atm - 0.5d0)/ &
+                                (tsunset_atm - tsunrise_atm)*pi) - dcos(pi/2.d0 + (daytime - 0.5d0)/ &
+                                                                        (tsunset_atm - tsunrise_atm)*pi))
+      elseif ((daytime - dt) .gt. tsunrise_atm .and. (daytime) .lt. tsunset_atm) then
+         fraction = 0.5d0*(dcos(pi/2.d0 + (daytime - dt - 0.5d0)/ &
+                                (tsunset_atm - tsunrise_atm)*pi) - dcos(pi/2.d0 + (daytime - 0.5d0)/ &
+                                                                        (tsunset_atm - tsunrise_atm)*pi))
+      elseif (daytime .gt. tsunset_atm .and. (daytime - dt) .lt. tsunset_atm) then
+         fraction = 0.5d0*(dcos(pi/2.d0 + (daytime - dt - 0.5d0)/ &
+                                (tsunset_atm - tsunrise_atm)*pi) - dcos(pi/2.d0 + (tsunset_atm - 0.5d0)/ &
+                                                                        (tsunset_atm - tsunrise_atm)*pi))
+      else
+         fraction = 0.d0
+      end if
+
+      ! Set E and T fluxes
+      peva = pevaday*fraction/dt
+      ptra = ptraday*fraction/dt
+
+      ! Actual soil evaporation rate of current moment
+      call reduceva(2, nraida)
+
+      return
+   end subroutine ETSine
+
+end module meteodt_mod

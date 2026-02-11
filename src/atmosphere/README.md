@@ -35,3 +35,7 @@ Temperature-index approach with corrections for:
 
 - `core/variables.f90` - Meteorological state variables
 - Weather input files (`.met` format)
+
+## Refactoring
+### Modularization
+- [ ] 

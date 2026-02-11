@@ -13,6 +13,7 @@
 !     Purpose            : read meteorological data of one calendar year
 ! ----------------------------------------------------------------------
       use variables
+      use meteodt_mod, only: MeteoDT
       implicit none
     
 ! --- global
@@ -249,7 +250,7 @@
 ! --- reopen present year for processing rain intensity data at beginning MeteoDt      
       if (swrain .gt. 0) then
          flYearStart = .true.
-         call MeteoDt
+         call MeteoDT
       endif
 
       return

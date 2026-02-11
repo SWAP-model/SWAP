@@ -80,6 +80,11 @@ use tillage,   only : DoTillage
 use swap_exchange
 use swap_log, only: log_info
 use boundbottom_mod, only: BoundBottom
+use runoff_mod, only: CNmethod
+use meteo_mod, only: ProcessMeteoDay
+use meteo_process_mod, only: ReadMeteoDay
+use snow_mod, only: snow
+use meteodt_mod, only: MeteoDT
 implicit none
 
 ! global
@@ -212,7 +217,7 @@ if (iTask == 2) then
       end if
 
 !     process Meteo data
-      if (flMeteoDt .or. flETSine) call MeteoDt
+      if (flMeteoDt .or. flETSine) call MeteoDT
 
 !     shared simulation
       if (flSwapShared .and. flDayStart) call SharedSimulation(2)

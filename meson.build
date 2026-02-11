@@ -57,6 +57,7 @@ sources = [
     'src/core/swap_state_sync.f90',
     'src/core/initialize.f90',
     'src/core/timecontrol.f90',
+    'src/core/arrays.f90',
     
     # Soil
     'src/soil/sptabulated.f90',
@@ -81,6 +82,9 @@ sources = [
     
     # Atmosphere & Heat
     'src/atmosphere/penmon.f90',
+    'src/atmosphere/interception.f90',
+    'src/atmosphere/et.f90',
+    'src/atmosphere/precipitation.f90',
     'src/atmosphere/meteoday.f90',
     'src/atmosphere/meteodt.f90',
     'src/atmosphere/snow.f90',
