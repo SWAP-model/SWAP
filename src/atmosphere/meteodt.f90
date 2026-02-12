@@ -24,6 +24,7 @@ module meteodt_mod
    implicit none
    private
    public :: MeteoDT
+   public :: MeteoDT_state
 
 contains
 
@@ -76,6 +77,24 @@ contains
          call ETSine
       end if
    end subroutine MeteoDT
+
+   !> State-aware wrapper for sub-daily meteorological processing
+  !!
+  !! Synchronizes legacy variables from/to explicit `swap_state_t` and
+  !! executes the original `MeteoDT` routine.
+  !!
+  !! @param[inout] state SWAP model state container
+   subroutine MeteoDT_state(state)
+      use swap_state_mod, only: swap_state_t
+      use swap_state_sync, only: atmosphere_state_from_variables, time_state_from_variables
+      implicit none
+
+      type(swap_state_t), intent(inout) :: state
+
+      call MeteoDT()
+      call atmosphere_state_from_variables(state%atm)
+      call time_state_from_variables(state%time)
+   end subroutine MeteoDT_state
 
    !> Process rainfall events for an entire calendar year
   !!

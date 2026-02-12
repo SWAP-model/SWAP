@@ -15,6 +15,20 @@
       real(8)   iqredsol_day       ! Sum (since start of a day) of total T reduction due to salinity stress (cm)
       real(8)   iqredfrs_day       ! Sum (since start of a day) of total T reduction due to frost    stress (cm)
       real(8)   iptra_day          ! Sum (since start of a day) of potential T (cm)
+
+      ! TimeControl persistent state (formerly local SAVE variables in timecontrol.f90)
+      integer   tc_datea(6)        ! Date array used in calendar conversions
+      integer   tc_nextyear        ! Year counter used by TimeControl
+      integer   tc_flprevious      ! Status of previous timestep interval
+      logical   tc_flTnext         ! Flag used by TimeControl
+      real(4)   tc_fsec            ! Seconds fraction in date conversions
+      real(8)   tc_tchange         ! Time of next output/control change
+      real(8)   tc_dtEvent         ! Current event time step
+      real(8)   tc_tEvent          ! Time to next event within day
+      real(8)   tc_tcumold         ! Previous cumulative time
+      real(8)   tc_dtprevious      ! Length of previous timestep
+      real(4)   tc_tmptimestart    ! Timing support (IterTime)
+      real(4)   tc_tmptimeend      ! Timing support (IterTime)
       logical   FlOpenFileDev
       integer   nprintday          ! Number of output times during one day
       logical   flprintdt          ! Flag indicating output every dt 
@@ -31,6 +45,9 @@
       integer   iyear              ! Year number of calendar year
       integer   iyearm1            ! Year number of previous calendar year
       integer   logf               ! Internal number of logbook output file *.LOG
+
+      ! Exchange/DLL persistent state (formerly local SAVE in swap.f90 handle_exchange)
+      real(8)   ex_tlast           ! Last t1900 seen by external caller (days since 1900)
       
       ! Oxygen stress persistent state (moved from O2_pars module and OxygenStress subroutine)
       real(8)   o2_w_root          ! Dry weight per root length (kg/m)

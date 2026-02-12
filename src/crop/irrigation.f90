@@ -1,7 +1,32 @@
 ! File VersionID:
 !   $Id: irrigation.f90 372 2018-03-13 10:01:20Z heine003 $
 ! ----------------------------------------------------------------------
-      subroutine irrigation (task)
+!> Irrigation routines for scheduled and subsurface drip irrigation.
+!!
+!! This module groups legacy irrigation entry points into a modern
+!! module namespace while preserving behavior and routine names.
+!!
+!! @note Legacy header retained:
+!!   Date: November 2004
+!!   Purpose: evaluate and schedule irrigations
+!!   Modified July 2019:
+!!   - tcs=5 obsolete and replaced by tcs=7 (theta) and tcs=8 (presh)
+!!   - some calculations only once during initialization
+   module irrigation_mod
+   implicit none
+   private
+
+   public :: irrigation
+   public :: SSDI_irrigation
+
+   contains
+
+!> Evaluate and schedule surface irrigation.
+!!
+!! @param[in] task Task selector:
+!!   - 1: initialization for current crop
+!!   - 2: daily irrigation decision and depth
+   subroutine irrigation(task)
 ! ----------------------------------------------------------------------
 !     Date               : November 2004
 !     Purpose            : evaluate and schedule irrigations
@@ -481,8 +506,14 @@
       end select
 
       return
-   end
+   end subroutine irrigation
 
+!> Compute subsurface drip irrigation (SSDI) scheduling and rates.
+!!
+!! @param[in] iTask Task selector:
+!!   - 1: initialization/read SSDI settings
+!!   - 2: daily SSDI scheduling and rate assignment
+!!   - 9: reset SSDI event state
 subroutine SSDI_irrigation(iTask)
 
 use variables, only: swpfile, logf, mairg, numnod, tend, tstart, t1900, zbotcp, irrigevent, qssdi, qssdisum, dt_SSDI_event,   &
@@ -689,6 +720,7 @@ logical :: rdinqr
 !---------------------------
    contains
 
+   !> Read SSDI configuration from SSDI input file.
    subroutine read_ssdi_input()
    real(8) :: dummy
    logical :: rdinar
@@ -752,3 +784,5 @@ logical :: rdinqr
    end subroutine read_ssdi_input
    
 end subroutine SSDI_irrigation
+
+end module irrigation_mod

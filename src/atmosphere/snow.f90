@@ -12,6 +12,7 @@ module snow_mod
 
    private
    public :: snow
+   public :: snow_state
 
 contains
 !> Simulate snow accumulation and melt processes
@@ -170,5 +171,24 @@ contains
 
       return
    end subroutine snow
+
+!> Simulate snow with explicit SWAP state synchronization
+!!
+!! Wrapper around legacy `snow` routine to support explicit state-based
+!! execution while preserving existing physics.
+!!
+!! @param[inout] state SWAP model state container
+!! @param[in]    task  Task selector: 1=initialization, 2=calculation
+   subroutine snow_state(state, task)
+      use swap_state_mod, only: swap_state_t
+      use swap_state_sync, only: atmosphere_state_from_variables
+      implicit none
+
+      type(swap_state_t), intent(inout) :: state
+      integer,            intent(in)    :: task
+
+      call snow(task)
+      call atmosphere_state_from_variables(state%atm)
+   end subroutine snow_state
 
 end module snow_mod

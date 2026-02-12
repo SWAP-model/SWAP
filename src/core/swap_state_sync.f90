@@ -59,6 +59,17 @@ module swap_state_sync
     public :: surfacewater_state_to_variables
     public :: boundary_state_from_variables
     public :: boundary_state_to_variables
+    public :: boundbottom_outputs_from_variables
+    public :: soilgrid_outputs_from_variables
+    public :: soilwater_outputs_from_variables
+    public :: soilwaterstatevar_outputs_from_variables
+    public :: soilwaterbalance_outputs_from_variables
+    public :: drainage_outputs_from_variables
+    public :: surfacewater_outputs_from_variables
+    public :: solute_outputs_from_variables
+    public :: agetracer_outputs_from_variables
+    public :: macropore_state_from_variables
+    public :: macropore_state_to_variables
     public :: solute_state_from_variables
     public :: solute_state_to_variables
     public :: heat_state_from_variables
@@ -127,7 +138,6 @@ contains
         call heat_state_to_variables(state%heat, state%numnod, state%numlay)
         call oxygenstress_state_to_variables(state%oxystress, state%numnod)
         
-        call log_info('sync', 'Variables synchronized from state')
     end subroutine state_to_variables
 
     ! ==========================================================================
@@ -161,6 +171,15 @@ contains
         tstate%nprintday = nprintday
         tstate%nprintcount = nprintcount
         tstate%period = period
+
+        ! Output schedule configuration
+        tstate%swheader = swheader
+        tstate%swodat = swodat
+        tstate%swres = swres
+        tstate%swscre = swscre
+        tstate%outper = outper
+        tstate%outdat = outdat
+        tstate%outdatint = outdatint
         
         ! Flags
         tstate%fldayend = fldayend
@@ -194,6 +213,23 @@ contains
         tstate%pathwork = pathwork
         tstate%project = project
         tstate%swpfile = swpfile
+
+        ! TimeControl persistent internals
+        tstate%tc_datea = tc_datea
+        tstate%tc_nextyear = tc_nextyear
+        tstate%tc_flprevious = tc_flprevious
+        tstate%tc_flTnext = tc_flTnext
+        tstate%tc_fsec = tc_fsec
+        tstate%tc_tchange = tc_tchange
+        tstate%tc_dtEvent = tc_dtEvent
+        tstate%tc_tEvent = tc_tEvent
+        tstate%tc_tcumold = tc_tcumold
+        tstate%tc_dtprevious = tc_dtprevious
+        tstate%tc_tmptimestart = tc_tmptimestart
+        tstate%tc_tmptimeend = tc_tmptimeend
+
+        ! External/DLL exchange persistent state
+        tstate%ex_tlast = ex_tlast
         
     end subroutine time_state_from_variables
 
@@ -225,6 +261,15 @@ contains
         nprintday = tstate%nprintday
         nprintcount = tstate%nprintcount
         period = tstate%period
+
+        ! Output schedule configuration
+        swheader = tstate%swheader
+        swodat = tstate%swodat
+        swres = tstate%swres
+        swscre = tstate%swscre
+        outper = tstate%outper
+        outdat = tstate%outdat
+        outdatint = tstate%outdatint
         
         ! Flags
         fldayend = tstate%fldayend
@@ -258,6 +303,23 @@ contains
         pathwork = tstate%pathwork
         project = tstate%project
         swpfile = tstate%swpfile
+
+        ! TimeControl persistent internals
+        tc_datea = tstate%tc_datea
+        tc_nextyear = tstate%tc_nextyear
+        tc_flprevious = tstate%tc_flprevious
+        tc_flTnext = tstate%tc_flTnext
+        tc_fsec = tstate%tc_fsec
+        tc_tchange = tstate%tc_tchange
+        tc_dtEvent = tstate%tc_dtEvent
+        tc_tEvent = tstate%tc_tEvent
+        tc_tcumold = tstate%tc_tcumold
+        tc_dtprevious = tstate%tc_dtprevious
+        tc_tmptimestart = tstate%tc_tmptimestart
+        tc_tmptimeend = tstate%tc_tmptimeend
+
+        ! External/DLL exchange persistent state
+        ex_tlast = tstate%ex_tlast
         
     end subroutine time_state_to_variables
 
@@ -465,6 +527,20 @@ contains
     ! ==========================================================================
     subroutine atmosphere_state_from_variables(astate)
         type(atmosphere_state_t), intent(inout) :: astate
+
+        ! Meteo input configuration
+        astate%swetr = swetr
+        astate%swdivide = swdivide
+        astate%swmetdetail = swmetdetail
+        astate%swmeteo = swmeteo
+        astate%swrain = swrain
+        astate%swetsine = swetsine
+        astate%swinter = swinter
+        astate%swMetFilAll = swMetFilAll
+        astate%nmetdetail = nmetdetail
+        astate%altw = altw
+        astate%angstroma = angstroma
+        astate%angstromb = angstromb
         
         ! Current meteorological values
         astate%tav = tav
@@ -550,6 +626,20 @@ contains
 
     subroutine atmosphere_state_to_variables(astate)
         type(atmosphere_state_t), intent(in) :: astate
+
+        ! Meteo input configuration
+        swetr = astate%swetr
+        swdivide = astate%swdivide
+        swmetdetail = astate%swmetdetail
+        swmeteo = astate%swmeteo
+        swrain = astate%swrain
+        swetsine = astate%swetsine
+        swinter = astate%swinter
+        swMetFilAll = astate%swMetFilAll
+        nmetdetail = astate%nmetdetail
+        altw = astate%altw
+        angstroma = astate%angstroma
+        angstromb = astate%angstromb
         
         ! Current meteorological values
         tav = astate%tav
@@ -1409,6 +1499,398 @@ contains
         ftoph = bstate%ftoph
         
     end subroutine boundary_state_to_variables
+
+    ! ==========================================================================
+    ! Minimal Output Synchronization: BoundBottom
+    ! ==========================================================================
+    !> Copy only outputs updated by `BoundBottom` from legacy module variables
+    !! into explicit state objects.
+    !!
+    !! This avoids expensive full-state snapshot operations inside the timestep
+    !! loop while preserving correctness for bottom boundary outputs.
+    !!
+    !! @param[inout] bstate Boundary-state object
+    !! @param[inout] sstate Soil-state object
+    subroutine boundbottom_outputs_from_variables(bstate, sstate)
+        type(boundary_state_t), intent(inout) :: bstate
+        type(soil_state_t), intent(inout) :: sstate
+
+        bstate%qbot = qbot
+        bstate%qbot_nonfrozen = qbot_nonfrozen
+        bstate%swbotb = swbotb
+
+        sstate%qbot = qbot
+        sstate%deepgw = deepgw
+        sstate%hbot = hbot
+        sstate%gwlinp = gwlinp
+
+        if (swbotb == 5 .and. allocated(sstate%kmean)) then
+            if ((numnod + 1) <= size(sstate%kmean)) then
+                sstate%kmean(numnod + 1) = kmean(numnod + 1)
+            end if
+        end if
+    end subroutine boundbottom_outputs_from_variables
+
+    ! ==========================================================================
+    ! Minimal Output Synchronization: SoilGrid
+    ! ==========================================================================
+    !> Copy grid outputs updated by `calcgrid`.
+    !!
+    !! @param[inout] sstate Soil-state object
+    !! @param[in]    n_nod  Number of soil compartments
+    !! @param[in]    n_lay  Number of soil layers
+    subroutine soilgrid_outputs_from_variables(sstate, n_nod, n_lay)
+        type(soil_state_t), intent(inout) :: sstate
+        integer, intent(in) :: n_nod, n_lay
+        integer :: i
+
+        sstate%numnod = n_nod
+        sstate%numlay = n_lay
+
+        if (allocated(sstate%dz) .and. allocated(sstate%z) .and. allocated(sstate%disnod) .and. n_nod > 0) then
+            do i = 1, min(n_nod, size(sstate%dz), size(sstate%z))
+                sstate%dz(i) = dz(i)
+                sstate%z(i) = z(i)
+                sstate%ztopcp(i) = ztopcp(i)
+                sstate%zbotcp(i) = zbotcp(i)
+                sstate%layer(i) = layer(i)
+            end do
+            do i = 1, min(n_nod + 1, size(sstate%disnod))
+                sstate%disnod(i) = disnod(i)
+            end do
+        end if
+
+        if (allocated(sstate%botcom) .and. allocated(sstate%nod1lay) .and. n_lay > 0) then
+            do i = 1, min(n_lay, size(sstate%botcom), size(sstate%nod1lay))
+                sstate%botcom(i) = botcom(i)
+                sstate%nod1lay(i) = nod1lay(i)
+            end do
+        end if
+    end subroutine soilgrid_outputs_from_variables
+
+    ! ==========================================================================
+    ! Minimal Output Synchronization: SoilWater
+    ! ==========================================================================
+    !> Copy outputs updated by `SoilWater(task)`.
+    !!
+    !! @param[inout] sstate Soil-state object
+    !! @param[inout] tstate Time-state object
+    !! @param[in]    task   SoilWater task selector
+    !! @param[in]    n_nod  Number of soil compartments
+    subroutine soilwater_outputs_from_variables(sstate, tstate, task, n_nod)
+        type(soil_state_t), intent(inout) :: sstate
+        type(time_state_t), intent(inout) :: tstate
+        integer, intent(in) :: task, n_nod
+        integer :: i
+
+        ! Common state outputs
+        if (allocated(sstate%h) .and. allocated(sstate%theta) .and. n_nod > 0) then
+            do i = 1, min(n_nod, size(sstate%h), size(sstate%theta))
+                sstate%h(i) = h(i)
+                sstate%theta(i) = theta(i)
+            end do
+        end if
+
+        if (allocated(sstate%k) .and. n_nod > 0) then
+            do i = 1, min(n_nod, size(sstate%k) - 1)
+                sstate%k(i) = k(i)
+            end do
+            if ((n_nod + 1) <= size(sstate%k)) sstate%k(n_nod + 1) = k(n_nod + 1)
+        end if
+
+        if (allocated(sstate%kmean)) then
+            do i = 1, min(n_nod + 1, size(sstate%kmean))
+                sstate%kmean(i) = kmean(i)
+            end do
+        end if
+
+        sstate%gwl = gwl
+        sstate%gwlm1 = gwlm1
+        sstate%gwlinp = gwlinp
+        sstate%deepgw = deepgw
+        sstate%pond = pond
+        sstate%pondm1 = pondm1
+        sstate%qbot = qbot
+        sstate%qtop = qtop
+        sstate%hbot = hbot
+        sstate%volact = volact
+        sstate%volm1 = volm1
+        sstate%volini = volini
+        sstate%fllowgwl = fllowgwl
+
+        tstate%fldecdt = fldecdt
+        tstate%fldtmin = fldtmin
+        tstate%fldtreduce = fldtreduce
+
+        select case (task)
+        case (1)
+            sstate%saev = saev
+            sstate%spev = spev
+            sstate%ldwet = ldwet
+        case (2)
+            ! no extra task-specific outputs
+        case (3)
+            sstate%wbalance = wbalance
+        end select
+    end subroutine soilwater_outputs_from_variables
+
+    ! ==========================================================================
+    ! Minimal Output Synchronization: SoilWaterStateVar
+    ! ==========================================================================
+    !> Copy outputs updated by `SoilWaterStateVar(task)`.
+    !!
+    !! @param[inout] sstate Soil-state object
+    !! @param[in]    task   Task selector
+    !! @param[in]    n_nod  Number of soil compartments
+    subroutine soilwaterstatevar_outputs_from_variables(sstate, task, n_nod)
+        type(soil_state_t), intent(inout) :: sstate
+        integer, intent(in) :: task, n_nod
+        integer :: i
+
+        select case (task)
+        case (1)
+            if (allocated(sstate%hm1) .and. allocated(sstate%thetm1) .and. n_nod > 0) then
+                do i = 1, min(n_nod, size(sstate%hm1), size(sstate%thetm1))
+                    sstate%hm1(i) = hm1(i)
+                    sstate%thetm1(i) = thetm1(i)
+                end do
+            end if
+            sstate%gwlm1 = gwlm1
+            sstate%pondm1 = pondm1
+        case (2)
+            if (allocated(sstate%h) .and. allocated(sstate%theta) .and. n_nod > 0) then
+                do i = 1, min(n_nod, size(sstate%h), size(sstate%theta))
+                    sstate%h(i) = h(i)
+                    sstate%theta(i) = theta(i)
+                end do
+            end if
+            sstate%gwl = gwl
+            sstate%pond = pond
+        end select
+    end subroutine soilwaterstatevar_outputs_from_variables
+
+    ! ==========================================================================
+    ! Minimal Output Synchronization: SoilWaterBalance
+    ! ==========================================================================
+    !> Copy outputs updated by soil water-balance routines.
+    !!
+    !! @param[inout] sstate Soil-state object
+    !! @param[in]    n_nod  Number of soil compartments
+    subroutine soilwaterbalance_outputs_from_variables(sstate, n_nod)
+        type(soil_state_t), intent(inout) :: sstate
+        integer, intent(in) :: n_nod
+        integer :: i
+
+        if (allocated(sstate%q) .and. n_nod > 0) then
+            do i = 1, min(n_nod + 1, size(sstate%q))
+                sstate%q(i) = q(i)
+            end do
+        end if
+
+        if (allocated(sstate%inq) .and. n_nod > 0) then
+            do i = 1, min(n_nod + 1, size(sstate%inq))
+                sstate%inq(i) = inq(i)
+            end do
+        end if
+
+        sstate%gwl = gwl
+        sstate%pegwl = pegwl
+        sstate%nodgwl = nodgwl
+        sstate%bpegwl = bpegwl
+        sstate%npegwl = npegwl
+        sstate%qbot = qbot
+        sstate%volact = volact
+        sstate%volm1 = volm1
+
+        sstate%iqbot = iqbot
+        sstate%iqrot = iqrot
+        sstate%iqdra = iqdra
+        sstate%iruno = iruno
+        sstate%irunon = irunon
+        sstate%iqssdi = iqssdi
+        sstate%ipondbeg = ipondbeg
+
+        sstate%cqbot = cqbot
+        sstate%cqbotdo = cqbotdo
+        sstate%cqbotup = cqbotup
+        sstate%cqtdo = cqtdo
+        sstate%cqtup = cqtup
+        sstate%cqrot = cqrot
+        sstate%cqdra = cqdra
+        sstate%crunoff = crunoff
+        sstate%crunon = crunon
+    end subroutine soilwaterbalance_outputs_from_variables
+
+    ! ==========================================================================
+    ! Minimal Output Synchronization: Drainage
+    ! ==========================================================================
+    !> Copy only dynamic outputs updated by drainage routines.
+    !!
+    !! @param[inout] dstate Drainage-state object
+    !! @param[in]    n_levs Number of drainage levels
+    !! @param[in]    n_nod  Number of soil compartments
+    subroutine drainage_outputs_from_variables(dstate, n_levs, n_nod)
+        type(drainage_state_t), intent(inout) :: dstate
+        integer, intent(in) :: n_levs, n_nod
+        integer :: i, j
+
+        if (allocated(dstate%qdrain) .and. n_levs > 0) then
+            do i = 1, min(n_levs, size(dstate%qdrain))
+                dstate%qdrain(i) = qdrain(i)
+                dstate%cqdrain(i) = cqdrain(i)
+                dstate%cqdrainin(i) = cqdrainin(i)
+                dstate%cqdrainout(i) = cqdrainout(i)
+            end do
+        end if
+
+        if (allocated(dstate%qdra) .and. n_levs > 0 .and. n_nod > 0) then
+            do i = 1, min(n_levs, size(dstate%qdra, 1))
+                do j = 1, min(n_nod, size(dstate%qdra, 2))
+                    dstate%qdra(i,j) = qdra(i,j)
+                    dstate%inqdra(i,j) = inqdra(i,j)
+                    dstate%inqdra_in(i,j) = inqdra_in(i,j)
+                    dstate%inqdra_out(i,j) = inqdra_out(i,j)
+                end do
+            end do
+        end if
+
+        dstate%qdrtot = qdrtot
+        dstate%iqdra = iqdra
+        dstate%cqdra = cqdra
+        dstate%fldrain = fldrain
+    end subroutine drainage_outputs_from_variables
+
+    ! ==========================================================================
+    ! Minimal Output Synchronization: Surface Water
+    ! ==========================================================================
+    !> Copy only dynamic outputs updated by surface-water routines.
+    !!
+    !! @param[inout] swstate Surface-water state object
+    subroutine surfacewater_outputs_from_variables(swstate)
+        type(surfacewater_state_t), intent(inout) :: swstate
+        integer :: i
+
+        swstate%wlp = wlp
+        swstate%wls = wls
+        swstate%wlsold = wlsold
+        swstate%wlstar = wlstar
+        swstate%hwlman = hwlman
+        swstate%vtair = vtair
+
+        if (allocated(swstate%wlsbak)) then
+            do i = 1, min(4, size(swstate%wlsbak))
+                swstate%wlsbak(i) = wlsbak(i)
+            end do
+        end if
+
+        swstate%swst = swst
+        swstate%qdrd = qdrd
+        swstate%cqdrd = cqdrd
+        swstate%cwsupp = cwsupp
+        swstate%cwout = cwout
+        swstate%runots = runots
+        swstate%QRapDra = QRapDra
+
+        swstate%imper = imper
+        swstate%numadj = numadj
+        swstate%overfl = overfl
+        swstate%fldecdt = fldecdt
+        swstate%fldtmin = fldtmin
+    end subroutine surfacewater_outputs_from_variables
+
+    ! ==========================================================================
+    ! Minimal Output Synchronization: Solute
+    ! ==========================================================================
+    !> Copy only dynamic outputs updated by `solute(task=2)`.
+    !!
+    !! @param[inout] solu  Solute-state object
+    !! @param[in]    n_nod Number of soil compartments
+    subroutine solute_outputs_from_variables(solu, n_nod)
+        type(solute_state_t), intent(inout) :: solu
+        integer, intent(in) :: n_nod
+        integer :: i
+
+        if (allocated(solu%cml) .and. n_nod > 0) then
+            do i = 1, min(n_nod, size(solu%cml))
+                solu%cml(i) = cml(i)
+                solu%cmsy(i) = cmsy(i)
+            end do
+        end if
+
+        solu%cpond = cpond
+        solu%csurf = csurf
+        solu%cdrain = cdrain
+        solu%cseep = cseep
+
+        solu%sampro = sampro
+        solu%samini = samini
+        solu%sqbot = sqbot
+        solu%sqdra = sqdra
+        solu%sqprec = sqprec
+        solu%sqirrig = sqirrig
+        solu%sqsur = sqsur
+        solu%sqrap = sqrap
+        solu%dectot = dectot
+        solu%rottot = rottot
+        solu%solbal = solbal
+
+        solu%imsqbot = imsqbot
+        solu%imsqdra = imsqdra
+        solu%imsqprec = imsqprec
+        solu%imsqirrig = imsqirrig
+        solu%imdectot = imdectot
+        solu%imrottot = imrottot
+        solu%isqbot = isqbot
+        solu%isqtop = isqtop
+
+        solu%dtsolu = dtsolu
+        solu%ArMpSs = ArMpSs
+    end subroutine solute_outputs_from_variables
+
+    ! ==========================================================================
+    ! Minimal Output Synchronization: AgeTracer
+    ! ==========================================================================
+    !> Copy only dynamic outputs updated by `AgeTracer(task=2)`.
+    !!
+    !! @param[inout] solu  Solute-state object
+    !! @param[in]    n_nod Number of soil compartments
+    !! @param[in]    n_lev Number of drainage levels
+    subroutine agetracer_outputs_from_variables(solu, n_nod, n_lev)
+        type(solute_state_t), intent(inout) :: solu
+        integer, intent(in) :: n_nod, n_lev
+        integer :: i
+
+        if (allocated(solu%cml) .and. n_nod > 0) then
+            do i = 1, min(n_nod, size(solu%cml))
+                solu%cml(i) = cml(i)
+            end do
+        end if
+
+        solu%AgeGwl1m = AgeGwl1m
+        solu%icAgeBot = icAgeBot
+        solu%icAgeRot = icAgeRot
+        solu%icAgeSur = icAgeSur
+        if (allocated(solu%icAgeDra) .and. n_lev > 0) then
+            do i = 1, min(n_lev, size(solu%icAgeDra))
+                solu%icAgeDra(i) = icAgeDra(i)
+            end do
+        end if
+
+        solu%Ageirr = Ageirr
+        solu%Agedrain = Agedrain
+        solu%Agepre = Agepre
+        solu%Agepond = Agepond
+        solu%Agepondm1 = Agepondm1
+        solu%icAgetopupw = icAgetopupw
+        solu%icAgetopdwn = icAgetopdwn
+
+        solu%sqdra = sqdra
+        solu%rottot = rottot
+        solu%isqbot = isqbot
+        solu%isqtop = isqtop
+        solu%dtsolu = dtsolu
+        solu%ArMpSs = ArMpSs
+    end subroutine agetracer_outputs_from_variables
 
     ! ==========================================================================
     ! Solute State Synchronization

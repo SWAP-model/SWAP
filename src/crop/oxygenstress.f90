@@ -78,6 +78,15 @@ module O2_pars
    implicit none
 end module O2_pars
 
+!> Oxygen stress routines and helpers.
+!!
+!! Keeps the original oxygen-stress implementation intact while exposing
+!! explicit interfaces through a dedicated module.
+module oxygenstress_mod
+      implicit none
+
+contains
+
 ! ## MH      subroutine OxygenStress(node,rwu_factor,ResultsOxStr) 
       subroutine OxygenStress(node,rwu_factor) 
 ! ----------------------------------------------------------------------
@@ -97,7 +106,7 @@ end module O2_pars
       real(8) theta0
       real(8) matric_potential
       real(8) air_temp,alpha,d_gassfreeair,gen_n,o2_atmosphere,percentage_sand,surface_tension_water
-      real(8) SOLVE,pi
+      real(8) pi
       real(8) soilphystab(7,matab)
       real(8) diff_water_cap_actual
       integer numrec_tab
@@ -685,7 +694,6 @@ end module O2_pars
      &                  surface_tension_water,glit)
      
       implicit none
-      real(8) FUNC
       real(8) a,b,s
       integer n
 ! --- procedure from numerical recipes. calculate integral numerically
@@ -730,7 +738,6 @@ end module O2_pars
      &                     surface_tension_water,glit)
      
       implicit none
-      real(8) functab
       real(8) a,b,s
       integer n
 ! --- procedure from numerical recipes. calculate integral numerically
@@ -1172,8 +1179,7 @@ end module O2_pars
 
 !      logical, parameter :: UseZBREND = .false.
       logical, parameter :: UseZBREND = .true.
-      real(8)  :: a, b, Dif_a, Dif_b, ZBREND, myfunc
-      external :: myfunc
+      real(8)  :: a, b, Dif_a, Dif_b
       
       if (UseZBREND) then
 ! ## MH: start 
@@ -1810,3 +1816,5 @@ end module O2_pars
       ZBREND=B
       RETURN
       END
+
+end module oxygenstress_mod

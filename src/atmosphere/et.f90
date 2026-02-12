@@ -13,7 +13,7 @@ module et_mod
     implicit none
     private
 
-    public :: PenMon, reduceva
+  public :: PenMon, reduceva, reduceva_state
 contains
       !> Penman-Monteith evapotranspiration calculation
       !>
@@ -501,9 +501,9 @@ use swap_constants, only: vlarge, small
       !! - spev, saev: state variables for Boesten-Stroosnijder method
       !! @endnote
       subroutine reduceva (task,nrai)
-        use variables, only: swredu,fldaystart,cofred,dt,empreva,    &
-      &               ldwet,nird,peva,pond,rsigni,spev,saev
-        implicit none
+      use variables, only: swredu,fldaystart,cofred,dt,empreva,    &
+     &               ldwet,nird,peva,pond,rsigni,spev,saev
+      implicit none
 
         ! Arguments
         integer, intent(in) :: task
@@ -549,4 +549,26 @@ use swap_constants, only: vlarge, small
             call fatalerr('reduceva', 'Unknown reduction method SWREDU')
         end select
       end subroutine reduceva
+      !> State-aware wrapper for `reduceva`
+      !!
+      !! Bridges legacy module-variable implementation with explicit model state.
+      !! The wrapper restores legacy variables from `state`, executes the
+      !! original routine, and snapshots the updated values back into `state`.
+      !!
+      !! @param[inout] state SWAP model state container
+      !! @param[in]    task  Task selector: 1=daily, 2=timestep
+      !! @param[in]    nrai  Rainfall amount [mm]
+      subroutine reduceva_state(state, task, nrai)
+      use swap_state_mod, only: swap_state_t
+      use swap_state_sync, only: atmosphere_state_from_variables
+      implicit none
+
+      type(swap_state_t), intent(inout) :: state
+      integer,            intent(in)     :: task
+      real(8),            intent(in)     :: nrai
+
+      call reduceva(task, nrai)
+      call atmosphere_state_from_variables(state%atm)
+
+      end subroutine reduceva_state
 end module et_mod

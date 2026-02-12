@@ -64,34 +64,37 @@ subroutine swap(iCaller, iTask, state, toswap, fromswap)
 
 !     swap modules for data communication
 use swap_state_mod, only: swap_state_t, swap_state_init, swap_state_finalize
-use swap_state_sync, only: state_from_variables, state_to_variables, heat_state_to_variables, &
+use swap_state_sync, only: state_from_variables, state_to_variables, &
                           log_state_summary
 use variables, only : flyearstart, fldaystart, flswapshared, flsurfacewater, flmacropore, fltemperature, flsnow,        &
                       flsolute, flcropnut, flirrigate, flagetracer, flrunend, flmeteodt, fletsine, swfrost, fldtreduce, &
                       swusecn, fldrain, fldecdt, fldecmprat, fldayend, flcropcalendar, flmaxitertime, floutput,         &
                       floutputshort, flharvestday, flcropoutput, swcrp, flirrigationoutput, swend, project, &
                       daynr, iyear, numnod, numlay
-use drainage_mod, only: drainage
-use surfacewater_mod, only: SurfaceWater
+use drainage_mod, only: drainage_state
+use surfacewater_mod, only: SurfaceWater_state
                       ! for debugging
 !use variables, only : iqrot, iptra, cnrai, t1900, Tstart, Tend, numnod, dz, theta, dt, h, arai, rainamount, lai
 
-use tillage,   only : DoTillage
+use tillage_mod,   only : DoTillage
 use swap_exchange
 use swap_log, only: log_info
-use boundbottom_mod, only: BoundBottom
+use boundbottom_mod, only: BoundBottom_state
 use runoff_mod, only: CNmethod
-use meteo_mod, only: ProcessMeteoDay
-use meteo_process_mod, only: ReadMeteoDay
-use snow_mod, only: snow
-use meteodt_mod, only: MeteoDT
-use frozencond_mod, only: FrozenCond, FrozenBounds
-use temperature_mod, only: Temperature
-use macropore_mod, only: macropore
+use meteo_mod, only: ProcessMeteoDay_state
+use meteo_process_mod, only: ReadMeteoDay_state
+use snow_mod, only: snow_state
+use meteodt_mod, only: MeteoDT_state
+use rootextraction_mod, only: RootExtraction
+use frozencond_mod, only: FrozenCond_state, FrozenBounds_state
+use temperature_mod, only: Temperature_state
+use macropore_mod, only: macropore_state
 use macroporeoutput_mod, only: MacroPoreOutput
-use solute_mod, only: solute, AgeTracer
-use soilgrid_mod, only: CalcGrid, ConvertDiscrVert
-use soilhydraulics_mod, only: soilwater, SoilWaterStateVar
+use solute_mod, only: solute_state, AgeTracer_state
+use soilgrid_mod, only: CalcGrid_state, ConvertDiscrVert
+use soilhydraulics_mod, only: soilwater_state, soilwaterstatevar_state
+use irrigation_mod, only: irrigation, SSDI_irrigation
+use management_soil_mod, only: SoilManagement
 implicit none
 
 ! global
@@ -102,6 +105,7 @@ type(swap_output), intent(out),   optional :: fromswap
 
 ! local
 logical :: flError
+logical, parameter :: flDailyStateSnapshot = .false.
 
 if (iCaller /= 0 .and. iTask < 3) then
    if (.not.(present(toswap)))   call fatalerr ('swap', 'Argument toswap missing in DLL call.')
@@ -120,8 +124,8 @@ if (iTask == 1) then
 !  iteration and timing statistics
    call IterTime(1)
 
-!  read time independent input .swp file
-   call ReadSwap
+!  read time independent input .swp file (also populates state config when present)
+   call ReadSwap(state)
 
 !  shared simulation
    if (flSwapShared) call SharedSimulation(1)
@@ -130,7 +134,7 @@ if (iTask == 1) then
    call TimeControl(1)
 
 !  calculate grid parameters
-   call CalcGrid
+   call CalcGrid_state(state)
    
 !  Initialize state container now that grid dimensions are known
    call swap_state_init(state, numnod, numlay)
@@ -139,40 +143,42 @@ if (iTask == 1) then
    call SSDI_irrigation(1)
 
 !  initialize SoilWater rate/state variables
-   call SoilWater(1)
+   call SoilWater_state(state, 1)
    if (swuseCN == 1) call CNmethod(1)
 
 !  initialize SurfaceWater management variables
-   if (flSurfaceWater) call SurfaceWater(1)
+   if (flSurfaceWater) call SurfaceWater_state(state, 1)
 
 !  initialize MacroPore rate/state variables
-   if (flMacroPore) call MacroPore(1)
+   if (flMacroPore) call MacroPore_state(state, 1)
 
 !  initialize SoilTemperature rate/state variables
-   if (flTemperature) call Temperature(1)
+   if (flTemperature) call Temperature_state(state, 1)
 
 !  initialize Snow rate/state variables
-   if (flSnow) call Snow(1)
+   if (flSnow) call Snow_state(state, 1)
 
 !  initialize Solute rate/state variables
-   if (flSolute) call Solute(1)
+   if (flSolute) call Solute_state(state, 1)
 
 !  initialize Ageing rate/state variables
-   if (flAgeTracer) call AgeTracer(1)
+   if (flAgeTracer) call AgeTracer_state(state, 1)
 
 !  Read and Initialize Soil Management Event
    if (flCropNut) call Soilmanagement(1)
 
-!  open Output files and write headers
-   call SwapOutput(1)
-   call SoilWaterOutput(1)
-   if (flIrrigate)     call IrrigationOutput(1)
-   if (flTemperature)  call TemperatureOutput(1)
-   if (flSolute)       call SoluteOutput(1)
-   if (flAgeTracer)    call AgeTracerOutput(1)
-   if (flSnow)         call SnowOutput(1)
-   if (flMacroPore)    call MacroPoreOutput(1)
-   if (flSurfaceWater) call SurfaceWaterOutput(1)
+!  open Output files and write headers (skip in external/DLL mode to avoid per-column I/O)
+   if (iCaller == 0) then
+      call SwapOutput(1)
+      call SoilWaterOutput(1)
+      if (flIrrigate)     call IrrigationOutput(1)
+      if (flTemperature)  call TemperatureOutput(1)
+      if (flSolute)       call SoluteOutput(1)
+      if (flAgeTracer)    call AgeTracerOutput(1)
+      if (flSnow)         call SnowOutput(1)
+      if (flMacroPore)    call MacroPoreOutput(1)
+      if (flSurfaceWater) call SurfaceWaterOutput(1)
+   end if
 
 !  Specific for exchange when called as DLL
    if (iCaller /= 0) call handle_exchange(11, flError)
@@ -190,14 +196,19 @@ end if
 !****************************************************************************************************************************
 if (iTask == 2) then
 
+!  Restore legacy module variables from explicit state (multi-instance support)
+   call state_to_variables(state)
+
 !  Specific for exchange when called as DLL
    if (iCaller /= 0) call handle_exchange(21, flError); if (flError) return
 
 !  loop with soil water time step during entire simulation period
    do while (.not.flrunend)
 
-!     get Meteo data
+!     get Meteo data (skip meteo-file I/O in external/DLL mode)
+   if (iCaller == 0) then
       if (flYearStart) call ReadMeteoYear
+   end if
 
       if (flDayStart) then
 
@@ -206,7 +217,7 @@ if (iTask == 2) then
          !if (iCaller /= 0) call handle_exchange(23, flError)   ! LAI, RD
 
 !        read meteo data for current day
-         call ReadMeteoDay
+         call ReadMeteoDay_state(state)
 
 !        check growing season
          call CropGrowth(1)
@@ -218,51 +229,49 @@ if (iTask == 2) then
          if (flIrrigate) call Irrigation(2)
 
 !        process Meteo data
-         call ProcessMeteoDay
+         call ProcessMeteoDay_state(state)
          call DoTillage(2)
 
       end if
 
 !     process Meteo data
-      if (flMeteoDt .or. flETSine) call MeteoDT
+      if (flMeteoDt .or. flETSine) call MeteoDT_state(state)
 
 !     shared simulation
       if (flSwapShared .and. flDayStart) call SharedSimulation(2)
 
 !     calculate Snow: MH+MM - probably to be moved within IF-block above, prior to call ProcessMeteoDay ...
-      if (flSnow .and. flDayStart) call Snow(2)
+      if (flSnow .and. flDayStart) call Snow_state(state, 2)
 
 !     calculate reduction for conductivities for frozen conditions
-!     FrozenCond uses state; sync back to variables for FrozenBounds (temporary bridge)
       if (SwFrost.eq.1) then
-         call FrozenCond(state%heat, state%soil)
-         call heat_state_to_variables(state%heat, numnod, numlay)
+         call FrozenCond_state(state)
       end if
 
 !     calculate potential and actual root water extraction profile
       call RootExtraction
 
 !     determine SoilWater bottom boundary conditions
-      call BoundBottom
+      call BoundBottom_state(state)
 
       fldtreduce = .true.
       do while(fldtreduce)
          fldtreduce = .false.
 
 !        calculate drainage fluxes
-         if (fldrain)                           call Drainage
-         if (.not.fldecdt .and. flSurfaceWater) call SurfaceWater(2)
-         if (SwFrost.eq.1)                      call FrozenBounds
+         if (fldrain)                           call Drainage_state(state)
+         if (.not.fldecdt .and. flSurfaceWater) call SurfaceWater_state(state, 2)
+         if (SwFrost.eq.1)                      call FrozenBounds_state(state)
 
 !        calculate SoilWater, incl macropores
-         if (.not.fldecdt) call SoilWater(2)
+         if (.not.fldecdt) call SoilWater_state(state, 2)
 
 !        calculate surface water balance
-         if (.not.fldecdt .and. flSurfaceWater) call SurfaceWater(3)
+         if (.not.fldecdt .and. flSurfaceWater) call SurfaceWater_state(state, 3)
 
 !        update time variables and switches/flags
          if (fldecdt .or. (flMacroPore .and. FlDecMpRat))then
-            call SoilWaterStateVar(2)
+            call SoilWaterStateVar_state(state, 2)
             call TimeControl(3)
             fldtreduce = .true.
          end if
@@ -270,16 +279,16 @@ if (iTask == 2) then
       end do
 
 !     calculate SoilWater rate/state variables
-      call SoilWater(3)
+      call SoilWater_state(state, 3)
 
 !     calculate SoilTemperature rate/state variables
-      if (flTemperature) call Temperature(2)
+   if (flTemperature) call Temperature_state(state, 2)
 
 !     calculate Solute rate/state variables
-      if (flSolute) call Solute(2)
+      if (flSolute) call Solute_state(state, 2)
 
 !     calculate Ageing rate/state variables
-      if (flAgeTracer) call AgeTracer(2)
+      if (flAgeTracer) call AgeTracer_state(state, 2)
 
 !     update time variables and switches/flags
       call TimeControl(2)
@@ -319,34 +328,38 @@ if (iTask == 2) then
          call SSDI_irrigation(2)
          call TimeControl(9)
 
-!        Daily state snapshot: sync variables->state and log summary
-         call state_from_variables(state)
-         call log_state_summary(state)
-
-      end if
-
-!     output section (write to standard files and to optional files)
-      if (flOutput) then
-         call SwapOutput(2)
-         call SoilWaterOutput(2)
-         call DoTillage(3)
-         if (flTemperature)   call TemperatureOutput(2)
-         if (flSolute)        call SoluteOutput(2)
-         if (flAgeTracer)     call AgeTracerOutput(2)
-         if (flSnow)          call SnowOutput(2)
-         if (flMacroPore)     call MacroPoreOutput(2)
-         if (flSurfaceWater)  call SurfaceWaterOutput(2)
-      else
-         if (flOutputShort)   call SoilWaterOutput(2)
-      end if
-      if (flDayEnd .and. (flOutput .or. flHarvestDay)) then
-         if (flCropCalendar .and. flCropOutput) then
-            if (swcrp.eq.1) call CropOutput(2)
+!        Optional daily state snapshot (debug only; costly for long regressions)
+         if (flDailyStateSnapshot) then
+            call state_from_variables(state)
+            call log_state_summary(state)
          end if
+
       end if
-      if (flIrrigationOutput)          call IrrigationOutput(2)
-      if (flDayEnd .and. flCropNut)    call Soilmanagement(6)
-      if (swend.eq.2 .and. flDayEnd)   call soilwateroutput(3)
+
+!     output section (skip in external/DLL mode to avoid per-column I/O)
+      if (iCaller == 0) then
+         if (flOutput) then
+            call SwapOutput(2)
+            call SoilWaterOutput(2)
+            call DoTillage(3)
+            if (flTemperature)   call TemperatureOutput(2)
+            if (flSolute)        call SoluteOutput(2)
+            if (flAgeTracer)     call AgeTracerOutput(2)
+            if (flSnow)          call SnowOutput(2)
+            if (flMacroPore)     call MacroPoreOutput(2)
+            if (flSurfaceWater)  call SurfaceWaterOutput(2)
+         else
+            if (flOutputShort)   call SoilWaterOutput(2)
+         end if
+         if (flDayEnd .and. (flOutput .or. flHarvestDay)) then
+            if (flCropCalendar .and. flCropOutput) then
+               if (swcrp.eq.1) call CropOutput(2)
+            end if
+         end if
+         if (flIrrigationOutput)          call IrrigationOutput(2)
+         if (flDayEnd .and. flCropNut)    call Soilmanagement(6)
+         if (swend.eq.2 .and. flDayEnd)   call soilwateroutput(3)
+      end if
 
 !    shared simulation
      if (flSwapShared .and. flDayEnd) call SharedSimulation(3)
@@ -356,6 +369,10 @@ if (iTask == 2) then
 !  Specific for exchange when called as DLL
    if (iCaller /= 0) call handle_exchange(29, flError)
 
+!  Final snapshot for this call (ensures state is current even if day-end snapshot
+!  did not occur due to early termination)
+   call state_from_variables(state)
+
    return
 end if
 
@@ -363,23 +380,28 @@ end if
 !*****   C L O S U R E   *****
 !****************************************************************************************************************************
 if (iTask == 3) then
+
+!  Restore legacy module variables from explicit state (multi-instance support)
+   call state_to_variables(state)
 !  iteration and timing statistics
    call IterTime(3)
 
-!  close output files
-   if (flSwapShared) call SharedSimulation(4)
-   call SwapOutput(3)
-   if (swend.eq.1) call SoilWaterOutput(3)
-   call SoilWaterOutput(4)
-   if (swcrp.eq.1) call CropOutput(3)
-   if (flTemperature)        call TemperatureOutput(3)
-   if (flSolute)             call SoluteOutput(3)
-   if (flAgeTracer)          call AgeTracerOutput(3)
-   if (flIrrigate)           call IrrigationOutput(3)
-   if (flSnow)               call SnowOutput(3)
-   if (flMacroPore)          call MacroPoreOutput(3)
-   if (flSurfaceWater)       call SurfaceWaterOutput(3)
-   if (flCropNut)            call Soilmanagement(7)
+!  close output files (skip in external/DLL mode)
+   if (iCaller == 0) then
+      if (flSwapShared) call SharedSimulation(4)
+      call SwapOutput(3)
+      if (swend.eq.1) call SoilWaterOutput(3)
+      call SoilWaterOutput(4)
+      if (swcrp.eq.1) call CropOutput(3)
+      if (flTemperature)        call TemperatureOutput(3)
+      if (flSolute)             call SoluteOutput(3)
+      if (flAgeTracer)          call AgeTracerOutput(3)
+      if (flIrrigate)           call IrrigationOutput(3)
+      if (flSnow)               call SnowOutput(3)
+      if (flMacroPore)          call MacroPoreOutput(3)
+      if (flSurfaceWater)       call SurfaceWaterOutput(3)
+      if (flCropNut)            call Soilmanagement(7)
+   end if
 
 !  write okay file for external use
    call WriteSwapOk(Project)
@@ -403,6 +425,7 @@ contains
    use variables, only : t1900, iyear, Tstart, Tend, numnod, dz, theta
    use variables, only : lai, ch, rd, iptra, iqrot, inqrot, flCropCalendar, flCropEmergence, flCropHarvest
    use variables, only : arad, atmn, atmx, awin, ahum, wet, arai, aetr, rainfluxarray, raintimearray   !, rainamount
+   use variables, only : ex_tlast, daynrfirst, daynrlast
    implicit none
    integer, intent(in)   :: task
    logical, intent(out)  :: flError
@@ -410,7 +433,6 @@ contains
    integer               :: i
    integer, dimension(6) :: datea
    real                  :: fsec
-   real(8), save         :: tlast
 
 ! NOTE: the optional arguments in argument list of swap cannot be saved automatically with the attribute SAVE.
 !       Therefore, each time allocation is needed and basic information must be set again
@@ -453,7 +475,7 @@ contains
       fromswap%dz(1:numnod)  = dz(1:numnod)
       fromswap%wc(1:numnod)  = theta(1:numnod)
       fromswap%rwu(1:numnod) = inqrot(1:numnod)
-      tlast = 0.0d0
+      ex_tlast = 0.0d0
    end if
 
 !  use tasks 21-29 to handle dynamic aspects
@@ -462,7 +484,7 @@ contains
       Tend   = toswap%tend
 
       ! check
-      if (tlast > 0.0d0 .and. dabs(Tstart - tlast) > 1.0d-8) then
+      if (ex_tlast > 0.0d0 .and. dabs(Tstart - ex_tlast) > 1.0d-8) then
          fromswap%ierrorcode = 1
          write (logf, '(A)') 'Unexpected timing error: tstart /= tlast'
       end if
@@ -479,6 +501,10 @@ contains
       call dtdpar (Tstart, datea, fsec)
       iyear = datea(1)
       call TimeControl(1)
+
+      ! External forcing mode: provide full-year availability without reading meteo files
+      daynrfirst = 1
+      daynrlast  = 366
 
    end if
 
@@ -529,7 +555,7 @@ contains
       fromswap%dz(1:numnod)  = dz(1:numnod)
       fromswap%wc(1:numnod)  = theta(1:numnod)
       fromswap%rwu(1:numnod) = 0.0d0
-      tlast = t1900
+      ex_tlast = t1900
    end if
 
 !  use tasks 31-39 to handle closure aspects

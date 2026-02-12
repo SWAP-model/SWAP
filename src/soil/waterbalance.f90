@@ -17,6 +17,7 @@ module soilwaterbalance_mod
     implicit none
     private
     public :: calcgwl, level, watertable, fluxes, integral, checkmassbal, watstor
+   public :: calcgwl_state, fluxes_state, integral_state, watstor_state
 contains
       !> @brief Calculate groundwater level
       !>
@@ -348,6 +349,23 @@ contains
       return
       end
 
+      !> State-aware wrapper for `calcgwl`
+      !!
+      !! Executes the legacy groundwater-level calculation and synchronizes
+      !! selected soil water balance outputs.
+      !!
+      !! @param[inout] state SWAP model state container
+      subroutine calcgwl_state(state)
+      use swap_state_mod, only: swap_state_t
+      use swap_state_sync, only: soilwaterbalance_outputs_from_variables
+      implicit none
+
+      type(swap_state_t), intent(inout) :: state
+
+      call calcgwl()
+      call soilwaterbalance_outputs_from_variables(state%soil, state%numnod)
+      end subroutine calcgwl_state
+
       !> @brief Calculate intermediate and cumulative fluxes
       !>
       !> @details
@@ -529,6 +547,23 @@ contains
 
       return
       end
+
+      !> State-aware wrapper for `fluxes`
+      !!
+      !! Executes the legacy flux integration between compartments and
+      !! synchronizes selected soil water balance outputs.
+      !!
+      !! @param[inout] state SWAP model state container
+      subroutine fluxes_state(state)
+      use swap_state_mod, only: swap_state_t
+      use swap_state_sync, only: soilwaterbalance_outputs_from_variables
+      implicit none
+
+      type(swap_state_t), intent(inout) :: state
+
+      call fluxes()
+      call soilwaterbalance_outputs_from_variables(state%soil, state%numnod)
+      end subroutine fluxes_state
 
       !> @brief Check mass balance per output period
       !>
@@ -761,6 +796,23 @@ contains
       return
       end
 
+      !> State-aware wrapper for `integral`
+      !!
+      !! Executes the legacy cumulative/intermediate flux accounting and
+      !! synchronizes selected soil water balance outputs.
+      !!
+      !! @param[inout] state SWAP model state container
+      subroutine integral_state(state)
+      use swap_state_mod, only: swap_state_t
+      use swap_state_sync, only: soilwaterbalance_outputs_from_variables
+      implicit none
+
+      type(swap_state_t), intent(inout) :: state
+
+      call integral()
+      call soilwaterbalance_outputs_from_variables(state%soil, state%numnod)
+      end subroutine integral_state
+
       !> @brief Calculate water storage in soil profile
       !>
       !> @details
@@ -788,5 +840,22 @@ contains
 
       return
       end
+
+      !> State-aware wrapper for `watstor`
+      !!
+      !! Executes the legacy water-storage update and synchronizes selected
+      !! soil water balance outputs.
+      !!
+      !! @param[inout] state SWAP model state container
+      subroutine watstor_state(state)
+      use swap_state_mod, only: swap_state_t
+      use swap_state_sync, only: soilwaterbalance_outputs_from_variables
+      implicit none
+
+      type(swap_state_t), intent(inout) :: state
+
+      call watstor()
+      call soilwaterbalance_outputs_from_variables(state%soil, state%numnod)
+      end subroutine watstor_state
 
 end module

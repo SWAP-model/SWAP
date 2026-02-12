@@ -1,6 +1,32 @@
 ! File VersionID:
 !   $Id: management_soil.f90 371 2018-02-19 09:25:14Z heine003 $
 ! ----------------------------------------------------------------------
+!> Soil management module.
+!!
+!! Hosts `SoilManagement`, the legacy task-based routine for soil nutrient
+!! management, initialization, daily updates, reporting, and closure.
+!!
+!! @note
+!! Original header retained below for record:
+!! Date: March 2015
+!! Purpose: save and reset soil water state variables
+module management_soil_mod
+
+   implicit none
+   private
+   public :: SoilManagement
+
+contains
+
+!> Execute soil management task.
+!!
+!! Task-switching wrapper around the legacy implementation.
+!!
+!! @param[in] task Selector for initialization, timestep updates, output,
+!! and closure actions.
+!!
+!! @note
+!! Legacy implementation is preserved and intentionally unchanged in physics.
       subroutine SoilManagement(task) 
 ! ----------------------------------------------------------------------
 !     Date               : March 2015
@@ -878,5 +904,7 @@
       ! isme and nut are module variables in wofost_soil_declarations - no local save needed
 
       return
-      end
+      end subroutine SoilManagement
+
+   end module management_soil_mod
 

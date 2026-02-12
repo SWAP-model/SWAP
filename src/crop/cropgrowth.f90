@@ -11,6 +11,7 @@
 
       use variables
       use array_utils, only: afgen
+      use rootextraction_mod, only: MatricFlux
       use swap_constants, only: tiny
       implicit none
 
@@ -364,6 +365,7 @@
       use variables
       use soilhydraulics_utils, only: watcon
       use array_utils, only: afgen
+      use rootextraction_mod, only: MatricFlux
       use swap_constants, only: tiny, nihil
       implicit none
 
@@ -875,6 +877,7 @@
       use wofost_soil_interface
       use array_utils, only: interpol, afgen, insw
       use soilhydraulics_utils, only: watcon
+      use rootextraction_mod, only: MatricFlux
         use swap_constants, only: tiny, nihil
       implicit none
  
@@ -1988,6 +1991,7 @@
       use variables
       use array_utils, only: afgen
       use soilhydraulics_utils, only: watcon
+      use rootextraction_mod, only: MatricFlux
       use swap_constants, only: tiny, nihil
       
       implicit none

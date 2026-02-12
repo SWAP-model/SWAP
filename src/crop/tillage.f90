@@ -1,7 +1,7 @@
 ! to do: default MvG parameters that are read: do they refer to BDENS or Rho_cons; or should BDENS and RhoCons be equal?
 ! to do: check if Rho_match differs from BDENS or Rho_cons (if not: division by zero possible)
 
-module tillage
+module tillage_mod
 
    use variables, only: t1900, date, swpfile, swhyst, swsolu, swoxygen, flCropNut, flMacroPore, flksatexm, zbotcp, NumNod, Bdens, layer, nraida, ParamVG, CofGen, &
                         NumLay, pond, theta, h, dz, disnod, botcom, psilt, pclay, SwDiscrvert, tend, &
@@ -520,5 +520,5 @@ write(124,'(A,1P,12E12.5)') Date, Bdens(1), ParamVG(2,layer(1)), theta(1), h(1),
    Slope_match(1:nlay) = (ParamVG(6,1:nlay) - N_match(1:nlay)) / (Rho_cons(1:nlay) - Rho_match(1:nlay))
    end subroutine Change_Tillage_Info
    
-end module tillage
+end module tillage_mod
    

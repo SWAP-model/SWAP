@@ -24,6 +24,7 @@ module boundtop_mod
 
       private
       public :: boundtop, PONDRUNOFF
+      public :: boundtop_state, PONDRUNOFF_state
 
 contains
 
@@ -186,6 +187,23 @@ contains
       return
       end subroutine boundtop
 
+   !> State-aware wrapper for `boundtop`
+   !!
+   !! Executes the legacy top boundary routine and snapshots updated legacy
+   !! module variables to explicit state.
+   !!
+   !! @param[inout] state SWAP model state container
+      subroutine boundtop_state(state)
+      use swap_state_mod, only: swap_state_t
+      use swap_state_sync, only: state_from_variables
+      implicit none
+
+      type(swap_state_t), intent(inout) :: state
+
+      call boundtop()
+      call state_from_variables(state)
+      end subroutine boundtop_state
+
 
 ! ----------------------------------------------------------------------
       SUBROUTINE PONDRUNOFF ()
@@ -301,5 +319,19 @@ contains
 
       return
       end subroutine pondrunoff
+
+   !> State-aware wrapper for `PONDRUNOFF`
+   !!
+   !! @param[inout] state SWAP model state container
+      subroutine PONDRUNOFF_state(state)
+      use swap_state_mod, only: swap_state_t
+      use swap_state_sync, only: state_from_variables
+      implicit none
+
+      type(swap_state_t), intent(inout) :: state
+
+      call PONDRUNOFF()
+      call state_from_variables(state)
+      end subroutine PONDRUNOFF_state
 
 end module boundtop_mod

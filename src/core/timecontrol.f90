@@ -8,6 +8,7 @@
 ! ----------------------------------------------------------------------
 
       use variables
+  use irrigation_mod, only: SSDI_irrigation
       implicit none
 ! ----------------------------------------------------------------------
 !     DAYNR  : = daynumber relative to start of calendar year
@@ -33,15 +34,7 @@
       character(len=11)  tmp
       character(len=80)  filtext
       integer       task, itask
-      integer, save :: datea(6),nextyear
-      integer, save :: flprevious  ! (status of previous timestep interval)
-!                   1 : dt as a result of reduction due to numerical reasons
-!                   2 : dt as a result of reduction due to input / output control
-      logical, save :: flTnext
-      real(4), save :: fsec
-      real(8), save :: dtCrit,tchange,dtEvent,tEvent,dtfletsine
-      real(8), save :: tcumold
-      real(8), save :: dtprevious  ! (length of previous timestep)
+      real(8)       :: dtCrit, dtfletsine
       real(8)       :: dtRestDay
 
 
@@ -49,6 +42,20 @@
       dtCrit = 1.d-8
       dtfletsine = 0.05d0
 
+
+      ! Bind former SAVE locals to explicit, synchronizable module variables
+      associate( datea => tc_datea, &
+           nextyear => tc_nextyear, &
+           flprevious => tc_flprevious, &
+           flTnext => tc_flTnext, &
+           fsec => tc_fsec, &
+           tchange => tc_tchange, &
+           dtEvent => tc_dtEvent, &
+           tEvent => tc_tEvent, &
+           tcumold => tc_tcumold, &
+           dtprevious => tc_dtprevious, &
+           tmptimestart => tc_tmptimestart, &
+           tmptimeend => tc_tmptimeend )
 
       itask = task
       if (itask.eq.2 .and. (fldecdt .or. fldecdtmin)) itask = 3
@@ -617,6 +624,8 @@
          call fatalerr ('TimeControl', 'Illegal value for TASK')
       end select
 
+      end associate
+
       return
       end 
 
@@ -635,13 +644,14 @@
       integer task, i, j, timediff
       character(len=400) messag
       real(4)       ::   tmptimeinterrupt
-      real(4), save ::   tmptimestart,tmptimeend
+      ! Use module variables (tc_tmptimestart/tc_tmptimeend) for persistence
+      ! to keep IterTime multi-instance safe.
 
       select case (task)
 
       case (1)
 ! --- part1 - initial values
-      call cpu_time(tmptimestart)
+      call cpu_time(tc_tmptimestart)
       return
 
       case (2)
@@ -668,9 +678,9 @@
      &     write(logf,'(i7,2x,i10,4x,i10)')i,(itnumb(i,j),j=1,2)
       end do
 
-      call cpu_time(tmptimeend)
+      call cpu_time(tc_tmptimeend)
       write(logf,'(/,a12,f12.2,a4)')                                    &
-     &           ' Run-time: ',tmptimeend-tmptimestart,' sec'
+         &           ' Run-time: ',tc_tmptimeend-tc_tmptimestart,' sec'
      
 
       case default

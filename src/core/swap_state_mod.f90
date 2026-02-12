@@ -99,6 +99,16 @@ module swap_state_mod
         integer :: nprintday = 0           ! Number of output times during one day
         integer :: nprintcount = 0         ! Counter for output during a day
         integer :: period = 0              ! Length of prescribed output interval
+
+        ! Output schedule configuration (loaded from .swp)
+        integer :: swheader = 0            ! Header printing: 0=no, 1=yes
+        integer :: swodat = 0              ! Extra output dates: 0=no, 1=yes
+        integer :: swres = 0               ! Reset interval counter at year start
+        integer :: swmonth = 0             ! Monthly intermediate output mode
+        integer :: swscre = 0              ! Screen output mode
+        real(8) :: outper = 0.0d0          ! Length of actual output interval
+        real(8) :: outdat(maout) = 0.0d0   ! Output dates for balances
+        real(8) :: outdatint(maout) = 0.0d0 ! Intermediate output dates
         
         ! Flags
         logical :: fldayend = .false.      ! End of day
@@ -134,6 +144,27 @@ module swap_state_mod
         character(len=80) :: pathwork = '' ! Path to work directory
         character(len=80) :: project = ''  ! Name of project
         character(len=80) :: swpfile = ''  ! Name of main input file
+
+        ! ------------------------------------------------------------------
+        ! TimeControl persistent internals (formerly SAVE locals)
+        ! Needed for multi-instance snapshot/restore while legacy code still
+        ! calls TimeControl() with module variables.
+        ! ------------------------------------------------------------------
+        integer :: tc_datea(6) = 0
+        integer :: tc_nextyear = 0
+        integer :: tc_flprevious = 0
+        logical :: tc_flTnext = .false.
+        real(4) :: tc_fsec = 0.0
+        real(8) :: tc_tchange = 0.0d0
+        real(8) :: tc_dtEvent = 0.0d0
+        real(8) :: tc_tEvent = 0.0d0
+        real(8) :: tc_tcumold = 0.0d0
+        real(8) :: tc_dtprevious = 0.0d0
+        real(4) :: tc_tmptimestart = 0.0
+        real(4) :: tc_tmptimeend = 0.0
+
+        ! External/DLL exchange persistent state
+        real(8) :: ex_tlast = 0.0d0
     end type time_state_t
 
     ! ===========================================================================
@@ -288,6 +319,20 @@ module swap_state_mod
     ! Atmosphere/Meteorology State
     ! ===========================================================================
     type :: atmosphere_state_t
+        ! Meteo input configuration (loaded from .swp)
+        integer :: swetr = 0                  ! 0=daily basic data, 1=ETref values
+        integer :: swdivide = 0               ! Partitioning switch
+        integer :: swmetdetail = 0            ! 0=daily, 1=detailed
+        integer :: swmeteo = 0                ! 1=no detailed needed, 2=detailed needed
+        integer :: swrain = 0                 ! Rain input mode
+        integer :: swetsine = 0               ! ETSine switch
+        integer :: swinter = 0                ! Interception method switch
+        integer :: swMetFilAll = 0            ! Meteo-in-one-file switch
+        integer :: nmetdetail = 0             ! Number of detailed records per day
+        real(8) :: altw = 0.0d0               ! Wind measurement height (m)
+        real(8) :: angstroma = 0.0d0          ! Angstrom coefficient a
+        real(8) :: angstromb = 0.0d0          ! Angstrom coefficient b
+
         ! Current meteorological values
         real(8) :: tav = 0.0d0                 ! Average air temperature (°C)
         real(8) :: tavd = 0.0d0                ! Average daytime temperature

@@ -211,7 +211,9 @@ module meteo_process_mod
    private
    
    public :: ReadMeteoDay
+  public :: ReadMeteoDay_state
    public :: ResetMetFlx
+  public :: ResetMetFlx_state
 
 contains
 
@@ -255,7 +257,9 @@ contains
   !! (detailed meteo input)
   !! @endnote
   subroutine ReadMeteoDay
-      use variables
+      ! use variables
+      use variables, only: out_tmn, out_tmx, out_hum, out_win, out_etr, out_wet, swrain, wet, rh, tav, tavd, out_rad, yearmeteo, arai, grai, atmx, ahum, aetr, date, arad, t1900, ssnow, teprrain, teprsnow, &
+                        detrecord, nmetdetail, dettime, detrad, dethum, dettav, atav, swmetdetail, daymeteo, daynrfirst, daynrlast, rad, tmn, tmx, pathatm, awin, atmn, metfil, detrain, swsnow, gsnow, snrai, irectotal, detwind, fprecnosnow
       use MeteoVars
       use precipitation_mod, only: PartitionPrecipitation
       implicit none
@@ -421,6 +425,37 @@ contains
     return
   end subroutine ResetMetFlx
 
+  !> Read meteorological data using explicit SWAP state
+  !!
+  !! Wrapper that bridges legacy module-variable implementation with
+  !! `swap_state_t` to support explicit state execution paths.
+  !!
+  !! @param[inout] state SWAP model state container
+  subroutine ReadMeteoDay_state(state)
+      use swap_state_mod, only: swap_state_t
+      use swap_state_sync, only: atmosphere_state_from_variables
+      implicit none
+
+      type(swap_state_t), intent(inout) :: state
+
+      call ReadMeteoDay()
+        call atmosphere_state_from_variables(state%atm)
+  end subroutine ReadMeteoDay_state
+
+  !> Reset meteorological fluxes using explicit SWAP state
+  !!
+  !! @param[inout] state SWAP model state container
+  subroutine ResetMetFlx_state(state)
+      use swap_state_mod, only: swap_state_t
+      use swap_state_sync, only: atmosphere_state_from_variables
+      implicit none
+
+      type(swap_state_t), intent(inout) :: state
+
+      call ResetMetFlx()
+        call atmosphere_state_from_variables(state%atm)
+  end subroutine ResetMetFlx_state
+
 end module meteo_process_mod
 
 !> Main meteorological processing coordinator module
@@ -457,6 +492,7 @@ module meteo_mod
   
   private
   public :: ProcessMeteoDay
+  public :: ProcessMeteoDay_state
 
 contains
 
@@ -486,7 +522,13 @@ contains
   !! Uses module variables from Variables and MeteoVars
   !! @endnote
   subroutine ProcessMeteoDay
-    use Variables
+    ! use Variables
+    use variables, only: lai, grai, gird, swinter, gsnow, ssnow, swmetdetail, nmetdetail, swetr, flCropEmergence, et0, ew0, es0, swcf, swcfbs, cfbs, &
+    cf, cfeic, rad, arad, metperiod, tav, atav, ahum, logf, swscre, daynr, lat, alt, altw, angstroma, angstromb, rsc, ch, daylp, flmetdetail, albedo, tmn, tmx, rsw, difpp, &
+    dsinbe, atmtr, rsoil, swdivide, kdif, kdir, croptype, swgc, gc, siccapact, siccaptb, icrop, t, dt, peva, flcropcalendar, &
+     flCropHarvest, pond, cfevappond, ptra, flco2, fco2tra, tpot, epot, grain, nrain, nraida, finterception, swrain, fprecnosnow, graidt, nraidt, &
+     swusecn, runoff_cn, aintcdt, fletsine, ptraday, pevaday, atmdem, rh, tavd
+    use swap_array_dimensions, only: magrs
     use MeteoVars
     use array_utils, only: afgen
     use runoff_mod, only: CNmethod
@@ -860,4 +902,32 @@ contains
     endif
 
   end subroutine ProcessMeteoDay
+
+  !> Process meteorological data using explicit SWAP state
+  !!
+  !! Wrapper around legacy `ProcessMeteoDay` that synchronizes
+  !! model variables from/to `state`.
+  !!
+  !! @param[inout] state SWAP model state container
+  subroutine ProcessMeteoDay_state(state)
+    use swap_state_mod, only: swap_state_t
+    use swap_state_sync, only: atmosphere_state_from_variables, irrigation_state_from_variables
+    implicit none
+
+    type(swap_state_t), intent(inout) :: state
+
+    call ProcessMeteoDay()
+    call atmosphere_state_from_variables(state%atm)
+    call irrigation_state_from_variables(state%irrig)
+  end subroutine ProcessMeteoDay_state
 end module meteo_mod
+
+
+
+
+
+
+
+
+
+

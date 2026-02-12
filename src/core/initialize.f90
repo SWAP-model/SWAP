@@ -11,6 +11,18 @@
       flprintdt          = .false. 
       flprintshort       = .false. 
       floutputshort      = .false. 
+      tc_datea            = 0
+      tc_nextyear          = 0
+      tc_flprevious        = 0
+      tc_flTnext           = .false.
+      tc_fsec              = 0.0
+      tc_tchange           = 0.0d0
+      tc_dtEvent           = 0.0d0
+      tc_tEvent            = 0.0d0
+      tc_tcumold           = 0.0d0
+      tc_dtprevious        = 0.0d0
+      tc_tmptimestart      = 0.0
+      tc_tmptimeend        = 0.0
       nprintday          = 0 
       nprintcount        = 0 
       cntper             = 0 
@@ -23,6 +35,7 @@
       iyear              = 0 
       iyearm1            = 0 
       logf               = 0 
+      ex_tlast            = 0.0d0
       period             = 0 
       swheader           = 0 
       swodat             = 0 

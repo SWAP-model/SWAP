@@ -33,6 +33,7 @@ module frozencond_mod
   private
 
   public :: FrozenCond, FrozenBounds
+  public :: FrozenCond_state, FrozenBounds_state
 
 contains
 
@@ -293,5 +294,40 @@ contains
 
     return
   end subroutine FrozenBounds
+
+  !> State-aware wrapper for `FrozenCond`
+  !!
+  !! Applies frozen-condition factors to explicit heat/soil state and updates
+  !! legacy module variables required by subsequent legacy routines.
+  !!
+  !! @param[inout] state SWAP model state container
+  subroutine FrozenCond_state(state)
+    use swap_state_mod, only: swap_state_t
+    use swap_state_sync, only: heat_state_to_variables
+    implicit none
+
+    type(swap_state_t), intent(inout) :: state
+
+    call FrozenCond(state%heat, state%soil)
+    call heat_state_to_variables(state%heat, state%numnod, state%numlay)
+  end subroutine FrozenCond_state
+
+  !> State-aware wrapper for `FrozenBounds`
+  !!
+  !! Executes legacy frozen-boundary adjustments and synchronizes affected
+  !! boundary and drainage outputs into explicit state.
+  !!
+  !! @param[inout] state SWAP model state container
+  subroutine FrozenBounds_state(state)
+    use swap_state_mod, only: swap_state_t
+    use swap_state_sync, only: boundbottom_outputs_from_variables, drainage_outputs_from_variables
+    implicit none
+
+    type(swap_state_t), intent(inout) :: state
+
+    call FrozenBounds()
+    call boundbottom_outputs_from_variables(state%boundary, state%soil)
+    call drainage_outputs_from_variables(state%drain, state%nrlevs, state%numnod)
+  end subroutine FrozenBounds_state
 
 end module frozencond_mod

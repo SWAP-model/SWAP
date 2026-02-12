@@ -9,6 +9,7 @@ module soilhydraulics_mod
    implicit none
    private
    public :: headcalc, soilwater, soilwaterstatevar, hysteresis
+   public :: soilwater_state, soilwaterstatevar_state
 contains
 
    !> Calculate pressure heads, water contents, and conductivities for next time step
@@ -25,6 +26,7 @@ contains
       use variables
       use boundbottom_mod, only: BoundBottom
       use boundtop_mod, only: boundtop, PONDRUNOFF
+      use rootextraction_mod, only: RootExtraction
       use array_utils, only: afgen
       use soilhydraulics_utils, only: watcon, hconduc, moiscap, hcomean, dhconduc
       use swap_constants, only: nihil
@@ -1232,6 +1234,44 @@ contains
 
       return
       end subroutine SoilWaterStateVar
+
+   !> State-aware wrapper for `soilwater`
+   !!
+   !! Executes the legacy soil water routine and synchronizes selected outputs
+   !! back to explicit state.
+   !!
+   !! @param[inout] state SWAP model state container
+   !! @param[in]    task  Task selector: 1=initialize, 2=calculate rates, 3=update states
+   subroutine soilwater_state(state, task)
+      use swap_state_mod, only: swap_state_t
+      use swap_state_sync, only: soilwater_outputs_from_variables
+      implicit none
+
+      type(swap_state_t), intent(inout) :: state
+      integer,            intent(in)    :: task
+
+      call soilwater(task)
+      call soilwater_outputs_from_variables(state%soil, state%time, task, state%numnod)
+   end subroutine soilwater_state
+
+   !> State-aware wrapper for `SoilWaterStateVar`
+   !!
+   !! Executes legacy state save/reset logic and synchronizes selected outputs
+   !! back to explicit state.
+   !!
+   !! @param[inout] state SWAP model state container
+   !! @param[in]    task  Task selector: 1=save, 2=reset
+   subroutine soilwaterstatevar_state(state, task)
+      use swap_state_mod, only: swap_state_t
+      use swap_state_sync, only: soilwaterstatevar_outputs_from_variables
+      implicit none
+
+      type(swap_state_t), intent(inout) :: state
+      integer,            intent(in)    :: task
+
+      call SoilWaterStateVar(task)
+      call soilwaterstatevar_outputs_from_variables(state%soil, task, state%numnod)
+   end subroutine soilwaterstatevar_state
 
    !> Check for hysteretic reversal and update model parameters
    !!

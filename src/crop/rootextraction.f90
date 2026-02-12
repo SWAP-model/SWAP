@@ -1,7 +1,32 @@
 ! File VersionID:
 !   $Id: rootextraction.f90 374 2018-03-21 13:12:23Z heine003 $
 ! ----------------------------------------------------------------------
-      subroutine RootExtraction 
+!> Root water extraction routines for SWAP crop module.
+!!
+!! Groups the legacy root extraction procedures in a module so callers use
+!! explicit interfaces.
+module rootextraction_mod
+  implicit none
+  private
+  public :: RootExtraction, MatricFlux
+
+  contains
+
+!> Calculate root water extraction profile and stress partitioning.
+!!
+!! Computes root water extraction for each rooted node, including reductions due
+!! to oxygen, drought, salinity, and frost stress, and optional compensation.
+!!
+!! @note
+!! update: August 2016: microscopic uptake according to JongvanLier(2013)
+!! update: August 2012: O2-stress according to Bartholomeus(2008)
+!! update: February 2011: macrosopic uptake extended with compensation
+!!         according to Jarvis (1989)
+!! date: August 2004
+!! purpose: Calculate the root water extraction rate as function of soil water
+!!          pressure head and salinity concentration for each node
+!! @endnote
+  subroutine RootExtraction
 ! ----------------------------------------------------------------------
 !     update    : August 2016: microscopic uptake according to JongvanLier(2013)
 !     update    : August 2012: O2-stress according to Bartholomeus(2008)
@@ -13,6 +38,7 @@
 ! ----------------------------------------------------------------------
       use variables
       use array_utils, only: afgen
+      use oxygenstress_mod, only: OxygenStress, OxygenReproFunction
       implicit none
 
 ! --- local variables
@@ -267,10 +293,17 @@
       
       return
 
-      end
+        end subroutine RootExtraction
 
 ! ----------------------------------------------------------------------
-      subroutine JongvanLier
+      !> Calculate microscopic root extraction after De Jong van Lier et al. (2013).
+      !!
+      !! @note
+      !! date: August 2016
+      !! purpose: Calculate the root water extraction rate according to
+      !!          De Jong van Lier et al. (2013)
+      !! @endnote
+        subroutine JongvanLier
 ! ----------------------------------------------------------------------
 !     date      : August 2016
 !     purpose   : Calculate the root water extraction rate according to 
@@ -595,10 +628,16 @@
 
       return
 
-      end
+  end subroutine JongvanLier
 
 ! ----------------------------------------------------------------------
-      subroutine JongvanLierLoop 
+!> Evaluate one microscopic uptake loop for a given xylem/leaf pressure state.
+!!
+!! @note
+!! date: August 2016
+!! purpose: Calculate microscopic root water uptake using hleaf
+!! @endnote
+  subroutine JongvanLierLoop
 ! ----------------------------------------------------------------------
 !     date      : August 2016
 !     purpose   : Calculate microscopic root water uptake using hleaf
@@ -707,10 +746,22 @@
       enddo
 
       return
-      end
+  end subroutine JongvanLierLoop
 
 ! ----------------------------------------------------------------------
-      subroutine MatricFlux(task,phead,node,outcome) 
+!> Initialize or evaluate the matric flux potential table.
+!!
+!! @param[in] task Task selector: 1 initializes lookup tables, 2 evaluates
+!!                 flux potential at node pressure head.
+!! @param[in] phead Pressure head [cm].
+!! @param[in] node Node index.
+!! @param[out] outcome Matric flux potential.
+!!
+!! @note
+!! Date: February 2010
+!! Purpose: Initialize and calculate matric flux potential
+!! @endnote
+  subroutine MatricFlux(task,phead,node,outcome)
 ! ----------------------------------------------------------------------
 !     Date               : February 2010   
 !     Purpose            : Initialize and calculate matric flux potential
@@ -807,4 +858,6 @@
       end select
 
       return
-      end 
+  end subroutine MatricFlux
+
+end module rootextraction_mod
