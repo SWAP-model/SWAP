@@ -15,6 +15,7 @@ module management_soil_mod
    implicit none
    private
    public :: SoilManagement
+   public :: SoilManagement_state
 
 contains
 
@@ -905,6 +906,23 @@ contains
 
       return
       end subroutine SoilManagement
+
+   !> State-aware wrapper for `SoilManagement`.
+   !!
+   !! @param[inout] state SWAP model state container
+   !! @param[in]    task  Legacy task selector
+      subroutine SoilManagement_state(state, task)
+      use swap_state_mod, only: swap_state_t
+      use swap_state_sync, only: wofost_soil_state_from_variables, crop_state_from_variables
+      implicit none
+
+      type(swap_state_t), intent(inout) :: state
+      integer,            intent(in)    :: task
+
+      call SoilManagement(task)
+      call wofost_soil_state_from_variables(state%wofost_soil)
+      call crop_state_from_variables(state%crop, state%ncrop)
+      end subroutine SoilManagement_state
 
    end module management_soil_mod
 

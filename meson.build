@@ -54,9 +54,17 @@ sources = [
     'src/core/arrays.f90',
     'src/core/constants.f90',
     'src/core/swap_log.f90',
+    'src/atmosphere/atmosphere_state.f90',
+    'src/boundary/boundary_state.f90',
+    'src/drainage/drainage_state.f90',
+    'src/drainage/surfacewater_state.f90',
+    'src/heat/heat_state.f90',
+    'src/solute/solute_state.f90',
+    'src/soil/soil_state.f90',
     'src/core/swap_state_mod.f90',
     'src/core/variables.f90',
     'src/core/swap_state_sync.f90',
+    'src/macropore/macropore_state.f90',
     'src/core/initialize.f90',
     'src/core/timecontrol.f90',
     
@@ -69,6 +77,8 @@ sources = [
     
     # I/O
     'src/io/swap_csv_output.f90',
+    'src/io/readdrainagetoml.f90',
+    'src/io/readswaptoml.f90',
     'src/io/readswap.f90',
     'src/io/readmeteo.f90',
     'src/io/swapoutput.f90',
@@ -113,6 +123,7 @@ sources = [
     'src/crop/tillage.f90',
     'src/crop/management_soil.f90',
     'src/crop/cropgrowth.f90',
+    'src/crop/cropgrowth_state.f90',
     
     # Utils
     'src/utils/sharedexchange.f90',
@@ -164,6 +175,19 @@ endif
 ttutil_dep = declare_dependency(link_args: [ttutil_lib_path])
 
 # ============================================================================
+# External dependency: toml-f
+# ============================================================================
+
+tomlf_prj = subproject(
+    'toml-f',
+    version: '>=0.2',
+    default_options: [
+        'default_library=static',
+    ],
+)
+tomlf_dep = tomlf_prj.get_variable('tomlf_dep')
+
+# ============================================================================
 # Main executable
 # ============================================================================
 if (is_windows and is_gcc) or not is_windows
@@ -173,7 +197,7 @@ else
 endif
 
 executable('swap', sources,
-    dependencies: [ttutil_dep],
+    dependencies: [ttutil_dep, tomlf_dep],
     link_args: link_args,
     include_directories: src_inc,
     install: false

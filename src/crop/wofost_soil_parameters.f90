@@ -1,9 +1,17 @@
 ! File VersionID:
 !   $Id: wofost_soil_parameters.f90 323 2017-03-03 15:17:25Z kroes006 $
 ! ----------------------------------------------------------------------
+!> Initialize default WOFOST soil organic matter and nitrogen parameters.
+!!
+!! Loads model constants and default material tables used by the soil nutrient
+!! routines, while preserving legacy parameter values.
+!!
+!! @note
+!! Legacy implementation retained; dependency on `variables` was narrowed to
+!! only `BDENS`.
       Subroutine Wofost_SoilParameters
 !0    Declarations
-      use variables
+      use variables, only: BDENS
       use Wofost_Soil_Declarations
 !0.3  intermediate local variables
       Integer :: fn

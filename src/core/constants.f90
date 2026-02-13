@@ -29,4 +29,38 @@ module swap_constants
   !! Used as upper bound or sentinel value
   real(8), parameter :: VLARGE = 1.0d12
 
+  !!> von Kármán constant (\(\kappa\), dimensionless) used in logarithmic wind-profile
+  !!> and turbulent transfer calculations.
+  !!
+  real(8), parameter :: KARMAN_CONSTANT = 0.41d0
+
+
+  !!> Representative grass canopy height in centimeters (cm), used as the reference
+  !!> vegetation roughness/height scale for aerodynamic parameterization.
+  !!
+  real(8), parameter :: GRASS_HEIGHT_CM = 12.0d0
+
+
+  !!> Standard meteorological measurement height in centimeters (cm), typically for
+  !!> wind and related atmospheric forcing variables.
+  !!
+  real(8), parameter :: MEASUREMENT_HEIGHT_CM = 200.0d0
+
+
+  !!> Effective bare-soil roughness height in centimeters (cm), used when no
+  !!> vegetation canopy is present.
+  !!
+  real(8), parameter :: BARE_SOIL_HEIGHT_CM = 0.1d0
+
+
+  !!> Mathematical constant \(\pi\) (dimensionless), ratio of a circle's circumference
+  !!> to its diameter.
+  !!
+  real(8), parameter :: PI = 3.141592653589793d0
+
+
+  !!> Surface albedo (dimensionless) for ponded-water conditions, representing the
+  !!> fraction of incoming shortwave radiation reflected by the water surface.
+  real(8), parameter :: ALBEDO_PONDING = 0.08d0
+
 end module swap_constants
