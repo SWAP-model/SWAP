@@ -11,6 +11,8 @@
 
 program test_solute_state
     use swap_state_mod
+    use solute_state_mod, only: solute_state_t, solute_state_init, solute_state_finalize, &
+                                solute_state_reset_cumulative, solute_state_reset_intermediate
     use swap_log
     implicit none
     
@@ -31,6 +33,7 @@ program test_solute_state
     call test_solute_concentrations()
     call test_solute_transport_params()
     call test_solute_age_tracer()
+    call test_direct_solute_state_module()
     call test_multiple_solute_instances()
     
     ! Print summary
@@ -278,6 +281,40 @@ contains
         
         call swap_state_finalize(state)
     end subroutine
+
+    subroutine test_direct_solute_state_module()
+        type(solute_state_t) :: sol
+
+        call log_info('test', '--- Test: Direct Solute State Module ---')
+
+        call solute_state_init(sol, numnod=12, numlay=3, nrlevs=2)
+
+        call assert_true(allocated(sol%cml), 'direct sol%cml allocated')
+        call assert_true(allocated(sol%ldis), 'direct sol%ldis allocated')
+        call assert_equal_int(12, size(sol%cml), 'direct size(sol%cml) = 12')
+        call assert_equal_int(3, size(sol%ldis), 'direct size(sol%ldis) = 3')
+        call assert_equal_int(2, size(sol%icAgeDra), 'direct size(sol%icAgeDra) = 2')
+        call assert_equal_real(1.0d0, sol%fdepth(1), 1.0d-10, 'direct fdepth initialized to 1.0')
+
+        sol%sqbot = 8.0d0
+        sol%sqdra = 4.0d0
+        sol%imsqbot = 0.7d0
+        sol%imsqdra = 0.9d0
+
+        call solute_state_reset_cumulative(sol)
+        call assert_equal_real(0.0d0, sol%sqbot, 1.0d-10, 'direct cumulative reset sqbot')
+        call assert_equal_real(0.0d0, sol%sqdra, 1.0d-10, 'direct cumulative reset sqdra')
+
+        call solute_state_reset_intermediate(sol)
+        call assert_equal_real(0.0d0, sol%imsqbot, 1.0d-10, 'direct intermediate reset imsqbot')
+        call assert_equal_real(0.0d0, sol%imsqdra, 1.0d-10, 'direct intermediate reset imsqdra')
+
+        call solute_state_finalize(sol)
+        call assert_true(.not. allocated(sol%cml), 'direct sol%cml deallocated')
+        call assert_true(.not. allocated(sol%ldis), 'direct sol%ldis deallocated')
+        call assert_equal_real(1.0d0, sol%cref, 1.0d-10, 'direct scalar reset after finalize')
+
+    end subroutine test_direct_solute_state_module
 
     subroutine test_multiple_solute_instances()
         type(swap_state_t) :: state1, state2, state3

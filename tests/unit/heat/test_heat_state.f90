@@ -224,7 +224,7 @@ contains
         call assert_equal_real(0.50d0, state%heat%psand(1), 1.0d-10, 'psand(1) = 0.50')
         call assert_equal_real(0.30d0, state%heat%psilt(1), 1.0d-10, 'psilt(1) = 0.30')
         call assert_equal_real(0.03d0, state%heat%orgmat(1), 1.0d-10, 'orgmat(1) = 0.03')
-        
+
         ! Verify layer-based arrays have correct size
         call assert_equal_int(5, size(state%heat%pclay), 'size(pclay) = 5')
         call assert_equal_int(5, size(state%heat%psand), 'size(psand) = 5')
