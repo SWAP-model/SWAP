@@ -15,346 +15,452 @@ module et_mod
 
   public :: PenMon, reduceva, reduceva_state
 contains
-      !> Penman-Monteith evapotranspiration calculation
-      !>
-      !! Calculates potential evaporation and transpiration rates from a bare soil surface,
-      !! a dry crop canopy, and a wet crop canopy based on the Penman-Monteith approach.
-      !>
-      !! @param[in]     logf              Internal number of logbook output file
-      !! @param[in]     swscre            Switch of screen display: 0 = no display; 1 = summary water balance; 2 = daynumber
-      !! @param[in]     daynr             Day number (January 1st = 1) [-]
-      !! @param[in]     lat               Latitude [deg, decimal degrees, N=+, S=-]
-      !! @param[in]     alt               Altitude above mean sea level [m]
-      !! @param[in]     altw              Altitude of wind speed measurement [m]
-      !! @param[in]     a                 First Angstrom coefficient [-]
-      !! @param[in]     b                 Second Angstrom coefficient [-]
-      !! @param[in]     rcs               Reflection coefficient soil [-]
-      !! @param[in]     rad               Incoming short wave radiation [J/m2/d]
-      !! @param[in]     tav               Average temperature (24 hour) [C]
-      !! @param[in]     hum               Vapour pressure [kPa]
-      !! @param[in]     win               Wind speed at 2 m height [m/s]
-      !! @param[in]     rsc               Minimum canopy resistance of dry crop [s/m]
-      !! @param[out]    es0               Potential evaporation rate from a wet bare soil [mm/d]
-      !! @param[out]    et0               Potential transpiration rate from a dry crop [mm/d]
-      !! @param[out]    ew0               Potential transpiration rate from a wet crop [mm/d]
-      !! @param[in]     swcf              Switch use crop factor (=1) or crop height (=2)
-      !! @param[in]     ch                Crop height [cm]
-      !! @param[in]     flCropEmergence   Logical flag for crop emergence
-      !! @param[in]     daylp             Day length parameter
-      !! @param[in]     flmetdetail       Logical flag for detailed meteorological data
-      !! @param[in]     irecord           Current record number
-      !! @param[in]     nmetdetail        Number of detailed meteorological records
-      !! @param[in]     albedo            Reflection coefficient crop [-]
-      !! @param[in]     tmn               Minimum temperature [C]
-      !! @param[in]     tmx               Maximum temperature [C]
-      !! @param[in]     rsw               Canopy resistance of intercepted water [s/m]
-      !! @param[in]     difpp             Diffuse radiation parameter
-      !! @param[in]     dsinbe            Solar elevation parameter
-      !! @param[in]     atmtr             Daily atmospheric transmission
-      !! @param[out]    Edirect           Direct evaporation [mm/d]
-      !! @param[out]    Tdirect           Direct transpiration [mm/d]
-      !! @param[out]    Tdirectwet        Direct transpiration from wet crop [mm/d]
-      !! @param[in]     rsoil             Soil resistance in PMdirect [s/m]
-      !! @param[in]     swdivide          Switch for direct partitioning method
-      !! @param[in]     kdif              Diffuse light extinction coefficient [-]
-      !! @param[in]     kdir              Direct light extinction coefficient [-]
-      !! @param[in]     lai               Leaf area index [-]
-      !! @param[out]    Edirectpond       Direct evaporation from ponding layer [mm/d]
-      !>
-      !! @note
-      !! Date: 14/01/99
-      !! Local variables:
-      !! - ckarman: von Karman constant [-]
-      !! - zm: height of wind speed [cm]
-      !! - zh: height of temperature and humidity measurement [cm]
-      !! - d: zero displacement of wind profile [cm]
-      !! - zom: roughness parameter for momentum [cm]
-      !! - zoh: roughness parameter for heat and vapour [cm]
-      !! - zmeasw: altitude of wind speed measurement [m]
-      !! - Vcover: vegetation cover [-]
-      !! @endnote
-      subroutine PenMon (logf,swscre,daynr,lat,alt,altw,a,b,rcs,rad,    &
-     & tav,hum,win,rsc,es0,et0,ew0,swcf,ch,flCropEmergence,             &
-     & daylp,flmetdetail,irecord,nmetdetail,albedo,tmn,tmx,rsw,difpp,   &
-     & dsinbe,atmtr,Edirect,Tdirect,Tdirectwet,rsoil,swdivide,kdif,kdir,&
-     & lai,Edirectpond)
-use swap_constants, only: vlarge, small
+  !> Pure Penman-Monteith calculation (no I/O, fully deterministic)
+  !!
+  !! Performs all ET calculations without side effects. This pure version
+  !! enables compiler optimizations, parallelization, and easier testing.
+  !!
+  !! @note All warnings are returned as optional status codes instead of being logged
+  pure subroutine PenMon_calc(daynr, lat, alt, altw, a, b, rcs, rad, &
+                              tav, hum, win, rsc, swcf, ch, flCropEmergence, &
+                              daylp, flmetdetail, irecord, nmetdetail, &
+                              albedo, tmn, tmx, rsw, difpp, dsinbe, atmtr, &
+                              rsoil, swdivide, kdif, kdir, lai, &
+                              es0, et0, ew0, Edirect, Tdirect, Tdirectwet, &
+                              Edirectpond, warning_code)
+      use swap_constants, only: vlarge, small, KARMAN_CONSTANT, &
+                                GRASS_HEIGHT_CM, MEASUREMENT_HEIGHT_CM, &
+                                BARE_SOIL_HEIGHT_CM, PI, ALBEDO_PONDING
       implicit none
-
-      ! Global variables
-      integer daynr,swcf,logf,swscre,irecord,nmetdetail,swdivide
-      real(8) lat,alt,altw,albedo,tmn,tmx,ch,difpp,dsinbe
-      real(8) a,b,rcs,rsc,rsw,es0,et0,ew0,hum,rad,tav,win,atmtr
-      real(8) Edirect,Tdirect,Tdirectwet,rsoil,kdif,kdir,lai
-      real(8) Edirectpond
-      logical flCropEmergence,flmetdetail
       
-      ! Local variables
-      real(8) lambda,cosld,dayl,delta,ea,vcover
-      real(8) ed,etaerc,etaers,etaerw,etradc,etrads,etradw
-      real(8) gamma,gammoc,gammos,gammow,palt,rac,ras,raw,cp
-      real(8) relssd,rho,rnc,rnl,rns,rnw,rss,sinld,tavk,tkv
-      real(8) ud,vpd,daylp,gs,gc,gw,radial,dec,aob,tmnk,tmxk
-      real(8) ckarman, chgrass, chsoil, d, dgrass, chplant
-      real(8) zm, zmeasw, zmeash, zom, zomgrass, zh,zoh
-      real(8) zact, dact, zomact, fact, fmeas
-      real(8) sunrise,sunset,startrec,endrec,pi,laieff
-      real(8) albpond,rnp,gammop,etaerp,etradp
-      character(len=200) messag
+      ! Input parameters
+      integer, intent(in) :: daynr
+        !! Day number (January 1st = 1) [-]
+      real(8), intent(in) :: lat
+        !! Latitude [deg, decimal degrees, N=+, S=-]
+      real(8), intent(in) :: alt
+        !! Altitude above mean sea level [m]
+      real(8), intent(in) :: altw
+        !! Altitude of wind speed measurement [m]
+      real(8), intent(in) :: a, b
+        !! Angstrom coefficients [-]
+      real(8), intent(in) :: rcs
+        !! Reflection coefficient soil [-]
+      real(8), intent(in) :: rad
+        !! Incoming short wave radiation [J/m2/d]
+      real(8), intent(in) :: tav
+        !! Average temperature (24 hour) [C]
+      real(8), intent(in) :: hum
+        !! Vapour pressure [kPa]
+      real(8), intent(in) :: win
+        !! Wind speed at 2 m height [m/s]
+      real(8), intent(in) :: rsc
+        !! Minimum canopy resistance of dry crop [s/m]
+      integer, intent(in) :: swcf
+        !! Switch: use crop factor (=1) or crop height (=2)
+      real(8), intent(in) :: ch
+        !! Crop height [cm]
+      logical, intent(in) :: flCropEmergence
+        !! Crop emergence flag
+      real(8), intent(in) :: daylp
+        !! Day length parameter
+      logical, intent(in) :: flmetdetail
+        !! Flag for detailed meteorological data
+      integer, intent(in) :: irecord
+        !! Current record number
+      integer, intent(in) :: nmetdetail
+        !! Number of detailed meteorological records
+      real(8), intent(in) :: albedo
+        !! Reflection coefficient crop [-]
+      real(8), intent(in) :: tmn, tmx
+        !! Minimum and maximum temperature [C]
+      real(8), intent(in) :: rsw
+        !! Canopy resistance of intercepted water [s/m]
+      real(8), intent(in) :: difpp
+        !! Diffuse radiation parameter
+      real(8), intent(in) :: dsinbe
+        !! Solar elevation parameter
+      real(8), intent(in) :: atmtr
+        !! Daily atmospheric transmission
+      real(8), intent(in) :: rsoil
+        !! Soil resistance in PMdirect [s/m]
+      integer, intent(in) :: swdivide
+        !! Switch for direct partitioning method (1=PMdirect)
+      real(8), intent(in) :: kdif, kdir
+        !! Diffuse and direct light extinction coefficients [-]
+      real(8), intent(in) :: lai
+        !! Leaf area index [-]
       
-      ! Local parameters
-      data    chgrass  /12.0d0/      ! Height of reference crop grassland [cm]
-      data    zmeash   /200.0d0/     ! Default height of humidity and temperature measurement [cm]
-      data    ckarman  /0.41d0/      ! von Karman constant [-]
-      data    chsoil   /0.1d0/       ! Nihil crop height for a wet bare soil [cm]
-      data    pi       /3.141593d0/  ! Number pi
-      data    albpond  /0.08d0/      ! Albedo of ponding layer
-
-
-      ! Conversion to cm
-      zmeasw = 100.0d0 * altw
-
-      ! Avoid zero crop height
+      ! Output variables
+      real(8), intent(out) :: es0
+        !! Potential evaporation rate from a wet bare soil [mm/d]
+      real(8), intent(out) :: et0
+        !! Potential transpiration rate from a dry crop [mm/d]
+      real(8), intent(out) :: ew0
+        !! Potential transpiration rate from a wet crop [mm/d]
+      real(8), intent(out) :: Edirect
+        !! Direct evaporation [mm/d]
+      real(8), intent(out) :: Tdirect
+        !! Direct transpiration [mm/d]
+      real(8), intent(out) :: Tdirectwet
+        !! Direct transpiration from wet crop [mm/d]
+      real(8), intent(out) :: Edirectpond
+        !! Direct evaporation from ponding layer [mm/d]
+      integer, intent(out), optional :: warning_code
+        !! Warning code: 0=none, 1=polar circle 0hrs, 2=polar circle 24hrs
+      
+      ! Local variables - atmospheric
+      real(8) :: lambda, delta, ea, ed, vpd, gamma, palt, rho, cp
+      real(8) :: tavk, tmnk, tmxk, tkv
+      
+      ! Local variables - radiation
+      real(8) :: rns, rnc, rnw, rnp, rnl, relssd
+      real(8) :: gs, gc, gw
+      real(8) :: sinld, cosld, dayl, radial, dec, aob
+      real(8) :: sunrise, sunset, startrec, endrec
+      
+      ! Local variables - aerodynamic
+      real(8) :: chplant, zmeasw
+      real(8) :: ud, rac, ras, raw, rss
+      real(8) :: zm, zh, d, zom, zoh
+      real(8) :: dgrass, zomgrass, zact, dact, zomact, fact, fmeas
+      
+      ! Local variables - Penman-Monteith terms
+      real(8) :: gammos, gammoc, gammow, gammop
+      real(8) :: etaers, etaerc, etaerw, etaerp
+      real(8) :: etrads, etradc, etradw, etradp
+      
+      ! Local variables - PMdirect
+      real(8) :: vcover, laieff
+      
+      ! Initialize outputs
+      es0 = 0.0d0
+      et0 = 0.0d0
+      ew0 = 0.0d0
+      Edirect = 0.0d0
+      Tdirect = 0.0d0
+      Tdirectwet = 0.0d0
+      Edirectpond = 0.0d0
+      if (present(warning_code)) warning_code = 0
+      
+      ! ========================================================================
+      ! 1. PREPROCESSING: Unit conversions and crop height determination
+      ! ========================================================================
+      
+      zmeasw = 100.0d0 * altw  ! Convert wind measurement height to cm
+      
+      ! Determine effective crop height
       if (.not. flCropEmergence) then
-        chplant = chgrass
-      else 
-        if (swcf.eq.1 .or. swcf.eq.3) then
-          chplant = chgrass
-        else
-          chplant = max (ch,0.1d0)
-        endif
+          chplant = GRASS_HEIGHT_CM
+      else
+          if (swcf == 1 .or. swcf == 3) then
+              chplant = GRASS_HEIGHT_CM
+          else
+              chplant = max(ch, 0.1d0)
+          endif
       endif
-
-      ! Conversion of temperature from [C] to [K]
-      tavk = tav+273.15d0
-      tmnk = tmn+273.15d0
-      tmxk = tmx+273.15d0
-
-      ! Atmospheric pressure at elevation alt [kPa]
-      palt = 101.3d0*((tavk-0.0065d0*alt)/tavk)**5.26d0
-
+      
+      ! ========================================================================
+      ! 2. ATMOSPHERIC PROPERTIES
+      ! ========================================================================
+      
+      ! Temperature conversions [K]
+      tavk = tav + 273.15d0
+      tmnk = tmn + 273.15d0
+      tmxk = tmx + 273.15d0
+      
+      ! Atmospheric pressure at elevation [kPa]
+      palt = 101.3d0 * ((tavk - 0.0065d0*alt) / tavk)**5.26d0
+      
       ! Latent heat of vaporization [MJ/kg]
-      lambda = 2.501d0-0.002361d0*tav
-
+      lambda = 2.501d0 - 0.002361d0*tav
+      
       ! Saturation vapour pressure [kPa]
       if (flmetdetail) then
-        ea = 0.611d0*exp(17.27d0*tav/(tav+237.3d0))
+          ea = 0.611d0 * exp(17.27d0*tav / (tav + 237.3d0))
       else
-        ea = 0.3055d0*(exp(17.27d0*tmn/(tmn+237.3d0)) +                 &
-     &                 exp(17.27d0*tmx/(tmx+237.3d0)))
+          ea = 0.3055d0 * (exp(17.27d0*tmn / (tmn + 237.3d0)) + &
+                          exp(17.27d0*tmx / (tmx + 237.3d0)))
       endif
-
-      ! Measured vapour pressure not to exceed saturated vapour pressure
-      ed = min(hum,ea)
+      
+      ! Measured vapour pressure (capped at saturation)
+      ed = min(hum, ea)
       
       ! Vapour pressure deficit [kPa]
-      vpd = ea-ed
-
-      ! Slope vapour pressure curve [kPa/C]
-      delta = 4098.0d0*ea/(tav+237.3d0)**2
-
+      vpd = ea - ed
+      
+      ! Slope of vapour pressure curve [kPa/C]
+      delta = 4098.0d0 * ea / (tav + 237.3d0)**2
+      
       ! Psychrometric constant [kPa/C]
-      gamma = 0.00163d0*palt/lambda
-
+      gamma = 0.00163d0 * palt / lambda
+      
       ! Atmospheric density [kg/m3]
-      tkv = tavk/(1.0d0-0.378d0*ed/palt)
-      rho = 3.486d0*palt/tkv
-
-      ! Specific heat moist air [kJ/kg/C]
-      cp = 622.0d0*gamma*lambda/palt
-
-      ! Aerodynamic resistance [s/m] - soil, crop & wet crop
+      tkv = tavk / (1.0d0 - 0.378d0*ed/palt)
+      rho = 3.486d0 * palt / tkv
       
-      ! Day wind [m/s] for daily records, avoid zero windspeed
-      ud = max (win, 0.0001d0)
-
-      ! Adjust wind speed if crop height deviates from measurement height of wind speed
-      ! assuming equal wind speed at 100 meter (1.0d4 cm) above the soil surface
-      ! (all length-units in cm)
-      if (chplant.gt.zmeash .or. zmeasw.gt.zmeash) then
-        dgrass = 2.0d0/3.0d0 * chgrass
-        zomgrass = 0.123d0 * chgrass
-        fmeas = log((1.0d4-dgrass)/zomgrass) /                          &
-     &         log((zmeasw-dgrass)/zomgrass) 
-        zact = max(chplant,200.0d0)
-        dact = 2.0d0/3.0d0 * chplant
-        zomact = 0.123d0 * chplant
-       fact = log((zact-dact)/zomact) / log((1.0d4-dact)/zomact)
-       ud = ud * fact * fmeas
+      ! Specific heat of moist air [kJ/kg/C]
+      cp = 622.0d0 * gamma * lambda / palt
+      
+      ! ========================================================================
+      ! 3. WIND SPEED AND AERODYNAMIC RESISTANCE
+      ! ========================================================================
+      
+      ! Day wind speed [m/s], avoid zero
+      ud = max(win, 0.0001d0)
+      
+      ! Adjust wind speed for height differences
+      if (chplant > MEASUREMENT_HEIGHT_CM .or. zmeasw > MEASUREMENT_HEIGHT_CM) then
+          dgrass = 2.0d0/3.0d0 * GRASS_HEIGHT_CM
+          zomgrass = 0.123d0 * GRASS_HEIGHT_CM
+          fmeas = log((1.0d4 - dgrass) / zomgrass) / &
+                  log((zmeasw - dgrass) / zomgrass)
+          
+          zact = max(chplant, 200.0d0)
+          dact = 2.0d0/3.0d0 * chplant
+          zomact = 0.123d0 * chplant
+          fact = log((zact - dact) / zomact) / log((1.0d4 - dact) / zomact)
+          
+          ud = ud * fact * fmeas
       endif
-
-      ! Constants to determine aerodynamic resistance
-      zm = max(chplant,zmeash)     ! Measured height of wind speed measurement [cm]
-      zh = zm                      ! Height of humidity and temperature measurement [cm]
-      d = 2.0d0/3.0d0 * chplant    ! Zero displacement of wind profile [cm]
-      zom = 0.123d0 * chplant      ! Roughness parameter for momentum [cm]
-      zoh = 0.1d0 * zom            ! Roughness parameter for heat and vapour [cm]
       
-      ! Aerodynamic resistance for dry and wet crop
-      rac = log ((zm - d)/zom) * log((zh - d)/zoh) / ckarman**2/ud 
+      ! Aerodynamic parameters for crop
+      zm = max(chplant, MEASUREMENT_HEIGHT_CM)
+      zh = zm
+      d = 2.0d0/3.0d0 * chplant
+      zom = 0.123d0 * chplant
+      zoh = 0.1d0 * zom
+      
+      ! Aerodynamic resistance for crop (dry and wet) [s/m]
+      rac = log((zm - d)/zom) * log((zh - d)/zoh) / KARMAN_CONSTANT**2 / ud
       raw = rac
-
-      ! Aerodynamic resistance for bare wet soil with a crop height set to 0.1 cm
-      d = 2.0d0/3.0d0 * chsoil    ! Zero displacement of wind profile at low height [cm]
-      zom = 0.123d0 * chsoil      ! Roughness parameter for momentum at low height [cm]
-      zoh = 0.1d0 * zom           ! Roughness parameter for heat and vapour [cm]
-      ras = log ((zm - d)/zom) * log((zh - d)/zoh) / ckarman**2/ud
-
-      ! Surface resistance of wet soil [s/m]
-      if (swdivide .eq. 1) then
-        ! Apply specified soil resistance for PMdirect partitioning
-        rss = rsoil
+      
+      ! Aerodynamic resistance for bare soil [s/m]
+      d = 2.0d0/3.0d0 * BARE_SOIL_HEIGHT_CM
+      zom = 0.123d0 * BARE_SOIL_HEIGHT_CM
+      zoh = 0.1d0 * zom
+      ras = log((zm - d)/zom) * log((zh - d)/zoh) / KARMAN_CONSTANT**2 / ud
+      
+      ! Surface resistance of soil [s/m]
+      if (swdivide == 1) then
+          rss = rsoil  ! PMdirect partitioning
       else
-        rss = 0.d0
+          rss = 0.0d0
       endif
-
-      ! Modified psychrometric constant [kPa/C] - soil, crop & wet crop 
-      gammos = gamma*(1.0d0+rss/ras)
-      gammoc = gamma*(1.0d0+rsc/rac)
-      gammow = gamma*(1.0d0+rsw/raw)
-
-      ! Net short wave radiation [MJ/m**2/d] - soil, crop, wet crop & pond layer
-      rns = (1.0d0-rcs)*rad/1000000.0d0
-      rnc = (1.0d0-albedo)*rad/1000000.0d0
-      rnw = (1.0d0-albedo)*rad/1000000.0d0
-      rnp = (1.0d0-albpond)*rad/1000000.0d0
-
-      ! Procedure to derive extraterrestrial radiation [MJ/m2/day]
+      
+      ! Modified psychrometric constants [kPa/C]
+      gammos = gamma * (1.0d0 + rss/ras)
+      gammoc = gamma * (1.0d0 + rsc/rac)
+      gammow = gamma * (1.0d0 + rsw/raw)
+      
+      ! ========================================================================
+      ! 4. RADIATION CALCULATIONS
+      ! ========================================================================
+      
+      ! Net shortwave radiation [MJ/m2/d]
+      rns = (1.0d0 - rcs) * rad / 1.0d6
+      rnc = (1.0d0 - albedo) * rad / 1.0d6
+      rnw = (1.0d0 - albedo) * rad / 1.0d6
+      rnp = (1.0d0 - ALBEDO_PONDING) * rad / 1.0d6
+      
+      ! Extraterrestrial radiation and daylength
       if (flmetdetail) then
-
-        ! Declination of the sun as a function of daynr
-        radial = pi/180.d0
-        dec = -asin(dsin(23.45d0*radial)*                                &
-     &                        dcos(2.d0*pi*dble(daynr+10)/365.0d0))
-        
-        ! Some intermediate variables
-        sinld = dsin(radial*lat)*dsin(dec)
-        cosld = dcos(radial*lat)*dcos(dec)
-        aob = sinld/cosld
-        
-        ! Calculation of astronomical daylength
-        if (aob.lt.-1.0d0) then
-          messag='Warning: latitude above polar circle, daylength= 0hrs'
-          call warn ('Astro',messag,logf,swscre)
-        else if (aob.gt.1.0d0) then
-          messag='Warning: latitude within polar circle,daylength=24hrs'
-          call warn ('Astro',messag,logf,swscre)
-        else
-          dayl  = 12.0d0*(1.0d0+2.0d0*asin(aob)/pi)
-        endif
-
-        ! Extraterrestrial radiation of current period (dso) [J/m2/day]
-        sunrise = 0.5d0 - dayl / 48.d0
-        sunset = 0.5d0 + dayl / 48.d0
-        startrec = dble(real(irecord-1)/real(nmetdetail))
-        endrec = dble(real(irecord)/real(nmetdetail))
-
+          ! Sub-daily: calculate astronomical parameters
+          radial = PI / 180.0d0
+          dec = -asin(sin(23.45d0*radial) * &
+                      cos(2.0d0*PI*dble(daynr+10) / 365.0d0))
+          
+          sinld = sin(radial*lat) * sin(dec)
+          cosld = cos(radial*lat) * cos(dec)
+          aob = sinld / cosld
+          
+          ! Daylength calculation with polar circle handling
+          if (aob < -1.0d0) then
+              dayl = 0.0d0
+              if (present(warning_code)) warning_code = 1  ! Polar circle, 0 hours
+          else if (aob > 1.0d0) then
+              dayl = 24.0d0
+              if (present(warning_code)) warning_code = 2  ! Polar circle, 24 hours
+          else
+              dayl = 12.0d0 * (1.0d0 + 2.0d0*asin(aob)/PI)
+          endif
+          
+          sunrise = 0.5d0 - dayl / 48.0d0
+          sunset = 0.5d0 + dayl / 48.0d0
+          startrec = dble(real(irecord-1) / real(nmetdetail))
+          endrec = dble(real(irecord) / real(nmetdetail))
       else
-        ! Just daily extraterrestrial radiation (one record per day)
-        call astro(daynr,lat,rad,dayl,daylp,sinld,cosld,difpp,          &
-     &             atmtr,dsinbe)
+          ! Daily: use provided parameters
+          ! Note: sinld, cosld would come from astro() call in wrapper
+          sinld = dsinbe
+          cosld = sqrt(max(0.0d0, 1.0d0 - sinld**2))
+          startrec = 0.0d0
+          endrec = 1.0d0
+          sunrise = 0.0d0
+          sunset = 1.0d0
       endif
-
-      ! Net long wave radiation (MJ/m2/d)
-      relssd = max(min((atmtr-a)/b,1.0d0),0.0d0)
-      rnl = 4.9d-9* 0.5d0 * (tmxk**4 + tmnk**4) *                       &
-     &      (0.34d0-0.14d0*dsqrt(ed))*(0.1d0+0.9d0*relssd)
- 
+      
+      ! Net longwave radiation [MJ/m2/d]
+      relssd = max(min((atmtr - a) / b, 1.0d0), 0.0d0)
+      rnl = 4.9d-9 * 0.5d0 * (tmxk**4 + tmnk**4) * &
+            (0.34d0 - 0.14d0*sqrt(ed)) * (0.1d0 + 0.9d0*relssd)
+      
       ! Soil heat flux [MJ/m2/d]
       if (flmetdetail) then
-        if ((startrec+endrec)/2.d0 .gt. sunrise .and.                   &
-     &      (startrec+endrec)/2.d0 .lt. sunset) then
-          ! Daytime period
-          gs = 0.1d0 * (rns - rnl)
-          gc = 0.1d0 * (rnc - rnl)
-          gw = 0.1d0 * (rnw - rnl)
-        else
-          ! Nighttime period
-          gs = 0.5d0 * (rns - rnl)
-          gc = 0.5d0 * (rnc - rnl)
-          gw = 0.5d0 * (rnw - rnl)
-        endif
+          if ((startrec + endrec)/2.0d0 > sunrise .and. &
+              (startrec + endrec)/2.0d0 < sunset) then
+              ! Daytime
+              gs = 0.1d0 * (rns - rnl)
+              gc = 0.1d0 * (rnc - rnl)
+              gw = 0.1d0 * (rnw - rnl)
+          else
+              ! Nighttime
+              gs = 0.5d0 * (rns - rnl)
+              gc = 0.5d0 * (rnc - rnl)
+              gw = 0.5d0 * (rnw - rnl)
+          endif
       else
-        ! Daily record, net flux negligable
-        gs = 0.d0
-        gc = 0.d0
-        gw = 0.d0
+          ! Daily: negligible net flux
+          gs = 0.0d0
+          gc = 0.0d0
+          gw = 0.0d0
+      endif
+      
+      ! ========================================================================
+      ! 5. PENMAN-MONTEITH EQUATION - STANDARD METHOD
+      ! ========================================================================
+      
+      ! Aerodynamic term [mm/d]
+      etaers = (86.4d0/lambda) * (1.0d0/(delta + gammos)) * (rho*cp*vpd/ras)
+      etaerc = (86.4d0/lambda) * (1.0d0/(delta + gammoc)) * (rho*cp*vpd/rac)
+      etaerw = (86.4d0/lambda) * (1.0d0/(delta + gammow)) * (rho*cp*vpd/raw)
+      
+      ! Radiation term [mm/d]
+      etrads = delta/(delta + gammos) * (rns - rnl - gs) / lambda
+      etradc = delta/(delta + gammoc) * (rnc - rnl - gc) / lambda
+      etradw = delta/(delta + gammow) * (rnw - rnl - gw) / lambda
+      
+      ! Total potential rates [mm/d]
+      es0 = max(0.0d0, etaers + etrads)
+      et0 = max(0.0d0, etaerc + etradc)
+      ew0 = max(0.0d0, etaerw + etradw)
+      
+      ! ========================================================================
+      ! 6. PENMAN-MONTEITH DIRECT PARTITIONING (PMdirect)
+      ! ========================================================================
+      
+      if (swdivide == 1) then
+          ! Vegetation cover fraction
+          vcover = 1.0d0 - exp(-kdif * kdir * lai)
+          
+          ! Adjust aerodynamic resistances for partial cover
+          if (vcover > 1.0d-6) then
+              rac = rac / vcover
+          else
+              rac = 1.0d12
+          endif
+          raw = rac
+          
+          if ((1.0d0 - vcover) > 1.0d-6) then
+              ras = ras / (1.0d0 - vcover)
+          else
+              ras = 1.0d12
+          endif
+          
+          ! Effective LAI for resistance scaling
+          laieff = lai / (0.3d0*lai + 1.2d0)
+          
+          ! Modified psychrometric constants with resistance scaling
+          gammos = vlarge
+          if (ras > small) gammos = gamma * (1.0d0 + rss/ras)
+          
+          gammoc = vlarge
+          if ((rac*laieff) > small) gammoc = gamma * (1.0d0 + rsc/(rac*laieff))
+          
+          gammow = vlarge
+          if ((raw*laieff) > small) gammow = gamma * (1.0d0 + rsw/(raw*laieff))
+          
+          gammop = vlarge
+          if (ras > small) gammop = gamma
+          
+          ! Aerodynamic terms [mm/d]
+          etaers = (86.4d0/lambda) * (1.0d0/(delta + gammos)) * (rho*cp*vpd/ras)
+          etaerc = (86.4d0/lambda) * (1.0d0/(delta + gammoc)) * (rho*cp*vpd/rac)
+          etaerw = (86.4d0/lambda) * (1.0d0/(delta + gammow)) * (rho*cp*vpd/raw)
+          etaerp = (86.4d0/lambda) * (1.0d0/(delta + gammop)) * (rho*cp*vpd/ras)
+          
+          ! Radiation terms [mm/d] weighted by cover fraction
+          etrads = delta/(delta + gammos) * (rns - rnl - gs) * (1.0d0 - vcover) / lambda
+          etradc = delta/(delta + gammoc) * (rnc - rnl - gc) * vcover / lambda
+          etradw = delta/(delta + gammow) * (rnw - rnl - gw) * vcover / lambda
+          etradp = delta/(delta + gammop) * (rnp - rnl - gs) * (1.0d0 - vcover) / lambda
+          
+          ! Direct partitioned rates [mm/d]
+          Edirect = max(0.0d0, etaers + etrads)
+          Tdirect = max(0.0d0, etaerc + etradc)
+          Tdirectwet = max(0.0d0, etaerw + etradw)
+          Edirectpond = max(0.0d0, etaerp + etradp)
       endif
 
-      ! Aerodynamic term of the PM equation [mm/d] - soil, crop & wet crop
-      etaers = (86.4d0/lambda)*(1.0d0/(delta+gammos))*(rho*cp*vpd/ras)
-      etaerc = (86.4d0/lambda)*(1.0d0/(delta+gammoc))*(rho*cp*vpd/rac)
-      etaerw = (86.4d0/lambda)*(1.0d0/(delta+gammow))*(rho*cp*vpd/raw)
+  end subroutine PenMon_calc
 
-      ! Radiation term of the PM equation [mm/d] - soil, crop & wet crop
-      etrads = delta/(delta+gammos)*(rns-rnl-gs)*1.0d0/lambda      
-      etradc = delta/(delta+gammoc)*(rnc-rnl-gc)*1.0d0/lambda      
-      etradw = delta/(delta+gammow)*(rnw-rnl-gw)*1.0d0/lambda      
-
-      ! Sum of both terms [mm/d] - soil, crop & wet crop      
-      es0 = max (0.0d0,etaers+etrads)
-      et0 = max (0.0d0,etaerc+etradc)
-      ew0 = max (0.0d0,etaerw+etradw)
-
-      ! PMdirect: potential transpiration Tdirect and potential evaporation Edirect
-      if (swdivide .eq. 1) then
-
-        ! Determine vegetation cover Vcover
-        Vcover = 1.0d0 - exp(-1.0d0*kdif*kdir*lai)
-
-        ! Adjust aerodynamic resistances
-        if (Vcover .gt. 1.d-6) then
-          rac = rac / Vcover
-        else
-          rac = 1.d12
-        endif
-        raw = rac
-
-        if ((1.d0 - Vcover) .gt. 1.d-6) then
-          ras = ras / (1.d0 - Vcover)
-        else
-          ras = 1.d12
-        endif
-
-        ! Effective LAI
-        LAIeff = lai / (0.3d0*lai + 1.2d0)
-
-        ! Modified psychrometric constant [kPa/C] - crop, wet crop & pond layer 
-        gammos = vlarge
-        if (ras .gt. small) gammos = gamma*(1.0d0+rss/ras)
-        gammoc = vlarge
-        if ((rac*LAIeff) .gt. small) gammoc = gamma*(1.0d0+rsc/(rac*LAIeff))
-        gammow = vlarge
-        if ((raw*LAIeff) .gt. small) gammow = gamma*(1.0d0+rsw/(raw*LAIeff))
-        gammop = vlarge
-        if (ras .gt. small) gammop = gamma
-
-        ! Aerodynamic term of the PM equation [mm/d] - crop, wet crop & pond layer
-        etaers = (86.4d0/lambda)*(1.0d0/(delta+gammos))*(rho*cp*vpd/ras)
-        etaerc = (86.4d0/lambda)*(1.0d0/(delta+gammoc))*(rho*cp*vpd/rac)
-        etaerw = (86.4d0/lambda)*(1.0d0/(delta+gammow))*(rho*cp*vpd/raw)
-        etaerp = (86.4d0/lambda)*(1.0d0/(delta+gammop))*(rho*cp*vpd/ras)
-
-        ! Radiation term of the PM equation [mm/d] - crop, wet crop & pond layer
-        etrads = delta/(delta+gammos)*(rns-rnl-gs)*(1.d0-vcover)        &
-     &           *1.0d0/lambda
-        etradc = delta/(delta+gammoc)*(rnc-rnl-gc)*vcover*1.0d0/lambda      
-        etradw = delta/(delta+gammow)*(rnw-rnl-gw)*vcover*1.0d0/lambda      
-        etradp = delta/(delta+gammop)*(rnp-rnl-gs)*(1.d0-vcover)        &
-     &           *1.0d0/lambda
-
-        ! Sum of both terms [mm/d] - crop, wet crop & pond layer
-        Edirect = max (0.0d0,etaers+etrads)
-        Tdirect = max (0.0d0,etaerc+etradc)
-        Tdirectwet = max (0.0d0,etaerw+etradw)
-        Edirectpond = max (0.0d0,etaerp+etradp)
-
+  !> Penman-Monteith evapotranspiration calculation (wrapper with I/O)
+  !!
+  !! This is a thin wrapper around PenMon_calc that handles validation,
+  !! warnings, and calls to external routines (astro). Legacy interface
+  !! is preserved for backward compatibility.
+  subroutine PenMon(logf, swscre, daynr, lat, alt, altw, a, b, rcs, rad, &
+                    tav, hum, win, rsc, es0, et0, ew0, swcf, ch, flCropEmergence, &
+                    daylp, flmetdetail, irecord, nmetdetail, albedo, tmn, tmx, rsw, &
+                    difpp, dsinbe, atmtr, Edirect, Tdirect, Tdirectwet, rsoil, &
+                    swdivide, kdif, kdir, lai, Edirectpond)
+      implicit none
+      
+      ! I/O parameters
+      integer, intent(in) :: logf
+        !! Internal number of logbook output file
+      integer, intent(in) :: swscre
+        !! Switch of screen display: 0=none, 1=summary, 2=daynumber
+      
+      ! All other parameters (same as PenMon_calc)
+      integer, intent(in) :: daynr, swcf, irecord, nmetdetail, swdivide
+      real(8), intent(in) :: lat, alt, altw, albedo, tmn, tmx, ch, difpp, dsinbe
+      real(8), intent(in) :: a, b, rcs, rsc, rsw, hum, rad, tav, win, atmtr
+      real(8), intent(in) :: rsoil, kdif, kdir, lai, daylp
+      real(8), intent(out) :: es0, et0, ew0
+      real(8), intent(out) :: Edirect, Tdirect, Tdirectwet, Edirectpond
+      logical, intent(in) :: flCropEmergence, flmetdetail
+      
+      ! Local variables
+      integer :: warning_code
+      real(8) :: dayl, sinld, cosld
+      character(len=200) :: messag
+      
+      ! Call astro() for daily radiation if needed
+      if (.not. flmetdetail) then
+          call astro(daynr, lat, rad, dayl, daylp, sinld, cosld, difpp, &
+                    atmtr, dsinbe)
+      endif
+      
+      ! Call pure calculation core
+      call PenMon_calc(daynr, lat, alt, altw, a, b, rcs, rad, &
+                      tav, hum, win, rsc, swcf, ch, flCropEmergence, &
+                      daylp, flmetdetail, irecord, nmetdetail, &
+                      albedo, tmn, tmx, rsw, difpp, dsinbe, atmtr, &
+                      rsoil, swdivide, kdif, kdir, lai, &
+                      es0, et0, ew0, Edirect, Tdirect, Tdirectwet, &
+                      Edirectpond, warning_code)
+      
+      ! Handle warnings
+      if (warning_code == 1) then
+          messag = 'Warning: latitude above polar circle, daylength = 0hrs'
+          call warn('Astro', messag, logf, swscre)
+      else if (warning_code == 2) then
+          messag = 'Warning: latitude within polar circle, daylength = 24hrs'
+          call warn('Astro', messag, logf, swscre)
       endif
 
-      return
-      end subroutine PenMon
-
-
+  end subroutine PenMon
 
     !> Black's evaporation reduction model
     !!
