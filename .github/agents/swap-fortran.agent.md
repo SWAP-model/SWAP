@@ -40,6 +40,11 @@ You are an expert in fortran programming and refactoring code for better readabi
 # testing
 - during the integration test (pixi run regression), there will be some discrepancies in the results of the oxygenstress. That is a preexisting issue and it fine.
 
+# refactoring state
+- state management pattern should follow instructions in #src/state_management_pattern.md.
+- after adding the new state modules, ensure that the readswaptoml routine correctly reads the necessary parameters from the config files. The toml files are in #tests/swap-cases/1.1.hupselbrook.
+- after each implementation, a unit test should be added to make sure that the read was successful and the state is correctly initialized.
+
 # end goals
 - swap can run in legacy mode, which is the current state of the code. It will run as executable and produce the same results as before, but with improved code quality and maintainability.
 - swap can run in modern mode, through Python bindings.
