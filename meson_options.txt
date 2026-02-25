@@ -1,1 +1,2 @@
 option('enable_pfunit', type: 'boolean', value: false, description: 'Build pFUnit-based unit tests')
+option('enable_unit_tests', type: 'boolean', value: false, description: 'Build standalone unit test executables')

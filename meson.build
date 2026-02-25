@@ -141,38 +141,34 @@ sources = [
 # ============================================================================
 # External dependency: ttutil
 # ============================================================================
-ttutil_version = '4.2.7'
-ttutil_lib_dir = join_paths(meson.current_build_dir(), 'lib')
-
-# Determine platform-specific library
-if is_windows and not is_gcc
-    ttutil_filename = 'libttutil@0@-windows.a'.format(ttutil_version)
-elif is_windows and is_gcc
-    ttutil_filename = 'libttutil@0@-mingw.a'.format(ttutil_version)
-elif is_gcc
-    # Local gfortran build
-    ttutil_lib_path = join_paths(meson.current_source_dir(), 
-        '../ttutil/builddir_gfortran/libttutil427_gfortran.a')
-    if not fs.exists(ttutil_lib_path)
-        error('ttutil gfortran library not found. Build it first: cd ../ttutil && pixi run build-linux-gfortran')
-    endif
+if is_gcc
+    # Use ttutil as a Meson subproject (built from source with gfortran)
+    ttutil_prj = subproject('ttutil', default_options: ['default_library=static'])
+    ttutil_dep = ttutil_prj.get_variable('ttutil_dep')
 else
-    ttutil_filename = 'libttutil@0@-linux.a'.format(ttutil_version)
-endif
+    # Use prebuilt library for Intel / Windows
+    ttutil_version = '4.2.7'
+    ttutil_lib_dir = join_paths(meson.current_build_dir(), 'lib')
 
-# Download prebuilt library (if not using local gfortran)
-if not (is_gcc and not is_windows)
+    if is_windows and not is_gcc
+        ttutil_filename = 'libttutil@0@-windows.a'.format(ttutil_version)
+    elif is_windows and is_gcc
+        ttutil_filename = 'libttutil@0@-mingw.a'.format(ttutil_version)
+    else
+        ttutil_filename = 'libttutil@0@-linux.a'.format(ttutil_version)
+    endif
+
     ttutil_lib_path = join_paths(ttutil_lib_dir, 'libttutil.a')
     ttutil_url = 'https://github.com/SWAP-model/ttutil/releases/download/v@0@/@1@'.format(
         ttutil_version, ttutil_filename)
-    
+
     if not fs.exists(ttutil_lib_path)
         run_command('mkdir', '-p', ttutil_lib_dir, check: true)
         run_command('curl', '-L', ttutil_url, '-o', ttutil_lib_path, check: true)
     endif
-endif
 
-ttutil_dep = declare_dependency(link_args: [ttutil_lib_path])
+    ttutil_dep = declare_dependency(link_args: [ttutil_lib_path])
+endif
 
 # ============================================================================
 # External dependency: toml-f
@@ -205,5 +201,7 @@ executable('swap', sources,
 # ============================================================================
 # Tests
 # ============================================================================
-subdir('tests/unit')
+if get_option('enable_unit_tests')
+    subdir('tests/unit')
+endif
 

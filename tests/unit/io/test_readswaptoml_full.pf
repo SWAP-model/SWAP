@@ -1,0 +1,155 @@
+module test_readswaptoml_full
+    use funit
+    use swap_config_mod, only: swap_config_t, swap_config_init, swap_config_finalize
+    use readswaptoml_mod, only: ReadSwapToml_config
+    implicit none
+
+    public :: ReadSwapTomlFullTest
+
+@TestCase
+    type, extends(TestCase) :: ReadSwapTomlFullTest
+        type(swap_config_t) :: cfg
+    contains
+        procedure :: setUp
+        procedure :: tearDown
+    end type ReadSwapTomlFullTest
+
+contains
+
+    subroutine setUp(this)
+        class(ReadSwapTomlFullTest), intent(inout) :: this
+        call swap_config_init(this%cfg, 5, 2, 1, 3)
+    end subroutine setUp
+
+    subroutine tearDown(this)
+        class(ReadSwapTomlFullTest), intent(inout) :: this
+        call swap_config_finalize(this%cfg)
+    end subroutine tearDown
+
+@Test
+    subroutine test_readswaptoml_state(this)
+        class(ReadSwapTomlFullTest), intent(inout) :: this
+
+        call ReadSwapToml_config(this%cfg, 'tests/swap-cases/1.1.hupselbrook-toml/swp.toml')
+        write(*,'(a)') 'Loaded swp.toml into swap_config_t'
+
+        @assertEqual('hupsel', trim(this%cfg%general%project))
+        @assertEqual(0, this%cfg%general%swscre)
+        @assertEqual(0, this%cfg%general%swerror)
+        @assertEqual('./', trim(this%cfg%general%pathwork))
+        @assertEqual('./', trim(this%cfg%general%pathatm))
+        @assertEqual('./', trim(this%cfg%general%pathcrop))
+        @assertEqual('./', trim(this%cfg%general%pathdrain))
+        @assertEqual('2002-01-01', trim(this%cfg%general%tstart))
+        @assertEqual('2004-12-31', trim(this%cfg%general%tend))
+        @assertEqual(1, this%cfg%general%nprintday)
+        @assertEqual(1, this%cfg%general%swmonth)
+        @assertEqual(1, this%cfg%general%period)
+        @assertEqual(0, this%cfg%general%swres)
+        @assertEqual(0, this%cfg%general%swodat)
+        @assertEqual(0, this%cfg%general%swyrvar)
+        @assertTrue(allocated(this%cfg%general%datefix))
+        @assertEqual(2, size(this%cfg%general%datefix))
+        @assertEqual(31, this%cfg%general%datefix(1))
+        @assertEqual(12, this%cfg%general%datefix(2))
+        @assertTrue(allocated(this%cfg%general%outdat))
+        @assertEqual(2, size(this%cfg%general%outdat))
+        @assertEqual('2003-12-31', trim(this%cfg%general%outdat(1)))
+        @assertEqual('2004-12-31', trim(this%cfg%general%outdat(2)))
+        @assertTrue(allocated(this%cfg%general%outdatint))
+        @assertEqual(0, size(this%cfg%general%outdatint))
+
+        @assertEqual('result', trim(this%cfg%output%outfil))
+        @assertEqual(0, this%cfg%output%swheader)
+        @assertEqual(0, this%cfg%output%swwba)
+        @assertEqual(0, this%cfg%output%swend)
+        @assertEqual(1, this%cfg%output%swvap)
+        @assertEqual(0, this%cfg%output%swbal)
+        @assertEqual(1, this%cfg%output%swblc)
+        @assertEqual(1, this%cfg%output%swsba)
+        @assertEqual(1, this%cfg%output%swini)
+        @assertEqual(1, this%cfg%output%swinc)
+        @assertEqual(1, this%cfg%output%swstr)
+        @assertEqual(1, this%cfg%output%swcrp)
+        @assertEqual(0, this%cfg%output%swrum)
+        @assertEqual(1, this%cfg%output%swirg)
+        @assertEqual(1, this%cfg%output%swcsv)
+        @assertEqual(1, this%cfg%output%swcsv_tz)
+
+        @assertTrue(allocated(this%cfg%output%output_list))
+        @assertEqual(5, size(this%cfg%output%output_list))
+        @assertEqual('vap', trim(this%cfg%output%output_list(1)))
+        @assertEqual('csv', trim(this%cfg%output%output_list(5)))
+
+        @assertTrue(allocated(this%cfg%output%inlist_csv))
+        @assertEqual(12, size(this%cfg%output%inlist_csv))
+        @assertEqual('rain', trim(this%cfg%output%inlist_csv(1)))
+        @assertEqual('gwl', trim(this%cfg%output%inlist_csv(12)))
+
+        @assertTrue(allocated(this%cfg%output%inlist_csv_tz))
+        @assertEqual(3, size(this%cfg%output%inlist_csv_tz))
+        @assertEqual('wc', trim(this%cfg%output%inlist_csv_tz(1)))
+        @assertEqual('conc', trim(this%cfg%output%inlist_csv_tz(3)))
+
+        @assertEqual(0, this%cfg%output%swafo)
+        @assertEqual(0, this%cfg%output%swaun)
+        @assertEqual(1.0d-5, this%cfg%output%critdevmasbal, tolerance=1.0d-12)
+        @assertEqual(0, this%cfg%output%swdiscrvert)
+        @assertEqual(6, this%cfg%output%numnodnew)
+        @assertTrue(allocated(this%cfg%output%dznew))
+        @assertEqual(6, size(this%cfg%output%dznew))
+        @assertEqual(10.0d0, this%cfg%output%dznew(1), tolerance=1.0d-12)
+        @assertEqual(50.0d0, this%cfg%output%dznew(6), tolerance=1.0d-12)
+
+        @assertEqual(1, this%cfg%fixed_irrigation%swirfix)
+        @assertEqual(0, this%cfg%fixed_irrigation%swirgfil)
+        @assertEqual('testirri', trim(this%cfg%fixed_irrigation%irgfil))
+        @assertTrue(allocated(this%cfg%fixed_irrigation%irdepth))
+        @assertTrue(allocated(this%cfg%fixed_irrigation%irconc))
+        @assertTrue(allocated(this%cfg%fixed_irrigation%irtype))
+        @assertEqual(1, size(this%cfg%fixed_irrigation%irdepth))
+        @assertEqual(10.0d0, this%cfg%fixed_irrigation%irdepth(1), tolerance=1.0d-12)
+        @assertEqual(0.0d0, this%cfg%fixed_irrigation%irconc(1), tolerance=1.0d-12)
+        @assertEqual(1, this%cfg%fixed_irrigation%irtype(1))
+
+        @assertTrue(allocated(this%cfg%crop%cropstart))
+        @assertTrue(allocated(this%cfg%crop%cropend))
+        @assertTrue(allocated(this%cfg%crop%cropfil))
+        @assertEqual(3, size(this%cfg%crop%cropstart))
+        @assertEqual(3, size(this%cfg%crop%cropfil))
+        @assertEqual('maizes', trim(this%cfg%crop%cropfil(1)))
+        @assertEqual('grassd', trim(this%cfg%crop%cropfil(3)))
+        @assertTrue(this%cfg%crop%cropstart(2) > this%cfg%crop%cropstart(1))
+
+        @assertTrue(allocated(this%cfg%soil%isollay))
+        @assertEqual(4, size(this%cfg%soil%isollay))
+        @assertEqual(1, this%cfg%soil%isollay(1))
+        @assertEqual(2, this%cfg%soil%isollay(4))
+
+        @assertTrue(allocated(this%cfg%boundary%datepmx))
+        @assertTrue(allocated(this%cfg%boundary%pondmxtb))
+        @assertEqual(2, size(this%cfg%boundary%datepmx))
+        @assertEqual(0.2d0, this%cfg%boundary%pondmxtb(2), tolerance=1.0d-12)
+
+        @assertEqual(0, this%cfg%frozencond%swfrost)
+        @assertEqual(0.0d0, this%cfg%frozencond%tfroststa, tolerance=1.0d-12)
+        @assertEqual(-1.0d0, this%cfg%frozencond%tfrostend, tolerance=1.0d-12)
+
+        @assertTrue(allocated(this%cfg%heat%datet))
+        @assertEqual(3, size(this%cfg%heat%datet))
+        @assertTrue(this%cfg%heat%datet(2) > this%cfg%heat%datet(1))
+        @assertTrue(allocated(this%cfg%heat%tembtab))
+        @assertEqual(6, size(this%cfg%heat%tembtab))
+        @assertEqual(-15.0d0, this%cfg%heat%tembtab(2), tolerance=1.0d-12)
+
+        @assertTrue(allocated(this%cfg%solute%datec))
+        @assertTrue(allocated(this%cfg%solute%cseeparr))
+        @assertEqual(2, size(this%cfg%solute%datec))
+        @assertEqual(25.0d0, this%cfg%solute%cseeparr(1), tolerance=1.0d-12)
+        @assertEqual(40.0d0, this%cfg%solute%cseeparr(2), tolerance=1.0d-12)
+
+        write(*,'(a,i0,a,i0,a,i0)') 'Loaded arrays: cropstart=', size(this%cfg%crop%cropstart), &
+            ', datepmx=', size(this%cfg%boundary%datepmx), ', cseeparr=', size(this%cfg%solute%cseeparr)
+    end subroutine test_readswaptoml_state
+
+end module test_readswaptoml_full

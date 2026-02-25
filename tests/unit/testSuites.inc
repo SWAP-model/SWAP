@@ -1,5 +1,3 @@
-ADD_TEST_SUITE(test_functions_suite)
-ADD_TEST_SUITE(test_ttutil_suite)
-ADD_TEST_SUITE(test_van_genuchten_suite)
-ADD_TEST_SUITE(test_datetime_suite)
-ADD_TEST_SUITE(test_readswaptoml_suite)
+ADD_TEST_SUITE(test_readswaptoml_full_suite)
+ADD_TEST_SUITE(test_sectionreaders_suite_suite)
+ADD_TEST_SUITE(test_state_lifecycles_suite_suite)

@@ -1,0 +1,601 @@
+module test_sectionreaders_suite
+    !! pFUnit test module for readswap_toml section readers.
+    !!
+    !! Each test exercises one section-reader subroutine and asserts
+    !! every field that the legacy standalone program checked via
+    !! `error stop`.
+    use funit
+    use tomlf, only: toml_table
+    use toml_helpers_mod, only: get_opt_table
+    use swap_config_mod, only: swap_config_t, swap_config_init, swap_config_finalize
+    use readswaptoml_mod, only: ReadSwapToml_open, read_general, read_output, &
+                                read_atmosphere, read_crop, read_irrigation, &
+                                read_soil, read_soil_initial, read_soil_surface, &
+                                read_soil_evaporation, read_soil_discretization, &
+                                read_soil_hydraulic, read_soil_hysteresis, &
+                                read_macropore, read_soil_numerical, read_snow, read_frozencond, &
+                                read_drainage, read_boundary, read_heat, read_solute
+    implicit none
+
+    public :: SectionReadersTest
+
+@TestCase
+    type, extends(TestCase) :: SectionReadersTest
+        type(swap_config_t)           :: cfg
+        type(toml_table), allocatable :: doc
+    contains
+        procedure :: setUp
+        procedure :: tearDown
+    end type SectionReadersTest
+
+contains
+
+    subroutine setUp(this)
+        class(SectionReadersTest), intent(inout) :: this
+
+        call swap_config_init(this%cfg, 5, 2, 1, 3)
+        call ReadSwapToml_open(this%doc, &
+            'tests/swap-cases/1.1.hupselbrook-toml/swp.toml')
+    end subroutine setUp
+
+    subroutine tearDown(this)
+        class(SectionReadersTest), intent(inout) :: this
+
+        call swap_config_finalize(this%cfg)
+        if (allocated(this%doc)) deallocate(this%doc)
+    end subroutine tearDown
+
+    ! ------------------------------------------------------------------
+    ! [general] section
+    ! ------------------------------------------------------------------
+@Test
+    subroutine test_read_general(this)
+        class(SectionReadersTest), intent(inout) :: this
+
+        call read_general(this%doc, this%cfg)
+
+        @assertEqual('hupsel', trim(this%cfg%general%project))
+        @assertEqual(0, this%cfg%general%swscre)
+        @assertEqual(0, this%cfg%general%swerror)
+        @assertEqual('./', trim(this%cfg%general%pathwork))
+        @assertEqual('./', trim(this%cfg%general%pathatm))
+        @assertEqual('./', trim(this%cfg%general%pathcrop))
+        @assertEqual('./', trim(this%cfg%general%pathdrain))
+        @assertEqual('2002-01-01', trim(this%cfg%general%tstart))
+        @assertEqual('2004-12-31', trim(this%cfg%general%tend))
+        @assertEqual(1, this%cfg%general%nprintday)
+        @assertEqual(1, this%cfg%general%swmonth)
+        @assertEqual(1, this%cfg%general%period)
+        @assertEqual(0, this%cfg%general%swres)
+        @assertEqual(0, this%cfg%general%swodat)
+        @assertEqual(0, this%cfg%general%swyrvar)
+        @assertTrue(allocated(this%cfg%general%datefix))
+        @assertEqual(2, size(this%cfg%general%datefix))
+        @assertEqual(31, this%cfg%general%datefix(1))
+        @assertEqual(12, this%cfg%general%datefix(2))
+        @assertTrue(allocated(this%cfg%general%outdat))
+        @assertEqual(2, size(this%cfg%general%outdat))
+        @assertEqual('2003-12-31', trim(this%cfg%general%outdat(1)))
+        @assertEqual('2004-12-31', trim(this%cfg%general%outdat(2)))
+        @assertTrue(allocated(this%cfg%general%outdatint))
+        @assertEqual(0, size(this%cfg%general%outdatint))
+    end subroutine test_read_general
+
+    ! ------------------------------------------------------------------
+    ! [output] section
+    ! ------------------------------------------------------------------
+@Test
+    subroutine test_read_output(this)
+        class(SectionReadersTest), intent(inout) :: this
+
+        ! read_general must run first (dependency)
+        call read_general(this%doc, this%cfg)
+        call read_output(this%doc, this%cfg)
+
+        @assertEqual('result', trim(this%cfg%output%outfil))
+        @assertEqual(0, this%cfg%output%swheader)
+        @assertEqual(0, this%cfg%output%swwba)
+        @assertEqual(0, this%cfg%output%swend)
+        @assertEqual(1, this%cfg%output%swvap)
+        @assertEqual(0, this%cfg%output%swbal)
+        @assertEqual(1, this%cfg%output%swblc)
+        @assertEqual(1, this%cfg%output%swsba)
+        @assertEqual(1, this%cfg%output%swini)
+        @assertEqual(1, this%cfg%output%swinc)
+        @assertEqual(1, this%cfg%output%swstr)
+        @assertEqual(1, this%cfg%output%swcrp)
+        @assertEqual(0, this%cfg%output%swrum)
+        @assertEqual(1, this%cfg%output%swirg)
+        @assertEqual(1, this%cfg%output%swcsv)
+        @assertEqual(1, this%cfg%output%swcsv_tz)
+
+        @assertTrue(allocated(this%cfg%output%output_list))
+        @assertEqual(5, size(this%cfg%output%output_list))
+        @assertEqual('vap', trim(this%cfg%output%output_list(1)))
+        @assertEqual('csv', trim(this%cfg%output%output_list(5)))
+
+        @assertTrue(allocated(this%cfg%output%inlist_csv))
+        @assertEqual(12, size(this%cfg%output%inlist_csv))
+        @assertEqual('rain', trim(this%cfg%output%inlist_csv(1)))
+        @assertEqual('gwl', trim(this%cfg%output%inlist_csv(12)))
+
+        @assertTrue(allocated(this%cfg%output%inlist_csv_tz))
+        @assertEqual(3, size(this%cfg%output%inlist_csv_tz))
+        @assertEqual('wc', trim(this%cfg%output%inlist_csv_tz(1)))
+        @assertEqual('conc', trim(this%cfg%output%inlist_csv_tz(3)))
+
+        @assertEqual(0, this%cfg%output%swafo)
+        @assertEqual(0, this%cfg%output%swaun)
+        @assertEqual(1.0d-5, this%cfg%output%critdevmasbal, tolerance=1.0d-12)
+        @assertEqual(0, this%cfg%output%swdiscrvert)
+        @assertEqual(6, this%cfg%output%numnodnew)
+        @assertTrue(allocated(this%cfg%output%dznew))
+        @assertEqual(6, size(this%cfg%output%dznew))
+        @assertEqual(10.0d0, this%cfg%output%dznew(1), tolerance=1.0d-12)
+        @assertEqual(50.0d0, this%cfg%output%dznew(6), tolerance=1.0d-12)
+    end subroutine test_read_output
+
+    ! ------------------------------------------------------------------
+    ! [crop] section
+    ! ------------------------------------------------------------------
+@Test
+    subroutine test_read_crop(this)
+        class(SectionReadersTest), intent(inout) :: this
+
+        call read_crop(this%doc, this%cfg)
+
+        @assertEqual(1, this%cfg%crop%swcrop)
+        @assertEqual(200.0d0, this%cfg%crop%rds, tolerance=1.0d-12)
+        @assertTrue(allocated(this%cfg%crop%croptype))
+        @assertEqual(3, size(this%cfg%crop%croptype))
+        @assertEqual(1, this%cfg%crop%croptype(1))
+        @assertEqual(2, this%cfg%crop%croptype(2))
+        @assertEqual(3, this%cfg%crop%croptype(3))
+    end subroutine test_read_crop
+
+    ! ------------------------------------------------------------------
+    ! [irrigation] section
+    ! ------------------------------------------------------------------
+@Test
+    subroutine test_read_irrigation(this)
+        class(SectionReadersTest), intent(inout) :: this
+
+        call read_irrigation(this%doc, this%cfg)
+
+        @assertEqual(1, this%cfg%fixed_irrigation%swirfix)
+        @assertEqual(0, this%cfg%fixed_irrigation%swirgfil)
+        @assertEqual('testirri', trim(this%cfg%fixed_irrigation%irgfil))
+        @assertTrue(allocated(this%cfg%fixed_irrigation%irdepth))
+        @assertTrue(allocated(this%cfg%fixed_irrigation%irconc))
+        @assertTrue(allocated(this%cfg%fixed_irrigation%irtype))
+        @assertEqual(1, size(this%cfg%fixed_irrigation%irdepth))
+        @assertEqual(10.0d0, this%cfg%fixed_irrigation%irdepth(1), tolerance=1.0d-12)
+        @assertEqual(0.0d0, this%cfg%fixed_irrigation%irconc(1), tolerance=1.0d-12)
+        @assertEqual(1, this%cfg%fixed_irrigation%irtype(1))
+    end subroutine test_read_irrigation
+
+    ! ------------------------------------------------------------------
+    ! [atmosphere] section
+    ! ------------------------------------------------------------------
+@Test
+    subroutine test_read_atmosphere(this)
+        class(SectionReadersTest), intent(inout) :: this
+
+        call read_atmosphere(this%doc, this%cfg)
+
+        @assertEqual('283.met', trim(this%cfg%atm%metfil))
+        @assertEqual(52.0d0, this%cfg%atm%lat, tolerance=1.0d-12)
+        @assertEqual(0, this%cfg%atm%swetr)
+        @assertEqual(10.0d0, this%cfg%atm%alt, tolerance=1.0d-12)
+        @assertEqual(10.0d0, this%cfg%atm%altw, tolerance=1.0d-12)
+        @assertEqual(0.25d0, this%cfg%atm%angstroma, tolerance=1.0d-12)
+        @assertEqual(0.5d0, this%cfg%atm%angstromb, tolerance=1.0d-12)
+        @assertEqual(1, this%cfg%atm%swdivide)
+        @assertEqual(0, this%cfg%atm%swmetdetail)
+        @assertEqual(24, this%cfg%atm%nmetdetail)
+        @assertEqual(0, this%cfg%atm%swetsine)
+        @assertEqual(0, this%cfg%atm%swrain)
+        @assertEqual('wagrain', trim(this%cfg%atm%rainfil))
+
+        @assertTrue(allocated(this%cfg%atm%rainfluxarray))
+        @assertTrue(allocated(this%cfg%atm%raintimearray))
+        @assertEqual(2, size(this%cfg%atm%rainfluxarray))
+        @assertEqual(1.0d0, this%cfg%atm%rainfluxarray(1), tolerance=1.0d-12)
+        @assertEqual(360.0d0, this%cfg%atm%rainfluxarray(2), tolerance=1.0d-12)
+        @assertEqual(20.0d0, this%cfg%atm%raintimearray(1), tolerance=1.0d-12)
+        @assertEqual(20.0d0, this%cfg%atm%raintimearray(2), tolerance=1.0d-12)
+    end subroutine test_read_atmosphere
+
+    ! ------------------------------------------------------------------
+    ! [soil.*] + [macropore] sections
+    ! ------------------------------------------------------------------
+@Test
+    subroutine test_read_soil(this)
+        class(SectionReadersTest), intent(inout) :: this
+
+        call read_soil(this%doc, this%cfg)
+
+        @assertEqual(2, this%cfg%soil%swinco)
+        @assertEqual(-75.0d0, this%cfg%soil%gwli, tolerance=1.0d-12)
+        @assertEqual('result.end', trim(this%cfg%soil%inifil))
+
+        @assertTrue(allocated(this%cfg%soil%zi))
+        @assertTrue(allocated(this%cfg%soil%h))
+        @assertEqual(2, size(this%cfg%soil%zi))
+        @assertEqual(-0.5d0, this%cfg%soil%zi(1), tolerance=1.0d-12)
+        @assertEqual(-195.0d0, this%cfg%soil%zi(2), tolerance=1.0d-12)
+        @assertEqual(-93.0d0, this%cfg%soil%h(1), tolerance=1.0d-12)
+        @assertEqual(120.0d0, this%cfg%soil%h(2), tolerance=1.0d-12)
+
+        @assertEqual(0, this%cfg%boundary%swpondmx)
+        @assertEqual(0.2d0, this%cfg%boundary%pondmx, tolerance=1.0d-12)
+        @assertEqual(0.5d0, this%cfg%boundary%rsro, tolerance=1.0d-12)
+        @assertEqual(1.0d0, this%cfg%boundary%rsroexp, tolerance=1.0d-12)
+        @assertEqual(0, this%cfg%boundary%swrunon)
+        @assertEqual('swap.inc', trim(this%cfg%boundary%rufil))
+
+        @assertTrue(allocated(this%cfg%boundary%datepmx))
+        @assertTrue(allocated(this%cfg%boundary%pondmxtb))
+        @assertEqual(2, size(this%cfg%boundary%datepmx))
+        @assertEqual(2, size(this%cfg%boundary%pondmxtb))
+        @assertTrue(this%cfg%boundary%datepmx(2) > this%cfg%boundary%datepmx(1))
+        @assertEqual(0.2d0, this%cfg%boundary%pondmxtb(1), tolerance=1.0d-12)
+        @assertEqual(0.2d0, this%cfg%boundary%pondmxtb(2), tolerance=1.0d-12)
+
+        @assertEqual(1.25d0, this%cfg%soil%cfevappond, tolerance=1.0d-12)
+        @assertEqual(0, this%cfg%soil%swcfbs)
+        @assertEqual(0.5d0, this%cfg%soil%cfbs, tolerance=1.0d-12)
+        @assertEqual(30.0d0, this%cfg%soil%rsoil, tolerance=1.0d-12)
+        @assertEqual(1, this%cfg%soil%swredu)
+        @assertEqual(0.35d0, this%cfg%soil%cofredbl, tolerance=1.0d-12)
+        @assertEqual(0.5d0, this%cfg%soil%rsigni, tolerance=1.0d-12)
+        @assertEqual(0.35d0, this%cfg%soil%cofredbo, tolerance=1.0d-12)
+
+        @assertTrue(allocated(this%cfg%soil%isublay))
+        @assertTrue(allocated(this%cfg%soil%isollay))
+        @assertTrue(allocated(this%cfg%soil%hsublay))
+        @assertTrue(allocated(this%cfg%soil%hcomp))
+        @assertTrue(allocated(this%cfg%soil%ncomp))
+        @assertEqual(4, size(this%cfg%soil%isublay))
+        @assertEqual(1, this%cfg%soil%isublay(1))
+        @assertEqual(4, this%cfg%soil%isublay(4))
+        @assertEqual(1, this%cfg%soil%isollay(1))
+        @assertEqual(2, this%cfg%soil%isollay(4))
+        @assertEqual(10.0d0, this%cfg%soil%hsublay(1), tolerance=1.0d-12)
+        @assertEqual(140.0d0, this%cfg%soil%hsublay(4), tolerance=1.0d-12)
+        @assertEqual(10, this%cfg%soil%ncomp(1))
+        @assertEqual(14, this%cfg%soil%ncomp(4))
+
+        @assertEqual(0, this%cfg%soil%swsophy)
+        @assertTrue(allocated(this%cfg%soil%ores))
+        @assertTrue(allocated(this%cfg%soil%osat))
+        @assertTrue(allocated(this%cfg%soil%alfa))
+        @assertTrue(allocated(this%cfg%soil%npar))
+        @assertTrue(allocated(this%cfg%soil%ksatfit))
+        @assertTrue(allocated(this%cfg%soil%lexp))
+        @assertTrue(allocated(this%cfg%soil%alfaw))
+        @assertTrue(allocated(this%cfg%soil%h_enpr))
+        @assertTrue(allocated(this%cfg%soil%ksatexm))
+        @assertTrue(allocated(this%cfg%soil%bdens))
+        @assertEqual(2, size(this%cfg%soil%ores))
+        @assertEqual(0.01d0, this%cfg%soil%ores(1), tolerance=1.0d-12)
+        @assertEqual(0.38d0, this%cfg%soil%osat(2), tolerance=1.0d-12)
+
+        @assertEqual(0, this%cfg%soil%swhyst)
+        @assertEqual(0.2d0, this%cfg%soil%tau, tolerance=1.0d-12)
+
+        @assertEqual(0, this%cfg%soil%swmacro)
+
+        @assertEqual(1.0d-6, this%cfg%soil%dtmin, tolerance=1.0d-14)
+        @assertEqual(0.04d0, this%cfg%soil%dtmax, tolerance=1.0d-12)
+        @assertEqual(100.0d0, this%cfg%soil%gwlconv, tolerance=1.0d-12)
+        @assertEqual(0.01d0, this%cfg%soil%critdevh1cp, tolerance=1.0d-12)
+        @assertEqual(0.1d0, this%cfg%soil%critdevh2cp, tolerance=1.0d-12)
+        @assertEqual(1.0d-4, this%cfg%soil%critdevponddt, tolerance=1.0d-12)
+        @assertEqual(30, this%cfg%soil%maxit)
+        @assertEqual(3, this%cfg%soil%maxbacktr)
+        @assertEqual(1, this%cfg%soil%swkmean)
+        @assertEqual(0, this%cfg%soil%swkimpl)
+    end subroutine test_read_soil
+
+@Test
+    subroutine test_read_soil_initial_reader(this)
+        class(SectionReadersTest), intent(inout) :: this
+
+        type(toml_table), pointer :: soil_tab
+
+        call get_opt_table(this%doc, 'soil', soil_tab)
+        call read_soil_initial(soil_tab, this%cfg)
+
+        @assertEqual(2, this%cfg%soil%swinco)
+        @assertEqual(-75.0d0, this%cfg%soil%gwli, tolerance=1.0d-12)
+        @assertTrue(allocated(this%cfg%soil%zi))
+        @assertTrue(allocated(this%cfg%soil%h))
+        @assertEqual(2, size(this%cfg%soil%zi))
+        @assertEqual(-0.5d0, this%cfg%soil%zi(1), tolerance=1.0d-12)
+        @assertEqual(-93.0d0, this%cfg%soil%h(1), tolerance=1.0d-12)
+    end subroutine test_read_soil_initial_reader
+
+@Test
+    subroutine test_read_soil_surface_reader(this)
+        class(SectionReadersTest), intent(inout) :: this
+
+        type(toml_table), pointer :: soil_tab
+
+        call get_opt_table(this%doc, 'soil', soil_tab)
+        call read_soil_surface(soil_tab, this%cfg)
+
+        @assertEqual(0, this%cfg%boundary%swpondmx)
+        @assertEqual(0.2d0, this%cfg%boundary%pondmx, tolerance=1.0d-12)
+        @assertTrue(allocated(this%cfg%boundary%datepmx))
+        @assertTrue(allocated(this%cfg%boundary%pondmxtb))
+        @assertEqual(2, size(this%cfg%boundary%datepmx))
+        @assertEqual(0.2d0, this%cfg%boundary%pondmxtb(2), tolerance=1.0d-12)
+    end subroutine test_read_soil_surface_reader
+
+@Test
+    subroutine test_read_soil_evaporation_reader(this)
+        class(SectionReadersTest), intent(inout) :: this
+
+        type(toml_table), pointer :: soil_tab
+
+        call get_opt_table(this%doc, 'soil', soil_tab)
+        call read_soil_evaporation(soil_tab, this%cfg)
+
+        @assertEqual(1.25d0, this%cfg%soil%cfevappond, tolerance=1.0d-12)
+        @assertEqual(0, this%cfg%soil%swcfbs)
+        @assertEqual(30.0d0, this%cfg%soil%rsoil, tolerance=1.0d-12)
+        @assertEqual(1, this%cfg%soil%swredu)
+        @assertEqual(0.35d0, this%cfg%soil%cofredbo, tolerance=1.0d-12)
+    end subroutine test_read_soil_evaporation_reader
+
+@Test
+    subroutine test_read_soil_discretization_reader(this)
+        class(SectionReadersTest), intent(inout) :: this
+
+        type(toml_table), pointer :: soil_tab
+
+        call get_opt_table(this%doc, 'soil', soil_tab)
+        call read_soil_discretization(soil_tab, this%cfg)
+
+        @assertTrue(allocated(this%cfg%soil%isublay))
+        @assertTrue(allocated(this%cfg%soil%isollay))
+        @assertTrue(allocated(this%cfg%soil%hsublay))
+        @assertTrue(allocated(this%cfg%soil%hcomp))
+        @assertTrue(allocated(this%cfg%soil%ncomp))
+        @assertEqual(4, size(this%cfg%soil%isublay))
+        @assertEqual(1, this%cfg%soil%isollay(1))
+        @assertEqual(2, this%cfg%soil%isollay(4))
+        @assertEqual(14, this%cfg%soil%ncomp(4))
+    end subroutine test_read_soil_discretization_reader
+
+@Test
+    subroutine test_read_soil_hydraulic_reader(this)
+        class(SectionReadersTest), intent(inout) :: this
+
+        type(toml_table), pointer :: soil_tab
+
+        call get_opt_table(this%doc, 'soil', soil_tab)
+        call read_soil_hydraulic(soil_tab, this%cfg)
+
+        @assertEqual(0, this%cfg%soil%swsophy)
+        @assertTrue(allocated(this%cfg%soil%ores))
+        @assertTrue(allocated(this%cfg%soil%ksatexm))
+        @assertEqual(2, size(this%cfg%soil%ores))
+        @assertEqual(0.01d0, this%cfg%soil%ores(1), tolerance=1.0d-12)
+        @assertEqual(1315.0d0, this%cfg%soil%bdens(2), tolerance=1.0d-12)
+    end subroutine test_read_soil_hydraulic_reader
+
+@Test
+    subroutine test_read_soil_hysteresis_reader(this)
+        class(SectionReadersTest), intent(inout) :: this
+
+        type(toml_table), pointer :: soil_tab
+
+        call get_opt_table(this%doc, 'soil', soil_tab)
+        call read_soil_hysteresis(soil_tab, this%cfg)
+
+        @assertEqual(0, this%cfg%soil%swhyst)
+        @assertEqual(0.2d0, this%cfg%soil%tau, tolerance=1.0d-12)
+    end subroutine test_read_soil_hysteresis_reader
+
+@Test
+    subroutine test_read_macropore_reader(this)
+        class(SectionReadersTest), intent(inout) :: this
+
+        call read_macropore(this%doc, this%cfg)
+
+        @assertEqual(0, this%cfg%soil%swmacro)
+    end subroutine test_read_macropore_reader
+
+@Test
+    subroutine test_read_soil_numerical_reader(this)
+        class(SectionReadersTest), intent(inout) :: this
+
+        type(toml_table), pointer :: soil_tab
+
+        call get_opt_table(this%doc, 'soil', soil_tab)
+        call read_soil_numerical(soil_tab, this%cfg)
+
+        @assertEqual(1.0d-6, this%cfg%soil%dtmin, tolerance=1.0d-14)
+        @assertEqual(0.04d0, this%cfg%soil%dtmax, tolerance=1.0d-12)
+        @assertEqual(30, this%cfg%soil%maxit)
+        @assertEqual(3, this%cfg%soil%maxbacktr)
+        @assertEqual(1, this%cfg%soil%swkmean)
+        @assertEqual(0, this%cfg%soil%swkimpl)
+    end subroutine test_read_soil_numerical_reader
+
+    ! ------------------------------------------------------------------
+    ! [snow] section
+    ! ------------------------------------------------------------------
+@Test
+    subroutine test_read_snow(this)
+        class(SectionReadersTest), intent(inout) :: this
+
+        call read_snow(this%doc, this%cfg)
+
+        @assertEqual(0, this%cfg%snow%swsnow)
+        @assertEqual(22.0d0, this%cfg%snow%snowinco, tolerance=1.0d-12)
+        @assertEqual(2.0d0, this%cfg%snow%teprrain, tolerance=1.0d-12)
+        @assertEqual(-2.0d0, this%cfg%snow%teprsnow, tolerance=1.0d-12)
+        @assertEqual(0.3d0, this%cfg%snow%snowcoef, tolerance=1.0d-12)
+    end subroutine test_read_snow
+
+@Test
+    subroutine test_read_frozencond(this)
+        class(SectionReadersTest), intent(inout) :: this
+
+        call read_frozencond(this%doc, this%cfg)
+
+        @assertEqual(0, this%cfg%frozencond%swfrost)
+        @assertEqual(0.0d0, this%cfg%frozencond%tfroststa, tolerance=1.0d-12)
+        @assertEqual(-1.0d0, this%cfg%frozencond%tfrostend, tolerance=1.0d-12)
+    end subroutine test_read_frozencond
+
+    ! ------------------------------------------------------------------
+    ! [drainage] section
+    ! ------------------------------------------------------------------
+@Test
+    subroutine test_read_drainage(this)
+        class(SectionReadersTest), intent(inout) :: this
+
+        call read_drainage(this%doc, this%cfg)
+
+        @assertEqual(1, this%cfg%drainage%swdra)
+        @assertEqual('swap', trim(this%cfg%drainage%drfil))
+        @assertEqual(0, this%cfg%drainage%swdrrap)
+        @assertEqual(1.0d0, this%cfg%drainage%rapdrareaexp, tolerance=1.0d-12)
+        @assertEqual(1, this%cfg%drainage%numlevrapdra)
+    end subroutine test_read_drainage
+
+    ! ------------------------------------------------------------------
+    ! [boundary.bottom] section
+    ! ------------------------------------------------------------------
+@Test
+    subroutine test_read_boundary(this)
+        class(SectionReadersTest), intent(inout) :: this
+
+        call read_boundary(this%doc, this%cfg)
+
+        @assertEqual(0, this%cfg%boundary%swbbcfile)
+        @assertEqual(6, this%cfg%boundary%swbotb)
+        @assertEqual('', trim(this%cfg%boundary%bbcfil))
+        @assertEqual(2, this%cfg%boundary%sw2)
+        @assertEqual(0.1d0, this%cfg%boundary%sinave, tolerance=1.0d-12)
+        @assertEqual(0.05d0, this%cfg%boundary%sinamp, tolerance=1.0d-12)
+        @assertEqual(91.0d0, this%cfg%boundary%sinmax, tolerance=1.0d-12)
+        @assertEqual(0, this%cfg%boundary%swbotb3resvert)
+        @assertEqual(0, this%cfg%boundary%swbotb3impl)
+        @assertEqual(0.79d0, this%cfg%boundary%shape, tolerance=1.0d-12)
+        @assertEqual(-110.0d0, this%cfg%boundary%hdrain, tolerance=1.0d-12)
+        @assertEqual(500.0d0, this%cfg%boundary%rimlay, tolerance=1.0d-12)
+        @assertEqual(1, this%cfg%boundary%sw3)
+        @assertEqual(1, this%cfg%boundary%sw4)
+        @assertEqual(-140.0d0, this%cfg%boundary%aqave, tolerance=1.0d-12)
+        @assertEqual(20.0d0, this%cfg%boundary%aqamp, tolerance=1.0d-12)
+        @assertEqual(120.0d0, this%cfg%boundary%aqtmax, tolerance=1.0d-12)
+        @assertEqual(365.0d0, this%cfg%boundary%aqper, tolerance=1.0d-12)
+        @assertEqual(2, this%cfg%boundary%swqhbot)
+        @assertEqual(0.1d0, this%cfg%boundary%cofqha, tolerance=1.0d-12)
+        @assertEqual(0.5d0, this%cfg%boundary%cofqhb, tolerance=1.0d-12)
+        @assertEqual(0.05d0, this%cfg%boundary%cofqhc, tolerance=1.0d-12)
+    end subroutine test_read_boundary
+
+    ! ------------------------------------------------------------------
+    ! [heat] section
+    ! ------------------------------------------------------------------
+@Test
+    subroutine test_read_heat(this)
+        class(SectionReadersTest), intent(inout) :: this
+
+        call read_heat(this%doc, this%cfg)
+
+        @assertEqual(1, this%cfg%heat%swhea)
+        @assertEqual(2, this%cfg%heat%swcalt)
+        @assertEqual(10.0d0, this%cfg%heat%tampli, tolerance=1.0d-12)
+        @assertEqual(15.0d0, this%cfg%heat%tmean, tolerance=1.0d-12)
+        @assertEqual(90.0d0, this%cfg%heat%timref, tolerance=1.0d-12)
+        @assertEqual(50.0d0, this%cfg%heat%ddamp, tolerance=1.0d-12)
+        @assertEqual(1, this%cfg%heat%swtopbhea)
+        @assertEqual('swap', trim(this%cfg%heat%tsoilfile))
+        @assertEqual(1, this%cfg%heat%swbotbhea)
+
+        @assertTrue(allocated(this%cfg%heat%psand))
+        @assertTrue(allocated(this%cfg%heat%psilt))
+        @assertTrue(allocated(this%cfg%heat%pclay))
+        @assertTrue(allocated(this%cfg%heat%orgmat))
+        @assertEqual(2, size(this%cfg%heat%psand))
+        @assertEqual(0.8d0, this%cfg%heat%psand(1), tolerance=1.0d-12)
+        @assertEqual(0.1d0, this%cfg%heat%orgmat(2), tolerance=1.0d-12)
+
+        @assertTrue(allocated(this%cfg%heat%zh))
+        @assertTrue(allocated(this%cfg%heat%tsoil))
+        @assertEqual(3, size(this%cfg%heat%zh))
+        @assertEqual(-10.0d0, this%cfg%heat%zh(1), tolerance=1.0d-12)
+        @assertEqual(10.0d0, this%cfg%heat%tsoil(3), tolerance=1.0d-12)
+
+        @assertTrue(allocated(this%cfg%heat%datet))
+        @assertEqual(3, size(this%cfg%heat%datet))
+        @assertTrue(this%cfg%heat%datet(2) > this%cfg%heat%datet(1))
+        @assertTrue(allocated(this%cfg%heat%tbot))
+        @assertEqual(3, size(this%cfg%heat%tbot))
+        @assertEqual(-15.0d0, this%cfg%heat%tbot(1), tolerance=1.0d-12)
+        @assertTrue(allocated(this%cfg%heat%tembtab))
+        @assertEqual(6, size(this%cfg%heat%tembtab))
+        @assertEqual(-15.0d0, this%cfg%heat%tembtab(2), tolerance=1.0d-12)
+    end subroutine test_read_heat
+
+    ! ------------------------------------------------------------------
+    ! [solute] section
+    ! ------------------------------------------------------------------
+@Test
+    subroutine test_read_solute(this)
+        class(SectionReadersTest), intent(inout) :: this
+
+        call read_solute(this%doc, this%cfg)
+
+        @assertEqual(1, this%cfg%solute%swsolu)
+        @assertEqual(0.0d0, this%cfg%solute%cpre, tolerance=1.0d-12)
+        @assertEqual(0.1d0, this%cfg%solute%cdrain, tolerance=1.0d-12)
+        @assertEqual(0, this%cfg%solute%swbotbc)
+        @assertEqual(0.1d0, this%cfg%solute%cseep, tolerance=1.0d-12)
+        @assertEqual(0.0d0, this%cfg%solute%ddif, tolerance=1.0d-12)
+        @assertEqual(0.0d0, this%cfg%solute%tscf, tolerance=1.0d-12)
+        @assertEqual(0, this%cfg%solute%swsp)
+        @assertEqual(0.9d0, this%cfg%solute%frexp, tolerance=1.0d-12)
+        @assertEqual(1.0d0, this%cfg%solute%cref, tolerance=1.0d-12)
+        @assertEqual(0, this%cfg%solute%swdc)
+        @assertEqual(0.0d0, this%cfg%solute%gampar, tolerance=1.0d-12)
+        @assertEqual(0.3d0, this%cfg%solute%rtheta, tolerance=1.0d-12)
+        @assertEqual(0.7d0, this%cfg%solute%bexp, tolerance=1.0d-12)
+        @assertEqual(0, this%cfg%solute%swbr)
+        @assertEqual(110.0d0, this%cfg%solute%daquif, tolerance=1.0d-12)
+        @assertEqual(0.4d0, this%cfg%solute%poros, tolerance=1.0d-12)
+        @assertEqual(0.2d0, this%cfg%solute%kfsat, tolerance=1.0d-12)
+        @assertEqual(1.0d0, this%cfg%solute%decsat, tolerance=1.0d-12)
+        @assertEqual(0.2d0, this%cfg%solute%cdraini, tolerance=1.0d-12)
+
+        @assertTrue(allocated(this%cfg%solute%zc))
+        @assertTrue(allocated(this%cfg%solute%cml))
+        @assertEqual(2, size(this%cfg%solute%zc))
+        @assertEqual(-10.0d0, this%cfg%solute%zc(1), tolerance=1.0d-12)
+        @assertEqual(0.0d0, this%cfg%solute%cml(2), tolerance=1.0d-12)
+
+        @assertTrue(allocated(this%cfg%solute%datec))
+        @assertTrue(allocated(this%cfg%solute%cseeparr))
+        @assertEqual(2, size(this%cfg%solute%datec))
+        @assertEqual(25.0d0, this%cfg%solute%cseeparr(1), tolerance=1.0d-12)
+        @assertEqual(40.0d0, this%cfg%solute%cseeparr(2), tolerance=1.0d-12)
+
+        @assertTrue(allocated(this%cfg%solute%ldis))
+        @assertTrue(allocated(this%cfg%solute%kf))
+        @assertTrue(allocated(this%cfg%solute%decpot))
+        @assertTrue(allocated(this%cfg%solute%fdepth))
+        @assertEqual(2, size(this%cfg%solute%ldis))
+        @assertEqual(5.0d0, this%cfg%solute%ldis(1), tolerance=1.0d-12)
+        @assertEqual(0.0001378d0, this%cfg%solute%kf(2), tolerance=1.0d-12)
+        @assertEqual(0.0d0, this%cfg%solute%decpot(1), tolerance=1.0d-12)
+        @assertEqual(0.65d0, this%cfg%solute%fdepth(2), tolerance=1.0d-12)
+    end subroutine test_read_solute
+
+end module test_sectionreaders_suite
