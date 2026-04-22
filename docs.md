@@ -9,8 +9,7 @@ src_dir: ./src
 output_dir: ./docs/api
 page_dir: ./docs
 media_dir: ./docs/public
-exclude_dir: ./swap_org
-             ./dubprojects
+exclude_dir: ./subprojects
 display: public
          protected
          private

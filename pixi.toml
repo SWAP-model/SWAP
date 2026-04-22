@@ -94,8 +94,8 @@ _compile-pfunit   = { cmd = 'meson compile -C builddir_gfortran', depends-on = [
 #============================================================================
 swap     = { cmd = "cd tests/swap-cases && ./run_case.sh --exec ../../builddir/swap", depends-on = ["build-linux"] }
 swap-win = { cmd = "cd tests/swap-cases && ./run_case.cmd --exec ../../builddir_windows/swap.exe", depends-on = ["build-windows-cross"] }
-swap-ref     = { cmd = "cd tests/swap-cases && ./run_case.sh --exec /home/zawadzkim/Code/swap/swap_org/linux/swap420" }
-swap-win-ref = { cmd = "cd tests/swap-cases && ./run_case.cmd --exec ../../builddir_windows/swap.exe", depends-on = ["build-windows-cross"] }
+swap-ref     = { cmd = "cd tests/swap-cases && ./run_case.sh --exec ../../tests/reference/swap420" }
+swap-win-ref = { cmd = "cd tests/swap-cases && ./run_case.cmd --exec ../../tests/reference/swap.exe" }
 
 lint = { cmd = "fprettify" }
 
