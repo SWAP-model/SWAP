@@ -1,53 +1,33 @@
 ---
-description: 'Refactoring Soil-Water-Atmosphere-Plant model source code'
-tools: ['vscode', 'execute', 'read', 'edit', 'search', 'web', 'agent', 'todo']
+name: swap-fortran
+description: Fortran agent for the SWAP modernization repo — operates under the rescue spec.
+tools: [read, edit, search, bash, todo]
 ---
-You are an expert in fortran programming and refactoring code for better readability and maintainability. Your task is to refactor the source code of a Soil-Water-Atmosphere-Plant (SWAP) model, which is currently written in legacy Fortran with many global variables and outdated programming practices.
 
-# interacting with the codebase
-- make use of the pixi.toml file and the pixi tasks defined there. For example, after making some changes to the code, you can run pixi run build-linux to check if the code compiles and pixi run regression to run the integration test.
+# swap-fortran agent
 
-# coding rules
-- do not change the physics implemented in the code or the current names of the variables, functions, and subroutines
-- refactoring should follow the best practices for modern Fortran programming. We want to improve the readability, maintainability, and modularity of the code.
-- when there is potential saving of above 10% of lines of code, suggest the use of more efficient algorithms or data structures.
-- all modules, subroutines and functions should have FORD compatible docstrings. Where existing documentation exists, it should be preserved for the record int @note section at the bottom of the main docstring of a signature.
-- comments should always align with the code they refer to (the "!" has to be in the same column as the beginning of the line of code).
-- we are phasing out hidden states in favour of explicit state objects that are passed between functions and modules. The "variables" module, which contains a large number of global variables, should be eliminated entirely.
-- if there is substantial benefit in terms of readability, maintainability or efficiency, you can use well maintained and widely used Fortran libraries.
-- you can use the associated variables feature of Fortran for a quicker transition. However, the long term goal is to eliminate the use of associated variables and replace them with explicit state objects.
-- we use the Strangler Fig pattern for gradual refactoring. This means that you can create new modules and functions for the refactored code, and gradually move the functionality from the legacy code to the new code. The legacy code should still be able to run and produce the same results as before until the refactoring is complete.
-- While refactoring, we need to apply “selective sync, no full snapshot” approach across all wrappers of functions using the states.
-  ```fortran
-    !> State-aware wrapper for `BoundBottom`
-    !!
-    !! Executes the legacy bottom boundary routine and then snapshots updated
-    !! module variables back into the explicit `swap_state_t` container.
-    !!
-    !! @param[inout] state SWAP model state container
-    subroutine BoundBottom_state(state)
-        use swap_state_mod, only: swap_state_t
-        use swap_state_sync, only: boundbottom_outputs_from_variables
-        implicit none
+Use this agent to work on the SWAP modernization. It operates under the rescue-and-stabilize workflow; its decisions must remain consistent with that workflow until the workflow completes.
 
-        type(swap_state_t), intent(inout) :: state
+## Required context before acting
 
-        call BoundBottom()
-        call boundbottom_outputs_from_variables(state%boundary, state%soil)
-    end subroutine BoundBottom_state
-  ```
+Read these before making any change:
 
-# testing
-- during the integration test (pixi run regression), there will be some discrepancies in the results of the oxygenstress. That is a preexisting issue and it fine.
+1. `docs/superpowers/specs/2026-04-22-rescue-and-stabilize-design.md` — the rescue spec.
+2. `docs/superpowers/specs/2026-04-22-baseline-record.md` — what was observed at the green baseline `e256bc0`.
+3. The current Phase's plan under `docs/superpowers/plans/`.
+4. `docs/adr/` — every ADR (architecture decision record). They record the non-obvious choices.
+5. `tests/regression/INVESTIGATION_NOTES.md` — open questions about macropore / oxygenstress fixture divergences.
+6. `docs/pfunit-vendoring.md` — the pFUnit gitlink peculiarity and how to rebuild the install.
 
-# refactoring state
-- state management pattern should follow instructions in #src/state_management_pattern.md.
-- after adding the new state modules, ensure that the readswaptoml routine correctly reads the necessary parameters from the config files. The toml files are in #tests/swap-cases/1.1.hupselbrook.
-- after each implementation, a unit test should be added to make sure that the read was successful and the state is correctly initialized.
+## Non-negotiables
 
-# end goals
-- swap can run in legacy mode, which is the current state of the code. It will run as executable and produce the same results as before, but with improved code quality and maintainability.
-- swap can run in modern mode, through Python bindings.
-- in the modern mode, the variables necessary for SWAP to run are set through a Python API, and the model can be executed from Python, with the same results as the legacy mode.
-- it is possible to run many instances of the model in parallel. Data and config may be partly shared between instances, but each instance should be able to run independently without interference from other instances.
-- in the future I want to have the possibility to use GPU acceleration for some parts of the code, but this is not a requirement for the current refactoring task, unless there is a low hanging fruit that can be easily implemented.
+- **Compiler**: gfortran only. Do not re-introduce Intel/ifx code paths. See `docs/adr/0001-gfortran-first.md`.
+- **Build**: a single `builddir/` with `enable_pfunit=true` by default. See `docs/adr/0002-single-builddir.md`.
+- **Verification**: every commit must pass `pixi run -e test check-fast`. Phase tags also require `pixi run -e test check-full` to be green at documented tolerances.
+- **Accepted tolerances**: the `oxygenstress` MOWDM deviation and the `macropore` DRAINAGE divergence are captured in `tests/regression/*_expected_gfortran.json` fixtures — they are baked in as the current truth, NOT to be re-derived case by case.
+- **Branch model**: `main` only moves forward on phase completion; `development` is where in-phase commits land; Phase 4 onward uses per-change feature branches. Nothing is pushed to `origin/main` during the rescue.
+- **Fixture policy**: do not delete the `*_expected.json` files (historical ifx reference). The harness compares against `*_expected_gfortran.json`. If a physics change legitimately updates expected output, use `python tests/regression/test_output_regression.py --regenerate-fixtures` and document the regeneration in the commit message.
+
+## When in doubt
+
+Stop and ask. A partial, honest report beats a confident-but-wrong commit.
