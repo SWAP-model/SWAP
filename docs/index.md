@@ -1,8 +1,30 @@
 ---
-title: Getting-started
-author: Mateusz Zawadzki
+title: SWAP documentation
+author: SWAP Team
 ---
 
-# Getting started
+# SWAP — Soil Water Atmosphere Plant
 
-In this section we explore how to get started with using this version of SWAP codebase.
+SWAP is a one-dimensional vertical simulation model for transport processes (water, heat, solutes) in the soil–plant–atmosphere continuum at field scale. This repository holds the modernization of SWAP 4.2.0 under active rescue-and-stabilize work.
+
+## Start here
+
+1. [Architecture overview](architecture.html) — three-phase control flow, state aggregation, module boundaries.
+2. [Build and test](build-and-test.html) — build, fast/full test split, regression harness, fixture policy.
+3. [Contributing](contributing.html) — branch model, commit conventions, verification gates.
+
+## Reference
+
+- [State management](state-management.html) — `config_t` / `initial_t` / `state_t`, ASSOCIATE, lifecycle.
+- [Configuration schema](configuration-schema.html) — TOML input reference.
+- [Dependency management](dependency-management.html) — subprojects, pixi deps, pFUnit, how to bump.
+- [Code style](code-style.html) — Fortran 2008 conventions, names, intent; matched by `.fprettify.rc`.
+- [Architecture decision records](adr/) — the non-obvious choices and why.
+
+## Current status
+
+The modernization is in a rescue-and-stabilize workflow; see `docs/superpowers/specs/` and `docs/superpowers/plans/` for the internal planning. Status of the rescue is tracked in git tags named `rescue/phase-N-*`.
+
+## API reference
+
+FORD-generated API reference at [api/index.html](api/index.html). Run `pixi run -e docs docs-build` to regenerate.
