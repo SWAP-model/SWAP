@@ -17,7 +17,7 @@ Read these before making any change:
 3. The current Phase's plan under `docs/superpowers/plans/`.
 4. `docs/adr/` — every ADR (architecture decision record). They record the non-obvious choices.
 5. `tests/regression/INVESTIGATION_NOTES.md` — open questions about macropore / oxygenstress fixture divergences.
-6. `docs/pfunit-vendoring.md` — the pFUnit gitlink peculiarity and how to rebuild the install.
+6. `docs/build-and-test.md` — build/test workflow, fast-vs-full gates, pFUnit gitlink peculiarity and rebuild steps.
 
 ## Non-negotiables
 
