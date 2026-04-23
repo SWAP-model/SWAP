@@ -38,6 +38,16 @@ pyswap = ">=0.3.9"
 #   pixi run -e test regression --log-timing # runs all with timing
 regression = { cmd = "python tests/regression/test_output_regression.py", depends-on = ["build-linux"] }
 
+#============================================================================
+# VERIFICATION GATES — the canonical commands for iteration and phase-end.
+# check-fast: everyday iteration (build + pFUnit + four fast regression cases).
+#             Budget: < 90s wall time.
+# check-full: phase-end gate (build + pFUnit + all six cases).
+#             Budget: ~10 minutes.
+#============================================================================
+check-fast = { cmd = "python tests/regression/test_output_regression.py hupselbrook surfacewater salinitystress grassgrowth", depends-on = ["build-linux", "test-pfunit"] }
+check-full = { cmd = "python tests/regression/test_output_regression.py", depends-on = ["build-linux", "test-pfunit"] }
+
 # ---- Documentation Feature ----
 [feature.docs.dependencies]
 ford = ">=7.0"
