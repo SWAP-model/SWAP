@@ -10,6 +10,7 @@ output_dir: ./docs/api
 page_dir: ./docs
 media_dir: ./docs/public
 exclude_dir: ./subprojects
+             ./docs/superpowers
 display: public
          protected
          private
