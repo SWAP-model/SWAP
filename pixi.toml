@@ -95,7 +95,11 @@ swap-win = { cmd = "cd tests/swap-cases && ./run_case.cmd --exec ../../builddir_
 swap-ref     = { cmd = "cd tests/swap-cases && ./run_case.sh --exec ../../tests/reference/swap420" }
 swap-win-ref = { cmd = "cd tests/swap-cases && ./run_case.cmd --exec ../../tests/reference/swap.exe" }
 
-lint = { cmd = "fprettify" }
+# Format Fortran sources in place per .fprettify.rc.
+lint = { cmd = "fprettify --config-file .fprettify.rc -r src tests/unit" }
+
+# Dry-run: show what lint would change without writing.
+lint-check = { cmd = "fprettify --config-file .fprettify.rc -d -r src tests/unit" }
 
 #============================================================================
 # UNIT TEST TASKS — pFUnit only; builds in the unified builddir.

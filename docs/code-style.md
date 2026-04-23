@@ -175,19 +175,42 @@ physics papers or textbooks are always worth writing down.
 
 ## Formatting
 
-**`pixi run lint` (fprettify) is authoritative.** The rules are encoded
-in `.fprettify.rc` at the repository root. Run `pixi run lint-check`
-first to see the diffs the formatter would make without applying them;
-`pixi run lint` rewrites files in place.
+**`.fprettify.rc` at the repository root is authoritative** for what
+formatted code should look like. Run `pixi run lint-check` to see the
+diffs the formatter would make; `pixi run lint` rewrites files in
+place.
 
-If the formatter disagrees with something written here, `.fprettify.rc`
-wins — open an issue to reconcile rather than ignoring the formatter.
-The linter is deliberately conservative during the rescue:
-`enable-replacements` is off so that legacy operator forms (`.eq.`,
-`.le.`, `.ne.`) are not auto-rewritten to `==`, `<=`, `/=`, and
-`disable-indent-mod` is on so that hand-crafted module-scope alignment
-is preserved. These choices will be revisited at Phase 4 exit, when the
-legacy surface area is small enough that aggressive rewrites are safe.
+**Rescue policy: lint is advisory only, NOT enforced across the legacy
+tree.** Running `pixi run lint` against the whole `src/` tree today
+produces a very large diff because modules have inconsistent indent
+and whitespace inherited from decades of different contributors. We do
+not do mass reformatting during the rescue — it would generate noise
+that obscures physics-affecting changes in the git log and invalidates
+blame for context that future code archaeology will need.
+
+Instead, the rescue rule is:
+
+- **New files must lint-clean** at commit time.
+- **Existing files are cleaned up individually in Phase 4** as each
+  module gets its TDD pass. Each module's cleanup commit includes the
+  formatter pass as a separate step so the diff is explicit.
+- `pixi run lint-check` is useful today for inspecting your own new
+  code; piping through `| grep -A 5 'your_new_file.f90'` scopes the
+  output.
+
+The config choices that keep the advisory output sane:
+
+- `enable-replacements = false` — legacy operator forms (`.eq.`,
+  `.le.`, `.ne.`) are not auto-rewritten to `==`, `<=`, `/=`. Phase 4
+  per-module passes can enable this selectively.
+- `disable-indent = true` — fprettify does not reformat indentation
+  at all. Fortran files have widely inconsistent indent across
+  contributors; forcing one style would invalidate git blame across
+  the tree.
+- `whitespace-type = false` — no inserted space around `%` (i.e.
+  `state%foo`, not `state % foo`), matching idiomatic Fortran.
+
+These choices will be revisited at Phase 4 exit.
 
 Two house rules that exist independent of the formatter:
 

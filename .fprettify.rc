@@ -1,0 +1,29 @@
+# fprettify configuration for the SWAP modernization.
+# Matches docs/code-style.md. If the formatter disagrees with the
+# doc, this file wins — open an issue to reconcile rather than
+# ignore the formatter.
+[fprettify]
+# Rescue-era conservative config. Indent reformatting is OFF
+# (disable-indent = true) so fprettify cannot fight legacy code's
+# inconsistent indent across modules. Only whitespace normalization
+# is active. At Phase 4 exit, flip disable-indent to false and
+# re-evaluate.
+indent = 3
+line-length = 132
+whitespace = 2
+whitespace-comma = true
+whitespace-assignment = true
+whitespace-decl = true
+whitespace-relational = true
+whitespace-logical = true
+whitespace-plusminus = true
+whitespace-multdiv = false
+whitespace-print = true
+whitespace-type = false
+whitespace-intrinsics = true
+case = [1, 1, 1, 1]
+strict-indent = false
+enable-decl = true
+enable-replacements = false
+disable-indent = true
+disable-whitespace = false
