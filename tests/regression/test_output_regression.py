@@ -42,7 +42,7 @@ CASES = {
     "hupselbrook": CaseConfig(
         name="hupselbrook",
         case_dir="1.hupselbrook",
-        fixture="hupselbrook_expected.json",
+        fixture="hupselbrook_expected_gfortran.json",
         flux_vars=["RAIN", "IRRIG", "INTERC", "RUNOFF", "EPOT", "EACT",
                    "DRAINAGE", "QBOTTOM", "TPOT", "TACT", "DSTOR"],
         state_vars=["GWL"],
@@ -56,14 +56,14 @@ CASES = {
     "macropore": CaseConfig(
         name="macropore",
         case_dir="3.macroporeflow",
-        fixture="macropore_expected.json",
+        fixture="macropore_expected_gfortran.json",
         flux_vars=["DRAINAGE"],
         state_vars=["GWL"],
     ),
     "grassgrowth": CaseConfig(
         name="grassgrowth",
         case_dir="2.grassgrowth",
-        fixture="grassgrowth_expected.json",
+        fixture="grassgrowth_expected_gfortran.json",
         flux_vars=[],
         state_vars=[],
         cumul_vars=["PGRASSDM", "GRASSDM", "PMOWDM", "MOWDM"],
@@ -71,7 +71,7 @@ CASES = {
     "oxygenstress": CaseConfig(
         name="oxygenstress",
         case_dir="4.oxygenstress",
-        fixture="oxygenstress_expected.json",
+        fixture="oxygenstress_expected_gfortran.json",
         flux_vars=[],
         state_vars=["TREDDRY", "TREDWET"],
         cumul_vars=["PGRASSDM", "GRASSDM", "PMOWDM", "MOWDM"],
@@ -79,7 +79,7 @@ CASES = {
     "salinitystress": CaseConfig(
         name="salinitystress",
         case_dir="5.salinitystress",
-        fixture="salinitystress_expected.json",
+        fixture="salinitystress_expected_gfortran.json",
         flux_vars=[],
         state_vars=["TREDDRY", "TREDWET", "TREDSOL", "CPWSO", "CWSO",
                     "CONC[-5.0]", "CONC[-25.0]", "CONC[-55.0]"],
@@ -87,7 +87,7 @@ CASES = {
     "surfacewater": CaseConfig(
         name="surfacewater",
         case_dir="6.surfacewater",
-        fixture="surfacewater_expected.json",
+        fixture="surfacewater_expected_gfortran.json",
         flux_vars=[],
         state_vars=["GWL", "POND"],
     ),
@@ -250,31 +250,22 @@ def load_case(case_name: str):
 
     return ml
 
-def run_case(case: CaseConfig) -> tuple[bool, float]:
-    """Run a single test case. Returns (success, execution_time) tuple."""
-    start_time = time.perf_counter()
-    
+def _run_and_aggregate(case: CaseConfig):
+    """Run a single SWAP case in a temp dir and return aggregated stats.
+
+    Returns a tuple ``(annual, totals, means)``. Raises RuntimeError on any
+    runtime/output failure so callers can surface the message cleanly.
+    """
     case_dir = TESTS_DIR / "swap-cases" / case.case_dir
-    fixture_path = TESTS_DIR / "regression" / case.fixture
-
     if not case_dir.exists():
-        print(f"✗ {case.name}: case directory not found at {case_dir}")
-        elapsed = time.perf_counter() - start_time
-        return False, elapsed
-
-    if not fixture_path.exists():
-        print(f"✗ {case.name}: fixture not found at {fixture_path}")
-        elapsed = time.perf_counter() - start_time
-        return False, elapsed
-
-    expected = load_fixture(fixture_path)
+        raise RuntimeError(f"case directory not found at {case_dir}")
 
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp = Path(tmpdir)
 
         # Copy case files, excluding any pre-existing output files
         shutil.copytree(
-            case_dir, 
+            case_dir,
             tmp / "case",
             ignore=shutil.ignore_patterns(
                 'result_output.csv',
@@ -306,49 +297,94 @@ def run_case(case: CaseConfig) -> tuple[bool, float]:
 
         # Check exit code (swap_main exits with 100 on success)
         if proc.returncode != 100:
-            print(f"✗ {case.name}: swap failed with exit code {proc.returncode} (expected 100)")
+            detail = f"exit code {proc.returncode} (expected 100)"
             if proc.stdout:
-                print(f"stdout:\n{proc.stdout}")
+                detail += f"\nstdout:\n{proc.stdout}"
             if proc.stderr:
-                print(f"stderr:\n{proc.stderr}")
-            elapsed = time.perf_counter() - start_time
-            return False, elapsed
+                detail += f"\nstderr:\n{proc.stderr}"
+            raise RuntimeError(f"swap failed: {detail}")
 
         csv_path = workdir / "result_output.csv"
         if not csv_path.exists():
-            print(f"✗ {case.name}: result_output.csv not produced")
-            elapsed = time.perf_counter() - start_time
-            return False, elapsed
+            raise RuntimeError("result_output.csv not produced")
 
         # Verify the CSV was created by this run (not a pre-existing file)
         if csv_path.stat().st_mtime < before_run:
-            print(f"✗ {case.name}: result_output.csv exists but was not created by this run")
-            print(f"   File timestamp: {csv_path.stat().st_mtime}, run started at: {before_run}")
-            elapsed = time.perf_counter() - start_time
-            return False, elapsed
+            raise RuntimeError(
+                f"result_output.csv exists but was not created by this run "
+                f"(file mtime {csv_path.stat().st_mtime} < run start {before_run})"
+            )
 
-        try:
-            cumul_vars = case.cumul_vars if hasattr(case, 'cumul_vars') else []
-            annual, totals, means = aggregate(csv_path, case.flux_vars, case.state_vars, cumul_vars)
-            compare(expected, annual, totals, means)
-        except AssertionError as e:
-            print(f"✗ {case.name}: {e}")
-            elapsed = time.perf_counter() - start_time
-            return False, elapsed
+        cumul_vars = case.cumul_vars if hasattr(case, 'cumul_vars') else []
+        return aggregate(csv_path, case.flux_vars, case.state_vars, cumul_vars)
+
+
+def run_case(case: CaseConfig) -> tuple[bool, float]:
+    """Run a single test case. Returns (success, execution_time) tuple."""
+    start_time = time.perf_counter()
+
+    fixture_path = TESTS_DIR / "regression" / case.fixture
+
+    if not fixture_path.exists():
+        print(f"✗ {case.name}: fixture not found at {fixture_path}")
+        elapsed = time.perf_counter() - start_time
+        return False, elapsed
+
+    expected = load_fixture(fixture_path)
+
+    try:
+        annual, totals, means = _run_and_aggregate(case)
+    except RuntimeError as exc:
+        print(f"✗ {case.name}: {exc}")
+        elapsed = time.perf_counter() - start_time
+        return False, elapsed
+
+    try:
+        compare(expected, annual, totals, means)
+    except AssertionError as e:
+        print(f"✗ {case.name}: {e}")
+        elapsed = time.perf_counter() - start_time
+        return False, elapsed
 
     elapsed = time.perf_counter() - start_time
     print(f"✓ {case.name}: regression ok (annual stats match fixture) [{elapsed:.2f}s]")
     return True, elapsed
 
 
+def _regen_one_case(case: CaseConfig) -> Path:
+    """Regenerate a gfortran-baseline fixture for a single case.
+
+    Writes ``{case.name}_expected_gfortran.json`` next to the other fixtures
+    and returns the output path.
+    """
+    annual, totals, means = _run_and_aggregate(case)
+    payload = {
+        "years": annual,
+        "total": totals,
+        "mean": means,
+    }
+    out_path = TESTS_DIR / "regression" / f"{case.name}_expected_gfortran.json"
+    with out_path.open("w") as f:
+        json.dump(payload, f, indent=2, sort_keys=True)
+        f.write("\n")
+    print(f"✓ {case.name}: wrote {out_path.name}")
+    return out_path
+
+
 def main():
     overall_start = time.perf_counter()
-    
+
+    # Parse command line
+    args = sys.argv[1:]
+    regenerate = False
+    if args and args[0] == "--regenerate-fixtures":
+        regenerate = True
+        args = args[1:]
+
     if not SWAP_BIN.exists():
         raise SystemExit(f"swap binary not found at {SWAP_BIN}; build first (pixi run build-linux)")
 
     # Parse command line to select cases
-    args = sys.argv[1:]
     if args:
         selected = []
         for arg in args:
@@ -359,6 +395,20 @@ def main():
                 sys.exit(1)
     else:
         selected = list(CASES.values())
+
+    if regenerate:
+        print(f"Regenerating fixtures for {len(selected)} case(s) as *_expected_gfortran.json ...\n")
+        regen_count = 0
+        for case in selected:
+            try:
+                _regen_one_case(case)
+                regen_count += 1
+            except Exception as exc:
+                print(f"✗ {case.name}: regeneration failed: {exc}")
+        print(f"\nRegenerated {regen_count}/{len(selected)} fixture(s).")
+        if regen_count != len(selected):
+            sys.exit(1)
+        return
 
     # Determine number of workers (defaults to CPU count)
     max_workers = min(len(selected), os.cpu_count() or 1)

@@ -12,39 +12,37 @@ src_inc = include_directories(
     'src/solute', 'src/heat', 'src/utils'
 )
 
-# Platform/compiler detection
+# Platform detection. The rescue spec locks the supported compiler
+# to GCC/gfortran (see docs/adr/0001-gfortran-first.md). Reject any
+# other compiler up front rather than silently producing a different
+# binary.
 is_windows = host_machine.system() == 'windows'
-is_intel = fc.get_id() == 'intel'
-is_gcc = fc.get_id() == 'gcc'
+
+if fc.get_id() != 'gcc'
+    error('Unsupported Fortran compiler: @0@. Only gfortran is supported during the rescue (see docs/adr/0001-gfortran-first.md).'.format(fc.get_id()))
+endif
 
 # ============================================================================
 # Compiler flags
 # ============================================================================
-if is_intel
-    add_project_arguments([
-        '-O2', '-fpscomp', 'general', '-warn', 'declarations',
-        '-warn', 'unused', '-warn', 'uncalled', '-warn', 'interfaces',
-        '-init=zero', '-fpe0', '-fp-model', 'source'
-    ], language: 'fortran')
-    
-    if not is_windows
-        add_project_link_arguments(['-static-intel'], language: 'fortran')
-    endif
+gfortran_flags = [
+    '-O2',
+    '-ffree-line-length-none',
+    '-Wno-line-truncation',
+    '-Wno-compare-reals',
+    '-Wno-missing-include-dirs',
+    '-Wno-unused-variable',
+    '-Wno-unused-dummy-argument',
+    '-std=legacy',
+    '-finit-local-zero',
+]
 
-elif is_gcc
-    gcc_flags = [
-        '-O2', '-ffree-line-length-none', '-Wno-line-truncation',
-        '-Wno-compare-reals', '-Wno-missing-include-dirs',
-        '-Wno-unused-variable', '-Wno-unused-dummy-argument', '-std=legacy'
-    ]
-    
-    if is_windows
-        gcc_flags += ['-mconsole', '-static-libgfortran', '-static-libgcc']
-        add_project_link_arguments(['-static', '-mconsole'], language: 'fortran')
-    endif
-    
-    add_project_arguments(gcc_flags, language: 'fortran')
+if is_windows
+    gfortran_flags += ['-mconsole', '-static-libgfortran', '-static-libgcc']
+    add_project_link_arguments(['-static', '-mconsole'], language: 'fortran')
 endif
+
+add_project_arguments(gfortran_flags, language: 'fortran')
 
 # ============================================================================
 # Source files
@@ -141,34 +139,11 @@ sources = [
 # ============================================================================
 # External dependency: ttutil
 # ============================================================================
-if is_gcc
-    # Use ttutil as a Meson subproject (built from source with gfortran)
-    ttutil_prj = subproject('ttutil', default_options: ['default_library=static'])
-    ttutil_dep = ttutil_prj.get_variable('ttutil_dep')
-else
-    # Use prebuilt library for Intel / Windows
-    ttutil_version = '4.2.7'
-    ttutil_lib_dir = join_paths(meson.current_build_dir(), 'lib')
-
-    if is_windows and not is_gcc
-        ttutil_filename = 'libttutil@0@-windows.a'.format(ttutil_version)
-    elif is_windows and is_gcc
-        ttutil_filename = 'libttutil@0@-mingw.a'.format(ttutil_version)
-    else
-        ttutil_filename = 'libttutil@0@-linux.a'.format(ttutil_version)
-    endif
-
-    ttutil_lib_path = join_paths(ttutil_lib_dir, 'libttutil.a')
-    ttutil_url = 'https://github.com/SWAP-model/ttutil/releases/download/v@0@/@1@'.format(
-        ttutil_version, ttutil_filename)
-
-    if not fs.exists(ttutil_lib_path)
-        run_command('mkdir', '-p', ttutil_lib_dir, check: true)
-        run_command('curl', '-L', ttutil_url, '-o', ttutil_lib_path, check: true)
-    endif
-
-    ttutil_dep = declare_dependency(link_args: [ttutil_lib_path])
-endif
+# Vendored as a meson subproject and built from source with gfortran.
+# The Intel/ifx download-prebuilt-binary path has been removed; see
+# docs/adr/0001-gfortran-first.md.
+ttutil_prj = subproject('ttutil', default_options: ['default_library=static'])
+ttutil_dep = ttutil_prj.get_variable('ttutil_dep')
 
 # ============================================================================
 # External dependency: toml-f
@@ -186,11 +161,8 @@ tomlf_dep = tomlf_prj.get_variable('tomlf_dep')
 # ============================================================================
 # Main executable
 # ============================================================================
-if (is_windows and is_gcc) or not is_windows
-    link_args = ['-static']
-else
-    link_args = []
-endif
+# Always statically link with gfortran — see docs/adr/0001-gfortran-first.md.
+link_args = ['-static']
 
 executable('swap', sources,
     dependencies: [ttutil_dep, tomlf_dep],
