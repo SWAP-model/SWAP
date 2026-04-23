@@ -173,7 +173,7 @@ executable('swap', sources,
 # ============================================================================
 # Tests
 # ============================================================================
-if get_option('enable_unit_tests')
+if get_option('enable_pfunit')
     subdir('tests/unit')
 endif
 

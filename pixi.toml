@@ -68,23 +68,14 @@ docs = { features = ["docs"], solve-group = "default" }
 
 [tasks]
 #============================================================================
-# BUILD TASKS
+# BUILD TASKS — single builddir/; pFUnit on by default (ADR 0002).
+# Pass -Denable_pfunit=false to _configure to build the swap binary only.
 #============================================================================
-
-# Production build (no test suite)
-_configure-swap = { cmd = "FC=gfortran meson setup builddir --reconfigure -Denable_pfunit=false -Denable_unit_tests=false" }
-build-linux     = { cmd = "meson compile -C builddir", depends-on = ["_configure-swap"] }
-
-# Test build (enables unit test targets) — setup + compile are separated
-_configure-tests = { cmd = "FC=gfortran meson setup builddir --reconfigure -Denable_pfunit=false -Denable_unit_tests=true" }
-_compile-tests   = { cmd = "meson compile -C builddir", depends-on = ["_configure-tests"] }
+_configure = { cmd = "FC=gfortran meson setup builddir --reconfigure" }
+build-linux = { cmd = "meson compile -C builddir", depends-on = ["_configure"] }
 
 build-windows-cross = "meson setup builddir_windows --cross-file cross_mingw.txt && meson compile -C builddir_windows"
 clean = "rm -rf builddir builddir_windows builddir_windows_native builddir_gfortran"
-
-# gfortran + pFUnit build (separate builddir to avoid compiler conflicts)
-_configure-pfunit = { cmd = 'FC=gfortran meson setup builddir_gfortran --reconfigure -Denable_pfunit=true -Denable_unit_tests=true' }
-_compile-pfunit   = { cmd = 'meson compile -C builddir_gfortran', depends-on = ["_configure-pfunit"] }
 
 #============================================================================
 # RUN TASKS
@@ -97,11 +88,8 @@ swap-win-ref = { cmd = "cd tests/swap-cases && ./run_case.cmd --exec ../../tests
 lint = { cmd = "fprettify" }
 
 #============================================================================
-# UNIT TEST TASKS
-# test-unit     → full suite (daily use)
-# test-unit-io  → TOML reader tests only
-# _test-unit-*  → per-module (hidden, for focused dev iteration)
+# UNIT TEST TASKS — pFUnit only; builds in the unified builddir.
+# Returns exit 0 with "No suitable tests defined." if pf_files is empty
+# (that is the baseline state; Phase 4 re-populates as state modules return).
 #============================================================================
-test-unit    = { cmd = "meson test -C builddir --suite unit-standalone --print-errorlogs", depends-on = ["_compile-tests"] }
-test-unit-io = { cmd = "meson test -C builddir --suite unit-standalone --print-errorlogs --test-args \"-k toml\"", depends-on = ["_compile-tests"] }
-test-pfunit  = { cmd = 'meson test -C builddir_gfortran --suite unit-pfunit --verbose', depends-on = ["_compile-pfunit"] }
+test-pfunit = { cmd = "meson test -C builddir --suite unit-pfunit --verbose", depends-on = ["build-linux"] }
