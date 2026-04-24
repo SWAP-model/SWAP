@@ -1,0 +1,83 @@
+@test
+subroutine test_crop_disabled_passes()
+   use funit
+   use error_mod
+   use crop_config_mod
+   type(crop_config_t)      :: c
+   type(error_collection_t) :: errors
+   c%swcrop = 0
+   call c%validate(errors)
+   @assertFalse(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_crop_enabled_empty_rotation_fails()
+   use funit
+   use error_mod
+   use crop_config_mod
+   type(crop_config_t)      :: c
+   type(error_collection_t) :: errors
+   c%swcrop = 1
+   call c%validate(errors)
+   @assertTrue(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_crop_valid_rotation_passes()
+   use funit
+   use error_mod
+   use crop_config_mod
+   type(crop_config_t)      :: c
+   type(error_collection_t) :: errors
+   c%swcrop = 1
+   allocate(c%rotation_start(1))
+   allocate(c%rotation_end(1))
+   allocate(c%rotation_file(1))
+   allocate(c%rotation_type(1))
+   c%rotation_start(1) = 37257.0d0
+   c%rotation_end(1)   = 37622.0d0
+   c%rotation_file(1)  = "maizes.crp"
+   c%rotation_type(1)  = 1
+   call c%validate(errors)
+   @assertFalse(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_crop_bad_type_fails()
+   use funit
+   use error_mod
+   use crop_config_mod
+   type(crop_config_t)      :: c
+   type(error_collection_t) :: errors
+   c%swcrop = 1
+   allocate(c%rotation_start(1))
+   allocate(c%rotation_end(1))
+   allocate(c%rotation_file(1))
+   allocate(c%rotation_type(1))
+   c%rotation_start(1) = 0.0d0
+   c%rotation_end(1)   = 365.0d0
+   c%rotation_file(1)  = "x.crp"
+   c%rotation_type(1)  = 9
+   call c%validate(errors)
+   @assertTrue(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_crop_inverted_dates_fails()
+   use funit
+   use error_mod
+   use crop_config_mod
+   type(crop_config_t)      :: c
+   type(error_collection_t) :: errors
+   c%swcrop = 1
+   allocate(c%rotation_start(1))
+   allocate(c%rotation_end(1))
+   allocate(c%rotation_file(1))
+   allocate(c%rotation_type(1))
+   c%rotation_start(1) = 365.0d0
+   c%rotation_end(1)   = 0.0d0
+   c%rotation_file(1)  = "x.crp"
+   c%rotation_type(1)  = 1
+   call c%validate(errors)
+   @assertTrue(errors%has_errors())
+end subroutine
