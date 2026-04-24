@@ -94,6 +94,7 @@ if get_option('enable_pfunit')
         '../../src/config/simulation_config.f90',
         '../../src/config/meteorology_config.f90',
         '../../src/config/drainage_config.f90',
+        '../../src/config/soil_config.f90',
     ]
 
     pfunit_base_sources = test_base_sources + pfunit_extra_sources
@@ -119,6 +120,7 @@ if get_option('enable_pfunit')
         'config/test_simulation_config.pf',
         'config/test_meteorology_config.pf',
         'config/test_drainage_config.pf',
+        'config/test_soil_config.pf',
     ]
 
     # When pf_files is non-empty, build and register the unit-swap-tests

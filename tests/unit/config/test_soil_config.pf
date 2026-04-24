@@ -1,0 +1,50 @@
+@test
+subroutine test_soil_valid_passes()
+   use funit
+   use error_mod
+   use soil_config_mod
+   type(soil_config_t)      :: s
+   type(error_collection_t) :: errors
+   s%swsophy = 0
+   s%swhyst  = 0
+   s%swinco  = 1
+   call s%validate(errors)
+   @assertFalse(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_soil_swhyst_out_of_enum_fails()
+   use funit
+   use error_mod
+   use soil_config_mod
+   type(soil_config_t)      :: s
+   type(error_collection_t) :: errors
+   s%swhyst = 5
+   call s%validate(errors)
+   @assertTrue(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_soil_swinco_invalid_fails()
+   use funit
+   use error_mod
+   use soil_config_mod
+   type(soil_config_t)      :: s
+   type(error_collection_t) :: errors
+   s%swinco = 0
+   call s%validate(errors)
+   @assertTrue(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_soil_negative_pondmx_fails()
+   use funit
+   use error_mod
+   use soil_config_mod
+   type(soil_config_t)      :: s
+   type(error_collection_t) :: errors
+   s%swinco = 1
+   s%pondmx = -0.5d0
+   call s%validate(errors)
+   @assertTrue(errors%has_errors())
+end subroutine
