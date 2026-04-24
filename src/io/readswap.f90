@@ -1,18 +1,15 @@
 ! File VersionID:
 !   $Id: readswap.f90 379 2018-05-16 07:02:44Z heine003 $
 ! ----------------------------------------------------------------------
-      subroutine readswap(state)
+      subroutine readswap()
 ! ----------------------------------------------------------------------
-!     Date               : April 2014   
+!     Date               : April 2014
 !     Purpose            : read main input file .SWP
 ! ----------------------------------------------------------------------
       use variables
       use doln
       use oxygenstress_mod, only: oxygen_dat
-      use swap_state_mod, only: swap_state_t
       implicit none
-
-      type(swap_state_t), intent(inout), optional :: state
 
       integer posarg,numchar,mxcrop,idum
       integer swp,i,datea(6),getun,getun2,runf,swrunon
@@ -107,13 +104,6 @@
       call rdscha ('pathdrain',pathdrain)
       call rdsinr ('swscre',0,2,swscre)
 
-      if (present(state)) then
-        state%time%project = project
-        state%time%pathwork = pathwork
-        state%time%swpfile = swpfile
-        state%time%swscre = swscre
-        state%atm%pathatm = pathatm
-      end if
       call rdsinr ('swerror',0,1,swerror)
       if (swerror .eq. 1) then
         toscr = .true.
@@ -140,10 +130,6 @@
       call dtdpar (tstart, datea, fsec)
       call rdstim('tend',tend)
 
-      if (present(state)) then
-        state%time%tstart = tstart
-        state%time%tend = tend
-      end if
 
 ! -   check begin and end date of simulation
       if ((tend - tstart) .lt. 0.0d0) then
@@ -179,16 +165,10 @@
         call rdatim ('outdat',outdat,maout,ifnd)
       endif
 
-      if (present(state)) then
-        state%time%outdat = outdat
-      end if
 
 ! -   Intermediate output dates
       call rdsinr ('nprintday',1,1440,nprintday)
 
-      if (present(state)) then
-        state%time%nprintday = nprintday
-      end if
 
 ! --- output each time interval dt
       flprintdt = .false.
@@ -196,15 +176,9 @@
         call rdslog ('flprintdt',flprintdt)
       endif
 
-      if (present(state)) then
-        state%time%flprintdt = flprintdt
-      end if
 
       call rdsinr ('swmonth',0,1,swmonth)
 
-      if (present(state)) then
-        state%time%swmonth = swmonth
-      end if
       if (swmonth .eq. 1) then 
         datea(1) = iyear
         datea(2) = imonth
@@ -242,21 +216,11 @@
         endif  
       endif
 
-      if (present(state)) then
-        state%time%period = period
-        state%time%swres = swres
-        state%time%swodat = swodat
-        state%time%outdatint = outdatint
-      end if
 
 ! -   output files
       call rdscha ('outfil',outfil)
       call rdsinr ('swheader',0,1,swheader)
 
-  if (present(state)) then
-    state%time%outfil = outfil
-    state%time%swheader = swheader
-  end if
 
       call rdsinr ('swafo',0,3,swafo)
       call rdsinr ('swaun',0,2,swaun)
@@ -350,44 +314,25 @@
       call rdscha ('metfil',metfil)
       call rdsdor ('lat',-90.0d0,90.0d0,lat)
 
-  if (present(state)) then
-    state%atm%metfil = metfil
-    state%atm%lat = lat
-  end if
       
 
 
 !     type of weather data
       call rdsinr ('swetr',0,1,swetr)
 
-      if (present(state)) then
-        state%atm%swetr = swetr
-      end if
       
       if (swetr.eq.0) then
         
         call rdsinr ('swmetdetail',0,1,swmetdetail)
 
-        if (present(state)) then
-          state%atm%swmetdetail = swmetdetail
-        end if
-        
         call rdsdor ('alt',-400.0d0,3000.0d0,alt)
         call rdsdor ('altw',0.0d0,99.0d0,altw)
 
-        if (present(state)) then
-          state%atm%alt = alt
-          state%atm%altw = altw
-        end if
         
         if(rdinqr('swdivide')) then
           call rdsinr ('swdivide',0,1,swdivide)
         endif
 
-        if (present(state)) then
-          state%atm%swdivide = swdivide
-        end if
-        
         angstroma = 0.25d0
         if(rdinqr('angstroma')) then
           call rdsdor ('angstroma',0.0d0,1.0d0,angstroma)
@@ -398,10 +343,6 @@
           call rdsdor ('angstromb',0.0d0,1.0d0,angstromb)
         endif
 
-        if (present(state)) then
-          state%atm%angstroma = angstroma
-          state%atm%angstromb = angstromb
-        end if
         
       else
 
@@ -414,10 +355,6 @@
           endif
         endif  
 
-        if (present(state)) then
-          state%atm%swmetdetail = swmetdetail
-        end if
-        
         if (rdinqr('swdivide')) then
           call rdsinr ('swdivide',0,1,swdivide)
           if(swdivide.eq.1) then
@@ -427,10 +364,6 @@
           endif
         endif  
 
-        if (present(state)) then
-          state%atm%swdivide = swdivide
-        end if
-        
       endif   
       
 
@@ -440,18 +373,11 @@
         call rdsinr ('swrain',0,3,swrain)
         call rdsinr ('swetsine',0,1,swetsine)
 
-        if (present(state)) then
-          state%atm%swrain = swrain
-          state%atm%swetsine = swetsine
-        end if
 
       else  
       
         call rdsinr ('nmetdetail',1,96,nmetdetail)
 
-        if (present(state)) then
-          state%atm%nmetdetail = nmetdetail
-        end if
         
         if (rdinqr('swrain')) then
           call rdsinr ('swrain',0,3,swrain)
@@ -486,9 +412,6 @@
       if (swrain .eq. 3) then
         call rdscha ('rainfil',rainfil)
 
-        if (present(state)) then
-          state%atm%rainfil = rainfil
-        end if
       endif
 
 ! -   special case: if METFIL is provided wit hextension .MET, then all weather dta will be erad at once
@@ -506,9 +429,6 @@
          end if
       end if
 
-      if (present(state)) then
-        state%atm%swMetFilAll = swMetFilAll
-      end if
 
 ! -   crop rotation scheme
 

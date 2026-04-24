@@ -126,7 +126,7 @@ if (iTask == 1) then
    call IterTime(1)
 
 !  read time independent input file
-   call ReadSwap(state)
+   call ReadSwap()
 
 !  shared simulation
    if (flSwapShared) call SharedSimulation(1)
