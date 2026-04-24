@@ -83,6 +83,7 @@ if get_option('enable_pfunit')
 
     pf_files = [
         'atmosphere/test_atmosphere_state.pf',
+        'boundary/test_boundary_state.pf',
     ]
 
     # When pf_files is non-empty, build and register the unit-swap-tests
