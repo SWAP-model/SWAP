@@ -33,7 +33,6 @@ module frozencond_mod
   private
 
   public :: FrozenCond, FrozenBounds
-  public :: FrozenCond_state, FrozenBounds_state
 
 contains
 
@@ -68,73 +67,70 @@ contains
   !! Purpose: If soil temperatures are simulated, determine the reduction factors
   !! and frozen depth for frozen conditions
   !! @endnote
-  subroutine FrozenCond(heat, soil)
-    use swap_state_mod, only: heat_state_t, soil_state_t
+  subroutine FrozenCond()
+    use variables
     implicit none
-
-    type(heat_state_t), intent(inout) :: heat
-    type(soil_state_t), intent(in)    :: soil
 
     ! Local variables
     integer node
     logical flthaw
 
     ! Calculate reduction factor for each node
-    do node=1,soil%numnod
-      heat%rfcp(node) = 1.0d0
-      if (heat%swfrost.eq.1)then
-        if(heat%tsoil(node).ge.heat%tfroststa)then
-          heat%rfcp(node) = 1.0d0
-        else if(heat%tsoil(node).le.heat%tfrostend) then
-          heat%rfcp(node) = 0.0d0
-        else if(heat%tsoil(node).lt.heat%tfroststa .and. &
-                heat%tsoil(node).gt.heat%tfrostend) then
-          heat%rfcp(node) = (heat%tsoil(node)-heat%tfrostend)/ &
-                            (heat%tfroststa-heat%tfrostend)
+    do node=1,numnod
+      rfcp(node) = 1.0d0
+      if (swfrost.eq.1)then
+        if(tsoil(node).ge.tfroststa)then
+          rfcp(node) = 1.0d0
+        else if(tsoil(node).le.tfrostend) then
+          rfcp(node) = 0.0d0
+        else if(tsoil(node).lt.tfroststa .and. &
+                tsoil(node).gt.tfrostend) then
+          rfcp(node) = (tsoil(node)-tfrostend)/ &
+                       (tfroststa-tfrostend)
         endif
       endif
     end do
     ! Determine frozen depth (z) and frozen node number
     flthaw              = .true.
-    heat%nodfrostbot    = -1
-    heat%zfrostbot      = 0.0d0
-    heat%zfrosttop      = 0.0d0
+    nodfrostbot         = -1
+    zfrostbot           = 0.0d0
+    zfrosttop           = 0.0d0
 
     ! Search from bottom upward for frozen zone
-    node = soil%numnod
+    node = numnod
     do while (flthaw .and. node.gt.1)
       node = node - 1
-      if(heat%tsoil(node) .le. heat%tfrostend+1.0d-6)then
-        heat%zfrostbot = soil%z(node+1) + soil%disnod(node+1) * &
-                         (heat%tfrostend-heat%tsoil(node+1)) / &
-                         (heat%tsoil(node)-heat%tsoil(node+1))
+      if(tsoil(node) .le. tfrostend+1.0d-6)then
+        zfrostbot = z(node+1) + disnod(node+1) * &
+                    (tfrostend-tsoil(node+1)) / &
+                    (tsoil(node)-tsoil(node+1))
         flthaw             =.false.
-        heat%nodfrostbot   = node
+        nodfrostbot        = node
       endif
-  end do
+    end do
 
     ! If frozen zone found, search from top downward for upper boundary
     if(.not.flthaw)then
       flthaw  = .true.
       node = 0
-      do while (flthaw .and. node.lt.heat%nodfrostbot)
+      do while (flthaw .and. node.lt.nodfrostbot)
         node = node + 1
-        if(heat%tsoil(node) .le. heat%tfrostend+1.0d-6)then
+        if(tsoil(node) .le. tfrostend+1.0d-6)then
           if(node.eq.1) then
-            if(heat%tetop.le.heat%tfrostend) then
-              heat%zfrosttop = 0.0d0
+            if(tetop.le.tfrostend) then
+              zfrosttop = 0.0d0
             else
-              heat%zfrosttop = soil%z(node) - &
-                               (soil%z(node) - 0.0d0) * &
-                               (heat%tsoil(node)-heat%tfrostend) / &
-                               (heat%tsoil(node)-heat%tetop)
+              zfrosttop = z(node) - &
+                          (z(node) - 0.0d0) * &
+                          (tsoil(node)-tfrostend) / &
+                          (tsoil(node)-tetop)
             endif
           else
-            heat%zfrosttop = soil%z(node) + soil%disnod(node) * &
-                             (heat%tsoil(node)-heat%tfrostend) / &
-                             (heat%tsoil(node)-heat%tsoil(node-1))
+            zfrosttop = z(node) + disnod(node) * &
+                        (tsoil(node)-tfrostend) / &
+                        (tsoil(node)-tsoil(node-1))
           endif
-          heat%zfrosttop = min(0.0d0,heat%zfrosttop)
+          zfrosttop = min(0.0d0,zfrosttop)
           flthaw      =.false.
         endif
       end do
@@ -294,40 +290,5 @@ contains
 
     return
   end subroutine FrozenBounds
-
-  !> State-aware wrapper for `FrozenCond`
-  !!
-  !! Applies frozen-condition factors to explicit heat/soil state and updates
-  !! legacy module variables required by subsequent legacy routines.
-  !!
-  !! @param[inout] state SWAP model state container
-  subroutine FrozenCond_state(state)
-    use swap_state_mod, only: swap_state_t
-    use swap_state_sync, only: heat_state_to_variables
-    implicit none
-
-    type(swap_state_t), intent(inout) :: state
-
-    call FrozenCond(state%heat, state%soil)
-    call heat_state_to_variables(state%heat, state%numnod, state%numlay)
-  end subroutine FrozenCond_state
-
-  !> State-aware wrapper for `FrozenBounds`
-  !!
-  !! Executes legacy frozen-boundary adjustments and synchronizes affected
-  !! boundary and drainage outputs into explicit state.
-  !!
-  !! @param[inout] state SWAP model state container
-  subroutine FrozenBounds_state(state)
-    use swap_state_mod, only: swap_state_t
-    use swap_state_sync, only: boundbottom_outputs_from_variables, drainage_outputs_from_variables
-    implicit none
-
-    type(swap_state_t), intent(inout) :: state
-
-    call FrozenBounds()
-    call boundbottom_outputs_from_variables(state%boundary, state%soil)
-    call drainage_outputs_from_variables(state%drain, state%nrlevs, state%numnod)
-  end subroutine FrozenBounds_state
 
 end module frozencond_mod

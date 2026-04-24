@@ -86,7 +86,7 @@ use meteo_process_mod, only: ReadMeteoDay_state
 use snow_mod, only: snow_state
 use meteodt_mod, only: MeteoDT_state
 use rootextraction_mod, only: RootExtraction_state
-use frozencond_mod, only: FrozenCond_state, FrozenBounds_state
+use frozencond_mod, only: FrozenCond, FrozenBounds
 use temperature_mod, only: Temperature_state
 use macropore_mod, only: macropore_state
 use macroporeoutput_mod, only: MacroPoreOutput
@@ -246,7 +246,7 @@ if (iTask == 2) then
 
 !     calculate reduction for conductivities for frozen conditions
       if (SwFrost.eq.1) then
-         call FrozenCond_state(state)
+         call FrozenCond()
       end if
 
 !     calculate potential and actual root water extraction profile
@@ -262,7 +262,7 @@ if (iTask == 2) then
 !        calculate drainage fluxes
          if (fldrain)                           call Drainage_state(state)
          if (.not.fldecdt .and. flSurfaceWater) call SurfaceWater_state(state, 2)
-         if (SwFrost.eq.1)                      call FrozenBounds_state(state)
+         if (SwFrost.eq.1)                      call FrozenBounds()
 
 !        calculate SoilWater, incl macropores
          if (.not.fldecdt) call SoilWater_state(state, 2)
