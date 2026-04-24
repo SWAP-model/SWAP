@@ -1,0 +1,63 @@
+@test
+subroutine test_read_drainage_happy()
+   use funit
+   use tomlf, only: toml_table, toml_load
+   use drainage_config_mod
+   use read_drainage_toml_mod
+   use error_mod
+   type(toml_table), allocatable, target :: doc
+   type(toml_table), pointer     :: doc_ptr
+   type(drainage_config_t)       :: c
+   type(error_collection_t)      :: errors
+
+   call toml_load(doc, 'tests/unit/io/toml/fixtures/drainage_minimal.toml')
+   doc_ptr => doc
+   call read_drainage_toml(doc_ptr, c, errors)
+
+   @assertFalse(errors%has_errors())
+   @assertEqual(1, c%swdra)
+   @assertEqual(1, c%dramet)
+   @assertEqual(1, c%nrlevs)
+   @assertEqual(-200.0d0, c%basegw, 1.0d-12)
+end subroutine
+
+@test
+subroutine test_read_drainage_level_array()
+   use funit
+   use tomlf, only: toml_table, toml_load
+   use drainage_config_mod
+   use read_drainage_toml_mod
+   use error_mod
+   type(toml_table), allocatable, target :: doc
+   type(toml_table), pointer     :: doc_ptr
+   type(drainage_config_t)       :: c
+   type(error_collection_t)      :: errors
+
+   call toml_load(doc, 'tests/unit/io/toml/fixtures/drainage_minimal.toml')
+   doc_ptr => doc
+   call read_drainage_toml(doc_ptr, c, errors)
+
+   @assertTrue(allocated(c%zbotdr))
+   @assertEqual(1, size(c%zbotdr))
+   @assertEqual(-80.0d0, c%zbotdr(1), 1.0d-12)
+   @assertEqual(100.0d0, c%drares(1), 1.0d-12)
+end subroutine
+
+@test
+subroutine test_read_drainage_missing_section_is_silent()
+   use funit
+   use tomlf, only: toml_table, toml_load
+   use drainage_config_mod
+   use read_drainage_toml_mod
+   use error_mod
+   type(toml_table), allocatable, target :: doc
+   type(toml_table), pointer     :: doc_ptr
+   type(drainage_config_t)       :: c
+   type(error_collection_t)      :: errors
+
+   call toml_load(doc, 'tests/unit/io/toml/fixtures/general_minimal.toml')
+   doc_ptr => doc
+   call read_drainage_toml(doc_ptr, c, errors)
+
+   @assertFalse(errors%has_errors())
+end subroutine
