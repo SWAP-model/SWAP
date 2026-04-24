@@ -1,0 +1,28 @@
+@test
+subroutine test_load_nonexistent_file_errors()
+   use funit
+   use swap_config_mod
+   use load_swap_config_mod
+   use error_mod
+   type(swap_config_t)      :: config
+   type(error_collection_t) :: errors
+
+   call load_swap_config('/this/path/does/not/exist.toml', config, errors)
+
+   @assertTrue(errors%has_fatals())
+end subroutine
+
+@test
+subroutine test_load_malformed_toml_errors()
+   use funit
+   use swap_config_mod
+   use load_swap_config_mod
+   use error_mod
+   type(swap_config_t)      :: config
+   type(error_collection_t) :: errors
+
+   call load_swap_config('tests/unit/io/toml/fixtures/malformed.toml', config, errors)
+
+   @assertTrue(errors%has_fatals())
+   @assertEqual(ERR_PARSE_MALFORMED_TOML, errors%items(1)%code)
+end subroutine
