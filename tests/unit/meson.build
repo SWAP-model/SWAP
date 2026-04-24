@@ -85,6 +85,7 @@ if get_option('enable_pfunit')
         'atmosphere/test_atmosphere_state.pf',
         'boundary/test_boundary_state.pf',
         'drainage/test_drainage_state.pf',
+        'drainage/test_surfacewater_state.pf',
     ]
 
     # When pf_files is non-empty, build and register the unit-swap-tests
