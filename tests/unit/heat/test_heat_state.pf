@@ -1,0 +1,39 @@
+! Lifecycle tests for heat_state_t. Only init and finalize exist.
+
+@test
+subroutine test_heat_state_init_smoke()
+   use funit
+   use heat_state_mod
+   type(heat_state_t) :: state
+
+   call heat_state_init(state, 1, 1)
+
+   @assertTrue(.true.)
+end subroutine
+
+@test
+subroutine test_heat_state_finalize_is_idempotent()
+   use funit
+   use heat_state_mod
+   type(heat_state_t) :: state
+
+   call heat_state_init(state, 1, 1)
+   call heat_state_finalize(state)
+   call heat_state_finalize(state)
+
+   @assertTrue(.true.)
+end subroutine
+
+@test
+subroutine test_heat_state_init_finalize_cycle()
+   use funit
+   use heat_state_mod
+   type(heat_state_t) :: state
+
+   call heat_state_init(state, 1, 1)
+   call heat_state_finalize(state)
+   call heat_state_init(state, 1, 1)
+   call heat_state_finalize(state)
+
+   @assertTrue(.true.)
+end subroutine
