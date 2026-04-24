@@ -107,6 +107,7 @@ if get_option('enable_pfunit')
         '../../src/io/toml/load_swap_config.f90',
         '../../src/io/toml/write_swap_config.f90',
         '../../src/core/config_to_state.f90',
+        'io/toml/legacy_readswap_shim.f90',
     ]
 
     pfunit_base_sources = test_base_sources + pfunit_extra_sources
