@@ -91,6 +91,7 @@ if get_option('enable_pfunit')
         '../../src/error/error.f90',
         '../../src/validation/validation.f90',
         '../../src/config/general_config.f90',
+        '../../src/config/simulation_config.f90',
     ]
 
     pfunit_base_sources = test_base_sources + pfunit_extra_sources
@@ -113,6 +114,7 @@ if get_option('enable_pfunit')
         'error/test_error.pf',
         'validation/test_validation.pf',
         'config/test_general_config.pf',
+        'config/test_simulation_config.pf',
     ]
 
     # When pf_files is non-empty, build and register the unit-swap-tests

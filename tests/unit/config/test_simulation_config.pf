@@ -1,0 +1,40 @@
+@test
+subroutine test_simulation_valid_passes()
+   use funit
+   use error_mod
+   use simulation_config_mod
+   type(simulation_config_t) :: s
+   type(error_collection_t)  :: errors
+   s%tstart = 37257.0d0
+   s%tend   = 38352.0d0
+   call s%validate(errors)
+   @assertFalse(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_simulation_tend_before_tstart_fails()
+   use funit
+   use error_mod
+   use simulation_config_mod
+   type(simulation_config_t) :: s
+   type(error_collection_t)  :: errors
+   s%tstart = 38352.0d0
+   s%tend   = 37257.0d0
+   call s%validate(errors)
+   @assertTrue(errors%has_errors())
+   @assertEqual(ERR_VALIDATION_CROSS_FIELD, errors%items(1)%code)
+end subroutine
+
+@test
+subroutine test_simulation_nprintday_out_of_range_fails()
+   use funit
+   use error_mod
+   use simulation_config_mod
+   type(simulation_config_t) :: s
+   type(error_collection_t)  :: errors
+   s%tstart = 0.0d0
+   s%tend   = 1.0d0
+   s%nprintday = 2000
+   call s%validate(errors)
+   @assertTrue(errors%has_errors())
+end subroutine
