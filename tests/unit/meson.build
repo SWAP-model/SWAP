@@ -106,6 +106,7 @@ if get_option('enable_pfunit')
         '../../src/io/toml/read_crop_toml.f90',
         '../../src/io/toml/load_swap_config.f90',
         '../../src/io/toml/write_swap_config.f90',
+        '../../src/core/config_to_state.f90',
     ]
 
     pfunit_base_sources = test_base_sources + pfunit_extra_sources
@@ -144,6 +145,7 @@ if get_option('enable_pfunit')
         'io/toml/test_load_swap_config.pf',
         'io/toml/test_hupselbrook_loads.pf',
         'io/toml/test_hupselbrook_roundtrip.pf',
+        'core/test_config_to_state.pf',
     ]
 
     # When pf_files is non-empty, build and register the unit-swap-tests

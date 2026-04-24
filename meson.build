@@ -74,6 +74,7 @@ sources = [
     'src/solute/solute_state.f90',
     'src/soil/soil_state.f90',
     'src/core/swap_state_mod.f90',
+    'src/core/config_to_state.f90',
     'src/core/variables.f90',
     'src/core/swap_state_sync.f90',
     'src/macropore/macropore_state.f90',
