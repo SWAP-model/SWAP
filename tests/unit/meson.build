@@ -77,7 +77,9 @@ if get_option('enable_pfunit')
 
     # Additional sources beyond test_base_sources required by surviving
     # .pf files. Empty at baseline; grows as Phase 4 re-adds suites.
-    pfunit_extra_sources = []
+    pfunit_extra_sources = [
+        '../../src/core/swap_state_mod.f90',
+    ]
 
     pfunit_base_sources = test_base_sources + pfunit_extra_sources
 
@@ -90,6 +92,7 @@ if get_option('enable_pfunit')
         'soil/test_soil_state.pf',
         'solute/test_solute_state.pf',
         'macropore/test_macropore_state.pf',
+        'core/test_swap_state.pf',
     ]
 
     # When pf_files is non-empty, build and register the unit-swap-tests
