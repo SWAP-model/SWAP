@@ -1,0 +1,37 @@
+@test
+subroutine test_meteo_valid_passes()
+   use funit
+   use error_mod
+   use meteorology_config_mod
+   type(meteorology_config_t) :: m
+   type(error_collection_t)   :: errors
+   m%lat = 52.0d0
+   m%alt = 10.0d0
+   call m%validate(errors)
+   @assertFalse(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_meteo_lat_out_of_range_fails()
+   use funit
+   use error_mod
+   use meteorology_config_mod
+   type(meteorology_config_t) :: m
+   type(error_collection_t)   :: errors
+   m%lat = 100.0d0
+   call m%validate(errors)
+   @assertTrue(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_meteo_swrain_invalid_fails()
+   use funit
+   use error_mod
+   use meteorology_config_mod
+   type(meteorology_config_t) :: m
+   type(error_collection_t)   :: errors
+   m%lat = 52.0d0
+   m%swrain = 9
+   call m%validate(errors)
+   @assertTrue(errors%has_errors())
+end subroutine

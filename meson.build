@@ -61,6 +61,7 @@ sources = [
     'src/validation/validation.f90',
     'src/config/general_config.f90',
     'src/config/simulation_config.f90',
+    'src/config/meteorology_config.f90',
     'src/atmosphere/atmosphere_state.f90',
     'src/boundary/boundary_state.f90',
     'src/drainage/drainage_state.f90',
