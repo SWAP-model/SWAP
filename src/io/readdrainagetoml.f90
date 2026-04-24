@@ -39,23 +39,23 @@ contains
         end if
 
         call get_value(doc, 'drainage', tab, requested=.false., stat=istat)
-        if (istat /= 0) then
+        if (istat /= 0 .or. .not. associated(tab)) then
             call log_info('ReadDrainageToml', 'No [drainage] section found in: ' // trim(drainage_toml_path))
             return
         end if
 
         call get_value(tab, 'basic', subtab, requested=.false., stat=istat)
-        if (istat == 0) call read_drainage_basic(subtab, drain)
+        if (istat == 0 .and. associated(subtab)) call read_drainage_basic(subtab, drain)
 
         call get_value(tab, 'extended', subtab, requested=.false., stat=istat)
-        if (istat == 0) call read_drainage_extended(subtab, drain)
+        if (istat == 0 .and. associated(subtab)) call read_drainage_extended(subtab, drain)
 
         call get_value(tab, 'basic', subtab, requested=.false., stat=istat)
-        if (istat == 0) then
+        if (istat == 0 .and. associated(subtab)) then
             call get_value(subtab, 'resistance', item, requested=.false., stat=istat)
-            if (istat == 0) then
+            if (istat == 0 .and. associated(item)) then
                 call get_value(item, 'levels', arr, requested=.false., stat=istat)
-                if (istat == 0) then
+                if (istat == 0 .and. associated(arr)) then
                     n = min(len(arr), max(0, drain%nrlevs))
                     do i = 1, n
                         call get_value(arr, i, item, stat=istat)
@@ -78,9 +78,9 @@ contains
         end if
 
         call get_value(tab, 'extended', subtab, requested=.false., stat=istat)
-        if (istat == 0) then
+        if (istat == 0 .and. associated(subtab)) then
             call get_value(subtab, 'systems', arr, requested=.false., stat=istat)
-            if (istat == 0) then
+            if (istat == 0 .and. associated(arr)) then
                 n = min(len(arr), max(0, drain%nrlevs))
                 do i = 1, n
                     call get_value(arr, i, item, stat=istat)
@@ -123,27 +123,27 @@ contains
         integer :: istat, n
 
         call get_value(basic, 'general', tab, requested=.false., stat=istat)
-        if (istat == 0) then
+        if (istat == 0 .and. associated(tab)) then
             call get_value(tab, 'dramet',   drain%dramet,   default=drain%dramet)
             call get_value(tab, 'swdivd',   drain%swdivd,   default=drain%swdivd)
             call get_value(tab, 'swdislay', drain%swdislay, default=drain%swdislay)
 
             call get_value(tab, 'dislay_table', subtab, requested=.false., stat=istat)
-            if (istat == 0) then
+            if (istat == 0 .and. associated(subtab)) then
                 call get_value(subtab, 'swtopdislay', arr, requested=.false., stat=istat)
-                if (istat == 0 .and. allocated(drain%swtopdislay)) then
+                if (istat == 0 .and. associated(arr) .and. allocated(drain%swtopdislay)) then
                     n = min(len(arr), size(drain%swtopdislay))
                     call read_int_array(arr, drain%swtopdislay, n)
                 end if
 
                 call get_value(subtab, 'ztopdislay', arr, requested=.false., stat=istat)
-                if (istat == 0 .and. allocated(drain%zTopDisLay)) then
+                if (istat == 0 .and. associated(arr) .and. allocated(drain%zTopDisLay)) then
                     n = min(len(arr), size(drain%zTopDisLay))
                     call read_real_array(arr, drain%zTopDisLay, n)
                 end if
 
                 call get_value(subtab, 'ftopdislay', arr, requested=.false., stat=istat)
-                if (istat == 0 .and. allocated(drain%fTopDisLay)) then
+                if (istat == 0 .and. associated(arr) .and. allocated(drain%fTopDisLay)) then
                     n = min(len(arr), size(drain%fTopDisLay))
                     call read_real_array(arr, drain%fTopDisLay, n)
                 end if
@@ -151,7 +151,7 @@ contains
         end if
 
         call get_value(basic, 'hooghoudt_ernst', tab, requested=.false., stat=istat)
-        if (istat == 0) then
+        if (istat == 0 .and. associated(tab)) then
             call get_value(tab, 'shape',  drain%shape,  default=drain%shape)
             call get_value(tab, 'entres', drain%entres, default=drain%entres)
             call get_value(tab, 'basegw', drain%basegw, default=drain%basegw)
@@ -165,7 +165,7 @@ contains
         end if
 
         call get_value(basic, 'resistance', tab, requested=.false., stat=istat)
-        if (istat == 0) then
+        if (istat == 0 .and. associated(tab)) then
             call get_value(tab, 'nrlevs', drain%nrlevs, default=drain%nrlevs)
             call get_value(tab, 'swintfl', drain%swnrsrf, default=drain%swnrsrf)
             call get_value(tab, 'cofintflb', drain%cofintfl, default=drain%cofintfl)
@@ -188,7 +188,7 @@ contains
         integer :: istat
 
         call get_value(ext, 'characteristics', tab, requested=.false., stat=istat)
-        if (istat == 0) then
+        if (istat == 0 .and. associated(tab)) then
             call get_value(tab, 'nrsrf', drain%nrlevs, default=drain%nrlevs)
             call get_value(tab, 'swnrsrf', drain%swnrsrf, default=drain%swnrsrf)
             call get_value(tab, 'rsurfdeep', drain%rsurfdeep, default=drain%rsurfdeep)

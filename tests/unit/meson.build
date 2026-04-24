@@ -79,6 +79,7 @@ if get_option('enable_pfunit')
     # .pf files. Empty at baseline; grows as Phase 4 re-adds suites.
     pfunit_extra_sources = [
         '../../src/core/swap_state_mod.f90',
+        '../../src/io/readdrainagetoml.f90',
     ]
 
     pfunit_base_sources = test_base_sources + pfunit_extra_sources
@@ -93,6 +94,7 @@ if get_option('enable_pfunit')
         'solute/test_solute_state.pf',
         'macropore/test_macropore_state.pf',
         'core/test_swap_state.pf',
+        'io/test_readdrainagetoml.pf',
     ]
 
     # When pf_files is non-empty, build and register the unit-swap-tests

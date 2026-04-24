@@ -1,0 +1,25 @@
+! Reader tests for ReadDrainageToml_state.
+! Happy path: populates an empty drainage_state_t without error.
+! Error path (malformed TOML) is deferred: readdrainagetoml_mod calls
+! fatalerr on parse errors, which halts the process; pFUnit has no
+! @assertFailsWith primitive. Phase 4 will replace fatalerr with a
+! recoverable error type at which point an error-path test is feasible.
+
+@test
+subroutine test_read_drainage_happy_path()
+   use funit
+   use drainage_state_mod
+   use readdrainagetoml_mod
+   type(drainage_state_t) :: drain
+
+   ! drainage_state_init requires nrlevs and numnod.  Use small values
+   ! sufficient to allocate the level arrays without triggering any
+   ! level-array accesses in the minimal fixture (which contains no
+   ! resistance or systems sections).
+   call drainage_state_init(drain, 1, 1)
+   call ReadDrainageToml_state(drain, 'tests/unit/io/fixtures/minimal_drainage.toml')
+
+   ! The fixture sets [drainage.basic.general] dramet = 1; any non-default
+   ! read is evidence the reader walked the TOML tree.
+   @assertEqual(1, drain%dramet)
+end subroutine
