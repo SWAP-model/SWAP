@@ -81,22 +81,37 @@ contains
       call log_error(context, message)
    end subroutine error_collection_append
 
+   !> .true. if any items have been appended.
    pure function error_collection_has_errors(self) result(yes)
       class(error_collection_t), intent(in) :: self
       logical :: yes
-      yes = .false.
+      yes = allocated(self%items) .and. size_safe(self) > 0
    end function error_collection_has_errors
 
+   !> .true. if any appended item has is_fatal=.true.
    pure function error_collection_has_fatals(self) result(yes)
       class(error_collection_t), intent(in) :: self
       logical :: yes
+      integer :: i
       yes = .false.
+      if (.not. allocated(self%items)) return
+      do i = 1, size(self%items)
+         if (self%items(i)%is_fatal) then
+            yes = .true.
+            return
+         end if
+      end do
    end function error_collection_has_fatals
 
+   !> Number of errors appended so far.
    pure function error_collection_count(self) result(n)
       class(error_collection_t), intent(in) :: self
       integer :: n
-      n = 0
+      if (allocated(self%items)) then
+         n = size(self%items)
+      else
+         n = 0
+      end if
    end function error_collection_count
 
    function error_collection_summary(self) result(text)
@@ -110,9 +125,21 @@ contains
       ! stub - implementation in Task 5
    end subroutine error_collection_abort_if_fatal
 
+   !> Reset the collection. Use between tests or logical phases.
    subroutine error_collection_clear(self)
       class(error_collection_t), intent(inout) :: self
-      ! stub - implementation in Task 4
+      if (allocated(self%items)) deallocate(self%items)
    end subroutine error_collection_clear
+
+   !> Helper used by has_errors (keeps the function pure).
+   pure function size_safe(self) result(n)
+      class(error_collection_t), intent(in) :: self
+      integer :: n
+      if (allocated(self%items)) then
+         n = size(self%items)
+      else
+         n = 0
+      end if
+   end function size_safe
 
 end module error_mod

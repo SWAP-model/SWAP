@@ -54,3 +54,55 @@ subroutine test_append_defaults_to_fatal()
 
    @assertTrue(errors%items(1)%is_fatal)
 end subroutine
+
+@test
+subroutine test_has_errors_empty_is_false()
+   use funit
+   use error_mod
+   type(error_collection_t) :: errors
+   @assertFalse(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_has_errors_after_append_is_true()
+   use funit
+   use error_mod
+   type(error_collection_t) :: errors
+   call errors%append(ERR_PARSE_TYPE_MISMATCH, "m", "c")
+   @assertTrue(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_has_fatals_only_counts_fatal_items()
+   use funit
+   use error_mod
+   type(error_collection_t) :: errors
+   call errors%append(ERR_FINALIZE_DERIVATION, "soft", "x", is_fatal=.false.)
+   @assertTrue(errors%has_errors())
+   @assertFalse(errors%has_fatals())
+   call errors%append(ERR_PARSE_MISSING_REQUIRED, "hard", "y")
+   @assertTrue(errors%has_fatals())
+end subroutine
+
+@test
+subroutine test_count_matches_appends()
+   use funit
+   use error_mod
+   type(error_collection_t) :: errors
+   @assertEqual(0, errors%count())
+   call errors%append(ERR_PARSE_TYPE_MISMATCH, "a", "c")
+   @assertEqual(1, errors%count())
+   call errors%append(ERR_PARSE_TYPE_MISMATCH, "b", "c")
+   @assertEqual(2, errors%count())
+end subroutine
+
+@test
+subroutine test_clear_resets()
+   use funit
+   use error_mod
+   type(error_collection_t) :: errors
+   call errors%append(ERR_PARSE_TYPE_MISMATCH, "a", "c")
+   call errors%clear()
+   @assertFalse(errors%has_errors())
+   @assertEqual(0, errors%count())
+end subroutine
