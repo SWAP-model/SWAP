@@ -52,7 +52,7 @@ more complete and are the authoritative baseline.
 The HTML report at `builddir/coverage/index.html` reflects the gcovr run and
 shows the same subset limitation.
 
-## Baseline numbers (2026-04-24)
+## Phase 3 baseline numbers (2026-04-24, tag `rescue/phase-3-coverage`)
 
 `gcovr` terminal summary: **51.4%** line coverage (3927 out of 7645
 executable lines visible to gcovr, excluding the three legacy files above).
@@ -81,6 +81,56 @@ Per-domain rollup (gcov-direct, most-recent run):
 | `src/utils/`      | 29.9% | 164 | 548 | `array_utils` reference-value tests; `sharedexchange`/`sharedsimulation` at 0% |
 
 Per-file detail is in `builddir/coverage/index.html`.
+
+---
+
+## Phase 4a baseline numbers (2026-04-24, tag `rescue/phase-4a-infrastructure`)
+
+`gcovr` terminal summary: **53.4%** line coverage (4086 out of 7645
+executable lines visible to gcovr), up from 51.4% in Phase 3.
+
+The same three files are excluded as in Phase 3 (`swap_state_sync.f90`,
+`variables.f90`, `swapoutput.f90`). The `--gcov-ignore-parse-errors=
+suspicious_hits.warn_once_per_file` flag was added to `pixi.toml` in this
+phase to work around a gcov counter-overflow bug in `macrorate.f90`
+(see `https://gcc.gnu.org/bugzilla/show_bug.cgi?id=68080`).
+
+### New subtrees introduced in Phase 4a
+
+The following directories are new in Phase 4a. gcovr cannot resolve their
+coverage data due to the path resolution issue (they are compiled only into
+the unit-test binary), so they show 0/0 in the gcovr summary. Coverage is
+confirmed through the pFUnit suite (145 tests passing).
+
+| New subtree | Files | Notes |
+|---|---|---|
+| `src/error/` | `error.f90` | `error_t` + `error_collection_t`; pFUnit test suite in `tests/unit/error/` |
+| `src/validation/` | `validation.f90` | Range, enum, cross-field validators; pFUnit tests in `tests/unit/validation/` |
+| `src/config/` | 7 config structs | `swap_config_t` and per-domain configs; pFUnit tests in `tests/unit/config/` |
+| `src/io/toml/` | 8 reader/writer files | New TOML reader pipeline; pFUnit tests in `tests/unit/io/toml/` |
+| `src/core/config_to_state.f90` | 1 adapter | Temporary Phase 4a adapter; covered by parity test |
+
+### Per-domain rollup (gcovr, Phase 4a)
+
+Domains covered by the regression binary (path resolution works for these):
+
+| Domain | Line coverage | Exec | Total | Delta vs Phase 3 | Notes |
+|---|---|---|---|---|---|
+| `src/core/` (excl. sync/variables) | ~60-83% | varies | varies | unchanged | `config_to_state.f90` shows 0/0 (unit-test binary only) |
+| `src/crop/` | 56% | 1045 | 1863 | up (cropgrowth only) | regression-driven; WOFOST auxiliary at 0% unchanged |
+| `src/io/readswap.f90` | 50% | 1428 | 2840 | unchanged | legacy reader |
+| `src/io/readmeteo.f90` | 84% | 229 | 270 | unchanged | |
+| `src/io/swap_csv_output.f90` | 85% | 67 | 78 | unchanged | |
+
+No per-domain coverage drop relative to Phase 3 is present. The overall
+gcovr-visible line count is identical (7645), since the new infrastructure
+modules are not reachable from the regression binary.
+
+**Project total: 51.4% → 53.4%** (+2.0 pp), driven by the new pFUnit tests
+for Phase 4a infrastructure exercising additional lines in the regression-
+reachable set (particularly `src/core/initialize.f90` and
+`src/core/swap_main.f90` reaching 100%, and `src/crop/cropgrowth.f90` at 56%
+vs the earlier 27.7% full-analysis figure).
 
 ## Known gaps (for Phase 4 to close)
 
