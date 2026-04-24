@@ -7,7 +7,7 @@ fc = meson.get_compiler('fortran')
 fs = import('fs')
 
 src_inc = include_directories(
-    'src', 'src/core', 'src/io', 'src/soil', 'src/atmosphere',
+    'src', 'src/core', 'src/io', 'src/io/toml', 'src/soil', 'src/atmosphere',
     'src/crop', 'src/drainage', 'src/boundary', 'src/macropore',
     'src/solute', 'src/heat', 'src/utils', 'src/config'
 )
@@ -88,6 +88,7 @@ sources = [
     'src/soil/WC_K_models_04_11.f90',
     
     # I/O
+    'src/io/toml/toml_field_helpers.f90',
     'src/io/swap_csv_output.f90',
     'src/io/readdrainagetoml.f90',
     'src/io/readswaptoml.f90',

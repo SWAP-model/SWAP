@@ -1,0 +1,185 @@
+! Tests for toml_field_helpers_mod.
+
+@test
+subroutine test_get_required_int_happy()
+   use funit
+   use tomlf, only: toml_table, toml_load, get_value
+   use toml_field_helpers_mod
+   use error_mod
+   type(toml_table), allocatable :: doc
+   type(toml_table), pointer     :: sec
+   type(error_collection_t)      :: errors
+   integer :: out
+
+   call toml_load(doc, 'tests/unit/io/toml/fixtures/happy.toml')
+   call get_value(doc, 'section', sec, requested=.false.)
+   call get_required_int(sec, 'my_int', out, 'section.my_int', errors)
+
+   @assertEqual(42, out)
+   @assertFalse(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_get_required_int_type_mismatch()
+   use funit
+   use tomlf, only: toml_table, toml_load, get_value
+   use toml_field_helpers_mod
+   use error_mod
+   type(toml_table), allocatable :: doc
+   type(toml_table), pointer     :: sec
+   type(error_collection_t)      :: errors
+   integer :: out
+
+   call toml_load(doc, 'tests/unit/io/toml/fixtures/wrong_types.toml')
+   call get_value(doc, 'section', sec, requested=.false.)
+   call get_required_int(sec, 'my_int', out, 'section.my_int', errors)
+
+   @assertTrue(errors%has_errors())
+   @assertEqual(ERR_PARSE_TYPE_MISMATCH, errors%items(1)%code)
+end subroutine
+
+@test
+subroutine test_get_required_int_missing_key()
+   use funit
+   use tomlf, only: toml_table, toml_load, get_value
+   use toml_field_helpers_mod
+   use error_mod
+   type(toml_table), allocatable :: doc
+   type(toml_table), pointer     :: sec
+   type(error_collection_t)      :: errors
+   integer :: out
+
+   call toml_load(doc, 'tests/unit/io/toml/fixtures/missing_keys.toml')
+   call get_value(doc, 'section', sec, requested=.false.)
+   call get_required_int(sec, 'my_int', out, 'section.my_int', errors)
+
+   @assertTrue(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_get_required_real_happy()
+   use funit
+   use tomlf, only: toml_table, toml_load, get_value
+   use toml_field_helpers_mod
+   use error_mod
+   type(toml_table), allocatable :: doc
+   type(toml_table), pointer     :: sec
+   type(error_collection_t)      :: errors
+   real(8) :: out
+
+   call toml_load(doc, 'tests/unit/io/toml/fixtures/happy.toml')
+   call get_value(doc, 'section', sec, requested=.false.)
+   call get_required_real(sec, 'my_real', out, 'section.my_real', errors)
+
+   @assertEqual(3.14d0, out, 1.0d-12)
+   @assertFalse(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_get_required_string_happy()
+   use funit
+   use tomlf, only: toml_table, toml_load, get_value
+   use toml_field_helpers_mod
+   use error_mod
+   type(toml_table), allocatable :: doc
+   type(toml_table), pointer     :: sec
+   type(error_collection_t)      :: errors
+   character(len=:), allocatable :: out
+
+   call toml_load(doc, 'tests/unit/io/toml/fixtures/happy.toml')
+   call get_value(doc, 'section', sec, requested=.false.)
+   call get_required_string(sec, 'my_string', out, 'section.my_string', errors)
+
+   @assertEqual("hello", out)
+   @assertFalse(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_get_optional_int_default_used_when_missing()
+   use funit
+   use tomlf, only: toml_table, toml_load, get_value
+   use toml_field_helpers_mod
+   use error_mod
+   type(toml_table), allocatable :: doc
+   type(toml_table), pointer     :: sec
+   type(error_collection_t)      :: errors
+   integer :: out
+
+   call toml_load(doc, 'tests/unit/io/toml/fixtures/missing_keys.toml')
+   call get_value(doc, 'section', sec, requested=.false.)
+   call get_optional_int_with_default(sec, 'absent_key', out, 99, 'x', errors)
+
+   @assertEqual(99, out)
+   @assertFalse(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_get_optional_int_read_when_present()
+   use funit
+   use tomlf, only: toml_table, toml_load, get_value
+   use toml_field_helpers_mod
+   use error_mod
+   type(toml_table), allocatable :: doc
+   type(toml_table), pointer     :: sec
+   type(error_collection_t)      :: errors
+   integer :: out
+
+   call toml_load(doc, 'tests/unit/io/toml/fixtures/happy.toml')
+   call get_value(doc, 'section', sec, requested=.false.)
+   call get_optional_int_with_default(sec, 'my_int', out, 99, 'x', errors)
+
+   @assertEqual(42, out)
+end subroutine
+
+@test
+subroutine test_get_table_returns_null_on_absent()
+   use funit
+   use tomlf, only: toml_table, toml_load, get_value
+   use toml_field_helpers_mod
+   use error_mod
+   type(toml_table), allocatable, target :: doc
+   type(toml_table), pointer     :: subtab
+   type(toml_table), pointer     :: doc_ptr
+   type(error_collection_t)      :: errors
+
+   call toml_load(doc, 'tests/unit/io/toml/fixtures/happy.toml')
+   doc_ptr => doc
+   call get_table(doc_ptr, 'nonexistent', subtab, 'x', errors)
+
+   @assertFalse(associated(subtab))
+   @assertFalse(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_get_required_int_null_parent()
+   use funit
+   use toml_field_helpers_mod
+   use error_mod
+   use tomlf, only: toml_table
+   type(toml_table), pointer :: null_tab
+   type(error_collection_t)  :: errors
+   integer :: out
+
+   null_tab => null()
+   call get_required_int(null_tab, 'x', out, 'ctx', errors)
+
+   @assertTrue(errors%has_errors())
+   @assertEqual(ERR_PARSE_MISSING_REQUIRED, errors%items(1)%code)
+end subroutine
+
+@test
+subroutine test_parse_date_to_days1900()
+   use funit
+   use toml_field_helpers_mod
+   use tomlf, only: toml_datetime
+   use iso_fortran_env, only: real64
+   type(toml_datetime) :: dtv
+   real(real64) :: days
+
+   dtv%date%year  = 2002
+   dtv%date%month = 1
+   dtv%date%day   = 1
+
+   days = parse_date_to_days1900(dtv)
+   @assertEqual(37255.0_real64, days, 1.0_real64)
+end subroutine

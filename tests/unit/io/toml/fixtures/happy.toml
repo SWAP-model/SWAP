@@ -1,0 +1,5 @@
+[section]
+my_int    = 42
+my_real   = 3.14
+my_string = "hello"
+my_date   = 2002-01-01

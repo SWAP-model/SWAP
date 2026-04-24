@@ -97,6 +97,7 @@ if get_option('enable_pfunit')
         '../../src/config/soil_config.f90',
         '../../src/config/crop_config.f90',
         '../../src/config/swap_config.f90',
+        '../../src/io/toml/toml_field_helpers.f90',
     ]
 
     pfunit_base_sources = test_base_sources + pfunit_extra_sources
@@ -125,6 +126,7 @@ if get_option('enable_pfunit')
         'config/test_soil_config.pf',
         'config/test_crop_config.pf',
         'config/test_swap_config.pf',
+        'io/toml/test_toml_field_helpers.pf',
     ]
 
     # When pf_files is non-empty, build and register the unit-swap-tests
