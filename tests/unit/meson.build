@@ -141,6 +141,7 @@ if get_option('enable_pfunit')
         'io/toml/test_read_soil_toml.pf',
         'io/toml/test_read_crop_toml.pf',
         'io/toml/test_load_swap_config.pf',
+        'io/toml/test_hupselbrook_loads.pf',
     ]
 
     # When pf_files is non-empty, build and register the unit-swap-tests
