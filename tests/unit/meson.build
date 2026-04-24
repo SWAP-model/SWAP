@@ -81,7 +81,9 @@ if get_option('enable_pfunit')
 
     pfunit_base_sources = test_base_sources + pfunit_extra_sources
 
-    pf_files = []
+    pf_files = [
+        'atmosphere/test_atmosphere_state.pf',
+    ]
 
     # When pf_files is non-empty, build and register the unit-swap-tests
     # executable. At baseline this is skipped; Phase 4 will flip the
