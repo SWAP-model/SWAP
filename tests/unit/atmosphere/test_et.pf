@@ -1,0 +1,47 @@
+! Characterization test for PenMon_calc (Penman-Monteith reference ET).
+!
+! Locks in the current gfortran build's output for a fixed set of inputs.
+! If Phase 4 intentionally changes the physics, update the expected
+! values in a separate commit from the physics change.
+!
+! PenMon_calc is a pure subroutine; it requires no I/O and has no side
+! effects. Inputs represent a mid-summer, mid-latitude day (day 180,
+! latitude 52 N) with standard meteorological conditions.
+!
+! Expected values are the observed outputs of the current gfortran build
+! and are characterization-only (not hand-validated against FAO-56).
+
+@test
+subroutine test_penmon_midsummer_midlatitude_characterization()
+   use funit
+   use et_mod
+   implicit none
+
+   real(8) :: et0, ew0, es0
+   real(8) :: Edirect, Tdirect, Tdirectwet, Edirectpond
+
+   ! Inputs: late-June midlatitude day (daily mode, flmetdetail=.false.)
+   !   daynr=180, lat=52 deg N, alt=10 m, altw=2 m (wind at 2 m),
+   !   Angstrom a=0.25, b=0.50, rcs=0.15 (soil reflection),
+   !   rad=25e6 J/m2/d, tav=16 C, hum=1.2 kPa (vapour pressure),
+   !   win=3 m/s, rsc=70 s/m (canopy resistance),
+   !   swcf=1 (crop factor mode), ch=12 cm (grass), flCropEmergence=.true.,
+   !   daylp=0 (not used in daily mode), flmetdetail=.false.,
+   !   irecord=1, nmetdetail=1,
+   !   albedo=0.23 (grass), tmn=10 C, tmx=22 C, rsw=0 s/m,
+   !   difpp=0 (not used in daily mode), dsinbe=0.5 (sin elevation),
+   !   atmtr=0.6 (atmospheric transmission),
+   !   rsoil=0 s/m, swdivide=0 (no PMdirect),
+   !   kdif=0.5, kdir=0.5, lai=3.
+   call PenMon_calc(180, 52.0d0, 10.0d0, 2.0d0, 0.25d0, 0.50d0, 0.15d0, &
+                    25.0d6, 16.0d0, 1.2d0, 3.0d0, 70.0d0, &
+                    1, 12.0d0, .true., &
+                    0.0d0, .false., 1, 1, &
+                    0.23d0, 10.0d0, 22.0d0, 0.0d0, 0.0d0, 0.5d0, 0.6d0, &
+                    0.0d0, 0, 0.5d0, 0.5d0, 3.0d0, &
+                    es0, et0, ew0, Edirect, Tdirect, Tdirectwet, Edirectpond)
+
+   @assertEqual(4.6108539555674373d0, et0, 1.0d-4)
+   @assertEqual(6.2483978923071479d0, ew0, 1.0d-4)
+   @assertEqual(5.0880237214078035d0, es0, 1.0d-4)
+end subroutine

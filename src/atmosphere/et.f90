@@ -13,7 +13,7 @@ module et_mod
     implicit none
     private
 
-  public :: PenMon, reduceva, reduceva_state
+  public :: PenMon, PenMon_calc, reduceva, reduceva_state
 contains
   !> Pure Penman-Monteith calculation (no I/O, fully deterministic)
   !!

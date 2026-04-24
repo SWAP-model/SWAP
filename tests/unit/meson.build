@@ -82,6 +82,12 @@ if get_option('enable_pfunit')
         '../../src/io/readdrainagetoml.f90',
         '../../src/io/readswaptoml.f90',
         '../../src/atmosphere/precipitation.f90',
+        '../../src/core/variables.f90',
+        '../../src/crop/wofost_soil_declarations.f90',
+        '../../src/crop/wofost_soil_interface.f90',
+        '../../src/core/swap_state_sync.f90',
+        '../../src/atmosphere/et.f90',
+        'atmosphere/et_test_stubs.f90',
     ]
 
     pfunit_base_sources = test_base_sources + pfunit_extra_sources
@@ -100,6 +106,7 @@ if get_option('enable_pfunit')
         'io/test_readswaptoml.pf',
         'utils/test_arrayutils.pf',
         'atmosphere/test_precipitation.pf',
+        'atmosphere/test_et.pf',
     ]
 
     # When pf_files is non-empty, build and register the unit-swap-tests
