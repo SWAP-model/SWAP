@@ -88,6 +88,7 @@ if get_option('enable_pfunit')
         'drainage/test_surfacewater_state.pf',
         'heat/test_heat_state.pf',
         'soil/test_soil_state.pf',
+        'solute/test_solute_state.pf',
     ]
 
     # When pf_files is non-empty, build and register the unit-swap-tests
