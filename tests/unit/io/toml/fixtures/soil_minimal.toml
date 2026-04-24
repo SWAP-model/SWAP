@@ -1,0 +1,12 @@
+[soil]
+swsophy = 0
+swhyst  = 0
+swinco  = 1
+swmacro = 0
+rsoil   = 30.0
+reva_top = 1
+
+[soil.initial]
+gwli    = -75.0
+pondini = 0.0
+pondmx  = 0.2

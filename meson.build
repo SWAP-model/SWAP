@@ -93,6 +93,7 @@ sources = [
     'src/io/toml/read_simulation_toml.f90',
     'src/io/toml/read_meteorology_toml.f90',
     'src/io/toml/read_drainage_toml.f90',
+    'src/io/toml/read_soil_toml.f90',
     'src/io/swap_csv_output.f90',
     'src/io/readdrainagetoml.f90',
     'src/io/readswaptoml.f90',

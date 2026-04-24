@@ -1,0 +1,60 @@
+@test
+subroutine test_read_soil_happy()
+   use funit
+   use tomlf, only: toml_table, toml_load
+   use soil_config_mod
+   use read_soil_toml_mod
+   use error_mod
+   type(toml_table), allocatable, target :: doc
+   type(toml_table), pointer     :: doc_ptr
+   type(soil_config_t)           :: c
+   type(error_collection_t)      :: errors
+
+   call toml_load(doc, 'tests/unit/io/toml/fixtures/soil_minimal.toml')
+   doc_ptr => doc
+   call read_soil_toml(doc_ptr, c, errors)
+
+   @assertFalse(errors%has_errors())
+   @assertEqual(0, c%swsophy)
+   @assertEqual(1, c%swinco)
+   @assertEqual(30.0d0, c%rsoil, 1.0d-12)
+end subroutine
+
+@test
+subroutine test_read_soil_initial_conditions()
+   use funit
+   use tomlf, only: toml_table, toml_load
+   use soil_config_mod
+   use read_soil_toml_mod
+   use error_mod
+   type(toml_table), allocatable, target :: doc
+   type(toml_table), pointer     :: doc_ptr
+   type(soil_config_t)           :: c
+   type(error_collection_t)      :: errors
+
+   call toml_load(doc, 'tests/unit/io/toml/fixtures/soil_minimal.toml')
+   doc_ptr => doc
+   call read_soil_toml(doc_ptr, c, errors)
+
+   @assertEqual(-75.0d0, c%gwli,    1.0d-12)
+   @assertEqual(0.2d0,   c%pondmx,  1.0d-12)
+end subroutine
+
+@test
+subroutine test_read_soil_missing_section_is_silent()
+   use funit
+   use tomlf, only: toml_table, toml_load
+   use soil_config_mod
+   use read_soil_toml_mod
+   use error_mod
+   type(toml_table), allocatable, target :: doc
+   type(toml_table), pointer     :: doc_ptr
+   type(soil_config_t)           :: c
+   type(error_collection_t)      :: errors
+
+   call toml_load(doc, 'tests/unit/io/toml/fixtures/general_minimal.toml')
+   doc_ptr => doc
+   call read_soil_toml(doc_ptr, c, errors)
+
+   @assertFalse(errors%has_errors())
+end subroutine

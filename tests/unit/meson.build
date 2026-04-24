@@ -102,6 +102,7 @@ if get_option('enable_pfunit')
         '../../src/io/toml/read_simulation_toml.f90',
         '../../src/io/toml/read_meteorology_toml.f90',
         '../../src/io/toml/read_drainage_toml.f90',
+        '../../src/io/toml/read_soil_toml.f90',
     ]
 
     pfunit_base_sources = test_base_sources + pfunit_extra_sources
@@ -135,6 +136,7 @@ if get_option('enable_pfunit')
         'io/toml/test_read_simulation_toml.pf',
         'io/toml/test_read_meteorology_toml.pf',
         'io/toml/test_read_drainage_toml.pf',
+        'io/toml/test_read_soil_toml.pf',
     ]
 
     # When pf_files is non-empty, build and register the unit-swap-tests
