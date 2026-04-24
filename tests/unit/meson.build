@@ -89,6 +89,7 @@ if get_option('enable_pfunit')
         'heat/test_heat_state.pf',
         'soil/test_soil_state.pf',
         'solute/test_solute_state.pf',
+        'macropore/test_macropore_state.pf',
     ]
 
     # When pf_files is non-empty, build and register the unit-swap-tests
