@@ -1,0 +1,49 @@
+@test
+subroutine test_general_minimal_valid_passes()
+   use funit
+   use error_mod
+   use general_config_mod
+   type(general_config_t)    :: g
+   type(error_collection_t)  :: errors
+   g%project  = "demo"
+   g%pathwork = "./"
+   call g%validate(errors)
+   @assertFalse(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_general_missing_project_fails()
+   use funit
+   use error_mod
+   use general_config_mod
+   type(general_config_t)    :: g
+   type(error_collection_t)  :: errors
+   call g%validate(errors)
+   @assertTrue(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_general_swscre_out_of_range_fails()
+   use funit
+   use error_mod
+   use general_config_mod
+   type(general_config_t)    :: g
+   type(error_collection_t)  :: errors
+   g%project = "x"
+   g%swscre  = 5
+   call g%validate(errors)
+   @assertTrue(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_general_finalize_idempotent()
+   use funit
+   use error_mod
+   use general_config_mod
+   type(general_config_t)    :: g
+   type(error_collection_t)  :: errors
+   g%project = "x"
+   call g%finalize(errors)
+   call g%finalize(errors)
+   @assertFalse(errors%has_errors())
+end subroutine
