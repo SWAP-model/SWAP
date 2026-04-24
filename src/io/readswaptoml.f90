@@ -44,13 +44,13 @@ contains
       ! [general]
       ! ------------------------------------------------------------------
       call get_value(doc, 'general', tab, requested=.false., stat=istat)
-      if (istat == 0) then
+      if (istat == 0 .and. associated(tab)) then
          call get_value(tab, 'project', s, stat=istat)
          if (istat == 0) state%time%project = trim(s)
          call get_value(tab, 'swscre',  state%time%swscre,  default=state%time%swscre)
 
          call get_value(tab, 'paths', subtab, requested=.false., stat=istat)
-         if (istat == 0) then
+         if (istat == 0 .and. associated(subtab)) then
             call get_value(subtab, 'work', s, stat=istat)
             if (istat == 0) state%time%pathwork = trim(s)
             call get_value(subtab, 'atmosphere', s, stat=istat)
@@ -68,7 +68,7 @@ contains
       ! [simulation]
       ! ------------------------------------------------------------------
       call get_value(doc, 'simulation', tab, requested=.false., stat=istat)
-      if (istat == 0) then
+      if (istat == 0 .and. associated(tab)) then
          call get_value(tab, 'start_date', dtv, stat=istat)
          if (istat == 0) state%time%tstart = toml_datetime_to_t1900(dtv)
 
@@ -80,14 +80,14 @@ contains
       ! [output]
       ! ------------------------------------------------------------------
       call get_value(doc, 'output', tab, requested=.false., stat=istat)
-      if (istat == 0) then
+      if (istat == 0 .and. associated(tab)) then
          call get_value(tab, 'file_prefix', s, stat=istat)
          if (istat == 0) state%time%outfil = trim(s)
          call get_value(tab, 'nprintday',   state%time%nprintday, default=state%time%nprintday)
          call get_value(tab, 'swheader',    state%time%swheader, default=state%time%swheader)
 
          call get_value(tab, 'timing', subtab, requested=.false., stat=istat)
-         if (istat == 0) then
+         if (istat == 0 .and. associated(subtab)) then
             call get_value(subtab, 'swmonth', state%time%swmonth, default=state%time%swmonth)
             call get_value(subtab, 'period',  state%time%period,  default=state%time%period)
             call get_value(subtab, 'swres',   state%time%swres,   default=state%time%swres)
@@ -99,13 +99,13 @@ contains
       ! [meteorology]
       ! ------------------------------------------------------------------
       call get_value(doc, 'meteorology', tab, requested=.false., stat=istat)
-      if (istat == 0) then
+      if (istat == 0 .and. associated(tab)) then
          call get_value(tab, 'file', s, stat=istat)
          if (istat == 0) state%atm%metfil = trim(s)
          call get_value(tab, 'lat',  state%atm%lat,    default=state%atm%lat)
 
          call get_value(tab, 'evapotranspiration', subtab, requested=.false., stat=istat)
-         if (istat == 0) then
+         if (istat == 0 .and. associated(subtab)) then
             call get_value(subtab, 'swetr',      state%atm%swetr,      default=state%atm%swetr)
             call get_value(subtab, 'alt',        state%atm%alt,        default=state%atm%alt)
             call get_value(subtab, 'altw',       state%atm%altw,       default=state%atm%altw)
@@ -115,14 +115,14 @@ contains
          end if
 
          call get_value(tab, 'temporal', subtab, requested=.false., stat=istat)
-         if (istat == 0) then
+         if (istat == 0 .and. associated(subtab)) then
             call get_value(subtab, 'swmetdetail', state%atm%swmetdetail, default=state%atm%swmetdetail)
             call get_value(subtab, 'nmetdetail',  state%atm%nmetdetail,  default=state%atm%nmetdetail)
             call get_value(subtab, 'swetsine',    state%atm%swetsine,    default=state%atm%swetsine)
          end if
 
          call get_value(tab, 'rainfall', subtab, requested=.false., stat=istat)
-         if (istat == 0) then
+         if (istat == 0 .and. associated(subtab)) then
             call get_value(subtab, 'swrain', state%atm%swrain, default=state%atm%swrain)
             call get_value(subtab, 'rainfall_file', s, stat=istat)
             if (istat == 0) state%atm%rainfil = trim(s)
@@ -133,11 +133,11 @@ contains
       ! [crop] and [crop.rotation]
       ! ------------------------------------------------------------------
       call get_value(doc, 'crop', tab, requested=.false., stat=istat)
-      if (istat == 0) then
+      if (istat == 0 .and. associated(tab)) then
          call get_value(tab, 'rotation', subtab, requested=.false., stat=istat)
-         if (istat == 0) then
+         if (istat == 0 .and. associated(subtab)) then
             call get_value(subtab, 'crop_file', arr, requested=.false., stat=istat)
-            if (istat == 0) then
+            if (istat == 0 .and. associated(arr)) then
                n = len(arr)
                if (n > 0) then
                   state%ncrop = n
@@ -150,7 +150,7 @@ contains
             end if
 
             call get_value(subtab, 'start_date', arr, requested=.false., stat=istat)
-            if (istat == 0 .and. allocated(state%crop%cropstart)) then
+            if (istat == 0 .and. associated(arr) .and. allocated(state%crop%cropstart)) then
                n = min(len(arr), size(state%crop%cropstart))
                do i = 1, n
                   call get_value(arr, i, s, stat=istat)
@@ -159,7 +159,7 @@ contains
             end if
 
             call get_value(subtab, 'end_date', arr, requested=.false., stat=istat)
-            if (istat == 0 .and. allocated(state%crop%cropend)) then
+            if (istat == 0 .and. associated(arr) .and. allocated(state%crop%cropend)) then
                n = min(len(arr), size(state%crop%cropend))
                do i = 1, n
                   call get_value(arr, i, s, stat=istat)
@@ -173,32 +173,32 @@ contains
       ! [soil]
       ! ------------------------------------------------------------------
       call get_value(doc, 'soil', tab, requested=.false., stat=istat)
-      if (istat == 0) then
+      if (istat == 0 .and. associated(tab)) then
          call get_value(tab, 'initial', subtab, requested=.false., stat=istat)
-         if (istat == 0) then
+         if (istat == 0 .and. associated(subtab)) then
             call get_value(subtab, 'gwli', state%soil%gwli, default=state%soil%gwli)
             state%soil%gwl = state%soil%gwli
          end if
 
          call get_value(tab, 'surface', subtab, requested=.false., stat=istat)
-         if (istat == 0) then
+         if (istat == 0 .and. associated(subtab)) then
             call get_value(subtab, 'pondmx', state%soil%pondmx, default=state%soil%pondmx)
          end if
 
          call get_value(tab, 'evaporation', subtab, requested=.false., stat=istat)
-         if (istat == 0) then
+         if (istat == 0 .and. associated(subtab)) then
             call get_value(subtab, 'cofredbl', state%soil%cofred, default=state%soil%cofred)
             call get_value(subtab, 'cofredbo', state%soil%cofred, default=state%soil%cofred)
          end if
 
          call get_value(tab, 'hysteresis', subtab, requested=.false., stat=istat)
-         if (istat == 0) then
+         if (istat == 0 .and. associated(subtab)) then
             call get_value(subtab, 'swhyst', state%soil%swhyst, default=state%soil%swhyst)
             call get_value(subtab, 'tau', state%soil%tau, default=state%soil%tau)
          end if
 
          call get_value(tab, 'numerical', subtab, requested=.false., stat=istat)
-         if (istat == 0) then
+         if (istat == 0 .and. associated(subtab)) then
             call get_value(subtab, 'gwlconv', state%soil%gwlconv, default=state%soil%gwlconv)
             call get_value(subtab, 'critdevh1cp', state%soil%CritDevh1Cp, default=state%soil%CritDevh1Cp)
             call get_value(subtab, 'critdevh2cp', state%soil%CritDevh2Cp, default=state%soil%CritDevh2Cp)
@@ -210,7 +210,7 @@ contains
       ! [drainage]
       ! ------------------------------------------------------------------
       call get_value(doc, 'drainage', tab, requested=.false., stat=istat)
-      if (istat == 0) then
+      if (istat == 0 .and. associated(tab)) then
          call get_value(tab, 'drainage_file', s, stat=istat)
          if (istat == 0) state%drain%drfil = trim(s)
          call read_drainage_toml_if_present(state)
@@ -220,9 +220,9 @@ contains
       ! [boundary]
       ! ------------------------------------------------------------------
       call get_value(doc, 'boundary', tab, requested=.false., stat=istat)
-      if (istat == 0) then
+      if (istat == 0 .and. associated(tab)) then
          call get_value(tab, 'bottom', subtab, requested=.false., stat=istat)
-         if (istat == 0) then
+         if (istat == 0 .and. associated(subtab)) then
             call get_value(subtab, 'swbotb', state%boundary%swbotb, default=state%boundary%swbotb)
             call get_value(subtab, 'swqhbot', state%boundary%swqhbot, default=state%boundary%swqhbot)
             call get_value(subtab, 'deepgw', state%boundary%deepgw, default=state%boundary%deepgw)
@@ -231,7 +231,7 @@ contains
          end if
 
          call get_value(tab, 'top', subtab, requested=.false., stat=istat)
-         if (istat == 0) then
+         if (istat == 0 .and. associated(subtab)) then
             call get_value(subtab, 'swpondmx', state%boundary%swpondmx, default=state%boundary%swpondmx)
             call get_value(subtab, 'pondmx', state%boundary%pondmx, default=state%boundary%pondmx)
             call get_value(subtab, 'rsro', state%boundary%rsro, default=state%boundary%rsro)

@@ -80,6 +80,7 @@ if get_option('enable_pfunit')
     pfunit_extra_sources = [
         '../../src/core/swap_state_mod.f90',
         '../../src/io/readdrainagetoml.f90',
+        '../../src/io/readswaptoml.f90',
     ]
 
     pfunit_base_sources = test_base_sources + pfunit_extra_sources
@@ -95,6 +96,7 @@ if get_option('enable_pfunit')
         'macropore/test_macropore_state.pf',
         'core/test_swap_state.pf',
         'io/test_readdrainagetoml.pf',
+        'io/test_readswaptoml.pf',
     ]
 
     # When pf_files is non-empty, build and register the unit-swap-tests
