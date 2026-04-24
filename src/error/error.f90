@@ -46,13 +46,39 @@ module error_mod
 
 contains
 
+   !> Append an error to the collection and auto-log through swap_log.
    subroutine error_collection_append(self, code, message, context, is_fatal)
       class(error_collection_t), intent(inout) :: self
       integer,                   intent(in)    :: code
       character(len=*),          intent(in)    :: message
       character(len=*),          intent(in)    :: context
       logical, optional,         intent(in)    :: is_fatal
-      ! stub - implementation in Task 3
+
+      type(error_t), allocatable :: tmp(:)
+      type(error_t)              :: item
+      integer                    :: n
+
+      item%code     = code
+      item%message  = message
+      item%context  = context
+      if (present(is_fatal)) then
+         item%is_fatal = is_fatal
+      else
+         item%is_fatal = .true.
+      end if
+
+      if (.not. allocated(self%items)) then
+         allocate(self%items(1))
+         self%items(1) = item
+      else
+         n = size(self%items)
+         allocate(tmp(n + 1))
+         tmp(1:n)   = self%items
+         tmp(n + 1) = item
+         call move_alloc(from=tmp, to=self%items)
+      end if
+
+      call log_error(context, message)
    end subroutine error_collection_append
 
    pure function error_collection_has_errors(self) result(yes)

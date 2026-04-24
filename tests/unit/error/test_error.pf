@@ -1,0 +1,56 @@
+! Tests for error_mod%append.
+
+@test
+subroutine test_append_adds_one_item()
+   use funit
+   use error_mod
+   type(error_collection_t) :: errors
+
+   call errors%append(ERR_PARSE_MISSING_REQUIRED, &
+                      "field 'foo' is required", "drainage.foo")
+
+   @assertTrue(allocated(errors%items))
+   @assertEqual(1, size(errors%items))
+   @assertEqual(ERR_PARSE_MISSING_REQUIRED, errors%items(1)%code)
+   @assertEqual("field 'foo' is required", errors%items(1)%message)
+   @assertEqual("drainage.foo", errors%items(1)%context)
+   @assertTrue(errors%items(1)%is_fatal)
+end subroutine
+
+@test
+subroutine test_append_preserves_order()
+   use funit
+   use error_mod
+   type(error_collection_t) :: errors
+
+   call errors%append(ERR_PARSE_MISSING_REQUIRED, "first",  "a")
+   call errors%append(ERR_VALIDATION_OUT_OF_RANGE, "second", "b")
+   call errors%append(ERR_PARSE_TYPE_MISMATCH,     "third",  "c")
+
+   @assertEqual(3, size(errors%items))
+   @assertEqual("first",  errors%items(1)%message)
+   @assertEqual("second", errors%items(2)%message)
+   @assertEqual("third",  errors%items(3)%message)
+end subroutine
+
+@test
+subroutine test_append_respects_is_fatal_argument()
+   use funit
+   use error_mod
+   type(error_collection_t) :: errors
+
+   call errors%append(ERR_FINALIZE_DERIVATION, "soft warning", "x", is_fatal=.false.)
+
+   @assertFalse(errors%items(1)%is_fatal)
+end subroutine
+
+@test
+subroutine test_append_defaults_to_fatal()
+   use funit
+   use error_mod
+   type(error_collection_t) :: errors
+
+   call errors%append(ERR_PARSE_MALFORMED_TOML, "bad token", "line 3")
+
+   @assertTrue(errors%items(1)%is_fatal)
+end subroutine

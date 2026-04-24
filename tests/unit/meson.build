@@ -88,6 +88,7 @@ if get_option('enable_pfunit')
         '../../src/core/swap_state_sync.f90',
         '../../src/atmosphere/et.f90',
         'atmosphere/et_test_stubs.f90',
+        '../../src/error/error.f90',
     ]
 
     pfunit_base_sources = test_base_sources + pfunit_extra_sources
@@ -107,6 +108,7 @@ if get_option('enable_pfunit')
         'utils/test_arrayutils.pf',
         'atmosphere/test_precipitation.pf',
         'atmosphere/test_et.pf',
+        'error/test_error.pf',
     ]
 
     # When pf_files is non-empty, build and register the unit-swap-tests
