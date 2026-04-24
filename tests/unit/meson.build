@@ -99,6 +99,7 @@ if get_option('enable_pfunit')
         '../../src/config/swap_config.f90',
         '../../src/io/toml/toml_field_helpers.f90',
         '../../src/io/toml/read_general_toml.f90',
+        '../../src/io/toml/read_simulation_toml.f90',
     ]
 
     pfunit_base_sources = test_base_sources + pfunit_extra_sources
@@ -129,6 +130,7 @@ if get_option('enable_pfunit')
         'config/test_swap_config.pf',
         'io/toml/test_toml_field_helpers.pf',
         'io/toml/test_read_general_toml.pf',
+        'io/toml/test_read_simulation_toml.pf',
     ]
 
     # When pf_files is non-empty, build and register the unit-swap-tests

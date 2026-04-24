@@ -1,0 +1,11 @@
+[simulation]
+start_date = 2002-01-01
+end_date   = 2004-12-31
+nprintday  = 1
+
+[simulation.output]
+swmonth = 1
+period  = 1
+swres   = 0
+swodat  = 0
+swyrvar = 0
