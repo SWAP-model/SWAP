@@ -91,6 +91,7 @@ sources = [
     'src/io/toml/toml_field_helpers.f90',
     'src/io/toml/read_general_toml.f90',
     'src/io/toml/read_simulation_toml.f90',
+    'src/io/toml/read_meteorology_toml.f90',
     'src/io/swap_csv_output.f90',
     'src/io/readdrainagetoml.f90',
     'src/io/readswaptoml.f90',

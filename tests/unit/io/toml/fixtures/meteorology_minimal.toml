@@ -1,0 +1,17 @@
+[meteorology]
+file = "283.met"
+lat  = 52.0
+alt  = 10.0
+altw = 2.0
+
+[meteorology.evapotranspiration]
+swetr      = 0
+swdivide   = 0
+angstrom_a = 0.25
+angstrom_b = 0.50
+
+[meteorology.temporal]
+swmetdetail = 0
+
+[meteorology.rain]
+swrain = 0
