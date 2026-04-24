@@ -17,16 +17,13 @@ program swap_main
 
 use variables, only: logf
 use swap_log, only: log_init, log_close, LOGLEVEL_DEBUG, LOGLEVEL_INFO
-use swap_state_mod, only: swap_state_t
 implicit none
 
 ! because subroutine swap has optional arguments, we must define the interface
 interface
-   subroutine swap(iCaller, iTask, state, toswap, fromswap)
+   subroutine swap(iCaller, iTask, toswap, fromswap)
       use swap_exchange
-      use swap_state_mod, only: swap_state_t
       integer,           intent(in)              :: iCaller, iTask
-      type(swap_state_t), intent(inout)          :: state
       type(swap_input),  intent(in),    optional :: toswap
       type(swap_output), intent(out),   optional :: fromswap
    end subroutine swap
@@ -36,7 +33,6 @@ end interface
 integer              :: iTask
 integer, parameter   :: iCaller = 0                   ! Who is calling swap? 0 = swap-main; > 0 external model is calling swap as DLL (iCaller > 0 for testing only)
 integer, save        :: iset, insets, iun1, iun2
-type(swap_state_t)   :: state                         ! State container for all model state
 
 ! functions
 integer              :: getun
@@ -59,17 +55,17 @@ do iset = 0, insets
 
 !  Initialize swap
    iTask = 1
-   if (iCaller == 0) call swap(iCaller, iTask, state)
+   if (iCaller == 0) call swap(iCaller, iTask)
    if (iCaller /= 0) call dummy(iTask)
 
 !  Dynamic call to swap
    iTask = 2
-   if (iCaller == 0) call swap(iCaller, iTask, state)
+   if (iCaller == 0) call swap(iCaller, iTask)
    if (iCaller /= 0) call dummy(iTask)
 
 !  Close swap
    iTask = 3
-   if (iCaller == 0) call swap(iCaller, iTask, state)
+   if (iCaller == 0) call swap(iCaller, iTask)
    if (iCaller /= 0) call dummy(iTask)
 
 end do
@@ -97,7 +93,7 @@ Call Exit(100)
       testin%tstart = 0.0d0; testin%tend = 0.0d0
       testin%rain = 0.0d0; testin%tmin = 0.0d0; testin%tmax = 0.0d0; testin%rad = 0.0d0; testin%hum = 0.0d0; testin%wind = 0.0d0; testin%etref = 0.0d0; testin%wet = 0.0d0
       testin%icrop = 0; testin%lai = 0.0d0; testin%ch = 0.0d0; testin%zroot = 0.0d0
-      call swap(iCaller, iTask, state, toswap = testin, fromswap = testout)
+      call swap(iCaller, iTask, toswap = testin, fromswap = testout)
       if (testout%ierrorcode /= 0) call fatalerr('swap_main', 'error')
       itstart = nint(testout%tstart + 365.0d0)
       itend   = nint(testout%tend   + 365.0d0)
@@ -127,13 +123,13 @@ Call Exit(100)
             testin%ch     =   0.0d0
             testin%zroot  =   0.0d0
          end if
-         call swap(iCaller, iTask, state, toswap = testin, fromswap = testout)
+         call swap(iCaller, iTask, toswap = testin, fromswap = testout)
          if (testout%ierrorcode /= 0) call fatalerr('swap_main', 'error')
          !write (*,'(i10, f8.3,i10)') i, testout%tact/testout%tpot, testout%ierrorcode
       end do
 
    case(3)
-      call swap(iCaller, iTask, state)
+      call swap(iCaller, iTask)
    end select
 
    end subroutine dummy

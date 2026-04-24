@@ -47,7 +47,7 @@ module swap_exchange
 end module swap_exchange
 
 ! -----------------------------------------------------------------------------------------------------------------------
-subroutine swap(iCaller, iTask, state, toswap, fromswap)
+subroutine swap(iCaller, iTask, toswap, fromswap)
 
 ! The model swap can perform three major tasks (iTask):
 !    1 - initialization
@@ -63,44 +63,39 @@ subroutine swap(iCaller, iTask, state, toswap, fromswap)
 !dec$ attributes dllexport :: SWAP
 
 !     swap modules for data communication
-use swap_state_mod, only: swap_state_t, swap_state_init, swap_state_finalize
-use swap_state_sync, only: state_from_variables, state_to_variables, &
-                          log_state_summary
 use variables, only : flyearstart, fldaystart, flswapshared, flsurfacewater, flmacropore, fltemperature, flsnow,        &
                       flsolute, flcropnut, flirrigate, flagetracer, flrunend, flmeteodt, fletsine, swfrost, fldtreduce, &
                       swusecn, fldrain, fldecdt, fldecmprat, fldayend, flcropcalendar, flmaxitertime, floutput,         &
                       floutputshort, flharvestday, flcropoutput, swcrp, flirrigationoutput, swend, project, &
                       daynr, iyear, numnod, numlay
-use drainage_mod, only: drainage_state
-use surfacewater_mod, only: SurfaceWater_state
+use drainage_mod, only: drainage
+use surfacewater_mod, only: SurfaceWater
                       ! for debugging
 !use variables, only : iqrot, iptra, cnrai, t1900, Tstart, Tend, numnod, dz, theta, dt, h, arai, rainamount, lai
 
-use tillage_mod,   only : DoTillage_state
+use tillage_mod,   only : DoTillage
 use swap_exchange
 use swap_log, only: log_info
-use boundbottom_mod, only: BoundBottom_state
+use boundbottom_mod, only: BoundBottom
 use runoff_mod, only: CNmethod
-use meteo_mod, only: ProcessMeteoDay_state
-use meteo_process_mod, only: ReadMeteoDay_state
-use snow_mod, only: snow_state
-use meteodt_mod, only: MeteoDT_state
-use rootextraction_mod, only: RootExtraction_state
+use meteo_mod, only: ProcessMeteoDay
+use meteo_process_mod, only: ReadMeteoDay
+use snow_mod, only: snow
+use meteodt_mod, only: MeteoDT
+use rootextraction_mod, only: RootExtraction
 use frozencond_mod, only: FrozenCond, FrozenBounds
-use temperature_mod, only: Temperature_state
-use macropore_mod, only: macropore_state
+use temperature_mod, only: Temperature
+use macropore_mod, only: MACROPORE
 use macroporeoutput_mod, only: MacroPoreOutput
-use solute_mod, only: solute_state, AgeTracer_state
-use soilgrid_mod, only: CalcGrid_state, ConvertDiscrVert
-use soilhydraulics_mod, only: soilwater_state, soilwaterstatevar_state
-use irrigation_mod, only: irrigation_state, SSDI_irrigation_state
-use management_soil_mod, only: SoilManagement_state
-use cropgrowth_state_mod, only: CropGrowth_state
+use solute_mod, only: solute, AgeTracer
+use soilgrid_mod, only: CalcGrid, ConvertDiscrVert
+use soilhydraulics_mod, only: soilwater, SoilWaterStateVar
+use irrigation_mod, only: irrigation, SSDI_irrigation
+use management_soil_mod, only: SoilManagement
 implicit none
 
 ! global
 integer,           intent(in)              :: iCaller, iTask
-type(swap_state_t), intent(inout)          :: state
 type(swap_input),  intent(in),    optional :: toswap
 type(swap_output), intent(out),   optional :: fromswap
 
@@ -135,38 +130,35 @@ if (iTask == 1) then
    call TimeControl(1)
 
 !  calculate grid parameters
-   call CalcGrid_state(state)
-   
-!  Initialize state container now that grid dimensions are known
-   call swap_state_init(state, numnod, numlay)
-   
-   call DoTillage_state(state, 1)
-   call SSDI_irrigation_state(state, 1)
+   call CalcGrid()
+
+   call DoTillage(1)
+   call SSDI_irrigation(1)
 
 !  initialize SoilWater rate/state variables
-   call SoilWater_state(state, 1)
+   call SoilWater(1)
    if (swuseCN == 1) call CNmethod(1)
 
 !  initialize SurfaceWater management variables
-   if (flSurfaceWater) call SurfaceWater_state(state, 1)
+   if (flSurfaceWater) call SurfaceWater(1)
 
 !  initialize MacroPore rate/state variables
-   if (flMacroPore) call MacroPore_state(state, 1)
+   if (flMacroPore) call MACROPORE(1)
 
 !  initialize SoilTemperature rate/state variables
-   if (flTemperature) call Temperature_state(state, 1)
+   if (flTemperature) call Temperature(1)
 
 !  initialize Snow rate/state variables
-   if (flSnow) call Snow_state(state, 1)
+   if (flSnow) call Snow(1)
 
 !  initialize Solute rate/state variables
-   if (flSolute) call Solute_state(state, 1)
+   if (flSolute) call Solute(1)
 
 !  initialize Ageing rate/state variables
-   if (flAgeTracer) call AgeTracer_state(state, 1)
+   if (flAgeTracer) call AgeTracer(1)
 
 !  Read and Initialize Soil Management Event
-   if (flCropNut) call SoilManagement_state(state, 1)
+   if (flCropNut) call SoilManagement(1)
 
 !  open Output files and write headers (skip in external/DLL mode to avoid per-column I/O)
    if (iCaller == 0) then
@@ -184,9 +176,6 @@ if (iTask == 1) then
 !  Specific for exchange when called as DLL
    if (iCaller /= 0) call handle_exchange(11, flError)
 
-!  Populate state container from initialized variables (one-time sync after init)
-   call state_from_variables(state)
-
    call log_info('swap', 'Initialization complete for project: ' // trim(project))
 
    return
@@ -196,9 +185,6 @@ end if
 !*****   D Y N A M I C   *****
 !****************************************************************************************************************************
 if (iTask == 2) then
-
-!  Restore legacy module variables from explicit state (multi-instance support)
-   call state_to_variables(state)
 
 !  Specific for exchange when called as DLL
    if (iCaller /= 0) call handle_exchange(21, flError); if (flError) return
@@ -218,31 +204,31 @@ if (iTask == 2) then
          !if (iCaller /= 0) call handle_exchange(23, flError)   ! LAI, RD
 
 !        read meteo data for current day
-         call ReadMeteoDay_state(state)
+         call ReadMeteoDay()
 
 !        check growing season
-         call CropGrowth_state(state, 1)
+         call CropGrowth(1)
 
 !        Specific for exchange when called as DLL
          if (iCaller /= 0) call handle_exchange(23, flError)   ! LAI, RD
 
 !        calculate Irrigation rate/state variables
-         if (flIrrigate) call irrigation_state(state, 2)
+         if (flIrrigate) call irrigation(2)
 
 !        process Meteo data
-         call ProcessMeteoDay_state(state)
-         call DoTillage_state(state, 2)
+         call ProcessMeteoDay()
+         call DoTillage(2)
 
       end if
 
 !     process Meteo data
-      if (flMeteoDt .or. flETSine) call MeteoDT_state(state)
+      if (flMeteoDt .or. flETSine) call MeteoDT()
 
 !     shared simulation
       if (flSwapShared .and. flDayStart) call SharedSimulation(2)
 
 !     calculate Snow: MH+MM - probably to be moved within IF-block above, prior to call ProcessMeteoDay ...
-      if (flSnow .and. flDayStart) call Snow_state(state, 2)
+      if (flSnow .and. flDayStart) call Snow(2)
 
 !     calculate reduction for conductivities for frozen conditions
       if (SwFrost.eq.1) then
@@ -250,29 +236,29 @@ if (iTask == 2) then
       end if
 
 !     calculate potential and actual root water extraction profile
-      call RootExtraction_state(state)
+      call RootExtraction()
 
 !     determine SoilWater bottom boundary conditions
-      call BoundBottom_state(state)
+      call BoundBottom()
 
       fldtreduce = .true.
       do while(fldtreduce)
          fldtreduce = .false.
 
 !        calculate drainage fluxes
-         if (fldrain)                           call Drainage_state(state)
-         if (.not.fldecdt .and. flSurfaceWater) call SurfaceWater_state(state, 2)
+         if (fldrain)                           call Drainage()
+         if (.not.fldecdt .and. flSurfaceWater) call SurfaceWater(2)
          if (SwFrost.eq.1)                      call FrozenBounds()
 
 !        calculate SoilWater, incl macropores
-         if (.not.fldecdt) call SoilWater_state(state, 2)
+         if (.not.fldecdt) call SoilWater(2)
 
 !        calculate surface water balance
-         if (.not.fldecdt .and. flSurfaceWater) call SurfaceWater_state(state, 3)
+         if (.not.fldecdt .and. flSurfaceWater) call SurfaceWater(3)
 
 !        update time variables and switches/flags
          if (fldecdt .or. (flMacroPore .and. FlDecMpRat))then
-            call SoilWaterStateVar_state(state, 2)
+            call SoilWaterStateVar(2)
             call TimeControl(3)
             fldtreduce = .true.
          end if
@@ -280,16 +266,16 @@ if (iTask == 2) then
       end do
 
 !     calculate SoilWater rate/state variables
-      call SoilWater_state(state, 3)
+      call SoilWater(3)
 
 !     calculate SoilTemperature rate/state variables
-   if (flTemperature) call Temperature_state(state, 2)
+   if (flTemperature) call Temperature(2)
 
 !     calculate Solute rate/state variables
-      if (flSolute) call Solute_state(state, 2)
+      if (flSolute) call Solute(2)
 
 !     calculate Ageing rate/state variables
-      if (flAgeTracer) call AgeTracer_state(state, 2)
+      if (flAgeTracer) call AgeTracer(2)
 
 !     update time variables and switches/flags
       call TimeControl(2)
@@ -298,42 +284,36 @@ if (iTask == 2) then
       if (flDayEnd) then
 
 !        update Soil nutrient status variables
-         if (flCropNut) call SoilManagement_state(state, 2)
+         if (flCropNut) call SoilManagement(2)
 
 !        calculate potential crop growth
 !        this is skipped in case called externally
-         if (iCaller == 0 .and. flCropCalendar) call CropGrowth_state(state, 2)
+         if (iCaller == 0 .and. flCropCalendar) call CropGrowth(2)
 
 !        amendent of crop residues from previous day
-         if (flCropNut) call SoilManagement_state(state, 5)
+         if (flCropNut) call SoilManagement(5)
 
 !        amendent of fertilizers of current day
-         if (flCropNut) call SoilManagement_state(state, 3)
+         if (flCropNut) call SoilManagement(3)
 
 !        calculate actual crop growth (calculation of actual crop rate and state variables)
 !        this is skipped in case called externally, so that LAI and CF remain their input values (for printing)
-         if (iCaller == 0  .and. flCropCalendar) call CropGrowth_state(state, 3)
+         if (iCaller == 0  .and. flCropCalendar) call CropGrowth(3)
 
 !        Simulate Soil Nutrient processes
-         if (flCropNut) call SoilManagement_state(state, 4)
+         if (flCropNut) call SoilManagement(4)
 
 !        harvest of crop
 !        this is skipped in case called externally, so that LAI and CF remain their input values (for printing)
-         if (iCaller == 0 .and. flCropCalendar) call CropGrowth_state(state, 4)
+         if (iCaller == 0 .and. flCropCalendar) call CropGrowth(4)
 
 !        timing statistics : prevent (near) endless simulations
          if (flMaxIterTime) call IterTime(2)
 
 !        Better here: check if subsurface irrigation is required for next day,
 !                     and determine if time step needs to be changed due to dt_SSDI_event
-         call SSDI_irrigation_state(state, 2)
+         call SSDI_irrigation(2)
          call TimeControl(9)
-
-!        Optional daily state snapshot (debug only; costly for long regressions)
-         if (flDailyStateSnapshot) then
-            call state_from_variables(state)
-            call log_state_summary(state)
-         end if
 
       end if
 
@@ -342,7 +322,7 @@ if (iTask == 2) then
          if (flOutput) then
             call SwapOutput(2)
             call SoilWaterOutput(2)
-            call DoTillage_state(state, 3)
+            call DoTillage(3)
             if (flTemperature)   call TemperatureOutput(2)
             if (flSolute)        call SoluteOutput(2)
             if (flAgeTracer)     call AgeTracerOutput(2)
@@ -358,7 +338,7 @@ if (iTask == 2) then
             end if
          end if
          if (flIrrigationOutput)          call IrrigationOutput(2)
-         if (flDayEnd .and. flCropNut)    call SoilManagement_state(state, 6)
+         if (flDayEnd .and. flCropNut)    call SoilManagement(6)
          if (swend.eq.2 .and. flDayEnd)   call soilwateroutput(3)
       end if
 
@@ -370,10 +350,6 @@ if (iTask == 2) then
 !  Specific for exchange when called as DLL
    if (iCaller /= 0) call handle_exchange(29, flError)
 
-!  Final snapshot for this call (ensures state is current even if day-end snapshot
-!  did not occur due to early termination)
-   call state_from_variables(state)
-
    return
 end if
 
@@ -382,8 +358,6 @@ end if
 !****************************************************************************************************************************
 if (iTask == 3) then
 
-!  Restore legacy module variables from explicit state (multi-instance support)
-   call state_to_variables(state)
 !  iteration and timing statistics
    call IterTime(3)
 
@@ -401,7 +375,7 @@ if (iTask == 3) then
       if (flSnow)               call SnowOutput(3)
       if (flMacroPore)          call MacroPoreOutput(3)
       if (flSurfaceWater)       call SurfaceWaterOutput(3)
-      if (flCropNut)            call SoilManagement_state(state, 7)
+      if (flCropNut)            call SoilManagement(7)
    end if
 
 !  write okay file for external use
@@ -409,9 +383,6 @@ if (iTask == 3) then
 
 !  Specific for exchange when called as DLL
    if (iCaller /= 0) call handle_exchange(31, flError)
-
-!  Finalize state container
-   call swap_state_finalize(state)
 
    call log_info('swap', 'Simulation complete for project: ' // trim(project))
 
