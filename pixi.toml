@@ -87,12 +87,14 @@ build-coverage     = { cmd = "meson compile -C builddir", depends-on = ["_config
 test-pfunit-cov    = { cmd = "meson test -C builddir --suite unit-pfunit --verbose", depends-on = ["build-coverage"] }
 regression-cov     = { cmd = "python tests/regression/test_output_regression.py hupselbrook surfacewater salinitystress grassgrowth", depends-on = ["build-coverage"] }
 coverage-run       = { depends-on = ["test-pfunit-cov", "regression-cov"] }
-coverage-report    = { cmd = "gcovr --root . --filter 'src/' --exclude 'src/.*_sync\\.f90' --exclude 'src/core/variables\\.f90' --html-details build/coverage/index.html --txt --print-summary builddir", depends-on = ["coverage-run"] }
+coverage-report    = { cmd = "mkdir -p builddir/coverage && gcovr --root . --filter 'src/' --exclude 'src/.*_sync\\.f90' --exclude 'src/core/variables\\.f90' --html-details builddir/coverage/index.html --txt --print-summary builddir", depends-on = ["coverage-run"] }
 
 [environments]
 default = { solve-group = "default" }
 test = { features = ["test"], solve-group = "default" }
 docs = { features = ["docs"], solve-group = "default" }
+# solve-group "coverage" is separate because gcovr requires pygments>=2.13
+# while ford (in the docs feature) pins pygments<2.13.
 coverage = { features = ["coverage"], solve-group = "coverage" }
 
 
