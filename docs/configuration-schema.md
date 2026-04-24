@@ -490,3 +490,22 @@ Worth noting for readers who will extend these schemas:
    (parsed by a custom `iso_date_to_t1900`), not as TOML date arrays. The
    simulation start/end in `[simulation]` are TOML datetimes. The two
    conventions exist side-by-side in the same file.
+
+## Typed config hierarchy
+
+The TOML key layout in this document is mirrored by a typed config
+hierarchy in `src/config/`:
+
+| TOML section | Fortran type | Module |
+|---|---|---|
+| `[general]` | `general_config_t` | `general_config_mod` |
+| `[simulation]` | `simulation_config_t` | `simulation_config_mod` |
+| `[meteorology]` | `meteorology_config_t` | `meteorology_config_mod` |
+| `[drainage]` | `drainage_config_t` | `drainage_config_mod` |
+| `[soil]` | `soil_config_t` | `soil_config_mod` |
+| `[crop]` | `crop_config_t` | `crop_config_mod` |
+| (top-level) | `swap_config_t` | `swap_config_mod` |
+
+Every type exposes `validate(errors)` and `finalize(errors)` as
+type-bound procedures. See `docs/validation.md` for the rules and
+`docs/error-handling.md` for how errors propagate.

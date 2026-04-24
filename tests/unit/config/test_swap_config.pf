@@ -1,0 +1,46 @@
+@test
+subroutine test_swap_validate_delegates_to_sections()
+   use funit
+   use error_mod
+   use swap_config_mod
+   type(swap_config_t)      :: c
+   type(error_collection_t) :: errors
+
+   call c%validate(errors)
+
+   @assertTrue(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_swap_finalize_short_circuits_on_fatal()
+   use funit
+   use error_mod
+   use swap_config_mod
+   type(swap_config_t)      :: c
+   type(error_collection_t) :: errors
+
+   call errors%append(202, "precondition fail", "x", is_fatal=.true.)
+   call c%finalize(errors)
+
+   @assertEqual(1, errors%count())
+end subroutine
+
+@test
+subroutine test_swap_validate_valid_config_passes()
+   use funit
+   use error_mod
+   use swap_config_mod
+   type(swap_config_t)      :: c
+   type(error_collection_t) :: errors
+
+   c%general%project    = "demo"
+   c%general%pathwork   = "./"
+   c%simulation%tstart  = 37257.0d0
+   c%simulation%tend    = 38352.0d0
+   c%meteo%lat          = 52.0d0
+   c%meteo%alt          = 10.0d0
+
+   call c%validate(errors)
+
+   @assertFalse(errors%has_fatals())
+end subroutine
