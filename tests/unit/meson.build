@@ -147,6 +147,7 @@ if get_option('enable_pfunit')
         'io/toml/test_hupselbrook_loads.pf',
         'io/toml/test_hupselbrook_roundtrip.pf',
         'core/test_config_to_state.pf',
+        'io/toml/test_hupselbrook_parity.pf',
     ]
 
     # When pf_files is non-empty, build and register the unit-swap-tests
