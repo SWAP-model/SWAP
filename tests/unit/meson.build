@@ -81,6 +81,7 @@ if get_option('enable_pfunit')
         '../../src/core/swap_state_mod.f90',
         '../../src/io/readdrainagetoml.f90',
         '../../src/io/readswaptoml.f90',
+        '../../src/atmosphere/precipitation.f90',
     ]
 
     pfunit_base_sources = test_base_sources + pfunit_extra_sources
@@ -98,6 +99,7 @@ if get_option('enable_pfunit')
         'io/test_readdrainagetoml.pf',
         'io/test_readswaptoml.pf',
         'utils/test_arrayutils.pf',
+        'atmosphere/test_precipitation.pf',
     ]
 
     # When pf_files is non-empty, build and register the unit-swap-tests

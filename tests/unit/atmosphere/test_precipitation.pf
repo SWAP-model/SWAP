@@ -1,0 +1,93 @@
+! Reference-value tests for PartitionPrecipitation. See
+! src/atmosphere/precipitation.f90 for the partitioning equations.
+
+@test
+subroutine test_partition_all_rain_when_tav_gt_threshold()
+   use funit
+   use precipitation_mod
+   real(8) :: ssnow, grai, gsnow, snrai, fprecnosnow, restint
+   real(8) :: arain(1)
+
+   ssnow = 0.0d0
+   grai = 10.0d0         ! mm (will be converted to cm: 1.0)
+   arain = [0.0d0]
+
+   call PartitionPrecipitation(0, 1, 5.0d0, 2.0d0, -2.0d0, &
+                               ssnow, 1, arain, grai, &
+                               gsnow, snrai, fprecnosnow, restint)
+
+   ! mm -> cm conversion
+   @assertEqual(1.0d0, grai, 1.0d-12)
+   ! all rain -> gsnow = 0
+   @assertEqual(0.0d0, gsnow, 1.0d-12)
+   ! no existing snowpack -> snrai = 0
+   @assertEqual(0.0d0, snrai, 1.0d-12)
+   ! all precip reaches surface
+   @assertEqual(1.0d0, fprecnosnow, 1.0d-12)
+end subroutine
+
+@test
+subroutine test_partition_all_snow_when_tav_lt_threshold()
+   use funit
+   use precipitation_mod
+   real(8) :: ssnow, grai, gsnow, snrai, fprecnosnow, restint
+   real(8) :: arain(1)
+
+   ssnow = 0.0d0
+   grai = 10.0d0                               ! mm
+   arain = [0.0d0]
+
+   call PartitionPrecipitation(0, 1, -5.0d0, 2.0d0, -2.0d0, &
+                               ssnow, 1, arain, grai, &
+                               gsnow, snrai, fprecnosnow, restint)
+
+   @assertEqual(1.0d0, grai, 1.0d-12)
+   ! all snow
+   @assertEqual(1.0d0, gsnow, 1.0d-12)
+   ! no preexisting pack -> snrai = 0
+   @assertEqual(0.0d0, snrai, 1.0d-12)
+   ! nothing reaches ground
+   @assertEqual(0.0d0, fprecnosnow, 1.0d-12)
+end subroutine
+
+@test
+subroutine test_partition_linear_interpolation_midpoint()
+   use funit
+   use precipitation_mod
+   real(8) :: ssnow, grai, gsnow, snrai, fprecnosnow, restint
+   real(8) :: arain(1)
+
+   ssnow = 0.0d0
+   grai = 10.0d0
+   arain = [0.0d0]
+
+   ! Thresholds span 0..4; tav at midpoint (2.0) -> 0.5 snow fraction
+   call PartitionPrecipitation(0, 1, 2.0d0, 4.0d0, 0.0d0, &
+                               ssnow, 1, arain, grai, &
+                               gsnow, snrai, fprecnosnow, restint)
+
+   @assertEqual(1.0d0, grai, 1.0d-12)
+   @assertEqual(0.5d0, gsnow, 1.0d-12)
+end subroutine
+
+@test
+subroutine test_partition_snow_disabled_passthrough()
+   use funit
+   use precipitation_mod
+   real(8) :: ssnow, grai, gsnow, snrai, fprecnosnow, restint
+   real(8) :: arain(1)
+
+   ssnow = 0.0d0
+   grai = 10.0d0
+   arain = [0.0d0]
+
+   call PartitionPrecipitation(0, 0, -5.0d0, 2.0d0, -2.0d0, &
+                               ssnow, 1, arain, grai, &
+                               gsnow, snrai, fprecnosnow, restint)
+
+   @assertEqual(1.0d0, grai, 1.0d-12)
+   ! snow off -> all rain, gsnow = 0
+   @assertEqual(0.0d0, gsnow, 1.0d-12)
+   @assertEqual(0.0d0, snrai, 1.0d-12)
+   @assertEqual(1.0d0, fprecnosnow, 1.0d-12)
+end subroutine
