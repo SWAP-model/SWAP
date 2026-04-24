@@ -37,6 +37,11 @@ gfortran_flags = [
     '-finit-local-zero',
 ]
 
+if get_option('enable_coverage')
+    gfortran_flags += ['--coverage', '-O0', '-fprofile-arcs', '-ftest-coverage']
+    add_project_link_arguments('--coverage', language: 'fortran')
+endif
+
 if is_windows
     gfortran_flags += ['-mconsole', '-static-libgfortran', '-static-libgcc']
     add_project_link_arguments(['-static', '-mconsole'], language: 'fortran')
