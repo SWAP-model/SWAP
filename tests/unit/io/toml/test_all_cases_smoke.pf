@@ -1,0 +1,73 @@
+! Smoke tests: TOML projects for all 6 swap cases load, validate, and
+! finalize without fatal errors. Full field parity for cases 2-6 is
+! deferred to the pre-Phase-4 follow-on step.
+
+@test
+subroutine test_grassgrowth_loads_clean()
+   use funit
+   use swap_config_mod
+   use load_swap_config_mod
+   use error_mod
+   type(swap_config_t)      :: c
+   type(error_collection_t) :: e
+   call load_swap_config('tests/swap-cases/toml/2.grassgrowth/swap.toml', c, e)
+   call c%validate(e)
+   call c%finalize(e)
+   @assertFalse(e%has_fatals())
+end subroutine
+
+@test
+subroutine test_macroporeflow_loads_clean()
+   use funit
+   use swap_config_mod
+   use load_swap_config_mod
+   use error_mod
+   type(swap_config_t)      :: c
+   type(error_collection_t) :: e
+   call load_swap_config('tests/swap-cases/toml/3.macroporeflow/swap.toml', c, e)
+   call c%validate(e)
+   call c%finalize(e)
+   @assertFalse(e%has_fatals())
+end subroutine
+
+@test
+subroutine test_oxygenstress_loads_clean()
+   use funit
+   use swap_config_mod
+   use load_swap_config_mod
+   use error_mod
+   type(swap_config_t)      :: c
+   type(error_collection_t) :: e
+   call load_swap_config('tests/swap-cases/toml/4.oxygenstress/swap.toml', c, e)
+   call c%validate(e)
+   call c%finalize(e)
+   @assertFalse(e%has_fatals())
+end subroutine
+
+@test
+subroutine test_salinitystress_loads_clean()
+   use funit
+   use swap_config_mod
+   use load_swap_config_mod
+   use error_mod
+   type(swap_config_t)      :: c
+   type(error_collection_t) :: e
+   call load_swap_config('tests/swap-cases/toml/5.salinitystress/swap.toml', c, e)
+   call c%validate(e)
+   call c%finalize(e)
+   @assertFalse(e%has_fatals())
+end subroutine
+
+@test
+subroutine test_surfacewater_loads_clean()
+   use funit
+   use swap_config_mod
+   use load_swap_config_mod
+   use error_mod
+   type(swap_config_t)      :: c
+   type(error_collection_t) :: e
+   call load_swap_config('tests/swap-cases/toml/6.surfacewater/swap.toml', c, e)
+   call c%validate(e)
+   call c%finalize(e)
+   @assertFalse(e%has_fatals())
+end subroutine
