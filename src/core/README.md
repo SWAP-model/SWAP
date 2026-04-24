@@ -24,6 +24,10 @@ subdir depends on `src/core/`.
   [../../docs/state-management.md](../../docs/state-management.md)).
 - `swap_log`: `log_init`, `log_close`, `log_debug`, `log_info`,
   `log_warn`, `log_error`, `log_set_level`, `log_message`, `to_str`.
+  See [../../docs/logging.md](../../docs/logging.md) for usage and
+  thread-safety constraints.
+- `config_to_state` — to be added in Phase 4a Task 25; converts TOML config
+  to initial/boundary/parameters state types.
 - `swap_constants`, `swap_array_dimensions` — shared parameters.
 - `variables` — legacy common-block module preserved for the rescue
   bridge; new code must not add fields to it.

@@ -20,6 +20,7 @@ SWAP is a one-dimensional vertical simulation model for transport processes (wat
 - [Coverage baseline](coverage-baseline.html) — Phase 3 line/branch coverage numbers and known gaps.
 - [Dependency management](dependency-management.html) — subprojects, pixi deps, pFUnit, how to bump.
 - [Code style](code-style.html) — Fortran 2008 conventions, names, intent; matched by `.fprettify.rc`.
+- [Logging](logging.html) — `swap_log` facility, levels, initialization, format, thread-safety constraints.
 - [Architecture decision records](adr/) — the non-obvious choices and why:
   - [ADR 0001 — gfortran-first](adr/0001-gfortran-first.html)
   - [ADR 0002 — single builddir](adr/0002-single-builddir.html)
