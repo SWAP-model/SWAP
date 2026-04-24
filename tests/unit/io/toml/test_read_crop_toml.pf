@@ -1,0 +1,62 @@
+@test
+subroutine test_read_crop_happy()
+   use funit
+   use tomlf, only: toml_table, toml_load
+   use crop_config_mod
+   use read_crop_toml_mod
+   use error_mod
+   type(toml_table), allocatable, target :: doc
+   type(toml_table), pointer     :: doc_ptr
+   type(crop_config_t)           :: c
+   type(error_collection_t)      :: errors
+
+   call toml_load(doc, 'tests/unit/io/toml/fixtures/crop_minimal.toml')
+   doc_ptr => doc
+   call read_crop_toml(doc_ptr, c, errors)
+
+   @assertFalse(errors%has_errors())
+   @assertEqual(1, c%swcrop)
+   @assertTrue(allocated(c%rotation_start))
+   @assertEqual(2, size(c%rotation_start))
+end subroutine
+
+@test
+subroutine test_read_crop_rotation_entries_populate()
+   use funit
+   use tomlf, only: toml_table, toml_load
+   use crop_config_mod
+   use read_crop_toml_mod
+   use error_mod
+   type(toml_table), allocatable, target :: doc
+   type(toml_table), pointer     :: doc_ptr
+   type(crop_config_t)           :: c
+   type(error_collection_t)      :: errors
+
+   call toml_load(doc, 'tests/unit/io/toml/fixtures/crop_minimal.toml')
+   doc_ptr => doc
+   call read_crop_toml(doc_ptr, c, errors)
+
+   @assertEqual("maizes.crp",  trim(c%rotation_file(1)))
+   @assertEqual("potatod.crp", trim(c%rotation_file(2)))
+   @assertEqual(1, c%rotation_type(1))
+   @assertTrue(c%rotation_end(1) > c%rotation_start(1))
+end subroutine
+
+@test
+subroutine test_read_crop_missing_section_is_silent()
+   use funit
+   use tomlf, only: toml_table, toml_load
+   use crop_config_mod
+   use read_crop_toml_mod
+   use error_mod
+   type(toml_table), allocatable, target :: doc
+   type(toml_table), pointer     :: doc_ptr
+   type(crop_config_t)           :: c
+   type(error_collection_t)      :: errors
+
+   call toml_load(doc, 'tests/unit/io/toml/fixtures/general_minimal.toml')
+   doc_ptr => doc
+   call read_crop_toml(doc_ptr, c, errors)
+
+   @assertFalse(errors%has_errors())
+end subroutine
