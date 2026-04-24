@@ -1,0 +1,129 @@
+! Tests for validation_mod primitives.
+
+@test
+subroutine test_check_int_range_inside_passes()
+   use funit
+   use error_mod
+   use validation_mod
+   type(error_collection_t) :: errors
+   call check_int_range(5, 1, 10, "x", errors)
+   @assertFalse(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_check_int_range_below_appends_error()
+   use funit
+   use error_mod
+   use validation_mod
+   type(error_collection_t) :: errors
+   call check_int_range(0, 1, 10, "x", errors)
+   @assertTrue(errors%has_errors())
+   @assertEqual(ERR_VALIDATION_OUT_OF_RANGE, errors%items(1)%code)
+end subroutine
+
+@test
+subroutine test_check_int_range_above_appends_error()
+   use funit
+   use error_mod
+   use validation_mod
+   type(error_collection_t) :: errors
+   call check_int_range(11, 1, 10, "x", errors)
+   @assertTrue(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_check_real_range_edges_pass()
+   use funit
+   use error_mod
+   use validation_mod
+   type(error_collection_t) :: errors
+   call check_real_range(1.0d0,  1.0d0, 10.0d0, "x", errors)
+   call check_real_range(10.0d0, 1.0d0, 10.0d0, "x", errors)
+   @assertFalse(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_check_int_enum_member_passes()
+   use funit
+   use error_mod
+   use validation_mod
+   type(error_collection_t) :: errors
+   integer :: allowed(3)
+   allowed = [1, 2, 3]
+   call check_int_enum(2, allowed, "x", errors)
+   @assertFalse(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_check_int_enum_nonmember_appends()
+   use funit
+   use error_mod
+   use validation_mod
+   type(error_collection_t) :: errors
+   integer :: allowed(3)
+   allowed = [1, 2, 3]
+   call check_int_enum(5, allowed, "x", errors)
+   @assertTrue(errors%has_errors())
+   @assertEqual(ERR_VALIDATION_ENUM, errors%items(1)%code)
+end subroutine
+
+@test
+subroutine test_check_not_empty_nonempty_passes()
+   use funit
+   use error_mod
+   use validation_mod
+   type(error_collection_t) :: errors
+   call check_not_empty("hello", "x", errors)
+   @assertFalse(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_check_not_empty_empty_appends()
+   use funit
+   use error_mod
+   use validation_mod
+   type(error_collection_t) :: errors
+   call check_not_empty("   ", "x", errors)
+   @assertTrue(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_check_nonnegative_real_positive_passes()
+   use funit
+   use error_mod
+   use validation_mod
+   type(error_collection_t) :: errors
+   call check_nonnegative_real(5.0d0, "x", errors)
+   @assertFalse(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_check_nonnegative_real_negative_appends()
+   use funit
+   use error_mod
+   use validation_mod
+   type(error_collection_t) :: errors
+   call check_nonnegative_real(-0.01d0, "x", errors)
+   @assertTrue(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_check_ordered_pair_ordered_passes()
+   use funit
+   use error_mod
+   use validation_mod
+   type(error_collection_t) :: errors
+   call check_ordered_pair(1.0d0, 2.0d0, "low", "high", "x", errors)
+   @assertFalse(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_check_ordered_pair_inverted_appends()
+   use funit
+   use error_mod
+   use validation_mod
+   type(error_collection_t) :: errors
+   call check_ordered_pair(2.0d0, 1.0d0, "low", "high", "x", errors)
+   @assertTrue(errors%has_errors())
+   @assertEqual(ERR_VALIDATION_CROSS_FIELD, errors%items(1)%code)
+end subroutine

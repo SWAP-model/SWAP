@@ -58,6 +58,7 @@ sources = [
     'src/core/constants.f90',
     'src/core/swap_log.f90',
     'src/error/error.f90',
+    'src/validation/validation.f90',
     'src/atmosphere/atmosphere_state.f90',
     'src/boundary/boundary_state.f90',
     'src/drainage/drainage_state.f90',
