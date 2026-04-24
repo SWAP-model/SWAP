@@ -97,6 +97,7 @@ if get_option('enable_pfunit')
         'core/test_swap_state.pf',
         'io/test_readdrainagetoml.pf',
         'io/test_readswaptoml.pf',
+        'utils/test_arrayutils.pf',
     ]
 
     # When pf_files is non-empty, build and register the unit-swap-tests

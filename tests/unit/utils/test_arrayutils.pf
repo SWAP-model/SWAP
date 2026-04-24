@@ -1,0 +1,88 @@
+! Reference-value tests for the pure interpolation / table-lookup
+! helpers in array_utils (afgen and insw).
+
+@test
+subroutine test_afgen_below_first_breakpoint()
+   use funit
+   use array_utils
+   use iso_fortran_env, only: real64
+   real(real64) :: table(4)
+   real(real64) :: result
+
+   ! AFGEN layout: (x1, y1, x2, y2, ...).
+   table = [1.0_real64, 10.0_real64, 5.0_real64, 50.0_real64]
+
+   result = afgen(table, 4, 0.5_real64)
+
+   @assertEqual(10.0_real64, result, 1.0e-12_real64)
+end subroutine
+
+@test
+subroutine test_afgen_on_breakpoint()
+   use funit
+   use array_utils
+   use iso_fortran_env, only: real64
+   real(real64) :: table(4)
+   real(real64) :: result
+
+   table = [1.0_real64, 10.0_real64, 5.0_real64, 50.0_real64]
+
+   result = afgen(table, 4, 5.0_real64)
+
+   @assertEqual(50.0_real64, result, 1.0e-12_real64)
+end subroutine
+
+@test
+subroutine test_afgen_linear_interpolation_midpoint()
+   use funit
+   use array_utils
+   use iso_fortran_env, only: real64
+   real(real64) :: table(4)
+   real(real64) :: result
+
+   table = [1.0_real64, 10.0_real64, 5.0_real64, 50.0_real64]
+
+   result = afgen(table, 4, 3.0_real64)
+
+   ! midpoint of x=[1,5] maps to midpoint of y=[10,50] = 30
+   @assertEqual(30.0_real64, result, 1.0e-12_real64)
+end subroutine
+
+@test
+subroutine test_afgen_above_last_breakpoint()
+   use funit
+   use array_utils
+   use iso_fortran_env, only: real64
+   real(real64) :: table(4)
+   real(real64) :: result
+
+   table = [1.0_real64, 10.0_real64, 5.0_real64, 50.0_real64]
+
+   result = afgen(table, 4, 100.0_real64)
+
+   @assertEqual(50.0_real64, result, 1.0e-12_real64)
+end subroutine
+
+@test
+subroutine test_insw_selects_first_when_x_negative()
+   use funit
+   use array_utils
+   use iso_fortran_env, only: real64
+   real(real64) :: result
+
+   result = insw(-1.0_real64, 11.0_real64, 22.0_real64)
+
+   @assertEqual(11.0_real64, result, 1.0e-12_real64)
+end subroutine
+
+@test
+subroutine test_insw_selects_second_when_x_positive()
+   use funit
+   use array_utils
+   use iso_fortran_env, only: real64
+   real(real64) :: result
+
+   result = insw(1.0_real64, 11.0_real64, 22.0_real64)
+
+   @assertEqual(22.0_real64, result, 1.0e-12_real64)
+end subroutine
