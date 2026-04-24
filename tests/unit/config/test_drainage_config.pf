@@ -1,0 +1,69 @@
+@test
+subroutine test_drainage_valid_passes()
+   use funit
+   use error_mod
+   use drainage_config_mod
+   type(drainage_config_t)  :: d
+   type(error_collection_t) :: errors
+   d%swdra  = 1
+   d%dramet = 1
+   d%swdivd = 0
+   d%nrlevs = 1
+   call d%validate(errors)
+   @assertFalse(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_drainage_dramet2_requires_swdivd1()
+   use funit
+   use error_mod
+   use drainage_config_mod
+   type(drainage_config_t)  :: d
+   type(error_collection_t) :: errors
+   d%swdra  = 1
+   d%dramet = 2
+   d%swdivd = 0
+   d%nrlevs = 1
+   call d%validate(errors)
+   @assertTrue(errors%has_fatals())
+   @assertEqual(ERR_VALIDATION_CROSS_FIELD, errors%items(errors%count())%code)
+end subroutine
+
+@test
+subroutine test_drainage_dramet2_with_swdivd1_passes()
+   use funit
+   use error_mod
+   use drainage_config_mod
+   type(drainage_config_t)  :: d
+   type(error_collection_t) :: errors
+   d%swdra  = 1
+   d%dramet = 2
+   d%swdivd = 1
+   d%nrlevs = 1
+   call d%validate(errors)
+   @assertFalse(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_drainage_invalid_swdra_fails()
+   use funit
+   use error_mod
+   use drainage_config_mod
+   type(drainage_config_t)  :: d
+   type(error_collection_t) :: errors
+   d%swdra = 5
+   call d%validate(errors)
+   @assertTrue(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_drainage_nrlevs_too_many_fails()
+   use funit
+   use error_mod
+   use drainage_config_mod
+   type(drainage_config_t)  :: d
+   type(error_collection_t) :: errors
+   d%nrlevs = 10
+   call d%validate(errors)
+   @assertTrue(errors%has_errors())
+end subroutine
