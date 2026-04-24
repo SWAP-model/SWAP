@@ -106,3 +106,51 @@ subroutine test_clear_resets()
    @assertFalse(errors%has_errors())
    @assertEqual(0, errors%count())
 end subroutine
+
+@test
+subroutine test_summary_empty()
+   use funit
+   use error_mod
+   type(error_collection_t) :: errors
+   @assertEqual("No errors.", errors%summary())
+end subroutine
+
+@test
+subroutine test_summary_includes_code_context_message()
+   use funit
+   use error_mod
+   type(error_collection_t) :: errors
+   character(len=:), allocatable :: text
+
+   call errors%append(ERR_PARSE_MISSING_REQUIRED, "need foo", "drainage.foo")
+   text = errors%summary()
+
+   @assertTrue(index(text, "202") > 0)
+   @assertTrue(index(text, "FATAL") > 0)
+   @assertTrue(index(text, "drainage.foo") > 0)
+   @assertTrue(index(text, "need foo") > 0)
+end subroutine
+
+@test
+subroutine test_summary_marks_nonfatal_as_warn()
+   use funit
+   use error_mod
+   type(error_collection_t) :: errors
+   character(len=:), allocatable :: text
+
+   call errors%append(ERR_FINALIZE_DERIVATION, "derivation warning", "x", is_fatal=.false.)
+   text = errors%summary()
+
+   @assertTrue(index(text, "WARN") > 0)
+   @assertFalse(index(text, "FATAL") > 0)
+end subroutine
+
+@test
+subroutine test_abort_if_fatal_returns_when_no_fatals()
+   use funit
+   use error_mod
+   type(error_collection_t) :: errors
+   call errors%append(ERR_FINALIZE_DERIVATION, "ok", "x", is_fatal=.false.)
+   call errors%abort_if_fatal()
+   @assertTrue(.true.)
+end subroutine

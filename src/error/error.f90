@@ -114,15 +114,38 @@ contains
       end if
    end function error_collection_count
 
+   !> Multi-line human-readable report of all collected errors.
    function error_collection_summary(self) result(text)
       class(error_collection_t), intent(in) :: self
       character(len=:), allocatable :: text
+      character(len=32)             :: code_str
+      integer                       :: i
+
+      if (.not. allocated(self%items) .or. size(self%items) == 0) then
+         text = "No errors."
+         return
+      end if
+
       text = ""
+      do i = 1, size(self%items)
+         write(code_str, '(I0)') self%items(i)%code
+         text = text // "[" // trim(adjustl(code_str)) // "]"
+         if (self%items(i)%is_fatal) then
+            text = text // " FATAL "
+         else
+            text = text // " WARN  "
+         end if
+         text = text // self%items(i)%context // ": " // self%items(i)%message // new_line('a')
+      end do
    end function error_collection_summary
 
+   !> Write summary to stderr and `error stop` if any fatal errors exist.
+   !! Returns normally if no fatals.
    subroutine error_collection_abort_if_fatal(self)
       class(error_collection_t), intent(in) :: self
-      ! stub - implementation in Task 5
+      if (.not. self%has_fatals()) return
+      write(error_unit, '(A)') self%summary()
+      error stop "fatal error(s) in swap input pipeline"
    end subroutine error_collection_abort_if_fatal
 
    !> Reset the collection. Use between tests or logical phases.
