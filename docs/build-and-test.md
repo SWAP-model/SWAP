@@ -197,6 +197,16 @@ The meson config at `tests/unit/meson.build` expects the install at
 `tests/pFUnit/build/install_gfortran/PFUNIT-4.15` and errors with a pointer
 back to this doc if the path is missing.
 
+## Coverage
+
+Line and branch coverage is produced by a dedicated pixi feature so it does
+not contaminate the normal build:
+
+    pixi run -e coverage coverage-report
+
+Full numbers and the Phase 3 baseline live in `docs/coverage-baseline.md`.
+Coverage is tracked, not gated (ADR 0006).
+
 ## Cross-compilation
 
 `pixi run build-windows-cross` builds for Windows via mingw, using

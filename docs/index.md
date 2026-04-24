@@ -17,6 +17,7 @@ SWAP is a one-dimensional vertical simulation model for transport processes (wat
 
 - [State management](state-management.html) — `config_t` / `initial_t` / `state_t`, ASSOCIATE, lifecycle.
 - [Configuration schema](configuration-schema.html) — TOML input reference.
+- [Coverage baseline](coverage-baseline.html) — Phase 3 line/branch coverage numbers and known gaps.
 - [Dependency management](dependency-management.html) — subprojects, pixi deps, pFUnit, how to bump.
 - [Code style](code-style.html) — Fortran 2008 conventions, names, intent; matched by `.fprettify.rc`.
 - [Architecture decision records](adr/) — the non-obvious choices and why.
