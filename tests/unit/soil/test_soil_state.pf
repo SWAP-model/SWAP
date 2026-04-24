@@ -1,0 +1,52 @@
+! Lifecycle tests for soil_state_t. Has init, finalize,
+! reset_cumulative, reset_intermediate.
+
+@test
+subroutine test_soil_state_init_smoke()
+   use funit
+   use soil_state_mod
+   type(soil_state_t) :: state
+
+   call soil_state_init(state, numnod=1, numlay=1)
+
+   @assertTrue(.true.)
+end subroutine
+
+@test
+subroutine test_soil_state_finalize_is_idempotent()
+   use funit
+   use soil_state_mod
+   type(soil_state_t) :: state
+
+   call soil_state_init(state, numnod=1, numlay=1)
+   call soil_state_finalize(state)
+   call soil_state_finalize(state)
+
+   @assertTrue(.true.)
+end subroutine
+
+@test
+subroutine test_soil_reset_cumulative_runs()
+   use funit
+   use soil_state_mod
+   type(soil_state_t) :: state
+
+   call soil_state_init(state, numnod=1, numlay=1)
+   call soil_state_reset_cumulative(state)
+   call soil_state_reset_cumulative(state)
+
+   @assertTrue(.true.)
+end subroutine
+
+@test
+subroutine test_soil_reset_intermediate_runs()
+   use funit
+   use soil_state_mod
+   type(soil_state_t) :: state
+
+   call soil_state_init(state, numnod=1, numlay=1)
+   call soil_state_reset_intermediate(state)
+   call soil_state_reset_intermediate(state)
+
+   @assertTrue(.true.)
+end subroutine
