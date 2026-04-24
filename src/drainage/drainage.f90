@@ -73,7 +73,7 @@ module drainage_mod
    use swap_constants, only: small
    implicit none
 
-   public :: drainage, drainage_state
+   public :: drainage
    public :: bocodrb, bocodre
 
 contains
@@ -745,22 +745,5 @@ owltab,t1900,swallo,drares,infres,qdrtab,nrlevs,swnrsrf,cofintfl,expintfl,dt,sha
 
                            return
                            end subroutine bocodre
-
-   !> State-aware wrapper for `drainage`
-   !!
-   !! Executes legacy drainage calculations and snapshots only the dynamic
-   !! drainage outputs back into explicit state.
-   !!
-   !! @param[inout] state SWAP model state container
-   subroutine drainage_state(state)
-      use swap_state_mod, only: swap_state_t
-      use swap_state_sync, only: drainage_outputs_from_variables
-      implicit none
-
-      type(swap_state_t), intent(inout) :: state
-
-      call drainage()
-      call drainage_outputs_from_variables(state%drain, state%nrlevs, state%numnod)
-   end subroutine drainage_state
 
                            end module drainage_mod

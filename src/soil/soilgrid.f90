@@ -6,7 +6,6 @@ module soilgrid_mod
     implicit none
     private
     public :: calcgrid, convertdiscrvert
-  public :: calcgrid_state, convertdiscrvert_state
 contains
 
       !> Calculate grid parameters for soil compartments
@@ -435,83 +434,5 @@ contains
 
       return
       end subroutine ConvertDiscrVert
-
-      !> State-aware wrapper for `calcgrid`
-      !!
-      !! Executes the legacy grid setup and synchronizes grid dimensions and,
-      !! when allocated, grid arrays to explicit state.
-      !!
-      !! @param[inout] state SWAP model state container
-      subroutine calcgrid_state(state)
-      use swap_state_mod, only: swap_state_t
-      use swap_state_sync, only: soilgrid_outputs_from_variables
-      use variables, only: numnod, numlay
-      implicit none
-
-      type(swap_state_t), intent(inout) :: state
-
-      call calcgrid()
-
-      state%numnod = numnod
-      state%numlay = numlay
-
-      if (allocated(state%soil%z)) then
-         call soilgrid_outputs_from_variables(state%soil, numnod, numlay)
-      end if
-      end subroutine calcgrid_state
-
-      !> State-aware wrapper for `ConvertDiscrVert`
-      !!
-      !! Executes legacy discretization conversion and then synchronizes current
-      !! soil balance outputs that may be used downstream.
-      !!
-      !! @param[inout] state SWAP model state container
-      !! @param[in]    part Part indicator (1=initial, 2=dynamic)
-      !! @param[in]    swop Macropore option switch
-      !! @param[out]   botcomnew Bottom compartment indices for new discretization
-      !! @param[out]   hnew Pressure head for new discretization
-      !! @param[out]   thetanew Volumetric water content for new discretization
-      !! @param[out]   inqnew Water flux for new discretization
-      !! @param[out]   inqrotnew Root water uptake for new discretization
-      !! @param[out]   inqdranew Drainage flux for new discretization
-      !! @param[out]   ithetabegnew Initial water content for new discretization
-      !! @param[in]    tsoil Soil temperature (old discretization)
-      !! @param[out]   tsoilnew Soil temperature for new discretization
-      !! @param[out]   dipocpnew Macropore diameter for new discretization
-      !! @param[out]   iavfrmpwlwtdm1new Average macropore fraction (domain 1)
-      !! @param[out]   iavfrmpwlwtdm2new Average macropore fraction (domain 2)
-      !! @param[out]   iqexcmtxdm1cpnew Matrix exchange flux (domain 1)
-      !! @param[out]   iqexcmtxdm2cpnew Matrix exchange flux (domain 2)
-      !! @param[out]   iqoutdrrapcpnew Rapid drainage outflow
-      !! @param[out]   vlmpstdm1new Macropore storage volume (domain 1)
-      !! @param[out]   vlmpstdm2new Macropore storage volume (domain 2)
-      subroutine convertdiscrvert_state(state, part, swop, botcomnew, hnew, thetanew, inqnew,     &
-                    inqrotnew, inqdranew, ithetabegnew, tsoil, tsoilnew,      &
-                    dipocpnew, iavfrmpwlwtdm1new, iavfrmpwlwtdm2new,           &
-                    iqexcmtxdm1cpnew, iqexcmtxdm2cpnew, iqoutdrrapcpnew,       &
-                    vlmpstdm1new, vlmpstdm2new)
-      use swap_state_mod, only: swap_state_t
-      use swap_state_sync, only: soilwaterbalance_outputs_from_variables
-      use swap_array_dimensions, only: macp, maho, madr
-      implicit none
-
-      type(swap_state_t), intent(inout) :: state
-      integer, intent(in) :: part, swop
-      integer, intent(out) :: botcomnew(maho)
-      real(8), intent(out) :: hnew(macp), thetanew(macp), inqrotnew(macp), inqnew(macp+1)
-      real(8), intent(out) :: inqdranew(madr,macp), ithetabegnew(macp)
-      real(8), intent(in) :: tsoil(0:macp)
-      real(8), intent(out) :: tsoilnew(0:macp)
-      real(8), intent(out) :: dipocpnew(macp), iavfrmpwlwtdm1new(macp), iavfrmpwlwtdm2new(macp)
-      real(8), intent(out) :: iqexcmtxdm1cpnew(macp), iqexcmtxdm2cpnew(macp), iqoutdrrapcpnew(macp)
-      real(8), intent(out) :: vlmpstdm1new(macp), vlmpstdm2new(macp)
-
-      call ConvertDiscrVert(part, swop, botcomnew, hnew, thetanew, inqnew, inqrotnew, inqdranew,   &
-                ithetabegnew, tsoil, tsoilnew, dipocpnew, iavfrmpwlwtdm1new,            &
-                iavfrmpwlwtdm2new, iqexcmtxdm1cpnew, iqexcmtxdm2cpnew, iqoutdrrapcpnew, &
-                vlmpstdm1new, vlmpstdm2new)
-
-      call soilwaterbalance_outputs_from_variables(state%soil, state%numnod)
-      end subroutine convertdiscrvert_state
 
 end module soilgrid_mod

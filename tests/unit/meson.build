@@ -22,14 +22,6 @@ test_base_sources = [
     '../../src/core/constants.f90',
     '../../src/core/swap_log.f90',
     '../../src/utils/arrayutils.f90',
-    '../../src/atmosphere/atmosphere_state.f90',
-    '../../src/boundary/boundary_state.f90',
-    '../../src/drainage/drainage_state.f90',
-    '../../src/drainage/surfacewater_state.f90',
-    '../../src/heat/heat_state.f90',
-    '../../src/solute/solute_state.f90',
-    '../../src/soil/soil_state.f90',
-    '../../src/macropore/macropore_state.f90',
 ]
 
 # ============================================================================
@@ -78,12 +70,10 @@ if get_option('enable_pfunit')
     # Additional sources beyond test_base_sources required by surviving
     # .pf files. Empty at baseline; grows as Phase 4 re-adds suites.
     pfunit_extra_sources = [
-        '../../src/core/swap_state_mod.f90',
         '../../src/atmosphere/precipitation.f90',
         '../../src/core/variables.f90',
         '../../src/crop/wofost_soil_declarations.f90',
         '../../src/crop/wofost_soil_interface.f90',
-        '../../src/core/swap_state_sync.f90',
         '../../src/atmosphere/et.f90',
         'atmosphere/et_test_stubs.f90',
         '../../src/error/error.f90',
@@ -104,22 +94,11 @@ if get_option('enable_pfunit')
         '../../src/io/toml/read_crop_toml.f90',
         '../../src/io/toml/load_swap_config.f90',
         '../../src/io/toml/write_swap_config.f90',
-        '../../src/core/config_to_state.f90',
-        'io/toml/legacy_readswap_shim.f90',
     ]
 
     pfunit_base_sources = test_base_sources + pfunit_extra_sources
 
     pf_files = [
-        'atmosphere/test_atmosphere_state.pf',
-        'boundary/test_boundary_state.pf',
-        'drainage/test_drainage_state.pf',
-        'drainage/test_surfacewater_state.pf',
-        'heat/test_heat_state.pf',
-        'soil/test_soil_state.pf',
-        'solute/test_solute_state.pf',
-        'macropore/test_macropore_state.pf',
-        'core/test_swap_state.pf',
         'utils/test_arrayutils.pf',
         'atmosphere/test_precipitation.pf',
         'atmosphere/test_et.pf',
@@ -142,8 +121,6 @@ if get_option('enable_pfunit')
         'io/toml/test_load_swap_config.pf',
         'io/toml/test_hupselbrook_loads.pf',
         'io/toml/test_hupselbrook_roundtrip.pf',
-        'core/test_config_to_state.pf',
-        'io/toml/test_hupselbrook_parity.pf',
         'io/toml/test_all_cases_smoke.pf',
     ]
 

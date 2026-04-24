@@ -38,7 +38,6 @@ module temperature_mod
   implicit none
   private
   public :: temperature, devries
-  public :: temperature_state
 
 contains
 
@@ -252,25 +251,6 @@ contains
 
     return
   end subroutine Temperature
-
-  !> State-aware wrapper for `temperature`
-  !!
-  !! Executes legacy soil-temperature routine and synchronizes heat outputs
-  !! to explicit state.
-  !!
-  !! @param[inout] state SWAP model state container
-  !! @param[in]    task  Task selector: 1=initialization, 2=calculation
-  subroutine temperature_state(state, task)
-    use swap_state_mod, only: swap_state_t
-    use swap_state_sync, only: heat_state_from_variables
-    implicit none
-
-    type(swap_state_t), intent(inout) :: state
-    integer,            intent(in)    :: task
-
-    call temperature(task)
-    call heat_state_from_variables(state%heat, state%numnod, state%numlay)
-  end subroutine temperature_state
 
   !> Calculate soil heat capacity and conductivity using de Vries model
   !!

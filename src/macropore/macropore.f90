@@ -39,7 +39,6 @@ module macropore_mod
   implicit none
   private
   public :: macropore, shrink
-   public :: macropore_state
 
 contains
 
@@ -213,27 +212,6 @@ contains
 
     return
   end subroutine macropore
-
-   !> State-aware wrapper for `macropore`
-   !!
-   !! Executes legacy macropore routine and synchronizes macropore component
-   !! outputs (and relevant soil-balance outputs) to explicit state.
-   !!
-   !! @param[inout] state SWAP model state container
-   !! @param[in]    itask Task selector for macropore calculations
-   subroutine macropore_state(state, itask)
-      use swap_state_mod, only: swap_state_t
-      use swap_state_sync, only: macropore_state_from_variables, soilwaterbalance_outputs_from_variables
-      use swap_array_dimensions, only: madm, madr
-      implicit none
-
-      type(swap_state_t), intent(inout) :: state
-      integer,            intent(in)    :: itask
-
-      call macropore(itask)
-      call macropore_state_from_variables(state%macro, state%numnod, madm, madr)
-      call soilwaterbalance_outputs_from_variables(state%soil, state%numnod)
-   end subroutine macropore_state
 
   !> Calculate macropore geometry and domain proportions
   !!

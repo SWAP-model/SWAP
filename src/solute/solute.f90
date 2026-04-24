@@ -5,7 +5,6 @@ module solute_mod
    implicit none
    private
    public :: solute, AgeTracer
-   public :: solute_state, AgeTracer_state
 
 contains
       
@@ -289,27 +288,6 @@ contains
       return
       end
 
-      !> State-aware wrapper for `solute`
-      !!
-      !! Executes legacy solute calculations and snapshots only dynamic solute
-      !! outputs into explicit state.
-      !!
-      !! @param[inout] state SWAP model state container
-      !! @param[in]    task  Solute task selector
-      subroutine solute_state(state, task)
-      use swap_state_mod, only: swap_state_t
-      use swap_state_sync, only: solute_outputs_from_variables
-      implicit none
-
-      type(swap_state_t), intent(inout) :: state
-      integer,            intent(in)    :: task
-
-      call solute(task)
-      if (task .eq. 2) then
-         call solute_outputs_from_variables(state%solute, state%numnod)
-      end if
-      end subroutine solute_state
-
       subroutine AgeTracer (task)
 ! ----------------------------------------------------------------------
 !     date               : Oct 2010
@@ -545,24 +523,4 @@ contains
       return
       end
 
-      !> State-aware wrapper for `AgeTracer`
-      !!
-      !! Executes legacy age-tracer calculations and snapshots only dynamic
-      !! age-tracer outputs into explicit state.
-      !!
-      !! @param[inout] state SWAP model state container
-      !! @param[in]    task  AgeTracer task selector
-      subroutine AgeTracer_state(state, task)
-      use swap_state_mod, only: swap_state_t
-      use swap_state_sync, only: agetracer_outputs_from_variables
-      implicit none
-
-      type(swap_state_t), intent(inout) :: state
-      integer,            intent(in)    :: task
-
-      call AgeTracer(task)
-      if (task .eq. 2) then
-         call agetracer_outputs_from_variables(state%solute, state%numnod, state%nrlevs)
-      end if
-      end subroutine AgeTracer_state
    end module solute_mod

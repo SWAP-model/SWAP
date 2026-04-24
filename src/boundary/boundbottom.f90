@@ -15,7 +15,6 @@ module boundbottom_mod
 
     private
     public :: BoundBottom
-    public :: BoundBottom_state
 
 contains
 
@@ -177,20 +176,4 @@ contains
         return
     end subroutine BoundBottom
 
-    !> State-aware wrapper for `BoundBottom`
-    !!
-    !! Executes the legacy bottom boundary routine and then snapshots updated
-    !! module variables back into the explicit `swap_state_t` container.
-    !!
-    !! @param[inout] state SWAP model state container
-    subroutine BoundBottom_state(state)
-        use swap_state_mod, only: swap_state_t
-        use swap_state_sync, only: boundbottom_outputs_from_variables
-        implicit none
-
-        type(swap_state_t), intent(inout) :: state
-
-        call BoundBottom()
-        call boundbottom_outputs_from_variables(state%boundary, state%soil)
-    end subroutine BoundBottom_state
 end module boundbottom_mod

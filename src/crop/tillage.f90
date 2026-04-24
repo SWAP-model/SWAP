@@ -30,7 +30,6 @@ module tillage_mod
    private
 !  except for these public routines/functions
    public :: DoTillage
-   public :: DoTillage_state
 !  and except for these public variables
    public :: swtill  ! Alias to till_swtill from variables module
    
@@ -521,22 +520,5 @@ write(124,'(A,1P,12E12.5)') Date, Bdens(1), ParamVG(2,layer(1)), theta(1), h(1),
    Slope_match(1:nlay) = (ParamVG(6,1:nlay) - N_match(1:nlay)) / (Rho_cons(1:nlay) - Rho_match(1:nlay))
    end subroutine Change_Tillage_Info
 
-!> State-aware wrapper for `DoTillage`.
-!!
-!! @param[inout] state SWAP model state container
-!! @param[in]    iTask Legacy task selector
-   subroutine DoTillage_state(state, iTask)
-      use swap_state_mod, only: swap_state_t
-      use swap_state_sync, only: tillage_state_from_variables, soil_state_from_variables
-      implicit none
-
-      type(swap_state_t), intent(inout) :: state
-      integer,            intent(in)    :: iTask
-
-      call DoTillage(iTask)
-      call tillage_state_from_variables(state%tillage, state%numlay)
-      call soil_state_from_variables(state%soil, state%numnod, state%numlay)
-   end subroutine DoTillage_state
-   
 end module tillage_mod
    

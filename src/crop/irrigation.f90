@@ -18,8 +18,6 @@
 
    public :: irrigation
    public :: SSDI_irrigation
-   public :: irrigation_state
-   public :: SSDI_irrigation_state
 
    contains
 
@@ -786,41 +784,5 @@ logical :: rdinqr
    end subroutine read_ssdi_input
    
 end subroutine SSDI_irrigation
-
-!> State-aware wrapper for `irrigation`.
-!!
-!! Executes the legacy irrigation task and snapshots irrigation-related outputs
-!! back into the explicit state object.
-!!
-!! @param[inout] state SWAP model state container
-!! @param[in]    task  Legacy task selector
-subroutine irrigation_state(state, task)
-   use swap_state_mod, only: swap_state_t
-   use swap_state_sync, only: irrigation_state_from_variables
-   implicit none
-
-   type(swap_state_t), intent(inout) :: state
-   integer,            intent(in)    :: task
-
-   call irrigation(task)
-   call irrigation_state_from_variables(state%irrig)
-end subroutine irrigation_state
-
-!> State-aware wrapper for `SSDI_irrigation`.
-!!
-!! @param[inout] state SWAP model state container
-!! @param[in]    iTask Legacy task selector
-subroutine SSDI_irrigation_state(state, iTask)
-   use swap_state_mod, only: swap_state_t
-   use swap_state_sync, only: irrigation_state_from_variables, soil_state_from_variables
-   implicit none
-
-   type(swap_state_t), intent(inout) :: state
-   integer,            intent(in)    :: iTask
-
-   call SSDI_irrigation(iTask)
-   call irrigation_state_from_variables(state%irrig)
-   call soil_state_from_variables(state%soil, state%numnod, state%numlay)
-end subroutine SSDI_irrigation_state
 
 end module irrigation_mod

@@ -66,18 +66,7 @@ sources = [
     'src/config/soil_config.f90',
     'src/config/crop_config.f90',
     'src/config/swap_config.f90',
-    'src/atmosphere/atmosphere_state.f90',
-    'src/boundary/boundary_state.f90',
-    'src/drainage/drainage_state.f90',
-    'src/drainage/surfacewater_state.f90',
-    'src/heat/heat_state.f90',
-    'src/solute/solute_state.f90',
-    'src/soil/soil_state.f90',
-    'src/core/swap_state_mod.f90',
-    'src/core/config_to_state.f90',
     'src/core/variables.f90',
-    'src/core/swap_state_sync.f90',
-    'src/macropore/macropore_state.f90',
     'src/core/initialize.f90',
     'src/core/timecontrol.f90',
     
@@ -143,8 +132,7 @@ sources = [
     'src/crop/tillage.f90',
     'src/crop/management_soil.f90',
     'src/crop/cropgrowth.f90',
-    'src/crop/cropgrowth_state.f90',
-    
+
     # Utils
     'src/utils/sharedexchange.f90',
     'src/utils/sharedsimulation.f90',

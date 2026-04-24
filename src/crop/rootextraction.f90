@@ -8,7 +8,7 @@
 module rootextraction_mod
   implicit none
   private
-  public :: RootExtraction, MatricFlux, RootExtraction_state
+  public :: RootExtraction, MatricFlux
 
   contains
 
@@ -859,26 +859,5 @@ module rootextraction_mod
 
       return
   end subroutine MatricFlux
-
-!> State-aware wrapper for `RootExtraction`.
-!!
-!! Executes the legacy root extraction routine and selectively synchronizes the
-!! updated outputs back into the explicit state container.
-!!
-!! @param[inout] state SWAP model state container
-  subroutine RootExtraction_state(state)
-      use swap_state_mod, only: swap_state_t
-      use swap_state_sync, only: crop_state_from_variables, soil_state_from_variables, &
-                                 time_state_from_variables, oxygenstress_state_from_variables
-      implicit none
-
-      type(swap_state_t), intent(inout) :: state
-
-      call RootExtraction()
-      call crop_state_from_variables(state%crop, state%ncrop)
-      call soil_state_from_variables(state%soil, state%numnod, state%numlay)
-      call time_state_from_variables(state%time)
-      call oxygenstress_state_from_variables(state%oxystress, state%numnod)
-  end subroutine RootExtraction_state
 
 end module rootextraction_mod

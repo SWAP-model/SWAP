@@ -17,7 +17,7 @@ module surfacewater_mod
       use distribute_drainage, only: DIVDRA
       use drainage_mod, only: bocodre
       implicit none
-      public :: SurfaceWater, SurfaceWater_state
+      public :: SurfaceWater
       contains
 
 subroutine SurfaceWater(task)
@@ -235,28 +235,6 @@ subroutine SurfaceWater(task)
 
       return
       end
-
-subroutine SurfaceWater_state(state, task)
-      !> State-aware wrapper for `SurfaceWater`
-      !!
-      !! Executes legacy surface-water calculations and snapshots only dynamic
-      !! drainage/surface-water outputs back into explicit state.
-      !!
-      !! @param[inout] state SWAP model state container
-      !! @param[in]    task  SurfaceWater task selector
-      use swap_state_mod, only: swap_state_t
-      use swap_state_sync, only: drainage_outputs_from_variables, surfacewater_outputs_from_variables
-      implicit none
-
-      type(swap_state_t), intent(inout) :: state
-      integer,            intent(in)    :: task
-
-      call SurfaceWater(task)
-      call drainage_outputs_from_variables(state%drain, state%nrlevs, state%numnod)
-      call surfacewater_outputs_from_variables(state%surfwater)
-end subroutine SurfaceWater_state
-
-
 
       SUBROUTINE WLEVBAL ()
       !! Calculate surface water level from water balance (simulated level)

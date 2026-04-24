@@ -15,7 +15,6 @@
 module interception_mod
 
   public :: VonHHBraden, Gash, ruttervw, msw1eic, DivIntercep
-  public :: VonHHBraden_state, Gash_state, ruttervw_state, DivIntercep_state
 
 contains
 
@@ -414,77 +413,5 @@ contains
     endif
 
   end subroutine DivIntercep
-
-  !> @brief State-aware wrapper for `VonHHBraden`
-  !!
-  !! Synchronizes legacy variables from/to explicit SWAP state and executes
-  !! the unchanged physical routine.
-  !!
-  !! @param[inout] state SWAP model state container
-  !! @param[out]   aintc Amount of rainfall interception [cm/d]
-  subroutine VonHHBraden_state(state, aintc)
-    use swap_state_mod, only: swap_state_t
-    use swap_state_sync, only: atmosphere_state_from_variables
-    implicit none
-
-    type(swap_state_t), intent(inout) :: state
-    real(8),            intent(out)   :: aintc
-
-    call VonHHBraden(aintc)
-    call atmosphere_state_from_variables(state%atm)
-  end subroutine VonHHBraden_state
-
-  !> @brief State-aware wrapper for `Gash`
-  !!
-  !! @param[inout] state SWAP model state container
-  !! @param[out]   aintc Amount of rainfall interception [cm/d]
-  subroutine Gash_state(state, aintc)
-    use swap_state_mod, only: swap_state_t
-    use swap_state_sync, only: atmosphere_state_from_variables
-    implicit none
-
-    type(swap_state_t), intent(inout) :: state
-    real(8),            intent(out)   :: aintc
-
-    call Gash(aintc)
-    call atmosphere_state_from_variables(state%atm)
-  end subroutine Gash_state
-
-  !> @brief State-aware wrapper for `ruttervw`
-  !!
-  !! @param[inout] state SWAP model state container
-  !! @param[in]    gctp  Soil cover [-]
-  !! @param[out]   aintc Intercepted rainfall [cm/d]
-  !! @param[out]   eintc Interception evaporation [cm/d]
-  subroutine ruttervw_state(state, gctp, aintc, eintc)
-    use swap_state_mod, only: swap_state_t
-    use swap_state_sync, only: atmosphere_state_from_variables
-    implicit none
-
-    type(swap_state_t), intent(inout) :: state
-    real(8),            intent(in)    :: gctp
-    real(8),            intent(out)   :: aintc
-    real(8),            intent(out)   :: eintc
-
-    call ruttervw(gctp, aintc, eintc)
-    call atmosphere_state_from_variables(state%atm)
-  end subroutine ruttervw_state
-
-  !> @brief State-aware wrapper for `DivIntercep`
-  !!
-  !! @param[inout] state SWAP model state container
-  !! @param[in]    aintc Total interception amount [cm/d]
-  subroutine DivIntercep_state(state, aintc)
-    use swap_state_mod, only: swap_state_t
-    use swap_state_sync, only: atmosphere_state_from_variables, irrigation_state_from_variables
-    implicit none
-
-    type(swap_state_t), intent(inout) :: state
-    real(8),            intent(in)    :: aintc
-
-    call DivIntercep(aintc)
-    call atmosphere_state_from_variables(state%atm)
-    call irrigation_state_from_variables(state%irrig)
-  end subroutine DivIntercep_state
 
 end module interception_mod
