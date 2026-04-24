@@ -1,8 +1,0 @@
-# Minimal happy-path drainage TOML used by test_readdrainagetoml.pf.
-# The goal is to exercise the reader's happy paths, not to model a
-# realistic drainage setup. Real cases live under tests/swap-cases/.
-
-[drainage.basic.general]
-dramet = 1
-swdivd = 0
-swdislay = 0

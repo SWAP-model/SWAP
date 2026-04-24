@@ -1,7 +1,0 @@
-# Malformed TOML used by test_readdrainagetoml.pf to verify that the
-# reader surfaces parse errors via the tomlf error object rather than
-# silently producing a zero-filled drainage_state_t. The unclosed
-# bracket is the parse failure.
-
-[drainage
-dramet = 1

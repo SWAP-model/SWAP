@@ -79,8 +79,6 @@ if get_option('enable_pfunit')
     # .pf files. Empty at baseline; grows as Phase 4 re-adds suites.
     pfunit_extra_sources = [
         '../../src/core/swap_state_mod.f90',
-        '../../src/io/readdrainagetoml.f90',
-        '../../src/io/readswaptoml.f90',
         '../../src/atmosphere/precipitation.f90',
         '../../src/core/variables.f90',
         '../../src/crop/wofost_soil_declarations.f90',
@@ -122,8 +120,6 @@ if get_option('enable_pfunit')
         'solute/test_solute_state.pf',
         'macropore/test_macropore_state.pf',
         'core/test_swap_state.pf',
-        'io/test_readdrainagetoml.pf',
-        'io/test_readswaptoml.pf',
         'utils/test_arrayutils.pf',
         'atmosphere/test_precipitation.pf',
         'atmosphere/test_et.pf',

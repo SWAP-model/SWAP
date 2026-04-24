@@ -96,7 +96,6 @@ use soilhydraulics_mod, only: soilwater_state, soilwaterstatevar_state
 use irrigation_mod, only: irrigation_state, SSDI_irrigation_state
 use management_soil_mod, only: SoilManagement_state
 use cropgrowth_state_mod, only: CropGrowth_state
-use readswaptoml_mod, only: ReadSwapToml_state
 implicit none
 
 ! global
@@ -108,9 +107,6 @@ type(swap_output), intent(out),   optional :: fromswap
 ! local
 logical :: flError
 logical, parameter :: flDailyStateSnapshot = .false.
-logical :: flTomlInput
-integer :: posarg, numchar
-character(len=400) :: inputcfg
 
 if (iCaller /= 0 .and. iTask < 3) then
    if (.not.(present(toswap)))   call fatalerr ('swap', 'Argument toswap missing in DLL call.')
@@ -130,29 +126,7 @@ if (iTask == 1) then
    call IterTime(1)
 
 !  read time independent input file
-   flTomlInput = .false.
-   posarg = 1
-   call get_command_argument(posarg, inputcfg, numchar)
-   if (numchar > 5) then
-      if (inputcfg(numchar-4:numchar) == '.toml' .or. inputcfg(numchar-4:numchar) == '.TOML') then
-         flTomlInput = .true.
-      end if
-   end if
-
-   if (flTomlInput) then
-      call ReadSwapToml_state(state, trim(inputcfg))
-
-      write (*,'(/,a)') '  TOML load smoke test (state):'
-      write (*,'(a,a)')  '    project   = ', trim(state%time%project)
-      write (*,'(a,a)')  '    meteo     = ', trim(state%atm%metfil)
-      write (*,'(a,a)')  '    drain     = ', trim(state%drain%drfil)
-      write (*,'(a,i0)') '    ncrop     = ', state%ncrop
-      if (allocated(state%crop%cropfil) .and. state%ncrop >= 1) then
-         write (*,'(a,a)') '    crop(1)   = ', trim(state%crop%cropfil(1))
-      end if
-   else
-      call ReadSwap(state)
-   end if
+   call ReadSwap(state)
 
 !  shared simulation
    if (flSwapShared) call SharedSimulation(1)

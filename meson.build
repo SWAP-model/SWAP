@@ -99,8 +99,6 @@ sources = [
     'src/io/toml/load_swap_config.f90',
     'src/io/toml/write_swap_config.f90',
     'src/io/swap_csv_output.f90',
-    'src/io/readdrainagetoml.f90',
-    'src/io/readswaptoml.f90',
     'src/io/readswap.f90',
     'src/io/readmeteo.f90',
     'src/io/swapoutput.f90',
