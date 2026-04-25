@@ -181,5 +181,5 @@ subroutine test_parse_date_to_days1900()
    dtv%date%day   = 1
 
    days = parse_date_to_days1900(dtv)
-   @assertEqual(37255.0_real64, days, 1.0_real64)
+   @assertEqual(37257.0_real64, days, 1.0_real64)
 end subroutine

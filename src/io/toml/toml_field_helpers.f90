@@ -173,7 +173,7 @@ contains
    end subroutine get_array_of_tables
 
    !> Convert a TOML datetime to days-since-1900 (the legacy time axis).
-   !! 1900-01-01 is JD 2415021.
+   !! 1900-01-01 is JD 2415021 (but we use 2415020 for 1-based indexing).
    function parse_date_to_days1900(dtv) result(days)
       type(toml_datetime), intent(in) :: dtv
       real(real64) :: days
@@ -182,7 +182,7 @@ contains
       m = dtv%date%month
       d = dtv%date%day
       jd     = julian_day(y, m, d)
-      jd1900 = 2415021
+      jd1900 = 2415020
       days   = real(jd - jd1900, kind=real64)
    end function parse_date_to_days1900
 
