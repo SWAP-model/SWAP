@@ -164,3 +164,61 @@ vs the earlier 27.7% full-analysis figure).
   by the regression suite happening to hit a code path that passed all guards.
   Both are fixed. The takeaway: regression-only coverage is not enough;
   Phase 4 should continue adding unit-level tests for error paths.
+
+---
+
+## Phase 4b baseline numbers (2026-04-24, tag `rescue/phase-4b-parity`)
+
+`gcovr` terminal summary: **53.1%** line coverage (4020 out of 7567
+executable lines visible to gcovr), compared to 53.4% in Phase 4a.
+
+Phase 4b deleted all drift-era `*_state.f90` modules and their pFUnit
+suites — approximately 8,590 lines removed, 401 added (net −8,189 LoC). The
+deletion removes both uncovered and covered lines from the count, so the
+gcovr-visible denominator shrank from 7,645 to 7,567 lines (−78). The
+numerator fell from 4,086 to 4,020 executed lines (−66), yielding a net
+change of −0.3 pp. The drop is structurally expected: the deleted state
+modules were partially covered by the now-also-deleted pFUnit state-lifecycle
+suites.
+
+The Phase 4a note on gcovr path resolution applies unchanged: the new
+infrastructure modules (`src/error/`, `src/validation/`, `src/config/`,
+`src/io/toml/`) remain invisible to the project-level gcovr run because
+their object files live in the unit-test binary directory. Coverage for
+those modules is confirmed through the pFUnit suite (109 tests passing).
+
+### Per-domain rollup (gcovr, Phase 4b)
+
+| Domain | Line coverage | Exec | Total | Delta vs Phase 4a | Notes |
+|---|---|---|---|---|---|
+| `src/core/` (excl. sync/variables) | ~60-83% | varies | varies | unchanged | state modules deleted; driver unchanged |
+| `src/crop/` | 56% | 1045 | 1863 | unchanged | regression-driven |
+| `src/io/readswap.f90` | 49% | 1377 | 2787 | −1 pp | line count stable; minor denominator change |
+| `src/io/readmeteo.f90` | 84% | 229 | 270 | unchanged | |
+| `src/io/swap_csv_output.f90` | 85% | 67 | 78 | unchanged | |
+| `src/utils/sharedexchange.f90` | 0% | 0 | 14 | new in report | was masked by deleted state modules |
+| `src/utils/sharedsimulation.f90` | 0% | 0 | 39 | new in report | same |
+
+**Project total: 53.4% → 53.1%** (−0.3 pp). The regression suite remains
+6/6 green; the hupselbrook parity test confirms load → validate → finalize →
+adapter produces bit-identical results to the legacy readswap path.
+
+### Phase 4c gap list
+
+The following gaps are surfaced for Phase 4c work:
+
+- **`bottom_boundary`, `heat`, `solute` config types missing.** The TOML
+  pipeline has no reader/config struct for these domains; they are still
+  handled exclusively by the legacy `readswap.f90` path.
+- **Cross-file TOML support needed.** The current `load_swap_config` reads a
+  single `.toml` file; real cases split config across `*.crp`, `*.dra`, etc.
+  Sub-file loading support is a Phase 4c prerequisite.
+- **Legacy off-by-1 dates.** The `readswap.f90` shim passes `tstart`/`tend`
+  as Julian-day integers; the TOML path parses ISO dates. An off-by-1
+  boundary exists at year boundaries that is not yet covered by a test.
+- **`swmacro` shadow variable.** `macropore.f90` declares a local `swmacro`
+  that shadows the global from `variables.f90`. Will surface as a Fortran
+  warning once the module is de-threaded in Phase 4c.
+- **`nrlevs` hardcode.** Drainage config cap is hardcoded to 5 in the
+  validator; the legacy reader accepts higher counts for some case types.
+  Needs alignment before the TOML path is used for drainage-heavy cases.
