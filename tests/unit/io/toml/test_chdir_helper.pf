@@ -1,0 +1,21 @@
+@test
+subroutine test_get_cwd_returns_nonempty()
+   use funit
+   use chdir_helper_mod
+   character(len=1024) :: cwd
+   call get_cwd(cwd)
+   @assertTrue(len_trim(cwd) > 0)
+end subroutine
+
+@test
+subroutine test_chdir_to_root_and_back()
+   use funit
+   use chdir_helper_mod
+   character(len=1024) :: orig_cwd, new_cwd
+
+   call get_cwd(orig_cwd)
+   call chdir_to('/tmp')
+   call get_cwd(new_cwd)
+   @assertEqual('/tmp', trim(new_cwd))
+   call chdir_to(trim(orig_cwd))
+end subroutine
