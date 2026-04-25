@@ -1,0 +1,42 @@
+@test
+subroutine test_read_cropgrass_happy()
+   use funit
+   use tomlf, only: toml_table, toml_load
+   use cropgrass_config_mod
+   use read_cropgrass_toml_mod
+   use error_mod
+   type(toml_table), allocatable, target :: doc
+   type(toml_table), pointer             :: doc_ptr
+   type(cropgrass_config_t)              :: c
+   type(error_collection_t)              :: errors
+
+   call toml_load(doc, 'tests/unit/io/toml/fixtures/cropgrass_minimal.toml')
+   doc_ptr => doc
+   call read_cropgrass_toml(doc_ptr, c, errors)
+
+   @assertFalse(errors%has_errors())
+   @assertEqual(2,    c%idev)
+   @assertEqual(1,    c%swharv)
+   @assertEqual(5,    c%nmow)
+   @assertEqual(800.0d0, c%tsum1, 1.0d-12)
+   @assertEqual(50.0d0,  c%rdc,   1.0d-12)
+end subroutine
+
+@test
+subroutine test_read_cropgrass_missing_section_silent()
+   use funit
+   use tomlf, only: toml_table, toml_load
+   use cropgrass_config_mod
+   use read_cropgrass_toml_mod
+   use error_mod
+   type(toml_table), allocatable, target :: doc
+   type(toml_table), pointer             :: doc_ptr
+   type(cropgrass_config_t)              :: c
+   type(error_collection_t)              :: errors
+
+   call toml_load(doc, 'tests/unit/io/toml/fixtures/general_minimal.toml')
+   doc_ptr => doc
+   call read_cropgrass_toml(doc_ptr, c, errors)
+
+   @assertFalse(errors%has_errors())
+end subroutine

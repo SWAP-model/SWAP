@@ -1,0 +1,24 @@
+[phenology]
+idev = 2
+tsum1 = 800.0
+tsum2 = 800.0
+
+[root]
+rdi = 5.0
+rri = 1.0
+rdc = 50.0
+
+[water_stress]
+hlim1  = -10.0
+hlim2u = -25.0
+hlim2l = -200.0
+hlim3h = -300.0
+hlim3l = -500.0
+hlim4  = -8000.0
+
+[mowing]
+swharv = 1
+nmow   = 5
+
+[grazing]
+swgraz = 0
