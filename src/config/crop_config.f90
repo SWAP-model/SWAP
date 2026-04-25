@@ -3,6 +3,8 @@ module crop_config_mod
    use iso_fortran_env, only: real64
    use error_mod, only: error_collection_t, ERR_VALIDATION_CROSS_FIELD, ERR_VALIDATION_OUT_OF_RANGE
    use validation_mod, only: check_int_enum
+   use cropfixed_config_mod, only: cropfixed_config_t
+   use cropgrass_config_mod, only: cropgrass_config_t
    implicit none
    private
 
@@ -17,6 +19,17 @@ module crop_config_mod
       real(real64),     allocatable :: rotation_end(:)
       character(len=256), allocatable :: rotation_file(:)
       integer,          allocatable :: rotation_type(:)
+
+      !> Per-entry sub-configs, populated when file= reference is followed.
+      !! rotation_fixed(i) is meaningful when rotation_type(i) == 1.
+      !! rotation_grass(i) is meaningful when rotation_type(i) == 3.
+      type(cropfixed_config_t), allocatable :: rotation_fixed(:)
+      type(cropgrass_config_t), allocatable :: rotation_grass(:)
+
+      !> .true. for entry i when a per-crop TOML file was successfully
+      !! loaded for that rotation slot. Prevents validate from checking
+      !! default-constructed sub-configs for entries whose files are absent.
+      logical, allocatable :: rotation_loaded(:)
    contains
       procedure :: validate => crop_config_validate
       procedure :: finalize => crop_config_finalize
@@ -64,6 +77,23 @@ contains
                                "crop.rotation")
          end if
       end do
+
+      ! Delegate validation to per-entry sub-configs when populated.
+      ! Only validate slots that were actually loaded from a file.
+      if (allocated(self%rotation_loaded)) then
+         do i = 1, n
+            if (.not. self%rotation_loaded(i)) cycle
+            if (self%rotation_type(i) == 1) then
+               if (allocated(self%rotation_fixed)) then
+                  call self%rotation_fixed(i)%validate(errors)
+               end if
+            else if (self%rotation_type(i) == 3) then
+               if (allocated(self%rotation_grass)) then
+                  call self%rotation_grass(i)%validate(errors)
+               end if
+            end if
+         end do
+      end if
    end subroutine crop_config_validate
 
    subroutine crop_config_finalize(self, errors)
