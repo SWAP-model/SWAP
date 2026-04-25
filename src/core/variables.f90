@@ -1128,9 +1128,10 @@
       integer IcTopMP              ! Compartment with top layer with macropores (-)                    ! Adaptation for GEM 
       integer IDecMpRat            ! Counter for number of times macropore fluxes are decreased with factor 10 because convergence is not reached (-)
       integer NodGWlFlCpZo         ! Node directly above groundwater level of full capillary zone (-)
-      integer NumDm                ! Number of macropore domains (-)     
-      integer NumLevRapDra         ! Number of drainage level 
+      integer NumDm                ! Number of macropore domains (-)
+      integer NumLevRapDra         ! Number of drainage level
       integer SwBma                ! Switch for output file with detailed yearly macropore water balance *.BMA: 0 = no; 1 = yes
+      integer swmacro              ! Switch for macropore option: 0 = no; 1 = yes
       real(8) ArMpTp               ! Area fraction of macropores at Top of macropores (-) 
       real(8) cQMpLatSs            ! Cumulative amount of macropore inflow at soil surface by lateral overland flow (L)
       real(8) cQMpInIntSatDm1      ! Cumulative amount of interflow out off perched groundwater into macropores of domain 1 (MB) (L)

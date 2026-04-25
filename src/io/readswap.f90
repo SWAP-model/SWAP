@@ -17,7 +17,6 @@
       integer swerror,swbbcfile
       integer lay,swdc,ini,tss
       integer isublay(macp),bbc,il, sol, j
-      integer SwMacro
       integer swvapor(maho)
       integer swIrrigate
 
