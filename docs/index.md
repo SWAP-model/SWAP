@@ -17,6 +17,7 @@ SWAP is a one-dimensional vertical simulation model for transport processes (wat
 
 - [State management](state-management.html) — `config_t` / `initial_t` / `state_t`, ASSOCIATE, lifecycle.
 - [Configuration schema](configuration-schema.html) — TOML input reference.
+- [TOML format guide](toml-format-guide.html) — how to author a SWAP TOML file: conventions, examples, gotchas.
 - [Error handling](error-handling.html) — error collection, calling convention, abort checkpoint.
 - [Validation](validation.html) — primitive checks, section validators, aggregate rules, testing.
 - [Coverage baseline](coverage-baseline.html) — Phase 3 line/branch coverage numbers and known gaps.
