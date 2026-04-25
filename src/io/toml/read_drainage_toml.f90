@@ -1,12 +1,15 @@
-!> Reader for the [drainage] section of a SWAP TOML.
+!> TOML reader for the [drainage] section.
+!! Supports inline drainage data OR external file via `[drainage].file = "..."`.
 module read_drainage_toml_mod
    use iso_fortran_env, only: real64
-   use tomlf, only: toml_table, toml_array, get_value, len
+   use tomlf, only: toml_table, toml_array, toml_error, toml_load, get_value, len
    use drainage_config_mod, only: drainage_config_t
    use toml_field_helpers_mod, only: get_table, get_array_of_tables,   &
                                      get_optional_int_with_default,    &
-                                     get_optional_real_with_default
-   use error_mod, only: error_collection_t
+                                     get_optional_real_with_default,   &
+                                     get_optional_string_with_default
+   use path_helpers_mod, only: resolve_relative_path
+   use error_mod, only: error_collection_t, ERR_PARSE_MALFORMED_TOML
    implicit none
    private
 
@@ -14,17 +17,45 @@ module read_drainage_toml_mod
 
 contains
 
-   subroutine read_drainage_toml(doc, config, errors)
+   subroutine read_drainage_toml(doc, config, errors, base_path)
       type(toml_table), pointer,  intent(in)    :: doc
       type(drainage_config_t),    intent(inout) :: config
       type(error_collection_t),   intent(inout) :: errors
+      character(len=*), optional, intent(in)    :: base_path
 
-      type(toml_table), pointer :: sec, basic, item
+      type(toml_table), pointer             :: drain_tab, ext_root, ext_sec
+      type(toml_table), allocatable, target :: ext_doc
+      type(toml_error), allocatable         :: terr
+      character(len=:), allocatable         :: file_rel, file_abs
+
+      call get_table(doc, 'drainage', drain_tab, 'drainage', errors)
+      if (.not. associated(drain_tab)) return
+
+      call get_optional_string_with_default(drain_tab, 'file', file_rel, '', 'drainage.file', errors)
+      if (len_trim(file_rel) > 0 .and. present(base_path)) then
+         file_abs = resolve_relative_path(base_path, file_rel)
+         call toml_load(ext_doc, trim(file_abs), error=terr)
+         if (allocated(terr)) then
+            call errors%append(ERR_PARSE_MALFORMED_TOML, trim(terr%message), trim(file_abs))
+            return
+         end if
+         ext_root => ext_doc
+         call get_table(ext_root, 'drainage', ext_sec, 'drainage', errors)
+         if (.not. associated(ext_sec)) return
+         call read_drainage_inner(ext_sec, config, errors)
+      else
+         call read_drainage_inner(drain_tab, config, errors)
+      end if
+   end subroutine read_drainage_toml
+
+   subroutine read_drainage_inner(sec, config, errors)
+      type(toml_table), pointer,  intent(in)    :: sec
+      type(drainage_config_t),    intent(inout) :: config
+      type(error_collection_t),   intent(inout) :: errors
+
+      type(toml_table), pointer :: basic, item
       type(toml_array), pointer :: levels
       integer :: i, n, stat
-
-      call get_table(doc, 'drainage', sec, 'drainage', errors)
-      if (.not. associated(sec)) return
 
       call get_optional_int_with_default(sec, 'swdra',    config%swdra,    0, 'drainage.swdra',    errors)
       call get_optional_int_with_default(sec, 'dramet',   config%dramet,   0, 'drainage.dramet',   errors)
@@ -62,7 +93,6 @@ contains
             config%widthr  = 0.0_real64
             config%taludr  = 0.0_real64
             config%swallo  = 0
-
             do i = 1, n
                call get_value(levels, i, item, stat=stat)
                if (stat /= 0 .or. .not. associated(item)) cycle
@@ -74,6 +104,6 @@ contains
             end do
          end if
       end if
-   end subroutine read_drainage_toml
+   end subroutine read_drainage_inner
 
 end module read_drainage_toml_mod
