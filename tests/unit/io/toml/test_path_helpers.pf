@@ -1,0 +1,35 @@
+@test
+subroutine test_directory_of_extracts_dir()
+   use funit
+   use path_helpers_mod
+   character(len=:), allocatable :: d
+   d = directory_of('tests/swap-cases/toml/1.hupselbrook/swap.toml')
+   @assertEqual('tests/swap-cases/toml/1.hupselbrook/', d)
+end subroutine
+
+@test
+subroutine test_directory_of_no_slash_returns_dot()
+   use funit
+   use path_helpers_mod
+   character(len=:), allocatable :: d
+   d = directory_of('swap.toml')
+   @assertEqual('./', d)
+end subroutine
+
+@test
+subroutine test_resolve_relative_concats()
+   use funit
+   use path_helpers_mod
+   character(len=:), allocatable :: p
+   p = resolve_relative_path('tests/swap-cases/toml/1.hupselbrook/', 'maizes.crp.toml')
+   @assertEqual('tests/swap-cases/toml/1.hupselbrook/maizes.crp.toml', p)
+end subroutine
+
+@test
+subroutine test_resolve_relative_absolute_passes_through()
+   use funit
+   use path_helpers_mod
+   character(len=:), allocatable :: p
+   p = resolve_relative_path('whatever/', '/abs/path/foo.toml')
+   @assertEqual('/abs/path/foo.toml', p)
+end subroutine
