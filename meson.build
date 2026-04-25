@@ -88,6 +88,7 @@ sources = [
     'src/io/toml/read_drainage_toml.f90',
     'src/io/toml/read_soil_toml.f90',
     'src/io/toml/read_crop_toml.f90',
+    'src/io/toml/read_cropfixed_toml.f90',
     'src/io/toml/load_swap_config.f90',
     'src/io/toml/write_swap_config.f90',
     'src/io/swap_csv_output.f90',
