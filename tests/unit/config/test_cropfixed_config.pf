@@ -1,0 +1,75 @@
+@test
+subroutine test_cropfixed_default_invalid_idev2_no_lcc_check()
+   use funit
+   use error_mod
+   use cropfixed_config_mod
+   type(cropfixed_config_t) :: c
+   type(error_collection_t) :: errors
+   c%idev = 2
+   call c%validate(errors)
+   @assertFalse(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_cropfixed_idev1_requires_lcc_in_range()
+   use funit
+   use error_mod
+   use cropfixed_config_mod
+   type(cropfixed_config_t) :: c
+   type(error_collection_t) :: errors
+   c%idev = 1
+   c%lcc  = 0
+   call c%validate(errors)
+   @assertTrue(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_cropfixed_idev1_lcc_180_passes()
+   use funit
+   use error_mod
+   use cropfixed_config_mod
+   type(cropfixed_config_t) :: c
+   type(error_collection_t) :: errors
+   c%idev = 1
+   c%lcc  = 180
+   call c%validate(errors)
+   @assertFalse(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_cropfixed_invalid_idev_fails()
+   use funit
+   use error_mod
+   use cropfixed_config_mod
+   type(cropfixed_config_t) :: c
+   type(error_collection_t) :: errors
+   c%idev = 9
+   call c%validate(errors)
+   @assertTrue(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_cropfixed_negative_rdi_fails()
+   use funit
+   use error_mod
+   use cropfixed_config_mod
+   type(cropfixed_config_t) :: c
+   type(error_collection_t) :: errors
+   c%idev = 2
+   c%rdi  = -1.0d0
+   call c%validate(errors)
+   @assertTrue(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_cropfixed_finalize_idempotent()
+   use funit
+   use error_mod
+   use cropfixed_config_mod
+   type(cropfixed_config_t) :: c
+   type(error_collection_t) :: errors
+   c%idev = 2
+   call c%finalize(errors)
+   call c%finalize(errors)
+   @assertFalse(errors%has_errors())
+end subroutine

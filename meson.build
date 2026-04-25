@@ -66,6 +66,7 @@ sources = [
     'src/config/soil_config.f90',
     'src/config/crop_config.f90',
     'src/config/swap_config.f90',
+    'src/config/cropfixed_config.f90',
     'src/core/variables.f90',
     'src/core/initialize.f90',
     'src/core/timecontrol.f90',
