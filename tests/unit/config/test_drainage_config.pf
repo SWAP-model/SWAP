@@ -67,3 +67,42 @@ subroutine test_drainage_nrlevs_too_many_fails()
    call d%validate(errors)
    @assertTrue(errors%has_errors())
 end subroutine
+
+@test
+subroutine test_drainage_finalize_clobbers_nrlevs_when_dramet_not_3()
+   use funit
+   use error_mod
+   use drainage_config_mod
+   type(drainage_config_t)  :: d
+   type(error_collection_t) :: errors
+   d%dramet = 2
+   d%nrlevs = 0
+   call d%finalize(errors)
+   @assertEqual(1, d%nrlevs)
+end subroutine
+
+@test
+subroutine test_drainage_finalize_clobbers_nrlevs_even_if_user_set()
+   use funit
+   use error_mod
+   use drainage_config_mod
+   type(drainage_config_t)  :: d
+   type(error_collection_t) :: errors
+   d%dramet = 1
+   d%nrlevs = 4
+   call d%finalize(errors)
+   @assertEqual(1, d%nrlevs)
+end subroutine
+
+@test
+subroutine test_drainage_finalize_preserves_nrlevs_when_dramet_is_3()
+   use funit
+   use error_mod
+   use drainage_config_mod
+   type(drainage_config_t)  :: d
+   type(error_collection_t) :: errors
+   d%dramet = 3
+   d%nrlevs = 5
+   call d%finalize(errors)
+   @assertEqual(5, d%nrlevs)
+end subroutine
