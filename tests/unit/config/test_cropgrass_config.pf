@@ -1,0 +1,72 @@
+@test
+subroutine test_cropgrass_defaults_pass()
+   use funit
+   use error_mod
+   use cropgrass_config_mod
+   type(cropgrass_config_t) :: c
+   type(error_collection_t) :: errors
+   call c%validate(errors)
+   @assertFalse(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_cropgrass_swharv1_requires_nmow()
+   use funit
+   use error_mod
+   use cropgrass_config_mod
+   type(cropgrass_config_t) :: c
+   type(error_collection_t) :: errors
+   c%swharv = 1
+   c%nmow   = 0
+   call c%validate(errors)
+   @assertTrue(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_cropgrass_swharv1_with_nmow_passes()
+   use funit
+   use error_mod
+   use cropgrass_config_mod
+   type(cropgrass_config_t) :: c
+   type(error_collection_t) :: errors
+   c%swharv = 1
+   c%nmow   = 4
+   call c%validate(errors)
+   @assertFalse(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_cropgrass_swgraz_invalid_fails()
+   use funit
+   use error_mod
+   use cropgrass_config_mod
+   type(cropgrass_config_t) :: c
+   type(error_collection_t) :: errors
+   c%swgraz = 9
+   call c%validate(errors)
+   @assertTrue(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_cropgrass_negative_rdi_fails()
+   use funit
+   use error_mod
+   use cropgrass_config_mod
+   type(cropgrass_config_t) :: c
+   type(error_collection_t) :: errors
+   c%rdi = -1.0d0
+   call c%validate(errors)
+   @assertTrue(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_cropgrass_finalize_idempotent()
+   use funit
+   use error_mod
+   use cropgrass_config_mod
+   type(cropgrass_config_t) :: c
+   type(error_collection_t) :: errors
+   call c%finalize(errors)
+   call c%finalize(errors)
+   @assertFalse(errors%has_errors())
+end subroutine
