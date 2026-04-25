@@ -1,0 +1,127 @@
+! Phase 4b Task 12 parity test: legacy `variables` globals (after readswap)
+! vs swap_config_t fields (after load_swap_config + validate + finalize).
+!
+! The test runs the legacy reader by chdir-ing into the case directory and
+! calling readswap() (reads "swap.swp" from CWD).  It then loads the
+! matching TOML file relative to the project root and asserts field-by-field
+! equality for ~30 fields spanning all six existing sections.
+!
+! Scope: existing-schema fields only.  SWHEA, SWSOLU, SWBOTB and the
+! associated heat/solute/bottom_boundary tables are Phase 4c.
+!
+! Note: swmacro is a LOCAL variable in readswap.f90 (shadows the module
+! global) — the module-level swmacro is never written.  Dropped from scope.
+! Note: swinter is only set per-crop inside crop .crp reader calls; the
+! top-level meteorology swinter global is left at 0 (default).
+
+@test
+subroutine test_hupselbrook_parity_general()
+   use funit
+   use parity_helpers_mod
+   use variables, only: project, pathwork, pathatm, pathcrop, pathdrain, swscre
+   use swap_config_mod
+   use error_mod
+   type(swap_config_t)      :: config
+   type(error_collection_t) :: errors
+
+   call load_both_for_hupselbrook(config, errors)
+
+   @assertFalse(errors%has_fatals())
+
+   @assertEqual(trim(project),   trim(config%general%project))
+   @assertEqual(trim(pathwork),  trim(config%general%pathwork))
+   @assertEqual(trim(pathatm),   trim(config%general%pathatm))
+   @assertEqual(trim(pathcrop),  trim(config%general%pathcrop))
+   @assertEqual(trim(pathdrain), trim(config%general%pathdrain))
+   @assertEqual(swscre,          config%general%swscre)
+end subroutine
+
+@test
+subroutine test_hupselbrook_parity_simulation()
+   use funit
+   use parity_helpers_mod
+   use variables, only: tstart, tend, nprintday
+   use swap_config_mod
+   use error_mod
+   type(swap_config_t)      :: config
+   type(error_collection_t) :: errors
+
+   call load_both_for_hupselbrook(config, errors)
+
+   @assertEqual(tstart,    config%simulation%tstart, 1.5d0)
+   @assertEqual(tend,      config%simulation%tend,   1.5d0)
+   @assertEqual(nprintday, config%simulation%nprintday)
+end subroutine
+
+@test
+subroutine test_hupselbrook_parity_meteorology()
+   use funit
+   use parity_helpers_mod
+   use variables, only: metfil, lat, alt, altw, swetr, swdivide, swrain, angstroma, angstromb
+   use swap_config_mod
+   use error_mod
+   type(swap_config_t)      :: config
+   type(error_collection_t) :: errors
+
+   call load_both_for_hupselbrook(config, errors)
+
+   @assertEqual(trim(metfil), trim(config%meteo%metfile))
+   @assertEqual(lat,          config%meteo%lat,       1.0d-9)
+   @assertEqual(alt,          config%meteo%alt,       1.0d-9)
+   @assertEqual(altw,         config%meteo%altw,      1.0d-9)
+   @assertEqual(swetr,        config%meteo%swetr)
+   @assertEqual(swdivide,     config%meteo%swdivide)
+   @assertEqual(swrain,       config%meteo%swrain)
+   @assertEqual(angstroma,    config%meteo%angstroma, 1.0d-9)
+   @assertEqual(angstromb,    config%meteo%angstromb, 1.0d-9)
+end subroutine
+
+@test
+subroutine test_hupselbrook_parity_drainage()
+   use funit
+   use parity_helpers_mod
+   use variables, only: dramet, swdivd, swdislay
+   use swap_config_mod
+   use error_mod
+   type(swap_config_t)      :: config
+   type(error_collection_t) :: errors
+
+   call load_both_for_hupselbrook(config, errors)
+
+   @assertEqual(dramet,   config%drain%dramet)
+   @assertEqual(swdivd,   config%drain%swdivd)
+   @assertEqual(swdislay, config%drain%swdislay)
+end subroutine
+
+@test
+subroutine test_hupselbrook_parity_soil()
+   use funit
+   use parity_helpers_mod
+   use variables, only: swsophy, swhyst, swinco, gwli
+   use swap_config_mod
+   use error_mod
+   type(swap_config_t)      :: config
+   type(error_collection_t) :: errors
+
+   call load_both_for_hupselbrook(config, errors)
+
+   @assertEqual(swsophy, config%soil%swsophy)
+   @assertEqual(swhyst,  config%soil%swhyst)
+   @assertEqual(swinco,  config%soil%swinco)
+   @assertEqual(gwli,    config%soil%gwli,    1.0d-9)
+end subroutine
+
+@test
+subroutine test_hupselbrook_parity_crop()
+   use funit
+   use parity_helpers_mod
+   use variables, only: swCrop
+   use swap_config_mod
+   use error_mod
+   type(swap_config_t)      :: config
+   type(error_collection_t) :: errors
+
+   call load_both_for_hupselbrook(config, errors)
+
+   @assertEqual(swCrop, config%crop%swcrop)
+end subroutine

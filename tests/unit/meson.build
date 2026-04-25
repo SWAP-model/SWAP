@@ -95,6 +95,15 @@ if get_option('enable_pfunit')
         '../../src/io/toml/load_swap_config.f90',
         '../../src/io/toml/write_swap_config.f90',
         'io/toml/chdir_helper.f90',
+        '../../src/soil/WC_K_models_04_11.f90',
+        '../../src/utils/soilhydraulicsutils.f90',
+        '../../src/soil/sptabulated.f90',
+        '../../src/crop/oxygenstress.f90',
+        '../../src/utils/surfacewaterutils.f90',
+        '../../src/crop/irrigation.f90',
+        '../../src/io/readswap.f90',
+        'io/toml/parity_helpers.f90',
+        'io/toml/readswap_stubs.f90',
     ]
 
     pfunit_base_sources = test_base_sources + pfunit_extra_sources
@@ -124,6 +133,7 @@ if get_option('enable_pfunit')
         'io/toml/test_hupselbrook_roundtrip.pf',
         'io/toml/test_all_cases_smoke.pf',
         'io/toml/test_chdir_helper.pf',
+        'io/toml/test_hupselbrook_parity.pf',
     ]
 
     # When pf_files is non-empty, build and register the unit-swap-tests
