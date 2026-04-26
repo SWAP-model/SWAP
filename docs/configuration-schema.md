@@ -6,17 +6,27 @@ author: SWAP modernization team
 # Configuration schema
 
 This document is the reference for the SWAP TOML input format as it exists at
-the rescue baseline. It is extracted directly from the two modernised readers,
-which are the schema source of truth:
+the Phase 4c-a rescue baseline. It is extracted directly from the modernised
+readers, which are the schema source of truth:
 
-- `src/io/readswaptoml.f90` — main `.swp` reader (`ReadSwapToml_state`).
-- `src/io/readdrainagetoml.f90` — drainage `.dra` reader
-  (`ReadDrainageToml_state`).
+- `src/io/toml/load_swap_config.f90` — top-level dispatcher.
+- `src/io/toml/read_general_toml.f90` — `[general]` section.
+- `src/io/toml/read_simulation_toml.f90` — `[simulation]` section (incl. `[simulation.output]`).
+- `src/io/toml/read_meteorology_toml.f90` — `[meteorology]` section.
+- `src/io/toml/read_drainage_toml.f90` — `[drainage]` section + external file reference.
+- `src/io/toml/read_soil_toml.f90` — `[soil]` section.
+- `src/io/toml/read_crop_toml.f90` — `[[crop.rotation]]` array-of-tables + cross-file dispatch.
+- `src/io/toml/read_cropfixed_toml.f90` — type-1 `.crp.toml` schema.
+- `src/io/toml/read_cropgrass_toml.f90` — type-3 `.crp.toml` schema.
 
 If a key is not listed here, the TOML reader does not currently parse it,
 regardless of whether it appears in example files under `tests/swap-cases/`.
 Sample files in the tree contain aspirational keys for future phases; only the
-subset documented below actually reaches `swap_state_t`.
+subset documented below actually reaches `swap_config_t`.
+
+**See also:**
+- `docs/toml-format-guide.md` — general TOML conventions used in SWAP.
+- Each module's source (listed above) for authoritative field and validator definitions.
 
 ## Input file layout
 
@@ -100,46 +110,52 @@ relative to the process working directory.
 
 | Key | Type | Required | State target | Description |
 |---|---|---|---|---|
-| `start_date` | TOML datetime | optional | `state%time%tstart` | Simulation start. Converted to days since 1900-01-01. |
-| `end_date` | TOML datetime | optional | `state%time%tend` | Simulation end. Converted to days since 1900-01-01. |
+| `start_date` | TOML date | **required** | `config%simulation%tstart` | Simulation start. Converted to days since 1900-01-01. |
+| `end_date`   | TOML date | **required** | `config%simulation%tend`   | Simulation end. Converted to days since 1900-01-01. |
+| `nprintday`  | integer   | optional     | `config%simulation%nprintday` | Number of output samples per day (default 1). |
 
-Both are read as full TOML datetimes; plain local dates (`2002-01-01`) are
-accepted and the time component defaults to midnight.
+Both dates are read as TOML local dates (`2002-01-01`) or datetimes
+(`2002-01-01T00:00:00`). `start_date` and `end_date` are the only
+**required** keys in the entire `.swp` file.
 
-### `[output]`
+### `[simulation.output]`
 
-| Key | Type | Required | State target | Description |
-|---|---|---|---|---|
-| `file_prefix` | string | optional | `state%time%outfil` | Prefix for generated output files. |
-| `nprintday` | integer | optional | `state%time%nprintday` | Number of output samples per day. |
-| `swheader` | integer | optional | `state%time%swheader` | Emit balance-period headers (0/1). |
-
-### `[output.timing]`
+Output timing is nested under `[simulation.output]`, **not** at top level.
 
 | Key | Type | Required | State target | Description |
 |---|---|---|---|---|
-| `swmonth` | integer | optional | `state%time%swmonth` | Monthly output mode (0=use `period`, 1=end of each month). |
-| `period`  | integer | optional | `state%time%period`  | Fixed-interval output in days (when `swmonth=0`). |
-| `swres`   | integer | optional | `state%time%swres`   | Reset the interval counter each calendar year. |
-| `swodat`  | integer | optional | `state%time%swodat`  | Enable the extra-dates output list. |
+| `swmonth` | integer | optional | `config%simulation%swmonth` | Monthly output mode (0=use `period`, 1=end of each month). |
+| `period`  | integer | optional | `config%simulation%period`  | Fixed-interval output in days (when `swmonth=0`; default 1). |
+| `swres`   | integer | optional | `config%simulation%swres`   | Reset the interval counter each calendar year (0/1). |
+| `swodat`  | integer | optional | `config%simulation%swodat`  | Enable the extra-dates output list (0/1). |
+| `swyrvar` | integer | optional | `config%simulation%swyrvar` | Year-varying output switch (0/1). |
+
+> **Phase 4b/4c change:** Keys `file_prefix`, `swheader` from the Phase-2
+> aspirational schema were never implemented in the typed TOML pipeline. The
+> legacy `readswap.f90` still populates `state%time%outfil` from a separate
+> fixed-format section; the TOML path does not yet map these.
 
 ### `[meteorology]`
 
 | Key | Type | Required | State target | Description |
 |---|---|---|---|---|
-| `file` | string | optional | `state%atm%metfil` | Name of the `.met` file (resolved against `[general.paths].atmosphere`). |
-| `lat`  | real   | optional | `state%atm%lat`   | Station latitude in degrees. |
+| `file` | string  | optional | `config%meteo%metfil` | Name of the `.met` file (resolved against `[general.paths].atmosphere`). |
+| `lat`  | real    | optional | `config%meteo%lat`    | Station latitude in degrees. |
+| `alt`  | real    | optional | `config%meteo%alt`    | Station altitude (m). **At section root, not under evapotranspiration.** |
+| `altw` | real    | optional | `config%meteo%altw`   | Anemometer height (m; default 2.0). **At section root, not under evapotranspiration.** |
+
+> **Phase 4b change:** `alt` and `altw` were previously documented under
+> `[meteorology.evapotranspiration]`. The reader (`read_meteorology_toml.f90`)
+> reads them directly from the `[meteorology]` table root.
 
 ### `[meteorology.evapotranspiration]`
 
 | Key | Type | Required | State target | Description |
 |---|---|---|---|---|
-| `swetr`       | integer | optional | `state%atm%swetr`       | 0 = Penman–Monteith, 1 = reference ET with crop factors. |
-| `alt`         | real    | optional | `state%atm%alt`         | Station altitude (m). |
-| `altw`        | real    | optional | `state%atm%altw`        | Anemometer height (m). |
-| `angstrom_a`  | real    | optional | `state%atm%angstroma`   | Angstrom A (overcast fraction of extraterrestrial radiation). |
-| `angstrom_b`  | real    | optional | `state%atm%angstromb`   | Angstrom B (additional clear-sky fraction). |
-| `swdivide`    | integer | optional | `state%atm%swdivide`    | ET/E partitioning: 0 = crop/soil factors, 1 = direct Penman–Monteith. |
+| `swetr`       | integer | optional | `config%meteo%swetr`      | 0 = Penman–Monteith, 1 = reference ET with crop factors. |
+| `angstrom_a`  | real    | optional | `config%meteo%angstroma`  | Angstrom A (overcast fraction of extraterrestrial radiation; default 0.25). |
+| `angstrom_b`  | real    | optional | `config%meteo%angstromb`  | Angstrom B (additional clear-sky fraction; default 0.50). |
+| `swdivide`    | integer | optional | `config%meteo%swdivide`   | ET/E partitioning: 0 = crop/soil factors, 1 = direct Penman–Monteith. |
 
 ### `[meteorology.temporal]`
 
@@ -156,22 +172,52 @@ accepted and the time component defaults to midnight.
 | `swrain`        | integer | optional | `state%atm%swrain`  | Rain input mode (0=daily, 1=daily+intensity, 2=daily+duration, 3=detailed file). |
 | `rainfall_file` | string  | optional | `state%atm%rainfil` | Detailed rainfall file (used when `swrain=3`). |
 
-### `[crop.rotation]`
-
-Three parallel arrays define the crop rotation. The reader allocates crop
-arrays sized to the length of `crop_file`; shorter `start_date` / `end_date`
-arrays are honoured (`min(len(arr), size(state%crop%cropstart))`), longer ones
-are truncated.
+### `[crop]`
 
 | Key | Type | Required | State target | Description |
 |---|---|---|---|---|
-| `crop_file`  | array of string | optional | `state%crop%cropfil`   | Per-crop file names (without `.CRP` extension). |
-| `start_date` | array of string | optional | `state%crop%cropstart` | ISO dates `YYYY-MM-DD` for each crop start. |
-| `end_date`   | array of string | optional | `state%crop%cropend`   | ISO dates for each crop end. |
+| `swcrop` | integer | optional | `config%crop%swcrop` | Crop simulation switch (0 = no crops; default 0). |
 
-Note that these are **string** arrays, not TOML date arrays — the reader calls
-`iso_date_to_t1900` on the trimmed string. Bare TOML local-date literals would
-also round-trip through `to_string`, but strings are the documented form.
+### `[[crop.rotation]]` (array of tables)
+
+The crop rotation is an **array of tables** (double-bracket `[[crop.rotation]]`),
+not parallel string arrays. Each entry in the array represents one crop period.
+
+> **Phase 4b change:** The old Phase-2 aspirational schema used three parallel
+> arrays (`crop_file`, `start_date`, `end_date`) under `[crop.rotation]`.
+> The Phase 4c-a reader uses `[[crop.rotation]]` array-of-tables with
+> TOML date values.
+
+| Key | Type | Required | State target | Description |
+|---|---|---|---|---|
+| `start` | TOML date | optional | `config%crop%rotation_start(i)` | Crop period start (days since 1900). |
+| `end`   | TOML date | optional | `config%crop%rotation_end(i)`   | Crop period end (days since 1900). |
+| `file`  | string    | optional | `config%crop%rotation_file(i)`  | Path to the `.crp.toml` file for this period (relative to `.swp` file). |
+| `type`  | integer   | optional | `config%crop%rotation_type(i)`  | Crop type: 1=fixed, 2=WOFOST general (Phase 4c-b), 3=WOFOST grass. Default 0. |
+
+When `file` is present and the referenced file exists, the loader reads the
+per-crop TOML and dispatches by `type` (see "Cross-file references" below).
+If the file is absent, the entry is silently skipped — this allows test cases
+not yet converted to `.crp.toml` to continue loading.
+
+Example:
+
+```toml
+[crop]
+swcrop = 1
+
+[[crop.rotation]]
+start = 2002-05-01
+end   = 2002-09-30
+file  = "maizes.crp.toml"
+type  = 1
+
+[[crop.rotation]]
+start = 2003-05-01
+end   = 2003-09-30
+file  = "maizes.crp.toml"
+type  = 1
+```
 
 ### `[soil.initial]`
 
@@ -215,12 +261,17 @@ wins. This is a known quirk — see the Discoveries note at the end.
 
 | Key | Type | Required | State target | Description |
 |---|---|---|---|---|
-| `drainage_file` | string | optional | `state%drain%drfil` | Name of the drainage TOML (without `.toml` if you want the `.dra.toml` suffix auto-appended). |
+| `file` | string | optional | _(resolved by loader)_ | Path to an external `*.dra.toml` drainage file, relative to the `.swp` file. |
 
-If `drainage_file` resolves to a file that exists, the reader then calls
-`ReadDrainageToml_state` on it (see next section). The filename is resolved
-against `[general.paths].drain`; an absolute path (leading `/`) is used
-verbatim. If the file is missing, the reader logs a warning and continues.
+When `file` is present, the loader reads the referenced file and parses its
+`[drainage]` table (see "Cross-file references" below and the `.dra` reference
+section). If `file` is absent, drainage keys may appear inline under
+`[drainage]` in the same `.swp` file.
+
+> **Phase 4b→4c change:** The old key `drainage_file` under `[general.paths]`
+> is superseded. The Phase 4c-a reader uses `[drainage].file` for the
+> external file reference. If `file` is absent and no inline drainage keys are
+> present, the drainage config struct retains its defaults.
 
 ### `[boundary.bottom]`
 
@@ -340,24 +391,163 @@ Same indexing rule as `resistance.levels`, bounded by `drain%nrlevs` and
 | `widthr`  | real    | optional | `drain%widthr(idx)` | Drain / channel width (cm). |
 | `taludr`  | real    | optional | `drain%taludr(idx)` | Talus slope of channel. |
 
-## `.crp` reference (baseline)
+## `.crp.toml` reference (Phase 4c-a)
 
-At the rescue baseline, crop configuration uses fixed-format `.crp` files, not
-TOML. The TOML crop reader is a Phase 4 deliverable. Current fixed-format crop
-inputs are read by `readcropfixed`, `readgrass`, and `readwofost` in
-`src/crop/`. See the upstream SWAP 4.2.0 manual (preserved at
-`legacy/swap-4.2.0/doc/`) for the fixed-format crop-file layout. This section
-will be filled in when Phase 4 adds a `readcrop_toml.f90` module with a
-defined schema.
+Phase 4c-a introduces TOML crop files. Each `[[crop.rotation]]` entry with
+`file = "..."` points to a `.crp.toml` file. The schema of that file depends
+on the `type` key.
+
+### `*.crp.toml` — type 1 (fixed crop)
+
+Parsed by `read_cropfixed_toml.f90`; config type `cropfixed_config_t`
+(`src/config/cropfixed_config.f90`).
+
+Sections: `[phenology]`, `[light]`, `[root]`, `[water_stress]`,
+`[salinity]`, `[interception]`.
+
+Example:
+
+```toml
+[phenology]
+idev = 1
+lcc  = 168
+
+[light]
+kdif = 0.6
+kdir = 0.6
+
+[root]
+rdi = 5.0
+rri = 1.2
+rdc = 100.0
+
+[water_stress]
+hlim1  = -10.0
+hlim2u = -25.0
+hlim2l = -200.0
+hlim3h = -400.0
+hlim3l = -600.0
+hlim4  = -8000.0
+adcrh  = 0.5
+adcrl  = 0.1
+rsc    = 70.0
+
+[salinity]
+ecmax  = 1.7
+ecslop = 12.0
+
+[interception]
+cofab = 0.25
+```
+
+#### `[phenology]` (type 1)
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `idev` | integer | 1 | Development mode: 1=fixed period, 2=temperature-sum-based. |
+| `lcc`  | integer | 0 | Length of crop cycle (days); used when `idev=1`. |
+
+#### `[light]` (type 1)
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `kdif` | real | 0.0 | Diffuse light extinction coefficient. |
+| `kdir` | real | 0.0 | Direct light extinction coefficient. |
+
+#### `[root]` (type 1)
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `rdi` | real | 0.0 | Initial rooting depth (cm). |
+| `rri` | real | 0.0 | Daily root extension rate (cm/d). |
+| `rdc` | real | 0.0 | Maximum rooting depth (cm). |
+
+#### `[water_stress]` (type 1 and 3)
+
+Feddes pressure-head thresholds (all in cm, negative values):
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `hlim1`  | real | 0.0 | Saturation threshold (near 0, least negative). |
+| `hlim2u` | real | 0.0 | Upper anaerobiosis threshold. |
+| `hlim2l` | real | 0.0 | Lower anaerobiosis threshold. |
+| `hlim3h` | real | 0.0 | High-transpiration wilting start. |
+| `hlim3l` | real | 0.0 | Low-transpiration wilting start. |
+| `hlim4`  | real | 0.0 | Wilting point (most negative). |
+| `adcrh`  | real | 0.0 | Critical fraction reduction at hlim3h. |
+| `adcrl`  | real | 0.0 | Critical fraction reduction at hlim3l. |
+| `rsc`    | real | 0.0 | Crop resistance for Penman-Monteith ET (s/m). |
+
+#### `[salinity]` (type 1 and 3)
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `ecmax`  | real | 0.0 | Threshold EC above which yield reduction starts (dS/m). |
+| `ecslop` | real | 0.0 | Slope of yield reduction per unit EC above `ecmax` (%/dS/m). |
+
+#### `[interception]` (type 1 and 3)
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `cofab` | real | 0.0 | Interception coefficient (cm/LAI per event). |
+
+### `*.crp.toml` — type 2 (WOFOST general)
+
+Type 2 is deferred to Phase 4c-b. A `[[crop.rotation]]` entry with `type=2`
+and a `file` reference is accepted and loads without error, but the
+`.crp.toml` content is not parsed — the `cropwofost_config_t` struct is
+populated only as a placeholder.
+
+### `*.crp.toml` — type 3 (WOFOST grass)
+
+Parsed by `read_cropgrass_toml.f90`; config type `cropgrass_config_t`
+(`src/config/cropgrass_config.f90`).
+
+Sections: same as type 1 (`[phenology]`, `[light]`, `[root]`, `[water_stress]`,
+`[salinity]`, `[interception]`) plus `[mowing]` and `[grazing]`.
+
+#### `[phenology]` (type 3, additional keys)
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `idev`  | integer | 2   | Development mode (2=temperature-sum-based typical for grass). |
+| `lcc`   | integer | 0   | Crop cycle length in days (if `idev=1`). |
+| `tbase` | real    | 0.0 | Base temperature for development sum (°C). |
+| `tsum1` | real    | 0.0 | Temperature sum for vegetative stage (°C·d). |
+| `tsum2` | real    | 0.0 | Temperature sum for generative stage (°C·d). |
+
+#### `[light]` (type 3, additional keys)
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `kdif` | real | 0.0 | Diffuse light extinction coefficient. |
+| `kdir` | real | 0.0 | Direct light extinction coefficient. |
+| `eff`  | real | 0.0 | Light use efficiency (kg·ha⁻¹·h⁻¹/(J·m⁻²·s⁻¹)). |
+| `amax` | real | 0.0 | Maximum assimilation rate (kg·ha⁻¹·h⁻¹). |
+
+#### `[mowing]` (type 3 only)
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `swharv` | integer | 0 | 0=no scheduled mowing, 1=scheduled. |
+| `nmow`   | integer | 0 | Number of mowing events (required when `swharv=1`). |
+
+#### `[grazing]` (type 3 only)
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `swgraz`      | integer | 0   | 0=no grazing, 1=scheduled. |
+| `nstart_graz` | real    | 0.0 | Start day-of-year for grazing. |
+| `nstop_graz`  | real    | 0.0 | Stop day-of-year for grazing. |
 
 ## Example
 
 The smallest `.swp` that exercises the supported keys looks like this. Every
-line is optional; sections may be omitted entirely and the state field keeps
-its default value.
+line except `start_date` and `end_date` is optional; sections may be omitted
+entirely and the config field keeps its default value.
 
 ```toml
-# Minimal SWAP TOML configuration
+# Minimal SWAP TOML configuration (Phase 4c-a)
 
 [general]
 project = "hupsel"
@@ -372,13 +562,9 @@ drain      = "./"
 [simulation]
 start_date = 2002-01-01
 end_date   = 2002-12-31
+nprintday  = 1
 
-[output]
-file_prefix = "result"
-nprintday   = 1
-swheader    = 0
-
-[output.timing]
+[simulation.output]
 swmonth = 1
 period  = 1
 swres   = 0
@@ -387,11 +573,11 @@ swodat  = 0
 [meteorology]
 file = "283.met"
 lat  = 52.0
+alt  = 10.0
+altw = 10.0
 
 [meteorology.evapotranspiration]
 swetr      = 0
-alt        = 10.0
-altw       = 10.0
 angstrom_a = 0.25
 angstrom_b = 0.5
 swdivide   = 1
@@ -404,10 +590,14 @@ swetsine    = 0
 [meteorology.rainfall]
 swrain = 0
 
-[crop.rotation]
-crop_file  = ["maizes"]
-start_date = ["2002-05-01"]
-end_date   = ["2002-10-15"]
+[crop]
+swcrop = 1
+
+[[crop.rotation]]
+start = 2002-05-01
+end   = 2002-10-15
+file  = "maizes.crp.toml"
+type  = 1
 
 [soil.initial]
 gwli = -75.0
@@ -422,7 +612,7 @@ critdevh2cp = 0.1
 maxit       = 30
 
 [drainage]
-drainage_file = "swap"
+file = "swap.dra.toml"
 
 [boundary.bottom]
 swbotb = 6
@@ -432,9 +622,65 @@ rsro = 0.5
 ```
 
 A fuller example lives at `tests/swap-cases/1.1.hupselbrook-toml/swap.toml`.
-That file contains many additional keys not yet read by `ReadSwapToml_state`
+That file contains many additional keys not yet read by the TOML pipeline
 (irrigation, heat, solute, soil hydraulic tables, macropores, snow, frost);
-those keys are ignored today and are targets for later rescue phases.
+those keys are silently ignored and are targets for later rescue phases.
+
+## Cross-file references
+
+Phase 4c-a introduces explicit `file = "..."` references that point at
+external TOML files for drainage and per-crop configuration. The loader
+follows these references relative to the directory of the referencing file
+(via `path_helpers_mod%resolve_relative_path`).
+
+### Drainage
+
+```toml
+# in swap.toml
+[drainage]
+file = "swap.dra.toml"   # loader follows this; swap.dra.toml has its own
+                         # [drainage] table with all the drainage keys
+```
+
+`swap.dra.toml` itself uses the same `[drainage]` schema as the inline form:
+
+```toml
+# swap.dra.toml
+[drainage]
+swdra  = 1
+dramet = 3
+# ... etc.
+```
+
+The loader calls `read_drainage_toml` with `base_path=` set to the directory
+of the `.swp` file. If `file` is absent the inline `[drainage]` table is
+parsed instead.
+
+### Per-crop files
+
+Each `[[crop.rotation]]` entry references its `.crp.toml` file via the `file`
+key:
+
+```toml
+[[crop.rotation]]
+start = 2002-05-01
+end   = 2002-09-30
+file  = "maizes.crp.toml"
+type  = 1
+```
+
+The `.crp.toml` schema depends on `type`:
+- `type = 1` → fixed crop schema (see "type 1 (fixed crop)" above)
+- `type = 2` → WOFOST general (Phase 4c-b; placeholder accepted in 4c-a)
+- `type = 3` → WOFOST grass (see "type 3 (grass)" above)
+
+The loader uses `[[crop.rotation]].type` to dispatch to the appropriate
+section reader. Phase 4c-a handles types 1 and 3; type 2 entries are
+populated only as placeholders.
+
+If `file` is absent for a rotation entry, or if the referenced file does not
+exist on disk, the entry is skipped silently — this allows incremental
+migration of cases without breaking cases that have not yet been converted.
 
 ## Validation and errors
 
@@ -486,10 +732,16 @@ Worth noting for readers who will extend these schemas:
    `[drainage_resistance]`, `[drainage_extended]`) that the reader does not
    recognise. A real drainage TOML must live under the `[drainage.basic]` /
    `[drainage.extended]` hierarchy shown above.
-5. Crop rotation dates in `[crop.rotation]` are read as **string arrays**
-   (parsed by a custom `iso_date_to_t1900`), not as TOML date arrays. The
-   simulation start/end in `[simulation]` are TOML datetimes. The two
-   conventions exist side-by-side in the same file.
+5. The Phase-2 aspirational schema used string arrays under `[crop.rotation]`.
+   Phase 4c-a uses `[[crop.rotation]]` array-of-tables with actual TOML date
+   values. The `parse_date_to_days1900` helper is shared with the simulation
+   reader so both paths now use real TOML date parsing, eliminating the prior
+   inconsistency.
+6. `[[crop.rotation]].file` is silently skipped when the referenced file does
+   not exist on disk. This is deliberate: it allows test cases that have not
+   yet been converted to `.crp.toml` to continue loading without error. The
+   consequence is that missing files produce no diagnostic — a strict mode
+   that warns on absent references is deferred to Phase 4d.
 
 ## Typed config hierarchy
 
@@ -504,6 +756,8 @@ hierarchy in `src/config/`:
 | `[drainage]` | `drainage_config_t` | `drainage_config_mod` |
 | `[soil]` | `soil_config_t` | `soil_config_mod` |
 | `[crop]` | `crop_config_t` | `crop_config_mod` |
+| `*.crp.toml` type 1 | `cropfixed_config_t` | `cropfixed_config_mod` |
+| `*.crp.toml` type 3 | `cropgrass_config_t` | `cropgrass_config_mod` |
 | (top-level) | `swap_config_t` | `swap_config_mod` |
 
 Every type exposes `validate(errors)` and `finalize(errors)` as
