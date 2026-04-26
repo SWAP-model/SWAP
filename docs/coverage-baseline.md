@@ -222,3 +222,30 @@ The following gaps are surfaced for Phase 4c work:
 - **`nrlevs` hardcode.** Drainage config cap is hardcoded to 5 in the
   validator; the legacy reader accepts higher counts for some case types.
   Needs alignment before the TOML path is used for drainage-heavy cases.
+
+---
+
+## Phase 4c-a baseline (2026-04-25)
+
+After Phase 4c-a (cross-file TOML loading + cropfixed/cropgrass + parity for cases 1, 2, 4, 6):
+
+- Project total: **53.1%** (4019 out of 7566 executable lines visible to gcovr)
+  — unchanged from Phase 4b (was also 53.1% at 4020/7567). The gcovr-visible
+  denominator shrank by 1 line (7567 → 7566) due to minor edits; the numerator
+  dropped by 1 executed line (4020 → 4019). Net change: 0.0 pp.
+- New modules introduced: `path_helpers`, `cropfixed_config`, `cropgrass_config`,
+  `read_cropfixed_toml`, `read_cropgrass_toml`. Each has unit-test coverage
+  per its dedicated pFUnit suite (162 tests total). These modules are compiled
+  only into the unit-test binary and remain invisible to the project-level
+  gcovr run (same path-resolution limitation as Phase 4a/4b infrastructure).
+- Cross-file extensions to `read_drainage_toml`, `read_crop_toml`, and
+  `load_swap_config` are exercised by per-case parity tests for cases 1, 2,
+  4, and 6.
+- The three Phase 4b workarounds are fully retired:
+  - `parse_date_to_days1900` aligned to legacy 1-based JDN
+  - `swmacro` shadow removed from `readswap.f90`
+  - `nrlevs` clobber mirrored in `drainage_config_t%finalize`
+
+Phase 4b deferrals still open: bottom_boundary, heat, solute config types;
+cross-file `.crp.toml` for type 2 (WOFOST) crops; cases 5.salinitystress
+parity. These move to Phase 4c-b and Phase 4d.
