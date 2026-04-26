@@ -1,0 +1,8 @@
+[crop]
+swcrop = 1
+
+[[crop.rotation]]
+start = 2002-05-10
+end   = 2002-10-15
+file  = "cropwofost_minimal.toml"
+type  = 2

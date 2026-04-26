@@ -410,7 +410,7 @@ contains
    end subroutine check_table
 
    subroutine wofost_preparation_validate(self, errors)
-      class(wofost_preparation_t), intent(inout) :: self
+      class(wofost_preparation_t), intent(in)    :: self
       type(error_collection_t),    intent(inout) :: errors
       call check_int_enum(self%swprep, [0, 1], 'wofost.preparation.swprep', errors)
       if (self%swprep == 1) then
@@ -421,7 +421,7 @@ contains
    end subroutine wofost_preparation_validate
 
    subroutine wofost_sowing_validate(self, errors)
-      class(wofost_sowing_t),   intent(inout) :: self
+      class(wofost_sowing_t),   intent(in)    :: self
       type(error_collection_t), intent(inout) :: errors
       call check_int_enum(self%swsow, [0, 1], 'wofost.sowing.swsow', errors)
       if (self%swsow == 1) then
@@ -434,7 +434,7 @@ contains
    end subroutine wofost_sowing_validate
 
    subroutine wofost_germination_validate(self, errors)
-      class(wofost_germination_t), intent(inout) :: self
+      class(wofost_germination_t), intent(in)    :: self
       type(error_collection_t),    intent(inout) :: errors
       call check_int_enum(self%swgerm, [0, 1, 2], 'wofost.germination.swgerm', errors)
       if (self%swgerm == 1 .or. self%swgerm == 2) then
@@ -451,14 +451,14 @@ contains
    end subroutine wofost_germination_validate
 
    subroutine wofost_harvest_validate(self, errors)
-      class(wofost_harvest_t),  intent(inout) :: self
+      class(wofost_harvest_t),  intent(in)    :: self
       type(error_collection_t), intent(inout) :: errors
       call check_real_range(self%dvsend, 0.0_real64, 3.0_real64, 'wofost.harvest.dvsend', errors)
       call check_int_enum(self%swharv,   [0, 1], 'wofost.harvest.swharv', errors)
    end subroutine wofost_harvest_validate
 
    subroutine wofost_cropfactor_validate(self, errors)
-      class(wofost_cropfactor_t), intent(inout) :: self
+      class(wofost_cropfactor_t), intent(in)    :: self
       type(error_collection_t),   intent(inout) :: errors
       call check_int_enum(self%swcf, [1, 2], 'wofost.crop_factor.swcf', errors)
       if (self%swcf == 2) then
@@ -474,7 +474,7 @@ contains
    end subroutine wofost_cropfactor_validate
 
    subroutine wofost_phenology_validate(self, errors)
-      class(wofost_phenology_t), intent(inout) :: self
+      class(wofost_phenology_t), intent(in)    :: self
       type(error_collection_t),  intent(inout) :: errors
       call check_int_enum(self%idsl, [0, 1, 2], 'wofost.phenology.idsl', errors)
       call check_real_range(self%tsumea, 0.0_real64, 10000.0_real64, 'wofost.phenology.tsumea', errors)
@@ -493,7 +493,7 @@ contains
    end subroutine wofost_phenology_validate
 
    subroutine wofost_initial_validate(self, errors)
-      class(wofost_initial_t),  intent(inout) :: self
+      class(wofost_initial_t),  intent(in)    :: self
       type(error_collection_t), intent(inout) :: errors
       call check_real_range(self%tdwi,   0.0_real64, 10000.0_real64, 'wofost.initial.tdwi',   errors)
       call check_real_range(self%laiem,  0.0_real64,    10.0_real64, 'wofost.initial.laiem',  errors)
@@ -501,7 +501,7 @@ contains
    end subroutine wofost_initial_validate
 
    subroutine wofost_greenarea_validate(self, errors)
-      class(wofost_greenarea_t), intent(inout) :: self
+      class(wofost_greenarea_t), intent(in)    :: self
       type(error_collection_t),  intent(inout) :: errors
       call check_real_range(self%spa,   0.0_real64,   1.0_real64, 'wofost.green_area.spa',   errors)
       call check_real_range(self%ssa,   0.0_real64,   1.0_real64, 'wofost.green_area.ssa',   errors)
@@ -511,7 +511,7 @@ contains
    end subroutine wofost_greenarea_validate
 
    subroutine wofost_assimilation_validate(self, errors)
-      class(wofost_assimilation_t), intent(inout) :: self
+      class(wofost_assimilation_t), intent(in)    :: self
       type(error_collection_t),     intent(inout) :: errors
       call check_real_range(self%kdif, 0.0_real64,  2.0_real64, 'wofost.assimilation.kdif', errors)
       call check_real_range(self%kdir, 0.0_real64,  2.0_real64, 'wofost.assimilation.kdir', errors)
@@ -522,7 +522,7 @@ contains
    end subroutine wofost_assimilation_validate
 
    subroutine wofost_conversion_validate(self, errors)
-      class(wofost_conversion_t), intent(inout) :: self
+      class(wofost_conversion_t), intent(in)    :: self
       type(error_collection_t),   intent(inout) :: errors
       call check_real_range(self%cvl, 0.0_real64, 1.0_real64, 'wofost.conversion.cvl', errors)
       call check_real_range(self%cvo, 0.0_real64, 1.0_real64, 'wofost.conversion.cvo', errors)
@@ -531,7 +531,7 @@ contains
    end subroutine wofost_conversion_validate
 
    subroutine wofost_respiration_validate(self, errors)
-      class(wofost_respiration_t), intent(inout) :: self
+      class(wofost_respiration_t), intent(in)    :: self
       type(error_collection_t),    intent(inout) :: errors
       call check_real_range(self%q10, 0.0_real64, 5.0_real64, 'wofost.respiration.q10', errors)
       call check_real_range(self%rml, 0.0_real64, 1.0_real64, 'wofost.respiration.rml', errors)
@@ -542,7 +542,7 @@ contains
    end subroutine wofost_respiration_validate
 
    subroutine wofost_partitioning_validate(self, errors)
-      class(wofost_partitioning_t), intent(inout) :: self
+      class(wofost_partitioning_t), intent(in)    :: self
       type(error_collection_t),     intent(inout) :: errors
       call check_table(self%frtb, 2, .true., 'wofost.partitioning.frtb', errors)
       call check_table(self%fltb, 2, .true., 'wofost.partitioning.fltb', errors)
@@ -551,7 +551,7 @@ contains
    end subroutine wofost_partitioning_validate
 
    subroutine wofost_death_validate(self, errors)
-      class(wofost_death_t),    intent(inout) :: self
+      class(wofost_death_t),    intent(in)    :: self
       type(error_collection_t), intent(inout) :: errors
       call check_real_range(self%perdl, 0.0_real64, 3.0_real64, 'wofost.death.perdl', errors)
       call check_table(self%rdrrtb, 2, .true., 'wofost.death.rdrrtb', errors)
@@ -559,7 +559,7 @@ contains
    end subroutine wofost_death_validate
 
    subroutine wofost_root_validate(self, errors)
-      class(wofost_root_t),     intent(inout) :: self
+      class(wofost_root_t),     intent(in)    :: self
       type(error_collection_t), intent(inout) :: errors
       call check_int_enum(self%swrd,     [1, 2, 3], 'wofost.root.swrd',     errors)
       call check_int_enum(self%swdmi2rd, [0, 1],    'wofost.root.swdmi2rd', errors)
@@ -579,7 +579,7 @@ contains
    end subroutine wofost_root_validate
 
    subroutine wofost_oxygen_stress_validate(self, errors)
-      class(wofost_oxygen_stress_t), intent(inout) :: self
+      class(wofost_oxygen_stress_t), intent(in)    :: self
       type(error_collection_t),      intent(inout) :: errors
       call check_int_enum(self%swoxygen,   [0, 1, 2], 'wofost.oxygen_stress.swoxygen',   errors)
       call check_int_enum(self%swwrtnonox, [0, 1],    'wofost.oxygen_stress.swwrtnonox', errors)
@@ -607,7 +607,7 @@ contains
    end subroutine wofost_oxygen_stress_validate
 
    subroutine wofost_drought_stress_validate(self, errors)
-      class(wofost_drought_stress_t), intent(inout) :: self
+      class(wofost_drought_stress_t), intent(in)    :: self
       type(error_collection_t),       intent(inout) :: errors
       call check_int_enum(self%swdrought, [1, 2], 'wofost.drought_stress.swdrought', errors)
       call check_real_range(self%hlim3h, -1.0e4_real64,    100.0_real64, 'wofost.drought_stress.hlim3h', errors)
@@ -618,7 +618,7 @@ contains
    end subroutine wofost_drought_stress_validate
 
    subroutine wofost_salinity_validate(self, errors)
-      class(wofost_salinity_t), intent(inout) :: self
+      class(wofost_salinity_t), intent(in)    :: self
       type(error_collection_t), intent(inout) :: errors
       call check_int_enum(self%swsalinity, [0, 1, 2], 'wofost.salinity.swsalinity', errors)
       if (self%swsalinity == 1) then
@@ -631,7 +631,7 @@ contains
    end subroutine wofost_salinity_validate
 
    subroutine wofost_compensate_validate(self, errors)
-      class(wofost_compensate_t), intent(inout) :: self
+      class(wofost_compensate_t), intent(in)    :: self
       type(error_collection_t),   intent(inout) :: errors
       call check_int_enum(self%swcompensate, [0, 1, 2], 'wofost.compensate.swcompensate', errors)
       if (self%swcompensate == 1 .or. self%swcompensate == 2) then
@@ -646,7 +646,7 @@ contains
    end subroutine wofost_compensate_validate
 
    subroutine wofost_interception_validate(self, errors)
-      class(wofost_interception_t), intent(inout) :: self
+      class(wofost_interception_t), intent(in)    :: self
       type(error_collection_t),     intent(inout) :: errors
       call check_int_enum(self%swinter, [0, 1, 2], 'wofost.interception.swinter', errors)
       if (self%swinter == 1) then
@@ -658,7 +658,7 @@ contains
    end subroutine wofost_interception_validate
 
    subroutine wofost_co2_validate(self, errors)
-      class(wofost_co2_t),      intent(inout) :: self
+      class(wofost_co2_t),      intent(in)    :: self
       type(error_collection_t), intent(inout) :: errors
       call check_int_enum(self%swco2, [0, 1], 'wofost.co2.swco2', errors)
       if (self%swco2 == 1) then
@@ -669,7 +669,7 @@ contains
    end subroutine wofost_co2_validate
 
    subroutine wofost_management_validate(self, errors)
-      class(wofost_management_t), intent(inout) :: self
+      class(wofost_management_t), intent(in)    :: self
       type(error_collection_t),   intent(inout) :: errors
       call check_real_range(self%fraharlosorm_lv,     0.0_real64, 1.0_real64, 'wofost.management.fraharlosorm_lv',     errors)
       call check_real_range(self%fraharlosorm_st,     0.0_real64, 1.0_real64, 'wofost.management.fraharlosorm_st',     errors)
@@ -680,7 +680,7 @@ contains
    end subroutine wofost_management_validate
 
    subroutine cropwofost_config_validate(self, errors)
-      class(cropwofost_config_t), intent(inout) :: self
+      class(cropwofost_config_t), intent(in)    :: self
       type(error_collection_t),   intent(inout) :: errors
 
       call self%preparation%validate(errors)

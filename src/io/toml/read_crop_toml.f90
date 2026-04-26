@@ -6,8 +6,10 @@ module read_crop_toml_mod
    use crop_config_mod, only: crop_config_t
    use cropfixed_config_mod, only: cropfixed_config_t
    use cropgrass_config_mod, only: cropgrass_config_t
+   use cropwofost_config_mod, only: cropwofost_config_t
    use read_cropfixed_toml_mod, only: read_cropfixed_toml
    use read_cropgrass_toml_mod, only: read_cropgrass_toml
+   use read_cropwofost_toml_mod, only: read_cropwofost_toml
    use toml_field_helpers_mod, only: get_table, get_array_of_tables,   &
                                      get_optional_int_with_default,    &
                                      get_optional_string_with_default, &
@@ -48,9 +50,10 @@ contains
       n = len(rotation)
       if (n == 0) return
 
-      allocate(config%rotation_start(n),  config%rotation_end(n),  &
-               config%rotation_file(n),   config%rotation_type(n), &
-               config%rotation_fixed(n),  config%rotation_grass(n),&
+      allocate(config%rotation_start(n),   config%rotation_end(n),   &
+               config%rotation_file(n),    config%rotation_type(n),  &
+               config%rotation_fixed(n),   config%rotation_grass(n), &
+               config%rotation_wofost(n),                             &
                config%rotation_loaded(n))
       config%rotation_start  = 0.0_real64
       config%rotation_end    = 0.0_real64
@@ -104,10 +107,12 @@ contains
             case (1)
                call read_cropfixed_toml(crp_doc_ptr, config%rotation_fixed(i), errors)
                config%rotation_loaded(i) = .true.
+            case (2)
+               call read_cropwofost_toml(crp_doc_ptr, config%rotation_wofost(i), errors)
+               config%rotation_loaded(i) = .true.
             case (3)
                call read_cropgrass_toml(crp_doc_ptr, config%rotation_grass(i), errors)
                config%rotation_loaded(i) = .true.
-            ! type 2 (WOFOST) is Phase 4c-b
             end select
          end if
       end do

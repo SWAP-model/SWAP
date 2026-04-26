@@ -43,6 +43,28 @@ subroutine test_read_crop_rotation_entries_populate()
 end subroutine
 
 @test
+subroutine test_read_crop_dispatches_wofost_type2()
+   use funit
+   use tomlf, only: toml_table, toml_load
+   use crop_config_mod
+   use read_crop_toml_mod
+   use error_mod
+   type(toml_table), allocatable, target :: doc
+   type(toml_table), pointer     :: doc_ptr
+   type(crop_config_t)           :: c
+   type(error_collection_t)      :: errors
+
+   call toml_load(doc, 'tests/unit/io/toml/fixtures/crop_wofost_via_file.toml')
+   doc_ptr => doc
+   call read_crop_toml(doc_ptr, c, errors, base_path='tests/unit/io/toml/fixtures/')
+
+   @assertFalse(errors%has_errors())
+   @assertEqual(2, c%rotation_type(1))
+   @assertTrue(c%rotation_loaded(1))
+   @assertEqual(150.0d0, c%rotation_wofost(1)%phenology%tsumea, 1.0d-12)
+end subroutine
+
+@test
 subroutine test_read_crop_missing_section_is_silent()
    use funit
    use tomlf, only: toml_table, toml_load

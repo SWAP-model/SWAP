@@ -5,6 +5,7 @@ module crop_config_mod
    use validation_mod, only: check_int_enum
    use cropfixed_config_mod, only: cropfixed_config_t
    use cropgrass_config_mod, only: cropgrass_config_t
+   use cropwofost_config_mod, only: cropwofost_config_t
    implicit none
    private
 
@@ -25,6 +26,7 @@ module crop_config_mod
       !! rotation_grass(i) is meaningful when rotation_type(i) == 3.
       type(cropfixed_config_t), allocatable :: rotation_fixed(:)
       type(cropgrass_config_t), allocatable :: rotation_grass(:)
+      type(cropwofost_config_t), allocatable :: rotation_wofost(:)
 
       !> .true. for entry i when a per-crop TOML file was successfully
       !! loaded for that rotation slot. Prevents validate from checking
@@ -86,6 +88,10 @@ contains
             if (self%rotation_type(i) == 1) then
                if (allocated(self%rotation_fixed)) then
                   call self%rotation_fixed(i)%validate(errors)
+               end if
+            else if (self%rotation_type(i) == 2) then
+               if (allocated(self%rotation_wofost)) then
+                  call self%rotation_wofost(i)%validate(errors)
                end if
             else if (self%rotation_type(i) == 3) then
                if (allocated(self%rotation_grass)) then
