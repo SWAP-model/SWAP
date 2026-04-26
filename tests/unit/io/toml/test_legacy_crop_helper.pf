@@ -1,0 +1,78 @@
+! Phase 4c-b Task 7 smoke tests for legacy_crop_helper_mod.
+!
+! 1) flatten_table layout — interleave [x,y,x,y,...] padded with zeros;
+!    zero-row input returns all zeros.
+! 2) read_legacy_wofost populates `variables%` globals (dtsmtb) when
+!    called for hupselbrook rotation entry icrop=2 ('potatod').
+!
+! Test 2 mirrors parity_helpers_mod%load_both_for_hupselbrook: stage the
+! .swp template, call readswap() to set up `pathcrop`, then call the new
+! wrapper, and finally chdir back to the project root.
+
+@test
+subroutine test_flatten_table_basic()
+   use funit
+   use iso_fortran_env, only: real64
+   use legacy_crop_helper_mod, only: flatten_table
+   real(real64) :: tbl(2, 2)
+   real(real64) :: flat(30)
+   real(real64) :: empty(0, 2)
+   real(real64) :: flat_empty(30)
+   integer      :: i
+
+   tbl(1, 1) = 1.0_real64;  tbl(1, 2) = 10.0_real64
+   tbl(2, 1) = 2.0_real64;  tbl(2, 2) = 20.0_real64
+
+   flat = flatten_table(tbl, 30)
+
+   @assertEqual(1.0_real64,  flat(1))
+   @assertEqual(10.0_real64, flat(2))
+   @assertEqual(2.0_real64,  flat(3))
+   @assertEqual(20.0_real64, flat(4))
+   do i = 5, 30
+      @assertEqual(0.0_real64, flat(i))
+   end do
+
+   ! Zero-row input → all zeros.
+   flat_empty = flatten_table(empty, 30)
+   do i = 1, 30
+      @assertEqual(0.0_real64, flat_empty(i))
+   end do
+end subroutine test_flatten_table_basic
+
+@test
+subroutine test_read_legacy_wofost_populates_variables()
+   use funit
+   use variables, only: dtsmtb, logf
+   use chdir_helper_mod, only: chdir_to, get_cwd, stage_swp_template
+   use parity_helpers_mod, only: reset_for_next_readswap
+   use legacy_crop_helper_mod, only: read_legacy_wofost
+   character(len=1024) :: orig_cwd
+   logical :: any_nonzero
+   integer :: i
+
+   call get_cwd(orig_cwd)
+   call chdir_to('tests/swap-cases/1.hupselbrook')
+   call stage_swp_template('swap_linux.swp.template', 'swap')
+   call reset_for_next_readswap()
+   call readswap()
+   close(logf)
+
+   ! Rotation entry 2 == 'potatod' (verified from
+   ! tests/swap-cases/1.hupselbrook/swap_linux.swp.template CROPROTATION:
+   !   1: maizes  2: potatod  3: grassd).
+   call read_legacy_wofost(2, 'potatod')
+
+   ! dtsmtb is populated from the .crp daily-effective-temperature table.
+   ! At least one of the first slots must be non-zero after the read.
+   any_nonzero = .false.
+   do i = 1, 30
+      if (dtsmtb(i) /= 0.0d0) then
+         any_nonzero = .true.
+         exit
+      end if
+   end do
+   @assertTrue(any_nonzero)
+
+   call chdir_to(trim(orig_cwd))
+end subroutine test_read_legacy_wofost_populates_variables
