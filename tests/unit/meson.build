@@ -146,6 +146,7 @@ if get_option('enable_pfunit')
         'io/toml/test_hupselbrook_parity.pf',
         'io/toml/test_grassgrowth_parity.pf',
         'io/toml/test_oxygenstress_parity.pf',
+        'io/toml/test_surfacewater_parity.pf',
     ]
 
     # When pf_files is non-empty, build and register the unit-swap-tests
