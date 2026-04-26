@@ -34,12 +34,11 @@ A SWAP simulation at the rescue baseline consumes the following input files:
 
 - `*.swp` — main simulation configuration (TOML). Parsed by
   `ReadSwapToml_state`.
-- `*.dra` or `*.dra.toml` — drainage configuration (TOML). Loaded by
-  `read_drainage_toml_if_present` when `[drainage].drainage_file` resolves to a
-  file that exists. Parsed by `ReadDrainageToml_state`.
-- `*.crp` — crop configuration (fixed-format at the baseline). A TOML crop
-  reader is a Phase 4 deliverable; current crop inputs are still parsed by the
-  legacy fixed-format readers in `src/crop/`.
+- `*.dra.toml` — drainage configuration (TOML). Loaded when `[drainage].file`
+  is present and the referenced file exists. Parsed by `read_drainage_toml`.
+- `*.crp.toml` — crop configuration (TOML). Loaded for each `[[crop.rotation]]`
+  entry that specifies `file = "..."` and the file exists. Parsed by
+  `read_cropfixed_toml` (type 1) or `read_cropgrass_toml` (type 3).
 - `*.met` — meteorology data (fixed-format, day or sub-daily records). The
   path is composed from `[general.paths].atmosphere` and
   `[meteorology].file`.
