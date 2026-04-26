@@ -199,3 +199,244 @@ subroutine test_hupselbrook_parity_last_grass_rotation()
    @assertEqual(   0.25d0, c_rri, 1.0d-9)
    @assertEqual(  40.0d0, c_rdc, 1.0d-9)
 end subroutine
+
+! Phase 4c-b Task 8: full WOFOST parity for the potatod (icrop=2) rotation
+! entry of hupselbrook.  This is the first real legacy-vs-TOML WOFOST parity
+! check.  Strategy:
+!   1. load_both_for_hupselbrook() runs readswap() and the TOML side.
+!   2. We chdir back into the case dir and call read_legacy_wofost(2,'potatod')
+!      directly — readswap() does not call readwofost().
+!   3. Assert at least one scalar (and where applicable one table) per
+!      WOFOST sub-section against the matching field in
+!      config%crop%rotation_wofost(2).  Tables compared via flatten_table
+!      against the legacy 1-D AFGEN storage.
+!
+! Coverage targets: ~30-50 assertions spanning all 21 sub-sections.
+@test
+subroutine test_hupselbrook_parity_potatod_wofost()
+   use funit
+   use variables, only: &
+      ! crop_factor / phenology / initial / green_area scalars
+      swcf, albedo, rsc, rsw, idsl, tsumea, tsumam, tdwi, laiem, rgrlai,  &
+      spa, ssa, span, tbase, kdif, kdir, eff,                            &
+      ! conversion / respiration / death scalars
+      cvl, cvo, cvr, cvs, q10, rml, rmo, rmr, rms, perdl,                &
+      ! root scalars
+      swrd, rdi, rri, rdc, swdmi2rd, wrtmax,                             &
+      ! oxygen / drought / salinity / compensate / interception / co2
+      swoxygen, swwrtnonox, aeratecrit, hlim1, hlim2u, hlim2l,           &
+      swdrought, hlim3h, hlim3l, hlim4, adcrh, adcrl,                    &
+      swsalinity, swcompensate, swinter, cofab,                          &
+      ! management
+      swpotrelmf, relmf,                                                 &
+      ! tables
+      dtsmtb, slatb, amaxtb, tmpftb, tmnftb, frtb, fltb, fstb, fotb,     &
+      rdrrtb, rdrstb, rfsetb, chtb,                                      &
+      ! harvest
+      dvsend, swharv
+   use parity_helpers_mod, only: load_both_for_hupselbrook, reset_for_next_readswap
+   use legacy_crop_helper_mod, only: read_legacy_wofost, flatten_table
+   use chdir_helper_mod, only: chdir_to, get_cwd
+   use swap_config_mod
+   use error_mod
+   use iso_fortran_env, only: real64
+
+   type(swap_config_t)      :: config
+   type(error_collection_t) :: errors
+   character(len=1024)      :: orig_cwd
+   real(real64)             :: flat(30)
+   real(real64)             :: flat_chtb(732)   ! 2*magrs (magrs=366)
+   integer, parameter       :: ICROP_POTATOD = 2
+
+   ! 1. Load the case (readswap on legacy side, load+validate+finalize on TOML).
+   call load_both_for_hupselbrook(config, errors)
+   @assertFalse(errors%has_fatals())
+
+   ! 2. Now invoke the legacy WOFOST reader from inside the case dir so the
+   !    relative pathcrop ('./') resolves to the .crp file.
+   call get_cwd(orig_cwd)
+   call chdir_to('tests/swap-cases/1.hupselbrook')
+   call reset_for_next_readswap()
+   call read_legacy_wofost(ICROP_POTATOD, 'potatod')
+   call chdir_to(trim(orig_cwd))
+
+   ! ------------------------------------------------------------------
+   ! preparation (swprep=0 → only swprep itself is meaningful)
+   ! ------------------------------------------------------------------
+   @assertEqual(0, config%crop%rotation_wofost(ICROP_POTATOD)%preparation%swprep)
+
+   ! ------------------------------------------------------------------
+   ! sowing (swsow=0 → only swsow itself is meaningful)
+   ! ------------------------------------------------------------------
+   @assertEqual(0, config%crop%rotation_wofost(ICROP_POTATOD)%sowing%swsow)
+
+   ! ------------------------------------------------------------------
+   ! germination (swgerm=2 → tsumemeopt + tbasem read)
+   ! ------------------------------------------------------------------
+   @assertEqual(2, config%crop%rotation_wofost(ICROP_POTATOD)%germination%swgerm)
+   @assertEqual(170.0_real64, config%crop%rotation_wofost(ICROP_POTATOD)%germination%tsumemeopt, 1.0e-12_real64)
+   @assertEqual(3.0_real64,   config%crop%rotation_wofost(ICROP_POTATOD)%germination%tbasem,     1.0e-12_real64)
+
+   ! ------------------------------------------------------------------
+   ! harvest
+   ! ------------------------------------------------------------------
+   @assertEqual(dvsend, config%crop%rotation_wofost(ICROP_POTATOD)%harvest%dvsend, 1.0e-12_real64)
+   @assertEqual(swharv, config%crop%rotation_wofost(ICROP_POTATOD)%harvest%swharv)
+
+   ! ------------------------------------------------------------------
+   ! crop_factor (swcf=2 → albedo, rsc, rsw populated; chtb table read)
+   ! ------------------------------------------------------------------
+   @assertEqual(swcf,   config%crop%rotation_wofost(ICROP_POTATOD)%crop_factor%swcf)
+   @assertEqual(albedo, config%crop%rotation_wofost(ICROP_POTATOD)%crop_factor%albedo, 1.0e-12_real64)
+   @assertEqual(rsc,    config%crop%rotation_wofost(ICROP_POTATOD)%crop_factor%rsc,    1.0e-12_real64)
+   @assertEqual(rsw,    config%crop%rotation_wofost(ICROP_POTATOD)%crop_factor%rsw,    1.0e-12_real64)
+   flat_chtb = flatten_table(config%crop%rotation_wofost(ICROP_POTATOD)%crop_factor%chtb, 732)
+   @assertEqual(chtb, flat_chtb, 1.0e-12_real64)
+
+   ! ------------------------------------------------------------------
+   ! phenology
+   ! ------------------------------------------------------------------
+   @assertEqual(idsl,   config%crop%rotation_wofost(ICROP_POTATOD)%phenology%idsl)
+   @assertEqual(tsumea, config%crop%rotation_wofost(ICROP_POTATOD)%phenology%tsumea, 1.0e-12_real64)
+   @assertEqual(tsumam, config%crop%rotation_wofost(ICROP_POTATOD)%phenology%tsumam, 1.0e-12_real64)
+   flat = flatten_table(config%crop%rotation_wofost(ICROP_POTATOD)%phenology%dtsmtb, 30)
+   @assertEqual(dtsmtb, flat, 1.0e-12_real64)
+
+   ! ------------------------------------------------------------------
+   ! initial
+   ! ------------------------------------------------------------------
+   @assertEqual(tdwi,   config%crop%rotation_wofost(ICROP_POTATOD)%initial%tdwi,   1.0e-12_real64)
+   @assertEqual(laiem,  config%crop%rotation_wofost(ICROP_POTATOD)%initial%laiem,  1.0e-12_real64)
+   @assertEqual(rgrlai, config%crop%rotation_wofost(ICROP_POTATOD)%initial%rgrlai, 1.0e-12_real64)
+
+   ! ------------------------------------------------------------------
+   ! green_area
+   ! ------------------------------------------------------------------
+   @assertEqual(spa,   config%crop%rotation_wofost(ICROP_POTATOD)%green_area%spa,   1.0e-12_real64)
+   @assertEqual(ssa,   config%crop%rotation_wofost(ICROP_POTATOD)%green_area%ssa,   1.0e-12_real64)
+   @assertEqual(span,  config%crop%rotation_wofost(ICROP_POTATOD)%green_area%span,  1.0e-12_real64)
+   @assertEqual(tbase, config%crop%rotation_wofost(ICROP_POTATOD)%green_area%tbase, 1.0e-12_real64)
+   flat = flatten_table(config%crop%rotation_wofost(ICROP_POTATOD)%green_area%slatb, 30)
+   @assertEqual(slatb, flat, 1.0e-12_real64)
+
+   ! ------------------------------------------------------------------
+   ! assimilation
+   ! ------------------------------------------------------------------
+   @assertEqual(kdif, config%crop%rotation_wofost(ICROP_POTATOD)%assimilation%kdif, 1.0e-12_real64)
+   @assertEqual(kdir, config%crop%rotation_wofost(ICROP_POTATOD)%assimilation%kdir, 1.0e-12_real64)
+   @assertEqual(eff,  config%crop%rotation_wofost(ICROP_POTATOD)%assimilation%eff,  1.0e-12_real64)
+   flat = flatten_table(config%crop%rotation_wofost(ICROP_POTATOD)%assimilation%amaxtb, 30)
+   @assertEqual(amaxtb, flat, 1.0e-12_real64)
+   flat = flatten_table(config%crop%rotation_wofost(ICROP_POTATOD)%assimilation%tmpftb, 30)
+   @assertEqual(tmpftb, flat, 1.0e-12_real64)
+   flat = flatten_table(config%crop%rotation_wofost(ICROP_POTATOD)%assimilation%tmnftb, 30)
+   @assertEqual(tmnftb, flat, 1.0e-12_real64)
+
+   ! ------------------------------------------------------------------
+   ! conversion
+   ! ------------------------------------------------------------------
+   @assertEqual(cvl, config%crop%rotation_wofost(ICROP_POTATOD)%conversion%cvl, 1.0e-12_real64)
+   @assertEqual(cvo, config%crop%rotation_wofost(ICROP_POTATOD)%conversion%cvo, 1.0e-12_real64)
+   @assertEqual(cvr, config%crop%rotation_wofost(ICROP_POTATOD)%conversion%cvr, 1.0e-12_real64)
+   @assertEqual(cvs, config%crop%rotation_wofost(ICROP_POTATOD)%conversion%cvs, 1.0e-12_real64)
+
+   ! ------------------------------------------------------------------
+   ! respiration
+   ! ------------------------------------------------------------------
+   @assertEqual(q10, config%crop%rotation_wofost(ICROP_POTATOD)%respiration%q10, 1.0e-12_real64)
+   @assertEqual(rml, config%crop%rotation_wofost(ICROP_POTATOD)%respiration%rml, 1.0e-12_real64)
+   @assertEqual(rmo, config%crop%rotation_wofost(ICROP_POTATOD)%respiration%rmo, 1.0e-12_real64)
+   @assertEqual(rmr, config%crop%rotation_wofost(ICROP_POTATOD)%respiration%rmr, 1.0e-12_real64)
+   @assertEqual(rms, config%crop%rotation_wofost(ICROP_POTATOD)%respiration%rms, 1.0e-12_real64)
+   flat = flatten_table(config%crop%rotation_wofost(ICROP_POTATOD)%respiration%rfsetb, 30)
+   @assertEqual(rfsetb, flat, 1.0e-12_real64)
+
+   ! ------------------------------------------------------------------
+   ! partitioning
+   ! ------------------------------------------------------------------
+   flat = flatten_table(config%crop%rotation_wofost(ICROP_POTATOD)%partitioning%frtb, 30)
+   @assertEqual(frtb, flat, 1.0e-12_real64)
+   flat = flatten_table(config%crop%rotation_wofost(ICROP_POTATOD)%partitioning%fltb, 30)
+   @assertEqual(fltb, flat, 1.0e-12_real64)
+   flat = flatten_table(config%crop%rotation_wofost(ICROP_POTATOD)%partitioning%fstb, 30)
+   @assertEqual(fstb, flat, 1.0e-12_real64)
+   flat = flatten_table(config%crop%rotation_wofost(ICROP_POTATOD)%partitioning%fotb, 30)
+   @assertEqual(fotb, flat, 1.0e-12_real64)
+
+   ! ------------------------------------------------------------------
+   ! death
+   ! ------------------------------------------------------------------
+   @assertEqual(perdl, config%crop%rotation_wofost(ICROP_POTATOD)%death%perdl, 1.0e-12_real64)
+   flat = flatten_table(config%crop%rotation_wofost(ICROP_POTATOD)%death%rdrrtb, 30)
+   @assertEqual(rdrrtb, flat, 1.0e-12_real64)
+   flat = flatten_table(config%crop%rotation_wofost(ICROP_POTATOD)%death%rdrstb, 30)
+   @assertEqual(rdrstb, flat, 1.0e-12_real64)
+
+   ! ------------------------------------------------------------------
+   ! root (swrd=2 → rdi/rri/rdc populated)
+   ! ------------------------------------------------------------------
+   @assertEqual(swrd,     config%crop%rotation_wofost(ICROP_POTATOD)%root%swrd)
+   @assertEqual(rdi,      config%crop%rotation_wofost(ICROP_POTATOD)%root%rdi,      1.0e-12_real64)
+   @assertEqual(rri,      config%crop%rotation_wofost(ICROP_POTATOD)%root%rri,      1.0e-12_real64)
+   @assertEqual(rdc,      config%crop%rotation_wofost(ICROP_POTATOD)%root%rdc,      1.0e-12_real64)
+   @assertEqual(swdmi2rd, config%crop%rotation_wofost(ICROP_POTATOD)%root%swdmi2rd)
+   ! READING NOTE: legacy readwofost only reads WRTMAX inside the swrd==3
+   ! branch (readswap.f90 line ~3029).  potatod has swrd=2 so the global
+   ! stays at its default 0.0 even though the .crp file declares WRTMAX=3000.
+   ! TOML side stores the value verbatim — assert against the literal.
+   @assertEqual(3000.0_real64, config%crop%rotation_wofost(ICROP_POTATOD)%root%wrtmax, 1.0e-12_real64)
+
+   ! ------------------------------------------------------------------
+   ! oxygen_stress (swoxygen=1 → Feddes branch: hlim1/2u/2l populated)
+   ! ------------------------------------------------------------------
+   @assertEqual(swoxygen,   config%crop%rotation_wofost(ICROP_POTATOD)%oxygen_stress%swoxygen)
+   @assertEqual(swwrtnonox, config%crop%rotation_wofost(ICROP_POTATOD)%oxygen_stress%swwrtnonox)
+   @assertEqual(aeratecrit, config%crop%rotation_wofost(ICROP_POTATOD)%oxygen_stress%aeratecrit, 1.0e-12_real64)
+   @assertEqual(hlim1,      config%crop%rotation_wofost(ICROP_POTATOD)%oxygen_stress%hlim1,      1.0e-12_real64)
+   @assertEqual(hlim2u,     config%crop%rotation_wofost(ICROP_POTATOD)%oxygen_stress%hlim2u,     1.0e-12_real64)
+   @assertEqual(hlim2l,     config%crop%rotation_wofost(ICROP_POTATOD)%oxygen_stress%hlim2l,     1.0e-12_real64)
+
+   ! ------------------------------------------------------------------
+   ! drought_stress
+   ! ------------------------------------------------------------------
+   @assertEqual(swdrought, config%crop%rotation_wofost(ICROP_POTATOD)%drought_stress%swdrought)
+   @assertEqual(hlim3h,    config%crop%rotation_wofost(ICROP_POTATOD)%drought_stress%hlim3h, 1.0e-12_real64)
+   @assertEqual(hlim3l,    config%crop%rotation_wofost(ICROP_POTATOD)%drought_stress%hlim3l, 1.0e-12_real64)
+   @assertEqual(hlim4,     config%crop%rotation_wofost(ICROP_POTATOD)%drought_stress%hlim4,  1.0e-12_real64)
+   @assertEqual(adcrh,     config%crop%rotation_wofost(ICROP_POTATOD)%drought_stress%adcrh,  1.0e-12_real64)
+   @assertEqual(adcrl,     config%crop%rotation_wofost(ICROP_POTATOD)%drought_stress%adcrl,  1.0e-12_real64)
+
+   ! ------------------------------------------------------------------
+   ! salinity (swsalinity=0 → only the switch itself is meaningful)
+   ! ------------------------------------------------------------------
+   @assertEqual(swsalinity, config%crop%rotation_wofost(ICROP_POTATOD)%salinity%swsalinity)
+
+   ! ------------------------------------------------------------------
+   ! compensate (swcompensate=0 → only the switch itself is meaningful)
+   ! ------------------------------------------------------------------
+   @assertEqual(swcompensate, config%crop%rotation_wofost(ICROP_POTATOD)%compensate%swcompensate)
+
+   ! ------------------------------------------------------------------
+   ! interception (swinter=1 → cofab populated)
+   ! ------------------------------------------------------------------
+   @assertEqual(swinter, config%crop%rotation_wofost(ICROP_POTATOD)%interception%swinter)
+   @assertEqual(cofab,   config%crop%rotation_wofost(ICROP_POTATOD)%interception%cofab, 1.0e-12_real64)
+
+   ! ------------------------------------------------------------------
+   ! co2 (swco2=0 → only the switch itself is meaningful here)
+   ! ------------------------------------------------------------------
+   ! readwofost does not expose `swco2` as a public variables global; the
+   ! TOML side carries it as an explicit config field.
+   @assertEqual(0, config%crop%rotation_wofost(ICROP_POTATOD)%co2%swco2)
+
+   ! ------------------------------------------------------------------
+   ! management
+   ! ------------------------------------------------------------------
+   @assertEqual(swpotrelmf, config%crop%rotation_wofost(ICROP_POTATOD)%management%swpotrelmf)
+   @assertEqual(relmf,      config%crop%rotation_wofost(ICROP_POTATOD)%management%relmf, 1.0e-12_real64)
+   ! fraharlosorm_lv etc. are not exposed as variables-module globals from
+   ! readwofost (they live on the harvest-loss accumulator).  Cross-check
+   ! against the literal .crp value to keep the management section covered.
+   @assertEqual(0.2_real64,  config%crop%rotation_wofost(ICROP_POTATOD)%management%fraharlosorm_lv,     1.0e-12_real64)
+   @assertEqual(0.3_real64,  config%crop%rotation_wofost(ICROP_POTATOD)%management%fradeceasedlvtosoil, 1.0e-12_real64)
+end subroutine
