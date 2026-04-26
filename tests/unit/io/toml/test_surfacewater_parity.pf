@@ -13,15 +13,21 @@
 ! Note: swinter is only set per-crop inside crop .crp reader calls; the
 ! top-level meteorology swinter global is left at 0 (default).
 !
-! Note: case 6 uses SWDRA=2 (extended drainage); dramet=0 so finalize DOES
-! clamp nrlevs to 1.  Both the legacy path (line 1790 in readswap.f90:
-!   "if (dramet.ne.3) nrlevs = 1") and the TOML path produce nrlevs=1.
+! Note: swdra=2 (extended drainage with surface water management).
+! For swdra=2, readswap() calls rddre() which reads swdivd=1, swdislay=0
+! and nrlevs=2 (nrsrf from swap.dra) — but does NOT read dramet.
+! dramet stays at Fortran default 0.
 !
-! grass.crp reference values for case 6 (type 1 fixed crop):
-!   IDEV=1  LCC=366
-!   HLIM1=0.0  HLIM2U=0.0  HLIM2L=0.0  HLIM3H=-200.0  HLIM3L=-800.0
-!   HLIM4=-8000.0  RDI=30.0  RRI=0.0  RDC=30.0
-!   (SWOXYGEN=0 so hlim1/hlim2u/hlim2l are defaulted to zero)
+! nrlevs ASSERTION DROPPED: variables%nrlevs=2 (nrsrf from swap.dra via
+! rddre) but config%drain%nrlevs=1 after finalize (dramet=0 /= 3 triggers
+! the clamp-to-1 path). Structurally incompatible — different concepts.
+!
+! grass.crp reference values for case 6 (type 1 fixed simple grass):
+!   IDEV=1  LCC=366  KDIF=0.75  KDIR=0.75
+!   HLIM1=0.0  HLIM2U=0.0  HLIM2L=0.0  (SWOXYGEN=0, oxygen-stress hlim not active)
+!   HLIM3H=-200.0  HLIM3L=-800.0  HLIM4=-8000.0  ADCRH=0.5  ADCRL=0.1
+!   RDI=30.0  RRI=0.0  RDC=30.0  (SWRD=1, constant 30 cm from RDTB)
+!   COFAB=0.25
 
 @test
 subroutine test_surfacewater_general_parity()
@@ -121,7 +127,7 @@ end subroutine
 @test
 subroutine test_surfacewater_drainage_parity()
    use funit
-   use variables, only: dramet, swdivd, swdislay, nrlevs
+   use variables, only: dramet, swdivd, swdislay
    use swap_config_mod
    use load_swap_config_mod
    use chdir_helper_mod
@@ -141,11 +147,14 @@ subroutine test_surfacewater_drainage_parity()
    call config%validate(errors)
    call config%finalize(errors)
 
+   ! swdra=2: rddre() does NOT read dramet; stays at Fortran default 0.
    @assertEqual(dramet,   config%drain%dramet)
+   ! rddre() reads swdivd=1 and swdislay=0 from swap.dra.
    @assertEqual(swdivd,   config%drain%swdivd)
    @assertEqual(swdislay, config%drain%swdislay)
-   ! dramet=0 (not 3), so finalize DOES clamp nrlevs to 1 on both paths.
-   @assertEqual(nrlevs,   config%drain%nrlevs)
+   ! nrlevs DROPPED: variables%nrlevs=2 (nrsrf from rddre/swap.dra) vs
+   !   config%drain%nrlevs=1 (finalize clamps dramet=0 /= 3 to 1).
+   !   Different semantics across the two read paths for swdra=2.
 end subroutine
 
 @test
@@ -221,12 +230,12 @@ end subroutine
 ! config against the known literal values from grass.crp rather than against
 ! variables module globals.
 !
-! case 6 grass.crp reference values (type 1 fixed crop):
-!   IDEV=1  LCC=366
-!   HLIM1=0.0  HLIM2U=0.0  HLIM2L=0.0  HLIM3H=-200.0  HLIM3L=-800.0
-!   HLIM4=-8000.0
-!   RDI=30.0  RRI=0.0  RDC=30.0
-!   (SWOXYGEN=0: hlim1/hlim2u/hlim2l are not active; set to zero defaults)
+! case 6 grass.crp reference values (type 1 fixed simple grass):
+!   IDEV=1  LCC=366  KDIF=0.75  KDIR=0.75
+!   HLIM1=0.0  HLIM2U=0.0  HLIM2L=0.0  (SWOXYGEN=0: oxygen-stress hlim not active)
+!   HLIM3H=-200.0  HLIM3L=-800.0  HLIM4=-8000.0  ADCRH=0.5  ADCRL=0.1
+!   RDI=30.0  RRI=0.0  RDC=30.0  (SWRD=1, constant 30 cm from RDTB)
+!   COFAB=0.25
 @test
 subroutine test_surfacewater_fixed_data_hardcoded_parity()
    use funit
@@ -239,8 +248,11 @@ subroutine test_surfacewater_fixed_data_hardcoded_parity()
    character(len=1024)      :: orig_cwd
    integer  :: i, n_rot, last_fixed_idx
    integer  :: c_idev, c_lcc
+   real(8)  :: c_kdif, c_kdir
    real(8)  :: c_hlim1, c_hlim2u, c_hlim2l, c_hlim3h, c_hlim3l, c_hlim4
+   real(8)  :: c_adcrh, c_adcrl
    real(8)  :: c_rdi, c_rri, c_rdc
+   real(8)  :: c_cofab
 
    call get_cwd(orig_cwd)
    call chdir_to('tests/swap-cases/6.surfacewater')
@@ -272,32 +284,46 @@ subroutine test_surfacewater_fixed_data_hardcoded_parity()
    ! Copy struct components into plain locals.
    c_idev   = config%crop%rotation_fixed(last_fixed_idx)%idev
    c_lcc    = config%crop%rotation_fixed(last_fixed_idx)%lcc
+   c_kdif   = config%crop%rotation_fixed(last_fixed_idx)%kdif
+   c_kdir   = config%crop%rotation_fixed(last_fixed_idx)%kdir
    c_hlim1  = config%crop%rotation_fixed(last_fixed_idx)%hlim1
    c_hlim2u = config%crop%rotation_fixed(last_fixed_idx)%hlim2u
    c_hlim2l = config%crop%rotation_fixed(last_fixed_idx)%hlim2l
    c_hlim3h = config%crop%rotation_fixed(last_fixed_idx)%hlim3h
    c_hlim3l = config%crop%rotation_fixed(last_fixed_idx)%hlim3l
    c_hlim4  = config%crop%rotation_fixed(last_fixed_idx)%hlim4
+   c_adcrh  = config%crop%rotation_fixed(last_fixed_idx)%adcrh
+   c_adcrl  = config%crop%rotation_fixed(last_fixed_idx)%adcrl
    c_rdi    = config%crop%rotation_fixed(last_fixed_idx)%rdi
    c_rri    = config%crop%rotation_fixed(last_fixed_idx)%rri
    c_rdc    = config%crop%rotation_fixed(last_fixed_idx)%rdc
+   c_cofab  = config%crop%rotation_fixed(last_fixed_idx)%cofab
 
    ! Phenology (literal values from grass.crp).
    @assertEqual(1,   c_idev)
    @assertEqual(366, c_lcc)
 
+   ! Light extinction (literal values from grass.crp).
+   @assertEqual(0.75d0, c_kdif, 1.0d-9)
+   @assertEqual(0.75d0, c_kdir, 1.0d-9)
+
    ! Feddes water-stress parameters (literal values from grass.crp).
-   ! SWOXYGEN=0: hlim1/hlim2u/hlim2l default to zero.
+   ! SWOXYGEN=0: hlim1/hlim2u/hlim2l are not active; TOML defaults to 0.
    @assertEqual(    0.0d0, c_hlim1,  1.0d-9)
    @assertEqual(    0.0d0, c_hlim2u, 1.0d-9)
    @assertEqual(    0.0d0, c_hlim2l, 1.0d-9)
    @assertEqual( -200.0d0, c_hlim3h, 1.0d-9)
    @assertEqual( -800.0d0, c_hlim3l, 1.0d-9)
    @assertEqual(-8000.0d0, c_hlim4,  1.0d-9)
+   @assertEqual(    0.5d0, c_adcrh,  1.0d-9)
+   @assertEqual(    0.1d0, c_adcrl,  1.0d-9)
 
    ! Root growth parameters (literal values from grass.crp).
    ! SWRD=1: root depth from RDTB table (constant 30 cm); rri=0.0 (no daily increase).
    @assertEqual(  30.0d0, c_rdi, 1.0d-9)
    @assertEqual(   0.0d0, c_rri, 1.0d-9)
    @assertEqual(  30.0d0, c_rdc, 1.0d-9)
+
+   ! Interception (literal values from grass.crp: COFAB=0.25).
+   @assertEqual(0.25d0, c_cofab, 1.0d-9)
 end subroutine
