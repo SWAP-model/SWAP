@@ -1,4 +1,5 @@
-! Phase 4b Task 12 parity test: legacy `variables` globals (after readswap)
+! Phase 4b Task 12 / Phase 4c-a Task 15 parity test:
+! legacy `variables` globals (after readswap)
 ! vs swap_config_t fields (after load_swap_config + validate + finalize).
 !
 ! The test runs the legacy reader by chdir-ing into the case directory and
@@ -9,8 +10,12 @@
 ! Scope: existing-schema fields only.  SWHEA, SWSOLU, SWBOTB and the
 ! associated heat/solute/bottom_boundary tables are Phase 4c.
 !
-! Note: swmacro is a LOCAL variable in readswap.f90 (shadows the module
-! global) — the module-level swmacro is never written.  Dropped from scope.
+! Phase 4c-a Task 15 additions:
+!   - Date tolerances tightened from 1.5d0 to 1.0d-9 (Task 1 aligned convention)
+!   - swmacro assertion re-enabled (Task 2 removed the local shadow)
+!   - nrlevs assertion re-enabled (Task 3 mirrors clobber in finalize)
+!   - New subtest: last rotation type-3 (grassd) sub-config parity
+!
 ! Note: swinter is only set per-crop inside crop .crp reader calls; the
 ! top-level meteorology swinter global is left at 0 (default).
 
@@ -48,8 +53,8 @@ subroutine test_hupselbrook_parity_simulation()
 
    call load_both_for_hupselbrook(config, errors)
 
-   @assertEqual(tstart,    config%simulation%tstart, 1.5d0)
-   @assertEqual(tend,      config%simulation%tend,   1.5d0)
+   @assertEqual(tstart,    config%simulation%tstart, 1.0d-9)
+   @assertEqual(tend,      config%simulation%tend,   1.0d-9)
    @assertEqual(nprintday, config%simulation%nprintday)
 end subroutine
 
@@ -80,7 +85,7 @@ end subroutine
 subroutine test_hupselbrook_parity_drainage()
    use funit
    use parity_helpers_mod
-   use variables, only: dramet, swdivd, swdislay
+   use variables, only: dramet, swdivd, swdislay, nrlevs
    use swap_config_mod
    use error_mod
    type(swap_config_t)      :: config
@@ -91,13 +96,15 @@ subroutine test_hupselbrook_parity_drainage()
    @assertEqual(dramet,   config%drain%dramet)
    @assertEqual(swdivd,   config%drain%swdivd)
    @assertEqual(swdislay, config%drain%swdislay)
+   ! nrlevs: legacy clobbers to 1 when dramet/=3; finalize mirrors this.
+   @assertEqual(nrlevs,   config%drain%nrlevs)
 end subroutine
 
 @test
 subroutine test_hupselbrook_parity_soil()
    use funit
    use parity_helpers_mod
-   use variables, only: swsophy, swhyst, swinco, gwli
+   use variables, only: swsophy, swhyst, swinco, gwli, swmacro
    use swap_config_mod
    use error_mod
    type(swap_config_t)      :: config
@@ -109,6 +116,8 @@ subroutine test_hupselbrook_parity_soil()
    @assertEqual(swhyst,  config%soil%swhyst)
    @assertEqual(swinco,  config%soil%swinco)
    @assertEqual(gwli,    config%soil%gwli,    1.0d-9)
+   ! swmacro: Task 2 removed the local shadow; module global is now populated.
+   @assertEqual(swmacro, config%soil%swmacro)
 end subroutine
 
 @test
@@ -124,4 +133,69 @@ subroutine test_hupselbrook_parity_crop()
    call load_both_for_hupselbrook(config, errors)
 
    @assertEqual(swCrop, config%crop%swcrop)
+end subroutine
+
+! Phase 4c-a Task 15: parity for the last type-3 (grassd) rotation entry.
+! readswap() populates only the top-level crop rotation metadata; per-crop
+! field globals (hlim*, rdi, rri, rdc) are set by readgrass() which is called
+! from cropgrowth.f90 during simulation, not by readswap().  Therefore we
+! compare the loaded grassd.crp.toml config against the known literal values
+! from grassd.crp rather than against variables module globals.
+!
+! grassd.crp reference values:
+!   HLIM1=0.0  HLIM2U=1.0  HLIM2L=-1.0  HLIM3H=-200.0  HLIM3L=-800.0
+!   HLIM4=-8000.0  RDI=20.0  RRI=0.25  RDC=40.0
+@test
+subroutine test_hupselbrook_parity_last_grass_rotation()
+   use funit
+   use parity_helpers_mod
+   use swap_config_mod
+   use error_mod
+   type(swap_config_t)      :: config
+   type(error_collection_t) :: errors
+   integer  :: i, n_rot, last_grass_idx
+   real(8)  :: c_hlim1, c_hlim2u, c_hlim2l, c_hlim3h, c_hlim3l, c_hlim4
+   real(8)  :: c_rdi, c_rri, c_rdc
+
+   call load_both_for_hupselbrook(config, errors)
+
+   @assertFalse(errors%has_fatals())
+
+   ! Locate the last type-3 entry in the rotation.
+   n_rot = size(config%crop%rotation_type)
+   last_grass_idx = 0
+   do i = n_rot, 1, -1
+      if (config%crop%rotation_type(i) == 3) then
+         last_grass_idx = i
+         exit
+      end if
+   end do
+   @assertTrue(last_grass_idx > 0)
+
+   ! Sanity check: grassd is the third (and last) rotation entry.
+   @assertEqual(3, last_grass_idx)
+
+   ! Copy struct components into plain locals.
+   c_hlim1  = config%crop%rotation_grass(last_grass_idx)%hlim1
+   c_hlim2u = config%crop%rotation_grass(last_grass_idx)%hlim2u
+   c_hlim2l = config%crop%rotation_grass(last_grass_idx)%hlim2l
+   c_hlim3h = config%crop%rotation_grass(last_grass_idx)%hlim3h
+   c_hlim3l = config%crop%rotation_grass(last_grass_idx)%hlim3l
+   c_hlim4  = config%crop%rotation_grass(last_grass_idx)%hlim4
+   c_rdi    = config%crop%rotation_grass(last_grass_idx)%rdi
+   c_rri    = config%crop%rotation_grass(last_grass_idx)%rri
+   c_rdc    = config%crop%rotation_grass(last_grass_idx)%rdc
+
+   ! Feddes water-stress parameters (literal values from grassd.crp).
+   @assertEqual(   0.0d0, c_hlim1,  1.0d-9)
+   @assertEqual(   1.0d0, c_hlim2u, 1.0d-9)
+   @assertEqual(  -1.0d0, c_hlim2l, 1.0d-9)
+   @assertEqual(-200.0d0, c_hlim3h, 1.0d-9)
+   @assertEqual(-800.0d0, c_hlim3l, 1.0d-9)
+   @assertEqual(-8000.0d0, c_hlim4, 1.0d-9)
+
+   ! Root growth parameters (literal values from grassd.crp).
+   @assertEqual(  20.0d0, c_rdi, 1.0d-9)
+   @assertEqual(   0.25d0, c_rri, 1.0d-9)
+   @assertEqual(  40.0d0, c_rdc, 1.0d-9)
 end subroutine
