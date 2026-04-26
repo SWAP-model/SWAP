@@ -1,0 +1,217 @@
+[preparation]
+swprep = 0
+zprep = -10.0
+hprep = -200.0
+maxprepdelay = 7
+
+[sowing]
+swsow = 0
+zsow = -5.0
+hsow = -150.0
+ztempsow = -10.0
+tempsow = 5.0
+maxsowdelay = 14
+
+[germination]
+swgerm = 2
+tsumemeopt = 170.0
+tbasem = 3.0
+teffmx = 30.0
+hdrygerm = -500.0
+hwetgerm = -10.0
+zgerm = -10.0
+agerm = 203.0
+
+[harvest]
+dvsend = 2.0
+swharv = 0
+
+[crop_factor]
+swcf = 2
+albedo = 0.23
+rsc = 70.0
+rsw = 0.0
+chtb = [
+  [0.0, 1.0],
+  [2.0, 1.0],
+]
+
+[phenology]
+idsl = 0
+tsumea = 150.0
+tsumam = 1550.0
+dlo = 14.0
+dlc = 8.0
+vernsat = 0.0
+vernbase = 0.0
+verndvs = 0.0
+dtsmtb = [
+  [0.0, 0.0],
+  [2.0, 0.0],
+  [13.0, 11.0],
+  [30.0, 28.0],
+]
+
+[initial]
+tdwi = 75.0
+laiem = 0.123
+rgrlai = 0.012
+
+[green_area]
+spa = 0.0
+ssa = 0.0
+span = 37.0
+tbase = 2.0
+slatb = [
+  [0.0, 0.0030],
+  [2.0, 0.0030],
+]
+
+[assimilation]
+kdif = 1.0
+kdir = 0.75
+eff = 0.45
+amaxtb = [
+  [0.0, 30.0],
+  [1.5, 35.0],
+  [2.0, 0.0],
+]
+tmpftb = [
+  [0.0, 0.01],
+  [25.0, 1.0],
+]
+tmnftb = [
+  [0.0, 0.0],
+  [3.0, 1.0],
+]
+
+[conversion]
+cvl = 0.72
+cvo = 0.85
+cvr = 0.72
+cvs = 0.69
+
+[respiration]
+q10 = 2.0
+rml = 0.03
+rmo = 0.0045
+rmr = 0.01
+rms = 0.015
+rfsetb = [
+  [0.0, 1.0],
+  [2.0, 1.0],
+]
+
+[partitioning]
+frtb = [
+  [0.0, 0.20],
+  [2.0, 0.0],
+]
+fltb = [
+  [0.0, 0.75],
+  [2.0, 0.0],
+]
+fstb = [
+  [0.0, 0.25],
+  [2.0, 0.0],
+]
+fotb = [
+  [0.0, 0.0],
+  [2.0, 1.0],
+]
+
+[death]
+perdl = 0.03
+rdrrtb = [
+  [0.0, 0.0],
+  [2.0, 0.02],
+]
+rdrstb = [
+  [0.0, 0.0],
+  [2.0, 0.02],
+]
+
+[root]
+swrd = 2
+rdi = 10.0
+rri = 1.2
+rdc = 50.0
+swdmi2rd = 1
+wrtmax = 3000.0
+rdtb = [
+  [0.0, 10.0],
+  [2.0, 50.0],
+]
+rlwtb = [
+  [0.0, 1.0],
+  [2.0, 1.0],
+]
+rdctb = [
+  [0.0, 1.0],
+  [1.0, 0.0],
+]
+
+[oxygen_stress]
+swoxygen = 1
+swwrtnonox = 0
+aeratecrit = 0.5
+hlim1 = -10.0
+hlim2u = -25.0
+hlim2l = -25.0
+q10_microbial = 2.8
+specific_resp_humus = 1.6e-3
+srl = 1.5e8
+swrootradius = 2
+dry_mat_cont_roots = 0.075
+air_filled_root_por = 0.05
+spec_weight_root_tissue = 1.0e5
+var_a = 0.1
+root_radiusO2 = 1.5e-4
+
+[drought_stress]
+swdrought = 1
+hlim3h = -300.0
+hlim3l = -500.0
+hlim4 = -10000.0
+adcrh = 0.5
+adcrl = 0.1
+
+[salinity]
+swsalinity = 0
+saltmax = 3.0
+saltslope = 0.1
+salthead = 100.0
+
+[compensate]
+swcompensate = 0
+swstressor = 1
+alphacrit = 1.0
+dcritrtz = 0.4
+
+[interception]
+swinter = 1
+cofab = 0.25
+
+[co2]
+swco2 = 0
+atmofil = "atmospheric"
+co2amaxtb = [
+  [40.0, 0.0],
+  [360.0, 1.0],
+]
+co2efftb = [
+  [40.0, 0.0],
+  [360.0, 1.0],
+]
+co2tratb = [
+  [40.0, 0.0],
+  [360.0, 1.0],
+]
+
+[management]
+fraharlosorm_lv = 0.0
+fraharlosorm_st = 0.0
+fraharlosorm_so = 0.0
+fradeceasedlvtosoil = 1.0
+swpotrelmf = 1
+relmf = 0.9

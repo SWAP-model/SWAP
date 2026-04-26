@@ -1,0 +1,186 @@
+@test
+subroutine test_read_cropwofost_happy()
+   use funit
+   use tomlf, only: toml_table, toml_load
+   use cropwofost_config_mod
+   use read_cropwofost_toml_mod
+   use error_mod
+   type(toml_table), allocatable, target :: doc
+   type(toml_table), pointer             :: doc_ptr
+   type(cropwofost_config_t)             :: c
+   type(error_collection_t)              :: errors
+
+   call toml_load(doc, 'tests/unit/io/toml/fixtures/cropwofost_minimal.toml')
+   doc_ptr => doc
+   call read_cropwofost_toml(doc_ptr, c, errors)
+
+   @assertFalse(errors%has_errors())
+   @assertEqual(0,        c%preparation%swprep)
+   @assertEqual(2,        c%germination%swgerm)
+   @assertEqual(170.0d0,  c%germination%tsumemeopt, 1.0d-12)
+   @assertEqual(150.0d0,  c%phenology%tsumea,       1.0d-12)
+   @assertEqual(1550.0d0, c%phenology%tsumam,       1.0d-12)
+   @assertEqual(0.72d0,   c%conversion%cvl,         1.0d-12)
+   @assertEqual(0.03d0,   c%death%perdl,            1.0d-12)
+   @assertEqual(2,        c%root%swrd)
+   @assertEqual(1,        c%oxygen_stress%swoxygen)
+   @assertEqual(0.9d0,    c%management%relmf,       1.0d-12)
+end subroutine
+
+@test
+subroutine test_read_cropwofost_table_dtsmtb_decoded()
+   use funit
+   use iso_fortran_env, only: real64
+   use tomlf, only: toml_table, toml_load
+   use cropwofost_config_mod
+   use read_cropwofost_toml_mod
+   use error_mod
+   type(toml_table), allocatable, target :: doc
+   type(toml_table), pointer             :: doc_ptr
+   type(cropwofost_config_t)             :: c
+   type(error_collection_t)              :: errors
+
+   call toml_load(doc, 'tests/unit/io/toml/fixtures/cropwofost_minimal.toml')
+   doc_ptr => doc
+   call read_cropwofost_toml(doc_ptr, c, errors)
+
+   @assertFalse(errors%has_errors())
+   @assertTrue(allocated(c%phenology%dtsmtb))
+   @assertEqual(4, size(c%phenology%dtsmtb, 1))
+   @assertEqual(2, size(c%phenology%dtsmtb, 2))
+   @assertEqual(0.0d0,  c%phenology%dtsmtb(1, 1), 1.0d-12)
+   @assertEqual(0.0d0,  c%phenology%dtsmtb(1, 2), 1.0d-12)
+   @assertEqual(13.0d0, c%phenology%dtsmtb(3, 1), 1.0d-12)
+   @assertEqual(11.0d0, c%phenology%dtsmtb(3, 2), 1.0d-12)
+   @assertEqual(30.0d0, c%phenology%dtsmtb(4, 1), 1.0d-12)
+   @assertEqual(28.0d0, c%phenology%dtsmtb(4, 2), 1.0d-12)
+end subroutine
+
+@test
+subroutine test_read_cropwofost_missing_section_silent()
+   use funit
+   use tomlf, only: toml_table, toml_load
+   use cropwofost_config_mod
+   use read_cropwofost_toml_mod
+   use error_mod
+   type(toml_table), allocatable, target :: doc
+   type(toml_table), pointer             :: doc_ptr
+   type(cropwofost_config_t)             :: c
+   type(error_collection_t)              :: errors
+
+   call toml_load(doc, 'tests/unit/io/toml/fixtures/general_minimal.toml')
+   doc_ptr => doc
+   call read_cropwofost_toml(doc_ptr, c, errors)
+
+   @assertFalse(errors%has_errors())
+   @assertFalse(allocated(c%phenology%dtsmtb))
+   @assertEqual(0, c%germination%swgerm)
+end subroutine
+
+@test
+subroutine test_read_cropwofost_malformed_table_ragged()
+   use funit
+   use tomlf, only: toml_table, toml_load
+   use cropwofost_config_mod
+   use read_cropwofost_toml_mod
+   use error_mod
+   type(toml_table), allocatable, target :: doc
+   type(toml_table), pointer             :: doc_ptr
+   type(cropwofost_config_t)             :: c
+   type(error_collection_t)              :: errors
+
+   call toml_load(doc, 'tests/unit/io/toml/fixtures/cropwofost_ragged_dtsmtb.toml')
+   doc_ptr => doc
+   call read_cropwofost_toml(doc_ptr, c, errors)
+
+   @assertTrue(errors%has_errors())
+   @assertFalse(allocated(c%phenology%dtsmtb))
+end subroutine
+
+@test
+subroutine test_read_cropwofost_malformed_table_wrong_width()
+   use funit
+   use tomlf, only: toml_table, toml_load
+   use cropwofost_config_mod
+   use read_cropwofost_toml_mod
+   use error_mod
+   type(toml_table), allocatable, target :: doc
+   type(toml_table), pointer             :: doc_ptr
+   type(cropwofost_config_t)             :: c
+   type(error_collection_t)              :: errors
+
+   call toml_load(doc, 'tests/unit/io/toml/fixtures/cropwofost_wrong_width.toml')
+   doc_ptr => doc
+   call read_cropwofost_toml(doc_ptr, c, errors)
+
+   @assertTrue(errors%has_errors())
+   @assertFalse(allocated(c%phenology%dtsmtb))
+end subroutine
+
+@test
+subroutine test_read_cropwofost_empty_table()
+   use funit
+   use tomlf, only: toml_table, toml_load
+   use cropwofost_config_mod
+   use read_cropwofost_toml_mod
+   use error_mod
+   type(toml_table), allocatable, target :: doc
+   type(toml_table), pointer             :: doc_ptr
+   type(cropwofost_config_t)             :: c
+   type(error_collection_t)              :: errors
+
+   call toml_load(doc, 'tests/unit/io/toml/fixtures/cropwofost_empty_dtsmtb.toml')
+   doc_ptr => doc
+   call read_cropwofost_toml(doc_ptr, c, errors)
+
+   @assertFalse(errors%has_errors())
+   @assertTrue(allocated(c%phenology%dtsmtb))
+   @assertEqual(0, size(c%phenology%dtsmtb, 1))
+end subroutine
+
+@test
+subroutine test_read_cropwofost_oversized_table_passes_reader()
+   use funit
+   use tomlf, only: toml_table, toml_load
+   use cropwofost_config_mod
+   use read_cropwofost_toml_mod
+   use error_mod
+   type(toml_table), allocatable, target :: doc
+   type(toml_table), pointer             :: doc_ptr
+   type(cropwofost_config_t)             :: c
+   type(error_collection_t)              :: errors
+
+   call toml_load(doc, 'tests/unit/io/toml/fixtures/cropwofost_oversized_dtsmtb.toml')
+   doc_ptr => doc
+   call read_cropwofost_toml(doc_ptr, c, errors)
+
+   @assertFalse(errors%has_errors())
+   @assertTrue(allocated(c%phenology%dtsmtb))
+   @assertEqual(20, size(c%phenology%dtsmtb, 1))
+
+   call c%validate(errors)
+   @assertTrue(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_read_cropwofost_gashtb_six_columns()
+   use funit
+   use tomlf, only: toml_table, toml_load
+   use cropwofost_config_mod
+   use read_cropwofost_toml_mod
+   use error_mod
+   type(toml_table), allocatable, target :: doc
+   type(toml_table), pointer             :: doc_ptr
+   type(cropwofost_config_t)             :: c
+   type(error_collection_t)              :: errors
+
+   call toml_load(doc, 'tests/unit/io/toml/fixtures/cropwofost_gashtb.toml')
+   doc_ptr => doc
+   call read_cropwofost_toml(doc_ptr, c, errors)
+
+   @assertFalse(errors%has_errors())
+   @assertTrue(allocated(c%interception%gashtb))
+   @assertEqual(2, size(c%interception%gashtb, 1))
+   @assertEqual(6, size(c%interception%gashtb, 2))
+   @assertEqual(0.5d0, c%interception%gashtb(1, 4), 1.0d-12)
+end subroutine
