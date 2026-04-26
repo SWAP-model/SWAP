@@ -144,6 +144,7 @@ if get_option('enable_pfunit')
         'io/toml/test_all_cases_smoke.pf',
         'io/toml/test_chdir_helper.pf',
         'io/toml/test_hupselbrook_parity.pf',
+        'io/toml/test_grassgrowth_parity.pf',
     ]
 
     # When pf_files is non-empty, build and register the unit-swap-tests
