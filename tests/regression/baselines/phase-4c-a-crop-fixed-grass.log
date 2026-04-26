@@ -1,0 +1,43 @@
+Phase 4c-a baseline: cross-file TOML loading + cropfixed/cropgrass (2026-04-25)
+================================================================================
+
+check-full run: pixi run -e test check-full
+Branch: development
+Commit: b4db7c2 (docs(baselines): record phase 4c-a coverage numbers)
+pFUnit tests: 162 passing
+
+Individual test wall times:
+  hupselbrook            1.42s
+  grassgrowth            2.75s
+  surfacewater           3.48s
+  salinitystress         7.44s
+  oxygenstress          46.45s
+  macropore            317.98s
+
+Summary: 6 passed, 0 failed
+Total execution time: 317.99s
+
+All 6/6 cases green.
+
+Phase 4c-a changes covered:
+  - path_helpers_mod: resolve_relative_path, directory_of
+  - cropfixed_config_t: type-1 crop config (phenology, light, root,
+    water_stress, salinity, interception)
+  - cropgrass_config_t: type-3 grass config (adds mowing, grazing)
+  - read_cropfixed_toml: reader for *.crp.toml type 1
+  - read_cropgrass_toml: reader for *.crp.toml type 3
+  - read_drainage_toml: extended with [drainage].file= cross-file support
+  - read_crop_toml: extended with [[crop.rotation]].file= dispatch
+  - load_swap_config: passes base_path to drainage and crop readers
+  - Parity tests: cases 1 (hupselbrook), 2 (oxygenstress), 4 (grassgrowth),
+    6 (surfacewater) all exercise the new cross-file loading path
+
+Three Phase 4b workarounds retired:
+  - parse_date_to_days1900 aligned to legacy 1-based JDN
+  - swmacro shadow removed from readswap.f90
+  - nrlevs clobber mirrored in drainage_config_t%finalize
+
+Phase 4c-b agenda:
+  - WOFOST type 2 crop config + reader
+  - Case 5 (salinitystress) parity test
+  - bottom_boundary, heat, solute config types
