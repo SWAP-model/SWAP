@@ -1,21 +1,21 @@
-Phase 4c-a baseline: cross-file TOML loading + cropfixed/cropgrass (2026-04-25)
+Phase 4c-a baseline: cross-file TOML loading + cropfixed/cropgrass (2026-04-26)
 ================================================================================
 
 check-full run: pixi run -e test check-full
 Branch: development
-Commit: b4db7c2 (docs(baselines): record phase 4c-a coverage numbers)
-pFUnit tests: 162 passing
+Commit: 2e864b7 (docs(schema): reconcile to Phase 4b/4c-a reality + cross-file)
+pFUnit tests: 155 passing
 
 Individual test wall times:
   hupselbrook            1.42s
-  grassgrowth            2.75s
-  surfacewater           3.48s
-  salinitystress         7.44s
-  oxygenstress          46.45s
-  macropore            317.98s
+  grassgrowth            2.77s
+  surfacewater           3.24s
+  salinitystress         7.88s
+  oxygenstress          46.74s
+  macropore            318.09s
 
 Summary: 6 passed, 0 failed
-Total execution time: 317.99s
+Total execution time: 318.10s
 
 All 6/6 cases green.
 

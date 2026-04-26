@@ -235,7 +235,7 @@ After Phase 4c-a (cross-file TOML loading + cropfixed/cropgrass + parity for cas
   dropped by 1 executed line (4020 → 4019). Net change: 0.0 pp.
 - New modules introduced: `path_helpers`, `cropfixed_config`, `cropgrass_config`,
   `read_cropfixed_toml`, `read_cropgrass_toml`. Each has unit-test coverage
-  per its dedicated pFUnit suite (162 tests total). These modules are compiled
+  per its dedicated pFUnit suite (155 tests total). These modules are compiled
   only into the unit-test binary and remain invisible to the project-level
   gcovr run (same path-resolution limitation as Phase 4a/4b infrastructure).
 - Cross-file extensions to `read_drainage_toml`, `read_crop_toml`, and
