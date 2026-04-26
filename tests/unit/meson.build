@@ -85,6 +85,7 @@ if get_option('enable_pfunit')
         '../../src/config/soil_config.f90',
         '../../src/config/cropfixed_config.f90',
         '../../src/config/cropgrass_config.f90',
+        '../../src/config/cropwofost_config.f90',
         '../../src/config/crop_config.f90',
         '../../src/config/swap_config.f90',
         '../../src/io/toml/path_helpers.f90',
