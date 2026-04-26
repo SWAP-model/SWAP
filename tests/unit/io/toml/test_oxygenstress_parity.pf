@@ -27,6 +27,7 @@ subroutine test_oxygenstress_general_parity()
    use swap_config_mod
    use load_swap_config_mod
    use chdir_helper_mod
+   use parity_helpers_mod
    use error_mod
    type(swap_config_t)      :: config
    type(error_collection_t) :: errors
@@ -35,6 +36,7 @@ subroutine test_oxygenstress_general_parity()
    call get_cwd(orig_cwd)
    call chdir_to('tests/swap-cases/4.oxygenstress')
    call stage_swp_template('swap_linux.swp.template', 'swap')
+   call reset_for_next_readswap()
    call readswap()
    close(logf)
    call chdir_to(trim(orig_cwd))
@@ -60,6 +62,7 @@ subroutine test_oxygenstress_simulation_parity()
    use swap_config_mod
    use load_swap_config_mod
    use chdir_helper_mod
+   use parity_helpers_mod
    use error_mod
    type(swap_config_t)      :: config
    type(error_collection_t) :: errors
@@ -68,6 +71,7 @@ subroutine test_oxygenstress_simulation_parity()
    call get_cwd(orig_cwd)
    call chdir_to('tests/swap-cases/4.oxygenstress')
    call stage_swp_template('swap_linux.swp.template', 'swap')
+   call reset_for_next_readswap()
    call readswap()
    close(logf)
    call chdir_to(trim(orig_cwd))
@@ -88,6 +92,7 @@ subroutine test_oxygenstress_meteorology_parity()
    use swap_config_mod
    use load_swap_config_mod
    use chdir_helper_mod
+   use parity_helpers_mod
    use error_mod
    type(swap_config_t)      :: config
    type(error_collection_t) :: errors
@@ -96,6 +101,7 @@ subroutine test_oxygenstress_meteorology_parity()
    call get_cwd(orig_cwd)
    call chdir_to('tests/swap-cases/4.oxygenstress')
    call stage_swp_template('swap_linux.swp.template', 'swap')
+   call reset_for_next_readswap()
    call readswap()
    close(logf)
    call chdir_to(trim(orig_cwd))
@@ -122,6 +128,7 @@ subroutine test_oxygenstress_drainage_parity()
    use swap_config_mod
    use load_swap_config_mod
    use chdir_helper_mod
+   use parity_helpers_mod
    use error_mod
    type(swap_config_t)      :: config
    type(error_collection_t) :: errors
@@ -130,6 +137,7 @@ subroutine test_oxygenstress_drainage_parity()
    call get_cwd(orig_cwd)
    call chdir_to('tests/swap-cases/4.oxygenstress')
    call stage_swp_template('swap_linux.swp.template', 'swap')
+   call reset_for_next_readswap()
    call readswap()
    close(logf)
    call chdir_to(trim(orig_cwd))
@@ -152,6 +160,7 @@ subroutine test_oxygenstress_soil_parity()
    use swap_config_mod
    use load_swap_config_mod
    use chdir_helper_mod
+   use parity_helpers_mod
    use error_mod
    type(swap_config_t)      :: config
    type(error_collection_t) :: errors
@@ -160,6 +169,7 @@ subroutine test_oxygenstress_soil_parity()
    call get_cwd(orig_cwd)
    call chdir_to('tests/swap-cases/4.oxygenstress')
    call stage_swp_template('swap_linux.swp.template', 'swap')
+   call reset_for_next_readswap()
    call readswap()
    close(logf)
    call chdir_to(trim(orig_cwd))
@@ -182,6 +192,7 @@ subroutine test_oxygenstress_crop_rotation_parity()
    use swap_config_mod
    use load_swap_config_mod
    use chdir_helper_mod
+   use parity_helpers_mod
    use error_mod
    type(swap_config_t)      :: config
    type(error_collection_t) :: errors
@@ -191,6 +202,7 @@ subroutine test_oxygenstress_crop_rotation_parity()
    call get_cwd(orig_cwd)
    call chdir_to('tests/swap-cases/4.oxygenstress')
    call stage_swp_template('swap_linux.swp.template', 'swap')
+   call reset_for_next_readswap()
    call readswap()
    close(logf)
    call chdir_to(trim(orig_cwd))
@@ -227,6 +239,7 @@ subroutine test_oxygenstress_grass_data_hardcoded_parity()
    use swap_config_mod
    use load_swap_config_mod
    use chdir_helper_mod
+   use parity_helpers_mod
    use error_mod
    type(swap_config_t)      :: config
    type(error_collection_t) :: errors
@@ -238,6 +251,7 @@ subroutine test_oxygenstress_grass_data_hardcoded_parity()
    call get_cwd(orig_cwd)
    call chdir_to('tests/swap-cases/4.oxygenstress')
    call stage_swp_template('swap_linux.swp.template', 'swap')
+   call reset_for_next_readswap()
    call readswap()
    close(logf)
    call chdir_to(trim(orig_cwd))

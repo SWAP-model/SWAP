@@ -10,6 +10,7 @@ module parity_helpers_mod
    private
 
    public :: load_both_for_hupselbrook
+   public :: reset_for_next_readswap
 
    character(len=*), parameter :: CASE_DIR = &
       'tests/swap-cases/1.hupselbrook'
@@ -18,6 +19,53 @@ module parity_helpers_mod
    character(len=*), parameter :: TEMPLATE = 'swap_linux.swp.template'
 
 contains
+
+   !> Phase 4c-b: pFUnit runs every @test in a single process, but the legacy
+   !! readswap() opens its log file with status='new'. Even though it asks for
+   !! 'del' privilege, the file lingers when a previous test was aborted or
+   !! closed mid-flight (and on success the close-with-delete only fires after
+   !! readswap finishes — we may be re-entering before that). This helper
+   !! force-deletes the stale `swap_swap.log` (and the legacy `Swap.ok` marker)
+   !! and closes any leaked Fortran units in the getun-managed range so the
+   !! next readswap() can claim a fresh logf.
+   subroutine reset_for_next_readswap()
+      integer :: u, ios
+      logical :: is_open
+
+      ! Defensive: close logf if a prior test left it open.
+      inquire(unit=logf, opened=is_open)
+      if (is_open) close(logf, iostat=ios)
+
+      ! Forcibly delete the legacy log file via Fortran open+close-with-delete.
+      ! Open as 'old' and unlink on close. iostat ignored — absence is fine.
+      open(newunit=u, file='swap_swap.log', status='old', &
+           action='read', iostat=ios)
+      if (ios == 0) close(u, status='delete', iostat=ios)
+
+      open(newunit=u, file='Swap.ok', status='old', &
+           action='read', iostat=ios)
+      if (ios == 0) close(u, status='delete', iostat=ios)
+
+      ! Belt-and-suspenders for any other process that may have leaked a
+      ! handle: try a shell-level rm so a still-open inode does not block
+      ! the next status='new' open. Test-only path.
+      call execute_command_line('rm -f swap_swap.log Swap.ok 2>/dev/null', &
+                                wait=.true.)
+
+      ! Close any leaked units in the getun-managed range so getun(20,99)
+      ! finds a free slot. Iostat ignored — closing an already-closed unit
+      ! is a no-op in gfortran.
+      do u = 20, 99
+         close(u, iostat=ios)
+      end do
+
+      ! Reset selected variables-module globals that readswap() does NOT
+      ! always overwrite. Without this, a previous test's value leaks into
+      ! the next case (e.g. case 6.surfacewater has swdra=2, where rddre()
+      ! never assigns dramet — so it would inherit 3 from case 4 and the
+      ! parity assertion would silently pass for the wrong reason).
+      dramet = 0
+   end subroutine reset_for_next_readswap
 
    !> Run readswap() for the hupselbrook case (sets `variables` module globals)
    !! then load+validate+finalize the matching TOML config.
@@ -29,6 +77,7 @@ contains
       call get_cwd(orig_cwd)
       call chdir_to(CASE_DIR)
       call stage_swp_template(TEMPLATE, 'swap')
+      call reset_for_next_readswap()
       call readswap()
       close(logf)
       call chdir_to(trim(orig_cwd))
