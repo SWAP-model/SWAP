@@ -129,6 +129,7 @@ if get_option('enable_pfunit')
         'config/test_swap_config.pf',
         'config/test_cropfixed_config.pf',
         'config/test_cropgrass_config.pf',
+        'config/test_cropwofost_config.pf',
         'io/toml/test_path_helpers.pf',
         'io/toml/test_toml_field_helpers.pf',
         'io/toml/test_read_general_toml.pf',

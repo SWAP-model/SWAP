@@ -1,0 +1,582 @@
+! Phase 4c-b Task 2: per-sub-type validator coverage for cropwofost_config_t.
+
+@test
+subroutine test_wofost_preparation_defaults_pass()
+   use funit
+   use error_mod
+   use cropwofost_config_mod
+   type(wofost_preparation_t) :: s
+   type(error_collection_t)   :: errors
+   call s%validate(errors)
+   @assertFalse(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_wofost_preparation_swprep1_invalid_zprep_fails()
+   use funit
+   use error_mod
+   use cropwofost_config_mod
+   type(wofost_preparation_t) :: s
+   type(error_collection_t)   :: errors
+   s%swprep       = 1
+   s%zprep        = 50.0d0
+   s%hprep        = -10.0d0
+   s%maxprepdelay = 30
+   call s%validate(errors)
+   @assertTrue(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_wofost_sowing_defaults_pass()
+   use funit
+   use error_mod
+   use cropwofost_config_mod
+   type(wofost_sowing_t)    :: s
+   type(error_collection_t) :: errors
+   call s%validate(errors)
+   @assertFalse(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_wofost_sowing_swsow_invalid_fails()
+   use funit
+   use error_mod
+   use cropwofost_config_mod
+   type(wofost_sowing_t)    :: s
+   type(error_collection_t) :: errors
+   s%swsow = 9
+   call s%validate(errors)
+   @assertTrue(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_wofost_germination_defaults_pass()
+   use funit
+   use error_mod
+   use cropwofost_config_mod
+   type(wofost_germination_t) :: s
+   type(error_collection_t)   :: errors
+   call s%validate(errors)
+   @assertFalse(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_wofost_germination_swgerm2_invalid_fails()
+   use funit
+   use error_mod
+   use cropwofost_config_mod
+   type(wofost_germination_t) :: s
+   type(error_collection_t)   :: errors
+   s%swgerm     = 2
+   s%tsumemeopt = 170.0d0
+   s%tbasem     = 3.0d0
+   s%teffmx     = 18.0d0
+   s%hdrygerm   = -2000.0d0
+   s%hwetgerm   = -100.0d0
+   s%zgerm      = -10.0d0
+   s%agerm      = 203.0d0
+   call s%validate(errors)
+   @assertTrue(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_wofost_harvest_defaults_pass()
+   use funit
+   use error_mod
+   use cropwofost_config_mod
+   type(wofost_harvest_t)   :: s
+   type(error_collection_t) :: errors
+   call s%validate(errors)
+   @assertFalse(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_wofost_harvest_dvsend_out_of_range_fails()
+   use funit
+   use error_mod
+   use cropwofost_config_mod
+   type(wofost_harvest_t)   :: s
+   type(error_collection_t) :: errors
+   s%dvsend = 5.0d0
+   call s%validate(errors)
+   @assertTrue(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_wofost_cropfactor_swcf2_passes()
+   use funit
+   use error_mod
+   use cropwofost_config_mod
+   type(wofost_cropfactor_t) :: s
+   type(error_collection_t)  :: errors
+   s%swcf   = 2
+   s%albedo = 0.19d0
+   s%rsc    = 207.0d0
+   s%rsw    = 0.0d0
+   call s%validate(errors)
+   @assertFalse(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_wofost_cropfactor_swcf_invalid_fails()
+   use funit
+   use error_mod
+   use cropwofost_config_mod
+   type(wofost_cropfactor_t) :: s
+   type(error_collection_t)  :: errors
+   s%swcf = 9
+   call s%validate(errors)
+   @assertTrue(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_wofost_phenology_defaults_pass()
+   use funit
+   use error_mod
+   use cropwofost_config_mod
+   type(wofost_phenology_t) :: s
+   type(error_collection_t) :: errors
+   call s%validate(errors)
+   @assertFalse(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_wofost_phenology_dtsmtb_non_monotone_fails()
+   use funit
+   use error_mod
+   use cropwofost_config_mod
+   type(wofost_phenology_t) :: s
+   type(error_collection_t) :: errors
+   allocate(s%dtsmtb(3, 2))
+   s%dtsmtb(1, :) = [0.0d0,  0.0d0]
+   s%dtsmtb(2, :) = [0.0d0,  0.0d0]   ! duplicate x — fails monotonicity
+   s%dtsmtb(3, :) = [13.0d0, 11.0d0]
+   call s%validate(errors)
+   @assertTrue(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_wofost_initial_defaults_pass()
+   use funit
+   use error_mod
+   use cropwofost_config_mod
+   type(wofost_initial_t)   :: s
+   type(error_collection_t) :: errors
+   call s%validate(errors)
+   @assertFalse(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_wofost_initial_tdwi_out_of_range_fails()
+   use funit
+   use error_mod
+   use cropwofost_config_mod
+   type(wofost_initial_t)   :: s
+   type(error_collection_t) :: errors
+   s%tdwi = -1.0d0
+   call s%validate(errors)
+   @assertTrue(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_wofost_greenarea_defaults_pass()
+   use funit
+   use error_mod
+   use cropwofost_config_mod
+   type(wofost_greenarea_t) :: s
+   type(error_collection_t) :: errors
+   call s%validate(errors)
+   @assertFalse(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_wofost_greenarea_tbase_below_floor_fails()
+   use funit
+   use error_mod
+   use cropwofost_config_mod
+   type(wofost_greenarea_t) :: s
+   type(error_collection_t) :: errors
+   s%tbase = -50.0d0
+   call s%validate(errors)
+   @assertTrue(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_wofost_assimilation_defaults_pass()
+   use funit
+   use error_mod
+   use cropwofost_config_mod
+   type(wofost_assimilation_t) :: s
+   type(error_collection_t)    :: errors
+   call s%validate(errors)
+   @assertFalse(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_wofost_assimilation_kdif_out_of_range_fails()
+   use funit
+   use error_mod
+   use cropwofost_config_mod
+   type(wofost_assimilation_t) :: s
+   type(error_collection_t)    :: errors
+   s%kdif = 5.0d0
+   call s%validate(errors)
+   @assertTrue(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_wofost_conversion_defaults_pass()
+   use funit
+   use error_mod
+   use cropwofost_config_mod
+   type(wofost_conversion_t) :: s
+   type(error_collection_t)  :: errors
+   call s%validate(errors)
+   @assertFalse(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_wofost_conversion_cvl_out_of_range_fails()
+   use funit
+   use error_mod
+   use cropwofost_config_mod
+   type(wofost_conversion_t) :: s
+   type(error_collection_t)  :: errors
+   s%cvl = 1.5d0
+   call s%validate(errors)
+   @assertTrue(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_wofost_respiration_defaults_pass()
+   use funit
+   use error_mod
+   use cropwofost_config_mod
+   type(wofost_respiration_t) :: s
+   type(error_collection_t)   :: errors
+   call s%validate(errors)
+   @assertFalse(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_wofost_respiration_q10_out_of_range_fails()
+   use funit
+   use error_mod
+   use cropwofost_config_mod
+   type(wofost_respiration_t) :: s
+   type(error_collection_t)   :: errors
+   s%q10 = 6.0d0
+   call s%validate(errors)
+   @assertTrue(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_wofost_partitioning_defaults_pass()
+   use funit
+   use error_mod
+   use cropwofost_config_mod
+   type(wofost_partitioning_t) :: s
+   type(error_collection_t)    :: errors
+   call s%validate(errors)
+   @assertFalse(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_wofost_partitioning_bad_ncols_fails()
+   use funit
+   use error_mod
+   use cropwofost_config_mod
+   type(wofost_partitioning_t) :: s
+   type(error_collection_t)    :: errors
+   allocate(s%frtb(3, 3))   ! wrong ncols
+   s%frtb = 0.0d0
+   s%frtb(1, 1) = 0.0d0
+   s%frtb(2, 1) = 1.0d0
+   s%frtb(3, 1) = 2.0d0
+   call s%validate(errors)
+   @assertTrue(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_wofost_death_defaults_pass()
+   use funit
+   use error_mod
+   use cropwofost_config_mod
+   type(wofost_death_t)     :: s
+   type(error_collection_t) :: errors
+   call s%validate(errors)
+   @assertFalse(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_wofost_death_perdl_out_of_range_fails()
+   use funit
+   use error_mod
+   use cropwofost_config_mod
+   type(wofost_death_t)     :: s
+   type(error_collection_t) :: errors
+   s%perdl = -0.1d0
+   call s%validate(errors)
+   @assertTrue(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_wofost_root_swrd2_passes()
+   use funit
+   use error_mod
+   use cropwofost_config_mod
+   type(wofost_root_t)      :: s
+   type(error_collection_t) :: errors
+   s%swrd     = 2
+   s%rdi      = 10.0d0
+   s%rri      = 1.2d0
+   s%rdc      = 50.0d0
+   s%swdmi2rd = 1
+   call s%validate(errors)
+   @assertFalse(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_wofost_root_swrd_invalid_fails()
+   use funit
+   use error_mod
+   use cropwofost_config_mod
+   type(wofost_root_t)      :: s
+   type(error_collection_t) :: errors
+   s%swrd = 9
+   call s%validate(errors)
+   @assertTrue(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_wofost_oxygen_stress_swoxygen1_passes()
+   use funit
+   use error_mod
+   use cropwofost_config_mod
+   type(wofost_oxygen_stress_t) :: s
+   type(error_collection_t)     :: errors
+   s%swoxygen   = 1
+   s%swwrtnonox = 1
+   s%aeratecrit = 0.5d0
+   s%hlim1      = -10.0d0
+   s%hlim2u     = -25.0d0
+   s%hlim2l     = -25.0d0
+   call s%validate(errors)
+   @assertFalse(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_wofost_oxygen_stress_aeratecrit_zero_fails()
+   use funit
+   use error_mod
+   use cropwofost_config_mod
+   type(wofost_oxygen_stress_t) :: s
+   type(error_collection_t)     :: errors
+   s%aeratecrit = 0.0d0   ! below 0.0001 floor
+   call s%validate(errors)
+   @assertTrue(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_wofost_drought_stress_swdrought1_passes()
+   use funit
+   use error_mod
+   use cropwofost_config_mod
+   type(wofost_drought_stress_t) :: s
+   type(error_collection_t)      :: errors
+   s%swdrought = 1
+   s%hlim3h    = -300.0d0
+   s%hlim3l    = -500.0d0
+   s%hlim4     = -10000.0d0
+   s%adcrh     = 0.5d0
+   s%adcrl     = 0.1d0
+   call s%validate(errors)
+   @assertFalse(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_wofost_drought_stress_swdrought_invalid_fails()
+   use funit
+   use error_mod
+   use cropwofost_config_mod
+   type(wofost_drought_stress_t) :: s
+   type(error_collection_t)      :: errors
+   s%swdrought = 0
+   call s%validate(errors)
+   @assertTrue(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_wofost_salinity_defaults_pass()
+   use funit
+   use error_mod
+   use cropwofost_config_mod
+   type(wofost_salinity_t)  :: s
+   type(error_collection_t) :: errors
+   call s%validate(errors)
+   @assertFalse(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_wofost_salinity_swsalinity1_bad_saltslope_fails()
+   use funit
+   use error_mod
+   use cropwofost_config_mod
+   type(wofost_salinity_t)  :: s
+   type(error_collection_t) :: errors
+   s%swsalinity = 1
+   s%saltmax    = 3.0d0
+   s%saltslope  = 5.0d0   ! > 1.0
+   call s%validate(errors)
+   @assertTrue(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_wofost_compensate_defaults_pass()
+   use funit
+   use error_mod
+   use cropwofost_config_mod
+   type(wofost_compensate_t) :: s
+   type(error_collection_t)  :: errors
+   call s%validate(errors)
+   @assertFalse(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_wofost_compensate_swcompensate1_bad_alpha_fails()
+   use funit
+   use error_mod
+   use cropwofost_config_mod
+   type(wofost_compensate_t) :: s
+   type(error_collection_t)  :: errors
+   s%swcompensate = 1
+   s%swstressor   = 3
+   s%alphacrit    = 0.0d0   ! below 0.2 floor
+   call s%validate(errors)
+   @assertTrue(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_wofost_interception_swinter1_passes()
+   use funit
+   use error_mod
+   use cropwofost_config_mod
+   type(wofost_interception_t) :: s
+   type(error_collection_t)    :: errors
+   s%swinter = 1
+   s%cofab   = 0.25d0
+   call s%validate(errors)
+   @assertFalse(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_wofost_interception_swinter_invalid_fails()
+   use funit
+   use error_mod
+   use cropwofost_config_mod
+   type(wofost_interception_t) :: s
+   type(error_collection_t)    :: errors
+   s%swinter = 9
+   call s%validate(errors)
+   @assertTrue(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_wofost_co2_defaults_pass()
+   use funit
+   use error_mod
+   use cropwofost_config_mod
+   type(wofost_co2_t)       :: s
+   type(error_collection_t) :: errors
+   call s%validate(errors)
+   @assertFalse(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_wofost_co2_swco2_invalid_fails()
+   use funit
+   use error_mod
+   use cropwofost_config_mod
+   type(wofost_co2_t)       :: s
+   type(error_collection_t) :: errors
+   s%swco2 = 9
+   call s%validate(errors)
+   @assertTrue(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_wofost_management_valid_passes()
+   use funit
+   use error_mod
+   use cropwofost_config_mod
+   type(wofost_management_t) :: s
+   type(error_collection_t)  :: errors
+   s%fraharlosorm_lv     = 0.2d0
+   s%fraharlosorm_st     = 0.1d0
+   s%fraharlosorm_so     = 0.01d0
+   s%fradeceasedlvtosoil = 0.3d0
+   s%swpotrelmf          = 2
+   s%relmf               = 0.9d0
+   call s%validate(errors)
+   @assertFalse(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_wofost_management_swpotrelmf_invalid_fails()
+   use funit
+   use error_mod
+   use cropwofost_config_mod
+   type(wofost_management_t) :: s
+   type(error_collection_t)  :: errors
+   s%swpotrelmf = 0   ! must be 1 or 2
+   call s%validate(errors)
+   @assertTrue(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_cropwofost_top_level_defaults_pass()
+   use funit
+   use error_mod
+   use cropwofost_config_mod
+   type(cropwofost_config_t) :: c
+   type(error_collection_t)  :: errors
+   ! Top-level: defaults set valid switches (all off), so no errors.
+   c%harvest%swharv      = 0
+   c%crop_factor%swcf    = 2
+   c%crop_factor%albedo  = 0.19d0
+   c%root%swrd           = 2
+   c%root%rdi            = 10.0d0
+   c%root%rri            = 1.2d0
+   c%root%rdc            = 50.0d0
+   c%root%swdmi2rd       = 1
+   c%oxygen_stress%swoxygen   = 1
+   c%oxygen_stress%swwrtnonox = 1
+   c%oxygen_stress%aeratecrit = 0.5d0
+   c%oxygen_stress%hlim1      = -10.0d0
+   c%oxygen_stress%hlim2u     = -25.0d0
+   c%oxygen_stress%hlim2l     = -25.0d0
+   c%drought_stress%swdrought = 1
+   c%drought_stress%hlim3h    = -300.0d0
+   c%drought_stress%hlim3l    = -500.0d0
+   c%drought_stress%hlim4     = -10000.0d0
+   c%drought_stress%adcrh     = 0.5d0
+   c%drought_stress%adcrl     = 0.1d0
+   c%management%swpotrelmf    = 2
+   c%management%relmf         = 0.9d0
+   call c%validate(errors)
+   @assertFalse(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_cropwofost_top_level_rolls_up_errors()
+   use funit
+   use error_mod
+   use cropwofost_config_mod
+   type(cropwofost_config_t) :: c
+   type(error_collection_t)  :: errors
+   c%management%swpotrelmf  = 7   ! invalid
+   c%harvest%dvsend         = 99.0d0  ! invalid
+   call c%validate(errors)
+   @assertTrue(errors%has_errors())
+   @assertGreaterThanOrEqual(errors%count(), 2)
+end subroutine
