@@ -17,6 +17,7 @@ module legacy_crop_helper_mod
    public :: read_legacy_cropfixed
    public :: read_legacy_grass
    public :: flatten_table
+   public :: reset_legacy_crop_globals
 
    ! Explicit interfaces for the free subroutines `readwofost`,
    ! `readcropfixed`, and `readgrass` exposed at file scope by
@@ -73,6 +74,55 @@ module legacy_crop_helper_mod
 
 contains
 
+   !> Phase 4c-b Task 14: zero out the legacy-variables-module crop tables
+   !! and the scalar root growth fields so that a previous test's read does
+   !! not pollute the next read's parity comparison.
+   !!
+   !! The legacy AFGEN tables are flat arrays sized for the maximum number
+   !! of rows. A reader only writes the first `2*ifnd` slots, leaving the
+   !! tail untouched. When two crop reads in the same process have different
+   !! `ifnd` counts, the tail of the second read is whatever the first read
+   !! left there. flatten_table on the (smaller) TOML side pads with zeros,
+   !! so the parity assertion fails on the polluted tail.
+   !!
+   !! Similarly, scalar root-growth fields (rdi/rri/rdc) are gated on
+   !! `swrd` in the legacy reader: if the current crop's swrd path does
+   !! not assign them, they keep the previous read's value.
+   !!
+   !! This routine resets every table and switch-gated scalar that the
+   !! parity tests actually compare. Test-only — never used in production.
+   subroutine reset_legacy_crop_globals()
+      use variables, only: &
+         dtsmtb, slatb, amaxtb, tmpftb, tmnftb, frtb, fltb, fstb, fotb, &
+         rdrrtb, rdrstb, rfsetb, chtb, cftb, gctb, cfeictb, rdtb, rdctb, &
+         rlwtb, rdi, rri, rdc, wrtmax, cofab
+
+      dtsmtb = 0.0d0
+      slatb  = 0.0d0
+      amaxtb = 0.0d0
+      tmpftb = 0.0d0
+      tmnftb = 0.0d0
+      frtb   = 0.0d0
+      fltb   = 0.0d0
+      fstb   = 0.0d0
+      fotb   = 0.0d0
+      rdrrtb = 0.0d0
+      rdrstb = 0.0d0
+      rfsetb = 0.0d0
+      chtb   = 0.0d0
+      cftb   = 0.0d0
+      gctb   = 0.0d0
+      cfeictb = 0.0d0
+      rdtb   = 0.0d0
+      rdctb  = 0.0d0
+      rlwtb  = 0.0d0
+      rdi    = 0.0d0
+      rri    = 0.0d0
+      rdc    = 0.0d0
+      wrtmax = 0.0d0
+      cofab  = 0.0d0
+   end subroutine reset_legacy_crop_globals
+
    !> Phase 4c-b Task 7: call legacy `readwofost` for rotation entry
    !! `icrop` with crop file `crpfil` (basename, no .crp extension).
    !! Side-effect populates the long list of `variables%` globals
@@ -92,6 +142,8 @@ contains
       real(8) :: tmaxdvr, tmindvr, toptdvr, popt, pcrt
       real(8) :: FraDeceasedLvToSoil
       logical :: flrfphotoveg, flphenodayl
+
+      call reset_legacy_crop_globals()
 
       swhydrlift = 0
       swsoybean  = 0
@@ -123,6 +175,8 @@ contains
       integer :: lcc
       integer :: swhydrlift
 
+      call reset_legacy_crop_globals()
+
       lcc        = 0
       swhydrlift = 0
 
@@ -150,6 +204,8 @@ contains
       integer :: daylastharvest, maxdaymow, maxdaygrz
       real(8) :: dmharvest, dmlastharvest, dmgrazing, tagprest
       real(8) :: lsdb(100)
+
+      call reset_legacy_crop_globals()
 
       swhydrlift     = 0
       swharvest      = 0
