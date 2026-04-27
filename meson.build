@@ -90,6 +90,7 @@ sources = [
     'src/io/toml/read_meteorology_toml.f90',
     'src/io/toml/read_drainage_toml.f90',
     'src/io/toml/read_bottom_boundary_toml.f90',
+    'src/io/toml/read_heat_toml.f90',
     'src/io/toml/read_soil_toml.f90',
     'src/io/toml/read_cropfixed_toml.f90',
     'src/io/toml/read_cropgrass_toml.f90',

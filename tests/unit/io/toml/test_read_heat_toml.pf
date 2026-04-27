@@ -1,0 +1,150 @@
+@test
+subroutine test_read_heat_swhea0_happy()
+   use funit
+   use tomlf, only: toml_table, toml_load
+   use heat_config_mod
+   use read_heat_toml_mod
+   use error_mod
+   type(toml_table), allocatable, target :: doc
+   type(toml_table), pointer             :: doc_ptr
+   type(heat_config_t)                   :: c
+   type(error_collection_t)              :: errors
+
+   call toml_load(doc, 'tests/unit/io/toml/fixtures/heat_swhea0.toml')
+   doc_ptr => doc
+   call read_heat_toml(doc_ptr, c, errors)
+
+   @assertFalse(errors%has_errors())
+   @assertEqual(0, c%swhea)
+   @assertFalse(allocated(c%psand))
+   @assertFalse(allocated(c%pclay))
+   @assertFalse(allocated(c%porg))
+   @assertFalse(allocated(c%tsoil_init))
+
+   ! Validator agrees: SWHEA=0 short-circuits cleanly.
+   call c%validate(errors)
+   @assertFalse(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_read_heat_swhea1_happy()
+   use funit
+   use tomlf, only: toml_table, toml_load
+   use heat_config_mod
+   use read_heat_toml_mod
+   use error_mod
+   type(toml_table), allocatable, target :: doc
+   type(toml_table), pointer             :: doc_ptr
+   type(heat_config_t)                   :: c
+   type(error_collection_t)              :: errors
+
+   call toml_load(doc, 'tests/unit/io/toml/fixtures/heat_swhea1.toml')
+   doc_ptr => doc
+   call read_heat_toml(doc_ptr, c, errors)
+
+   @assertFalse(errors%has_errors())
+   @assertEqual(1, c%swhea)
+   @assertEqual(2, c%swcalt)
+   @assertEqual(1, c%swtopbhea)
+   @assertEqual(1, c%swbotbhea)
+   @assertEqual(-1.0d0, c%tfroststa, 1.0d-12)
+   @assertEqual(-5.0d0, c%tfrostend, 1.0d-12)
+
+   @assertTrue(allocated(c%psand))
+   @assertEqual(3, size(c%psand))
+   @assertEqual(0.55d0, c%psand(1), 1.0d-12)
+   @assertEqual(0.55d0, c%psand(3), 1.0d-12)
+
+   @assertTrue(allocated(c%pclay))
+   @assertEqual(3, size(c%pclay))
+   @assertEqual(0.10d0, c%pclay(2), 1.0d-12)
+
+   @assertTrue(allocated(c%porg))
+   @assertEqual(3, size(c%porg))
+   @assertEqual(0.05d0, c%porg(1), 1.0d-12)
+
+   @assertTrue(allocated(c%tsoil_init))
+   @assertEqual(2, size(c%tsoil_init, 1))
+   @assertEqual(2, size(c%tsoil_init, 2))
+   @assertEqual(   0.0d0, c%tsoil_init(1, 1), 1.0d-12)
+   @assertEqual(  10.0d0, c%tsoil_init(1, 2), 1.0d-12)
+   @assertEqual(-100.0d0, c%tsoil_init(2, 1), 1.0d-12)
+   @assertEqual(  12.0d0, c%tsoil_init(2, 2), 1.0d-12)
+
+   ! Validator agrees on the populated payload.
+   call c%validate(errors)
+   @assertFalse(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_read_heat_missing_section_silent()
+   use funit
+   use tomlf, only: toml_table, toml_load
+   use heat_config_mod
+   use read_heat_toml_mod
+   use error_mod
+   type(toml_table), allocatable, target :: doc
+   type(toml_table), pointer             :: doc_ptr
+   type(heat_config_t)                   :: c
+   type(error_collection_t)              :: errors
+
+   call toml_load(doc, 'tests/unit/io/toml/fixtures/general_minimal.toml')
+   doc_ptr => doc
+   call read_heat_toml(doc_ptr, c, errors)
+
+   @assertFalse(errors%has_errors())
+   @assertEqual(0, c%swhea)
+   @assertFalse(allocated(c%psand))
+   @assertFalse(allocated(c%tsoil_init))
+end subroutine
+
+@test
+subroutine test_read_heat_malformed_tsoil_table()
+   use funit
+   use tomlf, only: toml_table, toml_load
+   use heat_config_mod
+   use read_heat_toml_mod
+   use error_mod
+   type(toml_table), allocatable, target :: doc
+   type(toml_table), pointer             :: doc_ptr
+   type(heat_config_t)                   :: c
+   type(error_collection_t)              :: errors
+
+   call toml_load(doc, 'tests/unit/io/toml/fixtures/heat_malformed_tsoil.toml')
+   doc_ptr => doc
+   call read_heat_toml(doc_ptr, c, errors)
+
+   @assertTrue(errors%has_errors())
+   @assertFalse(allocated(c%tsoil_init))
+end subroutine
+
+@test
+subroutine test_read_heat_mismatched_arrays_reader_passes()
+   use funit
+   use tomlf, only: toml_table, toml_load
+   use heat_config_mod
+   use read_heat_toml_mod
+   use error_mod
+   type(toml_table), allocatable, target :: doc
+   type(toml_table), pointer             :: doc_ptr
+   type(heat_config_t)                   :: c
+   type(error_collection_t)              :: errors
+
+   ! Reader is mechanical: it allocates each array as-given. The validator
+   ! owns required-ness and length-consistency checks.
+   call toml_load(doc, 'tests/unit/io/toml/fixtures/heat_mismatched_arrays.toml')
+   doc_ptr => doc
+   call read_heat_toml(doc_ptr, c, errors)
+
+   @assertFalse(errors%has_errors())
+   @assertTrue(allocated(c%psand))
+   @assertTrue(allocated(c%pclay))
+   @assertTrue(allocated(c%porg))
+   @assertEqual(3, size(c%psand))
+   @assertEqual(2, size(c%pclay))
+   @assertEqual(3, size(c%porg))
+
+   ! Validator catches the length mismatch.
+   call c%validate(errors)
+   @assertTrue(errors%has_errors())
+end subroutine

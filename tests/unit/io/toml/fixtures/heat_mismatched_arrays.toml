@@ -1,0 +1,9 @@
+[heat]
+swhea     = 1
+swcalt    = 2
+swtopbhea = 1
+swbotbhea = 1
+
+psand = [0.55, 0.55, 0.55]
+pclay = [0.10, 0.10]
+porg  = [0.05, 0.05, 0.05]
