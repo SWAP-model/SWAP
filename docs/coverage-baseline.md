@@ -299,3 +299,62 @@ Coverage of those modules is verified via the 221-test pFUnit suite, not
 via the gcovr percentage. Per-domain numbers in this document continue to
 under-count the typed-config + TOML-reader subtrees by design until that
 tooling issue is addressed.
+
+## Phase 4d — Bottom boundary, heat, irrigation, solute, mowing/grazing
+
+After Phase 4d:
+- **Coverage** (gcovr terminal summary): **53.1% line / 41.2% branch
+  (4021/7566 lines)** — flat vs Phase 4c-b. Phase 4d only added typed
+  configs + TOML readers under `src/config/` and `src/io/toml/`, both
+  of which fall in the gcovr path-resolution blind spot. Coverage of
+  the new modules is verified via the extended pFUnit suite, not via
+  the gcovr percentage.
+- **pFUnit suite**: dot stream clean (F count 0). TAP listener visible
+  to ~150 entries (pre-existing listener-buffer truncation, not a
+  failure).
+- **Regression suite**: **6/6 green** in ~319s; per-case timings
+  recorded in `tests/regression/baselines/phase-4d-remaining-configs.log`.
+
+### Phase 4d source-side delta
+
+| File | LoC | What it covers |
+|---|---|---|
+| `src/config/bottom_boundary_config.f90` | ~250 | `swbotb` 1..8 + per-branch fields + tables |
+| `src/io/toml/read_bottom_boundary_toml.f90` | ~180 | reader incl. `cofqha_table` decoder + `shape:real` |
+| `src/config/heat_config.f90` | ~150 | `swhea`, `swcalt`, frost params, `tsoil_init` |
+| `src/io/toml/read_heat_toml.f90` | ~120 | reader incl. `tsoil_init` 1D array |
+| `src/config/irrigation_config.f90` | ~350 | `irrigation_config_t` + `irrigation_schedule_t` |
+| `src/io/toml/read_irrigation_toml.f90` | ~280 | top-level + per-crop schedule reader |
+| `src/config/solute_config.f90` | ~180 | `swsolu` + Maas-Hoffman + dispersion |
+| `src/io/toml/read_solute_toml.f90` | ~120 | section reader |
+| `src/config/cropgrass_config.f90` (extension) | ~120 | per-event mowing/grazing tables (Tasks 15-16) |
+| `src/io/toml/read_cropgrass_toml.f90` (extension) | ~100 | new table fields under `[mowing]`/`[grazing]` |
+| `src/io/toml/load_swap_config.f90` (extension) | ~30 | wires the four new section readers |
+
+Net source-side LoC added in Phase 4d: ≈ 1,900 lines.
+
+### Phase 4d test-side delta
+
+| File | LoC | What it covers |
+|---|---|---|
+| `tests/unit/config/test_bottom_boundary_config.pf` | ~250 | switch-gated validators, table dim/monotonicity |
+| `tests/unit/config/test_heat_config.pf` | ~120 | validator coverage |
+| `tests/unit/config/test_irrigation_config.pf` | ~200 | top-level + per-schedule validators |
+| `tests/unit/config/test_solute_config.pf` | ~120 | validator coverage |
+| `tests/unit/io/toml/test_read_bottom_boundary_toml.pf` | ~180 | happy-path, cofqha decode, shape:real |
+| `tests/unit/io/toml/test_read_heat_toml.pf` | ~100 | happy-path, tsoil_init array |
+| `tests/unit/io/toml/test_read_irrigation_toml.pf` | ~150 | top-level + per-crop schedule |
+| `tests/unit/io/toml/test_read_solute_toml.pf` | ~100 | happy-path, error paths |
+| `tests/unit/io/toml/test_read_cropgrass_toml.pf` (additions) | ~80 | mowing/grazing per-event tables |
+| `tests/unit/io/toml/test_*_parity.pf` (5 files, extensions) | ~400 | 4d-section parity assertions per case |
+
+Net test-side LoC added in Phase 4d: ≈ 1,700 lines.
+
+### Caveat on the gcovr path-resolution issue (continued)
+
+Same caveat as Phase 4c-b. All four new typed configs and their
+readers under `src/config/` and `src/io/toml/` show `0/0 --%` in the
+gcovr terminal summary. Coverage of those modules is verified via the
+extended pFUnit suite. The "53.1% / 41.2%" flat line vs Phase 4c-b is
+therefore a gcovr-tooling artifact, not a real regression — denominator
+and numerator both lag the actual code.
