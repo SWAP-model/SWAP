@@ -331,3 +331,61 @@ subroutine test_salinitystress_parity_potatod_wofost()
    ! ------------------------------------------------------------------
    @assertEqual(0, config%crop%rotation_wofost(ICROP_POTATOD)%co2%swco2)
 end subroutine
+
+! Phase 4d Task 20e: parity for the four new sections — bottom_boundary,
+! heat, irrigation, solute — added to the case 5 swap.toml in Task 17.
+! Case 5 is the regression case for SWBOTB=3 (sinus aquifer scalars),
+! SWSOLU=1 + Maas-Hoffman, SWHEA=1, and SWIRFIX=1 with external file.
+@test
+subroutine test_salinitystress_parity_4d_sections()
+   use funit
+   use parity_helpers_mod
+   use variables, only: swbotb, shape, hdrain, rimlay, aqave, aqamp,    &
+                        aqper, aqtmax, swhea, swcalt, swtopbhea,        &
+                        swbotbhea, swirfix, swsolu, swbotbc, cdrain,    &
+                        cseep, tscf, ldis
+   use swap_config_mod
+   use error_mod
+   use iso_fortran_env, only: real64
+   type(swap_config_t)      :: config
+   type(error_collection_t) :: errors
+
+   call load_both_for_salinitystress(config, errors)
+   @assertFalse(errors%has_fatals())
+
+   ! [bottom_boundary] — case 5 SWBOTB=3 with the SW3=1 sinus branch.
+   @assertEqual(swbotb, config%bottom_boundary%swbotb)
+   @assertEqual(shape,  config%bottom_boundary%shape,  1.0e-12_real64)
+   @assertEqual(hdrain, config%bottom_boundary%hdrain, 1.0e-12_real64)
+   @assertEqual(rimlay, config%bottom_boundary%rimlay, 1.0e-12_real64)
+   @assertEqual(aqave,  config%bottom_boundary%aqave,  1.0e-12_real64)
+   @assertEqual(aqamp,  config%bottom_boundary%aqamp,  1.0e-12_real64)
+   @assertEqual(aqper,  config%bottom_boundary%aqper,  1.0e-12_real64)
+   @assertEqual(aqtmax, config%bottom_boundary%aqtmax, 1.0e-12_real64)
+
+   ! [heat] — case 5 SWHEA=1 with numerical method (SWCALT=2).
+   @assertEqual(swhea,     config%heat%swhea)
+   @assertEqual(swcalt,    config%heat%swcalt)
+   @assertEqual(swtopbhea, config%heat%swtopbhea)
+   @assertEqual(swbotbhea, config%heat%swbotbhea)
+   ! READING NOTE: per-layer arrays psand/pclay/porg deferred (variable-
+   ! length config side vs. fixed-size legacy `(maho)`).
+   @assertTrue(allocated(config%heat%psand))
+   @assertTrue(allocated(config%heat%tsoil_init))
+
+   ! [irrigation] — case 5 SWIRFIX=1, irgfil="swap" (external swap.irg).
+   @assertEqual(swirfix, config%irrigation%swirfix)
+   @assertTrue(allocated(config%irrigation%irgfil))
+   ! READING NOTE: legacy `irgfil` is a local in readswap, not a module
+   ! global; assert structure (allocation) only.
+
+   ! [solute] — case 5 SWSOLU=1 with Maas-Hoffman salinity stress.
+   @assertEqual(swsolu,  config%solute%swsolu)
+   @assertEqual(swbotbc, config%solute%swbotbc)
+   @assertEqual(cdrain,  config%solute%cdrain, 1.0e-12_real64)
+   @assertEqual(cseep,   config%solute%cseep,  1.0e-12_real64)
+   @assertEqual(tscf,    config%solute%tscf,   1.0e-12_real64)
+   ! READING NOTE: legacy ldis is a per-layer array `ldis(maho)`;
+   ! config holds a scalar. Compare against the first-layer entry.
+   @assertEqual(ldis(1), config%solute%ldis,   1.0e-12_real64)
+end subroutine
