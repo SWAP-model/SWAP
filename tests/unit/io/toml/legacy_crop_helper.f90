@@ -16,6 +16,7 @@ module legacy_crop_helper_mod
    public :: read_legacy_wofost
    public :: read_legacy_cropfixed
    public :: read_legacy_grass
+   public :: read_legacy_grass_with_mowing
    public :: flatten_table
    public :: reset_legacy_crop_globals
 
@@ -226,6 +227,51 @@ contains
                      dmlastharvest, swdmmow, maxdaymow, swlossmow, swlossgrz, &
                      swdmgrz, maxdaygrz, dmgrazing, lsdb, tagprest, swhydrlift)
    end subroutine read_legacy_grass
+
+   !> Phase 4d Task 20: parity-test wrapper that exposes the readgrass OUT
+   !! args (swharvest, dmharvest, daylastharvest, ..., dmgrazing, tagprest)
+   !! to the caller.  These are not in the `variables` module so they
+   !! cannot be reached via a `use variables` clause.  The simpler
+   !! `read_legacy_grass` discards them; this wrapper returns them via
+   !! `intent(out)` arguments so the caller can compare against the
+   !! cropgrass_config_t mowing/grazing fields.
+   subroutine read_legacy_grass_with_mowing(icrop, crpfil,                    &
+                                            swharvest, dmharvest,             &
+                                            daylastharvest, dmlastharvest,    &
+                                            swdmmow, maxdaymow,               &
+                                            swdmgrz, maxdaygrz,               &
+                                            dmgrazing, tagprest)
+      integer,          intent(in)  :: icrop
+      character(len=*), intent(in)  :: crpfil
+      integer,          intent(out) :: swharvest, swdmmow, swdmgrz
+      integer,          intent(out) :: daylastharvest, maxdaymow, maxdaygrz
+      real(8),          intent(out) :: dmharvest, dmlastharvest
+      real(8),          intent(out) :: dmgrazing, tagprest
+
+      integer :: swhydrlift, swlossmow, swlossgrz
+      real(8) :: lsdb(100)
+
+      call reset_legacy_crop_globals()
+
+      swhydrlift     = 0
+      swharvest      = 0
+      swdmmow        = 0
+      swlossmow      = 0
+      swlossgrz      = 0
+      swdmgrz        = 0
+      daylastharvest = 0
+      maxdaymow      = 0
+      maxdaygrz      = 0
+      dmharvest      = 0.0d0
+      dmlastharvest  = 0.0d0
+      dmgrazing      = 0.0d0
+      tagprest       = 0.0d0
+      lsdb           = 0.0d0
+
+      call readgrass(icrop, crpfil, swharvest, dmharvest, daylastharvest,    &
+                     dmlastharvest, swdmmow, maxdaymow, swlossmow, swlossgrz, &
+                     swdmgrz, maxdaygrz, dmgrazing, lsdb, tagprest, swhydrlift)
+   end subroutine read_legacy_grass_with_mowing
 
    !> Flatten a 2-D (nrows, 2) table into a length-`max_size` flat array
    !! interleaved as [x1, y1, x2, y2, ...] padded with zeros to match

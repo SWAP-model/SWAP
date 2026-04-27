@@ -294,3 +294,120 @@ subroutine test_grassgrowth_grass_data_parity()
    @assertEqual(rri, config%crop%rotation_grass(ICROP_GRASSD)%rri, 1.0e-12_real64)
    @assertEqual(rdc, config%crop%rotation_grass(ICROP_GRASSD)%rdc, 1.0e-12_real64)
 end subroutine
+
+! Phase 4d Task 20b: parity for the four new sections — bottom_boundary,
+! heat, irrigation, solute — added to the case 2 swap.toml in Task 17.
+@test
+subroutine test_grassgrowth_parity_4d_sections()
+   use funit
+   use variables, only: swbotb, swhea, swcalt, swtopbhea, swbotbhea, &
+                        swirfix, swsolu
+   use swap_config_mod
+   use load_swap_config_mod
+   use chdir_helper_mod
+   use parity_helpers_mod
+   use error_mod
+   use iso_fortran_env, only: real64
+   type(swap_config_t)      :: config
+   type(error_collection_t) :: errors
+   character(len=1024)      :: orig_cwd
+
+   call get_cwd(orig_cwd)
+   call chdir_to('tests/swap-cases/2.grassgrowth')
+   call stage_swp_template('swap_linux.swp.template', 'swap')
+   call reset_for_next_readswap()
+   call readswap()
+   close(logf)
+   call chdir_to(trim(orig_cwd))
+
+   call load_swap_config('tests/swap-cases/toml/2.grassgrowth/swap.toml', config, errors)
+   call config%validate(errors)
+   call config%finalize(errors)
+
+   @assertFalse(errors%has_fatals())
+
+   ! [bottom_boundary] — case 2 SWBOTB=1 (BBC-file branch, "swap").
+   @assertEqual(swbotb, config%bottom_boundary%swbotb)
+   @assertTrue(allocated(config%bottom_boundary%bbcfil))
+
+   ! [heat] — case 2 SWHEA=1 with numerical method (SWCALT=2).
+   @assertEqual(swhea,     config%heat%swhea)
+   @assertEqual(swcalt,    config%heat%swcalt)
+   @assertEqual(swtopbhea, config%heat%swtopbhea)
+   @assertEqual(swbotbhea, config%heat%swbotbhea)
+   ! READING NOTE: per-layer arrays psand/pclay/porg deferred to a future
+   ! flatten-style helper (variables side is fixed-size `(maho)`).
+   @assertTrue(allocated(config%heat%psand))
+   @assertTrue(allocated(config%heat%tsoil_init))
+
+   ! [irrigation] — case 2 SWIRFIX=0 (no irrigation).
+   @assertEqual(swirfix, config%irrigation%swirfix)
+
+   ! [solute] — case 2 SWSOLU=0 (no solute transport).
+   @assertEqual(swsolu, config%solute%swsolu)
+end subroutine
+
+! Phase 4d Task 20b: grass mowing + grazing parity for case 2 grassd.crp.
+! Drives the legacy readgrass via the read_legacy_grass_with_mowing wrapper
+! so the OUT-arg fields (swharvest, dmharvest, ..., dmgrazing, tagprest) can
+! be cross-checked against config%crop%rotation_grass(ICROP_GRASSD).
+@test
+subroutine test_grassgrowth_parity_grass_mowing_grazing()
+   use funit
+   use legacy_crop_helper_mod, only: read_legacy_grass_with_mowing
+   use swap_config_mod
+   use load_swap_config_mod
+   use chdir_helper_mod
+   use parity_helpers_mod
+   use error_mod
+   use iso_fortran_env, only: real64
+   type(swap_config_t)      :: config
+   type(error_collection_t) :: errors
+   character(len=1024)      :: orig_cwd
+   integer, parameter :: ICROP_GRASSD = 5
+   integer :: swharvest, swdmmow, swdmgrz
+   integer :: daylastharvest, maxdaymow, maxdaygrz
+   real(8) :: dmharvest, dmlastharvest, dmgrazing, tagprest
+
+   call get_cwd(orig_cwd)
+   call chdir_to('tests/swap-cases/2.grassgrowth')
+   call stage_swp_template('swap_linux.swp.template', 'swap')
+   call reset_for_next_readswap()
+   call readswap()
+   close(logf)
+   call chdir_to(trim(orig_cwd))
+
+   call load_swap_config('tests/swap-cases/toml/2.grassgrowth/swap.toml', config, errors)
+   call config%validate(errors)
+   call config%finalize(errors)
+
+   @assertFalse(errors%has_fatals())
+
+   ! Drive the legacy readgrass from inside the case directory.
+   call get_cwd(orig_cwd)
+   call chdir_to('tests/swap-cases/2.grassgrowth')
+   call read_legacy_grass_with_mowing(ICROP_GRASSD, 'grassd',                &
+                                      swharvest, dmharvest,                  &
+                                      daylastharvest, dmlastharvest,         &
+                                      swdmmow, maxdaymow,                    &
+                                      swdmgrz, maxdaygrz,                    &
+                                      dmgrazing, tagprest)
+   call chdir_to(trim(orig_cwd))
+
+   ! Mowing scalars (case 2 SWHARVEST=2, fixed-date branch).
+   @assertEqual(swharvest, config%crop%rotation_grass(ICROP_GRASSD)%swharv)
+   ! READING NOTE: case 2 SWHARVEST=2 (fixed-date mowing). Legacy readgrass
+   ! only reads `swdmmow`/`dmharvest`/`daylastharvest`/`dmlastharvest`/
+   ! `maxdaymow` inside the swharvest=1 branch (readswap.f90 lines 3995-4002),
+   ! so for case 2 these globals stay at 0 even though the TOML carries
+   ! the values verbatim. Skipped here; covered by the case 4 grass test
+   ! (SWHARVEST=1 path).
+
+   ! READING NOTE: case 2 SEQGRAZMOW = all-2 (mowing-only sequence) so the
+   ! legacy `swGrz` flag is .false. and the entire grazing block in
+   ! readgrass (readswap.f90 lines 3910-3982) is skipped — every grazing
+   ! global stays at 0 even though the TOML carries swgraz=1, dmgrazing,
+   ! tagprest, etc. verbatim. Cross-checks for swdmgrz / maxdaygrz /
+   ! dmgrazing / tagprest / nstart_graz / nstop_graz deferred to case 4
+   ! (SEQGRAZMOW mixes 1+2 there, exercising the grazing block).
+end subroutine
