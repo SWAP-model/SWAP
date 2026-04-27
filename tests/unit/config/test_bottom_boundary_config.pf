@@ -1,0 +1,243 @@
+@test
+subroutine test_bb_swbotb_out_of_range_fails()
+   use funit
+   use error_mod
+   use bottom_boundary_config_mod
+   type(bottom_boundary_config_t) :: c
+   type(error_collection_t) :: errors
+   c%swbotb = 9
+   call c%validate(errors)
+   @assertTrue(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_bb_swbotb_zero_fails()
+   use funit
+   use error_mod
+   use bottom_boundary_config_mod
+   type(bottom_boundary_config_t) :: c
+   type(error_collection_t) :: errors
+   c%swbotb = 0
+   call c%validate(errors)
+   @assertTrue(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_bb_swbotb1_with_bbcfil_passes()
+   use funit
+   use error_mod
+   use bottom_boundary_config_mod
+   type(bottom_boundary_config_t) :: c
+   type(error_collection_t) :: errors
+   c%swbotb = 1
+   c%bbcfil = "case.bbc"
+   call c%validate(errors)
+   @assertFalse(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_bb_swbotb1_with_swc_table_passes()
+   use funit
+   use error_mod
+   use iso_fortran_env, only: real64
+   use bottom_boundary_config_mod
+   type(bottom_boundary_config_t) :: c
+   type(error_collection_t) :: errors
+   c%swbotb = 1
+   allocate(c%swc_table(2, 2))
+   c%swc_table(1, :) = [1.0_real64, -50.0_real64]
+   c%swc_table(2, :) = [365.0_real64, -75.0_real64]
+   call c%validate(errors)
+   @assertFalse(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_bb_swbotb1_missing_both_fails()
+   use funit
+   use error_mod
+   use bottom_boundary_config_mod
+   type(bottom_boundary_config_t) :: c
+   type(error_collection_t) :: errors
+   c%swbotb = 1
+   call c%validate(errors)
+   @assertTrue(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_bb_swbotb1_both_fails()
+   use funit
+   use error_mod
+   use iso_fortran_env, only: real64
+   use bottom_boundary_config_mod
+   type(bottom_boundary_config_t) :: c
+   type(error_collection_t) :: errors
+   c%swbotb = 1
+   c%bbcfil = "case.bbc"
+   allocate(c%swc_table(2, 2))
+   c%swc_table(1, :) = [1.0_real64, -50.0_real64]
+   c%swc_table(2, :) = [365.0_real64, -75.0_real64]
+   call c%validate(errors)
+   @assertTrue(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_bb_swbotb2_with_qbot_table_passes()
+   use funit
+   use error_mod
+   use iso_fortran_env, only: real64
+   use bottom_boundary_config_mod
+   type(bottom_boundary_config_t) :: c
+   type(error_collection_t) :: errors
+   c%swbotb = 2
+   allocate(c%qbot_table(2, 2))
+   c%qbot_table(1, :) = [1.0_real64, -0.1_real64]
+   c%qbot_table(2, :) = [365.0_real64, -0.2_real64]
+   call c%validate(errors)
+   @assertFalse(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_bb_swbotb2_missing_qbot_fails()
+   use funit
+   use error_mod
+   use bottom_boundary_config_mod
+   type(bottom_boundary_config_t) :: c
+   type(error_collection_t) :: errors
+   c%swbotb = 2
+   call c%validate(errors)
+   @assertTrue(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_bb_swbotb3_happy_path()
+   use funit
+   use error_mod
+   use iso_fortran_env, only: real64
+   use bottom_boundary_config_mod
+   type(bottom_boundary_config_t) :: c
+   type(error_collection_t) :: errors
+   c%swbotb  = 3
+   c%shape   = 1
+   c%hdrain  = -100.0_real64
+   c%rimlay  = 500.0_real64
+   c%aqave   = -200.0_real64
+   c%aqamp   = 50.0_real64
+   c%aqper   = 365.0_real64
+   c%aqtmax  = 180.0_real64
+   call c%validate(errors)
+   @assertFalse(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_bb_swbotb3_hdrain_out_of_range_fails()
+   use funit
+   use error_mod
+   use iso_fortran_env, only: real64
+   use bottom_boundary_config_mod
+   type(bottom_boundary_config_t) :: c
+   type(error_collection_t) :: errors
+   c%swbotb = 3
+   c%shape  = 1
+   c%hdrain = 50.0_real64
+   c%rimlay = 500.0_real64
+   c%aqper  = 365.0_real64
+   c%aqtmax = 180.0_real64
+   call c%validate(errors)
+   @assertTrue(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_bb_swbotb3_aqper_out_of_range_fails()
+   use funit
+   use error_mod
+   use iso_fortran_env, only: real64
+   use bottom_boundary_config_mod
+   type(bottom_boundary_config_t) :: c
+   type(error_collection_t) :: errors
+   c%swbotb = 3
+   c%shape  = 1
+   c%hdrain = -100.0_real64
+   c%rimlay = 500.0_real64
+   c%aqper  = 500.0_real64
+   c%aqtmax = 180.0_real64
+   call c%validate(errors)
+   @assertTrue(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_bb_swbotb4_no_params_passes()
+   use funit
+   use error_mod
+   use bottom_boundary_config_mod
+   type(bottom_boundary_config_t) :: c
+   type(error_collection_t) :: errors
+   c%swbotb = 4
+   call c%validate(errors)
+   @assertFalse(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_bb_swbotb5_happy_path()
+   use funit
+   use error_mod
+   use iso_fortran_env, only: real64
+   use bottom_boundary_config_mod
+   type(bottom_boundary_config_t) :: c
+   type(error_collection_t) :: errors
+   c%swbotb = 5
+   c%hbot   = -150.0_real64
+   c%rhobot = 1.0_real64
+   call c%validate(errors)
+   @assertFalse(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_bb_swbotb5_hbot_out_of_range_fails()
+   use funit
+   use error_mod
+   use iso_fortran_env, only: real64
+   use bottom_boundary_config_mod
+   type(bottom_boundary_config_t) :: c
+   type(error_collection_t) :: errors
+   c%swbotb = 5
+   c%hbot   = 1.0e12_real64
+   c%rhobot = 1.0_real64
+   call c%validate(errors)
+   @assertTrue(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_bb_swbotb7_no_params_passes()
+   use funit
+   use error_mod
+   use bottom_boundary_config_mod
+   type(bottom_boundary_config_t) :: c
+   type(error_collection_t) :: errors
+   c%swbotb = 7
+   call c%validate(errors)
+   @assertFalse(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_bb_swbotb8_no_params_passes()
+   use funit
+   use error_mod
+   use bottom_boundary_config_mod
+   type(bottom_boundary_config_t) :: c
+   type(error_collection_t) :: errors
+   c%swbotb = 8
+   call c%validate(errors)
+   @assertFalse(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_bb_finalize_no_errors()
+   use funit
+   use error_mod
+   use bottom_boundary_config_mod
+   type(bottom_boundary_config_t) :: c
+   type(error_collection_t) :: errors
+   c%swbotb = 4
+   call c%finalize(errors)
+   @assertFalse(errors%has_errors())
+end subroutine
