@@ -54,9 +54,13 @@ contains
 
       ! Belt-and-suspenders for any other process that may have leaked a
       ! handle: try a shell-level rm so a still-open inode does not block
-      ! the next status='new' open. Test-only path.
-      call execute_command_line('rm -f swap_swap.log Swap.ok 2>/dev/null', &
-                                wait=.true.)
+      ! the next status='new' open. Also nuke the rdinit scratch files
+      ! (`<basename>rd$NNNNN.tmp`) and any stray `<project>_swap.log`
+      ! variants that earlier direct binary invocations with -f/-t/-v
+      ! flags may have produced. Test-only path.
+      call execute_command_line( &
+         'rm -f swap_swap.log Swap.ok *rd\$*.tmp *_swap.log 2>/dev/null', &
+         wait=.true.)
 
       ! Close any leaked units in the getun-managed range so getun(20,99)
       ! finds a free slot. Iostat ignored — closing an already-closed unit
