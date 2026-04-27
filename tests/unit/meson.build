@@ -83,6 +83,7 @@ if get_option('enable_pfunit')
         '../../src/config/meteorology_config.f90',
         '../../src/config/drainage_config.f90',
         '../../src/config/soil_config.f90',
+        '../../src/config/bottom_boundary_config.f90',
         '../../src/config/cropfixed_config.f90',
         '../../src/config/cropgrass_config.f90',
         '../../src/config/cropwofost_config.f90',
