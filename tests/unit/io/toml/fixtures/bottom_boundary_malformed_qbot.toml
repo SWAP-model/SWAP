@@ -1,0 +1,5 @@
+[bottom_boundary]
+swbotb = 2
+qbot_table = [
+  [0.0, 0.0, 0.0],
+]

@@ -1,0 +1,153 @@
+@test
+subroutine test_read_bottom_boundary_swbotb4_happy()
+   use funit
+   use tomlf, only: toml_table, toml_load
+   use bottom_boundary_config_mod
+   use read_bottom_boundary_toml_mod
+   use error_mod
+   type(toml_table), allocatable, target :: doc
+   type(toml_table), pointer             :: doc_ptr
+   type(bottom_boundary_config_t)        :: c
+   type(error_collection_t)              :: errors
+
+   call toml_load(doc, 'tests/unit/io/toml/fixtures/bottom_boundary_swbotb4.toml')
+   doc_ptr => doc
+   call read_bottom_boundary_toml(doc_ptr, c, errors)
+
+   @assertFalse(errors%has_errors())
+   @assertEqual(4, c%swbotb)
+   @assertFalse(allocated(c%swc_table))
+   @assertFalse(allocated(c%qbot_table))
+   @assertFalse(allocated(c%cofqha_table))
+
+   ! Validator agrees: SWBOTB=4 is free drainage, no payload required.
+   call c%validate(errors)
+   @assertFalse(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_read_bottom_boundary_swbotb3_happy()
+   use funit
+   use tomlf, only: toml_table, toml_load
+   use bottom_boundary_config_mod
+   use read_bottom_boundary_toml_mod
+   use error_mod
+   type(toml_table), allocatable, target :: doc
+   type(toml_table), pointer             :: doc_ptr
+   type(bottom_boundary_config_t)        :: c
+   type(error_collection_t)              :: errors
+
+   call toml_load(doc, 'tests/unit/io/toml/fixtures/bottom_boundary_swbotb3.toml')
+   doc_ptr => doc
+   call read_bottom_boundary_toml(doc_ptr, c, errors)
+
+   @assertFalse(errors%has_errors())
+   @assertEqual(3,        c%swbotb)
+   @assertEqual(1,        c%shape)
+   @assertEqual(-200.0d0, c%hdrain, 1.0d-12)
+   @assertEqual(500.0d0,  c%rimlay, 1.0d-12)
+   @assertEqual(-150.0d0, c%aqave,  1.0d-12)
+   @assertEqual(50.0d0,   c%aqamp,  1.0d-12)
+   @assertEqual(365.0d0,  c%aqper,  1.0d-12)
+   @assertEqual(91.0d0,   c%aqtmax, 1.0d-12)
+   @assertTrue(allocated(c%cofqha_table))
+   @assertEqual(2, size(c%cofqha_table, 1))
+   @assertEqual(2, size(c%cofqha_table, 2))
+   @assertEqual(-200.0d0, c%cofqha_table(1, 1), 1.0d-12)
+   @assertEqual(0.001d0,  c%cofqha_table(1, 2), 1.0d-12)
+   @assertEqual(-100.0d0, c%cofqha_table(2, 1), 1.0d-12)
+   @assertEqual(0.005d0,  c%cofqha_table(2, 2), 1.0d-12)
+end subroutine
+
+@test
+subroutine test_read_bottom_boundary_swbotb2_happy()
+   use funit
+   use tomlf, only: toml_table, toml_load
+   use bottom_boundary_config_mod
+   use read_bottom_boundary_toml_mod
+   use error_mod
+   type(toml_table), allocatable, target :: doc
+   type(toml_table), pointer             :: doc_ptr
+   type(bottom_boundary_config_t)        :: c
+   type(error_collection_t)              :: errors
+
+   call toml_load(doc, 'tests/unit/io/toml/fixtures/bottom_boundary_swbotb2.toml')
+   doc_ptr => doc
+   call read_bottom_boundary_toml(doc_ptr, c, errors)
+
+   @assertFalse(errors%has_errors())
+   @assertEqual(2, c%swbotb)
+   @assertTrue(allocated(c%qbot_table))
+   @assertEqual(3, size(c%qbot_table, 1))
+   @assertEqual(2, size(c%qbot_table, 2))
+   @assertEqual(180.0d0, c%qbot_table(2, 1), 1.0d-12)
+   @assertEqual(-0.10d0, c%qbot_table(2, 2), 1.0d-12)
+end subroutine
+
+@test
+subroutine test_read_bottom_boundary_missing_section_silent()
+   use funit
+   use tomlf, only: toml_table, toml_load
+   use bottom_boundary_config_mod
+   use read_bottom_boundary_toml_mod
+   use error_mod
+   type(toml_table), allocatable, target :: doc
+   type(toml_table), pointer             :: doc_ptr
+   type(bottom_boundary_config_t)        :: c
+   type(error_collection_t)              :: errors
+
+   call toml_load(doc, 'tests/unit/io/toml/fixtures/general_minimal.toml')
+   doc_ptr => doc
+   call read_bottom_boundary_toml(doc_ptr, c, errors)
+
+   @assertFalse(errors%has_errors())
+   @assertEqual(0, c%swbotb)
+   @assertFalse(allocated(c%swc_table))
+   @assertFalse(allocated(c%qbot_table))
+   @assertFalse(allocated(c%cofqha_table))
+end subroutine
+
+@test
+subroutine test_read_bottom_boundary_malformed_qbot_table()
+   use funit
+   use tomlf, only: toml_table, toml_load
+   use bottom_boundary_config_mod
+   use read_bottom_boundary_toml_mod
+   use error_mod
+   type(toml_table), allocatable, target :: doc
+   type(toml_table), pointer             :: doc_ptr
+   type(bottom_boundary_config_t)        :: c
+   type(error_collection_t)              :: errors
+
+   call toml_load(doc, 'tests/unit/io/toml/fixtures/bottom_boundary_malformed_qbot.toml')
+   doc_ptr => doc
+   call read_bottom_boundary_toml(doc_ptr, c, errors)
+
+   @assertTrue(errors%has_errors())
+   @assertFalse(allocated(c%qbot_table))
+end subroutine
+
+@test
+subroutine test_read_bottom_boundary_empty_qbot_table()
+   use funit
+   use tomlf, only: toml_table, toml_load
+   use bottom_boundary_config_mod
+   use read_bottom_boundary_toml_mod
+   use error_mod
+   type(toml_table), allocatable, target :: doc
+   type(toml_table), pointer             :: doc_ptr
+   type(bottom_boundary_config_t)        :: c
+   type(error_collection_t)              :: errors
+
+   ! Empty array -> reader allocates a 0-row table without flagging an
+   ! error. The validator (separately tested) decides whether 0 rows is
+   ! acceptable for swbotb=2.
+   call toml_load(doc, 'tests/unit/io/toml/fixtures/bottom_boundary_empty_qbot.toml')
+   doc_ptr => doc
+   call read_bottom_boundary_toml(doc_ptr, c, errors)
+
+   @assertFalse(errors%has_errors())
+   @assertTrue(allocated(c%qbot_table))
+   @assertEqual(0, size(c%qbot_table, 1))
+   @assertEqual(2, size(c%qbot_table, 2))
+end subroutine

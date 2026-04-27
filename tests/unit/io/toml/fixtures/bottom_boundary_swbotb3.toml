@@ -1,0 +1,13 @@
+[bottom_boundary]
+swbotb = 3
+shape  = 1
+hdrain = -200.0
+rimlay = 500.0
+aqave  = -150.0
+aqamp  = 50.0
+aqper  = 365.0
+aqtmax = 91.0
+cofqha_table = [
+  [-200.0, 0.001],
+  [-100.0, 0.005],
+]
