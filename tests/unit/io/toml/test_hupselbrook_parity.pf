@@ -508,3 +508,54 @@ subroutine test_hupselbrook_parity_potatod_wofost()
    @assertEqual(0.2_real64,  config%crop%rotation_wofost(ICROP_POTATOD)%management%fraharlosorm_lv,     1.0e-12_real64)
    @assertEqual(0.3_real64,  config%crop%rotation_wofost(ICROP_POTATOD)%management%fradeceasedlvtosoil, 1.0e-12_real64)
 end subroutine
+
+! Phase 4d Task 20a: parity for the four new sections — bottom_boundary,
+! heat, irrigation, solute — added to the case 1 swap.toml in Task 17.
+@test
+subroutine test_hupselbrook_parity_4d_sections()
+   use funit
+   use parity_helpers_mod
+   use variables, only: swbotb, swhea, swcalt, swtopbhea, swbotbhea,    &
+                        swirfix, swsolu, swbotbc, cdrain, cseep, tscf,  &
+                        ldis
+   use swap_config_mod
+   use error_mod
+   use iso_fortran_env, only: real64
+   type(swap_config_t)      :: config
+   type(error_collection_t) :: errors
+
+   call load_both_for_hupselbrook(config, errors)
+   @assertFalse(errors%has_fatals())
+
+   ! [bottom_boundary] — case 1 SWBOTB=6 (free outflow, no scalars).
+   @assertEqual(swbotb, config%bottom_boundary%swbotb)
+
+   ! [heat] — case 1 SWHEA=1 with numerical method (SWCALT=2).
+   @assertEqual(swhea,     config%heat%swhea)
+   @assertEqual(swcalt,    config%heat%swcalt)
+   @assertEqual(swtopbhea, config%heat%swtopbhea)
+   @assertEqual(swbotbhea, config%heat%swbotbhea)
+   ! READING NOTE: per-layer arrays psand/pclay/porg deferred — they live
+   ! in `variables%psand(maho)` (fixed-size) and need a flatten-style
+   ! helper to compare against the variable-length config arrays.
+   @assertTrue(allocated(config%heat%psand))
+   @assertTrue(allocated(config%heat%tsoil_init))
+
+   ! [irrigation] — case 1 SWIRFIX=1 with one inline fixed event.
+   @assertEqual(swirfix, config%irrigation%swirfix)
+   @assertTrue(allocated(config%irrigation%fixed_events))
+   @assertEqual(1, size(config%irrigation%fixed_events, 1))
+   ! READING NOTE: legacy `irgfil` is a local in readswap (not a module
+   ! global), so we cannot cross-check the file path; assert structure only.
+
+   ! [solute] — case 1 SWSOLU=1 with simple boundary transport.
+   @assertEqual(swsolu,  config%solute%swsolu)
+   @assertEqual(swbotbc, config%solute%swbotbc)
+   @assertEqual(cdrain,  config%solute%cdrain, 1.0e-12_real64)
+   @assertEqual(cseep,   config%solute%cseep,  1.0e-12_real64)
+   @assertEqual(tscf,    config%solute%tscf,   1.0e-12_real64)
+   ! READING NOTE: ldis is an array (one entry per soil layer) in the
+   ! variables module (`real(8) ldis(maho)`); config holds a scalar.
+   ! Compare against the first-layer entry (case 1: 5.0).
+   @assertEqual(ldis(1), config%solute%ldis,   1.0e-12_real64)
+end subroutine
