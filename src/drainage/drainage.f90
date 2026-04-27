@@ -1,4 +1,5 @@
 module drainage_mod
+   use error_mod, only: fatalerr_collected
 !> Drainage Module - Lateral water flux calculations for subsurface drainage systems
 !!
 !! This module provides comprehensive routines for simulating lateral drainage and
@@ -169,7 +170,7 @@ owltab,t1900,swallo,drares,infres,qdrtab,nrlevs,swnrsrf,cofintfl,expintfl,dt,sha
             messag = 'At the drainage section, the level of the'          &
        &       //' impervious layer is higher than the level of the'      &
        &       //' drain bottom. Adapt drain input!'
-            call fatalerr('Bocodrb', messag)
+            call fatalerr_collected('Bocodrb', messag)
          end if
 
          ! --- no infiltration allowed
@@ -220,7 +221,7 @@ owltab,t1900,swallo,drares,infres,qdrtab,nrlevs,swnrsrf,cofintfl,expintfl,dt,sha
                      messag = 'At the drainage section, the level of the'        &
               &         //' impervious layer is higher than the level of the'    &
               &         //' drain bottom. Adapt drain input!'
-                     call fatalerr('bocodrb', messag)
+                     call fatalerr_collected('bocodrb', messag)
                   end if
                   rver = max(gwldra - zintf, 0.0d0)/kvtop +                   &
            &                (min(zintf, gwldra) - zbotdr(1))/kvbot
@@ -235,7 +236,7 @@ owltab,t1900,swallo,drares,infres,qdrtab,nrlevs,swnrsrf,cofintfl,expintfl,dt,sha
                      messag = 'At the drainage section, the level of the'        &
               &         //' impervious layer is higher than the level of the'    &
               &         //' drain bottom. Adapt drain input!'
-                     call fatalerr('bocodrb', messag)
+                     call fatalerr_collected('bocodrb', messag)
                   end if
                   rver = (gwldra - zbotdr(1))/kvtop
                   rhor = l(1)*l(1)/(8*khtop*(zbotdr(1) - zintf) +               &
@@ -380,7 +381,7 @@ owltab,t1900,swallo,drares,infres,qdrtab,nrlevs,swnrsrf,cofintfl,expintfl,dt,sha
                if (flInitDraBas) then
                   if (NumLevRapDra .gt. nrlevs) then
                      messag = ' NUMLEVRAPDRA greater then NRLEVS'
-                     call fatalerr('MacroRead', messag)
+                     call fatalerr_collected('MacroRead', messag)
                   end if
 
                   if (dramet .lt. 3) then
@@ -715,7 +716,7 @@ owltab,t1900,swallo,drares,infres,qdrtab,nrlevs,swnrsrf,cofintfl,expintfl,dt,sha
 ! ---   Error handling
                         if (imper .gt. nmper) then
                            messag = 'sw-management periods(IMPER), more than defined'
-                           call fatalerr('Bocodre', messag)
+                           call fatalerr_collected('Bocodre', messag)
                         end if
                         if (t1900 - 1.d0 + 0.1d-10 .gt. impend(imper)) goto 800
 
@@ -733,7 +734,7 @@ owltab,t1900,swallo,drares,infres,qdrtab,nrlevs,swnrsrf,cofintfl,expintfl,dt,sha
 ! ---     Error handling
                            if (qdratio .gt. 1.0d0 .or. qdratio .lt. 0.0d0) then
                               messag = 'sw-management error with storage (qdratio)'
-                              call fatalerr('Bocodre', messag)
+                              call fatalerr_collected('Bocodre', messag)
                            end if
 
                            do 820 level = 1 + NRPRI, nrlevs

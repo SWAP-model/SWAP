@@ -3,6 +3,7 @@
 !! This module provides subroutines for calculating grid parameters and
 !! converting vertical discretization in soil profiles.
 module soilgrid_mod
+   use error_mod, only: fatalerr_collected
     implicit none
     private
     public :: calcgrid, convertdiscrvert
@@ -35,7 +36,7 @@ contains
           messag ='At the soil water section, part 4, at layer '//      &
      &   trim(tmp)//' the height of this soil layer hsublay corresponds'&
      &    //' not to the product of height and number of compartments'
-          call fatalerr ('calcgrid',messag)
+          call fatalerr_collected ('calcgrid',messag)
         endif
       end do
 
@@ -211,7 +212,7 @@ contains
       ! error in call of part
       if (part.lt.1 .or. part.gt.2) then
         write(message,*) 'fatal error in variabel PART '
-        call fatalerr(ModuleName,message)
+        call fatalerr_collected(ModuleName,message)
       endif
 
       ! always convert to maintain identic writing
@@ -429,7 +430,7 @@ contains
 
       else
         write(message,*) 'fatal error in variable SwDiscrVert'
-        call fatalerr(ModuleName,message)
+        call fatalerr_collected(ModuleName,message)
       endif
 
       return

@@ -168,6 +168,7 @@
 
       Subroutine Detcoef                                                &
      &(Iflsol,A1,A2,Avsocf,B1,B2,Hv,Hv1,Mto,Rhbd,T)
+      use error_mod, only: fatalerr_collected
 !.......................................................................
 !  Subprogram:
 !     Subroutine Detcoef - 
@@ -242,7 +243,7 @@
          B2 = 0.5d+00*T/(Mto+Rhbd*Avsocf)
 
       case default
-         call fatalerr ('DetCoef', 'Illegal value for TASK')
+         call fatalerr_collected ('DetCoef', 'Illegal value for TASK')
       end select
 
       Return

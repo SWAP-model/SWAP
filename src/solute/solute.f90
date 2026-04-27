@@ -2,6 +2,7 @@
 !   $Id: solute.f90 341 2017-09-29 18:12:25Z kroes006 $
 ! ----------------------------------------------------------------------
 module solute_mod
+   use error_mod, only: fatalerr_collected
    implicit none
    private
    public :: solute, AgeTracer
@@ -282,7 +283,7 @@ contains
       solbal = sampro - sqprec - sqirrig - sqbot + sqdra + dectot + rottot - samini
 
       case default
-         call fatalerr ('Solute', 'Illegal value for TASK')
+         call fatalerr_collected ('Solute', 'Illegal value for TASK')
       end select
 
       return
@@ -517,7 +518,7 @@ contains
       end do
 
       case default
-         call fatalerr ('AgeTracer', 'Illegal value for TASK')
+         call fatalerr_collected ('AgeTracer', 'Illegal value for TASK')
       end select
 
       return

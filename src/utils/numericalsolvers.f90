@@ -6,6 +6,7 @@
 !! This module contains routines for solving tridiagonal and band diagonal
 !! linear systems of equations.
 module numericalsolvers_mod
+   use error_mod, only: fatalerr_collected
   implicit none
   public :: tridag, bandec, banbks
 contains
@@ -137,7 +138,7 @@ contains
     ! Check array dimensions
     if (mm .gt. mp .or. m1 .gt. mpl .or. n .gt. np) then
       messag = 'bad args in bandec !'
-      call fatalerr('bandec', messag)
+      call fatalerr_collected('bandec', messag)
     end if
     
     ! Rearrange the storage a bit
@@ -244,7 +245,7 @@ contains
     ! Check array dimensions
     if (mm .gt. mp .or. m1 .gt. mpl .or. n .gt. np) then
       messag = 'bad args in banbks !'
-      call fatalerr('banbks', messag)
+      call fatalerr_collected('banbks', messag)
     end if
     
     ! Forward substitution, unscrambling the permuted rows as we go

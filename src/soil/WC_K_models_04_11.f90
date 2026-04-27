@@ -1,4 +1,5 @@
 module WC_K_models_04_11
+   use error_mod, only: fatalerr_collected
 
 use variables, only: cofgen, iHWCKmodel, BiModal, NoVap, layer
 implicit none
@@ -112,7 +113,7 @@ case (2)
             functionvalue_04_11 = K_PDI (h,dummy,dummy)
          else
             ! both wc and temp must be present as input
-            if (.not.present(wc) .or. .not.present(temp)) call fatalerr ('functionvalue_04_11','For Kvap both WC and TEMP must be given as arguments')
+            if (.not.present(wc) .or. .not.present(temp)) call fatalerr_collected ('functionvalue_04_11','For Kvap both WC and TEMP must be given as arguments')
             functionvalue_04_11 = K_PDI (h,wc,temp)
          end if
 
@@ -121,7 +122,7 @@ case (2)
             functionvalue_04_11 = K_PDI_s (h,dummy,dummy)
          else
             ! both wc and temp must be present as input
-            if (.not.present(wc) .or. .not.present(temp)) call fatalerr ('functionvalue_04_11','For Kvap both WC and TEMP must be given as arguments')
+            if (.not.present(wc) .or. .not.present(temp)) call fatalerr_collected ('functionvalue_04_11','For Kvap both WC and TEMP must be given as arguments')
             functionvalue_04_11 = K_PDI_s (h,wc,temp)
          end if
       
@@ -130,7 +131,7 @@ case (2)
             functionvalue_04_11 = K_PDI_2 (h,dummy,dummy)
          else
             ! both wc and temp must be present as input
-            if (.not.present(wc) .or. .not.present(temp)) call fatalerr ('functionvalue_04_11','For Kvap both WC and TEMP must be given as arguments')
+            if (.not.present(wc) .or. .not.present(temp)) call fatalerr_collected ('functionvalue_04_11','For Kvap both WC and TEMP must be given as arguments')
             functionvalue_04_11 = K_PDI_2 (h,wc,temp)
          end if
       
@@ -139,7 +140,7 @@ case (2)
             functionvalue_04_11 = K_PDI_2_s (h,dummy,dummy)
          else
             ! both wc and temp must be present as input
-            if (.not.present(wc) .or. .not.present(temp)) call fatalerr ('functionvalue_04_11','For Kvap both WC and TEMP must be given as arguments')
+            if (.not.present(wc) .or. .not.present(temp)) call fatalerr_collected ('functionvalue_04_11','For Kvap both WC and TEMP must be given as arguments')
             functionvalue_04_11 = K_PDI_2_s (h,wc,temp)
          end if
             
@@ -158,7 +159,7 @@ case (3)
    end select
 
 case default
-   call fatalerr ('functionvalue_04_11', 'Illegal iType; allowed values [1,2,3]')
+   call fatalerr_collected ('functionvalue_04_11', 'Illegal iType; allowed values [1,2,3]')
 
 end select
 return

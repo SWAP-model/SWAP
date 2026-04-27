@@ -1,4 +1,5 @@
 module array_utils
+   use error_mod, only: fatalerr_collected
     !> Module containing utility functions for interpolation and table lookups
     !!
     !! @author Original SWAP team
@@ -128,7 +129,7 @@ contains
       if (mx < mn) then
          ! Minimum is larger than maximum, should generate an error
          write(messag, '(2(a,g12.5))') 'argument error, min = ', mn, ', max = ', mx
-         call fatalerr('limit', messag)
+         call fatalerr_collected('limit', messag)
       end if
       
       if (x < mn) then

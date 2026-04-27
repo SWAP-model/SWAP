@@ -11,6 +11,7 @@
 !! Date: March 2015
 !! Purpose: save and reset soil water state variables
 module management_soil_mod
+   use error_mod, only: fatalerr_collected
 
    implicit none
    private
@@ -898,7 +899,7 @@ contains
       close(oup)
 
       case default
-         call fatalerr ('SoilManagement', 'Illegal value for TASK')
+         call fatalerr_collected ('SoilManagement', 'Illegal value for TASK')
       end select
 
       ! isme and nut are module variables in wofost_soil_declarations - no local save needed

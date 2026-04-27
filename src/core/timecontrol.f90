@@ -2,6 +2,7 @@
 !   $Id: timecontrol.f90 374 2018-03-21 13:12:23Z heine003 $
 ! ----------------------------------------------------------------------
       subroutine TimeControl(task) 
+      use error_mod, only: fatalerr_collected
 ! ----------------------------------------------------------------------
 !     Date               : Aug 2004   
 !     Purpose            : Handles time variables, switches and flags
@@ -178,7 +179,7 @@
      &                                              swinco .ne. 3) then
               messag = 'The start of simulation (tstart) begins in '//  &
      &        'crop growing season with swinco 1 or 2'
-              call fatalerr ('readswap',messag)
+              call fatalerr_collected ('readswap',messag)
             endif
           end if
         else
@@ -263,7 +264,7 @@
         messag ='The maximum number of time steps for a day is exceeded'&
      &    //' at daynumber '//trim(tmp)//'. Check input for numerical'  &
      &    //' solution of Richards equation'
-        call fatalerr ('timer',messag)
+        call fatalerr_collected ('timer',messag)
       endif
 
 
@@ -621,7 +622,7 @@
          end if
       
       case default
-         call fatalerr ('TimeControl', 'Illegal value for TASK')
+         call fatalerr_collected ('TimeControl', 'Illegal value for TASK')
       end select
 
       end associate
@@ -631,6 +632,7 @@
 
 
       subroutine IterTime(task)
+      use error_mod, only: fatalerr_collected
 ! ----------------------------------------------------------------------
 !     date    : 20080303
 !     update  : 20170223: intro part2 - to interrupt (near) endless simulations
@@ -663,7 +665,7 @@
         write(messag,'(a,i10,3a)')                                      &
      &     'The maximum cpu time of ',MaxIterTime,' (secs)',            &
      &     ' was exceeded.  Therefore simulation was interrupted'
-        call fatalerr ('IterTime',messag)
+        call fatalerr_collected ('IterTime',messag)
       endif
       return
 
@@ -684,7 +686,7 @@
      
 
       case default
-         call fatalerr ('IterTime', 'Illegal value for TASK')
+         call fatalerr_collected ('IterTime', 'Illegal value for TASK')
       end select
 
       return

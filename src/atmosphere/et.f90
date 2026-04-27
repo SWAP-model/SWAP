@@ -10,6 +10,7 @@
 !! - reduceva: Soil evaporation reduction (Black/Boesten-Stroosnijder)
 !! @endnote
 module et_mod
+   use error_mod, only: fatalerr_collected
     implicit none
     private
 
@@ -623,7 +624,7 @@ contains
 
         ! Validate task
         if (task /= 1 .and. task /= 2) then
-            call fatalerr('reduceva', 'Illegal value for TASK')
+            call fatalerr_collected('reduceva', 'Illegal value for TASK')
         end if
 
         if (task == 1) then
@@ -652,7 +653,7 @@ contains
             call boesten_stroosnijder_reduction(nrai, nird, peva, cofred, &
                                               spev, saev, empreva, timestep)
         case default
-            call fatalerr('reduceva', 'Unknown reduction method SWREDU')
+            call fatalerr_collected('reduceva', 'Unknown reduction method SWREDU')
         end select
       end subroutine reduceva
 end module et_mod

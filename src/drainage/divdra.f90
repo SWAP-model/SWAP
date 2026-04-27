@@ -1,4 +1,5 @@
 module distribute_drainage
+   use error_mod, only: fatalerr_collected
 !> Distribute Drainage - Lateral waterflux simulation in saturated zone
 !!
 !! This module provides routines for simulating lateral water fluxes in the saturated zone
@@ -585,7 +586,7 @@ contains
                ThickCum = ThickCum + ThickComp(NumCom2Lev)
             end do
 ! RobH 28-1-2018: Extra (most likely unnecessary) protection against possible level below soil profile
-            if (NumCom2Lev .gt. NumComp) call fatalerr('Lev2Comp', 'NumCom2Lev.gt.Numcomp')
+            if (NumCom2Lev .gt. NumComp) call fatalerr_collected('Lev2Comp', 'NumCom2Lev.gt.Numcomp')
 
 ! --- part of compartment Below level
             ThickCompBlwLev = ThickCum - Level

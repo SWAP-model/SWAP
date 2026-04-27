@@ -5,6 +5,7 @@
 !! hydraulic conductivity computations.
 !!
 module soilhydraulics_mod
+   use error_mod, only: fatalerr_collected
    ! Core hydraulic calculations
    implicit none
    private
@@ -952,7 +953,7 @@ contains
             if (SwSoilShr(lay).gt.0 .and.                               &
      &          ThetCrMp(lay).gt.CofGen(2,nod1lay(lay))) then
                messag = ' ThetCrMP.gt.ThetSat'
-               call fatalerr('MacroRead',messag)
+               call fatalerr_collected('MacroRead',messag)
             endif
          enddo
       endif
@@ -972,7 +973,7 @@ contains
           messag = 'Initial groundwaterlevel (SWINCO=2) is '//          &
      &    'too close to bottom of soil profile'//                       &
      &    ' must be corrected!'
-          call fatalerr ('soilwater',messag)
+          call fatalerr_collected ('soilwater',messag)
         endif
       endif
       if (swinco.eq.3) then
@@ -980,7 +981,7 @@ contains
           messag = 'Initial data are read from file (SWINCO=3) and '//  &
      &    'number of nodes/compartments is not consistent with NUMNOD'//&
      &    'must be corrected!'
-          call fatalerr ('soilwater',messag)
+          call fatalerr_collected ('soilwater',messag)
         endif
       endif
       if (swinco.eq.1.or.swinco.eq.3) then
@@ -1007,7 +1008,7 @@ contains
           messag = 'Groundwaterlevel as bottom boundary (SWBOTB=1) is'//&
      &    'below or to close to bottom of soil profile'//               &
      &    ' must be corrected!'
-            call fatalerr ('soilwater',messag)
+            call fatalerr_collected ('soilwater',messag)
           endif
         else
           gwl = gwli
@@ -1177,7 +1178,7 @@ contains
       if (swhyst.ne.0) call hysteresis ()
 
       case default
-         call fatalerr ('SoilWater', 'Illegal value for TASK')
+         call fatalerr_collected ('SoilWater', 'Illegal value for TASK')
       end select
 
       return
@@ -1228,7 +1229,7 @@ contains
       pond   = pondm1
 
       case default
-         call fatalerr ('SoilWaterStateVar', 'Illegal value for TASK')
+         call fatalerr_collected ('SoilWaterStateVar', 'Illegal value for TASK')
       end select
 
       return

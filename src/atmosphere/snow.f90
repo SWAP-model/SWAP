@@ -7,6 +7,7 @@
 !! Originally developed: December 2004
 !! @endnote
 module snow_mod
+   use error_mod, only: fatalerr_collected
 
    implicit none
 
@@ -165,7 +166,7 @@ contains
          csnrai = csnrai + snrai
 
       case default
-         call fatalerr('Snow', 'Illegal value for TASK')
+         call fatalerr_collected('Snow', 'Illegal value for TASK')
       end select
 
       return

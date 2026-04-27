@@ -2,6 +2,7 @@
 !   $Id: wofost_soil_rateconstants.f90 323 2017-03-03 15:17:25Z kroes006 $
 ! ----------------------------------------------------------------------
       Subroutine Wofost_SoilRateConstants(task)
+      use error_mod, only: fatalerr_collected
 
 !0    Declarations
       use Wofost_Soil_Declarations
@@ -63,7 +64,7 @@
       RateConDenitr = RateConDenitr * red_Resp
 
       case default
-         call fatalerr ('Wofost_SoilRateConstants', 'Illegal value for TASK')
+         call fatalerr_collected ('Wofost_SoilRateConstants', 'Illegal value for TASK')
       end select
 
       return

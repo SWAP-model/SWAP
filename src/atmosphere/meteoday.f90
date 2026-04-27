@@ -62,6 +62,7 @@ end module MeteoVars
 !! @author Original SWAP development team
 !! @date Refactored February 2026
 module runoff_mod
+   use error_mod, only: fatalerr_collected
    use soilhydraulics_utils, only: watcon
    implicit none
    private
@@ -113,11 +114,11 @@ contains
       ! check if times in CNtimeTAB are in ascending order
       ! set initial position in CNtimTAB
       do i = 2, iCNtab
-          if (CNtimTAB(i) < CNtimTAB(i-1)) call fatalerr ('CNmethod', 'CNtimTAB not in ascending order')
+          if (CNtimTAB(i) < CNtimTAB(i-1)) call fatalerr_collected ('CNmethod', 'CNtimTAB not in ascending order')
           if (t1900 >= CNtimTAB(i-1) .and. t1900 < CNtimTAB(i)) icn_atm = i-1
       end do
       ! error if start time t1900 not in CNtimTAB
-      if (icn_atm == 0) call fatalerr ('CNmethod', 'Start time of simulation not present in CNtimTAB')
+      if (icn_atm == 0) call fatalerr_collected ('CNmethod', 'Start time of simulation not present in CNtimTAB')
       
     !  to be replaced by average for layer 0-10 cm
       do i = 1, numnod
@@ -185,7 +186,7 @@ contains
       !!!end if
       
     case default
-      call fatalerr ('CNmethod', 'Illegal Itask option')
+      call fatalerr_collected ('CNmethod', 'Illegal Itask option')
     end select
 
   end subroutine CNmethod
@@ -207,6 +208,7 @@ end module runoff_mod
 !! @author Original SWAP development team
 !! @date Last modified March 2014, refactored February 2026
 module meteo_process_mod
+   use error_mod, only: fatalerr_collected
    implicit none
    private
    
@@ -281,7 +283,7 @@ contains
       if (daymeteo.lt.daynrfirst .or. daymeteo.gt.daynrlast) then
         messag ='In meteo file no meteo data are'// &
                 ' available for '//date//'. First adapt meteo file!'
-        call fatalerr ('meteo',messag)
+        call fatalerr_collected ('meteo',messag)
       end if
 
       ! Pass on weather values of today
@@ -340,7 +342,7 @@ contains
         if (i .ne. detrecord(irectotal)) then
           messag='In meteo file '//trim(filnam)//' record number(s)'// &
                  ' are not correct at '//date//'. First adapt meteo file!'
-          call fatalerr ('meteo',messag)
+          call fatalerr_collected ('meteo',messag)
         end if
         call dtdpst('year-month-day', &
                     dettime(irectotal)+0.1d0,detdate)
@@ -348,7 +350,7 @@ contains
         if (detdate .ne. date) then
           messag ='In meteo file '//trim(filnam)//' the amount of '// &
                   'records deviate near '//date//'. First adapt meteo file!'
-          call fatalerr ('meteo',messag)
+          call fatalerr_collected ('meteo',messag)
         end if
 
         ! Pass on weather records of today

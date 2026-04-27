@@ -1,4 +1,5 @@
 module surfacewater_mod
+   use error_mod, only: fatalerr_collected
 !! Module for calculating surface water balance and drainage fluxes
 !!
 !! This module handles the surface water system dynamics including:
@@ -61,7 +62,7 @@ subroutine SurfaceWater(task)
       if (flInitDraBas) then
          if (NumLevRapDra.gt.nrlevs) then
             messag = ' NUMLEVRAPDRA greater then NRLEVS'
-            call fatalerr('MacroRead',messag)
+            call fatalerr_collected('MacroRead',messag)
          endif
 !
          if (swdtyp(NumLevRapDra).eq.1) then
@@ -230,7 +231,7 @@ subroutine SurfaceWater(task)
       endif
       
       case default
-         call fatalerr ('SurfaceWater', 'Illegal value for TASK')
+         call fatalerr_collected ('SurfaceWater', 'Illegal value for TASK')
       end select
 
       return
@@ -345,7 +346,7 @@ subroutine SurfaceWater(task)
         messag = ' sw-level oscillation at '//datetime//                &
      &        '       advise: reduction of dtmax !'
         messag = 'error sw-management periods(IMPER), more than defined'
-        call fatalerr ('Wlevbal',messag)
+        call fatalerr_collected ('Wlevbal',messag)
       endif
       
       if (t1900-1.d0+0.1d-10 .gt. impend(imper)) goto 100
@@ -437,7 +438,7 @@ subroutine SurfaceWater(task)
 
         if (swstmax .lt. -0.1d0) then
           messag = 'error algorithm for sw falling dry'
-          call fatalerr ('Wlevbal',messag)
+          call fatalerr_collected ('Wlevbal',messag)
         endif
 
         wsupp = wsmax
@@ -524,7 +525,7 @@ subroutine SurfaceWater(task)
             swstn = swst + (qdrd + QRapDra - discap)*dt + runots
             if ( swstn .gt. sttab(1,2) ) then
               messag = 'surface water system has overflowed!'
-              call fatalerr ('Wlevbal',messag)
+              call fatalerr_collected ('Wlevbal',messag)
             endif
 
 ! --- iteration procedure for determining new level, storage, 
@@ -587,7 +588,7 @@ subroutine SurfaceWater(task)
               messag = ' sw-level oscillation at '//datetime//          &
      &        '       advise: reduction of dtmax !'
               call warn ('Wlevbal',messag,logf,swscre)
-              call fatalerr ('Wlevbal',messag)
+              call fatalerr_collected ('Wlevbal',messag)
            endif
         endif
       endif

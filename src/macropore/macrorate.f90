@@ -2,6 +2,7 @@
 !   $Id: macrorate.f90 370 2018-02-09 13:29:10Z heine003 $
 ! ----------------------------------------------------------------------
 module macrorate_mod
+   use error_mod, only: fatalerr_collected
    implicit none
    private
    public :: macrorate
@@ -570,7 +571,7 @@ SUBROUTINE MACRORATE(ITask,ICpBtDm,ICpBtPerZon,ICpSatGWl,         &
       endif
 !
       case default
-         call fatalerr ('SatFlow', 'Illegal value for TASK')
+         call fatalerr_collected ('SatFlow', 'Illegal value for TASK')
       end select
 
       Return
@@ -746,7 +747,7 @@ SUBROUTINE MACRORATE(ITask,ICpBtDm,ICpBtPerZon,ICpSatGWl,         &
       end do
 !
       case default
-         call fatalerr ('Absorption', 'Illegal value for TASK')
+         call fatalerr_collected ('Absorption', 'Illegal value for TASK')
       end select
 
       return

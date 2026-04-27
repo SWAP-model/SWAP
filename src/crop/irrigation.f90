@@ -13,6 +13,7 @@
 !!   - tcs=5 obsolete and replaced by tcs=7 (theta) and tcs=8 (presh)
 !!   - some calculations only once during initialization
    module irrigation_mod
+   use error_mod, only: fatalerr_collected
    implicit none
    private
 
@@ -126,7 +127,7 @@
                write (*,'(A)') ' Option tcs=5 (together with phormc) is obsolete and cannot be used anymore.'
                write (*,'(A)') ' Use option tcs=7 for pressure head (previously: tcs=5 + phormc=0) or '
                write (*,'(A)') '            tcs=8 for water content (previously: tcs=5 + phormc=1).'
-               call fatalerr ('Irrigation','Option tcs=5 (together with phormc) is obsolete and cannot be used anymore.')
+               call fatalerr_collected ('Irrigation','Option tcs=5 (together with phormc) is obsolete and cannot be used anymore.')
             end if
 
 ! -1-       timing - allowable daily stress
@@ -187,7 +188,7 @@
             if (tcsfix.eq.1) then
                if (tcs.eq.6) then   
                   messag = 'Timing criteria: conflict with fixed intervals tcsfix=1 AND tcs=6 not allowed, adapt input !'
-                  call fatalerr ('Irrigation',messag)
+                  call fatalerr_collected ('Irrigation',messag)
                end if
                call rdsinr('irgdayfix',1,366,irgdayfix)
             end if
@@ -502,7 +503,7 @@
          if (irrigevent .ne. 0) flIrrigationOutput = .true.
 
       case default
-         call fatalerr ('Irrigation', 'Illegal value for TASK')
+         call fatalerr_collected ('Irrigation', 'Illegal value for TASK')
       end select
 
       return
@@ -597,7 +598,7 @@ logical :: rdinqr
       if (ssdi_schedule == 0) then
          nirri = 1
          do i = 1, ifnd-1
-            if (ssdi_date(i) >= ssdi_date(i+1)) call fatalerr ('SSDI_irrigation', 'ssdi_date not in ascending order')
+            if (ssdi_date(i) >= ssdi_date(i+1)) call fatalerr_collected ('SSDI_irrigation', 'ssdi_date not in ascending order')
             if (t1900 >= ssdi_date(i)) nirri = i
          end do
          if (t1900 >= ssdi_date(ifnd)) nirri = ifnd
@@ -696,7 +697,7 @@ logical :: rdinqr
       qssdisum        = 0.0d0
       
    case default
-      call fatalerr ('SSDI_irrigation', 'Illegal value for iTask')
+      call fatalerr_collected ('SSDI_irrigation', 'Illegal value for iTask')
    end select
    
    ! Save state back to module variables at exit

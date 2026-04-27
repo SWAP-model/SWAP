@@ -2,6 +2,7 @@
 !   $Id: sharedexchange.f90 334 2017-07-06 10:39:10Z kroes006 $
 ! ----------------------------------------------------------------------
       subroutine FromSwap(task) 
+      use error_mod, only: fatalerr_collected
 ! ----------------------------------------------------------------------
 !     UpDate             : July 2017
 !     Date               : July 2009
@@ -34,13 +35,14 @@
 !     section meant to terminate the exchange process and close the exchange file
 
       case default
-         call fatalerr ('FromSWAP', 'Illegal value for TASK')
+         call fatalerr_collected ('FromSWAP', 'Illegal value for TASK')
       end select
 
       return
       end
 ! ----------------------------------------------------------------------
       subroutine ToSwap(task) 
+      use error_mod, only: fatalerr_collected
 ! ----------------------------------------------------------------------
 !     UpDate             : July 2017
 !     Date               : July 2009
@@ -73,7 +75,7 @@
 !     section meant to terminate the exchnge process and close the exchange file
 
       case default
-         call fatalerr ('ToSWAP', 'Illegal value for TASK')
+         call fatalerr_collected ('ToSWAP', 'Illegal value for TASK')
       end select
 
       return

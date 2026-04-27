@@ -1,5 +1,6 @@
 ! File: swap_hydraulic_functions.f90
 module soilhydraulics_utils
+   use error_mod, only: fatalerr_collected
    !> Module containing hydraulic property functions for soil water modeling
    !!
    !! This module contains functions for calculating:
@@ -363,7 +364,7 @@ contains
                messag = 'Linear interpolation option for examined ksat not' // &
                     ' yet implemented for implicit hydraulic conductivity ' // &
                     '(swKimpl=1) in iteration scheme' 
-               call fatalerr('dhconduc', messag)
+               call fatalerr_collected('dhconduc', messag)
             end if
 
             if (relsat < 0.001_real64) then

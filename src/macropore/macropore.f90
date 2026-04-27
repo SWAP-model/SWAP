@@ -36,6 +36,7 @@
 !! @author SWAP development team
 !! @date Last modified February 2018
 module macropore_mod
+   use error_mod, only: fatalerr_collected
   implicit none
   private
   public :: macropore, shrink
@@ -207,7 +208,7 @@ contains
       call MACRORESET(2)
 
     case default
-      call fatalerr ('Macropore', 'Illegal value for TASK')
+      call fatalerr_collected ('Macropore', 'Illegal value for TASK')
     end select
 
     return
@@ -1241,7 +1242,7 @@ contains
       !        FOUTMELDING AANPASSEN
       if (ShrParD.gt.Thetas/(1.d0-Thetas)-0.01d0) then
          messag = ' ShrParD.gt.(ThetaS/(1.d0-ThetaS)-0.01d0'
-         call fatalerr ('SHRINKPAR',messag)
+         call fatalerr_collected ('SHRINKPAR',messag)
       endif
 
       return
@@ -1253,14 +1254,14 @@ contains
       if (ShrParA.Gt.ShrParB) then
          messag = ' inconsistent shrinkage input: ShrParA > ShrParB'//  &
      &            ' is not allowed'
-         call fatalerr ('SHRINKPAR',messag)
+         call fatalerr_collected ('SHRINKPAR',messag)
       endif
       Alfa= ShrParA
       MoisR1= ShrParB
       !        ADAPT ERROR MESSAGE
       if (MoisR1.gt.Thetas/(1.d0-Thetas)-0.01d0) then
          messag = ' MoisR1.gt.ThetaS/(1.d0-ThetaS)-0.01d0'
-         call fatalerr ('SHRINKPAR',messag)
+         call fatalerr_collected ('SHRINKPAR',messag)
       endif
       Beta2= -1.d0/MoisR1*dlog((MoisR1)/Alfa)      
       Beta1= Beta2 + 1.d0
@@ -1367,7 +1368,7 @@ contains
       continue
 
       case default
-         call fatalerr ('ShrinkPar', 'Illegal value for TASK')
+         call fatalerr_collected ('ShrinkPar', 'Illegal value for TASK')
       end select
       
       return

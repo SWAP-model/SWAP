@@ -83,6 +83,7 @@ end module O2_pars
 !! Keeps the original oxygen-stress implementation intact while exposing
 !! explicit interfaces through a dedicated module.
 module oxygenstress_mod
+   use error_mod, only: fatalerr_collected
       implicit none
 
 contains
@@ -130,7 +131,7 @@ contains
 !## MH : some initial calculations      
       if (o2_ini_stress) then
          if (iHWCKmodel(layer(node)) == 3) then
-            call fatalerr ('OxygenStress', 'Combination of OxygenStress and bi-modal MvG (iHWCKmodel=3) is not (yet) possible!')
+            call fatalerr_collected ('OxygenStress', 'Combination of OxygenStress and bi-modal MvG (iHWCKmodel=3) is not (yet) possible!')
          end if
          call calc_ini_pars (numnod)
          ! Save to module arrays after initialization
@@ -1143,7 +1144,7 @@ contains
               error_messag = '1 Too much iterations for macroscopic '   &
      &               //' oxygen diffusion.'
 !D              call warn ('rootextraction',error_messag,logf,swscre)
-              call fatalerr ('rootextraction',error_messag)
+              call fatalerr_collected ('rootextraction',error_messag)
             endif            
          enddo
         
@@ -1332,7 +1333,7 @@ contains
      &            //' stress reached.'
             xx = xi
            SOLVE = xx
-           call fatalerr ('rootextraction',error_messag)
+           call fatalerr_collected ('rootextraction',error_messag)
            return          
         endif            
       enddo

@@ -14,6 +14,7 @@
 !> - checkmassbal: Check mass balance per output period
 !> - watstor: Calculate water storage in soil profile
 module soilwaterbalance_mod
+   use error_mod, only: fatalerr_collected
     implicit none
     private
     public :: calcgwl, level, watertable, fluxes, integral, checkmassbal, watstor
@@ -160,7 +161,7 @@ contains
           messag = 'The groundwater level descends below the lower' &
      &     //' boundary. This conflicts with bottom boundary' &
      &     //' condition 3 and 4. Extend soil profile!'
-         call fatalerr ('calcgwl',messag)
+         call fatalerr_collected ('calcgwl',messag)
       endif
 
       ! warning error if there is inconsistency between defined gwl and soil physics

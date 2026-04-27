@@ -2,6 +2,7 @@
 ! to do: check if Rho_match differs from BDENS or Rho_cons (if not: division by zero possible)
 
 module tillage_mod
+   use error_mod, only: fatalerr_collected
 
    use variables, only: t1900, date, swpfile, swhyst, swsolu, swoxygen, flCropNut, flMacroPore, flksatexm, zbotcp, NumNod, Bdens, layer, nraida, ParamVG, CofGen, &
                         NumLay, pond, theta, h, dz, disnod, botcom, psilt, pclay, SwDiscrvert, tend, &
@@ -72,13 +73,13 @@ module tillage_mod
       
       ! some checks: some combinations not (yet) allowed
       if (swtill == 1) then
-         if (swhyst == 1)      call fatalerr ('DoTillage', 'swhyst = 1 not allowed')
-         if (swsolu == 1)      call fatalerr ('DoTillage', 'swsolu = 1 not (yet) allowed')
-         if (swoxygen == 2)    call fatalerr ('DoTillage', 'swoxygen = 2 not (yet) allowed')
-         if (flCropNut)        call fatalerr ('DoTillage', 'flCropNut = 1 not (yet) allowed')
-         if (flMacroPore)      call fatalerr ('DoTillage', 'swmacro = 1 not (yet) allowed')
-         if (flksatexm)        call fatalerr ('DoTillage', 'flksatexm not (yet) allowed')
-         if (SwDiscrvert == 1) call fatalerr ('DoTillage', 'SwDiscrvert = 1 not (yet) allowed')
+         if (swhyst == 1)      call fatalerr_collected ('DoTillage', 'swhyst = 1 not allowed')
+         if (swsolu == 1)      call fatalerr_collected ('DoTillage', 'swsolu = 1 not (yet) allowed')
+         if (swoxygen == 2)    call fatalerr_collected ('DoTillage', 'swoxygen = 2 not (yet) allowed')
+         if (flCropNut)        call fatalerr_collected ('DoTillage', 'flCropNut = 1 not (yet) allowed')
+         if (flMacroPore)      call fatalerr_collected ('DoTillage', 'swmacro = 1 not (yet) allowed')
+         if (flksatexm)        call fatalerr_collected ('DoTillage', 'flksatexm not (yet) allowed')
+         if (SwDiscrvert == 1) call fatalerr_collected ('DoTillage', 'SwDiscrvert = 1 not (yet) allowed')
       end if
       
       ! currently: require all Z_tillage = Max_Z_tillage
@@ -104,7 +105,7 @@ module tillage_mod
             exit
          end if
       end do
-      if (.not. fine) call fatalerr ('DoTillage', 'Bottom of soil horizon does not coincide with tillage depth(s)')
+      if (.not. fine) call fatalerr_collected ('DoTillage', 'Bottom of soil horizon does not coincide with tillage depth(s)')
       
    case (2)
       ! RATE/STATE EVENT
@@ -193,7 +194,7 @@ module tillage_mod
       continue
       
    case default
-      call fatalerr ('DoTillage','Illegal value for iTask')
+      call fatalerr_collected ('DoTillage','Illegal value for iTask')
    end select
 
    end subroutine DoTillage
@@ -272,7 +273,7 @@ module tillage_mod
    
    select case (iRedist)
    case (0)
-      if (.not.TEST) call fatalerr ('Adapt_WC_H', 'Option iRedist = 0 only allowed in combination with TEST option')
+      if (.not.TEST) call fatalerr_collected ('Adapt_WC_H', 'Option iRedist = 0 only allowed in combination with TEST option')
       continue
       
    case (1)
@@ -400,7 +401,7 @@ write(124,'(A,1P,12E12.5)') Date, Bdens(1), ParamVG(2,layer(1)), theta(1), h(1),
    iTill = 1
    if (t1900 <= Date_tillage(1)) iTill = 1
    do i = 2, Ntill
-      if (Date_tillage(i) < Date_tillage(i-1)) call fatalerr ('set_iTill', 'Dates in tabulated tillage events must be sorted')
+      if (Date_tillage(i) < Date_tillage(i-1)) call fatalerr_collected ('set_iTill', 'Dates in tabulated tillage events must be sorted')
       if (t1900 >= Date_tillage(i-1) .and. t1900 < Date_tillage(i-1)) iTill = i-1
    end do
    end subroutine set_iTill
@@ -444,7 +445,7 @@ write(124,'(A,1P,12E12.5)') Date, Bdens(1), ParamVG(2,layer(1)), theta(1), h(1),
          
          ! get length of tabulated input data (number of tillage times, Ntill)
          call RDinne ('Date_tillage', Ntill)
-         if (Ntill < 1) call fatalerr ('Read_Tillage', 'You must supply tabulated data for tillage events')
+         if (Ntill < 1) call fatalerr_collected ('Read_Tillage', 'You must supply tabulated data for tillage events')
          
          ! allocate arrays for tabulated input
          if (allocated(Date_tillage)) deallocate(Date_tillage); allocate (Date_tillage(Ntill+1))
@@ -456,12 +457,12 @@ write(124,'(A,1P,12E12.5)') Date, Bdens(1), ParamVG(2,layer(1)), theta(1), h(1),
          call RDfdor ('Z_tillage',    0.0d0, -zbotcp(NumNod), Z_tillage, Ntill, Ntill)   ! still to check: depth must be equal to bottom of a soil horizon
          call RDfdor ('I_tillage',    0.0d0, 1.0d0, I_tillage, Ntill, Ntill)
          call RDfint ('Type_tillage', Type_tillage, Ntill, Ntill)
-         tmin = minval(Type_tillage); if (tmin < 1) call fatalerr ('Read_Tillage','Type_Tillage should be > 0')
-         tmax = maxval(Type_tillage); if (tmax < 1) call fatalerr ('Read_Tillage','Type_Tillage should be > 0')
+         tmin = minval(Type_tillage); if (tmin < 1) call fatalerr_collected ('Read_Tillage','Type_Tillage should be > 0')
+         tmax = maxval(Type_tillage); if (tmax < 1) call fatalerr_collected ('Read_Tillage','Type_Tillage should be > 0')
 
          ! length of second tabel entries: Ntypes
          call RDinne ('iType_Tillage', Ntypes)
-         if (Ntypes < 1) call fatalerr ('Read_Tillage', 'You must supply tabulated data for tillage events (Ntypes)')
+         if (Ntypes < 1) call fatalerr_collected ('Read_Tillage', 'You must supply tabulated data for tillage events (Ntypes)')
 
          ! allocate arrays for tabulated input
          if (allocated(iType_Tillage))    deallocate(iType_Tillage);    allocate(iType_Tillage(Ntypes))

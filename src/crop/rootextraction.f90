@@ -6,6 +6,7 @@
 !! Groups the legacy root extraction procedures in a module so callers use
 !! explicit interfaces.
 module rootextraction_mod
+   use error_mod, only: fatalerr_collected
   implicit none
   private
   public :: RootExtraction, MatricFlux
@@ -484,7 +485,7 @@ module rootextraction_mod
          messag = '4 Too many iterations for microscopic root'          &
      &             //' water uptake. Please adapt input!'
          call warn ('rootextraction',messag,logf,swscre)
-         call fatalerr ('rootextraction',messag)
+         call fatalerr_collected ('rootextraction',messag)
       endif
 
 ! --- apply linear interpolation when Fy1 and Fy3 have opposite sign
@@ -581,7 +582,7 @@ module rootextraction_mod
          messag = '5 Too many iterations for microscopic root'          &
      &             //' water uptake. Please adapt input!'
          call warn ('rootextraction',messag,logf,swscre)
-         call fatalerr ('rootextraction',messag)
+         call fatalerr_collected ('rootextraction',messag)
       endif
 
 ! --- apply linear interpolation when Fy1 and Fy3 have opposite sign
@@ -690,7 +691,7 @@ module rootextraction_mod
               messag = '1 Too many iterations for microscopic root'    &
      &               //' water uptake. Please adapt input!'
               call warn ('rootextraction',messag,logf,swscre)
-              call fatalerr ('rootextraction',messag)
+              call fatalerr_collected ('rootextraction',messag)
             endif
           enddo
           x1 = 999.d0
@@ -854,7 +855,7 @@ module rootextraction_mod
       endif
 
       case default
-         call fatalerr ('MatricFlux', 'Illegal value for TASK')
+         call fatalerr_collected ('MatricFlux', 'Illegal value for TASK')
       end select
 
       return

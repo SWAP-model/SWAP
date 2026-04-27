@@ -8,6 +8,7 @@
 !! @author Original SWAP team
 !! @date February 2026 (modularization)
 module surfacewater_utils
+   use error_mod, only: fatalerr_collected
    use iso_fortran_env, only: real64
    use variables, only: sttab, imper, hqhtab, qqhtab, swdra, pond, pondmx, rsro, rsroexp, wls, swst, dt
    
@@ -50,12 +51,12 @@ contains
 
       if (swstor < sttab(22,2)) then
          messag = 'Surface water storage below bottom of table'
-         call fatalerr('Wlevst', messag)
+         call fatalerr_collected('Wlevst', messag)
       end if
       
       if (swstor > sttab(1,2)) then
          messag = 'Surface water storage above top of table'
-         call fatalerr('Wlevst', messag)
+         call fatalerr_collected('Wlevst', messag)
       end if
       
       i = 0
@@ -103,12 +104,12 @@ contains
 
       if (wlev < sttab(22,1)) then
          messag = 'Surface water storage below bottom of table'
-         call fatalerr('swstlev', messag)
+         call fatalerr_collected('swstlev', messag)
       end if
       
       if (wlev > sttab(1,1)) then
          messag = 'Surface water storage above top of table'
-         call fatalerr('swstlev', messag)
+         call fatalerr_collected('swstlev', messag)
       end if
 
       i = 0

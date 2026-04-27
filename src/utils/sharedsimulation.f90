@@ -2,6 +2,7 @@
 !   $Id: sharedsimulation.f90 362 2018-01-08 13:08:33Z kroes006 $
 ! ----------------------------------------------------------------------
       subroutine SharedSimulation(task)
+      use error_mod, only: fatalerr_collected
 ! ----------------------------------------------------------------------
 !     UpDate             : July 2017
 !     Date               : July 2009
@@ -35,7 +36,7 @@
       if(count.ne.3) then
         messag = 'Argument of executable-call is not correct for '//    &
      &                    ' Shared simulation !'
-        call fatalerr ('readswap',messag)
+        call fatalerr_collected ('readswap',messag)
       endif
       PosArg         = 2
       Call Get_Command_Argument (number=PosArg,value=strIDss)
@@ -77,7 +78,7 @@
       close (unss)
 
       case default
-         call fatalerr ('SharedSimulation', 'Illegal value for TASK')
+         call fatalerr_collected ('SharedSimulation', 'Illegal value for TASK')
       end select
 
       return

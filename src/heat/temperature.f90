@@ -35,6 +35,7 @@
 !! @author Original SWAP development team
 !! @date Last modified January 2018
 module temperature_mod
+   use error_mod, only: fatalerr_collected
   implicit none
   private
   public :: temperature, devries
@@ -233,7 +234,7 @@ contains
         call tridag (numnod, thoma, thomb, thomc, thomf, tsoil,ierror)
         if(ierror.ne.0)then
           messag = 'During a call from Temperature an error occured in TriDag'
-          call fatalerr ('Temperature',messag)
+          call fatalerr_collected ('Temperature',messag)
         end if
       else
 
@@ -246,7 +247,7 @@ contains
       endif
 
     case default
-      call fatalerr ('Temperature', 'Illegal value for TASK')
+      call fatalerr_collected ('Temperature', 'Illegal value for TASK')
     end select
 
     return
