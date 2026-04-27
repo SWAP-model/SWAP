@@ -134,6 +134,7 @@ if get_option('enable_pfunit')
         'config/test_soil_config.pf',
         'config/test_bottom_boundary_config.pf',
         'config/test_heat_config.pf',
+        'config/test_irrigation_config.pf',
         'config/test_crop_config.pf',
         'config/test_swap_config.pf',
         'config/test_cropfixed_config.pf',

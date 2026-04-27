@@ -1,0 +1,251 @@
+! Phase 4d Task 10 — validator tests for irrigation_config_mod.
+!
+! Two type families: irrigation_config_t (top-level, swirfix gate) and
+! irrigation_schedule_t (per-crop, schedule gate). Both validators
+! short-circuit on a sentinel of 0 so that case TOMLs that omit the
+! relevant block still validate clean.
+
+@test
+subroutine test_irr_swirfix_zero_sentinel_skips()
+   use funit
+   use error_mod
+   use irrigation_config_mod
+   type(irrigation_config_t) :: c
+   type(error_collection_t)  :: errors
+   c%swirfix = 0
+   call c%validate(errors)
+   @assertFalse(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_irr_swirfix_out_of_range_fails()
+   use funit
+   use error_mod
+   use irrigation_config_mod
+   type(irrigation_config_t) :: c
+   type(error_collection_t)  :: errors
+   c%swirfix = 2
+   call c%validate(errors)
+   @assertTrue(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_irr_swirfix1_with_irgfil_passes()
+   use funit
+   use error_mod
+   use irrigation_config_mod
+   type(irrigation_config_t) :: c
+   type(error_collection_t)  :: errors
+   c%swirfix = 1
+   c%irgfil  = "case.irg"
+   call c%validate(errors)
+   @assertFalse(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_irr_swirfix1_with_fixed_events_passes()
+   use funit
+   use error_mod
+   use iso_fortran_env, only: real64
+   use irrigation_config_mod
+   type(irrigation_config_t) :: c
+   type(error_collection_t)  :: errors
+   c%swirfix = 1
+   allocate(c%fixed_events(2, 4))
+   c%fixed_events(1, :) = [1.0_real64,  20.0_real64, 0.5_real64, 0.0_real64]
+   c%fixed_events(2, :) = [60.0_real64, 25.0_real64, 0.5_real64, 0.0_real64]
+   call c%validate(errors)
+   @assertFalse(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_irr_swirfix1_missing_both_fails()
+   use funit
+   use error_mod
+   use irrigation_config_mod
+   type(irrigation_config_t) :: c
+   type(error_collection_t)  :: errors
+   c%swirfix = 1
+   call c%validate(errors)
+   @assertTrue(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_irr_fixed_events_wrong_cols_fails()
+   use funit
+   use error_mod
+   use iso_fortran_env, only: real64
+   use irrigation_config_mod
+   type(irrigation_config_t) :: c
+   type(error_collection_t)  :: errors
+   c%swirfix = 1
+   allocate(c%fixed_events(2, 3))
+   c%fixed_events = 0.0_real64
+   call c%validate(errors)
+   @assertTrue(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_sched_schedule_zero_sentinel_skips()
+   use funit
+   use error_mod
+   use irrigation_config_mod
+   type(irrigation_schedule_t) :: s
+   type(error_collection_t)    :: errors
+   s%schedule = 0
+   call s%validate(errors)
+   @assertFalse(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_sched_happy_path_tcs1_dcs1()
+   use funit
+   use error_mod
+   use iso_fortran_env, only: real64
+   use irrigation_config_mod
+   type(irrigation_schedule_t) :: s
+   type(error_collection_t)    :: errors
+   s%schedule       = 1
+   s%startirr_day   = 30
+   s%startirr_month = 3
+   s%endirr_day     = 31
+   s%endirr_month   = 12
+   s%cirrs          = 0.0_real64
+   s%isuas          = 1
+   s%tcs            = 1
+   s%dcs            = 1
+   s%phfieldcapacity = -100.0_real64
+   s%raithreshold   = 10.0_real64
+   allocate(s%trel_table(2, 2))
+   s%trel_table(1, :) = [0.0_real64, 0.95_real64]
+   s%trel_table(2, :) = [2.0_real64, 0.95_real64]
+   allocate(s%di_table(2, 2))
+   s%di_table(1, :) = [0.0_real64, 10.0_real64]
+   s%di_table(2, :) = [2.0_real64, 10.0_real64]
+   call s%validate(errors)
+   @assertFalse(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_sched_invalid_tcs_fails()
+   use funit
+   use error_mod
+   use irrigation_config_mod
+   type(irrigation_schedule_t) :: s
+   type(error_collection_t)    :: errors
+   s%schedule = 1
+   s%tcs      = 9
+   s%dcs      = 1
+   call s%validate(errors)
+   @assertTrue(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_sched_invalid_dcs_fails()
+   use funit
+   use error_mod
+   use irrigation_config_mod
+   type(irrigation_schedule_t) :: s
+   type(error_collection_t)    :: errors
+   s%schedule = 1
+   s%tcs      = 1
+   s%dcs      = 3
+   s%startirr_day   = 1
+   s%startirr_month = 1
+   s%endirr_day     = 1
+   s%endirr_month   = 1
+   call s%validate(errors)
+   @assertTrue(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_sched_tcs1_missing_trel_fails()
+   use funit
+   use error_mod
+   use iso_fortran_env, only: real64
+   use irrigation_config_mod
+   type(irrigation_schedule_t) :: s
+   type(error_collection_t)    :: errors
+   s%schedule = 1
+   s%tcs      = 1
+   s%dcs      = 1
+   s%startirr_day   = 1
+   s%startirr_month = 1
+   s%endirr_day     = 1
+   s%endirr_month   = 1
+   allocate(s%di_table(2, 2))
+   s%di_table = 0.0_real64
+   s%di_table(2, 1) = 1.0_real64
+   call s%validate(errors)
+   @assertTrue(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_sched_dcs1_missing_di_fails()
+   use funit
+   use error_mod
+   use iso_fortran_env, only: real64
+   use irrigation_config_mod
+   type(irrigation_schedule_t) :: s
+   type(error_collection_t)    :: errors
+   s%schedule = 1
+   s%tcs      = 1
+   s%dcs      = 1
+   s%startirr_day   = 1
+   s%startirr_month = 1
+   s%endirr_day     = 1
+   s%endirr_month   = 1
+   allocate(s%trel_table(2, 2))
+   s%trel_table = 0.5_real64
+   call s%validate(errors)
+   @assertTrue(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_sched_dcslim_min_exceeds_max_fails()
+   use funit
+   use error_mod
+   use iso_fortran_env, only: real64
+   use irrigation_config_mod
+   type(irrigation_schedule_t) :: s
+   type(error_collection_t)    :: errors
+   s%schedule       = 1
+   s%startirr_day   = 1
+   s%startirr_month = 1
+   s%endirr_day     = 1
+   s%endirr_month   = 1
+   s%tcs            = 1
+   s%dcs            = 1
+   s%dcslim         = 1
+   s%irgdepmin      = 80.0_real64
+   s%irgdepmax      = 10.0_real64
+   allocate(s%trel_table(2, 2))
+   s%trel_table = 0.5_real64
+   allocate(s%di_table(2, 2))
+   s%di_table = 0.0_real64
+   call s%validate(errors)
+   @assertTrue(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_sched_tcs6_with_tcsfix1_fails()
+   use funit
+   use error_mod
+   use iso_fortran_env, only: real64
+   use irrigation_config_mod
+   type(irrigation_schedule_t) :: s
+   type(error_collection_t)    :: errors
+   s%schedule       = 1
+   s%startirr_day   = 1
+   s%startirr_month = 1
+   s%endirr_day     = 1
+   s%endirr_month   = 1
+   s%tcs            = 6
+   s%dcs            = 1
+   s%tcsfix         = 1
+   s%irgdayfix      = 7
+   allocate(s%di_table(2, 2))
+   s%di_table = 0.0_real64
+   call s%validate(errors)
+   @assertTrue(errors%has_errors())
+end subroutine
