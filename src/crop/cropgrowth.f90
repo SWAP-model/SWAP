@@ -1,7 +1,14 @@
 ! File VersionID:
 !   $Id: cropgrowth.f90 380 2018-05-28 14:01:08Z heine003 $
+!
+! Phase 4e Task A2 audit: all `call fatalerr` sites in this file are in
+! surviving physics dispatchers (CropGrowth, cropfixed, cropoutput,
+! ArableLandGerm, FacCO2, wofost, grass, astro, outbalcrop*, chckcbl).
+! The crop sub-readers (readwofost, readcropfixed, readgrass) live in
+! src/io/readswap.f90 — none of them are here. Phase 4e Task A4/A5
+! replaces all of this file's calls via fatalerr_collected (singleton).
 ! ----------------------------------------------------------------------
-      subroutine CropGrowth(task) 
+      subroutine CropGrowth(task)
 ! ----------------------------------------------------------------------
 !     UpDate             : May 2014   
 !     Date               : Aug 2004   
