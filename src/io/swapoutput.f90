@@ -2,6 +2,7 @@
 !   $Id: swapoutput.f90 377 2018-04-04 10:57:55Z heine003 $
 ! ----------------------------------------------------------------------
       subroutine swapoutput(task)
+      use error_mod, only: fatalerr_collected
 ! ----------------------------------------------------------------------
 !     Date               : Aug 2004
 !     Purpose            : open and write general swap output files
@@ -57,7 +58,7 @@
          close (logf)
 
       case default
-         call fatalerr ('SWAPoutput', 'Illegal value for Task')
+         call fatalerr_collected ('SWAPoutput', 'Illegal value for Task')
       end select
 
       return
@@ -65,6 +66,7 @@
 
 ! ----------------------------------------------------------------------
       subroutine soilwateroutput(task)
+      use error_mod, only: fatalerr_collected
 ! ----------------------------------------------------------------------
 !     Date               : Aug 2004
 !     Purpose            : open and write soil water output files
@@ -187,7 +189,7 @@
          if (swrum == 1) call outrume (3)
 
       case default
-         call fatalerr ('SoilWaterOutput', 'Illegal value for Task')
+         call fatalerr_collected ('SoilWaterOutput', 'Illegal value for Task')
       end select
 
       return
@@ -195,6 +197,7 @@
 
 ! ----------------------------------------------------------------------
       subroutine outwba (task)
+      use error_mod, only: fatalerr_collected
 ! ----------------------------------------------------------------------
 !     date               : July 2002
 !     purpose            : write water balance data to outnam.wba file
@@ -354,7 +357,7 @@
       endif
 
       case default
-         call fatalerr ('outwba', 'Illegal value for Task')
+         call fatalerr_collected ('outwba', 'Illegal value for Task')
       end select
 
       return
@@ -362,6 +365,7 @@
 
 ! ----------------------------------------------------------------------
       subroutine outinc (task)
+      use error_mod, only: fatalerr_collected
 ! ----------------------------------------------------------------------
 !     date               : july 2002
 !     purpose            : write water balance increments to outnam.inc file
@@ -464,7 +468,7 @@
       SnowOld = ssnow
 
       case default
-         call fatalerr ('outinc', 'Illegal value for Task')
+         call fatalerr_collected ('outinc', 'Illegal value for Task')
       end select
 
       return
@@ -472,6 +476,7 @@
 
 ! ----------------------------------------------------------------------
       subroutine outstr (task)
+      use error_mod, only: fatalerr_collected
 ! ----------------------------------------------------------------------
 !     date               : March 2008
 !     purpose            : write ETpot and stress factors to outfil.str file
@@ -550,7 +555,7 @@
  22   format (a11,a1,i3,a1,i6,10(a1,f8.4))
 
       case default
-         call fatalerr ('outstr', 'Illegal value for Task')
+         call fatalerr_collected ('outstr', 'Illegal value for Task')
       end select
 
       return
@@ -558,6 +563,7 @@
 
 ! ----------------------------------------------------------------------
       subroutine outvap (task)
+      use error_mod, only: fatalerr_collected
 ! ----------------------------------------------------------------------
 !     date               : December 2007
 !     purpose            : write output of soil profile data
@@ -740,7 +746,7 @@
      &       e11.3,a1,0p,f7.1,a1,7x,a1,i4,a1,i5)
 
       case default
-         call fatalerr ('outvap', 'Illegal value for Task')
+         call fatalerr_collected ('outvap', 'Illegal value for Task')
       end select
 
       return
@@ -748,6 +754,7 @@
 
 ! ----------------------------------------------------------------------
       subroutine outrot (task)
+      use error_mod, only: fatalerr_collected
 
 ! ----------------------------------------------------------------------
 !     date               : February 2012
@@ -866,7 +873,7 @@
      &       i4,a1,i5)
 
       case default
-         call fatalerr ('outrot', 'Illegal value for Task')
+         call fatalerr_collected ('outrot', 'Illegal value for Task')
       end select
 
       return
@@ -874,6 +881,7 @@
 
 ! ----------------------------------------------------------------------
       subroutine outbal (task)
+      use error_mod, only: fatalerr_collected
 ! ----------------------------------------------------------------------
 !     date               : July 2002
 !     purpose            : write overview balances to bal file
@@ -1005,7 +1013,7 @@
      &   'Sum',t13,':',e12.4,t30,'Sum',t45,':',e12.4,/)
 
       case default
-         call fatalerr ('outbal', 'Illegal value for Task')
+         call fatalerr_collected ('outbal', 'Illegal value for Task')
       end select
 
       return
@@ -1282,6 +1290,7 @@
       end
 ! ----------------------------------------------------------------------
       subroutine OutCropFixed(task)
+      use error_mod, only: fatalerr_collected
 ! ----------------------------------------------------------------------
 !     Date               : Aug 2004
 !     Purpose            : open and write fixed crop output files
@@ -1333,7 +1342,7 @@
      &      6(a1,'         ') )
 
       case default
-         call fatalerr ('OutCropFixed', 'Illegal value for Task')
+         call fatalerr_collected ('OutCropFixed', 'Illegal value for Task')
       end select
 
       return
@@ -1341,6 +1350,7 @@
 
 ! ----------------------------------------------------------------------
       subroutine OutWofost(task)
+      use error_mod, only: fatalerr_collected
 ! ----------------------------------------------------------------------
 !     UpDate             : Aug 2014
 !     Date               : Oct 2004
@@ -1429,7 +1439,7 @@
      &        6(a1,f9.2), a1,i7, 5(a1,f9.2) )
 
       case default
-         call fatalerr ('OutWofost', 'Illegal value for Task')
+         call fatalerr_collected ('OutWofost', 'Illegal value for Task')
       end select
 
       return
@@ -1437,6 +1447,7 @@
 
 ! ----------------------------------------------------------------------
       subroutine OutGrass(task)
+      use error_mod, only: fatalerr_collected
 ! ----------------------------------------------------------------------
 !     UpDate             : Aug 2014
 !     Date               : Oct 2004
@@ -1494,7 +1505,7 @@
      &  6(a1,'         '))
 
       case default
-         call fatalerr ('OutGrass', 'Illegal value for Task')
+         call fatalerr_collected ('OutGrass', 'Illegal value for Task')
       end select
 
       return
@@ -1502,6 +1513,7 @@
 
 ! ----------------------------------------------------------------------
       subroutine SoluteOutput(task)
+      use error_mod, only: fatalerr_collected
 ! ----------------------------------------------------------------------
 !     Date               : November 2004
 !     Purpose            : open and write solute output files
@@ -1539,7 +1551,7 @@
       if (swsba .eq. 1) close (sba)
 
       case default
-         call fatalerr ('SoluteOutput', 'Illegal value for Task')
+         call fatalerr_collected ('SoluteOutput', 'Illegal value for Task')
       end select
 
       return
@@ -1547,6 +1559,7 @@
 
 ! ----------------------------------------------------------------------
       subroutine outsba (task)
+      use error_mod, only: fatalerr_collected
 ! ----------------------------------------------------------------------
 !     date               : July 2002
 !     purpose            : output of salt balance
@@ -1602,7 +1615,7 @@
  15   format(a11,a1,i4,a1,i6,6(a1,e14.5),a1,e14.2)
 
       case default
-         call fatalerr ('outsba', 'Illegal value for Task')
+         call fatalerr_collected ('outsba', 'Illegal value for Task')
       end select
 
       return
@@ -1610,6 +1623,7 @@
 
 ! ----------------------------------------------------------------------
       subroutine AgeTracerOutput(task)
+      use error_mod, only: fatalerr_collected
 ! ----------------------------------------------------------------------
 !     Date               : October 2010
 !     Purpose            : open and write Groundwater Ageing output files
@@ -1651,13 +1665,14 @@
       close (agee)
 
       case default
-         call fatalerr ('AgeTracerOutput', 'Illegal value for Task')
+         call fatalerr_collected ('AgeTracerOutput', 'Illegal value for Task')
       end select
 
       return
       end
 ! ----------------------------------------------------------------------
       subroutine outage(task,agep,agee,ageq)
+      use error_mod, only: fatalerr_collected
 ! ----------------------------------------------------------------------
 !     date               : October 2010
 !     purpose            : output of groundwater age
@@ -1754,7 +1769,7 @@
      &               (comma,iqdrainout(level),level=1,nrlevs)
 
       case default
-         call fatalerr ('outage', 'Illegal value for Task')
+         call fatalerr_collected ('outage', 'Illegal value for Task')
       end select
 
       return
@@ -1762,6 +1777,7 @@
 
 ! ----------------------------------------------------------------------
       subroutine TemperatureOutput(task)
+      use error_mod, only: fatalerr_collected
 ! ----------------------------------------------------------------------
 !     Date               : November 2004
 !     Purpose            : open and write soil temperature output files
@@ -1804,7 +1820,7 @@
       if (swtem .eq. 1) close (tem)
 
       case default
-         call fatalerr ('TemperatureOutput', 'Illegal value for Task')
+         call fatalerr_collected ('TemperatureOutput', 'Illegal value for Task')
       end select
 
       return
@@ -1982,6 +1998,7 @@
 
 ! ----------------------------------------------------------------------
       subroutine outtem (task)
+      use error_mod, only: fatalerr_collected
 
 ! ----------------------------------------------------------------------
 !     date               : November 2004
@@ -2051,7 +2068,7 @@
      &      (comma,tsoil(i),i=1,numnod),comma,tebot
 
       case default
-         call fatalerr ('outtem', 'Illegal value for Task')
+         call fatalerr_collected ('outtem', 'Illegal value for Task')
       end select
 
       return
@@ -2059,6 +2076,7 @@
 
 ! ----------------------------------------------------------------------
       subroutine IrrigationOutput(task)
+      use error_mod, only: fatalerr_collected
 ! ----------------------------------------------------------------------
 !     Date               : November 2004
 !     Purpose            : open and write irrigation output files
@@ -2145,7 +2163,7 @@
       close (irg)
 
       case default
-         call fatalerr ('IrrigationOutput', 'Illegal value for Task')
+         call fatalerr_collected ('IrrigationOutput', 'Illegal value for Task')
       end select
 
       return
@@ -2153,6 +2171,7 @@
 
 ! ----------------------------------------------------------------------
       subroutine SnowOutput(task)
+      use error_mod, only: fatalerr_collected
 ! ----------------------------------------------------------------------
 !     Date               : December 2004
 !     Purpose            : open and write snow pack data
@@ -2211,7 +2230,7 @@
       close (snw)
 
       case default
-         call fatalerr ('SnowOutput', 'Illegal value for Task')
+         call fatalerr_collected ('SnowOutput', 'Illegal value for Task')
       end select
 
       return
@@ -2219,6 +2238,7 @@
 
 ! ----------------------------------------------------------------------
       subroutine outblc(task,CQMpExfMtx,CQMpInfMtx)
+      use error_mod, only: fatalerr_collected
 ! ----------------------------------------------------------------------
 !     date               : December 2004
 !     purpose            : Write detailed overview of water balance
@@ -2373,7 +2393,7 @@
  65   FORMAT('Balance Deviation',t18,f7.2,3f8.2,/,99('='),/)
 
       case default
-         call fatalerr ('outbLC', 'Illegal value for Task')
+         call fatalerr_collected ('outbLC', 'Illegal value for Task')
       end select
 
       return
@@ -2381,6 +2401,7 @@
 
 ! ----------------------------------------------------------------------
       subroutine outafo (task)
+      use error_mod, only: fatalerr_collected
 ! ----------------------------------------------------------------------
 !     Date               : 29-jan-2003
 !     Purpose            : ANIMO/PEARL output: formatted hydrological data
@@ -2662,7 +2683,7 @@
 !50    format (10(1x,f9.6))    ! 8
 
       case default
-         call fatalerr ('outafo', 'Illegal value for Task')
+         call fatalerr_collected ('outafo', 'Illegal value for Task')
       end select
 
       return
@@ -2670,6 +2691,7 @@
 
 ! ----------------------------------------------------------------------
       subroutine outaun (task)
+      use error_mod, only: fatalerr_collected
 ! ----------------------------------------------------------------------
 !     Date               : 29-jan-2003
 !     Purpose            : ANIMO/PEARL output: unformatted hydrological data
@@ -2899,7 +2921,7 @@
       endif
 
       case default
-         call fatalerr ('outaun', 'Illegal value for Task')
+         call fatalerr_collected ('outaun', 'Illegal value for Task')
       end select
 
       return
@@ -2929,6 +2951,7 @@
 
 ! ----------------------------------------------------------------------
       subroutine SurfaceWaterOutput(task)
+      use error_mod, only: fatalerr_collected
 ! ----------------------------------------------------------------------
 !     Date               : Aug 2004
 !     Purpose            : open and write surface water output files
@@ -2970,7 +2993,7 @@
       close (swb)
 
       case default
-         call fatalerr ('SurfaceWaterOutput', 'Illegal value for Task')
+         call fatalerr_collected ('SurfaceWaterOutput', 'Illegal value for Task')
       end select
 
       return
@@ -2978,6 +3001,7 @@
 
 ! ----------------------------------------------------------------------
       subroutine outdrf (task)
+      use error_mod, only: fatalerr_collected
 ! ----------------------------------------------------------------------
 !     Date               : 10/6/99
 !     Purpose            : write drainage fluxes, surface runoff, rapid
@@ -3106,7 +3130,7 @@
       c1qdrar = cQMpOutDrRap
 
       case default
-         call fatalerr ('outdrf', 'Illegal value for Task')
+         call fatalerr_collected ('outdrf', 'Illegal value for Task')
       end select
 
       return
@@ -3114,6 +3138,7 @@
 
 ! ----------------------------------------------------------------------
       subroutine outswb(task)
+      use error_mod, only: fatalerr_collected
 ! ----------------------------------------------------------------------
 !     Date               : 21/08/99
 !     Purpose            : write surface water balance data to
@@ -3189,7 +3214,7 @@
 !       Error handling
         if (imper .gt. nmper) then
           messag = 'error sw-management(IMPER), more than defined'
-          call fatalerr ('Outswb',messag)
+          call fatalerr_collected ('Outswb',messag)
         endif
         if (t1900-1.d0-0.1d-10 .gt. impend(imper)) goto 100
       endif
@@ -3318,7 +3343,7 @@
       if (daynr.eq.nrOfDays) swstini = swst
 
       case default
-         call fatalerr ('outswb', 'Illegal value for Task')
+         call fatalerr_collected ('outswb', 'Illegal value for Task')
       end select
 
       return
@@ -3436,6 +3461,7 @@
 
 ! ----------------------------------------------------------------------
       subroutine checkDiscrVert()
+      use error_mod, only: fatalerr_collected
 !     date               : 20081105
 !     purpose            : verify reduced vertical discretizationface,
 ! global   formal parameters  : (i = input, o = output)
@@ -3478,7 +3504,7 @@
         if (abs(dzNew(in)-cumdzN(in)).gt.small) then
           write(messag,'(a,i5)')                                        &
      &    'New discretization has error in size of new compartment ',in
-          call fatalerr ('checkDiscrVert',messag)
+          call fatalerr_collected ('checkDiscrVert',messag)
         endif
       enddo
 
@@ -3494,7 +3520,7 @@
       if (abs(cumdzNew-cumdzOld).gt.small) then
         write(messag,'(a,f10.5)')                                       &
      &    'New discretization is wrong, total length differs >',small
-        call fatalerr ('checkDiscrVert',messag)
+        call fatalerr_collected ('checkDiscrVert',messag)
       endif
 
 
@@ -3503,6 +3529,7 @@
 
 ! ----------------------------------------------------------------------
       subroutine OutputModflow(task)
+      use error_mod, only: fatalerr_collected
 ! ----------------------------------------------------------------------
 !     Date               : July 2009
 !     Purpose            : open and write data to explore storage/recharge
@@ -3686,7 +3713,7 @@
       close (sto)
 
       case default
-         call fatalerr ('OutputModFlow', 'Illegal value for Task')
+         call fatalerr_collected ('OutputModFlow', 'Illegal value for Task')
       end select
 
       return
@@ -3695,6 +3722,7 @@
 
 ! ----------------------------------------------------------------------
       subroutine capriseoutput(task)
+      use error_mod, only: fatalerr_collected
 ! ----------------------------------------------------------------------
 !     Date               : September 2016
 !     Purpose            : open and write data to explore capillary rise to/from rootzone
@@ -3752,13 +3780,14 @@
       close (sto)
 
       case default
-         call fatalerr ('capriseoutput', 'Illegal value for Task')
+         call fatalerr_collected ('capriseoutput', 'Illegal value for Task')
       end select
 
       return
       end
 
 subroutine outrume (task)
+use error_mod, only: fatalerr_collected
 use variables, only: tcum,outper,numnod,dz,theta,thetas,igrai,iruno,pond,gwl
 implicit none
 
@@ -3885,12 +3914,13 @@ case (3)
 !!!   close (iunout)
    close (iunout2)
 case default
-   call fatalerr ('outrume','Illegal task value')
+   call fatalerr_collected ('outrume','Illegal task value')
 end select
 
 end subroutine outrume
 
 subroutine csv_write (iTask)
+use error_mod, only: fatalerr_collected
 ! Routine designed for CSV output of user-selected vaiables (provided matchig defined variables in this routine).
 ! Currently only valid for time-dependent, single variables.
 ! Contains help routines: do_write_csv; check_list; remove_sqbr; det_node; Make_Header
@@ -4201,7 +4231,7 @@ case (3)
 
 case default
 
-   call fatalerr ('csv_write','Illegal iTask value; range allowed: [1-3]')
+   call fatalerr_collected ('csv_write','Illegal iTask value; range allowed: [1-3]')
 
 end select
 
@@ -4225,6 +4255,7 @@ end if
 end subroutine do_write_csv
 
 subroutine check_list ()
+use error_mod, only: fatalerr_collected
 implicit none
 
 integer :: i, j
@@ -4239,13 +4270,13 @@ do i = 1, Nvars
       isthere = trim(ListVars(i)) == trim(Allowed(j))
       if (isthere) then
          iCSV(j) = 1    ! indicator for Yes/No for writing
-         if (iPOS(j) > 0) call fatalerr ('check_list', 'Double entries in inList_csv are not allowed')
+         if (iPOS(j) > 0) call fatalerr_collected ('check_list', 'Double entries in inList_csv are not allowed')
          iPOS(j) = i    ! help vector to be used later for sorting
          exit
       end if
    end do
    ! error if not there; or should we write a warning?
-   if (.not. isthere) call fatalerr ('check_list','Illegal variable name in inList_csv for write_csv output')
+   if (.not. isthere) call fatalerr_collected ('check_list','Illegal variable name in inList_csv for write_csv output')
 end do
 
 end subroutine check_list
@@ -4287,6 +4318,7 @@ InList_csv = trim(temp)
 end subroutine sort_list
 
 subroutine remove_sqbr (Inlist_csv, InList_csv_x)
+use error_mod, only: fatalerr_collected
 implicit none
 ! global
 character(len=*), intent(in)  :: Inlist_csv
@@ -4307,11 +4339,11 @@ if (ipos1 == 0 .AND. ipos2 == 0) then
    return
 else
    if (ipos2 < ipos1 .OR. (ipos2 > 0 .AND. ipos1 == 0)) then
-      call fatalerr ('remove_sqbr','Found ] before [')
+      call fatalerr_collected ('remove_sqbr','Found ] before [')
    else if (index(InList_csv_x(ipos1:ipos2),"H") > 0 .OR. index(InList_csv_x(ipos1:ipos2),"WC") > 0 .OR. index(InList_csv_x(ipos1:ipos2),"TEMP") > 0 .OR.   &
             index(InList_csv_x(ipos1:ipos2),"K") > 0 .OR. index(InList_csv_x(ipos1:ipos2),"CONC") > 0 .OR. index(InList_csv_x(ipos1:ipos2),"CONCADS") > 0 .OR. &
             index(InList_csv_x(ipos1:ipos2),"O2TOP") > 0) then
-      call fatalerr ('remove_sqbr','Possible mismatch in arranging information between [ and ]')
+      call fatalerr_collected ('remove_sqbr','Possible mismatch in arranging information between [ and ]')
    else
       if (Inlist_csv_x(ipos1-1:ipos1-1) == 'H') then
          H_list = Inlist_csv_x(ipos1+1:ipos2-1)
@@ -4335,7 +4367,7 @@ else
          O2_list = Inlist_csv_x(ipos1+1:ipos2-1)
          call det_node (O2_list, Nodes_O2TOP, Mnodes, NumNodes_O2TOP, Str_nodes_O2TOP)
       else
-         call fatalerr ('remove_sqbr','Found [] with illegal preceding variable name')
+         call fatalerr_collected ('remove_sqbr','Found [] with illegal preceding variable name')
       end if
 
       Inlist_csv_x(ipos1:ipos2) = " "
@@ -4346,6 +4378,7 @@ end if
 end subroutine remove_sqbr
 
 subroutine det_node (String, Nodes, Mnodes, NumNodes, Str_nodes)
+use error_mod, only: fatalerr_collected
 use variables, only: numnod, zbotcp
 implicit none
 ! global
@@ -4360,10 +4393,10 @@ integer, dimension(ilw) :: iw1, iw2
 integer :: ifnd, i
 real, dimension(ilw) :: dum
 
-if (Mnodes > ilw) call fatalerr ('det_node', 'Mnodes > ilw')
+if (Mnodes > ilw) call fatalerr_collected ('det_node', 'Mnodes > ilw')
 
 call words (String, ilw, ', ', iw1, iw2, ifnd)
-if (ifnd > Mnodes) call fatalerr ('det_node', 'No more than Mnodes allowed for nodal output')
+if (ifnd > Mnodes) call fatalerr_collected ('det_node', 'No more than Mnodes allowed for nodal output')
 NumNodes = ifnd
 Nodes = 0
 dum = 0.0
@@ -4377,12 +4410,12 @@ do i = 1, NumNodes
    end if
 end do
 
-if (minval(dum(1:NumNodes))*maxval(dum(1:NumNodes)) < 0) call fatalerr ('det_node', 'All entries between [] must be either >0 or <0; not mixed')
+if (minval(dum(1:NumNodes))*maxval(dum(1:NumNodes)) < 0) call fatalerr_collected ('det_node', 'All entries between [] must be either >0 or <0; not mixed')
 
 do i = 1, NumNodes
    if (dum(i) > 0) then
       Nodes(i) = nint(dum(i))    ! any floating point positive number is rounded to nearest integer; no warning/error
-      if (Nodes(i) > numnod) call fatalerr ('det_node', 'Entry between [] cannot exceed numnod')
+      if (Nodes(i) > numnod) call fatalerr_collected ('det_node', 'Entry between [] cannot exceed numnod')
    else
       do j = 1, numnod
          if (dum(i) > zbotcp(j)) then
@@ -4519,6 +4552,7 @@ end subroutine Make_Header
 end subroutine csv_write
 
 subroutine csv_write_tz (iTask)
+use error_mod, only: fatalerr_collected
 ! Routine designed for CSV output of user-selected vaiables (provided matching defined variables in this routine).
 ! Specifically for selected time-depth variables
 ! Contains help routines: do_write_csv; check_list; remove_sqbr; det_node; Make_Header
@@ -4648,7 +4682,7 @@ case (3)
 
 case default
 
-    call fatalerr ('csv_write_tz','Illegal iTask value; range allowed: [1-3]')
+    call fatalerr_collected ('csv_write_tz','Illegal iTask value; range allowed: [1-3]')
 
 end select
 
@@ -4665,6 +4699,7 @@ write (iuncsv,form_rea_E,advance='no') comma, real(var)
 end subroutine do_write_csv_tz
 
 subroutine check_list_tz ()
+use error_mod, only: fatalerr_collected
 implicit none
 
 integer :: i, j
@@ -4678,13 +4713,13 @@ do i = 1, Nvars
       isthere = trim(ListVars(i)) == trim(Allowed(j))
       if (isthere) then
          iCSV(j) = 1    ! indicator for Yes/No for writing
-         if (iPOS(j) > 0) call fatalerr ('check_list_tz', 'Double entries in inList_csv_tz are not allowed')
+         if (iPOS(j) > 0) call fatalerr_collected ('check_list_tz', 'Double entries in inList_csv_tz are not allowed')
          iPOS(j) = i    ! help vector to be used later for sorting
          exit
       end if
    end do
    ! error if not there; or should we write a warning?
-   if (.not. isthere) call fatalerr ('check_list_tz','Illegal variable name in inList_csv_tz for write_csv output')
+   if (.not. isthere) call fatalerr_collected ('check_list_tz','Illegal variable name in inList_csv_tz for write_csv output')
 end do
 end subroutine check_list_tz
 

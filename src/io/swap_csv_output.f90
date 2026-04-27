@@ -1,5 +1,6 @@
 module SWAP_csv_output
 
+   use error_mod, only: fatalerr_collected
    use variables, only: igsnow,igird,iintc,irunon,iruno,ipeva,ievap,iqdra,iqbot,                                                 &
                         gwl,pond,iptra,iqrot,iqreddry,iqredwet,iqredsol,iqredfrs,tsum,dvs,pgasspot,pgass,                        &
                         cwdmpot,cwdm,wsopot,wso,wlvpot,wlv,wstpot,wst,wrtpot,wrt,dwso,dwlv,dwlvpot,dwst,dwstpot,dwrt,dwrtpot,    &
@@ -414,7 +415,7 @@ module SWAP_csv_output
       close (unit=iuncsv)
 
    case default
-      call fatalerr("csv_out","Illegal iTask")
+      call fatalerr_collected("csv_out","Illegal iTask")
 
    end select
 
@@ -662,7 +663,7 @@ module SWAP_csv_output
    call words (str, ilw, semicolon, iwbeg, iwend, ifnd)
    if (.not. isSUB) then
       ! refers to specific nodes
-      if (ifnd > Mnodes) call fatalerr("handle_sqr_brackets", "Too many nodes between [] input")
+      if (ifnd > Mnodes) call fatalerr_collected("handle_sqr_brackets", "Too many nodes between [] input")
       vars%Nnodes(j) = ifnd
       do k = 1, ifnd
          call decrea (iwar, str(iwbeg(k):iwend(k)), rv)
@@ -673,12 +674,12 @@ module SWAP_csv_output
       call my_piksrt(ifnd, vars%nodes(1:ifnd,j), vars%head(1:ifnd,j))
    else
       ! refers to sub parts of soil column
-      if (ifnd > Mnodes/2) call fatalerr("handle_sqr_brackets", "Too many subregions between [] input")
+      if (ifnd > Mnodes/2) call fatalerr_collected("handle_sqr_brackets", "Too many subregions between [] input")
       vars%Nnodes(j) = ifnd
       ktel = 0
       do k = 1, ifnd
          substr = trim(str(iwbeg(k):iwend(k)))
-         ipos3 = index(substr, colon); if (ipos3 == 0) call fatalerr("handle_sqr_brackets", "Expecting : in subregions []")
+         ipos3 = index(substr, colon); if (ipos3 == 0) call fatalerr_collected("handle_sqr_brackets", "Expecting : in subregions []")
          call decrea (iwar, substr(1:(ipos3-1)), rv)
          ktel = ktel + 1
          ! to do: if rv < 0; then determine nodenumber at given depth
@@ -714,7 +715,7 @@ module SWAP_csv_output
    ipos1 = index(trim(InList(ipos2:)), "[") + (ipos2-1)
    if (ipos1 > ipos2) then
       ipos2 = index(trim(InList(ipos1:)),"]") + (ipos1-1)
-      if (ipos2 == 0) call fatalerr("make_userlist","Unmatched []")
+      if (ipos2 == 0) call fatalerr_collected("make_userlist","Unmatched []")
       do i = ipos1+1,ipos2-1
          if (InList(i:i) == ",") InList(i:i) = ";"
       end do
@@ -820,7 +821,7 @@ module SWAP_csv_output
    call words(trim(InList), ilw, ",", iwbeg, iwend, nlist)
    do i = 1, nlist
       userlist(i) = trim(adjustl(InList(iwbeg(i):iwend(i))))
-      if (.not. STRinARSTR(userlist(i), vars%name, M)) call fatalerr ("csv_write", "Item in userlist not known in vars%name")
+      if (.not. STRinARSTR(userlist(i), vars%name, M)) call fatalerr_collected ("csv_write", "Item in userlist not known in vars%name")
    end do
 
    end subroutine make_userlist
@@ -915,14 +916,14 @@ module SWAP_csv_output
       i = 1
       do while (real(zbotcp(i)) .gt. (depth + 1.0d-5))
          i = i + 1
-         if (i > numnod) call fatalerr("nodenumber", "Depth > zbotcp(numnod)")
+         if (i > numnod) call fatalerr_collected("nodenumber", "Depth > zbotcp(numnod)")
       end do
       nodenumber = i
    else
       i = 1
       do while (real(ztopcp(i)) .gt. (depth + 1.0d-5))
          i = i + 1
-         if (i > numnod) call fatalerr("nodenumber", "Depth > ztopcp(numnod)")
+         if (i > numnod) call fatalerr_collected("nodenumber", "Depth > ztopcp(numnod)")
       end do
       nodenumber = i
    end if
@@ -933,6 +934,7 @@ end module SWAP_csv_output
 
 module SWAP_csv_output_tz
 
+use error_mod, only: fatalerr_collected
 private
 public :: csv_out_tz
 
@@ -1102,7 +1104,7 @@ case (3)
 
 case default
 
-    call fatalerr ('csv_write_tz','Illegal iTask value; range allowed: [1-3]')
+    call fatalerr_collected ('csv_write_tz','Illegal iTask value; range allowed: [1-3]')
 
 end select
 
@@ -1132,13 +1134,13 @@ do i = 1, Nvars
       isthere = trim(ListVars(i)) == trim(Allowed(j))
       if (isthere) then
          iCSV(j) = 1    ! indicator for Yes/No for writing
-         if (iPOS(j) > 0) call fatalerr ('check_list_tz', 'Double entries in inList_csv_tz are not allowed')
+         if (iPOS(j) > 0) call fatalerr_collected ('check_list_tz', 'Double entries in inList_csv_tz are not allowed')
          iPOS(j) = i    ! help vector to be used later for sorting
          exit
       end if
    end do
    ! error if not there; or should we write a warning?
-   if (.not. isthere) call fatalerr ('check_list_tz','Illegal variable name in inList_csv_tz for write_csv output')
+   if (.not. isthere) call fatalerr_collected ('check_list_tz','Illegal variable name in inList_csv_tz for write_csv output')
 end do
 end subroutine check_list_tz
 

@@ -2,6 +2,7 @@
 !   $Id: macroporeoutput.f90 341 2017-09-29 18:12:25Z kroes006 $
 ! ----------------------------------------------------------------------
 module macroporeoutput_mod
+      use error_mod, only: fatalerr_collected
       implicit none
       private
       public :: MacroPoreOutput
@@ -92,7 +93,7 @@ module macroporeoutput_mod
       if (swbma .eq. 1) close (bma)
 
       case default
-         call fatalerr ('MacroporeOutput', 'Illegal value for TASK')
+         call fatalerr_collected ('MacroporeOutput', 'Illegal value for TASK')
       end select
 
       return
@@ -238,7 +239,7 @@ module macroporeoutput_mod
  47   format('Balance Deviation',t19,3f9.2,/,99('='),/)
   
       case default
-         call fatalerr ('OUTBMA', 'Illegal value for TASK')
+         call fatalerr_collected ('OUTBMA', 'Illegal value for TASK')
       end select
 
       return

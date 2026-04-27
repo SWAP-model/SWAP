@@ -8,6 +8,7 @@
 ! SUBROUTINE 1.
 ! ----------------------------------------------------------------------
       subroutine ReadMeteoYear
+      use error_mod, only: fatalerr_collected
 ! ----------------------------------------------------------------------
 !     Last modified      : March 2014
 !     Purpose            : read meteorological data of one calendar year
@@ -167,7 +168,7 @@
               call dtdpst ('year-month-day',tmeteo,datedum)           
               messag ='In meteo file '//trim(filnam)//' the date after '&
      &        //datedum//' is not correct! First adapt meteo file!'
-              call fatalerr ('meteo',messag)
+              call fatalerr_collected ('meteo',messag)
             endif
          end do
          
@@ -178,7 +179,7 @@
              messag ='In meteo file '//trim(filnam)//' temperatures'//  &
      &       ' must be input to calculate snow conditions (SWSNOW=1)'// &
      &       ' and/or frost conditions (SWFROST=1)! adapt meteo file.'
-             call fatalerr ('meteo',messag)
+             call fatalerr_collected ('meteo',messag)
            endif
          enddo
 ! --- realistic air temperatures are required when soil temp. is simulated 
@@ -189,7 +190,7 @@
 !            messag ='In meteo file realistic temperatures are '//
 !     &        ' required for simulation of temperature profiles (SWHEA=1) using'//
 !     &        'num.model (SWCALT=2)!  Adapt meteo data! '
-!            call fatalerr ('meteo',messag)
+!            call fatalerr_collected ('meteo',messag)
 !        endif
 !      endif
 
@@ -202,7 +203,7 @@
  1001           format(' In meteo file ',a,';  month =',i3,';  day =',  &
      &             i3,'; SwRain= 2      ',                              &
      &             ' Rain and Wet donot correspond.  Adapt meteo data!')
-               call fatalerr ('ReadMeteoYear',messag)
+               call fatalerr_collected ('ReadMeteoYear',messag)
               endif  
             enddo
          endif
@@ -260,6 +261,7 @@
 ! SUBROUTINE 2.
 ! ----------------------------------------------------------------------
       subroutine ReadRainEvents()
+      use error_mod, only: fatalerr_collected
 ! ----------------------------------------------------------------------
 !     Last modified      : February 2014
 !     Purpose            : read rainfall data (events) of one calendar year 
@@ -364,7 +366,7 @@
      &        ' time of its preceding rainrecord! Adapt rain file.'//   &
      &        '      Month: '//chmonth//'; Day: '//chday//'; Time: '//  &
      &        chtime//'!'
-            call fatalerr ('ReadRain',messag)
+            call fatalerr_collected ('ReadRain',messag)
          endif
       enddo
 
@@ -372,6 +374,7 @@
       end subroutine ReadRainEvents
       
 subroutine MeteoInOneFile (iTask, ifnd)
+use error_mod, only: fatalerr_collected
 use variables, only: arad, atmn, atmx, ahum, awin, arai, aetr, wet, station, ad, am, mayrs, maday, &
                      yearmeteo, tstart, tend, metfil, logf, pathatm
 implicit none
@@ -436,7 +439,7 @@ case (1)
             end if
          end do
          call lowerc (header)
-         if (trim(header) /= 'station,dd,mm,yyyy,rad,tmin,tmax,hum,wind,rain,etref,wet') call fatalerr ('MeteoInOneFile', 'Wrong header line in metfil.met')
+         if (trim(header) /= 'station,dd,mm,yyyy,rad,tmin,tmax,hum,wind,rain,etref,wet') call fatalerr_collected ('MeteoInOneFile', 'Wrong header line in metfil.met')
          Nall = 1
          do
             read (iunall,*,end=2,err=1) all_station(Nall), all_dd(Nall), all_mm(Nall), all_yyyy(Nall),   &
@@ -446,7 +449,7 @@ case (1)
          end do
 1        continue
          ! hopefully we never get here
-         call fatalerr ('MeteoInOneFile', 'reading error metfil.met')
+         call fatalerr_collected ('MeteoInOneFile', 'reading error metfil.met')
 2        continue
          Nall = Nall - 1
       close (iunall)
@@ -458,7 +461,7 @@ case (1)
    call DTARDP (datea, fsec, wstart)
    datea(1) = all_yyyy(Nall); datea(2) = all_mm(Nall); datea(3) = all_dd(Nall)
    call DTARDP (datea, fsec, wend)
-   if (wstart > tstart .or. wend < tend) call fatalerr ('MeteoInOneFile', 'wstart > tstart .or. wend < tend')
+   if (wstart > tstart .or. wend < tend) call fatalerr_collected ('MeteoInOneFile', 'wstart > tstart .or. wend < tend')
    
    ! no check on daily step-size in time records nor on data in ascending times
    continue
@@ -517,7 +520,7 @@ case (2)
    ifnd = i2-i1+1
 
 case default
-   call fatalerr ('MeteoInOneFile', 'Illegal value for iTask')
+   call fatalerr_collected ('MeteoInOneFile', 'Illegal value for iTask')
 end select
 
 return
