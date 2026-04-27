@@ -6,6 +6,7 @@ module cropgrass_config_mod
    use error_mod, only: error_collection_t, ERR_VALIDATION_OUT_OF_RANGE
    use validation_mod, only: check_int_enum, check_int_range, check_real_range, &
                              check_nonnegative_real, check_ordered_pair
+   use irrigation_config_mod, only: irrigation_schedule_t
    implicit none
    private
 
@@ -61,6 +62,9 @@ module cropgrass_config_mod
       integer :: swgraz = 0                     !! 0=no grazing, 1=scheduled
       real(real64) :: nstart_graz = 0.0_real64  !! Start day-of-year
       real(real64) :: nstop_graz  = 0.0_real64  !! Stop day-of-year
+
+      ! Per-crop irrigation schedule (Phase 4d Task 12)
+      type(irrigation_schedule_t) :: schedule
    contains
       procedure :: validate => cropgrass_config_validate
       procedure :: finalize => cropgrass_config_finalize
@@ -89,11 +93,14 @@ contains
       if (self%swharv == 1) then
          call check_int_range(self%nmow, 1, 50, 'cropgrass.nmow', errors)
       end if
+
+      call self%schedule%validate(errors)
    end subroutine cropgrass_config_validate
 
    subroutine cropgrass_config_finalize(self, errors)
       class(cropgrass_config_t), intent(inout) :: self
       type(error_collection_t),  intent(inout) :: errors
+      call self%schedule%finalize(errors)
    end subroutine cropgrass_config_finalize
 
 end module cropgrass_config_mod

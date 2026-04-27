@@ -10,6 +10,7 @@ module read_cropgrass_toml_mod
    use toml_field_helpers_mod, only: get_table,                    &
                                      get_optional_int_with_default, &
                                      get_optional_real_with_default
+   use read_irrigation_toml_mod, only: read_irrigation_schedule_from_section
    use error_mod, only: error_collection_t
    implicit none
    private
@@ -23,7 +24,7 @@ contains
       type(cropgrass_config_t),   intent(inout) :: config
       type(error_collection_t),   intent(inout) :: errors
 
-      type(toml_table), pointer :: ph, light, root, ws, salt, inter, mow, graz
+      type(toml_table), pointer :: ph, light, root, ws, salt, inter, mow, graz, irr_sched
 
       call get_table(doc, 'phenology', ph, 'phenology', errors)
       if (associated(ph)) then
@@ -85,6 +86,9 @@ contains
          call get_optional_real_with_default(graz, 'nstart_graz', config%nstart_graz, 0.0_real64, 'grazing.nstart_graz', errors)
          call get_optional_real_with_default(graz, 'nstop_graz',  config%nstop_graz,  0.0_real64, 'grazing.nstop_graz',  errors)
       end if
+
+      call get_table(doc, 'irrigation_schedule', irr_sched, 'irrigation_schedule', errors)
+      call read_irrigation_schedule_from_section(irr_sched, config%schedule, errors)
    end subroutine read_cropgrass_toml
 
 end module read_cropgrass_toml_mod

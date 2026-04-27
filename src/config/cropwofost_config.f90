@@ -6,6 +6,7 @@ module cropwofost_config_mod
    use error_mod, only: error_collection_t, ERR_VALIDATION_OUT_OF_RANGE
    use validation_mod, only: check_int_enum, check_int_range, check_real_range, &
                              check_nonnegative_real, check_ordered_pair
+   use irrigation_config_mod, only: irrigation_schedule_t
    implicit none
    private
 
@@ -365,6 +366,7 @@ module cropwofost_config_mod
       type(wofost_interception_t)    :: interception
       type(wofost_co2_t)             :: co2
       type(wofost_management_t)      :: management
+      type(irrigation_schedule_t)    :: schedule
    contains
       procedure :: validate => cropwofost_config_validate
       procedure :: finalize => cropwofost_config_finalize
@@ -704,6 +706,7 @@ contains
       call self%interception%validate(errors)
       call self%co2%validate(errors)
       call self%management%validate(errors)
+      call self%schedule%validate(errors)
    end subroutine cropwofost_config_validate
 
    subroutine wofost_preparation_finalize(self, errors)
@@ -857,6 +860,7 @@ contains
       call self%interception%finalize(errors)
       call self%co2%finalize(errors)
       call self%management%finalize(errors)
+      call self%schedule%finalize(errors)
    end subroutine cropwofost_config_finalize
 
 end module cropwofost_config_mod

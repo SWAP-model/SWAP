@@ -62,3 +62,21 @@ subroutine test_load_swap_config_dispatches_heat()
    @assertFalse(errors%has_errors())
    @assertEqual(1, config%heat%swhea)
 end subroutine
+
+@test
+subroutine test_load_swap_config_dispatches_irrigation()
+   ! Phase 4d Task 12: confirm load_swap_config calls read_irrigation_toml
+   ! and populates config%irrigation from an [irrigation] section.
+   use funit
+   use swap_config_mod
+   use load_swap_config_mod
+   use error_mod
+   type(swap_config_t)      :: config
+   type(error_collection_t) :: errors
+
+   call load_swap_config('tests/unit/io/toml/fixtures/swap_with_irrigation.toml', &
+                         config, errors)
+
+   @assertFalse(errors%has_errors())
+   @assertEqual(1, config%irrigation%swirfix)
+end subroutine

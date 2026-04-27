@@ -13,6 +13,7 @@ module read_cropwofost_toml_mod
                                      get_optional_int_with_default,     &
                                      get_optional_real_with_default,    &
                                      get_optional_string_with_default
+   use read_irrigation_toml_mod, only: read_irrigation_schedule_from_section
    use error_mod, only: error_collection_t, ERR_PARSE_TYPE_MISMATCH
    implicit none
    private
@@ -28,7 +29,8 @@ contains
 
       type(toml_table), pointer :: prep, sow, germ, harv, cf, ph, init, ga,  &
                                    asm, conv, resp, part, deth, root, oxy,    &
-                                   drou, salt, comp, inter, co2t, mgmt
+                                   drou, salt, comp, inter, co2t, mgmt,       &
+                                   irr_sched
 
       call get_table(doc_root, 'preparation', prep, 'preparation', errors)
       if (associated(prep)) then
@@ -232,6 +234,9 @@ contains
          call get_optional_int_with_default(mgmt,  'swpotrelmf',          config%management%swpotrelmf,          0,          'management.swpotrelmf',          errors)
          call get_optional_real_with_default(mgmt, 'relmf',               config%management%relmf,               0.0_real64, 'management.relmf',               errors)
       end if
+
+      call get_table(doc_root, 'irrigation_schedule', irr_sched, 'irrigation_schedule', errors)
+      call read_irrigation_schedule_from_section(irr_sched, config%schedule, errors)
    end subroutine read_cropwofost_toml
 
    !> Decode a TOML array-of-arrays at sec[key] into a (nrows, ncols)

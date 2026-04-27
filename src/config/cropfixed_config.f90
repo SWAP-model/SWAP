@@ -7,6 +7,7 @@ module cropfixed_config_mod
    use error_mod, only: error_collection_t, ERR_VALIDATION_OUT_OF_RANGE
    use validation_mod, only: check_int_enum, check_int_range, check_real_range, &
                              check_nonnegative_real, check_ordered_pair
+   use irrigation_config_mod, only: irrigation_schedule_t
    implicit none
    private
 
@@ -49,6 +50,9 @@ module cropfixed_config_mod
 
       ! Interception
       real(real64) :: cofab = 0.0_real64
+
+      ! Per-crop irrigation schedule (Phase 4d Task 12)
+      type(irrigation_schedule_t) :: schedule
    contains
       procedure :: validate => cropfixed_config_validate
       procedure :: finalize => cropfixed_config_finalize
@@ -76,12 +80,14 @@ contains
 
       call check_nonnegative_real(self%ecmax,  'cropfixed.ecmax',  errors)
       call check_nonnegative_real(self%ecslop, 'cropfixed.ecslop', errors)
+
+      call self%schedule%validate(errors)
    end subroutine cropfixed_config_validate
 
    subroutine cropfixed_config_finalize(self, errors)
       class(cropfixed_config_t), intent(inout) :: self
       type(error_collection_t),  intent(inout) :: errors
-      ! No derived fields in 4c-a.
+      call self%schedule%finalize(errors)
    end subroutine cropfixed_config_finalize
 
 end module cropfixed_config_mod
