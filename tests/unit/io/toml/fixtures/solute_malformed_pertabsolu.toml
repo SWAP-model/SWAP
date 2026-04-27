@@ -1,0 +1,5 @@
+[solute]
+swsolu = 1
+pertabsolu = [
+  [-30.0, 0.001, 99.0],
+]

@@ -1,0 +1,93 @@
+@test
+subroutine test_solute_swsolu_zero_skips_validation()
+   ! Phase 4d Task 13: swsolu=0 is the "section absent" sentinel. Validator
+   ! short-circuits to keep existing case TOMLs loading clean. Mirrors the
+   ! bottom_boundary swbotb=0 / heat swhea=0 / irrigation swirfix=0 sentinels.
+   use funit
+   use error_mod
+   use solute_config_mod
+   type(solute_config_t)    :: c
+   type(error_collection_t) :: errors
+   c%swsolu = 0
+   call c%validate(errors)
+   @assertFalse(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_solute_happy_path_case5()
+   ! Mirrors case 5 (salinitystress) values from the audit doc:
+   ! cdrain=1.051, cseep=15.574, tscf=0.5.
+   use funit
+   use error_mod
+   use iso_fortran_env, only: real64
+   use solute_config_mod
+   type(solute_config_t)    :: c
+   type(error_collection_t) :: errors
+   c%swsolu  = 1
+   c%swbotbc = 1
+   c%cdrain  = 1.051_real64
+   c%cseep   = 15.574_real64
+   c%tscf    = 0.5_real64
+   c%ldis    = 5.0_real64
+   c%rtheta  = 0.05_real64
+   c%bexp    = 0.7_real64
+   c%ecmax   = 0.0_real64
+   c%ecslop  = 0.0_real64
+   c%swsoltyp = 0
+   c%swdc     = 0
+   call c%validate(errors)
+   @assertFalse(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_solute_swsolu_invalid_value_fails()
+   use funit
+   use error_mod
+   use solute_config_mod
+   type(solute_config_t)    :: c
+   type(error_collection_t) :: errors
+   c%swsolu = 7
+   call c%validate(errors)
+   @assertTrue(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_solute_cdrain_out_of_range_fails()
+   use funit
+   use error_mod
+   use iso_fortran_env, only: real64
+   use solute_config_mod
+   type(solute_config_t)    :: c
+   type(error_collection_t) :: errors
+   c%swsolu = 1
+   c%cdrain = 1.0e6_real64   ! legacy max is 100.0
+   call c%validate(errors)
+   @assertTrue(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_solute_pertabsolu_wrong_ncols_fails()
+   use funit
+   use error_mod
+   use iso_fortran_env, only: real64
+   use solute_config_mod
+   type(solute_config_t)    :: c
+   type(error_collection_t) :: errors
+   c%swsolu = 1
+   allocate(c%pertabsolu(2, 3))   ! 3 cols, expected 2
+   c%pertabsolu = 0.0_real64
+   call c%validate(errors)
+   @assertTrue(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_solute_finalize_no_errors()
+   use funit
+   use error_mod
+   use solute_config_mod
+   type(solute_config_t)    :: c
+   type(error_collection_t) :: errors
+   c%swsolu = 1
+   call c%finalize(errors)
+   @assertFalse(errors%has_errors())
+end subroutine

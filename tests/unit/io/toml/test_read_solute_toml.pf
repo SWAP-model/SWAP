@@ -1,0 +1,136 @@
+@test
+subroutine test_read_solute_swsolu0_happy()
+   use funit
+   use tomlf, only: toml_table, toml_load
+   use solute_config_mod
+   use read_solute_toml_mod
+   use error_mod
+   type(toml_table), allocatable, target :: doc
+   type(toml_table), pointer             :: doc_ptr
+   type(solute_config_t)                 :: c
+   type(error_collection_t)              :: errors
+
+   call toml_load(doc, 'tests/unit/io/toml/fixtures/solute_swsolu0.toml')
+   doc_ptr => doc
+   call read_solute_toml(doc_ptr, c, errors)
+
+   @assertFalse(errors%has_errors())
+   @assertEqual(0, c%swsolu)
+   @assertFalse(allocated(c%pertabsolu))
+
+   ! Validator agrees: SWSOLU=0 short-circuits cleanly.
+   call c%validate(errors)
+   @assertFalse(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_read_solute_swsolu1_happy()
+   ! Mirrors case 5 (salinitystress) values from the Phase 4d audit:
+   ! cdrain=1.051, cseep=15.574, tscf=0.5, ldis=5.0.
+   use funit
+   use tomlf, only: toml_table, toml_load
+   use solute_config_mod
+   use read_solute_toml_mod
+   use error_mod
+   type(toml_table), allocatable, target :: doc
+   type(toml_table), pointer             :: doc_ptr
+   type(solute_config_t)                 :: c
+   type(error_collection_t)              :: errors
+
+   call toml_load(doc, 'tests/unit/io/toml/fixtures/solute_swsolu1.toml')
+   doc_ptr => doc
+   call read_solute_toml(doc_ptr, c, errors)
+
+   @assertFalse(errors%has_errors())
+   @assertEqual(1, c%swsolu)
+   @assertEqual(1, c%swbotbc)
+   @assertEqual( 1.051d0, c%cdrain, 1.0d-12)
+   @assertEqual(15.574d0, c%cseep,  1.0d-12)
+   @assertEqual( 0.5d0,   c%tscf,   1.0d-12)
+   @assertEqual( 5.0d0,   c%ldis,   1.0d-12)
+   @assertEqual( 0.05d0,  c%rtheta, 1.0d-12)
+   @assertEqual( 0.7d0,   c%bexp,   1.0d-12)
+   @assertEqual( 0.0d0,   c%ecmax,  1.0d-12)
+   @assertEqual( 0.0d0,   c%ecslop, 1.0d-12)
+   @assertEqual(0, c%swsoltyp)
+   @assertEqual(0, c%swdc)
+
+   @assertTrue(allocated(c%pertabsolu))
+   @assertEqual(2, size(c%pertabsolu, 1))
+   @assertEqual(2, size(c%pertabsolu, 2))
+   @assertEqual(-30.0d0,  c%pertabsolu(1, 1), 1.0d-12)
+   @assertEqual( 0.001d0, c%pertabsolu(1, 2), 1.0d-12)
+   @assertEqual(-60.0d0,  c%pertabsolu(2, 1), 1.0d-12)
+   @assertEqual( 0.0005d0, c%pertabsolu(2, 2), 1.0d-12)
+
+   ! Validator agrees on the populated payload.
+   call c%validate(errors)
+   @assertFalse(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_read_solute_missing_section_silent()
+   use funit
+   use tomlf, only: toml_table, toml_load
+   use solute_config_mod
+   use read_solute_toml_mod
+   use error_mod
+   type(toml_table), allocatable, target :: doc
+   type(toml_table), pointer             :: doc_ptr
+   type(solute_config_t)                 :: c
+   type(error_collection_t)              :: errors
+
+   call toml_load(doc, 'tests/unit/io/toml/fixtures/general_minimal.toml')
+   doc_ptr => doc
+   call read_solute_toml(doc_ptr, c, errors)
+
+   @assertFalse(errors%has_errors())
+   @assertEqual(0, c%swsolu)
+   @assertFalse(allocated(c%pertabsolu))
+end subroutine
+
+@test
+subroutine test_read_solute_malformed_pertabsolu()
+   use funit
+   use tomlf, only: toml_table, toml_load
+   use solute_config_mod
+   use read_solute_toml_mod
+   use error_mod
+   type(toml_table), allocatable, target :: doc
+   type(toml_table), pointer             :: doc_ptr
+   type(solute_config_t)                 :: c
+   type(error_collection_t)              :: errors
+
+   call toml_load(doc, 'tests/unit/io/toml/fixtures/solute_malformed_pertabsolu.toml')
+   doc_ptr => doc
+   call read_solute_toml(doc_ptr, c, errors)
+
+   @assertTrue(errors%has_errors())
+   @assertFalse(allocated(c%pertabsolu))
+end subroutine
+
+@test
+subroutine test_read_solute_swsolu1_minimal_reader_passes()
+   ! Reader is mechanical: it reads every key as optional with defaults.
+   ! When swsolu=1 is set but no other payload, the reader still succeeds
+   ! and the validator owns the required-ness checks (here all defaults
+   ! are within the legacy ranges, so validation also passes — required
+   ! fields are not yet flagged as such per spec D4).
+   use funit
+   use tomlf, only: toml_table, toml_load
+   use solute_config_mod
+   use read_solute_toml_mod
+   use error_mod
+   type(toml_table), allocatable, target :: doc
+   type(toml_table), pointer             :: doc_ptr
+   type(solute_config_t)                 :: c
+   type(error_collection_t)              :: errors
+
+   call toml_load(doc, 'tests/unit/io/toml/fixtures/solute_swsolu1_minimal.toml')
+   doc_ptr => doc
+   call read_solute_toml(doc_ptr, c, errors)
+
+   @assertFalse(errors%has_errors())
+   @assertEqual(1, c%swsolu)
+   @assertFalse(allocated(c%pertabsolu))
+end subroutine

@@ -1,0 +1,21 @@
+[solute]
+swsolu  = 1
+swbotbc = 1
+cdrain  = 1.051
+cseep   = 15.574
+tscf    = 0.5
+ldis    = 5.0
+
+rtheta  = 0.05
+bexp    = 0.7
+
+ecmax   = 0.0
+ecslop  = 0.0
+
+swsoltyp = 0
+swdc     = 0
+
+pertabsolu = [
+  [-30.0, 0.001],
+  [-60.0, 0.0005],
+]
