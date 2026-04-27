@@ -1,0 +1,22 @@
+[phenology]
+idev = 2
+tsum1 = 800.0
+tsum2 = 800.0
+
+[root]
+rdi = 5.0
+rri = 1.0
+rdc = 50.0
+
+[mowing]
+swharv = 0
+
+[grazing]
+swgraz = 1
+nstart_graz = 100
+nstop_graz = 270
+maxdaygrz = 7
+dmgrazing = 1500.0
+swdmgrz = 0
+tagprest = 800.0
+lsdb = [2.0, 2.0, 2.0]
