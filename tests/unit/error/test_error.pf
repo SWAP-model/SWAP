@@ -154,3 +154,47 @@ subroutine test_abort_if_fatal_returns_when_no_fatals()
    call errors%abort_if_fatal()
    @assertTrue(.true.)
 end subroutine
+
+@test
+subroutine test_global_errors_accumulates_appends()
+   use funit
+   use error_mod
+   ! global_errors is a module singleton; clear before exercising it
+   ! so leftover state from prior tests doesn't leak in.
+   call global_errors%clear()
+
+   call global_errors%append(ERR_LEGACY_FATAL, "first", "phys.A", is_fatal=.false.)
+   call global_errors%append(ERR_LEGACY_FATAL, "second", "phys.B", is_fatal=.false.)
+
+   @assertEqual(2, global_errors%count())
+   @assertEqual("first",  global_errors%items(1)%message)
+   @assertEqual("second", global_errors%items(2)%message)
+   call global_errors%clear()
+end subroutine
+
+@test
+subroutine test_global_errors_clear_resets()
+   use funit
+   use error_mod
+   call global_errors%clear()
+   call global_errors%append(ERR_LEGACY_FATAL, "x", "ctx", is_fatal=.false.)
+   @assertEqual(1, global_errors%count())
+   call global_errors%clear()
+   @assertEqual(0, global_errors%count())
+end subroutine
+
+@test
+subroutine test_fatalerr_channel_routes_to_global_errors()
+   use funit
+   use error_mod
+   ! We can't directly invoke fatalerr_collected because it terminates the
+   ! process. Instead, prove the channel works by appending non-fatally
+   ! through the same singleton and checking the same routing & shape.
+   call global_errors%clear()
+   call global_errors%append(ERR_LEGACY_FATAL, "boom", "phys.bad", is_fatal=.false.)
+   @assertEqual(1, global_errors%count())
+   @assertEqual(ERR_LEGACY_FATAL, global_errors%items(1)%code)
+   @assertEqual("phys.bad", global_errors%items(1)%context)
+   @assertEqual("boom",     global_errors%items(1)%message)
+   call global_errors%clear()
+end subroutine

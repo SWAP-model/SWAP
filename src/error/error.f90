@@ -24,6 +24,7 @@ module error_mod
    integer, parameter, public :: ERR_VALIDATION_CROSS_SECTION = 303
    integer, parameter, public :: ERR_FINALIZE_DERIVATION      = 400
    integer, parameter, public :: ERR_ADAPTER_UNSUPPORTED      = 500
+   integer, parameter, public :: ERR_LEGACY_FATAL             = 999
 
    type, public :: error_t
       integer                       :: code    = ERR_NONE
@@ -44,7 +45,26 @@ module error_mod
       procedure :: clear          => error_collection_clear
    end type error_collection_t
 
+   !> Module-level singleton — drop-in for legacy `fatalerr` calls deep
+   !! in physics paths where threading a per-call `errors` argument is
+   !! impractical. Top-level test setup may call `clear()` between runs.
+   type(error_collection_t), public, save :: global_errors
+
+   public :: fatalerr_collected
+
 contains
+
+   !> Drop-in replacement for legacy `call fatalerr(routine, msg)`.
+   !! Appends a fatal entry to `global_errors` then aborts. Used by
+   !! physics-path code where threading an explicit `errors` argument
+   !! through every caller would be invasive. I/O and configuration
+   !! code should still use the threaded-`errors` pattern instead.
+   subroutine fatalerr_collected(routine, message)
+      character(len=*), intent(in) :: routine
+      character(len=*), intent(in) :: message
+      call global_errors%append(ERR_LEGACY_FATAL, message, routine)
+      call global_errors%abort_if_fatal()
+   end subroutine fatalerr_collected
 
    !> Append an error to the collection and auto-log through swap_log.
    subroutine error_collection_append(self, code, message, context, is_fatal)
