@@ -11,7 +11,12 @@ subroutine test_bb_swbotb_out_of_range_fails()
 end subroutine
 
 @test
-subroutine test_bb_swbotb_zero_fails()
+subroutine test_bb_swbotb_zero_skips_validation()
+   ! Phase 4d Task 5: swbotb=0 is the "section absent" sentinel. The reader
+   ! leaves config at defaults when [bottom_boundary] is missing, so the
+   ! validator must short-circuit instead of flagging swbotb=0 as out-of-range.
+   ! Remove this no-op once Phase 4d Tasks 17-19 add [bottom_boundary] to
+   ! every per-case TOML and a missing section becomes an error.
    use funit
    use error_mod
    use bottom_boundary_config_mod
@@ -19,7 +24,7 @@ subroutine test_bb_swbotb_zero_fails()
    type(error_collection_t) :: errors
    c%swbotb = 0
    call c%validate(errors)
-   @assertTrue(errors%has_errors())
+   @assertFalse(errors%has_errors())
 end subroutine
 
 @test

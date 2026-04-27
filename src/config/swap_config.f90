@@ -6,6 +6,7 @@ module swap_config_mod
    use meteorology_config_mod,  only: meteorology_config_t
    use drainage_config_mod,     only: drainage_config_t
    use soil_config_mod,         only: soil_config_t
+   use bottom_boundary_config_mod, only: bottom_boundary_config_t
    use crop_config_mod,         only: crop_config_t
    implicit none
    private
@@ -18,6 +19,7 @@ module swap_config_mod
       type(meteorology_config_t) :: meteo
       type(drainage_config_t)    :: drain
       type(soil_config_t)        :: soil
+      type(bottom_boundary_config_t) :: bottom_boundary
       type(crop_config_t)        :: crop
    contains
       procedure :: validate => swap_config_validate
@@ -34,6 +36,7 @@ contains
       call self%meteo%validate(errors)
       call self%drain%validate(errors)
       call self%soil%validate(errors)
+      call self%bottom_boundary%validate(errors)
       call self%crop%validate(errors)
       ! Cross-section rules are added here as the parity test surfaces them.
    end subroutine swap_config_validate
@@ -47,6 +50,7 @@ contains
       call self%meteo%finalize(errors)
       call self%drain%finalize(errors)
       call self%soil%finalize(errors)
+      call self%bottom_boundary%finalize(errors)
       call self%crop%finalize(errors)
    end subroutine swap_config_finalize
 

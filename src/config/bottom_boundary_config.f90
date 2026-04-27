@@ -68,6 +68,13 @@ contains
       logical :: have_file, have_table
       integer :: i
 
+      ! Sentinel: swbotb=0 means the [bottom_boundary] section was absent in the
+      ! TOML (reader leaves config at defaults). Skip validation so existing case
+      ! TOMLs without the section still load clean — Phase 4d Tasks 17-19 will
+      ! add [bottom_boundary] sections to each per-case TOML, after which
+      ! swbotb will always be in [1..8] and full validation runs.
+      if (self%swbotb == 0) return
+
       call check_int_enum(self%swbotb, [(i, i=1, 8)], 'bottom_boundary.swbotb', errors)
 
       select case (self%swbotb)
