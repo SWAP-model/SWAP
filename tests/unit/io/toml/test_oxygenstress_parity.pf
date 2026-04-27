@@ -223,30 +223,31 @@ subroutine test_oxygenstress_crop_rotation_parity()
    end do
 end subroutine
 
-! Phase 4c-a Task 17: parity for the last type-3 (grassd) rotation entry.
-! readswap() populates only the top-level crop rotation metadata; per-crop
-! field globals (hlim*, rdi, rri, rdc) are set by readgrass() which is called
-! from cropgrowth.f90 during simulation, not by readswap().  Therefore we
-! compare the loaded grassd.crp.toml config against the known literal values
-! from grassd.crp rather than against variables module globals.
+! Phase 4c-b Task 14c: parity for the last type-3 (grassd) rotation entry of
+! case 4.oxygenstress. Drive readgrass directly via the legacy_crop_helper
+! bridge and cross-check `variables` globals against config%crop%rotation_grass.
 !
-! case 4 grassd.crp reference values (same as case 2 grassgrowth):
-!   HLIM1=0.0  HLIM2U=1.0  HLIM2L=-1.0  HLIM3H=-200.0  HLIM3L=-800.0
-!   HLIM4=-8000.0  RDI=10.0  RRI=1.0  RDC=40.0
+! Case 4 grassd.crp has SWRD=2 (same as case 2), so readgrass populates
+! rdi/rri/rdc as scalars. Note: case 4 has swdrought=2 (de Jong van Lier),
+! but the hlim1/2u/2l/3h/3l/4 fields are still all read by readgrass when
+! swoxygen=1, so the parity assertion still holds.
 @test
-subroutine test_oxygenstress_grass_data_hardcoded_parity()
+subroutine test_oxygenstress_grass_data_parity()
    use funit
+   use variables, only: &
+      hlim1, hlim2u, hlim2l, hlim3h, hlim3l, hlim4, rdi, rri, rdc
+   use legacy_crop_helper_mod, only: read_legacy_grass
    use swap_config_mod
    use load_swap_config_mod
    use chdir_helper_mod
    use parity_helpers_mod
    use error_mod
+   use iso_fortran_env, only: real64
    type(swap_config_t)      :: config
    type(error_collection_t) :: errors
    character(len=1024)      :: orig_cwd
    integer  :: i, n_rot, last_grass_idx
-   real(8)  :: c_hlim1, c_hlim2u, c_hlim2l, c_hlim3h, c_hlim3l, c_hlim4
-   real(8)  :: c_rdi, c_rri, c_rdc
+   integer, parameter :: ICROP_GRASSD = 10
 
    call get_cwd(orig_cwd)
    call chdir_to('tests/swap-cases/4.oxygenstress')
@@ -274,30 +275,24 @@ subroutine test_oxygenstress_grass_data_hardcoded_parity()
    @assertTrue(last_grass_idx > 0)
 
    ! Sanity check: all 10 rotation entries are type 3; last is index 10.
-   @assertEqual(10, last_grass_idx)
+   @assertEqual(ICROP_GRASSD, last_grass_idx)
 
-   ! Copy struct components into plain locals.
-   c_hlim1  = config%crop%rotation_grass(last_grass_idx)%hlim1
-   c_hlim2u = config%crop%rotation_grass(last_grass_idx)%hlim2u
-   c_hlim2l = config%crop%rotation_grass(last_grass_idx)%hlim2l
-   c_hlim3h = config%crop%rotation_grass(last_grass_idx)%hlim3h
-   c_hlim3l = config%crop%rotation_grass(last_grass_idx)%hlim3l
-   c_hlim4  = config%crop%rotation_grass(last_grass_idx)%hlim4
-   c_rdi    = config%crop%rotation_grass(last_grass_idx)%rdi
-   c_rri    = config%crop%rotation_grass(last_grass_idx)%rri
-   c_rdc    = config%crop%rotation_grass(last_grass_idx)%rdc
+   ! Drive the legacy readgrass from inside the case directory.
+   call get_cwd(orig_cwd)
+   call chdir_to('tests/swap-cases/4.oxygenstress')
+   call read_legacy_grass(ICROP_GRASSD, 'grassd')
+   call chdir_to(trim(orig_cwd))
 
-   ! Feddes water-stress parameters (literal values from grassd.crp).
-   @assertEqual(    0.0d0, c_hlim1,  1.0d-9)
-   @assertEqual(    1.0d0, c_hlim2u, 1.0d-9)
-   @assertEqual(   -1.0d0, c_hlim2l, 1.0d-9)
-   @assertEqual( -200.0d0, c_hlim3h, 1.0d-9)
-   @assertEqual( -800.0d0, c_hlim3l, 1.0d-9)
-   @assertEqual(-8000.0d0, c_hlim4,  1.0d-9)
+   ! Feddes water-stress parameters (swoxygen=1 → hlim1/2u/2l populated).
+   @assertEqual(hlim1,  config%crop%rotation_grass(ICROP_GRASSD)%hlim1,  1.0e-12_real64)
+   @assertEqual(hlim2u, config%crop%rotation_grass(ICROP_GRASSD)%hlim2u, 1.0e-12_real64)
+   @assertEqual(hlim2l, config%crop%rotation_grass(ICROP_GRASSD)%hlim2l, 1.0e-12_real64)
+   @assertEqual(hlim3h, config%crop%rotation_grass(ICROP_GRASSD)%hlim3h, 1.0e-12_real64)
+   @assertEqual(hlim3l, config%crop%rotation_grass(ICROP_GRASSD)%hlim3l, 1.0e-12_real64)
+   @assertEqual(hlim4,  config%crop%rotation_grass(ICROP_GRASSD)%hlim4,  1.0e-12_real64)
 
-   ! Root growth parameters (literal values from grassd.crp).
-   ! Note: case 4 has RDI=10.0, RRI=1.0, RDC=40.0 (same as case 2 grassgrowth).
-   @assertEqual(  10.0d0, c_rdi, 1.0d-9)
-   @assertEqual(   1.0d0, c_rri, 1.0d-9)
-   @assertEqual(  40.0d0, c_rdc, 1.0d-9)
+   ! Root growth (swrd=2 → rdi/rri/rdc populated).
+   @assertEqual(rdi, config%crop%rotation_grass(ICROP_GRASSD)%rdi, 1.0e-12_real64)
+   @assertEqual(rri, config%crop%rotation_grass(ICROP_GRASSD)%rri, 1.0e-12_real64)
+   @assertEqual(rdc, config%crop%rotation_grass(ICROP_GRASSD)%rdc, 1.0e-12_real64)
 end subroutine
