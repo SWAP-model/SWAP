@@ -8,6 +8,7 @@ module load_swap_config_mod
    use read_drainage_toml_mod,     only: read_drainage_toml
    use read_soil_toml_mod,         only: read_soil_toml
    use read_bottom_boundary_toml_mod, only: read_bottom_boundary_toml
+   use read_heat_toml_mod,         only: read_heat_toml
    use read_crop_toml_mod,         only: read_crop_toml
    use error_mod, only: error_collection_t, ERR_PARSE_MALFORMED_TOML
    implicit none
@@ -43,6 +44,7 @@ contains
       call read_drainage_toml   (doc_ptr, config%drain,      errors, base_path=base_dir)
       call read_soil_toml       (doc_ptr, config%soil,       errors)
       call read_bottom_boundary_toml(doc_ptr, config%bottom_boundary, errors)
+      call read_heat_toml       (doc_ptr, config%heat,       errors)
       call read_crop_toml       (doc_ptr, config%crop,       errors, base_path=base_dir)
    end subroutine load_swap_config
 
