@@ -18,11 +18,12 @@ module legacy_crop_helper_mod
    public :: read_legacy_grass
    public :: flatten_table
 
-   ! Explicit interface for the free subroutine `readwofost` exposed at
-   ! file scope by `src/io/readswap.f90`. gfortran does not require this
-   ! for an implicit-none caller as long as the linker resolves the
-   ! symbol, but declaring it here gives us argument-checking inside
-   ! `read_legacy_wofost`.
+   ! Explicit interfaces for the free subroutines `readwofost`,
+   ! `readcropfixed`, and `readgrass` exposed at file scope by
+   ! `src/io/readswap.f90`. gfortran does not require these for an
+   ! implicit-none caller as long as the linker resolves the symbol,
+   ! but declaring them here gives us argument-checking inside the
+   ! wrappers below.
    interface
       subroutine readwofost(icrop, crpfil, swhydrlift, swsoybean, mg, dvsi, &
                             dvrmax1, dvrmax2, flrfphotoveg, tmaxdvr, tmindvr, &
@@ -39,6 +40,35 @@ module legacy_crop_helper_mod
          logical,            intent(inout) :: flphenodayl
          real(8),            intent(inout) :: FraDeceasedLvToSoil
       end subroutine readwofost
+
+      subroutine readcropfixed(icrop, crpfil, lcc, swhydrlift)
+         integer,          intent(in)    :: icrop
+         character(len=*), intent(in)    :: crpfil
+         integer,          intent(inout) :: lcc
+         integer,          intent(in)    :: swhydrlift
+      end subroutine readcropfixed
+
+      subroutine readgrass(icrop, crpfil, swharvest, dmharvest, daylastharvest, &
+                           dmlastharvest, swdmmow, maxdaymow, swlossmow,        &
+                           swlossgrz, swdmgrz, maxdaygrz, dmgrazing, lsdb,      &
+                           tagprest, swhydrlift)
+         integer,          intent(in)    :: icrop
+         character(len=*), intent(in)    :: crpfil
+         integer,          intent(inout) :: swharvest
+         real(8),          intent(inout) :: dmharvest
+         integer,          intent(inout) :: daylastharvest
+         real(8),          intent(inout) :: dmlastharvest
+         integer,          intent(inout) :: swdmmow
+         integer,          intent(inout) :: maxdaymow
+         integer,          intent(inout) :: swlossmow
+         integer,          intent(inout) :: swlossgrz
+         integer,          intent(inout) :: swdmgrz
+         integer,          intent(inout) :: maxdaygrz
+         real(8),          intent(inout) :: dmgrazing
+         real(8),          intent(inout) :: lsdb(100)
+         real(8),          intent(inout) :: tagprest
+         integer,          intent(in)    :: swhydrlift
+      end subroutine readgrass
    end interface
 
 contains
@@ -79,22 +109,66 @@ contains
                       toptdvr, popt, pcrt, flphenodayl, FraDeceasedLvToSoil)
    end subroutine read_legacy_wofost
 
-   !> Phase 4c-b Task 7 stub. Body lands in Task 13 once the cropfixed
-   !! parity test is wired up.
+   !> Phase 4c-b Task 13: call legacy `readcropfixed` for rotation entry
+   !! `icrop` with crop file `crpfil` (basename, no .crp extension).
+   !! Side-effect populates the `variables%` globals enumerated in the
+   !! `use variables, only:` clause of `readcropfixed` itself (kdif, kdir,
+   !! hlim1..hlim4, gctb, cftb, rdctb, etc.). Local `lcc` absorbs the
+   !! length-of-cropping-cycle output and is discarded. `swhydrlift = 0`
+   !! is the conservative default used by hupselbrook/surfacewater cases.
    subroutine read_legacy_cropfixed(icrop, crpfil)
       integer,          intent(in) :: icrop
       character(len=*), intent(in) :: crpfil
-      ! TODO: Phase 4c-b Task 13 — call readcropfixed(icrop, crpfil, lcc, swhydrlift).
-      ! Suppress unused-argument warnings until Task 13 fills this in.
-      if (.false.) print *, icrop, crpfil
+
+      integer :: lcc
+      integer :: swhydrlift
+
+      lcc        = 0
+      swhydrlift = 0
+
+      call readcropfixed(icrop, crpfil, lcc, swhydrlift)
    end subroutine read_legacy_cropfixed
 
-   !> Phase 4c-b Task 7 stub. Body lands in Task 13.
+   !> Phase 4c-b Task 13: call legacy `readgrass` for rotation entry
+   !! `icrop` with crop file `crpfil` (basename, no .crp extension).
+   !! Side-effect populates the long list of `variables%` globals
+   !! enumerated in the `use variables, only:` clause of `readgrass`
+   !! (slatb, amaxtb, kdif, hlim1..hlim4, frtb, fltb, etc.). Local
+   !! variables here only exist to absorb the read's output arguments —
+   !! they are discarded on return. `swhydrlift = 0` is the conservative
+   !! default used by the grassgrowth case.
    subroutine read_legacy_grass(icrop, crpfil)
       integer,          intent(in) :: icrop
       character(len=*), intent(in) :: crpfil
-      ! TODO: Phase 4c-b Task 13 — call readgrass(icrop, crpfil, ...).
-      if (.false.) print *, icrop, crpfil
+
+      ! Inputs.
+      integer :: swhydrlift
+
+      ! Outputs absorbed and discarded. Types match readgrass's
+      ! declarations at src/io/readswap.f90:3470-3473.
+      integer :: swharvest, swdmmow, swlossmow, swlossgrz, swdmgrz
+      integer :: daylastharvest, maxdaymow, maxdaygrz
+      real(8) :: dmharvest, dmlastharvest, dmgrazing, tagprest
+      real(8) :: lsdb(100)
+
+      swhydrlift     = 0
+      swharvest      = 0
+      swdmmow        = 0
+      swlossmow      = 0
+      swlossgrz      = 0
+      swdmgrz        = 0
+      daylastharvest = 0
+      maxdaymow      = 0
+      maxdaygrz      = 0
+      dmharvest      = 0.0d0
+      dmlastharvest  = 0.0d0
+      dmgrazing      = 0.0d0
+      tagprest       = 0.0d0
+      lsdb           = 0.0d0
+
+      call readgrass(icrop, crpfil, swharvest, dmharvest, daylastharvest,    &
+                     dmlastharvest, swdmmow, maxdaymow, swlossmow, swlossgrz, &
+                     swdmgrz, maxdaygrz, dmgrazing, lsdb, tagprest, swhydrlift)
    end subroutine read_legacy_grass
 
    !> Flatten a 2-D (nrows, 2) table into a length-`max_size` flat array

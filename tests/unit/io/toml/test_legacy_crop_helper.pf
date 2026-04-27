@@ -76,3 +76,59 @@ subroutine test_read_legacy_wofost_populates_variables()
 
    call chdir_to(trim(orig_cwd))
 end subroutine test_read_legacy_wofost_populates_variables
+
+@test
+subroutine test_read_legacy_cropfixed_populates_variables()
+   use funit
+   use variables, only: kdif, logf
+   use chdir_helper_mod, only: chdir_to, get_cwd, stage_swp_template
+   use parity_helpers_mod, only: reset_for_next_readswap
+   use legacy_crop_helper_mod, only: read_legacy_cropfixed
+   character(len=1024) :: orig_cwd
+
+   call get_cwd(orig_cwd)
+   call chdir_to('tests/swap-cases/6.surfacewater')
+   call stage_swp_template('swap_linux.swp.template', 'swap')
+   call reset_for_next_readswap()
+   call readswap()
+   close(logf)
+
+   ! Rotation entry 1 == 'grass' (verified from
+   ! tests/swap-cases/6.surfacewater/swap_linux.swp.template CROPROTATION:
+   !   1: grass (CROPTYPE 1 = simple/fixed)).
+   call read_legacy_cropfixed(1, 'grass')
+
+   ! kdif is unconditionally read by readcropfixed (rdsdor 'kdif').
+   ! After the read it must be non-zero (the .crp sets KDIF = 0.75).
+   @assertTrue(kdif /= 0.0d0)
+
+   call chdir_to(trim(orig_cwd))
+end subroutine test_read_legacy_cropfixed_populates_variables
+
+@test
+subroutine test_read_legacy_grass_populates_variables()
+   use funit
+   use variables, only: kdif, logf
+   use chdir_helper_mod, only: chdir_to, get_cwd, stage_swp_template
+   use parity_helpers_mod, only: reset_for_next_readswap
+   use legacy_crop_helper_mod, only: read_legacy_grass
+   character(len=1024) :: orig_cwd
+
+   call get_cwd(orig_cwd)
+   call chdir_to('tests/swap-cases/2.grassgrowth')
+   call stage_swp_template('swap_linux.swp.template', 'swap')
+   call reset_for_next_readswap()
+   call readswap()
+   close(logf)
+
+   ! Rotation entry 1 == 'grassd' (verified from
+   ! tests/swap-cases/2.grassgrowth/swap_linux.swp.template CROPROTATION:
+   !   1: grassd (CROPTYPE 3 = WOFOST grass)).
+   call read_legacy_grass(1, 'grassd')
+
+   ! kdif is unconditionally read by readgrass (rdsdor 'kdif').
+   ! After the read it must be non-zero (the .crp sets KDIF = 0.60).
+   @assertTrue(kdif /= 0.0d0)
+
+   call chdir_to(trim(orig_cwd))
+end subroutine test_read_legacy_grass_populates_variables
