@@ -235,37 +235,34 @@ subroutine test_surfacewater_crop_rotation_parity()
    end do
 end subroutine
 
-! Phase 4c-a Task 18: parity for the last type-1 (grass.crp) rotation entry.
-! readswap() populates only the top-level crop rotation metadata; per-crop
-! field globals (hlim*, rdi, rri, rdc) are set by the per-crop reader during
-! simulation, not by readswap().  Therefore we compare the loaded grass.crp.toml
-! config against the known literal values from grass.crp rather than against
-! variables module globals.
+! Phase 4c-b Task 14d: parity for the last type-1 (grass.crp) rotation entry of
+! case 6.surfacewater. Drive readcropfixed directly via the legacy_crop_helper
+! bridge and cross-check `variables` globals against config%crop%rotation_fixed.
 !
-! case 6 grass.crp reference values (type 1 fixed simple grass):
-!   IDEV=1  LCC=366  KDIF=0.75  KDIR=0.75
-!   HLIM1=0.0  HLIM2U=0.0  HLIM2L=0.0  (SWOXYGEN=0: oxygen-stress hlim not active)
-!   HLIM3H=-200.0  HLIM3L=-800.0  HLIM4=-8000.0  ADCRH=0.5  ADCRL=0.1
-!   RDI=30.0  RRI=0.0  RDC=30.0  (SWRD=1, constant 30 cm from RDTB)
-!   COFAB=0.25
+! case 6 grass.crp switches: SWRD=1, SWOXYGEN=0, SWDROUGHT=1, SWINTER=1.
+! Per readcropfixed (readswap.f90 ~2037 onwards):
+!   - idev/lcc/kdif/kdir: always read.
+!   - hlim1/hlim2u/hlim2l: only read when SWOXYGEN=1 → NOT populated here.
+!   - hlim3h/hlim3l/hlim4/adcrh/adcrl: read for SWDROUGHT=1.
+!   - rdi/rri/rdc: only read when SWRD=2 → NOT populated here (SWRD=1 reads rdtb).
+!   - cofab: read for SWINTER=1.
 @test
-subroutine test_surfacewater_fixed_data_hardcoded_parity()
+subroutine test_surfacewater_fixed_data_parity()
    use funit
+   use variables, only: &
+      idev, kdif, kdir, hlim3h, hlim3l, hlim4, adcrh, adcrl, cofab
+   use legacy_crop_helper_mod, only: read_legacy_cropfixed
    use swap_config_mod
    use load_swap_config_mod
    use chdir_helper_mod
    use parity_helpers_mod
    use error_mod
+   use iso_fortran_env, only: real64
    type(swap_config_t)      :: config
    type(error_collection_t) :: errors
    character(len=1024)      :: orig_cwd
    integer  :: i, n_rot, last_fixed_idx
-   integer  :: c_idev, c_lcc
-   real(8)  :: c_kdif, c_kdir
-   real(8)  :: c_hlim1, c_hlim2u, c_hlim2l, c_hlim3h, c_hlim3l, c_hlim4
-   real(8)  :: c_adcrh, c_adcrl
-   real(8)  :: c_rdi, c_rri, c_rdc
-   real(8)  :: c_cofab
+   integer, parameter :: ICROP_GRASS = 3
 
    call get_cwd(orig_cwd)
    call chdir_to('tests/swap-cases/6.surfacewater')
@@ -293,51 +290,45 @@ subroutine test_surfacewater_fixed_data_hardcoded_parity()
    @assertTrue(last_fixed_idx > 0)
 
    ! Sanity check: all 3 rotation entries are type 1; last is index 3.
-   @assertEqual(3, last_fixed_idx)
+   @assertEqual(ICROP_GRASS, last_fixed_idx)
 
-   ! Copy struct components into plain locals.
-   c_idev   = config%crop%rotation_fixed(last_fixed_idx)%idev
-   c_lcc    = config%crop%rotation_fixed(last_fixed_idx)%lcc
-   c_kdif   = config%crop%rotation_fixed(last_fixed_idx)%kdif
-   c_kdir   = config%crop%rotation_fixed(last_fixed_idx)%kdir
-   c_hlim1  = config%crop%rotation_fixed(last_fixed_idx)%hlim1
-   c_hlim2u = config%crop%rotation_fixed(last_fixed_idx)%hlim2u
-   c_hlim2l = config%crop%rotation_fixed(last_fixed_idx)%hlim2l
-   c_hlim3h = config%crop%rotation_fixed(last_fixed_idx)%hlim3h
-   c_hlim3l = config%crop%rotation_fixed(last_fixed_idx)%hlim3l
-   c_hlim4  = config%crop%rotation_fixed(last_fixed_idx)%hlim4
-   c_adcrh  = config%crop%rotation_fixed(last_fixed_idx)%adcrh
-   c_adcrl  = config%crop%rotation_fixed(last_fixed_idx)%adcrl
-   c_rdi    = config%crop%rotation_fixed(last_fixed_idx)%rdi
-   c_rri    = config%crop%rotation_fixed(last_fixed_idx)%rri
-   c_rdc    = config%crop%rotation_fixed(last_fixed_idx)%rdc
-   c_cofab  = config%crop%rotation_fixed(last_fixed_idx)%cofab
+   ! Drive the legacy readcropfixed from inside the case directory.
+   call get_cwd(orig_cwd)
+   call chdir_to('tests/swap-cases/6.surfacewater')
+   call read_legacy_cropfixed(ICROP_GRASS, 'grass')
+   call chdir_to(trim(orig_cwd))
 
-   ! Phenology (literal values from grass.crp).
-   @assertEqual(1,   c_idev)
-   @assertEqual(366, c_lcc)
+   ! Phenology (lcc is a local in readcropfixed, not exposed via variables;
+   ! cross-check the literal LCC=366 from grass.crp).
+   @assertEqual(idev, config%crop%rotation_fixed(ICROP_GRASS)%idev)
+   @assertEqual(366,  config%crop%rotation_fixed(ICROP_GRASS)%lcc)
 
-   ! Light extinction (literal values from grass.crp).
-   @assertEqual(0.75d0, c_kdif, 1.0d-9)
-   @assertEqual(0.75d0, c_kdir, 1.0d-9)
+   ! Light extinction.
+   @assertEqual(kdif, config%crop%rotation_fixed(ICROP_GRASS)%kdif, 1.0e-12_real64)
+   @assertEqual(kdir, config%crop%rotation_fixed(ICROP_GRASS)%kdir, 1.0e-12_real64)
 
-   ! Feddes water-stress parameters (literal values from grass.crp).
-   ! SWOXYGEN=0: hlim1/hlim2u/hlim2l are not active; TOML defaults to 0.
-   @assertEqual(    0.0d0, c_hlim1,  1.0d-9)
-   @assertEqual(    0.0d0, c_hlim2u, 1.0d-9)
-   @assertEqual(    0.0d0, c_hlim2l, 1.0d-9)
-   @assertEqual( -200.0d0, c_hlim3h, 1.0d-9)
-   @assertEqual( -800.0d0, c_hlim3l, 1.0d-9)
-   @assertEqual(-8000.0d0, c_hlim4,  1.0d-9)
-   @assertEqual(    0.5d0, c_adcrh,  1.0d-9)
-   @assertEqual(    0.1d0, c_adcrl,  1.0d-9)
+   ! READING NOTE: grass.crp has SWOXYGEN=0, so readcropfixed does NOT
+   ! read hlim1/hlim2u/hlim2l (readswap.f90 line ~2235 in the swoxygen=1
+   ! branch). TOML side defaults to 0 — assert against literal 0.
+   @assertEqual(0.0_real64, config%crop%rotation_fixed(ICROP_GRASS)%hlim1,  1.0e-12_real64)
+   @assertEqual(0.0_real64, config%crop%rotation_fixed(ICROP_GRASS)%hlim2u, 1.0e-12_real64)
+   @assertEqual(0.0_real64, config%crop%rotation_fixed(ICROP_GRASS)%hlim2l, 1.0e-12_real64)
 
-   ! Root growth parameters (literal values from grass.crp).
-   ! SWRD=1: root depth from RDTB table (constant 30 cm); rri=0.0 (no daily increase).
-   @assertEqual(  30.0d0, c_rdi, 1.0d-9)
-   @assertEqual(   0.0d0, c_rri, 1.0d-9)
-   @assertEqual(  30.0d0, c_rdc, 1.0d-9)
+   ! Drought-stress (SWDROUGHT=1 → hlim3h/hlim3l/hlim4/adcrh/adcrl populated).
+   @assertEqual(hlim3h, config%crop%rotation_fixed(ICROP_GRASS)%hlim3h, 1.0e-12_real64)
+   @assertEqual(hlim3l, config%crop%rotation_fixed(ICROP_GRASS)%hlim3l, 1.0e-12_real64)
+   @assertEqual(hlim4,  config%crop%rotation_fixed(ICROP_GRASS)%hlim4,  1.0e-12_real64)
+   @assertEqual(adcrh,  config%crop%rotation_fixed(ICROP_GRASS)%adcrh,  1.0e-12_real64)
+   @assertEqual(adcrl,  config%crop%rotation_fixed(ICROP_GRASS)%adcrl,  1.0e-12_real64)
 
-   ! Interception (literal values from grass.crp: COFAB=0.25).
-   @assertEqual(0.25d0, c_cofab, 1.0d-9)
+   ! READING NOTE: grass.crp has SWRD=1, so readcropfixed reads the rdtb
+   ! table (not rdi/rri/rdc scalars; readswap.f90 lines 2177-2181). The
+   ! legacy globals stay at 0 even though the .crp declares RDI/RDC=30
+   ! and RRI=0. TOML side stores the values verbatim — assert literals.
+   @assertEqual(30.0_real64, config%crop%rotation_fixed(ICROP_GRASS)%rdi, 1.0e-12_real64)
+   @assertEqual( 0.0_real64, config%crop%rotation_fixed(ICROP_GRASS)%rri, 1.0e-12_real64)
+   @assertEqual(30.0_real64, config%crop%rotation_fixed(ICROP_GRASS)%rdc, 1.0e-12_real64)
+
+   ! Interception (SWINTER=1 → cofab populated).
+   @assertEqual(cofab, config%crop%rotation_fixed(ICROP_GRASS)%cofab, 1.0e-12_real64)
 end subroutine
