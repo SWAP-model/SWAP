@@ -1,0 +1,71 @@
+[general]
+project = "unit_test_solute"
+swscre  = 0
+swerror = 0
+
+[general.paths]
+work       = "./"
+atmosphere = "./"
+crop       = "./"
+drain      = "./"
+
+[simulation]
+start_date = 2002-01-01
+end_date   = 2004-12-31
+nprintday  = 1
+
+[simulation.output]
+swmonth = 1
+period  = 1
+swres   = 0
+swodat  = 0
+swyrvar = 0
+
+[meteorology]
+file = "283.met"
+lat  = 52.0
+alt  = 10.0
+altw = 2.0
+
+[meteorology.evapotranspiration]
+swetr      = 0
+swdivide   = 0
+angstrom_a = 0.25
+angstrom_b = 0.50
+
+[meteorology.temporal]
+swmetdetail = 0
+
+[meteorology.rain]
+swrain = 0
+
+[drainage]
+swdra    = 0
+
+[soil]
+swsophy = 0
+swhyst  = 0
+swinco  = 1
+swmacro = 0
+rsoil   = 30.0
+reva_top = 1
+
+[soil.initial]
+gwli    = -75.0
+pondini = 0.0
+pondmx  = 0.2
+
+[bottom_boundary]
+swbotb = 4
+
+[heat]
+swhea = 0
+
+[irrigation]
+swirfix = 0
+
+[solute]
+swsolu = 1
+
+[crop]
+swcrop = 0
