@@ -83,8 +83,8 @@ contains
       call get_table(doc, 'grazing', graz, 'grazing', errors)
       if (associated(graz)) then
          call get_optional_int_with_default(graz, 'swgraz',      config%swgraz,      0,         'grazing.swgraz',      errors)
-         call get_optional_real_with_default(graz, 'nstart_graz', config%nstart_graz, 0.0_real64, 'grazing.nstart_graz', errors)
-         call get_optional_real_with_default(graz, 'nstop_graz',  config%nstop_graz,  0.0_real64, 'grazing.nstop_graz',  errors)
+         call get_optional_int_with_default(graz, 'nstart_graz', config%nstart_graz, 0, 'grazing.nstart_graz', errors)
+         call get_optional_int_with_default(graz, 'nstop_graz',  config%nstop_graz,  0, 'grazing.nstop_graz',  errors)
       end if
 
       call get_table(doc, 'irrigation_schedule', irr_sched, 'irrigation_schedule', errors)

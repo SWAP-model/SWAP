@@ -29,8 +29,13 @@ subroutine test_cropgrass_swharv1_with_nmow_passes()
    use cropgrass_config_mod
    type(cropgrass_config_t) :: c
    type(error_collection_t) :: errors
-   c%swharv = 1
-   c%nmow   = 4
+   c%swharv         = 1
+   c%nmow           = 4
+   c%swdmmow        = 2
+   c%dmharvest      = 4000.0d0
+   c%daylastharvest = 250.0d0
+   c%dmlastharvest  = 1500.0d0
+   c%maxdaymow      = 60
    call c%validate(errors)
    @assertFalse(errors%has_errors())
 end subroutine
@@ -69,4 +74,105 @@ subroutine test_cropgrass_finalize_idempotent()
    call c%finalize(errors)
    call c%finalize(errors)
    @assertFalse(errors%has_errors())
+end subroutine
+
+! ---------------------------------------------------------------------------
+! Phase 4d Task 15 — per-event mowing/grazing tables
+! ---------------------------------------------------------------------------
+
+@test
+subroutine test_cropgrass_swharv2_fixed_dates_passes()
+   use funit
+   use error_mod
+   use cropgrass_config_mod
+   type(cropgrass_config_t) :: c
+   type(error_collection_t) :: errors
+   c%swharv  = 2
+   c%nmow    = 3
+   c%swdmmow = 2  ! DM threshold (legacy SWDMMOW=2 in cases)
+   allocate(c%mowing_dates(3))
+   c%mowing_dates = [120.0d0, 165.0d0, 210.0d0]
+   call c%validate(errors)
+   @assertFalse(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_cropgrass_swharv2_without_mowing_dates_fails()
+   use funit
+   use error_mod
+   use cropgrass_config_mod
+   type(cropgrass_config_t) :: c
+   type(error_collection_t) :: errors
+   c%swharv  = 2
+   c%nmow    = 3
+   c%swdmmow = 2
+   ! mowing_dates intentionally NOT allocated
+   call c%validate(errors)
+   @assertTrue(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_cropgrass_swharv2_heights_required_when_swdmmow0()
+   use funit
+   use error_mod
+   use cropgrass_config_mod
+   type(cropgrass_config_t) :: c
+   type(error_collection_t) :: errors
+   c%swharv  = 2
+   c%nmow    = 2
+   c%swdmmow = 0  ! heights branch
+   allocate(c%mowing_dates(2))
+   c%mowing_dates = [100.0d0, 200.0d0]
+   ! mowing_heights NOT allocated → must error
+   call c%validate(errors)
+   @assertTrue(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_cropgrass_swgraz1_passes()
+   use funit
+   use error_mod
+   use cropgrass_config_mod
+   type(cropgrass_config_t) :: c
+   type(error_collection_t) :: errors
+   c%swgraz      = 1
+   c%nstart_graz = 130
+   c%nstop_graz  = 270
+   c%maxdaygrz   = 14
+   c%dmgrazing   = 1900.0d0
+   c%swdmgrz     = 1
+   c%tagprest    = 750.0d0
+   call c%validate(errors)
+   @assertFalse(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_cropgrass_swgraz1_stop_before_start_fails()
+   use funit
+   use error_mod
+   use cropgrass_config_mod
+   type(cropgrass_config_t) :: c
+   type(error_collection_t) :: errors
+   c%swgraz      = 1
+   c%nstart_graz = 200
+   c%nstop_graz  = 150  ! invalid: before start
+   c%maxdaygrz   = 14
+   c%dmgrazing   = 1900.0d0
+   c%swdmgrz     = 1
+   c%tagprest    = 750.0d0
+   call c%validate(errors)
+   @assertTrue(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_cropgrass_lsdb_negative_entry_fails()
+   use funit
+   use error_mod
+   use cropgrass_config_mod
+   type(cropgrass_config_t) :: c
+   type(error_collection_t) :: errors
+   allocate(c%lsdb(3))
+   c%lsdb = [1.0d0, -0.5d0, 2.0d0]
+   call c%validate(errors)
+   @assertTrue(errors%has_errors())
 end subroutine
