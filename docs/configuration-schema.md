@@ -6,7 +6,7 @@ author: SWAP modernization team
 # Configuration schema
 
 This document is the reference for the SWAP TOML input format as it exists at
-the Phase 4c-a rescue baseline. It is extracted directly from the modernised
+the Phase 4c-b rescue baseline. It is extracted directly from the modernised
 readers, which are the schema source of truth:
 
 - `src/io/toml/load_swap_config.f90` — top-level dispatcher.
@@ -17,6 +17,7 @@ readers, which are the schema source of truth:
 - `src/io/toml/read_soil_toml.f90` — `[soil]` section.
 - `src/io/toml/read_crop_toml.f90` — `[[crop.rotation]]` array-of-tables + cross-file dispatch.
 - `src/io/toml/read_cropfixed_toml.f90` — type-1 `.crp.toml` schema.
+- `src/io/toml/read_cropwofost_toml.f90` — type-2 `.crp.toml` schema (Phase 4c-b).
 - `src/io/toml/read_cropgrass_toml.f90` — type-3 `.crp.toml` schema.
 
 If a key is not listed here, the TOML reader does not currently parse it,
@@ -492,10 +493,307 @@ Feddes pressure-head thresholds (all in cm, negative values):
 
 ### `*.crp.toml` — type 2 (WOFOST general)
 
-Type 2 is deferred to Phase 4c-b. A `[[crop.rotation]]` entry with `type=2`
-and a `file` reference is accepted and loads without error, but the
-`.crp.toml` content is not parsed — the `cropwofost_config_t` struct is
-populated only as a placeholder.
+Phase 4c-b adds the WOFOST type-2 schema. Parsed by
+`read_cropwofost_toml.f90`; config type `cropwofost_config_t`
+(`src/config/cropwofost_config.f90`).
+
+The schema mirrors the legacy `readcropwofost`/`crpgrowth` parameter set,
+broken into 21 nested sub-tables. All sections are optional: missing
+sections leave their fields at type defaults and the validator only flags
+inconsistencies when the relevant switch is enabled.
+
+Sections (read in order):
+
+`[preparation]`, `[sowing]`, `[germination]`, `[harvest]`,
+`[crop_factor]`, `[phenology]`, `[initial]`, `[green_area]`,
+`[assimilation]`, `[conversion]`, `[respiration]`, `[partitioning]`,
+`[death]`, `[root]`, `[oxygen_stress]`, `[drought_stress]`, `[salinity]`,
+`[compensate]`, `[interception]`, `[co2]`, `[management]`.
+
+#### Table encoding
+
+WOFOST uses many AFGEN tables (development-stage → coefficient curves).
+TOML encodes them as **arrays of arrays**, one inner array per row, with a
+fixed column count (2 for AFGEN x/y pairs, 6 for `gashtb` Gash interception
+parameters). The reader (`read_table_2d`) leaves the field unallocated when
+the key is absent and emits `ERR_PARSE_TYPE_MISMATCH` for ragged or
+wrong-width rows. Validators then enforce 2 ≤ nrows ≤ 15 for AFGEN tables.
+
+```toml
+[phenology]
+dtsmtb = [
+  [ 0.0,  0.0],
+  [30.0, 30.0],
+  [45.0, 30.0],
+]
+```
+
+#### `[preparation]`
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `swprep`       | integer | 0   | 0=no land preparation, 1=delay sowing until conditions are met. |
+| `zprep`        | real    | 0.0 | Soil-depth at which `hprep` is evaluated (cm, ≤0). |
+| `hprep`        | real    | 0.0 | Pressure-head threshold for preparation (cm). |
+| `maxprepdelay` | integer | 0   | Maximum allowed days to delay preparation (1..366 when active). |
+
+#### `[sowing]`
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `swsow`       | integer | 0   | 0=fixed sowing date, 1=delayed sowing on conditions. |
+| `zsow`        | real    | 0.0 | Depth at which `hsow`/`tempsow` are evaluated (cm). |
+| `hsow`        | real    | 0.0 | Pressure-head threshold for sowing (cm). |
+| `ztempsow`    | real    | 0.0 | Depth at which soil temperature is evaluated (cm). |
+| `tempsow`     | real    | 0.0 | Soil-temperature threshold for sowing (°C, 0..30). |
+| `maxsowdelay` | integer | 0   | Maximum allowed sowing delay in days (1..366). |
+
+#### `[germination]`
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `swgerm`     | integer | 0   | 0=immediate emergence, 1=tsum-driven, 2=tsum + soil-water. |
+| `tsumemeopt` | real    | 0.0 | Optimum temperature sum for emergence (°C·d, 0..1000). |
+| `tbasem`     | real    | 0.0 | Base temperature for emergence (°C, 0..40). |
+| `teffmx`     | real    | 0.0 | Maximum effective temperature (°C, 0..40). |
+| `hdrygerm`   | real    | 0.0 | Pressure head at which germination stalls (dry side, cm). |
+| `hwetgerm`   | real    | 0.0 | Pressure head at which germination stalls (wet side, cm). |
+| `zgerm`      | real    | 0.0 | Depth at which germination is evaluated (cm). |
+| `agerm`      | real    | 0.0 | Empirical germination coefficient. |
+
+#### `[harvest]`
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `dvsend` | real    | 0.0 | Development stage at harvest (typically 2.0 for cereals). |
+| `swharv` | integer | 0   | 0=harvest at `dvsend`, 1=harvest at `crop.rotation.end`. |
+
+#### `[crop_factor]`
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `swcf`   | integer            | 0   | 1=crop factor for ETref, 2=Penman–Monteith with `rsc`/`rsw`. |
+| `albedo` | real               | 0.0 | Crop albedo (0..1). |
+| `rsc`    | real               | 0.0 | Crop resistance (s/m). |
+| `rsw`    | real               | 0.0 | Wet canopy resistance (s/m). |
+| `cftb`   | array of [dvs, cf] | —   | Crop factor vs. development stage (or vs. day for type=1). |
+| `chtb`   | array of [dvs, h]  | —   | Crop height vs. development stage (cm). |
+
+#### `[phenology]`
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `idsl`     | integer                | 0   | 0=temperature-only, 1=temperature+daylength, 2=add vernalisation. |
+| `tsumea`   | real                   | 0.0 | Temperature sum from emergence to anthesis (°C·d). |
+| `tsumam`   | real                   | 0.0 | Temperature sum from anthesis to maturity (°C·d). |
+| `dlo`      | real                   | 0.0 | Optimum daylength (h, used when `idsl≥1`). |
+| `dlc`      | real                   | 0.0 | Critical daylength (h). |
+| `vernsat`  | real                   | 0.0 | Saturated vernalisation requirement (d, used when `idsl=2`). |
+| `vernbase` | real                   | 0.0 | Base vernalisation requirement (d). |
+| `verndvs`  | real                   | 0.0 | Development stage at which vernalisation completes. |
+| `dtsmtb`   | array of [t, dtsm]     | —   | Daily temperature-sum response curve. |
+| `verntb`   | array of [t, vern]    | —   | Vernalisation rate vs. temperature (used when `idsl=2`). |
+
+#### `[initial]`
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `tdwi`   | real | 0.0 | Initial total dry-matter weight (kg/ha). |
+| `laiem`  | real | 0.0 | Leaf area index at emergence (m²/m²). |
+| `rgrlai` | real | 0.0 | Maximum daily LAI growth rate (m²/m²/d). |
+
+#### `[green_area]`
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `spa`   | real                | 0.0 | Specific pod area (ha/kg). |
+| `ssa`   | real                | 0.0 | Specific stem area (ha/kg). |
+| `span`  | real                | 0.0 | Maximum life-span of leaves under optimum conditions (d). |
+| `tbase` | real                | 0.0 | Lower threshold temperature for ageing of leaves (°C). |
+| `slatb` | array of [dvs, sla] | —   | Specific leaf area vs. development stage (ha/kg). |
+
+#### `[assimilation]`
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `kdif`   | real                  | 0.0 | Diffuse-light extinction coefficient. |
+| `kdir`   | real                  | 0.0 | Direct-light extinction coefficient. |
+| `eff`    | real                  | 0.0 | Light-use efficiency (kg·ha⁻¹·h⁻¹/(J·m⁻²·s⁻¹)). |
+| `amaxtb` | array of [dvs, amax]  | —   | Maximum assimilation rate vs. development stage (kg·ha⁻¹·h⁻¹). |
+| `tmpftb` | array of [t, factor]  | —   | Day-temperature reduction factor for `amax`. |
+| `tmnftb` | array of [t, factor]  | —   | Night-temperature reduction factor for `amax`. |
+
+#### `[conversion]`
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `cvl` | real | 0.0 | Conversion efficiency assimilates → leaves (kg/kg). |
+| `cvo` | real | 0.0 | Conversion efficiency assimilates → storage organs. |
+| `cvr` | real | 0.0 | Conversion efficiency assimilates → roots. |
+| `cvs` | real | 0.0 | Conversion efficiency assimilates → stems. |
+
+#### `[respiration]`
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `q10`    | real                | 0.0 | Q10 of maintenance respiration. |
+| `rml`    | real                | 0.0 | Maintenance respiration rate of leaves (kg·CH₂O·kg⁻¹·d⁻¹). |
+| `rmo`    | real                | 0.0 | Maintenance respiration of storage organs. |
+| `rmr`    | real                | 0.0 | Maintenance respiration of roots. |
+| `rms`    | real                | 0.0 | Maintenance respiration of stems. |
+| `rfsetb` | array of [dvs, frac]| —   | Fraction of maintenance-respiration reduction with senescence. |
+
+#### `[partitioning]`
+
+Carbohydrate partitioning fractions vs. development stage. All four
+tables must sum to 1 at each row.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `frtb` | array of [dvs, fr] | — | Fraction of total dry matter to roots. |
+| `fltb` | array of [dvs, fl] | — | Fraction of above-ground DM to leaves. |
+| `fstb` | array of [dvs, fs] | — | Fraction of above-ground DM to stems. |
+| `fotb` | array of [dvs, fo] | — | Fraction of above-ground DM to storage organs. |
+
+#### `[death]`
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `perdl`  | real                  | 0.0 | Maximum relative leaf death rate due to water stress (d⁻¹). |
+| `rdrrtb` | array of [dvs, rdrr]  | —   | Relative root death rate vs. development stage. |
+| `rdrstb` | array of [dvs, rdrs]  | —   | Relative stem death rate vs. development stage. |
+
+#### `[root]`
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `swrd`     | integer             | 0   | 0=fixed `rdc`, 1=tabulated `rdtb`, 2=`rri` rate-driven. |
+| `rdi`      | real                | 0.0 | Initial rooting depth (cm). |
+| `rri`      | real                | 0.0 | Daily increase of rooting depth (cm/d). |
+| `rdc`      | real                | 0.0 | Maximum rooting depth (cm). |
+| `swdmi2rd` | integer             | 0   | 1=root growth tied to dry-matter increase. |
+| `wrtmax`   | real                | 0.0 | Maximum root weight (kg/ha). |
+| `rdtb`     | array of [dvs, rd]  | —   | Tabulated rooting depth (used when `swrd=1`). |
+| `rlwtb`    | array of [rd, rlw] | —   | Relative root-water-uptake distribution. |
+| `rdctb`    | array of [rd, frac]| —   | Root-density correction vs. depth. |
+
+#### `[oxygen_stress]`
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `swoxygen`                | integer | 0   | 0=off, 1=Feddes (`hlim1/2u/2l`), 2=Bartholomeus root-respiration model. |
+| `swwrtnonox`              | integer | 0   | 1=allow root growth into anoxic layers. |
+| `aeratecrit`              | real    | 0.0 | Critical aeration fraction (when `swoxygen=2`). |
+| `hlim1` / `hlim2u` / `hlim2l` | real | 0.0 | Feddes thresholds (cm, used when `swoxygen=1`). |
+| `q10_microbial`           | real    | 0.0 | Q10 of microbial respiration. |
+| `specific_resp_humus`     | real    | 0.0 | Specific respiration of humus (mg·O₂·kg⁻¹·d⁻¹). |
+| `srl`                     | real    | 0.0 | Specific root length (m/g). |
+| `swrootradius`            | integer | 0   | 0=fixed `root_radiusO2`, 1=derive from `srl` & root density. |
+| `dry_mat_cont_roots`      | real    | 0.0 | Dry-matter content of roots (g/g). |
+| `air_filled_root_por`     | real    | 0.0 | Air-filled root porosity (cm³/cm³). |
+| `spec_weight_root_tissue` | real    | 0.0 | Specific weight of dry root tissue (g/cm³). |
+| `var_a`                   | real    | 0.0 | Empirical Bartholomeus coefficient. |
+| `root_radiusO2`           | real    | 0.0 | Root radius for O₂ diffusion (cm). |
+
+#### `[drought_stress]`
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `swdrought` | integer | 0   | 0=Feddes pressure-head, 1=Jarvis stress factor. |
+| `hlim3h`    | real    | 0.0 | Pressure head where stress starts (high transpiration, cm). |
+| `hlim3l`    | real    | 0.0 | Pressure head where stress starts (low transpiration, cm). |
+| `hlim4`     | real    | 0.0 | Wilting-point pressure head (cm). |
+| `adcrh`     | real    | 0.0 | Critical transpiration rate at `hlim3h` (cm/d). |
+| `adcrl`     | real    | 0.0 | Critical transpiration rate at `hlim3l` (cm/d). |
+
+#### `[salinity]`
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `swsalinity` | integer | 0   | 0=off, 1=Maas–Hoffman, 2=osmotic-head Feddes extension. |
+| `saltmax`    | real    | 0.0 | EC threshold (dS/m) above which yield reduction starts. |
+| `saltslope`  | real    | 0.0 | Slope of yield reduction (%/dS/m above `saltmax`). |
+| `salthead`   | real    | 0.0 | Osmotic-head conversion factor (cm/(dS/m)) when `swsalinity=2`. |
+
+#### `[compensate]`
+
+Stress-compensation parameters governing root water uptake redistribution.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `swcompensate` | integer | 0   | 0=no compensation, 1=Jarvis 1989, 2=de Jong van Lier. |
+| `swstressor`   | integer | 0   | Bitfield selecting which stressors to compensate. |
+| `alphacrit`    | real    | 0.0 | Critical stress factor for compensation onset. |
+| `dcritrtz`     | real    | 0.0 | Critical depth in root zone (cm). |
+
+#### `[interception]`
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `swinter` | integer                       | 0   | 0=off, 1=`cofab` × LAI, 2=Gash table model. |
+| `cofab`   | real                          | 0.0 | Interception coefficient (cm/LAI; required when `swinter=1`). |
+| `gashtb`  | array of [m1,m2,m3,m4,m5,m6] | —   | Gash six-parameter table (required when `swinter=2`). |
+
+> **Reading note.** `gashtb` is only consumed when `swinter=2`; when
+> `swinter=1` the field is left unallocated and the validator does not
+> require it. The legacy reader populates `gashtb` only on the `swinter=2`
+> branch; the TOML reader follows the same convention.
+
+#### `[co2]`
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `swco2`     | integer                | 0   | 0=ambient, 1=read CO₂ history file. |
+| `atmofil`   | string                 | ""  | Path to CO₂ atmospheric history file (used when `swco2=1`). |
+| `co2amaxtb` | array of [co2, factor] | —   | CO₂ → `amax` correction. |
+| `co2efftb`  | array of [co2, factor] | —   | CO₂ → light-use-efficiency correction. |
+| `co2tratb`  | array of [co2, factor] | —   | CO₂ → transpiration-efficiency correction. |
+
+#### `[management]`
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `fraharlosorm_lv`     | real    | 0.0 | Harvest loss fraction of leaves left on field. |
+| `fraharlosorm_st`     | real    | 0.0 | Harvest loss fraction of stems left on field. |
+| `fraharlosorm_so`     | real    | 0.0 | Harvest loss fraction of storage organs left on field. |
+| `fradeceasedlvtosoil` | real    | 0.0 | Fraction of dead leaves returned to soil. |
+| `swpotrelmf`          | integer | 0   | 0=potential growth, 1=management factor `relmf` applied. |
+| `relmf`               | real    | 0.0 | Relative management factor (0..1, used when `swpotrelmf=1`). |
+
+#### Validator constraints (selected)
+
+The `cropwofost_config_t%validate` walks each sub-table; common rules:
+
+- Enum keys (`swprep`, `swsow`, `swgerm`, `swharv`, `swcf`, `idsl`, `swrd`,
+  `swoxygen`, `swdrought`, `swsalinity`, `swcompensate`, `swinter`, `swco2`,
+  `swpotrelmf`) accept only the values listed above.
+- AFGEN tables (`dtsmtb`, `slatb`, `amaxtb`, `frtb`, `fltb`, `fstb`,
+  `fotb`, `cftb`, `chtb`, `rdtb`, `rlwtb`, `rdctb`, `rdrrtb`, `rdrstb`,
+  `tmpftb`, `tmnftb`, `co2amaxtb`, `co2efftb`, `co2tratb`, `verntb`,
+  `rfsetb`) must satisfy `2 ≤ nrows ≤ 15` and the column count noted in
+  the encoding section. `gashtb` requires 6 columns.
+- Range checks apply only when the relevant switch is on (e.g. `tempsow`
+  is only validated when `swsow=1`).
+- Cross-field checks: `tsumea > 0` when `idsl ≥ 0`; `dlo ≥ dlc` when
+  `idsl ≥ 1`; `vernsat ≥ vernbase` when `idsl = 2`.
+
+#### Cross-file loading
+
+A type-2 entry is selected via the rotation array:
+
+```toml
+[[crop.rotation]]
+start = 1980-01-01
+end   = 1980-12-31
+file  = "potatod.crp.toml"
+type  = 2
+```
+
+`load_swap_config` resolves `file` relative to the `.swp` directory and
+calls `read_cropwofost_toml` on the loaded TOML root. The result is stored
+under `swap_config%crop%rotation_wofost(i)`. As with type-1 / type-3,
+missing files are silently skipped to keep partially-converted cases
+loadable.
 
 ### `*.crp.toml` — type 3 (WOFOST grass)
 

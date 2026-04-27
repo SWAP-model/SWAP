@@ -249,3 +249,53 @@ After Phase 4c-a (cross-file TOML loading + cropfixed/cropgrass + parity for cas
 Phase 4b deferrals still open: bottom_boundary, heat, solute config types;
 cross-file `.crp.toml` for type 2 (WOFOST) crops; cases 5.salinitystress
 parity. These move to Phase 4c-b and Phase 4d.
+
+---
+
+## Phase 4c-b baseline (2026-04-27, tag `rescue/phase-4c-b-wofost`)
+
+After Phase 4c-b (WOFOST type-2 `.crp.toml` reader + cases 1, 5 parity):
+
+- `gcovr` terminal summary: **53.1%** line coverage (4021 out of 7566
+  executable lines visible to gcovr), **41.2%** branch coverage (1421 out
+  of 3451), **50.5%** functions (47/93). The numerator nudged up by 2
+  executed lines (4019 → 4021); the denominator is unchanged at 7566.
+  Net change vs Phase 4c-a: +0.0 pp on the gcovr-visible total — the new
+  modules (`cropwofost_config.f90`, `read_cropwofost_toml.f90`,
+  `legacy_crop_helper.f90`) compile only into the unit-test binary and are
+  invisible to the project-level gcovr run for the same path-resolution
+  reason documented in Phase 4a/4b/4c-a.
+- pFUnit suite total: **221 tests**, 0 failures (up from 155 at
+  `rescue/phase-4c-a-crop-fixed-grass`). The new tests exercise:
+  - WOFOST sub-table validators (per-section unit suites for all 21
+    sub-tables in `tests/unit/config/cropwofost_*`)
+  - `read_cropwofost_toml` AFGEN-decoder happy/ragged/wrong-width paths
+  - `read_crop_toml` dispatch on `type=2`
+  - Full-config parity for hupselbrook potatod (case 1) and
+    salinitystress (case 5) driven via `legacy_crop_helper`
+- Regression suite: **6/6 green** in 319.5s; per-case timings recorded in
+  `tests/regression/baselines/phase-4c-b-wofost.log`.
+
+### Phase 4c-b delta (modules added, all unit-test only)
+
+| File | LoC | What it covers |
+|---|---|---|
+| `src/config/cropwofost_config.f90` | ~700 | 21 sub-tables + validators + finalize |
+| `src/io/toml/read_cropwofost_toml.f90` | ~330 | TOML reader incl. `read_table_2d` for AFGEN |
+| `tests/unit/io/toml/legacy_crop_helper.f90` (+ wrappers) | ~600 | shared infra to drive legacy readers from pFUnit |
+| `tests/unit/config/cropwofost_*.pf` (sub-table suites) | ~900 | per-section validator coverage |
+| `tests/unit/io/toml/test_hupselbrook_parity.pf` (additions) | ~150 | potatod WOFOST full-config assertions |
+| `tests/unit/io/toml/test_salinitystress_parity.pf` | ~250 | case-5 full-config assertions |
+
+Net test-side LoC added in Phase 4c-b: ≈ 2,500 lines.
+
+### Caveat on the gcovr path-resolution issue
+
+The Phase 4a note still applies: `src/config/cropwofost_config.f90`,
+`src/io/toml/read_cropwofost_toml.f90`, and the rest of `src/io/toml/`
+appear as `0/0 --%` in the `gcovr` terminal summary because gcovr cannot
+merge their `.gcda` data when its working directory is the project root.
+Coverage of those modules is verified via the 221-test pFUnit suite, not
+via the gcovr percentage. Per-domain numbers in this document continue to
+under-count the typed-config + TOML-reader subtrees by design until that
+tooling issue is addressed.
