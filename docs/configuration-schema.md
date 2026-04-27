@@ -6,7 +6,7 @@ author: SWAP modernization team
 # Configuration schema
 
 This document is the reference for the SWAP TOML input format as it exists at
-the Phase 4c-b rescue baseline. It is extracted directly from the modernised
+the Phase 4d rescue baseline. It is extracted directly from the modernised
 readers, which are the schema source of truth:
 
 - `src/io/toml/load_swap_config.f90` — top-level dispatcher.
@@ -19,6 +19,10 @@ readers, which are the schema source of truth:
 - `src/io/toml/read_cropfixed_toml.f90` — type-1 `.crp.toml` schema.
 - `src/io/toml/read_cropwofost_toml.f90` — type-2 `.crp.toml` schema (Phase 4c-b).
 - `src/io/toml/read_cropgrass_toml.f90` — type-3 `.crp.toml` schema.
+- `src/io/toml/read_bottom_boundary_toml.f90` — `[bottom_boundary]` (Phase 4d Task 5).
+- `src/io/toml/read_heat_toml.f90` — `[heat]` (Phase 4d Task 8).
+- `src/io/toml/read_irrigation_toml.f90` — `[irrigation]` and per-crop `[irrigation_schedule]` (Phase 4d Task 11).
+- `src/io/toml/read_solute_toml.f90` — `[solute]` (Phase 4d Task 14).
 
 If a key is not listed here, the TOML reader does not currently parse it,
 regardless of whether it appears in example files under `tests/swap-cases/`.
@@ -273,15 +277,148 @@ section). If `file` is absent, drainage keys may appear inline under
 > external file reference. If `file` is absent and no inline drainage keys are
 > present, the drainage config struct retains its defaults.
 
-### `[boundary.bottom]`
+### `[bottom_boundary]` (Phase 4d Task 3-5)
 
-| Key | Type | Required | State target | Description |
-|---|---|---|---|---|
-| `swbotb`  | integer | optional | `state%boundary%swbotb`  | Bottom boundary type (1..8). |
-| `swqhbot` | integer | optional | `state%boundary%swqhbot` | q(h) relationship type for `swbotb=4`. |
-| `deepgw`  | real    | optional | `state%boundary%deepgw`  | Hydraulic head in deep aquifer (cm). |
-| `hbot`    | real    | optional | `state%boundary%hbot`    | Bottom pressure head (cm). |
-| `qbot`    | real    | optional | `state%boundary%qbot`    | Bottom flux (cm/d). |
+The bottom-boundary block is read by `read_bottom_boundary_toml.f90` into
+`bottom_boundary_config_t`. The shape of the section depends on `swbotb`
+(legacy enum 1..8); `swbotb=0` is treated as "section absent" and skips
+validation. Tables are encoded as TOML arrays-of-arrays of two reals.
+
+| Key | Type | Default | Notes |
+|---|---|---|---|
+| `swbotb`       | integer        | 0    | Bottom boundary type, 1..8. |
+| `bbcfil`       | string         | ""   | External `.bbc` file (alternative to `swc_table` when `swbotb=1`). |
+| `swc_table`    | array of [t,h] | —    | Inline groundwater-table input (`swbotb=1`). |
+| `qbot_table`   | array of [t,q] | —    | Inline bottom-flux table (`swbotb=2`). |
+| `shape`        | real           | 0.0  | Cauchy/regional shape factor (`swbotb=3`). |
+| `hdrain`       | real           | 0.0  | Drainage base level (cm, `swbotb=3`). |
+| `rimlay`       | real           | 0.0  | Aquitard resistance (d, `swbotb=3`). |
+| `aqave`        | real           | 0.0  | Mean head deep aquifer (cm, `swbotb=3`). |
+| `aqamp`        | real           | 0.0  | Sinusoidal amplitude (cm, `swbotb=3`). |
+| `aqper`        | real           | 0.0  | Period (d, `swbotb=3`). |
+| `aqtmax`       | real           | 0.0  | Day-of-year of head maximum (`swbotb=3`). |
+| `cofqha_table` | array of [h,q] | —    | Optional q(h) table (`swbotb=3`). |
+| `hbot`         | real           | 0.0  | Pressure head at bottom (cm, `swbotb=5`). |
+| `rhobot`       | real           | 0.0  | Bottom-flux resistance (cm/d, `swbotb=5`). |
+
+`swbotb=4`, `6`, `7`, `8` carry no additional scalar fields in the typed
+config; their behaviour is selected purely by the switch.
+
+> **Reading note.** Legacy `SHAPE` was integer-typed in older `.swp` files,
+> but case 5 uses `SHAPE=0.79`. The Phase 4d schema stores `shape` as
+> `real(real64)` with a continuous 0..2 range — see commit `d4dba71`.
+
+### `[heat]` (Phase 4d Task 6-8)
+
+The heat-transport block is read by `read_heat_toml.f90` into
+`heat_config_t`. As with `[bottom_boundary]`, `swhea=0` is the
+section-absent sentinel: validation is skipped so cases without heat
+transport load clean.
+
+| Key | Type | Default | Notes |
+|---|---|---|---|
+| `swhea`     | integer            | 0   | 0=off, 1=heat transport on. |
+| `swcalt`    | integer            | 0   | 1=analytical, 2=numerical (when `swhea=1`). |
+| `swtopbhea` | integer            | 0   | Top BC: 1=air temp, 2=measured surface. |
+| `swbotbhea` | integer            | 0   | Bottom BC: 1=zero flux, 2=prescribed. |
+| `tfroststa` | real               | 0.0 | Frost-formation start temp (°C, -10..5). |
+| `tfrostend` | real               | 0.0 | Frost-formation end temp (°C, -10..5). |
+| `psand`     | array of real      | —   | Per-layer sand fraction (0..1). |
+| `pclay`     | array of real      | —   | Per-layer clay fraction (0..1). |
+| `porg`      | array of real      | —   | Per-layer organic-matter fraction (0..1). |
+| `tsoil_init`| array of [z, T]    | —   | Initial soil-temperature table (depth_cm, temp_C). |
+
+If any of `psand`/`pclay`/`porg` is set, all three must be present and of
+equal length (one entry per soil layer).
+
+> **Reading note.** The TOML key is `tsoil_init` (not `tsoil`) to avoid
+> collision with the runtime `variables%tsoil(numnod)` array — see the
+> module header in `heat_config.f90`.
+
+### `[irrigation]` (Phase 4d Task 9-12)
+
+The top-level irrigation block holds the fixed-irrigation switch and
+optional inline event table or external file reference. Read by
+`read_irrigation_toml.f90` into `irrigation_config_t`. `swirfix=0` is the
+section-absent sentinel.
+
+| Key | Type | Default | Notes |
+|---|---|---|---|
+| `swirfix`      | integer                 | 0  | 0=off, 1=fixed irrigation on. |
+| `irgfil`       | string                  | "" | External `.irg` file (alternative to `fixed_events`). |
+| `fixed_events` | array of [t,d,c,type]   | —  | Inline 4-column event table (date / depth / conc / type). |
+
+When `swirfix=1`, exactly one of `irgfil` or `fixed_events` must be set.
+
+#### `[irrigation_schedule]` (per-crop sub-section)
+
+The scheduled-irrigation block is **nested under each per-crop
+`.crp.toml`** file (cropfixed / cropwofost / cropgrass), not the top-level
+`.swp`. Read by `read_irrigation_schedule_from_section` into
+`irrigation_schedule_t`. `schedule=0` is the section-absent sentinel
+(matches the legacy `if (schedule == 1)` gating).
+
+| Key | Type | Default | Notes |
+|---|---|---|---|
+| `schedule`        | integer            | 0   | 0=off, 1=scheduled irrigation on. |
+| `startirr_day`    | integer            | 0   | Day-of-month for irrigation window start (1..31). |
+| `startirr_month`  | integer            | 0   | Month for window start (1..12). |
+| `endirr_day`      | integer            | 0   | Day-of-month for window end. |
+| `endirr_month`    | integer            | 0   | Month for window end. |
+| `cirrs`           | real               | 0.0 | Solute concentration of irrigation water. |
+| `isuas`           | integer            | 0   | 0=sprinkler, 1=surface. |
+| `tcs`             | integer            | 0   | Timing-criterion (1..8; 5 obsolete and rejected at runtime). |
+| `dcs`             | integer            | 0   | Depth-criterion (1=fixed-depth, 2=back-to-FC). |
+| `irgthreshold`    | real               | 0.0 | Minimum-event threshold (cm). |
+| `dcrit`           | real               | 0.0 | Critical depth (cm, ≤0). |
+| `swcirrthres`     | integer            | 0   | Concentration-threshold switch. |
+| `cirrthres`       | real               | 0.0 | Concentration threshold. |
+| `perirrsurp`      | real               | 0.0 | Surplus percentage (0..100). |
+| `tcsfix`          | integer            | 0   | 1=fixed irrigation day each year. |
+| `irgdayfix`       | integer            | 0   | Fixed day-of-year (1..366, when `tcsfix=1`). |
+| `phfieldcapacity` | real               | 0.0 | Field-capacity pressure head (cm, -1000..0). |
+| `raithreshold`    | real               | 0.0 | Rain-skip threshold (mm). |
+| `dcslim`          | integer            | 0   | 1=apply `irgdepmin`/`irgdepmax`. |
+| `irgdepmin`       | real               | 0.0 | Minimum irrigation depth (cm). |
+| `irgdepmax`       | real               | 0.0 | Maximum irrigation depth (cm). |
+| `trel_table`      | array of [dvs, t]  | —   | Required when `tcs=1`. |
+| `raw_table`       | array of [dvs, raw]| —   | Required when `tcs=2`. |
+| `taw_table`       | array of [dvs, taw]| —   | Required when `tcs=3`. |
+| `dwa_table`       | array of [dvs, dwa]| —   | Required when `tcs=4`. |
+| `hcri_table`      | array of [dvs, h]  | —   | Required when `tcs=7`. |
+| `tcri_table`      | array of [dvs, t]  | —   | Required when `tcs=8`. |
+| `di_table`        | array of [dvs, di] | —   | Required when `dcs=1`. |
+| `fid_table`       | array of [dvs, fid]| —   | Required when `dcs=2`. |
+
+> **Reading note.** Schedule day/month windows are encoded as separate
+> integer keys (`startirr_day` + `startirr_month`, `endirr_day` +
+> `endirr_month`) rather than full TOML dates — the legacy schedule is
+> repeated annually.
+
+### `[solute]` (Phase 4d Task 13-14)
+
+The solute-transport block is read by `read_solute_toml.f90` into
+`solute_config_t`. `swsolu=0` is the section-absent sentinel.
+
+| Key | Type | Default | Notes |
+|---|---|---|---|
+| `swsolu`      | integer            | 0   | 0=off, 1=solute transport on. |
+| `swbotbc`     | integer            | 0   | Bottom solute BC: 0..2 (when `swsolu=1`). |
+| `cdrain`      | real               | 0.0 | Drainage water concentration (mg/cm³). |
+| `cseep`       | real               | 0.0 | Seepage water concentration (mg/cm³). |
+| `tscf`        | real               | 0.0 | Transpiration-stream concentration factor (0..10). |
+| `ldis`        | real               | 0.0 | Dispersion length (cm, 0..100). |
+| `rtheta`      | real               | 0.0 | Water-content threshold for decomposition (0..0.4, when `swdc=1`). |
+| `bexp`        | real               | 0.0 | Decomposition exponent (0..2). |
+| `ecmax`       | real               | 0.0 | EC threshold for salinity stress (dS/m). |
+| `ecslop`      | real               | 0.0 | Slope of EC reduction (%/dS/m). |
+| `swsoltyp`    | integer            | 0   | Solute model variant (Phase 4d placeholder). |
+| `swdc`        | integer            | 0   | 0=no decomposition, 1=first-order decomposition. |
+| `pertabsolu`  | array of [z, fac]  | —   | Per-layer decomposition factor table. |
+
+> **Reading note.** `solute.ecmax` / `solute.ecslop` are independent of
+> the per-crop `[salinity]` keys — the spec keeps these on the soil-side
+> rather than cross-checking against the crop block (see `solute_config.f90`).
 
 ### `[boundary.top]`
 
@@ -824,18 +961,39 @@ Sections: same as type 1 (`[phenology]`, `[light]`, `[root]`, `[water_stress]`,
 
 #### `[mowing]` (type 3 only)
 
-| Key | Type | Default | Description |
+Phase 4d Tasks 15-16 added per-event scheduling fields to the original
+minimal schema. `swharv` selects the mowing model:
+0=none, 1=DM-threshold-driven, 2=fixed-date table.
+
+| Key | Type | Default | Notes |
 |---|---|---|---|
-| `swharv` | integer | 0 | 0=no scheduled mowing, 1=scheduled. |
-| `nmow`   | integer | 0 | Number of mowing events (required when `swharv=1`). |
+| `swharv`         | integer            | 0   | 0=no mowing, 1=DM-threshold, 2=fixed-date table. |
+| `nmow`           | integer            | 0   | Number of mowing events (1..50 when `swharv≥1`). |
+| `swdmmow`        | integer            | 0   | 0=use heights, 1=DM threshold, 2=DM threshold (legacy). |
+| `dmharvest`      | real               | 0.0 | DM threshold for mowing (when `swdmmow=1`). |
+| `daylastharvest` | real               | 0.0 | Last permitted harvest day-of-year. |
+| `dmlastharvest`  | real               | 0.0 | DM threshold for the final harvest. |
+| `maxdaymow`      | integer            | 0   | Maximum allowed mowing window in days (1..366). |
+| `mowing_dates`   | array of real      | —   | Per-event day-of-year (required when `swharv=2`; size must equal `nmow`). |
+| `mowing_heights` | array of real      | —   | Per-event residual height (required when `swharv=2` and `swdmmow=0`). |
+| `dates_mowing`   | array of real      | —   | Legacy alias retained for back-compat. |
+| `lai_after_mow`  | array of real      | —   | Legacy alias retained for back-compat. |
 
 #### `[grazing]` (type 3 only)
 
-| Key | Type | Default | Description |
+Phase 4d Tasks 15-16 added per-event grazing fields. `swgraz=1` enables
+the block.
+
+| Key | Type | Default | Notes |
 |---|---|---|---|
-| `swgraz`      | integer | 0   | 0=no grazing, 1=scheduled. |
-| `nstart_graz` | real    | 0.0 | Start day-of-year for grazing. |
-| `nstop_graz`  | real    | 0.0 | Stop day-of-year for grazing. |
+| `swgraz`      | integer       | 0   | 0=no grazing, 1=scheduled. |
+| `nstart_graz` | real          | 0.0 | Start day-of-year for grazing. |
+| `nstop_graz`  | real          | 0.0 | Stop day-of-year for grazing. |
+| `maxdaygrz`   | integer       | 0   | Maximum grazing window in days (1..366). |
+| `dmgrazing`   | real          | 0.0 | Above-ground DM threshold for grazing onset. |
+| `swdmgrz`     | integer       | 0   | 0/1/2 — grazing DM-threshold model variant. |
+| `tagprest`    | real          | 0.0 | Above-ground residue threshold after grazing. |
+| `lsdb`        | array of real | —   | Per-day stocking density (livestock/ha). |
 
 ## Example
 
@@ -918,10 +1076,11 @@ swbotb = 6
 rsro = 0.5
 ```
 
-A fuller example lives at `tests/swap-cases/1.1.hupselbrook-toml/swap.toml`.
-That file contains many additional keys not yet read by the TOML pipeline
-(irrigation, heat, solute, soil hydraulic tables, macropores, snow, frost);
-those keys are silently ignored and are targets for later rescue phases.
+A fuller example lives at `tests/swap-cases/toml/1.hupselbrook/swap.toml`.
+Phase 4d added typed readers for `[bottom_boundary]`, `[heat]`,
+`[irrigation]`, and `[solute]` (see sections above). Soil-hydraulic tables,
+macropores, snow, and frost remain silently ignored at the rescue baseline
+and are targets for later phases.
 
 ## Cross-file references
 
@@ -1039,6 +1198,26 @@ Worth noting for readers who will extend these schemas:
    yet been converted to `.crp.toml` to continue loading without error. The
    consequence is that missing files produce no diagnostic — a strict mode
    that warns on absent references is deferred to Phase 4d.
+7. `[bottom_boundary].shape` is `real(real64)` in the Phase 4d schema, not
+   integer as in some legacy templates. Case 5 uses `SHAPE=0.79`; encoding it
+   as integer would silently truncate. The validator now applies a continuous
+   0..2 range check (commit `d4dba71`).
+8. `[heat].tsoil_init` is the TOML name for the initial soil-temperature
+   table; the field is renamed from the legacy `tsoil` to avoid colliding
+   with the runtime `variables%tsoil(numnod)` array. Reader and validator
+   both use `tsoil_init`.
+9. `[irrigation_schedule]` is a **per-crop** sub-section embedded in each
+   `.crp.toml` (cropfixed / cropwofost / cropgrass via the shared
+   `irrigation_schedule_t`), not a top-level `.swp` block. The top-level
+   `[irrigation]` only carries fixed-irrigation events. Day/month windows
+   are split into separate integer keys (`startirr_day` /
+   `startirr_month`) rather than full TOML dates because the schedule
+   repeats annually.
+10. `[solute].swsolu`, `[heat].swhea`, `[bottom_boundary].swbotb`,
+    `[irrigation].swirfix`, and `[irrigation_schedule].schedule` all use a
+    `=0` "section absent" sentinel that short-circuits the validator. This
+    keeps cases that don't exercise the optional pipeline loadable while
+    Phase 4d Tasks 17-19 progressively populated each per-case TOML.
 
 ## Typed config hierarchy
 
@@ -1053,7 +1232,12 @@ hierarchy in `src/config/`:
 | `[drainage]` | `drainage_config_t` | `drainage_config_mod` |
 | `[soil]` | `soil_config_t` | `soil_config_mod` |
 | `[crop]` | `crop_config_t` | `crop_config_mod` |
+| `[bottom_boundary]` | `bottom_boundary_config_t` | `bottom_boundary_config_mod` |
+| `[heat]` | `heat_config_t` | `heat_config_mod` |
+| `[irrigation]` (and per-crop `[irrigation_schedule]`) | `irrigation_config_t` / `irrigation_schedule_t` | `irrigation_config_mod` |
+| `[solute]` | `solute_config_t` | `solute_config_mod` |
 | `*.crp.toml` type 1 | `cropfixed_config_t` | `cropfixed_config_mod` |
+| `*.crp.toml` type 2 | `cropwofost_config_t` | `cropwofost_config_mod` |
 | `*.crp.toml` type 3 | `cropgrass_config_t` | `cropgrass_config_mod` |
 | (top-level) | `swap_config_t` | `swap_config_mod` |
 
