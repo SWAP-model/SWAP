@@ -332,3 +332,54 @@ subroutine test_surfacewater_fixed_data_parity()
    ! Interception (SWINTER=1 → cofab populated).
    @assertEqual(cofab, config%crop%rotation_fixed(ICROP_GRASS)%cofab, 1.0e-12_real64)
 end subroutine
+
+! Phase 4d Task 20d: parity for the four new sections — bottom_boundary,
+! heat, irrigation, solute — added to the case 6 swap.toml in Task 17.
+! Case 6 disables heat, irrigation, and solute entirely (all-0 switches).
+@test
+subroutine test_surfacewater_parity_4d_sections()
+   use funit
+   use variables, only: swhea, swirfix, swsolu
+   use swap_config_mod
+   use load_swap_config_mod
+   use chdir_helper_mod
+   use parity_helpers_mod
+   use error_mod
+   use iso_fortran_env, only: real64
+   type(swap_config_t)      :: config
+   type(error_collection_t) :: errors
+   character(len=1024)      :: orig_cwd
+
+   call get_cwd(orig_cwd)
+   call chdir_to('tests/swap-cases/6.surfacewater')
+   call stage_swp_template('swap_linux.swp.template', 'swap')
+   call reset_for_next_readswap()
+   call readswap()
+   close(logf)
+   call chdir_to(trim(orig_cwd))
+
+   call load_swap_config('tests/swap-cases/toml/6.surfacewater/swap.toml', config, errors)
+   call config%validate(errors)
+   call config%finalize(errors)
+
+   @assertFalse(errors%has_fatals())
+
+   ! [bottom_boundary] — case 6 schema-side SWBOTB=1 with bbcfil="swap"
+   ! (the SWBBCFILE=1 BBC-file reference branch). Legacy `variables%swbotb`
+   ! is populated from the .bbc file itself (case 6: SWBOTB=3 from
+   ! swap.bbc), not from the .swp — so the schema int and the legacy
+   ! global are semantically different. Assert structure only.
+   ! READING NOTE: schema does not yet model the .bbc-file-reference
+   ! semantics distinct from inline SWBOTB=1; legacy `variables%swbotb`
+   ! cross-check deferred.
+   @assertTrue(allocated(config%bottom_boundary%bbcfil))
+
+   ! [heat] — case 6 SWHEA=0 (heat transport disabled).
+   @assertEqual(swhea, config%heat%swhea)
+
+   ! [irrigation] — case 6 SWIRFIX=0.
+   @assertEqual(swirfix, config%irrigation%swirfix)
+
+   ! [solute] — case 6 SWSOLU=0.
+   @assertEqual(swsolu, config%solute%swsolu)
+end subroutine
