@@ -81,6 +81,7 @@ Call Exit(100)
    contains
    subroutine dummy(iTask)
    use swap_exchange
+   use error_mod, only: fatalerr_collected
    implicit none
    integer, intent(in)  :: iTask
    integer              :: i, itel
@@ -94,7 +95,7 @@ Call Exit(100)
       testin%rain = 0.0d0; testin%tmin = 0.0d0; testin%tmax = 0.0d0; testin%rad = 0.0d0; testin%hum = 0.0d0; testin%wind = 0.0d0; testin%etref = 0.0d0; testin%wet = 0.0d0
       testin%icrop = 0; testin%lai = 0.0d0; testin%ch = 0.0d0; testin%zroot = 0.0d0
       call swap(iCaller, iTask, toswap = testin, fromswap = testout)
-      if (testout%ierrorcode /= 0) call fatalerr('swap_main', 'error')
+      if (testout%ierrorcode /= 0) call fatalerr_collected('swap_main', 'error')
       itstart = nint(testout%tstart + 365.0d0)
       itend   = nint(testout%tend   + 365.0d0)
 
@@ -124,7 +125,7 @@ Call Exit(100)
             testin%zroot  =   0.0d0
          end if
          call swap(iCaller, iTask, toswap = testin, fromswap = testout)
-         if (testout%ierrorcode /= 0) call fatalerr('swap_main', 'error')
+         if (testout%ierrorcode /= 0) call fatalerr_collected('swap_main', 'error')
          !write (*,'(i10, f8.3,i10)') i, testout%tact/testout%tpot, testout%ierrorcode
       end do
 

@@ -92,6 +92,7 @@ use soilgrid_mod, only: CalcGrid, ConvertDiscrVert
 use soilhydraulics_mod, only: soilwater, SoilWaterStateVar
 use irrigation_mod, only: irrigation, SSDI_irrigation
 use management_soil_mod, only: SoilManagement
+use error_mod, only: fatalerr_collected
 implicit none
 
 ! global
@@ -104,8 +105,8 @@ logical :: flError
 logical, parameter :: flDailyStateSnapshot = .false.
 
 if (iCaller /= 0 .and. iTask < 3) then
-   if (.not.(present(toswap)))   call fatalerr ('swap', 'Argument toswap missing in DLL call.')
-   if (.not.(present(fromswap))) call fatalerr ('swap', 'Argument fromswap missing in DLL call.')
+   if (.not.(present(toswap)))   call fatalerr_collected ('swap', 'Argument toswap missing in DLL call.')
+   if (.not.(present(fromswap))) call fatalerr_collected ('swap', 'Argument fromswap missing in DLL call.')
 end if
 flError = .false.
 

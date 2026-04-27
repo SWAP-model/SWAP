@@ -20,6 +20,7 @@
       use array_utils, only: afgen
       use rootextraction_mod, only: MatricFlux
       use swap_constants, only: tiny
+      use error_mod, only: fatalerr_collected
       implicit none
 
       integer task
@@ -356,7 +357,7 @@
       return      
       
       case default
-         call fatalerr ('CropGrowth', 'Illegal value for TASK')
+         call fatalerr_collected ('CropGrowth', 'Illegal value for TASK')
       end select
 
       return
@@ -374,6 +375,7 @@
       use array_utils, only: afgen
       use rootextraction_mod, only: MatricFlux
       use swap_constants, only: tiny, nihil
+      use error_mod, only: fatalerr_collected
       implicit none
 
 ! --- local variables
@@ -541,7 +543,7 @@
       return
       
       case default
-         call fatalerr ('CropFixed', 'Illegal value for TASK')
+         call fatalerr_collected ('CropFixed', 'Illegal value for TASK')
       end select
 
       return
@@ -555,6 +557,7 @@
 ! ----------------------------------------------------------------------
 
       use variables
+      use error_mod, only: fatalerr_collected
       implicit none
 
 ! --- local variables ------------------
@@ -575,7 +578,7 @@
           Messag = 'The name of the input crop-file (''//trim(cropfil'//&
      &   '(icrop))//'') cannot be equal to the name of'                 &
      &   //'the output crop-file '//trim(outfil)//' Adjust a filename !'
-          call fatalerr ('crops',messag)
+          call fatalerr_collected ('crops',messag)
         endif
         filnam = trim(pathwork)//trim(outfil)//'.crp'
         crp = getun (20,90)
@@ -632,7 +635,7 @@
       close (crp)
 
       case default
-         call fatalerr ('CropOutput', 'Illegal value for TASK')
+         call fatalerr_collected ('CropOutput', 'Illegal value for TASK')
       end select
 
       return
@@ -679,8 +682,9 @@
 ! ----------------------------------------------------------------------
       use variables
       use swap_constants, only: small
+      use error_mod, only: fatalerr_collected
       implicit none
- 
+
       integer  task,node
       real(8)  drz1,hrz1,pFz1
       real(8)  tsumemesub      
@@ -830,7 +834,7 @@
         return
         
       case default
-        call fatalerr ('ArableLandGerm', 'Illegal value for TASK')
+        call fatalerr_collected ('ArableLandGerm', 'Illegal value for TASK')
       end select
 
       return
@@ -846,8 +850,9 @@
 ! ----------------------------------------------------------------------
       use variables
       use array_utils, only: afgen
+      use error_mod, only: fatalerr_collected
       implicit none
- 
+
       integer   ifindi,indexyr
       real(8)   CO2
       character(len=200) messag
@@ -862,7 +867,7 @@
         indexyr = ifindi (CO2year, mayrs, 1, mayrs, iyear)
         if (indexyr.lt.1 .or. indexyr.gt.mayrs) then
           Messag ='Input if CO2year or CO2ppm inconsistent, correct'
-          call fatalerr ('wofost',messag)
+          call fatalerr_collected ('wofost',messag)
         endif
         CO2 = CO2ppm(indexyr)
         fco2amax = afgen(CO2AMAXTB,30,CO2)
@@ -886,6 +891,7 @@
       use soilhydraulics_utils, only: watcon
       use rootextraction_mod, only: MatricFlux
         use swap_constants, only: tiny, nihil
+      use error_mod, only: fatalerr_collected
       implicit none
  
       integer   i1,task,swhydrlift,i
@@ -1983,7 +1989,7 @@
       wrtt0 = wrt
 
       case default
-         call fatalerr ('Wofost', 'Illegal value for TASK')
+         call fatalerr_collected ('Wofost', 'Illegal value for TASK')
       end select
 
       return
@@ -2000,7 +2006,8 @@
       use soilhydraulics_utils, only: watcon
       use rootextraction_mod, only: MatricFlux
       use swap_constants, only: tiny, nihil
-      
+      use error_mod, only: fatalerr_collected
+
       implicit none
  
       integer   i1,task
@@ -2305,7 +2312,7 @@
           Messag ='The sum of partitioning factors for leaves, stems'// &
      &    ' and storage organs is not equal to one at time '            &
      &    //trim(tmp)//'.'
-          call fatalerr ('grass_pot',messag)
+          call fatalerr_collected ('grass_pot',messag)
         endif
 
 ! ---   dry matter increase
@@ -2314,10 +2321,10 @@
 
 ! ---   check on carbon balance
         ccheck = (gasspot-mrespot-(fr+(fl+fs)*(1.0d0-fr))*dmipot/cvf)   &
-     &         /max(0.0001d0,gasspot)      
+     &         /max(0.0001d0,gasspot)
         if (dabs(ccheck).gt.0.0001d0) then
           Messag ='The carbon balance is not correct'
-          call fatalerr ('grass_pot',messag)
+          call fatalerr_collected ('grass_pot',messag)
         endif
 
 
@@ -2775,7 +2782,7 @@
      &         /max(0.0001d0,gass)      
         if (dabs(ccheck).gt.0.0001d0) then
           Messag ='The carbon balance is not correct'
-          call fatalerr ('grass_act',messag)
+          call fatalerr_collected ('grass_act',messag)
         endif
 
 ! ===   growth rate by plant organ ===
@@ -3198,7 +3205,7 @@
       return
 
       case default
-         call fatalerr ('Grass', 'Illegal value for TASK')
+         call fatalerr_collected ('Grass', 'Illegal value for TASK')
       end select
 
       return
@@ -3526,6 +3533,7 @@
 !*  Author      : Joop Kroes
 !*  Date        : May 2014
 
+      use error_mod, only: fatalerr_collected
       implicit none
 !*     formal parameters
       integer iday
@@ -3538,7 +3546,7 @@
       parameter (pi=3.1415926d0, angle=-4.0d0, rad=0.0174533d0)
 
 !*     Error check on latitude
-      if (dabs(lat).gt.90.d0) call fatalerr                             &
+      if (dabs(lat).gt.90.d0) call fatalerr_collected                   &
      &   ('astro','lat > 90 or lat < -90')
 
 !*     Declination and solar constant for this day
@@ -3610,8 +3618,9 @@
      &               ANST,ANRT,ANSO,NLOSSL,NLOSSR,NLOSSS,NBALAN,NNI) 
 ! ----------------------------------------------------------------------
 !     Date               : March 2015  
-!     Purpose            : open and write crop output N balance files 
+!     Purpose            : open and write crop output N balance files
 ! ----------------------------------------------------------------------
+      use error_mod, only: fatalerr_collected
       implicit none
 
 ! --- global variables ------------------
@@ -3670,7 +3679,7 @@
       close (nba)
 
       case default
-         call fatalerr ('OutbalCropN', 'Illegal value for TASK')
+         call fatalerr_collected ('OutbalCropN', 'Illegal value for TASK')
       end select
 
       return
@@ -3685,6 +3694,7 @@
 ! ----------------------------------------------------------------------
       
      use swap_constants, only: tiny, nihil
+     use error_mod, only: fatalerr_collected
      implicit none
 
 ! --- global variables ------------------
@@ -3751,7 +3761,7 @@
       close (om1)
 
       case default
-         call fatalerr ('OutbalCropOM1', 'Illegal value for TASK')
+         call fatalerr_collected ('OutbalCropOM1', 'Illegal value for TASK')
       end select
 
       return
@@ -3762,8 +3772,9 @@
      &         delt,grlv,grst,grso,grrt,drlv,drst,drso,drrt,ombalan)
 ! ----------------------------------------------------------------------
 !     Date               : March 2015  
-!     Purpose            : open and write crop output OM balance files 
+!     Purpose            : open and write crop output OM balance files
 ! ----------------------------------------------------------------------
+      use error_mod, only: fatalerr_collected
       implicit none
 
 ! --- global variables ------------------
@@ -3824,7 +3835,7 @@
       close (om2)
 
       case default
-         call fatalerr ('OutbalCropOM2', 'Illegal value for TASK')
+         call fatalerr_collected ('OutbalCropOM2', 'Illegal value for TASK')
       end select
 
       return
@@ -3846,6 +3857,7 @@
 !       I    R8  FO        Fraction of total dry matter partitioned to the storage organs (-)
 !       I    R8  FBL       Fraction of total dry matter partitioned to the bulbs (-)
 ! ----------------------------------------------------------------------
+      use error_mod, only: fatalerr_collected
       implicit none
 ! --- global
       real(8)   DVS,FR,FL,FS,FO,FBL
@@ -3861,7 +3873,7 @@
      &      ' error in partitioning functions, dvs= ',dvs,              &
      &      ' fcheck = ',fcheck,' fr = ',fr,' fl = ',fl,                &
      &      ' fs = ',fs,' fo = ',fo
-        call fatalerr ('wofost',messag)
+        call fatalerr_collected ('wofost',messag)
       end if
       
       return
@@ -3887,6 +3899,7 @@
 !       I    R8  GASS      Gross assimilation (-)
 !       I    R8  MRES      maintenance respiration (-)
 ! ----------------------------------------------------------------------
+      use error_mod, only: fatalerr_collected
       implicit none
 ! --- global
       real(8)   dvs,cvf,dmi,fbl,fr,fl,fs,fo,gass,mres,ccheck
@@ -3901,7 +3914,7 @@
      &     ' carbon flows nog balanced on day ',dvs,                    &
      &     ' ccheck = ',ccheck,' gass = ',gass,' mres = ',mres,         &
      &    ' fr,fbl,l,s,o = ',fr,fbl,fl,fs,fo,' dmi = ',dmi,' dvf = ',cvf
-        call fatalerr ('wofost',messag)
+        call fatalerr_collected ('wofost',messag)
       end if    
       return
       end
