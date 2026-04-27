@@ -1,0 +1,157 @@
+@test
+subroutine test_heat_swhea_zero_skips_validation()
+   ! Phase 4d Task 6: swhea=0 is the "section absent" sentinel. Validator
+   ! short-circuits to keep existing case TOMLs loading clean. Mirrors the
+   ! bottom_boundary swbotb=0 sentinel.
+   use funit
+   use error_mod
+   use heat_config_mod
+   type(heat_config_t) :: c
+   type(error_collection_t) :: errors
+   c%swhea = 0
+   call c%validate(errors)
+   @assertFalse(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_heat_swhea_invalid_value_fails()
+   use funit
+   use error_mod
+   use heat_config_mod
+   type(heat_config_t) :: c
+   type(error_collection_t) :: errors
+   c%swhea  = 5
+   c%swcalt = 2
+   c%swtopbhea = 1
+   c%swbotbhea = 1
+   call c%validate(errors)
+   @assertTrue(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_heat_swcalt_invalid_enum_fails()
+   use funit
+   use error_mod
+   use heat_config_mod
+   type(heat_config_t) :: c
+   type(error_collection_t) :: errors
+   c%swhea     = 1
+   c%swcalt    = 7
+   c%swtopbhea = 1
+   c%swbotbhea = 1
+   call c%validate(errors)
+   @assertTrue(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_heat_happy_path_numerical()
+   ! Mirrors cases 1-5 from the audit: swhea=1, swcalt=2, with PSAND/PCLAY/PORG
+   ! per layer plus an initial soil-temperature table.
+   use funit
+   use error_mod
+   use iso_fortran_env, only: real64
+   use heat_config_mod
+   type(heat_config_t) :: c
+   type(error_collection_t) :: errors
+   c%swhea     = 1
+   c%swcalt    = 2
+   c%swtopbhea = 1
+   c%swbotbhea = 1
+   c%tfroststa = -1.0_real64
+   c%tfrostend = -3.0_real64
+   allocate(c%psand(2)); c%psand = [0.80_real64, 0.85_real64]
+   allocate(c%pclay(2)); c%pclay = [0.05_real64, 0.05_real64]
+   allocate(c%porg(2));  c%porg  = [0.10_real64, 0.05_real64]
+   allocate(c%tsoil_init(4, 2))
+   c%tsoil_init(1, :) = [-10.0_real64, 15.0_real64]
+   c%tsoil_init(2, :) = [-40.0_real64, 12.0_real64]
+   c%tsoil_init(3, :) = [-70.0_real64, 10.0_real64]
+   c%tsoil_init(4, :) = [-95.0_real64,  9.0_real64]
+   call c%validate(errors)
+   @assertFalse(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_heat_tfroststa_out_of_range_fails()
+   use funit
+   use error_mod
+   use iso_fortran_env, only: real64
+   use heat_config_mod
+   type(heat_config_t) :: c
+   type(error_collection_t) :: errors
+   c%swhea     = 1
+   c%swcalt    = 2
+   c%swtopbhea = 1
+   c%swbotbhea = 1
+   c%tfroststa = 100.0_real64   ! legacy max is 5.0 °C
+   c%tfrostend = 0.0_real64
+   call c%validate(errors)
+   @assertTrue(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_heat_psand_pclay_length_mismatch_fails()
+   use funit
+   use error_mod
+   use iso_fortran_env, only: real64
+   use heat_config_mod
+   type(heat_config_t) :: c
+   type(error_collection_t) :: errors
+   c%swhea     = 1
+   c%swcalt    = 2
+   c%swtopbhea = 1
+   c%swbotbhea = 1
+   allocate(c%psand(2)); c%psand = [0.80_real64, 0.85_real64]
+   allocate(c%pclay(3)); c%pclay = [0.05_real64, 0.05_real64, 0.05_real64]
+   allocate(c%porg(2));  c%porg  = [0.10_real64, 0.05_real64]
+   call c%validate(errors)
+   @assertTrue(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_heat_psand_only_without_pclay_fails()
+   ! All three per-layer fraction arrays must be supplied together.
+   use funit
+   use error_mod
+   use iso_fortran_env, only: real64
+   use heat_config_mod
+   type(heat_config_t) :: c
+   type(error_collection_t) :: errors
+   c%swhea     = 1
+   c%swcalt    = 2
+   c%swtopbhea = 1
+   c%swbotbhea = 1
+   allocate(c%psand(2)); c%psand = [0.80_real64, 0.85_real64]
+   call c%validate(errors)
+   @assertTrue(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_heat_tsoil_init_wrong_ncols_fails()
+   use funit
+   use error_mod
+   use iso_fortran_env, only: real64
+   use heat_config_mod
+   type(heat_config_t) :: c
+   type(error_collection_t) :: errors
+   c%swhea     = 1
+   c%swcalt    = 2
+   c%swtopbhea = 1
+   c%swbotbhea = 1
+   allocate(c%tsoil_init(3, 3))   ! 3 cols, expected 2
+   c%tsoil_init = 0.0_real64
+   call c%validate(errors)
+   @assertTrue(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_heat_finalize_no_errors()
+   use funit
+   use error_mod
+   use heat_config_mod
+   type(heat_config_t) :: c
+   type(error_collection_t) :: errors
+   c%swhea = 1
+   call c%finalize(errors)
+   @assertFalse(errors%has_errors())
+end subroutine
