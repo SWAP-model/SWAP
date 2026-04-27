@@ -1,0 +1,29 @@
+[irrigation_schedule]
+schedule        = 1
+startirr_day    = 1
+startirr_month  = 4
+endirr_day      = 30
+endirr_month    = 9
+cirrs           = 0.0
+isuas           = 1
+tcs             = 1
+dcs             = 1
+irgthreshold    = 0.5
+swcirrthres     = 0
+cirrthres       = 0.0
+perirrsurp      = 0.0
+tcsfix          = 0
+phfieldcapacity = -100.0
+raithreshold    = 0.0
+dcslim          = 0
+irgdepmin       = 5.0
+irgdepmax       = 50.0
+
+trel_table = [
+  [ 1.0, 0.65],
+  [60.0, 0.55],
+]
+di_table = [
+  [ 1.0, 20.0],
+  [60.0, 25.0],
+]

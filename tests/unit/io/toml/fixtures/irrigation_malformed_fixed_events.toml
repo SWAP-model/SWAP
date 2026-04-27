@@ -1,0 +1,5 @@
+[irrigation]
+swirfix = 1
+fixed_events = [
+  [12345.0, 25.0, 0.0],
+]

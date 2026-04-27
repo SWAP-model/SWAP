@@ -1,0 +1,220 @@
+@test
+subroutine test_read_irrigation_swirfix0_happy()
+   use funit
+   use tomlf, only: toml_table, toml_load
+   use irrigation_config_mod
+   use read_irrigation_toml_mod
+   use error_mod
+   type(toml_table), allocatable, target :: doc
+   type(toml_table), pointer             :: doc_ptr
+   type(irrigation_config_t)             :: c
+   type(error_collection_t)              :: errors
+
+   call toml_load(doc, 'tests/unit/io/toml/fixtures/irrigation_swirfix0.toml')
+   doc_ptr => doc
+   call read_irrigation_toml(doc_ptr, c, errors)
+
+   @assertFalse(errors%has_errors())
+   @assertEqual(0, c%swirfix)
+   @assertFalse(allocated(c%fixed_events))
+
+   ! Validator agrees: swirfix=0 short-circuits cleanly.
+   call c%validate(errors)
+   @assertFalse(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_read_irrigation_swirfix1_irgfil()
+   use funit
+   use tomlf, only: toml_table, toml_load
+   use irrigation_config_mod
+   use read_irrigation_toml_mod
+   use error_mod
+   type(toml_table), allocatable, target :: doc
+   type(toml_table), pointer             :: doc_ptr
+   type(irrigation_config_t)             :: c
+   type(error_collection_t)              :: errors
+
+   call toml_load(doc, 'tests/unit/io/toml/fixtures/irrigation_swirfix1_irgfil.toml')
+   doc_ptr => doc
+   call read_irrigation_toml(doc_ptr, c, errors)
+
+   @assertFalse(errors%has_errors())
+   @assertEqual(1, c%swirfix)
+   @assertTrue(allocated(c%irgfil))
+   @assertEqual('wateruse.irg', c%irgfil)
+   @assertFalse(allocated(c%fixed_events))
+
+   call c%validate(errors)
+   @assertFalse(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_read_irrigation_swirfix1_inline_table()
+   use funit
+   use tomlf, only: toml_table, toml_load
+   use irrigation_config_mod
+   use read_irrigation_toml_mod
+   use error_mod
+   type(toml_table), allocatable, target :: doc
+   type(toml_table), pointer             :: doc_ptr
+   type(irrigation_config_t)             :: c
+   type(error_collection_t)              :: errors
+
+   call toml_load(doc, 'tests/unit/io/toml/fixtures/irrigation_swirfix1_inline.toml')
+   doc_ptr => doc
+   call read_irrigation_toml(doc_ptr, c, errors)
+
+   @assertFalse(errors%has_errors())
+   @assertEqual(1, c%swirfix)
+   @assertTrue(allocated(c%fixed_events))
+   @assertEqual(2, size(c%fixed_events, 1))
+   @assertEqual(4, size(c%fixed_events, 2))
+   @assertEqual(12345.0d0, c%fixed_events(1, 1), 1.0d-12)
+   @assertEqual(   25.0d0, c%fixed_events(1, 2), 1.0d-12)
+   @assertEqual(    0.5d0, c%fixed_events(2, 3), 1.0d-12)
+   @assertEqual(    2.0d0, c%fixed_events(2, 4), 1.0d-12)
+
+   call c%validate(errors)
+   @assertFalse(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_read_irrigation_missing_section_silent()
+   use funit
+   use tomlf, only: toml_table, toml_load
+   use irrigation_config_mod
+   use read_irrigation_toml_mod
+   use error_mod
+   type(toml_table), allocatable, target :: doc
+   type(toml_table), pointer             :: doc_ptr
+   type(irrigation_config_t)             :: c
+   type(error_collection_t)              :: errors
+
+   call toml_load(doc, 'tests/unit/io/toml/fixtures/general_minimal.toml')
+   doc_ptr => doc
+   call read_irrigation_toml(doc_ptr, c, errors)
+
+   @assertFalse(errors%has_errors())
+   @assertEqual(0, c%swirfix)
+   @assertFalse(allocated(c%fixed_events))
+end subroutine
+
+@test
+subroutine test_read_irrigation_malformed_fixed_events()
+   use funit
+   use tomlf, only: toml_table, toml_load
+   use irrigation_config_mod
+   use read_irrigation_toml_mod
+   use error_mod
+   type(toml_table), allocatable, target :: doc
+   type(toml_table), pointer             :: doc_ptr
+   type(irrigation_config_t)             :: c
+   type(error_collection_t)              :: errors
+
+   call toml_load(doc, &
+        'tests/unit/io/toml/fixtures/irrigation_malformed_fixed_events.toml')
+   doc_ptr => doc
+   call read_irrigation_toml(doc_ptr, c, errors)
+
+   @assertTrue(errors%has_errors())
+   @assertFalse(allocated(c%fixed_events))
+end subroutine
+
+@test
+subroutine test_read_irrigation_schedule_minimal_happy()
+   use funit
+   use tomlf, only: toml_table, toml_load, get_value
+   use irrigation_config_mod
+   use read_irrigation_toml_mod
+   use error_mod
+   type(toml_table), allocatable, target :: doc
+   type(toml_table), pointer             :: doc_ptr, sec
+   type(irrigation_schedule_t)           :: s
+   type(error_collection_t)              :: errors
+   integer :: stat
+
+   call toml_load(doc, 'tests/unit/io/toml/fixtures/irrigation_schedule_minimal.toml')
+   doc_ptr => doc
+   sec => null()
+   call get_value(doc_ptr, 'irrigation_schedule', sec, requested=.false., stat=stat)
+   @assertTrue(associated(sec))
+
+   call read_irrigation_schedule_from_section(sec, s, errors)
+   @assertFalse(errors%has_errors())
+   @assertEqual(0, s%schedule)
+   @assertFalse(allocated(s%trel_table))
+   @assertFalse(allocated(s%di_table))
+
+   ! Validator: schedule=0 short-circuits cleanly.
+   call s%validate(errors)
+   @assertFalse(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_read_irrigation_schedule_tcs1_dcs1()
+   use funit
+   use tomlf, only: toml_table, toml_load, get_value
+   use irrigation_config_mod
+   use read_irrigation_toml_mod
+   use error_mod
+   type(toml_table), allocatable, target :: doc
+   type(toml_table), pointer             :: doc_ptr, sec
+   type(irrigation_schedule_t)           :: s
+   type(error_collection_t)              :: errors
+   integer :: stat
+
+   call toml_load(doc, 'tests/unit/io/toml/fixtures/irrigation_schedule_tcs1_dcs1.toml')
+   doc_ptr => doc
+   sec => null()
+   call get_value(doc_ptr, 'irrigation_schedule', sec, requested=.false., stat=stat)
+   @assertTrue(associated(sec))
+
+   call read_irrigation_schedule_from_section(sec, s, errors)
+   @assertFalse(errors%has_errors())
+   @assertEqual(1, s%schedule)
+   @assertEqual(1, s%tcs)
+   @assertEqual(1, s%dcs)
+   @assertEqual(1, s%isuas)
+   @assertEqual(1,  s%startirr_day)
+   @assertEqual(4,  s%startirr_month)
+   @assertEqual(30, s%endirr_day)
+   @assertEqual(9,  s%endirr_month)
+   @assertEqual(0.5d0, s%irgthreshold, 1.0d-12)
+   @assertEqual(-100.0d0, s%phfieldcapacity, 1.0d-12)
+   @assertEqual(50.0d0, s%irgdepmax, 1.0d-12)
+
+   @assertTrue(allocated(s%trel_table))
+   @assertEqual(2, size(s%trel_table, 1))
+   @assertEqual(2, size(s%trel_table, 2))
+   @assertEqual( 1.0d0, s%trel_table(1, 1), 1.0d-12)
+   @assertEqual(0.65d0, s%trel_table(1, 2), 1.0d-12)
+   @assertEqual(60.0d0, s%trel_table(2, 1), 1.0d-12)
+
+   @assertTrue(allocated(s%di_table))
+   @assertEqual(2, size(s%di_table, 1))
+   @assertEqual(20.0d0, s%di_table(1, 2), 1.0d-12)
+   @assertEqual(25.0d0, s%di_table(2, 2), 1.0d-12)
+
+   ! Validator agrees on the populated payload.
+   call s%validate(errors)
+   @assertFalse(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_read_irrigation_schedule_missing_section_silent()
+   use funit
+   use irrigation_config_mod
+   use read_irrigation_toml_mod
+   use tomlf, only: toml_table
+   use error_mod
+   type(toml_table), pointer    :: sec
+   type(irrigation_schedule_t)  :: s
+   type(error_collection_t)     :: errors
+
+   sec => null()
+   call read_irrigation_schedule_from_section(sec, s, errors)
+   @assertFalse(errors%has_errors())
+   @assertEqual(0, s%schedule)
+   @assertFalse(allocated(s%trel_table))
+end subroutine
