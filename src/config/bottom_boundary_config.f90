@@ -22,7 +22,9 @@ module bottom_boundary_config_mod
       real(real64), allocatable :: qbot_table(:,:)
 
       ! SWBOTB=3 (Cauchy / regional aquifer)
-      integer      :: shape   = 0
+      ! NOTE: legacy `shape` is a real (e.g. case 5 SHAPE=0.79). Phase 4d
+      ! Task 20-prep: store as real(real64) and use a continuous range check.
+      real(real64) :: shape   = 0.0_real64
       real(real64) :: hdrain  = 0.0_real64
       real(real64) :: rimlay  = 0.0_real64
       real(real64) :: aqave   = 0.0_real64
@@ -98,7 +100,8 @@ contains
          end if
          call check_table_2d(self%qbot_table, 2, 'bottom_boundary.qbot_table', errors)
       case (3)
-         call check_int_enum(self%shape, [0, 1, 2], 'bottom_boundary.shape', errors)
+         call check_real_range(self%shape, 0.0_real64, 2.0_real64, &
+                               'bottom_boundary.shape', errors)
          call check_real_range(self%hdrain, -1.0e4_real64,  0.0_real64, &
                                'bottom_boundary.hdrain', errors)
          call check_real_range(self%rimlay,  0.0_real64,    1.0e5_real64, &

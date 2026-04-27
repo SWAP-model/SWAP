@@ -44,8 +44,9 @@ contains
                                             'bottom_boundary.bbcfil', errors)
 
       ! SWBOTB=3 (Cauchy) scalars.
-      call get_optional_int_with_default(sec,  'shape',  config%shape,  0, &
-                                         'bottom_boundary.shape',  errors)
+      ! Phase 4d Task 20-prep: shape is a real (legacy case 5 SHAPE=0.79).
+      call get_optional_real_with_default(sec, 'shape',  config%shape,  0.0_real64, &
+                                          'bottom_boundary.shape',  errors)
       call get_optional_real_with_default(sec, 'hdrain', config%hdrain, 0.0_real64, &
                                           'bottom_boundary.hdrain', errors)
       call get_optional_real_with_default(sec, 'rimlay', config%rimlay, 0.0_real64, &

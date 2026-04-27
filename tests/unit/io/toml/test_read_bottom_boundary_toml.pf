@@ -43,7 +43,7 @@ subroutine test_read_bottom_boundary_swbotb3_happy()
 
    @assertFalse(errors%has_errors())
    @assertEqual(3,        c%swbotb)
-   @assertEqual(1,        c%shape)
+   @assertEqual(1.0d0,    c%shape, 1.0d-12)
    @assertEqual(-200.0d0, c%hdrain, 1.0d-12)
    @assertEqual(500.0d0,  c%rimlay, 1.0d-12)
    @assertEqual(-150.0d0, c%aqave,  1.0d-12)

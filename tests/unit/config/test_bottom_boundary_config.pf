@@ -122,7 +122,7 @@ subroutine test_bb_swbotb3_happy_path()
    type(bottom_boundary_config_t) :: c
    type(error_collection_t) :: errors
    c%swbotb  = 3
-   c%shape   = 1
+   c%shape   = 1.0_real64
    c%hdrain  = -100.0_real64
    c%rimlay  = 500.0_real64
    c%aqave   = -200.0_real64
@@ -142,7 +142,7 @@ subroutine test_bb_swbotb3_hdrain_out_of_range_fails()
    type(bottom_boundary_config_t) :: c
    type(error_collection_t) :: errors
    c%swbotb = 3
-   c%shape  = 1
+   c%shape  = 1.0_real64
    c%hdrain = 50.0_real64
    c%rimlay = 500.0_real64
    c%aqper  = 365.0_real64
@@ -160,7 +160,7 @@ subroutine test_bb_swbotb3_aqper_out_of_range_fails()
    type(bottom_boundary_config_t) :: c
    type(error_collection_t) :: errors
    c%swbotb = 3
-   c%shape  = 1
+   c%shape  = 1.0_real64
    c%hdrain = -100.0_real64
    c%rimlay = 500.0_real64
    c%aqper  = 500.0_real64
