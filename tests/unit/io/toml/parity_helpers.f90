@@ -10,6 +10,7 @@ module parity_helpers_mod
    private
 
    public :: load_both_for_hupselbrook
+   public :: load_both_for_salinitystress
    public :: reset_for_next_readswap
 
    character(len=*), parameter :: CASE_DIR = &
@@ -17,6 +18,11 @@ module parity_helpers_mod
    character(len=*), parameter :: TOML_FILE = &
       'tests/swap-cases/toml/1.hupselbrook/swap.toml'
    character(len=*), parameter :: TEMPLATE = 'swap_linux.swp.template'
+
+   character(len=*), parameter :: SAL_CASE_DIR = &
+      'tests/swap-cases/5.salinitystress'
+   character(len=*), parameter :: SAL_TOML_FILE = &
+      'tests/swap-cases/toml/5.salinitystress/swap.toml'
 
 contains
 
@@ -86,5 +92,25 @@ contains
       call config%validate(errors)
       call config%finalize(errors)
    end subroutine load_both_for_hupselbrook
+
+   !> Phase 4c-b Task 12: same pattern as `load_both_for_hupselbrook` but for
+   !! the salinitystress (case 5) regression case.
+   subroutine load_both_for_salinitystress(config, errors)
+      type(swap_config_t),      intent(out) :: config
+      type(error_collection_t), intent(out) :: errors
+      character(len=1024) :: orig_cwd
+
+      call get_cwd(orig_cwd)
+      call chdir_to(SAL_CASE_DIR)
+      call stage_swp_template(TEMPLATE, 'swap')
+      call reset_for_next_readswap()
+      call readswap()
+      close(logf)
+      call chdir_to(trim(orig_cwd))
+
+      call load_swap_config(SAL_TOML_FILE, config, errors)
+      call config%validate(errors)
+      call config%finalize(errors)
+   end subroutine load_both_for_salinitystress
 
 end module parity_helpers_mod
