@@ -11,6 +11,7 @@ module parity_helpers_mod
 
    public :: load_both_for_hupselbrook
    public :: load_both_for_salinitystress
+   public :: load_both_for_macroporeflow
    public :: reset_for_next_readswap
 
    character(len=*), parameter :: CASE_DIR = &
@@ -23,6 +24,11 @@ module parity_helpers_mod
       'tests/swap-cases/5.salinitystress'
    character(len=*), parameter :: SAL_TOML_FILE = &
       'tests/swap-cases/toml/5.salinitystress/swap.toml'
+
+   character(len=*), parameter :: MAC_CASE_DIR = &
+      'tests/swap-cases/3.macroporeflow'
+   character(len=*), parameter :: MAC_TOML_FILE = &
+      'tests/swap-cases/toml/3.macroporeflow/swap.toml'
 
 contains
 
@@ -116,5 +122,27 @@ contains
       call config%validate(errors)
       call config%finalize(errors)
    end subroutine load_both_for_salinitystress
+
+   !> Phase 4e Task C3: same pattern as `load_both_for_hupselbrook` but for
+   !! the macroporeflow (case 3) regression case. Macropore-specific physics
+   !! (SWMACRO=1 sub-block) is exercised by the legacy reader but has no
+   !! schema slot; the parity test asserts only the schema-covered subset.
+   subroutine load_both_for_macroporeflow(config, errors)
+      type(swap_config_t),      intent(out) :: config
+      type(error_collection_t), intent(out) :: errors
+      character(len=1024) :: orig_cwd
+
+      call get_cwd(orig_cwd)
+      call chdir_to(MAC_CASE_DIR)
+      call stage_swp_template(TEMPLATE, 'swap')
+      call reset_for_next_readswap()
+      call readswap()
+      close(logf)
+      call chdir_to(trim(orig_cwd))
+
+      call load_swap_config(MAC_TOML_FILE, config, errors)
+      call config%validate(errors)
+      call config%finalize(errors)
+   end subroutine load_both_for_macroporeflow
 
 end module parity_helpers_mod

@@ -1,0 +1,245 @@
+! Phase 4e Task C3 parity test:
+! legacy `variables` globals (after readswap for case 3.macroporeflow)
+! vs swap_config_t fields (after load_swap_config + validate + finalize).
+!
+! Case 3 highlights: 2 type-1 (cropfixed) winter-cereal rotation entries
+! 1998-1999, dramet=3 (multi-level resistance drainage), SWMACRO=1
+! (macropore physics enabled), SWBOTB=3 with date-keyed HAQUIF table.
+!
+! Scope: schema-covered fields only.  Macropore-specific physics keys
+! (SWMACRO sub-block: Z_AH, Z_IC, Z_ST, VLMPSTSS, PPICSS, NUMSBDM, POWM,
+! shrinkage curves, sorptivity, rapid drainage) are NOT asserted here —
+! no `macropore_config_t` exists yet.  Phase 4f-prep will add the schema
+! and a corresponding parity assertion block.
+!
+! Stubbed in TOML: SWRAIN=3 (detailed rainfall) → swrain=2.
+
+@test
+subroutine test_macroporeflow_parity_general()
+   use funit
+   use parity_helpers_mod
+   use variables, only: project, pathwork, pathatm, pathcrop, pathdrain, swscre
+   use swap_config_mod
+   use error_mod
+   type(swap_config_t)      :: config
+   type(error_collection_t) :: errors
+
+   call load_both_for_macroporeflow(config, errors)
+
+   @assertFalse(errors%has_fatals())
+
+   @assertEqual(trim(project),   trim(config%general%project))
+   @assertEqual(trim(pathwork),  trim(config%general%pathwork))
+   @assertEqual(trim(pathatm),   trim(config%general%pathatm))
+   @assertEqual(trim(pathcrop),  trim(config%general%pathcrop))
+   @assertEqual(trim(pathdrain), trim(config%general%pathdrain))
+   @assertEqual(swscre,          config%general%swscre)
+end subroutine
+
+@test
+subroutine test_macroporeflow_parity_simulation()
+   use funit
+   use parity_helpers_mod
+   use variables, only: tstart, tend, nprintday
+   use swap_config_mod
+   use error_mod
+   type(swap_config_t)      :: config
+   type(error_collection_t) :: errors
+
+   call load_both_for_macroporeflow(config, errors)
+
+   @assertEqual(tstart,    config%simulation%tstart, 1.0d-9)
+   @assertEqual(tend,      config%simulation%tend,   1.0d-9)
+   @assertEqual(nprintday, config%simulation%nprintday)
+end subroutine
+
+@test
+subroutine test_macroporeflow_parity_meteorology()
+   use funit
+   use parity_helpers_mod
+   use variables, only: metfil, lat, alt, altw, swetr, swdivide, swrain, angstroma, angstromb
+   use swap_config_mod
+   use error_mod
+   type(swap_config_t)      :: config
+   type(error_collection_t) :: errors
+
+   call load_both_for_macroporeflow(config, errors)
+
+   @assertEqual(trim(metfil), trim(config%meteo%metfile))
+   @assertEqual(lat,          config%meteo%lat,       1.0d-9)
+   @assertEqual(alt,          config%meteo%alt,       1.0d-9)
+   @assertEqual(altw,         config%meteo%altw,      1.0d-9)
+   ! Case 3: swetr=1 (use reference ET from .met file).
+   @assertEqual(swetr,        config%meteo%swetr)
+   @assertEqual(1,            config%meteo%swetr)
+   @assertEqual(swdivide,     config%meteo%swdivide)
+   ! READING NOTE: legacy SWRAIN=3 (detailed rainfall) is not yet in the
+   ! schema range [0,1,2]; the case-3 swap.toml uses swrain=2 as a
+   ! schema-clean stand-in.  Assert against the TOML literal.
+   @assertEqual(2,            config%meteo%swrain)
+   @assertEqual(angstroma,    config%meteo%angstroma, 1.0d-9)
+   @assertEqual(angstromb,    config%meteo%angstromb, 1.0d-9)
+end subroutine
+
+@test
+subroutine test_macroporeflow_parity_drainage()
+   use funit
+   use parity_helpers_mod
+   use variables, only: dramet, swdivd, swdislay, nrlevs
+   use swap_config_mod
+   use error_mod
+   type(swap_config_t)      :: config
+   type(error_collection_t) :: errors
+
+   call load_both_for_macroporeflow(config, errors)
+
+   @assertEqual(dramet,   config%drain%dramet)
+   @assertEqual(swdivd,   config%drain%swdivd)
+   @assertEqual(swdislay, config%drain%swdislay)
+   ! dramet=3 -> finalize does NOT clamp nrlevs to 1; value from file (1) is preserved.
+   @assertEqual(nrlevs,   config%drain%nrlevs)
+   @assertEqual(3,        config%drain%dramet)
+   @assertEqual(1,        config%drain%nrlevs)
+end subroutine
+
+@test
+subroutine test_macroporeflow_parity_soil()
+   use funit
+   use parity_helpers_mod
+   use variables, only: swsophy, swhyst, swinco, gwli, swmacro, pondmx
+   use swap_config_mod
+   use error_mod
+   type(swap_config_t)      :: config
+   type(error_collection_t) :: errors
+
+   call load_both_for_macroporeflow(config, errors)
+
+   @assertEqual(swsophy, config%soil%swsophy)
+   @assertEqual(swhyst,  config%soil%swhyst)
+   @assertEqual(swinco,  config%soil%swinco)
+   @assertEqual(gwli,    config%soil%gwli,    1.0d-9)
+   ! Case 3 headline: swmacro=1 (macropore physics enabled).
+   @assertEqual(swmacro, config%soil%swmacro)
+   @assertEqual(1,       config%soil%swmacro)
+   @assertEqual(pondmx,  config%soil%pondmx,  1.0d-9)
+   ! READING NOTE: The macropore sub-block (Z_AH, Z_IC, Z_ST, VLMPSTSS,
+   ! PPICSS, NUMSBDM, POWM, RZAH, SPOINT, SWPOWM, DIPOMI, DIPOMA, plus
+   ! per-layer SWSOILSHR / SWSHRINP / THETCRMP / GEOMFAC / SHRPAR* /
+   ! SWSORP / SORPFACPARL / SORPMAX / SORPALFA / ZNCRAR / SHAPEFACMP /
+   ! CRITUNDSATVOL / SWDARCY / SWDRRAP / RAPDRARESREF / RAPDRAREAEXP /
+   ! NUMLEVRAPDRA / PNDMXMP) is read by the legacy reader and influences
+   ! `variables` globals that have no schema counterpart yet.  Asserting
+   ! these would require a `macropore_config_t` (Phase 4f-prep).
+end subroutine
+
+@test
+subroutine test_macroporeflow_parity_bottom_boundary()
+   use funit
+   use parity_helpers_mod
+   use variables, only: swbotb, shape, hdrain, rimlay
+   use swap_config_mod
+   use error_mod
+   use iso_fortran_env, only: real64
+   type(swap_config_t)      :: config
+   type(error_collection_t) :: errors
+
+   call load_both_for_macroporeflow(config, errors)
+
+   ! Case 3: SWBOTB=3 with the SW3=2 (HAQUIF date table) sub-branch.
+   @assertEqual(swbotb, config%bottom_boundary%swbotb)
+   @assertEqual(3,      config%bottom_boundary%swbotb)
+   @assertEqual(shape,  config%bottom_boundary%shape,  1.0e-12_real64)
+   @assertEqual(hdrain, config%bottom_boundary%hdrain, 1.0e-12_real64)
+   @assertEqual(rimlay, config%bottom_boundary%rimlay, 1.0e-12_real64)
+   ! READING NOTE: case 3 uses SW3=2 (date-keyed HAQUIF table), not modelled
+   ! in current bottom_boundary_config_t (which covers only the SW3=1 sinus
+   ! scalars aqave/aqamp/aqper/aqtmax). Deferred to a future phase.
+end subroutine
+
+@test
+subroutine test_macroporeflow_parity_crop_meta()
+   use funit
+   use parity_helpers_mod
+   use variables, only: swCrop
+   use swap_config_mod
+   use error_mod
+   type(swap_config_t)      :: config
+   type(error_collection_t) :: errors
+   integer :: i, n_rot
+
+   call load_both_for_macroporeflow(config, errors)
+
+   @assertFalse(errors%has_fatals())
+
+   @assertEqual(swCrop, config%crop%swcrop)
+
+   ! Case 3 has 2 rotation entries (wintcer1 1998, wintcer2 1999),
+   ! both type 1 (fixed/simple growth).
+   n_rot = size(config%crop%rotation_type)
+   @assertEqual(2, n_rot)
+   do i = 1, n_rot
+      @assertEqual(1, config%crop%rotation_type(i))
+   end do
+end subroutine
+
+! Phase 4e Task C3: full type-1 (cropfixed) parity for the first wintcer1
+! rotation entry.  Drives readcropfixed via the legacy_crop_helper bridge
+! and cross-checks `variables` globals against config%crop%rotation_fixed(1).
+!
+! wintcer1.crp has SWRD=1 (RDTB-driven root depth, 30 -> 100 cm),
+! SWOXYGEN=0 (hlim1/hlim2u/hlim2l left at zero), SWDROUGHT=1 (Feddes),
+! SWSALINITY=0, SWINTER=1 (cofab=0.25).
+@test
+subroutine test_macroporeflow_parity_wintcer1_crop()
+   use funit
+   use parity_helpers_mod
+   use variables, only: &
+      hlim1, hlim2u, hlim2l, hlim3h, hlim3l, hlim4, adcrh, adcrl, &
+      kdif, kdir, rdi, rri, rdc, cofab
+   use legacy_crop_helper_mod, only: read_legacy_cropfixed
+   use chdir_helper_mod, only: chdir_to, get_cwd
+   use swap_config_mod
+   use error_mod
+   use iso_fortran_env, only: real64
+   type(swap_config_t)      :: config
+   type(error_collection_t) :: errors
+   character(len=1024)      :: orig_cwd
+   integer, parameter :: ICROP_WINTCER1 = 1
+
+   ! 1. Load the case (readswap on legacy side, load+validate+finalize on TOML).
+   call load_both_for_macroporeflow(config, errors)
+   @assertFalse(errors%has_fatals())
+
+   ! 2. Drive the legacy readcropfixed from inside the case directory.
+   call get_cwd(orig_cwd)
+   call chdir_to('tests/swap-cases/3.macroporeflow')
+   call read_legacy_cropfixed(ICROP_WINTCER1, 'wintcer1')
+   call chdir_to(trim(orig_cwd))
+
+   ! Light extinction.
+   @assertEqual(kdif, config%crop%rotation_fixed(ICROP_WINTCER1)%kdif, 1.0e-12_real64)
+   @assertEqual(kdir, config%crop%rotation_fixed(ICROP_WINTCER1)%kdir, 1.0e-12_real64)
+
+   ! Root-growth scalars. SWRD=1 in wintcer1 -> readcropfixed reads RDTB
+   ! and assigns rdi=first row Y, rdc=last row Y, rri=0 (unused).
+   @assertEqual(rdi, config%crop%rotation_fixed(ICROP_WINTCER1)%rdi, 1.0e-12_real64)
+   @assertEqual(rri, config%crop%rotation_fixed(ICROP_WINTCER1)%rri, 1.0e-12_real64)
+   @assertEqual(rdc, config%crop%rotation_fixed(ICROP_WINTCER1)%rdc, 1.0e-12_real64)
+   @assertEqual(30.0_real64,  config%crop%rotation_fixed(ICROP_WINTCER1)%rdi, 1.0e-12_real64)
+   @assertEqual(100.0_real64, config%crop%rotation_fixed(ICROP_WINTCER1)%rdc, 1.0e-12_real64)
+
+   ! Feddes water-stress parameters.  SWOXYGEN=0 -> hlim1/hlim2u/hlim2l
+   ! are left at the legacy default (0.0) by readcropfixed.
+   @assertEqual(hlim1,  config%crop%rotation_fixed(ICROP_WINTCER1)%hlim1,  1.0e-12_real64)
+   @assertEqual(hlim2u, config%crop%rotation_fixed(ICROP_WINTCER1)%hlim2u, 1.0e-12_real64)
+   @assertEqual(hlim2l, config%crop%rotation_fixed(ICROP_WINTCER1)%hlim2l, 1.0e-12_real64)
+   ! SWDROUGHT=1 (Feddes) -> hlim3h/hlim3l/hlim4/adcrh/adcrl populated.
+   @assertEqual(hlim3h, config%crop%rotation_fixed(ICROP_WINTCER1)%hlim3h, 1.0e-12_real64)
+   @assertEqual(hlim3l, config%crop%rotation_fixed(ICROP_WINTCER1)%hlim3l, 1.0e-12_real64)
+   @assertEqual(hlim4,  config%crop%rotation_fixed(ICROP_WINTCER1)%hlim4,  1.0e-12_real64)
+   @assertEqual(adcrh,  config%crop%rotation_fixed(ICROP_WINTCER1)%adcrh,  1.0e-12_real64)
+   @assertEqual(adcrl,  config%crop%rotation_fixed(ICROP_WINTCER1)%adcrl,  1.0e-12_real64)
+
+   ! Interception (SWINTER=1 -> cofab read).
+   @assertEqual(cofab, config%crop%rotation_fixed(ICROP_WINTCER1)%cofab, 1.0e-12_real64)
+end subroutine

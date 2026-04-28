@@ -169,6 +169,7 @@ if get_option('enable_pfunit')
         'io/toml/test_oxygenstress_parity.pf',
         'io/toml/test_salinitystress_parity.pf',
         'io/toml/test_surfacewater_parity.pf',
+        'io/toml/test_macroporeflow_parity.pf',
         'io/toml/test_legacy_crop_helper.pf',
     ]
 
