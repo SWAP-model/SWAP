@@ -128,12 +128,14 @@ contains
          call check_array_1d_size(size(self%sorpalfa), 'macropore.sorpalfa', errors)
       end if
 
-      ! shrpar 2D table — width must be 4 columns when allocated.
+      ! shrpar 2D table — width is 5 columns (SHRPARA..SHRPARE per the
+      ! legacy .swp documentation; column population varies by
+      ! SWSOILSHR/SWSHRINP combination).
       if (allocated(self%shrpar)) then
          call check_array_1d_size(size(self%shrpar, 1), 'macropore.shrpar', errors)
-         if (size(self%shrpar, 2) /= 4) then
+         if (size(self%shrpar, 2) /= 5) then
             call errors%append(ERR_VALIDATION_OUT_OF_RANGE, &
-               "shrpar ncols /= 4", 'macropore.shrpar')
+               "shrpar ncols /= 5", 'macropore.shrpar')
          end if
       end if
    end subroutine macropore_config_validate

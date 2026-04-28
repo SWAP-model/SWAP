@@ -34,7 +34,7 @@ subroutine test_macropore_swmacro_one_minimal_valid()
    allocate(c%swshrinp(1));    c%swshrinp    = 2
    allocate(c%thetcrmp(1));    c%thetcrmp    = 0.385_real64
    allocate(c%geomfac(1));     c%geomfac     = 3.0_real64
-   allocate(c%shrpar(1, 4));   c%shrpar      = 0.0_real64
+   allocate(c%shrpar(1, 5));   c%shrpar      = 0.0_real64
    allocate(c%swsorp(1));      c%swsorp      = 1
    allocate(c%sorpfacparl(1)); c%sorpfacparl = 0.33_real64
    allocate(c%sorpmax(1));     c%sorpmax     = 0.3_real64
