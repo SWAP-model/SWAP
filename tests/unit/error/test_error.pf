@@ -184,6 +184,37 @@ subroutine test_global_errors_clear_resets()
 end subroutine
 
 @test
+subroutine test_warn_deprecated_key_appends_nonfatal()
+   use funit
+   use error_mod
+   type(error_collection_t) :: errors
+
+   call warn_deprecated_key('read_general_toml', 'swafo', errors)
+
+   @assertEqual(1, errors%count())
+   @assertEqual(ERR_DEPRECATED_KEY, errors%items(1)%code)
+   @assertEqual('read_general_toml', errors%items(1)%context)
+   @assertFalse(errors%items(1)%is_fatal)
+   @assertTrue(index(errors%items(1)%message, 'swafo') > 0)
+   @assertTrue(index(errors%items(1)%message, 'ADR 0009') > 0)
+end subroutine
+
+@test
+subroutine test_warn_deprecated_key_does_not_abort()
+   use funit
+   use error_mod
+   type(error_collection_t) :: errors
+   ! Multiple deprecations + abort_if_fatal must NOT terminate, since
+   ! deprecations are non-fatal.
+   call warn_deprecated_key('a', 'swafo', errors)
+   call warn_deprecated_key('a', 'swaun', errors)
+   call warn_deprecated_key('a', 'swvap', errors)
+   call errors%abort_if_fatal()
+   @assertEqual(3, errors%count())
+   @assertFalse(errors%has_fatals())
+end subroutine
+
+@test
 subroutine test_fatalerr_channel_routes_to_global_errors()
    use funit
    use error_mod

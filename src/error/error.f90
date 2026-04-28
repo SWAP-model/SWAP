@@ -25,6 +25,7 @@ module error_mod
    integer, parameter, public :: ERR_FINALIZE_DERIVATION      = 400
    integer, parameter, public :: ERR_ADAPTER_UNSUPPORTED      = 500
    integer, parameter, public :: ERR_LEGACY_FATAL             = 999
+   integer, parameter, public :: ERR_DEPRECATED_KEY            = 600
 
    type, public :: error_t
       integer                       :: code    = ERR_NONE
@@ -51,8 +52,25 @@ module error_mod
    type(error_collection_t), public, save :: global_errors
 
    public :: fatalerr_collected
+   public :: warn_deprecated_key
 
 contains
+
+   !> Append a non-fatal deprecation warning for a TOML key that was
+   !! retired per an ADR (e.g. ADR 0009 retired the legacy non-CSV
+   !! output switches). Used by new TOML readers when they encounter
+   !! a key that has no schema slot but appears in user input.
+   !! The warning is NOT fatal — the reader continues and ignores
+   !! the key. Use abort_if_fatal at the pipeline edge if a downstream
+   !! check decides the deprecation is now fatal.
+   subroutine warn_deprecated_key(routine, key, errors)
+      character(len=*),         intent(in)    :: routine
+      character(len=*),         intent(in)    :: key
+      type(error_collection_t), intent(inout) :: errors
+      character(len=256) :: msg
+      write(msg, '("deprecated key ''", A, "'' is ignored; see ADR 0009")') trim(key)
+      call errors%append(ERR_DEPRECATED_KEY, trim(msg), routine, is_fatal=.false.)
+   end subroutine warn_deprecated_key
 
    !> Drop-in replacement for legacy `call fatalerr(routine, msg)`.
    !! Appends a fatal entry to `global_errors` then aborts. Used by
