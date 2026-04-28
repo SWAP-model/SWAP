@@ -29,6 +29,12 @@ regardless of whether it appears in example files under `tests/swap-cases/`.
 Sample files in the tree contain aspirational keys for future phases; only the
 subset documented below actually reaches `swap_config_t`.
 
+**Phase 4f preparation:** see
+[`docs/phase-4f-config-to-variables-audit.md`](phase-4f-config-to-variables-audit.md)
+for the field-by-field mapping between this schema and the legacy `variables`
+globals, plus the list of `G` (gap) entries that Phase 4f-prep will resolve
+before the strangler-fig replacement of `readswap()` lands.
+
 **See also:**
 - `docs/toml-format-guide.md` — general TOML conventions used in SWAP.
 - Each module's source (listed above) for authoritative field and validator definitions.
