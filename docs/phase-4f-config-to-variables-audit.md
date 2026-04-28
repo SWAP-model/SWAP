@@ -42,10 +42,16 @@ Method:
 ## Summary
 
 - **Total variables referenced by execution paths:** 1216
-- **C (covered):** 203  (17%)
+- **C (covered):** 204  (17%)
 - **R (runtime state):** 806  (66%)
-- **G (gaps):** 189  (16%) -- Phase 4f blockers
+- **G (gaps):** 188  (15%) -- Phase 4f blockers
 - **RETIRED:** 18  (1%) -- per ADR 0009; no longer flagged as gaps
+
+Phase 4f-prep Task A0 verified that `croptype(macrop)` is a renamed
+alias for `crop_config_t.rotation_type(:)` — the auditor's exact-name
+classifier missed the rename. Reclassified G → C; net +1 C / -1 G.
+The Crop section's per-section table reflects the change: 111 C / 74 R
+/ 29 G / 0 RETIRED / 214 total.
 
 Initial audit (commit `68b6d8d`) listed 325 G entries. Phase 4e Task B3
 reclassified 18 legacy output-format switches from G to RETIRED:
@@ -77,7 +83,7 @@ Per section (post Task B5 triage):
 | Heat | 10 | 0 | 2 | 0 | 12 |
 | Irrigation | 8 | 7 | 1 | 0 | 16 |
 | Solute | 8 | 11 | 3 | 0 | 22 |
-| Crop (fixed / grass / WOFOST) | 110 | 74 | 30 | 0 | 214 |
+| Crop (fixed / grass / WOFOST) | 111 | 74 | 29 | 0 | 214 |
 | Macropore | 0 | 22 | 10 | 0 | 32 |
 | Other / uncategorised | 0 | 512 | 71 | 1 | 584 |
 
@@ -570,7 +576,7 @@ C=110, R=74, G=30
 | cropend | G | -- (no config) | input key 'cropend' read only by readswap; needs slot in crop / cropfixed / cropgrass / cropwofost configs |
 | cropfil | G | -- (no config) | input key 'cropfil' read only by readswap; needs slot in crop / cropfixed / cropgrass / cropwofost configs |
 | cropstart | G | -- (no config) | input key 'cropstart' read only by readswap; needs slot in crop / cropfixed / cropgrass / cropwofost configs |
-| croptype | G | -- (no config) | input key 'croptype' read only by readswap; needs slot in crop / cropfixed / cropgrass / cropwofost configs |
+| croptype | C | config%crop%rotation_type(:) | renamed alias; legacy `croptype(macrop)` and new `rotation_type(:)` carry identical per-entry values (1=fixed, 2=WOFOST, 3=grass). Phase 4f-prep Task A0 verified by spot-checking 7 caller files. Adapter copies via `do i=1,nrot; croptype(i) = config%crop%rotation_type(i); end do`. |
 | cuptgraz | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
 | cuptgrazpot | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
 | cwdm | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
