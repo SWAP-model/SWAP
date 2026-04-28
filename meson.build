@@ -67,6 +67,7 @@ sources = [
     'src/config/bottom_boundary_config.f90',
     'src/config/heat_config.f90',
     'src/config/irrigation_config.f90',
+    'src/config/macropore_config.f90',
     'src/config/solute_config.f90',
     'src/config/cropfixed_config.f90',
     'src/config/cropgrass_config.f90',
