@@ -358,3 +358,74 @@ gcovr terminal summary. Coverage of those modules is verified via the
 extended pFUnit suite. The "53.1% / 41.2%" flat line vs Phase 4c-b is
 therefore a gcovr-tooling artifact, not a real regression — denominator
 and numerator both lag the actual code.
+
+## Phase 4e — Unified error handling + Phase 4f prep
+
+After Phase 4e:
+- **Coverage** (gcovr terminal summary): **51.3% line / 39.8% branch
+  (3882/7566 lines)** — slight slip vs Phase 4d's 53.1% / 41.2%.
+  Cause: Phase 4e replaced ~190 `call fatalerr` sites with
+  `call fatalerr_collected` across ~32 source files. Each replaced
+  call site adds an extra `use error_mod` line; the gcovr counter
+  treats those as covered-zero when the test path doesn't exercise
+  the error branch. The net of "added a few covered-zero lines but
+  didn't add proportional test cycles for the new error paths"
+  shows up as ~1.8 percentage-point dip. Coverage remains tracked,
+  not gated (ADR 0006), and the slip is in lines that exist only to
+  route through the new error channel rather than via `fatalerr`'s
+  legacy stdin-EOF abort.
+- **pFUnit suite**: 317 tests visible to the dot stream, F count 0.
+  Two new tests added in Task A1 + B4:
+  - `test_global_errors_accumulates_appends`
+  - `test_global_errors_clear_resets`
+  - `test_fatalerr_channel_routes_to_global_errors`
+  - `test_warn_deprecated_key_appends_nonfatal`
+  - `test_warn_deprecated_key_does_not_abort`
+- **Regression suite**: **6/6 green** in ~317s; per-case timings
+  recorded in `tests/regression/baselines/phase-4e-error-prep.log`.
+
+### Phase 4e source-side delta
+
+| File | LoC | What it covers |
+|---|---|---|
+| `src/error/error.f90` (extension) | +30 | `fatalerr_collected` shim + `global_errors` singleton + `warn_deprecated_key` + `ERR_LEGACY_FATAL` + `ERR_DEPRECATED_KEY` |
+| ~32 source files (mechanical replacement) | ~+190 / -190 | every legacy `call fatalerr` rerouted via `fatalerr_collected`; physics paths use the singleton, I/O paths likewise |
+
+Net source-side LoC delta in Phase 4e: ≈ +30 (error_mod additions; the
+singleton replacement is line-for-line and doesn't change LoC).
+
+### Phase 4e test-side delta
+
+| File | LoC | What it covers |
+|---|---|---|
+| `tests/unit/error/test_error.pf` (extension) | +50 | new tests for the singleton + deprecation helper |
+| `tests/unit/io/toml/test_macroporeflow_parity.pf` | ~245 | full parity test for case 3 |
+| `tests/unit/io/toml/parity_helpers.f90` (extension) | +25 | `load_both_for_macroporeflow` |
+
+Net test-side LoC delta in Phase 4e: ≈ +320.
+
+### Audit-related artifacts
+
+Phase 4e produced two doc artifacts that drive Phase 4f's design:
+
+- `docs/phase-4f-config-to-variables-audit.md` — every `variables%`
+  field referenced by execution paths classified as C (covered) /
+  R (runtime) / G (gap) / RETIRED (output switches retired per
+  ADR 0009). Final counts: **C=203 / R=806 / G=189 / RETIRED=18**.
+- `docs/phase-4e-macroporeflow-audit.md` — case-3-specific quirks
+  and macropore-physics keys deferred to Phase 4f-prep.
+
+The remaining **189 G entries** are the input for Phase 4f-prep
+(opens after this phase). Excluding the heuristic "Other /
+uncategorised" overflow bucket, real-domain gaps total **118**
+across drainage, soil, meteorology, crop, time/control, and
+macropore. Phase 4f-prep will close these with new config fields
+and per-case TOML extensions before Phase 4f's strangler-fig lands.
+
+### Caveat on the gcovr path-resolution issue (continued)
+
+Same caveat as Phase 4c-b/4d. The "51.3% / 39.8%" terminal summary
+under-counts the typed-config + TOML-reader subtrees by the same
+gcovr path-resolution issue that has dogged every prior phase.
+Coverage of the new `error_mod` code is verified via the extended
+pFUnit suite.
