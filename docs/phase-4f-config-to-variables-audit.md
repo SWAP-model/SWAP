@@ -16,6 +16,11 @@ Status legend:
 - **R** -- runtime state, never read from input; adapter does NOT touch.
 - **G** -- gap: field is read by execution paths but no config covers it.
   Phase 4f blocker; resolve before the strangler-fig lands.
+- **RETIRED** -- legacy output switch retired per
+  [ADR 0009](adr/0009-discontinue-non-csv-outputs.md). New TOML reader
+  has no slot; if a TOML file lists one, the reader emits a
+  deprecation warning and ignores it. Phase 4f's
+  `config_to_variables` forces the corresponding global to 0.
 
 Method:
 
@@ -39,24 +44,32 @@ Method:
 - **Total variables referenced by execution paths:** 1216
 - **C (covered):** 203  (16%)
 - **R (runtime state):** 688  (56%)
-- **G (gaps):** 325  (26%) -- Phase 4f blockers
+- **G (gaps):** 307  (25%) -- Phase 4f blockers
+- **RETIRED:** 18  (1%) -- per ADR 0009; no longer flagged as gaps
+
+Initial audit (commit `68b6d8d`) listed 325 G entries. Phase 4e Task B3
+reclassified 18 legacy output-format switches from G to RETIRED:
+`swafo`, `swaun`, `swvap`, `swbal`, `swwba`, `swsba`, `swblc`, `swdrf`,
+`swstr`, `swirg`, `swini`, `swend`, `swheader`, `swcaprise`,
+`swcapriseoutput`, `swrum`, `swswb`, `swoutputmodflow`. See
+[ADR 0009](adr/0009-discontinue-non-csv-outputs.md).
 
 Per section:
 
-| section | C | R | G | total |
-|---|---:|---:|---:|---:|
-| General + simulation | 11 | 0 | 0 | 11 |
-| Time / control / output | 0 | 11 | 34 | 45 |
-| Meteorology | 12 | 54 | 24 | 90 |
-| Soil + hydraulics | 15 | 58 | 29 | 102 |
-| Drainage + surface water | 20 | 27 | 23 | 70 |
-| Bottom boundary | 9 | 2 | 7 | 18 |
-| Heat | 10 | 0 | 2 | 12 |
-| Irrigation | 8 | 7 | 1 | 16 |
-| Solute | 8 | 9 | 5 | 22 |
-| Crop (fixed / grass / WOFOST) | 110 | 23 | 81 | 214 |
-| Macropore | 0 | 15 | 17 | 32 |
-| Other / uncategorised | 0 | 482 | 102 | 584 |
+| section | C | R | G | RETIRED | total |
+|---|---:|---:|---:|---:|---:|
+| General + simulation | 11 | 0 | 0 | 0 | 11 |
+| Time / control / output | 0 | 11 | 17 | 17 | 45 |
+| Meteorology | 12 | 54 | 24 | 0 | 90 |
+| Soil + hydraulics | 15 | 58 | 29 | 0 | 102 |
+| Drainage + surface water | 20 | 27 | 23 | 0 | 70 |
+| Bottom boundary | 9 | 2 | 7 | 0 | 18 |
+| Heat | 10 | 0 | 2 | 0 | 12 |
+| Irrigation | 8 | 7 | 1 | 0 | 16 |
+| Solute | 8 | 9 | 5 | 0 | 22 |
+| Crop (fixed / grass / WOFOST) | 110 | 23 | 81 | 0 | 214 |
+| Macropore | 0 | 15 | 17 | 0 | 32 |
+| Other / uncategorised | 0 | 482 | 101 | 1 | 584 |
 
 ## Initialization order (legacy)
 
@@ -133,7 +146,7 @@ C=11, R=0, G=0
 
 ### Time / control / output
 
-C=0, R=11, G=34
+C=0, R=11, G=17, RETIRED=17 (per ADR 0009)
 
 | variable | status | source / target | notes |
 |---|---|---|---|
@@ -146,31 +159,31 @@ C=0, R=11, G=34
 | ipos | G | -- (no config) | input key 'ipos' read by readswap; no config covers |
 | outdat | G | -- (no config) | input key 'outdat' read by readswap; no config covers |
 | outdatint | G | -- (no config) | input key 'outdatint' read by readswap; no config covers |
-| swafo | G | -- (no config) | input key 'swafo' read by readswap; no config covers |
-| swaun | G | -- (no config) | input key 'swaun' read by readswap; no config covers |
-| swbal | G | -- (no config) | input key 'swbal' read by readswap; no config covers |
-| swblc | G | -- (no config) | input key 'swblc' read by readswap; no config covers |
-| swcaprise | G | -- (no config) | input key 'swcaprise' read by readswap; no config covers |
-| swcapriseoutput | G | -- (no config) | input key 'swcapriseoutput' read by readswap; no config covers |
+| swafo | RETIRED | ADR 0009 | discontinued; new TOML reader emits deprecation warning |
+| swaun | RETIRED | ADR 0009 | discontinued; new TOML reader emits deprecation warning |
+| swbal | RETIRED | ADR 0009 | discontinued; new TOML reader emits deprecation warning |
+| swblc | RETIRED | ADR 0009 | discontinued; new TOML reader emits deprecation warning |
+| swcaprise | RETIRED | ADR 0009 | discontinued; new TOML reader emits deprecation warning |
+| swcapriseoutput | RETIRED | ADR 0009 | discontinued; new TOML reader emits deprecation warning |
 | swcsv | G | -- (no config) | input key 'swcsv' read by readswap; no config covers |
 | swcsv_tz | G | -- (no config) | input key 'swcsv_tz' read by readswap; no config covers |
 | swdiscrvert | G | -- (no config) | input key 'swdiscrvert' read by readswap; no config covers |
-| swdrf | G | -- (no config) | input key 'swdrf' read by readswap; no config covers |
+| swdrf | RETIRED | ADR 0009 | discontinued; new TOML reader emits deprecation warning |
 | SwDrRap | G | -- (no config) | input key 'swdrrap' read by readswap; no config covers |
-| swend | G | -- (no config) | input key 'swend' read by readswap; no config covers |
-| swheader | G | -- (no config) | input key 'swheader' read by readswap; no config covers |
-| swini | G | -- (no config) | input key 'swini' read by readswap; no config covers |
-| swirg | G | -- (no config) | input key 'swirg' read by readswap; no config covers |
+| swend | RETIRED | ADR 0009 | discontinued; new TOML reader emits deprecation warning |
+| swheader | RETIRED | ADR 0009 | discontinued; new TOML reader emits deprecation warning |
+| swini | RETIRED | ADR 0009 | discontinued; new TOML reader emits deprecation warning |
+| swirg | RETIRED | ADR 0009 | discontinued; new TOML reader emits deprecation warning |
 | swkimpl | G | -- (no config) | input key 'swkimpl' read by readswap; no config covers |
 | swkmean | G | -- (no config) | input key 'swkmean' read by readswap; no config covers |
 | swliminf | G | -- (no config) | input key 'swliminf' read by readswap; no config covers |
-| swrum | G | -- (no config) | input key 'swrum' read by readswap; no config covers |
-| swsba | G | -- (no config) | input key 'swsba' read by readswap; no config covers |
-| swstr | G | -- (no config) | input key 'swstr' read by readswap; no config covers |
+| swrum | RETIRED | ADR 0009 | discontinued; new TOML reader emits deprecation warning |
+| swsba | RETIRED | ADR 0009 | discontinued; new TOML reader emits deprecation warning |
+| swstr | RETIRED | ADR 0009 | discontinued; new TOML reader emits deprecation warning |
 | swsublim | G | -- (no config) | input key 'swsublim' read by readswap; no config covers |
-| swswb | G | -- (no config) | input key 'swswb' read by readswap; no config covers |
-| swvap | G | -- (no config) | input key 'swvap' read by readswap; no config covers |
-| swwba | G | -- (no config) | input key 'swwba' read by readswap; no config covers |
+| swswb | RETIRED | ADR 0009 | discontinued; new TOML reader emits deprecation warning |
+| swvap | RETIRED | ADR 0009 | discontinued; new TOML reader emits deprecation warning |
+| swwba | RETIRED | ADR 0009 | discontinued; new TOML reader emits deprecation warning |
 
 Runtime state (R) -- set by simulation code, not read from input:
 
@@ -744,7 +757,7 @@ C=0, R=482, G=102
 | swbulb | G | -- (no config) | input key 'swbulb' read by readswap; no config covers |
 | swgc | G | -- (no config) | input key 'swgc' read by readswap; no config covers |
 | swinc | G | -- (no config) | input key 'swinc' read by readswap; no config covers |
-| swoutputmodflow | G | -- (no config) | input key 'swoutputmodflow' read by readswap; no config covers |
+| swoutputmodflow | RETIRED | ADR 0009 | discontinued; new TOML reader emits deprecation warning |
 | swpondmx | G | -- (no config) | input key 'swpondmx' read by readswap; no config covers |
 | swrdc | G | -- (no config) | input key 'swrdc' read by readswap; no config covers |
 | swredu | G | -- (no config) | input key 'swredu' read by readswap; no config covers |

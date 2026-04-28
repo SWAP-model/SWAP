@@ -1168,6 +1168,40 @@ promotes it in Phase 4.
   syntactically invalid TOML are rejected by `toml_load` before any reader
   logic runs; the error bubbles up through `err%message`.
 
+## Deprecated keys (retired)
+
+Per [ADR 0009](adr/0009-discontinue-non-csv-outputs.md), the new TOML
+schema supports CSV output only (`swcsv`, `swcsv_tz`). The following 18
+legacy `.swp` keys are **retired** — the new TOML reader has no schema
+slot for them and will append a non-fatal deprecation warning if any
+appear in a TOML file:
+
+| key | legacy effect | retired because |
+|---|---|---|
+| `swafo` | `.afo` binary annual-flux file | binary format, no consumers in this repo |
+| `swaun` | `.aun` binary annual-unit file | same |
+| `swvap` | `.vap` vapor profile output | covered by CSV |
+| `swbal` | water balance text output | covered by CSV |
+| `swwba` | brief water balance | covered by CSV |
+| `swsba` | solute balance | covered by CSV |
+| `swblc` | balance check output | covered by CSV |
+| `swdrf` | drainage formatted output | covered by CSV |
+| `swstr` | stress output | covered by CSV |
+| `swirg` | `.IRG` irrigation output | covered by CSV |
+| `swini` | initial-state dump | one-shot diagnostic; superseded |
+| `swend` | end-state dump | same |
+| `swheader` | header-line toggle | always-on in CSV |
+| `swcaprise` | capillary rise output | covered by CSV |
+| `swcapriseoutput` | cap-rise toggle | same |
+| `swrum` | macropore runoff output | covered by CSV |
+| `swswb` | surface water balance output | covered by CSV |
+| `swoutputmodflow` | MODFLOW exchange dump | external integration; deferred |
+
+`swsublim` looks like an output switch by name but is **not** retired —
+it gates the snow-sublimation simulation in `src/atmosphere/snow.f90`,
+not an output file. The retirement list is by call-site behavior, not
+by name.
+
 ## Discoveries
 
 Worth noting for readers who will extend these schemas:
