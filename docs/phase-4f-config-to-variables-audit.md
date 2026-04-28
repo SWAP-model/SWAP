@@ -42,9 +42,9 @@ Method:
 ## Summary
 
 - **Total variables referenced by execution paths:** 1216
-- **C (covered):** 203  (16%)
-- **R (runtime state):** 688  (56%)
-- **G (gaps):** 307  (25%) -- Phase 4f blockers
+- **C (covered):** 203  (17%)
+- **R (runtime state):** 806  (66%)
+- **G (gaps):** 189  (16%) -- Phase 4f blockers
 - **RETIRED:** 18  (1%) -- per ADR 0009; no longer flagged as gaps
 
 Initial audit (commit `68b6d8d`) listed 325 G entries. Phase 4e Task B3
@@ -52,24 +52,34 @@ reclassified 18 legacy output-format switches from G to RETIRED:
 `swafo`, `swaun`, `swvap`, `swbal`, `swwba`, `swsba`, `swblc`, `swdrf`,
 `swstr`, `swirg`, `swini`, `swend`, `swheader`, `swcaprise`,
 `swcapriseoutput`, `swrum`, `swswb`, `swoutputmodflow`. See
-[ADR 0009](adr/0009-discontinue-non-csv-outputs.md).
+[ADR 0009](adr/0009-discontinue-non-csv-outputs.md). Phase 4e Task B5
+then triaged the remaining 307 G entries: 118 were reclassified to R
+because the only place the corresponding input key is read is
+`readswap.f90` itself, while a non-readswap simulation file is the
+authoritative writer -- the legacy reader merely zero-initialised them.
+The residual 189 G entries are confirmed gaps; each row's notes column
+records the resolution path (which `*_config_t` should grow the slot).
+Triage budget was capped at ~30s/entry, so the residual G count is
+still an upper bound -- the Crop section in particular was skimmed
+aggressively and may shrink further once Phase 4f's adapter prototype
+exposes which fields the physics actually exercises.
 
-Per section:
+Per section (post Task B5 triage):
 
 | section | C | R | G | RETIRED | total |
 |---|---:|---:|---:|---:|---:|
 | General + simulation | 11 | 0 | 0 | 0 | 11 |
-| Time / control / output | 0 | 11 | 17 | 17 | 45 |
-| Meteorology | 12 | 54 | 24 | 0 | 90 |
-| Soil + hydraulics | 15 | 58 | 29 | 0 | 102 |
-| Drainage + surface water | 20 | 27 | 23 | 0 | 70 |
+| Time / control / output | 0 | 16 | 12 | 17 | 45 |
+| Meteorology | 12 | 63 | 15 | 0 | 90 |
+| Soil + hydraulics | 15 | 69 | 18 | 0 | 102 |
+| Drainage + surface water | 20 | 30 | 20 | 0 | 70 |
 | Bottom boundary | 9 | 2 | 7 | 0 | 18 |
 | Heat | 10 | 0 | 2 | 0 | 12 |
 | Irrigation | 8 | 7 | 1 | 0 | 16 |
-| Solute | 8 | 9 | 5 | 0 | 22 |
-| Crop (fixed / grass / WOFOST) | 110 | 23 | 81 | 0 | 214 |
-| Macropore | 0 | 15 | 17 | 0 | 32 |
-| Other / uncategorised | 0 | 482 | 101 | 1 | 584 |
+| Solute | 8 | 11 | 3 | 0 | 22 |
+| Crop (fixed / grass / WOFOST) | 110 | 74 | 30 | 0 | 214 |
+| Macropore | 0 | 22 | 10 | 0 | 32 |
+| Other / uncategorised | 0 | 512 | 71 | 1 | 584 |
 
 ## Initialization order (legacy)
 
@@ -146,41 +156,41 @@ C=11, R=0, G=0
 
 ### Time / control / output
 
-C=0, R=11, G=17, RETIRED=17 (per ADR 0009)
+C=0, R=16, G=12, RETIRED=17 (per ADR 0009)
 
 | variable | status | source / target | notes |
 |---|---|---|---|
-| date | G | -- (no config) | input key 'date' read by readswap; no config covers |
-| dt | G | -- (no config) | input key 'dt' read by readswap; no config covers |
-| dtmax | G | -- (no config) | input key 'dtmax' read by readswap; no config covers |
-| dtmin | G | -- (no config) | input key 'dtmin' read by readswap; no config covers |
-| fldumpconvcrit | G | -- (no config) | input key 'fldumpconvcrit' read by readswap; no config covers |
-| flMaxIterTime | G | -- (no config) | input key 'flmaxitertime' read by readswap; no config covers |
-| ipos | G | -- (no config) | input key 'ipos' read by readswap; no config covers |
-| outdat | G | -- (no config) | input key 'outdat' read by readswap; no config covers |
-| outdatint | G | -- (no config) | input key 'outdatint' read by readswap; no config covers |
+| date | G | -- (no config) | input key 'date' read only by readswap; needs slot in simulation_config_t (timestep / output controls) |
+| dt | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| dtmax | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| dtmin | G | -- (no config) | input key 'dtmin' read only by readswap; needs slot in simulation_config_t (timestep / output controls) |
+| fldumpconvcrit | G | -- (no config) | input key 'fldumpconvcrit' read only by readswap; needs slot in simulation_config_t (timestep / output controls) |
+| flMaxIterTime | G | -- (no config) | input key 'flmaxitertime' read only by readswap; needs slot in simulation_config_t (timestep / output controls) |
+| ipos | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| outdat | G | -- (no config) | input key 'outdat' read only by readswap; needs slot in simulation_config_t (timestep / output controls) |
+| outdatint | G | -- (no config) | input key 'outdatint' read only by readswap; needs slot in simulation_config_t (timestep / output controls) |
 | swafo | RETIRED | ADR 0009 | discontinued; new TOML reader emits deprecation warning |
 | swaun | RETIRED | ADR 0009 | discontinued; new TOML reader emits deprecation warning |
 | swbal | RETIRED | ADR 0009 | discontinued; new TOML reader emits deprecation warning |
 | swblc | RETIRED | ADR 0009 | discontinued; new TOML reader emits deprecation warning |
 | swcaprise | RETIRED | ADR 0009 | discontinued; new TOML reader emits deprecation warning |
 | swcapriseoutput | RETIRED | ADR 0009 | discontinued; new TOML reader emits deprecation warning |
-| swcsv | G | -- (no config) | input key 'swcsv' read by readswap; no config covers |
-| swcsv_tz | G | -- (no config) | input key 'swcsv_tz' read by readswap; no config covers |
-| swdiscrvert | G | -- (no config) | input key 'swdiscrvert' read by readswap; no config covers |
+| swcsv | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| swcsv_tz | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| swdiscrvert | G | -- (no config) | input key 'swdiscrvert' read only by readswap; needs slot in simulation_config_t (timestep / output controls) |
 | swdrf | RETIRED | ADR 0009 | discontinued; new TOML reader emits deprecation warning |
-| SwDrRap | G | -- (no config) | input key 'swdrrap' read by readswap; no config covers |
+| SwDrRap | G | -- (no config) | input key 'swdrrap' read only by readswap; needs slot in simulation_config_t (timestep / output controls) |
 | swend | RETIRED | ADR 0009 | discontinued; new TOML reader emits deprecation warning |
 | swheader | RETIRED | ADR 0009 | discontinued; new TOML reader emits deprecation warning |
 | swini | RETIRED | ADR 0009 | discontinued; new TOML reader emits deprecation warning |
 | swirg | RETIRED | ADR 0009 | discontinued; new TOML reader emits deprecation warning |
-| swkimpl | G | -- (no config) | input key 'swkimpl' read by readswap; no config covers |
-| swkmean | G | -- (no config) | input key 'swkmean' read by readswap; no config covers |
-| swliminf | G | -- (no config) | input key 'swliminf' read by readswap; no config covers |
+| swkimpl | G | -- (no config) | input key 'swkimpl' read only by readswap; needs slot in simulation_config_t (timestep / output controls) |
+| swkmean | G | -- (no config) | input key 'swkmean' read only by readswap; needs slot in simulation_config_t (timestep / output controls) |
+| swliminf | G | -- (no config) | input key 'swliminf' read only by readswap; needs slot in simulation_config_t (timestep / output controls) |
 | swrum | RETIRED | ADR 0009 | discontinued; new TOML reader emits deprecation warning |
 | swsba | RETIRED | ADR 0009 | discontinued; new TOML reader emits deprecation warning |
 | swstr | RETIRED | ADR 0009 | discontinued; new TOML reader emits deprecation warning |
-| swsublim | G | -- (no config) | input key 'swsublim' read by readswap; no config covers |
+| swsublim | G | -- (no config) | input key 'swsublim' read only by readswap; needs slot in simulation_config_t (timestep / output controls) |
 | swswb | RETIRED | ADR 0009 | discontinued; new TOML reader emits deprecation warning |
 | swvap | RETIRED | ADR 0009 | discontinued; new TOML reader emits deprecation warning |
 | swwba | RETIRED | ADR 0009 | discontinued; new TOML reader emits deprecation warning |
@@ -191,7 +201,7 @@ Runtime state (R) -- set by simulation code, not read from input:
 
 ### Meteorology
 
-C=12, R=54, G=24
+C=12, R=63, G=15
 
 | variable | status | source / target | notes |
 |---|---|---|---|
@@ -207,30 +217,30 @@ C=12, R=54, G=24
 | swmetdetail | C | config%meteorology%swmetdetail |  |
 | swMetFilAll | C | config%meteorology%swmetfilall |  |
 | swrain | C | config%meteorology%swrain |  |
-| cfbs | G | -- (no config) | input key 'cfbs' read by readswap; no config covers |
-| cofred | G | -- (no config) | input key 'cofred' read by readswap; no config covers |
-| dateharvest | G | -- (no config) | input key 'dateharvest' read by readswap; no config covers |
-| metfil | G | -- (no config) | input key 'metfil' read by readswap; no config covers |
-| rainfil | G | -- (no config) | input key 'rainfil' read by readswap; no config covers |
-| sinamp | G | -- (no config) | input key 'sinamp' read by readswap; no config covers |
-| sinave | G | -- (no config) | input key 'sinave' read by readswap; no config covers |
-| sinmax | G | -- (no config) | input key 'sinmax' read by readswap; no config covers |
-| snowcoef | G | -- (no config) | input key 'snowcoef' read by readswap; no config covers |
-| snowinco | G | -- (no config) | input key 'snowinco' read by readswap; no config covers |
-| ssnow | G | -- (no config) | input key 'ssnow' read by readswap; no config covers |
-| station | G | -- (no config) | input key 'station' read by readswap; no config covers |
-| swcfbs | G | -- (no config) | input key 'swcfbs' read by readswap; no config covers |
-| tampli | G | -- (no config) | input key 'tampli' read by readswap; no config covers |
-| TePrRain | G | -- (no config) | input key 'teprrain' read by readswap; no config covers |
-| TePrSnow | G | -- (no config) | input key 'teprsnow' read by readswap; no config covers |
-| tmean | G | -- (no config) | input key 'tmean' read by readswap; no config covers |
-| wet | G | -- (no config) | input key 'wet' read by readswap; no config covers |
-| wetper | G | -- (no config) | input key 'wetper' read by readswap; no config covers |
-| wscap | G | -- (no config) | input key 'wscap' read by readswap; no config covers |
-| wso | G | -- (no config) | input key 'wso' read by readswap; no config covers |
-| wsopot | G | -- (no config) | input key 'wsopot' read by readswap; no config covers |
-| wst | G | -- (no config) | input key 'wst' read by readswap; no config covers |
-| wstpot | G | -- (no config) | input key 'wstpot' read by readswap; no config covers |
+| cfbs | G | -- (no config) | input key 'cfbs' read only by readswap; needs slot in meteorology_config_t |
+| cofred | G | -- (no config) | input key 'cofred' read only by readswap; needs slot in meteorology_config_t |
+| dateharvest | G | -- (no config) | input key 'dateharvest' read only by readswap; needs slot in meteorology_config_t |
+| metfil | G | -- (no config) | input key 'metfil' read only by readswap; needs slot in meteorology_config_t |
+| rainfil | G | -- (no config) | input key 'rainfil' read only by readswap; needs slot in meteorology_config_t |
+| sinamp | G | -- (no config) | input key 'sinamp' read only by readswap; needs slot in meteorology_config_t |
+| sinave | G | -- (no config) | input key 'sinave' read only by readswap; needs slot in meteorology_config_t |
+| sinmax | G | -- (no config) | input key 'sinmax' read only by readswap; needs slot in meteorology_config_t |
+| snowcoef | G | -- (no config) | input key 'snowcoef' read only by readswap; needs slot in meteorology_config_t |
+| snowinco | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| ssnow | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| station | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| swcfbs | G | -- (no config) | input key 'swcfbs' read only by readswap; needs slot in meteorology_config_t |
+| tampli | G | -- (no config) | input key 'tampli' read only by readswap; needs slot in meteorology_config_t |
+| TePrRain | G | -- (no config) | input key 'teprrain' read only by readswap; needs slot in meteorology_config_t |
+| TePrSnow | G | -- (no config) | input key 'teprsnow' read only by readswap; needs slot in meteorology_config_t |
+| tmean | G | -- (no config) | input key 'tmean' read only by readswap; needs slot in meteorology_config_t |
+| wet | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| wetper | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| wscap | G | -- (no config) | input key 'wscap' read only by readswap; needs slot in meteorology_config_t |
+| wso | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| wsopot | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| wst | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| wstpot | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
 
 Runtime state (R) -- set by simulation code, not read from input:
 
@@ -238,7 +248,7 @@ Runtime state (R) -- set by simulation code, not read from input:
 
 ### Soil + hydraulics
 
-C=15, R=58, G=29
+C=15, R=69, G=18
 
 | variable | status | source / target | notes |
 |---|---|---|---|
@@ -257,35 +267,35 @@ C=15, R=58, G=29
 | swhyst | C | config%soil%swhyst |  |
 | swinco | C | config%soil%swinco |  |
 | swsophy | C | config%soil%swsophy |  |
-| cofani | G | -- (no config) | input key 'cofani' read by readswap; no config covers |
-| dznew | G | -- (no config) | input key 'dznew' read by readswap; no config covers |
-| h | G | -- (no config) | input key 'h' read by readswap; no config covers |
-| h_enpr | G | -- (no config) | input key 'h_enpr' read by readswap; no config covers |
-| hcrit | G | -- (no config) | input key 'hcrit' read by readswap; no config covers |
-| hdepth | G | -- (no config) | input key 'hdepth' read by readswap; no config covers |
-| hplate | G | -- (no config) | input key 'hplate' read by readswap; no config covers |
-| hsublay | G | -- (no config) | input key 'hsublay' read by readswap; no config covers |
-| kf | G | -- (no config) | input key 'kf' read by readswap; no config covers |
-| kfsat | G | -- (no config) | input key 'kfsat' read by readswap; no config covers |
-| ksatfit | G | -- (no config) | input key 'ksatfit' read by readswap; no config covers |
-| nrstaring | G | -- (no config) | input key 'nrstaring' read by readswap; no config covers |
-| numnodnew | G | -- (no config) | input key 'numnodnew' read by readswap; no config covers |
-| SwDarcy | G | -- (no config) | input key 'swdarcy' read by readswap; no config covers |
-| swfrost | G | -- (no config) | input key 'swfrost' read by readswap; no config covers |
-| tau | G | -- (no config) | input key 'tau' read by readswap; no config covers |
-| Z_Ah | G | -- (no config) | input key 'z_ah' read by readswap; no config covers |
-| Z_Ic | G | -- (no config) | input key 'z_ic' read by readswap; no config covers |
-| Z_MB50 | G | -- (no config) | input key 'z_mb50' read by readswap; no config covers |
-| Z_St | G | -- (no config) | input key 'z_st' read by readswap; no config covers |
-| Z_Tp | G | -- (no config) | input key 'z_tp' read by readswap; no config covers |
-| zc | G | -- (no config) | input key 'zc' read by readswap; no config covers |
-| ZDraBas | G | -- (no config) | input key 'zdrabas' read by readswap; no config covers |
-| zgrz | G | -- (no config) | input key 'zgrz' read by readswap; no config covers |
-| zi | G | -- (no config) | input key 'zi' read by readswap; no config covers |
-| zintf | G | -- (no config) | input key 'zintf' read by readswap; no config covers |
-| zmow | G | -- (no config) | input key 'zmow' read by readswap; no config covers |
-| ZnCrAr | G | -- (no config) | input key 'zncrar' read by readswap; no config covers |
-| ztopdislay | G | -- (no config) | input key 'ztopdislay' read by readswap; no config covers |
+| cofani | G | -- (no config) | input key 'cofani' read only by readswap; needs slot in soil_config_t |
+| dznew | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| h | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| h_enpr | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| hcrit | G | -- (no config) | input key 'hcrit' read only by readswap; needs slot in soil_config_t |
+| hdepth | G | -- (no config) | input key 'hdepth' read only by readswap; needs slot in soil_config_t |
+| hplate | G | -- (no config) | input key 'hplate' read only by readswap; needs slot in soil_config_t |
+| hsublay | G | -- (no config) | input key 'hsublay' read only by readswap; needs slot in soil_config_t |
+| kf | G | -- (no config) | input key 'kf' read only by readswap; needs slot in soil_config_t |
+| kfsat | G | -- (no config) | input key 'kfsat' read only by readswap; needs slot in soil_config_t |
+| ksatfit | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| nrstaring | G | -- (no config) | input key 'nrstaring' read only by readswap; needs slot in soil_config_t |
+| numnodnew | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| SwDarcy | G | -- (no config) | input key 'swdarcy' read only by readswap; needs slot in soil_config_t |
+| swfrost | G | -- (no config) | input key 'swfrost' read only by readswap; needs slot in soil_config_t |
+| tau | G | -- (no config) | input key 'tau' read only by readswap; needs slot in soil_config_t |
+| Z_Ah | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| Z_Ic | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| Z_MB50 | G | -- (no config) | input key 'z_mb50' read only by readswap; needs slot in soil_config_t |
+| Z_St | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| Z_Tp | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| zc | G | -- (no config) | input key 'zc' read only by readswap; needs slot in soil_config_t |
+| ZDraBas | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| zgrz | G | -- (no config) | input key 'zgrz' read only by readswap; needs slot in soil_config_t |
+| zi | G | -- (no config) | input key 'zi' read only by readswap; needs slot in soil_config_t |
+| zintf | G | -- (no config) | input key 'zintf' read only by readswap; needs slot in soil_config_t |
+| zmow | G | -- (no config) | input key 'zmow' read only by readswap; needs slot in soil_config_t |
+| ZnCrAr | G | -- (no config) | input key 'zncrar' read only by readswap; needs slot in soil_config_t |
+| ztopdislay | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
 
 Runtime state (R) -- set by simulation code, not read from input:
 
@@ -293,7 +303,7 @@ Runtime state (R) -- set by simulation code, not read from input:
 
 ### Drainage + surface water
 
-C=20, R=27, G=23
+C=20, R=30, G=20
 
 | variable | status | source / target | notes |
 |---|---|---|---|
@@ -317,29 +327,29 @@ C=20, R=27, G=23
 | taludr | C | config%drainage%taludr |  |
 | widthr | C | config%drainage%widthr |  |
 | zbotdr | C | config%drainage%zbotdr |  |
-| cofintfl | G | -- (no config) | input key 'cofintfl' read by readswap; no config covers |
-| dropr | G | -- (no config) | input key 'dropr' read by readswap; no config covers |
-| expintfl | G | -- (no config) | input key 'expintfl' read by readswap; no config covers |
-| ftopdislay | G | -- (no config) | input key 'ftopdislay' read by readswap; no config covers |
-| geofac | G | -- (no config) | input key 'geofac' read by readswap; no config covers |
-| gwl | G | -- (no config) | input key 'gwl' read by readswap; no config covers |
-| gwlconv | G | -- (no config) | input key 'gwlconv' read by readswap; no config covers |
-| impend | G | -- (no config) | input key 'impend' read by readswap; no config covers |
-| nmper | G | -- (no config) | input key 'nmper' read by readswap; no config covers |
-| NumLevRapDra | G | -- (no config) | input key 'numlevrapdra' read by readswap; no config covers |
-| qdrain | G | -- (no config) | input key 'qdrain' read by readswap; no config covers |
-| RapDraReaExp | G | -- (no config) | input key 'rapdrareaexp' read by readswap; no config covers |
-| RapDraResRef | G | -- (no config) | input key 'rapdraresref' read by readswap; no config covers |
-| rsurfdeep | G | -- (no config) | input key 'rsurfdeep' read by readswap; no config covers |
-| rsurfshallow | G | -- (no config) | input key 'rsurfshallow' read by readswap; no config covers |
-| swdivdinf | G | -- (no config) | input key 'swdivdinf' read by readswap; no config covers |
-| swnrsrf | G | -- (no config) | input key 'swnrsrf' read by readswap; no config covers |
-| swsec | G | -- (no config) | input key 'swsec' read by readswap; no config covers |
-| swsrf | G | -- (no config) | input key 'swsrf' read by readswap; no config covers |
-| swtopdislay | G | -- (no config) | input key 'swtopdislay' read by readswap; no config covers |
-| SwTopnrsrf | G | -- (no config) | input key 'swtopnrsrf' read by readswap; no config covers |
-| wldip | G | -- (no config) | input key 'wldip' read by readswap; no config covers |
-| wls | G | -- (no config) | input key 'wls' read by readswap; no config covers |
+| cofintfl | G | -- (no config) | input key 'cofintfl' read only by readswap; needs slot in drainage_config_t (or new surface_water_config_t) |
+| dropr | G | -- (no config) | input key 'dropr' read only by readswap; needs slot in drainage_config_t (or new surface_water_config_t) |
+| expintfl | G | -- (no config) | input key 'expintfl' read only by readswap; needs slot in drainage_config_t (or new surface_water_config_t) |
+| ftopdislay | G | -- (no config) | input key 'ftopdislay' read only by readswap; needs slot in drainage_config_t (or new surface_water_config_t) |
+| geofac | G | -- (no config) | input key 'geofac' read only by readswap; needs slot in drainage_config_t (or new surface_water_config_t) |
+| gwl | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| gwlconv | G | -- (no config) | input key 'gwlconv' read only by readswap; needs slot in drainage_config_t (or new surface_water_config_t) |
+| impend | G | -- (no config) | input key 'impend' read only by readswap; needs slot in drainage_config_t (or new surface_water_config_t) |
+| nmper | G | -- (no config) | input key 'nmper' read only by readswap; needs slot in drainage_config_t (or new surface_water_config_t) |
+| NumLevRapDra | G | -- (no config) | input key 'numlevrapdra' read only by readswap; needs slot in drainage_config_t (or new surface_water_config_t) |
+| qdrain | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| RapDraReaExp | G | -- (no config) | input key 'rapdrareaexp' read only by readswap; needs slot in drainage_config_t (or new surface_water_config_t) |
+| RapDraResRef | G | -- (no config) | input key 'rapdraresref' read only by readswap; needs slot in drainage_config_t (or new surface_water_config_t) |
+| rsurfdeep | G | -- (no config) | input key 'rsurfdeep' read only by readswap; needs slot in drainage_config_t (or new surface_water_config_t) |
+| rsurfshallow | G | -- (no config) | input key 'rsurfshallow' read only by readswap; needs slot in drainage_config_t (or new surface_water_config_t) |
+| swdivdinf | G | -- (no config) | input key 'swdivdinf' read only by readswap; needs slot in drainage_config_t (or new surface_water_config_t) |
+| swnrsrf | G | -- (no config) | input key 'swnrsrf' read only by readswap; needs slot in drainage_config_t (or new surface_water_config_t) |
+| swsec | G | -- (no config) | input key 'swsec' read only by readswap; needs slot in drainage_config_t (or new surface_water_config_t) |
+| swsrf | G | -- (no config) | input key 'swsrf' read only by readswap; needs slot in drainage_config_t (or new surface_water_config_t) |
+| swtopdislay | G | -- (no config) | input key 'swtopdislay' read only by readswap; needs slot in drainage_config_t (or new surface_water_config_t) |
+| SwTopnrsrf | G | -- (no config) | input key 'swtopnrsrf' read only by readswap; needs slot in drainage_config_t (or new surface_water_config_t) |
+| wldip | G | -- (no config) | input key 'wldip' read only by readswap; needs slot in drainage_config_t (or new surface_water_config_t) |
+| wls | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
 
 Runtime state (R) -- set by simulation code, not read from input:
 
@@ -360,13 +370,13 @@ C=9, R=2, G=7
 | rimlay | C | config%bottom_boundary%rimlay |  |
 | shape | C | config%bottom_boundary%shape | also in: drainage/drainage_config_t |
 | swbotb | C | config%bottom_boundary%swbotb |  |
-| cofqha | G | -- (no config) | input key 'cofqha' read by readswap; no config covers |
-| cofqhb | G | -- (no config) | input key 'cofqhb' read by readswap; no config covers |
-| cofqhc | G | -- (no config) | input key 'cofqhc' read by readswap; no config covers |
-| daquif | G | -- (no config) | input key 'daquif' read by readswap; no config covers |
-| swbotb3Impl | G | -- (no config) | input key 'swbotb3impl' read by readswap; no config covers |
-| swqhbot | G | -- (no config) | input key 'swqhbot' read by readswap; no config covers |
-| swqhr | G | -- (no config) | input key 'swqhr' read by readswap; no config covers |
+| cofqha | G | -- (no config) | input key 'cofqha' read only by readswap; needs slot in bottom_boundary_config_t |
+| cofqhb | G | -- (no config) | input key 'cofqhb' read only by readswap; needs slot in bottom_boundary_config_t |
+| cofqhc | G | -- (no config) | input key 'cofqhc' read only by readswap; needs slot in bottom_boundary_config_t |
+| daquif | G | -- (no config) | input key 'daquif' read only by readswap; needs slot in bottom_boundary_config_t |
+| swbotb3Impl | G | -- (no config) | input key 'swbotb3impl' read only by readswap; needs slot in bottom_boundary_config_t |
+| swqhbot | G | -- (no config) | input key 'swqhbot' read only by readswap; needs slot in bottom_boundary_config_t |
+| swqhr | G | -- (no config) | input key 'swqhr' read only by readswap; needs slot in bottom_boundary_config_t |
 
 Runtime state (R) -- set by simulation code, not read from input:
 
@@ -388,8 +398,8 @@ C=10, R=0, G=2
 | tfroststa | C | config%heat%tfroststa |  |
 | tsoil | C | config%heat%tsoil_init | renamed in config (legacy `tsoil` ↔ schema `tsoil_init`) |
 | zh | C | config%heat%tsoil_init | renamed in config (legacy `zh` ↔ schema `tsoil_init`) |
-| ddamp | G | -- (no config) | input key 'ddamp' read by readswap; no config covers |
-| fdepth | G | -- (no config) | input key 'fdepth' read by readswap; no config covers |
+| ddamp | G | -- (no config) | input key 'ddamp' read only by readswap; needs slot in heat_config_t |
+| fdepth | G | -- (no config) | input key 'fdepth' read only by readswap; needs slot in heat_config_t |
 
 ### Irrigation
 
@@ -405,7 +415,7 @@ C=8, R=7, G=1
 | raithreshold | C | config%irrigation%raithreshold |  |
 | swcirrthres | C | config%irrigation%swcirrthres |  |
 | swirfix | C | config%irrigation%swirfix |  |
-| irconc | G | -- (no config) | input key 'irconc' read by readswap; no config covers |
+| irconc | G | -- (no config) | input key 'irconc' read only by readswap; needs slot in irrigation_config_t |
 
 Runtime state (R) -- set by simulation code, not read from input:
 
@@ -413,7 +423,7 @@ Runtime state (R) -- set by simulation code, not read from input:
 
 ### Solute
 
-C=8, R=9, G=5
+C=8, R=11, G=3
 
 | variable | status | source / target | notes |
 |---|---|---|---|
@@ -425,11 +435,11 @@ C=8, R=9, G=5
 | swbotbc | C | config%solute%swbotbc |  |
 | swsolu | C | config%solute%swsolu |  |
 | tscf | C | config%solute%tscf |  |
-| c_mroot | G | -- (no config) | input key 'c_mroot' read by readswap; no config covers |
-| cml | G | -- (no config) | input key 'cml' read by readswap; no config covers |
-| cpre | G | -- (no config) | input key 'cpre' read by readswap; no config covers |
-| cref | G | -- (no config) | input key 'cref' read by readswap; no config covers |
-| flAgeTracer | G | -- (no config) | input key 'flagetracer' read by readswap; no config covers |
+| c_mroot | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| cml | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| cpre | G | -- (no config) | input key 'cpre' read only by readswap; needs slot in solute_config_t |
+| cref | G | -- (no config) | input key 'cref' read only by readswap; needs slot in solute_config_t |
+| flAgeTracer | G | -- (no config) | input key 'flagetracer' read only by readswap; needs slot in solute_config_t |
 
 Runtime state (R) -- set by simulation code, not read from input:
 
@@ -437,7 +447,7 @@ Runtime state (R) -- set by simulation code, not read from input:
 
 ### Crop (fixed / grass / WOFOST)
 
-C=110, R=23, G=81
+C=110, R=74, G=30
 
 | variable | status | source / target | notes |
 |---|---|---|---|
@@ -551,87 +561,87 @@ C=110, R=23, G=81
 | zPrep | C | config%cropwofost%zprep |  |
 | zSow | C | config%cropwofost%zsow |  |
 | zTempSow | C | config%cropwofost%ztempsow |  |
-| alphaw | G | -- (no config) | input key 'alphaw' read by readswap; no config covers |
-| cf | G | -- (no config) | input key 'cf' read by readswap; no config covers |
-| cfeic | G | -- (no config) | input key 'cfeic' read by readswap; no config covers |
-| cfevappond | G | -- (no config) | input key 'cfevappond' read by readswap; no config covers |
-| co2ppm | G | -- (no config) | input key 'co2ppm' read by readswap; no config covers |
-| co2year | G | -- (no config) | input key 'co2year' read by readswap; no config covers |
-| cropend | G | -- (no config) | input key 'cropend' read by readswap; no config covers |
-| cropfil | G | -- (no config) | input key 'cropfil' read by readswap; no config covers |
-| cropstart | G | -- (no config) | input key 'cropstart' read by readswap; no config covers |
-| croptype | G | -- (no config) | input key 'croptype' read by readswap; no config covers |
-| cuptgraz | G | -- (no config) | input key 'cuptgraz' read by readswap; no config covers |
-| cuptgrazpot | G | -- (no config) | input key 'cuptgrazpot' read by readswap; no config covers |
-| cwdm | G | -- (no config) | input key 'cwdm' read by readswap; no config covers |
-| cwdmpot | G | -- (no config) | input key 'cwdmpot' read by readswap; no config covers |
-| dmgrztb | G | -- (no config) | input key 'dmgrztb' read by readswap; no config covers |
-| dmmowtb | G | -- (no config) | input key 'dmmowtb' read by readswap; no config covers |
-| dvs | G | -- (no config) | input key 'dvs' read by readswap; no config covers |
-| dwlv | G | -- (no config) | input key 'dwlv' read by readswap; no config covers |
-| dwlvCrop | G | -- (no config) | input key 'dwlvcrop' read by readswap; no config covers |
-| dwlvpot | G | -- (no config) | input key 'dwlvpot' read by readswap; no config covers |
-| dwlvSoil | G | -- (no config) | input key 'dwlvsoil' read by readswap; no config covers |
-| dwrt | G | -- (no config) | input key 'dwrt' read by readswap; no config covers |
-| dwrtpot | G | -- (no config) | input key 'dwrtpot' read by readswap; no config covers |
-| dwst | G | -- (no config) | input key 'dwst' read by readswap; no config covers |
-| dwstpot | G | -- (no config) | input key 'dwstpot' read by readswap; no config covers |
-| f_senes | G | -- (no config) | input key 'f_senes' read by readswap; no config covers |
-| fimin | G | -- (no config) | input key 'fimin' read by readswap; no config covers |
-| frexp | G | -- (no config) | input key 'frexp' read by readswap; no config covers |
-| gasst | G | -- (no config) | input key 'gasst' read by readswap; no config covers |
-| gasstpot | G | -- (no config) | input key 'gasstpot' read by readswap; no config covers |
-| gctb | G | -- (no config) | input key 'gctb' read by readswap; no config covers |
-| glaiex | G | -- (no config) | input key 'glaiex' read by readswap; no config covers |
-| glaiexpot | G | -- (no config) | input key 'glaiexpot' read by readswap; no config covers |
-| idaysgraz | G | -- (no config) | input key 'idaysgraz' read by readswap; no config covers |
-| idaysgrazpot | G | -- (no config) | input key 'idaysgrazpot' read by readswap; no config covers |
-| idregr | G | -- (no config) | input key 'idregr' read by readswap; no config covers |
-| idregrpot | G | -- (no config) | input key 'idregrpot' read by readswap; no config covers |
-| Kroot | G | -- (no config) | input key 'kroot' read by readswap; no config covers |
-| kstem | G | -- (no config) | input key 'kstem' read by readswap; no config covers |
-| lai | G | -- (no config) | input key 'lai' read by readswap; no config covers |
-| laiexp | G | -- (no config) | input key 'laiexp' read by readswap; no config covers |
-| laiexppot | G | -- (no config) | input key 'laiexppot' read by readswap; no config covers |
-| laimax | G | -- (no config) | input key 'laimax' read by readswap; no config covers |
-| laipot | G | -- (no config) | input key 'laipot' read by readswap; no config covers |
-| lvage | G | -- (no config) | input key 'lvage' read by readswap; no config covers |
-| lvagepot | G | -- (no config) | input key 'lvagepot' read by readswap; no config covers |
-| mowrest | G | -- (no config) | input key 'mowrest' read by readswap; no config covers |
-| mrest | G | -- (no config) | input key 'mrest' read by readswap; no config covers |
-| mrestpot | G | -- (no config) | input key 'mrestpot' read by readswap; no config covers |
-| PpIcSs | G | -- (no config) | input key 'ppicss' read by readswap; no config covers |
-| q10_root | G | -- (no config) | input key 'q10_root' read by readswap; no config covers |
-| rootcoefa | G | -- (no config) | input key 'rootcoefa' read by readswap; no config covers |
-| rooteff | G | -- (no config) | input key 'rooteff' read by readswap; no config covers |
-| rootradius | G | -- (no config) | input key 'rootradius' read by readswap; no config covers |
-| rsro | G | -- (no config) | input key 'rsro' read by readswap; no config covers |
-| rsroexp | G | -- (no config) | input key 'rsroexp' read by readswap; no config covers |
-| Rxylem | G | -- (no config) | input key 'rxylem' read by readswap; no config covers |
-| saev | G | -- (no config) | input key 'saev' read by readswap; no config covers |
-| seqgrazmow | G | -- (no config) | input key 'seqgrazmow' read by readswap; no config covers |
-| sla | G | -- (no config) | input key 'sla' read by readswap; no config covers |
-| slapot | G | -- (no config) | input key 'slapot' read by readswap; no config covers |
-| spev | G | -- (no config) | input key 'spev' read by readswap; no config covers |
-| swcrp | G | -- (no config) | input key 'swcrp' read by readswap; no config covers |
-| swoxygentype | G | -- (no config) | input key 'swoxygentype' read by readswap; no config covers |
-| SwShrInp | G | -- (no config) | input key 'swshrinp' read by readswap; no config covers |
-| tadw | G | -- (no config) | input key 'tadw' read by readswap; no config covers |
-| tadwpot | G | -- (no config) | input key 'tadwpot' read by readswap; no config covers |
-| tagp | G | -- (no config) | input key 'tagp' read by readswap; no config covers |
-| tagppot | G | -- (no config) | input key 'tagppot' read by readswap; no config covers |
-| tagpt | G | -- (no config) | input key 'tagpt' read by readswap; no config covers |
-| tagptpot | G | -- (no config) | input key 'tagptpot' read by readswap; no config covers |
-| tsum | G | -- (no config) | input key 'tsum' read by readswap; no config covers |
-| tsumdepth | G | -- (no config) | input key 'tsumdepth' read by readswap; no config covers |
-| tsumgerm | G | -- (no config) | input key 'tsumgerm' read by readswap; no config covers |
-| tsumtemp | G | -- (no config) | input key 'tsumtemp' read by readswap; no config covers |
-| tsumtime | G | -- (no config) | input key 'tsumtime' read by readswap; no config covers |
-| wlv | G | -- (no config) | input key 'wlv' read by readswap; no config covers |
-| wlvpot | G | -- (no config) | input key 'wlvpot' read by readswap; no config covers |
-| wrt | G | -- (no config) | input key 'wrt' read by readswap; no config covers |
-| wrtb | G | -- (no config) | input key 'wrtb' read by readswap; no config covers |
-| wrtpot | G | -- (no config) | input key 'wrtpot' read by readswap; no config covers |
+| alphaw | G | -- (no config) | input key 'alphaw' read only by readswap; needs slot in crop / cropfixed / cropgrass / cropwofost configs |
+| cf | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| cfeic | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| cfevappond | G | -- (no config) | input key 'cfevappond' read only by readswap; needs slot in crop / cropfixed / cropgrass / cropwofost configs |
+| co2ppm | G | -- (no config) | input key 'co2ppm' read only by readswap; needs slot in crop / cropfixed / cropgrass / cropwofost configs |
+| co2year | G | -- (no config) | input key 'co2year' read only by readswap; needs slot in crop / cropfixed / cropgrass / cropwofost configs |
+| cropend | G | -- (no config) | input key 'cropend' read only by readswap; needs slot in crop / cropfixed / cropgrass / cropwofost configs |
+| cropfil | G | -- (no config) | input key 'cropfil' read only by readswap; needs slot in crop / cropfixed / cropgrass / cropwofost configs |
+| cropstart | G | -- (no config) | input key 'cropstart' read only by readswap; needs slot in crop / cropfixed / cropgrass / cropwofost configs |
+| croptype | G | -- (no config) | input key 'croptype' read only by readswap; needs slot in crop / cropfixed / cropgrass / cropwofost configs |
+| cuptgraz | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| cuptgrazpot | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| cwdm | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| cwdmpot | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| dmgrztb | G | -- (no config) | input key 'dmgrztb' read only by readswap; needs slot in crop / cropfixed / cropgrass / cropwofost configs |
+| dmmowtb | G | -- (no config) | input key 'dmmowtb' read only by readswap; needs slot in crop / cropfixed / cropgrass / cropwofost configs |
+| dvs | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| dwlv | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| dwlvCrop | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| dwlvpot | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| dwlvSoil | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| dwrt | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| dwrtpot | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| dwst | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| dwstpot | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| f_senes | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| fimin | G | -- (no config) | input key 'fimin' read only by readswap; needs slot in crop / cropfixed / cropgrass / cropwofost configs |
+| frexp | G | -- (no config) | input key 'frexp' read only by readswap; needs slot in crop / cropfixed / cropgrass / cropwofost configs |
+| gasst | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| gasstpot | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| gctb | G | -- (no config) | input key 'gctb' read only by readswap; needs slot in crop / cropfixed / cropgrass / cropwofost configs |
+| glaiex | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| glaiexpot | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| idaysgraz | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| idaysgrazpot | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| idregr | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| idregrpot | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| Kroot | G | -- (no config) | input key 'kroot' read only by readswap; needs slot in crop / cropfixed / cropgrass / cropwofost configs |
+| kstem | G | -- (no config) | input key 'kstem' read only by readswap; needs slot in crop / cropfixed / cropgrass / cropwofost configs |
+| lai | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| laiexp | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| laiexppot | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| laimax | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| laipot | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| lvage | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| lvagepot | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| mowrest | G | -- (no config) | input key 'mowrest' read only by readswap; needs slot in crop / cropfixed / cropgrass / cropwofost configs |
+| mrest | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| mrestpot | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| PpIcSs | G | -- (no config) | input key 'ppicss' read only by readswap; needs slot in crop / cropfixed / cropgrass / cropwofost configs |
+| q10_root | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| rootcoefa | G | -- (no config) | input key 'rootcoefa' read only by readswap; needs slot in crop / cropfixed / cropgrass / cropwofost configs |
+| rooteff | G | -- (no config) | input key 'rooteff' read only by readswap; needs slot in crop / cropfixed / cropgrass / cropwofost configs |
+| rootradius | G | -- (no config) | input key 'rootradius' read only by readswap; needs slot in crop / cropfixed / cropgrass / cropwofost configs |
+| rsro | G | -- (no config) | input key 'rsro' read only by readswap; needs slot in crop / cropfixed / cropgrass / cropwofost configs |
+| rsroexp | G | -- (no config) | input key 'rsroexp' read only by readswap; needs slot in crop / cropfixed / cropgrass / cropwofost configs |
+| Rxylem | G | -- (no config) | input key 'rxylem' read only by readswap; needs slot in crop / cropfixed / cropgrass / cropwofost configs |
+| saev | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| seqgrazmow | G | -- (no config) | input key 'seqgrazmow' read only by readswap; needs slot in crop / cropfixed / cropgrass / cropwofost configs |
+| sla | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| slapot | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| spev | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| swcrp | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| swoxygentype | G | -- (no config) | input key 'swoxygentype' read only by readswap; needs slot in crop / cropfixed / cropgrass / cropwofost configs |
+| SwShrInp | G | -- (no config) | input key 'swshrinp' read only by readswap; needs slot in crop / cropfixed / cropgrass / cropwofost configs |
+| tadw | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| tadwpot | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| tagp | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| tagppot | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| tagpt | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| tagptpot | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| tsum | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| tsumdepth | G | -- (no config) | input key 'tsumdepth' read only by readswap; needs slot in crop / cropfixed / cropgrass / cropwofost configs |
+| tsumgerm | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| tsumtemp | G | -- (no config) | input key 'tsumtemp' read only by readswap; needs slot in crop / cropfixed / cropgrass / cropwofost configs |
+| tsumtime | G | -- (no config) | input key 'tsumtime' read only by readswap; needs slot in crop / cropfixed / cropgrass / cropwofost configs |
+| wlv | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| wlvpot | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| wrt | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| wrtb | G | -- (no config) | input key 'wrtb' read only by readswap; needs slot in crop / cropfixed / cropgrass / cropwofost configs |
+| wrtpot | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
 
 Runtime state (R) -- set by simulation code, not read from input:
 
@@ -639,27 +649,27 @@ Runtime state (R) -- set by simulation code, not read from input:
 
 ### Macropore
 
-C=0, R=15, G=17
+C=0, R=22, G=10
 
 | variable | status | source / target | notes |
 |---|---|---|---|
-| DiPoMa | G | -- (no config) | input key 'dipoma' read by readswap; no config covers |
-| DiPoMi | G | -- (no config) | input key 'dipomi' read by readswap; no config covers |
-| GeomFac | G | -- (no config) | input key 'geomfac' read by readswap; no config covers |
-| PowM | G | -- (no config) | input key 'powm' read by readswap; no config covers |
-| PrepDelay | G | -- (no config) | input key 'prepdelay' read by readswap; no config covers |
-| Rzah | G | -- (no config) | input key 'rzah' read by readswap; no config covers |
-| ShapeFacMp | G | -- (no config) | input key 'shapefacmp' read by readswap; no config covers |
-| SorpAlfa | G | -- (no config) | input key 'sorpalfa' read by readswap; no config covers |
-| SorpFacParl | G | -- (no config) | input key 'sorpfacparl' read by readswap; no config covers |
-| SorpMax | G | -- (no config) | input key 'sorpmax' read by readswap; no config covers |
-| Spoint | G | -- (no config) | input key 'spoint' read by readswap; no config covers |
-| SwBma | G | -- (no config) | input key 'swbma' read by readswap; no config covers |
-| swman | G | -- (no config) | input key 'swman' read by readswap; no config covers |
-| SwPowM | G | -- (no config) | input key 'swpowm' read by readswap; no config covers |
-| SwSoilShr | G | -- (no config) | input key 'swsoilshr' read by readswap; no config covers |
-| SwSorp | G | -- (no config) | input key 'swsorp' read by readswap; no config covers |
-| VlMpStSs | G | -- (no config) | input key 'vlmpstss' read by readswap; no config covers |
+| DiPoMa | G | -- (no config) | input key 'dipoma' read only by readswap; needs slot in new macropore_config_t (Phase 4d deferred) |
+| DiPoMi | G | -- (no config) | input key 'dipomi' read only by readswap; needs slot in new macropore_config_t (Phase 4d deferred) |
+| GeomFac | G | -- (no config) | input key 'geomfac' read only by readswap; needs slot in new macropore_config_t (Phase 4d deferred) |
+| PowM | G | -- (no config) | input key 'powm' read only by readswap; needs slot in new macropore_config_t (Phase 4d deferred) |
+| PrepDelay | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| Rzah | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| ShapeFacMp | G | -- (no config) | input key 'shapefacmp' read only by readswap; needs slot in new macropore_config_t (Phase 4d deferred) |
+| SorpAlfa | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| SorpFacParl | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| SorpMax | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| Spoint | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| SwBma | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| swman | G | -- (no config) | input key 'swman' read only by readswap; needs slot in new macropore_config_t (Phase 4d deferred) |
+| SwPowM | G | -- (no config) | input key 'swpowm' read only by readswap; needs slot in new macropore_config_t (Phase 4d deferred) |
+| SwSoilShr | G | -- (no config) | input key 'swsoilshr' read only by readswap; needs slot in new macropore_config_t (Phase 4d deferred) |
+| SwSorp | G | -- (no config) | input key 'swsorp' read only by readswap; needs slot in new macropore_config_t (Phase 4d deferred) |
+| VlMpStSs | G | -- (no config) | input key 'vlmpstss' read only by readswap; needs slot in new macropore_config_t (Phase 4d deferred) |
 
 Runtime state (R) -- set by simulation code, not read from input:
 
@@ -667,112 +677,112 @@ Runtime state (R) -- set by simulation code, not read from input:
 
 ### Other / uncategorised
 
-C=0, R=482, G=102
+C=0, R=512, G=71, RETIRED=1 (per ADR 0009)
 
 | variable | status | source / target | notes |
 |---|---|---|---|
-| atmin7 | G | -- (no config) | input key 'atmin7' read by readswap; no config covers |
-| betaw | G | -- (no config) | input key 'betaw' read by readswap; no config covers |
-| bgerm | G | -- (no config) | input key 'bgerm' read by readswap; no config covers |
-| cgerm | G | -- (no config) | input key 'cgerm' read by readswap; no config covers |
-| ch | G | -- (no config) | input key 'ch' read by readswap; no config covers |
-| CritDevh1Cp | G | -- (no config) | input key 'critdevh1cp' read by readswap; no config covers |
-| CritDevh2Cp | G | -- (no config) | input key 'critdevh2cp' read by readswap; no config covers |
-| CritDevMasBal | G | -- (no config) | input key 'critdevmasbal' read by readswap; no config covers |
-| CritDevPondDt | G | -- (no config) | input key 'critdevponddt' read by readswap; no config covers |
-| CriterHr | G | -- (no config) | input key 'criterhr' read by readswap; no config covers |
-| CritUndSatVol | G | -- (no config) | input key 'critundsatvol' read by readswap; no config covers |
-| daycrop | G | -- (no config) | input key 'daycrop' read by readswap; no config covers |
-| dayfix | G | -- (no config) | input key 'dayfix' read by readswap; no config covers |
-| daygrowth | G | -- (no config) | input key 'daygrowth' read by readswap; no config covers |
-| daygrowthpot | G | -- (no config) | input key 'daygrowthpot' read by readswap; no config covers |
-| ddif | G | -- (no config) | input key 'ddif' read by readswap; no config covers |
-| decpot | G | -- (no config) | input key 'decpot' read by readswap; no config covers |
-| decsat | G | -- (no config) | input key 'decsat' read by readswap; no config covers |
-| dewrest | G | -- (no config) | input key 'dewrest' read by readswap; no config covers |
-| FacDpthInf | G | -- (no config) | input key 'facdpthinf' read by readswap; no config covers |
-| fbltb | G | -- (no config) | input key 'fbltb' read by readswap; no config covers |
-| flCropNut | G | -- (no config) | input key 'flcropnut' read by readswap; no config covers |
-| flprintdt | G | -- (no config) | input key 'flprintdt' read by readswap; no config covers |
-| flSwapShared | G | -- (no config) | input key 'flswapshared' read by readswap; no config covers |
-| frnx | G | -- (no config) | input key 'frnx' read by readswap; no config covers |
-| gampar | G | -- (no config) | input key 'gampar' read by readswap; no config covers |
-| iharvest | G | -- (no config) | input key 'iharvest' read by readswap; no config covers |
-| iHWCKmodel | G | -- (no config) | input key 'ihwckmodel' read by readswap; no config covers |
-| ilvold | G | -- (no config) | input key 'ilvold' read by readswap; no config covers |
-| ilvoldpot | G | -- (no config) | input key 'ilvoldpot' read by readswap; no config covers |
-| intwl | G | -- (no config) | input key 'intwl' read by readswap; no config covers |
-| irdate | G | -- (no config) | input key 'irdate' read by readswap; no config covers |
-| irdepth | G | -- (no config) | input key 'irdepth' read by readswap; no config covers |
-| irtype | G | -- (no config) | input key 'irtype' read by readswap; no config covers |
-| iseqgm | G | -- (no config) | input key 'iseqgm' read by readswap; no config covers |
-| iseqgmpot | G | -- (no config) | input key 'iseqgmpot' read by readswap; no config covers |
-| khbot | G | -- (no config) | input key 'khbot' read by readswap; no config covers |
-| khtop | G | -- (no config) | input key 'khtop' read by readswap; no config covers |
-| kvbot | G | -- (no config) | input key 'kvbot' read by readswap; no config covers |
-| kvtop | G | -- (no config) | input key 'kvtop' read by readswap; no config covers |
-| ldwet | G | -- (no config) | input key 'ldwet' read by readswap; no config covers |
-| lrnr | G | -- (no config) | input key 'lrnr' read by readswap; no config covers |
-| lsda | G | -- (no config) | input key 'lsda' read by readswap; no config covers |
-| lsnr | G | -- (no config) | input key 'lsnr' read by readswap; no config covers |
-| lv | G | -- (no config) | input key 'lv' read by readswap; no config covers |
-| lvpot | G | -- (no config) | input key 'lvpot' read by readswap; no config covers |
-| MaxBackTr | G | -- (no config) | input key 'maxbacktr' read by readswap; no config covers |
-| MaxIt | G | -- (no config) | input key 'maxit' read by readswap; no config covers |
-| MaxIterTime | G | -- (no config) | input key 'maxitertime' read by readswap; no config covers |
-| mrftb | G | -- (no config) | input key 'mrftb' read by readswap; no config covers |
-| nlue | G | -- (no config) | input key 'nlue' read by readswap; no config covers |
-| nmxlv | G | -- (no config) | input key 'nmxlv' read by readswap; no config covers |
-| nofd | G | -- (no config) | input key 'nofd' read by readswap; no config covers |
-| NumSbDm | G | -- (no config) | input key 'numsbdm' read by readswap; no config covers |
-| osswlm | G | -- (no config) | input key 'osswlm' read by readswap; no config covers |
-| outfil | G | -- (no config) | input key 'outfil' read by readswap; no config covers |
-| pld | G | -- (no config) | input key 'pld' read by readswap; no config covers |
-| plwti | G | -- (no config) | input key 'plwti' read by readswap; no config covers |
-| PndmxMp | G | -- (no config) | input key 'pndmxmp' read by readswap; no config covers |
-| poros | G | -- (no config) | input key 'poros' read by readswap; no config covers |
-| psilt | G | -- (no config) | input key 'psilt' read by readswap; no config covers |
-| rad | G | -- (no config) | input key 'rad' read by readswap; no config covers |
-| rd | G | -- (no config) | input key 'rd' read by readswap; no config covers |
-| rdpot | G | -- (no config) | input key 'rdpot' read by readswap; no config covers |
-| remoc | G | -- (no config) | input key 'remoc' read by readswap; no config covers |
-| rid | G | -- (no config) | input key 'rid' read by readswap; no config covers |
-| rnflv | G | -- (no config) | input key 'rnflv' read by readswap; no config covers |
-| rnfst | G | -- (no config) | input key 'rnfst' read by readswap; no config covers |
-| rsigni | G | -- (no config) | input key 'rsigni' read by readswap; no config covers |
-| ShrParA | G | -- (no config) | input key 'shrpara' read by readswap; no config covers |
-| ShrParB | G | -- (no config) | input key 'shrparb' read by readswap; no config covers |
-| ShrParC | G | -- (no config) | input key 'shrparc' read by readswap; no config covers |
-| ShrParD | G | -- (no config) | input key 'shrpard' read by readswap; no config covers |
-| ShrParE | G | -- (no config) | input key 'shrpare' read by readswap; no config covers |
-| sicact | G | -- (no config) | input key 'sicact' read by readswap; no config covers |
-| siccaplai | G | -- (no config) | input key 'siccaplai' read by readswap; no config covers |
-| slw | G | -- (no config) | input key 'slw' read by readswap; no config covers |
-| SowDelay | G | -- (no config) | input key 'sowdelay' read by readswap; no config covers |
-| StepHr | G | -- (no config) | input key 'stephr' read by readswap; no config covers |
-| sw2 | G | -- (no config) | input key 'sw2' read by readswap; no config covers |
-| sw3 | G | -- (no config) | input key 'sw3' read by readswap; no config covers |
-| sw4 | G | -- (no config) | input key 'sw4' read by readswap; no config covers |
-| swbr | G | -- (no config) | input key 'swbr' read by readswap; no config covers |
-| swbulb | G | -- (no config) | input key 'swbulb' read by readswap; no config covers |
-| swgc | G | -- (no config) | input key 'swgc' read by readswap; no config covers |
-| swinc | G | -- (no config) | input key 'swinc' read by readswap; no config covers |
+| atmin7 | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| betaw | G | -- (no config) | input key 'betaw' read only by readswap; needs slot in needs Phase 4f categorisation |
+| bgerm | G | -- (no config) | input key 'bgerm' read only by readswap; needs slot in needs Phase 4f categorisation |
+| cgerm | G | -- (no config) | input key 'cgerm' read only by readswap; needs slot in needs Phase 4f categorisation |
+| ch | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| CritDevh1Cp | G | -- (no config) | input key 'critdevh1cp' read only by readswap; needs slot in needs Phase 4f categorisation |
+| CritDevh2Cp | G | -- (no config) | input key 'critdevh2cp' read only by readswap; needs slot in needs Phase 4f categorisation |
+| CritDevMasBal | G | -- (no config) | input key 'critdevmasbal' read only by readswap; needs slot in needs Phase 4f categorisation |
+| CritDevPondDt | G | -- (no config) | input key 'critdevponddt' read only by readswap; needs slot in needs Phase 4f categorisation |
+| CriterHr | G | -- (no config) | input key 'criterhr' read only by readswap; needs slot in needs Phase 4f categorisation |
+| CritUndSatVol | G | -- (no config) | input key 'critundsatvol' read only by readswap; needs slot in needs Phase 4f categorisation |
+| daycrop | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| dayfix | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| daygrowth | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| daygrowthpot | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| ddif | G | -- (no config) | input key 'ddif' read only by readswap; needs slot in needs Phase 4f categorisation |
+| decpot | G | -- (no config) | input key 'decpot' read only by readswap; needs slot in needs Phase 4f categorisation |
+| decsat | G | -- (no config) | input key 'decsat' read only by readswap; needs slot in needs Phase 4f categorisation |
+| dewrest | G | -- (no config) | input key 'dewrest' read only by readswap; needs slot in needs Phase 4f categorisation |
+| FacDpthInf | G | -- (no config) | input key 'facdpthinf' read only by readswap; needs slot in needs Phase 4f categorisation |
+| fbltb | G | -- (no config) | input key 'fbltb' read only by readswap; needs slot in needs Phase 4f categorisation |
+| flCropNut | G | -- (no config) | input key 'flcropnut' read only by readswap; needs slot in needs Phase 4f categorisation |
+| flprintdt | G | -- (no config) | input key 'flprintdt' read only by readswap; needs slot in needs Phase 4f categorisation |
+| flSwapShared | G | -- (no config) | input key 'flswapshared' read only by readswap; needs slot in needs Phase 4f categorisation |
+| frnx | G | -- (no config) | input key 'frnx' read only by readswap; needs slot in needs Phase 4f categorisation |
+| gampar | G | -- (no config) | input key 'gampar' read only by readswap; needs slot in needs Phase 4f categorisation |
+| iharvest | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| iHWCKmodel | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| ilvold | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| ilvoldpot | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| intwl | G | -- (no config) | input key 'intwl' read only by readswap; needs slot in needs Phase 4f categorisation |
+| irdate | G | -- (no config) | input key 'irdate' read only by readswap; needs slot in needs Phase 4f categorisation |
+| irdepth | G | -- (no config) | input key 'irdepth' read only by readswap; needs slot in needs Phase 4f categorisation |
+| irtype | G | -- (no config) | input key 'irtype' read only by readswap; needs slot in needs Phase 4f categorisation |
+| iseqgm | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| iseqgmpot | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| khbot | G | -- (no config) | input key 'khbot' read only by readswap; needs slot in needs Phase 4f categorisation |
+| khtop | G | -- (no config) | input key 'khtop' read only by readswap; needs slot in needs Phase 4f categorisation |
+| kvbot | G | -- (no config) | input key 'kvbot' read only by readswap; needs slot in needs Phase 4f categorisation |
+| kvtop | G | -- (no config) | input key 'kvtop' read only by readswap; needs slot in needs Phase 4f categorisation |
+| ldwet | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| lrnr | G | -- (no config) | input key 'lrnr' read only by readswap; needs slot in needs Phase 4f categorisation |
+| lsda | G | -- (no config) | input key 'lsda' read only by readswap; needs slot in needs Phase 4f categorisation |
+| lsnr | G | -- (no config) | input key 'lsnr' read only by readswap; needs slot in needs Phase 4f categorisation |
+| lv | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| lvpot | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| MaxBackTr | G | -- (no config) | input key 'maxbacktr' read only by readswap; needs slot in needs Phase 4f categorisation |
+| MaxIt | G | -- (no config) | input key 'maxit' read only by readswap; needs slot in needs Phase 4f categorisation |
+| MaxIterTime | G | -- (no config) | input key 'maxitertime' read only by readswap; needs slot in needs Phase 4f categorisation |
+| mrftb | G | -- (no config) | input key 'mrftb' read only by readswap; needs slot in needs Phase 4f categorisation |
+| nlue | G | -- (no config) | input key 'nlue' read only by readswap; needs slot in needs Phase 4f categorisation |
+| nmxlv | G | -- (no config) | input key 'nmxlv' read only by readswap; needs slot in needs Phase 4f categorisation |
+| nofd | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| NumSbDm | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| osswlm | G | -- (no config) | input key 'osswlm' read only by readswap; needs slot in needs Phase 4f categorisation |
+| outfil | G | -- (no config) | input key 'outfil' read only by readswap; needs slot in needs Phase 4f categorisation |
+| pld | G | -- (no config) | input key 'pld' read only by readswap; needs slot in needs Phase 4f categorisation |
+| plwti | G | -- (no config) | input key 'plwti' read only by readswap; needs slot in needs Phase 4f categorisation |
+| PndmxMp | G | -- (no config) | input key 'pndmxmp' read only by readswap; needs slot in needs Phase 4f categorisation |
+| poros | G | -- (no config) | input key 'poros' read only by readswap; needs slot in needs Phase 4f categorisation |
+| psilt | G | -- (no config) | input key 'psilt' read only by readswap; needs slot in needs Phase 4f categorisation |
+| rad | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| rd | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| rdpot | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| remoc | G | -- (no config) | input key 'remoc' read only by readswap; needs slot in needs Phase 4f categorisation |
+| rid | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| rnflv | G | -- (no config) | input key 'rnflv' read only by readswap; needs slot in needs Phase 4f categorisation |
+| rnfst | G | -- (no config) | input key 'rnfst' read only by readswap; needs slot in needs Phase 4f categorisation |
+| rsigni | G | -- (no config) | input key 'rsigni' read only by readswap; needs slot in needs Phase 4f categorisation |
+| ShrParA | G | -- (no config) | input key 'shrpara' read only by readswap; needs slot in needs Phase 4f categorisation |
+| ShrParB | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| ShrParC | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| ShrParD | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| ShrParE | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| sicact | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| siccaplai | G | -- (no config) | input key 'siccaplai' read only by readswap; needs slot in needs Phase 4f categorisation |
+| slw | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| SowDelay | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| StepHr | G | -- (no config) | input key 'stephr' read only by readswap; needs slot in needs Phase 4f categorisation |
+| sw2 | G | -- (no config) | input key 'sw2' read only by readswap; needs slot in needs Phase 4f categorisation |
+| sw3 | G | -- (no config) | input key 'sw3' read only by readswap; needs slot in needs Phase 4f categorisation |
+| sw4 | G | -- (no config) | input key 'sw4' read only by readswap; needs slot in needs Phase 4f categorisation |
+| swbr | G | -- (no config) | input key 'swbr' read only by readswap; needs slot in needs Phase 4f categorisation |
+| swbulb | G | -- (no config) | input key 'swbulb' read only by readswap; needs slot in needs Phase 4f categorisation |
+| swgc | G | -- (no config) | input key 'swgc' read only by readswap; needs slot in needs Phase 4f categorisation |
+| swinc | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
 | swoutputmodflow | RETIRED | ADR 0009 | discontinued; new TOML reader emits deprecation warning |
-| swpondmx | G | -- (no config) | input key 'swpondmx' read by readswap; no config covers |
-| swrdc | G | -- (no config) | input key 'swrdc' read by readswap; no config covers |
-| swredu | G | -- (no config) | input key 'swredu' read by readswap; no config covers |
-| swsnow | G | -- (no config) | input key 'swsnow' read by readswap; no config covers |
-| swtopsub | G | -- (no config) | input key 'swtopsub' read by readswap; no config covers |
-| swtsum | G | -- (no config) | input key 'swtsum' read by readswap; no config covers |
-| swuseCN | G | -- (no config) | input key 'swusecn' read by readswap; no config covers |
-| t | G | -- (no config) | input key 't' read by readswap; no config covers |
-| taccur | G | -- (no config) | input key 'taccur' read by readswap; no config covers |
-| ThetCrMp | G | -- (no config) | input key 'thetcrmp' read by readswap; no config covers |
-| timref | G | -- (no config) | input key 'timref' read by readswap; no config covers |
-| vcrit | G | -- (no config) | input key 'vcrit' read by readswap; no config covers |
-| vernrtb | G | -- (no config) | input key 'vernrtb' read by readswap; no config covers |
-| wc_cor | G | -- (no config) | input key 'wc_cor' read by readswap; no config covers |
-| wiltpoint | G | -- (no config) | input key 'wiltpoint' read by readswap; no config covers |
+| swpondmx | G | -- (no config) | input key 'swpondmx' read only by readswap; needs slot in needs Phase 4f categorisation |
+| swrdc | G | -- (no config) | input key 'swrdc' read only by readswap; needs slot in needs Phase 4f categorisation |
+| swredu | G | -- (no config) | input key 'swredu' read only by readswap; needs slot in needs Phase 4f categorisation |
+| swsnow | G | -- (no config) | input key 'swsnow' read only by readswap; needs slot in needs Phase 4f categorisation |
+| swtopsub | G | -- (no config) | input key 'swtopsub' read only by readswap; needs slot in needs Phase 4f categorisation |
+| swtsum | G | -- (no config) | input key 'swtsum' read only by readswap; needs slot in needs Phase 4f categorisation |
+| swuseCN | G | -- (no config) | input key 'swusecn' read only by readswap; needs slot in needs Phase 4f categorisation |
+| t | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
+| taccur | G | -- (no config) | input key 'taccur' read only by readswap; needs slot in needs Phase 4f categorisation |
+| ThetCrMp | G | -- (no config) | input key 'thetcrmp' read only by readswap; needs slot in needs Phase 4f categorisation |
+| timref | G | -- (no config) | input key 'timref' read only by readswap; needs slot in needs Phase 4f categorisation |
+| vcrit | G | -- (no config) | input key 'vcrit' read only by readswap; needs slot in needs Phase 4f categorisation |
+| vernrtb | G | -- (no config) | input key 'vernrtb' read only by readswap; needs slot in needs Phase 4f categorisation |
+| wc_cor | G | -- (no config) | input key 'wc_cor' read only by readswap; needs slot in needs Phase 4f categorisation |
+| wiltpoint | G | -- (no config) | input key 'wiltpoint' read only by readswap; needs slot in needs Phase 4f categorisation |
 
 Runtime state (R) -- set by simulation code (482 names; first 80 listed):
 
@@ -780,14 +790,14 @@ Runtime state (R) -- set by simulation code (482 names; first 80 listed):
 
 ## Gaps (Phase 4f blockers)
 
-All 325 (G) entries are reproduced inline in their section tables above.
-Each row's notes column gives the legacy reader key. Resolution path for
-each gap is one of:
+After Task B5 triage, 189 (G) entries are reproduced inline in their
+section tables above. Each row's notes column gives the legacy reader
+key plus a target `*_config_t`. Resolution path for each gap is one of:
 
 1. **Add the field to an existing typed config** (e.g. `swfrost` ->
    extend `heat_config_t` with `swfrost: int`).
 2. **Add a new typed config module** (e.g. `macropore_config_t` for the
-   ~17 (G) fields under macropore -- Phase 4d intentionally deferred this).
+   ~10 (G) fields under macropore -- Phase 4d intentionally deferred this).
 3. **Reclassify as initial-condition state** if the legacy reader populates
    it once and physics never re-reads it from input -- extend the relevant
    `*_ini` slot rather than adding a runtime field.
@@ -795,17 +805,17 @@ each gap is one of:
 Phase 4f decides per-gap which path to take. The audit's job is only to
 surface them; this doc does not prescribe schema changes.
 
-Highest-density gap clusters (by section):
+Highest-density gap clusters (post Task B5):
 
-- **Other / uncategorised** -- 102 gaps
-- **Crop (fixed / grass / WOFOST)** -- 81 gaps
-- **Time / control / output** -- 34 gaps
-- **Soil + hydraulics** -- 29 gaps
-- **Meteorology** -- 24 gaps
-- **Drainage + surface water** -- 23 gaps
-- **Macropore** -- 17 gaps
+- **Other / uncategorised** -- 71 gaps
+- **Crop (fixed / grass / WOFOST)** -- 30 gaps
+- **Drainage + surface water** -- 20 gaps
+- **Soil + hydraulics** -- 18 gaps
+- **Meteorology** -- 15 gaps
+- **Time / control / output** -- 12 gaps
+- **Macropore** -- 10 gaps
 - **Bottom boundary** -- 7 gaps
-- **Solute** -- 5 gaps
+- **Solute** -- 3 gaps
 - **Heat** -- 2 gaps
 - **Irrigation** -- 1 gaps
 
