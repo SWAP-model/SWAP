@@ -69,6 +69,7 @@ sources = [
     'src/config/irrigation_config.f90',
     'src/config/macropore_config.f90',
     'src/config/solute_config.f90',
+    'src/config/surface_water_config.f90',
     'src/config/cropfixed_config.f90',
     'src/config/cropgrass_config.f90',
     'src/config/cropwofost_config.f90',
