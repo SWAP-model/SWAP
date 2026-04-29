@@ -429,3 +429,68 @@ under-counts the typed-config + TOML-reader subtrees by the same
 gcovr path-resolution issue that has dogged every prior phase.
 Coverage of the new `error_mod` code is verified via the extended
 pFUnit suite.
+
+## Phase 4f-prep — Schema gap closure (top-N)
+
+After Phase 4f-prep:
+- **Coverage** (gcovr terminal summary): **51.3% line / 39.8% branch
+  (3882/7566 lines)** — flat vs Phase 4e. Phase 4f-prep added two
+  new typed configs (`macropore_config_t`, `surface_water_config_t`)
+  + extensions to five existing configs + matching readers + parity
+  test extensions. All under `src/config/` and `src/io/toml/` which
+  fall in the gcovr path-resolution blind spot. Coverage of the new
+  modules is verified via the pFUnit suite.
+- **pFUnit suite**: F count 0; ~75 new tests added across Tasks
+  A1-A2, B1-B3, C1-C5, D2-D6.
+- **Regression suite**: **6/6 green** in ~243s; per-case timings
+  recorded in `tests/regression/baselines/phase-4f-prep-gap-closure.log`.
+
+### Phase 4f-prep source-side delta
+
+| File | LoC | What it covers |
+|---|---|---|
+| `src/config/macropore_config.f90` | ~150 | Orphan per ADR 0010 — 22-key WOFOST-physics-foundation schema kept in tree but not wired |
+| `src/config/surface_water_config.f90` | ~145 | swsrf/swsec switches + per-period management + weir; finalize normalises alphaw |
+| `src/io/toml/read_surface_water_toml.f90` | ~210 | Section reader with `[surface_water.management]` + `[surface_water.weir]` sub-sections |
+| `src/config/simulation_config.f90` (extension) | +60 | `[simulation.numerical]` sub-type with cross-field invariants |
+| `src/config/meteorology_config.f90` (extension) | +75 | `[meteorology.evaporation]` + `[meteorology.snow]` sub-types + `rainfile` |
+| `src/config/soil_config.f90` (extension) | +130 | `[soil.discretization]` + `[soil.frost]` + `cofani(:)` + `nrstaring` |
+| `src/config/drainage_config.f90` (extension) | +95 | `[drainage.surface_runoff]` sub-type with switch-gated validators |
+| `src/config/crop_config.f90` (extension) | +15 | `rotation_swhydrlift(:)` per-rotation array |
+| `src/io/toml/read_*_toml.f90` (extensions) | +180 | Reader extensions for the new sub-sections |
+| `src/io/toml/load_swap_config.f90` (extension) | +5 | Wires `read_surface_water_toml` |
+
+Net source-side LoC added in Phase 4f-prep: ≈ 1,065 lines.
+
+### Phase 4f-prep test-side delta
+
+| File | LoC | What it covers |
+|---|---|---|
+| `tests/unit/config/test_macropore_config.pf` | ~190 | Switch-gated validators, table column-width, per-layer arrays |
+| `tests/unit/config/test_surface_water_config.pf` | ~245 | swsrf/swsec gating, per-period sizing, alphaw finalize |
+| `tests/unit/io/toml/test_read_surface_water_toml.pf` | ~215 | Section reader + sub-sections + date decode |
+| `tests/unit/config/test_*_config.pf` (extensions) | +160 | Per-extension validator tests |
+| `tests/unit/io/toml/test_read_*_toml.pf` (extensions) | +120 | Reader test additions |
+| `tests/unit/io/toml/parity_helpers.f90` (extension) | +30 | `load_both_for_surfacewater` with rddre call |
+| `tests/unit/io/toml/test_*_parity.pf` (extensions) | +80 | Phase 4f-prep parity assertions per case |
+
+Net test-side LoC added in Phase 4f-prep: ≈ 1,040 lines.
+
+### Audit progression
+
+Phase 4e end → Phase 4f-prep end:
+- C: 204 → 236 (+32)
+- G: 188 → 146 (-42)
+- RETIRED: 18 → 18
+- DEFERRED: 0 → 10 (per ADR 0010)
+
+Real-domain G count drop from ~118 to ~76, with the residual
+dominated by WOFOST crop state arrays that further B5-style triage
+will likely collapse to R during Phase 4f.
+
+### Caveat on the gcovr path-resolution issue (continued)
+
+Same caveat. The 51.3% / 39.8% terminal summary continues to
+under-count Phase 4f-prep's additions by the same gcovr blind spot.
+Coverage of the new modules is verified via the extended pFUnit
+suite.
