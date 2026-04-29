@@ -48,9 +48,9 @@ Method:
 ## Summary
 
 - **Total variables referenced by execution paths:** 1216
-- **C (covered):** 210  (17%)
+- **C (covered):** 225  (19%)
 - **R (runtime state):** 806  (66%)
-- **G (gaps):** 172  (14%) -- Phase 4f blockers
+- **G (gaps):** 157  (13%) -- Phase 4f blockers
 - **RETIRED:** 18  (1%) -- per ADR 0009; no longer flagged as gaps
 - **DEFERRED:** 10  (1%) -- per ADR 0010; macropore section deferred
 
@@ -340,27 +340,27 @@ C=20, R=30, G=20
 | taludr | C | config%drainage%taludr |  |
 | widthr | C | config%drainage%widthr |  |
 | zbotdr | C | config%drainage%zbotdr |  |
-| cofintfl | G | -- (no config) | input key 'cofintfl' read only by readswap; needs slot in drainage_config_t (or new surface_water_config_t) |
+| cofintfl | C | config%drain%surface_runoff%cofintfl | Phase 4f-prep Task C4 added the schema slot under `[drainage.surface_runoff]`. Legacy reader gates these per swnrsrf/swtopdislay/swdivdinf/ipos; no regression case meets those gates so the legacy globals stay at default 0 after readswap. Schema defaults match (Task D6 noop). |
 | dropr | G | -- (no config) | input key 'dropr' read only by readswap; needs slot in drainage_config_t (or new surface_water_config_t) |
-| expintfl | G | -- (no config) | input key 'expintfl' read only by readswap; needs slot in drainage_config_t (or new surface_water_config_t) |
-| ftopdislay | G | -- (no config) | input key 'ftopdislay' read only by readswap; needs slot in drainage_config_t (or new surface_water_config_t) |
-| geofac | G | -- (no config) | input key 'geofac' read only by readswap; needs slot in drainage_config_t (or new surface_water_config_t) |
+| expintfl | C | config%drain%surface_runoff%expintfl | Phase 4f-prep Task C4 added the schema slot under `[drainage.surface_runoff]`. Legacy reader gates these per swnrsrf/swtopdislay/swdivdinf/ipos; no regression case meets those gates so the legacy globals stay at default 0 after readswap. Schema defaults match (Task D6 noop). |
+| ftopdislay | C | config%drain%surface_runoff%ftopdislay | Phase 4f-prep Task C4 added the schema slot under `[drainage.surface_runoff]`. Legacy reader gates these per swnrsrf/swtopdislay/swdivdinf/ipos; no regression case meets those gates so the legacy globals stay at default 0 after readswap. Schema defaults match (Task D6 noop). |
+| geofac | C | config%drain%surface_runoff%geofac | Phase 4f-prep Task C4 added the schema slot under `[drainage.surface_runoff]`. Legacy reader gates these per swnrsrf/swtopdislay/swdivdinf/ipos; no regression case meets those gates so the legacy globals stay at default 0 after readswap. Schema defaults match (Task D6 noop). |
 | gwl | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
-| gwlconv | G | -- (no config) | input key 'gwlconv' read only by readswap; needs slot in drainage_config_t (or new surface_water_config_t) |
+| gwlconv | C | config%drain%surface_runoff%gwlconv | Phase 4f-prep Task C4 added the schema slot under `[drainage.surface_runoff]`. Legacy reader gates these per swnrsrf/swtopdislay/swdivdinf/ipos; no regression case meets those gates so the legacy globals stay at default 0 after readswap. Schema defaults match (Task D6 noop). |
 | impend | G | -- (no config) | input key 'impend' read only by readswap; needs slot in drainage_config_t (or new surface_water_config_t) |
 | nmper | G | -- (no config) | input key 'nmper' read only by readswap; needs slot in drainage_config_t (or new surface_water_config_t) |
-| NumLevRapDra | G | -- (no config) | input key 'numlevrapdra' read only by readswap; needs slot in drainage_config_t (or new surface_water_config_t) |
+| NumLevRapDra | C | config%drain%surface_runoff%numlevrapdra | Phase 4f-prep Task C4 added the schema slot under `[drainage.surface_runoff]`. Legacy reader gates these per swnrsrf/swtopdislay/swdivdinf/ipos; no regression case meets those gates so the legacy globals stay at default 0 after readswap. Schema defaults match (Task D6 noop). |
 | qdrain | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
-| RapDraReaExp | G | -- (no config) | input key 'rapdrareaexp' read only by readswap; needs slot in drainage_config_t (or new surface_water_config_t) |
-| RapDraResRef | G | -- (no config) | input key 'rapdraresref' read only by readswap; needs slot in drainage_config_t (or new surface_water_config_t) |
-| rsurfdeep | G | -- (no config) | input key 'rsurfdeep' read only by readswap; needs slot in drainage_config_t (or new surface_water_config_t) |
-| rsurfshallow | G | -- (no config) | input key 'rsurfshallow' read only by readswap; needs slot in drainage_config_t (or new surface_water_config_t) |
-| swdivdinf | G | -- (no config) | input key 'swdivdinf' read only by readswap; needs slot in drainage_config_t (or new surface_water_config_t) |
-| swnrsrf | G | -- (no config) | input key 'swnrsrf' read only by readswap; needs slot in drainage_config_t (or new surface_water_config_t) |
+| RapDraReaExp | C | config%drain%surface_runoff%rapdrareaexp | Phase 4f-prep Task C4 added the schema slot under `[drainage.surface_runoff]`. Legacy reader gates these per swnrsrf/swtopdislay/swdivdinf/ipos; no regression case meets those gates so the legacy globals stay at default 0 after readswap. Schema defaults match (Task D6 noop). |
+| RapDraResRef | C | config%drain%surface_runoff%rapdraresref | Phase 4f-prep Task C4 added the schema slot under `[drainage.surface_runoff]`. Legacy reader gates these per swnrsrf/swtopdislay/swdivdinf/ipos; no regression case meets those gates so the legacy globals stay at default 0 after readswap. Schema defaults match (Task D6 noop). |
+| rsurfdeep | C | config%drain%surface_runoff%rsurfdeep | Phase 4f-prep Task C4 added the schema slot under `[drainage.surface_runoff]`. Legacy reader gates these per swnrsrf/swtopdislay/swdivdinf/ipos; no regression case meets those gates so the legacy globals stay at default 0 after readswap. Schema defaults match (Task D6 noop). |
+| rsurfshallow | C | config%drain%surface_runoff%rsurfshallow | Phase 4f-prep Task C4 added the schema slot under `[drainage.surface_runoff]`. Legacy reader gates these per swnrsrf/swtopdislay/swdivdinf/ipos; no regression case meets those gates so the legacy globals stay at default 0 after readswap. Schema defaults match (Task D6 noop). |
+| swdivdinf | C | config%drain%surface_runoff%swdivdinf | Phase 4f-prep Task C4 added the schema slot under `[drainage.surface_runoff]`. Legacy reader gates these per swnrsrf/swtopdislay/swdivdinf/ipos; no regression case meets those gates so the legacy globals stay at default 0 after readswap. Schema defaults match (Task D6 noop). |
+| swnrsrf | C | config%drain%surface_runoff%swnrsrf | Phase 4f-prep Task C4 added the schema slot under `[drainage.surface_runoff]`. Legacy reader gates these per swnrsrf/swtopdislay/swdivdinf/ipos; no regression case meets those gates so the legacy globals stay at default 0 after readswap. Schema defaults match (Task D6 noop). |
 | swsec | G | -- (no config) | input key 'swsec' read only by readswap; needs slot in drainage_config_t (or new surface_water_config_t) |
 | swsrf | G | -- (no config) | input key 'swsrf' read only by readswap; needs slot in drainage_config_t (or new surface_water_config_t) |
-| swtopdislay | G | -- (no config) | input key 'swtopdislay' read only by readswap; needs slot in drainage_config_t (or new surface_water_config_t) |
-| SwTopnrsrf | G | -- (no config) | input key 'swtopnrsrf' read only by readswap; needs slot in drainage_config_t (or new surface_water_config_t) |
+| swtopdislay | C | config%drain%surface_runoff%swtopdislay | Phase 4f-prep Task C4 added the schema slot under `[drainage.surface_runoff]`. Legacy reader gates these per swnrsrf/swtopdislay/swdivdinf/ipos; no regression case meets those gates so the legacy globals stay at default 0 after readswap. Schema defaults match (Task D6 noop). |
+| SwTopnrsrf | C | config%drain%surface_runoff%swtopnrsrf | Phase 4f-prep Task C4 added the schema slot under `[drainage.surface_runoff]`. Legacy reader gates these per swnrsrf/swtopdislay/swdivdinf/ipos; no regression case meets those gates so the legacy globals stay at default 0 after readswap. Schema defaults match (Task D6 noop). |
 | wldip | G | -- (no config) | input key 'wldip' read only by readswap; needs slot in drainage_config_t (or new surface_water_config_t) |
 | wls | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
 
@@ -713,7 +713,7 @@ C=0, R=512, G=71, RETIRED=1 (per ADR 0009)
 | decpot | G | -- (no config) | input key 'decpot' read only by readswap; needs slot in needs Phase 4f categorisation |
 | decsat | G | -- (no config) | input key 'decsat' read only by readswap; needs slot in needs Phase 4f categorisation |
 | dewrest | G | -- (no config) | input key 'dewrest' read only by readswap; needs slot in needs Phase 4f categorisation |
-| FacDpthInf | G | -- (no config) | input key 'facdpthinf' read only by readswap; needs slot in needs Phase 4f categorisation |
+| FacDpthInf | C | config%drain%surface_runoff%facdpthinf | Phase 4f-prep Task C4 added the schema slot under `[drainage.surface_runoff]`. Legacy reader gates these per swnrsrf/swtopdislay/swdivdinf/ipos; no regression case meets those gates so the legacy globals stay at default 0 after readswap. Schema defaults match (Task D6 noop). |
 | fbltb | G | -- (no config) | input key 'fbltb' read only by readswap; needs slot in needs Phase 4f categorisation |
 | flCropNut | G | -- (no config) | input key 'flcropnut' read only by readswap; needs slot in needs Phase 4f categorisation |
 | flprintdt | G | -- (no config) | input key 'flprintdt' read only by readswap; needs slot in needs Phase 4f categorisation |
