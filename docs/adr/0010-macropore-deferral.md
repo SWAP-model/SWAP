@@ -1,0 +1,92 @@
+---
+title: "ADR 0010 — Macropore module deferral"
+date: 2026-04-29
+status: accepted
+---
+
+# ADR 0010: Macropore module deferral
+
+## Context
+
+Phase 4f-prep was scheduled to deliver `macropore_config_t` (22-key
+schema), `read_macropore_toml`, wiring into `swap_config_t`, plus
+per-case TOML and parity assertions for case 3 (3.macroporeflow). The
+new TOML path would then drive macropore physics for case 3 once
+Phase 4f's strangler-fig replaced `readswap()`.
+
+While Phase 4f-prep was in flight, the upstream macropore developers
+indicated that the current implementation is being phased out for
+reliability reasons. Future macropore work will rebuild the physics
+on the existing legacy code as a foundation, but no Phase-4-era
+investment in TOML parity for the present implementation is
+warranted.
+
+## Decision
+
+**The current macropore implementation stays in place but is
+"switched off" in the new TOML pipeline.** Concretely:
+
+1. **`macropore_config_t` is kept** as orphan infrastructure under
+   `src/config/macropore_config.f90` (committed `87bea98`). The
+   22-key schema, validators, and 9 unit tests remain in the
+   codebase, ready for future macropore work to wire up.
+2. **No `read_macropore_toml` module is authored** in Phase 4f-prep.
+3. **No `[macropore]` field is added to `swap_config_t`.** Nothing
+   in the new TOML pipeline references `macropore_config_t`.
+4. **No per-case TOML extension** for case 3 (3.macroporeflow). Its
+   `tests/swap-cases/toml/3.macroporeflow/swap.toml` carries no
+   `[macropore]` block.
+5. **No parity assertions** for macropore fields in case 3's
+   parity test. The existing parity test already scopes to the
+   schema-covered subset (per Phase 4e Task C3); no change needed.
+6. **Phase 4f's strangler-fig keeps `readswap.f90` as a fallback**
+   for macropore-using cases. The runtime branch is:
+   ```
+   if (toml_path_available) then
+      call load_swap_config(...); call config_to_variables(config)
+   else
+      call readswap()   ! legacy fallback (case 3 with SWMACRO=1)
+   end if
+   ```
+   Case 3 retains its `swap_linux.swp.template` and runs on the
+   legacy reader. Cases 1, 2, 4, 5, 6 take the new TOML path.
+7. **Audit-doc reclassification.** The 10 G entries in the macropore
+   section of `docs/phase-4f-config-to-variables-audit.md`
+   reclassify from G (gap) to **DEFERRED** — a new fourth status
+   distinct from RETIRED. Semantics: "schema exists, wiring deferred
+   to a future phase," vs RETIRED's "going away forever per ADR
+   0009."
+
+## Consequences
+
+Positive:
+
+- Phase 4f-prep skips three sub-tasks (A2, A3, D1) that would have
+  produced throw-away wiring once the macropore implementation
+  changes.
+- Phase 4f's strangler-fig has a clean cutover criterion: cases
+  with `swmacro=0` use the new path; the one case with `swmacro=1`
+  keeps using the legacy reader. No partial-coverage edge cases.
+- Future macropore work has a fully-typed schema waiting in
+  `src/config/macropore_config.f90` to extend or replace.
+
+Negative:
+
+- `src/io/readswap.f90` is NOT deletable in Phase 4f. It stays
+  ~5,000 LoC of legacy Fortran in the tree until the future
+  macropore phase resolves.
+- `macropore_config_t` is orphan code (compiled, tested, never
+  consumed) until that phase. Some readers may find the asymmetry
+  confusing without this ADR as context.
+- Case 3's parity test asserts the schema-covered subset only
+  (general/simulation/meteorology/drainage/soil/bottom_boundary/
+  crop_meta + wintcer1 crop). Macropore physics regressions caught
+  only by `check-full`, not by unit-level parity.
+
+## Revisit trigger
+
+When upstream commits to the next-generation macropore
+implementation. At that point: extend or replace
+`macropore_config_t`, author the reader, wire it into
+`swap_config_t`, populate case 3's TOML with `[macropore]`, extend
+the parity test, and finally remove `readswap.f90`.

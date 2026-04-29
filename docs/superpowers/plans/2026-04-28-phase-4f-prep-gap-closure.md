@@ -72,17 +72,9 @@ pixi run -e test check-full
   **Verify:** test-pfunit green; new tests pass; existing 317 tests still pass.
   **Commit:** `feat(config): add macropore_config_t (Phase 4f-prep Task A1)`.
 
-- [ ] **Task A2 — `read_macropore_toml` + reader tests.**
-  Author `src/io/toml/read_macropore_toml.f90`. Reads `[macropore]` section; per-layer arrays via TOML arrays-of-arrays. Mirror `read_bottom_boundary_toml` for the table-decoding pattern.
-  Author `tests/unit/io/toml/test_read_macropore_toml.pf` covering: happy-path full read; missing-section silent; table dimension mismatch errors.
-  **Verify:** test-pfunit green; new reader tests pass.
-  **Commit:** `feat(io/toml): add read_macropore_toml (Phase 4f-prep Task A2)`.
+- [x] **Task A2 — SKIPPED per ADR 0010.** No `read_macropore_toml`; the new TOML pipeline does not parse `[macropore]`. `macropore_config_t` stays as orphan infrastructure for future macropore work.
 
-- [ ] **Task A3 — Wire `macropore` into `swap_config_t` + `load_swap_config`.**
-  Add `type(macropore_config_t) :: macropore` to `swap_config_t`. Extend `load_swap_config` to call `read_macropore_toml` when `[macropore]` is present. Validator dispatch in `swap_config_validate`.
-  Update `tests/unit/io/toml/test_load_swap_config.pf` (or wherever the integration smoke test lives) to confirm a TOML with `[macropore]` loads and validates.
-  **Verify:** test-pfunit green; check-fast 4/4 green.
-  **Commit:** `feat(config,io/toml): wire macropore into swap_config (Phase 4f-prep Task A3)`.
+- [x] **Task A3 — SKIPPED per ADR 0010.** No wiring of `macropore_config_t` into `swap_config_t`. Case 3 (3.macroporeflow) continues to run on the legacy `readswap()` path; Phase 4f's strangler-fig keeps `readswap.f90` as a fallback for macropore cases.
 
 ### Part B — surface_water_config_t
 
@@ -139,10 +131,7 @@ pixi run -e test check-full
 
 Per Q3 option A: only cases that exercise the new section get TOML extensions and parity-test assertions.
 
-- [ ] **Task D1 — Macropore TOML in case 3 + parity assertions.**
-  Submodule: extend `tests/swap-cases/toml/3.macroporeflow/swap.toml` with `[macropore]` block transcribed from legacy `.swp`. Outer-repo: extend `test_macroporeflow_parity.pf` with `[macropore]` parity sub-test asserting all 22 fields against `variables%` globals.
-  **Submodule commit (user runs):** `feat(toml/macroporeflow): add [macropore] section (Phase 4f-prep Task D1)`.
-  **Outer-repo commits:** parity test commit + submodule pointer bump.
+- [x] **Task D1 — SKIPPED per ADR 0010.** No `[macropore]` block in case 3's TOML; no parity assertions for macropore fields. Case 3's existing parity test (Phase 4e Task C3, commit `37e79c6`) already scopes to the schema-covered subset and stays green.
 
 - [ ] **Task D2 — Surface-water TOML in case 6 + parity assertions.**
   Same pattern, case 6.

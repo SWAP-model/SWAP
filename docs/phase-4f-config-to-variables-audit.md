@@ -21,6 +21,12 @@ Status legend:
   has no slot; if a TOML file lists one, the reader emits a
   deprecation warning and ignores it. Phase 4f's
   `config_to_variables` forces the corresponding global to 0.
+- **DEFERRED** -- macropore-related field per
+  [ADR 0010](adr/0010-macropore-deferral.md). The new TOML pipeline
+  does not read or wire these fields; case 3 (3.macroporeflow)
+  continues to run on the legacy `readswap()` path. Schema lives at
+  `src/config/macropore_config.f90` as orphan infrastructure for
+  future macropore work.
 
 Method:
 
@@ -44,8 +50,9 @@ Method:
 - **Total variables referenced by execution paths:** 1216
 - **C (covered):** 204  (17%)
 - **R (runtime state):** 806  (66%)
-- **G (gaps):** 188  (15%) -- Phase 4f blockers
+- **G (gaps):** 178  (15%) -- Phase 4f blockers
 - **RETIRED:** 18  (1%) -- per ADR 0009; no longer flagged as gaps
+- **DEFERRED:** 10  (1%) -- per ADR 0010; macropore section deferred
 
 Phase 4f-prep Task A0 verified that `croptype(macrop)` is a renamed
 alias for `crop_config_t.rotation_type(:)` — the auditor's exact-name
@@ -84,7 +91,7 @@ Per section (post Task B5 triage):
 | Irrigation | 8 | 7 | 1 | 0 | 16 |
 | Solute | 8 | 11 | 3 | 0 | 22 |
 | Crop (fixed / grass / WOFOST) | 111 | 74 | 29 | 0 | 214 |
-| Macropore | 0 | 22 | 10 | 0 | 32 |
+| Macropore | 0 | 22 | 0 | 0 (RETIRED) / 10 (DEFERRED) | 32 |
 | Other / uncategorised | 0 | 512 | 71 | 1 | 584 |
 
 ## Initialization order (legacy)
@@ -655,27 +662,27 @@ Runtime state (R) -- set by simulation code, not read from input:
 
 ### Macropore
 
-C=0, R=22, G=10
+C=0, R=22, G=0, DEFERRED=10 (per ADR 0010)
 
 | variable | status | source / target | notes |
 |---|---|---|---|
-| DiPoMa | G | -- (no config) | input key 'dipoma' read only by readswap; needs slot in new macropore_config_t (Phase 4d deferred) |
-| DiPoMi | G | -- (no config) | input key 'dipomi' read only by readswap; needs slot in new macropore_config_t (Phase 4d deferred) |
-| GeomFac | G | -- (no config) | input key 'geomfac' read only by readswap; needs slot in new macropore_config_t (Phase 4d deferred) |
-| PowM | G | -- (no config) | input key 'powm' read only by readswap; needs slot in new macropore_config_t (Phase 4d deferred) |
+| DiPoMa | DEFERRED | macropore_config_t (orphan, ADR 0010) | schema lives at src/config/macropore_config.f90 but is unused; Phase 4f-prep deferred wiring per ADR 0010 |
+| DiPoMi | DEFERRED | macropore_config_t (orphan, ADR 0010) | schema lives at src/config/macropore_config.f90 but is unused; Phase 4f-prep deferred wiring per ADR 0010 |
+| GeomFac | DEFERRED | macropore_config_t (orphan, ADR 0010) | schema lives at src/config/macropore_config.f90 but is unused; Phase 4f-prep deferred wiring per ADR 0010 |
+| PowM | DEFERRED | macropore_config_t (orphan, ADR 0010) | schema lives at src/config/macropore_config.f90 but is unused; Phase 4f-prep deferred wiring per ADR 0010 |
 | PrepDelay | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
 | Rzah | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
-| ShapeFacMp | G | -- (no config) | input key 'shapefacmp' read only by readswap; needs slot in new macropore_config_t (Phase 4d deferred) |
+| ShapeFacMp | DEFERRED | macropore_config_t (orphan, ADR 0010) | schema lives at src/config/macropore_config.f90 but is unused; Phase 4f-prep deferred wiring per ADR 0010 |
 | SorpAlfa | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
 | SorpFacParl | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
 | SorpMax | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
 | Spoint | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
 | SwBma | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
-| swman | G | -- (no config) | input key 'swman' read only by readswap; needs slot in new macropore_config_t (Phase 4d deferred) |
-| SwPowM | G | -- (no config) | input key 'swpowm' read only by readswap; needs slot in new macropore_config_t (Phase 4d deferred) |
-| SwSoilShr | G | -- (no config) | input key 'swsoilshr' read only by readswap; needs slot in new macropore_config_t (Phase 4d deferred) |
-| SwSorp | G | -- (no config) | input key 'swsorp' read only by readswap; needs slot in new macropore_config_t (Phase 4d deferred) |
-| VlMpStSs | G | -- (no config) | input key 'vlmpstss' read only by readswap; needs slot in new macropore_config_t (Phase 4d deferred) |
+| swman | DEFERRED | macropore_config_t (orphan, ADR 0010) | schema lives at src/config/macropore_config.f90 but is unused; Phase 4f-prep deferred wiring per ADR 0010 |
+| SwPowM | DEFERRED | macropore_config_t (orphan, ADR 0010) | schema lives at src/config/macropore_config.f90 but is unused; Phase 4f-prep deferred wiring per ADR 0010 |
+| SwSoilShr | DEFERRED | macropore_config_t (orphan, ADR 0010) | schema lives at src/config/macropore_config.f90 but is unused; Phase 4f-prep deferred wiring per ADR 0010 |
+| SwSorp | DEFERRED | macropore_config_t (orphan, ADR 0010) | schema lives at src/config/macropore_config.f90 but is unused; Phase 4f-prep deferred wiring per ADR 0010 |
+| VlMpStSs | DEFERRED | macropore_config_t (orphan, ADR 0010) | schema lives at src/config/macropore_config.f90 but is unused; Phase 4f-prep deferred wiring per ADR 0010 |
 
 Runtime state (R) -- set by simulation code, not read from input:
 

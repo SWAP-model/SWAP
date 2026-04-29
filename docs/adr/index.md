@@ -15,3 +15,4 @@ Records of significant architecture and process decisions made during the SWAP m
 - [ADR 0007 — config parse-validate-finalize-adapter pipeline](0007-config-validate-finalize-pipeline.html) — Four-stage input pipeline: parse, validate, finalize, adapter.
 - [ADR 0008 — error collection over fatalerr](0008-error-collection-over-fatalerr.html) — Error collection for full-pass validation; one abort checkpoint after pipeline.
 - [ADR 0009 — discontinue non-CSV output formats](0009-discontinue-non-csv-outputs.html) — Retire 18 legacy output switches; CSV becomes the only supported output path.
+- [ADR 0010 — macropore module deferral](0010-macropore-deferral.html) — Macropore stays in legacy code; new TOML pipeline does not wire it. Schema kept as orphan infrastructure for future macropore work.
