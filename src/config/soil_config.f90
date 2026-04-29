@@ -68,6 +68,22 @@ module soil_config_mod
       real(real64) :: ksatexm = 0.0_real64
       real(real64) :: rsoil   = 0.0_real64
 
+      ! Surface-runoff drainage resistance (legacy RSRO) and exponent
+      ! (legacy RSROEXP). Read by readswap.f90:527-528 right after the
+      ! initial-water section. Defaults below match the legacy schema
+      ! ranges from rdsdor (0.001..1.0 d, 0.01..10.0 -). Initialize sets
+      ! both to 0; the runoff equation `dt/rsro * (pond - pondmx)^rsroexp`
+      ! falls back to the instantaneous branch when rsro < 1e-3, so for
+      ! parity each case must author finite values matching its .swp.
+      real(real64) :: rsro    = 0.0_real64
+      real(real64) :: rsroexp = 0.0_real64
+
+      ! Switch for runon (legacy SWRUNON, readswap.f90:1011). When 1, a
+      ! companion .inc file feeds runon time-series into the model. Cases
+      ! that don't enable runon leave it at 0; the legacy default after
+      ! Initialize is also 0 so the schema default agrees.
+      integer      :: swrunon = 0
+
       integer :: reva_top = 0
       integer :: nrstaring = 0  !! 0=user-supplied, 1..6=Staring series
 
@@ -106,6 +122,9 @@ contains
 
       call check_nonnegative_real(self%pondmx,  "soil.pondmx",  errors)
       call check_nonnegative_real(self%ksatexm, "soil.ksatexm", errors)
+      call check_nonnegative_real(self%rsro,    "soil.rsro",    errors)
+      call check_nonnegative_real(self%rsroexp, "soil.rsroexp", errors)
+      call check_int_enum(self%swrunon, [0, 1], "soil.swrunon", errors)
 
       call check_int_range(self%nrstaring, 0, 6, "soil.nrstaring", errors)
 

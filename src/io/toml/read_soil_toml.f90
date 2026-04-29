@@ -40,6 +40,9 @@ contains
 
       call get_optional_real_with_default(sec, 'ksatexm', config%ksatexm, 0.0_real64, 'soil.ksatexm', errors)
       call get_optional_real_with_default(sec, 'rsoil',   config%rsoil,   0.0_real64, 'soil.rsoil',   errors)
+      call get_optional_real_with_default(sec, 'rsro',    config%rsro,    0.0_real64, 'soil.rsro',    errors)
+      call get_optional_real_with_default(sec, 'rsroexp', config%rsroexp, 0.0_real64, 'soil.rsroexp', errors)
+      call get_optional_int_with_default(sec, 'swrunon',  config%swrunon, 0,          'soil.swrunon', errors)
       call get_optional_int_with_default(sec, 'reva_top', config%reva_top, 0, 'soil.reva_top', errors)
 
       call get_optional_int_with_default(sec, 'nrstaring', config%nrstaring, 0, 'soil.nrstaring', errors)

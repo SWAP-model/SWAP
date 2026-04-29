@@ -356,6 +356,11 @@ contains
       pond    = config%soil%pondini    ! legacy alias: pond <-> pondini
       pondmx  = config%soil%pondmx
       rsoil   = config%soil%rsoil
+      rsro    = config%soil%rsro
+      rsroexp = config%soil%rsroexp
+      ! Legacy parses .swp `SWRUNON` into a local int; the persistent
+      ! global is the boolean `flrunon`. Mirror that mapping here.
+      flrunon = (config%soil%swrunon == 1)
       nrstaring = config%soil%nrstaring
 
       ! sublay (legacy 'isublay') is a local in readswap, not a module
