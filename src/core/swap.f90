@@ -126,6 +126,12 @@ if (iTask == 1) then
 !  readswap() entry point. The binary expects swap.toml in the
 !  current directory; abort_if_fatal terminates with a clear summary
 !  if the file is absent or fails validate/finalize.
+!
+!  HACK Phase 4f-extend: the adapter currently calls readswap() at the
+!  end as a backstop for legacy globals not yet covered by any schema
+!  slot. Phase 4f-extend will incrementally remove that call as schema
+!  extensions land. See config_to_variables.f90's tail comment for the
+!  full migration plan.
    block
       use load_swap_config_mod, only: load_swap_config
       use swap_config_mod, only: swap_config_t

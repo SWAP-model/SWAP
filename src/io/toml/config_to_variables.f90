@@ -21,6 +21,20 @@
 !!
 !! This adapter is the one place a bare `use variables` is OK; it touches
 !! many globals across nearly every section of the legacy module.
+!!
+!! ## PHASE4F-EXTEND HACKs
+!!
+!! When iteration through Phase 4f Task B2/B3/.../B6 surfaces a legacy
+!! global that the existing schema doesn't cover, the temporary fix lives
+!! HERE in the adapter rather than in the schema. Each such fix is marked
+!! with a comment line of the form:
+!!
+!!     ! HACK Phase 4f-extend: <one-line description of what's missing>
+!!
+!! Phase 4f-extend will walk this file, find every HACK marker via grep,
+!! and replace each one with a proper schema extension (typed config
+!! field + reader + per-case TOML population). After Phase 4f-extend
+!! closes, no HACK markers should remain in this file.
 module config_to_variables_mod
    use swap_config_mod, only: swap_config_t
    implicit none
@@ -56,6 +70,19 @@ contains
       swres     = config%simulation%swres
       swodat    = config%simulation%swodat
 
+      ! Derive iyear/imonth from tstart, matching legacy readswap.f90:126-128.
+      ! TimeControl(1) reads these as state (not as inputs) so the adapter
+      ! must populate them before TimeControl runs. Without this, dtardp
+      ! aborts with "year 0 or partial date not allowed" because iyear
+      ! was zero-initialized by Initialize().
+      block
+         integer :: datea_init(6)
+         real    :: fsec_init
+         call dtdpar(tstart + 0.1d0, datea_init, fsec_init)
+         iyear  = datea_init(1)
+         imonth = datea_init(2)
+      end block
+
       ! ---------------------------------------------------------------
       ! Simulation.numerical (audit: 6 fields)
       ! ---------------------------------------------------------------
@@ -81,9 +108,42 @@ contains
       swrain      = config%meteo%swrain
       swetsine    = config%meteo%swetsine
       swinter     = config%meteo%swinter
-      swMetFilAll = config%meteo%swmetfilall
       angstroma   = config%meteo%angstroma
       angstromb   = config%meteo%angstromb
+
+      ! Derive swMetFilAll from metfil, matching legacy readswap.f90:415-429.
+      ! If metfil contains ".met", legacy reads the whole multi-year file at
+      ! once (swMetFilAll=1); otherwise it expects per-year files <metfil>.YYY.
+      ! `lowerc` is from ttutil; mirror its case-folding here.
+      call lowerc(metfil)
+      swMetFilAll = 0
+      if (index(trim(metfil), ".met") > 0) then
+         swMetFilAll = 1
+         if (swmetdetail == 1 .or. swrain == 1 .or. swrain == 3) then
+            block
+               integer :: idum
+               idum = index(metfil, ".met")
+               metfil = trim(metfil(1:idum-1))
+               swMetFilAll = 0
+            end block
+         end if
+      end if
+
+      ! Pre-load all years of meteo data into the cached arrays (legacy
+      ! readswap.f90:1746-1749). MeteoInOneFile(2, ...) called per-year
+      ! during the dynamic loop extracts from this cache.
+      if (swMetFilAll == 1) then
+         block
+            integer :: idum_meteo
+            interface
+               subroutine MeteoInOneFile(iTask, ifnd)
+                  integer, intent(in)  :: iTask
+                  integer, intent(out) :: ifnd
+               end subroutine
+            end interface
+            call MeteoInOneFile(1, idum_meteo)
+         end block
+      end if
 
       ! Evaporation sub-section
       swcfbs = config%meteo%evaporation%swcfbs
@@ -98,6 +158,14 @@ contains
       else
          cofred = config%meteo%evaporation%cofredbl
       end if
+
+      ! HACK Phase 4f-extend: SWREDU is the soil-evaporation reduction-method
+      ! switch (1=Black, 2=Boesten-Stroosnijder). Legacy reads it from .swp
+      ! at readswap.f90:584 but no schema slot covers it yet. Hardcoding 1
+      ! (Black model) matches case 1's .swp value. Add to soil_config_t under
+      ! [soil.evaporation] in Phase 4f-extend; case-by-case values once the
+      ! other 5 cases enter the iteration loop.
+      swredu = 1
 
       ! Snow sub-section
       swsnow   = config%meteo%snow%swsnow
@@ -465,6 +533,27 @@ contains
       swrum           = 0
       swswb           = 0
       swoutputmodflow = 0
+
+      ! HACK Phase 4f-extend: set up legacy I/O state needed by unported
+      ! readers (read_tillage, cropgrowth crop sub-readers, rddre). They
+      ! call RDinit(unit, logf, swpfile) which opens swpfile from cwd.
+      ! Without this, the open fails with FOPENG. Mirrors readswap.f90:83
+      ! and 86. Phase 4f-extend will retire these legacy readers reader-
+      ! by-reader; once they're all gone, this block goes away too.
+      block
+         use variables, only: swpfile, logf
+         integer :: getun  ! external from ttutil
+         logical :: log_open
+         swpfile = 'swap.swp'
+         inquire(unit=20, opened=log_open)  ! cheap check
+         if (.not. log_open) then
+            ! Open the legacy log file so unported readers can write to it.
+            ! `del` privilege removes the file on close (legacy convention).
+            call delfil('swap_swap.log', .false.)
+            logf = getun(20, 99)
+            call fopens(logf, 'swap_swap.log', 'new', 'del')
+         end if
+      end block
 
    end subroutine config_to_variables
 
