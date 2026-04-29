@@ -617,6 +617,27 @@ contains
       ! cropgrowth.f90's per-rotation init (Phase 4g territory).
       ! ---------------------------------------------------------------
       swCrop = config%crop%swcrop
+
+      ! Mirror readswap.f90:479-480 — when crop simulation is enabled,
+      ! arm the per-rotation reader gates so cropgrowth.f90's per-crop
+      ! init (ArableLandGerm/CropFixed/Wofost/Grass at lines 91 / 121)
+      ! actually fires. Without this, flCropReadFile stays .false. (the
+      ! Initialize() default) and every rotation is treated as bare soil:
+      ! LAI/cf/rd remain 0, TPOT/TACT collapse, and EACT/DRAINAGE balloon.
+      if (swCrop == 1) then
+         flCropReadFile = .true.
+         flCropOpenFile = .true.
+      end if
+
+      ! HACK Phase 4f-extend: RDS (rdmax) is the soil-profile-imposed maximum
+      ! rooting depth, read by legacy readswap.f90:470 from .swp's crop
+      ! rotation block. Without it, cropfixed.f90:414 sets rdm=0 and then
+      ! `rd = min(afgen(rdtb,...), rdm) = 0`, so noddrz stays at 1 and
+      ! RootExtraction returns zero — TACT collapses across every rotation.
+      ! Hardcoding 200.0 cm matches case 1's .swp value; add a typed
+      ! crop_config_t.rdmax slot when Phase 4f-extend tackles crop schema.
+      rdmax = 200.0d0
+
       if (allocated(config%crop%rotation_type)) then
          n = size(config%crop%rotation_type)
          do i = 1, min(n, size(croptype))
