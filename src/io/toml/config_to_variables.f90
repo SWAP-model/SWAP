@@ -174,6 +174,22 @@ contains
       ! other 5 cases enter the iteration loop.
       swredu = 1
 
+      ! HACK Phase 4f-extend: RSIGNI is the minimum daily rainfall (cm) that
+      ! resets the Black-method dry counter (ldwet). Legacy reads it from .swp
+      ! at readswap.f90:586 only when swredu==1. Initialize.f90 leaves it 0.0,
+      ! so EVERY trace of rain resets ldwet -> Black empreva stays high every
+      ! day -> bare-soil EACT overshoots by ~7 cm/yr in case 1 (hupselbrook).
+      ! .swp template authors RSIGNI = 0.5. Hardcoding 0.5 matches case 1;
+      ! add to meteo_evaporation_config_t in a follow-up Phase 4f-extend pass.
+      rsigni = 0.5d0
+
+      ! HACK Phase 4f-extend: CFEVAPPOND is the ponding-layer evaporation
+      ! coefficient applied to peva when pond > 1e-10. Legacy default in
+      ! readswap.f90:599 is 1.25; initialize.f90 leaves it 0.0, which would
+      ! zero out evaporation during ponding. Hardcoded to 1.25 here; add a
+      ! schema slot in a follow-up Phase 4f-extend pass.
+      cfevappond = 1.25d0
+
       ! Snow sub-section
       swsnow   = config%meteo%snow%swsnow
       snowcoef = config%meteo%snow%snowcoef
