@@ -1,0 +1,15 @@
+[drainage]
+swdra    = 1
+dramet   = 1
+swdivd   = 0
+swdislay = 0
+nrlevs   = 1
+altcu    = 0.0
+
+[drainage.basic]
+basegw = -200.0
+entres = 0.0
+shape  = 0.0
+
+[drainage.surface_runoff]
+swnrsrf = 0

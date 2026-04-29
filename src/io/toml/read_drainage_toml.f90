@@ -17,6 +17,49 @@ module read_drainage_toml_mod
 
 contains
 
+   subroutine read_drainage_surface_runoff(sec, config, errors)
+      type(toml_table), pointer,  intent(in)    :: sec
+      type(drainage_config_t),    intent(inout) :: config
+      type(error_collection_t),   intent(inout) :: errors
+
+      type(toml_table), pointer :: sr
+
+      call get_table(sec, 'surface_runoff', sr, 'drainage.surface_runoff', errors)
+      if (.not. associated(sr)) return
+
+      call get_optional_int_with_default(sr, 'swnrsrf',      config%surface_runoff%swnrsrf,      0, &
+                                         'drainage.surface_runoff.swnrsrf',      errors)
+      call get_optional_int_with_default(sr, 'swtopnrsrf',   config%surface_runoff%swtopnrsrf,   0, &
+                                         'drainage.surface_runoff.swtopnrsrf',   errors)
+      call get_optional_int_with_default(sr, 'swdivdinf',    config%surface_runoff%swdivdinf,    0, &
+                                         'drainage.surface_runoff.swdivdinf',    errors)
+      call get_optional_int_with_default(sr, 'swtopdislay',  config%surface_runoff%swtopdislay,  0, &
+                                         'drainage.surface_runoff.swtopdislay',  errors)
+      call get_optional_int_with_default(sr, 'numlevrapdra', config%surface_runoff%numlevrapdra, 0, &
+                                         'drainage.surface_runoff.numlevrapdra', errors)
+
+      call get_optional_real_with_default(sr, 'facdpthinf',   config%surface_runoff%facdpthinf,   0.0_real64, &
+                                          'drainage.surface_runoff.facdpthinf',   errors)
+      call get_optional_real_with_default(sr, 'cofintfl',     config%surface_runoff%cofintfl,     0.0_real64, &
+                                          'drainage.surface_runoff.cofintfl',     errors)
+      call get_optional_real_with_default(sr, 'expintfl',     config%surface_runoff%expintfl,     0.0_real64, &
+                                          'drainage.surface_runoff.expintfl',     errors)
+      call get_optional_real_with_default(sr, 'geofac',       config%surface_runoff%geofac,       0.0_real64, &
+                                          'drainage.surface_runoff.geofac',       errors)
+      call get_optional_real_with_default(sr, 'gwlconv',      config%surface_runoff%gwlconv,      0.0_real64, &
+                                          'drainage.surface_runoff.gwlconv',      errors)
+      call get_optional_real_with_default(sr, 'ftopdislay',   config%surface_runoff%ftopdislay,   0.0_real64, &
+                                          'drainage.surface_runoff.ftopdislay',   errors)
+      call get_optional_real_with_default(sr, 'rsurfdeep',    config%surface_runoff%rsurfdeep,    0.0_real64, &
+                                          'drainage.surface_runoff.rsurfdeep',    errors)
+      call get_optional_real_with_default(sr, 'rsurfshallow', config%surface_runoff%rsurfshallow, 0.0_real64, &
+                                          'drainage.surface_runoff.rsurfshallow', errors)
+      call get_optional_real_with_default(sr, 'rapdrareaexp', config%surface_runoff%rapdrareaexp, 0.0_real64, &
+                                          'drainage.surface_runoff.rapdrareaexp', errors)
+      call get_optional_real_with_default(sr, 'rapdraresref', config%surface_runoff%rapdraresref, 0.0_real64, &
+                                          'drainage.surface_runoff.rapdraresref', errors)
+   end subroutine read_drainage_surface_runoff
+
    subroutine read_drainage_toml(doc, config, errors, base_path)
       type(toml_table), pointer,  intent(in)    :: doc
       type(drainage_config_t),    intent(inout) :: config
@@ -104,6 +147,8 @@ contains
             end do
          end if
       end if
+
+      call read_drainage_surface_runoff(sec, config, errors)
    end subroutine read_drainage_inner
 
 end module read_drainage_toml_mod

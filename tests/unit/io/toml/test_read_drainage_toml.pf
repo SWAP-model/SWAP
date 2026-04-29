@@ -83,3 +83,86 @@ subroutine test_read_drainage_follows_file_reference()
    @assertEqual(1, d%dramet)
    @assertEqual(-200.0d0, d%basegw, 1.0d-12)
 end subroutine
+
+@test
+subroutine test_read_dra_surface_runoff_full()
+   use funit
+   use tomlf, only: toml_table, toml_load
+   use drainage_config_mod
+   use read_drainage_toml_mod
+   use error_mod
+   type(toml_table), allocatable, target :: doc
+   type(toml_table), pointer     :: doc_ptr
+   type(drainage_config_t)       :: c
+   type(error_collection_t)      :: errors
+
+   call toml_load(doc, 'tests/unit/io/toml/fixtures/drainage_surface_runoff_full.toml')
+   doc_ptr => doc
+   call read_drainage_toml(doc_ptr, c, errors)
+
+   @assertFalse(errors%has_errors())
+   @assertEqual(2, c%surface_runoff%swnrsrf)
+   @assertEqual(1, c%surface_runoff%swtopnrsrf)
+   @assertEqual(1, c%surface_runoff%swdivdinf)
+   @assertEqual(1, c%surface_runoff%swtopdislay)
+   @assertEqual(2, c%surface_runoff%numlevrapdra)
+   @assertEqual(0.5d0,   c%surface_runoff%facdpthinf,   1.0d-12)
+   @assertEqual(0.5d0,   c%surface_runoff%cofintfl,     1.0d-12)
+   @assertEqual(1.0d0,   c%surface_runoff%expintfl,     1.0d-12)
+   @assertEqual(4.8d0,   c%surface_runoff%geofac,       1.0d-12)
+   @assertEqual(1.0d0,   c%surface_runoff%gwlconv,      1.0d-12)
+   @assertEqual(0.25d0,  c%surface_runoff%ftopdislay,   1.0d-12)
+   @assertEqual(30.0d0,  c%surface_runoff%rsurfdeep,    1.0d-12)
+   @assertEqual(10.0d0,  c%surface_runoff%rsurfshallow, 1.0d-12)
+   @assertEqual(1.5d0,   c%surface_runoff%rapdrareaexp, 1.0d-12)
+   @assertEqual(100.0d0, c%surface_runoff%rapdraresref, 1.0d-12)
+end subroutine
+
+@test
+subroutine test_read_dra_surface_runoff_missing_silent()
+   use funit
+   use tomlf, only: toml_table, toml_load
+   use drainage_config_mod
+   use read_drainage_toml_mod
+   use error_mod
+   type(toml_table), allocatable, target :: doc
+   type(toml_table), pointer     :: doc_ptr
+   type(drainage_config_t)       :: c
+   type(error_collection_t)      :: errors
+
+   ! drainage_minimal.toml has no [drainage.surface_runoff] block.
+   call toml_load(doc, 'tests/unit/io/toml/fixtures/drainage_minimal.toml')
+   doc_ptr => doc
+   call read_drainage_toml(doc_ptr, c, errors)
+
+   @assertFalse(errors%has_errors())
+   ! Defaults preserved.
+   @assertEqual(0, c%surface_runoff%swnrsrf)
+   @assertEqual(0, c%surface_runoff%swtopnrsrf)
+   @assertEqual(0, c%surface_runoff%swdivdinf)
+   @assertEqual(0, c%surface_runoff%swtopdislay)
+   @assertEqual(0.0d0, c%surface_runoff%rsurfdeep,  1.0d-12)
+   @assertEqual(0.0d0, c%surface_runoff%geofac,     1.0d-12)
+end subroutine
+
+@test
+subroutine test_read_dra_surface_runoff_swnrsrf_zero_only()
+   use funit
+   use tomlf, only: toml_table, toml_load
+   use drainage_config_mod
+   use read_drainage_toml_mod
+   use error_mod
+   type(toml_table), allocatable, target :: doc
+   type(toml_table), pointer     :: doc_ptr
+   type(drainage_config_t)       :: c
+   type(error_collection_t)      :: errors
+
+   call toml_load(doc, 'tests/unit/io/toml/fixtures/drainage_surface_runoff_off.toml')
+   doc_ptr => doc
+   call read_drainage_toml(doc_ptr, c, errors)
+
+   @assertFalse(errors%has_errors())
+   @assertEqual(0, c%surface_runoff%swnrsrf)
+   @assertEqual(0.0d0, c%surface_runoff%rsurfdeep,    1.0d-12)
+   @assertEqual(0.0d0, c%surface_runoff%rsurfshallow, 1.0d-12)
+end subroutine

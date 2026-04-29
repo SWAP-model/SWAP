@@ -1,0 +1,29 @@
+[drainage]
+swdra    = 1
+dramet   = 1
+swdivd   = 1
+swdislay = 0
+nrlevs   = 1
+altcu    = 0.0
+
+[drainage.basic]
+basegw = -200.0
+entres = 0.0
+shape  = 0.0
+
+[drainage.surface_runoff]
+swnrsrf      = 2
+swtopnrsrf   = 1
+swdivdinf    = 1
+swtopdislay  = 1
+facdpthinf   = 0.5
+cofintfl     = 0.5
+expintfl     = 1.0
+geofac       = 4.8
+gwlconv      = 1.0
+ftopdislay   = 0.25
+rsurfdeep    = 30.0
+rsurfshallow = 10.0
+rapdrareaexp = 1.5
+rapdraresref = 100.0
+numlevrapdra = 2
