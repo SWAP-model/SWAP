@@ -48,9 +48,9 @@ Method:
 ## Summary
 
 - **Total variables referenced by execution paths:** 1216
-- **C (covered):** 204  (17%)
+- **C (covered):** 207  (17%)
 - **R (runtime state):** 806  (66%)
-- **G (gaps):** 178  (15%) -- Phase 4f blockers
+- **G (gaps):** 175  (14%) -- Phase 4f blockers
 - **RETIRED:** 18  (1%) -- per ADR 0009; no longer flagged as gaps
 - **DEFERRED:** 10  (1%) -- per ADR 0010; macropore section deferred
 
@@ -203,7 +203,7 @@ C=0, R=16, G=12, RETIRED=17 (per ADR 0009)
 | swrum | RETIRED | ADR 0009 | discontinued; new TOML reader emits deprecation warning |
 | swsba | RETIRED | ADR 0009 | discontinued; new TOML reader emits deprecation warning |
 | swstr | RETIRED | ADR 0009 | discontinued; new TOML reader emits deprecation warning |
-| swsublim | G | -- (no config) | input key 'swsublim' read only by readswap; needs slot in simulation_config_t (timestep / output controls) |
+| swsublim | C | config%soil%frost%swsublim | Phase 4f-prep Task C3 added the schema slot under `[soil.frost]`. No regression case exercises swsublim (all .swp.template files omit the key, defaulting to 0); Task D3 noop on the per-case TOML side. |
 | swswb | RETIRED | ADR 0009 | discontinued; new TOML reader emits deprecation warning |
 | swvap | RETIRED | ADR 0009 | discontinued; new TOML reader emits deprecation warning |
 | swwba | RETIRED | ADR 0009 | discontinued; new TOML reader emits deprecation warning |
@@ -294,7 +294,7 @@ C=15, R=69, G=18
 | nrstaring | G | -- (no config) | input key 'nrstaring' read only by readswap; needs slot in soil_config_t |
 | numnodnew | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
 | SwDarcy | G | -- (no config) | input key 'swdarcy' read only by readswap; needs slot in soil_config_t |
-| swfrost | G | -- (no config) | input key 'swfrost' read only by readswap; needs slot in soil_config_t |
+| swfrost | C | config%soil%frost%swfrost | Phase 4f-prep Task C3 added the schema slot under `[soil.frost]`. All 6 regression cases have `SWFROST=0` in their .swp.template; Task D3 noop on the per-case TOML side. |
 | tau | G | -- (no config) | input key 'tau' read only by readswap; needs slot in soil_config_t |
 | Z_Ah | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
 | Z_Ic | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
@@ -784,7 +784,7 @@ C=0, R=512, G=71, RETIRED=1 (per ADR 0009)
 | swpondmx | G | -- (no config) | input key 'swpondmx' read only by readswap; needs slot in needs Phase 4f categorisation |
 | swrdc | G | -- (no config) | input key 'swrdc' read only by readswap; needs slot in needs Phase 4f categorisation |
 | swredu | G | -- (no config) | input key 'swredu' read only by readswap; needs slot in needs Phase 4f categorisation |
-| swsnow | G | -- (no config) | input key 'swsnow' read only by readswap; needs slot in needs Phase 4f categorisation |
+| swsnow | C | config%meteo%snow%swsnow | Phase 4f-prep Task C2 added the schema slot under `[meteorology.snow]`. All 6 regression cases have `SWSNOW=0` in their .swp.template; Task D3 noop on the per-case TOML side. |
 | swtopsub | G | -- (no config) | input key 'swtopsub' read only by readswap; needs slot in needs Phase 4f categorisation |
 | swtsum | G | -- (no config) | input key 'swtsum' read only by readswap; needs slot in needs Phase 4f categorisation |
 | swuseCN | G | -- (no config) | input key 'swusecn' read only by readswap; needs slot in needs Phase 4f categorisation |
