@@ -407,6 +407,20 @@ contains
       ! Irrigation (audit: 8 fields, top-level only)
       ! ---------------------------------------------------------------
       swirfix = config%irrigation%swirfix
+      ! Inline fixed events: copy (date, depth, conc, type) rows from
+      ! the typed config table into the legacy parallel arrays. The
+      ! reader already stored col 1 as days-since-1900, so this is a
+      ! straight copy. The /10.0 on irdepth mirrors readswap.f90:503
+      ! (mm in input -> cm in legacy globals).
+      if (allocated(config%irrigation%fixed_events)) then
+         n = size(config%irrigation%fixed_events, 1)
+         do i = 1, min(n, size(irdate))
+            irdate(i)  = config%irrigation%fixed_events(i, 1)
+            irdepth(i) = config%irrigation%fixed_events(i, 2) / 10.0d0
+            irconc(i)  = config%irrigation%fixed_events(i, 3)
+            irtype(i)  = nint(config%irrigation%fixed_events(i, 4))
+         end do
+      end if
       ! cirrs / cirrthres / dcrit / isuas / perirrsurp / raithreshold /
       ! swcirrthres live in irrigation_schedule_t (per-crop), not the
       ! top-level irrigation_config_t. They are populated per-rotation

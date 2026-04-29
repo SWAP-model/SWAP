@@ -1,6 +1,14 @@
 [irrigation]
 swirfix = 1
-fixed_events = [
-  [12345.0, 25.0, 0.0, 1.0],
-  [12350.0, 30.0, 0.5, 2.0],
-]
+
+[[irrigation.fixed_events]]
+date  = 2002-01-05
+depth = 25.0
+conc  = 0.0
+type  = 1
+
+[[irrigation.fixed_events]]
+date  = 2002-01-10
+depth = 30.0
+conc  = 0.5
+type  = 0

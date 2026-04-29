@@ -18,12 +18,13 @@
 !! leaves `config` / `schedule` at defaults (swirfix=0, schedule=0).
 module read_irrigation_toml_mod
    use iso_fortran_env, only: real64
-   use tomlf, only: toml_table, toml_array, get_value, len
+   use tomlf, only: toml_table, toml_array, toml_datetime, get_value, len
    use irrigation_config_mod, only: irrigation_config_t, irrigation_schedule_t
-   use toml_field_helpers_mod, only: get_table,                         &
+   use toml_field_helpers_mod, only: get_table, get_array_of_tables,    &
                                      get_optional_int_with_default,     &
                                      get_optional_real_with_default,    &
-                                     get_optional_string_with_default
+                                     get_optional_string_with_default,  &
+                                     parse_date_to_days1900
    use error_mod, only: error_collection_t, ERR_PARSE_TYPE_MISMATCH
    implicit none
    private
@@ -51,10 +52,97 @@ contains
       call get_optional_string_with_default(sec, 'irgfil', config%irgfil, '', &
                                             'irrigation.irgfil', errors)
 
-      ! Inline fixed-events: 4 columns (date / depth / conc / type).
-      call read_table_2d(sec, 'fixed_events', config%fixed_events, 4, &
-                         'irrigation.fixed_events', errors)
+      ! Inline fixed-events: array-of-tables with named keys
+      ! (date / depth / conc / type). Stored internally as a (nrows, 4)
+      ! real(real64) table where col 1 is days-since-1900 (legacy axis)
+      ! so the validator and downstream adapter remain shape-stable.
+      call read_fixed_events(sec, config%fixed_events, errors)
    end subroutine read_irrigation_toml
+
+   !> Decode `[[irrigation.fixed_events]]` array-of-tables into the legacy
+   !! (nrows, 4) real(real64) layout. Each row's `date` field is a TOML
+   !! date literal that gets converted to days-since-1900 via
+   !! `parse_date_to_days1900`. Missing keys append a parse error and
+   !! leave the table unallocated (matches the legacy malformed-table
+   !! semantics from `read_table_2d`).
+   subroutine read_fixed_events(sec, table, errors)
+      type(toml_table), pointer, intent(in)    :: sec
+      real(real64), allocatable, intent(out)   :: table(:,:)
+      type(error_collection_t),  intent(inout) :: errors
+
+      type(toml_array), pointer :: arr
+      type(toml_table), pointer :: row
+      type(toml_datetime)       :: dtv
+      integer  :: i, n, stat
+      real(real64) :: depth_val, conc_val
+      integer  :: type_val
+
+      if (.not. associated(sec)) return
+
+      call get_array_of_tables(sec, 'fixed_events', arr, &
+                               'irrigation.fixed_events', errors)
+      if (.not. associated(arr)) return
+
+      n = len(arr)
+      if (n == 0) then
+         allocate(table(0, 4))
+         return
+      end if
+
+      allocate(table(n, 4))
+      table = 0.0_real64
+
+      do i = 1, n
+         row => null()
+         call get_value(arr, i, row, stat=stat)
+         if (stat /= 0 .or. .not. associated(row)) then
+            call errors%append(ERR_PARSE_TYPE_MISMATCH, &
+                               "row not a table", 'irrigation.fixed_events')
+            if (allocated(table)) deallocate(table)
+            return
+         end if
+
+         call get_value(row, 'date', dtv, stat=stat)
+         if (stat /= 0) then
+            call errors%append(ERR_PARSE_TYPE_MISMATCH, &
+                               "missing or non-date 'date' key", &
+                               'irrigation.fixed_events')
+            if (allocated(table)) deallocate(table)
+            return
+         end if
+         table(i, 1) = parse_date_to_days1900(dtv)
+
+         call get_value(row, 'depth', depth_val, stat=stat)
+         if (stat /= 0) then
+            call errors%append(ERR_PARSE_TYPE_MISMATCH, &
+                               "missing or non-real 'depth' key", &
+                               'irrigation.fixed_events')
+            if (allocated(table)) deallocate(table)
+            return
+         end if
+         table(i, 2) = depth_val
+
+         call get_value(row, 'conc', conc_val, stat=stat)
+         if (stat /= 0) then
+            call errors%append(ERR_PARSE_TYPE_MISMATCH, &
+                               "missing or non-real 'conc' key", &
+                               'irrigation.fixed_events')
+            if (allocated(table)) deallocate(table)
+            return
+         end if
+         table(i, 3) = conc_val
+
+         call get_value(row, 'type', type_val, stat=stat)
+         if (stat /= 0) then
+            call errors%append(ERR_PARSE_TYPE_MISMATCH, &
+                               "missing or non-int 'type' key", &
+                               'irrigation.fixed_events')
+            if (allocated(table)) deallocate(table)
+            return
+         end if
+         table(i, 4) = real(type_val, kind=real64)
+      end do
+   end subroutine read_fixed_events
 
    !> Populate an `irrigation_schedule_t` from a per-crop
    !! `[irrigation_schedule]` sub-section. Caller resolves the section
