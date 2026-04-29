@@ -1174,6 +1174,66 @@ promotes it in Phase 4.
   syntactically invalid TOML are rejected by `toml_load` before any reader
   logic runs; the error bubbles up through `err%message`.
 
+## Phase 4f-prep additions
+
+Phase 4f-prep added two new typed sub-configs and extensions to five
+existing sections to close the highest-priority audit gaps before the
+Phase 4f strangler-fig of `readswap()`. Detail:
+
+- **`[surface_water]`** — new `surface_water_config_t` covering the
+  surface-water management block from the legacy `.dra` (top-level
+  `swsrf`, `swsec`, `wlact`, `osswlm`, `nmper`, `swqhr`, `sofcu` plus
+  `[surface_water.management]` per-period table (`impend`, `swman`,
+  `wscap`, `wldip`, `intwl`) and `[surface_water.weir]` per-period
+  arrays (`hbweir`, `alphaw`, `betaw`). Finalize stage applies the
+  legacy `alphaw` normalisation `alphaw * 8.64 * 100^(1-betaw) /
+  sofcu` so config matches `variables%alphaw` post-`rddre`. Only
+  case 6 (6.surfacewater) exercises this section.
+
+- **Macropore** — `macropore_config_t` exists at
+  `src/config/macropore_config.f90` as orphan infrastructure per
+  [ADR 0010](adr/0010-macropore-deferral.md); the new TOML pipeline
+  does NOT read or wire it. Phase 4f's strangler-fig keeps
+  `readswap()` as a fallback for case 3 (3.macroporeflow).
+
+- **`[simulation.numerical]`** — `dt`, `dtmin`, `dtmax`, `MaxIt`,
+  `MaxBackTr`, `taccur`. All 6 cases set `DTMAX=0.04`; case 3 sets
+  `DTMIN=1.0e-5` (others 1.0e-6). Cross-field rule: `dtmin <= dt
+  <= dtmax`.
+
+- **`[meteorology.evaporation]`** — `swcfbs`, `cfbs`, `cofredbl`
+  (Black soil-evaporation coefficient), `cofredbo` (Boesten-
+  Stroosnijder coefficient). Resolves the legacy ambiguity where
+  both keys mapped to the same `cofred` global (Discovery #1 below).
+
+- **`[meteorology.snow]`** — `swsnow`, `snowcoef`, `teprrain`,
+  `teprsnow`. All 6 regression cases have `swsnow=0`; switch-gated
+  validators skip the body.
+
+- **`[soil.discretization]`** — `swdiscrvert`, `numnodnew`, `dznew`.
+  All cases have `swdiscrvert=0`; gated.
+
+- **`[soil.frost]`** — `swfrost`, `tfroststa`, `tfrostend`,
+  `swsublim`. All cases have `swfrost=0`. Cross-field rule:
+  `tfrostend < tfroststa`.
+
+- **`[soil]` top-level extensions** — `cofani(:)` per-layer
+  anisotropy ratios; `nrstaring` Staring-series flag.
+
+- **`[drainage.surface_runoff]`** — surface-runoff control block
+  with 14 fields: `swnrsrf`, `swtopnrsrf`, `swdivdinf`, `swtopdislay`
+  switches plus per-mode reals (`facdpthinf`, `cofintfl`, `expintfl`,
+  `geofac`, `gwlconv`, `ftopdislay`, `rsurfdeep`, `rsurfshallow`,
+  `rapdrareaexp`, `rapdraresref`, `numlevrapdra`). Switch-gated.
+
+- **`[[crop.rotation]].swhydrlift`** — per-rotation hydraulic-lift
+  switch. Default 0; legacy crop sub-readers (`readwofost`,
+  `readcropfixed`, `readgrass`) take this as an argument.
+
+End-of-Phase-4f-prep state: 42 G entries reclassified to C; the
+audit at `docs/phase-4f-config-to-variables-audit.md` has the full
+field-by-field breakdown.
+
 ## Deprecated keys (retired)
 
 Per [ADR 0009](adr/0009-discontinue-non-csv-outputs.md), the new TOML
