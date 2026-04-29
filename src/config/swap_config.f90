@@ -10,6 +10,7 @@ module swap_config_mod
    use heat_config_mod,         only: heat_config_t
    use irrigation_config_mod,   only: irrigation_config_t
    use solute_config_mod,       only: solute_config_t
+   use surface_water_config_mod, only: surface_water_config_t
    use crop_config_mod,         only: crop_config_t
    implicit none
    private
@@ -26,6 +27,7 @@ module swap_config_mod
       type(heat_config_t)        :: heat
       type(irrigation_config_t)  :: irrigation
       type(solute_config_t)      :: solute
+      type(surface_water_config_t) :: surface_water
       type(crop_config_t)        :: crop
    contains
       procedure :: validate => swap_config_validate
@@ -46,6 +48,7 @@ contains
       call self%heat%validate(errors)
       call self%irrigation%validate(errors)
       call self%solute%validate(errors)
+      call self%surface_water%validate(errors)
       call self%crop%validate(errors)
       ! Cross-section rules are added here as the parity test surfaces them.
    end subroutine swap_config_validate
@@ -63,6 +66,7 @@ contains
       call self%heat%finalize(errors)
       call self%irrigation%finalize(errors)
       call self%solute%finalize(errors)
+      call self%surface_water%finalize(errors)
       call self%crop%finalize(errors)
    end subroutine swap_config_finalize
 
