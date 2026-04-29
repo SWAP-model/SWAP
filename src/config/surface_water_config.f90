@@ -137,9 +137,23 @@ contains
    end subroutine surface_water_config_validate
 
    subroutine surface_water_config_finalize(self, errors)
+      ! Phase 4f-prep Task D2: legacy `rddre` (src/io/readswap.f90:4598-4599)
+      ! normalizes the per-period exponential-weir alpha coefficient when
+      ! SWQHR=1:
+      !   alphaw(i) = alphaw(i) * 8.64 * 100^(1-betaw(i)) / sofcu
+      ! TOML stores the raw input value; finalize applies the same
+      ! normalization so config%surface_water%alphaw matches the legacy
+      ! global post-rddre. Skip when swqhr /= 1 or arrays unallocated.
       class(surface_water_config_t), intent(inout) :: self
       type(error_collection_t),      intent(inout) :: errors
-      return
+      integer :: i
+      if (self%swqhr /= 1) return
+      if (.not. allocated(self%alphaw) .or. .not. allocated(self%betaw)) return
+      if (self%sofcu <= 0.0_real64) return
+      do i = 1, self%nmper
+         self%alphaw(i) = self%alphaw(i) * 8.64_real64 &
+            * 100.0_real64 ** (1.0_real64 - self%betaw(i)) / self%sofcu
+      end do
    end subroutine surface_water_config_finalize
 
 end module surface_water_config_mod
