@@ -204,6 +204,7 @@ contains
          L(1)      = 100.0d0 * config%drain%lm
          wetper(1) = config%drain%wetper
          zbotdr(1) = config%drain%zbotdr_basic
+         shape     = config%drain%shape
          ipos      = config%drain%ipos
          khtop     = config%drain%khtop
          if (config%drain%ipos >= 3) then
