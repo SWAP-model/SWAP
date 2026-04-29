@@ -287,6 +287,20 @@ def _run_and_aggregate(case: CaseConfig):
                     shutil.copy(alt, swap_file)
                     break
 
+        # Phase 4f: SWAP now requires swap.toml as the canonical entry
+        # point. Stage it from tests/swap-cases/toml/<case>/ alongside
+        # cross-file siblings (swap.dra.toml, *.crp.toml). Cases without
+        # a populated TOML directory still fail loudly — Phase 4f-extend
+        # ports them one by one. Mirrors run_case.sh --toml.
+        toml_src = TESTS_DIR / "swap-cases" / "toml" / case.case_dir
+        if (toml_src / "swap.toml").exists():
+            shutil.copy(toml_src / "swap.toml", workdir / "swap.toml")
+            for extra in ("swap.dra.toml",):
+                if (toml_src / extra).exists():
+                    shutil.copy(toml_src / extra, workdir / extra)
+            for crp in toml_src.glob("*.crp.toml"):
+                shutil.copy(crp, workdir / crp.name)
+
         # Record time before running to verify output is fresh
         before_run = time.time()
 

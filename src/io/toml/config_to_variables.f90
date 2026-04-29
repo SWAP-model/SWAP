@@ -92,6 +92,13 @@ contains
       MaxIt     = config%simulation%numerical%MaxIt
       MaxBackTr = config%simulation%numerical%MaxBackTr
       taccur    = config%simulation%numerical%taccur
+      gwlconv       = config%simulation%numerical%gwlconv
+      critdevh1cp   = config%simulation%numerical%critdevh1cp
+      critdevh2cp   = config%simulation%numerical%critdevh2cp
+      critdevponddt = config%simulation%numerical%critdevponddt
+      SWkmean       = config%simulation%numerical%swkmean
+      SwkImpl       = config%simulation%numerical%swkimpl
+      msteps        = config%simulation%numerical%msteps
 
       ! ---------------------------------------------------------------
       ! Meteorology (audit: 12 + evaporation + snow)
@@ -598,7 +605,15 @@ contains
       if (allocated(config%crop%rotation_file)) then
          n = size(config%crop%rotation_file)
          do i = 1, min(n, size(cropfil))
-            cropfil(i) = config%crop%rotation_file(i)
+            ! Legacy cropfil is a stem (no extension): the cropgrowth
+            ! reader appends '.crp' itself. Our TOML authors the full
+            ! '<name>.crp.toml' path; strip both suffixes so the legacy
+            ! per-crop reader (still in use until Phase 4f-extend ports
+            ! it) reconstructs '<name>.crp' on disk.
+            ! HACK Phase 4f-extend: once read_cropfixed_toml et al. own
+            ! the per-crop init, the rotation_file should pass through
+            ! unchanged (the new readers will use the .toml path).
+            cropfil(i) = strip_crp_toml_suffix(config%crop%rotation_file(i))
          end do
       end if
 
@@ -625,6 +640,23 @@ contains
       swswb           = 0
       swoutputmodflow = 0
 
+      ! HACK Phase 4f-extend: outfil is the output-file basename
+      ! (legacy reads it from .swp Part 1: OUTFIL = 'result'). All
+      ! regression cases use the same value, so we hardcode it. Add a
+      ! [general.output] / general.outfil slot in Phase 4f-extend.
+      outfil = 'result'
+
+      ! HACK Phase 4f-extend: enable CSV output. swcsv=1 + InList_csv
+      ! authored verbatim from hupselbrook's .swp. The csv driver is
+      ! the *only* output the regression baseline checks (it asserts
+      ! against `<outfil>_output.csv`), so without these we 'complete
+      ! normally' but produce no output file. Move to a typed
+      ! [output.csv] block when Phase 4f-extend tackles output configs.
+      swcsv = 1
+      InList_csv = 'rain,irrig,interc,runoff,drainage,dstor,epot,eact,tpot,tact,qbottom,gwl'
+      swcsv_tz = 0
+      InList_csv_tz = 'wc,h,conc'
+
       ! HACK Phase 4f-extend: set up legacy I/O state needed by unported
       ! readers (read_tillage, cropgrowth crop sub-readers, rddre). They
       ! call RDinit(unit, logf, swpfile) which opens swpfile from cwd.
@@ -647,5 +679,25 @@ contains
       end block
 
    end subroutine config_to_variables
+
+   !> Strip a trailing '.crp.toml' (or '.toml') suffix from a rotation
+   !! file path, leaving the stem the legacy per-crop reader expects in
+   !! `cropfil(:)`. Only used by the strangler adapter; goes away when
+   !! the per-crop readers are TOML-native (Phase 4f-extend Task TBD).
+   pure function strip_crp_toml_suffix(s) result(stem)
+      character(len=*), intent(in)  :: s
+      character(len=len(s))         :: stem
+      character(len=*), parameter   :: SFX1 = '.crp.toml'
+      character(len=*), parameter   :: SFX2 = '.toml'
+      integer :: n
+      n = len_trim(s)
+      if (n >= len(SFX1) .and. s(n - len(SFX1) + 1 : n) == SFX1) then
+         stem = s(1 : n - len(SFX1))
+      else if (n >= len(SFX2) .and. s(n - len(SFX2) + 1 : n) == SFX2) then
+         stem = s(1 : n - len(SFX2))
+      else
+         stem = s
+      end if
+   end function strip_crp_toml_suffix
 
 end module config_to_variables_mod
