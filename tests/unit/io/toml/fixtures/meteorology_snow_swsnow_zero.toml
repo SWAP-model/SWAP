@@ -1,0 +1,7 @@
+[meteorology]
+file = "283.met"
+lat  = 52.0
+alt  = 10.0
+
+[meteorology.snow]
+swsnow = 0

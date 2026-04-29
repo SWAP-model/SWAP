@@ -19,12 +19,13 @@ contains
       type(meteorology_config_t),  intent(inout) :: config
       type(error_collection_t),    intent(inout) :: errors
 
-      type(toml_table), pointer :: sec, et, temporal, rain, interception
+      type(toml_table), pointer :: sec, et, temporal, rain, interception, evap, snow
 
       call get_table(doc, 'meteorology', sec, 'meteorology', errors)
       if (.not. associated(sec)) return
 
-      call get_optional_string_with_default(sec, 'file', config%metfile, '', 'meteorology.file', errors)
+      call get_optional_string_with_default(sec, 'file',     config%metfile,  '', 'meteorology.file',     errors)
+      call get_optional_string_with_default(sec, 'rainfile', config%rainfile, '', 'meteorology.rainfile', errors)
       call get_optional_real_with_default(sec,   'lat',  config%lat,     0.0d0, 'meteorology.lat',  errors)
       call get_optional_real_with_default(sec,   'alt',  config%alt,     0.0d0, 'meteorology.alt',  errors)
       call get_optional_real_with_default(sec,   'altw', config%altw,    2.0d0, 'meteorology.altw', errors)
@@ -53,6 +54,22 @@ contains
       call get_table(sec, 'interception', interception, 'meteorology.interception', errors)
       if (associated(interception)) then
          call get_optional_int_with_default(interception, 'swinter', config%swinter, 0, 'meteorology.interception.swinter', errors)
+      end if
+
+      call get_table(sec, 'evaporation', evap, 'meteorology.evaporation', errors)
+      if (associated(evap)) then
+         call get_optional_int_with_default(evap,  'swcfbs',   config%evaporation%swcfbs,   0,      'meteorology.evaporation.swcfbs',   errors)
+         call get_optional_real_with_default(evap, 'cfbs',     config%evaporation%cfbs,     1.0d0,  'meteorology.evaporation.cfbs',     errors)
+         call get_optional_real_with_default(evap, 'cofredbl', config%evaporation%cofredbl, 0.35d0, 'meteorology.evaporation.cofredbl', errors)
+         call get_optional_real_with_default(evap, 'cofredbo', config%evaporation%cofredbo, 0.35d0, 'meteorology.evaporation.cofredbo', errors)
+      end if
+
+      call get_table(sec, 'snow', snow, 'meteorology.snow', errors)
+      if (associated(snow)) then
+         call get_optional_int_with_default(snow,  'swsnow',   config%snow%swsnow,   0,     'meteorology.snow.swsnow',   errors)
+         call get_optional_real_with_default(snow, 'snowcoef', config%snow%snowcoef, 0.0d0, 'meteorology.snow.snowcoef', errors)
+         call get_optional_real_with_default(snow, 'teprrain', config%snow%teprrain, 0.0d0, 'meteorology.snow.teprrain', errors)
+         call get_optional_real_with_default(snow, 'teprsnow', config%snow%teprsnow, 0.0d0, 'meteorology.snow.teprsnow', errors)
       end if
    end subroutine read_meteorology_toml
 

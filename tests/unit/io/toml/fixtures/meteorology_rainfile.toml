@@ -1,0 +1,5 @@
+[meteorology]
+file     = "283.met"
+rainfile = "wagrain"
+lat      = 52.0
+alt      = 10.0

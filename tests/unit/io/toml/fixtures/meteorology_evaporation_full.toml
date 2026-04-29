@@ -1,0 +1,10 @@
+[meteorology]
+file = "283.met"
+lat  = 52.0
+alt  = 10.0
+
+[meteorology.evaporation]
+swcfbs   = 1
+cfbs     = 1.2
+cofredbl = 0.40
+cofredbo = 0.55
