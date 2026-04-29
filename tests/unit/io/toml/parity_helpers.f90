@@ -1,6 +1,7 @@
 !> Phase 4b Task 12: shared setup helper for hupselbrook parity tests.
 !! Lives under tests/; never shipped with the production binary.
 module parity_helpers_mod
+   use iso_fortran_env, only: real64
    use variables
    use swap_config_mod
    use load_swap_config_mod
@@ -12,6 +13,7 @@ module parity_helpers_mod
    public :: load_both_for_hupselbrook
    public :: load_both_for_salinitystress
    public :: load_both_for_macroporeflow
+   public :: load_both_for_surfacewater
    public :: reset_for_next_readswap
 
    character(len=*), parameter :: CASE_DIR = &
@@ -29,6 +31,11 @@ module parity_helpers_mod
       'tests/swap-cases/3.macroporeflow'
    character(len=*), parameter :: MAC_TOML_FILE = &
       'tests/swap-cases/toml/3.macroporeflow/swap.toml'
+
+   character(len=*), parameter :: SW_CASE_DIR = &
+      'tests/swap-cases/6.surfacewater'
+   character(len=*), parameter :: SW_TOML_FILE = &
+      'tests/swap-cases/toml/6.surfacewater/swap.toml'
 
 contains
 
@@ -144,5 +151,43 @@ contains
       call config%validate(errors)
       call config%finalize(errors)
    end subroutine load_both_for_macroporeflow
+
+   !> Phase 4f-prep Task D2: same pattern as `load_both_for_hupselbrook` but
+   !! for the surfacewater (case 6) regression case. SWSRF=2/SWSEC=2 with
+   !! 28 management periods exercises the full surface_water_config_t.
+   !!
+   !! READING NOTE: the surface-water management block in swap.dra is read
+   !! by `rddre()` (defined in src/io/readswap.f90:4273), which is called
+   !! from `SurfaceWater(1)` at simulation init — NOT from `readswap()`.
+   !! To populate `variables%swsrf`, `swsec`, `nmper`, `impend(:)`, etc.,
+   !! the helper invokes `rddre` directly after `readswap()` while still
+   !! in the case dir. Mirrors the Phase 4c-b legacy_crop_helper pattern.
+   subroutine load_both_for_surfacewater(config, errors)
+      type(swap_config_t),      intent(out) :: config
+      type(error_collection_t), intent(out) :: errors
+      character(len=1024) :: orig_cwd
+      real(real64) :: wls1, wlp1
+      interface
+         subroutine rddre(wls1, wlp1)
+            use iso_fortran_env, only: real64
+            real(real64), intent(out) :: wls1, wlp1
+         end subroutine rddre
+      end interface
+
+      call get_cwd(orig_cwd)
+      call chdir_to(SW_CASE_DIR)
+      call stage_swp_template(TEMPLATE, 'swap')
+      call reset_for_next_readswap()
+      call readswap()
+      ! `rddre` populates surface-water management globals from swap.dra.
+      ! Must run from the case dir before chdir-back.
+      call rddre(wls1, wlp1)
+      close(logf)
+      call chdir_to(trim(orig_cwd))
+
+      call load_swap_config(SW_TOML_FILE, config, errors)
+      call config%validate(errors)
+      call config%finalize(errors)
+   end subroutine load_both_for_surfacewater
 
 end module parity_helpers_mod

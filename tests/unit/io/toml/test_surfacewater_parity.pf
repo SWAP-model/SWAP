@@ -383,3 +383,86 @@ subroutine test_surfacewater_parity_4d_sections()
    ! [solute] — case 6 SWSOLU=0.
    @assertEqual(swsolu, config%solute%swsolu)
 end subroutine
+
+! Phase 4f-prep Task D2: parity for the [surface_water] section newly
+! added to case 6's swap.toml. Cross-check legacy `variables` globals
+! (set by readswap() → rddre()) against config%surface_water fields.
+!
+! READING NOTES:
+!   - There is no `wlact` global; legacy rddre reads "wlact" into the
+!     local `wls1` and stores it into `wlstar` after subtracting altcu
+!     (altcu=0 in case 6, so values match TOML directly). We assert
+!     against the TOML literal -77.0 instead of any global.
+!   - sofcu is a local in rddre, not a `variables` global. Asserted
+!     against the TOML literal 100.0.
+!   - Legacy stores impend(:) as days-since-1900 reals (rdftim). The
+!     reader normalises TOML date literals through parse_date_to_days1900
+!     to the same axis, so day counts compare directly.
+!   - Legacy rddre applies `wldip = abs(wldip)`; case 6 inputs are 0.0
+!     so the abs() is a no-op for this case.
+@test
+subroutine test_surfacewater_parity_surface_water()
+   use funit
+   use variables, only: swsrf, swsec, nmper, swqhr, osswlm, &
+                        impend, swman, wscap, wldip, intwl, &
+                        hbweir, alphaw, betaw
+   use swap_config_mod
+   use parity_helpers_mod
+   use error_mod
+   use iso_fortran_env, only: real64
+   type(swap_config_t)      :: config
+   type(error_collection_t) :: errors
+
+   call load_both_for_surfacewater(config, errors)
+
+   @assertFalse(errors%has_fatals())
+
+   ! Top-level scalars: legacy globals vs config.
+   @assertEqual(swsrf,  config%surface_water%swsrf)
+   @assertEqual(swsec,  config%surface_water%swsec)
+   @assertEqual(nmper,  config%surface_water%nmper)
+   @assertEqual(swqhr,  config%surface_water%swqhr)
+   @assertEqual(osswlm, config%surface_water%osswlm, 1.0e-12_real64)
+
+   ! Literal sanity (transcribed from swap.dra).
+   @assertEqual(2,    config%surface_water%swsrf)
+   @assertEqual(2,    config%surface_water%swsec)
+   @assertEqual(28,   config%surface_water%nmper)
+   @assertEqual(1,    config%surface_water%swqhr)
+   @assertEqual(-77.0_real64,  config%surface_water%wlact, 1.0e-12_real64)
+   @assertEqual(2.5_real64,    config%surface_water%osswlm, 1.0e-12_real64)
+   @assertEqual(100.0_real64,  config%surface_water%sofcu, 1.0e-12_real64)
+
+   ! Per-period management arrays sized to nmper=28.
+   @assertEqual(28, size(config%surface_water%impend))
+   @assertEqual(28, size(config%surface_water%swman))
+   @assertEqual(28, size(config%surface_water%wscap))
+   @assertEqual(28, size(config%surface_water%wldip))
+   @assertEqual(28, size(config%surface_water%intwl))
+
+   ! Representative per-period entries: legacy global vs config.
+   @assertEqual(swman(1),   config%surface_water%swman(1))
+   @assertEqual(swman(28),  config%surface_water%swman(28))
+   @assertEqual(intwl(1),   config%surface_water%intwl(1))
+   @assertEqual(intwl(28),  config%surface_water%intwl(28))
+   @assertEqual(wscap(1),   config%surface_water%wscap(1),  1.0e-12_real64)
+   @assertEqual(wscap(28),  config%surface_water%wscap(28), 1.0e-12_real64)
+   @assertEqual(wldip(1),   config%surface_water%wldip(1),  1.0e-12_real64)
+   @assertEqual(wldip(28),  config%surface_water%wldip(28), 1.0e-12_real64)
+
+   ! impend in days-since-1900 (legacy rdftim and parse_date_to_days1900
+   ! agree on the axis).
+   @assertEqual(impend(1),  config%surface_water%impend(1),  1.0e-9_real64)
+   @assertEqual(impend(14), config%surface_water%impend(14), 1.0e-9_real64)
+   @assertEqual(impend(28), config%surface_water%impend(28), 1.0e-9_real64)
+
+   ! Per-period weir arrays (SWQHR=1, exponential).
+   @assertEqual(28, size(config%surface_water%hbweir))
+   @assertEqual(28, size(config%surface_water%alphaw))
+   @assertEqual(28, size(config%surface_water%betaw))
+   @assertEqual(hbweir(1),  config%surface_water%hbweir(1),  1.0e-12_real64)
+   @assertEqual(hbweir(13), config%surface_water%hbweir(13), 1.0e-12_real64)
+   @assertEqual(hbweir(28), config%surface_water%hbweir(28), 1.0e-12_real64)
+   @assertEqual(alphaw(1),  config%surface_water%alphaw(1),  1.0e-12_real64)
+   @assertEqual(betaw(1),   config%surface_water%betaw(1),   1.0e-12_real64)
+end subroutine
