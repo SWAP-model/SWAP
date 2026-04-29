@@ -1,0 +1,239 @@
+! Unit tests for read_surface_water_toml — Phase 4f-prep Task B2.
+!
+! Each test builds an inline TOML document via toml_loads and exercises
+! the [surface_water] reader. Covers: missing-section silent path,
+! switch-only configurations, full populate (swsec=2 + swqhr=1 weir),
+! per-period-array length mismatch, and the impend date-decoding path.
+
+@test
+subroutine test_read_surface_water_missing_section_silent()
+   use funit
+   use tomlf, only: toml_table, toml_loads
+   use surface_water_config_mod
+   use read_surface_water_toml_mod
+   use error_mod
+   type(toml_table), allocatable, target :: doc
+   type(toml_table), pointer             :: doc_ptr
+   type(surface_water_config_t)          :: c
+   type(error_collection_t)              :: errors
+   character(len=*), parameter :: src = &
+      '[other]' // new_line('a') // 'foo = 1' // new_line('a')
+
+   call toml_loads(doc, src)
+   doc_ptr => doc
+   call read_surface_water_toml(doc_ptr, c, errors)
+
+   @assertFalse(errors%has_errors())
+   ! Defaults preserved.
+   @assertEqual(1, c%swsrf)
+   @assertEqual(1, c%swsec)
+   @assertEqual(0, c%nmper)
+   @assertFalse(allocated(c%impend))
+end subroutine
+
+@test
+subroutine test_read_surface_water_swsrf_one_only()
+   use funit
+   use tomlf, only: toml_table, toml_loads
+   use surface_water_config_mod
+   use read_surface_water_toml_mod
+   use error_mod
+   type(toml_table), allocatable, target :: doc
+   type(toml_table), pointer             :: doc_ptr
+   type(surface_water_config_t)          :: c
+   type(error_collection_t)              :: errors
+   character(len=*), parameter :: src = &
+      '[surface_water]' // new_line('a') // &
+      'swsrf = 1' // new_line('a')
+
+   call toml_loads(doc, src)
+   doc_ptr => doc
+   call read_surface_water_toml(doc_ptr, c, errors)
+
+   @assertFalse(errors%has_errors())
+   @assertEqual(1, c%swsrf)
+   @assertEqual(0, c%nmper)
+   @assertFalse(allocated(c%impend))
+end subroutine
+
+@test
+subroutine test_read_surface_water_full_swsec_two()
+   use funit
+   use tomlf, only: toml_table, toml_loads
+   use surface_water_config_mod
+   use read_surface_water_toml_mod
+   use error_mod
+   type(toml_table), allocatable, target :: doc
+   type(toml_table), pointer             :: doc_ptr
+   type(surface_water_config_t)          :: c
+   type(error_collection_t)              :: errors
+   character(len=*), parameter :: src = &
+      '[surface_water]'                          // new_line('a') // &
+      'swsrf  = 2'                               // new_line('a') // &
+      'swsec  = 2'                               // new_line('a') // &
+      'wlact  = -25.0'                           // new_line('a') // &
+      'osswlm = 1.5'                             // new_line('a') // &
+      'nmper  = 2'                               // new_line('a') // &
+      'swqhr  = 1'                               // new_line('a') // &
+      'sofcu  = 100.0'                           // new_line('a') // &
+      ''                                         // new_line('a') // &
+      '[surface_water.management]'               // new_line('a') // &
+      'impend = [1997-06-30, 1997-12-31]'        // new_line('a') // &
+      'swman  = [1, 2]'                          // new_line('a') // &
+      'wscap  = [0.0, 0.5]'                      // new_line('a') // &
+      'wldip  = [10.0, 20.0]'                    // new_line('a') // &
+      'intwl  = [1, 1]'                          // new_line('a') // &
+      ''                                         // new_line('a') // &
+      '[surface_water.weir]'                     // new_line('a') // &
+      'hbweir = [-50.0, -40.0]'                  // new_line('a') // &
+      'alphaw = [1.0, 1.5]'                      // new_line('a') // &
+      'betaw  = [1.5, 1.5]'                      // new_line('a')
+
+   call toml_loads(doc, src)
+   doc_ptr => doc
+   call read_surface_water_toml(doc_ptr, c, errors)
+
+   @assertFalse(errors%has_errors())
+   @assertEqual(2,    c%swsrf)
+   @assertEqual(2,    c%swsec)
+   @assertEqual(2,    c%nmper)
+   @assertEqual(1,    c%swqhr)
+   @assertEqual(-25.0d0, c%wlact,  1.0d-12)
+   @assertEqual(1.5d0,   c%osswlm, 1.0d-12)
+   @assertEqual(100.0d0, c%sofcu,  1.0d-12)
+
+   @assertTrue(allocated(c%impend))
+   @assertTrue(allocated(c%swman))
+   @assertTrue(allocated(c%wscap))
+   @assertTrue(allocated(c%wldip))
+   @assertTrue(allocated(c%intwl))
+   @assertEqual(2, size(c%impend))
+   @assertEqual(2, size(c%swman))
+   @assertEqual(1, c%swman(1))
+   @assertEqual(2, c%swman(2))
+   @assertEqual(0.5d0,  c%wscap(2),  1.0d-12)
+   @assertEqual(20.0d0, c%wldip(2),  1.0d-12)
+   @assertEqual(1, c%intwl(1))
+
+   @assertTrue(allocated(c%hbweir))
+   @assertTrue(allocated(c%alphaw))
+   @assertTrue(allocated(c%betaw))
+   @assertEqual(-50.0d0, c%hbweir(1), 1.0d-12)
+   @assertEqual(1.5d0,   c%alphaw(2), 1.0d-12)
+   @assertEqual(1.5d0,   c%betaw(1),  1.0d-12)
+end subroutine
+
+@test
+subroutine test_read_surface_water_period_array_size_mismatch()
+   use funit
+   use tomlf, only: toml_table, toml_loads
+   use surface_water_config_mod
+   use read_surface_water_toml_mod
+   use error_mod
+   type(toml_table), allocatable, target :: doc
+   type(toml_table), pointer             :: doc_ptr
+   type(surface_water_config_t)          :: c
+   type(error_collection_t)              :: errors
+   character(len=*), parameter :: src = &
+      '[surface_water]'                  // new_line('a') // &
+      'swsrf  = 2'                       // new_line('a') // &
+      'swsec  = 2'                       // new_line('a') // &
+      'nmper  = 2'                       // new_line('a') // &
+      ''                                 // new_line('a') // &
+      '[surface_water.management]'       // new_line('a') // &
+      'swman  = [1, 1, 1]'               // new_line('a')
+
+   call toml_loads(doc, src)
+   doc_ptr => doc
+   call read_surface_water_toml(doc_ptr, c, errors)
+
+   @assertTrue(errors%has_errors())
+   @assertFalse(allocated(c%swman))
+end subroutine
+
+@test
+subroutine test_read_surface_water_impend_decoded_to_days1900()
+   use funit
+   use tomlf, only: toml_table, toml_loads, toml_datetime
+   use surface_water_config_mod
+   use read_surface_water_toml_mod
+   use toml_field_helpers_mod, only: parse_date_to_days1900
+   use error_mod
+   type(toml_table), allocatable, target :: doc
+   type(toml_table), pointer             :: doc_ptr
+   type(surface_water_config_t)          :: c
+   type(error_collection_t)              :: errors
+   type(toml_datetime)                   :: dtv
+   real(8)                               :: expected
+   character(len=*), parameter :: src = &
+      '[surface_water]'                  // new_line('a') // &
+      'swsrf  = 2'                       // new_line('a') // &
+      'swsec  = 2'                       // new_line('a') // &
+      'nmper  = 1'                       // new_line('a') // &
+      ''                                 // new_line('a') // &
+      '[surface_water.management]'       // new_line('a') // &
+      'impend = [1997-01-01]'            // new_line('a') // &
+      'swman  = [1]'                     // new_line('a') // &
+      'wscap  = [0.0]'                   // new_line('a') // &
+      'wldip  = [10.0]'                  // new_line('a') // &
+      'intwl  = [1]'                     // new_line('a')
+
+   call toml_loads(doc, src)
+   doc_ptr => doc
+   call read_surface_water_toml(doc_ptr, c, errors)
+
+   @assertFalse(errors%has_errors())
+   @assertTrue(allocated(c%impend))
+   @assertEqual(1, size(c%impend))
+
+   ! Build expected via the same conversion routine.
+   dtv = toml_datetime(year=1997, month=1, day=1)
+   expected = parse_date_to_days1900(dtv)
+   @assertEqual(expected, c%impend(1), 1.0d-9)
+end subroutine
+
+@test
+subroutine test_read_surface_water_swqhr_one_full()
+   use funit
+   use tomlf, only: toml_table, toml_loads
+   use surface_water_config_mod
+   use read_surface_water_toml_mod
+   use error_mod
+   type(toml_table), allocatable, target :: doc
+   type(toml_table), pointer             :: doc_ptr
+   type(surface_water_config_t)          :: c
+   type(error_collection_t)              :: errors
+   character(len=*), parameter :: src = &
+      '[surface_water]'                          // new_line('a') // &
+      'swsrf  = 2'                               // new_line('a') // &
+      'swsec  = 2'                               // new_line('a') // &
+      'nmper  = 1'                               // new_line('a') // &
+      'swqhr  = 1'                               // new_line('a') // &
+      'sofcu  = 50.0'                            // new_line('a') // &
+      ''                                         // new_line('a') // &
+      '[surface_water.management]'               // new_line('a') // &
+      'impend = [1997-12-31]'                    // new_line('a') // &
+      'swman  = [1]'                             // new_line('a') // &
+      'wscap  = [0.0]'                           // new_line('a') // &
+      'wldip  = [5.0]'                           // new_line('a') // &
+      'intwl  = [1]'                             // new_line('a') // &
+      ''                                         // new_line('a') // &
+      '[surface_water.weir]'                     // new_line('a') // &
+      'hbweir = [-30.0]'                         // new_line('a') // &
+      'alphaw = [2.0]'                           // new_line('a') // &
+      'betaw  = [1.5]'                           // new_line('a')
+
+   call toml_loads(doc, src)
+   doc_ptr => doc
+   call read_surface_water_toml(doc_ptr, c, errors)
+
+   @assertFalse(errors%has_errors())
+   @assertEqual(1, c%swqhr)
+   @assertTrue(allocated(c%hbweir))
+   @assertTrue(allocated(c%alphaw))
+   @assertTrue(allocated(c%betaw))
+   @assertEqual(1, size(c%hbweir))
+   @assertEqual(-30.0d0, c%hbweir(1), 1.0d-12)
+   @assertEqual(2.0d0,   c%alphaw(1), 1.0d-12)
+   @assertEqual(1.5d0,   c%betaw(1),  1.0d-12)
+end subroutine
