@@ -194,6 +194,38 @@ contains
       ! at the legacy global `shape`. Bottom boundary is wired below
       ! and overwrites for swbotb=3 cases (the documented audit alias).
 
+      ! DRAMET=2 (Hooghoudt/Ernst). Mirrors readswap.f90:1850-1875.
+      ! lm is authored in metres; the legacy reader does the m->cm
+      ! conversion (`l(1) = 100*lm2`) so we replicate that here.
+      ! wetper / zbotdr go into the level-1 entry of the per-level
+      ! arrays; ipos / khtop / khbot / kvtop / kvbot / zintf / geofac
+      ! are scalar globals.
+      if (config%drain%dramet == 2) then
+         L(1)      = 100.0d0 * config%drain%lm
+         wetper(1) = config%drain%wetper
+         zbotdr(1) = config%drain%zbotdr_basic
+         ipos      = config%drain%ipos
+         khtop     = config%drain%khtop
+         if (config%drain%ipos >= 3) then
+            khbot = config%drain%khbot
+            zintf = config%drain%zintf
+         end if
+         if (config%drain%ipos >= 4) then
+            kvtop = config%drain%kvtop
+            kvbot = config%drain%kvbot
+         end if
+         if (config%drain%ipos == 5) then
+            geofac = config%drain%geofac
+         end if
+      end if
+
+      ! Per-soil-physical-layer anisotropy ratio (legacy COFANI in .dra).
+      if (allocated(config%drain%cofani)) then
+         do i = 1, size(config%drain%cofani)
+            cofani(i) = config%drain%cofani(i)
+         end do
+      end if
+
       if (allocated(config%drain%swdtyp)) then
          do i = 1, size(config%drain%swdtyp)
             swdtyp(i) = config%drain%swdtyp(i)
