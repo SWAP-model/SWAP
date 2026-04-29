@@ -1,0 +1,15 @@
+✓ salinitystress: regression ok (annual stats match fixture) [5.10s]
+✓ macropore: regression ok (annual stats match fixture) [241.48s]
+✓ oxygenstress: regression ok (annual stats match fixture) [41.72s]
+
+============================================================
+Results: 6 passed, 0 failed
+Total execution time: 241.48s
+
+Individual test timings:
+  macropore            241.48s
+  oxygenstress          41.72s
+  salinitystress         5.10s
+  grassgrowth            2.21s
+  surfacewater           2.20s
+  hupselbrook            1.05s
