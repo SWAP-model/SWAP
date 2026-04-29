@@ -1,0 +1,10 @@
+[soil]
+swsophy = 0
+swhyst  = 0
+swinco  = 1
+
+[soil.frost]
+swfrost   = 1
+tfroststa = -1.0
+tfrostend = -3.0
+swsublim  = 1
