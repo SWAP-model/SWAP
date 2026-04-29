@@ -10,6 +10,7 @@ module soil_config_mod
    public :: soil_config_t
    public :: soil_discretization_t
    public :: soil_frost_t
+   public :: soil_hydraulics_t
 
    !> Optional re-discretization of the vertical grid for output reporting.
    !! When swdiscrvert == 1, dznew(:) (sized to numnodnew) carries the
@@ -21,6 +22,28 @@ module soil_config_mod
    contains
       procedure :: validate => soil_discretization_validate
    end type soil_discretization_t
+
+   !> Per-soil-physical-layer Mualem-van Genuchten hydraulic parameters.
+   !! All arrays are sized to `numlay` (number of soil-physical layers,
+   !! the deepest `isoillay` value in the discretization). Required when
+   !! `swsophy = 0` (analytical MvG); the validator does not enforce
+   !! presence here because the runtime fatalerrs if values are missing
+   !! at the time soilhydraulics builds `paramvg`. Field names mirror the
+   !! legacy `.swp` keys verbatim (Phase 4f Task B2).
+   type :: soil_hydraulics_t
+      real(real64), allocatable :: ores(:)     !! residual water content [0..1]
+      real(real64), allocatable :: osat(:)     !! saturated water content [0..1]
+      real(real64), allocatable :: alfa(:)     !! MvG alpha drying [1e-4..100 /cm]
+      real(real64), allocatable :: npar(:)     !! MvG n shape [1.001..9 -]
+      real(real64), allocatable :: ksatfit(:)  !! fitted Ksat [1e-5..1e5 cm/d]
+      real(real64), allocatable :: lexp(:)     !! K(h) exponent [-25..25 -]
+      real(real64), allocatable :: alfaw(:)    !! MvG alpha wetting (hysteresis)
+      real(real64), allocatable :: h_enpr(:)   !! air-entry pressure head [-40..0 cm]
+      real(real64), allocatable :: ksatexm(:)  !! measured Ksat [1e-5..1e5 cm/d]
+      real(real64), allocatable :: bdens(:)    !! dry bulk density [100..1e4 mg/cm3]
+   contains
+      procedure :: validate => soil_hydraulics_validate
+   end type soil_hydraulics_t
 
    !> Frost-induced flow reduction parameters.
    type :: soil_frost_t
@@ -49,6 +72,7 @@ module soil_config_mod
       integer :: nrstaring = 0  !! 0=user-supplied, 1..6=Staring series
 
       integer,      allocatable :: sublay(:)
+      real(real64), allocatable :: hsublay(:)  !! per-sub-layer height (cm)
       real(real64), allocatable :: hcomp(:)
       integer,      allocatable :: ncomp(:)
       integer,      allocatable :: isoillay(:)
@@ -60,6 +84,7 @@ module soil_config_mod
 
       type(soil_discretization_t) :: discretization
       type(soil_frost_t)          :: frost
+      type(soil_hydraulics_t)     :: hydraulics
    contains
       procedure :: validate => soil_config_validate
       procedure :: finalize => soil_config_finalize
@@ -93,7 +118,76 @@ contains
 
       call self%discretization%validate(errors)
       call self%frost%validate(errors)
+      call self%hydraulics%validate(errors)
    end subroutine soil_config_validate
+
+   !> Per-soil-physical-layer hydraulics validator. All arrays are
+   !! optional at the schema level — presence is required only when
+   !! swsophy=0, but that cross-section check belongs upstream of the
+   !! per-array range checks (the runtime catches missing arrays via
+   !! its own fatalerr). Here we just enforce that, when present, every
+   !! array has the same length and each cell is within the legacy
+   !! `rdfdor` range.
+   subroutine soil_hydraulics_validate(self, errors)
+      class(soil_hydraulics_t), intent(in)    :: self
+      type(error_collection_t), intent(inout) :: errors
+      integer :: i, n
+      n = -1
+      call check_size(self%ores,    n, "soil.hydraulics.ores",    errors)
+      call check_size(self%osat,    n, "soil.hydraulics.osat",    errors)
+      call check_size(self%alfa,    n, "soil.hydraulics.alfa",    errors)
+      call check_size(self%npar,    n, "soil.hydraulics.npar",    errors)
+      call check_size(self%ksatfit, n, "soil.hydraulics.ksatfit", errors)
+      call check_size(self%lexp,    n, "soil.hydraulics.lexp",    errors)
+      call check_size(self%alfaw,   n, "soil.hydraulics.alfaw",   errors)
+      call check_size(self%h_enpr,  n, "soil.hydraulics.h_enpr",  errors)
+      call check_size(self%ksatexm, n, "soil.hydraulics.ksatexm", errors)
+      call check_size(self%bdens,   n, "soil.hydraulics.bdens",   errors)
+
+      if (allocated(self%ores)) then
+         do i = 1, size(self%ores)
+            call check_real_range(self%ores(i),    0.0_real64,    1.0_real64, &
+                                  "soil.hydraulics.ores", errors)
+            call check_real_range(self%osat(i),    0.0_real64,    1.0_real64, &
+                                  "soil.hydraulics.osat", errors)
+            call check_real_range(self%alfa(i),    1.0e-4_real64, 100.0_real64, &
+                                  "soil.hydraulics.alfa", errors)
+            call check_real_range(self%npar(i),    1.001_real64,  9.0_real64, &
+                                  "soil.hydraulics.npar", errors)
+            call check_real_range(self%ksatfit(i), 1.0e-5_real64, 1.0e5_real64, &
+                                  "soil.hydraulics.ksatfit", errors)
+            call check_real_range(self%lexp(i),   -25.0_real64,   25.0_real64, &
+                                  "soil.hydraulics.lexp", errors)
+            call check_real_range(self%alfaw(i),   1.0e-4_real64, 100.0_real64, &
+                                  "soil.hydraulics.alfaw", errors)
+            call check_real_range(self%h_enpr(i), -40.0_real64,   0.0_real64, &
+                                  "soil.hydraulics.h_enpr", errors)
+            call check_real_range(self%ksatexm(i), 1.0e-5_real64, 1.0e5_real64, &
+                                  "soil.hydraulics.ksatexm", errors)
+            call check_real_range(self%bdens(i),   100.0_real64,  1.0e4_real64, &
+                                  "soil.hydraulics.bdens", errors)
+         end do
+      end if
+   end subroutine soil_hydraulics_validate
+
+   !> Helper: on first call (n<0) record the array's size; on subsequent
+   !! calls verify every other array matches. Append an error when
+   !! sizes diverge so the typical 10-array layer table is sanity-checked.
+   subroutine check_size(arr, n, label, errors)
+      real(real64), allocatable, intent(in)    :: arr(:)
+      integer,                   intent(inout) :: n
+      character(len=*),          intent(in)    :: label
+      type(error_collection_t),  intent(inout) :: errors
+      integer :: this
+      if (.not. allocated(arr)) return
+      this = size(arr)
+      if (n < 0) then
+         n = this
+      else if (this /= n) then
+         call errors%append(ERR_VALIDATION_CROSS_FIELD, &
+                            "size mismatch across soil.hydraulics arrays", label)
+      end if
+   end subroutine check_size
 
    subroutine soil_discretization_validate(self, errors)
       class(soil_discretization_t), intent(in)    :: self

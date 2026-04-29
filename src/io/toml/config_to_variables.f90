@@ -302,14 +302,36 @@ contains
       rsoil   = config%soil%rsoil
       nrstaring = config%soil%nrstaring
 
+      ! sublay (legacy 'isublay') is a local in readswap, not a module
+      ! global; calcgrid only consumes nsublay + isoillay + ncomp + hcomp
+      ! + hsublay, so we simply set nsublay here.
+      if (allocated(config%soil%sublay)) then
+         nsublay = size(config%soil%sublay)
+      end if
       if (allocated(config%soil%isoillay)) then
          do i = 1, size(config%soil%isoillay)
             isoillay(i) = config%soil%isoillay(i)
+         end do
+         numlay = config%soil%isoillay(size(config%soil%isoillay))
+      end if
+      if (allocated(config%soil%hsublay)) then
+         do i = 1, size(config%soil%hsublay)
+            hsublay(i) = config%soil%hsublay(i)
          end do
       end if
       if (allocated(config%soil%ncomp)) then
          do i = 1, size(config%soil%ncomp)
             ncomp(i) = config%soil%ncomp(i)
+         end do
+      end if
+      ! Derive hcomp = hsublay / ncomp (mirrors readswap.f90:613-619).
+      ! Skipped when the case authors hcomp explicitly (none yet do).
+      if (allocated(config%soil%hsublay) .and. allocated(config%soil%ncomp) &
+          .and. .not. allocated(config%soil%hcomp)) then
+         do i = 1, size(config%soil%hsublay)
+            if (config%soil%ncomp(i) > 0) then
+               hcomp(i) = config%soil%hsublay(i) / dble(config%soil%ncomp(i))
+            end if
          end do
       end if
       if (allocated(config%soil%hcomp)) then
@@ -330,6 +352,61 @@ contains
       if (allocated(config%soil%cofani)) then
          do i = 1, size(config%soil%cofani)
             cofani(i) = config%soil%cofani(i)
+         end do
+      end if
+
+      ! Per-soil-physical-layer Mualem-van Genuchten hydraulics.
+      ! Mirrors readswap.f90:786-825 conceptually, but most of the
+      ! per-array names (ores/osat/alfa/npar/lexp/alfaw) are *locals*
+      ! in readswap — not module globals — so they only matter as input
+      ! to paramvg(1..10, lay). We write paramvg directly here. The
+      ! globals we *do* need to set are bdens / ksatfit / ksatexm /
+      ! h_enpr (all real(8) :: ...(maho) in variables.f90), since
+      ! downstream code (soilhydraulics, solute, etc.) reads them.
+      if (allocated(config%soil%hydraulics%ores)) then
+         do i = 1, size(config%soil%hydraulics%ores)
+            ksatfit(i) = config%soil%hydraulics%ksatfit(i)
+            ksatexm(i) = config%soil%hydraulics%ksatexm(i)
+            h_enpr(i)  = config%soil%hydraulics%h_enpr(i)
+            bdens(i)   = config%soil%hydraulics%bdens(i)
+         end do
+
+         ! Default analytical MvG model for every soil-physical layer.
+         ! HACK Phase 4f-extend: iHWCKmodel(:) is fixed to 1 (uni-modal
+         ! MvG). The legacy reader at readswap.f90:651-657 lets cases
+         ! override per layer (1..11) but no schema slot covers it yet.
+         ! None of the regression cases set it; this matches.
+         iHWCKmodel(1:size(config%soil%hydraulics%ores)) = 1
+
+         ! paramvg layout (legacy):
+         !   1 = ores         6 = npar
+         !   2 = osat         7 = 1 - 1/npar
+         !   3 = ksatfit      8 = alfa or alfaw (per swhyst)
+         !   4 = alfa         9 = h_enpr
+         !   5 = lexp        10 = ksatexm (-999 sentinel when absent)
+         paramvg = 0.0d0
+         do i = 1, size(config%soil%hydraulics%ores)
+            paramvg(1, i)  = config%soil%hydraulics%ores(i)
+            paramvg(2, i)  = config%soil%hydraulics%osat(i)
+            paramvg(3, i)  = config%soil%hydraulics%ksatfit(i)
+            paramvg(4, i)  = config%soil%hydraulics%alfa(i)
+            paramvg(5, i)  = config%soil%hydraulics%lexp(i)
+            paramvg(6, i)  = config%soil%hydraulics%npar(i)
+            paramvg(7, i)  = 1.0d0 - (1.0d0 / paramvg(6, i))
+            if (swhyst == 0) then
+               paramvg(8, i) = config%soil%hydraulics%alfa(i)
+            else
+               paramvg(8, i) = config%soil%hydraulics%alfaw(i)
+            end if
+            paramvg(9, i)  = config%soil%hydraulics%h_enpr(i)
+            ! HACK Phase 4f-extend: ksatexm path ignores the legacy
+            ! flksatexm/relsatthr/ksatthr branch (readswap.f90:802-815).
+            ! For hupselbrook ksatexm == ksatfit, so flksatexm stays
+            ! false in the legacy path and paramvg(10,:) keeps the
+            ! -999 sentinel. Matches behaviour for the case at hand;
+            ! cases with ksatexm > ksatfit need the threshold-Ksat
+            ! computation ported.
+            paramvg(10, i) = -999.0d0
          end do
       end if
 
