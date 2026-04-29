@@ -48,9 +48,9 @@ Method:
 ## Summary
 
 - **Total variables referenced by execution paths:** 1216
-- **C (covered):** 207  (17%)
+- **C (covered):** 210  (17%)
 - **R (runtime state):** 806  (66%)
-- **G (gaps):** 175  (14%) -- Phase 4f blockers
+- **G (gaps):** 172  (14%) -- Phase 4f blockers
 - **RETIRED:** 18  (1%) -- per ADR 0009; no longer flagged as gaps
 - **DEFERRED:** 10  (1%) -- per ADR 0010; macropore section deferred
 
@@ -190,7 +190,7 @@ C=0, R=16, G=12, RETIRED=17 (per ADR 0009)
 | swcapriseoutput | RETIRED | ADR 0009 | discontinued; new TOML reader emits deprecation warning |
 | swcsv | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
 | swcsv_tz | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
-| swdiscrvert | G | -- (no config) | input key 'swdiscrvert' read only by readswap; needs slot in simulation_config_t (timestep / output controls) |
+| swdiscrvert | C | config%soil%discretization%swdiscrvert | Phase 4f-prep Task C3 added the schema slot under `[soil.discretization]`. Only case 1's .swp.template mentions it, with `SWDISCRVERT=0` (matches schema default); no per-case TOML needed (Task D5 noop). |
 | swdrf | RETIRED | ADR 0009 | discontinued; new TOML reader emits deprecation warning |
 | SwDrRap | G | -- (no config) | input key 'swdrrap' read only by readswap; needs slot in simulation_config_t (timestep / output controls) |
 | swend | RETIRED | ADR 0009 | discontinued; new TOML reader emits deprecation warning |
@@ -280,7 +280,7 @@ C=15, R=69, G=18
 | swhyst | C | config%soil%swhyst |  |
 | swinco | C | config%soil%swinco |  |
 | swsophy | C | config%soil%swsophy |  |
-| cofani | G | -- (no config) | input key 'cofani' read only by readswap; needs slot in soil_config_t |
+| cofani | C | config%soil%cofani(:) | Phase 4f-prep Task C3 added the per-layer schema slot. No regression case sets COFANI in its .swp.template (legacy default = isotropy); no per-case TOML needed (Task D5 noop). |
 | dznew | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
 | h | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
 | h_enpr | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
@@ -291,7 +291,7 @@ C=15, R=69, G=18
 | kf | G | -- (no config) | input key 'kf' read only by readswap; needs slot in soil_config_t |
 | kfsat | G | -- (no config) | input key 'kfsat' read only by readswap; needs slot in soil_config_t |
 | ksatfit | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
-| nrstaring | G | -- (no config) | input key 'nrstaring' read only by readswap; needs slot in soil_config_t |
+| nrstaring | C | config%soil%nrstaring | Phase 4f-prep Task C3 added the schema slot. No regression case sets NRSTARING in its .swp.template (legacy default 0 = user-supplied hydraulic params); no per-case TOML needed (Task D5 noop). |
 | numnodnew | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
 | SwDarcy | G | -- (no config) | input key 'swdarcy' read only by readswap; needs slot in soil_config_t |
 | swfrost | C | config%soil%frost%swfrost | Phase 4f-prep Task C3 added the schema slot under `[soil.frost]`. All 6 regression cases have `SWFROST=0` in their .swp.template; Task D3 noop on the per-case TOML side. |
