@@ -50,6 +50,12 @@ warranted.
    ```
    Case 3 retains its `swap_linux.swp.template` and runs on the
    legacy reader. Cases 1, 2, 4, 5, 6 take the new TOML path.
+
+   **SUPERSEDED by [ADR 0011](0011-macropore-exclusion-from-regression.md):**
+   case 3 is now excluded from `check-full` entirely; the runtime
+   branch is dropped and Phase 4f makes a clean cut to the new
+   TOML pipeline. `readswap.f90` still stays in the tree (per the
+   broader Phase 4f design) as Phase 4f-extend's reference.
 7. **Audit-doc reclassification.** The 10 G entries in the macropore
    section of `docs/phase-4f-config-to-variables-audit.md`
    reclassify from G (gap) to **DEFERRED** — a new fourth status

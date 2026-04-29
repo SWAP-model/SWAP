@@ -53,13 +53,11 @@ CASES = {
                 "drafile": "swap.dra"
         }
     ),
-    "macropore": CaseConfig(
-        name="macropore",
-        case_dir="3.macroporeflow",
-        fixture="macropore_expected_gfortran.json",
-        flux_vars=["DRAINAGE"],
-        state_vars=["GWL"],
-    ),
+    # Case 3 (macroporeflow) excluded from check-full per ADR 0011.
+    # The case directory still exists at tests/swap-cases/3.macroporeflow/
+    # for archival; macropore_config_t is orphan infrastructure per ADR 0010.
+    # When the future macropore phase reactivates the module, this entry
+    # comes back.
     "grassgrowth": CaseConfig(
         name="grassgrowth",
         case_dir="2.grassgrowth",
