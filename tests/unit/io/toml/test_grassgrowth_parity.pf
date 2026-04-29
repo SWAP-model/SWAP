@@ -85,6 +85,40 @@ subroutine test_grassgrowth_simulation_parity()
    @assertEqual(nprintday, config%simulation%nprintday)
 end subroutine
 
+! Phase 4f-prep Task D4: [simulation.numerical] parity for case 2.
+@test
+subroutine test_grassgrowth_simulation_numerical_parity()
+   use funit
+   use variables, only: dtmin, dtmax, MaxIt, MaxBackTr, logf
+   use swap_config_mod
+   use load_swap_config_mod
+   use chdir_helper_mod
+   use parity_helpers_mod
+   use error_mod
+   use iso_fortran_env, only: real64
+   type(swap_config_t)      :: config
+   type(error_collection_t) :: errors
+   character(len=1024)      :: orig_cwd
+
+   call get_cwd(orig_cwd)
+   call chdir_to('tests/swap-cases/2.grassgrowth')
+   call stage_swp_template('swap_linux.swp.template', 'swap')
+   call reset_for_next_readswap()
+   call readswap()
+   close(logf)
+   call chdir_to(trim(orig_cwd))
+
+   call load_swap_config('tests/swap-cases/toml/2.grassgrowth/swap.toml', config, errors)
+   call config%validate(errors)
+   call config%finalize(errors)
+
+   @assertEqual(dtmin,     config%simulation%numerical%dtmin, 1.0e-12_real64)
+   @assertEqual(dtmax,     config%simulation%numerical%dtmax, 1.0e-12_real64)
+   @assertEqual(MaxIt,     config%simulation%numerical%MaxIt)
+   @assertEqual(MaxBackTr, config%simulation%numerical%MaxBackTr)
+   @assertEqual(0.04_real64, config%simulation%numerical%dtmax, 1.0e-12_real64)
+end subroutine
+
 @test
 subroutine test_grassgrowth_meteorology_parity()
    use funit
