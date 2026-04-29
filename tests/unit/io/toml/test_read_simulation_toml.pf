@@ -57,3 +57,81 @@ subroutine test_read_simulation_missing_section_is_silent()
 
    @assertFalse(errors%has_errors())
 end subroutine
+
+@test
+subroutine test_read_simulation_numerical_full()
+   use funit
+   use tomlf, only: toml_table, toml_load
+   use simulation_config_mod
+   use read_simulation_toml_mod
+   use error_mod
+   type(toml_table), allocatable, target :: doc
+   type(toml_table), pointer     :: doc_ptr
+   type(simulation_config_t)     :: c
+   type(error_collection_t)      :: errors
+
+   call toml_load(doc, 'tests/unit/io/toml/fixtures/simulation_numerical_full.toml')
+   doc_ptr => doc
+   call read_simulation_toml(doc_ptr, c, errors)
+
+   @assertFalse(errors%has_errors())
+   @assertEqual(0.1d0,    c%numerical%dt,     1.0d-12)
+   @assertEqual(1.0d-5,   c%numerical%dtmin,  1.0d-15)
+   @assertEqual(0.5d0,    c%numerical%dtmax,  1.0d-12)
+   @assertEqual(50,       c%numerical%MaxIt)
+   @assertEqual(5,        c%numerical%MaxBackTr)
+   @assertEqual(1.0d-4,   c%numerical%taccur, 1.0d-15)
+end subroutine
+
+@test
+subroutine test_read_simulation_numerical_missing_silent()
+   use funit
+   use tomlf, only: toml_table, toml_load
+   use simulation_config_mod
+   use read_simulation_toml_mod
+   use error_mod
+   type(toml_table), allocatable, target :: doc
+   type(toml_table), pointer     :: doc_ptr
+   type(simulation_config_t)     :: c
+   type(error_collection_t)      :: errors
+
+   call toml_load(doc, 'tests/unit/io/toml/fixtures/simulation_minimal.toml')
+   doc_ptr => doc
+   call read_simulation_toml(doc_ptr, c, errors)
+
+   @assertFalse(errors%has_errors())
+   ! Defaults preserved when [simulation.numerical] is absent.
+   @assertEqual(0.2d0,    c%numerical%dt,     1.0d-12)
+   @assertEqual(1.0d-6,   c%numerical%dtmin,  1.0d-15)
+   @assertEqual(0.2d0,    c%numerical%dtmax,  1.0d-12)
+   @assertEqual(30,       c%numerical%MaxIt)
+   @assertEqual(3,        c%numerical%MaxBackTr)
+   @assertEqual(1.0d-3,   c%numerical%taccur, 1.0d-15)
+end subroutine
+
+@test
+subroutine test_read_simulation_numerical_partial_populate()
+   use funit
+   use tomlf, only: toml_table, toml_load
+   use simulation_config_mod
+   use read_simulation_toml_mod
+   use error_mod
+   type(toml_table), allocatable, target :: doc
+   type(toml_table), pointer     :: doc_ptr
+   type(simulation_config_t)     :: c
+   type(error_collection_t)      :: errors
+
+   call toml_load(doc, 'tests/unit/io/toml/fixtures/simulation_numerical_partial.toml')
+   doc_ptr => doc
+   call read_simulation_toml(doc_ptr, c, errors)
+
+   @assertFalse(errors%has_errors())
+   ! Populated keys.
+   @assertEqual(0.05d0, c%numerical%dt, 1.0d-12)
+   @assertEqual(42,     c%numerical%MaxIt)
+   ! Untouched defaults.
+   @assertEqual(1.0d-6, c%numerical%dtmin,  1.0d-15)
+   @assertEqual(0.2d0,  c%numerical%dtmax,  1.0d-12)
+   @assertEqual(3,      c%numerical%MaxBackTr)
+   @assertEqual(1.0d-3, c%numerical%taccur, 1.0d-15)
+end subroutine

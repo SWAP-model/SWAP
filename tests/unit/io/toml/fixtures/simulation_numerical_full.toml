@@ -1,0 +1,16 @@
+[simulation]
+start_date = 2002-01-01
+end_date   = 2004-12-31
+nprintday  = 1
+
+[simulation.output]
+swmonth = 1
+period  = 1
+
+[simulation.numerical]
+dt        = 0.1
+dtmin     = 1.0e-5
+dtmax     = 0.5
+maxit     = 50
+maxbacktr = 5
+taccur    = 1.0e-4

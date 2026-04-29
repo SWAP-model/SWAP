@@ -1,0 +1,7 @@
+[simulation]
+start_date = 2002-01-01
+end_date   = 2004-12-31
+
+[simulation.numerical]
+dt    = 0.05
+maxit = 42

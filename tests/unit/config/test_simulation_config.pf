@@ -38,3 +38,86 @@ subroutine test_simulation_nprintday_out_of_range_fails()
    call s%validate(errors)
    @assertTrue(errors%has_errors())
 end subroutine
+
+@test
+subroutine test_simulation_numerical_defaults_validate_clean()
+   use funit
+   use error_mod
+   use simulation_config_mod
+   type(simulation_numerical_t) :: n
+   type(error_collection_t)     :: errors
+   call n%validate(errors)
+   @assertFalse(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_simulation_numerical_dt_out_of_range()
+   use funit
+   use error_mod
+   use simulation_config_mod
+   type(simulation_numerical_t) :: n
+   type(error_collection_t)     :: errors
+   n%dt = 5.0d0
+   call n%validate(errors)
+   @assertTrue(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_simulation_numerical_MaxIt_out_of_range()
+   use funit
+   use error_mod
+   use simulation_config_mod
+   type(simulation_numerical_t) :: n
+   type(error_collection_t)     :: errors
+   n%MaxIt = 0
+   call n%validate(errors)
+   @assertTrue(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_simulation_numerical_dt_below_dtmin()
+   use funit
+   use error_mod
+   use simulation_config_mod
+   type(simulation_numerical_t) :: n
+   type(error_collection_t)     :: errors
+   integer :: i
+   logical :: found_cross_field
+   n%dt    = 1.0d-9
+   n%dtmin = 1.0d-3
+   n%dtmax = 0.2d0
+   call n%validate(errors)
+   @assertTrue(errors%has_errors())
+   found_cross_field = .false.
+   do i = 1, errors%count()
+      if (errors%items(i)%code == ERR_VALIDATION_CROSS_FIELD) then
+         found_cross_field = .true.
+         exit
+      end if
+   end do
+   @assertTrue(found_cross_field)
+end subroutine
+
+@test
+subroutine test_simulation_numerical_dtmin_above_dtmax()
+   use funit
+   use error_mod
+   use simulation_config_mod
+   type(simulation_numerical_t) :: n
+   type(error_collection_t)     :: errors
+   integer :: i
+   logical :: found_cross_field
+   n%dt    = 0.2d0
+   n%dtmin = 0.5d0
+   n%dtmax = 0.1d0
+   call n%validate(errors)
+   @assertTrue(errors%has_errors())
+   found_cross_field = .false.
+   do i = 1, errors%count()
+      if (errors%items(i)%code == ERR_VALIDATION_CROSS_FIELD) then
+         found_cross_field = .true.
+         exit
+      end if
+   end do
+   @assertTrue(found_cross_field)
+end subroutine
