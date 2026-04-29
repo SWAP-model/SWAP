@@ -1,0 +1,10 @@
+Results: 6 passed, 0 failed
+Total execution time: 317.50s
+
+Individual test timings:
+  macropore            317.49s
+  oxygenstress          46.94s
+  salinitystress         7.43s
+  surfacewater           3.22s
+  grassgrowth            2.75s
+  hupselbrook            1.42s
