@@ -50,16 +50,18 @@ contains
       n = len(rotation)
       if (n == 0) return
 
-      allocate(config%rotation_start(n),   config%rotation_end(n),   &
-               config%rotation_file(n),    config%rotation_type(n),  &
-               config%rotation_fixed(n),   config%rotation_grass(n), &
-               config%rotation_wofost(n),                             &
+      allocate(config%rotation_start(n),       config%rotation_end(n),   &
+               config%rotation_file(n),        config%rotation_type(n),  &
+               config%rotation_swhydrlift(n),                              &
+               config%rotation_fixed(n),       config%rotation_grass(n), &
+               config%rotation_wofost(n),                                  &
                config%rotation_loaded(n))
-      config%rotation_start  = 0.0_real64
-      config%rotation_end    = 0.0_real64
-      config%rotation_file   = ""
-      config%rotation_type   = 0
-      config%rotation_loaded = .false.
+      config%rotation_start      = 0.0_real64
+      config%rotation_end        = 0.0_real64
+      config%rotation_file       = ""
+      config%rotation_type       = 0
+      config%rotation_swhydrlift = 0
+      config%rotation_loaded     = .false.
 
       do i = 1, n
          call get_value(rotation, i, item, stat=stat)
@@ -87,6 +89,9 @@ contains
          config%rotation_file(i) = fname
 
          call get_optional_int_with_default(item, 'type', config%rotation_type(i), 0, 'crop.rotation.type', errors)
+
+         call get_optional_int_with_default(item, 'swhydrlift', &
+              config%rotation_swhydrlift(i), 0, 'crop.rotation.swhydrlift', errors)
 
          ! If file= is specified and base_path is available, follow the
          ! reference and dispatch to the matching crop reader.

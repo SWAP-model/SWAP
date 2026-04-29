@@ -20,6 +20,7 @@ module crop_config_mod
       real(real64),     allocatable :: rotation_end(:)
       character(len=256), allocatable :: rotation_file(:)
       integer,          allocatable :: rotation_type(:)
+      integer,          allocatable :: rotation_swhydrlift(:)   ! 0 or 1, per entry
 
       !> Per-entry sub-configs, populated when file= reference is followed.
       !! rotation_fixed(i) is meaningful when rotation_type(i) == 1.
@@ -77,6 +78,10 @@ contains
             call errors%append(ERR_VALIDATION_CROSS_FIELD, &
                                "crop rotation entry: start must be before end", &
                                "crop.rotation")
+         end if
+         if (allocated(self%rotation_swhydrlift)) then
+            call check_int_enum(self%rotation_swhydrlift(i), [0, 1], &
+                                "crop.rotation.swhydrlift", errors)
          end if
       end do
 

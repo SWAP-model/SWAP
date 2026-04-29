@@ -63,6 +63,52 @@ subroutine test_crop_bad_type_fails()
 end subroutine
 
 @test
+subroutine test_crop_rotation_swhydrlift_default_zero()
+   use funit
+   use error_mod
+   use crop_config_mod
+   type(crop_config_t)      :: c
+   type(error_collection_t) :: errors
+   c%swcrop = 1
+   allocate(c%rotation_start(2))
+   allocate(c%rotation_end(2))
+   allocate(c%rotation_file(2))
+   allocate(c%rotation_type(2))
+   allocate(c%rotation_swhydrlift(2))
+   c%rotation_start(1) = 0.0d0;   c%rotation_end(1) = 365.0d0
+   c%rotation_start(2) = 366.0d0; c%rotation_end(2) = 730.0d0
+   c%rotation_file(1)  = "a.crp"; c%rotation_file(2) = "b.crp"
+   c%rotation_type(1)  = 1;       c%rotation_type(2) = 1
+   c%rotation_swhydrlift = 0
+   call c%validate(errors)
+   @assertFalse(errors%has_errors())
+   @assertEqual(0, c%rotation_swhydrlift(1))
+   @assertEqual(0, c%rotation_swhydrlift(2))
+end subroutine
+
+@test
+subroutine test_crop_rotation_swhydrlift_invalid_enum()
+   use funit
+   use error_mod
+   use crop_config_mod
+   type(crop_config_t)      :: c
+   type(error_collection_t) :: errors
+   c%swcrop = 1
+   allocate(c%rotation_start(1))
+   allocate(c%rotation_end(1))
+   allocate(c%rotation_file(1))
+   allocate(c%rotation_type(1))
+   allocate(c%rotation_swhydrlift(1))
+   c%rotation_start(1) = 0.0d0
+   c%rotation_end(1)   = 365.0d0
+   c%rotation_file(1)  = "x.crp"
+   c%rotation_type(1)  = 1
+   c%rotation_swhydrlift(1) = 9
+   call c%validate(errors)
+   @assertTrue(errors%has_errors())
+end subroutine
+
+@test
 subroutine test_crop_inverted_dates_fails()
    use funit
    use error_mod
