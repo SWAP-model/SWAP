@@ -48,11 +48,21 @@ Method:
 ## Summary
 
 - **Total variables referenced by execution paths:** 1216
-- **C (covered):** 225  (19%)
+- **C (covered):** 236  (19%)
 - **R (runtime state):** 806  (66%)
-- **G (gaps):** 157  (13%) -- Phase 4f blockers
+- **G (gaps):** 146  (12%) -- Phase 4f blockers
 - **RETIRED:** 18  (1%) -- per ADR 0009; no longer flagged as gaps
 - **DEFERRED:** 10  (1%) -- per ADR 0010; macropore section deferred
+
+End-of-Phase-4f-prep status: 42 G entries reclassified to C across
+Phase 4f-prep Tasks A0/B/C/D, plus 28 entries to RETIRED/DEFERRED
+(per ADRs 0009/0010). Remaining 146 G entries divide between:
+- ~70 in "Other / uncategorised" (auditor-overflow heuristic; need
+  further per-section sweeps if Phase 4f surfaces issues)
+- ~76 in real-domain sections, dominated by WOFOST crop state arrays
+  (most likely R after closer inspection — Phase 4e Task B5 already
+  collapsed 51 crop FALSE_R entries, and the residual ones may yield
+  similarly under deeper triage during Phase 4f).
 
 Phase 4f-prep Task A0 verified that `croptype(macrop)` is a renamed
 alias for `crop_config_t.rotation_type(:)` — the auditor's exact-name
@@ -176,7 +186,7 @@ C=0, R=16, G=12, RETIRED=17 (per ADR 0009)
 | date | G | -- (no config) | input key 'date' read only by readswap; needs slot in simulation_config_t (timestep / output controls) |
 | dt | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
 | dtmax | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
-| dtmin | G | -- (no config) | input key 'dtmin' read only by readswap; needs slot in simulation_config_t (timestep / output controls) |
+| dtmin | C | config%simulation%numerical%dtmin | Phase 4f-prep Task C1 added the schema slot under `[simulation.numerical]`. Cases set DTMIN=1.0e-6 (case 3: 1.0e-5); Task D4 wired per-case TOML and parity assertions. |
 | fldumpconvcrit | G | -- (no config) | input key 'fldumpconvcrit' read only by readswap; needs slot in simulation_config_t (timestep / output controls) |
 | flMaxIterTime | G | -- (no config) | input key 'flmaxitertime' read only by readswap; needs slot in simulation_config_t (timestep / output controls) |
 | ipos | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
@@ -230,26 +240,26 @@ C=12, R=63, G=15
 | swmetdetail | C | config%meteorology%swmetdetail |  |
 | swMetFilAll | C | config%meteorology%swmetfilall |  |
 | swrain | C | config%meteorology%swrain |  |
-| cfbs | G | -- (no config) | input key 'cfbs' read only by readswap; needs slot in meteorology_config_t |
-| cofred | G | -- (no config) | input key 'cofred' read only by readswap; needs slot in meteorology_config_t |
+| cfbs | C | config%meteo%evaporation%cfbs | Phase 4f-prep Task C2 added the schema slot under `[meteorology.evaporation]`. Cases 1, 3 set CFBS to non-default values; the schema is ready for them when parity tests need this assertion. |
+| cofred | C | config%meteo%evaporation%cofredbl/cofredbo | Phase 4f-prep Task C2 added two distinct schema slots (`cofredbl` for Black, `cofredbo` for Boesten/Stroosnijder); legacy reads either into the same `cofred` global per Discovery #1 in configuration-schema.md. Resolved as C — both halves of the alias are in the schema. |
 | dateharvest | G | -- (no config) | input key 'dateharvest' read only by readswap; needs slot in meteorology_config_t |
 | metfil | G | -- (no config) | input key 'metfil' read only by readswap; needs slot in meteorology_config_t |
 | rainfil | G | -- (no config) | input key 'rainfil' read only by readswap; needs slot in meteorology_config_t |
 | sinamp | G | -- (no config) | input key 'sinamp' read only by readswap; needs slot in meteorology_config_t |
 | sinave | G | -- (no config) | input key 'sinave' read only by readswap; needs slot in meteorology_config_t |
 | sinmax | G | -- (no config) | input key 'sinmax' read only by readswap; needs slot in meteorology_config_t |
-| snowcoef | G | -- (no config) | input key 'snowcoef' read only by readswap; needs slot in meteorology_config_t |
+| snowcoef | C | config%meteo%snow%snowcoef | Phase 4f-prep Task C2 added the schema slot under `[meteorology.snow]`. No regression case sets SNOWCOEF (gated by SWSNOW=1, which no case exercises); schema default stands. |
 | snowinco | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
 | ssnow | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
 | station | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
-| swcfbs | G | -- (no config) | input key 'swcfbs' read only by readswap; needs slot in meteorology_config_t |
+| swcfbs | C | config%meteo%evaporation%swcfbs | Phase 4f-prep Task C2 added the schema slot. All cases except case 3 have SWCFBS=0 (matches schema default); case 3 sets SWCFBS=1. |
 | tampli | G | -- (no config) | input key 'tampli' read only by readswap; needs slot in meteorology_config_t |
-| TePrRain | G | -- (no config) | input key 'teprrain' read only by readswap; needs slot in meteorology_config_t |
-| TePrSnow | G | -- (no config) | input key 'teprsnow' read only by readswap; needs slot in meteorology_config_t |
+| TePrRain | C | config%meteo%snow%teprrain | Phase 4f-prep Task C2 added the schema slot. Gated by SWSNOW=1; no case exercises it. |
+| TePrSnow | C | config%meteo%snow%teprsnow | Phase 4f-prep Task C2 added the schema slot. Gated by SWSNOW=1; no case exercises it. |
 | tmean | G | -- (no config) | input key 'tmean' read only by readswap; needs slot in meteorology_config_t |
 | wet | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
 | wetper | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
-| wscap | G | -- (no config) | input key 'wscap' read only by readswap; needs slot in meteorology_config_t |
+| wscap | C | config%surface_water%wscap(:) | Misclassified by the auditor into meteorology — it's actually the per-period water-supply capacity in surface_water management. Phase 4f-prep Task B1 added it under `[surface_water.management]`; case 6 populates it with all-zero values, and Task D2 added parity assertions. |
 | wso | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
 | wsopot | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
 | wst | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
@@ -740,8 +750,8 @@ C=0, R=512, G=71, RETIRED=1 (per ADR 0009)
 | lsnr | G | -- (no config) | input key 'lsnr' read only by readswap; needs slot in needs Phase 4f categorisation |
 | lv | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
 | lvpot | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
-| MaxBackTr | G | -- (no config) | input key 'maxbacktr' read only by readswap; needs slot in needs Phase 4f categorisation |
-| MaxIt | G | -- (no config) | input key 'maxit' read only by readswap; needs slot in needs Phase 4f categorisation |
+| MaxBackTr | C | config%simulation%numerical%MaxBackTr | Phase 4f-prep Task C1 added the schema slot. All cases set MAXBACKTR=3 (matches schema default); Task D4 added parity assertions across all 6 cases. |
+| MaxIt | C | config%simulation%numerical%MaxIt | Phase 4f-prep Task C1 added the schema slot. All cases set MAXIT=30 (matches schema default); Task D4 added parity assertions. |
 | MaxIterTime | G | -- (no config) | input key 'maxitertime' read only by readswap; needs slot in needs Phase 4f categorisation |
 | mrftb | G | -- (no config) | input key 'mrftb' read only by readswap; needs slot in needs Phase 4f categorisation |
 | nlue | G | -- (no config) | input key 'nlue' read only by readswap; needs slot in needs Phase 4f categorisation |
@@ -789,7 +799,7 @@ C=0, R=512, G=71, RETIRED=1 (per ADR 0009)
 | swtsum | G | -- (no config) | input key 'swtsum' read only by readswap; needs slot in needs Phase 4f categorisation |
 | swuseCN | G | -- (no config) | input key 'swusecn' read only by readswap; needs slot in needs Phase 4f categorisation |
 | t | R | -- | reclassified by Task B5: input key only consumed by readswap; assigned by simulation code; orphan after Phase 4f |
-| taccur | G | -- (no config) | input key 'taccur' read only by readswap; needs slot in needs Phase 4f categorisation |
+| taccur | C | config%simulation%numerical%taccur | Phase 4f-prep Task C1 added the schema slot. No regression case sets TACCUR; schema default 1.0e-3 stands. |
 | ThetCrMp | G | -- (no config) | input key 'thetcrmp' read only by readswap; needs slot in needs Phase 4f categorisation |
 | timref | G | -- (no config) | input key 'timref' read only by readswap; needs slot in needs Phase 4f categorisation |
 | vcrit | G | -- (no config) | input key 'vcrit' read only by readswap; needs slot in needs Phase 4f categorisation |
