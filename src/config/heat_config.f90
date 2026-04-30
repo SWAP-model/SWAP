@@ -25,6 +25,7 @@ module heat_config_mod
 
       ! Soil-texture per layer (used by SWCALT=2 numerical method).
       real(real64), allocatable :: psand(:)       !! Sand fraction per layer (0..1)
+      real(real64), allocatable :: psilt(:)       !! Silt fraction per layer (0..1)
       real(real64), allocatable :: pclay(:)       !! Clay fraction per layer (0..1)
       real(real64), allocatable :: porg(:)        !! Organic-matter fraction per layer (0..1)
 
@@ -90,24 +91,26 @@ contains
       call check_real_range(self%tfrostend, -10.0_real64, 5.0_real64, &
                             'heat.tfrostend', errors)
 
-      ! Per-layer texture tables: if any one is allocated, all three must
+      ! Per-layer texture tables: if any one is allocated, all four must
       ! match in length. Ranges per legacy rdfdor: 0..1 each.
-      if (allocated(self%psand) .or. allocated(self%pclay) .or. &
-          allocated(self%porg)) then
+      if (allocated(self%psand) .or. allocated(self%psilt) .or. &
+          allocated(self%pclay) .or. allocated(self%porg)) then
          if (.not. allocated(self%psand) .or. &
+             .not. allocated(self%psilt) .or. &
              .not. allocated(self%pclay) .or. &
              .not. allocated(self%porg)) then
             call errors%append(ERR_VALIDATION_OUT_OF_RANGE, &
-               "psand/pclay/porg must all be set together", 'heat')
+               "psand/psilt/pclay/porg must all be set together", 'heat')
          else
             nsand = size(self%psand)
             nclay = size(self%pclay)
             norg  = size(self%porg)
-            if (nsand /= nclay .or. nsand /= norg) then
+            if (nsand /= size(self%psilt) .or. nsand /= nclay .or. nsand /= norg) then
                call errors%append(ERR_VALIDATION_OUT_OF_RANGE, &
-                  "psand/pclay/porg length mismatch", 'heat')
+                  "psand/psilt/pclay/porg length mismatch", 'heat')
             end if
             call check_fraction_array(self%psand, 'heat.psand', errors)
+            call check_fraction_array(self%psilt, 'heat.psilt', errors)
             call check_fraction_array(self%pclay, 'heat.pclay', errors)
             call check_fraction_array(self%porg,  'heat.porg',  errors)
          end if

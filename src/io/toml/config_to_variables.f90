@@ -527,6 +527,11 @@ contains
             psand(i) = config%heat%psand(i)
          end do
       end if
+      if (allocated(config%heat%psilt)) then
+         do i = 1, size(config%heat%psilt)
+            psilt(i) = config%heat%psilt(i)
+         end do
+      end if
       if (allocated(config%heat%pclay)) then
          do i = 1, size(config%heat%pclay)
             pclay(i) = config%heat%pclay(i)
