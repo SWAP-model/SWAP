@@ -1,5 +1,7 @@
 !> Bottom-boundary config — populated from `[bottom_boundary]` TOML section.
 !! Phase 4d Task 3: validators wired per `swbotb` branch (1..8).
+!! Phase 4f cleanup (Tasks 6-8): replaces inline table slots with *_file paths
+!! and sub-mode switches.
 module bottom_boundary_config_mod
    use iso_fortran_env, only: real64
    use error_mod, only: error_collection_t, ERR_VALIDATION_OUT_OF_RANGE
@@ -12,16 +14,25 @@ module bottom_boundary_config_mod
    type :: bottom_boundary_config_t
       integer :: swbotb = 0
 
-      ! Optional path to external file for SWBOTB=1 reference (legacy bbcfil).
-      character(len=:), allocatable :: bbcfil
+      ! Sub-mode switches (legacy SW2/SW3/SW4/SWQHBOT) — see core/variables.f90.
+      ! sw2: 1=sine, 2=table; sw3: 1=sine, 2=table; sw4: 0=no extra flux,
+      ! 1=include extra flux; swqhbot: 1=exponential, 2=tabular.
+      ! Validators key on (swbotb, sw_x) combinations.
+      integer :: sw2     = 1
+      integer :: sw3     = 1
+      integer :: sw4     = 0
+      integer :: swqhbot = 1
 
-      ! SWBOTB=1 inline alternative
+      ! Phase 4f cleanup: per-sub-mode CSV companion file paths.
+      character(len=:), allocatable :: gwl_file     ! SWBOTB=1
+      character(len=:), allocatable :: qbot2_file   ! SWBOTB=2 + sw2=2
+      character(len=:), allocatable :: haquif_file  ! SWBOTB=3 + sw3=2
+      character(len=:), allocatable :: qbot4_file   ! SWBOTB=3 + sw4=1
+      character(len=:), allocatable :: qhbot_file   ! SWBOTB=4 + swqhbot=2
+      character(len=:), allocatable :: hbot5_file   ! SWBOTB=5
+
+      ! SWBOTB=1 inline alternative (kept for backward compat with non-BBC paths)
       real(real64), allocatable :: swc_table(:,:)
-      ! Phase 4f cleanup: SWBOTB=1 date-keyed groundwater-level table.
-      ! Two columns (date as days-since-1900, gwlevel in cm). Maps to legacy
-      ! gwltab(:) populated in readswap.f90 and consumed by afgen() in
-      ! soilhydraulics.f90:1005. Mirrors haquif_table for SWBOTB=3 sw3=2.
-      real(real64), allocatable :: gwl_table(:,:)
 
       ! SWBOTB=2 inline
       real(real64), allocatable :: qbot_table(:,:)
@@ -40,10 +51,6 @@ module bottom_boundary_config_mod
       real(real64) :: aqper   = 0.0_real64
       real(real64) :: aqtmax  = 0.0_real64
       real(real64), allocatable :: cofqha_table(:,:)
-      ! Phase 4f Task B4: SWBOTB=3 sw3=2 date-keyed aquifer-head table.
-      ! Two columns (date as days-since-1900, head in cm). Maps to legacy
-      ! haqtab(:) populated in readswap.f90 lines 1374-1378.
-      real(real64), allocatable :: haquif_table(:,:)
 
       ! SWBOTB=5
       real(real64) :: hbot    = 0.0_real64
@@ -55,87 +62,87 @@ module bottom_boundary_config_mod
 
 contains
 
-   !> Local helper: verify allocatable 2D table has expected ncols and >=1 row.
-   !! Skips silently when unallocated (caller decides whether absence is an error).
-   subroutine check_table_2d(table, expected_cols, label, errors)
-      real(real64), allocatable, intent(in)    :: table(:,:)
-      integer,                   intent(in)    :: expected_cols
-      character(len=*),          intent(in)    :: label
-      type(error_collection_t),  intent(inout) :: errors
-      character(len=128) :: msg
-      integer :: nrows, ncols
-      if (.not. allocated(table)) return
-      nrows = size(table, 1)
-      ncols = size(table, 2)
-      if (ncols /= expected_cols) then
-         write(msg, '("ncols=",I0," expected ",I0)') ncols, expected_cols
-         call errors%append(ERR_VALIDATION_OUT_OF_RANGE, trim(msg), label)
-      end if
-      if (nrows < 1) then
-         call errors%append(ERR_VALIDATION_OUT_OF_RANGE, "nrows<1", label)
-      end if
-   end subroutine check_table_2d
-
    subroutine bottom_boundary_config_validate(self, errors)
+      use error_mod, only: ERR_VALIDATION_REQUIRED
       class(bottom_boundary_config_t), intent(in)    :: self
       type(error_collection_t),         intent(inout) :: errors
-      logical :: have_file, have_table
       integer :: i
 
-      ! Sentinel: swbotb=0 means the [bottom_boundary] section was absent in the
-      ! TOML (reader leaves config at defaults). Skip validation so existing case
-      ! TOMLs without the section still load clean — Phase 4d Tasks 17-19 will
-      ! add [bottom_boundary] sections to each per-case TOML, after which
-      ! swbotb will always be in [1..8] and full validation runs.
       if (self%swbotb == 0) return
 
       call check_int_enum(self%swbotb, [(i, i=1, 8)], 'bottom_boundary.swbotb', errors)
+      call check_int_enum(self%sw2,     [1, 2], 'bottom_boundary.sw2',     errors)
+      call check_int_enum(self%sw3,     [1, 2], 'bottom_boundary.sw3',     errors)
+      call check_int_enum(self%sw4,     [0, 1], 'bottom_boundary.sw4',     errors)
+      call check_int_enum(self%swqhbot, [1, 2], 'bottom_boundary.swqhbot', errors)
 
       select case (self%swbotb)
       case (1)
-         have_file  = allocated(self%bbcfil)
-         if (have_file) have_file = len_trim(self%bbcfil) > 0
-         have_table = allocated(self%swc_table) .or. allocated(self%gwl_table)
-         if (.not. have_file .and. .not. have_table) then
-            call errors%append(ERR_VALIDATION_OUT_OF_RANGE, &
-               "swbotb=1 requires bbcfil, swc_table, or gwl_table", 'bottom_boundary')
+         if (.not. has_file(self%gwl_file)) then
+            call errors%append(ERR_VALIDATION_REQUIRED, &
+               "bottom_boundary.gwl_file required when swbotb=1", &
+               'bottom_boundary')
          end if
-         call check_table_2d(self%swc_table, 2, 'bottom_boundary.swc_table', errors)
-         call check_table_2d(self%gwl_table, 2, 'bottom_boundary.gwl_table', errors)
       case (2)
-         if (.not. allocated(self%qbot_table)) then
-            call errors%append(ERR_VALIDATION_OUT_OF_RANGE, &
-               "swbotb=2 requires qbot_table", 'bottom_boundary')
+         if (self%sw2 == 2 .and. .not. has_file(self%qbot2_file)) then
+            call errors%append(ERR_VALIDATION_REQUIRED, &
+               "bottom_boundary.qbot2_file required when swbotb=2 and sw2=2", &
+               'bottom_boundary')
          end if
-         call check_table_2d(self%qbot_table, 2, 'bottom_boundary.qbot_table', errors)
       case (3)
          call check_real_range(self%shape, 0.0_real64, 2.0_real64, &
                                'bottom_boundary.shape', errors)
-         call check_real_range(self%hdrain, -1.0e4_real64,  0.0_real64, &
+         call check_real_range(self%hdrain, -1.0e4_real64, 0.0_real64, &
                                'bottom_boundary.hdrain', errors)
-         call check_real_range(self%rimlay,  0.0_real64,    1.0e5_real64, &
+         call check_real_range(self%rimlay, 0.0_real64, 1.0e5_real64, &
                                'bottom_boundary.rimlay', errors)
-         call check_real_range(self%aqave,  -1.0e4_real64,  1.0e3_real64, &
+         call check_real_range(self%aqave, -1.0e4_real64, 1.0e3_real64, &
                                'bottom_boundary.aqave', errors)
-         call check_real_range(self%aqamp,   0.0_real64,    1.0e3_real64, &
+         call check_real_range(self%aqamp, 0.0_real64, 1.0e3_real64, &
                                'bottom_boundary.aqamp', errors)
-         call check_real_range(self%aqper,   0.0_real64,    366.0_real64, &
+         call check_real_range(self%aqper, 0.0_real64, 366.0_real64, &
                                'bottom_boundary.aqper', errors)
-         call check_real_range(self%aqtmax,  0.0_real64,    366.0_real64, &
+         call check_real_range(self%aqtmax, 0.0_real64, 366.0_real64, &
                                'bottom_boundary.aqtmax', errors)
-         call check_table_2d(self%cofqha_table, 2, 'bottom_boundary.cofqha_table', errors)
-         call check_table_2d(self%haquif_table, 2, 'bottom_boundary.haquif_table', errors)
          call check_int_enum(self%swbotb3impl, [0, 1], &
                              'bottom_boundary.swbotb3impl', errors)
+         if (self%sw3 == 2 .and. .not. has_file(self%haquif_file)) then
+            call errors%append(ERR_VALIDATION_REQUIRED, &
+               "bottom_boundary.haquif_file required when swbotb=3 and sw3=2", &
+               'bottom_boundary')
+         end if
+         if (self%sw4 == 1 .and. .not. has_file(self%qbot4_file)) then
+            call errors%append(ERR_VALIDATION_REQUIRED, &
+               "bottom_boundary.qbot4_file required when swbotb=3 and sw4=1", &
+               'bottom_boundary')
+         end if
+      case (4)
+         if (self%swqhbot == 2 .and. .not. has_file(self%qhbot_file)) then
+            call errors%append(ERR_VALIDATION_REQUIRED, &
+               "bottom_boundary.qhbot_file required when swbotb=4 and swqhbot=2", &
+               'bottom_boundary')
+         end if
       case (5)
-         call check_real_range(self%hbot,   -1.0e10_real64, 1.0e3_real64, &
+         call check_real_range(self%hbot, -1.0e10_real64, 1.0e3_real64, &
                                'bottom_boundary.hbot', errors)
-         call check_real_range(self%rhobot, -1.0e4_real64,  1.0e4_real64, &
+         call check_real_range(self%rhobot, -1.0e4_real64, 1.0e4_real64, &
                                'bottom_boundary.rhobot', errors)
-      case (4, 6, 7, 8)
-         ! No additional scalar params required.
+         if (.not. has_file(self%hbot5_file)) then
+            call errors%append(ERR_VALIDATION_REQUIRED, &
+               "bottom_boundary.hbot5_file required when swbotb=5", &
+               'bottom_boundary')
+         end if
+      case (6, 7, 8)
+         ! No required tables.
       end select
    end subroutine bottom_boundary_config_validate
+
+   pure function has_file(slot) result(yes)
+      character(len=:), allocatable, intent(in) :: slot
+      logical :: yes
+      yes = allocated(slot)
+      if (yes) yes = len_trim(slot) > 0
+   end function has_file
 
    subroutine bottom_boundary_config_finalize(self, errors)
       class(bottom_boundary_config_t), intent(inout) :: self

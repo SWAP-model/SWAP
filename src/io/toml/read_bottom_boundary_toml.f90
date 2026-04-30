@@ -11,13 +11,12 @@
 !! absent the reader returns silently and leaves `config` at defaults.
 module read_bottom_boundary_toml_mod
    use iso_fortran_env, only: real64
-   use tomlf, only: toml_table, toml_array, get_value, len, toml_datetime
+   use tomlf, only: toml_table, toml_array, get_value, len
    use bottom_boundary_config_mod, only: bottom_boundary_config_t
    use toml_field_helpers_mod, only: get_table,                         &
                                      get_optional_int_with_default,     &
                                      get_optional_real_with_default,    &
-                                     get_optional_string_with_default,  &
-                                     parse_date_to_days1900
+                                     get_optional_string_with_default
    use error_mod, only: error_collection_t, ERR_PARSE_TYPE_MISMATCH
    implicit none
    private
@@ -40,10 +39,6 @@ contains
       call get_optional_int_with_default(sec, 'swbotb', config%swbotb, 0, &
                                          'bottom_boundary.swbotb', errors)
 
-      ! SWBOTB=1 external file reference.
-      call get_optional_string_with_default(sec, 'bbcfil', config%bbcfil, '', &
-                                            'bottom_boundary.bbcfil', errors)
-
       ! SWBOTB=3 (Cauchy) scalars.
       ! Phase 4d Task 20-prep: shape is a real (legacy case 5 SHAPE=0.79).
       call get_optional_real_with_default(sec, 'shape',  config%shape,  0.0_real64, &
@@ -64,97 +59,44 @@ contains
       call get_optional_int_with_default(sec, 'swbotb3impl', config%swbotb3impl, 0, &
                                          'bottom_boundary.swbotb3impl', errors)
 
+      ! Phase 4f cleanup: sub-mode switches.
+      call get_optional_int_with_default(sec, 'sw2',     config%sw2,     1, &
+                                         'bottom_boundary.sw2',     errors)
+      call get_optional_int_with_default(sec, 'sw3',     config%sw3,     1, &
+                                         'bottom_boundary.sw3',     errors)
+      call get_optional_int_with_default(sec, 'sw4',     config%sw4,     0, &
+                                         'bottom_boundary.sw4',     errors)
+      call get_optional_int_with_default(sec, 'swqhbot', config%swqhbot, 1, &
+                                         'bottom_boundary.swqhbot', errors)
+
       ! SWBOTB=5 scalars.
       call get_optional_real_with_default(sec, 'hbot',   config%hbot,   0.0_real64, &
                                           'bottom_boundary.hbot',   errors)
       call get_optional_real_with_default(sec, 'rhobot', config%rhobot, 0.0_real64, &
                                           'bottom_boundary.rhobot', errors)
 
-      ! Tables.
+      ! Tables (inline TOML 2D arrays — kept for swc_table/qbot_table/cofqha_table).
       call read_table_2d(sec, 'swc_table',    config%swc_table,    2, &
                          'bottom_boundary.swc_table',    errors)
       call read_table_2d(sec, 'qbot_table',   config%qbot_table,   2, &
                          'bottom_boundary.qbot_table',   errors)
       call read_table_2d(sec, 'cofqha_table', config%cofqha_table, 2, &
                          'bottom_boundary.cofqha_table', errors)
-      ! Phase 4f Task B4: SWBOTB=3 sw3=2 aquifer-head date table.
-      ! Column 1 is a TOML date literal (decoded to days-since-1900);
-      ! column 2 is the aquifer head in cm.
-      call read_date_real_table(sec, 'haquif_table', config%haquif_table, &
-                                'bottom_boundary.haquif_table', errors)
-      ! Phase 4f cleanup: SWBOTB=1 date-keyed groundwater-level table.
-      ! Column 1 is a TOML date literal (decoded to days-since-1900);
-      ! column 2 is the groundwater level in cm. Mirrors haquif_table.
-      call read_date_real_table(sec, 'gwl_table', config%gwl_table, &
-                                'bottom_boundary.gwl_table', errors)
+
+      ! Phase 4f cleanup: per-sub-mode CSV companion file paths.
+      call get_optional_string_with_default(sec, 'gwl_file',    config%gwl_file,    '', &
+                                            'bottom_boundary.gwl_file',    errors)
+      call get_optional_string_with_default(sec, 'qbot2_file',  config%qbot2_file,  '', &
+                                            'bottom_boundary.qbot2_file',  errors)
+      call get_optional_string_with_default(sec, 'haquif_file', config%haquif_file, '', &
+                                            'bottom_boundary.haquif_file', errors)
+      call get_optional_string_with_default(sec, 'qbot4_file',  config%qbot4_file,  '', &
+                                            'bottom_boundary.qbot4_file',  errors)
+      call get_optional_string_with_default(sec, 'qhbot_file',  config%qhbot_file,  '', &
+                                            'bottom_boundary.qhbot_file',  errors)
+      call get_optional_string_with_default(sec, 'hbot5_file',  config%hbot5_file,  '', &
+                                            'bottom_boundary.hbot5_file',  errors)
    end subroutine read_bottom_boundary_toml
-
-   !> Decode a TOML array-of-arrays where each inner row is [date, real].
-   !! Column 1 is a TOML date literal converted to days-since-1900;
-   !! column 2 is a real(real64). Mirrors read_table_2d's error semantics.
-   subroutine read_date_real_table(sec, key, table, context, errors)
-      type(toml_table), pointer, intent(in)    :: sec
-      character(len=*),          intent(in)    :: key
-      real(real64), allocatable, intent(out)   :: table(:,:)
-      character(len=*),          intent(in)    :: context
-      type(error_collection_t),  intent(inout) :: errors
-
-      type(toml_array), pointer :: outer, inner
-      integer :: nrows, i, stat, n_inner
-      real(real64) :: val
-      type(toml_datetime) :: dtv
-
-      if (.not. associated(sec)) return
-
-      outer => null()
-      call get_value(sec, key, outer, requested=.false., stat=stat)
-      if (.not. associated(outer)) return
-
-      nrows = len(outer)
-      if (nrows == 0) then
-         allocate(table(0, 2))
-         return
-      end if
-
-      allocate(table(nrows, 2))
-      table = 0.0_real64
-
-      do i = 1, nrows
-         inner => null()
-         call get_value(outer, i, inner, stat=stat)
-         if (stat /= 0 .or. .not. associated(inner)) then
-            call errors%append(ERR_PARSE_TYPE_MISMATCH, &
-                               "row not an array", context)
-            if (allocated(table)) deallocate(table)
-            return
-         end if
-         n_inner = len(inner)
-         if (n_inner /= 2) then
-            call errors%append(ERR_PARSE_TYPE_MISMATCH, &
-                               "row width mismatch (expected 2)", context)
-            if (allocated(table)) deallocate(table)
-            return
-         end if
-         ! Column 1: TOML date.
-         call get_value(inner, 1, dtv, stat=stat)
-         if (stat /= 0) then
-            call errors%append(ERR_PARSE_TYPE_MISMATCH, &
-                               "expected date in col 1", context)
-            if (allocated(table)) deallocate(table)
-            return
-         end if
-         table(i, 1) = parse_date_to_days1900(dtv)
-         ! Column 2: real.
-         call get_value(inner, 2, val, stat=stat)
-         if (stat /= 0) then
-            call errors%append(ERR_PARSE_TYPE_MISMATCH, &
-                               "non-real cell in col 2", context)
-            if (allocated(table)) deallocate(table)
-            return
-         end if
-         table(i, 2) = val
-      end do
-   end subroutine read_date_real_table
 
    !> Decode a TOML array-of-arrays at sec[key] into a (nrows, ncols)
    !! real(real64) allocatable. Absent key leaves table unallocated.

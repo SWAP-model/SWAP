@@ -601,56 +601,159 @@ contains
       swbotb = config%bottom_boundary%swbotb
       select case (swbotb)
       case (1)
-         ! Phase 4f cleanup: SWBOTB=1 prescribes the groundwater level via a
-         ! (date, gwlevel) table inlined in [bottom_boundary].gwl_table.
-         ! Mirrors the SWBOTB=3 haquif_table pattern below. Populates the
-         ! legacy interleaved gwltab(2*i-1)=date, gwltab(2*i)=gwlevel packing
-         ! consumed by afgen() in soilhydraulics.f90:1005.
-         if (allocated(config%bottom_boundary%gwl_table)) then
-            block
-               integer :: nrows_gwl, k_gwl
-               nrows_gwl = size(config%bottom_boundary%gwl_table, 1)
-               do k_gwl = 1, nrows_gwl
-                  gwltab(k_gwl*2 - 1) = config%bottom_boundary%gwl_table(k_gwl, 1)
-                  gwltab(k_gwl*2)     = config%bottom_boundary%gwl_table(k_gwl, 2)
+         block
+            use csv_reader_mod, only: read_csv_table
+            use error_mod, only: error_collection_t
+            real(8), allocatable :: csv_table(:,:)
+            type(error_collection_t)  :: csv_errs
+            integer :: k, nrows
+            character(len=4) :: hdr(2)
+            hdr(1) = 'date'
+            hdr(2) = 'gwl '
+            call read_csv_table( &
+               trim(pathwork)//trim(config%bottom_boundary%gwl_file), &
+               hdr, csv_table, csv_errs)
+            call csv_errs%abort_if_fatal()
+            if (allocated(csv_table)) then
+               nrows = size(csv_table, 1)
+               do k = 1, nrows
+                  gwltab(k*2 - 1) = csv_table(k, 1)
+                  gwltab(k*2)     = csv_table(k, 2)
                end do
+            end if
+         end block
+      case (2)
+         sw2 = config%bottom_boundary%sw2
+         if (config%bottom_boundary%sw2 == 2) then
+            block
+               use csv_reader_mod, only: read_csv_table
+               use error_mod, only: error_collection_t
+               real(8), allocatable :: csv_table(:,:)
+               type(error_collection_t)  :: csv_errs
+               integer :: k, nrows
+               character(len=4) :: hdr(2)
+               hdr(1) = 'date'
+               hdr(2) = 'qbot'
+               call read_csv_table( &
+                  trim(pathwork)//trim(config%bottom_boundary%qbot2_file), &
+                  hdr, csv_table, csv_errs)
+               call csv_errs%abort_if_fatal()
+               if (allocated(csv_table)) then
+                  nrows = size(csv_table, 1)
+                  do k = 1, nrows
+                     qbotab(k*2 - 1) = csv_table(k, 1)
+                     qbotab(k*2)     = csv_table(k, 2)
+                  end do
+               end if
             end block
          end if
       case (3)
-         shape  = config%bottom_boundary%shape
-         hdrain = config%bottom_boundary%hdrain
-         rimlay = config%bottom_boundary%rimlay
-         aqave  = config%bottom_boundary%aqave
-         aqamp  = config%bottom_boundary%aqamp
-         aqper  = config%bottom_boundary%aqper
-         aqtmax = config%bottom_boundary%aqtmax
-         ! HACK Phase 4f-extend: SWBOTB=3 implicit/explicit flux selector
+         shape       = config%bottom_boundary%shape
+         hdrain      = config%bottom_boundary%hdrain
+         rimlay      = config%bottom_boundary%rimlay
+         aqave       = config%bottom_boundary%aqave
+         aqamp       = config%bottom_boundary%aqamp
+         aqper       = config%bottom_boundary%aqper
+         aqtmax      = config%bottom_boundary%aqtmax
          swbotb3impl = config%bottom_boundary%swbotb3impl
-         ! Phase 4f Task B4: SWBOTB=3 + sw3=2 (date-keyed aquifer head).
-         ! Mirrors readswap.f90:1369-1378. Selects table mode (sw3=2) when
-         ! the typed config provides a haquif_table; sinus mode (sw3=1)
-         ! otherwise. Populates the legacy interleaved haqtab(2*i-1)=date,
-         ! haqtab(2*i)=head packing consumed by afgen() in
-         ! boundary/boundbottom.f90:118.
-         if (allocated(config%bottom_boundary%haquif_table)) then
+         sw3         = config%bottom_boundary%sw3
+         sw4         = config%bottom_boundary%sw4
+         if (config%bottom_boundary%sw3 == 2) then
             block
-               integer :: nrows_haq, k_haq
-               nrows_haq = size(config%bottom_boundary%haquif_table, 1)
-               if (nrows_haq > 0) then
-                  sw3 = 2
-                  do k_haq = 1, nrows_haq
-                     haqtab(k_haq*2 - 1) = config%bottom_boundary%haquif_table(k_haq, 1)
-                     haqtab(k_haq*2)     = config%bottom_boundary%haquif_table(k_haq, 2)
+               use csv_reader_mod, only: read_csv_table
+               use error_mod, only: error_collection_t
+               real(8), allocatable :: csv_table(:,:)
+               type(error_collection_t)  :: csv_errs
+               integer :: k, nrows
+               character(len=6) :: hdr(2)
+               hdr(1) = 'date  '
+               hdr(2) = 'haquif'
+               call read_csv_table( &
+                  trim(pathwork)//trim(config%bottom_boundary%haquif_file), &
+                  hdr, csv_table, csv_errs)
+               call csv_errs%abort_if_fatal()
+               if (allocated(csv_table)) then
+                  nrows = size(csv_table, 1)
+                  do k = 1, nrows
+                     haqtab(k*2 - 1) = csv_table(k, 1)
+                     haqtab(k*2)     = csv_table(k, 2)
                   end do
-               else
-                  sw3 = 1
                end if
             end block
-         else
-            sw3 = 1
+         end if
+         if (config%bottom_boundary%sw4 == 1) then
+            block
+               use csv_reader_mod, only: read_csv_table
+               use error_mod, only: error_collection_t
+               real(8), allocatable :: csv_table(:,:)
+               type(error_collection_t)  :: csv_errs
+               integer :: k, nrows
+               character(len=4) :: hdr(2)
+               hdr(1) = 'date'
+               hdr(2) = 'qbot'
+               call read_csv_table( &
+                  trim(pathwork)//trim(config%bottom_boundary%qbot4_file), &
+                  hdr, csv_table, csv_errs)
+               call csv_errs%abort_if_fatal()
+               if (allocated(csv_table)) then
+                  nrows = size(csv_table, 1)
+                  do k = 1, nrows
+                     qbotab(k*2 - 1) = csv_table(k, 1)
+                     qbotab(k*2)     = csv_table(k, 2)
+                  end do
+               end if
+            end block
+         end if
+      case (4)
+         swqhbot = config%bottom_boundary%swqhbot
+         if (config%bottom_boundary%swqhbot == 2) then
+            block
+               use csv_reader_mod, only: read_csv_table
+               use error_mod, only: error_collection_t
+               real(8), allocatable :: csv_table(:,:)
+               type(error_collection_t)  :: csv_errs
+               integer :: k, nrows
+               character(len=4) :: hdr(2)
+               hdr(1) = 'htab'
+               hdr(2) = 'qtab'
+               call read_csv_table( &
+                  trim(pathwork)//trim(config%bottom_boundary%qhbot_file), &
+                  hdr, csv_table, csv_errs)
+               call csv_errs%abort_if_fatal()
+               ! Legacy unpack pattern from readswap.f90:1418-1419 — for the
+               ! q(h) curve, qbotab(odd) = abs(htab) and qbotab(even) = qtab.
+               if (allocated(csv_table)) then
+                  nrows = size(csv_table, 1)
+                  do k = 1, nrows
+                     qbotab(k*2 - 1) = abs(csv_table(k, 1))
+                     qbotab(k*2)     = csv_table(k, 2)
+                  end do
+               end if
+            end block
          end if
       case (5)
          hbot = config%bottom_boundary%hbot
+         block
+            use csv_reader_mod, only: read_csv_table
+            use error_mod, only: error_collection_t
+            real(8), allocatable :: csv_table(:,:)
+            type(error_collection_t)  :: csv_errs
+            integer :: k, nrows
+            character(len=4) :: hdr(2)
+            hdr(1) = 'date'
+            hdr(2) = 'hbot'
+            call read_csv_table( &
+               trim(pathwork)//trim(config%bottom_boundary%hbot5_file), &
+               hdr, csv_table, csv_errs)
+            call csv_errs%abort_if_fatal()
+            if (allocated(csv_table)) then
+               nrows = size(csv_table, 1)
+               do k = 1, nrows
+                  hbotab(k*2 - 1) = csv_table(k, 1)
+                  hbotab(k*2)     = csv_table(k, 2)
+               end do
+            end if
+         end block
       end select
 
       ! ---------------------------------------------------------------

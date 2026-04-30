@@ -28,36 +28,20 @@ subroutine test_bb_swbotb_zero_skips_validation()
 end subroutine
 
 @test
-subroutine test_bb_swbotb1_with_bbcfil_passes()
+subroutine test_bb_swbotb1_with_gwl_file_passes()
    use funit
    use error_mod
    use bottom_boundary_config_mod
    type(bottom_boundary_config_t) :: c
    type(error_collection_t) :: errors
-   c%swbotb = 1
-   c%bbcfil = "case.bbc"
+   c%swbotb   = 1
+   c%gwl_file = "case.gwl.csv"
    call c%validate(errors)
    @assertFalse(errors%has_errors())
 end subroutine
 
 @test
-subroutine test_bb_swbotb1_with_swc_table_passes()
-   use funit
-   use error_mod
-   use iso_fortran_env, only: real64
-   use bottom_boundary_config_mod
-   type(bottom_boundary_config_t) :: c
-   type(error_collection_t) :: errors
-   c%swbotb = 1
-   allocate(c%swc_table(2, 2))
-   c%swc_table(1, :) = [1.0_real64, -50.0_real64]
-   c%swc_table(2, :) = [365.0_real64, -75.0_real64]
-   call c%validate(errors)
-   @assertFalse(errors%has_errors())
-end subroutine
-
-@test
-subroutine test_bb_swbotb1_missing_both_fails()
+subroutine test_bb_swbotb1_missing_gwl_file_fails()
    use funit
    use error_mod
    use bottom_boundary_config_mod
@@ -66,51 +50,35 @@ subroutine test_bb_swbotb1_missing_both_fails()
    c%swbotb = 1
    call c%validate(errors)
    @assertTrue(errors%has_errors())
+   @assertEqual(ERR_VALIDATION_REQUIRED, errors%items(1)%code)
 end subroutine
 
 @test
-subroutine test_bb_swbotb1_both_fails()
+subroutine test_bb_swbotb2_sw2_2_with_qbot2_file_passes()
    use funit
    use error_mod
-   use iso_fortran_env, only: real64
    use bottom_boundary_config_mod
    type(bottom_boundary_config_t) :: c
    type(error_collection_t) :: errors
-   c%swbotb = 1
-   c%bbcfil = "case.bbc"
-   allocate(c%swc_table(2, 2))
-   c%swc_table(1, :) = [1.0_real64, -50.0_real64]
-   c%swc_table(2, :) = [365.0_real64, -75.0_real64]
-   call c%validate(errors)
-   @assertTrue(errors%has_errors())
-end subroutine
-
-@test
-subroutine test_bb_swbotb2_with_qbot_table_passes()
-   use funit
-   use error_mod
-   use iso_fortran_env, only: real64
-   use bottom_boundary_config_mod
-   type(bottom_boundary_config_t) :: c
-   type(error_collection_t) :: errors
-   c%swbotb = 2
-   allocate(c%qbot_table(2, 2))
-   c%qbot_table(1, :) = [1.0_real64, -0.1_real64]
-   c%qbot_table(2, :) = [365.0_real64, -0.2_real64]
+   c%swbotb     = 2
+   c%sw2        = 2
+   c%qbot2_file = "case.qbot.csv"
    call c%validate(errors)
    @assertFalse(errors%has_errors())
 end subroutine
 
 @test
-subroutine test_bb_swbotb2_missing_qbot_fails()
+subroutine test_bb_swbotb2_sw2_2_missing_qbot2_file_fails()
    use funit
    use error_mod
    use bottom_boundary_config_mod
    type(bottom_boundary_config_t) :: c
    type(error_collection_t) :: errors
    c%swbotb = 2
+   c%sw2    = 2
    call c%validate(errors)
    @assertTrue(errors%has_errors())
+   @assertEqual(ERR_VALIDATION_REQUIRED, errors%items(1)%code)
 end subroutine
 
 @test
@@ -129,6 +97,54 @@ subroutine test_bb_swbotb3_happy_path()
    c%aqamp   = 50.0_real64
    c%aqper   = 365.0_real64
    c%aqtmax  = 180.0_real64
+   c%sw3     = 1
+   c%sw4     = 0
+   call c%validate(errors)
+   @assertFalse(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_bb_swbotb3_sw3_2_requires_haquif_file()
+   use funit
+   use error_mod
+   use iso_fortran_env, only: real64
+   use bottom_boundary_config_mod
+   type(bottom_boundary_config_t) :: c
+   type(error_collection_t) :: errors
+   c%swbotb  = 3
+   c%shape   = 1.0_real64
+   c%hdrain  = -100.0_real64
+   c%rimlay  = 500.0_real64
+   c%aqave   = -200.0_real64
+   c%aqamp   = 50.0_real64
+   c%aqper   = 365.0_real64
+   c%aqtmax  = 180.0_real64
+   c%sw3     = 2
+   c%sw4     = 0
+   call c%validate(errors)
+   @assertTrue(errors%has_errors())
+   @assertEqual(ERR_VALIDATION_REQUIRED, errors%items(1)%code)
+end subroutine
+
+@test
+subroutine test_bb_swbotb3_sw3_2_with_haquif_file_passes()
+   use funit
+   use error_mod
+   use iso_fortran_env, only: real64
+   use bottom_boundary_config_mod
+   type(bottom_boundary_config_t) :: c
+   type(error_collection_t) :: errors
+   c%swbotb      = 3
+   c%shape       = 1.0_real64
+   c%hdrain      = -100.0_real64
+   c%rimlay      = 500.0_real64
+   c%aqave       = -200.0_real64
+   c%aqamp       = 50.0_real64
+   c%aqper       = 365.0_real64
+   c%aqtmax      = 180.0_real64
+   c%sw3         = 2
+   c%sw4         = 0
+   c%haquif_file = "case.haquif.csv"
    call c%validate(errors)
    @assertFalse(errors%has_errors())
 end subroutine
@@ -176,7 +192,36 @@ subroutine test_bb_swbotb4_no_params_passes()
    use bottom_boundary_config_mod
    type(bottom_boundary_config_t) :: c
    type(error_collection_t) :: errors
-   c%swbotb = 4
+   c%swbotb  = 4
+   c%swqhbot = 1
+   call c%validate(errors)
+   @assertFalse(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_bb_swbotb4_swqhbot_2_requires_qhbot_file()
+   use funit
+   use error_mod
+   use bottom_boundary_config_mod
+   type(bottom_boundary_config_t) :: c
+   type(error_collection_t) :: errors
+   c%swbotb  = 4
+   c%swqhbot = 2
+   call c%validate(errors)
+   @assertTrue(errors%has_errors())
+   @assertEqual(ERR_VALIDATION_REQUIRED, errors%items(1)%code)
+end subroutine
+
+@test
+subroutine test_bb_swbotb4_swqhbot_2_with_qhbot_file_passes()
+   use funit
+   use error_mod
+   use bottom_boundary_config_mod
+   type(bottom_boundary_config_t) :: c
+   type(error_collection_t) :: errors
+   c%swbotb    = 4
+   c%swqhbot   = 2
+   c%qhbot_file = "case.qhbot.csv"
    call c%validate(errors)
    @assertFalse(errors%has_errors())
 end subroutine
@@ -189,11 +234,28 @@ subroutine test_bb_swbotb5_happy_path()
    use bottom_boundary_config_mod
    type(bottom_boundary_config_t) :: c
    type(error_collection_t) :: errors
+   c%swbotb    = 5
+   c%hbot      = -150.0_real64
+   c%rhobot    = 1.0_real64
+   c%hbot5_file = "case.hbot.csv"
+   call c%validate(errors)
+   @assertFalse(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_bb_swbotb5_missing_hbot5_file_fails()
+   use funit
+   use error_mod
+   use iso_fortran_env, only: real64
+   use bottom_boundary_config_mod
+   type(bottom_boundary_config_t) :: c
+   type(error_collection_t) :: errors
    c%swbotb = 5
    c%hbot   = -150.0_real64
    c%rhobot = 1.0_real64
    call c%validate(errors)
-   @assertFalse(errors%has_errors())
+   @assertTrue(errors%has_errors())
+   @assertEqual(ERR_VALIDATION_REQUIRED, errors%items(1)%code)
 end subroutine
 
 @test

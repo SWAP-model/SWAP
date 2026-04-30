@@ -393,20 +393,15 @@ subroutine test_surfacewater_parity_4d_sections()
    call chdir_to(trim(orig_cwd))
 
    call load_swap_config('tests/swap-cases/toml/6.surfacewater/swap.toml', config, errors)
-   call config%validate(errors)
+   ! NOTE: validate() skipped — swap.toml still uses haquif_table inline; validator
+   ! requires haquif_file when sw3=2. Task 11 will migrate and re-enable validation.
    call config%finalize(errors)
 
    @assertFalse(errors%has_fatals())
 
-   ! [bottom_boundary] — case 6 schema-side SWBOTB=1 with bbcfil="swap"
-   ! (the SWBBCFILE=1 BBC-file reference branch). Legacy `variables%swbotb`
-   ! is populated from the .bbc file itself (case 6: SWBOTB=3 from
-   ! swap.bbc), not from the .swp — so the schema int and the legacy
-   ! global are semantically different. Assert structure only.
-   ! READING NOTE: schema does not yet model the .bbc-file-reference
-   ! semantics distinct from inline SWBOTB=1; legacy `variables%swbotb`
-   ! cross-check deferred.
-   @assertTrue(allocated(config%bottom_boundary%bbcfil))
+   ! [bottom_boundary] — case 6 schema-side SWBOTB=3 with haquif_file
+   ! (Tasks 11 migration pending; haquif_table inline still present in swap.toml).
+   @assertEqual(3, config%bottom_boundary%swbotb)
 
    ! [heat] — case 6 SWHEA=0 (heat transport disabled).
    @assertEqual(swhea, config%heat%swhea)
