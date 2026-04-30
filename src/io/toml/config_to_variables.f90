@@ -321,7 +321,16 @@ contains
       cofintfl     = config%drain%surface_runoff%cofintfl
       expintfl     = config%drain%surface_runoff%expintfl
       geofac       = config%drain%surface_runoff%geofac
-      gwlconv      = config%drain%surface_runoff%gwlconv
+      ! NOTE: do NOT write gwlconv from drainage.surface_runoff. Legacy
+      ! reads gwlconv exactly once (readswap.f90:960, in the .swp Part 13
+      ! numerical block) and there is no second read in the .dra reader.
+      ! The schema's drainage.surface_runoff.gwlconv is a misnamed/orphan
+      ! field with default 0.0; writing it here clobbered the proper
+      ! value just set from simulation.numerical.gwlconv (default 100 cm).
+      ! The clobber turns out to be benign in practice because gwlconv only
+      ! gates a warning (soilhydraulics.f90:724), not solver behaviour, but
+      ! the duplicate write is wrong on principle and could surprise future
+      ! cases if the warning ever becomes load-bearing.
       rsurfdeep    = config%drain%surface_runoff%rsurfdeep
       rsurfshallow = config%drain%surface_runoff%rsurfshallow
       RapDraReaExp = config%drain%surface_runoff%rapdrareaexp
