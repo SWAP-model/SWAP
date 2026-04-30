@@ -83,6 +83,23 @@ contains
          imonth = datea_init(2)
       end block
 
+      ! Legacy finalize for swmonth=1 (mirrors readswap.f90:181-207):
+      ! when monthly output is on, populate outdatint(:) with end-of-month
+      ! dates and clobber the daily-period output fields. Without this the
+      ! CSV runs daily even though the .swp said "monthly", and the
+      ! regression aggregator averages state_vars (e.g. GWL) over 365
+      ! samples instead of 12 — producing a non-physical year-1 mean diff
+      ! ~2 cm. The simulation state is identical at every monthly endpoint;
+      ! only the sampling cadence differed. swmonth/swyrvar themselves are
+      ! locals in readswap (readswap.f90:16), no module global exists.
+      ! Must run AFTER iyear/imonth derivation above.
+      if (config%simulation%swmonth == 1) then
+         call populate_outdatint_monthly()
+         period = 0
+         swres  = 0
+         swodat = 0
+      end if
+
       ! ---------------------------------------------------------------
       ! Simulation.numerical (audit: 6 fields)
       ! ---------------------------------------------------------------
@@ -774,6 +791,42 @@ contains
       end block
 
    end subroutine config_to_variables
+
+   !> Populate `variables%outdatint(:)` with the end-of-month dates
+   !! between `tstart` and `tend`. Mirrors `readswap.f90:181-204` (the
+   !! `swmonth == 1` branch). Bare `use variables` for parity with the
+   !! parent adapter.
+   subroutine populate_outdatint_monthly()
+      use variables
+      integer  :: datea_om(6), i_om
+      real     :: fsec_om
+      real(8)  :: outdate_om
+
+      datea_om = 0
+      datea_om(1) = iyear
+      datea_om(2) = imonth
+      if (datea_om(2) < 12) then
+         datea_om(2) = datea_om(2) + 1
+      else
+         datea_om(1) = datea_om(1) + 1
+         datea_om(2) = 1
+      end if
+      datea_om(3) = 1
+      fsec_om = 0.0
+      call dtardp(datea_om, fsec_om, outdate_om)
+      i_om = 0
+      do while ((outdate_om - 1.0d0) < (tend + 0.1d0))
+         i_om = i_om + 1
+         outdatint(i_om) = outdate_om - 1.0d0
+         if (datea_om(2) < 12) then
+            datea_om(2) = datea_om(2) + 1
+         else
+            datea_om(1) = datea_om(1) + 1
+            datea_om(2) = 1
+         end if
+         call dtardp(datea_om, fsec_om, outdate_om)
+      end do
+   end subroutine populate_outdatint_monthly
 
    !> Strip a trailing '.crp.toml' (or '.toml') suffix from a rotation
    !! file path, leaving the stem the legacy per-crop reader expects in
