@@ -601,41 +601,20 @@ contains
       swbotb = config%bottom_boundary%swbotb
       select case (swbotb)
       case (1)
-         ! Phase 4f hupselbrook-parity (grassgrowth case 2): SWBOTB=1
-         ! prescribes the groundwater level via a (date, gwlevel) table.
-         ! Legacy reads it from pathwork//bbcfil//'.bbc' (readswap.f90
-         ! :1263-1315). Without this, gwltab(:) stays zero from
-         ! Initialize() and soilhydraulics.f90:1005 returns gwl=0 every
-         ! time — the profile is treated as fully saturated to the
-         ! surface, h(node) goes positive, Feddes's alpwet collapses,
-         ! root water uptake (tra) is zero, and grass biomass never
-         ! grows past the post-mow residual (mowrest=700 kg DM/ha).
-         ! This block uses the legacy ttutil rdinit/rdatim/rdfdor on
-         ! the .bbc file as a HACK — Phase 4f-extend should port the
-         ! .bbc table into a typed schema slot (e.g.
-         ! [bottom_boundary].gwl_table = [[date, gwlevel], ...]).
-         if (allocated(config%bottom_boundary%bbcfil)) then
-            if (len_trim(config%bottom_boundary%bbcfil) > 0) then
-               block
-                  use swap_array_dimensions, only: mabbc
-                  integer :: bbc_unit, ifnd_bbc, k_bbc, swbotb_dummy
-                  real(8) :: dates_bbc(mabbc), gwlevel_bbc(mabbc)
-                  character(len=200) :: bbc_filnam
-                  integer, external :: getun2
-                  bbc_filnam = trim(pathwork)//trim(config%bottom_boundary%bbcfil)//'.bbc'
-                  bbc_unit = getun2(10, 90, 2)
-                  call rdinit(bbc_unit, logf, bbc_filnam)
-                  ! consume `swbotb` (already known); legacy validates 1..8
-                  call rdsinr('swbotb', 1, 8, swbotb_dummy)
-                  call rdatim('date1', dates_bbc, mabbc, ifnd_bbc)
-                  call rdfdor('gwlevel', -10000.0d0, 1000.0d0, gwlevel_bbc, mabbc, ifnd_bbc)
-                  do k_bbc = 1, ifnd_bbc
-                     gwltab(k_bbc*2)     = gwlevel_bbc(k_bbc)
-                     gwltab(k_bbc*2 - 1) = dates_bbc(k_bbc)
-                  end do
-                  close(bbc_unit)
-               end block
-            end if
+         ! Phase 4f cleanup: SWBOTB=1 prescribes the groundwater level via a
+         ! (date, gwlevel) table inlined in [bottom_boundary].gwl_table.
+         ! Mirrors the SWBOTB=3 haquif_table pattern below. Populates the
+         ! legacy interleaved gwltab(2*i-1)=date, gwltab(2*i)=gwlevel packing
+         ! consumed by afgen() in soilhydraulics.f90:1005.
+         if (allocated(config%bottom_boundary%gwl_table)) then
+            block
+               integer :: nrows_gwl, k_gwl
+               nrows_gwl = size(config%bottom_boundary%gwl_table, 1)
+               do k_gwl = 1, nrows_gwl
+                  gwltab(k_gwl*2 - 1) = config%bottom_boundary%gwl_table(k_gwl, 1)
+                  gwltab(k_gwl*2)     = config%bottom_boundary%gwl_table(k_gwl, 2)
+               end do
+            end block
          end if
       case (3)
          shape  = config%bottom_boundary%shape
