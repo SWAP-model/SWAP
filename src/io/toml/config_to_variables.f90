@@ -585,6 +585,31 @@ contains
          aqamp  = config%bottom_boundary%aqamp
          aqper  = config%bottom_boundary%aqper
          aqtmax = config%bottom_boundary%aqtmax
+         ! HACK Phase 4f-extend: SWBOTB=3 implicit/explicit flux selector
+         swbotb3impl = config%bottom_boundary%swbotb3impl
+         ! Phase 4f Task B4: SWBOTB=3 + sw3=2 (date-keyed aquifer head).
+         ! Mirrors readswap.f90:1369-1378. Selects table mode (sw3=2) when
+         ! the typed config provides a haquif_table; sinus mode (sw3=1)
+         ! otherwise. Populates the legacy interleaved haqtab(2*i-1)=date,
+         ! haqtab(2*i)=head packing consumed by afgen() in
+         ! boundary/boundbottom.f90:118.
+         if (allocated(config%bottom_boundary%haquif_table)) then
+            block
+               integer :: nrows_haq, k_haq
+               nrows_haq = size(config%bottom_boundary%haquif_table, 1)
+               if (nrows_haq > 0) then
+                  sw3 = 2
+                  do k_haq = 1, nrows_haq
+                     haqtab(k_haq*2 - 1) = config%bottom_boundary%haquif_table(k_haq, 1)
+                     haqtab(k_haq*2)     = config%bottom_boundary%haquif_table(k_haq, 2)
+                  end do
+               else
+                  sw3 = 1
+               end if
+            end block
+         else
+            sw3 = 1
+         end if
       case (5)
          hbot = config%bottom_boundary%hbot
       end select

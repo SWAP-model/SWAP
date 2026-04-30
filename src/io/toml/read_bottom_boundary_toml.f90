@@ -59,6 +59,9 @@ contains
                                           'bottom_boundary.aqper',  errors)
       call get_optional_real_with_default(sec, 'aqtmax', config%aqtmax, 0.0_real64, &
                                           'bottom_boundary.aqtmax', errors)
+      ! Phase 4f Task B4: SWBOTB=3 implicit/explicit flux solver selector.
+      call get_optional_int_with_default(sec, 'swbotb3impl', config%swbotb3impl, 0, &
+                                         'bottom_boundary.swbotb3impl', errors)
 
       ! SWBOTB=5 scalars.
       call get_optional_real_with_default(sec, 'hbot',   config%hbot,   0.0_real64, &
@@ -73,6 +76,9 @@ contains
                          'bottom_boundary.qbot_table',   errors)
       call read_table_2d(sec, 'cofqha_table', config%cofqha_table, 2, &
                          'bottom_boundary.cofqha_table', errors)
+      ! Phase 4f Task B4: SWBOTB=3 sw3=2 aquifer-head date table.
+      call read_table_2d(sec, 'haquif_table', config%haquif_table, 2, &
+                         'bottom_boundary.haquif_table', errors)
    end subroutine read_bottom_boundary_toml
 
    !> Decode a TOML array-of-arrays at sec[key] into a (nrows, ncols)

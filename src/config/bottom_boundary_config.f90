@@ -27,11 +27,18 @@ module bottom_boundary_config_mod
       real(real64) :: shape   = 0.0_real64
       real(real64) :: hdrain  = 0.0_real64
       real(real64) :: rimlay  = 0.0_real64
+      ! Phase 4f Task B4: numerical-solution switch for SWBOTB=3 bottom flux.
+      ! Legacy default is 0 (explicit). Case 4 (oxygenstress) authors 1.
+      integer      :: swbotb3impl = 0
       real(real64) :: aqave   = 0.0_real64
       real(real64) :: aqamp   = 0.0_real64
       real(real64) :: aqper   = 0.0_real64
       real(real64) :: aqtmax  = 0.0_real64
       real(real64), allocatable :: cofqha_table(:,:)
+      ! Phase 4f Task B4: SWBOTB=3 sw3=2 date-keyed aquifer-head table.
+      ! Two columns (date as days-since-1900, head in cm). Maps to legacy
+      ! haqtab(:) populated in readswap.f90 lines 1374-1378.
+      real(real64), allocatable :: haquif_table(:,:)
 
       ! SWBOTB=5
       real(real64) :: hbot    = 0.0_real64
@@ -115,6 +122,9 @@ contains
          call check_real_range(self%aqtmax,  0.0_real64,    366.0_real64, &
                                'bottom_boundary.aqtmax', errors)
          call check_table_2d(self%cofqha_table, 2, 'bottom_boundary.cofqha_table', errors)
+         call check_table_2d(self%haquif_table, 2, 'bottom_boundary.haquif_table', errors)
+         call check_int_enum(self%swbotb3impl, [0, 1], &
+                             'bottom_boundary.swbotb3impl', errors)
       case (5)
          call check_real_range(self%hbot,   -1.0e10_real64, 1.0e3_real64, &
                                'bottom_boundary.hbot', errors)
