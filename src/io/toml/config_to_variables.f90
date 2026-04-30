@@ -765,7 +765,20 @@ contains
       ! normally' but produce no output file. Move to a typed
       ! [output.csv] block when Phase 4f-extend tackles output configs.
       swcsv = 1
-      InList_csv = 'rain,irrig,interc,runoff,drainage,dstor,epot,eact,tpot,tact,qbottom,gwl'
+      ! Per-case override (Phase 4f Task B3): when the TOML authors
+      ! `general.inlist_csv` use it; otherwise fall back to the
+      ! hupselbrook-tuned water-balance default. Grass cases (case 2 +
+      ! oxygenstress) override with grass-detailed columns to match
+      ! their fixtures.
+      if (allocated(config%general%inlist_csv)) then
+         if (len_trim(config%general%inlist_csv) > 0) then
+            InList_csv = config%general%inlist_csv
+         else
+            InList_csv = 'rain,irrig,interc,runoff,drainage,dstor,epot,eact,tpot,tact,qbottom,gwl'
+         end if
+      else
+         InList_csv = 'rain,irrig,interc,runoff,drainage,dstor,epot,eact,tpot,tact,qbottom,gwl'
+      end if
       swcsv_tz = 0
       InList_csv_tz = 'wc,h,conc'
 
