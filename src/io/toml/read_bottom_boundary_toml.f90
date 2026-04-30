@@ -39,10 +39,6 @@ contains
       call get_optional_int_with_default(sec, 'swbotb', config%swbotb, 0, &
                                          'bottom_boundary.swbotb', errors)
 
-      ! SWBOTB=1 external file reference.
-      call get_optional_string_with_default(sec, 'bbcfil', config%bbcfil, '', &
-                                            'bottom_boundary.bbcfil', errors)
-
       ! SWBOTB=3 (Cauchy) scalars.
       ! Phase 4d Task 20-prep: shape is a real (legacy case 5 SHAPE=0.79).
       call get_optional_real_with_default(sec, 'shape',  config%shape,  0.0_real64, &
@@ -59,6 +55,19 @@ contains
                                           'bottom_boundary.aqper',  errors)
       call get_optional_real_with_default(sec, 'aqtmax', config%aqtmax, 0.0_real64, &
                                           'bottom_boundary.aqtmax', errors)
+      ! Phase 4f Task B4: SWBOTB=3 implicit/explicit flux solver selector.
+      call get_optional_int_with_default(sec, 'swbotb3impl', config%swbotb3impl, 0, &
+                                         'bottom_boundary.swbotb3impl', errors)
+
+      ! Phase 4f cleanup: sub-mode switches.
+      call get_optional_int_with_default(sec, 'sw2',     config%sw2,     1, &
+                                         'bottom_boundary.sw2',     errors)
+      call get_optional_int_with_default(sec, 'sw3',     config%sw3,     1, &
+                                         'bottom_boundary.sw3',     errors)
+      call get_optional_int_with_default(sec, 'sw4',     config%sw4,     0, &
+                                         'bottom_boundary.sw4',     errors)
+      call get_optional_int_with_default(sec, 'swqhbot', config%swqhbot, 1, &
+                                         'bottom_boundary.swqhbot', errors)
 
       ! SWBOTB=5 scalars.
       call get_optional_real_with_default(sec, 'hbot',   config%hbot,   0.0_real64, &
@@ -66,13 +75,27 @@ contains
       call get_optional_real_with_default(sec, 'rhobot', config%rhobot, 0.0_real64, &
                                           'bottom_boundary.rhobot', errors)
 
-      ! Tables.
+      ! Tables (inline TOML 2D arrays — kept for swc_table/qbot_table/cofqha_table).
       call read_table_2d(sec, 'swc_table',    config%swc_table,    2, &
                          'bottom_boundary.swc_table',    errors)
       call read_table_2d(sec, 'qbot_table',   config%qbot_table,   2, &
                          'bottom_boundary.qbot_table',   errors)
       call read_table_2d(sec, 'cofqha_table', config%cofqha_table, 2, &
                          'bottom_boundary.cofqha_table', errors)
+
+      ! Phase 4f cleanup: per-sub-mode CSV companion file paths.
+      call get_optional_string_with_default(sec, 'gwl_file',    config%gwl_file,    '', &
+                                            'bottom_boundary.gwl_file',    errors)
+      call get_optional_string_with_default(sec, 'qbot2_file',  config%qbot2_file,  '', &
+                                            'bottom_boundary.qbot2_file',  errors)
+      call get_optional_string_with_default(sec, 'haquif_file', config%haquif_file, '', &
+                                            'bottom_boundary.haquif_file', errors)
+      call get_optional_string_with_default(sec, 'qbot4_file',  config%qbot4_file,  '', &
+                                            'bottom_boundary.qbot4_file',  errors)
+      call get_optional_string_with_default(sec, 'qhbot_file',  config%qhbot_file,  '', &
+                                            'bottom_boundary.qhbot_file',  errors)
+      call get_optional_string_with_default(sec, 'hbot5_file',  config%hbot5_file,  '', &
+                                            'bottom_boundary.hbot5_file',  errors)
    end subroutine read_bottom_boundary_toml
 
    !> Decode a TOML array-of-arrays at sec[key] into a (nrows, ncols)

@@ -16,3 +16,4 @@ Records of significant architecture and process decisions made during the SWAP m
 - [ADR 0008 — error collection over fatalerr](0008-error-collection-over-fatalerr.html) — Error collection for full-pass validation; one abort checkpoint after pipeline.
 - [ADR 0009 — discontinue non-CSV output formats](0009-discontinue-non-csv-outputs.html) — Retire 18 legacy output switches; CSV becomes the only supported output path.
 - [ADR 0010 — macropore module deferral](0010-macropore-deferral.html) — Macropore stays in legacy code; new TOML pipeline does not wire it. Schema kept as orphan infrastructure for future macropore work.
+- [ADR 0011 — macropore case exclusion from regression](0011-macropore-exclusion-from-regression.html) — Case 3 dropped from check-full; ADR 0010's runtime-fallback clause superseded; Phase 4f's strangler-fig becomes a clean cut.

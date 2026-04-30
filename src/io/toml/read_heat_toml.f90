@@ -54,6 +54,7 @@ contains
 
       ! Per-layer texture fractions (1-D arrays).
       call read_array_1d(sec, 'psand', config%psand, 'heat.psand', errors)
+      call read_array_1d(sec, 'psilt', config%psilt, 'heat.psilt', errors)
       call read_array_1d(sec, 'pclay', config%pclay, 'heat.pclay', errors)
       call read_array_1d(sec, 'porg',  config%porg,  'heat.porg',  errors)
 

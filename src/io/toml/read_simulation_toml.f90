@@ -69,6 +69,20 @@ contains
                                             config%numerical%MaxBackTr, 'simulation.numerical.MaxBackTr', errors)
          call get_optional_real_with_default(num, 'taccur', config%numerical%taccur, &
                                              config%numerical%taccur, 'simulation.numerical.taccur', errors)
+         call get_optional_real_with_default(num, 'gwlconv', config%numerical%gwlconv, &
+                                             config%numerical%gwlconv, 'simulation.numerical.gwlconv', errors)
+         call get_optional_real_with_default(num, 'critdevh1cp', config%numerical%critdevh1cp, &
+                                             config%numerical%critdevh1cp, 'simulation.numerical.critdevh1cp', errors)
+         call get_optional_real_with_default(num, 'critdevh2cp', config%numerical%critdevh2cp, &
+                                             config%numerical%critdevh2cp, 'simulation.numerical.critdevh2cp', errors)
+         call get_optional_real_with_default(num, 'critdevponddt', config%numerical%critdevponddt, &
+                                             config%numerical%critdevponddt, 'simulation.numerical.critdevponddt', errors)
+         call get_optional_int_with_default(num, 'swkmean', config%numerical%swkmean, &
+                                            config%numerical%swkmean, 'simulation.numerical.swkmean', errors)
+         call get_optional_int_with_default(num, 'swkimpl', config%numerical%swkimpl, &
+                                            config%numerical%swkimpl, 'simulation.numerical.swkimpl', errors)
+         call get_optional_int_with_default(num, 'msteps', config%numerical%msteps, &
+                                            config%numerical%msteps, 'simulation.numerical.msteps', errors)
       end if
    end subroutine read_simulation_toml
 

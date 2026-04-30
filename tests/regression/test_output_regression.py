@@ -53,13 +53,11 @@ CASES = {
                 "drafile": "swap.dra"
         }
     ),
-    "macropore": CaseConfig(
-        name="macropore",
-        case_dir="3.macroporeflow",
-        fixture="macropore_expected_gfortran.json",
-        flux_vars=["DRAINAGE"],
-        state_vars=["GWL"],
-    ),
+    # Case 3 (macroporeflow) excluded from check-full per ADR 0011.
+    # The case directory still exists at tests/swap-cases/3.macroporeflow/
+    # for archival; macropore_config_t is orphan infrastructure per ADR 0010.
+    # When the future macropore phase reactivates the module, this entry
+    # comes back.
     "grassgrowth": CaseConfig(
         name="grassgrowth",
         case_dir="2.grassgrowth",
@@ -288,6 +286,25 @@ def _run_and_aggregate(case: CaseConfig):
                 for alt in workdir.glob("*.swp"):
                     shutil.copy(alt, swap_file)
                     break
+
+        # Phase 4f: SWAP now requires swap.toml as the canonical entry
+        # point. Stage it from tests/swap-cases/toml/<case>/ alongside
+        # cross-file siblings (swap.dra.toml, *.crp.toml). Cases without
+        # a populated TOML directory still fail loudly — Phase 4f-extend
+        # ports them one by one. Mirrors run_case.sh --toml.
+        toml_src = TESTS_DIR / "swap-cases" / "toml" / case.case_dir
+        if (toml_src / "swap.toml").exists():
+            shutil.copy(toml_src / "swap.toml", workdir / "swap.toml")
+            for extra in ("swap.dra.toml",):
+                if (toml_src / extra).exists():
+                    shutil.copy(toml_src / extra, workdir / extra)
+            for crp in toml_src.glob("*.crp.toml"):
+                shutil.copy(crp, workdir / crp.name)
+            # Phase 4f cleanup: stage CSV companion files (long-form
+            # fixed-irrigation events, prescribed gwl, etc.) alongside
+            # swap.toml. Reader paths are relative to pathwork.
+            for csv_companion in toml_src.glob("*.csv"):
+                shutil.copy(csv_companion, workdir / csv_companion.name)
 
         # Record time before running to verify output is fresh
         before_run = time.time()

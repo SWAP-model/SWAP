@@ -87,6 +87,7 @@ sources = [
     'src/soil/WC_K_models_04_11.f90',
     
     # I/O
+    'src/io/csv_reader.f90',
     'src/io/toml/path_helpers.f90',
     'src/io/toml/toml_field_helpers.f90',
     'src/io/toml/read_general_toml.f90',
@@ -105,6 +106,7 @@ sources = [
     'src/io/toml/read_crop_toml.f90',
     'src/io/toml/load_swap_config.f90',
     'src/io/toml/write_swap_config.f90',
+    'src/io/toml/config_to_variables.f90',
     'src/io/swap_csv_output.f90',
     'src/io/readswap.f90',
     'src/io/readmeteo.f90',

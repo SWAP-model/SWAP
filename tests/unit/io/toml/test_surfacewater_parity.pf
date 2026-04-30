@@ -398,15 +398,10 @@ subroutine test_surfacewater_parity_4d_sections()
 
    @assertFalse(errors%has_fatals())
 
-   ! [bottom_boundary] — case 6 schema-side SWBOTB=1 with bbcfil="swap"
-   ! (the SWBBCFILE=1 BBC-file reference branch). Legacy `variables%swbotb`
-   ! is populated from the .bbc file itself (case 6: SWBOTB=3 from
-   ! swap.bbc), not from the .swp — so the schema int and the legacy
-   ! global are semantically different. Assert structure only.
-   ! READING NOTE: schema does not yet model the .bbc-file-reference
-   ! semantics distinct from inline SWBOTB=1; legacy `variables%swbotb`
-   ! cross-check deferred.
-   @assertTrue(allocated(config%bottom_boundary%bbcfil))
+   ! [bottom_boundary] — case 6 SWBOTB=3 with haquif_file (sw3=2).
+   @assertEqual(3, config%bottom_boundary%swbotb)
+   @assertTrue(allocated(config%bottom_boundary%haquif_file))
+   @assertEqual("surfacewater.haquif.csv", config%bottom_boundary%haquif_file)
 
    ! [heat] — case 6 SWHEA=0 (heat transport disabled).
    @assertEqual(swhea, config%heat%swhea)

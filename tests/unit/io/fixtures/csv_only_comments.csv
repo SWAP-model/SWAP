@@ -1,0 +1,3 @@
+# this file is only comments and blank lines
+
+# the reader should report ERR_PARSE_MISSING_HEADER because no header line ever appears

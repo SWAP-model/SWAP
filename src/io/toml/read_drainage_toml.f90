@@ -9,13 +9,53 @@ module read_drainage_toml_mod
                                      get_optional_real_with_default,   &
                                      get_optional_string_with_default
    use path_helpers_mod, only: resolve_relative_path
-   use error_mod, only: error_collection_t, ERR_PARSE_MALFORMED_TOML
+   use error_mod, only: error_collection_t, ERR_PARSE_MALFORMED_TOML, &
+                        ERR_PARSE_TYPE_MISMATCH
    implicit none
    private
 
    public :: read_drainage_toml
 
 contains
+
+   !> Decode `drainage.cofani = [...]` into a 1-D real array sized by
+   !! the input length. Absent key leaves arr unallocated. Mirrors the
+   !! local read_array_1d helpers in read_soil_toml / read_heat_toml.
+   subroutine read_cofani(sec, arr, errors)
+      type(toml_table), pointer, intent(in)    :: sec
+      real(real64), allocatable, intent(out)   :: arr(:)
+      type(error_collection_t),  intent(inout) :: errors
+
+      type(toml_array), pointer :: outer
+      integer :: n, i, stat
+      real(real64) :: val
+
+      if (.not. associated(sec)) return
+
+      outer => null()
+      call get_value(sec, 'cofani', outer, requested=.false., stat=stat)
+      if (.not. associated(outer)) return
+
+      n = len(outer)
+      if (n == 0) then
+         allocate(arr(0))
+         return
+      end if
+
+      allocate(arr(n))
+      arr = 0.0_real64
+
+      do i = 1, n
+         call get_value(outer, i, val, stat=stat)
+         if (stat /= 0) then
+            call errors%append(ERR_PARSE_TYPE_MISMATCH, &
+                               "non-real cell", "drainage.cofani")
+            if (allocated(arr)) deallocate(arr)
+            return
+         end if
+         arr(i) = val
+      end do
+   end subroutine read_cofani
 
    subroutine read_drainage_surface_runoff(sec, config, errors)
       type(toml_table), pointer,  intent(in)    :: sec
@@ -99,6 +139,7 @@ contains
       type(toml_table), pointer :: basic, item
       type(toml_array), pointer :: levels
       integer :: i, n, stat
+      character(len=:), allocatable :: str_tmp
 
       call get_optional_int_with_default(sec, 'swdra',    config%swdra,    0, 'drainage.swdra',    errors)
       call get_optional_int_with_default(sec, 'dramet',   config%dramet,   0, 'drainage.dramet',   errors)
@@ -112,7 +153,21 @@ contains
          call get_optional_real_with_default(basic, 'basegw', config%basegw, 0.0_real64, 'drainage.basic.basegw', errors)
          call get_optional_real_with_default(basic, 'entres', config%entres, 0.0_real64, 'drainage.basic.entres', errors)
          call get_optional_real_with_default(basic, 'shape',  config%shape,  0.0_real64, 'drainage.basic.shape',  errors)
+         ! DRAMET=2 (Hooghoudt/Ernst) scalars (legacy .dra Part 2).
+         call get_optional_real_with_default(basic, 'lm',     config%lm,           0.0_real64, 'drainage.basic.lm',     errors)
+         call get_optional_real_with_default(basic, 'wetper', config%wetper,       0.0_real64, 'drainage.basic.wetper', errors)
+         call get_optional_real_with_default(basic, 'zbotdr', config%zbotdr_basic, 0.0_real64, 'drainage.basic.zbotdr', errors)
+         call get_optional_int_with_default (basic, 'ipos',   config%ipos,         0,          'drainage.basic.ipos',   errors)
+         call get_optional_real_with_default(basic, 'khtop',  config%khtop,        0.0_real64, 'drainage.basic.khtop',  errors)
+         call get_optional_real_with_default(basic, 'khbot',  config%khbot,        0.0_real64, 'drainage.basic.khbot',  errors)
+         call get_optional_real_with_default(basic, 'kvtop',  config%kvtop,        0.0_real64, 'drainage.basic.kvtop',  errors)
+         call get_optional_real_with_default(basic, 'kvbot',  config%kvbot,        0.0_real64, 'drainage.basic.kvbot',  errors)
+         call get_optional_real_with_default(basic, 'zintf',  config%zintf,        0.0_real64, 'drainage.basic.zintf',  errors)
+         call get_optional_real_with_default(basic, 'geofac', config%geofac,       0.0_real64, 'drainage.basic.geofac', errors)
       end if
+
+      ! Top-level `cofani` array (per soil-physical layer anisotropy).
+      call read_cofani(sec, config%cofani, errors)
 
       call get_array_of_tables(sec, 'levels', levels, 'drainage.levels', errors)
       if (associated(levels)) then
@@ -122,28 +177,32 @@ contains
                      config%infres(n), config%L(n),      config%gwlinf(n), &
                      config%rdrain(n), config%rinfi(n),  config%rentry(n), &
                      config%rexit(n),  config%widthr(n), config%taludr(n), &
-                     config%swallo(n))
-            config%swdtyp  = 0
-            config%zbotdr  = 0.0_real64
-            config%drares  = 0.0_real64
-            config%infres  = 0.0_real64
-            config%L       = 0.0_real64
-            config%gwlinf  = 0.0_real64
-            config%rdrain  = 0.0_real64
-            config%rinfi   = 0.0_real64
-            config%rentry  = 0.0_real64
-            config%rexit   = 0.0_real64
-            config%widthr  = 0.0_real64
-            config%taludr  = 0.0_real64
-            config%swallo  = 0
+                     config%swallo(n), config%owltab_file(n))
+            config%swdtyp      = 0
+            config%zbotdr      = 0.0_real64
+            config%drares      = 0.0_real64
+            config%infres      = 0.0_real64
+            config%L           = 0.0_real64
+            config%gwlinf      = 0.0_real64
+            config%rdrain      = 0.0_real64
+            config%rinfi       = 0.0_real64
+            config%rentry      = 0.0_real64
+            config%rexit       = 0.0_real64
+            config%widthr      = 0.0_real64
+            config%taludr      = 0.0_real64
+            config%swallo      = 0
+            config%owltab_file = ''
             do i = 1, n
                call get_value(levels, i, item, stat=stat)
                if (stat /= 0 .or. .not. associated(item)) cycle
-               call get_optional_int_with_default(item,  'swdtyp', config%swdtyp(i), 0,           'drainage.levels.swdtyp', errors)
-               call get_optional_real_with_default(item, 'zbotdr', config%zbotdr(i), 0.0_real64,  'drainage.levels.zbotdr', errors)
-               call get_optional_real_with_default(item, 'drares', config%drares(i), 0.0_real64,  'drainage.levels.drares', errors)
-               call get_optional_real_with_default(item, 'infres', config%infres(i), 0.0_real64,  'drainage.levels.infres', errors)
-               call get_optional_real_with_default(item, 'L',      config%L(i),      0.0_real64,  'drainage.levels.L',      errors)
+               call get_optional_int_with_default(item,  'swdtyp',     config%swdtyp(i),         0,           'drainage.levels.swdtyp',     errors)
+               call get_optional_int_with_default(item,  'swallo',     config%swallo(i),         0,           'drainage.levels.swallo',     errors)
+               call get_optional_real_with_default(item, 'zbotdr',     config%zbotdr(i),         0.0_real64,  'drainage.levels.zbotdr',     errors)
+               call get_optional_real_with_default(item, 'drares',     config%drares(i),         0.0_real64,  'drainage.levels.drares',     errors)
+               call get_optional_real_with_default(item, 'infres',     config%infres(i),         0.0_real64,  'drainage.levels.infres',     errors)
+               call get_optional_real_with_default(item, 'L',          config%L(i),              0.0_real64,  'drainage.levels.L',          errors)
+               call get_optional_string_with_default(item, 'owltab_file', str_tmp, '', 'drainage.levels.owltab_file', errors)
+               if (allocated(str_tmp)) config%owltab_file(i) = str_tmp
             end do
          end if
       end if

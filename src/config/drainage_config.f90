@@ -51,6 +51,26 @@ module drainage_config_mod
       real(real64) :: entres = 0.0_real64
       real(real64) :: shape  = 0.0_real64
 
+      ! DRAMET=2 (Hooghoudt/Ernst) scalars. The legacy reader stores
+      ! lm (drain spacing in m) into l(1) after converting to cm, and
+      ! treats wetper / zbotdr as the level-1 entry of the legacy
+      ! per-level arrays. For DRAMET=2 we author single scalars and
+      ! the adapter does the cm conversion + index-1 placement.
+      real(real64) :: lm           = 0.0_real64   !! [m] drain spacing (DRAMET=2)
+      real(real64) :: wetper       = 0.0_real64   !! [cm] wet perimeter of drain
+      real(real64) :: zbotdr_basic = 0.0_real64   !! [cm] drain bottom level (DRAMET=2)
+      integer      :: ipos         = 0            !! 1..5 position of drain
+      real(real64) :: khtop        = 0.0_real64   !! [cm/d] horiz K top
+      real(real64) :: khbot        = 0.0_real64   !! [cm/d] horiz K bottom (ipos>=3)
+      real(real64) :: kvtop        = 0.0_real64   !! [cm/d] vert K top (ipos>=4)
+      real(real64) :: kvbot        = 0.0_real64   !! [cm/d] vert K bottom (ipos>=4)
+      real(real64) :: zintf        = 0.0_real64   !! [cm] fine/coarse interface (ipos>=3)
+      real(real64) :: geofac       = 0.0_real64   !! [-] Ernst geometry factor (ipos=5)
+
+      ! Per-soil-physical-layer anisotropy ratio (legacy COFANI in
+      ! .dra). Required when swdivd=1.
+      real(real64), allocatable :: cofani(:)
+
       integer,      allocatable :: swdtyp(:)
       real(real64), allocatable :: zbotdr(:)
       real(real64), allocatable :: drares(:)
@@ -64,6 +84,7 @@ module drainage_config_mod
       real(real64), allocatable :: widthr(:)
       real(real64), allocatable :: taludr(:)
       integer,      allocatable :: swallo(:)
+      character(len=256), allocatable :: owltab_file(:)  !! per-level channel water level CSV (header: date,level)
 
       type(drainage_surface_runoff_t) :: surface_runoff
    contains

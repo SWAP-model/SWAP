@@ -13,7 +13,8 @@ module read_soil_toml_mod
    use soil_config_mod, only: soil_config_t
    use toml_field_helpers_mod, only: get_table, &
                                      get_optional_int_with_default, &
-                                     get_optional_real_with_default
+                                     get_optional_real_with_default, &
+                                     get_optional_string_with_default
    use error_mod, only: error_collection_t, ERR_PARSE_TYPE_MISMATCH
    implicit none
    private
@@ -40,9 +41,16 @@ contains
 
       call get_optional_real_with_default(sec, 'ksatexm', config%ksatexm, 0.0_real64, 'soil.ksatexm', errors)
       call get_optional_real_with_default(sec, 'rsoil',   config%rsoil,   0.0_real64, 'soil.rsoil',   errors)
+      call get_optional_real_with_default(sec, 'rsro',    config%rsro,    0.0_real64, 'soil.rsro',    errors)
+      call get_optional_real_with_default(sec, 'rsroexp', config%rsroexp, 0.0_real64, 'soil.rsroexp', errors)
+      call get_optional_int_with_default(sec, 'swrunon',  config%swrunon, 0,          'soil.swrunon', errors)
       call get_optional_int_with_default(sec, 'reva_top', config%reva_top, 0, 'soil.reva_top', errors)
 
       call get_optional_int_with_default(sec, 'nrstaring', config%nrstaring, 0, 'soil.nrstaring', errors)
+
+      ! Phase 4f Task B5: SWINCO=3 inifil (path to previous-run state file).
+      call get_optional_string_with_default(sec, 'inifil', config%inifil, '', &
+                                            'soil.inifil', errors)
 
       ! Top-level per-layer anisotropy ratios.
       call read_array_1d(sec, 'cofani', config%cofani, 'soil.cofani', errors)
@@ -71,7 +79,90 @@ contains
          call get_optional_real_with_default(frost, 'tfrostend', config%frost%tfrostend, 0.0_real64, 'soil.frost.tfrostend', errors)
          call get_optional_int_with_default(frost,  'swsublim',  config%frost%swsublim,  0,          'soil.frost.swsublim',  errors)
       end if
+
+      ! Vertical sub-layer discretization. Phase 4f Task B2: per-sub-layer
+      ! arrays (sublay, isoillay, hsublay, ncomp) authored at top level
+      ! of [soil]; calcgrid() consumes these to build numnod / dz / z /
+      ! disnod / layer.
+      call read_int_array_1d (sec, 'sublay',   config%sublay,   'soil.sublay',   errors)
+      call read_int_array_1d (sec, 'isoillay', config%isoillay, 'soil.isoillay', errors)
+      call read_array_1d     (sec, 'hsublay',  config%hsublay,  'soil.hsublay',  errors)
+      call read_int_array_1d (sec, 'ncomp',    config%ncomp,    'soil.ncomp',    errors)
+      ! hcomp is derived as hsublay/ncomp by the adapter; do not author
+      ! it directly. (See readswap.f90:613-619 for the legacy derivation.)
+
+      ! Per-soil-physical-layer Mualem-van Genuchten hydraulics. Authored
+      ! as parallel 1D arrays (one cell per soil-physical layer) inside
+      ! [soil.hydraulics]. The adapter copies these into the legacy
+      ! variables%ores / variables%osat / ... arrays and then builds
+      ! variables%paramvg(1..10, lay) just like readswap.f90:786-825.
+      call read_hydraulics(sec, config, errors)
    end subroutine read_soil_toml
+
+   !> Read [soil.hydraulics] into the typed sub-config. Each key is an
+   !! optional 1-D real array; missing arrays are left unallocated and
+   !! the validator does not enforce presence (the runtime aborts later
+   !! if needed). Section absence is silent.
+   subroutine read_hydraulics(soil_sec, config, errors)
+      type(toml_table), pointer, intent(in)    :: soil_sec
+      type(soil_config_t),       intent(inout) :: config
+      type(error_collection_t),  intent(inout) :: errors
+
+      type(toml_table), pointer :: hyd
+
+      call get_table(soil_sec, 'hydraulics', hyd, 'soil.hydraulics', errors)
+      if (.not. associated(hyd)) return
+
+      call read_array_1d(hyd, 'ores',    config%hydraulics%ores,    'soil.hydraulics.ores',    errors)
+      call read_array_1d(hyd, 'osat',    config%hydraulics%osat,    'soil.hydraulics.osat',    errors)
+      call read_array_1d(hyd, 'alfa',    config%hydraulics%alfa,    'soil.hydraulics.alfa',    errors)
+      call read_array_1d(hyd, 'npar',    config%hydraulics%npar,    'soil.hydraulics.npar',    errors)
+      call read_array_1d(hyd, 'ksatfit', config%hydraulics%ksatfit, 'soil.hydraulics.ksatfit', errors)
+      call read_array_1d(hyd, 'lexp',    config%hydraulics%lexp,    'soil.hydraulics.lexp',    errors)
+      call read_array_1d(hyd, 'alfaw',   config%hydraulics%alfaw,   'soil.hydraulics.alfaw',   errors)
+      call read_array_1d(hyd, 'h_enpr',  config%hydraulics%h_enpr,  'soil.hydraulics.h_enpr',  errors)
+      call read_array_1d(hyd, 'ksatexm', config%hydraulics%ksatexm, 'soil.hydraulics.ksatexm', errors)
+      call read_array_1d(hyd, 'bdens',   config%hydraulics%bdens,   'soil.hydraulics.bdens',   errors)
+   end subroutine read_hydraulics
+
+   !> Decode a flat TOML int array at sec[key] into a 1-D integer
+   !! allocatable. Mirrors `read_array_1d` semantics for ints.
+   subroutine read_int_array_1d(sec, key, arr, context, errors)
+      type(toml_table), pointer, intent(in)    :: sec
+      character(len=*),          intent(in)    :: key
+      integer, allocatable,      intent(out)   :: arr(:)
+      character(len=*),          intent(in)    :: context
+      type(error_collection_t),  intent(inout) :: errors
+
+      type(toml_array), pointer :: outer
+      integer :: n, i, stat, val
+
+      if (.not. associated(sec)) return
+
+      outer => null()
+      call get_value(sec, key, outer, requested=.false., stat=stat)
+      if (.not. associated(outer)) return
+
+      n = len(outer)
+      if (n == 0) then
+         allocate(arr(0))
+         return
+      end if
+
+      allocate(arr(n))
+      arr = 0
+
+      do i = 1, n
+         call get_value(outer, i, val, stat=stat)
+         if (stat /= 0) then
+            call errors%append(ERR_PARSE_TYPE_MISMATCH, &
+                               "non-int cell", context)
+            if (allocated(arr)) deallocate(arr)
+            return
+         end if
+         arr(i) = val
+      end do
+   end subroutine read_int_array_1d
 
    !> Decode a flat TOML real array at sec[key] into a 1-D real(real64)
    !! allocatable. Absent key leaves arr unallocated. Empty array yields

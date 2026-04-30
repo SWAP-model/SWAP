@@ -1,0 +1,248 @@
+! pFUnit tests for the Phase 4f Task A1 config_to_variables adapter.
+!!
+!! Each test constructs a minimal swap_config_t, populates the relevant
+!! fields, calls config_to_variables(config), and asserts that the
+!! corresponding variables%-globals carry the expected values.
+!!
+!! Tests are self-contained but share the global `variables` module —
+!! pFUnit launches each in the same process, so the adapter's writes
+!! across tests overlap. Each test resets its own legacy slots before
+!! asserting (Fortran zero-init covers the first invocation; explicit
+!! resets cover ordering between tests).
+
+@test
+subroutine test_config_to_variables_general_section()
+   use funit
+   use swap_config_mod, only: swap_config_t
+   use config_to_variables_mod, only: config_to_variables
+   use variables, only: project, pathwork, pathatm, pathcrop, pathdrain, &
+                        swscre, tstart, tend, nprintday, period, swres, swodat
+   implicit none
+   type(swap_config_t) :: config
+
+   config%general%project   = "phase4f_unit"
+   config%general%pathwork  = "./work/"
+   config%general%pathatm   = "./atm/"
+   config%general%pathcrop  = "./crop/"
+   config%general%pathdrain = "./drain/"
+   config%general%swscre    = 2
+   config%simulation%tstart    = 365.0d0
+   config%simulation%tend      = 730.0d0
+   config%simulation%nprintday = 4
+   config%simulation%period    = 7
+   config%simulation%swres     = 1
+   config%simulation%swodat    = 1
+
+   call config_to_variables(config)
+
+   @assertEqual("phase4f_unit", trim(project))
+   @assertEqual("./work/",      trim(pathwork))
+   @assertEqual("./atm/",       trim(pathatm))
+   @assertEqual("./crop/",      trim(pathcrop))
+   @assertEqual("./drain/",     trim(pathdrain))
+   @assertEqual(2,              swscre)
+   @assertEqual(365.0d0,        tstart)
+   @assertEqual(730.0d0,        tend)
+   @assertEqual(4,              nprintday)
+   @assertEqual(7,              period)
+   @assertEqual(1,              swres)
+   @assertEqual(1,              swodat)
+end subroutine test_config_to_variables_general_section
+
+
+@test
+subroutine test_config_to_variables_simulation_numerical()
+   use funit
+   use swap_config_mod, only: swap_config_t
+   use config_to_variables_mod, only: config_to_variables
+   use variables, only: dt, dtmin, dtmax, MaxIt, MaxBackTr, taccur
+   implicit none
+   type(swap_config_t) :: config
+
+   config%simulation%numerical%dt        = 0.1d0
+   config%simulation%numerical%dtmin     = 1.0d-5
+   config%simulation%numerical%dtmax     = 0.5d0
+   config%simulation%numerical%MaxIt     = 50
+   config%simulation%numerical%MaxBackTr = 5
+   config%simulation%numerical%taccur    = 5.0d-4
+
+   call config_to_variables(config)
+
+   @assertEqual(0.1d0,   dt)
+   @assertEqual(1.0d-5,  dtmin)
+   @assertEqual(0.5d0,   dtmax)
+   @assertEqual(50,      MaxIt)
+   @assertEqual(5,       MaxBackTr)
+   @assertEqual(5.0d-4,  taccur)
+end subroutine test_config_to_variables_simulation_numerical
+
+
+@test
+subroutine test_config_to_variables_drainage_basic()
+   use funit
+   use swap_config_mod, only: swap_config_t
+   use config_to_variables_mod, only: config_to_variables
+   use variables, only: dramet, swdivd, swdislay, basegw, entres, &
+                        swdra, nrlevs
+   implicit none
+   type(swap_config_t) :: config
+
+   config%drain%swdra    = 1
+   config%drain%dramet   = 3
+   config%drain%swdivd   = 1
+   config%drain%swdislay = 1
+   config%drain%nrlevs   = 4
+   config%drain%basegw   = -250.0d0
+   config%drain%entres   = 30.0d0
+
+   call config_to_variables(config)
+
+   @assertEqual(1,         swdra)
+   @assertEqual(3,         dramet)
+   @assertEqual(1,         swdivd)
+   @assertEqual(1,         swdislay)
+   @assertEqual(4,         nrlevs)
+   @assertEqual(-250.0d0,  basegw)
+   @assertEqual(30.0d0,    entres)
+end subroutine test_config_to_variables_drainage_basic
+
+
+@test
+subroutine test_config_to_variables_soil_with_layer_arrays()
+   use funit
+   use swap_config_mod, only: swap_config_t
+   use config_to_variables_mod, only: config_to_variables
+   use variables, only: swsophy, swhyst, swinco, gwli, pondini, pondmx, pond, &
+                        cofani
+   implicit none
+   type(swap_config_t) :: config
+
+   config%soil%swsophy = 1
+   config%soil%swhyst  = 2
+   config%soil%swinco  = 2
+   config%soil%gwli    = -75.0d0
+   config%soil%pondini = 0.5d0
+   config%soil%pondmx  = 1.0d0
+   allocate(config%soil%cofani(3))
+   config%soil%cofani = [1.5d0, 2.0d0, 2.5d0]
+
+   call config_to_variables(config)
+
+   @assertEqual(1,        swsophy)
+   @assertEqual(2,        swhyst)
+   @assertEqual(2,        swinco)
+   @assertEqual(-75.0d0,  gwli)
+   @assertEqual(0.5d0,    pondini)
+   ! legacy alias: pond <-> pondini
+   @assertEqual(0.5d0,    pond)
+   @assertEqual(1.0d0,    pondmx)
+   @assertEqual(1.5d0,    cofani(1))
+   @assertEqual(2.0d0,    cofani(2))
+   @assertEqual(2.5d0,    cofani(3))
+end subroutine test_config_to_variables_soil_with_layer_arrays
+
+
+@test
+subroutine test_config_to_variables_surface_water_with_management()
+   use funit
+   use swap_config_mod, only: swap_config_t
+   use config_to_variables_mod, only: config_to_variables
+   use variables, only: swsrf, swsec, swqhr, osswlm, nmper, &
+                        impend, swman, wscap, wldip, intwl, hbweir
+   implicit none
+   type(swap_config_t) :: config
+
+   config%surface_water%swsrf  = 2
+   config%surface_water%swsec  = 2
+   config%surface_water%swqhr  = 1
+   config%surface_water%osswlm = 0.05d0
+   config%surface_water%nmper  = 2
+   allocate(config%surface_water%impend(2))
+   allocate(config%surface_water%swman(2))
+   allocate(config%surface_water%wscap(2))
+   allocate(config%surface_water%wldip(2))
+   allocate(config%surface_water%intwl(2))
+   allocate(config%surface_water%hbweir(2))
+   config%surface_water%impend = [365.0d0, 730.0d0]
+   config%surface_water%swman  = [1, 2]
+   config%surface_water%wscap  = [0.0d0, 0.5d0]
+   config%surface_water%wldip  = [10.0d0, 15.0d0]
+   config%surface_water%intwl  = [1, 7]
+   config%surface_water%hbweir = [-50.0d0, -75.0d0]
+
+   call config_to_variables(config)
+
+   @assertEqual(2,        swsrf)
+   @assertEqual(2,        swsec)
+   @assertEqual(1,        swqhr)
+   @assertEqual(0.05d0,   osswlm)
+   @assertEqual(2,        nmper)
+   @assertEqual(365.0d0,  impend(1))
+   @assertEqual(730.0d0,  impend(2))
+   @assertEqual(1,        swman(1))
+   @assertEqual(2,        swman(2))
+   @assertEqual(0.0d0,    wscap(1))
+   @assertEqual(0.5d0,    wscap(2))
+   @assertEqual(10.0d0,   wldip(1))
+   @assertEqual(15.0d0,   wldip(2))
+   @assertEqual(1,        intwl(1))
+   @assertEqual(7,        intwl(2))
+   @assertEqual(-50.0d0,  hbweir(1))
+   @assertEqual(-75.0d0,  hbweir(2))
+end subroutine test_config_to_variables_surface_water_with_management
+
+
+@test
+subroutine test_config_to_variables_zero_forces_retired_switches()
+   use funit
+   use swap_config_mod, only: swap_config_t
+   use config_to_variables_mod, only: config_to_variables
+   use variables, only: swafo, swaun, swvap, swbal, swwba, swsba, swblc, &
+                        swdrf, swstr, swirg, swini, swend, swheader, &
+                        swrum, swswb, swoutputmodflow, &
+                        swcaprise, swcapriseoutput
+   implicit none
+   type(swap_config_t) :: config
+
+   ! Pre-set every retired switch to a non-zero / non-default value to
+   ! prove the adapter explicitly forces them back to 0/.false. per ADR 0009.
+   swafo           = 99
+   swaun           = 99
+   swvap           = 99
+   swbal           = 99
+   swwba           = 99
+   swsba           = 99
+   swblc           = 99
+   swdrf           = 99
+   swstr           = 99
+   swirg           = 99
+   swini           = 99
+   swend           = 99
+   swheader        = 99
+   swrum           = 99
+   swswb           = 99
+   swoutputmodflow = 99
+   swcaprise       = .true.
+   swcapriseoutput = .true.
+
+   call config_to_variables(config)
+
+   @assertEqual(0, swafo)
+   @assertEqual(0, swaun)
+   @assertEqual(0, swvap)
+   @assertEqual(0, swbal)
+   @assertEqual(0, swwba)
+   @assertEqual(0, swsba)
+   @assertEqual(0, swblc)
+   @assertEqual(0, swdrf)
+   @assertEqual(0, swstr)
+   @assertEqual(0, swirg)
+   @assertEqual(0, swini)
+   @assertEqual(0, swend)
+   @assertEqual(0, swheader)
+   @assertEqual(0, swrum)
+   @assertEqual(0, swswb)
+   @assertEqual(0, swoutputmodflow)
+   @assertFalse(swcaprise)
+   @assertFalse(swcapriseoutput)
+end subroutine test_config_to_variables_zero_forces_retired_switches

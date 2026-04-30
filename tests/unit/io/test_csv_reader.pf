@@ -1,0 +1,246 @@
+! Tests for csv_reader_mod (Phase 4f cleanup — unified reader).
+
+@test
+subroutine test_date_keyed_happy()
+   use funit
+   use iso_fortran_env, only: real64
+   use csv_reader_mod, only: read_csv_table
+   use error_mod, only: error_collection_t
+   real(real64), allocatable :: table(:,:)
+   type(error_collection_t)  :: errors
+
+   call read_csv_table('tests/unit/io/fixtures/csv_date_gwl.csv', &
+                       ['date', 'gwl '], table, errors)
+
+   @assertFalse(errors%has_errors())
+   @assertTrue(allocated(table))
+   @assertEqual(3, size(table, 1))
+   @assertEqual(2, size(table, 2))
+   ! 1980-04-24 = days-since-1900 = 29334.
+   @assertEqual(29334.0_real64, table(1, 1), 1.0_real64)
+   @assertEqual(-88.0_real64,  table(1, 2), 1.0e-6_real64)
+end subroutine
+
+@test
+subroutine test_real_keyed_happy()
+   use funit
+   use iso_fortran_env, only: real64
+   use csv_reader_mod, only: read_csv_table
+   use error_mod, only: error_collection_t
+   real(real64), allocatable :: table(:,:)
+   type(error_collection_t)  :: errors
+
+   call read_csv_table('tests/unit/io/fixtures/csv_htab_qtab.csv', &
+                       ['htab', 'qtab'], table, errors)
+
+   @assertFalse(errors%has_errors())
+   @assertEqual(3, size(table, 1))
+   @assertEqual(2, size(table, 2))
+   @assertEqual(-100.0_real64, table(1, 1), 1.0e-6_real64)
+   @assertEqual(0.0_real64,    table(1, 2), 1.0e-6_real64)
+end subroutine
+
+@test
+subroutine test_wide_table_happy()
+   use funit
+   use iso_fortran_env, only: real64
+   use csv_reader_mod, only: read_csv_table
+   use error_mod, only: error_collection_t
+   real(real64), allocatable :: table(:,:)
+   type(error_collection_t)  :: errors
+
+   call read_csv_table('tests/unit/io/fixtures/csv_irrigation.csv', &
+                       ['date ', 'depth', 'conc ', 'type '], table, errors)
+
+   @assertFalse(errors%has_errors())
+   @assertEqual(3, size(table, 1))
+   @assertEqual(4, size(table, 2))
+   @assertEqual(14.40_real64, table(1, 2), 1.0e-6_real64)
+   @assertEqual(0.401_real64, table(1, 3), 1.0e-6_real64)
+   @assertEqual(1.0_real64,   table(1, 4), 1.0e-6_real64)
+end subroutine
+
+@test
+subroutine test_header_wrong_order()
+   use funit
+   use iso_fortran_env, only: real64
+   use csv_reader_mod, only: read_csv_table
+   use error_mod, only: error_collection_t, ERR_PARSE_HEADER_MISMATCH
+   real(real64), allocatable :: table(:,:)
+   type(error_collection_t)  :: errors
+
+   call read_csv_table('tests/unit/io/fixtures/csv_gwl_date_swapped.csv', &
+                       ['date', 'gwl '], table, errors)
+
+   @assertTrue(errors%has_errors())
+   @assertEqual(ERR_PARSE_HEADER_MISMATCH, errors%items(1)%code)
+   @assertFalse(allocated(table))
+end subroutine
+
+@test
+subroutine test_header_case_mismatch()
+   use funit
+   use iso_fortran_env, only: real64
+   use csv_reader_mod, only: read_csv_table
+   use error_mod, only: error_collection_t, ERR_PARSE_HEADER_MISMATCH
+   real(real64), allocatable :: table(:,:)
+   type(error_collection_t)  :: errors
+
+   call read_csv_table('tests/unit/io/fixtures/csv_uppercase_header.csv', &
+                       ['date', 'gwl '], table, errors)
+
+   @assertTrue(errors%has_errors())
+   @assertEqual(ERR_PARSE_HEADER_MISMATCH, errors%items(1)%code)
+end subroutine
+
+@test
+subroutine test_header_extra_column()
+   use funit
+   use iso_fortran_env, only: real64
+   use csv_reader_mod, only: read_csv_table
+   use error_mod, only: error_collection_t, ERR_PARSE_HEADER_MISMATCH
+   real(real64), allocatable :: table(:,:)
+   type(error_collection_t)  :: errors
+
+   call read_csv_table('tests/unit/io/fixtures/csv_extra_column.csv', &
+                       ['date', 'gwl '], table, errors)
+
+   @assertTrue(errors%has_errors())
+   @assertEqual(ERR_PARSE_HEADER_MISMATCH, errors%items(1)%code)
+end subroutine
+
+@test
+subroutine test_header_missing()
+   use funit
+   use iso_fortran_env, only: real64
+   use csv_reader_mod, only: read_csv_table
+   use error_mod, only: error_collection_t, ERR_PARSE_HEADER_MISMATCH
+   real(real64), allocatable :: table(:,:)
+   type(error_collection_t)  :: errors
+
+   call read_csv_table('tests/unit/io/fixtures/csv_no_header.csv', &
+                       ['date', 'gwl '], table, errors)
+
+   @assertTrue(errors%has_errors())
+   ! csv_no_header.csv: first line "1980-04-24,-88.0" is treated as the
+   ! header attempt (rows-only file → header-mismatch).
+   @assertEqual(ERR_PARSE_HEADER_MISMATCH, errors%items(1)%code)
+end subroutine
+
+@test
+subroutine test_only_comments_missing_header()
+   use funit
+   use iso_fortran_env, only: real64
+   use csv_reader_mod, only: read_csv_table
+   use error_mod, only: error_collection_t, ERR_PARSE_MISSING_HEADER
+   real(real64), allocatable :: table(:,:)
+   type(error_collection_t)  :: errors
+
+   call read_csv_table('tests/unit/io/fixtures/csv_only_comments.csv', &
+                       ['date', 'gwl '], table, errors)
+
+   @assertTrue(errors%has_errors())
+   @assertEqual(ERR_PARSE_MISSING_HEADER, errors%items(1)%code)
+   @assertFalse(allocated(table))
+end subroutine
+
+@test
+subroutine test_missing_file()
+   use funit
+   use iso_fortran_env, only: real64
+   use csv_reader_mod, only: read_csv_table
+   use error_mod, only: error_collection_t, ERR_IO_OPEN_FAILED
+   real(real64), allocatable :: table(:,:)
+   type(error_collection_t)  :: errors
+
+   call read_csv_table('tests/unit/io/fixtures/does_not_exist.csv', &
+                       ['date', 'gwl '], table, errors)
+
+   @assertTrue(errors%has_errors())
+   @assertEqual(ERR_IO_OPEN_FAILED, errors%items(1)%code)
+   @assertFalse(allocated(table))
+end subroutine
+
+@test
+subroutine test_malformed_real()
+   use funit
+   use iso_fortran_env, only: real64
+   use csv_reader_mod, only: read_csv_table
+   use error_mod, only: error_collection_t, ERR_PARSE_TYPE_MISMATCH
+   real(real64), allocatable :: table(:,:)
+   type(error_collection_t)  :: errors
+
+   call read_csv_table('tests/unit/io/fixtures/csv_bad_real.csv', &
+                       ['date', 'gwl '], table, errors)
+
+   @assertTrue(errors%has_errors())
+   @assertEqual(ERR_PARSE_TYPE_MISMATCH, errors%items(1)%code)
+   @assertFalse(allocated(table))
+end subroutine
+
+@test
+subroutine test_malformed_date()
+   use funit
+   use iso_fortran_env, only: real64
+   use csv_reader_mod, only: read_csv_table
+   use error_mod, only: error_collection_t, ERR_PARSE_TYPE_MISMATCH
+   real(real64), allocatable :: table(:,:)
+   type(error_collection_t)  :: errors
+
+   call read_csv_table('tests/unit/io/fixtures/csv_bad_date.csv', &
+                       ['date', 'gwl '], table, errors)
+
+   @assertTrue(errors%has_errors())
+   @assertEqual(ERR_PARSE_TYPE_MISMATCH, errors%items(1)%code)
+end subroutine
+
+@test
+subroutine test_row_shape_mismatch()
+   use funit
+   use iso_fortran_env, only: real64
+   use csv_reader_mod, only: read_csv_table
+   use error_mod, only: error_collection_t, ERR_PARSE_ROW_SHAPE
+   real(real64), allocatable :: table(:,:)
+   type(error_collection_t)  :: errors
+
+   call read_csv_table('tests/unit/io/fixtures/csv_short_row.csv', &
+                       ['date', 'gwl '], table, errors)
+
+   @assertTrue(errors%has_errors())
+   @assertEqual(ERR_PARSE_ROW_SHAPE, errors%items(1)%code)
+end subroutine
+
+@test
+subroutine test_empty_table()
+   use funit
+   use iso_fortran_env, only: real64
+   use csv_reader_mod, only: read_csv_table
+   use error_mod, only: error_collection_t
+   real(real64), allocatable :: table(:,:)
+   type(error_collection_t)  :: errors
+
+   call read_csv_table('tests/unit/io/fixtures/csv_header_only.csv', &
+                       ['date', 'gwl '], table, errors)
+
+   @assertFalse(errors%has_errors())
+   @assertTrue(allocated(table))
+   @assertEqual(0, size(table, 1))
+   @assertEqual(2, size(table, 2))
+end subroutine
+
+@test
+subroutine test_comments_and_blanks()
+   use funit
+   use iso_fortran_env, only: real64
+   use csv_reader_mod, only: read_csv_table
+   use error_mod, only: error_collection_t
+   real(real64), allocatable :: table(:,:)
+   type(error_collection_t)  :: errors
+
+   call read_csv_table('tests/unit/io/fixtures/csv_with_comments.csv', &
+                       ['date', 'gwl '], table, errors)
+
+   @assertFalse(errors%has_errors())
+   @assertEqual(2, size(table, 1))
+   @assertEqual(2, size(table, 2))
+end subroutine

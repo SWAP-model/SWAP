@@ -121,8 +121,30 @@ if (iTask == 1) then
 !  iteration and timing statistics
    call IterTime(1)
 
-!  read time independent input file
-   call ReadSwap()
+!  Phase 4f strangler-fig: read time-independent input via the new
+!  TOML pipeline + config_to_variables adapter, replacing the legacy
+!  readswap() entry point. The binary expects swap.toml in the
+!  current directory; abort_if_fatal terminates with a clear summary
+!  if the file is absent or fails validate/finalize.
+!
+!  HACK Phase 4f-extend: the adapter currently calls readswap() at the
+!  end as a backstop for legacy globals not yet covered by any schema
+!  slot. Phase 4f-extend will incrementally remove that call as schema
+!  extensions land. See config_to_variables.f90's tail comment for the
+!  full migration plan.
+   block
+      use load_swap_config_mod, only: load_swap_config
+      use swap_config_mod, only: swap_config_t
+      use config_to_variables_mod, only: config_to_variables
+      use error_mod, only: error_collection_t
+      type(swap_config_t)      :: config
+      type(error_collection_t) :: errors
+      call load_swap_config('swap.toml', config, errors)
+      call config%validate(errors)
+      call config%finalize(errors)
+      call errors%abort_if_fatal()
+      call config_to_variables(config)
+   end block
 
 !  shared simulation
    if (flSwapShared) call SharedSimulation(1)

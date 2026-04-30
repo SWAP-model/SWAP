@@ -360,9 +360,10 @@ subroutine test_grassgrowth_parity_4d_sections()
 
    @assertFalse(errors%has_fatals())
 
-   ! [bottom_boundary] — case 2 SWBOTB=1 (BBC-file branch, "swap").
+   ! [bottom_boundary] — case 2 SWBOTB=1 (gwl_file branch).
    @assertEqual(swbotb, config%bottom_boundary%swbotb)
-   @assertTrue(allocated(config%bottom_boundary%bbcfil))
+   @assertTrue(allocated(config%bottom_boundary%gwl_file))
+   @assertEqual("grassgrowth.gwl.csv", config%bottom_boundary%gwl_file)
 
    ! [heat] — case 2 SWHEA=1 with numerical method (SWCALT=2).
    @assertEqual(swhea,     config%heat%swhea)

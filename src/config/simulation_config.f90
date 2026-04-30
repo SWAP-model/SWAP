@@ -10,14 +10,30 @@ module simulation_config_mod
    public :: simulation_config_t
    public :: simulation_numerical_t
 
-   !> Numerical solver controls (timestep + iteration limits).
+   !> Numerical solver controls (timestep + iteration limits + Richards
+   !! convergence criteria + hydraulic-conductivity averaging).
+   !! Defaults mirror the .swp template values used by the regression
+   !! cases — so a TOML that omits this block runs identically to a
+   !! .swp that authors all of these explicitly.
    type :: simulation_numerical_t
-      real(real64) :: dt        = 0.2_real64
-      real(real64) :: dtmin     = 1.0e-6_real64
-      real(real64) :: dtmax     = 0.2_real64
-      integer      :: MaxIt     = 30
-      integer      :: MaxBackTr = 3
-      real(real64) :: taccur    = 1.0e-3_real64
+      real(real64) :: dt            = 0.2_real64
+      real(real64) :: dtmin         = 1.0e-6_real64
+      real(real64) :: dtmax         = 0.2_real64
+      integer      :: MaxIt         = 30
+      integer      :: MaxBackTr     = 3
+      real(real64) :: taccur        = 1.0e-3_real64
+      ! Richards-solver convergence criteria (legacy .swp Part 13).
+      real(real64) :: gwlconv       = 100.0_real64    !! [1e-5..1000 cm]
+      real(real64) :: critdevh1cp   = 0.01_real64     !! [1e-10..1e3 -]
+      real(real64) :: critdevh2cp   = 0.1_real64      !! [1e-10..1e3 cm]
+      real(real64) :: critdevponddt = 1.0e-4_real64   !! [1e-6..0.1 cm]
+      ! Hydraulic conductivity mean type + implicitness flag.
+      integer      :: swkmean       = 1               !! 1..6 (see readswap.f90:983-985)
+      integer      :: swkimpl       = 0               !! 0=explicit, 1=implicit
+      ! Hard-cap on iterations per day. The legacy default is 1e8 (effectively
+      ! unlimited); we mirror that. The runtime aborts if a single day's
+      ! iteration count exceeds this — the cap exists only as a circuit-breaker.
+      integer      :: msteps        = 100000000
    contains
       procedure :: validate => simulation_numerical_validate
    end type simulation_numerical_t
@@ -70,6 +86,20 @@ contains
                            "simulation.numerical.MaxBackTr", errors)
       call check_real_range(self%taccur, 1.0e-9_real64, 1.0_real64, &
                             "simulation.numerical.taccur", errors)
+      call check_real_range(self%gwlconv,       1.0e-5_real64,  1000.0_real64, &
+                            "simulation.numerical.gwlconv", errors)
+      call check_real_range(self%critdevh1cp,   1.0e-10_real64, 1.0e3_real64, &
+                            "simulation.numerical.critdevh1cp", errors)
+      call check_real_range(self%critdevh2cp,   1.0e-10_real64, 1.0e3_real64, &
+                            "simulation.numerical.critdevh2cp", errors)
+      call check_real_range(self%critdevponddt, 1.0e-6_real64,  0.1_real64, &
+                            "simulation.numerical.critdevponddt", errors)
+      call check_int_range(self%swkmean, 1, 6, &
+                           "simulation.numerical.swkmean", errors)
+      call check_int_enum(self%swkimpl, [0, 1], &
+                          "simulation.numerical.swkimpl", errors)
+      call check_int_range(self%msteps, 1, 1000000000, &
+                           "simulation.numerical.msteps", errors)
 
       ! Cross-field invariants: dtmin <= dtmax, dtmin <= dt <= dtmax.
       if (self%dtmin > self%dtmax) then

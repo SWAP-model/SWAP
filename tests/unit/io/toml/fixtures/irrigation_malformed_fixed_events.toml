@@ -1,5 +1,9 @@
 [irrigation]
 swirfix = 1
-fixed_events = [
-  [12345.0, 25.0, 0.0],
-]
+
+# Missing the required `date` key — exercises the reader's per-row
+# parse-error path.
+[[irrigation.fixed_events]]
+depth = 25.0
+conc  = 0.0
+type  = 1
