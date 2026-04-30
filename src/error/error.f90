@@ -26,7 +26,7 @@ module error_mod
    integer, parameter, public :: ERR_VALIDATION_ENUM          = 301
    integer, parameter, public :: ERR_VALIDATION_CROSS_FIELD   = 302
    integer, parameter, public :: ERR_VALIDATION_CROSS_SECTION = 303
-   integer, parameter, public :: ERR_VALIDATE_REQUIRED        = 304
+   integer, parameter, public :: ERR_VALIDATION_REQUIRED      = 304
    integer, parameter, public :: ERR_FINALIZE_DERIVATION      = 400
    integer, parameter, public :: ERR_ADAPTER_UNSUPPORTED      = 500
    integer, parameter, public :: ERR_LEGACY_FATAL             = 999

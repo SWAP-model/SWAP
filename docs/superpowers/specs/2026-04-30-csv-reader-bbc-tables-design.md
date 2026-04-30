@@ -66,7 +66,7 @@ Removed slots: `gwl_table`, `haquif_table`, `bbcfil`.
 
 **Validator:**
 
-`bottom_boundary_config_t%validate` adds a per-sub-mode rule: if the chosen SWBOTB sub-mode requires a table, the matching `*_file` must be non-empty. Six rules total, each emitting `ERR_VALIDATE_REQUIRED` with a message naming the offending field. Validation fires before any I/O.
+`bottom_boundary_config_t%validate` adds a per-sub-mode rule: if the chosen SWBOTB sub-mode requires a table, the matching `*_file` must be non-empty. Six rules total, each emitting `ERR_VALIDATION_REQUIRED` with a message naming the offending field. Validation fires before any I/O.
 
 **Adapter:**
 
@@ -86,7 +86,7 @@ Removed slots: `gwl_table`, `haquif_table`, `bbcfil`.
 | BBC reader | `src/io/toml/read_bottom_boundary_toml.f90` | 6 `get_optional_string_with_default` calls. Remove `read_array_2d` calls for table slots; remove `bbcfil` read. |
 | Adapter — BBC | `src/io/toml/config_to_variables.f90` | Rewrite `populate_bottom_boundary_*` blocks to call `read_csv_table` per sub-mode. |
 | Adapter — irrigation | `src/io/toml/config_to_variables.f90` | Migrate `fixed_events_file` call from `read_csv_date_reals` to `read_csv_table` with `expected_header=['date','depth','conc','type']`. |
-| Error codes | `src/utils/error_mod.f90` | Add `ERR_PARSE_MISSING_HEADER`, `ERR_PARSE_HEADER_MISMATCH`, `ERR_PARSE_ROW_SHAPE`, `ERR_VALIDATE_REQUIRED`. |
+| Error codes | `src/utils/error_mod.f90` | Add `ERR_PARSE_MISSING_HEADER`, `ERR_PARSE_HEADER_MISMATCH`, `ERR_PARSE_ROW_SHAPE`, `ERR_VALIDATION_REQUIRED`. |
 | Case data | `tests/swap-cases/toml/2.grassgrowth/swap.toml` | Replace inline 125-row `gwl_table` with `gwl_file = "grassgrowth.gwl.csv"`. |
 | Case data | `tests/swap-cases/toml/2.grassgrowth/grassgrowth.gwl.csv` | New, header `date,gwl` + 125 rows extracted from the inline table. |
 | Docs | `docs/csv-companion-files.md` | Update to reflect the unified reader contract and the BBC slot list. |
@@ -127,12 +127,12 @@ Validator-time errors:
 
 | Condition | Error code | Message |
 |---|---|---|
-| SWBOTB=1 with empty `gwl_file` | `ERR_VALIDATE_REQUIRED` | `bottom_boundary.gwl_file required when swbotb=1` |
-| SWBOTB=2 + SW2=2 with empty `qbot2_file` | `ERR_VALIDATE_REQUIRED` | analogous |
-| SWBOTB=3 + SW3=2 with empty `haquif_file` | `ERR_VALIDATE_REQUIRED` | analogous |
-| SWBOTB=3 + SW4=1 with empty `qbot4_file` | `ERR_VALIDATE_REQUIRED` | analogous |
-| SWBOTB=4 + SWQHBOT=2 with empty `qhbot_file` | `ERR_VALIDATE_REQUIRED` | analogous |
-| SWBOTB=5 with empty `hbot5_file` | `ERR_VALIDATE_REQUIRED` | analogous |
+| SWBOTB=1 with empty `gwl_file` | `ERR_VALIDATION_REQUIRED` | `bottom_boundary.gwl_file required when swbotb=1` |
+| SWBOTB=2 + SW2=2 with empty `qbot2_file` | `ERR_VALIDATION_REQUIRED` | analogous |
+| SWBOTB=3 + SW3=2 with empty `haquif_file` | `ERR_VALIDATION_REQUIRED` | analogous |
+| SWBOTB=3 + SW4=1 with empty `qbot4_file` | `ERR_VALIDATION_REQUIRED` | analogous |
+| SWBOTB=4 + SWQHBOT=2 with empty `qhbot_file` | `ERR_VALIDATION_REQUIRED` | analogous |
+| SWBOTB=5 with empty `hbot5_file` | `ERR_VALIDATION_REQUIRED` | analogous |
 
 All errors flow through `error_collection_t`; the run aborts at the first checkpoint after any error. No silent fallbacks.
 
@@ -158,7 +158,7 @@ All errors flow through `error_collection_t`; the run aborts at the first checkp
 
 **Validator unit tests** (`tests/unit/config/test_bottom_boundary_config.pf`):
 
-Per SWBOTB sub-mode: one positive case (file slot populated → passes) and one negative (slot empty → `ERR_VALIDATE_REQUIRED` on the right field). Six pairs total. Tests for removed slots (`gwl_table`, `haquif_table`, `bbcfil`) are deleted.
+Per SWBOTB sub-mode: one positive case (file slot populated → passes) and one negative (slot empty → `ERR_VALIDATION_REQUIRED` on the right field). Six pairs total. Tests for removed slots (`gwl_table`, `haquif_table`, `bbcfil`) are deleted.
 
 **Regression** (`pixi run -e test regression`):
 
