@@ -602,9 +602,10 @@ contains
       select case (swbotb)
       case (1)
          block
+            use iso_fortran_env, only: real64
             use csv_reader_mod, only: read_csv_table
             use error_mod, only: error_collection_t
-            real(8), allocatable :: csv_table(:,:)
+            real(real64), allocatable :: csv_table(:,:)
             type(error_collection_t)  :: csv_errs
             integer :: k, nrows
             character(len=4) :: hdr(2)
@@ -626,9 +627,10 @@ contains
          sw2 = config%bottom_boundary%sw2
          if (config%bottom_boundary%sw2 == 2) then
             block
+               use iso_fortran_env, only: real64
                use csv_reader_mod, only: read_csv_table
                use error_mod, only: error_collection_t
-               real(8), allocatable :: csv_table(:,:)
+               real(real64), allocatable :: csv_table(:,:)
                type(error_collection_t)  :: csv_errs
                integer :: k, nrows
                character(len=4) :: hdr(2)
@@ -660,9 +662,10 @@ contains
          sw4         = config%bottom_boundary%sw4
          if (config%bottom_boundary%sw3 == 2) then
             block
+               use iso_fortran_env, only: real64
                use csv_reader_mod, only: read_csv_table
                use error_mod, only: error_collection_t
-               real(8), allocatable :: csv_table(:,:)
+               real(real64), allocatable :: csv_table(:,:)
                type(error_collection_t)  :: csv_errs
                integer :: k, nrows
                character(len=6) :: hdr(2)
@@ -683,9 +686,10 @@ contains
          end if
          if (config%bottom_boundary%sw4 == 1) then
             block
+               use iso_fortran_env, only: real64
                use csv_reader_mod, only: read_csv_table
                use error_mod, only: error_collection_t
-               real(8), allocatable :: csv_table(:,:)
+               real(real64), allocatable :: csv_table(:,:)
                type(error_collection_t)  :: csv_errs
                integer :: k, nrows
                character(len=4) :: hdr(2)
@@ -708,9 +712,10 @@ contains
          swqhbot = config%bottom_boundary%swqhbot
          if (config%bottom_boundary%swqhbot == 2) then
             block
+               use iso_fortran_env, only: real64
                use csv_reader_mod, only: read_csv_table
                use error_mod, only: error_collection_t
-               real(8), allocatable :: csv_table(:,:)
+               real(real64), allocatable :: csv_table(:,:)
                type(error_collection_t)  :: csv_errs
                integer :: k, nrows
                character(len=4) :: hdr(2)
@@ -733,10 +738,14 @@ contains
          end if
       case (5)
          hbot = config%bottom_boundary%hbot
+         ! NOTE: rhobot has no legacy SWAP-wide global; the plan's spec
+         ! line `rhobot = config%bottom_boundary%rhobot` was a defect.
+         ! The schema slot is read for future-proofing; consumers TBD.
          block
+            use iso_fortran_env, only: real64
             use csv_reader_mod, only: read_csv_table
             use error_mod, only: error_collection_t
-            real(8), allocatable :: csv_table(:,:)
+            real(real64), allocatable :: csv_table(:,:)
             type(error_collection_t)  :: csv_errs
             integer :: k, nrows
             character(len=4) :: hdr(2)

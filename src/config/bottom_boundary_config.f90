@@ -116,6 +116,18 @@ contains
                "bottom_boundary.qbot4_file required when swbotb=3 and sw4=1", &
                'bottom_boundary')
          end if
+         if (allocated(self%cofqha_table)) then
+            if (size(self%cofqha_table, 2) /= 2) then
+               call errors%append(ERR_VALIDATION_OUT_OF_RANGE, &
+                  "bottom_boundary.cofqha_table: expected 2 columns", &
+                  'bottom_boundary.cofqha_table')
+            end if
+            if (size(self%cofqha_table, 1) < 1) then
+               call errors%append(ERR_VALIDATION_OUT_OF_RANGE, &
+                  "bottom_boundary.cofqha_table: expected at least 1 row", &
+                  'bottom_boundary.cofqha_table')
+            end if
+         end if
       case (4)
          if (self%swqhbot == 2 .and. .not. has_file(self%qhbot_file)) then
             call errors%append(ERR_VALIDATION_REQUIRED, &

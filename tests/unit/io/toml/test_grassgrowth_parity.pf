@@ -363,6 +363,10 @@ subroutine test_grassgrowth_parity_4d_sections()
 
    ! [bottom_boundary] — case 2 SWBOTB=1 (gwl_file branch, Tasks 9 migration pending).
    @assertEqual(swbotb, config%bottom_boundary%swbotb)
+   ! Reader must NOT populate gwl_file when only the inline gwl_table is
+   ! present. Tasks 9 will migrate the case and this assertion flips to
+   ! @assertTrue(allocated(...)).
+   @assertFalse(allocated(config%bottom_boundary%gwl_file))
 
    ! [heat] — case 2 SWHEA=1 with numerical method (SWCALT=2).
    @assertEqual(swhea,     config%heat%swhea)
