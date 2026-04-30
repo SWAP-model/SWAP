@@ -680,6 +680,38 @@ contains
             irconc(i)  = config%irrigation%fixed_events(i, 3)
             irtype(i)  = nint(config%irrigation%fixed_events(i, 4))
          end do
+      else if (swirfix == 1 .and. allocated(config%irrigation%irgfil)) then
+         ! HACK Phase 4f-extend: external .irg file (legacy SWIRGFIL=1).
+         ! Mirrors readswap.f90:1573-1591. Salinitystress (case 5) authors
+         ! `irgfil = "swap"` pointing to swap.irg with ~370 daily gifts
+         ! 2012-2015. Until [[irrigation.fixed_events]] is wired through a
+         ! schema slot for a date+depth+conc+type table, fall back to the
+         ! legacy ttutil reader on the .irg file. Same HACK pattern as the
+         ! SWBOTB=1 .bbc reader (lines 559-578 above).
+         if (len_trim(config%irrigation%irgfil) > 0) then
+            block
+               use swap_array_dimensions, only: mairg
+               integer :: irg_unit, ifnd_irg, k_irg
+               real(8) :: irdate_local(mairg), irdepth_local(mairg), irconc_local(mairg)
+               integer :: irtype_local(mairg)
+               character(len=200) :: irg_filnam
+               integer, external :: getun2
+               irg_filnam = trim(pathwork)//trim(config%irrigation%irgfil)//'.irg'
+               irg_unit = getun2(10, 90, 2)
+               call rdinit(irg_unit, logf, irg_filnam)
+               call rdatim('irdate', irdate_local, mairg, ifnd_irg)
+               call rdfdor('irdepth', 0.0d0, 1000.0d0, irdepth_local, mairg, ifnd_irg)
+               call rdfdor('irconc',  0.0d0, 1000.0d0, irconc_local,  mairg, ifnd_irg)
+               call rdfinr('irtype',  0,     1,        irtype_local,  mairg, ifnd_irg)
+               close(irg_unit)
+               do k_irg = 1, ifnd_irg
+                  irdate(k_irg)  = irdate_local(k_irg)
+                  irdepth(k_irg) = irdepth_local(k_irg) / 10.0d0  ! mm -> cm
+                  irconc(k_irg)  = irconc_local(k_irg)
+                  irtype(k_irg)  = irtype_local(k_irg)
+               end do
+            end block
+         end if
       end if
       ! cirrs / cirrthres / dcrit / isuas / perirrsurp / raithreshold /
       ! swcirrthres live in irrigation_schedule_t (per-crop), not the
