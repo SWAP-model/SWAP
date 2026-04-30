@@ -87,6 +87,11 @@ module soil_config_mod
       integer :: reva_top = 0
       integer :: nrstaring = 0  !! 0=user-supplied, 1..6=Staring series
 
+      ! Phase 4f Task B5: legacy SWINCO=3 reads initial state (h, cml,
+      ! ssnow, slw, pond, Tsoil) from a previous-run .end-style file
+      ! named here. Adapter reads the file directly when allocated.
+      character(len=:), allocatable :: inifil
+
       integer,      allocatable :: sublay(:)
       real(real64), allocatable :: hsublay(:)  !! per-sub-layer height (cm)
       real(real64), allocatable :: hcomp(:)

@@ -471,6 +471,50 @@ contains
          end do
       end if
 
+      ! HACK Phase 4f-extend: SWINCO=3 .ini reader. Mirrors
+      ! readswap.f90:1593-1626 — when the case authors `[soil].inifil`
+      ! and `swinco=3`, read the previous-run end-state file via the
+      ! legacy ttutil rdinit/rdsdor/rdador/rdfdor stack to populate
+      ! ssnow/slw/pond/zi/h/zc/cml (and z_Tsoil/Tsoil under SWHEA=1
+      ! SWCALT=2). Salinitystress (case 5) needs this so the initial
+      ! solute profile (~15 mg/cm3 below ~150 cm, ~0 in root zone)
+      ! matches the fixture's quasi-steady starting state. Same HACK
+      ! pattern as the .bbc / .irg readers above. Phase 4f-extend
+      ! should port the .ini state into a typed schema slot.
+      if (config%soil%swinco == 3 .and. allocated(config%soil%inifil)) then
+         if (len_trim(config%soil%inifil) > 0) then
+            block
+               use swap_array_dimensions, only: macp
+               integer :: ini_unit, ifnd_ini
+               character(len=200) :: ini_filnam
+               integer, external :: getun2
+               ini_filnam = trim(config%soil%inifil)
+               ini_unit = getun2(10, 90, 2)
+               call rdinit(ini_unit, logf, ini_filnam)
+               call rdsdor('ssnow', 0.0d0, 1000.0d0, ssnow)
+               ! Legacy zeroes ssnow when swsnow != 1 (readswap.f90:1606-1613).
+               ! Salinitystress and other regression cases have swsnow=0.
+               if (config%meteo%snow%swsnow /= 1) ssnow = 0.0d0
+               call rdsdor('slw',   0.0d0, 1000.0d0, slw)
+               call rdsdor('pond',  0.0d0,  100.0d0, pond)
+               pondini = pond
+               call rdador('z_h',  -1.0d5,  0.0d0, zi, macp, ifnd_ini)
+               call rdfdor('h',    -1.0d10, 1.0d4, h,  macp, ifnd_ini)
+               nhead = ifnd_ini
+               if (config%heat%swhea == 1 .and. config%heat%swcalt == 2) then
+                  call rdador('z_Tsoil', -1.0d5,  0.0d0, zh,    macp, ifnd_ini)
+                  call rdfdor('Tsoil',  -50.0d0, 50.0d0, tsoil, macp, ifnd_ini)
+               end if
+               if (config%solute%swsolu == 1) then
+                  call rdador('z_Cml', -1.0d5,    0.0d0, zc,  macp, ifnd_ini)
+                  call rdfdor('Cml',    0.0d0, 1.0d6,    cml, macp, ifnd_ini)
+                  nconc = ifnd_ini
+               end if
+               close(ini_unit)
+            end block
+         end if
+      end if
+
       ! Per-soil-physical-layer Mualem-van Genuchten hydraulics.
       ! Mirrors readswap.f90:786-825 conceptually, but most of the
       ! per-array names (ores/osat/alfa/npar/lexp/alfaw) are *locals*

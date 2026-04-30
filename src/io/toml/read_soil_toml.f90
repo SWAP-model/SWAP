@@ -13,7 +13,8 @@ module read_soil_toml_mod
    use soil_config_mod, only: soil_config_t
    use toml_field_helpers_mod, only: get_table, &
                                      get_optional_int_with_default, &
-                                     get_optional_real_with_default
+                                     get_optional_real_with_default, &
+                                     get_optional_string_with_default
    use error_mod, only: error_collection_t, ERR_PARSE_TYPE_MISMATCH
    implicit none
    private
@@ -46,6 +47,10 @@ contains
       call get_optional_int_with_default(sec, 'reva_top', config%reva_top, 0, 'soil.reva_top', errors)
 
       call get_optional_int_with_default(sec, 'nrstaring', config%nrstaring, 0, 'soil.nrstaring', errors)
+
+      ! Phase 4f Task B5: SWINCO=3 inifil (path to previous-run state file).
+      call get_optional_string_with_default(sec, 'inifil', config%inifil, '', &
+                                            'soil.inifil', errors)
 
       ! Top-level per-layer anisotropy ratios.
       call read_array_1d(sec, 'cofani', config%cofani, 'soil.cofani', errors)
