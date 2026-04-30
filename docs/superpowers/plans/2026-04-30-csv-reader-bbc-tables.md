@@ -85,6 +85,7 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 - Create: `tests/unit/io/fixtures/csv_short_row.csv`
 - Create: `tests/unit/io/fixtures/csv_header_only.csv`
 - Create: `tests/unit/io/fixtures/csv_with_comments.csv`
+- Create: `tests/unit/io/fixtures/csv_only_comments.csv`
 - Delete: `tests/unit/io/fixtures/csv_happy.csv`, `tests/unit/io/fixtures/csv_malformed.csv`
 
 - [ ] **Step 1: Write each fixture**
@@ -177,6 +178,14 @@ date,gwl
 
 # inline comment between rows
 1980-04-25,-90.0
+```
+
+`csv_only_comments.csv`:
+```
+# this file is only comments and blank lines
+
+# the reader should report ERR_PARSE_MISSING_HEADER because no header line ever appears
+
 ```
 
 - [ ] **Step 2: Delete obsolete fixtures**
@@ -330,9 +339,26 @@ subroutine test_header_missing()
                        ['date', 'gwl '], table, errors)
 
    @assertTrue(errors%has_errors())
-   ! First line "1980-04-24,-88.0" is treated as the header attempt
-   ! and fails strict-positional comparison.
+   ! csv_no_header.csv: first line "1980-04-24,-88.0" is treated as the
+   ! header attempt (rows-only file → header-mismatch).
    @assertEqual(ERR_PARSE_HEADER_MISMATCH, errors%items(1)%code)
+end subroutine
+
+@test
+subroutine test_only_comments_missing_header()
+   use funit
+   use iso_fortran_env, only: real64
+   use csv_reader_mod, only: read_csv_table
+   use error_mod, only: error_collection_t, ERR_PARSE_MISSING_HEADER
+   real(real64), allocatable :: table(:,:)
+   type(error_collection_t)  :: errors
+
+   call read_csv_table('tests/unit/io/fixtures/csv_only_comments.csv', &
+                       ['date', 'gwl '], table, errors)
+
+   @assertTrue(errors%has_errors())
+   @assertEqual(ERR_PARSE_MISSING_HEADER, errors%items(1)%code)
+   @assertFalse(allocated(table))
 end subroutine
 
 @test
