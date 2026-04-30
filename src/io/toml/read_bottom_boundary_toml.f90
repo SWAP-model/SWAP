@@ -82,6 +82,11 @@ contains
       ! column 2 is the aquifer head in cm.
       call read_date_real_table(sec, 'haquif_table', config%haquif_table, &
                                 'bottom_boundary.haquif_table', errors)
+      ! Phase 4f cleanup: SWBOTB=1 date-keyed groundwater-level table.
+      ! Column 1 is a TOML date literal (decoded to days-since-1900);
+      ! column 2 is the groundwater level in cm. Mirrors haquif_table.
+      call read_date_real_table(sec, 'gwl_table', config%gwl_table, &
+                                'bottom_boundary.gwl_table', errors)
    end subroutine read_bottom_boundary_toml
 
    !> Decode a TOML array-of-arrays where each inner row is [date, real].

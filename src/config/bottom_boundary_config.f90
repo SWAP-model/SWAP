@@ -17,6 +17,11 @@ module bottom_boundary_config_mod
 
       ! SWBOTB=1 inline alternative
       real(real64), allocatable :: swc_table(:,:)
+      ! Phase 4f cleanup: SWBOTB=1 date-keyed groundwater-level table.
+      ! Two columns (date as days-since-1900, gwlevel in cm). Maps to legacy
+      ! gwltab(:) populated in readswap.f90 and consumed by afgen() in
+      ! soilhydraulics.f90:1005. Mirrors haquif_table for SWBOTB=3 sw3=2.
+      real(real64), allocatable :: gwl_table(:,:)
 
       ! SWBOTB=2 inline
       real(real64), allocatable :: qbot_table(:,:)
@@ -90,16 +95,13 @@ contains
       case (1)
          have_file  = allocated(self%bbcfil)
          if (have_file) have_file = len_trim(self%bbcfil) > 0
-         have_table = allocated(self%swc_table)
+         have_table = allocated(self%swc_table) .or. allocated(self%gwl_table)
          if (.not. have_file .and. .not. have_table) then
             call errors%append(ERR_VALIDATION_OUT_OF_RANGE, &
-               "swbotb=1 requires bbcfil or swc_table", 'bottom_boundary')
-         end if
-         if (have_file .and. have_table) then
-            call errors%append(ERR_VALIDATION_OUT_OF_RANGE, &
-               "swbotb=1 cannot set both bbcfil and swc_table", 'bottom_boundary')
+               "swbotb=1 requires bbcfil, swc_table, or gwl_table", 'bottom_boundary')
          end if
          call check_table_2d(self%swc_table, 2, 'bottom_boundary.swc_table', errors)
+         call check_table_2d(self%gwl_table, 2, 'bottom_boundary.gwl_table', errors)
       case (2)
          if (.not. allocated(self%qbot_table)) then
             call errors%append(ERR_VALIDATION_OUT_OF_RANGE, &
