@@ -537,15 +537,21 @@ contains
             forg(i) = config%heat%porg(i)   ! legacy alias: porg -> forg
          end do
       end if
-      ! Initial soil temperature table tsoil_init(:,2) — column 2 (temp)
-      ! flattens into legacy `tsoil(numnod)` row-by-row. Legacy convention:
-      ! the (depth, temp) pairs feed an interpolation against `z` to fill
-      ! tsoil(macp); for parity at the assignment level we copy the table
-      ! directly into the lower-indexed entries of tsoil. Real interpolation
-      ! happens in physics post-init.
+      ! Initial soil temperature table tsoil_init(:,1:2) — column 1 (depth)
+      ! mirrors legacy `zh`, column 2 (temp) mirrors legacy `tsoil(1..nheat)`.
+      ! `nheat` is the number of (depth, temp) pairs; it gates the afgen
+      ! table-build in heat/temperature.f90 task=1 (lines 117-123). Without
+      ! `nheat` and `zh`, the table-build loop is skipped and every
+      ! compartment's tsoil(:) is interpolated against an empty afgen
+      ! table, yielding spurious zero initial soil temperatures across
+      ! the profile. (Hupselbrook iHWCKmodel<=3 path means no direct
+      ! water-flow feedback, so this fix is parity-correctness only and
+      ! does not by itself close the year-1 GWL gap.)
       if (allocated(config%heat%tsoil_init)) then
          n = size(config%heat%tsoil_init, 1)
+         nheat = n
          do i = 1, min(n, size(tsoil))
+            zh(i)    = config%heat%tsoil_init(i, 1)
             tsoil(i) = config%heat%tsoil_init(i, 2)
          end do
       end if
