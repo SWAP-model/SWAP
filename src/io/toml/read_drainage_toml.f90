@@ -194,6 +194,7 @@ contains
                call get_value(levels, i, item, stat=stat)
                if (stat /= 0 .or. .not. associated(item)) cycle
                call get_optional_int_with_default(item,  'swdtyp', config%swdtyp(i), 0,           'drainage.levels.swdtyp', errors)
+               call get_optional_int_with_default(item,  'swallo', config%swallo(i), 0,           'drainage.levels.swallo', errors)
                call get_optional_real_with_default(item, 'zbotdr', config%zbotdr(i), 0.0_real64,  'drainage.levels.zbotdr', errors)
                call get_optional_real_with_default(item, 'drares', config%drares(i), 0.0_real64,  'drainage.levels.drares', errors)
                call get_optional_real_with_default(item, 'infres', config%infres(i), 0.0_real64,  'drainage.levels.infres', errors)
