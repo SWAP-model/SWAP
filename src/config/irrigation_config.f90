@@ -26,6 +26,13 @@ module irrigation_config_mod
    type :: irrigation_config_t
       integer                       :: swirfix = 0
       character(len=:), allocatable :: irgfil
+      ! Phase 4f cleanup: CSV companion file path (relative to swap.toml)
+      ! holding a long-form (date, depth, conc, type) fixed-events table.
+      ! Replaces the legacy `.irg` external-file HACK. Mutually exclusive
+      ! with `fixed_events` (inline TOML). When set, the adapter reads
+      ! the CSV via `csv_reader_mod%read_csv_date_reals` and unpacks it
+      ! into the same legacy `irdate/irdepth/irconc/irtype` arrays.
+      character(len=:), allocatable :: fixed_events_file
       real(real64),     allocatable :: fixed_events(:,:)
    contains
       procedure :: validate => irrigation_config_validate
@@ -95,7 +102,7 @@ contains
    subroutine irrigation_config_validate(self, errors)
       class(irrigation_config_t), intent(in)    :: self
       type(error_collection_t),   intent(inout) :: errors
-      logical :: have_file, have_table
+      logical :: have_irgfil, have_table, have_csv
 
       ! Sentinel: swirfix=0 ⇒ no fixed irrigation at the .swp level. Skip
       ! everything so existing case TOMLs without an [irrigation] section
@@ -105,16 +112,21 @@ contains
       call check_int_enum(self%swirfix, [0, 1], 'irrigation.swirfix', errors)
 
       if (self%swirfix == 1) then
-         have_file = allocated(self%irgfil)
-         if (have_file) have_file = len_trim(self%irgfil) > 0
+         have_irgfil = allocated(self%irgfil)
+         if (have_irgfil) have_irgfil = len_trim(self%irgfil) > 0
+         have_csv = allocated(self%fixed_events_file)
+         if (have_csv) have_csv = len_trim(self%fixed_events_file) > 0
          have_table = allocated(self%fixed_events)
-         if (.not. have_file .and. .not. have_table) then
+         if (.not. have_irgfil .and. .not. have_table .and. .not. have_csv) then
             call errors%append(ERR_VALIDATION_OUT_OF_RANGE, &
-               "swirfix=1 requires irgfil or fixed_events", 'irrigation')
+               "swirfix=1 requires irgfil, fixed_events, or fixed_events_file", &
+               'irrigation')
          end if
-         if (have_file .and. have_table) then
+         ! Phase 4f cleanup: at most one source for the events.
+         if (count([have_irgfil, have_table, have_csv]) > 1) then
             call errors%append(ERR_VALIDATION_OUT_OF_RANGE, &
-               "swirfix=1 cannot set both irgfil and fixed_events", 'irrigation')
+               "swirfix=1 cannot set more than one of " // &
+               "{irgfil, fixed_events, fixed_events_file}", 'irrigation')
          end if
          call check_table_2d(self%fixed_events, 4, 'irrigation.fixed_events', errors)
       end if

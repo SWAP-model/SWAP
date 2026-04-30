@@ -52,6 +52,13 @@ contains
       call get_optional_string_with_default(sec, 'irgfil', config%irgfil, '', &
                                             'irrigation.irgfil', errors)
 
+      ! Phase 4f cleanup: CSV companion file (preferred replacement for
+      ! the legacy .irg path). Path is relative to swap.toml and is
+      ! resolved + read by the strangler adapter, not at parse time.
+      call get_optional_string_with_default(sec, 'fixed_events_file', &
+                                            config%fixed_events_file, '', &
+                                            'irrigation.fixed_events_file', errors)
+
       ! Inline fixed-events: array-of-tables with named keys
       ! (date / depth / conc / type). Stored internally as a (nrows, 4)
       ! real(real64) table where col 1 is days-since-1900 (legacy axis)
