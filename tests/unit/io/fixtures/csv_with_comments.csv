@@ -1,0 +1,8 @@
+# leading comment
+# another comment
+date,gwl
+
+1980-04-24,-88.0
+
+# inline comment between rows
+1980-04-25,-90.0

@@ -1,6 +1,0 @@
-# Happy CSV fixture for csv_reader_mod test.
-# Three data rows; one header row; one comment line above.
-date,depth,conc,type
-2012-04-17,14.40,0.401,1
-2012-04-18,14.40,0.401,1
-2012-04-19,14.40,0.401,1
