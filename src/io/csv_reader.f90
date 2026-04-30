@@ -31,7 +31,6 @@ contains
       integer :: unit, ios, ncols, nrows, irow
       character(len=4096) :: line
       logical :: file_exists, header_done, date_keyed
-      character(len=64) :: irow_str
 
       ncols = size(expected_header)
       date_keyed = (ncols >= 1) .and. (to_lower(trim(expected_header(1))) == 'date')
@@ -162,7 +161,7 @@ contains
             end if
             field = trim(adjustl(rest))
          end if
-         if (to_lower(field) /= to_lower(trim(expected(i)))) then
+         if (field /= trim(expected(i))) then
             call errors%append(ERR_PARSE_HEADER_MISMATCH, &
                trim(path) // ": header column '" // field // &
                "' does not match expected '" // trim(expected(i)) // "'", &
