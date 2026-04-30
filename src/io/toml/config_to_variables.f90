@@ -841,7 +841,8 @@ contains
             block
                use csv_reader_mod, only: read_csv_table
                use error_mod, only: error_collection_t
-               real(8), allocatable :: csv_table(:,:)
+               use iso_fortran_env, only: real64
+               real(real64), allocatable :: csv_table(:,:)
                type(error_collection_t) :: csv_errs
                integer :: k_csv, nrows_csv
                character(len=5) :: irrig_header(4)

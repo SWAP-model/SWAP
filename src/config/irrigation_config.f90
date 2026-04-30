@@ -30,7 +30,7 @@ module irrigation_config_mod
       ! holding a long-form (date, depth, conc, type) fixed-events table.
       ! Replaces the legacy `.irg` external-file HACK. Mutually exclusive
       ! with `fixed_events` (inline TOML). When set, the adapter reads
-      ! the CSV via `csv_reader_mod%read_csv_date_reals` and unpacks it
+      ! the CSV via `csv_reader_mod%read_csv_table` and unpacks it
       ! into the same legacy `irdate/irdepth/irconc/irtype` arrays.
       character(len=:), allocatable :: fixed_events_file
       real(real64),     allocatable :: fixed_events(:,:)
