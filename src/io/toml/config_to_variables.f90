@@ -284,6 +284,18 @@ contains
          do i = 1, size(config%drain%L)
             L(i) = config%drain%L(i)
          end do
+         ! Legacy m->cm conversion mirroring readswap.f90:1908-1909 (and
+         ! the matching DRAMET=2 branch above). For DRAMET=3 the reader
+         ! at lines 1908-1994 multiplies each per-level `l(:)` by 100 only
+         ! when `swdivd == 1`. The DRAMET=2 branch upstream in this file
+         ! handles its own scalar `lm` conversion; here we cover the
+         ! per-level array path (DRAMET=3 only — DRAMET=1/lookup never
+         ! consults `L(:)`).
+         if (config%drain%dramet == 3 .and. config%drain%swdivd == 1) then
+            do i = 1, size(config%drain%L)
+               L(i) = 100.0d0 * L(i)
+            end do
+         end if
       end if
       if (allocated(config%drain%gwlinf)) then
          do i = 1, size(config%drain%gwlinf)
@@ -324,6 +336,17 @@ contains
          do i = 1, size(config%drain%swallo)
             swallo(i) = config%drain%swallo(i)
          end do
+      end if
+
+      ! HACK Phase 4f-extend: SWLIMINF gates limit-of-infiltration to the
+      ! channel water depth in the DRAMET=3 multi-level resistance solver
+      ! (drainage.f90 / divdra.f90). Legacy hard-codes 1 in
+      ! readswap.f90:2010 (after the DRAMET=3 .dra block) when the .dra
+      ! is silent on the key. variables.f90:694 default-initialises to 0,
+      ! so without this HACK case 2's solver would treat infiltration as
+      ! unlimited. Add a [drainage].swliminf slot in Phase 4f-extend.
+      if (config%drain%dramet == 3) then
+         swliminf = 1
       end if
 
       ! Drainage.surface_runoff sub-section: scalar switches + per-level
