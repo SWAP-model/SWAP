@@ -300,6 +300,11 @@ def _run_and_aggregate(case: CaseConfig):
                     shutil.copy(toml_src / extra, workdir / extra)
             for crp in toml_src.glob("*.crp.toml"):
                 shutil.copy(crp, workdir / crp.name)
+            # Phase 4f cleanup: stage CSV companion files (long-form
+            # fixed-irrigation events, prescribed gwl, etc.) alongside
+            # swap.toml. Reader paths are relative to pathwork.
+            for csv_companion in toml_src.glob("*.csv"):
+                shutil.copy(csv_companion, workdir / csv_companion.name)
 
         # Record time before running to verify output is fresh
         before_run = time.time()
