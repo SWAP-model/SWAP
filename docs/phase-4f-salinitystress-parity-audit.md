@@ -229,3 +229,76 @@ N/A — case excluded from macropore by SWMACRO=0.
 - `[soil].swinco=3` + `inifil` parsing for restart from `swap.ini`. Case 5
   uses SWINCO=3; the TOML stand-in is SWINCO=2 with gwli=-90, which
   may bias year-1 trajectories slightly.
+
+## Residual diff after gap-closure (BLOCKED)
+
+After all audited gaps were closed in Phase 4f Task B5:
+
+- TOML: psilt, soil discretization (5 sub-layers, 195 compartments), MvG
+  hydraulics, rsoil/rsro/rsroexp, cofani, per-level swallo, inlist_csv
+  override, cofredbo=0.54, per-layer ldis_array, swinco=3 + inifil.
+- Schema: `[solute].ldis_array` per-layer slot, `[soil].inifil` slot,
+  swredu inferred from cofredbo.
+- Adapter: SWIRGFIL=1 .irg reader HACK, SWINCO=3 .ini reader HACK
+  (mirrors readswap.f90:1593-1626 — populates ssnow/slw/pond/zi/h/zc/cml
+  and z_Tsoil/Tsoil under SWHEA=1 SWCALT=2), per-layer ldis copy,
+  swredu=2 inference from non-default cofredbo.
+
+The case runs end-to-end but conc + CWSO drifts persist:
+
+```
+mean CONC[-25.0]   expected 1.12   actual 1.52   diff 0.40 (+36%)
+mean CONC[-5.0]    expected 1.14   actual 1.46   diff 0.32 (+28%)
+mean CONC[-55.0]   expected 1.17   actual 1.71   diff 0.54 (+46%)
+mean CWSO          expected 717.02 actual 21.57  diff 695.45 (-97%)
+```
+
+CWSO collapsed to ~zero (crops dying from salinity stress). Conc values
+are systematically ~30-46% above fixture across all 4 years. The
+~30% over-pattern is consistent year over year, suggesting a systemic
+flux multiplier rather than a missing initial-condition. With the .ini
+reader in place, the initial cml profile (and h profile) match the
+fixture's quasi-steady starting state, yet salt continues to over-
+accumulate.
+
+`TREDSOL = 0.0` in the actual run vs 0.02 in the fixture is itself
+strange: the crop is clearly dying from salinity stress (CWSO=0), but
+the daily salinity-stress reduction factor is not being recorded. This
+points at either (a) the `.crp` salinity stress params (saltmax=0.732
+/ saltslope=0.0868) being read but not affecting the same daily
+reduction factor that's logged, or (b) a wiring nuance where salinity
+stress kicks in via a different code path than expected.
+
+Dead ends explored:
+
+- Adding SWINCO=3 .ini reader (port of readswap.f90:1593-1626) — no
+  measurable change in conc/CWSO. The ssnow/pond/h/cml/zc are read
+  successfully but the trajectory is unchanged.
+- Wiring per-layer ldis_array (5/5 cm dispersion) — minor effect, conc
+  still elevated.
+- Switching swredu to 2 (Boesten-Stroosnijder) with cofredbo=0.54 — no
+  measurable change in conc/CWSO.
+
+Suspected next steps (out of scope for this iteration):
+
+1. Audit the `.crp.toml` per-rotation salinity-stress wiring. The
+   strangler adapter does not handle .crp at all (Phase 4g territory);
+   the legacy crop sub-readers (cropfixed/wofost) consume the staged
+   `.crp` file via `readwofost`. The salinity stress handler reads
+   saltmax/saltslope from .crp; if the value lookup or the per-day
+   salinity-stress timing differs between legacy and the new pipeline,
+   that would explain why TREDSOL is 0 yet CWSO collapses.
+2. Verify the bottom-flux source/sink for solute. With cseep=15.574
+   (mg/cm3) and shape=0.79, the saline aquifer head + drain-flux
+   formulation may be over-driving upward salt flux.
+3. Compare the legacy binary's `result_output.csv` against ours over
+   each year — currently we only have the fixture's annual aggregates.
+   A daily-trace bisect would localize when conc starts to diverge.
+4. Verify the `.crp.toml` SWSALINITY=1 / saltmax / saltslope is being
+   handed to the legacy reader correctly (cropfixed reads it from the
+   staged .crp file, not from TOML).
+
+Status: BLOCKED on residual ~30% conc over-shoot + ~97% CWSO collapse.
+Every audited gap is closed; the residual is downstream of the
+strangler adapter (likely in the .crp salinity-stress wiring or the
+saline-seepage flux, neither of which is in the adapter's scope).
