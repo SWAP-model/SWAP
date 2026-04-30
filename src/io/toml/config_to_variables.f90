@@ -727,14 +727,19 @@ contains
          ! on depth, nint() on type). Replaces the legacy .irg HACK.
          if (len_trim(config%irrigation%fixed_events_file) > 0) then
             block
-               use csv_reader_mod, only: read_csv_date_reals
+               use csv_reader_mod, only: read_csv_table
                use error_mod, only: error_collection_t
                real(8), allocatable :: csv_table(:,:)
                type(error_collection_t) :: csv_errs
                integer :: k_csv, nrows_csv
-               call read_csv_date_reals( &
+               character(len=5) :: irrig_header(4)
+               irrig_header(1) = 'date '
+               irrig_header(2) = 'depth'
+               irrig_header(3) = 'conc '
+               irrig_header(4) = 'type '
+               call read_csv_table( &
                   trim(pathwork)//trim(config%irrigation%fixed_events_file), &
-                  3, csv_table, csv_errs)
+                  irrig_header, csv_table, csv_errs)
                call csv_errs%abort_if_fatal()
                if (allocated(csv_table)) then
                   nrows_csv = size(csv_table, 1)
