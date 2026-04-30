@@ -11,12 +11,13 @@
 !! absent the reader returns silently and leaves `config` at defaults.
 module read_bottom_boundary_toml_mod
    use iso_fortran_env, only: real64
-   use tomlf, only: toml_table, toml_array, get_value, len
+   use tomlf, only: toml_table, toml_array, get_value, len, toml_datetime
    use bottom_boundary_config_mod, only: bottom_boundary_config_t
    use toml_field_helpers_mod, only: get_table,                         &
                                      get_optional_int_with_default,     &
                                      get_optional_real_with_default,    &
-                                     get_optional_string_with_default
+                                     get_optional_string_with_default,  &
+                                     parse_date_to_days1900
    use error_mod, only: error_collection_t, ERR_PARSE_TYPE_MISMATCH
    implicit none
    private
@@ -77,9 +78,78 @@ contains
       call read_table_2d(sec, 'cofqha_table', config%cofqha_table, 2, &
                          'bottom_boundary.cofqha_table', errors)
       ! Phase 4f Task B4: SWBOTB=3 sw3=2 aquifer-head date table.
-      call read_table_2d(sec, 'haquif_table', config%haquif_table, 2, &
-                         'bottom_boundary.haquif_table', errors)
+      ! Column 1 is a TOML date literal (decoded to days-since-1900);
+      ! column 2 is the aquifer head in cm.
+      call read_date_real_table(sec, 'haquif_table', config%haquif_table, &
+                                'bottom_boundary.haquif_table', errors)
    end subroutine read_bottom_boundary_toml
+
+   !> Decode a TOML array-of-arrays where each inner row is [date, real].
+   !! Column 1 is a TOML date literal converted to days-since-1900;
+   !! column 2 is a real(real64). Mirrors read_table_2d's error semantics.
+   subroutine read_date_real_table(sec, key, table, context, errors)
+      type(toml_table), pointer, intent(in)    :: sec
+      character(len=*),          intent(in)    :: key
+      real(real64), allocatable, intent(out)   :: table(:,:)
+      character(len=*),          intent(in)    :: context
+      type(error_collection_t),  intent(inout) :: errors
+
+      type(toml_array), pointer :: outer, inner
+      integer :: nrows, i, stat, n_inner
+      real(real64) :: val
+      type(toml_datetime) :: dtv
+
+      if (.not. associated(sec)) return
+
+      outer => null()
+      call get_value(sec, key, outer, requested=.false., stat=stat)
+      if (.not. associated(outer)) return
+
+      nrows = len(outer)
+      if (nrows == 0) then
+         allocate(table(0, 2))
+         return
+      end if
+
+      allocate(table(nrows, 2))
+      table = 0.0_real64
+
+      do i = 1, nrows
+         inner => null()
+         call get_value(outer, i, inner, stat=stat)
+         if (stat /= 0 .or. .not. associated(inner)) then
+            call errors%append(ERR_PARSE_TYPE_MISMATCH, &
+                               "row not an array", context)
+            if (allocated(table)) deallocate(table)
+            return
+         end if
+         n_inner = len(inner)
+         if (n_inner /= 2) then
+            call errors%append(ERR_PARSE_TYPE_MISMATCH, &
+                               "row width mismatch (expected 2)", context)
+            if (allocated(table)) deallocate(table)
+            return
+         end if
+         ! Column 1: TOML date.
+         call get_value(inner, 1, dtv, stat=stat)
+         if (stat /= 0) then
+            call errors%append(ERR_PARSE_TYPE_MISMATCH, &
+                               "expected date in col 1", context)
+            if (allocated(table)) deallocate(table)
+            return
+         end if
+         table(i, 1) = parse_date_to_days1900(dtv)
+         ! Column 2: real.
+         call get_value(inner, 2, val, stat=stat)
+         if (stat /= 0) then
+            call errors%append(ERR_PARSE_TYPE_MISMATCH, &
+                               "non-real cell in col 2", context)
+            if (allocated(table)) deallocate(table)
+            return
+         end if
+         table(i, 2) = val
+      end do
+   end subroutine read_date_real_table
 
    !> Decode a TOML array-of-arrays at sec[key] into a (nrows, ncols)
    !! real(real64) allocatable. Absent key leaves table unallocated.
