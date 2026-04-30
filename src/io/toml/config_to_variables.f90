@@ -185,11 +185,17 @@ contains
 
       ! HACK Phase 4f-extend: SWREDU is the soil-evaporation reduction-method
       ! switch (1=Black, 2=Boesten-Stroosnijder). Legacy reads it from .swp
-      ! at readswap.f90:584 but no schema slot covers it yet. Hardcoding 1
-      ! (Black model) matches case 1's .swp value. Add to soil_config_t under
-      ! [soil.evaporation] in Phase 4f-extend; case-by-case values once the
-      ! other 5 cases enter the iteration loop.
-      swredu = 1
+      ! at readswap.f90:584 but no schema slot covers it yet. Default to 1
+      ! (Black model) matching cases 1/2/4. When the case authors a non-
+      ! default cofredbo (Boesten coefficient), flip to swredu=2 — case 5
+      ! (salinitystress) is the only regression case using SWREDU=2.
+      ! Phase 4f-extend should add `[soil.evaporation].swredu` so the
+      ! switch is authored explicitly rather than inferred.
+      if (config%meteo%evaporation%cofredbo /= 0.35d0) then
+         swredu = 2
+      else
+         swredu = 1
+      end if
 
       ! HACK Phase 4f-extend: RSIGNI is the minimum daily rainfall (cm) that
       ! resets the Black-method dry counter (ldwet). Legacy reads it from .swp
