@@ -182,3 +182,52 @@ because the case TOML authors `psand/pclay/porg` but not `psilt`).
 6. Add `inlist_csv` override.
 7. Add `swbotb3impl` schema slot + adapter copy.
 8. Verify regression converges.
+
+## Residual diff after gap-closure (BLOCKED)
+
+After all audited gaps were closed (psilt + soil discretization + MvG, cofani
++ per-level swallo, rsoil + rsro + rsroexp + inlist_csv, swbotb3impl +
+haquif_table schema slot + reader + adapter wiring), the case runs end-to-end
+but MOWDM / GRASSDM still drift 8–25 % below fixture values:
+
+```
+mean MOWDM   expected 12412.97   actual 10740.27   diff 1672.70
+mean GRASSDM expected   720.14   actual   704.96   diff   15.18
+```
+
+`TREDDRY` and `TREDWET` (annual-average drought / oxygen-stress factors)
+match the fixture exactly, indicating the daily stress signals are
+identical in this run vs the legacy run; only the integrated crop biomass
+diverges. That points at a non-stress-driven crop integration nuance
+rather than a missing TOML key.
+
+`tests/regression/INVESTIGATION_NOTES.md` documents that the oxygenstress
+fixture has carried a pre-existing MOWDM deviation (max 85 in year 1995)
+for both ifx- and gfortran-built legacy SWAP — i.e. a known crop-mowing
+fixture imperfection that pre-dates the strangler swap. The current
+8–25 % drift is much larger than that pre-existing 85-kg artefact, so
+something in the strangler pipeline is amplifying it; but it is not
+attributable to any unauthored TOML key the audit could surface.
+
+Dead ends explored:
+
+- Wiring `orgmat(i) = config%heat%porg(i)` (mirrors legacy
+  readswap.f90:1062 reading orgmat into the per-layer `orgmat(maho)` for
+  oxygenstress.f90:202 to consume) makes the diff dramatically worse
+  (mean MOWDM drops from 10740 to 8211). The fixture run therefore must
+  have effectively had `orgmat = 0` for the oxygenstress.f90 lookup,
+  even though .swp authors realistic ORGMAT values. Reverted to
+  `forg(i) = porg(i)` only.
+- Numerical scalars (gwlconv, critdevh1cp, critdevh2cp, critdevponddt,
+  maxit, maxbacktr, swkmean, swkimpl, dtmin, dtmax) all already at
+  legacy defaults that match case 4.
+- swbotb3impl (=1 in case) authored and wired through the new schema
+  slot. The haquif date table (sw3=2 branch) is authored verbatim
+  (80 rows, 1993-2002) and decoded into the legacy haqtab(:)
+  interleaved date/head packing.
+- Reference legacy binary (`tests/reference/swap420`) cannot run
+  case 4 (segfaults); our gfortran binary in `--legacy` mode requires
+  swap.toml. There is no working oracle to bisect the residual.
+
+Status: BLOCKED on residual ~15 % MOWDM gap. Every audited gap is
+closed; no further unauthored TOML key surfaced.
