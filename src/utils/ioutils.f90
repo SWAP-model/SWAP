@@ -79,24 +79,5 @@ contains
         
     end subroutine parse_output_extensions
 
-    !> Helper function to convert to lowercase
-    !!
-    !! Even though fortran is case insensitive, in this kind of comparison
-    !! we are checking if character data (not identifier) are the same, and caps and lower case
-    !! letters have a different value.
-    !!
-    function to_lower(str) result(lower_str)
-        character(len=*), intent(in) :: str
-        character(len=len(str)) :: lower_str
-        integer :: i, ic
-        
-        lower_str = str
-        do i = 1, len_trim(str)
-            ic = iachar(str(i:i))
-            if (ic >= iachar('A') .and. ic <= iachar('Z')) then
-                lower_str(i:i) = achar(ic + 32)
-            end if
-        end do
-    end function to_lower
 
 end module io_utils_mod

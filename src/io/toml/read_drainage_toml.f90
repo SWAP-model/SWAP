@@ -139,6 +139,7 @@ contains
       type(toml_table), pointer :: basic, item
       type(toml_array), pointer :: levels
       integer :: i, n, stat
+      character(len=:), allocatable :: str_tmp
 
       call get_optional_int_with_default(sec, 'swdra',    config%swdra,    0, 'drainage.swdra',    errors)
       call get_optional_int_with_default(sec, 'dramet',   config%dramet,   0, 'drainage.dramet',   errors)
@@ -176,29 +177,32 @@ contains
                      config%infres(n), config%L(n),      config%gwlinf(n), &
                      config%rdrain(n), config%rinfi(n),  config%rentry(n), &
                      config%rexit(n),  config%widthr(n), config%taludr(n), &
-                     config%swallo(n))
-            config%swdtyp  = 0
-            config%zbotdr  = 0.0_real64
-            config%drares  = 0.0_real64
-            config%infres  = 0.0_real64
-            config%L       = 0.0_real64
-            config%gwlinf  = 0.0_real64
-            config%rdrain  = 0.0_real64
-            config%rinfi   = 0.0_real64
-            config%rentry  = 0.0_real64
-            config%rexit   = 0.0_real64
-            config%widthr  = 0.0_real64
-            config%taludr  = 0.0_real64
-            config%swallo  = 0
+                     config%swallo(n), config%owltab_file(n))
+            config%swdtyp      = 0
+            config%zbotdr      = 0.0_real64
+            config%drares      = 0.0_real64
+            config%infres      = 0.0_real64
+            config%L           = 0.0_real64
+            config%gwlinf      = 0.0_real64
+            config%rdrain      = 0.0_real64
+            config%rinfi       = 0.0_real64
+            config%rentry      = 0.0_real64
+            config%rexit       = 0.0_real64
+            config%widthr      = 0.0_real64
+            config%taludr      = 0.0_real64
+            config%swallo      = 0
+            config%owltab_file = ''
             do i = 1, n
                call get_value(levels, i, item, stat=stat)
                if (stat /= 0 .or. .not. associated(item)) cycle
-               call get_optional_int_with_default(item,  'swdtyp', config%swdtyp(i), 0,           'drainage.levels.swdtyp', errors)
-               call get_optional_int_with_default(item,  'swallo', config%swallo(i), 0,           'drainage.levels.swallo', errors)
-               call get_optional_real_with_default(item, 'zbotdr', config%zbotdr(i), 0.0_real64,  'drainage.levels.zbotdr', errors)
-               call get_optional_real_with_default(item, 'drares', config%drares(i), 0.0_real64,  'drainage.levels.drares', errors)
-               call get_optional_real_with_default(item, 'infres', config%infres(i), 0.0_real64,  'drainage.levels.infres', errors)
-               call get_optional_real_with_default(item, 'L',      config%L(i),      0.0_real64,  'drainage.levels.L',      errors)
+               call get_optional_int_with_default(item,  'swdtyp',     config%swdtyp(i),         0,           'drainage.levels.swdtyp',     errors)
+               call get_optional_int_with_default(item,  'swallo',     config%swallo(i),         0,           'drainage.levels.swallo',     errors)
+               call get_optional_real_with_default(item, 'zbotdr',     config%zbotdr(i),         0.0_real64,  'drainage.levels.zbotdr',     errors)
+               call get_optional_real_with_default(item, 'drares',     config%drares(i),         0.0_real64,  'drainage.levels.drares',     errors)
+               call get_optional_real_with_default(item, 'infres',     config%infres(i),         0.0_real64,  'drainage.levels.infres',     errors)
+               call get_optional_real_with_default(item, 'L',          config%L(i),              0.0_real64,  'drainage.levels.L',          errors)
+               call get_optional_string_with_default(item, 'owltab_file', str_tmp, '', 'drainage.levels.owltab_file', errors)
+               if (allocated(str_tmp)) config%owltab_file(i) = str_tmp
             end do
          end if
       end if

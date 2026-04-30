@@ -354,6 +354,39 @@ contains
          end do
       end if
 
+      ! Channel water level tables (DATOWL/LEVEL in .dra). ASCII readswap
+      ! reads these per level into owltab(lev,1:2*nowltab(lev)). Without
+      ! them owltab=0 → afgen returns channel level = 0 (surface), which
+      ! causes spurious infiltration or drainage and changes water table
+      ! dynamics. Each drainage level may supply an owltab_file CSV with
+      ! header 'date,level'; col-1 is decoded as ISO date.
+      if (allocated(config%drain%owltab_file)) then
+         block
+            use iso_fortran_env, only: real64
+            use csv_reader_mod, only: read_csv_table
+            use error_mod, only: error_collection_t
+            real(real64), allocatable :: csv_table(:,:)
+            type(error_collection_t)  :: csv_errs
+            integer :: lev, nrows, k
+            character(len=6) :: hdr(2)
+            hdr(1) = 'date  '
+            hdr(2) = 'level '
+            do lev = 1, size(config%drain%owltab_file)
+               if (len_trim(config%drain%owltab_file(lev)) == 0) cycle
+               call read_csv_table(trim(config%drain%owltab_file(lev)), hdr, csv_table, csv_errs)
+               call csv_errs%abort_if_fatal()
+               if (csv_errs%count() == 0) then
+                  nrows = size(csv_table, 1)
+                  nowltab(lev) = nrows
+                  do k = 1, nrows
+                     owltab(lev, 2*k-1) = csv_table(k, 1)  ! date (days since 1900)
+                     owltab(lev, 2*k)   = csv_table(k, 2)  ! channel water level (cm)
+                  end do
+               end if
+            end do
+         end block
+      end if
+
       ! HACK Phase 4f-extend: SWLIMINF gates limit-of-infiltration to the
       ! channel water depth in the DRAMET=3 multi-level resistance solver
       ! (drainage.f90 / divdra.f90). Legacy hard-codes 1 in
@@ -794,6 +827,16 @@ contains
          do i = 1, size(config%heat%porg)
             forg(i) = config%heat%porg(i)   ! legacy alias: porg -> forg
          end do
+         ! Also populate orgmat (per-layer array, oxygenstress.f90:202 Bartholomeus).
+         ! ASCII readswap.f90:1062 sets it from the ORGMAT column. Without this,
+         ! orgmat stays at Initialize.f90:485 (all zeros) → zero microbial O2 demand
+         ! → wrong Bartholomeus O2 stress. Only backfill when caller didn't explicitly
+         ! supply [soil].orgmat.
+         if (.not. allocated(config%soil%orgmat)) then
+            do i = 1, min(size(config%heat%porg), size(orgmat))
+               orgmat(i) = config%heat%porg(i)
+            end do
+         end if
       end if
       ! Initial soil temperature table tsoil_init(:,1:2) — column 1 (depth)
       ! mirrors legacy `zh`, column 2 (temp) mirrors legacy `tsoil(1..nheat)`.

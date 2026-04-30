@@ -84,6 +84,7 @@ module drainage_config_mod
       real(real64), allocatable :: widthr(:)
       real(real64), allocatable :: taludr(:)
       integer,      allocatable :: swallo(:)
+      character(len=256), allocatable :: owltab_file(:)  !! per-level channel water level CSV (header: date,level)
 
       type(drainage_surface_runoff_t) :: surface_runoff
    contains
