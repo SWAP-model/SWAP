@@ -53,8 +53,14 @@ contains
                                           'solute.cseep',  errors)
       call get_optional_real_with_default(sec, 'tscf',   config%tscf,   0.0_real64, &
                                           'solute.tscf',   errors)
-      call get_optional_real_with_default(sec, 'ldis',   config%ldis,   0.0_real64, &
-                                          'solute.ldis',   errors)
+      ! Phase 4f Task B5: ldis can be authored as a scalar OR as a
+      ! per-layer array. Try the array form first; if absent fall back
+      ! to the scalar (which the adapter broadcasts to all layers).
+      call read_real_array(sec, 'ldis', config%ldis_array, errors)
+      if (.not. allocated(config%ldis_array)) then
+         call get_optional_real_with_default(sec, 'ldis',   config%ldis,   0.0_real64, &
+                                             'solute.ldis',   errors)
+      end if
 
       ! Root-uptake.
       call get_optional_real_with_default(sec, 'rtheta', config%rtheta, 0.0_real64, &
@@ -72,6 +78,45 @@ contains
       call read_table_2d(sec, 'pertabsolu', config%pertabsolu, 2, &
                          'solute.pertabsolu', errors)
    end subroutine read_solute_toml
+
+   !> Decode a flat TOML real array at sec[key] into a 1-D real(real64)
+   !! allocatable. Absent key (or scalar value at the same key) leaves
+   !! arr unallocated, letting the caller fall back to a scalar reader.
+   subroutine read_real_array(sec, key, arr, errors)
+      type(toml_table), pointer, intent(in)    :: sec
+      character(len=*),          intent(in)    :: key
+      real(real64), allocatable, intent(out)   :: arr(:)
+      type(error_collection_t),  intent(inout) :: errors
+
+      type(toml_array), pointer :: outer
+      integer :: n, i, stat
+      real(real64) :: val
+
+      if (.not. associated(sec)) return
+
+      outer => null()
+      call get_value(sec, key, outer, requested=.false., stat=stat)
+      if (.not. associated(outer)) return
+
+      n = len(outer)
+      if (n == 0) then
+         allocate(arr(0))
+         return
+      end if
+
+      allocate(arr(n))
+      arr = 0.0_real64
+      do i = 1, n
+         call get_value(outer, i, val, stat=stat)
+         if (stat /= 0) then
+            call errors%append(ERR_PARSE_TYPE_MISMATCH, &
+                               "non-real cell", "solute."//trim(key))
+            if (allocated(arr)) deallocate(arr)
+            return
+         end if
+         arr(i) = val
+      end do
+   end subroutine read_real_array
 
    !> Decode a TOML array-of-arrays at sec[key] into a (nrows, ncols)
    !! real(real64) allocatable. Absent key leaves table unallocated.

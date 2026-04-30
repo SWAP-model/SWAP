@@ -28,7 +28,13 @@ module solute_config_mod
       real(real64) :: cdrain = 0.0_real64
       real(real64) :: cseep  = 0.0_real64
       real(real64) :: tscf   = 0.0_real64    !! Transpiration stream conc factor
-      real(real64) :: ldis   = 0.0_real64    !! Dispersion length
+      ! Phase 4f Task B5: ldis is per soil-physical layer in legacy
+      ! (rdfdor 'ldis', macp). Schema exposes both a scalar fallback
+      ! (for cases that author a single value) and a per-layer array.
+      ! When `ldis_array` is allocated, the adapter copies it to the
+      ! legacy `ldis(maho)` global; otherwise it broadcasts the scalar.
+      real(real64) :: ldis   = 0.0_real64    !! Dispersion length (scalar fallback)
+      real(real64), allocatable :: ldis_array(:)  !! Per-layer dispersion length
 
       ! Root-uptake (decomposition switch=1 inputs):
       real(real64) :: rtheta = 0.0_real64    !! Water-content threshold

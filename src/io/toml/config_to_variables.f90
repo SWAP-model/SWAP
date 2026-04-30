@@ -729,7 +729,18 @@ contains
       tscf    = config%solute%tscf
       rtheta  = config%solute%rtheta
       bexp    = config%solute%bexp
-      ! ldis(maho): config side has no per-layer schema yet; leave as-is.
+      ! Phase 4f Task B5: per-layer dispersion length. Mirrors
+      ! readswap.f90:1139-1143 — when the case authors `ldis` as an
+      ! array, copy element-wise; otherwise broadcast the scalar to
+      ! every soil-physical layer (legacy `rdsdor('ldis',...,ldis(1))`
+      ! followed by an implicit broadcast in the dispersion solver).
+      if (allocated(config%solute%ldis_array)) then
+         do i = 1, size(config%solute%ldis_array)
+            ldis(i) = config%solute%ldis_array(i)
+         end do
+      else if (config%solute%ldis > 0.0d0) then
+         ldis(1) = config%solute%ldis
+      end if
 
       ! ---------------------------------------------------------------
       ! Surface water (audit: 12 + per-period management arrays)
