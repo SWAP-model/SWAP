@@ -233,6 +233,16 @@ contains
       ! at the legacy global `shape`. Bottom boundary is wired below
       ! and overwrites for swbotb=3 cases (the documented audit alias).
 
+      ! HACK Phase 4f-extend: drfil is the legacy stem of the .dra file
+      ! consumed by rddre() in src/drainage/surfacewater.f90:56 when
+      ! SWDRA=2. The legacy reads `drfil` from .swp at readswap.f90:1003
+      ! but the strangler doesn't have a typed schema slot for it. All
+      ! existing TOML cases use 'swap' as the .dra stem (swap.dra).
+      ! Add a [drainage].drfil slot in Phase 4f-extend.
+      if (config%drain%swdra >= 1) then
+         drfil = 'swap'
+      end if
+
       ! DRAMET=2 (Hooghoudt/Ernst). Mirrors readswap.f90:1850-1875.
       ! lm is authored in metres; the legacy reader does the m->cm
       ! conversion (`l(1) = 100*lm2`) so we replicate that here.
