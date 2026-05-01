@@ -169,17 +169,20 @@ contains
       ! Legacy SWINCO=3 cases that author `inifil` (.end-style file) bypass
       ! the typed slots entirely (handled by config_to_variables), so skip
       ! validation when inifil is present.
+      ! Transitional: the inifil branch (and has_inifil helper) goes away
+      ! with the swap.ini-port plan's cleanup task, after which this gate
+      ! simplifies to plain `if (self%swinco == 3)`.
       if (self%swinco == 3 .and. .not. has_inifil(self%inifil)) then
          call self%initial%validate(errors)
       end if
    end subroutine soil_config_validate
 
    !> True when the legacy `inifil` path is authored (allocated and not blank).
-   pure function has_inifil(inifil) result(present)
+   pure function has_inifil(inifil) result(is_set)
       character(len=:), allocatable, intent(in) :: inifil
-      logical :: present
-      present = allocated(inifil)
-      if (present) present = len_trim(inifil) > 0
+      logical :: is_set
+      is_set = allocated(inifil)
+      if (is_set) is_set = len_trim(inifil) > 0
    end function has_inifil
 
    !> Per-soil-physical-layer hydraulics validator. All arrays are
