@@ -90,7 +90,7 @@ Lines that fall into multiple buckets appear in multiple rows — this is intent
 | 4658-4700     | GUARDED   | Validate q-h table: nqh count, level above zbotdr, unique imper, hqhtab first=altcu+100, descending h/q (swqhr=2 only) |
 | 4703-4706     | GUARDED   | `if (imperi.ne.nmper)` fatalerr — period count for 4d (swqhr=2 only)                   |
 | 4709-4714     | GUARDED   | `do imper=1,nmper`: if qqhtab not going to zero fatalerr (swqhr=2 only)                 |
-| 4720-4856     | GUARDED   | `if (nrman2.gt.0)` block (parts 4e1+4e2) — automatic weir management. Not in port scope. |
+| 4720-4859     | GUARDED   | `if (nrman2.gt.0)` block (parts 4e1+4e2) — automatic weir management. Not in port scope. |
 | 4727-4729     | GUARDED   | Read imper_4e1, dropr, hdepth arrays (nrman2>0 only)                                    |
 | 4731-4755     | GUARDED   | Loop: hdepth=abs, find compartment node (nodhd), validate swman=2, unique imper (nrman2>0) |
 | 4756-4759     | GUARDED   | `if (imperi.ne.nrman2)` fatalerr — 4e1 period count mismatch (nrman2>0)                |
@@ -166,7 +166,7 @@ The storage table `sttab(22,2)` is built using `l(ilev)` which was already conve
 
 ### 7. nrman2>0 block is the most complex guarded section
 
-Lines 4720-4856 (~137 lines) cover multi-phase automatic weir management. This is deeply intertwined with the numnod/dz soil column state (line 4738-4742 determines `nodhd` by walking the soil nodes). This cannot be stubbed with a simple "not supported" message in the config validator alone — it requires runtime node-depth data unavailable at config-read time. The stub at validator level should refuse swman=2 entirely.
+Lines 4720-4859 (~140 lines) cover multi-phase automatic weir management. This is deeply intertwined with the numnod/dz soil column state (line 4738-4742 determines `nodhd` by walking the soil nodes). This cannot be stubbed with a simple "not supported" message in the config validator alone — it requires runtime node-depth data unavailable at config-read time. The stub at validator level should refuse swman=2 entirely.
 
 ### 8. zb = min(zbotdr(1),zbotdr(2)) dependency
 
