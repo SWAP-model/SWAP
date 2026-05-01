@@ -254,57 +254,41 @@ def _run_and_aggregate(case: CaseConfig):
     Returns a tuple ``(annual, totals, means)``. Raises RuntimeError on any
     runtime/output failure so callers can surface the message cleanly.
     """
-    case_dir = TESTS_DIR / "swap-cases" / case.case_dir
-    if not case_dir.exists():
-        raise RuntimeError(f"case directory not found at {case_dir}")
+    toml_dir = TESTS_DIR / "swap-cases" / "toml" / case.case_dir
+    if not toml_dir.exists() or not (toml_dir / "swap.toml").exists():
+        raise RuntimeError(
+            f"TOML case directory not found at {toml_dir} "
+            f"(missing dir or swap.toml). Phase 0 of CSV meteo finalization "
+            f"made the TOML dir the sole source of truth for regression."
+        )
 
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp = Path(tmpdir)
 
-        # Copy case files, excluding any pre-existing output files
+        # Phase 0: TOML dir is the self-contained source. It contains
+        # swap.toml, swap.dra.toml, *.crp.toml, *.csv companions, *.crp
+        # legacy crop files, and swap_linux.swp.template. Everything SWAP
+        # needs at runtime lives here.
         shutil.copytree(
-            case_dir,
+            toml_dir,
             tmp / "case",
             ignore=shutil.ignore_patterns(
                 'result_output.csv',
                 'result_*.csv',
                 '*.log',
                 'output.*',
-                '*.out'
-            )
+                '*.out',
+            ),
         )
         workdir = tmp / "case"
 
-        # ensure template is named swap.swp
+        # Stage swap.swp from the in-dir template (legacy crop sub-readers
+        # still call RDinit(swpfile)).
         swap_file = workdir / "swap.swp"
         if not swap_file.exists():
             template = workdir / "swap_linux.swp.template"
             if template.exists():
                 shutil.copy(template, swap_file)
-            else:
-                # try other common names
-                for alt in workdir.glob("*.swp"):
-                    shutil.copy(alt, swap_file)
-                    break
-
-        # Phase 4f: SWAP now requires swap.toml as the canonical entry
-        # point. Stage it from tests/swap-cases/toml/<case>/ alongside
-        # cross-file siblings (swap.dra.toml, *.crp.toml). Cases without
-        # a populated TOML directory still fail loudly — Phase 4f-extend
-        # ports them one by one. Mirrors run_case.sh --toml.
-        toml_src = TESTS_DIR / "swap-cases" / "toml" / case.case_dir
-        if (toml_src / "swap.toml").exists():
-            shutil.copy(toml_src / "swap.toml", workdir / "swap.toml")
-            for extra in ("swap.dra.toml",):
-                if (toml_src / extra).exists():
-                    shutil.copy(toml_src / extra, workdir / extra)
-            for crp in toml_src.glob("*.crp.toml"):
-                shutil.copy(crp, workdir / crp.name)
-            # Phase 4f cleanup: stage CSV companion files (long-form
-            # fixed-irrigation events, prescribed gwl, etc.) alongside
-            # swap.toml. Reader paths are relative to pathwork.
-            for csv_companion in toml_src.glob("*.csv"):
-                shutil.copy(csv_companion, workdir / csv_companion.name)
 
         # Record time before running to verify output is fresh
         before_run = time.time()
