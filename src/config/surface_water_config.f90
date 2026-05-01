@@ -94,6 +94,9 @@ contains
 
       ! Stub-error for swsrf=3 (primary system) must run BEFORE the swsrf=2
       ! early-return below; otherwise swsrf=3 would short-circuit without error.
+      ! The remaining stub-errors (swsec=1, swqhr=2, swman=2) run AFTER the
+      ! early-return: swsec and swqhr have default values of 1, which would
+      ! cause false positives on every swsrf=1 config if checked here.
       if (self%swsrf == 3) then
          call errors%append(ERR_VALIDATION_CROSS_FIELD, &
             'surface_water.swsrf=3 (primary system) not yet supported in ' // &
