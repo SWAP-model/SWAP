@@ -90,9 +90,17 @@ Validators should reject cases where multiple sources are set (e.g. inline
 
 - Companion CSVs are referenced by basename in `swap.toml`. The adapter resolves
   paths relative to the working directory at adapter time.
-- The runtime stages all `*.csv` companion files into the case directory before SWAP
-  starts. The regression harness (`tests/regression/test_output_regression.py`) and
-  `tests/swap-cases/run_case.sh` both glob `*.csv` from the case directory.
+- The case working directory is `tests/swap-cases/toml/<N>.<case>/`. It is
+  self-contained — every file SWAP reads at runtime lives there: `swap.toml`,
+  `swap.dra.toml`, `*.crp.toml`, all `*.csv` companions, the legacy `*.crp`
+  crop files (read by sub-readers in `cropgrowth.f90` until Phase 4f-extend
+  ports them), `swap_linux.swp.template` (staged to `swap.swp` per run), and
+  where the scenario requires them legacy ASCII companions like `swap.dra`
+  (`swdra=2`) and `swap.ini` (`swinco=3`).
+- `tests/swap-cases/run_case.sh` runs SWAP in that directory in-place;
+  `tests/regression/test_output_regression.py` copies it to a temp dir for
+  parallel-safe execution. Neither tool reads from the legacy `<N>.<case>/`
+  directories — those are reserved for the legacy reference binary.
 
 ## Migration history
 
