@@ -608,18 +608,96 @@ contains
          end do
       end if
 
-      ! HACK Phase 4f-extend: SWINCO=3 .ini reader. Mirrors
-      ! readswap.f90:1593-1626 — when the case authors `[soil].inifil`
-      ! and `swinco=3`, read the previous-run end-state file via the
-      ! legacy ttutil rdinit/rdsdor/rdador/rdfdor stack to populate
-      ! ssnow/slw/pond/zi/h/zc/cml (and z_Tsoil/Tsoil under SWHEA=1
-      ! SWCALT=2). Salinitystress (case 5) needs this so the initial
-      ! solute profile (~15 mg/cm3 below ~150 cm, ~0 in root zone)
-      ! matches the fixture's quasi-steady starting state. Same HACK
-      ! pattern as the .bbc / .irg readers above. Phase 4f-extend
-      ! should port the .ini state into a typed schema slot.
-      if (config%soil%swinco == 3 .and. allocated(config%soil%inifil)) then
-         if (len_trim(config%soil%inifil) > 0) then
+      ! [soil.initial] / inifil dual-path block. The new path uses the
+      ! typed soil.initial schema + per-profile CSV companions; the
+      ! legacy path opens swap.ini via TTutil. Both consume swinco=3.
+      if (config%soil%swinco == 3) then
+         if (allocated(config%soil%initial%h_file) .and. &
+             len_trim(config%soil%initial%h_file) > 0) then
+            ! ----- NEW CSV-based path -----------------------------------
+            ssnow   = config%soil%initial%ssnow
+            slw     = config%soil%initial%slw
+            pond    = config%soil%initial%pond
+            pondini = pond
+            ldwet   = config%soil%initial%ldwet
+            dt      = config%soil%initial%dt
+            atmin7(:) = config%soil%initial%atmin7(:)
+            ! Legacy zeroes ssnow when swsnow != 1 (readswap.f90:1606-1613).
+            if (config%meteo%snow%swsnow /= 1) ssnow = 0.0d0
+
+            ! Note: [soil.initial].pondini (pre-existing top-level field) is
+            ! NOT consumed by this swinco=3 path — only [soil.initial].pond
+            ! is, since pond is the warm-restart "saved final state" while
+            ! pondini was the swinco<3 "initial-from-scalars" input. They
+            ! can both be authored without conflict; only pond wins here.
+
+            ! Mandatory: initial pressure-head profile (z, h).
+            block
+               use csv_reader_mod,  only: read_csv_table
+               use error_mod,       only: error_collection_t
+               real(8), allocatable     :: tbl(:,:)
+               type(error_collection_t) :: errs
+               character(len=2)         :: hdr(2)
+               integer :: nrows, k
+               hdr(1) = 'z '
+               hdr(2) = 'h '
+               call read_csv_table(trim(config%soil%initial%h_file), hdr, tbl, errs)
+               call errs%abort_if_fatal()
+               nrows = size(tbl, 1)
+               nhead = nrows
+               do k = 1, nrows
+                  zi(k) = tbl(k, 1)
+                  h(k)  = tbl(k, 2)
+               end do
+            end block
+
+            ! Optional: initial soil temperature profile.
+            if (config%heat%swhea == 1 .and. config%heat%swcalt == 2) then
+               block
+                  use csv_reader_mod,  only: read_csv_table
+                  use error_mod,       only: error_collection_t
+                  real(8), allocatable     :: tbl(:,:)
+                  type(error_collection_t) :: errs
+                  character(len=5)         :: hdr(2)
+                  integer :: nrows, k
+                  hdr(1) = 'z    '
+                  hdr(2) = 'tsoil'
+                  call read_csv_table(trim(config%soil%initial%tsoil_file), hdr, tbl, errs)
+                  call errs%abort_if_fatal()
+                  nrows = size(tbl, 1)
+                  do k = 1, nrows
+                     zh(k)    = tbl(k, 1)
+                     tsoil(k) = tbl(k, 2)
+                  end do
+               end block
+            end if
+
+            ! Optional: initial concentration profile (Cml).
+            if (config%solute%swsolu == 1) then
+               block
+                  use csv_reader_mod,  only: read_csv_table
+                  use error_mod,       only: error_collection_t
+                  real(8), allocatable     :: tbl(:,:)
+                  type(error_collection_t) :: errs
+                  character(len=3)         :: hdr(2)
+                  integer :: nrows, k
+                  hdr(1) = 'z  '
+                  hdr(2) = 'cml'
+                  call read_csv_table(trim(config%soil%initial%cml_file), hdr, tbl, errs)
+                  call errs%abort_if_fatal()
+                  nrows = size(tbl, 1)
+                  nconc = nrows
+                  do k = 1, nrows
+                     zc(k)  = tbl(k, 1)
+                     cml(k) = tbl(k, 2)
+                  end do
+               end block
+            end if
+            ! ----- end NEW path -----------------------------------------
+
+         else if (allocated(config%soil%inifil) .and. &
+                  len_trim(config%soil%inifil) > 0) then
+            ! ----- LEGACY ASCII swap.ini path (preserved for now) -------
             block
                use swap_array_dimensions, only: macp
                integer :: ini_unit, ifnd_ini
@@ -629,8 +707,6 @@ contains
                ini_unit = getun2(10, 90, 2)
                call rdinit(ini_unit, logf, ini_filnam)
                call rdsdor('ssnow', 0.0d0, 1000.0d0, ssnow)
-               ! Legacy zeroes ssnow when swsnow != 1 (readswap.f90:1606-1613).
-               ! Salinitystress and other regression cases have swsnow=0.
                if (config%meteo%snow%swsnow /= 1) ssnow = 0.0d0
                call rdsdor('slw',   0.0d0, 1000.0d0, slw)
                call rdsdor('pond',  0.0d0,  100.0d0, pond)
@@ -649,6 +725,7 @@ contains
                end if
                close(ini_unit)
             end block
+            ! ----- end LEGACY path --------------------------------------
          end if
       end if
 
