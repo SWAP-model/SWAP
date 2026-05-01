@@ -49,6 +49,7 @@ contains
    !! validated, and finalized `config` first.
    subroutine config_to_variables(config)
       use variables   ! bare-use is intentional: many globals across sections
+      use error_mod, only: fatalerr_collected
       type(swap_config_t), intent(in) :: config
 
       integer :: i, n
@@ -196,6 +197,43 @@ contains
             end interface
             call MeteoInOneFile(1, idum_meteo)
          end block
+      end if
+
+      ! Detail meteo CSV pre-load (swmetdetail=1 + CSV mode + detail_file provided).
+      swMetDetCSV = 0
+      if (swmetdetail == 1 .and. swMetCSV == 1) then
+         if (.not. allocated(config%meteo%detail_file) .or. &
+             len_trim(config%meteo%detail_file) == 0) then
+            call fatalerr_collected('config_to_variables', &
+               'meteorology.temporal.detail_file required when ' // &
+               'swmetdetail=1 and metfile is a CSV')
+         else
+            block
+               use csv_reader_mod,  only: read_csv_table
+               use error_mod,       only: error_collection_t
+               real(8), allocatable :: tbl(:,:)
+               type(error_collection_t) :: errs
+               character(len=8) :: hdr(7)
+               character(len=300) :: csvpath
+               integer :: r
+               hdr(1) = 'datetime'
+               hdr(2) = 'record  '
+               hdr(3) = 'rad     '
+               hdr(4) = 'temp    '
+               hdr(5) = 'hum     '
+               hdr(6) = 'wind    '
+               hdr(7) = 'rain    '
+               csvpath = trim(pathatm) // trim(config%meteo%detail_file)
+               call read_csv_table(trim(csvpath), hdr, tbl, errs)
+               call errs%abort_if_fatal()
+               nmetcsv_det = size(tbl, 1)
+               allocate(metcsv_det(nmetcsv_det, 7))
+               do r = 1, nmetcsv_det
+                  metcsv_det(r, :) = tbl(r, :)
+               end do
+            end block
+            swMetDetCSV = 1
+         end if
       end if
 
       ! Rain events CSV pre-load (swrain=3, events_file set).
