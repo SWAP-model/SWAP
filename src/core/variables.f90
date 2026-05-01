@@ -208,9 +208,12 @@
       ! Column layout (daily): 1=date, 2=rad(kJ/m2/d), 3=tmin, 4=tmax, 5=hum, 6=wind, 7=rain, 8=etref, 9=wet
       integer :: nmetcsv = 0
       real(8), dimension(:,:), allocatable :: metcsv_dat
-      ! Detail CSV cache (swmetdetail=1): 1=datetime(frac days), 2=rad, 3=temp, 4=hum, 5=wind, 6=rain
+      ! Detail CSV cache (swmetdetail=1): 7 columns per ADR 0014.
+      ! 1=datetime(frac days since JD1900), 2=record, 3=rad(kJ/m2/d),
+      ! 4=temp(C), 5=hum(kPa), 6=wind(m/s), 7=rain(mm)
       integer :: nmetcsv_det = 0
       real(8), dimension(:,:), allocatable :: metcsv_det
+      integer   swMetDetCSV        ! 0=no sub-daily CSV; 1=sub-daily CSV pre-loaded by adapter
       character(len=200) rainfil   ! Name of input file with detailed rainfall intensities
       integer   swRainCSV          ! 0=legacy .YYY; 1=CSV mode (pre-loaded by adapter)
       ! Rain events CSV cache: pre-loaded by adapter, sliced per year by ReadRainEvents.
