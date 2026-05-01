@@ -217,3 +217,47 @@ subroutine test_soil_initial_validates_when_swinco_3_with_valid_dt()
    ! (Other validators may emit unrelated errors — we don't assert on those.)
    @assertFalse(errors%has_errors())
 end subroutine
+
+@test
+subroutine test_swap_config_swinco3_missing_h_file_fails()
+   use funit
+   use swap_config_mod
+   use error_mod, only: error_collection_t, ERR_VALIDATION_REQUIRED
+   type(swap_config_t)        :: c
+   type(error_collection_t)   :: errors
+   integer :: i
+   logical :: found
+   c%soil%swinco = 3
+   ! h_file is unallocated by default → required-file error must fire.
+   call c%validate(errors)
+   @assertTrue(errors%has_errors())
+   found = .false.
+   do i = 1, errors%count()
+      if (errors%items(i)%code == ERR_VALIDATION_REQUIRED) found = .true.
+   end do
+   @assertTrue(found)
+end subroutine
+
+@test
+subroutine test_swap_config_swinco3_with_h_file_passes_init_check()
+   use funit
+   use swap_config_mod
+   use error_mod, only: error_collection_t, ERR_VALIDATION_REQUIRED
+   type(swap_config_t)        :: c
+   type(error_collection_t)   :: errors
+   integer :: i
+   logical :: found_required
+   c%soil%swinco = 3
+   c%soil%initial%h_file = 'case.ini.h.csv'
+   ! Other validators may emit unrelated errors (e.g. missing crops);
+   ! we only assert that NO ERR_VALIDATION_REQUIRED for soil.initial.h_file fires.
+   call c%validate(errors)
+   found_required = .false.
+   do i = 1, errors%count()
+      if (errors%items(i)%code == ERR_VALIDATION_REQUIRED .and. &
+          index(errors%items(i)%message, 'soil.initial.h_file') > 0) then
+         found_required = .true.
+      end if
+   end do
+   @assertFalse(found_required)
+end subroutine
