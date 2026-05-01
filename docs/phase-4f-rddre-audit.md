@@ -45,7 +45,7 @@ Lines that fall into multiple buckets appear in multiple rows — this is intent
 | 4438-4444     | READ      | `if (swnrsrf.eq.1)`: read rsurfdeep, rsurfshallow; `if (swnrsrf.eq.2)`: read cofintfl, expintfl |
 | 4448-4450     | READ      | `if (swdivd.eq.1 .and. swnrsrf.gt.0)`: read SwTopnrsrf                                  |
 | 4454          | READ      | `call rdsinr('swsrf',1,3,swsrf)` — read swsrf (surface water regime switch)             |
-| 4455-4465     | READ      | Set nrpri/nrsec based on swsrf; if swsrf=1 close(dra) and return early                  |
+| 4455-4460     | RUNTIME   | Set nrpri/nrsec based on swsrf (`if swsrf.eq.3: nrpri=1; if swsrf.eq.2: nrpri=0; nrsec=nrlevs-nrpri`) — module-level state, not a `rd*` call |
 | 4461-4465     | GUARDED   | `if (swsrf.eq.1)`: no surface water system — close and return. Our port targets swsrf=2; swsrf=1 closes early. |
 | 4467-4470     | VALIDATE  | `if (swdtyp(1+nrpri).ne.0)` fatalerr — deepest secondary level must be open channel     |
 | 4475-4500     | GUARDED   | Entire `if (swsrf.eq.3)` block — primary system wlptab read + wlp1 init. Port scope is swsrf=2 only. |
@@ -65,7 +65,7 @@ Lines that fall into multiple buckets appear in multiple rows — this is intent
 | 4542          | READ      | `call rdsinr('nmper',1,mamp,nmper)` — read number of management periods                 |
 | 4543          | RUNTIME   | `wlstar = wls1` — initialize target level to initial water level                        |
 | 4545-4550     | READ      | Read per-period arrays: imper_4b, impend, swman, wscap, wldip, intwl                    |
-| 4553-4554     | READ      | Init counters nrman1=0, nrman2=0                                                         |
+| 4553-4554     | RUNTIME   | `nrman1=0; nrman2=0` — counter initializations derived from swman array, not `rd*` calls |
 | 4555-4573     | VALIDATE  | Loop over nmper: validate intwl.ge.1 when swman=2; compute wldip=abs(wldip); count nrman1/nrman2; validate swman range; validate nrman1+nrman2=nmper |
 | 4560          | NORMALIZE | `wldip(imper) = abs(wldip(imper))` — normalize wldip to positive value                  |
 | 4556-4559     | VALIDATE  | `if (swman(imper).eq.2 .and. intwl(imper).lt.1)` fatalerr — intwl must be >= 1         |
@@ -73,7 +73,6 @@ Lines that fall into multiple buckets appear in multiple rows — this is intent
 | 4565-4568     | VALIDATE  | `if (swman(imper).ne.1 .and. .ne.2)` fatalerr — swman out of range                     |
 | 4570-4573     | VALIDATE  | `if ((nrman1+nrman2).ne.nmper)` fatalerr — period count mismatch                        |
 | 4576          | READ      | `call rdsinr('swqhr',1,2,swqhr)` — read type of discharge relationship                  |
-| 4578-4628     | GUARDED   | `if (swqhr.eq.1)` block (part 4c) — weir flow relation (analytical). Port supports swqhr=1 only; keep VALIDATE/NORMALIZE rows; READ rows discard. |
 | 4582          | READ      | `call rdsdor('sofcu',0.1,100000,sofcu)` — read surface area of control unit             |
 | 4584          | READ      | `call rdfinr('imper_4c',1,nmper,imper_4c,mamp,nmper)` — read period indices             |
 | 4585-4589     | READ      | Compute zb=min(zbotdr(1),zbotdr(2)); read hbweir array and alphaw, betaw arrays         |
@@ -100,7 +99,7 @@ Lines that fall into multiple buckets appear in multiple rows — this is intent
 | 4781-4786     | GUARDED   | Convert: `wlsman -= altcu`; store gwlcrit, hcrit, vcrit (nrman2>0)                     |
 | 4789-4807     | GUARDED   | Validate 4e2: wlsman above zbotdr, swman=2 consistency, unique imper counting (nrman2>0) |
 | 4809-4814     | GUARDED   | `if (imperi.ne.nrman2)` fatalerr — 4e2 period count mismatch (nrman2>0)                |
-| 4817-4855     | GUARDED   | Consistency checks: gwlcrit(1)=0, vcrit(1)=0, hcrit(1)=0; hbweir within 1cm of wlsman; wlsman/gwlcrit/hcrit/vcrit monotonicity across phases (nrman2>0) |
+| 4817-4859     | GUARDED   | Consistency checks: gwlcrit(1)=0, vcrit(1)=0, hcrit(1)=0; hbweir within 1cm of wlsman; wlsman/gwlcrit/hcrit/vcrit monotonicity across phases (nrman2>0); closing `endif` + structural comment at 4857-4859 |
 | 4860          | RUNTIME   | `numadj = 0` — init counter for target level adjustments                                |
 | 4866-4867     | RUNTIME   | `sttab(1,1)=100.0; sttab(2,1)=0.0` — set top two levels of storage table               |
 | 4868-4872     | RUNTIME   | Loop i=3,22: `sttab(i,1) = zbotdr(1+nrpri)*(i-2)/20.0` — divide depth to 20 compartments |
@@ -120,11 +119,11 @@ Lines that fall into multiple buckets appear in multiple rows — this is intent
 
 | Bucket   | Approx. line-range count | Description                                                     |
 | -------- | ------------------------ | --------------------------------------------------------------- |
-| READ     | ~220 lines               | `rd*` calls, file open/close, local declarations, use statements, array init for reading |
+| READ     | ~212 lines               | `rd*` calls, file open/close, local declarations, use statements, array init for reading |
 | VALIDATE | ~85 lines                | `fatalerr` / `warn` calls and surrounding `if` logic            |
 | NORMALIZE| ~20 lines                | Unit and coordinate conversions (altcu subtraction, cm conversion, alphaw formula, abs(wldip)) |
-| RUNTIME  | ~25 lines                | sttab build, swstini/swst init, wlsbak zero-init, wlstar init   |
-| GUARDED  | ~180 lines               | swsrf=3 primary wlp table, swsec=1 prescribed secondary wl, swqhr=2 q-h table, nrman2>0 automatic weir |
+| RUNTIME  | ~33 lines                | sttab build, swstini/swst init, wlsbak zero-init, wlstar init, nrpri/nrsec assignment, nrman1/nrman2 init |
+| GUARDED  | ~184 lines               | swsrf=3 primary wlp table, swsec=1 prescribed secondary wl, swqhr=2 q-h table, nrman2>0 automatic weir (incl. closing structural lines at 4857-4859) |
 
 Total: 640 lines of substantive content (4273–4912, minus ~2 blank header lines at the top).
 
