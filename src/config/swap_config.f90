@@ -56,6 +56,9 @@ contains
       ! Range validation has already run inside soil%validate.
       ! Skip when soil.swinco /= 3 OR when legacy inifil path is in use
       ! (matches the transitional contract in soil_config_validate).
+      ! The inifil branch is transitional and removed in Task 6 of the
+      ! 2026-05-01-swap-ini-port plan; after that this gate becomes
+      ! pure `swinco == 3`.
       if (self%soil%swinco == 3 .and. &
           (.not. allocated(self%soil%inifil) .or. &
            len_trim_safe(self%soil%inifil) == 0)) then
