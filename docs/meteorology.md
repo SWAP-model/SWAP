@@ -137,6 +137,64 @@ events_file = "mysite.rain.csv"
 
 ---
 
+## Sub-daily detail meteorology CSV (`temporal.detail_file`)
+
+Used when `[meteorology.temporal].swmetdetail = 1`. The file must cover every
+year of the simulation period. Each row is one sub-daily time slot.
+
+**Schema:**
+
+```
+datetime,record,rad,temp,hum,wind,rain
+```
+
+| Column     | Unit         | Description                                                    |
+|------------|--------------|----------------------------------------------------------------|
+| `datetime` | ISO datetime | Slot timestamp `YYYY-MM-DD HH:MM:SS`; fractional days since JD 2415020 |
+| `record`   | –            | Intra-day slot index 1 … `nmetdetail`                          |
+| `rad`      | kJ m⁻² d⁻¹  | Global radiation for the slot (converted to J m⁻² d⁻¹ internally) |
+| `temp`     | °C           | Air temperature (single value per slot)                        |
+| `hum`      | kPa          | Actual vapour pressure                                         |
+| `wind`     | m s⁻¹        | Wind speed                                                     |
+| `rain`     | mm           | Rainfall for the slot                                          |
+
+**Example (48 slots per day):**
+
+```csv
+# Sub-daily meteo, station Hupsel, 48 half-hourly slots per day
+datetime,record,rad,temp,hum,wind,rain
+2002-01-01 00:00:00,1,0.0,-3.2,0.524,4.90,0.000
+2002-01-01 00:30:00,2,0.0,-3.3,0.525,4.85,0.000
+2002-01-01 23:30:00,48,0.0,-2.9,0.520,5.10,0.000
+```
+
+**TOML configuration:**
+
+```toml
+[meteorology]
+file = "hupsel.csv"
+
+[meteorology.temporal]
+swmetdetail = 1
+nmetdetail  = 48
+detail_file = "hupsel.det.csv"
+```
+
+**Notes:**
+
+- The adapter (`config_to_variables.f90`) pre-loads all rows into `metcsv_det`
+  at startup. `MeteoCSVDetYear` extracts the current year's slice on each
+  `ReadMeteoYear` call, exactly mirroring the daily `MeteoCSVYear` pattern.
+- The maximum record count per year is `NMETFILE = 17568` (48 slots × 366 days).
+- `irectotal` is initialised in `ReadMeteoYear` using `dettime(1)` after
+  `MeteoCSVDetYear` returns — no changes needed in `meteoday.f90`.
+- Year boundaries are half-open `[t_jan1, t_jan1_next)` to correctly bucket
+  `YYYY-12-31 23:59:59` into year YYYY (not YYYY+1).
+- If no rows are found for the requested year, SWAP aborts via
+  `fatalerr_collected`.
+
+---
+
 ## Legacy formats (ASCII `.swp` pathway only)
 
 The following formats are used by the legacy `swap420` binary and the ASCII
