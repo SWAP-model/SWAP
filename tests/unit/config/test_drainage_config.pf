@@ -202,3 +202,23 @@ subroutine test_dra_surf_swtopdislay_one_ftopdislay_oor()
    call d%validate(errors)
    @assertTrue(errors%has_errors())
 end subroutine
+
+@test
+subroutine test_drainage_altcu_nonzero_rejected()
+   use funit
+   use drainage_config_mod, only: drainage_config_t
+   use error_mod, only: error_collection_t, ERR_VALIDATION_CROSS_FIELD
+   type(drainage_config_t)  :: d
+   type(error_collection_t) :: errors
+   integer :: i
+   logical :: found
+   d%swdra = 2
+   d%altcu = 5.0d0   ! non-zero: should be rejected
+   call d%validate(errors)
+   found = .false.
+   do i = 1, errors%count()
+      if (errors%items(i)%code == ERR_VALIDATION_CROSS_FIELD .and. &
+          index(errors%items(i)%message, 'altcu') > 0) found = .true.
+   end do
+   @assertTrue(found)
+end subroutine

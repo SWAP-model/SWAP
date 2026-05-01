@@ -110,6 +110,18 @@ contains
                             "drainage")
       end if
 
+      ! Stub-error: non-zero altcu requires altcu-subtraction plumbing
+      ! in the runtime adapter that the TOML port hasn't built yet.
+      ! All current TOML cases author altcu = 0.0; future cases needing
+      ! a non-zero altcu must extend the adapter to subtract altcu from
+      ! zbotdr / hbweir / wls1 globals before this guard is removed.
+      if (abs(self%altcu) > 1.0e-12_real64) then
+         call errors%append(ERR_VALIDATION_CROSS_FIELD, &
+            'drainage.altcu /= 0 is not yet supported in the TOML pipeline. ' // &
+            'Use the legacy executable for cases authoring altcu /= 0.', &
+            'drainage')
+      end if
+
       call self%surface_runoff%validate(errors)
    end subroutine drainage_config_validate
 
