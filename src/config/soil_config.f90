@@ -165,8 +165,22 @@ contains
       call self%discretization%validate(errors)
       call self%frost%validate(errors)
       call self%hydraulics%validate(errors)
-      call self%initial%validate(errors)
+      ! soil.initial holds the TOML companion-CSV pathway for SWINCO=3.
+      ! Legacy SWINCO=3 cases that author `inifil` (.end-style file) bypass
+      ! the typed slots entirely (handled by config_to_variables), so skip
+      ! validation when inifil is present.
+      if (self%swinco == 3 .and. .not. has_inifil(self%inifil)) then
+         call self%initial%validate(errors)
+      end if
    end subroutine soil_config_validate
+
+   !> True when the legacy `inifil` path is authored (allocated and not blank).
+   pure function has_inifil(inifil) result(present)
+      character(len=:), allocatable, intent(in) :: inifil
+      logical :: present
+      present = allocated(inifil)
+      if (present) present = len_trim(inifil) > 0
+   end function has_inifil
 
    !> Per-soil-physical-layer hydraulics validator. All arrays are
    !! optional at the schema level — presence is required only when
@@ -291,24 +305,20 @@ contains
       type(error_collection_t), intent(inout) :: errors
       integer :: i
 
-      call check_int_enum(self%swirrigate, [0, 1], 'soil.initial.swirrigate', errors)
+      call check_int_enum(self%swirrigate, [0, 1], "soil.initial.swirrigate", errors)
       call check_real_range(self%ssnow, 0.0_real64, 1000.0_real64, &
-                            'soil.initial.ssnow', errors)
+                            "soil.initial.ssnow", errors)
       call check_real_range(self%slw,   0.0_real64, 1000.0_real64, &
-                            'soil.initial.slw',   errors)
+                            "soil.initial.slw",   errors)
       call check_real_range(self%pond,  0.0_real64,  100.0_real64, &
-                            'soil.initial.pond',  errors)
+                            "soil.initial.pond",  errors)
       call check_real_range(self%ldwet, 0.0_real64,  366.0_real64, &
-                            'soil.initial.ldwet', errors)
-      ! dt range applies only when authored. The default (0.0) means
-      ! "section absent / [soil.initial] not consumed" — no error.
-      if (self%dt /= 0.0_real64) then
-         call check_real_range(self%dt, 1.0e-12_real64, 1.0_real64, &
-                               'soil.initial.dt', errors)
-      end if
+                            "soil.initial.ldwet", errors)
+      call check_real_range(self%dt, 1.0e-12_real64, 1.0_real64, &
+                            "soil.initial.dt", errors)
       do i = 1, 7
          call check_real_range(self%atmin7(i), -50.0_real64, 50.0_real64, &
-                               'soil.initial.atmin7', errors)
+                               "soil.initial.atmin7", errors)
       end do
    end subroutine soil_initial_validate
 

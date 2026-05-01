@@ -189,13 +189,31 @@ subroutine test_soil_initial_atmin7_out_of_range_fails()
 end subroutine
 
 @test
-subroutine test_soil_initial_zero_defaults_valid()
+subroutine test_soil_initial_skipped_when_swinco_not_3()
    use funit
    use soil_config_mod
    use error_mod
    type(soil_config_t)        :: c
    type(error_collection_t)   :: errors
-   ! All defaults; nothing set explicitly. Defaults must be valid.
-   call c%initial%validate(errors)
+   ! Default swinco is 0 → soil_config_validate should skip the
+   ! soil.initial validator entirely. Defaults like dt=0.0 must NOT trip
+   ! the range check.
+   call c%validate(errors)
+   @assertFalse(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_soil_initial_validates_when_swinco_3_with_valid_dt()
+   use funit
+   use soil_config_mod
+   use error_mod
+   type(soil_config_t)        :: c
+   type(error_collection_t)   :: errors
+   c%swinco       = 3
+   c%initial%dt   = 0.5d0          ! within [1.0e-12, 1.0]
+   c%initial%h_file = 'dummy.csv'  ! suppress any future cross-section gating
+   call c%validate(errors)
+   ! No errors from soil.initial range checks specifically.
+   ! (Other validators may emit unrelated errors — we don't assert on those.)
    @assertFalse(errors%has_errors())
 end subroutine
