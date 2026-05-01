@@ -178,6 +178,12 @@ contains
       class(surface_water_config_t), intent(inout) :: self
       type(error_collection_t),      intent(inout) :: errors
       integer :: i
+      ! Match legacy rddre: wldip is treated as a magnitude (negatives
+      ! are silently flipped). Done before swqhr-gated normalization so
+      ! it runs regardless of swqhr value.
+      if (allocated(self%wldip)) then
+         self%wldip = abs(self%wldip)
+      end if
       if (self%swqhr /= 1) return
       if (.not. allocated(self%alphaw) .or. .not. allocated(self%betaw)) return
       if (self%sofcu <= 0.0_real64) return

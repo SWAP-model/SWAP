@@ -241,6 +241,26 @@ subroutine test_finalize_skips_when_swqhr_two()
 end subroutine
 
 @test
+subroutine test_surface_water_finalize_wldip_abs()
+   use funit
+   use error_mod, only: error_collection_t
+   use surface_water_config_mod, only: surface_water_config_t
+   type(surface_water_config_t) :: s
+   type(error_collection_t)     :: errors
+   s%swsrf = 2
+   s%swsec = 2
+   s%swqhr = 1
+   s%nmper = 2
+   s%sofcu = 100.0d0
+   allocate(s%wldip(2));  s%wldip  = [-3.5d0, 2.0d0]
+   allocate(s%alphaw(2)); s%alphaw = [1.7d0, 1.7d0]
+   allocate(s%betaw(2));  s%betaw  = [1.5d0, 1.5d0]
+   call s%finalize(errors)
+   @assertEqual(3.5d0, s%wldip(1), 1.0d-12)
+   @assertEqual(2.0d0, s%wldip(2), 1.0d-12)
+end subroutine
+
+@test
 subroutine test_surface_water_swsrf3_rejected()
    use funit
    use error_mod, only: error_collection_t, ERR_VALIDATION_CROSS_FIELD
