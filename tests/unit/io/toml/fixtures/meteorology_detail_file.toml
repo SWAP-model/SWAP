@@ -1,0 +1,15 @@
+[meteorology]
+file = "hupsel.csv"
+lat  = 52.0
+alt  = 10.0
+
+[meteorology.evapotranspiration]
+swetr = 1
+
+[meteorology.temporal]
+swmetdetail = 1
+nmetdetail  = 48
+detail_file = "hupsel.det.csv"
+
+[meteorology.rain]
+swrain = 0

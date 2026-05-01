@@ -43,6 +43,8 @@ contains
          call get_optional_int_with_default(temporal, 'swmetdetail',  config%swmetdetail,  0, 'meteorology.temporal.swmetdetail',  errors)
          call get_optional_int_with_default(temporal, 'nmetdetail',   config%nmetdetail,   0, 'meteorology.temporal.nmetdetail',   errors)
          call get_optional_int_with_default(temporal, 'swmetfilall',  config%swmetfilall,  0, 'meteorology.temporal.swmetfilall',  errors)
+         call get_optional_string_with_default(temporal, 'detail_file', config%detail_file, '', &
+                                               'meteorology.temporal.detail_file', errors)
       end if
 
       call get_table(sec, 'rain', rain, 'meteorology.rain', errors)
