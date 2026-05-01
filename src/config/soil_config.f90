@@ -11,6 +11,7 @@ module soil_config_mod
    public :: soil_discretization_t
    public :: soil_frost_t
    public :: soil_hydraulics_t
+   public :: soil_initial_t
 
    !> Optional re-discretization of the vertical grid for output reporting.
    !! When swdiscrvert == 1, dznew(:) (sized to numnodnew) carries the
@@ -54,6 +55,26 @@ module soil_config_mod
    contains
       procedure :: validate => soil_frost_validate
    end type soil_frost_t
+
+   !> Initial-state inputs consumed when soil.swinco == 3.
+   !! Replaces the legacy ASCII swap.ini file. Scalars copy directly to
+   !! globals (ssnow, slw, pond, pondini, ldwet, dt, atmin7); the three
+   !! z-indexed profiles are read via read_csv_table as separate companion
+   !! CSVs. swirrigate is metadata only — no TOML-side global consumer.
+   type :: soil_initial_t
+      integer       :: swirrigate = 0
+      real(real64)  :: ssnow  = 0.0_real64
+      real(real64)  :: slw    = 0.0_real64
+      real(real64)  :: pond   = 0.0_real64
+      real(real64)  :: ldwet  = 0.0_real64
+      real(real64)  :: dt     = 0.0_real64
+      real(real64)  :: atmin7(7) = 0.0_real64
+      character(len=:), allocatable :: h_file      !! header z,h
+      character(len=:), allocatable :: tsoil_file  !! header z,tsoil
+      character(len=:), allocatable :: cml_file    !! header z,cml
+   contains
+      procedure :: validate => soil_initial_validate
+   end type soil_initial_t
 
    type :: soil_config_t
       integer :: swsophy = 0
@@ -106,6 +127,7 @@ module soil_config_mod
       type(soil_discretization_t) :: discretization
       type(soil_frost_t)          :: frost
       type(soil_hydraulics_t)     :: hydraulics
+      type(soil_initial_t)        :: initial
    contains
       procedure :: validate => soil_config_validate
       procedure :: finalize => soil_config_finalize
@@ -143,6 +165,7 @@ contains
       call self%discretization%validate(errors)
       call self%frost%validate(errors)
       call self%hydraulics%validate(errors)
+      call self%initial%validate(errors)
    end subroutine soil_config_validate
 
    !> Per-soil-physical-layer hydraulics validator. All arrays are
@@ -262,6 +285,32 @@ contains
          end if
       end if
    end subroutine soil_frost_validate
+
+   subroutine soil_initial_validate(self, errors)
+      class(soil_initial_t),    intent(in)    :: self
+      type(error_collection_t), intent(inout) :: errors
+      integer :: i
+
+      call check_int_enum(self%swirrigate, [0, 1], 'soil.initial.swirrigate', errors)
+      call check_real_range(self%ssnow, 0.0_real64, 1000.0_real64, &
+                            'soil.initial.ssnow', errors)
+      call check_real_range(self%slw,   0.0_real64, 1000.0_real64, &
+                            'soil.initial.slw',   errors)
+      call check_real_range(self%pond,  0.0_real64,  100.0_real64, &
+                            'soil.initial.pond',  errors)
+      call check_real_range(self%ldwet, 0.0_real64,  366.0_real64, &
+                            'soil.initial.ldwet', errors)
+      ! dt range applies only when authored. The default (0.0) means
+      ! "section absent / [soil.initial] not consumed" — no error.
+      if (self%dt /= 0.0_real64) then
+         call check_real_range(self%dt, 1.0e-12_real64, 1.0_real64, &
+                               'soil.initial.dt', errors)
+      end if
+      do i = 1, 7
+         call check_real_range(self%atmin7(i), -50.0_real64, 50.0_real64, &
+                               'soil.initial.atmin7', errors)
+      end do
+   end subroutine soil_initial_validate
 
    subroutine soil_config_finalize(self, errors)
       class(soil_config_t),     intent(inout) :: self

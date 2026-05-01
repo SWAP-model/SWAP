@@ -142,3 +142,60 @@ subroutine test_soil_nrstaring_out_of_range()
    call s%validate(errors)
    @assertTrue(errors%has_errors())
 end subroutine
+
+@test
+subroutine test_soil_initial_fields_roundtrip()
+   use funit
+   use soil_config_mod
+   type(soil_config_t) :: c
+   c%initial%swirrigate = 1
+   c%initial%ssnow      = 0.5d0
+   c%initial%slw        = 0.1d0
+   c%initial%pond       = 0.2d0
+   c%initial%ldwet      = 7.0d0
+   c%initial%dt         = 1.0d-7
+   c%initial%atmin7     = [1.0d0, 2.0d0, 3.0d0, 4.0d0, 5.0d0, 6.0d0, 7.0d0]
+   c%initial%h_file     = "case.ini.h.csv"
+   c%initial%tsoil_file = "case.ini.tsoil.csv"
+   c%initial%cml_file   = "case.ini.cml.csv"
+   @assertEqual(1,                 c%initial%swirrigate)
+   @assertEqual(0.5d0,             c%initial%ssnow,  1.0d-12)
+   @assertEqual(7.0d0,             c%initial%atmin7(7), 1.0d-12)
+   @assertEqual("case.ini.h.csv",  c%initial%h_file)
+end subroutine
+
+@test
+subroutine test_soil_initial_dt_too_small_fails()
+   use funit
+   use soil_config_mod
+   use error_mod
+   type(soil_config_t)        :: c
+   type(error_collection_t)   :: errors
+   c%initial%dt = 1.0d-15  ! below 1e-12 lower bound
+   call c%initial%validate(errors)
+   @assertTrue(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_soil_initial_atmin7_out_of_range_fails()
+   use funit
+   use soil_config_mod
+   use error_mod
+   type(soil_config_t)        :: c
+   type(error_collection_t)   :: errors
+   c%initial%atmin7(3) = 100.0d0   ! above 50.0 upper bound
+   call c%initial%validate(errors)
+   @assertTrue(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_soil_initial_zero_defaults_valid()
+   use funit
+   use soil_config_mod
+   use error_mod
+   type(soil_config_t)        :: c
+   type(error_collection_t)   :: errors
+   ! All defaults; nothing set explicitly. Defaults must be valid.
+   call c%initial%validate(errors)
+   @assertFalse(errors%has_errors())
+end subroutine
