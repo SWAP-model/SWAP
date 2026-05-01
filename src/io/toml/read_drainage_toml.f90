@@ -201,6 +201,13 @@ contains
                call get_optional_real_with_default(item, 'drares',     config%drares(i),         0.0_real64,  'drainage.levels.drares',     errors)
                call get_optional_real_with_default(item, 'infres',     config%infres(i),         0.0_real64,  'drainage.levels.infres',     errors)
                call get_optional_real_with_default(item, 'L',          config%L(i),              0.0_real64,  'drainage.levels.L',          errors)
+               call get_optional_real_with_default(item, 'gwlinf',  config%gwlinf(i),  0.0_real64,  'drainage.levels.gwlinf',  errors)
+               call get_optional_real_with_default(item, 'rdrain',  config%rdrain(i),  0.0_real64,  'drainage.levels.rdrain',  errors)
+               call get_optional_real_with_default(item, 'rinfi',   config%rinfi(i),   0.0_real64,  'drainage.levels.rinfi',   errors)
+               call get_optional_real_with_default(item, 'rentry',  config%rentry(i),  0.0_real64,  'drainage.levels.rentry',  errors)
+               call get_optional_real_with_default(item, 'rexit',   config%rexit(i),   0.0_real64,  'drainage.levels.rexit',   errors)
+               call get_optional_real_with_default(item, 'widthr',  config%widthr(i),  0.0_real64,  'drainage.levels.widthr',  errors)
+               call get_optional_real_with_default(item, 'taludr',  config%taludr(i),  0.0_real64,  'drainage.levels.taludr',  errors)
                call get_optional_string_with_default(item, 'owltab_file', str_tmp, '', 'drainage.levels.owltab_file', errors)
                if (allocated(str_tmp)) config%owltab_file(i) = str_tmp
             end do

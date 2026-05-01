@@ -166,3 +166,35 @@ subroutine test_read_dra_surface_runoff_swnrsrf_zero_only()
    @assertEqual(0.0d0, c%surface_runoff%rsurfdeep,    1.0d-12)
    @assertEqual(0.0d0, c%surface_runoff%rsurfshallow, 1.0d-12)
 end subroutine
+
+@test
+subroutine test_drainage_levels_parses_extended_fields()
+   use funit
+   use tomlf, only: toml_table, toml_load
+   use drainage_config_mod
+   use read_drainage_toml_mod
+   use error_mod
+   type(toml_table), allocatable, target :: doc
+   type(toml_table), pointer     :: doc_ptr
+   type(drainage_config_t)       :: c
+   type(error_collection_t)      :: errors
+
+   call toml_load(doc, 'tests/unit/io/toml/fixtures/drainage_levels_extended.toml')
+   doc_ptr => doc
+   call read_drainage_toml(doc_ptr, c, errors)
+
+   @assertFalse(errors%has_errors())
+   @assertEqual(2, size(c%gwlinf))
+   @assertEqual(-1000.0d0, c%gwlinf(1), 1.0d-12)
+   @assertEqual(-1000.0d0, c%gwlinf(2), 1.0d-12)
+   @assertEqual(461.0d0,   c%rdrain(1), 1.0d-12)
+   @assertEqual(296.0d0,   c%rdrain(2), 1.0d-12)
+   @assertEqual(1000.0d0,  c%rinfi(1),  1.0d-12)
+   @assertEqual(500.0d0,   c%rinfi(2),  1.0d-12)
+   @assertEqual(1.0d0,     c%rentry(1), 1.0d-12)
+   @assertEqual(5.0d0,     c%rexit(1),  1.0d-12)
+   @assertEqual(100.0d0,   c%widthr(1), 1.0d-12)
+   @assertEqual(50.0d0,    c%widthr(2), 1.0d-12)
+   @assertEqual(0.66d0,    c%taludr(1), 1.0d-12)
+   @assertEqual(1.00d0,    c%taludr(2), 1.0d-12)
+end subroutine
