@@ -14,10 +14,15 @@ case directory (`tests/swap-cases/<N>.<case>/`) and is unaffected.
 The terminal state:
 - `tests/swap-cases/toml/6.surfacewater/swap.dra` is deleted.
 - `surfacewater.f90:56` no longer calls `rddre`.
-- `rddre` is removed from `readswap.f90`, along with its upstream `drfil` /
-  `pathdrain` reads.
+- `rddre` stays alive in `readswap.f90` as a parity-test fixture
+  (used by `tests/unit/io/toml/test_surfacewater_parity.pf` and similar)
+  — it's no longer on the runtime path.
 - `tests/swap-cases/toml/6.surfacewater` runs end-to-end against the regression
   reference output via the new executable.
+
+A follow-up cleanup (out of scope here) can rewrite the parity tests
+to compare against fixture values rather than `rddre` output, after
+which `rddre` and its `drfil`/`pathdrain` plumbing can be deleted.
 
 ## Non-goals
 
@@ -133,21 +138,27 @@ if (self%surface_water%swsrf == 3 .or. self%surface_water%swsec == 1 .or. &
 end if
 ```
 
-### Unit 2 — extend finalizers for coordinate normalization
+### Unit 2 — coordinate normalization (deferred / simplified)
 
-Push (3) into config finalizers. `surface_water_config_finalize` already
-has the alphaw precedent.
+Push (3) into config finalizers and validators. `surface_water_config_finalize`
+already has the `alphaw` precedent, so the pattern is established.
 
-- `hbweir[i] -= altcu` (per-period). `altcu` is in `drainage_config_t`,
-  not `surface_water_config_t` — so this becomes a finalize step in
-  `swap_config_finalize` (cross-section), wrapping
-  `surface_water%finalize` with an extra pass that consumes
-  `drain%altcu`.
-- `wldip[i] = abs(wldip[i])` — pure within-config; goes in
-  `surface_water_config_finalize`.
+This port enforces `drain.altcu = 0` at validate time (a stub-error in
+`drainage_config_validate`) and defers full altcu plumbing to a future
+port. Rationale: `altcu` is not currently a module global, `wlact` is
+not currently a module global, and the legacy subtraction logic threads
+through three different globals (`zbotdr`, `hbweir`, the initial `wls1`
+seed). Building all that plumbing speculatively when no TOML case
+authors `altcu /= 0` would be expensive churn. Until a case needs it,
+the subtraction is a no-op (since `altcu = 0`) and we sidestep it.
 
-After Unit 2, the typed config carries values in the same coordinate
-system that `rddre` produced. The adapter is unchanged.
+That leaves only `wldip[i] = abs(wldip[i])` in `surface_water_config_finalize`,
+which is pure within-config and trivial.
+
+To seed the runtime initial water level, the adapter pre-computes
+`wls1_init = wlact - altcu` (which equals `wlact` under the altcu=0
+constraint) and writes it to a single new module global `wls1_init`.
+`surfacewater_init` reads this to set its OUT parameter.
 
 ### Unit 3 — extract runtime init into a new module
 
@@ -199,20 +210,17 @@ call surfacewater_init (wls, wlp)
 - Bump `nrlevs` from 0 to 2 in case 6's `swap.dra.toml`.
 - Strip the "Phase 4d skipped" comment block.
 
-### Unit 5 — delete `rddre` and upstream
+### Unit 5 — keep `rddre` alive for parity tests
 
-Once all callers route through `surfacewater_init`:
+`rddre` and its upstream `drfil`/`pathdrain` reads stay in
+`readswap.f90` untouched. They're used as the parity reference by
+`tests/unit/io/toml/test_surfacewater_parity.pf`, which compares
+adapter-populated globals against `rddre`-populated globals starting
+from the same `swap.dra` fixture.
 
-- Delete subroutine `rddre` (`readswap.f90:4273-4915`).
-- Delete `subroutine checkdate` if only `rddre` calls it. (Verify.)
-- Delete `if (swdra .ne. 0) call rdscha ('drfil',drfil)` at
-  `readswap.f90:1003` — `drfil` is now dead.
-- Delete `drfil` argument propagation at `readswap.f90:1766,1783` and
-  the `drfil` field from any common/module that only `rddre` reads.
-- Delete `pathdrain` if no other caller. (Verify.)
-
-After this `readswap.f90` shrinks by ~700 lines and no code anywhere
-opens `swap.dra`.
+The runtime path no longer calls `rddre` — that's the only change.
+Cleanup (deleting `rddre`, the `drfil`/`pathdrain` plumbing, and
+the parity-test reference path) is out of scope here.
 
 ### Unit 6 — delete `swap.dra` from case 6
 
@@ -239,15 +247,18 @@ branches (swsrf=3, swsec=1, swqhr=2, nrman2>0) are gated with explicit
 fatal errors at validation and runtime. No silent misbehaviour. Future
 work expands coverage when a test case authors those switches.
 
-**Decided: hbweir altcu-subtraction lives in `swap_config_finalize`,
-not `surface_water_config_finalize`.** It's a cross-section
-normalization (needs `drain%altcu`). Mirrors the existing `swap_config`
-cross-section validation pattern.
+**Decided: enforce `drain.altcu = 0` and defer full altcu plumbing.**
+A stub-error in `drainage_config_validate` rejects non-zero `altcu`.
+Case 6 has `altcu = 0`, and no other TOML case authors a non-zero
+value today. This sidesteps the need to add `altcu`/`wlact` as new
+module globals, modify the adapter's `zbotdr`/`hbweir` writes, and
+co-author cross-section finalize steps. When a future case requires
+`altcu /= 0`, the adapter is extended in a focused follow-up.
 
-**Decided: `wls1 = wlact - altcu` lives in `surfacewater_init`, not
-finalize.** `wls1` is runtime state, not config. The typed config
-holds `wlact` in its authored form (relative to reference level).
-The runtime sub does the offset translation.
+**Decided: adapter writes a single new global `wls1_init`.** Equals
+`wlact - altcu` (= `wlact` under the altcu=0 constraint). Read by
+`surfacewater_init` to seed its OUT parameter. Cleaner than passing
+config into the runtime module or adding two separate globals.
 
 **Decided: schema-level fields for unimplemented branches not added
 in this port.** No `[surface_water.qh_table]` for swqhr=2, no
@@ -293,13 +304,15 @@ change in output schema.
 
 ### Acceptance
 
-- `pixi run unit-tests` green.
+- `pixi run unit-tests` green (including existing surfacewater parity
+  test, which still runs `rddre` against the legacy `swap.dra` it
+  loads from a test fixture).
 - `pixi run regression-tests` 5/5 cases green (no perf regression
   beyond noise).
-- `git grep rddre src/` returns nothing.
-- `git grep swap.dra src/` returns only the legacy `tests/swap-cases/`
-  reference.
+- `git grep "call rddre" src/` returns nothing (only test files may
+  reference it).
 - `tests/swap-cases/toml/6.surfacewater/swap.dra` does not exist.
+- `surfacewater.f90:56` calls `surfacewater_init`, not `rddre`.
 
 ## Risk register
 
