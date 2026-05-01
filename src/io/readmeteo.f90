@@ -701,10 +701,14 @@ t_jan1      = real(jday(yearmeteo,   1, 1) - jd1900, 8)
 t_jan1_next = real(jday(yearmeteo+1, 1, 1) - jd1900, 8)
 
 ! Scan cache for this year (cache is sorted by datetime).
+! Half-open interval [t_jan1, t_jan1_next) — sub-daily timestamps are
+! continuous fractional days, not whole-day integers, so MeteoCSVYear's
+! ±0.5-day slack would mis-bucket Dec 31 noon-to-midnight into the next
+! year. Timestamps are derived from exact integer-second arithmetic in
+! parse_iso_datetime, so no FP slack is needed.
 i1 = 0; i2 = 0
 do i = 1, nmetcsv_det
-   if (metcsv_det(i,1) >= t_jan1 - 0.5d0 .and. &
-       metcsv_det(i,1) <  t_jan1_next - 0.5d0) then
+   if (metcsv_det(i,1) >= t_jan1 .and. metcsv_det(i,1) < t_jan1_next) then
       if (i1 == 0) i1 = i
       i2 = i
    end if
