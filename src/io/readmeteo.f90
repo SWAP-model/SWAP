@@ -91,9 +91,15 @@
 !   - 1 swmetdetail = 0; daily input
 !   - 2 swmetdetail = 1; detailed input for nmetdetail time intervals per day
 
-! --- CSV mode: extract year slice from the pre-loaded cache
+! --- CSV mode: extract year slice from the pre-loaded cache.
+!     For daily mode (swmetdetail=0): MeteoCSVYear.
+!     For sub-daily mode (swmetdetail=1): MeteoCSVDetYear.
       if (swMetCSV == 1) then
-         call MeteoCSVYear(ifnd)
+         if (swmetdetail == 0) then
+            call MeteoCSVYear(ifnd)
+         else
+            call MeteoCSVDetYear(ifnd)
+         end if
          goto 100
       end if
 
@@ -666,6 +672,69 @@ call dtardp(datea, fsec, tval)
 daynrlast = nint(tval - timjan1 + 1.0d0)
 
 end subroutine MeteoCSVYear
+
+
+! SUBROUTINE: MeteoCSVDetYear
+! Extract one year's sub-daily meteo from the pre-loaded metcsv_det cache.
+! Called by ReadMeteoYear when swMetCSV==1 and swmetdetail==1.
+! Populates dettime, detrecord, detrad, dettav, dethum, detwind, detrain.
+! irectotal and nofd are set in ReadMeteoYear after goto 100.
+subroutine MeteoCSVDetYear(ifnd)
+use error_mod, only: fatalerr_collected
+use variables, only: yearmeteo, metcsv_det, nmetcsv_det, &
+                     dettime, detrecord, detrad, dettav, dethum, detwind, detrain
+use swap_array_dimensions, only: NMETFILE
+implicit none
+integer, intent(out) :: ifnd
+
+integer, parameter :: jd1900 = 2415020
+integer :: jday
+external jday
+
+integer  :: i, i1, i2, n
+real(8)  :: t_jan1, t_jan1_next
+
+! Year boundaries in days-since-jd1900.
+! All sub-daily timestamps for yearmeteo satisfy:
+!   t_jan1 <= timestamp < t_jan1_next
+t_jan1      = real(jday(yearmeteo,   1, 1) - jd1900, 8)
+t_jan1_next = real(jday(yearmeteo+1, 1, 1) - jd1900, 8)
+
+! Scan cache for this year (cache is sorted by datetime).
+i1 = 0; i2 = 0
+do i = 1, nmetcsv_det
+   if (metcsv_det(i,1) >= t_jan1 - 0.5d0 .and. &
+       metcsv_det(i,1) <  t_jan1_next - 0.5d0) then
+      if (i1 == 0) i1 = i
+      i2 = i
+   end if
+end do
+
+if (i1 == 0) then
+   call fatalerr_collected('MeteoCSVDetYear', &
+      'No sub-daily meteo CSV records found for the requested year')
+   ifnd = 0; return
+end if
+
+n = i2 - i1 + 1
+if (n > NMETFILE) then
+   call fatalerr_collected('MeteoCSVDetYear', &
+      'Sub-daily meteo CSV record count exceeds NMETFILE (17568)')
+   ifnd = 0; return
+end if
+ifnd = n
+
+! Populate per-slot arrays.
+! metcsv_det columns: 1=datetime, 2=record, 3=rad(kJ), 4=temp, 5=hum, 6=wind, 7=rain
+dettime(1:n)   = metcsv_det(i1:i2, 1)
+detrecord(1:n) = nint(metcsv_det(i1:i2, 2))
+detrad(1:n)    = metcsv_det(i1:i2, 3) * 1000.0d0   ! kJ/m2 → J/m2
+dettav(1:n)    = metcsv_det(i1:i2, 4)
+dethum(1:n)    = metcsv_det(i1:i2, 5)
+detwind(1:n)   = metcsv_det(i1:i2, 6)
+detrain(1:n)   = metcsv_det(i1:i2, 7)
+
+end subroutine MeteoCSVDetYear
 
 
 ! Helper: convert days-since-jd1900 to (month, day) via inverse Julian Day.
