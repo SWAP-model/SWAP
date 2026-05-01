@@ -34,6 +34,7 @@ module meteorology_config_mod
       character(len=:), allocatable :: metfile
       character(len=:), allocatable :: rainfile
       character(len=:), allocatable :: rain_events_file
+      character(len=:), allocatable :: detail_file
       real(real64) :: lat  = 0.0_real64
       real(real64) :: alt  = 0.0_real64
       real(real64) :: altw = 2.0_real64

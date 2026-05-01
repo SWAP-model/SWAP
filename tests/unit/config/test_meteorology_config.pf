@@ -122,3 +122,12 @@ subroutine test_meteorology_snow_swsnow_one_teprsnow_above_teprrain()
    call m%validate(errors)
    @assertTrue(errors%has_errors())
 end subroutine
+
+@test
+subroutine test_meteo_detail_file_field_roundtrips()
+   use funit
+   use meteorology_config_mod
+   type(meteorology_config_t) :: m
+   m%detail_file = "mysite.det.csv"
+   @assertEqual("mysite.det.csv", m%detail_file)
+end subroutine
