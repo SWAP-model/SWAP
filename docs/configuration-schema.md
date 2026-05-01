@@ -231,9 +231,26 @@ type  = 1
 
 ### `[soil.initial]`
 
+Initial / warm-restart inputs. The `gwli` / `pondini` / `pondmx` scalars apply
+when `swinco ∈ {1, 2}` (initial-from-scalars). The remaining keys apply when
+`swinco = 3` (warm restart from saved state); they replaced the legacy
+`swap.ini` ASCII file.
+
 | Key | Type | Required | State target | Description |
 |---|---|---|---|---|
 | `gwli` | real | optional | `state%soil%gwli` (and `state%soil%gwl`) | Initial groundwater level (cm). |
+| `pondini` | real | optional | `state%soil%pondini` | Initial ponding depth, swinco<3 path (cm). |
+| `pondmx` | real | optional | `state%soil%pondmx` | Maximum ponding depth before runoff (cm). |
+| `swirrigate` | int | optional | — (metadata only) | Whether the previous run had irrigation active. |
+| `ssnow` | real | optional | global `ssnow` | Initial snow water equivalent (cm). |
+| `slw` | real | optional | global `slw` | Initial snow liquid water (cm). |
+| `pond` | real | optional | globals `pond`, `pondini` | Initial ponding depth, swinco=3 path (cm). |
+| `ldwet` | real | optional | global `ldwet` | Time after significant rainfall, Black evap reservoir (d). |
+| `dt` | real | optional | global `dt` | Length of final timestep at end of previous run (d). |
+| `atmin7` | real(7) | optional | global `atmin7(7)` | Minimum temperatures of last week (°C). |
+| `h_file` | string | required when swinco=3 | populates `zi`, `h`, `nhead` | CSV path; header `z,h`. |
+| `tsoil_file` | string | required when swinco=3 ∧ heat.swhea=1 ∧ heat.swcalt=2 | populates `zh`, `tsoil` | CSV path; header `z,tsoil`. |
+| `cml_file` | string | required when swinco=3 ∧ solute.swsolu=1 | populates `zc`, `cml`, `nconc` | CSV path; header `z,cml`. |
 
 ### `[soil.surface]`
 

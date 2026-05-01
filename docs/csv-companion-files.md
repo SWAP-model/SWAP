@@ -82,6 +82,9 @@ when the matching switch is set. Current users:
 | `qhbot_file`       | `[bottom_boundary]` | `htab,qtab`      | `swbotb = 4` AND `swqhbot = 2`       |
 | `hbot5_file`       | `[bottom_boundary]` | `date,hbot`      | `swbotb = 5`                         |
 | `fixed_events_file`| `[irrigation]`      | `date,depth,conc,type` | `swirfix = 1` (long-form)      |
+| `h_file`           | `[soil.initial]`    | `z,h`            | `swinco = 3`                         |
+| `tsoil_file`       | `[soil.initial]`    | `z,tsoil`        | `swinco = 3` AND `heat.swhea = 1` AND `heat.swcalt = 2` |
+| `cml_file`         | `[soil.initial]`    | `z,cml`          | `swinco = 3` AND `solute.swsolu = 1` |
 
 Validators should reject cases where multiple sources are set (e.g. inline
 `fixed_events`, `fixed_events_file`, and the legacy `irgfil` are mutually exclusive).
@@ -95,8 +98,8 @@ Validators should reject cases where multiple sources are set (e.g. inline
   `swap.dra.toml`, `*.crp.toml`, all `*.csv` companions, the legacy `*.crp`
   crop files (read by sub-readers in `cropgrowth.f90` until Phase 4f-extend
   ports them), `swap_linux.swp.template` (staged to `swap.swp` per run), and
-  where the scenario requires them legacy ASCII companions like `swap.dra`
-  (`swdra=2`) and `swap.ini` (`swinco=3`).
+  where the scenario requires it the legacy ASCII companion `swap.dra`
+  (`swdra=2`, surface-water extended drainage; pending its own port).
 - `tests/swap-cases/run_case.sh` runs SWAP in that directory in-place;
   `tests/regression/test_output_regression.py` copies it to a temp dir for
   parallel-safe execution. Neither tool reads from the legacy `<N>.<case>/`
@@ -108,6 +111,7 @@ Validators should reject cases where multiple sources are set (e.g. inline
 - `grassgrowth.gwl.csv` — replaced inline 125-row `gwl_table` (Phase 4f cleanup).
 - `oxygenstress.haquif.csv` — replaced inline `haquif_table`.
 - `surfacewater.haquif.csv` — replaced inline `haquif_table`.
+- `salinitystress.ini.{h,tsoil,cml}.csv` — replaced legacy ASCII `swap.ini` profile blocks (Phase 4f cleanup, post-CSV-meteo). The legacy `[soil].inifil` slot was removed; `[soil.initial]` is now the canonical SWINCO=3 schema.
 
 ## Future users (deferred)
 
