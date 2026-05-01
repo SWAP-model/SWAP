@@ -33,6 +33,7 @@ module meteorology_config_mod
    type :: meteorology_config_t
       character(len=:), allocatable :: metfile
       character(len=:), allocatable :: rainfile
+      character(len=:), allocatable :: rain_events_file
       real(real64) :: lat  = 0.0_real64
       real(real64) :: alt  = 0.0_real64
       real(real64) :: altw = 2.0_real64
@@ -64,7 +65,7 @@ contains
       call check_int_enum(self%swetr,       [0, 1],    "meteorology.swetr",       errors)
       call check_int_enum(self%swdivide,    [0, 1],    "meteorology.swdivide",    errors)
       call check_int_enum(self%swmetdetail, [0, 1],    "meteorology.swmetdetail", errors)
-      call check_int_enum(self%swrain,      [0, 1, 2], "meteorology.swrain",      errors)
+      call check_int_enum(self%swrain,      [0, 1, 2, 3], "meteorology.swrain",      errors)
       call check_int_enum(self%swinter,     [0, 1, 2], "meteorology.swinter",     errors)
       call self%evaporation%validate(errors)
       call self%snow%validate(errors)

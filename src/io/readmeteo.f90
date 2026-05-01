@@ -90,6 +90,13 @@
 ! --- get values from file; two options:
 !   - 1 swmetdetail = 0; daily input
 !   - 2 swmetdetail = 1; detailed input for nmetdetail time intervals per day
+
+! --- CSV mode: extract year slice from the pre-loaded cache
+      if (swMetCSV == 1) then
+         call MeteoCSVYear(ifnd)
+         goto 100
+      end if
+
       if (swmetdetail.eq.0) then
          if (swMetFilAll == 1) then
             call MeteoInOneFile (2, ifnd)
@@ -130,6 +137,7 @@
          close (wth)
       endif
 
+100   continue
 !========================= tests and initialization ====================
 
 ! --- perform some reliability tests and some initialization
@@ -264,17 +272,16 @@
       use error_mod, only: fatalerr_collected
 ! ----------------------------------------------------------------------
 !     Last modified      : February 2014
-!     Purpose            : read rainfall data (events) of one calendar year 
+!     Purpose            : read rainfall data (events) of one calendar year
 !     Interface:
 !       I   - logf,yearmeteo,pathatm,rainfil
 !       O   - nmrain,rainamount,raintimearray
 ! ----------------------------------------------------------------------
-      use variables, only: logf,yearmeteo,pathatm,rainfil,nmrain,rainamount,raintimearray
+      use variables, only: logf,yearmeteo,pathatm,rainfil,nmrain,rainamount,raintimearray, &
+                           swRainCSV, raincsv_dat, nraincsv
       use swap_array_dimensions, only: mrain
-      
-      implicit none
 
-! --- global
+      implicit none
 
 ! --- local
       character(len=2)   chday,chmonth
@@ -287,41 +294,97 @@
       real(4)   fsec,time4(mrain)
       real(8)   tday,tdayold,vsmall
       logical   flrnx
-      vsmall = 1.0d-8
-!========================= Read rain file =============================
+      ! CSV-path locals
+      integer  :: jday
+      external    jday
+      integer, parameter :: jd1900 = 2415020
+      real(8)  :: t_jan1, t_dec31, tfrac
 
-! --- in case of detailed rainfall, open file once a year
+      vsmall = 1.0d-8
+
+!========================= CSV path ====================================
+      if (swRainCSV == 1) then
+         ! Extract current year's events from the pre-loaded cache.
+         t_jan1  = real(jday(yearmeteo,  1,  1) - jd1900, 8)
+         t_dec31 = real(jday(yearmeteo, 12, 31) - jd1900, 8) + 1.0d0
+
+         ifnd = 0
+         do i = 1, nraincsv
+            if (raincsv_dat(i,1) >= t_jan1 - 0.5d0 .and. &
+     &          raincsv_dat(i,1) <  t_dec31 + 0.5d0) then
+               ifnd = ifnd + 1
+               raintimearray(ifnd) = raincsv_dat(i,1)
+               rainamount(ifnd)    = raincsv_dat(i,2)
+            end if
+         end do
+
+         if (ifnd == 0) then
+            call fatalerr_collected('ReadRainEvents', &
+     &         'No rain events CSV records found for the requested year')
+            return
+         end if
+
+         ! Zero-prepend: if first event is not at midnight, insert t=0 record.
+         tfrac = raintimearray(1) - real(int(raintimearray(1)), 8)
+         if (tfrac > vsmall) then
+            do i = ifnd, 1, -1
+               raintimearray(i+1) = raintimearray(i)
+               rainamount(i+1)    = rainamount(i)
+            end do
+            ifnd = ifnd + 1
+            raintimearray(1) = real(int(raintimearray(2)), 8)
+            rainamount(1)    = 0.0d0
+         end if
+
+         ! Deduplication: drop midnight-crossover duplicates.
+         ic = 1
+         do i = 2, ifnd
+            if ((raintimearray(i) - raintimearray(ic)) > vsmall) then
+               ic = ic + 1
+               raintimearray(ic) = raintimearray(i)
+               rainamount(ic)    = rainamount(i)
+            end if
+         end do
+         nmrain = ic
+
+         ! Ascending order check.
+         do i = 2, nmrain
+            if ((raintimearray(i) - raintimearray(i-1)) .lt. vsmall) then
+               messag = 'In rain events CSV file the time of a record ' //  &
+     &            'is not greater than its predecessor. Adapt the file!'
+               call fatalerr_collected('ReadRainEvents', messag)
+            end if
+         end do
+         return
+      end if
+
+!========================= TTutil / legacy .YYY path ===================
+
       write (ext,'(i3.3)') mod(yearmeteo,1000)
       filnam = trim(pathatm)//trim(rainfil)//'.'//trim(ext)
 
-! --- initialise and start reading
       pre = getun2 (10,90,2)
       call rdinit(pre,logf,filnam)
-
-! --- get values from file
       call rdainr ('day',1,31,ad,mrain,ifnd)
       call rdfinr ('month',1,12,am,mrain,ifnd)
       call rdfinr ('year',1,3000,ay,mrain,ifnd)
       call rdfdor ('time',0.0d0,1.0d0,raintimearray,mrain,ifnd)
       call rdfdor ('amount',0.0d0,10000.0d0,rainamount,mrain,ifnd)
-
       close (pre)
 
-! --- check whether first rain event starts at t = 0; if not: repair
       if (raintimearray(1).gt.vsmall) then
          do i = ifnd, 1, -1
            ay(i+1) = ay(i)
            am(i+1) = am(i)
            ad(i+1) = ad(i)
-           raintimearray(i+1) = raintimearray(i) 
-           rainamount(i+1)    = rainamount(i) 
+           raintimearray(i+1) = raintimearray(i)
+           rainamount(i+1)    = rainamount(i)
          enddo
          ifnd = ifnd + 1
          raintimearray(i+1) = 0.0d0
-         rainamount(i+1)    = 0.0d0 
+         rainamount(i+1)    = 0.0d0
       endif
 
-! --- convert year, day, month and fraction of day to absolute time
       fsec = 0.0
       ic = 0
       datea = 0
@@ -330,9 +393,8 @@
          datea(2) = am(i)
          datea(3) = ad(i)
          call dtardp (datea,fsec,tday)
-         time4(i)         = real(raintimearray(i)) 
-         raintimearray(i) = tday + raintimearray(i) 
-!   - check whether end of previous day is equal to start of this day (original raintimearray(i) = 0.00)
+         time4(i)         = real(raintimearray(i))
+         raintimearray(i) = tday + raintimearray(i)
          if (ic.gt.0) then
             if ( (raintimearray(i)-raintimearray(ic)) .lt. vsmall .and. &
      &           tday.gt.tdayold) then
@@ -346,15 +408,13 @@
          if (flrnx) then
             ic = ic + 1
             raintimearray(ic) = raintimearray(i)
-            rainamount(ic)    = rainamount(i) 
+            rainamount(ic)    = rainamount(i)
          endif
          tdayold = tday
       end do
 
-! --- save number of rain event records
-      nmrain = ic   !  ifnd
+      nmrain = ic
 
-! --- check whether dates are in ascending order
       do i = 2,ic
          if ( (raintimearray(i)-raintimearray(i-1)) .lt. vsmall) then
             write(chmonth,'(i2)')  am(i)
@@ -525,3 +585,115 @@ end select
 
 return
 end subroutine MeteoInOneFile
+
+
+! SUBROUTINE: MeteoCSVYear
+! Extract one year's daily meteo from the pre-loaded metcsv_dat cache.
+! Called by ReadMeteoYear when swMetCSV == 1, replacing both the per-year
+! file reader and MeteoInOneFile(2).  After return, arad/atmn/atmx/ahum/
+! awin/arai/aetr/wet/ad/am are populated exactly as in the legacy path
+! so that the validation and rain-array init code in ReadMeteoYear works
+! unchanged.
+subroutine MeteoCSVYear(ifnd)
+use error_mod, only: fatalerr_collected
+use variables, only: arad, atmn, atmx, ahum, awin, arai, aetr, wet, ad, am, &
+                     yearmeteo, metcsv_dat, nmetcsv, &
+                     daynrfirst, daynrlast, timjan1
+implicit none
+integer, intent(out) :: ifnd
+
+integer  :: i, i1, i2, n
+integer  :: datea(6)
+real(4)  :: fsec
+real(8)  :: t_jan1, t_dec31, tval
+! Julian-day epoch used by csv_reader: JD - 2415020
+integer, parameter :: jd1900 = 2415020
+! Forward declaration: jday is defined later in this file.
+integer :: jday
+external jday
+
+! Year boundaries in days-since-jd1900
+t_jan1  = real(jday(yearmeteo,  1,  1) - jd1900, 8)
+t_dec31 = real(jday(yearmeteo, 12, 31) - jd1900, 8)
+
+! Find row range for this year (metcsv_dat is sorted by date).
+i1 = 0; i2 = 0
+do i = 1, nmetcsv
+   if (metcsv_dat(i, 1) >= t_jan1 - 0.5d0 .and. &
+       metcsv_dat(i, 1) <= t_dec31 + 0.5d0) then
+      if (i1 == 0) i1 = i
+      i2 = i
+   end if
+end do
+
+if (i1 == 0) then
+   call fatalerr_collected('MeteoCSVYear', &
+      'No meteo CSV records found for the requested year')
+   ifnd = 0; return
+end if
+
+n = i2 - i1 + 1
+ifnd = n
+
+! Populate per-day arrays.
+arad(1:n) = metcsv_dat(i1:i2, 2) * 1000.0d0   ! kJ/m2/d → J/m2/d
+atmn(1:n) = metcsv_dat(i1:i2, 3)
+atmx(1:n) = metcsv_dat(i1:i2, 4)
+ahum(1:n) = metcsv_dat(i1:i2, 5)
+awin(1:n) = metcsv_dat(i1:i2, 6)
+arai(1:n) = metcsv_dat(i1:i2, 7)
+aetr(1:n) = metcsv_dat(i1:i2, 8)
+wet(1:n)  = metcsv_dat(i1:i2, 9)
+
+! Backfill ad/am from the date column (days-since-jd1900 → month/day).
+! ReadMeteoYear's validation code uses am(i)/ad(i) to build raintimearray.
+do i = 1, n
+   call days1900_to_md(nint(metcsv_dat(i1+i-1, 1)), am(i), ad(i))
+end do
+
+! daynrfirst / daynrlast via existing DTARDP, matching ReadMeteoYear logic.
+datea = 0; fsec = 0.0
+datea(1) = yearmeteo; datea(2) = 1; datea(3) = 1
+call dtardp(datea, fsec, t_jan1)
+timjan1 = t_jan1
+
+datea(2) = am(1); datea(3) = ad(1)
+call dtardp(datea, fsec, tval)
+daynrfirst = nint(tval - timjan1 + 1.0d0)
+
+datea(2) = am(n); datea(3) = ad(n)
+call dtardp(datea, fsec, tval)
+daynrlast = nint(tval - timjan1 + 1.0d0)
+
+end subroutine MeteoCSVYear
+
+
+! Helper: convert days-since-jd1900 to (month, day) via inverse Julian Day.
+subroutine days1900_to_md(d1900, mm, dd)
+implicit none
+integer, intent(in)  :: d1900
+integer, intent(out) :: mm, dd
+integer :: jd, a, b, c, d, e, m
+integer, parameter :: jd1900 = 2415020
+jd = d1900 + jd1900
+a = jd + 32044
+b = (4*a + 3) / 146097
+c = a - (146097*b) / 4
+d = (4*c + 3) / 1461
+e = c - (1461*d) / 4
+m = (5*e + 2) / 153
+dd = e - (153*m + 2)/5 + 1
+mm = m + 3 - 12*(m/10)
+end subroutine days1900_to_md
+
+
+! Pure Julian Day Number for use inside MeteoCSVYear (avoids dependency on
+! csv_reader_mod's private julian_day).
+pure function jday(y, m, d) result(jd)
+integer, intent(in) :: y, m, d
+integer :: jd, a, yy, mm
+a  = (14 - m) / 12
+yy = y + 4800 - a
+mm = m + 12*a - 3
+jd = d + (153*mm + 2)/5 + 365*yy + yy/4 - yy/100 + yy/400 - 32045
+end function jday

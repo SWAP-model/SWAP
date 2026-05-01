@@ -202,8 +202,21 @@
       logical   flupdmetdet        ! Flag indicating that update of detailed meteorological input within the day is required               !!!!!!!!!!!  Robnew
       character(len=200) metfil    ! Name of meteorological input file
       integer   swMetFilAll        ! Switch indicating that metfil contains data for all years (limited usage)
+      integer   swMetCSV           ! 0=legacy .met/.YYY; 1=single-file CSV mode
       character(len=80) pathatm    ! Path to folder with meteorological input files
+      ! CSV meteo cache: pre-loaded by adapter, sliced per year by MeteoCSVYear.
+      ! Column layout (daily): 1=date, 2=rad(kJ/m2/d), 3=tmin, 4=tmax, 5=hum, 6=wind, 7=rain, 8=etref, 9=wet
+      integer :: nmetcsv = 0
+      real(8), dimension(:,:), allocatable :: metcsv_dat
+      ! Detail CSV cache (swmetdetail=1): 1=datetime(frac days), 2=rad, 3=temp, 4=hum, 5=wind, 6=rain
+      integer :: nmetcsv_det = 0
+      real(8), dimension(:,:), allocatable :: metcsv_det
       character(len=200) rainfil   ! Name of input file with detailed rainfall intensities
+      integer   swRainCSV          ! 0=legacy .YYY; 1=CSV mode (pre-loaded by adapter)
+      ! Rain events CSV cache: pre-loaded by adapter, sliced per year by ReadRainEvents.
+      ! Column layout: 1=datetime (fractional days since JD2415020), 2=amount (mm)
+      integer :: nraincsv = 0
+      real(8), dimension(:,:), allocatable :: raincsv_dat
 !   - atmosphere SAVE variable state (refactored from local SAVE)
       real(8)   tsunrise_atm       ! Time of sunrise (fraction of day) - from meteodt.f90 ETSine
       real(8)   tsunset_atm        ! Time of sunset (fraction of day) - from meteodt.f90 ETSine  

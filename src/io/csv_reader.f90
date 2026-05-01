@@ -30,10 +30,11 @@ contains
 
       integer :: unit, ios, ncols, nrows, irow
       character(len=4096) :: line
-      logical :: file_exists, header_done, date_keyed
+      logical :: file_exists, header_done, date_keyed, datetime_keyed
 
       ncols = size(expected_header)
-      date_keyed = (ncols >= 1) .and. (to_lower(trim(expected_header(1))) == 'date')
+      date_keyed     = (ncols >= 1) .and. (to_lower(trim(expected_header(1))) == 'date')
+      datetime_keyed = (ncols >= 1) .and. (to_lower(trim(expected_header(1))) == 'datetime')
 
       inquire(file=path, exist=file_exists)
       if (.not. file_exists) then
@@ -108,7 +109,7 @@ contains
             cycle
          end if
          irow = irow + 1
-         call parse_row(line, irow, ncols, date_keyed, path, table, errors)
+         call parse_row(line, irow, ncols, date_keyed, datetime_keyed, path, table, errors)
          if (errors%has_fatals()) then
             close(unit)
             if (allocated(table)) deallocate(table)
@@ -171,10 +172,10 @@ contains
       end do
    end subroutine validate_header
 
-   subroutine parse_row(line, irow, ncols, date_keyed, path, table, errors)
+   subroutine parse_row(line, irow, ncols, date_keyed, datetime_keyed, path, table, errors)
       character(len=*),         intent(in)    :: line
       integer,                  intent(in)    :: irow, ncols
-      logical,                  intent(in)    :: date_keyed
+      logical,                  intent(in)    :: date_keyed, datetime_keyed
       character(len=*),         intent(in)    :: path
       real(real64),             intent(inout) :: table(:,:)
       type(error_collection_t), intent(inout) :: errors
@@ -213,6 +214,15 @@ contains
                call errors%append(ERR_PARSE_TYPE_MISMATCH, &
                   trim(path) // ":row " // trim(irow_str) // " col 1: '" // &
                   field // "' not an ISO date", 'csv_reader')
+               return
+            end if
+            table(irow, 1) = days
+         else if (j == 1 .and. datetime_keyed) then
+            if (.not. parse_iso_datetime(field, days)) then
+               write(irow_str, '(I0)') irow
+               call errors%append(ERR_PARSE_TYPE_MISMATCH, &
+                  trim(path) // ":row " // trim(irow_str) // " col 1: '" // &
+                  field // "' not an ISO datetime (YYYY-MM-DD HH:MM:SS)", 'csv_reader')
                return
             end if
             table(irow, 1) = days
@@ -269,6 +279,30 @@ contains
       days   = real(jd - jd1900, kind=real64)
       ok = .true.
    end function parse_iso_date
+
+   ! Parse YYYY-MM-DD HH:MM:SS (T or space as separator) into fractional days
+   ! since the same epoch used by parse_iso_date (JD 2415020 = 1899-12-31).
+   function parse_iso_datetime(s, days) result(ok)
+      character(len=*), intent(in)  :: s
+      real(real64),     intent(out) :: days
+      logical :: ok
+      integer :: ios, hh, mi, ss
+      real(real64) :: date_days
+      days = 0.0_real64
+      ok = .false.
+      if (len_trim(s) < 19) return
+      if (s(5:5) /= '-' .or. s(8:8) /= '-') return
+      if (s(14:14) /= ':' .or. s(17:17) /= ':') return
+      if (.not. parse_iso_date(s(1:10), date_days)) return
+      read(s(12:13), '(I2)', iostat=ios) hh; if (ios /= 0) return
+      read(s(15:16), '(I2)', iostat=ios) mi; if (ios /= 0) return
+      read(s(18:19), '(I2)', iostat=ios) ss; if (ios /= 0) return
+      if (hh < 0 .or. hh > 23) return
+      if (mi < 0 .or. mi > 59) return
+      if (ss < 0 .or. ss > 59) return
+      days = date_days + hh / 24.0_real64 + mi / 1440.0_real64 + ss / 86400.0_real64
+      ok = .true.
+   end function parse_iso_datetime
 
    pure function julian_day(y, m, d) result(jd)
       integer, intent(in) :: y, m, d

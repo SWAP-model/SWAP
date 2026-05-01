@@ -15,7 +15,7 @@ Heuristic: above ~30 rows, prefer CSV. The TOML stays readable and diffs/reviews
 | 5-row vertical discretization     | `hsublay = [...]`  | -               |
 | 126-row grassgrowth gwl table     | -                  | `*.csv`         |
 | 585-row fixed irrigation schedule | -                  | `*.irg.csv`     |
-| Multi-year met series             | -                  | `*.csv` (TBD)   |
+| Multi-year met series             | -                  | `*.csv`         |
 
 ## Authoring a CSV file
 

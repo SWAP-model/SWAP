@@ -17,3 +17,6 @@ Records of significant architecture and process decisions made during the SWAP m
 - [ADR 0009 — discontinue non-CSV output formats](0009-discontinue-non-csv-outputs.html) — Retire 18 legacy output switches; CSV becomes the only supported output path.
 - [ADR 0010 — macropore module deferral](0010-macropore-deferral.html) — Macropore stays in legacy code; new TOML pipeline does not wire it. Schema kept as orphan infrastructure for future macropore work.
 - [ADR 0011 — macropore case exclusion from regression](0011-macropore-exclusion-from-regression.html) — Case 3 dropped from check-full; ADR 0010's runtime-fallback clause superseded; Phase 4f's strangler-fig becomes a clean cut.
+- [ADR 0012 — CSV companion input files](0012-csv-companion-input-files.html) — `read_csv_table` as the canonical reader for all tabular inputs in the TOML pathway; ISO date support, header validation, `error_collection_t` errors.
+- [ADR 0013 — CSV meteorology input](0013-csv-meteorology-input.html) — TOML pathway reads daily meteo from a `date,rad,tmin,…,wet` CSV; legacy `.met`/`.YYY` files unchanged for the ASCII pathway.
+- [ADR 0014 — readmeteo.f90 TTutil phase-out](0014-readmeteo-phaseout.html) — Three-step plan to delete all TTutil branches from `readmeteo.f90`: implement sub-daily CSV, delete dead TTutil code, clean up dead variables.

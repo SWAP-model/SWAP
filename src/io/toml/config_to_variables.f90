@@ -135,27 +135,56 @@ contains
       angstroma   = config%meteo%angstroma
       angstromb   = config%meteo%angstromb
 
-      ! Derive swMetFilAll from metfil, matching legacy readswap.f90:415-429.
-      ! If metfil contains ".met", legacy reads the whole multi-year file at
-      ! once (swMetFilAll=1); otherwise it expects per-year files <metfil>.YYY.
-      ! `lowerc` is from ttutil; mirror its case-folding here.
+      ! Detect meteo file mode from the metfil extension.
+      ! CSV mode  (.csv): single multi-year CSV; pre-load via read_csv_table.
+      ! Legacy .met mode: MeteoInOneFile pre-loads all years (swMetFilAll=1).
+      ! Per-year mode (<base>.YYY): read one file per year in ReadMeteoYear.
       call lowerc(metfil)
+      swMetCSV    = 0
       swMetFilAll = 0
-      if (index(trim(metfil), ".met") > 0) then
+
+      if (index(trim(metfil), '.csv') > 0) then
+         swMetCSV = 1
+         block
+            use csv_reader_mod,  only: read_csv_table
+            use error_mod,       only: error_collection_t
+            real(8), allocatable :: tbl(:,:)
+            type(error_collection_t) :: errs
+            character(len=9) :: hdr(9)
+            character(len=300) :: csvpath
+            integer :: r
+            hdr(1) = 'date     '
+            hdr(2) = 'rad      '
+            hdr(3) = 'tmin     '
+            hdr(4) = 'tmax     '
+            hdr(5) = 'hum      '
+            hdr(6) = 'wind     '
+            hdr(7) = 'rain     '
+            hdr(8) = 'etref    '
+            hdr(9) = 'wet      '
+            csvpath = trim(pathatm) // trim(metfil)
+            call read_csv_table(trim(csvpath), hdr, tbl, errs)
+            call errs%abort_if_fatal()
+            nmetcsv = size(tbl, 1)
+            allocate(metcsv_dat(nmetcsv, 9))
+            do r = 1, nmetcsv
+               metcsv_dat(r, :) = tbl(r, :)
+            end do
+         end block
+
+      else if (index(trim(metfil), '.met') > 0) then
          swMetFilAll = 1
          if (swmetdetail == 1 .or. swrain == 1 .or. swrain == 3) then
             block
                integer :: idum
-               idum = index(metfil, ".met")
+               idum = index(metfil, '.met')
                metfil = trim(metfil(1:idum-1))
                swMetFilAll = 0
             end block
          end if
       end if
 
-      ! Pre-load all years of meteo data into the cached arrays (legacy
-      ! readswap.f90:1746-1749). MeteoInOneFile(2, ...) called per-year
-      ! during the dynamic loop extracts from this cache.
+      ! Pre-load all years into cache for legacy .met mode.
       if (swMetFilAll == 1) then
          block
             integer :: idum_meteo
@@ -167,6 +196,33 @@ contains
             end interface
             call MeteoInOneFile(1, idum_meteo)
          end block
+      end if
+
+      ! Rain events CSV pre-load (swrain=3, events_file set).
+      swRainCSV = 0
+      if (swrain == 3 .and. allocated(config%meteo%rain_events_file)) then
+         if (len_trim(config%meteo%rain_events_file) > 0) then
+            swRainCSV = 1
+            block
+               use csv_reader_mod,  only: read_csv_table
+               use error_mod,       only: error_collection_t
+               real(8), allocatable :: tbl(:,:)
+               type(error_collection_t) :: errs
+               character(len=8) :: hdr(2)
+               character(len=300) :: csvpath
+               integer :: r
+               hdr(1) = 'datetime'
+               hdr(2) = 'amount  '
+               csvpath = trim(pathatm) // trim(config%meteo%rain_events_file)
+               call read_csv_table(trim(csvpath), hdr, tbl, errs)
+               call errs%abort_if_fatal()
+               nraincsv = size(tbl, 1)
+               allocate(raincsv_dat(nraincsv, 2))
+               do r = 1, nraincsv
+                  raincsv_dat(r, :) = tbl(r, :)
+               end do
+            end block
+         end if
       end if
 
       ! Evaporation sub-section

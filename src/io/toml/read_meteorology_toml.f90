@@ -47,8 +47,9 @@ contains
 
       call get_table(sec, 'rain', rain, 'meteorology.rain', errors)
       if (associated(rain)) then
-         call get_optional_int_with_default(rain, 'swrain',   config%swrain,   0, 'meteorology.rain.swrain',   errors)
-         call get_optional_int_with_default(rain, 'swetsine', config%swetsine, 0, 'meteorology.rain.swetsine', errors)
+         call get_optional_int_with_default(rain,    'swrain',      config%swrain,            0,  'meteorology.rain.swrain',      errors)
+         call get_optional_int_with_default(rain,    'swetsine',    config%swetsine,           0,  'meteorology.rain.swetsine',    errors)
+         call get_optional_string_with_default(rain, 'events_file', config%rain_events_file,  '', 'meteorology.rain.events_file', errors)
       end if
 
       call get_table(sec, 'interception', interception, 'meteorology.interception', errors)
