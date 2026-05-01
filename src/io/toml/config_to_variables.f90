@@ -608,13 +608,13 @@ contains
          end do
       end if
 
-      ! [soil.initial] / inifil dual-path block. The new path uses the
-      ! typed soil.initial schema + per-profile CSV companions; the
-      ! legacy path opens swap.ini via TTutil. Both consume swinco=3.
+      ! [soil.initial] CSV path for swinco=3 warm restart. The typed
+      ! soil.initial schema + per-profile CSV companions are the only
+      ! supported pathway (the legacy ASCII swap.ini reader has been
+      ! removed).
       if (config%soil%swinco == 3) then
          if (allocated(config%soil%initial%h_file) .and. &
              len_trim(config%soil%initial%h_file) > 0) then
-            ! ----- NEW CSV-based path -----------------------------------
             ssnow   = config%soil%initial%ssnow
             slw     = config%soil%initial%slw
             pond    = config%soil%initial%pond
@@ -693,39 +693,6 @@ contains
                   end do
                end block
             end if
-            ! ----- end NEW path -----------------------------------------
-
-         else if (allocated(config%soil%inifil) .and. &
-                  len_trim(config%soil%inifil) > 0) then
-            ! ----- LEGACY ASCII swap.ini path (preserved for now) -------
-            block
-               use swap_array_dimensions, only: macp
-               integer :: ini_unit, ifnd_ini
-               character(len=200) :: ini_filnam
-               integer, external :: getun2
-               ini_filnam = trim(config%soil%inifil)
-               ini_unit = getun2(10, 90, 2)
-               call rdinit(ini_unit, logf, ini_filnam)
-               call rdsdor('ssnow', 0.0d0, 1000.0d0, ssnow)
-               if (config%meteo%snow%swsnow /= 1) ssnow = 0.0d0
-               call rdsdor('slw',   0.0d0, 1000.0d0, slw)
-               call rdsdor('pond',  0.0d0,  100.0d0, pond)
-               pondini = pond
-               call rdador('z_h',  -1.0d5,  0.0d0, zi, macp, ifnd_ini)
-               call rdfdor('h',    -1.0d10, 1.0d4, h,  macp, ifnd_ini)
-               nhead = ifnd_ini
-               if (config%heat%swhea == 1 .and. config%heat%swcalt == 2) then
-                  call rdador('z_Tsoil', -1.0d5,  0.0d0, zh,    macp, ifnd_ini)
-                  call rdfdor('Tsoil',  -50.0d0, 50.0d0, tsoil, macp, ifnd_ini)
-               end if
-               if (config%solute%swsolu == 1) then
-                  call rdador('z_Cml', -1.0d5,    0.0d0, zc,  macp, ifnd_ini)
-                  call rdfdor('Cml',    0.0d0, 1.0d6,    cml, macp, ifnd_ini)
-                  nconc = ifnd_ini
-               end if
-               close(ini_unit)
-            end block
-            ! ----- end LEGACY path --------------------------------------
          end if
       end if
 

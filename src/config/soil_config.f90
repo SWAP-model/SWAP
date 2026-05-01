@@ -108,11 +108,6 @@ module soil_config_mod
       integer :: reva_top = 0
       integer :: nrstaring = 0  !! 0=user-supplied, 1..6=Staring series
 
-      ! Phase 4f Task B5: legacy SWINCO=3 reads initial state (h, cml,
-      ! ssnow, slw, pond, Tsoil) from a previous-run .end-style file
-      ! named here. Adapter reads the file directly when allocated.
-      character(len=:), allocatable :: inifil
-
       integer,      allocatable :: sublay(:)
       real(real64), allocatable :: hsublay(:)  !! per-sub-layer height (cm)
       real(real64), allocatable :: hcomp(:)
@@ -166,24 +161,10 @@ contains
       call self%frost%validate(errors)
       call self%hydraulics%validate(errors)
       ! soil.initial holds the TOML companion-CSV pathway for SWINCO=3.
-      ! Legacy SWINCO=3 cases that author `inifil` (.end-style file) bypass
-      ! the typed slots entirely (handled by config_to_variables), so skip
-      ! validation when inifil is present.
-      ! Transitional: the inifil branch (and has_inifil helper) goes away
-      ! with the swap.ini-port plan's cleanup task, after which this gate
-      ! simplifies to plain `if (self%swinco == 3)`.
-      if (self%swinco == 3 .and. .not. has_inifil(self%inifil)) then
+      if (self%swinco == 3) then
          call self%initial%validate(errors)
       end if
    end subroutine soil_config_validate
-
-   !> True when the legacy `inifil` path is authored (allocated and not blank).
-   pure function has_inifil(inifil) result(is_set)
-      character(len=:), allocatable, intent(in) :: inifil
-      logical :: is_set
-      is_set = allocated(inifil)
-      if (is_set) is_set = len_trim(inifil) > 0
-   end function has_inifil
 
    !> Per-soil-physical-layer hydraulics validator. All arrays are
    !! optional at the schema level — presence is required only when

@@ -244,28 +244,6 @@ subroutine test_swap_config_swinco3_missing_h_file_fails()
 end subroutine
 
 @test
-subroutine test_swap_config_swinco3_with_inifil_skips_h_file_gate()
-   use funit
-   use swap_config_mod
-   use error_mod, only: error_collection_t, ERR_VALIDATION_REQUIRED
-   type(swap_config_t)        :: c
-   type(error_collection_t)   :: errors
-   integer :: i
-   logical :: found_required
-   c%soil%swinco = 3
-   c%soil%inifil = 'swap.ini'   ! legacy path → new gate must skip
-   call c%validate(errors)
-   found_required = .false.
-   do i = 1, errors%count()
-      if (errors%items(i)%code == ERR_VALIDATION_REQUIRED .and. &
-          index(errors%items(i)%message, 'soil.initial.h_file') > 0) then
-         found_required = .true.
-      end if
-   end do
-   @assertFalse(found_required)
-end subroutine
-
-@test
 subroutine test_swap_config_swinco3_with_h_file_passes_init_check()
    use funit
    use swap_config_mod

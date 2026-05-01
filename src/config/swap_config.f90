@@ -54,49 +54,40 @@ contains
       !
       ! Cross-section gating for [soil.initial] required CSV slots.
       ! Range validation has already run inside soil%validate.
-      ! Skip when soil.swinco /= 3 OR when legacy inifil path is in use
-      ! (matches the transitional contract in soil_config_validate).
-      ! The inifil branch is transitional and removed in Task 6 of the
-      ! 2026-05-01-swap-ini-port plan; after that this gate becomes
-      ! pure `swinco == 3`.
-      if (self%soil%swinco == 3 .and. &
-          (.not. allocated(self%soil%inifil) .or. &
-           len_trim_safe(self%soil%inifil) == 0)) then
-         if (.not. allocated(self%soil%initial%h_file) .or. &
-             len_trim_safe(self%soil%initial%h_file) == 0) then
-            call errors%append(ERR_VALIDATION_REQUIRED, &
-               'soil.initial.h_file required when soil.swinco=3', &
-               'swap_config')
-         end if
-         if (self%heat%swhea == 1 .and. self%heat%swcalt == 2) then
-            if (.not. allocated(self%soil%initial%tsoil_file) .or. &
-                len_trim_safe(self%soil%initial%tsoil_file) == 0) then
+      if (self%soil%swinco == 3) then
+         block
+            logical :: have_h, have_tsoil, have_cml
+            have_h = .false.
+            if (allocated(self%soil%initial%h_file)) &
+               have_h = len_trim(self%soil%initial%h_file) > 0
+            if (.not. have_h) then
                call errors%append(ERR_VALIDATION_REQUIRED, &
-                  'soil.initial.tsoil_file required when soil.swinco=3 and ' // &
-                  'heat.swhea=1 and heat.swcalt=2', 'swap_config')
+                  'soil.initial.h_file required when soil.swinco=3', &
+                  'swap_config')
             end if
-         end if
-         if (self%solute%swsolu == 1) then
-            if (.not. allocated(self%soil%initial%cml_file) .or. &
-                len_trim_safe(self%soil%initial%cml_file) == 0) then
-               call errors%append(ERR_VALIDATION_REQUIRED, &
-                  'soil.initial.cml_file required when soil.swinco=3 and ' // &
-                  'solute.swsolu=1', 'swap_config')
+            if (self%heat%swhea == 1 .and. self%heat%swcalt == 2) then
+               have_tsoil = .false.
+               if (allocated(self%soil%initial%tsoil_file)) &
+                  have_tsoil = len_trim(self%soil%initial%tsoil_file) > 0
+               if (.not. have_tsoil) then
+                  call errors%append(ERR_VALIDATION_REQUIRED, &
+                     'soil.initial.tsoil_file required when soil.swinco=3 and ' // &
+                     'heat.swhea=1 and heat.swcalt=2', 'swap_config')
+               end if
             end if
-         end if
+            if (self%solute%swsolu == 1) then
+               have_cml = .false.
+               if (allocated(self%soil%initial%cml_file)) &
+                  have_cml = len_trim(self%soil%initial%cml_file) > 0
+               if (.not. have_cml) then
+                  call errors%append(ERR_VALIDATION_REQUIRED, &
+                     'soil.initial.cml_file required when soil.swinco=3 and ' // &
+                     'solute.swsolu=1', 'swap_config')
+               end if
+            end if
+         end block
       end if
    end subroutine swap_config_validate
-
-   !> Allocatable-safe wrapper around len_trim. Returns 0 when not allocated.
-   pure function len_trim_safe(s) result(n)
-      character(len=:), allocatable, intent(in) :: s
-      integer :: n
-      if (allocated(s)) then
-         n = len_trim(s)
-      else
-         n = 0
-      end if
-   end function len_trim_safe
 
    subroutine swap_config_finalize(self, errors)
       class(swap_config_t),     intent(inout) :: self

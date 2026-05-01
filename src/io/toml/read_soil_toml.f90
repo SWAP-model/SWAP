@@ -48,10 +48,6 @@ contains
 
       call get_optional_int_with_default(sec, 'nrstaring', config%nrstaring, 0, 'soil.nrstaring', errors)
 
-      ! Phase 4f Task B5: SWINCO=3 inifil (path to previous-run state file).
-      call get_optional_string_with_default(sec, 'inifil', config%inifil, '', &
-                                            'soil.inifil', errors)
-
       ! Top-level per-layer anisotropy ratios.
       call read_array_1d(sec, 'cofani', config%cofani, 'soil.cofani', errors)
 
