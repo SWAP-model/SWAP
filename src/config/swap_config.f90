@@ -1,6 +1,8 @@
 !> Aggregate SWAP configuration: composes the six section types.
 module swap_config_mod
-   use error_mod, only: error_collection_t, ERR_VALIDATION_REQUIRED
+   use iso_fortran_env, only: real64
+   use error_mod, only: error_collection_t, ERR_VALIDATION_REQUIRED, &
+                        ERR_VALIDATION_CROSS_SECTION
    use general_config_mod,      only: general_config_t
    use simulation_config_mod,   only: simulation_config_t
    use meteorology_config_mod,  only: meteorology_config_t
@@ -52,6 +54,44 @@ contains
       call self%crop%validate(errors)
       ! Cross-section rules are added here as the parity test surfaces them.
       !
+      ! Cross-section validation for surface-water management.
+      ! Task 7 enforces drain.altcu = 0 in the TOML pipeline, so all
+      ! coordinates here are already in the same (altcu-relative)
+      ! frame -- no inline altcu subtraction needed. zbotdr(1+nrpri)
+      ! becomes zbotdr(1) since nrpri=0 for swsrf=2 (the only branch
+      ! reaching this code, courtesy of upstream stub-errors).
+      ! Use minval(zbotdr) to find the deepest channel bottom defensively;
+      ! NRSRF tables conventionally place deepest at index 1 but we don't
+      ! rely on that ordering here.
+      if (self%drain%swdra == 2 .and. self%surface_water%swsrf == 2 .and. &
+          self%surface_water%swsec == 2 .and. self%surface_water%swqhr == 1 .and. &
+          self%drain%nrlevs >= 1 .and. allocated(self%drain%zbotdr) .and. &
+          allocated(self%surface_water%hbweir) .and. &
+          allocated(self%surface_water%wldip) .and. &
+          allocated(self%surface_water%swman) .and. &
+          allocated(self%surface_water%wscap)) then
+         block
+            integer :: imper
+            real(real64) :: zbottom
+            zbottom = minval(self%drain%zbotdr(1:self%drain%nrlevs))
+            do imper = 1, self%surface_water%nmper
+               if (self%surface_water%hbweir(imper) < zbottom) then
+                  call errors%append(ERR_VALIDATION_CROSS_SECTION, &
+                     'hbweir below deepest channel bottom of secondary system', &
+                     'swap_config')
+               end if
+               if (self%surface_water%swman(imper) == 1 .and. &
+                   self%surface_water%wscap(imper) > 1.0e-7_real64 .and. &
+                   (self%surface_water%hbweir(imper) - self%surface_water%wldip(imper)) < &
+                   (zbottom + 1.0e-4_real64)) then
+                  call errors%append(ERR_VALIDATION_CROSS_SECTION, &
+                     'target level (hbweir - wldip) below channel bottom; ' // &
+                     'supply not possible', 'swap_config')
+               end if
+            end do
+         end block
+      end if
+
       ! Cross-section gating for [soil.initial] required CSV slots.
       ! Range validation has already run inside soil%validate.
       if (self%soil%swinco == 3) then
