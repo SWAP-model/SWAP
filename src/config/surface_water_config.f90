@@ -3,7 +3,7 @@
 module surface_water_config_mod
    use iso_fortran_env, only: real64
    use error_mod, only: error_collection_t, ERR_VALIDATION_OUT_OF_RANGE, &
-                         ERR_PARSE_MISSING_REQUIRED
+                         ERR_PARSE_MISSING_REQUIRED, ERR_VALIDATION_CROSS_FIELD
    use validation_mod, only: check_int_enum, check_int_range, check_real_range
    implicit none
    private
@@ -92,8 +92,36 @@ contains
       class(surface_water_config_t), intent(in)    :: self
       type(error_collection_t),      intent(inout) :: errors
 
+      ! Stub-error for swsrf=3 (primary system) must run BEFORE the swsrf=2
+      ! early-return below; otherwise swsrf=3 would short-circuit without error.
+      if (self%swsrf == 3) then
+         call errors%append(ERR_VALIDATION_CROSS_FIELD, &
+            'surface_water.swsrf=3 (primary system) not yet supported in ' // &
+            'the TOML pipeline; use the legacy executable.', 'surface_water')
+      end if
+
       call check_int_enum(self%swsrf, [1, 2], 'surface_water.swsrf', errors)
       if (self%swsrf /= 2) return
+
+      ! Stub-errors for swsec/swqhr/swman branches not yet supported in the
+      ! TOML pipeline; only reached when swsrf=2 (active surface-water mgmt).
+      if (self%swsec == 1) then
+         call errors%append(ERR_VALIDATION_CROSS_FIELD, &
+            'surface_water.swsec=1 (input water level) not yet supported ' // &
+            'in the TOML pipeline; use the legacy executable.', 'surface_water')
+      end if
+      if (self%swqhr == 2) then
+         call errors%append(ERR_VALIDATION_CROSS_FIELD, &
+            'surface_water.swqhr=2 (q-h table discharge) not yet supported ' // &
+            'in the TOML pipeline; use the legacy executable.', 'surface_water')
+      end if
+      if (allocated(self%swman)) then
+         if (any(self%swman == 2)) then
+            call errors%append(ERR_VALIDATION_CROSS_FIELD, &
+               'surface_water.swman=2 (automatic weir) not yet supported ' // &
+               'in the TOML pipeline; use the legacy executable.', 'surface_water')
+         end if
+      end if
 
       call check_int_enum(self%swsec, [1, 2], 'surface_water.swsec', errors)
       if (self%swsec /= 2) return
