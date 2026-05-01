@@ -265,10 +265,13 @@ def _run_and_aggregate(case: CaseConfig):
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp = Path(tmpdir)
 
-        # Phase 0: TOML dir is the self-contained source. It contains
-        # swap.toml, swap.dra.toml, *.crp.toml, *.csv companions, *.crp
-        # legacy crop files, and swap_linux.swp.template. Everything SWAP
-        # needs at runtime lives here.
+        # Phase 0: TOML dir is the self-contained source. Per case, it
+        # contains swap.toml, swap.dra.toml, *.crp.toml, *.csv companions,
+        # legacy *.crp crop files, swap_linux.swp.template, and (where the
+        # scenario requires it) legacy ASCII companions like swap.dra
+        # (swdra=2 → rddre()) and swap.ini (swinco=3 → rdinit()).
+        # Everything SWAP needs at runtime lives here; nothing is read
+        # from the legacy <N>.<case>/ dirs anymore.
         shutil.copytree(
             toml_dir,
             tmp / "case",
