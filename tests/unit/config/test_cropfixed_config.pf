@@ -229,6 +229,25 @@ subroutine test_cropfixed_swsalinity_one_rejected()
 end subroutine
 
 @test
+subroutine test_cropfixed_schedule_switch_one_rejected()
+   use funit
+   use cropfixed_config_mod, only: cropfixed_config_t
+   use error_mod, only: error_collection_t, ERR_VALIDATION_CROSS_FIELD
+   type(cropfixed_config_t) :: c
+   type(error_collection_t) :: errors
+   integer :: i
+   logical :: found
+   c%schedule_switch = 1
+   call c%validate(errors)
+   found = .false.
+   do i = 1, errors%count()
+      if (errors%items(i)%code == ERR_VALIDATION_CROSS_FIELD .and. &
+          index(errors%items(i)%message, 'schedule') > 0) found = .true.
+   end do
+   @assertTrue(found)
+end subroutine
+
+@test
 subroutine test_cropfixed_case6_supported_values_pass()
    use funit
    use cropfixed_config_mod, only: cropfixed_config_t
