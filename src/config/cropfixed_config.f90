@@ -1,7 +1,9 @@
 !> Type 1 (fixed/simple) crop config — populated from a .crp.toml file.
-!! Field set is the COMMON SUBSET shared with type 3 (grass), plus type 1
-!! specific fields. Phase 4c-a starts with a core schema; additional fields
-!! are added during parity-test iteration as needed.
+!! Phase 1 of the .crp port (Phase 4f) extended this to a 1:1 match with
+!! legacy `readcropfixed` in src/io/readswap.f90: every legacy field is
+!! present in the schema, regardless of whether the parent switch is
+!! supported in Phase 1's runtime. Stub-errored switches are documented
+!! per ADR 0015.
 module cropfixed_config_mod
    use iso_fortran_env, only: real64
    use error_mod, only: error_collection_t, ERR_VALIDATION_OUT_OF_RANGE, &
@@ -77,7 +79,8 @@ module cropfixed_config_mod
       real(real64), allocatable :: rdtb(:)    !! (dvs, rd) flat pairs (when swrd=1)
 
       ! Part 11 — oxygen stress
-      integer :: swoxygen   = 0   !! 0=none, 1=Feddes, 2=Bartholomeus (stub-errored)
+      integer :: swoxygen   = 0   !! 0=none, 1=Feddes, 2=Bartholomeus (stub-errored).
+                                  !! NOTE: TOML default 0; legacy readcropfixed default was 1.
       integer :: swwrtnonox = 0   !! 0=no aerobic check, 1=check
       real(real64) :: aeratecrit = 1.0e-4_real64    !! Required when swwrtnonox=1
 
@@ -225,6 +228,10 @@ contains
       call check_nonnegative_real(self%rri, 'cropfixed.rri', errors)
 
       ! Feddes ordering — applied only when the corresponding branch is active.
+      ! hlim1 (saturation, near 0) >= hlim2u >= hlim2l >= hlim3h >= hlim3l >= hlim4 (wilting).
+      if (self%swoxygen == 1) then
+         call check_ordered_pair(self%hlim2l, self%hlim2u, 'hlim2l', 'hlim2u', 'cropfixed', errors)
+      end if
       if (self%swdrought == 1) then
          call check_ordered_pair(self%hlim3l, self%hlim3h, 'hlim3l', 'hlim3h', 'cropfixed', errors)
       end if
