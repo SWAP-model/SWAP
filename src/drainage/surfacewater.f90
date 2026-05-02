@@ -35,7 +35,8 @@ subroutine SurfaceWater(task)
       !! compartments and handles both primary and secondary drainage systems.
       use Variables
       use array_utils, only: afgen
-      implicit none 
+      use surfacewater_init_mod, only: surfacewater_init
+      implicit none
       integer task
 
 !     local
@@ -53,7 +54,7 @@ subroutine SurfaceWater(task)
 ! === initialization ===================================================
 
 ! --- read input data
-      call rddre (wls,wlp)
+      call surfacewater_init (wls, wlp)
 
       hwlman = 0.0d0
       vtair = 0.0d0

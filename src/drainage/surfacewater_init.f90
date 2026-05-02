@@ -19,15 +19,16 @@
 !!
 !!     l(i) = l(i)*100.0d0
 !!
-!! before using l(ilev) in the sttab volume computation.  The TOML
-!! adapter pre-converts L to cm ONLY for dramet=3 + swdivd=1 cases
-!! (config_to_variables.f90:404-408).  For the dramet=0 / swdra=2
-!! path the adapter does NOT pre-convert, so the global L(:) array
-!! is still in metres when this module is called.  The *100 factor
-!! is therefore applied locally inside the sttab loop below so that
-!! the global stays consistent with what the adapter writes (matching
-!! what downstream drainage.f90 expects for resistance calculations),
-!! while the storage geometry math gets the correct centimetre value.
+!! before using l(ilev) in the sttab volume computation and before
+!! drainage.f90 line 661 uses l(level) in the open-channel resistance
+!! formula.  The TOML adapter pre-converts L to cm ONLY for
+!! dramet=3 + swdivd=1 cases (config_to_variables.f90:404-408).  For
+!! the dramet=0 / swdra=2 path the adapter does NOT pre-convert, so
+!! the global L(:) array is still in metres when this module is called.
+!! This module therefore applies the *100 conversion to the global L(:)
+!! array (mirroring rddre) so that both the sttab geometry math and all
+!! downstream resistance calculations (drainage.f90:661) operate in
+!! centimetres.
 !!
 !! If a future case authors swdra=2 + dramet=3, the validator rejects
 !! it before reaching this module, preventing a double-conversion of L.
@@ -70,6 +71,14 @@ contains
       ! For swsrf=2 (no primary system) nrpri = 0.
       nrpri = 0
 
+      ! Convert L from metres -> centimetres (mirrors rddre line 4399:
+      ! l(i) = l(i)*100.0d0). The adapter writes L in metres for the
+      ! dramet=0/swdra=2 path; downstream drainage.f90 (line 661) and
+      ! the sttab geometry math both expect L in centimetres.
+      do i = 1, nrlevs
+         l(i) = l(i) * 100.0_real64
+      end do
+
       numadj = 0
       do i = 1, 4
          wlsbak(i) = 0.0_real64
@@ -93,12 +102,8 @@ contains
       ! sttab(:,2) — storage volume per unit area (cm), summed across
       ! open-channel levels (swdtyp=0). Verbatim port from
       ! readswap.f90:4878-4897.
-      !
-      ! L unit reconciliation: global l(ilev) is in metres for the
-      ! dramet=0/swdra=2 path (the adapter does not multiply by 100
-      ! for this case).  Legacy rddre converts l(i) = l(i)*100 before
-      ! the sttab math, so we apply the factor locally here.  The
-      ! global L(:) remains in metres for downstream resistance calcs.
+      ! l(ilev) is now in centimetres (converted above), matching
+      ! legacy rddre which converts l(i) = l(i)*100.0d0 before this loop.
       do i = 1, 22
          sttab(i, 2) = 0.0_real64
          do ilev = 1 + nrpri, nrlevs
@@ -115,9 +120,7 @@ contains
                   wdepth   = sttab(i, 1)
                   wvolum   = wvolum + wbreadth * wdepth
                end if
-               ! l(ilev) * 100 converts metres -> centimetres to match
-               ! legacy rddre line 4399: l(i) = l(i)*100.0d0
-               sttab(i, 2) = sttab(i, 2) + wvolum / (l(ilev) * 100.0_real64)
+               sttab(i, 2) = sttab(i, 2) + wvolum / l(ilev)
             end if
          end do
       end do
