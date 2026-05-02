@@ -118,12 +118,15 @@ work. Findings:
   present. It appears to be near-complete from a prior preparation task.
 
 **Type-3 (grassd.crp) vs. cases 4+2:**
-- `SWJARVIS=4` — this is the legacy `readgrass`-specific compensation switch (distinct
-  from the `SWCOMPENSATE` field in cropfixed/cropwofost). If Phase 3 covers cases 4+2's
-  grass crop, which use `SWJARVIS`, then this is not a gap. **Risk:** If Phase 3 only
-  covers `SWJARVIS=0`, case 1's `SWJARVIS=4` would be a schema gap requiring retroactive
-  Phase 3 work. Document as a risk; the implementing agent must verify Phase 3's
-  `cropgrass_config_t` covers `SWJARVIS=4`.
+- `SWJARVIS=4` — **DROPPED.** Legacy `readgrass` exposed both the modern
+  `SWCOMPENSATE` (range 0..2) and a deprecated `SWJARVIS` (range 0..4) where
+  `SWJARVIS=4` mapped to "compensate drought, wet, salt, and frost stressors."
+  Per user direction (2026-05-02): the TOML pipeline does NOT support the
+  deprecated `swjarvis` key. Case 1's grassd.crp.toml will be authored with
+  the equivalent modern form; if no clean `SWCOMPENSATE` value matches
+  `SWJARVIS=4`'s broader semantics, that switch combination is stub-errored
+  and case 1 must run via the legacy executable for that rotation. Phase 3
+  schema authors `swcompensate` only; no `swjarvis` field exists.
 - `SWRD=3` (biomass-based root growth via `RLWTB`) — Phase 3 scope. The grassd.crp
   already uses `SWRD=3` in both case 4+2 and case 1.
 - `SWRDC=0` — covered.
@@ -132,8 +135,10 @@ work. Findings:
   task (Phase 4d Task 18) with a `[mowing]` section.
 - `SWCO2=0` — Phase 3 scope.
 
-**Summary:** No new schema gaps were found that Phase 4 must address itself. One
-potential risk (SWJARVIS=4 coverage in Phase 3) is flagged in the Risk Register.
+**Summary:** No new schema gaps were found that Phase 4 must address itself.
+The previously-flagged SWJARVIS=4 coverage question was resolved by user
+direction: SWJARVIS support is dropped from the TOML pipeline; only modern
+SWCOMPENSATE is supported.
 
 ---
 
@@ -404,7 +409,7 @@ end subroutine
 | Risk | Severity | Likelihood | Mitigation |
 |---|---|---|---|
 | **Multi-type rotation integration** (all three init modules run side-by-side in case 1). If any two modules share module-global state that they each initialize independently, they may clobber each other's values mid-simulation (e.g. if `variables::swrd` is set by both `cropfixed_init` and `cropgrass_init`). | High | Low | Each rotation runs its own init at task=1 in sequence (one per rotation entry, not simultaneously). The rotation index `icrop` scopes the init. However, if any init module reads module globals left over from a prior rotation (e.g. `swrd` from the previous `cropfixed_init` being visible when `cropgrass_init` runs), it can cause subtle bugs. Mitigation: verify in the Phase 1/2/3 parity tests that each `*_init_from_config` writes **all** module globals its runtime path reads, so no stale values propagate. |
-| **SWJARVIS=4 not covered by Phase 3** (grassd.crp uses `SWJARVIS=4`; Phase 3 may only support `SWJARVIS=0`). | Medium | Medium | If Phase 3 stub-errors `SWJARVIS /= 0`, case 1 rotation 3 will fail validation when loading grassd.crp.toml. Fix: retroactively extend Phase 3 to support `SWJARVIS ∈ {0,1,2,3,4}` (or the subset that case 1 uses). This is a Phase 3 retroactive concern, not Phase 4 work. Document and escalate to the Phase 3 implementer. |
+| **`SWJARVIS=4` semantics in case 1's `grassd.crp` need translation to `SWCOMPENSATE`** — the legacy deprecated `swjarvis` key is dropped from the TOML pipeline (per user direction 2026-05-02). The modern `swcompensate ∈ {0, 1, 2}` doesn't have a 1:1 equivalent of the legacy `swjarvis=4` "compensate-everything" mode. | Low | Medium | When authoring case 1's `grassd.crp.toml` (Task 4), translate `SWJARVIS=4` to the closest modern `SWCOMPENSATE` value (most likely `SWCOMPENSATE=1` Jarvis-compensation). If that produces regression drift vs. the legacy reference, accept the divergence as a documented limitation of the modern schema, or stub-error the rotation and run case 1 via the legacy executable. The spec/regression decision is the implementer's call at Task 4. |
 | **potatod.crp.toml appears near-complete from a prior task** but may have minor gaps or stale field names. | Low | Medium | Phase 4 Task 3 includes a field-by-field diff of the TOML file against the 704-line legacy `.crp`. Any gap found there is minor authoring work. |
 | **Dispatch argument lists for wofost/grass `_init_from_config`** may differ from the predicted signatures above. | Low | Low | The implementing agent reads the actual Phase 2/3 source before writing the post-removal code. The predicted signatures in this spec are derived from the legacy reader call signatures; adjust if Phase 2/3 changed them. |
 | **Regression of cases 6/5/4/2** may regress after the dispatch removal if the unconditional calls expose a latent bug in the init modules that was masked by the fallback. | Low | Low | The smoke test (Task 10) catches this before deletion. The pFUnit assertions for all four predecessor cases also run in the pre-flight check. |

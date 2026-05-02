@@ -563,8 +563,13 @@ hlim2l   =  -1.0
 
 [drought_stress]
 swdrought = 1
-swjarvis  = 4
-alphacrit = 0.7
+# Legacy swjarvis=4 is dropped per user direction (2026-05-02).
+# Translate to modern swcompensate. The closest equivalent of legacy
+# swjarvis=4 ("compensate drought, wet, salt, frost") is swcompensate=1
+# (Jarvis, all stressors per swstressor=1 default). If regression drifts,
+# stub-error this rotation and run case 1 via the legacy executable.
+swcompensate = 1
+alphacrit    = 0.7
 hlim3h    = -200.0
 hlim3l    = -800.0
 hlim4     = -8000.0
@@ -641,11 +646,12 @@ Replace the current 41-line stub with the full content above (adjusted for any
 conventions discovered in Step 1). Preserve the existing `[mowing]` and `[grazing]`
 sections if they already have correct values.
 
-**Critical: verify SWJARVIS=4 field name.** The legacy `grassd.crp` uses `SWJARVIS`
-(not `SWCOMPENSATE`). Phase 3's schema must have a corresponding field. If Phase 3
-used a different field name (e.g. `swcompensate` for backward compatibility), use that
-name. If Phase 3 stub-errored SWJARVIS ≠ 0, do NOT include it in the TOML file — but
-escalate as a Phase 3 gap before proceeding to Task 5.
+**SWJARVIS dropped (2026-05-02 user direction).** The TOML pipeline does not
+support the deprecated legacy `swjarvis` key. Use modern `swcompensate` instead.
+Translate legacy `SWJARVIS=4` → `swcompensate = 1` with `swstressor = 1`
+(Jarvis-compensate-all). If regression drifts unacceptably from the legacy
+reference, stub-error this rotation and run case 1 via the legacy executable
+rather than re-introducing `swjarvis` support.
 
 - [ ] **Step 3: Run the regression**
 
@@ -654,8 +660,10 @@ cd /home/zawadzkim/Code/swap
 pixi run regression 2>&1 | tail -10
 ```
 
-Expected: 5/5 green. If case 1 fails with a schema error (e.g. "swjarvis not yet
-supported"), stop and escalate to the Phase 3 issue — do not proceed until resolved.
+Expected: 5/5 green. If case 1's grass rotation diverges from the legacy
+reference because of the `swjarvis` → `swcompensate` translation, accept
+the divergence (and document it) or stub-error the rotation type-3 in
+case 1's swap.toml. Do NOT re-introduce `swjarvis` support to fix this.
 
 - [ ] **Step 4: Submodule inner-commit**
 
@@ -666,8 +674,9 @@ git commit toml/1.hupselbrook/grassd.crp.toml \
 
 Expands 41-line stub to full 1:1 schema coverage of grassd.crp.
 Active switches: swcf=2, tdwi=1000.0, swtsum=1, swrd=3 (rlwtb-biomass),
-swrdc=0, swoxygen=1, swdrought=1+swjarvis=4, swsalinity=0, swco2=0,
-swharvest=1+swdmmow=2, swgraz=0, schedule=0."
+swrdc=0, swoxygen=1, swdrought=1, swcompensate=1 (translated from
+legacy swjarvis=4 per 2026-05-02 user direction), swsalinity=0,
+swco2=0, swharvest=1+swdmmow=2, swgraz=0, schedule=0."
 ```
 
 - [ ] **Step 5: Outer-repo bump commit**
