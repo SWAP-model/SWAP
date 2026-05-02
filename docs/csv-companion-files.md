@@ -95,9 +95,12 @@ Validators should reject cases where multiple sources are set (e.g. inline
   paths relative to the working directory at adapter time.
 - The case working directory is `tests/swap-cases/toml/<N>.<case>/`. It is
   self-contained — every file SWAP reads at runtime lives there: `swap.toml`,
-  `swap.dra.toml`, `*.crp.toml`, all `*.csv` companions, the legacy `*.crp`
-  crop files (read by sub-readers in `cropgrowth.f90` until Phase 4f-extend
-  ports them), and `swap_linux.swp.template` (staged to `swap.swp` per run).
+  `swap.dra.toml`, `*.crp.toml`, all `*.csv` companions, and
+  `swap_linux.swp.template` (staged to `swap.swp` per run). For type=1
+  (cropfixed) rotations the `.crp` ASCII file is no longer staged after
+  Phase 1 of the `.crp` port (case 6 surfacewater); type=2 (cropwofost) and
+  type=3 (cropgrass) rotations still stage their legacy `*.crp` files
+  pending Phases 2 and 3.
 - `tests/swap-cases/run_case.sh` runs SWAP in that directory in-place;
   `tests/regression/test_output_regression.py` copies it to a temp dir for
   parallel-safe execution. Neither tool reads from the legacy `<N>.<case>/`
@@ -110,6 +113,7 @@ Validators should reject cases where multiple sources are set (e.g. inline
 - `oxygenstress.haquif.csv` — replaced inline `haquif_table`.
 - `surfacewater.haquif.csv` — replaced inline `haquif_table`.
 - `salinitystress.ini.{h,tsoil,cml}.csv` — replaced legacy ASCII `swap.ini` profile blocks (Phase 4f cleanup, post-CSV-meteo). The legacy `[soil].inifil` slot was removed; `[soil.initial]` is now the canonical SWINCO=3 schema.
+- `surfacewater/grass.crp.toml` — replaced legacy ASCII `grass.crp` for type=1 (cropfixed) rotations, Phase 1 of the `.crp` port. Schema 1:1 with legacy `readcropfixed`; runtime narrow per ADR 0015. Cache-driven dispatch on `crop_config_global%rotation_loaded(icrop)` per ADR 0016, with sibling-reader dispatch around `ArableLandGerm(1)` per ADR 0017. Phases 2/3/4 will extend coverage to types 2/3 + integration via case 1 hupselbrook.
 
 ## Future users (deferred)
 
