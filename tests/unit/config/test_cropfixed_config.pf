@@ -73,3 +73,199 @@ subroutine test_cropfixed_finalize_idempotent()
    call c%finalize(errors)
    @assertFalse(errors%has_errors())
 end subroutine
+
+! Phase 1 cropfixed port — stub-error validators for unsupported branches.
+
+@test
+subroutine test_cropfixed_swdrought_two_rejected()
+   use funit
+   use cropfixed_config_mod, only: cropfixed_config_t
+   use error_mod, only: error_collection_t, ERR_VALIDATION_CROSS_FIELD
+   type(cropfixed_config_t) :: c
+   type(error_collection_t) :: errors
+   integer :: i
+   logical :: found
+   c%swdrought = 2
+   call c%validate(errors)
+   found = .false.
+   do i = 1, errors%count()
+      if (errors%items(i)%code == ERR_VALIDATION_CROSS_FIELD .and. &
+          index(errors%items(i)%message, 'swdrought=2') > 0) found = .true.
+   end do
+   @assertTrue(found)
+end subroutine
+
+@test
+subroutine test_cropfixed_swoxygen_two_rejected()
+   use funit
+   use cropfixed_config_mod, only: cropfixed_config_t
+   use error_mod, only: error_collection_t, ERR_VALIDATION_CROSS_FIELD
+   type(cropfixed_config_t) :: c
+   type(error_collection_t) :: errors
+   integer :: i
+   logical :: found
+   c%swoxygen = 2
+   call c%validate(errors)
+   found = .false.
+   do i = 1, errors%count()
+      if (errors%items(i)%code == ERR_VALIDATION_CROSS_FIELD .and. &
+          index(errors%items(i)%message, 'swoxygen=2') > 0) found = .true.
+   end do
+   @assertTrue(found)
+end subroutine
+
+@test
+subroutine test_cropfixed_swcompensate_one_rejected()
+   use funit
+   use cropfixed_config_mod, only: cropfixed_config_t
+   use error_mod, only: error_collection_t, ERR_VALIDATION_CROSS_FIELD
+   type(cropfixed_config_t) :: c
+   type(error_collection_t) :: errors
+   integer :: i
+   logical :: found
+   c%swcompensate = 1
+   call c%validate(errors)
+   found = .false.
+   do i = 1, errors%count()
+      if (errors%items(i)%code == ERR_VALIDATION_CROSS_FIELD .and. &
+          index(errors%items(i)%message, 'swcompensate') > 0) found = .true.
+   end do
+   @assertTrue(found)
+end subroutine
+
+@test
+subroutine test_cropfixed_swcf_three_rejected()
+   use funit
+   use cropfixed_config_mod, only: cropfixed_config_t
+   use error_mod, only: error_collection_t, ERR_VALIDATION_CROSS_FIELD
+   type(cropfixed_config_t) :: c
+   type(error_collection_t) :: errors
+   integer :: i
+   logical :: found
+   c%swcf = 3
+   call c%validate(errors)
+   found = .false.
+   do i = 1, errors%count()
+      if (errors%items(i)%code == ERR_VALIDATION_CROSS_FIELD .and. &
+          index(errors%items(i)%message, 'swcf=3') > 0) found = .true.
+   end do
+   @assertTrue(found)
+end subroutine
+
+@test
+subroutine test_cropfixed_swharv_one_rejected()
+   use funit
+   use cropfixed_config_mod, only: cropfixed_config_t
+   use error_mod, only: error_collection_t, ERR_VALIDATION_CROSS_FIELD
+   type(cropfixed_config_t) :: c
+   type(error_collection_t) :: errors
+   integer :: i
+   logical :: found
+   c%swharv = 1
+   call c%validate(errors)
+   found = .false.
+   do i = 1, errors%count()
+      if (errors%items(i)%code == ERR_VALIDATION_CROSS_FIELD .and. &
+          index(errors%items(i)%message, 'swharv=1') > 0) found = .true.
+   end do
+   @assertTrue(found)
+end subroutine
+
+@test
+subroutine test_cropfixed_swinter_two_rejected()
+   use funit
+   use cropfixed_config_mod, only: cropfixed_config_t
+   use error_mod, only: error_collection_t, ERR_VALIDATION_CROSS_FIELD
+   type(cropfixed_config_t) :: c
+   type(error_collection_t) :: errors
+   integer :: i
+   logical :: found
+   c%swinter = 2
+   call c%validate(errors)
+   found = .false.
+   do i = 1, errors%count()
+      if (errors%items(i)%code == ERR_VALIDATION_CROSS_FIELD .and. &
+          index(errors%items(i)%message, 'swinter=2') > 0) found = .true.
+   end do
+   @assertTrue(found)
+end subroutine
+
+@test
+subroutine test_cropfixed_swrd_two_rejected()
+   use funit
+   use cropfixed_config_mod, only: cropfixed_config_t
+   use error_mod, only: error_collection_t, ERR_VALIDATION_CROSS_FIELD
+   type(cropfixed_config_t) :: c
+   type(error_collection_t) :: errors
+   integer :: i
+   logical :: found
+   c%swrd = 2
+   call c%validate(errors)
+   found = .false.
+   do i = 1, errors%count()
+      if (errors%items(i)%code == ERR_VALIDATION_CROSS_FIELD .and. &
+          index(errors%items(i)%message, 'swrd') > 0) found = .true.
+   end do
+   @assertTrue(found)
+end subroutine
+
+@test
+subroutine test_cropfixed_swsalinity_one_rejected()
+   use funit
+   use cropfixed_config_mod, only: cropfixed_config_t
+   use error_mod, only: error_collection_t, ERR_VALIDATION_CROSS_FIELD
+   type(cropfixed_config_t) :: c
+   type(error_collection_t) :: errors
+   integer :: i
+   logical :: found
+   c%swsalinity = 1
+   call c%validate(errors)
+   found = .false.
+   do i = 1, errors%count()
+      if (errors%items(i)%code == ERR_VALIDATION_CROSS_FIELD .and. &
+          index(errors%items(i)%message, 'swsalinity') > 0) found = .true.
+   end do
+   @assertTrue(found)
+end subroutine
+
+@test
+subroutine test_cropfixed_case6_supported_values_pass()
+   use funit
+   use cropfixed_config_mod, only: cropfixed_config_t
+   use error_mod, only: error_collection_t, ERR_VALIDATION_CROSS_FIELD
+   type(cropfixed_config_t) :: c
+   type(error_collection_t) :: errors
+   integer :: i
+   logical :: any_stub
+   ! Case 6 supported values for the new switches.
+   c%swprep = 0
+   c%swsow = 0
+   c%swgerm = 0
+   c%dvsend = 2.0d0
+   c%swharv = 0
+   c%idev = 1
+   c%lcc  = 366
+   c%kdif = 0.75d0
+   c%kdir = 0.75d0
+   c%swgc = 1
+   c%swcf = 1
+   c%swrd = 1
+   c%swoxygen = 0
+   c%swwrtnonox = 0
+   c%swdrought = 1
+   c%swsalinity = 0
+   c%swcompensate = 0
+   c%swinter = 1
+   c%cofab = 0.25d0
+   c%hlim3h = -200.0d0
+   c%hlim3l = -800.0d0
+   c%hlim4  = -8000.0d0
+   c%adcrh = 0.5d0
+   c%adcrl = 0.1d0
+   call c%validate(errors)
+   any_stub = .false.
+   do i = 1, errors%count()
+      if (errors%items(i)%code == ERR_VALIDATION_CROSS_FIELD) any_stub = .true.
+   end do
+   @assertFalse(any_stub)
+end subroutine
