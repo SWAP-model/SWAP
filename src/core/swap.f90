@@ -137,7 +137,7 @@ if (iTask == 1) then
       use swap_config_mod, only: swap_config_t
       use config_to_variables_mod, only: config_to_variables
       use error_mod, only: error_collection_t
-      type(swap_config_t)      :: config
+      type(swap_config_t), target :: config
       type(error_collection_t) :: errors
       call load_swap_config('swap.toml', config, errors)
       call config%validate(errors)

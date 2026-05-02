@@ -50,7 +50,7 @@ contains
    subroutine config_to_variables(config)
       use variables   ! bare-use is intentional: many globals across sections
       use error_mod, only: fatalerr_collected
-      type(swap_config_t), intent(in) :: config
+      type(swap_config_t), intent(in), target :: config
 
       integer :: i, n
 
@@ -1194,6 +1194,15 @@ contains
             cropfil(i) = strip_crp_toml_suffix(config%crop%rotation_file(i))
          end do
       end if
+
+      ! Phase 1 (.crp port): expose the parsed crop config to runtime
+      ! subs that need per-rotation cache access. Transitional — see
+      ! ADR 0016. The pointer targets the caller's local config; valid
+      ! for the duration of the simulation init.
+      block
+         use crop_config_global_mod, only: crop_config_global
+         crop_config_global => config%crop
+      end block
 
       ! ---------------------------------------------------------------
       ! Per ADR 0009: zero-force the 18 RETIRED legacy output switches

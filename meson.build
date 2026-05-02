@@ -74,6 +74,7 @@ sources = [
     'src/config/cropgrass_config.f90',
     'src/config/cropwofost_config.f90',
     'src/config/crop_config.f90',
+    'src/crop/crop_config_global.f90',
     'src/config/swap_config.f90',
     'src/core/variables.f90',
     'src/core/initialize.f90',

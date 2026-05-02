@@ -93,6 +93,7 @@ if get_option('enable_pfunit')
         '../../src/config/cropgrass_config.f90',
         '../../src/config/cropwofost_config.f90',
         '../../src/config/crop_config.f90',
+        '../../src/crop/crop_config_global.f90',
         '../../src/config/swap_config.f90',
         '../../src/io/csv_reader.f90',
         '../../src/io/toml/path_helpers.f90',
