@@ -95,6 +95,7 @@ if get_option('enable_pfunit')
         '../../src/config/crop_config.f90',
         '../../src/crop/crop_config_global.f90',
         '../../src/crop/cropfixed_init.f90',
+        '../../src/crop/cropwofost_init.f90',
         '../../src/config/swap_config.f90',
         '../../src/io/csv_reader.f90',
         '../../src/io/toml/path_helpers.f90',
@@ -186,6 +187,7 @@ if get_option('enable_pfunit')
         'io/toml/test_legacy_crop_helper.pf',
         'drainage/test_surfacewater_init.pf',
         'crop/test_cropfixed_init.pf',
+        'crop/test_cropwofost_init.pf',
     ]
 
     # When pf_files is non-empty, build and register the unit-swap-tests

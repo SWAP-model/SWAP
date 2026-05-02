@@ -93,33 +93,54 @@
             ! (which opens pathcrop//cropfil(icrop)//'.crp' via
             ! readarablelandgerm). Cache-hit path sets flCrop* flags from
             ! the typed config. Cache-miss path falls back to legacy.
+            ! Phase 2 extends to type=2 (Wofost) in addition to type=1.
             ! Teardown: end of Phase 4 removes the else-branch.
             block
                use crop_config_global_mod, only: crop_config_global
-               use cropfixed_config_mod, only: cropfixed_config_t
                use error_mod, only: fatalerr_collected
                logical :: use_cache
-               type(cropfixed_config_t), pointer :: cfg
+               integer :: swprep_cache, swsow_cache, swgerm_cache
                use_cache = .false.
-               cfg => null()
+               swprep_cache = 0
+               swsow_cache  = 0
+               swgerm_cache = 0
                if (associated(crop_config_global)) then
                   if (allocated(crop_config_global%rotation_loaded) .and. &
                       allocated(crop_config_global%rotation_type)) then
                      if (icrop >= 1 .and. icrop <= size(crop_config_global%rotation_loaded)) then
-                        ! Only dispatch on the cropfixed cache when rotation_type==1.
-                        ! Type=2 (Wofost) still reads its .crp via legacy fallback.
-                        if (crop_config_global%rotation_loaded(icrop) .and. &
-                            crop_config_global%rotation_type(icrop) == 1 .and. &
-                            allocated(crop_config_global%rotation_fixed)) then
-                           use_cache = .true.
-                           cfg => crop_config_global%rotation_fixed(icrop)
+                        if (crop_config_global%rotation_loaded(icrop)) then
+                           select case (crop_config_global%rotation_type(icrop))
+                           case (1)
+                              ! type=1 cropfixed
+                              if (allocated(crop_config_global%rotation_fixed)) then
+                                 use_cache    = .true.
+                                 swprep_cache = crop_config_global%rotation_fixed(icrop)%swprep
+                                 swsow_cache  = crop_config_global%rotation_fixed(icrop)%swsow
+                                 swgerm_cache = crop_config_global%rotation_fixed(icrop)%swgerm
+                              end if
+                           case (2)
+                              ! type=2 wofost (Phase 2): only use TOML cache path when
+                              ! all prep/sow/germ switches are 0 (the supported subset).
+                              ! When any switch is non-zero, fall through to legacy
+                              ! ArableLandGerm(1) which reads the .crp file and handles
+                              ! swgerm=1/2 via readarablelandgerm.
+                              if (allocated(crop_config_global%rotation_wofost)) then
+                                 swprep_cache = crop_config_global%rotation_wofost(icrop)%preparation%swprep
+                                 swsow_cache  = crop_config_global%rotation_wofost(icrop)%sowing%swsow
+                                 swgerm_cache = crop_config_global%rotation_wofost(icrop)%germination%swgerm
+                                 if (swprep_cache == 0 .and. swsow_cache == 0 .and. &
+                                     swgerm_cache == 0) use_cache = .true.
+                              end if
+                           end select
                         end if
                      end if
                   end if
                end if
                if (use_cache) then
-                  ! Defense-in-depth: Phase 1 only supports the all-zero default.
-                  if (cfg%swprep /= 0 .or. cfg%swsow /= 0 .or. cfg%swgerm /= 0) then
+                  ! Defense-in-depth: Phase 1 (type=1) stub-errors non-zero switches
+                  ! since no cropfixed .crp.toml should have them set.
+                  ! For type=2, non-zero switches fall through to legacy above.
+                  if (swprep_cache /= 0 .or. swsow_cache /= 0 .or. swgerm_cache /= 0) then
                      call fatalerr_collected('cropgrowth/ArableLandGerm', &
                         'swprep/swsow/swgerm /= 0 not yet supported in TOML pipeline.')
                   else
@@ -1050,9 +1071,34 @@
 
 ! === initialization ====================================================
       
-! --- read general crop data
-      call readwofost (icrop,cropfil(icrop),swhydrlift,swsoybean,mg,dvsi,dvrmax1,dvrmax2, &
-                       flrfphotoveg,tmaxdvr,tmindvr,toptdvr,popt,pcrt,flphenodayl,FraDeceasedLvToSoil)
+! --- read general crop data: dispatch on per-rotation typed-config cache
+!     (ADR 0016). Falls back to legacy reader for rotations whose
+!     .crp.toml is not yet authored. Teardown: end of Phase 4 removes
+!     the else-branch.
+      block
+         use crop_config_global_mod, only: crop_config_global
+         use cropwofost_init_mod, only: cropwofost_init_from_config
+         logical :: use_cache
+         use_cache = .false.
+         if (associated(crop_config_global)) then
+            if (allocated(crop_config_global%rotation_loaded)) then
+               if (icrop >= 1 .and. icrop <= size(crop_config_global%rotation_loaded)) then
+                  if (crop_config_global%rotation_loaded(icrop)) use_cache = .true.
+               end if
+            end if
+         end if
+         if (use_cache) then
+            call cropwofost_init_from_config(crop_config_global%rotation_wofost(icrop), &
+                                             icrop, FraDeceasedLvToSoil)
+            ! swhydrlift is read by legacy readwofost only inside swdrought=2
+            ! branch (stub-errored in Phase 2). Set to 0 here to mirror the
+            ! default.
+            swhydrlift = 0
+         else
+            call readwofost (icrop,cropfil(icrop),swhydrlift,swsoybean,mg,dvsi,dvrmax1,dvrmax2, &
+                             flrfphotoveg,tmaxdvr,tmindvr,toptdvr,popt,pcrt,flphenodayl,FraDeceasedLvToSoil)
+         end if
+      end block
 
 ! --- if crop based on calendar is still active, but already harvested
       if (flCropHarvest) return
