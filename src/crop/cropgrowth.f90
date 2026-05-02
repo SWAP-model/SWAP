@@ -393,9 +393,35 @@
 
 ! === initialization ===================================================
       
-! --- read crop data
-      call readcropfixed (icrop,cropfil(icrop),lcc,swhydrlift)
-     
+! --- read crop data: dispatch on per-rotation typed-config cache
+!     (ADR 0016). Falls back to legacy reader for rotations whose
+!     .crp.toml is not yet authored or for rotation types not yet
+!     ported (Phase 1: only type=1 cropfixed; Phases 2/3 add types
+!     2 and 3). Teardown: end of Phase 4 removes the else-branch.
+      block
+         use crop_config_global_mod, only: crop_config_global
+         use cropfixed_init_mod, only: cropfixed_init_from_config
+         logical :: use_cache
+         use_cache = .false.
+         if (associated(crop_config_global)) then
+            if (allocated(crop_config_global%rotation_loaded)) then
+               if (icrop >= 1 .and. icrop <= size(crop_config_global%rotation_loaded)) then
+                  if (crop_config_global%rotation_loaded(icrop)) use_cache = .true.
+               end if
+            end if
+         end if
+         if (use_cache) then
+            call cropfixed_init_from_config(crop_config_global%rotation_fixed(icrop), icrop, lcc)
+            ! swhydrlift is read by legacy readcropfixed only inside the
+            ! swdrought=2 branch (stub-errored in Phase 1). Set to 0 here
+            ! to mirror the default; Phase 2 (cropwofost) reuses this
+            ! same field on its own dispatch path.
+            swhydrlift = 0
+         else
+            call readcropfixed (icrop,cropfil(icrop),lcc,swhydrlift)   ! transitional fallback
+         end if
+      end block
+
 ! --- maximum rooting depth
       if (swrd.eq.1) then
         rdm = rdmax
