@@ -192,10 +192,10 @@ contains
 
       ! Mirror legacy convention from readswap.f90: single-level drainage
       ! methods (dramet 1 or 2) clobber nrlevs to 1 regardless of input.
-      ! Matching this is required for parity with the legacy reader. The
-      ! validator already constrains nrlevs in [0, 5]; this finalize step
-      ! lands AFTER validate.
-      if (self%dramet /= 3) self%nrlevs = 1
+      ! EXCEPTION: for swdra=2 (extended drainage), legacy rddre overrides
+      ! nrlevs from NRSRF in swap.dra — so the typed config's authored
+      ! nrlevs is the authoritative source and must NOT be clobbered.
+      if (self%dramet /= 3 .and. self%swdra /= 2) self%nrlevs = 1
    end subroutine drainage_config_finalize
 
 end module drainage_config_mod

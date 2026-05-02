@@ -222,3 +222,34 @@ subroutine test_drainage_altcu_nonzero_rejected()
    end do
    @assertTrue(found)
 end subroutine
+
+@test
+subroutine test_drainage_finalize_preserves_nrlevs_when_swdra2()
+   use funit
+   use drainage_config_mod, only: drainage_config_t
+   use error_mod, only: error_collection_t
+   type(drainage_config_t)  :: d
+   type(error_collection_t) :: errors
+   ! SWDRA=2, dramet=0 — extended drainage where rddre would
+   ! override nrlevs from NRSRF. Don't clobber nrlevs to 1.
+   d%swdra  = 2
+   d%dramet = 0
+   d%nrlevs = 2
+   call d%finalize(errors)
+   @assertEqual(2, d%nrlevs)
+end subroutine
+
+@test
+subroutine test_drainage_finalize_clobbers_nrlevs_when_dramet1()
+   use funit
+   use drainage_config_mod, only: drainage_config_t
+   use error_mod, only: error_collection_t
+   type(drainage_config_t)  :: d
+   type(error_collection_t) :: errors
+   ! Existing legacy convention: dramet 1 or 2 clobber nrlevs to 1.
+   d%swdra  = 1
+   d%dramet = 1
+   d%nrlevs = 4
+   call d%finalize(errors)
+   @assertEqual(1, d%nrlevs)
+end subroutine
