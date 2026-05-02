@@ -1,0 +1,69 @@
+[phenology]
+swtsum = 1
+
+[crop_state]
+tdwi   = 1200.0
+laiem  = 0.5
+rgrlai = 0.009
+
+[green_area]
+ssa  = 0.0004
+span = 25.0
+
+[assimilation]
+cvl   = 0.685
+cvr   = 0.694
+cvs   = 0.662
+q10   = 2.0
+rml   = 0.03
+rmr   = 0.015
+rms   = 0.015
+perdl = 0.05
+
+[crop_factor]
+swcf   = 2
+albedo = 0.23
+rsw    = 0.0
+
+[root]
+swrd     = 2
+swdmi2rd = 0
+swrdc    = 0
+wrtmax   = 3000.0
+
+[oxygen_stress]
+swoxygen   = 2
+swwrtnonox = 1
+aeratecrit = 0.5
+
+[oxygen_stress.bartholomeus]
+swoxygentype            = 1
+q10_microbial           = 2.8
+specific_resp_humus     = 0.0016
+srl                     = 383571.0
+swrootradius            = 2
+dry_mat_cont_roots      = 0.075
+air_filled_root_por     = 0.05
+spec_weight_root_tissue = 1000.0
+var_a                   = 4.175e-10
+root_radiuso2           = 0.000075
+
+[drought_stress]
+swdrought = 1
+
+[compensation]
+swcompensate = 1
+swstressor   = 1
+alphacrit    = 0.7
+dcritrtz     = 0.0
+
+[management]
+mowrest    = 700.0
+dewrest    = 850.0
+swpotrelmf = 1
+relmf      = 1.0
+swlossmow  = 0
+swlossgrz  = 0
+
+[co2]
+swco2 = 0
