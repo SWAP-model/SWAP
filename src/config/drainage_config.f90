@@ -110,6 +110,19 @@ contains
                             "drainage")
       end if
 
+      ! Cross-field rule: swdra=2 (extended drainage) is only supported
+      ! with dramet=0 in the TOML pipeline. surfacewater_init's sttab
+      ! math assumes L is in metres (no adapter pre-conversion), which
+      ! holds only for the dramet=0 path. dramet=1/2/3 with swdra=2
+      ! requires careful unit reconciliation work that this port hasn't
+      ! built.
+      if (self%swdra == 2 .and. self%dramet /= 0) then
+         call errors%append(ERR_VALIDATION_CROSS_FIELD, &
+            'drainage.swdra=2 with drainage.dramet/=0 not yet supported ' // &
+            'in the TOML pipeline. Use drainage.dramet=0 or the legacy ' // &
+            'executable.', 'drainage')
+      end if
+
       ! Stub-error: non-zero altcu requires altcu-subtraction plumbing
       ! in the runtime adapter that the TOML port hasn't built yet.
       ! All current TOML cases author altcu = 0.0; future cases needing
@@ -193,8 +206,11 @@ contains
       ! Mirror legacy convention from readswap.f90: single-level drainage
       ! methods (dramet 1 or 2) clobber nrlevs to 1 regardless of input.
       ! EXCEPTION: for swdra=2 (extended drainage), legacy rddre overrides
-      ! nrlevs from NRSRF in swap.dra — so the typed config's authored
+      ! nrlevs from NRSRF in swap.dra -- so the typed config's authored
       ! nrlevs is the authoritative source and must NOT be clobbered.
+      ! NOTE: The validator (swdra=2 + dramet/=0 rejection) ensures we
+      ! only see swdra=2 with dramet=0 here. Other swdra=2/dramet
+      ! combinations are not yet supported in the TOML pipeline.
       if (self%dramet /= 3 .and. self%swdra /= 2) self%nrlevs = 1
    end subroutine drainage_config_finalize
 

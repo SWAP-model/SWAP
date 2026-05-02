@@ -9,21 +9,28 @@
 !! Other branches are guarded with fatalerr_collected (defense in
 !! depth — the config validator rejects them upstream too).
 !!
-!! ## L unit reconciliation
+!! ## L unit reconciliation (dramet=0 / swdra=2 only)
+!! This module is only reachable for swdra=2 cases. The cross-field
+!! validator in drainage_config_validate rejects swdra=2 + dramet/=0,
+!! so at runtime dramet is guaranteed to be 0.
+!!
 !! Legacy rddre reads L from the .dra file in METERS (valid range
 !! 1..100000 m), then immediately converts to CENTIMETRES at line 4399:
 !!
 !!     l(i) = l(i)*100.0d0
 !!
 !! before using l(ilev) in the sttab volume computation.  The TOML
-!! adapter currently only multiplies L by 100 for dramet=3 cases
-!! (config_to_variables.f90:404-408), so when this module is called
-!! for the dramet=0 / swdra=2 path, the global L(:) array is still
-!! in metres.  The multiplication is therefore applied locally inside
-!! the sttab loop below so that the global stays consistent with what
-!! the adapter writes (matching what downstream drainage.f90 expects
-!! for resistance calculations), while the storage geometry math gets
-!! the correct centimetre value.
+!! adapter pre-converts L to cm ONLY for dramet=3 + swdivd=1 cases
+!! (config_to_variables.f90:404-408).  For the dramet=0 / swdra=2
+!! path the adapter does NOT pre-convert, so the global L(:) array
+!! is still in metres when this module is called.  The *100 factor
+!! is therefore applied locally inside the sttab loop below so that
+!! the global stays consistent with what the adapter writes (matching
+!! what downstream drainage.f90 expects for resistance calculations),
+!! while the storage geometry math gets the correct centimetre value.
+!!
+!! If a future case authors swdra=2 + dramet=3, the validator rejects
+!! it before reaching this module, preventing a double-conversion of L.
 module surfacewater_init_mod
    use iso_fortran_env, only: real64
    implicit none

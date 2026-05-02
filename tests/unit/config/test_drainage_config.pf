@@ -253,3 +253,23 @@ subroutine test_drainage_finalize_clobbers_nrlevs_when_dramet1()
    call d%finalize(errors)
    @assertEqual(1, d%nrlevs)
 end subroutine
+
+@test
+subroutine test_drainage_swdra2_with_dramet3_rejected()
+   use funit
+   use drainage_config_mod, only: drainage_config_t
+   use error_mod, only: error_collection_t, ERR_VALIDATION_CROSS_FIELD
+   type(drainage_config_t)  :: d
+   type(error_collection_t) :: errors
+   integer :: i
+   logical :: found
+   d%swdra  = 2
+   d%dramet = 3
+   call d%validate(errors)
+   found = .false.
+   do i = 1, errors%count()
+      if (errors%items(i)%code == ERR_VALIDATION_CROSS_FIELD .and. &
+          index(errors%items(i)%message, 'swdra=2') > 0) found = .true.
+   end do
+   @assertTrue(found)
+end subroutine
