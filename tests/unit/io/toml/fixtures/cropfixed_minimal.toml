@@ -7,18 +7,23 @@ rdi = 5.0
 rri = 1.2
 rdc = 100.0
 
-[water_stress]
+[oxygen_stress]
 hlim1  = -10.0
 hlim2u = -25.0
 hlim2l = -200.0
+
+[drought_stress]
+swdrought = 1
 hlim3h = -400.0
 hlim3l = -600.0
 hlim4  = -8000.0
 adcrh  = 0.5
 adcrl  = 0.1
-rsc    = 70.0
 
-[salinity]
+[crop_factor]
+rsc = 70.0
+
+[salinity_stress]
 ecmax  = 1.7
 ecslop = 12.0
 
