@@ -55,10 +55,9 @@ contains
       ! Cross-section rules are added here as the parity test surfaces them.
       !
       ! Cross-section validation for surface-water management.
-      ! Task 7 enforces drain.altcu = 0 in the TOML pipeline, so all
-      ! coordinates here are already in the same (altcu-relative)
-      ! frame -- no inline altcu subtraction needed. zbotdr(1+nrpri)
-      ! becomes zbotdr(1) since nrpri=0 for swsrf=2 (the only branch
+      ! drainage_config_validate enforces altcu=0 in the TOML pipeline, so all
+      ! coordinates here are in the same (altcu-relative) frame.
+      ! zbotdr(1+nrpri) becomes zbotdr(1) since nrpri=0 for swsrf=2 (the only branch
       ! reaching this code, courtesy of upstream stub-errors).
       ! Use minval(zbotdr) to find the deepest channel bottom defensively;
       ! NRSRF tables conventionally place deepest at index 1 but we don't

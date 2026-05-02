@@ -85,7 +85,7 @@ contains
       end do
 
       ! Initial water level pre-computed by the adapter
-      ! (= wlact - altcu; altcu enforced = 0 by Task 7).
+      ! (adapter wrote wls1_init = wlact - altcu; altcu=0 is enforced by drainage_config_validate so this equals wlact).
       wls1   = wls1_init
       wlp1   = 0.0_real64    ! swsrf=2 has no primary system
       wlstar = wls1
