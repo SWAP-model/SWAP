@@ -144,3 +144,30 @@ subroutine test_load_case6_grass_crp_toml_populated()
    @assertTrue(allocated(c%crop%rotation_fixed(1)%rdctb))
    @assertEqual(4, size(c%crop%rotation_fixed(1)%rdctb))
 end subroutine
+
+@test
+subroutine test_load_swap_config_case5_wofost_populated()
+   ! Case 5 has 4 rotation entries all pointing at potatod.crp.toml (type=2).
+   ! After load+validate+finalize, all 4 slots must be loaded.
+   use funit
+   use swap_config_mod
+   use load_swap_config_mod
+   use error_mod, only: error_collection_t
+   type(error_collection_t) :: errors
+   type(swap_config_t)      :: config
+   integer :: i
+
+   call load_swap_config('tests/swap-cases/toml/5.salinitystress/swap.toml', &
+                          config, errors)
+   @assertFalse(errors%has_fatals())
+
+   @assertEqual(4, size(config%crop%rotation_wofost))
+   @assertEqual(4, size(config%crop%rotation_loaded))
+
+   do i = 1, 4
+      @assertTrue(config%crop%rotation_loaded(i))
+      @assertEqual(2, config%crop%rotation_type(i))
+      @assertEqual(1, config%crop%rotation_wofost(i)%salinity%swsalinity)
+      @assertEqual(0.732d0, config%crop%rotation_wofost(i)%salinity%saltmax, 1.0d-12)
+   end do
+end subroutine
