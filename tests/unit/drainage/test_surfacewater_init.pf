@@ -1,0 +1,63 @@
+@test
+subroutine test_surfacewater_init_zeroes_state()
+   use funit
+   use surfacewater_init_mod, only: surfacewater_init
+   use variables, only: numadj, wlsbak, nrlevs, swdtyp, zbotdr, widthr, &
+                         taludr, l, wls1_init, swsrf, swsec, swqhr, &
+                         nmper, swman
+   real(8) :: wls1, wlp1
+   integer :: i
+   ! Minimal happy-path setup mimicking case 6's first level.
+   ! swman is a fixed-size global; set element 1 directly.
+   swsrf  = 2
+   swsec  = 2
+   swqhr  = 1
+   nrlevs = 1
+   nmper  = 1
+   wls1_init = -77.0d0
+   swman(1)  = 1
+   swdtyp(1) = 0
+   zbotdr(1) = -115.0d0
+   widthr(1) = 100.0d0
+   taludr(1) = 0.66d0
+   l(1)      = 390.0d0
+   numadj = 999
+   do i = 1, 4
+      wlsbak(i) = 999.0d0
+   end do
+   call surfacewater_init(wls1, wlp1)
+   @assertEqual(0,  numadj)
+   @assertEqual(0.0d0, wlsbak(1), 1.0d-12)
+   @assertEqual(0.0d0, wlsbak(4), 1.0d-12)
+   @assertEqual(-77.0d0, wls1, 1.0d-12)
+   @assertEqual(0.0d0,   wlp1, 1.0d-12)
+end subroutine
+
+@test
+subroutine test_surfacewater_init_sttab_top_rows()
+   use funit
+   use surfacewater_init_mod, only: surfacewater_init
+   use variables, only: sttab, nrlevs, swdtyp, zbotdr, widthr, taludr, l, &
+                         wls1_init, swsrf, swsec, swqhr, nmper, swman
+   real(8) :: wls1, wlp1
+   swsrf  = 2
+   swsec  = 2
+   swqhr  = 1
+   nrlevs = 1
+   nmper  = 1
+   wls1_init = -77.0d0
+   swman(1)  = 1
+   swdtyp(1) = 0
+   zbotdr(1) = -115.0d0
+   widthr(1) = 100.0d0
+   taludr(1) = 0.66d0
+   l(1)      = 390.0d0
+   call surfacewater_init(wls1, wlp1)
+   ! Row 1 = +100cm; row 2 = 0cm.
+   @assertEqual(100.0d0, sttab(1, 1), 1.0d-12)
+   @assertEqual(  0.0d0, sttab(2, 1), 1.0d-12)
+   ! Rows 3..22 divide [0, zbotdr(1)] = [0, -115] into 20 compartments.
+   ! Row 3 = -5.75; row 22 = -115.
+   @assertEqual(-5.75d0,  sttab( 3, 1), 1.0d-12)
+   @assertEqual(-115.0d0, sttab(22, 1), 1.0d-12)
+end subroutine

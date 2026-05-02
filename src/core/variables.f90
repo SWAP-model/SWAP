@@ -1257,6 +1257,7 @@
       real(8) impend(mamp)
       real(8) wldip(mamp),wscap(mamp),hbweir(mamp)
       real(8) osswlm,wlstar,wlp,alphaw(mamp),betaw(mamp)
+      real(8) wls1_init    ! TOML pipeline: initial wls1 = wlact - altcu (Task 7 forces altcu=0)
       real(8) dropr(mamp*mamte),hdepth(mamp*mamte)
       real(8) gwlcrit(mamp,mamte),hcrit(mamp,mamte),vcrit(mamp,mamte)
       real(8) hqhtab(mamp,mamte),qqhtab(mamp,mamte)

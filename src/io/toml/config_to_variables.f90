@@ -1081,9 +1081,13 @@ contains
       ! ---------------------------------------------------------------
       swsrf = config%surface_water%swsrf
       swsec = config%surface_water%swsec
-      ! wlact + osswlm are loaded by readswap into local scratch; only
-      ! osswlm is a module global.
-      osswlm = config%surface_water%osswlm
+      ! TOML pipeline: pre-compute the initial water level wls1.
+      ! Legacy rddre computes wls1 = wlact - altcu inside the routine;
+      ! we do the same here so surfacewater_init can read it from a
+      ! module global. drainage.altcu /= 0 is rejected upstream (Task 7),
+      ! so this simplifies to wlact.
+      wls1_init = config%surface_water%wlact - config%drain%altcu
+      osswlm    = config%surface_water%osswlm
       nmper  = config%surface_water%nmper
       swqhr  = config%surface_water%swqhr
 

@@ -120,6 +120,7 @@ if get_option('enable_pfunit')
         '../../src/soil/sptabulated.f90',
         '../../src/crop/oxygenstress.f90',
         '../../src/utils/surfacewaterutils.f90',
+        '../../src/drainage/surfacewater_init.f90',
         '../../src/crop/irrigation.f90',
         '../../src/io/readswap.f90',
         'io/toml/parity_helpers.f90',
@@ -181,6 +182,7 @@ if get_option('enable_pfunit')
         'io/toml/test_surfacewater_parity.pf',
         'io/toml/test_macroporeflow_parity.pf',
         'io/toml/test_legacy_crop_helper.pf',
+        'drainage/test_surfacewater_init.pf',
     ]
 
     # When pf_files is non-empty, build and register the unit-swap-tests
