@@ -3,7 +3,9 @@
 !! Given the ROOT table of a loaded .crp.toml document, populates a
 !! cropfixed_config_t. Phase 1 of the .crp port (Phase 4f) extends this
 !! to a 1:1 match with legacy readcropfixed: ~30 new scalars + 6 flat-pair
-!! tables (gctb, cftb, chtb, rdtb, rdctb, cfeictb).
+!! tables (gctb, cftb, chtb, rdtb, rdctb). cfeictb is declared on the
+!! schema but not read here — it is only relevant when swcf=3, which
+!! is stub-errored at validate time per ADR 0015.
 module read_cropfixed_toml_mod
    use iso_fortran_env, only: real64
    use tomlf, only: toml_table
@@ -12,7 +14,7 @@ module read_cropfixed_toml_mod
                                      get_optional_int_with_default, &
                                      get_optional_real_with_default
    use read_irrigation_toml_mod, only: read_irrigation_schedule_from_section
-   use error_mod, only: error_collection_t
+   use error_mod, only: error_collection_t, ERR_PARSE_TYPE_MISMATCH, ERR_PARSE_ROW_SHAPE
    implicit none
    private
 
@@ -22,7 +24,6 @@ contains
 
    subroutine read_pair_array(tbl, key, arr, label, errors)
       use tomlf, only: toml_array, get_value, len
-      use error_mod, only: ERR_PARSE_TYPE_MISMATCH, ERR_VALIDATION_OUT_OF_RANGE
       type(toml_table), pointer, intent(in)    :: tbl
       character(len=*),          intent(in)    :: key
       real(real64), allocatable, intent(out)   :: arr(:)
@@ -36,7 +37,7 @@ contains
       if (stat /= 0 .or. .not. associated(a)) return
       n = len(a)
       if (mod(n, 2) /= 0) then
-         call errors%append(ERR_VALIDATION_OUT_OF_RANGE, &
+         call errors%append(ERR_PARSE_ROW_SHAPE, &
             'expected even-length (dvs,value) pair array', label)
          return
       end if
