@@ -353,6 +353,92 @@ subroutine test_salinitystress_parity_potatod_wofost()
    @assertEqual(0, config%crop%rotation_wofost(ICROP_POTATOD)%co2%swco2)
 end subroutine
 
+! Phase 2 Task 8: Parity: cropwofost_init_from_config(rotation_wofost(1)) vs
+! readwofost(potatod) for case 5.  The init sub must produce the same
+! variables-module globals AND the same cumdens array as the legacy reader.
+@test
+subroutine test_salinitystress_wofost_init_parity()
+   use funit
+   use parity_helpers_mod, only: load_both_for_salinitystress, reset_for_next_readswap
+   use legacy_crop_helper_mod, only: read_legacy_wofost, flatten_table
+   use chdir_helper_mod, only: chdir_to, get_cwd
+   use cropwofost_init_mod, only: cropwofost_init_from_config
+   use swap_config_mod
+   use error_mod
+   use variables, only: &
+      flsolute,                                                              &
+      swcf, albedo, rsc, rsw,                                               &
+      idsl, tsumea, tsumam,                                                 &
+      tdwi, laiem, rgrlai, spa, ssa, span, tbase,                          &
+      kdif, kdir, eff,                                                      &
+      cvl, cvo, cvr, cvs, q10, rml, rmo, rmr, rms, perdl,                  &
+      swrd, rdi, rri, rdc, swdmi2rd,                                       &
+      swoxygen, swwrtnonox, aeratecrit, hlim1, hlim2u, hlim2l,             &
+      swdrought, hlim3h, hlim3l, hlim4, adcrh, adcrl,                      &
+      swsalinity, saltmax, saltslope,                                       &
+      swcompensate, swinter, cofab,                                         &
+      relmf, swpotrelmf,                                                    &
+      cumdens,                                                              &
+      dtsmtb, slatb, amaxtb, frtb, fltb, fstb, fotb,                       &
+      dvsend, swharv
+
+   type(swap_config_t)      :: config
+   type(error_collection_t) :: errors
+   character(len=1024)      :: orig_cwd
+   real(8) :: legacy_cumdens(202)
+   real(8) :: flat_amaxtb(30), flat_frtb(30)
+   real(8) :: FraDeceasedLvToSoil_local
+   integer, parameter :: ICROP = 1
+
+   ! 1. Load the TOML config (populates rotation_wofost).
+   call load_both_for_salinitystress(config, errors)
+   @assertFalse(errors%has_fatals())
+
+   ! 2. Run legacy readwofost to populate variables globals.
+   ! READING NOTE: readwofost gates the salinity block on `flsolute`.  In a
+   ! live SWAP run that flag is set during driver setup (case 5 has
+   ! SWSOLU=1).  readswap() does not set it, so we force it here so
+   ! readwofost actually parses SWSALINITY/SALTMAX/SALTSLOPE.
+   flsolute = .true.
+   call get_cwd(orig_cwd)
+   call chdir_to('tests/swap-cases/5.salinitystress')
+   call reset_for_next_readswap()
+   call read_legacy_wofost(ICROP, 'potatod')
+   call chdir_to(trim(orig_cwd))
+
+   ! 3. Save the legacy cumdens for comparison.
+   legacy_cumdens = cumdens
+
+   ! 4. Reset cumdens to zero, then run the init sub.
+   cumdens = 0.0d0
+   call cropwofost_init_from_config(config%crop%rotation_wofost(ICROP), ICROP, &
+                                    FraDeceasedLvToSoil_local)
+
+   ! 5. Assert globals match config (and therefore legacy) values.
+   @assertEqual(swcf,      config%crop%rotation_wofost(ICROP)%crop_factor%swcf)
+   @assertEqual(albedo,    config%crop%rotation_wofost(ICROP)%crop_factor%albedo,  1.0d-12)
+   @assertEqual(rsc,       config%crop%rotation_wofost(ICROP)%crop_factor%rsc,     1.0d-12)
+   @assertEqual(rsw,       config%crop%rotation_wofost(ICROP)%crop_factor%rsw,     1.0d-12)
+   @assertEqual(swdrought, config%crop%rotation_wofost(ICROP)%drought_stress%swdrought)
+   @assertEqual(hlim3h,    config%crop%rotation_wofost(ICROP)%drought_stress%hlim3h, 1.0d-12)
+   @assertEqual(swsalinity, config%crop%rotation_wofost(ICROP)%salinity%swsalinity)
+   @assertEqual(saltmax,   config%crop%rotation_wofost(ICROP)%salinity%saltmax,    1.0d-12)
+   @assertEqual(saltslope, config%crop%rotation_wofost(ICROP)%salinity%saltslope,  1.0d-12)
+   ! Spot-check literal values for the headline salinity feature.
+   @assertEqual(1, swsalinity)
+   @assertEqual(0.732d0,  saltmax,   1.0d-12)
+   @assertEqual(0.0868d0, saltslope, 1.0d-12)
+
+   ! 6. Assert cumdens matches legacy after init.
+   @assertEqual(legacy_cumdens, cumdens, 1.0d-10)
+
+   ! 7. Assert key table globals (flat).
+   flat_amaxtb = flatten_table(config%crop%rotation_wofost(ICROP)%assimilation%amaxtb, 30)
+   @assertEqual(amaxtb, flat_amaxtb, 1.0d-12)
+   flat_frtb = flatten_table(config%crop%rotation_wofost(ICROP)%partitioning%frtb, 30)
+   @assertEqual(frtb, flat_frtb, 1.0d-12)
+end subroutine
+
 ! Phase 4d Task 20e: parity for the four new sections — bottom_boundary,
 ! heat, irrigation, solute — added to the case 5 swap.toml in Task 17.
 ! Case 5 is the regression case for SWBOTB=3 (sinus aquifer scalars),
