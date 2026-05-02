@@ -176,3 +176,390 @@ subroutine test_cropgrass_lsdb_negative_entry_fails()
    call c%validate(errors)
    @assertTrue(errors%has_errors())
 end subroutine
+
+! ---------------------------------------------------------------------------
+! Phase 3 cropgrass port — stub-error validators for unsupported branches.
+! ---------------------------------------------------------------------------
+
+@test
+subroutine test_cropgrass_swdrought2_rejected()
+   use funit
+   use cropgrass_config_mod, only: cropgrass_config_t
+   use error_mod, only: error_collection_t, ERR_VALIDATION_CROSS_FIELD
+   type(cropgrass_config_t) :: c
+   type(error_collection_t) :: errors
+   integer :: i
+   logical :: found
+   c%swdrought = 2
+   call c%validate(errors)
+   found = .false.
+   do i = 1, errors%count()
+      if (errors%items(i)%code == ERR_VALIDATION_CROSS_FIELD .and. &
+          index(errors%items(i)%message, 'swdrought=2') > 0) found = .true.
+   end do
+   @assertTrue(found)
+end subroutine
+
+@test
+subroutine test_cropgrass_swcompensate2_rejected()
+   use funit
+   use cropgrass_config_mod, only: cropgrass_config_t
+   use error_mod, only: error_collection_t, ERR_VALIDATION_CROSS_FIELD
+   type(cropgrass_config_t) :: c
+   type(error_collection_t) :: errors
+   integer :: i
+   logical :: found
+   c%swcompensate = 2
+   call c%validate(errors)
+   found = .false.
+   do i = 1, errors%count()
+      if (errors%items(i)%code == ERR_VALIDATION_CROSS_FIELD .and. &
+          index(errors%items(i)%message, 'swcompensate=2') > 0) found = .true.
+   end do
+   @assertTrue(found)
+end subroutine
+
+@test
+subroutine test_cropgrass_swsalinity1_rejected()
+   use funit
+   use cropgrass_config_mod, only: cropgrass_config_t
+   use error_mod, only: error_collection_t, ERR_VALIDATION_CROSS_FIELD
+   type(cropgrass_config_t) :: c
+   type(error_collection_t) :: errors
+   integer :: i
+   logical :: found
+   c%swsalinity = 1
+   call c%validate(errors)
+   found = .false.
+   do i = 1, errors%count()
+      if (errors%items(i)%code == ERR_VALIDATION_CROSS_FIELD .and. &
+          index(errors%items(i)%message, 'swsalinity') > 0) found = .true.
+   end do
+   @assertTrue(found)
+end subroutine
+
+@test
+subroutine test_cropgrass_swinter2_rejected()
+   use funit
+   use cropgrass_config_mod, only: cropgrass_config_t
+   use error_mod, only: error_collection_t, ERR_VALIDATION_CROSS_FIELD
+   type(cropgrass_config_t) :: c
+   type(error_collection_t) :: errors
+   integer :: i
+   logical :: found
+   c%swinter = 2
+   call c%validate(errors)
+   found = .false.
+   do i = 1, errors%count()
+      if (errors%items(i)%code == ERR_VALIDATION_CROSS_FIELD .and. &
+          index(errors%items(i)%message, 'swinter=2') > 0) found = .true.
+   end do
+   @assertTrue(found)
+end subroutine
+
+@test
+subroutine test_cropgrass_swinter3_rejected()
+   use funit
+   use cropgrass_config_mod, only: cropgrass_config_t
+   use error_mod, only: error_collection_t, ERR_VALIDATION_CROSS_FIELD
+   type(cropgrass_config_t) :: c
+   type(error_collection_t) :: errors
+   integer :: i
+   logical :: found
+   c%swinter = 3
+   call c%validate(errors)
+   found = .false.
+   do i = 1, errors%count()
+      if (errors%items(i)%code == ERR_VALIDATION_CROSS_FIELD .and. &
+          index(errors%items(i)%message, 'swinter') > 0) found = .true.
+   end do
+   @assertTrue(found)
+end subroutine
+
+@test
+subroutine test_cropgrass_swco2_1_rejected()
+   use funit
+   use cropgrass_config_mod, only: cropgrass_config_t
+   use error_mod, only: error_collection_t, ERR_VALIDATION_CROSS_FIELD
+   type(cropgrass_config_t) :: c
+   type(error_collection_t) :: errors
+   integer :: i
+   logical :: found
+   c%swco2 = 1
+   call c%validate(errors)
+   found = .false.
+   do i = 1, errors%count()
+      if (errors%items(i)%code == ERR_VALIDATION_CROSS_FIELD .and. &
+          index(errors%items(i)%message, 'swco2=1') > 0) found = .true.
+   end do
+   @assertTrue(found)
+end subroutine
+
+@test
+subroutine test_cropgrass_swlossmow1_rejected()
+   use funit
+   use cropgrass_config_mod, only: cropgrass_config_t
+   use error_mod, only: error_collection_t, ERR_VALIDATION_CROSS_FIELD
+   type(cropgrass_config_t) :: c
+   type(error_collection_t) :: errors
+   integer :: i
+   logical :: found
+   c%swlossmow = 1
+   call c%validate(errors)
+   found = .false.
+   do i = 1, errors%count()
+      if (errors%items(i)%code == ERR_VALIDATION_CROSS_FIELD .and. &
+          index(errors%items(i)%message, 'swlossmow=1') > 0) found = .true.
+   end do
+   @assertTrue(found)
+end subroutine
+
+@test
+subroutine test_cropgrass_swlossgrz1_rejected()
+   use funit
+   use cropgrass_config_mod, only: cropgrass_config_t
+   use error_mod, only: error_collection_t, ERR_VALIDATION_CROSS_FIELD
+   type(cropgrass_config_t) :: c
+   type(error_collection_t) :: errors
+   integer :: i
+   logical :: found
+   c%swlossgrz = 1
+   call c%validate(errors)
+   found = .false.
+   do i = 1, errors%count()
+      if (errors%items(i)%code == ERR_VALIDATION_CROSS_FIELD .and. &
+          index(errors%items(i)%message, 'swlossgrz=1') > 0) found = .true.
+   end do
+   @assertTrue(found)
+end subroutine
+
+@test
+subroutine test_cropgrass_swoxygentype2_rejected()
+   use funit
+   use cropgrass_config_mod, only: cropgrass_config_t
+   use error_mod, only: error_collection_t, ERR_VALIDATION_CROSS_FIELD
+   type(cropgrass_config_t) :: c
+   type(error_collection_t) :: errors
+   integer :: i
+   logical :: found
+   c%swoxygen     = 2
+   c%swoxygentype = 2
+   call c%validate(errors)
+   found = .false.
+   do i = 1, errors%count()
+      if (errors%items(i)%code == ERR_VALIDATION_CROSS_FIELD .and. &
+          index(errors%items(i)%message, 'swoxygentype=2') > 0) found = .true.
+   end do
+   @assertTrue(found)
+end subroutine
+
+@test
+subroutine test_cropgrass_seqgrazmow_grazing_rejected()
+   use funit
+   use cropgrass_config_mod, only: cropgrass_config_t
+   use error_mod, only: error_collection_t, ERR_VALIDATION_CROSS_FIELD
+   type(cropgrass_config_t) :: c
+   type(error_collection_t) :: errors
+   integer :: i
+   logical :: found
+   ! Encode a period 1 = grazing in the sequence
+   c%nseqgrazmow = 1
+   allocate(c%seqgrazmow(1))
+   c%seqgrazmow(1) = 1
+   call c%validate(errors)
+   found = .false.
+   do i = 1, errors%count()
+      if (errors%items(i)%code == ERR_VALIDATION_CROSS_FIELD .and. &
+          index(errors%items(i)%message, 'seqgrazmow') > 0) found = .true.
+   end do
+   @assertTrue(found)
+end subroutine
+
+@test
+subroutine test_cropgrass_swrd1_rejected()
+   use funit
+   use cropgrass_config_mod, only: cropgrass_config_t
+   use error_mod, only: error_collection_t, ERR_VALIDATION_CROSS_FIELD
+   type(cropgrass_config_t) :: c
+   type(error_collection_t) :: errors
+   integer :: i
+   logical :: found
+   c%swrd = 1
+   call c%validate(errors)
+   found = .false.
+   do i = 1, errors%count()
+      if (errors%items(i)%code == ERR_VALIDATION_CROSS_FIELD .and. &
+          index(errors%items(i)%message, 'swrd=1') > 0) found = .true.
+   end do
+   @assertTrue(found)
+end subroutine
+
+@test
+subroutine test_cropgrass_swrd3_rejected()
+   use funit
+   use cropgrass_config_mod, only: cropgrass_config_t
+   use error_mod, only: error_collection_t, ERR_VALIDATION_CROSS_FIELD
+   type(cropgrass_config_t) :: c
+   type(error_collection_t) :: errors
+   integer :: i
+   logical :: found
+   c%swrd = 3
+   call c%validate(errors)
+   found = .false.
+   do i = 1, errors%count()
+      if (errors%items(i)%code == ERR_VALIDATION_CROSS_FIELD .and. &
+          index(errors%items(i)%message, 'swrd=3') > 0) found = .true.
+   end do
+   @assertTrue(found)
+end subroutine
+
+@test
+subroutine test_cropgrass_swcf3_rejected()
+   use funit
+   use cropgrass_config_mod, only: cropgrass_config_t
+   use error_mod, only: error_collection_t, ERR_VALIDATION_CROSS_FIELD
+   type(cropgrass_config_t) :: c
+   type(error_collection_t) :: errors
+   integer :: i
+   logical :: found
+   c%swcf = 3
+   call c%validate(errors)
+   found = .false.
+   do i = 1, errors%count()
+      if (errors%items(i)%code == ERR_VALIDATION_CROSS_FIELD .and. &
+          index(errors%items(i)%message, 'swcf=3') > 0) found = .true.
+   end do
+   @assertTrue(found)
+end subroutine
+
+@test
+subroutine test_cropgrass_swrdc1_rejected()
+   use funit
+   use cropgrass_config_mod, only: cropgrass_config_t
+   use error_mod, only: error_collection_t, ERR_VALIDATION_CROSS_FIELD
+   type(cropgrass_config_t) :: c
+   type(error_collection_t) :: errors
+   integer :: i
+   logical :: found
+   c%swrdc = 1
+   call c%validate(errors)
+   found = .false.
+   do i = 1, errors%count()
+      if (errors%items(i)%code == ERR_VALIDATION_CROSS_FIELD .and. &
+          index(errors%items(i)%message, 'swrdc=1') > 0) found = .true.
+   end do
+   @assertTrue(found)
+end subroutine
+
+@test
+subroutine test_cropgrass_swtsum2_rejected()
+   use funit
+   use cropgrass_config_mod, only: cropgrass_config_t
+   use error_mod, only: error_collection_t, ERR_VALIDATION_CROSS_FIELD
+   type(cropgrass_config_t) :: c
+   type(error_collection_t) :: errors
+   integer :: i
+   logical :: found
+   c%swtsum = 2
+   call c%validate(errors)
+   found = .false.
+   do i = 1, errors%count()
+      if (errors%items(i)%code == ERR_VALIDATION_CROSS_FIELD .and. &
+          index(errors%items(i)%message, 'swtsum=2') > 0) found = .true.
+   end do
+   @assertTrue(found)
+end subroutine
+
+@test
+subroutine test_cropgrass_schedule1_rejected()
+   use funit
+   use cropgrass_config_mod, only: cropgrass_config_t
+   use error_mod, only: error_collection_t, ERR_VALIDATION_CROSS_FIELD
+   type(cropgrass_config_t) :: c
+   type(error_collection_t) :: errors
+   integer :: i
+   logical :: found
+   c%schedule%schedule = 1
+   call c%validate(errors)
+   found = .false.
+   do i = 1, errors%count()
+      if (errors%items(i)%code == ERR_VALIDATION_CROSS_FIELD .and. &
+          index(errors%items(i)%message, 'schedule=1') > 0) found = .true.
+   end do
+   @assertTrue(found)
+end subroutine
+
+@test
+subroutine test_cropgrass_case4_supported_values_pass()
+   use funit
+   use cropgrass_config_mod, only: cropgrass_config_t
+   use error_mod, only: error_collection_t, ERR_VALIDATION_CROSS_FIELD
+   type(cropgrass_config_t) :: c
+   type(error_collection_t) :: errors
+   integer :: i
+   logical :: any_stub
+   ! Case 4 supported values for the new switches.
+   c%swcf         = 2
+   c%swinter      = 1
+   c%swtsum       = 1
+   c%swrd         = 2
+   c%swdmi2rd     = 1
+   c%swrdc        = 0
+   c%swoxygen     = 2
+   c%swoxygentype = 1    ! physical — supported
+   c%swwrtnonox   = 1
+   c%swdrought    = 1
+   c%swsalinity   = 0
+   c%swcompensate = 1    ! Jarvis — supported
+   c%swstressor   = 1
+   c%swdmmow      = 2
+   c%swharv       = 1
+   c%swdmgrz      = 2
+   c%swlossgrz    = 0
+   c%swlossmow    = 0
+   c%nseqgrazmow  = 3
+   allocate(c%seqgrazmow(3))
+   c%seqgrazmow   = 2    ! all mowing — supported
+   c%swco2        = 0
+   call c%validate(errors)
+   any_stub = .false.
+   do i = 1, errors%count()
+      if (errors%items(i)%code == ERR_VALIDATION_CROSS_FIELD) any_stub = .true.
+   end do
+   @assertFalse(any_stub)
+end subroutine
+
+@test
+subroutine test_cropgrass_case2_supported_values_pass()
+   use funit
+   use cropgrass_config_mod, only: cropgrass_config_t
+   use error_mod, only: error_collection_t, ERR_VALIDATION_CROSS_FIELD
+   type(cropgrass_config_t) :: c
+   type(error_collection_t) :: errors
+   integer :: i
+   logical :: any_stub
+   ! Case 2 supported values for the new switches.
+   c%swcf         = 2
+   c%swinter      = 1
+   c%swtsum       = 1
+   c%swrd         = 2
+   c%swoxygen     = 1    ! Feddes — supported
+   c%swwrtnonox   = 1
+   c%swdrought    = 1
+   c%swsalinity   = 0
+   c%swcompensate = 0
+   c%swharv       = 2
+   c%nmow         = 30
+   allocate(c%mowing_dates(30))
+   c%mowing_dates = 1.0d0  ! placeholder values (shape check only)
+   c%nseqgrazmow  = 3
+   allocate(c%seqgrazmow(3))
+   c%seqgrazmow   = 2    ! all mowing — supported
+   c%swco2        = 0
+   call c%validate(errors)
+   any_stub = .false.
+   do i = 1, errors%count()
+      if (errors%items(i)%code == ERR_VALIDATION_CROSS_FIELD) any_stub = .true.
+   end do
+   @assertFalse(any_stub)
+end subroutine
