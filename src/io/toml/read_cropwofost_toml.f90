@@ -30,7 +30,7 @@ contains
       type(toml_table), pointer :: prep, sow, germ, harv, cf, ph, init, ga,  &
                                    asm, conv, resp, part, deth, root, oxy,    &
                                    drou, salt, comp, inter, co2t, mgmt,       &
-                                   irr_sched
+                                   irr_sched, soy, bul, nut
 
       call get_table(doc_root, 'preparation', prep, 'preparation', errors)
       if (associated(prep)) then
@@ -158,6 +158,7 @@ contains
          call get_optional_real_with_default(root, 'rri',      config%root%rri,      0.0_real64, 'root.rri',      errors)
          call get_optional_real_with_default(root, 'rdc',      config%root%rdc,      0.0_real64, 'root.rdc',      errors)
          call get_optional_int_with_default(root,  'swdmi2rd', config%root%swdmi2rd, 0,          'root.swdmi2rd', errors)
+         call get_optional_int_with_default(root,  'swrdc',   config%root%swrdc,   0,           'root.swrdc',    errors)
          call get_optional_real_with_default(root, 'wrtmax',   config%root%wrtmax,   0.0_real64, 'root.wrtmax',   errors)
          call read_table_2d(root, 'rdtb',  config%root%rdtb,  2, 'root.rdtb',  errors)
          call read_table_2d(root, 'rlwtb', config%root%rlwtb, 2, 'root.rlwtb', errors)
@@ -233,6 +234,60 @@ contains
          call get_optional_real_with_default(mgmt, 'fradeceasedlvtosoil', config%management%fradeceasedlvtosoil, 0.0_real64, 'management.fradeceasedlvtosoil', errors)
          call get_optional_int_with_default(mgmt,  'swpotrelmf',          config%management%swpotrelmf,          0,          'management.swpotrelmf',          errors)
          call get_optional_real_with_default(mgmt, 'relmf',               config%management%relmf,               0.0_real64, 'management.relmf',               errors)
+      end if
+
+      ! ----------------------------------------------------------------
+      ! Soybean variant (optional section; absent in most cases)
+      ! ----------------------------------------------------------------
+      call get_table(doc_root, 'soybean', soy, 'soybean', errors)
+      if (associated(soy)) then
+         call get_optional_int_with_default(soy, 'swsoybean',    config%soybean%swsoybean,    0,          'soybean.swsoybean',    errors)
+         call get_optional_real_with_default(soy, 'mg',          config%soybean%mg,           0.0_real64, 'soybean.mg',           errors)
+         call get_optional_real_with_default(soy, 'dvsi',        config%soybean%dvsi,         0.0_real64, 'soybean.dvsi',         errors)
+         call get_optional_real_with_default(soy, 'dvrmax1',     config%soybean%dvrmax1,      0.0_real64, 'soybean.dvrmax1',      errors)
+         call get_optional_real_with_default(soy, 'dvrmax2',     config%soybean%dvrmax2,      0.0_real64, 'soybean.dvrmax2',      errors)
+         call get_optional_real_with_default(soy, 'tmaxdvr',     config%soybean%tmaxdvr,      0.0_real64, 'soybean.tmaxdvr',      errors)
+         call get_optional_real_with_default(soy, 'tmindvr',     config%soybean%tmindvr,      0.0_real64, 'soybean.tmindvr',      errors)
+         call get_optional_real_with_default(soy, 'toptdvr',     config%soybean%toptdvr,      0.0_real64, 'soybean.toptdvr',      errors)
+         call get_optional_real_with_default(soy, 'popt',        config%soybean%popt,         0.0_real64, 'soybean.popt',         errors)
+         call get_optional_real_with_default(soy, 'pcrt',        config%soybean%pcrt,         0.0_real64, 'soybean.pcrt',         errors)
+      end if
+
+      ! ----------------------------------------------------------------
+      ! Bulb crops (optional section; absent in most cases)
+      ! ----------------------------------------------------------------
+      call get_table(doc_root, 'bulb', bul, 'bulb', errors)
+      if (associated(bul)) then
+         call get_optional_int_with_default(bul,  'swbulb', config%bulb%swbulb, 0,          'bulb.swbulb', errors)
+         call get_optional_real_with_default(bul, 'pld',    config%bulb%pld,    0.0_real64, 'bulb.pld',    errors)
+         call get_optional_real_with_default(bul, 'plwti',  config%bulb%plwti,  0.0_real64, 'bulb.plwti',  errors)
+         call get_optional_real_with_default(bul, 'remoc',  config%bulb%remoc,  0.0_real64, 'bulb.remoc',  errors)
+         call read_table_2d(bul, 'fbltb', config%bulb%fbltb, 2, 'bulb.fbltb', errors)
+      end if
+
+      ! ----------------------------------------------------------------
+      ! Nutrient model (optional section; absent in most cases)
+      ! ----------------------------------------------------------------
+      call get_table(doc_root, 'nutrient', nut, 'nutrient', errors)
+      if (associated(nut)) then
+         call get_optional_real_with_default(nut, 'lrnr',   config%nutrient%lrnr,   0.0_real64, 'nutrient.lrnr',   errors)
+         call get_optional_real_with_default(nut, 'lsnr',   config%nutrient%lsnr,   0.0_real64, 'nutrient.lsnr',   errors)
+         call get_optional_real_with_default(nut, 'nlai',   config%nutrient%nlai,   0.0_real64, 'nutrient.nlai',   errors)
+         call get_optional_real_with_default(nut, 'nlue',   config%nutrient%nlue,   0.0_real64, 'nutrient.nlue',   errors)
+         call get_optional_real_with_default(nut, 'nmaxso', config%nutrient%nmaxso, 0.0_real64, 'nutrient.nmaxso', errors)
+         call get_optional_real_with_default(nut, 'npart',  config%nutrient%npart,  0.0_real64, 'nutrient.npart',  errors)
+         call get_optional_real_with_default(nut, 'nfixf',  config%nutrient%nfixf,  0.0_real64, 'nutrient.nfixf',  errors)
+         call get_optional_real_with_default(nut, 'nsla',   config%nutrient%nsla,   0.0_real64, 'nutrient.nsla',   errors)
+         call get_optional_real_with_default(nut, 'rnflv',  config%nutrient%rnflv,  0.0_real64, 'nutrient.rnflv',  errors)
+         call get_optional_real_with_default(nut, 'rnfrt',  config%nutrient%rnfrt,  0.0_real64, 'nutrient.rnfrt',  errors)
+         call get_optional_real_with_default(nut, 'rnfst',  config%nutrient%rnfst,  0.0_real64, 'nutrient.rnfst',  errors)
+         call get_optional_real_with_default(nut, 'tcnt',   config%nutrient%tcnt,   0.0_real64, 'nutrient.tcnt',   errors)
+         call get_optional_real_with_default(nut, 'dvsnlt', config%nutrient%dvsnlt, 0.0_real64, 'nutrient.dvsnlt', errors)
+         call get_optional_real_with_default(nut, 'dvsnt',  config%nutrient%dvsnt,  0.0_real64, 'nutrient.dvsnt',  errors)
+         call get_optional_real_with_default(nut, 'rdrns',  config%nutrient%rdrns,  0.0_real64, 'nutrient.rdrns',  errors)
+         call get_optional_real_with_default(nut, 'fntrt',  config%nutrient%fntrt,  0.0_real64, 'nutrient.fntrt',  errors)
+         call get_optional_real_with_default(nut, 'frnx',   config%nutrient%frnx,   0.0_real64, 'nutrient.frnx',   errors)
+         call read_table_2d(nut, 'nmxlv', config%nutrient%nmxlv, 2, 'nutrient.nmxlv', errors)
       end if
 
       call get_table(doc_root, 'irrigation_schedule', irr_sched, 'irrigation_schedule', errors)
