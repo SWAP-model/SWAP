@@ -40,7 +40,7 @@ contains
       use array_utils,  only: afgen
       use error_mod,    only: fatalerr_collected
       type(cropfixed_config_t), intent(in)  :: cfg
-      integer,                  intent(in)  :: icrop
+      integer,                  intent(in)  :: icrop  ! reserved for swinco=3 inifil path (not yet ported)
       integer,                  intent(out) :: lcc
 
       integer      :: i
@@ -106,14 +106,19 @@ contains
       swharv = cfg%swharv
 
       ! ---- Reflection coefficients / crop resistance (legacy:2150-2160)
-      ! Only ETref-friendly branch (swcf=1 or 3) is reachable; legacy
-      ! sets albedo=0.23, rsc=70, rsw=0 in that branch. We read the
-      ! values from cfg in case the user authored them; otherwise fall
-      ! back to the same defaults.
+      ! Two branches in legacy:
+      !   swcf=1 (ETref crop factor): hardcoded ETref defaults
+      !       (albedo=0.23, rsc=70, rsw=0)
+      !   swcf=2 (crop height): user-authored values from .crp
+      ! swcf=3 is stub-errored upstream so it never reaches here.
       if (cfg%swcf == 1) then
          albedo = 0.23_real64
          rsc    = 70.0_real64
          rsw    = 0.0_real64
+      else if (cfg%swcf == 2) then
+         albedo = cfg%albedo
+         rsc    = cfg%rsc
+         rsw    = cfg%rsw
       end if
 
       ! ---- Copy tables ------------------------------------------------
