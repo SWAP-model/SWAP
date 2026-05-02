@@ -97,10 +97,10 @@ Validators should reject cases where multiple sources are set (e.g. inline
   self-contained — every file SWAP reads at runtime lives there: `swap.toml`,
   `swap.dra.toml`, `*.crp.toml`, all `*.csv` companions, and
   `swap_linux.swp.template` (staged to `swap.swp` per run). For type=1
-  (cropfixed) rotations the `.crp` ASCII file is no longer staged after
-  Phase 1 of the `.crp` port (case 6 surfacewater); type=2 (cropwofost) and
-  type=3 (cropgrass) rotations still stage their legacy `*.crp` files
-  pending Phases 2 and 3.
+  (cropfixed, Phase 1, case 6 surfacewater) and type=2 (cropwofost,
+  Phase 2, case 5 salinitystress) rotations the `.crp` ASCII file is no
+  longer staged. Type=3 (cropgrass) rotations still stage their legacy
+  `*.crp` files pending Phase 3.
 - `tests/swap-cases/run_case.sh` runs SWAP in that directory in-place;
   `tests/regression/test_output_regression.py` copies it to a temp dir for
   parallel-safe execution. Neither tool reads from the legacy `<N>.<case>/`
@@ -114,6 +114,7 @@ Validators should reject cases where multiple sources are set (e.g. inline
 - `surfacewater.haquif.csv` — replaced inline `haquif_table`.
 - `salinitystress.ini.{h,tsoil,cml}.csv` — replaced legacy ASCII `swap.ini` profile blocks (Phase 4f cleanup, post-CSV-meteo). The legacy `[soil].inifil` slot was removed; `[soil.initial]` is now the canonical SWINCO=3 schema.
 - `surfacewater/grass.crp.toml` — replaced legacy ASCII `grass.crp` for type=1 (cropfixed) rotations, Phase 1 of the `.crp` port. Schema 1:1 with legacy `readcropfixed`; runtime narrow per ADR 0015. Cache-driven dispatch on `crop_config_global%rotation_loaded(icrop)` per ADR 0016, with sibling-reader dispatch around `ArableLandGerm(1)` per ADR 0017. Phases 2/3/4 will extend coverage to types 2/3 + integration via case 1 hupselbrook.
+- `salinitystress/potatod.crp.toml` — replaced legacy ASCII `potatod.crp` for type=2 (cropwofost) rotations, Phase 2 of the `.crp` port. Schema 1:1 with legacy `readwofost` (extended in Phase 2 with `wofost_soybean_t`, `wofost_bulb_t`, `wofost_nutrient_t` sub-types and `swrdc` field for full coverage). Runtime narrow per ADR 0015 — soybean/bulb/nutrient/CO2/scheduling and `swdrought=2`/`swoxygen=2`/`swinter=2`/`swcompensate≠0`/`swharv=1`/`swsalinity=2`/`swrdc=1` are validator-rejected. Cache-driven dispatch via `crop_config_global%rotation_loaded(icrop)` (ADR 0016); ArableLandGerm sibling dispatch (ADR 0017) extended to type=2. Init signature `cropwofost_init_from_config(cfg, icrop, FraDeceasedLvToSoil)` mirrors Phase 1's `lcc` pattern for the local SAVE in `wofost()`. Phase 3 will cover type=3 (cropgrass); Phase 4 integrates all three types via case 1 hupselbrook.
 
 ## Future users (deferred)
 

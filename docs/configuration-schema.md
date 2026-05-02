@@ -811,14 +811,14 @@ active when `schedule=1`, which is stub-errored in Phase 1. Schema defined by
 
 ### `*.crp.toml` — type 2 (WOFOST general)
 
-Phase 4c-b adds the WOFOST type-2 schema. Parsed by
+Phase 2 of the `.crp` port (case 5 salinitystress) makes the WOFOST type-2
+schema 1:1 with legacy `readwofost`. Parsed by
 `read_cropwofost_toml.f90`; config type `cropwofost_config_t`
-(`src/config/cropwofost_config.f90`).
-
-The schema mirrors the legacy `readcropwofost`/`crpgrowth` parameter set,
-broken into 21 nested sub-tables. All sections are optional: missing
-sections leave their fields at type defaults and the validator only flags
-inconsistencies when the relevant switch is enabled.
+(`src/config/cropwofost_config.f90`). Runtime init via
+`cropwofost_init_from_config(cfg, icrop, FraDeceasedLvToSoil)` in
+`src/crop/cropwofost_init.f90` (ADR 0016). Cache-driven dispatch in
+`cropgrowth.f90` `wofost(task=1)` selects the TOML path when
+`crop_config_global%rotation_loaded(icrop) = .true.`.
 
 Sections (read in order):
 
@@ -826,7 +826,33 @@ Sections (read in order):
 `[crop_factor]`, `[phenology]`, `[initial]`, `[green_area]`,
 `[assimilation]`, `[conversion]`, `[respiration]`, `[partitioning]`,
 `[death]`, `[root]`, `[oxygen_stress]`, `[drought_stress]`, `[salinity]`,
-`[compensate]`, `[interception]`, `[co2]`, `[management]`.
+`[compensate]`, `[interception]`, `[co2]`, `[management]`,
+`[soybean]`, `[bulb]`, `[nutrient]`, `[irrigation_schedule]`.
+
+All sections are optional: missing sections leave their fields at type
+defaults and the validator only flags inconsistencies when the relevant
+switch is enabled.
+
+#### Phase 2 stub-errored branches (ADR 0015)
+
+The following switch values are validator-rejected with
+`ERR_VALIDATION_CROSS_FIELD`. Schema is 1:1 with legacy for round-tripping
+parity tests, but the runtime path does not yet support them:
+
+| Switch | Stub-errored value | Notes |
+|---|---|---|
+| `soybean.swsoybean` | `1` | Soybean variant phenology |
+| `bulb.swbulb` | `1` | Bulb-crop development |
+| `nutrient.flcropnut` | `.true.` | N-P-K nutrient model (sibling reader at `cropgrowth.f90:1061-1091`) |
+| `co2.swco2` | `1` | Atmospheric CO₂ correction |
+| `irrigation_schedule.schedule` | `1` | Per-crop irrigation scheduling |
+| `drought_stress.swdrought` | `2` | De Jong van Lier |
+| `oxygen_stress.swoxygen` | `2` | Bartholomeus |
+| `interception.swinter` | `2` | Gash forest interception |
+| `compensate.swcompensate` | `≠ 0` | Jarvis/Walsum compensation |
+| `harvest.swharv` | `1` | DVS-based harvest timing |
+| `salinity.swsalinity` | `2` | Osmotic-head salinity |
+| `root.swrdc` | `1` | Root density development switch |
 
 #### Table encoding
 
