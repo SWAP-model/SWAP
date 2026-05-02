@@ -72,6 +72,9 @@ contains
       swrd = cfg%swrd
       swdmi2rd = cfg%swdmi2rd
       swrdc    = cfg%swrdc
+      rdi      = cfg%rdi
+      rri      = cfg%rri
+      rdc      = cfg%rdc
 
       swoxygen   = cfg%swoxygen
       swWrtNonox = cfg%swwrtnonox

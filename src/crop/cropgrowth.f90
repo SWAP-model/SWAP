@@ -89,7 +89,51 @@
         ! Initialize preparation, sowing and germination
         if (.not. flCropEmergence) then
           if (flCropReadFile) then
-            call ArableLandGerm(1)
+            ! ADR 0017: sibling-reader dispatch around legacy ArableLandGerm
+            ! (which opens pathcrop//cropfil(icrop)//'.crp' via
+            ! readarablelandgerm). Cache-hit path sets flCrop* flags from
+            ! the typed config. Cache-miss path falls back to legacy.
+            ! Teardown: end of Phase 4 removes the else-branch.
+            block
+               use crop_config_global_mod, only: crop_config_global
+               use cropfixed_config_mod, only: cropfixed_config_t
+               use error_mod, only: fatalerr_collected
+               logical :: use_cache
+               type(cropfixed_config_t), pointer :: cfg
+               use_cache = .false.
+               cfg => null()
+               if (associated(crop_config_global)) then
+                  if (allocated(crop_config_global%rotation_loaded) .and. &
+                      allocated(crop_config_global%rotation_type)) then
+                     if (icrop >= 1 .and. icrop <= size(crop_config_global%rotation_loaded)) then
+                        ! Only dispatch on the cropfixed cache when rotation_type==1.
+                        ! Type=2 (Wofost) still reads its .crp via legacy fallback.
+                        if (crop_config_global%rotation_loaded(icrop) .and. &
+                            crop_config_global%rotation_type(icrop) == 1 .and. &
+                            allocated(crop_config_global%rotation_fixed)) then
+                           use_cache = .true.
+                           cfg => crop_config_global%rotation_fixed(icrop)
+                        end if
+                     end if
+                  end if
+               end if
+               if (use_cache) then
+                  ! Defense-in-depth: Phase 1 only supports the all-zero default.
+                  if (cfg%swprep /= 0 .or. cfg%swsow /= 0 .or. cfg%swgerm /= 0) then
+                     call fatalerr_collected('cropgrowth/ArableLandGerm', &
+                        'swprep/swsow/swgerm /= 0 not yet supported in TOML pipeline.')
+                  else
+                     ! All three switches are 0; legacy reader sets all four
+                     ! flags to .true. unconditionally for this case.
+                     flCropPrep      = .true.
+                     flCropSow       = .true.
+                     flCropGerm      = .true.
+                     flCropEmergence = .true.
+                  end if
+               else
+                  call ArableLandGerm(1)   ! transitional fallback
+               end if
+            end block
           endif
         endif
 

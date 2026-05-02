@@ -93,6 +93,9 @@ use soilhydraulics_mod, only: soilwater, SoilWaterStateVar
 use irrigation_mod, only: irrigation, SSDI_irrigation
 use management_soil_mod, only: SoilManagement
 use error_mod, only: fatalerr_collected
+use swap_config_mod, only: swap_config_t
+use load_swap_config_mod, only: load_swap_config
+use config_to_variables_mod, only: config_to_variables
 implicit none
 
 ! global
@@ -103,6 +106,10 @@ type(swap_output), intent(out),   optional :: fromswap
 ! local
 logical :: flError
 logical, parameter :: flDailyStateSnapshot = .false.
+! Phase 1 (.crp port): saved config so crop_config_global pointer remains
+! valid across the iTask=1 / iTask=2 / iTask=3 call boundary.
+! See crop_config_global.f90 and ADR 0016/0017.
+type(swap_config_t), target, save :: config
 
 if (iCaller /= 0 .and. iTask < 3) then
    if (.not.(present(toswap)))   call fatalerr_collected ('swap', 'Argument toswap missing in DLL call.')
@@ -133,11 +140,7 @@ if (iTask == 1) then
 !  extensions land. See config_to_variables.f90's tail comment for the
 !  full migration plan.
    block
-      use load_swap_config_mod, only: load_swap_config
-      use swap_config_mod, only: swap_config_t
-      use config_to_variables_mod, only: config_to_variables
       use error_mod, only: error_collection_t
-      type(swap_config_t), target :: config
       type(error_collection_t) :: errors
       call load_swap_config('swap.toml', config, errors)
       call config%validate(errors)
