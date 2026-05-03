@@ -213,7 +213,10 @@ subroutine test_cropgrass_round_trip_new_scalars()
    @assertEqual(0.0004d0, c%ssa,  1.0d-10)
    @assertEqual(25.0d0,   c%span, 1.0d-10)
 
-   ! assimilation
+   ! assimilation — light interception params (kdif/kdir/eff live here, not [light])
+   @assertEqual(0.60d0,  c%kdif,  1.0d-10)
+   @assertEqual(0.75d0,  c%kdir,  1.0d-10)
+   @assertEqual(0.45d0,  c%eff,   1.0d-10)
    @assertEqual(0.685d0, c%cvl,   1.0d-10)
    @assertEqual(0.694d0, c%cvr,   1.0d-10)
    @assertEqual(0.662d0, c%cvs,   1.0d-10)

@@ -266,7 +266,8 @@
         ! daily gross assimilation
         effc = fco2eff * eff
         if (croptype(icrop) .eq. 2) amax = fco2amax * afgen (amaxtb,30,dvs) * afgen (tmpftb,30,tavd)
-        if (croptype(icrop) .eq. 3) amax = fco2amax * afgen (amaxtb,30,dble(daycrop)) * afgen (tmpftb,30,tavd)        
+        if (croptype(icrop) .eq. 3) amax = fco2amax * afgen (amaxtb,30,dble(daycrop)) * afgen (tmpftb,30,tavd)
+
 
         ! potential assimilation
         call totass (dayl,amax,effc,laipot,kdif,rad,difpp,dsinbe,sinld,cosld,dtgapot)
@@ -2180,9 +2181,45 @@
 
 ! === initialization at start of crop =========================================
 
-! --- read grass input data
-      call readgrass (icrop,cropfil(icrop),swharvest,dmharvest,daylastharvest,dmlastharvest,swdmmow,maxdaymow, &
-                      swlossmow,swlossgrz,swdmgrz,maxdaygrz,dmgrazing,LSDb,tagprest,swhydrlift)
+! --- read grass input data: dispatch on per-rotation typed-config cache
+!     (ADR 0016). Falls back to legacy reader for rotations whose
+!     .crp.toml is not yet authored. Teardown: end of Phase 4 removes
+!     the else-branch.
+      block
+         use crop_config_global_mod, only: crop_config_global
+         use cropgrass_init_mod,     only: cropgrass_init_from_config
+         logical :: use_cache
+         use_cache = .false.
+         if (associated(crop_config_global)) then
+            if (allocated(crop_config_global%rotation_loaded)) then
+               if (icrop >= 1 .and. icrop <= size(crop_config_global%rotation_loaded)) then
+                  if (crop_config_global%rotation_loaded(icrop)) use_cache = .true.
+               end if
+            end if
+         end if
+         if (use_cache) then
+            associate(cfg => crop_config_global%rotation_grass(icrop))
+               swharvest      = cfg%swharv
+               dmharvest      = cfg%dmharvest
+               daylastharvest = int(cfg%daylastharvest)
+               dmlastharvest  = cfg%dmlastharvest
+               swdmmow        = cfg%swdmmow
+               maxdaymow      = cfg%maxdaymow
+               swlossmow      = cfg%swlossmow
+               swlossgrz      = cfg%swlossgrz
+               swdmgrz        = cfg%swdmgrz
+               maxdaygrz      = cfg%maxdaygrz
+               dmgrazing      = cfg%dmgrazing
+               LSDb           = 0.0d0   ! grazing stub-guarded; populated via daysgrazingtab/uptgrazingtab/lossgrazingtab by init
+               tagprest       = cfg%tagprest
+               swhydrlift     = 0       ! swdrought=2 stub-errored; mirror cropfixed/cropwofost default
+               call cropgrass_init_from_config(cfg, icrop)
+            end associate
+         else
+            call readgrass (icrop,cropfil(icrop),swharvest,dmharvest,daylastharvest,dmlastharvest,swdmmow,maxdaymow, &
+                            swlossmow,swlossgrz,swdmgrz,maxdaygrz,dmgrazing,LSDb,tagprest,swhydrlift)   ! transitional fallback
+         end if
+      end block
 
 ! --- sequence of harvest by mowing, dewooling and grazing
       seqgrazmowpot = seqgrazmow
@@ -2406,9 +2443,9 @@
       if (flGrassGrowth .and. daycrop.ge.idregrpot) then
 
 ! ===   daily dry matter production ===
-        
+
         gasspot = pgasspot
-        
+
 ! ---   respiration and partitioning of carbohydrates between growth and
 ! ---   maintenance respiration
         rmrespot=(rmr*wrtpot+rml*wlvpot+rms*wstpot)*afgen(rfsetb,30,rid)

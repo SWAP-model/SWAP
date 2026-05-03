@@ -77,9 +77,14 @@ contains
          call read_array_1d(ga, 'slatb', config%slatb, 'green_area.slatb', errors)
       end if
 
-      ! [assimilation] — Phase 3 new section (biomass conversion, respiration, partitioning, death)
+      ! [assimilation] — Phase 3 new section (light interception, biomass conversion,
+      !                  respiration, partitioning, death rates)
       call get_table(doc, 'assimilation', assim, 'assimilation', errors)
       if (associated(assim)) then
+         ! Light interception (grass TOML puts these here, not under [light])
+         call get_optional_real_with_default(assim, 'kdif', config%kdif, 0.0_real64, 'assimilation.kdif', errors)
+         call get_optional_real_with_default(assim, 'kdir', config%kdir, 0.0_real64, 'assimilation.kdir', errors)
+         call get_optional_real_with_default(assim, 'eff',  config%eff,  0.0_real64, 'assimilation.eff',  errors)
          call get_optional_real_with_default(assim, 'cvl',   config%cvl,   0.685_real64,  'assimilation.cvl',   errors)
          call get_optional_real_with_default(assim, 'cvr',   config%cvr,   0.694_real64,  'assimilation.cvr',   errors)
          call get_optional_real_with_default(assim, 'cvs',   config%cvs,   0.662_real64,  'assimilation.cvs',   errors)

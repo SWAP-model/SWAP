@@ -322,6 +322,12 @@ contains
          ! converts them to t1900-relative real(8) timestamps.
          ! TOML stores them as DOY floats spanning the full simulation.
          ! Conversion: walk the dates; when DOY decreases, advance year.
+         !
+         ! This must be called every crop rotation (not just icrop==1)
+         ! because InitializeCrop zeroes the dateharvest array at the start
+         ! of each crop period.  populate_dateharvest anchors the DOY→t1900
+         ! mapping to tstart (first simulation year), not yearmeteo, so the
+         ! same full date sequence is reproduced correctly every time.
          call populate_dateharvest(cfg, tend)
       end if
 
@@ -397,19 +403,24 @@ contains
    ! Sentinel: dateharvest(nmow+1) = tend + 1.0  (legacy line 4023).
    ! ------------------------------------------------------------------
    subroutine populate_dateharvest(cfg, tend_val)
-      use variables, only: dateharvest, yearmeteo
+      use variables, only: dateharvest, tstart
       implicit none
       type(cropgrass_config_t), intent(in) :: cfg
       real(real64),             intent(in) :: tend_val
 
-      integer      :: i, cur_year
+      integer      :: i, cur_year, start_year
       real(real64) :: t_jan1
 
       if (.not. allocated(cfg%mowing_dates)) return
       if (cfg%nmow <= 0) return
 
-      cur_year = yearmeteo
-      t_jan1   = real(t1900_from_year(cur_year), real64)
+      ! Derive the simulation start year from tstart.
+      ! This is stable across all crop rotations: mowing_dates span the
+      ! entire simulation, so we always anchor the DOY→t1900 mapping to
+      ! the first simulation year regardless of which rotation icrop we are.
+      start_year = year_from_t1900(int(tstart))
+      cur_year   = start_year
+      t_jan1     = real(t1900_from_year(cur_year), real64)
 
       do i = 1, cfg%nmow
          ! Year roll-over: DOY decreases means we crossed Jan 1.
@@ -443,6 +454,33 @@ contains
       jd = 1 + (153*mm + 2)/5 + 365*yy + yy/4 - yy/100 + yy/400 - 32045
       t  = jd - 2415020
    end function t1900_from_year
+
+   ! ------------------------------------------------------------------
+   ! Compute the calendar year containing a given t1900 value.
+   ! Uses a bisection / forward-search approach on t1900_from_year.
+   ! ------------------------------------------------------------------
+   pure function year_from_t1900(t) result(y)
+      integer, intent(in) :: t
+      integer :: y, lo, hi, mid
+      ! Rough estimate: t1900 for Jan-1-1900 ≈ 0; ~365.25 d/yr.
+      y  = 1900 + max(0, (t - 1) / 366)
+      ! Refine: find year such that t1900_from_year(y) <= t < t1900_from_year(y+1)
+      lo = y - 2
+      hi = y + 2
+      do while (t1900_from_year(hi) <= t)
+         lo = hi
+         hi = hi + 10
+      end do
+      do while (hi - lo > 1)
+         mid = (lo + hi) / 2
+         if (t1900_from_year(mid) <= t) then
+            lo = mid
+         else
+            hi = mid
+         end if
+      end do
+      y = lo
+   end function year_from_t1900
 
    ! ------------------------------------------------------------------
    ! Copy a flat allocatable array into a fixed-size module global.
