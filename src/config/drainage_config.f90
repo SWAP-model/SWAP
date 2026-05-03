@@ -42,6 +42,7 @@ module drainage_config_mod
    type :: drainage_config_t
       integer :: swdra    = 0
       integer :: dramet   = 0
+      character(len=:), allocatable :: drfil  !! legacy .dra file stem (default 'swap')
       integer :: swdivd   = 0
       integer :: swdislay = 0
       integer :: nrlevs   = 0

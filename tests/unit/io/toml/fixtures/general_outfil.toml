@@ -1,0 +1,11 @@
+[general]
+project = "unit_test"
+swscre  = 0
+swerror = 0
+outfil  = "myresult"
+
+[general.paths]
+work       = "./"
+atmosphere = "./"
+crop       = "./"
+drain      = "./"

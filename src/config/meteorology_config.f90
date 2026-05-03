@@ -12,10 +12,12 @@ module meteorology_config_mod
 
    !> Bare-soil evaporation reduction parameters.
    type :: meteorology_evaporation_t
-      integer      :: swcfbs   = 0
-      real(real64) :: cfbs     = 1.0_real64
-      real(real64) :: cofredbl = 0.35_real64
-      real(real64) :: cofredbo = 0.35_real64
+      integer      :: swcfbs     = 0
+      real(real64) :: cfbs       = 1.0_real64
+      real(real64) :: cofredbl   = 0.35_real64
+      real(real64) :: cofredbo   = 0.35_real64
+      real(real64) :: rsigni     = 0.5_real64   !! minimum daily rainfall (cm/d) resetting Black dry counter
+      real(real64) :: cfevappond = 1.25_real64  !! ponding-layer evaporation coefficient
    contains
       procedure :: validate => meteorology_evaporation_validate
    end type meteorology_evaporation_t
@@ -85,6 +87,10 @@ contains
                             "meteorology.evaporation.cofredbl", errors)
       call check_real_range(self%cofredbo, 0.0_real64, 1.0_real64, &
                             "meteorology.evaporation.cofredbo", errors)
+      call check_real_range(self%rsigni, 0.0_real64, 10.0_real64, &
+                            "meteorology.evaporation.rsigni", errors)
+      call check_real_range(self%cfevappond, 0.0_real64, 10.0_real64, &
+                            "meteorology.evaporation.cfevappond", errors)
    end subroutine meteorology_evaporation_validate
 
    subroutine meteorology_snow_validate(self, errors)

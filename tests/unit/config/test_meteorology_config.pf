@@ -131,3 +131,55 @@ subroutine test_meteo_detail_file_field_roundtrips()
    m%detail_file = "mysite.det.csv"
    @assertEqual("mysite.det.csv", m%detail_file)
 end subroutine
+
+@test
+subroutine test_meteorology_evaporation_rsigni_default_validates_clean()
+   use funit
+   use error_mod
+   use meteorology_config_mod
+   type(meteorology_config_t) :: m
+   type(error_collection_t)   :: errors
+   m%lat = 52.0d0
+   ! rsigni default is 0.5 — within [0, 10]
+   call m%validate(errors)
+   @assertFalse(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_meteorology_evaporation_rsigni_out_of_range_fails()
+   use funit
+   use error_mod
+   use meteorology_config_mod
+   type(meteorology_config_t) :: m
+   type(error_collection_t)   :: errors
+   m%lat = 52.0d0
+   m%evaporation%rsigni = 20.0d0   ! out of [0, 10]
+   call m%validate(errors)
+   @assertTrue(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_meteorology_evaporation_cfevappond_default_validates_clean()
+   use funit
+   use error_mod
+   use meteorology_config_mod
+   type(meteorology_config_t) :: m
+   type(error_collection_t)   :: errors
+   m%lat = 52.0d0
+   ! cfevappond default is 1.25 — within [0, 10]
+   call m%validate(errors)
+   @assertFalse(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_meteorology_evaporation_cfevappond_out_of_range_fails()
+   use funit
+   use error_mod
+   use meteorology_config_mod
+   type(meteorology_config_t) :: m
+   type(error_collection_t)   :: errors
+   m%lat = 52.0d0
+   m%evaporation%cfevappond = 50.0d0   ! out of [0, 10]
+   call m%validate(errors)
+   @assertTrue(errors%has_errors())
+end subroutine

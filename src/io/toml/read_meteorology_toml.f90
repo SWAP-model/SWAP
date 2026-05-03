@@ -63,8 +63,10 @@ contains
       if (associated(evap)) then
          call get_optional_int_with_default(evap,  'swcfbs',   config%evaporation%swcfbs,   0,      'meteorology.evaporation.swcfbs',   errors)
          call get_optional_real_with_default(evap, 'cfbs',     config%evaporation%cfbs,     1.0d0,  'meteorology.evaporation.cfbs',     errors)
-         call get_optional_real_with_default(evap, 'cofredbl', config%evaporation%cofredbl, 0.35d0, 'meteorology.evaporation.cofredbl', errors)
-         call get_optional_real_with_default(evap, 'cofredbo', config%evaporation%cofredbo, 0.35d0, 'meteorology.evaporation.cofredbo', errors)
+         call get_optional_real_with_default(evap, 'cofredbl',   config%evaporation%cofredbl,   0.35d0, 'meteorology.evaporation.cofredbl',   errors)
+         call get_optional_real_with_default(evap, 'cofredbo',   config%evaporation%cofredbo,   0.35d0, 'meteorology.evaporation.cofredbo',   errors)
+         call get_optional_real_with_default(evap, 'rsigni',     config%evaporation%rsigni,     0.5d0,  'meteorology.evaporation.rsigni',     errors)
+         call get_optional_real_with_default(evap, 'cfevappond', config%evaporation%cfevappond, 1.25d0, 'meteorology.evaporation.cfevappond', errors)
       end if
 
       call get_table(sec, 'snow', snow, 'meteorology.snow', errors)

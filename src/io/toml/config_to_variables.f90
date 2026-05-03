@@ -291,21 +291,8 @@ contains
          swredu = 1
       end if
 
-      ! HACK Phase 4f-extend: RSIGNI is the minimum daily rainfall (cm) that
-      ! resets the Black-method dry counter (ldwet). Legacy reads it from .swp
-      ! at readswap.f90:586 only when swredu==1. Initialize.f90 leaves it 0.0,
-      ! so EVERY trace of rain resets ldwet -> Black empreva stays high every
-      ! day -> bare-soil EACT overshoots by ~7 cm/yr in case 1 (hupselbrook).
-      ! .swp template authors RSIGNI = 0.5. Hardcoding 0.5 matches case 1;
-      ! add to meteo_evaporation_config_t in a follow-up Phase 4f-extend pass.
-      rsigni = 0.5d0
-
-      ! HACK Phase 4f-extend: CFEVAPPOND is the ponding-layer evaporation
-      ! coefficient applied to peva when pond > 1e-10. Legacy default in
-      ! readswap.f90:599 is 1.25; initialize.f90 leaves it 0.0, which would
-      ! zero out evaporation during ponding. Hardcoded to 1.25 here; add a
-      ! schema slot in a follow-up Phase 4f-extend pass.
-      cfevappond = 1.25d0
+      rsigni     = config%meteo%evaporation%rsigni
+      cfevappond = config%meteo%evaporation%cfevappond
 
       ! Snow sub-section
       swsnow   = config%meteo%snow%swsnow
@@ -327,14 +314,8 @@ contains
       ! at the legacy global `shape`. Bottom boundary is wired below
       ! and overwrites for swbotb=3 cases (the documented audit alias).
 
-      ! HACK Phase 4f-extend: drfil is the legacy stem of the .dra file
-      ! consumed by rddre() in src/drainage/surfacewater.f90:56 when
-      ! SWDRA=2. The legacy reads `drfil` from .swp at readswap.f90:1003
-      ! but the strangler doesn't have a typed schema slot for it. All
-      ! existing TOML cases use 'swap' as the .dra stem (swap.dra).
-      ! Add a [drainage].drfil slot in Phase 4f-extend.
-      if (config%drain%swdra >= 1) then
-         drfil = 'swap'
+      if (config%drain%swdra >= 1 .and. allocated(config%drain%drfil)) then
+         drfil = config%drain%drfil
       end if
 
       ! DRAMET=2 (Hooghoudt/Ernst). Mirrors readswap.f90:1850-1875.
@@ -1227,11 +1208,7 @@ contains
       swswb           = 0
       swoutputmodflow = 0
 
-      ! HACK Phase 4f-extend: outfil is the output-file basename
-      ! (legacy reads it from .swp Part 1: OUTFIL = 'result'). All
-      ! regression cases use the same value, so we hardcode it. Add a
-      ! [general.output] / general.outfil slot in Phase 4f-extend.
-      outfil = 'result'
+      if (allocated(config%general%outfil)) outfil = config%general%outfil
 
       ! HACK Phase 4f-extend: enable CSV output. swcsv=1 + InList_csv
       ! authored verbatim from hupselbrook's .swp. The csv driver is

@@ -273,3 +273,13 @@ subroutine test_drainage_swdra2_with_dramet3_rejected()
    end do
    @assertTrue(found)
 end subroutine
+
+@test
+subroutine test_drainage_drfil_field_roundtrips()
+   use funit
+   use drainage_config_mod, only: drainage_config_t
+   type(drainage_config_t) :: d
+   d%drfil = "myswap"
+   @assertTrue(allocated(d%drfil))
+   @assertEqual("myswap", d%drfil)
+end subroutine

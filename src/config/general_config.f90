@@ -23,6 +23,9 @@ module general_config_mod
       !! regression case authors its own list so the fixture aggregator
       !! receives the columns it expects (e.g. GRASSDM/MOWDM for case 2).
       character(len=:), allocatable :: inlist_csv
+      !> Output-file basename (legacy OUTFIL in .swp Part 1).
+      !! Default 'result' matches the legacy hardcode in all regression cases.
+      character(len=:), allocatable :: outfil
    contains
       procedure :: validate => general_config_validate
       procedure :: finalize => general_config_finalize

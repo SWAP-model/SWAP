@@ -32,6 +32,8 @@ contains
       ! its hard-coded water-balance default (Phase 4f-extend HACK).
       call get_optional_string_with_default(sec, 'inlist_csv', config%inlist_csv, '', &
                                             'general.inlist_csv', errors)
+      call get_optional_string_with_default(sec, 'outfil', config%outfil, 'result', &
+                                            'general.outfil', errors)
 
       call get_table(sec, 'paths', paths, 'general.paths', errors)
       if (associated(paths)) then
