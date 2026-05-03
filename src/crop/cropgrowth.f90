@@ -94,22 +94,29 @@
             ! readarablelandgerm). Cache-hit path sets flCrop* flags from
             ! the typed config. Cache-miss path falls back to legacy.
             ! Phase 2 extends to type=2 (Wofost) in addition to type=1.
+            ! Phase 4 extends type=2 to handle swgerm=1/2 from TOML config,
+            ! mirroring legacy readarablelandgerm:3322-3358.
             ! Teardown: end of Phase 4 removes the else-branch.
             block
                use crop_config_global_mod, only: crop_config_global
+               use cropwofost_config_mod, only: wofost_germination_t
                use error_mod, only: fatalerr_collected
                logical :: use_cache
-               integer :: swprep_cache, swsow_cache, swgerm_cache
+               integer :: swprep_cache, swsow_cache, swgerm_cache, rot_type
+               type(wofost_germination_t), pointer :: gp
                use_cache = .false.
                swprep_cache = 0
                swsow_cache  = 0
                swgerm_cache = 0
+               rot_type     = 0
+               nullify(gp)
                if (associated(crop_config_global)) then
                   if (allocated(crop_config_global%rotation_loaded) .and. &
                       allocated(crop_config_global%rotation_type)) then
                      if (icrop >= 1 .and. icrop <= size(crop_config_global%rotation_loaded)) then
                         if (crop_config_global%rotation_loaded(icrop)) then
-                           select case (crop_config_global%rotation_type(icrop))
+                           rot_type = crop_config_global%rotation_type(icrop)
+                           select case (rot_type)
                            case (1)
                               ! type=1 cropfixed
                               if (allocated(crop_config_global%rotation_fixed)) then
@@ -119,17 +126,16 @@
                                  swgerm_cache = crop_config_global%rotation_fixed(icrop)%swgerm
                               end if
                            case (2)
-                              ! type=2 wofost (Phase 2): only use TOML cache path when
-                              ! all prep/sow/germ switches are 0 (the supported subset).
-                              ! When any switch is non-zero, fall through to legacy
-                              ! ArableLandGerm(1) which reads the .crp file and handles
-                              ! swgerm=1/2 via readarablelandgerm.
+                              ! type=2 wofost: cache-hit when swprep=0 AND swsow=0.
+                              ! swgerm=0/1/2 are all handled in the cache body below.
                               if (allocated(crop_config_global%rotation_wofost)) then
                                  swprep_cache = crop_config_global%rotation_wofost(icrop)%preparation%swprep
                                  swsow_cache  = crop_config_global%rotation_wofost(icrop)%sowing%swsow
                                  swgerm_cache = crop_config_global%rotation_wofost(icrop)%germination%swgerm
-                                 if (swprep_cache == 0 .and. swsow_cache == 0 .and. &
-                                     swgerm_cache == 0) use_cache = .true.
+                                 if (swprep_cache == 0 .and. swsow_cache == 0) then
+                                    use_cache = .true.
+                                    gp => crop_config_global%rotation_wofost(icrop)%germination
+                                 end if
                               end if
                            end select
                         end if
@@ -137,19 +143,46 @@
                   end if
                end if
                if (use_cache) then
-                  ! Defense-in-depth: Phase 1 (type=1) stub-errors non-zero switches
-                  ! since no cropfixed .crp.toml should have them set.
-                  ! For type=2, non-zero switches fall through to legacy above.
-                  if (swprep_cache /= 0 .or. swsow_cache /= 0 .or. swgerm_cache /= 0) then
+                  ! swprep/swsow non-zero: stub-error across all types.
+                  if (swprep_cache /= 0 .or. swsow_cache /= 0) then
                      call fatalerr_collected('cropgrowth/ArableLandGerm', &
-                        'swprep/swsow/swgerm /= 0 not yet supported in TOML pipeline.')
+                        'swprep /= 0 or swsow /= 0 not yet supported in TOML pipeline.')
                   else
-                     ! All three switches are 0; legacy reader sets all four
-                     ! flags to .true. unconditionally for this case.
-                     flCropPrep      = .true.
-                     flCropSow       = .true.
-                     flCropGerm      = .true.
-                     flCropEmergence = .true.
+                     ! Prep and sow done (both switches are 0).
+                     flCropPrep = .true.
+                     flCropSow  = .true.
+                     PrepDelay  = 0
+                     SowDelay   = 0
+                     if (swgerm_cache == 0) then
+                        ! swgerm=0: germination and emergence are immediate.
+                        flCropGerm      = .true.
+                        flCropEmergence = .true.
+                     else if (rot_type == 2) then
+                        ! type=2 with swgerm=1 or 2: copy germ params from cfg,
+                        ! mirror legacy readarablelandgerm:3322-3358.
+                        flCropGerm      = .false.
+                        flCropEmergence = .false.
+                        tsumemeopt = gp%tsumemeopt
+                        tbasem     = gp%tbasem
+                        teffmx     = gp%teffmx
+                        agerm      = -99.0d0
+                        if (swgerm_cache == 2) then
+                           hdrygerm = gp%hdrygerm
+                           hwetgerm = gp%hwetgerm
+                           if (gp%zgerm /= 0.0d0) then
+                              zgerm = gp%zgerm
+                           else
+                              zgerm = -10.0d0   ! legacy default
+                           end if
+                           agerm = gp%agerm
+                           cgerm = - (tsumemeopt - agerm * log10(-hdrygerm))
+                           bgerm =   (tsumemeopt + agerm * log10(-hwetgerm))
+                        end if
+                     else
+                        ! type=1 cropfixed with swgerm > 0 — not yet supported.
+                        call fatalerr_collected('cropgrowth/ArableLandGerm', &
+                           'cropfixed swgerm > 0 not yet supported in TOML pipeline.')
+                     end if
                   end if
                else
                   call ArableLandGerm(1)   ! transitional fallback
