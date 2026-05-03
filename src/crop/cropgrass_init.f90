@@ -116,9 +116,7 @@ contains
       if (cfg%swrd == 1) &
          call fatalerr_collected('cropgrass_init', &
             'swrd=1 not supported on TOML path; validator should have rejected.')
-      if (cfg%swrd == 3) &
-         call fatalerr_collected('cropgrass_init', &
-            'swrd=3 not supported on TOML path; validator should have rejected.')
+      ! swrd=3 (biomass-based root extension) is now supported; see copy block below.
       if (cfg%swcf == 3) &
          call fatalerr_collected('cropgrass_init', &
             'swcf=3 not supported on TOML path; validator should have rejected.')
@@ -276,12 +274,17 @@ contains
       swrdc = cfg%swrdc
       if (allocated(cfg%rdctb)) call copy_table(cfg%rdctb, rdctb)
       swrd = cfg%swrd
-      ! swrd=1 and swrd=3 are stub-guarded above; only swrd=2 active.
+      ! swrd=1 is still stub-guarded above; swrd=2 and swrd=3 are both active.
       if (cfg%swrd == 2) then
          rdi      = cfg%rdi
          rri      = cfg%rri
          rdc      = cfg%rdc
          swdmi2rd = cfg%swdmi2rd
+      else if (cfg%swrd == 3) then
+         ! Legacy readgrass:3868-3874 reads rlwtb (22-element flat pair table)
+         ! and wrtmax for biomass-driven root extension.
+         if (allocated(cfg%rlwtb)) call copy_table(cfg%rlwtb, rlwtb)
+         wrtmax = cfg%wrtmax
       end if
 
       ! Part 16: management factors (readgrass lines 3876-3885)

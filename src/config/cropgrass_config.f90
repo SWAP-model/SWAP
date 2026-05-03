@@ -274,11 +274,8 @@ contains
             'cropgrass.swrd=1 (DVS-table root depth) not yet supported in ' // &
             'the TOML pipeline; use the legacy executable.', 'cropgrass')
       end if
-      if (self%swrd == 3) then
-         call errors%append(ERR_VALIDATION_CROSS_FIELD, &
-            'cropgrass.swrd=3 (root biomass extension) not yet supported in ' // &
-            'the TOML pipeline; use the legacy executable.', 'cropgrass')
-      end if
+      ! swrd=3 (biomass-based root extension via rlwtb/wrtmax) is now supported;
+      ! cropgrass_init copies rlwtb and wrtmax to legacy globals.
       if (self%swcf == 3) then
          call errors%append(ERR_VALIDATION_CROSS_FIELD, &
             'cropgrass.swcf=3 (LAI-dependent dual-coeff) not yet supported ' // &

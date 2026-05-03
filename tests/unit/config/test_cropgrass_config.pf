@@ -563,3 +563,26 @@ subroutine test_cropgrass_case2_supported_values_pass()
    end do
    @assertFalse(any_stub)
 end subroutine
+
+@test
+subroutine test_cropgrass_swrd3_with_rlwtb_passes()
+   ! swrd=3 (biomass-based root extension) is now supported.
+   ! Validator must not stub-error when rlwtb is allocated and wrtmax is set.
+   use funit
+   use cropgrass_config_mod, only: cropgrass_config_t
+   use error_mod, only: error_collection_t, ERR_VALIDATION_CROSS_FIELD
+   type(cropgrass_config_t) :: c
+   type(error_collection_t) :: errors
+   integer :: i
+   logical :: any_stub
+   c%swrd   = 3
+   c%wrtmax = 3000.0d0
+   allocate(c%rlwtb(4))
+   c%rlwtb  = [300.0d0, 20.0d0, 2500.0d0, 40.0d0]
+   call c%validate(errors)
+   any_stub = .false.
+   do i = 1, errors%count()
+      if (errors%items(i)%code == ERR_VALIDATION_CROSS_FIELD) any_stub = .true.
+   end do
+   @assertFalse(any_stub)
+end subroutine
