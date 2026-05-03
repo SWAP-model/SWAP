@@ -2193,7 +2193,13 @@
          if (associated(crop_config_global)) then
             if (allocated(crop_config_global%rotation_loaded)) then
                if (icrop >= 1 .and. icrop <= size(crop_config_global%rotation_loaded)) then
-                  if (crop_config_global%rotation_loaded(icrop)) use_cache = .true.
+                  if (crop_config_global%rotation_loaded(icrop)) then
+                     ! Defense-in-depth: only dispatch to cache when the schema
+                     ! is fully authored (case 4 + case 2 have amaxtb; the
+                     ! hupselbrook skeleton does not — Phase 4 will fill it).
+                     if (allocated(crop_config_global%rotation_grass(icrop)%amaxtb)) &
+                        use_cache = .true.
+                  end if
                end if
             end if
          end if
