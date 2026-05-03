@@ -1141,11 +1141,41 @@ loadable.
 
 ### `*.crp.toml` — type 3 (WOFOST grass)
 
-Parsed by `read_cropgrass_toml.f90`; config type `cropgrass_config_t`
-(`src/config/cropgrass_config.f90`).
+Phase 3 of the `.crp` port (cases 4 oxygenstress + 2 grassgrowth) makes the
+type-3 schema 1:1 with legacy `readgrass`. Parsed by `read_cropgrass_toml.f90`;
+config type `cropgrass_config_t` (`src/config/cropgrass_config.f90`). Runtime
+init via `cropgrass_init_from_config(cfg, icrop)` in
+`src/crop/cropgrass_init.f90` (ADR 0016). Cache-driven dispatch in
+`cropgrowth.f90` `grass(task=1)` selects the TOML path when
+`crop_config_global%rotation_loaded(icrop) = .true.` — the 14 `intent(out)`
+locals of legacy `readgrass` are assigned in the dispatch block prior to
+`cropgrass_init_from_config`.
 
-Sections: same as type 1 (`[phenology]`, `[light]`, `[root]`, `[water_stress]`,
-`[salinity]`, `[interception]`) plus `[mowing]` and `[grazing]`.
+Sections (read in order):
+
+`[phenology]`, `[crop_state]`, `[crop_factor]`, `[green_area]`,
+`[assimilation]`, `[root]`, `[oxygen_stress]` (with
+`[oxygen_stress.bartholomeus]` sub-table for `swoxygen=2`), `[drought_stress]`,
+`[water_stress]`, `[salinity]`, `[compensation]`, `[interception]`,
+`[management]`, `[mowing]`, `[grazing]`, `[co2]`, `[irrigation_schedule]`.
+
+#### Phase 3 stub-errored branches (ADR 0015)
+
+| Switch | Stub-errored value | Notes |
+|---|---|---|
+| `oxygen_stress.bartholomeus.swoxygentype` | `2` | Reproduction-function sub-branch |
+| `compensation.swcompensate` | `2` | Walsum compensation |
+| `interception.swinter` | `2`, `3` | Gash, storage-cap |
+| `drought_stress.swdrought` | `2` | De Jong van Lier |
+| `salinity.swsalinity` | `≠ 0` | Phase 3 supports `swsalinity=0` only |
+| `co2.swco2` | `1` | CO₂ correction |
+| `management.swlossmow`, `swlossgrz` | `1` | Treading losses |
+| `management.seqgrazmow(i)` | `∈ {1, 3}` | Grazing or dewooling — Phase 3 supports mowing-only |
+| `root.swrd` | `1` | DVS-table root depth (`swrd=2` and `swrd=3` supported) |
+| `crop_factor.swcf` | `3` | LAI-dependent dual-coeff |
+| `root.swrdc` | `1` | Root density development switch |
+| `irrigation_schedule.schedule` | `1` | Per-crop irrigation scheduling |
+| `phenology.swtsum` | `2` | Soil-temperature-sum start of growth |
 
 #### `[phenology]` (type 3, additional keys)
 
