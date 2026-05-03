@@ -98,10 +98,13 @@ value, so omitting it leaves the corresponding default untouched.
 
 ### `[general]`
 
-| Key | Type | Required | State target | Description |
-|---|---|---|---|---|
-| `project` | string | optional | `state%time%project` | Project name used in output headers. |
-| `swscre` | integer | optional | `state%time%swscre` | Screen output mode. |
+| Key | Type | Required | Default | State target | Description |
+|---|---|---|---|---|---|
+| `project`    | string  | **required** | —        | `state%time%project` | Project name used in output headers. |
+| `swscre`     | integer | optional     | `0`      | `state%time%swscre`  | Screen output mode (0=none, 1=water balance, 2=day number). |
+| `swerror`    | integer | optional     | `0`      | `state%time%swerror` | Error output switch (0=off, 1=on). |
+| `outfil`     | string  | optional     | `result` | `outfil` (global)    | Output-file basename. All output files are named `<outfil>_*.csv` etc. Matches legacy `.swp` key `OUTFIL`. |
+| `inlist_csv` | string  | optional     | `''`     | `InList_csv` (global)| Comma-separated list of CSV output variable names (legacy `INLIST_CSV`). When absent the adapter uses a built-in water-balance default. |
 
 ### `[general.paths]`
 
@@ -181,6 +184,20 @@ Output timing is nested under `[simulation.output]`, **not** at top level.
 |---|---|---|---|---|
 | `swrain`        | integer | optional | `state%atm%swrain`  | Rain input mode (0=daily, 1=daily+intensity, 2=daily+duration, 3=detailed file). |
 | `rainfall_file` | string  | optional | `state%atm%rainfil` | Detailed rainfall file (used when `swrain=3`). |
+
+### `[meteorology.evaporation]`
+
+Bare-soil evaporation reduction parameters. All keys are optional; defaults
+match legacy `.swp` values.
+
+| Key | Type | Default | Validator | State target | Description |
+|---|---|---|---|---|---|
+| `swcfbs`     | integer | `0`    | enum {0, 1}  | `state%atm%swcfbs`   | Correction for bare-soil evaporation (0=off, 1=on). |
+| `cfbs`       | real    | `1.0`  | [0.5, 1.5]   | `state%atm%cfbs`     | Correction factor (active when `swcfbs=1`). |
+| `cofredbl`   | real    | `0.35` | [0.0, 1.0]   | `state%soil%cofred`  | Black evaporation reduction coefficient. |
+| `cofredbo`   | real    | `0.35` | [0.0, 1.0]   | `state%soil%cofred`  | Boesten/Stroosnijder coefficient. |
+| `rsigni`     | real    | `0.5`  | [0.0, 10.0]  | `rsigni` (global)    | Minimum daily rainfall (cm/d) that resets the Black-method dry-day counter (`ldwet`). Default 0.5 matches legacy `.swp` template; `Initialize.f90` defaults to 0.0 which overshoots bare-soil EACT by ~7 cm/yr. |
+| `cfevappond` | real    | `1.25` | [0.0, 10.0]  | `cfevappond` (global)| Ponding-layer evaporation coefficient applied to `peva` when pond depth > 1e-10 cm. Default 1.25 matches legacy `.swp` default; `Initialize.f90` defaults to 0.0 which zeroes out pond evaporation. |
 
 ### `[crop]`
 
@@ -286,9 +303,12 @@ wins. This is a known quirk — see the Discoveries note at the end.
 
 ### `[drainage]`
 
-| Key | Type | Required | State target | Description |
-|---|---|---|---|---|
-| `file` | string | optional | _(resolved by loader)_ | Path to an external `*.dra.toml` drainage file, relative to the `.swp` file. |
+| Key | Type | Required | Default | State target | Description |
+|---|---|---|---|---|---|
+| `file`    | string  | optional | `''`   | _(resolved by loader)_ | Path to an external `*.dra.toml` drainage file, relative to the `.swp` file. |
+| `swdra`   | integer | optional | `0`    | `swdra`      | Drainage simulation switch (0=off, 1=basic, 2=extended). |
+| `dramet`  | integer | optional | `0`    | `dramet`     | Drainage method (0=fixed, 1=table, 2=Hooghoudt/Ernst, 3=multi-level). |
+| `drfil`   | string  | optional | `swap` | `drfil` (global) | Stem of the legacy `.dra` file consumed by `rddre()` when `swdra>=1`. Default `'swap'` resolves to `swap.dra`. Only relevant if the legacy `.dra`-file reader path is exercised; the TOML pipeline uses `surfacewater_init` instead for `swdra=2` cases. |
 
 When `file` is present, the loader reads the referenced file and parses its
 `[drainage]` table (see "Cross-file references" below and the `.dra` reference
@@ -1436,6 +1456,9 @@ Phase 4f strangler-fig of `readswap()`. Detail:
   (Black soil-evaporation coefficient), `cofredbo` (Boesten-
   Stroosnijder coefficient). Resolves the legacy ambiguity where
   both keys mapped to the same `cofred` global (Discovery #1 below).
+  **Phase 4f Bucket-A addition:** `rsigni` (min daily rain resetting Black
+  dry-day counter, default 0.5 cm/d) and `cfevappond` (ponding evaporation
+  coefficient, default 1.25) added in commit `8f4f5a3`.
 
 - **`[meteorology.snow]`** — `swsnow`, `snowcoef`, `teprrain`,
   `teprsnow`. All 6 regression cases have `swsnow=0`; switch-gated
