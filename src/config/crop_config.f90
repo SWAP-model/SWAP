@@ -2,7 +2,7 @@
 module crop_config_mod
    use iso_fortran_env, only: real64
    use error_mod, only: error_collection_t, ERR_VALIDATION_CROSS_FIELD, ERR_VALIDATION_OUT_OF_RANGE
-   use validation_mod, only: check_int_enum
+   use validation_mod, only: check_int_enum, check_real_range
    use cropfixed_config_mod, only: cropfixed_config_t
    use cropgrass_config_mod, only: cropgrass_config_t
    use cropwofost_config_mod, only: cropwofost_config_t
@@ -13,6 +13,10 @@ module crop_config_mod
 
    type :: crop_config_t
       integer :: swcrop = 0
+
+      !> Soil-profile-imposed maximum rooting depth [cm]. Authoritative
+      !! value of the legacy RDS field read from .swp crop-rotation block.
+      real(real64) :: rdmax = 200.0_real64
 
       !> Per-entry arrays sized to the rotation length. All same length
       !! after parse; enforced in validate.
@@ -47,6 +51,7 @@ contains
       integer :: i, n
 
       call check_int_enum(self%swcrop, [0, 1], "crop.swcrop", errors)
+      call check_real_range(self%rdmax, 1.0_real64, 5000.0_real64, 'crop.rdmax', errors)
 
       ! If crops are disabled, skip rotation checks.
       if (self%swcrop == 0) return

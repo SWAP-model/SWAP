@@ -171,3 +171,25 @@ subroutine test_load_swap_config_case5_wofost_populated()
       @assertEqual(0.732d0, config%crop%rotation_wofost(i)%salinity%saltmax, 1.0d-12)
    end do
 end subroutine
+
+@test
+subroutine test_load_case1_hupselbrook_rotations()
+   use funit
+   use swap_config_mod, only: swap_config_t
+   use load_swap_config_mod, only: load_swap_config
+   use error_mod, only: error_collection_t
+   type(error_collection_t) :: errors
+   type(swap_config_t)      :: config
+   integer :: i
+   call load_swap_config('tests/swap-cases/toml/1.hupselbrook/swap.toml', config, errors)
+   do i = 1, errors%count()
+      print *, 'err', i, ':', errors%items(i)%code, ':', trim(errors%items(i)%message)
+   end do
+   @assertEqual(3, size(config%crop%rotation_loaded))
+   do i = 1, 3
+      print *, 'rot', i, 'type=', config%crop%rotation_type(i), 'loaded=', config%crop%rotation_loaded(i)
+   end do
+   @assertTrue(config%crop%rotation_loaded(1))
+   @assertTrue(config%crop%rotation_loaded(2))
+   @assertTrue(config%crop%rotation_loaded(3))
+end subroutine
