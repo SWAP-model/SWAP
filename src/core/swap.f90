@@ -128,17 +128,21 @@ if (iTask == 1) then
 !  iteration and timing statistics
    call IterTime(1)
 
-!  Phase 4f strangler-fig: read time-independent input via the new
-!  TOML pipeline + config_to_variables adapter, replacing the legacy
-!  readswap() entry point. The binary expects swap.toml in the
-!  current directory; abort_if_fatal terminates with a clear summary
-!  if the file is absent or fails validate/finalize.
+!  Phase 4f strangler-fig: read time-independent input via the TOML
+!  pipeline + config_to_variables adapter. The legacy readswap() entry
+!  point is no longer called from the runtime path (see ADR 0007); it
+!  survives in src/io/readswap.f90 only as a parity-test fixture. The
+!  binary expects swap.toml in the current directory; abort_if_fatal
+!  terminates with a clear summary if the file is absent or fails
+!  validate/finalize.
 !
-!  HACK Phase 4f-extend: the adapter currently calls readswap() at the
-!  end as a backstop for legacy globals not yet covered by any schema
-!  slot. Phase 4f-extend will incrementally remove that call as schema
-!  extensions land. See config_to_variables.f90's tail comment for the
-!  full migration plan.
+!  Remaining strangler-fig debt: ~10 individual HACK Phase 4f-extend
+!  slots in config_to_variables.f90 for legacy globals not yet covered
+!  by typed schema slots (SWREDU, RSIGNI, CFEVAPPOND, iHWCKmodel, RDS,
+!  ksatexm path, etc.). Each slot is a small typed-config extension +
+!  adapter wiring. The deeper follow-on (per ADR 0016) is the config-
+!  passing refactor — eliminate variables-module mutation by passing
+!  typed config + state to compute subs explicitly.
    block
       use error_mod, only: error_collection_t
       type(error_collection_t) :: errors

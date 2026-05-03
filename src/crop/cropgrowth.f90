@@ -185,7 +185,12 @@
                      end if
                   end if
                else
-                  call ArableLandGerm(1)   ! transitional fallback
+                  ! ADR 0017 sibling-reader dispatch: cache-miss is now
+                  ! treated as a fatal error rather than a silent legacy
+                  ! fallback. Every rotation in tests/swap-cases/toml/
+                  ! has a .crp.toml; missing one is a user error.
+                  call fatalerr_collected('cropgrowth/ArableLandGerm', &
+                     'rotation has no loaded .crp.toml — author the file or use the legacy executable.')
                end if
             end block
           endif
@@ -517,7 +522,10 @@
             ! same field on its own dispatch path.
             swhydrlift = 0
          else
-            call readcropfixed (icrop,cropfil(icrop),lcc,swhydrlift)   ! transitional fallback
+            ! ADR 0016 cache-miss: typed config required for type=1 rotations.
+            ! No silent legacy fallback — the user must author cropfixed.crp.toml.
+            call fatalerr_collected('cropgrowth/CropFixed', &
+               'cropfixed rotation has no loaded .crp.toml — author the file or use the legacy executable.')
          end if
       end block
 
@@ -1129,8 +1137,10 @@
             ! default.
             swhydrlift = 0
          else
-            call readwofost (icrop,cropfil(icrop),swhydrlift,swsoybean,mg,dvsi,dvrmax1,dvrmax2, &
-                             flrfphotoveg,tmaxdvr,tmindvr,toptdvr,popt,pcrt,flphenodayl,FraDeceasedLvToSoil)
+            ! ADR 0016 cache-miss: typed config required for type=2 rotations.
+            ! No silent legacy fallback — the user must author cropwofost.crp.toml.
+            call fatalerr_collected('cropgrowth/Wofost', &
+               'cropwofost rotation has no loaded .crp.toml — author the file or use the legacy executable.')
          end if
       end block
 
@@ -2255,8 +2265,10 @@
                call cropgrass_init_from_config(cfg, icrop)
             end associate
          else
-            call readgrass (icrop,cropfil(icrop),swharvest,dmharvest,daylastharvest,dmlastharvest,swdmmow,maxdaymow, &
-                            swlossmow,swlossgrz,swdmgrz,maxdaygrz,dmgrazing,LSDb,tagprest,swhydrlift)   ! transitional fallback
+            ! ADR 0016 cache-miss: typed config required for type=3 rotations.
+            ! No silent legacy fallback — the user must author cropgrass.crp.toml.
+            call fatalerr_collected('cropgrowth/Grass', &
+               'cropgrass rotation has no loaded .crp.toml — author the file or use the legacy executable.')
          end if
       end block
 
