@@ -122,7 +122,10 @@ contains
       ! Meteorology (audit: 12 + evaporation + snow)
       ! ---------------------------------------------------------------
       if (allocated(config%meteo%metfile))  metfil  = config%meteo%metfile
-      if (allocated(config%meteo%rainfile)) rainfil = config%meteo%rainfile
+      ! Legacy `rainfil` global removed (Phase 4f-extend SS-5 / ADR 0014).
+      ! `config%meteo%rainfile` is no longer copied into a global because
+      ! the only consumer (the `.YYY` per-year rain reader in readmeteo.f90)
+      ! has been deleted; CSV rain events use `config%meteo%rain_events_file`.
       lat         = config%meteo%lat
       alt         = config%meteo%alt
       altw        = config%meteo%altw
@@ -140,10 +143,8 @@ contains
       ! meteorology_config_validate (Phase 4f-extend SS-5; ADR 0014).
       ! Pre-load CSV via read_csv_table.
       call lowerc(metfil)
-      swMetCSV = 0
 
       if (index(trim(metfil), '.csv') > 0) then
-         swMetCSV = 1
          block
             use csv_reader_mod,  only: read_csv_table
             use error_mod,       only: error_collection_t
@@ -172,9 +173,10 @@ contains
          end block
       end if
 
-      ! Detail meteo CSV pre-load (swmetdetail=1 + CSV mode + detail_file provided).
-      swMetDetCSV = 0
-      if (swmetdetail == 1 .and. swMetCSV == 1) then
+      ! Detail meteo CSV pre-load (swmetdetail=1 + detail_file provided).
+      ! Metfile is always CSV here (rejected at TOML boundary otherwise —
+      ! Phase 4f-extend SS-5 / ADR 0014).
+      if (swmetdetail == 1) then
          if (.not. allocated(config%meteo%detail_file) .or. &
              len_trim(config%meteo%detail_file) == 0) then
             call fatalerr_collected('config_to_variables', &
@@ -205,15 +207,12 @@ contains
                   metcsv_det(r, :) = tbl(r, :)
                end do
             end block
-            swMetDetCSV = 1
          end if
       end if
 
       ! Rain events CSV pre-load (swrain=3, events_file set).
-      swRainCSV = 0
       if (swrain == 3 .and. allocated(config%meteo%rain_events_file)) then
          if (len_trim(config%meteo%rain_events_file) > 0) then
-            swRainCSV = 1
             block
                use csv_reader_mod,  only: read_csv_table
                use error_mod,       only: error_collection_t

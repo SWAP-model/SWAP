@@ -129,7 +129,6 @@
       integer   yearmeteo          ! Year for which meteorological data should be read from input file
       integer   ad(mrain)          ! Array with day numbers in meteo file
       integer   am(mrain)          ! Array with month numbers in meteo file
-      character(len=80)  station(366)  ! Array with weather station names in meteo file
       real(8)   aetr(366)          ! Array with daily ETref input data (L/T)
       real(8)   ahum(366)          ! Array with daily humidity input data (M/L/T2)  
       real(8)   aintcdt            ! Interception flux of ONLY Rain during iteration timesteps (L/T) 
@@ -201,8 +200,6 @@
       logical   flrainintens       ! Flag indicating that rainfall intensity info in combination with daily ET records is used              !!!!!!!!!!!  Robnew
       logical   flupdmetdet        ! Flag indicating that update of detailed meteorological input within the day is required               !!!!!!!!!!!  Robnew
       character(len=200) metfil    ! Name of meteorological input file
-      integer   swMetFilAll        ! Switch indicating that metfil contains data for all years (limited usage)
-      integer   swMetCSV           ! 0=legacy .met/.YYY; 1=single-file CSV mode
       character(len=80) pathatm    ! Path to folder with meteorological input files
       ! CSV meteo cache: pre-loaded by adapter, sliced per year by MeteoCSVYear.
       ! Column layout (daily): 1=date, 2=rad(kJ/m2/d), 3=tmin, 4=tmax, 5=hum, 6=wind, 7=rain, 8=etref, 9=wet
@@ -213,9 +210,6 @@
       ! 4=temp(C), 5=hum(kPa), 6=wind(m/s), 7=rain(mm)
       integer :: nmetcsv_det = 0
       real(8), dimension(:,:), allocatable :: metcsv_det
-      integer   swMetDetCSV        ! 0=no sub-daily CSV; 1=sub-daily CSV pre-loaded by adapter
-      character(len=200) rainfil   ! Name of input file with detailed rainfall intensities
-      integer   swRainCSV          ! 0=legacy .YYY; 1=CSV mode (pre-loaded by adapter)
       ! Rain events CSV cache: pre-loaded by adapter, sliced per year by ReadRainEvents.
       ! Column layout: 1=datetime (fractional days since JD2415020), 2=amount (mm)
       integer :: nraincsv = 0

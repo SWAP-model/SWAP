@@ -409,24 +409,15 @@
       endif
 
       if (swrain .eq. 3) then
-        call rdscha ('rainfil',rainfil)
-
+        ! Legacy `rainfil` rdscha removed (Phase 4f-extend SS-5 / ADR 0014):
+        ! the rainfil global is gone; the .swp pipeline is no longer invoked
+        ! by working source per the umbrella spec retirement gate.
       endif
 
-! -   special case: if METFIL is provided wit hextension .MET, then all weather dta will be erad at once
-      ! only possible if: SWMETDETAIL = 0 and SWRAIN = 0 or 2
+! --- Legacy ".met all-years" handling removed (Phase 4f-extend SS-5 /
+!     ADR 0014). swMetFilAll is gone; only CSV metfiles are accepted at
+!     the TOML boundary.
       call lowerc (metfil)
-      swMetFilAll = 0
-      if (index(trim(metfil),".met") > 0) then
-         swMetFilAll = 1
-         if (swmetdetail == 1 .OR. swrain == 1 .OR. swrain == 3) then
-            messag = 'Extension .met in metfil discarded because not allowed in combination with SWETSINE = 1 or SWRAIN = 1 or 3'
-            call warn ('Readswap',messag,logf,swscre)
-            idum = index(metfil,".met")
-            metfil = trim(metfil(1:idum-1))
-            swMetFilAll = 0
-         end if
-      end if
 
 
 ! -   crop rotation scheme
@@ -1746,7 +1737,7 @@
 ! --- Legacy "all meteo in single .met" pre-load removed (Phase 4f-extend
 !     SS-5 / ADR 0014). MeteoInOneFile deleted; the .swp pipeline is no
 !     longer invoked by working source per the umbrella spec retirement
-!     gate. swMetFilAll itself is swept in SS-5 Commit 3.
+!     gate. swMetFilAll global swept in SS-5 Commit 3.
 
 ! --- copy content of key-file to log-file
       write (logf,14)  

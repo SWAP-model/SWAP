@@ -69,7 +69,7 @@ End-state tag: `rescue/phase-4f-extend-complete`.
 | `swap.ini` port | DONE | `[soil.initial]` + 3 CSV companions; `inifil` slot dropped (`7cea63d`) |
 | `swap.dra` port | DONE | `surfacewater_init` replaces `rddre` (`27f8e65`) |
 | CSV meteo Step 1 (sub-daily detail) | DONE | `MeteoCSVDetYear` + `detail_file` schema |
-| CSV meteo Steps 2–3 (TTutil branch deletion + dead-var sweep) | OPEN | Daily-meteo TTutil fallback still alive |
+| CSV meteo Steps 2–3 (TTutil branch deletion + dead-var sweep) | DONE | SS-5 — TTutil branches retired (`2026-05-05-ss5-readmeteo-ttutil-deletion.md`) |
 | Phase 0 test-dir reorg | DONE | `run_case.sh` defaults to in-place TOML |
 | Adapter HACK Bucket A + B | DONE | 7 of 12 slots closed |
 | Adapter HACK residuals (4) | OPEN | `iHWCKmodel`, `ksatexm`, `cropfil` suffix-strip, `swpfile`/`logf` |
@@ -165,7 +165,7 @@ work expected.
 | SS-2 | `swap.dra` port | DONE | `2026-05-01-swap-dra-port-design.md` | — |
 | SS-3 | CSV meteo finalize Step 1 (sub-daily) | DONE | `2026-05-01-csv-meteo-finalize.md` Phase 0 + Phase 1 | — |
 | SS-4 | Macropore TOML stub-error | DONE | `2026-05-04-ss4-macropore-toml-stub-error.md` | — |
-| SS-5 | `readmeteo.f90` TTutil branch deletion (ADR 0014 Steps 2–3) | OPEN | new spec | — |
+| SS-5 | `readmeteo.f90` TTutil branch deletion (ADR 0014 Steps 2–3) | DONE | `2026-05-05-ss5-readmeteo-ttutil-deletion.md` | — |
 | SS-6 | `src/crop/irrigation.f90` TOML port | OPEN | new spec | — |
 | SS-7 | `src/crop/management_soil.f90` TOML port (SMM/SME/SNP) | OPEN | new spec | — |
 | SS-8 | `src/crop/cropgrowth.f90` nutrient block port | OPEN | new spec | — |

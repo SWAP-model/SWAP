@@ -193,3 +193,26 @@ the linker happy — this code path is unreachable in working source per
 the umbrella spec retirement gate. Variables (`swMetCSV`, `swRainCSV`,
 `swMetFilAll`, `swMetDetCSV`, `rainfil`, `station`, `ad`, `am`) become
 trivially redundant — Step 3 sweeps them.
+
+## Progress note 2026-05-05 — Step 3 complete (SS-5 Commit 3)
+
+Dead-variable sweep complete. Deleted from `src/core/variables.f90`:
+`swMetFilAll`, `swMetCSV`, `swRainCSV`, `swMetDetCSV`, `rainfil`,
+`station(366)`. The `ad(mrain)` and `am(mrain)` arrays are *retained* —
+contrary to the audit's initial plan they are still read by `MeteoCSVYear`
+(it backfills them from the CSV date column) and by `ReadMeteoYear`'s
+date-validation and rain-array init code, so they are alive, not dead.
+Adapter assignments deleted from `src/io/toml/config_to_variables.f90`
+(`swMetCSV`, `swMetDetCSV`, `swRainCSV`, plus the `rainfil = …` copy).
+Legacy `.swp` references deleted from `src/io/readswap.f90`: the
+`call rdscha ('rainfil',rainfil)` line and the entire 9-line
+`swMetFilAll = 0 / if (.met) … end if` block. Stale comments in
+`readmeteo.f90` (`MeteoCSVYear` / `MeteoCSVDetYear` docstrings) updated
+to reflect the post-deletion reality. Unused locals `wth` and `getun2`
+in `ReadMeteoYear` pruned.
+
+ADR 0014 phase-out is now complete. The TTutil library remains a
+build-time dependency of the legacy `.swp` target only (if that target is
+retained); the TOML-only build target no longer needs it.
+
+Plan: `docs/superpowers/plans/2026-05-05-ss5-readmeteo-ttutil-deletion.md`.

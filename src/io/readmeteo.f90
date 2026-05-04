@@ -26,7 +26,6 @@
       character(len=200) filnam
       character(len=800) messag
       integer   datea(6),daynumber,i,ifnd
-      integer   getun2,wth      
       real(4)   fsec
       real(8)   etrmax,etrmin,hummax,hummin,radmax,radmin,raimax,raimin
       real(8)   tmeteo,tmnmax,tmnmin,tmxmax,tmxmin,winmax,winmin
@@ -235,7 +234,7 @@
 !     Last modified      : February 2014
 !     Purpose            : read rainfall data (events) of one calendar year
 !     Interface:
-!       I   - logf,yearmeteo,pathatm,rainfil
+!       I   - logf,yearmeteo,pathatm,raincsv_dat,nraincsv
 !       O   - nmrain,rainamount,raintimearray
 ! ----------------------------------------------------------------------
       use variables, only: yearmeteo,nmrain,rainamount,raintimearray, &
@@ -314,11 +313,10 @@
 
 ! SUBROUTINE: MeteoCSVYear
 ! Extract one year's daily meteo from the pre-loaded metcsv_dat cache.
-! Called by ReadMeteoYear when swMetCSV == 1, replacing both the per-year
-! file reader and MeteoInOneFile(2).  After return, arad/atmn/atmx/ahum/
-! awin/arai/aetr/wet/ad/am are populated exactly as in the legacy path
-! so that the validation and rain-array init code in ReadMeteoYear works
-! unchanged.
+! Called unconditionally by ReadMeteoYear (the only supported daily path
+! after Phase 4f-extend SS-5 / ADR 0014). After return, arad/atmn/atmx/
+! ahum/awin/arai/aetr/wet/ad/am are populated so that the validation and
+! rain-array init code in ReadMeteoYear works unchanged.
 subroutine MeteoCSVYear(ifnd)
 use error_mod, only: fatalerr_collected
 use variables, only: arad, atmn, atmx, ahum, awin, arai, aetr, wet, ad, am, &
@@ -395,9 +393,10 @@ end subroutine MeteoCSVYear
 
 ! SUBROUTINE: MeteoCSVDetYear
 ! Extract one year's sub-daily meteo from the pre-loaded metcsv_det cache.
-! Called by ReadMeteoYear when swMetCSV==1 and swmetdetail==1.
+! Called by ReadMeteoYear when swmetdetail==1 (the only supported sub-daily
+! path after Phase 4f-extend SS-5 / ADR 0014).
 ! Populates dettime, detrecord, detrad, dettav, dethum, detwind, detrain.
-! irectotal and nofd are set in ReadMeteoYear after goto 100.
+! irectotal and nofd are set by ReadMeteoYear after this returns.
 subroutine MeteoCSVDetYear(ifnd)
 use error_mod, only: fatalerr_collected
 use variables, only: yearmeteo, metcsv_det, nmetcsv_det, &
