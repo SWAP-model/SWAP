@@ -7,6 +7,11 @@
 **Update 2026-05-04:** Bucket A slots (lines 294, 303, 330, 1230) resolved in
 commit `8f4f5a3` (feat: bucket-A schema additions — rsigni, cfevappond, outfil, drfil).
 
+**Update 2026-05-03:** Bucket B slots 5/6/7 resolved:
+- `rdmax` (line 1144) — commit `a85faa8`
+- `swliminf` (line 484) — commit `66559f2`
+- `swredu` (line 280) — commit `ef7447d`
+
 ---
 
 ## Summary
@@ -17,10 +22,10 @@ have since been resolved (Bucket A → Bucket E). 8 remain open.
 | Bucket | Label | Count (original) | Count (remaining) |
 |--------|-------|-----------------|-------------------|
 | A | Trivial schema add | 4 | 0 (all resolved) |
-| B | Schema add + cross-section validator | 2 | 2 |
+| B | Schema add + cross-section validator | 2 | 0 (slots 5/6/7 resolved 2026-05-03) |
 | C | Schema redesign / non-trivial | 1 | 1 |
 | D | Will-be-irrelevant after config-passing refactor (ADR 0016 Part C) | 3 | 3 |
-| E | Already-resolved (stale comment) | 2 | 6 |
+| E | Already-resolved (stale comment) | 2 | 9 |
 
 Two entries (line 1236 / CSV block, line 1156 / rdmax) are
 partially resolved: a schema field exists but hardcoded companion values
@@ -32,14 +37,14 @@ remain; they are graded B and B respectively on that basis.
 
 | # | Line | Field / Global | Bucket | What's hacked | What's needed | Affected case(s) | Effort |
 |---|------|----------------|--------|---------------|---------------|------------------|--------|
-| 1 | 280 | `swredu` | B | Inferred from `cofredbo != 0.35` instead of being explicitly authored. Works for all 6 cases but couples two orthogonal switches (evap-method switch vs. Boesten coefficient). | Add `[soil.evaporation].swredu` (integer, 1–2) to `meteo_evaporation_config_t`. Remove inference; validate that `swredu=2` requires `cofredbo` to be set. | Case 5 (`salinitystress`) is the only case requiring `swredu=2`. Cases 1/2/4/6 need `swredu=1`. | M |
+| 1 | 280 | `swredu` | E | ~~Inferred from `cofredbo != 0.35`~~ **Resolved in `ef7447d`.** Added `meteorology.evaporation.swredu` (integer, default 1) to `meteorology_evaporation_t`; parser + validator (enum [1,2] + cross-field swredu=2 requires cofredbo≠0.35) + adapter wired. Case 5 authors `swredu = 2`. | — | — | — |
 | 2 | 294 | `rsigni` | E | ~~Hardcoded `0.5` (cm)~~ **Resolved in `8f4f5a3`.** Added `meteorology.evaporation.rsigni` (real, default 0.5) to `meteo_evaporation_config_t`; parser + validator + adapter wired. | — | — | — |
 | 3 | 303 | `cfevappond` | E | ~~Hardcoded `1.25`~~ **Resolved in `8f4f5a3`.** Added `meteorology.evaporation.cfevappond` (real, default 1.25) to `meteo_evaporation_config_t`; parser + validator + adapter wired. | — | — | — |
 | 4 | 330 | `drfil` | E | ~~Hardcoded `'swap'`~~ **Resolved in `8f4f5a3`.** Added `drainage.drfil` (string, default `'swap'`) to `drainage_config_t`; parser + adapter wired. | — | — | — |
-| 5 | 484 | `swliminf` | B | Hardcoded `1` when `dramet=3` (multi-level resistance solver). `variables.f90` initialises to 0, which would treat infiltration as unlimited in the DRAMET=3 solver. | Add `[drainage].swliminf` (integer, 0/1) to `drainage_config_t`; validate that it is only meaningful for `dramet=3`. | Cases 2, 4, 5 use `dramet=3` and depend on this for correct drainage. | M |
+| 5 | 484 | `swliminf` | E | ~~Hardcoded `1` when `dramet=3`~~ **Resolved in `66559f2`.** Added `drainage.swliminf` (integer, default 0) to `drainage_config_t`; parser + validator (enum [0,1] + cross-field swliminf=1 requires dramet=3) + adapter wired. Cases 2, 3, 4, 5 (all dramet=3) author `swliminf = 1`. | — | — | — |
 | 6 | 716 | `iHWCKmodel(:)` | C | Fixed to `1` (uni-modal van Genuchten) for all soil layers. Legacy reader allows per-layer override (values 1–11), but no schema slot exists. | Requires a per-layer field (array) in `soil_hydraulics_config_t`, schema validation, and potentially a lookup table / enum for the 11 model codes — this is a multi-model hydraulic dispatch, not a simple scalar. | No current regression case authors a value other than 1. Risk is latent. | L |
 | 7 | 743 | `paramvg(10,:)` / `ksatexm` threshold branch | B | Always sets `paramvg(10,i) = -999.0` (sentinel = no threshold-Ksat). The legacy path computes `relsatthr`/`ksatthr` when `ksatexm(i) > ksatfit(i)`. All current regression cases author `ksatexm == ksatfit`, so `flksatexm` would be `.false.` in the legacy path — the sentinel is therefore correct for all current cases, but semantically the schema already reads `ksatexm` without wiring the threshold logic. | Port the `flksatexm` branch (readswap.f90:802–815): when `ksatexm(i) > ksatfit(i)`, compute `relsatthr(i)`, `ksatthr(i)` and set `paramvg(10,i) = ksatexm(i)`. Update `cofgen(11,:)` / `cofgen(12,:)`. | No current case triggers this (all have `ksatexm == ksatfit`). Future cases with structured-Ksat reduction need this. | M |
-| 8 | 1156 | `rdmax` (`RDS`) | B | Hardcoded `200.0` cm. Template `.swp` files vary: case 5 = 100.0, case 6 = 60.0, case 3 = 320.0. All current regression cases happen to have crop `rdc`/`rdtb` values that fall under 200 cm, so `rd = min(afgen(rdtb,...), rdm)` is not affected. But the hardcoded value is wrong for cases 5 and 6. | Add `rdmax` (or `rds`) scalar field to `crop_config_t` (main-crop level, not per-rotation); wire parser; copy in adapter. Validate range [1, 5000] cm. | Cases 5 and 6 currently pass regression only because their crop rooting tables cap below 60–100 cm. Any case with deep roots near the soil profile bottom would be wrong. | M |
+| 8 | 1144 | `rdmax` (`RDS`) | E | ~~Hardcoded `200.0` cm~~ **Resolved in `a85faa8`.** Added `crop.rdmax` (real64, default 200.0 cm) to `crop_config_t`; parser + validator (range [1,5000] cm) + adapter wired. Cases 3 (320.0), 5 (100.0), 6 (60.0) author non-default values; cases 1/2/4 use the default. | — | — | — |
 | 9 | 1191 | `cropfil(:)` suffix stripping | D | Strips `.crp.toml` / `.toml` suffixes from `rotation_file(i)` before writing to legacy `cropfil(i)`, because the legacy per-rotation readers (still called via `cropgrowth.f90 ArableLandGerm`) expect a bare stem. | This hack goes away when ADR 0016 Part C lands: once all three crop-mode readers (`readcropfixed`, `readwofost`, `readgrass`) are fully retired and replaced by `read_crop*_toml` init functions, `cropfil` can pass through unchanged (or be eliminated). Until then this is load-bearing. | All TOML crop cases (1, 2, 4, 5, 6). Must remain until legacy reader retirement is complete. | — (defer) |
 | 10 | 1230 | `outfil` | E | ~~Hardcoded `'result'`~~ **Resolved in `8f4f5a3`.** Added `general.outfil` (string, default `'result'`) to `general_config_t`; parser + adapter wired. | — | — | — |
 | 11 | 1236 | `swcsv` + `InList_csv` / `swcsv_tz` / `InList_csv_tz` | B | `swcsv` is hardcoded to 1 (CSV always on). `InList_csv` is partially resolved — `general.inlist_csv` schema field exists and is used when authored; otherwise falls back to a hardcoded default. `swcsv_tz` is hardcoded to 0 and `InList_csv_tz` to `'wc,h,conc'`. | The partial resolution of `InList_csv` (already done) leaves 3 remaining gaps: (a) `swcsv` (the enable switch, always 1); (b) `swcsv_tz` (depth-profile CSV switch, always 0); (c) `InList_csv_tz` (depth-profile column list, hardcoded). These belong in a `[output.csv]` section. Cross-section concern: the output section does not yet exist in the schema. | All 6 TOML cases are affected — they silently inherit `swcsv=1`. Cases 2, 4, 5, 6 override `inlist_csv`; none yet need `swcsv_tz=1`. | M |
@@ -89,33 +94,18 @@ All four Bucket A slots resolved in `8f4f5a3`:
 - `outfil` (line 1230) → `general.outfil`
 - `drfil` (line 330) → `drainage.drfil`
 
-### Medium priority (Bucket B, ~M each)
-Address in order of correctness risk:
+### Medium priority (Bucket B) — COMPLETE
+All three Bucket B slots resolved in commits `a85faa8` / `66559f2` / `ef7447d`:
+- `rdmax` (line 1144) → `crop.rdmax`
+- `swliminf` (line 484) → `drainage.swliminf`
+- `swredu` (line 280) → `meteorology.evaporation.swredu`
 
-5. **`rdmax` (line 1156)** — Latent correctness risk for cases 5 and 6
-   (wrong `rdmax` values: 200 vs. 100 / 60). Fix as part of the next
-   crop-schema extension pass. Goes in `crop_config_t` (scalar, not
-   per-rotation). Must also update all 5 TOML case files.
-
-6. **`swliminf` (line 484)** — Affects drainage correctness for all
-   `dramet=3` cases (2, 4, 5). Schema slot is in `drainage_config_t`.
-   Include a cross-section validator: `swliminf` is only meaningful when
-   `dramet=3`.
-
-7. **`swredu` (line 280)** — Remove the inference-from-cofredbo hack.
-   Schema slot in `meteo_evaporation_config_t`. Cross-validator: `swredu=2`
-   requires `cofredbo` to be non-default. Case 5 TOML must add
-   `swredu = 2`.
-
+### Remaining medium priority (Bucket B, ~M)
 8. **CSV output block (line 1236)** — Add `[output.csv]` section type to
    `general_config_t`. Three sub-fields: `swcsv` (int 0/1), `swcsv_tz`
    (int 0/1), `InList_csv_tz` (string). All 6 case TOMLs need the section.
    Dependency: schema section type must exist before the parser and adapter
    can be wired.
-
-   **Note:** Slots 5–8 have no inter-dependencies but slot 8 requires
-   creating a new schema section (versus adding fields to an existing
-   section for slots 5–7). Consider sequencing 5–7 first.
 
 ### Defer (Bucket C and D)
 
