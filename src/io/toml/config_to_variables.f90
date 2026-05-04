@@ -1182,29 +1182,17 @@ contains
 
       if (allocated(config%general%outfil)) outfil = config%general%outfil
 
-      ! HACK Phase 4f-extend: enable CSV output. swcsv=1 + InList_csv
-      ! authored verbatim from hupselbrook's .swp. The csv driver is
-      ! the *only* output the regression baseline checks (it asserts
-      ! against `<outfil>_output.csv`), so without these we 'complete
-      ! normally' but produce no output file. Move to a typed
-      ! [output.csv] block when Phase 4f-extend tackles output configs.
-      swcsv = 1
-      ! Per-case override (Phase 4f Task B3): when the TOML authors
-      ! `general.inlist_csv` use it; otherwise fall back to the
-      ! hupselbrook-tuned water-balance default. Grass cases (case 2 +
-      ! oxygenstress) override with grass-detailed columns to match
-      ! their fixtures.
-      if (allocated(config%general%inlist_csv)) then
-         if (len_trim(config%general%inlist_csv) > 0) then
-            InList_csv = config%general%inlist_csv
-         else
-            InList_csv = 'rain,irrig,interc,runoff,drainage,dstor,epot,eact,tpot,tact,qbottom,gwl'
-         end if
-      else
-         InList_csv = 'rain,irrig,interc,runoff,drainage,dstor,epot,eact,tpot,tact,qbottom,gwl'
+      ! CSV output — read from [output.csv] schema section.
+      ! Defaults (enabled=1, enabled_tz=0, inlist=water-balance, inlist_tz=wc,h,conc)
+      ! are applied by output_csv_config_finalize prior to this adapter.
+      swcsv = config%output_csv%enabled
+      if (allocated(config%output_csv%inlist)) then
+         InList_csv = config%output_csv%inlist
       end if
-      swcsv_tz = 0
-      InList_csv_tz = 'wc,h,conc'
+      swcsv_tz = config%output_csv%enabled_tz
+      if (allocated(config%output_csv%inlist_tz)) then
+         InList_csv_tz = config%output_csv%inlist_tz
+      end if
 
       ! HACK Phase 4f-extend: set up legacy I/O state needed by unported
       ! readers (read_tillage, cropgrowth crop sub-readers, rddre). They

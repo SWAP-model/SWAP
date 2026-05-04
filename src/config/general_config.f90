@@ -16,13 +16,6 @@ module general_config_mod
       integer :: swscre  = 0   !! 0=no display, 1=wb, 2=daynum
       integer :: swerror = 0   !! 0=no, 1=yes
 
-      !> Optional comma-separated list of variables for the SPECIFIC CSV
-      !! output (legacy `INLIST_CSV` in .swp Part 4). When present, the
-      !! adapter forwards it to `variables%InList_csv`. When absent, the
-      !! adapter falls back to a hard-coded water-balance default. Each
-      !! regression case authors its own list so the fixture aggregator
-      !! receives the columns it expects (e.g. GRASSDM/MOWDM for case 2).
-      character(len=:), allocatable :: inlist_csv
       !> Output-file basename (legacy OUTFIL in .swp Part 1).
       !! Default 'result' matches the legacy hardcode in all regression cases.
       character(len=:), allocatable :: outfil

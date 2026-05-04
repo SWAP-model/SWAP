@@ -193,3 +193,26 @@ subroutine test_load_case1_hupselbrook_rotations()
    @assertTrue(config%crop%rotation_loaded(2))
    @assertTrue(config%crop%rotation_loaded(3))
 end subroutine
+
+@test
+subroutine test_load_swap_config_dispatches_output_csv()
+   ! Phase 4f Bucket B slot 8: confirm load_swap_config calls
+   ! read_output_csv_toml and populates config%output_csv.
+   use funit
+   use swap_config_mod
+   use load_swap_config_mod
+   use error_mod
+   type(swap_config_t)      :: config
+   type(error_collection_t) :: errors
+
+   call load_swap_config('tests/unit/io/toml/fixtures/swap_with_output_csv.toml', &
+                         config, errors)
+
+   @assertFalse(errors%has_errors())
+   @assertEqual(1, config%output_csv%enabled)
+   @assertEqual(0, config%output_csv%enabled_tz)
+   @assertTrue(allocated(config%output_csv%inlist))
+   @assertEqual('gwl,pond', config%output_csv%inlist)
+   @assertTrue(allocated(config%output_csv%inlist_tz))
+   @assertEqual('wc,h,conc', config%output_csv%inlist_tz)
+end subroutine
