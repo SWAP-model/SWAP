@@ -277,19 +277,7 @@ contains
          cofred = config%meteo%evaporation%cofredbl
       end if
 
-      ! HACK Phase 4f-extend: SWREDU is the soil-evaporation reduction-method
-      ! switch (1=Black, 2=Boesten-Stroosnijder). Legacy reads it from .swp
-      ! at readswap.f90:584 but no schema slot covers it yet. Default to 1
-      ! (Black model) matching cases 1/2/4. When the case authors a non-
-      ! default cofredbo (Boesten coefficient), flip to swredu=2 — case 5
-      ! (salinitystress) is the only regression case using SWREDU=2.
-      ! Phase 4f-extend should add `[soil.evaporation].swredu` so the
-      ! switch is authored explicitly rather than inferred.
-      if (config%meteo%evaporation%cofredbo /= 0.35d0) then
-         swredu = 2
-      else
-         swredu = 1
-      end if
+      swredu = config%meteo%evaporation%swredu
 
       rsigni     = config%meteo%evaporation%rsigni
       cfevappond = config%meteo%evaporation%cfevappond

@@ -18,6 +18,10 @@ module meteorology_config_mod
       real(real64) :: cofredbo   = 0.35_real64
       real(real64) :: rsigni     = 0.5_real64   !! minimum daily rainfall (cm/d) resetting Black dry counter
       real(real64) :: cfevappond = 1.25_real64  !! ponding-layer evaporation coefficient
+
+      !> Soil-evaporation reduction method (1=Black, 2=Boesten-Stroosnijder).
+      !! Legacy SWREDU; default 1 matches all cases except case 5.
+      integer :: swredu = 1
    contains
       procedure :: validate => meteorology_evaporation_validate
    end type meteorology_evaporation_t
@@ -91,6 +95,16 @@ contains
                             "meteorology.evaporation.rsigni", errors)
       call check_real_range(self%cfevappond, 0.0_real64, 10.0_real64, &
                             "meteorology.evaporation.cfevappond", errors)
+      call check_int_enum(self%swredu, [1, 2], "meteorology.evaporation.swredu", errors)
+
+      ! Cross-field: swredu=2 (Boesten-Stroosnijder) requires cofredbo to
+      ! be set to a non-default value (anything other than the default 0.35).
+      if (self%swredu == 2 .and. abs(self%cofredbo - 0.35_real64) < 1.0e-12_real64) then
+         call errors%append(ERR_VALIDATION_CROSS_FIELD, &
+            'meteorology.evaporation.swredu=2 requires cofredbo to be ' // &
+            'authored (non-default value expected)', &
+            'meteorology.evaporation')
+      end if
    end subroutine meteorology_evaporation_validate
 
    subroutine meteorology_snow_validate(self, errors)

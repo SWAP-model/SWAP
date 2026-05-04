@@ -67,6 +67,7 @@ contains
          call get_optional_real_with_default(evap, 'cofredbo',   config%evaporation%cofredbo,   0.35d0, 'meteorology.evaporation.cofredbo',   errors)
          call get_optional_real_with_default(evap, 'rsigni',     config%evaporation%rsigni,     0.5d0,  'meteorology.evaporation.rsigni',     errors)
          call get_optional_real_with_default(evap, 'cfevappond', config%evaporation%cfevappond, 1.25d0, 'meteorology.evaporation.cfevappond', errors)
+         call get_optional_int_with_default(evap,  'swredu',     config%evaporation%swredu,     1,      'meteorology.evaporation.swredu',     errors)
       end if
 
       call get_table(sec, 'snow', snow, 'meteorology.snow', errors)

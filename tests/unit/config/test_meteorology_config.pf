@@ -183,3 +183,64 @@ subroutine test_meteorology_evaporation_cfevappond_out_of_range_fails()
    call m%validate(errors)
    @assertTrue(errors%has_errors())
 end subroutine
+
+@test
+subroutine test_meteorology_evaporation_swredu_default_validates_clean()
+   use funit
+   use error_mod
+   use meteorology_config_mod
+   type(meteorology_config_t) :: m
+   type(error_collection_t)   :: errors
+   m%lat = 52.0d0
+   ! swredu default is 1 (Black) — valid enum value; cofredbo stays default
+   call m%validate(errors)
+   @assertFalse(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_meteo_evap_swredu_two_cofredbo_nondefault_passes()
+   use funit
+   use error_mod
+   use meteorology_config_mod
+   type(meteorology_config_t) :: m
+   type(error_collection_t)   :: errors
+   m%lat = 52.0d0
+   m%evaporation%swredu   = 2
+   m%evaporation%cofredbo = 0.54d0   ! non-default -> cross-check passes
+   call m%validate(errors)
+   @assertFalse(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_meteo_evap_swredu_two_cofredbo_default_fails()
+   use funit
+   use error_mod
+   use meteorology_config_mod
+   type(meteorology_config_t) :: m
+   type(error_collection_t)   :: errors
+   integer :: i
+   logical :: found
+   m%lat = 52.0d0
+   m%evaporation%swredu   = 2
+   ! cofredbo stays at default 0.35 — cross-field check must fire
+   call m%validate(errors)
+   found = .false.
+   do i = 1, errors%count()
+      if (errors%items(i)%code == ERR_VALIDATION_CROSS_FIELD .and. &
+          index(errors%items(i)%message, 'swredu=2') > 0) found = .true.
+   end do
+   @assertTrue(found)
+end subroutine
+
+@test
+subroutine test_meteorology_evaporation_swredu_invalid_enum_fails()
+   use funit
+   use error_mod
+   use meteorology_config_mod
+   type(meteorology_config_t) :: m
+   type(error_collection_t)   :: errors
+   m%lat = 52.0d0
+   m%evaporation%swredu = 5   ! out of [1, 2]
+   call m%validate(errors)
+   @assertTrue(errors%has_errors())
+end subroutine
