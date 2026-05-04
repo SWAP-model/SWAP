@@ -67,6 +67,26 @@ contains
       class(meteorology_config_t), intent(in)    :: self
       type(error_collection_t),    intent(inout) :: errors
 
+      ! ----- Phase 4f-extend SS-5 stub-error: only CSV metfiles supported -----
+      ! ADR 0014 retires the TTutil-based readers in readmeteo.f90 (per-year
+      ! .YYY daily reader, .met all-years reader, TTutil detail reader, and the
+      ! TTutil tail of ReadRainEvents). After SS-5, swap_csv_dat is the only
+      ! source of meteorology data. Reject any non-.csv metfile here so that
+      ! configurations naming a legacy file produce an actionable error
+      ! instead of falling through to deleted code paths.
+      if (.not. allocated(self%metfile) .or. len_trim(self%metfile) == 0) then
+         call errors%append(ERR_VALIDATION_CROSS_FIELD, &
+            'meteorology.metfile is required and must reference a CSV file ' // &
+            '(per ADR 0014; legacy .met / per-year .YYY readers retired ' // &
+            'in Phase 4f-extend SS-5).', 'meteorology')
+      else if (index(self%metfile, '.csv') == 0) then
+         call errors%append(ERR_VALIDATION_CROSS_FIELD, &
+            'meteorology.metfile="' // trim(self%metfile) // &
+            '" not supported in the TOML pipeline; only CSV metfiles are ' // &
+            'accepted (Phase 4f-extend SS-5; legacy .met/.YYY readers ' // &
+            'retired per ADR 0014).', 'meteorology')
+      end if
+
       call check_real_range(self%lat, -90.0_real64, 90.0_real64, "meteorology.lat", errors)
       call check_real_range(self%alt, -500.0_real64, 9000.0_real64, "meteorology.alt", errors)
       call check_int_enum(self%swetr,       [0, 1],    "meteorology.swetr",       errors)

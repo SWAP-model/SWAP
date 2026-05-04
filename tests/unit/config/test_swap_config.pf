@@ -39,6 +39,7 @@ subroutine test_swap_validate_valid_config_passes()
    c%simulation%tend    = 38352.0d0
    c%meteo%lat          = 52.0d0
    c%meteo%alt          = 10.0d0
+   c%meteo%metfile      = "weather.csv"   ! SS-5: metfile required, must be CSV
 
    call c%validate(errors)
 

@@ -167,3 +167,16 @@ not worth porting, Step 1 can be replaced by dropping `swmetdetail` as a
 supported option in the TOML schema (add it to the deprecated-key list per
 ADR 0009's pattern) and deleting the detail arrays from `variables.f90`
 outright.
+
+## Progress note 2026-05-05 — Sequencing constraint resolved (SS-5 Commit 1)
+
+The sequencing constraint above is now closed by the second option:
+`meteorology_config_validate` rejects any `metfile` not ending in `.csv`
+with `ERR_VALIDATION_CROSS_FIELD`. The legacy `.met` and per-year `.YYY`
+codepaths are therefore unreachable from any TOML configuration. The
+legacy `.swp` pipeline is no longer invoked by working source code (umbrella
+spec `2026-05-04-legacy-reader-retirement-design.md`), so no separate
+`readmeteo_legacy.f90` is needed. Steps 2 and 3 may proceed.
+
+Audit doc: `docs/phase-4f-readmeteo-ttutil-audit.md`.
+Plan: `docs/superpowers/plans/2026-05-05-ss5-readmeteo-ttutil-deletion.md`.
