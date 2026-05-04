@@ -91,59 +91,14 @@
 !   - 1 swmetdetail = 0; daily input
 !   - 2 swmetdetail = 1; detailed input for nmetdetail time intervals per day
 
-! --- CSV mode: extract year slice from the pre-loaded cache.
-!     For daily mode (swmetdetail=0): MeteoCSVYear.
-!     For sub-daily mode (swmetdetail=1): MeteoCSVDetYear.
-      if (swMetCSV == 1) then
-         if (swmetdetail == 0) then
-            call MeteoCSVYear(ifnd)
-         else
-            call MeteoCSVDetYear(ifnd)
-         end if
-         goto 100
+! --- CSV mode is the only supported path (Phase 4f-extend SS-5,
+!     ADR 0014). Daily mode → MeteoCSVYear. Sub-daily → MeteoCSVDetYear.
+      if (swmetdetail == 0) then
+         call MeteoCSVYear(ifnd)
+      else
+         call MeteoCSVDetYear(ifnd)
       end if
 
-      if (swmetdetail.eq.0) then
-         if (swMetFilAll == 1) then
-            call MeteoInOneFile (2, ifnd)
-         else
-! ---       initialise and start reading
-            wth = getun2 (10,90,2)
-            call rdinit(wth,logf,filnam)
-               call rdacha ('station',station,366,ifnd)
-               call rdfinr ('dd',1,31,ad,366,ifnd)
-               call rdfinr ('mm',1,12,am,366,ifnd)
-               call rdfdor ('rad',radmin,radmax,arad,366,ifnd)
-               call rdfdor ('tmin',tmnmin,tmnmax,atmn,366,ifnd)
-               call rdfdor ('tmax',tmxmin,tmxmax,atmx,366,ifnd)
-               call rdfdor ('hum',hummin,hummax,ahum,366,ifnd)
-               call rdfdor ('wind',winmin,winmax,awin,366,ifnd)
-               if (swrain.lt.3) call rdfdor('rain',raimin,raimax,arai,366,ifnd)
-               call rdfdor ('etref',etrmin,etrmax,aetr,366,ifnd)
-               if (swrain.eq.2) call rdfdor('wet',0.d0,1.d0,wet,366,ifnd)
-! -            Convert radiation from kj/m2/d to j/m2/d
-               arad = 1000.0d0 * arad
-! ---       close meteorological file
-            close (wth)
-         end if
-      elseif (swmetdetail.eq.1) then
-! ---    initialise and start reading
-         wth = getun2 (10,90,2)
-         call rdinit(wth,logf,filnam)
-            call rdatim ('date',dettime,nmetfile,ifnd)
-            call rdfinr ('record',1,nmetdetail,detrecord,nmetfile,ifnd)
-            call rdfdor ('rad',radmin,radmax,detrad,nmetfile,ifnd)   
-            call rdfdor ('temp',tmxmin,tmxmax,dettav,nmetfile,ifnd)
-            call rdfdor ('hum',hummin,hummax,dethum,nmetfile,ifnd)
-            call rdfdor ('wind',winmin,winmax,detwind,nmetfile,ifnd)
-            call rdfdor ('rain',raimin,raimax,detrain,nmetfile,ifnd)
-! -         Convert radiation from kj/m2/d to j/m2/d
-            detrad = 1000.0d0 * detrad
-! ---    close meteorological file
-         close (wth)
-      endif
-
-100   continue
 !========================= tests and initialization ====================
 
 ! --- perform some reliability tests and some initialization
@@ -283,23 +238,15 @@
 !       I   - logf,yearmeteo,pathatm,rainfil
 !       O   - nmrain,rainamount,raintimearray
 ! ----------------------------------------------------------------------
-      use variables, only: logf,yearmeteo,pathatm,rainfil,nmrain,rainamount,raintimearray, &
-                           swRainCSV, raincsv_dat, nraincsv
-      use swap_array_dimensions, only: mrain
+      use variables, only: yearmeteo,nmrain,rainamount,raintimearray, &
+                           raincsv_dat, nraincsv
 
       implicit none
 
 ! --- local
-      character(len=2)   chday,chmonth
-      character(len=6)   chtime
-      character(len=3)   ext
-      character(len=200) filnam
       character(len=300) messag
-      integer   ad(mrain),am(mrain),ay(mrain)
-      integer   datea(6),getun2,i,ic,ifnd,pre
-      real(4)   fsec,time4(mrain)
-      real(8)   tday,tdayold,vsmall
-      logical   flrnx
+      integer   i,ic,ifnd
+      real(8)   vsmall
       ! CSV-path locals
       integer  :: jday
       external    jday
@@ -308,289 +255,61 @@
 
       vsmall = 1.0d-8
 
-!========================= CSV path ====================================
-      if (swRainCSV == 1) then
-         ! Extract current year's events from the pre-loaded cache.
-         t_jan1  = real(jday(yearmeteo,  1,  1) - jd1900, 8)
-         t_dec31 = real(jday(yearmeteo, 12, 31) - jd1900, 8) + 1.0d0
+!========================= CSV path (only supported, ADR 0014) =========
+      ! Extract current year's events from the pre-loaded cache.
+      t_jan1  = real(jday(yearmeteo,  1,  1) - jd1900, 8)
+      t_dec31 = real(jday(yearmeteo, 12, 31) - jd1900, 8) + 1.0d0
 
-         ifnd = 0
-         do i = 1, nraincsv
-            if (raincsv_dat(i,1) >= t_jan1 - 0.5d0 .and. &
-     &          raincsv_dat(i,1) <  t_dec31 + 0.5d0) then
-               ifnd = ifnd + 1
-               raintimearray(ifnd) = raincsv_dat(i,1)
-               rainamount(ifnd)    = raincsv_dat(i,2)
-            end if
-         end do
-
-         if (ifnd == 0) then
-            call fatalerr_collected('ReadRainEvents', &
-     &         'No rain events CSV records found for the requested year')
-            return
-         end if
-
-         ! Zero-prepend: if first event is not at midnight, insert t=0 record.
-         tfrac = raintimearray(1) - real(int(raintimearray(1)), 8)
-         if (tfrac > vsmall) then
-            do i = ifnd, 1, -1
-               raintimearray(i+1) = raintimearray(i)
-               rainamount(i+1)    = rainamount(i)
-            end do
+      ifnd = 0
+      do i = 1, nraincsv
+         if (raincsv_dat(i,1) >= t_jan1 - 0.5d0 .and. &
+     &       raincsv_dat(i,1) <  t_dec31 + 0.5d0) then
             ifnd = ifnd + 1
-            raintimearray(1) = real(int(raintimearray(2)), 8)
-            rainamount(1)    = 0.0d0
+            raintimearray(ifnd) = raincsv_dat(i,1)
+            rainamount(ifnd)    = raincsv_dat(i,2)
          end if
+      end do
 
-         ! Deduplication: drop midnight-crossover duplicates.
-         ic = 1
-         do i = 2, ifnd
-            if ((raintimearray(i) - raintimearray(ic)) > vsmall) then
-               ic = ic + 1
-               raintimearray(ic) = raintimearray(i)
-               rainamount(ic)    = rainamount(i)
-            end if
-         end do
-         nmrain = ic
-
-         ! Ascending order check.
-         do i = 2, nmrain
-            if ((raintimearray(i) - raintimearray(i-1)) .lt. vsmall) then
-               messag = 'In rain events CSV file the time of a record ' //  &
-     &            'is not greater than its predecessor. Adapt the file!'
-               call fatalerr_collected('ReadRainEvents', messag)
-            end if
-         end do
+      if (ifnd == 0) then
+         call fatalerr_collected('ReadRainEvents', &
+     &      'No rain events CSV records found for the requested year')
          return
       end if
 
-!========================= TTutil / legacy .YYY path ===================
-
-      write (ext,'(i3.3)') mod(yearmeteo,1000)
-      filnam = trim(pathatm)//trim(rainfil)//'.'//trim(ext)
-
-      pre = getun2 (10,90,2)
-      call rdinit(pre,logf,filnam)
-      call rdainr ('day',1,31,ad,mrain,ifnd)
-      call rdfinr ('month',1,12,am,mrain,ifnd)
-      call rdfinr ('year',1,3000,ay,mrain,ifnd)
-      call rdfdor ('time',0.0d0,1.0d0,raintimearray,mrain,ifnd)
-      call rdfdor ('amount',0.0d0,10000.0d0,rainamount,mrain,ifnd)
-      close (pre)
-
-      if (raintimearray(1).gt.vsmall) then
+      ! Zero-prepend: if first event is not at midnight, insert t=0 record.
+      tfrac = raintimearray(1) - real(int(raintimearray(1)), 8)
+      if (tfrac > vsmall) then
          do i = ifnd, 1, -1
-           ay(i+1) = ay(i)
-           am(i+1) = am(i)
-           ad(i+1) = ad(i)
-           raintimearray(i+1) = raintimearray(i)
-           rainamount(i+1)    = rainamount(i)
-         enddo
+            raintimearray(i+1) = raintimearray(i)
+            rainamount(i+1)    = rainamount(i)
+         end do
          ifnd = ifnd + 1
-         raintimearray(i+1) = 0.0d0
-         rainamount(i+1)    = 0.0d0
-      endif
+         raintimearray(1) = real(int(raintimearray(2)), 8)
+         rainamount(1)    = 0.0d0
+      end if
 
-      fsec = 0.0
-      ic = 0
-      datea = 0
-      do i = 1,ifnd
-         datea(1) = ay(i)
-         datea(2) = am(i)
-         datea(3) = ad(i)
-         call dtardp (datea,fsec,tday)
-         time4(i)         = real(raintimearray(i))
-         raintimearray(i) = tday + raintimearray(i)
-         if (ic.gt.0) then
-            if ( (raintimearray(i)-raintimearray(ic)) .lt. vsmall .and. &
-     &           tday.gt.tdayold) then
-               flrnx = .false.
-            else
-               flrnx = .true.
-            endif
-         else
-            flrnx = .true.
-         endif
-         if (flrnx) then
+      ! Deduplication: drop midnight-crossover duplicates.
+      ic = 1
+      do i = 2, ifnd
+         if ((raintimearray(i) - raintimearray(ic)) > vsmall) then
             ic = ic + 1
             raintimearray(ic) = raintimearray(i)
             rainamount(ic)    = rainamount(i)
-         endif
-         tdayold = tday
+         end if
       end do
-
       nmrain = ic
 
-      do i = 2,ic
-         if ( (raintimearray(i)-raintimearray(i-1)) .lt. vsmall) then
-            write(chmonth,'(i2)')  am(i)
-            write(chday,'(i2)')    ad(i)
-            write(chtime,'(f6.3)') time4(i)
-           messag ='Error-message from module ReadRainEvents'//         &
-     &        '. In detailed rain file '//trim(filnam)//                &
-     &        ' the time of a rainrecord should be greater than the'//  &
-     &        ' time of its preceding rainrecord! Adapt rain file.'//   &
-     &        '      Month: '//chmonth//'; Day: '//chday//'; Time: '//  &
-     &        chtime//'!'
-            call fatalerr_collected ('ReadRain',messag)
-         endif
-      enddo
+      ! Ascending order check.
+      do i = 2, nmrain
+         if ((raintimearray(i) - raintimearray(i-1)) .lt. vsmall) then
+            messag = 'In rain events CSV file the time of a record ' //  &
+     &         'is not greater than its predecessor. Adapt the file!'
+            call fatalerr_collected('ReadRainEvents', messag)
+         end if
+      end do
 
       return
       end subroutine ReadRainEvents
-      
-subroutine MeteoInOneFile (iTask, ifnd)
-use error_mod, only: fatalerr_collected
-use variables, only: arad, atmn, atmx, ahum, awin, arai, aetr, wet, station, ad, am, mayrs, maday, &
-                     yearmeteo, tstart, tend, metfil, logf, pathatm
-implicit none
-! global
-integer,           intent(in)             :: iTask
-integer,           intent(out)            :: ifnd
-
-! local
-integer,           parameter              :: iReadType = 2     ! 1 = use TTutil; 2 = simple read (requires fixed sequence in columns; no value range checking)
-integer,                             save :: Nall, nyrs, iyr
-integer,           dimension(mayrs), save :: istart, ystart
-character(len=10), dimension(maday), save :: all_station
-integer,           dimension(maday), save :: all_dd, all_mm, all_yyyy
-real(8),           dimension(maday), save :: all_rad, all_tmin, all_tmax, all_hum, all_wind, all_rain, all_etref, all_wet
-integer                                   :: iunall, getun, i1, i2, i
-character(len=80)                         :: fin
-character(len=250)                        :: header
-
-real(8)                                   :: radmin, radmax, tmnmin, tmnmax, tmxmin, tmxmax, hummin, hummax
-real(8)                                   :: winmin, winmax, raimin, raimax, etrmin, etrmax
-real(8)                                   :: wstart, wend
-integer,           dimension(6)           :: datea
-real                                      :: fsec
-
-select case (iTask)
-case (1)
-   ! see ReadMeteoYear
-   radmin =   0.0d0;    radmax =   5.0d6
-   tmnmin = -50.0d0;    tmnmax =  60.0d0
-   tmxmin = -50.0d0;    tmxmax =  60.0d0
-   hummin =   0.0d0;    hummax =  10.0d0
-   winmin =   0.0d0;    winmax = 150.0d0
-   raimin =   0.0d0;    raimax =   1.0d3
-   etrmin =  -1.0d5;    etrmax =   1.0d5
-   
-   ! read all data
-   iunall = getun (500, 900)
-   fin =  trim(pathatm) // trim(metfil)
-   if (iReadType == 1) then
-      call RDinit (iunall, logf, fin)
-         ! station,dd,mm,yyyy,rad,tmin,tmax,hum,wind,rain,etref,wet
-         call RDacha ('station',                 all_station, maday, Nall)
-         call RDfinr ('dd',      1,      31,     all_dd,      maday, Nall)
-         call RDfinr ('mm',      1,      12,     all_mm,      maday, Nall)
-         call RDfint ('yyyy',                    all_yyyy,    maday, Nall)
-         call RDfdor ('rad',     radmin, radmax, all_rad,     maday, Nall)
-         call RDfdor ('tmin',    tmnmin, tmnmax, all_tmin,    maday, Nall)
-         call RDfdor ('tmax',    tmxmin, tmxmax, all_tmax,    maday, Nall)
-         call RDfdor ('hum',     hummin, hummax, all_hum,     maday, Nall)
-         call RDfdor ('wind',    winmin, winmax, all_wind,    maday, Nall)
-         call RDfdor ('rain',    raimin, raimax, all_rain,    maday, Nall)
-         call RDfdor ('etref',   etrmin, etrmax, all_etref,   maday, Nall)
-         call RDfdor ('wet',     0.d0,   1.d0,   all_wet,     maday, Nall)
-      close (iunall)
-   else
-      open (unit = iunall, file = fin, status='old')
-         ! skip comment lines at top of file; comment lines start with !, * or # as first character
-         do
-            read (iunall,'(A)',end=1) header
-            if (header(1:1) /= '!' .AND. header(1:1) /= '*' .AND. header(1:1) /= '#') then
-               exit
-            end if
-         end do
-         call lowerc (header)
-         if (trim(header) /= 'station,dd,mm,yyyy,rad,tmin,tmax,hum,wind,rain,etref,wet') call fatalerr_collected ('MeteoInOneFile', 'Wrong header line in metfil.met')
-         Nall = 1
-         do
-            read (iunall,*,end=2,err=1) all_station(Nall), all_dd(Nall), all_mm(Nall), all_yyyy(Nall),   &
-                                        all_rad(Nall), all_tmin(Nall), all_tmax(Nall), all_hum(Nall),    &
-                                        all_wind(Nall), all_rain(Nall), all_etref(Nall), all_wet(Nall)
-            Nall = Nall + 1
-         end do
-1        continue
-         ! hopefully we never get here
-         call fatalerr_collected ('MeteoInOneFile', 'reading error metfil.met')
-2        continue
-         Nall = Nall - 1
-      close (iunall)
-   end if
-   
-   ! check if start and end time are present in meteofile
-   datea = 0; fsec = 0.0
-   datea(1) = all_yyyy(1); datea(2) = all_mm(1); datea(3) = all_dd(1)
-   call DTARDP (datea, fsec, wstart)
-   datea(1) = all_yyyy(Nall); datea(2) = all_mm(Nall); datea(3) = all_dd(Nall)
-   call DTARDP (datea, fsec, wend)
-   if (wstart > tstart .or. wend < tend) call fatalerr_collected ('MeteoInOneFile', 'wstart > tstart .or. wend < tend')
-   
-   ! no check on daily step-size in time records nor on data in ascending times
-   continue
-   
-   ! determine and store start positions for new years
-   nyrs         = 1
-   istart(nyrs) = 1
-   ystart(nyrs) = all_yyyy(1)
-   do i = 2, Nall
-      if (all_yyyy(i) > all_yyyy(i-1)) then
-         nyrs         = nyrs + 1
-         istart(nyrs) = i
-         ystart(nyrs) = all_yyyy(i)
-      end if
-   end do
-   
-   ! dummy
-   ifnd = 0
-   
-   ! data read and stored preperly
-   write (logf,'(A)') 'metfil.met: all meteo data read and stored.'
-   
-case (2)
-   ! new year: determine where we are
-   ! current year: yearmeteo
-   do i = 1, nyrs
-      if (ystart(i) == yearmeteo) then
-         iyr = i
-         exit
-      end if
-   end do
-   
-   i1 = istart(iyr)
-   if (iyr < nyrs) then
-      i2  = istart(iyr+1) - 1
-   else
-      i2  = Nall
-   end if
-   
-   ! return data
-   station  = all_station(i1:i2)
-   ad       = all_dd(i1:i2)
-   am       = all_mm(i1:i2)
-   arad     = all_rad(i1:i2)
-   atmn     = all_tmin(i1:i2)
-   atmx     = all_tmax(i1:i2)
-   ahum     = all_hum(i1:i2)
-   awin     = all_wind(i1:i2)
-   arai     = all_rain(i1:i2)
-   aetr     = all_etref(i1:i2)
-   wet      = all_wet(i1:i2)
-   ! Convert radiation from kj/m2/d to j/m2/d
-   arad = 1000.0d0 * arad
-
-   ! number of days 
-   ifnd = i2-i1+1
-
-case default
-   call fatalerr_collected ('MeteoInOneFile', 'Illegal value for iTask')
-end select
-
-return
-end subroutine MeteoInOneFile
 
 
 ! SUBROUTINE: MeteoCSVYear

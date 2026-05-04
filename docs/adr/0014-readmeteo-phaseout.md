@@ -180,3 +180,16 @@ spec `2026-05-04-legacy-reader-retirement-design.md`), so no separate
 
 Audit doc: `docs/phase-4f-readmeteo-ttutil-audit.md`.
 Plan: `docs/superpowers/plans/2026-05-05-ss5-readmeteo-ttutil-deletion.md`.
+
+## Progress note 2026-05-05 — Step 2 complete (SS-5 Commit 2)
+
+`readmeteo.f90` no longer contains TTutil calls. `MeteoInOneFile` deleted.
+The `swMetFilAll = 1` adapter block in `config_to_variables.f90` deleted.
+`ReadRainEvents` is CSV-only. Deleted ~280 LoC across `readmeteo.f90`
+(file shrank from 772 to 491 lines). The dangling `MeteoInOneFile`
+production-side caller in `src/io/readswap.f90` (the `if (swMetFilAll == 1)
+call MeteoInOneFile (1, idum)` block, ~line 1747) was also removed to keep
+the linker happy — this code path is unreachable in working source per
+the umbrella spec retirement gate. Variables (`swMetCSV`, `swRainCSV`,
+`swMetFilAll`, `swMetDetCSV`, `rainfil`, `station`, `ad`, `am`) become
+trivially redundant — Step 3 sweeps them.

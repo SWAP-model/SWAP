@@ -1743,11 +1743,11 @@
          end if
       end if
 
-! --- Special case: all meteo data in a single file; handled separately      
-      if (swMetFilAll == 1) then
-         call MeteoInOneFile (1, idum)
-      end if
-      
+! --- Legacy "all meteo in single .met" pre-load removed (Phase 4f-extend
+!     SS-5 / ADR 0014). MeteoInOneFile deleted; the .swp pipeline is no
+!     longer invoked by working source per the umbrella spec retirement
+!     gate. swMetFilAll itself is swept in SS-5 Commit 3.
+
 ! --- copy content of key-file to log-file
       write (logf,14)  
  14   format('*',70('-'),'*',/,' Echo of input file:',/)

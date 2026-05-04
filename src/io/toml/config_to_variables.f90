@@ -136,13 +136,11 @@ contains
       angstroma   = config%meteo%angstroma
       angstromb   = config%meteo%angstromb
 
-      ! Detect meteo file mode from the metfil extension.
-      ! CSV mode  (.csv): single multi-year CSV; pre-load via read_csv_table.
-      ! Legacy .met mode: MeteoInOneFile pre-loads all years (swMetFilAll=1).
-      ! Per-year mode (<base>.YYY): read one file per year in ReadMeteoYear.
+      ! All metfile extensions other than .csv are rejected by
+      ! meteorology_config_validate (Phase 4f-extend SS-5; ADR 0014).
+      ! Pre-load CSV via read_csv_table.
       call lowerc(metfil)
-      swMetCSV    = 0
-      swMetFilAll = 0
+      swMetCSV = 0
 
       if (index(trim(metfil), '.csv') > 0) then
          swMetCSV = 1
@@ -171,31 +169,6 @@ contains
             do r = 1, nmetcsv
                metcsv_dat(r, :) = tbl(r, :)
             end do
-         end block
-
-      else if (index(trim(metfil), '.met') > 0) then
-         swMetFilAll = 1
-         if (swmetdetail == 1 .or. swrain == 1 .or. swrain == 3) then
-            block
-               integer :: idum
-               idum = index(metfil, '.met')
-               metfil = trim(metfil(1:idum-1))
-               swMetFilAll = 0
-            end block
-         end if
-      end if
-
-      ! Pre-load all years into cache for legacy .met mode.
-      if (swMetFilAll == 1) then
-         block
-            integer :: idum_meteo
-            interface
-               subroutine MeteoInOneFile(iTask, ifnd)
-                  integer, intent(in)  :: iTask
-                  integer, intent(out) :: ifnd
-               end subroutine
-            end interface
-            call MeteoInOneFile(1, idum_meteo)
          end block
       end if
 
