@@ -408,15 +408,8 @@
         end do
       endif
 
-      if (swrain .eq. 3) then
-        ! Legacy `rainfil` rdscha removed (Phase 4f-extend SS-5 / ADR 0014):
-        ! the rainfil global is gone; the .swp pipeline is no longer invoked
-        ! by working source per the umbrella spec retirement gate.
-      endif
-
-! --- Legacy ".met all-years" handling removed (Phase 4f-extend SS-5 /
-!     ADR 0014). swMetFilAll is gone; only CSV metfiles are accepted at
-!     the TOML boundary.
+! --- Legacy `rainfil` rdscha and ".met all-years" handling removed per
+!     ADR 0014; the .swp pipeline is no longer invoked by working source.
       call lowerc (metfil)
 
 
