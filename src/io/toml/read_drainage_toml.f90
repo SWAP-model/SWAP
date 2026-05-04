@@ -147,6 +147,7 @@ contains
       call get_optional_int_with_default(sec, 'swdivd',   config%swdivd,   0, 'drainage.swdivd',   errors)
       call get_optional_int_with_default(sec, 'swdislay', config%swdislay, 0, 'drainage.swdislay', errors)
       call get_optional_int_with_default(sec, 'nrlevs',   config%nrlevs,   0, 'drainage.nrlevs',   errors)
+      call get_optional_int_with_default(sec, 'swliminf', config%swliminf, 0, 'drainage.swliminf', errors)
       call get_optional_real_with_default(sec, 'altcu',   config%altcu,    0.0_real64, 'drainage.altcu', errors)
 
       call get_table(sec, 'basic', basic, 'drainage.basic', errors)

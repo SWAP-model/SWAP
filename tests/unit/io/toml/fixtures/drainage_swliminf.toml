@@ -1,0 +1,15 @@
+[drainage]
+swdra    = 1
+dramet   = 3
+swdivd   = 1
+swdislay = 0
+nrlevs   = 3
+swliminf = 1
+altcu    = 0.0
+
+[[drainage.levels]]
+swdtyp = 1
+zbotdr = -80.0
+drares = 100.0
+infres = 100.0
+L      = 25.0

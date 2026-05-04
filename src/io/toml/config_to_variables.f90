@@ -462,16 +462,7 @@ contains
          end block
       end if
 
-      ! HACK Phase 4f-extend: SWLIMINF gates limit-of-infiltration to the
-      ! channel water depth in the DRAMET=3 multi-level resistance solver
-      ! (drainage.f90 / divdra.f90). Legacy hard-codes 1 in
-      ! readswap.f90:2010 (after the DRAMET=3 .dra block) when the .dra
-      ! is silent on the key. variables.f90:694 default-initialises to 0,
-      ! so without this HACK case 2's solver would treat infiltration as
-      ! unlimited. Add a [drainage].swliminf slot in Phase 4f-extend.
-      if (config%drain%dramet == 3) then
-         swliminf = 1
-      end if
+      swliminf = config%drain%swliminf
 
       ! Drainage.surface_runoff sub-section: scalar switches + per-level
       ! arrays. Legacy globals `swtopdislay`, `ftopdislay`, `RapDraResRef`

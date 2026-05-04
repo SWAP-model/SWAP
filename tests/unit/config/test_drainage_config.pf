@@ -283,3 +283,67 @@ subroutine test_drainage_drfil_field_roundtrips()
    @assertTrue(allocated(d%drfil))
    @assertEqual("myswap", d%drfil)
 end subroutine
+
+@test
+subroutine test_drainage_swliminf_default_zero_validates_clean()
+   use funit
+   use error_mod
+   use drainage_config_mod, only: drainage_config_t
+   type(drainage_config_t)  :: d
+   type(error_collection_t) :: errors
+   d%swdra  = 1
+   d%dramet = 3
+   d%nrlevs = 1
+   ! swliminf default is 0 — valid enum value
+   call d%validate(errors)
+   @assertFalse(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_drainage_swliminf_one_with_dramet3_validates_clean()
+   use funit
+   use error_mod
+   use drainage_config_mod, only: drainage_config_t
+   type(drainage_config_t)  :: d
+   type(error_collection_t) :: errors
+   d%swdra    = 1
+   d%dramet   = 3
+   d%nrlevs   = 1
+   d%swliminf = 1
+   call d%validate(errors)
+   @assertFalse(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_drainage_swliminf_one_without_dramet3_fails()
+   use funit
+   use error_mod
+   use drainage_config_mod, only: drainage_config_t
+   type(drainage_config_t)  :: d
+   type(error_collection_t) :: errors
+   integer :: i
+   logical :: found
+   d%swdra    = 1
+   d%dramet   = 1
+   d%nrlevs   = 1
+   d%swliminf = 1   ! dramet /= 3 — cross-section error expected
+   call d%validate(errors)
+   found = .false.
+   do i = 1, errors%count()
+      if (errors%items(i)%code == ERR_VALIDATION_CROSS_FIELD .and. &
+          index(errors%items(i)%message, 'swliminf') > 0) found = .true.
+   end do
+   @assertTrue(found)
+end subroutine
+
+@test
+subroutine test_drainage_swliminf_invalid_enum_fails()
+   use funit
+   use error_mod
+   use drainage_config_mod, only: drainage_config_t
+   type(drainage_config_t)  :: d
+   type(error_collection_t) :: errors
+   d%swliminf = 9   ! out of [0, 1]
+   call d%validate(errors)
+   @assertTrue(errors%has_errors())
+end subroutine

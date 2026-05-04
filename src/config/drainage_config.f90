@@ -47,6 +47,12 @@ module drainage_config_mod
       integer :: swdislay = 0
       integer :: nrlevs   = 0
 
+      !> Gate limit-of-infiltration to channel water depth in the
+      !! DRAMET=3 multi-level resistance solver (0=no limit, 1=limit).
+      !! Legacy readswap.f90:2010 hard-codes 1 after the DRAMET=3 .dra
+      !! block; variables.f90:694 initialises to 0.
+      integer :: swliminf = 0
+
       real(real64) :: altcu  = 0.0_real64
       real(real64) :: basegw = 0.0_real64
       real(real64) :: entres = 0.0_real64
@@ -104,6 +110,14 @@ contains
       call check_int_enum(self%swdivd,   [0, 1],         "drainage.swdivd",   errors)
       call check_int_enum(self%swdislay, [0, 1],         "drainage.swdislay", errors)
       call check_int_range(self%nrlevs,  0, 5,           "drainage.nrlevs",   errors)
+      call check_int_enum(self%swliminf, [0, 1],         "drainage.swliminf", errors)
+
+      ! Cross-field: swliminf=1 is only meaningful for dramet=3.
+      if (self%swliminf == 1 .and. self%dramet /= 3) then
+         call errors%append(ERR_VALIDATION_CROSS_FIELD, &
+            'drainage.swliminf=1 requires drainage.dramet=3', &
+            'drainage')
+      end if
 
       if (self%dramet == 2 .and. self%swdivd /= 1) then
          call errors%append(ERR_VALIDATION_CROSS_FIELD, &

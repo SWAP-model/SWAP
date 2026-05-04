@@ -221,6 +221,47 @@ subroutine test_read_drainage_drfil_roundtrip()
 end subroutine
 
 @test
+subroutine test_read_drainage_swliminf_roundtrip()
+   use funit
+   use tomlf, only: toml_table, toml_load
+   use drainage_config_mod
+   use read_drainage_toml_mod
+   use error_mod
+   type(toml_table), allocatable, target :: doc
+   type(toml_table), pointer     :: doc_ptr
+   type(drainage_config_t)       :: c
+   type(error_collection_t)      :: errors
+
+   call toml_load(doc, 'tests/unit/io/toml/fixtures/drainage_swliminf.toml')
+   doc_ptr => doc
+   call read_drainage_toml(doc_ptr, c, errors)
+
+   @assertFalse(errors%has_errors())
+   @assertEqual(1, c%swliminf)
+end subroutine
+
+@test
+subroutine test_read_drainage_swliminf_default()
+   use funit
+   use tomlf, only: toml_table, toml_load
+   use drainage_config_mod
+   use read_drainage_toml_mod
+   use error_mod
+   type(toml_table), allocatable, target :: doc
+   type(toml_table), pointer     :: doc_ptr
+   type(drainage_config_t)       :: c
+   type(error_collection_t)      :: errors
+
+   ! drainage_minimal.toml has no swliminf key -> default 0 applies
+   call toml_load(doc, 'tests/unit/io/toml/fixtures/drainage_minimal.toml')
+   doc_ptr => doc
+   call read_drainage_toml(doc_ptr, c, errors)
+
+   @assertFalse(errors%has_errors())
+   @assertEqual(0, c%swliminf)
+end subroutine
+
+@test
 subroutine test_read_drainage_drfil_default()
    use funit
    use tomlf, only: toml_table, toml_load
