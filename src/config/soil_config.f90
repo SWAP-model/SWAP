@@ -136,6 +136,22 @@ contains
 
       integer :: i
 
+      ! ----- Phase 4f-extend SS-4 stub-error: macropore deferred -----
+      ! ADR 0010 keeps macropore_config_t as orphan infrastructure and
+      ! the macropore reader code in readswap.f90 unwired. ADR 0011
+      ! excludes case 3 (3.macroporeflow) from regression. Authoring
+      ! swmacro=1 in a TOML config would let the modern binary copy the
+      ! switch into the legacy global without populating any macropore
+      ! state, producing silent runtime corruption. Reject it here with
+      ! a clear message instead.
+      if (self%swmacro == 1) then
+         call errors%append(ERR_VALIDATION_CROSS_FIELD, &
+            'soil.swmacro=1 (macropore physics) not yet supported in ' // &
+            'the TOML pipeline; case 3 is excluded from regression per ' // &
+            'ADR 0011 and the macropore module remains deferred per ' // &
+            'ADR 0010.', 'soil')
+      end if
+
       call check_int_enum(self%swsophy, [0, 1],       "soil.swsophy", errors)
       call check_int_enum(self%swhyst,  [0, 1, 2],    "soil.swhyst",  errors)
       call check_int_enum(self%swinco,  [1, 2, 3],    "soil.swinco",  errors)

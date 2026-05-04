@@ -73,7 +73,7 @@ End-state tag: `rescue/phase-4f-extend-complete`.
 | Phase 0 test-dir reorg | DONE | `run_case.sh` defaults to in-place TOML |
 | Adapter HACK Bucket A + B | DONE | 7 of 12 slots closed |
 | Adapter HACK residuals (4) | OPEN | `iHWCKmodel`, `ksatexm`, `cropfil` suffix-strip, `swpfile`/`logf` |
-| Macropore TOML stub-error | OPEN | `swmacro` currently passes validation silently |
+| Macropore TOML stub-error | DONE | SS-4 — `swmacro=1` rejected by `soil_config_validate` (see `2026-05-04-ss4-macropore-toml-stub-error.md`) |
 | `irrigation.f90` TTutil reader | OPEN | `rdinit` at line 79 reads `.crp` irrigation block |
 | `management_soil.f90` TTutil readers | OPEN | SMM/SME/SNP `rdinit` at lines 129, 142, 197 |
 | `cropgrowth.f90` nutrient TTutil reader | OPEN | `rdinit` at line 1155 |
@@ -164,7 +164,7 @@ work expected.
 | SS-1 | `swap.ini` port | DONE | `2026-05-01-swap-ini-port-design.md` | — |
 | SS-2 | `swap.dra` port | DONE | `2026-05-01-swap-dra-port-design.md` | — |
 | SS-3 | CSV meteo finalize Step 1 (sub-daily) | DONE | `2026-05-01-csv-meteo-finalize.md` Phase 0 + Phase 1 | — |
-| SS-4 | Macropore TOML stub-error | OPEN | new spec | — |
+| SS-4 | Macropore TOML stub-error | DONE | `2026-05-04-ss4-macropore-toml-stub-error.md` | — |
 | SS-5 | `readmeteo.f90` TTutil branch deletion (ADR 0014 Steps 2–3) | OPEN | new spec | — |
 | SS-6 | `src/crop/irrigation.f90` TOML port | OPEN | new spec | — |
 | SS-7 | `src/crop/management_soil.f90` TOML port (SMM/SME/SNP) | OPEN | new spec | — |

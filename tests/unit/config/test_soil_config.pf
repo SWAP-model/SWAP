@@ -266,3 +266,34 @@ subroutine test_swap_config_swinco3_with_h_file_passes_init_check()
    end do
    @assertFalse(found_required)
 end subroutine
+
+@test
+subroutine test_soil_swmacro_one_stub_errors()
+   use funit
+   use error_mod, only: error_collection_t, ERR_VALIDATION_CROSS_FIELD
+   use soil_config_mod, only: soil_config_t
+   type(soil_config_t)      :: s
+   type(error_collection_t) :: errors
+   integer :: i
+   logical :: found_macro_msg
+
+   ! Defaults are valid (swmacro = 0). Flip the switch to 1 and assert
+   ! validation rejects it with a CROSS_FIELD error whose message
+   ! references soil.swmacro=1 and at least one of ADR 0010 / 0011.
+   s%swmacro = 1
+   call s%validate(errors)
+
+   @assertTrue(errors%has_errors())
+
+   found_macro_msg = .false.
+   do i = 1, errors%count()
+      if (errors%items(i)%code == ERR_VALIDATION_CROSS_FIELD .and. &
+          index(errors%items(i)%message, 'soil.swmacro=1') > 0 .and. &
+          (index(errors%items(i)%message, 'ADR 0010') > 0 .or. &
+           index(errors%items(i)%message, 'ADR 0011') > 0)) then
+         found_macro_msg = .true.
+         exit
+      end if
+   end do
+   @assertTrue(found_macro_msg)
+end subroutine
