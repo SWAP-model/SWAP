@@ -1,254 +1,230 @@
-! Phase 4b Task 12 / Phase 4c-a Task 15 parity test:
-! legacy `variables` globals (after readswap)
-! vs swap_config_t fields (after load_swap_config + validate + finalize).
+! SS-A literal-parity test for case 1 (hupselbrook).
 !
-! The test runs the legacy reader by chdir-ing into the case directory and
-! calling readswap() (reads "swap.swp" from CWD).  It then loads the
-! matching TOML file relative to the project root and asserts field-by-field
-! equality for ~30 fields spanning all six existing sections.
+! Each subtest now asserts swap_config_t fields against literal values
+! captured once via the legacy `readswap()` pipeline (parity_helpers_mod
+! before SS-A; literals captured via capture_helpers_mod during SS-A
+! conversion). After SS-A, no parity test invokes `readswap` or any
+! legacy helper.
 !
-! Scope: existing-schema fields only.  SWHEA, SWSOLU, SWBOTB and the
-! associated heat/solute/bottom_boundary tables are Phase 4c.
+! Scope: existing-schema fields only — see ADR 0014.
 !
-! Phase 4c-a Task 15 additions:
-!   - Date tolerances tightened from 1.5d0 to 1.0d-9 (Task 1 aligned convention)
-!   - swmacro assertion re-enabled (Task 2 removed the local shadow)
-!   - nrlevs assertion re-enabled (Task 3 mirrors clobber in finalize)
-!   - New subtest: last rotation type-3 (grassd) sub-config parity
-!
-! Note: swinter is only set per-crop inside crop .crp reader calls; the
-! top-level meteorology swinter global is left at 0 (default).
+! Test names and intent are preserved from the pre-conversion suite.
 
 @test
 subroutine test_hupselbrook_parity_general()
    use funit
-   use parity_helpers_mod
-   use variables, only: project, pathwork, pathatm, pathcrop, pathdrain, swscre
    use swap_config_mod
+   use load_swap_config_mod, only: load_swap_config
    use error_mod
    type(swap_config_t)      :: config
    type(error_collection_t) :: errors
 
-   call load_both_for_hupselbrook(config, errors)
-
+   call load_swap_config('tests/swap-cases/toml/1.hupselbrook/swap.toml', config, errors)
+   call config%validate(errors)
+   call config%finalize(errors)
    @assertFalse(errors%has_fatals())
 
-   @assertEqual(trim(project),   trim(config%general%project))
-   @assertEqual(trim(pathwork),  trim(config%general%pathwork))
-   @assertEqual(trim(pathatm),   trim(config%general%pathatm))
-   @assertEqual(trim(pathcrop),  trim(config%general%pathcrop))
-   @assertEqual(trim(pathdrain), trim(config%general%pathdrain))
-   @assertEqual(swscre,          config%general%swscre)
+   @assertEqual('hupsel', trim(config%general%project))
+   @assertEqual('./',     trim(config%general%pathwork))
+   @assertEqual('./',     trim(config%general%pathatm))
+   @assertEqual('./',     trim(config%general%pathcrop))
+   @assertEqual('./',     trim(config%general%pathdrain))
+   @assertEqual(0,        config%general%swscre)
 end subroutine
 
 @test
 subroutine test_hupselbrook_parity_simulation()
    use funit
-   use parity_helpers_mod
-   use variables, only: tstart, tend, nprintday
    use swap_config_mod
+   use load_swap_config_mod, only: load_swap_config
    use error_mod
+   use iso_fortran_env, only: real64
    type(swap_config_t)      :: config
    type(error_collection_t) :: errors
 
-   call load_both_for_hupselbrook(config, errors)
+   call load_swap_config('tests/swap-cases/toml/1.hupselbrook/swap.toml', config, errors)
+   call config%validate(errors)
+   call config%finalize(errors)
+   @assertFalse(errors%has_fatals())
 
-   @assertEqual(tstart,    config%simulation%tstart, 1.0d-9)
-   @assertEqual(tend,      config%simulation%tend,   1.0d-9)
-   @assertEqual(nprintday, config%simulation%nprintday)
+   @assertEqual(37256.0_real64, config%simulation%tstart, 1.0d-9)
+   @assertEqual(38351.0_real64, config%simulation%tend,   1.0d-9)
+   @assertEqual(1,              config%simulation%nprintday)
 end subroutine
 
 ! Phase 4f-prep Task D4: [simulation.numerical] parity for case 1.
 @test
 subroutine test_hupselbrook_parity_simulation_numerical()
    use funit
-   use parity_helpers_mod
-   use variables, only: dtmin, dtmax, MaxIt, MaxBackTr
    use swap_config_mod
+   use load_swap_config_mod, only: load_swap_config
    use error_mod
    use iso_fortran_env, only: real64
    type(swap_config_t)      :: config
    type(error_collection_t) :: errors
 
-   call load_both_for_hupselbrook(config, errors)
+   call load_swap_config('tests/swap-cases/toml/1.hupselbrook/swap.toml', config, errors)
+   call config%validate(errors)
+   call config%finalize(errors)
+   @assertFalse(errors%has_fatals())
 
-   @assertEqual(dtmin,     config%simulation%numerical%dtmin, 1.0e-12_real64)
-   @assertEqual(dtmax,     config%simulation%numerical%dtmax, 1.0e-12_real64)
-   @assertEqual(MaxIt,     config%simulation%numerical%MaxIt)
-   @assertEqual(MaxBackTr, config%simulation%numerical%MaxBackTr)
-   ! Literal sanity for the non-default value driven by the .swp template.
-   @assertEqual(0.04_real64, config%simulation%numerical%dtmax, 1.0e-12_real64)
+   @assertEqual(1.0e-6_real64, config%simulation%numerical%dtmin, 1.0e-12_real64)
+   @assertEqual(0.04_real64,   config%simulation%numerical%dtmax, 1.0e-12_real64)
+   @assertEqual(30,            config%simulation%numerical%MaxIt)
+   @assertEqual(3,             config%simulation%numerical%MaxBackTr)
 end subroutine
 
 @test
 subroutine test_hupselbrook_parity_meteorology()
    use funit
-   use parity_helpers_mod
-   use variables, only: metfil, lat, alt, altw, swetr, swdivide, swrain, angstroma, angstromb
    use swap_config_mod
+   use load_swap_config_mod, only: load_swap_config
    use error_mod
+   use iso_fortran_env, only: real64
    type(swap_config_t)      :: config
    type(error_collection_t) :: errors
 
-   call load_both_for_hupselbrook(config, errors)
+   call load_swap_config('tests/swap-cases/toml/1.hupselbrook/swap.toml', config, errors)
+   call config%validate(errors)
+   call config%finalize(errors)
+   @assertFalse(errors%has_fatals())
 
-   ! Note: legacy metfil ('283.met') and TOML metfile ('283.csv') diverge
-   ! intentionally per ADR 0014 — the TOML pipeline only accepts CSV.
-   ! Compare the basename only.
-   @assertEqual('283', trim(metfil(1:index(metfil,'.')-1)))
+   ! Note: TOML pipeline only accepts CSV (ADR 0014). Compare basename only.
    @assertEqual('283', trim(config%meteo%metfile(1:index(config%meteo%metfile,'.')-1)))
-   @assertEqual(lat,          config%meteo%lat,       1.0d-9)
-   @assertEqual(alt,          config%meteo%alt,       1.0d-9)
-   @assertEqual(altw,         config%meteo%altw,      1.0d-9)
-   @assertEqual(swetr,        config%meteo%swetr)
-   @assertEqual(swdivide,     config%meteo%swdivide)
-   @assertEqual(swrain,       config%meteo%swrain)
-   @assertEqual(angstroma,    config%meteo%angstroma, 1.0d-9)
-   @assertEqual(angstromb,    config%meteo%angstromb, 1.0d-9)
+   @assertEqual(52.0_real64,  config%meteo%lat,       1.0d-9)
+   @assertEqual(10.0_real64,  config%meteo%alt,       1.0d-9)
+   @assertEqual(10.0_real64,  config%meteo%altw,      1.0d-9)
+   @assertEqual(0,            config%meteo%swetr)
+   @assertEqual(1,            config%meteo%swdivide)
+   @assertEqual(0,            config%meteo%swrain)
+   @assertEqual(0.25_real64,  config%meteo%angstroma, 1.0d-9)
+   @assertEqual(0.50_real64,  config%meteo%angstromb, 1.0d-9)
 end subroutine
 
 @test
 subroutine test_hupselbrook_parity_drainage()
    use funit
-   use parity_helpers_mod
-   use variables, only: dramet, swdivd, swdislay, nrlevs
    use swap_config_mod
+   use load_swap_config_mod, only: load_swap_config
    use error_mod
    type(swap_config_t)      :: config
    type(error_collection_t) :: errors
 
-   call load_both_for_hupselbrook(config, errors)
+   call load_swap_config('tests/swap-cases/toml/1.hupselbrook/swap.toml', config, errors)
+   call config%validate(errors)
+   call config%finalize(errors)
+   @assertFalse(errors%has_fatals())
 
-   @assertEqual(dramet,   config%drain%dramet)
-   @assertEqual(swdivd,   config%drain%swdivd)
-   @assertEqual(swdislay, config%drain%swdislay)
+   @assertEqual(2, config%drain%dramet)
+   @assertEqual(1, config%drain%swdivd)
+   @assertEqual(0, config%drain%swdislay)
    ! nrlevs: legacy clobbers to 1 when dramet/=3; finalize mirrors this.
-   @assertEqual(nrlevs,   config%drain%nrlevs)
+   @assertEqual(1, config%drain%nrlevs)
 end subroutine
 
 @test
 subroutine test_hupselbrook_parity_soil()
    use funit
-   use parity_helpers_mod
-   use variables, only: swsophy, swhyst, swinco, gwli, swmacro
    use swap_config_mod
+   use load_swap_config_mod, only: load_swap_config
    use error_mod
+   use iso_fortran_env, only: real64
    type(swap_config_t)      :: config
    type(error_collection_t) :: errors
 
-   call load_both_for_hupselbrook(config, errors)
+   call load_swap_config('tests/swap-cases/toml/1.hupselbrook/swap.toml', config, errors)
+   call config%validate(errors)
+   call config%finalize(errors)
+   @assertFalse(errors%has_fatals())
 
-   @assertEqual(swsophy, config%soil%swsophy)
-   @assertEqual(swhyst,  config%soil%swhyst)
-   @assertEqual(swinco,  config%soil%swinco)
-   @assertEqual(gwli,    config%soil%gwli,    1.0d-9)
-   ! swmacro: Task 2 removed the local shadow; module global is now populated.
-   @assertEqual(swmacro, config%soil%swmacro)
+   @assertEqual(0,             config%soil%swsophy)
+   @assertEqual(0,             config%soil%swhyst)
+   @assertEqual(2,             config%soil%swinco)
+   @assertEqual(-75.0_real64,  config%soil%gwli, 1.0d-9)
+   @assertEqual(0,             config%soil%swmacro)
 end subroutine
 
 @test
 subroutine test_hupselbrook_parity_crop()
    use funit
-   use parity_helpers_mod
-   use variables, only: swCrop
    use swap_config_mod
+   use load_swap_config_mod, only: load_swap_config
    use error_mod
    type(swap_config_t)      :: config
    type(error_collection_t) :: errors
 
-   call load_both_for_hupselbrook(config, errors)
+   call load_swap_config('tests/swap-cases/toml/1.hupselbrook/swap.toml', config, errors)
+   call config%validate(errors)
+   call config%finalize(errors)
+   @assertFalse(errors%has_fatals())
 
-   @assertEqual(swCrop, config%crop%swcrop)
+   @assertEqual(1, config%crop%swcrop)
 end subroutine
 
 ! Phase 4c-b Task 14a: parity for the maizes (type-1, icrop=1) rotation entry.
-! readswap() does not invoke readcropfixed; we drive it directly via the
-! legacy_crop_helper bridge, then cross-check the resulting `variables`
-! globals against the matching fields in config%crop%rotation_fixed(1).
 @test
 subroutine test_hupselbrook_parity_maizes_cropfixed()
    use funit
-   use variables, only: &
-      idev, kdif, kdir, hlim1, hlim2u, hlim2l, hlim3h, hlim3l, hlim4, &
-      adcrh, adcrl, cofab
-   use parity_helpers_mod, only: load_both_for_hupselbrook, reset_for_next_readswap
-   use legacy_crop_helper_mod, only: read_legacy_cropfixed
-   use chdir_helper_mod, only: chdir_to, get_cwd
    use swap_config_mod
+   use load_swap_config_mod, only: load_swap_config
    use error_mod
    use iso_fortran_env, only: real64
    type(swap_config_t)      :: config
    type(error_collection_t) :: errors
-   character(len=1024)      :: orig_cwd
    integer, parameter       :: ICROP_MAIZES = 1
 
-   call load_both_for_hupselbrook(config, errors)
+   call load_swap_config('tests/swap-cases/toml/1.hupselbrook/swap.toml', config, errors)
+   call config%validate(errors)
+   call config%finalize(errors)
    @assertFalse(errors%has_fatals())
 
-   ! Drive the legacy readcropfixed from inside the case directory so the
-   ! relative pathcrop ('./') resolves to the .crp file.
-   call get_cwd(orig_cwd)
-   call chdir_to('tests/swap-cases/1.hupselbrook')
-   call reset_for_next_readswap()
-   call read_legacy_cropfixed(ICROP_MAIZES, 'maizes')
-   call chdir_to(trim(orig_cwd))
-
-   ! Phenology (lcc is a local in readcropfixed, not exposed via variables;
-   ! cross-check the literal from maizes.crp).
-   @assertEqual(idev, config%crop%rotation_fixed(ICROP_MAIZES)%idev)
+   ! Phenology
+   @assertEqual(1,   config%crop%rotation_fixed(ICROP_MAIZES)%idev)
    @assertEqual(168, config%crop%rotation_fixed(ICROP_MAIZES)%lcc)
 
    ! Light extinction
-   @assertEqual(kdif, config%crop%rotation_fixed(ICROP_MAIZES)%kdif, 1.0e-12_real64)
-   @assertEqual(kdir, config%crop%rotation_fixed(ICROP_MAIZES)%kdir, 1.0e-12_real64)
+   @assertEqual(0.6_real64,  config%crop%rotation_fixed(ICROP_MAIZES)%kdif, 1.0e-12_real64)
+   @assertEqual(0.75_real64, config%crop%rotation_fixed(ICROP_MAIZES)%kdir, 1.0e-12_real64)
 
-   ! Feddes water stress (swoxygen=1 → hlim1/2u/2l populated from .crp).
-   @assertEqual(hlim1,  config%crop%rotation_fixed(ICROP_MAIZES)%hlim1,  1.0e-12_real64)
-   @assertEqual(hlim2u, config%crop%rotation_fixed(ICROP_MAIZES)%hlim2u, 1.0e-12_real64)
-   @assertEqual(hlim2l, config%crop%rotation_fixed(ICROP_MAIZES)%hlim2l, 1.0e-12_real64)
-   @assertEqual(hlim3h, config%crop%rotation_fixed(ICROP_MAIZES)%hlim3h, 1.0e-12_real64)
-   @assertEqual(hlim3l, config%crop%rotation_fixed(ICROP_MAIZES)%hlim3l, 1.0e-12_real64)
-   @assertEqual(hlim4,  config%crop%rotation_fixed(ICROP_MAIZES)%hlim4,  1.0e-12_real64)
-   @assertEqual(adcrh,  config%crop%rotation_fixed(ICROP_MAIZES)%adcrh,  1.0e-12_real64)
-   @assertEqual(adcrl,  config%crop%rotation_fixed(ICROP_MAIZES)%adcrl,  1.0e-12_real64)
+   ! Feddes water stress (swoxygen=1)
+   @assertEqual(-15.0_real64,   config%crop%rotation_fixed(ICROP_MAIZES)%hlim1,  1.0e-12_real64)
+   @assertEqual(-30.0_real64,   config%crop%rotation_fixed(ICROP_MAIZES)%hlim2u, 1.0e-12_real64)
+   @assertEqual(-30.0_real64,   config%crop%rotation_fixed(ICROP_MAIZES)%hlim2l, 1.0e-12_real64)
+   @assertEqual(-325.0_real64,  config%crop%rotation_fixed(ICROP_MAIZES)%hlim3h, 1.0e-12_real64)
+   @assertEqual(-600.0_real64,  config%crop%rotation_fixed(ICROP_MAIZES)%hlim3l, 1.0e-12_real64)
+   @assertEqual(-8000.0_real64, config%crop%rotation_fixed(ICROP_MAIZES)%hlim4,  1.0e-12_real64)
+   @assertEqual(0.5_real64,     config%crop%rotation_fixed(ICROP_MAIZES)%adcrh,  1.0e-12_real64)
+   @assertEqual(0.1_real64,     config%crop%rotation_fixed(ICROP_MAIZES)%adcrl,  1.0e-12_real64)
 
-   ! READING NOTE: maizes.crp has SWRD=1, so readcropfixed reads the rdtb
-   ! table (not rdi/rri/rdc scalars; readswap.f90 lines 2177-2181). The
-   ! legacy globals stay at 0 even though the .crp declares RDI/RRI/RDC.
-   ! TOML side stores the values verbatim — assert against literals.
+   ! Root depth (TOML stores values verbatim).
    @assertEqual( 10.0_real64, config%crop%rotation_fixed(ICROP_MAIZES)%rdi, 1.0e-12_real64)
    @assertEqual(  2.2_real64, config%crop%rotation_fixed(ICROP_MAIZES)%rri, 1.0e-12_real64)
    @assertEqual(100.0_real64, config%crop%rotation_fixed(ICROP_MAIZES)%rdc, 1.0e-12_real64)
 
-   ! Interception (swinter=1 → cofab populated).
-   @assertEqual(cofab, config%crop%rotation_fixed(ICROP_MAIZES)%cofab, 1.0e-12_real64)
+   ! Interception
+   @assertEqual(0.25_real64, config%crop%rotation_fixed(ICROP_MAIZES)%cofab, 1.0e-12_real64)
 end subroutine
 
 ! Phase 4c-b Task 14a: parity for the last type-3 (grassd, icrop=3) rotation
-! entry of hupselbrook.  Drive readgrass directly via the legacy_crop_helper
-! bridge and cross-check `variables` globals against config%crop%rotation_grass(3).
+! entry of hupselbrook.
 @test
 subroutine test_hupselbrook_parity_last_grass_rotation()
    use funit
-   use variables, only: &
-      kdif, kdir, hlim1, hlim2u, hlim2l, hlim3h, hlim3l, hlim4, &
-      adcrh, adcrl, cofab
-   use parity_helpers_mod, only: load_both_for_hupselbrook, reset_for_next_readswap
-   use legacy_crop_helper_mod, only: read_legacy_grass
-   use chdir_helper_mod, only: chdir_to, get_cwd
    use swap_config_mod
+   use load_swap_config_mod, only: load_swap_config
    use error_mod
    use iso_fortran_env, only: real64
    type(swap_config_t)      :: config
    type(error_collection_t) :: errors
-   character(len=1024)      :: orig_cwd
    integer  :: i, n_rot, last_grass_idx
    integer, parameter :: ICROP_GRASSD = 3
 
-   call load_both_for_hupselbrook(config, errors)
+   call load_swap_config('tests/swap-cases/toml/1.hupselbrook/swap.toml', config, errors)
+   call config%validate(errors)
+   call config%finalize(errors)
    @assertFalse(errors%has_fatals())
 
-   ! Locate the last type-3 entry in the rotation (sanity check on rotation layout).
+   ! Locate the last type-3 entry in the rotation.
    n_rot = size(config%crop%rotation_type)
    last_grass_idx = 0
    do i = n_rot, 1, -1
@@ -260,275 +236,148 @@ subroutine test_hupselbrook_parity_last_grass_rotation()
    @assertTrue(last_grass_idx > 0)
    @assertEqual(ICROP_GRASSD, last_grass_idx)
 
-   ! Drive the legacy readgrass from inside the case directory.
-   call get_cwd(orig_cwd)
-   call chdir_to('tests/swap-cases/1.hupselbrook')
-   call reset_for_next_readswap()
-   call read_legacy_grass(ICROP_GRASSD, 'grassd')
-   call chdir_to(trim(orig_cwd))
-
    ! Light extinction
-   @assertEqual(kdif, config%crop%rotation_grass(ICROP_GRASSD)%kdif, 1.0e-12_real64)
-   @assertEqual(kdir, config%crop%rotation_grass(ICROP_GRASSD)%kdir, 1.0e-12_real64)
+   @assertEqual(0.6_real64,  config%crop%rotation_grass(ICROP_GRASSD)%kdif, 1.0e-12_real64)
+   @assertEqual(0.75_real64, config%crop%rotation_grass(ICROP_GRASSD)%kdir, 1.0e-12_real64)
 
-   ! Feddes water stress (swoxygen=1 → hlim1/2u/2l populated).
-   @assertEqual(hlim1,  config%crop%rotation_grass(ICROP_GRASSD)%hlim1,  1.0e-12_real64)
-   @assertEqual(hlim2u, config%crop%rotation_grass(ICROP_GRASSD)%hlim2u, 1.0e-12_real64)
-   @assertEqual(hlim2l, config%crop%rotation_grass(ICROP_GRASSD)%hlim2l, 1.0e-12_real64)
-   @assertEqual(hlim3h, config%crop%rotation_grass(ICROP_GRASSD)%hlim3h, 1.0e-12_real64)
-   @assertEqual(hlim3l, config%crop%rotation_grass(ICROP_GRASSD)%hlim3l, 1.0e-12_real64)
-   @assertEqual(hlim4,  config%crop%rotation_grass(ICROP_GRASSD)%hlim4,  1.0e-12_real64)
-   @assertEqual(adcrh,  config%crop%rotation_grass(ICROP_GRASSD)%adcrh,  1.0e-12_real64)
-   @assertEqual(adcrl,  config%crop%rotation_grass(ICROP_GRASSD)%adcrl,  1.0e-12_real64)
+   ! Feddes water stress (swoxygen=1)
+   @assertEqual( 0.0_real64,    config%crop%rotation_grass(ICROP_GRASSD)%hlim1,  1.0e-12_real64)
+   @assertEqual( 1.0_real64,    config%crop%rotation_grass(ICROP_GRASSD)%hlim2u, 1.0e-12_real64)
+   @assertEqual(-1.0_real64,    config%crop%rotation_grass(ICROP_GRASSD)%hlim2l, 1.0e-12_real64)
+   @assertEqual(-200.0_real64,  config%crop%rotation_grass(ICROP_GRASSD)%hlim3h, 1.0e-12_real64)
+   @assertEqual(-800.0_real64,  config%crop%rotation_grass(ICROP_GRASSD)%hlim3l, 1.0e-12_real64)
+   @assertEqual(-8000.0_real64, config%crop%rotation_grass(ICROP_GRASSD)%hlim4,  1.0e-12_real64)
+   @assertEqual(0.5_real64,     config%crop%rotation_grass(ICROP_GRASSD)%adcrh,  1.0e-12_real64)
+   @assertEqual(0.1_real64,     config%crop%rotation_grass(ICROP_GRASSD)%adcrl,  1.0e-12_real64)
 
-   ! READING NOTE: hupselbrook grassd.crp has SWRD=3 (biomass-based root
-   ! extension via rlwtb/wrtmax). Both pipelines correctly skip the
-   ! swrd=2-only fields rdi/rri/rdc — the legacy globals stay at 0
-   ! (readswap.f90 swrd=3 branch never reads them) and the TOML
-   ! grassd.crp.toml comments them out (lines 94-96). No assertions on
-   ! those fields here — they are tested separately in the swrd=2 path.
-
-   ! Interception.
-   @assertEqual(cofab, config%crop%rotation_grass(ICROP_GRASSD)%cofab, 1.0e-12_real64)
+   ! Interception
+   @assertEqual(0.25_real64, config%crop%rotation_grass(ICROP_GRASSD)%cofab, 1.0e-12_real64)
 end subroutine
 
 ! Phase 4c-b Task 8: full WOFOST parity for the potatod (icrop=2) rotation
-! entry of hupselbrook.  This is the first real legacy-vs-TOML WOFOST parity
-! check.  Strategy:
-!   1. load_both_for_hupselbrook() runs readswap() and the TOML side.
-!   2. We chdir back into the case dir and call read_legacy_wofost(2,'potatod')
-!      directly — readswap() does not call readwofost().
-!   3. Assert at least one scalar (and where applicable one table) per
-!      WOFOST sub-section against the matching field in
-!      config%crop%rotation_wofost(2).  Tables compared via flatten_table
-!      against the legacy 1-D AFGEN storage.
+! entry of hupselbrook.
 !
-! Coverage targets: ~30-50 assertions spanning all 21 sub-sections.
+! SS-A note: large-array assertions (chtb 732, dtsmtb 30, slatb 30, amaxtb,
+! tmpftb, tmnftb, frtb, fltb, fstb, fotb, rdrrtb, rdrstb, rfsetb) were
+! dropped per Decision 2 — coverage relocated to/already in
+! tests/unit/io/toml/test_read_cropwofost_toml.pf which exercises the TOML
+! reader directly on these tables. Tautological once the legacy reader is
+! gone (SS-C).
 @test
 subroutine test_hupselbrook_parity_potatod_wofost()
    use funit
-   use variables, only: &
-      ! crop_factor / phenology / initial / green_area scalars
-      swcf, albedo, rsc, rsw, idsl, tsumea, tsumam, tdwi, laiem, rgrlai,  &
-      spa, ssa, span, tbase, kdif, kdir, eff,                            &
-      ! conversion / respiration / death scalars
-      cvl, cvo, cvr, cvs, q10, rml, rmo, rmr, rms, perdl,                &
-      ! root scalars
-      swrd, rdi, rri, rdc, swdmi2rd, wrtmax,                             &
-      ! oxygen / drought / salinity / compensate / interception / co2
-      swoxygen, swwrtnonox, aeratecrit, hlim1, hlim2u, hlim2l,           &
-      swdrought, hlim3h, hlim3l, hlim4, adcrh, adcrl,                    &
-      swsalinity, swcompensate, swinter, cofab,                          &
-      ! management
-      swpotrelmf, relmf,                                                 &
-      ! tables
-      dtsmtb, slatb, amaxtb, tmpftb, tmnftb, frtb, fltb, fstb, fotb,     &
-      rdrrtb, rdrstb, rfsetb, chtb,                                      &
-      ! harvest
-      dvsend, swharv
-   use parity_helpers_mod, only: load_both_for_hupselbrook, reset_for_next_readswap
-   use legacy_crop_helper_mod, only: read_legacy_wofost, flatten_table
-   use chdir_helper_mod, only: chdir_to, get_cwd
    use swap_config_mod
+   use load_swap_config_mod, only: load_swap_config
    use error_mod
    use iso_fortran_env, only: real64
 
    type(swap_config_t)      :: config
    type(error_collection_t) :: errors
-   character(len=1024)      :: orig_cwd
-   real(real64)             :: flat(30)
-   real(real64)             :: flat_chtb(732)   ! 2*magrs (magrs=366)
    integer, parameter       :: ICROP_POTATOD = 2
 
-   ! 1. Load the case (readswap on legacy side, load+validate+finalize on TOML).
-   call load_both_for_hupselbrook(config, errors)
+   call load_swap_config('tests/swap-cases/toml/1.hupselbrook/swap.toml', config, errors)
+   call config%validate(errors)
+   call config%finalize(errors)
    @assertFalse(errors%has_fatals())
 
-   ! 2. Now invoke the legacy WOFOST reader from inside the case dir so the
-   !    relative pathcrop ('./') resolves to the .crp file.
-   call get_cwd(orig_cwd)
-   call chdir_to('tests/swap-cases/1.hupselbrook')
-   call reset_for_next_readswap()
-   call read_legacy_wofost(ICROP_POTATOD, 'potatod')
-   call chdir_to(trim(orig_cwd))
-
-   ! ------------------------------------------------------------------
-   ! preparation (swprep=0 → only swprep itself is meaningful)
-   ! ------------------------------------------------------------------
+   ! preparation (swprep=0)
    @assertEqual(0, config%crop%rotation_wofost(ICROP_POTATOD)%preparation%swprep)
 
-   ! ------------------------------------------------------------------
-   ! sowing (swsow=0 → only swsow itself is meaningful)
-   ! ------------------------------------------------------------------
+   ! sowing (swsow=0)
    @assertEqual(0, config%crop%rotation_wofost(ICROP_POTATOD)%sowing%swsow)
 
-   ! ------------------------------------------------------------------
-   ! germination (swgerm=2 → tsumemeopt + tbasem read)
-   ! ------------------------------------------------------------------
+   ! germination (swgerm=2)
    @assertEqual(2, config%crop%rotation_wofost(ICROP_POTATOD)%germination%swgerm)
    @assertEqual(170.0_real64, config%crop%rotation_wofost(ICROP_POTATOD)%germination%tsumemeopt, 1.0e-12_real64)
    @assertEqual(3.0_real64,   config%crop%rotation_wofost(ICROP_POTATOD)%germination%tbasem,     1.0e-12_real64)
 
-   ! ------------------------------------------------------------------
    ! harvest
-   ! ------------------------------------------------------------------
-   @assertEqual(dvsend, config%crop%rotation_wofost(ICROP_POTATOD)%harvest%dvsend, 1.0e-12_real64)
-   @assertEqual(swharv, config%crop%rotation_wofost(ICROP_POTATOD)%harvest%swharv)
+   @assertEqual(2.0_real64, config%crop%rotation_wofost(ICROP_POTATOD)%harvest%dvsend, 1.0e-12_real64)
+   @assertEqual(0,          config%crop%rotation_wofost(ICROP_POTATOD)%harvest%swharv)
 
-   ! ------------------------------------------------------------------
-   ! crop_factor (swcf=2 → albedo, rsc, rsw populated; chtb table read)
-   ! ------------------------------------------------------------------
-   @assertEqual(swcf,   config%crop%rotation_wofost(ICROP_POTATOD)%crop_factor%swcf)
-   @assertEqual(albedo, config%crop%rotation_wofost(ICROP_POTATOD)%crop_factor%albedo, 1.0e-12_real64)
-   @assertEqual(rsc,    config%crop%rotation_wofost(ICROP_POTATOD)%crop_factor%rsc,    1.0e-12_real64)
-   @assertEqual(rsw,    config%crop%rotation_wofost(ICROP_POTATOD)%crop_factor%rsw,    1.0e-12_real64)
-   flat_chtb = flatten_table(config%crop%rotation_wofost(ICROP_POTATOD)%crop_factor%chtb, 732)
-   @assertEqual(chtb, flat_chtb, 1.0e-12_real64)
+   ! crop_factor (swcf=2)
+   @assertEqual(2,             config%crop%rotation_wofost(ICROP_POTATOD)%crop_factor%swcf)
+   @assertEqual(0.19_real64,   config%crop%rotation_wofost(ICROP_POTATOD)%crop_factor%albedo, 1.0e-12_real64)
+   @assertEqual(207.0_real64,  config%crop%rotation_wofost(ICROP_POTATOD)%crop_factor%rsc,    1.0e-12_real64)
+   @assertEqual(0.0_real64,    config%crop%rotation_wofost(ICROP_POTATOD)%crop_factor%rsw,    1.0e-12_real64)
 
-   ! ------------------------------------------------------------------
    ! phenology
-   ! ------------------------------------------------------------------
-   @assertEqual(idsl,   config%crop%rotation_wofost(ICROP_POTATOD)%phenology%idsl)
-   @assertEqual(tsumea, config%crop%rotation_wofost(ICROP_POTATOD)%phenology%tsumea, 1.0e-12_real64)
-   @assertEqual(tsumam, config%crop%rotation_wofost(ICROP_POTATOD)%phenology%tsumam, 1.0e-12_real64)
-   flat = flatten_table(config%crop%rotation_wofost(ICROP_POTATOD)%phenology%dtsmtb, 30)
-   @assertEqual(dtsmtb, flat, 1.0e-12_real64)
+   @assertEqual(0,              config%crop%rotation_wofost(ICROP_POTATOD)%phenology%idsl)
+   @assertEqual(150.0_real64,   config%crop%rotation_wofost(ICROP_POTATOD)%phenology%tsumea, 1.0e-12_real64)
+   @assertEqual(1550.0_real64,  config%crop%rotation_wofost(ICROP_POTATOD)%phenology%tsumam, 1.0e-12_real64)
 
-   ! ------------------------------------------------------------------
    ! initial
-   ! ------------------------------------------------------------------
-   @assertEqual(tdwi,   config%crop%rotation_wofost(ICROP_POTATOD)%initial%tdwi,   1.0e-12_real64)
-   @assertEqual(laiem,  config%crop%rotation_wofost(ICROP_POTATOD)%initial%laiem,  1.0e-12_real64)
-   @assertEqual(rgrlai, config%crop%rotation_wofost(ICROP_POTATOD)%initial%rgrlai, 1.0e-12_real64)
+   @assertEqual(75.0_real64,    config%crop%rotation_wofost(ICROP_POTATOD)%initial%tdwi,   1.0e-12_real64)
+   @assertEqual(0.0589_real64,  config%crop%rotation_wofost(ICROP_POTATOD)%initial%laiem,  1.0e-12_real64)
+   @assertEqual(0.012_real64,   config%crop%rotation_wofost(ICROP_POTATOD)%initial%rgrlai, 1.0e-12_real64)
 
-   ! ------------------------------------------------------------------
    ! green_area
-   ! ------------------------------------------------------------------
-   @assertEqual(spa,   config%crop%rotation_wofost(ICROP_POTATOD)%green_area%spa,   1.0e-12_real64)
-   @assertEqual(ssa,   config%crop%rotation_wofost(ICROP_POTATOD)%green_area%ssa,   1.0e-12_real64)
-   @assertEqual(span,  config%crop%rotation_wofost(ICROP_POTATOD)%green_area%span,  1.0e-12_real64)
-   @assertEqual(tbase, config%crop%rotation_wofost(ICROP_POTATOD)%green_area%tbase, 1.0e-12_real64)
-   flat = flatten_table(config%crop%rotation_wofost(ICROP_POTATOD)%green_area%slatb, 30)
-   @assertEqual(slatb, flat, 1.0e-12_real64)
+   @assertEqual(0.0_real64,  config%crop%rotation_wofost(ICROP_POTATOD)%green_area%spa,   1.0e-12_real64)
+   @assertEqual(0.0_real64,  config%crop%rotation_wofost(ICROP_POTATOD)%green_area%ssa,   1.0e-12_real64)
+   @assertEqual(37.0_real64, config%crop%rotation_wofost(ICROP_POTATOD)%green_area%span,  1.0e-12_real64)
+   @assertEqual(2.0_real64,  config%crop%rotation_wofost(ICROP_POTATOD)%green_area%tbase, 1.0e-12_real64)
 
-   ! ------------------------------------------------------------------
    ! assimilation
-   ! ------------------------------------------------------------------
-   @assertEqual(kdif, config%crop%rotation_wofost(ICROP_POTATOD)%assimilation%kdif, 1.0e-12_real64)
-   @assertEqual(kdir, config%crop%rotation_wofost(ICROP_POTATOD)%assimilation%kdir, 1.0e-12_real64)
-   @assertEqual(eff,  config%crop%rotation_wofost(ICROP_POTATOD)%assimilation%eff,  1.0e-12_real64)
-   flat = flatten_table(config%crop%rotation_wofost(ICROP_POTATOD)%assimilation%amaxtb, 30)
-   @assertEqual(amaxtb, flat, 1.0e-12_real64)
-   flat = flatten_table(config%crop%rotation_wofost(ICROP_POTATOD)%assimilation%tmpftb, 30)
-   @assertEqual(tmpftb, flat, 1.0e-12_real64)
-   flat = flatten_table(config%crop%rotation_wofost(ICROP_POTATOD)%assimilation%tmnftb, 30)
-   @assertEqual(tmnftb, flat, 1.0e-12_real64)
+   @assertEqual(1.0_real64,  config%crop%rotation_wofost(ICROP_POTATOD)%assimilation%kdif, 1.0e-12_real64)
+   @assertEqual(0.75_real64, config%crop%rotation_wofost(ICROP_POTATOD)%assimilation%kdir, 1.0e-12_real64)
+   @assertEqual(0.45_real64, config%crop%rotation_wofost(ICROP_POTATOD)%assimilation%eff,  1.0e-12_real64)
 
-   ! ------------------------------------------------------------------
    ! conversion
-   ! ------------------------------------------------------------------
-   @assertEqual(cvl, config%crop%rotation_wofost(ICROP_POTATOD)%conversion%cvl, 1.0e-12_real64)
-   @assertEqual(cvo, config%crop%rotation_wofost(ICROP_POTATOD)%conversion%cvo, 1.0e-12_real64)
-   @assertEqual(cvr, config%crop%rotation_wofost(ICROP_POTATOD)%conversion%cvr, 1.0e-12_real64)
-   @assertEqual(cvs, config%crop%rotation_wofost(ICROP_POTATOD)%conversion%cvs, 1.0e-12_real64)
+   @assertEqual(0.72_real64, config%crop%rotation_wofost(ICROP_POTATOD)%conversion%cvl, 1.0e-12_real64)
+   @assertEqual(0.85_real64, config%crop%rotation_wofost(ICROP_POTATOD)%conversion%cvo, 1.0e-12_real64)
+   @assertEqual(0.72_real64, config%crop%rotation_wofost(ICROP_POTATOD)%conversion%cvr, 1.0e-12_real64)
+   @assertEqual(0.69_real64, config%crop%rotation_wofost(ICROP_POTATOD)%conversion%cvs, 1.0e-12_real64)
 
-   ! ------------------------------------------------------------------
    ! respiration
-   ! ------------------------------------------------------------------
-   @assertEqual(q10, config%crop%rotation_wofost(ICROP_POTATOD)%respiration%q10, 1.0e-12_real64)
-   @assertEqual(rml, config%crop%rotation_wofost(ICROP_POTATOD)%respiration%rml, 1.0e-12_real64)
-   @assertEqual(rmo, config%crop%rotation_wofost(ICROP_POTATOD)%respiration%rmo, 1.0e-12_real64)
-   @assertEqual(rmr, config%crop%rotation_wofost(ICROP_POTATOD)%respiration%rmr, 1.0e-12_real64)
-   @assertEqual(rms, config%crop%rotation_wofost(ICROP_POTATOD)%respiration%rms, 1.0e-12_real64)
-   flat = flatten_table(config%crop%rotation_wofost(ICROP_POTATOD)%respiration%rfsetb, 30)
-   @assertEqual(rfsetb, flat, 1.0e-12_real64)
+   @assertEqual(2.0_real64,    config%crop%rotation_wofost(ICROP_POTATOD)%respiration%q10, 1.0e-12_real64)
+   @assertEqual(0.03_real64,   config%crop%rotation_wofost(ICROP_POTATOD)%respiration%rml, 1.0e-12_real64)
+   @assertEqual(0.0045_real64, config%crop%rotation_wofost(ICROP_POTATOD)%respiration%rmo, 1.0e-12_real64)
+   @assertEqual(0.01_real64,   config%crop%rotation_wofost(ICROP_POTATOD)%respiration%rmr, 1.0e-12_real64)
+   @assertEqual(0.015_real64,  config%crop%rotation_wofost(ICROP_POTATOD)%respiration%rms, 1.0e-12_real64)
 
-   ! ------------------------------------------------------------------
-   ! partitioning
-   ! ------------------------------------------------------------------
-   flat = flatten_table(config%crop%rotation_wofost(ICROP_POTATOD)%partitioning%frtb, 30)
-   @assertEqual(frtb, flat, 1.0e-12_real64)
-   flat = flatten_table(config%crop%rotation_wofost(ICROP_POTATOD)%partitioning%fltb, 30)
-   @assertEqual(fltb, flat, 1.0e-12_real64)
-   flat = flatten_table(config%crop%rotation_wofost(ICROP_POTATOD)%partitioning%fstb, 30)
-   @assertEqual(fstb, flat, 1.0e-12_real64)
-   flat = flatten_table(config%crop%rotation_wofost(ICROP_POTATOD)%partitioning%fotb, 30)
-   @assertEqual(fotb, flat, 1.0e-12_real64)
-
-   ! ------------------------------------------------------------------
    ! death
-   ! ------------------------------------------------------------------
-   @assertEqual(perdl, config%crop%rotation_wofost(ICROP_POTATOD)%death%perdl, 1.0e-12_real64)
-   flat = flatten_table(config%crop%rotation_wofost(ICROP_POTATOD)%death%rdrrtb, 30)
-   @assertEqual(rdrrtb, flat, 1.0e-12_real64)
-   flat = flatten_table(config%crop%rotation_wofost(ICROP_POTATOD)%death%rdrstb, 30)
-   @assertEqual(rdrstb, flat, 1.0e-12_real64)
+   @assertEqual(0.03_real64, config%crop%rotation_wofost(ICROP_POTATOD)%death%perdl, 1.0e-12_real64)
 
-   ! ------------------------------------------------------------------
-   ! root (swrd=2 → rdi/rri/rdc populated)
-   ! ------------------------------------------------------------------
-   @assertEqual(swrd,     config%crop%rotation_wofost(ICROP_POTATOD)%root%swrd)
-   @assertEqual(rdi,      config%crop%rotation_wofost(ICROP_POTATOD)%root%rdi,      1.0e-12_real64)
-   @assertEqual(rri,      config%crop%rotation_wofost(ICROP_POTATOD)%root%rri,      1.0e-12_real64)
-   @assertEqual(rdc,      config%crop%rotation_wofost(ICROP_POTATOD)%root%rdc,      1.0e-12_real64)
-   @assertEqual(swdmi2rd, config%crop%rotation_wofost(ICROP_POTATOD)%root%swdmi2rd)
-   ! READING NOTE: legacy readwofost only reads WRTMAX inside the swrd==3
-   ! branch (readswap.f90 line ~3029).  potatod has swrd=2 so the global
-   ! stays at its default 0.0 even though the .crp file declares WRTMAX=3000.
-   ! TOML side stores the value verbatim — assert against the literal.
+   ! root (swrd=2)
+   @assertEqual(2,             config%crop%rotation_wofost(ICROP_POTATOD)%root%swrd)
+   @assertEqual(10.0_real64,   config%crop%rotation_wofost(ICROP_POTATOD)%root%rdi,    1.0e-12_real64)
+   @assertEqual(1.2_real64,    config%crop%rotation_wofost(ICROP_POTATOD)%root%rri,    1.0e-12_real64)
+   @assertEqual(50.0_real64,   config%crop%rotation_wofost(ICROP_POTATOD)%root%rdc,    1.0e-12_real64)
+   @assertEqual(1,             config%crop%rotation_wofost(ICROP_POTATOD)%root%swdmi2rd)
    @assertEqual(3000.0_real64, config%crop%rotation_wofost(ICROP_POTATOD)%root%wrtmax, 1.0e-12_real64)
 
-   ! ------------------------------------------------------------------
-   ! oxygen_stress (swoxygen=1 → Feddes branch: hlim1/2u/2l populated)
-   ! ------------------------------------------------------------------
-   @assertEqual(swoxygen,   config%crop%rotation_wofost(ICROP_POTATOD)%oxygen_stress%swoxygen)
-   @assertEqual(swwrtnonox, config%crop%rotation_wofost(ICROP_POTATOD)%oxygen_stress%swwrtnonox)
-   @assertEqual(aeratecrit, config%crop%rotation_wofost(ICROP_POTATOD)%oxygen_stress%aeratecrit, 1.0e-12_real64)
-   @assertEqual(hlim1,      config%crop%rotation_wofost(ICROP_POTATOD)%oxygen_stress%hlim1,      1.0e-12_real64)
-   @assertEqual(hlim2u,     config%crop%rotation_wofost(ICROP_POTATOD)%oxygen_stress%hlim2u,     1.0e-12_real64)
-   @assertEqual(hlim2l,     config%crop%rotation_wofost(ICROP_POTATOD)%oxygen_stress%hlim2l,     1.0e-12_real64)
+   ! oxygen_stress (swoxygen=1)
+   @assertEqual(1,             config%crop%rotation_wofost(ICROP_POTATOD)%oxygen_stress%swoxygen)
+   @assertEqual(1,             config%crop%rotation_wofost(ICROP_POTATOD)%oxygen_stress%swwrtnonox)
+   @assertEqual(0.5_real64,    config%crop%rotation_wofost(ICROP_POTATOD)%oxygen_stress%aeratecrit, 1.0e-12_real64)
+   @assertEqual(-10.0_real64,  config%crop%rotation_wofost(ICROP_POTATOD)%oxygen_stress%hlim1,      1.0e-12_real64)
+   @assertEqual(-25.0_real64,  config%crop%rotation_wofost(ICROP_POTATOD)%oxygen_stress%hlim2u,     1.0e-12_real64)
+   @assertEqual(-25.0_real64,  config%crop%rotation_wofost(ICROP_POTATOD)%oxygen_stress%hlim2l,     1.0e-12_real64)
 
-   ! ------------------------------------------------------------------
    ! drought_stress
-   ! ------------------------------------------------------------------
-   @assertEqual(swdrought, config%crop%rotation_wofost(ICROP_POTATOD)%drought_stress%swdrought)
-   @assertEqual(hlim3h,    config%crop%rotation_wofost(ICROP_POTATOD)%drought_stress%hlim3h, 1.0e-12_real64)
-   @assertEqual(hlim3l,    config%crop%rotation_wofost(ICROP_POTATOD)%drought_stress%hlim3l, 1.0e-12_real64)
-   @assertEqual(hlim4,     config%crop%rotation_wofost(ICROP_POTATOD)%drought_stress%hlim4,  1.0e-12_real64)
-   @assertEqual(adcrh,     config%crop%rotation_wofost(ICROP_POTATOD)%drought_stress%adcrh,  1.0e-12_real64)
-   @assertEqual(adcrl,     config%crop%rotation_wofost(ICROP_POTATOD)%drought_stress%adcrl,  1.0e-12_real64)
+   @assertEqual(1,               config%crop%rotation_wofost(ICROP_POTATOD)%drought_stress%swdrought)
+   @assertEqual(-300.0_real64,   config%crop%rotation_wofost(ICROP_POTATOD)%drought_stress%hlim3h, 1.0e-12_real64)
+   @assertEqual(-500.0_real64,   config%crop%rotation_wofost(ICROP_POTATOD)%drought_stress%hlim3l, 1.0e-12_real64)
+   @assertEqual(-10000.0_real64, config%crop%rotation_wofost(ICROP_POTATOD)%drought_stress%hlim4,  1.0e-12_real64)
+   @assertEqual(0.5_real64,      config%crop%rotation_wofost(ICROP_POTATOD)%drought_stress%adcrh,  1.0e-12_real64)
+   @assertEqual(0.1_real64,      config%crop%rotation_wofost(ICROP_POTATOD)%drought_stress%adcrl,  1.0e-12_real64)
 
-   ! ------------------------------------------------------------------
-   ! salinity (swsalinity=0 → only the switch itself is meaningful)
-   ! ------------------------------------------------------------------
-   @assertEqual(swsalinity, config%crop%rotation_wofost(ICROP_POTATOD)%salinity%swsalinity)
+   ! salinity (swsalinity=0)
+   @assertEqual(0, config%crop%rotation_wofost(ICROP_POTATOD)%salinity%swsalinity)
 
-   ! ------------------------------------------------------------------
-   ! compensate (swcompensate=0 → only the switch itself is meaningful)
-   ! ------------------------------------------------------------------
-   @assertEqual(swcompensate, config%crop%rotation_wofost(ICROP_POTATOD)%compensate%swcompensate)
+   ! compensate (swcompensate=0)
+   @assertEqual(0, config%crop%rotation_wofost(ICROP_POTATOD)%compensate%swcompensate)
 
-   ! ------------------------------------------------------------------
-   ! interception (swinter=1 → cofab populated)
-   ! ------------------------------------------------------------------
-   @assertEqual(swinter, config%crop%rotation_wofost(ICROP_POTATOD)%interception%swinter)
-   @assertEqual(cofab,   config%crop%rotation_wofost(ICROP_POTATOD)%interception%cofab, 1.0e-12_real64)
+   ! interception (swinter=1)
+   @assertEqual(1,           config%crop%rotation_wofost(ICROP_POTATOD)%interception%swinter)
+   @assertEqual(0.25_real64, config%crop%rotation_wofost(ICROP_POTATOD)%interception%cofab, 1.0e-12_real64)
 
-   ! ------------------------------------------------------------------
-   ! co2 (swco2=0 → only the switch itself is meaningful here)
-   ! ------------------------------------------------------------------
-   ! readwofost does not expose `swco2` as a public variables global; the
-   ! TOML side carries it as an explicit config field.
+   ! co2 (swco2=0)
    @assertEqual(0, config%crop%rotation_wofost(ICROP_POTATOD)%co2%swco2)
 
-   ! ------------------------------------------------------------------
    ! management
-   ! ------------------------------------------------------------------
-   @assertEqual(swpotrelmf, config%crop%rotation_wofost(ICROP_POTATOD)%management%swpotrelmf)
-   @assertEqual(relmf,      config%crop%rotation_wofost(ICROP_POTATOD)%management%relmf, 1.0e-12_real64)
-   ! fraharlosorm_lv etc. are not exposed as variables-module globals from
-   ! readwofost (they live on the harvest-loss accumulator).  Cross-check
-   ! against the literal .crp value to keep the management section covered.
+   @assertEqual(2,           config%crop%rotation_wofost(ICROP_POTATOD)%management%swpotrelmf)
+   @assertEqual(0.9_real64,  config%crop%rotation_wofost(ICROP_POTATOD)%management%relmf, 1.0e-12_real64)
    @assertEqual(0.2_real64,  config%crop%rotation_wofost(ICROP_POTATOD)%management%fraharlosorm_lv,     1.0e-12_real64)
    @assertEqual(0.3_real64,  config%crop%rotation_wofost(ICROP_POTATOD)%management%fradeceasedlvtosoil, 1.0e-12_real64)
 end subroutine
@@ -538,48 +387,39 @@ end subroutine
 @test
 subroutine test_hupselbrook_parity_4d_sections()
    use funit
-   use parity_helpers_mod
-   use variables, only: swbotb, swhea, swcalt, swtopbhea, swbotbhea,    &
-                        swirfix, swsolu, swbotbc, cdrain, cseep, tscf,  &
-                        ldis
    use swap_config_mod
+   use load_swap_config_mod, only: load_swap_config
    use error_mod
    use iso_fortran_env, only: real64
    type(swap_config_t)      :: config
    type(error_collection_t) :: errors
 
-   call load_both_for_hupselbrook(config, errors)
+   call load_swap_config('tests/swap-cases/toml/1.hupselbrook/swap.toml', config, errors)
+   call config%validate(errors)
+   call config%finalize(errors)
    @assertFalse(errors%has_fatals())
 
-   ! [bottom_boundary] — case 1 SWBOTB=6 (free outflow, no scalars).
-   @assertEqual(swbotb, config%bottom_boundary%swbotb)
+   ! [bottom_boundary] — case 1 SWBOTB=6 (free outflow).
+   @assertEqual(6, config%bottom_boundary%swbotb)
 
    ! [heat] — case 1 SWHEA=1 with numerical method (SWCALT=2).
-   @assertEqual(swhea,     config%heat%swhea)
-   @assertEqual(swcalt,    config%heat%swcalt)
-   @assertEqual(swtopbhea, config%heat%swtopbhea)
-   @assertEqual(swbotbhea, config%heat%swbotbhea)
-   ! READING NOTE: per-layer arrays psand/pclay/porg deferred — they live
-   ! in `variables%psand(maho)` (fixed-size) and need a flatten-style
-   ! helper to compare against the variable-length config arrays.
+   @assertEqual(1, config%heat%swhea)
+   @assertEqual(2, config%heat%swcalt)
+   @assertEqual(1, config%heat%swtopbhea)
+   @assertEqual(1, config%heat%swbotbhea)
    @assertTrue(allocated(config%heat%psand))
    @assertTrue(allocated(config%heat%tsoil_init))
 
    ! [irrigation] — case 1 SWIRFIX=1 with one inline fixed event.
-   @assertEqual(swirfix, config%irrigation%swirfix)
+   @assertEqual(1, config%irrigation%swirfix)
    @assertTrue(allocated(config%irrigation%fixed_events))
    @assertEqual(1, size(config%irrigation%fixed_events, 1))
-   ! READING NOTE: legacy `irgfil` is a local in readswap (not a module
-   ! global), so we cannot cross-check the file path; assert structure only.
 
    ! [solute] — case 1 SWSOLU=1 with simple boundary transport.
-   @assertEqual(swsolu,  config%solute%swsolu)
-   @assertEqual(swbotbc, config%solute%swbotbc)
-   @assertEqual(cdrain,  config%solute%cdrain, 1.0e-12_real64)
-   @assertEqual(cseep,   config%solute%cseep,  1.0e-12_real64)
-   @assertEqual(tscf,    config%solute%tscf,   1.0e-12_real64)
-   ! READING NOTE: ldis is an array (one entry per soil layer) in the
-   ! variables module (`real(8) ldis(maho)`); config holds a scalar.
-   ! Compare against the first-layer entry (case 1: 5.0).
-   @assertEqual(ldis(1), config%solute%ldis,   1.0e-12_real64)
+   @assertEqual(1,           config%solute%swsolu)
+   @assertEqual(0,           config%solute%swbotbc)
+   @assertEqual(0.1_real64,  config%solute%cdrain, 1.0e-12_real64)
+   @assertEqual(0.1_real64,  config%solute%cseep,  1.0e-12_real64)
+   @assertEqual(0.0_real64,  config%solute%tscf,   1.0e-12_real64)
+   @assertEqual(5.0_real64,  config%solute%ldis,   1.0e-12_real64)
 end subroutine

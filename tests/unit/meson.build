@@ -133,6 +133,7 @@ if get_option('enable_pfunit')
         'io/toml/parity_helpers.f90',
         'io/toml/legacy_crop_helper.f90',
         'io/toml/readswap_stubs.f90',
+        'io/toml/capture_helpers.f90',
     ]
 
     pfunit_base_sources = test_base_sources + pfunit_extra_sources
