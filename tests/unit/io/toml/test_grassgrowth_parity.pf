@@ -144,7 +144,10 @@ subroutine test_grassgrowth_meteorology_parity()
    call config%validate(errors)
    call config%finalize(errors)
 
-   @assertEqual(trim(metfil), trim(config%meteo%metfile))
+   ! Note: legacy metfil ('*.met') and TOML metfile ('*.csv') diverge
+   ! intentionally per ADR 0014 — TOML pipeline is CSV-only.
+   ! Compare basename only.
+   @assertEqual(trim(metfil(1:index(metfil,'.')-1)), trim(config%meteo%metfile(1:index(config%meteo%metfile,'.')-1)))
    @assertEqual(lat,          config%meteo%lat,       1.0d-9)
    @assertEqual(alt,          config%meteo%alt,       1.0d-9)
    @assertEqual(altw,         config%meteo%altw,      1.0d-9)

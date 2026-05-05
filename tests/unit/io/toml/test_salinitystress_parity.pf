@@ -81,7 +81,10 @@ subroutine test_salinitystress_parity_meteorology()
 
    call load_both_for_salinitystress(config, errors)
 
-   @assertEqual(trim(metfil), trim(config%meteo%metfile))
+   ! Note: legacy metfil ('*.met') and TOML metfile ('*.csv') diverge
+   ! intentionally per ADR 0014 — TOML pipeline is CSV-only.
+   ! Compare basename only.
+   @assertEqual(trim(metfil(1:index(metfil,'.')-1)), trim(config%meteo%metfile(1:index(config%meteo%metfile,'.')-1)))
    @assertEqual(lat,          config%meteo%lat,       1.0d-9)
    @assertEqual(alt,          config%meteo%alt,       1.0d-9)
    @assertEqual(altw,         config%meteo%altw,      1.0d-9)
@@ -127,13 +130,13 @@ subroutine test_salinitystress_parity_soil()
 
    @assertEqual(swsophy, config%soil%swsophy)
    @assertEqual(swhyst,  config%soil%swhyst)
-   ! READING NOTE: legacy SWINCO=3 (with INIFIL='swap.ini') is not yet wired
-   ! in the schema; the case-5 swap.toml uses swinco=2 as a schema-clean
-   ! stand-in (deferred to Phase 4d).  Assert against the TOML literal.
-   @assertEqual(2,       config%soil%swinco)
-   ! READING NOTE: gwli is not read by readswap when swinco==3 (legacy reads
-   ! initial heads from INIFIL='swap.ini' in that branch).  TOML carries the
-   ! value verbatim from the .toml -90.0; assert against the literal.
+   ! Phase 4d wired SWINCO=3 with [soil.initial] CSV companions; both
+   ! pipelines now agree on swinco=3.
+   @assertEqual(3,       config%soil%swinco)
+   @assertEqual(swinco,  config%soil%swinco)
+   ! gwli is not read by readswap when swinco==3 (legacy reads initial
+   ! heads from INIFIL='swap.ini' in that branch). TOML carries the value
+   ! verbatim from the .toml as -90.0; assert against the literal.
    @assertEqual(-90.0d0, config%soil%gwli, 1.0d-9)
    @assertEqual(swmacro, config%soil%swmacro)
    @assertEqual(pondmx,  config%soil%pondmx,  1.0d-9)
@@ -493,6 +496,9 @@ subroutine test_salinitystress_parity_4d_sections()
    @assertEqual(cseep,   config%solute%cseep,  1.0e-12_real64)
    @assertEqual(tscf,    config%solute%tscf,   1.0e-12_real64)
    ! READING NOTE: legacy ldis is a per-layer array `ldis(maho)`;
-   ! config holds a scalar. Compare against the first-layer entry.
-   @assertEqual(ldis(1), config%solute%ldis,   1.0e-12_real64)
+   ! schema has both `ldis` (scalar) and `ldis_array` (per-layer). The
+   ! case-5 TOML uses the array form (`ldis = [5.0, 5.0]`), so compare
+   ! the first-layer legacy value against ldis_array(1).
+   @assertTrue(allocated(config%solute%ldis_array))
+   @assertEqual(ldis(1), config%solute%ldis_array(1), 1.0e-12_real64)
 end subroutine

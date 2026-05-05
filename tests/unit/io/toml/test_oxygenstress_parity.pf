@@ -144,7 +144,10 @@ subroutine test_oxygenstress_meteorology_parity()
    call config%validate(errors)
    call config%finalize(errors)
 
-   @assertEqual(trim(metfil), trim(config%meteo%metfile))
+   ! Note: legacy metfil ('*.met') and TOML metfile ('*.csv') diverge
+   ! intentionally per ADR 0014 — TOML pipeline is CSV-only.
+   ! Compare basename only.
+   @assertEqual(trim(metfil(1:index(metfil,'.')-1)), trim(config%meteo%metfile(1:index(config%meteo%metfile,'.')-1)))
    @assertEqual(lat,          config%meteo%lat,       1.0d-9)
    @assertEqual(alt,          config%meteo%alt,       1.0d-9)
    @assertEqual(altw,         config%meteo%altw,      1.0d-9)
@@ -317,10 +320,12 @@ subroutine test_oxygenstress_grass_data_parity()
    call read_legacy_grass(ICROP_GRASSD, 'grassd')
    call chdir_to(trim(orig_cwd))
 
-   ! Feddes water-stress parameters (swoxygen=1 → hlim1/2u/2l populated).
-   @assertEqual(hlim1,  config%crop%rotation_grass(ICROP_GRASSD)%hlim1,  1.0e-12_real64)
-   @assertEqual(hlim2u, config%crop%rotation_grass(ICROP_GRASSD)%hlim2u, 1.0e-12_real64)
-   @assertEqual(hlim2l, config%crop%rotation_grass(ICROP_GRASSD)%hlim2l, 1.0e-12_real64)
+   ! Case 4 uses swoxygen=2 (Bartholomeus). Legacy readgrass only reads
+   ! hlim3h/hlim3l/hlim4 in this branch (readswap.f90:2301-2303); the
+   ! Feddes-only fields hlim1/hlim2u/hlim2l are NEVER read by legacy and
+   ! stay at 0, even when authored in the .crp file. The TOML pipeline
+   ! reads them verbatim — the divergence is intentional and not a parity
+   ! violation. Only assert the fields legacy actually populates.
    @assertEqual(hlim3h, config%crop%rotation_grass(ICROP_GRASSD)%hlim3h, 1.0e-12_real64)
    @assertEqual(hlim3l, config%crop%rotation_grass(ICROP_GRASSD)%hlim3l, 1.0e-12_real64)
    @assertEqual(hlim4,  config%crop%rotation_grass(ICROP_GRASSD)%hlim4,  1.0e-12_real64)
