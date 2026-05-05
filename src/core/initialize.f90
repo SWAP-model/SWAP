@@ -421,7 +421,11 @@
       qredfrssum         = 0.0d0 
       qrot               = 0.0d0
       qssdi              = 0.0d0
-      qtop               = 0.0d0 
+      ! dt_SSDI_event = 1.0 means "no SSDI sub-day event in progress";
+      ! timecontrol.f90:423,620 read this ungated by flSSDI, so the
+      ! default must reflect the no-event state even when SSDI is off.
+      dt_SSDI_event      = 1.0d0
+      qtop               = 0.0d0
       relsatthr          = 0.0d0 
       reva               = 0.0d0 
       rfcp               = 0.0d0 
