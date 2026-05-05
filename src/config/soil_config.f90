@@ -82,6 +82,7 @@ module soil_config_mod
       integer :: swinco  = 1
       integer :: swmacro = 0
       integer :: swscal  = 0
+      integer :: swtill  = 0       !! Tillage-event simulation. 0=off (only supported value); 1 stub-errored (SS-10.5).
 
       real(real64) :: gwli    = 0.0_real64
       real(real64) :: pondini = 0.0_real64
@@ -152,11 +153,28 @@ contains
             'ADR 0010.', 'soil')
       end if
 
+      ! ----- Phase 4f-extend SS-10.5 stub-error: tillage deferred -----
+      ! Read_Tillage (tillage.f90:433) was the last legacy reader still
+      ! reachable from the production runtime. SS-10.5 retired its
+      ! RDinit(swpfile) call and now reads swtill from this schema slot.
+      ! No regression case authors swtill=1; if a future case needs it,
+      ! the rest of the Read_Tillage rdinqr/rdsdor block must also be
+      ! ported to schema (Date_tillage, Z_tillage, I_tillage,
+      ! Type_tillage, iType_Tillage, Rho_cons, Rho_tillage, k_R, ...).
+      if (self%swtill == 1) then
+         call errors%append(ERR_VALIDATION_CROSS_FIELD, &
+            'soil.swtill=1 (tillage events) not yet supported in the ' // &
+            'TOML pipeline; no regression case exercises it. Port the ' // &
+            'Read_Tillage rdinqr/rdsdor block to schema if a case needs ' // &
+            'this.', 'soil')
+      end if
+
       call check_int_enum(self%swsophy, [0, 1],       "soil.swsophy", errors)
       call check_int_enum(self%swhyst,  [0, 1, 2],    "soil.swhyst",  errors)
       call check_int_enum(self%swinco,  [1, 2, 3],    "soil.swinco",  errors)
       call check_int_enum(self%swmacro, [0, 1],       "soil.swmacro", errors)
       call check_int_enum(self%swscal,  [0, 1],       "soil.swscal",  errors)
+      call check_int_enum(self%swtill,  [0, 1],       "soil.swtill",  errors)
 
       call check_nonnegative_real(self%pondmx,  "soil.pondmx",  errors)
       call check_nonnegative_real(self%ksatexm, "soil.ksatexm", errors)

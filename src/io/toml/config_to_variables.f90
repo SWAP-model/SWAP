@@ -122,7 +122,7 @@ contains
       ! Meteorology (audit: 12 + evaporation + snow)
       ! ---------------------------------------------------------------
       if (allocated(config%meteo%metfile))  metfil  = config%meteo%metfile
-      ! Legacy `rainfil` global removed (Phase 4f-extend SS-5 / ADR 0014).
+      ! Legacy `rainfil` global removed (ADR 0014).
       ! `config%meteo%rainfile` is no longer copied into a global because
       ! the only consumer (the `.YYY` per-year rain reader in readmeteo.f90)
       ! has been deleted; CSV rain events use `config%meteo%rain_events_file`.
@@ -140,8 +140,9 @@ contains
       angstromb   = config%meteo%angstromb
 
       ! All metfile extensions other than .csv are rejected by
-      ! meteorology_config_validate (Phase 4f-extend SS-5; ADR 0014).
-      ! Pre-load CSV via read_csv_table.
+      ! meteorology_config_validate (ADR 0014). The `.csv` guard below
+      ! is defense-in-depth — the validator already enforced this before
+      ! the adapter ran.
       call lowerc(metfil)
 
       if (index(trim(metfil), '.csv') > 0) then
@@ -174,15 +175,13 @@ contains
       end if
 
       ! Detail meteo CSV pre-load (swmetdetail=1 + detail_file provided).
-      ! Metfile is always CSV here (rejected at TOML boundary otherwise —
-      ! Phase 4f-extend SS-5 / ADR 0014).
+      ! Metfile is always CSV here (validator rejects non-.csv per ADR
+      ! 0014). The detail_file required-when-swmetdetail=1 check moved
+      ! to meteorology_config_validate (SS-5 follow-up M2); the
+      ! allocation guard below is defense-in-depth only.
       if (swmetdetail == 1) then
-         if (.not. allocated(config%meteo%detail_file) .or. &
-             len_trim(config%meteo%detail_file) == 0) then
-            call fatalerr_collected('config_to_variables', &
-               'meteorology.temporal.detail_file required when ' // &
-               'swmetdetail=1 and metfile is a CSV')
-         else
+         if (allocated(config%meteo%detail_file) .and. &
+             len_trim(config%meteo%detail_file) > 0) then
             block
                use csv_reader_mod,  only: read_csv_table
                use error_mod,       only: error_collection_t
@@ -475,6 +474,10 @@ contains
       swhyst  = config%soil%swhyst
       swinco  = config%soil%swinco
       swmacro = config%soil%swmacro
+      ! SS-10.5: legacy globals use prefixed names (variables module);
+      ! validators stub-error =1 so default 0 is the only value reachable.
+      till_swtill = config%soil%swtill
+      swssdi_irr  = config%irrigation%swssdi
       gwli    = config%soil%gwli
       pondini = config%soil%pondini
       pond    = config%soil%pondini    ! legacy alias: pond <-> pondini
@@ -1166,21 +1169,18 @@ contains
          InList_csv_tz = config%output_csv%inlist_tz
       end if
 
-      ! HACK Phase 4f-extend: set up legacy I/O state needed by unported
-      ! readers (read_tillage, cropgrowth crop sub-readers, rddre). They
-      ! call RDinit(unit, logf, swpfile) which opens swpfile from cwd.
-      ! Without this, the open fails with FOPENG. Mirrors readswap.f90:83
-      ! and 86. Phase 4f-extend will retire these legacy readers reader-
-      ! by-reader; once they're all gone, this block goes away too.
+      ! Phase 4f-extend SS-10.5: the swpfile/logf hack that previously
+      ! lived here was removed when Read_Tillage and SSDI_irrigation(1)
+      ! were refactored to short-circuit when swtill=0 / swssdi=0
+      ! (which the validators now enforce as the only supported values).
+      ! `logf` is still opened here because ~90 production code sites
+      ! write log lines via `write(logf, ...)`.
       block
-         use variables, only: swpfile, logf
-         integer :: getun  ! external from ttutil
+         use variables, only: logf
+         integer :: getun
          logical :: log_open
-         swpfile = 'swap.swp'
-         inquire(unit=20, opened=log_open)  ! cheap check
+         inquire(unit=20, opened=log_open)
          if (.not. log_open) then
-            ! Open the legacy log file so unported readers can write to it.
-            ! `del` privilege removes the file on close (legacy convention).
             call delfil('swap_swap.log', .false.)
             logf = getun(20, 99)
             call fopens(logf, 'swap_swap.log', 'new', 'del')

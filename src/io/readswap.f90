@@ -1743,10 +1743,10 @@
          end if
       end if
 
-! --- Legacy "all meteo in single .met" pre-load removed (Phase 4f-extend
-!     SS-5 / ADR 0014). MeteoInOneFile deleted; the .swp pipeline is no
-!     longer invoked by working source per the umbrella spec retirement
-!     gate. swMetFilAll global swept in SS-5 Commit 3.
+! --- Legacy "all meteo in single .met" pre-load removed (ADR 0014).
+!     MeteoInOneFile deleted; the .swp pipeline is no longer invoked
+!     by working source per the umbrella spec retirement gate.
+!     swMetFilAll global swept in SS-5 Commit 3.
 
 ! --- copy content of key-file to log-file
       write (logf,14)  
