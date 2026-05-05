@@ -823,20 +823,13 @@
       real(8)  tsumemesub      
       
       select case (task)
-          
-! === Initialization preparation, sowing and germination ======================
-      
-      case (1)
-        
-        call readarablelandgerm(icrop,cropfil(icrop))
-      
-        if (.not. flCropEmergence) flCropReadFile = .false.
-    
-        return
-      
+
 ! === Preparation before crop growth ==========================================
-      
-      case (2)  
+! ADR 0017: case(1) deleted — legacy readarablelandgerm() callsite. The
+! dispatch block in InitCropGrowth (lines 90-197) is the modern entry
+! point; cache-miss is fatalerr_collected, no legacy fallback.
+
+      case (2)
       
         node   = 1
         dhPrep = h(node) - hPrep
