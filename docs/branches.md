@@ -5,74 +5,74 @@ date: 2026-05-05
 
 # Branch convention
 
-This repository hosts two parallel histories on the remote:
-
-| Branch | What it holds | Consumers |
+| Branch | Role | Push target |
 |---|---|---|
-| `main` | **Legacy SWAP 4.2.0 reference implementation.** Frozen against accidental modernization changes. | `pyswap` (hardcoded `git clone main` for build artifacts); GitHub Actions legacy build workflow. |
-| `modern` | **Modernized runtime: TOML-only input pipeline, typed config schema, CSV outputs.** Active development line. | Internal modernization work; future consumers once they migrate. |
+| `main` | **Modernization release line.** Only merge from `development` when a version is release-worthy. | Tagged releases only. |
+| `development` | **Active day-to-day work.** Topic branches feed into here. | Pushed continuously. |
+| `v4.2.0` tag | **Legacy SWAP 4.2.0 reference snapshot** (commit `7587ca3`). pyswap and other downstream consumers pin to this tag for the legacy artifact. | Frozen. |
 
-## Why two branches
+## Workflow
+
+```
+topic-branch        ← optional short-lived feature work
+    │
+    ▼ git merge --no-ff (or fast-forward)
+development         ← daily work; push freely to origin/development
+    │
+    ▼ git merge --no-ff   (only when a version is release-worthy)
+main                ← release line; tagged when a version ships
+```
+
+- New work happens on `development` (or topic branches that merge into
+  it).
+- Push `development` to `origin/development` whenever you want a remote
+  backup or want CI to run.
+- **Do not merge `development` → `main` until a version is
+  release-worthy.** Each merge to `main` should correspond to a
+  tagged release.
+
+## Why this convention
 
 The modernization (Phase 4 / Phase 4f-extend, completed 2026-05-05;
 see [`PHASE-4-MODERNIZATION-SUMMARY.md`](PHASE-4-MODERNIZATION-SUMMARY.md))
-landed ~460 commits of changes that retire the legacy fixed-format
-reader chain. External consumers — `pyswap` and the GitHub Actions
-legacy artifact build — depend on `main` pointing at the SWAP 4.2.0
-codebase. Pushing the modernized history to `main` would break those
-consumers without warning.
+landed ~460 commits that retire the legacy fixed-format reader chain.
+The first push of those commits accidentally landed on `origin/main`
+on 2026-05-05 13:40 UTC+2; rather than reverting, we accepted `main`
+as the new modernization line and pinned pyswap (and other consumers)
+to the `v4.2.0` tag for legacy artifacts.
 
-`modern` exists so the modernization work has a remote home (backed
-up, browsable, taggable) without disturbing the consumers of `main`.
-
-## Day-to-day workflow
-
-```
-development        ← short-lived feature work; merge upward
-   │
-   ▼ git merge --no-ff
-modern             ← active modernization branch (push here, never to main)
-   │
-   ▼ (eventual cutover, see below)
-main               ← currently legacy v4.2.0; future home of the modern branch once consumers migrate
-```
-
-- New work happens on `development` (or topic branches).
-- When stable, merge into `modern` with `--no-ff` (preserves the
-  feature branch in history).
-- Push `modern` to `origin/modern`.
-- Never push directly to `origin/main`.
+Going forward, `main` is reserved for releases. `development` carries
+the in-progress work and is the default push target.
 
 ## Tags
 
-The `rescue/*` and `docs/*` tags annotate the modernization journey
-on the `modern` branch. The capstone summary
+The `rescue/*` and `docs/*` tags annotate the modernization journey.
+The capstone summary
 ([`PHASE-4-MODERNIZATION-SUMMARY.md`](PHASE-4-MODERNIZATION-SUMMARY.md))
-lists each tag with its scope.
+lists each tag with its scope. The `v4.2.0` tag points at the
+pre-modernization legacy SHA (`7587ca3`) and is the canonical anchor
+for downstream consumers that need the legacy reference.
 
 ## Future plan: fork into a separate repository
 
 Once the modernization is independently consumable (Python bindings,
-release artifacts, documentation site), the `modern` branch will be
-forked into a new repository — separating "modern SWAP" cleanly from
-the SWAP 4.2.0 legacy reference. At that point:
+release artifacts, documentation site), the `main` branch will be
+forked into a new repository — a "modern SWAP" repo separate from
+this one (which becomes a legacy/archive holding pen). At that point:
 
-- New repo: hosts `modern` as its `main`.
-- This repo: continues hosting the legacy 4.2.0 reference for
-  archival / pyswap-style consumers.
+- New repo: hosts modernization as its `main`.
+- This repo: continues hosting the legacy 4.2.0 reference (via the
+  `v4.2.0` tag) for archival / pyswap-style consumers.
 
-Until then, the two-branch arrangement keeps both histories live in
-one place.
+Until then, both histories live here.
 
 ## Local convention
 
-After the initial setup:
-
 ```
-local/main       ← mirrors origin/main (legacy)
-local/modern     ← tracks origin/modern (modernization)
-local/development ← topic branches feed into modern
+local/main          ← mirrors origin/main (modernization, release line)
+local/development   ← mirrors origin/development (daily work)
 ```
 
-`git fetch && git pull --ff-only` on either branch is safe — neither
-diverges from its remote.
+`git fetch && git pull --ff-only` on either is safe. Merge from
+`development` to `main` is a deliberate, infrequent action gated on
+release-worthiness.
