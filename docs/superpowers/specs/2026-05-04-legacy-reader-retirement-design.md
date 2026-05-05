@@ -74,7 +74,7 @@ End-state tag: `rescue/phase-4f-extend-complete`.
 | Adapter HACK Bucket A + B | DONE | 7 of 12 slots closed |
 | Adapter HACK residuals (4) | OPEN | `iHWCKmodel`, `ksatexm`, `cropfil` suffix-strip, `swpfile`/`logf` |
 | Macropore TOML stub-error | DONE | SS-4 — `swmacro=1` rejected by `soil_config_validate` (see `2026-05-04-ss4-macropore-toml-stub-error.md`) |
-| `irrigation.f90` TTutil reader | OPEN | `rdinit` at line 79 reads `.crp` irrigation block |
+| `irrigation.f90` TTutil reader | DONE | SS-6 — closed by Phase 4f strangler swap; `irrigation(1)` reachable only via parity-test harness (see `phase-4f-irrigation-audit.md`) |
 | `management_soil.f90` TTutil readers | OPEN | SMM/SME/SNP `rdinit` at lines 129, 142, 197 |
 | `cropgrowth.f90` nutrient TTutil reader | OPEN | `rdinit` at line 1155 |
 | `readswap.f90` full audit (unauthored keys) | OPEN | Existing audit only covered keys exercised by 6 cases |
@@ -166,7 +166,7 @@ work expected.
 | SS-3 | CSV meteo finalize Step 1 (sub-daily) | DONE | `2026-05-01-csv-meteo-finalize.md` Phase 0 + Phase 1 | — |
 | SS-4 | Macropore TOML stub-error | DONE | `2026-05-04-ss4-macropore-toml-stub-error.md` | — |
 | SS-5 | `readmeteo.f90` TTutil branch deletion (ADR 0014 Steps 2–3) | DONE | `2026-05-05-ss5-readmeteo-ttutil-deletion.md` | — |
-| SS-6 | `src/crop/irrigation.f90` TOML port | OPEN | new spec | — |
+| SS-6 | `src/crop/irrigation.f90` TOML port | DONE | `phase-4f-irrigation-audit.md` (no code work — closed by Phase 4f strangler swap) | — |
 | SS-7 | `src/crop/management_soil.f90` TOML port (SMM/SME/SNP) | OPEN | new spec | — |
 | SS-8 | `src/crop/cropgrowth.f90` nutrient block port | OPEN | new spec | — |
 | SS-9 | `readswap.f90` full audit + unauthored-key closure | OPEN | new spec | SS-4..8 close first (their keys overlap `readswap.f90`'s switch tree) |
