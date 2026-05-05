@@ -1140,40 +1140,19 @@
 ! --- if crop based on calendar is still active, but already harvested
       if (flCropHarvest) return
 
-! --- n-p-k 
+! --- n-p-k
       if( flCropNut) then
-!        initialise and start reading
-         filnam = trim(pathcrop)//trim(cropfil(icrop))//'.crp'
-         nut = getun2 (10,90,2)
-         call rdinit(nut,logf,filnam)
+!        Legacy nutrient parameters (LRNR, LSNR, NLAI, NLUE, NMAXSO,
+!        NPART, NFIXF, NSLA, RNFLV/RT/ST, TCNT, DVSNLT, DVSNT, RDRNS,
+!        FNTRT, FRNX, NMXLV, FraHarLosOrm_lv/st/so) used to be read here
+!        from <cropfil>.crp via TTutil rdinit/rdsdou. Read block deleted
+!        as part of legacy readers physical deletion. flCropNut=1 is
+!        stub-errored upstream in DoTillage (tillage.f90), so this block
+!        is unreachable in the modern flow. A future TOML port of the
+!        nutrient sub-block (companion to ADR 0021) will reintroduce
+!        these reads from typed config.
 
-         CALL rdsdou ('LRNR', LRNR)
-         CALL rdsdou ('LSNR', LSNR)
-         CALL rdsdou ('NLAI', NLAI)
-         CALL rdsdou ('NLUE', NLUE)
-         CALL rdsdou ('NMAXSO', NMAXSO)
-         CALL rdsdou ('NPART', NPART)
-         CALL rdsdou ('NFIXF', NFIXF)
-         CALL rdsdou ('NSLA', NSLA)
-         CALL rdsdou ('RNFLV', RNFLV)
-         CALL rdsdou ('RNFRT', RNFRT)
-         CALL rdsdou ('RNFST', RNFST)
-         CALL rdsdou ('TCNT', TCNT) 
-         CALL rdsdou ('DVSNLT', DVSNLT)
-         CALL rdsdou ('DVSNT', DVSNT)
-         CALL rdsdou ('RDRNS', RDRNS)
-         CALL rdsdou ('FNTRT', FNTRT)
-         CALL rdsdou ('FRNX', FRNX)
-         CALL rdadou ('NMXLV', NMXLV, 30, ILNMXL)
-!        Read harvest losses (fractions of leaves, stems, storage organs)
-         call rdsdor ('FraHarLosOrm_lv',0.d0,1.0d0,FraHarLosOrm_lv) 
-         call rdsdor ('FraHarLosOrm_st',0.d0,1.0d0,FraHarLosOrm_st) 
-         call rdsdor ('FraHarLosOrm_so',0.d0,1.0d0,FraHarLosOrm_so) 
-
-! -      close input file
-         close(nut)
-
-!        open output files and write header 
+!        open output files and write header
          if (icrop.eq.1) then
             call outbalcropOM1(1,pathwork,outfil,project,date,daycrop,  &
      &         t,dvs,tsum,gass,mres,fr,fl,fs,fo,dmi,cvf,ccheck)
