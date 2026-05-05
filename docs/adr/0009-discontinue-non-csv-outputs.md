@@ -46,7 +46,7 @@ Retirement happens in two stages:
 - This ADR documents the policy.
 - `docs/configuration-schema.md` lists the retired keys explicitly so
   authors know they will be ignored.
-- `docs/phase-4f-config-to-variables-audit.md` reclassifies these
+- `docs/archive/2026-phase-4/audits/phase-4f-config-to-variables-audit.md` reclassifies these
   18 entries from `G` (gap) to `RETIRED`.
 - A `warn_deprecated_key(routine, key)` helper is added to
   `error_mod` for use by the new TOML readers when they encounter a

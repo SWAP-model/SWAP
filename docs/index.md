@@ -34,7 +34,7 @@ SWAP is a one-dimensional vertical simulation model for transport processes (wat
 
 ## Current status
 
-The modernization is in a rescue-and-stabilize workflow; see `docs/superpowers/specs/` and `docs/superpowers/plans/` for the internal planning. Status of the rescue is tracked in git tags named `rescue/phase-N-*`.
+The Phase 4 / Phase 4f-extend modernization completed on 2026-05-05 (tags `rescue/phase-4f-extend-complete` and `rescue/phase-4f-extend-followups`). The capstone summary is [`PHASE-4-MODERNIZATION-SUMMARY.md`](PHASE-4-MODERNIZATION-SUMMARY.html). Frozen specs, plans, and per-reader audits live under [`docs/archive/2026-phase-4/`](archive/2026-phase-4/README.html). Status of the rescue is tracked in git tags named `rescue/phase-*`.
 
 ## API reference
 

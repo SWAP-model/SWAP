@@ -9,7 +9,7 @@ status: accepted
 ## Context
 
 Phase 4f-extend's umbrella spec
-(`docs/superpowers/specs/2026-05-04-legacy-reader-retirement-design.md`)
+(`docs/archive/2026-phase-4/specs/2026-05-04-legacy-reader-retirement-design.md`)
 defined eleven sub-specs (SS-1 … SS-11) to retire the legacy
 fixed-format `.swp` / `.dra` / `.crp` / `.YYY` / `.met` input readers
 in favour of a single typed TOML pipeline. SS-1 through SS-10 are now

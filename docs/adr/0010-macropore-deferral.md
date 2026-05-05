@@ -57,7 +57,7 @@ warranted.
    TOML pipeline. `readswap.f90` still stays in the tree (per the
    broader Phase 4f design) as Phase 4f-extend's reference.
 7. **Audit-doc reclassification.** The 10 G entries in the macropore
-   section of `docs/phase-4f-config-to-variables-audit.md`
+   section of `docs/archive/2026-phase-4/audits/phase-4f-config-to-variables-audit.md`
    reclassify from G (gap) to **DEFERRED** — a new fourth status
    distinct from RETIRED. Semantics: "schema exists, wiring deferred
    to a future phase," vs RETIRED's "going away forever per ADR

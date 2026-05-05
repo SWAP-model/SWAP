@@ -23,6 +23,7 @@ readers, which are the schema source of truth:
 - `src/io/toml/read_heat_toml.f90` — `[heat]` (Phase 4d Task 8).
 - `src/io/toml/read_irrigation_toml.f90` — `[irrigation]` and per-crop `[irrigation_schedule]` (Phase 4d Task 11).
 - `src/io/toml/read_solute_toml.f90` — `[solute]` (Phase 4d Task 14).
+- `src/io/toml/read_output_csv_toml.f90` — `[output.csv]` (Phase 4f-extend Bucket B).
 
 If a key is not listed here, the TOML reader does not currently parse it,
 regardless of whether it appears in example files under `tests/swap-cases/`.
@@ -30,7 +31,7 @@ Sample files in the tree contain aspirational keys for future phases; only the
 subset documented below actually reaches `swap_config_t`.
 
 **Phase 4f preparation:** see
-[`docs/phase-4f-config-to-variables-audit.md`](phase-4f-config-to-variables-audit.md)
+[`docs/archive/2026-phase-4/audits/phase-4f-config-to-variables-audit.md`](archive/2026-phase-4/audits/phase-4f-config-to-variables-audit.md)
 for the field-by-field mapping between this schema and the legacy `variables`
 globals, plus the list of `G` (gap) entries that Phase 4f-prep will resolve
 before the strangler-fig replacement of `readswap()` lands.
@@ -104,7 +105,6 @@ value, so omitting it leaves the corresponding default untouched.
 | `swscre`     | integer | optional     | `0`      | `state%time%swscre`  | Screen output mode (0=none, 1=water balance, 2=day number). |
 | `swerror`    | integer | optional     | `0`      | `state%time%swerror` | Error output switch (0=off, 1=on). |
 | `outfil`     | string  | optional     | `result` | `outfil` (global)    | Output-file basename. All output files are named `<outfil>_*.csv` etc. Matches legacy `.swp` key `OUTFIL`. |
-| `inlist_csv` | string  | optional     | `''`     | `InList_csv` (global)| Comma-separated list of CSV output variable names (legacy `INLIST_CSV`). When absent the adapter uses a built-in water-balance default. |
 
 ### `[general.paths]`
 
@@ -462,6 +462,29 @@ The solute-transport block is read by `read_solute_toml.f90` into
 > **Reading note.** `solute.ecmax` / `solute.ecslop` are independent of
 > the per-crop `[salinity]` keys — the spec keeps these on the soil-side
 > rather than cross-checking against the crop block (see `solute_config.f90`).
+
+### `[output.csv]` (Phase 4f-extend Bucket B)
+
+Controls the special per-variable CSV output (legacy `SWCSV` / `INLIST_CSV` /
+`SWCSV_TZ` / `INLIST_CSV_TZ` in `.swp` Part 4). The section and all keys are
+optional; the defaults reproduce the legacy hardcoded behaviour.
+
+| Key | Type | Required | Default | State target | Description |
+|---|---|---|---|---|---|
+| `enabled`    | integer | optional | `1`             | `swcsv` (global)     | Enable daily CSV output (0=off, 1=on). |
+| `enabled_tz` | integer | optional | `0`             | `swcsv_tz` (global)  | Enable depth-profile CSV output (0=off, 1=on). |
+| `inlist`     | string  | optional | water-balance default¹ | `InList_csv` (global) | Comma-separated list of variable names for the daily CSV (legacy `INLIST_CSV`). |
+| `inlist_tz`  | string  | optional | `'wc,h,conc'`  | `InList_csv_tz` (global) | Comma-separated list of variable names for the depth-profile CSV (legacy `INLIST_CSV_TZ`). |
+
+¹ Default `inlist` when absent or empty:
+`rain,irrig,interc,runoff,drainage,dstor,epot,eact,tpot,tact,qbottom,gwl`
+
+**Validators:** `enabled` and `enabled_tz` must be 0 or 1
+(`check_int_enum([0, 1])`). The string fields are unconstrained.
+
+**Migration note (Phase 4f-extend):** the former `general.inlist_csv` field has
+been removed. Cases that previously authored `general.inlist_csv = "..."` must
+now use `[output.csv] inlist = "..."`.
 
 ### `[boundary.top]`
 
@@ -1485,7 +1508,7 @@ Phase 4f strangler-fig of `readswap()`. Detail:
   `readcropfixed`, `readgrass`) take this as an argument.
 
 End-of-Phase-4f-prep state: 42 G entries reclassified to C; the
-audit at `docs/phase-4f-config-to-variables-audit.md` has the full
+audit at `docs/archive/2026-phase-4/audits/phase-4f-config-to-variables-audit.md` has the full
 field-by-field breakdown.
 
 ## Deprecated keys (retired)
@@ -1590,6 +1613,7 @@ hierarchy in `src/config/`:
 | `[heat]` | `heat_config_t` | `heat_config_mod` |
 | `[irrigation]` (and per-crop `[irrigation_schedule]`) | `irrigation_config_t` / `irrigation_schedule_t` | `irrigation_config_mod` |
 | `[solute]` | `solute_config_t` | `solute_config_mod` |
+| `[output.csv]` | `output_csv_config_t` | `output_csv_config_mod` |
 | `*.crp.toml` type 1 | `cropfixed_config_t` | `cropfixed_config_mod` |
 | `*.crp.toml` type 2 | `cropwofost_config_t` | `cropwofost_config_mod` |
 | `*.crp.toml` type 3 | `cropgrass_config_t` | `cropgrass_config_mod` |
