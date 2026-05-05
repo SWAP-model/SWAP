@@ -55,6 +55,10 @@ subroutine test_read_heat_swhea1_happy()
    @assertEqual(0.55d0, c%psand(1), 1.0d-12)
    @assertEqual(0.55d0, c%psand(3), 1.0d-12)
 
+   @assertTrue(allocated(c%psilt))
+   @assertEqual(3, size(c%psilt))
+   @assertEqual(0.30d0, c%psilt(2), 1.0d-12)
+
    @assertTrue(allocated(c%pclay))
    @assertEqual(3, size(c%pclay))
    @assertEqual(0.10d0, c%pclay(2), 1.0d-12)
