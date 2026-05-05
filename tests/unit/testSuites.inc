@@ -51,7 +51,10 @@ ADD_TEST_SUITE(test_grassgrowth_parity_suite)
 ADD_TEST_SUITE(test_oxygenstress_parity_suite)
 ADD_TEST_SUITE(test_salinitystress_parity_suite)
 ADD_TEST_SUITE(test_surfacewater_parity_suite)
-ADD_TEST_SUITE(test_macroporeflow_parity_suite)
+! DEFERRED: case 3 (macroporeflow) is excluded from regression per ADR
+! 0011 and rejected at TOML validation by SS-4 stub-error. Re-enable
+! when macropore TOML support lands. See ADR 0010 / 0011 / 0018.
+! ADD_TEST_SUITE(test_macroporeflow_parity_suite)
 ADD_TEST_SUITE(test_legacy_crop_helper_suite)
 ADD_TEST_SUITE(test_cropfixed_init_suite)
 ADD_TEST_SUITE(test_cropwofost_init_suite)

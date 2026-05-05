@@ -70,11 +70,19 @@ Files modified:
 - `meson.build` — adds the shim to the production source list
 - `tests/unit/meson.build` — adds the shim to the test source list
 
-Files removed:
-- `tests/unit/run_pfunit.sh` — the wrapper that worked around the
-  silent-exit-0 problem is no longer needed
-- `tests/unit/meson.build` — `test()` now invokes the binary directly
-  again, like before the wrapper was added
+Files removed/restored:
+- `tests/unit/run_pfunit.sh` — initially removed when the shim landed,
+  then **restored** with a narrower scope when a separate failure mode
+  surfaced: several parity suites (`hupselbrook_parity`,
+  `grassgrowth_parity`, …) invoke the legacy `readswap()` and mutate
+  `variables` module globals. State leaks between suites and a later
+  suite fatal-errors via RDDATA on what should be valid input. Each
+  suite passes when run in isolation; only the cross-suite sequence is
+  broken. The wrapper invokes the binary once per suite, which avoids
+  the leakage. Until the legacy reader is fully retired (umbrella spec
+  SS-11), this isolation is load-bearing for the unit-test gate.
+- `tests/unit/meson.build` — `test()` invokes the wrapper, which in
+  turn invokes the binary per-suite.
 
 ## Consequences
 
@@ -127,9 +135,9 @@ re-applied on every update. Forking TTutil is heavier than shadowing
 one symbol.
 
 **C. Wrap the test binary in a script** (`tests/unit/run_pfunit.sh`).
-Implemented temporarily during SS-5 follow-up; recovered the failure
-picture by invoking each suite separately with `--tap` and parsing
-output. **Removed** as part of this ADR — the shim solves the root
-cause and the wrapper's residual value (per-suite isolation, TAP
-enumeration) is not worth the complexity once the binary's exit code
-is honest.
+The shim solves the silent-exit-0 root cause, but the wrapper retains
+load-bearing value for **per-suite isolation** — see the
+"Files removed/restored" note above. Until the legacy `readswap()`
+retires (umbrella spec SS-11), some parity suites cannot share a
+process without state corruption. The wrapper trades a small amount
+of complexity for a working unit-test gate.

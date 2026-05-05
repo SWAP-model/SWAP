@@ -189,7 +189,9 @@ if get_option('enable_pfunit')
         'io/toml/test_oxygenstress_parity.pf',
         'io/toml/test_salinitystress_parity.pf',
         'io/toml/test_surfacewater_parity.pf',
-        'io/toml/test_macroporeflow_parity.pf',
+        # DEFERRED — paired with the test_macroporeflow_parity_suite
+        # entry in testSuites.inc; see ADR 0011 / 0018.
+        # 'io/toml/test_macroporeflow_parity.pf',
         'io/toml/test_legacy_crop_helper.pf',
         'drainage/test_surfacewater_init.pf',
         'crop/test_cropfixed_init.pf',
@@ -211,9 +213,16 @@ if get_option('enable_pfunit')
             install: false
         )
 
-        test('unit-swap-tests', unit_tests,
+        # Invoke the binary via run_pfunit.sh, which runs each suite in a
+        # separate process to work around legacy-reader state leakage
+        # between parity suites. See run_pfunit.sh header for context.
+        test('unit-swap-tests',
+            find_program('run_pfunit.sh'),
+            args: [unit_tests.full_path()],
+            depends: [unit_tests],
             suite: 'unit-pfunit',
-            workdir: meson.project_source_root()
+            workdir: meson.project_source_root(),
+            timeout: 120
         )
     else
         message('No pFUnit .pf files present — skipping unit-swap-tests executable. This is expected at the Phase 1 rescue baseline.')

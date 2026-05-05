@@ -17,7 +17,14 @@ subroutine test_grassgrowth_loads_clean()
 end subroutine
 
 @test
+@disable
 subroutine test_macroporeflow_loads_clean()
+   ! DEFERRED: case 3 (macroporeflow) is excluded from regression per
+   ! ADR 0011 and rejected at TOML validation by SS-4 stub-error
+   ! (soil.swmacro=1 → ERR_VALIDATION_CROSS_FIELD). The "loads clean"
+   ! assertion no longer holds; re-enable (and update the assertion to
+   ! expect the stub-error message) when macropore TOML support is
+   ! introduced. See ADR 0010 / 0011 / 0018.
    use funit
    use swap_config_mod
    use load_swap_config_mod
