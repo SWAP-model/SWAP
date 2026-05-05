@@ -576,22 +576,31 @@ logical :: rdinqr
 
    select case  (iTask)
    case (1)
-      swp = getun2(10, 90, 2)
-      call rdinit(swp, logf, swpfile)
-         swssdi = 0
-         if (rdinqr('swssdi')) call rdsinr ('swssdi', 0, 1, swssdi)
-         if (swssdi == 1)      call rdscha ('ssdi_file', ssdi_file)
-      close(swp)
-      
+      ! Phase 4f-extend SS-10.5: swssdi is now read from
+      ! irrigation_config%swssdi by the TOML adapter
+      ! (config_to_variables.f90). The validator at
+      ! irrigation_config_validate stub-errors swssdi=1, so the
+      ! else-branch (read_ssdi_input) is unreachable from the modern
+      ! binary; no production code path needs to open swpfile any more.
+      ! When swssdi=0 (every regression case), short-circuit to the
+      ! disable-SSDI defaults.
       if (swssdi == 0) then
          nod_ssdi = 0
          qssdi    = 0.0
          nirri    = 1
          dt_SSDI_event = 1.0d0
          return
-      else
-         call read_ssdi_input()
       end if
+      ! swssdi=1 path: legacy plumbing retained for parity-test
+      ! invocations of readswap('swap'). Production reaches this branch
+      ! only via the legacy reader; in TOML mode the validator already
+      ! rejected swssdi=1.
+      swp = getun2(10, 90, 2)
+      call rdinit(swp, logf, swpfile)
+         if (rdinqr('swssdi')) call rdsinr ('swssdi', 0, 1, swssdi)
+         if (swssdi == 1)      call rdscha ('ssdi_file', ssdi_file)
+      close(swp)
+      call read_ssdi_input()
       
       ! check if ssdi_date is ascending, and determine initial entry point nirri
       nirri = 0

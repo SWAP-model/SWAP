@@ -475,6 +475,10 @@ contains
       swhyst  = config%soil%swhyst
       swinco  = config%soil%swinco
       swmacro = config%soil%swmacro
+      ! SS-10.5: legacy globals use prefixed names (variables module);
+      ! validators stub-error =1 so default 0 is the only value reachable.
+      till_swtill = config%soil%swtill
+      swssdi_irr  = config%irrigation%swssdi
       gwli    = config%soil%gwli
       pondini = config%soil%pondini
       pond    = config%soil%pondini    ! legacy alias: pond <-> pondini
@@ -1166,21 +1170,18 @@ contains
          InList_csv_tz = config%output_csv%inlist_tz
       end if
 
-      ! HACK Phase 4f-extend: set up legacy I/O state needed by unported
-      ! readers (read_tillage, cropgrowth crop sub-readers, rddre). They
-      ! call RDinit(unit, logf, swpfile) which opens swpfile from cwd.
-      ! Without this, the open fails with FOPENG. Mirrors readswap.f90:83
-      ! and 86. Phase 4f-extend will retire these legacy readers reader-
-      ! by-reader; once they're all gone, this block goes away too.
+      ! Phase 4f-extend SS-10.5: the swpfile/logf hack that previously
+      ! lived here was removed when Read_Tillage and SSDI_irrigation(1)
+      ! were refactored to short-circuit when swtill=0 / swssdi=0
+      ! (which the validators now enforce as the only supported values).
+      ! `logf` is still opened here because ~90 production code sites
+      ! write log lines via `write(logf, ...)`.
       block
-         use variables, only: swpfile, logf
-         integer :: getun  ! external from ttutil
+         use variables, only: logf
+         integer :: getun
          logical :: log_open
-         swpfile = 'swap.swp'
-         inquire(unit=20, opened=log_open)  ! cheap check
+         inquire(unit=20, opened=log_open)
          if (.not. log_open) then
-            ! Open the legacy log file so unported readers can write to it.
-            ! `del` privilege removes the file on close (legacy convention).
             call delfil('swap_swap.log', .false.)
             logf = getun(20, 99)
             call fopens(logf, 'swap_swap.log', 'new', 'del')

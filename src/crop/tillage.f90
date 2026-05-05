@@ -428,12 +428,17 @@ write(124,'(A,1P,12E12.5)') Date, Bdens(1), ParamVG(2,layer(1)), theta(1), h(1),
    integer     :: getun
    logical     :: RDinqr
 
+   ! Phase 4f-extend SS-10.5: swtill is now read from soil_config%swtill
+   ! by the TOML adapter (config_to_variables.f90). The validator at
+   ! soil_config_validate stub-errors swtill=1 so this branch is
+   ! unreachable from the modern binary; no production code path needs
+   ! to open swpfile any more. The legacy reader plumbing below stays
+   ! in place only for parity-test invocations of readswap('swap').
    Max_Z_tillage = 0.0d0
+   if (swtill /= 1) return
    IunIn = getun (200, 900)
    call RDinit (IunIn, 0, swpfile)
-      swtill = 0                                                     ! default: do not consider tillage
-      if (RDinqr('swtill')) call RDsinr ('swtill', 0, 1, swtill)
-      
+
       if (swtill == 1) then
          ! switch for how to treat change in n-parameter:
          i_n_model = 2
