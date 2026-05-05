@@ -1,10 +1,8 @@
 ! SS-A literal-parity test for case 1 (hupselbrook).
 !
 ! Each subtest now asserts swap_config_t fields against literal values
-! captured once via the legacy `readswap()` pipeline (parity_helpers_mod
-! before SS-A; literals captured via capture_helpers_mod during SS-A
-! conversion). After SS-A, no parity test invokes `readswap` or any
-! legacy helper.
+! captured once via the legacy `readswap()` pipeline. After SS-A, no
+! parity test invokes `readswap` or any legacy helper.
 !
 ! Scope: existing-schema fields only — see ADR 0014.
 !
