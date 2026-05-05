@@ -70,11 +70,13 @@ subroutine test_read_irrigation_swirfix1_inline_table()
    @assertTrue(allocated(c%fixed_events))
    @assertEqual(2, size(c%fixed_events, 1))
    @assertEqual(4, size(c%fixed_events, 2))
-   ! Date column is days-since-1900: 2002-01-05 -> 37261, 2002-01-10 -> 37266.
-   @assertEqual(37261.0d0, c%fixed_events(1, 1), 1.0d-12)
+   ! Date column is days-since-1900 via parse_date_to_days1900 with
+   ! jd1900 = 2415020 (1899-12-31 = day 0): 2002-01-05 -> 37260,
+   ! 2002-01-10 -> 37265.
+   @assertEqual(37260.0d0, c%fixed_events(1, 1), 1.0d-12)
    @assertEqual(   25.0d0, c%fixed_events(1, 2), 1.0d-12)
    @assertEqual(    1.0d0, c%fixed_events(1, 4), 1.0d-12)
-   @assertEqual(37266.0d0, c%fixed_events(2, 1), 1.0d-12)
+   @assertEqual(37265.0d0, c%fixed_events(2, 1), 1.0d-12)
    @assertEqual(    0.5d0, c%fixed_events(2, 3), 1.0d-12)
    @assertEqual(    0.0d0, c%fixed_events(2, 4), 1.0d-12)
 
