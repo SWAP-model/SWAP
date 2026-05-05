@@ -1,15 +1,24 @@
 ! File VersionID:
 !   $Id: readswap.f90 379 2018-05-16 07:02:44Z heine003 $
 ! ----------------------------------------------------------------------
-      subroutine readswap()
+      subroutine readswap(project_name)
 ! ----------------------------------------------------------------------
 !     Date               : April 2014
 !     Purpose            : read main input file .SWP
+!
+!     Optional argument `project_name` overrides the
+!     `Get_Command_Argument(1)` lookup, allowing the parity test harness
+!     to call readswap without the pFUnit binary's CLI flags
+!     (`--tap`, `-f`, etc.) being mistaken for the project name.
+!     Production code (legacy main loop entry) calls readswap() with no
+!     argument and the original argv-based behaviour is preserved.
 ! ----------------------------------------------------------------------
       use variables
       use doln
       use oxygenstress_mod, only: oxygen_dat
       implicit none
+
+      character(len=*), intent(in), optional :: project_name
 
       integer posarg,numchar,mxcrop,idum
       integer swp,i,datea(6),getun,getun2,runf,swrunon
@@ -62,10 +71,17 @@
 ! --- write message running to screen
       write (*,'(/,a)') '  running swap ....'
 
-! --- path and filename of executable through argument command line
-      PosArg = 1
-      Call Get_Command_Argument (PosArg,swpfil,NumChar)
-      if (NumChar.lt.1) swpfil = 'swap'
+! --- path and filename of executable through argument command line,
+!     or via the optional `project_name` argument when called from the
+!     parity test harness.
+      if (present(project_name)) then
+         swpfil  = project_name
+         NumChar = len_trim(swpfil)
+      else
+         PosArg = 1
+         Call Get_Command_Argument (PosArg,swpfil,NumChar)
+         if (NumChar.lt.1) swpfil = 'swap'
+      end if
       project = swpfil
 
       if(NumChar.gt.3) then

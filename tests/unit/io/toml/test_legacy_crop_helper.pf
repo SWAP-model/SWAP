@@ -6,7 +6,7 @@
 !    called for hupselbrook rotation entry icrop=2 ('potatod').
 !
 ! Test 2 mirrors parity_helpers_mod%load_both_for_hupselbrook: stage the
-! .swp template, call readswap() to set up `pathcrop`, then call the new
+! .swp template, call readswap('swap') to set up `pathcrop`, then call the new
 ! wrapper, and finally chdir back to the project root.
 
 @test
@@ -55,7 +55,7 @@ subroutine test_read_legacy_wofost_populates_variables()
    call chdir_to('tests/swap-cases/1.hupselbrook')
    call stage_swp_template('swap_linux.swp.template', 'swap')
    call reset_for_next_readswap()
-   call readswap()
+   call readswap('swap')
    close(logf)
 
    ! Rotation entry 2 == 'potatod' (verified from
@@ -90,7 +90,7 @@ subroutine test_read_legacy_cropfixed_populates_variables()
    call chdir_to('tests/swap-cases/6.surfacewater')
    call stage_swp_template('swap_linux.swp.template', 'swap')
    call reset_for_next_readswap()
-   call readswap()
+   call readswap('swap')
    close(logf)
 
    ! Rotation entry 1 == 'grass' (verified from
@@ -118,7 +118,7 @@ subroutine test_read_legacy_grass_populates_variables()
    call chdir_to('tests/swap-cases/2.grassgrowth')
    call stage_swp_template('swap_linux.swp.template', 'swap')
    call reset_for_next_readswap()
-   call readswap()
+   call readswap('swap')
    close(logf)
 
    ! Rotation entry 1 == 'grassd' (verified from
