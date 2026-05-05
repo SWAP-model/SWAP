@@ -210,9 +210,17 @@ if get_option('enable_pfunit')
             install: false
         )
 
-        test('unit-swap-tests', unit_tests,
+        # Invoke the binary via run_pfunit.sh, which runs each suite in a
+        # separate process (so a crashing suite does not blackhole later
+        # ones), parses TAP output, and exits non-zero on any failure.
+        # See run_pfunit.sh header for the root-cause analysis.
+        test('unit-swap-tests',
+            find_program('run_pfunit.sh'),
+            args: [unit_tests.full_path()],
+            depends: [unit_tests],
             suite: 'unit-pfunit',
-            workdir: meson.project_source_root()
+            workdir: meson.project_source_root(),
+            timeout: 120
         )
     else
         message('No pFUnit .pf files present — skipping unit-swap-tests executable. This is expected at the Phase 1 rescue baseline.')
