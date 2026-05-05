@@ -188,8 +188,10 @@ if (iTask == 1) then
 !  initialize Ageing rate/state variables
    if (flAgeTracer) call AgeTracer(1)
 
-!  Read and Initialize Soil Management Event
-   if (flCropNut) call SoilManagement(1)
+!  Soil Management init: SoilManagement(1) was the legacy reader entry
+!  point and is now a no-op (SS-C step 3). flCropNut=1 is stub-errored
+!  upstream in DoTillage; the SoilManagement(2..7) call sites below remain
+!  for the eventual TOML-port reactivation (ADR 0021).
 
 !  open Output files and write headers (skip in external/DLL mode to avoid per-column I/O)
    if (iCaller == 0) then
