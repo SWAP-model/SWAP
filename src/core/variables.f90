@@ -562,6 +562,8 @@
 
 ! --- Nitrogen: crop and soil management
       logical   flCropNut          ! Flag indicating simulation of crop nutrient stress
+      logical :: flTillage = .false.   !! ADR 0020 call-site gate for DoTillage
+      logical :: flSSDI    = .false.   !! ADR 0020 call-site gate for SSDI_irrigation
       real(8)   nmxlv(30)
       real(8)   nlue,anlv,anst,nmaxlv,nmaxst,nmaxrt
       real(8)   lrnr,lsnr,nni,rnflv,rnfst,frnx

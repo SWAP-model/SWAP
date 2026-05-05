@@ -474,10 +474,15 @@ contains
       swhyst  = config%soil%swhyst
       swinco  = config%soil%swinco
       swmacro = config%soil%swmacro
-      ! SS-10.5: legacy globals use prefixed names (variables module);
-      ! validators stub-error =1 so default 0 is the only value reachable.
+      ! SS-B / ADR 0020: legacy globals use prefixed names (variables
+      ! module); set both the legacy switch globals and the call-site
+      ! gating flags. When flTillage / flSSDI are false (default for
+      ! every regression case), the call sites in swap.f90 /
+      ! timecontrol.f90 short-circuit and the subsystems never run.
       till_swtill = config%soil%swtill
       swssdi_irr  = config%irrigation%swssdi
+      flTillage = (config%soil%swtill == 1)
+      flSSDI    = (config%irrigation%swssdi == 1)
       gwli    = config%soil%gwli
       pondini = config%soil%pondini
       pond    = config%soil%pondini    ! legacy alias: pond <-> pondini
@@ -1169,12 +1174,15 @@ contains
          InList_csv_tz = config%output_csv%inlist_tz
       end if
 
-      ! Phase 4f-extend SS-10.5: the swpfile/logf hack that previously
-      ! lived here was removed when Read_Tillage and SSDI_irrigation(1)
-      ! were refactored to short-circuit when swtill=0 / swssdi=0
-      ! (which the validators now enforce as the only supported values).
-      ! `logf` is still opened here because ~90 production code sites
-      ! write log lines via `write(logf, ...)`.
+      ! ADR 0020 SS-B: Read_Tillage and SSDI_irrigation(1) read
+      ! tillage / SSDI parameters from staged swap.swp via TTutil when
+      ! their call-site gate fires (flTillage / flSSDI true). Until
+      ! ADR 0021 ports those parameter blocks to TOML schema, swpfile
+      ! must point at the staged template.
+      swpfile = 'swap.swp'
+
+      ! `logf` is opened here because ~90 production code sites write
+      ! log lines via `write(logf, ...)`.
       block
          use variables, only: logf
          integer :: getun
