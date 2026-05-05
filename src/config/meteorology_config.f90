@@ -67,7 +67,7 @@ contains
       class(meteorology_config_t), intent(in)    :: self
       type(error_collection_t),    intent(inout) :: errors
 
-      ! ----- Phase 4f-extend SS-5 stub-error: only CSV metfiles supported -----
+      ! ----- ADR 0014 stub-error: only CSV metfiles supported -----
       ! ADR 0014 retires the TTutil-based readers in readmeteo.f90 (per-year
       ! .YYY daily reader, .met all-years reader, TTutil detail reader, and the
       ! TTutil tail of ReadRainEvents). After SS-5, swap_csv_dat is the only
@@ -94,6 +94,21 @@ contains
       call check_int_enum(self%swmetdetail, [0, 1],    "meteorology.swmetdetail", errors)
       call check_int_enum(self%swrain,      [0, 1, 2, 3], "meteorology.swrain",      errors)
       call check_int_enum(self%swinter,     [0, 1, 2], "meteorology.swinter",     errors)
+
+      ! SS-5 follow-up M2: keep all "config rejection" logic in one place.
+      ! When swmetdetail=1, the sub-daily detail CSV path needs detail_file
+      ! authored. (The adapter previously checked this with a fatalerr
+      ! mid-pipeline; pulling it up here surfaces the error alongside the
+      ! rest of validation.)
+      if (self%swmetdetail == 1) then
+         if (.not. allocated(self%detail_file) .or. &
+             len_trim(self%detail_file) == 0) then
+            call errors%append(ERR_VALIDATION_CROSS_FIELD, &
+               'meteorology.temporal.detail_file required when ' // &
+               'swmetdetail=1', 'meteorology')
+         end if
+      end if
+
       call self%evaporation%validate(errors)
       call self%snow%validate(errors)
    end subroutine meteorology_config_validate

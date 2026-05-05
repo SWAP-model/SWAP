@@ -311,7 +311,8 @@ subroutine test_meteo_metfile_per_year_extension_stub_errors()
    found = .false.
    do i = 1, errors%count()
       if (errors%items(i)%code == ERR_VALIDATION_CROSS_FIELD .and. &
-          index(errors%items(i)%message, 'meteorology.metfile') > 0) then
+          index(errors%items(i)%message, 'meteorology.metfile') > 0 .and. &
+          index(errors%items(i)%message, 'ADR 0014') > 0) then
          found = .true.
          exit
       end if

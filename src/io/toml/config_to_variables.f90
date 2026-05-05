@@ -122,7 +122,7 @@ contains
       ! Meteorology (audit: 12 + evaporation + snow)
       ! ---------------------------------------------------------------
       if (allocated(config%meteo%metfile))  metfil  = config%meteo%metfile
-      ! Legacy `rainfil` global removed (Phase 4f-extend SS-5 / ADR 0014).
+      ! Legacy `rainfil` global removed (ADR 0014).
       ! `config%meteo%rainfile` is no longer copied into a global because
       ! the only consumer (the `.YYY` per-year rain reader in readmeteo.f90)
       ! has been deleted; CSV rain events use `config%meteo%rain_events_file`.
@@ -140,8 +140,9 @@ contains
       angstromb   = config%meteo%angstromb
 
       ! All metfile extensions other than .csv are rejected by
-      ! meteorology_config_validate (Phase 4f-extend SS-5; ADR 0014).
-      ! Pre-load CSV via read_csv_table.
+      ! meteorology_config_validate (ADR 0014). The `.csv` guard below
+      ! is defense-in-depth — the validator already enforced this before
+      ! the adapter ran.
       call lowerc(metfil)
 
       if (index(trim(metfil), '.csv') > 0) then
@@ -174,15 +175,13 @@ contains
       end if
 
       ! Detail meteo CSV pre-load (swmetdetail=1 + detail_file provided).
-      ! Metfile is always CSV here (rejected at TOML boundary otherwise —
-      ! Phase 4f-extend SS-5 / ADR 0014).
+      ! Metfile is always CSV here (validator rejects non-.csv per ADR
+      ! 0014). The detail_file required-when-swmetdetail=1 check moved
+      ! to meteorology_config_validate (SS-5 follow-up M2); the
+      ! allocation guard below is defense-in-depth only.
       if (swmetdetail == 1) then
-         if (.not. allocated(config%meteo%detail_file) .or. &
-             len_trim(config%meteo%detail_file) == 0) then
-            call fatalerr_collected('config_to_variables', &
-               'meteorology.temporal.detail_file required when ' // &
-               'swmetdetail=1 and metfile is a CSV')
-         else
+         if (allocated(config%meteo%detail_file) .and. &
+             len_trim(config%meteo%detail_file) > 0) then
             block
                use csv_reader_mod,  only: read_csv_table
                use error_mod,       only: error_collection_t

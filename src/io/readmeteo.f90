@@ -90,8 +90,8 @@
 !   - 1 swmetdetail = 0; daily input
 !   - 2 swmetdetail = 1; detailed input for nmetdetail time intervals per day
 
-! --- CSV mode is the only supported path (Phase 4f-extend SS-5,
-!     ADR 0014). Daily mode → MeteoCSVYear. Sub-daily → MeteoCSVDetYear.
+! --- CSV mode is the only supported path (ADR 0014).
+!     Daily mode → MeteoCSVYear. Sub-daily → MeteoCSVDetYear.
       if (swmetdetail == 0) then
          call MeteoCSVYear(ifnd)
       else
@@ -314,7 +314,7 @@
 ! SUBROUTINE: MeteoCSVYear
 ! Extract one year's daily meteo from the pre-loaded metcsv_dat cache.
 ! Called unconditionally by ReadMeteoYear (the only supported daily path
-! after Phase 4f-extend SS-5 / ADR 0014). After return, arad/atmn/atmx/
+! after ADR 0014). After return, arad/atmn/atmx/
 ! ahum/awin/arai/aetr/wet/ad/am are populated so that the validation and
 ! rain-array init code in ReadMeteoYear works unchanged.
 subroutine MeteoCSVYear(ifnd)
@@ -394,7 +394,7 @@ end subroutine MeteoCSVYear
 ! SUBROUTINE: MeteoCSVDetYear
 ! Extract one year's sub-daily meteo from the pre-loaded metcsv_det cache.
 ! Called by ReadMeteoYear when swmetdetail==1 (the only supported sub-daily
-! path after Phase 4f-extend SS-5 / ADR 0014).
+! path after ADR 0014).
 ! Populates dettime, detrecord, detrad, dettav, dethum, detwind, detrain.
 ! irectotal and nofd are set by ReadMeteoYear after this returns.
 subroutine MeteoCSVDetYear(ifnd)
