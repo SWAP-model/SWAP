@@ -77,7 +77,7 @@ End-state tag: `rescue/phase-4f-extend-complete`.
 | `irrigation.f90` TTutil reader | DONE | SS-6 — closed by Phase 4f strangler swap; `irrigation(1)` reachable only via parity-test harness (see `phase-4f-irrigation-audit.md`) |
 | `management_soil.f90` TTutil readers | DONE | SS-7 — unreachable via `flCropNut=.false.` default (see `phase-4f-management-soil-audit.md`) |
 | `cropgrowth.f90` nutrient TTutil reader | DONE | SS-8 — same `flCropNut` gate as SS-7 (see `phase-4f-cropgrowth-nutrients-audit.md`) |
-| `readswap.f90` full audit (unauthored keys) | OPEN | Existing audit only covered keys exercised by 6 cases |
+| `readswap.f90` full audit (unauthored keys) | DONE | SS-9 — 146 G rows re-classified: 71 C-now, 67 DEFERRED, 8 STALE, 0 STILL-G (see `phase-4f-ss9-residual-audit.md`) |
 
 ## Methodology
 
@@ -169,7 +169,7 @@ work expected.
 | SS-6 | `src/crop/irrigation.f90` TOML port | DONE | `phase-4f-irrigation-audit.md` (no code work — closed by Phase 4f strangler swap) | — |
 | SS-7 | `src/crop/management_soil.f90` TOML port (SMM/SME/SNP) | DONE | `phase-4f-management-soil-audit.md` (no code work — `flCropNut=.false.` default) | — |
 | SS-8 | `src/crop/cropgrowth.f90` nutrient block port | DONE | `phase-4f-cropgrowth-nutrients-audit.md` (same `flCropNut` gate as SS-7) | — |
-| SS-9 | `readswap.f90` full audit + unauthored-key closure | OPEN | new spec | SS-4..8 close first (their keys overlap `readswap.f90`'s switch tree) |
+| SS-9 | `readswap.f90` full audit + unauthored-key closure | DONE | `phase-4f-ss9-residual-audit.md` (zero STILL-G; SS-11 unblocked) | — |
 | SS-10 | Adapter HACK residual cleanup | OPEN | new spec | — |
 | SS-11 | Closeout — runtime-call deletion + retirement tag | OPEN | new spec | SS-4..10 all closed |
 
