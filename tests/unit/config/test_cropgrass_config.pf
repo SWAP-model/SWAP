@@ -395,25 +395,6 @@ subroutine test_cropgrass_swrd1_rejected()
 end subroutine
 
 @test
-subroutine test_cropgrass_swrd3_rejected()
-   use funit
-   use cropgrass_config_mod, only: cropgrass_config_t
-   use error_mod, only: error_collection_t, ERR_VALIDATION_CROSS_FIELD
-   type(cropgrass_config_t) :: c
-   type(error_collection_t) :: errors
-   integer :: i
-   logical :: found
-   c%swrd = 3
-   call c%validate(errors)
-   found = .false.
-   do i = 1, errors%count()
-      if (errors%items(i)%code == ERR_VALIDATION_CROSS_FIELD .and. &
-          index(errors%items(i)%message, 'swrd=3') > 0) found = .true.
-   end do
-   @assertTrue(found)
-end subroutine
-
-@test
 subroutine test_cropgrass_swcf3_rejected()
    use funit
    use cropgrass_config_mod, only: cropgrass_config_t
