@@ -58,6 +58,7 @@ sources = [
     'src/core/constants.f90',
     'src/core/swap_log.f90',
     'src/error/error.f90',
+    'src/error/fatalerr_shim.f90',
     'src/validation/validation.f90',
     'src/config/general_config.f90',
     'src/config/simulation_config.f90',

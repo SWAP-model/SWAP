@@ -77,6 +77,7 @@ if get_option('enable_pfunit')
         '../../src/atmosphere/et.f90',
         'atmosphere/et_test_stubs.f90',
         '../../src/error/error.f90',
+        '../../src/error/fatalerr_shim.f90',
         '../../src/validation/validation.f90',
         '../../src/config/general_config.f90',
         '../../src/config/simulation_config.f90',
@@ -210,17 +211,9 @@ if get_option('enable_pfunit')
             install: false
         )
 
-        # Invoke the binary via run_pfunit.sh, which runs each suite in a
-        # separate process (so a crashing suite does not blackhole later
-        # ones), parses TAP output, and exits non-zero on any failure.
-        # See run_pfunit.sh header for the root-cause analysis.
-        test('unit-swap-tests',
-            find_program('run_pfunit.sh'),
-            args: [unit_tests.full_path()],
-            depends: [unit_tests],
+        test('unit-swap-tests', unit_tests,
             suite: 'unit-pfunit',
-            workdir: meson.project_source_root(),
-            timeout: 120
+            workdir: meson.project_source_root()
         )
     else
         message('No pFUnit .pf files present — skipping unit-swap-tests executable. This is expected at the Phase 1 rescue baseline.')
