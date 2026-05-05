@@ -67,6 +67,7 @@ use variables, only : flyearstart, fldaystart, flswapshared, flsurfacewater, flm
                       flsolute, flcropnut, flirrigate, flagetracer, flrunend, flmeteodt, fletsine, swfrost, fldtreduce, &
                       swusecn, fldrain, fldecdt, fldecmprat, fldayend, flcropcalendar, flmaxitertime, floutput,         &
                       floutputshort, flharvestday, flcropoutput, swcrp, flirrigationoutput, swend, project, &
+                      flTillage, flSSDI, &
                       daynr, iyear, numnod, numlay
 use drainage_mod, only: drainage
 use surfacewater_mod, only: SurfaceWater
@@ -162,8 +163,8 @@ if (iTask == 1) then
 !  calculate grid parameters
    call CalcGrid()
 
-   call DoTillage(1)
-   call SSDI_irrigation(1)
+   if (flTillage) call DoTillage(1)
+   if (flSSDI)    call SSDI_irrigation(1)
 
 !  initialize SoilWater rate/state variables
    call SoilWater(1)
@@ -247,7 +248,7 @@ if (iTask == 2) then
 
 !        process Meteo data
          call ProcessMeteoDay()
-         call DoTillage(2)
+         if (flTillage) call DoTillage(2)
 
       end if
 
@@ -342,7 +343,7 @@ if (iTask == 2) then
 
 !        Better here: check if subsurface irrigation is required for next day,
 !                     and determine if time step needs to be changed due to dt_SSDI_event
-         call SSDI_irrigation(2)
+         if (flSSDI) call SSDI_irrigation(2)
          call TimeControl(9)
 
       end if
@@ -352,7 +353,7 @@ if (iTask == 2) then
          if (flOutput) then
             call SwapOutput(2)
             call SoilWaterOutput(2)
-            call DoTillage(3)
+            if (flTillage) call DoTillage(3)
             if (flTemperature)   call TemperatureOutput(2)
             if (flSolute)        call SoluteOutput(2)
             if (flAgeTracer)     call AgeTracerOutput(2)

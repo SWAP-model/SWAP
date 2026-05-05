@@ -428,14 +428,12 @@ write(124,'(A,1P,12E12.5)') Date, Bdens(1), ParamVG(2,layer(1)), theta(1), h(1),
    integer     :: getun
    logical     :: RDinqr
 
-   ! Phase 4f-extend SS-10.5: swtill is now read from soil_config%swtill
-   ! by the TOML adapter (config_to_variables.f90). The validator at
-   ! soil_config_validate stub-errors swtill=1 so this branch is
-   ! unreachable from the modern binary; no production code path needs
-   ! to open swpfile any more. The legacy reader plumbing below stays
-   ! in place only for parity-test invocations of readswap('swap').
+   ! Phase 4f-extend SS-B (ADR 0020): entry to this routine implies the
+   ! call-site gate flTillage was true → swtill=1 was set in the TOML
+   ! config and copied to the global. Reads tillage parameters from
+   ! staged swap.swp via TTutil; future ADR 0021 will replace this with
+   ! a TOML schema port of the tillage block.
    Max_Z_tillage = 0.0d0
-   if (swtill /= 1) return
    IunIn = getun (200, 900)
    call RDinit (IunIn, 0, swpfile)
 

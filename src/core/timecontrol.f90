@@ -475,7 +475,7 @@
       endif
 
 !     SSDI: end of subsurface irirgation event reached; reset
-      if (tcum - int(tcum) + dtCrit > dt_SSDI_event) then
+      if (flSSDI .and. tcum - int(tcum) + dtCrit > dt_SSDI_event) then
          call SSDI_irrigation(9)
       end if
 

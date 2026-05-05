@@ -576,25 +576,11 @@ logical :: rdinqr
 
    select case  (iTask)
    case (1)
-      ! Phase 4f-extend SS-10.5: swssdi is now read from
-      ! irrigation_config%swssdi by the TOML adapter
-      ! (config_to_variables.f90). The validator at
-      ! irrigation_config_validate stub-errors swssdi=1, so the
-      ! else-branch (read_ssdi_input) is unreachable from the modern
-      ! binary; no production code path needs to open swpfile any more.
-      ! When swssdi=0 (every regression case), short-circuit to the
-      ! disable-SSDI defaults.
-      if (swssdi == 0) then
-         nod_ssdi = 0
-         qssdi    = 0.0
-         nirri    = 1
-         dt_SSDI_event = 1.0d0
-         return
-      end if
-      ! swssdi=1 path: legacy plumbing retained for parity-test
-      ! invocations of readswap('swap'). Production reaches this branch
-      ! only via the legacy reader; in TOML mode the validator already
-      ! rejected swssdi=1.
+      ! Phase 4f-extend SS-B (ADR 0020): entry to this case implies the
+      ! call-site gate flSSDI was true → swssdi=1 was set in the TOML
+      ! config and copied to the global. Reads SSDI parameters from
+      ! staged swap.swp via TTutil; future ADR 0021 will replace this
+      ! with a TOML schema port of the SSDI block.
       swp = getun2(10, 90, 2)
       call rdinit(swp, logf, swpfile)
          if (rdinqr('swssdi')) call rdsinr ('swssdi', 0, 1, swssdi)
