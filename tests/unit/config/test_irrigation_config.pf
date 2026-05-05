@@ -251,26 +251,17 @@ subroutine test_sched_tcs6_with_tcsfix1_fails()
 end subroutine
 
 @test
-subroutine test_irrigation_swssdi_one_stub_errors()
+subroutine test_irrigation_swssdi_one_accepted()
+   ! ADR 0020 SS-B: swssdi=1 is a legitimate value (SSDI activated).
+   ! Validation accepts it; the call-site gate (flSSDI) controls
+   ! whether SSDI_irrigation actually runs at runtime.
    use funit
-   use error_mod, only: error_collection_t, ERR_VALIDATION_CROSS_FIELD
+   use error_mod, only: error_collection_t
    use irrigation_config_mod, only: irrigation_config_t
    type(irrigation_config_t) :: c
-   type(error_collection_t) :: errors
-   integer :: i
-   logical :: found
+   type(error_collection_t)  :: errors
 
    c%swssdi = 1
    call c%validate(errors)
-   @assertTrue(errors%has_errors())
-
-   found = .false.
-   do i = 1, errors%count()
-      if (errors%items(i)%code == ERR_VALIDATION_CROSS_FIELD .and. &
-          index(errors%items(i)%message, 'irrigation.swssdi=1') > 0) then
-         found = .true.
-         exit
-      end if
-   end do
-   @assertTrue(found)
+   @assertFalse(errors%has_errors())
 end subroutine

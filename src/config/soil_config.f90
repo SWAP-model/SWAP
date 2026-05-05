@@ -82,7 +82,7 @@ module soil_config_mod
       integer :: swinco  = 1
       integer :: swmacro = 0
       integer :: swscal  = 0
-      integer :: swtill  = 0       !! Tillage-event simulation. 0=off (only supported value); 1 stub-errored (SS-10.5).
+      integer :: swtill  = 0       !! Tillage-event simulation. 0=off, 1=on (activates flTillage call-site gate; ADR 0020).
 
       real(real64) :: gwli    = 0.0_real64
       real(real64) :: pondini = 0.0_real64
@@ -153,21 +153,12 @@ contains
             'ADR 0010.', 'soil')
       end if
 
-      ! ----- Phase 4f-extend SS-10.5 stub-error: tillage deferred -----
-      ! Read_Tillage (tillage.f90:433) was the last legacy reader still
-      ! reachable from the production runtime. SS-10.5 retired its
-      ! RDinit(swpfile) call and now reads swtill from this schema slot.
-      ! No regression case authors swtill=1; if a future case needs it,
-      ! the rest of the Read_Tillage rdinqr/rdsdor block must also be
-      ! ported to schema (Date_tillage, Z_tillage, I_tillage,
-      ! Type_tillage, iType_Tillage, Rho_cons, Rho_tillage, k_R, ...).
-      if (self%swtill == 1) then
-         call errors%append(ERR_VALIDATION_CROSS_FIELD, &
-            'soil.swtill=1 (tillage events) not yet supported in the ' // &
-            'TOML pipeline; no regression case exercises it. Port the ' // &
-            'Read_Tillage rdinqr/rdsdor block to schema if a case needs ' // &
-            'this.', 'soil')
-      end if
+      ! ADR 0020 SS-B: swtill=1 is a legitimate value (tillage
+      ! activated). Validation accepts it; the call-site gate
+      ! (flTillage) controls whether the tillage subsystem actually
+      ! runs at runtime. ADR 0021 (candidate, future) will TOML-port
+      ! the rest of the Read_Tillage rdinqr/rdsdor block currently
+      ! read via TTutil from the staged swap.swp.
 
       call check_int_enum(self%swsophy, [0, 1],       "soil.swsophy", errors)
       call check_int_enum(self%swhyst,  [0, 1, 2],    "soil.swhyst",  errors)

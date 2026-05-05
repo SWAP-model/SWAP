@@ -13,8 +13,7 @@
 !! `src/io/readswap.f90` and `src/crop/irrigation.f90`.
 module irrigation_config_mod
    use iso_fortran_env, only: real64
-   use error_mod, only: error_collection_t, ERR_VALIDATION_OUT_OF_RANGE, &
-                        ERR_VALIDATION_CROSS_FIELD
+   use error_mod, only: error_collection_t, ERR_VALIDATION_OUT_OF_RANGE
    use validation_mod, only: check_int_enum, check_int_range, check_real_range, &
                              check_ordered_pair
    implicit none
@@ -26,7 +25,7 @@ module irrigation_config_mod
    ! Top-level fixed-irrigation (.swp side).
    type :: irrigation_config_t
       integer                       :: swirfix = 0
-      integer                       :: swssdi  = 0       !! SSDI sub-surface drip irrigation. 0=off (only supported value); 1 stub-errored (SS-10.5).
+      integer                       :: swssdi  = 0       !! SSDI sub-surface drip irrigation. 0=off, 1=on (activates flSSDI call-site gate; ADR 0020).
       character(len=:), allocatable :: irgfil
       ! Phase 4f cleanup: CSV companion file path (relative to swap.toml)
       ! holding a long-form (date, depth, conc, type) fixed-events table.
@@ -106,20 +105,12 @@ contains
       type(error_collection_t),   intent(inout) :: errors
       logical :: have_irgfil, have_table, have_csv
 
-      ! Phase 4f-extend SS-10.5 stub-error: SSDI sub-surface drip
-      ! irrigation. SSDI_irrigation(1) (irrigation.f90:580) was a
-      ! legacy reader still reachable from the production runtime.
-      ! SS-10.5 retired its RDinit(swpfile) call and now reads swssdi
-      ! from this schema slot. No regression case authors swssdi=1; if
-      ! a future case needs it, the read_ssdi_input() block must also
-      ! be ported to schema (ssdi_file companion table).
-      if (self%swssdi == 1) then
-         call errors%append(ERR_VALIDATION_CROSS_FIELD, &
-            'irrigation.swssdi=1 (sub-surface drip irrigation) not yet ' // &
-            'supported in the TOML pipeline; no regression case ' // &
-            'exercises it. Port read_ssdi_input() to schema if a case ' // &
-            'needs this.', 'irrigation')
-      end if
+      ! ADR 0020 SS-B: swssdi=1 is a legitimate value (sub-surface
+      ! drip irrigation activated). Validation accepts it; the call-
+      ! site gate (flSSDI) controls whether SSDI_irrigation actually
+      ! runs at runtime. ADR 0021 (candidate, future) will TOML-port
+      ! the read_ssdi_input() block currently read via TTutil from the
+      ! staged swap.swp / ssdi_file.
       call check_int_enum(self%swssdi, [0, 1], 'irrigation.swssdi', errors)
 
       ! Sentinel: swirfix=0 ⇒ no fixed irrigation at the .swp level. Skip
