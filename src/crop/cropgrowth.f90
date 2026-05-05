@@ -89,7 +89,110 @@
         ! Initialize preparation, sowing and germination
         if (.not. flCropEmergence) then
           if (flCropReadFile) then
-            call ArableLandGerm(1)
+            ! ADR 0017: sibling-reader dispatch around legacy ArableLandGerm
+            ! (which opens pathcrop//cropfil(icrop)//'.crp' via
+            ! readarablelandgerm). Cache-hit path sets flCrop* flags from
+            ! the typed config. Cache-miss path falls back to legacy.
+            ! Phase 2 extends to type=2 (Wofost) in addition to type=1.
+            ! Phase 4 extends type=2 to handle swgerm=1/2 from TOML config,
+            ! mirroring legacy readarablelandgerm:3322-3358.
+            ! Teardown: end of Phase 4 removes the else-branch.
+            block
+               use crop_config_global_mod, only: crop_config_global
+               use cropwofost_config_mod, only: wofost_germination_t
+               use error_mod, only: fatalerr_collected
+               logical :: use_cache
+               integer :: swprep_cache, swsow_cache, swgerm_cache, rot_type
+               type(wofost_germination_t), pointer :: gp
+               use_cache = .false.
+               swprep_cache = 0
+               swsow_cache  = 0
+               swgerm_cache = 0
+               rot_type     = 0
+               nullify(gp)
+               if (associated(crop_config_global)) then
+                  if (allocated(crop_config_global%rotation_loaded) .and. &
+                      allocated(crop_config_global%rotation_type)) then
+                     if (icrop >= 1 .and. icrop <= size(crop_config_global%rotation_loaded)) then
+                        if (crop_config_global%rotation_loaded(icrop)) then
+                           rot_type = crop_config_global%rotation_type(icrop)
+                           select case (rot_type)
+                           case (1)
+                              ! type=1 cropfixed
+                              if (allocated(crop_config_global%rotation_fixed)) then
+                                 use_cache    = .true.
+                                 swprep_cache = crop_config_global%rotation_fixed(icrop)%swprep
+                                 swsow_cache  = crop_config_global%rotation_fixed(icrop)%swsow
+                                 swgerm_cache = crop_config_global%rotation_fixed(icrop)%swgerm
+                              end if
+                           case (2)
+                              ! type=2 wofost: cache-hit when swprep=0 AND swsow=0.
+                              ! swgerm=0/1/2 are all handled in the cache body below.
+                              if (allocated(crop_config_global%rotation_wofost)) then
+                                 swprep_cache = crop_config_global%rotation_wofost(icrop)%preparation%swprep
+                                 swsow_cache  = crop_config_global%rotation_wofost(icrop)%sowing%swsow
+                                 swgerm_cache = crop_config_global%rotation_wofost(icrop)%germination%swgerm
+                                 if (swprep_cache == 0 .and. swsow_cache == 0) then
+                                    use_cache = .true.
+                                    gp => crop_config_global%rotation_wofost(icrop)%germination
+                                 end if
+                              end if
+                           end select
+                        end if
+                     end if
+                  end if
+               end if
+               if (use_cache) then
+                  ! swprep/swsow non-zero: stub-error across all types.
+                  if (swprep_cache /= 0 .or. swsow_cache /= 0) then
+                     call fatalerr_collected('cropgrowth/ArableLandGerm', &
+                        'swprep /= 0 or swsow /= 0 not yet supported in TOML pipeline.')
+                  else
+                     ! Prep and sow done (both switches are 0).
+                     flCropPrep = .true.
+                     flCropSow  = .true.
+                     PrepDelay  = 0
+                     SowDelay   = 0
+                     if (swgerm_cache == 0) then
+                        ! swgerm=0: germination and emergence are immediate.
+                        flCropGerm      = .true.
+                        flCropEmergence = .true.
+                     else if (rot_type == 2) then
+                        ! type=2 with swgerm=1 or 2: copy germ params from cfg,
+                        ! mirror legacy readarablelandgerm:3322-3358.
+                        flCropGerm      = .false.
+                        flCropEmergence = .false.
+                        tsumemeopt = gp%tsumemeopt
+                        tbasem     = gp%tbasem
+                        teffmx     = gp%teffmx
+                        agerm      = -99.0d0
+                        if (swgerm_cache == 2) then
+                           hdrygerm = gp%hdrygerm
+                           hwetgerm = gp%hwetgerm
+                           if (gp%zgerm /= 0.0d0) then
+                              zgerm = gp%zgerm
+                           else
+                              zgerm = -10.0d0   ! legacy default
+                           end if
+                           agerm = gp%agerm
+                           cgerm = - (tsumemeopt - agerm * log10(-hdrygerm))
+                           bgerm =   (tsumemeopt + agerm * log10(-hwetgerm))
+                        end if
+                     else
+                        ! type=1 cropfixed with swgerm > 0 — not yet supported.
+                        call fatalerr_collected('cropgrowth/ArableLandGerm', &
+                           'cropfixed swgerm > 0 not yet supported in TOML pipeline.')
+                     end if
+                  end if
+               else
+                  ! ADR 0017 sibling-reader dispatch: cache-miss is now
+                  ! treated as a fatal error rather than a silent legacy
+                  ! fallback. Every rotation in tests/swap-cases/toml/
+                  ! has a .crp.toml; missing one is a user error.
+                  call fatalerr_collected('cropgrowth/ArableLandGerm', &
+                     'rotation has no loaded .crp.toml — author the file or use the legacy executable.')
+               end if
+            end block
           endif
         endif
 
@@ -201,7 +304,8 @@
         ! daily gross assimilation
         effc = fco2eff * eff
         if (croptype(icrop) .eq. 2) amax = fco2amax * afgen (amaxtb,30,dvs) * afgen (tmpftb,30,tavd)
-        if (croptype(icrop) .eq. 3) amax = fco2amax * afgen (amaxtb,30,dble(daycrop)) * afgen (tmpftb,30,tavd)        
+        if (croptype(icrop) .eq. 3) amax = fco2amax * afgen (amaxtb,30,dble(daycrop)) * afgen (tmpftb,30,tavd)
+
 
         ! potential assimilation
         call totass (dayl,amax,effc,laipot,kdif,rad,difpp,dsinbe,sinld,cosld,dtgapot)
@@ -393,9 +497,38 @@
 
 ! === initialization ===================================================
       
-! --- read crop data
-      call readcropfixed (icrop,cropfil(icrop),lcc,swhydrlift)
-     
+! --- read crop data: dispatch on per-rotation typed-config cache
+!     (ADR 0016). Falls back to legacy reader for rotations whose
+!     .crp.toml is not yet authored or for rotation types not yet
+!     ported (Phase 1: only type=1 cropfixed; Phases 2/3 add types
+!     2 and 3). Teardown: end of Phase 4 removes the else-branch.
+      block
+         use crop_config_global_mod, only: crop_config_global
+         use cropfixed_init_mod, only: cropfixed_init_from_config
+         logical :: use_cache
+         use_cache = .false.
+         if (associated(crop_config_global)) then
+            if (allocated(crop_config_global%rotation_loaded)) then
+               if (icrop >= 1 .and. icrop <= size(crop_config_global%rotation_loaded)) then
+                  if (crop_config_global%rotation_loaded(icrop)) use_cache = .true.
+               end if
+            end if
+         end if
+         if (use_cache) then
+            call cropfixed_init_from_config(crop_config_global%rotation_fixed(icrop), icrop, lcc)
+            ! swhydrlift is read by legacy readcropfixed only inside the
+            ! swdrought=2 branch (stub-errored in Phase 1). Set to 0 here
+            ! to mirror the default; Phase 2 (cropwofost) reuses this
+            ! same field on its own dispatch path.
+            swhydrlift = 0
+         else
+            ! ADR 0016 cache-miss: typed config required for type=1 rotations.
+            ! No silent legacy fallback — the user must author cropfixed.crp.toml.
+            call fatalerr_collected('cropgrowth/CropFixed', &
+               'cropfixed rotation has no loaded .crp.toml — author the file or use the legacy executable.')
+         end if
+      end block
+
 ! --- maximum rooting depth
       if (swrd.eq.1) then
         rdm = rdmax
@@ -980,9 +1113,36 @@
 
 ! === initialization ====================================================
       
-! --- read general crop data
-      call readwofost (icrop,cropfil(icrop),swhydrlift,swsoybean,mg,dvsi,dvrmax1,dvrmax2, &
-                       flrfphotoveg,tmaxdvr,tmindvr,toptdvr,popt,pcrt,flphenodayl,FraDeceasedLvToSoil)
+! --- read general crop data: dispatch on per-rotation typed-config cache
+!     (ADR 0016). Falls back to legacy reader for rotations whose
+!     .crp.toml is not yet authored. Teardown: end of Phase 4 removes
+!     the else-branch.
+      block
+         use crop_config_global_mod, only: crop_config_global
+         use cropwofost_init_mod, only: cropwofost_init_from_config
+         logical :: use_cache
+         use_cache = .false.
+         if (associated(crop_config_global)) then
+            if (allocated(crop_config_global%rotation_loaded)) then
+               if (icrop >= 1 .and. icrop <= size(crop_config_global%rotation_loaded)) then
+                  if (crop_config_global%rotation_loaded(icrop)) use_cache = .true.
+               end if
+            end if
+         end if
+         if (use_cache) then
+            call cropwofost_init_from_config(crop_config_global%rotation_wofost(icrop), &
+                                             icrop, FraDeceasedLvToSoil)
+            ! swhydrlift is read by legacy readwofost only inside swdrought=2
+            ! branch (stub-errored in Phase 2). Set to 0 here to mirror the
+            ! default.
+            swhydrlift = 0
+         else
+            ! ADR 0016 cache-miss: typed config required for type=2 rotations.
+            ! No silent legacy fallback — the user must author cropwofost.crp.toml.
+            call fatalerr_collected('cropgrowth/Wofost', &
+               'cropwofost rotation has no loaded .crp.toml — author the file or use the legacy executable.')
+         end if
+      end block
 
 ! --- if crop based on calendar is still active, but already harvested
       if (flCropHarvest) return
@@ -2064,9 +2224,53 @@
 
 ! === initialization at start of crop =========================================
 
-! --- read grass input data
-      call readgrass (icrop,cropfil(icrop),swharvest,dmharvest,daylastharvest,dmlastharvest,swdmmow,maxdaymow, &
-                      swlossmow,swlossgrz,swdmgrz,maxdaygrz,dmgrazing,LSDb,tagprest,swhydrlift)
+! --- read grass input data: dispatch on per-rotation typed-config cache
+!     (ADR 0016). Falls back to legacy reader for rotations whose
+!     .crp.toml is not yet authored. Teardown: end of Phase 4 removes
+!     the else-branch.
+      block
+         use crop_config_global_mod, only: crop_config_global
+         use cropgrass_init_mod,     only: cropgrass_init_from_config
+         logical :: use_cache
+         use_cache = .false.
+         if (associated(crop_config_global)) then
+            if (allocated(crop_config_global%rotation_loaded)) then
+               if (icrop >= 1 .and. icrop <= size(crop_config_global%rotation_loaded)) then
+                  if (crop_config_global%rotation_loaded(icrop)) then
+                     ! Defense-in-depth: only dispatch to cache when the schema
+                     ! is fully authored (case 4 + case 2 have amaxtb; the
+                     ! hupselbrook skeleton does not — Phase 4 will fill it).
+                     if (allocated(crop_config_global%rotation_grass(icrop)%amaxtb)) &
+                        use_cache = .true.
+                  end if
+               end if
+            end if
+         end if
+         if (use_cache) then
+            associate(cfg => crop_config_global%rotation_grass(icrop))
+               swharvest      = cfg%swharv
+               dmharvest      = cfg%dmharvest
+               daylastharvest = int(cfg%daylastharvest)
+               dmlastharvest  = cfg%dmlastharvest
+               swdmmow        = cfg%swdmmow
+               maxdaymow      = cfg%maxdaymow
+               swlossmow      = cfg%swlossmow
+               swlossgrz      = cfg%swlossgrz
+               swdmgrz        = cfg%swdmgrz
+               maxdaygrz      = cfg%maxdaygrz
+               dmgrazing      = cfg%dmgrazing
+               LSDb           = 0.0d0   ! grazing stub-guarded; populated via daysgrazingtab/uptgrazingtab/lossgrazingtab by init
+               tagprest       = cfg%tagprest
+               swhydrlift     = 0       ! swdrought=2 stub-errored; mirror cropfixed/cropwofost default
+               call cropgrass_init_from_config(cfg, icrop)
+            end associate
+         else
+            ! ADR 0016 cache-miss: typed config required for type=3 rotations.
+            ! No silent legacy fallback — the user must author cropgrass.crp.toml.
+            call fatalerr_collected('cropgrowth/Grass', &
+               'cropgrass rotation has no loaded .crp.toml — author the file or use the legacy executable.')
+         end if
+      end block
 
 ! --- sequence of harvest by mowing, dewooling and grazing
       seqgrazmowpot = seqgrazmow
@@ -2290,9 +2494,9 @@
       if (flGrassGrowth .and. daycrop.ge.idregrpot) then
 
 ! ===   daily dry matter production ===
-        
+
         gasspot = pgasspot
-        
+
 ! ---   respiration and partitioning of carbohydrates between growth and
 ! ---   maintenance respiration
         rmrespot=(rmr*wrtpot+rml*wlvpot+rms*wstpot)*afgen(rfsetb,30,rid)

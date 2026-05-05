@@ -98,10 +98,13 @@ value, so omitting it leaves the corresponding default untouched.
 
 ### `[general]`
 
-| Key | Type | Required | State target | Description |
-|---|---|---|---|---|
-| `project` | string | optional | `state%time%project` | Project name used in output headers. |
-| `swscre` | integer | optional | `state%time%swscre` | Screen output mode. |
+| Key | Type | Required | Default | State target | Description |
+|---|---|---|---|---|---|
+| `project`    | string  | **required** | —        | `state%time%project` | Project name used in output headers. |
+| `swscre`     | integer | optional     | `0`      | `state%time%swscre`  | Screen output mode (0=none, 1=water balance, 2=day number). |
+| `swerror`    | integer | optional     | `0`      | `state%time%swerror` | Error output switch (0=off, 1=on). |
+| `outfil`     | string  | optional     | `result` | `outfil` (global)    | Output-file basename. All output files are named `<outfil>_*.csv` etc. Matches legacy `.swp` key `OUTFIL`. |
+| `inlist_csv` | string  | optional     | `''`     | `InList_csv` (global)| Comma-separated list of CSV output variable names (legacy `INLIST_CSV`). When absent the adapter uses a built-in water-balance default. |
 
 ### `[general.paths]`
 
@@ -182,6 +185,20 @@ Output timing is nested under `[simulation.output]`, **not** at top level.
 | `swrain`        | integer | optional | `state%atm%swrain`  | Rain input mode (0=daily, 1=daily+intensity, 2=daily+duration, 3=detailed file). |
 | `rainfall_file` | string  | optional | `state%atm%rainfil` | Detailed rainfall file (used when `swrain=3`). |
 
+### `[meteorology.evaporation]`
+
+Bare-soil evaporation reduction parameters. All keys are optional; defaults
+match legacy `.swp` values.
+
+| Key | Type | Default | Validator | State target | Description |
+|---|---|---|---|---|---|
+| `swcfbs`     | integer | `0`    | enum {0, 1}  | `state%atm%swcfbs`   | Correction for bare-soil evaporation (0=off, 1=on). |
+| `cfbs`       | real    | `1.0`  | [0.5, 1.5]   | `state%atm%cfbs`     | Correction factor (active when `swcfbs=1`). |
+| `cofredbl`   | real    | `0.35` | [0.0, 1.0]   | `state%soil%cofred`  | Black evaporation reduction coefficient. |
+| `cofredbo`   | real    | `0.35` | [0.0, 1.0]   | `state%soil%cofred`  | Boesten/Stroosnijder coefficient. |
+| `rsigni`     | real    | `0.5`  | [0.0, 10.0]  | `rsigni` (global)    | Minimum daily rainfall (cm/d) that resets the Black-method dry-day counter (`ldwet`). Default 0.5 matches legacy `.swp` template; `Initialize.f90` defaults to 0.0 which overshoots bare-soil EACT by ~7 cm/yr. |
+| `cfevappond` | real    | `1.25` | [0.0, 10.0]  | `cfevappond` (global)| Ponding-layer evaporation coefficient applied to `peva` when pond depth > 1e-10 cm. Default 1.25 matches legacy `.swp` default; `Initialize.f90` defaults to 0.0 which zeroes out pond evaporation. |
+
 ### `[crop]`
 
 | Key | Type | Required | State target | Description |
@@ -231,9 +248,26 @@ type  = 1
 
 ### `[soil.initial]`
 
+Initial / warm-restart inputs. The `gwli` / `pondini` / `pondmx` scalars apply
+when `swinco ∈ {1, 2}` (initial-from-scalars). The remaining keys apply when
+`swinco = 3` (warm restart from saved state); they replaced the legacy
+`swap.ini` ASCII file.
+
 | Key | Type | Required | State target | Description |
 |---|---|---|---|---|
 | `gwli` | real | optional | `state%soil%gwli` (and `state%soil%gwl`) | Initial groundwater level (cm). |
+| `pondini` | real | optional | `state%soil%pondini` | Initial ponding depth, swinco<3 path (cm). |
+| `pondmx` | real | optional | `state%soil%pondmx` | Maximum ponding depth before runoff (cm). |
+| `swirrigate` | int | optional | — (metadata only) | Whether the previous run had irrigation active. |
+| `ssnow` | real | optional | global `ssnow` | Initial snow water equivalent (cm). |
+| `slw` | real | optional | global `slw` | Initial snow liquid water (cm). |
+| `pond` | real | optional | globals `pond`, `pondini` | Initial ponding depth, swinco=3 path (cm). |
+| `ldwet` | real | optional | global `ldwet` | Time after significant rainfall, Black evap reservoir (d). |
+| `dt` | real | optional | global `dt` | Length of final timestep at end of previous run (d). |
+| `atmin7` | real(7) | optional | global `atmin7(7)` | Minimum temperatures of last week (°C). |
+| `h_file` | string | required when swinco=3 | populates `zi`, `h`, `nhead` | CSV path; header `z,h`. |
+| `tsoil_file` | string | required when swinco=3 ∧ heat.swhea=1 ∧ heat.swcalt=2 | populates `zh`, `tsoil` | CSV path; header `z,tsoil`. |
+| `cml_file` | string | required when swinco=3 ∧ solute.swsolu=1 | populates `zc`, `cml`, `nconc` | CSV path; header `z,cml`. |
 
 ### `[soil.surface]`
 
@@ -269,9 +303,12 @@ wins. This is a known quirk — see the Discoveries note at the end.
 
 ### `[drainage]`
 
-| Key | Type | Required | State target | Description |
-|---|---|---|---|---|
-| `file` | string | optional | _(resolved by loader)_ | Path to an external `*.dra.toml` drainage file, relative to the `.swp` file. |
+| Key | Type | Required | Default | State target | Description |
+|---|---|---|---|---|---|
+| `file`    | string  | optional | `''`   | _(resolved by loader)_ | Path to an external `*.dra.toml` drainage file, relative to the `.swp` file. |
+| `swdra`   | integer | optional | `0`    | `swdra`      | Drainage simulation switch (0=off, 1=basic, 2=extended). |
+| `dramet`  | integer | optional | `0`    | `dramet`     | Drainage method (0=fixed, 1=table, 2=Hooghoudt/Ernst, 3=multi-level). |
+| `drfil`   | string  | optional | `swap` | `drfil` (global) | Stem of the legacy `.dra` file consumed by `rddre()` when `swdra>=1`. Default `'swap'` resolves to `swap.dra`. Only relevant if the legacy `.dra`-file reader path is exercised; the TOML pipeline uses `surfacewater_init` instead for `swdra=2` cases. |
 
 When `file` is present, the loader reads the referenced file and parses its
 `[drainage]` table (see "Cross-file references" below and the `.dra` reference
@@ -545,105 +582,263 @@ on the `type` key.
 Parsed by `read_cropfixed_toml.f90`; config type `cropfixed_config_t`
 (`src/config/cropfixed_config.f90`).
 
-Sections: `[phenology]`, `[light]`, `[root]`, `[water_stress]`,
-`[salinity]`, `[interception]`.
+**Phase 1 (Phase 4f) — 14 sections, 1:1 schema match with legacy `readcropfixed`.**
 
-Example:
+Sections (parser order): `[preparation]`, `[harvest]`, `[phenology]`,
+`[light]`, `[lai]`, `[crop_factor]`, `[root]`, `[oxygen_stress]`,
+`[drought_stress]`, `[salinity_stress]`, `[compensation]`,
+`[interception]`, `[scheduling]`, `[irrigation_schedule]`.
+
+> **Phase 1 status**
+>
+> The schema is a 1:1 match with legacy `readcropfixed`: every legacy field
+> has a TOML home. However, several runtime branches have not yet been ported
+> and are stub-errored at validate time (ADR 0015). Cases that require these
+> switches must run via the legacy executable. Affected values:
+>
+> | Switch | Stub-errored value(s) | Reason |
+> |---|---|---|
+> | `swdrought`    | 2 (De Jong van Lier)                 | Not ported |
+> | `swoxygen`     | 2 (Bartholomeus)                     | Not ported |
+> | `swcompensate` | 1 (Jarvis), 2 (Walsum)               | Not ported |
+> | `swcf`         | 3 (wet-crop factor)                  | Not ported |
+> | `swharv`       | 1 (DVS-based harvest)                | Not ported |
+> | `swinter`      | 2 (Gash), 3 (storage-cap)           | Not ported |
+> | `swrd`         | 2 (daily increase), 3 (biomass)      | Not ported |
+> | `swsalinity`   | 1 (Maas-Hoffman), 2 (osmotic head)  | Not ported |
+> | `schedule`     | 1 (per-crop scheduling)              | Not ported |
+>
+> See also: ADR 0016 (cache), ADR 0017 (sibling dispatch).
+
+Example (case 6 `grass.crp.toml`, all switches at supported values):
 
 ```toml
+[preparation]
+swprep = 0
+swsow  = 0
+swgerm = 0
+
+[harvest]
+dvsend = 2.0
+swharv = 0
+
 [phenology]
 idev = 1
-lcc  = 168
+lcc  = 366
 
 [light]
-kdif = 0.6
-kdir = 0.6
+kdif = 0.75
+kdir = 0.75
+
+[lai]
+swgc = 1
+gctb = [0.0, 3.0, 2.0, 3.0]
+
+[crop_factor]
+swcf = 1
+cftb = [0.0, 1.0, 2.0, 1.0]
 
 [root]
-rdi = 5.0
-rri = 1.2
-rdc = 100.0
+swrd = 1
+swdmi2rd = 0
+swrdc = 0
+rdtb  = [0.0, 30.0, 2.0, 30.0]
+rdctb = [0.0, 1.0, 1.0, 1.0]
+rdi = 30.0
+rri = 0.0
+rdc = 30.0
 
-[water_stress]
-hlim1  = -10.0
-hlim2u = -25.0
-hlim2l = -200.0
-hlim3h = -400.0
-hlim3l = -600.0
-hlim4  = -8000.0
-adcrh  = 0.5
-adcrl  = 0.1
-rsc    = 70.0
+[oxygen_stress]
+swoxygen   = 0
+swwrtnonox = 0
 
-[salinity]
-ecmax  = 1.7
-ecslop = 12.0
+[drought_stress]
+swdrought = 1
+hlim3h    = -200.0
+hlim3l    = -800.0
+hlim4     = -8000.0
+adcrh     = 0.5
+adcrl     = 0.1
+
+[salinity_stress]
+swsalinity = 0
+
+[compensation]
+swcompensate = 0
 
 [interception]
-cofab = 0.25
+swinter = 1
+cofab   = 0.25
+
+[scheduling]
+schedule = 0
 ```
+
+#### `[preparation]` (type 1)
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `swprep`  | integer | 0 | 0=no seedbed preparation, 1=preparation before crop growth. |
+| `swsow`   | integer | 0 | 0=no sowing, 1=sowing event before crop growth starts. |
+| `swgerm`  | integer | 0 | 0=no germination, 1=germination from temperature, 2=temperature-sum-based. |
+
+#### `[harvest]` (type 1)
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `dvsend`  | real    | 2.0 | Development stage at crop end (0–3). |
+| `swharv`  | integer | 0   | 0=harvest triggered by CROPEND date, **1=DVS-based (stub-errored)**. |
 
 #### `[phenology]` (type 1)
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `idev` | integer | 1 | Development mode: 1=fixed period, 2=temperature-sum-based. |
-| `lcc`  | integer | 0 | Length of crop cycle (days); used when `idev=1`. |
+| `idev`   | integer | 1   | Development mode: 1=fixed period (`lcc`), 2=temperature-sum-based. |
+| `lcc`    | integer | 0   | Length of crop cycle (days); used when `idev=1`. Range 1–366. |
+| `tsumea` | real    | 0.0 | Temperature sum from emergence to anthesis (°C·d); used when `idev=2`. |
+| `tsumam` | real    | 0.0 | Temperature sum from anthesis to maturity (°C·d); used when `idev=2`. |
+| `tbase`  | real    | 0.0 | Base temperature for development (°C); used when `idev=2`. |
 
 #### `[light]` (type 1)
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `kdif` | real | 0.0 | Diffuse light extinction coefficient. |
-| `kdir` | real | 0.0 | Direct light extinction coefficient. |
+| `kdif` | real | 0.0 | Extinction coefficient for diffuse radiation (0–2). |
+| `kdir` | real | 0.0 | Extinction coefficient for direct radiation (0–2). |
+
+#### `[lai]` (type 1)
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `swgc` | integer | 1 | 1=use LAI table (`gctb`), 2=use soil cover fraction table (`gctb`). |
+| `gctb` | real array | — | Flat even-length (DVS, LAI or SCF) pair array. |
+
+`gctb` is an inline TOML array of even length: alternating DVS and LAI (or
+SCF when `swgc=2`) values, e.g. `gctb = [0.0, 0.5, 1.0, 3.0, 2.0, 0.5]`.
+
+#### `[crop_factor]` (type 1)
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `swcf`   | integer | 1    | 1=crop factor table (`cftb`), 2=crop height table (`chtb`), **3=wet-crop factor (stub-errored)**. |
+| `cftb`   | real array | — | (DVS, crop-factor) pairs; used when `swcf=1`. |
+| `chtb`   | real array | — | (DVS, height-cm) pairs; used when `swcf=2`. |
+| `albedo` | real    | 0.23 | Crop albedo; used when `swcf=2` (Penman-Monteith). |
+| `rsc`    | real    | 0.0  | Minimum crop resistance (s/m); used when `swcf=2`. |
+| `rsw`    | real    | 0.0  | Wet surface resistance (s/m); used when `swcf=2`. |
+
+Pair arrays follow the same convention as `gctb` above.
 
 #### `[root]` (type 1)
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `rdi` | real | 0.0 | Initial rooting depth (cm). |
-| `rri` | real | 0.0 | Daily root extension rate (cm/d). |
-| `rdc` | real | 0.0 | Maximum rooting depth (cm). |
+| `swrd`     | integer | 1   | Root depth method: 1=DVS table (`rdtb`), **2=daily increase (stub-errored)**, **3=biomass (stub-errored)**. |
+| `swdmi2rd` | integer | 0   | Only used when `swrd=2`; irrelevant in Phase 1. |
+| `swrdc`    | integer | 0   | Switch for root density profile development (legacy hard-codes to 0). |
+| `rdtb`     | real array | — | (DVS, root-depth-cm) pairs; used when `swrd=1`. |
+| `rdctb`    | real array | — | (relative depth, relative density) pairs. |
+| `rdi`      | real    | 0.0 | Initial rooting depth (cm, 0–1000). |
+| `rri`      | real    | 0.0 | Daily root extension rate (cm/d, ≥0); used when `swrd=2`. |
+| `rdc`      | real    | 0.0 | Maximum rooting depth (cm, 0–1000). |
 
-#### `[water_stress]` (type 1 and 3)
+#### `[oxygen_stress]` (type 1)
 
-Feddes pressure-head thresholds (all in cm, negative values):
-
-| Key | Type | Default | Description |
-|---|---|---|---|
-| `hlim1`  | real | 0.0 | Saturation threshold (near 0, least negative). |
-| `hlim2u` | real | 0.0 | Upper anaerobiosis threshold. |
-| `hlim2l` | real | 0.0 | Lower anaerobiosis threshold. |
-| `hlim3h` | real | 0.0 | High-transpiration wilting start. |
-| `hlim3l` | real | 0.0 | Low-transpiration wilting start. |
-| `hlim4`  | real | 0.0 | Wilting point (most negative). |
-| `adcrh`  | real | 0.0 | Critical fraction reduction at hlim3h. |
-| `adcrl`  | real | 0.0 | Critical fraction reduction at hlim3l. |
-| `rsc`    | real | 0.0 | Crop resistance for Penman-Monteith ET (s/m). |
-
-#### `[salinity]` (type 1 and 3)
+Feddes anaerobiosis thresholds and Bartholomeus parameters (all pressure heads in cm, negative values):
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `ecmax`  | real | 0.0 | Threshold EC above which yield reduction starts (dS/m). |
-| `ecslop` | real | 0.0 | Slope of yield reduction per unit EC above `ecmax` (%/dS/m). |
+| `swoxygen`   | integer | 0      | 0=no oxygen stress, 1=Feddes (Hlim1/2), **2=Bartholomeus (stub-errored)**. |
+| `swwrtnonox` | integer | 0      | 0=no aerobic root check, 1=check aerobic root fraction. |
+| `aeratecrit` | real    | 1.0e-4 | Minimum aeration fraction required (used when `swwrtnonox=1`). |
+| `hlim1`      | real    | 0.0    | Feddes saturation threshold (near 0, least negative) (cm). |
+| `hlim2u`     | real    | 0.0    | Feddes upper anaerobiosis threshold (cm). |
+| `hlim2l`     | real    | 0.0    | Feddes lower anaerobiosis threshold (cm); must satisfy `hlim2l ≤ hlim2u`. |
 
-#### `[interception]` (type 1 and 3)
+The following fields are parsed into the config type but are only meaningful
+when `swoxygen=2` (Bartholomeus), which is stub-errored in Phase 1. They are
+not populated by the parser and should not be set in the TOML file:
+`swoxygentype`, `swrootradius`, `swtopsub`, `nrstaring`, `q10_root`,
+`q10_microbial`, `specific_resp_humus`, `c_mroot`, `srl`, `f_senes`,
+`dry_mat_cont_roots`, `air_filled_root_por`, `spec_weight_root_tissue`,
+`var_a`, `root_radiusO2`.
+
+#### `[drought_stress]` (type 1)
+
+Feddes water uptake reduction thresholds (cm, negative values) and De Jong van
+Lier parameters:
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `cofab` | real | 0.0 | Interception coefficient (cm/LAI per event). |
+| `swdrought` | integer | 1   | 1=Feddes pressure-head thresholds, **2=De Jong van Lier (stub-errored)**. |
+| `hlim3h`    | real    | 0.0 | High-transpiration stress threshold (cm, negative). |
+| `hlim3l`    | real    | 0.0 | Low-transpiration stress threshold (cm); must satisfy `hlim3l ≤ hlim3h`. |
+| `hlim4`     | real    | 0.0 | Wilting point (cm, most negative). |
+| `adcrh`     | real    | 0.0 | Critical transpiration fraction at `hlim3h`. |
+| `adcrl`     | real    | 0.0 | Critical transpiration fraction at `hlim3l`. |
+
+The following fields belong to the `swdrought=2` (De Jong van Lier) path,
+which is stub-errored in Phase 1. They are not populated by the parser and
+should not be set in the TOML file: `wiltpoint`, `kstem`, `rxylem`,
+`rootradius`, `kroot`, `rootcoefa`, `rooteff`, `stephr`, `criterhr`,
+`taccur`.
+
+#### `[salinity_stress]` (type 1)
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `swsalinity` | integer | 0   | 0=no salinity stress, **1=Maas-Hoffman (stub-errored)**, **2=osmotic head (stub-errored)**. |
+| `saltmax`    | real    | 0.0 | Threshold EC / osmotic head above which yield reduction starts; used when `swsalinity=1`. |
+| `saltslope`  | real    | 0.0 | Slope of yield reduction above threshold; used when `swsalinity=1`. |
+| `salthead`   | real    | 0.0 | Osmotic head parameter; used when `swsalinity=2`. |
+| `ecmax`      | real    | 0.0 | Threshold EC (dS/m); alternative to `saltmax` (Maas-Hoffman). |
+| `ecslop`     | real    | 0.0 | Yield reduction slope (%/(dS/m)); alternative to `saltslope`. |
+
+#### `[compensation]` (type 1)
+
+Root water uptake compensation. All non-zero values of `swcompensate` are
+stub-errored in Phase 1.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `swcompensate` | integer | 0   | 0=no compensation, **1=Jarvis (stub-errored)**, **2=Walsum (stub-errored)**. |
+| `swstressor`   | integer | 1   | Stressor used in compensation (only relevant when `swcompensate /= 0`). |
+| `alphacrit`    | real    | 1.0 | Critical alpha value for Jarvis compensation. |
+| `dcritrtz`     | real    | 0.0 | Critical rooting zone depth (cm) for Walsum compensation. |
+
+#### `[interception]` (type 1)
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `swinter` | integer | 1   | 0=no interception, 1=Von Hoyningen-Hune (supported), **2=Gash (stub-errored)**, **3=storage-cap (stub-errored)**. |
+| `cofab`   | real    | 0.0 | Interception coefficient (cm/LAI per event); used when `swinter=1`. |
+
+#### `[scheduling]` (type 1)
+
+Top-level irrigation scheduling switch. When `schedule=1` the
+`[irrigation_schedule]` section is active; this path is stub-errored in
+Phase 1.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `schedule` | integer | 0 | 0=no per-crop irrigation scheduling, **1=apply schedule (stub-errored)**. |
+
+#### `[irrigation_schedule]` (type 1)
+
+Per-crop irrigation schedule (existing field from Phase 4c-a, kept). Only
+active when `schedule=1`, which is stub-errored in Phase 1. Schema defined by
+`irrigation_schedule_t` in `src/config/irrigation_config.f90`.
 
 ### `*.crp.toml` — type 2 (WOFOST general)
 
-Phase 4c-b adds the WOFOST type-2 schema. Parsed by
+Phase 2 of the `.crp` port (case 5 salinitystress) makes the WOFOST type-2
+schema 1:1 with legacy `readwofost`. Parsed by
 `read_cropwofost_toml.f90`; config type `cropwofost_config_t`
-(`src/config/cropwofost_config.f90`).
-
-The schema mirrors the legacy `readcropwofost`/`crpgrowth` parameter set,
-broken into 21 nested sub-tables. All sections are optional: missing
-sections leave their fields at type defaults and the validator only flags
-inconsistencies when the relevant switch is enabled.
+(`src/config/cropwofost_config.f90`). Runtime init via
+`cropwofost_init_from_config(cfg, icrop, FraDeceasedLvToSoil)` in
+`src/crop/cropwofost_init.f90` (ADR 0016). Cache-driven dispatch in
+`cropgrowth.f90` `wofost(task=1)` selects the TOML path when
+`crop_config_global%rotation_loaded(icrop) = .true.`.
 
 Sections (read in order):
 
@@ -651,7 +846,33 @@ Sections (read in order):
 `[crop_factor]`, `[phenology]`, `[initial]`, `[green_area]`,
 `[assimilation]`, `[conversion]`, `[respiration]`, `[partitioning]`,
 `[death]`, `[root]`, `[oxygen_stress]`, `[drought_stress]`, `[salinity]`,
-`[compensate]`, `[interception]`, `[co2]`, `[management]`.
+`[compensate]`, `[interception]`, `[co2]`, `[management]`,
+`[soybean]`, `[bulb]`, `[nutrient]`, `[irrigation_schedule]`.
+
+All sections are optional: missing sections leave their fields at type
+defaults and the validator only flags inconsistencies when the relevant
+switch is enabled.
+
+#### Phase 2 stub-errored branches (ADR 0015)
+
+The following switch values are validator-rejected with
+`ERR_VALIDATION_CROSS_FIELD`. Schema is 1:1 with legacy for round-tripping
+parity tests, but the runtime path does not yet support them:
+
+| Switch | Stub-errored value | Notes |
+|---|---|---|
+| `soybean.swsoybean` | `1` | Soybean variant phenology |
+| `bulb.swbulb` | `1` | Bulb-crop development |
+| `nutrient.flcropnut` | `.true.` | N-P-K nutrient model (sibling reader at `cropgrowth.f90:1061-1091`) |
+| `co2.swco2` | `1` | Atmospheric CO₂ correction |
+| `irrigation_schedule.schedule` | `1` | Per-crop irrigation scheduling |
+| `drought_stress.swdrought` | `2` | De Jong van Lier |
+| `oxygen_stress.swoxygen` | `2` | Bartholomeus |
+| `interception.swinter` | `2` | Gash forest interception |
+| `compensate.swcompensate` | `≠ 0` | Jarvis/Walsum compensation |
+| `harvest.swharv` | `1` | DVS-based harvest timing |
+| `salinity.swsalinity` | `2` | Osmotic-head salinity |
+| `root.swrdc` | `1` | Root density development switch |
 
 #### Table encoding
 
@@ -940,11 +1161,41 @@ loadable.
 
 ### `*.crp.toml` — type 3 (WOFOST grass)
 
-Parsed by `read_cropgrass_toml.f90`; config type `cropgrass_config_t`
-(`src/config/cropgrass_config.f90`).
+Phase 3 of the `.crp` port (cases 4 oxygenstress + 2 grassgrowth) makes the
+type-3 schema 1:1 with legacy `readgrass`. Parsed by `read_cropgrass_toml.f90`;
+config type `cropgrass_config_t` (`src/config/cropgrass_config.f90`). Runtime
+init via `cropgrass_init_from_config(cfg, icrop)` in
+`src/crop/cropgrass_init.f90` (ADR 0016). Cache-driven dispatch in
+`cropgrowth.f90` `grass(task=1)` selects the TOML path when
+`crop_config_global%rotation_loaded(icrop) = .true.` — the 14 `intent(out)`
+locals of legacy `readgrass` are assigned in the dispatch block prior to
+`cropgrass_init_from_config`.
 
-Sections: same as type 1 (`[phenology]`, `[light]`, `[root]`, `[water_stress]`,
-`[salinity]`, `[interception]`) plus `[mowing]` and `[grazing]`.
+Sections (read in order):
+
+`[phenology]`, `[crop_state]`, `[crop_factor]`, `[green_area]`,
+`[assimilation]`, `[root]`, `[oxygen_stress]` (with
+`[oxygen_stress.bartholomeus]` sub-table for `swoxygen=2`), `[drought_stress]`,
+`[water_stress]`, `[salinity]`, `[compensation]`, `[interception]`,
+`[management]`, `[mowing]`, `[grazing]`, `[co2]`, `[irrigation_schedule]`.
+
+#### Phase 3 stub-errored branches (ADR 0015)
+
+| Switch | Stub-errored value | Notes |
+|---|---|---|
+| `oxygen_stress.bartholomeus.swoxygentype` | `2` | Reproduction-function sub-branch |
+| `compensation.swcompensate` | `2` | Walsum compensation |
+| `interception.swinter` | `2`, `3` | Gash, storage-cap |
+| `drought_stress.swdrought` | `2` | De Jong van Lier |
+| `salinity.swsalinity` | `≠ 0` | Phase 3 supports `swsalinity=0` only |
+| `co2.swco2` | `1` | CO₂ correction |
+| `management.swlossmow`, `swlossgrz` | `1` | Treading losses |
+| `management.seqgrazmow(i)` | `∈ {1, 3}` | Grazing or dewooling — Phase 3 supports mowing-only |
+| `root.swrd` | `1` | DVS-table root depth (`swrd=2` and `swrd=3` supported) |
+| `crop_factor.swcf` | `3` | LAI-dependent dual-coeff |
+| `root.swrdc` | `1` | Root density development switch |
+| `irrigation_schedule.schedule` | `1` | Per-crop irrigation scheduling |
+| `phenology.swtsum` | `2` | Soil-temperature-sum start of growth |
 
 #### `[phenology]` (type 3, additional keys)
 
@@ -1205,6 +1456,9 @@ Phase 4f strangler-fig of `readswap()`. Detail:
   (Black soil-evaporation coefficient), `cofredbo` (Boesten-
   Stroosnijder coefficient). Resolves the legacy ambiguity where
   both keys mapped to the same `cofred` global (Discovery #1 below).
+  **Phase 4f Bucket-A addition:** `rsigni` (min daily rain resetting Black
+  dry-day counter, default 0.5 cm/d) and `cfevappond` (ponding evaporation
+  coefficient, default 1.25) added in commit `8f4f5a3`.
 
 - **`[meteorology.snow]`** — `swsnow`, `snowcoef`, `teprrain`,
   `teprsnow`. All 6 regression cases have `swsnow=0`; switch-gated

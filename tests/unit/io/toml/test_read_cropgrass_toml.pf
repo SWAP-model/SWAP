@@ -180,3 +180,97 @@ subroutine test_read_cropgrass_new_fields_absent_silent()
    @assertEqual(0.0d0, c%tagprest,  1.0d-12)
    @assertFalse(allocated(c%lsdb))
 end subroutine
+
+@test
+subroutine test_cropgrass_round_trip_new_scalars()
+   ! Round-trip test for all Phase 3 new scalar fields.
+   ! Fixture: tests/unit/io/toml/fixtures/cropgrass_phase3_scalars.toml
+   use funit
+   use tomlf,                   only: toml_table, toml_load
+   use cropgrass_config_mod,    only: cropgrass_config_t
+   use read_cropgrass_toml_mod, only: read_cropgrass_toml
+   use error_mod,               only: error_collection_t
+
+   type(toml_table), allocatable, target :: doc
+   type(toml_table), pointer             :: doc_ptr
+   type(cropgrass_config_t)              :: c
+   type(error_collection_t)              :: errors
+
+   call toml_load(doc, 'tests/unit/io/toml/fixtures/cropgrass_phase3_scalars.toml')
+   doc_ptr => doc
+   call read_cropgrass_toml(doc_ptr, c, errors)
+   @assertEqual(0, errors%count())
+
+   ! phenology extension
+   @assertEqual(1, c%swtsum)
+
+   ! crop_state
+   @assertEqual(1200.0d0, c%tdwi,   1.0d-10)
+   @assertEqual(0.5d0,    c%laiem,  1.0d-10)
+   @assertEqual(0.009d0,  c%rgrlai, 1.0d-12)
+
+   ! green_area
+   @assertEqual(0.0004d0, c%ssa,  1.0d-10)
+   @assertEqual(25.0d0,   c%span, 1.0d-10)
+
+   ! assimilation — light interception params (kdif/kdir/eff live here, not [light])
+   @assertEqual(0.60d0,  c%kdif,  1.0d-10)
+   @assertEqual(0.75d0,  c%kdir,  1.0d-10)
+   @assertEqual(0.45d0,  c%eff,   1.0d-10)
+   @assertEqual(0.685d0, c%cvl,   1.0d-10)
+   @assertEqual(0.694d0, c%cvr,   1.0d-10)
+   @assertEqual(0.662d0, c%cvs,   1.0d-10)
+   @assertEqual(2.0d0,   c%q10,   1.0d-10)
+   @assertEqual(0.03d0,  c%rml,   1.0d-12)
+   @assertEqual(0.015d0, c%rmr,   1.0d-12)
+   @assertEqual(0.015d0, c%rms,   1.0d-12)
+   @assertEqual(0.05d0,  c%perdl, 1.0d-12)
+
+   ! crop_factor
+   @assertEqual(2,     c%swcf)
+   @assertEqual(0.23d0, c%albedo, 1.0d-10)
+   @assertEqual(0.0d0,  c%rsw,   1.0d-12)
+
+   ! root extension
+   @assertEqual(2, c%swrd)
+   @assertEqual(0, c%swdmi2rd)
+   @assertEqual(0, c%swrdc)
+   @assertEqual(3000.0d0, c%wrtmax, 1.0d-10)
+
+   ! oxygen_stress
+   @assertEqual(2, c%swoxygen)
+   @assertEqual(1, c%swwrtnonox)
+   @assertEqual(0.5d0, c%aeratecrit, 1.0d-10)
+
+   ! bartholomeus sub-table
+   @assertEqual(1,        c%swoxygentype)
+   @assertEqual(2.8d0,    c%q10_microbial,       1.0d-10)
+   @assertEqual(0.0016d0, c%specific_resp_humus,  1.0d-12)
+   @assertEqual(383571.0d0, c%srl,               1.0d0)
+   @assertEqual(2,        c%swrootradius)
+   @assertEqual(0.075d0,  c%dry_mat_cont_roots,   1.0d-12)
+   @assertEqual(0.05d0,   c%air_filled_root_por,  1.0d-12)
+   @assertEqual(1000.0d0, c%spec_weight_root_tissue, 1.0d-8)
+   @assertEqual(4.175d-10, c%var_a,              1.0d-20)
+   @assertEqual(0.000075d0, c%root_radiusO2,      1.0d-12)
+
+   ! drought_stress
+   @assertEqual(1, c%swdrought)
+
+   ! compensation
+   @assertEqual(1,   c%swcompensate)
+   @assertEqual(1,   c%swstressor)
+   @assertEqual(0.7d0, c%alphacrit,  1.0d-10)
+   @assertEqual(0.0d0, c%dcritrtz,  1.0d-12)
+
+   ! management
+   @assertEqual(700.0d0, c%mowrest,   1.0d-10)
+   @assertEqual(850.0d0, c%dewrest,   1.0d-10)
+   @assertEqual(1,       c%swpotrelmf)
+   @assertEqual(1.0d0,   c%relmf,    1.0d-10)
+   @assertEqual(0,       c%swlossmow)
+   @assertEqual(0,       c%swlossgrz)
+
+   ! co2
+   @assertEqual(0, c%swco2)
+end subroutine

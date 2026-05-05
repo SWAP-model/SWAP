@@ -1,0 +1,9 @@
+[crop]
+swcrop = 1
+rdmax  = 320.0
+
+[[crop.rotation]]
+start = 2002-05-10
+end   = 2002-10-15
+file  = "maizes.crp"
+type  = 1

@@ -3,7 +3,8 @@
 !! Phase 4c-b Task 2: per-sub-type validators wired into top-level validate.
 module cropwofost_config_mod
    use iso_fortran_env, only: real64
-   use error_mod, only: error_collection_t, ERR_VALIDATION_OUT_OF_RANGE
+   use error_mod, only: error_collection_t, ERR_VALIDATION_OUT_OF_RANGE, &
+                        ERR_VALIDATION_CROSS_FIELD
    use validation_mod, only: check_int_enum, check_int_range, check_real_range, &
                              check_nonnegative_real, check_ordered_pair
    use irrigation_config_mod, only: irrigation_schedule_t
@@ -31,6 +32,9 @@ module cropwofost_config_mod
    public :: wofost_interception_t
    public :: wofost_co2_t
    public :: wofost_management_t
+   public :: wofost_soybean_t
+   public :: wofost_bulb_t
+   public :: wofost_nutrient_t
    public :: cropwofost_config_t
 
    ! ------------------------------------------------------------------
@@ -222,6 +226,7 @@ module cropwofost_config_mod
    ! ------------------------------------------------------------------
    type :: wofost_root_t
       integer      :: swrd     = 0
+      integer      :: swrdc    = 0
       real(real64) :: rdi      = 0.0_real64
       real(real64) :: rri      = 0.0_real64
       real(real64) :: rdc      = 0.0_real64
@@ -342,6 +347,69 @@ module cropwofost_config_mod
    end type wofost_management_t
 
    ! ------------------------------------------------------------------
+   ! Soybean variant (stub-errored when swsoybean=1)
+   ! ------------------------------------------------------------------
+   type :: wofost_soybean_t
+      integer      :: swsoybean    = 0
+      real(real64) :: mg           = 0.0_real64   ! maturity group
+      real(real64) :: dvsi         = 0.0_real64
+      real(real64) :: dvrmax1      = 0.0_real64
+      real(real64) :: dvrmax2      = 0.0_real64
+      real(real64) :: tmaxdvr      = 0.0_real64
+      real(real64) :: tmindvr      = 0.0_real64
+      real(real64) :: toptdvr      = 0.0_real64
+      logical      :: flrfphotoveg = .false.
+      logical      :: flphenodayl  = .false.
+      real(real64) :: popt         = 0.0_real64
+      real(real64) :: pcrt         = 0.0_real64
+   contains
+      procedure :: validate => wofost_soybean_validate
+      procedure :: finalize => wofost_soybean_finalize
+   end type wofost_soybean_t
+
+   ! ------------------------------------------------------------------
+   ! Bulb crops (stub-errored when swbulb=1)
+   ! ------------------------------------------------------------------
+   type :: wofost_bulb_t
+      integer      :: swbulb = 0
+      real(real64) :: pld    = 0.0_real64   ! planting density
+      real(real64) :: plwti  = 0.0_real64   ! initial weight of planting material
+      real(real64) :: remoc  = 0.0_real64   ! remobilisation coefficient
+      real(real64), allocatable :: fbltb(:,:)  ! fraction to bulb vs DVS
+   contains
+      procedure :: validate => wofost_bulb_validate
+      procedure :: finalize => wofost_bulb_finalize
+   end type wofost_bulb_t
+
+   ! ------------------------------------------------------------------
+   ! N-P-K nutrient (stub-errored when flcropnut=.true.)
+   ! ------------------------------------------------------------------
+   type :: wofost_nutrient_t
+      logical      :: flcropnut = .false.
+      real(real64) :: lrnr      = 0.0_real64
+      real(real64) :: lsnr      = 0.0_real64
+      real(real64) :: nlai      = 0.0_real64
+      real(real64) :: nlue      = 0.0_real64
+      real(real64) :: nmaxso    = 0.0_real64
+      real(real64) :: npart     = 0.0_real64
+      real(real64) :: nfixf     = 0.0_real64
+      real(real64) :: nsla      = 0.0_real64
+      real(real64) :: rnflv     = 0.0_real64
+      real(real64) :: rnfrt     = 0.0_real64
+      real(real64) :: rnfst     = 0.0_real64
+      real(real64) :: tcnt      = 0.0_real64
+      real(real64) :: dvsnlt    = 0.0_real64
+      real(real64) :: dvsnt     = 0.0_real64
+      real(real64) :: rdrns     = 0.0_real64
+      real(real64) :: fntrt     = 0.0_real64
+      real(real64) :: frnx      = 0.0_real64
+      real(real64), allocatable :: nmxlv(:,:)  ! max N concentration in leaves vs DVS
+   contains
+      procedure :: validate => wofost_nutrient_validate
+      procedure :: finalize => wofost_nutrient_finalize
+   end type wofost_nutrient_t
+
+   ! ------------------------------------------------------------------
    ! Top-level
    ! ------------------------------------------------------------------
    type :: cropwofost_config_t
@@ -367,6 +435,9 @@ module cropwofost_config_mod
       type(wofost_co2_t)             :: co2
       type(wofost_management_t)      :: management
       type(irrigation_schedule_t)    :: schedule
+      type(wofost_soybean_t)         :: soybean
+      type(wofost_bulb_t)            :: bulb
+      type(wofost_nutrient_t)        :: nutrient
    contains
       procedure :: validate => cropwofost_config_validate
       procedure :: finalize => cropwofost_config_finalize
@@ -564,7 +635,13 @@ contains
       class(wofost_root_t),     intent(in)    :: self
       type(error_collection_t), intent(inout) :: errors
       call check_int_enum(self%swrd,     [1, 2, 3], 'wofost.root.swrd',     errors)
+      call check_int_enum(self%swrdc,   [0, 1],    'wofost.root.swrdc',    errors)
       call check_int_enum(self%swdmi2rd, [0, 1],    'wofost.root.swdmi2rd', errors)
+      if (self%swrdc == 1) then
+         call errors%append(ERR_VALIDATION_CROSS_FIELD, &
+            'cropwofost.root.swrdc=1 not yet supported in the TOML ' // &
+            'pipeline; use the legacy executable.', 'cropwofost.root')
+      end if
       if (self%swrd == 1) then
          call check_table(self%rdtb, 2, .true., 'wofost.root.rdtb', errors)
       end if
@@ -685,6 +762,57 @@ contains
       class(cropwofost_config_t), intent(in)    :: self
       type(error_collection_t),   intent(inout) :: errors
 
+      ! Phase 2 stub-errors (ADR 0015)
+      if (self%drought_stress%swdrought == 2) then
+         call errors%append(ERR_VALIDATION_CROSS_FIELD, &
+            'cropwofost.drought_stress.swdrought=2 (De Jong van Lier) not yet ' // &
+            'supported in the TOML pipeline; use the legacy executable.', &
+            'cropwofost.drought_stress')
+      end if
+      if (self%oxygen_stress%swoxygen == 2) then
+         call errors%append(ERR_VALIDATION_CROSS_FIELD, &
+            'cropwofost.oxygen_stress.swoxygen=2 (Bartholomeus) not yet ' // &
+            'supported in the TOML pipeline; use the legacy executable.', &
+            'cropwofost.oxygen_stress')
+      end if
+      if (self%interception%swinter == 2) then
+         call errors%append(ERR_VALIDATION_CROSS_FIELD, &
+            'cropwofost.interception.swinter=2 (Gash forest interception) not ' // &
+            'yet supported in the TOML pipeline; use the legacy executable.', &
+            'cropwofost.interception')
+      end if
+      if (self%compensate%swcompensate /= 0) then
+         call errors%append(ERR_VALIDATION_CROSS_FIELD, &
+            'cropwofost.compensate.swcompensate /= 0 (Jarvis/Walsum) not yet ' // &
+            'supported in the TOML pipeline; use the legacy executable.', &
+            'cropwofost.compensate')
+      end if
+      if (self%harvest%swharv == 1) then
+         call errors%append(ERR_VALIDATION_CROSS_FIELD, &
+            'cropwofost.harvest.swharv=1 (DVS-based harvest timing) not yet ' // &
+            'supported in the TOML pipeline; use the legacy executable.', &
+            'cropwofost.harvest')
+      end if
+      if (self%co2%swco2 == 1) then
+         call errors%append(ERR_VALIDATION_CROSS_FIELD, &
+            'cropwofost.co2.swco2=1 (CO2 assimilation correction) not yet ' // &
+            'supported in the TOML pipeline; use the legacy executable.', &
+            'cropwofost.co2')
+      end if
+      if (self%schedule%schedule == 1) then
+         call errors%append(ERR_VALIDATION_CROSS_FIELD, &
+            'cropwofost.irrigation_schedule.schedule=1 not yet supported in ' // &
+            'the TOML pipeline; use the legacy executable.', &
+            'cropwofost.schedule')
+      end if
+      if (self%salinity%swsalinity == 2) then
+         call errors%append(ERR_VALIDATION_CROSS_FIELD, &
+            'cropwofost.salinity.swsalinity=2 (osmotic head) not yet supported ' // &
+            'in the TOML pipeline; use the legacy executable.', &
+            'cropwofost.salinity')
+      end if
+
+      ! Delegate to sub-types
       call self%preparation%validate(errors)
       call self%sowing%validate(errors)
       call self%germination%validate(errors)
@@ -706,6 +834,9 @@ contains
       call self%interception%validate(errors)
       call self%co2%validate(errors)
       call self%management%validate(errors)
+      call self%soybean%validate(errors)
+      call self%bulb%validate(errors)
+      call self%nutrient%validate(errors)
       call self%schedule%validate(errors)
    end subroutine cropwofost_config_validate
 
@@ -835,6 +966,59 @@ contains
       return
    end subroutine wofost_management_finalize
 
+   subroutine wofost_soybean_validate(self, errors)
+      class(wofost_soybean_t),  intent(in)    :: self
+      type(error_collection_t), intent(inout) :: errors
+      call check_int_enum(self%swsoybean, [0, 1], 'wofost.soybean.swsoybean', errors)
+      if (self%swsoybean == 1) then
+         call errors%append(ERR_VALIDATION_CROSS_FIELD, &
+            'cropwofost.soybean.swsoybean=1 (soybean variant) not yet ' // &
+            'supported in the TOML pipeline; use the legacy executable.', &
+            'cropwofost.soybean')
+      end if
+   end subroutine wofost_soybean_validate
+
+   subroutine wofost_soybean_finalize(self, errors)
+      class(wofost_soybean_t),  intent(inout) :: self
+      type(error_collection_t), intent(inout) :: errors
+      return
+   end subroutine wofost_soybean_finalize
+
+   subroutine wofost_bulb_validate(self, errors)
+      class(wofost_bulb_t),     intent(in)    :: self
+      type(error_collection_t), intent(inout) :: errors
+      call check_int_enum(self%swbulb, [0, 1], 'wofost.bulb.swbulb', errors)
+      if (self%swbulb == 1) then
+         call errors%append(ERR_VALIDATION_CROSS_FIELD, &
+            'cropwofost.bulb.swbulb=1 (bulb crops) not yet supported ' // &
+            'in the TOML pipeline; use the legacy executable.', &
+            'cropwofost.bulb')
+      end if
+   end subroutine wofost_bulb_validate
+
+   subroutine wofost_bulb_finalize(self, errors)
+      class(wofost_bulb_t),     intent(inout) :: self
+      type(error_collection_t), intent(inout) :: errors
+      return
+   end subroutine wofost_bulb_finalize
+
+   subroutine wofost_nutrient_validate(self, errors)
+      class(wofost_nutrient_t), intent(in)    :: self
+      type(error_collection_t), intent(inout) :: errors
+      if (self%flcropnut) then
+         call errors%append(ERR_VALIDATION_CROSS_FIELD, &
+            'cropwofost.nutrient.flcropnut=.true. (N-P-K nutrient model) ' // &
+            'not yet supported in the TOML pipeline; use the legacy executable.', &
+            'cropwofost.nutrient')
+      end if
+   end subroutine wofost_nutrient_validate
+
+   subroutine wofost_nutrient_finalize(self, errors)
+      class(wofost_nutrient_t), intent(inout) :: self
+      type(error_collection_t), intent(inout) :: errors
+      return
+   end subroutine wofost_nutrient_finalize
+
    subroutine cropwofost_config_finalize(self, errors)
       class(cropwofost_config_t), intent(inout) :: self
       type(error_collection_t),   intent(inout) :: errors
@@ -861,6 +1045,9 @@ contains
       call self%co2%finalize(errors)
       call self%management%finalize(errors)
       call self%schedule%finalize(errors)
+      call self%soybean%finalize(errors)
+      call self%bulb%finalize(errors)
+      call self%nutrient%finalize(errors)
    end subroutine cropwofost_config_finalize
 
 end module cropwofost_config_mod

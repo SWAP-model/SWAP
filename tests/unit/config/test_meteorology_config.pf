@@ -7,6 +7,7 @@ subroutine test_meteo_valid_passes()
    type(error_collection_t)   :: errors
    m%lat = 52.0d0
    m%alt = 10.0d0
+   m%metfile = "weather.csv"   ! SS-5: metfile required, must be CSV
    call m%validate(errors)
    @assertFalse(errors%has_errors())
 end subroutine
@@ -19,6 +20,7 @@ subroutine test_meteo_lat_out_of_range_fails()
    type(meteorology_config_t) :: m
    type(error_collection_t)   :: errors
    m%lat = 100.0d0
+   m%metfile = "weather.csv"
    call m%validate(errors)
    @assertTrue(errors%has_errors())
 end subroutine
@@ -31,6 +33,7 @@ subroutine test_meteo_swrain_invalid_fails()
    type(meteorology_config_t) :: m
    type(error_collection_t)   :: errors
    m%lat = 52.0d0
+   m%metfile = "weather.csv"
    m%swrain = 9
    call m%validate(errors)
    @assertTrue(errors%has_errors())
@@ -44,6 +47,7 @@ subroutine test_meteorology_evaporation_swcfbs_zero_validates_clean()
    type(meteorology_config_t) :: m
    type(error_collection_t)   :: errors
    m%lat = 52.0d0
+   m%metfile = "weather.csv"
    m%evaporation%swcfbs = 0
    m%evaporation%cfbs   = 99.0d0   ! ignored when swcfbs=0
    call m%validate(errors)
@@ -58,6 +62,7 @@ subroutine test_meteorology_evaporation_swcfbs_one_cfbs_out_of_range()
    type(meteorology_config_t) :: m
    type(error_collection_t)   :: errors
    m%lat = 52.0d0
+   m%metfile = "weather.csv"
    m%evaporation%swcfbs = 1
    m%evaporation%cfbs   = 5.0d0   ! out of [0.5, 1.5]
    call m%validate(errors)
@@ -72,6 +77,7 @@ subroutine test_meteorology_evaporation_cofredbl_out_of_range()
    type(meteorology_config_t) :: m
    type(error_collection_t)   :: errors
    m%lat = 52.0d0
+   m%metfile = "weather.csv"
    m%evaporation%cofredbl = 2.0d0
    call m%validate(errors)
    @assertTrue(errors%has_errors())
@@ -85,6 +91,7 @@ subroutine test_meteorology_snow_swsnow_zero_validates_clean()
    type(meteorology_config_t) :: m
    type(error_collection_t)   :: errors
    m%lat = 52.0d0
+   m%metfile = "weather.csv"
    m%snow%swsnow = 0
    m%snow%snowcoef = 999.0d0   ! ignored when swsnow=0
    call m%validate(errors)
@@ -99,6 +106,7 @@ subroutine test_meteorology_snow_swsnow_one_minimal_valid()
    type(meteorology_config_t) :: m
    type(error_collection_t)   :: errors
    m%lat = 52.0d0
+   m%metfile = "weather.csv"
    m%snow%swsnow   = 1
    m%snow%snowcoef = 0.5d0
    m%snow%teprrain = 2.0d0
@@ -115,10 +123,214 @@ subroutine test_meteorology_snow_swsnow_one_teprsnow_above_teprrain()
    type(meteorology_config_t) :: m
    type(error_collection_t)   :: errors
    m%lat = 52.0d0
+   m%metfile = "weather.csv"
    m%snow%swsnow   = 1
    m%snow%snowcoef = 0.5d0
    m%snow%teprrain = 0.0d0
    m%snow%teprsnow = 2.0d0   ! must be <= teprrain
    call m%validate(errors)
    @assertTrue(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_meteo_detail_file_field_roundtrips()
+   use funit
+   use meteorology_config_mod
+   type(meteorology_config_t) :: m
+   m%detail_file = "mysite.det.csv"
+   @assertEqual("mysite.det.csv", m%detail_file)
+end subroutine
+
+@test
+subroutine test_meteorology_evaporation_rsigni_default_validates_clean()
+   use funit
+   use error_mod
+   use meteorology_config_mod
+   type(meteorology_config_t) :: m
+   type(error_collection_t)   :: errors
+   m%lat = 52.0d0
+   m%metfile = "weather.csv"
+   ! rsigni default is 0.5 — within [0, 10]
+   call m%validate(errors)
+   @assertFalse(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_meteorology_evaporation_rsigni_out_of_range_fails()
+   use funit
+   use error_mod
+   use meteorology_config_mod
+   type(meteorology_config_t) :: m
+   type(error_collection_t)   :: errors
+   m%lat = 52.0d0
+   m%metfile = "weather.csv"
+   m%evaporation%rsigni = 20.0d0   ! out of [0, 10]
+   call m%validate(errors)
+   @assertTrue(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_meteorology_evaporation_cfevappond_default_validates_clean()
+   use funit
+   use error_mod
+   use meteorology_config_mod
+   type(meteorology_config_t) :: m
+   type(error_collection_t)   :: errors
+   m%lat = 52.0d0
+   m%metfile = "weather.csv"
+   ! cfevappond default is 1.25 — within [0, 10]
+   call m%validate(errors)
+   @assertFalse(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_meteorology_evaporation_cfevappond_out_of_range_fails()
+   use funit
+   use error_mod
+   use meteorology_config_mod
+   type(meteorology_config_t) :: m
+   type(error_collection_t)   :: errors
+   m%lat = 52.0d0
+   m%metfile = "weather.csv"
+   m%evaporation%cfevappond = 50.0d0   ! out of [0, 10]
+   call m%validate(errors)
+   @assertTrue(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_meteorology_evaporation_swredu_default_validates_clean()
+   use funit
+   use error_mod
+   use meteorology_config_mod
+   type(meteorology_config_t) :: m
+   type(error_collection_t)   :: errors
+   m%lat = 52.0d0
+   m%metfile = "weather.csv"
+   ! swredu default is 1 (Black) — valid enum value; cofredbo stays default
+   call m%validate(errors)
+   @assertFalse(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_meteo_evap_swredu_two_cofredbo_nondefault_passes()
+   use funit
+   use error_mod
+   use meteorology_config_mod
+   type(meteorology_config_t) :: m
+   type(error_collection_t)   :: errors
+   m%lat = 52.0d0
+   m%metfile = "weather.csv"
+   m%evaporation%swredu   = 2
+   m%evaporation%cofredbo = 0.54d0   ! non-default -> cross-check passes
+   call m%validate(errors)
+   @assertFalse(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_meteo_evap_swredu_two_cofredbo_default_fails()
+   use funit
+   use error_mod
+   use meteorology_config_mod
+   type(meteorology_config_t) :: m
+   type(error_collection_t)   :: errors
+   integer :: i
+   logical :: found
+   m%lat = 52.0d0
+   m%metfile = "weather.csv"
+   m%evaporation%swredu   = 2
+   ! cofredbo stays at default 0.35 — cross-field check must fire
+   call m%validate(errors)
+   found = .false.
+   do i = 1, errors%count()
+      if (errors%items(i)%code == ERR_VALIDATION_CROSS_FIELD .and. &
+          index(errors%items(i)%message, 'swredu=2') > 0) found = .true.
+   end do
+   @assertTrue(found)
+end subroutine
+
+@test
+subroutine test_meteorology_evaporation_swredu_invalid_enum_fails()
+   use funit
+   use error_mod
+   use meteorology_config_mod
+   type(meteorology_config_t) :: m
+   type(error_collection_t)   :: errors
+   m%lat = 52.0d0
+   m%metfile = "weather.csv"
+   m%evaporation%swredu = 5   ! out of [1, 2]
+   call m%validate(errors)
+   @assertTrue(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_meteo_metfile_dot_met_stub_errors()
+   use funit
+   use error_mod, only: error_collection_t, ERR_VALIDATION_CROSS_FIELD
+   use meteorology_config_mod, only: meteorology_config_t
+   type(meteorology_config_t) :: m
+   type(error_collection_t)   :: errors
+   integer :: i
+   logical :: found_metfile_msg
+
+   m%lat = 52.0d0
+   m%alt = 10.0d0
+   m%metfile = "weather.met"
+   call m%validate(errors)
+
+   @assertTrue(errors%has_errors())
+
+   found_metfile_msg = .false.
+   do i = 1, errors%count()
+      if (errors%items(i)%code == ERR_VALIDATION_CROSS_FIELD .and. &
+          index(errors%items(i)%message, 'meteorology.metfile') > 0 .and. &
+          index(errors%items(i)%message, 'ADR 0014') > 0) then
+         found_metfile_msg = .true.
+         exit
+      end if
+   end do
+   @assertTrue(found_metfile_msg)
+end subroutine
+
+@test
+subroutine test_meteo_metfile_per_year_extension_stub_errors()
+   use funit
+   use error_mod, only: error_collection_t, ERR_VALIDATION_CROSS_FIELD
+   use meteorology_config_mod, only: meteorology_config_t
+   type(meteorology_config_t) :: m
+   type(error_collection_t)   :: errors
+   integer :: i
+   logical :: found
+
+   m%lat = 52.0d0
+   m%alt = 10.0d0
+   m%metfile = "283"   ! base name, would historically grow .YYY suffix
+   call m%validate(errors)
+
+   @assertTrue(errors%has_errors())
+
+   found = .false.
+   do i = 1, errors%count()
+      if (errors%items(i)%code == ERR_VALIDATION_CROSS_FIELD .and. &
+          index(errors%items(i)%message, 'meteorology.metfile') > 0) then
+         found = .true.
+         exit
+      end if
+   end do
+   @assertTrue(found)
+end subroutine
+
+@test
+subroutine test_meteo_metfile_csv_passes()
+   use funit
+   use error_mod, only: error_collection_t
+   use meteorology_config_mod, only: meteorology_config_t
+   type(meteorology_config_t) :: m
+   type(error_collection_t)   :: errors
+
+   m%lat = 52.0d0
+   m%alt = 10.0d0
+   m%metfile = "283.csv"
+   call m%validate(errors)
+
+   @assertFalse(errors%has_errors())
 end subroutine

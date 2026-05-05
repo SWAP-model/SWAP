@@ -184,3 +184,56 @@ subroutine test_read_cropwofost_gashtb_six_columns()
    @assertEqual(6, size(c%interception%gashtb, 2))
    @assertEqual(0.5d0, c%interception%gashtb(1, 4), 1.0d-12)
 end subroutine
+
+@test
+subroutine test_read_cropwofost_potatod_salinity()
+   ! Round-trip case 5's potatod.crp.toml — verify the salinity and drought
+   ! fields that are the headline feature of case 5.
+   use funit
+   use iso_fortran_env, only: real64
+   use tomlf, only: toml_table, toml_load, toml_error
+   use cropwofost_config_mod, only: cropwofost_config_t
+   use read_cropwofost_toml_mod, only: read_cropwofost_toml
+   use error_mod, only: error_collection_t
+   type(toml_table), allocatable, target :: doc
+   type(toml_table), pointer             :: doc_ptr
+   type(cropwofost_config_t)             :: c
+   type(error_collection_t)              :: errors
+   type(toml_error), allocatable         :: terr
+
+   call toml_load(doc, &
+      'tests/swap-cases/toml/5.salinitystress/potatod.crp.toml', error=terr)
+   @assertFalse(allocated(terr))
+   doc_ptr => doc
+   call read_cropwofost_toml(doc_ptr, c, errors)
+   @assertFalse(errors%has_errors())
+
+   ! Headline features: salinity=1 (Maas-Hoffman)
+   @assertEqual(1,          c%salinity%swsalinity)
+   @assertEqual(0.732_real64,  c%salinity%saltmax,   1.0e-12_real64)
+   @assertEqual(0.0868_real64, c%salinity%saltslope, 1.0e-12_real64)
+
+   ! Drought=1 (Feddes)
+   @assertEqual(1,             c%drought_stress%swdrought)
+   @assertEqual(-300.0_real64, c%drought_stress%hlim3h, 1.0e-12_real64)
+   @assertEqual(-500.0_real64, c%drought_stress%hlim3l, 1.0e-12_real64)
+   @assertEqual(-10000.0_real64, c%drought_stress%hlim4, 1.0e-12_real64)
+
+   ! Oxygen=1 (Feddes)
+   @assertEqual(1,            c%oxygen_stress%swoxygen)
+   @assertEqual(-10.0_real64, c%oxygen_stress%hlim1,  1.0e-12_real64)
+   @assertEqual(-25.0_real64, c%oxygen_stress%hlim2u, 1.0e-12_real64)
+   @assertEqual(-25.0_real64, c%oxygen_stress%hlim2l, 1.0e-12_real64)
+
+   ! Root depth=2 (daily increase)
+   @assertEqual(2,           c%root%swrd)
+   @assertEqual(10.0_real64, c%root%rdi, 1.0e-12_real64)
+   @assertEqual(1.2_real64,  c%root%rri, 1.0e-12_real64)
+   @assertEqual(50.0_real64, c%root%rdc, 1.0e-12_real64)
+   @assertEqual(1,           c%root%swdmi2rd)
+
+   ! Management
+   @assertEqual(2,          c%management%swpotrelmf)
+   @assertEqual(0.8_real64, c%management%relmf, 1.0e-12_real64)
+   @assertEqual(0.3_real64, c%management%fradeceasedlvtosoil, 1.0e-12_real64)
+end subroutine

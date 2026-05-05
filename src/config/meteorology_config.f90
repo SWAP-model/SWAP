@@ -12,10 +12,16 @@ module meteorology_config_mod
 
    !> Bare-soil evaporation reduction parameters.
    type :: meteorology_evaporation_t
-      integer      :: swcfbs   = 0
-      real(real64) :: cfbs     = 1.0_real64
-      real(real64) :: cofredbl = 0.35_real64
-      real(real64) :: cofredbo = 0.35_real64
+      integer      :: swcfbs     = 0
+      real(real64) :: cfbs       = 1.0_real64
+      real(real64) :: cofredbl   = 0.35_real64
+      real(real64) :: cofredbo   = 0.35_real64
+      real(real64) :: rsigni     = 0.5_real64   !! minimum daily rainfall (cm/d) resetting Black dry counter
+      real(real64) :: cfevappond = 1.25_real64  !! ponding-layer evaporation coefficient
+
+      !> Soil-evaporation reduction method (1=Black, 2=Boesten-Stroosnijder).
+      !! Legacy SWREDU; default 1 matches all cases except case 5.
+      integer :: swredu = 1
    contains
       procedure :: validate => meteorology_evaporation_validate
    end type meteorology_evaporation_t
@@ -33,6 +39,8 @@ module meteorology_config_mod
    type :: meteorology_config_t
       character(len=:), allocatable :: metfile
       character(len=:), allocatable :: rainfile
+      character(len=:), allocatable :: rain_events_file
+      character(len=:), allocatable :: detail_file
       real(real64) :: lat  = 0.0_real64
       real(real64) :: alt  = 0.0_real64
       real(real64) :: altw = 2.0_real64
@@ -59,12 +67,32 @@ contains
       class(meteorology_config_t), intent(in)    :: self
       type(error_collection_t),    intent(inout) :: errors
 
+      ! ----- Phase 4f-extend SS-5 stub-error: only CSV metfiles supported -----
+      ! ADR 0014 retires the TTutil-based readers in readmeteo.f90 (per-year
+      ! .YYY daily reader, .met all-years reader, TTutil detail reader, and the
+      ! TTutil tail of ReadRainEvents). After SS-5, swap_csv_dat is the only
+      ! source of meteorology data. Reject any non-.csv metfile here so that
+      ! configurations naming a legacy file produce an actionable error
+      ! instead of falling through to deleted code paths.
+      if (.not. allocated(self%metfile) .or. len_trim(self%metfile) == 0) then
+         call errors%append(ERR_VALIDATION_CROSS_FIELD, &
+            'meteorology.metfile is required and must reference a CSV file ' // &
+            '(per ADR 0014; legacy .met / per-year .YYY readers retired ' // &
+            'in Phase 4f-extend SS-5).', 'meteorology')
+      else if (index(self%metfile, '.csv') == 0) then
+         call errors%append(ERR_VALIDATION_CROSS_FIELD, &
+            'meteorology.metfile="' // trim(self%metfile) // &
+            '" not supported in the TOML pipeline; only CSV metfiles are ' // &
+            'accepted (Phase 4f-extend SS-5; legacy .met/.YYY readers ' // &
+            'retired per ADR 0014).', 'meteorology')
+      end if
+
       call check_real_range(self%lat, -90.0_real64, 90.0_real64, "meteorology.lat", errors)
       call check_real_range(self%alt, -500.0_real64, 9000.0_real64, "meteorology.alt", errors)
       call check_int_enum(self%swetr,       [0, 1],    "meteorology.swetr",       errors)
       call check_int_enum(self%swdivide,    [0, 1],    "meteorology.swdivide",    errors)
       call check_int_enum(self%swmetdetail, [0, 1],    "meteorology.swmetdetail", errors)
-      call check_int_enum(self%swrain,      [0, 1, 2], "meteorology.swrain",      errors)
+      call check_int_enum(self%swrain,      [0, 1, 2, 3], "meteorology.swrain",      errors)
       call check_int_enum(self%swinter,     [0, 1, 2], "meteorology.swinter",     errors)
       call self%evaporation%validate(errors)
       call self%snow%validate(errors)
@@ -83,6 +111,20 @@ contains
                             "meteorology.evaporation.cofredbl", errors)
       call check_real_range(self%cofredbo, 0.0_real64, 1.0_real64, &
                             "meteorology.evaporation.cofredbo", errors)
+      call check_real_range(self%rsigni, 0.0_real64, 10.0_real64, &
+                            "meteorology.evaporation.rsigni", errors)
+      call check_real_range(self%cfevappond, 0.0_real64, 10.0_real64, &
+                            "meteorology.evaporation.cfevappond", errors)
+      call check_int_enum(self%swredu, [1, 2], "meteorology.evaporation.swredu", errors)
+
+      ! Cross-field: swredu=2 (Boesten-Stroosnijder) requires cofredbo to
+      ! be set to a non-default value (anything other than the default 0.35).
+      if (self%swredu == 2 .and. abs(self%cofredbo - 0.35_real64) < 1.0e-12_real64) then
+         call errors%append(ERR_VALIDATION_CROSS_FIELD, &
+            'meteorology.evaporation.swredu=2 requires cofredbo to be ' // &
+            'authored (non-default value expected)', &
+            'meteorology.evaporation')
+      end if
    end subroutine meteorology_evaporation_validate
 
    subroutine meteorology_snow_validate(self, errors)

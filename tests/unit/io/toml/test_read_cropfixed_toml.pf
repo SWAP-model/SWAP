@@ -41,3 +41,66 @@ subroutine test_read_cropfixed_missing_section_silent()
 
    @assertFalse(errors%has_errors())
 end subroutine
+
+@test
+subroutine test_cropfixed_toml_full_roundtrip()
+   use funit
+   use error_mod
+   use cropfixed_config_mod, only: cropfixed_config_t
+   use read_cropfixed_toml_mod, only: read_cropfixed_toml
+   use tomlf, only: toml_table, toml_load, toml_error
+   type(cropfixed_config_t)       :: c
+   type(error_collection_t)       :: errors
+   type(toml_table), allocatable, target :: doc
+   type(toml_table), pointer      :: doc_ptr
+   type(toml_error), allocatable  :: terr
+   call toml_load(doc, &
+        'tests/unit/io/toml/fixtures/cropfixed_full.toml', error=terr)
+   @assertFalse(allocated(terr))
+   doc_ptr => doc
+   call read_cropfixed_toml(doc_ptr, c, errors)
+   @assertFalse(errors%has_errors())
+   ! Top-level switches
+   @assertEqual(0, c%swprep)
+   @assertEqual(0, c%swsow)
+   @assertEqual(0, c%swgerm)
+   @assertEqual(2.0d0, c%dvsend, 1.0d-12)
+   @assertEqual(0, c%swharv)
+   @assertEqual(1, c%idev)
+   @assertEqual(366, c%lcc)
+   @assertEqual(0.75d0, c%kdif, 1.0d-12)
+   @assertEqual(0.75d0, c%kdir, 1.0d-12)
+   @assertEqual(1, c%swgc)
+   @assertEqual(1, c%swcf)
+   @assertEqual(1, c%swrd)
+   @assertEqual(0, c%swoxygen)
+   @assertEqual(0, c%swwrtnonox)
+   @assertEqual(1, c%swdrought)
+   @assertEqual(0, c%swsalinity)
+   @assertEqual(0, c%swcompensate)
+   @assertEqual(1, c%swinter)
+   @assertEqual(0.25d0, c%cofab, 1.0d-12)
+   @assertEqual(0, c%schedule_switch)
+   ! Tables (each is a flat array of (dvs, value) pairs).
+   @assertTrue(allocated(c%gctb))
+   @assertEqual(4, size(c%gctb))
+   @assertEqual(0.0d0, c%gctb(1), 1.0d-12)
+   @assertEqual(3.0d0, c%gctb(2), 1.0d-12)
+   @assertEqual(2.0d0, c%gctb(3), 1.0d-12)
+   @assertEqual(3.0d0, c%gctb(4), 1.0d-12)
+   @assertTrue(allocated(c%cftb))
+   @assertEqual(4, size(c%cftb))
+   @assertEqual(1.0d0, c%cftb(2), 1.0d-12)
+   @assertTrue(allocated(c%rdtb))
+   @assertEqual(4, size(c%rdtb))
+   @assertEqual(30.0d0, c%rdtb(2), 1.0d-12)
+   @assertTrue(allocated(c%rdctb))
+   @assertEqual(4, size(c%rdctb))
+   @assertEqual(1.0d0, c%rdctb(2), 1.0d-12)
+   ! Feddes — drought (swdrought=1)
+   @assertEqual(-200.0d0,  c%hlim3h, 1.0d-12)
+   @assertEqual(-800.0d0,  c%hlim3l, 1.0d-12)
+   @assertEqual(-8000.0d0, c%hlim4,  1.0d-12)
+   @assertEqual(0.5d0,     c%adcrh,  1.0d-12)
+   @assertEqual(0.1d0,     c%adcrl,  1.0d-12)
+end subroutine

@@ -60,6 +60,7 @@ subroutine test_heat_happy_path_numerical()
    c%tfroststa = -1.0_real64
    c%tfrostend = -3.0_real64
    allocate(c%psand(2)); c%psand = [0.80_real64, 0.85_real64]
+   allocate(c%psilt(2)); c%psilt = [0.05_real64, 0.05_real64]
    allocate(c%pclay(2)); c%pclay = [0.05_real64, 0.05_real64]
    allocate(c%porg(2));  c%porg  = [0.10_real64, 0.05_real64]
    allocate(c%tsoil_init(4, 2))

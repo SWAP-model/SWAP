@@ -77,6 +77,7 @@ if get_option('enable_pfunit')
         '../../src/atmosphere/et.f90',
         'atmosphere/et_test_stubs.f90',
         '../../src/error/error.f90',
+        '../../src/error/fatalerr_shim.f90',
         '../../src/validation/validation.f90',
         '../../src/config/general_config.f90',
         '../../src/config/simulation_config.f90',
@@ -93,6 +94,11 @@ if get_option('enable_pfunit')
         '../../src/config/cropgrass_config.f90',
         '../../src/config/cropwofost_config.f90',
         '../../src/config/crop_config.f90',
+        '../../src/config/output_csv_config.f90',
+        '../../src/crop/crop_config_global.f90',
+        '../../src/crop/cropfixed_init.f90',
+        '../../src/crop/cropwofost_init.f90',
+        '../../src/crop/cropgrass_init.f90',
         '../../src/config/swap_config.f90',
         '../../src/io/csv_reader.f90',
         '../../src/io/toml/path_helpers.f90',
@@ -111,6 +117,7 @@ if get_option('enable_pfunit')
         '../../src/io/toml/read_cropgrass_toml.f90',
         '../../src/io/toml/read_cropwofost_toml.f90',
         '../../src/io/toml/read_crop_toml.f90',
+        '../../src/io/toml/read_output_csv_toml.f90',
         '../../src/io/toml/load_swap_config.f90',
         '../../src/io/toml/write_swap_config.f90',
         '../../src/io/toml/config_to_variables.f90',
@@ -120,6 +127,7 @@ if get_option('enable_pfunit')
         '../../src/soil/sptabulated.f90',
         '../../src/crop/oxygenstress.f90',
         '../../src/utils/surfacewaterutils.f90',
+        '../../src/drainage/surfacewater_init.f90',
         '../../src/crop/irrigation.f90',
         '../../src/io/readswap.f90',
         'io/toml/parity_helpers.f90',
@@ -147,6 +155,7 @@ if get_option('enable_pfunit')
         'config/test_solute_config.pf',
         'config/test_surface_water_config.pf',
         'config/test_crop_config.pf',
+        'config/test_output_csv_config.pf',
         'config/test_swap_config.pf',
         'config/test_cropfixed_config.pf',
         'config/test_cropgrass_config.pf',
@@ -164,6 +173,7 @@ if get_option('enable_pfunit')
         'io/toml/test_read_solute_toml.pf',
         'io/toml/test_read_soil_toml.pf',
         'io/toml/test_read_surface_water_toml.pf',
+        'io/toml/test_read_output_csv_toml.pf',
         'io/toml/test_read_crop_toml.pf',
         'io/toml/test_read_cropfixed_toml.pf',
         'io/toml/test_read_cropgrass_toml.pf',
@@ -179,8 +189,14 @@ if get_option('enable_pfunit')
         'io/toml/test_oxygenstress_parity.pf',
         'io/toml/test_salinitystress_parity.pf',
         'io/toml/test_surfacewater_parity.pf',
-        'io/toml/test_macroporeflow_parity.pf',
+        # DEFERRED — paired with the test_macroporeflow_parity_suite
+        # entry in testSuites.inc; see ADR 0011 / 0018.
+        # 'io/toml/test_macroporeflow_parity.pf',
         'io/toml/test_legacy_crop_helper.pf',
+        'drainage/test_surfacewater_init.pf',
+        'crop/test_cropfixed_init.pf',
+        'crop/test_cropwofost_init.pf',
+        'crop/test_cropgrass_init.pf',
     ]
 
     # When pf_files is non-empty, build and register the unit-swap-tests
@@ -197,9 +213,16 @@ if get_option('enable_pfunit')
             install: false
         )
 
-        test('unit-swap-tests', unit_tests,
+        # Invoke the binary via run_pfunit.sh, which runs each suite in a
+        # separate process to work around legacy-reader state leakage
+        # between parity suites. See run_pfunit.sh header for context.
+        test('unit-swap-tests',
+            find_program('run_pfunit.sh'),
+            args: [unit_tests.full_path()],
+            depends: [unit_tests],
             suite: 'unit-pfunit',
-            workdir: meson.project_source_root()
+            workdir: meson.project_source_root(),
+            timeout: 120
         )
     else
         message('No pFUnit .pf files present — skipping unit-swap-tests executable. This is expected at the Phase 1 rescue baseline.')

@@ -42,9 +42,16 @@ module drainage_config_mod
    type :: drainage_config_t
       integer :: swdra    = 0
       integer :: dramet   = 0
+      character(len=:), allocatable :: drfil  !! legacy .dra file stem (default 'swap')
       integer :: swdivd   = 0
       integer :: swdislay = 0
       integer :: nrlevs   = 0
+
+      !> Gate limit-of-infiltration to channel water depth in the
+      !! DRAMET=3 multi-level resistance solver (0=no limit, 1=limit).
+      !! Legacy readswap.f90:2010 hard-codes 1 after the DRAMET=3 .dra
+      !! block; variables.f90:694 initialises to 0.
+      integer :: swliminf = 0
 
       real(real64) :: altcu  = 0.0_real64
       real(real64) :: basegw = 0.0_real64
@@ -103,11 +110,44 @@ contains
       call check_int_enum(self%swdivd,   [0, 1],         "drainage.swdivd",   errors)
       call check_int_enum(self%swdislay, [0, 1],         "drainage.swdislay", errors)
       call check_int_range(self%nrlevs,  0, 5,           "drainage.nrlevs",   errors)
+      call check_int_enum(self%swliminf, [0, 1],         "drainage.swliminf", errors)
+
+      ! Cross-field: swliminf=1 is only meaningful for dramet=3.
+      if (self%swliminf == 1 .and. self%dramet /= 3) then
+         call errors%append(ERR_VALIDATION_CROSS_FIELD, &
+            'drainage.swliminf=1 requires drainage.dramet=3', &
+            'drainage')
+      end if
 
       if (self%dramet == 2 .and. self%swdivd /= 1) then
          call errors%append(ERR_VALIDATION_CROSS_FIELD, &
                             "swdivd must be 1 when dramet=2", &
                             "drainage")
+      end if
+
+      ! Cross-field rule: swdra=2 (extended drainage) is only supported
+      ! with dramet=0 in the TOML pipeline. surfacewater_init's sttab
+      ! math assumes L is in metres (no adapter pre-conversion), which
+      ! holds only for the dramet=0 path. dramet=1/2/3 with swdra=2
+      ! requires careful unit reconciliation work that this port hasn't
+      ! built.
+      if (self%swdra == 2 .and. self%dramet /= 0) then
+         call errors%append(ERR_VALIDATION_CROSS_FIELD, &
+            'drainage.swdra=2 with drainage.dramet/=0 not yet supported ' // &
+            'in the TOML pipeline. Use drainage.dramet=0 or the legacy ' // &
+            'executable.', 'drainage')
+      end if
+
+      ! Stub-error: non-zero altcu requires altcu-subtraction plumbing
+      ! in the runtime adapter that the TOML port hasn't built yet.
+      ! All current TOML cases author altcu = 0.0; future cases needing
+      ! a non-zero altcu must extend the adapter to subtract altcu from
+      ! zbotdr / hbweir / wls1 globals before this guard is removed.
+      if (abs(self%altcu) > 1.0e-12_real64) then
+         call errors%append(ERR_VALIDATION_CROSS_FIELD, &
+            'drainage.altcu /= 0 is not yet supported in the TOML pipeline. ' // &
+            'Use the legacy executable for cases authoring altcu /= 0.', &
+            'drainage')
       end if
 
       call self%surface_runoff%validate(errors)
@@ -180,10 +220,13 @@ contains
 
       ! Mirror legacy convention from readswap.f90: single-level drainage
       ! methods (dramet 1 or 2) clobber nrlevs to 1 regardless of input.
-      ! Matching this is required for parity with the legacy reader. The
-      ! validator already constrains nrlevs in [0, 5]; this finalize step
-      ! lands AFTER validate.
-      if (self%dramet /= 3) self%nrlevs = 1
+      ! EXCEPTION: for swdra=2 (extended drainage), legacy rddre overrides
+      ! nrlevs from NRSRF in swap.dra -- so the typed config's authored
+      ! nrlevs is the authoritative source and must NOT be clobbered.
+      ! NOTE: The validator (swdra=2 + dramet/=0 rejection) ensures we
+      ! only see swdra=2 with dramet=0 here. Other swdra=2/dramet
+      ! combinations are not yet supported in the TOML pipeline.
+      if (self%dramet /= 3 .and. self%swdra /= 2) self%nrlevs = 1
    end subroutine drainage_config_finalize
 
 end module drainage_config_mod

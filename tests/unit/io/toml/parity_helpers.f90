@@ -101,7 +101,7 @@ contains
       call chdir_to(CASE_DIR)
       call stage_swp_template(TEMPLATE, 'swap')
       call reset_for_next_readswap()
-      call readswap()
+      call readswap('swap')
       close(logf)
       call chdir_to(trim(orig_cwd))
 
@@ -121,7 +121,7 @@ contains
       call chdir_to(SAL_CASE_DIR)
       call stage_swp_template(TEMPLATE, 'swap')
       call reset_for_next_readswap()
-      call readswap()
+      call readswap('swap')
       close(logf)
       call chdir_to(trim(orig_cwd))
 
@@ -143,7 +143,7 @@ contains
       call chdir_to(MAC_CASE_DIR)
       call stage_swp_template(TEMPLATE, 'swap')
       call reset_for_next_readswap()
-      call readswap()
+      call readswap('swap')
       close(logf)
       call chdir_to(trim(orig_cwd))
 
@@ -178,7 +178,7 @@ contains
       call chdir_to(SW_CASE_DIR)
       call stage_swp_template(TEMPLATE, 'swap')
       call reset_for_next_readswap()
-      call readswap()
+      call readswap('swap')
       ! `rddre` populates surface-water management globals from swap.dra.
       ! Must run from the case dir before chdir-back.
       call rddre(wls1, wlp1)

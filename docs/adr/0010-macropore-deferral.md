@@ -96,3 +96,30 @@ implementation. At that point: extend or replace
 `macropore_config_t`, author the reader, wire it into
 `swap_config_t`, populate case 3's TOML with `[macropore]`, extend
 the parity test, and finally remove `readswap.f90`.
+
+## Update 2026-05-04 — TOML-boundary stub-error (Phase 4f-extend SS-4)
+
+Authoring `soil.swmacro = 1` in a TOML configuration is now rejected at
+validation time by `soil_config_validate` (in `src/config/soil_config.f90`).
+The error message reads:
+
+> soil.swmacro=1 (macropore physics) not yet supported in the TOML
+> pipeline; case 3 is excluded from regression per ADR 0011 and the
+> macropore module remains deferred per ADR 0010.
+
+Rationale: the modern binary's adapter copies `swmacro` into the legacy
+global without populating any other macropore state. Without the
+stub-error, a user who authored `swmacro = 1` would get silent runtime
+corruption (or a crash deep in macropore physics that reads
+unallocated arrays) instead of an immediate, actionable failure.
+
+This update does not change the deferral itself: `macropore_config_t`
+remains orphan infrastructure, no `read_macropore_toml` module exists,
+and no `[macropore]` field is wired into `swap_config_t`. The
+stub-error is the TOML-side counterpart to the regression exclusion
+recorded in ADR 0011 — both close the macropore path cleanly without
+removing the legacy code.
+
+When future macropore work re-enables the module, this stub-error
+must be removed in the same change that wires `[macropore]` into the
+TOML pipeline.

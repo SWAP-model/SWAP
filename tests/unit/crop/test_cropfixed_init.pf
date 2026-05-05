@@ -1,0 +1,89 @@
+@test
+subroutine test_cropfixed_init_writes_scalars()
+   use funit
+   use cropfixed_init_mod, only: cropfixed_init_from_config
+   use cropfixed_config_mod, only: cropfixed_config_t
+   use variables, only: idev, kdif, kdir, hlim3h, hlim3l, hlim4, &
+                         adcrh, adcrl, cofab, swgc, swcf, swrd, swoxygen, &
+                         swdrought, swsalinity, swcompensate, swinter, &
+                         albedo, rsc, rsw
+   type(cropfixed_config_t) :: cfg
+   integer :: lcc_out
+   ! Case 6 grass.crp values
+   cfg%idev = 1
+   cfg%lcc  = 366
+   cfg%kdif = 0.75d0
+   cfg%kdir = 0.75d0
+   cfg%swgc = 1
+   cfg%swcf = 1
+   cfg%swrd = 1
+   cfg%swoxygen = 0
+   cfg%swdrought = 1
+   cfg%swsalinity = 0
+   cfg%swcompensate = 0
+   cfg%swinter = 1
+   cfg%cofab = 0.25d0
+   cfg%hlim3h = -200.0d0
+   cfg%hlim3l = -800.0d0
+   cfg%hlim4  = -8000.0d0
+   cfg%adcrh  = 0.5d0
+   cfg%adcrl  = 0.1d0
+   ! rdctb required by tail-init even though we don't assert on cumdens here.
+   allocate(cfg%rdctb(4))
+   cfg%rdctb = [0.0d0, 1.0d0, 1.0d0, 1.0d0]
+
+   call cropfixed_init_from_config(cfg, 1, lcc_out)
+
+   @assertEqual(1,    idev)
+   @assertEqual(366,  lcc_out)
+   @assertEqual(0.75d0, kdif, 1.0d-12)
+   @assertEqual(0.75d0, kdir, 1.0d-12)
+   @assertEqual(1,    swgc)
+   @assertEqual(1,    swcf)
+   @assertEqual(1,    swrd)
+   @assertEqual(0,    swoxygen)
+   @assertEqual(1,    swdrought)
+   @assertEqual(0,    swsalinity)
+   @assertEqual(0,    swcompensate)
+   @assertEqual(1,    swinter)
+   @assertEqual(-200.0d0,  hlim3h, 1.0d-12)
+   @assertEqual(-800.0d0,  hlim3l, 1.0d-12)
+   @assertEqual(-8000.0d0, hlim4,  1.0d-12)
+   @assertEqual(0.5d0,     adcrh,  1.0d-12)
+   @assertEqual(0.1d0,     adcrl,  1.0d-12)
+   @assertEqual(0.25d0,    cofab,  1.0d-12)
+
+   ! ETref defaults are reset for swcf=1 path
+   @assertEqual(0.23d0, albedo, 1.0d-12)
+   @assertEqual(70.0d0, rsc,    1.0d-12)
+   @assertEqual(0.0d0,  rsw,    1.0d-12)
+end subroutine
+
+@test
+subroutine test_cropfixed_init_cumdens_constant_density()
+   use funit
+   use cropfixed_init_mod, only: cropfixed_init_from_config
+   use cropfixed_config_mod, only: cropfixed_config_t
+   use variables, only: cumdens
+   type(cropfixed_config_t) :: cfg
+   integer :: lcc_out
+   ! Same case-6 fixture: rdctb = [0.0, 1.0, 1.0, 1.0] is a constant
+   ! density of 1.0 everywhere. After integration and normalization,
+   ! cumdens should be linear from 0 at the surface to 1 at the
+   ! deepest depth. Check a few representative rows.
+   cfg%idev = 1
+   cfg%lcc = 366
+   cfg%swrd = 1
+   cfg%swdrought = 1
+   allocate(cfg%rdctb(4))
+   cfg%rdctb = [0.0d0, 1.0d0, 1.0d0, 1.0d0]
+   call cropfixed_init_from_config(cfg, 1, lcc_out)
+   ! cumdens(1) = 0.0 (depth at surface)
+   @assertEqual(0.0d0,  cumdens(1),   1.0d-12)
+   ! cumdens(2) = 0.0 (storage at surface, set explicitly)
+   @assertEqual(0.0d0,  cumdens(2),   1.0d-12)
+   ! cumdens(202) = 1.0 (normalized total)
+   @assertEqual(1.0d0,  cumdens(202), 1.0d-12)
+   ! Mid-point (i=102, depth=0.5) should be ~0.5 by symmetry of constant density.
+   @assertEqual(0.5d0,  cumdens(102), 1.0d-2)
+end subroutine

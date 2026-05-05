@@ -15,7 +15,7 @@ Heuristic: above ~30 rows, prefer CSV. The TOML stays readable and diffs/reviews
 | 5-row vertical discretization     | `hsublay = [...]`  | -               |
 | 126-row grassgrowth gwl table     | -                  | `*.csv`         |
 | 585-row fixed irrigation schedule | -                  | `*.irg.csv`     |
-| Multi-year met series             | -                  | `*.csv` (TBD)   |
+| Multi-year met series             | -                  | `*.csv`         |
 
 ## Authoring a CSV file
 
@@ -82,6 +82,9 @@ when the matching switch is set. Current users:
 | `qhbot_file`       | `[bottom_boundary]` | `htab,qtab`      | `swbotb = 4` AND `swqhbot = 2`       |
 | `hbot5_file`       | `[bottom_boundary]` | `date,hbot`      | `swbotb = 5`                         |
 | `fixed_events_file`| `[irrigation]`      | `date,depth,conc,type` | `swirfix = 1` (long-form)      |
+| `h_file`           | `[soil.initial]`    | `z,h`            | `swinco = 3`                         |
+| `tsoil_file`       | `[soil.initial]`    | `z,tsoil`        | `swinco = 3` AND `heat.swhea = 1` AND `heat.swcalt = 2` |
+| `cml_file`         | `[soil.initial]`    | `z,cml`          | `swinco = 3` AND `solute.swsolu = 1` |
 
 Validators should reject cases where multiple sources are set (e.g. inline
 `fixed_events`, `fixed_events_file`, and the legacy `irgfil` are mutually exclusive).
@@ -90,9 +93,19 @@ Validators should reject cases where multiple sources are set (e.g. inline
 
 - Companion CSVs are referenced by basename in `swap.toml`. The adapter resolves
   paths relative to the working directory at adapter time.
-- The runtime stages all `*.csv` companion files into the case directory before SWAP
-  starts. The regression harness (`tests/regression/test_output_regression.py`) and
-  `tests/swap-cases/run_case.sh` both glob `*.csv` from the case directory.
+- The case working directory is `tests/swap-cases/toml/<N>.<case>/`. It is
+  self-contained — every file SWAP reads at runtime lives there: `swap.toml`,
+  `swap.dra.toml`, `*.crp.toml`, all `*.csv` companions, and
+  `swap_linux.swp.template` (staged to `swap.swp` per run). After Phase 4
+  of the `.crp` port, no `.crp` ASCII file is staged in any TOML case
+  directory: cases 1 (hupselbrook), 2 (grassgrowth), 3 (macroporeflow),
+  4 (oxygenstress), 5 (salinitystress), and 6 (surfacewater) all run end-
+  to-end via the typed pipeline (`*.crp.toml` + `cropfixed_init` /
+  `cropwofost_init` / `cropgrass_init` per the ADR 0016 dispatch).
+- `tests/swap-cases/run_case.sh` runs SWAP in that directory in-place;
+  `tests/regression/test_output_regression.py` copies it to a temp dir for
+  parallel-safe execution. Neither tool reads from the legacy `<N>.<case>/`
+  directories — those are reserved for the legacy reference binary.
 
 ## Migration history
 
@@ -100,6 +113,11 @@ Validators should reject cases where multiple sources are set (e.g. inline
 - `grassgrowth.gwl.csv` — replaced inline 125-row `gwl_table` (Phase 4f cleanup).
 - `oxygenstress.haquif.csv` — replaced inline `haquif_table`.
 - `surfacewater.haquif.csv` — replaced inline `haquif_table`.
+- `salinitystress.ini.{h,tsoil,cml}.csv` — replaced legacy ASCII `swap.ini` profile blocks (Phase 4f cleanup, post-CSV-meteo). The legacy `[soil].inifil` slot was removed; `[soil.initial]` is now the canonical SWINCO=3 schema.
+- `surfacewater/grass.crp.toml` — replaced legacy ASCII `grass.crp` for type=1 (cropfixed) rotations, Phase 1 of the `.crp` port. Schema 1:1 with legacy `readcropfixed`; runtime narrow per ADR 0015. Cache-driven dispatch on `crop_config_global%rotation_loaded(icrop)` per ADR 0016, with sibling-reader dispatch around `ArableLandGerm(1)` per ADR 0017. Phases 2/3/4 will extend coverage to types 2/3 + integration via case 1 hupselbrook.
+- `salinitystress/potatod.crp.toml` — replaced legacy ASCII `potatod.crp` for type=2 (cropwofost) rotations, Phase 2 of the `.crp` port. Schema 1:1 with legacy `readwofost` (extended in Phase 2 with `wofost_soybean_t`, `wofost_bulb_t`, `wofost_nutrient_t` sub-types and `swrdc` field for full coverage). Runtime narrow per ADR 0015 — soybean/bulb/nutrient/CO2/scheduling and `swdrought=2`/`swoxygen=2`/`swinter=2`/`swcompensate≠0`/`swharv=1`/`swsalinity=2`/`swrdc=1` are validator-rejected. Cache-driven dispatch via `crop_config_global%rotation_loaded(icrop)` (ADR 0016); ArableLandGerm sibling dispatch (ADR 0017) extended to type=2. Init signature `cropwofost_init_from_config(cfg, icrop, FraDeceasedLvToSoil)` mirrors Phase 1's `lcc` pattern for the local SAVE in `wofost()`. Phase 3 covers type=3 (cropgrass); Phase 4 integrates all three types via case 1 hupselbrook.
+- `oxygenstress/grassd.crp.toml` and `grassgrowth/grassd.crp.toml` — replaced legacy ASCII `grassd.crp` for type=3 (cropgrass) rotations, Phase 3 of the `.crp` port. Two case files because case 4 and case 2 differ on `swoxygen` (2 Bartholomeus vs 1 Feddes), `swcompensate` (1 Jarvis vs 0), and `swharvest` (1 DM-threshold vs 2 fixed-date). Schema 1:1 with legacy `readgrass` (extended in Phase 3 with ~55 scalar fields and ~15 tables, plus a Bartholomeus sub-section under `[oxygen_stress.bartholomeus]`). Runtime narrow per ADR 0015 — `swoxygen=2 swoxygentype=2`/`swcompensate=2`/`swinter ∈ {2,3}`/`swdrought=2`/`swsalinity≠0`/`swco2=1`/`swlossgrz=1`/`swlossmow=1`/`seqgrazmow ∈ {1,3}`/`swrd=1`/`swcf=3`/`swrdc=1`/`schedule=1`/`swtsum=2` are validator-rejected (`swrd=3` later un-stub-errored for Phase 4 hupselbrook). Cache-driven dispatch via `rotation_loaded(icrop)` (ADR 0016). The 14 `intent(out)` args of legacy `readgrass` (`swharvest`, `dmharvest`, `daylastharvest`, `dmlastharvest`, `swdmmow`, `maxdaymow`, `swlossmow`, `swlossgrz`, `swdmgrz`, `maxdaygrz`, `dmgrazing`, `LSDb`, `tagprest`, `swhydrlift`) are local SAVEs in `grass()` and assigned in the dispatch block prior to calling `cropgrass_init_from_config(cfg, icrop)` — chosen over a 16-arg init signature for clarity. `dateharvest` (t1900-relative timestamps) is computed from `mowing_dates` (DOY floats) by walking simulation years using `yearmeteo`. No sibling readers per ADR 0017 audit.
+- `hupselbrook/{maizes,potatod,grassd}.crp.toml` and `macroporeflow/wintcer{1,2}.crp.toml` — Phase 4 of the `.crp` port. Cleanup phase: case 1 hupselbrook (mixed cropfixed + cropwofost + cropgrass rotation) and case 3 macroporeflow (cropwofost) had stub `.crp.toml` files that needed full 1:1 authoring against legacy. Two pipeline extensions surfaced and shipped: (1) ADR 0017 sibling-reader dispatch around `ArableLandGerm(1)` was extended to handle `cropwofost.swgerm ∈ {1, 2}` (case 1's potatod.crp.toml authors `swgerm=2` for germination simulation); (2) the `cropgrass.swrd=3` (biomass-based root extension via `rlwtb`/`wrtmax`) validator stub-error was lifted and `cropgrass_init` extended with the swrd=3 copy block, because case 1's grassd.crp legacy uses SWRD=3 (vs cases 2/4 using SWRD=2). The legacy `swjarvis=4` in case 1's grassd.crp was translated to modern `swcompensate=1` per user direction (2026-05-02). After Phase 4, no `.crp` ASCII file is staged in any TOML case directory.
 
 ## Future users (deferred)
 

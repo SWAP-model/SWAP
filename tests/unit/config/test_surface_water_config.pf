@@ -10,7 +10,9 @@ subroutine test_swsrf_one_validates_clean()
 end subroutine
 
 @test
-subroutine test_swsrf_two_swsec_one_validates_clean()
+subroutine test_swsrf_two_swsec_one_rejected()
+   ! swsec=1 (input water level) is not yet supported in the TOML pipeline;
+   ! validate must reject it when swsrf=2.
    use funit
    use error_mod
    use surface_water_config_mod
@@ -21,7 +23,7 @@ subroutine test_swsrf_two_swsec_one_validates_clean()
    s%wlact  = -50.0d0
    s%osswlm = 1.0d0
    call s%validate(errors)
-   @assertFalse(errors%has_errors())
+   @assertTrue(errors%has_errors())
 end subroutine
 
 @test
@@ -236,4 +238,117 @@ subroutine test_finalize_skips_when_swqhr_two()
    allocate(s%betaw(1));   s%betaw  = [1.5_real64]
    call s%finalize(errors)
    @assertEqual(1.7_real64, s%alphaw(1), 1.0e-12_real64)
+end subroutine
+
+@test
+subroutine test_surface_water_finalize_wldip_abs()
+   use funit
+   use error_mod, only: error_collection_t
+   use surface_water_config_mod, only: surface_water_config_t
+   type(surface_water_config_t) :: s
+   type(error_collection_t)     :: errors
+   s%swsrf = 2
+   s%swsec = 2
+   s%swqhr = 1
+   s%nmper = 2
+   s%sofcu = 100.0d0
+   allocate(s%wldip(2));  s%wldip  = [-3.5d0, 2.0d0]
+   allocate(s%alphaw(2)); s%alphaw = [1.7d0, 1.7d0]
+   allocate(s%betaw(2));  s%betaw  = [1.5d0, 1.5d0]
+   call s%finalize(errors)
+   @assertEqual(3.5d0, s%wldip(1), 1.0d-12)
+   @assertEqual(2.0d0, s%wldip(2), 1.0d-12)
+end subroutine
+
+@test
+subroutine test_surface_water_swsrf3_rejected()
+   use funit
+   use error_mod, only: error_collection_t, ERR_VALIDATION_CROSS_FIELD
+   use surface_water_config_mod, only: surface_water_config_t
+   type(surface_water_config_t) :: s
+   type(error_collection_t)     :: errors
+   integer :: i
+   logical :: found
+   s%swsrf = 3
+   call s%validate(errors)
+   found = .false.
+   do i = 1, errors%count()
+      if (errors%items(i)%code == ERR_VALIDATION_CROSS_FIELD .and. &
+          index(errors%items(i)%message, 'swsrf=3') > 0) found = .true.
+   end do
+   @assertTrue(found)
+end subroutine
+
+@test
+subroutine test_surface_water_swsec1_rejected()
+   use funit
+   use error_mod, only: error_collection_t, ERR_VALIDATION_CROSS_FIELD
+   use surface_water_config_mod, only: surface_water_config_t
+   type(surface_water_config_t) :: s
+   type(error_collection_t)     :: errors
+   integer :: i
+   logical :: found
+   s%swsrf = 2
+   s%swsec = 1
+   call s%validate(errors)
+   found = .false.
+   do i = 1, errors%count()
+      if (errors%items(i)%code == ERR_VALIDATION_CROSS_FIELD .and. &
+          index(errors%items(i)%message, 'swsec=1') > 0) found = .true.
+   end do
+   @assertTrue(found)
+end subroutine
+
+@test
+subroutine test_surface_water_swqhr2_rejected()
+   use funit
+   use error_mod, only: error_collection_t, ERR_VALIDATION_CROSS_FIELD
+   use surface_water_config_mod, only: surface_water_config_t
+   type(surface_water_config_t) :: s
+   type(error_collection_t)     :: errors
+   integer :: i
+   logical :: found
+   s%swsrf = 2
+   s%swsec = 2
+   s%swqhr = 2
+   call s%validate(errors)
+   found = .false.
+   do i = 1, errors%count()
+      if (errors%items(i)%code == ERR_VALIDATION_CROSS_FIELD .and. &
+          index(errors%items(i)%message, 'swqhr=2') > 0) found = .true.
+   end do
+   @assertTrue(found)
+end subroutine
+
+@test
+subroutine test_surface_water_swman2_rejected()
+   use funit
+   use error_mod, only: error_collection_t, ERR_VALIDATION_CROSS_FIELD
+   use surface_water_config_mod, only: surface_water_config_t
+   type(surface_water_config_t) :: s
+   type(error_collection_t)     :: errors
+   integer :: i
+   logical :: found
+   s%swsrf = 2
+   s%swsec = 2
+   s%swqhr = 1
+   s%nmper = 1
+   s%wlact  = -50.0d0
+   s%osswlm =   1.0d0
+   s%sofcu  = 100.0d0
+   allocate(s%impend(1)); s%impend(1) = 36526.0d0
+   allocate(s%swman(1));  s%swman(1)  = 2
+   allocate(s%wscap(1));  s%wscap(1)  = 0.0d0
+   allocate(s%wldip(1));  s%wldip(1)  = 0.0d0
+   allocate(s%intwl(1));  s%intwl(1)  = 1
+   allocate(s%hbweir(1)); s%hbweir(1) = -50.0d0
+   allocate(s%alphaw(1)); s%alphaw(1) =   1.7d0
+   allocate(s%betaw(1));  s%betaw(1)  =   1.5d0
+   call s%validate(errors)
+   found = .false.
+   do i = 1, errors%count()
+      if (errors%items(i)%code == ERR_VALIDATION_CROSS_FIELD .and. &
+          index(errors%items(i)%message, 'swman=2') > 0) found = .true.
+   end do
+   @assertTrue(found)
 end subroutine

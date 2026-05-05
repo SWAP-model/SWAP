@@ -48,10 +48,6 @@ contains
 
       call get_optional_int_with_default(sec, 'nrstaring', config%nrstaring, 0, 'soil.nrstaring', errors)
 
-      ! Phase 4f Task B5: SWINCO=3 inifil (path to previous-run state file).
-      call get_optional_string_with_default(sec, 'inifil', config%inifil, '', &
-                                            'soil.inifil', errors)
-
       ! Top-level per-layer anisotropy ratios.
       call read_array_1d(sec, 'cofani', config%cofani, 'soil.cofani', errors)
 
@@ -60,6 +56,42 @@ contains
          call get_optional_real_with_default(initial, 'gwli',    config%gwli,    0.0_real64, 'soil.initial.gwli',    errors)
          call get_optional_real_with_default(initial, 'pondini', config%pondini, 0.0_real64, 'soil.initial.pondini', errors)
          call get_optional_real_with_default(initial, 'pondmx',  config%pondmx,  0.0_real64, 'soil.initial.pondmx',  errors)
+
+         ! [soil.initial] sub-table — typed home for what swap.ini used to carry.
+         call get_optional_int_with_default(initial,    'swirrigate', config%initial%swirrigate, 0, &
+                                            'soil.initial.swirrigate', errors)
+         call get_optional_real_with_default(initial,   'ssnow',  config%initial%ssnow,  0.0_real64, &
+                                             'soil.initial.ssnow',  errors)
+         call get_optional_real_with_default(initial,   'slw',    config%initial%slw,    0.0_real64, &
+                                             'soil.initial.slw',    errors)
+         call get_optional_real_with_default(initial,   'pond',   config%initial%pond,   0.0_real64, &
+                                             'soil.initial.pond',   errors)
+         call get_optional_real_with_default(initial,   'ldwet',  config%initial%ldwet,  0.0_real64, &
+                                             'soil.initial.ldwet',  errors)
+         call get_optional_real_with_default(initial,   'dt',     config%initial%dt,     0.0_real64, &
+                                             'soil.initial.dt',     errors)
+         call get_optional_string_with_default(initial, 'h_file',     config%initial%h_file,     '', &
+                                               'soil.initial.h_file',     errors)
+         call get_optional_string_with_default(initial, 'tsoil_file', config%initial%tsoil_file, '', &
+                                               'soil.initial.tsoil_file', errors)
+         call get_optional_string_with_default(initial, 'cml_file',   config%initial%cml_file,   '', &
+                                               'soil.initial.cml_file',   errors)
+
+         ! atmin7: fixed-length 7-element inline TOML array.
+         block
+            type(toml_array), pointer :: arr_ptr
+            integer :: ilen, k, stat
+            real(real64) :: tmp
+            arr_ptr => null()
+            call get_value(initial, 'atmin7', arr_ptr, requested=.false., stat=stat)
+            if (associated(arr_ptr)) then
+               ilen = min(len(arr_ptr), 7)
+               do k = 1, ilen
+                  call get_value(arr_ptr, k, tmp, stat=stat)
+                  if (stat == 0) config%initial%atmin7(k) = tmp
+               end do
+            end if
+         end block
       end if
 
       call get_table(sec, 'discretization', discr, 'soil.discretization', errors)

@@ -1,0 +1,68 @@
+@test
+subroutine test_read_output_csv_happy()
+   use funit
+   use tomlf, only: toml_table, toml_load
+   use output_csv_config_mod
+   use read_output_csv_toml_mod
+   use error_mod
+   type(toml_table), allocatable, target :: doc
+   type(toml_table), pointer     :: doc_ptr
+   type(output_csv_config_t)     :: c
+   type(error_collection_t)      :: errors
+
+   call toml_load(doc, 'tests/unit/io/toml/fixtures/output_csv_full.toml')
+   doc_ptr => doc
+   call read_output_csv_toml(doc_ptr, c, errors)
+
+   @assertFalse(errors%has_errors())
+   @assertEqual(1, c%enabled)
+   @assertEqual(0, c%enabled_tz)
+   @assertTrue(allocated(c%inlist))
+   @assertEqual('gwl,pond', c%inlist)
+   @assertTrue(allocated(c%inlist_tz))
+   @assertEqual('wc,h,conc', c%inlist_tz)
+end subroutine
+
+@test
+subroutine test_read_output_csv_missing_section_is_silent()
+   use funit
+   use tomlf, only: toml_table, toml_load
+   use output_csv_config_mod
+   use read_output_csv_toml_mod
+   use error_mod
+   type(toml_table), allocatable, target :: doc
+   type(toml_table), pointer     :: doc_ptr
+   type(output_csv_config_t)     :: c
+   type(error_collection_t)      :: errors
+
+   ! general_minimal.toml has no [output] section -> silent, defaults apply
+   call toml_load(doc, 'tests/unit/io/toml/fixtures/general_minimal.toml')
+   doc_ptr => doc
+   call read_output_csv_toml(doc_ptr, c, errors)
+
+   @assertFalse(errors%has_errors())
+   @assertEqual(1, c%enabled)
+   @assertEqual(0, c%enabled_tz)
+end subroutine
+
+@test
+subroutine test_read_output_csv_defaults_when_csv_absent()
+   use funit
+   use tomlf, only: toml_table, toml_load
+   use output_csv_config_mod
+   use read_output_csv_toml_mod
+   use error_mod
+   type(toml_table), allocatable, target :: doc
+   type(toml_table), pointer     :: doc_ptr
+   type(output_csv_config_t)     :: c
+   type(error_collection_t)      :: errors
+
+   ! general_minimal.toml has no [output.csv] -> all defaults apply
+   call toml_load(doc, 'tests/unit/io/toml/fixtures/general_minimal.toml')
+   doc_ptr => doc
+   call read_output_csv_toml(doc_ptr, c, errors)
+
+   @assertFalse(errors%has_errors())
+   @assertEqual(1, c%enabled)
+   @assertEqual(0, c%enabled_tz)
+end subroutine

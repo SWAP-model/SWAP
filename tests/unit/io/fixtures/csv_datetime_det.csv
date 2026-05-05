@@ -1,0 +1,5 @@
+# Sub-daily detail meteo fixture for test_csv_reader.pf
+datetime,record,rad,temp,hum,wind,rain
+1980-04-24 00:00:00,1,500.0,10.0,1.0,3.0,0.0
+1980-04-24 12:00:00,2,800.0,14.0,0.8,4.0,1.5
+1980-04-25 00:00:00,1,400.0,8.0,1.1,2.5,0.0

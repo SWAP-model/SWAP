@@ -13,6 +13,7 @@ module load_swap_config_mod
    use read_solute_toml_mod,       only: read_solute_toml
    use read_surface_water_toml_mod, only: read_surface_water_toml
    use read_crop_toml_mod,         only: read_crop_toml
+   use read_output_csv_toml_mod,   only: read_output_csv_toml
    use error_mod, only: error_collection_t, ERR_PARSE_MALFORMED_TOML
    implicit none
    private
@@ -52,6 +53,7 @@ contains
       call read_solute_toml     (doc_ptr, config%solute,     errors)
       call read_surface_water_toml(doc_ptr, config%surface_water, errors)
       call read_crop_toml       (doc_ptr, config%crop,       errors, base_path=base_dir)
+      call read_output_csv_toml (doc_ptr, config%output_csv, errors)
    end subroutine load_swap_config
 
 end module load_swap_config_mod

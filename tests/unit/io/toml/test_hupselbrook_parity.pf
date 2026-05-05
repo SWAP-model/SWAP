@@ -92,7 +92,11 @@ subroutine test_hupselbrook_parity_meteorology()
 
    call load_both_for_hupselbrook(config, errors)
 
-   @assertEqual(trim(metfil), trim(config%meteo%metfile))
+   ! Note: legacy metfil ('283.met') and TOML metfile ('283.csv') diverge
+   ! intentionally per ADR 0014 — the TOML pipeline only accepts CSV.
+   ! Compare the basename only.
+   @assertEqual('283', trim(metfil(1:index(metfil,'.')-1)))
+   @assertEqual('283', trim(config%meteo%metfile(1:index(config%meteo%metfile,'.')-1)))
    @assertEqual(lat,          config%meteo%lat,       1.0d-9)
    @assertEqual(alt,          config%meteo%alt,       1.0d-9)
    @assertEqual(altw,         config%meteo%altw,      1.0d-9)
@@ -277,14 +281,12 @@ subroutine test_hupselbrook_parity_last_grass_rotation()
    @assertEqual(adcrh,  config%crop%rotation_grass(ICROP_GRASSD)%adcrh,  1.0e-12_real64)
    @assertEqual(adcrl,  config%crop%rotation_grass(ICROP_GRASSD)%adcrl,  1.0e-12_real64)
 
-   ! READING NOTE: hupselbrook grassd.crp has SWRD=3, so readgrass reads
-   ! the rlwtb/wrtmax fields (not rdi/rri/rdc scalars; readswap.f90 lines
-   ! 3879-3881 in the readgrass swrd=3 branch). The legacy globals stay
-   ! at 0 even though the .crp declares RDI/RRI/RDC. TOML side stores the
-   ! values verbatim — assert against literals.
-   @assertEqual(20.0_real64,  config%crop%rotation_grass(ICROP_GRASSD)%rdi, 1.0e-12_real64)
-   @assertEqual( 0.25_real64, config%crop%rotation_grass(ICROP_GRASSD)%rri, 1.0e-12_real64)
-   @assertEqual(40.0_real64,  config%crop%rotation_grass(ICROP_GRASSD)%rdc, 1.0e-12_real64)
+   ! READING NOTE: hupselbrook grassd.crp has SWRD=3 (biomass-based root
+   ! extension via rlwtb/wrtmax). Both pipelines correctly skip the
+   ! swrd=2-only fields rdi/rri/rdc — the legacy globals stay at 0
+   ! (readswap.f90 swrd=3 branch never reads them) and the TOML
+   ! grassd.crp.toml comments them out (lines 94-96). No assertions on
+   ! those fields here — they are tested separately in the swrd=2 path.
 
    ! Interception.
    @assertEqual(cofab, config%crop%rotation_grass(ICROP_GRASSD)%cofab, 1.0e-12_real64)

@@ -47,3 +47,13 @@ subroutine test_general_finalize_idempotent()
    call g%finalize(errors)
    @assertFalse(errors%has_errors())
 end subroutine
+
+@test
+subroutine test_general_outfil_field_roundtrips()
+   use funit
+   use general_config_mod
+   type(general_config_t) :: g
+   g%outfil = "myresult"
+   @assertTrue(allocated(g%outfil))
+   @assertEqual("myresult", g%outfil)
+end subroutine

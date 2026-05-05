@@ -1,0 +1,14 @@
+[soil]
+swinco = 3
+
+[soil.initial]
+swirrigate = 1
+ssnow      = 0.0
+slw        = 0.0
+pond       = 0.0
+ldwet      = 10.0
+dt         = 1.0e-7
+atmin7     = [14.1, 13.2, 13.8, 16.0, 18.4, 16.3, 16.6]
+h_file     = "salinitystress.ini.h.csv"
+tsoil_file = "salinitystress.ini.tsoil.csv"
+cml_file   = "salinitystress.ini.cml.csv"

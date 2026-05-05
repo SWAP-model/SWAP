@@ -37,7 +37,7 @@ subroutine test_grassgrowth_general_parity()
    call chdir_to('tests/swap-cases/2.grassgrowth')
    call stage_swp_template('swap_linux.swp.template', 'swap')
    call reset_for_next_readswap()
-   call readswap()
+   call readswap('swap')
    close(logf)
    call chdir_to(trim(orig_cwd))
 
@@ -72,7 +72,7 @@ subroutine test_grassgrowth_simulation_parity()
    call chdir_to('tests/swap-cases/2.grassgrowth')
    call stage_swp_template('swap_linux.swp.template', 'swap')
    call reset_for_next_readswap()
-   call readswap()
+   call readswap('swap')
    close(logf)
    call chdir_to(trim(orig_cwd))
 
@@ -104,7 +104,7 @@ subroutine test_grassgrowth_simulation_numerical_parity()
    call chdir_to('tests/swap-cases/2.grassgrowth')
    call stage_swp_template('swap_linux.swp.template', 'swap')
    call reset_for_next_readswap()
-   call readswap()
+   call readswap('swap')
    close(logf)
    call chdir_to(trim(orig_cwd))
 
@@ -136,7 +136,7 @@ subroutine test_grassgrowth_meteorology_parity()
    call chdir_to('tests/swap-cases/2.grassgrowth')
    call stage_swp_template('swap_linux.swp.template', 'swap')
    call reset_for_next_readswap()
-   call readswap()
+   call readswap('swap')
    close(logf)
    call chdir_to(trim(orig_cwd))
 
@@ -144,7 +144,10 @@ subroutine test_grassgrowth_meteorology_parity()
    call config%validate(errors)
    call config%finalize(errors)
 
-   @assertEqual(trim(metfil), trim(config%meteo%metfile))
+   ! Note: legacy metfil ('*.met') and TOML metfile ('*.csv') diverge
+   ! intentionally per ADR 0014 — TOML pipeline is CSV-only.
+   ! Compare basename only.
+   @assertEqual(trim(metfil(1:index(metfil,'.')-1)), trim(config%meteo%metfile(1:index(config%meteo%metfile,'.')-1)))
    @assertEqual(lat,          config%meteo%lat,       1.0d-9)
    @assertEqual(alt,          config%meteo%alt,       1.0d-9)
    @assertEqual(altw,         config%meteo%altw,      1.0d-9)
@@ -172,7 +175,7 @@ subroutine test_grassgrowth_drainage_parity()
    call chdir_to('tests/swap-cases/2.grassgrowth')
    call stage_swp_template('swap_linux.swp.template', 'swap')
    call reset_for_next_readswap()
-   call readswap()
+   call readswap('swap')
    close(logf)
    call chdir_to(trim(orig_cwd))
 
@@ -204,7 +207,7 @@ subroutine test_grassgrowth_soil_parity()
    call chdir_to('tests/swap-cases/2.grassgrowth')
    call stage_swp_template('swap_linux.swp.template', 'swap')
    call reset_for_next_readswap()
-   call readswap()
+   call readswap('swap')
    close(logf)
    call chdir_to(trim(orig_cwd))
 
@@ -237,7 +240,7 @@ subroutine test_grassgrowth_crop_rotation_parity()
    call chdir_to('tests/swap-cases/2.grassgrowth')
    call stage_swp_template('swap_linux.swp.template', 'swap')
    call reset_for_next_readswap()
-   call readswap()
+   call readswap('swap')
    close(logf)
    call chdir_to(trim(orig_cwd))
 
@@ -285,7 +288,7 @@ subroutine test_grassgrowth_grass_data_parity()
    call chdir_to('tests/swap-cases/2.grassgrowth')
    call stage_swp_template('swap_linux.swp.template', 'swap')
    call reset_for_next_readswap()
-   call readswap()
+   call readswap('swap')
    close(logf)
    call chdir_to(trim(orig_cwd))
 
@@ -350,7 +353,7 @@ subroutine test_grassgrowth_parity_4d_sections()
    call chdir_to('tests/swap-cases/2.grassgrowth')
    call stage_swp_template('swap_linux.swp.template', 'swap')
    call reset_for_next_readswap()
-   call readswap()
+   call readswap('swap')
    close(logf)
    call chdir_to(trim(orig_cwd))
 
@@ -408,7 +411,7 @@ subroutine test_grassgrowth_parity_grass_mowing_grazing()
    call chdir_to('tests/swap-cases/2.grassgrowth')
    call stage_swp_template('swap_linux.swp.template', 'swap')
    call reset_for_next_readswap()
-   call readswap()
+   call readswap('swap')
    close(logf)
    call chdir_to(trim(orig_cwd))
 
@@ -445,4 +448,87 @@ subroutine test_grassgrowth_parity_grass_mowing_grazing()
    ! tagprest, etc. verbatim. Cross-checks for swdmgrz / maxdaygrz /
    ! dmgrazing / tagprest / nstart_graz / nstop_graz deferred to case 4
    ! (SEQGRAZMOW mixes 1+2 there, exercising the grazing block).
+end subroutine
+
+! Phase 3 Task 9: init-parity for case 2 grassd.crp.
+! cropgrass_init_from_config must reproduce the same variables-module globals
+! as legacy readgrass. Case 2: swoxygen=1, swcompensate=0, swdrought=1 →
+! only cumdens branch is active; dateharvest must match 30 fixed mowing dates.
+@test
+subroutine test_grassgrowth_grass_init_parity()
+   use funit
+   use variables, only: &
+      cumdens, kdif, dateharvest,                                             &
+      swoxygen, swdrought, swcompensate,                                      &
+      hlim1, hlim2u, hlim2l, hlim3h, hlim3l, hlim4,                         &
+      rdi, rri, rdc
+   use legacy_crop_helper_mod, only: read_legacy_grass
+   use cropgrass_init_mod,     only: cropgrass_init_from_config
+   use swap_config_mod
+   use load_swap_config_mod
+   use chdir_helper_mod
+   use parity_helpers_mod
+   use error_mod
+   type(swap_config_t)      :: config
+   type(error_collection_t) :: errors
+   character(len=1024)      :: orig_cwd
+   integer,  parameter :: ICROP_GRASSD = 5
+   real(8) :: legacy_cumdens(202)
+   real(8) :: legacy_kdif
+   real(8) :: legacy_dateharvest(999)
+
+   ! 1. Load TOML config (populates rotation_grass).
+   call get_cwd(orig_cwd)
+   call chdir_to('tests/swap-cases/2.grassgrowth')
+   call stage_swp_template('swap_linux.swp.template', 'swap')
+   call reset_for_next_readswap()
+   call readswap('swap')
+   close(logf)
+   call chdir_to(trim(orig_cwd))
+
+   call load_swap_config('tests/swap-cases/toml/2.grassgrowth/swap.toml', config, errors)
+   call config%validate(errors)
+   call config%finalize(errors)
+   @assertFalse(errors%has_fatals())
+
+   ! 2. Call legacy readgrass to populate variables globals.
+   ! NOTE: readgrass populates dateharvest from the crp file calendar-date
+   ! strings.  The init module reproduces this from the TOML mowing_dates
+   ! (DOY floats) anchored to tstart (set by readswap above).
+   call get_cwd(orig_cwd)
+   call chdir_to('tests/swap-cases/2.grassgrowth')
+   call read_legacy_grass(ICROP_GRASSD, 'grassd')
+   call chdir_to(trim(orig_cwd))
+
+   ! 3. Save key legacy globals.
+   legacy_cumdens    = cumdens
+   legacy_kdif       = kdif
+   legacy_dateharvest = dateharvest
+
+   ! 4. Reset those globals.
+   cumdens    = 0.0d0
+   kdif       = 0.0d0
+   dateharvest = 0.0d0
+
+   ! 5. Call init from config.
+   call cropgrass_init_from_config(config%crop%rotation_grass(ICROP_GRASSD), ICROP_GRASSD)
+
+   ! 6. Assert globals match legacy values.
+   ! kdif always written.
+   @assertEqual(legacy_kdif, kdif, 1.0d-12)
+   @assertEqual(0.60d0, kdif, 1.0d-12)
+   ! swdrought=1 → cumdens built by init math.
+   @assertEqual(legacy_cumdens, cumdens, 1.0d-10)
+   ! swharvest=2 → dateharvest populated from mowing_dates.
+   ! Assert the first 3 entries match (Task 7 t1900 conversion critical fix).
+   @assertEqual(legacy_dateharvest(1), dateharvest(1), 1.0d-10)
+   @assertEqual(legacy_dateharvest(2), dateharvest(2), 1.0d-10)
+   @assertEqual(legacy_dateharvest(3), dateharvest(3), 1.0d-10)
+   ! Feddes parameters (swoxygen=1 → hlim1/2u/2l populated; no srl/alphacrit).
+   @assertEqual(hlim1,  config%crop%rotation_grass(ICROP_GRASSD)%hlim1,  1.0d-12)
+   @assertEqual(hlim2u, config%crop%rotation_grass(ICROP_GRASSD)%hlim2u, 1.0d-12)
+   @assertEqual(hlim2l, config%crop%rotation_grass(ICROP_GRASSD)%hlim2l, 1.0d-12)
+   @assertEqual(hlim3h, config%crop%rotation_grass(ICROP_GRASSD)%hlim3h, 1.0d-12)
+   @assertEqual(hlim3l, config%crop%rotation_grass(ICROP_GRASSD)%hlim3l, 1.0d-12)
+   @assertEqual(hlim4,  config%crop%rotation_grass(ICROP_GRASSD)%hlim4,  1.0d-12)
 end subroutine

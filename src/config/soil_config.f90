@@ -11,6 +11,7 @@ module soil_config_mod
    public :: soil_discretization_t
    public :: soil_frost_t
    public :: soil_hydraulics_t
+   public :: soil_initial_t
 
    !> Optional re-discretization of the vertical grid for output reporting.
    !! When swdiscrvert == 1, dznew(:) (sized to numnodnew) carries the
@@ -55,6 +56,26 @@ module soil_config_mod
       procedure :: validate => soil_frost_validate
    end type soil_frost_t
 
+   !> Initial-state inputs consumed when soil.swinco == 3.
+   !! Replaces the legacy ASCII swap.ini file. Scalars copy directly to
+   !! globals (ssnow, slw, pond, pondini, ldwet, dt, atmin7); the three
+   !! z-indexed profiles are read via read_csv_table as separate companion
+   !! CSVs. swirrigate is metadata only — no TOML-side global consumer.
+   type :: soil_initial_t
+      integer       :: swirrigate = 0
+      real(real64)  :: ssnow  = 0.0_real64
+      real(real64)  :: slw    = 0.0_real64
+      real(real64)  :: pond   = 0.0_real64
+      real(real64)  :: ldwet  = 0.0_real64
+      real(real64)  :: dt     = 0.0_real64
+      real(real64)  :: atmin7(7) = 0.0_real64
+      character(len=:), allocatable :: h_file      !! header z,h
+      character(len=:), allocatable :: tsoil_file  !! header z,tsoil
+      character(len=:), allocatable :: cml_file    !! header z,cml
+   contains
+      procedure :: validate => soil_initial_validate
+   end type soil_initial_t
+
    type :: soil_config_t
       integer :: swsophy = 0
       integer :: swhyst  = 0
@@ -87,11 +108,6 @@ module soil_config_mod
       integer :: reva_top = 0
       integer :: nrstaring = 0  !! 0=user-supplied, 1..6=Staring series
 
-      ! Phase 4f Task B5: legacy SWINCO=3 reads initial state (h, cml,
-      ! ssnow, slw, pond, Tsoil) from a previous-run .end-style file
-      ! named here. Adapter reads the file directly when allocated.
-      character(len=:), allocatable :: inifil
-
       integer,      allocatable :: sublay(:)
       real(real64), allocatable :: hsublay(:)  !! per-sub-layer height (cm)
       real(real64), allocatable :: hcomp(:)
@@ -106,6 +122,7 @@ module soil_config_mod
       type(soil_discretization_t) :: discretization
       type(soil_frost_t)          :: frost
       type(soil_hydraulics_t)     :: hydraulics
+      type(soil_initial_t)        :: initial
    contains
       procedure :: validate => soil_config_validate
       procedure :: finalize => soil_config_finalize
@@ -118,6 +135,22 @@ contains
       type(error_collection_t), intent(inout) :: errors
 
       integer :: i
+
+      ! ----- Phase 4f-extend SS-4 stub-error: macropore deferred -----
+      ! ADR 0010 keeps macropore_config_t as orphan infrastructure and
+      ! the macropore reader code in readswap.f90 unwired. ADR 0011
+      ! excludes case 3 (3.macroporeflow) from regression. Authoring
+      ! swmacro=1 in a TOML config would let the modern binary copy the
+      ! switch into the legacy global without populating any macropore
+      ! state, producing silent runtime corruption. Reject it here with
+      ! a clear message instead.
+      if (self%swmacro == 1) then
+         call errors%append(ERR_VALIDATION_CROSS_FIELD, &
+            'soil.swmacro=1 (macropore physics) not yet supported in ' // &
+            'the TOML pipeline; case 3 is excluded from regression per ' // &
+            'ADR 0011 and the macropore module remains deferred per ' // &
+            'ADR 0010.', 'soil')
+      end if
 
       call check_int_enum(self%swsophy, [0, 1],       "soil.swsophy", errors)
       call check_int_enum(self%swhyst,  [0, 1, 2],    "soil.swhyst",  errors)
@@ -143,6 +176,10 @@ contains
       call self%discretization%validate(errors)
       call self%frost%validate(errors)
       call self%hydraulics%validate(errors)
+      ! soil.initial holds the TOML companion-CSV pathway for SWINCO=3.
+      if (self%swinco == 3) then
+         call self%initial%validate(errors)
+      end if
    end subroutine soil_config_validate
 
    !> Per-soil-physical-layer hydraulics validator. All arrays are
@@ -262,6 +299,28 @@ contains
          end if
       end if
    end subroutine soil_frost_validate
+
+   subroutine soil_initial_validate(self, errors)
+      class(soil_initial_t),    intent(in)    :: self
+      type(error_collection_t), intent(inout) :: errors
+      integer :: i
+
+      call check_int_enum(self%swirrigate, [0, 1], "soil.initial.swirrigate", errors)
+      call check_real_range(self%ssnow, 0.0_real64, 1000.0_real64, &
+                            "soil.initial.ssnow", errors)
+      call check_real_range(self%slw,   0.0_real64, 1000.0_real64, &
+                            "soil.initial.slw",   errors)
+      call check_real_range(self%pond,  0.0_real64,  100.0_real64, &
+                            "soil.initial.pond",  errors)
+      call check_real_range(self%ldwet, 0.0_real64,  366.0_real64, &
+                            "soil.initial.ldwet", errors)
+      call check_real_range(self%dt, 1.0e-12_real64, 1.0_real64, &
+                            "soil.initial.dt", errors)
+      do i = 1, 7
+         call check_real_range(self%atmin7(i), -50.0_real64, 50.0_real64, &
+                               "soil.initial.atmin7", errors)
+      end do
+   end subroutine soil_initial_validate
 
    subroutine soil_config_finalize(self, errors)
       class(soil_config_t),     intent(inout) :: self

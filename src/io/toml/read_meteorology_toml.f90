@@ -43,12 +43,15 @@ contains
          call get_optional_int_with_default(temporal, 'swmetdetail',  config%swmetdetail,  0, 'meteorology.temporal.swmetdetail',  errors)
          call get_optional_int_with_default(temporal, 'nmetdetail',   config%nmetdetail,   0, 'meteorology.temporal.nmetdetail',   errors)
          call get_optional_int_with_default(temporal, 'swmetfilall',  config%swmetfilall,  0, 'meteorology.temporal.swmetfilall',  errors)
+         call get_optional_string_with_default(temporal, 'detail_file', config%detail_file, '', &
+                                               'meteorology.temporal.detail_file', errors)
       end if
 
       call get_table(sec, 'rain', rain, 'meteorology.rain', errors)
       if (associated(rain)) then
-         call get_optional_int_with_default(rain, 'swrain',   config%swrain,   0, 'meteorology.rain.swrain',   errors)
-         call get_optional_int_with_default(rain, 'swetsine', config%swetsine, 0, 'meteorology.rain.swetsine', errors)
+         call get_optional_int_with_default(rain,    'swrain',      config%swrain,            0,  'meteorology.rain.swrain',      errors)
+         call get_optional_int_with_default(rain,    'swetsine',    config%swetsine,           0,  'meteorology.rain.swetsine',    errors)
+         call get_optional_string_with_default(rain, 'events_file', config%rain_events_file,  '', 'meteorology.rain.events_file', errors)
       end if
 
       call get_table(sec, 'interception', interception, 'meteorology.interception', errors)
@@ -60,8 +63,11 @@ contains
       if (associated(evap)) then
          call get_optional_int_with_default(evap,  'swcfbs',   config%evaporation%swcfbs,   0,      'meteorology.evaporation.swcfbs',   errors)
          call get_optional_real_with_default(evap, 'cfbs',     config%evaporation%cfbs,     1.0d0,  'meteorology.evaporation.cfbs',     errors)
-         call get_optional_real_with_default(evap, 'cofredbl', config%evaporation%cofredbl, 0.35d0, 'meteorology.evaporation.cofredbl', errors)
-         call get_optional_real_with_default(evap, 'cofredbo', config%evaporation%cofredbo, 0.35d0, 'meteorology.evaporation.cofredbo', errors)
+         call get_optional_real_with_default(evap, 'cofredbl',   config%evaporation%cofredbl,   0.35d0, 'meteorology.evaporation.cofredbl',   errors)
+         call get_optional_real_with_default(evap, 'cofredbo',   config%evaporation%cofredbo,   0.35d0, 'meteorology.evaporation.cofredbo',   errors)
+         call get_optional_real_with_default(evap, 'rsigni',     config%evaporation%rsigni,     0.5d0,  'meteorology.evaporation.rsigni',     errors)
+         call get_optional_real_with_default(evap, 'cfevappond', config%evaporation%cfevappond, 1.25d0, 'meteorology.evaporation.cfevappond', errors)
+         call get_optional_int_with_default(evap,  'swredu',     config%evaporation%swredu,     1,      'meteorology.evaporation.swredu',     errors)
       end if
 
       call get_table(sec, 'snow', snow, 'meteorology.snow', errors)

@@ -12,6 +12,7 @@ module read_crop_toml_mod
    use read_cropwofost_toml_mod, only: read_cropwofost_toml
    use toml_field_helpers_mod, only: get_table, get_array_of_tables,   &
                                      get_optional_int_with_default,    &
+                                     get_optional_real_with_default,   &
                                      get_optional_string_with_default, &
                                      parse_date_to_days1900
    use path_helpers_mod, only: resolve_relative_path
@@ -43,6 +44,7 @@ contains
       if (.not. associated(sec)) return
 
       call get_optional_int_with_default(sec, 'swcrop', config%swcrop, 0, 'crop.swcrop', errors)
+      call get_optional_real_with_default(sec, 'rdmax', config%rdmax, 200.0_real64, 'crop.rdmax', errors)
 
       call get_array_of_tables(sec, 'rotation', rotation, 'crop.rotation', errors)
       if (.not. associated(rotation)) return

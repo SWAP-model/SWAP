@@ -1,15 +1,24 @@
 ! File VersionID:
 !   $Id: readswap.f90 379 2018-05-16 07:02:44Z heine003 $
 ! ----------------------------------------------------------------------
-      subroutine readswap()
+      subroutine readswap(project_name)
 ! ----------------------------------------------------------------------
 !     Date               : April 2014
 !     Purpose            : read main input file .SWP
+!
+!     Optional argument `project_name` overrides the
+!     `Get_Command_Argument(1)` lookup, allowing the parity test harness
+!     to call readswap without the pFUnit binary's CLI flags
+!     (`--tap`, `-f`, etc.) being mistaken for the project name.
+!     Production code (legacy main loop entry) calls readswap() with no
+!     argument and the original argv-based behaviour is preserved.
 ! ----------------------------------------------------------------------
       use variables
       use doln
       use oxygenstress_mod, only: oxygen_dat
       implicit none
+
+      character(len=*), intent(in), optional :: project_name
 
       integer posarg,numchar,mxcrop,idum
       integer swp,i,datea(6),getun,getun2,runf,swrunon
@@ -62,10 +71,17 @@
 ! --- write message running to screen
       write (*,'(/,a)') '  running swap ....'
 
-! --- path and filename of executable through argument command line
-      PosArg = 1
-      Call Get_Command_Argument (PosArg,swpfil,NumChar)
-      if (NumChar.lt.1) swpfil = 'swap'
+! --- path and filename of executable through argument command line,
+!     or via the optional `project_name` argument when called from the
+!     parity test harness.
+      if (present(project_name)) then
+         swpfil  = project_name
+         NumChar = len_trim(swpfil)
+      else
+         PosArg = 1
+         Call Get_Command_Argument (PosArg,swpfil,NumChar)
+         if (NumChar.lt.1) swpfil = 'swap'
+      end if
       project = swpfil
 
       if(NumChar.gt.3) then
@@ -408,25 +424,9 @@
         end do
       endif
 
-      if (swrain .eq. 3) then
-        call rdscha ('rainfil',rainfil)
-
-      endif
-
-! -   special case: if METFIL is provided wit hextension .MET, then all weather dta will be erad at once
-      ! only possible if: SWMETDETAIL = 0 and SWRAIN = 0 or 2
+! --- Legacy `rainfil` rdscha and ".met all-years" handling removed per
+!     ADR 0014; the .swp pipeline is no longer invoked by working source.
       call lowerc (metfil)
-      swMetFilAll = 0
-      if (index(trim(metfil),".met") > 0) then
-         swMetFilAll = 1
-         if (swmetdetail == 1 .OR. swrain == 1 .OR. swrain == 3) then
-            messag = 'Extension .met in metfil discarded because not allowed in combination with SWETSINE = 1 or SWRAIN = 1 or 3'
-            call warn ('Readswap',messag,logf,swscre)
-            idum = index(metfil,".met")
-            metfil = trim(metfil(1:idum-1))
-            swMetFilAll = 0
-         end if
-      end if
 
 
 ! -   crop rotation scheme
@@ -1743,11 +1743,11 @@
          end if
       end if
 
-! --- Special case: all meteo data in a single file; handled separately      
-      if (swMetFilAll == 1) then
-         call MeteoInOneFile (1, idum)
-      end if
-      
+! --- Legacy "all meteo in single .met" pre-load removed (Phase 4f-extend
+!     SS-5 / ADR 0014). MeteoInOneFile deleted; the .swp pipeline is no
+!     longer invoked by working source per the umbrella spec retirement
+!     gate. swMetFilAll global swept in SS-5 Commit 3.
+
 ! --- copy content of key-file to log-file
       write (logf,14)  
  14   format('*',70('-'),'*',/,' Echo of input file:',/)

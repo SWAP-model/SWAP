@@ -1,0 +1,87 @@
+@test
+subroutine test_output_csv_defaults_valid()
+   use funit
+   use error_mod
+   use output_csv_config_mod
+   type(output_csv_config_t) :: c
+   type(error_collection_t)  :: errors
+
+   call c%validate(errors)
+   @assertFalse(errors%has_errors())
+   @assertEqual(1, c%enabled)
+   @assertEqual(0, c%enabled_tz)
+end subroutine
+
+@test
+subroutine test_output_csv_enabled_invalid()
+   use funit
+   use error_mod
+   use output_csv_config_mod
+   type(output_csv_config_t) :: c
+   type(error_collection_t)  :: errors
+
+   c%enabled = 5
+   call c%validate(errors)
+   @assertTrue(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_output_csv_enabled_tz_invalid()
+   use funit
+   use error_mod
+   use output_csv_config_mod
+   type(output_csv_config_t) :: c
+   type(error_collection_t)  :: errors
+
+   c%enabled_tz = 2
+   call c%validate(errors)
+   @assertTrue(errors%has_errors())
+end subroutine
+
+@test
+subroutine test_output_csv_finalize_sets_defaults()
+   use funit
+   use error_mod
+   use output_csv_config_mod
+   type(output_csv_config_t) :: c
+   type(error_collection_t)  :: errors
+   character(len=:), allocatable :: expected_inlist
+
+   expected_inlist = 'rain,irrig,interc,runoff,drainage,dstor,epot,eact,tpot,tact,qbottom,gwl'
+   call c%finalize(errors)
+   @assertFalse(errors%has_errors())
+   @assertTrue(allocated(c%inlist))
+   @assertTrue(allocated(c%inlist_tz))
+   @assertEqual(expected_inlist, c%inlist)
+   @assertEqual('wc,h,conc', c%inlist_tz)
+end subroutine
+
+@test
+subroutine test_output_csv_finalize_preserves_existing_inlist()
+   use funit
+   use error_mod
+   use output_csv_config_mod
+   type(output_csv_config_t) :: c
+   type(error_collection_t)  :: errors
+
+   c%inlist = 'gwl,pond'
+   call c%finalize(errors)
+   @assertFalse(errors%has_errors())
+   @assertEqual('gwl,pond', c%inlist)
+end subroutine
+
+@test
+subroutine test_output_csv_field_roundtrip()
+   use funit
+   use output_csv_config_mod
+   type(output_csv_config_t) :: c
+
+   c%enabled    = 0
+   c%enabled_tz = 1
+   c%inlist     = 'gwl,pond'
+   c%inlist_tz  = 'wc,h'
+   @assertEqual(0, c%enabled)
+   @assertEqual(1, c%enabled_tz)
+   @assertEqual('gwl,pond', c%inlist)
+   @assertEqual('wc,h', c%inlist_tz)
+end subroutine

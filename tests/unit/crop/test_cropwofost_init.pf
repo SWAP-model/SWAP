@@ -1,0 +1,165 @@
+! Phase 2 cropwofost port — unit tests for cropwofost_init_from_config.
+! Verifies that calling the init sub from a fixture built from potatod.crp.toml
+! values writes the correct module globals, including the cumdens computation
+! from the 2-row rdctb = [[0.0, 1.0], [1.0, 0.0]].
+!
+! NOTE: swco2, flco2, FraHarLosOrm_* are LOCAL save variables inside wofost()
+! in cropgrowth.f90 and are NOT in the variables module.
+! FraDeceasedLvToSoil is now returned via the 3rd intent(out) argument and is
+! therefore directly testable in these unit tests.
+
+@test
+subroutine test_cropwofost_init_basic_globals()
+   use funit
+   use iso_fortran_env, only: real64
+   use cropwofost_config_mod, only: cropwofost_config_t
+   use cropwofost_init_mod,   only: cropwofost_init_from_config
+   use variables, only: swcf, albedo, rsc, rsw, &
+                        swoxygen, hlim1, hlim2u, hlim2l, swWrtNonox, aeratecrit, &
+                        swdrought, hlim3h, hlim3l, hlim4, adcrh, adcrl, &
+                        swsalinity, saltmax, saltslope, &
+                        swcompensate, swinter, cofab, &
+                        swrd, rdi, rri, rdc, swdmi2rd, &
+                        relmf, swpotrelmf
+   type(cropwofost_config_t) :: cfg
+   real(real64) :: FraDeceasedLvToSoil
+   integer, parameter :: ICROP = 1
+
+   ! Build a fixture matching case 5 potatod.crp values.
+   cfg%crop_factor%swcf         = 2
+   cfg%crop_factor%albedo       = 0.19_real64
+   cfg%crop_factor%rsc          = 207.0_real64
+   cfg%crop_factor%rsw          = 0.0_real64
+   cfg%oxygen_stress%swoxygen   = 1
+   cfg%oxygen_stress%swwrtnonox = 1
+   cfg%oxygen_stress%aeratecrit = 0.5_real64
+   cfg%oxygen_stress%hlim1      = -10.0_real64
+   cfg%oxygen_stress%hlim2u     = -25.0_real64
+   cfg%oxygen_stress%hlim2l     = -25.0_real64
+   cfg%drought_stress%swdrought = 1
+   cfg%drought_stress%hlim3h    = -300.0_real64
+   cfg%drought_stress%hlim3l    = -500.0_real64
+   cfg%drought_stress%hlim4     = -10000.0_real64
+   cfg%drought_stress%adcrh     = 0.5_real64
+   cfg%drought_stress%adcrl     = 0.1_real64
+   cfg%salinity%swsalinity      = 1
+   cfg%salinity%saltmax         = 0.732_real64
+   cfg%salinity%saltslope       = 0.0868_real64
+   cfg%compensate%swcompensate  = 0
+   cfg%interception%swinter     = 1
+   cfg%interception%cofab       = 0.25_real64
+   cfg%co2%swco2                = 0
+   cfg%root%swrd                = 2
+   cfg%root%rdi                 = 10.0_real64
+   cfg%root%rri                 = 1.2_real64
+   cfg%root%rdc                 = 50.0_real64
+   cfg%root%swdmi2rd            = 1
+   cfg%root%swrdc               = 0
+   cfg%management%swpotrelmf        = 2
+   cfg%management%relmf             = 0.8_real64
+   cfg%management%fradeceasedlvtosoil = 0.35_real64
+   cfg%soybean%swsoybean            = 0
+   cfg%bulb%swbulb                  = 0
+   cfg%nutrient%flcropnut           = .false.
+   cfg%schedule%schedule            = 0
+   ! rdctb = [[0.0, 1.0], [1.0, 0.0]] — linear ramp
+   allocate(cfg%root%rdctb(2, 2))
+   cfg%root%rdctb(1,1) = 0.0_real64; cfg%root%rdctb(1,2) = 1.0_real64
+   cfg%root%rdctb(2,1) = 1.0_real64; cfg%root%rdctb(2,2) = 0.0_real64
+
+   call cropwofost_init_from_config(cfg, ICROP, FraDeceasedLvToSoil)
+
+   ! -- Verify globals --
+   @assertEqual(2,            swcf)
+   @assertEqual(0.19_real64,  albedo,  1.0e-12_real64)
+   @assertEqual(207.0_real64, rsc,     1.0e-12_real64)
+   @assertEqual(0.0_real64,   rsw,     1.0e-12_real64)
+   @assertEqual(1,            swoxygen)
+   @assertEqual(-10.0_real64, hlim1,   1.0e-12_real64)
+   @assertEqual(-25.0_real64, hlim2u,  1.0e-12_real64)
+   @assertEqual(-25.0_real64, hlim2l,  1.0e-12_real64)
+   @assertEqual(1,            swWrtNonox)
+   @assertEqual(0.5_real64,   aeratecrit, 1.0e-12_real64)
+   @assertEqual(1,            swdrought)
+   @assertEqual(-300.0_real64,  hlim3h, 1.0e-12_real64)
+   @assertEqual(-500.0_real64,  hlim3l, 1.0e-12_real64)
+   @assertEqual(-10000.0_real64,hlim4,  1.0e-12_real64)
+   @assertEqual(0.5_real64,   adcrh,  1.0e-12_real64)
+   @assertEqual(0.1_real64,   adcrl,  1.0e-12_real64)
+   @assertEqual(1,            swsalinity)
+   @assertEqual(0.732_real64,  saltmax,   1.0e-12_real64)
+   @assertEqual(0.0868_real64, saltslope, 1.0e-12_real64)
+   @assertEqual(0,            swcompensate)
+   @assertEqual(1,            swinter)
+   @assertEqual(0.25_real64,  cofab,  1.0e-12_real64)
+   @assertEqual(2,            swrd)
+   @assertEqual(10.0_real64,  rdi, 1.0e-12_real64)
+   @assertEqual(1.2_real64,   rri, 1.0e-12_real64)
+   @assertEqual(50.0_real64,  rdc, 1.0e-12_real64)
+   @assertEqual(1,            swdmi2rd)
+   @assertEqual(2,            swpotrelmf)
+   @assertEqual(0.8_real64,   relmf, 1.0e-12_real64)
+   @assertEqual(0.35_real64,  FraDeceasedLvToSoil, 1.0e-12_real64)
+end subroutine
+
+@test
+subroutine test_cropwofost_init_cumdens_linear_ramp()
+   ! rdctb = [[0.0, 1.0], [1.0, 0.0]] (linear ramp from 1.0 to 0.0).
+   ! The cumulative integral over [0,1] = 0.5 (triangle).
+   ! The algorithm uses 101 depth points (i=0..100) with depth = i/100.
+   ! rdctb density at depth d = (1-d) by linear interpolation.
+   ! cumdens(i*2) = integral from 0 to (i-1)/100 of (1-d) dd, normalized.
+   ! Expected at depth=0.5 (i=51): integral = 0.5*1 - 0.5*(0.5^2) = 0.5 - 0.125 = 0.375
+   ! Normalized: 0.375 / 0.5 = 0.75.
+   use funit
+   use iso_fortran_env, only: real64
+   use cropwofost_config_mod, only: cropwofost_config_t
+   use cropwofost_init_mod,   only: cropwofost_init_from_config
+   use variables, only: cumdens, swdrought
+   type(cropwofost_config_t) :: cfg
+   real(real64) :: FraDeceasedLvToSoil
+   integer, parameter :: ICROP = 1
+
+   cfg%soybean%swsoybean       = 0
+   cfg%bulb%swbulb             = 0
+   cfg%nutrient%flcropnut      = .false.
+   cfg%schedule%schedule       = 0
+   cfg%co2%swco2               = 0
+   cfg%harvest%swharv          = 0
+   cfg%compensate%swcompensate = 0
+   cfg%interception%swinter    = 1
+   cfg%oxygen_stress%swoxygen  = 1
+   cfg%oxygen_stress%swwrtnonox= 0
+   cfg%oxygen_stress%aeratecrit= 0.001_real64
+   cfg%drought_stress%swdrought= 1
+   cfg%drought_stress%hlim3h   = -200.0_real64
+   cfg%drought_stress%hlim3l   = -800.0_real64
+   cfg%drought_stress%hlim4    = -8000.0_real64
+   cfg%drought_stress%adcrh    = 0.5_real64
+   cfg%drought_stress%adcrl    = 0.1_real64
+   cfg%salinity%swsalinity     = 0
+   cfg%root%swrd               = 2
+   cfg%root%swrdc              = 0
+   cfg%root%rdi                = 10.0_real64
+   cfg%root%rri                = 1.0_real64
+   cfg%root%rdc                = 30.0_real64
+   cfg%root%swdmi2rd           = 0
+   cfg%management%swpotrelmf          = 1
+   cfg%management%fradeceasedlvtosoil = 0.0_real64
+   allocate(cfg%root%rdctb(2, 2))
+   cfg%root%rdctb(1,1) = 0.0_real64; cfg%root%rdctb(1,2) = 1.0_real64
+   cfg%root%rdctb(2,1) = 1.0_real64; cfg%root%rdctb(2,2) = 0.0_real64
+
+   call cropwofost_init_from_config(cfg, ICROP, FraDeceasedLvToSoil)
+
+   @assertEqual(1, swdrought)
+   ! cumdens(1)=depth at index 1 = 0.0; cumdens(2)=cumulative density at 0.0 = 0.0
+   @assertEqual(0.0_real64, cumdens(1), 1.0e-10_real64)
+   @assertEqual(0.0_real64, cumdens(2), 1.0e-10_real64)
+   ! cumdens(201)=depth at index 101 = 1.0; cumdens(202)=normalized density = 1.0
+   @assertEqual(1.0_real64, cumdens(201), 1.0e-10_real64)
+   @assertEqual(1.0_real64, cumdens(202), 1.0e-10_real64)
+   ! cumdens at depth=0.5 (index 51): depth stored at cumdens(101), normalized at cumdens(102)
+   @assertEqual(0.5_real64, cumdens(101), 1.0e-10_real64)
+   @assertEqual(0.75_real64, cumdens(102), 1.0e-6_real64)
+end subroutine

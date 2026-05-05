@@ -11,8 +11,6 @@ utilities including `afgen` linear interpolation and `insw` / `stepnr`
 `soilhydraulicsutils.f90`. Surface-water helpers `wlevst`, `swstlev`,
 `qhtab`, `runoff` in `surfacewaterutils.f90`. Shared-model coupling
 scaffolding in `sharedexchange.f90` and `sharedsimulation.f90`.
-`ioutils.f90` exposes string / list helpers such as
-`parse_output_extensions`.
 
 ## Public interface
 
@@ -22,7 +20,6 @@ scaffolding in `sharedexchange.f90` and `sharedsimulation.f90`.
 - `watcon`, `moiscap`, `hconduc`, `dhconduc`, `prhead`, `hcomean`,
   `dkmean` — soil-hydraulics helpers.
 - `wlevst`, `swstlev`, `qhtab`, `runoff` — surface-water helpers.
-- `parse_output_extensions` — I/O helper.
 - `sharedexchange`, `sharedsimulation` — coupling-with-external-
   models scaffolding.
 

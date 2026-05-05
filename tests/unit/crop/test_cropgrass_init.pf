@@ -1,0 +1,191 @@
+@test
+subroutine test_cropgrass_init_writes_kdif()
+   use funit
+   use cropgrass_init_mod, only: cropgrass_init_from_config
+   use cropgrass_config_mod, only: cropgrass_config_t
+   use variables, only: kdif, kdir, swdrought, swoxygen, swcompensate, cumdens
+   implicit none
+   type(cropgrass_config_t) :: cfg
+
+   ! Minimal setup to pass all guards and run without fatalerr.
+   cfg%swoxygen    = 0
+   cfg%swdrought   = 1
+   cfg%swcompensate = 0
+   cfg%swco2       = 0
+   cfg%swlossgrz   = 0
+   cfg%swlossmow   = 0
+   cfg%swcf        = 1
+   cfg%swinter     = 0
+   cfg%swrd        = 2
+   cfg%swrdc       = 0
+   cfg%nseqgrazmow = 1
+   allocate(cfg%seqgrazmow(1))
+   cfg%seqgrazmow(1) = 2
+   allocate(cfg%rdctb(4))
+   cfg%rdctb = [0.0d0, 1.0d0, 1.0d0, 0.0d0]
+
+   ! Tested values
+   cfg%kdif = 0.60d0
+   cfg%kdir = 0.75d0
+
+   call cropgrass_init_from_config(cfg, 1)
+
+   @assertEqual(0.60d0, kdif, 1.0d-12)
+   @assertEqual(0.75d0, kdir, 1.0d-12)
+end subroutine test_cropgrass_init_writes_kdif
+
+@test
+subroutine test_cropgrass_init_cumdens_linear_decline()
+   ! rdctb = [(0.0, 1.0), (1.0, 0.0)] — linear decline.
+   ! Trapezium integral over 100 intervals of width 0.01:
+   ! integral = 0.5 (area of triangle). After normalization:
+   !   cumdens(2) = 0.0 / 0.5 = 0.0
+   !   cumdens(202) = 0.5 / 0.5 = 1.0
+   use funit
+   use cropgrass_init_mod, only: cropgrass_init_from_config
+   use cropgrass_config_mod, only: cropgrass_config_t
+   use variables, only: cumdens
+   implicit none
+   type(cropgrass_config_t) :: cfg
+
+   cfg%swoxygen    = 0
+   cfg%swdrought   = 1
+   cfg%swcompensate = 0
+   cfg%swco2       = 0
+   cfg%swlossgrz   = 0
+   cfg%swlossmow   = 0
+   cfg%swcf        = 1
+   cfg%swinter     = 0
+   cfg%swrd        = 2
+   cfg%swrdc       = 0
+   cfg%nseqgrazmow = 1
+   allocate(cfg%seqgrazmow(1))
+   cfg%seqgrazmow(1) = 2
+   allocate(cfg%rdctb(4))
+   cfg%rdctb = [0.0d0, 1.0d0, 1.0d0, 0.0d0]
+
+   call cropgrass_init_from_config(cfg, 1)
+
+   @assertEqual(0.0d0, cumdens(2),   1.0d-6)
+   @assertEqual(1.0d0, cumdens(202), 1.0d-6)
+end subroutine test_cropgrass_init_cumdens_linear_decline
+
+@test
+subroutine test_cropgrass_init_swoxygen2_writes_srl()
+   use funit
+   use cropgrass_init_mod, only: cropgrass_init_from_config
+   use cropgrass_config_mod, only: cropgrass_config_t
+   use variables, only: srl
+   implicit none
+   type(cropgrass_config_t) :: cfg
+
+   cfg%swoxygen      = 2
+   cfg%swoxygentype  = 1
+   cfg%srl           = 383571.0d0
+   cfg%swrootradius  = 2
+   cfg%root_radiusO2 = 0.000075d0
+   cfg%swwrtnonox    = 0
+   cfg%aeratecrit    = 1.0d-4
+   cfg%swdrought     = 1
+   cfg%swcompensate  = 0
+   cfg%swco2         = 0
+   cfg%swlossgrz     = 0
+   cfg%swlossmow     = 0
+   cfg%swcf          = 1
+   cfg%swinter       = 0
+   cfg%swrd          = 2
+   cfg%swrdc         = 0
+   cfg%nseqgrazmow   = 1
+   allocate(cfg%seqgrazmow(1))
+   cfg%seqgrazmow(1) = 2
+   allocate(cfg%rdctb(4))
+   cfg%rdctb = [0.0d0, 1.0d0, 1.0d0, 0.0d0]
+
+   call cropgrass_init_from_config(cfg, 1)
+
+   @assertEqual(383571.0d0, srl, 1.0d0)
+end subroutine test_cropgrass_init_swoxygen2_writes_srl
+
+@test
+subroutine test_cropgrass_init_swcompensate1_writes_alphacrit()
+   use funit
+   use cropgrass_init_mod, only: cropgrass_init_from_config
+   use cropgrass_config_mod, only: cropgrass_config_t
+   use variables, only: alphacrit
+   implicit none
+   type(cropgrass_config_t) :: cfg
+
+   cfg%swcompensate = 1
+   cfg%alphacrit    = 0.7d0
+   cfg%swstressor   = 1
+   cfg%swoxygen     = 0
+   cfg%swdrought    = 1
+   cfg%swco2        = 0
+   cfg%swlossgrz    = 0
+   cfg%swlossmow    = 0
+   cfg%swcf         = 1
+   cfg%swinter      = 0
+   cfg%swrd         = 2
+   cfg%swrdc        = 0
+   cfg%nseqgrazmow  = 1
+   allocate(cfg%seqgrazmow(1))
+   cfg%seqgrazmow(1) = 2
+   allocate(cfg%rdctb(4))
+   cfg%rdctb = [0.0d0, 1.0d0, 1.0d0, 0.0d0]
+
+   call cropgrass_init_from_config(cfg, 1)
+
+   @assertEqual(0.7d0, alphacrit, 1.0d-12)
+end subroutine test_cropgrass_init_swcompensate1_writes_alphacrit
+
+@test
+subroutine test_cropgrass_init_swharvest2_populates_dateharvest()
+   ! When cfg%swharv=2, the dateharvest global must be populated.
+   ! populate_dateharvest derives the start year from `tstart` (a module
+   ! global), so the test must set tstart explicitly — without it,
+   ! tstart=0 maps to a pre-1900 year and the dateharvest entries come
+   ! out negative. Set tstart to 2000-01-01 (= 36525 days since 1900) so
+   ! dateharvest(i) = 36525 + DOY_i - 1 is positive and predictable.
+   use funit
+   use cropgrass_init_mod, only: cropgrass_init_from_config
+   use cropgrass_config_mod, only: cropgrass_config_t
+   use variables, only: dateharvest, tend, tstart
+   implicit none
+   type(cropgrass_config_t) :: cfg
+   integer :: nmow_val
+
+   cfg%swharv       = 2
+   cfg%nmow         = 3
+   nmow_val         = 3
+   allocate(cfg%mowing_dates(3))
+   cfg%mowing_dates = [127.0d0, 149.0d0, 176.0d0]
+   cfg%swoxygen     = 0
+   cfg%swdrought    = 1
+   cfg%swcompensate = 0
+   cfg%swco2        = 0
+   cfg%swlossgrz    = 0
+   cfg%swlossmow    = 0
+   cfg%swcf         = 1
+   cfg%swinter      = 0
+   cfg%swrd         = 2
+   cfg%swrdc        = 0
+   cfg%nseqgrazmow  = 1
+   allocate(cfg%seqgrazmow(1))
+   cfg%seqgrazmow(1) = 2
+   allocate(cfg%rdctb(4))
+   cfg%rdctb = [0.0d0, 1.0d0, 1.0d0, 0.0d0]
+
+   ! Anchor the date math: tstart = days-since-1900 for 2000-01-01 (36525)
+   ! so dateharvest(i) = 36525 + DOY_i - 1.
+   tstart = 36525.0d0
+   tend   = 36525.0d0 + 365.0d0   ! end-of-year-2000 sentinel
+
+   call cropgrass_init_from_config(cfg, 1)
+
+   ! Sentinel: dateharvest(nmow+1) = tend + 1.0
+   @assertEqual(tend + 1.0d0, dateharvest(nmow_val + 1), 1.0d-6)
+   ! DOYs in same year (127, 149, 176) anchored to 2000-01-01.
+   @assertEqual(36525.0d0 + 127.0d0 - 1.0d0, dateharvest(1), 1.0d-12)
+   @assertEqual(36525.0d0 + 149.0d0 - 1.0d0, dateharvest(2), 1.0d-12)
+   @assertEqual(36525.0d0 + 176.0d0 - 1.0d0, dateharvest(3), 1.0d-12)
+end subroutine test_cropgrass_init_swharvest2_populates_dateharvest

@@ -129,7 +129,6 @@
       integer   yearmeteo          ! Year for which meteorological data should be read from input file
       integer   ad(mrain)          ! Array with day numbers in meteo file
       integer   am(mrain)          ! Array with month numbers in meteo file
-      character(len=80)  station(366)  ! Array with weather station names in meteo file
       real(8)   aetr(366)          ! Array with daily ETref input data (L/T)
       real(8)   ahum(366)          ! Array with daily humidity input data (M/L/T2)  
       real(8)   aintcdt            ! Interception flux of ONLY Rain during iteration timesteps (L/T) 
@@ -201,9 +200,20 @@
       logical   flrainintens       ! Flag indicating that rainfall intensity info in combination with daily ET records is used              !!!!!!!!!!!  Robnew
       logical   flupdmetdet        ! Flag indicating that update of detailed meteorological input within the day is required               !!!!!!!!!!!  Robnew
       character(len=200) metfil    ! Name of meteorological input file
-      integer   swMetFilAll        ! Switch indicating that metfil contains data for all years (limited usage)
       character(len=80) pathatm    ! Path to folder with meteorological input files
-      character(len=200) rainfil   ! Name of input file with detailed rainfall intensities
+      ! CSV meteo cache: pre-loaded by adapter, sliced per year by MeteoCSVYear.
+      ! Column layout (daily): 1=date, 2=rad(kJ/m2/d), 3=tmin, 4=tmax, 5=hum, 6=wind, 7=rain, 8=etref, 9=wet
+      integer :: nmetcsv = 0
+      real(8), dimension(:,:), allocatable :: metcsv_dat
+      ! Detail CSV cache (swmetdetail=1): 7 columns per ADR 0014.
+      ! 1=datetime(frac days since JD1900), 2=record, 3=rad(kJ/m2/d),
+      ! 4=temp(C), 5=hum(kPa), 6=wind(m/s), 7=rain(mm)
+      integer :: nmetcsv_det = 0
+      real(8), dimension(:,:), allocatable :: metcsv_det
+      ! Rain events CSV cache: pre-loaded by adapter, sliced per year by ReadRainEvents.
+      ! Column layout: 1=datetime (fractional days since JD2415020), 2=amount (mm)
+      integer :: nraincsv = 0
+      real(8), dimension(:,:), allocatable :: raincsv_dat
 !   - atmosphere SAVE variable state (refactored from local SAVE)
       real(8)   tsunrise_atm       ! Time of sunrise (fraction of day) - from meteodt.f90 ETSine
       real(8)   tsunset_atm        ! Time of sunset (fraction of day) - from meteodt.f90 ETSine  
@@ -1241,6 +1251,7 @@
       real(8) impend(mamp)
       real(8) wldip(mamp),wscap(mamp),hbweir(mamp)
       real(8) osswlm,wlstar,wlp,alphaw(mamp),betaw(mamp)
+      real(8) wls1_init    ! TOML pipeline: initial wls1 = wlact - altcu; altcu=0 is enforced by drainage_config_validate
       real(8) dropr(mamp*mamte),hdepth(mamp*mamte)
       real(8) gwlcrit(mamp,mamte),hcrit(mamp,mamte),vcrit(mamp,mamte)
       real(8) hqhtab(mamp,mamte),qqhtab(mamp,mamte)

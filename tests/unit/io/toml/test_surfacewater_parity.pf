@@ -46,7 +46,7 @@ subroutine test_surfacewater_general_parity()
    call chdir_to('tests/swap-cases/6.surfacewater')
    call stage_swp_template('swap_linux.swp.template', 'swap')
    call reset_for_next_readswap()
-   call readswap()
+   call readswap('swap')
    close(logf)
    call chdir_to(trim(orig_cwd))
 
@@ -81,7 +81,7 @@ subroutine test_surfacewater_simulation_parity()
    call chdir_to('tests/swap-cases/6.surfacewater')
    call stage_swp_template('swap_linux.swp.template', 'swap')
    call reset_for_next_readswap()
-   call readswap()
+   call readswap('swap')
    close(logf)
    call chdir_to(trim(orig_cwd))
 
@@ -113,7 +113,7 @@ subroutine test_surfacewater_simulation_numerical_parity()
    call chdir_to('tests/swap-cases/6.surfacewater')
    call stage_swp_template('swap_linux.swp.template', 'swap')
    call reset_for_next_readswap()
-   call readswap()
+   call readswap('swap')
    close(logf)
    call chdir_to(trim(orig_cwd))
 
@@ -145,7 +145,7 @@ subroutine test_surfacewater_meteorology_parity()
    call chdir_to('tests/swap-cases/6.surfacewater')
    call stage_swp_template('swap_linux.swp.template', 'swap')
    call reset_for_next_readswap()
-   call readswap()
+   call readswap('swap')
    close(logf)
    call chdir_to(trim(orig_cwd))
 
@@ -153,7 +153,10 @@ subroutine test_surfacewater_meteorology_parity()
    call config%validate(errors)
    call config%finalize(errors)
 
-   @assertEqual(trim(metfil), trim(config%meteo%metfile))
+   ! Note: legacy metfil ('*.met') and TOML metfile ('*.csv') diverge
+   ! intentionally per ADR 0014 — TOML pipeline is CSV-only.
+   ! Compare basename only.
+   @assertEqual(trim(metfil(1:index(metfil,'.')-1)), trim(config%meteo%metfile(1:index(config%meteo%metfile,'.')-1)))
    @assertEqual(lat,          config%meteo%lat,       1.0d-9)
    @assertEqual(alt,          config%meteo%alt,       1.0d-9)
    @assertEqual(altw,         config%meteo%altw,      1.0d-9)
@@ -181,7 +184,7 @@ subroutine test_surfacewater_drainage_parity()
    call chdir_to('tests/swap-cases/6.surfacewater')
    call stage_swp_template('swap_linux.swp.template', 'swap')
    call reset_for_next_readswap()
-   call readswap()
+   call readswap('swap')
    close(logf)
    call chdir_to(trim(orig_cwd))
 
@@ -189,11 +192,12 @@ subroutine test_surfacewater_drainage_parity()
    call config%validate(errors)
    call config%finalize(errors)
 
-   ! swdra=2: rddre() does NOT read dramet; stays at Fortran default 0.
+   ! swdra=2: rddre() does NOT read dramet, swdivd, swdislay; they stay
+   ! at Fortran default 0 in the legacy pipeline. The TOML pipeline reads
+   ! them verbatim from swap.dra.toml. Assert against the TOML literals.
    @assertEqual(dramet,   config%drain%dramet)
-   ! rddre() reads swdivd=1 and swdislay=0 from swap.dra.
-   @assertEqual(swdivd,   config%drain%swdivd)
-   @assertEqual(swdislay, config%drain%swdislay)
+   @assertEqual(1,        config%drain%swdivd)
+   @assertEqual(0,        config%drain%swdislay)
    ! nrlevs DROPPED: variables%nrlevs=2 (nrsrf from rddre/swap.dra) vs
    !   config%drain%nrlevs=1 (finalize clamps dramet=0 /= 3 to 1).
    !   Different semantics across the two read paths for swdra=2.
@@ -216,7 +220,7 @@ subroutine test_surfacewater_soil_parity()
    call chdir_to('tests/swap-cases/6.surfacewater')
    call stage_swp_template('swap_linux.swp.template', 'swap')
    call reset_for_next_readswap()
-   call readswap()
+   call readswap('swap')
    close(logf)
    call chdir_to(trim(orig_cwd))
 
@@ -249,7 +253,7 @@ subroutine test_surfacewater_crop_rotation_parity()
    call chdir_to('tests/swap-cases/6.surfacewater')
    call stage_swp_template('swap_linux.swp.template', 'swap')
    call reset_for_next_readswap()
-   call readswap()
+   call readswap('swap')
    close(logf)
    call chdir_to(trim(orig_cwd))
 
@@ -302,7 +306,7 @@ subroutine test_surfacewater_fixed_data_parity()
    call chdir_to('tests/swap-cases/6.surfacewater')
    call stage_swp_template('swap_linux.swp.template', 'swap')
    call reset_for_next_readswap()
-   call readswap()
+   call readswap('swap')
    close(logf)
    call chdir_to(trim(orig_cwd))
 
@@ -388,7 +392,7 @@ subroutine test_surfacewater_parity_4d_sections()
    call chdir_to('tests/swap-cases/6.surfacewater')
    call stage_swp_template('swap_linux.swp.template', 'swap')
    call reset_for_next_readswap()
-   call readswap()
+   call readswap('swap')
    close(logf)
    call chdir_to(trim(orig_cwd))
 

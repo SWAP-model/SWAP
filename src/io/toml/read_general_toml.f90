@@ -28,10 +28,8 @@ contains
       call get_optional_int_with_default(sec, 'swscre',  config%swscre,  0, 'general.swscre',  errors)
       call get_optional_int_with_default(sec, 'swerror', config%swerror, 0, 'general.swerror', errors)
 
-      ! Optional CSV inlist (legacy INLIST_CSV). Absent -> adapter uses
-      ! its hard-coded water-balance default (Phase 4f-extend HACK).
-      call get_optional_string_with_default(sec, 'inlist_csv', config%inlist_csv, '', &
-                                            'general.inlist_csv', errors)
+      call get_optional_string_with_default(sec, 'outfil', config%outfil, 'result', &
+                                            'general.outfil', errors)
 
       call get_table(sec, 'paths', paths, 'general.paths', errors)
       if (associated(paths)) then

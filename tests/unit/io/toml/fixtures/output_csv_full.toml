@@ -1,0 +1,5 @@
+[output.csv]
+enabled    = 1
+enabled_tz = 0
+inlist     = "gwl,pond"
+inlist_tz  = "wc,h,conc"

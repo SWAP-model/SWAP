@@ -49,7 +49,8 @@ contains
    !! validated, and finalized `config` first.
    subroutine config_to_variables(config)
       use variables   ! bare-use is intentional: many globals across sections
-      type(swap_config_t), intent(in) :: config
+      use error_mod, only: fatalerr_collected
+      type(swap_config_t), intent(in), target :: config
 
       integer :: i, n
 
@@ -121,7 +122,10 @@ contains
       ! Meteorology (audit: 12 + evaporation + snow)
       ! ---------------------------------------------------------------
       if (allocated(config%meteo%metfile))  metfil  = config%meteo%metfile
-      if (allocated(config%meteo%rainfile)) rainfil = config%meteo%rainfile
+      ! Legacy `rainfil` global removed (Phase 4f-extend SS-5 / ADR 0014).
+      ! `config%meteo%rainfile` is no longer copied into a global because
+      ! the only consumer (the `.YYY` per-year rain reader in readmeteo.f90)
+      ! has been deleted; CSV rain events use `config%meteo%rain_events_file`.
       lat         = config%meteo%lat
       alt         = config%meteo%alt
       altw        = config%meteo%altw
@@ -135,38 +139,100 @@ contains
       angstroma   = config%meteo%angstroma
       angstromb   = config%meteo%angstromb
 
-      ! Derive swMetFilAll from metfil, matching legacy readswap.f90:415-429.
-      ! If metfil contains ".met", legacy reads the whole multi-year file at
-      ! once (swMetFilAll=1); otherwise it expects per-year files <metfil>.YYY.
-      ! `lowerc` is from ttutil; mirror its case-folding here.
+      ! All metfile extensions other than .csv are rejected by
+      ! meteorology_config_validate (Phase 4f-extend SS-5; ADR 0014).
+      ! Pre-load CSV via read_csv_table.
       call lowerc(metfil)
-      swMetFilAll = 0
-      if (index(trim(metfil), ".met") > 0) then
-         swMetFilAll = 1
-         if (swmetdetail == 1 .or. swrain == 1 .or. swrain == 3) then
+
+      if (index(trim(metfil), '.csv') > 0) then
+         block
+            use csv_reader_mod,  only: read_csv_table
+            use error_mod,       only: error_collection_t
+            real(8), allocatable :: tbl(:,:)
+            type(error_collection_t) :: errs
+            character(len=9) :: hdr(9)
+            character(len=300) :: csvpath
+            integer :: r
+            hdr(1) = 'date     '
+            hdr(2) = 'rad      '
+            hdr(3) = 'tmin     '
+            hdr(4) = 'tmax     '
+            hdr(5) = 'hum      '
+            hdr(6) = 'wind     '
+            hdr(7) = 'rain     '
+            hdr(8) = 'etref    '
+            hdr(9) = 'wet      '
+            csvpath = trim(pathatm) // trim(metfil)
+            call read_csv_table(trim(csvpath), hdr, tbl, errs)
+            call errs%abort_if_fatal()
+            nmetcsv = size(tbl, 1)
+            allocate(metcsv_dat(nmetcsv, 9))
+            do r = 1, nmetcsv
+               metcsv_dat(r, :) = tbl(r, :)
+            end do
+         end block
+      end if
+
+      ! Detail meteo CSV pre-load (swmetdetail=1 + detail_file provided).
+      ! Metfile is always CSV here (rejected at TOML boundary otherwise —
+      ! Phase 4f-extend SS-5 / ADR 0014).
+      if (swmetdetail == 1) then
+         if (.not. allocated(config%meteo%detail_file) .or. &
+             len_trim(config%meteo%detail_file) == 0) then
+            call fatalerr_collected('config_to_variables', &
+               'meteorology.temporal.detail_file required when ' // &
+               'swmetdetail=1 and metfile is a CSV')
+         else
             block
-               integer :: idum
-               idum = index(metfil, ".met")
-               metfil = trim(metfil(1:idum-1))
-               swMetFilAll = 0
+               use csv_reader_mod,  only: read_csv_table
+               use error_mod,       only: error_collection_t
+               real(8), allocatable :: tbl(:,:)
+               type(error_collection_t) :: errs
+               character(len=8) :: hdr(7)
+               character(len=300) :: csvpath
+               integer :: r
+               hdr(1) = 'datetime'
+               hdr(2) = 'record  '
+               hdr(3) = 'rad     '
+               hdr(4) = 'temp    '
+               hdr(5) = 'hum     '
+               hdr(6) = 'wind    '
+               hdr(7) = 'rain    '
+               csvpath = trim(pathatm) // trim(config%meteo%detail_file)
+               call read_csv_table(trim(csvpath), hdr, tbl, errs)
+               call errs%abort_if_fatal()
+               nmetcsv_det = size(tbl, 1)
+               allocate(metcsv_det(nmetcsv_det, 7))
+               do r = 1, nmetcsv_det
+                  metcsv_det(r, :) = tbl(r, :)
+               end do
             end block
          end if
       end if
 
-      ! Pre-load all years of meteo data into the cached arrays (legacy
-      ! readswap.f90:1746-1749). MeteoInOneFile(2, ...) called per-year
-      ! during the dynamic loop extracts from this cache.
-      if (swMetFilAll == 1) then
-         block
-            integer :: idum_meteo
-            interface
-               subroutine MeteoInOneFile(iTask, ifnd)
-                  integer, intent(in)  :: iTask
-                  integer, intent(out) :: ifnd
-               end subroutine
-            end interface
-            call MeteoInOneFile(1, idum_meteo)
-         end block
+      ! Rain events CSV pre-load (swrain=3, events_file set).
+      if (swrain == 3 .and. allocated(config%meteo%rain_events_file)) then
+         if (len_trim(config%meteo%rain_events_file) > 0) then
+            block
+               use csv_reader_mod,  only: read_csv_table
+               use error_mod,       only: error_collection_t
+               real(8), allocatable :: tbl(:,:)
+               type(error_collection_t) :: errs
+               character(len=8) :: hdr(2)
+               character(len=300) :: csvpath
+               integer :: r
+               hdr(1) = 'datetime'
+               hdr(2) = 'amount  '
+               csvpath = trim(pathatm) // trim(config%meteo%rain_events_file)
+               call read_csv_table(trim(csvpath), hdr, tbl, errs)
+               call errs%abort_if_fatal()
+               nraincsv = size(tbl, 1)
+               allocate(raincsv_dat(nraincsv, 2))
+               do r = 1, nraincsv
+                  raincsv_dat(r, :) = tbl(r, :)
+               end do
+            end block
+         end if
       end if
 
       ! Evaporation sub-section
@@ -183,35 +249,10 @@ contains
          cofred = config%meteo%evaporation%cofredbl
       end if
 
-      ! HACK Phase 4f-extend: SWREDU is the soil-evaporation reduction-method
-      ! switch (1=Black, 2=Boesten-Stroosnijder). Legacy reads it from .swp
-      ! at readswap.f90:584 but no schema slot covers it yet. Default to 1
-      ! (Black model) matching cases 1/2/4. When the case authors a non-
-      ! default cofredbo (Boesten coefficient), flip to swredu=2 — case 5
-      ! (salinitystress) is the only regression case using SWREDU=2.
-      ! Phase 4f-extend should add `[soil.evaporation].swredu` so the
-      ! switch is authored explicitly rather than inferred.
-      if (config%meteo%evaporation%cofredbo /= 0.35d0) then
-         swredu = 2
-      else
-         swredu = 1
-      end if
+      swredu = config%meteo%evaporation%swredu
 
-      ! HACK Phase 4f-extend: RSIGNI is the minimum daily rainfall (cm) that
-      ! resets the Black-method dry counter (ldwet). Legacy reads it from .swp
-      ! at readswap.f90:586 only when swredu==1. Initialize.f90 leaves it 0.0,
-      ! so EVERY trace of rain resets ldwet -> Black empreva stays high every
-      ! day -> bare-soil EACT overshoots by ~7 cm/yr in case 1 (hupselbrook).
-      ! .swp template authors RSIGNI = 0.5. Hardcoding 0.5 matches case 1;
-      ! add to meteo_evaporation_config_t in a follow-up Phase 4f-extend pass.
-      rsigni = 0.5d0
-
-      ! HACK Phase 4f-extend: CFEVAPPOND is the ponding-layer evaporation
-      ! coefficient applied to peva when pond > 1e-10. Legacy default in
-      ! readswap.f90:599 is 1.25; initialize.f90 leaves it 0.0, which would
-      ! zero out evaporation during ponding. Hardcoded to 1.25 here; add a
-      ! schema slot in a follow-up Phase 4f-extend pass.
-      cfevappond = 1.25d0
+      rsigni     = config%meteo%evaporation%rsigni
+      cfevappond = config%meteo%evaporation%cfevappond
 
       ! Snow sub-section
       swsnow   = config%meteo%snow%swsnow
@@ -233,14 +274,8 @@ contains
       ! at the legacy global `shape`. Bottom boundary is wired below
       ! and overwrites for swbotb=3 cases (the documented audit alias).
 
-      ! HACK Phase 4f-extend: drfil is the legacy stem of the .dra file
-      ! consumed by rddre() in src/drainage/surfacewater.f90:56 when
-      ! SWDRA=2. The legacy reads `drfil` from .swp at readswap.f90:1003
-      ! but the strangler doesn't have a typed schema slot for it. All
-      ! existing TOML cases use 'swap' as the .dra stem (swap.dra).
-      ! Add a [drainage].drfil slot in Phase 4f-extend.
-      if (config%drain%swdra >= 1) then
-         drfil = 'swap'
+      if (config%drain%swdra >= 1 .and. allocated(config%drain%drfil)) then
+         drfil = config%drain%drfil
       end if
 
       ! DRAMET=2 (Hooghoudt/Ernst). Mirrors readswap.f90:1850-1875.
@@ -387,16 +422,7 @@ contains
          end block
       end if
 
-      ! HACK Phase 4f-extend: SWLIMINF gates limit-of-infiltration to the
-      ! channel water depth in the DRAMET=3 multi-level resistance solver
-      ! (drainage.f90 / divdra.f90). Legacy hard-codes 1 in
-      ! readswap.f90:2010 (after the DRAMET=3 .dra block) when the .dra
-      ! is silent on the key. variables.f90:694 default-initialises to 0,
-      ! so without this HACK case 2's solver would treat infiltration as
-      ! unlimited. Add a [drainage].swliminf slot in Phase 4f-extend.
-      if (config%drain%dramet == 3) then
-         swliminf = 1
-      end if
+      swliminf = config%drain%swliminf
 
       ! Drainage.surface_runoff sub-section: scalar switches + per-level
       ! arrays. Legacy globals `swtopdislay`, `ftopdislay`, `RapDraResRef`
@@ -514,47 +540,91 @@ contains
          end do
       end if
 
-      ! HACK Phase 4f-extend: SWINCO=3 .ini reader. Mirrors
-      ! readswap.f90:1593-1626 — when the case authors `[soil].inifil`
-      ! and `swinco=3`, read the previous-run end-state file via the
-      ! legacy ttutil rdinit/rdsdor/rdador/rdfdor stack to populate
-      ! ssnow/slw/pond/zi/h/zc/cml (and z_Tsoil/Tsoil under SWHEA=1
-      ! SWCALT=2). Salinitystress (case 5) needs this so the initial
-      ! solute profile (~15 mg/cm3 below ~150 cm, ~0 in root zone)
-      ! matches the fixture's quasi-steady starting state. Same HACK
-      ! pattern as the .bbc / .irg readers above. Phase 4f-extend
-      ! should port the .ini state into a typed schema slot.
-      if (config%soil%swinco == 3 .and. allocated(config%soil%inifil)) then
-         if (len_trim(config%soil%inifil) > 0) then
+      ! [soil.initial] CSV path for swinco=3 warm restart. The typed
+      ! soil.initial schema + per-profile CSV companions are the only
+      ! supported pathway (the legacy ASCII swap.ini reader has been
+      ! removed).
+      if (config%soil%swinco == 3) then
+         if (allocated(config%soil%initial%h_file) .and. &
+             len_trim(config%soil%initial%h_file) > 0) then
+            ssnow   = config%soil%initial%ssnow
+            slw     = config%soil%initial%slw
+            pond    = config%soil%initial%pond
+            pondini = pond
+            ldwet   = config%soil%initial%ldwet
+            dt      = config%soil%initial%dt
+            atmin7(:) = config%soil%initial%atmin7(:)
+            ! Legacy zeroes ssnow when swsnow != 1 (readswap.f90:1606-1613).
+            if (config%meteo%snow%swsnow /= 1) ssnow = 0.0d0
+
+            ! Note: [soil.initial].pondini (pre-existing top-level field) is
+            ! NOT consumed by this swinco=3 path — only [soil.initial].pond
+            ! is, since pond is the warm-restart "saved final state" while
+            ! pondini was the swinco<3 "initial-from-scalars" input. They
+            ! can both be authored without conflict; only pond wins here.
+
+            ! Mandatory: initial pressure-head profile (z, h).
             block
-               use swap_array_dimensions, only: macp
-               integer :: ini_unit, ifnd_ini
-               character(len=200) :: ini_filnam
-               integer, external :: getun2
-               ini_filnam = trim(config%soil%inifil)
-               ini_unit = getun2(10, 90, 2)
-               call rdinit(ini_unit, logf, ini_filnam)
-               call rdsdor('ssnow', 0.0d0, 1000.0d0, ssnow)
-               ! Legacy zeroes ssnow when swsnow != 1 (readswap.f90:1606-1613).
-               ! Salinitystress and other regression cases have swsnow=0.
-               if (config%meteo%snow%swsnow /= 1) ssnow = 0.0d0
-               call rdsdor('slw',   0.0d0, 1000.0d0, slw)
-               call rdsdor('pond',  0.0d0,  100.0d0, pond)
-               pondini = pond
-               call rdador('z_h',  -1.0d5,  0.0d0, zi, macp, ifnd_ini)
-               call rdfdor('h',    -1.0d10, 1.0d4, h,  macp, ifnd_ini)
-               nhead = ifnd_ini
-               if (config%heat%swhea == 1 .and. config%heat%swcalt == 2) then
-                  call rdador('z_Tsoil', -1.0d5,  0.0d0, zh,    macp, ifnd_ini)
-                  call rdfdor('Tsoil',  -50.0d0, 50.0d0, tsoil, macp, ifnd_ini)
-               end if
-               if (config%solute%swsolu == 1) then
-                  call rdador('z_Cml', -1.0d5,    0.0d0, zc,  macp, ifnd_ini)
-                  call rdfdor('Cml',    0.0d0, 1.0d6,    cml, macp, ifnd_ini)
-                  nconc = ifnd_ini
-               end if
-               close(ini_unit)
+               use csv_reader_mod,  only: read_csv_table
+               use error_mod,       only: error_collection_t
+               real(8), allocatable     :: tbl(:,:)
+               type(error_collection_t) :: errs
+               character(len=2)         :: hdr(2)
+               integer :: nrows, k
+               hdr(1) = 'z '
+               hdr(2) = 'h '
+               call read_csv_table(trim(config%soil%initial%h_file), hdr, tbl, errs)
+               call errs%abort_if_fatal()
+               nrows = size(tbl, 1)
+               nhead = nrows
+               do k = 1, nrows
+                  zi(k) = tbl(k, 1)
+                  h(k)  = tbl(k, 2)
+               end do
             end block
+
+            ! Optional: initial soil temperature profile.
+            if (config%heat%swhea == 1 .and. config%heat%swcalt == 2) then
+               block
+                  use csv_reader_mod,  only: read_csv_table
+                  use error_mod,       only: error_collection_t
+                  real(8), allocatable     :: tbl(:,:)
+                  type(error_collection_t) :: errs
+                  character(len=5)         :: hdr(2)
+                  integer :: nrows, k
+                  hdr(1) = 'z    '
+                  hdr(2) = 'tsoil'
+                  call read_csv_table(trim(config%soil%initial%tsoil_file), hdr, tbl, errs)
+                  call errs%abort_if_fatal()
+                  nrows = size(tbl, 1)
+                  do k = 1, nrows
+                     zh(k)    = tbl(k, 1)
+                     tsoil(k) = tbl(k, 2)
+                  end do
+               end block
+            end if
+
+            ! Optional: initial concentration profile (Cml).
+            if (config%solute%swsolu == 1) then
+               block
+                  use csv_reader_mod,  only: read_csv_table
+                  use error_mod,       only: error_collection_t
+                  real(8), allocatable     :: tbl(:,:)
+                  type(error_collection_t) :: errs
+                  character(len=3)         :: hdr(2)
+                  integer :: nrows, k
+                  hdr(1) = 'z  '
+                  hdr(2) = 'cml'
+                  call read_csv_table(trim(config%soil%initial%cml_file), hdr, tbl, errs)
+                  call errs%abort_if_fatal()
+                  nrows = size(tbl, 1)
+                  nconc = nrows
+                  do k = 1, nrows
+                     zc(k)  = tbl(k, 1)
+                     cml(k) = tbl(k, 2)
+                  end do
+               end block
+            end if
          end if
       end if
 
@@ -943,9 +1013,13 @@ contains
       ! ---------------------------------------------------------------
       swsrf = config%surface_water%swsrf
       swsec = config%surface_water%swsec
-      ! wlact + osswlm are loaded by readswap into local scratch; only
-      ! osswlm is a module global.
-      osswlm = config%surface_water%osswlm
+      ! TOML pipeline: pre-compute the initial water level wls1.
+      ! Legacy rddre computes wls1 = wlact - altcu inside the routine;
+      ! we do the same here so surfacewater_init can read it from a
+      ! module global. drainage.altcu /= 0 is rejected upstream (Task 7),
+      ! so this simplifies to wlact.
+      wls1_init = config%surface_water%wlact - config%drain%altcu
+      osswlm    = config%surface_water%osswlm
       nmper  = config%surface_water%nmper
       swqhr  = config%surface_water%swqhr
 
@@ -1011,14 +1085,7 @@ contains
          flCropOpenFile = .true.
       end if
 
-      ! HACK Phase 4f-extend: RDS (rdmax) is the soil-profile-imposed maximum
-      ! rooting depth, read by legacy readswap.f90:470 from .swp's crop
-      ! rotation block. Without it, cropfixed.f90:414 sets rdm=0 and then
-      ! `rd = min(afgen(rdtb,...), rdm) = 0`, so noddrz stays at 1 and
-      ! RootExtraction returns zero — TACT collapses across every rotation.
-      ! Hardcoding 200.0 cm matches case 1's .swp value; add a typed
-      ! crop_config_t.rdmax slot when Phase 4f-extend tackles crop schema.
-      rdmax = 200.0d0
+      rdmax = config%crop%rdmax
 
       if (allocated(config%crop%rotation_type)) then
          n = size(config%crop%rotation_type)
@@ -1053,6 +1120,15 @@ contains
          end do
       end if
 
+      ! Phase 1 (.crp port): expose the parsed crop config to runtime
+      ! subs that need per-rotation cache access. Transitional — see
+      ! ADR 0016. The pointer targets the caller's local config; valid
+      ! for the duration of the simulation init.
+      block
+         use crop_config_global_mod, only: crop_config_global
+         crop_config_global => config%crop
+      end block
+
       ! ---------------------------------------------------------------
       ! Per ADR 0009: zero-force the 18 RETIRED legacy output switches
       ! so any residual code that checks them does the right thing.
@@ -1076,35 +1152,19 @@ contains
       swswb           = 0
       swoutputmodflow = 0
 
-      ! HACK Phase 4f-extend: outfil is the output-file basename
-      ! (legacy reads it from .swp Part 1: OUTFIL = 'result'). All
-      ! regression cases use the same value, so we hardcode it. Add a
-      ! [general.output] / general.outfil slot in Phase 4f-extend.
-      outfil = 'result'
+      if (allocated(config%general%outfil)) outfil = config%general%outfil
 
-      ! HACK Phase 4f-extend: enable CSV output. swcsv=1 + InList_csv
-      ! authored verbatim from hupselbrook's .swp. The csv driver is
-      ! the *only* output the regression baseline checks (it asserts
-      ! against `<outfil>_output.csv`), so without these we 'complete
-      ! normally' but produce no output file. Move to a typed
-      ! [output.csv] block when Phase 4f-extend tackles output configs.
-      swcsv = 1
-      ! Per-case override (Phase 4f Task B3): when the TOML authors
-      ! `general.inlist_csv` use it; otherwise fall back to the
-      ! hupselbrook-tuned water-balance default. Grass cases (case 2 +
-      ! oxygenstress) override with grass-detailed columns to match
-      ! their fixtures.
-      if (allocated(config%general%inlist_csv)) then
-         if (len_trim(config%general%inlist_csv) > 0) then
-            InList_csv = config%general%inlist_csv
-         else
-            InList_csv = 'rain,irrig,interc,runoff,drainage,dstor,epot,eact,tpot,tact,qbottom,gwl'
-         end if
-      else
-         InList_csv = 'rain,irrig,interc,runoff,drainage,dstor,epot,eact,tpot,tact,qbottom,gwl'
+      ! CSV output — read from [output.csv] schema section.
+      ! Defaults (enabled=1, enabled_tz=0, inlist=water-balance, inlist_tz=wc,h,conc)
+      ! are applied by output_csv_config_finalize prior to this adapter.
+      swcsv = config%output_csv%enabled
+      if (allocated(config%output_csv%inlist)) then
+         InList_csv = config%output_csv%inlist
       end if
-      swcsv_tz = 0
-      InList_csv_tz = 'wc,h,conc'
+      swcsv_tz = config%output_csv%enabled_tz
+      if (allocated(config%output_csv%inlist_tz)) then
+         InList_csv_tz = config%output_csv%inlist_tz
+      end if
 
       ! HACK Phase 4f-extend: set up legacy I/O state needed by unported
       ! readers (read_tillage, cropgrowth crop sub-readers, rddre). They

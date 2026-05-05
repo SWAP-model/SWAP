@@ -580,3 +580,296 @@ subroutine test_cropwofost_top_level_rolls_up_errors()
    @assertTrue(errors%has_errors())
    @assertGreaterThanOrEqual(errors%count(), 2)
 end subroutine
+
+! Phase 2 cropwofost port — stub-error validators for unsupported branches.
+! ADR 0015: schema accepts values 1:1; runtime plumbing not yet ported.
+
+@test
+subroutine test_cropwofost_swsoybean_one_rejected()
+   use funit
+   use cropwofost_config_mod, only: cropwofost_config_t
+   use error_mod, only: error_collection_t, ERR_VALIDATION_CROSS_FIELD
+   type(cropwofost_config_t) :: c
+   type(error_collection_t) :: errors
+   integer :: i
+   logical :: found
+   c%soybean%swsoybean = 1
+   call c%validate(errors)
+   found = .false.
+   do i = 1, errors%count()
+      if (errors%items(i)%code == ERR_VALIDATION_CROSS_FIELD .and. &
+          index(errors%items(i)%message, 'swsoybean=1') > 0) found = .true.
+   end do
+   @assertTrue(found)
+end subroutine
+
+@test
+subroutine test_cropwofost_swbulb_one_rejected()
+   use funit
+   use cropwofost_config_mod, only: cropwofost_config_t
+   use error_mod, only: error_collection_t, ERR_VALIDATION_CROSS_FIELD
+   type(cropwofost_config_t) :: c
+   type(error_collection_t) :: errors
+   integer :: i
+   logical :: found
+   c%bulb%swbulb = 1
+   call c%validate(errors)
+   found = .false.
+   do i = 1, errors%count()
+      if (errors%items(i)%code == ERR_VALIDATION_CROSS_FIELD .and. &
+          index(errors%items(i)%message, 'swbulb=1') > 0) found = .true.
+   end do
+   @assertTrue(found)
+end subroutine
+
+@test
+subroutine test_cropwofost_flcropnut_true_rejected()
+   use funit
+   use cropwofost_config_mod, only: cropwofost_config_t
+   use error_mod, only: error_collection_t, ERR_VALIDATION_CROSS_FIELD
+   type(cropwofost_config_t) :: c
+   type(error_collection_t) :: errors
+   integer :: i
+   logical :: found
+   c%nutrient%flcropnut = .true.
+   call c%validate(errors)
+   found = .false.
+   do i = 1, errors%count()
+      if (errors%items(i)%code == ERR_VALIDATION_CROSS_FIELD .and. &
+          index(errors%items(i)%message, 'flcropnut') > 0) found = .true.
+   end do
+   @assertTrue(found)
+end subroutine
+
+@test
+subroutine test_cropwofost_swco2_one_rejected()
+   use funit
+   use cropwofost_config_mod, only: cropwofost_config_t
+   use error_mod, only: error_collection_t, ERR_VALIDATION_CROSS_FIELD
+   type(cropwofost_config_t) :: c
+   type(error_collection_t) :: errors
+   integer :: i
+   logical :: found
+   c%co2%swco2 = 1
+   call c%validate(errors)
+   found = .false.
+   do i = 1, errors%count()
+      if (errors%items(i)%code == ERR_VALIDATION_CROSS_FIELD .and. &
+          index(errors%items(i)%message, 'swco2=1') > 0) found = .true.
+   end do
+   @assertTrue(found)
+end subroutine
+
+@test
+subroutine test_cropwofost_schedule_one_rejected()
+   use funit
+   use cropwofost_config_mod, only: cropwofost_config_t
+   use error_mod, only: error_collection_t, ERR_VALIDATION_CROSS_FIELD
+   type(cropwofost_config_t) :: c
+   type(error_collection_t) :: errors
+   integer :: i
+   logical :: found
+   c%schedule%schedule = 1
+   call c%validate(errors)
+   found = .false.
+   do i = 1, errors%count()
+      if (errors%items(i)%code == ERR_VALIDATION_CROSS_FIELD .and. &
+          index(errors%items(i)%message, 'schedule=1') > 0) found = .true.
+   end do
+   @assertTrue(found)
+end subroutine
+
+@test
+subroutine test_cropwofost_swdrought_two_rejected()
+   use funit
+   use cropwofost_config_mod, only: cropwofost_config_t
+   use error_mod, only: error_collection_t, ERR_VALIDATION_CROSS_FIELD
+   type(cropwofost_config_t) :: c
+   type(error_collection_t) :: errors
+   integer :: i
+   logical :: found
+   c%drought_stress%swdrought = 2
+   call c%validate(errors)
+   found = .false.
+   do i = 1, errors%count()
+      if (errors%items(i)%code == ERR_VALIDATION_CROSS_FIELD .and. &
+          index(errors%items(i)%message, 'swdrought=2') > 0) found = .true.
+   end do
+   @assertTrue(found)
+end subroutine
+
+@test
+subroutine test_cropwofost_swoxygen_two_rejected()
+   use funit
+   use cropwofost_config_mod, only: cropwofost_config_t
+   use error_mod, only: error_collection_t, ERR_VALIDATION_CROSS_FIELD
+   type(cropwofost_config_t) :: c
+   type(error_collection_t) :: errors
+   integer :: i
+   logical :: found
+   c%oxygen_stress%swoxygen = 2
+   call c%validate(errors)
+   found = .false.
+   do i = 1, errors%count()
+      if (errors%items(i)%code == ERR_VALIDATION_CROSS_FIELD .and. &
+          index(errors%items(i)%message, 'swoxygen=2') > 0) found = .true.
+   end do
+   @assertTrue(found)
+end subroutine
+
+@test
+subroutine test_cropwofost_swinter_two_rejected()
+   use funit
+   use cropwofost_config_mod, only: cropwofost_config_t
+   use error_mod, only: error_collection_t, ERR_VALIDATION_CROSS_FIELD
+   type(cropwofost_config_t) :: c
+   type(error_collection_t) :: errors
+   integer :: i
+   logical :: found
+   c%interception%swinter = 2
+   call c%validate(errors)
+   found = .false.
+   do i = 1, errors%count()
+      if (errors%items(i)%code == ERR_VALIDATION_CROSS_FIELD .and. &
+          index(errors%items(i)%message, 'swinter=2') > 0) found = .true.
+   end do
+   @assertTrue(found)
+end subroutine
+
+@test
+subroutine test_cropwofost_swcompensate_one_rejected()
+   use funit
+   use cropwofost_config_mod, only: cropwofost_config_t
+   use error_mod, only: error_collection_t, ERR_VALIDATION_CROSS_FIELD
+   type(cropwofost_config_t) :: c
+   type(error_collection_t) :: errors
+   integer :: i
+   logical :: found
+   c%compensate%swcompensate = 1
+   call c%validate(errors)
+   found = .false.
+   do i = 1, errors%count()
+      if (errors%items(i)%code == ERR_VALIDATION_CROSS_FIELD .and. &
+          index(errors%items(i)%message, 'swcompensate') > 0) found = .true.
+   end do
+   @assertTrue(found)
+end subroutine
+
+@test
+subroutine test_cropwofost_swharv_one_rejected()
+   use funit
+   use cropwofost_config_mod, only: cropwofost_config_t
+   use error_mod, only: error_collection_t, ERR_VALIDATION_CROSS_FIELD
+   type(cropwofost_config_t) :: c
+   type(error_collection_t) :: errors
+   integer :: i
+   logical :: found
+   c%harvest%swharv = 1
+   call c%validate(errors)
+   found = .false.
+   do i = 1, errors%count()
+      if (errors%items(i)%code == ERR_VALIDATION_CROSS_FIELD .and. &
+          index(errors%items(i)%message, 'swharv=1') > 0) found = .true.
+   end do
+   @assertTrue(found)
+end subroutine
+
+@test
+subroutine test_cropwofost_swsalinity_two_rejected()
+   use funit
+   use cropwofost_config_mod, only: cropwofost_config_t
+   use error_mod, only: error_collection_t, ERR_VALIDATION_CROSS_FIELD
+   type(cropwofost_config_t) :: c
+   type(error_collection_t) :: errors
+   integer :: i
+   logical :: found
+   ! swsalinity=2 (osmotic head) requires swdrought=2 which is itself stub-errored.
+   c%salinity%swsalinity = 2
+   call c%validate(errors)
+   found = .false.
+   do i = 1, errors%count()
+      if (errors%items(i)%code == ERR_VALIDATION_CROSS_FIELD .and. &
+          index(errors%items(i)%message, 'swsalinity=2') > 0) found = .true.
+   end do
+   @assertTrue(found)
+end subroutine
+
+@test
+subroutine test_cropwofost_swrdc_one_rejected()
+   use funit
+   use cropwofost_config_mod, only: cropwofost_config_t
+   use error_mod, only: error_collection_t, ERR_VALIDATION_CROSS_FIELD
+   type(cropwofost_config_t) :: c
+   type(error_collection_t) :: errors
+   integer :: i
+   logical :: found
+   c%root%swrdc = 1
+   call c%validate(errors)
+   found = .false.
+   do i = 1, errors%count()
+      if (errors%items(i)%code == ERR_VALIDATION_CROSS_FIELD .and. &
+          index(errors%items(i)%message, 'swrdc=1') > 0) found = .true.
+   end do
+   @assertTrue(found)
+end subroutine
+
+@test
+subroutine test_cropwofost_case5_supported_values_no_stub_errors()
+   use funit
+   use iso_fortran_env, only: real64
+   use cropwofost_config_mod, only: cropwofost_config_t
+   use error_mod, only: error_collection_t, ERR_VALIDATION_CROSS_FIELD
+   type(cropwofost_config_t) :: c
+   type(error_collection_t) :: errors
+   integer :: i
+   logical :: any_stub
+
+   ! Set switches to case-5 active values — none should trigger stub-errors.
+   c%soybean%swsoybean        = 0
+   c%bulb%swbulb              = 0
+   c%nutrient%flcropnut       = .false.
+   c%harvest%swharv           = 0
+   c%harvest%dvsend           = 3.0_real64
+   c%crop_factor%swcf         = 2
+   c%crop_factor%albedo       = 0.19_real64
+   c%crop_factor%rsc          = 207.0_real64
+   c%crop_factor%rsw          = 0.0_real64
+   c%phenology%idsl           = 0
+   c%phenology%tsumea         = 150.0_real64
+   c%phenology%tsumam         = 1550.0_real64
+   c%oxygen_stress%swoxygen   = 1
+   c%oxygen_stress%swwrtnonox = 1
+   c%oxygen_stress%aeratecrit = 0.5_real64
+   c%oxygen_stress%hlim1      = -10.0_real64
+   c%oxygen_stress%hlim2u     = -25.0_real64
+   c%oxygen_stress%hlim2l     = -25.0_real64
+   c%drought_stress%swdrought = 1
+   c%drought_stress%hlim3h    = -300.0_real64
+   c%drought_stress%hlim3l    = -500.0_real64
+   c%drought_stress%hlim4     = -10000.0_real64
+   c%drought_stress%adcrh     = 0.5_real64
+   c%drought_stress%adcrl     = 0.1_real64
+   c%salinity%swsalinity      = 1
+   c%salinity%saltmax         = 0.732_real64
+   c%salinity%saltslope       = 0.0868_real64
+   c%compensate%swcompensate  = 0
+   c%interception%swinter     = 1
+   c%interception%cofab       = 0.25_real64
+   c%co2%swco2                = 0
+   c%schedule%schedule        = 0
+   c%root%swrd                = 2
+   c%root%swrdc               = 0
+   c%root%rdi                 = 10.0_real64
+   c%root%rri                 = 1.2_real64
+   c%root%rdc                 = 50.0_real64
+   c%root%swdmi2rd            = 1
+   c%management%swpotrelmf    = 2
+   c%management%relmf         = 0.8_real64
+
+   call c%validate(errors)
+   any_stub = .false.
+   do i = 1, errors%count()
+      if (errors%items(i)%code == ERR_VALIDATION_CROSS_FIELD) any_stub = .true.
+   end do
+   @assertFalse(any_stub)
+end subroutine

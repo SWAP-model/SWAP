@@ -39,8 +39,81 @@ subroutine test_swap_validate_valid_config_passes()
    c%simulation%tend    = 38352.0d0
    c%meteo%lat          = 52.0d0
    c%meteo%alt          = 10.0d0
+   c%meteo%metfile      = "weather.csv"   ! SS-5: metfile required, must be CSV
 
    call c%validate(errors)
 
    @assertFalse(errors%has_fatals())
+end subroutine
+
+@test
+subroutine test_swap_config_hbweir_below_channel_bottom_fails()
+   use funit
+   use swap_config_mod, only: swap_config_t
+   use error_mod, only: error_collection_t, ERR_VALIDATION_CROSS_SECTION
+   type(swap_config_t)      :: c
+   type(error_collection_t) :: errors
+   integer :: i
+   logical :: found
+   c%drain%swdra    = 2
+   c%drain%nrlevs   = 1
+   allocate(c%drain%zbotdr(1)); c%drain%zbotdr(1) = -60.0d0
+   c%surface_water%swsrf = 2
+   c%surface_water%swsec = 2
+   c%surface_water%swqhr = 1
+   c%surface_water%nmper = 1
+   c%surface_water%sofcu = 100.0d0
+   c%surface_water%osswlm = 1.0d0
+   c%surface_water%wlact  = -50.0d0
+   allocate(c%surface_water%impend(1)); c%surface_water%impend(1) = 36526.0d0
+   allocate(c%surface_water%swman(1));  c%surface_water%swman(1)  = 1
+   allocate(c%surface_water%wscap(1));  c%surface_water%wscap(1)  = 0.0d0
+   allocate(c%surface_water%wldip(1));  c%surface_water%wldip(1)  = 0.0d0
+   allocate(c%surface_water%intwl(1));  c%surface_water%intwl(1)  = 1
+   allocate(c%surface_water%hbweir(1)); c%surface_water%hbweir(1) = -100.0d0   ! BELOW zbotdr(1)
+   allocate(c%surface_water%alphaw(1)); c%surface_water%alphaw(1) =   1.7d0
+   allocate(c%surface_water%betaw(1));  c%surface_water%betaw(1)  =   1.5d0
+   call c%validate(errors)
+   found = .false.
+   do i = 1, errors%count()
+      if (errors%items(i)%code == ERR_VALIDATION_CROSS_SECTION .and. &
+          index(errors%items(i)%message, 'hbweir') > 0) found = .true.
+   end do
+   @assertTrue(found)
+end subroutine
+
+@test
+subroutine test_swap_config_target_below_channel_with_supply_fails()
+   use funit
+   use swap_config_mod, only: swap_config_t
+   use error_mod, only: error_collection_t, ERR_VALIDATION_CROSS_SECTION
+   type(swap_config_t)      :: c
+   type(error_collection_t) :: errors
+   integer :: i
+   logical :: found
+   c%drain%swdra  = 2
+   c%drain%nrlevs = 1
+   allocate(c%drain%zbotdr(1)); c%drain%zbotdr(1) = -60.0d0
+   c%surface_water%swsrf = 2
+   c%surface_water%swsec = 2
+   c%surface_water%swqhr = 1
+   c%surface_water%nmper = 1
+   c%surface_water%sofcu = 100.0d0
+   c%surface_water%osswlm = 1.0d0
+   c%surface_water%wlact  = -50.0d0
+   allocate(c%surface_water%impend(1)); c%surface_water%impend(1) = 36526.0d0
+   allocate(c%surface_water%swman(1));  c%surface_water%swman(1)  = 1
+   allocate(c%surface_water%wscap(1));  c%surface_water%wscap(1)  = 0.5d0   ! supply attempted
+   allocate(c%surface_water%wldip(1));  c%surface_water%wldip(1)  = 5.0d0
+   allocate(c%surface_water%intwl(1));  c%surface_water%intwl(1)  = 1
+   allocate(c%surface_water%hbweir(1)); c%surface_water%hbweir(1) = -58.0d0  ! crest-wldip = -63, below zbotdr(1)=-60
+   allocate(c%surface_water%alphaw(1)); c%surface_water%alphaw(1) = 1.7d0
+   allocate(c%surface_water%betaw(1));  c%surface_water%betaw(1)  = 1.5d0
+   call c%validate(errors)
+   found = .false.
+   do i = 1, errors%count()
+      if (errors%items(i)%code == ERR_VALIDATION_CROSS_SECTION .and. &
+          index(errors%items(i)%message, 'target level') > 0) found = .true.
+   end do
+   @assertTrue(found)
 end subroutine
