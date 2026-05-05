@@ -209,13 +209,11 @@ if get_option('enable_pfunit')
             install: false
         )
 
-        # Invoke the binary via run_pfunit.sh, which runs each suite in a
-        # separate process to work around legacy-reader state leakage
-        # between parity suites. See run_pfunit.sh header for context.
+        # Run the binary directly. The per-suite-isolation wrapper
+        # (run_pfunit.sh) was retired with the legacy readers — there is
+        # no shared global state to leak between suites anymore.
         test('unit-swap-tests',
-            find_program('run_pfunit.sh'),
-            args: [unit_tests.full_path()],
-            depends: [unit_tests],
+            unit_tests,
             suite: 'unit-pfunit',
             workdir: meson.project_source_root(),
             timeout: 120
