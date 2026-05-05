@@ -106,20 +106,49 @@ contract between `*_state_init` and `*_state_finalize` — see
 
 ## I/O layer
 
-Configuration input is transitioning from the legacy fixed-format key=value
-`.swp` / `.dra` dialect to TOML, parsed through the vendored toml-f
-library. The canonical modern path is `src/io/readswaptoml.f90`
-(`ReadSwapToml_state`) for the main project file, with drainage-specific
-sections delegated to `src/io/readdrainagetoml.f90`. The legacy reader
-`src/io/readswap.f90` remains compiled and is selected whenever the input
-path does not end in `.toml`; this lets existing regression cases run
-unchanged while new cases adopt the TOML schema. Selection happens inside
-`swap(iTask=1)` based on the command-line argument extension.
+**As of Phase 4f-extend (2026-05-05):** TOML is the only runtime input
+path. Configuration enters via `src/io/toml/load_swap_config.f90`
+(`load_swap_config`), which parses `swap.toml` plus its companion files
+(`swap.dra.toml`, `*.crp.toml`, CSV companions) through the vendored
+toml-f library, populates a typed `swap_config_t` (`src/config/`), and
+hands off to `src/io/toml/config_to_variables.f90`
+(`config_to_variables`) which copies the validated config into the
+legacy `variables` module globals that the physics solvers read.
 
-Meteo data is still fixed-format (daily `.yyy` files) and is read by
-`src/io/readmeteo.f90` via `ReadMeteoDay_state`. Crop configuration at
-the rescue baseline remains in the legacy `.crp` format; a TOML crop
-reader is a Phase 4 deliverable.
+Per-rotation crop configuration loads through three init modules —
+`src/crop/cropfixed_init.f90`, `src/crop/cropwofost_init.f90`,
+`src/crop/cropgrass_init.f90` — that read from the cached
+`crop_config_global` (populated by `read_crop_toml.f90`) at the moment
+each rotation activates.
+
+Meteo data is CSV: a multi-year `.csv` file declared via
+`[meteorology.temporal].file`, optionally accompanied by a sub-daily
+`detail_file` and a rain-events `events_file`. The reader is
+`src/io/readmeteo.f90` (`ReadMeteoYear`, `ReadRainEvents`,
+`MeteoCSVYear`, `MeteoCSVDetYear`); all TTutil-based per-year `.YYY`
+and all-years `.met` reader paths were retired in SS-5 (ADR 0014).
+
+The legacy fixed-format reader `src/io/readswap.f90` and its per-crop
+helpers (`readcropfixed`, `readwofost`, `readgrass`, `rddre`,
+`readarablelandgerm`, `irrigation(1)`, `SoilManagement(1)`,
+`cropgrowth.f90` nutrient block) **remain compiled** but are
+**unreachable from the production call graph**. They are retained as
+parity-test fixtures: `tests/unit/io/toml/test_*_parity.pf` invoke
+`readswap('swap')` directly to verify legacy-vs-TOML output equivalence
+on the six regression cases. See ADR 0019 for the closeout decision.
+
+Two TTutil utility calls survive in the production runtime — they are
+not data readers:
+- `swap_main.f90` — `rdsets` / `rdfrom` for the optional `reruns.dat`
+  parameter sweep mechanism (auto-skipped if file missing).
+- `swapoutput.f90` — `rddtmp` for TTutil scratch-file cleanup at exit.
+
+Two stub-readers also survive — `Read_Tillage` (`tillage.f90:433`) and
+`SSDI_irrigation(1)` (`irrigation.f90:580`) both call
+`RDinit(unit, 0, swpfile)` to look up `swtill` / `swssdi`. Both default
+to 0 in every regression case; the swpfile-pointing hack at
+`config_to_variables.f90:1171-1186` keeps the file open succeeding.
+Tracked as the SS-10.5 follow-up.
 
 Output is CSV-first. `src/io/swap_csv_output.f90` provides the shared CSV
 writer primitives used by the domain-specific output modules:

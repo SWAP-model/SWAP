@@ -2,7 +2,7 @@
 title: "Legacy reader retirement — Phase 4f-extend complete (umbrella)"
 author: Mateusz Zawadzki
 date: 2026-05-04
-status: draft
+status: complete
 ---
 
 # Legacy reader retirement — Phase 4f-extend complete
@@ -171,7 +171,7 @@ work expected.
 | SS-8 | `src/crop/cropgrowth.f90` nutrient block port | DONE | `phase-4f-cropgrowth-nutrients-audit.md` (same `flCropNut` gate as SS-7) | — |
 | SS-9 | `readswap.f90` full audit + unauthored-key closure | DONE | `phase-4f-ss9-residual-audit.md` (zero STILL-G; SS-11 unblocked) | — |
 | SS-10 | Adapter HACK residual cleanup | DONE | `phase-4f-config-to-variables-hacks-audit.md` 2026-05-05 update (0 actionable; 2 deferred, 1 reclassified, 1 logged as SS-10.5) | — |
-| SS-11 | Closeout — runtime-call deletion + retirement tag | OPEN | new spec | SS-4..10 all closed |
+| SS-11 | Closeout — runtime-call deletion + retirement tag | DONE | `phase-4f-ss11-closeout.md` + `adr/0019-legacy-readers-retired.md` + tag `rescue/phase-4f-extend-complete` | — |
 
 ### Dependency graph
 
