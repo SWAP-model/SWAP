@@ -41,9 +41,11 @@ defined in `src/core/swap.f90` with `iTask` equal to 1, 2, and 3 in turn.
 The `swap_state_t` container (see below) is passed in and out on every
 call, so the entry point is re-entrant with respect to its state.
 
-Task 1 is initialization. It reads the input configuration — TOML via
-`ReadSwapToml_state` when the command-line argument ends in `.toml`, or
-the legacy fixed-format reader `ReadSwap` otherwise — initializes the
+Task 1 is initialization. It reads the input configuration via the
+typed TOML pipeline (`ReadSwapToml_state` and the
+`config_to_variables` adapter) — the legacy fixed-format reader was
+deleted in 2026-05-06, so a `.toml` argument is now mandatory. It
+initializes the
 legacy `variables` module, builds the numerical grid via `CalcGrid_state`,
 allocates the aggregated state via `swap_state_init`, and initializes each
 physics domain (soil water, surface water, macropores, soil temperature,
@@ -130,12 +132,15 @@ and all-years `.met` reader paths were retired in SS-5 (ADR 0014).
 
 The legacy fixed-format reader `src/io/readswap.f90` and its per-crop
 helpers (`readcropfixed`, `readwofost`, `readgrass`, `rddre`,
-`readarablelandgerm`, `irrigation(1)`, `SoilManagement(1)`,
-`cropgrowth.f90` nutrient block) **remain compiled** but are
-**unreachable from the production call graph**. They are retained as
-parity-test fixtures: `tests/unit/io/toml/test_*_parity.pf` invoke
-`readswap('swap')` directly to verify legacy-vs-TOML output equivalence
-on the six regression cases. See ADR 0019 for the closeout decision.
+`readarablelandgerm`) were **physically deleted** on 2026-05-06 as the
+follow-on to ADR 0019. The case-1 init blocks they fed
+(`irrigation(1)`, `SoilManagement(1)`, the cropgrowth nutrient block,
+`ArableLandGerm(1)`) were collapsed to no-op returns or removed
+outright. Parity test suites under `tests/unit/io/toml/` switched to
+literal-value assertions and no longer drive any legacy reader. See
+ADR 0019's "Update 2026-05-06" section and the umbrella spec
+`docs/superpowers/specs/2026-05-05-legacy-readers-physical-deletion-design.md`
+for the deletion record.
 
 Two TTutil utility calls survive in the production runtime — they are
 not data readers:
@@ -211,10 +216,12 @@ output. For the full TOML schema — every section and key that
   Exports `heat_state_t`.
 
 - `src/io/` — All file I/O. Canonical TOML readers `readswaptoml.f90`
-  and `readdrainagetoml.f90`; the legacy fixed-format reader
-  `readswap.f90`; the meteo reader `readmeteo.f90`; the CSV output
-  primitives in `swap_csv_output.f90`; and domain output writers in
-  `swapoutput.f90` and `macroporeoutput.f90`.
+  and `readdrainagetoml.f90`; the meteo reader `readmeteo.f90`; the
+  CSV output primitives in `swap_csv_output.f90`; the domain output
+  writers in `swapoutput.f90` and `macroporeoutput.f90`; and a small
+  `checkdate.f90` (date-range validator extracted from the deleted
+  legacy reader, still used by `read_ssdi_input` for the swssdi=1
+  path pending ADR 0021).
 
 - `src/macropore/` — Preferential flow through the macropore continuum:
   rate calculations (`macrorate.f90`), the integrator (`macropore.f90`),
@@ -269,9 +276,11 @@ for the duration of the rescue and is isolated to `swap_state_sync.f90`.
 This repository is currently under a rescue-and-stabilize workflow, and
 parts of the architecture described above are still in transition. In
 particular the legacy `variables` module coexists with `swap_state_t`,
-the legacy fixed-format reader code remains in `src/` as parity-test
-fixtures (production runtime is TOML-only as of 2026-05-05; see ADR
-0019), and follow-on rescue work continues. For the modernization
+and follow-on rescue work continues. The legacy fixed-format reader
+code that previously lived in `src/io/readswap.f90` and the case-1
+init blocks it fed were physically deleted on 2026-05-06 (see ADR
+0019's closing update); the production runtime has been TOML-only
+since 2026-05-05. For the modernization
 capstone see [`PHASE-4-MODERNIZATION-SUMMARY.md`](PHASE-4-MODERNIZATION-SUMMARY.html);
 for the original rescue plan see
 [`docs/archive/2026-phase-4/specs/2026-04-22-rescue-and-stabilize-design.md`](archive/2026-phase-4/specs/2026-04-22-rescue-and-stabilize-design.md);

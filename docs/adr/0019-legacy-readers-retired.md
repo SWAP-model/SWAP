@@ -132,3 +132,49 @@ be physically deleted from `src/`:
 ## Tag
 
 `rescue/phase-4f-extend-complete` placed at the closing commit.
+
+## Update 2026-05-06: physical deletion executed
+
+The "retirement gate" forward-look above was executed in a follow-on
+spec (`docs/superpowers/specs/2026-05-05-legacy-readers-physical-deletion-design.md`),
+landed across SS-A → SS-D on the `development` branch:
+
+- **SS-A** — All five parity suites (hupselbrook, grassgrowth,
+  oxygenstress, salinitystress, surfacewater) converted to literal-value
+  assertions; helper files (`parity_helpers.f90`, `legacy_crop_helper.f90`,
+  test_legacy_crop_helper suite) deleted.
+- **SS-B** — Tillage and SSDI gating moved from internal self-checks to
+  call-site flags (ADR 0020); SS-10.5 stub-errors retired so the
+  subsystems are reachable when their flags are set.
+- **SS-C** — Code deletion (this ADR's "Option 1"):
+  - `src/io/readswap.f90` deleted (-5080 LoC).
+  - `src/crop/cropgrowth.f90`: `ArableLandGerm(1)` case removed; legacy
+    nutrient `rdinit` block deleted.
+  - `src/crop/management_soil.f90`: `SoilManagement(1)` body collapsed
+    to `return` (file-open + state-init was readswap's responsibility).
+  - `src/crop/irrigation.f90`: `irrigation(1)` body collapsed to
+    `return`.
+  - `src/core/swap.f90`: dead `call SoilManagement(1)` removed.
+  - `tests/unit/io/toml/readswap_stubs.f90` deleted (existed only to
+    satisfy linker references from readswap).
+  - `tests/unit/run_pfunit.sh` retired; meson `test()` invokes the
+    pFUnit binary directly (no global state to leak between suites
+    after readswap is gone).
+  - Net: ~5,500 LoC removed from `src/`; one ~30-line `checkdate`
+    helper extracted to `src/io/checkdate.f90` because
+    `read_ssdi_input` (the swssdi=1 path) still calls it pending ADR
+    0021 (TOML port of the SSDI block).
+- **SS-D** — This update + sibling docs refresh.
+
+End-state acceptance, all green:
+- `src/io/readswap.f90` does not exist.
+- `grep -rnE "subroutine readswap\b|call irrigation\(1\)|call SoilManagement\(1\)" src/` → no matches.
+- `tests/unit/run_pfunit.sh` does not exist.
+- `pixi run -e test test-pfunit` → `Ok: 1, Fail: 0` (540 tests, 1
+  disabled = macroporeflow_parity per ADR 0011).
+- `pixi run -e test check-full` → `5 passed, 0 failed` in ~42s.
+
+Tag at the closing commit: `rescue/legacy-readers-deleted` (on
+`development`; not yet merged to `main` per the post-Phase-4 release
+gate).
+

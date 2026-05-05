@@ -2,7 +2,7 @@
 title: Phase 4 modernization — capstone summary
 date: 2026-05-05
 status: complete
-tags: [rescue/phase-4f-extend-complete, rescue/phase-4f-extend-followups]
+tags: [rescue/phase-4f-extend-complete, rescue/phase-4f-extend-followups, rescue/legacy-readers-deleted]
 ---
 
 # Phase 4 modernization — capstone summary
@@ -24,7 +24,7 @@ binary running TOML-only inputs.
 | **Output** | 18 toggleable output formats (`swafo`, `swaun`, `swvap`, …) | CSV-only via `[output.csv]` (ADR 0009) |
 | **Error handling** | TTutil `FatalERR` → bare `STOP` (exit 0) — silent test failures | `error_collection_t` accumulates errors; `error stop "..."` (exit 1) at one abort checkpoint (ADR 0008, 0018) |
 | **Macropore physics** | Legacy reader populated globals; case 3 ran via legacy path | Stub-errored at validation; case 3 excluded from regression (ADR 0010, 0011) |
-| **Legacy reader runtime calls** | Whole-stack: `readswap()` → `irrigation(1)` → `SoilManagement(*)` → `cropgrowth.f90` nutrient block, all reading from `.swp` / `.crp` | Zero TTutil **data-reader** calls reachable from the production main loop. Source code retained as parity-test fixtures (ADR 0019). |
+| **Legacy reader runtime calls** | Whole-stack: `readswap()` → `irrigation(1)` → `SoilManagement(*)` → `cropgrowth.f90` nutrient block, all reading from `.swp` / `.crp` | Zero TTutil **data-reader** calls anywhere in `src/`. The reader source files were physically deleted on 2026-05-06 (ADR 0019 closing update). |
 
 ## How it was done — the staging template
 
@@ -47,9 +47,9 @@ The work used a repeatable **audit → schema → adapter → reader-deletion
 6. **Close-doc.** Mark the sub-spec DONE in the umbrella roadmap with
    pointers to the closing commit + audit.
 
-Verification at each step: `pixi run -e test test-pfunit` (548 tests
-green) + `pixi run -e test check-full` (5 of 6 regression cases pass;
-case 3 = macropore = excluded per ADR 0011).
+Verification at each step: `pixi run -e test test-pfunit` (540 tests
+green, 1 disabled) + `pixi run -e test check-full` (5 of 6 regression
+cases pass; case 3 = macropore = excluded per ADR 0011).
 
 ## Phase chronology
 
@@ -74,6 +74,7 @@ The work split into **rescue phases** (Phase 1-3, infrastructure) and
 | 4f .crp port (Phases 1-4) | 2026-05-02 | Per-rotation crop cache (ADR 0016, 0017); cropfixed → cropwofost → cropgrass; hupselbrook full | (no tag) |
 | **4f-extend** | **2026-05-04 → 05-05** | **Legacy reader retirement umbrella (SS-1..SS-11); ADR 0014, 0015, 0018, 0019** | **`rescue/phase-4f-extend-complete`** |
 | Follow-ups | 2026-05-05 | SS-10.5 (swtill/swssdi schema port) + SS-5 M1-M5 polish | `rescue/phase-4f-extend-followups` |
+| **Legacy readers deleted** | **2026-05-05 → 05-06** | **Physical deletion (umbrella SS-A→SS-D); ADR 0020 (call-site gating); ~5,500 LoC removed; `readswap.f90` + dead case(1) blocks gone; `run_pfunit.sh` retired** | **`rescue/legacy-readers-deleted`** |
 
 ## Why these decisions — ADR landing zone
 
@@ -95,25 +96,28 @@ shape the modernized runtime:
 | [0016](adr/0016-per-rotation-crop-config-cache.md) | Per-rotation crop content loaded into `crop_config_global` at config-load time | Avoid the per-rotation legacy reader cycle; future direction is explicit-argument passing |
 | [0017](adr/0017-sibling-reader-dispatch-from-cache.md) | Sibling-reader dispatch around legacy `ArableLandGerm` | Cache-hit path uses typed config; cache-miss is fatal — no silent legacy fallback |
 | [0018](adr/0018-fatalerr-shim.md) | Shim TTutil's `FatalERR` through `fatalerr_collected` | Fix the silent-exit-0 bug at the root; one-file linker shadow |
-| [0019](adr/0019-legacy-readers-retired.md) | Leave legacy reader code in `src/`; document unreachability | Parity tests still need the readers; deletion deferred until parity tests retire |
+| [0019](adr/0019-legacy-readers-retired.md) | Initially: leave legacy reader code in `src/`; document unreachability. **Update 2026-05-06: physical deletion executed** after parity tests switched to literal-value assertions. | Step-wise modernization: ship runtime decoupling first, then delete the dead source once parity test invariants no longer required it. |
+| [0020](adr/0020-call-site-gating-convention.md) | Optional subsystems gated at the call site (`if (flX) call X(...)`), not by internal self-checks | Uniform gating convention; un-stub-error swtill / swssdi; prerequisite for clean physical deletion |
 
 ## Test infrastructure (worth knowing)
 
-The journey surfaced several pFUnit harness quirks that future work
-inherits:
+The pFUnit harness has been simplified along with the reader deletion:
 
-- **`tests/unit/run_pfunit.sh`** wraps the pFUnit binary and invokes
-  each test suite in a separate process. Without this, state leakage
-  in legacy `variables` globals between parity suites causes RDDATA
-  fatal errors mid-suite. See ADR 0018 + `phase-4f-ss11-closeout.md`.
-- **`call readswap('swap')`** — readswap accepts an optional
-  `project_name` argument (added in SS-5). Parity tests pass `'swap'`
-  explicitly so pFUnit's `--tap` / `-f` flags don't get interpreted as
-  the project name by `Get_Command_Argument(1)`.
+- **Direct pFUnit invocation.** `tests/unit/run_pfunit.sh` (the
+  per-suite-isolation wrapper) was retired on 2026-05-06; meson now
+  calls the unit-swap-tests binary directly. The wrapper existed
+  solely to dodge legacy-`variables` global-state leakage between
+  parity suites; with the readers gone, no globals leak.
+- **Parity suites are now literal-value.**
+  `tests/unit/io/toml/test_*_parity.pf` no longer call any legacy
+  reader. Each `@assertEqual` checks the typed config field against
+  a captured literal that the legacy reader *would have* produced
+  — captured once during SS-A and frozen.
 - **6 known parity divergences** between legacy and TOML are
   intentional (case 5 swinco; case 6 swdra=2 dramet/swdivd/swdislay;
   case-4 swoxygen=2 hlim1/2u/2l; case-5 ldis array; metfile basename
-  comparison). Documented in the per-case parity audits.
+  comparison). Documented in the per-case parity audits, encoded in
+  the captured literals.
 
 ## What's next (out of scope for Phase 4f-extend)
 
@@ -124,7 +128,9 @@ Pulled forward from the rescue plan and from sub-spec follow-ups:
 | Compartment-state refactor | rescue plan §"Out of scope item 2" | L |
 | Performance work (state-sync 344s macropore, vectorization, GPU, ifx re-enable) | rescue plan | L each |
 | Python bindings (pyswap) | rescue plan | M-L |
-| Iso-iso physical deletion of `readswap.f90` + dead `case(1)` blocks | ADR 0019 retirement gate | L (requires parity-test refactor first) |
+| TOML port of the SSDI block (replace `read_ssdi_input` + the standalone `checkdate`) | ADR 0021 candidate | M |
+| TOML port of the tillage block (replace `Read_Tillage` swpfile reads) | ADR 0021 candidate | M |
+| Reactivate the nutrient subsystem (un-stub `flCropNut`, port `<cropfil>.crp` nutrient block to TOML, restore `SoilManagement(2..7)` callers in swap.f90) | follow-on to legacy-readers-deleted | M-L |
 | `iHWCKmodel` + `paramvg(10,:)` ksatexm threshold (Buckets B/C) | SS-10 audit | M each, on-demand |
 | Refresh `phase-4f-config-to-variables-audit.md` per-section table totals | SS-9 audit | S |
 
@@ -135,7 +141,7 @@ If you've just landed in this codebase:
 1. **Run the gates** to make sure your environment is healthy:
    ```
    pixi run -e test build-linux
-   pixi run -e test test-pfunit       # → Ok: 1, Fail: 0  (548 tests)
+   pixi run -e test test-pfunit       # → Ok: 1, Fail: 0  (540 tests, 1 disabled)
    pixi run -e test check-full        # → 5 passed, 0 failed
    ```
 2. **Read [`architecture.md`](architecture.html)** for the current
@@ -147,10 +153,12 @@ If you've just landed in this codebase:
 5. **Pop into [`archive/2026-phase-4/`](archive/2026-phase-4/README.html)**
    only when investigating a specific historical decision.
 
-The legacy fixed-format readers in `src/io/readswap.f90`,
-`src/crop/irrigation.f90` (case 1), `src/crop/management_soil.f90`
-(SoilManagement(1)), and `src/crop/cropgrowth.f90` (nutrient block
-+ readarablelandgerm) are **dead in the production runtime** but still
-compiled. They serve as parity-test fixtures
-(`tests/unit/io/toml/test_*_parity.pf`) that cross-check
-legacy-vs-TOML output equivalence on the six regression cases.
+The legacy fixed-format readers (`src/io/readswap.f90`, the case-1
+init blocks in `irrigation.f90` / `management_soil.f90` /
+`cropgrowth.f90`, `readarablelandgerm`) **were physically deleted** on
+2026-05-06 along with `tests/unit/run_pfunit.sh`. The production
+runtime is TOML-only; parity test suites cross-check the typed config
+against captured literal values rather than driving any legacy reader.
+See ADR 0019's "Update 2026-05-06: physical deletion executed" and
+the umbrella spec
+[`docs/superpowers/specs/2026-05-05-legacy-readers-physical-deletion-design.md`](superpowers/specs/2026-05-05-legacy-readers-physical-deletion-design.md).
