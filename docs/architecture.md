@@ -269,10 +269,14 @@ for the duration of the rescue and is isolated to `swap_state_sync.f90`.
 This repository is currently under a rescue-and-stabilize workflow, and
 parts of the architecture described above are still in transition. In
 particular the legacy `variables` module coexists with `swap_state_t`,
-the legacy fixed-format reader coexists with the TOML reader, and the
-crop configuration is not yet on TOML. For the full rescue plan see
-[`docs/superpowers/specs/2026-04-22-rescue-and-stabilize-design.md`](superpowers/specs/2026-04-22-rescue-and-stabilize-design.md);
-for per-phase plans see [`docs/superpowers/plans/`](superpowers/plans/);
+the legacy fixed-format reader code remains in `src/` as parity-test
+fixtures (production runtime is TOML-only as of 2026-05-05; see ADR
+0019), and follow-on rescue work continues. For the modernization
+capstone see [`PHASE-4-MODERNIZATION-SUMMARY.md`](PHASE-4-MODERNIZATION-SUMMARY.html);
+for the original rescue plan see
+[`docs/archive/2026-phase-4/specs/2026-04-22-rescue-and-stabilize-design.md`](archive/2026-phase-4/specs/2026-04-22-rescue-and-stabilize-design.md);
+for the per-phase plans and audits see
+[`docs/archive/2026-phase-4/`](archive/2026-phase-4/README.html);
 and for the architectural decisions that underpin the rescue see
 [`docs/adr/`](adr/) — currently ADR 0001 (gfortran-first) and
 ADR 0002 (single builddir), with further ADRs to follow as subsequent

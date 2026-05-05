@@ -422,7 +422,7 @@ by the TOML schema:
   is validated as 0–2 in the current readers; `swrain=3` is a Phase 4c
   extension.
 
-See `phase-4b-field-coverage.md` for a detailed per-case gap inventory.
+See `archive/2026-phase-4/audits/phase-4b-field-coverage.md` for a detailed per-case gap inventory.
 
 ## Related docs
 

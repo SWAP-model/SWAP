@@ -7,11 +7,12 @@ author: SWAP modernization team
 
 ## You are here
 
-This repository is in an active **rescue-and-stabilize** workflow. Before
-making substantive changes, read
-`docs/superpowers/specs/2026-04-22-rescue-and-stabilize-design.md`. Trivial
-typo fixes and documentation edits do not need the full context; anything
-touching source, build, tests, or fixtures does.
+This repository was rescued through Phase 4 / Phase 4f-extend (completed
+2026-05-05); see `docs/PHASE-4-MODERNIZATION-SUMMARY.md` for the
+capstone overview and `docs/archive/2026-phase-4/` for the frozen
+specs, plans, and audits. Trivial typo fixes and documentation edits
+do not need the full context; anything touching source, build, tests,
+or fixtures does.
 
 ## Branch model during the rescue
 
@@ -153,7 +154,8 @@ file.
 ## When in doubt
 
 In order: look at adjacent similar code, read the relevant ADR, check
-the relevant spec or plan under `docs/superpowers/`, and open a
+the relevant spec or plan under `docs/archive/2026-phase-4/` (or for
+new modernization arcs, the active spec/plan), and open a
 discussion (GitHub issue or direct conversation) before guessing in a
 commit. The rescue has enough moving pieces that undocumented decisions
 are expensive — explicit disagreement is cheaper than silent drift.
