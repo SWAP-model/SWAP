@@ -72,7 +72,7 @@ End-state tag: `rescue/phase-4f-extend-complete`.
 | CSV meteo Steps 2–3 (TTutil branch deletion + dead-var sweep) | DONE | SS-5 — TTutil branches retired (`2026-05-05-ss5-readmeteo-ttutil-deletion.md`) |
 | Phase 0 test-dir reorg | DONE | `run_case.sh` defaults to in-place TOML |
 | Adapter HACK Bucket A + B | DONE | 7 of 12 slots closed |
-| Adapter HACK residuals (4) | OPEN | `iHWCKmodel`, `ksatexm`, `cropfil` suffix-strip, `swpfile`/`logf` |
+| Adapter HACK residuals (4) | DONE | SS-10 — 0 actionable: 2 deferred (`iHWCKmodel`, `ksatexm` — no case triggers), 1 reclassified-as-correct (`cropfil` strip — used by output writers), 1 SS-10.5 follow-up (`swpfile`/`logf` — load-bearing for `DoTillage`/`SSDI_irrigation` `RDinit`) (see `phase-4f-config-to-variables-hacks-audit.md`) |
 | Macropore TOML stub-error | DONE | SS-4 — `swmacro=1` rejected by `soil_config_validate` (see `2026-05-04-ss4-macropore-toml-stub-error.md`) |
 | `irrigation.f90` TTutil reader | DONE | SS-6 — closed by Phase 4f strangler swap; `irrigation(1)` reachable only via parity-test harness (see `phase-4f-irrigation-audit.md`) |
 | `management_soil.f90` TTutil readers | DONE | SS-7 — unreachable via `flCropNut=.false.` default (see `phase-4f-management-soil-audit.md`) |
@@ -170,7 +170,7 @@ work expected.
 | SS-7 | `src/crop/management_soil.f90` TOML port (SMM/SME/SNP) | DONE | `phase-4f-management-soil-audit.md` (no code work — `flCropNut=.false.` default) | — |
 | SS-8 | `src/crop/cropgrowth.f90` nutrient block port | DONE | `phase-4f-cropgrowth-nutrients-audit.md` (same `flCropNut` gate as SS-7) | — |
 | SS-9 | `readswap.f90` full audit + unauthored-key closure | DONE | `phase-4f-ss9-residual-audit.md` (zero STILL-G; SS-11 unblocked) | — |
-| SS-10 | Adapter HACK residual cleanup | OPEN | new spec | — |
+| SS-10 | Adapter HACK residual cleanup | DONE | `phase-4f-config-to-variables-hacks-audit.md` 2026-05-05 update (0 actionable; 2 deferred, 1 reclassified, 1 logged as SS-10.5) | — |
 | SS-11 | Closeout — runtime-call deletion + retirement tag | OPEN | new spec | SS-4..10 all closed |
 
 ### Dependency graph

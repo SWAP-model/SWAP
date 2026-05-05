@@ -4,6 +4,39 @@
 **File audited:** `src/io/toml/config_to_variables.f90`
 **Branch:** development (post-Phase 4f .crp port, all 6 regression cases bit-identical)
 
+**Update 2026-05-05 (SS-10 closure):** Re-verified the four "remaining" slots
+post-SS-1..9. Findings:
+
+- **Slot 6 (`iHWCKmodel`, now line ~648):** Confirmed deferred. No
+  regression case authors a non-1 hydraulic model code. Bucket C — open
+  for future work, no SS-11 blocker.
+- **Slot 7 (`paramvg(10,:)` ksatexm threshold, now line ~678):** Confirmed
+  deferred. All 6 cases have `ksatexm == ksatfit` element-wise; the
+  `-999` sentinel is bit-identical to the legacy `flksatexm == .false.`
+  output. Bucket B — open for future work, no SS-11 blocker.
+- **Slot 9 (`cropfil` suffix-strip, now lines ~1110-1119, ~1232-1246):**
+  **Re-classified as NOT-A-HACK.** `cropfil` is consumed by
+  `swapoutput.f90:1141,2141,2150` as a filename label in CSV output
+  (live, correct). The strip is necessary so the label reads
+  `'maizes'` instead of `'maizes.crp.toml'`. Other consumers
+  (`irrigation.f90:77`, `cropgrowth.f90:831,1153`) are inside
+  unreachable code paths per SS-6/SS-7/SS-8 audits.
+- **Slot 12 (`swpfile + logf`, now lines ~1171-1186):** **Load-bearing
+  in production.** `DoTillage(1)` (`swap.f90:165`) and
+  `SSDI_irrigation(1)` (`swap.f90:166`) both unconditionally call
+  `RDinit(unit, 0, swpfile)` to read `swtill` / `swssdi`. Both default
+  to 0 in every case (no TOML or .swp.template authors them), but the
+  file open + RDinqr lookup are real runtime work. Retiring requires
+  adding `swtill` / `swssdi` schema slots + adapter wiring + retiring
+  the `RDinit(swpfile)` call in `tillage.f90:433` and
+  `irrigation.f90:580`. Logged as SS-10.5 follow-up; does NOT block
+  SS-11 (the legacy readers we're retiring in SS-11 — per-crop init
+  blocks in `cropgrowth.f90`, `management_soil.f90`, `irrigation.f90`
+  case(1) — are independent of swpfile).
+
+SS-10 closes with 0 actionable slots; 2 deferred (6, 7); 1 reclassified
+(9); 1 logged as follow-up (12).
+
 **Update 2026-05-04:** Bucket A slots (lines 294, 303, 330, 1230) resolved in
 commit `8f4f5a3` (feat: bucket-A schema additions — rsigni, cfevappond, outfil, drfil).
 
@@ -11,6 +44,11 @@ commit `8f4f5a3` (feat: bucket-A schema additions — rsigni, cfevappond, outfil
 - `rdmax` (line 1144) — commit `a85faa8`
 - `swliminf` (line 484) — commit `66559f2`
 - `swredu` (line 280) — commit `ef7447d`
+
+**Update 2026-05-03:** Bucket B slot 8 (CSV output block) resolved — see commit SHA below.
+- `swcsv` + `InList_csv` + `swcsv_tz` + `InList_csv_tz` (line 1185–1207) — new `[output.csv]`
+  section type `output_csv_config_t`. Cases 2, 4, 5, 6 `general.inlist_csv` migrated to
+  `output.csv.inlist`. `general.inlist_csv` field removed.
 
 ---
 
@@ -22,10 +60,10 @@ have since been resolved (Bucket A → Bucket E). 8 remain open.
 | Bucket | Label | Count (original) | Count (remaining) |
 |--------|-------|-----------------|-------------------|
 | A | Trivial schema add | 4 | 0 (all resolved) |
-| B | Schema add + cross-section validator | 2 | 0 (slots 5/6/7 resolved 2026-05-03) |
+| B | Schema add + cross-section validator | 2 | 0 (slots 5/6/7 resolved 2026-05-03; slot 8 resolved 2026-05-03) |
 | C | Schema redesign / non-trivial | 1 | 1 |
 | D | Will-be-irrelevant after config-passing refactor (ADR 0016 Part C) | 3 | 3 |
-| E | Already-resolved (stale comment) | 2 | 9 |
+| E | Already-resolved (stale comment) | 2 | 10 |
 
 Two entries (line 1236 / CSV block, line 1156 / rdmax) are
 partially resolved: a schema field exists but hardcoded companion values
@@ -47,7 +85,7 @@ remain; they are graded B and B respectively on that basis.
 | 8 | 1144 | `rdmax` (`RDS`) | E | ~~Hardcoded `200.0` cm~~ **Resolved in `a85faa8`.** Added `crop.rdmax` (real64, default 200.0 cm) to `crop_config_t`; parser + validator (range [1,5000] cm) + adapter wired. Cases 3 (320.0), 5 (100.0), 6 (60.0) author non-default values; cases 1/2/4 use the default. | — | — | — |
 | 9 | 1191 | `cropfil(:)` suffix stripping | D | Strips `.crp.toml` / `.toml` suffixes from `rotation_file(i)` before writing to legacy `cropfil(i)`, because the legacy per-rotation readers (still called via `cropgrowth.f90 ArableLandGerm`) expect a bare stem. | This hack goes away when ADR 0016 Part C lands: once all three crop-mode readers (`readcropfixed`, `readwofost`, `readgrass`) are fully retired and replaced by `read_crop*_toml` init functions, `cropfil` can pass through unchanged (or be eliminated). Until then this is load-bearing. | All TOML crop cases (1, 2, 4, 5, 6). Must remain until legacy reader retirement is complete. | — (defer) |
 | 10 | 1230 | `outfil` | E | ~~Hardcoded `'result'`~~ **Resolved in `8f4f5a3`.** Added `general.outfil` (string, default `'result'`) to `general_config_t`; parser + adapter wired. | — | — | — |
-| 11 | 1236 | `swcsv` + `InList_csv` / `swcsv_tz` / `InList_csv_tz` | B | `swcsv` is hardcoded to 1 (CSV always on). `InList_csv` is partially resolved — `general.inlist_csv` schema field exists and is used when authored; otherwise falls back to a hardcoded default. `swcsv_tz` is hardcoded to 0 and `InList_csv_tz` to `'wc,h,conc'`. | The partial resolution of `InList_csv` (already done) leaves 3 remaining gaps: (a) `swcsv` (the enable switch, always 1); (b) `swcsv_tz` (depth-profile CSV switch, always 0); (c) `InList_csv_tz` (depth-profile column list, hardcoded). These belong in a `[output.csv]` section. Cross-section concern: the output section does not yet exist in the schema. | All 6 TOML cases are affected — they silently inherit `swcsv=1`. Cases 2, 4, 5, 6 override `inlist_csv`; none yet need `swcsv_tz=1`. | M |
+| 11 | 1236 | `swcsv` + `InList_csv` / `swcsv_tz` / `InList_csv_tz` | E | **Resolved.** New `output_csv_config_t` type with `enabled`, `enabled_tz`, `inlist`, `inlist_tz` fields. `[output.csv]` section wired in `load_swap_config.f90`. HACK block replaced with typed reads. `general.inlist_csv` removed; cases 2/4/5/6 migrated to `output.csv.inlist`. | — | — | — |
 | 12 | 1260 | `swpfile` + `logf` (legacy I/O state) | D | Sets `swpfile = 'swap.swp'` and opens `swap_swap.log` so that unported per-crop / drainage legacy readers (`RDinit(unit, logf, swpfile)`) can open the right input file. | This entire block goes away reader-by-reader as Phase 4f retires the legacy ASCII readers. Fixing it in isolation (e.g. making `swpfile` a typed-config field) would be pointless — the fix is to retire the readers that need it. | All TOML crop cases currently call `ArableLandGerm` / crop-mode readers that depend on this. | — (defer) |
 
 ---
