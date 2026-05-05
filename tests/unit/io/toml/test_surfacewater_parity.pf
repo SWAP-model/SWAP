@@ -1,30 +1,16 @@
-! Phase 4c-a Task 18 parity test:
-! legacy `variables` globals (after readswap for case 6.surfacewater)
-! vs swap_config_t fields (after load_swap_config + validate + finalize).
+! SS-A literal-parity test for case 6 (surfacewater).
 !
-! The test runs the legacy reader by chdir-ing into the case directory and
-! calling readswap() (reads "swap.swp" from CWD).  It then loads the
-! matching TOML file relative to the project root and asserts field-by-field
-! equality for ~30 fields spanning all six existing sections.
-!
-! Scope: existing-schema fields only.  SWHEA, SWSOLU, SWBOTB and the
-! associated heat/solute/bottom_boundary tables are Phase 4c.
-!
-! Note: swinter is only set per-crop inside crop .crp reader calls; the
-! top-level meteorology swinter global is left at 0 (default).
+! Each subtest now asserts swap_config_t fields against literal values
+! captured once via the legacy `readswap()` + `rddre()` pipeline. After
+! SS-A, no parity test invokes `readswap` or any legacy helper.
 !
 ! Note: swdra=2 (extended drainage with surface water management).
 ! For swdra=2, readswap() calls rddre() which reads swdivd=1, swdislay=0
 ! and nrlevs=2 (nrsrf from swap.dra) — but does NOT read dramet.
 ! dramet stays at Fortran default 0.
 !
-! nrlevs ASSERTION DROPPED: variables%nrlevs=2 (nrsrf from swap.dra via
-! rddre) but config%drain%nrlevs=1 after finalize (dramet=0 /= 3 triggers
-! the clamp-to-1 path). Structurally incompatible — different concepts.
-!
 ! grass.crp reference values for case 6 (type 1 fixed simple grass):
 !   IDEV=1  LCC=366  KDIF=0.75  KDIR=0.75
-!   HLIM1=0.0  HLIM2U=0.0  HLIM2L=0.0  (SWOXYGEN=0, oxygen-stress hlim not active)
 !   HLIM3H=-200.0  HLIM3L=-800.0  HLIM4=-8000.0  ADCRH=0.5  ADCRL=0.1
 !   RDI=30.0  RRI=0.0  RDC=30.0  (SWRD=1, constant 30 cm from RDTB)
 !   COFAB=0.25
@@ -32,172 +18,113 @@
 @test
 subroutine test_surfacewater_general_parity()
    use funit
-   use variables, only: project, pathwork, pathatm, pathcrop, pathdrain, swscre
    use swap_config_mod
-   use load_swap_config_mod
-   use chdir_helper_mod
-   use parity_helpers_mod
+   use load_swap_config_mod, only: load_swap_config
    use error_mod
    type(swap_config_t)      :: config
    type(error_collection_t) :: errors
-   character(len=1024)      :: orig_cwd
-
-   call get_cwd(orig_cwd)
-   call chdir_to('tests/swap-cases/6.surfacewater')
-   call stage_swp_template('swap_linux.swp.template', 'swap')
-   call reset_for_next_readswap()
-   call readswap('swap')
-   close(logf)
-   call chdir_to(trim(orig_cwd))
 
    call load_swap_config('tests/swap-cases/toml/6.surfacewater/swap.toml', config, errors)
    call config%validate(errors)
    call config%finalize(errors)
-
    @assertFalse(errors%has_fatals())
 
-   @assertEqual(trim(project),   trim(config%general%project))
-   @assertEqual(trim(pathwork),  trim(config%general%pathwork))
-   @assertEqual(trim(pathatm),   trim(config%general%pathatm))
-   @assertEqual(trim(pathcrop),  trim(config%general%pathcrop))
-   @assertEqual(trim(pathdrain), trim(config%general%pathdrain))
-   @assertEqual(swscre,          config%general%swscre)
+   @assertEqual('wildenborch', trim(config%general%project))
+   @assertEqual('./',          trim(config%general%pathwork))
+   @assertEqual('./',          trim(config%general%pathatm))
+   @assertEqual('./',          trim(config%general%pathcrop))
+   @assertEqual('./',          trim(config%general%pathdrain))
+   @assertEqual(0,             config%general%swscre)
 end subroutine
 
 @test
 subroutine test_surfacewater_simulation_parity()
    use funit
-   use variables, only: tstart, tend, nprintday
    use swap_config_mod
-   use load_swap_config_mod
-   use chdir_helper_mod
-   use parity_helpers_mod
-   use error_mod
-   type(swap_config_t)      :: config
-   type(error_collection_t) :: errors
-   character(len=1024)      :: orig_cwd
-
-   call get_cwd(orig_cwd)
-   call chdir_to('tests/swap-cases/6.surfacewater')
-   call stage_swp_template('swap_linux.swp.template', 'swap')
-   call reset_for_next_readswap()
-   call readswap('swap')
-   close(logf)
-   call chdir_to(trim(orig_cwd))
-
-   call load_swap_config('tests/swap-cases/toml/6.surfacewater/swap.toml', config, errors)
-   call config%validate(errors)
-   call config%finalize(errors)
-
-   @assertEqual(tstart,    config%simulation%tstart,    1.0d-9)
-   @assertEqual(tend,      config%simulation%tend,      1.0d-9)
-   @assertEqual(nprintday, config%simulation%nprintday)
-end subroutine
-
-! Phase 4f-prep Task D4: [simulation.numerical] parity for case 6.
-@test
-subroutine test_surfacewater_simulation_numerical_parity()
-   use funit
-   use variables, only: dtmin, dtmax, MaxIt, MaxBackTr, logf
-   use swap_config_mod
-   use load_swap_config_mod
-   use chdir_helper_mod
-   use parity_helpers_mod
+   use load_swap_config_mod, only: load_swap_config
    use error_mod
    use iso_fortran_env, only: real64
    type(swap_config_t)      :: config
    type(error_collection_t) :: errors
-   character(len=1024)      :: orig_cwd
-
-   call get_cwd(orig_cwd)
-   call chdir_to('tests/swap-cases/6.surfacewater')
-   call stage_swp_template('swap_linux.swp.template', 'swap')
-   call reset_for_next_readswap()
-   call readswap('swap')
-   close(logf)
-   call chdir_to(trim(orig_cwd))
 
    call load_swap_config('tests/swap-cases/toml/6.surfacewater/swap.toml', config, errors)
    call config%validate(errors)
    call config%finalize(errors)
+   @assertFalse(errors%has_fatals())
 
-   @assertEqual(dtmin,     config%simulation%numerical%dtmin, 1.0e-12_real64)
-   @assertEqual(dtmax,     config%simulation%numerical%dtmax, 1.0e-12_real64)
-   @assertEqual(MaxIt,     config%simulation%numerical%MaxIt)
-   @assertEqual(MaxBackTr, config%simulation%numerical%MaxBackTr)
-   @assertEqual(0.04_real64, config%simulation%numerical%dtmax, 1.0e-12_real64)
+   @assertEqual(35430.0_real64, config%simulation%tstart, 1.0d-9)
+   @assertEqual(36524.0_real64, config%simulation%tend,   1.0d-9)
+   @assertEqual(1,              config%simulation%nprintday)
+end subroutine
+
+@test
+subroutine test_surfacewater_simulation_numerical_parity()
+   use funit
+   use swap_config_mod
+   use load_swap_config_mod, only: load_swap_config
+   use error_mod
+   use iso_fortran_env, only: real64
+   type(swap_config_t)      :: config
+   type(error_collection_t) :: errors
+
+   call load_swap_config('tests/swap-cases/toml/6.surfacewater/swap.toml', config, errors)
+   call config%validate(errors)
+   call config%finalize(errors)
+   @assertFalse(errors%has_fatals())
+
+   @assertEqual(1.0e-6_real64, config%simulation%numerical%dtmin, 1.0e-12_real64)
+   @assertEqual(0.04_real64,   config%simulation%numerical%dtmax, 1.0e-12_real64)
+   @assertEqual(30,            config%simulation%numerical%MaxIt)
+   @assertEqual(3,             config%simulation%numerical%MaxBackTr)
 end subroutine
 
 @test
 subroutine test_surfacewater_meteorology_parity()
    use funit
-   use variables, only: metfil, lat, alt, altw, swetr, swdivide, swrain, angstroma, angstromb
    use swap_config_mod
-   use load_swap_config_mod
-   use chdir_helper_mod
-   use parity_helpers_mod
+   use load_swap_config_mod, only: load_swap_config
    use error_mod
+   use iso_fortran_env, only: real64
    type(swap_config_t)      :: config
    type(error_collection_t) :: errors
-   character(len=1024)      :: orig_cwd
-
-   call get_cwd(orig_cwd)
-   call chdir_to('tests/swap-cases/6.surfacewater')
-   call stage_swp_template('swap_linux.swp.template', 'swap')
-   call reset_for_next_readswap()
-   call readswap('swap')
-   close(logf)
-   call chdir_to(trim(orig_cwd))
 
    call load_swap_config('tests/swap-cases/toml/6.surfacewater/swap.toml', config, errors)
    call config%validate(errors)
    call config%finalize(errors)
+   @assertFalse(errors%has_fatals())
 
-   ! Note: legacy metfil ('*.met') and TOML metfile ('*.csv') diverge
-   ! intentionally per ADR 0014 — TOML pipeline is CSV-only.
-   ! Compare basename only.
-   @assertEqual(trim(metfil(1:index(metfil,'.')-1)), trim(config%meteo%metfile(1:index(config%meteo%metfile,'.')-1)))
-   @assertEqual(lat,          config%meteo%lat,       1.0d-9)
-   @assertEqual(alt,          config%meteo%alt,       1.0d-9)
-   @assertEqual(altw,         config%meteo%altw,      1.0d-9)
-   @assertEqual(swetr,        config%meteo%swetr)
-   @assertEqual(swdivide,     config%meteo%swdivide)
-   @assertEqual(swrain,       config%meteo%swrain)
-   @assertEqual(angstroma,    config%meteo%angstroma, 1.0d-9)
-   @assertEqual(angstromb,    config%meteo%angstromb, 1.0d-9)
+   ! TOML pipeline is CSV-only (ADR 0014). Compare basename only.
+   @assertEqual('290', trim(config%meteo%metfile(1:index(config%meteo%metfile,'.')-1)))
+   @assertEqual(52.274_real64, config%meteo%lat,       1.0d-9)
+   @assertEqual(34.8_real64,   config%meteo%alt,       1.0d-9)
+   @assertEqual(10.0_real64,   config%meteo%altw,      1.0d-9)
+   @assertEqual(0,             config%meteo%swetr)
+   @assertEqual(1,             config%meteo%swdivide)
+   @assertEqual(2,             config%meteo%swrain)
+   @assertEqual(0.25_real64,   config%meteo%angstroma, 1.0d-9)
+   @assertEqual(0.50_real64,   config%meteo%angstromb, 1.0d-9)
 end subroutine
 
 @test
 subroutine test_surfacewater_drainage_parity()
    use funit
-   use variables, only: dramet, swdivd, swdislay
    use swap_config_mod
-   use load_swap_config_mod
-   use chdir_helper_mod
-   use parity_helpers_mod
+   use load_swap_config_mod, only: load_swap_config
    use error_mod
    type(swap_config_t)      :: config
    type(error_collection_t) :: errors
-   character(len=1024)      :: orig_cwd
-
-   call get_cwd(orig_cwd)
-   call chdir_to('tests/swap-cases/6.surfacewater')
-   call stage_swp_template('swap_linux.swp.template', 'swap')
-   call reset_for_next_readswap()
-   call readswap('swap')
-   close(logf)
-   call chdir_to(trim(orig_cwd))
 
    call load_swap_config('tests/swap-cases/toml/6.surfacewater/swap.toml', config, errors)
    call config%validate(errors)
    call config%finalize(errors)
+   @assertFalse(errors%has_fatals())
 
-   ! swdra=2: rddre() does NOT read dramet, swdivd, swdislay; they stay
-   ! at Fortran default 0 in the legacy pipeline. The TOML pipeline reads
-   ! them verbatim from swap.dra.toml. Assert against the TOML literals.
-   @assertEqual(dramet,   config%drain%dramet)
-   @assertEqual(1,        config%drain%swdivd)
-   @assertEqual(0,        config%drain%swdislay)
+   ! swdra=2: TOML carries dramet/swdivd/swdislay verbatim. For case 6,
+   ! the swap.dra source has dramet absent → TOML default 0; swdivd=1;
+   ! swdislay=0.
+   @assertEqual(0, config%drain%dramet)
+   @assertEqual(1, config%drain%swdivd)
+   @assertEqual(0, config%drain%swdislay)
    ! nrlevs DROPPED: variables%nrlevs=2 (nrsrf from rddre/swap.dra) vs
    !   config%drain%nrlevs=1 (finalize clamps dramet=0 /= 3 to 1).
    !   Different semantics across the two read paths for swdra=2.
@@ -206,64 +133,41 @@ end subroutine
 @test
 subroutine test_surfacewater_soil_parity()
    use funit
-   use variables, only: swsophy, swhyst, swinco, gwli, swmacro
    use swap_config_mod
-   use load_swap_config_mod
-   use chdir_helper_mod
-   use parity_helpers_mod
+   use load_swap_config_mod, only: load_swap_config
    use error_mod
+   use iso_fortran_env, only: real64
    type(swap_config_t)      :: config
    type(error_collection_t) :: errors
-   character(len=1024)      :: orig_cwd
-
-   call get_cwd(orig_cwd)
-   call chdir_to('tests/swap-cases/6.surfacewater')
-   call stage_swp_template('swap_linux.swp.template', 'swap')
-   call reset_for_next_readswap()
-   call readswap('swap')
-   close(logf)
-   call chdir_to(trim(orig_cwd))
 
    call load_swap_config('tests/swap-cases/toml/6.surfacewater/swap.toml', config, errors)
    call config%validate(errors)
    call config%finalize(errors)
+   @assertFalse(errors%has_fatals())
 
-   @assertEqual(swsophy, config%soil%swsophy)
-   @assertEqual(swhyst,  config%soil%swhyst)
-   @assertEqual(swinco,  config%soil%swinco)
-   @assertEqual(gwli,    config%soil%gwli,    1.0d-9)
-   @assertEqual(swmacro, config%soil%swmacro)
+   @assertEqual(0,            config%soil%swsophy)
+   @assertEqual(0,            config%soil%swhyst)
+   @assertEqual(2,            config%soil%swinco)
+   @assertEqual(-68.0_real64, config%soil%gwli, 1.0d-9)
+   @assertEqual(0,            config%soil%swmacro)
 end subroutine
 
 @test
 subroutine test_surfacewater_crop_rotation_parity()
    use funit
-   use variables, only: swCrop
    use swap_config_mod
-   use load_swap_config_mod
-   use chdir_helper_mod
-   use parity_helpers_mod
+   use load_swap_config_mod, only: load_swap_config
    use error_mod
    type(swap_config_t)      :: config
    type(error_collection_t) :: errors
-   character(len=1024)      :: orig_cwd
    integer :: i, n_rot
-
-   call get_cwd(orig_cwd)
-   call chdir_to('tests/swap-cases/6.surfacewater')
-   call stage_swp_template('swap_linux.swp.template', 'swap')
-   call reset_for_next_readswap()
-   call readswap('swap')
-   close(logf)
-   call chdir_to(trim(orig_cwd))
 
    call load_swap_config('tests/swap-cases/toml/6.surfacewater/swap.toml', config, errors)
    call config%validate(errors)
    call config%finalize(errors)
-
    @assertFalse(errors%has_fatals())
 
-   @assertEqual(swCrop, config%crop%swcrop)
+   @assertEqual(1, config%crop%swcrop)
 
    ! Case 6 has 3 rotation entries (1997-1999), all type 1 (fixed crop).
    n_rot = size(config%crop%rotation_type)
@@ -274,46 +178,22 @@ subroutine test_surfacewater_crop_rotation_parity()
 end subroutine
 
 ! Phase 4c-b Task 14d: parity for the last type-1 (grass.crp) rotation entry of
-! case 6.surfacewater. Drive readcropfixed directly via the legacy_crop_helper
-! bridge and cross-check `variables` globals against config%crop%rotation_fixed.
-!
-! case 6 grass.crp switches: SWRD=1, SWOXYGEN=0, SWDROUGHT=1, SWINTER=1.
-! Per readcropfixed (readswap.f90 ~2037 onwards):
-!   - idev/lcc/kdif/kdir: always read.
-!   - hlim1/hlim2u/hlim2l: only read when SWOXYGEN=1 → NOT populated here.
-!   - hlim3h/hlim3l/hlim4/adcrh/adcrl: read for SWDROUGHT=1.
-!   - rdi/rri/rdc: only read when SWRD=2 → NOT populated here (SWRD=1 reads rdtb).
-!   - cofab: read for SWINTER=1.
+! case 6. case 6 grass.crp switches: SWRD=1, SWOXYGEN=0, SWDROUGHT=1, SWINTER=1.
 @test
 subroutine test_surfacewater_fixed_data_parity()
    use funit
-   use variables, only: &
-      idev, kdif, kdir, hlim3h, hlim3l, hlim4, adcrh, adcrl, cofab
-   use legacy_crop_helper_mod, only: read_legacy_cropfixed
    use swap_config_mod
-   use load_swap_config_mod
-   use chdir_helper_mod
-   use parity_helpers_mod
+   use load_swap_config_mod, only: load_swap_config
    use error_mod
    use iso_fortran_env, only: real64
    type(swap_config_t)      :: config
    type(error_collection_t) :: errors
-   character(len=1024)      :: orig_cwd
    integer  :: i, n_rot, last_fixed_idx
    integer, parameter :: ICROP_GRASS = 3
-
-   call get_cwd(orig_cwd)
-   call chdir_to('tests/swap-cases/6.surfacewater')
-   call stage_swp_template('swap_linux.swp.template', 'swap')
-   call reset_for_next_readswap()
-   call readswap('swap')
-   close(logf)
-   call chdir_to(trim(orig_cwd))
 
    call load_swap_config('tests/swap-cases/toml/6.surfacewater/swap.toml', config, errors)
    call config%validate(errors)
    call config%finalize(errors)
-
    @assertFalse(errors%has_fatals())
 
    ! Locate the last type-1 entry in the rotation.
@@ -326,80 +206,52 @@ subroutine test_surfacewater_fixed_data_parity()
       end if
    end do
    @assertTrue(last_fixed_idx > 0)
-
-   ! Sanity check: all 3 rotation entries are type 1; last is index 3.
    @assertEqual(ICROP_GRASS, last_fixed_idx)
 
-   ! Drive the legacy readcropfixed from inside the case directory.
-   call get_cwd(orig_cwd)
-   call chdir_to('tests/swap-cases/6.surfacewater')
-   call read_legacy_cropfixed(ICROP_GRASS, 'grass')
-   call chdir_to(trim(orig_cwd))
+   ! Phenology
+   @assertEqual(1,   config%crop%rotation_fixed(ICROP_GRASS)%idev)
+   @assertEqual(366, config%crop%rotation_fixed(ICROP_GRASS)%lcc)
 
-   ! Phenology (lcc is a local in readcropfixed, not exposed via variables;
-   ! cross-check the literal LCC=366 from grass.crp).
-   @assertEqual(idev, config%crop%rotation_fixed(ICROP_GRASS)%idev)
-   @assertEqual(366,  config%crop%rotation_fixed(ICROP_GRASS)%lcc)
+   ! Light extinction
+   @assertEqual(0.75_real64, config%crop%rotation_fixed(ICROP_GRASS)%kdif, 1.0e-12_real64)
+   @assertEqual(0.75_real64, config%crop%rotation_fixed(ICROP_GRASS)%kdir, 1.0e-12_real64)
 
-   ! Light extinction.
-   @assertEqual(kdif, config%crop%rotation_fixed(ICROP_GRASS)%kdif, 1.0e-12_real64)
-   @assertEqual(kdir, config%crop%rotation_fixed(ICROP_GRASS)%kdir, 1.0e-12_real64)
-
-   ! READING NOTE: grass.crp has SWOXYGEN=0, so readcropfixed does NOT
-   ! read hlim1/hlim2u/hlim2l (readswap.f90 line ~2235 in the swoxygen=1
-   ! branch). TOML side defaults to 0 — assert against literal 0.
+   ! grass.crp has SWOXYGEN=0 — hlim1/2u/2l default to 0.
    @assertEqual(0.0_real64, config%crop%rotation_fixed(ICROP_GRASS)%hlim1,  1.0e-12_real64)
    @assertEqual(0.0_real64, config%crop%rotation_fixed(ICROP_GRASS)%hlim2u, 1.0e-12_real64)
    @assertEqual(0.0_real64, config%crop%rotation_fixed(ICROP_GRASS)%hlim2l, 1.0e-12_real64)
 
-   ! Drought-stress (SWDROUGHT=1 → hlim3h/hlim3l/hlim4/adcrh/adcrl populated).
-   @assertEqual(hlim3h, config%crop%rotation_fixed(ICROP_GRASS)%hlim3h, 1.0e-12_real64)
-   @assertEqual(hlim3l, config%crop%rotation_fixed(ICROP_GRASS)%hlim3l, 1.0e-12_real64)
-   @assertEqual(hlim4,  config%crop%rotation_fixed(ICROP_GRASS)%hlim4,  1.0e-12_real64)
-   @assertEqual(adcrh,  config%crop%rotation_fixed(ICROP_GRASS)%adcrh,  1.0e-12_real64)
-   @assertEqual(adcrl,  config%crop%rotation_fixed(ICROP_GRASS)%adcrl,  1.0e-12_real64)
+   ! Drought-stress (SWDROUGHT=1).
+   @assertEqual(-200.0_real64,  config%crop%rotation_fixed(ICROP_GRASS)%hlim3h, 1.0e-12_real64)
+   @assertEqual(-800.0_real64,  config%crop%rotation_fixed(ICROP_GRASS)%hlim3l, 1.0e-12_real64)
+   @assertEqual(-8000.0_real64, config%crop%rotation_fixed(ICROP_GRASS)%hlim4,  1.0e-12_real64)
+   @assertEqual(0.5_real64,     config%crop%rotation_fixed(ICROP_GRASS)%adcrh, 1.0e-12_real64)
+   @assertEqual(0.1_real64,     config%crop%rotation_fixed(ICROP_GRASS)%adcrl, 1.0e-12_real64)
 
-   ! READING NOTE: grass.crp has SWRD=1, so readcropfixed reads the rdtb
-   ! table (not rdi/rri/rdc scalars; readswap.f90 lines 2177-2181). The
-   ! legacy globals stay at 0 even though the .crp declares RDI/RDC=30
-   ! and RRI=0. TOML side stores the values verbatim — assert literals.
+   ! TOML stores RDI/RRI/RDC verbatim (legacy SWRD=1 ignores them).
    @assertEqual(30.0_real64, config%crop%rotation_fixed(ICROP_GRASS)%rdi, 1.0e-12_real64)
    @assertEqual( 0.0_real64, config%crop%rotation_fixed(ICROP_GRASS)%rri, 1.0e-12_real64)
    @assertEqual(30.0_real64, config%crop%rotation_fixed(ICROP_GRASS)%rdc, 1.0e-12_real64)
 
-   ! Interception (SWINTER=1 → cofab populated).
-   @assertEqual(cofab, config%crop%rotation_fixed(ICROP_GRASS)%cofab, 1.0e-12_real64)
+   ! Interception (SWINTER=1).
+   @assertEqual(0.25_real64, config%crop%rotation_fixed(ICROP_GRASS)%cofab, 1.0e-12_real64)
 end subroutine
 
 ! Phase 4d Task 20d: parity for the four new sections — bottom_boundary,
-! heat, irrigation, solute — added to the case 6 swap.toml in Task 17.
-! Case 6 disables heat, irrigation, and solute entirely (all-0 switches).
+! heat, irrigation, solute. Case 6 disables heat, irrigation, solute.
 @test
 subroutine test_surfacewater_parity_4d_sections()
    use funit
-   use variables, only: swhea, swirfix, swsolu
    use swap_config_mod
-   use load_swap_config_mod
-   use chdir_helper_mod
-   use parity_helpers_mod
+   use load_swap_config_mod, only: load_swap_config
    use error_mod
    use iso_fortran_env, only: real64
    type(swap_config_t)      :: config
    type(error_collection_t) :: errors
-   character(len=1024)      :: orig_cwd
-
-   call get_cwd(orig_cwd)
-   call chdir_to('tests/swap-cases/6.surfacewater')
-   call stage_swp_template('swap_linux.swp.template', 'swap')
-   call reset_for_next_readswap()
-   call readswap('swap')
-   close(logf)
-   call chdir_to(trim(orig_cwd))
 
    call load_swap_config('tests/swap-cases/toml/6.surfacewater/swap.toml', config, errors)
    call config%validate(errors)
    call config%finalize(errors)
-
    @assertFalse(errors%has_fatals())
 
    ! [bottom_boundary] — case 6 SWBOTB=3 with haquif_file (sw3=2).
@@ -407,64 +259,48 @@ subroutine test_surfacewater_parity_4d_sections()
    @assertTrue(allocated(config%bottom_boundary%haquif_file))
    @assertEqual("surfacewater.haquif.csv", config%bottom_boundary%haquif_file)
 
-   ! [heat] — case 6 SWHEA=0 (heat transport disabled).
-   @assertEqual(swhea, config%heat%swhea)
+   ! [heat] — case 6 SWHEA=0.
+   @assertEqual(0, config%heat%swhea)
 
    ! [irrigation] — case 6 SWIRFIX=0.
-   @assertEqual(swirfix, config%irrigation%swirfix)
+   @assertEqual(0, config%irrigation%swirfix)
 
    ! [solute] — case 6 SWSOLU=0.
-   @assertEqual(swsolu, config%solute%swsolu)
+   @assertEqual(0, config%solute%swsolu)
 end subroutine
 
-! Phase 4f-prep Task D2: parity for the [surface_water] section newly
-! added to case 6's swap.toml. Cross-check legacy `variables` globals
-! (set by readswap() → rddre()) against config%surface_water fields.
+! Phase 4f-prep Task D2: parity for the [surface_water] section. Cross-check
+! literal values transcribed from swap.dra (28 management periods).
 !
 ! READING NOTES:
 !   - There is no `wlact` global; legacy rddre reads "wlact" into the
 !     local `wls1` and stores it into `wlstar` after subtracting altcu
-!     (altcu=0 in case 6, so values match TOML directly). We assert
-!     against the TOML literal -77.0 instead of any global.
-!   - sofcu is a local in rddre, not a `variables` global. Asserted
-!     against the TOML literal 100.0.
-!   - Legacy stores impend(:) as days-since-1900 reals (rdftim). The
-!     reader normalises TOML date literals through parse_date_to_days1900
-!     to the same axis, so day counts compare directly.
-!   - Legacy rddre applies `wldip = abs(wldip)`; case 6 inputs are 0.0
-!     so the abs() is a no-op for this case.
+!     (altcu=0 in case 6). Literal -77.0 from swap.dra.
+!   - sofcu is a local in rddre, not a `variables` global. Literal 100.0.
+!   - impend in days-since-1900 (parse_date_to_days1900 axis).
 @test
 subroutine test_surfacewater_parity_surface_water()
    use funit
-   use variables, only: swsrf, swsec, nmper, swqhr, osswlm, &
-                        impend, swman, wscap, wldip, intwl, &
-                        hbweir, alphaw, betaw
    use swap_config_mod
-   use parity_helpers_mod
+   use load_swap_config_mod, only: load_swap_config
    use error_mod
    use iso_fortran_env, only: real64
    type(swap_config_t)      :: config
    type(error_collection_t) :: errors
 
-   call load_both_for_surfacewater(config, errors)
-
+   call load_swap_config('tests/swap-cases/toml/6.surfacewater/swap.toml', config, errors)
+   call config%validate(errors)
+   call config%finalize(errors)
    @assertFalse(errors%has_fatals())
 
-   ! Top-level scalars: legacy globals vs config.
-   @assertEqual(swsrf,  config%surface_water%swsrf)
-   @assertEqual(swsec,  config%surface_water%swsec)
-   @assertEqual(nmper,  config%surface_water%nmper)
-   @assertEqual(swqhr,  config%surface_water%swqhr)
-   @assertEqual(osswlm, config%surface_water%osswlm, 1.0e-12_real64)
-
-   ! Literal sanity (transcribed from swap.dra).
-   @assertEqual(2,    config%surface_water%swsrf)
-   @assertEqual(2,    config%surface_water%swsec)
-   @assertEqual(28,   config%surface_water%nmper)
-   @assertEqual(1,    config%surface_water%swqhr)
-   @assertEqual(-77.0_real64,  config%surface_water%wlact, 1.0e-12_real64)
+   ! Top-level scalars.
+   @assertEqual(2,             config%surface_water%swsrf)
+   @assertEqual(2,             config%surface_water%swsec)
+   @assertEqual(28,            config%surface_water%nmper)
+   @assertEqual(1,             config%surface_water%swqhr)
    @assertEqual(2.5_real64,    config%surface_water%osswlm, 1.0e-12_real64)
-   @assertEqual(100.0_real64,  config%surface_water%sofcu, 1.0e-12_real64)
+   @assertEqual(-77.0_real64,  config%surface_water%wlact,  1.0e-12_real64)
+   @assertEqual(100.0_real64,  config%surface_water%sofcu,  1.0e-12_real64)
 
    ! Per-period management arrays sized to nmper=28.
    @assertEqual(28, size(config%surface_water%impend))
@@ -473,29 +309,28 @@ subroutine test_surfacewater_parity_surface_water()
    @assertEqual(28, size(config%surface_water%wldip))
    @assertEqual(28, size(config%surface_water%intwl))
 
-   ! Representative per-period entries: legacy global vs config.
-   @assertEqual(swman(1),   config%surface_water%swman(1))
-   @assertEqual(swman(28),  config%surface_water%swman(28))
-   @assertEqual(intwl(1),   config%surface_water%intwl(1))
-   @assertEqual(intwl(28),  config%surface_water%intwl(28))
-   @assertEqual(wscap(1),   config%surface_water%wscap(1),  1.0e-12_real64)
-   @assertEqual(wscap(28),  config%surface_water%wscap(28), 1.0e-12_real64)
-   @assertEqual(wldip(1),   config%surface_water%wldip(1),  1.0e-12_real64)
-   @assertEqual(wldip(28),  config%surface_water%wldip(28), 1.0e-12_real64)
+   ! Representative per-period entries (literals captured from rddre).
+   @assertEqual(1, config%surface_water%swman(1))
+   @assertEqual(1, config%surface_water%swman(28))
+   @assertEqual(1, config%surface_water%intwl(1))
+   @assertEqual(1, config%surface_water%intwl(28))
+   @assertEqual(0.0_real64,    config%surface_water%wscap(1),  1.0e-12_real64)
+   @assertEqual(0.0_real64,    config%surface_water%wscap(28), 1.0e-12_real64)
+   @assertEqual(0.0_real64,    config%surface_water%wldip(1),  1.0e-12_real64)
+   @assertEqual(0.0_real64,    config%surface_water%wldip(28), 1.0e-12_real64)
 
-   ! impend in days-since-1900 (legacy rdftim and parse_date_to_days1900
-   ! agree on the axis).
-   @assertEqual(impend(1),  config%surface_water%impend(1),  1.0e-9_real64)
-   @assertEqual(impend(14), config%surface_water%impend(14), 1.0e-9_real64)
-   @assertEqual(impend(28), config%surface_water%impend(28), 1.0e-9_real64)
+   ! impend in days-since-1900 (parse_date_to_days1900 axis).
+   @assertEqual(35430.0_real64, config%surface_water%impend(1),  1.0e-9_real64)
+   @assertEqual(35865.0_real64, config%surface_water%impend(14), 1.0e-9_real64)
+   @assertEqual(36524.0_real64, config%surface_water%impend(28), 1.0e-9_real64)
 
    ! Per-period weir arrays (SWQHR=1, exponential).
    @assertEqual(28, size(config%surface_water%hbweir))
    @assertEqual(28, size(config%surface_water%alphaw))
    @assertEqual(28, size(config%surface_water%betaw))
-   @assertEqual(hbweir(1),  config%surface_water%hbweir(1),  1.0e-12_real64)
-   @assertEqual(hbweir(13), config%surface_water%hbweir(13), 1.0e-12_real64)
-   @assertEqual(hbweir(28), config%surface_water%hbweir(28), 1.0e-12_real64)
-   @assertEqual(alphaw(1),  config%surface_water%alphaw(1),  1.0e-12_real64)
-   @assertEqual(betaw(1),   config%surface_water%betaw(1),   1.0e-12_real64)
+   @assertEqual(-96.0_real64,    config%surface_water%hbweir(1),  1.0e-12_real64)
+   @assertEqual(-34.0_real64,    config%surface_water%hbweir(13), 1.0e-12_real64)
+   @assertEqual(-46.6_real64,    config%surface_water%hbweir(28), 1.0e-12_real64)
+   @assertEqual(0.014688_real64, config%surface_water%alphaw(1),  1.0e-9_real64)
+   @assertEqual(1.5_real64,      config%surface_water%betaw(1),   1.0e-12_real64)
 end subroutine
