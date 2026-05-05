@@ -45,13 +45,16 @@ End-state tag: `rescue/legacy-readers-deleted`.
 
 ## Non-goals
 
-- **`Read_Tillage` retirement** (`tillage.f90:433`) — still calls
-  `RDinit(swpfile)` to look up `swtill` (always 0 in TOML mode per
-  SS-10.5). Retiring would also retire the tillage subsystem; out of
-  scope here. TTutil therefore stays as a build dependency for
-  production.
-- **`SSDI_irrigation(1)` retirement** (`irrigation.f90:580`) — same
-  pattern; reads `swssdi` via `RDinit(swpfile)`. Out of scope.
+- **Tillage and SSDI TOML port** — `Read_Tillage` and
+  `SSDI_irrigation(1)` continue to read tillage / SSDI parameters
+  from staged `swap.swp` via TTutil when activated. Schema-porting
+  those blocks (so the modern binary doesn't need TTutil for tillage
+  / SSDI either) is a future arc tracked as ADR 0021 candidate. Out
+  of scope here.
+- **TTutil utility-call retirement** (`rdsets`/`rdfrom` in
+  `swap_main.f90`, `rddtmp` in `swapoutput.f90`) — these are not
+  data readers (rerun mechanism + temp-file cleanup). Separate,
+  smaller arc; out of scope.
 - **TTutil utility calls** (`rdsets`, `rdfrom` in
   `swap_main.f90:47,54`; `rddtmp` in `swapoutput.f90:3454`) — these
   are not data readers. Out of scope.
@@ -67,8 +70,19 @@ End-state tag: `rescue/legacy-readers-deleted`.
 | SS | Title | Effort | Depends on |
 |---|---|---|---|
 | SS-A | Per-parity-suite literal-value capture + helper-file drop | M | — |
-| SS-B | Code deletion (readswap.f90 + dead case(1) blocks + wrapper retirement) | M | SS-A |
-| SS-C | Closeout (ADR 0019 update, architecture.md update, summary update, tag) | S | SS-A, SS-B |
+| SS-B | ADR 0020: call-site gating convention; lift tillage/SSDI gates; un-stub validators | S-M | — |
+| SS-C | Code deletion (readswap.f90 + dead case(1) blocks + wrapper retirement) | M | SS-A |
+| SS-D | Closeout (ADR 0019 update, architecture.md update, summary update, tag) | S | SS-A, SS-B, SS-C |
+
+**Note on SS-B framing.** Tillage and SSDI are legitimate SWAP
+features whose TOML port hasn't been written yet — not deprecated /
+deferred features. The `swtill=1` / `swssdi=1` stub-errors added in
+SS-10.5 sent the wrong signal ("this feature is gone"); SS-B removes
+those stub-errors and instead gates the subsystems at the call site
+(matching the existing convention used by `flCropNut`,
+`flMacroPore`, `flSurfaceWater`, etc.). The subsystems remain
+runnable via TTutil reading of staged `swap.swp` until a future arc
+ports them to TOML schema. See "Out of scope" for the follow-on.
 
 ## SS-A — Per-parity-suite literal-value capture + helper-file drop
 
