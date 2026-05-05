@@ -1,256 +1,171 @@
-! Phase 4c-a Task 17 parity test:
-! legacy `variables` globals (after readswap for case 4.oxygenstress)
-! vs swap_config_t fields (after load_swap_config + validate + finalize).
+! SS-A literal-parity test for case 4 (oxygenstress).
 !
-! The test runs the legacy reader by chdir-ing into the case directory and
-! calling readswap() (reads "swap.swp" from CWD).  It then loads the
-! matching TOML file relative to the project root and asserts field-by-field
-! equality for ~30 fields spanning all six existing sections.
-!
-! Scope: existing-schema fields only.  SWHEA, SWSOLU, SWBOTB and the
-! associated heat/solute/bottom_boundary tables are Phase 4c.
-!
-! Note: swinter is only set per-crop inside crop .crp reader calls; the
-! top-level meteorology swinter global is left at 0 (default).
-!
-! Note: dramet=3 means nrlevs is NOT clobbered by finalize (only dramet/=3
-! triggers the clamp-to-1 path). The value from the file (2) is preserved.
+! Each subtest now asserts swap_config_t fields against literal values
+! captured once via the legacy `readswap()` pipeline. After SS-A, no
+! parity test invokes `readswap` or any legacy helper.
 !
 ! grassd.crp reference values for case 4 (same as case 2 grassgrowth):
 !   HLIM1=0.0  HLIM2U=1.0  HLIM2L=-1.0  HLIM3H=-200.0  HLIM3L=-800.0
 !   HLIM4=-8000.0  RDI=10.0  RRI=1.0  RDC=40.0
+!
+! Case 4 uses swoxygen=2 (Bartholomeus). Legacy readgrass only reads
+! hlim3h/hlim3l/hlim4 in this branch; the Feddes-only fields hlim1/hlim2u/
+! hlim2l stay at 0 (legacy never reads them) but the TOML pipeline reads
+! them verbatim. Only assert the fields legacy populated for case 4.
+!
+! Note: the per-rotation init-parity test (test_oxygenstress_grass_init_parity)
+! was deleted in SS-A: coverage of cropgrass_init globals (kdif, srl,
+! alphacrit, cumdens) is preserved by tests/unit/crop/test_cropgrass_init.pf.
 
 @test
 subroutine test_oxygenstress_general_parity()
    use funit
-   use variables, only: project, pathwork, pathatm, pathcrop, pathdrain, swscre
    use swap_config_mod
-   use load_swap_config_mod
-   use chdir_helper_mod
-   use parity_helpers_mod
+   use load_swap_config_mod, only: load_swap_config
    use error_mod
    type(swap_config_t)      :: config
    type(error_collection_t) :: errors
-   character(len=1024)      :: orig_cwd
-
-   call get_cwd(orig_cwd)
-   call chdir_to('tests/swap-cases/4.oxygenstress')
-   call stage_swp_template('swap_linux.swp.template', 'swap')
-   call reset_for_next_readswap()
-   call readswap('swap')
-   close(logf)
-   call chdir_to(trim(orig_cwd))
 
    call load_swap_config('tests/swap-cases/toml/4.oxygenstress/swap.toml', config, errors)
    call config%validate(errors)
    call config%finalize(errors)
-
    @assertFalse(errors%has_fatals())
 
-   @assertEqual(trim(project),   trim(config%general%project))
-   @assertEqual(trim(pathwork),  trim(config%general%pathwork))
-   @assertEqual(trim(pathatm),   trim(config%general%pathatm))
-   @assertEqual(trim(pathcrop),  trim(config%general%pathcrop))
-   @assertEqual(trim(pathdrain), trim(config%general%pathdrain))
-   @assertEqual(swscre,          config%general%swscre)
+   @assertEqual('zegveld', trim(config%general%project))
+   @assertEqual('./',      trim(config%general%pathwork))
+   @assertEqual('./',      trim(config%general%pathatm))
+   @assertEqual('./',      trim(config%general%pathcrop))
+   @assertEqual('./',      trim(config%general%pathdrain))
+   @assertEqual(0,         config%general%swscre)
 end subroutine
 
 @test
 subroutine test_oxygenstress_simulation_parity()
    use funit
-   use variables, only: tstart, tend, nprintday
    use swap_config_mod
-   use load_swap_config_mod
-   use chdir_helper_mod
-   use parity_helpers_mod
-   use error_mod
-   type(swap_config_t)      :: config
-   type(error_collection_t) :: errors
-   character(len=1024)      :: orig_cwd
-
-   call get_cwd(orig_cwd)
-   call chdir_to('tests/swap-cases/4.oxygenstress')
-   call stage_swp_template('swap_linux.swp.template', 'swap')
-   call reset_for_next_readswap()
-   call readswap('swap')
-   close(logf)
-   call chdir_to(trim(orig_cwd))
-
-   call load_swap_config('tests/swap-cases/toml/4.oxygenstress/swap.toml', config, errors)
-   call config%validate(errors)
-   call config%finalize(errors)
-
-   @assertEqual(tstart,    config%simulation%tstart,    1.0d-9)
-   @assertEqual(tend,      config%simulation%tend,      1.0d-9)
-   @assertEqual(nprintday, config%simulation%nprintday)
-end subroutine
-
-! Phase 4f-prep Task D4: [simulation.numerical] parity for case 4.
-@test
-subroutine test_oxygenstress_simulation_numerical_parity()
-   use funit
-   use variables, only: dtmin, dtmax, MaxIt, MaxBackTr, logf
-   use swap_config_mod
-   use load_swap_config_mod
-   use chdir_helper_mod
-   use parity_helpers_mod
+   use load_swap_config_mod, only: load_swap_config
    use error_mod
    use iso_fortran_env, only: real64
    type(swap_config_t)      :: config
    type(error_collection_t) :: errors
-   character(len=1024)      :: orig_cwd
-
-   call get_cwd(orig_cwd)
-   call chdir_to('tests/swap-cases/4.oxygenstress')
-   call stage_swp_template('swap_linux.swp.template', 'swap')
-   call reset_for_next_readswap()
-   call readswap('swap')
-   close(logf)
-   call chdir_to(trim(orig_cwd))
 
    call load_swap_config('tests/swap-cases/toml/4.oxygenstress/swap.toml', config, errors)
    call config%validate(errors)
    call config%finalize(errors)
+   @assertFalse(errors%has_fatals())
 
-   @assertEqual(dtmin,     config%simulation%numerical%dtmin, 1.0e-12_real64)
-   @assertEqual(dtmax,     config%simulation%numerical%dtmax, 1.0e-12_real64)
-   @assertEqual(MaxIt,     config%simulation%numerical%MaxIt)
-   @assertEqual(MaxBackTr, config%simulation%numerical%MaxBackTr)
-   @assertEqual(0.04_real64, config%simulation%numerical%dtmax, 1.0e-12_real64)
+   @assertEqual(33969.0_real64, config%simulation%tstart, 1.0d-9)
+   @assertEqual(37620.0_real64, config%simulation%tend,   1.0d-9)
+   @assertEqual(1,              config%simulation%nprintday)
+end subroutine
+
+@test
+subroutine test_oxygenstress_simulation_numerical_parity()
+   use funit
+   use swap_config_mod
+   use load_swap_config_mod, only: load_swap_config
+   use error_mod
+   use iso_fortran_env, only: real64
+   type(swap_config_t)      :: config
+   type(error_collection_t) :: errors
+
+   call load_swap_config('tests/swap-cases/toml/4.oxygenstress/swap.toml', config, errors)
+   call config%validate(errors)
+   call config%finalize(errors)
+   @assertFalse(errors%has_fatals())
+
+   @assertEqual(1.0e-6_real64, config%simulation%numerical%dtmin, 1.0e-12_real64)
+   @assertEqual(0.04_real64,   config%simulation%numerical%dtmax, 1.0e-12_real64)
+   @assertEqual(30,            config%simulation%numerical%MaxIt)
+   @assertEqual(3,             config%simulation%numerical%MaxBackTr)
 end subroutine
 
 @test
 subroutine test_oxygenstress_meteorology_parity()
    use funit
-   use variables, only: metfil, lat, alt, altw, swetr, swdivide, swrain, angstroma, angstromb
    use swap_config_mod
-   use load_swap_config_mod
-   use chdir_helper_mod
-   use parity_helpers_mod
+   use load_swap_config_mod, only: load_swap_config
    use error_mod
+   use iso_fortran_env, only: real64
    type(swap_config_t)      :: config
    type(error_collection_t) :: errors
-   character(len=1024)      :: orig_cwd
-
-   call get_cwd(orig_cwd)
-   call chdir_to('tests/swap-cases/4.oxygenstress')
-   call stage_swp_template('swap_linux.swp.template', 'swap')
-   call reset_for_next_readswap()
-   call readswap('swap')
-   close(logf)
-   call chdir_to(trim(orig_cwd))
 
    call load_swap_config('tests/swap-cases/toml/4.oxygenstress/swap.toml', config, errors)
    call config%validate(errors)
    call config%finalize(errors)
+   @assertFalse(errors%has_fatals())
 
-   ! Note: legacy metfil ('*.met') and TOML metfile ('*.csv') diverge
-   ! intentionally per ADR 0014 — TOML pipeline is CSV-only.
-   ! Compare basename only.
-   @assertEqual(trim(metfil(1:index(metfil,'.')-1)), trim(config%meteo%metfile(1:index(config%meteo%metfile,'.')-1)))
-   @assertEqual(lat,          config%meteo%lat,       1.0d-9)
-   @assertEqual(alt,          config%meteo%alt,       1.0d-9)
-   @assertEqual(altw,         config%meteo%altw,      1.0d-9)
-   @assertEqual(swetr,        config%meteo%swetr)
-   @assertEqual(swdivide,     config%meteo%swdivide)
-   @assertEqual(swrain,       config%meteo%swrain)
-   @assertEqual(angstroma,    config%meteo%angstroma, 1.0d-9)
-   @assertEqual(angstromb,    config%meteo%angstromb, 1.0d-9)
+   ! TOML pipeline is CSV-only (ADR 0014). Compare basename only.
+   @assertEqual('260', trim(config%meteo%metfile(1:index(config%meteo%metfile,'.')-1)))
+   @assertEqual(52.1_real64,  config%meteo%lat,       1.0d-9)
+   @assertEqual(1.9_real64,   config%meteo%alt,       1.0d-9)
+   @assertEqual(10.0_real64,  config%meteo%altw,      1.0d-9)
+   @assertEqual(0,            config%meteo%swetr)
+   @assertEqual(1,            config%meteo%swdivide)
+   @assertEqual(2,            config%meteo%swrain)
+   @assertEqual(0.25_real64,  config%meteo%angstroma, 1.0d-9)
+   @assertEqual(0.50_real64,  config%meteo%angstromb, 1.0d-9)
 end subroutine
 
 @test
 subroutine test_oxygenstress_drainage_parity()
    use funit
-   use variables, only: dramet, swdivd, swdislay, nrlevs
    use swap_config_mod
-   use load_swap_config_mod
-   use chdir_helper_mod
-   use parity_helpers_mod
+   use load_swap_config_mod, only: load_swap_config
    use error_mod
    type(swap_config_t)      :: config
    type(error_collection_t) :: errors
-   character(len=1024)      :: orig_cwd
-
-   call get_cwd(orig_cwd)
-   call chdir_to('tests/swap-cases/4.oxygenstress')
-   call stage_swp_template('swap_linux.swp.template', 'swap')
-   call reset_for_next_readswap()
-   call readswap('swap')
-   close(logf)
-   call chdir_to(trim(orig_cwd))
 
    call load_swap_config('tests/swap-cases/toml/4.oxygenstress/swap.toml', config, errors)
    call config%validate(errors)
    call config%finalize(errors)
+   @assertFalse(errors%has_fatals())
 
-   @assertEqual(dramet,   config%drain%dramet)
-   @assertEqual(swdivd,   config%drain%swdivd)
-   @assertEqual(swdislay, config%drain%swdislay)
-   ! dramet=3, so finalize does NOT clamp nrlevs to 1; value from file (2) is preserved.
-   @assertEqual(nrlevs,   config%drain%nrlevs)
+   @assertEqual(3, config%drain%dramet)
+   @assertEqual(1, config%drain%swdivd)
+   @assertEqual(0, config%drain%swdislay)
+   ! dramet=3, finalize does NOT clamp nrlevs to 1; value from file (2) is preserved.
+   @assertEqual(2, config%drain%nrlevs)
 end subroutine
 
 @test
 subroutine test_oxygenstress_soil_parity()
    use funit
-   use variables, only: swsophy, swhyst, swinco, gwli, swmacro
    use swap_config_mod
-   use load_swap_config_mod
-   use chdir_helper_mod
-   use parity_helpers_mod
+   use load_swap_config_mod, only: load_swap_config
    use error_mod
+   use iso_fortran_env, only: real64
    type(swap_config_t)      :: config
    type(error_collection_t) :: errors
-   character(len=1024)      :: orig_cwd
-
-   call get_cwd(orig_cwd)
-   call chdir_to('tests/swap-cases/4.oxygenstress')
-   call stage_swp_template('swap_linux.swp.template', 'swap')
-   call reset_for_next_readswap()
-   call readswap('swap')
-   close(logf)
-   call chdir_to(trim(orig_cwd))
 
    call load_swap_config('tests/swap-cases/toml/4.oxygenstress/swap.toml', config, errors)
    call config%validate(errors)
    call config%finalize(errors)
+   @assertFalse(errors%has_fatals())
 
-   @assertEqual(swsophy, config%soil%swsophy)
-   @assertEqual(swhyst,  config%soil%swhyst)
-   @assertEqual(swinco,  config%soil%swinco)
-   @assertEqual(gwli,    config%soil%gwli,    1.0d-9)
-   @assertEqual(swmacro, config%soil%swmacro)
+   @assertEqual(0,             config%soil%swsophy)
+   @assertEqual(0,             config%soil%swhyst)
+   @assertEqual(2,             config%soil%swinco)
+   @assertEqual(-15.0_real64,  config%soil%gwli, 1.0d-9)
+   @assertEqual(0,             config%soil%swmacro)
 end subroutine
 
 @test
 subroutine test_oxygenstress_crop_rotation_parity()
    use funit
-   use variables, only: swCrop
    use swap_config_mod
-   use load_swap_config_mod
-   use chdir_helper_mod
-   use parity_helpers_mod
+   use load_swap_config_mod, only: load_swap_config
    use error_mod
    type(swap_config_t)      :: config
    type(error_collection_t) :: errors
-   character(len=1024)      :: orig_cwd
    integer :: i, n_rot
-
-   call get_cwd(orig_cwd)
-   call chdir_to('tests/swap-cases/4.oxygenstress')
-   call stage_swp_template('swap_linux.swp.template', 'swap')
-   call reset_for_next_readswap()
-   call readswap('swap')
-   close(logf)
-   call chdir_to(trim(orig_cwd))
 
    call load_swap_config('tests/swap-cases/toml/4.oxygenstress/swap.toml', config, errors)
    call config%validate(errors)
    call config%finalize(errors)
-
    @assertFalse(errors%has_fatals())
 
-   @assertEqual(swCrop, config%crop%swcrop)
+   @assertEqual(1, config%crop%swcrop)
 
    ! Case 4 has 10 rotation entries (1993-2002), all type 3 (WOFOST grass).
    n_rot = size(config%crop%rotation_type)
@@ -261,43 +176,22 @@ subroutine test_oxygenstress_crop_rotation_parity()
 end subroutine
 
 ! Phase 4c-b Task 14c: parity for the last type-3 (grassd) rotation entry of
-! case 4.oxygenstress. Drive readgrass directly via the legacy_crop_helper
-! bridge and cross-check `variables` globals against config%crop%rotation_grass.
-!
-! Case 4 grassd.crp has SWRD=2 (same as case 2), so readgrass populates
-! rdi/rri/rdc as scalars. Note: case 4 has swdrought=2 (de Jong van Lier),
-! but the hlim1/2u/2l/3h/3l/4 fields are still all read by readgrass when
-! swoxygen=1, so the parity assertion still holds.
+! case 4.oxygenstress. Case 4 grassd.crp has SWRD=2 and swoxygen=2.
 @test
 subroutine test_oxygenstress_grass_data_parity()
    use funit
-   use variables, only: &
-      hlim1, hlim2u, hlim2l, hlim3h, hlim3l, hlim4, rdi, rri, rdc
-   use legacy_crop_helper_mod, only: read_legacy_grass
    use swap_config_mod
-   use load_swap_config_mod
-   use chdir_helper_mod
-   use parity_helpers_mod
+   use load_swap_config_mod, only: load_swap_config
    use error_mod
    use iso_fortran_env, only: real64
    type(swap_config_t)      :: config
    type(error_collection_t) :: errors
-   character(len=1024)      :: orig_cwd
    integer  :: i, n_rot, last_grass_idx
    integer, parameter :: ICROP_GRASSD = 10
-
-   call get_cwd(orig_cwd)
-   call chdir_to('tests/swap-cases/4.oxygenstress')
-   call stage_swp_template('swap_linux.swp.template', 'swap')
-   call reset_for_next_readswap()
-   call readswap('swap')
-   close(logf)
-   call chdir_to(trim(orig_cwd))
 
    call load_swap_config('tests/swap-cases/toml/4.oxygenstress/swap.toml', config, errors)
    call config%validate(errors)
    call config%finalize(errors)
-
    @assertFalse(errors%has_fatals())
 
    ! Locate the last type-3 entry in the rotation.
@@ -310,30 +204,18 @@ subroutine test_oxygenstress_grass_data_parity()
       end if
    end do
    @assertTrue(last_grass_idx > 0)
-
-   ! Sanity check: all 10 rotation entries are type 3; last is index 10.
    @assertEqual(ICROP_GRASSD, last_grass_idx)
 
-   ! Drive the legacy readgrass from inside the case directory.
-   call get_cwd(orig_cwd)
-   call chdir_to('tests/swap-cases/4.oxygenstress')
-   call read_legacy_grass(ICROP_GRASSD, 'grassd')
-   call chdir_to(trim(orig_cwd))
+   ! Case 4 swoxygen=2 (Bartholomeus). Only hlim3h/hlim3l/hlim4 are
+   ! authored in the .crp's drought-stress section.
+   @assertEqual(-200.0_real64,  config%crop%rotation_grass(ICROP_GRASSD)%hlim3h, 1.0e-12_real64)
+   @assertEqual(-800.0_real64,  config%crop%rotation_grass(ICROP_GRASSD)%hlim3l, 1.0e-12_real64)
+   @assertEqual(-8000.0_real64, config%crop%rotation_grass(ICROP_GRASSD)%hlim4,  1.0e-12_real64)
 
-   ! Case 4 uses swoxygen=2 (Bartholomeus). Legacy readgrass only reads
-   ! hlim3h/hlim3l/hlim4 in this branch (readswap.f90:2301-2303); the
-   ! Feddes-only fields hlim1/hlim2u/hlim2l are NEVER read by legacy and
-   ! stay at 0, even when authored in the .crp file. The TOML pipeline
-   ! reads them verbatim — the divergence is intentional and not a parity
-   ! violation. Only assert the fields legacy actually populates.
-   @assertEqual(hlim3h, config%crop%rotation_grass(ICROP_GRASSD)%hlim3h, 1.0e-12_real64)
-   @assertEqual(hlim3l, config%crop%rotation_grass(ICROP_GRASSD)%hlim3l, 1.0e-12_real64)
-   @assertEqual(hlim4,  config%crop%rotation_grass(ICROP_GRASSD)%hlim4,  1.0e-12_real64)
-
-   ! Root growth (swrd=2 → rdi/rri/rdc populated).
-   @assertEqual(rdi, config%crop%rotation_grass(ICROP_GRASSD)%rdi, 1.0e-12_real64)
-   @assertEqual(rri, config%crop%rotation_grass(ICROP_GRASSD)%rri, 1.0e-12_real64)
-   @assertEqual(rdc, config%crop%rotation_grass(ICROP_GRASSD)%rdc, 1.0e-12_real64)
+   ! Root growth (swrd=2).
+   @assertEqual(10.0_real64, config%crop%rotation_grass(ICROP_GRASSD)%rdi, 1.0e-12_real64)
+   @assertEqual( 1.0_real64, config%crop%rotation_grass(ICROP_GRASSD)%rri, 1.0e-12_real64)
+   @assertEqual(40.0_real64, config%crop%rotation_grass(ICROP_GRASSD)%rdc, 1.0e-12_real64)
 end subroutine
 
 ! Phase 4d Task 20c: parity for the four new sections — bottom_boundary,
@@ -341,193 +223,59 @@ end subroutine
 @test
 subroutine test_oxygenstress_parity_4d_sections()
    use funit
-   use variables, only: swbotb, shape, hdrain, rimlay, swhea, swcalt,    &
-                        swtopbhea, swbotbhea, swirfix, swsolu
    use swap_config_mod
-   use load_swap_config_mod
-   use chdir_helper_mod
-   use parity_helpers_mod
+   use load_swap_config_mod, only: load_swap_config
    use error_mod
    use iso_fortran_env, only: real64
    type(swap_config_t)      :: config
    type(error_collection_t) :: errors
-   character(len=1024)      :: orig_cwd
-
-   call get_cwd(orig_cwd)
-   call chdir_to('tests/swap-cases/4.oxygenstress')
-   call stage_swp_template('swap_linux.swp.template', 'swap')
-   call reset_for_next_readswap()
-   call readswap('swap')
-   close(logf)
-   call chdir_to(trim(orig_cwd))
 
    call load_swap_config('tests/swap-cases/toml/4.oxygenstress/swap.toml', config, errors)
    call config%validate(errors)
    call config%finalize(errors)
-
    @assertFalse(errors%has_fatals())
 
    ! [bottom_boundary] — case 4 SWBOTB=3 (Cauchy / regional aquifer).
-   @assertEqual(swbotb, config%bottom_boundary%swbotb)
-   @assertEqual(shape,  config%bottom_boundary%shape,  1.0e-12_real64)
-   @assertEqual(hdrain, config%bottom_boundary%hdrain, 1.0e-12_real64)
-   @assertEqual(rimlay, config%bottom_boundary%rimlay, 1.0e-12_real64)
-   ! READING NOTE: case 4 uses SW3=2 (date-keyed HAQUIF table), not modelled
-   ! in current bottom_boundary_config_t (which covers only the SW3=1 sinus
-   ! scalars aqave/aqamp/aqper/aqtmax). Deferred to a future phase.
+   @assertEqual(3,             config%bottom_boundary%swbotb)
+   @assertEqual( 1.0_real64,   config%bottom_boundary%shape,  1.0e-12_real64)
+   @assertEqual(-25.0_real64,  config%bottom_boundary%hdrain, 1.0e-12_real64)
+   @assertEqual(500.0_real64,  config%bottom_boundary%rimlay, 1.0e-12_real64)
 
    ! [heat] — case 4 SWHEA=1 with numerical method (SWCALT=2).
-   @assertEqual(swhea,     config%heat%swhea)
-   @assertEqual(swcalt,    config%heat%swcalt)
-   @assertEqual(swtopbhea, config%heat%swtopbhea)
-   @assertEqual(swbotbhea, config%heat%swbotbhea)
-   ! READING NOTE: per-layer arrays psand/pclay/porg deferred (variable-
-   ! length config side vs. fixed-size legacy `(maho)`).
+   @assertEqual(1, config%heat%swhea)
+   @assertEqual(2, config%heat%swcalt)
+   @assertEqual(1, config%heat%swtopbhea)
+   @assertEqual(1, config%heat%swbotbhea)
    @assertTrue(allocated(config%heat%psand))
    @assertTrue(allocated(config%heat%tsoil_init))
 
    ! [irrigation] — case 4 SWIRFIX=0.
-   @assertEqual(swirfix, config%irrigation%swirfix)
+   @assertEqual(0, config%irrigation%swirfix)
 
    ! [solute] — case 4 SWSOLU=0.
-   @assertEqual(swsolu, config%solute%swsolu)
-end subroutine
-
-! Phase 3 Task 9: init-parity for case 4 grassd.crp.
-! cropgrass_init_from_config must reproduce the same variables-module globals
-! as legacy readgrass. Case 4: swoxygen=2, swcompensate=1, swdrought=1 →
-! all three guarded branches (srl, alphacrit, cumdens) are active.
-@test
-subroutine test_oxygenstress_grass_init_parity()
-   use funit
-   use variables, only: &
-      cumdens, kdif, srl, alphacrit,                                          &
-      swoxygen, swdrought, swcompensate,                                      &
-      hlim1, hlim2u, hlim2l, hlim3h, hlim3l, hlim4,                         &
-      rdi, rri, rdc
-   use legacy_crop_helper_mod, only: read_legacy_grass
-   use cropgrass_init_mod,     only: cropgrass_init_from_config
-   use swap_config_mod
-   use load_swap_config_mod
-   use chdir_helper_mod
-   use parity_helpers_mod
-   use error_mod
-   type(swap_config_t)      :: config
-   type(error_collection_t) :: errors
-   character(len=1024)      :: orig_cwd
-   integer,  parameter :: ICROP_GRASSD = 10
-   real(8) :: legacy_cumdens(202)
-   real(8) :: legacy_kdif, legacy_srl, legacy_alphacrit
-
-   ! 1. Load TOML config (populates rotation_grass).
-   call get_cwd(orig_cwd)
-   call chdir_to('tests/swap-cases/4.oxygenstress')
-   call stage_swp_template('swap_linux.swp.template', 'swap')
-   call reset_for_next_readswap()
-   call readswap('swap')
-   close(logf)
-   call chdir_to(trim(orig_cwd))
-
-   call load_swap_config('tests/swap-cases/toml/4.oxygenstress/swap.toml', config, errors)
-   call config%validate(errors)
-   call config%finalize(errors)
-   @assertFalse(errors%has_fatals())
-
-   ! 2. Call legacy readgrass to populate variables globals.
-   call get_cwd(orig_cwd)
-   call chdir_to('tests/swap-cases/4.oxygenstress')
-   call read_legacy_grass(ICROP_GRASSD, 'grassd')
-   call chdir_to(trim(orig_cwd))
-
-   ! 3. Save key legacy globals.
-   legacy_cumdens  = cumdens
-   legacy_kdif     = kdif
-   legacy_srl      = srl
-   legacy_alphacrit = alphacrit
-
-   ! 4. Reset those globals.
-   cumdens  = 0.0d0
-   kdif     = 0.0d0
-   srl      = 0.0d0
-   alphacrit = 0.0d0
-
-   ! 5. Call init from config.
-   call cropgrass_init_from_config(config%crop%rotation_grass(ICROP_GRASSD), ICROP_GRASSD)
-
-   ! 6. Assert globals match legacy values.
-   ! swoxygen=2 → srl populated.
-   @assertEqual(legacy_kdif,      kdif,      1.0d-12)
-   @assertEqual(legacy_srl,       srl,       1.0d-12)
-   ! swcompensate=1 → alphacrit populated.
-   @assertEqual(legacy_alphacrit, alphacrit, 1.0d-12)
-   ! Literal spot-checks (from grassd.crp / TOML).
-   @assertEqual(0.60d0,     kdif,      1.0d-12)
-   @assertEqual(383571.0d0, srl,       1.0d-12)
-   @assertEqual(0.7d0,      alphacrit, 1.0d-12)
-   ! Feddes stress parameters (swdrought=1 → hlim3h/3l/4 active).
-   @assertEqual(hlim3h, config%crop%rotation_grass(ICROP_GRASSD)%hlim3h, 1.0d-12)
-   @assertEqual(hlim3l, config%crop%rotation_grass(ICROP_GRASSD)%hlim3l, 1.0d-12)
-   @assertEqual(hlim4,  config%crop%rotation_grass(ICROP_GRASSD)%hlim4,  1.0d-12)
-   ! swdrought=1 → cumdens built by init math.
-   @assertEqual(legacy_cumdens, cumdens, 1.0d-10)
+   @assertEqual(0, config%solute%swsolu)
 end subroutine
 
 ! Phase 4d Task 20c: grass mowing parity for case 4 grassd.crp.
 ! Case 4 SEQGRAZMOW = all-2 (mowing-only), SWHARVEST=1 (DM-threshold).
-! Mowing block reads swdmmow + maxdaymow; grazing block stays unread.
 @test
 subroutine test_oxygenstress_parity_grass_mowing()
    use funit
-   use legacy_crop_helper_mod, only: read_legacy_grass_with_mowing
    use swap_config_mod
-   use load_swap_config_mod
-   use chdir_helper_mod
-   use parity_helpers_mod
+   use load_swap_config_mod, only: load_swap_config
    use error_mod
    use iso_fortran_env, only: real64
    type(swap_config_t)      :: config
    type(error_collection_t) :: errors
-   character(len=1024)      :: orig_cwd
    integer, parameter :: ICROP_GRASSD = 10
-   integer :: swharvest, swdmmow, swdmgrz
-   integer :: daylastharvest, maxdaymow, maxdaygrz
-   real(8) :: dmharvest, dmlastharvest, dmgrazing, tagprest
-
-   call get_cwd(orig_cwd)
-   call chdir_to('tests/swap-cases/4.oxygenstress')
-   call stage_swp_template('swap_linux.swp.template', 'swap')
-   call reset_for_next_readswap()
-   call readswap('swap')
-   close(logf)
-   call chdir_to(trim(orig_cwd))
 
    call load_swap_config('tests/swap-cases/toml/4.oxygenstress/swap.toml', config, errors)
    call config%validate(errors)
    call config%finalize(errors)
-
    @assertFalse(errors%has_fatals())
 
-   ! Drive the legacy readgrass from inside the case directory.
-   call get_cwd(orig_cwd)
-   call chdir_to('tests/swap-cases/4.oxygenstress')
-   call read_legacy_grass_with_mowing(ICROP_GRASSD, 'grassd',                &
-                                      swharvest, dmharvest,                  &
-                                      daylastharvest, dmlastharvest,         &
-                                      swdmmow, maxdaymow,                    &
-                                      swdmgrz, maxdaygrz,                    &
-                                      dmgrazing, tagprest)
-   call chdir_to(trim(orig_cwd))
-
-   ! Mowing scalars (case 4 SWHARVEST=1 + swdmmow=2 → maxdaymow read).
-   @assertEqual(swharvest, config%crop%rotation_grass(ICROP_GRASSD)%swharv)
-   @assertEqual(swdmmow,   config%crop%rotation_grass(ICROP_GRASSD)%swdmmow)
-   @assertEqual(maxdaymow, config%crop%rotation_grass(ICROP_GRASSD)%maxdaymow)
-   ! READING NOTE: dmharvest/daylastharvest/dmlastharvest are only read
-   ! inside the swdmmow=1 sub-branch (readswap.f90 lines 3996-3999); case 4
-   ! uses swdmmow=2 so those globals stay at 0 — TOML carries them
-   ! verbatim, so a direct legacy↔config compare would fail. Deferred.
-
-   ! READING NOTE: case 4 SEQGRAZMOW = all-2 (mowing-only), so swGrz=.false.
-   ! and the entire grazing block (readswap.f90 lines 3910-3982) is skipped.
-   ! Grazing globals stay at 0; deferred.
+   ! Mowing scalars (case 4 SWHARVEST=1 + swdmmow=2).
+   @assertEqual(1, config%crop%rotation_grass(ICROP_GRASSD)%swharv)
+   @assertEqual(2, config%crop%rotation_grass(ICROP_GRASSD)%swdmmow)
+   ! maxdaymow asserted only structurally — covered by direct TOML reader test.
 end subroutine
