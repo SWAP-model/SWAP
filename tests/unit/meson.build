@@ -129,8 +129,7 @@ if get_option('enable_pfunit')
         '../../src/utils/surfacewaterutils.f90',
         '../../src/drainage/surfacewater_init.f90',
         '../../src/crop/irrigation.f90',
-        '../../src/io/readswap.f90',
-        'io/toml/readswap_stubs.f90',
+        '../../src/io/checkdate.f90',
     ]
 
     pfunit_base_sources = test_base_sources + pfunit_extra_sources
