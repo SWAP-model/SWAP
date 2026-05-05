@@ -14,25 +14,44 @@ specs, plans, and audits. Trivial typo fixes and documentation edits
 do not need the full context; anything touching source, build, tests,
 or fixtures does.
 
-## Branch model during the rescue
+## Branch model
 
-The rescue uses a small set of long-lived branches rather than the usual
-per-change feature-branch flow:
+| Branch | Role | Push policy |
+|---|---|---|
+| `main` | Modernization release line. Each merge into `main` corresponds to a tagged release. | **No direct commits, no untagged merges.** Merge from `development` only when shipping a release. |
+| `development` | Active day-to-day work. Topic branches feed into it. | Push freely; CI runs on tag pushes only (see below). |
+| topic branches (optional) | Short-lived feature work. | Merge into `development` once green. |
+| `v4.2.0` tag | Legacy SWAP 4.2.0 reference snapshot. Downstream consumers (pyswap) pin to this. | Frozen. |
 
-- `main` advances only at phase completion, marked by a
-  `rescue/phase-N-<shortname>` tag. It does not accept direct commits
-  mid-phase.
-- `development` is where all in-phase commits land. Phases 1–3 (including
-  Phase 2, the current phase) work directly on `development`.
-- `archive/*` branches preserve the pre-rescue state and must not be lost:
-  `archive/main-pre-rescue`, `archive/swaplib`, `archive/swaplib-simple`,
-  and `archive/wip-drifted`.
+### Release flow
+
+```bash
+# On development (or a topic branch merged into it), confirm gates green:
+pixi run -e test test-pfunit       # → Ok: 1, Fail: 0
+pixi run -e test check-full        # → 5 passed, 0 failed
+
+# Merge into main and tag the release. The tag triggers GitHub Actions
+# (build + test + release artifacts).
+git checkout main
+git merge --no-ff development -m "Release vX.Y.Z"
+git tag -a vX.Y.Z -m "<release notes>"
+git push origin main vX.Y.Z
+```
+
+**Never push to `main` without a corresponding tag.** Untagged pushes
+to `main` will not trigger CI under the current workflow trigger
+(`tags: ['v*']`), so an artifactless push silently weakens the
+release line.
+
+### Other branches
+
+- `archive/*` branches preserve pre-rescue state and must not be
+  deleted: `archive/main-pre-rescue`, `archive/swaplib`,
+  `archive/swaplib-simple`, `archive/wip-drifted`.
 - `legacy/swap-4.2.0` is an orphan branch carrying the upstream
   Intel-compiled SWAP 4.2.0 tree for reference.
-- Starting in Phase 4, per-change feature branches branch off
-  `development` and merge back by fast-forward once green.
-- `origin/main` is **not** advanced during the rescue. Nothing is pushed
-  to it until the rescue completes.
+
+See [`branches.md`](branches.html) for the full convention narrative.
 
 ## Commit conventions
 

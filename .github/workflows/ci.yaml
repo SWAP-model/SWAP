@@ -1,9 +1,14 @@
 name: build-and-release
 
+# Fires only on version tag pushes (e.g. `v1.0.0`).
+# Branch pushes do NOT trigger CI under this workflow — see
+# docs/contributing.md "Release flow" for the tag-driven release model.
+# `workflow_dispatch` is kept as a manual escape hatch for re-runs.
 on:
   push:
-    branches:
-      - main
+    tags:
+      - 'v*'
+  workflow_dispatch:
 
 jobs:
   build-linux:
@@ -173,22 +178,14 @@ jobs:
           name: mingw-bins
           path: dist/mingw
           
-      - name: Create git tag from build version
-        id: tag_version
-        run: |
-          VERSION="${{ needs.build-linux.outputs.version }}"
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag "v$VERSION"
-          git push origin "v$VERSION"
-          echo "tag=v$VERSION" >> $GITHUB_OUTPUT
-
+      # The triggering tag IS the release tag — no need to create one
+      # in the workflow. github.ref_name = the tag name (e.g. 'v1.0.0').
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
             dist/linux/swap${{ needs.build-linux.outputs.version }}-linux
             dist/mingw/swap${{ needs.build-linux.outputs.version }}-mingw.exe
-          tag_name: ${{ steps.tag_version.outputs.tag }}
+          tag_name: ${{ github.ref_name }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
