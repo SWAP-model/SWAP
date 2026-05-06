@@ -1,0 +1,158 @@
+! Tests for the [soil.tillage] validation block in soil_config_validate.
+! Each test exercises one specific rule introduced in Task 2 of the
+! tillage TOML port (spec: docs/superpowers/specs/2026-05-06-tillage-toml-port-design.md).
+
+@test
+subroutine test_validate_swtill1_requires_events()
+   use soil_config_mod, only: soil_config_t
+   use error_mod, only: error_collection_t
+   use funit
+   implicit none
+   type(soil_config_t)      :: cfg
+   type(error_collection_t) :: errs
+
+   cfg%swtill = 1
+   cfg%tillage%i_n_model = 2
+   cfg%tillage%iRedist   = 2
+   ! events and types left unallocated — expect at least one error
+   call cfg%validate(errs)
+   @assertTrue(errs%count() > 0, 'expected error for swtill=1 with no events')
+end subroutine
+
+@test
+subroutine test_validate_event_type_id_must_match_a_type()
+   use soil_config_mod, only: soil_config_t, soil_tillage_event_t, &
+                              soil_tillage_type_t
+   use error_mod, only: error_collection_t
+   use funit
+   implicit none
+   type(soil_config_t)      :: cfg
+   type(error_collection_t) :: errs
+
+   cfg%swtill = 1
+   cfg%tillage%i_n_model = 2
+   cfg%tillage%iRedist   = 2
+   allocate(cfg%tillage%events(1))
+   cfg%tillage%events(1) = soil_tillage_event_t(date='2003-04-15', z=30.0d0, &
+                                                intensity=1.0d0, type_id=2)
+   allocate(cfg%tillage%types(1))
+   cfg%tillage%types(1) = soil_tillage_type_t(id=1, rho_cons=1500.0d0, &
+                                              rho_tillage=1100.0d0, k_R=0.05d0)
+   call cfg%validate(errs)
+   @assertTrue(errs%count() > 0, 'expected error for events(1).type_id not in types')
+end subroutine
+
+@test
+subroutine test_validate_dates_strictly_ascending()
+   use soil_config_mod, only: soil_config_t, soil_tillage_event_t, &
+                              soil_tillage_type_t
+   use error_mod, only: error_collection_t
+   use funit
+   implicit none
+   type(soil_config_t)      :: cfg
+   type(error_collection_t) :: errs
+
+   cfg%swtill = 1
+   cfg%tillage%i_n_model = 2
+   cfg%tillage%iRedist   = 2
+   allocate(cfg%tillage%events(2))
+   ! Second event date is before first — violates ascending requirement
+   cfg%tillage%events(1) = soil_tillage_event_t(date='2003-05-10', z=30.0d0, &
+                                                intensity=0.8d0, type_id=1)
+   cfg%tillage%events(2) = soil_tillage_event_t(date='2003-04-01', z=25.0d0, &
+                                                intensity=0.5d0, type_id=1)
+   allocate(cfg%tillage%types(1))
+   cfg%tillage%types(1) = soil_tillage_type_t(id=1, rho_cons=1500.0d0, &
+                                              rho_tillage=1100.0d0, k_R=0.05d0)
+   call cfg%validate(errs)
+   @assertTrue(errs%count() > 0, 'expected error for non-ascending event dates')
+end subroutine
+
+@test
+subroutine test_validate_intensity_in_range()
+   use soil_config_mod, only: soil_config_t, soil_tillage_event_t, &
+                              soil_tillage_type_t
+   use error_mod, only: error_collection_t
+   use funit
+   implicit none
+   type(soil_config_t)      :: cfg
+   type(error_collection_t) :: errs
+
+   cfg%swtill = 1
+   cfg%tillage%i_n_model = 2
+   cfg%tillage%iRedist   = 2
+   allocate(cfg%tillage%events(1))
+   ! intensity = 1.5 is outside [0, 1]
+   cfg%tillage%events(1) = soil_tillage_event_t(date='2003-04-15', z=30.0d0, &
+                                                intensity=1.5d0, type_id=1)
+   allocate(cfg%tillage%types(1))
+   cfg%tillage%types(1) = soil_tillage_type_t(id=1, rho_cons=1500.0d0, &
+                                              rho_tillage=1100.0d0, k_R=0.05d0)
+   call cfg%validate(errs)
+   @assertTrue(errs%count() > 0, 'expected error for intensity=1.5 outside [0,1]')
+end subroutine
+
+@test
+subroutine test_validate_i_n_model_3_requires_rho_match_N_match()
+   use soil_config_mod, only: soil_config_t, soil_tillage_event_t, &
+                              soil_tillage_type_t
+   use error_mod, only: error_collection_t
+   use funit
+   implicit none
+   type(soil_config_t)      :: cfg
+   type(error_collection_t) :: errs
+
+   cfg%swtill = 1
+   cfg%tillage%i_n_model = 3    ! requires rho_match and N_match
+   cfg%tillage%iRedist   = 2
+   allocate(cfg%tillage%events(1))
+   cfg%tillage%events(1) = soil_tillage_event_t(date='2003-04-15', z=30.0d0, &
+                                                intensity=0.8d0, type_id=1)
+   allocate(cfg%tillage%types(1))
+   ! rho_match left at default -99 — outside [100, 3000]
+   cfg%tillage%types(1) = soil_tillage_type_t(id=1, rho_cons=1500.0d0, &
+                                              rho_tillage=1100.0d0, k_R=0.05d0)
+   call cfg%validate(errs)
+   @assertTrue(errs%count() > 0, 'expected error for i_n_model=3 with rho_match=-99')
+end subroutine
+
+@test
+subroutine test_validate_swtill0_skips_tillage_block()
+   use soil_config_mod, only: soil_config_t
+   use error_mod, only: error_collection_t
+   use funit
+   implicit none
+   type(soil_config_t)      :: cfg
+   type(error_collection_t) :: errs
+
+   ! swtill=0: no events or types — tillage block must not fire any errors.
+   cfg%swtill = 0
+   ! events and types intentionally left unallocated
+   call cfg%validate(errs)
+   ! The fresh errs collection should be empty — the tillage block is silent.
+   @assertEqual(0, errs%count(), 'expected zero errors when swtill=0 (tillage block skipped)')
+end subroutine
+
+@test
+subroutine test_validate_clean_config_no_errors()
+   use soil_config_mod, only: soil_config_t, soil_tillage_event_t, &
+                              soil_tillage_type_t
+   use error_mod, only: error_collection_t
+   use funit
+   implicit none
+   type(soil_config_t)      :: cfg
+   type(error_collection_t) :: errs
+
+   ! Fully valid: swtill=1, one event referencing one type, all in range.
+   cfg%swtill = 1
+   cfg%tillage%i_n_model = 2
+   cfg%tillage%iRedist   = 2
+   allocate(cfg%tillage%events(1))
+   cfg%tillage%events(1) = soil_tillage_event_t(date='2003-04-15', z=30.0d0, &
+                                                intensity=0.8d0, type_id=1)
+   allocate(cfg%tillage%types(1))
+   cfg%tillage%types(1) = soil_tillage_type_t(id=1, rho_cons=1500.0d0, &
+                                              rho_tillage=1100.0d0, k_R=0.05d0)
+   call cfg%validate(errs)
+   @assertEqual(0, errs%count(), 'expected zero errors for a fully valid tillage config')
+end subroutine

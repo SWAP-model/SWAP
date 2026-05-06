@@ -190,6 +190,7 @@ if get_option('enable_pfunit')
         # entry in testSuites.inc; see ADR 0011 / 0018.
         # 'io/toml/test_macroporeflow_parity.pf',
         'io/toml/test_apply_soil_tillage.pf',
+        'io/toml/test_soil_tillage_validate.pf',
         'drainage/test_surfacewater_init.pf',
         'crop/test_cropfixed_init.pf',
         'crop/test_cropwofost_init.pf',

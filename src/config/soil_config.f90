@@ -1,7 +1,9 @@
 !> [soil] section config.
 module soil_config_mod
    use iso_fortran_env, only: real64
-   use error_mod, only: error_collection_t, ERR_VALIDATION_CROSS_FIELD
+   use error_mod, only: error_collection_t,          &
+                        ERR_VALIDATION_CROSS_FIELD,  &
+                        ERR_VALIDATION_OUT_OF_RANGE
    use validation_mod, only: check_int_enum, check_int_range, &
                              check_real_range, check_nonnegative_real
    implicit none
@@ -218,6 +220,78 @@ contains
       ! soil.initial holds the TOML companion-CSV pathway for SWINCO=3.
       if (self%swinco == 3) then
          call self%initial%validate(errors)
+      end if
+
+      ! [soil.tillage] validation — only fires when swtill = 1.
+      ! Depth check (events.z vs |zbotcp(NumNod)|) is deferred to the
+      ! adapter (apply_soil_tillage) since NumNod isn't known here.
+      ! Cross-section date-window check is deferred to a higher-level
+      ! validator (Task 4, adapter, which has access to swap_config_t).
+      if (self%swtill == 1) then
+         call check_int_range(self%tillage%i_n_model, 1, 3, &
+                              'soil.tillage.i_n_model', errors)
+         call check_int_range(self%tillage%iRedist,   0, 2, &
+                              'soil.tillage.iRedist',   errors)
+
+         if (.not. allocated(self%tillage%events) .or. &
+             size(self%tillage%events) == 0) then
+            call errors%append(ERR_VALIDATION_CROSS_FIELD, &
+                               'must be non-empty when soil.swtill = 1', &
+                               'soil.tillage.events')
+         end if
+         if (.not. allocated(self%tillage%types) .or. &
+             size(self%tillage%types) == 0) then
+            call errors%append(ERR_VALIDATION_CROSS_FIELD, &
+                               'must be non-empty when soil.swtill = 1', &
+                               'soil.tillage.types')
+         end if
+
+         if (allocated(self%tillage%events)) then
+            do i = 1, size(self%tillage%events)
+               associate (ev => self%tillage%events(i))
+                  call check_real_range(ev%intensity, 0.0_real64, 1.0_real64, &
+                                        'soil.tillage.events.intensity', errors)
+                  if (ev%type_id < 1) then
+                     call errors%append(ERR_VALIDATION_OUT_OF_RANGE, &
+                                        'must be >= 1', &
+                                        'soil.tillage.events.type_id')
+                  end if
+                  if (allocated(self%tillage%types)) then
+                     if (.not. any(self%tillage%types%id == ev%type_id)) then
+                        call errors%append(ERR_VALIDATION_CROSS_FIELD, &
+                                           'type_id not present in soil.tillage.types', &
+                                           'soil.tillage.events.type_id')
+                     end if
+                  end if
+                  if (i > 1) then
+                     if (ev%date <= self%tillage%events(i - 1)%date) then
+                        call errors%append(ERR_VALIDATION_CROSS_FIELD, &
+                                           'dates must be strictly ascending', &
+                                           'soil.tillage.events.date')
+                     end if
+                  end if
+               end associate
+            end do
+         end if
+
+         if (allocated(self%tillage%types)) then
+            do i = 1, size(self%tillage%types)
+               associate (ty => self%tillage%types(i))
+                  call check_real_range(ty%rho_cons,    100.0_real64, 3000.0_real64, &
+                                        'soil.tillage.types.rho_cons',    errors)
+                  call check_real_range(ty%rho_tillage, 100.0_real64, 3000.0_real64, &
+                                        'soil.tillage.types.rho_tillage', errors)
+                  call check_real_range(ty%k_R,         1.0e-4_real64, 10.0_real64, &
+                                        'soil.tillage.types.k_R',         errors)
+                  if (self%tillage%i_n_model == 3) then
+                     call check_real_range(ty%rho_match, 100.0_real64, 3000.0_real64, &
+                                           'soil.tillage.types.rho_match', errors)
+                     call check_real_range(ty%N_match,   1.001_real64, 10.0_real64, &
+                                           'soil.tillage.types.N_match',   errors)
+                  end if
+               end associate
+            end do
+         end if
       end if
    end subroutine soil_config_validate
 
