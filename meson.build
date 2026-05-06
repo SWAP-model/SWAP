@@ -105,6 +105,7 @@ sources = [
     'src/io/toml/read_irrigation_toml.f90',
     'src/io/toml/read_solute_toml.f90',
     'src/io/toml/read_soil_toml.f90',
+    'src/io/toml/read_soil_tillage_toml.f90',
     'src/io/toml/read_surface_water_toml.f90',
     'src/io/toml/read_cropfixed_toml.f90',
     'src/io/toml/read_cropgrass_toml.f90',

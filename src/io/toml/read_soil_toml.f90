@@ -16,6 +16,7 @@ module read_soil_toml_mod
                                      get_optional_real_with_default, &
                                      get_optional_string_with_default
    use error_mod, only: error_collection_t, ERR_PARSE_TYPE_MISMATCH
+   use read_soil_tillage_toml_mod, only: read_soil_tillage_toml
    implicit none
    private
 
@@ -129,6 +130,10 @@ contains
       ! variables%ores / variables%osat / ... arrays and then builds
       ! variables%paramvg(1..10, lay) just like readswap.f90:786-825.
       call read_hydraulics(sec, config, errors)
+
+      ! Optional [soil.tillage] block — parsed by sibling module to keep
+      ! this file focused. Block is absent when swtill = 0.
+      call read_soil_tillage_toml(sec, config%tillage, errors)
    end subroutine read_soil_toml
 
    !> Read [soil.hydraulics] into the typed sub-config. Each key is an

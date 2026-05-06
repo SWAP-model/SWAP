@@ -1,0 +1,31 @@
+[soil]
+swsophy = 0
+swtill  = 1
+
+[soil.tillage]
+i_n_model = 2
+iRedist   = 2
+
+[[soil.tillage.events]]
+date      = 2003-04-15
+z         = 30.0
+intensity = 0.8
+type_id   = 1
+
+[[soil.tillage.events]]
+date      = 2003-05-20
+z         = 20.0
+intensity = 0.5
+type_id   = 2
+
+[[soil.tillage.types]]
+id          = 1
+rho_cons    = 1500.0
+rho_tillage = 1200.0
+k_R         = 0.001
+
+[[soil.tillage.types]]
+id          = 2
+rho_cons    = 1400.0
+rho_tillage = 1100.0
+k_R         = 0.002

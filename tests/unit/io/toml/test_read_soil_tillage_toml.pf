@@ -1,0 +1,106 @@
+@test
+subroutine test_read_full_tillage_block()
+   use funit
+   use tomlf, only: toml_table, toml_load, get_value
+   use soil_config_mod
+   use read_soil_tillage_toml_mod
+   use error_mod
+   type(toml_table), allocatable, target :: doc
+   type(toml_table), pointer             :: doc_ptr, soil_ptr
+   type(soil_tillage_t)                  :: tillage
+   type(error_collection_t)              :: errors
+   integer                               :: stat
+
+   call toml_load(doc, 'tests/unit/io/toml/fixtures/soil_tillage_full.toml')
+   doc_ptr => doc
+
+   ! Fetch [soil] sub-table then delegate to reader.
+   soil_ptr => null()
+   call get_value(doc_ptr, 'soil', soil_ptr, requested=.false., stat=stat)
+   @assertTrue(associated(soil_ptr))
+
+   call read_soil_tillage_toml(soil_ptr, tillage, errors)
+
+   @assertFalse(errors%has_errors())
+   @assertEqual(2, tillage%i_n_model)
+   @assertEqual(2, tillage%iRedist)
+
+   @assertTrue(allocated(tillage%events))
+   @assertEqual(2, size(tillage%events))
+   @assertEqual('2003-04-15', tillage%events(1)%date)
+   @assertEqual(30.0d0, tillage%events(1)%z, 1.0d-12)
+   @assertEqual(0.8d0,  tillage%events(1)%intensity, 1.0d-12)
+   @assertEqual(1, tillage%events(1)%type_id)
+
+   @assertTrue(allocated(tillage%types))
+   @assertEqual(2, size(tillage%types))
+   @assertEqual(1,        tillage%types(1)%id)
+   @assertEqual(1500.0d0, tillage%types(1)%rho_cons,    1.0d-12)
+   @assertEqual(1200.0d0, tillage%types(1)%rho_tillage, 1.0d-12)
+   @assertEqual(0.001d0,  tillage%types(1)%k_R,         1.0d-12)
+end subroutine test_read_full_tillage_block
+
+
+@test
+subroutine test_read_missing_block_keeps_defaults()
+   use funit
+   use tomlf, only: toml_table, toml_load, get_value
+   use soil_config_mod
+   use read_soil_tillage_toml_mod
+   use error_mod
+   type(toml_table), allocatable, target :: doc
+   type(toml_table), pointer             :: doc_ptr, soil_ptr
+   type(soil_tillage_t)                  :: tillage
+   type(error_collection_t)              :: errors
+   integer                               :: stat
+
+   ! soil_minimal.toml has no [soil.tillage] block.
+   call toml_load(doc, 'tests/unit/io/toml/fixtures/soil_minimal.toml')
+   doc_ptr => doc
+
+   soil_ptr => null()
+   call get_value(doc_ptr, 'soil', soil_ptr, requested=.false., stat=stat)
+   @assertTrue(associated(soil_ptr))
+
+   call read_soil_tillage_toml(soil_ptr, tillage, errors)
+
+   @assertFalse(errors%has_errors())
+   ! Defaults from soil_tillage_t initializers.
+   @assertEqual(2, tillage%i_n_model)
+   @assertEqual(2, tillage%iRedist)
+   @assertFalse(allocated(tillage%events))
+   @assertFalse(allocated(tillage%types))
+end subroutine test_read_missing_block_keeps_defaults
+
+
+@test
+subroutine test_read_optional_rho_match_N_match_when_i_n_model_3()
+   use funit
+   use tomlf, only: toml_table, toml_load, get_value
+   use soil_config_mod
+   use read_soil_tillage_toml_mod
+   use error_mod
+   type(toml_table), allocatable, target :: doc
+   type(toml_table), pointer             :: doc_ptr, soil_ptr
+   type(soil_tillage_t)                  :: tillage
+   type(error_collection_t)              :: errors
+   integer                               :: stat
+
+   call toml_load(doc, 'tests/unit/io/toml/fixtures/soil_tillage_i_n_model3.toml')
+   doc_ptr => doc
+
+   soil_ptr => null()
+   call get_value(doc_ptr, 'soil', soil_ptr, requested=.false., stat=stat)
+   @assertTrue(associated(soil_ptr))
+
+   call read_soil_tillage_toml(soil_ptr, tillage, errors)
+
+   @assertFalse(errors%has_errors())
+   @assertEqual(3, tillage%i_n_model)
+   @assertEqual(1, tillage%iRedist)
+
+   @assertTrue(allocated(tillage%types))
+   @assertEqual(1, size(tillage%types))
+   @assertEqual(1450.0d0, tillage%types(1)%rho_match, 1.0d-12)
+   @assertEqual(0.5d0,    tillage%types(1)%N_match,   1.0d-12)
+end subroutine test_read_optional_rho_match_N_match_when_i_n_model_3
