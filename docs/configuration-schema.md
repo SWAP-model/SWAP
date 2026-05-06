@@ -301,6 +301,48 @@ wins. This is a known quirk — see the Discoveries note at the end.
 | `critdevh2cp` | real    | optional | `state%soil%CritDevh2Cp` | Absolute pressure-head convergence tolerance (cm). |
 | `maxit`       | integer | optional | `state%soil%msteps`      | Maximum Picard iterations per time step. |
 
+### `[soil.tillage]`
+
+Tillage parameters. Present only when `[soil].swtill = 1`; omitted
+entirely when `swtill = 0`. Read by `read_soil_tillage_toml.f90`
+into `soil_tillage_t`. The block combines per-event table
+(`[[soil.tillage.events]]`) and per-type table
+(`[[soil.tillage.types]]`) arrays-of-tables with scalar
+configuration switches.
+
+#### Top-level fields
+
+| Key | Type | Default | Range | Description |
+|---|---|---|---|---|
+| `i_n_model` | integer | 2 | 1..3 | Model variant for n-parameter treatment: 1=original, 2=refined (default), 3=match-based (requires `rho_match`/`N_match`). |
+| `iRedist` | integer | 2 | 0..2 | Redistribution method after tilling: 0=none, 1=simple, 2=full (default). |
+
+#### `[[soil.tillage.events]]` (array of tables)
+
+One row per tillage event. Events must be strictly ascending in time
+and fall within the simulation window.
+
+| Key | Type | Required | Range | Description |
+|---|---|---|---|---|
+| `date` | TOML local-date | required | within simulation window | Tillage date (YYYY-MM-DD). |
+| `z` | real | required | 0 ≤ z ≤ \|zbotcp(NumNod)\| | Tillage depth (cm). |
+| `intensity` | real | required | 0.0..1.0 | Tillage intensity (dimensionless, 0=none, 1=complete). |
+| `type_id` | integer | required | ≥1, present in `types` | Tillage type identifier, must reference an `id` in `[[soil.tillage.types]]`. |
+
+#### `[[soil.tillage.types]]` (array of tables)
+
+One row per tillage type. Type identifiers are referenced by
+`events[].type_id`.
+
+| Key | Type | Required | Range | Description |
+|---|---|---|---|---|
+| `id` | integer | required | ≥1, unique | Tillage type identifier. |
+| `rho_cons` | real | required | 100..3000 | Consolidated bulk density just before tilling (kg/m³). |
+| `rho_tillage` | real | required | 100..3000 | Bulk density just after tilling (kg/m³). |
+| `k_R` | real | required | 1.0e-4..10.0 | Relaxation coefficient (dimensionless). |
+| `rho_match` | real | required when i_n_model=3, default -99.0 | 100..3000 or -99.0 (unset) | Reference bulk density for n-parameter match (kg/m³). Required only when `i_n_model = 3`. |
+| `N_match` | real | required when i_n_model=3, default -99.0 | 1.001..10.0 or -99.0 (unset) | Exponent for n-parameter match. Required only when `i_n_model = 3`. |
+
 ### `[drainage]`
 
 | Key | Type | Required | Default | State target | Description |
