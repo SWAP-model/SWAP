@@ -10,3 +10,153 @@ subroutine test_soil_tillage_default_init()
    @assertFalse(allocated(cfg%tillage%events), 'events not allocated by default')
    @assertFalse(allocated(cfg%tillage%types),  'types not allocated by default')
 end subroutine
+
+@test
+subroutine test_apply_populates_per_event_globals()
+   use soil_config_mod, only: soil_tillage_t, soil_tillage_event_t, soil_tillage_type_t
+   use config_to_variables_mod, only: apply_soil_tillage
+   use variables, only: Ntill         => till_Ntill, &
+                        Max_Z_tillage => till_Max_Z_tillage, &
+                        Date_tillage  => till_Date_tillage, &
+                        Z_tillage     => till_Z_tillage, &
+                        I_tillage     => till_I_tillage, &
+                        Type_tillage  => till_Type_Tillage, &
+                        NumNod, zbotcp, tend
+   use funit
+   implicit none
+   type(soil_tillage_t) :: til
+
+   ! Minimal grid for the deferred z-range check: zbotcp is a fixed-size
+   ! array (MACP=5000); set the relevant slots by index.
+   NumNod = 2
+   zbotcp(1) = -50.0d0
+   zbotcp(2) = -100.0d0
+   tend = 36898.0d0   ! 2004-12-31
+
+   allocate(til%events(2))
+   til%events(1) = soil_tillage_event_t(date='2003-04-15', z=30.0d0, &
+                                        intensity=1.0d0, type_id=1)
+   til%events(2) = soil_tillage_event_t(date='2004-04-20', z=30.0d0, &
+                                        intensity=0.8d0, type_id=1)
+   allocate(til%types(1))
+   til%types(1) = soil_tillage_type_t(id=1, rho_cons=1500.0d0, &
+                                      rho_tillage=1100.0d0, k_R=0.05d0)
+
+   call apply_soil_tillage(til)
+
+   @assertEqual(2, Ntill)
+   @assertEqual(30.0d0, Z_tillage(1), tolerance=1.0d-9)
+   @assertEqual(1.0d0,  I_tillage(1), tolerance=1.0d-9)
+   @assertEqual(1,      Type_tillage(1))
+   ! Sentinel slot: Date_tillage(Ntill+1) = tend + 1
+   @assertEqual(tend + 1.0d0, Date_tillage(Ntill+1), tolerance=1.0d-9)
+   @assertEqual(30.0d0, Max_Z_tillage, tolerance=1.0d-9)
+end subroutine
+
+@test
+subroutine test_apply_populates_per_type_globals()
+   use soil_config_mod, only: soil_tillage_t, soil_tillage_event_t, soil_tillage_type_t
+   use config_to_variables_mod, only: apply_soil_tillage
+   use variables, only: iType_Tillage   => till_iType_Tillage, &
+                        TAB_Rho_cons    => till_TAB_Rho_cons, &
+                        TAB_Rho_tillage => till_TAB_Rho_tillage, &
+                        TAB_K_R_cons    => till_TAB_K_R_cons, &
+                        NumNod, zbotcp, tend
+   use funit
+   implicit none
+   type(soil_tillage_t) :: til
+
+   NumNod = 2
+   zbotcp(1) = -50.0d0
+   zbotcp(2) = -100.0d0
+   tend = 36898.0d0
+
+   allocate(til%events(1))
+   til%events(1) = soil_tillage_event_t(date='2003-04-15', z=30.0d0, &
+                                        intensity=1.0d0, type_id=1)
+   allocate(til%types(1))
+   til%types(1) = soil_tillage_type_t(id=1, rho_cons=1500.0d0, &
+                                      rho_tillage=1100.0d0, k_R=0.05d0)
+
+   call apply_soil_tillage(til)
+
+   @assertEqual(1, iType_Tillage(1))
+   @assertEqual(1500.0d0, TAB_Rho_cons(1),    tolerance=1.0d-9)
+   @assertEqual(1100.0d0, TAB_Rho_tillage(1), tolerance=1.0d-9)
+   @assertEqual(0.05d0,   TAB_K_R_cons(1),    tolerance=1.0d-9)
+end subroutine
+
+@test
+subroutine test_apply_iTT1_iTT2_indices_when_two_types()
+   ! Two events: event 1 is type 1, event 2 is type 2.
+   ! Two type-table entries: iType_Tillage = [1, 2].
+   ! After the iTT1/iTT2 loop: iTT1(1)=1, iTT2(1)=1, iTT1(2)=2, iTT2(2)=2.
+   use soil_config_mod, only: soil_tillage_t, soil_tillage_event_t, soil_tillage_type_t
+   use config_to_variables_mod, only: apply_soil_tillage
+   use variables, only: iTT1 => till_iTT1, &
+                        iTT2 => till_iTT2, &
+                        NumNod, zbotcp, tend
+   use funit
+   implicit none
+   type(soil_tillage_t) :: til
+
+   NumNod = 2
+   zbotcp(1) = -50.0d0
+   zbotcp(2) = -100.0d0
+   tend = 36898.0d0
+
+   allocate(til%events(2))
+   til%events(1) = soil_tillage_event_t(date='2003-04-15', z=30.0d0, &
+                                        intensity=1.0d0, type_id=1)
+   til%events(2) = soil_tillage_event_t(date='2004-04-20', z=30.0d0, &
+                                        intensity=0.8d0, type_id=2)
+   allocate(til%types(2))
+   til%types(1) = soil_tillage_type_t(id=1, rho_cons=1500.0d0, &
+                                      rho_tillage=1100.0d0, k_R=0.05d0)
+   til%types(2) = soil_tillage_type_t(id=2, rho_cons=1400.0d0, &
+                                      rho_tillage=1050.0d0, k_R=0.03d0)
+
+   call apply_soil_tillage(til)
+
+   ! iTT1/iTT2 arrays are size Ntill (=2).
+   ! For j=1 (type 1): iType_Tillage(1)=1, so iTT1(1)=1, iTT2(1)=1.
+   ! For j=2 (type 2): iType_Tillage(2)=2, so iTT1(2)=2, iTT2(2)=2.
+   @assertEqual(1, iTT1(1))
+   @assertEqual(1, iTT2(1))
+   @assertEqual(2, iTT1(2))
+   @assertEqual(2, iTT2(2))
+end subroutine
+
+@test
+subroutine test_apply_i_n_model_3_allocates_match_arrays()
+   use soil_config_mod, only: soil_tillage_t, soil_tillage_event_t, soil_tillage_type_t
+   use config_to_variables_mod, only: apply_soil_tillage
+   use variables, only: TAB_Rho_match => till_TAB_Rho_match, &
+                        TAB_N_match   => till_TAB_N_match, &
+                        NumNod, zbotcp, tend
+   use funit
+   implicit none
+   type(soil_tillage_t) :: til
+
+   NumNod = 2
+   zbotcp(1) = -50.0d0
+   zbotcp(2) = -100.0d0
+   tend = 36898.0d0
+
+   til%i_n_model = 3
+
+   allocate(til%events(1))
+   til%events(1) = soil_tillage_event_t(date='2003-04-15', z=30.0d0, &
+                                        intensity=1.0d0, type_id=1)
+   allocate(til%types(1))
+   til%types(1) = soil_tillage_type_t(id=1, rho_cons=1500.0d0, &
+                                      rho_tillage=1100.0d0, k_R=0.05d0, &
+                                      rho_match=1200.0d0, N_match=2.0d0)
+
+   call apply_soil_tillage(til)
+
+   @assertTrue(allocated(TAB_Rho_match), 'TAB_Rho_match allocated for i_n_model=3')
+   @assertTrue(allocated(TAB_N_match),   'TAB_N_match allocated for i_n_model=3')
+   @assertEqual(1200.0d0, TAB_Rho_match(1), tolerance=1.0d-9)
+   @assertEqual(2.0d0,    TAB_N_match(1),   tolerance=1.0d-9)
+end subroutine

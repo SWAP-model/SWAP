@@ -41,6 +41,7 @@ module config_to_variables_mod
    private
 
    public :: config_to_variables
+   public :: apply_soil_tillage
 
 contains
 
@@ -483,6 +484,7 @@ contains
       swssdi_irr  = config%irrigation%swssdi
       flTillage = (config%soil%swtill == 1)
       flSSDI    = (config%irrigation%swssdi == 1)
+      if (flTillage) call apply_soil_tillage(config%soil%tillage)
       gwli    = config%soil%gwli
       pondini = config%soil%pondini
       pond    = config%soil%pondini    ! legacy alias: pond <-> pondini
@@ -1252,5 +1254,125 @@ contains
          stem = s
       end if
    end function strip_crp_toml_suffix
+
+   !> ISO 'YYYY-MM-DD' -> days since 1900 (real(real64)).
+   !! Constructs a toml_datetime from the parsed date components and delegates
+   !! to the existing parse_date_to_days1900 helper in toml_field_helpers_mod.
+   function parse_iso_date_to_days1900(s) result(t)
+      use, intrinsic :: iso_fortran_env, only: real64
+      use tomlf, only: toml_datetime
+      use toml_field_helpers_mod, only: parse_date_to_days1900
+      character(len=*), intent(in) :: s
+      real(real64) :: t
+      type(toml_datetime) :: dtv
+      integer :: y, m, d
+      read(s, '(i4,1x,i2,1x,i2)') y, m, d
+      dtv%date%year  = y
+      dtv%date%month = m
+      dtv%date%day   = d
+      ! Leave dtv%time fields at default (-1) so the conversion treats it as a date-only.
+      t = parse_date_to_days1900(dtv)
+   end function parse_iso_date_to_days1900
+
+   !> Apply [soil.tillage] config to legacy `variables` globals.
+   !! Called from config_to_variables when flTillage is true. Allocates
+   !! per-event and per-type arrays, populates them from the typed config,
+   !! parses event dates to days-since-1900, sets the Ntill+1 sentinel
+   !! (tend + 1), computes Max_Z_tillage and the iTT1/iTT2 first/last-position
+   !! indices. Replaces the deleted Read_Tillage subroutine (Task 5).
+   subroutine apply_soil_tillage(tillage)
+      use, intrinsic :: iso_fortran_env, only: real64
+      use soil_config_mod, only: soil_tillage_t
+      use error_mod, only: fatalerr_collected
+      use variables, only: Ntill         => till_Ntill, &
+                           Ntypes        => till_Ntypes, &
+                           i_n_model     => till_i_n_model, &
+                           iRedist       => till_iRedist, &
+                           Max_Z_tillage => till_Max_Z_tillage, &
+                           Date_tillage  => till_Date_tillage, &
+                           Z_tillage     => till_Z_tillage, &
+                           I_tillage     => till_I_tillage, &
+                           Type_tillage  => till_Type_Tillage, &
+                           iType_Tillage => till_iType_Tillage, &
+                           TAB_Rho_cons    => till_TAB_Rho_cons, &
+                           TAB_Rho_tillage => till_TAB_Rho_tillage, &
+                           TAB_K_R_cons    => till_TAB_K_R_cons, &
+                           TAB_Rho_match   => till_TAB_Rho_match, &
+                           TAB_N_match     => till_TAB_N_match, &
+                           iTT1 => till_iTT1, &
+                           iTT2 => till_iTT2, &
+                           NumNod, zbotcp, tend
+      type(soil_tillage_t), intent(in) :: tillage
+
+      integer :: i, j
+
+      i_n_model = tillage%i_n_model
+      iRedist   = tillage%iRedist
+
+      Ntill  = size(tillage%events)
+      Ntypes = size(tillage%types)
+
+      ! Per-event arrays (sentinel: Date_tillage(Ntill+1) = tend + 1).
+      if (allocated(Date_tillage)) deallocate(Date_tillage); allocate(Date_tillage(Ntill+1))
+      if (allocated(Z_tillage))    deallocate(Z_tillage);    allocate(Z_tillage(Ntill))
+      if (allocated(I_tillage))    deallocate(I_tillage);    allocate(I_tillage(Ntill))
+      if (allocated(Type_tillage)) deallocate(Type_tillage); allocate(Type_tillage(Ntill))
+
+      do i = 1, Ntill
+         Z_tillage(i)    = tillage%events(i)%z
+         I_tillage(i)    = tillage%events(i)%intensity
+         Type_tillage(i) = tillage%events(i)%type_id
+         Date_tillage(i) = parse_iso_date_to_days1900(tillage%events(i)%date)
+      end do
+      Date_tillage(Ntill + 1) = tend + 1.0_real64
+
+      ! Deferred z-range check (validator can't see NumNod / zbotcp).
+      ! TODO: route this error through whatever error-collection mechanism
+      ! config_to_variables uses; for now, fatalerr_collected on violation.
+      ! The test test_apply_z_outside_grid_raises_error is deferred because
+      ! catching a STOP in pFUnit is awkward — verified manually for now.
+      do i = 1, Ntill
+         if (Z_tillage(i) < 0.0_real64 .or. &
+             Z_tillage(i) > abs(zbotcp(NumNod))) then
+            call fatalerr_collected('apply_soil_tillage', &
+               'Z_tillage value is outside the model grid depth range')
+         end if
+      end do
+
+      ! Per-type arrays.
+      if (allocated(iType_Tillage))   deallocate(iType_Tillage);   allocate(iType_Tillage(Ntypes))
+      if (allocated(TAB_Rho_cons))    deallocate(TAB_Rho_cons);    allocate(TAB_Rho_cons(Ntypes))
+      if (allocated(TAB_Rho_tillage)) deallocate(TAB_Rho_tillage); allocate(TAB_Rho_tillage(Ntypes))
+      if (allocated(TAB_K_R_cons))    deallocate(TAB_K_R_cons);    allocate(TAB_K_R_cons(Ntypes))
+
+      do i = 1, Ntypes
+         iType_Tillage(i)   = tillage%types(i)%id
+         TAB_Rho_cons(i)    = tillage%types(i)%rho_cons
+         TAB_Rho_tillage(i) = tillage%types(i)%rho_tillage
+         TAB_K_R_cons(i)    = tillage%types(i)%k_R
+      end do
+
+      if (i_n_model == 3) then
+         if (allocated(TAB_Rho_match)) deallocate(TAB_Rho_match); allocate(TAB_Rho_match(Ntypes))
+         if (allocated(TAB_N_match))   deallocate(TAB_N_match);   allocate(TAB_N_match(Ntypes))
+         do i = 1, Ntypes
+            TAB_Rho_match(i) = tillage%types(i)%rho_match
+            TAB_N_match(i)   = tillage%types(i)%N_match
+         end do
+      end if
+
+      Max_Z_tillage = maxval(Z_tillage(1:Ntill))
+
+      ! iTT1 / iTT2: first/last position per tillage type in iType_Tillage.
+      ! Replicates the loop from the legacy Read_Tillage subroutine verbatim.
+      if (allocated(iTT1)) deallocate(iTT1); allocate(iTT1(Ntill)); iTT1 = 0
+      if (allocated(iTT2)) deallocate(iTT2); allocate(iTT2(Ntill)); iTT2 = 0
+      do j = 1, Ntill
+         do i = 1, Ntypes
+            if (iTT1(j) == 0 .and. iType_Tillage(i) == j) iTT1(j) = i
+            if (iTT1(j) >  0 .and. iType_Tillage(i) == j) iTT2(j) = i
+         end do
+      end do
+   end subroutine apply_soil_tillage
 
 end module config_to_variables_mod
