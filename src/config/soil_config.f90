@@ -12,6 +12,9 @@ module soil_config_mod
    public :: soil_frost_t
    public :: soil_hydraulics_t
    public :: soil_initial_t
+   public :: soil_tillage_event_t
+   public :: soil_tillage_type_t
+   public :: soil_tillage_t
 
    !> Optional re-discretization of the vertical grid for output reporting.
    !! When swdiscrvert == 1, dznew(:) (sized to numnodnew) carries the
@@ -76,6 +79,32 @@ module soil_config_mod
       procedure :: validate => soil_initial_validate
    end type soil_initial_t
 
+   !> Single tillage event row read from `[[soil.tillage.events]]`.
+   type :: soil_tillage_event_t
+      character(len=10) :: date      = ''       !! ISO YYYY-MM-DD (parsed to days-since-1900 by adapter)
+      real(real64)      :: z         = 0.0_real64
+      real(real64)      :: intensity = 0.0_real64
+      integer           :: type_id   = 0
+   end type soil_tillage_event_t
+
+   !> Single tillage type row read from `[[soil.tillage.types]]`.
+   type :: soil_tillage_type_t
+      integer      :: id          = 0
+      real(real64) :: rho_cons    = 0.0_real64
+      real(real64) :: rho_tillage = 0.0_real64
+      real(real64) :: k_R         = 0.0_real64
+      real(real64) :: rho_match   = -99.0_real64   !! used only when i_n_model = 3
+      real(real64) :: N_match     = -99.0_real64   !! used only when i_n_model = 3
+   end type soil_tillage_type_t
+
+   !> `[soil.tillage]` block container.
+   type :: soil_tillage_t
+      integer :: i_n_model = 2
+      integer :: iRedist   = 2
+      type(soil_tillage_event_t), allocatable :: events(:)
+      type(soil_tillage_type_t),  allocatable :: types(:)
+   end type soil_tillage_t
+
    type :: soil_config_t
       integer :: swsophy = 0
       integer :: swhyst  = 0
@@ -124,6 +153,7 @@ module soil_config_mod
       type(soil_frost_t)          :: frost
       type(soil_hydraulics_t)     :: hydraulics
       type(soil_initial_t)        :: initial
+      type(soil_tillage_t)        :: tillage
    contains
       procedure :: validate => soil_config_validate
       procedure :: finalize => soil_config_finalize

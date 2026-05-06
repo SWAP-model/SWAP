@@ -1,0 +1,12 @@
+@test
+subroutine test_soil_tillage_default_init()
+   use funit
+   use soil_config_mod, only: soil_config_t
+   type(soil_config_t) :: cfg
+
+   ! Default-init values for the new tillage sub-type.
+   call assertEqual(2, cfg%tillage%i_n_model, 'i_n_model default')
+   call assertEqual(2, cfg%tillage%iRedist,   'iRedist default')
+   @assertFalse(allocated(cfg%tillage%events), 'events not allocated by default')
+   @assertFalse(allocated(cfg%tillage%types),  'types not allocated by default')
+end subroutine

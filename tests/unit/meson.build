@@ -189,6 +189,7 @@ if get_option('enable_pfunit')
         # DEFERRED — paired with the test_macroporeflow_parity_suite
         # entry in testSuites.inc; see ADR 0011 / 0018.
         # 'io/toml/test_macroporeflow_parity.pf',
+        'io/toml/test_apply_soil_tillage.pf',
         'drainage/test_surfacewater_init.pf',
         'crop/test_cropfixed_init.pf',
         'crop/test_cropwofost_init.pf',
