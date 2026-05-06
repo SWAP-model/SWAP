@@ -4,7 +4,7 @@
 module tillage_mod
    use error_mod, only: fatalerr_collected
 
-   use variables, only: t1900, date, swpfile, swhyst, swsolu, swoxygen, flCropNut, flMacroPore, flksatexm, zbotcp, NumNod, Bdens, layer, nraida, ParamVG, CofGen, &
+   use variables, only: t1900, date, swhyst, swsolu, swoxygen, flCropNut, flMacroPore, flksatexm, zbotcp, NumNod, Bdens, layer, nraida, ParamVG, CofGen, &
                         NumLay, pond, theta, h, dz, disnod, botcom, psilt, pclay, SwDiscrvert, tend, &
                         ! Tillage bridge variables with renaming (SAVE statements removed)
                         swtill => till_swtill, Ntill => till_Ntill, iTill => till_iTill, &
@@ -64,13 +64,7 @@ module tillage_mod
       if (allocated(Rho_match))   deallocate(Rho_match);   allocate(Rho_match(NumLay))
       if (allocated(N_match))     deallocate(N_match);     allocate(N_match(NumLay))
       if (allocated(Slope_match)) deallocate(Slope_match); allocate(Slope_match(NumLay))
-      
-      ! read input data
-      call Read_Tillage
-      
-      ! no tillage required; leave DoTillage immediately
-      if (swtill == 0) return
-      
+
       ! some checks: some combinations not (yet) allowed
       if (swtill == 1) then
          if (swhyst == 1)      call fatalerr_collected ('DoTillage', 'swhyst = 1 not allowed')
@@ -419,94 +413,6 @@ write(124,'(A,1P,12E12.5)') Date, Bdens(1), ParamVG(2,layer(1)), theta(1), h(1),
    end do
    end subroutine det_MNSH   
 
-! **************************************************** Read_Tillage *********************************************************
-   subroutine Read_Tillage
-   implicit none
-   ! local (not to be saved)
-   integer     :: IunIn, tmin, tmax, i, j
-   ! functions
-   integer     :: getun
-   logical     :: RDinqr
-
-   ! Phase 4f-extend SS-B (ADR 0020): entry to this routine implies the
-   ! call-site gate flTillage was true → swtill=1 was set in the TOML
-   ! config and copied to the global. Reads tillage parameters from
-   ! staged swap.swp via TTutil; future ADR 0021 will replace this with
-   ! a TOML schema port of the tillage block.
-   Max_Z_tillage = 0.0d0
-   IunIn = getun (200, 900)
-   call RDinit (IunIn, 0, swpfile)
-
-      if (swtill == 1) then
-         ! switch for how to treat change in n-parameter:
-         i_n_model = 2
-         if (RDinqr('i_n_model')) call RDsinr ('i_n_model', 1, 3, i_n_model)
-         
-         ! type of redistribution
-         iRedist = 2 ! default
-         if (RDinqr('iRedist')) call RDsinr ('iRedist', 0, 2, iRedist)
-         
-         ! get length of tabulated input data (number of tillage times, Ntill)
-         call RDinne ('Date_tillage', Ntill)
-         if (Ntill < 1) call fatalerr_collected ('Read_Tillage', 'You must supply tabulated data for tillage events')
-         
-         ! allocate arrays for tabulated input
-         if (allocated(Date_tillage)) deallocate(Date_tillage); allocate (Date_tillage(Ntill+1))
-         if (allocated(Z_tillage))    deallocate(Z_tillage);    allocate (Z_tillage(Ntill))
-         if (allocated(I_tillage))    deallocate(I_tillage);    allocate (I_tillage(Ntill))
-         if (allocated(Type_tillage)) deallocate(Type_tillage); allocate (Type_tillage(Ntill))
-         
-         call RDftim ('Date_tillage', Date_tillage, Ntill, Ntill); Date_Tillage(Ntill+1) = tend + 1.0d0
-         call RDfdor ('Z_tillage',    0.0d0, -zbotcp(NumNod), Z_tillage, Ntill, Ntill)   ! still to check: depth must be equal to bottom of a soil horizon
-         call RDfdor ('I_tillage',    0.0d0, 1.0d0, I_tillage, Ntill, Ntill)
-         call RDfint ('Type_tillage', Type_tillage, Ntill, Ntill)
-         tmin = minval(Type_tillage); if (tmin < 1) call fatalerr_collected ('Read_Tillage','Type_Tillage should be > 0')
-         tmax = maxval(Type_tillage); if (tmax < 1) call fatalerr_collected ('Read_Tillage','Type_Tillage should be > 0')
-
-         ! length of second tabel entries: Ntypes
-         call RDinne ('iType_Tillage', Ntypes)
-         if (Ntypes < 1) call fatalerr_collected ('Read_Tillage', 'You must supply tabulated data for tillage events (Ntypes)')
-
-         ! allocate arrays for tabulated input
-         if (allocated(iType_Tillage))    deallocate(iType_Tillage);    allocate(iType_Tillage(Ntypes))
-         if (allocated(TAB_Rho_cons))     deallocate(TAB_Rho_cons);     allocate(TAB_Rho_cons(Ntypes))
-         if (allocated(TAB_Rho_tillage))  deallocate(TAB_Rho_tillage);  allocate(TAB_Rho_tillage(Ntypes))
-         if (allocated(TAB_K_R_cons))     deallocate(TAB_K_R_cons);     allocate(TAB_K_R_cons(Ntypes))
-         if (allocated(TAB_Rho_match))    deallocate(TAB_Rho_match);    allocate(TAB_Rho_match(Ntypes))
-         if (allocated(TAB_N_match))      deallocate(TAB_N_match);      allocate(TAB_N_match(Ntypes))
- 
-         call RDfinr ('iType_Tillage', tmin,     tmax,     iType_Tillage,     Ntypes, Ntypes)
-         call RDfdor ('Rho_cons',      100.0d0,  3000.0d0, TAB_Rho_cons,      Ntypes, Ntypes)
-         call RDfdor ('Rho_tillage',   100.0d0,  3000.0d0, TAB_Rho_tillage,   Ntypes, Ntypes)
-         call RDfdor ('k_R',             1.0d-4,   10.0d0, TAB_K_R_cons,      Ntypes, Ntypes)
-         
-         if (i_n_model == 3) then
-            call RDfdor('Rho_match', 100.0d0, 3000.0d0, TAB_Rho_match, Ntypes, Ntypes)
-            call RDfdor('N_match',   1.001d0,   10.0d0, TAB_N_match,   Ntypes, Ntypes)
-         end if
-         
-         ! store first and last position per tillage type in vector iType_Tillage
-         ! assumes consitent supply of input: e.g., tmin = 1, tmax > 1 and all intermediate values are present
-         if (allocated(iTT1)) deallocate(iTT1); allocate(iTT1(Ntill)); iTT1 = 0
-         if (allocated(iTT2)) deallocate(iTT2); allocate(iTT2(Ntill)); iTT2 = 0
-         do j = 1, Ntill
-            do i = 1, Ntypes
-               if (iTT1(j) == 0 .and. iType_Tillage(i) == j) iTT1(j) = i
-               if (iTT1(j) >  0 .and. iType_Tillage(i) == j) iTT2(j) = i
-            end do
-! check if NumLay is exceeded; and if iTT2-iTT1+1 corresponds with number of layer within Z_tillage
-         end do
-         
-         ! special case: consolidation according to time
-         !use_K_T = RDinqr('k_T')
-         !if (use_K_T) call RDfdor ('k_T', 1.0d-4, 10.0d0, K_T_cons, maho, NumLay)
-         
-         Max_Z_tillage = maxval(Z_tillage(1:Ntill))
-         
-      end if
-   close (IunIn)
-   end subroutine Read_Tillage
-   
    subroutine Change_Tillage_Info (iTill)
    implicit none
    ! global
