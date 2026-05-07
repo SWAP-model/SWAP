@@ -9,18 +9,19 @@ module macroporeoutput_mod
 
       contains
       
-      subroutine MacroPoreOutput(task) 
+      subroutine MacroPoreOutput(task)
 ! ----------------------------------------------------------------------
-!     Date               : Aug 2004   
-!     Purpose            : open and write macropore output files 
+!     Date               : Aug 2004
+!     Purpose            : open and write macropore output files
 ! ----------------------------------------------------------------------
 
       use Variables
+      use file_io_mod, only: file_open
       implicit none
 
       integer task
 !     local
-      integer getun, ic, id, mpgeom, i
+      integer ic, id, mpgeom, i
       real(8) cumdz
       character(len=300) filnam
       character(len=181) filtext
@@ -35,8 +36,7 @@ module macroporeoutput_mod
 ! --  write geometry of macropores
 !      open(unit=3,file='MacroGeom.csv',status='unknown')
       filnam = trim(pathwork)//'MacroGeom.Csv'
-      mpgeom = getun (50,90)
-      call fopens(mpgeom,filnam,'new','del')
+      call file_open(mpgeom, filnam, 'replace', 'write')
       filtext='Macropore geometry: Pp = proportion (-); Vls = '         &
      &//'volume static macropores(cm3/cm2). Bot.depth = bottom detpth'  &
      &//' compartment (cm).'
@@ -115,9 +115,10 @@ module macroporeoutput_mod
 ! ---------------------------------------------------------------------
       
       use swap_array_dimensions, only: macp, maout
+      use file_io_mod, only: file_open
 
 !     global
-      integer   bma,IcTopMp,numnod,ioutdat,getun, task
+      integer   bma,IcTopMp,numnod,ioutdat, task
       real(8)   dz(macp),z(macp), tstart,t1900,outdat(maout)  
       real(8)   CQMpInIntSatDm1, CQMpInIntSatDm2, CQMpInMtxSatDm1   
       real(8)   CQMpInMtxSatDm2, CQMpInTopVrtDm1, CQMpInTopVrtDm2
@@ -139,8 +140,7 @@ module macroporeoutput_mod
       case (1)
 ! --- open output file
       filnam = trim(pathwork)//trim(outfil)//'.bma'
-      bma = getun (50,90)
-      call fopens(bma,filnam,'new','del')
+      call file_open(bma, filnam, 'replace', 'write')
       filtext='overview of macropore water balance components (cm)'
       call writehead (bma,1,filnam,filtext,project)
 
@@ -249,27 +249,27 @@ module macroporeoutput_mod
       subroutine outshrinkchar ()
 ! ----------------------------------------------------------------------
 !     date               : April 2008
-!     purpose            : Output of shrinkage characteristics as generated 
+!     purpose            : Output of shrinkage characteristics as generated
 !                          on basis of input parameters
 ! ---------------------------------------------------------------------
 ! --- global
       use Variables
       use macropore_mod, only: SHRINK
+      use file_io_mod, only: file_open
       implicit none 
 
 ! --- local variables ------------------
       character(len=300) filnam
       character(len=80)  filtext
       character(len=1)   comma
-      integer   getun,shr,lay,i
+      integer   shr,lay,i
       real(8)   MoisR, Thet, VlSolidRel, VoidR, VRhlp
 ! ---------------------------------------------------------------------
       comma = ',' 
 
 ! === open output file =================================================
       filnam = trim(pathwork)//'SoilShrinkChar.csv'
-      shr = getun (20,90)
-      call fopens(shr,filnam,'new','del')
+      call file_open(shr, filnam, 'replace', 'write')
       filtext = 'soil shrinkage characteristics'
       call writehead (shr,1,filnam,filtext,project)
 
