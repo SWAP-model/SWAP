@@ -73,7 +73,9 @@ close (iun2)
 
 ! write message on screen
 write(*,'(a)')' Swap normal completion!'
-close(logf)
+! logf is closed by SwapOutput(3) during swap task 3; the close here
+! was a redundant legacy cleanup and is now omitted to avoid a
+! gfortran unit-table issue with newunit= allocated units.
 call log_close()
 call CloseTempFil
 Call Exit(100)

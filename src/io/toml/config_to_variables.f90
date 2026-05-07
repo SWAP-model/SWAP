@@ -1181,14 +1181,11 @@ contains
       ! `logf` is opened here because ~90 production code sites write
       ! log lines via `write(logf, ...)`.
       block
-         use variables, only: logf
-         integer :: getun
-         logical :: log_open
-         inquire(unit=20, opened=log_open)
-         if (.not. log_open) then
-            call delfil('swap_swap.log', .false.)
-            logf = getun(20, 99)
-            call fopens(logf, 'swap_swap.log', 'new', 'del')
+         use variables,   only: logf
+         use file_io_mod, only: file_open, file_delete
+         if (logf == 0) then
+            call file_delete('swap_swap.log')
+            call file_open(logf, 'swap_swap.log', 'replace', 'write')
          end if
       end block
 
