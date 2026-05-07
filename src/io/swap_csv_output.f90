@@ -333,6 +333,7 @@ module SWAP_csv_output
    end subroutine set_values
 
    subroutine csv_out(iTask)
+   use file_io_mod, only: file_open
    implicit none
 
    ! global
@@ -345,8 +346,6 @@ module SWAP_csv_output
    character(len=300)   :: filcsv
    character(len=20)    :: form
    character(len=30)    :: myval
-   ! functions
-   integer              :: getun
    save                 :: iuncsv
 
    select case (iTask)
@@ -370,9 +369,8 @@ module SWAP_csv_output
       call det_which_vars
 
       ! output file; write header
-      iuncsv = getun (500, 900)
       filcsv = trim(pathwork)//trim(outfil)//'_output.csv'
-      open(unit=iuncsv, file=filcsv, status="unknown")
+      call file_open(iuncsv, filcsv, 'unknown', 'readwrite')
       call makeheader(iuncsv, filcsv)
 
       ! store inital values
@@ -948,6 +946,7 @@ subroutine csv_out_tz (iTask)
 ! import global variables contianing possible output
 use variables, only: pathwork, outfil, project, InList_csv_tz, tz_z1_z2, numnod, z, zbotcp, flprintshort, date, t1900, &
                      h, theta, tsoil, K, cml, cmsy, c_top, HEACAP, HEACON, inqrot
+use file_io_mod, only: file_open
 
 implicit none
 ! global
@@ -980,9 +979,6 @@ character(len=19)                                  :: datexti
 ! when to automatically swith from F to E formatting
 integer,             parameter                     :: num_d = 5         ! # of decimals; later: user input?
 integer,             parameter                     :: num_w = num_d+7   ! total width of format, for E-formatting: 7 positions are needed for "-x."at start and "E+00" at end
-
-! functions
-integer                                            :: getun
 
 data (Allowed(i), Units(i), i = 1, Mlist) / &
       'H',        '(cm)',        &
@@ -1048,9 +1044,8 @@ case (1)
    
    ! open file for output; existing file will be overwritten; formatted output
    !    to do: write some basic info at the top of the output file?
-   iuncsv = getun (500, 900)
    filnam = trim(pathwork)//trim(outfil)//'_output_tz.csv'
-   open (unit=iuncsv, file=filnam, status='replace', form='formatted')
+   call file_open(iuncsv, filnam, 'replace', 'write')
 
    ! column header
    Header = 'DATE,DEPTH'
