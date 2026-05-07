@@ -57,8 +57,9 @@ sources = [
     'src/core/arrays.f90',
     'src/core/constants.f90',
     'src/core/swap_log.f90',
+    'src/core/dtutil.f90',
     'src/error/error.f90',
-    'src/error/fatalerr_shim.f90',
+    'src/error/fatalerr.f90',
     'src/validation/validation.f90',
     'src/config/general_config.f90',
     'src/config/simulation_config.f90',
@@ -177,15 +178,6 @@ sources = [
 ]
 
 # ============================================================================
-# External dependency: ttutil
-# ============================================================================
-# Vendored as a meson subproject and built from source with gfortran.
-# The Intel/ifx download-prebuilt-binary path has been removed; see
-# docs/adr/0001-gfortran-first.md.
-ttutil_prj = subproject('ttutil', default_options: ['default_library=static'])
-ttutil_dep = ttutil_prj.get_variable('ttutil_dep')
-
-# ============================================================================
 # External dependency: toml-f
 # ============================================================================
 
@@ -205,7 +197,7 @@ tomlf_dep = tomlf_prj.get_variable('tomlf_dep')
 link_args = ['-static']
 
 executable('swap', sources,
-    dependencies: [ttutil_dep, tomlf_dep],
+    dependencies: [tomlf_dep],
     link_args: link_args,
     include_directories: src_inc,
     install: false

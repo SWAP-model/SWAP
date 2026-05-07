@@ -21,6 +21,7 @@ test_base_sources = [
     '../../src/core/arrays.f90',
     '../../src/core/constants.f90',
     '../../src/core/swap_log.f90',
+    '../../src/core/dtutil.f90',
     '../../src/utils/arrayutils.f90',
 ]
 
@@ -77,7 +78,7 @@ if get_option('enable_pfunit')
         '../../src/atmosphere/et.f90',
         'atmosphere/et_test_stubs.f90',
         '../../src/error/error.f90',
-        '../../src/error/fatalerr_shim.f90',
+        '../../src/error/fatalerr.f90',
         '../../src/validation/validation.f90',
         '../../src/config/general_config.f90',
         '../../src/config/simulation_config.f90',
@@ -212,7 +213,7 @@ if get_option('enable_pfunit')
 
         unit_tests = executable('unit-swap-tests',
             sources: [pp_sources, driver_src] + pfunit_base_sources,
-            dependencies: [pfunit_dep, ttutil_dep, tomlf_dep],
+            dependencies: [pfunit_dep, tomlf_dep],
             include_directories: src_inc,
             fortran_args: ['-D_TEST_SUITES="testSuites.inc"'],
             install: false

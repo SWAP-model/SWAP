@@ -1,4 +1,0 @@
-[wrap-git]
-directory = ttutil
-url = https://github.com/SWAP-model/ttutil.git
-revision = v4.2.7
