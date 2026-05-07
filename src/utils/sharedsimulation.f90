@@ -3,6 +3,7 @@
 ! ----------------------------------------------------------------------
       subroutine SharedSimulation(task)
       use error_mod, only: fatalerr_collected
+      use file_io_mod, only: file_open
 ! ----------------------------------------------------------------------
 !     UpDate             : July 2017
 !     Date               : July 2009
@@ -18,7 +19,7 @@
       integer PosArg
       integer(4) delay
       logical    flhold
-      integer    unss, ID_Shared, getun, count, IDread
+      integer    unss, ID_Shared, count, IDread
       character(len=3)   strIDss
       character(len=80)  strFINA
       character(len=200) messag
@@ -43,9 +44,7 @@
       read(strIDss,'(i3.3)')ID_Shared
       PosArg         = 3
       Call Get_Command_Argument (number=PosArg,value=strFINA)
-      unss  = getun (20,99)
-      open(unit=unss,file=strFINA,status='unknown',                     &
-     &     action='READWRITE') !,share='DENYNONE')
+      call file_open(unss, strFINA, 'unknown', 'readwrite')
 !     open shared data file
       call FromSwap(task)
       call ToSwap(task)
