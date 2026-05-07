@@ -17,7 +17,6 @@ program swap_main
 
 use variables, only: logf
 use swap_log, only: log_init, log_close, LOGLEVEL_DEBUG, LOGLEVEL_INFO
-use file_io_mod, only: file_open
 implicit none
 
 ! because subroutine swap has optional arguments, we must define the interface
@@ -31,45 +30,21 @@ interface
 end interface
 
 ! local
-integer              :: iTask
 integer, parameter   :: iCaller = 0                   ! Who is calling swap? 0 = swap-main; > 0 external model is calling swap as DLL (iCaller > 0 for testing only)
-integer, save        :: iset, insets, iun1, iun2
-
-! functions
-integer              :: getun
 
 ! Initialize logging (LOGLEVEL_INFO for normal, LOGLEVEL_DEBUG for verbose)
 call log_init(log_level=LOGLEVEL_INFO, log_file='swap_debug.log')
 
-! open logfile and read rerun file
-call file_open(iun1, 'reruns.log', 'replace', 'write')
-iun2 = getun (10,900)
-call rdsets (iun2,iun1,'reruns.dat',insets)
-if (insets == 0) write (iun1,'(a)') 'No reruns defined.'
-
-! reruns (if supplied; else this loop is performed only once)
-do iset = 0, insets
-
-! select rerun set
-   call rdfrom (iset,.true.)
-
-!  Initialize swap
-   iTask = 1
-   if (iCaller == 0) call swap(iCaller, iTask)
-   if (iCaller /= 0) call dummy(iTask)
-
-!  Dynamic call to swap
-   iTask = 2
-   if (iCaller == 0) call swap(iCaller, iTask)
-   if (iCaller /= 0) call dummy(iTask)
-
-!  Close swap
-   iTask = 3
-   if (iCaller == 0) call swap(iCaller, iTask)
-   if (iCaller /= 0) call dummy(iTask)
-
-end do
-close (iun2)
+! Reruns retired (ADR 0023). Parameter sweeps now driven externally.
+if (iCaller == 0) then
+   call swap(iCaller, 1)
+   call swap(iCaller, 2)
+   call swap(iCaller, 3)
+else
+   call dummy(1)
+   call dummy(2)
+   call dummy(3)
+end if
 
 ! write message on screen
 write(*,'(a)')' Swap normal completion!'

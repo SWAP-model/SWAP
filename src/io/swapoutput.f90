@@ -3429,16 +3429,14 @@
       subroutine CloseTempFil
 ! ----------------------------------------------------------------------
 !     date               : Aug 2004
-!     purpose            : delete temporary files of TTUTIL
+!     purpose            : delete temporary files
 ! ----------------------------------------------------------------------
       implicit  none
 
-      integer cexf,getun
       logical fileopen
 
-! --- delete temporary files
-      cexf = getun (10,90)
-      call rddtmp(cexf)
+! --- delete temporary files (TTutil scratch retired with ADR 0023).
+! The unit-20 close-with-DELETE is the project's own cleanup, kept.
       inquire(unit=20,opened=fileopen)
       if(fileopen)close(20, STATUS = 'DELETE')
 
