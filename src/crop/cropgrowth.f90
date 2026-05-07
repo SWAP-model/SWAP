@@ -1051,7 +1051,6 @@
       real(8) NMAXSO, NPART, NFIXF !,NLUE
       real(8) NSLA, RNFRT, TCNT !,RNFLV,RNFST
       real(8) DVSNLT, DVSNT, RDRNS, FNTRT !, FRNX
-      integer getun2
       !real(8) NMAXLV,NMAXST,NMAXRT,NNI,FSTR
       !real(8) NMXLV(30)
       integer ILNMXL

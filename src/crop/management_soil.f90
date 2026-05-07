@@ -80,7 +80,6 @@ contains
       real(8) :: AppAgeArableRt, AppAgeArableLv
       real(8) :: AppAgeArableSt, AppAgeArableSo
       real(8) :: AppAgeGrassRt, AppAgeGrassLv, AppAgeGrassSt
-      logical :: rdinqr
 
       ! SAVE removed - isme and nut are already module variables in wofost_soil_declarations
       ! save
