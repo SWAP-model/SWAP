@@ -1,9 +1,19 @@
-!> Canonical implementations of TTutil utility functions.
+!> @file dtutil.f90
+!! TTutil-API compatibility shim — project-owned native-Fortran
+!! reimplementations of the 11 TTutil date/string utility functions
+!! that were still referenced by src/ after the TTutil retirement
+!! arc (ADR 0023).
 !!
-!! Provides free subroutines and functions matching the TTutil-era
-!! signatures that are still referenced by src/ after Phases A-D of
-!! the TTutil retirement arc. With TTutil retired (ADR 0023), this
-!! file is the canonical source; no subproject required.
+!! See ADR 0024 for the full rationale + architectural direction.
+!! Short version: TTutil-the-dependency is gone (no subproject, no
+!! vendored tree); TTutil-shaped APIs persist here as a drop-in
+!! shim because touching ~75 call sites at Phase E was deferred to
+!! a follow-on cleanup. Future direction: hoist these calls out of
+!! the physics layer (src/soil, src/crop, src/drainage,
+!! src/atmosphere, src/core) into the I/O boundary, so physics
+!! subroutines receive parsed/validated inputs and don't format
+!! dates or split strings. When that's done, this file shrinks or
+!! goes away entirely.
 !!
 !! Functions / subroutines implemented here (all free, no module):
 !!
@@ -22,6 +32,22 @@
 !! Date representation: DPDTTM counts days since 1900-01-01 00:00
 !! (1900-01-01 = 1.0), using the TTUTIL OFFSET of 693594 absolute
 !! days from 0001-01-01. DATEA(6) = [year, month, day, hour, min, sec].
+!!
+!! Behavioural notes (vs upstream TTutil v4.2.7):
+!!  - Validation is softened. Where upstream would FATALERR on
+!!    malformed input (year=0, day > DAYMAX, unknown DTDPST format
+!!    descriptor, IFINDI bounds outside array, etc.), this shim
+!!    silently returns a default. Internal SWAP callers always
+!!    pass valid inputs; verified by check-full byte-identical
+!!    CSV outputs.
+!!  - DTDPST uses a sequential first-occurrence INDEX-based
+!!    replacer (vs upstream's tokenizer + SFINDG lookup).
+!!    Behaviourally equivalent for every format string used in
+!!    src/ today (`year-month-day`, `year-month-day,hour:minute:seconds`,
+!!    `YEAR-MONTHST-DAY`, `year-month-day hour:min:sec`).
+!!  - DECREA uses native Fortran internal READ (vs upstream's
+!!    PARSWORD) — accepts strictly more inputs, but produces
+!!    identical results for clean numeric strings.
 
 ! ============================================================================
 ! DTLEAP — leap-year predicate (mirrors TTutil DTLEAP.FOR)
