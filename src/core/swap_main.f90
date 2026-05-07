@@ -17,6 +17,7 @@ program swap_main
 
 use variables, only: logf
 use swap_log, only: log_init, log_close, LOGLEVEL_DEBUG, LOGLEVEL_INFO
+use file_io_mod, only: file_open
 implicit none
 
 ! because subroutine swap has optional arguments, we must define the interface
@@ -41,9 +42,8 @@ integer              :: getun
 call log_init(log_level=LOGLEVEL_INFO, log_file='swap_debug.log')
 
 ! open logfile and read rerun file
-iun1 = getun (400,900)
-iun2 = getun (iun1+1,900)
-call fopens (iun1,'reruns.log','new','del')
+call file_open(iun1, 'reruns.log', 'replace', 'write')
+iun2 = getun (10,900)
 call rdsets (iun2,iun1,'reruns.dat',insets)
 if (insets == 0) write (iun1,'(a)') 'No reruns defined.'
 
