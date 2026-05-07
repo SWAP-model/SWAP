@@ -542,6 +542,57 @@ The solute-transport block is read by `read_solute_toml.f90` into
 > the per-crop `[salinity]` keys — the spec keeps these on the soil-side
 > rather than cross-checking against the crop block (see `solute_config.f90`).
 
+### `[nutrients]` (Phase 4f-extend, N2a)
+
+The nutrients block is read by `read_nutrients_toml.f90` into
+`nutrients_config_t`. The section and all keys are optional; absent `[nutrients]`
+triggers `cfg%present = .false.` and all fields default to zero (no sorption,
+no initial pools). When present, the block carries soil-side initial pool
+concentrations and the soil-water sorption coefficient used by the nutrient
+transport routines (ADR 0026).
+
+| Key | Type | Required | Default | Notes |
+|---|---|---|---|---|
+| `sorp_coef` | real | optional | 0.0 | Sorption coefficient (m³/kg). Eliminates a legacy uninitialised-variable bug. |
+
+#### `[nutrients.initial]` (sub-table, optional)
+
+Initial nutrient pool concentrations in the soil. The sub-table is optional
+within an optional `[nutrients]` block; absent → all pools default to 0.0.
+All values are non-negative.
+
+| Key | Type | Elements | Default | Description |
+|---|---|---|---|---|
+| `fom`  | array of real | 1–8 | 0.0 each | Fresh organic matter pool (kg/m²), indices 1–8 (`FOM_t(1..8)` legacy). |
+| `bio`  | real | — | 0.0 | Biomass pool (kg/m²) (`Bio_t` legacy). |
+| `hum`  | real | — | 0.0 | Humus pool (kg/m²) (`Hum_t` legacy). |
+| `cnh4` | real | — | 0.0 | Ammonium concentration (kg/m³) (`cNH4_t` legacy). |
+| `cno3` | real | — | 0.0 | Nitrate concentration (kg/m³) (`cNO3_t` legacy). |
+
+**Example:**
+
+```toml
+[nutrients]
+sorp_coef = 0.005
+
+[nutrients.initial]
+fom  = [0.5, 0.3, 0.2, 0.1, 0.5, 0.3, 0.2, 0.1]
+bio  = 0.4
+hum  = 8.0
+cnh4 = 0.001
+cno3 = 0.005
+```
+
+**Notes:**
+- `fom` is a variable-length array: providing fewer than 8 elements is legal
+  (trailing positions stay at 0.0). Providing more than 8 elements is an error.
+- When `[nutrients]` is omitted entirely, the adapter `apply_nutrients`
+  (called unconditionally from `config_to_variables`) sets `SorpCoef = 0.0`
+  and all pool arrays to 0.0, matching the legacy behaviour of uninitialised
+  globals for cases not using the nutrient subsystem. The runtime gate
+  `flCropNut` (at `tillage.f90:73`) controls whether the pools are read;
+  lifting that gate is N3's scope (future ADR 0028).
+
 ### `[output.csv]` (Phase 4f-extend Bucket B)
 
 Controls the special per-variable CSV output (legacy `SWCSV` / `INLIST_CSV` /
