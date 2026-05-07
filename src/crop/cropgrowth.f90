@@ -691,10 +691,11 @@
 
       use variables
       use error_mod, only: fatalerr_collected
+      use file_io_mod, only: file_open
       implicit none
 
 ! --- local variables ------------------
-      integer task,getun   !,numcrop
+      integer task   !,numcrop
       character(len=200) messag
       character(len=160) filnam,filtext
 
@@ -714,8 +715,7 @@
           call fatalerr_collected ('crops',messag)
         endif
         filnam = trim(pathwork)//trim(outfil)//'.crp'
-        crp = getun (20,90)
-        call fopens(crp,filnam,'new','del')
+        call file_open(crp, filnam, 'replace', 'write')
         filtext = 'output data of simple or detailed crop growth model'
         call writehead (crp,1,filnam,filtext,project)
 
@@ -3797,6 +3797,7 @@
 !     Purpose            : open and write crop output N balance files
 ! ----------------------------------------------------------------------
       use error_mod, only: fatalerr_collected
+      use file_io_mod, only: file_open
       implicit none
 
 ! --- global variables ------------------
@@ -3810,7 +3811,7 @@
 ! --- local variables ------------------
       character(len=1) comma
 !      character(len=200) messag
-      integer   getun,nba
+      integer   nba
       character(len=160) filnam,filtext
 
       save    nba
@@ -3823,8 +3824,7 @@
 ! === open output file and write headers =====================
 
       filnam = trim(pathwork)//trim(outfil)//'.nba'
-      nba = getun (20,90)
-      call fopens(nba,filnam,'new','del')
+      call file_open(nba, filnam, 'replace', 'write')
       filtext = 'output of N-balance of detailed crop growth model'
       call writehead (nba,1,filnam,filtext,project)
 
@@ -3871,6 +3871,7 @@
       
      use swap_constants, only: tiny, nihil
      use error_mod, only: fatalerr_collected
+     use file_io_mod, only: file_open
      implicit none
 
 ! --- global variables ------------------
@@ -3881,7 +3882,7 @@
 ! --- local variables ------------------
       character(len=1) comma
 !      character(len=200) messag
-      integer   getun,om1
+      integer   om1
       character(len=160) filnam,filtext
       real(8)   OMroot,OMleaves,OMstems,OMstorage  !,Cccheck
 
@@ -3895,8 +3896,7 @@
 ! === open output file and write headers =====================
 
       filnam = trim(pathwork)//trim(outfil)//'.om1'
-      om1 = getun (20,90)
-      call fopens(om1,filnam,'new','del')
+      call file_open(om1, filnam, 'replace', 'write')
       filtext = 'output of OM1-balance (kg/ha DM increase per time'//   &
      & 'step) of detailed crop growth model'
       call writehead (om1,1,filnam,filtext,project)
@@ -3951,6 +3951,7 @@
 !     Purpose            : open and write crop output OM balance files
 ! ----------------------------------------------------------------------
       use error_mod, only: fatalerr_collected
+      use file_io_mod, only: file_open
       implicit none
 
 ! --- global variables ------------------
@@ -3963,7 +3964,7 @@
 ! --- local variables ------------------
       character(len=1) comma
 !      character(len=200) messag
-      integer   getun,om2
+      integer   om2
       character(len=160) filnam,filtext
 
       save    om2
@@ -3976,8 +3977,7 @@
 ! === open output file and write headers =====================
 
       filnam = trim(pathwork)//trim(outfil)//'.om2'
-      om2 = getun (20,90)
-      call fopens(om2,filnam,'new','del')
+      call file_open(om2, filnam, 'replace', 'write')
       filtext = 'output of OM2-balance (kg/ha DM, cumulative and '//    &
      & 'increments) of detailed crop growth model'
       call writehead (om2,1,filnam,filtext,project)
@@ -4557,6 +4557,7 @@
 !       O    L   flGrassGrowth flag indicating grass growth (suppressed=.false. when criteria are not met) [.true .or. .false. -, L]
 ! ----------------------------------------------------------------------
       use Variables
+      use file_io_mod, only: file_open
       implicit none
 
 ! --- global
@@ -4571,7 +4572,7 @@
       integer    :: cmpcrit, node
       character(len=11), intent(out) ::  dateGrassGrowth            ! date of start of GrassGrowth
 !     output
-      integer    :: uo, getun   !, idum, ios
+      integer    :: uo   !, idum, ios
       character(len=160)  :: filnam, filtext
       character(len=1)  :: comma
       logical    :: flexist, flopened
@@ -4607,8 +4608,7 @@
               inquire (uo, opened=flopened, exist=flexist)
           endif
           if (.not.flexist .and. .not.flopened) then
-              uo = getun (20,90)
-              call fopens(uo,filnam,'new','del')
+              call file_open(uo, filnam, 'replace', 'write')
               filtext = 'output of subr sumttd'
               call writehead (uo,1,filnam,filtext,project)
               write (uo,100)
