@@ -403,7 +403,10 @@ module cropwofost_config_mod
       real(real64) :: rdrns     = 0.0_real64
       real(real64) :: fntrt     = 0.0_real64
       real(real64) :: frnx      = 0.0_real64
-      real(real64), allocatable :: nmxlv(:,:)  ! max N concentration in leaves vs DVS
+      real(real64), allocatable :: nmxlv(:)        ! max N concentration in leaves (flat NMXLV(30) slice)
+      real(real64) :: frahar_los_orm_lv = 0.0_real64
+      real(real64) :: frahar_los_orm_st = 0.0_real64
+      real(real64) :: frahar_los_orm_so = 0.0_real64
    contains
       procedure :: validate => wofost_nutrient_validate
       procedure :: finalize => wofost_nutrient_finalize
@@ -1005,12 +1008,31 @@ contains
    subroutine wofost_nutrient_validate(self, errors)
       class(wofost_nutrient_t), intent(in)    :: self
       type(error_collection_t), intent(inout) :: errors
-      if (self%flcropnut) then
+
+      if (.not. self%flcropnut) return
+
+      ! nmxlv must be allocated and non-empty when flcropnut=true.
+      if (.not. allocated(self%nmxlv) .or. size(self%nmxlv) == 0) then
          call errors%append(ERR_VALIDATION_CROSS_FIELD, &
-            'cropwofost.nutrient.flcropnut=.true. (N-P-K nutrient model) ' // &
-            'not yet supported in the TOML pipeline; use the legacy executable.', &
-            'cropwofost.nutrient')
+            'cropwofost.nutrient.nmxlv: must be a non-empty array when flcropnut=true', &
+            'cropwofost.nutrient.nmxlv')
+      else if (size(self%nmxlv) > 30) then
+         call errors%append(ERR_VALIDATION_OUT_OF_RANGE, &
+            'cropwofost.nutrient.nmxlv: at most 30 entries (legacy NMXLV(30) cap)', &
+            'cropwofost.nutrient.nmxlv')
       end if
+
+      ! Harvest-loss fractions must be in [0, 1].
+      call check_real_range(self%frahar_los_orm_lv, 0.0_real64, 1.0_real64, &
+                            'cropwofost.nutrient.frahar_los_orm_lv', errors)
+      call check_real_range(self%frahar_los_orm_st, 0.0_real64, 1.0_real64, &
+                            'cropwofost.nutrient.frahar_los_orm_st', errors)
+      call check_real_range(self%frahar_los_orm_so, 0.0_real64, 1.0_real64, &
+                            'cropwofost.nutrient.frahar_los_orm_so', errors)
+
+      ! N1 leaves the 17 numeric scalars (lrnr, lsnr, nlai, ...) unranged.
+      ! The legacy reader (rdsdou) didn't enforce ranges either; future
+      ! tightening can land when nutrient regression fixtures exist (post-N3).
    end subroutine wofost_nutrient_validate
 
    subroutine wofost_nutrient_finalize(self, errors)

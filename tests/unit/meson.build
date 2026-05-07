@@ -199,6 +199,7 @@ if get_option('enable_pfunit')
         'io/toml/test_apply_irrigation_ssdi.pf',
         'io/toml/test_irrigation_ssdi_validate.pf',
         'io/toml/test_read_irrigation_ssdi_toml.pf',
+        'io/toml/test_apply_cropwofost_nutrient.pf',
         'drainage/test_surfacewater_init.pf',
         'crop/test_cropfixed_init.pf',
         'crop/test_cropwofost_init.pf',

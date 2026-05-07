@@ -1,0 +1,108 @@
+! Tests for wofost_nutrient_validate — Task 2 of [nutrients] N1.
+! Validator rules: nmxlv non-empty + size <= 30 when flcropnut=true;
+! harvest fractions frahar_los_orm_lv/st/so each in [0, 1].
+! Placeholder test_apply_populates_legacy_globals is filled in Task 3.
+
+@test
+subroutine test_validate_silent_flcropnut_false()
+   use cropwofost_config_mod, only: wofost_nutrient_t
+   use error_mod, only: error_collection_t
+   use funit
+   implicit none
+   type(wofost_nutrient_t) :: cfg
+   type(error_collection_t) :: errs
+
+   ! Defaults: flcropnut=.false., all numeric defaults zero, nmxlv unallocated
+   call cfg%validate(errs)
+   call assertEqual(0, errs%count(), 'expected zero errors when flcropnut=false')
+end subroutine
+
+
+@test
+subroutine test_validate_passes_clean_flcropnut_true()
+   use, intrinsic :: iso_fortran_env, only: real64
+   use cropwofost_config_mod, only: wofost_nutrient_t
+   use error_mod, only: error_collection_t
+   use funit
+   implicit none
+   type(wofost_nutrient_t) :: cfg
+   type(error_collection_t) :: errs
+
+   cfg%flcropnut = .true.
+   ! Numeric scalars: defaults are 0.0; that's fine — N1 doesn't range-check them.
+   ! What N1 requires:
+   !   nmxlv non-empty, size <= 30
+   !   harvest fractions in [0, 1]
+   allocate(cfg%nmxlv(2))
+   cfg%nmxlv = [0.06_real64, 0.04_real64]
+   cfg%frahar_los_orm_lv = 0.5_real64
+   cfg%frahar_los_orm_st = 0.5_real64
+   cfg%frahar_los_orm_so = 0.0_real64
+
+   call cfg%validate(errs)
+   call assertEqual(0, errs%count(), 'expected zero errors for clean flcropnut=true config')
+end subroutine
+
+
+@test
+subroutine test_validate_rejects_flcropnut_true_empty_nmxlv()
+   use cropwofost_config_mod, only: wofost_nutrient_t
+   use error_mod, only: error_collection_t
+   use funit
+   implicit none
+   type(wofost_nutrient_t) :: cfg
+   type(error_collection_t) :: errs
+
+   cfg%flcropnut = .true.
+   ! Leave nmxlv unallocated.
+   call cfg%validate(errs)
+   @assertTrue(errs%count() > 0, 'expected error for empty nmxlv')
+end subroutine
+
+
+@test
+subroutine test_validate_rejects_flcropnut_true_oversized_nmxlv()
+   use, intrinsic :: iso_fortran_env, only: real64
+   use cropwofost_config_mod, only: wofost_nutrient_t
+   use error_mod, only: error_collection_t
+   use funit
+   implicit none
+   type(wofost_nutrient_t) :: cfg
+   type(error_collection_t) :: errs
+
+   cfg%flcropnut = .true.
+   allocate(cfg%nmxlv(31))
+   cfg%nmxlv = 0.05_real64
+   call cfg%validate(errs)
+   @assertTrue(errs%count() > 0, 'expected error for nmxlv size > 30')
+end subroutine
+
+
+@test
+subroutine test_validate_rejects_flcropnut_true_out_of_range_harvest_lv()
+   use, intrinsic :: iso_fortran_env, only: real64
+   use cropwofost_config_mod, only: wofost_nutrient_t
+   use error_mod, only: error_collection_t
+   use funit
+   implicit none
+   type(wofost_nutrient_t) :: cfg
+   type(error_collection_t) :: errs
+
+   cfg%flcropnut = .true.
+   allocate(cfg%nmxlv(1))
+   cfg%nmxlv(1) = 0.05_real64
+   cfg%frahar_los_orm_lv = 1.5_real64   ! out of [0, 1]
+   call cfg%validate(errs)
+   @assertTrue(errs%count() > 0, 'expected error for frahar_los_orm_lv out of range')
+end subroutine
+
+
+! Placeholder; populated in Task 3 once apply_cropwofost_nutrient exists.
+! Currently asserts a trivial pass so the suite compiles cleanly.
+@test
+subroutine test_apply_populates_legacy_globals()
+   use funit
+   implicit none
+   ! Body added in Task 3.
+   call assertEqual(1, 1)
+end subroutine

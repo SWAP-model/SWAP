@@ -9,9 +9,10 @@ module read_cropwofost_toml_mod
    use iso_fortran_env, only: real64
    use tomlf, only: toml_table, toml_array, get_value, len
    use cropwofost_config_mod, only: cropwofost_config_t
-   use toml_field_helpers_mod, only: get_table,                         &
-                                     get_optional_int_with_default,     &
-                                     get_optional_real_with_default,    &
+   use toml_field_helpers_mod, only: get_table,                            &
+                                     get_optional_int_with_default,        &
+                                     get_optional_real_with_default,       &
+                                     get_optional_logical_with_default,    &
                                      get_optional_string_with_default
    use read_irrigation_toml_mod, only: read_irrigation_schedule_from_section
    use error_mod, only: error_collection_t, ERR_PARSE_TYPE_MISMATCH
@@ -270,6 +271,7 @@ contains
       ! ----------------------------------------------------------------
       call get_table(doc_root, 'nutrient', nut, 'nutrient', errors)
       if (associated(nut)) then
+         call get_optional_logical_with_default(nut, 'flcropnut', config%nutrient%flcropnut, .false., 'nutrient.flcropnut', errors)
          call get_optional_real_with_default(nut, 'lrnr',   config%nutrient%lrnr,   0.0_real64, 'nutrient.lrnr',   errors)
          call get_optional_real_with_default(nut, 'lsnr',   config%nutrient%lsnr,   0.0_real64, 'nutrient.lsnr',   errors)
          call get_optional_real_with_default(nut, 'nlai',   config%nutrient%nlai,   0.0_real64, 'nutrient.nlai',   errors)
@@ -287,7 +289,10 @@ contains
          call get_optional_real_with_default(nut, 'rdrns',  config%nutrient%rdrns,  0.0_real64, 'nutrient.rdrns',  errors)
          call get_optional_real_with_default(nut, 'fntrt',  config%nutrient%fntrt,  0.0_real64, 'nutrient.fntrt',  errors)
          call get_optional_real_with_default(nut, 'frnx',   config%nutrient%frnx,   0.0_real64, 'nutrient.frnx',   errors)
-         call read_table_2d(nut, 'nmxlv', config%nutrient%nmxlv, 2, 'nutrient.nmxlv', errors)
+         call read_real_array_1d(nut, 'nmxlv', config%nutrient%nmxlv, 'nutrient.nmxlv', errors)
+         call get_optional_real_with_default(nut, 'frahar_los_orm_lv', config%nutrient%frahar_los_orm_lv, 0.0_real64, 'nutrient.frahar_los_orm_lv', errors)
+         call get_optional_real_with_default(nut, 'frahar_los_orm_st', config%nutrient%frahar_los_orm_st, 0.0_real64, 'nutrient.frahar_los_orm_st', errors)
+         call get_optional_real_with_default(nut, 'frahar_los_orm_so', config%nutrient%frahar_los_orm_so, 0.0_real64, 'nutrient.frahar_los_orm_so', errors)
       end if
 
       call get_table(doc_root, 'irrigation_schedule', irr_sched, 'irrigation_schedule', errors)
@@ -353,5 +358,41 @@ contains
          end do
       end do
    end subroutine read_table_2d
+
+   !> Decode a flat TOML array at sec[key] into a 1-D real(real64) allocatable.
+   !! Absent key leaves arr unallocated (caller must check allocation).
+   !! A non-array value appends ERR_PARSE_TYPE_MISMATCH and leaves arr unallocated.
+   subroutine read_real_array_1d(sec, key, arr, context, errors)
+      type(toml_table), pointer, intent(in)    :: sec
+      character(len=*),          intent(in)    :: key
+      real(real64), allocatable, intent(out)   :: arr(:)
+      character(len=*),          intent(in)    :: context
+      type(error_collection_t),  intent(inout) :: errors
+
+      type(toml_array), pointer :: outer
+      integer :: n, i, stat
+      real(real64) :: val
+
+      if (.not. associated(sec)) return
+
+      outer => null()
+      call get_value(sec, key, outer, requested=.false., stat=stat)
+      if (.not. associated(outer)) return
+
+      n = len(outer)
+      allocate(arr(n))
+      arr = 0.0_real64
+
+      do i = 1, n
+         call get_value(outer, i, val, stat=stat)
+         if (stat /= 0) then
+            call errors%append(ERR_PARSE_TYPE_MISMATCH, &
+                               "non-real element in array " // key, context)
+            if (allocated(arr)) deallocate(arr)
+            return
+         end if
+         arr(i) = val
+      end do
+   end subroutine read_real_array_1d
 
 end module read_cropwofost_toml_mod

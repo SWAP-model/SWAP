@@ -631,12 +631,14 @@ subroutine test_cropwofost_flcropnut_true_rejected()
    type(error_collection_t) :: errors
    integer :: i
    logical :: found
+   ! flcropnut=.true. with nmxlv unallocated must produce at least one
+   ! ERR_VALIDATION_CROSS_FIELD error (nmxlv missing).
    c%nutrient%flcropnut = .true.
    call c%validate(errors)
    found = .false.
    do i = 1, errors%count()
       if (errors%items(i)%code == ERR_VALIDATION_CROSS_FIELD .and. &
-          index(errors%items(i)%message, 'flcropnut') > 0) found = .true.
+          index(errors%items(i)%message, 'nmxlv') > 0) found = .true.
    end do
    @assertTrue(found)
 end subroutine

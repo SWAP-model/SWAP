@@ -17,6 +17,7 @@ module toml_field_helpers_mod
    public :: get_required_string
    public :: get_optional_int_with_default
    public :: get_optional_real_with_default
+   public :: get_optional_logical_with_default
    public :: get_optional_string_with_default
    public :: get_table
    public :: get_array_of_tables
@@ -125,6 +126,24 @@ contains
          out = default
       end if
    end subroutine get_optional_real_with_default
+
+   subroutine get_optional_logical_with_default(tab, key, out, default, context, errors)
+      type(toml_table), pointer, intent(in)    :: tab
+      character(len=*),          intent(in)    :: key
+      logical,                   intent(out)   :: out
+      logical,                   intent(in)    :: default
+      character(len=*),          intent(in)    :: context
+      type(error_collection_t),  intent(inout) :: errors
+      integer :: stat
+      out = default
+      if (.not. associated(tab)) return
+      call get_value(tab, key, out, default=default, stat=stat)
+      if (stat /= 0) then
+         call errors%append(ERR_PARSE_TYPE_MISMATCH, &
+                            "expected logical at " // key, context)
+         out = default
+      end if
+   end subroutine get_optional_logical_with_default
 
    subroutine get_optional_string_with_default(tab, key, out, default, context, errors)
       type(toml_table), pointer,     intent(in)    :: tab
