@@ -43,9 +43,9 @@ contains
       implicit none
 
 ! --- local variables
-      character(len=300) filnam, filnamce
+      character(len=300) filnam
 !      character(len=100) MatName(masme)
-      integer   task, sme, smm, snp, nsmm, nsme, oup
+      integer   task, sme, smm, nsmm, nsme
       Integer :: i,j, idum
       real(8) :: dum, t4, t3, help
       real(8)   MatAmount(masme) ! Array with amount of applied material (kg/ha)
@@ -66,9 +66,7 @@ contains
       real(8):: Nsupply_Nsupply_rate_limited
       real(8):: dum1, dum2, dum3, dum4 !, dum5, dum6, dum7
       character(len=1) comma
-      character(len=160) filtext, line
 
-      integer :: stat      ! ,imat
       real(8) :: xAmend, xAppAge, xOrgMatFrac, xOrgNFrac, xNH4NFrac,    &
      &           xNO3NFrac
 
@@ -585,69 +583,21 @@ contains
       return
 
       case (7)
-
-      if (flCropExt) then
-         close(cropext)
-
-         open(cropext,file=filnamce,status = 'old')
-         iline = 0
-         do while (.not. IS_IOSTAT_END(stat) )
-            iline = iline + 1
-            read(cropext,'(a)',IOSTAT=stat) cstring(iline)
-         end do
-         close(cropext)
-         stat = 0
-
-         open(cropext,file=filnamce,status = 'unknown')
-         write(cropext,'(a)') cstring(1)
-         write(cropext,'(8e11.4)')nishmi,nishma,niromi,niroma,             &
-        &                        poshmi,poshma,poromi,poroma
-         do i = 3,iline
-            write(cropext,'(a)') cstring(i)
-         end do
-         close(cropext)
-      end if
-      
-! -   open file with soil nutrient parameters
-      filnam = trim(pathwork)//trim(project)//'.snp'
-      call file_open(snp, filnam, 'old', 'read')
-
-! -   open file to write soil nutrient parameters
-      filnam = trim(pathwork)//trim(project)//'_nut.end'
-      call file_open(oup, filnam, 'unknown', 'readwrite')
-!      do while (.not. eof(snp) )
-      do while (.not. IS_IOSTAT_END(stat) )
-         read(snp,'(a)',IOSTAT=stat)line
-         if(line(1:6).eq.'FOM1_t')then
-            write(oup,'("FOM1_t =",f12.6)')FOM_t(1)
-         else if(line(1:6).eq.'FOM2_t')then
-            write(oup,'("FOM2_t =",f12.6)')FOM_t(2)
-         else if(line(1:6).eq.'FOM3_t')then
-            write(oup,'("FOM3_t =",f12.6)')FOM_t(3)
-         else if(line(1:6).eq.'FOM4_t')then
-            write(oup,'("FOM4_t =",f12.6)')FOM_t(4)
-         else if(line(1:6).eq.'FOM5_t')then
-            write(oup,'("FOM5_t =",f12.6)')FOM_t(5)
-         else if(line(1:6).eq.'FOM6_t')then
-            write(oup,'("FOM6_t =",f12.6)')FOM_t(6)
-         else if(line(1:6).eq.'FOM7_t')then
-            write(oup,'("FOM7_t =",f12.6)')FOM_t(7)
-         else if(line(1:6).eq.'FOM8_t')then
-            write(oup,'("FOM8_t =",f12.6)')FOM_t(8)
-         else if(line(1:5).eq.'Bio_t')then
-            write(oup,'("Bio_t =",f12.6)')BIO_t
-         else if(line(1:5).eq.'Hum_t')then
-            write(oup,'("Hum_t =",f12.6)')HUM_t
-         else if(line(1:6).eq.'cNH4_t')then
-            write(oup,'("cNH4_t =",f12.6)')cNH4_t
-         else if(line(1:6).eq.'cNO3_t')then
-            write(oup,'("cNO3_t =",f12.6)')cNO3_t
-         else
-            write(oup,'(a)')line
-         end if
-      end do
-      close(snp)
-      close(oup)
+      ! [nutrients] N2a (ADR 0026): the legacy diagnostic dump
+      ! used <project>.snp as a template (read each line; if a
+      ! known key match, write the current pool value to
+      ! <project>_nut.end; else echo). Without .snp files in the
+      ! modern flow, the read would fail at runtime if flCropNut
+      ! were ever true.
+      !
+      ! The flCropExt write-back at the top of the legacy case (7)
+      ! is also retired — that branch was driven by a separate
+      ! mechanism (cropext) tied to the N-P-K case-1 init that's
+      ! now also gone.
+      !
+      ! A future arc can add a clean CSV-style nutrient-pool dump
+      ! if anyone asks.
+      return
 
       case default
          call fatalerr_collected ('SoilManagement', 'Illegal value for TASK')
