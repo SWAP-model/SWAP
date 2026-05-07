@@ -43,7 +43,7 @@
 
 ! --  local variables
       integer irr,node,nodsen,task,tcs,tcsfix,dcslim,dcs
-      integer ifnd,i,datea(6),getun2,irgdayfix
+      integer ifnd,i,datea(6),irgdayfix
       integer endirr(2),startirr(2)
       integer yearendcrp, yearstacrp
       real(8) frlow,phlo,phhi,phme,awlh,awmh,awah,cdef
@@ -55,7 +55,6 @@
       real(8) tstairryrx,tendirryrx, grai_red
       real(8), dimension(maho) :: wclos, wcmes, wchis
       logical flIrriTime
-      logical rdinqr
       character(len=80) filnam
       character(len=200) messag
 

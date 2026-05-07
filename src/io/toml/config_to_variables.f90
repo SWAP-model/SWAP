@@ -1178,13 +1178,6 @@ contains
          InList_csv_tz = config%output_csv%inlist_tz
       end if
 
-      ! ADR 0020 SS-B: Read_Tillage and SSDI_irrigation(1) read
-      ! tillage / SSDI parameters from staged swap.swp via TTutil when
-      ! their call-site gate fires (flTillage / flSSDI true). Until
-      ! ADR 0021 ports those parameter blocks to TOML schema, swpfile
-      ! must point at the staged template.
-      swpfile = 'swap.swp'
-
       ! `logf` is opened here because ~90 production code sites write
       ! log lines via `write(logf, ...)`.
       block

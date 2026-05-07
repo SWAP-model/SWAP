@@ -105,7 +105,6 @@
       character(len=16) outfil     ! Name of output file
       character(len=80) pathwork   ! Path to work directory
       character(len=80) project    ! Name of project
-      character(len=80) swpfile    ! Name of main (.swp) input file
 
 ! --- meteo variables
       integer   daymeteo           ! Calendar day number for which meteorological data should be read from input file
