@@ -1,0 +1,16 @@
+[general]
+project = "ssdi_test"
+
+[irrigation]
+swssdi = 1
+
+[irrigation.ssdi]
+schedule = 1
+ssdi_z   = [-30.0, -50.0]
+
+[irrigation.ssdi.scheduled]
+sched_type     = 1
+threshold      = 0.7
+ssdi_amount    = 10.0
+ssdi_appl_rate = 5.0
+sw_interval    = 0

@@ -20,6 +20,7 @@ module read_irrigation_toml_mod
    use iso_fortran_env, only: real64
    use tomlf, only: toml_table, toml_array, toml_datetime, get_value, len
    use irrigation_config_mod, only: irrigation_config_t, irrigation_schedule_t
+   use read_irrigation_ssdi_toml_mod, only: read_irrigation_ssdi_toml
    use toml_field_helpers_mod, only: get_table, get_array_of_tables,    &
                                      get_optional_int_with_default,     &
                                      get_optional_real_with_default,    &
@@ -64,6 +65,9 @@ contains
       ! real(real64) table where col 1 is days-since-1900 (legacy axis)
       ! so the validator and downstream adapter remain shape-stable.
       call read_fixed_events(sec, config%fixed_events, errors)
+
+      ! Delegate [irrigation.ssdi] parsing to the sibling reader.
+      call read_irrigation_ssdi_toml(sec, config%ssdi, errors)
    end subroutine read_irrigation_toml
 
    !> Decode `[[irrigation.fixed_events]]` array-of-tables into the legacy

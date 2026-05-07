@@ -103,6 +103,7 @@ sources = [
     'src/io/toml/read_bottom_boundary_toml.f90',
     'src/io/toml/read_heat_toml.f90',
     'src/io/toml/read_irrigation_toml.f90',
+    'src/io/toml/read_irrigation_ssdi_toml.f90',
     'src/io/toml/read_solute_toml.f90',
     'src/io/toml/read_soil_toml.f90',
     'src/io/toml/read_soil_tillage_toml.f90',

@@ -1,0 +1,5 @@
+[general]
+project = "ssdi_test"
+
+[irrigation]
+swssdi = 0
