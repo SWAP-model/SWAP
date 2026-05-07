@@ -1,0 +1,85 @@
+@test
+subroutine test_file_open_replace_write_succeeds()
+   use file_io_mod, only: file_open, file_delete
+   use funit
+   implicit none
+   integer :: u, ios
+
+   ! Clean up any leftover from a previous run.
+   call file_delete('test_file_io_replace.tmp')
+
+   call file_open(u, 'test_file_io_replace.tmp', 'replace', 'write', iostat=ios)
+   @assertEqual(0, ios, 'open(replace,write) should succeed')
+   write(u, '(a)') 'hello'
+   close(u)
+
+   call file_delete('test_file_io_replace.tmp')
+end subroutine
+
+@test
+subroutine test_file_open_old_read_existing_succeeds()
+   use file_io_mod, only: file_open
+   use funit
+   implicit none
+   integer :: u, ios
+   character(len=64) :: line
+
+   call file_open(u, 'tests/unit/io/fixtures/file_io_present.txt', 'old', 'read', iostat=ios)
+   @assertEqual(0, ios, 'open(old,read) on existing file should succeed')
+   read(u, '(a)') line
+   close(u)
+   @assertEqual('exists', trim(line))
+end subroutine
+
+@test
+subroutine test_file_open_old_read_missing_returns_nonzero_iostat()
+   use file_io_mod, only: file_open
+   use funit
+   implicit none
+   integer :: u, ios
+
+   call file_open(u, 'tests/unit/io/fixtures/does_not_exist.xyz', 'old', 'read', iostat=ios)
+   @assertTrue(ios /= 0, 'expected nonzero iostat for missing file with status=old')
+end subroutine
+
+@test
+subroutine test_file_delete_idempotent()
+   use file_io_mod, only: file_delete, file_exists
+   use funit
+   implicit none
+
+   ! Calling delete twice on a non-existing path should not error.
+   call file_delete('test_file_io_idempotent.tmp')
+   call file_delete('test_file_io_idempotent.tmp')
+   @assertFalse(file_exists('test_file_io_idempotent.tmp'))
+end subroutine
+
+@test
+subroutine test_file_delete_removes_existing()
+   use file_io_mod, only: file_open, file_delete, file_exists
+   use funit
+   implicit none
+   integer :: u
+
+   call file_open(u, 'test_file_io_delme.tmp', 'replace', 'write')
+   close(u)
+   @assertTrue(file_exists('test_file_io_delme.tmp'))
+   call file_delete('test_file_io_delme.tmp')
+   @assertFalse(file_exists('test_file_io_delme.tmp'))
+end subroutine
+
+@test
+subroutine test_file_exists_true_for_fixture()
+   use file_io_mod, only: file_exists
+   use funit
+   implicit none
+   @assertTrue(file_exists('tests/unit/io/fixtures/file_io_present.txt'))
+end subroutine
+
+@test
+subroutine test_file_exists_false_for_missing()
+   use file_io_mod, only: file_exists
+   use funit
+   implicit none
+   @assertFalse(file_exists('tests/unit/io/fixtures/does_not_exist.xyz'))
+end subroutine

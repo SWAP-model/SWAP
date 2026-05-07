@@ -131,6 +131,7 @@ if get_option('enable_pfunit')
         '../../src/utils/surfacewaterutils.f90',
         '../../src/drainage/surfacewater_init.f90',
         '../../src/crop/irrigation.f90',
+        '../../src/io/file_io.f90',
     ]
 
     pfunit_base_sources = test_base_sources + pfunit_extra_sources
@@ -159,6 +160,7 @@ if get_option('enable_pfunit')
         'config/test_cropgrass_config.pf',
         'config/test_cropwofost_config.pf',
         'io/test_csv_reader.pf',
+        'io/test_file_io.pf',
         'io/toml/test_path_helpers.pf',
         'io/toml/test_toml_field_helpers.pf',
         'io/toml/test_read_general_toml.pf',

@@ -94,6 +94,7 @@ sources = [
     
     # I/O
     'src/io/csv_reader.f90',
+    'src/io/file_io.f90',
     'src/io/toml/path_helpers.f90',
     'src/io/toml/toml_field_helpers.f90',
     'src/io/toml/read_general_toml.f90',
