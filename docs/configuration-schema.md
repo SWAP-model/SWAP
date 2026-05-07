@@ -480,6 +480,43 @@ The scheduled-irrigation block is **nested under each per-crop
 > `endirr_month`) rather than full TOML dates — the legacy schedule is
 > repeated annually.
 
+#### `[irrigation.ssdi]`
+
+Supplemental/Deficit Irrigation (SSDI) parameters. Present only when
+`[irrigation].swssdi = 1`; omitted entirely when `swssdi = 0`. Read by
+`read_irrigation_ssdi_toml.f90` into `irrigation_ssdi_t`. The block
+uses an explicit `schedule` discriminator (0=fixed-date, 1=triggered)
+to select between two disjoint sub-table schemas.
+
+##### Top-level fields
+
+| Key | Type | Default | Range | Description |
+|---|---|---|---|---|
+| `schedule` | integer | 0 | 0..1 | Mode discriminator: 0=fixed-date events from CSV, 1=scheduled trigger-based irrigation. |
+| `ssdi_z` | real array | — | 1 or 2 elements, each ∈ [-100.0, 0.0] | Application depth(s) in cm; if single-depth supply one element; if two, `ssdi_z[1] >= ssdi_z[2]` (depths are negative). |
+
+##### `[irrigation.ssdi.fixed]` (required when `schedule = 0`)
+
+Fixed-date SSDI with events supplied via an external CSV file.
+
+| Key | Type | Required | Description |
+|---|---|---|---|
+| `events_file` | string | required | Path to events CSV file (relative to `.swp` directory). CSV must have columns `date` (ISO YYYY-MM-DD), `rate_f` (mm/h), and `amount_f` (mm), with at least one row in the simulation window or spanning it. Up to 366 rows; dates strictly ascending. |
+
+##### `[irrigation.ssdi.scheduled]` (required when `schedule = 1`)
+
+Trigger-based SSDI with scheduling parameters inline.
+
+| Key | Type | Required | Range | Description |
+|---|---|---|---|---|
+| `sched_type` | integer | required | 1..3 | Trigger type: 1=transpiration-reduction (Tred), 2=pressure-head (presh), 3=water-content (watc). |
+| `threshold` | real | required | varies by type | Trigger threshold; range depends on `sched_type`: 1 → [0,1], 2 → [-1e7, 0], 3 → [0,1]. |
+| `threshold_depth` | real | required when sched_type > 1 | [-100, 0] cm | Measurement depth (cm) for trigger evaluation; required only when `sched_type = 2` or `3`. |
+| `ssdi_amount` | real | required | [0, 100] mm | Per-event total irrigation depth (mm). |
+| `ssdi_appl_rate` | real | required | [0, 100] mm/h | Application rate (mm/h). |
+| `sw_interval` | integer | optional | 0..1 | Interval gating: 0=apply daily (default), 1=apply at interval. |
+| `days_interval` | integer | required when sw_interval = 1 | [1, 366] | Days between applications when `sw_interval = 1`. |
+
 ### `[solute]` (Phase 4d Task 13-14)
 
 The solute-transport block is read by `read_solute_toml.f90` into
