@@ -1,0 +1,104 @@
+@test
+subroutine test_nutrients_default_init()
+   use nutrients_config_mod, only: nutrients_config_t
+   use funit
+   implicit none
+   type(nutrients_config_t) :: cfg
+   integer :: i
+
+   ! Defaults: present=false, sorp_coef=0, all initial pools at 0
+   @assertFalse(cfg%present, 'present default false')
+   @assertEqual(0.0d0, cfg%sorp_coef, tolerance=1.0d-12)
+   do i = 1, 8
+      @assertEqual(0.0d0, cfg%initial%fom(i), tolerance=1.0d-12)
+   end do
+   @assertEqual(0.0d0, cfg%initial%bio,  tolerance=1.0d-12)
+   @assertEqual(0.0d0, cfg%initial%hum,  tolerance=1.0d-12)
+   @assertEqual(0.0d0, cfg%initial%cnh4, tolerance=1.0d-12)
+   @assertEqual(0.0d0, cfg%initial%cno3, tolerance=1.0d-12)
+end subroutine
+
+@test
+subroutine test_nutrients_validate_silent_when_absent()
+   use nutrients_config_mod, only: nutrients_config_t
+   use error_mod, only: error_collection_t
+   use funit
+   implicit none
+   type(nutrients_config_t)  :: cfg
+   type(error_collection_t)  :: errs
+
+   ! present=.false. by default — validator must stay silent.
+   call cfg%validate(errs)
+   call assertEqual(0, errs%count(), 'expected zero errors when present=.false.')
+end subroutine
+
+@test
+subroutine test_nutrients_validate_passes_clean()
+   use, intrinsic :: iso_fortran_env, only: real64
+   use nutrients_config_mod, only: nutrients_config_t
+   use error_mod, only: error_collection_t
+   use funit
+   implicit none
+   type(nutrients_config_t)  :: cfg
+   type(error_collection_t)  :: errs
+
+   cfg%present   = .true.
+   cfg%sorp_coef = 0.005_real64
+   cfg%initial%fom = [0.5_real64, 0.3_real64, 0.2_real64, 0.1_real64, &
+                      0.5_real64, 0.3_real64, 0.2_real64, 0.1_real64]
+   cfg%initial%bio  = 0.4_real64
+   cfg%initial%hum  = 8.0_real64
+   cfg%initial%cnh4 = 0.001_real64
+   cfg%initial%cno3 = 0.005_real64
+
+   call cfg%validate(errs)
+   call assertEqual(0, errs%count(), 'expected zero errors for clean populated config')
+end subroutine
+
+@test
+subroutine test_nutrients_validate_rejects_negative_sorp_coef()
+   use, intrinsic :: iso_fortran_env, only: real64
+   use nutrients_config_mod, only: nutrients_config_t
+   use error_mod, only: error_collection_t
+   use funit
+   implicit none
+   type(nutrients_config_t)  :: cfg
+   type(error_collection_t)  :: errs
+
+   cfg%present   = .true.
+   cfg%sorp_coef = -0.1_real64
+   call cfg%validate(errs)
+   @assertTrue(errs%count() > 0, 'expected error for negative sorp_coef')
+end subroutine
+
+@test
+subroutine test_nutrients_validate_rejects_fom_above_1000()
+   use, intrinsic :: iso_fortran_env, only: real64
+   use nutrients_config_mod, only: nutrients_config_t
+   use error_mod, only: error_collection_t
+   use funit
+   implicit none
+   type(nutrients_config_t)  :: cfg
+   type(error_collection_t)  :: errs
+
+   cfg%present = .true.
+   cfg%initial%fom(3) = 1500.0_real64
+   call cfg%validate(errs)
+   @assertTrue(errs%count() > 0, 'expected error for fom(3) > 1000')
+end subroutine
+
+@test
+subroutine test_nutrients_validate_rejects_negative_bio()
+   use, intrinsic :: iso_fortran_env, only: real64
+   use nutrients_config_mod, only: nutrients_config_t
+   use error_mod, only: error_collection_t
+   use funit
+   implicit none
+   type(nutrients_config_t)  :: cfg
+   type(error_collection_t)  :: errs
+
+   cfg%present     = .true.
+   cfg%initial%bio = -0.5_real64
+   call cfg%validate(errs)
+   @assertTrue(errs%count() > 0, 'expected error for negative bio')
+end subroutine
