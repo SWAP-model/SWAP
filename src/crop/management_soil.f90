@@ -38,14 +38,15 @@ contains
       use Variables
       use Wofost_Soil_Declarations
       use Wofost_Soil_Interface
+      use file_io_mod, only: file_open
 
       implicit none
 
 ! --- local variables
       character(len=300) filnam, filnamce
 !      character(len=100) MatName(masme)
-      integer   task, sme, smm, snp, getun2, nsmm, nsme, oup
-      Integer :: i,j, idum, getun
+      integer   task, sme, smm, snp, nsmm, nsme, oup
+      Integer :: i,j, idum
       real(8) :: dum, t4, t3, help
       real(8)   MatAmount(masme) ! Array with amount of applied material (kg/ha)
       real(8)   smedate(masme)   ! Array with soilmanagement event dates (-)
@@ -610,13 +611,11 @@ contains
       
 ! -   open file with soil nutrient parameters
       filnam = trim(pathwork)//trim(project)//'.snp'
-      snp = getun2 (10,90,2)
-      open(unit=snp,file=filnam,status='old')
+      call file_open(snp, filnam, 'old', 'read')
 
 ! -   open file to write soil nutrient parameters
       filnam = trim(pathwork)//trim(project)//'_nut.end'
-      oup = getun2 (10,90,2)
-      open(unit=oup,file=filnam,status='unknown')
+      call file_open(oup, filnam, 'unknown', 'readwrite')
 !      do while (.not. eof(snp) )
       do while (.not. IS_IOSTAT_END(stat) )
          read(snp,'(a)',IOSTAT=stat)line
