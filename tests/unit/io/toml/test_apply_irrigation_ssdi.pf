@@ -1,0 +1,15 @@
+@test
+subroutine test_irrigation_ssdi_default_init()
+   use irrigation_config_mod, only: irrigation_config_t
+   use funit
+   implicit none
+   type(irrigation_config_t) :: cfg
+
+   ! Default-init values for the new ssdi sub-type.
+   call assertEqual(0, cfg%ssdi%schedule, 'schedule default')
+   @assertEqual(0.0d0, cfg%ssdi%ssdi_z(1), tolerance=1.0d-12)
+   @assertEqual(0.0d0, cfg%ssdi%ssdi_z(2), tolerance=1.0d-12)
+   @assertFalse(allocated(cfg%ssdi%fixed%events_file), 'events_file not allocated by default')
+   call assertEqual(0, cfg%ssdi%scheduled%sched_type, 'sched_type default')
+   call assertEqual(1, cfg%ssdi%scheduled%days_interval, 'days_interval default')
+end subroutine

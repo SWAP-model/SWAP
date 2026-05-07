@@ -193,6 +193,7 @@ if get_option('enable_pfunit')
         'io/toml/test_apply_soil_tillage.pf',
         'io/toml/test_soil_tillage_validate.pf',
         'io/toml/test_read_soil_tillage_toml.pf',
+        'io/toml/test_apply_irrigation_ssdi.pf',
         'drainage/test_surfacewater_init.pf',
         'crop/test_cropfixed_init.pf',
         'crop/test_cropwofost_init.pf',

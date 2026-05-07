@@ -21,6 +21,35 @@ module irrigation_config_mod
 
    public :: irrigation_config_t
    public :: irrigation_schedule_t
+   public :: irrigation_ssdi_fixed_t
+   public :: irrigation_ssdi_scheduled_t
+   public :: irrigation_ssdi_t
+
+   !> Fixed-mode SSDI configuration. Date table lives in a CSV file
+   !! pointed to by events_file (parsed by the adapter, not the TOML
+   !! reader).
+   type :: irrigation_ssdi_fixed_t
+      character(len=:), allocatable :: events_file   !! relative path to ssdi_events.csv
+   end type irrigation_ssdi_fixed_t
+
+   !> Scheduled-trigger-mode SSDI configuration.
+   type :: irrigation_ssdi_scheduled_t
+      integer      :: sched_type      = 0          !! 1=Tred, 2=presh, 3=watc
+      real(real64) :: threshold       = 0.0_real64 !! semantics determined by sched_type
+      real(real64) :: threshold_depth = 0.0_real64 !! cm; required when sched_type > 1
+      real(real64) :: ssdi_amount     = 0.0_real64 !! mm/event
+      real(real64) :: ssdi_appl_rate  = 0.0_real64 !! mm/h
+      integer      :: sw_interval     = 0          !! 0=daily, 1=interval-gated
+      integer      :: days_interval   = 1          !! 1..366; required when sw_interval=1
+   end type irrigation_ssdi_scheduled_t
+
+   !> [irrigation.ssdi] block container. Mode discriminator: schedule.
+   type :: irrigation_ssdi_t
+      integer      :: schedule  = 0                  !! 0=fixed-date, 1=scheduled-trigger
+      real(real64) :: ssdi_z(2) = 0.0_real64         !! cm; both elements equal for single-depth
+      type(irrigation_ssdi_fixed_t)     :: fixed
+      type(irrigation_ssdi_scheduled_t) :: scheduled
+   end type irrigation_ssdi_t
 
    ! Top-level fixed-irrigation (.swp side).
    type :: irrigation_config_t
@@ -35,6 +64,7 @@ module irrigation_config_mod
       ! into the same legacy `irdate/irdepth/irconc/irtype` arrays.
       character(len=:), allocatable :: fixed_events_file
       real(real64),     allocatable :: fixed_events(:,:)
+      type(irrigation_ssdi_t)       :: ssdi
    contains
       procedure :: validate => irrigation_config_validate
       procedure :: finalize => irrigation_config_finalize
