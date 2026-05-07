@@ -460,6 +460,13 @@ contains
       daycrop = 0
       nofd    = 0
 
+      ! [nutrients] N1: apply nutrient block to legacy globals when
+      ! flcropnut=true on this rotation. Validator and the runtime
+      ! gate at tillage.f90:73 still control whether nutrient physics
+      ! actually runs; this just makes the typed-config inputs
+      ! available if/when the gate is lifted (N3).
+      if (cfg%nutrient%flcropnut) call apply_cropwofost_nutrient(cfg%nutrient)
+
    end subroutine cropwofost_init_from_config
 
 
