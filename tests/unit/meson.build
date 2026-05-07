@@ -122,6 +122,7 @@ if get_option('enable_pfunit')
         '../../src/io/toml/read_cropwofost_toml.f90',
         '../../src/io/toml/read_crop_toml.f90',
         '../../src/io/toml/read_output_csv_toml.f90',
+        '../../src/io/toml/read_nutrients_toml.f90',
         '../../src/io/toml/load_swap_config.f90',
         '../../src/io/toml/write_swap_config.f90',
         '../../src/io/toml/config_to_variables.f90',

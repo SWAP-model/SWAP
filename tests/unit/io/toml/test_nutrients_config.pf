@@ -102,3 +102,117 @@ subroutine test_nutrients_validate_rejects_negative_bio()
    call cfg%validate(errs)
    @assertTrue(errs%count() > 0, 'expected error for negative bio')
 end subroutine
+
+@test
+subroutine test_read_nutrients_full_block()
+   use, intrinsic :: iso_fortran_env, only: real64
+   use nutrients_config_mod, only: nutrients_config_t
+   use read_nutrients_toml_mod, only: read_nutrients_toml
+   use error_mod, only: error_collection_t
+   use tomlf, only: toml_table, toml_loads
+   use funit
+   implicit none
+   type(toml_table), allocatable, target :: doc
+   type(toml_table), pointer :: doc_ptr
+   type(nutrients_config_t)  :: cfg
+   type(error_collection_t)  :: errs
+   character(len=*), parameter :: toml_text =                        &
+      '[nutrients]'                                  // new_line('a') // &
+      'sorp_coef = 0.005'                            // new_line('a') // &
+      ''                                             // new_line('a') // &
+      '[nutrients.initial]'                          // new_line('a') // &
+      'fom  = [0.5, 0.3, 0.2, 0.1, 0.5, 0.3, 0.2, 0.1]' // new_line('a') // &
+      'bio  = 0.4'                                   // new_line('a') // &
+      'hum  = 8.0'                                   // new_line('a') // &
+      'cnh4 = 0.001'                                 // new_line('a') // &
+      'cno3 = 0.005'
+
+   call toml_loads(doc, toml_text)
+   doc_ptr => doc
+
+   call read_nutrients_toml(doc_ptr, cfg, errs)
+   call assertEqual(0, errs%count(), 'expected zero parse errors')
+   @assertTrue(cfg%present, 'expected present=true')
+   @assertEqual(0.005_real64, cfg%sorp_coef,        tolerance=1.0e-12_real64)
+   @assertEqual(0.5_real64,   cfg%initial%fom(1),   tolerance=1.0e-12_real64)
+   @assertEqual(0.1_real64,   cfg%initial%fom(8),   tolerance=1.0e-12_real64)
+   @assertEqual(0.4_real64,   cfg%initial%bio,      tolerance=1.0e-12_real64)
+   @assertEqual(8.0_real64,   cfg%initial%hum,      tolerance=1.0e-12_real64)
+   @assertEqual(0.001_real64, cfg%initial%cnh4,     tolerance=1.0e-12_real64)
+   @assertEqual(0.005_real64, cfg%initial%cno3,     tolerance=1.0e-12_real64)
+end subroutine
+
+@test
+subroutine test_read_nutrients_missing_block()
+   use nutrients_config_mod, only: nutrients_config_t
+   use read_nutrients_toml_mod, only: read_nutrients_toml
+   use error_mod, only: error_collection_t
+   use tomlf, only: toml_table, toml_loads
+   use funit
+   implicit none
+   type(toml_table), allocatable, target :: doc
+   type(toml_table), pointer :: doc_ptr
+   type(nutrients_config_t)  :: cfg
+   type(error_collection_t)  :: errs
+
+   call toml_loads(doc, '[general]' // new_line('a') // 'project = "x"')
+   doc_ptr => doc
+
+   call read_nutrients_toml(doc_ptr, cfg, errs)
+   call assertEqual(0, errs%count(), 'no errors when [nutrients] absent')
+   @assertFalse(cfg%present, 'expected present=false')
+end subroutine
+
+@test
+subroutine test_read_nutrients_partial_fom()
+   use, intrinsic :: iso_fortran_env, only: real64
+   use nutrients_config_mod, only: nutrients_config_t
+   use read_nutrients_toml_mod, only: read_nutrients_toml
+   use error_mod, only: error_collection_t
+   use tomlf, only: toml_table, toml_loads
+   use funit
+   implicit none
+   type(toml_table), allocatable, target :: doc
+   type(toml_table), pointer :: doc_ptr
+   type(nutrients_config_t)  :: cfg
+   type(error_collection_t)  :: errs
+   character(len=*), parameter :: src =                              &
+      '[nutrients]'                       // new_line('a') //         &
+      '[nutrients.initial]'               // new_line('a') //         &
+      'fom = [0.5, 0.3, 0.2]'
+
+   call toml_loads(doc, src)
+   doc_ptr => doc
+
+   call read_nutrients_toml(doc_ptr, cfg, errs)
+   call assertEqual(0, errs%count())
+   @assertEqual(0.5_real64, cfg%initial%fom(1), tolerance=1.0e-12_real64)
+   @assertEqual(0.3_real64, cfg%initial%fom(2), tolerance=1.0e-12_real64)
+   @assertEqual(0.2_real64, cfg%initial%fom(3), tolerance=1.0e-12_real64)
+   @assertEqual(0.0_real64, cfg%initial%fom(4), tolerance=1.0e-12_real64)
+   @assertEqual(0.0_real64, cfg%initial%fom(8), tolerance=1.0e-12_real64)
+end subroutine
+
+@test
+subroutine test_read_nutrients_oversized_fom()
+   use nutrients_config_mod, only: nutrients_config_t
+   use read_nutrients_toml_mod, only: read_nutrients_toml
+   use error_mod, only: error_collection_t
+   use tomlf, only: toml_table, toml_loads
+   use funit
+   implicit none
+   type(toml_table), allocatable, target :: doc
+   type(toml_table), pointer :: doc_ptr
+   type(nutrients_config_t)  :: cfg
+   type(error_collection_t)  :: errs
+   character(len=*), parameter :: src =                              &
+      '[nutrients]'                                              // new_line('a') // &
+      '[nutrients.initial]'                                      // new_line('a') // &
+      'fom = [1, 2, 3, 4, 5, 6, 7, 8, 9]'
+
+   call toml_loads(doc, src)
+   doc_ptr => doc
+
+   call read_nutrients_toml(doc_ptr, cfg, errs)
+   @assertTrue(errs%count() > 0, 'expected parse error for fom size > 8')
+end subroutine
