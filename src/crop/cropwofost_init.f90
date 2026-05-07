@@ -33,6 +33,7 @@ module cropwofost_init_mod
    private
 
    public :: cropwofost_init_from_config
+   public :: apply_cropwofost_nutrient
 
 contains
 
@@ -460,5 +461,59 @@ contains
       nofd    = 0
 
    end subroutine cropwofost_init_from_config
+
+
+   !> Apply the per-rotation [wofost.nutrient] config to the legacy
+   !! `variables` globals. Called from cropwofost_init_from_config (or
+   !! directly from an alternative entry point) when
+   !! cfg%nutrient%flcropnut = .true..
+   !!
+   !! Replaces the deleted rdinit/rdsdou block in cropgrowth.f90's wofost
+   !! subroutine (legacy readers physical deletion arc, SS-C step 2).
+   !!
+   !! See ADR 0025 ([nutrients] N1).
+   subroutine apply_cropwofost_nutrient(cfg)
+      use cropwofost_config_mod, only: wofost_nutrient_t
+      use variables, only: lrnr, lsnr, nlue, rnflv, rnfst, frnx, nmxlv,            &
+                           nlai, nmaxso, npart, nfixf, nsla, rnfrt, tcnt,           &
+                           dvsnlt, dvsnt, rdrns, fntrt, ilnmxl,                     &
+                           fraharlosorm_lv, fraharlosorm_st, fraharlosorm_so
+      type(wofost_nutrient_t), intent(in) :: cfg
+
+      integer :: n
+
+      ! Module-level scalars (already exist in module variables)
+      lrnr   = cfg%lrnr
+      lsnr   = cfg%lsnr
+      nlue   = cfg%nlue
+      rnflv  = cfg%rnflv
+      rnfst  = cfg%rnfst
+      frnx   = cfg%frnx
+
+      ! Newly-promoted module variables (Task 1)
+      nlai   = cfg%nlai
+      nmaxso = cfg%nmaxso
+      npart  = cfg%npart
+      nfixf  = cfg%nfixf
+      nsla   = cfg%nsla
+      rnfrt  = cfg%rnfrt
+      tcnt   = cfg%tcnt
+      dvsnlt = cfg%dvsnlt
+      dvsnt  = cfg%dvsnt
+      rdrns  = cfg%rdrns
+      fntrt  = cfg%fntrt
+
+      ! NMXLV array — copy entries; ILNMXL records the active length
+      n = 0
+      if (allocated(cfg%nmxlv)) n = size(cfg%nmxlv)
+      ilnmxl = n
+      nmxlv  = 0.0_real64
+      if (n > 0) nmxlv(1:n) = cfg%nmxlv(1:n)
+
+      ! Harvest fractions
+      fraharlosorm_lv = cfg%frahar_los_orm_lv
+      fraharlosorm_st = cfg%frahar_los_orm_st
+      fraharlosorm_so = cfg%frahar_los_orm_so
+   end subroutine apply_cropwofost_nutrient
 
 end module cropwofost_init_mod

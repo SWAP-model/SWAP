@@ -97,12 +97,73 @@ subroutine test_validate_rejects_flcropnut_true_out_of_range_harvest_lv()
 end subroutine
 
 
-! Placeholder; populated in Task 3 once apply_cropwofost_nutrient exists.
-! Currently asserts a trivial pass so the suite compiles cleanly.
 @test
 subroutine test_apply_populates_legacy_globals()
+   use, intrinsic :: iso_fortran_env, only: real64
+   use cropwofost_config_mod, only: wofost_nutrient_t
+   use cropwofost_init_mod,   only: apply_cropwofost_nutrient
+   use variables, only: lrnr, lsnr, nlue, rnflv, rnfst, frnx, nmxlv,           &
+                        nlai, nmaxso, npart, nfixf, nsla, rnfrt, tcnt,          &
+                        dvsnlt, dvsnt, rdrns, fntrt, ilnmxl,                    &
+                        fraharlosorm_lv, fraharlosorm_st, fraharlosorm_so
    use funit
    implicit none
-   ! Body added in Task 3.
-   call assertEqual(1, 1)
+   type(wofost_nutrient_t) :: cfg
+
+   cfg%flcropnut = .true.
+   cfg%lrnr   = 0.50_real64
+   cfg%lsnr   = 0.50_real64
+   cfg%nlai   = 1.00_real64
+   cfg%nlue   = 1.10_real64
+   cfg%nmaxso = 0.0176_real64
+   cfg%npart  = 1.00_real64
+   cfg%nfixf  = 0.00_real64
+   cfg%nsla   = 0.50_real64
+   cfg%rnflv  = 0.0040_real64
+   cfg%rnfrt  = 0.0048_real64
+   cfg%rnfst  = 0.0015_real64
+   cfg%tcnt   = 10.00_real64
+   cfg%dvsnlt = 1.00_real64
+   cfg%dvsnt  = 0.80_real64
+   cfg%rdrns  = 0.05_real64
+   cfg%fntrt  = 0.15_real64
+   cfg%frnx   = 0.50_real64
+   allocate(cfg%nmxlv(3))
+   cfg%nmxlv = [0.06_real64, 0.04_real64, 0.02_real64]
+   cfg%frahar_los_orm_lv = 0.50_real64
+   cfg%frahar_los_orm_st = 0.50_real64
+   cfg%frahar_los_orm_so = 0.00_real64
+
+   call apply_cropwofost_nutrient(cfg)
+
+   ! Module-level globals populated from cfg
+   @assertEqual(0.50_real64,   lrnr,   tolerance=1.0e-12_real64)
+   @assertEqual(0.50_real64,   lsnr,   tolerance=1.0e-12_real64)
+   @assertEqual(1.10_real64,   nlue,   tolerance=1.0e-12_real64)
+   @assertEqual(0.0040_real64, rnflv,  tolerance=1.0e-12_real64)
+   @assertEqual(0.0015_real64, rnfst,  tolerance=1.0e-12_real64)
+   @assertEqual(0.50_real64,   frnx,   tolerance=1.0e-12_real64)
+
+   @assertEqual(1.00_real64,   nlai,   tolerance=1.0e-12_real64)
+   @assertEqual(0.0176_real64, nmaxso, tolerance=1.0e-12_real64)
+   @assertEqual(1.00_real64,   npart,  tolerance=1.0e-12_real64)
+   @assertEqual(0.00_real64,   nfixf,  tolerance=1.0e-12_real64)
+   @assertEqual(0.50_real64,   nsla,   tolerance=1.0e-12_real64)
+   @assertEqual(0.0048_real64, rnfrt,  tolerance=1.0e-12_real64)
+   @assertEqual(10.00_real64,  tcnt,   tolerance=1.0e-12_real64)
+   @assertEqual(1.00_real64,   dvsnlt, tolerance=1.0e-12_real64)
+   @assertEqual(0.80_real64,   dvsnt,  tolerance=1.0e-12_real64)
+   @assertEqual(0.05_real64,   rdrns,  tolerance=1.0e-12_real64)
+   @assertEqual(0.15_real64,   fntrt,  tolerance=1.0e-12_real64)
+
+   ! NMXLV(1:ilnmxl) populated; ILNMXL = size(cfg%nmxlv)
+   call assertEqual(3, ilnmxl, 'ilnmxl matches size(cfg%nmxlv)')
+   @assertEqual(0.06_real64, nmxlv(1), tolerance=1.0e-12_real64)
+   @assertEqual(0.04_real64, nmxlv(2), tolerance=1.0e-12_real64)
+   @assertEqual(0.02_real64, nmxlv(3), tolerance=1.0e-12_real64)
+
+   ! Harvest fractions
+   @assertEqual(0.50_real64, fraharlosorm_lv, tolerance=1.0e-12_real64)
+   @assertEqual(0.50_real64, fraharlosorm_st, tolerance=1.0e-12_real64)
+   @assertEqual(0.00_real64, fraharlosorm_so, tolerance=1.0e-12_real64)
 end subroutine
