@@ -13,7 +13,8 @@
 !! `src/io/readswap.f90` and `src/crop/irrigation.f90`.
 module irrigation_config_mod
    use iso_fortran_env, only: real64
-   use error_mod, only: error_collection_t, ERR_VALIDATION_OUT_OF_RANGE
+   use error_mod, only: error_collection_t, ERR_VALIDATION_OUT_OF_RANGE, &
+                        ERR_VALIDATION_CROSS_FIELD
    use validation_mod, only: check_int_enum, check_int_range, check_real_range, &
                              check_ordered_pair
    implicit none
@@ -142,6 +143,83 @@ contains
       ! the read_ssdi_input() block currently read via TTutil from the
       ! staged swap.swp / ssdi_file.
       call check_int_enum(self%swssdi, [0, 1], 'irrigation.swssdi', errors)
+
+      ! [irrigation.ssdi] validation — only fires when swssdi = 1.
+      ! Placed before the swirfix sentinel so it runs regardless of swirfix.
+      if (self%swssdi == 1) then
+         ! Mode discriminator
+         call check_int_range(self%ssdi%schedule, 0, 1, &
+                              'irrigation.ssdi.schedule', errors)
+
+         ! Shared: ssdi_z range + ordering (top above or equal bottom; cm depths are negative)
+         call check_real_range(self%ssdi%ssdi_z(1), -100.0_real64, 0.0_real64, &
+                               'irrigation.ssdi.ssdi_z', errors)
+         call check_real_range(self%ssdi%ssdi_z(2), -100.0_real64, 0.0_real64, &
+                               'irrigation.ssdi.ssdi_z', errors)
+         if (self%ssdi%ssdi_z(1) < self%ssdi%ssdi_z(2)) then
+            call errors%append(ERR_VALIDATION_CROSS_FIELD, &
+                               'ssdi_z(1) must be >= ssdi_z(2) (top above or equal bottom; cm depths are negative)', &
+                               'irrigation.ssdi.ssdi_z')
+         end if
+
+         ! Mode-specific
+         select case (self%ssdi%schedule)
+         case (0)
+            ! Fixed mode: events_file required, scheduled-block at defaults
+            if (.not. allocated(self%ssdi%fixed%events_file) .or. &
+                len_trim(self%ssdi%fixed%events_file) == 0) then
+               call errors%append(ERR_VALIDATION_CROSS_FIELD, &
+                                  'must be non-empty when schedule = 0', &
+                                  'irrigation.ssdi.fixed.events_file')
+            end if
+            if (self%ssdi%scheduled%sched_type /= 0 .or. &
+                self%ssdi%scheduled%threshold /= 0.0_real64 .or. &
+                self%ssdi%scheduled%ssdi_amount /= 0.0_real64 .or. &
+                self%ssdi%scheduled%ssdi_appl_rate /= 0.0_real64) then
+               call errors%append(ERR_VALIDATION_CROSS_FIELD, &
+                                  '[irrigation.ssdi.scheduled] must be at defaults when schedule = 0 (silently-ignored fields are a footgun)', &
+                                  'irrigation.ssdi.scheduled')
+            end if
+
+         case (1)
+            ! Scheduled mode: events_file empty, scheduled-block populated
+            if (allocated(self%ssdi%fixed%events_file)) then
+               if (len_trim(self%ssdi%fixed%events_file) > 0) then
+                  call errors%append(ERR_VALIDATION_CROSS_FIELD, &
+                                     'must be empty when schedule = 1', &
+                                     'irrigation.ssdi.fixed.events_file')
+               end if
+            end if
+
+            call check_int_range(self%ssdi%scheduled%sched_type, 1, 3, &
+                                 'irrigation.ssdi.scheduled.sched_type', errors)
+            select case (self%ssdi%scheduled%sched_type)
+            case (1)
+               call check_real_range(self%ssdi%scheduled%threshold, 0.0_real64, 1.0_real64, &
+                                     'irrigation.ssdi.scheduled.threshold', errors)
+            case (2)
+               call check_real_range(self%ssdi%scheduled%threshold, -1.0e7_real64, 0.0_real64, &
+                                     'irrigation.ssdi.scheduled.threshold', errors)
+            case (3)
+               call check_real_range(self%ssdi%scheduled%threshold, 0.0_real64, 1.0_real64, &
+                                     'irrigation.ssdi.scheduled.threshold', errors)
+            end select
+            if (self%ssdi%scheduled%sched_type > 1) then
+               call check_real_range(self%ssdi%scheduled%threshold_depth, -100.0_real64, 0.0_real64, &
+                                     'irrigation.ssdi.scheduled.threshold_depth', errors)
+            end if
+            call check_real_range(self%ssdi%scheduled%ssdi_amount, 0.0_real64, 100.0_real64, &
+                                  'irrigation.ssdi.scheduled.ssdi_amount', errors)
+            call check_real_range(self%ssdi%scheduled%ssdi_appl_rate, 0.0_real64, 100.0_real64, &
+                                  'irrigation.ssdi.scheduled.ssdi_appl_rate', errors)
+            call check_int_range(self%ssdi%scheduled%sw_interval, 0, 1, &
+                                 'irrigation.ssdi.scheduled.sw_interval', errors)
+            if (self%ssdi%scheduled%sw_interval == 1) then
+               call check_int_range(self%ssdi%scheduled%days_interval, 1, 366, &
+                                    'irrigation.ssdi.scheduled.days_interval', errors)
+            end if
+         end select
+      end if
 
       ! Sentinel: swirfix=0 ⇒ no fixed irrigation at the .swp level. Skip
       ! everything so existing case TOMLs without an [irrigation] section

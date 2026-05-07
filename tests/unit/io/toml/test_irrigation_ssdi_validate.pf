@@ -1,0 +1,287 @@
+! Tests for the [irrigation.ssdi] validation block in irrigation_config_validate.
+! Each test exercises one specific rule introduced in Task 2 of the
+! SSDI TOML port (spec: docs/superpowers/specs/2026-05-07-ssdi-toml-port-design.md).
+
+@test
+subroutine test_validate_swssdi1_schedule_out_of_range()
+   use irrigation_config_mod, only: irrigation_config_t
+   use error_mod, only: error_collection_t
+   use funit
+   implicit none
+   type(irrigation_config_t) :: cfg
+   type(error_collection_t)  :: errs
+
+   cfg%swssdi = 1
+   cfg%ssdi%schedule = 5
+   call cfg%validate(errs)
+   @assertTrue(errs%count() > 0, 'expected error for schedule=5')
+end subroutine
+
+@test
+subroutine test_validate_mode0_requires_events_file()
+   use irrigation_config_mod, only: irrigation_config_t
+   use error_mod, only: error_collection_t
+   use funit
+   implicit none
+   type(irrigation_config_t) :: cfg
+   type(error_collection_t)  :: errs
+
+   cfg%swssdi = 1
+   cfg%ssdi%schedule = 0
+   ! events_file left unallocated — expect error
+   call cfg%validate(errs)
+   @assertTrue(errs%count() > 0, 'expected error for schedule=0 with no events_file')
+end subroutine
+
+@test
+subroutine test_validate_mode0_rejects_populated_scheduled_block()
+   use irrigation_config_mod, only: irrigation_config_t
+   use error_mod, only: error_collection_t
+   use funit
+   implicit none
+   type(irrigation_config_t) :: cfg
+   type(error_collection_t)  :: errs
+
+   cfg%swssdi = 1
+   cfg%ssdi%schedule = 0
+   cfg%ssdi%fixed%events_file = 'x.csv'
+   cfg%ssdi%scheduled%sched_type = 1
+   call cfg%validate(errs)
+   @assertTrue(errs%count() > 0, 'expected error for schedule=0 with non-default scheduled block')
+end subroutine
+
+@test
+subroutine test_validate_mode1_rejects_populated_events_file()
+   use irrigation_config_mod, only: irrigation_config_t
+   use error_mod, only: error_collection_t
+   use funit
+   implicit none
+   type(irrigation_config_t) :: cfg
+   type(error_collection_t)  :: errs
+
+   cfg%swssdi = 1
+   cfg%ssdi%schedule = 1
+   cfg%ssdi%fixed%events_file = 'x.csv'
+   cfg%ssdi%scheduled%sched_type = 1
+   cfg%ssdi%scheduled%threshold = 0.7d0
+   cfg%ssdi%scheduled%ssdi_amount = 10.0d0
+   cfg%ssdi%scheduled%ssdi_appl_rate = 5.0d0
+   cfg%ssdi%scheduled%sw_interval = 0
+   call cfg%validate(errs)
+   @assertTrue(errs%count() > 0, 'expected error for schedule=1 with non-empty events_file')
+end subroutine
+
+@test
+subroutine test_validate_mode1_sched_type_in_range()
+   use irrigation_config_mod, only: irrigation_config_t
+   use error_mod, only: error_collection_t
+   use funit
+   implicit none
+   type(irrigation_config_t) :: cfg
+   type(error_collection_t)  :: errs
+
+   cfg%swssdi = 1
+   cfg%ssdi%schedule = 1
+   cfg%ssdi%scheduled%sched_type = 4
+   call cfg%validate(errs)
+   @assertTrue(errs%count() > 0, 'expected error for sched_type=4 outside [1,3]')
+end subroutine
+
+@test
+subroutine test_validate_mode1_threshold_range_sched_type1()
+   use irrigation_config_mod, only: irrigation_config_t
+   use error_mod, only: error_collection_t
+   use funit
+   implicit none
+   type(irrigation_config_t) :: cfg
+   type(error_collection_t)  :: errs
+
+   cfg%swssdi = 1
+   cfg%ssdi%schedule = 1
+   cfg%ssdi%scheduled%sched_type = 1
+   cfg%ssdi%scheduled%threshold = 2.0d0   ! outside [0,1]
+   cfg%ssdi%scheduled%ssdi_amount = 10.0d0
+   cfg%ssdi%scheduled%ssdi_appl_rate = 5.0d0
+   cfg%ssdi%scheduled%sw_interval = 0
+   call cfg%validate(errs)
+   @assertTrue(errs%count() > 0, 'expected error for sched_type=1, threshold=2.0 outside [0,1]')
+end subroutine
+
+@test
+subroutine test_validate_mode1_threshold_range_sched_type2()
+   use irrigation_config_mod, only: irrigation_config_t
+   use error_mod, only: error_collection_t
+   use funit
+   implicit none
+   type(irrigation_config_t) :: cfg
+   type(error_collection_t)  :: errs
+
+   cfg%swssdi = 1
+   cfg%ssdi%schedule = 1
+   cfg%ssdi%scheduled%sched_type = 2
+   cfg%ssdi%scheduled%threshold = 1.0d0   ! outside [-1e7,0]
+   cfg%ssdi%scheduled%threshold_depth = -30.0d0
+   cfg%ssdi%scheduled%ssdi_amount = 10.0d0
+   cfg%ssdi%scheduled%ssdi_appl_rate = 5.0d0
+   cfg%ssdi%scheduled%sw_interval = 0
+   call cfg%validate(errs)
+   @assertTrue(errs%count() > 0, 'expected error for sched_type=2, threshold=1.0 outside [-1e7,0]')
+end subroutine
+
+@test
+subroutine test_validate_mode1_threshold_range_sched_type3()
+   use irrigation_config_mod, only: irrigation_config_t
+   use error_mod, only: error_collection_t
+   use funit
+   implicit none
+   type(irrigation_config_t) :: cfg
+   type(error_collection_t)  :: errs
+
+   cfg%swssdi = 1
+   cfg%ssdi%schedule = 1
+   cfg%ssdi%scheduled%sched_type = 3
+   cfg%ssdi%scheduled%threshold = -0.1d0  ! outside [0,1]
+   cfg%ssdi%scheduled%threshold_depth = -30.0d0
+   cfg%ssdi%scheduled%ssdi_amount = 10.0d0
+   cfg%ssdi%scheduled%ssdi_appl_rate = 5.0d0
+   cfg%ssdi%scheduled%sw_interval = 0
+   call cfg%validate(errs)
+   @assertTrue(errs%count() > 0, 'expected error for sched_type=3, threshold=-0.1 outside [0,1]')
+end subroutine
+
+@test
+subroutine test_validate_mode1_threshold_depth_sched_type_gt_1()
+   use irrigation_config_mod, only: irrigation_config_t
+   use error_mod, only: error_collection_t
+   use funit
+   implicit none
+   type(irrigation_config_t) :: cfg
+   type(error_collection_t)  :: errs
+
+   cfg%swssdi = 1
+   cfg%ssdi%schedule = 1
+   cfg%ssdi%scheduled%sched_type = 2
+   cfg%ssdi%scheduled%threshold = -500.0d0   ! in range for sched_type=2
+   cfg%ssdi%scheduled%threshold_depth = 10.0d0  ! positive — outside [-100,0]
+   cfg%ssdi%scheduled%ssdi_amount = 10.0d0
+   cfg%ssdi%scheduled%ssdi_appl_rate = 5.0d0
+   cfg%ssdi%scheduled%sw_interval = 0
+   call cfg%validate(errs)
+   @assertTrue(errs%count() > 0, 'expected error for threshold_depth=10.0 outside [-100,0]')
+end subroutine
+
+@test
+subroutine test_validate_mode1_amount_appl_rate_in_range()
+   use irrigation_config_mod, only: irrigation_config_t
+   use error_mod, only: error_collection_t
+   use funit
+   implicit none
+   type(irrigation_config_t) :: cfg
+   type(error_collection_t)  :: errs
+
+   cfg%swssdi = 1
+   cfg%ssdi%schedule = 1
+   cfg%ssdi%scheduled%sched_type = 1
+   cfg%ssdi%scheduled%threshold = 0.5d0
+   cfg%ssdi%scheduled%ssdi_amount = 200.0d0   ! outside [0,100]
+   cfg%ssdi%scheduled%ssdi_appl_rate = 5.0d0
+   cfg%ssdi%scheduled%sw_interval = 0
+   call cfg%validate(errs)
+   @assertTrue(errs%count() > 0, 'expected error for ssdi_amount=200.0 outside [0,100]')
+end subroutine
+
+@test
+subroutine test_validate_mode1_days_interval_required_when_sw_interval_1()
+   use irrigation_config_mod, only: irrigation_config_t
+   use error_mod, only: error_collection_t
+   use funit
+   implicit none
+   type(irrigation_config_t) :: cfg
+   type(error_collection_t)  :: errs
+
+   cfg%swssdi = 1
+   cfg%ssdi%schedule = 1
+   cfg%ssdi%scheduled%sched_type = 1
+   cfg%ssdi%scheduled%threshold = 0.5d0
+   cfg%ssdi%scheduled%ssdi_amount = 10.0d0
+   cfg%ssdi%scheduled%ssdi_appl_rate = 5.0d0
+   cfg%ssdi%scheduled%sw_interval = 1
+   cfg%ssdi%scheduled%days_interval = 0   ! outside [1,366]
+   call cfg%validate(errs)
+   @assertTrue(errs%count() > 0, 'expected error for sw_interval=1 with days_interval=0')
+end subroutine
+
+@test
+subroutine test_validate_ssdi_z_ordering()
+   use irrigation_config_mod, only: irrigation_config_t
+   use error_mod, only: error_collection_t
+   use funit
+   implicit none
+   type(irrigation_config_t) :: cfg
+   type(error_collection_t)  :: errs
+
+   cfg%swssdi = 1
+   cfg%ssdi%schedule = 0
+   cfg%ssdi%fixed%events_file = 'ssdi.csv'
+   cfg%ssdi%ssdi_z(1) = -50.0d0   ! top depth (less negative = closer to surface)
+   cfg%ssdi%ssdi_z(2) = -30.0d0   ! bottom depth — but -30 > -50, violates z(1) >= z(2)
+   call cfg%validate(errs)
+   @assertTrue(errs%count() > 0, 'expected error for ssdi_z ordering: z(1)=-50 < z(2)=-30')
+end subroutine
+
+@test
+subroutine test_validate_swssdi0_skips_block()
+   use irrigation_config_mod, only: irrigation_config_t
+   use error_mod, only: error_collection_t
+   use funit
+   implicit none
+   type(irrigation_config_t) :: cfg
+   type(error_collection_t)  :: errs
+
+   ! swssdi=0: ssdi block must not fire any errors
+   cfg%swssdi = 0
+   call cfg%validate(errs)
+   @assertEqual(0, errs%count(), 'expected zero errors when swssdi=0 (ssdi block skipped)')
+end subroutine
+
+@test
+subroutine test_validate_clean_mode0_no_errors()
+   use irrigation_config_mod, only: irrigation_config_t
+   use error_mod, only: error_collection_t
+   use funit
+   implicit none
+   type(irrigation_config_t) :: cfg
+   type(error_collection_t)  :: errs
+
+   cfg%swssdi = 1
+   cfg%ssdi%schedule = 0
+   cfg%ssdi%fixed%events_file = 'ssdi.csv'
+   cfg%ssdi%ssdi_z(1) = -30.0d0
+   cfg%ssdi%ssdi_z(2) = -50.0d0
+   ! scheduled struct left at defaults (all zero)
+   call cfg%validate(errs)
+   @assertEqual(0, errs%count(), 'expected zero errors for clean mode-0 ssdi config')
+end subroutine
+
+@test
+subroutine test_validate_clean_mode1_no_errors()
+   use irrigation_config_mod, only: irrigation_config_t
+   use error_mod, only: error_collection_t
+   use funit
+   implicit none
+   type(irrigation_config_t) :: cfg
+   type(error_collection_t)  :: errs
+
+   cfg%swssdi = 1
+   cfg%ssdi%schedule = 1
+   cfg%ssdi%ssdi_z(1) = -30.0d0
+   cfg%ssdi%ssdi_z(2) = -50.0d0
+   ! events_file intentionally not allocated (schedule=1, so it must be absent)
+   cfg%ssdi%scheduled%sched_type    = 1
+   cfg%ssdi%scheduled%threshold     = 0.7d0
+   cfg%ssdi%scheduled%ssdi_amount   = 10.0d0
+   cfg%ssdi%scheduled%ssdi_appl_rate = 5.0d0
+   cfg%ssdi%scheduled%sw_interval   = 0
+   call cfg%validate(errs)
+   @assertEqual(0, errs%count(), 'expected zero errors for clean mode-1 ssdi config')
+end subroutine

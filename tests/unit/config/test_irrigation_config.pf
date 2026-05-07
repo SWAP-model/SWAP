@@ -255,6 +255,9 @@ subroutine test_irrigation_swssdi_one_accepted()
    ! ADR 0020 SS-B: swssdi=1 is a legitimate value (SSDI activated).
    ! Validation accepts it; the call-site gate (flSSDI) controls
    ! whether SSDI_irrigation actually runs at runtime.
+   ! Updated for Task 2 (SSDI validator): supply a minimal valid
+   ! mode-0 config (events_file set, ssdi_z in order) to satisfy the
+   ! new ssdi block rules while keeping the spirit of the test.
    use funit
    use error_mod, only: error_collection_t
    use irrigation_config_mod, only: irrigation_config_t
@@ -262,6 +265,10 @@ subroutine test_irrigation_swssdi_one_accepted()
    type(error_collection_t)  :: errors
 
    c%swssdi = 1
+   c%ssdi%schedule = 0
+   c%ssdi%fixed%events_file = 'ssdi.csv'
+   c%ssdi%ssdi_z(1) = -30.0d0
+   c%ssdi%ssdi_z(2) = -50.0d0
    call c%validate(errors)
    @assertFalse(errors%has_errors())
 end subroutine
