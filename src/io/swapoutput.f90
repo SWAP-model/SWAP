@@ -205,13 +205,13 @@
       use variables, only: wba,daynr,daycum,swscre,cevap,cgird,cgrai,csnrai,cnird,cnrai,cpeva,cptra,cqbot,cqdra,cqrot,crunon,                &
                            crunoff,gwl,cQMpOutDrRap,pond,t1900,date,volact,volini,wbalance,outfil,pathwork,project,flprintshort,floutput,       &
                            swsnow,cqprai,ssnow,snowinco,PondIni,flheader,flmacropore
+      use file_io_mod, only: file_open
       implicit none
 
 ! -   global
       integer   task
 
 ! -   local
-      integer   getun
       real(8)   dstor
       character(len=80) filnam,filtext
       character(len=10) gwlout
@@ -226,8 +226,7 @@
 
 ! --- open output file
       filnam = trim(pathwork)//trim(outfil)//'.wba'
-      wba = getun (20,90)
-      call fopens(wba,filnam,'new','del')
+      call file_open(wba,filnam,'replace','write')
       filtext = 'cumulative water balance components (cm)'
       call writehead (wba,1,filnam,filtext,project)
       if (swscre .eq. 1) then
@@ -372,13 +371,13 @@
 ! ---------------------------------------------------------------------
       use variables, only: inc,daynr,daycum,igrai,isnrai,igsnow,igird,iintc,irunon,iruno,irunoCN,iptra,iqrot,ipeva,ievap,isubl,iqdra,  &
                            iQMpOutDrRap,iqbot,t1900,date,outfil,pathwork,project,flheader,gwl,volact,volini,pond,PondIni,ssnow,snowinco,flprintshort
+      use file_io_mod, only: file_open
       implicit none
 
 ! --- global
       integer   task
 
 ! --- local
-      integer   getun
       real(8)  baldev,dstor
       character(len=80) filnam,filtext
       character(len=1)  comma
@@ -398,8 +397,7 @@
 
 ! --- open output file once
       filnam = trim(pathwork)//trim(outfil)//'.inc'
-      inc = getun (20,90)
-      call fopens(inc,filnam,'new','del')
+      call file_open(inc,filnam,'replace','write')
       filtext = 'water balance increments (cm/day)'
       call writehead (inc,1,filnam,filtext,project)
 
@@ -483,14 +481,13 @@
 ! ---------------------------------------------------------------------
       use variables, only: str,daynr,daycum,ies0,iet0,iew0,ipeva,iptra,iqrot,iqredwet,iqreddry,iqredsol,iqredfrs,t1900,   &
                            date,outfil,pathwork,project,flheader,flprintshort
-
+      use file_io_mod, only: file_open
       implicit none
 
 ! --- global
       integer   task
 
 ! --- local
-      integer   getun
       character(len=80)  filnam
       character(len=132) filtext
       character(len=1)   comma
@@ -505,8 +502,7 @@
 
 ! --- open output file once
       filnam = trim(pathwork)//trim(outfil)//'.str'
-      str = getun (20,90)
-      call fopens(str,filnam,'new','del')
+      call file_open(str,filnam,'replace','write')
       filtext = 'ES0, ET0, EW0, Epot, Tpot, Tact and 4 Tact-stress '//  &
      & 'values for wetness, drought, salinity and frost (cm/period)'
       call writehead (str,1,filnam,filtext,project)
@@ -570,13 +566,14 @@
 ! ---------------------------------------------------------------------
       use variables, only: ztopcp, zbotcp, vap,daynr,numnod,daycum,z,cml,t1900,theta,h,k,tsoil,q,outfil,     &
                            pathwork,project,swheader,isqtop,isqbot,qdraincomp,qrot,cmsy,date,flprintshort
+      use file_io_mod, only: file_open
       implicit none
 
 ! --- global
       integer   task
 
 ! --- local
-      integer   node,getun
+      integer   node
       real(8)   sflux
       character(len=19) datexti
       character(len=11) inidate
@@ -590,8 +587,7 @@
       case (1)
 ! --- open output file
       filnam = trim(pathwork)//trim(outfil)//'.vap'
-      vap = getun (20,90)
-      call fopens(vap,filnam,'new','del')
+      call file_open(vap,filnam,'replace','write')
       filtext = 'soil profile data'
       call writehead (vap,1,filnam,filtext,project)
       write (vap,100)
@@ -762,13 +758,14 @@
 ! ---------------------------------------------------------------------
       use variables, only: ztopcp, zbotcp,rot,daynr,noddrz,daycum,z,hxylem,t1900,theta,hm1,q,outfil,pathwork,project,swheader,qrot,      &
                            date,flprintshort,hroot,inq,inqrot,mroot,mflux,rootrho,rootphi,hleaf
+      use file_io_mod, only: file_open
       implicit none
 
 ! --- global
       integer   task
 
 ! --- local
-      integer   node,getun
+      integer   node
       character(len=19) datexti
 !      character(len=11) inidate
       character(len=80) filnam,filtext
@@ -783,8 +780,7 @@
 
 ! --- open output file
       filnam = trim(pathwork)//trim(outfil)//'.rot'
-      rot = getun (20,90)
-      call fopens(rot,filnam,'new','del')
+      call file_open(rot,filnam,'replace','write')
       filtext = 'microscopic root water uptake'
       call writehead (rot,1,filnam,filtext,project)
       write (rot,100)
@@ -890,13 +886,14 @@
                            crunon,cQMpOutDrRap,cqdra,cqdrain,samini,sampro,samcra,sqprec,sqirrig,sqbot,dectot,rottot,sqrap,sqdra,pond,volact,      &
                            volini,t1900,outdat,outfil,pathwork,project,caintc,csubl,PondIni,WaSrDm1,WaSrDm2,WaSrDm1Ini,WaSrDm2Ini,      &
                            swsnow,cgsnow,csnrai,snowinco,ssnow,cqssdi
+      use file_io_mod, only: file_open
       implicit none
 
 ! --- global
       integer   task
 
 ! --- local
-      integer   i,getun
+      integer   i
       real(8)   precip
       character(len=80) filnam,filtext
       character(len=11) datbegin,datend
@@ -908,8 +905,7 @@
       swscre = swscre
 ! --- open output file
       filnam = trim(pathwork)//trim(outfil)//'.bal'
-      bal = getun (20,90)
-      call fopens(bal,filnam,'new','del')
+      call file_open(bal,filnam,'replace','write')
       filtext='overview of actual water and solute balance components'
       call writehead (bal,1,filnam,filtext,project)
 
@@ -1034,12 +1030,13 @@
                            idregrpot,laiexppot,laimax,tagp,tagppot,idaysgraz,idaysgrazpot,daygrowth,daygrowthpot,                                           &
                            tagpt,tagptpot,iharvest,iseqgm,iseqgmpot,flgrazing,slw,cuptgraz,cuptgrazpot,flIrrigate,dayfix,                                   &
                            flCropCalendar,flCropPrep,flCropSow,flCropGerm,flCropEmergence,flCropHarvest,PrepDelay,SowDelay,swinter,sicact,glaiex,glaiexpot
+      use file_io_mod, only: file_open
       implicit none
 
 ! --- global
 
 ! --- local
-      integer   i,fin,getun,swanthesis,swgrazing,swgrazingpot,count
+      integer   i,fin,swanthesis,swgrazing,swgrazingpot,count
       integer   swIrrigate
       integer   swCropPrep,swCropSow,swCropGerm
       integer   swCropEmergence,swCropHarvest
@@ -1055,8 +1052,7 @@
          call dtdpst ('year-month-day',t1900-0.5d0,date)
          filnam = trim(pathwork)//trim(outfil)//'_'//date(1:4)//date(6:7)//date(9:10)//'.end'
       end if
-      fin = getun (20,90)
-      call fopens(fin,filnam,'new','del')
+      call file_open(fin,filnam,'replace','write')
       filtext = 'final state variables'
       call writehead (fin,1,filnam,filtext,project)
 
@@ -1566,13 +1562,13 @@
 ! ---------------------------------------------------------------------
       use variables, only: sba,daynr,daycum,sampro,sqbot,project,sqdra,solbal,dectot,rottot,sqprec,                    &
                            date,sqirrig,outfil,pathwork,flheader
+      use file_io_mod, only: file_open
       implicit none
 
 ! --- global
       integer   task
 
 ! --- local variables ------------------
-      integer   getun
       character(len=300) filnam
       character(len=80)  filtext
       character(len=1)   comma
@@ -1585,8 +1581,7 @@
 
 ! --- open output file -------------------------------------------------
       filnam = trim(pathwork)//trim(outfil)//'.sba'
-      sba = getun (20,90)
-      call fopens(sba,filnam,'new','del')
+      call file_open(sba,filnam,'replace','write')
       filtext = 'cumulative solute balance components (mg/cm2)'
       call writehead (sba,1,filnam,filtext,project)
 
@@ -1680,13 +1675,14 @@
       use variables, only: daynr,daycum,date,outper,project,nrlevs,outfil,pathwork,numnod,z,cml,            &
                            AgeGwl1m,icAgeBot,icAgeDra,icAgeRot,icAgeSur,inqdra
       use swap_array_dimensions, only: madr
+      use file_io_mod, only: file_open
                            implicit none
 
 ! --- global
       integer   agep,agee,ageq,task
 
 ! --- local variables ------------------
-      integer   getun,reclngth,node,level
+      integer   reclngth,node,level
       character(len=300) filnam
       character(len=80)  filtext
       character(len=1)   comma
@@ -1700,21 +1696,18 @@
 ! --- open output files -------------------------------------------------
 !     age of groundwater as profile
       filnam = trim(pathwork)//trim(outfil)//'.ageProfile.csv'
-      agep = getun (20,90)
       reclngth = 50 + 12*numnod
-      open(unit=agep,file=filnam,status='unknown',recl=reclngth)
+      open(newunit=agep,file=filnam,status='unknown',recl=reclngth)
       filtext = 'Groundwater age profiles (all age-values in days)'
       call writehead (agep,1,filnam,filtext,project)
 !     age of groundwater in effluents: drains, transpiration, leaching, runoff
       filnam = trim(pathwork)//trim(outfil)//'.ageEffluent.csv'
-      agee = getun (20,90)
-      call fopens(agee,filnam,'new','del')
+      call file_open(agee,filnam,'replace','write')
       filtext = 'Groundwater age effluent (all age-values in days)'
       call writehead (agee,1,filnam,filtext,project)
 !     effluent drain water fluxes
       filnam = trim(pathwork)//trim(outfil)//'.ageEffluentqDrain.csv'
-      ageq = getun (20,90)
-      call fopens(ageq,filnam,'new','del')
+      call file_open(ageq,filnam,'replace','write')
       filtext = 'Drain water effluent (mm/day)'
       call writehead (ageq,1,filnam,filtext,project)
 
@@ -1837,20 +1830,20 @@
 ! --- global
       use variables
       use temperature_mod, only: devries
+      use file_io_mod, only: file_open
 
 ! --- local variables ------------------
       character(len=300) filnam
       character(len=80)  filtext
       character(len=1)   comma
-      integer   getun,hea,lay,node,j
+      integer   hea,lay,node,j
       real(8)   heacnd(macp),thetadum(numnod)
 ! ---------------------------------------------------------------------
       comma = ','
 
 ! === open output file =================================================
       filnam = trim(pathwork)//'heatparam.csv'
-      hea = getun (20,90)
-      call fopens(hea,filnam,'new','del')
+      call file_open(hea,filnam,'replace','write')
       filtext = 'soil heat conductivity and capacity'
       call writehead (hea,1,filnam,filtext,project)
 
@@ -1914,13 +1907,14 @@
       use variables
       use doln
       use soilhydraulics_utils, only: watcon, moiscap, hconduc!, dhconduc
+      use file_io_mod, only: file_open
       implicit none
 
 ! --- local variables ------------------
       character(len=300) filnam
       character(len=80)  filtext
       character(len=1)   comma
-      integer   getun,soi,lay,hh,numhead,node
+      integer   soi,lay,hh,numhead,node
       real(8)   relsat, dhx!, dkx, 
       real(8)   dimocax,kx,thetax, FrArMtrx1,rfcpx
       parameter (numhead = 341)
@@ -1932,8 +1926,7 @@
 
 ! === open output file =================================================
       filnam = trim(pathwork)//'SoilPhysParam.csv'
-      soi = getun (20,90)
-      call fopens(soi,filnam,'new','del')
+      call file_open(soi,filnam,'replace','write')
       filtext = 'soil physical parameters '
       call writehead (soi,1,filnam,filtext,project)
 
@@ -2011,7 +2004,7 @@
       integer   task
 
 ! --- local variables ------------------
-      integer      getun,i, reclngth
+      integer      i, reclngth
       character(len=300) filnam
       character(len=80)  filtext
       character(len=1)   comma
@@ -2023,10 +2016,9 @@
 
 ! === open output file =================================================
       filnam = trim(pathwork)//trim(outfil)//'.tem'
-      tem = getun (20,90)
 !      reclngth = 36 + 7*numnod
       reclngth = 50 + 7*numnod
-      open(unit=tem,file=filnam,status='unknown',recl=reclngth)
+      open(newunit=tem,file=filnam,status='unknown',recl=reclngth)
       filtext = 'soil temperature profiles (oC)'
       call writehead (tem,1,filnam,filtext,project)
 
@@ -2083,12 +2075,12 @@
 ! ----------------------------------------------------------------------
 
       use variables
+      use file_io_mod, only: file_open
       implicit none
 
 ! --- global variables ------------------
       integer   task
 ! --- local variables ------------------
-      integer   getun
       character(len=300) filnam
       character(len=80)  filtext
       character(len=1)   comma
@@ -2097,15 +2089,14 @@
 
       ! return in case of no output for irrigation
       if (swirg .eq. 0) return
-      
+
       select case (task)
       case (1)
 
 ! === open output file and write header ===============================
 
       filnam = trim(pathwork)//trim(outfil)//'.irg'
-      irg = getun (20,90)
-      call fopens(irg,filnam,'new','del')
+      call file_open(irg,filnam,'replace','write')
       filtext = 'irrigation data'
       call writehead (irg,1,filnam,filtext,project)
 
@@ -2178,12 +2169,12 @@
 ! ----------------------------------------------------------------------
 
       use variables
+      use file_io_mod, only: file_open
       implicit none
 
 ! --- global variables ------------------
       integer task
 ! --- local variables ------------------
-      integer   getun
       character(len=300) filnam
       character(len=80)  filtext
       character(len=1)   comma
@@ -2195,8 +2186,7 @@
 
 ! === open output file =================================================
       filnam = trim(pathwork)//trim(outfil)//'.snw'
-      snw = getun (20,90)
-      call fopens(snw,filnam,'new','del')
+      call file_open(snw,filnam,'replace','write')
       filtext = 'snow pack output data (cm/period)'
       call writehead (snw,1,filnam,filtext,project)
 
@@ -2247,6 +2237,7 @@
                            schedule,numnod,snowinco,ssnow,cgsnow,cmelt,caintc,csnrai,cqprai,ioutdat,t1900,outdat,tstart,project,pond,pondini,     &
                            cqdrainin,cqdrainout,cinund,crunoff,cqtdo,cqtup,cqbotdo,cqbotup,csubl,crunon,IcTopMp,CQMpInTopVrtDm1,CQMpInTopVrtDm2,                  &
                            CQMpInTopLatDm1,CQMpInTopLatDm2,cqssdi
+      use file_io_mod, only: file_open
       implicit none
 
 !     global
@@ -2254,7 +2245,7 @@
       real(8)   CQMpInfMtx, CQMpExfMtx
 
 !     local
-      integer   getun,level
+      integer   level
 
       real(8)   CQMpInTop,soilout
       real(8)   plantin,plantout,snowin,snowout,pondin,pondout,soilin
@@ -2268,8 +2259,7 @@
       case (1)
 ! --- open output file
       filnam = trim(pathwork)//trim(outfil)//'.blc'
-      blc = getun (50,90)
-      call fopens(blc,filnam,'new','del')
+      call file_open(blc,filnam,'replace','write')
       filtext='detailed overview of water balance components (cm)'
       call writehead (blc,1,filnam,filtext,project)
 
@@ -2416,14 +2406,15 @@
       use swap_array_dimensions, only: maho, macp, madr
       use soilgrid_mod, only: convertdiscrvert
       use soilwaterbalance_mod, only: checkmassbal
+      use file_io_mod, only: file_open
       implicit none
-      
+
 
 ! -   global
       integer   task
 
 ! -   local
-      integer   getun,ftype,node,bruny,eruny,brund,erund,lay,level
+      integer   ftype,node,bruny,eruny,brund,erund,lay,level
       integer   swop,botcomNew(maho)
       integer   datea(6)
       real(4)   fsec
@@ -2478,8 +2469,7 @@
          afoext = '.cfo'
       endif
       filnam = trim(pathwork)//trim(outfil)//afoext
-      afo = getun (20,90)
-      call fopens(afo,filnam,'new','del')
+      call file_open(afo,filnam,'replace','write')
 
 
 ! ---   write initial part
@@ -2712,7 +2702,7 @@
 
 ! -   local
       integer   swop
-      integer   getun,ftype,node,bruny,eruny,brund,erund,lay,level
+      integer   ftype,node,bruny,eruny,brund,erund,lay,level
       integer   botcomNew(maho)
       integer   datea(6)
       real(4)   fsec
@@ -2762,8 +2752,7 @@
         aunext = '.bun'
       endif
       filnam = trim(pathwork)//trim(outfil)//aunext
-      aun = getun (20,90)
-      open(unit=aun,file=filnam,status='unknown',form='unformatted')
+      open(newunit=aun,file=filnam,status='unknown',form='unformatted')
 
 ! --- write initial part
       if (swaun.eq.2) then
@@ -2933,14 +2922,14 @@
 !      Date    : December 2004
 !      Purpose : Create file Swap.ok at end of simulation
 !-----------------------------------------------------------------------
+      use file_io_mod, only: file_open
       implicit none
 
-      integer   cexf,getun
+      integer   cexf
       character(len=80) project
 
 !     create file Swap.ok to let environment programs verify termination
-      cexf = getun (20,90)
-      call fopens(cexf,'Swap.ok','new','del')
+      call file_open(cexf,'Swap.ok','replace','write')
       call writehead (cexf,1,'Swap.ok',                                 &
      &  'this header only: simulation succesfully terminated',project)
       close (cexf)
@@ -3009,14 +2998,14 @@
 ! ---------------------------------------------------------------------
       use variables, only: outfil,drf,pathwork,daynr,date,nrpri,nrlevs,cqdrain,cqdrd,crunoff,cQMpOutDrRap,flheader
       use swap_array_dimensions, only: madr
-      
+      use file_io_mod, only: file_open
       implicit none
 
 ! --- global
       integer   task
 
 ! --- local
-      integer   level,getun
+      integer   level
       real(8)   c1qdrain(Madr),c1qdrd,c1runoff,c1qdrar
       character(len=80) filnam
       character(len=1)  comma
@@ -3031,8 +3020,7 @@
 
 ! --- open output file
       filnam = trim(pathwork)//trim(outfil)//'.drf'
-      drf = getun (20,90)
-      call fopens(drf,filnam,'new','del')
+      call file_open(drf,filnam,'replace','write')
 
 ! --- write header
       if (nrpri .eq. 1) then
@@ -3147,13 +3135,14 @@
 ! ---------------------------------------------------------------------
       use variables, only: outfil,vtair,pathwork,daynr,daycum,hbweir,overfl,gwl,pond,wlstar,wls,swstini,swst,cqdrd,crunoff,           &
                            cQMpOutDrRap,cwsupp,swb,numadj,hwlman,cwout,swsec,swman,nmper,impend,imper,project,logf,swscre,date,t1900,t,outper,iyear
+      use file_io_mod, only: file_open
       implicit none
 
 ! --- Global
       integer   task
 
 ! --- Local
-      integer   getun,nrOfDays,man
+      integer   nrOfDays,man
       real(8)   gwlev,cqdrf1,c1wsupp,c1wout,delbal,small,zero
       character(len=1)   spc,comma
       character(len=200) messag
@@ -3175,8 +3164,7 @@
 
 ! --- open output file once
       filnam = trim(pathwork)//trim(outfil)//'.swb'
-      swb = getun (20,90)
-      call fopens(swb,filnam,'new','del')
+      call file_open(swb,filnam,'replace','write')
       filtext = 'Surface water balance increments (cm/period)'
       call writehead (swb,1,filnam,filtext,project)
 
@@ -3239,8 +3227,7 @@
 
 ! --    open output file once
         filnam = trim(pathwork)//trim(outfil)//'.man'
-        man = getun (20,90)
-        call fopens(man,filnam,'new','del')
+        call file_open(man,filnam,'replace','write')
         filtext = 'Surface water management (cm/period)'
         call writehead (man,1,filnam,filtext,project)
 
@@ -3540,12 +3527,13 @@
       use surfacewater_mod, only: SurfaceWater
       use frozencond_mod, only: FrozenBounds
       use soilhydraulics_mod, only: headcalc, SoilWaterStateVar
+      use file_io_mod, only: file_open
       implicit none
 
 ! --- global variables ------------------
       integer task
 ! --- local variables ------------------
-      integer   getun,sto,nod1m, nod
+      integer   sto,nod1m, nod
       real(8)   vsat,vt0,gwlt0,vt1,qre,qv1m,gwlt1,stocoav,stocot1
       character(len=300) filnam
       character(len=80)  filtext
@@ -3566,8 +3554,7 @@
 
 ! === open output file =================================================
       filnam = trim(pathwork)//trim(outfil)//'.sto'
-      sto = getun (20,90)
-      call fopens(sto,filnam,'new','del')
+      call file_open(sto,filnam,'replace','write')
       filtext = 'Storage and recharge output data '//                   &
      &'(q in cm/period; gwl in cm; sto in cm)'
       call writehead (sto,1,filnam,filtext,project)
@@ -3728,12 +3715,13 @@
 !     Purpose            : open and write data to explore capillary rise to/from rootzone
 ! ----------------------------------------------------------------------
       use variables
+      use file_io_mod, only: file_open
       implicit none
 
 ! --- global variables ------------------
       integer task
 ! --- local variables ------------------
-      integer   getun,sto
+      integer   sto
       character(len=300) filnam
       character(len=200) filtext
       character(len=1)   comma
@@ -3749,8 +3737,7 @@
 
 ! === open output file =================================================
       filnam = trim(pathwork)//trim(outfil)//'.crz'
-      sto = getun (20,90)
-      call fopens(sto,filnam,'new','del')
+      call file_open(sto,filnam,'replace','write')
       filtext = 'Capillary rise q to/from rootzone when roots '//      &
      &' are present (rd>0) (q in cm/period, pos=upward, neg=downward)'
       call writehead (sto,1,filnam,filtext,project)
@@ -3794,7 +3781,7 @@ implicit none
 ! global
 integer, intent(in) :: task
 ! local
-integer                       :: i, getun
+integer                       :: i
 integer,          save        :: LZnod             ! last node lying within LZ
 integer,          save        :: LZnod2            ! last node lying within LZ2
 real(8)                       :: sum, VT, WC
@@ -3812,9 +3799,8 @@ real(8), save :: Tr, Ia, SS, hh, T, GG, P, Q, CN, S
 select case (task)
 case (1)
 !!!   iunout  = getun (300, 900)
-   iunout2 = getun (360, 900)
 !!!   open (unit=iunout, file=fout, status='unknown', form='unformatted')
-   open (unit=iunout2, file=fout2, status='unknown', form='formatted')
+   open (newunit=iunout2, file=fout2, status='unknown', form='formatted')
    ! write header
    write (iunout2,'(A)') 'DayCum (d), Day (d),Tr (d),P (mm),Q (mm),Ia (mm),SS (mm),CN (-),S (mm),h0 (mm),GWL (cm),WCini (cm3/cm3)'
    ! simple
@@ -4019,9 +4005,6 @@ real(8),             parameter                     :: t2 = 10.0d0**expo
 ! other
 real(8), save :: dstor, baldev, volold, snowold, pondold
 
-! functions
-integer                                            :: getun
-
 select case (iTask)
 case (1)
 
@@ -4058,9 +4041,8 @@ case (1)
 
    ! open file for output; existing file will be overwritten; formatted output
    !    to do: write some basic info at the top of the output file?
-   iuncsv = getun (500, 900)
    filnam = trim(pathwork)//trim(outfil)//'_output.csv'
-   open (unit=iuncsv, file=filnam, status='replace', form='formatted')
+   open (newunit=iuncsv, file=filnam, status='replace', form='formatted')
 
    ! column header
    filtext = 'specified output data of SWAP'
@@ -4592,9 +4574,6 @@ character(len=19)                                  :: datexti
 integer,             parameter                     :: num_d = 5         ! # of decimals; later: user input?
 integer,             parameter                     :: num_w = num_d+7   ! total width of format, for E-formatting: 7 positions are needed for "-x."at start and "E+00" at end
 
-! functions
-integer                                            :: getun
-
 select case (iTask)
 case (1)
 
@@ -4627,9 +4606,8 @@ case (1)
 
    ! open file for output; existing file will be overwritten; formatted output
    !    to do: write some basic info at the top of the output file?
-   iuncsv = getun (500, 900)
    filnam = trim(pathwork)//trim(outfil)//'_output_tz.csv'
-   open (unit=iuncsv, file=filnam, status='replace', form='formatted')
+   open (newunit=iuncsv, file=filnam, status='replace', form='formatted')
 
    ! column header
    Header = 'DATE,DEPTH'
