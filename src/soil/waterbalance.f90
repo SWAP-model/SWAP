@@ -568,6 +568,7 @@ contains
                            IQInTopLatDm2,ISsnowBeg,iruno,irunon,isnrai,iSubl,pond,Ssnow,IWaSrDm1Beg,IWaSrDm2Beg,WaSrDm1,WaSrDm2, &
                            dev_cmb
       use swap_array_dimensions, only: macp, madr
+      use file_io_mod, only: file_open
       implicit none
 
       ! -   global
@@ -578,7 +579,7 @@ contains
       logical FlOpenFileDev
 
       ! local
-      integer Level, getun, ic
+      integer Level, ic
       real(8) DevMasBalDm1,DevMasBalDm2, DevMasBalCmp(MaCp)
       real(8) DevMasBalPnd, DevMasBalPrf, IQExcMtxDm1
       real(8) IQExcMtxDm2,IQInTopLatDm,  IQInTopPreDm, IQOutDrRap
@@ -704,8 +705,7 @@ contains
 
       if (FlWriteDev .and. .not.FlOpenFileDev) then
          filnam = trim(pathwork)//trim(outfil)//'.dwb'
-         dev_cmb = getun (20,90)
-         call fopens(dev_cmb,filnam,'new','del')
+         call file_open(dev_cmb, filnam, 'replace', 'write')
          write(dev_cmb,1)
          if (FlMacropore) write(dev_cmb,2)
          FlOpenFileDev = .true.
