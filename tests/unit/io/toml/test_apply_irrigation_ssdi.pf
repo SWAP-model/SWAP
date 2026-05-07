@@ -13,3 +13,110 @@ subroutine test_irrigation_ssdi_default_init()
    call assertEqual(0, cfg%ssdi%scheduled%sched_type, 'sched_type default')
    call assertEqual(1, cfg%ssdi%scheduled%days_interval, 'days_interval default')
 end subroutine
+
+@test
+subroutine test_apply_mode0_populates_globals_from_csv()
+   use irrigation_config_mod, only: irrigation_ssdi_t
+   use config_to_variables_mod, only: apply_irrigation_ssdi
+   use variables, only: ssdi_date_irr, ssdi_rate_f_irr, ssdi_amount_f_irr, &
+                        nod_ssdi_irr, nirri_ssdi_irr,                       &
+                        NumNod, zbotcp,                                     &
+                        tend, tstart, t1900, pathwork
+   use, intrinsic :: iso_fortran_env, only: real64
+   use funit
+   implicit none
+   type(irrigation_ssdi_t) :: ssdi
+   integer :: dy_apr15
+
+   ! Minimal grid for ssdi_z resolution.
+   NumNod = 4
+   zbotcp(1) = -10.0d0
+   zbotcp(2) = -25.0d0
+   zbotcp(3) = -40.0d0
+   zbotcp(4) = -60.0d0
+
+   ! Simulation window covers the fixture dates (2003-04-15 .. 2003-06-10).
+   tstart = 37621.0_real64   ! 2003-01-01 (days since 1900)
+   tend   = 37985.0_real64   ! 2003-12-31
+   t1900  = tstart
+   pathwork = 'tests/unit/io/toml/fixtures/'
+
+   ssdi%schedule = 0
+   ssdi%ssdi_z   = [-25.0d0, -40.0d0]
+   allocate(character(len=20) :: ssdi%fixed%events_file)
+   ssdi%fixed%events_file = 'ssdi_events_small.csv'
+
+   call apply_irrigation_ssdi(ssdi)
+
+   ! nod_ssdi(1) should point to the node whose zbotcp <= -25 (node 2)
+   ! nod_ssdi(2) should point to the node whose zbotcp <= -40 (node 3)
+   @assertEqual(2, nod_ssdi_irr(1))
+   @assertEqual(3, nod_ssdi_irr(2))
+
+   ! Three rows in fixture → nirri_ssdi_irr starts at 1
+   @assertEqual(1, nirri_ssdi_irr)
+
+   ! 2003-04-15 = 37725 days since 1900-01-01 (1-based: day 1 = 1900-01-01)
+   dy_apr15 = 37725
+   @assertEqual(real(dy_apr15, real64), ssdi_date_irr(1), tolerance=1.0d-6)
+
+   ! Unit conversion: rate_f mm/h -> cm/d  (5 * 0.1 * 24 = 12.0)
+   @assertEqual(12.0_real64, ssdi_rate_f_irr(1), tolerance=1.0d-9)
+
+   ! Unit conversion + spread: amount_f mm -> cm, then divided by ncomp
+   ! ssdi_z = [-25, -40] -> nod_ssdi(1)=2, nod_ssdi(2)=3 (2 nodes); 10mm -> 1.0cm / 2 = 0.5
+   @assertEqual(0.5_real64, ssdi_amount_f_irr(1), tolerance=1.0d-9)
+end subroutine
+
+@test
+subroutine test_apply_mode1_copies_scheduled_block()
+   use irrigation_config_mod, only: irrigation_ssdi_t
+   use config_to_variables_mod, only: apply_irrigation_ssdi
+   use variables, only: ssdi_sched_type_irr, ssdi_threshold_irr,        &
+                        ssdi_threshold_z_irr, ssdi_amount_irr,          &
+                        ssdi_appl_rate_irr, sw_interval_irr,            &
+                        days_interval_irr, dt_SSDI_event, nirri_ssdi_irr, &
+                        nod_ssdi_irr, NumNod, zbotcp
+   use, intrinsic :: iso_fortran_env, only: real64
+   use funit
+   implicit none
+   type(irrigation_ssdi_t) :: ssdi
+
+   NumNod = 4
+   zbotcp(1) = -10.0d0
+   zbotcp(2) = -25.0d0
+   zbotcp(3) = -40.0d0
+   zbotcp(4) = -60.0d0
+
+   ssdi%schedule = 1
+   ssdi%ssdi_z   = [-25.0d0, -40.0d0]
+   ssdi%scheduled%sched_type    = 1
+   ssdi%scheduled%threshold     = 0.7d0
+   ssdi%scheduled%ssdi_amount   = 10.0d0
+   ssdi%scheduled%ssdi_appl_rate = 5.0d0
+   ssdi%scheduled%sw_interval   = 0
+   ssdi%scheduled%days_interval = 1
+
+   call apply_irrigation_ssdi(ssdi)
+
+   @assertEqual(2, nod_ssdi_irr(1))
+   @assertEqual(3, nod_ssdi_irr(2))
+
+   @assertEqual(1,     ssdi_sched_type_irr)
+   @assertEqual(0.7d0, ssdi_threshold_irr,  tolerance=1.0d-12)
+
+   ! mm -> cm, then spread over (nod_ssdi(2)-nod_ssdi(1)+1) = 2 compartments
+   ! 10mm -> 1.0cm / 2 = 0.5
+   @assertEqual(0.5d0, ssdi_amount_irr,     tolerance=1.0d-9)
+
+   ! mm/h -> cm/d: 5 * 0.1 * 24 = 12.0
+   @assertEqual(12.0d0, ssdi_appl_rate_irr, tolerance=1.0d-9)
+
+   @assertEqual(0,     sw_interval_irr)
+
+   ! Regression-fix invariant from d8a88d6: dt_SSDI_event default is 1.0
+   @assertEqual(1.0d0, dt_SSDI_event,       tolerance=1.0d-12)
+
+   ! nirri entry-point initialised to 1
+   @assertEqual(1, nirri_ssdi_irr)
+end subroutine
