@@ -43,6 +43,7 @@ module config_to_variables_mod
    public :: config_to_variables
    public :: apply_soil_tillage
    public :: apply_irrigation_ssdi
+   public :: apply_nutrients
 
 contains
 
@@ -487,6 +488,7 @@ contains
       flSSDI    = (config%irrigation%swssdi == 1)
       if (flTillage) call apply_soil_tillage(config%soil%tillage)
       if (flSSDI)    call apply_irrigation_ssdi(config%irrigation%ssdi)
+      call apply_nutrients(config%nutrients)
       gwli    = config%soil%gwli
       pondini = config%soil%pondini
       pond    = config%soil%pondini    ! legacy alias: pond <-> pondini
@@ -1417,6 +1419,33 @@ contains
          call apply_ssdi_mode1(ssdi, ncomp)
       end select
    end subroutine apply_irrigation_ssdi
+
+
+   !> Apply [nutrients] config to legacy `variables`/wofost_soil_declarations
+   !! globals. Always called from config_to_variables (no flCropNut gate);
+   !! the cfg%present flag is informational only — defaults are zero
+   !! whether or not the user supplied a [nutrients] block.
+   !!
+   !! Sets SorpCoef unconditionally — fixes the genuine uninitialised-
+   !! variable bug discovered during the [nutrients] N2 brainstorm.
+   !!
+   !! See ADR 0026 ([nutrients] N2a).
+   subroutine apply_nutrients(cfg)
+      use nutrients_config_mod, only: nutrients_config_t
+      use wofost_soil_declarations, only: FOM_t, Bio_t, Hum_t, &
+                                           cNH4_t, cNO3_t, SorpCoef
+      type(nutrients_config_t), intent(in) :: cfg
+      integer :: i
+
+      SorpCoef = cfg%sorp_coef
+      do i = 1, 8
+         FOM_t(i) = cfg%initial%fom(i)
+      end do
+      Bio_t  = cfg%initial%bio
+      Hum_t  = cfg%initial%hum
+      cNH4_t = cfg%initial%cnh4
+      cNO3_t = cfg%initial%cno3
+   end subroutine apply_nutrients
 
 
    !> Mode-0 (fixed-date): stage CSV; populate ssdi_*_f_irr; deferred

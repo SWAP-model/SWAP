@@ -216,3 +216,69 @@ subroutine test_read_nutrients_oversized_fom()
    call read_nutrients_toml(doc_ptr, cfg, errs)
    @assertTrue(errs%count() > 0, 'expected parse error for fom size > 8')
 end subroutine
+
+@test
+subroutine test_apply_nutrients_populates_globals()
+   use, intrinsic :: iso_fortran_env, only: real64
+   use nutrients_config_mod, only: nutrients_config_t
+   use config_to_variables_mod, only: apply_nutrients
+   use wofost_soil_declarations, only: FOM_t, Bio_t, Hum_t, &
+                                        cNH4_t, cNO3_t, SorpCoef
+   use funit
+   implicit none
+   type(nutrients_config_t) :: cfg
+   integer :: i
+
+   cfg%present   = .true.
+   cfg%sorp_coef = 0.005_real64
+   cfg%initial%fom = [0.5_real64, 0.3_real64, 0.2_real64, 0.1_real64, &
+                      0.5_real64, 0.3_real64, 0.2_real64, 0.1_real64]
+   cfg%initial%bio  = 0.4_real64
+   cfg%initial%hum  = 8.0_real64
+   cfg%initial%cnh4 = 0.001_real64
+   cfg%initial%cno3 = 0.005_real64
+
+   call apply_nutrients(cfg)
+
+   @assertEqual(0.005_real64, SorpCoef, tolerance=1.0e-12_real64)
+   do i = 1, 8
+      @assertEqual(cfg%initial%fom(i), FOM_t(i), tolerance=1.0e-12_real64)
+   end do
+   @assertEqual(0.4_real64,   Bio_t,  tolerance=1.0e-12_real64)
+   @assertEqual(8.0_real64,   Hum_t,  tolerance=1.0e-12_real64)
+   @assertEqual(0.001_real64, cNH4_t, tolerance=1.0e-12_real64)
+   @assertEqual(0.005_real64, cNO3_t, tolerance=1.0e-12_real64)
+end subroutine
+
+@test
+subroutine test_apply_nutrients_defaults_zero()
+   use, intrinsic :: iso_fortran_env, only: real64
+   use nutrients_config_mod, only: nutrients_config_t
+   use config_to_variables_mod, only: apply_nutrients
+   use wofost_soil_declarations, only: FOM_t, Bio_t, Hum_t, &
+                                        cNH4_t, cNO3_t, SorpCoef
+   use funit
+   implicit none
+   type(nutrients_config_t) :: cfg
+   integer :: i
+
+   ! Non-zero pre-existing values to detect overwrite-with-zero.
+   FOM_t(1) = 99.0_real64
+   Bio_t    = 99.0_real64
+   Hum_t    = 99.0_real64
+   cNH4_t   = 99.0_real64
+   cNO3_t   = 99.0_real64
+   SorpCoef = 99.0_real64
+
+   ! cfg%present = .false. (default); apply_nutrients still runs and resets.
+   call apply_nutrients(cfg)
+
+   @assertEqual(0.0_real64, SorpCoef, tolerance=1.0e-12_real64)
+   do i = 1, 8
+      @assertEqual(0.0_real64, FOM_t(i), tolerance=1.0e-12_real64)
+   end do
+   @assertEqual(0.0_real64, Bio_t,  tolerance=1.0e-12_real64)
+   @assertEqual(0.0_real64, Hum_t,  tolerance=1.0e-12_real64)
+   @assertEqual(0.0_real64, cNH4_t, tolerance=1.0e-12_real64)
+   @assertEqual(0.0_real64, cNO3_t, tolerance=1.0e-12_real64)
+end subroutine
