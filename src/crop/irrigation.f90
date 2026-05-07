@@ -291,7 +291,7 @@
 !!   - 9: reset SSDI event state
 subroutine SSDI_irrigation(iTask)
 
-use variables, only: swpfile, logf, mairg, numnod, tend, tstart, t1900, zbotcp, irrigevent, qssdi, qssdisum, dt_SSDI_event,   &
+use variables, only: mairg, numnod, tend, tstart, t1900, zbotcp, irrigevent, qssdi, qssdisum, dt_SSDI_event,   &
                      h, theta, iptra_day, iqreddry_day, iqredsol_day, &
                      swssdi_irr, nod_ssdi_irr, ssdi_schedule_irr, ssdi_sched_type_irr, &
                      nod_ssdi_sensor_irr, ssdi_threshold_irr, ssdi_threshold_z_irr, &
@@ -321,14 +321,8 @@ real(8), dimension(mairg)       :: ssdi_rate_f
 real(8), dimension(mairg)       :: ssdi_amount_f
 
 ! local, help
-integer                         :: i, j, swp, ifnd
+integer                         :: i, j
 real(8)                         :: Tred
-real(8), dimension(2)           :: ssdi_z
-character(len=132)              :: ssdi_file
-
-! functions
-integer :: getun2
-logical :: rdinqr
 
    ! Load state from module variables at entry
    swssdi = swssdi_irr
@@ -350,63 +344,14 @@ logical :: rdinqr
 
    select case  (iTask)
    case (1)
-      ! Phase 4f-extend SS-B (ADR 0020): entry to this case implies the
-      ! call-site gate flSSDI was true → swssdi=1 was set in the TOML
-      ! config and copied to the global. Reads SSDI parameters from
-      ! staged swap.swp via TTutil; future ADR 0021 will replace this
-      ! with a TOML schema port of the SSDI block.
-      swp = getun2(10, 90, 2)
-      call rdinit(swp, logf, swpfile)
-         if (rdinqr('swssdi')) call rdsinr ('swssdi', 0, 1, swssdi)
-         if (swssdi == 1)      call rdscha ('ssdi_file', ssdi_file)
-      close(swp)
-      call read_ssdi_input()
-      
-      ! check if ssdi_date is ascending, and determine initial entry point nirri
-      nirri = 0
-      if (ssdi_schedule == 0) then
-         nirri = 1
-         do i = 1, ifnd-1
-            if (ssdi_date(i) >= ssdi_date(i+1)) call fatalerr_collected ('SSDI_irrigation', 'ssdi_date not in ascending order')
-            if (t1900 >= ssdi_date(i)) nirri = i
-         end do
-         if (t1900 >= ssdi_date(ifnd)) nirri = ifnd
-      end if
-
-      ! determine layer number of sensor (if applicable)
-      nod_ssdi_sensor = 0
-      if (ssdi_schedule == 1 .AND. ssdi_sched_type > 1) then
-         i = 1
-         do while (zbotcp(i) .gt. (ssdi_threshold_z + 1.0d-5))
-            i = i + 1
-         end do
-         nod_ssdi_sensor = i
-      end if
-      
-      ! determine layer number where SSDI takes place
-      do j = 1, 2
-         i = 1
-         do while (zbotcp(i) .gt. (ssdi_z(j) + 1.0d-5))
-            i = i + 1
-         end do
-         nod_ssdi(j) = i
-      end do
-
-      ! redefine application rate: uniformly spread over all nodes
-      if (ssdi_schedule == 0) then
-         ssdi_amount_f = ssdi_amount_f/dble((nod_ssdi(2) - nod_ssdi(1) + 1))
-      else
-         ssdi_amount = ssdi_amount/dble((nod_ssdi(2) - nod_ssdi(1) + 1))
-      end if
-      
-      ! initialize
-      qssdi         = 0.0d0
-      dt_SSDI_event = 1.0d0
+      ! [irrigation.ssdi] init was performed at config-load time by
+      ! apply_irrigation_ssdi (config_to_variables.f90). Per ADR 0022,
+      ! this case is now a no-op; the runtime reads the staged
+      ! _irr snapshots into per-day locals at the top of
+      ! SSDI_irrigation (above the select case).
+      return
       
    case (2)
-      ! no subsurface drip irrigation: return
-      if (swssdi == 0) return
-      
       irrigevent      = 0
       qssdi(1:numnod) = 0.0d0
       dt_SSDI_event   = 1.0d0
@@ -486,72 +431,6 @@ logical :: rdinqr
    ssdi_date_irr = ssdi_date
    ssdi_rate_f_irr = ssdi_rate_f
    ssdi_amount_f_irr = ssdi_amount_f
-   
-!---------------------------
-   contains
-
-   !> Read SSDI configuration from SSDI input file.
-   subroutine read_ssdi_input()
-   real(8) :: dummy
-   logical :: rdinar
-   
-   call rdinit(swp, logf, ssdi_file)
-      call rdsinr('ssdi_schedule', 0, 1, ssdi_schedule)
-      if (ssdi_schedule == 0) then
-         call rdatim('ssdi_date',                      ssdi_date,     mairg, ifnd)
-         call rdfdor('ssdi_rate_f',    0.0d0, 100.0d0, ssdi_rate_f,   mairg, ifnd)     ! mm/h
-         call rdfdor('ssdi_amount_f',  0.0d0, 100.0d0, ssdi_amount_f, mairg, ifnd)     ! mm
-         if (.NOT. rdinar('ssdi_z')) then
-            ! application at single depth (single compartment)
-            call rdsdor('ssdi_z', -100.0d0, 0.0d0, dummy)                ! cm
-            ssdi_z(1) = dummy
-            ssdi_z(2) = dummy
-         else
-            ! application over depth interval btween two depth levels (multiple consecutive compartments)
-            call rdfdor('ssdi_z', -100.0d0, 0.0d0, ssdi_z, 2, 2)          ! cm
-         end if
-         ! convert mm/h or mm irrigation to cm/d or cm
-         ssdi_rate_f(1:ifnd)   = ssdi_rate_f(1:ifnd)*0.1d0*24.0d0
-         ssdi_amount_f(1:ifnd) = ssdi_amount_f(1:ifnd)*0.1d0
-      else
-         call rdsinr('ssdi_sched_type', 1, 3, ssdi_sched_type)
-         if (ssdi_sched_type == 1) call rdsdor('threshold_Tred',     0.0d0,   1.0d0, ssdi_threshold)
-         if (ssdi_sched_type == 2) call rdsdor('threshold_presh',   -1.0d7,   0.0d0, ssdi_threshold)
-         if (ssdi_sched_type == 3) call rdsdor('threshold_watc',     0.0d0,   1.0d0, ssdi_threshold)
-         if (ssdi_sched_type >  1) call rdsdor('threshold_depth', -100.0d0,   0.0d0, ssdi_threshold_z)      ! cm
-                                   call rdsdor('ssdi_amount',        0.0d0, 100.0d0, ssdi_amount)           ! mm
-                                   call rdsdor('ssdi_appl_rate',     0.0d0, 100.0d0, ssdi_appl_rate)        ! mm/h  !!!
-         if (.NOT. rdinar('ssdi_z')) then
-            ! application at single depth (single compartment)
-            call rdsdor('ssdi_z', -100.0d0, 0.0d0, dummy)                ! cm
-            ssdi_z(1) = dummy
-            ssdi_z(2) = dummy
-         else
-            ! application over depth interval btween two depth levels (multiple consecutive compartments)
-            call rdfdor('ssdi_z', -100.0d0, 0.0d0, ssdi_z, 2, 2)          ! cm
-         end if
-         ! Restriction on number of days between two successive SSDI appliocations
-         call rdsinr('sw_interval', 0, 1, sw_interval)
-         if (sw_interval == 0) then
-            days_interval = 1
-         else
-            call rdsinr('days_interval', 1, 366, days_interval)
-         end if
-         days_counter = 366
-
-         ! convert mm irrigation to cm
-         ssdi_amount = ssdi_amount*0.1d0
-         
-         ! convert mm/h irrigation to cm/d
-         ssdi_appl_rate = ssdi_appl_rate*0.1d0*24.0d0
-
-      end if
-   close(swp)
-         
-!  at least one date must be within simulation period
-   if (ssdi_schedule == 0) call checkdate(ifnd, ssdi_date, tend, tstart, 'irdate', 'SSDI_irrigation//swssdi=1')
-   
-   end subroutine read_ssdi_input
    
 end subroutine SSDI_irrigation
 
