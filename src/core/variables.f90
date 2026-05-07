@@ -566,6 +566,15 @@
       real(8)   nmxlv(30)
       real(8)   nlue,anlv,anst,nmaxlv,nmaxst,nmaxrt
       real(8)   lrnr,lsnr,nni,rnflv,rnfst,frnx
+      ! N-P-K nutrient parameters from cropwofost.nutrient (N1 of [nutrients] umbrella).
+      ! Promoted from local-to-wofost-subroutine after spec brainstorming
+      ! revealed they could not be reached from a config-load-time adapter
+      ! while declared as locals. See ADR 0025.
+      real(8)   nlai, nmaxso, npart, nfixf
+      real(8)   nsla, rnfrt, tcnt
+      real(8)   dvsnlt, dvsnt, rdrns, fntrt
+      integer   ilnmxl
+      real(8)   fraharlosorm_lv, fraharlosorm_st, fraharlosorm_so
       real(8)   fstr
       real(8)   amFERT             ! amount of applied Fertilizer (kg/ha/d N)
 

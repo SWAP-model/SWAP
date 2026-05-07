@@ -1046,14 +1046,6 @@
       real(8)   admi,grbl,gwbl,grblpot,gwblpot
       real(8)   twbl,twblpot
 
-! --- n-p-k use
-      real(8) NLAI   !,LRNR, LSNR
-      real(8) NMAXSO, NPART, NFIXF !,NLUE
-      real(8) NSLA, RNFRT, TCNT !,RNFLV,RNFST
-      real(8) DVSNLT, DVSNT, RDRNS, FNTRT !, FRNX
-      !real(8) NMAXLV,NMAXST,NMAXRT,NNI,FSTR
-      !real(8) NMXLV(30)
-      integer ILNMXL
       real(8) Fstress
       integer nut
 
@@ -1069,7 +1061,6 @@
 
       real(8) NdemandBioFix
       real(8) ombalan,wlvt0,wstt0,wsot0,wrtt0,storagediff,drso
-      real(8) FraHarLosOrm_lv,FraHarLosOrm_st,FraHarLosOrm_so
       real(8) FraDeceasedLvToSoil
       real(8) HarLosOrm_rt, HarLosOrm_lv, HarLosOrm_st, HarLosOrm_so
       real(8) HarLosNit_rt, HarLosNit_lv, HarLosNit_st, HarLosNit_so
