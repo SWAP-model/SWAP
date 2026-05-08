@@ -332,3 +332,128 @@ subroutine test_apply_nutrients_defaults_zero()
    @assertEqual(0.0_real64, cNH4_t, tolerance=1.0e-12_real64)
    @assertEqual(0.0_real64, cNO3_t, tolerance=1.0e-12_real64)
 end subroutine
+
+@test
+subroutine test_apply_events_csv_populates_legacy_globals()
+   use, intrinsic :: iso_fortran_env, only: real64
+   use nutrients_config_mod, only: nutrients_config_t
+   use config_to_variables_mod, only: apply_nutrients_events
+   use variables, only: pathwork
+   use wofost_soil_declarations, only: MatNum, Amend, VolaFrac, &
+                                         TimeAmend, NuAmend, iamend, &
+                                         namend, isme
+   use funit
+   implicit none
+   type(nutrients_config_t) :: cfg
+   integer :: dy_apr15, dy_jun20
+
+   pathwork = 'tests/unit/io/toml/fixtures/'
+   cfg%events_file = 'nutrients_events_small.csv'
+
+   call apply_nutrients_events(cfg)
+
+   ! 3 rows, two share the date 2003-06-20 → 2 amendment groups.
+   call assertEqual(2, namend, 'two distinct amendment dates')
+   call assertEqual(1, isme,   'isme reset to 1')
+
+   ! After sort: 2003-04-15 first (mat 10), 2003-06-20 second group (mat 1, mat 3).
+   ! NuAmend(1) = 1 (just the 2003-04-15 event)
+   ! NuAmend(2) = 2 (the two 2003-06-20 events)
+   call assertEqual(1, NuAmend(1))
+   call assertEqual(2, NuAmend(2))
+
+   ! Sorted order: row 1 = mat 10, row 2 = mat 1, row 3 = mat 3
+   call assertEqual(10, MatNum(1))
+   call assertEqual(1,  MatNum(2))
+   call assertEqual(3,  MatNum(3))
+
+   ! Amend = kg/ha * 1.0e-4 = kg/m^2  (100*1e-4=0.01, 25000*1e-4=2.5, 500*1e-4=0.05)
+   @assertEqual(0.01_real64,    Amend(1), tolerance=1.0e-12_real64)
+   @assertEqual(2.5_real64,     Amend(2), tolerance=1.0e-12_real64)
+   @assertEqual(0.05_real64,    Amend(3), tolerance=1.0e-12_real64)
+
+   ! VolaFrac round-trips exactly
+   @assertEqual(0.05_real64, VolaFrac(1), tolerance=1.0e-12_real64)
+   @assertEqual(0.10_real64, VolaFrac(2), tolerance=1.0e-12_real64)
+   @assertEqual(0.02_real64, VolaFrac(3), tolerance=1.0e-12_real64)
+
+   ! Days-since-1900 for 2003-04-15 and 2003-06-20.
+   ! Verify by checking the SSDI adapter test for 2003-04-15's value.
+   dy_apr15 = 37725
+   dy_jun20 = dy_apr15 + 66   ! 2003-06-20 = 2003-04-15 + 66 days
+   @assertEqual(real(dy_apr15, real64), TimeAmend(1), tolerance=1.0e-6_real64)
+   @assertEqual(real(dy_jun20, real64), TimeAmend(2), tolerance=1.0e-6_real64)
+
+   ! iamend pointers
+   call assertEqual(1, iamend(1, 1), 'group 1: row 1')
+   call assertEqual(2, iamend(2, 1), 'group 2: row 2')
+   call assertEqual(3, iamend(2, 2), 'group 2: row 3')
+end subroutine
+
+@test
+subroutine test_apply_events_no_file_zero_amendments()
+   use nutrients_config_mod, only: nutrients_config_t
+   use config_to_variables_mod, only: apply_nutrients_events
+   use wofost_soil_declarations, only: namend, isme
+   use funit
+   implicit none
+   type(nutrients_config_t) :: cfg
+
+   ! Pre-existing non-zero values to detect overwrite.
+   namend = 99
+   isme   = 99
+
+   ! cfg%events_file is unallocated by default OR allocated to empty string
+   ! (depending on whether read_nutrients_toml has run; in this isolated test,
+   ! it's unallocated until something assigns it). The adapter handles both.
+   call apply_nutrients_events(cfg)
+
+   call assertEqual(0, namend, 'namend reset to 0')
+   call assertEqual(1, isme,   'isme reset to 1')
+end subroutine
+
+@test
+subroutine test_apply_events_empty_file()
+   use nutrients_config_mod, only: nutrients_config_t
+   use config_to_variables_mod, only: apply_nutrients_events
+   use variables, only: pathwork
+   use wofost_soil_declarations, only: namend, isme
+   use funit
+   implicit none
+   type(nutrients_config_t) :: cfg
+
+   ! Empty-string events_file is treated like absent.
+   pathwork = 'tests/unit/io/toml/fixtures/'
+   cfg%events_file = ''
+   namend = 99
+   isme   = 99
+
+   call apply_nutrients_events(cfg)
+
+   call assertEqual(0, namend)
+   call assertEqual(1, isme)
+end subroutine
+
+@test
+subroutine test_apply_events_explicit_state_after_run()
+   use, intrinsic :: iso_fortran_env, only: real64
+   use nutrients_config_mod, only: nutrients_config_t
+   use config_to_variables_mod, only: apply_nutrients_events
+   use variables, only: pathwork
+   use wofost_soil_declarations, only: namend, isme
+   use funit
+   implicit none
+   type(nutrients_config_t) :: cfg
+
+   ! Run on the fixture, then re-run with deallocated events_file — verify reset.
+   pathwork = 'tests/unit/io/toml/fixtures/'
+   cfg%events_file = 'nutrients_events_small.csv'
+   call apply_nutrients_events(cfg)
+   call assertEqual(2, namend, 'after fixture run: 2 groups')
+
+   ! Re-init: deallocate events_file, expect reset.
+   if (allocated(cfg%events_file)) deallocate(cfg%events_file)
+   call apply_nutrients_events(cfg)
+   call assertEqual(0, namend, 'after no-file run: namend reset to 0')
+   call assertEqual(1, isme,   'after no-file run: isme reset to 1')
+end subroutine
