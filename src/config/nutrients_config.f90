@@ -29,6 +29,7 @@ module nutrients_config_mod
    type :: nutrients_config_t
       logical      :: present   = .false.
       real(real64) :: sorp_coef = 0.0_real64
+      character(len=:), allocatable :: events_file       ! relative to pathwork; CSV companion (N2b, ADR 0027)
       type(nutrients_initial_t) :: initial
    contains
       procedure :: validate => nutrients_config_validate

@@ -251,6 +251,56 @@ subroutine test_apply_nutrients_populates_globals()
 end subroutine
 
 @test
+subroutine test_read_nutrients_with_events_file()
+   use nutrients_config_mod, only: nutrients_config_t
+   use read_nutrients_toml_mod, only: read_nutrients_toml
+   use error_mod, only: error_collection_t
+   use tomlf, only: toml_table, toml_loads
+   use funit
+   implicit none
+   type(toml_table), allocatable, target :: doc
+   type(toml_table), pointer :: doc_ptr
+   type(nutrients_config_t)  :: cfg
+   type(error_collection_t)  :: errs
+   character(len=*), parameter :: toml_text =                       &
+      '[nutrients]'                              // new_line('a') // &
+      'events_file = "amendments.csv"'
+
+   call toml_loads(doc, toml_text)
+   doc_ptr => doc
+
+   call read_nutrients_toml(doc_ptr, cfg, errs)
+   call assertEqual(0, errs%count(), 'expected zero parse errors')
+   @assertTrue(cfg%present, 'expected present=true')
+   @assertTrue(allocated(cfg%events_file), 'events_file allocated')
+   @assertEqual('amendments.csv', trim(cfg%events_file))
+end subroutine
+
+@test
+subroutine test_read_nutrients_no_events_file()
+   use nutrients_config_mod, only: nutrients_config_t
+   use read_nutrients_toml_mod, only: read_nutrients_toml
+   use error_mod, only: error_collection_t
+   use tomlf, only: toml_table, toml_loads
+   use funit
+   implicit none
+   type(toml_table), allocatable, target :: doc
+   type(toml_table), pointer :: doc_ptr
+   type(nutrients_config_t)  :: cfg
+   type(error_collection_t)  :: errs
+   character(len=*), parameter :: toml_text =                       &
+      '[nutrients]'                              // new_line('a') // &
+      'sorp_coef = 0.005'
+
+   call toml_loads(doc, toml_text)
+   doc_ptr => doc
+
+   call read_nutrients_toml(doc_ptr, cfg, errs)
+   call assertEqual(0, errs%count())
+   @assertEqual(0, len_trim(cfg%events_file), 'events_file unallocated when absent')
+end subroutine
+
+@test
 subroutine test_apply_nutrients_defaults_zero()
    use, intrinsic :: iso_fortran_env, only: real64
    use nutrients_config_mod, only: nutrients_config_t

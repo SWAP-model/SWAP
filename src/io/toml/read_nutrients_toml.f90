@@ -8,7 +8,8 @@ module read_nutrients_toml_mod
 
    use, intrinsic :: iso_fortran_env, only: real64
    use tomlf, only: toml_table, toml_array, get_value, len
-   use toml_field_helpers_mod, only: get_optional_real_with_default
+   use toml_field_helpers_mod, only: get_optional_real_with_default, &
+                                     get_optional_string_with_default
    use nutrients_config_mod, only: nutrients_config_t
    use error_mod, only: error_collection_t, ERR_PARSE_TYPE_MISMATCH
    implicit none
@@ -37,6 +38,9 @@ contains
       cfg%present = .true.
       call get_optional_real_with_default(nut_tbl, 'sorp_coef', cfg%sorp_coef, &
                                           0.0_real64, 'nutrients.sorp_coef', errors)
+      call get_optional_string_with_default(nut_tbl, 'events_file', &
+                                            cfg%events_file, '', &
+                                            'nutrients.events_file', errors)
 
       ! [nutrients.initial] sub-table is optional.
       init_tbl => null()
