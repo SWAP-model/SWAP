@@ -382,7 +382,7 @@ module cropwofost_config_mod
    end type wofost_bulb_t
 
    ! ------------------------------------------------------------------
-   ! N-P-K nutrient (stub-errored when flcropnut=.true.)
+   ! N-P-K nutrient (activated when flcropnut=.true.; ADR 0025 N1, ADR 0028 N3)
    ! ------------------------------------------------------------------
    type :: wofost_nutrient_t
       logical      :: flcropnut = .false.
