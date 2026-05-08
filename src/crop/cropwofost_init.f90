@@ -59,7 +59,7 @@ contains
          dvsend, swharv,                                                      &
          relmf, swpotrelmf,                                                   &
          schedule,                                                             &
-         dvs, tsum, daycrop, nofd
+         dvs, tsum, daycrop, nofd, flCropNut
       use array_utils, only: afgen
       use error_mod,   only: fatalerr_collected
       implicit none
@@ -457,12 +457,12 @@ contains
       daycrop = 0
       nofd    = 0
 
-      ! [nutrients] N1: apply nutrient block to legacy globals when
-      ! flcropnut=true on this rotation. Validator and the runtime
-      ! gate at tillage.f90:73 still control whether nutrient physics
-      ! actually runs; this just makes the typed-config inputs
-      ! available if/when the gate is lifted (N3).
-      if (cfg%nutrient%flcropnut) call apply_cropwofost_nutrient(cfg%nutrient)
+      ! [nutrients] N3: drive the legacy global flCropNut from the
+      ! per-rotation typed config. cropwofost_init_from_config runs at
+      ! every rotation start, so a sequence of rotations with mixed
+      ! flcropnut values toggles the gate correctly.
+      flCropNut = cfg%nutrient%flcropnut
+      if (flCropNut) call apply_cropwofost_nutrient(cfg%nutrient)
 
    end subroutine cropwofost_init_from_config
 
