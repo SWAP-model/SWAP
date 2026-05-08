@@ -17,8 +17,9 @@
 !!     FraDeceasedLvToSoil  — 3rd arg (intent out), set from cfg%management
 !!   The following are NOT set here:
 !!     FraHarLosOrm_lv/st/so  (harvest/death losses)
-!!       — set by the N-P-K block (readwofost lines 1086-1088), gated on
-!!         flCropNut; stub-errored for TOML path so no action needed.
+!!       — set by apply_cropwofost_nutrient when flcropnut=true on the
+!!         current rotation (ADR 0025 N1). For flcropnut=false rotations
+!!         these stay at their wofost() local defaults.
 !!     swco2, flco2                                  (CO2 correction — stub=0)
 !!     swsoybean, mg, dvsi, dvrmax1, dvrmax2,        (soybean — stub=0)
 !!       tmaxdvr, tmindvr, toptdvr, popt, pcrt,
@@ -407,8 +408,8 @@ contains
       swpotrelmf = cfg%management%swpotrelmf
 
       ! FraDeceasedLvToSoil — local SAVE in wofost(), returned via intent(out)
-      ! so the dispatch block can assign it.  (FraHarLosOrm_* are set by the
-      ! N-P-K block which is gated on flCropNut; stub-guarded above.)
+      ! so the dispatch block can assign it.  (FraHarLosOrm_* are set by
+      ! apply_cropwofost_nutrient below when flcropnut=true on this rotation.)
       FraDeceasedLvToSoil = cfg%management%fradeceasedlvtosoil
 
       ! ----------------------------------------------------------------

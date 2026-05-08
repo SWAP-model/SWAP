@@ -1136,11 +1136,9 @@
 !        NPART, NFIXF, NSLA, RNFLV/RT/ST, TCNT, DVSNLT, DVSNT, RDRNS,
 !        FNTRT, FRNX, NMXLV, FraHarLosOrm_lv/st/so) used to be read here
 !        from <cropfil>.crp via TTutil rdinit/rdsdou. Read block deleted
-!        as part of legacy readers physical deletion. flCropNut=1 is
-!        stub-errored upstream in DoTillage (tillage.f90), so this block
-!        is unreachable in the modern flow. A future TOML port of the
-!        nutrient sub-block (companion to ADR 0021) will reintroduce
-!        these reads from typed config.
+!        as part of legacy readers physical deletion. These globals are
+!        now populated by apply_cropwofost_nutrient when flcropnut=true
+!        on the active rotation (ADR 0025 N1, ADR 0028 N3).
 
 !        open output files and write header
          if (icrop.eq.1) then

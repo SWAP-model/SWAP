@@ -86,10 +86,8 @@ contains
       case (1)
       ! Legacy nutrient soil-management init (file-open + state
       ! initialization) deleted as part of legacy readers physical
-      ! deletion. flCropNut=1 is stub-errored upstream so all
-      ! SoilManagement(*) call sites are unreachable in the modern
-      ! flow. A future TOML port (companion to ADR 0021) will
-      ! reintroduce this with typed-config-driven init.
+      ! deletion. Initial soil-nutrient state now flows from the
+      ! [nutrients] typed config via apply_nutrients (ADR 0026 N2a).
       return
 
       case (2)
