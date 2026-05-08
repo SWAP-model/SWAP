@@ -554,6 +554,7 @@ transport routines (ADR 0026).
 | Key | Type | Required | Default | Notes |
 |---|---|---|---|---|
 | `sorp_coef` | real | optional | 0.0 | Sorption coefficient (m³/kg). Eliminates a legacy uninitialised-variable bug. |
+| `events_file` | string | optional | empty | Relative path to a CSV companion of timed soil management events (fertilizer applications, manure spreading). Resolved against `[general.paths].work` (`pathwork` global). Absent or empty → no amendments (ADR 0027). |
 
 #### `[nutrients.initial]` (sub-table, optional)
 
@@ -592,6 +593,39 @@ cno3 = 0.005
   globals for cases not using the nutrient subsystem. The runtime gate
   `flCropNut` (at `tillage.f90:73`) controls whether the pools are read;
   lifting that gate is N3's scope (future ADR 0028).
+
+#### `events_file` CSV format
+
+When `events_file` is specified, the adapter `apply_nutrients_events` loads
+a 4-column CSV companion describing timed soil management events (e.g.
+fertilizer applications, manure spreading). The CSV is sorted by date and
+same-day rows are grouped into single amendment events for the legacy
+runtime globals.
+
+**CSV columns:**
+
+| Column | Type | Range | Description |
+|---|---|---|---|
+| `date` | ISO `YYYY-MM-DD` | strictly ascending after sort | Event date. Same-day rows are grouped. |
+| `material` | integer | `[1, 20]` | Material index into hardcoded materials in `Wofost_SoilParameters` (1=Cattle manure, 10=Mineral N fertilizer, 3=Compost, etc.). |
+| `amount_kgha` | real | `[0, 500000]` | Application rate (kg/ha). Internally converted to kg/m² for the legacy runtime. |
+| `volat_fraction` | real | `[0, 1]` | Volatilization fraction (dimensionless). Tightened from legacy [0, 500000] typo to physically meaningful [0, 1]. |
+
+**Limits:**
+- Up to 1000 rows (`maxamn` parameter in `wofost_soil_declarations`).
+- Rows with the same date are grouped and combined into a single amendment event.
+
+**Example:**
+
+```
+date,material,amount_kgha,volat_fraction
+2003-04-15,10,100.0,0.05
+2003-06-20,1,25000.0,0.10
+2003-06-20,3,500.0,0.02
+```
+
+In the example, the two 2003-06-20 rows (materials 1 and 3) are grouped into
+a single amendment event.
 
 ### `[output.csv]` (Phase 4f-extend Bucket B)
 
