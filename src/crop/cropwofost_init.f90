@@ -82,9 +82,6 @@ contains
       if (cfg%bulb%swbulb == 1) &
          call fatalerr_collected('cropwofost_init', &
             'swbulb=1 not supported on TOML path; validator should have rejected.')
-      if (cfg%nutrient%flcropnut) &
-         call fatalerr_collected('cropwofost_init', &
-            'flcropnut=.true. not supported on TOML path; validator should have rejected.')
       if (cfg%co2%swco2 == 1) &
          call fatalerr_collected('cropwofost_init', &
             'swco2=1 not supported on TOML path; validator should have rejected.')
