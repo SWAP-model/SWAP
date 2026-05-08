@@ -4,7 +4,7 @@
 module tillage_mod
    use error_mod, only: fatalerr_collected
 
-   use variables, only: t1900, date, swhyst, swsolu, swoxygen, flCropNut, flMacroPore, flksatexm, zbotcp, NumNod, Bdens, layer, nraida, ParamVG, CofGen, &
+   use variables, only: t1900, date, swhyst, swsolu, swoxygen, flMacroPore, flksatexm, zbotcp, NumNod, Bdens, layer, nraida, ParamVG, CofGen, &
                         NumLay, pond, theta, h, dz, disnod, botcom, psilt, pclay, SwDiscrvert, tend, &
                         ! Tillage bridge variables with renaming (SAVE statements removed)
                         swtill => till_swtill, Ntill => till_Ntill, iTill => till_iTill, &
@@ -70,7 +70,6 @@ module tillage_mod
          if (swhyst == 1)      call fatalerr_collected ('DoTillage', 'swhyst = 1 not allowed')
          if (swsolu == 1)      call fatalerr_collected ('DoTillage', 'swsolu = 1 not (yet) allowed')
          if (swoxygen == 2)    call fatalerr_collected ('DoTillage', 'swoxygen = 2 not (yet) allowed')
-         if (flCropNut)        call fatalerr_collected ('DoTillage', 'flCropNut = 1 not (yet) allowed')
          if (flMacroPore)      call fatalerr_collected ('DoTillage', 'swmacro = 1 not (yet) allowed')
          if (flksatexm)        call fatalerr_collected ('DoTillage', 'flksatexm not (yet) allowed')
          if (SwDiscrvert == 1) call fatalerr_collected ('DoTillage', 'SwDiscrvert = 1 not (yet) allowed')
