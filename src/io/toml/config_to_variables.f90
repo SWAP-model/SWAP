@@ -44,6 +44,7 @@ module config_to_variables_mod
    public :: apply_soil_tillage
    public :: apply_irrigation_ssdi
    public :: apply_nutrients
+   public :: apply_nutrients_events
 
 contains
 
@@ -1445,7 +1446,122 @@ contains
       Hum_t  = cfg%initial%hum
       cNH4_t = cfg%initial%cnh4
       cNO3_t = cfg%initial%cno3
+
+      ! N2b (ADR 0027): stage timed amendments from the CSV companion.
+      call apply_nutrients_events(cfg)
    end subroutine apply_nutrients
+
+
+   !> Stage timed soil management events from the CSV companion
+   !! at cfg%events_file. Sets the legacy globals consumed by
+   !! SoilManagement(3) and Wofost_SoilAmendents.
+   !!
+   !! Default (empty events_file or empty CSV): namend = 0, isme = 1.
+   !!
+   !! See ADR 0027 ([nutrients] N2b).
+   subroutine apply_nutrients_events(cfg)
+      use, intrinsic :: iso_fortran_env, only: real64
+      use csv_reader_mod, only: read_csv_table
+      use error_mod, only: error_collection_t, fatalerr_collected
+      use nutrients_config_mod, only: nutrients_config_t
+      use variables, only: pathwork
+      use wofost_soil_declarations, only: MatNum, Amend, VolaFrac, &
+                                            TimeAmend, NuAmend, iamend, &
+                                            namend, isme, maxamn
+      type(nutrients_config_t), intent(in) :: cfg
+
+      real(real64), allocatable :: tbl(:,:)
+      type(error_collection_t)  :: errs
+      character(len=300) :: csvpath
+      character(len=14)  :: hdr(4)
+      integer :: i, j, n
+      real(real64) :: tmp_date, tmp_amount, tmp_volat
+      real(real64) :: tmp_mat_real
+
+      ! Default: no amendments. Reset legacy globals to a known state.
+      namend = 0
+      isme   = 1
+
+      ! events_file is always allocated by get_optional_string_with_default
+      ! (defaults to empty string on missing key), so check len_trim instead.
+      if (.not. allocated(cfg%events_file)) return
+      if (len_trim(cfg%events_file) == 0)   return
+
+      hdr(1) = 'date          '
+      hdr(2) = 'material      '
+      hdr(3) = 'amount_kgha   '
+      hdr(4) = 'volat_fraction'
+      csvpath = trim(pathwork) // trim(cfg%events_file)
+      call read_csv_table(trim(csvpath), hdr, tbl, errs)
+      call errs%abort_if_fatal()
+
+      n = 0
+      if (allocated(tbl)) n = size(tbl, 1)
+      if (n < 1) return     ! Empty CSV: no amendments. Not an error.
+      if (n > maxamn) then
+         call fatalerr_collected('apply_nutrients_events', &
+            'CSV row count exceeds maxamn (1000)')
+         return
+      end if
+
+      ! Per-row validation
+      do i = 1, n
+         if (nint(tbl(i, 2)) < 1 .or. nint(tbl(i, 2)) > 20) then
+            call fatalerr_collected('apply_nutrients_events', &
+               'material out of range [1, 20]')
+            return
+         end if
+         if (tbl(i, 3) < 0.0_real64 .or. tbl(i, 3) > 500000.0_real64) then
+            call fatalerr_collected('apply_nutrients_events', &
+               'amount_kgha out of range [0, 500000]')
+            return
+         end if
+         if (tbl(i, 4) < 0.0_real64 .or. tbl(i, 4) > 1.0_real64) then
+            call fatalerr_collected('apply_nutrients_events', &
+               'volat_fraction out of range [0, 1]')
+            return
+         end if
+      end do
+
+      ! Sort by date (in-place bubble sort, mirrors deleted SoilManagement(1)).
+      ! Acceptable O(n^2) given n <= 1000 and this runs once at config-load.
+      do i = 1, n - 1
+         do j = i + 1, n
+            if (tbl(i, 1) > tbl(j, 1)) then
+               tmp_date     = tbl(i, 1); tbl(i, 1) = tbl(j, 1); tbl(j, 1) = tmp_date
+               tmp_mat_real = tbl(i, 2); tbl(i, 2) = tbl(j, 2); tbl(j, 2) = tmp_mat_real
+               tmp_amount   = tbl(i, 3); tbl(i, 3) = tbl(j, 3); tbl(j, 3) = tmp_amount
+               tmp_volat    = tbl(i, 4); tbl(i, 4) = tbl(j, 4); tbl(j, 4) = tmp_volat
+            end if
+         end do
+      end do
+
+      ! Populate per-event legacy globals
+      do i = 1, n
+         MatNum(i)   = nint(tbl(i, 2))
+         Amend(i)    = 1.0e-4_real64 * tbl(i, 3)   ! kg/ha -> kg/m^2
+         VolaFrac(i) = tbl(i, 4)
+      end do
+
+      ! Group dosages per date (mirrors deleted SoilManagement(1)).
+      j = 1
+      NuAmend(j)   = 1
+      TimeAmend(j) = tbl(1, 1)
+      iamend(1, 1) = 1
+      do i = 2, n
+         if (abs(tbl(i, 1) - tbl(i - 1, 1)) < 1.0e-3_real64) then
+            NuAmend(j) = NuAmend(j) + 1
+         else
+            j = j + 1
+            NuAmend(j)   = 1
+            TimeAmend(j) = tbl(i, 1)
+         end if
+         iamend(j, NuAmend(j)) = i
+      end do
+
+      namend = j
+      isme   = 1
+   end subroutine apply_nutrients_events
 
 
    !> Mode-0 (fixed-date): stage CSV; populate ssdi_*_f_irr; deferred
