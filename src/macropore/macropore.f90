@@ -95,16 +95,18 @@ contains
   !! Functions called: -
   !! File usage: -
   !! @endnote
-  subroutine MACROPORE(ITask)
+  subroutine MACROPORE(ITask, state)
     use Variables
     use drainage_mod, only: drainage
     use macrorate_mod, only: macrorate
    use soilwaterbalance_mod, only: watstor
+    use swap_state_mod, only: swap_state_t
     implicit NONE
 
     ! Arguments
     integer ITask
     !! Task selector for macropore calculations
+    type(swap_state_t), intent(inout), optional :: state
 
     select case (itask)
     case (1)
@@ -116,7 +118,7 @@ contains
 
       ! Initialisation of flag for drain tube flDraTub and drainage basis ZDraBas
       if (SwDrRap.Eq.1 .and. SwDra.gt.0) then
-        if (SwDra.eq.1 .and. flInitDraBas) call drainage
+        if (SwDra.eq.1 .and. flInitDraBas .and. present(state)) call drainage(state)
         ! Flag indicating whether drainage system is tube or open drain
         flDraTub(1) = .false.
         if (SwDTyp(NumLevRapDra).eq.1) flDraTub(1) = .true.

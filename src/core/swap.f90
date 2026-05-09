@@ -182,7 +182,7 @@ if (iTask == 1) then
    if (flSurfaceWater) call SurfaceWater(1, state, request_smaller_dt)
 
 !  initialize MacroPore rate/state variables
-   if (flMacroPore) call MACROPORE(1)
+   if (flMacroPore) call MACROPORE(1, state)
 
 !  initialize SoilTemperature rate/state variables
    if (flTemperature) call Temperature(1)
@@ -287,7 +287,7 @@ if (iTask == 2) then
          fldtreduce = .false.
 
 !        calculate drainage fluxes
-         if (fldrain)                           call Drainage()
+         if (fldrain)                           call Drainage(state)
          ! SS-SWST Phase 2: SurfaceWater sets request_smaller_dt; propagate to fldecdt here.
          if (.not.fldecdt .and. flSurfaceWater) call SurfaceWater(2, state, request_smaller_dt)
          if (request_smaller_dt) fldecdt = .true.

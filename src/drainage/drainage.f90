@@ -72,6 +72,7 @@ module drainage_mod
    use distribute_drainage, only: DIVDRA
    use array_utils, only: afgen
    use swap_constants, only: small
+   use swap_state_mod, only: swap_state_t
    implicit none
 
    public :: drainage
@@ -79,7 +80,7 @@ module drainage_mod
 
 contains
 
-   subroutine bocodrb(dh)
+   subroutine bocodrb(dh, state)
       !> Calculate drainage flux using Hooghoudt/Ernst or resistance methods
     !!
     !! This subroutine calculates the total drainage flux for a single drainage system
@@ -137,11 +138,12 @@ contains
     !!@endnote
     !!
       use variables, only: dramet,gwl,zbotdr,basegw,l,qdrain,ipos,khtop,khbot,kvtop,kvbot,entres,wetper,zintf,geofac,swdtyp,      &
-owltab,t1900,swallo,drares,infres,qdrtab,nrlevs,swnrsrf,cofintfl,expintfl,dt,shape,FlMacropore,NumLevRapDra,ZDraBas,swliminf,nowltab
+owltab,t1900,swallo,drares,infres,qdrtab,nrlevs,swnrsrf,cofintfl,expintfl,dt,shape,FlMacropore,NumLevRapDra,swliminf,nowltab
       use array_utils, only: afgen
 
       ! --- global
       real(8) dh
+      type(swap_state_t), intent(inout) :: state
 
       ! ----------------------------------------------------------------------
       ! --- local
@@ -156,6 +158,8 @@ owltab,t1900,swallo,drares,infres,qdrtab,nrlevs,swnrsrf,cofintfl,expintfl,dt,sha
 
       character(len=200) messag
       ! ----------------------------------------------------------------------
+
+      associate(ZDraBas => state%surfacewater%ZDraBas)
 
       gwldra = gwl
 
@@ -303,10 +307,10 @@ owltab,t1900,swallo,drares,infres,qdrtab,nrlevs,swnrsrf,cofintfl,expintfl,dt,sha
                qdrain(1) = afgen(qdrtab, 50, abs(gwldra))
             end if
 
-            return
+            end associate
     end subroutine bocodrb
 
-    subroutine drainage
+    subroutine drainage(state)
     !> Main drainage orchestration routine
     !!
     !! This subroutine coordinates all drainage-related calculations for each time step,
@@ -368,14 +372,53 @@ owltab,t1900,swallo,drares,infres,qdrtab,nrlevs,swnrsrf,cofintfl,expintfl,dt,sha
     !!@endnote
     !!
 
-               use variables
+               use variables, only: gwl,nrlevs,numnod,dramet,swdtyp,NumLevRapDra,owltab,nowltab,t1900, &
+                  qdrain,qdra,zbotdr,flzerointr,flzerocumu,swdivd,swdislay,swtopdislay,fTopDisLay, &
+                  zTopDisLay,dz,ksatfit,ksatexm,fluseksatexm,layer,cofani,l,Swdivdinf,Swnrsrf,    &
+                  SwTopnrsrf,dt,FacDpthInf,madr,                                                    &
+                  flInitDraBas,ZDraBas,                                                             &
+                  inqdra,inqdra_in,inqdra_out,iqdra,cqdra,cqdrain,cqdrainin,cqdrainout,qdrtot
                use array_utils, only: afgen
+
+               type(swap_state_t), intent(inout) :: state
+
                !     local
                integer node, level
                real(8) zCum, difzTopDisLay(madr), ratio, ratiodz, sumqdr(madr), dh
                !, temptab(2*maowl) ????
                integer nodeTopDisLay(madr)
                CHARACTER(len=33) messag
+
+               ! Allocate per-level state arrays if not yet done (guard for
+               ! fldrain path where surfacewater_init may not have been called).
+               if (.not. allocated(state%surfacewater%cqdrain)) then
+                  allocate(state%surfacewater%cqdrain(nrlevs))
+                  state%surfacewater%cqdrain = 0.0d0
+               end if
+               if (.not. allocated(state%surfacewater%cqdrainin)) then
+                  allocate(state%surfacewater%cqdrainin(nrlevs))
+                  state%surfacewater%cqdrainin = 0.0d0
+               end if
+               if (.not. allocated(state%surfacewater%cqdrainout)) then
+                  allocate(state%surfacewater%cqdrainout(nrlevs))
+                  state%surfacewater%cqdrainout = 0.0d0
+               end if
+               if (.not. allocated(state%surfacewater%qdra)) then
+                  allocate(state%surfacewater%qdra(nrlevs, numnod))
+                  state%surfacewater%qdra = 0.0d0
+               end if
+               if (.not. allocated(state%surfacewater%inqdra)) then
+                  allocate(state%surfacewater%inqdra(nrlevs, numnod))
+                  state%surfacewater%inqdra = 0.0d0
+               end if
+               if (.not. allocated(state%surfacewater%inqdra_in)) then
+                  allocate(state%surfacewater%inqdra_in(nrlevs, numnod))
+                  state%surfacewater%inqdra_in = 0.0d0
+               end if
+               if (.not. allocated(state%surfacewater%inqdra_out)) then
+                  allocate(state%surfacewater%inqdra_out(nrlevs, numnod))
+                  state%surfacewater%inqdra_out = 0.0d0
+               end if
 
                !   - In case of macropores: initialise drainage basis for rapid drainage through macropores
                if (flInitDraBas) then
@@ -386,19 +429,23 @@ owltab,t1900,swallo,drares,infres,qdrtab,nrlevs,swnrsrf,cofintfl,expintfl,dt,sha
 
                   if (dramet .lt. 3) then
                      ZDraBas = zbotdr(1)
+                     state%surfacewater%ZDraBas = ZDraBas
                   else
                      if (swdtyp(NumLevRapDra) .eq. 1) then
                         ZDraBas = zbotdr(NumLevRapDra)
+                        state%surfacewater%ZDraBas = ZDraBas
                      else
                         !do i = 1,2*maowl
                         !   temptab(i) = owltab(NumLevRapDra,i)
                         !end do
                         !ZDraBas = afgen (temptab,2*maowl,t1900)
                         ZDraBas = afgen(owltab(NumLevRapDra, 1:2*nowltab(NumLevRapDra)), 2*nowltab(NumLevRapDra), t1900)
+                        state%surfacewater%ZDraBas = ZDraBas
                      end if
                   end if
 
                   flInitDraBas = .false.
+                  state%surfacewater%flInitDraBas = .false.
 
                   Return
 
@@ -409,20 +456,28 @@ owltab,t1900,swallo,drares,infres,qdrtab,nrlevs,swnrsrf,cofintfl,expintfl,dt,sha
                   do node = 1, numnod
                      do level = 1, nrlevs
                         inqdra(level, node) = 0.0d0
+                        state%surfacewater%inqdra(level, node) = 0.0d0
                         inqdra_in(level, node) = 0.0d0
+                        state%surfacewater%inqdra_in(level, node) = 0.0d0
                         inqdra_out(level, node) = 0.0d0
+                        state%surfacewater%inqdra_out(level, node) = 0.0d0
                      end do
                   end do
                   iqdra = 0.0d0
+                  state%surfacewater%iqdra = 0.0d0
                end if
 
                ! --- reset cumulative soil water fluxes
                if (flzerocumu) then
                   cqdra = 0.0d0
+                  state%surfacewater%cqdra = 0.0d0
                   do level = 1, nrlevs
                      cqdrain(level) = 0.0d0
+                     state%surfacewater%cqdrain(level) = 0.0d0
                      cqdrainin(level) = 0.0d0
+                     state%surfacewater%cqdrainin(level) = 0.0d0
                      cqdrainout(level) = 0.0d0
+                     state%surfacewater%cqdrainout(level) = 0.0d0
                   end do
                end if
 
@@ -435,7 +490,7 @@ owltab,t1900,swallo,drares,infres,qdrtab,nrlevs,swnrsrf,cofintfl,expintfl,dt,sha
                end if
 
                ! --- calculate total drainage rate and state variables
-               call bocodrb(dh)
+               call bocodrb(dh, state)
 
                ! --- partition drainage flux over compartments
                if (swdivd .eq. 1) then
@@ -501,11 +556,19 @@ owltab,t1900,swallo,drares,infres,qdrtab,nrlevs,swnrsrf,cofintfl,expintfl,dt,sha
                do level = 1, nrlevs
                   qdrtot = qdrtot + qdrain(level)
                end do
+               state%surfacewater%qdrtot = qdrtot
 
-               return
+               ! Dual-write qdra to state (global qdra used by divdra;
+               ! state copy kept current for readers in waterbalance etc.)
+               do node = 1, numnod
+                  do level = 1, nrlevs
+                     state%surfacewater%qdra(level, node) = qdra(level, node)
+                  end do
+               end do
+
             end subroutine drainage
 
-            subroutine bocodre(dh)
+            subroutine bocodre(dh, state)
                !> Calculate drainage/infiltration with surface water management
     !!
     !! This subroutine handles drainage calculations when surface water management
@@ -575,12 +638,13 @@ owltab,t1900,swallo,drares,infres,qdrtab,nrlevs,swnrsrf,cofintfl,expintfl,dt,sha
     !!     File usage         : -  Error handling
     !! ----------------------------------------------------------------------
     !!@endnote
-  use variables, only: swsec,swsrf,nrlevs,nrpri,gwl,zbotdr,taludr,widthr,pond,pondmx,swdtyp,dt,wls,wlp,drainl,l,rdrain,rinfi,      &
-              rentry, rexit, gwlinf, wetper, qdrain, qdrd, impend, nmper, wscap, swst, swnrsrf, rsurfdeep, rsurfshallow, cofintfl, &
-                                    expintfl, t1900, FlMacropore, NumLevRapdra, ZDraBas
+  use variables, only: swsec,swsrf,nrlevs,nrpri,gwl,zbotdr,taludr,widthr,pond,pondmx,swdtyp,dt,wlp,drainl,l,rdrain,rinfi,      &
+              rentry, rexit, gwlinf, wetper, qdrain, qdrd, impend, nmper, wscap, swnrsrf, rsurfdeep, rsurfshallow, cofintfl, &
+                                    expintfl, t1900, FlMacropore, NumLevRapdra
 
 ! --- global
                real(8) dh
+               type(swap_state_t), intent(inout) :: state
 
 ! --- local
                integer level, imper
@@ -588,6 +652,21 @@ owltab,t1900,swallo,drares,infres,qdrtab,nrlevs,swnrsrf,cofintfl,expintfl,dt,sha
                character(len=200) messag
 ! Removed save statement for imper to avoid issues in parallel runs
 ! ----------------------------------------------------------------------
+
+               associate( &
+                  wls    => state%surfacewater%wls,    &
+                  swst   => state%surfacewater%swst,   &
+                  ZDraBas => state%surfacewater%ZDraBas)
+
+! --- Spec D7: zero drainage when groundwater is dry.
+!     Was in SurfaceWater(2) in legacy code; relocated here per ADR 0030
+!     since qdrain is drainage-owned.
+               if (gwl .gt. 998.0d0) then
+                  do level = 1, nrlevs
+                     qdrain(level) = 0.0d0
+                  end do
+                  return
+               end if
 
 ! --- summate fluxes for use by swballev and swlevbal
                qdrd = 0.0d0
@@ -744,7 +823,7 @@ owltab,t1900,swallo,drares,infres,qdrtab,nrlevs,swnrsrf,cofintfl,expintfl,dt,sha
                               end if
                            end if
 
-                           return
+                           end associate
                            end subroutine bocodre
 
                            end module drainage_mod

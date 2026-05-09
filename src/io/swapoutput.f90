@@ -3714,7 +3714,7 @@
            fldtreduce = .false.
 
 ! ---   calculate drainage fluxes
-           if (fldrain)                           call Drainage
+           if (fldrain)                           call Drainage(state_om)
            if (.not.fldecdt .and. flSurfaceWater) call SurfaceWater(2, state_om, request_smaller_dt_om)
            if (request_smaller_dt_om) fldecdt = .true.
            if (SwFrost.eq.1)                      call FrozenBounds
