@@ -287,6 +287,10 @@ if (iTask == 2) then
 
 !        calculate drainage fluxes
          if (fldrain)                           call Drainage()
+         ! Phase 1 transitional: SurfaceWater dual-writes fldecdt and sets
+         ! request_smaller_dt; we read the legacy fldecdt below. Phase 2 will
+         ! propagate request_smaller_dt → fldecdt at this call site BEFORE
+         ! removing the WLEVBAL fldecdt dual-write, then drop fldecdt entirely.
          if (.not.fldecdt .and. flSurfaceWater) call SurfaceWater(2, state, request_smaller_dt)
          if (SwFrost.eq.1)                      call FrozenBounds()
 

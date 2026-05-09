@@ -131,6 +131,9 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
       endif
 
 ! --- no drainage at all
+      ! PHASE 2 TARGET (spec D7): this rule is morally drainage-side
+      ! (the surface water just observes that gwl is dry). Phase 2 moves
+      ! it into drainage.f90/bocodre. surfacewater stops touching qdrain.
       if (gwl.gt.998.0d0) then
         do level = 1,nrlevs
           qdrain(level) = 0.0d0
@@ -376,7 +379,6 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
          sw_hwlman => state%surfacewater%hwlman, &
          sw_vtair  => state%surfacewater%vtair,  &
          sw_imper  => state%surfacewater%imper,  &
-         sw_sttab  => state%surfacewater%sttab,  &
          sw_cqdrd  => state%surfacewater%cqdrd,  &
          sw_cwsupp => state%surfacewater%cwsupp, &
          sw_cwout  => state%surfacewater%cwout)
