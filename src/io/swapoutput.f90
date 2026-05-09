@@ -3590,6 +3590,15 @@
 ! ----------------------------------------------------------------------
 !     Date               : July 2009
 !     Purpose            : open and write data to explore storage/recharge
+!
+!     ARCHITECTURAL NOTE (SS-SWST Phase 2 Task 10 / ADR 0030):
+!     This routine calls SurfaceWater(2/3) and Drainage() despite
+!     living in the output file because it is a finite-difference
+!     perturbation experiment computing dV/dGWL (stocot1).  Each
+!     iteration is a what-if perturbation, not a timestep advance.
+!     state_om is a private SAVE-local clone — see the declaration
+!     block below and ADR 0030 for rationale.  Do NOT classify
+!     these compute calls as dead code.
 ! ----------------------------------------------------------------------
 
       use variables
