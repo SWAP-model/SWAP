@@ -764,10 +764,11 @@
       real(8)   cqbot              ! Cumulative amount of water flow through bottom of simulated soil column (L)
       real(8)   cqbotdo            ! Cumulative amount of water (L) passed through the soil column bottom in downward direction
       real(8)   cqbotup            ! Cumulative amount of water (L) passed through the soil column bottom in upward direction
-      real(8)   cqdra              ! Cumulative amount of lateral drainage (L)
-      real(8)   cqdrain(Madr)      ! Cumulative amount of lateral drainage for each drainage level (L)
-      real(8)   cqdrainin(Madr)    ! Cumulative infiltration flux (L) for each drainage level
-      real(8)   cqdrainout(Madr)   ! Cumulative drainage flux (L) for each drainage level
+      ! SS-SWST Phase 2 Task 11 C2: cqdra/cqdrain/cqdrainin/cqdrainout removed — state%surfacewater owns them.
+      ! real(8)   cqdra              ! Moved to surfacewater_state_t%cqdra
+      ! real(8)   cqdrain(Madr)      ! Moved to surfacewater_state_t%cqdrain(:)
+      ! real(8)   cqdrainin(Madr)    ! Moved to surfacewater_state_t%cqdrainin(:)
+      ! real(8)   cqdrainout(Madr)   ! Moved to surfacewater_state_t%cqdrainout(:)
       real(8)   cqprai             ! Cumulative amount of net rain (L)
       real(8)   cqssdi             ! Cumulative amount of subsurface drip irrigation (L)
       real(8)   cqrot              ! Cumulative amount of extracted water by roots (L)
@@ -822,8 +823,10 @@
       real(8)   inpola(macp)       ! Weight for interpolation between current node and upper node
       real(8)   inpolb(macp)       ! Weight for interpolation between current node and lower node
       real(8)   inq(macp+1)        ! Array with intermediate amounts of water flow between current and upper compartment (L)
-      real(8)   inqdra(Madr,macp)  ! Array with intermediate amounts of lateral drainage for each level and compartment (L)
-      real(8)   inqdra_in(Madr,macp), inqdra_out(Madr,macp)
+      ! SS-SWST Phase 2 Task 11 C2: inqdra/inqdra_in/inqdra_out removed — state%surfacewater owns them.
+      ! real(8)   inqdra(Madr,macp)      ! Moved to surfacewater_state_t%inqdra
+      ! real(8)   inqdra_in(Madr,macp)   ! Moved to surfacewater_state_t%inqdra_in
+      ! real(8)   inqdra_out(Madr,macp)  ! Moved to surfacewater_state_t%inqdra_out
       real(8)   inqrot(macp)       ! Array with intermediate amounts of extracted water by roots for each compartment (L)
       real(8)   inqssdi(macp)      ! Array with intermediate amounts of subsurface drip irrigation for each compartment (L)
       real(8)   qpotrot_day(macp)  ! Array with amounts of potential extracted water by roots for each compartment since start of day (L)
@@ -833,7 +836,8 @@
       real(8)   iqbot              ! Intermediate amount of water flow through bottom of simulated soil column (L)
       real(8)   iqtdo, iqtup, iqinfmax, qinfmax
       real(8)   iqdo(macp+1), iqup(macp+1)
-      real(8)   iqdra              ! Intermediate amount of lateral drainage (L)
+      ! SS-SWST Phase 2 Task 11 C2: iqdra removed — state%surfacewater%iqdra owns it.
+      ! real(8)   iqdra              ! Moved to surfacewater_state_t%iqdra
       real(8)   iqrot              ! Intermediate amount of extracted water by roots (L)
       real(8)   iqssdi             ! Intermediate amount of water input via subsurface drip irrigation (L)
       real(8)   iqredwet           ! Intermediate amount of reduced root water extraction due to wet conditions (L)
@@ -877,7 +881,8 @@
       real(8)   qdrain(Madr)       ! Total lateral drainage flux (L/T) for each drainage level
       real(8)   qdraincomp(macp)   ! Total lateral drainage flux (L/T) for each compartment
       real(8)   qdrtab(50)         ! Array with lateral drainage flux (L/T) as function of groundwater level (L)
-      real(8)   qdrtot             ! Total lateral drainage flux (L/T)
+      ! SS-SWST Phase 2 Task 11 C2: qdrtot removed — state%surfacewater%qdrtot owns it.
+      ! real(8)   qdrtot             ! Moved to surfacewater_state_t%qdrtot
       real(8)   qimmob(macp)       ! Soil water flux between mobile and immobile fraction in case of fingered flow (L/T)
       real(8)   qssdisum           ! Total subsurface irrigation flux (L/T)
       real(8)   qrosum             ! Total root water extraction flux (L/T)
@@ -956,7 +961,8 @@
       real(8)   volact             ! Water storage (L) of soil column at current time level
       real(8)   volini             ! Water storage (L) of soil column at start of simulation
       real(8)   volm1              ! Water storage (L) of soil column at former time level
-      real(8)   vtair              ! Total depth of air in the soil column (L)
+      ! SS-SWST Phase 2 Task 11 C2: vtair removed — state%surfacewater%vtair owns it.
+      ! real(8)   vtair              ! Moved to surfacewater_state_t%vtair
       real(8)   wbalance           ! Cumulative water balance error (L)
       real(8)   wetper(Madr)       ! Array with wet perimeter of drain (L) for each drainage level
       real(8)   z(macp)            ! Depth of a node (L)
@@ -1208,9 +1214,10 @@
       real(8) WaSrDm1Ini           ! Initial water storage in domain 1 (MB) (L)
       real(8) WaSrDm2              ! Water storage in domain 2 (IC) (L)
       real(8) WaSrDm2Ini           ! Initial water storage in domain 2 (IC) (L)
-      real(8) ZDraBas              ! Level of drainage basis (drain depth or surface water level) for rapid drainage calculations (L)
+      ! SS-SWST Phase 2 Task 11 C2: ZDraBas/flInitDraBas removed — state%surfacewater owns them.
+      ! real(8) ZDraBas              ! Moved to surfacewater_state_t%ZDraBas
       logical FlDecMpRat           ! Flag indicating decrease of macropore fluxes when convergence is not reached
-      logical flInitDraBas         ! Flag indicating initialization of basis for rapid drainage
+      ! logical flInitDraBas         ! Moved to surfacewater_state_t%flInitDraBas
       logical flmacropore          ! Flag indicating simulation of macropore flow
 
 ! --- macropore work arrays (previously local SAVE in macropore.f90)
@@ -1251,25 +1258,45 @@
 ! --- surface water variables
       integer swswb,swdrf,swsrf,swallo(Madr),swdtyp(Madr),swnrsrf
       integer swqhr,swsec,nrpri,nrsec,nmper,swman(mamp),SwTopnrsrf
-      integer nqh(mamp),drf,swb,nphase(mamp),nodhd(mamp),numadj
-      integer intwl(mamp),imper
+      ! SS-SWST Phase 2 Task 11 C2: numadj/imper removed — state%surfacewater owns them.
+      integer nqh(mamp),drf,swb,nphase(mamp),nodhd(mamp)
+      ! numadj removed (surfacewater_state_t%numadj)
+      integer intwl(mamp)
+      ! imper removed (surfacewater_state_t%imper)
       integer nowltab(madr)
       real(8) widthr(Madr),taludr(Madr),rdrain(Madr),rsurfdeep
       real(8) rsurfshallow,rinfi(Madr),rentry(Madr),rexit(Madr)
       real(8) gwlinf(Madr),wlptab(2*mawlp)
       real(8) impend(mamp)
       real(8) wldip(mamp),wscap(mamp),hbweir(mamp)
-      real(8) osswlm,wlstar,wlp,alphaw(mamp),betaw(mamp)
+      ! SS-SWST Phase 2 Task 11 C2: wlstar removed — state%surfacewater%wlstar owns it.
+      real(8) osswlm,wlp,alphaw(mamp),betaw(mamp)
+      ! wlstar removed (surfacewater_state_t%wlstar)
       real(8) wls1_init    ! TOML pipeline: initial wls1 = wlact - altcu; altcu=0 is enforced by drainage_config_validate
       real(8) dropr(mamp*mamte),hdepth(mamp*mamte)
       real(8) gwlcrit(mamp,mamte),hcrit(mamp,mamte),vcrit(mamp,mamte)
       real(8) hqhtab(mamp,mamte),qqhtab(mamp,mamte)
       real(8) wlsman(mamp,mamte)
-      real(8) wlstab(2*mawls),sttab(22,2)
-      real(8) swstini,swst,wlsbak(4)
-      real(8) cofintfl,expintfl,cqdrd,cwsupp,cwout,wls
-      real(8) owltab(Madr,2*maowl),hwlman,wlsold,qdrd
-      logical flsurfacewater,overfl
+      ! SS-SWST Phase 2 Task 11 C2: sttab removed — state%surfacewater%sttab owns it.
+      real(8) wlstab(2*mawls)
+      ! sttab(22,2) removed (surfacewater_state_t%sttab)
+      ! SS-SWST Phase 2 Task 11 C2: swstini/swst/wlsbak removed — state%surfacewater owns them.
+      ! real(8) swstini   ! Moved to surfacewater_state_t%swstini
+      ! real(8) swst      ! Moved to surfacewater_state_t%swst
+      ! real(8) wlsbak(4) ! Moved to surfacewater_state_t%wlsbak
+      ! SS-SWST Phase 2 Task 11 C2: cqdrd/cwsupp/cwout/wls removed — state%surfacewater owns them.
+      real(8) cofintfl,expintfl
+      ! cqdrd removed (surfacewater_state_t%cqdrd)
+      ! cwsupp removed (surfacewater_state_t%cwsupp)
+      ! cwout removed  (surfacewater_state_t%cwout)
+      ! wls removed    (surfacewater_state_t%wls)
+      ! SS-SWST Phase 2 Task 11 C2: hwlman/wlsold removed — state%surfacewater owns them.
+      real(8) owltab(Madr,2*maowl),qdrd
+      ! hwlman removed (surfacewater_state_t%hwlman)
+      ! wlsold removed (surfacewater_state_t%wlsold)
+      ! SS-SWST Phase 2 Task 11 C2: overfl removed — state%surfacewater%overfl owns it.
+      logical flsurfacewater
+      ! overfl removed (surfacewater_state_t%overfl)
 
       ! Preparation before crop growth
       logical   flCropPrep         ! Flag indicating if ploughing opportunity has been realized

@@ -372,12 +372,13 @@ owltab,t1900,swallo,drares,infres,qdrtab,nrlevs,swnrsrf,cofintfl,expintfl,dt,sha
     !!@endnote
     !!
 
+               ! SS-SWST Phase 2 Task 11 B1: removed globals flInitDraBas,ZDraBas,inqdra*,iqdra,
+               ! cqdra,cqdrain*,qdrtot — now written only via state%surfacewater.
+               ! qdra kept: still written to global for divdra callers (frozencond divdra path).
                use variables, only: gwl,nrlevs,numnod,dramet,swdtyp,NumLevRapDra,owltab,nowltab,t1900, &
                   qdrain,qdra,zbotdr,flzerointr,flzerocumu,swdivd,swdislay,swtopdislay,fTopDisLay, &
                   zTopDisLay,dz,ksatfit,ksatexm,fluseksatexm,layer,cofani,l,Swdivdinf,Swnrsrf,    &
-                  SwTopnrsrf,dt,FacDpthInf,madr,                                                    &
-                  flInitDraBas,ZDraBas,                                                             &
-                  inqdra,inqdra_in,inqdra_out,iqdra,cqdra,cqdrain,cqdrainin,cqdrainout,qdrtot
+                  SwTopnrsrf,dt,FacDpthInf,madr
                use array_utils, only: afgen
 
                type(swap_state_t), intent(inout) :: state
@@ -421,30 +422,28 @@ owltab,t1900,swallo,drares,infres,qdrtab,nrlevs,swnrsrf,cofintfl,expintfl,dt,sha
                end if
 
                !   - In case of macropores: initialise drainage basis for rapid drainage through macropores
-               if (flInitDraBas) then
+               if (state%surfacewater%flInitDraBas) then
                   if (NumLevRapDra .gt. nrlevs) then
                      messag = ' NUMLEVRAPDRA greater then NRLEVS'
                      call fatalerr_collected('MacroRead', messag)
                   end if
 
+                  ! SS-SWST Phase 2 Task 11: ZDraBas global dropped; write only to state.
                   if (dramet .lt. 3) then
-                     ZDraBas = zbotdr(1)
-                     state%surfacewater%ZDraBas = ZDraBas
+                     state%surfacewater%ZDraBas = zbotdr(1)
                   else
                      if (swdtyp(NumLevRapDra) .eq. 1) then
-                        ZDraBas = zbotdr(NumLevRapDra)
-                        state%surfacewater%ZDraBas = ZDraBas
+                        state%surfacewater%ZDraBas = zbotdr(NumLevRapDra)
                      else
                         !do i = 1,2*maowl
                         !   temptab(i) = owltab(NumLevRapDra,i)
                         !end do
-                        !ZDraBas = afgen (temptab,2*maowl,t1900)
-                        ZDraBas = afgen(owltab(NumLevRapDra, 1:2*nowltab(NumLevRapDra)), 2*nowltab(NumLevRapDra), t1900)
-                        state%surfacewater%ZDraBas = ZDraBas
+                        !state%surfacewater%ZDraBas = afgen (temptab,2*maowl,t1900)
+                        state%surfacewater%ZDraBas = afgen(owltab(NumLevRapDra, 1:2*nowltab(NumLevRapDra)), 2*nowltab(NumLevRapDra), t1900)
                      end if
                   end if
 
-                  flInitDraBas = .false.
+                  ! SS-SWST Phase 2 Task 11 B1: flInitDraBas global write dropped.
                   state%surfacewater%flInitDraBas = .false.
 
                   Return
@@ -452,31 +451,25 @@ owltab,t1900,swallo,drares,infres,qdrtab,nrlevs,swnrsrf,cofintfl,expintfl,dt,sha
                end if
 
                ! --- reset intermediate soil water fluxes
+               ! SS-SWST Phase 2 Task 11 B1: global dual-writes for inqdra/iqdra dropped.
                if (flzerointr) then
                   do node = 1, numnod
                      do level = 1, nrlevs
-                        inqdra(level, node) = 0.0d0
                         state%surfacewater%inqdra(level, node) = 0.0d0
-                        inqdra_in(level, node) = 0.0d0
                         state%surfacewater%inqdra_in(level, node) = 0.0d0
-                        inqdra_out(level, node) = 0.0d0
                         state%surfacewater%inqdra_out(level, node) = 0.0d0
                      end do
                   end do
-                  iqdra = 0.0d0
                   state%surfacewater%iqdra = 0.0d0
                end if
 
                ! --- reset cumulative soil water fluxes
+               ! SS-SWST Phase 2 Task 11 B1: global dual-writes for cqdra/cqdrain* dropped.
                if (flzerocumu) then
-                  cqdra = 0.0d0
                   state%surfacewater%cqdra = 0.0d0
                   do level = 1, nrlevs
-                     cqdrain(level) = 0.0d0
                      state%surfacewater%cqdrain(level) = 0.0d0
-                     cqdrainin(level) = 0.0d0
                      state%surfacewater%cqdrainin(level) = 0.0d0
-                     cqdrainout(level) = 0.0d0
                      state%surfacewater%cqdrainout(level) = 0.0d0
                   end do
                end if
@@ -552,14 +545,14 @@ owltab,t1900,swallo,drares,infres,qdrtab,nrlevs,swnrsrf,cofintfl,expintfl,dt,sha
                   end do
                end if
 
-               qdrtot = 0.0d0
+               ! SS-SWST Phase 2 Task 11 B1: qdrtot global write dropped; only state written.
+               state%surfacewater%qdrtot = 0.0d0
                do level = 1, nrlevs
-                  qdrtot = qdrtot + qdrain(level)
+                  state%surfacewater%qdrtot = state%surfacewater%qdrtot + qdrain(level)
                end do
-               state%surfacewater%qdrtot = qdrtot
 
-               ! Dual-write qdra to state (global qdra used by divdra;
-               ! state copy kept current for readers in waterbalance etc.)
+               ! SS-SWST Phase 2 Task 11 B1: qdra still written to global for divdra callers
+               ! (frozencond.f90 divdra call); state also kept current.
                do node = 1, numnod
                   do level = 1, nrlevs
                      state%surfacewater%qdra(level, node) = qdra(level, node)

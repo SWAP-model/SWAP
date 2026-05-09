@@ -319,18 +319,21 @@ contains
       !> @note
       !> Date: 29/9/99
       !> @endnote
-      subroutine fluxes ()
-      use variables, only: q,qbot,dt,inq,numnod,thetm1,theta,dz,qrot,qdra,qimmob,qtop,qrosum,qdrtot,volact,volm1,swbotb,     &
+      ! SS-SWST Phase 2 Task 11 A2: state added to fluxes() so qdra/qdrtot read from state.
+      subroutine fluxes (state)
+      use variables, only: q,qbot,dt,inq,numnod,thetm1,theta,dz,qrot,qimmob,qtop,qrosum,volact,volm1,swbotb,     &
                            FrArMtrx,QExcMpMtx,QMaPo,nrlevs,fllowgwl,qssdi, qssdisum
+      use swap_state_mod, only: swap_state_t
       implicit none
 
+      type(swap_state_t), intent(in) :: state
       integer i,level
 
       ! determine qbot if not specified
       if (swbotb .eq. 5 .or. swbotb .eq. 7 .or.                         &
      &    swbotb .eq. 8 .or. swbotb .eq. -2 .or.                        &
      &    (swbotb .eq. 1 .and. fllowgwl)) then
-        qbot = qtop + qrosum + qdrtot - QMaPo + (volact-volm1)/dt - qssdisum
+        qbot = qtop + qrosum + state%surfacewater%qdrtot - QMaPo + (volact-volm1)/dt - qssdisum
       endif
 
       ! calculate fluxes (cm/d) from changes in volume per compartment
@@ -340,10 +343,12 @@ contains
       do i = numnod,1,-1
         q(i) = - (theta(i)-thetm1(i)+qimmob(i))*FrArMtrx(i)*dz(i)/dt +  &
      &                q(i+1)-qrot(i)+QExcMpMtx(i)+qssdi(i)
-     
-        do level=1,nrlevs
-           q(i) = q(i) - qdra(level,i)
-        enddo
+
+        if (allocated(state%surfacewater%qdra)) then
+          do level=1,nrlevs
+             q(i) = q(i) - state%surfacewater%qdra(level,i)
+          enddo
+        end if
         inq(i) = inq(i) + q(i)*dt
       end do
 
@@ -397,7 +402,8 @@ contains
       qrotts = qrosum * dt
 
       ! total drainage flux of this timestep
-      qdrats = qdrtot * dt
+      ! SS-SWST Phase 2 Task 11 A2: qdrtot removed from globals; read from state.
+      qdrats = state%surfacewater%qdrtot * dt
 
       ! determine daily actual transpiration
       if (fldaystart) tra = 0.0d0

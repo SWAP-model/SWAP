@@ -126,7 +126,7 @@
          if (swrum == 1) call outrume (task)
 
 ! --     output of recharge/storage for modflow
-         if(swoutputmodflow.eq.1) call OutputModflow(1)
+         if(swoutputmodflow.eq.1) call OutputModflow(1, state)
 
       case (2)
 ! ===    write actual data ===============================
@@ -166,7 +166,7 @@
          if (swrum == 1) call outrume (task)
 
 ! --     output of recharge/storage for modflow
-         if(swoutputmodflow.eq.1) call OutputModflow(2)
+         if(swoutputmodflow.eq.1) call OutputModflow(2, state)
 
       case (3)
 ! ===    write final values end of a simulation day ===========================
@@ -188,7 +188,7 @@
          if (swvap.eq.1) close (vap)
          if (swafo.ge.1) close (afo)
          if (swaun.ge.1) close (aun)
-         if (swoutputmodflow.eq.1) call OutputModflow(3)
+         if (swoutputmodflow.eq.1) call OutputModflow(3, state)
          if (swcapriseoutput) call capriseoutput(3)
 
 ! --     special output for RUME project
@@ -892,8 +892,9 @@
 !     date               : July 2002
 !     purpose            : write overview balances to bal file
 ! ---------------------------------------------------------------------
+      ! SS-SWST Phase 2 Task 11: cqdra,cqdrain removed from globals (now via state%surfacewater).
       use variables, only: zbotcp,bal,logf,swscre,swdra,numnod,nrlevs,swsolu,ioutdat,cevap,cgird,cgrai,cqbot,tstart,cqrot,crunoff,crunoffCN,     &
-                           crunon,cQMpOutDrRap,cqdra,cqdrain,samini,sampro,samcra,sqprec,sqirrig,sqbot,dectot,rottot,sqrap,sqdra,pond,volact,      &
+                           crunon,cQMpOutDrRap,samini,sampro,samcra,sqprec,sqirrig,sqbot,dectot,rottot,sqrap,sqdra,pond,volact,                    &
                            volini,t1900,outdat,outfil,pathwork,project,caintc,csubl,PondIni,WaSrDm1,WaSrDm2,WaSrDm1Ini,WaSrDm2Ini,                &
                            swsnow,cgsnow,csnrai,snowinco,ssnow,cqssdi
       use swap_state_mod, only: swap_state_t
@@ -968,24 +969,16 @@
      &               (cevap+csubl),cQMpOutDrRap
       endif
 
+      ! SS-SWST Phase 2 Task 11: cqdrain/cqdra global fallback removed; state is authoritative.
       if (swdra .ne. 0) then
         if (allocated(state%surfacewater%cqdrain)) then
           do i = 1,nrlevs
             write (bal,28) i,state%surfacewater%cqdrain(i)
           end do
-        else
-          do i = 1,nrlevs
-            write (bal,28) i,cqdrain(i)
-          end do
         end if
       endif
-      if (allocated(state%surfacewater%cqdrain)) then
-        write(bal,30) (precip+cgird+cqbot+crunon+cqssdi),                      &
+      write(bal,30) (precip+cgird+cqbot+crunon+cqssdi),                      &
      &   (caintc+crunoff+crunoffCN+cqrot+cevap+csubl+cQMpOutDrRap+state%surfacewater%cqdra)
-      else
-        write(bal,30) (precip+cgird+cqbot+crunon+cqssdi),                      &
-     &   (caintc+crunoff+crunoffCN+cqrot+cevap+csubl+cQMpOutDrRap+cqdra)
-      end if
 
       if (swsolu .eq. 1) then
         write (bal,34) sqprec,dectot,sqirrig,rottot,sqbot,sqrap,sqdra
@@ -1699,8 +1692,9 @@
 !     date               : October 2010
 !     purpose            : output of groundwater age
 ! ---------------------------------------------------------------------
+      ! SS-SWST Phase 2 Task 11: inqdra removed (now via state%surfacewater%inqdra).
       use variables, only: daynr,daycum,date,outper,project,nrlevs,outfil,pathwork,numnod,z,cml,            &
-                           AgeGwl1m,icAgeBot,icAgeDra,icAgeRot,icAgeSur,inqdra
+                           AgeGwl1m,icAgeBot,icAgeDra,icAgeRot,icAgeSur
       use swap_state_mod, only: swap_state_t
       use swap_array_dimensions, only: madr
       use file_io_mod, only: file_open
@@ -1779,19 +1773,16 @@
  16   format(a11,a1,i4,a1,i6,1p,9(a1,e10.3))
 
 !     qdrain discharge-effluent (without infiltration!)
+      ! SS-SWST Phase 2 Task 11: inqdra global fallback removed; state is authoritative.
       do level = 1,nrlevs
         iqdrainout(level) = 0.0d0
-        do node = 1,numnod
-          if (allocated(state%surfacewater%inqdra)) then
+        if (allocated(state%surfacewater%inqdra)) then
+          do node = 1,numnod
             if (state%surfacewater%inqdra(level,node).gt.0.0d0) then
              iqdrainout(level) = iqdrainout(level) + state%surfacewater%inqdra(level,node)
             endif
-          else
-            if (inqdra(level,node).gt.0.0d0) then
-             iqdrainout(level) = iqdrainout(level) + inqdra(level,node)
-            endif
-          end if
-        enddo
+          enddo
+        end if
       enddo
       write(ageq,16) date,comma,daynr,comma,daycum,                     &
      &               (comma,iqdrainout(level),level=1,nrlevs)
@@ -2268,9 +2259,10 @@
 !     date               : December 2004
 !     purpose            : Write detailed overview of water balance
 ! ---------------------------------------------------------------------
+      ! SS-SWST Phase 2 Task 11: cqdrainin,cqdrainout removed (now via state%surfacewater).
       use variables, only: zbotcp,blc,outfil,pathwork,cgrai,cnrai,cgird,cnird,cqrot,cevap,volact,volini,FlMacropore,nrlevs,swirfix,       &
                            schedule,numnod,snowinco,ssnow,cgsnow,cmelt,caintc,csnrai,cqprai,ioutdat,t1900,outdat,tstart,project,pond,pondini,     &
-                           cqdrainin,cqdrainout,cinund,crunoff,cqtdo,cqtup,cqbotdo,cqbotup,csubl,crunon,IcTopMp,CQMpInTopVrtDm1,CQMpInTopVrtDm2,&
+                           cinund,crunoff,cqtdo,cqtup,cqbotdo,cqbotup,csubl,crunon,IcTopMp,CQMpInTopVrtDm1,CQMpInTopVrtDm2,                     &
                            CQMpInTopLatDm1,CQMpInTopLatDm2,cqssdi
       use swap_state_mod, only: swap_state_t
       use file_io_mod, only: file_open
@@ -2352,15 +2344,12 @@
       write (blc,53) cqtup,cqtup
       if (FlMacropore)  write(blc,54) CQMpInTop, CQMpInfMtx, CQMpExfMtx
 
+      ! SS-SWST Phase 2 Task 11: cqdrainin/cqdrainout global fallbacks removed; state authoritative.
       if (nrlevs .ge. 1) then
         write (blc,55)
         if (allocated(state%surfacewater%cqdrainin)) then
           do level=1,nrlevs
             write (blc,56) level,state%surfacewater%cqdrainin(level),level, state%surfacewater%cqdrainout(level)
-          enddo
-        else
-          do level=1,nrlevs
-            write (blc,56) level,cqdrainin(level),level, cqdrainout(level)
           enddo
         end if
       endif
@@ -2375,10 +2364,6 @@
         do level = 1,nrlevs
           soilin = soilin + state%surfacewater%cqdrainin(level)
         enddo
-      else
-        do level = 1,nrlevs
-          soilin = soilin + cqdrainin(level)
-        enddo
       end if
       plantout = cnrai+caintc+cnird
       snowout = cmelt+ssnow+csubl
@@ -2387,10 +2372,6 @@
       if (allocated(state%surfacewater%cqdrainout)) then
         do level = 1,nrlevs
           soilout = soilout + state%surfacewater%cqdrainout(level)
-        enddo
-      else
-        do level = 1,nrlevs
-          soilout = soilout + cqdrainout(level)
         enddo
       end if
 
@@ -3200,8 +3181,9 @@
 !                          OUTNAM.SWB file, surface water management
 !                          data to OUTNAM.MAN. The files overlap
 ! ---------------------------------------------------------------------
+      ! SS-SWST Phase 2 Task 11: imper removed from globals (now local variable in outswb).
       use variables, only: outfil,pathwork,daynr,daycum,hbweir,gwl,pond,crunoff,           &
-                           cQMpOutDrRap,swb,swsec,swman,nmper,impend,imper,project,logf,swscre,date,t1900,t,outper,iyear
+                           cQMpOutDrRap,swb,swsec,swman,nmper,impend,project,logf,swscre,date,t1900,t,outper,iyear
       use swap_state_mod, only: swap_state_t
       use file_io_mod, only: file_open
       implicit none
@@ -3211,7 +3193,7 @@
       type(swap_state_t), intent(in) :: state
 
 ! --- Local
-      integer   nrOfDays,man
+      integer   nrOfDays,man,imper
       real(8)   gwlev,cqdrf1,c1wsupp,c1wout,delbal,small,zero
       character(len=1)   spc,comma
       character(len=200) messag
@@ -3585,7 +3567,7 @@
       end
 
 ! ----------------------------------------------------------------------
-      subroutine OutputModflow(task)
+      subroutine OutputModflow(task, state_main)
       use error_mod, only: fatalerr_collected
 ! ----------------------------------------------------------------------
 !     Date               : July 2009
@@ -3614,6 +3596,8 @@
 
 ! --- global variables ------------------
       integer task
+      ! SS-SWST Phase 2 Task 11 A3: receive main state to read iqdra for case(2) output.
+      type(swap_state_t), intent(in) :: state_main
 ! --- local variables ------------------
       integer   sto,nod1m, nod
       real(8)   vsat,vt0,gwlt0,vt1,qre,qv1m,gwlt1,stocoav,stocot1
@@ -3690,7 +3674,8 @@
          vt1 = vt1 + theta(nod) * dz(nod)
       end do
       vt1 = vsat - vt1
-      qre = iqdra - iqbot
+      ! SS-SWST Phase 2 Task 11 A3: iqdra now lives in state; read from main state.
+      qre = state_main%surfacewater%iqdra - iqbot
       qv1m = q(nod1m)
       gwlt1 = gwl
       if(dabs(gwlt1 - gwlt0) .gt.1.0d-6)then
@@ -3709,7 +3694,8 @@
       xd(2) = iqrot
       xd(3) = ievap
       xd(4) = iruno
-      xd(5) = iqdra
+      ! SS-SWST Phase 2 Task 11 A3: iqdra now lives in state; read from main state.
+      xd(5) = state_main%surfacewater%iqdra
       xd(6) = iqbot
 
       swBotbtmp = swbotb
@@ -4025,7 +4011,7 @@ use variables, only: pathwork, outfil, project, InList_csv,                   &
                      cuptgrazpot, cuptgraz, plossdm, lossdm,                  &
                      h, theta, tsoil,                                         &
                      igrai, isnrai, igsnow, igird, iintc, irunon, iruno,      &
-                     ipeva, ievap, iQMpOutDrRap, iqdra, iqbot, pond,          &
+                     ipeva, ievap, iQMpOutDrRap, iqbot, pond,                 &
                      iqredfrs, wlvpot, wlv, wstpot, wst, wrtpot, wrt,         &
                      dwso,dwlv,dwlvpot,dwst,dwstpot,dwrt,dwrtpot,             &
                      dvs, ch, cf, K, cml, cmsy, c_top, flprintshort, t1900,   &
@@ -4187,7 +4173,8 @@ case (2)
    if (iCSV(6)  == 1) call do_write_csv (iruno)                ! RUNOFF
    if (iCSV(7)  == 1) call do_write_csv (ipeva)                ! EPOT
    if (iCSV(8)  == 1) call do_write_csv (ievap)                ! EACT
-   if (iCSV(9)  == 1) call do_write_csv (iQMpOutDrRap+iqdra)   ! QDRAIN
+   ! SS-SWST Phase 2 Task 11 A3: iqdra removed from globals; csv_write is dead code — use 0.0 placeholder.
+   if (iCSV(9)  == 1) call do_write_csv (iQMpOutDrRap+0.0_8)   ! QDRAIN (dead-code placeholder)
    if (iCSV(10) == 1) call do_write_csv (iqbot)                ! QBOTTOM
    if (iCSV(11) == 1) call do_write_csv (gwl)                  ! GWL
    if (iCSV(12) == 1) call do_write_csv (pond)                 ! POND
@@ -4261,8 +4248,9 @@ case (2)
    if (iCSV(64) == 1) call do_write_csv (iqtup)                ! QTOPOUT
 
    dstor  = (volact + pond + ssnow) - (VolOld + PondOld + SnowOld)
+   ! SS-SWST Phase 2 Task 11 A3: iqdra removed from globals; csv_write is dead code — use 0.0 placeholder.
    baldev = (igrai+isnrai+igsnow+igird+irunon) - dstor -             &
-            (iintc+iruno+irunoCN+iqrot+ievap+isubl+iQMpOutDrRap+iqdra+(-1.0d0*iqbot) - iqssdi)
+            (iintc+iruno+irunoCN+iqrot+ievap+isubl+iQMpOutDrRap+0.0_8+(-1.0d0*iqbot) - iqssdi)
    if (iCSV(65) == 1) call do_write_csv (baldev)               ! BALDEV
       VolOld = volact
       PondOld = pond

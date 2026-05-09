@@ -192,14 +192,17 @@ contains
             imrottot = imrottot + tscf*qrot(i)*cml(i)*dtsolu
 
 ! --- lateral drainage
+            ! SS-SWST Phase 2 Task 11: qdra read from state (global dropped).
             cdrtot = 0.0d0
+            if (allocated(state%surfacewater%qdra)) then
             do level = 1,nrlevs
-               if (qdra(level,i) .gt. 0.0d0) then
-                  cdrtot = cdrtot+qdra(level,i)*cml(i)/dz(i)
+               if (state%surfacewater%qdra(level,i) .gt. 0.0d0) then
+                  cdrtot = cdrtot+state%surfacewater%qdra(level,i)*cml(i)/dz(i)
                else
-                  cdrtot = cdrtot+qdra(level,i)*cdrain/dz(i)
+                  cdrtot = cdrtot+state%surfacewater%qdra(level,i)*cdrain/dz(i)
                endif
             enddo
+            end if
 
 ! --- cumulative amount of solutes to lateral drainage
             isqdra = isqdra + cdrtot*dz(i)*dtsolu
@@ -235,10 +238,11 @@ contains
          enddo
 
 ! ---    solute balance in aquifer for breakthrough curve
+         ! SS-SWST Phase 2 Task 11: qdrtot read from state (global dropped).
          if (swbr .eq. 1) then
-            if (qdrtot .gt. 0.0d0) then
+            if (state%surfacewater%qdrtot .gt. 0.0d0) then
                cdrain = cdrain + dtsolu/bdenskfsatporos(i) *         &
-     &         ( (isqdra - qdrtot*cdrain)/daquif - decsat*cdrain*bdenskfsatporos(i) )
+     &         ( (isqdra - state%surfacewater%qdrtot*cdrain)/daquif - decsat*cdrain*bdenskfsatporos(i) )
             else
                cdrain = cdrain + dtsolu/bdenskfsatporos(i) *         &
      &                           ( isqdra/daquif - decsat*cdrain*bdenskfsatporos(i) )
@@ -248,7 +252,7 @@ contains
 
 ! --- flux to surface water from aquifer
          if (swbr .eq. 1) then
-            sqsur = sqsur + qdrtot*cdrain*dtsolu
+            sqsur = sqsur + state%surfacewater%qdrtot*cdrain*dtsolu
          endif
 
 ! --- flux through bottom of soil profile
@@ -460,14 +464,17 @@ contains
 !            Ageevp = evso??*Ageml(i)/dz(i)
 
 ! --- lateral drainage
+            ! SS-SWST Phase 2 Task 11: qdra read from state (global dropped).
             Agedrtot = 0.0d0
+            if (allocated(state%surfacewater%qdra)) then
             do level = 1,nrlevs
-               if (qdra(level,i) .gt. 0.0d0) then
-                  Agedrtot = Agedrtot+qdra(level,i)*Ageml(i)/dz(i)
+               if (state%surfacewater%qdra(level,i) .gt. 0.0d0) then
+                  Agedrtot = Agedrtot+state%surfacewater%qdra(level,i)*Ageml(i)/dz(i)
                else
-                  Agedrtot = Agedrtot+qdra(level,i)*Agedrain/dz(i)
+                  Agedrtot = Agedrtot+state%surfacewater%qdra(level,i)*Agedrain/dz(i)
                endif
             enddo
+            end if
 
 ! --- cumulative amount of solutes to lateral drainage
             isqdra = isqdra + Agedrtot*dz(i)*dtsolu

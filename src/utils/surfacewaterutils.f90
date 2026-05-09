@@ -10,7 +10,8 @@
 module surfacewater_utils
    use error_mod, only: fatalerr_collected
    use iso_fortran_env, only: real64
-   use variables, only: imper, hqhtab, qqhtab, swdra, pond, pondmx, rsro, rsroexp, dt
+   ! SS-SWST Phase 2 Task 11: imper removed from globals; callers pass it explicitly.
+   use variables, only: hqhtab, qqhtab, swdra, pond, pondmx, rsro, rsroexp, dt
    use swap_state_mod, only: swap_state_t
 
    implicit none
@@ -150,25 +151,27 @@ contains
    !! Uses management period index `imper` to select appropriate rating curve.
    !! Different periods can have different level-discharge relationships.
    !!@endnote
-   function qhtab(wlev)
+   ! SS-SWST Phase 2 Task 11: imper_in passed explicitly (imper removed from globals).
+   function qhtab(wlev, imper_in)
       implicit none
-      
+
       ! Arguments
       real(real64), intent(in) :: wlev
+      integer,      intent(in) :: imper_in
       real(real64) :: qhtab
-      
+
       ! Local variables
       integer :: itab
       real(real64) :: dwl
 
       itab = 2
-      do while (wlev < hqhtab(imper,itab))
+      do while (wlev < hqhtab(imper_in,itab))
          itab = itab + 1
       end do
-      
-      dwl = (wlev - hqhtab(imper,itab)) / (hqhtab(imper,itab-1) - hqhtab(imper,itab))
-      qhtab = qqhtab(imper,itab) + dwl * (qqhtab(imper,itab-1) - qqhtab(imper,itab))
-      
+
+      dwl = (wlev - hqhtab(imper_in,itab)) / (hqhtab(imper_in,itab-1) - hqhtab(imper_in,itab))
+      qhtab = qqhtab(imper_in,itab) + dwl * (qqhtab(imper_in,itab-1) - qqhtab(imper_in,itab))
+
    end function qhtab
 
 

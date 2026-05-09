@@ -26,9 +26,9 @@ contains
 
    subroutine surfacewater_init(state)
       use swap_state_mod, only: swap_state_t
+      ! SS-SWST Phase 2 Task 11: wls and swst global writes dropped; bocodre uses state aliases.
       use variables, only: nrlevs, numnod, swdtyp, zbotdr, widthr, taludr, l, &
-                            wls1_init, wls, wlp, &
-                            swst, &
+                            wls1_init, wlp, &
                             swsrf, swsec, swqhr, swman, nmper
       use surfacewater_utils, only: swstlev
       use error_mod, only: fatalerr_collected
@@ -65,10 +65,8 @@ contains
 
       ! Initial water level pre-computed by the adapter
       ! (adapter wrote wls1_init = wlact - altcu; altcu=0 is enforced by drainage_config_validate so this equals wlact).
-      ! wls global kept: drainage.f90 (bocodre) reads it for previous-timestep surface water level.
-      ! wlp global kept: drainage.f90 (bocodre) reads it for primary surface water level.
-      ! wlstar global dropped: only output reads it, via state%surfacewater%wlstar.
-      wls    = wls1_init
+      ! SS-SWST Phase 2 Task 11: wls global write dropped (bocodre uses state%surfacewater%wls).
+      ! wlp global kept: bocodre reads it for primary surface water level (not a SW-owned var).
       wlp    = 0.0_real64    ! swsrf=2 has no primary system
 
       sw%wls    = wls1_init
@@ -113,10 +111,8 @@ contains
       end do
 
       ! Initial storage state.
-      ! swstini global dropped: only output reads it, via state%surfacewater%swstini.
-      ! swst global kept: drainage.f90 (bocodre) reads it for previous-timestep storage.
+      ! SS-SWST Phase 2 Task 11: swst global write dropped (bocodre uses state%surfacewater%swst).
       sw%swstini = swstlev(state, wls1_init)
-      swst       = sw%swstini
       sw%swst    = sw%swstini
 
       ! Allocate per-level arrays in state (guard against repeated calls).

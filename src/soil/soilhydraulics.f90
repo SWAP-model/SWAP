@@ -42,7 +42,7 @@ contains
       type(swap_state_t), intent(inout) :: state
 
       ! Local variables
-      integer   i,j, itry,  MaxIt1, ndr, NN, iBackTr
+      integer   i,j, itry,  MaxIt1, NN, iBackTr
       real(8)   dFdhL(macp), dFdhM(macp), dFdhU(macp), difh(macp)
       real(8)   F(macp), factor, Fmax, QMpLatSsSav,qv(macp+1)
       real(8)   factmax, sink(macp), source(macp), sum, sum1, sumold, deviat
@@ -62,7 +62,7 @@ contains
       data    CritDevBalCp   / 1.0d-6 / 
       data    CritDevBalTot  / 1.0d-5 / 
       data    Critdz         / 1.0d-5 / 
-      data    ndr            / 5 / 
+      ! ndr removed: loop now uses nrlevs (actual drain-level count, always <= Madr=5)
 
       real(8) hgrad(macp+1), dkdh(macp)
 
@@ -86,11 +86,14 @@ contains
       flunsatok(1) = .false.
       flunsatok(2) = .false.
       flunsatok(3) = .false.
+      ! SS-SWST Phase 2 Task 11 A1: read qdra from state (loop bound = nrlevs, not ndr=5)
       do i=1,numnod
          sink(i) = evp(i)
-         do j=1,ndr
-            sink(i) = sink(i) + qdra(j,i)
-         end do
+         if (allocated(state%surfacewater%qdra)) then
+            do j=1,nrlevs
+               sink(i) = sink(i) + state%surfacewater%qdra(j,i)
+            end do
+         end if
       end do
       source(1:numnod) = qssdi(1:numnod)
 
@@ -1176,7 +1179,8 @@ contains
       call watstor ()
 
       ! Calculate water fluxes between soil compartments
-      call fluxes ()
+      ! SS-SWST Phase 2 Task 11: state passed so fluxes() reads qdra/qdrtot from state.
+      call fluxes (state)
 
       ! Calculation of states macropores and intermediate & cumulative values
       if (flMacroPore) call macropore(4, state)

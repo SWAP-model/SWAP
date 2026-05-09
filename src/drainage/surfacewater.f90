@@ -76,7 +76,8 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
          elseif (Swsec.eq.1) then
             state%surfacewater%ZDraBas = afgen (wlstab,2*maowl,t1900) ! open drain, surf.wat. level input
          elseif (Swsec.eq.2) then
-            state%surfacewater%ZDraBas = WlStar                  ! open drain, srf.wat. level simulated
+            ! SS-SWST Phase 2 Task 11: wlstar global removed; read from state (set by surfacewater_init).
+            state%surfacewater%ZDraBas = state%surfacewater%wlstar   ! open drain, srf.wat. level simulated
          endif
 !
          state%surfacewater%flInitDraBas = .false.
@@ -220,11 +221,11 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
         end do
       endif
 
-      qdrtot = 0.0d0
+      ! SS-SWST Phase 2 Task 11: qdrtot global write dropped; only state written.
+      state%surfacewater%qdrtot = 0.0d0
       do level=1,nrlevs
-          qdrtot = qdrtot + qdrain(level)
+          state%surfacewater%qdrtot = state%surfacewater%qdrtot + qdrain(level)
       end do
-      state%surfacewater%qdrtot = qdrtot
 
       return
 
@@ -326,7 +327,8 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
       !!     Functions called   : swstlev
       !!     File usage         :
       !!@endnote
-      use variables, only: tcum,NRPRI,impend,nmper,swman,wlstar,hbweir,gwl,wlsman,gwlcrit,nphase,dropr,wscap,   &
+      ! SS-SWST Phase 2 Task 11: wlstar global removed; use sw_wlstar (state alias) throughout.
+      use variables, only: tcum,NRPRI,impend,nmper,swman,hbweir,gwl,wlsman,gwlcrit,nphase,dropr,wscap,   &
                            dt,runots,QRapDra,qdrd,zbotdr,alphaw,betaw,osswlm,T,NUMNOD,THETAS,THETA,DZ,VCRIT,NODHD,HCRIT, &
                            H,SWQHR,QQHTAB,wldip,intwl,t1900,logf,swscre,fldtmin,rsro,pond,pondmx
       use swap_state_mod, only: swap_state_t
@@ -369,7 +371,8 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
       sw_overfl = .false.
 
 ! --- memorizing previous target level
-      wlstarb = wlstar
+      ! SS-SWST Phase 2 Task 11: wlstar global removed; sw_wlstar (state alias) is authoritative.
+      wlstarb = sw_wlstar
 
 ! --- determine which management period the model is in:
       imper = 0
@@ -393,7 +396,6 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
 ! --- In the case of a fixed weir the 'target level' is set to the
 ! --- weir crest, for later use in calculations to determine whether
 ! --- there is any outflow at all (see below):
-        wlstar = hbweir(imper)
         sw_wlstar = hbweir(imper)
       else
 
@@ -440,26 +442,25 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
 
 ! ---   if the level must drop, then do not let it drop at more than
 ! ---   the specified rate:
-        if (wlstx .lt. wlstar .and. dropr(imper) .gt. 0.001d0) then
-          wlstar = wlstar - dropr(imper)*dt
-          if (wlstar .lt. wlstx) wlstar = wlstx
+        if (wlstx .lt. sw_wlstar .and. dropr(imper) .gt. 0.001d0) then
+          sw_wlstar = sw_wlstar - dropr(imper)*dt
+          if (sw_wlstar .lt. wlstx) sw_wlstar = wlstx
         else
-          wlstar = wlstx
+          sw_wlstar = wlstx
         endif
-        sw_wlstar = wlstar
       endif
 
 ! --- counter of adjustments
-      if (abs(wlstar-wlstarb) .gt. 0.00001d0) then
+      if (abs(sw_wlstar-wlstarb) .gt. 0.00001d0) then
          ! numadj global write dropped; sw_numadj (state alias) accumulates directly.
          sw_numadj = sw_numadj + 1
       endif
 
 ! --- storage for the 'target level'
-      swsttar = swstlev(state, wlstar)
+      swsttar = swstlev(state, sw_wlstar)
 
 ! --- level and storage for "max. level for supply"
-      wlstara = wlstar - wldip(imper)
+      wlstara = sw_wlstar - wldip(imper)
       if (wlstara .gt. (zbotdr(1+nrpri)+1.d-4)) then
          swsttara = swstlev(state, wlstara)
          wsmax = wscap(imper)
@@ -540,10 +541,11 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
             elseif (SWQHR.eq.2) then
 
 ! --- interpolate QH table
-              discap = qhtab(wlstar)
+              ! SS-SWST Phase 2 Task 11: pass imper explicitly (no longer a global).
+              discap = qhtab(sw_wlstar, imper)
             endif
             if (discap .gt. wdis) then
-              sw_wls = wlstar
+              sw_wls = sw_wlstar
               sw_swst = swsttar
               ! overfl global drops dropped; sw_overfl (state alias) is the signal.
               sw_overfl = .false.
@@ -581,7 +583,8 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
             if (SWQHR.eq.1) then
               wdisi = alphaw(imper)*(wlsi-hbweir(imper))**betaw(imper)
             else
-              wdisi = qhtab(wlsi)
+              ! SS-SWST Phase 2 Task 11: pass imper explicitly (no longer a global).
+              wdisi = qhtab(wlsi, imper)
             endif
             swstn = sw_swst + (qdrd + QRapDra - wdisi)*dt + runots
             if (swstn .lt. swsti) then

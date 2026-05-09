@@ -304,10 +304,8 @@
       cqbot              = 0.0d0 
       cqbotdo            = 0.0d0 
       cqbotup            = 0.0d0 
-      cqdra              = 0.0d0 
-      cqdrain            = 0.0d0 
-      cqdrainin          = 0.0d0 
-      cqdrainout         = 0.0d0 
+      ! SS-SWST Phase 2 Task 11 C3: cqdra/cqdrain/cqdrainin/cqdrainout removed (now in state%surfacewater).
+      ! cqdra=0, cqdrain=0, cqdrainin=0, cqdrainout=0 — initialized in surfacewater_state_t defaults.
       cqprai             = 0.0d0 
       cqssdi             = 0.0d0
       cqtdo              = 0.0d0 
@@ -359,9 +357,8 @@
       inpola             = 0.0d0 
       inpolb             = 0.0d0 
       inq                = 0.0d0 
-      inqdra             = 0.0d0 
-      inqdra_in          = 0.0d0
-      inqdra_out         = 0.0d0
+      ! SS-SWST Phase 2 Task 11 C3: inqdra/inqdra_in/inqdra_out removed (now in state%surfacewater).
+      ! Initialized via surfacewater_init with allocate+assign=0.
       inqrot             = 0.0d0
       inqssdi            = 0.0d0
       ipondbeg           = 0.0d0 
@@ -371,7 +368,7 @@
       iqtup              = 0.0d0
       iqdo(1:numnod+1)   = 0.0d0
       iqup(1:numnod+1)   = 0.0d0
-      iqdra              = 0.0d0
+      ! SS-SWST Phase 2 Task 11 C3: iqdra removed (state%surfacewater%iqdra initialized in surfacewater_state_t).
       iqrot              = 0.0d0
       iqssdi             = 0.0d0
       iqredwet           = 0.0d0
@@ -411,7 +408,7 @@
       qdrain             = 0.0d0 
       qdraincomp         = 0.0d0 
       qdrtab             = 0.0d0 
-      qdrtot             = 0.0d0 
+      ! SS-SWST Phase 2 Task 11 C3: qdrtot removed (state%surfacewater%qdrtot initialized in surfacewater_state_t).
       qimmob             = 0.0d0 
       qrosum             = 0.0d0 
       qredwetsum         = 0.0d0 
@@ -454,7 +451,7 @@
       volact             = 0.0d0
       volini             = 0.0d0 
       volm1              = 0.0d0 
-      vtair              = 0.0d0 
+      ! SS-SWST Phase 2 Task 11 C3: vtair removed (state%surfacewater%vtair initialized in surfacewater_state_t).
       wbalance           = 0.0d0 
       wetper             = 0.0d0 
       z                  = 0.0d0 
@@ -682,9 +679,9 @@
       WaSrDm1Ini           = 0.0d0 
       WaSrDm2              = 0.0d0 
       WaSrDm2Ini           = 0.0d0 
-      ZDraBas              = 0.0d0 
-      FlDecMpRat           = .false. 
-      flInitDraBas         = .false. 
+      ! SS-SWST Phase 2 Task 11 C3: ZDraBas/flInitDraBas removed (state%surfacewater owns them).
+      ! ZDraBas=0.0, flInitDraBas=.true. are set by surfacewater_state_t defaults.
+      FlDecMpRat           = .false.
       flmacropore          = .false. 
 
 ! --- surface water variables
@@ -706,9 +703,9 @@
       swb                  = 0
       nphase               = 0
       nodhd                = 0
-      numadj               = 0
+      ! SS-SWST Phase 2 Task 11 C3: numadj/imper removed (state%surfacewater owns them).
       intwl                = 0
-      imper                = 0
+      ! numadj=0, imper=1 set by surfacewater_state_t defaults.
       nowltab              = 0
       widthr                = 0.0d0
       taludr                = 0.0d0
@@ -725,7 +722,7 @@
       wscap                 = 0.0d0
       hbweir                = 0.0d0
       osswlm                = 0.0d0
-      wlstar                = 0.0d0
+      ! SS-SWST Phase 2 Task 11 C3: wlstar removed (state%surfacewater%wlstar, default=0).
       wlp                   = 0.0d0
       alphaw                = 0.0d0
       betaw                 = 0.0d0
@@ -738,22 +735,17 @@
       qqhtab                = 0.0d0
       wlsman                = 0.0d0
       wlstab                = 0.0d0
-      sttab                 = 0.0d0
-      swstini               = 0.0d0
-      swst                  = 0.0d0
-      wlsbak                = 0.0d0
+      ! SS-SWST Phase 2 Task 11 C3: sttab/swstini/swst/wlsbak removed (state%surfacewater owns them).
+      ! sttab=0, swstini=0, swst=0, wlsbak=0 are set by surfacewater_state_t defaults.
       cofintfl              = 0.0d0
       expintfl              = 0.0d0
-      cqdrd                 = 0.0d0
-      cwsupp                = 0.0d0
-      cwout                 = 0.0d0
-      wls                   = 0.0d0
+      ! SS-SWST Phase 2 Task 11 C3: cqdrd/cwsupp/cwout/wls removed (state%surfacewater owns them).
+      ! All default to 0 in surfacewater_state_t.
       owltab                = 0.0d0
-      hwlman                = 0.0d0
-      wlsold                = 0.0d0
+      ! SS-SWST Phase 2 Task 11 C3: hwlman/wlsold removed (state%surfacewater owns them, default=0).
       qdrd                  = 0.0d0
       flsurfacewater       = .false.
-      overfl               = .false.
+      ! SS-SWST Phase 2 Task 11 C3: overfl removed (state%surfacewater%overfl, default=.false.).
 
       return
       end subroutine

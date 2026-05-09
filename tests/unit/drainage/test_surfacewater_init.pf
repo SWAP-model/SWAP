@@ -4,8 +4,9 @@ subroutine test_surfacewater_init_zeroes_state()
    use iso_fortran_env, only: real64
    use surfacewater_init_mod, only: surfacewater_init
    use swap_state_mod, only: swap_state_t
+   ! SS-SWST Phase 2 Task 11: wls global removed from use variables (now state-only).
    use variables, only: nrlevs, numnod, swdtyp, zbotdr, widthr, &
-                         taludr, l, wls1_init, wls, wlp, swsrf, swsec, swqhr, &
+                         taludr, l, wls1_init, wlp, swsrf, swsec, swqhr, &
                          nmper, swman
    type(swap_state_t) :: state
    integer :: i
@@ -28,8 +29,8 @@ subroutine test_surfacewater_init_zeroes_state()
    l(1)      = 39000.0d0   ! 390 m * 100 = 39000 cm
    call surfacewater_init(state)
 
-   ! wls and wlp globals kept (drainage.f90 reads them): assert parity.
-   @assertEqual(-77.0_real64, wls, 1.0d-12)
+   ! wlp global kept (not a SW-owned var; bocodre reads it for primary system level).
+   ! wls global dropped (SS-SWST Phase 2 Task 11): now written only to state%surfacewater%wls.
    @assertEqual(0.0_real64,   wlp, 1.0d-12)
 
    ! numadj and wlsbak global writes dropped (Task 6); assert only via typed state.

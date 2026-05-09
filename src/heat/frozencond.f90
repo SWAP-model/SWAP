@@ -297,11 +297,11 @@ contains
 
       endif
 
-      qdrtot = 0.0d0
+      ! SS-SWST Phase 2 Task 11: qdrtot global write dropped; only state written.
+      state%surfacewater%qdrtot = 0.0d0
       do level=1,nrlevs
-        qdrtot = qdrtot + qdrain(level)
+        state%surfacewater%qdrtot = state%surfacewater%qdrtot + qdrain(level)
       end do
-      state%surfacewater%qdrtot = qdrtot
 
     endif
 
