@@ -21,7 +21,7 @@ module surfacewater_mod
       public :: SurfaceWater
       contains
 
-subroutine SurfaceWater(task)
+subroutine SurfaceWater(task, state, request_smaller_dt)
       !! Main driver subroutine for surface water calculations
       !!
       !! This subroutine is called with different task numbers to perform
@@ -38,16 +38,17 @@ subroutine SurfaceWater(task)
       use surfacewater_init_mod, only: surfacewater_init
       use swap_state_mod, only: swap_state_t
       implicit none
-      integer task
+      integer,            intent(in)    :: task
+      type(swap_state_t), intent(inout) :: state
+      logical,            intent(out)   :: request_smaller_dt
 
 !     local
       integer level, node
       real(8) zCum,difzTopDisLay(madr),ratio,ratiodz,sumqdr(madr),dh
       integer nodeTopDisLay(madr)
       character(len=300) messag
-!cd     real(8) qdrain_old(madr), qdrain_new(madr)
-      type(swap_state_t), save :: state
 
+      request_smaller_dt = .false.
 
 ! ----------------------------------------------------------------------
       select case (task)
@@ -60,9 +61,11 @@ subroutine SurfaceWater(task)
 
       hwlman = 0.0d0
       vtair = 0.0d0
+      state%surfacewater%hwlman = 0.0d0
+      state%surfacewater%vtair  = 0.0d0
 
 !   - In case of macropores: initialise drainage basis for rapid drainage through macropores
-      if (flInitDraBas) then
+      if (state%surfacewater%flInitDraBas) then
          if (NumLevRapDra.gt.nrlevs) then
             messag = ' NUMLEVRAPDRA greater then NRLEVS'
             call fatalerr_collected('MacroRead',messag)
@@ -70,13 +73,17 @@ subroutine SurfaceWater(task)
 !
          if (swdtyp(NumLevRapDra).eq.1) then
             ZDraBas = zbotdr(NumLevRapDra)      ! drain tube
-         elseif (Swsec.eq.1) then            
+            state%surfacewater%ZDraBas = zbotdr(NumLevRapDra)
+         elseif (Swsec.eq.1) then
             ZDraBas = afgen (wlstab,2*maowl,t1900) ! open drain, surf.wat. level input
+            state%surfacewater%ZDraBas = ZDraBas
          elseif (Swsec.eq.2) then
             ZDraBas = WlStar                    ! open drain, srf.wat. level simulated
-         endif   
+            state%surfacewater%ZDraBas = WlStar
+         endif
 !
          flInitDraBas = .false.
+         state%surfacewater%flInitDraBas = .false.
 !
          Return
 !
@@ -92,24 +99,35 @@ subroutine SurfaceWater(task)
       if (flzerointr) then
         do node = 1,numnod
           do level = 1,nrlevs
-            inqdra(level,node)     = 0.0d0
-            inqdra_in(level,node)  = 0.0d0
-            inqdra_out(level,node) = 0.0d0
+            inqdra(level,node)                        = 0.0d0
+            state%surfacewater%inqdra(level,node)     = 0.0d0
+            inqdra_in(level,node)                     = 0.0d0
+            state%surfacewater%inqdra_in(level,node)  = 0.0d0
+            inqdra_out(level,node)                    = 0.0d0
+            state%surfacewater%inqdra_out(level,node) = 0.0d0
           enddo
         enddo
         iqdra = 0.0d0
+        state%surfacewater%iqdra = 0.0d0
       endif
 
 ! --- reset cumulative surface water and drainage fluxes
       if (flzerocumu) then
         cqdrd = 0.0d0
+        state%surfacewater%cqdrd = 0.0d0
         cwsupp = 0.0d0
+        state%surfacewater%cwsupp = 0.0d0
         cwout = 0.0d0
+        state%surfacewater%cwout = 0.0d0
         cqdra = 0.0d0
+        state%surfacewater%cqdra = 0.0d0
         do level = 1,nrlevs
           cqdrain(level) = 0.0d0
+          state%surfacewater%cqdrain(level) = 0.0d0
           cqdrainin(level) = 0.0d0
+          state%surfacewater%cqdrainin(level) = 0.0d0
           cqdrainout(level) = 0.0d0
+          state%surfacewater%cqdrainout(level) = 0.0d0
         enddo
       endif
 
@@ -129,6 +147,7 @@ subroutine SurfaceWater(task)
       do level=1,nrlevs
          do node = 1,numnod
             qdra(level,node) = 0.0d0
+            state%surfacewater%qdra(level,node) = 0.0d0
          end do
       end do
 
@@ -176,14 +195,14 @@ subroutine SurfaceWater(task)
 !                 redistribute drainwater fluxes
                   do node = 1,nodeTopDisLay(level)-1
                      qdra(level,node) = 0.0d0
-                  end do           
+                  end do
                   qdra(level,nodeTopDisLay(level)) =                    &
      &                qdra(level,nodeTopDisLay(level)) * ratio * ratiodz
                   do node = nodeTopDisLay(level)+1,numnod
                      qdra(level,node) = qdra(level,node)* ratio
-                  end do           
+                  end do
                endif
-            end do           
+            end do
          endif
 
 ! --- error handling
@@ -193,7 +212,7 @@ subroutine SurfaceWater(task)
 !cD              qdrain_new(level) = qdrain_new(level) + qdra(level,node)
 !cD           end do
 !cD           if (abs(qdrain_new(level)-qdrain_old(level)).gt.0.001) then
-!cD              write(messag,55) 
+!cD              write(messag,55)
 !cD    &        ' SwDislay qdrain-diff,datetime',date,t1900,'level',level,
 !cD    &        ' qdrain_new = ',qdrain_new(level),' qdrain_old = ',
 !cD    &         qdrain_old(level),'(cm/d)'
@@ -203,11 +222,18 @@ subroutine SurfaceWater(task)
 !cD           endif
 !cD        end do
 
+         ! dual-write qdra after divdra (and possible redistribution)
+         do node = 1, numnod
+           do level = 1, nrlevs
+             state%surfacewater%qdra(level,node) = qdra(level,node)
+           end do
+         end do
 
       else
-! --- drainage flux through lowest compartment 
+! --- drainage flux through lowest compartment
         do level = 1,nrlevs
            qdra(level,numnod) = qdrain(level)
+           state%surfacewater%qdra(level,numnod) = qdrain(level)
         end do
       endif
 
@@ -215,6 +241,7 @@ subroutine SurfaceWater(task)
       do level=1,nrlevs
           qdrtot = qdrtot + qdrain(level)
       end do
+      state%surfacewater%qdrtot = qdrtot
 
       return
 
@@ -222,17 +249,17 @@ subroutine SurfaceWater(task)
 
 ! === surface water balance ========================
 
-      if (swsrf .eq. 3) then 
+      if (swsrf .eq. 3) then
         wlp = afgen (wlptab,2*mawlp,t1900-1.0d0+dt)
       endif
       if (swsec.eq.2) then
 ! ---    water level of secondary system is simulated
-         call wlevbal ()
+         call wlevbal (state, request_smaller_dt)
       elseif (swsec.eq.1) then
 ! ---    water level of secondary system is input
-         call wballev ()
+         call wballev (state)
       endif
-      
+
       case default
          call fatalerr_collected ('SurfaceWater', 'Illegal value for TASK')
       end select
@@ -240,7 +267,7 @@ subroutine SurfaceWater(task)
       return
       end
 
-      SUBROUTINE WLEVBAL ()
+      SUBROUTINE WLEVBAL (state, request_smaller_dt)
       !! Calculate surface water level from water balance (simulated level)
       !!
       !! This subroutine determines the surface water level based on a complete
@@ -266,12 +293,12 @@ subroutine SurfaceWater(task)
       !!
       !! --- Set target level wlstar:
       !! --- SWMAN = 1: HBWEIR
-      !! --- SWMAN = 2: from table (4e #2) and within adjustment period and 
-      !! --- taking into account the maximum drop rate. 
+      !! --- SWMAN = 2: from table (4e #2) and within adjustment period and
+      !! --- taking into account the maximum drop rate.
       !! --- Calculate level for maximum supply wlstara ( = wlstar-wldip)
       !!
       !! --- Calculate storage at wlstar and at wlstara
-      !! ---   If wlstara is above deepest bottom level then water supply 
+      !! ---   If wlstara is above deepest bottom level then water supply
       !! ---   capacity is set to maximum value otherwise both swsttara and
       !! ---   wsmax are set to zero
       !!
@@ -288,7 +315,7 @@ subroutine SurfaceWater(task)
       !! ---    wls is calculated from storage and is somewhere between
       !! ---    wlstar and wlstara, no supply, no discharge
       !! --- 3c wlstar can be reached :wsupp = 0;
-      !! ---    Now check whether there are automatic weirs for keeping the 
+      !! ---    Now check whether there are automatic weirs for keeping the
       !! ---    level at target value or that the discharge relationship
       !! ---    determines new level:
       !! --- 3c1 SWMAN=2: calculate discharge
@@ -297,7 +324,7 @@ subroutine SurfaceWater(task)
       !! ---     in case SWQHR = 2: find discap from table
       !! ---     if sufficient capacity wls = wlstar otherwise set overflow
       !! --- 3c2 SWMAN=1 or overflow
-      !! ---     Calculate highest possible discharge, if still unsufficient 
+      !! ---     Calculate highest possible discharge, if still unsufficient
       !! ---     to handle present drain fluxes: stop - system overflow
       !! ---     otherwise start iteration procedure to determine new level,
       !! ---     storage and discharge:
@@ -308,22 +335,24 @@ subroutine SurfaceWater(task)
       !! --- Calculate storage and discharge for point halfway: swsti, wdisi
       !! --- Calculate new storage: if higher than swsti then adjust lower
       !! --- bound to point halfway otherwise adapt upper bound to point halfway
-      !! --- Continue until upper and lower bounds converge (< 0.001 cm)   
+      !! --- Continue until upper and lower bounds converge (< 0.001 cm)
       !! --- Ready: update wls, swst and wdis
       !! ***********************************************
       !!
-      !!     Subroutines called :                          
-      !!     Functions called   : swstlev                          
+      !!     Subroutines called :
+      !!     Functions called   : swstlev
       !!     File usage         :
       !!@endnote
-      use variables, only: tcum,NRPRI,impend,nmper,swman,imper,wlstar,wls,hbweir,gwl,wlsman,gwlcrit,nphase,dropr,sttab,wscap,   &
-                           dt,runots,QRapDra,swst,zbotdr,alphaw,betaw,qdrd,cqdrd,cwsupp,cwout,wlsbak,osswlm,T,NUMNOD,THETAS,THETA,DZ,VCRIT,NODHD,HCRIT, &
-                           H,SWQHR,QQHTAB,wldip,hwlman,vtair,overfl,numadj,intwl,t1900,logf,swscre,fldecdt,fldtmin,rsro,pond,pondmx
+      use variables, only: tcum,NRPRI,impend,nmper,swman,wls,wlstar,hbweir,gwl,wlsman,gwlcrit,nphase,dropr,wscap,   &
+                           dt,runots,QRapDra,qdrd,swst,zbotdr,alphaw,betaw,cqdrd,cwsupp,cwout,wlsbak,osswlm,T,NUMNOD,THETAS,THETA,DZ,VCRIT,NODHD,HCRIT, &
+                           H,SWQHR,QQHTAB,wldip,hwlman,vtair,overfl,numadj,intwl,t1900,logf,swscre,fldecdt,fldtmin,rsro,pond,pondmx,imper,sttab
+      use swap_state_mod, only: swap_state_t
       use surfacewater_utils, only: wlevst, swstlev, qhtab
       IMPLICIT NONE
 
-! --- global
-     
+      type(swap_state_t), intent(inout) :: state
+      logical,            intent(inout) :: request_smaller_dt
+
 ! --- local
       INTEGER iphase,NODE,Intday
       real(8) wlstx,swsttar,dvmax,swstmax,wsupp,wdis,wlstarb
@@ -332,17 +361,39 @@ subroutine SurfaceWater(task)
       real(8) swsttara,rday,wsmax
       character(len=200) messag
       character(len=19)  datetime
+      logical :: fl_early_return
 ! removed the blanket save statement to avoid issues in parallel runs
 !-----------------------------------------------------------------------
+
+      fl_early_return = .false.
+
+      associate( &
+         sw_wls    => state%surfacewater%wls,    &
+         sw_wlstar => state%surfacewater%wlstar, &
+         sw_swst   => state%surfacewater%swst,   &
+         sw_wlsbak => state%surfacewater%wlsbak, &
+         sw_overfl => state%surfacewater%overfl, &
+         sw_numadj => state%surfacewater%numadj, &
+         sw_hwlman => state%surfacewater%hwlman, &
+         sw_vtair  => state%surfacewater%vtair,  &
+         sw_imper  => state%surfacewater%imper,  &
+         sw_sttab  => state%surfacewater%sttab,  &
+         sw_cqdrd  => state%surfacewater%cqdrd,  &
+         sw_cwsupp => state%surfacewater%cwsupp, &
+         sw_cwout  => state%surfacewater%cwout)
+
 ! --- resetting of flag for overflowing of automatic weir
       overfl = .false.
+      sw_overfl = .false.
 
 ! --- memorizing previous target level
       wlstarb = wlstar
 
 ! --- determine which management period the model is in:
       imper = 0
+      sw_imper = 0
  100  imper = imper + 1
+      sw_imper = imper
 
 ! --- error handling
       if (imper .gt. nmper) then
@@ -351,22 +402,23 @@ subroutine SurfaceWater(task)
         messag = 'error sw-management periods(IMPER), more than defined'
         call fatalerr_collected ('Wlevbal',messag)
       endif
-      
+
       if (t1900-1.d0+0.1d-10 .gt. impend(imper)) goto 100
 
 ! --- determine the target sw-level:
       if (swman(imper) .eq. 1) then
 
-! --- In the case of a fixed weir the 'target level' is set to the 
-! --- weir crest, for later use in calculations to determine whether 
+! --- In the case of a fixed weir the 'target level' is set to the
+! --- weir crest, for later use in calculations to determine whether
 ! --- there is any outflow at all (see below):
         wlstar = hbweir(imper)
+        sw_wlstar = hbweir(imper)
       else
 
-! ---  For automatic weir, determine the target level of the surface 
+! ---  For automatic weir, determine the target level of the surface
 ! ---  water, dependent on groundwater level:
 
-! ---   only adjust it if new subperiod, with length intwl(imper) has 
+! ---   only adjust it if new subperiod, with length intwl(imper) has
 !       started  (or if it is is the first call)
         rday = (T+1.0D0)/intwl(imper)
         intday = int(rday)
@@ -374,26 +426,29 @@ subroutine SurfaceWater(task)
         if (abs(rday-1.0*intday).lt.0.00001d0 .or. tcum.lt.1.0d-10) then
 
           iphase = nphase(imper)
-          do while(gwl.gt.gwlcrit(imper,iphase).and.iphase.gt.1) 
+          do while(gwl.gt.gwlcrit(imper,iphase).and.iphase.gt.1)
             iphase = iphase-1
           enddo
 
 ! --- compare total air volume with VCRIT, adapt iphase
           VTAIR = 0.0d0
+          sw_vtair = 0.0d0
           do NODE = 1,NUMNOD
             VTAIR = VTAIR + (THETAS(NODE)-THETA(NODE))                  &
      &              *abs(DZ(NODE))
           enddo
+          sw_vtair = VTAIR
           do while (VTAIR.lt.VCRIT(imper,iphase).AND.IPHASE.gt.1)
             iphase = iphase - 1
           enddo
 
-! --- compare H(nodhd(imper)) with HCRIT, adapt iphase 
+! --- compare H(nodhd(imper)) with HCRIT, adapt iphase
           do while (h(nodhd(imper)).gt.hcrit(imper,iphase)              &
-     &                            .and.iphase.gt.1) 
+     &                            .and.iphase.gt.1)
             iphase = iphase - 1
           enddo
           hwlman = h(nodhd(imper))
+          sw_hwlman = hwlman
 
           wlstx = wlsman(imper,iphase)
         else
@@ -402,7 +457,7 @@ subroutine SurfaceWater(task)
           wlstx = wlstarb
         endif
 
-! ---   if the level must drop, then do not let it drop at more than 
+! ---   if the level must drop, then do not let it drop at more than
 ! ---   the specified rate:
         if (wlstx .lt. wlstar .and. dropr(imper) .gt. 0.001d0) then
           wlstar = wlstar - dropr(imper)*dt
@@ -410,11 +465,13 @@ subroutine SurfaceWater(task)
         else
           wlstar = wlstx
         endif
+        sw_wlstar = wlstar
       endif
 
 ! --- counter of adjustments
       if (abs(wlstar-wlstarb) .gt. 0.00001d0) then
          numadj = numadj + 1
+         sw_numadj = numadj
       endif
 
 ! --- storage for the 'target level'
@@ -429,15 +486,15 @@ subroutine SurfaceWater(task)
          swsttara = 0.0d0
          wsmax = 0.0d0
       endif
-      
+
 ! --- determine whether the system will become full (target level or
 ! --- level of weir crest):
       dvmax = (qdrd + QRapDra + wsmax) * dt + runots
       swstmax = swst + dvmax
 
       if (swstmax .lt. 1.0d-7) then
-! ---   storage decreases to zero, then the surface water system 
-! ---   falls dry; set surface water supply to maximum: 
+! ---   storage decreases to zero, then the surface water system
+! ---   falls dry; set surface water supply to maximum:
 
         if (swstmax .lt. -0.1d0) then
           messag = 'error algorithm for sw falling dry'
@@ -447,16 +504,20 @@ subroutine SurfaceWater(task)
         wsupp = wsmax
         wdis = 0.0d0
         swst = 0.0d0
+        sw_swst = 0.0d0
         wls = zbotdr(nrpri+1)
+        sw_wls = wls
 
       elseif (swstmax .ge. 0.0d0 .and. swstmax .lt. swsttara) then
 ! --- system will not become full - set supply to max. capacity
         wsupp = wsmax
         wdis = 0.0d0
         swst = swstmax
+        sw_swst = swstmax
 
 ! --- calculate new level from storage
         wls = wlevst(swst)
+        sw_wls = wls
       else
 
 ! --- determine how system will become full: with or without needing
@@ -465,12 +526,14 @@ subroutine SurfaceWater(task)
         swstmax = swst + dvmax
         if (swstmax .le. swsttara) then
 
-! --- apparently supply is needed for reaching target level, system 
+! --- apparently supply is needed for reaching target level, system
 !     is made full up to level wlstara, because supply is controllable:
           wsupp = (swsttara - swst - (qdrd+QRapDra)*dt-runots)/dt
           wdis = 0.0d0
           swst = swsttara
+          sw_swst = swsttara
           wls = wlstara
+          sw_wls = wlstara
         elseif (swstmax .le. swsttar) then
 
 ! --- apparently drainage is more than sufficient for filling system
@@ -479,7 +542,9 @@ subroutine SurfaceWater(task)
           wsupp = 0.0d0
           wdis = 0.0d0
           swst = swstmax
+          sw_swst = swstmax
           wls = wlevst(swst)
+          sw_wls = wls
         else
 
 ! --- drainage water is more than sufficient for reaching target
@@ -491,10 +556,10 @@ subroutine SurfaceWater(task)
 
 ! --- the outflow equals the drainage flux, plus the storage
 !     excess (or deficit !) in the target situation compared to
-!     the actual situation: 
+!     the actual situation:
             wdis = (swst-swsttar + (qdrd+QRapDra)*dt + runots )/dt
 
-! --- now check whether the weir has enough discharge capacity 
+! --- now check whether the weir has enough discharge capacity
 !     at this water level
             if (SWQHR.eq.1) then
               wover = wls - hbweir(imper)
@@ -506,24 +571,28 @@ subroutine SurfaceWater(task)
             endif
             if (discap .gt. wdis) then
               wls = wlstar
+              sw_wls = wlstar
               swst = swsttar
+              sw_swst = swsttar
               overfl = .false.
+              sw_overfl = .false.
             else
               overfl = .true.
+              sw_overfl = .true.
             endif
           endif
           if (swman(imper) .eq. 1 .or. overfl) then
 
 ! --- determine level from q-h relationship, and also account
 !     for change in storage (see below)
-!     check first that the system does not overflow 
+!     check first that the system does not overflow
             if (SWQHR.eq.1) then
               wover = sttab(1,1) - hbweir(imper)
               discap = alphaw(imper) * (wover**betaw(imper))
             elseif (SWQHR.eq.2) then
               discap = QQHTAB(imper,1)
             endif
-            
+
 ! ---       error handling
             swstn = swst + (qdrd + QRapDra - discap)*dt + runots
             if ( swstn .gt. sttab(1,2) ) then
@@ -531,7 +600,7 @@ subroutine SurfaceWater(task)
               call fatalerr_collected ('Wlevbal',messag)
             endif
 
-! --- iteration procedure for determining new level, storage, 
+! --- iteration procedure for determining new level, storage,
 !     and discharge
             wlsl = hbweir(imper)
             wlsu = sttab(1,1)
@@ -546,7 +615,7 @@ subroutine SurfaceWater(task)
             endif
             swstn = swst + (qdrd + QRapDra - wdisi)*dt + runots
             if (swstn .lt. swsti) then
-              wlsu = wlsi 
+              wlsu = wlsi
             else
               wlsl = wlsi
             endif
@@ -558,7 +627,9 @@ subroutine SurfaceWater(task)
 
 ! --- updating of sw-parameters:
               wls = wlsi
+              sw_wls = wlsi
               swst = swstn
+              sw_swst = swstn
               wdis = wdisi
             endif
           endif
@@ -568,23 +639,32 @@ subroutine SurfaceWater(task)
 !        ponding in case of extended drainage may limit timestep
 
       if (wls.gt.pondmx .or. pond.gt.pondmx) then
-        if(dt .gt. 0.02*rsro) fldecdt = .true.
-        return
+        if(dt .gt. 0.02*rsro) then
+          request_smaller_dt = .true.
+          fldecdt = .true.   ! transitional dual-write
+        end if
+        fl_early_return = .true.
       endif
 
+      if (.not. fl_early_return) then
 ! --- updating registration of last four levels, for noting oscillation
       wlsbak(1) = wlsbak(2)
       wlsbak(2) = wlsbak(3)
       wlsbak(3) = wlsbak(4)
       wlsbak(4) = wls
+      sw_wlsbak(1) = sw_wlsbak(2)
+      sw_wlsbak(2) = sw_wlsbak(3)
+      sw_wlsbak(3) = sw_wlsbak(4)
+      sw_wlsbak(4) = sw_wls
       wprod1 = (wlsbak(2)-wlsbak(1))*(wlsbak(3)-wlsbak(2))
       wprod2 = (wlsbak(3)-wlsbak(2))*(wlsbak(4)-wlsbak(3))
       if (wprod1.lt.0.0d0 .and. wprod2.lt.0.0d0) then
-        oscil = abs(wlsbak(3)-wlsbak(2)) 
+        oscil = abs(wlsbak(3)-wlsbak(2))
         if (oscil .gt. osswlm) then
            if (.not.fldtmin ) then
-              fldecdt = .true.
-              return  
+              request_smaller_dt = .true.
+              fldecdt = .true.   ! transitional dual-write
+              fl_early_return = .true.
            else
               call dtdpst                                               &
      &        ('year-month-day,hour:minute:seconds',t1900,datetime)
@@ -595,19 +675,25 @@ subroutine SurfaceWater(task)
            endif
         endif
       endif
+      endif  ! .not. fl_early_return
 
+      if (.not. fl_early_return) then
 ! --- cumulative terms:
       cqdrd = cqdrd  + qdrd*dt
+      sw_cqdrd = sw_cqdrd + qdrd*dt
       cwsupp = cwsupp + wsupp*dt
+      sw_cwsupp = sw_cwsupp + wsupp*dt
       cwout = cwout  + wdis*dt
+      sw_cwout = sw_cwout + wdis*dt
+      endif  ! .not. fl_early_return
 
-
+      end associate
 
       return
       end
 
 ! ----------------------------------------------------------------------
-      subroutine WBALLEV ()
+      subroutine WBALLEV (state)
       !! Close surface water balance using given input surface water levels
       !!
       !! This subroutine handles the case where surface water levels are
@@ -622,42 +708,55 @@ subroutine SurfaceWater(task)
       !! drainage fluxes, determines whether supply or discharge occurred.
       !!@note
       !!     Date               : 29/9/99
-      !!     Purpose            : close surface water balance using 
-      !!                          given (input) surface water levels   
+      !!     Purpose            : close surface water balance using
+      !!                          given (input) surface water levels
       !!
       !! --- Compare storage at T + drainage fluxes with storage at T+DT
       !! --- The difference will be either discharge or supply
       !! --- Update totals (of discharge, supply and qdrd)
       !!
-      !!     Subroutines called :                          
-      !!     Functions called   : swstlev                          
+      !!     Subroutines called :
+      !!     Functions called   : swstlev
       !!     File usage         :
-      !!     Differences SWAP/SWAPS: None        
+      !!     Differences SWAP/SWAPS: None
       !!@endnote
       use variables, only: wls,wlstab,swst,dt,runots,QRapDra,qdrd,cqdrd,cwsupp,cwout,WLSOLD,t1900
+      use swap_state_mod, only: swap_state_t
       use array_utils, only: afgen
       use surfacewater_utils, only: swstlev
       use swap_array_dimensions, only: mawls
       IMPLICIT NONE
-      
-! --- global
+
+      type(swap_state_t), intent(inout) :: state
 
 ! --- local
       real(8) swstold,swstrest,wdis,wsupp
 
 ! ----------------------------------------------------------------------
+
+      associate( &
+         sw_wls    => state%surfacewater%wls,    &
+         sw_wlsold => state%surfacewater%wlsold, &
+         sw_swst   => state%surfacewater%swst,   &
+         sw_cqdrd  => state%surfacewater%cqdrd,  &
+         sw_cwsupp => state%surfacewater%cwsupp, &
+         sw_cwout  => state%surfacewater%cwout)
+
 ! --- wlsold gets w-level of previous time step
       wlsold = wls
+      sw_wlsold = wls
 
 ! --- fetch new level from input series
       wls = AFGEN (WLSTAB,2*MAWLS,t1900-1.d0+DT)
+      sw_wls = wls
 
 ! --- determine surface water storage for level(t-dt) and level(t)
-      swstold = swstlev(wlsold) 
+      swstold = swstlev(wlsold)
       swst = swstlev(wls)
+      sw_swst = swst
 
 ! --- determine from the surface water storages and the qdrain whether
-! --- supply has taken place during period (t)-(t+dt) or water has 
+! --- supply has taken place during period (t)-(t+dt) or water has
 ! --- been discharged
       swstrest = swstold + (qdrd + QRapDra)*dt + runots - swst
 
@@ -674,8 +773,13 @@ subroutine SurfaceWater(task)
 
 ! --- cumulation of water balance terms
       cqdrd = cqdrd  + qdrd*dt
+      sw_cqdrd = sw_cqdrd + qdrd*dt
       cwsupp = cwsupp + wsupp*dt
+      sw_cwsupp = sw_cwsupp + wsupp*dt
       cwout = cwout  + wdis*dt
+      sw_cwout = sw_cwout + wdis*dt
+
+      end associate
 
       return
       end

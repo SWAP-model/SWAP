@@ -3523,6 +3523,8 @@
       use variables
       use drainage_mod, only: drainage
       use surfacewater_mod, only: SurfaceWater
+      use swap_state_mod, only: swap_state_t
+      use surfacewater_init_mod, only: surfacewater_init
       use frozencond_mod, only: FrozenBounds
       use soilhydraulics_mod, only: headcalc, SoilWaterStateVar
       use file_io_mod, only: file_open
@@ -3539,6 +3541,12 @@
       integer   i,swBotbtmp
       real(8)   vair(2),dgwl(2),gwltmp,pondtmp,qbottmp, vt2
       real(8)   thetatmp(macp),htmp(macp),xd(6)
+      ! SS-SWST Phase 1: local saved state for the diagnostic re-run.
+      ! Initialized via surfacewater_init in task=1 (called after SurfaceWater(1)
+      ! has already set up globals). The dual-write in SurfaceWater keeps globals
+      ! current, so this state tracks the perturbed mini-loop independently.
+      type(swap_state_t), save :: state_om
+      logical :: request_smaller_dt_om
 
 
       save      sto,vsat,vt0,gwlt0, stocot1
@@ -3567,6 +3575,11 @@
       do nod = 1,numnod
          vsat = vsat + cofgen(2,nod) * dz(nod)
       end do
+
+      ! SS-SWST Phase 1: initialize the local saved state for
+      ! the diagnostic re-run. Called after SurfaceWater(1) has
+      ! already set globals; surfacewater_init reads those globals.
+      if (flSurfaceWater) call surfacewater_init(state_om)
 
       return
 
@@ -3636,7 +3649,7 @@
 
 ! ---   calculate drainage fluxes
            if (fldrain)                           call Drainage
-           if (.not.fldecdt .and. flSurfaceWater) call SurfaceWater(2)
+           if (.not.fldecdt .and. flSurfaceWater) call SurfaceWater(2, state_om, request_smaller_dt_om)
            if (SwFrost.eq.1)                      call FrozenBounds
 
 ! ---   calculate SoilWater
@@ -3648,7 +3661,7 @@
               call headcalc
 
 ! ---   calculate surface water balace
-              if (flSurfaceWater) call SurfaceWater(3)
+              if (flSurfaceWater) call SurfaceWater(3, state_om, request_smaller_dt_om)
            end if
 
 ! ---   update time variables and switches/flags

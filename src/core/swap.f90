@@ -69,6 +69,7 @@ use variables, only : flyearstart, fldaystart, flswapshared, flsurfacewater, flm
                       floutputshort, flharvestday, flcropoutput, swcrp, flirrigationoutput, swend, project, &
                       flTillage, flSSDI, &
                       daynr, iyear, numnod, numlay
+use swap_state_mod, only: swap_state_t
 use drainage_mod, only: drainage
 use surfacewater_mod, only: SurfaceWater
                       ! for debugging
@@ -106,11 +107,16 @@ type(swap_output), intent(out),   optional :: fromswap
 
 ! local
 logical :: flError
+logical :: request_smaller_dt
 logical, parameter :: flDailyStateSnapshot = .false.
 ! Phase 1 (.crp port): saved config so crop_config_global pointer remains
 ! valid across the iTask=1 / iTask=2 / iTask=3 call boundary.
 ! See crop_config_global.f90 and ADR 0016/0017.
 type(swap_config_t), target, save :: config
+! SS-SWST Phase 1: typed surface-water state, threaded to SurfaceWater().
+! SAVE ensures the state persists across the iTask=1 / iTask=2 / iTask=3
+! call boundary (same pattern as `config` above).
+type(swap_state_t), save :: state
 
 if (iCaller /= 0 .and. iTask < 3) then
    if (.not.(present(toswap)))   call fatalerr_collected ('swap', 'Argument toswap missing in DLL call.')
@@ -171,7 +177,7 @@ if (iTask == 1) then
    if (swuseCN == 1) call CNmethod(1)
 
 !  initialize SurfaceWater management variables
-   if (flSurfaceWater) call SurfaceWater(1)
+   if (flSurfaceWater) call SurfaceWater(1, state, request_smaller_dt)
 
 !  initialize MacroPore rate/state variables
    if (flMacroPore) call MACROPORE(1)
@@ -280,14 +286,14 @@ if (iTask == 2) then
 
 !        calculate drainage fluxes
          if (fldrain)                           call Drainage()
-         if (.not.fldecdt .and. flSurfaceWater) call SurfaceWater(2)
+         if (.not.fldecdt .and. flSurfaceWater) call SurfaceWater(2, state, request_smaller_dt)
          if (SwFrost.eq.1)                      call FrozenBounds()
 
 !        calculate SoilWater, incl macropores
          if (.not.fldecdt) call SoilWater(2)
 
 !        calculate surface water balance
-         if (.not.fldecdt .and. flSurfaceWater) call SurfaceWater(3)
+         if (.not.fldecdt .and. flSurfaceWater) call SurfaceWater(3, state, request_smaller_dt)
 
 !        update time variables and switches/flags
          if (fldecdt .or. (flMacroPore .and. FlDecMpRat))then
