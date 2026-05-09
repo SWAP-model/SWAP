@@ -15,11 +15,12 @@ SUBROUTINE MACRORATE(ITask,ICpBtDm,ICpBtPerZon,ICpSatGWl,         &
      &            ThtSrpRefDmCp,TimAbsCumDmCp,VlMpDm,VlMpDmCp,WaSrMp,   &
      &            WaSrMpDm,ZBtDm,ZWaLevDm,         flDraTub,FlEndSrpEvt,&
      &            QExcMtxDmCp,QInIntSatDmCp,QInMtxSatDmCp,QInTopLatDm,  &
-     &            QInTopVrtDm,QOutDrRapCp,QOutMtxSatDmCp,QOutMtxUnsDmCp)
+     &            QInTopVrtDm,QOutDrRapCp,QOutMtxSatDmCp,QOutMtxUnsDmCp,&
+     &            state)
 ! ----------------------------------------------------------------------
-!     Date               : april 2008                                       
-!     Purpose            : 
-!     Subroutines called : ABSORPTION, RAPIDDRAIN, SATFLOW                               
+!     Date               : april 2008
+!     Purpose            :
+!     Subroutines called : ABSORPTION, RAPIDDRAIN, SATFLOW
 !     Functions called   : VOLUNDR
 ! ----------------------------------------------------------------------
 ! --- Exclude work arrays passed as arguments (now module-level in variables.f90)
@@ -37,21 +38,23 @@ SUBROUTINE MACRORATE(ITask,ICpBtDm,ICpBtPerZon,ICpSatGWl,         &
      &    FlEndSrpEvt_v => FlEndSrpEvt, ICpBtPerZon_v => ICpBtPerZon, &
      &    ICpSatGWl_v => ICpSatGWl, ICpSatPeGWl_v => ICpSatPeGWl, &
      &    ICpTpPerZon_v => ICpTpPerZon, ICpTpSatZon_v => ICpTpSatZon
+      use swap_state_mod, only: swap_state_t
       implicit NONE
 
 ! --- global                                                          In
       integer ICpBtDm(MaDm), ICpTpWaSrDm(MaDm), ITask
-      real(8) ArMpTpDm(MaDm), AwlCorFac(Macp), FrMpWalWet(MaDm,MaCp) 
+      real(8) ArMpTpDm(MaDm), AwlCorFac(Macp), FrMpWalWet(MaDm,MaCp)
       real(8) KDCrRlRef(MaDr), SorpDmCp(MaDm,MaCp)
       real(8) ThtSrpRefDmCp(MaDm,MaCp), TimAbsCumDmCp(MaDm,MaCp)
       real(8) VlMpDm(MaDm), VlMpDmCp(MaDm,MaCp), WaSrMp, WaSrMpDm(MaDm)
       real(8) ZBtDm(MaDm), ZWaLevDm(MaDm)
       logical flDraTub(Madr)
+      type(swap_state_t), intent(in) :: state
 !     -                                                              Out
       real(8) QExcMtxDmCp(MaDm,MaCp), QInIntSatDmCp(MaDm,MaCp)
       real(8) QInMtxSatDmCp(MaDm,MaCp), QInTopLatDm(MaDm)
-      real(8) QInTopVrtDm(MaDm), QOutDrRapCp(MaCp) 
-      real(8) QOutMtxSatDmCp(MaDm,MaCp), QOutMtxUnsDmCp(MaDm,MaCp) 
+      real(8) QInTopVrtDm(MaDm), QOutDrRapCp(MaCp)
+      real(8) QOutMtxSatDmCp(MaDm,MaCp), QOutMtxUnsDmCp(MaDm,MaCp)
       logical FlEndSrpEvt(MaDm,MaCp)
 ! ----------------------------------------------------------------------
 ! --- local
@@ -200,7 +203,7 @@ SUBROUTINE MACRORATE(ITask,ICpBtDm,ICpBtPerZon,ICpSatGWl,         &
          call RAPIDDRAIN(id,ICpBtDm(1),ICpTpWaSrDm(1),flDraTub,         &
      &          FrMpWalWet,FrReduQ,KDCrRlRef,VlMpDmCp,WaSrMpDm(1),      &
      &          ZBtDm(1),ZWaLevDm(1),FlwOutDrRapCpPot,FlwOutDrRapPot,   &
-     &          VlMpUndrDrL)
+     &          VlMpUndrDrL, state)
 
 
 !- B. CALCULATE NEW WATER STORAGE AND CHECK WITH AVAILABLE DOMAIN VOLUME
@@ -757,9 +760,9 @@ SUBROUTINE MACRORATE(ITask,ICpBtDm,ICpBtPerZon,ICpSatGWl,         &
 !=====================================================================
       SUBROUTINE RAPIDDRAIN(id,ICpBtDm,ICpTpWaSrDm,flDraTub,FrMpWalWet, &
      &              FrReduQ,KDCrRlRef,VlMpDmCp,WaSrMpDm,ZBtDm,ZWaLevDm, &
-     &              FlwOutDrRapCpPot,FlwOutDrRapPot,VlMpUndrDrL)
+     &              FlwOutDrRapCpPot,FlwOutDrRapPot,VlMpUndrDrL, state)
 ! ----------------------------------------------------------------------
-!     Date               : April 2008                                      
+!     Date               : April 2008
 !     Purpose            : To calculate rapid drainage from Main Bypass flow domain
 ! ----------------------------------------------------------------------
 ! --- Exclude work arrays passed as arguments (now module-level in variables.f90)
@@ -767,13 +770,15 @@ SUBROUTINE MACRORATE(ITask,ICpBtDm,ICpBtPerZon,ICpSatGWl,         &
      &    flDraTub_v => flDraTub, FrMpWalWet_v => FrMpWalWet, &
      &    KDCrRlRef_v => KDCrRlRef, VlMpDmCp_v => VlMpDmCp, &
      &    WaSrMpDm_v => WaSrMpDm, ZBtDm_v => ZBtDm, ZWaLevDm_v => ZWaLevDm
+      use swap_state_mod, only: swap_state_t
       implicit NONE
 
 ! --- global                                                          In
       integer ICpBtDm, ICpTpWaSrDm, id
-      real(8) FrMpWalWet(MaDm,MaCp), FrReduQ, KDCrRlRef(MaDr) 
+      real(8) FrMpWalWet(MaDm,MaCp), FrReduQ, KDCrRlRef(MaDr)
       real(8) VlMpDmCp(MaDm,MaCp), WaSrMpDm, ZBtDm, ZWaLevDm
       logical flDraTub(Madr)
+      type(swap_state_t), intent(in) :: state
 !     -                                                              Out
       real(8) FlwOutDrRapCpPot(MaCp), FlwOutDrRapPot, VlMpUndrDrL
       real(8) FacRes
@@ -786,6 +791,7 @@ SUBROUTINE MACRORATE(ITask,ICpBtDm,ICpBtPerZon,ICpSatGWl,         &
 !
 ! --- Check whether this subroutine is relevant for this macropore domain
 !     Rapid drainage only in domain 1: Main Bypass flow domain
+      associate(ZDraBas => state%surfacewater%ZDraBas)
       if (id.eq.1) then
 !   - Initialization
          FlwOutDrRapPot= 0.d0
@@ -845,6 +851,8 @@ SUBROUTINE MACRORATE(ITask,ICpBtDm,ICpBtPerZon,ICpSatGWl,         &
             endif    
  300     continue
       endif
+
+      end associate
 
       return
       END

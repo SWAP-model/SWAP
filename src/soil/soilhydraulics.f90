@@ -39,7 +39,7 @@ contains
       implicit none
 
       ! Arguments
-      type(swap_state_t), intent(in) :: state
+      type(swap_state_t), intent(inout) :: state
 
       ! Local variables
       integer   i,j, itry,  MaxIt1, ndr, NN, iBackTr
@@ -201,7 +201,7 @@ contains
       call boundtop
 
       if (FlMacropore) then
-         call MACROPORE(2)
+         call MACROPORE(2, state)
       end if
 
       if (FlRunoff .or. (FlMacropore .and. Z_Tp.gt.-1.d-8))             &   ! Adaptation for GEM
@@ -382,7 +382,7 @@ contains
          end if
 
          if (FlMacropore .and. .not.flunsatok(3)) then
-            call MACROPORE(3)
+            call MACROPORE(3, state)
 
             do i= 1, nn
                dFdhM(i) = dFdhM(i) - dFdhMp(i)
@@ -483,7 +483,7 @@ contains
 
             if (FlMacropore) then
                if (.not.flunsatok(3)) then
-                  call MACROPORE(2)
+                  call MACROPORE(2, state)
                else
                   QMpLatSs = QMpLatSsSav
                endif
@@ -1123,7 +1123,7 @@ contains
         enddo
 
         ! Macropore variables
-        if (flMacroPore) call macropore(5)
+        if (flMacroPore) call macropore(5, state)
       endif
 
       ! Reset cumulative soil water fluxes
@@ -1145,7 +1145,7 @@ contains
         cqprai = 0.0d0
 
         ! Macropore variables
-        if (flMacroPore) call macropore(6)
+        if (flMacroPore) call macropore(6, state)
 
         ! Reset initial water storage and ponding
         volini = volact
@@ -1179,7 +1179,7 @@ contains
       call fluxes ()
 
       ! Calculation of states macropores and intermediate & cumulative values
-      if (flMacroPore) call macropore(4)
+      if (flMacroPore) call macropore(4, state)
 
       ! Calculate cumulative fluxes
       call integral (state)

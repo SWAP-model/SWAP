@@ -72,17 +72,13 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
          endif
 !
          if (swdtyp(NumLevRapDra).eq.1) then
-            ZDraBas = zbotdr(NumLevRapDra)      ! drain tube
-            state%surfacewater%ZDraBas = zbotdr(NumLevRapDra)
+            state%surfacewater%ZDraBas = zbotdr(NumLevRapDra)    ! drain tube
          elseif (Swsec.eq.1) then
-            ZDraBas = afgen (wlstab,2*maowl,t1900) ! open drain, surf.wat. level input
-            state%surfacewater%ZDraBas = ZDraBas
+            state%surfacewater%ZDraBas = afgen (wlstab,2*maowl,t1900) ! open drain, surf.wat. level input
          elseif (Swsec.eq.2) then
-            ZDraBas = WlStar                    ! open drain, srf.wat. level simulated
-            state%surfacewater%ZDraBas = WlStar
+            state%surfacewater%ZDraBas = WlStar                  ! open drain, srf.wat. level simulated
          endif
 !
-         flInitDraBas = .false.
          state%surfacewater%flInitDraBas = .false.
 !
          Return

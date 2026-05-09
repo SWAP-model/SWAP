@@ -106,7 +106,7 @@ contains
     ! Arguments
     integer ITask
     !! Task selector for macropore calculations
-    type(swap_state_t), intent(inout), optional :: state
+    type(swap_state_t), intent(inout) :: state
 
     select case (itask)
     case (1)
@@ -118,7 +118,7 @@ contains
 
       ! Initialisation of flag for drain tube flDraTub and drainage basis ZDraBas
       if (SwDrRap.Eq.1 .and. SwDra.gt.0) then
-        if (SwDra.eq.1 .and. flInitDraBas .and. present(state)) call drainage(state)
+        if (SwDra.eq.1 .and. state%surfacewater%flInitDraBas) call drainage(state)
         ! Flag indicating whether drainage system is tube or open drain
         flDraTub(1) = .false.
         if (SwDTyp(NumLevRapDra).eq.1) flDraTub(1) = .true.
@@ -132,7 +132,7 @@ contains
       call MACROINIT(ICpBtDm,ICpTpWaSrDm,NnCrAr,flDraTub,FlEndSrpEvt, &
                      AwlCorFac,KDCrRlRef,QExcMtxDmCp,QInTopLatDm,QInTopVrtDm, &
                      QOutDrRapCp,SorpDmCp,ThtSrpRefDmCp,TimAbsCumDmCp,VlMpDmCp, &
-                     WaSrMpDm)
+                     WaSrMpDm, state)
 
       ! Calculate INITIAL dynamic macropore (crack) volume, total macropore volume
       ! per domain and per compartment, and area of macropores at soil surface
@@ -165,7 +165,8 @@ contains
                      VlMpDm,VlMpDmCp,WaSrMp,WaSrMpDm,ZBtDm,ZWaLevDm, &
                      flDraTub,FlEndSrpEvt, &
                      QExcMtxDmCp,QInIntSatDmCp,QInMtxSatDmCp,QInTopLatDm, &
-                     QInTopVrtDm,QOutDrRapCp,QOutMtxSatDmCp,QOutMtxUnsDmCp)
+                     QInTopVrtDm,QOutDrRapCp,QOutMtxSatDmCp,QOutMtxUnsDmCp, &
+                     state)
       return
 
     case (3)
@@ -177,7 +178,8 @@ contains
                      VlMpDm,VlMpDmCp,WaSrMp,WaSrMpDm,ZBtDm,ZWaLevDm, &
                      flDraTub,FlEndSrpEvt, &
                      QExcMtxDmCp,QInIntSatDmCp,QInMtxSatDmCp,QInTopLatDm, &
-                     QInTopVrtDm,QOutDrRapCp,QOutMtxSatDmCp,QOutMtxUnsDmCp)
+                     QInTopVrtDm,QOutDrRapCp,QOutMtxSatDmCp,QOutMtxUnsDmCp, &
+                     state)
       return
 
     case (4)
@@ -869,7 +871,7 @@ contains
   subroutine MACROINIT(ICpBtDm,ICpTpWaSrDm,NnCrAr, &
                        flDraTub,FlEndSrpEvt,AwlCorFac,KDCrRlRef,QExcMtxDmCp, &
                        QInTopLatDm,QInTopVrtDm,QOutDrRapCp,SorpDmCp, &
-                       ThtSrpRefDmCp,TimAbsCumDmCp,VlMpDmCp,WaSrMpDm)
+                       ThtSrpRefDmCp,TimAbsCumDmCp,VlMpDmCp,WaSrMpDm, state)
       ! --- Exclude work arrays passed as arguments (now module-level in variables.f90)
       use Variables, ICpBtDm_v => ICpBtDm, ICpTpWaSrDm_v => ICpTpWaSrDm, &
      &    NnCrAr_v => NnCrAr, AwlCorFac_v => AwlCorFac, KDCrRlRef_v => KDCrRlRef, &
@@ -879,16 +881,18 @@ contains
      &    TimAbsCumDmCp_v => TimAbsCumDmCp, VlMpDmCp_v => VlMpDmCp, &
      &    WaSrMpDm_v => WaSrMpDm, flDraTub_v => flDraTub, FlEndSrpEvt_v => FlEndSrpEvt
       use soilhydraulics_utils, only: watcon
+      use swap_state_mod, only: swap_state_t
       implicit NONE
 
-      ! --- global                                                       
-      integer ICpBtDm(MaDm), ICpTpWaSrDm(MaDm), NnCrAr 
+      ! --- global
+      integer ICpBtDm(MaDm), ICpTpWaSrDm(MaDm), NnCrAr
       real(8) AwlCorFac(Macp),KDCrRlRef(MaDr), QExcMtxDmCp(MaDm,MaCp)
       real(8) QInTopLatDm(MaDm), QInTopVrtDm(MaDm), QOutDrRapCp(MaCp)
       real(8) SorpDmCp(MaDm,MaCp), ThtSrpRefDmCp(MaDm,MaCp)
-      real(8) TimAbsCumDmCp(MaDm,MaCp), VlMpDmCp(MaDm,MaCp) 
+      real(8) TimAbsCumDmCp(MaDm,MaCp), VlMpDmCp(MaDm,MaCp)
       real(8) WaSrMpDm(MaDm)
       logical flDraTub(Madr),FlEndSrpEvt(MaDm,MaCp)
+      type(swap_state_t), intent(in) :: state
 
       ! ----------------------------------------------------------------------
       ! --- local
@@ -900,6 +904,8 @@ contains
 
       ! ----------------------------------------------------------------------
       !
+      associate(ZDraBas => state%surfacewater%ZDraBas)
+
       ! - A. INITIALIZING VOLUMES OF MACROPORES AND WATER STORAGE IN MACROPORES
       !      of lezen uit file met toestandsvariabelen...................
       do 10 ic= 1, NumNod
@@ -1050,11 +1056,13 @@ contains
   70  continue
 
       ! - E. CALCULATION OF SORPTIVITY PARAMETERS SorpAlfa and SorpMax FROM SOIL
-      !      HYDRAULIC FUNCTIONS according to PARLANGE 
+      !      HYDRAULIC FUNCTIONS according to PARLANGE
       do 80 il= 1, NumLay
          call PARLANGE(SwSorp(il),il)
   80  continue
-   
+
+      end associate
+
       return
       end subroutine MACROINIT
 
