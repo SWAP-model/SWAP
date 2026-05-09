@@ -9,7 +9,7 @@ fs = import('fs')
 src_inc = include_directories(
     'src', 'src/core', 'src/io', 'src/io/toml', 'src/soil', 'src/atmosphere',
     'src/crop', 'src/drainage', 'src/boundary', 'src/macropore',
-    'src/solute', 'src/heat', 'src/utils', 'src/config'
+    'src/solute', 'src/heat', 'src/utils', 'src/config', 'src/state'
 )
 
 # Platform detection. The rescue spec locks the supported compiler
@@ -165,6 +165,9 @@ sources = [
     'src/crop/tillage.f90',
     'src/crop/management_soil.f90',
     'src/crop/cropgrowth.f90',
+
+    # State
+    'src/state/surfacewater_state.f90',
 
     # Utils
     'src/utils/sharedexchange.f90',

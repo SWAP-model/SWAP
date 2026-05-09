@@ -133,6 +133,7 @@ if get_option('enable_pfunit')
         '../../src/crop/oxygenstress.f90',
         '../../src/utils/surfacewaterutils.f90',
         '../../src/drainage/surfacewater_init.f90',
+        '../../src/state/surfacewater_state.f90',
         '../../src/crop/irrigation.f90',
         '../../src/io/file_io.f90',
     ]
@@ -204,6 +205,7 @@ if get_option('enable_pfunit')
         'io/toml/test_apply_cropwofost_nutrient.pf',
         'io/toml/test_nutrients_config.pf',
         'drainage/test_surfacewater_init.pf',
+        'state/test_surfacewater_state.pf',
         'crop/test_cropfixed_init.pf',
         'crop/test_cropwofost_init.pf',
         'crop/test_cropgrass_init.pf',

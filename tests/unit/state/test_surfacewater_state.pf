@@ -1,0 +1,101 @@
+! Tests for surfacewater_state_t — typed state record for the
+! surface-water subsystem. Phase 1 of the state-migration arc.
+!
+! See docs/superpowers/specs/2026-05-09-state-migration-surfacewater-design.md.
+
+@test
+subroutine test_surfacewater_state_default_scalars()
+   use funit
+   use iso_fortran_env, only: real64
+   use surfacewater_state_mod, only: surfacewater_state_t
+   type(surfacewater_state_t) :: sw
+
+   @assertEqual(0.0_real64, sw%wls,           1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%wlstar,        1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%swst,          1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%swstini,       1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%hwlman,        1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%vtair,         1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%wlsold,        1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%cqdrd,         1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%cwsupp,        1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%cwout,         1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%cqdra,         1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%ZDraBas,       1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%iqdra,         1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%qdrtot,        1.0e-12_real64)
+   @assertFalse(sw%overfl)
+   @assertTrue(sw%flInitDraBas)
+   @assertEqual(1, sw%imper)
+   @assertEqual(0, sw%numadj)
+end subroutine test_surfacewater_state_default_scalars
+
+@test
+subroutine test_surfacewater_state_wlsbak_default()
+   use funit
+   use iso_fortran_env, only: real64
+   use surfacewater_state_mod, only: surfacewater_state_t
+   type(surfacewater_state_t) :: sw
+   integer :: i
+
+   do i = 1, 4
+      @assertEqual(0.0_real64, sw%wlsbak(i), 1.0e-12_real64)
+   end do
+end subroutine test_surfacewater_state_wlsbak_default
+
+@test
+subroutine test_surfacewater_state_sttab_default()
+   use funit
+   use iso_fortran_env, only: real64
+   use surfacewater_state_mod, only: surfacewater_state_t
+   type(surfacewater_state_t) :: sw
+   integer :: i, j
+
+   do j = 1, 2
+      do i = 1, 22
+         @assertEqual(0.0_real64, sw%sttab(i,j), 1.0e-12_real64)
+      end do
+   end do
+end subroutine test_surfacewater_state_sttab_default
+
+@test
+subroutine test_surfacewater_state_arrays_unallocated()
+   ! Per-level arrays are allocatable; default state is unallocated.
+   ! surfacewater_init allocates them based on drainage config (Madr, macp).
+   use funit
+   use surfacewater_state_mod, only: surfacewater_state_t
+   type(surfacewater_state_t) :: sw
+
+   @assertFalse(allocated(sw%cqdrain))
+   @assertFalse(allocated(sw%cqdrainin))
+   @assertFalse(allocated(sw%cqdrainout))
+   @assertFalse(allocated(sw%qdra))
+   @assertFalse(allocated(sw%inqdra))
+   @assertFalse(allocated(sw%inqdra_in))
+   @assertFalse(allocated(sw%inqdra_out))
+end subroutine test_surfacewater_state_arrays_unallocated
+
+@test
+subroutine test_surfacewater_state_array_allocation()
+   ! Caller (surfacewater_init) is responsible for allocating per-level
+   ! arrays. Verify the allocation pattern works.
+   use funit
+   use iso_fortran_env, only: real64
+   use surfacewater_state_mod, only: surfacewater_state_t
+   type(surfacewater_state_t) :: sw
+   integer, parameter :: Madr = 5
+   integer, parameter :: macp = 100
+
+   allocate(sw%cqdrain(Madr));         sw%cqdrain    = 0.0_real64
+   allocate(sw%cqdrainin(Madr));       sw%cqdrainin  = 0.0_real64
+   allocate(sw%cqdrainout(Madr));      sw%cqdrainout = 0.0_real64
+   allocate(sw%qdra(Madr, macp));      sw%qdra       = 0.0_real64
+   allocate(sw%inqdra(Madr, macp));    sw%inqdra     = 0.0_real64
+   allocate(sw%inqdra_in(Madr, macp)); sw%inqdra_in  = 0.0_real64
+   allocate(sw%inqdra_out(Madr, macp));sw%inqdra_out = 0.0_real64
+
+   @assertTrue(allocated(sw%cqdrain))
+   @assertEqual(Madr, size(sw%cqdrain))
+   @assertEqual(Madr, size(sw%qdra, 1))
+   @assertEqual(macp, size(sw%qdra, 2))
+end subroutine test_surfacewater_state_array_allocation
