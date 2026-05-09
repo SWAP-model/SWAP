@@ -92,36 +92,32 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
 ! === lateral drainage fluxes to surface water ========================
 
 ! --- reset intermediate surface water and drainage fluxes
+      ! SS-SWST Phase 2 Task 7: global dual-writes for inqdra/iqdra dropped;
+      ! state is authoritative.  Global resets removed; state resets kept.
       if (flzerointr) then
         do node = 1,numnod
           do level = 1,nrlevs
-            inqdra(level,node)                        = 0.0d0
             state%surfacewater%inqdra(level,node)     = 0.0d0
-            inqdra_in(level,node)                     = 0.0d0
             state%surfacewater%inqdra_in(level,node)  = 0.0d0
-            inqdra_out(level,node)                    = 0.0d0
             state%surfacewater%inqdra_out(level,node) = 0.0d0
           enddo
         enddo
-        iqdra = 0.0d0
         state%surfacewater%iqdra = 0.0d0
       endif
 
 ! --- reset cumulative surface water and drainage fluxes
+      ! SS-SWST Phase 2 Task 7: global dual-writes for cqdra/cqdrain* dropped;
+      ! state is authoritative.  Global resets removed; state resets kept.
       if (flzerocumu) then
         ! cqdrd/cwsupp/cwout global writes dropped: only output reads them,
         ! via state%surfacewater%*.  State resets remain authoritative.
         state%surfacewater%cqdrd  = 0.0d0
         state%surfacewater%cwsupp = 0.0d0
         state%surfacewater%cwout  = 0.0d0
-        cqdra = 0.0d0
         state%surfacewater%cqdra = 0.0d0
         do level = 1,nrlevs
-          cqdrain(level) = 0.0d0
           state%surfacewater%cqdrain(level) = 0.0d0
-          cqdrainin(level) = 0.0d0
           state%surfacewater%cqdrainin(level) = 0.0d0
-          cqdrainout(level) = 0.0d0
           state%surfacewater%cqdrainout(level) = 0.0d0
         enddo
       endif

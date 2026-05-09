@@ -427,26 +427,22 @@ contains
       iet0 = iet0 + 0.1d0*et0*dt
       iew0 = iew0 + 0.1d0*ew0*dt
 
-      iqdra = iqdra + qdrats + QRapDra*dt
-      state%surfacewater%iqdra = iqdra
+      ! SS-SWST Phase 2 Task 7: iqdra/inqdra* accumulated directly into state; global dropped.
+      state%surfacewater%iqdra = state%surfacewater%iqdra + qdrats + QRapDra*dt
       do node = 1,numnod
         qdraincomp(node) = 0.d0
         do level = 1,nrlevs
-          inqdra(level,node) = inqdra(level,node)+qdra(level,node)*dt
-          if (qdra(level,node) > 0.0d0) then
-             inqdra_out(level,node) = inqdra_out(level,node) + qdra(level,node)*dt
-          else
-             inqdra_in(level,node)  = inqdra_in(level,node) - qdra(level,node)*dt
+          if (allocated(state%surfacewater%inqdra)) then
+            state%surfacewater%inqdra(level,node) = state%surfacewater%inqdra(level,node) + qdra(level,node)*dt
+            if (qdra(level,node) > 0.0d0) then
+               state%surfacewater%inqdra_out(level,node) = state%surfacewater%inqdra_out(level,node) + qdra(level,node)*dt
+            else
+               state%surfacewater%inqdra_in(level,node)  = state%surfacewater%inqdra_in(level,node) - qdra(level,node)*dt
+            end if
           end if
           qdraincomp(node) = qdra(level,node) + qdraincomp(node)
         end do
       end do
-      ! dual-write inqdra arrays to state (only if allocated by surfacewater_init)
-      if (allocated(state%surfacewater%inqdra)) then
-         state%surfacewater%inqdra(1:nrlevs,1:numnod)     = inqdra(1:nrlevs,1:numnod)
-         state%surfacewater%inqdra_in(1:nrlevs,1:numnod)  = inqdra_in(1:nrlevs,1:numnod)
-         state%surfacewater%inqdra_out(1:nrlevs,1:numnod) = inqdra_out(1:nrlevs,1:numnod)
-      end if
 
       iintc = iintc + (aintcdt+gird-nird)*dt
 
@@ -477,8 +473,8 @@ contains
       ! add time step fluxes to total cumulative values
       cqssdi = cqssdi + qssdisum*dt
       cqrot = cqrot + qrotts
-      cqdra = cqdra + qdrats
-      state%surfacewater%cqdra = cqdra
+      ! SS-SWST Phase 2 Task 7: cqdra accumulated directly into state; global dropped.
+      state%surfacewater%cqdra = state%surfacewater%cqdra + qdrats
       cptra = cptra + ptrats
       cpeva = cpeva + pevats
       cevap = cevap + revats
@@ -504,21 +500,18 @@ contains
         cqbotup = cqbotup + qbotts
       endif
       cqbot = cqbot + qbotts
-      do level = 1,nrlevs
-        ! infiltration
-        if (qdrain(level).lt.0.0d0) then
-          cqdrainin(level) = cqdrainin(level) - qdrain(level)*dt
-        ! drainage
-        else if (qdrain(level).gt.0.0d0) then
-          cqdrainout(level) = cqdrainout(level) + qdrain(level)*dt
-        endif
-        cqdrain(level) = cqdrain(level) + qdrain(level)*dt
-      enddo
-      ! dual-write cqdrain/cqdrainin/cqdrainout to state (only if allocated by surfacewater_init)
+      ! SS-SWST Phase 2 Task 7: cqdrain/in/out accumulated directly into state; globals dropped.
       if (allocated(state%surfacewater%cqdrain)) then
-         state%surfacewater%cqdrain(1:nrlevs)    = cqdrain(1:nrlevs)
-         state%surfacewater%cqdrainin(1:nrlevs)  = cqdrainin(1:nrlevs)
-         state%surfacewater%cqdrainout(1:nrlevs) = cqdrainout(1:nrlevs)
+        do level = 1,nrlevs
+          ! infiltration
+          if (qdrain(level).lt.0.0d0) then
+            state%surfacewater%cqdrainin(level) = state%surfacewater%cqdrainin(level) - qdrain(level)*dt
+          ! drainage
+          else if (qdrain(level).gt.0.0d0) then
+            state%surfacewater%cqdrainout(level) = state%surfacewater%cqdrainout(level) + qdrain(level)*dt
+          endif
+          state%surfacewater%cqdrain(level) = state%surfacewater%cqdrain(level) + qdrain(level)*dt
+        enddo
       end if
 
       ! rain on the ponding surface
@@ -532,12 +525,12 @@ contains
 
       ! compensate water balance error of this time step during remaining day part
       ! cumulative water balance error
-      if (swsnow.eq.0) then 
+      if (swsnow.eq.0) then
         wbalance = cnrai + cnird + crunon - crunoff - cqrot - cevap     &
-     &        - cqdra + cqbot + volini - volact + PondIni - pond + cqssdi
+     &        - state%surfacewater%cqdra + cqbot + volini - volact + PondIni - pond + cqssdi
       else
          wbalance = cqprai + cnird + cmelt + crunon - crunoff           &
-     &        - cqrot - cevap - cqdra                                   &
+     &        - cqrot - cevap - state%surfacewater%cqdra                &
      &        + cqbot + volini - volact + PondIni - pond + cqssdi
       endif
 
