@@ -154,21 +154,22 @@ Hazards (3) and (4) (output reaching back into state, compute called from output
 
 CSV output (`set_values` in `swap_csv_output.f90`) gets the same treatment for the surface-water-related variables it currently reads from globals.
 
-### D10. Config: promote 12 missing fields first (Phase 0)
+### D10. Config: 12 missing fields — DEFERRED (separate arc)
 
-The discovery doc Section 8 item (8) lists 12 fields used by stub-errored branches (`swman=2`, `swsec=1`, `swqhr=2`) that the legacy reader populated but `surface_water_config_t` doesn't declare: `wlsman`, `gwlcrit`, `nphase`, `nodhd`, `dropr`, `vcrit`, `hcrit`, `hqhtab`, `qqhtab` (+ a few siblings).
+The discovery doc Section 8 item (8) lists 12 fields used by stub-errored branches (`swman=2`, `swsec=1`, `swqhr=2`) that the legacy reader populated but `surface_water_config_t` doesn't declare: `wlsman`, `gwlcrit`, `nphase`, `nodhd`, `dropr`, `vcrit`, `hcrit`, `hqhtab`, `qqhtab` plus three siblings the discovery doc enumerates in detail.
 
-The 12 fields are: `wlsman`, `gwlcrit`, `nphase`, `nodhd`, `dropr`, `vcrit`, `hcrit`, `hqhtab`, `qqhtab` plus three siblings the discovery doc enumerates in detail. Per the principle "config-file values live in the config type," they belong in `surface_water_config_t`. **Phase 0** of this arc promotes them: extend the typed config, extend the TOML reader, extend the adapter to populate the corresponding globals, extend pFUnit coverage. Stub-errors stay in place — these branches aren't enabled, just the inputs moved off legacy.
+**Status: deferred.** On a fresh pass, none of the 29 owned state-type fields overlap with these 12 config inputs, and the regression cases never exercise `swman=2` / `swqhr=2` / `swsec=1` (all stub-errored). Promoting these fields therefore does not unblock Phase 1 or Phase 2. It also drags in TOML-schema design (2D `mamp × mamte` tables — nested arrays vs sub-tables vs CSV companion) that the spec doesn't pin down.
 
-This phase is independent enough that it ships before Phase 1 starts.
+Track as its own future arc, kicked off whenever someone needs to enable `swman=2` / `swqhr=2`. Until then, the stub-errors keep these branches inactive and `surface_water_config_t` stays at its current shape.
 
 ## Phasing
 
-The arc decomposes into three phases with check-full as the gate between them:
+The arc decomposes into two phases with check-full as the gate between them:
 
-- **Phase 0 — Config completion.** Promote 12 fields. No state-type work. Existing stub-errors preserved.
 - **Phase 1 — State type + per-step migration.** Define `surfacewater_state_t` and `swap_state_t`. Thread `state` through all surfacewater entry points and call sites. Move `fldecdt` to `intent(out)`. Apply ASSOCIATE inside compute bodies. Update output-side reads to use threaded state. Verify check-full at end of phase.
 - **Phase 2 — Owner-rule relocation.** Move `qdrain` zeroing rule to drainage's `bocodre`. Move `l(Madr)` m→cm conversion to drainage config load. Remove dead `SurfaceWater(2)` call from `swapoutput.f90`. Remove `fldecdt`, the 29 owned globals, and any incidentally-orphaned declarations from `variables.f90`.
+
+(Phase 0 — promote 12 missing config fields — is deferred. See D10.)
 
 Each phase ships independently with check-full byte-identical and pFUnit green as the integration gates.
 
