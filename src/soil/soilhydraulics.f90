@@ -848,7 +848,7 @@ contains
 
       ! Arguments
       integer task
-      type(swap_state_t), intent(in) :: state
+      type(swap_state_t), intent(inout) :: state
 
       ! Local variables
       integer lay,node,i,j
@@ -1181,7 +1181,7 @@ contains
       if (flMacroPore) call macropore(4)
 
       ! Calculate cumulative fluxes
-      call integral
+      call integral (state)
 
       ! Update parameters for soil water hystereses
       if (swhyst.ne.0) call hysteresis ()

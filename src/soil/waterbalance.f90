@@ -15,6 +15,7 @@
 !> - watstor: Calculate water storage in soil profile
 module soilwaterbalance_mod
    use error_mod, only: fatalerr_collected
+   use swap_state_mod, only: swap_state_t
     implicit none
     private
     public :: calcgwl, level, watertable, fluxes, integral, checkmassbal, watstor
@@ -364,10 +365,11 @@ contains
       !> @note
       !> Date: November 2004
       !> @endnote
-      subroutine integral 
+      subroutine integral (state)
       Use Variables
       implicit none
 
+      type(swap_state_t), intent(inout) :: state
       integer node,level
       real(8) qrotts,qdrats,ptrats,pevats,revats,qbotts
              
@@ -426,6 +428,7 @@ contains
       iew0 = iew0 + 0.1d0*ew0*dt
 
       iqdra = iqdra + qdrats + QRapDra*dt
+      state%surfacewater%iqdra = iqdra
       do node = 1,numnod
         qdraincomp(node) = 0.d0
         do level = 1,nrlevs
@@ -438,6 +441,12 @@ contains
           qdraincomp(node) = qdra(level,node) + qdraincomp(node)
         end do
       end do
+      ! dual-write inqdra arrays to state (only if allocated by surfacewater_init)
+      if (allocated(state%surfacewater%inqdra)) then
+         state%surfacewater%inqdra(1:nrlevs,1:numnod)     = inqdra(1:nrlevs,1:numnod)
+         state%surfacewater%inqdra_in(1:nrlevs,1:numnod)  = inqdra_in(1:nrlevs,1:numnod)
+         state%surfacewater%inqdra_out(1:nrlevs,1:numnod) = inqdra_out(1:nrlevs,1:numnod)
+      end if
 
       iintc = iintc + (aintcdt+gird-nird)*dt
 
@@ -469,6 +478,7 @@ contains
       cqssdi = cqssdi + qssdisum*dt
       cqrot = cqrot + qrotts
       cqdra = cqdra + qdrats
+      state%surfacewater%cqdra = cqdra
       cptra = cptra + ptrats
       cpeva = cpeva + pevats
       cevap = cevap + revats
@@ -501,9 +511,15 @@ contains
         ! drainage
         else if (qdrain(level).gt.0.0d0) then
           cqdrainout(level) = cqdrainout(level) + qdrain(level)*dt
-        endif      
+        endif
         cqdrain(level) = cqdrain(level) + qdrain(level)*dt
       enddo
+      ! dual-write cqdrain/cqdrainin/cqdrainout to state (only if allocated by surfacewater_init)
+      if (allocated(state%surfacewater%cqdrain)) then
+         state%surfacewater%cqdrain(1:nrlevs)    = cqdrain(1:nrlevs)
+         state%surfacewater%cqdrainin(1:nrlevs)  = cqdrainin(1:nrlevs)
+         state%surfacewater%cqdrainout(1:nrlevs) = cqdrainout(1:nrlevs)
+      end if
 
       ! rain on the ponding surface
       cqprai = cqprai + nraidt*dt

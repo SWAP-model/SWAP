@@ -1,15 +1,16 @@
 module SWAP_csv_output
 
    use error_mod, only: fatalerr_collected
-   use variables, only: igsnow,igird,iintc,irunon,iruno,ipeva,ievap,iqdra,iqbot,                                                 &
+   use variables, only: igsnow,igird,iintc,irunon,iruno,ipeva,ievap,iqbot,                                                       &
                         gwl,pond,iptra,iqrot,iqreddry,iqredwet,iqredsol,iqredfrs,tsum,dvs,pgasspot,pgass,                        &
                         cwdmpot,cwdm,wsopot,wso,wlvpot,wlv,wstpot,wst,wrtpot,wrt,dwso,dwlv,dwlvpot,dwst,dwstpot,dwrt,dwrtpot,    &
                         ch,cf,laipot,lai,rdpot,rd,tagppot,tagp,tagptpot,tagpt,cuptgrazpot,cuptgraz,plossdm,lossdm,               &
                         imsqprec,imsqirrig,imsqbot,imsqdra,imdectot,imrottot,sampro,solbal,                                      &
                         wc10,Runoff_CN,iqtdo,iqtup,iqinfmax,TeTop,TeBot,ies0,iet0,iew0,inrai,inird,volact,ssnow,iqssdi,          &
                         flprintshort, date, t1900, dz, numnod, zbotcp, ztopcp, H, theta, K, Tsoil, cml, cmsy, inq, inqrot,       &
-                        igrai, isnrai, iqmpoutdrrap, irunocn, isubl, c_top, heacap, heacon, inqssdi, inqdra, nrlevs, frarmtrx,   &
-                        iqdo, iqup, inqdra_in, inqdra_out, pathwork, outfil, project, InList_csv, macp, madr
+                        igrai, isnrai, iqmpoutdrrap, irunocn, isubl, c_top, heacap, heacon, inqssdi, nrlevs, frarmtrx,           &
+                        iqdo, iqup, pathwork, outfil, project, InList_csv, macp, madr
+   use swap_state_mod, only: swap_state_t
 
    implicit none
 
@@ -214,8 +215,9 @@ module SWAP_csv_output
 
    contains
 
-   subroutine set_values
+   subroutine set_values(state)
    implicit none
+   type(swap_state_t), intent(in) :: state
    integer :: i
    ! this must be hard-coded
    ! this provides the actual link between user-supplied name and internal variable name (MUST be uppercase)
@@ -232,7 +234,7 @@ module SWAP_csv_output
       if (vars%name(i) == 'EPOT')        vars%value(1,i) = ipeva
       if (vars%name(i) == 'EACT')        vars%value(1,i) = ievap
       if (vars%name(i) == 'SUBLIM')      vars%value(1,i) = isubl
-      if (vars%name(i) == 'DRAINAGE')    vars%value(1,i) = iqdra + iQMpOutDrRap
+      if (vars%name(i) == 'DRAINAGE')    vars%value(1,i) = state%surfacewater%iqdra + iQMpOutDrRap
       if (vars%name(i) == 'QBOTTOM')     vars%value(1,i) = iqbot
       if (vars%name(i) == 'GWL')         vars%value(1,i) = gwl
       if (vars%name(i) == 'POND')        vars%value(1,i) = pond
@@ -332,12 +334,13 @@ module SWAP_csv_output
    end do
    end subroutine set_values
 
-   subroutine csv_out(iTask)
+   subroutine csv_out(iTask, state)
    use file_io_mod, only: file_open
    implicit none
 
    ! global
-   integer, intent(in)  :: iTask
+   integer,            intent(in) :: iTask
+   type(swap_state_t), intent(in) :: state
 
    ! local
    integer              :: j, il, iuncsv
@@ -381,8 +384,8 @@ module SWAP_csv_output
    case (2)
       ! dynamic
       ! some local pointers must be filled here first; then values are transferred to vars%values
-      call fill_values
-      call set_values
+      call fill_values(state)
+      call set_values(state)
 
       ! line contains results in comma-separated format; il is its length
       ! time is first value
@@ -455,14 +458,15 @@ module SWAP_csv_output
    end if
    end subroutine what_form
 
-   subroutine fill_values
+   subroutine fill_values(state)
    implicit none
+   type(swap_state_t), intent(in) :: state
    integer :: i
 
    ! change in storage and deviation in mass balance
-   dstor        = (volact + pond + ssnow) - (VolOld + PondOld + SnowOld) 
+   dstor        = (volact + pond + ssnow) - (VolOld + PondOld + SnowOld)
    baldev       = (igrai+isnrai+igsnow+igird+irunon + iqssdi) - dstor -             &
-                  (iintc+iruno+irunoCN+iqrot+ievap+isubl+iQMpOutDrRap+iqdra+(-1.0d0*iqbot))
+                  (iintc+iruno+irunoCN+iqrot+ievap+isubl+iQMpOutDrRap+state%surfacewater%iqdra+(-1.0d0*iqbot))
 
    ! replace Old values by current values (needed for next output moment)
    VolOld  = volact
@@ -487,7 +491,7 @@ module SWAP_csv_output
 
    ! summed for all drainage levels
    if (lp_DRA%fldo) then
-      do i = 1, vars%Nnodes(lp_DRA%jpos); lp_DRA%vals(i) = sum(inqdra(1:nrlevs,i)); end do
+      do i = 1, vars%Nnodes(lp_DRA%jpos); lp_DRA%vals(i) = sum(state%surfacewater%inqdra(1:nrlevs,i)); end do
    end if
 
    ! handle subregions: WTOT, QTRANS, QTOP, QBOT, QDRA, lp_QTIN, lp_QTOU, lp_QBIN, lp_QBOU, lp_QDIN, lp_QDOU
@@ -495,9 +499,9 @@ module SWAP_csv_output
 
    ! summed sink-terms inside subregion
    if (lp_QTRA%fldo) call fill_1(vars%Nnodes(lp_QTRA%jpos), lp_QTRA%jpos, vars%nodes, lp_QTRA%vals, 0, inqrot)
-   if (lp_QDRA%fldo) call fill_2(vars%Nnodes(lp_QDRA%jpos), lp_QDRA%jpos, vars%nodes, lp_QDRA%vals, nrlevs, inqdra)
-   if (lp_QDIN%fldo) call fill_2(vars%Nnodes(lp_QDIN%jpos), lp_QDIN%jpos, vars%nodes, lp_QDIN%vals, nrlevs, inqdra_in)
-   if (lp_QDOU%fldo) call fill_2(vars%Nnodes(lp_QDOU%jpos), lp_QDOU%jpos, vars%nodes, lp_QDOU%vals, nrlevs, inqdra_out)
+   if (lp_QDRA%fldo) call fill_2(vars%Nnodes(lp_QDRA%jpos), lp_QDRA%jpos, vars%nodes, lp_QDRA%vals, nrlevs, state%surfacewater%inqdra)
+   if (lp_QDIN%fldo) call fill_2(vars%Nnodes(lp_QDIN%jpos), lp_QDIN%jpos, vars%nodes, lp_QDIN%vals, nrlevs, state%surfacewater%inqdra_in)
+   if (lp_QDOU%fldo) call fill_2(vars%Nnodes(lp_QDOU%jpos), lp_QDOU%jpos, vars%nodes, lp_QDOU%vals, nrlevs, state%surfacewater%inqdra_out)
 
    ! fluxes at top and bottom boudanries of subregions
    if (lp_QTOP%fldo) call fill_3(vars%Nnodes(lp_QTOP%jpos), lp_QTOP%jpos, 1, 0, vars%nodes, lp_QTOP%vals, -inq)

@@ -202,15 +202,15 @@ if (iTask == 1) then
 
 !  open Output files and write headers (skip in external/DLL mode to avoid per-column I/O)
    if (iCaller == 0) then
-      call SwapOutput(1)
+      call SwapOutput(1, state)
       call SoilWaterOutput(1, state)
       if (flIrrigate)     call IrrigationOutput(1)
       if (flTemperature)  call TemperatureOutput(1)
       if (flSolute)       call SoluteOutput(1)
-      if (flAgeTracer)    call AgeTracerOutput(1)
+      if (flAgeTracer)    call AgeTracerOutput(1, state)
       if (flSnow)         call SnowOutput(1)
       if (flMacroPore)    call MacroPoreOutput(1)
-      if (flSurfaceWater) call SurfaceWaterOutput(1)
+      if (flSurfaceWater) call SurfaceWaterOutput(1, state)
    end if
 
 !  Specific for exchange when called as DLL
@@ -360,12 +360,12 @@ if (iTask == 2) then
 !     output section (skip in external/DLL mode to avoid per-column I/O)
       if (iCaller == 0) then
          if (flOutput) then
-            call SwapOutput(2)
+            call SwapOutput(2, state)
             call SoilWaterOutput(2, state)
             if (flTillage) call DoTillage(3)
             if (flTemperature)   call TemperatureOutput(2)
             if (flSolute)        call SoluteOutput(2)
-            if (flAgeTracer)     call AgeTracerOutput(2)
+            if (flAgeTracer)     call AgeTracerOutput(2, state)
             if (flSnow)          call SnowOutput(2)
             if (flMacroPore)     call MacroPoreOutput(2)
             if (flSurfaceWater) then
@@ -408,13 +408,13 @@ if (iTask == 3) then
 !  close output files (skip in external/DLL mode)
    if (iCaller == 0) then
       if (flSwapShared) call SharedSimulation(4)
-      call SwapOutput(3)
+      call SwapOutput(3, state)
       if (swend.eq.1) call SoilWaterOutput(3, state)
       call SoilWaterOutput(4, state)
       if (swcrp.eq.1) call CropOutput(3)
       if (flTemperature)        call TemperatureOutput(3)
       if (flSolute)             call SoluteOutput(3)
-      if (flAgeTracer)          call AgeTracerOutput(3)
+      if (flAgeTracer)          call AgeTracerOutput(3, state)
       if (flIrrigate)           call IrrigationOutput(3)
       if (flSnow)               call SnowOutput(3)
       if (flMacroPore)          call MacroPoreOutput(3)

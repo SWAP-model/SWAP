@@ -1,7 +1,7 @@
 ! File VersionID:
 !   $Id: swapoutput.f90 377 2018-04-04 10:57:55Z heine003 $
 ! ----------------------------------------------------------------------
-      subroutine swapoutput(task)
+      subroutine swapoutput(task, state)
       use error_mod, only: fatalerr_collected
 ! ----------------------------------------------------------------------
 !     Date               : Aug 2004
@@ -9,9 +9,11 @@
 ! ----------------------------------------------------------------------
 
       use Variables
+      use swap_state_mod, only: swap_state_t
       implicit none
 
       integer task
+      type(swap_state_t), intent(in) :: state
 
       select case (task)
       case (1)
@@ -19,12 +21,13 @@
 ! === open output files ===============================
 
 ! --     bal file
-         if (swbal .eq. 1) call outbal (task)
+         if (swbal .eq. 1) call outbal (task, state)
 
 ! --     blc file
          if (swblc .eq. 1) call outblc(task,                                                 &
                       (CQMpInIntSatDm1+CQMpInIntSatDm2+CQMpInMtxSatDm1+CQMpInMtxSatDm2),     &
-                      (CQMpOutMtxSatDm1+CQMpOutMtxSatDm2+CQMpOutMtxUnsDm1+CQMpOutMtxUnsDm2))
+                      (CQMpOutMtxSatDm1+CQMpOutMtxSatDm2+CQMpOutMtxUnsDm1+CQMpOutMtxUnsDm2), &
+                      state)
 
          return
 
@@ -35,12 +38,13 @@
          if (flbaloutput) then
 
 ! --        bal file
-            if (swbal .eq. 1) call outbal (task)
+            if (swbal .eq. 1) call outbal (task, state)
 
 ! --        blc file
             if (swblc .eq. 1) call outblc(task,                                                 &
                          (CQMpInIntSatDm1+CQMpInIntSatDm2+CQMpInMtxSatDm1+CQMpInMtxSatDm2),     &
-                         (CQMpOutMtxSatDm1+CQMpOutMtxSatDm2+CQMpOutMtxUnsDm1+CQMpOutMtxUnsDm2))
+                         (CQMpOutMtxSatDm1+CQMpOutMtxSatDm2+CQMpOutMtxUnsDm1+CQMpOutMtxUnsDm2), &
+                         state)
 
          endif
 
@@ -87,15 +91,15 @@
 ! ===    open output files and write headers ===============================
 
 ! --     user-defined variables in CSV file
-         if (swcsv == 1) call csv_out(1)                    ! call csv_write(1)
+         if (swcsv == 1) call csv_out(1, state)              ! call csv_write(1)
 ! --     user-defined variables in CSV file
          if (swcsv_tz == 1) call csv_out_tz(1)              ! call csv_write_tz(1)
 
 ! --     wba file
-         if (swwba.eq.1) call outwba (1)
+         if (swwba.eq.1) call outwba (1, state)
 
 ! --     inc file
-         if (swinc.eq.1) call outinc (1)
+         if (swinc.eq.1) call outinc (1, state)
 
 ! --     str file
          if (swstr.eq.1) call outstr (1)
@@ -128,15 +132,15 @@
 ! ===    write actual data ===============================
 
 ! --     user-defined variables in CSV file
-         if (swcsv == 1) call csv_out(2)                    ! csv_write(2)
+         if (swcsv == 1) call csv_out(2, state)              ! csv_write(2)
 ! --     user-defined variables in CSV file
          if (swcsv_tz == 1) call csv_out_tz(2)              ! csv_write_tz(2)
 
 ! --     wba file
-         if (swwba.eq.1) call outwba (2)
+         if (swwba.eq.1) call outwba (2, state)
 
 ! --     inc file
-         if (swinc.eq.1) call outinc (2)
+         if (swinc.eq.1) call outinc (2, state)
 
 ! --     str file
          if (flCropCalendar .and. flCropOutput) then
@@ -174,7 +178,7 @@
 ! ===    close output files ===========================
 
 ! --     user-defined variables in CSV file
-         if (swcsv == 1) call csv_out(3)                    ! csv_write(3)
+         if (swcsv == 1) call csv_out(3, state)              ! csv_write(3)
 ! --     user-defined variables in CSV file
          if (swcsv_tz == 1) call csv_out_tz(3)              ! csv_write_tz(3)
 
@@ -198,20 +202,22 @@
       end
 
 ! ----------------------------------------------------------------------
-      subroutine outwba (task)
+      subroutine outwba (task, state)
       use error_mod, only: fatalerr_collected
 ! ----------------------------------------------------------------------
 !     date               : July 2002
 !     purpose            : write water balance data to outnam.wba file
 ! ---------------------------------------------------------------------
-      use variables, only: wba,daynr,daycum,swscre,cevap,cgird,cgrai,csnrai,cnird,cnrai,cpeva,cptra,cqbot,cqdra,cqrot,crunon,                &
+      use variables, only: wba,daynr,daycum,swscre,cevap,cgird,cgrai,csnrai,cnird,cnrai,cpeva,cptra,cqbot,cqrot,crunon,                     &
                            crunoff,gwl,cQMpOutDrRap,pond,t1900,date,volact,volini,wbalance,outfil,pathwork,project,flprintshort,floutput,       &
                            swsnow,cqprai,ssnow,snowinco,PondIni,flheader,flmacropore
+      use swap_state_mod, only: swap_state_t
       use file_io_mod, only: file_open
       implicit none
 
 ! -   global
       integer   task
+      type(swap_state_t), intent(in) :: state
 
 ! -   local
       real(8)   dstor
@@ -298,20 +304,20 @@
           write (wba,25) datexti,comma,daynr,comma,daycum,comma,        &
      &    cgrai+csnrai,comma,cnrai,comma,cgird,comma,cnird,comma,crunon,&
      &    comma,crunoff,comma,cptra,comma,cqrot,comma,cpeva,comma,cevap,&
-     &    comma,(cqdra+cQMpOutDrRap),comma,cqbot,comma,dstor,comma,     &
-     &    gwlout,comma,pond,comma,wbalance,comma,date
+     &    comma,(state%surfacewater%cqdra+cQMpOutDrRap),comma,cqbot,comma,&
+     &    dstor,comma,gwlout,comma,pond,comma,wbalance,comma,date
         else
           if(FlMacropore) then
             write (wba,30) date,comma,daynr,comma,daycum,comma,         &
      &    cgrai+csnrai,comma,cqprai,comma,cgird,comma,cnird,comma,      &
      &    crunon,comma,crunoff,comma,cptra,comma,cqrot,comma,cpeva,     &
-     &    comma,cevap,comma,cqdra,comma,cQMpOutDrRap,comma,cqbot,comma, &   !!! aanpassing GEM
+     &    comma,cevap,comma,state%surfacewater%cqdra,comma,cQMpOutDrRap,comma,cqbot,comma, &   !!! aanpassing GEM
      &    dstor,comma,gwlout,comma,pond,comma,wbalance,comma,date
           else
             write (wba,31) date,comma,daynr,comma,daycum,comma,         &
      &    cgrai+csnrai,comma,cqprai,comma,cgird,comma,cnird,comma,      &
      &    crunon,comma,crunoff,comma,cptra,comma,cqrot,comma,cpeva,     &
-     &    comma,cevap,comma,(cqdra+cQMpOutDrRap),comma,cqbot,comma,     &
+     &    comma,cevap,comma,(state%surfacewater%cqdra+cQMpOutDrRap),comma,cqbot,comma,&
      &    dstor,comma,gwlout,comma,pond,comma,wbalance,comma,date
           endif
         endif
@@ -321,20 +327,20 @@
           write (wba,25) datexti,comma,daynr,comma,daycum,comma,        &
      &    cgrai+csnrai,comma,cnrai,comma,cgird,comma,cnird,comma,crunon,&
      &    comma,crunoff,comma,cptra,comma,cqrot,comma,cpeva,comma,cevap,&
-     &    comma,(cqdra+cQMpOutDrRap),comma,cqbot,comma,dstor,comma,     &
-     &    gwlout,comma,pond,comma,wbalance,comma,date
+     &    comma,(state%surfacewater%cqdra+cQMpOutDrRap),comma,cqbot,comma,&
+     &    dstor,comma,gwlout,comma,pond,comma,wbalance,comma,date
         else
           if(FlMacropore) then
             write (wba,30) date,comma,daynr,comma,daycum,comma,         &
      &    cgrai+csnrai,comma,cqprai,comma,cgird,comma,cnird,comma,      &
      &    crunon,comma,crunoff,comma,cptra,comma,cqrot,comma,cpeva,     &
-     &    comma,cevap,comma,cqdra,comma,cQMpOutDrRap,comma,cqbot,comma, &   !!! aanpassing GEM
+     &    comma,cevap,comma,state%surfacewater%cqdra,comma,cQMpOutDrRap,comma,cqbot,comma, &   !!! aanpassing GEM
      &    dstor,comma,gwlout,comma,pond,comma,wbalance,comma,date
           else
             write (wba,31) date,comma,daynr,comma,daycum,comma,         &
      &    cgrai+csnrai,comma,cqprai,comma,cgird,comma,cnird,comma,      &
      &    crunon,comma,crunoff,comma,cptra,comma,cqrot,comma,cpeva,     &
-     &    comma,cevap,comma,(cqdra+cQMpOutDrRap),comma,cqbot,comma,     &
+     &    comma,cevap,comma,(state%surfacewater%cqdra+cQMpOutDrRap),comma,cqbot,comma,&
      &    dstor,comma,gwlout,comma,pond,comma,wbalance,comma,date
           endif
         endif
@@ -353,7 +359,7 @@
         if (flheader) write (*,22)
         write (unit=*, fmt=40)                                          &
      &                date,cgrai,cgird,crunoff,cqrot,cevap,             &
-     &                (cqdra+cQMpOutDrRap),cqbot,gwl,wbalance
+     &                (state%surfacewater%cqdra+cQMpOutDrRap),cqbot,gwl,wbalance
  40     format(1x,a11,f8.1,6f7.2,f7.1,f7.2)
       endif
 
@@ -365,19 +371,21 @@
       end
 
 ! ----------------------------------------------------------------------
-      subroutine outinc (task)
+      subroutine outinc (task, state)
       use error_mod, only: fatalerr_collected
 ! ----------------------------------------------------------------------
 !     date               : july 2002
 !     purpose            : write water balance increments to outnam.inc file
 ! ---------------------------------------------------------------------
-      use variables, only: inc,daynr,daycum,igrai,isnrai,igsnow,igird,iintc,irunon,iruno,irunoCN,iptra,iqrot,ipeva,ievap,isubl,iqdra,  &
+      use variables, only: inc,daynr,daycum,igrai,isnrai,igsnow,igird,iintc,irunon,iruno,irunoCN,iptra,iqrot,ipeva,ievap,isubl,  &
                            iQMpOutDrRap,iqbot,t1900,date,outfil,pathwork,project,flheader,gwl,volact,volini,pond,PondIni,ssnow,snowinco,flprintshort
+      use swap_state_mod, only: swap_state_t
       use file_io_mod, only: file_open
       implicit none
 
 ! --- global
       integer   task
+      type(swap_state_t), intent(in) :: state
 
 ! --- local
       real(8)  baldev,dstor
@@ -446,18 +454,18 @@
       if (gwl.lt.998.0d0)  write(gwlout,'(f9.1)') gwl
       dstor = (volact + pond + ssnow) - (VolOld + PondOld + SnowOld)
       baldev = (igrai+isnrai+igsnow+igird+irunon) - dstor -             &
-     & (iintc+iruno+irunoCN+iqrot+ievap+isubl+iQMpOutDrRap+iqdra+(-1.0d0*iqbot))
+     & (iintc+iruno+irunoCN+iqrot+ievap+isubl+iQMpOutDrRap+state%surfacewater%iqdra+(-1.0d0*iqbot))
       if (flprintshort) then
         write (inc,20) datexti,comma,daynr,comma,daycum,comma,          &
      &    igrai+isnrai,comma,igsnow,comma,igird,comma,iintc,comma,      &
      &    irunon,comma,iruno+irunoCN,comma,iptra,comma,iqrot,comma,ipeva,comma, &
-     &    ievap,comma,(iQMpOutDrRap+iqdra),comma,iqbot,                 &
+     &    ievap,comma,(iQMpOutDrRap+state%surfacewater%iqdra),comma,iqbot,&
      &    comma,gwlout,comma,dstor,comma,baldev            !comma,storage
       else
         write (inc,22) date,comma,daynr,comma,daycum,comma,             &
      &    igrai+isnrai,comma,igsnow,comma,igird,comma,iintc,comma,      &
      &    irunon,comma,iruno+irunoCN,comma,iptra,comma,iqrot,comma,ipeva,comma, &
-     &    ievap,comma,(iQMpOutDrRap+iqdra),comma,iqbot,                 &
+     &    ievap,comma,(iQMpOutDrRap+state%surfacewater%iqdra),comma,iqbot,&
      &    comma,gwlout,comma,dstor,comma,baldev           !comma,storage
       endif
  20   format (a19,a1,i3,a1,i6,12(a1,f10.5),2a,2(a1,f10.5))     !,(a1,e12.5)
@@ -878,7 +886,7 @@
       end
 
 ! ----------------------------------------------------------------------
-      subroutine outbal (task)
+      subroutine outbal (task, state)
       use error_mod, only: fatalerr_collected
 ! ----------------------------------------------------------------------
 !     date               : July 2002
@@ -886,13 +894,15 @@
 ! ---------------------------------------------------------------------
       use variables, only: zbotcp,bal,logf,swscre,swdra,numnod,nrlevs,swsolu,ioutdat,cevap,cgird,cgrai,cqbot,tstart,cqrot,crunoff,crunoffCN,     &
                            crunon,cQMpOutDrRap,cqdra,cqdrain,samini,sampro,samcra,sqprec,sqirrig,sqbot,dectot,rottot,sqrap,sqdra,pond,volact,      &
-                           volini,t1900,outdat,outfil,pathwork,project,caintc,csubl,PondIni,WaSrDm1,WaSrDm2,WaSrDm1Ini,WaSrDm2Ini,      &
+                           volini,t1900,outdat,outfil,pathwork,project,caintc,csubl,PondIni,WaSrDm1,WaSrDm2,WaSrDm1Ini,WaSrDm2Ini,                &
                            swsnow,cgsnow,csnrai,snowinco,ssnow,cqssdi
+      use swap_state_mod, only: swap_state_t
       use file_io_mod, only: file_open
       implicit none
 
 ! --- global
       integer   task
+      type(swap_state_t), intent(in) :: state
 
 ! --- local
       integer   i
@@ -959,12 +969,23 @@
       endif
 
       if (swdra .ne. 0) then
-        do i = 1,nrlevs
-          write (bal,28) i,cqdrain(i)
-        end do
+        if (allocated(state%surfacewater%cqdrain)) then
+          do i = 1,nrlevs
+            write (bal,28) i,state%surfacewater%cqdrain(i)
+          end do
+        else
+          do i = 1,nrlevs
+            write (bal,28) i,cqdrain(i)
+          end do
+        end if
       endif
-      write(bal,30) (precip+cgird+cqbot+crunon+cqssdi),                        &
+      if (allocated(state%surfacewater%cqdrain)) then
+        write(bal,30) (precip+cgird+cqbot+crunon+cqssdi),                      &
+     &   (caintc+crunoff+crunoffCN+cqrot+cevap+csubl+cQMpOutDrRap+state%surfacewater%cqdra)
+      else
+        write(bal,30) (precip+cgird+cqbot+crunon+cqssdi),                      &
      &   (caintc+crunoff+crunoffCN+cqrot+cevap+csubl+cQMpOutDrRap+cqdra)
+      end if
 
       if (swsolu .eq. 1) then
         write (bal,34) sqprec,dectot,sqirrig,rottot,sqbot,sqrap,sqdra
@@ -1621,16 +1642,18 @@
       end
 
 ! ----------------------------------------------------------------------
-      subroutine AgeTracerOutput(task)
+      subroutine AgeTracerOutput(task, state)
       use error_mod, only: fatalerr_collected
 ! ----------------------------------------------------------------------
 !     Date               : October 2010
 !     Purpose            : open and write Groundwater Ageing output files
 ! ----------------------------------------------------------------------
+      use swap_state_mod, only: swap_state_t
       implicit none
 
 ! --- global variables ------------------
       integer task
+      type(swap_state_t), intent(in) :: state
 ! --- local variables ------------------
       integer agep,agee,ageq
 
@@ -1642,7 +1665,7 @@
 ! === open output files and write headers ===============================
 
 ! --  age files
-      call outage (1,agep,agee,ageq)
+      call outage (1,agep,agee,ageq,state)
 
       return
 
@@ -1651,7 +1674,7 @@
 ! === write actual data ===============================
 
 ! --  age files
-      call outage (2,agep,agee,ageq)
+      call outage (2,agep,agee,ageq,state)
 
       return
 
@@ -1670,7 +1693,7 @@
       return
       end
 ! ----------------------------------------------------------------------
-      subroutine outage(task,agep,agee,ageq)
+      subroutine outage(task,agep,agee,ageq,state)
       use error_mod, only: fatalerr_collected
 ! ----------------------------------------------------------------------
 !     date               : October 2010
@@ -1678,12 +1701,14 @@
 ! ---------------------------------------------------------------------
       use variables, only: daynr,daycum,date,outper,project,nrlevs,outfil,pathwork,numnod,z,cml,            &
                            AgeGwl1m,icAgeBot,icAgeDra,icAgeRot,icAgeSur,inqdra
+      use swap_state_mod, only: swap_state_t
       use swap_array_dimensions, only: madr
       use file_io_mod, only: file_open
                            implicit none
 
 ! --- global
       integer   agep,agee,ageq,task
+      type(swap_state_t), intent(in) :: state
 
 ! --- local variables ------------------
       integer   reclngth,node,level
@@ -1757,9 +1782,15 @@
       do level = 1,nrlevs
         iqdrainout(level) = 0.0d0
         do node = 1,numnod
-          if (inqdra(level,node).gt.0.0d0) then
-           iqdrainout(level) = iqdrainout(level) + inqdra(level,node)
-          endif
+          if (allocated(state%surfacewater%inqdra)) then
+            if (state%surfacewater%inqdra(level,node).gt.0.0d0) then
+             iqdrainout(level) = iqdrainout(level) + state%surfacewater%inqdra(level,node)
+            endif
+          else
+            if (inqdra(level,node).gt.0.0d0) then
+             iqdrainout(level) = iqdrainout(level) + inqdra(level,node)
+            endif
+          end if
         enddo
       enddo
       write(ageq,16) date,comma,daynr,comma,daycum,                     &
@@ -2231,7 +2262,7 @@
       end
 
 ! ----------------------------------------------------------------------
-      subroutine outblc(task,CQMpExfMtx,CQMpInfMtx)
+      subroutine outblc(task,CQMpExfMtx,CQMpInfMtx,state)
       use error_mod, only: fatalerr_collected
 ! ----------------------------------------------------------------------
 !     date               : December 2004
@@ -2239,14 +2270,16 @@
 ! ---------------------------------------------------------------------
       use variables, only: zbotcp,blc,outfil,pathwork,cgrai,cnrai,cgird,cnird,cqrot,cevap,volact,volini,FlMacropore,nrlevs,swirfix,       &
                            schedule,numnod,snowinco,ssnow,cgsnow,cmelt,caintc,csnrai,cqprai,ioutdat,t1900,outdat,tstart,project,pond,pondini,     &
-                           cqdrainin,cqdrainout,cinund,crunoff,cqtdo,cqtup,cqbotdo,cqbotup,csubl,crunon,IcTopMp,CQMpInTopVrtDm1,CQMpInTopVrtDm2,                  &
+                           cqdrainin,cqdrainout,cinund,crunoff,cqtdo,cqtup,cqbotdo,cqbotup,csubl,crunon,IcTopMp,CQMpInTopVrtDm1,CQMpInTopVrtDm2,&
                            CQMpInTopLatDm1,CQMpInTopLatDm2,cqssdi
+      use swap_state_mod, only: swap_state_t
       use file_io_mod, only: file_open
       implicit none
 
 !     global
       integer   task
       real(8)   CQMpInfMtx, CQMpExfMtx
+      type(swap_state_t), intent(in) :: state
 
 !     local
       integer   level
@@ -2321,9 +2354,15 @@
 
       if (nrlevs .ge. 1) then
         write (blc,55)
-        do level=1,nrlevs
-          write (blc,56) level,cqdrainin(level),level, cqdrainout(level)
-        enddo
+        if (allocated(state%surfacewater%cqdrainin)) then
+          do level=1,nrlevs
+            write (blc,56) level,state%surfacewater%cqdrainin(level),level, state%surfacewater%cqdrainout(level)
+          enddo
+        else
+          do level=1,nrlevs
+            write (blc,56) level,cqdrainin(level),level, cqdrainout(level)
+          enddo
+        end if
       endif
       write (blc,61) cqbotup,cqbotdo
 
@@ -2332,16 +2371,28 @@
       snowin = snowinco+cgsnow+csnrai
       pondin = pondini+cqprai+cnird+cmelt+cinund+cqtup+crunon
       soilin = volini+cqtdo+cqbotup+CQMpInfMtx
-      do level = 1,nrlevs
-        soilin = soilin + cqdrainin(level)
-      enddo
+      if (allocated(state%surfacewater%cqdrainin)) then
+        do level = 1,nrlevs
+          soilin = soilin + state%surfacewater%cqdrainin(level)
+        enddo
+      else
+        do level = 1,nrlevs
+          soilin = soilin + cqdrainin(level)
+        enddo
+      end if
       plantout = cnrai+caintc+cnird
       snowout = cmelt+ssnow+csubl
       pondout = pond+crunoff+cqtdo+cevap+CQMpInTop
       soilout = volact+cqrot+cqtup+cqbotdo+CQMpExfMtx-cqssdi
-      do level = 1,nrlevs
-        soilout = soilout + cqdrainout(level)
-      enddo
+      if (allocated(state%surfacewater%cqdrainout)) then
+        do level = 1,nrlevs
+          soilout = soilout + state%surfacewater%cqdrainout(level)
+        enddo
+      else
+        do level = 1,nrlevs
+          soilout = soilout + cqdrainout(level)
+        enddo
+      end if
 
       write (blc,63) plantin,snowin,pondin,soilin,plantout,snowout,     &
      &       pondout,soilout
@@ -2963,7 +3014,7 @@
 ! === open output files and write headers ===============================
 
 ! --  drf file
-      if (swdrf.eq.1) call outdrf (task)
+      if (swdrf.eq.1) call outdrf (task, state)
 
       if (swswb.eq.1) call outswb(task, state)
 
@@ -2974,7 +3025,7 @@
 ! === write actual data ===============================
 
 ! --  drf file
-      if (swdrf.eq.1) call outdrf (task)
+      if (swdrf.eq.1) call outdrf (task, state)
 
       if (swswb.eq.1) call outswb(task, state)
 
@@ -2995,20 +3046,22 @@
       end
 
 ! ----------------------------------------------------------------------
-      subroutine outdrf (task)
+      subroutine outdrf (task, state)
       use error_mod, only: fatalerr_collected
 ! ----------------------------------------------------------------------
 !     Date               : 10/6/99
 !     Purpose            : write drainage fluxes, surface runoff, rapid
 !                          drainage to  OUTNAM.DRF file
 ! ---------------------------------------------------------------------
-      use variables, only: outfil,drf,pathwork,daynr,date,nrpri,nrlevs,cqdrain,cqdrd,crunoff,cQMpOutDrRap,flheader
+      use variables, only: outfil,drf,pathwork,daynr,date,nrpri,nrlevs,crunoff,cQMpOutDrRap,flheader
+      use swap_state_mod, only: swap_state_t
       use swap_array_dimensions, only: madr
       use file_io_mod, only: file_open
       implicit none
 
 ! --- global
       integer   task
+      type(swap_state_t), intent(in) :: state
 
 ! --- local
       integer   level
@@ -3102,24 +3155,25 @@
 
 ! --- write output record
       write (DRF,20) date,comma,daynr,                                  &
-     &  comma,(cqdrain(1)-c1qdrain(1)),                                 &
-     &  comma,(cqdrain(2)-c1qdrain(2)),                                 &
-     &  comma,(cqdrain(3)-c1qdrain(3)),                                 &
-     &  comma,(cqdrain(4)-c1qdrain(4)),                                 &
-     &  comma,(cqdrain(5)-c1qdrain(5)),                                 &
-     &  comma,(cqdrd-c1qdrd),comma,(crunoff-c1runoff),                  &
+     &  comma,(state%surfacewater%cqdrain(1)-c1qdrain(1)),              &
+     &  comma,(state%surfacewater%cqdrain(2)-c1qdrain(2)),              &
+     &  comma,(state%surfacewater%cqdrain(3)-c1qdrain(3)),              &
+     &  comma,(state%surfacewater%cqdrain(4)-c1qdrain(4)),              &
+     &  comma,(state%surfacewater%cqdrain(5)-c1qdrain(5)),              &
+     &  comma,(state%surfacewater%cqdrd-c1qdrd),comma,(crunoff-c1runoff),&
      &  comma,(cQMpOutDrRap-c1qdrar),                                   &
-     &  comma,cqdrain(1),comma,cqdrain(2),                              &
-     &  comma,cqdrain(3),comma,cqdrain(4),comma,cqdrain(5),             &
-     &  comma,cqdrd,comma,crunoff,comma,cQMpOutDrRap
+     &  comma,state%surfacewater%cqdrain(1),comma,state%surfacewater%cqdrain(2),&
+     &  comma,state%surfacewater%cqdrain(3),comma,state%surfacewater%cqdrain(4),&
+     &  comma,state%surfacewater%cqdrain(5),                            &
+     &  comma,state%surfacewater%cqdrd,comma,crunoff,comma,cQMpOutDrRap
 
  20   format (A11,a1,I4,8(a1,f8.2),8(a1,f8.1))
 
 ! --- store cumulative values
       do level=1,nrlevs
-          c1qdrain(level)=cqdrain(level)
+          c1qdrain(level)=state%surfacewater%cqdrain(level)
       enddo
-      c1qdrd = cqdrd
+      c1qdrd = state%surfacewater%cqdrd
       c1runoff = crunoff
       c1qdrar = cQMpOutDrRap
 
