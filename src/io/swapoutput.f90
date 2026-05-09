@@ -114,13 +114,13 @@
          if(swcapriseoutput) call capriseoutput(task)
 
 ! --     extensive formatted output file for solute studies
-         if (swafo.ge.1) call outafo (task)
+         if (swafo.ge.1) call outafo (task, state)
 
 ! --     generate file with soil physical parameters
          if (swini .eq. 1) call outsoilphys ()
 
 ! --     extensive unformatted output file for solute studies
-         if (swaun.ge.1) call outaun (task)
+         if (swaun.ge.1) call outaun (task, state)
 
 ! --     special output for RUME project
          if (swrum == 1) call outrume (task)
@@ -157,10 +157,10 @@
          if(swcapriseoutput) call capriseoutput(task)
 
 ! --     extensive formatted output file for solute studies
-         if (swafo.ge.1) call outafo (task)
+         if (swafo.ge.1) call outafo (task, state)
 
 ! --     extensive unformatted output file for solute studies
-         if (swaun.ge.1) call outaun (task)
+         if (swaun.ge.1) call outaun (task, state)
 
 ! --     special output for RUME project
          if (swrum == 1) call outrume (task)
@@ -2445,7 +2445,7 @@
       end
 
 ! ----------------------------------------------------------------------
-      subroutine outafo (task)
+      subroutine outafo (task, state)
       use error_mod, only: fatalerr_collected
 ! ----------------------------------------------------------------------
 !     Date               : 29-jan-2003
@@ -2462,8 +2462,11 @@
       use soilgrid_mod, only: convertdiscrvert
       use soilwaterbalance_mod, only: checkmassbal
       use file_io_mod, only: file_open
+      use swap_state_mod, only: swap_state_t
       implicit none
 
+      ! SS-SWST Phase 2 Task 5: state threaded to ConvertDiscrVert (inqdra read)
+      type(swap_state_t), intent(in) :: state
 
 ! -   global
       integer   task
@@ -2514,7 +2517,7 @@
       enddo
       call convertdiscrvert(1,swop,botcomnew,hnew,thetanew,inqnew,inqrotnew,inqdranew,ithetabegnew,tsoili,tsoilnew,   &
                             dipocpnew,iavfrmpwlwtdm1new,iavfrmpwlwtdm2new,inqexcmtxdm1cpnew,inqexcmtxdm2cpnew, &
-                            inqoutdrrapcpnew,vlmpstdm1new,vlmpstdm2new)
+                            inqoutdrrapcpnew,vlmpstdm1new,vlmpstdm2new,state)
 ! -   open file
       if (swafo.eq.1) then
          afoext = '.afo'
@@ -2621,7 +2624,7 @@
         enddo
         call ConvertDiscrVert(2,swop,botcomnew,hnew,thetanew,inqnew,inqrotnew,inqdranew,ithetabegnew,tsoili,tsoilnew,    &
                               dipocpnew,iavfrmpwlwtdm1new,iavfrmpwlwtdm2new,inqexcmtxdm1cpnew,inqexcmtxdm2cpnew,  &
-                              inqoutdrrapcpnew,vlmpstdm1new,vlmpstdm2new)
+                              inqoutdrrapcpnew,vlmpstdm1new,vlmpstdm2new,state)
 
         if (swafo.eq.1) then
           write (afo,30) real(tcum),                                    &
@@ -2735,7 +2738,7 @@
       end
 
 ! ----------------------------------------------------------------------
-      subroutine outaun (task)
+      subroutine outaun (task, state)
       use error_mod, only: fatalerr_collected
 ! ----------------------------------------------------------------------
 !     Date               : 29-jan-2003
@@ -2750,7 +2753,11 @@
       use swap_array_dimensions, only: maho, macp, madr
       use soilgrid_mod, only: convertdiscrvert
       use soilwaterbalance_mod, only: checkmassbal
+      use swap_state_mod, only: swap_state_t
       implicit none
+
+      ! SS-SWST Phase 2 Task 5: state threaded to ConvertDiscrVert (inqdra read)
+      type(swap_state_t), intent(in) :: state
 
 ! -   global
       integer   task
@@ -2798,7 +2805,7 @@
       enddo
       call convertdiscrvert(1,swop,botcomnew,hnew,thetanew,inqnew,inqrotnew,inqdranew,ithetabegnew,tsoili,tsoilnew,      &
                             dipocpnew,iavfrmpwlwtdm1new,iavfrmpwlwtdm2new,inqexcmtxdm1cpnew,inqexcmtxdm2cpnew,    &
-                            inqoutdrrapcpnew,vlmpstdm1new,vlmpstdm2new)
+                            inqoutdrrapcpnew,vlmpstdm1new,vlmpstdm2new,state)
 
 ! -   open file
       if (swaun.eq.1) then
@@ -2892,7 +2899,7 @@
       enddo
       call convertdiscrvert(2,swop,botcomnew,hnew,thetanew,inqnew,inqrotnew,inqdranew,ithetabegnew,tsoili,tsoilnew,      &
                             dipocpnew,iavfrmpwlwtdm1new,iavfrmpwlwtdm2new,inqexcmtxdm1cpnew,inqexcmtxdm2cpnew,    &
-                            inqoutdrrapcpnew,vlmpstdm1new,vlmpstdm2new)
+                            inqoutdrrapcpnew,vlmpstdm1new,vlmpstdm2new,state)
 
       if (swaun.eq.1) then
         write (aun) real(tcum),                                         &
@@ -3717,7 +3724,7 @@
            if (fldrain)                           call Drainage(state_om)
            if (.not.fldecdt .and. flSurfaceWater) call SurfaceWater(2, state_om, request_smaller_dt_om)
            if (request_smaller_dt_om) fldecdt = .true.
-           if (SwFrost.eq.1)                      call FrozenBounds
+           if (SwFrost.eq.1)                      call FrozenBounds(state_om)
 
 ! ---   calculate SoilWater
            if (.not.fldecdt) then

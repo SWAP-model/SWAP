@@ -191,10 +191,10 @@ if (iTask == 1) then
    if (flSnow) call Snow(1)
 
 !  initialize Solute rate/state variables
-   if (flSolute) call Solute(1)
+   if (flSolute) call Solute(1, state)
 
 !  initialize Ageing rate/state variables
-   if (flAgeTracer) call AgeTracer(1)
+   if (flAgeTracer) call AgeTracer(1, state)
 
 !  Soil Management init: SoilManagement(1) was the legacy reader entry
 !  point and is now a no-op (SS-C step 3). flCropNut is now driven by
@@ -291,7 +291,7 @@ if (iTask == 2) then
          ! SS-SWST Phase 2: SurfaceWater sets request_smaller_dt; propagate to fldecdt here.
          if (.not.fldecdt .and. flSurfaceWater) call SurfaceWater(2, state, request_smaller_dt)
          if (request_smaller_dt) fldecdt = .true.
-         if (SwFrost.eq.1)                      call FrozenBounds()
+         if (SwFrost.eq.1)                      call FrozenBounds(state)
 
 !        calculate SoilWater, incl macropores (headcalc inside may also set fldecdt on non-convergence)
          if (.not.fldecdt) call SoilWater(2, state)
@@ -316,10 +316,10 @@ if (iTask == 2) then
    if (flTemperature) call Temperature(2)
 
 !     calculate Solute rate/state variables
-      if (flSolute) call Solute(2)
+      if (flSolute) call Solute(2, state)
 
 !     calculate Ageing rate/state variables
-      if (flAgeTracer) call AgeTracer(2)
+      if (flAgeTracer) call AgeTracer(2, state)
 
 !     update time variables and switches/flags
       call TimeControl(2)
@@ -328,24 +328,24 @@ if (iTask == 2) then
       if (flDayEnd) then
 
 !        update Soil nutrient status variables
-         if (flCropNut) call SoilManagement(2)
+         if (flCropNut) call SoilManagement(2, state)
 
 !        calculate potential crop growth
 !        this is skipped in case called externally
          if (iCaller == 0 .and. flCropCalendar) call CropGrowth(2)
 
 !        amendent of crop residues from previous day
-         if (flCropNut) call SoilManagement(5)
+         if (flCropNut) call SoilManagement(5, state)
 
 !        amendent of fertilizers of current day
-         if (flCropNut) call SoilManagement(3)
+         if (flCropNut) call SoilManagement(3, state)
 
 !        calculate actual crop growth (calculation of actual crop rate and state variables)
 !        this is skipped in case called externally, so that LAI and CF remain their input values (for printing)
          if (iCaller == 0  .and. flCropCalendar) call CropGrowth(3)
 
 !        Simulate Soil Nutrient processes
-         if (flCropNut) call SoilManagement(4)
+         if (flCropNut) call SoilManagement(4, state)
 
 !        harvest of crop
 !        this is skipped in case called externally, so that LAI and CF remain their input values (for printing)
@@ -386,7 +386,7 @@ if (iTask == 2) then
             end if
          end if
          if (flIrrigationOutput)          call IrrigationOutput(2)
-         if (flDayEnd .and. flCropNut)    call SoilManagement(6)
+         if (flDayEnd .and. flCropNut)    call SoilManagement(6, state)
          if (swend.eq.2 .and. flDayEnd)   call soilwateroutput(3, state)
       end if
 
@@ -423,7 +423,7 @@ if (iTask == 3) then
       if (flSnow)               call SnowOutput(3)
       if (flMacroPore)          call MacroPoreOutput(3)
       if (flSurfaceWater)       call SurfaceWaterOutput(3, state)
-      if (flCropNut)            call SoilManagement(7)
+      if (flCropNut)            call SoilManagement(7, state)
    end if
 
 !  write okay file for external use

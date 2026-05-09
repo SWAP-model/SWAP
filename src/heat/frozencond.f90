@@ -175,10 +175,17 @@ contains
   !! Purpose: Reduce or stop boundary (drainage and bottom) fluxes under
   !! frost conditions
   !! @endnote
-  subroutine FrozenBounds
+  subroutine FrozenBounds(state)
     use variables
     use distribute_drainage, only: DIVDRA
+    use swap_state_mod, only: swap_state_t
     implicit none
+
+    ! SS-SWST Phase 2 Task 5: FrozenBounds modifies qdra/qdrtot after
+    ! SurfaceWater has computed them.  Receive state intent(inout) so we can
+    ! both read and write state%surfacewater%qdra / qdrtot (dual-write
+    ! pattern preserved until Task 7 drops the legacy globals).
+    type(swap_state_t), intent(inout) :: state
 
     ! Local variables
     integer node,level,layercp(macp),leveldeepest
@@ -240,6 +247,7 @@ contains
           do level=1,nrlevs
             if(zfrostbot.lt.zbotdr(level)) then
               qdra(level,node) = 0.0d0
+              state%surfacewater%qdra(level,node) = 0.0d0
               qdrain(level) = 0.0d0
             endif
           enddo
@@ -268,13 +276,21 @@ contains
                        layercp,cofanicp,ztop,L,qdrain,qdra, &
                        Swdivdinf,Swnrsrf,SwTopnrsrf,Zbotdr, &
                        dt,FacDpthInf,owltab,t1900)
+          ! Sync DIVDRA-updated qdra values to state
+          do level = 1, nrlevs
+            do node = 1, numnod
+              state%surfacewater%qdra(level,node) = qdra(level,node)
+            end do
+          end do
         endif
       else
 
         do level = 1,nrlevs
           qdrain(level) = 0.0d0
           do node = 1,numnod
+            ! Read from global qdra (kept current by SurfaceWater dual-write)
             qdra(level,node) = qdra(level,node)*rfcp(node)
+            state%surfacewater%qdra(level,node) = qdra(level,node)
             qdrain(level) = qdrain(level) + qdra(level,node)
           end do
         end do
@@ -285,6 +301,7 @@ contains
       do level=1,nrlevs
         qdrtot = qdrtot + qdrain(level)
       end do
+      state%surfacewater%qdrtot = qdrtot
 
     endif
 

@@ -9,14 +9,18 @@ module solute_mod
 
 contains
       
-      subroutine solute (task)
+      subroutine solute (task, state)
 ! ----------------------------------------------------------------------
 !     date               : december 2007; code update: June, 2019
 !     purpose            : calculation of solute concentrations
 ! ----------------------------------------------------------------------
       use Variables
       use array_utils, only: afgen
+      use swap_state_mod, only: swap_state_t
       implicit none
+
+!     SS-SWST Phase 2 Task 5: read qdra / qdrtot from state%surfacewater.
+      type(swap_state_t), intent(in) :: state
 
 !     local variables
       integer level,i,task
@@ -27,7 +31,7 @@ contains
       logical differ
 !     work arrays for intermediate calculations (recomputed each timestep)
       real(8), dimension(macp) :: thetav, diffus, dispr1, vpore2, ddiffwcs, bdenskf, bdenskfcref, bdenskfsatporos, decpotfdepth
-      
+
       ! Small constants for numerical stability
       real(8), parameter :: rer = 1.0d-3
       real(8), parameter :: vsmall = 1.0d-15
@@ -123,6 +127,9 @@ contains
       enddo
 
       tcumsol = 0.0d0
+      ! SS-SWST Phase 2 Task 5: qdra / qdrtot read from state%surfacewater
+      associate(qdra   => state%surfacewater%qdra, &
+                qdrtot => state%surfacewater%qdrtot)
       do while ((dt-tcumsol).gt.1.0d-8)
 
 ! ---    time step and cumulative time
@@ -255,6 +262,7 @@ contains
 
 ! --- continue with next solute time step
       end do
+      end associate  ! qdra, qdrtot from state%surfacewater
 
 ! --- current solute flux at bottom of soil column
       if (q(numnod+1) .gt. 0.0d0) then
@@ -289,15 +297,19 @@ contains
       return
       end
 
-      subroutine AgeTracer (task)
+      subroutine AgeTracer (task, state)
 ! ----------------------------------------------------------------------
 !     date               : Oct 2010
-!     purpose            : Ageing according to Goode (1996): 
+!     purpose            : Ageing according to Goode (1996):
 !                        : "Direct simulation of groundwater age, WRR vol.32, p 289-296"
 ! ----------------------------------------------------------------------
       use Variables
       use array_utils, only: afgen
+      use swap_state_mod, only: swap_state_t
       implicit none
+
+!     SS-SWST Phase 2 Task 5: read qdra from state%surfacewater.
+      type(swap_state_t), intent(in) :: state
 
 !     global
       integer task
@@ -393,6 +405,8 @@ contains
       enddo
 
       tcumsol = 0.0
+      ! SS-SWST Phase 2 Task 5: qdra read from state%surfacewater
+      associate(qdra => state%surfacewater%qdra)
       do while ((dt-tcumsol).gt.1.0d-8)
 
 ! ---    time step and cumulative time
@@ -488,6 +502,7 @@ contains
      &                         0.5d0*(Ageml(numnod)+cml(numnod))*dtsolu
 
       end do
+      end associate  ! qdra from state%surfacewater
 
 !     age of variable 1m-plane of groundwater
       i = nodgwl+1

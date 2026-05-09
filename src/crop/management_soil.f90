@@ -28,7 +28,7 @@ contains
 !!
 !! @note
 !! Legacy implementation is preserved and intentionally unchanged in physics.
-      subroutine SoilManagement(task) 
+      subroutine SoilManagement(task, state)
 ! ----------------------------------------------------------------------
 !     Date               : March 2015
 !     Purpose            : save and reset soil water state variables
@@ -39,8 +39,12 @@ contains
       use Wofost_Soil_Declarations
       use Wofost_Soil_Interface
       use file_io_mod, only: file_open
+      use swap_state_mod, only: swap_state_t
 
       implicit none
+
+      ! SS-SWST Phase 2 Task 5: read inqdra from state%surfacewater.
+      type(swap_state_t), intent(in) :: state
 
 ! --- local variables
       character(len=300) filnam
@@ -147,9 +151,11 @@ contains
 !     water balance items of soil layer for which nutriemnts are simulated
       dum1=0.0;dum2=0.0;dum3=0.0;dum4=0.0
       idum = 0
-      
+
+      ! SS-SWST Phase 2 Task 5: inqdra read from state%surfacewater
+      associate(inqdra => state%surfacewater%inqdra)
       do i=1,numnod
-         dum2 = dum2 + inqrot(i)/outper 
+         dum2 = dum2 + inqrot(i)/outper
          if(dum1 + 1.0d-2 * dz(i) .lt. dz_WSN)then
             dum1 = dum1 + 1.0d-2 * dz(i)
             do le=1,5
@@ -157,6 +163,7 @@ contains
             end do
          end if
       end do
+      end associate  ! inqdra from state%surfacewater
       help = 1.0d-2 * (igrai+isnrai+igsnow+igird-iintc+irunon-iruno) /  &
      &                 outper
       SoilEvap = 1.0d-2 * ievap / outper

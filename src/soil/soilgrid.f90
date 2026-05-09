@@ -179,15 +179,19 @@ contains
                                   inqrotnew,inqdranew,ithetabegnew,tsoil,tsoilnew,     &
                                   dipocpnew,iavfrmpwlwtdm1new,iavfrmpwlwtdm2new,       &
                                   iqexcmtxdm1cpnew,iqexcmtxdm2cpnew,iqoutdrrapcpnew,   &
-                                  vlmpstdm1new,vlmpstdm2new)
+                                  vlmpstdm1new,vlmpstdm2new,state)
 
       !---- Declarations
-      use variables, only: SwDiscrvert,nrlevs,numlay,botcom,numnod,dz,h,theta,inq,inqrot,inqdra,                           &
+      ! SS-SWST Phase 2 Task 5: inqdra read from state%surfacewater; dropped from use variables.
+      use variables, only: SwDiscrvert,nrlevs,numlay,botcom,numnod,dz,h,theta,inq,inqrot,                                 &
                            IThetaBeg,cofgen,numnodNew,dzNew,DiPoCp,FrArMtrx,IAvFrMpWlWtDm1,IAvFrMpWlWtDm2,           &
                            IQExcMtxDm1Cp,IQExcMtxDm2Cp,IQOutDrRapCp,VlMpStDm1,VlMpStDm2
       use soilhydraulics_utils, only: prhead
       use swap_array_dimensions, only: macp, maho, madr
+      use swap_state_mod, only: swap_state_t
       IMPLICIT NONE
+
+      type(swap_state_t), intent(in) :: state
 
       ! global variables
       integer   part,Swop
@@ -231,7 +235,7 @@ contains
           inqNew(node) = inq(node)
           inqrotNew(node) = inqrot(node)
           do level=1,nrlevs
-            inqdraNew(level,node) = inqdra(level,node)
+            inqdraNew(level,node) = state%surfacewater%inqdra(level,node)
           enddo
 
           if (swop.eq.2) then
@@ -394,8 +398,8 @@ contains
               inqdraNew(level,node) = 0.0d0
               Do i = NodeNew(node,1),NodeNew(node,2)
                 inqdraNew(level,node) = inqdraNew(level,node) +         &
-     &                                 inqdra(level,i)
-              Enddo               
+     &                                 state%surfacewater%inqdra(level,i)
+              Enddo
             Enddo
           Enddo
         endif
