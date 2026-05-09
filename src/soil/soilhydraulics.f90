@@ -880,7 +880,7 @@ contains
         evp(i) = 0.0d0
         rfcp(i) = 1.0d0
       enddo
-      vtair = 0.0d0
+      state%surfacewater%vtair = 0.0d0
       cQMpLatSs = 0.0d0
 
       ! Soil physics: tabulated or MualemVanGenuchten functions
