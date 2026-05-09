@@ -41,18 +41,21 @@ module surfacewater_init_mod
 
 contains
 
-   subroutine surfacewater_init(wls1, wlp1)
-      use variables, only: nrlevs, swdtyp, zbotdr, widthr, taludr, l, &
-                            wls1_init, wlstar, &
+   subroutine surfacewater_init(state)
+      use swap_state_mod, only: swap_state_t
+      use variables, only: nrlevs, numnod, swdtyp, zbotdr, widthr, taludr, l, &
+                            wls1_init, wlstar, wls, wlp, &
                             sttab, swstini, swst, wlsbak, numadj, &
                             swsrf, swsec, swqhr, swman, nmper
       use surfacewater_utils, only: swstlev
       use error_mod, only: fatalerr_collected
-      real(real64), intent(out) :: wls1, wlp1
+      type(swap_state_t), intent(inout) :: state
 
       integer      :: i, ilev
       real(real64) :: wdepth, wvolum, wbreadth
       integer      :: nrpri
+
+      associate(sw => state%surfacewater)
 
       ! Defensive guards mirroring surface_water_config_validate.
       ! swman is a fixed-size array (dimensioned mamp); slice 1:nmper
@@ -80,15 +83,21 @@ contains
       end do
 
       numadj = 0
+      sw%numadj = 0
+
       do i = 1, 4
          wlsbak(i) = 0.0_real64
+         sw%wlsbak(i) = 0.0_real64
       end do
 
       ! Initial water level pre-computed by the adapter
       ! (adapter wrote wls1_init = wlact - altcu; altcu=0 is enforced by drainage_config_validate so this equals wlact).
-      wls1   = wls1_init
-      wlp1   = 0.0_real64    ! swsrf=2 has no primary system
-      wlstar = wls1
+      wls    = wls1_init
+      wlp    = 0.0_real64    ! swsrf=2 has no primary system
+      wlstar = wls1_init
+
+      sw%wls    = wls1_init
+      sw%wlstar = wls1_init
 
       ! sttab(:,1) — depths. Row 1 = +100cm above soil surface;
       ! row 2 = 0cm (soil surface); rows 3..22 divide
@@ -97,6 +106,12 @@ contains
       sttab(2, 1) =   0.0_real64
       do i = 3, 22
          sttab(i, 1) = zbotdr(1 + nrpri) * (i - 2) / 20.0_real64
+      end do
+
+      sw%sttab(1, 1) = 100.0_real64
+      sw%sttab(2, 1) =   0.0_real64
+      do i = 3, 22
+         sw%sttab(i, 1) = zbotdr(1 + nrpri) * (i - 2) / 20.0_real64
       end do
 
       ! sttab(:,2) — storage volume per unit area (cm), summed across
@@ -125,9 +140,48 @@ contains
          end do
       end do
 
+      do i = 1, 22
+         sw%sttab(i, 2) = sttab(i, 2)
+      end do
+
       ! Initial storage state.
-      swstini = swstlev(wls1)
+      swstini = swstlev(wls1_init)
       swst    = swstini
+
+      sw%swstini = swstini
+      sw%swst    = swstini
+
+      ! Allocate per-level arrays in state (guard against repeated calls).
+      if (.not. allocated(sw%cqdrain)) then
+         allocate(sw%cqdrain(nrlevs))
+         sw%cqdrain = 0.0_real64
+      end if
+      if (.not. allocated(sw%cqdrainin)) then
+         allocate(sw%cqdrainin(nrlevs))
+         sw%cqdrainin = 0.0_real64
+      end if
+      if (.not. allocated(sw%cqdrainout)) then
+         allocate(sw%cqdrainout(nrlevs))
+         sw%cqdrainout = 0.0_real64
+      end if
+      if (.not. allocated(sw%qdra)) then
+         allocate(sw%qdra(nrlevs, numnod))
+         sw%qdra = 0.0_real64
+      end if
+      if (.not. allocated(sw%inqdra)) then
+         allocate(sw%inqdra(nrlevs, numnod))
+         sw%inqdra = 0.0_real64
+      end if
+      if (.not. allocated(sw%inqdra_in)) then
+         allocate(sw%inqdra_in(nrlevs, numnod))
+         sw%inqdra_in = 0.0_real64
+      end if
+      if (.not. allocated(sw%inqdra_out)) then
+         allocate(sw%inqdra_out(nrlevs, numnod))
+         sw%inqdra_out = 0.0_real64
+      end if
+
+      end associate
    end subroutine surfacewater_init
 
 end module surfacewater_init_mod

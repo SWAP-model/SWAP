@@ -36,6 +36,7 @@ subroutine SurfaceWater(task)
       use Variables
       use array_utils, only: afgen
       use surfacewater_init_mod, only: surfacewater_init
+      use swap_state_mod, only: swap_state_t
       implicit none
       integer task
 
@@ -45,6 +46,7 @@ subroutine SurfaceWater(task)
       integer nodeTopDisLay(madr)
       character(len=300) messag
 !cd     real(8) qdrain_old(madr), qdrain_new(madr)
+      type(swap_state_t), save :: state
 
 
 ! ----------------------------------------------------------------------
@@ -54,7 +56,7 @@ subroutine SurfaceWater(task)
 ! === initialization ===================================================
 
 ! --- read input data
-      call surfacewater_init (wls, wlp)
+      call surfacewater_init (state)
 
       hwlman = 0.0d0
       vtair = 0.0d0

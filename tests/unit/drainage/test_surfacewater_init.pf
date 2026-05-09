@@ -1,11 +1,13 @@
 @test
 subroutine test_surfacewater_init_zeroes_state()
    use funit
+   use iso_fortran_env, only: real64
    use surfacewater_init_mod, only: surfacewater_init
-   use variables, only: numadj, wlsbak, nrlevs, swdtyp, zbotdr, widthr, &
-                         taludr, l, wls1_init, swsrf, swsec, swqhr, &
+   use swap_state_mod, only: swap_state_t
+   use variables, only: numadj, wlsbak, nrlevs, numnod, swdtyp, zbotdr, widthr, &
+                         taludr, l, wls1_init, wls, wlp, swsrf, swsec, swqhr, &
                          nmper, swman
-   real(8) :: wls1, wlp1
+   type(swap_state_t) :: state
    integer :: i
    ! Minimal happy-path setup mimicking case 6's first level.
    ! swman is a fixed-size global; set element 1 directly.
@@ -13,6 +15,7 @@ subroutine test_surfacewater_init_zeroes_state()
    swsec  = 2
    swqhr  = 1
    nrlevs = 1
+   numnod = 1
    nmper  = 1
    wls1_init = -77.0d0
    swman(1)  = 1
@@ -25,25 +28,38 @@ subroutine test_surfacewater_init_zeroes_state()
    do i = 1, 4
       wlsbak(i) = 999.0d0
    end do
-   call surfacewater_init(wls1, wlp1)
+   call surfacewater_init(state)
+
+   ! Assert via the legacy globals to confirm dual-write (globals still authoritative).
    @assertEqual(0,  numadj)
-   @assertEqual(0.0d0, wlsbak(1), 1.0d-12)
-   @assertEqual(0.0d0, wlsbak(4), 1.0d-12)
-   @assertEqual(-77.0d0, wls1, 1.0d-12)
-   @assertEqual(0.0d0,   wlp1, 1.0d-12)
+   @assertEqual(0.0_real64, wlsbak(1), 1.0d-12)
+   @assertEqual(0.0_real64, wlsbak(4), 1.0d-12)
+   @assertEqual(-77.0_real64, wls, 1.0d-12)
+   @assertEqual(0.0_real64,   wlp, 1.0d-12)
+
+   ! Assert via the typed state.
+   @assertEqual(0, state%surfacewater%numadj)
+   do i = 1, 4
+      @assertEqual(0.0_real64, state%surfacewater%wlsbak(i), 1.0d-12)
+   end do
+   @assertEqual(-77.0_real64, state%surfacewater%wls,    1.0d-12)
+   @assertEqual(-77.0_real64, state%surfacewater%wlstar, 1.0d-12)
 end subroutine
 
 @test
 subroutine test_surfacewater_init_sttab_top_rows()
    use funit
+   use iso_fortran_env, only: real64
    use surfacewater_init_mod, only: surfacewater_init
-   use variables, only: sttab, nrlevs, swdtyp, zbotdr, widthr, taludr, l, &
+   use swap_state_mod, only: swap_state_t
+   use variables, only: sttab, nrlevs, numnod, swdtyp, zbotdr, widthr, taludr, l, &
                          wls1_init, swsrf, swsec, swqhr, nmper, swman
-   real(8) :: wls1, wlp1
+   type(swap_state_t) :: state
    swsrf  = 2
    swsec  = 2
    swqhr  = 1
    nrlevs = 1
+   numnod = 1
    nmper  = 1
    wls1_init = -77.0d0
    swman(1)  = 1
@@ -52,7 +68,9 @@ subroutine test_surfacewater_init_sttab_top_rows()
    widthr(1) = 100.0d0
    taludr(1) = 0.66d0
    l(1)      = 390.0d0
-   call surfacewater_init(wls1, wlp1)
+   call surfacewater_init(state)
+
+   ! Assert via legacy globals.
    ! Row 1 = +100cm; row 2 = 0cm.
    @assertEqual(100.0d0, sttab(1, 1), 1.0d-12)
    @assertEqual(  0.0d0, sttab(2, 1), 1.0d-12)
@@ -60,20 +78,29 @@ subroutine test_surfacewater_init_sttab_top_rows()
    ! Row 3 = -5.75; row 22 = -115.
    @assertEqual(-5.75d0,  sttab( 3, 1), 1.0d-12)
    @assertEqual(-115.0d0, sttab(22, 1), 1.0d-12)
+
+   ! Assert via typed state (dual-write check).
+   @assertEqual(100.0_real64, state%surfacewater%sttab(1, 1), 1.0d-12)
+   @assertEqual(  0.0_real64, state%surfacewater%sttab(2, 1), 1.0d-12)
+   @assertEqual(-5.75_real64,  state%surfacewater%sttab( 3, 1), 1.0d-12)
+   @assertEqual(-115.0_real64, state%surfacewater%sttab(22, 1), 1.0d-12)
 end subroutine
 
 @test
 subroutine test_surfacewater_init_sttab_storage_row3()
    use funit
+   use iso_fortran_env, only: real64
    use surfacewater_init_mod, only: surfacewater_init
-   use variables, only: sttab, nrlevs, swdtyp, zbotdr, widthr, taludr, l, &
+   use swap_state_mod, only: swap_state_t
+   use variables, only: sttab, nrlevs, numnod, swdtyp, zbotdr, widthr, taludr, l, &
                          wls1_init, swsrf, swsec, swqhr, nmper, swman
-   real(8) :: wls1, wlp1
+   type(swap_state_t) :: state
    ! Same fixture as test_surfacewater_init_sttab_top_rows.
    swsrf  = 2
    swsec  = 2
    swqhr  = 1
    nrlevs = 1
+   numnod = 1
    nmper  = 1
    wls1_init = -77.0d0
    swman(1)  = 1
@@ -82,11 +109,16 @@ subroutine test_surfacewater_init_sttab_storage_row3()
    widthr(1) = 100.0d0
    taludr(1) = 0.66d0
    l(1)      = 390.0d0   ! metres (surfacewater_init applies *100 locally)
-   call surfacewater_init(wls1, wlp1)
+   call surfacewater_init(state)
+
+   ! Assert via legacy global.
    ! sttab(3,1) = zbotdr(1) * 1/20 = -5.75 cm.
    ! Trapezium branch (depth=-5.75 > zbotdr=-115, depth <= 0):
    !   wdepth = -5.75 - (-115.0) = 109.25 cm
    !   wvolum = 109.25 * (100.0 + 109.25 / 0.66) = 109.25 * 265.530303 = 29009.186 cm^2
    !   sttab(3,2) = 29009.186 / (390.0 * 100) = 0.74382527...
    @assertEqual(0.7438d0, sttab(3, 2), 1.0d-3)
+
+   ! Assert via typed state (dual-write check).
+   @assertEqual(0.7438_real64, state%surfacewater%sttab(3, 2), 1.0d-3)
 end subroutine
