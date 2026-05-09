@@ -65,7 +65,7 @@
       end
 
 ! ----------------------------------------------------------------------
-      subroutine soilwateroutput(task)
+      subroutine soilwateroutput(task, state)
       use error_mod, only: fatalerr_collected
 ! ----------------------------------------------------------------------
 !     Date               : Aug 2004
@@ -75,9 +75,11 @@
       use Variables
       use SWAP_csv_output
       use SWAP_csv_output_tz
+      use swap_state_mod, only: swap_state_t
       implicit none
 
       integer task
+      type(swap_state_t), intent(in) :: state
 
       select case (task)
 
@@ -166,7 +168,7 @@
 ! ===    write final values end of a simulation day ===========================
 
 ! ---    write final pressure heads, solute concentrations and soil temperatures
-         if (swend.ge.1) call outend ()
+         if (swend.ge.1) call outend (state)
 
       case (4)
 ! ===    close output files ===========================
@@ -1016,14 +1018,14 @@
       end
 
 ! ----------------------------------------------------------------------
-      subroutine outend ()
+      subroutine outend (state)
 ! ----------------------------------------------------------------------
 !     Updates            : September 2015, June 2017
 !     date               : July 2002
 !     purpose            : write final result to .end file
 ! ---------------------------------------------------------------------
       use variables, only: t1900,swend,numnod,h,flSolute,flAgeTracer,cml,z,fltemperature,tsoil,                                                             &
-                           ssnow,pond,dt,icrop,croptype,cropfil,flSurfaceWater,wls,swredu,ldwet,spev,saev,outfil,pathwork,project,                          &
+                           ssnow,pond,dt,icrop,croptype,cropfil,flSurfaceWater,swredu,ldwet,spev,saev,outfil,pathwork,project,                          &
                            rd,rdpot,dvs,flanthesis,tsum,ilvold,ilvoldpot,wrt,wrtpot,tadw,tadwpot,wst,wstpot,wso,wsopot,wlv,wlvpot,laiexp,lai,laipot,        &
                            dwrt,dwrtpot,dwlv,dwlvpot,dwst,dwstpot,dwlvSoil,dwlvCrop,gasst,gasstpot,mrest,mrestpot,                                          &
                            cwdm,cwdmpot,sla,slapot,lvage,lvagepot,lv,lvpot,daycrop,nofd,atmin7,tsumgerm,rid,flgrazingpot,idregr,                            &
@@ -1031,9 +1033,11 @@
                            tagpt,tagptpot,iharvest,iseqgm,iseqgmpot,flgrazing,slw,cuptgraz,cuptgrazpot,flIrrigate,dayfix,                                   &
                            flCropCalendar,flCropPrep,flCropSow,flCropGerm,flCropEmergence,flCropHarvest,PrepDelay,SowDelay,swinter,sicact,glaiex,glaiexpot
       use file_io_mod, only: file_open
+      use swap_state_mod, only: swap_state_t
       implicit none
 
-! --- global
+! --- Arguments
+      type(swap_state_t), intent(in) :: state
 
 ! --- local
       integer   i,fin,swanthesis,swgrazing,swgrazingpot,count
@@ -1093,7 +1097,7 @@
       if(flSurfaceWater) then
         write(fin,'("* Surface water")')
         write(fin,'("* Surface water level (cm)")')
-        write(fin,'(" wls = ", e12.5/)') wls
+        write(fin,'(" wls = ", e12.5/)') state%surfacewater%wls
       endif
 
       ! write soil evaporation reservoirs
@@ -2939,7 +2943,7 @@
 
 
 ! ----------------------------------------------------------------------
-      subroutine SurfaceWaterOutput(task)
+      subroutine SurfaceWaterOutput(task, state)
       use error_mod, only: fatalerr_collected
 ! ----------------------------------------------------------------------
 !     Date               : Aug 2004
@@ -2947,9 +2951,11 @@
 ! ----------------------------------------------------------------------
 
       use variables
+      use swap_state_mod, only: swap_state_t
       implicit none
 
       integer task
+      type(swap_state_t), intent(in) :: state
 
       select case (task)
       case (1)
@@ -2959,7 +2965,7 @@
 ! --  drf file
       if (swdrf.eq.1) call outdrf (task)
 
-      if (swswb.eq.1) call outswb(task)
+      if (swswb.eq.1) call outswb(task, state)
 
       return
 
@@ -2970,7 +2976,7 @@
 ! --  drf file
       if (swdrf.eq.1) call outdrf (task)
 
-      if (swswb.eq.1) call outswb(task)
+      if (swswb.eq.1) call outswb(task, state)
 
       return
 
@@ -3125,7 +3131,7 @@
       end
 
 ! ----------------------------------------------------------------------
-      subroutine outswb(task)
+      subroutine outswb(task, state)
       use error_mod, only: fatalerr_collected
 ! ----------------------------------------------------------------------
 !     Date               : 21/08/99
@@ -3133,13 +3139,15 @@
 !                          OUTNAM.SWB file, surface water management
 !                          data to OUTNAM.MAN. The files overlap
 ! ---------------------------------------------------------------------
-      use variables, only: outfil,vtair,pathwork,daynr,daycum,hbweir,overfl,gwl,pond,wlstar,wls,swstini,swst,cqdrd,crunoff,           &
-                           cQMpOutDrRap,cwsupp,swb,numadj,hwlman,cwout,swsec,swman,nmper,impend,imper,project,logf,swscre,date,t1900,t,outper,iyear
+      use variables, only: outfil,pathwork,daynr,daycum,hbweir,gwl,pond,crunoff,           &
+                           cQMpOutDrRap,swb,swsec,swman,nmper,impend,imper,project,logf,swscre,date,t1900,t,outper,iyear
+      use swap_state_mod, only: swap_state_t
       use file_io_mod, only: file_open
       implicit none
 
-! --- Global
-      integer   task
+! --- Arguments
+      integer,            intent(in) :: task
+      type(swap_state_t), intent(in) :: state
 
 ! --- Local
       integer   nrOfDays,man
@@ -3215,7 +3223,7 @@
       endif
 
 ! --- write record for initial state
-      write (SWB,20) comma,gwlev,comma,wlstar,comma,wls,comma,swst,     &
+      write (SWB,20) comma,gwlev,comma,state%surfacewater%wlstar,comma,state%surfacewater%wls,comma,state%surfacewater%swst,     &
      & comma,(0.),comma,(0.),comma,(0.),comma,(0.),comma,(0.),comma,(0.)
  20   format ('* initial  ,   - ,    - ',                               &
      & 3(a1,f7.1),a1,f6.1,6(a1,f7.2),/,'*',/,                           &
@@ -3269,8 +3277,9 @@
       endif
 
 ! --- water balance error
-      delbal = (swst + cwout) - (swstini + cqdrd+crunoff + cwsupp +     &
-     &                          cQMpOutDrRap)
+      delbal = (state%surfacewater%swst + state%surfacewater%cwout) - &
+     &         (state%surfacewater%swstini + state%surfacewater%cqdrd + crunoff + &
+     &          state%surfacewater%cwsupp + cQMpOutDrRap)
       if (delbal .gt. 0.05d0) then
         call dtdpst                                                     &
      &        ('year-month-day,hour:minute:seconds',t1900,datetime)
@@ -3289,28 +3298,30 @@
 
 ! --- write output record OUTNAM.SWB
       write (SWB,40) date,comma,daynr,comma,daycum,comma,gwlev,comma,   &
-     &  wlstar,comma,wls,comma,swst,comma,                              &
-     &  (cqdrd+crunoff+cQMpOutDrRap-cqdrf1),comma,(cwsupp-c1wsupp),     &
-     &  comma,(cwout-c1wout),comma,(cqdrd+crunoff+cQMpOutDrRap),        &
-     &  comma,cwsupp,comma,cwout
+     &  state%surfacewater%wlstar,comma,state%surfacewater%wls,comma,state%surfacewater%swst,comma, &
+     &  (state%surfacewater%cqdrd+crunoff+cQMpOutDrRap-cqdrf1),comma,(state%surfacewater%cwsupp-c1wsupp), &
+     &  comma,(state%surfacewater%cwout-c1wout),comma,(state%surfacewater%cqdrd+crunoff+cQMpOutDrRap), &
+     &  comma,state%surfacewater%cwsupp,comma,state%surfacewater%cwout
  40   format (a11,a1,I4,a1,I6,3(a1,f7.1),a1,f6.1,6(a1,f7.2))
 
 ! --- write output record OUTNAM.MAN
       if (swsec .eq. 2) then
-        if (overfl) then
+        if (state%surfacewater%overfl) then
           spc = 'o'
         else
           spc = '-'
         endif
         if (swman(imper) .eq. 1) then
           write(man,50) date,comma,daynr,comma,daycum,comma,gwlev,comma,&
-     &      wlstar,comma,wls,comma,((cwout-c1wout)-(cwsupp-c1wsupp)),   &
-     &      comma,numadj,comma,spc,comma,hbweir(imper)
+     &      state%surfacewater%wlstar,comma,state%surfacewater%wls,comma, &
+     &      ((state%surfacewater%cwout-c1wout)-(state%surfacewater%cwsupp-c1wsupp)), &
+     &      comma,state%surfacewater%numadj,comma,spc,comma,hbweir(imper)
         else
           write(man,60) date,comma,daynr,comma,daycum,comma,gwlev,comma,&
-     &      hwlman,comma,vtair,comma,wlstar,comma,wls,comma,            &
-     &      ((cwout-c1wout)-(cwsupp-c1wsupp)),comma,numadj,comma,spc,   &
-     &      comma,hbweir(imper)
+     &      state%surfacewater%hwlman,comma,state%surfacewater%vtair,comma, &
+     &      state%surfacewater%wlstar,comma,state%surfacewater%wls,comma, &
+     &      ((state%surfacewater%cwout-c1wout)-(state%surfacewater%cwsupp-c1wsupp)), &
+     &      comma,state%surfacewater%numadj,comma,spc,comma,hbweir(imper)
         endif
  50     format (a11,a1,i4,a1,I6,',    f',a1,f7.1,2(',     -'),          &
      &          3(a1,f7.1),a1,i7,a1,5x,a1,a1,f7.1)
@@ -3320,14 +3331,14 @@
       endif
 
 ! --- store cumulative values
-      cqdrf1 = (cqdrd+crunoff+cQMpOutDrRap)
-      c1wsupp = cwsupp
-      c1wout = cwout
+      cqdrf1 = (state%surfacewater%cqdrd+crunoff+cQMpOutDrRap)
+      c1wsupp = state%surfacewater%cwsupp
+      c1wout = state%surfacewater%cwout
 
-! --- saves storage as initial values for next year
+! --- year-boundary reset of swstini moved to surfacewater_year_reset,
+!     called from swap_main at the year boundary (Task 5, ADR 0020)
       nrOfDays = 365
       if (dtleap(iyear)) nrOfDays = nrOfDays + 1
-      if (daynr.eq.nrOfDays) swstini = swst
 
       case default
          call fatalerr_collected ('outswb', 'Illegal value for Task')
@@ -3658,7 +3669,7 @@
               call SoilWaterStateVar(1)
 
 ! --- calculate new soil water state variables
-              call headcalc
+              call headcalc(state_om)
 
 ! ---   calculate surface water balace
               if (flSurfaceWater) call SurfaceWater(3, state_om, request_smaller_dt_om)

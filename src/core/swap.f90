@@ -71,7 +71,7 @@ use variables, only : flyearstart, fldaystart, flswapshared, flsurfacewater, flm
                       daynr, iyear, numnod, numlay
 use swap_state_mod, only: swap_state_t
 use drainage_mod, only: drainage
-use surfacewater_mod, only: SurfaceWater
+use surfacewater_mod, only: SurfaceWater, surfacewater_year_reset
                       ! for debugging
 !use variables, only : iqrot, iptra, cnrai, t1900, Tstart, Tend, numnod, dz, theta, dt, h, arai, rainamount, lai
 
@@ -108,6 +108,7 @@ type(swap_output), intent(out),   optional :: fromswap
 ! local
 logical :: flError
 logical :: request_smaller_dt
+logical, external :: dtleap
 logical, parameter :: flDailyStateSnapshot = .false.
 ! Phase 1 (.crp port): saved config so crop_config_global pointer remains
 ! valid across the iTask=1 / iTask=2 / iTask=3 call boundary.
@@ -173,7 +174,7 @@ if (iTask == 1) then
    if (flSSDI)    call SSDI_irrigation(1)
 
 !  initialize SoilWater rate/state variables
-   call SoilWater(1)
+   call SoilWater(1, state)
    if (swuseCN == 1) call CNmethod(1)
 
 !  initialize SurfaceWater management variables
@@ -202,7 +203,7 @@ if (iTask == 1) then
 !  open Output files and write headers (skip in external/DLL mode to avoid per-column I/O)
    if (iCaller == 0) then
       call SwapOutput(1)
-      call SoilWaterOutput(1)
+      call SoilWaterOutput(1, state)
       if (flIrrigate)     call IrrigationOutput(1)
       if (flTemperature)  call TemperatureOutput(1)
       if (flSolute)       call SoluteOutput(1)
@@ -290,7 +291,7 @@ if (iTask == 2) then
          if (SwFrost.eq.1)                      call FrozenBounds()
 
 !        calculate SoilWater, incl macropores
-         if (.not.fldecdt) call SoilWater(2)
+         if (.not.fldecdt) call SoilWater(2, state)
 
 !        calculate surface water balance
          if (.not.fldecdt .and. flSurfaceWater) call SurfaceWater(3, state, request_smaller_dt)
@@ -305,7 +306,7 @@ if (iTask == 2) then
       end do
 
 !     calculate SoilWater rate/state variables
-      call SoilWater(3)
+      call SoilWater(3, state)
 
 !     calculate SoilTemperature rate/state variables
    if (flTemperature) call Temperature(2)
@@ -360,16 +361,20 @@ if (iTask == 2) then
       if (iCaller == 0) then
          if (flOutput) then
             call SwapOutput(2)
-            call SoilWaterOutput(2)
+            call SoilWaterOutput(2, state)
             if (flTillage) call DoTillage(3)
             if (flTemperature)   call TemperatureOutput(2)
             if (flSolute)        call SoluteOutput(2)
             if (flAgeTracer)     call AgeTracerOutput(2)
             if (flSnow)          call SnowOutput(2)
             if (flMacroPore)     call MacroPoreOutput(2)
-            if (flSurfaceWater)  call SurfaceWaterOutput(2)
+            if (flSurfaceWater) then
+               if (daynr == merge(366, 365, dtleap(iyear))) &
+                  call surfacewater_year_reset(state%surfacewater)
+               call SurfaceWaterOutput(2, state)
+            end if
          else
-            if (flOutputShort)   call SoilWaterOutput(2)
+            if (flOutputShort)   call SoilWaterOutput(2, state)
          end if
          if (flDayEnd .and. (flOutput .or. flHarvestDay)) then
             if (flCropCalendar .and. flCropOutput) then
@@ -378,7 +383,7 @@ if (iTask == 2) then
          end if
          if (flIrrigationOutput)          call IrrigationOutput(2)
          if (flDayEnd .and. flCropNut)    call SoilManagement(6)
-         if (swend.eq.2 .and. flDayEnd)   call soilwateroutput(3)
+         if (swend.eq.2 .and. flDayEnd)   call soilwateroutput(3, state)
       end if
 
 !    shared simulation
@@ -404,8 +409,8 @@ if (iTask == 3) then
    if (iCaller == 0) then
       if (flSwapShared) call SharedSimulation(4)
       call SwapOutput(3)
-      if (swend.eq.1) call SoilWaterOutput(3)
-      call SoilWaterOutput(4)
+      if (swend.eq.1) call SoilWaterOutput(3, state)
+      call SoilWaterOutput(4, state)
       if (swcrp.eq.1) call CropOutput(3)
       if (flTemperature)        call TemperatureOutput(3)
       if (flSolute)             call SoluteOutput(3)
@@ -413,7 +418,7 @@ if (iTask == 3) then
       if (flIrrigate)           call IrrigationOutput(3)
       if (flSnow)               call SnowOutput(3)
       if (flMacroPore)          call MacroPoreOutput(3)
-      if (flSurfaceWater)       call SurfaceWaterOutput(3)
+      if (flSurfaceWater)       call SurfaceWaterOutput(3, state)
       if (flCropNut)            call SoilManagement(7)
    end if
 

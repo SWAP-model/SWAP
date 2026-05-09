@@ -18,7 +18,7 @@ module surfacewater_mod
       use distribute_drainage, only: DIVDRA
       use drainage_mod, only: bocodre
       implicit none
-      public :: SurfaceWater
+      public :: SurfaceWater, surfacewater_year_reset
       contains
 
 subroutine SurfaceWater(task, state, request_smaller_dt)
@@ -784,5 +784,14 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
       return
       end
 
+
+!> Year-boundary reset for surface-water cumulative state.
+!! Captures the current swst as swstini for the new year.
+subroutine surfacewater_year_reset(sw)
+   use surfacewater_state_mod, only: surfacewater_state_t
+   implicit none
+   type(surfacewater_state_t), intent(inout) :: sw
+   sw%swstini = sw%swst
+end subroutine surfacewater_year_reset
 
 end module surfacewater_mod

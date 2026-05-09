@@ -10,10 +10,11 @@
 module surfacewater_utils
    use error_mod, only: fatalerr_collected
    use iso_fortran_env, only: real64
-   use variables, only: sttab, imper, hqhtab, qqhtab, swdra, pond, pondmx, rsro, rsroexp, wls, swst, dt
-   
+   use variables, only: sttab, imper, hqhtab, qqhtab, swdra, pond, pondmx, rsro, rsroexp, dt
+   use swap_state_mod, only: swap_state_t
+
    implicit none
-   
+
    private
    public :: wlevst, swstlev, qhtab, runoff
 contains
@@ -190,33 +191,40 @@ contains
    !! Positive runoff indicates drainage from soil surface to surface water system.
    !! Negative runoff indicates inundation from surface water onto soil surface.
    !!@endnote
-   function runoff()
+   function runoff(state)
       implicit none
-      
+
+      ! Arguments
+      type(swap_state_t), intent(in) :: state
+
       ! Function result
       real(real64) :: runoff
-      
+
       ! Local variables
       real(real64) :: inun_max
 
+      associate(sw_wls => state%surfacewater%wls, sw_swst => state%surfacewater%swst)
+
       runoff = 0.0_real64
-      
+
       if (pond - pondmx > 0.0_real64 .and. swdra /= 2) then
-         if (rsro < 1.0d-3) then 
+         if (rsro < 1.0d-3) then
             runoff = pond - pondmx
-         else         
+         else
             runoff = dt / rsro * (pond - pondmx)**rsroexp
          end if
-         
+
       else if (swdra == 2) then
-         if (pond > pondmx .and. pond > wls) then
-            runoff = dt / rsro * (pond - max(pondmx, wls))**rsroexp
-         else if (pond < wls) then
-            inun_max = swst - swstlev(pond)
-            runoff = -min(inun_max, wls - max(pond, pondmx))
+         if (pond > pondmx .and. pond > sw_wls) then
+            runoff = dt / rsro * (pond - max(pondmx, sw_wls))**rsroexp
+         else if (pond < sw_wls) then
+            inun_max = sw_swst - swstlev(pond)
+            runoff = -min(inun_max, sw_wls - max(pond, pondmx))
          end if
       end if
-      
+
+      end associate
+
    end function runoff
 
 end module surfacewater_utils

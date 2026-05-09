@@ -188,24 +188,25 @@ contains
 
 
 ! ----------------------------------------------------------------------
-      SUBROUTINE PONDRUNOFF ()
+      SUBROUTINE PONDRUNOFF (state)
 ! ----------------------------------------------------------------------
 !     Date               : 4/5/2005
-!     Purpose            : determines ponding height and calculates runoff        
-!     Formal parameters  :                                             
-!     Subroutines called : -                                           
-!     Functions called   : runoff                                 
-!     File usage         : -                                           
+!     Purpose            : determines ponding height and calculates runoff
+!     Formal parameters  : state — typed surface-water state (read-only)
+!     Subroutines called : -
+!     Functions called   : runoff
+!     File usage         : -
 ! ----------------------------------------------------------------------
       use variables, only: swdra,FlMacropore,FlRunoff,disnod,dt,h,H0max,k1max,pondm1,pondmx,q0,rsro,rsroexp, &
                            QMpLatSs,hsurf,pond,runots,swpondmx,pondmxtab,t1900
       use array_utils, only: afgen
       use surfacewater_utils, only: runoff
+      use swap_state_mod, only: swap_state_t
       implicit none
 
-! --- global                                                       In
+! --- arguments
+      type(swap_state_t), intent(in) :: state
 
-! ----------------------------------------------------------------------
 ! --- local variables
       INTEGER i
       real(8) h0,h0min,p1,p2
@@ -250,7 +251,7 @@ contains
          return
       end if
 
-      runots = runoff()
+      runots = runoff(state)
       if(dabs(runots).lt.1.0d-6)then
 !        if no runoff occurs: first estimation of pond is OK 
          pond     = h0max 
@@ -263,7 +264,7 @@ contains
 
          pond     = p2 * ( pondm1 + q0*dt - k1max*dt + p1*h(1) +        &
      &                     dt/rsro * pondmx )
-         runots = runoff() 
+         runots = runoff(state) 
          hsurf    = pond
          return
       else             
@@ -278,7 +279,7 @@ contains
          h0min = 0.0d0
          do i=1,30
             pond   = 0.5d0 * (h0max + h0min)
-            runots = runoff()
+            runots = runoff(state)
             h0     = p2 * ( pondm1 +q0*dt -k1max*dt +p1*h(1) -runots)
 
             if(dabs(pond-h0).lt.1.0d-6)then
@@ -296,7 +297,7 @@ contains
 
 !     if convergence has not been reached: proceed with final value
       pond   = 0.5d0 * (h0max + h0min)
-      runots = runoff()
+      runots = runoff(state)
       hsurf  = pond
 
       return

@@ -22,7 +22,7 @@ contains
    !! Date: April 2005 / Sept 2005
    !! @endnote
    !!
-   subroutine headcalc
+   subroutine headcalc(state)
       use variables
       use boundbottom_mod, only: BoundBottom
       use boundtop_mod, only: boundtop, PONDRUNOFF
@@ -31,10 +31,14 @@ contains
       use soilhydraulics_utils, only: watcon, hconduc, moiscap, hcomean, dhconduc
       use swap_constants, only: nihil
       use macropore_mod, only: macropore
+      use swap_state_mod, only: swap_state_t
       use soilhydraulics_utils, only: dkmean
       use soilwaterbalance_mod, only: calcgwl, fluxes
       use numericalsolvers_mod, only: tridag, bandec, banbks
       implicit none
+
+      ! Arguments
+      type(swap_state_t), intent(in) :: state
 
       ! Local variables
       integer   i,j, itry,  MaxIt1, ndr, NN, iBackTr
@@ -99,7 +103,7 @@ contains
          if(gwlinp.ge.z(1)-1.0d-4)then
 
             q0 = (nraidt+nird+melt)*(1.0d0-ArMpSs) + runon - reva 
-            call pondrunoff ()
+            call pondrunoff (state)
             q1 = - q0 + (pond - pondm1)/dt + runots / dt
             theta(1) = watcon(1,gwlinp)
             kmean(1) = hconduc(1,gwlinp,theta(1),rfcp(1))
@@ -199,8 +203,8 @@ contains
          call MACROPORE(2)
       end if
 
-      if (FlRunoff .or. (FlMacropore .and. Z_Tp.gt.-1.d-8))             &   ! Adaptation for GEM 
-     &    call pondrunoff ()
+      if (FlRunoff .or. (FlMacropore .and. Z_Tp.gt.-1.d-8))             &   ! Adaptation for GEM
+     &    call pondrunoff (state)
 
       if(ftoph)then
          hgrad(1) = (hsurf-h(1))/disnod(1) + 1.d0
@@ -485,7 +489,7 @@ contains
             endif
 
             if (FlRunoff .or. (FlMacropore .and. Z_Tp.gt.-1.d-8))       &   ! Adaptation for GEM
-     &         call pondrunoff ()
+     &         call pondrunoff (state)
 
             if(ftoph)then
                hgrad(1) = (hsurf-h(1))/disnod(1) + 1.d0
@@ -831,7 +835,7 @@ contains
    !! Date: Aug 2004
    !! @endnote
    !!
-   subroutine soilwater(task)
+   subroutine soilwater(task, state)
      use doln
       use Variables
       use swap_log, only: log_info, to_str
@@ -839,10 +843,15 @@ contains
       use soilhydraulics_utils, only: watcon, hconduc, moiscap, hcomean
       use macropore_mod, only: macropore
       use soilwaterbalance_mod, only: calcgwl, watstor, integral, fluxes
+      use swap_state_mod, only: swap_state_t
       implicit none
 
+      ! Arguments
+      integer task
+      type(swap_state_t), intent(in) :: state
+
       ! Local variables
-      integer task,lay,node,i,j
+      integer lay,node,i,j
 
       real(8) tab(mabbc*2)
       character(len=200) messag
@@ -1146,7 +1155,7 @@ contains
       call SoilWaterStateVar(1)
 
       ! Calculate new soil water state variables
-      call headcalc
+      call headcalc(state)
 
       return
 
