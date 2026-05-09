@@ -6,9 +6,9 @@ status: accepted (draft — finalized at end of Phase 2)
 
 # ADR 0030: Surface-water state-type migration (pilot)
 
-**Status:** accepted (Phase 1 complete; Phase 2 pending — consequences section grows once globals leave variables.f90)
+**Status:** accepted (Phases 1 + 2 complete)
 **Date:** 2026-05-09
-**Branch:** `refactor/surfacewater-state` — do not merge to `development` until Phase 2 lands and verification is green
+**Branch:** `refactor/surfacewater-state` — ready to merge to `development`
 
 ## Context
 
@@ -58,7 +58,25 @@ The discovery template needs one extension: a "Section 3.5: external readers of 
 - pFUnit: 614 → 616 tests (added 2 state-type construction suites). All green.
 - check-full: 5/5 byte-identical at every task boundary.
 
-**Phase 2 consequences (to be filled after completion):** TBD — remaining global deletions, cross-subsystem reader migrations, owner-rule relocations, and the actual `variables.f90` line-count drop.
+**Phase 2 outcomes (completed 2026-05-09):**
+
+- 28 of 29 surface-water-owned globals removed from `variables.f90` and `initialize.f90`. The 29th (`qdra`) is retained as a globally-declared array because `divdra` consumes it as an explicit-shape `(Madr, macp)` argument; the state%surfacewater%qdra mirror is the live read source for compute and output, while the global serves only as the divdra argument-binding scaffold. This residual global is a candidate for cleanup when divdra's signature is modernized in a future arc.
+- `fldecdt` (timestep-decrease signal) deleted from `variables.f90` and `initialize.f90`. Replaced by `intent(out) :: request_smaller_dt` on `SurfaceWater(2/3)`, propagated to a swap-main-local flag (`fldecdt`) hosted in a new tiny `src/core/timestep_control_mod.f90` module rather than threaded as an argument — `headcalc` writes the flag on Richards non-convergence, which would have ballooned argument lists if pure-arg threading were forced.
+- 13 cross-subsystem reader files migrated to `state%surfacewater` for surface-water-owned reads: `drainage.f90`, `macropore.f90`, `macrorate.f90`, `frozencond.f90`, `solute.f90`, `soilgrid.f90`, `management_soil.f90`, `soilhydraulics.f90`, `waterbalance.f90` (`integral` and `fluxes`), `surfacewaterutils.f90` (`wlevst`, `swstlev`, `qhtab`, `runoff`), `swap.f90`, `swapoutput.f90` (including `outafo`/`outaun`/`outend`/`outwba`/`outinc`/`outbal`/`outdrf`/`outage`/`outblc`/`OutputModflow`/`AgeTracerOutput`/`SurfaceWaterOutput`/`soilwateroutput`), `swap_csv_output.f90` (`csv_out`/`set_values`/`fill_values`), `boundtop.f90`, `timecontrol.f90`.
+- Owner-rule relocations completed:
+  - `qdrain(:) = 0` rule (when `gwl > 998`) moved from `SurfaceWater(2)` in `surfacewater.f90` into `Drainage` (and a guarded variant in `bocodre`) per spec D7. surface-water no longer mutates `qdrain`.
+  - `l(Madr)` m→cm conversion moved from `surfacewater_init` in-place mutation to TOML-read-time in `read_drainage_toml.f90` per spec D6. The typed config now holds cm internally; the legacy in-place global mutation is gone. A double-conversion path in the adapter (DRAMET=3+swdivd=1) was discovered and eliminated as a side effect.
+- `OutputModflow`'s SAVE-local `state_om` confirmed as the correct architectural shape (Phase 2 Task 8) — it's a finite-difference `dV/dGWL` perturbation experiment, not a timestep-tracking loop. Documentation added; code unchanged.
+- `variables.f90` LoC: 1314 → ~1340 (the 28 surface-water declarations are commented out with `! Moved to surfacewater_state_t%X` markers preserving migration provenance; net file size is similar, but the live declarations dropped accordingly). The commented-out block is itself a candidate for cleanup in a follow-up sweep once subsequent subsystems migrate.
+- Tests: 614 → 617 pFUnit tests passing (added 5 surfacewater_state, 2 swap_state, 1 read_drainage_toml conversion). Zero regressions across check-full's 5 cases.
+
+**Phase 2 architectural learnings carried forward:**
+
+- The 16-of-29 globals had cross-subsystem readers (drainage, macropore, soilhydraulics, frozencond, solute, soilgrid, management_soil, waterbalance, swapoutput, swap_csv_output, boundtop, timecontrol). The original Phase 1 discovery only enumerated this subsystem's writes, not external reads — Section 3.5 of the discovery doc retroactively captures these for future subsystem migrations.
+- ASSOCIATE name shadowing of `use Variables` (no `only:`) imports works in gfortran but is fragile; the `sw_*` prefix pattern is safer.
+- `intent(inout)` for non-trivial subroutines is contagious upward — `headcalc` had to gain inout because it calls `MACROPORE` which now takes inout state. Plan ahead for the call chain.
+- Some globals (e.g., `qdra`) are structurally tangled with explicit-shape array arguments (`divdra`) and cannot be cleanly removed without modernizing the consumer signatures — a separate future arc.
+- `timestep_control_mod` as a tiny dedicated module is a useful pattern when a flag is written deep in the call chain — argument-threading would have required signature changes in 4-5 routines, while the module is one new file with two readers.
 
 **Architectural consequences (carried into subsequent subsystem migrations):**
 

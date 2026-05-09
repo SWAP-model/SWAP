@@ -262,6 +262,40 @@ Config fields fed from `[surface_water]` TOML → `surface_water_config_t` → a
 
 ---
 
+## 3.5 External readers of owned globals
+
+**Added retroactively at end of Phase 2** (lessons-learned from execution: the original discovery cataloged owned writes but missed external reads; future subsystem migrations populate this section during discovery, not during execution).
+
+For each surface-water-owned global, the files OUTSIDE this subsystem's home tree that read it. This determines the scope of cross-subsystem migration work in Phase 2.
+
+| Owned global | External reader files |
+|---|---|
+| `wls` | `src/drainage/drainage.f90` (via `bocodre`); also indirectly via `surfacewater_utils:runoff()` from `boundtop.f90` |
+| `swst` | `src/drainage/drainage.f90`; also indirectly via `runoff()` |
+| `imper` | `src/drainage/drainage.f90`; `src/utils/surfacewaterutils.f90:qhtab` |
+| `cqdra` | `src/drainage/drainage.f90`, `src/soil/waterbalance.f90:integral` |
+| `ZDraBas` | `src/drainage/drainage.f90`, `src/macropore/macrorate.f90` (`RAPIDDRAIN`), `src/macropore/macropore.f90` (`MACROINIT`) |
+| `iqdra` | `src/drainage/drainage.f90`, `src/soil/waterbalance.f90:integral`, `src/io/swap_csv_output.f90:set_values`, `src/io/swapoutput.f90:outwba`/`outinc`/`OutputModflow`/`csv_write` |
+| `qdrtot` | `src/heat/frozencond.f90:FrozenBounds`, `src/soil/waterbalance.f90:integral`+`fluxes`, `src/drainage/drainage.f90`, `src/solute/solute.f90` |
+| `flInitDraBas` | `src/drainage/drainage.f90`, `src/macropore/macropore.f90:MACROINIT` |
+| `sttab` | `src/utils/surfacewaterutils.f90:wlevst`/`swstlev`; `src/config/drainage_config.f90` (comment-only, safe) |
+| `cqdrain(Madr)` | `src/soil/waterbalance.f90:integral`, `src/drainage/drainage.f90`, `src/io/swapoutput.f90:outdrf`/`outbal`/`outblc` |
+| `cqdrainin(Madr)` | `src/drainage/drainage.f90`, `src/soil/waterbalance.f90:integral`, `src/io/swapoutput.f90:outblc` |
+| `cqdrainout(Madr)` | `src/drainage/drainage.f90`, `src/soil/waterbalance.f90:integral`, `src/io/swapoutput.f90:outblc` |
+| `qdra(Madr,macp)` | `src/heat/frozencond.f90:FrozenBounds`, `src/drainage/drainage.f90` (passed to `divdra` as explicit-shape), `src/soil/waterbalance.f90:integral`+`fluxes`, `src/soil/soilhydraulics.f90:headcalc`, `src/solute/solute.f90` |
+| `inqdra(Madr,macp)` | `src/drainage/drainage.f90`, `src/soil/soilgrid.f90:ConvertDiscrVert`, `src/soil/waterbalance.f90:integral`, `src/crop/management_soil.f90:SoilManagement` |
+| `inqdra_in(Madr,macp)` | `src/drainage/drainage.f90`, `src/soil/waterbalance.f90:integral` |
+| `inqdra_out(Madr,macp)` | `src/drainage/drainage.f90`, `src/soil/waterbalance.f90:integral` |
+| `cqdrd`, `cwsupp`, `cwout` | `src/io/swapoutput.f90:outdrf` only (output-side, migrated in Phase 1) |
+| `wlstar`, `wlsold`, `wlsbak`, `numadj`, `vtair`, `hwlman`, `swstini`, `qdrtot`, `overfl` | (no live external readers in Phase 1; owned-only or already migrated) |
+
+Plus the special case (not in surfacewater_state_t):
+| `fldecdt` | `src/core/swap.f90`, `src/core/timecontrol.f90`, `src/soil/soilhydraulics.f90:headcalc`, `src/io/swapoutput.f90:OutputModflow` |
+
+**Implication for migration scope:** Phase 2 had to migrate 13 cross-subsystem files in addition to the home tree. Future subsystem-migration discoveries should populate this section during the read-only investigation, BEFORE writing the design doc, so the design phase can plan owner-rule relocations and reader migrations explicitly.
+
+---
+
 ## 9. Test surface
 
 | Test file | What it covers |
