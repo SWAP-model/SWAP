@@ -3614,10 +3614,18 @@
       integer   i,swBotbtmp
       real(8)   vair(2),dgwl(2),gwltmp,pondtmp,qbottmp, vt2
       real(8)   thetatmp(macp),htmp(macp),xd(6)
-      ! SS-SWST Phase 1: local saved state for the diagnostic re-run.
-      ! Initialized via surfacewater_init in task=1 (called after SurfaceWater(1)
-      ! has already set up globals). The dual-write in SurfaceWater keeps globals
-      ! current, so this state tracks the perturbed mini-loop independently.
+      ! SS-SWST Phase 2 Task 8 — Option A (independent mini-simulation): state_om
+      ! is intentionally NOT re-synced from main state on each call.  OutputModflow
+      ! runs a two-arm perturbation experiment (dgwl = +1 cm / -1 cm) to estimate
+      ! the numerical storage coefficient dV/dGWL at the current timestep.  The
+      ! two arms share state_om as a common SurfaceWater carrier; scalar main-state
+      ! globals (gwl, theta, h, pond, qbot) are saved/restored explicitly around
+      ! each arm (see gwltmp/thetatmp/htmp/pondtmp/qbottmp below).  state_om drifting
+      ! from main state%surfacewater across timesteps is acceptable: the perturbation
+      ! magnitude (1 cm) is small and the finite difference only needs internal
+      ! consistency between arm 1 and arm 2, not identity with the main run.
+      ! Do NOT add "state_om = state" here — that would be Option B (timestep
+      ! tracking), which is incorrect for this finite-difference purpose.
       type(swap_state_t), save :: state_om
       logical :: request_smaller_dt_om
 
@@ -3709,6 +3717,8 @@
       dgwl(1) = 1.0d0
       dgwl(2) = -1.0d0
 ! ---   determine SoilWater bottom boundary conditions
+! ---   Two-arm perturbation: +1 cm (i=1) and -1 cm (i=2) relative to gwltmp.
+! ---   state_om carries SurfaceWater across both arms (Option A — see declaration).
 
       do i=1,2
 
