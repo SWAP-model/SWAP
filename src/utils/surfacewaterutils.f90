@@ -10,7 +10,7 @@
 module surfacewater_utils
    use error_mod, only: fatalerr_collected
    use iso_fortran_env, only: real64
-   use variables, only: sttab, imper, hqhtab, qqhtab, swdra, pond, pondmx, rsro, rsroexp, dt
+   use variables, only: imper, hqhtab, qqhtab, swdra, pond, pondmx, rsro, rsroexp, dt
    use swap_state_mod, only: swap_state_t
 
    implicit none
@@ -38,37 +38,42 @@ contains
    !!@warning
    !! Function terminates with fatal error if storage is outside table bounds.
    !!@endwarning
-   function wlevst(swstor)
+   function wlevst(state, swstor) result(wlevst_r)
       implicit none
-      
+
       ! Arguments
-      real(real64), intent(in) :: swstor
-      real(real64) :: wlevst
-      
+      type(swap_state_t), intent(in) :: state
+      real(real64),       intent(in) :: swstor
+      real(real64) :: wlevst_r
+
       ! Local variables
       integer :: i
       real(real64) :: dswst
       character(len=80) :: messag
 
+      associate(sttab => state%surfacewater%sttab)
+
       if (swstor < sttab(22,2)) then
          messag = 'Surface water storage below bottom of table'
          call fatalerr_collected('Wlevst', messag)
       end if
-      
+
       if (swstor > sttab(1,2)) then
          messag = 'Surface water storage above top of table'
          call fatalerr_collected('Wlevst', messag)
       end if
-      
+
       i = 0
       do
          i = i + 1
          if (swstor >= sttab(i+1,2) .and. swstor <= sttab(i,2)) exit
       end do
-      
+
       dswst = (swstor - sttab(i+1,2)) / (sttab(i,2) - sttab(i+1,2))
-      wlevst = sttab(i+1,1) + dswst * (sttab(i,1) - sttab(i+1,1))
-      
+      wlevst_r = sttab(i+1,1) + dswst * (sttab(i,1) - sttab(i+1,1))
+
+      end associate
+
    end function wlevst
 
 
@@ -91,23 +96,26 @@ contains
    !!@warning
    !! Function terminates with fatal error if water level is outside table bounds.
    !!@endwarning
-   function swstlev(wlev)
+   function swstlev(state, wlev) result(swstlev_r)
       implicit none
-      
+
       ! Arguments
-      real(real64), intent(in) :: wlev
-      real(real64) :: swstlev
-      
+      type(swap_state_t), intent(in) :: state
+      real(real64),       intent(in) :: wlev
+      real(real64) :: swstlev_r
+
       ! Local variables
       integer :: i
       real(real64) :: dwl
       character(len=200) :: messag
 
+      associate(sttab => state%surfacewater%sttab)
+
       if (wlev < sttab(22,1)) then
          messag = 'Surface water storage below bottom of table'
          call fatalerr_collected('swstlev', messag)
       end if
-      
+
       if (wlev > sttab(1,1)) then
          messag = 'Surface water storage above top of table'
          call fatalerr_collected('swstlev', messag)
@@ -118,10 +126,12 @@ contains
          i = i + 1
          if (wlev >= sttab(i+1,1) .and. wlev <= sttab(i,1)) exit
       end do
-      
+
       dwl = (wlev - sttab(i+1,1)) / (sttab(i,1) - sttab(i+1,1))
-      swstlev = sttab(i+1,2) + dwl * (sttab(i,2) - sttab(i+1,2))
-      
+      swstlev_r = sttab(i+1,2) + dwl * (sttab(i,2) - sttab(i+1,2))
+
+      end associate
+
    end function swstlev
 
 
@@ -218,7 +228,7 @@ contains
          if (pond > pondmx .and. pond > sw_wls) then
             runoff = dt / rsro * (pond - max(pondmx, sw_wls))**rsroexp
          else if (pond < sw_wls) then
-            inun_max = sw_swst - swstlev(pond)
+            inun_max = sw_swst - swstlev(state, pond)
             runoff = -min(inun_max, sw_wls - max(pond, pondmx))
          end if
       end if

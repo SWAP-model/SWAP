@@ -45,7 +45,7 @@ contains
       use swap_state_mod, only: swap_state_t
       use variables, only: nrlevs, numnod, swdtyp, zbotdr, widthr, taludr, l, &
                             wls1_init, wls, wlp, &
-                            sttab, swst, &
+                            swst, &
                             swsrf, swsec, swqhr, swman, nmper
       use surfacewater_utils, only: swstlev
       use error_mod, only: fatalerr_collected
@@ -103,13 +103,7 @@ contains
       ! sttab(:,1) — depths. Row 1 = +100cm above soil surface;
       ! row 2 = 0cm (soil surface); rows 3..22 divide
       ! [0, zbotdr(1+nrpri)] into 20 compartments.
-      ! sttab global kept: surfacewaterutils.f90 (wlevst/swstlev) reads from global sttab.
-      sttab(1, 1) = 100.0_real64
-      sttab(2, 1) =   0.0_real64
-      do i = 3, 22
-         sttab(i, 1) = zbotdr(1 + nrpri) * (i - 2) / 20.0_real64
-      end do
-
+      ! State is now authoritative; global sttab write dropped (ADR 0030 Phase 2 Task 2).
       sw%sttab(1, 1) = 100.0_real64
       sw%sttab(2, 1) =   0.0_real64
       do i = 3, 22
@@ -121,35 +115,32 @@ contains
       ! readswap.f90:4878-4897.
       ! l(ilev) is now in centimetres (converted above), matching
       ! legacy rddre which converts l(i) = l(i)*100.0d0 before this loop.
+      ! State is authoritative; global sttab write dropped (ADR 0030 Phase 2 Task 2).
       do i = 1, 22
-         sttab(i, 2) = 0.0_real64
+         sw%sttab(i, 2) = 0.0_real64
          do ilev = 1 + nrpri, nrlevs
-            if (swdtyp(ilev) == 0 .and. sttab(i, 1) > zbotdr(ilev)) then
-               if (sttab(i, 1) <= 0.0_real64) then
+            if (swdtyp(ilev) == 0 .and. sw%sttab(i, 1) > zbotdr(ilev)) then
+               if (sw%sttab(i, 1) <= 0.0_real64) then
                   ! Trapezium below soil surface
-                  wdepth = sttab(i, 1) - zbotdr(ilev)
+                  wdepth = sw%sttab(i, 1) - zbotdr(ilev)
                   wvolum = wdepth * (widthr(ilev) + wdepth / taludr(ilev))
                else
                   ! Trapezium up to surface, plus rectangle above
                   wdepth   = -zbotdr(ilev)
                   wvolum   = wdepth * (widthr(ilev) + wdepth / taludr(ilev))
                   wbreadth = widthr(ilev) + 2.0_real64 * wdepth / taludr(ilev)
-                  wdepth   = sttab(i, 1)
+                  wdepth   = sw%sttab(i, 1)
                   wvolum   = wvolum + wbreadth * wdepth
                end if
-               sttab(i, 2) = sttab(i, 2) + wvolum / l(ilev)
+               sw%sttab(i, 2) = sw%sttab(i, 2) + wvolum / l(ilev)
             end if
          end do
-      end do
-
-      do i = 1, 22
-         sw%sttab(i, 2) = sttab(i, 2)
       end do
 
       ! Initial storage state.
       ! swstini global dropped: only output reads it, via state%surfacewater%swstini.
       ! swst global kept: drainage.f90 (bocodre) reads it for previous-timestep storage.
-      sw%swstini = swstlev(wls1_init)
+      sw%swstini = swstlev(state, wls1_init)
       swst       = sw%swstini
       sw%swst    = sw%swstini
 

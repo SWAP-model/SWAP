@@ -347,7 +347,7 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
       !!@endnote
       use variables, only: tcum,NRPRI,impend,nmper,swman,wls,wlstar,hbweir,gwl,wlsman,gwlcrit,nphase,dropr,wscap,   &
                            dt,runots,QRapDra,qdrd,swst,zbotdr,alphaw,betaw,osswlm,T,NUMNOD,THETAS,THETA,DZ,VCRIT,NODHD,HCRIT, &
-                           H,SWQHR,QQHTAB,wldip,intwl,t1900,logf,swscre,fldtmin,rsro,pond,pondmx,imper,sttab
+                           H,SWQHR,QQHTAB,wldip,intwl,t1900,logf,swscre,fldtmin,rsro,pond,pondmx,imper
       use swap_state_mod, only: swap_state_t
       use surfacewater_utils, only: wlevst, swstlev, qhtab
       IMPLICIT NONE
@@ -475,12 +475,12 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
       endif
 
 ! --- storage for the 'target level'
-      swsttar = swstlev(wlstar)
+      swsttar = swstlev(state, wlstar)
 
 ! --- level and storage for "max. level for supply"
       wlstara = wlstar - wldip(imper)
       if (wlstara .gt. (zbotdr(1+nrpri)+1.d-4)) then
-         swsttara = swstlev(wlstara)
+         swsttara = swstlev(state, wlstara)
          wsmax = wscap(imper)
       else
          swsttara = 0.0d0
@@ -516,7 +516,7 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
         sw_swst = swstmax
 
 ! --- calculate new level from storage
-        wls = wlevst(swst)
+        wls = wlevst(state, swst)
         sw_wls = wls
       else
 
@@ -543,7 +543,7 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
           wdis = 0.0d0
           swst = swstmax
           sw_swst = swstmax
-          wls = wlevst(swst)
+          wls = wlevst(state, swst)
           sw_wls = wls
         else
 
@@ -586,7 +586,7 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
 !     for change in storage (see below)
 !     check first that the system does not overflow
             if (SWQHR.eq.1) then
-              wover = sttab(1,1) - hbweir(imper)
+              wover = state%surfacewater%sttab(1,1) - hbweir(imper)
               discap = alphaw(imper) * (wover**betaw(imper))
             elseif (SWQHR.eq.2) then
               discap = QQHTAB(imper,1)
@@ -594,7 +594,7 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
 
 ! ---       error handling
             swstn = swst + (qdrd + QRapDra - discap)*dt + runots
-            if ( swstn .gt. sttab(1,2) ) then
+            if ( swstn .gt. state%surfacewater%sttab(1,2) ) then
               messag = 'surface water system has overflowed!'
               call fatalerr_collected ('Wlevbal',messag)
             endif
@@ -602,11 +602,11 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
 ! --- iteration procedure for determining new level, storage,
 !     and discharge
             wlsl = hbweir(imper)
-            wlsu = sttab(1,1)
+            wlsu = state%surfacewater%sttab(1,1)
 
 ! --- find storage and discharge for intermediate point
  700        wlsi = (wlsl + wlsu) * 0.5
-            swsti = swstlev(wlsi)
+            swsti = swstlev(state, wlsi)
             if (SWQHR.eq.1) then
               wdisi = alphaw(imper)*(wlsi-hbweir(imper))**betaw(imper)
             else
@@ -743,8 +743,8 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
       sw_wls = wls
 
 ! --- determine surface water storage for level(t-dt) and level(t)
-      swstold = swstlev(sw_wlsold)
-      swst = swstlev(wls)
+      swstold = swstlev(state, sw_wlsold)
+      swst = swstlev(state, wls)
       sw_swst = swst
 
 ! --- determine from the surface water storages and the qdrain whether
