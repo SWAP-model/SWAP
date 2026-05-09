@@ -84,6 +84,13 @@ The discovery template needs one extension: a "Section 3.5: external readers of 
 - `ASSOCIATE` is the right tool for low-churn leaf-routine refactoring, but `use variables, only:` shadowing forces an alias prefix (`sw_*`) when the same name is imported. Future subsystems will face the same constraint until their borrowed-globals are also migrated.
 - `intent(out)` parameters replace shared "signal" globals (e.g., `fldecdt` → `request_smaller_dt`). This is the recommended pattern for cross-subsystem signals during migration.
 - The discovery template should be extended (Section 3.5) to pre-catalog external readers of owned globals — this was the largest source of surprise scope in Phase 1.
+- The `config` argument proposed in design D4 (`SurfaceWater(task, state, config, request_smaller_dt)`) was NOT implemented. The actual signature is `SurfaceWater(task, state, request_smaller_dt)` — surfacewater config is still accessed via the legacy `variables` globals that the input adapter populates. Adding `config` would have required threading `swap_config_t` through every subsystem entry point in parallel with `state`; deferred to the broader config-passing refactor (ADR 0016 future direction). Subsequent subsystem migrations may apply or postpone this same way.
+
+## Post-merge follow-up items (tracked as a punch-list for the next touch of this code)
+
+1. Narrow the bare `use Variables` in `SurfaceWater(task)` dispatcher body (`src/drainage/surfacewater.f90:36`) to a focused `use variables, only: …` clause. The branch corrected this pattern elsewhere; only the home-file dispatcher was missed. One-commit cleanup, no functional change.
+2. Plan the `qdra` global removal as a sub-task of the drainage subsystem migration. When `divdra` signature is modernized to take an allocatable array (or `state%surfacewater%qdra` directly), the global can be deleted.
+3. Extend the migration-playbook discovery template's Section 3.5 guidance with the `sw_*` ASSOCIATE prefix convention for subroutines that carry `use Variables, only:` clauses — to prevent latent shadow risks.
 
 ## References
 
