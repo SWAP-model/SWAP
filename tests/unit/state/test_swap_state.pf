@@ -1,0 +1,32 @@
+! Tests for swap_state_t — top-level aggregator of all per-subsystem
+! typed state records. Phase 1 starts with only the surface-water
+! subsystem migrated. Each subsequent migration arc adds a field.
+
+@test
+subroutine test_swap_state_has_surfacewater()
+   use funit
+   use iso_fortran_env, only: real64
+   use swap_state_mod, only: swap_state_t
+   type(swap_state_t) :: state
+
+   @assertEqual(0.0_real64, state%surfacewater%wls,    1.0e-12_real64)
+   @assertEqual(0.0_real64, state%surfacewater%swst,   1.0e-12_real64)
+   @assertEqual(1,           state%surfacewater%imper)
+end subroutine test_swap_state_has_surfacewater
+
+@test
+subroutine test_swap_state_independent_instances()
+   ! Confirm that two state instances are independent (no shared module
+   ! storage). This is the architectural intent — each "simulation"
+   ! holds its own state.
+   use funit
+   use iso_fortran_env, only: real64
+   use swap_state_mod, only: swap_state_t
+   type(swap_state_t) :: state_a, state_b
+
+   state_a%surfacewater%wls = 12.5_real64
+   state_b%surfacewater%wls = -3.1_real64
+
+   @assertEqual(12.5_real64, state_a%surfacewater%wls, 1.0e-12_real64)
+   @assertEqual(-3.1_real64, state_b%surfacewater%wls, 1.0e-12_real64)
+end subroutine test_swap_state_independent_instances
