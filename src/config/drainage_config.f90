@@ -82,7 +82,7 @@ module drainage_config_mod
       real(real64), allocatable :: zbotdr(:)
       real(real64), allocatable :: drares(:)
       real(real64), allocatable :: infres(:)
-      real(real64), allocatable :: L(:)
+      real(real64), allocatable :: L(:)   !! [cm] drain spacing per level (authored m, converted to cm at TOML read time — spec D6)
       real(real64), allocatable :: gwlinf(:)
       real(real64), allocatable :: rdrain(:)
       real(real64), allocatable :: rinfi(:)
@@ -126,11 +126,10 @@ contains
       end if
 
       ! Cross-field rule: swdra=2 (extended drainage) is only supported
-      ! with dramet=0 in the TOML pipeline. surfacewater_init's sttab
-      ! math assumes L is in metres (no adapter pre-conversion), which
-      ! holds only for the dramet=0 path. dramet=1/2/3 with swdra=2
-      ! requires careful unit reconciliation work that this port hasn't
-      ! built.
+      ! with dramet=0 in the TOML pipeline. L is now stored in cm in the
+      ! typed config (converted at TOML-read time, spec D6). dramet=1/2/3
+      ! with swdra=2 requires additional runtime plumbing that this port
+      ! hasn't built.
       if (self%swdra == 2 .and. self%dramet /= 0) then
          call errors%append(ERR_VALIDATION_CROSS_FIELD, &
             'drainage.swdra=2 with drainage.dramet/=0 not yet supported ' // &

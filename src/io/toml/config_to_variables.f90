@@ -335,21 +335,11 @@ contains
          end do
       end if
       if (allocated(config%drain%L)) then
+         ! L(:) is already in cm: the TOML reader converts m->cm at parse time
+         ! (Phase 2 Task 9, spec D6). No further unit conversion needed here.
          do i = 1, size(config%drain%L)
             L(i) = config%drain%L(i)
          end do
-         ! Legacy m->cm conversion mirroring readswap.f90:1908-1909 (and
-         ! the matching DRAMET=2 branch above). For DRAMET=3 the reader
-         ! at lines 1908-1994 multiplies each per-level `l(:)` by 100 only
-         ! when `swdivd == 1`. The DRAMET=2 branch upstream in this file
-         ! handles its own scalar `lm` conversion; here we cover the
-         ! per-level array path (DRAMET=3 only — DRAMET=1/lookup never
-         ! consults `L(:)`).
-         if (config%drain%dramet == 3 .and. config%drain%swdivd == 1) then
-            do i = 1, size(config%drain%L)
-               L(i) = 100.0d0 * L(i)
-            end do
-         end if
       end if
       if (allocated(config%drain%gwlinf)) then
          do i = 1, size(config%drain%gwlinf)

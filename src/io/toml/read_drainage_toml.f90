@@ -203,6 +203,11 @@ contains
                call get_optional_real_with_default(item, 'drares',     config%drares(i),         0.0_real64,  'drainage.levels.drares',     errors)
                call get_optional_real_with_default(item, 'infres',     config%infres(i),         0.0_real64,  'drainage.levels.infres',     errors)
                call get_optional_real_with_default(item, 'L',          config%L(i),              0.0_real64,  'drainage.levels.L',          errors)
+               ! L is authored in metres in TOML; SWAP internal units are cm.
+               ! Convert here (Phase 2 Task 9, spec D6) so the typed config
+               ! holds consistent cm. surfacewater_init and config_to_variables
+               ! no longer need to convert L.
+               config%L(i) = config%L(i) * 100.0_real64
                call get_optional_real_with_default(item, 'gwlinf',     config%gwlinf(i),         0.0_real64,  'drainage.levels.gwlinf',     errors)
                call get_optional_real_with_default(item, 'rdrain',     config%rdrain(i),         0.0_real64,  'drainage.levels.rdrain',     errors)
                call get_optional_real_with_default(item, 'rinfi',      config%rinfi(i),          0.0_real64,  'drainage.levels.rinfi',      errors)

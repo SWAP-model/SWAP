@@ -11,6 +11,8 @@ subroutine test_surfacewater_init_zeroes_state()
    integer :: i
    ! Minimal happy-path setup mimicking case 6's first level.
    ! swman is a fixed-size global; set element 1 directly.
+   ! l is set in CENTIMETRES: the m->cm conversion now happens at
+   ! TOML-read time (spec D6); surfacewater_init no longer converts l.
    swsrf  = 2
    swsec  = 2
    swqhr  = 1
@@ -23,7 +25,7 @@ subroutine test_surfacewater_init_zeroes_state()
    zbotdr(1) = -115.0d0
    widthr(1) = 100.0d0
    taludr(1) = 0.66d0
-   l(1)      = 390.0d0
+   l(1)      = 39000.0d0   ! 390 m * 100 = 39000 cm
    call surfacewater_init(state)
 
    ! wls and wlp globals kept (drainage.f90 reads them): assert parity.
@@ -49,6 +51,7 @@ subroutine test_surfacewater_init_sttab_top_rows()
    use variables, only: nrlevs, numnod, swdtyp, zbotdr, widthr, taludr, l, &
                          wls1_init, swsrf, swsec, swqhr, nmper, swman
    type(swap_state_t) :: state
+   ! l set in cm (spec D6: conversion happens at TOML-read time).
    swsrf  = 2
    swsec  = 2
    swqhr  = 1
@@ -61,7 +64,7 @@ subroutine test_surfacewater_init_sttab_top_rows()
    zbotdr(1) = -115.0d0
    widthr(1) = 100.0d0
    taludr(1) = 0.66d0
-   l(1)      = 390.0d0
+   l(1)      = 39000.0d0   ! 390 m * 100 = 39000 cm
    call surfacewater_init(state)
 
    ! Assert via typed state (global sttab write dropped: ADR 0030 Phase 2 Task 2).
@@ -96,7 +99,9 @@ subroutine test_surfacewater_init_sttab_storage_row3()
    zbotdr(1) = -115.0d0
    widthr(1) = 100.0d0
    taludr(1) = 0.66d0
-   l(1)      = 390.0d0   ! metres (surfacewater_init applies *100 locally)
+   ! l is set in cm (spec D6: conversion happens at TOML-read time,
+   ! surfacewater_init no longer converts). 390 m * 100 = 39000 cm.
+   l(1)      = 39000.0d0
    call surfacewater_init(state)
 
    ! Assert via typed state (global sttab write dropped: ADR 0030 Phase 2 Task 2).
@@ -104,6 +109,6 @@ subroutine test_surfacewater_init_sttab_storage_row3()
    ! Trapezium branch (depth=-5.75 > zbotdr=-115, depth <= 0):
    !   wdepth = -5.75 - (-115.0) = 109.25 cm
    !   wvolum = 109.25 * (100.0 + 109.25 / 0.66) = 109.25 * 265.530303 = 29009.186 cm^2
-   !   sttab(3,2) = 29009.186 / (390.0 * 100) = 0.74382527...
+   !   sttab(3,2) = 29009.186 / 39000.0 = 0.74382527...
    @assertEqual(0.7438_real64, state%surfacewater%sttab(3, 2), 1.0d-3)
 end subroutine
