@@ -59,8 +59,8 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
 ! --- read input data
       call surfacewater_init (state)
 
-      hwlman = 0.0d0
-      vtair = 0.0d0
+      ! hwlman and vtair global writes dropped: only output reads them,
+      ! via state%surfacewater%hwlman / state%surfacewater%vtair.
       state%surfacewater%hwlman = 0.0d0
       state%surfacewater%vtair  = 0.0d0
 
@@ -113,12 +113,11 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
 
 ! --- reset cumulative surface water and drainage fluxes
       if (flzerocumu) then
-        cqdrd = 0.0d0
-        state%surfacewater%cqdrd = 0.0d0
-        cwsupp = 0.0d0
+        ! cqdrd/cwsupp/cwout global writes dropped: only output reads them,
+        ! via state%surfacewater%*.  State resets remain authoritative.
+        state%surfacewater%cqdrd  = 0.0d0
         state%surfacewater%cwsupp = 0.0d0
-        cwout = 0.0d0
-        state%surfacewater%cwout = 0.0d0
+        state%surfacewater%cwout  = 0.0d0
         cqdra = 0.0d0
         state%surfacewater%cqdra = 0.0d0
         do level = 1,nrlevs
@@ -344,8 +343,8 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
       !!     File usage         :
       !!@endnote
       use variables, only: tcum,NRPRI,impend,nmper,swman,wls,wlstar,hbweir,gwl,wlsman,gwlcrit,nphase,dropr,wscap,   &
-                           dt,runots,QRapDra,qdrd,swst,zbotdr,alphaw,betaw,cqdrd,cwsupp,cwout,wlsbak,osswlm,T,NUMNOD,THETAS,THETA,DZ,VCRIT,NODHD,HCRIT, &
-                           H,SWQHR,QQHTAB,wldip,hwlman,vtair,overfl,numadj,intwl,t1900,logf,swscre,fldecdt,fldtmin,rsro,pond,pondmx,imper,sttab
+                           dt,runots,QRapDra,qdrd,swst,zbotdr,alphaw,betaw,osswlm,T,NUMNOD,THETAS,THETA,DZ,VCRIT,NODHD,HCRIT, &
+                           H,SWQHR,QQHTAB,wldip,intwl,t1900,logf,swscre,fldecdt,fldtmin,rsro,pond,pondmx,imper,sttab
       use swap_state_mod, only: swap_state_t
       use surfacewater_utils, only: wlevst, swstlev, qhtab
       IMPLICIT NONE
@@ -383,7 +382,7 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
          sw_cwout  => state%surfacewater%cwout)
 
 ! --- resetting of flag for overflowing of automatic weir
-      overfl = .false.
+      ! overfl global write dropped: only sw_overfl (state alias) used henceforth.
       sw_overfl = .false.
 
 ! --- memorizing previous target level
@@ -431,14 +430,13 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
           enddo
 
 ! --- compare total air volume with VCRIT, adapt iphase
-          VTAIR = 0.0d0
+          ! VTAIR global write dropped; sw_vtair (state alias) used as accumulator.
           sw_vtair = 0.0d0
           do NODE = 1,NUMNOD
-            VTAIR = VTAIR + (THETAS(NODE)-THETA(NODE))                  &
+            sw_vtair = sw_vtair + (THETAS(NODE)-THETA(NODE))            &
      &              *abs(DZ(NODE))
           enddo
-          sw_vtair = VTAIR
-          do while (VTAIR.lt.VCRIT(imper,iphase).AND.IPHASE.gt.1)
+          do while (sw_vtair.lt.VCRIT(imper,iphase).AND.IPHASE.gt.1)
             iphase = iphase - 1
           enddo
 
@@ -447,8 +445,8 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
      &                            .and.iphase.gt.1)
             iphase = iphase - 1
           enddo
-          hwlman = h(nodhd(imper))
-          sw_hwlman = hwlman
+          ! hwlman global write dropped; sw_hwlman (state alias) set directly.
+          sw_hwlman = h(nodhd(imper))
 
           wlstx = wlsman(imper,iphase)
         else
@@ -470,8 +468,8 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
 
 ! --- counter of adjustments
       if (abs(wlstar-wlstarb) .gt. 0.00001d0) then
-         numadj = numadj + 1
-         sw_numadj = numadj
+         ! numadj global write dropped; sw_numadj (state alias) accumulates directly.
+         sw_numadj = sw_numadj + 1
       endif
 
 ! --- storage for the 'target level'
@@ -574,14 +572,13 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
               sw_wls = wlstar
               swst = swsttar
               sw_swst = swsttar
-              overfl = .false.
+              ! overfl global drops dropped; sw_overfl (state alias) is the signal.
               sw_overfl = .false.
             else
-              overfl = .true.
               sw_overfl = .true.
             endif
           endif
-          if (swman(imper) .eq. 1 .or. overfl) then
+          if (swman(imper) .eq. 1 .or. sw_overfl) then
 
 ! --- determine level from q-h relationship, and also account
 !     for change in storage (see below)
@@ -648,18 +645,15 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
 
       if (.not. fl_early_return) then
 ! --- updating registration of last four levels, for noting oscillation
-      wlsbak(1) = wlsbak(2)
-      wlsbak(2) = wlsbak(3)
-      wlsbak(3) = wlsbak(4)
-      wlsbak(4) = wls
+      ! wlsbak global writes dropped; sw_wlsbak (state alias) is the ring buffer.
       sw_wlsbak(1) = sw_wlsbak(2)
       sw_wlsbak(2) = sw_wlsbak(3)
       sw_wlsbak(3) = sw_wlsbak(4)
       sw_wlsbak(4) = sw_wls
-      wprod1 = (wlsbak(2)-wlsbak(1))*(wlsbak(3)-wlsbak(2))
-      wprod2 = (wlsbak(3)-wlsbak(2))*(wlsbak(4)-wlsbak(3))
+      wprod1 = (sw_wlsbak(2)-sw_wlsbak(1))*(sw_wlsbak(3)-sw_wlsbak(2))
+      wprod2 = (sw_wlsbak(3)-sw_wlsbak(2))*(sw_wlsbak(4)-sw_wlsbak(3))
       if (wprod1.lt.0.0d0 .and. wprod2.lt.0.0d0) then
-        oscil = abs(wlsbak(3)-wlsbak(2))
+        oscil = abs(sw_wlsbak(3)-sw_wlsbak(2))
         if (oscil .gt. osswlm) then
            if (.not.fldtmin ) then
               request_smaller_dt = .true.
@@ -678,13 +672,10 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
       endif  ! .not. fl_early_return
 
       if (.not. fl_early_return) then
-! --- cumulative terms:
-      cqdrd = cqdrd  + qdrd*dt
-      sw_cqdrd = sw_cqdrd + qdrd*dt
-      cwsupp = cwsupp + wsupp*dt
+! --- cumulative terms (global accumulations dropped; state aliases are authoritative):
+      sw_cqdrd  = sw_cqdrd  + qdrd*dt
       sw_cwsupp = sw_cwsupp + wsupp*dt
-      cwout = cwout  + wdis*dt
-      sw_cwout = sw_cwout + wdis*dt
+      sw_cwout  = sw_cwout  + wdis*dt
       endif  ! .not. fl_early_return
 
       end associate
@@ -720,7 +711,7 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
       !!     File usage         :
       !!     Differences SWAP/SWAPS: None
       !!@endnote
-      use variables, only: wls,wlstab,swst,dt,runots,QRapDra,qdrd,cqdrd,cwsupp,cwout,WLSOLD,t1900
+      use variables, only: wls,wlstab,swst,dt,runots,QRapDra,qdrd,t1900
       use swap_state_mod, only: swap_state_t
       use array_utils, only: afgen
       use surfacewater_utils, only: swstlev
@@ -743,7 +734,8 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
          sw_cwout  => state%surfacewater%cwout)
 
 ! --- wlsold gets w-level of previous time step
-      wlsold = wls
+      ! wlsold global write dropped; sw_wlsold (state alias) is the signal;
+      ! wls global kept because drainage.f90 (bocodre) reads it.
       sw_wlsold = wls
 
 ! --- fetch new level from input series
@@ -751,7 +743,7 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
       sw_wls = wls
 
 ! --- determine surface water storage for level(t-dt) and level(t)
-      swstold = swstlev(wlsold)
+      swstold = swstlev(sw_wlsold)
       swst = swstlev(wls)
       sw_swst = swst
 
@@ -771,13 +763,10 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
         wsupp = 0.0d0
       endif
 
-! --- cumulation of water balance terms
-      cqdrd = cqdrd  + qdrd*dt
-      sw_cqdrd = sw_cqdrd + qdrd*dt
-      cwsupp = cwsupp + wsupp*dt
+! --- cumulation of water balance terms (global accumulations dropped; state aliases authoritative):
+      sw_cqdrd  = sw_cqdrd  + qdrd*dt
       sw_cwsupp = sw_cwsupp + wsupp*dt
-      cwout = cwout  + wdis*dt
-      sw_cwout = sw_cwout + wdis*dt
+      sw_cwout  = sw_cwout  + wdis*dt
 
       end associate
 

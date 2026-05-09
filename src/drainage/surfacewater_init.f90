@@ -44,8 +44,8 @@ contains
    subroutine surfacewater_init(state)
       use swap_state_mod, only: swap_state_t
       use variables, only: nrlevs, numnod, swdtyp, zbotdr, widthr, taludr, l, &
-                            wls1_init, wlstar, wls, wlp, &
-                            sttab, swstini, swst, wlsbak, numadj, &
+                            wls1_init, wls, wlp, &
+                            sttab, swst, &
                             swsrf, swsec, swqhr, swman, nmper
       use surfacewater_utils, only: swstlev
       use error_mod, only: fatalerr_collected
@@ -82,19 +82,20 @@ contains
          l(i) = l(i) * 100.0_real64
       end do
 
-      numadj = 0
+      ! numadj and wlsbak written to state only; legacy globals are dead.
       sw%numadj = 0
 
       do i = 1, 4
-         wlsbak(i) = 0.0_real64
          sw%wlsbak(i) = 0.0_real64
       end do
 
       ! Initial water level pre-computed by the adapter
       ! (adapter wrote wls1_init = wlact - altcu; altcu=0 is enforced by drainage_config_validate so this equals wlact).
+      ! wls global kept: drainage.f90 (bocodre) reads it for previous-timestep surface water level.
+      ! wlp global kept: drainage.f90 (bocodre) reads it for primary surface water level.
+      ! wlstar global dropped: only output reads it, via state%surfacewater%wlstar.
       wls    = wls1_init
       wlp    = 0.0_real64    ! swsrf=2 has no primary system
-      wlstar = wls1_init
 
       sw%wls    = wls1_init
       sw%wlstar = wls1_init
@@ -102,6 +103,7 @@ contains
       ! sttab(:,1) — depths. Row 1 = +100cm above soil surface;
       ! row 2 = 0cm (soil surface); rows 3..22 divide
       ! [0, zbotdr(1+nrpri)] into 20 compartments.
+      ! sttab global kept: surfacewaterutils.f90 (wlevst/swstlev) reads from global sttab.
       sttab(1, 1) = 100.0_real64
       sttab(2, 1) =   0.0_real64
       do i = 3, 22
@@ -145,11 +147,11 @@ contains
       end do
 
       ! Initial storage state.
-      swstini = swstlev(wls1_init)
-      swst    = swstini
-
-      sw%swstini = swstini
-      sw%swst    = swstini
+      ! swstini global dropped: only output reads it, via state%surfacewater%swstini.
+      ! swst global kept: drainage.f90 (bocodre) reads it for previous-timestep storage.
+      sw%swstini = swstlev(wls1_init)
+      swst       = sw%swstini
+      sw%swst    = sw%swstini
 
       ! Allocate per-level arrays in state (guard against repeated calls).
       if (.not. allocated(sw%cqdrain)) then

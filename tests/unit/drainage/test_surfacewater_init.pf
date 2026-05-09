@@ -4,7 +4,7 @@ subroutine test_surfacewater_init_zeroes_state()
    use iso_fortran_env, only: real64
    use surfacewater_init_mod, only: surfacewater_init
    use swap_state_mod, only: swap_state_t
-   use variables, only: numadj, wlsbak, nrlevs, numnod, swdtyp, zbotdr, widthr, &
+   use variables, only: nrlevs, numnod, swdtyp, zbotdr, widthr, &
                          taludr, l, wls1_init, wls, wlp, swsrf, swsec, swqhr, &
                          nmper, swman
    type(swap_state_t) :: state
@@ -24,19 +24,13 @@ subroutine test_surfacewater_init_zeroes_state()
    widthr(1) = 100.0d0
    taludr(1) = 0.66d0
    l(1)      = 390.0d0
-   numadj = 999
-   do i = 1, 4
-      wlsbak(i) = 999.0d0
-   end do
    call surfacewater_init(state)
 
-   ! Assert via the legacy globals to confirm dual-write (globals still authoritative).
-   @assertEqual(0,  numadj)
-   @assertEqual(0.0_real64, wlsbak(1), 1.0d-12)
-   @assertEqual(0.0_real64, wlsbak(4), 1.0d-12)
+   ! wls and wlp globals kept (drainage.f90 reads them): assert parity.
    @assertEqual(-77.0_real64, wls, 1.0d-12)
    @assertEqual(0.0_real64,   wlp, 1.0d-12)
 
+   ! numadj and wlsbak global writes dropped (Task 6); assert only via typed state.
    ! Assert via the typed state.
    @assertEqual(0, state%surfacewater%numadj)
    do i = 1, 4
