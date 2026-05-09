@@ -9,6 +9,7 @@
 ! ----------------------------------------------------------------------
 
       use variables
+      use timestep_control_mod, only: fldecdt
   use irrigation_mod, only: SSDI_irrigation
       implicit none
 ! ----------------------------------------------------------------------

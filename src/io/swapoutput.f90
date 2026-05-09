@@ -3586,6 +3586,7 @@
 ! ----------------------------------------------------------------------
 
       use variables
+      use timestep_control_mod, only: fldecdt
       use drainage_mod, only: drainage
       use surfacewater_mod, only: SurfaceWater
       use swap_state_mod, only: swap_state_t
@@ -3715,6 +3716,7 @@
 ! ---   calculate drainage fluxes
            if (fldrain)                           call Drainage
            if (.not.fldecdt .and. flSurfaceWater) call SurfaceWater(2, state_om, request_smaller_dt_om)
+           if (request_smaller_dt_om) fldecdt = .true.
            if (SwFrost.eq.1)                      call FrozenBounds
 
 ! ---   calculate SoilWater
@@ -3727,6 +3729,7 @@
 
 ! ---   calculate surface water balace
               if (flSurfaceWater) call SurfaceWater(3, state_om, request_smaller_dt_om)
+              if (request_smaller_dt_om) fldecdt = .true.
            end if
 
 ! ---   update time variables and switches/flags

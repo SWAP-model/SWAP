@@ -24,6 +24,7 @@ contains
    !!
    subroutine headcalc(state)
       use variables
+      use timestep_control_mod, only: fldecdt
       use boundbottom_mod, only: BoundBottom
       use boundtop_mod, only: boundtop, PONDRUNOFF
       use rootextraction_mod, only: RootExtraction

@@ -65,10 +65,11 @@ subroutine swap(iCaller, iTask, toswap, fromswap)
 !     swap modules for data communication
 use variables, only : flyearstart, fldaystart, flswapshared, flsurfacewater, flmacropore, fltemperature, flsnow,        &
                       flsolute, flcropnut, flirrigate, flagetracer, flrunend, flmeteodt, fletsine, swfrost, fldtreduce, &
-                      swusecn, fldrain, fldecdt, fldecmprat, fldayend, flcropcalendar, flmaxitertime, floutput,         &
+                      swusecn, fldrain, fldecmprat, fldayend, flcropcalendar, flmaxitertime, floutput,         &
                       floutputshort, flharvestday, flcropoutput, swcrp, flirrigationoutput, swend, project, &
                       flTillage, flSSDI, &
                       daynr, iyear, numnod, numlay
+use timestep_control_mod, only: fldecdt
 use swap_state_mod, only: swap_state_t
 use drainage_mod, only: drainage
 use surfacewater_mod, only: SurfaceWater, surfacewater_year_reset
@@ -287,18 +288,17 @@ if (iTask == 2) then
 
 !        calculate drainage fluxes
          if (fldrain)                           call Drainage()
-         ! Phase 1 transitional: SurfaceWater dual-writes fldecdt and sets
-         ! request_smaller_dt; we read the legacy fldecdt below. Phase 2 will
-         ! propagate request_smaller_dt → fldecdt at this call site BEFORE
-         ! removing the WLEVBAL fldecdt dual-write, then drop fldecdt entirely.
+         ! SS-SWST Phase 2: SurfaceWater sets request_smaller_dt; propagate to fldecdt here.
          if (.not.fldecdt .and. flSurfaceWater) call SurfaceWater(2, state, request_smaller_dt)
+         if (request_smaller_dt) fldecdt = .true.
          if (SwFrost.eq.1)                      call FrozenBounds()
 
-!        calculate SoilWater, incl macropores
+!        calculate SoilWater, incl macropores (headcalc inside may also set fldecdt on non-convergence)
          if (.not.fldecdt) call SoilWater(2, state)
 
 !        calculate surface water balance
          if (.not.fldecdt .and. flSurfaceWater) call SurfaceWater(3, state, request_smaller_dt)
+         if (request_smaller_dt) fldecdt = .true.
 
 !        update time variables and switches/flags
          if (fldecdt .or. (flMacroPore .and. FlDecMpRat))then

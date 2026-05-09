@@ -55,8 +55,7 @@
       flbaloutput        = .false. 
       fldayend           = .false. 
       fldaystart         = .false. 
-      fldecdt            = .false. 
-      fldecdtmin         = .false. 
+      fldecdtmin         = .false.
       fldtmin            = .false. 
       fldtreduce         = .false. 
       flheader           = .false. 

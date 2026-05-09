@@ -347,7 +347,7 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
       !!@endnote
       use variables, only: tcum,NRPRI,impend,nmper,swman,wls,wlstar,hbweir,gwl,wlsman,gwlcrit,nphase,dropr,wscap,   &
                            dt,runots,QRapDra,qdrd,swst,zbotdr,alphaw,betaw,osswlm,T,NUMNOD,THETAS,THETA,DZ,VCRIT,NODHD,HCRIT, &
-                           H,SWQHR,QQHTAB,wldip,intwl,t1900,logf,swscre,fldecdt,fldtmin,rsro,pond,pondmx,imper,sttab
+                           H,SWQHR,QQHTAB,wldip,intwl,t1900,logf,swscre,fldtmin,rsro,pond,pondmx,imper,sttab
       use swap_state_mod, only: swap_state_t
       use surfacewater_utils, only: wlevst, swstlev, qhtab
       IMPLICIT NONE
@@ -640,7 +640,6 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
       if (wls.gt.pondmx .or. pond.gt.pondmx) then
         if(dt .gt. 0.02*rsro) then
           request_smaller_dt = .true.
-          fldecdt = .true.   ! transitional dual-write
         end if
         fl_early_return = .true.
       endif
@@ -659,7 +658,6 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
         if (oscil .gt. osswlm) then
            if (.not.fldtmin ) then
               request_smaller_dt = .true.
-              fldecdt = .true.   ! transitional dual-write
               fl_early_return = .true.
            else
               call dtdpst                                               &

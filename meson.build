@@ -83,6 +83,7 @@ sources = [
     'src/crop/cropwofost_init.f90',
     'src/crop/cropgrass_init.f90',
     'src/config/swap_config.f90',
+    'src/core/timestep_control_mod.f90',
     'src/core/variables.f90',
     'src/core/initialize.f90',
     'src/core/timecontrol.f90',

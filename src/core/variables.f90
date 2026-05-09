@@ -90,7 +90,6 @@
       logical   flbaloutput        ! Flag indicating time for output of water and solute balance
       logical   fldayend           ! Flag indicating end of day
       logical   fldaystart         ! Flag indicating that this time step is the first one of a day
-      logical   fldecdt            ! Flag indicating decrease of time step
       logical   fldecdtmin         ! Flag indicating that the time step should be reset to the minimum time step
       logical   fldtmin            ! Flag indicating that the time step is equal to the minimum time step
       logical   fldtreduce
