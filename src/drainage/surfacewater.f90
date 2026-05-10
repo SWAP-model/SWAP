@@ -99,12 +99,12 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
       if (flzerointr) then
         do node = 1,numnod
           do level = 1,nrlevs
-            state%surfacewater%inqdra(level,node)     = 0.0d0
-            state%surfacewater%inqdra_in(level,node)  = 0.0d0
-            state%surfacewater%inqdra_out(level,node) = 0.0d0
+            state%surfacewater%intermediate%inqdra(level,node)     = 0.0d0
+            state%surfacewater%intermediate%inqdra_in(level,node)  = 0.0d0
+            state%surfacewater%intermediate%inqdra_out(level,node) = 0.0d0
           enddo
         enddo
-        state%surfacewater%iqdra = 0.0d0
+        state%surfacewater%intermediate%iqdra = 0.0d0
       endif
 
 ! --- reset cumulative surface water and drainage fluxes
@@ -113,14 +113,14 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
       if (flzerocumu) then
         ! cqdrd/cwsupp/cwout global writes dropped: only output reads them,
         ! via state%surfacewater%*.  State resets remain authoritative.
-        state%surfacewater%cqdrd  = 0.0d0
-        state%surfacewater%cwsupp = 0.0d0
-        state%surfacewater%cwout  = 0.0d0
-        state%surfacewater%cqdra = 0.0d0
+        state%surfacewater%cumulative%cqdrd  = 0.0d0
+        state%surfacewater%cumulative%cwsupp = 0.0d0
+        state%surfacewater%cumulative%cwout  = 0.0d0
+        state%surfacewater%cumulative%cqdra = 0.0d0
         do level = 1,nrlevs
-          state%surfacewater%cqdrain(level) = 0.0d0
-          state%surfacewater%cqdrainin(level) = 0.0d0
-          state%surfacewater%cqdrainout(level) = 0.0d0
+          state%surfacewater%cumulative%cqdrain(level) = 0.0d0
+          state%surfacewater%cumulative%cqdrainin(level) = 0.0d0
+          state%surfacewater%cumulative%cqdrainout(level) = 0.0d0
         enddo
       endif
 
@@ -357,9 +357,9 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
          sw_hwlman => state%surfacewater%hwlman, &
          sw_vtair  => state%surfacewater%vtair,  &
          sw_imper  => state%surfacewater%imper,  &
-         sw_cqdrd  => state%surfacewater%cqdrd,  &
-         sw_cwsupp => state%surfacewater%cwsupp, &
-         sw_cwout  => state%surfacewater%cwout)
+         sw_cqdrd  => state%surfacewater%cumulative%cqdrd,  &
+         sw_cwsupp => state%surfacewater%cumulative%cwsupp, &
+         sw_cwout  => state%surfacewater%cumulative%cwout)
 
 ! --- resetting of flag for overflowing of automatic weir
       ! overfl global write dropped: only sw_overfl (state alias) used henceforth.
@@ -696,9 +696,9 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
          sw_wls    => state%surfacewater%wls,    &
          sw_wlsold => state%surfacewater%wlsold, &
          sw_swst   => state%surfacewater%swst,   &
-         sw_cqdrd  => state%surfacewater%cqdrd,  &
-         sw_cwsupp => state%surfacewater%cwsupp, &
-         sw_cwout  => state%surfacewater%cwout)
+         sw_cqdrd  => state%surfacewater%cumulative%cqdrd,  &
+         sw_cwsupp => state%surfacewater%cumulative%cwsupp, &
+         sw_cwout  => state%surfacewater%cumulative%cwout)
 
 ! --- wlsold gets w-level of previous time step
       ! wlsold global write dropped; sw_wlsold (state alias) is the signal.

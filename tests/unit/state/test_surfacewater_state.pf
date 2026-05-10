@@ -2,6 +2,9 @@
 ! surface-water subsystem. Phase 1 of the state-migration arc.
 !
 ! See docs/superpowers/specs/2026-05-09-state-migration-surfacewater-design.md.
+!
+! Updated for CRR Phase A Task A3: 11 cumulative/intermediate fields moved
+! into nested cohort sub-records (state%surfacewater%intermediate / %cumulative).
 
 @test
 subroutine test_surfacewater_state_default_scalars()
@@ -10,20 +13,21 @@ subroutine test_surfacewater_state_default_scalars()
    use surfacewater_state_mod, only: surfacewater_state_t
    type(surfacewater_state_t) :: sw
 
-   @assertEqual(0.0_real64, sw%wls,           1.0e-12_real64)
-   @assertEqual(0.0_real64, sw%wlstar,        1.0e-12_real64)
-   @assertEqual(0.0_real64, sw%swst,          1.0e-12_real64)
-   @assertEqual(0.0_real64, sw%swstini,       1.0e-12_real64)
-   @assertEqual(0.0_real64, sw%hwlman,        1.0e-12_real64)
-   @assertEqual(0.0_real64, sw%vtair,         1.0e-12_real64)
-   @assertEqual(0.0_real64, sw%wlsold,        1.0e-12_real64)
-   @assertEqual(0.0_real64, sw%cqdrd,         1.0e-12_real64)
-   @assertEqual(0.0_real64, sw%cwsupp,        1.0e-12_real64)
-   @assertEqual(0.0_real64, sw%cwout,         1.0e-12_real64)
-   @assertEqual(0.0_real64, sw%cqdra,         1.0e-12_real64)
-   @assertEqual(0.0_real64, sw%ZDraBas,       1.0e-12_real64)
-   @assertEqual(0.0_real64, sw%iqdra,         1.0e-12_real64)
-   @assertEqual(0.0_real64, sw%qdrtot,        1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%wls,                       1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%wlstar,                    1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%swst,                      1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%swstini,                   1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%hwlman,                    1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%vtair,                     1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%wlsold,                    1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%ZDraBas,                   1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%qdrtot,                    1.0e-12_real64)
+   ! cohort scalars — now nested
+   @assertEqual(0.0_real64, sw%cumulative%cqdrd,          1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%cumulative%cwsupp,         1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%cumulative%cwout,          1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%cumulative%cqdra,          1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%intermediate%iqdra,        1.0e-12_real64)
    @assertFalse(sw%overfl)
    @assertTrue(sw%flInitDraBas)
    @assertEqual(1, sw%imper)
@@ -62,23 +66,24 @@ end subroutine test_surfacewater_state_sttab_default
 subroutine test_surfacewater_state_arrays_unallocated()
    ! Per-level arrays are allocatable; default state is unallocated.
    ! surfacewater_init allocates them based on drainage config (Madr, macp).
+   ! After CRR Phase A Task A3: arrays live in nested cohort sub-records.
    use funit
    use surfacewater_state_mod, only: surfacewater_state_t
    type(surfacewater_state_t) :: sw
 
-   @assertFalse(allocated(sw%cqdrain))
-   @assertFalse(allocated(sw%cqdrainin))
-   @assertFalse(allocated(sw%cqdrainout))
+   @assertFalse(allocated(sw%cumulative%cqdrain))
+   @assertFalse(allocated(sw%cumulative%cqdrainin))
+   @assertFalse(allocated(sw%cumulative%cqdrainout))
    ! qdra moved to drainage_state_t (SS-DRST Task 3 / ADR 0031)
-   @assertFalse(allocated(sw%inqdra))
-   @assertFalse(allocated(sw%inqdra_in))
-   @assertFalse(allocated(sw%inqdra_out))
+   @assertFalse(allocated(sw%intermediate%inqdra))
+   @assertFalse(allocated(sw%intermediate%inqdra_in))
+   @assertFalse(allocated(sw%intermediate%inqdra_out))
 end subroutine test_surfacewater_state_arrays_unallocated
 
 @test
 subroutine test_surfacewater_state_array_allocation()
    ! Caller (surfacewater_init) is responsible for allocating per-level
-   ! arrays. Verify the allocation pattern works.
+   ! arrays. Verify the allocation pattern works via the nested cohort paths.
    use funit
    use iso_fortran_env, only: real64
    use surfacewater_state_mod, only: surfacewater_state_t
@@ -86,16 +91,16 @@ subroutine test_surfacewater_state_array_allocation()
    integer, parameter :: Madr = 5
    integer, parameter :: macp = 100
 
-   allocate(sw%cqdrain(Madr));         sw%cqdrain    = 0.0_real64
-   allocate(sw%cqdrainin(Madr));       sw%cqdrainin  = 0.0_real64
-   allocate(sw%cqdrainout(Madr));      sw%cqdrainout = 0.0_real64
+   allocate(sw%cumulative%cqdrain(Madr));         sw%cumulative%cqdrain    = 0.0_real64
+   allocate(sw%cumulative%cqdrainin(Madr));       sw%cumulative%cqdrainin  = 0.0_real64
+   allocate(sw%cumulative%cqdrainout(Madr));      sw%cumulative%cqdrainout = 0.0_real64
    ! qdra moved to drainage_state_t (SS-DRST Task 3 / ADR 0031)
-   allocate(sw%inqdra(Madr, macp));    sw%inqdra     = 0.0_real64
-   allocate(sw%inqdra_in(Madr, macp)); sw%inqdra_in  = 0.0_real64
-   allocate(sw%inqdra_out(Madr, macp));sw%inqdra_out = 0.0_real64
+   allocate(sw%intermediate%inqdra(Madr, macp));    sw%intermediate%inqdra     = 0.0_real64
+   allocate(sw%intermediate%inqdra_in(Madr, macp)); sw%intermediate%inqdra_in  = 0.0_real64
+   allocate(sw%intermediate%inqdra_out(Madr, macp));sw%intermediate%inqdra_out = 0.0_real64
 
-   @assertTrue(allocated(sw%cqdrain))
-   @assertEqual(Madr, size(sw%cqdrain))
+   @assertTrue(allocated(sw%cumulative%cqdrain))
+   @assertEqual(Madr, size(sw%cumulative%cqdrain))
    ! qdra allocation now tested in test_drainage_state.pf
-   @assertTrue(allocated(sw%inqdra))
+   @assertTrue(allocated(sw%intermediate%inqdra))
 end subroutine test_surfacewater_state_array_allocation

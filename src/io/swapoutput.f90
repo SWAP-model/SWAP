@@ -304,20 +304,20 @@
           write (wba,25) datexti,comma,daynr,comma,daycum,comma,        &
      &    cgrai+csnrai,comma,cnrai,comma,cgird,comma,cnird,comma,crunon,&
      &    comma,crunoff,comma,cptra,comma,cqrot,comma,cpeva,comma,cevap,&
-     &    comma,(state%surfacewater%cqdra+cQMpOutDrRap),comma,cqbot,comma,&
+     &    comma,(state%surfacewater%cumulative%cqdra+cQMpOutDrRap),comma,cqbot,comma,&
      &    dstor,comma,gwlout,comma,pond,comma,wbalance,comma,date
         else
           if(FlMacropore) then
             write (wba,30) date,comma,daynr,comma,daycum,comma,         &
      &    cgrai+csnrai,comma,cqprai,comma,cgird,comma,cnird,comma,      &
      &    crunon,comma,crunoff,comma,cptra,comma,cqrot,comma,cpeva,     &
-     &    comma,cevap,comma,state%surfacewater%cqdra,comma,cQMpOutDrRap,comma,cqbot,comma, &   !!! aanpassing GEM
+     &    comma,cevap,comma,state%surfacewater%cumulative%cqdra,comma,cQMpOutDrRap,comma,cqbot,comma, &   !!! aanpassing GEM
      &    dstor,comma,gwlout,comma,pond,comma,wbalance,comma,date
           else
             write (wba,31) date,comma,daynr,comma,daycum,comma,         &
      &    cgrai+csnrai,comma,cqprai,comma,cgird,comma,cnird,comma,      &
      &    crunon,comma,crunoff,comma,cptra,comma,cqrot,comma,cpeva,     &
-     &    comma,cevap,comma,(state%surfacewater%cqdra+cQMpOutDrRap),comma,cqbot,comma,&
+     &    comma,cevap,comma,(state%surfacewater%cumulative%cqdra+cQMpOutDrRap),comma,cqbot,comma,&
      &    dstor,comma,gwlout,comma,pond,comma,wbalance,comma,date
           endif
         endif
@@ -327,20 +327,20 @@
           write (wba,25) datexti,comma,daynr,comma,daycum,comma,        &
      &    cgrai+csnrai,comma,cnrai,comma,cgird,comma,cnird,comma,crunon,&
      &    comma,crunoff,comma,cptra,comma,cqrot,comma,cpeva,comma,cevap,&
-     &    comma,(state%surfacewater%cqdra+cQMpOutDrRap),comma,cqbot,comma,&
+     &    comma,(state%surfacewater%cumulative%cqdra+cQMpOutDrRap),comma,cqbot,comma,&
      &    dstor,comma,gwlout,comma,pond,comma,wbalance,comma,date
         else
           if(FlMacropore) then
             write (wba,30) date,comma,daynr,comma,daycum,comma,         &
      &    cgrai+csnrai,comma,cqprai,comma,cgird,comma,cnird,comma,      &
      &    crunon,comma,crunoff,comma,cptra,comma,cqrot,comma,cpeva,     &
-     &    comma,cevap,comma,state%surfacewater%cqdra,comma,cQMpOutDrRap,comma,cqbot,comma, &   !!! aanpassing GEM
+     &    comma,cevap,comma,state%surfacewater%cumulative%cqdra,comma,cQMpOutDrRap,comma,cqbot,comma, &   !!! aanpassing GEM
      &    dstor,comma,gwlout,comma,pond,comma,wbalance,comma,date
           else
             write (wba,31) date,comma,daynr,comma,daycum,comma,         &
      &    cgrai+csnrai,comma,cqprai,comma,cgird,comma,cnird,comma,      &
      &    crunon,comma,crunoff,comma,cptra,comma,cqrot,comma,cpeva,     &
-     &    comma,cevap,comma,(state%surfacewater%cqdra+cQMpOutDrRap),comma,cqbot,comma,&
+     &    comma,cevap,comma,(state%surfacewater%cumulative%cqdra+cQMpOutDrRap),comma,cqbot,comma,&
      &    dstor,comma,gwlout,comma,pond,comma,wbalance,comma,date
           endif
         endif
@@ -359,7 +359,7 @@
         if (flheader) write (*,22)
         write (unit=*, fmt=40)                                          &
      &                date,cgrai,cgird,crunoff,cqrot,cevap,             &
-     &                (state%surfacewater%cqdra+cQMpOutDrRap),cqbot,gwl,wbalance
+     &                (state%surfacewater%cumulative%cqdra+cQMpOutDrRap),cqbot,gwl,wbalance
  40     format(1x,a11,f8.1,6f7.2,f7.1,f7.2)
       endif
 
@@ -454,18 +454,18 @@
       if (gwl.lt.998.0d0)  write(gwlout,'(f9.1)') gwl
       dstor = (volact + pond + ssnow) - (VolOld + PondOld + SnowOld)
       baldev = (igrai+isnrai+igsnow+igird+irunon) - dstor -             &
-     & (iintc+iruno+irunoCN+iqrot+ievap+isubl+iQMpOutDrRap+state%surfacewater%iqdra+(-1.0d0*iqbot))
+     & (iintc+iruno+irunoCN+iqrot+ievap+isubl+iQMpOutDrRap+state%surfacewater%intermediate%iqdra+(-1.0d0*iqbot))
       if (flprintshort) then
         write (inc,20) datexti,comma,daynr,comma,daycum,comma,          &
      &    igrai+isnrai,comma,igsnow,comma,igird,comma,iintc,comma,      &
      &    irunon,comma,iruno+irunoCN,comma,iptra,comma,iqrot,comma,ipeva,comma, &
-     &    ievap,comma,(iQMpOutDrRap+state%surfacewater%iqdra),comma,iqbot,&
+     &    ievap,comma,(iQMpOutDrRap+state%surfacewater%intermediate%iqdra),comma,iqbot,&
      &    comma,gwlout,comma,dstor,comma,baldev            !comma,storage
       else
         write (inc,22) date,comma,daynr,comma,daycum,comma,             &
      &    igrai+isnrai,comma,igsnow,comma,igird,comma,iintc,comma,      &
      &    irunon,comma,iruno+irunoCN,comma,iptra,comma,iqrot,comma,ipeva,comma, &
-     &    ievap,comma,(iQMpOutDrRap+state%surfacewater%iqdra),comma,iqbot,&
+     &    ievap,comma,(iQMpOutDrRap+state%surfacewater%intermediate%iqdra),comma,iqbot,&
      &    comma,gwlout,comma,dstor,comma,baldev           !comma,storage
       endif
  20   format (a19,a1,i3,a1,i6,12(a1,f10.5),2a,2(a1,f10.5))     !,(a1,e12.5)
@@ -976,14 +976,14 @@
 
       ! SS-SWST Phase 2 Task 11: cqdrain/cqdra global fallback removed; state is authoritative.
       if (swdra .ne. 0) then
-        if (allocated(state%surfacewater%cqdrain)) then
+        if (allocated(state%surfacewater%cumulative%cqdrain)) then
           do i = 1,nrlevs
-            write (bal,28) i,state%surfacewater%cqdrain(i)
+            write (bal,28) i,state%surfacewater%cumulative%cqdrain(i)
           end do
         end if
       endif
       write(bal,30) (precip+cgird+cqbot+crunon+cqssdi),                      &
-     &   (caintc+crunoff+crunoffCN+cqrot+cevap+csubl+cQMpOutDrRap+state%surfacewater%cqdra)
+     &   (caintc+crunoff+crunoffCN+cqrot+cevap+csubl+cQMpOutDrRap+state%surfacewater%cumulative%cqdra)
 
       if (swsolu .eq. 1) then
         associate (sl => state%solute)
@@ -1798,10 +1798,10 @@
       ! SS-SWST Phase 2 Task 11: inqdra global fallback removed; state is authoritative.
       do level = 1,nrlevs
         iqdrainout(level) = 0.0d0
-        if (allocated(state%surfacewater%inqdra)) then
+        if (allocated(state%surfacewater%intermediate%inqdra)) then
           do node = 1,numnod
-            if (state%surfacewater%inqdra(level,node).gt.0.0d0) then
-             iqdrainout(level) = iqdrainout(level) + state%surfacewater%inqdra(level,node)
+            if (state%surfacewater%intermediate%inqdra(level,node).gt.0.0d0) then
+             iqdrainout(level) = iqdrainout(level) + state%surfacewater%intermediate%inqdra(level,node)
             endif
           enddo
         end if
@@ -2369,9 +2369,9 @@
       ! SS-SWST Phase 2 Task 11: cqdrainin/cqdrainout global fallbacks removed; state authoritative.
       if (nrlevs .ge. 1) then
         write (blc,55)
-        if (allocated(state%surfacewater%cqdrainin)) then
+        if (allocated(state%surfacewater%cumulative%cqdrainin)) then
           do level=1,nrlevs
-            write (blc,56) level,state%surfacewater%cqdrainin(level),level, state%surfacewater%cqdrainout(level)
+            write (blc,56) level,state%surfacewater%cumulative%cqdrainin(level),level, state%surfacewater%cumulative%cqdrainout(level)
           enddo
         end if
       endif
@@ -2382,18 +2382,18 @@
       snowin = snowinco+cgsnow+csnrai
       pondin = pondini+cqprai+cnird+cmelt+cinund+cqtup+crunon
       soilin = volini+cqtdo+cqbotup+CQMpInfMtx
-      if (allocated(state%surfacewater%cqdrainin)) then
+      if (allocated(state%surfacewater%cumulative%cqdrainin)) then
         do level = 1,nrlevs
-          soilin = soilin + state%surfacewater%cqdrainin(level)
+          soilin = soilin + state%surfacewater%cumulative%cqdrainin(level)
         enddo
       end if
       plantout = cnrai+caintc+cnird
       snowout = cmelt+ssnow+csubl
       pondout = pond+crunoff+cqtdo+cevap+CQMpInTop
       soilout = volact+cqrot+cqtup+cqbotdo+CQMpExfMtx-cqssdi
-      if (allocated(state%surfacewater%cqdrainout)) then
+      if (allocated(state%surfacewater%cumulative%cqdrainout)) then
         do level = 1,nrlevs
-          soilout = soilout + state%surfacewater%cqdrainout(level)
+          soilout = soilout + state%surfacewater%cumulative%cqdrainout(level)
         enddo
       end if
 
@@ -3165,25 +3165,25 @@
 
 ! --- write output record
       write (DRF,20) date,comma,daynr,                                  &
-     &  comma,(state%surfacewater%cqdrain(1)-c1qdrain(1)),              &
-     &  comma,(state%surfacewater%cqdrain(2)-c1qdrain(2)),              &
-     &  comma,(state%surfacewater%cqdrain(3)-c1qdrain(3)),              &
-     &  comma,(state%surfacewater%cqdrain(4)-c1qdrain(4)),              &
-     &  comma,(state%surfacewater%cqdrain(5)-c1qdrain(5)),              &
-     &  comma,(state%surfacewater%cqdrd-c1qdrd),comma,(crunoff-c1runoff),&
+     &  comma,(state%surfacewater%cumulative%cqdrain(1)-c1qdrain(1)),              &
+     &  comma,(state%surfacewater%cumulative%cqdrain(2)-c1qdrain(2)),              &
+     &  comma,(state%surfacewater%cumulative%cqdrain(3)-c1qdrain(3)),              &
+     &  comma,(state%surfacewater%cumulative%cqdrain(4)-c1qdrain(4)),              &
+     &  comma,(state%surfacewater%cumulative%cqdrain(5)-c1qdrain(5)),              &
+     &  comma,(state%surfacewater%cumulative%cqdrd-c1qdrd),comma,(crunoff-c1runoff),&
      &  comma,(cQMpOutDrRap-c1qdrar),                                   &
-     &  comma,state%surfacewater%cqdrain(1),comma,state%surfacewater%cqdrain(2),&
-     &  comma,state%surfacewater%cqdrain(3),comma,state%surfacewater%cqdrain(4),&
-     &  comma,state%surfacewater%cqdrain(5),                            &
-     &  comma,state%surfacewater%cqdrd,comma,crunoff,comma,cQMpOutDrRap
+     &  comma,state%surfacewater%cumulative%cqdrain(1),comma,state%surfacewater%cumulative%cqdrain(2),&
+     &  comma,state%surfacewater%cumulative%cqdrain(3),comma,state%surfacewater%cumulative%cqdrain(4),&
+     &  comma,state%surfacewater%cumulative%cqdrain(5),                            &
+     &  comma,state%surfacewater%cumulative%cqdrd,comma,crunoff,comma,cQMpOutDrRap
 
  20   format (A11,a1,I4,8(a1,f8.2),8(a1,f8.1))
 
 ! --- store cumulative values
       do level=1,nrlevs
-          c1qdrain(level)=state%surfacewater%cqdrain(level)
+          c1qdrain(level)=state%surfacewater%cumulative%cqdrain(level)
       enddo
-      c1qdrd = state%surfacewater%cqdrd
+      c1qdrd = state%surfacewater%cumulative%cqdrd
       c1runoff = crunoff
       c1qdrar = cQMpOutDrRap
 
@@ -3342,9 +3342,9 @@
       endif
 
 ! --- water balance error
-      delbal = (state%surfacewater%swst + state%surfacewater%cwout) - &
-     &         (state%surfacewater%swstini + state%surfacewater%cqdrd + crunoff + &
-     &          state%surfacewater%cwsupp + cQMpOutDrRap)
+      delbal = (state%surfacewater%swst + state%surfacewater%cumulative%cwout) - &
+     &         (state%surfacewater%swstini + state%surfacewater%cumulative%cqdrd + crunoff + &
+     &          state%surfacewater%cumulative%cwsupp + cQMpOutDrRap)
       if (delbal .gt. 0.05d0) then
         call dtdpst                                                     &
      &        ('year-month-day,hour:minute:seconds',t1900,datetime)
@@ -3364,9 +3364,9 @@
 ! --- write output record OUTNAM.SWB
       write (SWB,40) date,comma,daynr,comma,daycum,comma,gwlev,comma,   &
      &  state%surfacewater%wlstar,comma,state%surfacewater%wls,comma,state%surfacewater%swst,comma, &
-     &  (state%surfacewater%cqdrd+crunoff+cQMpOutDrRap-cqdrf1),comma,(state%surfacewater%cwsupp-c1wsupp), &
-     &  comma,(state%surfacewater%cwout-c1wout),comma,(state%surfacewater%cqdrd+crunoff+cQMpOutDrRap), &
-     &  comma,state%surfacewater%cwsupp,comma,state%surfacewater%cwout
+     &  (state%surfacewater%cumulative%cqdrd+crunoff+cQMpOutDrRap-cqdrf1),comma,(state%surfacewater%cumulative%cwsupp-c1wsupp), &
+     &  comma,(state%surfacewater%cumulative%cwout-c1wout),comma,(state%surfacewater%cumulative%cqdrd+crunoff+cQMpOutDrRap), &
+     &  comma,state%surfacewater%cumulative%cwsupp,comma,state%surfacewater%cumulative%cwout
  40   format (a11,a1,I4,a1,I6,3(a1,f7.1),a1,f6.1,6(a1,f7.2))
 
 ! --- write output record OUTNAM.MAN
@@ -3379,13 +3379,13 @@
         if (swman(imper) .eq. 1) then
           write(man,50) date,comma,daynr,comma,daycum,comma,gwlev,comma,&
      &      state%surfacewater%wlstar,comma,state%surfacewater%wls,comma, &
-     &      ((state%surfacewater%cwout-c1wout)-(state%surfacewater%cwsupp-c1wsupp)), &
+     &      ((state%surfacewater%cumulative%cwout-c1wout)-(state%surfacewater%cumulative%cwsupp-c1wsupp)), &
      &      comma,state%surfacewater%numadj,comma,spc,comma,hbweir(imper)
         else
           write(man,60) date,comma,daynr,comma,daycum,comma,gwlev,comma,&
      &      state%surfacewater%hwlman,comma,state%surfacewater%vtair,comma, &
      &      state%surfacewater%wlstar,comma,state%surfacewater%wls,comma, &
-     &      ((state%surfacewater%cwout-c1wout)-(state%surfacewater%cwsupp-c1wsupp)), &
+     &      ((state%surfacewater%cumulative%cwout-c1wout)-(state%surfacewater%cumulative%cwsupp-c1wsupp)), &
      &      comma,state%surfacewater%numadj,comma,spc,comma,hbweir(imper)
         endif
  50     format (a11,a1,i4,a1,I6,',    f',a1,f7.1,2(',     -'),          &
@@ -3396,9 +3396,9 @@
       endif
 
 ! --- store cumulative values
-      cqdrf1 = (state%surfacewater%cqdrd+crunoff+cQMpOutDrRap)
-      c1wsupp = state%surfacewater%cwsupp
-      c1wout = state%surfacewater%cwout
+      cqdrf1 = (state%surfacewater%cumulative%cqdrd+crunoff+cQMpOutDrRap)
+      c1wsupp = state%surfacewater%cumulative%cwsupp
+      c1wout = state%surfacewater%cumulative%cwout
 
 ! --- year-boundary reset of swstini moved to surfacewater_year_reset,
 !     called from swap_main at the year boundary (Task 5, ADR 0020)
@@ -3697,7 +3697,7 @@
       end do
       vt1 = vsat - vt1
       ! SS-SWST Phase 2 Task 11 A3: iqdra now lives in state; read from main state.
-      qre = state_main%surfacewater%iqdra - iqbot
+      qre = state_main%surfacewater%intermediate%iqdra - iqbot
       qv1m = q(nod1m)
       gwlt1 = gwl
       if(dabs(gwlt1 - gwlt0) .gt.1.0d-6)then
@@ -3717,7 +3717,7 @@
       xd(3) = ievap
       xd(4) = iruno
       ! SS-SWST Phase 2 Task 11 A3: iqdra now lives in state; read from main state.
-      xd(5) = state_main%surfacewater%iqdra
+      xd(5) = state_main%surfacewater%intermediate%iqdra
       xd(6) = iqbot
 
       swBotbtmp = swbotb

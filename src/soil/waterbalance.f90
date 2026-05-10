@@ -435,16 +435,16 @@ contains
 
       ! SS-SWST Phase 2 Task 7: iqdra/inqdra* accumulated directly into state; global dropped.
       ! ADR 0031 Phase 2 Task 5: qdra global deleted; read from state%drainage%qdra.
-      state%surfacewater%iqdra = state%surfacewater%iqdra + qdrats + QRapDra*dt
+      state%surfacewater%intermediate%iqdra = state%surfacewater%intermediate%iqdra + qdrats + QRapDra*dt
       do node = 1,numnod
         qdraincomp(node) = 0.d0
         do level = 1,nrlevs
-          if (allocated(state%surfacewater%inqdra) .and. allocated(state%drainage%qdra)) then
-            state%surfacewater%inqdra(level,node) = state%surfacewater%inqdra(level,node) + state%drainage%qdra(level,node)*dt
+          if (allocated(state%surfacewater%intermediate%inqdra) .and. allocated(state%drainage%qdra)) then
+            state%surfacewater%intermediate%inqdra(level,node) = state%surfacewater%intermediate%inqdra(level,node) + state%drainage%qdra(level,node)*dt
             if (state%drainage%qdra(level,node) > 0.0d0) then
-               state%surfacewater%inqdra_out(level,node) = state%surfacewater%inqdra_out(level,node) + state%drainage%qdra(level,node)*dt
+               state%surfacewater%intermediate%inqdra_out(level,node) = state%surfacewater%intermediate%inqdra_out(level,node) + state%drainage%qdra(level,node)*dt
             else
-               state%surfacewater%inqdra_in(level,node)  = state%surfacewater%inqdra_in(level,node) - state%drainage%qdra(level,node)*dt
+               state%surfacewater%intermediate%inqdra_in(level,node)  = state%surfacewater%intermediate%inqdra_in(level,node) - state%drainage%qdra(level,node)*dt
             end if
           end if
           if (allocated(state%drainage%qdra)) then
@@ -483,7 +483,7 @@ contains
       cqssdi = cqssdi + qssdisum*dt
       cqrot = cqrot + qrotts
       ! SS-SWST Phase 2 Task 7: cqdra accumulated directly into state; global dropped.
-      state%surfacewater%cqdra = state%surfacewater%cqdra + qdrats
+      state%surfacewater%cumulative%cqdra = state%surfacewater%cumulative%cqdra + qdrats
       cptra = cptra + ptrats
       cpeva = cpeva + pevats
       cevap = cevap + revats
@@ -510,16 +510,16 @@ contains
       endif
       cqbot = cqbot + qbotts
       ! SS-SWST Phase 2 Task 7: cqdrain/in/out accumulated directly into state; globals dropped.
-      if (allocated(state%surfacewater%cqdrain)) then
+      if (allocated(state%surfacewater%cumulative%cqdrain)) then
         do level = 1,nrlevs
           ! infiltration
           if (state%drainage%qdrain(level).lt.0.0d0) then
-            state%surfacewater%cqdrainin(level) = state%surfacewater%cqdrainin(level) - state%drainage%qdrain(level)*dt
+            state%surfacewater%cumulative%cqdrainin(level) = state%surfacewater%cumulative%cqdrainin(level) - state%drainage%qdrain(level)*dt
           ! drainage
           else if (state%drainage%qdrain(level).gt.0.0d0) then
-            state%surfacewater%cqdrainout(level) = state%surfacewater%cqdrainout(level) + state%drainage%qdrain(level)*dt
+            state%surfacewater%cumulative%cqdrainout(level) = state%surfacewater%cumulative%cqdrainout(level) + state%drainage%qdrain(level)*dt
           endif
-          state%surfacewater%cqdrain(level) = state%surfacewater%cqdrain(level) + state%drainage%qdrain(level)*dt
+          state%surfacewater%cumulative%cqdrain(level) = state%surfacewater%cumulative%cqdrain(level) + state%drainage%qdrain(level)*dt
         enddo
       end if
 
@@ -536,10 +536,10 @@ contains
       ! cumulative water balance error
       if (swsnow.eq.0) then
         wbalance = cnrai + cnird + crunon - crunoff - cqrot - cevap     &
-     &        - state%surfacewater%cqdra + cqbot + volini - volact + PondIni - pond + cqssdi
+     &        - state%surfacewater%cumulative%cqdra + cqbot + volini - volact + PondIni - pond + cqssdi
       else
          wbalance = cqprai + cnird + cmelt + crunon - crunoff           &
-     &        - cqrot - cevap - state%surfacewater%cqdra                &
+     &        - cqrot - cevap - state%surfacewater%cumulative%cqdra     &
      &        + cqbot + volini - volact + PondIni - pond + cqssdi
       endif
 

@@ -115,30 +115,30 @@ contains
       sw%swstini = swstlev(state, wls1_init)
       sw%swst    = sw%swstini
 
-      ! Allocate per-level arrays in state (guard against repeated calls).
-      if (.not. allocated(sw%cqdrain)) then
-         allocate(sw%cqdrain(nrlevs))
-         sw%cqdrain = 0.0_real64
+      ! Allocate per-level arrays in state cohort sub-records (guard against repeated calls).
+      if (.not. allocated(sw%cumulative%cqdrain)) then
+         allocate(sw%cumulative%cqdrain(nrlevs))
+         sw%cumulative%cqdrain = 0.0_real64
       end if
-      if (.not. allocated(sw%cqdrainin)) then
-         allocate(sw%cqdrainin(nrlevs))
-         sw%cqdrainin = 0.0_real64
+      if (.not. allocated(sw%cumulative%cqdrainin)) then
+         allocate(sw%cumulative%cqdrainin(nrlevs))
+         sw%cumulative%cqdrainin = 0.0_real64
       end if
-      if (.not. allocated(sw%cqdrainout)) then
-         allocate(sw%cqdrainout(nrlevs))
-         sw%cqdrainout = 0.0_real64
+      if (.not. allocated(sw%cumulative%cqdrainout)) then
+         allocate(sw%cumulative%cqdrainout(nrlevs))
+         sw%cumulative%cqdrainout = 0.0_real64
       end if
-      if (.not. allocated(sw%inqdra)) then
-         allocate(sw%inqdra(nrlevs, numnod))
-         sw%inqdra = 0.0_real64
+      if (.not. allocated(sw%intermediate%inqdra)) then
+         allocate(sw%intermediate%inqdra(nrlevs, numnod))
+         sw%intermediate%inqdra = 0.0_real64
       end if
-      if (.not. allocated(sw%inqdra_in)) then
-         allocate(sw%inqdra_in(nrlevs, numnod))
-         sw%inqdra_in = 0.0_real64
+      if (.not. allocated(sw%intermediate%inqdra_in)) then
+         allocate(sw%intermediate%inqdra_in(nrlevs, numnod))
+         sw%intermediate%inqdra_in = 0.0_real64
       end if
-      if (.not. allocated(sw%inqdra_out)) then
-         allocate(sw%inqdra_out(nrlevs, numnod))
-         sw%inqdra_out = 0.0_real64
+      if (.not. allocated(sw%intermediate%inqdra_out)) then
+         allocate(sw%intermediate%inqdra_out(nrlevs, numnod))
+         sw%intermediate%inqdra_out = 0.0_real64
       end if
 
       end associate

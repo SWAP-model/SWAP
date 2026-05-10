@@ -51,12 +51,7 @@ module surfacewater_state_mod
       real(real64) :: hwlman        = 0.0_real64    ! pressure head for target level (cm)
       real(real64) :: vtair         = 0.0_real64    ! total air volume in soil column (cm)
       real(real64) :: wlsold        = 0.0_real64    ! previous-step surface level (cm)
-      real(real64) :: cqdrd         = 0.0_real64    ! cumulative drain into reservoir (cm)
-      real(real64) :: cwsupp        = 0.0_real64    ! cumulative external supply (cm)
-      real(real64) :: cwout         = 0.0_real64    ! cumulative outflow (cm)
-      real(real64) :: cqdra         = 0.0_real64    ! cumulative lateral drainage, all levels (cm)
       real(real64) :: ZDraBas       = 0.0_real64    ! drainage basis level for rapid macropore drainage (cm)
-      real(real64) :: iqdra         = 0.0_real64    ! intermediate lateral drainage total (cm)
       real(real64) :: qdrtot        = 0.0_real64    ! total lateral drainage flux (cm/d)
 
       logical      :: overfl        = .false.       ! automatic weir overflow flag
@@ -68,13 +63,9 @@ module surfacewater_state_mod
       real(real64) :: wlsbak(4)     = 0.0_real64    ! 4-step circular buffer for oscillation detection
       real(real64) :: sttab(22, 2)  = 0.0_real64    ! pre-computed level-storage table
 
-      ! per-level (Madr-sized) arrays — allocated by surfacewater_init
-      real(real64), allocatable :: cqdrain(:)
-      real(real64), allocatable :: cqdrainin(:)
-      real(real64), allocatable :: cqdrainout(:)
-      real(real64), allocatable :: inqdra(:,:)       ! (Madr, macp)
-      real(real64), allocatable :: inqdra_in(:,:)    ! (Madr, macp)
-      real(real64), allocatable :: inqdra_out(:,:)   ! (Madr, macp)
+      ! cohort sub-records — intermediate and cumulative accumulators
+      type(surfacewater_intermediate_t) :: intermediate
+      type(surfacewater_cumulative_t)   :: cumulative
    end type surfacewater_state_t
 
 contains

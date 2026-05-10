@@ -436,29 +436,29 @@ owltab,t1900,swallo,drares,infres,qdrtab,nrlevs,swnrsrf,cofintfl,expintfl,dt,sha
 
                ! Allocate per-level state arrays if not yet done (guard for
                ! fldrain path where surfacewater_init may not have been called).
-               if (.not. allocated(state%surfacewater%cqdrain)) then
-                  allocate(state%surfacewater%cqdrain(nrlevs))
-                  state%surfacewater%cqdrain = 0.0d0
+               if (.not. allocated(state%surfacewater%cumulative%cqdrain)) then
+                  allocate(state%surfacewater%cumulative%cqdrain(nrlevs))
+                  state%surfacewater%cumulative%cqdrain = 0.0d0
                end if
-               if (.not. allocated(state%surfacewater%cqdrainin)) then
-                  allocate(state%surfacewater%cqdrainin(nrlevs))
-                  state%surfacewater%cqdrainin = 0.0d0
+               if (.not. allocated(state%surfacewater%cumulative%cqdrainin)) then
+                  allocate(state%surfacewater%cumulative%cqdrainin(nrlevs))
+                  state%surfacewater%cumulative%cqdrainin = 0.0d0
                end if
-               if (.not. allocated(state%surfacewater%cqdrainout)) then
-                  allocate(state%surfacewater%cqdrainout(nrlevs))
-                  state%surfacewater%cqdrainout = 0.0d0
+               if (.not. allocated(state%surfacewater%cumulative%cqdrainout)) then
+                  allocate(state%surfacewater%cumulative%cqdrainout(nrlevs))
+                  state%surfacewater%cumulative%cqdrainout = 0.0d0
                end if
-               if (.not. allocated(state%surfacewater%inqdra)) then
-                  allocate(state%surfacewater%inqdra(nrlevs, numnod))
-                  state%surfacewater%inqdra = 0.0d0
+               if (.not. allocated(state%surfacewater%intermediate%inqdra)) then
+                  allocate(state%surfacewater%intermediate%inqdra(nrlevs, numnod))
+                  state%surfacewater%intermediate%inqdra = 0.0d0
                end if
-               if (.not. allocated(state%surfacewater%inqdra_in)) then
-                  allocate(state%surfacewater%inqdra_in(nrlevs, numnod))
-                  state%surfacewater%inqdra_in = 0.0d0
+               if (.not. allocated(state%surfacewater%intermediate%inqdra_in)) then
+                  allocate(state%surfacewater%intermediate%inqdra_in(nrlevs, numnod))
+                  state%surfacewater%intermediate%inqdra_in = 0.0d0
                end if
-               if (.not. allocated(state%surfacewater%inqdra_out)) then
-                  allocate(state%surfacewater%inqdra_out(nrlevs, numnod))
-                  state%surfacewater%inqdra_out = 0.0d0
+               if (.not. allocated(state%surfacewater%intermediate%inqdra_out)) then
+                  allocate(state%surfacewater%intermediate%inqdra_out(nrlevs, numnod))
+                  state%surfacewater%intermediate%inqdra_out = 0.0d0
                end if
 
                !   - In case of macropores: initialise drainage basis for rapid drainage through macropores
@@ -495,22 +495,22 @@ owltab,t1900,swallo,drares,infres,qdrtab,nrlevs,swnrsrf,cofintfl,expintfl,dt,sha
                if (flzerointr) then
                   do node = 1, numnod
                      do level = 1, nrlevs
-                        state%surfacewater%inqdra(level, node) = 0.0d0
-                        state%surfacewater%inqdra_in(level, node) = 0.0d0
-                        state%surfacewater%inqdra_out(level, node) = 0.0d0
+                        state%surfacewater%intermediate%inqdra(level, node) = 0.0d0
+                        state%surfacewater%intermediate%inqdra_in(level, node) = 0.0d0
+                        state%surfacewater%intermediate%inqdra_out(level, node) = 0.0d0
                      end do
                   end do
-                  state%surfacewater%iqdra = 0.0d0
+                  state%surfacewater%intermediate%iqdra = 0.0d0
                end if
 
                ! --- reset cumulative soil water fluxes
                ! SS-SWST Phase 2 Task 11 B1: global dual-writes for cqdra/cqdrain* dropped.
                if (flzerocumu) then
-                  state%surfacewater%cqdra = 0.0d0
+                  state%surfacewater%cumulative%cqdra = 0.0d0
                   do level = 1, nrlevs
-                     state%surfacewater%cqdrain(level) = 0.0d0
-                     state%surfacewater%cqdrainin(level) = 0.0d0
-                     state%surfacewater%cqdrainout(level) = 0.0d0
+                     state%surfacewater%cumulative%cqdrain(level) = 0.0d0
+                     state%surfacewater%cumulative%cqdrainin(level) = 0.0d0
+                     state%surfacewater%cumulative%cqdrainout(level) = 0.0d0
                   end do
                end if
 

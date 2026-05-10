@@ -153,7 +153,7 @@ contains
       idum = 0
 
       ! SS-SWST Phase 2 Task 5: inqdra read from state%surfacewater
-      associate(inqdra => state%surfacewater%inqdra)
+      associate(inqdra => state%surfacewater%intermediate%inqdra)
       do i=1,numnod
          dum2 = dum2 + inqrot(i)/outper
          if(dum1 + 1.0d-2 * dz(i) .lt. dz_WSN)then
