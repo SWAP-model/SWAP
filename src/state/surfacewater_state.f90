@@ -16,6 +16,31 @@ module surfacewater_state_mod
    implicit none
    private
    public :: surfacewater_state_t
+   public :: surfacewater_intermediate_t
+   public :: surfacewater_cumulative_t
+
+   !> Intermediate accumulators — reset when flzerointr fires.
+   type :: surfacewater_intermediate_t
+      real(real64) :: iqdra = 0.0_real64    ! intermediate lateral drainage total (cm)
+      real(real64), allocatable :: inqdra(:,:)       ! (Madr, macp)
+      real(real64), allocatable :: inqdra_in(:,:)    ! (Madr, macp)
+      real(real64), allocatable :: inqdra_out(:,:)   ! (Madr, macp)
+   contains
+      procedure :: reset => surfacewater_intermediate_reset
+   end type surfacewater_intermediate_t
+
+   !> Cumulative balance fields — reset when flzerocumu fires.
+   type :: surfacewater_cumulative_t
+      real(real64) :: cqdrd  = 0.0_real64   ! cumulative drain into reservoir (cm)
+      real(real64) :: cwsupp = 0.0_real64   ! cumulative external supply (cm)
+      real(real64) :: cwout  = 0.0_real64   ! cumulative outflow (cm)
+      real(real64) :: cqdra  = 0.0_real64   ! cumulative lateral drainage, all levels (cm)
+      real(real64), allocatable :: cqdrain(:)
+      real(real64), allocatable :: cqdrainin(:)
+      real(real64), allocatable :: cqdrainout(:)
+   contains
+      procedure :: reset => surfacewater_cumulative_reset
+   end type surfacewater_cumulative_t
 
    type :: surfacewater_state_t
       ! per-step / per-day scalars
@@ -51,5 +76,29 @@ module surfacewater_state_mod
       real(real64), allocatable :: inqdra_in(:,:)    ! (Madr, macp)
       real(real64), allocatable :: inqdra_out(:,:)   ! (Madr, macp)
    end type surfacewater_state_t
+
+contains
+
+   !> Zero every field in the intermediate cohort. Allocatable arrays are
+   !! zeroed only if allocated; allocation lifecycle stays with the caller.
+   subroutine surfacewater_intermediate_reset(self)
+      class(surfacewater_intermediate_t), intent(inout) :: self
+      self%iqdra = 0.0_real64
+      if (allocated(self%inqdra))     self%inqdra     = 0.0_real64
+      if (allocated(self%inqdra_in))  self%inqdra_in  = 0.0_real64
+      if (allocated(self%inqdra_out)) self%inqdra_out = 0.0_real64
+   end subroutine surfacewater_intermediate_reset
+
+   !> Zero every field in the cumulative cohort. See note above.
+   subroutine surfacewater_cumulative_reset(self)
+      class(surfacewater_cumulative_t), intent(inout) :: self
+      self%cqdrd  = 0.0_real64
+      self%cwsupp = 0.0_real64
+      self%cwout  = 0.0_real64
+      self%cqdra  = 0.0_real64
+      if (allocated(self%cqdrain))    self%cqdrain    = 0.0_real64
+      if (allocated(self%cqdrainin))  self%cqdrainin  = 0.0_real64
+      if (allocated(self%cqdrainout)) self%cqdrainout = 0.0_real64
+   end subroutine surfacewater_cumulative_reset
 
 end module surfacewater_state_mod
