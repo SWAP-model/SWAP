@@ -1692,9 +1692,12 @@
 !     date               : October 2010
 !     purpose            : output of groundwater age
 ! ---------------------------------------------------------------------
+! --- ADR 0032: AgeTracer is currently inert (flAgeTracer never .true.).
+!     This routine is already unreachable via call-site guards in swap.f90,
+!     but the explicit guard here makes the gating visible at the definition.
       ! SS-SWST Phase 2 Task 11: inqdra removed (now via state%surfacewater%inqdra).
       use variables, only: daynr,daycum,date,outper,project,nrlevs,outfil,pathwork,numnod,z,cml,            &
-                           AgeGwl1m,icAgeBot,icAgeDra,icAgeRot,icAgeSur
+                           AgeGwl1m,icAgeBot,icAgeDra,icAgeRot,icAgeSur,flAgeTracer
       use swap_state_mod, only: swap_state_t
       use swap_array_dimensions, only: madr
       use file_io_mod, only: file_open
@@ -1711,6 +1714,8 @@
       character(len=1)   comma
       real(8)   iqdrainout(madr)   ! Cumulative (over 1 output timestep) drainage flux (L) for each drainage level
 ! ----------------------------------------------------------------------
+      if (.not. flAgeTracer) return   ! AgeTracer is currently inert (ADR 0032); output gated
+
       comma = ','
 
       select case (task)

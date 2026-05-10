@@ -148,6 +148,7 @@ sources = [
     'src/macropore/macropore.f90',
     'src/macropore/macrorate.f90',
     'src/solute/solute.f90',
+    'src/solute/agetracer.f90',
     
     # Crop
     'src/crop/wofost_soil_declarations.f90',

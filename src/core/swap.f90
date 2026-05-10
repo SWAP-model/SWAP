@@ -90,7 +90,8 @@ use frozencond_mod, only: FrozenCond, FrozenBounds
 use temperature_mod, only: Temperature
 use macropore_mod, only: MACROPORE
 use macroporeoutput_mod, only: MacroPoreOutput
-use solute_mod, only: solute, AgeTracer
+use solute_mod, only: solute
+use agetracer_mod, only: AgeTracer
 use soilgrid_mod, only: CalcGrid, ConvertDiscrVert
 use soilhydraulics_mod, only: soilwater, SoilWaterStateVar
 use irrigation_mod, only: irrigation, SSDI_irrigation
