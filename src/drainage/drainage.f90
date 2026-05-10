@@ -171,7 +171,7 @@ contains
     !! bidirectional flow is allowed based on resistance values.
     !!@endnote
     !!
-      use variables, only: dramet,gwl,zbotdr,basegw,l,qdrain,ipos,khtop,khbot,kvtop,kvbot,entres,wetper,zintf,geofac,swdtyp,      &
+      use variables, only: dramet,gwl,zbotdr,basegw,l,ipos,khtop,khbot,kvtop,kvbot,entres,wetper,zintf,geofac,swdtyp,      &
 owltab,t1900,swallo,drares,infres,qdrtab,nrlevs,swnrsrf,cofintfl,expintfl,dt,shape,FlMacropore,NumLevRapDra,swliminf,nowltab
       use array_utils, only: afgen
 
@@ -193,7 +193,9 @@ owltab,t1900,swallo,drares,infres,qdrtab,nrlevs,swnrsrf,cofintfl,expintfl,dt,sha
       character(len=200) messag
       ! ----------------------------------------------------------------------
 
-      associate(ZDraBas => state%surfacewater%ZDraBas)
+      ! SS-DRST Phase 2 Task 4: qdrain alias points directly to state; no legacy global written.
+      associate(ZDraBas => state%surfacewater%ZDraBas, &
+                qdrain  => state%drainage%qdrain)
 
       gwldra = gwl
 
@@ -409,9 +411,9 @@ owltab,t1900,swallo,drares,infres,qdrtab,nrlevs,swnrsrf,cofintfl,expintfl,dt,sha
                ! SS-SWST Phase 2 Task 11 B1: removed globals flInitDraBas,ZDraBas,inqdra*,iqdra,
                ! cqdra,cqdrain*,qdrtot — now written only via state%surfacewater.
                ! SS-DRST Phase 2 Task 3: qdra dropped — all qdra reads/writes use state%drainage%qdra.
-               ! qdrain retained: bocodrb still writes legacy global; synced to state after call.
+               ! SS-DRST Phase 2 Task 4: qdrain dropped — bocodrb writes state%drainage%qdrain directly.
                use variables, only: gwl,nrlevs,numnod,dramet,swdtyp,NumLevRapDra,owltab,nowltab,t1900, &
-                  qdrain,zbotdr,flzerointr,flzerocumu,swdivd,swdislay,swtopdislay,fTopDisLay, &
+                  zbotdr,flzerointr,flzerocumu,swdivd,swdislay,swtopdislay,fTopDisLay, &
                   zTopDisLay,dz,ksatfit,ksatexm,fluseksatexm,layer,cofani,l,Swdivdinf,Swnrsrf,    &
                   SwTopnrsrf,dt,FacDpthInf,madr
                use array_utils, only: afgen
@@ -516,14 +518,11 @@ owltab,t1900,swallo,drares,infres,qdrtab,nrlevs,swnrsrf,cofintfl,expintfl,dt,sha
                end if
 
                ! --- calculate total drainage rate and state variables
-               ! bocodrb writes qdrain via legacy global; sync to state before divdra reads it.
+               ! SS-DRST Phase 2 Task 4: bocodrb writes state%drainage%qdrain directly; no bridge sync.
                call bocodrb(dh, state)
-               ! SS-DRST Phase 2 Task 3: sync bocodrb's legacy-global result into state so
-               ! divdra (now reading state%drainage%qdrain) sees the correct values.
-               state%drainage%qdrain = qdrain(1:nrlevs)
 
                ! --- partition drainage flux over compartments
-               ! SS-DRST Phase 2 Task 3: divdra now reads/writes state%drainage%qdrain and
+               ! SS-DRST Phase 2 Task 3: divdra reads/writes state%drainage%qdrain and
                ! state%drainage%qdra directly — no legacy globals passed here.
                if (swdivd .eq. 1) then
                   call divdra(numnod, nrlevs, dz, ksatfit, ksatexm, fluseksatexm,    &
@@ -590,12 +589,8 @@ owltab,t1900,swallo,drares,infres,qdrtab,nrlevs,swnrsrf,cofintfl,expintfl,dt,sha
                   state%surfacewater%qdrtot = state%surfacewater%qdrtot + state%drainage%qdrain(level)
                end do
 
-               ! SS-DRST Phase 2 Task 3: state%drainage%qdrain and state%drainage%qdra are
-               ! now written directly by divdra and the redistribution code above.
-               ! Dual-write syncs (Task 2 transitional) removed — Task 4 drops legacy globals.
-               ! Legacy global qdrain is kept consistent via the post-bocodrb sync above so
-               ! that frozencond's divdra path (which still writes legacy qdra via global) and
-               ! any other bocodrb-path callers see correct values.
+               ! SS-DRST Phase 2 Task 4: state%drainage%qdrain is authoritative; legacy global
+               ! qdrain no longer written here or by bocodrb.
 
             end subroutine drainage
 
@@ -669,8 +664,9 @@ owltab,t1900,swallo,drares,infres,qdrtab,nrlevs,swnrsrf,cofintfl,expintfl,dt,sha
     !!     File usage         : -  Error handling
     !! ----------------------------------------------------------------------
     !!@endnote
+  ! SS-DRST Phase 2 Task 4: qdrain removed from use-variables; written via state%drainage%qdrain.
   use variables, only: swsec,swsrf,nrlevs,nrpri,gwl,zbotdr,taludr,widthr,pond,pondmx,swdtyp,dt,wlp,l,rdrain,rinfi,          &
-              rentry, rexit, gwlinf, qdrain, impend, nmper, wscap, swnrsrf, rsurfdeep, rsurfshallow, cofintfl,              &
+              rentry, rexit, gwlinf, impend, nmper, wscap, swnrsrf, rsurfdeep, rsurfshallow, cofintfl,              &
                                     expintfl, t1900, FlMacropore, NumLevRapdra
 
 ! --- global
@@ -684,10 +680,12 @@ owltab,t1900,swallo,drares,infres,qdrtab,nrlevs,swnrsrf,cofintfl,expintfl,dt,sha
 ! Removed save statement for imper to avoid issues in parallel runs
 ! ----------------------------------------------------------------------
 
+               ! SS-DRST Phase 2 Task 4: qdrain alias points directly to state; no legacy global written.
                associate( &
                   wls    => state%surfacewater%wls,    &
                   swst   => state%surfacewater%swst,   &
-                  ZDraBas => state%surfacewater%ZDraBas)
+                  ZDraBas => state%surfacewater%ZDraBas, &
+                  qdrain  => state%drainage%qdrain)
 
 ! --- Spec D7: zero drainage when groundwater is dry.
 !     Was in SurfaceWater(2) in legacy code; relocated here per ADR 0030

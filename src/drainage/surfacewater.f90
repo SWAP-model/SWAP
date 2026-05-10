@@ -124,12 +124,8 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
       endif
 
 ! --- calculate lateral drainage
+      ! SS-DRST Phase 2 Task 4: bocodre writes state%drainage%qdrain directly; no bridge sync.
       call bocodre (dh, state)
-
-      ! SS-DRST Phase 2 Task 2: sync state%drainage%qdrain from global after bocodre
-      ! so that divdra call and subsequent reads see up-to-date values via state.
-      ! Task 4 drops the global write; this sync is removed when global is deleted.
-      state%drainage%qdrain = qdrain(1:nrlevs)
 
 ! --- partition drainage flux over compartments
 
