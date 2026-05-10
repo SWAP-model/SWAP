@@ -71,6 +71,7 @@ use variables, only : flyearstart, fldaystart, flswapshared, flsurfacewater, flm
                       daynr, iyear, numnod, numlay
 use timestep_control_mod, only: fldecdt
 use swap_state_mod, only: swap_state_t
+use soilwater_state_mod, only: soilwater_init
 use drainage_mod, only: drainage, drainage_init
 use surfacewater_mod, only: SurfaceWater, surfacewater_year_reset
                       ! for debugging
@@ -180,6 +181,7 @@ if (iTask == 1) then
 
 !  calculate grid parameters
    call CalcGrid()
+   call soilwater_init(state%soilwater)   ! SS-BND Phase 1 B-1.2: zero soilwater state (forward-compat for per-node arrays)
 
    if (flTillage) call DoTillage(1)
    if (flSSDI)    call SSDI_irrigation(1)

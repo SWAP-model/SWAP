@@ -62,6 +62,48 @@ subroutine test_soilwater_state_write_read_roundtrip()
 end subroutine test_soilwater_state_write_read_roundtrip
 
 @test
+subroutine test_soilwater_init_zeros_state()
+   ! soilwater_init explicitly zeros all 12 fields, even when they were
+   ! previously set to non-zero values. Verifies the forward-compatibility
+   ! contract established in B-1.2 (D8).
+   use funit
+   use iso_fortran_env, only: real64
+   use soilwater_state_mod, only: soilwater_state_t, soilwater_init
+   type(soilwater_state_t) :: sw
+
+   ! Pre-load with non-zero / non-default values
+   sw%qtop           = 99.0_real64
+   sw%reva           = -5.0_real64
+   sw%hsurf          = 10.0_real64
+   sw%runots         = 3.0_real64
+   sw%QMpLatSs       = 1.5_real64
+   sw%ftoph          = .true.
+   sw%FlRunoff       = .true.
+   sw%qbot           = -2.0_real64
+   sw%qbot_nonfrozen = -1.0_real64
+   sw%hbot           = 500.0_real64
+   sw%gwlinp         = 250.0_real64
+   sw%deepgw         = -400.0_real64
+
+   call soilwater_init(sw)
+
+   ! All reals must be zero
+   @assertEqual(0.0_real64, sw%qtop,           1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%reva,            1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%hsurf,           1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%runots,          1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%QMpLatSs,        1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%qbot,            1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%qbot_nonfrozen,  1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%hbot,            1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%gwlinp,          1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%deepgw,          1.0e-12_real64)
+   ! Both logical flags must be .false.
+   @assertFalse(sw%ftoph)
+   @assertFalse(sw%FlRunoff)
+end subroutine test_soilwater_init_zeros_state
+
+@test
 subroutine test_soilwater_state_aggregator_access()
    ! Aggregator path: state%soilwater%<field> round-trip via swap_state_t.
    use funit

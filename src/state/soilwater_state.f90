@@ -23,7 +23,7 @@ module soilwater_state_mod
    use, intrinsic :: iso_fortran_env, only: real64
    implicit none
    private
-   public :: soilwater_state_t
+   public :: soilwater_state_t, soilwater_init
 
    type :: soilwater_state_t
 
@@ -46,5 +46,39 @@ module soilwater_state_mod
       real(real64) :: deepgw         = 0.0_real64  !! deep-aquifer head, swbotb=3 (cm)
 
    end type soilwater_state_t
+
+contains
+
+   !> Lifecycle init for soilwater typed state.
+   !! Currently (boundary arc): all 12 fields are instantaneous scalars with
+   !! type-declaration zero defaults — explicit reset establishes the
+   !! forward-compatibility contract for soil-water-core arc, which will
+   !! allocate per-node arrays here using numnod.
+   !!
+   !! Takes soilwater_state_t directly (not swap_state_t) to avoid a circular
+   !! dependency: soilwater_state_mod is used by swap_state_mod.
+   !! Mirrors heat_init pattern but at the sub-record level.
+   !! Called from swap.f90 immediately after CalcGrid(), before DoTillage(1).
+   !!
+   !! Design: docs/superpowers/specs/2026-05-10-state-migration-boundary-design.md D8
+   subroutine soilwater_init(sw)
+      type(soilwater_state_t), intent(inout) :: sw
+
+      ! Top-boundary fields
+      sw%qtop      = 0.0_real64
+      sw%reva      = 0.0_real64
+      sw%hsurf     = 0.0_real64
+      sw%runots    = 0.0_real64
+      sw%QMpLatSs  = 0.0_real64
+      sw%ftoph     = .false.
+      sw%FlRunoff  = .false.
+
+      ! Bottom-boundary fields
+      sw%qbot           = 0.0_real64
+      sw%qbot_nonfrozen = 0.0_real64
+      sw%hbot           = 0.0_real64
+      sw%gwlinp         = 0.0_real64
+      sw%deepgw         = 0.0_real64
+   end subroutine soilwater_init
 
 end module soilwater_state_mod
