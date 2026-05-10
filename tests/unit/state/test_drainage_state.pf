@@ -1,0 +1,65 @@
+! Tests for drainage_state_t — typed state record for the drainage
+! subsystem. Phase 1 of the drainage state-migration arc.
+!
+! See docs/superpowers/specs/2026-05-10-state-migration-drainage-design.md.
+
+@test
+subroutine test_drainage_state_default_scalars()
+   use funit
+   use iso_fortran_env, only: real64
+   use drainage_state_mod, only: drainage_state_t
+   type(drainage_state_t) :: dr
+
+   @assertEqual(0.0_real64, dr%qdrd, 1.0e-12_real64)
+end subroutine test_drainage_state_default_scalars
+
+@test
+subroutine test_drainage_state_arrays_unallocated()
+   use funit
+   use drainage_state_mod, only: drainage_state_t
+   type(drainage_state_t) :: dr
+
+   @assertFalse(allocated(dr%qdrain))
+   @assertFalse(allocated(dr%drainl))
+   @assertFalse(allocated(dr%wetper))
+   @assertFalse(allocated(dr%ztopdislay))
+   @assertFalse(allocated(dr%qdra))
+end subroutine test_drainage_state_arrays_unallocated
+
+@test
+subroutine test_drainage_state_array_allocation()
+   ! Caller (drainage_init) allocates per-level arrays. Verify the
+   ! allocation pattern works.
+   use funit
+   use iso_fortran_env, only: real64
+   use drainage_state_mod, only: drainage_state_t
+   type(drainage_state_t) :: dr
+   integer, parameter :: Madr = 5
+   integer, parameter :: macp = 100
+
+   allocate(dr%qdrain(Madr));         dr%qdrain     = 0.0_real64
+   allocate(dr%drainl(Madr));         dr%drainl     = 0.0_real64
+   allocate(dr%wetper(Madr));         dr%wetper     = 0.0_real64
+   allocate(dr%ztopdislay(Madr));     dr%ztopdislay = 0.0_real64
+   allocate(dr%qdra(Madr, macp));     dr%qdra       = 0.0_real64
+
+   @assertTrue(allocated(dr%qdrain))
+   @assertEqual(Madr, size(dr%qdrain))
+   @assertEqual(Madr, size(dr%qdra, 1))
+   @assertEqual(macp, size(dr%qdra, 2))
+end subroutine test_drainage_state_array_allocation
+
+@test
+subroutine test_drainage_state_independent_instances()
+   ! Two instances must be independent (no shared module storage).
+   use funit
+   use iso_fortran_env, only: real64
+   use drainage_state_mod, only: drainage_state_t
+   type(drainage_state_t) :: dr_a, dr_b
+
+   dr_a%qdrd = 1.5_real64
+   dr_b%qdrd = -2.5_real64
+
+   @assertEqual(1.5_real64,  dr_a%qdrd, 1.0e-12_real64)
+   @assertEqual(-2.5_real64, dr_b%qdrd, 1.0e-12_real64)
+end subroutine test_drainage_state_independent_instances
