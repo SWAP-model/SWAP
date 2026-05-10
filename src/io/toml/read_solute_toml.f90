@@ -77,6 +77,38 @@ contains
       ! Per-layer decomposition table.
       call read_table_2d(sec, 'pertabsolu', config%pertabsolu, 2, &
                          'solute.pertabsolu', errors)
+
+      ! Phase 0 (ADR 0032) — physics fields promoted from legacy globals.
+      call get_optional_real_with_default(sec, 'cref',   config%cref,   0.0_real64, &
+                                          'solute.cref',   errors)
+      call get_optional_real_with_default(sec, 'cpre',   config%cpre,   0.0_real64, &
+                                          'solute.cpre',   errors)
+      call get_optional_real_with_default(sec, 'ddif',   config%ddif,   0.0_real64, &
+                                          'solute.ddif',   errors)
+      call get_optional_real_with_default(sec, 'frexp',  config%frexp,  0.0_real64, &
+                                          'solute.frexp',  errors)
+      call get_optional_real_with_default(sec, 'gampar', config%gampar, 0.0_real64, &
+                                          'solute.gampar', errors)
+      call get_optional_real_with_default(sec, 'daquif', config%daquif, 0.0_real64, &
+                                          'solute.daquif', errors)
+      call get_optional_real_with_default(sec, 'kfsat',  config%kfsat,  0.0_real64, &
+                                          'solute.kfsat',  errors)
+      call get_optional_real_with_default(sec, 'decsat', config%decsat, 0.0_real64, &
+                                          'solute.decsat', errors)
+      call get_optional_real_with_default(sec, 'poros',  config%poros,  0.0_real64, &
+                                          'solute.poros',  errors)
+      call get_optional_int_with_default (sec, 'swbr',   config%swbr,   0, &
+                                          'solute.swbr',   errors)
+
+      ! Per-layer arrays — 1D flat TOML arrays.
+      call read_real_array(sec, 'kf',     config%kf,     errors)
+      call read_real_array(sec, 'decpot', config%decpot, errors)
+      call read_real_array(sec, 'fdepth', config%fdepth, errors)
+
+      ! Seepage concentration table — 2D (rows × 2): col 1 = time, col 2 = concentration.
+      ! Adapter flattens to the interleaved afgen layout used by cseeptab(mabbc*2).
+      call read_table_2d(sec, 'cseeptab', config%cseeptab, 2, &
+                         'solute.cseeptab', errors)
    end subroutine read_solute_toml
 
    !> Decode a flat TOML real array at sec[key] into a 1-D real(real64)

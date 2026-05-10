@@ -997,7 +997,7 @@ contains
       ! the strangler adapter does not touch them.
 
       ! ---------------------------------------------------------------
-      ! Solute (audit: 8 fields)
+      ! Solute (audit: 8 fields + 14 Phase 0 promoted fields)
       ! ---------------------------------------------------------------
       swsolu  = config%solute%swsolu
       swbotbc = config%solute%swbotbc
@@ -1017,6 +1017,44 @@ contains
          end do
       else if (config%solute%ldis > 0.0d0) then
          ldis(1) = config%solute%ldis
+      end if
+
+      ! Phase 0 (ADR 0032) — populate legacy globals from the 14 promoted fields.
+      cref   = config%solute%cref
+      cpre   = config%solute%cpre
+      ddif   = config%solute%ddif
+      frexp  = config%solute%frexp
+      gampar = config%solute%gampar
+      daquif = config%solute%daquif
+      kfsat  = config%solute%kfsat
+      decsat = config%solute%decsat
+      poros  = config%solute%poros
+      swbr   = config%solute%swbr
+
+      if (allocated(config%solute%kf)) then
+         do i = 1, min(size(config%solute%kf), size(kf))
+            kf(i) = config%solute%kf(i)
+         end do
+      end if
+      if (allocated(config%solute%decpot)) then
+         do i = 1, min(size(config%solute%decpot), size(decpot))
+            decpot(i) = config%solute%decpot(i)
+         end do
+      end if
+      if (allocated(config%solute%fdepth)) then
+         do i = 1, min(size(config%solute%fdepth), size(fdepth))
+            fdepth(i) = config%solute%fdepth(i)
+         end do
+      end if
+
+      ! cseeptab: flatten 2D typed config to the interleaved afgen layout.
+      ! afgen(cseeptab, mabbc*2, time) reads pairs as (2*k-1)=time, (2*k)=value.
+      ! Confirmed from: grep -n "cseeptab" src/solute/solute.f90 → line 107.
+      if (allocated(config%solute%cseeptab)) then
+         do i = 1, min(size(config%solute%cseeptab, 1), size(cseeptab)/2)
+            cseeptab(2*i - 1) = config%solute%cseeptab(i, 1)   ! time
+            cseeptab(2*i)     = config%solute%cseeptab(i, 2)   ! concentration
+         end do
       end if
 
       ! ---------------------------------------------------------------

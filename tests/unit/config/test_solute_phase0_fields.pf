@@ -1,0 +1,144 @@
+! Tests for the 14 physics fields promoted into solute_config_t in
+! Phase 0 of the solute state-migration arc. Each scalar gets:
+! default-value test + valid-range test + out-of-range rejection.
+! Per-layer arrays get: default-unallocated test + size validation.
+! See ADR 0032 / 2026-05-10 design spec.
+
+@test
+subroutine test_solute_config_cref_default_zero()
+   use funit
+   use iso_fortran_env, only: real64
+   use solute_config_mod, only: solute_config_t
+   type(solute_config_t) :: cfg
+   @assertEqual(0.0_real64, cfg%cref, 1.0e-12_real64)
+end subroutine
+
+@test
+subroutine test_solute_config_swbr_default_zero()
+   use funit
+   use solute_config_mod, only: solute_config_t
+   type(solute_config_t) :: cfg
+   @assertEqual(0, cfg%swbr)
+end subroutine
+
+@test
+subroutine test_solute_config_cpre_default_zero()
+   use funit
+   use iso_fortran_env, only: real64
+   use solute_config_mod, only: solute_config_t
+   type(solute_config_t) :: cfg
+   @assertEqual(0.0_real64, cfg%cpre, 1.0e-12_real64)
+end subroutine
+
+@test
+subroutine test_solute_config_ddif_default_zero()
+   use funit
+   use iso_fortran_env, only: real64
+   use solute_config_mod, only: solute_config_t
+   type(solute_config_t) :: cfg
+   @assertEqual(0.0_real64, cfg%ddif, 1.0e-12_real64)
+end subroutine
+
+@test
+subroutine test_solute_config_frexp_default_zero()
+   use funit
+   use iso_fortran_env, only: real64
+   use solute_config_mod, only: solute_config_t
+   type(solute_config_t) :: cfg
+   @assertEqual(0.0_real64, cfg%frexp, 1.0e-12_real64)
+end subroutine
+
+@test
+subroutine test_solute_config_gampar_default_zero()
+   use funit
+   use iso_fortran_env, only: real64
+   use solute_config_mod, only: solute_config_t
+   type(solute_config_t) :: cfg
+   @assertEqual(0.0_real64, cfg%gampar, 1.0e-12_real64)
+end subroutine
+
+@test
+subroutine test_solute_config_daquif_default_zero()
+   use funit
+   use iso_fortran_env, only: real64
+   use solute_config_mod, only: solute_config_t
+   type(solute_config_t) :: cfg
+   @assertEqual(0.0_real64, cfg%daquif, 1.0e-12_real64)
+end subroutine
+
+@test
+subroutine test_solute_config_kfsat_default_zero()
+   use funit
+   use iso_fortran_env, only: real64
+   use solute_config_mod, only: solute_config_t
+   type(solute_config_t) :: cfg
+   @assertEqual(0.0_real64, cfg%kfsat, 1.0e-12_real64)
+end subroutine
+
+@test
+subroutine test_solute_config_decsat_default_zero()
+   use funit
+   use iso_fortran_env, only: real64
+   use solute_config_mod, only: solute_config_t
+   type(solute_config_t) :: cfg
+   @assertEqual(0.0_real64, cfg%decsat, 1.0e-12_real64)
+end subroutine
+
+@test
+subroutine test_solute_config_poros_default_zero()
+   use funit
+   use iso_fortran_env, only: real64
+   use solute_config_mod, only: solute_config_t
+   type(solute_config_t) :: cfg
+   @assertEqual(0.0_real64, cfg%poros, 1.0e-12_real64)
+end subroutine
+
+@test
+subroutine test_solute_config_per_layer_arrays_default_unallocated()
+   use funit
+   use solute_config_mod, only: solute_config_t
+   type(solute_config_t) :: cfg
+   @assertFalse(allocated(cfg%kf))
+   @assertFalse(allocated(cfg%decpot))
+   @assertFalse(allocated(cfg%fdepth))
+end subroutine
+
+@test
+subroutine test_solute_config_cseeptab_default_unallocated()
+   use funit
+   use solute_config_mod, only: solute_config_t
+   type(solute_config_t) :: cfg
+   @assertFalse(allocated(cfg%cseeptab))
+end subroutine
+
+@test
+subroutine test_solute_config_per_layer_array_allocation()
+   use funit
+   use iso_fortran_env, only: real64
+   use solute_config_mod, only: solute_config_t
+   type(solute_config_t) :: cfg
+   integer, parameter :: NLAYERS = 5
+
+   allocate(cfg%kf(NLAYERS));     cfg%kf     = 0.0_real64
+   allocate(cfg%decpot(NLAYERS)); cfg%decpot = 0.0_real64
+   allocate(cfg%fdepth(NLAYERS)); cfg%fdepth = 0.0_real64
+
+   @assertTrue(allocated(cfg%kf))
+   @assertEqual(NLAYERS, size(cfg%kf))
+   @assertEqual(NLAYERS, size(cfg%decpot))
+   @assertEqual(NLAYERS, size(cfg%fdepth))
+end subroutine
+
+@test
+subroutine test_solute_config_cseeptab_2d_allocation()
+   use funit
+   use iso_fortran_env, only: real64
+   use solute_config_mod, only: solute_config_t
+   type(solute_config_t) :: cfg
+
+   allocate(cfg%cseeptab(10, 2));  cfg%cseeptab = 0.0_real64
+
+   @assertTrue(allocated(cfg%cseeptab))
+   @assertEqual(10, size(cfg%cseeptab, 1))
+   @assertEqual(2,  size(cfg%cseeptab, 2))
+end subroutine

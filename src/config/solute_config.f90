@@ -50,6 +50,30 @@ module solute_config_mod
 
       ! Per-layer decomposition table — (depth, factor) pairs, two columns.
       real(real64), allocatable :: pertabsolu(:,:)
+
+      ! Phase 0 (ADR 0032) — promoted from legacy globals to patch the
+      ! silent-zero-defaults correctness gap on TOML runs with swsolu=1.
+
+      ! Scalars
+      real(real64) :: cref    = 0.0_real64    !! Reference concentration (Freundlich) (M/L3)
+      real(real64) :: cpre    = 0.0_real64    !! Solute concentration in precipitation (M/L3)
+      real(real64) :: ddif    = 0.0_real64    !! Molecular diffusion coefficient (L2/T)
+      real(real64) :: frexp   = 0.0_real64    !! Freundlich exponent (-)
+      real(real64) :: gampar  = 0.0_real64    !! Low-temperature reduction factor (/C)
+      real(real64) :: daquif  = 0.0_real64    !! Aquifer thickness (L)
+      real(real64) :: kfsat   = 0.0_real64    !! Aquifer linear adsorption coefficient (L3/M)
+      real(real64) :: decsat  = 0.0_real64    !! Aquifer decomposition rate (/T)
+      real(real64) :: poros   = 0.0_real64    !! Aquifer porosity (-)
+      integer      :: swbr    = 0             !! Breakthrough switch (0/1)
+
+      ! Per-soil-layer arrays (sized dynamically to the active layer count)
+      real(real64), allocatable :: kf(:)        !! Freundlich coefficient per soil layer (L3/M)
+      real(real64), allocatable :: decpot(:)    !! Potential decomposition rate per soil layer (/T)
+      real(real64), allocatable :: fdepth(:)    !! Depth-correction factor per soil layer (-)
+
+      ! Seepage concentration table — 2D (n_rows, 2): col 1 = time (T), col 2 = concentration (M/L3).
+      ! Adapter flattens to the interleaved legacy layout cseeptab(2*i-1)=time, cseeptab(2*i)=conc.
+      real(real64), allocatable :: cseeptab(:,:)
    contains
       procedure :: validate => solute_config_validate
       procedure :: finalize => solute_config_finalize
@@ -82,6 +106,7 @@ contains
    subroutine solute_config_validate(self, errors)
       class(solute_config_t),   intent(in)    :: self
       type(error_collection_t), intent(inout) :: errors
+      integer :: i
 
       ! Section-not-present sentinel: `swsolu=0` with all defaults means the
       ! [solute] section was absent in the TOML (reader leaves config at
@@ -121,6 +146,40 @@ contains
 
       ! Per-layer decomposition table: (depth, factor) pairs.
       call check_table_2d(self%pertabsolu, 2, 'solute.pertabsolu', errors)
+
+      ! Phase 0 (ADR 0032) — 14 promoted physics fields.
+      call check_real_range(self%cref,   0.0_real64, 1.0e6_real64, 'solute.cref',   errors)
+      call check_real_range(self%cpre,   0.0_real64, 1.0e6_real64, 'solute.cpre',   errors)
+      call check_real_range(self%ddif,   0.0_real64, 1.0e3_real64, 'solute.ddif',   errors)
+      call check_real_range(self%frexp,  0.0_real64, 10.0_real64,  'solute.frexp',  errors)
+      call check_real_range(self%gampar, 0.0_real64, 1.0_real64,   'solute.gampar', errors)
+      call check_real_range(self%daquif, 0.0_real64, 1.0e6_real64, 'solute.daquif', errors)
+      call check_real_range(self%kfsat,  0.0_real64, 1.0e6_real64, 'solute.kfsat',  errors)
+      call check_real_range(self%decsat, 0.0_real64, 1.0_real64,   'solute.decsat', errors)
+      call check_real_range(self%poros,  0.0_real64, 1.0_real64,   'solute.poros',  errors)
+      call check_int_enum(self%swbr,     [0, 1],                   'solute.swbr',   errors)
+
+      ! Per-layer arrays — validate element-wise when allocated.
+      if (allocated(self%kf)) then
+         do i = 1, size(self%kf)
+            call check_real_range(self%kf(i), 0.0_real64, 1.0e6_real64, 'solute.kf', errors)
+         end do
+      end if
+      if (allocated(self%decpot)) then
+         do i = 1, size(self%decpot)
+            call check_real_range(self%decpot(i), 0.0_real64, 1.0_real64, 'solute.decpot', errors)
+         end do
+      end if
+      if (allocated(self%fdepth)) then
+         do i = 1, size(self%fdepth)
+            call check_real_range(self%fdepth(i), 0.0_real64, 1.0_real64, 'solute.fdepth', errors)
+         end do
+      end if
+
+      ! cseeptab: when swbotbc=2, check allocated and has 2 columns.
+      if (self%swbotbc == 2) then
+         call check_table_2d(self%cseeptab, 2, 'solute.cseeptab', errors)
+      end if
    end subroutine solute_config_validate
 
    subroutine solute_config_finalize(self, errors)
