@@ -1,11 +1,13 @@
 !> @file surfacewater_state.f90
-!! Typed state record for the surface-water subsystem. Holds 27 of the
-!! 29 surface-water-owned variables that legacy SWAP kept in the
-!! `variables.f90` globals module. The two excluded:
+!! Typed state record for the surface-water subsystem. Holds the
+!! surface-water-owned variables that legacy SWAP kept in the
+!! `variables.f90` globals module. Excluded:
 !!   - `l(Madr)` — drainage-config (m→cm conversion moves to drainage
 !!     config-load in Phase 2; not surface-water state).
 !!   - `fldecdt` — replaced by `intent(out) :: request_smaller_dt`
 !!     argument on `SurfaceWater(task=2)`; not a state field.
+!!   - `qdra(:,:)` — moved to drainage_state_t in the drainage
+!!     migration arc (ADR 0031 / SS-DRST Task 3).
 !! See ADR 0030 (state-migration pilot) and the 2026-05-09 design spec
 !! for rationale and field provenance.
 
@@ -45,7 +47,6 @@ module surfacewater_state_mod
       real(real64), allocatable :: cqdrain(:)
       real(real64), allocatable :: cqdrainin(:)
       real(real64), allocatable :: cqdrainout(:)
-      real(real64), allocatable :: qdra(:,:)         ! (Madr, macp)
       real(real64), allocatable :: inqdra(:,:)       ! (Madr, macp)
       real(real64), allocatable :: inqdra_in(:,:)    ! (Madr, macp)
       real(real64), allocatable :: inqdra_out(:,:)   ! (Madr, macp)

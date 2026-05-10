@@ -71,7 +71,7 @@ use variables, only : flyearstart, fldaystart, flswapshared, flsurfacewater, flm
                       daynr, iyear, numnod, numlay
 use timestep_control_mod, only: fldecdt
 use swap_state_mod, only: swap_state_t
-use drainage_mod, only: drainage
+use drainage_mod, only: drainage, drainage_init
 use surfacewater_mod, only: SurfaceWater, surfacewater_year_reset
                       ! for debugging
 !use variables, only : iqrot, iptra, cnrai, t1900, Tstart, Tend, numnod, dz, theta, dt, h, arai, rainamount, lai
@@ -177,6 +177,10 @@ if (iTask == 1) then
 !  initialize SoilWater rate/state variables
    call SoilWater(1, state)
    if (swuseCN == 1) call CNmethod(1)
+
+!  allocate and zero drainage state arrays (qdra, qdrain, drainl, wetper, ztopdislay)
+!  unconditionally — these are sized off nrlevs/numnod which are always set by TimeControl(1).
+   call drainage_init(state)
 
 !  initialize SurfaceWater management variables
    if (flSurfaceWater) call SurfaceWater(1, state, request_smaller_dt)

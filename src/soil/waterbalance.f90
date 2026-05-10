@@ -344,9 +344,9 @@ contains
         q(i) = - (theta(i)-thetm1(i)+qimmob(i))*FrArMtrx(i)*dz(i)/dt +  &
      &                q(i+1)-qrot(i)+QExcMpMtx(i)+qssdi(i)
 
-        if (allocated(state%surfacewater%qdra)) then
+        if (allocated(state%drainage%qdra)) then
           do level=1,nrlevs
-             q(i) = q(i) - state%surfacewater%qdra(level,i)
+             q(i) = q(i) - state%drainage%qdra(level,i)
           enddo
         end if
         inq(i) = inq(i) + q(i)*dt

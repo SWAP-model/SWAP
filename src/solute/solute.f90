@@ -127,8 +127,8 @@ contains
       enddo
 
       tcumsol = 0.0d0
-      ! SS-SWST Phase 2 Task 5: qdra / qdrtot read from state%surfacewater
-      associate(qdra   => state%surfacewater%qdra, &
+      ! SS-DRST Task 3: qdra read from state%drainage; qdrtot remains in state%surfacewater
+      associate(qdra   => state%drainage%qdra, &
                 qdrtot => state%surfacewater%qdrtot)
       do while ((dt-tcumsol).gt.1.0d-8)
 
@@ -194,12 +194,12 @@ contains
 ! --- lateral drainage
             ! SS-SWST Phase 2 Task 11: qdra read from state (global dropped).
             cdrtot = 0.0d0
-            if (allocated(state%surfacewater%qdra)) then
+            if (allocated(state%drainage%qdra)) then
             do level = 1,nrlevs
-               if (state%surfacewater%qdra(level,i) .gt. 0.0d0) then
-                  cdrtot = cdrtot+state%surfacewater%qdra(level,i)*cml(i)/dz(i)
+               if (state%drainage%qdra(level,i) .gt. 0.0d0) then
+                  cdrtot = cdrtot+state%drainage%qdra(level,i)*cml(i)/dz(i)
                else
-                  cdrtot = cdrtot+state%surfacewater%qdra(level,i)*cdrain/dz(i)
+                  cdrtot = cdrtot+state%drainage%qdra(level,i)*cdrain/dz(i)
                endif
             enddo
             end if
@@ -409,8 +409,8 @@ contains
       enddo
 
       tcumsol = 0.0
-      ! SS-SWST Phase 2 Task 5: qdra read from state%surfacewater
-      associate(qdra => state%surfacewater%qdra)
+      ! SS-DRST Task 3: qdra read from state%drainage
+      associate(qdra => state%drainage%qdra)
       do while ((dt-tcumsol).gt.1.0d-8)
 
 ! ---    time step and cumulative time
@@ -466,12 +466,12 @@ contains
 ! --- lateral drainage
             ! SS-SWST Phase 2 Task 11: qdra read from state (global dropped).
             Agedrtot = 0.0d0
-            if (allocated(state%surfacewater%qdra)) then
+            if (allocated(state%drainage%qdra)) then
             do level = 1,nrlevs
-               if (state%surfacewater%qdra(level,i) .gt. 0.0d0) then
-                  Agedrtot = Agedrtot+state%surfacewater%qdra(level,i)*Ageml(i)/dz(i)
+               if (state%drainage%qdra(level,i) .gt. 0.0d0) then
+                  Agedrtot = Agedrtot+state%drainage%qdra(level,i)*Ageml(i)/dz(i)
                else
-                  Agedrtot = Agedrtot+state%surfacewater%qdra(level,i)*Agedrain/dz(i)
+                  Agedrtot = Agedrtot+state%drainage%qdra(level,i)*Agedrain/dz(i)
                endif
             enddo
             end if

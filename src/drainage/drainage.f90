@@ -77,8 +77,33 @@ module drainage_mod
 
    public :: drainage
    public :: bocodrb, bocodre
+   public :: drainage_init
 
 contains
+
+   !> Allocate and zero-initialise all per-level arrays in state%drainage.
+   !! Called from swap_main BEFORE SurfaceWater(1) so that qdra/qdrain are
+   !! available to every subsystem (frozencond, soilhydraulics, waterbalance,
+   !! solute) regardless of flSurfaceWater or fldrain.
+   subroutine drainage_init(state)
+      use, intrinsic :: iso_fortran_env, only: real64
+      use swap_state_mod, only: swap_state_t
+      use variables, only: nrlevs, numnod
+      type(swap_state_t), intent(inout) :: state
+
+      if (.not. allocated(state%drainage%qdrain))     allocate(state%drainage%qdrain(nrlevs))
+      if (.not. allocated(state%drainage%drainl))     allocate(state%drainage%drainl(nrlevs))
+      if (.not. allocated(state%drainage%wetper))     allocate(state%drainage%wetper(nrlevs))
+      if (.not. allocated(state%drainage%ztopdislay)) allocate(state%drainage%ztopdislay(nrlevs))
+      if (.not. allocated(state%drainage%qdra))       allocate(state%drainage%qdra(nrlevs, numnod))
+
+      state%drainage%qdrain     = 0.0_real64
+      state%drainage%drainl     = 0.0_real64
+      state%drainage%wetper     = 0.0_real64
+      state%drainage%ztopdislay = 0.0_real64
+      state%drainage%qdra       = 0.0_real64
+   end subroutine drainage_init
+
 
    subroutine bocodrb(dh, state)
       !> Calculate drainage flux using Hooghoudt/Ernst or resistance methods
@@ -404,10 +429,6 @@ owltab,t1900,swallo,drares,infres,qdrtab,nrlevs,swnrsrf,cofintfl,expintfl,dt,sha
                   allocate(state%surfacewater%cqdrainout(nrlevs))
                   state%surfacewater%cqdrainout = 0.0d0
                end if
-               if (.not. allocated(state%surfacewater%qdra)) then
-                  allocate(state%surfacewater%qdra(nrlevs, numnod))
-                  state%surfacewater%qdra = 0.0d0
-               end if
                if (.not. allocated(state%surfacewater%inqdra)) then
                   allocate(state%surfacewater%inqdra(nrlevs, numnod))
                   state%surfacewater%inqdra = 0.0d0
@@ -555,7 +576,7 @@ owltab,t1900,swallo,drares,infres,qdrtab,nrlevs,swnrsrf,cofintfl,expintfl,dt,sha
                ! (frozencond.f90 divdra call); state also kept current.
                do node = 1, numnod
                   do level = 1, nrlevs
-                     state%surfacewater%qdra(level, node) = qdra(level, node)
+                     state%drainage%qdra(level, node) = qdra(level, node)
                   end do
                end do
 

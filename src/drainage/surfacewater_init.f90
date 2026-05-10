@@ -128,10 +128,6 @@ contains
          allocate(sw%cqdrainout(nrlevs))
          sw%cqdrainout = 0.0_real64
       end if
-      if (.not. allocated(sw%qdra)) then
-         allocate(sw%qdra(nrlevs, numnod))
-         sw%qdra = 0.0_real64
-      end if
       if (.not. allocated(sw%inqdra)) then
          allocate(sw%inqdra(nrlevs, numnod))
          sw%inqdra = 0.0_real64

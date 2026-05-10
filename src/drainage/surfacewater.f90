@@ -131,7 +131,7 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
       do level=1,nrlevs
          do node = 1,numnod
             qdra(level,node) = 0.0d0
-            state%surfacewater%qdra(level,node) = 0.0d0
+            state%drainage%qdra(level,node) = 0.0d0
          end do
       end do
 
@@ -209,7 +209,7 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
          ! dual-write qdra after divdra (and possible redistribution)
          do node = 1, numnod
            do level = 1, nrlevs
-             state%surfacewater%qdra(level,node) = qdra(level,node)
+             state%drainage%qdra(level,node) = qdra(level,node)
            end do
          end do
 
@@ -217,7 +217,7 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
 ! --- drainage flux through lowest compartment
         do level = 1,nrlevs
            qdra(level,numnod) = qdrain(level)
-           state%surfacewater%qdra(level,numnod) = qdrain(level)
+           state%drainage%qdra(level,numnod) = qdrain(level)
         end do
       endif
 

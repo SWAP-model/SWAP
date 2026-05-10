@@ -86,12 +86,12 @@ contains
       flunsatok(1) = .false.
       flunsatok(2) = .false.
       flunsatok(3) = .false.
-      ! SS-SWST Phase 2 Task 11 A1: read qdra from state (loop bound = nrlevs, not ndr=5)
+      ! SS-DRST Task 3: read qdra from state%drainage (loop bound = nrlevs, not ndr=5)
       do i=1,numnod
          sink(i) = evp(i)
-         if (allocated(state%surfacewater%qdra)) then
+         if (allocated(state%drainage%qdra)) then
             do j=1,nrlevs
-               sink(i) = sink(i) + state%surfacewater%qdra(j,i)
+               sink(i) = sink(i) + state%drainage%qdra(j,i)
             end do
          end if
       end do
