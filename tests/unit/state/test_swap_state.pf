@@ -54,3 +54,17 @@ subroutine test_swap_state_has_solute()
    @assertFalse(allocated(state%solute%cml))
    @assertFalse(allocated(state%solute%cmsy))
 end subroutine test_swap_state_has_solute
+
+@test
+subroutine test_swap_state_has_heat()
+   use funit
+   use iso_fortran_env, only: real64
+   use swap_state_mod, only: swap_state_t
+   type(swap_state_t) :: state
+
+   @assertEqual(0.0_real64, state%heat%tebot, 1.0e-12_real64)
+   @assertEqual(0.0_real64, state%heat%tetop, 1.0e-12_real64)
+   @assertEqual(0,          state%heat%nodfrostbot)
+   @assertFalse(allocated(state%heat%tsoil))
+   @assertFalse(allocated(state%heat%rfcp))
+end subroutine test_swap_state_has_heat

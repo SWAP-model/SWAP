@@ -1,0 +1,83 @@
+! Tests for heat_state_t — typed state record for the heat
+! (soil-temperature) subsystem. Phase 1 of the heat state-migration arc.
+!
+! All 12 fields (13 owned globals minus fltemperature, which is a
+! timecontrol-owned config flag) are instantaneous — no cohort
+! sub-records. Flat layout only.
+!
+! See docs/superpowers/specs/2026-05-10-state-migration-heat-design.md.
+
+@test
+subroutine test_heat_state_default_scalars()
+   use funit
+   use iso_fortran_env, only: real64
+   use heat_state_mod, only: heat_state_t
+   type(heat_state_t) :: ht
+
+   @assertEqual(0.0_real64, ht%tebot,      1.0e-12_real64)
+   @assertEqual(0.0_real64, ht%tetop,      1.0e-12_real64)
+   @assertEqual(0.0_real64, ht%zfrostbot,  1.0e-12_real64)
+   @assertEqual(0.0_real64, ht%zfrosttop,  1.0e-12_real64)
+   @assertEqual(0,          ht%nodfrostbot)
+end subroutine test_heat_state_default_scalars
+
+@test
+subroutine test_heat_state_arrays_unallocated()
+   use funit
+   use heat_state_mod, only: heat_state_t
+   type(heat_state_t) :: ht
+
+   @assertFalse(allocated(ht%tsoil))
+   @assertFalse(allocated(ht%heacap))
+   @assertFalse(allocated(ht%heacon))
+   @assertFalse(allocated(ht%rfcp))
+   @assertFalse(allocated(ht%fquartz))
+   @assertFalse(allocated(ht%fclay))
+   @assertFalse(allocated(ht%forg))
+end subroutine test_heat_state_arrays_unallocated
+
+@test
+subroutine test_heat_state_array_allocation()
+   ! Caller (heat_init / Temperature task=1) allocates per-node arrays.
+   ! Verify the allocation pattern works for all 7 per-node fields.
+   use funit
+   use iso_fortran_env, only: real64
+   use heat_state_mod, only: heat_state_t
+   type(heat_state_t) :: ht
+   integer, parameter :: macp = 15
+
+   allocate(ht%tsoil(macp));   ht%tsoil   = 0.0_real64
+   allocate(ht%heacap(macp));  ht%heacap  = 0.0_real64
+   allocate(ht%heacon(macp));  ht%heacon  = 0.0_real64
+   allocate(ht%rfcp(macp));    ht%rfcp    = 1.0_real64
+   allocate(ht%fquartz(macp)); ht%fquartz = 0.0_real64
+   allocate(ht%fclay(macp));   ht%fclay   = 0.0_real64
+   allocate(ht%forg(macp));    ht%forg    = 0.0_real64
+
+   @assertTrue(allocated(ht%tsoil))
+   @assertTrue(allocated(ht%heacap))
+   @assertTrue(allocated(ht%heacon))
+   @assertTrue(allocated(ht%rfcp))
+   @assertTrue(allocated(ht%fquartz))
+   @assertTrue(allocated(ht%fclay))
+   @assertTrue(allocated(ht%forg))
+   @assertEqual(macp, size(ht%tsoil))
+   @assertEqual(macp, size(ht%rfcp))
+   ! rfcp seeds to 1.0 (legacy FrozenCond convention)
+   @assertEqual(1.0_real64, ht%rfcp(1), 1.0e-12_real64)
+end subroutine test_heat_state_array_allocation
+
+@test
+subroutine test_heat_state_independent_instances()
+   ! Two instances must be independent (no shared module storage).
+   use funit
+   use iso_fortran_env, only: real64
+   use heat_state_mod, only: heat_state_t
+   type(heat_state_t) :: ht_a, ht_b
+
+   ht_a%tebot = 8.5_real64
+   ht_b%tebot = -3.2_real64
+
+   @assertEqual( 8.5_real64, ht_a%tebot, 1.0e-12_real64)
+   @assertEqual(-3.2_real64, ht_b%tebot, 1.0e-12_real64)
+end subroutine test_heat_state_independent_instances
