@@ -27,7 +27,20 @@ Section 2 of each discovery doc enumerates the subsystem's owned globals (variab
 |---|---|---|---|
 | **Instantaneous** | Reset every step unconditionally OR computed fresh each step (no `flzero*` gating) | Stays as flat field on `<subsystem>_state_t` | `dt`, `csurf`, `cml(:)` (recomputed daily), `isqbot` |
 | **Intermediate** | Reset on `flzerointr` (intermediate-period rollover, typically daily/sub-output) | `<subsystem>_intermediate_t` | `iqdra`, `imsqprec`, `inqdra(:,:)` |
-| **Cumulative** | Reset on `flzerocumu` (cumulative-period rollover, typically yearly/output-period) | `<subsystem>_cumulative_t` | `cqdra`, `sqdra`, `samini`, `cqdrain(:)` |
+| **Cumulative** | Reset on `flzerocumu` (cumulative-period rollover, typically yearly/output-period) | `<subsystem>_cumulative_t` (or partitioned by activity gate — see below) | `cqdra`, `sqdra`, `samini`, `cqdrain(:)` |
+
+### Cohort partitioning by activity gate (added 2026-05-10 from SS-CRR Phase A correction)
+
+When cumulative fields in one subsystem's state are accumulated under different activity flags, **partition the cohort by flag** — not by name prefix or data type. Surfacewater's cumulative cohort is the worked example:
+
+| Cohort | Fields | Activity gate | Reset owner |
+|---|---|---|---|
+| `surfacewater_drainage_cumulative_t` | `cqdra`, `cqdrain(:)`, `cqdrainin(:)`, `cqdrainout(:)` | `fldrain` (active under `swdra=1` OR `swdra=2`) | `Drainage()` (and `SurfaceWater(2)` when `swdra=2`) |
+| `surfacewater_reservoir_cumulative_t` | `cqdrd`, `cwsupp`, `cwout` | `flSurfaceWater` (active only under `swdra=2`) | `SurfaceWater(2)` only |
+
+The owner of each cohort is the subsystem whose activity flag gates that cohort's accumulation, and only the owner calls `reset()`. The original mistake (Task A5) was a single combined cohort with an inline comment papering over the fact that drainage zeros a strict subset; the type system can express the contract directly via partitioning.
+
+**Discovery checklist:** during Section 2 categorization of cumulative fields, also note the activity flag(s) that gate each field's accumulation paths. If two fields in the same subsystem have different gates, they belong in different cohorts. See ADR 0033 for the full pattern.
 
 The classification grid in Section 2 should look like:
 

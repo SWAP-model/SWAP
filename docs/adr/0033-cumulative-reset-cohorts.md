@@ -44,17 +44,36 @@ Accumulation sites mutate fields directly: `state%X%cumulative%Y = state%X%cumul
 - The 22-line inline reset block in `surfacewater.f90:SurfaceWater(task=2)` collapses into two `call state%surfacewater%X%reset()` invocations.
 - check-full byte-identical at every commit; pFUnit 646 tests passing.
 
-### Cumulative-cohort ownership asymmetry (Task A5 finding)
+### Cumulative-cohort partitioning by activity gate (Phase A correction)
 
-The `flzerocumu` reset block at `drainage.f90:Drainage()` zeros a STRICT SUBSET of the cumulative cohort: only `cqdra`, `cqdrain(:)`, `cqdrainin(:)`, `cqdrainout(:)` (4 of 7 cohort fields). The other 3 (`cqdrd`, `cwsupp`, `cwout`) are accumulated by `SurfaceWater(task=2)`, which runs AFTER `Drainage()` in `swap_main`. If drainage called the full cohort `reset()`, it would silently zero `cqdrd`/`cwsupp`/`cwout` mid-accumulation, corrupting the surface-water balance calculation downstream.
+Task A5 originally landed the surfacewater cumulative cohort as a single 7-field type (`surfacewater_cumulative_t`), with the observation that `drainage.f90:Drainage()` zeroes a strict 4-field subset of it. That commit's inline comment explained the asymmetry as a "mid-accumulation timing hazard": calling the full cohort `reset()` from `Drainage()` would zero `cqdrd`/`cwsupp`/`cwout` mid-accumulation. **That diagnosis was wrong.**
 
-**Decision:** hybrid pattern.
+The real reason: `flSurfaceWater = .true.` only when `swdra=2` (see `timecontrol.f90:114-115`). Under `swdra=1`, `SurfaceWater(2)` never runs at all. The reservoir-only fields (`cqdrd`, `cwsupp`, `cwout`) are accumulated *only* inside `SurfaceWater(2)`, so under `swdra=1` they never accumulate. They don't need a reset site in `Drainage()` — there's nothing to zero. Drainage is the sole reset site for the drainage-only fields (`cqdra`, `cqdrain*`), and it correctly zeroes only those.
 
-- `surfacewater.f90:SurfaceWater(task=2)` calls the full `cumulative%reset()` — the canonical owner of the full cohort.
-- `drainage.f90:Drainage()` keeps element-by-element zeroing of its 4-field subset, with an `allocated()` guard, with a comment pointing to this ADR section. It does NOT call the type-bound `reset()`.
-- `intermediate%reset()` is symmetric — both sites zero the identical 4-field set, so both call the full cohort reset.
+The asymmetry isn't a hazard. It's a **config-gated coverage artifact**, and the type system can express it directly.
 
-**Lesson:** when a cohort field is mid-accumulation across multiple subsystem entry points, the cohort `reset()` must be called from the LATEST point in the call chain that the cohort is touched, not earlier sites. The pattern doesn't require unanimous full-reset; subset zeroing at intermediate sites is legitimate and the type system can't enforce it. ADR readers should treat "every reset block becomes a cohort reset() call" as a heuristic, not a rule.
+**Decision (Phase A correction):** split the cumulative cohort into two cohorts partitioned by activity gate.
+
+- `surfacewater_drainage_cumulative_t` — `cqdra`, `cqdrain(:)`, `cqdrainin(:)`, `cqdrainout(:)`. Gate: `fldrain` (active under `swdra=1` OR `swdra=2`). Owner: drainage subsystem.
+- `surfacewater_reservoir_cumulative_t` — `cqdrd`, `cwsupp`, `cwout`. Gate: `flSurfaceWater` (active under `swdra=2` only). Owner: surface-water subsystem.
+
+Each cohort has a single canonical reset owner. No subset-zeroing at intermediate sites; no inline comments papering over an unexpressed contract.
+
+- `Drainage(2)` calls `state%surfacewater%drainage_cumulative%reset()` and **does not touch reservoir_cumulative** (correctly — those fields don't accumulate under `swdra=1`).
+- `SurfaceWater(2)` calls **both** `drainage_cumulative%reset()` and `reservoir_cumulative%reset()`. Both are valid because `SurfaceWater(2)` only runs under `swdra=2`, where both cohorts are active.
+
+The `intermediate` cohort (`iqdra`, `inqdra*`) was already entirely drainage-gated and remains a single cohort.
+
+**Lesson — partitioning by activity gate:** when cumulatives nested in one subsystem's state are accumulated under different activity flags, split the cohort by flag — not by name prefix or by data type. The owner of each cohort is the subsystem whose activity flag gates that cohort's accumulation, and only the owner calls `reset()`. This expresses the contract in types instead of comments.
+
+### Phase A correction implementation summary
+
+Phase A correction commits (`463d84c → 5cc9f38`):
+
+- Task 1 (`463d84c`): defined `surfacewater_drainage_cumulative_t` and `surfacewater_reservoir_cumulative_t` with type-bound `reset()` procedures. Old `surfacewater_cumulative_t` kept temporarily so the new types compile standalone. 4 pFUnit tests added (cqdra zero, per-level array zero, safe-when-unallocated, reservoir scalar zero).
+- Task 2 (`5cc9f38`): replaced `cumulative` field in `surfacewater_state_t` with `drainage_cumulative` and `reservoir_cumulative`. Migrated ~67 field references across `surfacewater.f90`, `drainage.f90`, `surfacewater_init.f90`, `waterbalance.f90`, `swapoutput.f90`. Replaced `Drainage()`'s inline subset-zeroing block with `state%surfacewater%drainage_cumulative%reset()`. Updated `SurfaceWater(2)`'s single `cumulative%reset()` call to call both cohort resets. Dropped `surfacewater_cumulative_t`; deprecated tests removed.
+
+Audit gate: `grep -rn 'state%surfacewater%cumulative%' src/ --include='*.f90'` returns 0. check-full byte-identical at every commit; pFUnit 646 → 652.
 
 ## Consequences
 
@@ -90,7 +109,7 @@ The cohort pattern is now part of the migration playbook. Future subsystem migra
 (+) Reset cadence is now part of the type signature — readers see `intermediate` vs `cumulative` and immediately know reset semantics.
 (+) Field paths self-document: `state%X%cumulative%Y` says "this is a cumulative balance variable in subsystem X."
 (–) Field paths grow one level deeper. ASSOCIATE blocks mitigate this for compute-heavy bodies.
-(–) Asymmetric subset-resets (the Task A5 finding for surfacewater/drainage) cannot be enforced by the cohort type; they remain a per-call-site policy. Solute has no asymmetric reset, so the Phase A pattern works clean there.
+(–) When cumulatives are accumulated under different activity gates (the surfacewater finding from Phase A correction), the single-cohort form is wrong. Partition by activity gate instead — not by name prefix or data type. Each cohort gets a single canonical owner (the subsystem whose flag gates its accumulation).
 (–) Two additional alias forms (`sl => state%solute`, `sw => state%surfacewater`) require greps tailored beyond `state%X%` — Phase B Task B3 caught this when initial inventory missed two ASSOCIATE blocks. Future migrations should grep for ALL alias forms during the audit step.
 
 ## References
