@@ -1002,7 +1002,7 @@ contains
       swsolu  = config%solute%swsolu
       swbotbc = config%solute%swbotbc
       cdrain  = config%solute%cdrain
-      cseep   = config%solute%cseep
+!     cseep   = config%solute%cseep   ! global cseep removed (ADR 0032); state%solute%cseep written by solute task=2 via afgen(cseeptab)
       tscf    = config%solute%tscf
       rtheta  = config%solute%rtheta
       bexp    = config%solute%bexp

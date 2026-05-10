@@ -1045,23 +1045,23 @@
       integer   swsp               ! Switch (in case of solute transport) for simulation of sorption  0 = no; 1 = yes
       real(8)   AgeGwl1m           ! Age (d) of groundwater in upper 1 meter of saturated zone
       real(8)   bexp               ! Exponent in decomposition reduction factor due to dryness (-)
-      real(8)   cdrain             ! Mean solute concentration in aquifer or drainage system (M/L3 water)
+      real(8)   cdrain             ! Mean solute concentration in aquifer or drainage system (M/L3 water)  [AgeTracer dead-code dep, keep until agetracer_state_t]
       real(8)   cirr               ! Solute concentration (M/L3) in irrigation water
       real(8)   cml(macp)          ! Array with solute concentration (M/L3 water) in mobile region
       real(8)   cmsy(macp)         ! Array with dissolved + adsorbed solute concentration (M/L3 soil volume) in mobile region
-      real(8)   cpond              ! Mean solute concentration (M/L3) in ponding layer on soil surface
+! real(8)   cpond              ! Moved to solute_state_t%cpond (ADR 0032)
       real(8)   cpre               ! Solute concentration (M/L3) in precipitation
       real(8)   cref               ! Reference solute concentration (M/L3) for Freundlich adsorption
-      real(8)   cseep              ! Mean solute concentration in upward seepage water at bottom of profile (M/L3 water)
+! real(8)   cseep              ! Moved to solute_state_t%cseep (ADR 0032)
       real(8)   cseeptab(mabbc*2)  ! Array with Mean solute concentration in upward seepage water at bottom of profile (M/L3 water) as function of time (T)
-      real(8)   csurf              ! Total amount of solutes (M/L2) in ponding layer on soil surface
+! real(8)   csurf              ! Moved to solute_state_t%csurf (ADR 0032)
       real(8)   daquif             ! Thickness of saturated aquifer (L) to calculate solute breakthrough to surface water
       real(8)   ddif               ! Molecular diffusion coefficient (L2/T)
       real(8)   decpot(maho)       ! Array with Potential decomposition rate (/T) for each soil layer
       real(8)   decsat             ! Decomposition rate in aquifer (/T)
-      real(8)   dectot             ! Cumulative amount of solute decomposition (M/L2)
-      real(8)   imdectot           ! Intermediate amount of solute decomposition (M/L2)
-      real(8)   dtsolu             ! Maximum time step (T) for accurate numerical solution of solute transport equation
+! real(8)   dectot             ! Moved to solute_state_t%dectot (ADR 0032)
+! real(8)   imdectot           ! Moved to solute_state_t%imdectot (ADR 0032)
+      real(8)   dtsolu             ! Maximum time step (T) for accurate numerical solution of solute transport equation  [AgeTracer dead-code dep, keep until agetracer_state_t]
       real(8)   fdepth(maho)       ! Array with reduction factor for decomposition (-) for each soil layer
       real(8)   frexp              ! Array with Freundlich exponent (-) for solute adsorption
       real(8)   gampar             ! Reduction factor for decomposition due to low temperatures (/C)
@@ -1069,32 +1069,32 @@
       real(8)   icAgeDra(madr)     ! Incremental (over output interval) age (d) of groundwater leaving bottom comp.
       real(8)   icAgeRot           ! Incremental (over output interval) age (d) of groundwater leaving by root uptake
       real(8)   icAgeSur           ! Incremental (over output interval) age (d) of groundwater leaving by surface runoff
-      real(8)   isqbot             ! Solute flux at the bottom of the soil column (M/L2/T) 
-      real(8)   isqtop             ! Solute flux through the soil top surface (M/L2/T) 
+      real(8)   isqbot             ! Solute flux at the bottom of the soil column (M/L2/T)  [AgeTracer dead-code dep, keep until agetracer_state_t]
+      real(8)   isqtop             ! Solute flux through the soil top surface (M/L2/T)  [AgeTracer dead-code dep, keep until agetracer_state_t]
       real(8)   kf(maho)           ! Array with Freundlich coefficient (L3/M) for solute adsorption for each soil layer
       real(8)   kfsat              ! Linear adsorption coefficient in aquifer (L3/M)
       real(8)   ldis(maho)         ! Array with Solute dispersion length (L) for each soil layer
       real(8)   poros              ! Porosity of aquifer (-) to calculate solute breakthrough
-      real(8)   rottot             ! Cumulative amount of solutes (M/L2) extracted by plant roots
-      real(8)   imrottot           ! Intermediate amount of solutes (M/L2) extracted by plant roots
+      real(8)   rottot             ! Cumulative amount of solutes (M/L2) extracted by plant roots  [AgeTracer dead-code dep, keep until agetracer_state_t]
+! real(8)   imrottot           ! Moved to solute_state_t%imrottot (ADR 0032)
       real(8)   rtheta             ! Minimum volumetric water content (-) for potential decomposition
       real(8)   salthead           ! Conversion salt concentration (mg/cm3) into osmotic head (cm) [0..1000.0 cm/(mg/cm3), R]
       real(8)   saltmax            ! Threshold salt concentration in soil water  [0..100 mg/cm3, R]
       real(8)   saltslope          ! Decline of rootwater uptake above threshold [0..1.0 cm3/mg, R]
-      real(8)   samcra             ! Total amount of solutes (M/L2) entrapped in cracks
-      real(8)   samini             ! Total amount of solutes (M/L2) in soil profile at start of current balance period
-      real(8)   sampro             ! Total amount of solutes (M/L2) in soil column
-      real(8)   solbal             ! Cumulative solute balance (M/L2) for current balance period
-      real(8)   sqbot              ! Cumulative amount of solutes (M/L2) passed through the soil column bottom
-      real(8)   imsqbot            ! Intermediate amount of solutes (M/L2) passed through the soil column bottom
-      real(8)   sqdra              ! Total amount of solutes (M/L2) transported to drainage canals
-      real(8)   imsqdra            ! Intermediate Total amount of solutes (M/L2) transported to drainage canals
-      real(8)   sqirrig            ! Cumulative amount of solutes (M/L2) in irrigation water
-      real(8)   imsqirrig          ! Intermediate amount of solutes (M/L2) in irrigation water
-      real(8)   sqprec             ! Cumulative amount of solutes (M/L2) in precipitation
-      real(8)   imsqprec           ! Intermediate amount of solutes (M/L2) in precipitation
-      real(8)   sqrap              ! Cumulative amount of solutes (M/L2) in rapid drainage
-      real(8)   sqsur              ! Cumulative amount of solutes (M/L2) transported to surface water
+! real(8)   samcra             ! Moved to solute_state_t%samcra (ADR 0032)
+      real(8)   samini             ! Total amount of solutes (M/L2) in soil profile at start of current balance period  [AgeTracer dead-code dep, keep until agetracer_state_t]
+! real(8)   sampro             ! Moved to solute_state_t%sampro (ADR 0032)
+! real(8)   solbal             ! Moved to solute_state_t%solbal (ADR 0032)
+! real(8)   sqbot              ! Moved to solute_state_t%sqbot (ADR 0032)
+! real(8)   imsqbot            ! Moved to solute_state_t%imsqbot (ADR 0032)
+      real(8)   sqdra              ! Total amount of solutes (M/L2) transported to drainage canals  [AgeTracer dead-code dep, keep until agetracer_state_t]
+! real(8)   imsqdra            ! Moved to solute_state_t%imsqdra (ADR 0032)
+! real(8)   sqirrig            ! Moved to solute_state_t%sqirrig (ADR 0032)
+! real(8)   imsqirrig          ! Moved to solute_state_t%imsqirrig (ADR 0032)
+! real(8)   sqprec             ! Moved to solute_state_t%sqprec (ADR 0032)
+! real(8)   imsqprec           ! Moved to solute_state_t%imsqprec (ADR 0032)
+! real(8)   sqrap              ! Moved to solute_state_t%sqrap (ADR 0032)
+! real(8)   sqsur              ! Moved to solute_state_t%sqsur (ADR 0032)
       real(8)   tscf               ! Relative uptake of solutes by roots (-)
       real(8)   zc(macp)           ! Array with soil depths (L) used to specify initial solute concentrations
       logical   flsolute           ! Flag indicating simulation of solute transport
