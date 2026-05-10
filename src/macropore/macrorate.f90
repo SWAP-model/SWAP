@@ -49,7 +49,8 @@ SUBROUTINE MACRORATE(ITask,ICpBtDm,ICpBtPerZon,ICpSatGWl,         &
       real(8) VlMpDm(MaDm), VlMpDmCp(MaDm,MaCp), WaSrMp, WaSrMpDm(MaDm)
       real(8) ZBtDm(MaDm), ZWaLevDm(MaDm)
       logical flDraTub(Madr)
-      type(swap_state_t), intent(in) :: state
+      ! SS-BND B-2.7: inout to write state%soilwater%QMpLatSs (QMpLatSs global retired)
+      type(swap_state_t), intent(inout) :: state
 !     -                                                              Out
       real(8) QExcMtxDmCp(MaDm,MaCp), QInIntSatDmCp(MaDm,MaCp)
       real(8) QInMtxSatDmCp(MaDm,MaCp), QInTopLatDm(MaDm)
@@ -104,7 +105,7 @@ SUBROUTINE MACRORATE(ITask,ICpBtDm,ICpBtPerZon,ICpSatGWl,         &
 
 ! --- Check whether the macropore status requires the working of this subroutine
       if (IcTopMp.eq.1) then                                        ! no covering layer on top of macropores
-         FlwInTopPot= QMpLatSs + ArMpTp * (NRaiDt+NIrd+Melt) * DT
+         FlwInTopPot= state%soilwater%QMpLatSs + ArMpTp * (NRaiDt+NIrd+Melt) * DT
       else                                                          ! covering layer on top of macropores
          FlwInTopPot= 0.d0
       endif
@@ -115,7 +116,7 @@ SUBROUTINE MACRORATE(ITask,ICpBtDm,ICpBtPerZon,ICpSatGWl,         &
                FlEndSrpEvt(id,ic)= .true.
   19        continue
   20     continue
-         QMpLatSs= 0.d0
+         state%soilwater%QMpLatSs= 0.d0
          return
       endif
 
@@ -152,7 +153,7 @@ SUBROUTINE MACRORATE(ITask,ICpBtDm,ICpBtPerZon,ICpSatGWl,         &
 
          if (IcTopMp.eq.1) then                                        ! no covering layer on top of macropores
             FlwInTopVrtDmPot(id)= ArMpTpDm(id) * (NRaiDt+NIrd+Melt) * DT
-            if (ArMpTp.gt.0.d0) FlwInTopLatDmPot(id)= ArMpTpDm(id)/ArMpTp * QMpLatSs 
+            if (ArMpTp.gt.0.d0) FlwInTopLatDmPot(id)= ArMpTpDm(id)/ArMpTp * state%soilwater%QMpLatSs
          else                                                          ! covering layer on top of macropores
             ic = IcTopMp-1
             Henpr1 = 0.d0 ! H_enpr(1) 
@@ -333,8 +334,8 @@ SUBROUTINE MACRORATE(ITask,ICpBtDm,ICpBtPerZon,ICpSatGWl,         &
 !   3. Remaining inflow excess is substracted from lateral inflow into macropores 
 !      for use in main SWAP
       if (IcTopMp.eq.1) then
-      QMpLatSs= QMpLatSs - FlwInTopExcesTot 
-      if (dabs(QMpLatSs).lt.1.0d-7) QMpLatSs= 0.0d0
+      state%soilwater%QMpLatSs= state%soilwater%QMpLatSs - FlwInTopExcesTot
+      if (dabs(state%soilwater%QMpLatSs).lt.1.0d-7) state%soilwater%QMpLatSs= 0.0d0
       else
 
       if(FlwInTopExcesTot.gt.0.d0) then

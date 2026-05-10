@@ -862,7 +862,8 @@ contains
             end block
          end if
       case (5)
-         hbot = config%bottom_boundary%hbot
+         ! [SS-BND B-2.7] hbot global retired; state%soilwater%hbot set by boundbottom each step.
+         ! hbot = config%bottom_boundary%hbot
          ! NOTE: rhobot has no legacy SWAP-wide global; the plan's spec
          ! line `rhobot = config%bottom_boundary%rhobot` was a defect.
          ! The schema slot is read for future-proofing; consumers TBD.

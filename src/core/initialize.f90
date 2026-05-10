@@ -217,7 +217,8 @@
       dev_cmb            = 0          ! Initialize mass balance deviation file unit (previously SAVE in checkmassbal)
       flksatexm          = .false. 
       fluseksatexm       = .false. 
-      FlRunoff           = .false. 
+      ! [SS-BND B-2.7] FlRunoff retired — soilwater_init handles init via state%soilwater
+      ! FlRunoff           = .false.
       h0max              = 0.0d0 
       k1max              = 0.0d0 
       q0                 = 0.0d0 
@@ -316,7 +317,8 @@
       crunoffCN          = 0.0d0
       crunon             = 0.0d0 
       cseeptab           = 0.0d0
-      deepgw             = 0.0d0 
+      ! [SS-BND B-2.7] deepgw retired — soilwater_init handles init via state%soilwater
+      ! deepgw             = 0.0d0
       dimoca             = 0.0d0 
       disnod             = 0.0d0 
       ! drainl             = 0.0d0  ! Moved to drainage_state_t — drainage_init handles (ADR 0031)
@@ -334,21 +336,24 @@
       gwl                = 0.0d0 
       gwlconv            = 0.0d0 
       gwli               = 0.0d0 
-      gwlinp             = 0.0d0 
+      ! [SS-BND B-2.7] gwlinp retired — soilwater_init handles init via state%soilwater
+      ! gwlinp             = 0.0d0
       gwlm1              = 0.0d0 
       gwltab             = 0.0d0 
       h                  = 0.0d0 
       h_enpr             = 0.0d0 
       haqtab             = 0.0d0 
       hatm               = 0.0d0 
-      hbot               = 0.0d0 
+      ! [SS-BND B-2.7] hbot retired — soilwater_init handles init via state%soilwater
+      ! hbot               = 0.0d0
       hbotab             = 0.0d0 
       hcomp              = 0.0d0 
       hdrain             = 0.0d0 
       hm1                = 0.0d0 
       hroot              = 0.0d0 
       hsublay            = 0.0d0 
-      hsurf              = 0.0d0 
+      ! [SS-BND B-2.7] hsurf retired — soilwater_init handles init via state%soilwater
+      ! hsurf              = 0.0d0
       igrai              = 0.0d0 
       ies0               = 0.0d0
       iet0               = 0.0d0
@@ -402,9 +407,10 @@
       pondmx             = 0.0d0 
       pondmxtab          = 0.0d0 
       q                  = 0.0d0 
-      qbot               = 0.0d0 
-      qbotab             = 0.0d0 
-      qbot_nonfrozen     = 0.0d0 
+      ! [SS-BND B-2.7] qbot, qbot_nonfrozen retired — soilwater_init handles init via state%soilwater
+      ! qbot               = 0.0d0
+      qbotab             = 0.0d0
+      ! qbot_nonfrozen     = 0.0d0
       ! qdra               = 0.0d0   ! Moved to drainage_state_t — drainage_init handles (ADR 0031)
       ! qdrain             = 0.0d0   ! Moved to drainage_state_t — drainage_init handles (ADR 0031)
       qdraincomp         = 0.0d0 
@@ -422,9 +428,11 @@
       ! timecontrol.f90:423,620 read this ungated by flSSDI, so the
       ! default must reflect the no-event state even when SSDI is off.
       dt_SSDI_event      = 1.0d0
-      qtop               = 0.0d0
+      ! [SS-BND B-2.7] qtop retired — soilwater_init handles init via state%soilwater
+      ! qtop               = 0.0d0
       relsatthr          = 0.0d0 
-      reva               = 0.0d0 
+      ! [SS-BND B-2.7] reva retired — soilwater_init handles init via state%soilwater
+      ! reva               = 0.0d0
       ! [SS-HEAT] Task 9: rfcp retired to state%heat%rfcp
       ! rfcp               = 0.0d0
       rimlay             = 0.0d0 
@@ -435,7 +443,8 @@
       Runoff_CN          = 0.0d0
       runon              = 0.0d0 
       runonarr           = 0.0d0 
-      runots             = 0.0d0 
+      ! [SS-BND B-2.7] runots retired — soilwater_init handles init via state%soilwater
+      ! runots             = 0.0d0
       saev               = 0.0d0 
       shape              = 0.0d0 
       sinamp             = 0.0d0 
@@ -469,7 +478,8 @@
       fldrain            = .false. 
       fllowgwl           = .false. 
       flrunon            = .false. 
-      ftoph              = .false. 
+      ! [SS-BND B-2.7] ftoph retired — soilwater_init handles init via state%soilwater
+      ! ftoph              = .false.
 !      drfil              = 16*' ' 
 !      pathdrain          = 80*' '
 
@@ -649,7 +659,8 @@
       cQMpOutMtxUnsDm2     = 0.0d0 
       DiPoCp               = 0.0d0 
       dFdhMp               = 0.0d0 
-      QMpLatSs             = 0.0d0 
+      ! [SS-BND B-2.7] QMpLatSs retired — soilwater_init handles init via state%soilwater
+      ! QMpLatSs             = 0.0d0
       FrArMtrx             = 0.0d0 
       GWlFlCpZo            = 0.0d0 
       IAvFrMpWlWtDm1       = 0.0d0 

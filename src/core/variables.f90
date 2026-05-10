@@ -633,7 +633,8 @@
       logical   flksatexm          ! flag Ksatexm variable present in input file 
       logical   fluseksatexm(macp) ! flag per node: yes/no make use of Ksatexm (Ksat examined in lab or field) extension in h-range [-2,0]
       logical   flMaxIterTime      ! flag to enable input of Maximum cputime
-      logical   FlRunoff
+      ! [SS-BND] retired 2026-05-11 — boundary subsystem migrated to state%soilwater (ADR 0035)
+      ! logical   FlRunoff
       logical   swcaprise          ! flag to minimize cap.rise to rootzone (for experts only)
       logical   swcapriseoutput    ! flag to generate an output file with cap.rise to/form rootzone (for experts only)
 
@@ -779,7 +780,8 @@
       real(8)   CriterHr           ! Maximum difference of Hroot between iterations; convergence criterium  (L)
       real(8)   crunoff            ! Cumulative runoff (L)
       real(8)   crunon             ! Cumulative amount of runon (L)
-      real(8)   deepgw             ! hydraulic head in aquifer (L)
+      ! [SS-BND] retired 2026-05-11 — boundary subsystem migrated to state%soilwater (ADR 0035)
+      ! real(8)   deepgw             ! hydraulic head in aquifer (L)
       real(8)   dimoca(macp)       ! Differential soil moisture capacity (/L)
       real(8)   disnod(macp+1)     ! Distance between actual node and upper node (L)
       ! real(8)   drainl(Madr)       ! Moved to drainage_state_t%drainl (ADR 0031)
@@ -797,14 +799,16 @@
       real(8)   gwl                ! Groundwater level (L)
       real(8)   gwlconv            ! Maximum difference of groundwater levels between iterations to solve Richards equation
       real(8)   gwli               ! Groundwater level (L) at start of simulation
-      real(8)   gwlinp             ! Prescribed groundwater level (L) for current time
+      ! [SS-BND] retired 2026-05-11 — boundary subsystem migrated to state%soilwater (ADR 0035)
+      ! real(8)   gwlinp             ! Prescribed groundwater level (L) for current time
       real(8)   gwlm1              ! Groundwater level (L) at former time level
       real(8)   gwltab(mabbc*2)    ! Array with prescribed groundwater level (L) as function of time (T)
       real(8)   h(macp)            ! Soil water pressure head (L)
       real(8)   h_enpr(macp)       ! Soil water Entry Pressure head for Modified MualemVanGenuchten curve (L)
       real(8)   haqtab(mabbc*2)    ! Array with specified hydraulic head in deep aquifer (L) as function of time (T)
       real(8)   hatm               ! Pressure head of air (L) near the soil surface
-      real(8)   hbot               ! Soil water pressure head (L) at bottom of soil column
+      ! [SS-BND] retired 2026-05-11 — boundary subsystem migrated to state%soilwater (ADR 0035)
+      ! real(8)   hbot               ! Soil water pressure head (L) at bottom of soil column
       real(8)   hbotab(mabbc*2)    ! Array with specified pressure head of lowest compartment (L) as function of time (T)
       real(8)   hcomp(macp)        ! Array with prescribed height of numerical compartments (L) for each sublayer
       real(8)   hdrain             ! Mean drainage level (L) to derive regional average groundwater level for bottom boundary condition
@@ -813,7 +817,8 @@
       real(8)   hplate             ! Pressure head of ceramic plate below lysimeter
       real(8)   hroot(macp)        ! Pressure head of a compartment at the root-soil interface (L)
       real(8)   hsublay(macp)      ! Array with prescribed height of sublayers (L)
-      real(8)   hsurf              ! Soil water pressure head at the soil surface (cm)
+      ! [SS-BND] retired 2026-05-11 — boundary subsystem migrated to state%soilwater (ADR 0035)
+      ! real(8)   hsurf              ! Soil water pressure head at the soil surface (cm)
       real(8)   Hxylem             ! Pressure head in root xylem (L)
       real(8)   igrai              ! Intermediate amount of gross rainfall (L)
       real(8)   ies0               ! Intermediate potential evaporation rate from a wet bare soil [cm/d]
@@ -875,9 +880,11 @@
       real(8)   pondmx             ! Maximum amount of ponding (L) on soil surface before runoff starts
       real(8)   pondmxtab(2*mairg) ! Table with time-dependent input (date,value) for maximum amount of ponding (L) on soil surface before runoff starts
       real(8)   q(macp+1)          ! Soil water flux between current compartment and upper compartment (L/T)
-      real(8)   qbot               ! Water flux through bottom of simulated soil column (L/T)
+      ! [SS-BND] retired 2026-05-11 — boundary subsystem migrated to state%soilwater (ADR 0035)
+      ! real(8)   qbot               ! Water flux through bottom of simulated soil column (L/T)
       real(8)   qbotab(mabbc*2)    ! Array with specified bottom flux (L/T) as function of time (T)
-      real(8)   qbot_nonfrozen     ! Water flux through bottom of non-frozen soil column (L/T)
+      ! [SS-BND] retired 2026-05-11 — boundary subsystem migrated to state%soilwater (ADR 0035)
+      ! real(8)   qbot_nonfrozen     ! Water flux through bottom of non-frozen soil column (L/T)
       ! real(8)   qdra(Madr,macp)    ! Moved to drainage_state_t%qdra (ADR 0031)
       ! real(8)   qdrain(Madr)       ! Moved to drainage_state_t%qdrain (ADR 0031)
       real(8)   qdraincomp(macp)   ! Total lateral drainage flux (L/T) for each compartment
@@ -918,10 +925,12 @@
       real(8)   ssdi_rate_f_irr(mairg) ! Fixed irrigation rates (cm/d)
       real(8)   ssdi_amount_f_irr(mairg) ! Fixed irrigation amounts (cm)
       
-      real(8)   qtop               ! Water flux through soil surface (L/T)
+      ! [SS-BND] retired 2026-05-11 — boundary subsystem migrated to state%soilwater (ADR 0035)
+      ! real(8)   qtop               ! Water flux through soil surface (L/T)
       real(8)   relsatthr(maho)    ! Array with relative saturation (-) for each soil layer: to interpolate VG and Ksatexm
       real(8)   ResultsOxygenStress(19,macp) ! array with results for OxygenStress; for output only 
-      real(8)   reva               ! Actual soil evaporation rate (L/T)
+      ! [SS-BND] retired 2026-05-11 — boundary subsystem migrated to state%soilwater (ADR 0035)
+      ! real(8)   reva               ! Actual soil evaporation rate (L/T)
       ! [SS-HEAT] retired 2026-05-10 — moved to state%heat%rfcp (ADR 0034)
       ! real(8)   rfcp(macp)         ! Reduction factor for frozen conditions in each model compartment (-)
       real(8)   rimlay             ! Vertical resistance of aquitard (T)
@@ -941,7 +950,8 @@
       real(8)   Rxylem             ! Mean radius of xylem tube inside roots (L)
       real(8)   runon              ! Water runon flux (L/T)
       real(8)   runonarr(maday)    ! Array with runon (L) data for each day
-      real(8)   runots             ! Amount of runoff during a time step (L)
+      ! [SS-BND] retired 2026-05-11 — boundary subsystem migrated to state%soilwater (ADR 0035)
+      ! real(8)   runots             ! Amount of runoff during a time step (L)
       real(8)   saev               ! Cumulative actual evaporation (L) as used in the model of Boesten/Stroosnijder for reduction of E
       real(8)   shape              ! Shape factor: ratio between the mean and the maximum groundwater level elevation above the drainage base (-)
       real(8)   sinamp             ! Amplitude of prescribed bottom flux (L/T) in case of sine function
@@ -982,7 +992,8 @@
       logical   FlHydrLift         ! Flag indicating release of water from root to soil is allowed
       logical   fllowgwl           ! Flag indicating precribed groundwater level below bottom soil column
       logical   flrunon            ! Flag indicating the existance of runon
-      logical   ftoph              ! Flag indicating that the pressure head is prescribed at the soil surface
+      ! [SS-BND] retired 2026-05-11 — boundary subsystem migrated to state%soilwater (ADR 0035)
+      ! logical   ftoph              ! Flag indicating that the pressure head is prescribed at the soil surface
       character(len=16) drfil      ! Name of drainage input file
       character(len=80) pathdrain  ! Path to folder with drainage input files
 
@@ -1188,7 +1199,8 @@
       real(8) DiPoCp(MaCp)         ! Diameter of soil matrix polygon per compartment (L)
       real(8) dFdhMp(MaCp)         ! Contribution of macropores to derivative of compartment (1/T)
       real(8) dtold                ! Length of previous Time step (T)
-      real(8) QMpLatSs             ! Macropore inflow flux at soil surface by lateral overland flow (L/T)
+      ! [SS-BND] retired 2026-05-11 — boundary subsystem migrated to state%soilwater (ADR 0035)
+      ! real(8) QMpLatSs             ! Macropore inflow flux at soil surface by lateral overland flow (L/T)
       real(8) FrArMtrx(MaCp)       ! Fraction of horizontal area of soil matrix per compartment (-)
       real(8) GWlFlCpZo            ! Groundwater level of full capillary zone (L) (only unsaturated zones with less than CritUndSatVol air)
       real(8) IAvFrMpWlWtDm1(MaCp) ! Incremental sum of average wet macropore wall fraction weighted for time step, for domain 1 (MB) (-)

@@ -83,7 +83,7 @@
       implicit none
 
       integer task
-      ! B-2.6: inout so mini-sim writeback can restore state%soilwater%qbot
+      ! B-2.7: inout for mini-sim writeback to state%soilwater%qbot / gwlinp
       type(swap_state_t), intent(inout) :: state
 
       select case (task)
@@ -3641,7 +3641,7 @@
 ! --- global variables ------------------
       integer task
       ! SS-SWST Phase 2 Task 11 A3: receive main state to read iqdra for case(2) output.
-      ! B-2.6: inout so mini-sim writeback can restore state_main%soilwater%qbot (dual-write).
+      ! B-2.7: inout for mini-sim writeback to state_main%soilwater%qbot / gwlinp.
       type(swap_state_t), intent(inout) :: state_main
 ! --- local variables ------------------
       integer   sto,nod1m, nod
@@ -3744,7 +3744,8 @@
       xd(6) = iqbot
 
       swBotbtmp = swbotb
-      qbottmp = qbot
+      ! B-2.7: save state%soilwater%qbot (legacy qbot global retired)
+      qbottmp = state_main%soilwater%qbot
       gwltmp = gwl
       pondtmp = pond
       do nod =1,numnod
@@ -3762,8 +3763,7 @@
 
       do i=1,2
 
-        gwlinp = gwltmp + dgwl(i)
-        ! B-2.6 dual-write: readers now consume state%soilwater%gwlinp.
+        ! B-2.7: write only state%soilwater%gwlinp (legacy gwlinp global retired)
         state_main%soilwater%gwlinp = gwltmp + dgwl(i)
 
 !        call BoundBottom
@@ -3819,9 +3819,7 @@
 
 
       swbotb = swBotbtmp
-      qbot = qbottmp
-      ! B-2.6 dual-write: restore state%soilwater%qbot alongside legacy global
-      ! (readers now consume state%soilwater%qbot). gwl/pond stay legacy — deferred.
+      ! B-2.7: restore state%soilwater%qbot (legacy qbot global retired; gwl/pond stay legacy)
       state_main%soilwater%qbot = qbottmp
       gwl = gwltmp
       pond = pondtmp

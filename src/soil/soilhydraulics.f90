@@ -108,7 +108,7 @@ contains
 
             q0 = (nraidt+nird+melt)*(1.0d0-ArMpSs) + runon - state%soilwater%reva
             call pondrunoff (state)
-            q1 = - q0 + (pond - pondm1)/dt + runots / dt
+            q1 = - q0 + (pond - pondm1)/dt + state%soilwater%runots / dt
             theta(1) = watcon(1,state%soilwater%gwlinp)
             kmean(1) = hconduc(1,state%soilwater%gwlinp,theta(1),state%heat%rfcp(1))
             ! In case of static macropores FrArMtrx < 1
@@ -119,8 +119,7 @@ contains
                qv(i+1) = qv(i) +dz(i)*FrArMtrx(i)*(theta(i)-thetm1(i))  &
      &                          / dt+ sink(i) - source(i) + qrot(i)
             end do
-            qbot = qv(numnod+1)
-            state%soilwater%qbot = qbot
+            state%soilwater%qbot = qv(numnod+1)
             h(1) = state%soilwater%gwlinp + disnod(1)*(qv(1)/kmean(1)+1.0d0)
             do i=2,numnod
                h(i) = h(i-1) + disnod(i)*(qv(i)/kmean(i)+1.0d0)
@@ -136,7 +135,7 @@ contains
                end do
                kmean(numnod+1) = k(numnod)                  
             end if
-            call calcgwl ()
+            call calcgwl (state)
             return
          else
             NN = 0
@@ -147,15 +146,13 @@ contains
                ! Groundwater within soil profile
                if ((z(NN)-state%soilwater%gwlinp) .lt. 1.0d-4 .and. (NN.gt.0)) then
                   ! Difference gwlinp with node too small to calculate gradient properly
-                  gwlinp = z(NN)
-                  state%soilwater%gwlinp = gwlinp
+                  state%soilwater%gwlinp = z(NN)
                   NN = NN-1
                endif
             else
                ! Groundwater below soil profile
                fllowgwl = .true.
-               hbot = state%soilwater%gwlinp - z(numnod) + 0.5*dz(numnod)
-               state%soilwater%hbot = hbot
+               state%soilwater%hbot = state%soilwater%gwlinp - z(numnod) + 0.5*dz(numnod)
             endif
          end if
       else
@@ -252,14 +249,13 @@ contains
 
          if(swbotb.eq.3.and.swbotb3Impl.eq.1)then ! Cauchy-relation, implemented as head boundary
             if (SwBotb3ResVert.eq.0) then
-               qbot = - (h(NN)+z(NN)-state%soilwater%deepgw) / (disnod(NN+1)/kmean(NN+1)+rimlay)
+               state%soilwater%qbot = - (h(NN)+z(NN)-state%soilwater%deepgw) / (disnod(NN+1)/kmean(NN+1)+rimlay)
             elseif (SwBotb3ResVert.eq.1) then
-               qbot = - (h(NN)+z(NN)-state%soilwater%deepgw) / rimlay
+               state%soilwater%qbot = - (h(NN)+z(NN)-state%soilwater%deepgw) / rimlay
             endif
 ! ---       extra groundwater flux might be added
-            if (sw4 .eq. 1) qbot = qbot + afgen(qbotab,mabbc*2,t1900+dt)
-            state%soilwater%qbot = qbot
-            F(NN) = F(NN) - qbot
+            if (sw4 .eq. 1) state%soilwater%qbot = state%soilwater%qbot + afgen(qbotab,mabbc*2,t1900+dt)
+            F(NN) = F(NN) - state%soilwater%qbot
          else if(swbotb.eq.5 .or. (swbotb.eq.1 .and. fllowgwl))then ! pressure head at lower boundary specified
             F(NN) = F(NN) + kmean(NN+1) * hgrad(NN+1)
          else if(swbotb.eq.7 .or. swbotb .eq. -2)then ! free drainage option
@@ -267,18 +263,15 @@ contains
             if(FlMacropore) then
                 kmean(numnod+1) = FrArMtrx(numnod) * kmean(numnod+1)
             endif
-            qbot = -1.0d0 * kmean(numnod+1)
-            state%soilwater%qbot = qbot
-            F(NN) = F(NN) - qbot
+            state%soilwater%qbot = -1.0d0 * kmean(numnod+1)
+            F(NN) = F(NN) - state%soilwater%qbot
          ! Lysimeter option
          else if(swbotb.eq.8)then
             if (flboth) then
-               hbot = hplate
-               state%soilwater%hbot = hbot
+               state%soilwater%hbot = hplate
                F(NN) = F(NN) + kmean(NN+1) * hgrad(NN+1)
             else
-               qbot = 0.0d0
-               state%soilwater%qbot = qbot
+               state%soilwater%qbot = 0.0d0
             end if
          ! Flux bottom boundary
          else
@@ -487,7 +480,7 @@ contains
             F(1) = (theta(1) - thetm1(1))*FrArMtrx(1)*dz(1)/dt + sink(1) - source(1) &
      &           + qrot(1) + kmean(2) * hgrad(2)
 
-            if (FlMacropore) QMpLatSsSav = QMpLatSs
+            if (FlMacropore) QMpLatSsSav = state%soilwater%QMpLatSs
 
             call boundtop(state)  ! [SS-HEAT] Task 9: state passed for rfcp access
 
@@ -495,7 +488,7 @@ contains
                if (.not.flunsatok(3)) then
                   call MACROPORE(2, state)
                else
-                  QMpLatSs = QMpLatSsSav
+                  state%soilwater%QMpLatSs = QMpLatSsSav
                endif
             endif
 
@@ -538,17 +531,16 @@ contains
      &               + sink(NN) - source(NN) + qrot(NN)
                if(swbotb.eq.3.and.swbotb3Impl.eq.1)then ! Cauchy
                   if (SwBotb3ResVert.eq.0) then
-                     qbot = - (h(NN)+z(NN)-state%soilwater%deepgw) /       &
+                     state%soilwater%qbot = - (h(NN)+z(NN)-state%soilwater%deepgw) /       &
      &                                 (disnod(NN+1)/kmean(NN+1)+rimlay)
                   elseif (SwBotb3ResVert.eq.1) then
-                     qbot = - (h(NN)+z(NN)-state%soilwater%deepgw) / rimlay
+                     state%soilwater%qbot = - (h(NN)+z(NN)-state%soilwater%deepgw) / rimlay
                   endif
                   ! Extra groundwater flux might be added
                   if (sw4 .eq. 1) then
-                     qbot = qbot + afgen(qbotab,mabbc*2,t1900+dt)
+                     state%soilwater%qbot = state%soilwater%qbot + afgen(qbotab,mabbc*2,t1900+dt)
                   end if
-                  state%soilwater%qbot = qbot
-                  F(NN) = F(NN) - qbot
+                  F(NN) = F(NN) - state%soilwater%qbot
                else if(swbotb.eq.5 .or.(swbotb.eq.1 .and. fllowgwl))then
                   ! Pressure head at lower boundary specified
                   F(NN) = F(NN) + kmean(NN+1) * hgrad(NN+1)
@@ -557,18 +549,15 @@ contains
                   if(FlMacropore) then
                      kmean(numnod+1) = FrArMtrx(numnod)*kmean(numnod+1)
                   endif
-                  qbot = -1.0d0 * kmean(numnod+1)
-                  state%soilwater%qbot = qbot
-                  F(NN) = F(NN) - qbot
+                  state%soilwater%qbot = -1.0d0 * kmean(numnod+1)
+                  F(NN) = F(NN) - state%soilwater%qbot
                ! Lysimeter option
                else if(swbotb.eq.8)then
                   if (flboth) then
-                     hbot = hplate
-                     state%soilwater%hbot = hbot
-                       F(NN) = F(NN) + kmean(NN+1) * hgrad(NN+1)
+                     state%soilwater%hbot = hplate
+                     F(NN) = F(NN) + kmean(NN+1) * hgrad(NN+1)
                   else
-                     qbot = 0.0d0
-                     state%soilwater%qbot = qbot
+                     state%soilwater%qbot = 0.0d0
                   end if
                ! Flux bottom boundary
                else
@@ -645,11 +634,10 @@ contains
 
          ! Test for waterbalance of ponding layer
          if (state%soilwater%ftoph) then
-            qtop = -kmean(1)*((state%soilwater%hsurf - h(1))/disnod(1)+1.0d0)
-            state%soilwater%qtop = qtop
+            state%soilwater%qtop = -kmean(1)*((state%soilwater%hsurf - h(1))/disnod(1)+1.0d0)
             if(.not.flnonconv .and. (.not.FlMacropore .or. IcTopMp.gt.1)) then
                deviat = pond - pondm1 + state%soilwater%reva*dt - (nraidt+nird+Melt)*dt &
-     &                - runon*dt  +  runots  - state%soilwater%qtop * dt
+     &                - runon*dt  +  state%soilwater%runots  - state%soilwater%qtop * dt
                if( abs(deviat) .gt. CritDevPondDt) then
                   flnonconv3 = .true. ; flnonconv   = .true.
                   flnonconv3 = flnonconv3 ! for Forcheck
@@ -659,8 +647,8 @@ contains
 
          if(FlMacropore)then
             deviat = pond - pondm1 + state%soilwater%reva*dt - (nraidt+nird+Melt)*dt  &
-     &             - runon*dt  +  runots  - state%soilwater%qtop * dt                 &
-     &             + ArMpSs * (nraidt+nird+Melt)*dt + QMpLatSs
+     &             - runon*dt  +  state%soilwater%runots  - state%soilwater%qtop * dt  &
+     &             + ArMpSs * (nraidt+nird+Melt)*dt + state%soilwater%QMpLatSs
             if( abs(deviat) .gt. CritDevPondDt) then
                flnonconv3 = .true. ; flnonconv   = .true.
                flnonconv3 = flnonconv3 ! for Forcheck
@@ -730,8 +718,7 @@ contains
                  qv(i+1) = qv(i) +dz(i)*FrArMtrx(i)*(theta(i)-thetm1(i))&
      &                          / dt + sink(i) - source(i) + qrot(i)
                end do
-               qbot = qv(numnod+1)
-               state%soilwater%qbot = qbot
+               state%soilwater%qbot = qv(numnod+1)
 
                do i=NN+1,numnod
                   h(i) = h(i-1) + disnod(i)*(qv(i)/kmean(i)+1.0d0)
@@ -740,7 +727,7 @@ contains
             end if
 
             ! Calculate new groundwater level
-            call calcgwl ()
+            call calcgwl (state)
 
             if(swbotb.ne.1.and.abs(gwl-gwlm1).ge.gwlconv .AND.          &
      &         abs(gwl-999d0).gt.1.d0.and.abs(gwlm1-999d0).gt.1.d0) then
@@ -888,8 +875,7 @@ contains
         saev = 0.d0
       endif
       runon = 0.0d0
-      qtop = 0.d0
-      state%soilwater%qtop = qtop
+      state%soilwater%qtop = 0.d0
       do i = 1,numnod+1
         q(i) = 0.0d0
       enddo
@@ -1081,7 +1067,7 @@ contains
       pondini = pond
 
       ! Initial groundwater level
-      call calcgwl ()
+      call calcgwl (state)
 
       call log_info('soilwater', 'Soil state initialized: gwl=' // to_str(real(gwl,4)) // &
                     ' cm, numnod=' // to_str(numnod) // ', numlay=' // to_str(numlay) // &

@@ -36,11 +36,13 @@ contains
       !> SAVE statement removed - all local variables are reset at start of each call
       !> (legacy code that was unnecessary)
       !> @endnote
-      subroutine calcgwl ()
-      use variables, only: disnod,logf,swscre,swbotb,flmacropore,numnod,gwlinp,h,z,pond,t1900,  &
+      subroutine calcgwl (state)
+      use variables, only: disnod,logf,swscre,swbotb,flmacropore,numnod,h,z,pond,t1900,  &
                            gwl,nodgwl,bpegwl,npegwl,pegwl,nodgwlflcpzo,gwlflcpzo,CritUndSatVol
       use swap_log, only: log_debug, to_str
       implicit none
+      ! SS-BND B-2.7: state added to read state%soilwater%gwlinp (gwlinp global retired)
+      type(swap_state_t), intent(in) :: state
       ! local
       integer   i, node, nodhlp, nodheq1
       logical   flsat,flunsat
@@ -166,7 +168,7 @@ contains
       endif
 
       ! warning error if there is inconsistency between defined gwl and soil physics
-      if (swbotb.eq.1 .and. (gwlinp .ge.z(1) .or. gwl.gt.998.0d0)) then
+      if (swbotb.eq.1 .and. (state%soilwater%gwlinp .ge.z(1) .or. gwl.gt.998.0d0)) then
          ! determine date and date-time
          call dtdpst('year-month-day,hour:minute:seconds',t1900,datexti)
          write(messag,'(6a)')                                           &
@@ -321,24 +323,25 @@ contains
       !> @endnote
       ! SS-SWST Phase 2 Task 11 A2: state added to fluxes() so qdra/qdrtot read from state.
       subroutine fluxes (state)
-      use variables, only: q,qbot,dt,inq,numnod,thetm1,theta,dz,qrot,qimmob,qtop,qrosum,volact,volm1,swbotb,     &
+      use variables, only: q,dt,inq,numnod,thetm1,theta,dz,qrot,qimmob,qrosum,volact,volm1,swbotb,     &
                            FrArMtrx,QExcMpMtx,QMaPo,nrlevs,fllowgwl,qssdi, qssdisum
       use swap_state_mod, only: swap_state_t
       implicit none
 
-      type(swap_state_t), intent(in) :: state
+      type(swap_state_t), intent(inout) :: state
       integer i,level
 
       ! determine qbot if not specified
+      ! SS-BND B-2.7: qtop and qbot read/written via state%soilwater (globals retired)
       if (swbotb .eq. 5 .or. swbotb .eq. 7 .or.                         &
      &    swbotb .eq. 8 .or. swbotb .eq. -2 .or.                        &
      &    (swbotb .eq. 1 .and. fllowgwl)) then
-        qbot = qtop + qrosum + state%surfacewater%qdrtot - QMaPo + (volact-volm1)/dt - qssdisum
+        state%soilwater%qbot = state%soilwater%qtop + qrosum + state%surfacewater%qdrtot - QMaPo + (volact-volm1)/dt - qssdisum
       endif
 
       ! calculate fluxes (cm/d) from changes in volume per compartment
       i = numnod+1
-      q(i) = qbot
+      q(i) = state%soilwater%qbot
       inq(i) = inq(i) + q(i)*dt
       do i = numnod,1,-1
         q(i) = - (theta(i)-thetm1(i)+qimmob(i))*FrArMtrx(i)*dz(i)/dt +  &

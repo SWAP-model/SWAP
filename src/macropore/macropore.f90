@@ -197,7 +197,7 @@ contains
       ! Integration of Cumulative and Intermediate values
       call MACROINTEGRAL(flBegin,FrMpWalWet, &
                          QInIntSatDmCp,QInMtxSatDmCp,QInTopLatDm,QInTopVrtDm, &
-                         QOutDrRapCp,QOutMtxSatDmCp,QOutMtxUnsDmCp)
+                         QOutDrRapCp,QOutMtxSatDmCp,QOutMtxUnsDmCp, state)
       return
 
     case (5)
@@ -1430,7 +1430,7 @@ contains
   !! @endnote
   SUBROUTINE MACROINTEGRAL(flBegin,FrMpWalWet,                      &
      &              QInIntSatDmCp,QInMtxSatDmCp,QInTopLatDm,QInTopVrtDm,&
-     &              QOutDrRapCp,QOutMtxSatDmCp,QOutMtxUnsDmCp)
+     &              QOutDrRapCp,QOutMtxSatDmCp,QOutMtxUnsDmCp, state)
       ! ----------------------------------------------------------------------
       ! --- Exclude work arrays passed as arguments (now module-level in variables.f90)
       use Variables, flBegin_v => flBegin, FrMpWalWet_v => FrMpWalWet, &
@@ -1438,6 +1438,7 @@ contains
      &    QInTopLatDm_v => QInTopLatDm, QInTopVrtDm_v => QInTopVrtDm, &
      &    QOutDrRapCp_v => QOutDrRapCp, QOutMtxSatDmCp_v => QOutMtxSatDmCp, &
      &    QOutMtxUnsDmCp_v => QOutMtxUnsDmCp
+      use swap_state_mod, only: swap_state_t
       implicit NONE
 
       ! --- global                                                       In
@@ -1445,7 +1446,9 @@ contains
       real(8) QInMtxSatDmCp(MaDm,MaCp), QInTopLatDm(MaDm)
       real(8) QInTopVrtDm(MaDm), QOutDrRapCp(MaCp)
       real(8) QOutMtxSatDmCp(MaDm,MaCp), QOutMtxUnsDmCp(MaDm,MaCp)
-      logical flBegin 
+      logical flBegin
+      ! SS-BND B-2.7: state added to read state%soilwater%QMpLatSs (QMpLatSs global retired)
+      type(swap_state_t), intent(in) :: state
       !     -                                                            Out
       ! ----------------------------------------------------------------------
       ! --- local
@@ -1541,7 +1544,8 @@ contains
   40  continue
       !
       !     Summing up Cumulative values
-      cQMpLatSs = cQMpLatSs + QMpLatSs 
+      ! SS-BND B-2.7: QMpLatSs global retired; read from state%soilwater
+      cQMpLatSs = cQMpLatSs + state%soilwater%QMpLatSs
       !      cQMapo    = cQMapo + QMapo*dt   
 
       if (QInTopVrtDm(2).gt.0.0d0) then
