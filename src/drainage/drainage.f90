@@ -81,14 +81,16 @@ module drainage_mod
 
 contains
 
-   !> Allocate and zero-initialise all per-level arrays in state%drainage.
-   !! Called from swap_main BEFORE SurfaceWater(1) so that qdra/qdrain are
-   !! available to every subsystem (frozencond, soilhydraulics, waterbalance,
-   !! solute) regardless of flSurfaceWater or fldrain.
+   !> Allocate and seed all per-level arrays in state%drainage from the
+   !! legacy globals.  Called from swap_main AFTER config_to_variables so
+   !! that config-sourced geometry (e.g. wetper(1) for dramet==2) is
+   !! already present in the globals and can be mirrored into state.
+   !! qdra/qdrain are zeroed because they are computed each timestep and
+   !! have no pre-compute config value.
    subroutine drainage_init(state)
       use, intrinsic :: iso_fortran_env, only: real64
       use swap_state_mod, only: swap_state_t
-      use variables, only: nrlevs, numnod
+      use variables, only: nrlevs, numnod, drainl, wetper, ztopdislay, qdrd
       type(swap_state_t), intent(inout) :: state
 
       if (.not. allocated(state%drainage%qdrain))     allocate(state%drainage%qdrain(nrlevs))
@@ -97,11 +99,18 @@ contains
       if (.not. allocated(state%drainage%ztopdislay)) allocate(state%drainage%ztopdislay(nrlevs))
       if (.not. allocated(state%drainage%qdra))       allocate(state%drainage%qdra(nrlevs, numnod))
 
-      state%drainage%qdrain     = 0.0_real64
-      state%drainage%drainl     = 0.0_real64
-      state%drainage%wetper     = 0.0_real64
-      state%drainage%ztopdislay = 0.0_real64
-      state%drainage%qdra       = 0.0_real64
+      ! Seed geometry arrays from the legacy globals, which carry any
+      ! config-set values (e.g. wetper(1) from dramet==2 in
+      ! config_to_variables).  This is the initial state%drainage sync;
+      ! bocodre then keeps them current each timestep via dual-write.
+      state%drainage%drainl(1:nrlevs)     = drainl(1:nrlevs)
+      state%drainage%wetper(1:nrlevs)     = wetper(1:nrlevs)
+      state%drainage%ztopdislay(1:nrlevs) = ztopdislay(1:nrlevs)
+      state%drainage%qdrd                 = qdrd
+
+      ! Flux arrays start at zero — no config source; computed each step.
+      state%drainage%qdrain = 0.0_real64
+      state%drainage%qdra   = 0.0_real64
    end subroutine drainage_init
 
 
@@ -791,6 +800,13 @@ owltab,t1900,swallo,drares,infres,qdrtab,nrlevs,swnrsrf,cofintfl,expintfl,dt,sha
                      end if
                   end if
 
+! --- SS-DRST Task 5: dual-write per-level geometry and qdrd to state.
+!     Done after the main loop so every level's final value is captured
+!     in one slice, including the ZDraBas-driving drainl(NumLevRapDra).
+                  state%drainage%drainl(1:nrlevs) = drainl(1:nrlevs)
+                  state%drainage%wetper(1:nrlevs) = wetper(1:nrlevs)
+                  state%drainage%qdrd             = qdrd
+
 ! ----------------------------------------------------------------------
 ! --- check for system falling dry (only for swsec = 2):
                   if (swsec .eq. 1) return
@@ -834,6 +850,8 @@ owltab,t1900,swallo,drares,infres,qdrtab,nrlevs,swnrsrf,cofintfl,expintfl,dt,sha
                               qdrain(level) = qdrain(level)*qdratio
 820                           continue
                               qdrd = qdrdm
+                              ! SS-DRST Task 5: re-sync qdrd after falling-dry clamp.
+                              state%drainage%qdrd = qdrd
                               end if
                            end if
 
