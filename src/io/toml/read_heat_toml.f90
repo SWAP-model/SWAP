@@ -61,6 +61,24 @@ contains
       ! Initial soil-temperature table (2-D, depth/temp pairs).
       call read_table_2d(sec, 'tsoil_init', config%tsoil_init, 2, &
                          'heat.tsoil_init', errors)
+
+      ! Phase 0 (SS-HEAT) — swcalt=1 analytical method scalars.
+      call get_optional_real_with_default(sec, 'ddamp',  config%ddamp,  0.0_real64, &
+                                          'heat.ddamp',  errors)
+      call get_optional_real_with_default(sec, 'tmean',  config%tmean,  0.0_real64, &
+                                          'heat.tmean',  errors)
+      call get_optional_real_with_default(sec, 'tampli', config%tampli, 0.0_real64, &
+                                          'heat.tampli', errors)
+      call get_optional_real_with_default(sec, 'timref', config%timref, 0.0_real64, &
+                                          'heat.timref', errors)
+
+      ! Boundary-condition temperature tables (2-D, time/temperature pairs).
+      ! Absent key leaves table unallocated; adapter flattens to interleaved
+      ! 1D afgen layout in apply_heat (2*k-1=time, 2*k=value).
+      call read_table_2d(sec, 'temtoptab', config%temtoptab, 2, &
+                         'heat.temtoptab', errors)
+      call read_table_2d(sec, 'tembtab',   config%tembtab,   2, &
+                         'heat.tembtab',   errors)
    end subroutine read_heat_toml
 
    !> Decode a flat TOML array at sec[key] into a 1-D real(real64)

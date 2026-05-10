@@ -160,6 +160,7 @@ if get_option('enable_pfunit')
         'config/test_macropore_config.pf',
         'config/test_solute_config.pf',
         'config/test_solute_phase0_fields.pf',
+        'config/test_heat_phase0_fields.pf',
         'config/test_surface_water_config.pf',
         'config/test_crop_config.pf',
         'config/test_output_csv_config.pf',

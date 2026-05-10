@@ -880,7 +880,7 @@ contains
       end select
 
       ! ---------------------------------------------------------------
-      ! Heat (audit: 10 fields)
+      ! Heat (audit: 10 fields + 6 Phase-0 promoted fields = 16 total)
       ! ---------------------------------------------------------------
       swhea     = config%heat%swhea
       swcalt    = config%heat%swcalt
@@ -935,6 +935,29 @@ contains
          do i = 1, min(n, size(tsoil))
             zh(i)    = config%heat%tsoil_init(i, 1)
             tsoil(i) = config%heat%tsoil_init(i, 2)
+         end do
+      end if
+
+      ! Phase 0 (SS-HEAT) — swcalt=1 analytical method scalars.
+      ddamp  = config%heat%ddamp
+      tmean  = config%heat%tmean
+      tampli = config%heat%tampli
+      timref = config%heat%timref
+
+      ! Flatten 2D typed table → interleaved 1D afgen layout.
+      ! afgen(temtoptab, 2*mabbc, time) reads (2*k-1)=time, (2*k)=value.
+      ! Confirmed from temperature.f90:151 and 179.
+      if (allocated(config%heat%temtoptab)) then
+         do i = 1, min(size(config%heat%temtoptab, 1), size(temtoptab)/2)
+            temtoptab(2*i - 1) = config%heat%temtoptab(i, 1)   ! time
+            temtoptab(2*i)     = config%heat%temtoptab(i, 2)   ! temperature
+         end do
+      end if
+
+      if (allocated(config%heat%tembtab)) then
+         do i = 1, min(size(config%heat%tembtab, 1), size(tembtab)/2)
+            tembtab(2*i - 1) = config%heat%tembtab(i, 1)   ! time
+            tembtab(2*i)     = config%heat%tembtab(i, 2)   ! temperature
          end do
       end if
 

@@ -37,6 +37,20 @@ module heat_config_mod
       ! Frost params (legacy rdsdor range -10..5 °C).
       real(real64) :: tfroststa = 0.0_real64
       real(real64) :: tfrostend = 0.0_real64
+
+      ! Phase 0 (SS-HEAT) — promoted from legacy globals to patch the
+      ! silent-zero-defaults correctness gap on swcalt=1 (analytical
+      ! soil-temperature method). Previously these were never read from
+      ! TOML, so TOML runs silently used uninitialised (zero) legacy globals.
+      real(real64) :: ddamp  = 0.0_real64    !! Damping depth of temperature wave (L)
+      real(real64) :: tmean  = 0.0_real64    !! Prescribed mean annual surface temperature (degC)
+      real(real64) :: tampli = 0.0_real64    !! Amplitude of annual surface temperature wave (degC)
+      real(real64) :: timref = 0.0_real64    !! Time in year with top of prescribed sine wave (T)
+
+      ! Boundary-condition tables — 2D (n_rows, 2): col 1 = time, col 2 = temperature.
+      ! The adapter flattens to interleaved 1D afgen layout: (2*k-1)=time, (2*k)=value.
+      real(real64), allocatable :: temtoptab(:,:)   !! Soil-surface temperature vs time
+      real(real64), allocatable :: tembtab(:,:)     !! Soil-bottom temperature vs time
    contains
       procedure :: validate => heat_config_validate
       procedure :: finalize => heat_config_finalize
@@ -120,6 +134,19 @@ contains
       ! to interpolate; the legacy reader expects matching `zh`/`tsoil`
       ! arrays of length >= 1 but a useful column needs at least two rows.
       call check_table_2d(self%tsoil_init, 2, 2, 'heat.tsoil_init', errors)
+
+      ! Phase 0 (SS-HEAT) — validate promoted swcalt=1 analytics fields.
+      call check_real_range(self%ddamp,   0.0_real64, 1.0e6_real64,   'heat.ddamp',  errors)
+      call check_real_range(self%tmean, -100.0_real64, 100.0_real64,  'heat.tmean',  errors)
+      call check_real_range(self%tampli,  0.0_real64, 100.0_real64,   'heat.tampli', errors)
+      call check_real_range(self%timref,  0.0_real64, 366.0_real64,   'heat.timref', errors)
+
+      ! Boundary-condition tables: when allocated, must have exactly 2
+      ! columns and at least 1 row (afgen needs at least one pair).
+      ! Cross-field requirement checks (e.g. must be present when
+      ! swbotbhea=2 / swtopbhea=2) are deferred to a later task.
+      call check_table_2d(self%temtoptab, 2, 1, 'heat.temtoptab', errors)
+      call check_table_2d(self%tembtab,   2, 1, 'heat.tembtab',   errors)
    end subroutine heat_config_validate
 
    !> Per-element fraction range check (0..1) for soil-texture arrays.
