@@ -114,25 +114,16 @@ contains
       )
 
 ! --- reset cumulative solute fluxes
-      if (flzerointr) then
-        imsqprec  = 0.0d0
-        imsqirrig = 0.0d0
-        imsqbot   = 0.0d0
-        imsqdra   = 0.0d0
-        imdectot  = 0.0d0
-        imrottot  = 0.0d0
-      endif
+      ! SS-CRR Phase B Task B4: cohort-owned reset; see solute_state_mod.
+      if (flzerointr) call state%solute%intermediate%reset()
       if (flzerocumu) then
-        sqprec  = 0.0d0
-        sqirrig = 0.0d0
-        sqbot   = 0.0d0
-        sqdra   = 0.0d0
-        sqsur   = 0.0d0
-        dectot  = 0.0d0
-        rottot  = 0.0d0
-        csurf   = 0.0d0
-        samini  = sampro
-      endif
+         call state%solute%cumulative%reset()
+         ! Rebase mass-balance baseline. samini is in the cumulative cohort
+         ! and was zeroed by reset(); physics requires anchoring it to
+         ! current profile mass (sampro) for the next balance period. See
+         ! the solbal equation later in case(2).
+         samini = sampro
+      end if
 
       isqbot = 0.0d0
       isqtop = 0.0d0
