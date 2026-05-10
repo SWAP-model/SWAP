@@ -6,7 +6,7 @@ status: accepted (Phase A complete; Phase B pending)
 
 # ADR 0033: Cumulative Reset Cohorts
 
-**Status:** accepted (Phase A complete; Phase B pending — solute cohort migration follows on the same branch)
+**Status:** accepted (Phases A + B complete; Phase C playbook update pending)
 **Date:** 2026-05-10
 **Branch:** `refactor/cumulative-reset-cohorts`
 
@@ -65,16 +65,37 @@ The `flzerocumu` reset block at `drainage.f90:Drainage()` zeros a STRICT SUBSET 
 (–) Field paths grow one level deeper. ASSOCIATE blocks mitigate this for compute-heavy bodies.
 (–) Asymmetric subset-resets (the Task A5 finding) cannot be enforced by the cohort type; they remain a per-call-site policy.
 
-## Phase B scope (pending)
+## Phase B outcomes (solute, completed 2026-05-10)
 
-Solute cohorts (`solute_intermediate_t` with 6 fields; `solute_cumulative_t` with 9 fields including `samini` whose `=sampro` rebase stays inline). Plan reference: `docs/superpowers/plans/2026-05-10-cumulative-reset-refactor.md`.
+- `src/state/solute_state.f90` adds `solute_intermediate_t` (6 fields: `imsqprec`, `imsqirrig`, `imsqbot`, `imsqdra`, `imdectot`, `imrottot`) and `solute_cumulative_t` (9 fields: `sqprec`, `sqirrig`, `sqbot`, `sqdra`, `sqsur`, `dectot`, `rottot`, `csurf`, `samini`).
+- `solute_state_t` carries them as nested `intermediate` and `cumulative` components. The 15 fields are no longer flat in `solute_state_t`.
+- 31 reader/writer sites across `solute.f90`, `swapoutput.f90`, `swap_csv_output.f90`, and the unit tests migrated to nested paths. Two ASSOCIATE blocks in solute.f90 (case 1 and case 2) keep their local alias names but point at the new nested paths. Two additional ASSOCIATE blocks in swapoutput.f90 (`sl => state%solute`) discovered during compile (initial grep missed them because they alias `sl%`, not `state%solute%`) — both retargeted.
+- 4 pFUnit tests added for the two `reset()` procedures (no allocatables in solute cohorts, so 4 instead of 5 — the allocation-guard test is N/A).
+- The 15-line inline reset block in `solute(task=2)` collapses into two `call state%solute%X%reset()` invocations + an inline `samini = sampro` rebase preserved at the call site. The rebase resolves through the case(2) ASSOCIATE alias to `state%solute%cumulative%samini`. Comment at the call site explains that the rebase is physics (mass-balance anchoring), not cohort policy.
+- `isqbot`, `isqtop`, `isqdra` zeroing remains inline inside `solute(task=2)` — these are instantaneous per-step fluxes (reset every step unconditionally, not flag-gated). They are owned by `solute_state_t` directly, not by a cohort.
+- check-full byte-identical at every commit; pFUnit 650 tests passing.
 
-## Phase C scope (pending)
+### Phase B finding: solute has NO ownership-asymmetry hazard
 
-Update the migration playbook (discovery template Section 2 schema; design template) so future subsystem migrations classify owned fields by reset cadence (instantaneous / intermediate / cumulative) upfront, and pre-define cohort sub-records as part of the state-type design.
+Unlike Phase A's surfacewater/drainage finding, solute's reset block is the sole writer of all 15 cohort fields — there is no second site that zeros a strict subset. The full cohort `reset()` is a clean drop-in.
+
+## Migration playbook update (Phase C — see ADR 0033 + plan)
+
+The cohort pattern is now part of the migration playbook. Future subsystem migration discoveries classify owned fields by reset cadence (instantaneous / intermediate / cumulative) upfront, and design specs pre-define cohort sub-records as part of the state-type design. See discovery-template Section 2 update and design-template addendum (committed in CRR Phase C).
+
+## Consequences (final)
+
+(+) Reset logic is co-located with the data; pFUnit can drive a populated cohort through `reset()` without SWAP scaffolding.
+(+) Adding a new cumulative field is one line in the cohort type; no need to remember to zero it in N reset blocks.
+(+) Reset cadence is now part of the type signature — readers see `intermediate` vs `cumulative` and immediately know reset semantics.
+(+) Field paths self-document: `state%X%cumulative%Y` says "this is a cumulative balance variable in subsystem X."
+(–) Field paths grow one level deeper. ASSOCIATE blocks mitigate this for compute-heavy bodies.
+(–) Asymmetric subset-resets (the Task A5 finding for surfacewater/drainage) cannot be enforced by the cohort type; they remain a per-call-site policy. Solute has no asymmetric reset, so the Phase A pattern works clean there.
+(–) Two additional alias forms (`sl => state%solute`, `sw => state%surfacewater`) require greps tailored beyond `state%X%` — Phase B Task B3 caught this when initial inventory missed two ASSOCIATE blocks. Future migrations should grep for ALL alias forms during the audit step.
 
 ## References
 
 - Plan: `docs/superpowers/plans/2026-05-10-cumulative-reset-refactor.md`
-- Phase A commit chain: `50ad0a2` → `55fa08f` → `45d4514` → `e43fac3` → `e5b8f7d`
+- Phase A commit chain: `50ad0a2` → `55fa08f` → `45d4514` → `e43fac3` → `e5b8f7d` → `fba1288`
+- Phase B commit chain: `8208382` → `d4c0cb5` → `ed30706` → `fea3cf4`
 - Predecessor state migrations: ADR 0030 (surfacewater), ADR 0031 (drainage), ADR 0032 (solute).
