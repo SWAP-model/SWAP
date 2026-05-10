@@ -59,6 +59,14 @@ contains
       call get_optional_int_with_default(sec, 'swbotb3impl', config%swbotb3impl, 0, &
                                          'bottom_boundary.swbotb3impl', errors)
 
+      ! Phase 0 B-0.1: SWBOTB=2 sine-wave scalars (used when sw2=1).
+      call get_optional_real_with_default(sec, 'sinmax', config%sinmax, 0.0_real64, &
+                                          'bottom_boundary.sinmax', errors)
+      call get_optional_real_with_default(sec, 'sinamp', config%sinamp, 0.0_real64, &
+                                          'bottom_boundary.sinamp', errors)
+      call get_optional_real_with_default(sec, 'sinave', config%sinave, 0.0_real64, &
+                                          'bottom_boundary.sinave', errors)
+
       ! Phase 4f cleanup: sub-mode switches.
       call get_optional_int_with_default(sec, 'sw2',     config%sw2,     1, &
                                          'bottom_boundary.sw2',     errors)

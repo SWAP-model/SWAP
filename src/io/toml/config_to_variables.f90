@@ -738,7 +738,12 @@ contains
             end if
          end block
       case (2)
-         sw2 = config%bottom_boundary%sw2
+         sw2    = config%bottom_boundary%sw2
+         ! Phase 0 B-0.1: populate sine-wave scalars regardless of sw2;
+         ! the gate in boundbottom.f90:104 protects the non-sine path.
+         sinmax = config%bottom_boundary%sinmax
+         sinamp = config%bottom_boundary%sinamp
+         sinave = config%bottom_boundary%sinave
          if (config%bottom_boundary%sw2 == 2) then
             block
                use iso_fortran_env, only: real64

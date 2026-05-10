@@ -34,6 +34,13 @@ module bottom_boundary_config_mod
       ! SWBOTB=1 inline alternative (kept for backward compat with non-BBC paths)
       real(real64), allocatable :: swc_table(:,:)
 
+      ! SWBOTB=2 sine-wave bottom flux scalars (sw2=1).
+      ! Phase 0 B-0.1: promoted from legacy variables.f90 lines 947-949.
+      ! Used in boundbottom.f90:104 when swbotb=2 .and. sw2=1.
+      real(real64) :: sinmax = 0.0_real64  ! Day of year with maximum bottom flux
+      real(real64) :: sinamp = 0.0_real64  ! Amplitude of bottom flux (L/T)
+      real(real64) :: sinave = 0.0_real64  ! Average value of bottom flux (L/T)
+
       ! SWBOTB=2 inline
       real(real64), allocatable :: qbot_table(:,:)
 
@@ -84,6 +91,15 @@ contains
                'bottom_boundary')
          end if
       case (2)
+         if (self%sw2 == 1) then
+            ! Sine-wave path: validate sine parameters (Phase 0 B-0.1).
+            call check_real_range(self%sinmax, 0.0_real64, 366.0_real64, &
+                                  'bottom_boundary.sinmax', errors)
+            call check_real_range(self%sinamp, -1.0e3_real64, 1.0e3_real64, &
+                                  'bottom_boundary.sinamp', errors)
+            call check_real_range(self%sinave, -1.0e3_real64, 1.0e3_real64, &
+                                  'bottom_boundary.sinave', errors)
+         end if
          if (self%sw2 == 2 .and. .not. has_file(self%qbot2_file)) then
             call errors%append(ERR_VALIDATION_REQUIRED, &
                "bottom_boundary.qbot2_file required when swbotb=2 and sw2=2", &

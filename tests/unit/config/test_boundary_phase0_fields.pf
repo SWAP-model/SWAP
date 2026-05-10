@@ -1,0 +1,114 @@
+! Tests for Phase 0 B-0.1: sinmax / sinamp / sinave scalars promoted
+! into bottom_boundary_config_t.
+!
+! Covers: (a) default values, (b) TOML round-trip read, (c) validator
+! acceptance, (d) validator rejection on out-of-range sinmax.
+!
+! Spec: docs/superpowers/specs/2026-05-10-state-migration-boundary-design.md
+! Plan: docs/superpowers/plans/2026-05-10-boundary-state-migration.md  B-0.1
+
+! -----------------------------------------------------------------------
+! (a) Default-value tests — no TOML involved, just struct initialisation.
+! -----------------------------------------------------------------------
+
+@test
+subroutine test_sinmax_default_zero()
+   use funit
+   use iso_fortran_env, only: real64
+   use bottom_boundary_config_mod, only: bottom_boundary_config_t
+   type(bottom_boundary_config_t) :: c
+   @assertEqual(0.0_real64, c%sinmax, 1.0e-12_real64)
+end subroutine
+
+@test
+subroutine test_sinamp_default_zero()
+   use funit
+   use iso_fortran_env, only: real64
+   use bottom_boundary_config_mod, only: bottom_boundary_config_t
+   type(bottom_boundary_config_t) :: c
+   @assertEqual(0.0_real64, c%sinamp, 1.0e-12_real64)
+end subroutine
+
+@test
+subroutine test_sinave_default_zero()
+   use funit
+   use iso_fortran_env, only: real64
+   use bottom_boundary_config_mod, only: bottom_boundary_config_t
+   type(bottom_boundary_config_t) :: c
+   @assertEqual(0.0_real64, c%sinave, 1.0e-12_real64)
+end subroutine
+
+! -----------------------------------------------------------------------
+! (b) TOML round-trip — fixture bottom_boundary_swbotb2_sine.toml contains
+!     swbotb=2, sw2=1, sinmax=180.0, sinamp=-0.002, sinave=-0.001.
+! -----------------------------------------------------------------------
+
+@test
+subroutine test_sinmax_sinamp_sinave_toml_read()
+   use funit
+   use iso_fortran_env, only: real64
+   use tomlf, only: toml_table, toml_load
+   use bottom_boundary_config_mod, only: bottom_boundary_config_t
+   use read_bottom_boundary_toml_mod, only: read_bottom_boundary_toml
+   use error_mod, only: error_collection_t
+   type(toml_table), allocatable, target :: doc
+   type(toml_table), pointer             :: doc_ptr
+   type(bottom_boundary_config_t)        :: c
+   type(error_collection_t)              :: errors
+
+   call toml_load(doc, 'tests/unit/io/toml/fixtures/bottom_boundary_swbotb2_sine.toml')
+   doc_ptr => doc
+   call read_bottom_boundary_toml(doc_ptr, c, errors)
+
+   @assertFalse(errors%has_errors())
+   @assertEqual(2,        c%swbotb)
+   @assertEqual(1,        c%sw2)
+   @assertEqual(180.0_real64, c%sinmax, 1.0e-12_real64)
+   @assertEqual(-0.002_real64, c%sinamp, 1.0e-12_real64)
+   @assertEqual(-0.001_real64, c%sinave, 1.0e-12_real64)
+end subroutine
+
+! -----------------------------------------------------------------------
+! (c) Validator accepts swbotb=2, sw2=1 with in-range sine parameters.
+! -----------------------------------------------------------------------
+
+@test
+subroutine test_swbotb2_sw2_1_sine_valid_passes()
+   use funit
+   use iso_fortran_env, only: real64
+   use error_mod, only: error_collection_t
+   use bottom_boundary_config_mod, only: bottom_boundary_config_t
+   type(bottom_boundary_config_t) :: c
+   type(error_collection_t)       :: errors
+
+   c%swbotb = 2
+   c%sw2    = 1
+   c%sinmax = 91.0_real64
+   c%sinamp = -0.003_real64
+   c%sinave = -0.001_real64
+   call c%validate(errors)
+   @assertFalse(errors%has_errors())
+end subroutine
+
+! -----------------------------------------------------------------------
+! (d) Validator rejects sinmax out of range (> 366).
+! -----------------------------------------------------------------------
+
+@test
+subroutine test_swbotb2_sw2_1_sinmax_out_of_range_fails()
+   use funit
+   use iso_fortran_env, only: real64
+   use error_mod, only: error_collection_t, ERR_VALIDATION_OUT_OF_RANGE
+   use bottom_boundary_config_mod, only: bottom_boundary_config_t
+   type(bottom_boundary_config_t) :: c
+   type(error_collection_t)       :: errors
+
+   c%swbotb = 2
+   c%sw2    = 1
+   c%sinmax = 400.0_real64   ! out of [0, 366]
+   c%sinamp = -0.003_real64
+   c%sinave = -0.001_real64
+   call c%validate(errors)
+   @assertTrue(errors%has_errors())
+   @assertEqual(ERR_VALIDATION_OUT_OF_RANGE, errors%items(1)%code)
+end subroutine

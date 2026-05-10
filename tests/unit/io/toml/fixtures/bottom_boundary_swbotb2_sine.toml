@@ -1,0 +1,6 @@
+[bottom_boundary]
+swbotb = 2
+sw2    = 1
+sinmax = 180.0
+sinamp = -0.002
+sinave = -0.001
