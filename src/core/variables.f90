@@ -781,7 +781,7 @@
       real(8)   deepgw             ! hydraulic head in aquifer (L)
       real(8)   dimoca(macp)       ! Differential soil moisture capacity (/L)
       real(8)   disnod(macp+1)     ! Distance between actual node and upper node (L)
-      real(8)   drainl(Madr)       ! Drainage level (maximum of depth of drain and surface water level) (L)
+      ! real(8)   drainl(Madr)       ! Moved to drainage_state_t%drainl (ADR 0031)
       real(8)   drares(Madr)       ! Array with drainage resistance (T) for each drainage level
       real(8)   dz(macp)           ! Compartment thickness (L)
       real(8)   dznew(macp)        ! Desired thickness of compartments for soil water quality models (L)
@@ -877,8 +877,8 @@
       real(8)   qbot               ! Water flux through bottom of simulated soil column (L/T)
       real(8)   qbotab(mabbc*2)    ! Array with specified bottom flux (L/T) as function of time (T)
       real(8)   qbot_nonfrozen     ! Water flux through bottom of non-frozen soil column (L/T)
-      real(8)   qdra(Madr,macp)    ! Array with lateral drainage flux (L/T) for each drainage level and compartment
-      real(8)   qdrain(Madr)       ! Total lateral drainage flux (L/T) for each drainage level
+      ! real(8)   qdra(Madr,macp)    ! Moved to drainage_state_t%qdra (ADR 0031)
+      ! real(8)   qdrain(Madr)       ! Moved to drainage_state_t%qdrain (ADR 0031)
       real(8)   qdraincomp(macp)   ! Total lateral drainage flux (L/T) for each compartment
       real(8)   qdrtab(50)         ! Array with lateral drainage flux (L/T) as function of groundwater level (L)
       ! SS-SWST Phase 2 Task 11 C2: qdrtot removed — state%surfacewater%qdrtot owns it.
@@ -964,7 +964,7 @@
       ! SS-SWST Phase 2 Task 11 C2: vtair removed — state%surfacewater%vtair owns it.
       ! real(8)   vtair              ! Moved to surfacewater_state_t%vtair
       real(8)   wbalance           ! Cumulative water balance error (L)
-      real(8)   wetper(Madr)       ! Array with wet perimeter of drain (L) for each drainage level
+      ! real(8)   wetper(Madr)       ! Moved to drainage_state_t%wetper (ADR 0031)
       real(8)   z(macp)            ! Depth of a node (L)
       real(8)   ztopcp(macp)       ! Depth of top    boundary of layer(node) (L)
       real(8)   zbotcp(macp)       ! Depth of bottom boundary of layer(node) (L)
@@ -973,7 +973,7 @@
       real(8)   zbotdr(Madr)       ! Array with depth of drain bottom for each drain level
       real(8)   zi(macp)           ! Array with soil depths (L) used to specify initial soil water pressure heads
       real(8)   zintf              ! Depth (L) at which fine top layer ends and coarse sub layer starts
-      real(8)   ztopdislay(Madr)   ! Array with depth of top of model discharge layer for each drain level, see also swtopdislay (L)
+      ! real(8)   ztopdislay(Madr)   ! Moved to drainage_state_t%ztopdislay (ADR 0031)
       logical   fldrain            ! Flag indicating basic drainage
       logical   FlHydrLift         ! Flag indicating release of water from root to soil is allowed
       logical   fllowgwl           ! Flag indicating precribed groundwater level below bottom soil column
@@ -1291,7 +1291,8 @@
       ! cwout removed  (surfacewater_state_t%cwout)
       ! wls removed    (surfacewater_state_t%wls)
       ! SS-SWST Phase 2 Task 11 C2: hwlman/wlsold removed — state%surfacewater owns them.
-      real(8) owltab(Madr,2*maowl),qdrd
+      real(8) owltab(Madr,2*maowl)
+      ! real(8) qdrd                  ! Moved to drainage_state_t%qdrd (ADR 0031)
       ! hwlman removed (surfacewater_state_t%hwlman)
       ! wlsold removed (surfacewater_state_t%wlsold)
       ! SS-SWST Phase 2 Task 11 C2: overfl removed — state%surfacewater%overfl owns it.

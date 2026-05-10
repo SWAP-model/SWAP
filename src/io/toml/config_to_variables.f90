@@ -284,12 +284,12 @@ contains
       ! DRAMET=2 (Hooghoudt/Ernst). Mirrors readswap.f90:1850-1875.
       ! lm is authored in metres; the legacy reader does the m->cm
       ! conversion (`l(1) = 100*lm2`) so we replicate that here.
-      ! wetper / zbotdr go into the level-1 entry of the per-level
-      ! arrays; ipos / khtop / khbot / kvtop / kvbot / zintf / geofac
-      ! are scalar globals.
+      ! ADR 0031 Phase 2 Task 5: wetper(1) removed — state%drainage%wetper(1)
+      ! is seeded from config%drain%wetper in drainage_init instead.
+      ! zbotdr goes into the level-1 entry of the per-level array;
+      ! ipos / khtop / khbot / kvtop / kvbot / zintf / geofac are scalar globals.
       if (config%drain%dramet == 2) then
          L(1)      = 100.0d0 * config%drain%lm
-         wetper(1) = config%drain%wetper
          zbotdr(1) = config%drain%zbotdr_basic
          shape     = config%drain%shape
          ipos      = config%drain%ipos
@@ -428,7 +428,13 @@ contains
       FacDpthInf   = config%drain%surface_runoff%facdpthinf
       cofintfl     = config%drain%surface_runoff%cofintfl
       expintfl     = config%drain%surface_runoff%expintfl
-      geofac       = config%drain%surface_runoff%geofac
+      ! ADR 0031: gate the surface_runoff geofac write to avoid overwriting
+      ! the ipos==5 (Ernst geometry factor) write at line 306. Two distinct
+      ! TOML fields map to one legacy global; the gate preserves both
+      ! intended behaviors. Schema-level reconciliation deferred.
+      if (config%drain%ipos /= 5) then
+         geofac = config%drain%surface_runoff%geofac
+      end if
       ! NOTE: do NOT write gwlconv from drainage.surface_runoff. Legacy
       ! reads gwlconv exactly once (readswap.f90:960, in the .swp Part 13
       ! numerical block) and there is no second read in the .dra reader.

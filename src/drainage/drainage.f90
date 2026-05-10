@@ -81,17 +81,19 @@ module drainage_mod
 
 contains
 
-   !> Allocate and seed all per-level arrays in state%drainage from the
-   !! legacy globals.  Called from swap_main AFTER config_to_variables so
-   !! that config-sourced geometry (e.g. wetper(1) for dramet==2) is
-   !! already present in the globals and can be mirrored into state.
-   !! qdra/qdrain are zeroed because they are computed each timestep and
-   !! have no pre-compute config value.
-   subroutine drainage_init(state)
+   !> Allocate and initialise all per-level arrays in state%drainage.
+   !! Called from swap_main AFTER config_to_variables so that
+   !! config-sourced geometry (e.g. wetper for dramet==2) can be
+   !! seeded directly from config into state.
+   !! ADR 0031 Phase 2 Task 5: drainl/wetper/ztopdislay/qdrd globals
+   !! deleted; geometry is now seeded from config, flux arrays zeroed.
+   subroutine drainage_init(state, config)
       use, intrinsic :: iso_fortran_env, only: real64
       use swap_state_mod, only: swap_state_t
-      use variables, only: nrlevs, numnod, drainl, wetper, ztopdislay, qdrd
-      type(swap_state_t), intent(inout) :: state
+      use swap_config_mod, only: swap_config_t
+      use variables, only: nrlevs, numnod
+      type(swap_state_t),  intent(inout) :: state
+      type(swap_config_t), intent(in)    :: config
 
       if (.not. allocated(state%drainage%qdrain))     allocate(state%drainage%qdrain(nrlevs))
       if (.not. allocated(state%drainage%drainl))     allocate(state%drainage%drainl(nrlevs))
@@ -99,16 +101,19 @@ contains
       if (.not. allocated(state%drainage%ztopdislay)) allocate(state%drainage%ztopdislay(nrlevs))
       if (.not. allocated(state%drainage%qdra))       allocate(state%drainage%qdra(nrlevs, numnod))
 
-      ! Seed geometry arrays from the legacy globals, which carry any
-      ! config-set values (e.g. wetper(1) from dramet==2 in
-      ! config_to_variables).  This is the initial state%drainage sync;
-      ! bocodre then keeps them current each timestep via dual-write.
-      state%drainage%drainl(1:nrlevs)     = drainl(1:nrlevs)
-      state%drainage%wetper(1:nrlevs)     = wetper(1:nrlevs)
-      state%drainage%ztopdislay(1:nrlevs) = ztopdislay(1:nrlevs)
-      state%drainage%qdrd                 = qdrd
+      ! Geometry arrays: start at zero; seed state%drainage%wetper(1) from config when
+      ! dramet==2 (Hooghoudt/Ernst) — the only config-sourced geometry
+      ! value.  drainl/ztopdislay are computed each timestep by bocodre;
+      ! qdrd is computed by the secondary drainage block.
+      state%drainage%drainl     = 0.0_real64
+      state%drainage%wetper     = 0.0_real64
+      state%drainage%ztopdislay = 0.0_real64
+      state%drainage%qdrd       = 0.0_real64
+      if (config%drain%dramet == 2) then
+         state%drainage%wetper(1) = config%drain%wetper
+      end if
 
-      ! Flux arrays start at zero — no config source; computed each step.
+      ! Flux arrays start at zero — computed each timestep.
       state%drainage%qdrain = 0.0_real64
       state%drainage%qdra   = 0.0_real64
    end subroutine drainage_init
@@ -171,7 +176,8 @@ contains
     !! bidirectional flow is allowed based on resistance values.
     !!@endnote
     !!
-      use variables, only: dramet,gwl,zbotdr,basegw,l,ipos,khtop,khbot,kvtop,kvbot,entres,wetper,zintf,geofac,swdtyp,      &
+      ! ADR 0031 Phase 2 Task 5: wetper removed from use-list; read from state%drainage%wetper(1).
+      use variables, only: dramet,gwl,zbotdr,basegw,l,ipos,khtop,khbot,kvtop,kvbot,entres,zintf,geofac,swdtyp,      &
 owltab,t1900,swallo,drares,infres,qdrtab,nrlevs,swnrsrf,cofintfl,expintfl,dt,shape,FlMacropore,NumLevRapDra,swliminf,nowltab
       use array_utils, only: afgen
 
@@ -236,13 +242,13 @@ owltab,t1900,swallo,drares,infres,qdrtab,nrlevs,swnrsrf,cofintfl,expintfl,dt,sha
                do 10 i = 1, 5, 2
                   fx = fx + (4*exp(-2*i*x))/(i*(1.0d0 - exp(-2*i*x)))
 10                continue
-                  eqd = pi*l(1)/8/(log(l(1)/wetper(1)) + fx)
+                  eqd = pi*l(1)/8/(log(l(1)/state%drainage%wetper(1)) + fx)
                   else
                   if (x .lt. 1.0d-6) then
                      eqd = dbot
                   else
                      fx = pi**2/(4*x) + log(x/(2*pi))
-                     eqd = pi*l(1)/8/(log(l(1)/wetper(1)) + fx)
+                     eqd = pi*l(1)/8/(log(l(1)/state%drainage%wetper(1)) + fx)
                   end if
                   end if
                   if (eqd .gt. dbot) eqd = dbot
@@ -266,7 +272,7 @@ owltab,t1900,swallo,drares,infres,qdrtab,nrlevs,swnrsrf,cofintfl,expintfl,dt,sha
                   rver = max(gwldra - zintf, 0.0d0)/kvtop +                   &
            &                (min(zintf, gwldra) - zbotdr(1))/kvbot
                   rhor = l(1)*l(1)/(8*khbot*dbot)
-                  rrad = l(1)/(pi*dsqrt(khbot*kvbot))*log(dbot/wetper(1))
+                  rrad = l(1)/(pi*dsqrt(khbot*kvbot))*log(dbot/state%drainage%wetper(1))
                   totres = rver + rhor + rrad + entres
                   qdrain(1) = dh/totres
 
@@ -282,7 +288,7 @@ owltab,t1900,swallo,drares,infres,qdrtab,nrlevs,swnrsrf,cofintfl,expintfl,dt,sha
                   rhor = l(1)*l(1)/(8*khtop*(zbotdr(1) - zintf) +               &
              &                             8*khbot*(zintf - zimp))
                   rrad = l(1)/(pi*dsqrt(khtop*kvtop))*log((geofac*               &
-             &                (zbotdr(1) - zintf))/wetper(1))
+             &                (zbotdr(1) - zintf))/state%drainage%wetper(1))
                   totres = rver + rhor + rrad + entres
                   qdrain(1) = dh/totres
                end if
@@ -412,9 +418,10 @@ owltab,t1900,swallo,drares,infres,qdrtab,nrlevs,swnrsrf,cofintfl,expintfl,dt,sha
                ! cqdra,cqdrain*,qdrtot — now written only via state%surfacewater.
                ! SS-DRST Phase 2 Task 3: qdra dropped — all qdra reads/writes use state%drainage%qdra.
                ! SS-DRST Phase 2 Task 4: qdrain dropped — bocodrb writes state%drainage%qdrain directly.
+               ! ADR 0031 Phase 2 Task 5: zTopDisLay removed from use-list; declared local below.
                use variables, only: gwl,nrlevs,numnod,dramet,swdtyp,NumLevRapDra,owltab,nowltab,t1900, &
                   zbotdr,flzerointr,flzerocumu,swdivd,swdislay,swtopdislay,fTopDisLay, &
-                  zTopDisLay,dz,ksatfit,ksatexm,fluseksatexm,layer,cofani,l,Swdivdinf,Swnrsrf,    &
+                  dz,ksatfit,ksatexm,fluseksatexm,layer,cofani,l,Swdivdinf,Swnrsrf,    &
                   SwTopnrsrf,dt,FacDpthInf,madr
                use array_utils, only: afgen
 
@@ -422,7 +429,7 @@ owltab,t1900,swallo,drares,infres,qdrtab,nrlevs,swnrsrf,cofintfl,expintfl,dt,sha
 
                !     local
                integer node, level
-               real(8) zCum, difzTopDisLay(madr), ratio, ratiodz, sumqdr(madr), dh
+               real(8) zCum, zTopDisLay(madr), difzTopDisLay(madr), ratio, ratiodz, sumqdr(madr), dh
                !, temptab(2*maowl) ????
                integer nodeTopDisLay(madr)
                CHARACTER(len=33) messag

@@ -434,19 +434,22 @@ contains
       iew0 = iew0 + 0.1d0*ew0*dt
 
       ! SS-SWST Phase 2 Task 7: iqdra/inqdra* accumulated directly into state; global dropped.
+      ! ADR 0031 Phase 2 Task 5: qdra global deleted; read from state%drainage%qdra.
       state%surfacewater%iqdra = state%surfacewater%iqdra + qdrats + QRapDra*dt
       do node = 1,numnod
         qdraincomp(node) = 0.d0
         do level = 1,nrlevs
-          if (allocated(state%surfacewater%inqdra)) then
-            state%surfacewater%inqdra(level,node) = state%surfacewater%inqdra(level,node) + qdra(level,node)*dt
-            if (qdra(level,node) > 0.0d0) then
-               state%surfacewater%inqdra_out(level,node) = state%surfacewater%inqdra_out(level,node) + qdra(level,node)*dt
+          if (allocated(state%surfacewater%inqdra) .and. allocated(state%drainage%qdra)) then
+            state%surfacewater%inqdra(level,node) = state%surfacewater%inqdra(level,node) + state%drainage%qdra(level,node)*dt
+            if (state%drainage%qdra(level,node) > 0.0d0) then
+               state%surfacewater%inqdra_out(level,node) = state%surfacewater%inqdra_out(level,node) + state%drainage%qdra(level,node)*dt
             else
-               state%surfacewater%inqdra_in(level,node)  = state%surfacewater%inqdra_in(level,node) - qdra(level,node)*dt
+               state%surfacewater%inqdra_in(level,node)  = state%surfacewater%inqdra_in(level,node) - state%drainage%qdra(level,node)*dt
             end if
           end if
-          qdraincomp(node) = qdra(level,node) + qdraincomp(node)
+          if (allocated(state%drainage%qdra)) then
+            qdraincomp(node) = state%drainage%qdra(level,node) + qdraincomp(node)
+          end if
         end do
       end do
 

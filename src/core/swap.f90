@@ -178,9 +178,11 @@ if (iTask == 1) then
    call SoilWater(1, state)
    if (swuseCN == 1) call CNmethod(1)
 
-!  allocate and zero drainage state arrays (qdra, qdrain, drainl, wetper, ztopdislay)
-!  unconditionally — these are sized off nrlevs/numnod which are always set by TimeControl(1).
-   call drainage_init(state)
+!  Allocate and initialise drainage state arrays.  Config is passed so
+!  drainage_init can seed state%drainage%wetper(1) from config%drain%wetper
+!  (dramet==2) without reading the now-deleted legacy global wetper.
+!  ADR 0031 Phase 2 Task 5: drainl/wetper/ztopdislay/qdrd globals deleted.
+   call drainage_init(state, config)
 
 !  initialize SurfaceWater management variables
    if (flSurfaceWater) call SurfaceWater(1, state, request_smaller_dt)

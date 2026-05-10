@@ -318,7 +318,7 @@
       deepgw             = 0.0d0 
       dimoca             = 0.0d0 
       disnod             = 0.0d0 
-      drainl             = 0.0d0 
+      ! drainl             = 0.0d0  ! Moved to drainage_state_t — drainage_init handles (ADR 0031)
       drares             = 0.0d0 
       dz                 = 0.0d0 
       dznew              = 0.0d0 
@@ -404,8 +404,8 @@
       qbot               = 0.0d0 
       qbotab             = 0.0d0 
       qbot_nonfrozen     = 0.0d0 
-      qdra               = 0.0d0 
-      qdrain             = 0.0d0 
+      ! qdra               = 0.0d0   ! Moved to drainage_state_t — drainage_init handles (ADR 0031)
+      ! qdrain             = 0.0d0   ! Moved to drainage_state_t — drainage_init handles (ADR 0031)
       qdraincomp         = 0.0d0 
       qdrtab             = 0.0d0 
       ! SS-SWST Phase 2 Task 11 C3: qdrtot removed (state%surfacewater%qdrtot initialized in surfacewater_state_t).
@@ -453,7 +453,7 @@
       volm1              = 0.0d0 
       ! SS-SWST Phase 2 Task 11 C3: vtair removed (state%surfacewater%vtair initialized in surfacewater_state_t).
       wbalance           = 0.0d0 
-      wetper             = 0.0d0 
+      ! wetper             = 0.0d0   ! Moved to drainage_state_t — drainage_init handles (ADR 0031)
       z                  = 0.0d0 
       ztopcp             = 0.0d0
       zbotcp             = 0.0d0
@@ -462,7 +462,7 @@
       zbotdr             = 0.0d0 
       zi                 = 0.0d0 
       zintf              = 0.0d0 
-      ztopdislay         = 0.0d0 
+      ! ztopdislay         = 0.0d0   ! Moved to drainage_state_t — drainage_init handles (ADR 0031)
       fldrain            = .false. 
       fllowgwl           = .false. 
       flrunon            = .false. 
@@ -743,7 +743,7 @@
       ! All default to 0 in surfacewater_state_t.
       owltab                = 0.0d0
       ! SS-SWST Phase 2 Task 11 C3: hwlman/wlsold removed (state%surfacewater owns them, default=0).
-      qdrd                  = 0.0d0
+      ! qdrd                  = 0.0d0  ! Moved to drainage_state_t — drainage_init handles (ADR 0031)
       flsurfacewater       = .false.
       ! SS-SWST Phase 2 Task 11 C3: overfl removed (state%surfacewater%overfl, default=.false.).
 

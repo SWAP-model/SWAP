@@ -44,7 +44,8 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
 
 !     local
       integer level, node
-      real(8) zCum,difzTopDisLay(madr),ratio,ratiodz,sumqdr(madr),dh
+      ! ADR 0031 Phase 2 Task 5: zTopDisLay declared local (was global ztopdislay).
+      real(8) zCum,zTopDisLay(madr),difzTopDisLay(madr),ratio,ratiodz,sumqdr(madr),dh
       integer nodeTopDisLay(madr)
       character(len=300) messag
 
@@ -129,9 +130,10 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
 
 ! --- partition drainage flux over compartments
 
+      ! ADR 0031 Phase 2 Task 5: qdra global deleted; state%drainage%qdra is
+      ! the sole working array throughout.  Sync loops removed.
       do level=1,nrlevs
          do node = 1,numnod
-            qdra(level,node) = 0.0d0
             state%drainage%qdra(level,node) = 0.0d0
          end do
       end do
@@ -143,13 +145,6 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
          call divdra (numnod,nrlevs,dz,ksatfit,ksatexm,fluseksatexm,    &
             layer,cofani,gwl,l,state%drainage%qdrain,state%drainage%qdra,Swdivdinf,Swnrsrf, &
      &      SwTopnrsrf,Zbotdr,dt,FacDpthInf,owltab,t1900)
-
-         ! sync global qdra from state after divdra (redistribution block still uses global)
-         do node = 1, numnod
-           do level = 1, nrlevs
-             qdra(level,node) = state%drainage%qdra(level,node)
-           end do
-         end do
 
 !        redistribute qdrain with new top boundary for discharge layers
          if(swdislay.eq.2) then
@@ -175,9 +170,9 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
                   ratiodz =                                             &
      &                     difzTopDisLay(level)/dz(nodeTopDisLay(level))
                   sumqdr(level) =                                       &
-     &                        ratiodz * qdra(level,nodeTopDisLay(level))
+     &                        ratiodz * state%drainage%qdra(level,nodeTopDisLay(level))
                   do node = nodeTopDisLay(level)+1,numnod
-                     sumqdr(level) =  sumqdr(level) + qdra(level,node)
+                     sumqdr(level) =  sumqdr(level) + state%drainage%qdra(level,node)
                   end do
                   if( dabs(sumqdr(level)) .lt. 1.0d-8)then
                      ratio = 1.0d0
@@ -186,12 +181,12 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
                   end if
 !                 redistribute drainwater fluxes
                   do node = 1,nodeTopDisLay(level)-1
-                     qdra(level,node) = 0.0d0
+                     state%drainage%qdra(level,node) = 0.0d0
                   end do
-                  qdra(level,nodeTopDisLay(level)) =                    &
-     &                qdra(level,nodeTopDisLay(level)) * ratio * ratiodz
+                  state%drainage%qdra(level,nodeTopDisLay(level)) =                    &
+     &                state%drainage%qdra(level,nodeTopDisLay(level)) * ratio * ratiodz
                   do node = nodeTopDisLay(level)+1,numnod
-                     qdra(level,node) = qdra(level,node)* ratio
+                     state%drainage%qdra(level,node) = state%drainage%qdra(level,node)* ratio
                   end do
                endif
             end do
@@ -201,7 +196,7 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
 !cD        do level=1,nrlevs
 !cD           qdrain_new(level) = 0.0d0
 !cD           do node = 1,numnod
-!cD              qdrain_new(level) = qdrain_new(level) + qdra(level,node)
+!cD              qdrain_new(level) = qdrain_new(level) + state%drainage%qdra(level,node)
 !cD           end do
 !cD           if (abs(qdrain_new(level)-qdrain_old(level)).gt.0.001) then
 !cD              write(messag,55)
@@ -214,17 +209,9 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
 !cD           endif
 !cD        end do
 
-         ! dual-write qdra after divdra (and possible redistribution)
-         do node = 1, numnod
-           do level = 1, nrlevs
-             state%drainage%qdra(level,node) = qdra(level,node)
-           end do
-         end do
-
       else
 ! --- drainage flux through lowest compartment
         do level = 1,nrlevs
-           qdra(level,numnod) = state%drainage%qdrain(level)
            state%drainage%qdra(level,numnod) = state%drainage%qdrain(level)
         end do
       endif
