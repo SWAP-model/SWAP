@@ -108,7 +108,9 @@ contains
       real(8) FacAniso, CondSatHorAv, CondSatVerAV, BotDisLay(Madr)
       real(8) ThickCum
       real(8) CumThickCondHor, CumThickCondVer, DistDrain(Madr), Dum1, Dum2
-      real(8) FluxDr(Madr), FluxDrComp(Madr, MACP), FlowDrDisch(Madr)
+      real(8) FluxDr(:)          ! assumed-shape (was FluxDr(Madr))
+      real(8) FluxDrComp(:,:)    ! assumed-shape (was FluxDrComp(Madr,MACP))
+      real(8) FlowDrDisch(Madr)
       real(8) HelpFl(Madr)
       real(8) HelpTh, HelpTr, MaxDepthDislay(Madr), CondSatHor(MACP)
       real(8) CondSatVer(MACP), Small, ThickComp(MACP), ThickCompSatWatLev
