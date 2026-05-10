@@ -510,13 +510,13 @@ contains
       if (allocated(state%surfacewater%cqdrain)) then
         do level = 1,nrlevs
           ! infiltration
-          if (qdrain(level).lt.0.0d0) then
-            state%surfacewater%cqdrainin(level) = state%surfacewater%cqdrainin(level) - qdrain(level)*dt
+          if (state%drainage%qdrain(level).lt.0.0d0) then
+            state%surfacewater%cqdrainin(level) = state%surfacewater%cqdrainin(level) - state%drainage%qdrain(level)*dt
           ! drainage
-          else if (qdrain(level).gt.0.0d0) then
-            state%surfacewater%cqdrainout(level) = state%surfacewater%cqdrainout(level) + qdrain(level)*dt
+          else if (state%drainage%qdrain(level).gt.0.0d0) then
+            state%surfacewater%cqdrainout(level) = state%surfacewater%cqdrainout(level) + state%drainage%qdrain(level)*dt
           endif
-          state%surfacewater%cqdrain(level) = state%surfacewater%cqdrain(level) + qdrain(level)*dt
+          state%surfacewater%cqdrain(level) = state%surfacewater%cqdrain(level) + state%drainage%qdrain(level)*dt
         enddo
       end if
 

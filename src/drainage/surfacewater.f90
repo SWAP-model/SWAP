@@ -126,6 +126,11 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
 ! --- calculate lateral drainage
       call bocodre (dh, state)
 
+      ! SS-DRST Phase 2 Task 2: sync state%drainage%qdrain from global after bocodre
+      ! so that divdra call and subsequent reads see up-to-date values via state.
+      ! Task 4 drops the global write; this sync is removed when global is deleted.
+      state%drainage%qdrain = qdrain(1:nrlevs)
+
 ! --- partition drainage flux over compartments
 
       do level=1,nrlevs
@@ -140,8 +145,15 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
 !cD           qdrain_old(level) = qdrain(level)
 !cD        end do
          call divdra (numnod,nrlevs,dz,ksatfit,ksatexm,fluseksatexm,    &
-            layer,cofani,gwl,l,qdrain,qdra,Swdivdinf,Swnrsrf,           &
+            layer,cofani,gwl,l,state%drainage%qdrain,state%drainage%qdra,Swdivdinf,Swnrsrf, &
      &      SwTopnrsrf,Zbotdr,dt,FacDpthInf,owltab,t1900)
+
+         ! sync global qdra from state after divdra (redistribution block still uses global)
+         do node = 1, numnod
+           do level = 1, nrlevs
+             qdra(level,node) = state%drainage%qdra(level,node)
+           end do
+         end do
 
 !        redistribute qdrain with new top boundary for discharge layers
          if(swdislay.eq.2) then
@@ -174,7 +186,7 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
                   if( dabs(sumqdr(level)) .lt. 1.0d-8)then
                      ratio = 1.0d0
                   else
-                     ratio = qdrain(level)/sumqdr(level)
+                     ratio = state%drainage%qdrain(level)/sumqdr(level)
                   end if
 !                 redistribute drainwater fluxes
                   do node = 1,nodeTopDisLay(level)-1
@@ -216,15 +228,15 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
       else
 ! --- drainage flux through lowest compartment
         do level = 1,nrlevs
-           qdra(level,numnod) = qdrain(level)
-           state%drainage%qdra(level,numnod) = qdrain(level)
+           qdra(level,numnod) = state%drainage%qdrain(level)
+           state%drainage%qdra(level,numnod) = state%drainage%qdrain(level)
         end do
       endif
 
       ! SS-SWST Phase 2 Task 11: qdrtot global write dropped; only state written.
       state%surfacewater%qdrtot = 0.0d0
       do level=1,nrlevs
-          state%surfacewater%qdrtot = state%surfacewater%qdrtot + qdrain(level)
+          state%surfacewater%qdrtot = state%surfacewater%qdrtot + state%drainage%qdrain(level)
       end do
 
       return

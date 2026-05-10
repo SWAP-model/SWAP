@@ -581,6 +581,11 @@ owltab,t1900,swallo,drares,infres,qdrtab,nrlevs,swnrsrf,cofintfl,expintfl,dt,sha
                   state%surfacewater%qdrtot = state%surfacewater%qdrtot + qdrain(level)
                end do
 
+               ! SS-DRST Phase 2 Task 2: dual-write qdrain to state so cross-subsystem
+               ! readers (surfacewater.f90 WLEVBAL, waterbalance.f90 integral) can read
+               ! state%drainage%qdrain. Task 4 drops this global write.
+               state%drainage%qdrain = qdrain(1:nrlevs)
+
                ! SS-SWST Phase 2 Task 11 B1: qdra still written to global for divdra callers
                ! (frozencond.f90 divdra call); state also kept current.
                do node = 1, numnod
