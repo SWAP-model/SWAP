@@ -10,6 +10,7 @@
 module swap_state_mod
    use surfacewater_state_mod, only: surfacewater_state_t
    use drainage_state_mod,     only: drainage_state_t
+   use solute_state_mod,       only: solute_state_t
    implicit none
    private
    public :: swap_state_t
@@ -17,6 +18,7 @@ module swap_state_mod
    type :: swap_state_t
       type(surfacewater_state_t) :: surfacewater
       type(drainage_state_t)     :: drainage
+      type(solute_state_t)       :: solute
    end type swap_state_t
 
 end module swap_state_mod

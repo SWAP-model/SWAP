@@ -1,0 +1,74 @@
+! Tests for solute_state_t — typed state record for the solute
+! subsystem. Phase 1 of the solute state-migration arc.
+!
+! See docs/superpowers/specs/2026-05-10-state-migration-solute-design.md.
+
+@test
+subroutine test_solute_state_default_scalars()
+   use funit
+   use iso_fortran_env, only: real64
+   use solute_state_mod, only: solute_state_t
+   type(solute_state_t) :: sl
+
+   @assertEqual(0.0_real64, sl%samini,   1.0e-12_real64)
+   @assertEqual(0.0_real64, sl%sampro,   1.0e-12_real64)
+   @assertEqual(0.0_real64, sl%samcra,   1.0e-12_real64)
+   @assertEqual(0.0_real64, sl%solbal,   1.0e-12_real64)
+   @assertEqual(0.0_real64, sl%dectot,   1.0e-12_real64)
+   @assertEqual(0.0_real64, sl%rottot,   1.0e-12_real64)
+   @assertEqual(0.0_real64, sl%sqprec,   1.0e-12_real64)
+   @assertEqual(0.0_real64, sl%sqirrig,  1.0e-12_real64)
+   @assertEqual(0.0_real64, sl%sqdra,    1.0e-12_real64)
+   @assertEqual(0.0_real64, sl%sqbot,    1.0e-12_real64)
+   @assertEqual(0.0_real64, sl%sqsur,    1.0e-12_real64)
+   @assertEqual(0.0_real64, sl%sqrap,    1.0e-12_real64)
+   @assertEqual(0.0_real64, sl%csurf,    1.0e-12_real64)
+   @assertEqual(0.0_real64, sl%cpond,    1.0e-12_real64)
+   @assertEqual(0.0_real64, sl%cdrain,   1.0e-12_real64)
+   @assertEqual(0.0_real64, sl%cseep,    1.0e-12_real64)
+   @assertEqual(0.0_real64, sl%dtsolu,   1.0e-12_real64)
+end subroutine test_solute_state_default_scalars
+
+@test
+subroutine test_solute_state_arrays_unallocated()
+   use funit
+   use solute_state_mod, only: solute_state_t
+   type(solute_state_t) :: sl
+
+   @assertFalse(allocated(sl%cml))
+   @assertFalse(allocated(sl%cmsy))
+end subroutine test_solute_state_arrays_unallocated
+
+@test
+subroutine test_solute_state_array_allocation()
+   ! Caller (solute_init / main loop) allocates per-node arrays.
+   ! Verify the allocation pattern works.
+   use funit
+   use iso_fortran_env, only: real64
+   use solute_state_mod, only: solute_state_t
+   type(solute_state_t) :: sl
+   integer, parameter :: numnod = 10
+
+   allocate(sl%cml(numnod));   sl%cml  = 0.0_real64
+   allocate(sl%cmsy(numnod));  sl%cmsy = 0.0_real64
+
+   @assertTrue(allocated(sl%cml))
+   @assertTrue(allocated(sl%cmsy))
+   @assertEqual(numnod, size(sl%cml))
+   @assertEqual(numnod, size(sl%cmsy))
+end subroutine test_solute_state_array_allocation
+
+@test
+subroutine test_solute_state_independent_instances()
+   ! Two instances must be independent (no shared module storage).
+   use funit
+   use iso_fortran_env, only: real64
+   use solute_state_mod, only: solute_state_t
+   type(solute_state_t) :: sl_a, sl_b
+
+   sl_a%samini = 1.5_real64
+   sl_b%samini = -2.5_real64
+
+   @assertEqual(1.5_real64,  sl_a%samini, 1.0e-12_real64)
+   @assertEqual(-2.5_real64, sl_b%samini, 1.0e-12_real64)
+end subroutine test_solute_state_independent_instances

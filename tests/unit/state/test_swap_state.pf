@@ -1,6 +1,5 @@
 ! Tests for swap_state_t — top-level aggregator of all per-subsystem
-! typed state records. Phase 1 starts with only the surface-water
-! subsystem migrated. Each subsequent migration arc adds a field.
+! typed state records. Each migration arc adds a new subsystem field.
 
 @test
 subroutine test_swap_state_has_surfacewater()
@@ -42,3 +41,16 @@ subroutine test_swap_state_has_drainage()
    @assertFalse(allocated(state%drainage%qdrain))
    @assertFalse(allocated(state%drainage%qdra))
 end subroutine test_swap_state_has_drainage
+
+@test
+subroutine test_swap_state_has_solute()
+   use funit
+   use iso_fortran_env, only: real64
+   use swap_state_mod, only: swap_state_t
+   type(swap_state_t) :: state
+
+   @assertEqual(0.0_real64, state%solute%samini, 1.0e-12_real64)
+   @assertEqual(0.0_real64, state%solute%solbal, 1.0e-12_real64)
+   @assertFalse(allocated(state%solute%cml))
+   @assertFalse(allocated(state%solute%cmsy))
+end subroutine test_swap_state_has_solute
