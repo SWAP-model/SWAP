@@ -48,10 +48,10 @@ contains
 ! === initialize Solute rate/state variables ===========================
 
       associate( &
-         cml    => state%solute%cml,    &
-         cmsy   => state%solute%cmsy,   &
-         samini => state%solute%samini,  &
-         sampro => state%solute%sampro   &
+         cml    => state%solute%cml,                      &
+         cmsy   => state%solute%cmsy,                     &
+         samini => state%solute%cumulative%samini,         &
+         sampro => state%solute%sampro                     &
       )
 
 ! --- determine initial solute profile from input concentrations
@@ -86,31 +86,31 @@ contains
 ! === calculate Solute rate variables ========================
 
       associate( &
-         cml      => state%solute%cml,       &
-         cmsy     => state%solute%cmsy,      &
-         csurf    => state%solute%csurf,     &
-         cpond    => state%solute%cpond,     &
-         cdrain   => state%solute%cdrain,    &
-         cseep    => state%solute%cseep,     &
-         dtsolu   => state%solute%dtsolu,    &
-         isqbot   => state%solute%isqbot,    &
-         isqtop   => state%solute%isqtop,    &
-         samini   => state%solute%samini,    &
-         sampro   => state%solute%sampro,    &
-         solbal   => state%solute%solbal,    &
-         dectot   => state%solute%dectot,    &
-         imdectot => state%solute%imdectot,  &
-         rottot   => state%solute%rottot,    &
-         imrottot => state%solute%imrottot,  &
-         sqprec   => state%solute%sqprec,    &
-         imsqprec => state%solute%imsqprec,  &
-         sqirrig  => state%solute%sqirrig,   &
-         imsqirrig=> state%solute%imsqirrig, &
-         sqbot    => state%solute%sqbot,     &
-         imsqbot  => state%solute%imsqbot,   &
-         sqdra    => state%solute%sqdra,     &
-         imsqdra  => state%solute%imsqdra,   &
-         sqsur    => state%solute%sqsur      &
+         cml      => state%solute%cml,                        &
+         cmsy     => state%solute%cmsy,                       &
+         csurf    => state%solute%cumulative%csurf,           &
+         cpond    => state%solute%cpond,                      &
+         cdrain   => state%solute%cdrain,                     &
+         cseep    => state%solute%cseep,                      &
+         dtsolu   => state%solute%dtsolu,                     &
+         isqbot   => state%solute%isqbot,                     &
+         isqtop   => state%solute%isqtop,                     &
+         samini   => state%solute%cumulative%samini,          &
+         sampro   => state%solute%sampro,                     &
+         solbal   => state%solute%solbal,                     &
+         dectot   => state%solute%cumulative%dectot,          &
+         imdectot => state%solute%intermediate%imdectot,      &
+         rottot   => state%solute%cumulative%rottot,          &
+         imrottot => state%solute%intermediate%imrottot,      &
+         sqprec   => state%solute%cumulative%sqprec,          &
+         imsqprec => state%solute%intermediate%imsqprec,      &
+         sqirrig  => state%solute%cumulative%sqirrig,         &
+         imsqirrig=> state%solute%intermediate%imsqirrig,     &
+         sqbot    => state%solute%cumulative%sqbot,           &
+         imsqbot  => state%solute%intermediate%imsqbot,       &
+         sqdra    => state%solute%cumulative%sqdra,           &
+         imsqdra  => state%solute%intermediate%imsqdra,       &
+         sqsur    => state%solute%cumulative%sqsur            &
       )
 
 ! --- reset cumulative solute fluxes

@@ -10,19 +10,28 @@ subroutine test_solute_state_default_scalars()
    use solute_state_mod, only: solute_state_t
    type(solute_state_t) :: sl
 
-   @assertEqual(0.0_real64, sl%samini,   1.0e-12_real64)
+   ! cumulative cohort fields
+   @assertEqual(0.0_real64, sl%cumulative%samini,   1.0e-12_real64)
+   @assertEqual(0.0_real64, sl%cumulative%dectot,   1.0e-12_real64)
+   @assertEqual(0.0_real64, sl%cumulative%rottot,   1.0e-12_real64)
+   @assertEqual(0.0_real64, sl%cumulative%sqprec,   1.0e-12_real64)
+   @assertEqual(0.0_real64, sl%cumulative%sqirrig,  1.0e-12_real64)
+   @assertEqual(0.0_real64, sl%cumulative%sqdra,    1.0e-12_real64)
+   @assertEqual(0.0_real64, sl%cumulative%sqbot,    1.0e-12_real64)
+   @assertEqual(0.0_real64, sl%cumulative%sqsur,    1.0e-12_real64)
+   @assertEqual(0.0_real64, sl%cumulative%csurf,    1.0e-12_real64)
+   ! intermediate cohort fields
+   @assertEqual(0.0_real64, sl%intermediate%imsqprec,  1.0e-12_real64)
+   @assertEqual(0.0_real64, sl%intermediate%imsqirrig, 1.0e-12_real64)
+   @assertEqual(0.0_real64, sl%intermediate%imsqbot,   1.0e-12_real64)
+   @assertEqual(0.0_real64, sl%intermediate%imsqdra,   1.0e-12_real64)
+   @assertEqual(0.0_real64, sl%intermediate%imdectot,  1.0e-12_real64)
+   @assertEqual(0.0_real64, sl%intermediate%imrottot,  1.0e-12_real64)
+   ! flat scalar fields remaining in solute_state_t
    @assertEqual(0.0_real64, sl%sampro,   1.0e-12_real64)
    @assertEqual(0.0_real64, sl%samcra,   1.0e-12_real64)
    @assertEqual(0.0_real64, sl%solbal,   1.0e-12_real64)
-   @assertEqual(0.0_real64, sl%dectot,   1.0e-12_real64)
-   @assertEqual(0.0_real64, sl%rottot,   1.0e-12_real64)
-   @assertEqual(0.0_real64, sl%sqprec,   1.0e-12_real64)
-   @assertEqual(0.0_real64, sl%sqirrig,  1.0e-12_real64)
-   @assertEqual(0.0_real64, sl%sqdra,    1.0e-12_real64)
-   @assertEqual(0.0_real64, sl%sqbot,    1.0e-12_real64)
-   @assertEqual(0.0_real64, sl%sqsur,    1.0e-12_real64)
    @assertEqual(0.0_real64, sl%sqrap,    1.0e-12_real64)
-   @assertEqual(0.0_real64, sl%csurf,    1.0e-12_real64)
    @assertEqual(0.0_real64, sl%cpond,    1.0e-12_real64)
    @assertEqual(0.0_real64, sl%cdrain,   1.0e-12_real64)
    @assertEqual(0.0_real64, sl%cseep,    1.0e-12_real64)
@@ -66,9 +75,9 @@ subroutine test_solute_state_independent_instances()
    use solute_state_mod, only: solute_state_t
    type(solute_state_t) :: sl_a, sl_b
 
-   sl_a%samini = 1.5_real64
-   sl_b%samini = -2.5_real64
+   sl_a%cumulative%samini = 1.5_real64
+   sl_b%cumulative%samini = -2.5_real64
 
-   @assertEqual(1.5_real64,  sl_a%samini, 1.0e-12_real64)
-   @assertEqual(-2.5_real64, sl_b%samini, 1.0e-12_real64)
+   @assertEqual(1.5_real64,  sl_a%cumulative%samini, 1.0e-12_real64)
+   @assertEqual(-2.5_real64, sl_b%cumulative%samini, 1.0e-12_real64)
 end subroutine test_solute_state_independent_instances

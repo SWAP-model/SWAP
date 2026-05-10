@@ -950,10 +950,10 @@
           write (bal,24) (volact+pond+WaSrDm1+WaSrDm2+ssnow),                   &
      &                                            (state%solute%sampro+state%solute%samcra),      &
      &                  (volini+PondIni+WaSrDm1Ini+WaSrDm2Ini+snowinco),         &
-     &                                             state%solute%samini,           &
+     &                                             state%solute%cumulative%samini,           &
      &                  (volact+pond+WaSrDm1+WaSrDm2+ssnow-                      &
      &                   volini-PondIni-WaSrDm1Ini-WaSrDm2Ini-snowinco),         &
-     &                                            (state%solute%sampro+state%solute%samcra-state%solute%samini)
+     &                                            (state%solute%sampro+state%solute%samcra-state%solute%cumulative%samini)
       else
           write (bal,25) (volact+pond+WaSrDm1+WaSrDm2+ssnow),           &
      &                  (volini+PondIni+WaSrDm1Ini+WaSrDm2Ini+snowinco),&
@@ -987,9 +987,9 @@
 
       if (swsolu .eq. 1) then
         associate (sl => state%solute)
-          write (bal,34) sl%sqprec,sl%dectot,sl%sqirrig,sl%rottot,sl%sqbot,sl%sqrap,sl%sqdra
-          write (bal,36) (sl%sqprec+sl%sqirrig+sl%sqbot),              &
-     &      (sl%dectot+sl%rottot+sl%sqrap+sl%sqdra)
+          write (bal,34) sl%cumulative%sqprec,sl%cumulative%dectot,sl%cumulative%sqirrig,sl%cumulative%rottot,sl%cumulative%sqbot,sl%sqrap,sl%cumulative%sqdra
+          write (bal,36) (sl%cumulative%sqprec+sl%cumulative%sqirrig+sl%cumulative%sqbot),              &
+     &      (sl%cumulative%dectot+sl%cumulative%rottot+sl%sqrap+sl%cumulative%sqdra)
         end associate
       endif
 
@@ -1637,8 +1637,8 @@
 
       associate (sl => state%solute)
         write(sba,15) date,comma,daynr,comma,daycum,comma,              &
-     &   (sl%sqprec+sl%sqirrig),comma,sl%rottot,comma,sl%dectot,        &
-     &   comma,sl%sqdra,comma,sl%sqbot,comma,sl%sampro,comma,sl%solbal
+     &   (sl%cumulative%sqprec+sl%cumulative%sqirrig),comma,sl%cumulative%rottot,comma,sl%cumulative%dectot,        &
+     &   comma,sl%cumulative%sqdra,comma,sl%cumulative%sqbot,comma,sl%sampro,comma,sl%solbal
       end associate
 
  15   format(a11,a1,i4,a1,i6,6(a1,e14.5),a1,e14.2)
@@ -4259,12 +4259,12 @@ case (2)
    ! solute: formerly imsqprec, imsqirrig, imsqbot, imsqdra, imdectot, imrottot, sampro
    ! csv_write is dead code (superseded by csv_out in swap_csv_output.f90); these writes
    ! are never executed. Fields are now owned by state%solute. Left as stubs.
-   if (iCSV(54) == 1) continue                                 ! SQPREC  (state%solute%imsqprec)
-   if (iCSV(55) == 1) continue                                 ! SQIRRIG (state%solute%imsqirrig)
-   if (iCSV(56) == 1) continue                                 ! SQBOT   (state%solute%imsqbot)
-   if (iCSV(57) == 1) continue                                 ! SQDRA   (state%solute%imsqdra)
-   if (iCSV(58) == 1) continue                                 ! DECTOT  (state%solute%imdectot)
-   if (iCSV(59) == 1) continue                                 ! ROTTOT  (state%solute%imrottot)
+   if (iCSV(54) == 1) continue                                 ! SQPREC  (state%solute%intermediate%imsqprec)
+   if (iCSV(55) == 1) continue                                 ! SQIRRIG (state%solute%intermediate%imsqirrig)
+   if (iCSV(56) == 1) continue                                 ! SQBOT   (state%solute%intermediate%imsqbot)
+   if (iCSV(57) == 1) continue                                 ! SQDRA   (state%solute%intermediate%imsqdra)
+   if (iCSV(58) == 1) continue                                 ! DECTOT  (state%solute%intermediate%imdectot)
+   if (iCSV(59) == 1) continue                                 ! ROTTOT  (state%solute%intermediate%imrottot)
    if (iCSV(60) == 1) continue                                 ! SAMPRO  (state%solute%sampro)
 
    ! surface: water content, runoff, net inflow, net outflow, max inf rate

@@ -68,7 +68,6 @@ module solute_state_mod
       real(real64), allocatable :: cmsy(:)   !! dissolved + adsorbed solute concentration (M/L3 soil volume)
 
       ! Scalar state variables updated during solute time-stepping
-      real(real64) :: csurf   = 0.0_real64  !! total solutes (M/L2) in ponding layer on soil surface
       real(real64) :: cpond   = 0.0_real64  !! mean solute concentration (M/L3) in ponding layer
       real(real64) :: cdrain  = 0.0_real64  !! mean solute conc in aquifer or drainage system (M/L3 water)
       real(real64) :: cseep   = 0.0_real64  !! mean solute conc in upward seepage water at bottom (M/L3 water)
@@ -78,27 +77,15 @@ module solute_state_mod
       real(real64) :: isqbot  = 0.0_real64  !! instantaneous solute flux at profile bottom (M/L2/T)
       real(real64) :: isqtop  = 0.0_real64  !! instantaneous solute flux through soil surface (M/L2/T)
 
-      ! Cumulative balance scalars (reset at balance period start)
-      real(real64) :: samini  = 0.0_real64  !! total solutes (M/L2) in profile at start of balance period
+      ! Running totals (not cohort-owned: not reset by flzerointr/flzerocumu)
       real(real64) :: sampro  = 0.0_real64  !! total solutes (M/L2) in soil column (running sum)
       real(real64) :: samcra  = 0.0_real64  !! total solutes (M/L2) entrapped in cracks
       real(real64) :: solbal  = 0.0_real64  !! cumulative solute balance error (M/L2)
-      real(real64) :: dectot  = 0.0_real64  !! cumulative solute decomposition (M/L2)
-      real(real64) :: imdectot = 0.0_real64 !! intermediate (within output interval) decomposition (M/L2)
-      real(real64) :: rottot  = 0.0_real64  !! cumulative solutes extracted by plant roots (M/L2)
-      real(real64) :: imrottot = 0.0_real64 !! intermediate root extraction (M/L2)
+      real(real64) :: sqrap   = 0.0_real64  !! cumulative solutes in rapid drainage (M/L2)
 
-      ! Cumulative source/sink fluxes
-      real(real64) :: sqprec   = 0.0_real64 !! cumulative solutes in precipitation (M/L2)
-      real(real64) :: imsqprec = 0.0_real64 !! intermediate solutes in precipitation (M/L2)
-      real(real64) :: sqirrig  = 0.0_real64 !! cumulative solutes in irrigation water (M/L2)
-      real(real64) :: imsqirrig = 0.0_real64 !! intermediate solutes in irrigation (M/L2)
-      real(real64) :: sqbot    = 0.0_real64 !! cumulative solutes through profile bottom (M/L2)
-      real(real64) :: imsqbot  = 0.0_real64 !! intermediate solutes through bottom (M/L2)
-      real(real64) :: sqdra    = 0.0_real64 !! total solutes transported to drainage canals (M/L2)
-      real(real64) :: imsqdra  = 0.0_real64 !! intermediate solutes to drainage (M/L2)
-      real(real64) :: sqsur    = 0.0_real64 !! cumulative solutes transported to surface water (M/L2)
-      real(real64) :: sqrap    = 0.0_real64 !! cumulative solutes in rapid drainage (M/L2)
+      ! Cohort sub-records — reset by flzerointr / flzerocumu respectively
+      type(solute_intermediate_t) :: intermediate
+      type(solute_cumulative_t)   :: cumulative
 
    end type solute_state_t
 

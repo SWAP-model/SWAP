@@ -288,12 +288,12 @@ module SWAP_csv_output
       if (vars%name(i) == 'GRAZDM')      vars%value(1,i) = cuptgraz
       if (vars%name(i) == 'PLOSSDM')     vars%value(1,i) = plossdm
       if (vars%name(i) == 'LOSSDM')      vars%value(1,i) = lossdm
-      if (vars%name(i) == 'SQPREC')      vars%value(1,i) = state%solute%imsqprec
-      if (vars%name(i) == 'SQIRRIG')     vars%value(1,i) = state%solute%imsqirrig
-      if (vars%name(i) == 'SQBOT')       vars%value(1,i) = state%solute%imsqbot
-      if (vars%name(i) == 'SQDRA')       vars%value(1,i) = state%solute%imsqdra
-      if (vars%name(i) == 'DECTOT')      vars%value(1,i) = state%solute%imdectot
-      if (vars%name(i) == 'ROTTOT')      vars%value(1,i) = state%solute%imrottot
+      if (vars%name(i) == 'SQPREC')      vars%value(1,i) = state%solute%intermediate%imsqprec
+      if (vars%name(i) == 'SQIRRIG')     vars%value(1,i) = state%solute%intermediate%imsqirrig
+      if (vars%name(i) == 'SQBOT')       vars%value(1,i) = state%solute%intermediate%imsqbot
+      if (vars%name(i) == 'SQDRA')       vars%value(1,i) = state%solute%intermediate%imsqdra
+      if (vars%name(i) == 'DECTOT')      vars%value(1,i) = state%solute%intermediate%imdectot
+      if (vars%name(i) == 'ROTTOT')      vars%value(1,i) = state%solute%intermediate%imrottot
       if (vars%name(i) == 'SAMPRO')      vars%value(1,i) = state%solute%sampro
       if (vars%name(i) == 'SOLBAL')      vars%value(1,i) = state%solute%solbal
       if (vars%name(i) == 'WC10')        vars%value(1,i) = wc10
