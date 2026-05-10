@@ -222,6 +222,10 @@ contains
         qbot = 0.0d0
       endif
     else
+      ! SS-DRST Phase 2 Task 1: alias state drainage fields; all reads/writes
+      ! go directly to state — legacy globals are no longer touched here.
+      associate(qdrain => state%drainage%qdrain, qdra => state%drainage%qdra)
+
       if(nodfrostbot.gt.1 .and. volair.lt.0.01d0)then
 
         leveldeepest = 0
@@ -247,7 +251,6 @@ contains
           do level=1,nrlevs
             if(zfrostbot.lt.zbotdr(level)) then
               qdra(level,node) = 0.0d0
-              state%drainage%qdra(level,node) = 0.0d0
               qdrain(level) = 0.0d0
             endif
           enddo
@@ -276,21 +279,13 @@ contains
                        layercp,cofanicp,ztop,L,qdrain,qdra, &
                        Swdivdinf,Swnrsrf,SwTopnrsrf,Zbotdr, &
                        dt,FacDpthInf,owltab,t1900)
-          ! Sync DIVDRA-updated qdra values to state
-          do level = 1, nrlevs
-            do node = 1, numnod
-              state%drainage%qdra(level,node) = qdra(level,node)
-            end do
-          end do
         endif
       else
 
         do level = 1,nrlevs
           qdrain(level) = 0.0d0
           do node = 1,numnod
-            ! Read from global qdra (kept current by SurfaceWater dual-write)
             qdra(level,node) = qdra(level,node)*rfcp(node)
-            state%drainage%qdra(level,node) = qdra(level,node)
             qdrain(level) = qdrain(level) + qdra(level,node)
           end do
         end do
@@ -303,6 +298,7 @@ contains
         state%surfacewater%qdrtot = state%surfacewater%qdrtot + qdrain(level)
       end do
 
+      end associate
     endif
 
     return
