@@ -6,6 +6,7 @@ module solute_mod
    implicit none
    private
    public :: solute
+   public :: solute_init
 
 contains
       
@@ -57,17 +58,7 @@ contains
         end do
       endif
 
-! --- SS-SLST Phase 1 Task 4: allocate state%solute per-node arrays (Task 7 replaces with solute_init)
-      if (.not. allocated(state%solute%cml)) then
-         allocate(state%solute%cml(numnod))
-         state%solute%cml = 0.0_real64
-      end if
-      if (.not. allocated(state%solute%cmsy)) then
-         allocate(state%solute%cmsy(numnod))
-         state%solute%cmsy = 0.0_real64
-      end if
-
-! --- mirror cml to state after init loop
+! --- mirror cml to state after init loop (allocated by solute_init)
       state%solute%cml(:) = cml(1:numnod)
 
 ! --- determine derived solute concentrations
@@ -370,6 +361,33 @@ contains
       end select
 
       return
-      end
+      end subroutine solute
 
-   end module solute_mod
+!> Lifecycle init for solute typed state. Allocates per-node arrays
+!! from numnod and seeds them from the config-time-populated legacy
+!! globals. Called from swap_main once per simulation, after
+!! config_to_variables has populated the legacy globals.
+!!
+!! Mirrors drainage_init's pattern (ADR 0031). The two-stage cml
+!! seeding (discovery hazard #7) is preserved: config-time seed in
+!! the legacy global persists; this routine copies it into the typed
+!! state at run init.
+subroutine solute_init(state)
+   use, intrinsic :: iso_fortran_env, only: real64
+   use swap_state_mod, only: swap_state_t
+   use Variables, only: numnod, cml, cmsy
+   implicit none
+   type(swap_state_t), intent(inout) :: state
+
+   if (.not. allocated(state%solute%cml)) then
+      allocate(state%solute%cml(numnod))
+   end if
+   if (.not. allocated(state%solute%cmsy)) then
+      allocate(state%solute%cmsy(numnod))
+   end if
+
+   state%solute%cml(:)  = cml(1:numnod)
+   state%solute%cmsy(:) = cmsy(1:numnod)
+end subroutine solute_init
+
+end module solute_mod

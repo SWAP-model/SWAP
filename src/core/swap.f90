@@ -90,7 +90,7 @@ use frozencond_mod, only: FrozenCond, FrozenBounds
 use temperature_mod, only: Temperature
 use macropore_mod, only: MACROPORE
 use macroporeoutput_mod, only: MacroPoreOutput
-use solute_mod, only: solute
+use solute_mod, only: solute, solute_init
 use agetracer_mod, only: AgeTracer
 use soilgrid_mod, only: CalcGrid, ConvertDiscrVert
 use soilhydraulics_mod, only: soilwater, SoilWaterStateVar
@@ -184,6 +184,7 @@ if (iTask == 1) then
 !  (dramet==2) without reading the now-deleted legacy global wetper.
 !  ADR 0031 Phase 2 Task 5: drainl/wetper/ztopdislay/qdrd globals deleted.
    call drainage_init(state, config)
+   if (flSolute) call solute_init(state)   ! SS-SLST Phase 2 Task 7: seed state%solute from config-populated globals
 
 !  initialize SurfaceWater management variables
    if (flSurfaceWater) call SurfaceWater(1, state, request_smaller_dt)
