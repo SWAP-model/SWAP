@@ -9,13 +9,14 @@
 
 module swap_state_mod
    use surfacewater_state_mod, only: surfacewater_state_t
+   use drainage_state_mod,     only: drainage_state_t
    implicit none
    private
    public :: swap_state_t
 
    type :: swap_state_t
       type(surfacewater_state_t) :: surfacewater
-      ! Subsequent migration arcs add fields here.
+      type(drainage_state_t)     :: drainage
    end type swap_state_t
 
 end module swap_state_mod

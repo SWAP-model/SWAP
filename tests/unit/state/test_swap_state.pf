@@ -30,3 +30,15 @@ subroutine test_swap_state_independent_instances()
    @assertEqual(12.5_real64, state_a%surfacewater%wls, 1.0e-12_real64)
    @assertEqual(-3.1_real64, state_b%surfacewater%wls, 1.0e-12_real64)
 end subroutine test_swap_state_independent_instances
+
+@test
+subroutine test_swap_state_has_drainage()
+   use funit
+   use iso_fortran_env, only: real64
+   use swap_state_mod, only: swap_state_t
+   type(swap_state_t) :: state
+
+   @assertEqual(0.0_real64, state%drainage%qdrd, 1.0e-12_real64)
+   @assertFalse(allocated(state%drainage%qdrain))
+   @assertFalse(allocated(state%drainage%qdra))
+end subroutine test_swap_state_has_drainage
