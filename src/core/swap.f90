@@ -282,7 +282,7 @@ if (iTask == 2) then
 
 !     calculate reduction for conductivities for frozen conditions
       if (SwFrost.eq.1) then
-         call FrozenCond()
+         call FrozenCond(state)
       end if
 
 !     calculate potential and actual root water extraction profile

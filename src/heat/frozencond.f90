@@ -67,13 +67,23 @@ contains
   !! Purpose: If soil temperatures are simulated, determine the reduction factors
   !! and frozen depth for frozen conditions
   !! @endnote
-  subroutine FrozenCond()
+  subroutine FrozenCond(state)
     use variables
+    use swap_state_mod, only: swap_state_t
     implicit none
+
+    type(swap_state_t), intent(inout) :: state
+    !! Typed simulation state — dual-write: writes both legacy globals and state%heat%*
 
     ! Local variables
     integer node
     logical flthaw
+
+    associate( &
+        ht_rfcp        => state%heat%rfcp,        &
+        ht_nodfrostbot => state%heat%nodfrostbot,  &
+        ht_zfrostbot   => state%heat%zfrostbot,    &
+        ht_zfrosttop   => state%heat%zfrosttop)
 
     ! Calculate reduction factor for each node
     do node=1,numnod
@@ -90,6 +100,8 @@ contains
         endif
       endif
     end do
+    ht_rfcp(:) = rfcp(1:numnod)                  ! dual-write: mirror to state (rfcp legacy is macp)
+
     ! Determine frozen depth (z) and frozen node number
     flthaw              = .true.
     nodfrostbot         = -1
@@ -135,6 +147,13 @@ contains
         endif
       end do
     end if
+
+    ! dual-write: mirror frozen-zone scalars to state
+    ht_nodfrostbot = nodfrostbot
+    ht_zfrostbot   = zfrostbot
+    ht_zfrosttop   = zfrosttop
+
+    end associate
 
     return
   end subroutine FrozenCond

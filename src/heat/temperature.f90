@@ -90,7 +90,7 @@ contains
     integer,            intent(in)    :: task
     !! Task selector: 1=initialization, 2=calculation
     type(swap_state_t), intent(inout) :: state
-    !! Typed simulation state (body reads/writes still from legacy globals; Task 4 adds dual-write)
+    !! Typed simulation state — dual-write: compute writes both legacy globals and state%heat%*
 
     ! Local variables
     integer i,lay, ierror
@@ -100,6 +100,16 @@ contains
     real(8) heaconbot,qhbot
     real(8) apar, dzsnw, heaconsnw, Rosnw
     character(len=200) messag
+
+    associate( &
+        ht_tsoil         => state%heat%tsoil,   &
+        ht_heacap        => state%heat%heacap,  &
+        ht_heacon        => state%heat%heacon,  &
+        ht_fquartz       => state%heat%fquartz, &
+        ht_fclay         => state%heat%fclay,   &
+        ht_forg          => state%heat%forg,    &
+        ht_tetop         => state%heat%tetop,   &
+        ht_tebot         => state%heat%tebot)
 
     select case (task)
     case (1)
@@ -114,6 +124,7 @@ contains
           tsoil(i) = tmean+tampli*(dsin(0.0172d0*(daynr-timref+91.0d0)+ &
                      z(i)/ddamp)) / dexp(-z(i)/ddamp)
         enddo
+        ht_tsoil(:) = tsoil(1:numnod)             ! dual-write: mirror to state
       else
         ! Numerical solution, use specified soil temperatures
         if (swinco.ne.3) then
@@ -124,6 +135,7 @@ contains
           do i = 1, numnod
             tsoil(i) = afgen(tab,macp*2,dabs(z(i)))
           end do
+          ht_tsoil(:) = tsoil(1:numnod)           ! dual-write: mirror to state
         end if
       endif
 
@@ -137,6 +149,9 @@ contains
           fclay(i) = pclay(lay)*gmineral/2.7d0
           forg(i) = dummy*gmineral/1.4d0
         end do
+        ht_fquartz(:) = fquartz(1:numnod)         ! dual-write: mirror to state
+        ht_fclay(:)   = fclay(1:numnod)
+        ht_forg(:)    = forg(1:numnod)
       endif
 
       return
@@ -172,6 +187,7 @@ contains
             TeTop = Tav
           endif
         endif
+        ht_tetop = TeTop                         ! dual-write: mirror scalar to state
 
         ! Set bottom boundary condition
         if (SwBotbHea.eq.1) then
@@ -181,6 +197,7 @@ contains
           ! Bottom temperature is prescribed
           TeBot = afgen (tembtab,2*mabbc,t1900+dt)
         endif
+        ht_tebot = TeBot                         ! dual-write: mirror scalar to state
 
         ! Save old temperature profile
         do i = 1,numnod
@@ -198,6 +215,8 @@ contains
         do i = 2,numnod
           heacon(i) = 0.5d0 * (heacnd(i) + heacnd(i-1))
         enddo
+        ht_heacap(:) = heacap(1:numnod)           ! dual-write: mirror to state
+        ht_heacon(:) = heacon(1:numnod)
 
         ! Calculate new temperature profile using tridiagonal solver
 
@@ -239,6 +258,7 @@ contains
           messag = 'During a call from Temperature an error occured in TriDag'
           call fatalerr_collected ('Temperature',messag)
         end if
+        ht_tsoil(:) = tsoil(1:numnod)             ! dual-write: mirror solved profile to state
       else
 
         ! Analytical solution temperature profile
@@ -246,12 +266,15 @@ contains
           tsoil(i) = tmean+tampli*(dsin(0.0172d0*(daynr-timref+91.0d0)+ &
                      z(i)/ddamp)) / dexp(-z(i)/ddamp)
         enddo
+        ht_tsoil(:) = tsoil(1:numnod)             ! dual-write: mirror to state
 
       endif
 
     case default
       call fatalerr_collected ('Temperature', 'Illegal value for TASK')
     end select
+
+    end associate
 
     return
   end subroutine Temperature
