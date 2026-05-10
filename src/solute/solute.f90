@@ -170,11 +170,12 @@ contains
 
 ! --- solute flux at soil surface
          csurf = (nird*cirr + nraidt*cpre)*dtsolu + csurf   ! gr cm-2
-         if (qtop.lt.-1.d-6) then
-            cpond  = csurf / (pond-qtop*dtsolu)             ! gr cm-3
-            cfluxt = qtop*(1.0d0-ArMpSs)*cpond*dtsolu       ! gr cm-2
-            csurf  = csurf + cfluxt                         ! gr cm-2
-            isqtop = qtop*(1.0d0-ArMpSs)*cpond              ! gr cm-2 d-1
+         ! SS-BND Phase 2 Task B-2.3: qtop read from state%soilwater (boundary home).
+         if (state%soilwater%qtop.lt.-1.d-6) then
+            cpond  = csurf / (pond-state%soilwater%qtop*dtsolu)             ! gr cm-3
+            cfluxt = state%soilwater%qtop*(1.0d0-ArMpSs)*cpond*dtsolu       ! gr cm-2
+            csurf  = csurf + cfluxt                                          ! gr cm-2
+            isqtop = state%soilwater%qtop*(1.0d0-ArMpSs)*cpond              ! gr cm-2 d-1
          else
             cpond  = 0.0d0
             cfluxt = 0.0d0
@@ -288,12 +289,13 @@ contains
          endif
 
 ! --- flux through bottom of soil profile
-         if (qbot .gt. 0.0d0) then
-            sqbot = sqbot + qbot*cseep*dtsolu
-            imsqbot = imsqbot + qbot*cseep*dtsolu
+         ! SS-BND Phase 2 Task B-2.3: qbot read from state%soilwater (boundary home).
+         if (state%soilwater%qbot .gt. 0.0d0) then
+            sqbot = sqbot + state%soilwater%qbot*cseep*dtsolu
+            imsqbot = imsqbot + state%soilwater%qbot*cseep*dtsolu
          else
-            sqbot = sqbot + qbot*cml(numnod)*dtsolu
-            imsqbot = imsqbot + qbot*cml(numnod)*dtsolu
+            sqbot = sqbot + state%soilwater%qbot*cml(numnod)*dtsolu
+            imsqbot = imsqbot + state%soilwater%qbot*cml(numnod)*dtsolu
          endif
 
 ! --- continue with next solute time step

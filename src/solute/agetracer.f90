@@ -184,18 +184,19 @@ contains
 ! --- solute flux at soil surface
          Agesurf = (nird*Ageirr + nraidt*Agepre)*dtsolu +               &
      &                                       Pondm1*Agepondm1              ! gr cm-2
-         if (qtop.lt.-1.d-6) then
-            Agepond  = Agesurf / (pond-qtop*dtsolu)                        ! gr cm-3
-            Agefluxt = qtop*(1.0d0-ArMpSs)*Agepond*dtsolu                  ! gr cm-2
-            Agesurf  = Agesurf + Agefluxt                                  ! gr cm-2
-            isqtop   = qtop*(1.0d0-ArMpSs)*Agepond                         ! gr cm-2 d-1
-            icAgetopdwn = icAgetopdwn + qtop*(1.0d0-ArMpSs)*0.5d0*      &  ! gr cm-2
+         ! SS-BND Phase 2 Task B-2.3: qtop/runots read from state%soilwater (boundary home).
+         if (state%soilwater%qtop.lt.-1.d-6) then
+            Agepond  = Agesurf / (pond-state%soilwater%qtop*dtsolu)                        ! gr cm-3
+            Agefluxt = state%soilwater%qtop*(1.0d0-ArMpSs)*Agepond*dtsolu                  ! gr cm-2
+            Agesurf  = Agesurf + Agefluxt                                                   ! gr cm-2
+            isqtop   = state%soilwater%qtop*(1.0d0-ArMpSs)*Agepond                         ! gr cm-2 d-1
+            icAgetopdwn = icAgetopdwn + state%soilwater%qtop*(1.0d0-ArMpSs)*0.5d0*      &  ! gr cm-2
      &                    (Agepond+Agepondm1)  * dtsolu
          else
             Agepond  = 0.0d0
             Agefluxt = 0.0d0
          endif
-         icAgesur    = icAgesur + 0.5d0*(Agepond+Agepondm1) * runots
+         icAgesur    = icAgesur + 0.5d0*(Agepond+Agepondm1) * state%soilwater%runots
 
 ! --- calculate mass balance for each compartment
 
