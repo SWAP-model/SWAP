@@ -491,27 +491,26 @@ owltab,t1900,swallo,drares,infres,qdrtab,nrlevs,swnrsrf,cofintfl,expintfl,dt,sha
                end if
 
                ! --- reset intermediate soil water fluxes
-               ! SS-SWST Phase 2 Task 11 B1: global dual-writes for inqdra/iqdra dropped.
-               if (flzerointr) then
-                  do node = 1, numnod
-                     do level = 1, nrlevs
-                        state%surfacewater%intermediate%inqdra(level, node) = 0.0d0
-                        state%surfacewater%intermediate%inqdra_in(level, node) = 0.0d0
-                        state%surfacewater%intermediate%inqdra_out(level, node) = 0.0d0
-                     end do
-                  end do
-                  state%surfacewater%intermediate%iqdra = 0.0d0
-               end if
+               ! SS-CRR Phase A Task A5: intermediate cohort is identical at both
+               ! call sites; delegate to cohort reset(). See surfacewater_state_mod.
+               if (flzerointr) call state%surfacewater%intermediate%reset()
 
                ! --- reset cumulative soil water fluxes
-               ! SS-SWST Phase 2 Task 11 B1: global dual-writes for cqdra/cqdrain* dropped.
+               ! SS-CRR Phase A Task A5: drainage zeros a strict subset of the
+               ! cumulative cohort (cqdra + cqdrain*). The full cohort reset()
+               ! would also zero cqdrd/cwsupp/cwout, which are mid-accumulation
+               ! across timesteps between flzerocumu events (they are only
+               ! accumulated inside SurfaceWater(2), which runs AFTER Drainage).
+               ! The full cohort reset() runs at SurfaceWater(2) call site
+               ! (Task A4). Drainage retains element-by-element zeroing of its
+               ! own subset only. See ADR 0033 for the asymmetry analysis.
                if (flzerocumu) then
                   state%surfacewater%cumulative%cqdra = 0.0d0
-                  do level = 1, nrlevs
-                     state%surfacewater%cumulative%cqdrain(level) = 0.0d0
-                     state%surfacewater%cumulative%cqdrainin(level) = 0.0d0
-                     state%surfacewater%cumulative%cqdrainout(level) = 0.0d0
-                  end do
+                  if (allocated(state%surfacewater%cumulative%cqdrain)) then
+                     state%surfacewater%cumulative%cqdrain    = 0.0d0
+                     state%surfacewater%cumulative%cqdrainin  = 0.0d0
+                     state%surfacewater%cumulative%cqdrainout = 0.0d0
+                  end if
                end if
 
                ! --- reset to zero if groundwater level under soil profile and return
