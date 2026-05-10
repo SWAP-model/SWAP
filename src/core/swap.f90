@@ -87,7 +87,7 @@ use snow_mod, only: snow
 use meteodt_mod, only: MeteoDT
 use rootextraction_mod, only: RootExtraction
 use frozencond_mod, only: FrozenCond, FrozenBounds
-use temperature_mod, only: Temperature
+use temperature_mod, only: Temperature, heat_init
 use macropore_mod, only: MACROPORE
 use macroporeoutput_mod, only: MacroPoreOutput
 use solute_mod, only: solute, solute_init
@@ -185,6 +185,7 @@ if (iTask == 1) then
 !  ADR 0031 Phase 2 Task 5: drainl/wetper/ztopdislay/qdrd globals deleted.
    call drainage_init(state, config)
    if (flSolute) call solute_init(state)   ! SS-SLST Phase 2 Task 7: seed state%solute from config-populated globals
+   call heat_init(state)                  ! SS-HEAT Phase 1 Task 3: allocate state%heat per-node arrays
 
 !  initialize SurfaceWater management variables
    if (flSurfaceWater) call SurfaceWater(1, state, request_smaller_dt)
@@ -193,7 +194,7 @@ if (iTask == 1) then
    if (flMacroPore) call MACROPORE(1, state)
 
 !  initialize SoilTemperature rate/state variables
-   if (flTemperature) call Temperature(1)
+   if (flTemperature) call Temperature(1, state)
 
 !  initialize Snow rate/state variables
    if (flSnow) call Snow(1)
@@ -321,7 +322,7 @@ if (iTask == 2) then
       call SoilWater(3, state)
 
 !     calculate SoilTemperature rate/state variables
-   if (flTemperature) call Temperature(2)
+   if (flTemperature) call Temperature(2, state)
 
 !     calculate Solute rate/state variables
       if (flSolute) call Solute(2, state)
