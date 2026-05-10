@@ -8,22 +8,39 @@
 ! src/io/readswap.f90 — none of them are here. Phase 4e Task A4/A5
 ! replaces all of this file's calls via fatalerr_collected (singleton).
 ! ----------------------------------------------------------------------
-      subroutine CropGrowth(task)
+      subroutine CropGrowth(task, tsoil)
 ! ----------------------------------------------------------------------
 !     UpDate             : May 2014
 !     Date               : Aug 2004
 !     Purpose            : Call proper crop routines for initialization,
 !                          calculation of rate/state variables and output
+! SS-HEAT pre-Task-8: tsoil passed as non-optional arg (from state%heat%tsoil
+!   at caller); threaded down to ArableLandGerm / grass / sumttd.
 ! ----------------------------------------------------------------------
 
-      use variables
+      use variables, dummy_tsoil_cg_ => tsoil
+      !! Rename global tsoil to avoid clash with dummy arg tsoil.
       use array_utils, only: afgen
       use rootextraction_mod, only: MatricFlux
       use swap_constants, only: tiny
       use error_mod, only: fatalerr_collected
       implicit none
 
+      ! Explicit interfaces for non-module subs that now take tsoil(:)
+      interface
+         subroutine ArableLandGerm(task, tsoil)
+            integer, intent(in) :: task
+            real(8), intent(in) :: tsoil(:)
+         end subroutine ArableLandGerm
+         subroutine grass(task, tsoil)
+            integer, intent(in) :: task
+            real(8), intent(in) :: tsoil(:)
+         end subroutine grass
+      end interface
+
       integer task
+      real(8), intent(in) :: tsoil(:)
+      !! Soil temperature array from state%heat%tsoil, passed by caller.
       integer i, node
       real(8) sumtmin
       
@@ -200,17 +217,17 @@
           
           ! Preparation before crop growth
           if (.not. flCropPrep) then
-            call ArableLandGerm(2)
+            call ArableLandGerm(2, tsoil)
           endif
 
           ! Sowing before crop growth
           if (flCropPrep .and. .not. flCropSow) then
-            call ArableLandGerm(3)
+            call ArableLandGerm(3, tsoil)
           endif
 
           ! Germination of arable crop growth
           if (flCropPrep .and. flCropSow) then
-            call ArableLandGerm(4)
+            call ArableLandGerm(4, tsoil)
           endif
 
         endif
@@ -230,7 +247,7 @@
           if (croptype(icrop) .eq. 2 .and. flCropEmergence) call Wofost(1)
           
           ! detailed grass growth
-          if (croptype(icrop) .eq. 3) call Grass(1)
+          if (croptype(icrop) .eq. 3) call Grass(1, tsoil)
           
           flCropReadFile = .false.
 
@@ -370,9 +387,9 @@
           call Wofost(2)
         endif
       endif  
-! --- detailed grass growth  -----------------------------------------------      
+! --- detailed grass growth  -----------------------------------------------
       if (croptype(icrop) .eq. 3) then
-        call Grass(2)
+        call Grass(2, tsoil)
       endif
 
       return
@@ -380,15 +397,15 @@
       case (3)
 
 ! === calculation of actual crop rate and state variables ==================
-      
+
       if (flCropHarvest) return
-      
+
 ! --- fixed crop development -----------------------------------------------
       if (croptype(icrop).eq.1) then
         if(flCropEmergence) then
           call CropFixed(3)
         endif
-      endif  
+      endif
 ! --- detailed crop growth -------------------------------------------------
       if (croptype(icrop).eq.2) then
         if (flCropEmergence) then
@@ -397,7 +414,7 @@
       endif
 ! --- detailed grass growth  -----------------------------------------------
       if (croptype(icrop).eq.3) then
-        call Grass(3)
+        call Grass(3, tsoil)
       endif
 
       return
@@ -807,18 +824,23 @@
       end
 
 ! ----------------------------------------------------------------------
-      subroutine ArableLandGerm(task)
+      subroutine ArableLandGerm(task, tsoil)
 ! ----------------------------------------------------------------------
 !     update             : December 2017
 !     date               : December 2017
 !     purpose            : Crop growth
+! SS-HEAT pre-Task-8: tsoil(:) non-optional dummy arg; callers pass
+!   state%heat%tsoil. Global tsoil excluded via rename.
 ! ----------------------------------------------------------------------
-      use variables
+      use variables, dummy_tsoil_alg_ => tsoil
+      !! Rename global tsoil to avoid clash with dummy arg tsoil.
       use swap_constants, only: small
       use error_mod, only: fatalerr_collected
       implicit none
 
       integer  task,node
+      real(8), intent(in) :: tsoil(:)
+      !! Soil temperature array from state%heat%tsoil.
       real(8)  drz1,hrz1,pFz1
       real(8)  tsumemesub
       
@@ -873,7 +895,7 @@
           drz1 = drz1 - dz(node)
         enddo
         
-        ! SS-HEAT Phase 2 Task 6: tsoil read kept on global (non-module sub; dual-write keeps it current)
+        ! SS-HEAT pre-Task-8: tsoil read from dummy arg (state%heat%tsoil via caller).
         dtempSow = min(tsoil(node) - TempSow,0.d0)
 
         flCropSow = .true.
@@ -2117,12 +2139,15 @@
       end
 
 ! ----------------------------------------------------------------------
-      subroutine grass(task)
+      subroutine grass(task, tsoil)
 ! ----------------------------------------------------------------------
 !     Date               : November 2004
 !     Purpose            : detailed grass growth routine
+! SS-HEAT pre-Task-8: tsoil(:) non-optional dummy arg; callers pass
+!   state%heat%tsoil. Threaded through to sumttd calls.
 ! ----------------------------------------------------------------------
-      use variables
+      use variables, dummy_tsoil_gr_ => tsoil
+      !! Rename global tsoil to avoid clash with dummy arg tsoil.
       use array_utils, only: afgen
       use soilhydraulics_utils, only: watcon
       use rootextraction_mod, only: MatricFlux
@@ -2131,7 +2156,19 @@
 
       implicit none
 
+      ! Explicit interface for non-module sumttd which now takes tsoil(:)
+      interface
+         subroutine sumttd(task, flGrassGrowth, dateGrassGrowth, tsoil)
+            character(len=*), intent(in)  :: task
+            logical,          intent(out) :: flGrassGrowth
+            character(len=11),intent(out) :: dateGrassGrowth
+            real(8),          intent(in)  :: tsoil(:)
+         end subroutine sumttd
+      end interface
+
       integer   i1,task
+      real(8), intent(in) :: tsoil(:)
+      !! Soil temperature array from state%heat%tsoil, passed from CropGrowth.
       integer   idelaypot,idelay,i,swhydrlift
 
       real(8)   laicr,lasum,mres,grazlivinglv,grazlivinglvpot
@@ -2334,8 +2371,8 @@
           flGrassGrowth = .false.  
         endif
         if (swtsum.eq.2) then
-          ! SS-HEAT Phase 2 Task 6: tsoil read via global in sumttd (non-module; dual-write keeps it current)
-          call sumttd('initial',flGrassGrowth,dateGrassGrowth)
+          ! SS-HEAT pre-Task-8: pass tsoil from state%heat%tsoil (via dummy arg) to sumttd.
+          call sumttd('initial',flGrassGrowth,dateGrassGrowth,tsoil)
         endif
 
 ! --- end skip above initialization if crop parameters are read from *.END file
@@ -2441,8 +2478,8 @@
         
         ! grass growth initiated by temperature, time and depth
         if (swtsum.eq.2) then
-          ! SS-HEAT Phase 2 Task 6: tsoil read via global in sumttd (non-module; dual-write keeps it current)
-          if (dateGrassGrowth.eq.'undefined') call sumttd('dynamic',flGrassGrowth,dateGrassGrowth)
+          ! SS-HEAT pre-Task-8: pass tsoil from state%heat%tsoil (via dummy arg) to sumttd.
+          if (dateGrassGrowth.eq.'undefined') call sumttd('dynamic',flGrassGrowth,dateGrassGrowth,tsoil)
         endif
       
         ! check if grass growth has started
@@ -4529,7 +4566,7 @@
       return
       end
 
-      subroutine sumttd(task,flGrassGrowth,dateGrassGrowth)
+      subroutine sumttd(task,flGrassGrowth,dateGrassGrowth,tsoil)
 ! ----------------------------------------------------------------------
 !     Last modified      : Jan 2016
 !     Author             : Joop Kroes
@@ -4546,9 +4583,11 @@
 !       I    R8  z         depth of a node (L)
 !       I    R8  tsoil     Array with soil temperatures (oC) for each compartment
 !       O    L   flGrassGrowth flag indicating grass growth (suppressed=.false. when criteria are not met) [.true .or. .false. -, L]
-! SS-HEAT Phase 2 Task 6: tsoil read kept on global (non-module sub; dual-write keeps it current).
+! SS-HEAT pre-Task-8: tsoil now non-optional dummy arg; callers pass state%heat%tsoil
+!   via grass's tsoil dummy arg. Global tsoil excluded via rename.
 ! ----------------------------------------------------------------------
-      use Variables
+      use Variables, dummy_tsoil_sumttd_ => tsoil
+      !! Rename global tsoil to avoid clash with dummy arg tsoil.
       use file_io_mod, only: file_open
       implicit none
 
@@ -4556,6 +4595,8 @@
       character(len=*), intent(in) :: task
       logical, intent(out)         :: flGrassGrowth      ! flag indicating grass growth (suppressed=.false. when criteria are not met) [.true .or. .false. -, L]
       character(len=11), intent(out) ::  dateGrassGrowth            ! date of start of GrassGrowth
+      real(8), intent(in) :: tsoil(:)
+      !! Soil temperature array from state%heat%tsoil.
 
 ! --- local
       integer    :: tsumtimecum      ! cumulative, from 1-jan, time (nrs of sequential days) with temp above tsumtemp for grass growth [1..20 days, I]
@@ -4610,7 +4651,7 @@
 
       case('dynamic')
           ! temperature and depth criterium
-          ! SS-HEAT Phase 2 Task 6: tsoil read kept on global (non-module sub; dual-write keeps it current)
+          ! SS-HEAT pre-Task-8: tsoil read from dummy arg (state%heat%tsoil via caller chain).
           if(tsoil(cmpcrit).ge.tsumtemp) then
               fltsumtemp = .true.
           else

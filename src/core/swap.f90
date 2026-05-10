@@ -102,6 +102,15 @@ use load_swap_config_mod, only: load_swap_config
 use config_to_variables_mod, only: config_to_variables
 implicit none
 
+! SS-HEAT pre-Task-8: explicit interface for CropGrowth (external non-module sub
+! that now takes tsoil(:) assumed-shape arg; interface required for caller).
+interface
+   subroutine CropGrowth(task, tsoil)
+      integer, intent(in) :: task
+      real(8), intent(in) :: tsoil(:)
+   end subroutine CropGrowth
+end interface
+
 ! global
 integer,           intent(in)              :: iCaller, iTask
 type(swap_input),  intent(in),    optional :: toswap
@@ -258,7 +267,7 @@ if (iTask == 2) then
          call ReadMeteoDay()
 
 !        check growing season
-         call CropGrowth(1)
+         call CropGrowth(1, state%heat%tsoil)
 
 !        Specific for exchange when called as DLL
          if (iCaller /= 0) call handle_exchange(23, flError)   ! LAI, RD
@@ -343,7 +352,7 @@ if (iTask == 2) then
 
 !        calculate potential crop growth
 !        this is skipped in case called externally
-         if (iCaller == 0 .and. flCropCalendar) call CropGrowth(2)
+         if (iCaller == 0 .and. flCropCalendar) call CropGrowth(2, state%heat%tsoil)
 
 !        amendent of crop residues from previous day
          if (flCropNut) call SoilManagement(5, state)
@@ -353,14 +362,14 @@ if (iTask == 2) then
 
 !        calculate actual crop growth (calculation of actual crop rate and state variables)
 !        this is skipped in case called externally, so that LAI and CF remain their input values (for printing)
-         if (iCaller == 0  .and. flCropCalendar) call CropGrowth(3)
+         if (iCaller == 0  .and. flCropCalendar) call CropGrowth(3, state%heat%tsoil)
 
 !        Simulate Soil Nutrient processes
          if (flCropNut) call SoilManagement(4, state)
 
 !        harvest of crop
 !        this is skipped in case called externally, so that LAI and CF remain their input values (for printing)
-         if (iCaller == 0 .and. flCropCalendar) call CropGrowth(4)
+         if (iCaller == 0 .and. flCropCalendar) call CropGrowth(4, state%heat%tsoil)
 
 !        timing statistics : prevent (near) endless simulations
          if (flMaxIterTime) call IterTime(2)
