@@ -17,10 +17,12 @@ contains
       use Variables
       use array_utils, only: afgen
       use swap_state_mod, only: swap_state_t
+      use, intrinsic :: iso_fortran_env, only: real64
       implicit none
 
 !     SS-SWST Phase 2 Task 5: read qdra / qdrtot from state%surfacewater.
-      type(swap_state_t), intent(in) :: state
+!     SS-SLST Phase 1 Task 4: dual-write — solute also writes state%solute.
+      type(swap_state_t), intent(inout) :: state
 
 !     local variables
       integer level,i,task
@@ -55,6 +57,19 @@ contains
         end do
       endif
 
+! --- SS-SLST Phase 1 Task 4: allocate state%solute per-node arrays (Task 7 replaces with solute_init)
+      if (.not. allocated(state%solute%cml)) then
+         allocate(state%solute%cml(numnod))
+         state%solute%cml = 0.0_real64
+      end if
+      if (.not. allocated(state%solute%cmsy)) then
+         allocate(state%solute%cmsy(numnod))
+         state%solute%cmsy = 0.0_real64
+      end if
+
+! --- mirror cml to state after init loop
+      state%solute%cml(:) = cml(1:numnod)
+
 ! --- determine derived solute concentrations
       samini = 0.0d0
 !      samaq = 0.0d0
@@ -67,7 +82,10 @@ contains
          ddiffwcs(i) = ddif / (thetsl(layer(i))**2)
          decpotfdepth(i) = decpot(layer(i))*fdepth(layer(i))
       end do
+      state%solute%cmsy(:) = cmsy(1:numnod)   ! SS-SLST Phase 1 Task 4: mirror
+      state%solute%samini  = samini            ! SS-SLST Phase 1 Task 4: mirror
       sampro = samini
+      state%solute%sampro  = sampro            ! SS-SLST Phase 1 Task 4: mirror
 
       case (2)
 
@@ -81,6 +99,13 @@ contains
         imsqdra   = 0.0d0
         imdectot  = 0.0d0
         imrottot  = 0.0d0
+        ! SS-SLST Phase 1 Task 4: mirror intermediate resets
+        state%solute%imsqprec  = imsqprec
+        state%solute%imsqirrig = imsqirrig
+        state%solute%imsqbot   = imsqbot
+        state%solute%imsqdra   = imsqdra
+        state%solute%imdectot  = imdectot
+        state%solute%imrottot  = imrottot
       endif
       if (flzerocumu) then
         sqprec  = 0.0d0
@@ -92,10 +117,23 @@ contains
         rottot  = 0.0d0
         csurf   = 0.0d0
         samini  = sampro
+        ! SS-SLST Phase 1 Task 4: mirror cumulative resets
+        state%solute%sqprec  = sqprec
+        state%solute%sqirrig = sqirrig
+        state%solute%sqbot   = sqbot
+        state%solute%sqdra   = sqdra
+        state%solute%sqsur   = sqsur
+        state%solute%dectot  = dectot
+        state%solute%rottot  = rottot
+        state%solute%csurf   = csurf
+        state%solute%samini  = samini
       endif
 
       isqbot = 0.0d0
       isqtop = 0.0d0
+      ! SS-SLST Phase 1 Task 4: mirror instantaneous resets
+      state%solute%isqbot = isqbot
+      state%solute%isqtop = isqtop
       isqdra = 0.0d0
 
 !     set value of macropore area at soil surface
@@ -105,10 +143,12 @@ contains
 ! --- boundary concentrations
       if (swbotbc .eq. 2) then
         cseep = afgen (cseeptab,mabbc*2,t1900+dt)
+        state%solute%cseep = cseep   ! SS-SLST Phase 1 Task 4: mirror
       endif
 
 ! --- determine maximum timestep
       dtsolu = dt
+      state%solute%dtsolu = dtsolu   ! SS-SLST Phase 1 Task 4: mirror
       do i = 1,numnod
         thetav(i) = inpola(i+1)*theta(i)+inpolb(i)*theta(i+1)
         diffus(i) = ddiffwcs(i) * thetav(i)**2.33d0
@@ -125,6 +165,7 @@ contains
         !dummy = 1.2d0*dz(i)*dz(i)/(2.0d0*dispr)
         dtsolu = min(dtsolu,dummy)
       enddo
+      state%solute%dtsolu = dtsolu   ! SS-SLST Phase 1 Task 4: mirror post-stability-limit
 
       tcumsol = 0.0d0
       ! SS-DRST Task 3: qdra read from state%drainage; qdrtot remains in state%surfacewater
@@ -135,6 +176,7 @@ contains
 ! ---    time step and cumulative time
          dtsolu  = min(dtsolu,(dt-tcumsol))
          dtsolu  = max(dtsolu,dtmin)
+         state%solute%dtsolu = dtsolu   ! SS-SLST Phase 1 Task 4: mirror
          tcumsol = tcumsol + dtsolu
 
 ! --- solute flux at soil surface
@@ -148,6 +190,10 @@ contains
             cpond  = 0.0d0
             cfluxt = 0.0d0
          endif
+         ! SS-SLST Phase 1 Task 4: mirror surface-flux scalars
+         state%solute%csurf  = csurf
+         state%solute%cpond  = cpond
+         state%solute%isqtop = isqtop
 
 ! --- calculate mass balance for each compartment
 
@@ -237,6 +283,16 @@ contains
 ! ---    next compartment
          enddo
 
+         ! SS-SLST Phase 1 Task 4: mirror per-node arrays and running-sum scalars after inner loop
+         state%solute%cml(:)     = cml(1:numnod)
+         state%solute%cmsy(:)    = cmsy(1:numnod)
+         state%solute%dectot     = dectot
+         state%solute%imdectot   = imdectot
+         state%solute%rottot     = rottot
+         state%solute%imrottot   = imrottot
+         state%solute%sqdra      = sqdra
+         state%solute%imsqdra    = imsqdra
+
 ! ---    solute balance in aquifer for breakthrough curve
          ! SS-SWST Phase 2 Task 11: qdrtot read from state (global dropped).
          if (swbr .eq. 1) then
@@ -248,21 +304,28 @@ contains
      &                           ( isqdra/daquif - decsat*cdrain*bdenskfsatporos(i) )
             endif
             cseep = cdrain
+            ! SS-SLST Phase 1 Task 4: mirror aquifer scalars
+            state%solute%cdrain = cdrain
+            state%solute%cseep  = cseep
          endif
 
 ! --- flux to surface water from aquifer
          if (swbr .eq. 1) then
             sqsur = sqsur + state%surfacewater%qdrtot*cdrain*dtsolu
+            state%solute%sqsur = sqsur   ! SS-SLST Phase 1 Task 4: mirror
          endif
 
 ! --- flux through bottom of soil profile
          if (qbot .gt. 0.0d0) then
             sqbot = sqbot + qbot*cseep*dtsolu
             imsqbot = imsqbot + qbot*cseep*dtsolu
-         else 
+         else
             sqbot = sqbot + qbot*cml(numnod)*dtsolu
             imsqbot = imsqbot + qbot*cml(numnod)*dtsolu
          endif
+         ! SS-SLST Phase 1 Task 4: mirror bottom-flux scalars
+         state%solute%sqbot   = sqbot
+         state%solute%imsqbot = imsqbot
 
 ! --- continue with next solute time step
       end do
@@ -274,6 +337,7 @@ contains
       else
         isqbot = q(numnod+1) * cml(numnod)
       endif
+      state%solute%isqbot = isqbot   ! SS-SLST Phase 1 Task 4: mirror
 
 ! === calculate solute balance components ========================
 
@@ -283,6 +347,7 @@ contains
         sampro = sampro + cmsy(i) * dz(i)
       enddo
       sampro = sampro + csurf
+      state%solute%sampro = sampro   ! SS-SLST Phase 1 Task 4: mirror
 !      if (swbr .eq. 1) samaq = cdrain*poros*daquif
 
 ! --- add time step fluxes to total cumulative values
@@ -290,9 +355,15 @@ contains
       imsqprec = imsqprec + nraidt * cpre * dt
       sqirrig = sqirrig + nird * cirr * dt
       imsqirrig = imsqirrig + nird * cirr * dt
+      ! SS-SLST Phase 1 Task 4: mirror precipitation/irrigation cumulative fluxes
+      state%solute%sqprec    = sqprec
+      state%solute%imsqprec  = imsqprec
+      state%solute%sqirrig   = sqirrig
+      state%solute%imsqirrig = imsqirrig
 
 ! --- cumulative solute balance
       solbal = sampro - sqprec - sqirrig - sqbot + sqdra + dectot + rottot - samini
+      state%solute%solbal = solbal   ! SS-SLST Phase 1 Task 4: mirror
 
       case default
          call fatalerr_collected ('Solute', 'Illegal value for TASK')
