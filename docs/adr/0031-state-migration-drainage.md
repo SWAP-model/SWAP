@@ -6,7 +6,7 @@ status: accepted (draft — Phase 1 complete; Phase 2 pending)
 
 # ADR 0031: Drainage state-type migration
 
-**Status:** accepted (Phase 1 complete; Phase 2 pending — consequences section grows once globals leave variables.f90)
+**Status:** accepted (Phases 1 + 2 complete)
 **Date:** 2026-05-10
 **Migration #:** 2 of N (subsystem-by-subsystem state migration umbrella)
 **Branch:** `refactor/surfacewater-state` — continuing the umbrella migration branch; merge to `development` after all subsystems land
@@ -39,7 +39,35 @@ Two phases:
 - Tests: 622 pFUnit (was 617 after surfacewater migration; +4 drainage_state + +1 swap_state-has-drainage). All green.
 - check-full: 5/5 byte-identical at every commit.
 
-**Phase 2 consequences (to be filled after completion):** TBD — `qdra`/`qdrain` dual-write drop, cross-subsystem reader migration (frozencond's qdrain writeback, divdra callers passing typed state, etc.), 6 globals removed from variables.f90, geofac adapter bug fix.
+**Phase 2 outcomes (completed 2026-05-10, commits `a1180f9..d248cbb`):**
+
+- 6 drainage-owned globals commented out (with provenance markers) in `variables.f90` and removed from `initialize.f90`: `qdrd`, `qdrain`, `qdra`, `drainl`, `wetper`, `ztopdislay`. `state%drainage%*` is the sole authoritative location.
+- Cross-subsystem reader migrations:
+  - `frozencond.f90:FrozenBounds` reads/writes `state%drainage%qdrain` and `state%drainage%qdra` (Task 1).
+  - `surfacewater.f90:WLEVBAL` reads `state%drainage%qdrain` (Task 2). The `divdra` call site at line 143 passes typed state (Task 2).
+  - `waterbalance.f90:integral` reads `state%drainage%qdrain` (Task 2) and `state%drainage%qdra` (caught in Task 5).
+  - `drainage.f90:drainage()` divdra call passes typed state (Task 3); `bocodrb` and `bocodre` write `state%drainage%qdrain` directly via ASSOCIATE (Task 4); `drainage_init` signature gains `config` arg, reads from typed config instead of legacy globals (Task 5).
+- Adapter bug fix: `config_to_variables.f90:431` now gates the `surface_runoff%geofac` write on `ipos /= 5` (Task 5). Zero observable effect on the 5 regression cases (none uses `ipos=5`); correctness-only fix preserving both intended TOML field behaviors.
+- pFUnit: 622 throughout Phase 2 (no count change). check-full: 5/5 byte-identical at every commit.
+
+### Hidden migration gaps caught during Phase 2 (Section 3.5 addendum content)
+
+The Phase 2 plan's pre-flight inventory was incomplete despite the Phase 1 lessons-learned addendum to Section 3.5. Task 5's "zero remaining readers" verification step caught four hidden gaps:
+
+1. `surfacewater.f90` swdislay redistribution used global `qdra` as a working buffer; also `zTopDisLay` was a global there. Migrated to `state%drainage%qdra` and a subroutine-local respectively.
+2. `waterbalance.f90:integral` had a `qdra` read for `inqdra` accumulation that the inventory missed.
+3. `drainage_init` read `drainl`, `wetper`, `ztopdislay`, `qdrd` from globals to seed state. After global deletion, it had to read from `config` directly — signature gained a `config` argument.
+4. `bocodrb` had a `wetper(1)` read of the global; migrated to `state%drainage%wetper(1)`.
+
+The catch was Task 5's verification step doing the grep and discovering the issues before the global declarations were deleted. **Lesson reinforced:** verification grep must run BEFORE the deletion, and any non-zero count is an unmigrated reader to handle in the same task.
+
+## Architectural learnings (Phases 1 + 2)
+
+- **Cross-subsystem reader inventory must be exhaustive AND categorize by intent.** Phase 1's lesson was "include compute readers, not just output." Phase 2 added: "include working-buffer reads (e.g., `swdislay` redistribution using global qdra as a temporary), reads inside _init routines (e.g., drainage_init seeding from globals), and reads passed to call sites (e.g., bocodrb's static-geometry reads)." The grep-then-classify pattern is the safety net.
+- **`divdra`'s assumed-shape signature (Phase 1 Task 4) was a clean unblock.** Phase 2 just switched call sites without further refactoring of divdra. The investment paid off.
+- **The geofac schema duplication (two TOML fields mapping to one legacy global) was fixed inline.** The deeper schema reconciliation (do we need both fields?) is documented as future work — none of the regression cases exercise the bug.
+- **drainage_init signature change (config arg) is a precedent for future state init routines.** Init routines that previously read globals to seed state now take config directly. This breaks the "init reads globals" convention but is architecturally cleaner — config is the authoritative source for config-derived initial values.
+- **The dual-write transitional pattern works, but verification gaps compound.** Phase 1's missed compute readers AND Phase 2's missed working-buffer/init reads were both caught only at the integration gate (Task 7 of Phase 1, Task 5 of Phase 2). The pattern: each phase's first integration gate is where invisible debt surfaces. Plan accordingly — the integration-gate task usually exceeds its planned scope.
 
 ## Architectural learnings (carried forward to migration #3+)
 
@@ -57,4 +85,6 @@ Two phases:
 - Design: `docs/superpowers/specs/2026-05-10-state-migration-drainage-design.md`
 - Plan (Phase 1): `docs/superpowers/plans/2026-05-10-drainage-state-phase1.md`
 - Predecessor: ADR 0030 (surface-water pilot established the playbook)
-- Phase 1 commit chain: `406b55e` (state type) → `c3472e2` (aggregator) → `f66509e` (qdra move) → `4b29b3b` (divdra modernized) → `c07bb7b` (dual-write) → `53d2776` (drop dual-write)
+- Phase 1 commit chain: `406b55e` (state type) → `c3472e2` (aggregator) → `f66509e` (qdra move) → `4b29b3b` (divdra modernized) → `c07bb7b` (dual-write) → `53d2776` (drop dual-write) → `469252d` (ADR draft)
+- Phase 2 plan: `docs/superpowers/plans/2026-05-10-drainage-state-phase2.md`
+- Phase 2 commit chain: `a1180f9` (frozencond) → `1d06be5` (surfacewater + waterbalance + qdrain dual-write add) → `723fb7c` (drainage divdra call) → `d3644a3` (drop qdra/qdrain dual-write) → `d248cbb` (delete globals + geofac fix)

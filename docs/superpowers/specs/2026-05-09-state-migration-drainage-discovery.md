@@ -275,6 +275,42 @@ What does the output layer read from drainage's state?
 
 ---
 
+### Phase 1 + Phase 2 lessons-learned addendum (added 2026-05-10 after Phase 2 close-out)
+
+The original Section 3.5 categorization missed several classes of cross-subsystem reads. Phase 1 + Phase 2 caught the gaps at the integration-gate tasks (Phase 1 Task 7 — `qdrd` compute readers in WLEVBAL/WBALLEV; Phase 2 Task 5 — working-buffer reads, init-routine reads, call-site reads).
+
+**For future subsystem-migration discoveries, Section 3.5 should categorize external readers by intent:**
+
+1. **Output readers** — output routines that read for file I/O (e.g., `outdrf`, `outbal`, `set_values`). Most obvious; usually well-cataloged.
+2. **Compute readers** — compute routines in OTHER subsystems that read this subsystem's state for their own physics (e.g., `frozencond.FrozenBounds` reading drainage's `qdrain`; `WLEVBAL` reading drainage's `qdrd`). Easy to miss; the `use variables, only: …` grep finds them.
+3. **Working-buffer reads** — code paths that use the legacy global as a temporary scratch space (e.g., `swdislay` redistribution in `surfacewater.f90` using global `qdra` as a working buffer alongside its own `state%drainage%qdra` reads). These need migration to either use the typed state directly or to a subroutine-local. Hard to grep for; surface during integration-gate verification.
+4. **Init-routine seed reads** — init routines that read legacy globals to populate state because, at init time, the globals carry config-set values (e.g., `drainage_init` reading `drainl`, `wetper`, `ztopdislay` to seed state). These need either a different init source (typed config arg) or to be migrated AFTER the typed config is wired.
+5. **Call-site argument reads** — reads that happen because a routine takes the global by reference as an argument (e.g., `bocodrb`'s `wetper(1)` static read). These need the caller to pass the typed-state slice OR the typed-config field.
+
+**The grep templates that catch each:**
+
+```bash
+# Output readers + compute readers (use variables clauses):
+grep -rEn "use variables.*\b<owned-var>\b" src/ --include="*.f90" \
+  | grep -v "src/core/variables.f90" \
+  | grep -v "src/state/" \
+  | grep -v "src/<home-tree>"
+
+# Working-buffer + call-site reads (raw symbol references, post-state-write):
+grep -rEn "\b<owned-var>\b" src/ --include="*.f90" \
+  | grep -v "src/core/variables.f90" \
+  | grep -v "src/core/initialize.f90" \
+  | grep -v "src/state/" \
+  | grep -v "state%" \
+  | grep -v "config%"
+```
+
+The first grep finds all explicitly-imported readers. The second grep (run AFTER state-side migrations) finds any remaining bare-name references that aren't migrated yet.
+
+**Verification sequencing:** before deleting a legacy global declaration, run BOTH greps. Any non-zero result is an unmigrated reader that must be handled in the same task as the deletion. The Phase 2 lesson: skip this verification at your peril; the integration gate's check-full failure tells you something is wrong, but the grep tells you exactly where.
+
+---
+
 ## 9. Test surface
 
 | Test file | What it covers |
