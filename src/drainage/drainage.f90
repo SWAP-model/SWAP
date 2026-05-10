@@ -661,8 +661,8 @@ owltab,t1900,swallo,drares,infres,qdrtab,nrlevs,swnrsrf,cofintfl,expintfl,dt,sha
     !!     File usage         : -  Error handling
     !! ----------------------------------------------------------------------
     !!@endnote
-  use variables, only: swsec,swsrf,nrlevs,nrpri,gwl,zbotdr,taludr,widthr,pond,pondmx,swdtyp,dt,wlp,drainl,l,rdrain,rinfi,      &
-              rentry, rexit, gwlinf, wetper, qdrain, qdrd, impend, nmper, wscap, swnrsrf, rsurfdeep, rsurfshallow, cofintfl, &
+  use variables, only: swsec,swsrf,nrlevs,nrpri,gwl,zbotdr,taludr,widthr,pond,pondmx,swdtyp,dt,wlp,l,rdrain,rinfi,          &
+              rentry, rexit, gwlinf, qdrain, impend, nmper, wscap, swnrsrf, rsurfdeep, rsurfshallow, cofintfl,              &
                                     expintfl, t1900, FlMacropore, NumLevRapdra
 
 ! --- global
@@ -692,7 +692,7 @@ owltab,t1900,swallo,drares,infres,qdrtab,nrlevs,swnrsrf,cofintfl,expintfl,dt,sha
                end if
 
 ! --- summate fluxes for use by swballev and swlevbal
-               qdrd = 0.0d0
+               state%drainage%qdrd = 0.0d0
 
                do 500 level = 1, nrlevs
 
@@ -717,31 +717,31 @@ owltab,t1900,swallo,drares,infres,qdrtab,nrlevs,swnrsrf,cofintfl,expintfl,dt,sha
                         if (wl .le. (zbotdr(level) + 0.001d0) .or. swsrf .eq. 1) then
 
 ! --- only groundw. level above channel bottom; bottom is dr. base
-                           drainl(level) = zbotdr(level)
+                           state%drainage%drainl(level) = zbotdr(level)
 
 ! --- wetted perimeter only computed for open channels
 !     (for drains it is input)
                            if (swdtyp(level) .eq. 0) then
-                              wetper(level) = widthr(level)
+                              state%drainage%wetper(level) = widthr(level)
                            end if
                         else
 
 ! --- surface water level above channel bottom
-                           drainl(level) = wl
+                           state%drainage%drainl(level) = wl
                            if (swdtyp(level) .eq. 0) then
                               swdepth = wl - zbotdr(level)
                               swexbrd = (wl - zbotdr(level))/taludr(level)
-                              wetper(level) = widthr(level) +                         &
+                              state%drainage%wetper(level) = widthr(level) +           &
                    &            2*dsqrt(swdepth**2 + swexbrd**2)
                            end if
                         end if
 
 ! --- drainage flux (cm/d)
                         ! calculate head difference
-                        dh = gwl - drainl(level)
+                        dh = gwl - state%drainage%drainl(level)
                         if (gwl .gt. -0.1d0) dh = dh + pond
                         if (dh .lt. 0.0d0 .and. gwl .lt. gwlinf(level)) then
-                           dh = gwlinf(level) - drainl(level)
+                           dh = gwlinf(level) - state%drainage%drainl(level)
                         end if
                         ! interflow flux calculated by a power function,
                         if ((level .eq. nrlevs) .and. (swnrsrf .eq. 2)) then
@@ -760,20 +760,20 @@ owltab,t1900,swallo,drares,infres,qdrtab,nrlevs,swnrsrf,cofintfl,expintfl,dt,sha
                               re = rexit(level)
                            end if
                            if (swdtyp(level) .eq. 0) then
-                              qdrain(level) = dh/((rd + re*l(level)/wetper(level)))
+                              qdrain(level) = dh/((rd + re*l(level)/state%drainage%wetper(level)))
                            else
                               qdrain(level) = dh/rd
                            end if
                         end if
                      else
                         if (swdtyp(level) .eq. 0) then
-                           wetper(level) = 0.0d0
+                           state%drainage%wetper(level) = 0.0d0
                         end if
                         dh = 0.0d0
                         qdrain(level) = 0.0d0
 
 !   - for determining drainage basis for rapid drainage through macropores
-                        drainl(level) = zbotdr(level)
+                        state%drainage%drainl(level) = zbotdr(level)
 
                      end if
 !
@@ -781,14 +781,14 @@ owltab,t1900,swallo,drares,infres,qdrtab,nrlevs,swnrsrf,cofintfl,expintfl,dt,sha
                      qdrain(level) = 0.0d0
 
 !   - for determining drainage basis for rapid drainage through macropores
-                     drainl(level) = wl
+                     state%drainage%drainl(level) = wl
 
                   end if
 !
                   if (swsrf .ge. 2 .and. level .gt. nrpri) then
 
 ! --- qdrd is total flux to or from secondary system
-                     qdrd = qdrd + qdrain(level)
+                     state%drainage%qdrd = state%drainage%qdrd + qdrain(level)
                   end if
 
 500               continue
@@ -796,16 +796,9 @@ owltab,t1900,swallo,drares,infres,qdrtab,nrlevs,swnrsrf,cofintfl,expintfl,dt,sha
 !   - drainage basis for rapid drainage through macropores
                   if (FlMacropore) then
                      if (swdtyp(NumLevRapDra) .ne. 1) then
-                        ZDraBas = drainl(NumLevRapDra)
+                        ZDraBas = state%drainage%drainl(NumLevRapDra)
                      end if
                   end if
-
-! --- SS-DRST Task 5: dual-write per-level geometry and qdrd to state.
-!     Done after the main loop so every level's final value is captured
-!     in one slice, including the ZDraBas-driving drainl(NumLevRapDra).
-                  state%drainage%drainl(1:nrlevs) = drainl(1:nrlevs)
-                  state%drainage%wetper(1:nrlevs) = wetper(1:nrlevs)
-                  state%drainage%qdrd             = qdrd
 
 ! ----------------------------------------------------------------------
 ! --- check for system falling dry (only for swsec = 2):
@@ -830,7 +823,7 @@ owltab,t1900,swallo,drares,infres,qdrtab,nrlevs,swnrsrf,cofintfl,expintfl,dt,sha
                         if (t1900 - 1.d0 + 0.1d-10 .gt. impend(imper)) goto 800
 
 ! ---   determine whether the system will become empty
-                        dvmax = (qdrd + wscap(imper))*dt
+                        dvmax = (state%drainage%qdrd + wscap(imper))*dt
                         swstmax = swst + dvmax
 
                         if (swstmax .lt. 0.0d0) then
@@ -838,7 +831,7 @@ owltab,t1900,swallo,drares,infres,qdrtab,nrlevs,swnrsrf,cofintfl,expintfl,dt,sha
 !         falls dry; make the total infiltration exactly equal to the
 !         available amount:
                            qdrdm = -(swst + wscap(imper)*dt)/dt
-                           qdratio = qdrdm/qdrd
+                           qdratio = qdrdm/state%drainage%qdrd
 
 ! ---     Error handling
                            if (qdratio .gt. 1.0d0 .or. qdratio .lt. 0.0d0) then
@@ -849,9 +842,7 @@ owltab,t1900,swallo,drares,infres,qdrtab,nrlevs,swnrsrf,cofintfl,expintfl,dt,sha
                            do 820 level = 1 + NRPRI, nrlevs
                               qdrain(level) = qdrain(level)*qdratio
 820                           continue
-                              qdrd = qdrdm
-                              ! SS-DRST Task 5: re-sync qdrd after falling-dry clamp.
-                              state%drainage%qdrd = qdrd
+                              state%drainage%qdrd = qdrdm
                               end if
                            end if
 
