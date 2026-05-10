@@ -402,22 +402,36 @@ contains
    end function dhconduc
 
    !> Calculate hydraulic conductivity (as a function of THETA)
-   function hconduc(node, head, theta, rfcp)
+   !! @param tsoil_node Optional soil temperature [deg C] at node — when
+   !! supplied by the caller, the WC_K_models_04_11 temperature-dependent
+   !! path reads from state%heat instead of the global tsoil array.
+   !! SS-HEAT Phase 2 Task 6.
+   function hconduc(node, head, theta, rfcp, tsoil_node)
       implicit none
-      
+
       ! Arguments
       integer, intent(in) :: node
       real(real64), intent(in) :: head, theta, rfcp
+      real(real64), optional, intent(in) :: tsoil_node
+      !! SS-HEAT Phase 2 Task 6: soil temperature at node from state%heat (optional)
       real(real64) :: hconduc
-      
+
       ! Local variables
       real(real64) :: term1, relsat, hconode_vsmall, m, ksatfit, lambda, dummy
       real(real64) :: relsatm, relsat1, alfamg, thetar, thetas
       real(real64) :: h_enpr, n, term2, thetam, relsatthr, ksatthr, ksatexm
       real(real64) :: alfa_2, n_2, m_2, omega_1, s1, s2
+      real(real64) :: tsoil_loc
+      !! Local temperature value: from tsoil_node if present, else global tsoil(node)
       real(real64), parameter :: h_crit = -1.0d-2
       
       hconode_vsmall = 1.0d-10
+      ! SS-HEAT Phase 2 Task 6: resolve temperature source
+      if (present(tsoil_node)) then
+         tsoil_loc = tsoil_node
+      else
+         tsoil_loc = tsoil(node)
+      end if
 
       ! Use analytical expression. "hconduc" is calclated as a function of "watcon"
       if (swsophy == 0) then
@@ -454,7 +468,8 @@ contains
             end if
             
          else if (iHWCKmodel(layer(node)) > 3 .and. iHWCKmodel(layer(node)) < 12) then
-            hconduc = functionvalue_04_11(2, node, head, wc=theta, temp=tsoil(node))
+            ! SS-HEAT Phase 2 Task 6: use tsoil_loc (from state%heat or global fallback)
+            hconduc = functionvalue_04_11(2, node, head, wc=theta, temp=tsoil_loc)
             
          else  ! Use default MvG
 

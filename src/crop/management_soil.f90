@@ -124,6 +124,8 @@ contains
 
       dum1=0.0; dum2=0.0; dum3=0.0; dum4=0.0
       idum = 0
+      ! SS-HEAT Phase 2 Task 6: read tsoil from state%heat
+      associate(tsoil => state%heat%tsoil)
       do i=1,numnod
          if(dum1 + 1.0d-2 * dz(i) .lt. dz_WSN)then
             idum = idum + 1
@@ -133,6 +135,7 @@ contains
             dum4 = dum4 + theta(i) * 1.0d-2 * dz(i)
          end if
       end do
+      end associate
       Temp          = dum2 / dum1 
 !      WFrac_t0      = dum3 / dum1
       WFrac_t       = dum4 / dum1

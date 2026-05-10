@@ -197,7 +197,8 @@ if (iTask == 1) then
    if (flTemperature) call Temperature(1, state)
 
 !  initialize Snow rate/state variables
-   if (flSnow) call Snow(1)
+   ! SS-HEAT Phase 2 Task 6: pass state so Snow reads tsoil from state%heat
+   if (flSnow) call Snow(1, state)
 
 !  initialize Solute rate/state variables
    if (flSolute) call Solute(1, state)
@@ -278,7 +279,8 @@ if (iTask == 2) then
       if (flSwapShared .and. flDayStart) call SharedSimulation(2)
 
 !     calculate Snow: MH+MM - probably to be moved within IF-block above, prior to call ProcessMeteoDay ...
-      if (flSnow .and. flDayStart) call Snow(2)
+      ! SS-HEAT Phase 2 Task 6: pass state so Snow reads tsoil from state%heat
+      if (flSnow .and. flDayStart) call Snow(2, state)
 
 !     calculate reduction for conductivities for frozen conditions
       if (SwFrost.eq.1) then

@@ -136,12 +136,14 @@ module rootextraction_mod
 
             ! use physical processes
             if (swoxygentype .eq. 1) then
-!##MH         call OxygenStress(node,alpwet,ResultsOxygenStress) 
-              call OxygenStress(node,alpwet) 
+!##MH         call OxygenStress(node,alpwet,ResultsOxygenStress)
+              ! SS-HEAT Phase 2 Task 6: pass state so OxygenStress reads tsoil from state%heat
+              call OxygenStress(node,alpwet,state)
             
             ! use reproduction functions
             else
-              call OxygenReproFunction (OxygenSlope,OxygenIntercept,theta,thetas,tsoil,node,z,dz,alpwet)
+              ! SS-HEAT Phase 2 Task 6: pass tsoil from state%heat
+              call OxygenReproFunction (OxygenSlope,OxygenIntercept,theta,thetas,state%heat%tsoil,node,z,dz,alpwet)
             endif
 
           endif
@@ -187,7 +189,8 @@ module rootextraction_mod
 ! ---         in output file *.STR
 
 ! ----  reduction due to frost conditions
-        if (swfrost .eq.1 .and. tsoil(node) .lt. 0.0d0) then
+        ! SS-HEAT Phase 2 Task 6: read tsoil from state%heat
+        if (swfrost .eq.1 .and. state%heat%tsoil(node) .lt. 0.0d0) then
           alpfrs = 0.0d0
         endif
 

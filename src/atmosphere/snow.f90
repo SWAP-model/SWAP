@@ -8,6 +8,7 @@
 !! @endnote
 module snow_mod
    use error_mod, only: fatalerr_collected
+   use swap_state_mod, only: swap_state_t
 
    implicit none
 
@@ -27,13 +28,15 @@ contains
 !! The energy balance approach uses air temperature as a proxy
 !! for available melt energy.
 !!
-   subroutine snow(task)
+   subroutine snow(task, state)
 
       use Variables
       implicit none
 
       ! Arguments
       integer, intent(in) :: task
+      ! SS-HEAT Phase 2 Task 6: optional state for reading tsoil from state%heat
+      type(swap_state_t), optional, intent(in) :: state
     !! Task selector: 1=initialization, 2=calculation
 
       ! Local variables
@@ -45,6 +48,8 @@ contains
     !! Snow deficit when pack becomes negative
       real(8) :: SnLoss
     !! Total snow loss (melt + sublimation)
+      real(8) :: tsoil_surf
+    !! Surface soil temperature [deg C], read from state%heat or global tsoil(1)
 
       ! Constants
       real(8), parameter :: cwat = 4180.0d0
@@ -107,7 +112,13 @@ contains
 
          ! --- when the soil surface is above the freezing point there will be
          ! --- no accumulation of fresh snow.
-         if (tsoil(1) .gt. 0.5d0 .and. ssnow .lt. 1.0d-6 .and. gsnow .gt. 0.0d0) then
+         ! SS-HEAT Phase 2 Task 6: read tsoil(1) from state%heat when available
+         if (present(state)) then
+            tsoil_surf = state%heat%tsoil(1)
+         else
+            tsoil_surf = tsoil(1)
+         end if
+         if (tsoil_surf .gt. 0.5d0 .and. ssnow .lt. 1.0d-6 .and. gsnow .gt. 0.0d0) then
             ssnow = 0.0d0
             melt = gsnow
             subl = 0.d0

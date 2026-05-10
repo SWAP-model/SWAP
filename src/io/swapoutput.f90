@@ -575,7 +575,8 @@
 !     purpose            : write output of soil profile data
 ! ---------------------------------------------------------------------
       ! SS-SLST Phase 1 Task 5: cml, cmsy, isqtop, isqbot migrated to state%solute.
-      use variables, only: ztopcp, zbotcp, vap,daynr,numnod,daycum,z,t1900,theta,h,k,tsoil,q,outfil,     &
+      ! SS-HEAT Phase 2 Task 6: tsoil removed from only-list; reads via state%heat%tsoil.
+      use variables, only: ztopcp, zbotcp, vap,daynr,numnod,daycum,z,t1900,theta,h,k,q,outfil,     &
                            pathwork,project,swheader,qdraincomp,qrot,date,flprintshort
       use swap_state_mod, only: swap_state_t
       use file_io_mod, only: file_open
@@ -625,7 +626,7 @@
            end if
            write (vap,300) datexti,comma,z(node),comma,theta(node),     &
      &       comma,h(node),comma,k(node),comma,qdraincomp(node),comma,  &
-     &       qrot(node),comma,q(node),comma,tsoil(node),comma,state%solute%cml(node),&
+     &       qrot(node),comma,q(node),comma,state%heat%tsoil(node),comma,state%solute%cml(node),&
      &       comma,state%solute%cmsy(node),comma,sflux,comma,ztopcp(node),           &
      &       comma,zbotcp(node),comma,daynr,comma,daycum
         end do
@@ -646,7 +647,7 @@
            end if
            write (vap,310) inidate,comma,z(node),comma,theta(node),     &
      &       comma,h(node),comma,k(node),comma,qdraincomp(node),comma,  &
-     &       qrot(node),comma,q(node),comma,tsoil(node),comma,state%solute%cml(node),&
+     &       qrot(node),comma,q(node),comma,state%heat%tsoil(node),comma,state%solute%cml(node),&
      &       comma,state%solute%cmsy(node),comma,sflux,comma,ztopcp(node),           &
      &       comma,zbotcp(node),comma,daynr,comma,daycum
         end do
@@ -685,7 +686,7 @@
            end if
            write (vap,300) datexti,comma,z(node),comma,theta(node),     &
      &       comma,h(node),comma,k(node),comma,qdraincomp(node),comma,  &
-     &       qrot(node),comma,q(node),comma,tsoil(node),comma,state%solute%cml(node),&
+     &       qrot(node),comma,q(node),comma,state%heat%tsoil(node),comma,state%solute%cml(node),&
      &       comma,state%solute%cmsy(node),comma,sflux,comma,ztopcp(node),           &
      &       comma,zbotcp(node),comma,daynr,comma,daycum
         end do
@@ -704,7 +705,7 @@
            end if
            write (vap,310) date,comma,z(node),comma,theta(node),        &
      &       comma,h(node),comma,k(node),comma,qdraincomp(node),comma,  &
-     &       qrot(node),comma,q(node),comma,tsoil(node),comma,state%solute%cml(node),&
+     &       qrot(node),comma,q(node),comma,state%heat%tsoil(node),comma,state%solute%cml(node),&
      &       comma,state%solute%cmsy(node),comma,sflux,comma,ztopcp(node),           &
      &       comma,zbotcp(node),comma,daynr,comma,daycum
         end do
@@ -1046,7 +1047,8 @@
 !     purpose            : write final result to .end file
 ! ---------------------------------------------------------------------
       ! SS-SLST Phase 1 Task 5: cml migrated to state%solute.
-      use variables, only: t1900,swend,numnod,h,flSolute,flAgeTracer,z,fltemperature,tsoil,                                                             &
+      ! SS-HEAT Phase 2 Task 6: tsoil removed from only-list; reads via state%heat%tsoil.
+      use variables, only: t1900,swend,numnod,h,flSolute,flAgeTracer,z,fltemperature,                                                                   &
                            ssnow,pond,dt,icrop,croptype,cropfil,flSurfaceWater,swredu,ldwet,spev,saev,outfil,pathwork,project,                          &
                            rd,rdpot,dvs,flanthesis,tsum,ilvold,ilvoldpot,wrt,wrtpot,tadw,tadwpot,wst,wstpot,wso,wsopot,wlv,wlvpot,laiexp,lai,laipot,        &
                            dwrt,dwrtpot,dwlv,dwlvpot,dwst,dwstpot,dwlvSoil,dwlvCrop,gasst,gasstpot,mrest,mrestpot,                                          &
@@ -1110,8 +1112,9 @@
       if(fltemperature) then
         write(fin,'(/,"* Soil temperatures  (z in cm; Tsoil in oC)")')
         write(fin,'("   z_Tsoil        Tsoil")')
+        ! SS-HEAT Phase 2 Task 6: read tsoil from state%heat
         do i = 1, numnod
-          write (fin,'(f10.1," ",1p,e12.5)') z(i), tsoil(i)
+          write (fin,'(f10.1," ",1p,e12.5)') z(i), state%heat%tsoil(i)
         end do
       endif
 
@@ -2464,8 +2467,9 @@
 !     Date               : 29-jan-2003
 !     Purpose            : ANIMO/PEARL output: formatted hydrological data
 ! ---------------------------------------------------------------------
+      ! SS-HEAT Phase 2 Task 6: tsoil removed from only-list; reads via state%heat%tsoil.
       use variables, only: afo,outfil,pathwork,numnod,outper,period,pond,gwl,nrlevs,ievap,ipeva,iptra,    &
-                           iruno,numlay,botcom,thetas,kdif,kdir,swafo,igrai,igird,inird,iintc,gc,lai,tav,tsoil,rd,cf,wbalance, &
+                           iruno,numlay,botcom,thetas,kdif,kdir,swafo,igrai,igird,inird,iintc,gc,lai,tav,rd,cf,wbalance, &
                            project,tstart,tend,swdiscrvert,numnodnew,dznew,FlMacropore,Ssnow,igSnow,isnrai,iSubl,irunon,IcTopMp,     &
                            WalevDm1,VlMpDm1,WaSrDm1,VlMpDm2,WaSrDm2,IQInTopVrtDm1,IQInTopLatDm1,            &
                            IQInTopVrtDm2,IQInTopLatDm2,        &
@@ -2525,8 +2529,9 @@
       if (Swafo.ge.2 .and. FlMacropore) Swop = 2
 
 ! -   convert vertical discretization: initial values
+      ! SS-HEAT Phase 2 Task 6: read tsoil from state%heat
       do node = 1,numnod
-         tsoili(node) = tsoil(node)
+         tsoili(node) = state%heat%tsoil(node)
       enddo
       call convertdiscrvert(1,swop,botcomnew,hnew,thetanew,inqnew,inqrotnew,inqdranew,ithetabegnew,tsoili,tsoilnew,   &
                             dipocpnew,iavfrmpwlwtdm1new,iavfrmpwlwtdm2new,inqexcmtxdm1cpnew,inqexcmtxdm2cpnew, &
@@ -2632,8 +2637,9 @@
 ! === output during simulation ===============================================
 
 ! -     convert vertical discretization: dynamic part
+        ! SS-HEAT Phase 2 Task 6: read tsoil from state%heat
         do node = 1,numnod
-          tsoili(node) = tsoil(node)
+          tsoili(node) = state%heat%tsoil(node)
         enddo
         call ConvertDiscrVert(2,swop,botcomnew,hnew,thetanew,inqnew,inqrotnew,inqdranew,ithetabegnew,tsoili,tsoilnew,    &
                               dipocpnew,iavfrmpwlwtdm1new,iavfrmpwlwtdm2new,inqexcmtxdm1cpnew,inqexcmtxdm2cpnew,  &
@@ -2757,8 +2763,9 @@
 !     Date               : 29-jan-2003
 !     Purpose            : ANIMO/PEARL output: unformatted hydrological data
 ! ---------------------------------------------------------------------
+      ! SS-HEAT Phase 2 Task 6: tsoil removed from only-list; reads via state%heat%tsoil.
       use variables, only: aun,outfil,pathwork,numnod,outper,period,pond,gwl,nrlevs,ievap,ipeva,iptra,    &
-                           iruno,numlay,botcom,thetas,kdif,kdir,swaun,igrai,igird,inird,iintc,gc,lai,tav,tsoil,rd,cf,wbalance, &
+                           iruno,numlay,botcom,thetas,kdif,kdir,swaun,igrai,igird,inird,iintc,gc,lai,tav,rd,cf,wbalance, &
                            project,tstart,tend,swdiscrvert,numnodnew,dznew,SwAfo,FlMacropore,Ssnow,igSnow,isnrai,iSubl,irunon, &
                            WalevDm1,VlMpDm1,WaSrDm1,VlMpDm2,WaSrDm2,IQInTopVrtDm1,IQInTopLatDm1,   &
                            IQInTopVrtDm2,IQInTopLatDm2,CritDevMasBal,tcum,nod1lay, FlOpenFileDev
@@ -2813,8 +2820,9 @@
       if (Swaun.eq.2 .and. FlMacropore) Swop = 2
 
 ! -     convert vertical discretization: initial values
+      ! SS-HEAT Phase 2 Task 6: read tsoil from state%heat
       do node = 1,numnod
-        tsoili(node) = tsoil(node)
+        tsoili(node) = state%heat%tsoil(node)
       enddo
       call convertdiscrvert(1,swop,botcomnew,hnew,thetanew,inqnew,inqrotnew,inqdranew,ithetabegnew,tsoili,tsoilnew,      &
                             dipocpnew,iavfrmpwlwtdm1new,iavfrmpwlwtdm2new,inqexcmtxdm1cpnew,inqexcmtxdm2cpnew,    &
@@ -2907,8 +2915,9 @@
 ! === output during simulation ===============================================
 
 ! -   convert vertical discretization: dynamic part
+      ! SS-HEAT Phase 2 Task 6: read tsoil from state%heat
       do node = 1,numnod
-        tsoili(node) = tsoil(node)
+        tsoili(node) = state%heat%tsoil(node)
       enddo
       call convertdiscrvert(2,swop,botcomnew,hnew,thetanew,inqnew,inqrotnew,inqdranew,ithetabegnew,tsoili,tsoilnew,      &
                             dipocpnew,iavfrmpwlwtdm1new,iavfrmpwlwtdm2new,inqexcmtxdm1cpnew,inqexcmtxdm2cpnew,    &
@@ -4668,6 +4677,7 @@ use error_mod, only: fatalerr_collected
 
 ! import global variables contianing possible output
 ! SS-SLST Phase 1 Task 5: cml,cmsy removed (dead-code routine; superseded by csv_out_tz in swap_csv_output.f90).
+! SS-HEAT Phase 2 Task 6: this is a dead-code routine superseded by csv_out_tz; tsoil left as global for compile compat.
 use variables, only: pathwork, outfil, project, InList_csv_tz, numnod, z, flprintshort, date, t1900, h, theta, tsoil, K, c_top, HEACAP, HEACON
 
 implicit none

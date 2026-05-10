@@ -10,8 +10,8 @@
 ! ----------------------------------------------------------------------
       subroutine CropGrowth(task)
 ! ----------------------------------------------------------------------
-!     UpDate             : May 2014   
-!     Date               : Aug 2004   
+!     UpDate             : May 2014
+!     Date               : Aug 2004
 !     Purpose            : Call proper crop routines for initialization,
 !                          calculation of rate/state variables and output
 ! ----------------------------------------------------------------------
@@ -202,7 +202,7 @@
           if (.not. flCropPrep) then
             call ArableLandGerm(2)
           endif
-          
+
           ! Sowing before crop growth
           if (flCropPrep .and. .not. flCropSow) then
             call ArableLandGerm(3)
@@ -820,7 +820,7 @@
 
       integer  task,node
       real(8)  drz1,hrz1,pFz1
-      real(8)  tsumemesub      
+      real(8)  tsumemesub
       
       select case (task)
 
@@ -873,8 +873,9 @@
           drz1 = drz1 - dz(node)
         enddo
         
+        ! SS-HEAT Phase 2 Task 6: tsoil read kept on global (non-module sub; dual-write keeps it current)
         dtempSow = min(tsoil(node) - TempSow,0.d0)
-        
+
         flCropSow = .true.
         if (dtempSow .lt. 0.d0 .or. dhSow.gt.0.d0) then
           if (SowDelay .lt. MaxSowDelay) then
@@ -2119,7 +2120,7 @@
       subroutine grass(task)
 ! ----------------------------------------------------------------------
 !     Date               : November 2004
-!     Purpose            : detailed grass growth routine 
+!     Purpose            : detailed grass growth routine
 ! ----------------------------------------------------------------------
       use variables
       use array_utils, only: afgen
@@ -2129,7 +2130,7 @@
       use error_mod, only: fatalerr_collected
 
       implicit none
- 
+
       integer   i1,task
       integer   idelaypot,idelay,i,swhydrlift
 
@@ -2333,6 +2334,7 @@
           flGrassGrowth = .false.  
         endif
         if (swtsum.eq.2) then
+          ! SS-HEAT Phase 2 Task 6: tsoil read via global in sumttd (non-module; dual-write keeps it current)
           call sumttd('initial',flGrassGrowth,dateGrassGrowth)
         endif
 
@@ -2439,6 +2441,7 @@
         
         ! grass growth initiated by temperature, time and depth
         if (swtsum.eq.2) then
+          ! SS-HEAT Phase 2 Task 6: tsoil read via global in sumttd (non-module; dual-write keeps it current)
           if (dateGrassGrowth.eq.'undefined') call sumttd('dynamic',flGrassGrowth,dateGrassGrowth)
         endif
       
@@ -4531,7 +4534,7 @@
 !     Last modified      : Jan 2016
 !     Author             : Joop Kroes
 !
-!     Purpose            : Suppress grass growth as long as 3 criteria are not met: 
+!     Purpose            : Suppress grass growth as long as 3 criteria are not met:
 !                          temperature, time and depth
 !
 !     Interface parameters, class: I=input,O=output,I/O=input/output
@@ -4543,22 +4546,23 @@
 !       I    R8  z         depth of a node (L)
 !       I    R8  tsoil     Array with soil temperatures (oC) for each compartment
 !       O    L   flGrassGrowth flag indicating grass growth (suppressed=.false. when criteria are not met) [.true .or. .false. -, L]
+! SS-HEAT Phase 2 Task 6: tsoil read kept on global (non-module sub; dual-write keeps it current).
 ! ----------------------------------------------------------------------
       use Variables
       use file_io_mod, only: file_open
       implicit none
 
-! --- global
+! --- arguments
       character(len=*), intent(in) :: task
       logical, intent(out)         :: flGrassGrowth      ! flag indicating grass growth (suppressed=.false. when criteria are not met) [.true .or. .false. -, L]
+      character(len=11), intent(out) ::  dateGrassGrowth            ! date of start of GrassGrowth
 
 ! --- local
       integer    :: tsumtimecum      ! cumulative, from 1-jan, time (nrs of sequential days) with temp above tsumtemp for grass growth [1..20 days, I]
-      logical    :: fltsumtemp       ! flag to indicate if temperature criteria is met 
+      logical    :: fltsumtemp       ! flag to indicate if temperature criteria is met
       logical    :: fltsimprev       ! flag to indicate if temperature criterion is met during simulated previous day
       logical    :: fltsimcount      ! flag to indicate nr of contiuous simulated days that temperature criteria is met
       integer    :: cmpcrit, node
-      character(len=11), intent(out) ::  dateGrassGrowth            ! date of start of GrassGrowth
 !     output
       integer    :: uo   !, idum, ios
       character(len=160)  :: filnam, filtext
@@ -4606,6 +4610,7 @@
 
       case('dynamic')
           ! temperature and depth criterium
+          ! SS-HEAT Phase 2 Task 6: tsoil read kept on global (non-module sub; dual-write keeps it current)
           if(tsoil(cmpcrit).ge.tsumtemp) then
               fltsumtemp = .true.
           else
@@ -4635,8 +4640,8 @@
           if(fltsumtemp) then
               fltsimprev = .true.
           endif
-          
-          ! === write output 
+
+          ! === write output
           write (uo,200) Date,comma,z(cmpcrit),comma,tsoil(cmpcrit),    &
      &           comma,fltsumtemp,comma,fltsimprev,comma,fltsimcount
  200      format (a11,2(a1,f7.2),3(a1,i3))

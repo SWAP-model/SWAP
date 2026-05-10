@@ -203,8 +203,9 @@ contains
 
 ! --- solute decomposition
             if (fltemperature) then
-               if (tsoil(i) .lt. 35.0d0) then
-                  ftemp = exp(gampar*(tsoil(i)-20.0d0))
+               ! SS-HEAT Phase 2 Task 6: read tsoil from state%heat
+               if (state%heat%tsoil(i) .lt. 35.0d0) then
+                  ftemp = exp(gampar*(state%heat%tsoil(i)-20.0d0))
                else
                   ftemp = exp(gampar*15.0d0)
                endif

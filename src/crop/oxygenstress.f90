@@ -84,12 +84,13 @@ end module O2_pars
 !! explicit interfaces through a dedicated module.
 module oxygenstress_mod
    use error_mod, only: fatalerr_collected
+   use swap_state_mod, only: swap_state_t
       implicit none
 
 contains
 
-! ## MH      subroutine OxygenStress(node,rwu_factor,ResultsOxStr) 
-      subroutine OxygenStress(node,rwu_factor) 
+! ## MH      subroutine OxygenStress(node,rwu_factor,ResultsOxStr)
+      subroutine OxygenStress(node,rwu_factor,state)
 ! ----------------------------------------------------------------------
 !     Last modified      : January 2014              
 !     Purpose            : calculates oxygen stress according to Bartholomeus et al. (2008)
@@ -100,6 +101,9 @@ contains
                          bunsencoeff, c_min_micro, c_macro,ctopnode,r_microbial_z0, d_soil
       use array_utils, only: afgen
       implicit none
+
+! --- SS-HEAT Phase 2 Task 6: optional state for reading tsoil from state%heat
+      type(swap_state_t), optional, intent(in) :: state
 
 ! --- local
       integer glit,lay,node,i,j
@@ -211,7 +215,12 @@ contains
 ! --- thickness of the soil compartment [m]     ## MH: =0.01* 
       depth = 0.01d0*dz(node)
 ! --- temperature in the soil compartment [K]
-      soil_temp = tsoil(node)+273.d0  
+      ! SS-HEAT Phase 2 Task 6: read tsoil from state%heat when available
+      if (present(state)) then
+         soil_temp = state%heat%tsoil(node)+273.d0
+      else
+         soil_temp = tsoil(node)+273.d0
+      end if
 ! --- dry weight of roots at nodal depth
 !RB20140109 start new calculation of w_root_z0
 !previous:  w_root_z0 = w_root_ss * exp(0.01*z(node)/shape_factor_rootr)  
