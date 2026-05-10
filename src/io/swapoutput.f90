@@ -1817,7 +1817,7 @@
       end
 
 ! ----------------------------------------------------------------------
-      subroutine TemperatureOutput(task)
+      subroutine TemperatureOutput(task, state)
       use error_mod, only: fatalerr_collected
 ! ----------------------------------------------------------------------
 !     Date               : November 2004
@@ -1826,9 +1826,11 @@
 
 ! --- global variables ------------------
       use Variables
+      use swap_state_mod, only: swap_state_t
 
       implicit none
       integer task
+      type(swap_state_t), intent(in) :: state
 
 
       select case (task)
@@ -1840,7 +1842,7 @@
       if (swini .eq. 1 .and. swcalt.eq.2)  call outheapar()
 
 ! --  tem file
-      if (swtem .eq. 1) call outtem (task)
+      if (swtem .eq. 1) call outtem (task, state)
 
       return
 
@@ -1849,7 +1851,7 @@
 ! === write actual data ===============================
 
 ! --  tem file
-      if (swtem .eq. 1) call outtem (task)
+      if (swtem .eq. 1) call outtem (task, state)
 
       return
 
@@ -1885,7 +1887,12 @@
       character(len=80)  filtext
       character(len=1)   comma
       integer   hea,lay,node,j
-      real(8)   heacnd(macp),thetadum(numnod)
+      real(8)   heacap_loc(macp),heacnd(macp),thetadum(numnod)
+      ! heacap_loc / heacnd are local scratch arrays for the devries parameter sweep.
+      ! Using locals instead of the global heacap prevents a writeback hazard:
+      ! outheapar calls devries with synthetic theta values (not compute-time theta),
+      ! so writing to the global heacap would corrupt it after Temperature(task=1) has
+      ! already populated state%heat%heacap correctly.  (ADR 0034, SS-HEAT Task 5)
 ! ---------------------------------------------------------------------
       comma = ','
 
@@ -1911,9 +1918,9 @@
           do j = 1,21
             thetadum(node) = thetar(node) + dble(j-1) *               &
      &                    (thetas(node)-thetar(node)) / 20.0d0
-            call devries (thetadum,heacap,heacnd)
+            call devries (thetadum,heacap_loc,heacnd)
             write(hea,22) lay, comma, thetadum(node), comma,            &
-     &                 heacap(node), comma, heacnd(node)
+     &                 heacap_loc(node), comma, heacnd(node)
 22          format(i4,a1,f8.5,2(a1,e14.5))
           enddo
       enddo
@@ -2038,18 +2045,21 @@
       end
 
 ! ----------------------------------------------------------------------
-      subroutine outtem (task)
+      subroutine outtem (task, state)
       use error_mod, only: fatalerr_collected
 
 ! ----------------------------------------------------------------------
 !     date               : November 2004
 !     purpose            : Output of soil temperatures
 ! ---------------------------------------------------------------------
-      use variables, only: numnod,date,daynr,tem,daycum,tav,tebot,tsoil,tetop,outfil,pathwork,flheader,project
+      ! SS-HEAT Phase 1 Task 5: tsoil, tebot, tetop migrated to state%heat.
+      use variables, only: numnod,date,daynr,tem,daycum,tav,outfil,pathwork,flheader,project
+      use swap_state_mod, only: swap_state_t
       implicit none
 
 ! --- global
       integer   task
+      type(swap_state_t), intent(in) :: state
 
 ! --- local variables ------------------
       integer      i, reclngth
@@ -2086,8 +2096,8 @@
      &1024(',   T',i2),', TeBot')
 
       write (tem,'(a11,a1,i3,a1,i6,1024(a1,f6.1:))') '    Initial'      &
-     &      ,comma,daynr,comma,daycum,comma,tav,comma,tetop,            &
-     &      (comma,tsoil(i),i=1,numnod),comma,tebot
+     &      ,comma,daynr,comma,daycum,comma,tav,comma,state%heat%tetop,  &
+     &      (comma,state%heat%tsoil(i),i=1,numnod),comma,state%heat%tebot
 
       return
 
@@ -2101,11 +2111,11 @@
 ! --- write soil temperature profile
 !     PWB: idem
 !      write (tem,'(a11,a1,i3,a1,i6,<numnod+3>(a1,f6.1:))') date
-!     &      ,comma,daynr,comma,daycum,comma,tav,comma,tetop,
-!     &      (comma,tsoil(i),i=1,numnod),comma,tebot
+!     &      ,comma,daynr,comma,daycum,comma,tav,comma,state%heat%tetop,
+!     &      (comma,state%heat%tsoil(i),i=1,numnod),comma,state%heat%tebot
       write (tem,'(a11,a1,i3,a1,i6,1024(a1,f6.1:))') date               &
-     &      ,comma,daynr,comma,daycum,comma,tav,comma,tetop,            &
-     &      (comma,tsoil(i),i=1,numnod),comma,tebot
+     &      ,comma,daynr,comma,daycum,comma,tav,comma,state%heat%tetop,  &
+     &      (comma,state%heat%tsoil(i),i=1,numnod),comma,state%heat%tebot
 
       case default
          call fatalerr_collected ('outtem', 'Illegal value for Task')

@@ -3,13 +3,15 @@ module SWAP_csv_output
    use error_mod, only: fatalerr_collected
    ! SS-SLST Phase 1 Task 5: cml,cmsy,imsqprec,imsqirrig,imsqbot,imsqdra,imdectot,imrottot,sampro,solbal
    !   removed from module-level use variables (now via state%solute in set_values/fill_values).
+   ! SS-HEAT Phase 1 Task 5: TeTop,TeBot,Tsoil,heacap,heacon removed from module-level use variables
+   !   (now via state%heat in set_values/fill_values).
    use variables, only: igsnow,igird,iintc,irunon,iruno,ipeva,ievap,iqbot,                                                       &
                         gwl,pond,iptra,iqrot,iqreddry,iqredwet,iqredsol,iqredfrs,tsum,dvs,pgasspot,pgass,                        &
                         cwdmpot,cwdm,wsopot,wso,wlvpot,wlv,wstpot,wst,wrtpot,wrt,dwso,dwlv,dwlvpot,dwst,dwstpot,dwrt,dwrtpot,    &
                         ch,cf,laipot,lai,rdpot,rd,tagppot,tagp,tagptpot,tagpt,cuptgrazpot,cuptgraz,plossdm,lossdm,               &
-                        wc10,Runoff_CN,iqtdo,iqtup,iqinfmax,TeTop,TeBot,ies0,iet0,iew0,inrai,inird,volact,ssnow,iqssdi,          &
-                        flprintshort, date, t1900, dz, numnod, zbotcp, ztopcp, H, theta, K, Tsoil, inq, inqrot,                  &
-                        igrai, isnrai, iqmpoutdrrap, irunocn, isubl, c_top, heacap, heacon, inqssdi, nrlevs, frarmtrx,           &
+                        wc10,Runoff_CN,iqtdo,iqtup,iqinfmax,ies0,iet0,iew0,inrai,inird,volact,ssnow,iqssdi,                     &
+                        flprintshort, date, t1900, dz, numnod, zbotcp, ztopcp, H, theta, K, inq, inqrot,                        &
+                        igrai, isnrai, iqmpoutdrrap, irunocn, isubl, c_top, inqssdi, nrlevs, frarmtrx,                          &
                         iqdo, iqup, pathwork, outfil, project, InList_csv, macp, madr
    use swap_state_mod, only: swap_state_t
 
@@ -301,8 +303,8 @@ module SWAP_csv_output
       if (vars%name(i) == 'QTOPIN')      vars%value(1,i) = iqtdo
       if (vars%name(i) == 'QTOPOUT')     vars%value(1,i) = iqtup
       if (vars%name(i) == 'QINFMAX')     vars%value(1,i) = iqinfmax
-      if (vars%name(i) == 'TETOP')       vars%value(1,i) = TeTop
-      if (vars%name(i) == 'TEBOT')       vars%value(1,i) = TeBot
+      if (vars%name(i) == 'TETOP')       vars%value(1,i) = state%heat%tetop
+      if (vars%name(i) == 'TEBOT')       vars%value(1,i) = state%heat%tebot
 
       ! vars per layer
       if (vars%name(i) == 'H[')          vars%value(1:Mnodes,i) = lp_H%vals(1:Mnodes)
@@ -478,14 +480,14 @@ module SWAP_csv_output
    if (lp_H%fldo)   lp_H%vals(1:vars%Nnodes(lp_H%jpos))     =       H(vars%nodes(1:vars%Nnodes(lp_H%jpos), lp_H%jpos))
    if (lp_WC%fldo)  lp_WC%vals(1:vars%Nnodes(lp_WC%jpos))   =   theta(vars%nodes(1:vars%Nnodes(lp_WC%jpos),lp_WC%jpos))
    if (lp_K%fldo)   lp_K%vals(1:vars%Nnodes(lp_K%jpos))     =       K(vars%nodes(1:vars%Nnodes(lp_K%jpos), lp_K%jpos))
-   if (lp_T%fldo)   lp_T%vals(1:vars%Nnodes(lp_T%jpos))     =   Tsoil(vars%nodes(1:vars%Nnodes(lp_T%jpos), lp_T%jpos))
+   if (lp_T%fldo)   lp_T%vals(1:vars%Nnodes(lp_T%jpos))     =   state%heat%tsoil(vars%nodes(1:vars%Nnodes(lp_T%jpos), lp_T%jpos))
    if (lp_C%fldo)   lp_C%vals(1:vars%Nnodes(lp_C%jpos))     =     state%solute%cml(vars%nodes(1:vars%Nnodes(lp_C%jpos), lp_C%jpos))
    if (lp_CA%fldo)  lp_CA%vals(1:vars%Nnodes(lp_CA%jpos))   =    state%solute%cmsy(vars%nodes(1:vars%Nnodes(lp_CA%jpos),lp_CA%jpos))
    if (lp_O2%fldo)  lp_O2%vals(1:vars%Nnodes(lp_O2%jpos))   =   c_top(vars%nodes(1:vars%Nnodes(lp_O2%jpos),lp_O2%jpos))
 
    ! HEACAP, HEACON, DRAIN, RWU, FLUX, SSDI
-   if (lp_HCA%fldo) lp_HCA%vals(1:vars%Nnodes(lp_HCA%jpos)) =  HEACAP(vars%nodes(1:vars%Nnodes(lp_HCA%jpos),lp_HCA%jpos))
-   if (lp_HCO%fldo) lp_HCO%vals(1:vars%Nnodes(lp_HCO%jpos)) =  HEACON(vars%nodes(1:vars%Nnodes(lp_HCO%jpos),lp_HCO%jpos))
+   if (lp_HCA%fldo) lp_HCA%vals(1:vars%Nnodes(lp_HCA%jpos)) =  state%heat%heacap(vars%nodes(1:vars%Nnodes(lp_HCA%jpos),lp_HCA%jpos))
+   if (lp_HCO%fldo) lp_HCO%vals(1:vars%Nnodes(lp_HCO%jpos)) =  state%heat%heacon(vars%nodes(1:vars%Nnodes(lp_HCO%jpos),lp_HCO%jpos))
    if (lp_RWU%fldo) lp_RWU%vals(1:vars%Nnodes(lp_RWU%jpos)) =  inqrot(vars%nodes(1:vars%Nnodes(lp_RWU%jpos),lp_RWU%jpos))
    if (lp_Q%fldo)   lp_Q%vals(1:vars%Nnodes(lp_Q%jpos))     =     inq(vars%nodes(1:vars%Nnodes(lp_Q%jpos),  lp_Q%jpos))
    if (lp_SI%fldo)  lp_SI%vals(1:vars%Nnodes(lp_SI%jpos))   = inqssdi(vars%nodes(1:vars%Nnodes(lp_SI%jpos), lp_SI%jpos))
@@ -950,8 +952,9 @@ subroutine csv_out_tz (iTask, state)
 
 ! import global variables contianing possible output
 ! SS-SLST Phase 1 Task 5: cml,cmsy migrated to state%solute.
+! SS-HEAT Phase 1 Task 5: tsoil, HEACAP, HEACON removed (now via state%heat).
 use variables, only: pathwork, outfil, project, InList_csv_tz, tz_z1_z2, numnod, z, zbotcp, flprintshort, date, t1900, &
-                     h, theta, tsoil, K, c_top, HEACAP, HEACON, inqrot
+                     h, theta, K, c_top, inqrot
 use swap_state_mod, only: swap_state_t
 use file_io_mod, only: file_open
 
@@ -1087,13 +1090,13 @@ case (2)
 
     if (iCSV(1)  == 1) call do_write_csv_tz (h(j))
     if (iCSV(2)  == 1) call do_write_csv_tz (theta(j))
-    if (iCSV(3)  == 1) call do_write_csv_tz (tsoil(j))
+    if (iCSV(3)  == 1) call do_write_csv_tz (state%heat%tsoil(j))
     if (iCSV(4)  == 1) call do_write_csv_tz (k(j))
     if (iCSV(5)  == 1) call do_write_csv_tz (state%solute%cml(j))
     if (iCSV(6)  == 1) call do_write_csv_tz (state%solute%cmsy(j))
     if (iCSV(7)  == 1) call do_write_csv_tz (c_top(j))
-    if (iCSV(8)  == 1) call do_write_csv_tz (HEACAP(j)/1.0d-6)    ! from J/cm3/K  to J/m3/K
-    if (iCSV(9)  == 1) call do_write_csv_tz (HEACON(j)/864.0d0)   ! from J/cm/K/d to W/m/K
+    if (iCSV(8)  == 1) call do_write_csv_tz (state%heat%heacap(j)/1.0d-6)    ! from J/cm3/K  to J/m3/K
+    if (iCSV(9)  == 1) call do_write_csv_tz (state%heat%heacon(j)/864.0d0)   ! from J/cm/K/d to W/m/K
     if (iCSV(10) == 1) call do_write_csv_tz (inqrot(j))
 
     ! finalize record (advance to next line)
