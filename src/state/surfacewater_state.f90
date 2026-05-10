@@ -17,7 +17,6 @@ module surfacewater_state_mod
    private
    public :: surfacewater_state_t
    public :: surfacewater_intermediate_t
-   public :: surfacewater_cumulative_t
    public :: surfacewater_drainage_cumulative_t
    public :: surfacewater_reservoir_cumulative_t
 
@@ -31,22 +30,6 @@ module surfacewater_state_mod
    contains
       procedure :: reset => surfacewater_intermediate_reset
    end type surfacewater_intermediate_t
-
-   !> [DEPRECATED — see surfacewater_drainage_cumulative_t and
-   !! surfacewater_reservoir_cumulative_t.] Old single-cohort type kept
-   !! during the SS-CRR Phase A correction so the new types can compile
-   !! standalone before the call-site migration. Removed in the next commit.
-   type :: surfacewater_cumulative_t
-      real(real64) :: cqdrd  = 0.0_real64
-      real(real64) :: cwsupp = 0.0_real64
-      real(real64) :: cwout  = 0.0_real64
-      real(real64) :: cqdra  = 0.0_real64
-      real(real64), allocatable :: cqdrain(:)
-      real(real64), allocatable :: cqdrainin(:)
-      real(real64), allocatable :: cqdrainout(:)
-   contains
-      procedure :: reset => surfacewater_cumulative_reset
-   end type surfacewater_cumulative_t
 
    !> Drainage-cumulative cohort — accumulates only when fldrain is true
    !! (i.e., swdra=1 OR swdra=2). Owner: drainage subsystem; reset() is
@@ -98,9 +81,10 @@ module surfacewater_state_mod
       real(real64) :: wlsbak(4)     = 0.0_real64    ! 4-step circular buffer for oscillation detection
       real(real64) :: sttab(22, 2)  = 0.0_real64    ! pre-computed level-storage table
 
-      ! cohort sub-records — intermediate and cumulative accumulators
-      type(surfacewater_intermediate_t) :: intermediate
-      type(surfacewater_cumulative_t)   :: cumulative
+      ! cohort sub-records — intermediate and partitioned cumulative accumulators
+      type(surfacewater_intermediate_t)          :: intermediate
+      type(surfacewater_drainage_cumulative_t)   :: drainage_cumulative   ! gate: fldrain
+      type(surfacewater_reservoir_cumulative_t)  :: reservoir_cumulative  ! gate: flSurfaceWater
    end type surfacewater_state_t
 
 contains
@@ -114,19 +98,6 @@ contains
       if (allocated(self%inqdra_in))  self%inqdra_in  = 0.0_real64
       if (allocated(self%inqdra_out)) self%inqdra_out = 0.0_real64
    end subroutine surfacewater_intermediate_reset
-
-   !> [DEPRECATED] Old combined-cohort reset. Removed alongside the
-   !! type itself in the next commit (call-site migration).
-   subroutine surfacewater_cumulative_reset(self)
-      class(surfacewater_cumulative_t), intent(inout) :: self
-      self%cqdrd  = 0.0_real64
-      self%cwsupp = 0.0_real64
-      self%cwout  = 0.0_real64
-      self%cqdra  = 0.0_real64
-      if (allocated(self%cqdrain))    self%cqdrain    = 0.0_real64
-      if (allocated(self%cqdrainin))  self%cqdrainin  = 0.0_real64
-      if (allocated(self%cqdrainout)) self%cqdrainout = 0.0_real64
-   end subroutine surfacewater_cumulative_reset
 
    !> Zero the drainage-cumulative cohort. Allocatable arrays are zeroed
    !! only if allocated; allocation lifecycle stays with the caller.

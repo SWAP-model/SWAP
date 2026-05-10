@@ -483,7 +483,7 @@ contains
       cqssdi = cqssdi + qssdisum*dt
       cqrot = cqrot + qrotts
       ! SS-SWST Phase 2 Task 7: cqdra accumulated directly into state; global dropped.
-      state%surfacewater%cumulative%cqdra = state%surfacewater%cumulative%cqdra + qdrats
+      state%surfacewater%drainage_cumulative%cqdra = state%surfacewater%drainage_cumulative%cqdra + qdrats
       cptra = cptra + ptrats
       cpeva = cpeva + pevats
       cevap = cevap + revats
@@ -510,16 +510,16 @@ contains
       endif
       cqbot = cqbot + qbotts
       ! SS-SWST Phase 2 Task 7: cqdrain/in/out accumulated directly into state; globals dropped.
-      if (allocated(state%surfacewater%cumulative%cqdrain)) then
+      if (allocated(state%surfacewater%drainage_cumulative%cqdrain)) then
         do level = 1,nrlevs
           ! infiltration
           if (state%drainage%qdrain(level).lt.0.0d0) then
-            state%surfacewater%cumulative%cqdrainin(level) = state%surfacewater%cumulative%cqdrainin(level) - state%drainage%qdrain(level)*dt
+            state%surfacewater%drainage_cumulative%cqdrainin(level) = state%surfacewater%drainage_cumulative%cqdrainin(level) - state%drainage%qdrain(level)*dt
           ! drainage
           else if (state%drainage%qdrain(level).gt.0.0d0) then
-            state%surfacewater%cumulative%cqdrainout(level) = state%surfacewater%cumulative%cqdrainout(level) + state%drainage%qdrain(level)*dt
+            state%surfacewater%drainage_cumulative%cqdrainout(level) = state%surfacewater%drainage_cumulative%cqdrainout(level) + state%drainage%qdrain(level)*dt
           endif
-          state%surfacewater%cumulative%cqdrain(level) = state%surfacewater%cumulative%cqdrain(level) + state%drainage%qdrain(level)*dt
+          state%surfacewater%drainage_cumulative%cqdrain(level) = state%surfacewater%drainage_cumulative%cqdrain(level) + state%drainage%qdrain(level)*dt
         enddo
       end if
 
@@ -536,10 +536,10 @@ contains
       ! cumulative water balance error
       if (swsnow.eq.0) then
         wbalance = cnrai + cnird + crunon - crunoff - cqrot - cevap     &
-     &        - state%surfacewater%cumulative%cqdra + cqbot + volini - volact + PondIni - pond + cqssdi
+     &        - state%surfacewater%drainage_cumulative%cqdra + cqbot + volini - volact + PondIni - pond + cqssdi
       else
          wbalance = cqprai + cnird + cmelt + crunon - crunoff           &
-     &        - cqrot - cevap - state%surfacewater%cumulative%cqdra     &
+     &        - cqrot - cevap - state%surfacewater%drainage_cumulative%cqdra     &
      &        + cqbot + volini - volact + PondIni - pond + cqssdi
       endif
 

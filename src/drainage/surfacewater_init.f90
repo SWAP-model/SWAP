@@ -116,17 +116,17 @@ contains
       sw%swst    = sw%swstini
 
       ! Allocate per-level arrays in state cohort sub-records (guard against repeated calls).
-      if (.not. allocated(sw%cumulative%cqdrain)) then
-         allocate(sw%cumulative%cqdrain(nrlevs))
-         sw%cumulative%cqdrain = 0.0_real64
+      if (.not. allocated(sw%drainage_cumulative%cqdrain)) then
+         allocate(sw%drainage_cumulative%cqdrain(nrlevs))
+         sw%drainage_cumulative%cqdrain = 0.0_real64
       end if
-      if (.not. allocated(sw%cumulative%cqdrainin)) then
-         allocate(sw%cumulative%cqdrainin(nrlevs))
-         sw%cumulative%cqdrainin = 0.0_real64
+      if (.not. allocated(sw%drainage_cumulative%cqdrainin)) then
+         allocate(sw%drainage_cumulative%cqdrainin(nrlevs))
+         sw%drainage_cumulative%cqdrainin = 0.0_real64
       end if
-      if (.not. allocated(sw%cumulative%cqdrainout)) then
-         allocate(sw%cumulative%cqdrainout(nrlevs))
-         sw%cumulative%cqdrainout = 0.0_real64
+      if (.not. allocated(sw%drainage_cumulative%cqdrainout)) then
+         allocate(sw%drainage_cumulative%cqdrainout(nrlevs))
+         sw%drainage_cumulative%cqdrainout = 0.0_real64
       end if
       if (.not. allocated(sw%intermediate%inqdra)) then
          allocate(sw%intermediate%inqdra(nrlevs, numnod))

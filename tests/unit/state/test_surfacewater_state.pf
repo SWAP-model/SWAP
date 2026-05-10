@@ -23,10 +23,10 @@ subroutine test_surfacewater_state_default_scalars()
    @assertEqual(0.0_real64, sw%ZDraBas,                   1.0e-12_real64)
    @assertEqual(0.0_real64, sw%qdrtot,                    1.0e-12_real64)
    ! cohort scalars — now nested
-   @assertEqual(0.0_real64, sw%cumulative%cqdrd,          1.0e-12_real64)
-   @assertEqual(0.0_real64, sw%cumulative%cwsupp,         1.0e-12_real64)
-   @assertEqual(0.0_real64, sw%cumulative%cwout,          1.0e-12_real64)
-   @assertEqual(0.0_real64, sw%cumulative%cqdra,          1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%reservoir_cumulative%cqdrd,          1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%reservoir_cumulative%cwsupp,         1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%reservoir_cumulative%cwout,          1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%drainage_cumulative%cqdra,          1.0e-12_real64)
    @assertEqual(0.0_real64, sw%intermediate%iqdra,        1.0e-12_real64)
    @assertFalse(sw%overfl)
    @assertTrue(sw%flInitDraBas)
@@ -71,9 +71,9 @@ subroutine test_surfacewater_state_arrays_unallocated()
    use surfacewater_state_mod, only: surfacewater_state_t
    type(surfacewater_state_t) :: sw
 
-   @assertFalse(allocated(sw%cumulative%cqdrain))
-   @assertFalse(allocated(sw%cumulative%cqdrainin))
-   @assertFalse(allocated(sw%cumulative%cqdrainout))
+   @assertFalse(allocated(sw%drainage_cumulative%cqdrain))
+   @assertFalse(allocated(sw%drainage_cumulative%cqdrainin))
+   @assertFalse(allocated(sw%drainage_cumulative%cqdrainout))
    ! qdra moved to drainage_state_t (SS-DRST Task 3 / ADR 0031)
    @assertFalse(allocated(sw%intermediate%inqdra))
    @assertFalse(allocated(sw%intermediate%inqdra_in))
@@ -91,16 +91,16 @@ subroutine test_surfacewater_state_array_allocation()
    integer, parameter :: Madr = 5
    integer, parameter :: macp = 100
 
-   allocate(sw%cumulative%cqdrain(Madr));         sw%cumulative%cqdrain    = 0.0_real64
-   allocate(sw%cumulative%cqdrainin(Madr));       sw%cumulative%cqdrainin  = 0.0_real64
-   allocate(sw%cumulative%cqdrainout(Madr));      sw%cumulative%cqdrainout = 0.0_real64
+   allocate(sw%drainage_cumulative%cqdrain(Madr));         sw%drainage_cumulative%cqdrain    = 0.0_real64
+   allocate(sw%drainage_cumulative%cqdrainin(Madr));       sw%drainage_cumulative%cqdrainin  = 0.0_real64
+   allocate(sw%drainage_cumulative%cqdrainout(Madr));      sw%drainage_cumulative%cqdrainout = 0.0_real64
    ! qdra moved to drainage_state_t (SS-DRST Task 3 / ADR 0031)
    allocate(sw%intermediate%inqdra(Madr, macp));    sw%intermediate%inqdra     = 0.0_real64
    allocate(sw%intermediate%inqdra_in(Madr, macp)); sw%intermediate%inqdra_in  = 0.0_real64
    allocate(sw%intermediate%inqdra_out(Madr, macp));sw%intermediate%inqdra_out = 0.0_real64
 
-   @assertTrue(allocated(sw%cumulative%cqdrain))
-   @assertEqual(Madr, size(sw%cumulative%cqdrain))
+   @assertTrue(allocated(sw%drainage_cumulative%cqdrain))
+   @assertEqual(Madr, size(sw%drainage_cumulative%cqdrain))
    ! qdra allocation now tested in test_drainage_state.pf
    @assertTrue(allocated(sw%intermediate%inqdra))
 end subroutine test_surfacewater_state_array_allocation

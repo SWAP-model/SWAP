@@ -98,8 +98,13 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
       if (flzerointr) call state%surfacewater%intermediate%reset()
 
 ! --- reset cumulative surface water and drainage fluxes
-      ! SS-CRR Phase A Task A4: cohort-owned reset; see surfacewater_state_mod.
-      if (flzerocumu) call state%surfacewater%cumulative%reset()
+      ! SS-CRR Phase A correction Task 2: cumulative cohort partitioned by activity gate.
+      ! SurfaceWater(2) is the canonical owner for both cohorts under swdra=2 (the only
+      ! swdra value at which this code runs — see flSurfaceWater wiring in timecontrol).
+      if (flzerocumu) then
+         call state%surfacewater%drainage_cumulative%reset()
+         call state%surfacewater%reservoir_cumulative%reset()
+      end if
 
 ! --- calculate lateral drainage
       ! SS-DRST Phase 2 Task 4: bocodre writes state%drainage%qdrain directly; no bridge sync.
@@ -334,9 +339,9 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
          sw_hwlman => state%surfacewater%hwlman, &
          sw_vtair  => state%surfacewater%vtair,  &
          sw_imper  => state%surfacewater%imper,  &
-         sw_cqdrd  => state%surfacewater%cumulative%cqdrd,  &
-         sw_cwsupp => state%surfacewater%cumulative%cwsupp, &
-         sw_cwout  => state%surfacewater%cumulative%cwout)
+         sw_cqdrd  => state%surfacewater%reservoir_cumulative%cqdrd,  &
+         sw_cwsupp => state%surfacewater%reservoir_cumulative%cwsupp, &
+         sw_cwout  => state%surfacewater%reservoir_cumulative%cwout)
 
 ! --- resetting of flag for overflowing of automatic weir
       ! overfl global write dropped: only sw_overfl (state alias) used henceforth.
@@ -673,9 +678,9 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
          sw_wls    => state%surfacewater%wls,    &
          sw_wlsold => state%surfacewater%wlsold, &
          sw_swst   => state%surfacewater%swst,   &
-         sw_cqdrd  => state%surfacewater%cumulative%cqdrd,  &
-         sw_cwsupp => state%surfacewater%cumulative%cwsupp, &
-         sw_cwout  => state%surfacewater%cumulative%cwout)
+         sw_cqdrd  => state%surfacewater%reservoir_cumulative%cqdrd,  &
+         sw_cwsupp => state%surfacewater%reservoir_cumulative%cwsupp, &
+         sw_cwout  => state%surfacewater%reservoir_cumulative%cwout)
 
 ! --- wlsold gets w-level of previous time step
       ! wlsold global write dropped; sw_wlsold (state alias) is the signal.

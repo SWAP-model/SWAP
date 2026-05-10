@@ -1,6 +1,11 @@
-! Tests for surfacewater_intermediate_t%reset and
-! surfacewater_cumulative_t%reset — the cohort sub-records
-! introduced in CRR Phase A Task A1 and unit-tested here (Task A2).
+! Tests for the surfacewater cohort reset() procedures:
+!   - surfacewater_intermediate_t           (Task A1, A2)
+!   - surfacewater_drainage_cumulative_t    (Phase A correction Task 1)
+!   - surfacewater_reservoir_cumulative_t   (Phase A correction Task 1)
+!
+! The original surfacewater_cumulative_t was deprecated and removed
+! during the Phase A correction; its tests are gone. The new pair of
+! cohorts is partitioned by activity gate (fldrain vs flSurfaceWater).
 
 @test
 subroutine test_intermediate_reset_zeroes_scalar_iqdra()
@@ -46,43 +51,6 @@ subroutine test_intermediate_reset_safe_when_arrays_not_allocated()
    @assertFalse(allocated(cohort%inqdra_out))
 end subroutine test_intermediate_reset_safe_when_arrays_not_allocated
 
-@test
-subroutine test_cumulative_reset_zeroes_all_scalars()
-   use funit
-   use iso_fortran_env, only: real64
-   use surfacewater_state_mod, only: surfacewater_cumulative_t
-   type(surfacewater_cumulative_t) :: cohort
-
-   cohort%cqdrd  = 1.0_real64
-   cohort%cwsupp = 2.0_real64
-   cohort%cwout  = 3.0_real64
-   cohort%cqdra  = 4.0_real64
-
-   call cohort%reset()
-
-   @assertEqual(0.0_real64, cohort%cqdrd,  1.0e-12_real64)
-   @assertEqual(0.0_real64, cohort%cwsupp, 1.0e-12_real64)
-   @assertEqual(0.0_real64, cohort%cwout,  1.0e-12_real64)
-   @assertEqual(0.0_real64, cohort%cqdra,  1.0e-12_real64)
-end subroutine test_cumulative_reset_zeroes_all_scalars
-
-@test
-subroutine test_cumulative_reset_zeroes_allocated_per_level_arrays()
-   use funit
-   use iso_fortran_env, only: real64
-   use surfacewater_state_mod, only: surfacewater_cumulative_t
-   type(surfacewater_cumulative_t) :: cohort
-
-   allocate(cohort%cqdrain(5));    cohort%cqdrain    = 5.0_real64
-   allocate(cohort%cqdrainin(5));  cohort%cqdrainin  = 5.0_real64
-   allocate(cohort%cqdrainout(5)); cohort%cqdrainout = 5.0_real64
-
-   call cohort%reset()
-
-   @assertEqual(0.0_real64, sum(cohort%cqdrain),    1.0e-12_real64)
-   @assertEqual(0.0_real64, sum(cohort%cqdrainin),  1.0e-12_real64)
-   @assertEqual(0.0_real64, sum(cohort%cqdrainout), 1.0e-12_real64)
-end subroutine test_cumulative_reset_zeroes_allocated_per_level_arrays
 
 ! Tests for the SS-CRR Phase A correction split: drainage_cumulative
 ! and reservoir_cumulative cohorts replace the single cumulative

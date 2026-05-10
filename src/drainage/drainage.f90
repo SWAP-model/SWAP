@@ -436,17 +436,17 @@ owltab,t1900,swallo,drares,infres,qdrtab,nrlevs,swnrsrf,cofintfl,expintfl,dt,sha
 
                ! Allocate per-level state arrays if not yet done (guard for
                ! fldrain path where surfacewater_init may not have been called).
-               if (.not. allocated(state%surfacewater%cumulative%cqdrain)) then
-                  allocate(state%surfacewater%cumulative%cqdrain(nrlevs))
-                  state%surfacewater%cumulative%cqdrain = 0.0d0
+               if (.not. allocated(state%surfacewater%drainage_cumulative%cqdrain)) then
+                  allocate(state%surfacewater%drainage_cumulative%cqdrain(nrlevs))
+                  state%surfacewater%drainage_cumulative%cqdrain = 0.0d0
                end if
-               if (.not. allocated(state%surfacewater%cumulative%cqdrainin)) then
-                  allocate(state%surfacewater%cumulative%cqdrainin(nrlevs))
-                  state%surfacewater%cumulative%cqdrainin = 0.0d0
+               if (.not. allocated(state%surfacewater%drainage_cumulative%cqdrainin)) then
+                  allocate(state%surfacewater%drainage_cumulative%cqdrainin(nrlevs))
+                  state%surfacewater%drainage_cumulative%cqdrainin = 0.0d0
                end if
-               if (.not. allocated(state%surfacewater%cumulative%cqdrainout)) then
-                  allocate(state%surfacewater%cumulative%cqdrainout(nrlevs))
-                  state%surfacewater%cumulative%cqdrainout = 0.0d0
+               if (.not. allocated(state%surfacewater%drainage_cumulative%cqdrainout)) then
+                  allocate(state%surfacewater%drainage_cumulative%cqdrainout(nrlevs))
+                  state%surfacewater%drainage_cumulative%cqdrainout = 0.0d0
                end if
                if (.not. allocated(state%surfacewater%intermediate%inqdra)) then
                   allocate(state%surfacewater%intermediate%inqdra(nrlevs, numnod))
@@ -497,21 +497,13 @@ owltab,t1900,swallo,drares,infres,qdrtab,nrlevs,swnrsrf,cofintfl,expintfl,dt,sha
 
                ! --- reset cumulative soil water fluxes
                ! SS-CRR Phase A Task A5: drainage zeros a strict subset of the
-               ! cumulative cohort (cqdra + cqdrain*). The full cohort reset()
-               ! would also zero cqdrd/cwsupp/cwout, which are mid-accumulation
-               ! across timesteps between flzerocumu events (they are only
-               ! accumulated inside SurfaceWater(2), which runs AFTER Drainage).
-               ! The full cohort reset() runs at SurfaceWater(2) call site
-               ! (Task A4). Drainage retains element-by-element zeroing of its
-               ! own subset only. See ADR 0033 for the asymmetry analysis.
-               if (flzerocumu) then
-                  state%surfacewater%cumulative%cqdra = 0.0d0
-                  if (allocated(state%surfacewater%cumulative%cqdrain)) then
-                     state%surfacewater%cumulative%cqdrain    = 0.0d0
-                     state%surfacewater%cumulative%cqdrainin  = 0.0d0
-                     state%surfacewater%cumulative%cqdrainout = 0.0d0
-                  end if
-               end if
+               ! SS-CRR Phase A correction Task 2: drainage_cumulative cohort
+               ! is gated by fldrain (active under both swdra=1 and swdra=2);
+               ! reservoir_cumulative is gated by flSurfaceWater (active only
+               ! under swdra=2). Drainage owns the drainage_cumulative reset;
+               ! reservoir_cumulative is reset by SurfaceWater(2) and never
+               ! accumulates under swdra=1 — so no reset site is needed here.
+               if (flzerocumu) call state%surfacewater%drainage_cumulative%reset()
 
                ! --- reset to zero if groundwater level under soil profile and return
                if (gwl .gt. 998.0d0) then
