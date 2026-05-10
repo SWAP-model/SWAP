@@ -213,6 +213,7 @@ if get_option('enable_pfunit')
         'state/test_surfacewater_cumulative.pf',
         'state/test_drainage_state.pf',
         'state/test_solute_state.pf',
+        'state/test_solute_cumulative.pf',
         'state/test_swap_state.pf',
         'crop/test_cropfixed_init.pf',
         'crop/test_cropwofost_init.pf',

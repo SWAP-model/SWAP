@@ -1,0 +1,84 @@
+! Tests for solute_intermediate_t%reset and solute_cumulative_t%reset —
+! the cohort sub-records introduced in CRR Phase B Task B1 and
+! unit-tested here (Task B2). Mirrors Task A2's pattern for surfacewater.
+! No allocatable arrays in solute cohorts, so 4 tests (not 5).
+
+@test
+subroutine test_solute_intermediate_reset_zeroes_all_scalars()
+   use funit
+   use iso_fortran_env, only: real64
+   use solute_state_mod, only: solute_intermediate_t
+   type(solute_intermediate_t) :: cohort
+
+   cohort%imsqprec  = 1.0_real64
+   cohort%imsqirrig = 2.0_real64
+   cohort%imsqbot   = 3.0_real64
+   cohort%imsqdra   = 4.0_real64
+   cohort%imdectot  = 5.0_real64
+   cohort%imrottot  = 6.0_real64
+
+   call cohort%reset()
+
+   @assertEqual(0.0_real64, cohort%imsqprec,  1.0e-12_real64)
+   @assertEqual(0.0_real64, cohort%imsqirrig, 1.0e-12_real64)
+   @assertEqual(0.0_real64, cohort%imsqbot,   1.0e-12_real64)
+   @assertEqual(0.0_real64, cohort%imsqdra,   1.0e-12_real64)
+   @assertEqual(0.0_real64, cohort%imdectot,  1.0e-12_real64)
+   @assertEqual(0.0_real64, cohort%imrottot,  1.0e-12_real64)
+end subroutine test_solute_intermediate_reset_zeroes_all_scalars
+
+@test
+subroutine test_solute_intermediate_reset_from_default_state()
+   use funit
+   use iso_fortran_env, only: real64
+   use solute_state_mod, only: solute_intermediate_t
+   type(solute_intermediate_t) :: cohort
+
+   ! Default state is already zero; reset() is a no-op but must not crash.
+   call cohort%reset()
+
+   @assertEqual(0.0_real64, cohort%imsqprec, 1.0e-12_real64)
+end subroutine test_solute_intermediate_reset_from_default_state
+
+@test
+subroutine test_solute_cumulative_reset_zeroes_all_scalars()
+   use funit
+   use iso_fortran_env, only: real64
+   use solute_state_mod, only: solute_cumulative_t
+   type(solute_cumulative_t) :: cohort
+
+   cohort%sqprec  = 1.0_real64
+   cohort%sqirrig = 2.0_real64
+   cohort%sqbot   = 3.0_real64
+   cohort%sqdra   = 4.0_real64
+   cohort%sqsur   = 5.0_real64
+   cohort%dectot  = 6.0_real64
+   cohort%rottot  = 7.0_real64
+   cohort%csurf   = 8.0_real64
+   cohort%samini  = 9.0_real64
+
+   call cohort%reset()
+
+   @assertEqual(0.0_real64, cohort%sqprec,  1.0e-12_real64)
+   @assertEqual(0.0_real64, cohort%sqirrig, 1.0e-12_real64)
+   @assertEqual(0.0_real64, cohort%sqbot,   1.0e-12_real64)
+   @assertEqual(0.0_real64, cohort%sqdra,   1.0e-12_real64)
+   @assertEqual(0.0_real64, cohort%sqsur,   1.0e-12_real64)
+   @assertEqual(0.0_real64, cohort%dectot,  1.0e-12_real64)
+   @assertEqual(0.0_real64, cohort%rottot,  1.0e-12_real64)
+   @assertEqual(0.0_real64, cohort%csurf,   1.0e-12_real64)
+   @assertEqual(0.0_real64, cohort%samini,  1.0e-12_real64)
+end subroutine test_solute_cumulative_reset_zeroes_all_scalars
+
+@test
+subroutine test_solute_cumulative_reset_from_default_state()
+   use funit
+   use iso_fortran_env, only: real64
+   use solute_state_mod, only: solute_cumulative_t
+   type(solute_cumulative_t) :: cohort
+
+   ! Default state is already zero; reset() is a no-op but must not crash.
+   call cohort%reset()
+
+   @assertEqual(0.0_real64, cohort%samini, 1.0e-12_real64)
+end subroutine test_solute_cumulative_reset_from_default_state
