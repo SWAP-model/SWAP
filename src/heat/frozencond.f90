@@ -73,51 +73,52 @@ contains
     implicit none
 
     type(swap_state_t), intent(inout) :: state
-    !! Typed simulation state — dual-write: writes both legacy globals and state%heat%*
+    !! Typed simulation state — reads tsoil/tetop from state; writes rfcp/frozen-zone to state only
 
     ! Local variables
     integer node
     logical flthaw
 
     associate( &
-        ht_rfcp        => state%heat%rfcp,        &
+        ht_tsoil       => state%heat%tsoil,       &
+        ht_tetop       => state%heat%tetop,        &
+        ht_rfcp        => state%heat%rfcp,         &
         ht_nodfrostbot => state%heat%nodfrostbot,  &
         ht_zfrostbot   => state%heat%zfrostbot,    &
         ht_zfrosttop   => state%heat%zfrosttop)
 
     ! Calculate reduction factor for each node
     do node=1,numnod
-      rfcp(node) = 1.0d0
+      ht_rfcp(node) = 1.0d0
       if (swfrost.eq.1)then
-        if(tsoil(node).ge.tfroststa)then
-          rfcp(node) = 1.0d0
-        else if(tsoil(node).le.tfrostend) then
-          rfcp(node) = 0.0d0
-        else if(tsoil(node).lt.tfroststa .and. &
-                tsoil(node).gt.tfrostend) then
-          rfcp(node) = (tsoil(node)-tfrostend)/ &
-                       (tfroststa-tfrostend)
+        if(ht_tsoil(node).ge.tfroststa)then
+          ht_rfcp(node) = 1.0d0
+        else if(ht_tsoil(node).le.tfrostend) then
+          ht_rfcp(node) = 0.0d0
+        else if(ht_tsoil(node).lt.tfroststa .and. &
+                ht_tsoil(node).gt.tfrostend) then
+          ht_rfcp(node) = (ht_tsoil(node)-tfrostend)/ &
+                          (tfroststa-tfrostend)
         endif
       endif
     end do
-    ht_rfcp(:) = rfcp(1:numnod)                  ! dual-write: mirror to state (rfcp legacy is macp)
 
     ! Determine frozen depth (z) and frozen node number
     flthaw              = .true.
-    nodfrostbot         = -1
-    zfrostbot           = 0.0d0
-    zfrosttop           = 0.0d0
+    ht_nodfrostbot      = -1
+    ht_zfrostbot        = 0.0d0
+    ht_zfrosttop        = 0.0d0
 
     ! Search from bottom upward for frozen zone
     node = numnod
     do while (flthaw .and. node.gt.1)
       node = node - 1
-      if(tsoil(node) .le. tfrostend+1.0d-6)then
-        zfrostbot = z(node+1) + disnod(node+1) * &
-                    (tfrostend-tsoil(node+1)) / &
-                    (tsoil(node)-tsoil(node+1))
-        flthaw             =.false.
-        nodfrostbot        = node
+      if(ht_tsoil(node) .le. tfrostend+1.0d-6)then
+        ht_zfrostbot = z(node+1) + disnod(node+1) * &
+                       (tfrostend-ht_tsoil(node+1)) / &
+                       (ht_tsoil(node)-ht_tsoil(node+1))
+        flthaw           = .false.
+        ht_nodfrostbot   = node
       endif
     end do
 
@@ -125,33 +126,28 @@ contains
     if(.not.flthaw)then
       flthaw  = .true.
       node = 0
-      do while (flthaw .and. node.lt.nodfrostbot)
+      do while (flthaw .and. node.lt.ht_nodfrostbot)
         node = node + 1
-        if(tsoil(node) .le. tfrostend+1.0d-6)then
+        if(ht_tsoil(node) .le. tfrostend+1.0d-6)then
           if(node.eq.1) then
-            if(tetop.le.tfrostend) then
-              zfrosttop = 0.0d0
+            if(ht_tetop.le.tfrostend) then
+              ht_zfrosttop = 0.0d0
             else
-              zfrosttop = z(node) - &
-                          (z(node) - 0.0d0) * &
-                          (tsoil(node)-tfrostend) / &
-                          (tsoil(node)-tetop)
+              ht_zfrosttop = z(node) - &
+                             (z(node) - 0.0d0) * &
+                             (ht_tsoil(node)-tfrostend) / &
+                             (ht_tsoil(node)-ht_tetop)
             endif
           else
-            zfrosttop = z(node) + disnod(node) * &
-                        (tsoil(node)-tfrostend) / &
-                        (tsoil(node)-tsoil(node-1))
+            ht_zfrosttop = z(node) + disnod(node) * &
+                           (ht_tsoil(node)-tfrostend) / &
+                           (ht_tsoil(node)-ht_tsoil(node-1))
           endif
-          zfrosttop = min(0.0d0,zfrosttop)
-          flthaw      =.false.
+          ht_zfrosttop = min(0.0d0,ht_zfrosttop)
+          flthaw       = .false.
         endif
       end do
     end if
-
-    ! dual-write: mirror frozen-zone scalars to state
-    ht_nodfrostbot = nodfrostbot
-    ht_zfrostbot   = zfrostbot
-    ht_zfrosttop   = zfrosttop
 
     end associate
 
@@ -204,6 +200,7 @@ contains
     ! SurfaceWater has computed them.  Receive state intent(inout) so we can
     ! both read and write state%drainage%qdra / state%surfacewater%qdrtot
     ! (dual-write pattern preserved until drainage Task 7 drops legacy globals).
+    ! SS-HEAT Task 8: rfcp/nodfrostbot/zfrostbot read from state%heat (legacy globals dropped).
     type(swap_state_t), intent(inout) :: state
 
     ! Local variables
@@ -218,6 +215,11 @@ contains
     ! Initialize qbot
     qbot = qbot_nonfrozen
 
+    associate( &
+        ht_rfcp        => state%heat%rfcp,       &
+        ht_nodfrostbot => state%heat%nodfrostbot, &
+        ht_zfrostbot   => state%heat%zfrostbot)
+
     ! Verify available air volume in frozen zone
     node = numnod
     volair = 0.0d0
@@ -228,7 +230,7 @@ contains
       if(node.eq.0)then
         frozencomp = .false.
       else
-        if(rfcp(node) .le. 0.01d0)then
+        if(ht_rfcp(node) .le. 0.01d0)then
           frozencomp = .false.
         end if
       end if
@@ -237,7 +239,7 @@ contains
     ! Consider reduction when volair is very low
     ! Reduction of drainage only when systems are present
     if(swdra.eq.0) then
-      if(nodfrostbot.gt.1 .and. volair.lt.0.01d0)then
+      if(ht_nodfrostbot.gt.1 .and. volair.lt.0.01d0)then
         qbot = 0.0d0
       endif
     else
@@ -245,7 +247,7 @@ contains
       ! go directly to state — legacy globals are no longer touched here.
       associate(qdrain => state%drainage%qdrain, qdra => state%drainage%qdra)
 
-      if(nodfrostbot.gt.1 .and. volair.lt.0.01d0)then
+      if(ht_nodfrostbot.gt.1 .and. volair.lt.0.01d0)then
 
         leveldeepest = 0
         zdeepest     = 0.0d0
@@ -258,17 +260,17 @@ contains
 
         do node=1,numnod
           if(fluseksatexm(node))then
-            ksatcp(node)  = ksatexm(layer(node))*rfcp(node) + &
-                            (1.0d0-rfcp(node))*hconode_vsmall
+            ksatcp(node)  = ksatexm(layer(node))*ht_rfcp(node) + &
+                            (1.0d0-ht_rfcp(node))*hconode_vsmall
           else
-            ksatcp(node)  = ksatfit(layer(node))*rfcp(node) + &
-                            (1.0d0-rfcp(node))*hconode_vsmall
+            ksatcp(node)  = ksatfit(layer(node))*ht_rfcp(node) + &
+                            (1.0d0-ht_rfcp(node))*hconode_vsmall
           endif
 
           cofanicp(node) = cofani(layer(node))
           layercp(node) = node
           do level=1,nrlevs
-            if(zfrostbot.lt.zbotdr(level)) then
+            if(ht_zfrostbot.lt.zbotdr(level)) then
               qdra(level,node) = 0.0d0
               qdrain(level) = 0.0d0
             endif
@@ -281,7 +283,7 @@ contains
         end do
 
         if(abs(qdratot).lt.1.0d-6) then
-          if(zfrostbot.lt.zbotdr(leveldeepest)) then
+          if(ht_zfrostbot.lt.zbotdr(leveldeepest)) then
             qbot = 0.0d0
           else
             qdrain(leveldeepest) = qbot
@@ -293,7 +295,7 @@ contains
         end if
 
         if (swdivd.eq.1) then
-          ztop = min(gwl,zfrostbot)
+          ztop = min(gwl,ht_zfrostbot)
           call divdra (numnod,nrlevs,dz,ksatcp,ksatcp,fluseksatexm, &
                        layercp,cofanicp,ztop,L,qdrain,qdra, &
                        Swdivdinf,Swnrsrf,SwTopnrsrf,Zbotdr, &
@@ -304,7 +306,7 @@ contains
         do level = 1,nrlevs
           qdrain(level) = 0.0d0
           do node = 1,numnod
-            qdra(level,node) = qdra(level,node)*rfcp(node)
+            qdra(level,node) = qdra(level,node)*ht_rfcp(node)
             qdrain(level) = qdrain(level) + qdra(level,node)
           end do
         end do
@@ -319,6 +321,8 @@ contains
 
       end associate
     endif
+
+    end associate
 
     return
   end subroutine FrozenBounds

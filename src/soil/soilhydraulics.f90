@@ -884,7 +884,7 @@ contains
         rfcp(i) = 1.0d0
       enddo
       if (allocated(state%heat%rfcp)) &
-         state%heat%rfcp = 1.0d0     ! SS-HEAT Phase 2 Task 7: dual-write; legacy global above, Task 8 drops both
+         state%heat%rfcp = 1.0d0     ! SS-HEAT Task 8: state write kept; legacy global above is now dead
       state%surfacewater%vtair = 0.0d0
       cQMpLatSs = 0.0d0
 

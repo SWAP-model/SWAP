@@ -1842,7 +1842,7 @@
 ! === open output files and write headers ===============================
 
 ! --  heat params file
-      if (swini .eq. 1 .and. swcalt.eq.2)  call outheapar()
+      if (swini .eq. 1 .and. swcalt.eq.2)  call outheapar(state)
 
 ! --  tem file
       if (swtem .eq. 1) call outtem (task, state)
@@ -1875,7 +1875,7 @@
 
 
 ! ----------------------------------------------------------------------
-      subroutine outheapar ()
+      subroutine outheapar (state)
 ! ----------------------------------------------------------------------
 !     date               : February 2005
 !     purpose            : Output of soil heat conductivity and capacity
@@ -1883,7 +1883,11 @@
 ! --- global
       use variables
       use temperature_mod, only: devries
+      use swap_state_mod, only: swap_state_t
       use file_io_mod, only: file_open
+
+      implicit none
+      type(swap_state_t), intent(in) :: state
 
 ! --- local variables ------------------
       character(len=300) filnam
@@ -1892,10 +1896,7 @@
       integer   hea,lay,node,j
       real(8)   heacap_loc(macp),heacnd(macp),thetadum(numnod)
       ! heacap_loc / heacnd are local scratch arrays for the devries parameter sweep.
-      ! Using locals instead of the global heacap prevents a writeback hazard:
-      ! outheapar calls devries with synthetic theta values (not compute-time theta),
-      ! so writing to the global heacap would corrupt it after Temperature(task=1) has
-      ! already populated state%heat%heacap correctly.  (ADR 0034, SS-HEAT Task 5)
+      ! fquartz/fclay/forg read from state%heat (Task 8: legacy globals no longer written).
 ! ---------------------------------------------------------------------
       comma = ','
 
@@ -1921,7 +1922,8 @@
           do j = 1,21
             thetadum(node) = thetar(node) + dble(j-1) *               &
      &                    (thetas(node)-thetar(node)) / 20.0d0
-            call devries (thetadum,heacap_loc,heacnd)
+            call devries (thetadum,heacap_loc,heacnd, &
+     &                    state%heat%fquartz, state%heat%fclay, state%heat%forg)
             write(hea,22) lay, comma, thetadum(node), comma,            &
      &                 heacap_loc(node), comma, heacnd(node)
 22          format(i4,a1,f8.5,2(a1,e14.5))

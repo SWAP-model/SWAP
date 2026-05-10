@@ -90,13 +90,13 @@ contains
     integer,            intent(in)    :: task
     !! Task selector: 1=initialization, 2=calculation
     type(swap_state_t), intent(inout) :: state
-    !! Typed simulation state — dual-write: compute writes both legacy globals and state%heat%*
+    !! Typed simulation state — heat compute writes only state%heat%* (Task 8: dual-write dropped)
 
     ! Local variables
     integer i,lay, ierror
     real(8) tmpold(macp),tab(mabbc*2),dummy,gmineral
     real(8) thoma(macp),thomb(macp),thomc(macp),thomf(macp)
-    real(8) theave(macp),heacnd(macp)
+    real(8) theave(macp),heacnd(macp),heacap_loc(macp)
     real(8) heaconbot,qhbot
     real(8) apar, dzsnw, heaconsnw, Rosnw
     character(len=200) messag
@@ -121,21 +121,19 @@ contains
       if (swcalt.eq.1) then
         ! Analytical solution
         do i = 1,numnod
-          tsoil(i) = tmean+tampli*(dsin(0.0172d0*(daynr-timref+91.0d0)+ &
-                     z(i)/ddamp)) / dexp(-z(i)/ddamp)
+          ht_tsoil(i) = tmean+tampli*(dsin(0.0172d0*(daynr-timref+91.0d0)+ &
+                        z(i)/ddamp)) / dexp(-z(i)/ddamp)
         enddo
-        ht_tsoil(:) = tsoil(1:numnod)             ! dual-write: mirror to state
       else
         ! Numerical solution, use specified soil temperatures
         if (swinco.ne.3) then
           do i = 1, nheat
-            tab(i*2) = tsoil(i)
+            tab(i*2)   = tsoil(i)   ! reads config-loaded initial profile (not compute state)
             tab(i*2-1) = dabs(zh(i))
           end do
           do i = 1, numnod
-            tsoil(i) = afgen(tab,macp*2,dabs(z(i)))
+            ht_tsoil(i) = afgen(tab,macp*2,dabs(z(i)))
           end do
-          ht_tsoil(:) = tsoil(1:numnod)           ! dual-write: mirror to state
         end if
       endif
 
@@ -145,13 +143,10 @@ contains
           lay = layer(i)
           dummy = orgmat(lay)/(1.0d0 - orgmat(lay))
           gmineral = (1.0d0 - thetas(i)) / (0.370d0 + 0.714d0*dummy)
-          fquartz(i) = (psand(lay) + psilt(lay))*gmineral/2.7d0
-          fclay(i) = pclay(lay)*gmineral/2.7d0
-          forg(i) = dummy*gmineral/1.4d0
+          ht_fquartz(i) = (psand(lay) + psilt(lay))*gmineral/2.7d0
+          ht_fclay(i)   = pclay(lay)*gmineral/2.7d0
+          ht_forg(i)    = dummy*gmineral/1.4d0
         end do
-        ht_fquartz(:) = fquartz(1:numnod)         ! dual-write: mirror to state
-        ht_fclay(:)   = fclay(1:numnod)
-        ht_forg(:)    = forg(1:numnod)
       endif
 
       return
@@ -166,42 +161,40 @@ contains
         ! Set top boundary condition
         if (swtopbhea .eq. 2) then
           ! Use specified soil surface temperatures as top boundary condition
-          TeTop = afgen (temtoptab,2*mabbc,t1900+dt)
+          ht_tetop = afgen (temtoptab,2*mabbc,t1900+dt)
         elseif (dabs(ssnow).gt.1.0d-10) then
           ! Air temperature cannot be used with a snow layer,
           ! calculate temperature on soil-snow interface
           Rosnw = 170.0d0
           heaconsnw = 2.86d-6 * 864.0d0 * Rosnw**2.d0
           dzsnw = ssnow / 0.170d0
-          if (heacon(1).lt.1.d-10) heacon(1) = 100.0d0
-          apar = (0.5d0*heaconsnw*dz(1)) / (heacon(1)*dzsnw)
+          if (ht_heacon(1).lt.1.d-10) ht_heacon(1) = 100.0d0
+          apar = (0.5d0*heaconsnw*dz(1)) / (ht_heacon(1)*dzsnw)
           if (flmetdetail) then
-            TeTop = (Tsoil(1) + apar*atav(wrecord)) / (1.d0+apar)
+            ht_tetop = (ht_tsoil(1) + apar*atav(wrecord)) / (1.d0+apar)
           else
-            TeTop = (Tsoil(1) + apar*Tav) / (1.d0+apar)
+            ht_tetop = (ht_tsoil(1) + apar*Tav) / (1.d0+apar)
           endif
         else
           if (flmetdetail) then
-            TeTop = atav(wrecord)
+            ht_tetop = atav(wrecord)
           else
-            TeTop = Tav
+            ht_tetop = Tav
           endif
         endif
-        ht_tetop = TeTop                         ! dual-write: mirror scalar to state
 
         ! Set bottom boundary condition
         if (SwBotbHea.eq.1) then
           ! No heat flow through bottom of profile assumed
-          TeBot = Tsoil(Numnod)
+          ht_tebot = ht_tsoil(Numnod)
         elseif (SwBotbHea.eq.2) then
           ! Bottom temperature is prescribed
-          TeBot = afgen (tembtab,2*mabbc,t1900+dt)
+          ht_tebot = afgen (tembtab,2*mabbc,t1900+dt)
         endif
-        ht_tebot = TeBot                         ! dual-write: mirror scalar to state
 
         ! Save old temperature profile
         do i = 1,numnod
-          tmpold(i) = tsoil(i)
+          tmpold(i) = ht_tsoil(i)
         enddo
 
         ! Compute heat conductivity and capacity
@@ -210,29 +203,29 @@ contains
         enddo
 
         ! Calculate nodal heat capacity and thermal conductivity
-        call devries(theave,heacap,heacnd)
-        heacon(1) = heacnd(1)
+        ! heacap_loc is a local workspace (macp-sized) so devries explicit-shape args are satisfied
+        call devries(theave,heacap_loc,heacnd,ht_fquartz,ht_fclay,ht_forg)
+        ht_heacon(1) = heacnd(1)
         do i = 2,numnod
-          heacon(i) = 0.5d0 * (heacnd(i) + heacnd(i-1))
+          ht_heacon(i) = 0.5d0 * (heacnd(i) + heacnd(i-1))
         enddo
-        ht_heacap(:) = heacap(1:numnod)           ! dual-write: mirror to state
-        ht_heacon(:) = heacon(1:numnod)
+        ht_heacap(1:numnod) = heacap_loc(1:numnod)
 
         ! Calculate new temperature profile using tridiagonal solver
 
         ! Calculation of coefficients for node = 1 (temperature fixed at soil surface)
         i = 1
-        thoma(i) = - dt * heacon(i) / (dz(i) * disnod(i))
-        thomc(i) = - dt * heacon(i+1) / (dz(i) * disnod(i+1))
-        thomb(i) = heacap(i) - thoma(i) - thomc(i)
-        thomf(i) = heacap(i) * tmpold(i) - thoma(i) * TeTop
+        thoma(i) = - dt * ht_heacon(i) / (dz(i) * disnod(i))
+        thomc(i) = - dt * ht_heacon(i+1) / (dz(i) * disnod(i+1))
+        thomb(i) = ht_heacap(i) - thoma(i) - thomc(i)
+        thomf(i) = ht_heacap(i) * tmpold(i) - thoma(i) * ht_tetop
 
         ! Calculation of coefficients for 2 < node < numnod
         do i = 2,numnod-1
-          thoma(i) = - dt * heacon(i) / (dz(i) * disnod(i))
-          thomc(i) = - dt * heacon(i+1) / (dz(i) * disnod(i+1))
-          thomb(i) = heacap(i) - thoma(i) - thomc(i)
-          thomf(i) = heacap(i) * tmpold(i)
+          thoma(i) = - dt * ht_heacon(i) / (dz(i) * disnod(i))
+          thomc(i) = - dt * ht_heacon(i+1) / (dz(i) * disnod(i+1))
+          thomb(i) = ht_heacap(i) - thoma(i) - thomc(i)
+          thomf(i) = ht_heacap(i) * tmpold(i)
         enddo
 
         ! Calculation of coefficients for node = numnod
@@ -240,33 +233,31 @@ contains
         if (SwBotbHea.eq.1) then
           ! No heat flow through bottom of profile assumed
           qhbot = 0.0d0
-          thoma(i) = - dt * heacon(i) / (dz(i) * disnod(i))
-          thomb(i) = heacap(i) - thoma(i)
-          thomf(i) = heacap(i) * tmpold(i) - (qhbot * dt)/dz(i)
+          thoma(i) = - dt * ht_heacon(i) / (dz(i) * disnod(i))
+          thomb(i) = ht_heacap(i) - thoma(i)
+          thomf(i) = ht_heacap(i) * tmpold(i) - (qhbot * dt)/dz(i)
         elseif (SwBotbHea.eq.2) then
           ! Bottom temperature is prescribed
           heaconBot = heacnd(i)
-          thoma(i)  = - dt * heacon(i) / (dz(i) * disnod(i))
+          thoma(i)  = - dt * ht_heacon(i) / (dz(i) * disnod(i))
           thomc(i)  = - dt * heaconBot / (dz(i) * 0.5d0 * dz(i))
-          thomb(i)  = heacap(i) - thoma(i) - thomc(i)
-          thomf(i)  = heacap(i) * tmpold(i) - thomc(i) * TeBot
+          thomb(i)  = ht_heacap(i) - thoma(i) - thomc(i)
+          thomf(i)  = ht_heacap(i) * tmpold(i) - thomc(i) * ht_tebot
         endif
 
-        ! Solve for vector tsoil using tridiagonal linear solver
-        call tridag (numnod, thoma, thomb, thomc, thomf, tsoil,ierror)
+        ! Solve for temperature profile; result written directly to state
+        call tridag (numnod, thoma, thomb, thomc, thomf, ht_tsoil,ierror)
         if(ierror.ne.0)then
           messag = 'During a call from Temperature an error occured in TriDag'
           call fatalerr_collected ('Temperature',messag)
         end if
-        ht_tsoil(:) = tsoil(1:numnod)             ! dual-write: mirror solved profile to state
       else
 
         ! Analytical solution temperature profile
         do i = 1,numnod
-          tsoil(i) = tmean+tampli*(dsin(0.0172d0*(daynr-timref+91.0d0)+ &
-                     z(i)/ddamp)) / dexp(-z(i)/ddamp)
+          ht_tsoil(i) = tmean+tampli*(dsin(0.0172d0*(daynr-timref+91.0d0)+ &
+                        z(i)/ddamp)) / dexp(-z(i)/ddamp)
         enddo
-        ht_tsoil(:) = tsoil(1:numnod)             ! dual-write: mirror to state
 
       endif
 
@@ -341,14 +332,15 @@ contains
   !! Input:
   !! - NumNod: number of compartments (-)
   !! - theta/THETAS: volumetric soil moisture / saturated vol. s. moist (-)
-  !! - Fquartz, Fclay and Forg: volume fractions of sand, clay and org. matter
+  !! - fquartz_in, fclay_in, forg_in: volume fractions of sand, clay and org. matter
+  !!   (passed explicitly; callers supply from state%heat to avoid stale global reads)
   !!
   !! Output:
   !! - HeaCap: heat capacity (J/m³/K)
   !! - HeaCon: thermal conductivity (W/m/K)
   !! @endnote
-  subroutine Devries (theta,HeaCap,HeaCon)
-    use variables, only: NumNod,THETAS,FQUARTZ,FCLAY,FORG
+  subroutine Devries (theta,HeaCap,HeaCon,fquartz_in,fclay_in,forg_in)
+    use variables, only: NumNod,THETAS
     use swap_array_dimensions, only: macp
     implicit none
 
@@ -359,6 +351,12 @@ contains
     !! Output: Heat capacity (J/m³/K)
     real(8) HeaCon(MACP)
     !! Output: Thermal conductivity (W/m/K)
+    real(8), intent(in) :: fquartz_in(*)
+    !! Volume fraction of quartz per node (caller supplies from state%heat%fquartz)
+    real(8), intent(in) :: fclay_in(*)
+    !! Volume fraction of clay per node
+    real(8), intent(in) :: forg_in(*)
+    !! Volume fraction of organic matter per node
 
     ! Local variables
     integer Node
@@ -454,8 +452,8 @@ contains
 
       ! (2) Heat capacity (W/m³/K) is average of heat capacities for
       ! all components (multiplied by density for correct units)
-      HeaCap(Node) = fQuartz(Node)*cdQuartz + fClay(Node)*cdClay + &
-                     theta(Node)*cdWat + fAir(Node)*cdAir + fOrg(Node)*cdOrg
+      HeaCap(Node) = fquartz_in(Node)*cdQuartz + fclay_in(Node)*cdClay + &
+                     theta(Node)*cdWat + fAir(Node)*cdAir + forg_in(Node)*cdOrg
 
       ! (3) Thermal conductivity (W/m/K) is weighted average of
       ! conductivities of all components
@@ -463,44 +461,44 @@ contains
       ! (3.1) Dry conditions (include empirical correction factor 1.25)
       if (theta(Node).LE.thetaDry) Then
         HeaCon(Node) = 1.25d0 * &
-                       (fQuartz(Node)*kqaXkQuartz + &
-                        fClay(Node)*kcaXkClay + &
+                       (fquartz_in(Node)*kqaXkQuartz + &
+                        fclay_in(Node)*kcaXkClay + &
                         fAir(Node)*kaaXkAir + &
-                        fOrg(Node)*koaXkOrg + &
+                        forg_in(Node)*koaXkOrg + &
                         theta(Node)*kwaXkWat) / &
-                       (kqa * fQuartz(Node) + kca * fClay(Node) + kaa * fAir(Node) + &
-                        koa * fOrg(Node) + kwa * theta(Node))
+                       (kqa * fquartz_in(Node) + kca * fclay_in(Node) + kaa * fAir(Node) + &
+                        koa * forg_in(Node) + kwa * theta(Node))
 
       ! (3.2) Wet conditions
       else if (theta(Node).GE.thetaWet) Then
-        HeaCon(Node) = (fQuartz(Node)*kqwXkQuartz + &
-                        fClay(Node)*kcwXkClay + &
+        HeaCon(Node) = (fquartz_in(Node)*kqwXkQuartz + &
+                        fclay_in(Node)*kcwXkClay + &
                         fAir(Node)*kaw*kAir + &
-                        fOrg(Node)*kowXkOrg + &
+                        forg_in(Node)*kowXkOrg + &
                         theta(Node)*kwwXkWat) / &
-                       (kqw * fQuartz(Node) + kcw * fClay(Node) + kaw * fAir(Node) + &
-                        kow * fOrg(Node) + kww * theta(Node))
+                       (kqw * fquartz_in(Node) + kcw * fclay_in(Node) + kaw * fAir(Node) + &
+                        kow * forg_in(Node) + kww * theta(Node))
 
       ! (3.3) Intermediate conditions (interpolate between dry and wet)
       else
         ! (3.3.1) Conductivity for theta = 0.02
         HeaConDry = 1.25d0 * &
-                       (fQuartz(Node)*kqaXkQuartz + &
-                        fClay(Node)*kcaXkClay + &
+                       (fquartz_in(Node)*kqaXkQuartz + &
+                        fclay_in(Node)*kcaXkClay + &
                         fAir(Node)*kaaXkAir + &
-                        fOrg(Node)*koaXkOrg + &
+                        forg_in(Node)*koaXkOrg + &
                         thetaDry*kwaXkWat) / &
-                       (kqa * fQuartz(Node) + kca * fClay(Node) + kaa * fAir(Node) + &
-                        koa * fOrg(Node) + kwa * thetaDry)
+                       (kqa * fquartz_in(Node) + kca * fclay_in(Node) + kaa * fAir(Node) + &
+                        koa * forg_in(Node) + kwa * thetaDry)
 
         ! (3.3.2) Conductivity for theta = 0.05
-        HeaConWet = (fQuartz(Node)*kqwXkQuartz + &
-                     fClay(Node)*kcwXkClay + &
+        HeaConWet = (fquartz_in(Node)*kqwXkQuartz + &
+                     fclay_in(Node)*kcwXkClay + &
                      fAir(Node)*kaw*kAir + &
-                     fOrg(Node)*kowXkOrg + &
+                     forg_in(Node)*kowXkOrg + &
                      thetaWet*kwwXkWat) / &
-                    (kqw * fQuartz(Node) + kcw * fClay(Node) + kaw * fAir(Node) + &
-                     kow * fOrg(Node) + kww * thetaWet)
+                    (kqw * fquartz_in(Node) + kcw * fclay_in(Node) + kaw * fAir(Node) + &
+                     kow * forg_in(Node) + kww * thetaWet)
 
         ! (3.3.3) Interpolate
         HeaCon(Node) = HeaConDry + (theta(Node)-thetaDry) * &
