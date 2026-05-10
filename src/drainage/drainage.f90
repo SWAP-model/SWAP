@@ -408,9 +408,10 @@ owltab,t1900,swallo,drares,infres,qdrtab,nrlevs,swnrsrf,cofintfl,expintfl,dt,sha
 
                ! SS-SWST Phase 2 Task 11 B1: removed globals flInitDraBas,ZDraBas,inqdra*,iqdra,
                ! cqdra,cqdrain*,qdrtot — now written only via state%surfacewater.
-               ! qdra kept: still written to global for divdra callers (frozencond divdra path).
+               ! SS-DRST Phase 2 Task 3: qdra dropped — all qdra reads/writes use state%drainage%qdra.
+               ! qdrain retained: bocodrb still writes legacy global; synced to state after call.
                use variables, only: gwl,nrlevs,numnod,dramet,swdtyp,NumLevRapDra,owltab,nowltab,t1900, &
-                  qdrain,qdra,zbotdr,flzerointr,flzerocumu,swdivd,swdislay,swtopdislay,fTopDisLay, &
+                  qdrain,zbotdr,flzerointr,flzerocumu,swdivd,swdislay,swtopdislay,fTopDisLay, &
                   zTopDisLay,dz,ksatfit,ksatexm,fluseksatexm,layer,cofani,l,Swdivdinf,Swnrsrf,    &
                   SwTopnrsrf,dt,FacDpthInf,madr
                use array_utils, only: afgen
@@ -506,20 +507,28 @@ owltab,t1900,swallo,drares,infres,qdrtab,nrlevs,swnrsrf,cofintfl,expintfl,dt,sha
 
                ! --- reset to zero if groundwater level under soil profile and return
                if (gwl .gt. 998.0d0) then
+                  ! SS-DRST Phase 2 Task 3: zero state directly; legacy global qdrain
+                  ! still zeroed so bocodrb's own use-variables path stays consistent.
                   do level = 1, nrlevs
-                     qdrain(level) = 0.0d0
+                     state%drainage%qdrain(level) = 0.0d0
                   end do
                   return
                end if
 
                ! --- calculate total drainage rate and state variables
+               ! bocodrb writes qdrain via legacy global; sync to state before divdra reads it.
                call bocodrb(dh, state)
+               ! SS-DRST Phase 2 Task 3: sync bocodrb's legacy-global result into state so
+               ! divdra (now reading state%drainage%qdrain) sees the correct values.
+               state%drainage%qdrain = qdrain(1:nrlevs)
 
                ! --- partition drainage flux over compartments
+               ! SS-DRST Phase 2 Task 3: divdra now reads/writes state%drainage%qdrain and
+               ! state%drainage%qdra directly — no legacy globals passed here.
                if (swdivd .eq. 1) then
                   call divdra(numnod, nrlevs, dz, ksatfit, ksatexm, fluseksatexm,    &
-              &      layer, cofani, gwl, l, qdrain, qdra, Swdivdinf, Swnrsrf,           &
-              &      SwTopnrsrf, Zbotdr, dt, FacDpthInf, owltab, t1900)                  !  Divdra, infiltration
+              &      layer, cofani, gwl, l, state%drainage%qdrain, state%drainage%qdra, &
+              &      Swdivdinf, Swnrsrf, SwTopnrsrf, Zbotdr, dt, FacDpthInf, owltab, t1900)  !  Divdra, infiltration
                   !       redistribute qdrain with new top boundary for discharge layers
                   if (swdislay .eq. 2) then
                      do level = 1, nrlevs
@@ -544,23 +553,23 @@ owltab,t1900,swallo,drares,infres,qdrtab,nrlevs,swnrsrf,cofintfl,expintfl,dt,sha
                            ratiodz =                                             &
               &                     difzTopDisLay(level)/dz(nodeTopDisLay(level))
                            sumqdr(level) =                                       &
-              &                        ratiodz*qdra(level, nodeTopDisLay(level))
+              &                        ratiodz*state%drainage%qdra(level, nodeTopDisLay(level))
                            do node = nodeTopDisLay(level) + 1, numnod
-                              sumqdr(level) = sumqdr(level) + qdra(level, node)
+                              sumqdr(level) = sumqdr(level) + state%drainage%qdra(level, node)
                            end do
                            if (dabs(sumqdr(level)) .lt. 1.0d-8) then
                               ratio = 1.0d0
                            else
-                              ratio = qdrain(level)/sumqdr(level)
+                              ratio = state%drainage%qdrain(level)/sumqdr(level)
                            end if
                            !                 redistribute drainwater fluxes
                            do node = 1, nodeTopDisLay(level) - 1
-                              qdra(level, node) = 0.0d0
+                              state%drainage%qdra(level, node) = 0.0d0
                            end do
-                           qdra(level, nodeTopDisLay(level)) =                    &
-              &                qdra(level, nodeTopDisLay(level))*ratio*ratiodz
+                           state%drainage%qdra(level, nodeTopDisLay(level)) =       &
+              &                state%drainage%qdra(level, nodeTopDisLay(level))*ratio*ratiodz
                            do node = nodeTopDisLay(level) + 1, numnod
-                              qdra(level, node) = qdra(level, node)*ratio
+                              state%drainage%qdra(level, node) = state%drainage%qdra(level, node)*ratio
                            end do
                         end if
                      end do
@@ -569,30 +578,24 @@ owltab,t1900,swallo,drares,infres,qdrtab,nrlevs,swnrsrf,cofintfl,expintfl,dt,sha
                   ! --- drainage flux through lowest compartment
                   do level = 1, nrlevs
                      do node = 1, numnod - 1
-                        qdra(level, node) = 0.0d0
+                        state%drainage%qdra(level, node) = 0.0d0
                      end do
-                     qdra(level, numnod) = qdrain(level)
+                     state%drainage%qdra(level, numnod) = state%drainage%qdrain(level)
                   end do
                end if
 
                ! SS-SWST Phase 2 Task 11 B1: qdrtot global write dropped; only state written.
                state%surfacewater%qdrtot = 0.0d0
                do level = 1, nrlevs
-                  state%surfacewater%qdrtot = state%surfacewater%qdrtot + qdrain(level)
+                  state%surfacewater%qdrtot = state%surfacewater%qdrtot + state%drainage%qdrain(level)
                end do
 
-               ! SS-DRST Phase 2 Task 2: dual-write qdrain to state so cross-subsystem
-               ! readers (surfacewater.f90 WLEVBAL, waterbalance.f90 integral) can read
-               ! state%drainage%qdrain. Task 4 drops this global write.
-               state%drainage%qdrain = qdrain(1:nrlevs)
-
-               ! SS-SWST Phase 2 Task 11 B1: qdra still written to global for divdra callers
-               ! (frozencond.f90 divdra call); state also kept current.
-               do node = 1, numnod
-                  do level = 1, nrlevs
-                     state%drainage%qdra(level, node) = qdra(level, node)
-                  end do
-               end do
+               ! SS-DRST Phase 2 Task 3: state%drainage%qdrain and state%drainage%qdra are
+               ! now written directly by divdra and the redistribution code above.
+               ! Dual-write syncs (Task 2 transitional) removed — Task 4 drops legacy globals.
+               ! Legacy global qdrain is kept consistent via the post-bocodrb sync above so
+               ! that frozencond's divdra path (which still writes legacy qdra via global) and
+               ! any other bocodrb-path callers see correct values.
 
             end subroutine drainage
 
