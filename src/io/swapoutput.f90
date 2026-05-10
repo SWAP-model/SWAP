@@ -83,7 +83,8 @@
       implicit none
 
       integer task
-      type(swap_state_t), intent(in) :: state
+      ! B-2.6: inout so mini-sim writeback can restore state%soilwater%qbot
+      type(swap_state_t), intent(inout) :: state
 
       select case (task)
 
@@ -3640,7 +3641,8 @@
 ! --- global variables ------------------
       integer task
       ! SS-SWST Phase 2 Task 11 A3: receive main state to read iqdra for case(2) output.
-      type(swap_state_t), intent(in) :: state_main
+      ! B-2.6: inout so mini-sim writeback can restore state_main%soilwater%qbot (dual-write).
+      type(swap_state_t), intent(inout) :: state_main
 ! --- local variables ------------------
       integer   sto,nod1m, nod
       real(8)   vsat,vt0,gwlt0,vt1,qre,qv1m,gwlt1,stocoav,stocot1
@@ -3761,6 +3763,8 @@
       do i=1,2
 
         gwlinp = gwltmp + dgwl(i)
+        ! B-2.6 dual-write: readers now consume state%soilwater%gwlinp.
+        state_main%soilwater%gwlinp = gwltmp + dgwl(i)
 
 !        call BoundBottom
 
@@ -3816,6 +3820,9 @@
 
       swbotb = swBotbtmp
       qbot = qbottmp
+      ! B-2.6 dual-write: restore state%soilwater%qbot alongside legacy global
+      ! (readers now consume state%soilwater%qbot). gwl/pond stay legacy — deferred.
+      state_main%soilwater%qbot = qbottmp
       gwl = gwltmp
       pond = pondtmp
       do nod =1,numnod
