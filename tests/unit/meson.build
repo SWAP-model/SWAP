@@ -210,6 +210,7 @@ if get_option('enable_pfunit')
         'io/toml/test_nutrients_config.pf',
         'drainage/test_surfacewater_init.pf',
         'state/test_surfacewater_state.pf',
+        'state/test_surfacewater_cumulative.pf',
         'state/test_drainage_state.pf',
         'state/test_solute_state.pf',
         'state/test_swap_state.pf',

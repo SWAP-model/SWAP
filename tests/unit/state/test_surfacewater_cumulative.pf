@@ -1,0 +1,85 @@
+! Tests for surfacewater_intermediate_t%reset and
+! surfacewater_cumulative_t%reset — the cohort sub-records
+! introduced in CRR Phase A Task A1 and unit-tested here (Task A2).
+
+@test
+subroutine test_intermediate_reset_zeroes_scalar_iqdra()
+   use funit
+   use iso_fortran_env, only: real64
+   use surfacewater_state_mod, only: surfacewater_intermediate_t
+   type(surfacewater_intermediate_t) :: cohort
+
+   cohort%iqdra = 42.0_real64
+   call cohort%reset()
+   @assertEqual(0.0_real64, cohort%iqdra, 1.0e-12_real64)
+end subroutine test_intermediate_reset_zeroes_scalar_iqdra
+
+@test
+subroutine test_intermediate_reset_zeroes_allocated_arrays()
+   use funit
+   use iso_fortran_env, only: real64
+   use surfacewater_state_mod, only: surfacewater_intermediate_t
+   type(surfacewater_intermediate_t) :: cohort
+
+   allocate(cohort%inqdra(2, 3));     cohort%inqdra     = 1.0_real64
+   allocate(cohort%inqdra_in(2, 3));  cohort%inqdra_in  = 2.0_real64
+   allocate(cohort%inqdra_out(2, 3)); cohort%inqdra_out = 3.0_real64
+
+   call cohort%reset()
+
+   @assertEqual(0.0_real64, sum(cohort%inqdra),     1.0e-12_real64)
+   @assertEqual(0.0_real64, sum(cohort%inqdra_in),  1.0e-12_real64)
+   @assertEqual(0.0_real64, sum(cohort%inqdra_out), 1.0e-12_real64)
+end subroutine test_intermediate_reset_zeroes_allocated_arrays
+
+@test
+subroutine test_intermediate_reset_safe_when_arrays_not_allocated()
+   use funit
+   use surfacewater_state_mod, only: surfacewater_intermediate_t
+   type(surfacewater_intermediate_t) :: cohort
+
+   ! No allocation — reset() must not crash.
+   call cohort%reset()
+
+   @assertFalse(allocated(cohort%inqdra))
+   @assertFalse(allocated(cohort%inqdra_in))
+   @assertFalse(allocated(cohort%inqdra_out))
+end subroutine test_intermediate_reset_safe_when_arrays_not_allocated
+
+@test
+subroutine test_cumulative_reset_zeroes_all_scalars()
+   use funit
+   use iso_fortran_env, only: real64
+   use surfacewater_state_mod, only: surfacewater_cumulative_t
+   type(surfacewater_cumulative_t) :: cohort
+
+   cohort%cqdrd  = 1.0_real64
+   cohort%cwsupp = 2.0_real64
+   cohort%cwout  = 3.0_real64
+   cohort%cqdra  = 4.0_real64
+
+   call cohort%reset()
+
+   @assertEqual(0.0_real64, cohort%cqdrd,  1.0e-12_real64)
+   @assertEqual(0.0_real64, cohort%cwsupp, 1.0e-12_real64)
+   @assertEqual(0.0_real64, cohort%cwout,  1.0e-12_real64)
+   @assertEqual(0.0_real64, cohort%cqdra,  1.0e-12_real64)
+end subroutine test_cumulative_reset_zeroes_all_scalars
+
+@test
+subroutine test_cumulative_reset_zeroes_allocated_per_level_arrays()
+   use funit
+   use iso_fortran_env, only: real64
+   use surfacewater_state_mod, only: surfacewater_cumulative_t
+   type(surfacewater_cumulative_t) :: cohort
+
+   allocate(cohort%cqdrain(5));    cohort%cqdrain    = 5.0_real64
+   allocate(cohort%cqdrainin(5));  cohort%cqdrainin  = 5.0_real64
+   allocate(cohort%cqdrainout(5)); cohort%cqdrainout = 5.0_real64
+
+   call cohort%reset()
+
+   @assertEqual(0.0_real64, sum(cohort%cqdrain),    1.0e-12_real64)
+   @assertEqual(0.0_real64, sum(cohort%cqdrainin),  1.0e-12_real64)
+   @assertEqual(0.0_real64, sum(cohort%cqdrainout), 1.0e-12_real64)
+end subroutine test_cumulative_reset_zeroes_allocated_per_level_arrays
