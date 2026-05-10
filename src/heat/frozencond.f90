@@ -213,7 +213,8 @@ contains
     real(8), parameter :: hconode_vsmall = 1.0d-10
 
     ! Initialize qbot
-    qbot = qbot_nonfrozen
+    ! SS-BND Phase 2 Task B-2.5: read qbot_nonfrozen from state (pure read; global dropped).
+    qbot = state%soilwater%qbot_nonfrozen
     state%soilwater%qbot = qbot
 
     associate( &
@@ -289,11 +290,13 @@ contains
             qbot = 0.0d0
             state%soilwater%qbot = qbot
           else
-            qdrain(leveldeepest) = qbot
+            ! SS-BND Phase 2 Task B-2.5: read qbot from state (dual-write keeps state current).
+            qdrain(leveldeepest) = state%soilwater%qbot
           endif
         else
           do level = 1,nrlevs
-            qdrain(level) = qdrain(level) * (1.0d0 + qbot/qdratot)
+            ! SS-BND Phase 2 Task B-2.5: read qbot from state.
+            qdrain(level) = qdrain(level) * (1.0d0 + state%soilwater%qbot/qdratot)
           end do
         end if
 
