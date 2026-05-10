@@ -6,7 +6,7 @@ status: accepted (Phase A complete; Phase B pending)
 
 # ADR 0033: Cumulative Reset Cohorts
 
-**Status:** accepted (Phases A + B complete; Phase C playbook update pending)
+**Status:** accepted (Phases A + B + C complete)
 **Date:** 2026-05-10
 **Branch:** `refactor/cumulative-reset-cohorts`
 
