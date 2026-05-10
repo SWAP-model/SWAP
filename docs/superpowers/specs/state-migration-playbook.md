@@ -206,9 +206,28 @@ Each migration arc must maintain these invariants:
 
 ---
 
+---
+
+## Lessons from heat migration (ADR 0034, added 2026-05-10)
+
+These five lessons generalize beyond heat and apply to future subsystem migrations.
+
+1. **Init-order trap — use `allocated()` guards for state fields consumed before `<subsystem>_init` runs.** In `swap.f90`'s startup sequence, `SoilWater(1, state)` runs before `heat_init`. `SoilWater` resets `state%heat%rfcp(:) = 1.0` every Richards sub-step. Because `heat_init` allocates `rfcp` later, the first Richards call sees an unallocated array and segfaults without the guard. Fix: `if (allocated(state%heat%rfcp)) state%heat%rfcp(:) = 1.0_real64`. **General rule:** during discovery, note the startup call order in `swap.f90`/`swap_main`. Any state field that an earlier-running subsystem reads or writes needs an `allocated()` guard at those call sites.
+
+2. **Non-module routines + state plumbing — use non-optional dummy arrays + use-rename instead of optional+interface.** Passing typed `state` into external (non-module) routines as an `optional` dummy arg requires an explicit interface block at the call site. For routines with large implicit interfaces this is impractical. Alternative: pass a **non-optional** array slice (`tsoil(:)`) as an explicit dummy arg — gfortran resolves this without an explicit interface — and exclude the homonymous global from scope via `use Variables, dummy_X_ => tsoil`. The rename trick cleanly eliminates exactly one global from the namespace without touching unrelated imports. Used for `ArableLandGerm`, `sumttd`, and `grass` in the heat arc.
+
+3. **Output-side parameter sweeps are not writeback hazards — fix is a local scratch array.** A `call <physics>(synthetic_input, owned_field, …)` inside an output routine where `owned_field` is an out-arg looks like a stale-state writeback hazard (playbook gotcha #6). It may actually be a **parameter sweep**: synthetic inputs fed through the physics function to produce a range of output columns (e.g., `heacap` at pF0, pF1, …, pF4.2). In that case the owned field should never have been modified in the first place — the fix is a local scratch array, not relocating the compute to the physics side. Inspect the call's purpose before choosing a fix: if the inputs are synthetic (not the actual current-step state), it is a parameter sweep.
+
+4. **Audit compute auxiliaries for hidden global reads — devries-style.** When migrating a compute routine, also audit the auxiliary subroutines it calls. They may import globals via `use variables, only:` even if the top-level compute was clean. In the heat arc, `devries` (called from `outheapar`'s parameter sweep) read composition arrays from the global namespace. Task 8 extended devries' signature to take those arrays explicitly — eliminating the hidden dependency. **General rule:** after migrating a compute entry point, grep for `use variables` in every helper it calls, including helpers in utility modules (`soilhydraulicsutils`, etc.).
+
+5. **Flat state-type layout when no fields are flag-gated cumulatives.** The cohort sub-record pattern (ADR 0033) is only needed when owned fields accumulate under `flzero*` gates. If all owned fields are instantaneous (recomputed or overwritten every step), a plain flat `*_state_t` is correct — no `intermediate` or `cumulative` sub-records. Heat is the first migration to use this layout. **General rule:** during discovery Section 2 categorization, if every owned global is marked "instantaneous," the cohort pattern does not apply and can be omitted from the design spec.
+
+---
+
 ## Reference ADRs
 
 - ADR 0030 — Surface-water state-type migration (pilot)
 - ADR 0031 — Drainage state-type migration
 - ADR 0032 — Solute state-type migration
 - ADR 0033 — Cumulative reset cohorts
+- ADR 0034 — Heat subsystem state-type migration
