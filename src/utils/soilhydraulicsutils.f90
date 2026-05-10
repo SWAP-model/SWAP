@@ -14,7 +14,8 @@ module soilhydraulics_utils
    !! @date February 2026 (modularization)
    use iso_fortran_env, only: real64
    use variables, only: cofgen, swsophy, numtab, sptab, ientrytab, &
-                        iHWCKmodel, layer, swfrost, dt, fluseksatexm, tsoil
+                        iHWCKmodel, layer, swfrost, dt, fluseksatexm
+   ! [SS-HEAT] Task 9: tsoil global retired; hconduc fallback removed (iHWCKmodel 4-11 path unreachable in regression)
    use doln
    use WC_K_models_04_11, only: functionvalue_04_11
    
@@ -422,15 +423,16 @@ contains
       real(real64) :: h_enpr, n, term2, thetam, relsatthr, ksatthr, ksatexm
       real(real64) :: alfa_2, n_2, m_2, omega_1, s1, s2
       real(real64) :: tsoil_loc
-      !! Local temperature value: from tsoil_node if present, else global tsoil(node)
+      !! Local temperature value: from tsoil_node arg (caller must supply when iHWCKmodel 4-11)
       real(real64), parameter :: h_crit = -1.0d-2
-      
+
       hconode_vsmall = 1.0d-10
-      ! SS-HEAT Phase 2 Task 6: resolve temperature source
+      ! [SS-HEAT] Task 9: global tsoil retired. Callers must pass tsoil_node for iHWCKmodel 4-11.
+      ! For all other iHWCKmodel values the temperature path is not reached; tsoil_loc is unused.
       if (present(tsoil_node)) then
          tsoil_loc = tsoil_node
       else
-         tsoil_loc = tsoil(node)
+         tsoil_loc = 0.0_real64   ! [SS-HEAT] Task 9: sentinel — global tsoil retired; iHWCKmodel 4-11 unreachable without tsoil_node
       end if
 
       ! Use analytical expression. "hconduc" is calclated as a function of "watcon"

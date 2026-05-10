@@ -11,6 +11,7 @@ module boundbottom_mod
 ! ----------------------------------------------------------------------
     use variables
     use swap_log, only: log_debug, to_str
+    use swap_state_mod, only: swap_state_t
     implicit none
 
     private
@@ -51,11 +52,15 @@ contains
     !!     purpose            : determine soil profile bottom boundary conditions
     !! ----------------------------------------------------------------------
     !! @endnote
-    subroutine BoundBottom
+    subroutine BoundBottom(state)
+        ! [SS-HEAT] Task 9: state added to access state%heat%rfcp (rfcp global retired)
         use array_utils, only: afgen
         use soilhydraulics_utils, only: watcon, hconduc
+        implicit none
+
+        type(swap_state_t), intent(in) :: state
+
         ! --- local variables
-        
     integer node, nodnumgwl
 
         real(8) cvalprof, gwlmean, thetabot, twopi, freq
@@ -156,7 +161,7 @@ contains
             hbot = afgen(hbotab, mabbc*2, t1900 + dt)
             thetabot = watcon(numnod, hbot)
 
-            kmean(numnod + 1) = hconduc(numnod, hbot, thetabot, rfcp(numnod))
+            kmean(numnod + 1) = hconduc(numnod, hbot, thetabot, state%heat%rfcp(numnod))
             if (flMacroPore) then
                 kmean(numnod + 1) = FrArMtrx(numnod)*kmean(numnod + 1)
             end if

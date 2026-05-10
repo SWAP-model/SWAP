@@ -20,6 +20,7 @@ module boundtop_mod
       use variables
       use swap_log, only: log_debug, to_str
       use surfacewater_utils, only: runoff
+      use swap_state_mod, only: swap_state_t
       implicit none
 
       private
@@ -73,9 +74,13 @@ contains
    !!     purpose            : determine soil profile top boundary condition      
    !! ----------------------------------------------------------------------
    !! @endnote
-   subroutine boundtop
+   subroutine boundtop(state)
+   ! [SS-HEAT] Task 9: state added to access state%heat%rfcp (rfcp global retired)
    use soilhydraulics_utils, only: watcon, hconduc, hcomean
    implicit none
+
+   type(swap_state_t), intent(in) :: state
+
 ! --- local variables
       real(8) emax,ks,theatm,ksurf
 
@@ -102,7 +107,7 @@ contains
 ! --- Calculate hydraulic conductivity corresponding with hAtm
       if (hAtm.lt.0.0d0) Then
          TheAtm = watcon(1,dble(hatm))
-         ksurf  = hconduc (1,dble(hatm),TheAtm,rfcp(1))
+         ksurf  = hconduc (1,dble(hatm),TheAtm,state%heat%rfcp(1))
          if(FlMacropore) then
             ksurf = FrArMtrx(1) * ksurf
          endif
@@ -143,9 +148,9 @@ contains
 
 !     maximum conductivity assuming saturation at ground surface (z=0)
       if(fluseksatexm(1))then
-         ks = rfcp(1)*ksatexm(1) + (1.0d0-rfcp(1))*hconode_vsmall
+         ks = state%heat%rfcp(1)*ksatexm(1) + (1.0d0-state%heat%rfcp(1))*hconode_vsmall
       else
-         ks = rfcp(1)*ksatfit(1) + (1.0d0-rfcp(1))*hconode_vsmall
+         ks = state%heat%rfcp(1)*ksatfit(1) + (1.0d0-state%heat%rfcp(1))*hconode_vsmall
       endif
       k1max = hcomean(swkmean,ks,k(1),dz(1),dz(1))
 !     check whether application of flux=q1 will yield a pressure head >0 

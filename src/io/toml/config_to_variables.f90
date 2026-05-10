@@ -905,9 +905,7 @@ contains
          end do
       end if
       if (allocated(config%heat%porg)) then
-         do i = 1, size(config%heat%porg)
-            forg(i) = config%heat%porg(i)   ! legacy alias: porg -> forg
-         end do
+         ! [SS-HEAT] Task 9: forg global retired — temperature.f90 computes ht_forg from orgmat, not from global forg
          ! Also populate orgmat (per-layer array, oxygenstress.f90:202 Bartholomeus).
          ! ASCII readswap.f90:1062 sets it from the ORGMAT column. Without this,
          ! orgmat stays at Initialize.f90:485 (all zeros) → zero microbial O2 demand

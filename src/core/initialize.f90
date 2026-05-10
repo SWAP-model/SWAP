@@ -240,7 +240,8 @@
       nhead              = 0 
       nodgwl             = 0 
       nod1lay            = 0 
-      nodfrostbot        = 0 
+      ! [SS-HEAT] Task 9: nodfrostbot retired to state%heat%nodfrostbot
+      ! nodfrostbot        = 0
       npegwl             = 0 
       nrlevs             = 0 
       nsublay            = 0 
@@ -424,7 +425,8 @@
       qtop               = 0.0d0
       relsatthr          = 0.0d0 
       reva               = 0.0d0 
-      rfcp               = 0.0d0 
+      ! [SS-HEAT] Task 9: rfcp retired to state%heat%rfcp
+      ! rfcp               = 0.0d0
       rimlay             = 0.0d0 
       rsigni             = 0.0d0 
       rsoil              = 0.0d0 
@@ -457,8 +459,9 @@
       z                  = 0.0d0 
       ztopcp             = 0.0d0
       zbotcp             = 0.0d0
-      zfrostbot          = 0.0d0 
-      zfrosttop          = 0.0d0 
+      ! [SS-HEAT] Task 9: zfrostbot/zfrosttop retired to state%heat
+      ! zfrostbot          = 0.0d0
+      ! zfrosttop          = 0.0d0
       zbotdr             = 0.0d0 
       zi                 = 0.0d0 
       zintf              = 0.0d0 
@@ -479,23 +482,26 @@
       swtem              = 0 
       tem                = 0 
       ddamp              = 0.0d0 
-      fclay              = 0.0d0 
-      forg               = 0.0d0 
-      fquartz            = 0.0d0 
-      orgmat             = 0.0d0 
+      ! [SS-HEAT] Task 9: fclay/forg/fquartz retired to state%heat
+      ! fclay              = 0.0d0
+      ! forg               = 0.0d0
+      ! fquartz            = 0.0d0
+      orgmat             = 0.0d0
       pclay              = 0.0d0 
       psand              = 0.0d0 
       psilt              = 0.0d0 
       tampli             = 0.0d0 
-      tebot              = 0.0d0
-      tembtab            = 0.0d0 
+      ! [SS-HEAT] Task 9: tebot retired to state%heat%tebot
+      ! tebot              = 0.0d0
+      tembtab            = 0.0d0
       temtoptab          = 0.0d0 
       tfroststa          = 0.0d0 
       tfrostend          = 0.0d0 
       timref             = 0.0d0 
       tmean              = 0.0d0 
-      tsoil              = 0.0d0 
-      tetop              = 0.0d0
+      tsoil              = 0.0d0   ! [SS-HEAT] Task 9: config staging buffer — compute state is state%heat%tsoil
+      ! [SS-HEAT] Task 9: tetop retired to state%heat%tetop
+      ! tetop              = 0.0d0
       zh                 = 0.0d0 
       fltemperature      = .false. 
 

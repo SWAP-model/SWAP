@@ -662,7 +662,8 @@
       integer   nhead              ! Number of initial soil water pressure heads as provided in the input
       integer   nodgwl             ! Node directly above groundwater level
       integer   nod1lay(maho)      ! node nr of first node of each soil layer (from top to bottom)
-      integer   nodfrostbot        ! Node nr of deepest node with frost conditions
+      ! [SS-HEAT] retired 2026-05-10 — moved to state%heat%nodfrostbot (ADR 0034)
+      ! integer   nodfrostbot        ! Node nr of deepest node with frost conditions
       integer   npegwl             ! Node directly above perched groundwater level
       integer   nrlevs             ! Number of drainage levels
       integer   nrstaring          ! Number of soil type [1..18] according to Staring series (Wosten et al., 2001)
@@ -921,7 +922,8 @@
       real(8)   relsatthr(maho)    ! Array with relative saturation (-) for each soil layer: to interpolate VG and Ksatexm
       real(8)   ResultsOxygenStress(19,macp) ! array with results for OxygenStress; for output only 
       real(8)   reva               ! Actual soil evaporation rate (L/T)
-      real(8)   rfcp(macp)         ! Reduction factor for frozen conditions in each model compartment (-)
+      ! [SS-HEAT] retired 2026-05-10 — moved to state%heat%rfcp (ADR 0034)
+      ! real(8)   rfcp(macp)         ! Reduction factor for frozen conditions in each model compartment (-)
       real(8)   rimlay             ! Vertical resistance of aquitard (T)
       real(8)   rmax(macp)         ! Radius around roots in which water is extracted (L)
       real(8)   RootPhi(macp)      ! Factor Phi of a compartment used in drought reduction of De Jong van Lier et al. (T/L)
@@ -968,8 +970,10 @@
       real(8)   z(macp)            ! Depth of a node (L)
       real(8)   ztopcp(macp)       ! Depth of top    boundary of layer(node) (L)
       real(8)   zbotcp(macp)       ! Depth of bottom boundary of layer(node) (L)
-      real(8)   zfrostbot          ! Depth of bottom of frost layer (L)
-      real(8)   zfrosttop          ! Depth of top of frost layer (L)
+      ! [SS-HEAT] retired 2026-05-10 — moved to state%heat%zfrostbot (ADR 0034)
+      ! real(8)   zfrostbot          ! Depth of bottom of frost layer (L)
+      ! [SS-HEAT] retired 2026-05-10 — moved to state%heat%zfrosttop (ADR 0034)
+      ! real(8)   zfrosttop          ! Depth of top of frost layer (L)
       real(8)   zbotdr(Madr)       ! Array with depth of drain bottom for each drain level
       real(8)   zi(macp)           ! Array with soil depths (L) used to specify initial soil water pressure heads
       real(8)   zintf              ! Depth (L) at which fine top layer ends and coarse sub layer starts
@@ -991,26 +995,35 @@
       integer   swtem              ! Switch for output file *.TEM with soil temperatures: 0 = no; 1 = yes
       integer   tem                ! Internal number of output file *.TEM with soil temperatures
       real(8)   ddamp              ! Damping depth (L) of temperature wave in soil
-      real(8)   fclay(macp)        ! Array with gravimetric content of clay (g/g mineral parts) of each numerical compartment
-      real(8)   forg(macp)         ! Array with gravimetric organic matter content (g/g mineral parts) of each numerical compartment
-      real(8)   fquartz(macp)      ! Array with gravimetric content of sand+silt (g/g mineral parts) of each numerical compartment
+      ! [SS-HEAT] retired 2026-05-10 — moved to state%heat%fclay (ADR 0034)
+      ! real(8)   fclay(macp)        ! Array with gravimetric content of clay (g/g mineral parts) of each numerical compartment
+      ! [SS-HEAT] retired 2026-05-10 — moved to state%heat%forg (ADR 0034)
+      ! real(8)   forg(macp)         ! Array with gravimetric organic matter content (g/g mineral parts) of each numerical compartment
+      ! [SS-HEAT] retired 2026-05-10 — moved to state%heat%fquartz (ADR 0034)
+      ! real(8)   fquartz(macp)      ! Array with gravimetric content of sand+silt (g/g mineral parts) of each numerical compartment
       real(8)   orgmat(maho)       ! Array with gravimetric organic matter content (g/g mineral parts) for each soil layer
       real(8)   pclay(maho)        ! Array with gravimetric clay content (g/g mineral parts) for each soil layer
       real(8)   psand(maho)        ! Array with gravimetric sand content (g/g mineral parts) for each soil layer
       real(8)   psilt(maho)        ! Array with gravimetric silt content (g/g mineral parts) for each soil layer
       real(8)   tampli             ! Amplitude of prescribed annual temperature wave (�C) at soil surface
-      real(8)   tebot              ! Temperatures (�C) at bottom of soil profile
+      ! [SS-HEAT] retired 2026-05-10 — moved to state%heat%tebot (ADR 0034)
+      ! real(8)   tebot              ! Temperatures (�C) at bottom of soil profile
       real(8)   tembtab(mabbc*2)   ! Array with specified bottom temperature (�C) as function of time (T)
       real(8)   temtoptab(mabbc*2) ! Array with specified soil surface temperature (�C) as function of time (T)
       real(8)   tfroststa          ! Soil temperature (�C) where reduction of water fluxes starts
       real(8)   tfrostend          ! Soil temperature (�C) where reduction of water fluxes ends
       real(8)   timref             ! Time in the year (T) with top of prescribed sine temperature wave
       real(8)   tmean              ! Prescribed mean annual temperature (�C) at soil surface
-      real(8)   tsoil(macp)        ! Array with soil temperatures (�C) for each compartment
-      real(8)   tetop              ! Temperatures (�C) at top of soil profile (under snow cover)
+      ! [SS-HEAT] NOTE: tsoil retained as config-staging buffer for temperature.f90 task=1 init.
+      ! The runtime soil-temperature compute state is state%heat%tsoil(numnod). (ADR 0034)
+      real(8)   tsoil(macp)        ! Config-staging: nheat initial temperature profile entries (�C) for each compartment
+      ! [SS-HEAT] retired 2026-05-10 — moved to state%heat%tetop (ADR 0034)
+      ! real(8)   tetop              ! Temperatures (�C) at top of soil profile (under snow cover)
       real(8)   zh(macp)           ! Array with soil depths (L) used to specify initial soil temperatures
-      real(8)   heacap(macp)       ! Array with heat capacity for all compartments (J/cm3/K)
-      real(8)   heacon(macp)       ! Array with heat conductivity for all compartments (J/cm/K/d)
+      ! [SS-HEAT] retired 2026-05-10 — moved to state%heat%heacap (ADR 0034)
+      ! real(8)   heacap(macp)       ! Array with heat capacity for all compartments (J/cm3/K)
+      ! [SS-HEAT] retired 2026-05-10 — moved to state%heat%heacon (ADR 0034)
+      ! real(8)   heacon(macp)       ! Array with heat conductivity for all compartments (J/cm/K/d)
       logical   fltemperature      ! Flag indicating simulation of soil heat flow
 
 ! --- snow variables

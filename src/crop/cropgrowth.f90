@@ -19,7 +19,8 @@
 ! ----------------------------------------------------------------------
 
       use variables, dummy_tsoil_cg_ => tsoil
-      !! Rename global tsoil to avoid clash with dummy arg tsoil.
+      !! Rename config-staging tsoil to avoid clash with dummy arg tsoil.
+      !! [SS-HEAT] Task 9: tsoil retained as config-staging buffer; global is not compute state.
       use array_utils, only: afgen
       use rootextraction_mod, only: MatricFlux
       use swap_constants, only: tiny
@@ -833,7 +834,8 @@
 !   state%heat%tsoil. Global tsoil excluded via rename.
 ! ----------------------------------------------------------------------
       use variables, dummy_tsoil_alg_ => tsoil
-      !! Rename global tsoil to avoid clash with dummy arg tsoil.
+      !! Rename config-staging tsoil to avoid clash with dummy arg tsoil.
+      !! [SS-HEAT] Task 9: tsoil retained as config-staging buffer; global is not compute state.
       use swap_constants, only: small
       use error_mod, only: fatalerr_collected
       implicit none
@@ -2147,7 +2149,8 @@
 !   state%heat%tsoil. Threaded through to sumttd calls.
 ! ----------------------------------------------------------------------
       use variables, dummy_tsoil_gr_ => tsoil
-      !! Rename global tsoil to avoid clash with dummy arg tsoil.
+      !! Rename config-staging tsoil to avoid clash with dummy arg tsoil.
+      !! [SS-HEAT] Task 9: tsoil retained as config-staging buffer; global is not compute state.
       use array_utils, only: afgen
       use soilhydraulics_utils, only: watcon
       use rootextraction_mod, only: MatricFlux

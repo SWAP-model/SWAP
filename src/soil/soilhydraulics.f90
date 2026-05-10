@@ -110,7 +110,7 @@ contains
             call pondrunoff (state)
             q1 = - q0 + (pond - pondm1)/dt + runots / dt
             theta(1) = watcon(1,gwlinp)
-            kmean(1) = hconduc(1,gwlinp,theta(1),rfcp(1))
+            kmean(1) = hconduc(1,gwlinp,theta(1),state%heat%rfcp(1))
             ! In case of static macropores FrArMtrx < 1
             if(FlMacropore) kmean(1) = FrArMtrx(1) * kmean(1)
 
@@ -127,7 +127,7 @@ contains
 
             if(SwKimpl.eq.1)then
                do i=1,numnod
-                  k(i) = hconduc(i,h(i),theta(i),rfcp(i))
+                  k(i) = hconduc(i,h(i),theta(i),state%heat%rfcp(i))
                   if(FlMacropore)  k(i) = FrArMtrx(i) * k(i)
                   if(i.gt.1)then
                      kmean(i)=hcomean(swkmean,k(i-1),k(i),dz(i-1),dz(i))
@@ -167,7 +167,7 @@ contains
          flcaprise = .false.
       endif
       do i = 1,numnod
-         k(i) = hconduc(i,h(i),theta(i),rfcp(i))
+         k(i) = hconduc(i,h(i),theta(i),state%heat%rfcp(i))
 
          if (swcaprise) then
             ! Prevent capillary rise into the root zone !! special for experts only
@@ -201,7 +201,7 @@ contains
 
       F(1) = (theta(1)-thetm1(1))*FrArMtrx(1)*dz(1)/dt + sink(1) - source(1) + qrot(1) + kmean(2) * hgrad(2)
 
-      call boundtop
+      call boundtop(state)  ! [SS-HEAT] Task 9: state passed for rfcp access
 
       if (FlMacropore) then
          call MACROPORE(2, state)
@@ -235,7 +235,7 @@ contains
 
       if(swbotb.eq.1 .and. (.not.fllowgwl))then
          theta(NN)= watcon(NN,h(NN))
-         k(NN)    = hconduc(NN,h(NN),theta(NN),rfcp(NN))
+         k(NN)    = hconduc(NN,h(NN),theta(NN),state%heat%rfcp(NN))
          ! In case of static macropores FrArMtrx < 1
          if(FlMacropore) k(NN) = FrArMtrx(NN) * k(NN)
          kmean(NN+1) = hcomean(swkmean,k(NN),cofgen(3,(NN+1)),          &
@@ -259,8 +259,8 @@ contains
          else if(swbotb.eq.5 .or. (swbotb.eq.1 .and. fllowgwl))then ! pressure head at lower boundary specified
             F(NN) = F(NN) + kmean(NN+1) * hgrad(NN+1)
          else if(swbotb.eq.7 .or. swbotb .eq. -2)then ! free drainage option
-            kmean(numnod+1) = hconduc(numnod,h(numnod),theta(numnod),rfcp(numnod))
-            if(FlMacropore) then 
+            kmean(numnod+1) = hconduc(numnod,h(numnod),theta(numnod),state%heat%rfcp(numnod))
+            if(FlMacropore) then
                 kmean(numnod+1) = FrArMtrx(numnod) * kmean(numnod+1)
             endif
             qbot = -1.0d0 * kmean(numnod+1)
@@ -315,7 +315,7 @@ contains
 
          if(SwKimpl.eq.1)then
             do i = 1, NN
-               dkdh(i)= dhconduc(i,h(i),theta(i),dimoca(i),rfcp(i))
+               dkdh(i)= dhconduc(i,h(i),theta(i),dimoca(i),state%heat%rfcp(i))
                if(FlMacropore) dkdh(i) = FrArMtrx(i) * dkdh(i)
             enddo
             do i=2,NN
@@ -450,7 +450,7 @@ contains
             if(SwKimpl.eq.1)then
                call Rootextraction(state)
                do i = 1,NN
-                  k(i) = hconduc(i,h(i),theta(i),rfcp(i))
+                  k(i) = hconduc(i,h(i),theta(i),state%heat%rfcp(i))
                   if(FlMacropore)  k(i) = FrArMtrx(i) * k(i)
                   if(i.gt.1)then
                      kmean(i)=hcomean(swkmean,k(i-1),k(i),dz(i-1),dz(i))
@@ -482,7 +482,7 @@ contains
 
             if (FlMacropore) QMpLatSsSav = QMpLatSs
 
-            call boundtop
+            call boundtop(state)  ! [SS-HEAT] Task 9: state passed for rfcp access
 
             if (FlMacropore) then
                if (.not.flunsatok(3)) then
@@ -517,7 +517,7 @@ contains
 
             if(swbotb.eq.1 .and. (.not.fllowgwl))then
                theta(NN) = watcon(NN,h(NN))
-               k(NN)     = hconduc(NN,h(NN),theta(NN),rfcp(NN))
+               k(NN)     = hconduc(NN,h(NN),theta(NN),state%heat%rfcp(NN))
                ! In case of static macropores FrArMtrx < 1
                if(FlMacropore)  k(NN) = FrArMtrx(NN) * k(NN)
                kmean(NN+1) = hcomean(swkmean,k(NN),cofgen(3,(NN+1))     &
@@ -545,7 +545,7 @@ contains
                   ! Pressure head at lower boundary specified
                   F(NN) = F(NN) + kmean(NN+1) * hgrad(NN+1)
                else if(swbotb.eq.7.or. swbotb .eq. -2)then ! free drainage option
-                  kmean(numnod+1) = hconduc(numnod,h(numnod),theta(numnod),rfcp(numnod))
+                  kmean(numnod+1) = hconduc(numnod,h(numnod),theta(numnod),state%heat%rfcp(numnod))
                   if(FlMacropore) then
                      kmean(numnod+1) = FrArMtrx(numnod)*kmean(numnod+1)
                   endif
@@ -881,10 +881,9 @@ contains
       enddo
       do i = 1,macp
         evp(i) = 0.0d0
-        rfcp(i) = 1.0d0
       enddo
-      if (allocated(state%heat%rfcp)) &
-         state%heat%rfcp = 1.0d0     ! SS-HEAT Task 8: state write kept; legacy global above is now dead
+      ! [SS-HEAT] Task 9: legacy rfcp global retired; state%heat%rfcp is authoritative
+      if (allocated(state%heat%rfcp)) state%heat%rfcp = 1.0d0
       state%surfacewater%vtair = 0.0d0
       cQMpLatSs = 0.0d0
 
@@ -1049,7 +1048,7 @@ contains
         dimoca(node) = moiscap(node,h(node))
 
         FrArMtrx(node) = 1.d0
-        k(node) = hconduc (node,h(node),theta(node),rfcp(node))
+        k(node) = hconduc (node,h(node),theta(node),state%heat%rfcp(node))
         if(FlMacropore)  k(node) = FrArMtrx(node) * k(node)
 
         if(node.gt.1) kmean(node) =  hcomean(swkmean,k(node-1),k(node),dz(node-1),dz(node))
@@ -1169,7 +1168,7 @@ contains
 
          ! Update hydraulic conductivities to time level t+1
          do i = 1,numnod
-         k(i) = hconduc(i,h(i),theta(i),rfcp(i))
+         k(i) = hconduc(i,h(i),theta(i),state%heat%rfcp(i))
          if(FlMacropore)  k(i) = FrArMtrx(i) * k(i)
          if(i.gt.1)then
             kmean(i) = hcomean(swkmean,k(i-1),k(i),dz(i-1),dz(i))

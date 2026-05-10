@@ -300,7 +300,7 @@ if (iTask == 2) then
       call RootExtraction(state)
 
 !     determine SoilWater bottom boundary conditions
-      call BoundBottom()
+      call BoundBottom(state)  ! [SS-HEAT] Task 9: state passed for rfcp access
 
       fldtreduce = .true.
       do while(fldtreduce)
