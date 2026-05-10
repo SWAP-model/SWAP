@@ -214,6 +214,7 @@ contains
 
     ! Initialize qbot
     qbot = qbot_nonfrozen
+    state%soilwater%qbot = qbot
 
     associate( &
         ht_rfcp        => state%heat%rfcp,       &
@@ -241,6 +242,7 @@ contains
     if(swdra.eq.0) then
       if(ht_nodfrostbot.gt.1 .and. volair.lt.0.01d0)then
         qbot = 0.0d0
+        state%soilwater%qbot = qbot
       endif
     else
       ! SS-DRST Phase 2 Task 1: alias state drainage fields; all reads/writes
@@ -285,6 +287,7 @@ contains
         if(abs(qdratot).lt.1.0d-6) then
           if(ht_zfrostbot.lt.zbotdr(leveldeepest)) then
             qbot = 0.0d0
+            state%soilwater%qbot = qbot
           else
             qdrain(leveldeepest) = qbot
           endif

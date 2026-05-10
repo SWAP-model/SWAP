@@ -120,6 +120,7 @@ contains
      &                          / dt+ sink(i) - source(i) + qrot(i) 
             end do
             qbot = qv(numnod+1)
+            state%soilwater%qbot = qbot
             h(1) = gwlinp + disnod(1)*(qv(1)/kmean(1)+1.0d0)
             do i=2,numnod
                h(i) = h(i-1) + disnod(i)*(qv(i)/kmean(i)+1.0d0)
@@ -147,12 +148,14 @@ contains
                if ((z(NN)-gwlinp) .lt. 1.0d-4 .and. (NN.gt.0)) then
                   ! Difference gwlinp with node too small to calculate gradient properly
                   gwlinp = z(NN)
+                  state%soilwater%gwlinp = gwlinp
                   NN = NN-1
                endif
             else
                ! Groundwater below soil profile
                fllowgwl = .true.
                hbot = gwlinp - z(numnod) + 0.5*dz(numnod)
+               state%soilwater%hbot = hbot
             endif
          end if
       else
@@ -255,7 +258,8 @@ contains
             endif
 ! ---       extra groundwater flux might be added
             if (sw4 .eq. 1) qbot = qbot + afgen(qbotab,mabbc*2,t1900+dt)
-            F(NN) = F(NN) - qbot     
+            state%soilwater%qbot = qbot
+            F(NN) = F(NN) - qbot
          else if(swbotb.eq.5 .or. (swbotb.eq.1 .and. fllowgwl))then ! pressure head at lower boundary specified
             F(NN) = F(NN) + kmean(NN+1) * hgrad(NN+1)
          else if(swbotb.eq.7 .or. swbotb .eq. -2)then ! free drainage option
@@ -264,14 +268,17 @@ contains
                 kmean(numnod+1) = FrArMtrx(numnod) * kmean(numnod+1)
             endif
             qbot = -1.0d0 * kmean(numnod+1)
+            state%soilwater%qbot = qbot
             F(NN) = F(NN) - qbot
          ! Lysimeter option
          else if(swbotb.eq.8)then
             if (flboth) then
                hbot = hplate
+               state%soilwater%hbot = hbot
                F(NN) = F(NN) + kmean(NN+1) * hgrad(NN+1)
             else
                qbot = 0.0d0
+               state%soilwater%qbot = qbot
             end if
          ! Flux bottom boundary
          else
@@ -540,6 +547,7 @@ contains
                   if (sw4 .eq. 1) then
                      qbot = qbot + afgen(qbotab,mabbc*2,t1900+dt)
                   end if
+                  state%soilwater%qbot = qbot
                   F(NN) = F(NN) - qbot
                else if(swbotb.eq.5 .or.(swbotb.eq.1 .and. fllowgwl))then
                   ! Pressure head at lower boundary specified
@@ -550,14 +558,17 @@ contains
                      kmean(numnod+1) = FrArMtrx(numnod)*kmean(numnod+1)
                   endif
                   qbot = -1.0d0 * kmean(numnod+1)
+                  state%soilwater%qbot = qbot
                   F(NN) = F(NN) - qbot
                ! Lysimeter option
                else if(swbotb.eq.8)then
                   if (flboth) then
                      hbot = hplate
+                     state%soilwater%hbot = hbot
                        F(NN) = F(NN) + kmean(NN+1) * hgrad(NN+1)
                   else
                      qbot = 0.0d0
+                     state%soilwater%qbot = qbot
                   end if
                ! Flux bottom boundary
                else
@@ -635,6 +646,7 @@ contains
          ! Test for waterbalance of ponding layer
          if (ftoph) then
             qtop = -kmean(1)*((hsurf - h(1))/disnod(1)+1.0d0)
+            state%soilwater%qtop = qtop
             if(.not.flnonconv .and. (.not.FlMacropore .or. IcTopMp.gt.1)) then
                deviat = pond - pondm1 + reva*dt - (nraidt+nird+Melt)*dt &
      &                - runon*dt  +  runots  - qtop * dt
@@ -719,6 +731,7 @@ contains
      &                          / dt + sink(i) - source(i) + qrot(i)
                end do
                qbot = qv(numnod+1)
+               state%soilwater%qbot = qbot
 
                do i=NN+1,numnod
                   h(i) = h(i-1) + disnod(i)*(qv(i)/kmean(i)+1.0d0)
@@ -876,6 +889,7 @@ contains
       endif
       runon = 0.0d0
       qtop = 0.d0
+      state%soilwater%qtop = qtop
       do i = 1,numnod+1
         q(i) = 0.0d0
       enddo
