@@ -7,6 +7,7 @@
 !! explicit interfaces.
 module rootextraction_mod
    use error_mod, only: fatalerr_collected
+   use swap_state_mod, only: swap_state_t
   implicit none
   private
   public :: RootExtraction, MatricFlux
@@ -27,20 +28,22 @@ module rootextraction_mod
 !! purpose: Calculate the root water extraction rate as function of soil water
 !!          pressure head and salinity concentration for each node
 !! @endnote
-  subroutine RootExtraction
+  subroutine RootExtraction(state)
 ! ----------------------------------------------------------------------
 !     update    : August 2016: microscopic uptake according to JongvanLier(2013)
 !     update    : August 2012: O2-stress according to Bartholomeus(2008)
-!     update    : February 2011: macrosopic uptake extended with 
+!     update    : February 2011: macrosopic uptake extended with
 !                                compensation according to Jarvis (1989)
 !     date      : August 2004
-!     purpose   : Calculate the root water extraction rate as function of soil 
+!     purpose   : Calculate the root water extraction rate as function of soil
 !                 water pressure head and salinity concentration for each node
 ! ----------------------------------------------------------------------
       use variables
       use array_utils, only: afgen
       use oxygenstress_mod, only: OxygenStress, OxygenReproFunction
       implicit none
+
+      type(swap_state_t), intent(in) :: state
 
 ! --- local variables
       integer node
@@ -97,7 +100,7 @@ module rootextraction_mod
 
 ! --- DROUGHT REDUCTION ACCORDING TO DE JONG VAN LIER ET AL. (2012)
       if (swdrought .eq. 2) then
-        call JongvanLier
+        call JongvanLier(state)
       endif
 
 ! === COMBINATION OF OXYGEN, DROUGHT, SALT AND FROST STRESS ====
@@ -173,8 +176,8 @@ module rootextraction_mod
         
         ! reduction according to Maas and Hoffman linear reduction function        
         if (swsalinity .eq. 1) then
-          if (cml(node) .gt. saltmax) then
-            alpsol = 1.0d0 - (cml(node) - saltmax) * saltslope
+          if (state%solute%cml(node) .gt. saltmax) then
+            alpsol = 1.0d0 - (state%solute%cml(node) - saltmax) * saltslope
             alpsol = max(0.0d0,alpsol)
           endif
         endif
@@ -304,15 +307,17 @@ module rootextraction_mod
       !! purpose: Calculate the root water extraction rate according to
       !!          De Jong van Lier et al. (2013)
       !! @endnote
-        subroutine JongvanLier
+        subroutine JongvanLier(state)
 ! ----------------------------------------------------------------------
 !     date      : August 2016
-!     purpose   : Calculate the root water extraction rate according to 
+!     purpose   : Calculate the root water extraction rate according to
 !                 De Jong van Lier et al. (2013)
 ! ----------------------------------------------------------------------
       use variables
       use array_utils, only: afgen
       implicit none
+
+      type(swap_state_t), intent(in) :: state
 
 ! --- local variables
       integer node,counter
@@ -372,7 +377,7 @@ module rootextraction_mod
 ! --- calculate current matric flux potential in soil water
       do node = 1,noddrz
         h(node) = min(1.0d3,max(h(node),1.0d-8))
-        call MatricFlux(2,h(node),node,mflux(node))
+        call MatricFlux(2,h(node),node,mflux(node),state)
       enddo
 
 ! --- interpolate matric flux potential in lowest compartment that is partly filled with roots
@@ -395,7 +400,7 @@ module rootextraction_mod
       if (dHPlant .gt. (hwet - wiltpoint)) flstress = .true.
 
       HXylem = Hleaf + dHPLant
-      call JongvanLierLoop
+      call JongvanLierLoop(state)
       if (qrosum .lt. ptra) flstress = .true.
 
 ! --- set hroot to previous values
@@ -409,7 +414,7 @@ module rootextraction_mod
 ! --- calculate root extraction at previous value of hleaf
       Hleaf = Hleafm1
       HXylem = Hleaf + dHPLant
-      call JongvanLierLoop     
+      call JongvanLierLoop(state)
 
 ! --- check convergence
       if (abs(qrosum-ptra) .lt. taccur) flconverg = .true.
@@ -436,7 +441,7 @@ module rootextraction_mod
 ! --- calculate root extraction at modified pressure head y2 in leaf
       hleaf = y2
       HXylem = Hleaf + dHPLant
-      call JongvanLierLoop     
+      call JongvanLierLoop(state)
       Fy2 = ptra - qrosum
       
 ! --- determine new value of leaf pressure head with Newton Raphson algorithm
@@ -472,7 +477,7 @@ module rootextraction_mod
       Hxylem = Hleaf + dHPlant
 
 ! --- calculate root extraction at y3
-      call JongvanLierLoop     
+      call JongvanLierLoop(state)
       Fy3 = ptra - qrosum
     
 ! --- check convergence
@@ -521,7 +526,7 @@ module rootextraction_mod
         tactual = dHplant * kstem
       endif
       HXylem = Hleaf + dHPLant
-      call JongvanLierLoop     
+      call JongvanLierLoop(state)
 
 ! --- check convergence
       if (abs(tactual - qrosum) .lt. taccur) flconverg = .true.
@@ -549,7 +554,7 @@ module rootextraction_mod
       tactual = y2
       dHplant = tactual/kstem
       HXylem = Hleaf + dHPLant
-      call JongvanLierLoop     
+      call JongvanLierLoop(state)
       Fy2 = tactual - qrosum
       
 ! --- determine new value of tactual with Newton Raphson algorithm
@@ -570,7 +575,7 @@ module rootextraction_mod
       Hxylem = Hleaf + dHPlant
 
 ! --- calculate root extraction at y3
-      call JongvanLierLoop     
+      call JongvanLierLoop(state)
       Fy3 = tactual - qrosum
     
 ! --- check convergence
@@ -638,13 +643,15 @@ module rootextraction_mod
 !! date: August 2016
 !! purpose: Calculate microscopic root water uptake using hleaf
 !! @endnote
-  subroutine JongvanLierLoop
+  subroutine JongvanLierLoop(state)
 ! ----------------------------------------------------------------------
 !     date      : August 2016
 !     purpose   : Calculate microscopic root water uptake using hleaf
 ! ----------------------------------------------------------------------
       use variables
       implicit none
+
+      type(swap_state_t), intent(in) :: state
 
 ! --- local variables
       integer counter,node,lay
@@ -674,8 +681,8 @@ module rootextraction_mod
             Step = min(abs(x3-x1),StepHr*log10(max(abs(x3),1.d0)))
             x1 = x3
             x2 = x1 - Step
-            call MatricFlux(2,x1,node,mflux1)
-            call MatricFlux(2,x2,node,mflux2)
+            call MatricFlux(2,x1,node,mflux1,state)
+            call MatricFlux(2,x2,node,mflux2,state)
             Fx1 = Hxylem -x1 + rootphi(node)*(mflux(node)-mflux1)
             Fx2 = Hxylem -x2 + rootphi(node)*(mflux(node)-mflux2)
             if (abs(Fx2-Fx1).lt.1.d-10) then
@@ -698,7 +705,7 @@ module rootextraction_mod
           counter = 0
           hroot(node) = x3
         endif
-        call MatricFlux(2,hroot(node),node,MRoot(node))
+        call MatricFlux(2,hroot(node),node,MRoot(node),state)
 ! ---   calculate root water extraction flux
         if (node .lt. noddrz) then
           qrot(node) = rooteff * rootrho(node) *                        &
@@ -762,9 +769,9 @@ module rootextraction_mod
 !! Date: February 2010
 !! Purpose: Initialize and calculate matric flux potential
 !! @endnote
-  subroutine MatricFlux(task,phead,node,outcome)
+  subroutine MatricFlux(task,phead,node,outcome,state)
 ! ----------------------------------------------------------------------
-!     Date               : February 2010   
+!     Date               : February 2010
 !     Purpose            : Initialize and calculate matric flux potential
 ! ----------------------------------------------------------------------
 
@@ -776,6 +783,7 @@ module rootextraction_mod
       integer task,lay,count,start,node,i
       real(8) phead1,phead2,wcontent,conduc1,conduc2
       real(8) logphead,hosm,hsalt,mfluxsalt,phead,outcome
+      type(swap_state_t), intent(in), optional :: state
 
       select case (task)
       case (1)
@@ -835,7 +843,7 @@ module rootextraction_mod
       if (swsalinity .eq. 2) then
           lay = layer(node)
 !         osmotic head in cm
-          hosm = salthead * cml(node)
+          hosm = salthead * state%solute%cml(node)
           hsalt = wiltpoint + hosm
           if (hosm .lt. 1.d-3) then
 ! ---       very dry range 

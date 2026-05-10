@@ -14,6 +14,7 @@
 !!   - some calculations only once during initialization
    module irrigation_mod
    use error_mod, only: fatalerr_collected
+   use swap_state_mod, only: swap_state_t
    implicit none
    private
 
@@ -27,11 +28,11 @@
 !! @param[in] task Task selector:
 !!   - 1: initialization for current crop
 !!   - 2: daily irrigation decision and depth
-   subroutine irrigation(task)
+   subroutine irrigation(task, state)
 ! ----------------------------------------------------------------------
 !     Date               : November 2004
 !     Purpose            : evaluate and schedule irrigations
-!                        : Modified July 2019; 
+!                        : Modified July 2019;
 !                             - tcs=5 obsolete and replaced by tcs=7 (theta) and tcs=8 (presh)
 !                             - some calculations only once during initialization
 ! ----------------------------------------------------------------------
@@ -40,6 +41,8 @@
       use array_utils, only: afgen
       use soilhydraulics_utils, only: watcon
       implicit none
+
+      type(swap_state_t), intent(in) :: state
 
 ! --  local variables
       integer irr,node,nodsen,task,tcs,tcsfix,dcslim,dcs
@@ -266,7 +269,7 @@
 
 ! ---       in case of solutes: allow overirrigation when conc exceeds concthreshold
             if (swsolu.eq.1 .and.irrigevent.eq.2 .and.swcirrthres.eq.1) then
-               if (cml(nodsen).gt.cirrthres) then
+               if (state%solute%cml(nodsen).gt.cirrthres) then
                   gird = gird + 0.01d0*perirrsurp*gird
                end if
             end if

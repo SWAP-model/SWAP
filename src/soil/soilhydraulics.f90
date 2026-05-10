@@ -448,7 +448,7 @@ contains
 
 
             if(SwKimpl.eq.1)then
-               call Rootextraction
+               call Rootextraction(state)
                do i = 1,NN
                   k(i) = hconduc(i,h(i),theta(i),rfcp(i))
                   if(FlMacropore)  k(i) = FrArMtrx(i) * k(i)

@@ -261,7 +261,7 @@ if (iTask == 2) then
          if (iCaller /= 0) call handle_exchange(23, flError)   ! LAI, RD
 
 !        calculate Irrigation rate/state variables
-         if (flIrrigate) call irrigation(2)
+         if (flIrrigate) call irrigation(2, state)
 
 !        process Meteo data
          call ProcessMeteoDay()
@@ -284,7 +284,7 @@ if (iTask == 2) then
       end if
 
 !     calculate potential and actual root water extraction profile
-      call RootExtraction()
+      call RootExtraction(state)
 
 !     determine SoilWater bottom boundary conditions
       call BoundBottom()
