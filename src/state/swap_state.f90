@@ -12,6 +12,7 @@ module swap_state_mod
    use drainage_state_mod,     only: drainage_state_t
    use solute_state_mod,       only: solute_state_t
    use heat_state_mod,         only: heat_state_t
+   use soilwater_state_mod,    only: soilwater_state_t
    implicit none
    private
    public :: swap_state_t
@@ -21,6 +22,7 @@ module swap_state_mod
       type(drainage_state_t)     :: drainage
       type(solute_state_t)       :: solute
       type(heat_state_t)         :: heat
+      type(soilwater_state_t)    :: soilwater
    end type swap_state_t
 
 end module swap_state_mod

@@ -1,0 +1,85 @@
+! Tests for soilwater_state_t — typed state record for the soil-water
+! boundary subsystem. Phase 1 of the boundary state-migration arc (B-1.1).
+!
+! 12 scalar fields: 7 top-boundary (qtop, reva, hsurf, runots, QMpLatSs,
+! ftoph, FlRunoff) + 5 bottom-boundary (qbot, qbot_nonfrozen, hbot,
+! gwlinp, deepgw). All instantaneous — flat layout, no cohort sub-records.
+!
+! See docs/superpowers/specs/2026-05-10-state-migration-boundary-design.md.
+
+@test
+subroutine test_soilwater_state_default_reals()
+   ! All real(real64) fields default to 0.0.
+   use funit
+   use iso_fortran_env, only: real64
+   use soilwater_state_mod, only: soilwater_state_t
+   type(soilwater_state_t) :: sw
+
+   @assertEqual(0.0_real64, sw%qtop,           1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%reva,            1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%hsurf,           1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%runots,          1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%QMpLatSs,        1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%qbot,            1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%qbot_nonfrozen,  1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%hbot,            1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%gwlinp,          1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%deepgw,          1.0e-12_real64)
+end subroutine test_soilwater_state_default_reals
+
+@test
+subroutine test_soilwater_state_default_logicals()
+   ! Both logical fields default to .false.
+   use funit
+   use soilwater_state_mod, only: soilwater_state_t
+   type(soilwater_state_t) :: sw
+
+   @assertFalse(sw%ftoph)
+   @assertFalse(sw%FlRunoff)
+end subroutine test_soilwater_state_default_logicals
+
+@test
+subroutine test_soilwater_state_write_read_roundtrip()
+   ! Field write/read round-trip for representative scalars.
+   use funit
+   use iso_fortran_env, only: real64
+   use soilwater_state_mod, only: soilwater_state_t
+   type(soilwater_state_t) :: sw
+
+   sw%qtop    = 1.5_real64
+   sw%reva    = 0.3_real64
+   sw%qbot    = -0.8_real64
+   sw%gwlinp  = 250.0_real64
+   sw%ftoph   = .true.
+   sw%FlRunoff = .true.
+
+   @assertEqual(  1.5_real64, sw%qtop,   1.0e-12_real64)
+   @assertEqual(  0.3_real64, sw%reva,   1.0e-12_real64)
+   @assertEqual( -0.8_real64, sw%qbot,   1.0e-12_real64)
+   @assertEqual(250.0_real64, sw%gwlinp, 1.0e-12_real64)
+   @assertTrue(sw%ftoph)
+   @assertTrue(sw%FlRunoff)
+end subroutine test_soilwater_state_write_read_roundtrip
+
+@test
+subroutine test_soilwater_state_aggregator_access()
+   ! Aggregator path: state%soilwater%<field> round-trip via swap_state_t.
+   use funit
+   use iso_fortran_env, only: real64
+   use swap_state_mod, only: swap_state_t
+   type(swap_state_t) :: state
+
+   ! Default at construction
+   @assertEqual(0.0_real64, state%soilwater%qtop, 1.0e-12_real64)
+   @assertEqual(0.0_real64, state%soilwater%qbot, 1.0e-12_real64)
+   @assertFalse(state%soilwater%ftoph)
+
+   ! Write then read through aggregator
+   state%soilwater%qtop    = 1.0_real64
+   state%soilwater%deepgw  = -350.0_real64
+   state%soilwater%FlRunoff = .true.
+
+   @assertEqual(  1.0_real64, state%soilwater%qtop,   1.0e-12_real64)
+   @assertEqual(-350.0_real64, state%soilwater%deepgw, 1.0e-12_real64)
+   @assertTrue(state%soilwater%FlRunoff)
+end subroutine test_soilwater_state_aggregator_access

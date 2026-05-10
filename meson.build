@@ -173,6 +173,7 @@ sources = [
     'src/state/drainage_state.f90',
     'src/state/solute_state.f90',
     'src/state/heat_state.f90',
+    'src/state/soilwater_state.f90',
     'src/state/swap_state.f90',
 
     # Utils
