@@ -70,6 +70,12 @@ module bottom_boundary_config_mod
       ! SWBOTB=5
       real(real64) :: hbot    = 0.0_real64
       real(real64) :: rhobot  = 0.0_real64
+
+      ! SWBOTB=8 lysimeter plate pressure head.
+      ! Phase 0 B-0.3: promoted from legacy variables.f90 line 813.
+      ! Used in soilhydraulics.f90:229,271,515,557 when swbotb=8.
+      ! Negative values are valid (pressure head below atmospheric).
+      real(real64) :: hplate  = 0.0_real64  ! Pressure head of ceramic plate (cm)
    contains
       procedure :: validate => bottom_boundary_config_validate
       procedure :: finalize => bottom_boundary_config_finalize
@@ -179,8 +185,13 @@ contains
                "bottom_boundary.hbot5_file required when swbotb=5", &
                'bottom_boundary')
          end if
-      case (6, 7, 8)
-         ! No required tables.
+      case (6, 7)
+         ! No required parameters.
+      case (8)
+         ! Lysimeter path: validate ceramic plate pressure head (Phase 0 B-0.3).
+         ! Range: -1.0e6 to 1.0e3 cm covers the full pF range plus elevated setups.
+         call check_real_range(self%hplate, -1.0e6_real64, 1.0e3_real64, &
+                               'bottom_boundary.hplate', errors)
       end select
    end subroutine bottom_boundary_config_validate
 

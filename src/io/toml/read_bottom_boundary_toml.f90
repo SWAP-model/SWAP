@@ -77,6 +77,10 @@ contains
       call get_optional_int_with_default(sec,  'swcofqhc', config%swcofqhc, 0, &
                                          'bottom_boundary.swcofqhc', errors)
 
+      ! Phase 0 B-0.3: SWBOTB=8 lysimeter plate pressure head.
+      call get_optional_real_with_default(sec, 'hplate', config%hplate, 0.0_real64, &
+                                          'bottom_boundary.hplate', errors)
+
       ! Phase 4f cleanup: sub-mode switches.
       call get_optional_int_with_default(sec, 'sw2',     config%sw2,     1, &
                                          'bottom_boundary.sw2',     errors)

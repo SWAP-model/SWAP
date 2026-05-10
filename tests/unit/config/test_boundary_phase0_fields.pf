@@ -235,3 +235,71 @@ subroutine test_swbotb4_swqhbot1_swcofqhc_invalid_fails()
    @assertTrue(errors%has_errors())
    @assertEqual(ERR_VALIDATION_ENUM, errors%items(1)%code)
 end subroutine
+
+! =======================================================================
+! Phase 0 B-0.3: hplate — swbotb=8 lysimeter plate pressure head
+! Used in soilhydraulics.f90:229,271,515,557; variables.f90 line 813.
+! Negative values are physically valid (pressure head below atmospheric).
+! =======================================================================
+
+! -----------------------------------------------------------------------
+! (a) Default-value test — struct initialisation only, no TOML.
+! -----------------------------------------------------------------------
+
+@test
+subroutine test_hplate_default_zero()
+   use funit
+   use iso_fortran_env, only: real64
+   use bottom_boundary_config_mod, only: bottom_boundary_config_t
+   type(bottom_boundary_config_t) :: c
+   @assertEqual(0.0_real64, c%hplate, 1.0e-12_real64)
+end subroutine
+
+! -----------------------------------------------------------------------
+! (b) TOML round-trip — fixture bottom_boundary_swbotb8_lysimeter.toml:
+!     swbotb=8, hplate=-100.0
+! -----------------------------------------------------------------------
+
+@test
+subroutine test_hplate_toml_read()
+   use funit
+   use iso_fortran_env, only: real64
+   use tomlf, only: toml_table, toml_load
+   use bottom_boundary_config_mod, only: bottom_boundary_config_t
+   use read_bottom_boundary_toml_mod, only: read_bottom_boundary_toml
+   use error_mod, only: error_collection_t
+   type(toml_table), allocatable, target :: doc
+   type(toml_table), pointer             :: doc_ptr
+   type(bottom_boundary_config_t)        :: c
+   type(error_collection_t)              :: errors
+
+   call toml_load(doc, 'tests/unit/io/toml/fixtures/bottom_boundary_swbotb8_lysimeter.toml')
+   doc_ptr => doc
+   call read_bottom_boundary_toml(doc_ptr, c, errors)
+
+   @assertFalse(errors%has_errors())
+   @assertEqual(8,            c%swbotb)
+   @assertEqual(-100.0_real64, c%hplate, 1.0e-12_real64)
+end subroutine
+
+! -----------------------------------------------------------------------
+! (c) Validator accepts swbotb=8 with a typical negative hplate value.
+!     Physical range: hplate is a pressure head in cm; -1e6 to 0 covers
+!     the typical pF range; positive values up to ~1e3 cover lysimeter
+!     setups with elevated water tables.
+! -----------------------------------------------------------------------
+
+@test
+subroutine test_swbotb8_hplate_valid_passes()
+   use funit
+   use iso_fortran_env, only: real64
+   use error_mod, only: error_collection_t
+   use bottom_boundary_config_mod, only: bottom_boundary_config_t
+   type(bottom_boundary_config_t) :: c
+   type(error_collection_t)       :: errors
+
+   c%swbotb = 8
+   c%hplate = -100.0_real64   ! typical suction below ceramic plate
+   call c%validate(errors)
+   @assertFalse(errors%has_errors())
+end subroutine

@@ -888,6 +888,11 @@ contains
                end do
             end if
          end block
+      case (6, 7)
+         ! No parameters to populate for modes 6 and 7.
+      case (8)
+         ! Phase 0 B-0.3: lysimeter path — populate hplate legacy global.
+         hplate = config%bottom_boundary%hplate
       end select
 
       ! ---------------------------------------------------------------
