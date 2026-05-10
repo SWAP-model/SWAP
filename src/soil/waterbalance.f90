@@ -393,10 +393,12 @@ contains
       pevats = peva * dt
 
       ! reduced soil evaporation of this timestep
-      revats = reva * dt
+      ! SS-BND Phase 2 Task B-2.2: reva read from state%soilwater (boundary home).
+      revats = state%soilwater%reva * dt
 
       ! flux lower boundary of this timestep
-      qbotts = qbot*dt
+      ! SS-BND Phase 2 Task B-2.2: qbot read from state%soilwater (boundary home).
+      qbotts = state%soilwater%qbot*dt
 
       ! total root extraction of this timestep
       qrotts = qrosum * dt
@@ -458,7 +460,8 @@ contains
       iptra = iptra + ptrats
       ipeva = ipeva + pevats
       ievap = ievap + revats
-      iruno = iruno + runots
+      ! SS-BND Phase 2 Task B-2.2: runots read from state%soilwater (boundary home).
+      iruno = iruno + state%soilwater%runots
       irunon = irunon + runon*dt
       iprec = iprec + (graidt+gird)*dt
       igrai = igrai + graidt*dt
@@ -487,10 +490,10 @@ contains
       cptra = cptra + ptrats
       cpeva = cpeva + pevats
       cevap = cevap + revats
-      if (runots.lt.0.0d0) then
-        cinund = cinund - runots
-      else if (runots.gt.0.0d0) then
-        crunoff = crunoff + runots
+      if (state%soilwater%runots.lt.0.0d0) then
+        cinund = cinund - state%soilwater%runots
+      else if (state%soilwater%runots.gt.0.0d0) then
+        crunoff = crunoff + state%soilwater%runots
       endif
       irunoCN = irunoCN + Runoff_CN*dt
       crunoffCN = crunoffCN + Runoff_CN*dt
