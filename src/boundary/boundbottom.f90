@@ -58,7 +58,8 @@ contains
         use soilhydraulics_utils, only: watcon, hconduc
         implicit none
 
-        type(swap_state_t), intent(in) :: state
+        ! [SS-BND B-1.3] intent bumped to inout for dual-write to state%soilwater
+        type(swap_state_t), intent(inout) :: state
 
         ! --- local variables
     integer node, nodnumgwl
@@ -74,6 +75,7 @@ contains
         ! --- interpolation between daily values of given groundwaterlevel
         if (swbotb .eq. 1) then
             gwlinp = afgen(gwltab, mabbc*2, t1900 + dt)
+            state%soilwater%gwlinp = gwlinp             ! [SS-BND B-1.3] dual-write
         end if
 
         ! --- regional bottom flux is given
@@ -102,14 +104,19 @@ contains
                 if (sw2 .eq. 1) then
                     ! ---     sine function is used
                     qbot = sinave + sinamp*dcos(freq*(t - sinmax))
+                    state%soilwater%qbot = qbot         ! [SS-BND B-1.3] dual-write
                 else
                     ! ---     table is used
                     qbot = afgen(qbotab, mabbc*2, t1900 + dt)
+                    state%soilwater%qbot = qbot         ! [SS-BND B-1.3] dual-write
                 end if
             end if
 
             ! ---   free drainage assumed in case of h(numnod) < -1.0E7
-            if (swbotb .eq. -2) qbot = -1.0d0*kmean(numnod + 1)
+            if (swbotb .eq. -2) then
+                qbot = -1.0d0*kmean(numnod + 1)
+                state%soilwater%qbot = qbot             ! [SS-BND B-1.3] dual-write
+            end if
 
         end if
 
@@ -119,8 +126,10 @@ contains
             ! ---   determine hydraulic head of deep aquifer
             if (sw3 .eq. 1) then
                 deepgw = aqave + aqamp*dcos(twopi/aqper*(t - aqtmax))
+                state%soilwater%deepgw = deepgw         ! [SS-BND B-1.3] dual-write
             else
                 deepgw = afgen(haqtab, mabbc*2, t1900 + dt)
+                state%soilwater%deepgw = deepgw         ! [SS-BND B-1.3] dual-write
             end if
 
             ! ---   determine C-value (vertical resistance) in saturated part of modelled profile
@@ -141,24 +150,34 @@ contains
             end if
 !
             qbot = (deepgw - gwlmean)/(rimlay + cvalprof)
+            state%soilwater%qbot = qbot                 ! [SS-BND B-1.3] dual-write
 
 ! ---   extra groundwater flux might be added
-            if (sw4 .eq. 1) qbot = qbot + afgen(qbotab, mabbc*2, t1900 + dt)
+            if (sw4 .eq. 1) then
+                qbot = qbot + afgen(qbotab, mabbc*2, t1900 + dt)
+                state%soilwater%qbot = qbot             ! [SS-BND B-1.3] dual-write
+            end if
         end if
 
 ! --- flux calculated as function of h
         if (swbotb .eq. 4) then
             if (swqhbot .eq. 1) then
                 qbot = cofqha*dexp(cofqhb*dabs(gwl))
-                if (swcofqhc .eq. 1) qbot = qbot + cofqhc
+                state%soilwater%qbot = qbot             ! [SS-BND B-1.3] dual-write
+                if (swcofqhc .eq. 1) then
+                    qbot = qbot + cofqhc
+                    state%soilwater%qbot = qbot         ! [SS-BND B-1.3] dual-write
+                end if
             else if (swqhbot .eq. 2) then
                 qbot = afgen(qbotab, mabbc*2, dabs(gwl))
+                state%soilwater%qbot = qbot             ! [SS-BND B-1.3] dual-write
             end if
         end if
 
 ! --- interpolation between daily values of given pressurehead
         if (swbotb .eq. 5) then
             hbot = afgen(hbotab, mabbc*2, t1900 + dt)
+            state%soilwater%hbot = hbot                 ! [SS-BND B-1.3] dual-write
             thetabot = watcon(numnod, hbot)
 
             kmean(numnod + 1) = hconduc(numnod, hbot, thetabot, state%heat%rfcp(numnod))
@@ -168,15 +187,25 @@ contains
         end if
 
 ! --- zero flux at the bottom
-        if (swbotb .eq. 6) qbot = 0.0d0
+        if (swbotb .eq. 6) then
+            qbot = 0.0d0
+            state%soilwater%qbot = qbot                 ! [SS-BND B-1.3] dual-write
+        end if
 
 ! --- free drainage
-        if (swbotb .eq. 7) qbot = -1.0d0*kmean(numnod + 1)
+        if (swbotb .eq. 7) then
+            qbot = -1.0d0*kmean(numnod + 1)
+            state%soilwater%qbot = qbot                 ! [SS-BND B-1.3] dual-write
+        end if
 
 ! --- lysimeter with free drainage
-        if (swbotb .eq. 8) qbot = 0.0d0
+        if (swbotb .eq. 8) then
+            qbot = 0.0d0
+            state%soilwater%qbot = qbot                 ! [SS-BND B-1.3] dual-write
+        end if
 
         qbot_nonfrozen = qbot
+        state%soilwater%qbot_nonfrozen = qbot_nonfrozen ! [SS-BND B-1.3] dual-write
 
         return
     end subroutine BoundBottom

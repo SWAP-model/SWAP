@@ -76,10 +76,11 @@ contains
    !! @endnote
    subroutine boundtop(state)
    ! [SS-HEAT] Task 9: state added to access state%heat%rfcp (rfcp global retired)
+   ! [SS-BND B-1.3] intent bumped to inout for dual-write to state%soilwater
    use soilhydraulics_utils, only: watcon, hconduc, hcomean
    implicit none
 
-   type(swap_state_t), intent(in) :: state
+   type(swap_state_t), intent(inout) :: state
 
 ! --- local variables
       real(8) emax,ks,theatm,ksurf
@@ -99,7 +100,9 @@ contains
 
 
       FlRunoff = .false.
+      state%soilwater%FlRunoff = FlRunoff              ! [SS-BND B-1.3] dual-write
       QMpLatSs = 0.0d0
+      state%soilwater%QMpLatSs = QMpLatSs              ! [SS-BND B-1.3] dual-write
 
 
 !     S O I L   E V A P O R A T I O N
@@ -124,8 +127,10 @@ contains
 ! --- determine reduced soil evaporation rate
       if (swredu .eq. 0) then
         reva = min(peva,max(0.0d0,Emax))
+        state%soilwater%reva = reva                    ! [SS-BND B-1.3] dual-write
       else
         reva = min(empreva,max(0.0d0,Emax))
+        state%soilwater%reva = reva                    ! [SS-BND B-1.3] dual-write
       endif
 
 !     H I G H   A T M O S P H E R I C   D E M A N D
@@ -139,10 +144,13 @@ contains
 !     check whether the atmospheric demand condition applies
       if (q1 .ge. 0.0d0 .and. q1.gt.Emax) then
          ftoph    = .true.
+         state%soilwater%ftoph = ftoph                 ! [SS-BND B-1.3] dual-write
          hsurf    = hAtm
+         state%soilwater%hsurf = hsurf                 ! [SS-BND B-1.3] dual-write
          kmean(1) = k1Atm
          pond     = 0.0d0
          runots   = 0.0d0
+         state%soilwater%runots = runots               ! [SS-BND B-1.3] dual-write
          return
       endif             
 
@@ -158,15 +166,21 @@ contains
       h0    = h(1) - disnod(1)*(q1/k1max+1.0d0)
       if (h0.le.1.0d-6) then
          ftoph    = .false.
+         state%soilwater%ftoph = ftoph                 ! [SS-BND B-1.3] dual-write
          kmean(1) = 0.0d0
          hsurf    = 0.0d0
+         state%soilwater%hsurf = hsurf                 ! [SS-BND B-1.3] dual-write
          pond     = 0.0d0
          runots   = 0.0d0
+         state%soilwater%runots = runots               ! [SS-BND B-1.3] dual-write
          qtop     = q1
+         state%soilwater%qtop = qtop                   ! [SS-BND B-1.3] dual-write
       else                 ! ponding occurs
          ftoph    = .true.
+         state%soilwater%ftoph = ftoph                 ! [SS-BND B-1.3] dual-write
          kmean(1) = k1max
          FlRunoff = .true. ! runoff potential possible
+         state%soilwater%FlRunoff = FlRunoff           ! [SS-BND B-1.3] dual-write
 
 ! --- calculate max value of pond without runoff
          p1     = k1max/disnod(1) * dt
@@ -180,10 +194,14 @@ contains
                p2Mp    = 1.0d0 / (p1 + 1.0d0 + dt/RsRoMp)
                pond    = (h0max - PndmxMp) * p2Mp/p2
                QMpLatSs= pond * dt/RsRoMp
+               state%soilwater%QMpLatSs = QMpLatSs     ! [SS-BND B-1.3] dual-write
                QMpLatSs= dmin1(QMpLatSs,h0max)
+               state%soilwater%QMpLatSs = QMpLatSs     ! [SS-BND B-1.3] dual-write
                if (QMpLatSs.lt.1.0d-7) QMpLatSs = 0.0d0
+               state%soilwater%QMpLatSs = QMpLatSs     ! [SS-BND B-1.3] dual-write
             else
                QMpLatSs = 0.0d0
+               state%soilwater%QMpLatSs = QMpLatSs     ! [SS-BND B-1.3] dual-write
             endif
          endif
       endif
@@ -210,7 +228,8 @@ contains
       implicit none
 
 ! --- arguments
-      type(swap_state_t), intent(in) :: state
+      ! [SS-BND B-1.3] intent bumped to inout for dual-write to state%soilwater
+      type(swap_state_t), intent(inout) :: state
 
 ! --- local variables
       INTEGER i
@@ -234,12 +253,14 @@ contains
             h0max  = p2 * ( pondm1 + q0hlp*dt - k1max*dt + p1*h(1) )   
             if (h0max.lt.-1.d-9) then
                QMpLatSs =  QMpLatSs + h0max
+               state%soilwater%QMpLatSs = QMpLatSs     ! [SS-BND B-1.3] dual-write
                h0max = 0.d0
             endif
          else
 !   - inflow excess by direct precipitation into macropores is added to ponding
-            if (QMpLatSs.lt.0.d0) then 
+            if (QMpLatSs.lt.0.d0) then
                QMpLatSs = 0.d0
+               state%soilwater%QMpLatSs = QMpLatSs     ! [SS-BND B-1.3] dual-write
             endif
             return
          endif
@@ -251,16 +272,20 @@ contains
 
       if(h0max.le.pondmx)then
          runots   = 0.0d0
-         pond     = h0max 
+         state%soilwater%runots = runots               ! [SS-BND B-1.3] dual-write
+         pond     = h0max
          hsurf    = pond
+         state%soilwater%hsurf = hsurf                 ! [SS-BND B-1.3] dual-write
          return
       end if
 
       runots = runoff(state)
+      state%soilwater%runots = runots                  ! [SS-BND B-1.3] dual-write
       if(dabs(runots).lt.1.0d-6)then
-!        if no runoff occurs: first estimation of pond is OK 
-         pond     = h0max 
+!        if no runoff occurs: first estimation of pond is OK
+         pond     = h0max
          hsurf    = pond
+         state%soilwater%hsurf = hsurf                 ! [SS-BND B-1.3] dual-write
          return
       else if(dabs(runots).ge.1.0d-6 .and. swdra.ne.2 .and.             &
      &                                dabs(rsroexp-1.0d0).lt.1.0d-6)then
@@ -269,8 +294,10 @@ contains
 
          pond     = p2 * ( pondm1 + q0*dt - k1max*dt + p1*h(1) +        &
      &                     dt/rsro * pondmx )
-         runots = runoff(state) 
+         runots = runoff(state)
+         state%soilwater%runots = runots               ! [SS-BND B-1.3] dual-write
          hsurf    = pond
+         state%soilwater%hsurf = hsurf                 ! [SS-BND B-1.3] dual-write
          return
       else             
 
@@ -285,10 +312,12 @@ contains
          do i=1,30
             pond   = 0.5d0 * (h0max + h0min)
             runots = runoff(state)
+            state%soilwater%runots = runots            ! [SS-BND B-1.3] dual-write
             h0     = p2 * ( pondm1 +q0*dt -k1max*dt +p1*h(1) -runots)
 
             if(dabs(pond-h0).lt.1.0d-6)then
                hsurf    = pond
+               state%soilwater%hsurf = hsurf           ! [SS-BND B-1.3] dual-write
                return
             else
                if(h0.gt.pond)then
@@ -303,7 +332,9 @@ contains
 !     if convergence has not been reached: proceed with final value
       pond   = 0.5d0 * (h0max + h0min)
       runots = runoff(state)
+      state%soilwater%runots = runots                  ! [SS-BND B-1.3] dual-write
       hsurf  = pond
+      state%soilwater%hsurf = hsurf                    ! [SS-BND B-1.3] dual-write
 
       return
       end subroutine pondrunoff
