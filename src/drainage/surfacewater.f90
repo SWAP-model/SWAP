@@ -94,35 +94,12 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
 ! === lateral drainage fluxes to surface water ========================
 
 ! --- reset intermediate surface water and drainage fluxes
-      ! SS-SWST Phase 2 Task 7: global dual-writes for inqdra/iqdra dropped;
-      ! state is authoritative.  Global resets removed; state resets kept.
-      if (flzerointr) then
-        do node = 1,numnod
-          do level = 1,nrlevs
-            state%surfacewater%intermediate%inqdra(level,node)     = 0.0d0
-            state%surfacewater%intermediate%inqdra_in(level,node)  = 0.0d0
-            state%surfacewater%intermediate%inqdra_out(level,node) = 0.0d0
-          enddo
-        enddo
-        state%surfacewater%intermediate%iqdra = 0.0d0
-      endif
+      ! SS-CRR Phase A Task A4: cohort-owned reset; see surfacewater_state_mod.
+      if (flzerointr) call state%surfacewater%intermediate%reset()
 
 ! --- reset cumulative surface water and drainage fluxes
-      ! SS-SWST Phase 2 Task 7: global dual-writes for cqdra/cqdrain* dropped;
-      ! state is authoritative.  Global resets removed; state resets kept.
-      if (flzerocumu) then
-        ! cqdrd/cwsupp/cwout global writes dropped: only output reads them,
-        ! via state%surfacewater%*.  State resets remain authoritative.
-        state%surfacewater%cumulative%cqdrd  = 0.0d0
-        state%surfacewater%cumulative%cwsupp = 0.0d0
-        state%surfacewater%cumulative%cwout  = 0.0d0
-        state%surfacewater%cumulative%cqdra = 0.0d0
-        do level = 1,nrlevs
-          state%surfacewater%cumulative%cqdrain(level) = 0.0d0
-          state%surfacewater%cumulative%cqdrainin(level) = 0.0d0
-          state%surfacewater%cumulative%cqdrainout(level) = 0.0d0
-        enddo
-      endif
+      ! SS-CRR Phase A Task A4: cohort-owned reset; see surfacewater_state_mod.
+      if (flzerocumu) call state%surfacewater%cumulative%reset()
 
 ! --- calculate lateral drainage
       ! SS-DRST Phase 2 Task 4: bocodre writes state%drainage%qdrain directly; no bridge sync.
