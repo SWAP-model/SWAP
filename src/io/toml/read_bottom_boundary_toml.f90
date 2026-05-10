@@ -67,6 +67,16 @@ contains
       call get_optional_real_with_default(sec, 'sinave', config%sinave, 0.0_real64, &
                                           'bottom_boundary.sinave', errors)
 
+      ! Phase 0 B-0.2: SWBOTB=4 exponential q(h) scalars (used when swqhbot=1).
+      call get_optional_real_with_default(sec, 'cofqha',   config%cofqha,   0.0_real64, &
+                                          'bottom_boundary.cofqha',   errors)
+      call get_optional_real_with_default(sec, 'cofqhb',   config%cofqhb,   0.0_real64, &
+                                          'bottom_boundary.cofqhb',   errors)
+      call get_optional_real_with_default(sec, 'cofqhc',   config%cofqhc,   0.0_real64, &
+                                          'bottom_boundary.cofqhc',   errors)
+      call get_optional_int_with_default(sec,  'swcofqhc', config%swcofqhc, 0, &
+                                         'bottom_boundary.swcofqhc', errors)
+
       ! Phase 4f cleanup: sub-mode switches.
       call get_optional_int_with_default(sec, 'sw2',     config%sw2,     1, &
                                          'bottom_boundary.sw2',     errors)

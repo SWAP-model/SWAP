@@ -41,6 +41,14 @@ module bottom_boundary_config_mod
       real(real64) :: sinamp = 0.0_real64  ! Amplitude of bottom flux (L/T)
       real(real64) :: sinave = 0.0_real64  ! Average value of bottom flux (L/T)
 
+      ! SWBOTB=4 exponential q(h) scalars (swqhbot=1).
+      ! Phase 0 B-0.2: promoted from legacy variables.f90 lines 761-763, 720.
+      ! Used in boundbottom.f90:152-153 when swbotb=4 .and. swqhbot=1.
+      real(real64) :: cofqha   = 0.0_real64  ! Coefficient A: q = A * exp(B * |gwl|)
+      real(real64) :: cofqhb   = 0.0_real64  ! Coefficient B: exponent multiplier (1/L)
+      real(real64) :: cofqhc   = 0.0_real64  ! Coefficient C: additional flux term (L/T)
+      integer      :: swcofqhc = 0           ! Switch: 1 = include c-term, 0 = omit
+
       ! SWBOTB=2 inline
       real(real64), allocatable :: qbot_table(:,:)
 
@@ -145,6 +153,17 @@ contains
             end if
          end if
       case (4)
+         if (self%swqhbot == 1) then
+            ! Exponential q(h) path: validate scalar coefficients (Phase 0 B-0.2).
+            call check_real_range(self%cofqha, -1.0e10_real64, 1.0e10_real64, &
+                                  'bottom_boundary.cofqha', errors)
+            call check_real_range(self%cofqhb, -1.0e10_real64, 1.0e10_real64, &
+                                  'bottom_boundary.cofqhb', errors)
+            call check_real_range(self%cofqhc, -1.0e10_real64, 1.0e10_real64, &
+                                  'bottom_boundary.cofqhc', errors)
+            call check_int_enum(self%swcofqhc, [0, 1], &
+                                'bottom_boundary.swcofqhc', errors)
+         end if
          if (self%swqhbot == 2 .and. .not. has_file(self%qhbot_file)) then
             call errors%append(ERR_VALIDATION_REQUIRED, &
                "bottom_boundary.qhbot_file required when swbotb=4 and swqhbot=2", &

@@ -112,3 +112,126 @@ subroutine test_swbotb2_sw2_1_sinmax_out_of_range_fails()
    @assertTrue(errors%has_errors())
    @assertEqual(ERR_VALIDATION_OUT_OF_RANGE, errors%items(1)%code)
 end subroutine
+
+! =======================================================================
+! Phase 0 B-0.2: cofqha / cofqhb / cofqhc / swcofqhc
+! swbotb=4 .and. swqhbot=1 exponential q(h) curve path
+! =======================================================================
+
+! -----------------------------------------------------------------------
+! (a) Default-value tests — struct initialisation only, no TOML.
+! -----------------------------------------------------------------------
+
+@test
+subroutine test_cofqha_default_zero()
+   use funit
+   use iso_fortran_env, only: real64
+   use bottom_boundary_config_mod, only: bottom_boundary_config_t
+   type(bottom_boundary_config_t) :: c
+   @assertEqual(0.0_real64, c%cofqha, 1.0e-12_real64)
+end subroutine
+
+@test
+subroutine test_cofqhb_default_zero()
+   use funit
+   use iso_fortran_env, only: real64
+   use bottom_boundary_config_mod, only: bottom_boundary_config_t
+   type(bottom_boundary_config_t) :: c
+   @assertEqual(0.0_real64, c%cofqhb, 1.0e-12_real64)
+end subroutine
+
+@test
+subroutine test_cofqhc_default_zero()
+   use funit
+   use iso_fortran_env, only: real64
+   use bottom_boundary_config_mod, only: bottom_boundary_config_t
+   type(bottom_boundary_config_t) :: c
+   @assertEqual(0.0_real64, c%cofqhc, 1.0e-12_real64)
+end subroutine
+
+@test
+subroutine test_swcofqhc_default_zero()
+   use funit
+   use bottom_boundary_config_mod, only: bottom_boundary_config_t
+   type(bottom_boundary_config_t) :: c
+   @assertEqual(0, c%swcofqhc)
+end subroutine
+
+! -----------------------------------------------------------------------
+! (b) TOML round-trip — fixture bottom_boundary_swbotb4_cofqh.toml:
+!     swbotb=4, swqhbot=1, cofqha=0.005, cofqhb=-0.15, cofqhc=-0.0001,
+!     swcofqhc=1.
+! -----------------------------------------------------------------------
+
+@test
+subroutine test_cofqha_cofqhb_cofqhc_swcofqhc_toml_read()
+   use funit
+   use iso_fortran_env, only: real64
+   use tomlf, only: toml_table, toml_load
+   use bottom_boundary_config_mod, only: bottom_boundary_config_t
+   use read_bottom_boundary_toml_mod, only: read_bottom_boundary_toml
+   use error_mod, only: error_collection_t
+   type(toml_table), allocatable, target :: doc
+   type(toml_table), pointer             :: doc_ptr
+   type(bottom_boundary_config_t)        :: c
+   type(error_collection_t)              :: errors
+
+   call toml_load(doc, 'tests/unit/io/toml/fixtures/bottom_boundary_swbotb4_cofqh.toml')
+   doc_ptr => doc
+   call read_bottom_boundary_toml(doc_ptr, c, errors)
+
+   @assertFalse(errors%has_errors())
+   @assertEqual(4,             c%swbotb)
+   @assertEqual(1,             c%swqhbot)
+   @assertEqual(0.005_real64,  c%cofqha,   1.0e-12_real64)
+   @assertEqual(-0.15_real64,  c%cofqhb,   1.0e-12_real64)
+   @assertEqual(-0.0001_real64, c%cofqhc,  1.0e-12_real64)
+   @assertEqual(1,             c%swcofqhc)
+end subroutine
+
+! -----------------------------------------------------------------------
+! (c) Validator accepts swbotb=4, swqhbot=1 with valid coefficients.
+! -----------------------------------------------------------------------
+
+@test
+subroutine test_swbotb4_swqhbot1_cofqh_valid_passes()
+   use funit
+   use iso_fortran_env, only: real64
+   use error_mod, only: error_collection_t
+   use bottom_boundary_config_mod, only: bottom_boundary_config_t
+   type(bottom_boundary_config_t) :: c
+   type(error_collection_t)       :: errors
+
+   c%swbotb   = 4
+   c%swqhbot  = 1
+   c%cofqha   = 0.005_real64
+   c%cofqhb   = -0.15_real64
+   c%cofqhc   = -0.0001_real64
+   c%swcofqhc = 1
+   call c%validate(errors)
+   @assertFalse(errors%has_errors())
+end subroutine
+
+! -----------------------------------------------------------------------
+! (d) Validator rejects swcofqhc with invalid value (not 0 or 1).
+! -----------------------------------------------------------------------
+
+@test
+subroutine test_swbotb4_swqhbot1_swcofqhc_invalid_fails()
+   use funit
+   use iso_fortran_env, only: real64
+   use error_mod, only: error_collection_t, ERR_VALIDATION_ENUM
+   use bottom_boundary_config_mod, only: bottom_boundary_config_t
+   type(bottom_boundary_config_t) :: c
+   type(error_collection_t)       :: errors
+
+   c%swbotb   = 4
+   c%swqhbot  = 1
+   c%cofqha   = 0.005_real64
+   c%cofqhb   = -0.15_real64
+   c%cofqhc   = -0.0001_real64
+   c%swcofqhc = 99   ! invalid — not 0 or 1
+   call c%validate(errors)
+   @assertTrue(errors%has_errors())
+   @assertEqual(ERR_VALIDATION_ENUM, errors%items(1)%code)
+end subroutine

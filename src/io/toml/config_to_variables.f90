@@ -828,7 +828,13 @@ contains
             end block
          end if
       case (4)
-         swqhbot = config%bottom_boundary%swqhbot
+         swqhbot  = config%bottom_boundary%swqhbot
+         ! Phase 0 B-0.2: populate exponential q(h) scalars regardless of
+         ! swqhbot; the gate in boundbottom.f90:152-153 protects the tabular path.
+         cofqha   = config%bottom_boundary%cofqha
+         cofqhb   = config%bottom_boundary%cofqhb
+         cofqhc   = config%bottom_boundary%cofqhc
+         swcofqhc = config%bottom_boundary%swcofqhc
          if (config%bottom_boundary%swqhbot == 2) then
             block
                use iso_fortran_env, only: real64
