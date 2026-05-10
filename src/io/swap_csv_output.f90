@@ -1,13 +1,14 @@
 module SWAP_csv_output
 
    use error_mod, only: fatalerr_collected
+   ! SS-SLST Phase 1 Task 5: cml,cmsy,imsqprec,imsqirrig,imsqbot,imsqdra,imdectot,imrottot,sampro,solbal
+   !   removed from module-level use variables (now via state%solute in set_values/fill_values).
    use variables, only: igsnow,igird,iintc,irunon,iruno,ipeva,ievap,iqbot,                                                       &
                         gwl,pond,iptra,iqrot,iqreddry,iqredwet,iqredsol,iqredfrs,tsum,dvs,pgasspot,pgass,                        &
                         cwdmpot,cwdm,wsopot,wso,wlvpot,wlv,wstpot,wst,wrtpot,wrt,dwso,dwlv,dwlvpot,dwst,dwstpot,dwrt,dwrtpot,    &
                         ch,cf,laipot,lai,rdpot,rd,tagppot,tagp,tagptpot,tagpt,cuptgrazpot,cuptgraz,plossdm,lossdm,               &
-                        imsqprec,imsqirrig,imsqbot,imsqdra,imdectot,imrottot,sampro,solbal,                                      &
                         wc10,Runoff_CN,iqtdo,iqtup,iqinfmax,TeTop,TeBot,ies0,iet0,iew0,inrai,inird,volact,ssnow,iqssdi,          &
-                        flprintshort, date, t1900, dz, numnod, zbotcp, ztopcp, H, theta, K, Tsoil, cml, cmsy, inq, inqrot,       &
+                        flprintshort, date, t1900, dz, numnod, zbotcp, ztopcp, H, theta, K, Tsoil, inq, inqrot,                  &
                         igrai, isnrai, iqmpoutdrrap, irunocn, isubl, c_top, heacap, heacon, inqssdi, nrlevs, frarmtrx,           &
                         iqdo, iqup, pathwork, outfil, project, InList_csv, macp, madr
    use swap_state_mod, only: swap_state_t
@@ -287,14 +288,14 @@ module SWAP_csv_output
       if (vars%name(i) == 'GRAZDM')      vars%value(1,i) = cuptgraz
       if (vars%name(i) == 'PLOSSDM')     vars%value(1,i) = plossdm
       if (vars%name(i) == 'LOSSDM')      vars%value(1,i) = lossdm
-      if (vars%name(i) == 'SQPREC')      vars%value(1,i) = imsqprec
-      if (vars%name(i) == 'SQIRRIG')     vars%value(1,i) = imsqirrig
-      if (vars%name(i) == 'SQBOT')       vars%value(1,i) = imsqbot
-      if (vars%name(i) == 'SQDRA')       vars%value(1,i) = imsqdra
-      if (vars%name(i) == 'DECTOT')      vars%value(1,i) = imdectot
-      if (vars%name(i) == 'ROTTOT')      vars%value(1,i) = imrottot
-      if (vars%name(i) == 'SAMPRO')      vars%value(1,i) = sampro
-      if (vars%name(i) == 'SOLBAL')      vars%value(1,i) = solbal
+      if (vars%name(i) == 'SQPREC')      vars%value(1,i) = state%solute%imsqprec
+      if (vars%name(i) == 'SQIRRIG')     vars%value(1,i) = state%solute%imsqirrig
+      if (vars%name(i) == 'SQBOT')       vars%value(1,i) = state%solute%imsqbot
+      if (vars%name(i) == 'SQDRA')       vars%value(1,i) = state%solute%imsqdra
+      if (vars%name(i) == 'DECTOT')      vars%value(1,i) = state%solute%imdectot
+      if (vars%name(i) == 'ROTTOT')      vars%value(1,i) = state%solute%imrottot
+      if (vars%name(i) == 'SAMPRO')      vars%value(1,i) = state%solute%sampro
+      if (vars%name(i) == 'SOLBAL')      vars%value(1,i) = state%solute%solbal
       if (vars%name(i) == 'WC10')        vars%value(1,i) = wc10
       if (vars%name(i) == 'RUNOFFCN')    vars%value(1,i) = Runoff_CN
       if (vars%name(i) == 'QTOPIN')      vars%value(1,i) = iqtdo
@@ -478,8 +479,8 @@ module SWAP_csv_output
    if (lp_WC%fldo)  lp_WC%vals(1:vars%Nnodes(lp_WC%jpos))   =   theta(vars%nodes(1:vars%Nnodes(lp_WC%jpos),lp_WC%jpos))
    if (lp_K%fldo)   lp_K%vals(1:vars%Nnodes(lp_K%jpos))     =       K(vars%nodes(1:vars%Nnodes(lp_K%jpos), lp_K%jpos))
    if (lp_T%fldo)   lp_T%vals(1:vars%Nnodes(lp_T%jpos))     =   Tsoil(vars%nodes(1:vars%Nnodes(lp_T%jpos), lp_T%jpos))
-   if (lp_C%fldo)   lp_C%vals(1:vars%Nnodes(lp_C%jpos))     =     cml(vars%nodes(1:vars%Nnodes(lp_C%jpos), lp_C%jpos))
-   if (lp_CA%fldo)  lp_CA%vals(1:vars%Nnodes(lp_CA%jpos))   =    cmsy(vars%nodes(1:vars%Nnodes(lp_CA%jpos),lp_CA%jpos))
+   if (lp_C%fldo)   lp_C%vals(1:vars%Nnodes(lp_C%jpos))     =     state%solute%cml(vars%nodes(1:vars%Nnodes(lp_C%jpos), lp_C%jpos))
+   if (lp_CA%fldo)  lp_CA%vals(1:vars%Nnodes(lp_CA%jpos))   =    state%solute%cmsy(vars%nodes(1:vars%Nnodes(lp_CA%jpos),lp_CA%jpos))
    if (lp_O2%fldo)  lp_O2%vals(1:vars%Nnodes(lp_O2%jpos))   =   c_top(vars%nodes(1:vars%Nnodes(lp_O2%jpos),lp_O2%jpos))
 
    ! HEACAP, HEACON, DRAIN, RWU, FLUX, SSDI
@@ -942,19 +943,22 @@ public :: csv_out_tz
 
 contains
 
-subroutine csv_out_tz (iTask)
+subroutine csv_out_tz (iTask, state)
 ! Routine designed for CSV output of user-selected vaiables (provided matching defined variables in this routine).
 ! Specifically for selected time-depth variables
 ! Contains help routines: do_write_csv; check_list; remove_sqbr; det_node; Make_Header
 
 ! import global variables contianing possible output
+! SS-SLST Phase 1 Task 5: cml,cmsy migrated to state%solute.
 use variables, only: pathwork, outfil, project, InList_csv_tz, tz_z1_z2, numnod, z, zbotcp, flprintshort, date, t1900, &
-                     h, theta, tsoil, K, cml, cmsy, c_top, HEACAP, HEACON, inqrot
+                     h, theta, tsoil, K, c_top, HEACAP, HEACON, inqrot
+use swap_state_mod, only: swap_state_t
 use file_io_mod, only: file_open
 
 implicit none
 ! global
 integer,          intent(in)        :: iTask
+type(swap_state_t), intent(in)      :: state
 
 ! local (some need to be saved)
 
@@ -1085,8 +1089,8 @@ case (2)
     if (iCSV(2)  == 1) call do_write_csv_tz (theta(j))
     if (iCSV(3)  == 1) call do_write_csv_tz (tsoil(j))
     if (iCSV(4)  == 1) call do_write_csv_tz (k(j))
-    if (iCSV(5)  == 1) call do_write_csv_tz (cml(j))
-    if (iCSV(6)  == 1) call do_write_csv_tz (cmsy(j))
+    if (iCSV(5)  == 1) call do_write_csv_tz (state%solute%cml(j))
+    if (iCSV(6)  == 1) call do_write_csv_tz (state%solute%cmsy(j))
     if (iCSV(7)  == 1) call do_write_csv_tz (c_top(j))
     if (iCSV(8)  == 1) call do_write_csv_tz (HEACAP(j)/1.0d-6)    ! from J/cm3/K  to J/m3/K
     if (iCSV(9)  == 1) call do_write_csv_tz (HEACON(j)/864.0d0)   ! from J/cm/K/d to W/m/K

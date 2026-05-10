@@ -93,7 +93,7 @@
 ! --     user-defined variables in CSV file
          if (swcsv == 1) call csv_out(1, state)              ! call csv_write(1)
 ! --     user-defined variables in CSV file
-         if (swcsv_tz == 1) call csv_out_tz(1)              ! call csv_write_tz(1)
+         if (swcsv_tz == 1) call csv_out_tz(1, state)        ! call csv_write_tz(1)
 
 ! --     wba file
          if (swwba.eq.1) call outwba (1, state)
@@ -105,7 +105,7 @@
          if (swstr.eq.1) call outstr (1)
 
 ! --     vap file
-         if (swvap.eq.1) call outvap (1)
+         if (swvap.eq.1) call outvap (1, state)
 
 ! --     rot file, only when drought stress according to De Jong van Lier
          if (swdrought.eq.2) call outrot(1)
@@ -134,7 +134,7 @@
 ! --     user-defined variables in CSV file
          if (swcsv == 1) call csv_out(2, state)              ! csv_write(2)
 ! --     user-defined variables in CSV file
-         if (swcsv_tz == 1) call csv_out_tz(2)              ! csv_write_tz(2)
+         if (swcsv_tz == 1) call csv_out_tz(2, state)        ! csv_write_tz(2)
 
 ! --     wba file
          if (swwba.eq.1) call outwba (2, state)
@@ -148,7 +148,7 @@
          endif
 
 ! --     vap file
-         if (swvap.eq.1) call outvap (2)
+         if (swvap.eq.1) call outvap (2, state)
 
 ! --     rot file
          if (swdrought.eq.2 .and. ptra .gt. 1.0d-10) call outrot (2)
@@ -180,7 +180,7 @@
 ! --     user-defined variables in CSV file
          if (swcsv == 1) call csv_out(3, state)              ! csv_write(3)
 ! --     user-defined variables in CSV file
-         if (swcsv_tz == 1) call csv_out_tz(3)              ! csv_write_tz(3)
+         if (swcsv_tz == 1) call csv_out_tz(3, state)        ! csv_write_tz(3)
 
          close (wba)
          close (inc)
@@ -568,19 +568,22 @@
       end
 
 ! ----------------------------------------------------------------------
-      subroutine outvap (task)
+      subroutine outvap (task, state)
       use error_mod, only: fatalerr_collected
 ! ----------------------------------------------------------------------
 !     date               : December 2007
 !     purpose            : write output of soil profile data
 ! ---------------------------------------------------------------------
-      use variables, only: ztopcp, zbotcp, vap,daynr,numnod,daycum,z,cml,t1900,theta,h,k,tsoil,q,outfil,     &
-                           pathwork,project,swheader,isqtop,isqbot,qdraincomp,qrot,cmsy,date,flprintshort
+      ! SS-SLST Phase 1 Task 5: cml, cmsy, isqtop, isqbot migrated to state%solute.
+      use variables, only: ztopcp, zbotcp, vap,daynr,numnod,daycum,z,t1900,theta,h,k,tsoil,q,outfil,     &
+                           pathwork,project,swheader,qdraincomp,qrot,date,flprintshort
+      use swap_state_mod, only: swap_state_t
       use file_io_mod, only: file_open
       implicit none
 
 ! --- global
       integer   task
+      type(swap_state_t), intent(in) :: state
 
 ! --- local
       integer   node
@@ -616,17 +619,17 @@
         call dtdpst ('year-month-day,hour:minute:seconds',t1900,datexti)
         do node = 1,numnod
           if (node.eq.1) then
-             sflux = isqtop
+             sflux = state%solute%isqtop
               else
-             sflux = 0.5d0 * (cml(node) + cml(node-1)) * q(node)
+             sflux = 0.5d0 * (state%solute%cml(node) + state%solute%cml(node-1)) * q(node)
            end if
            write (vap,300) datexti,comma,z(node),comma,theta(node),     &
      &       comma,h(node),comma,k(node),comma,qdraincomp(node),comma,  &
-     &       qrot(node),comma,q(node),comma,tsoil(node),comma,cml(node),&
-     &       comma,cmsy(node),comma,sflux,comma,ztopcp(node),           &
+     &       qrot(node),comma,q(node),comma,tsoil(node),comma,state%solute%cml(node),&
+     &       comma,state%solute%cmsy(node),comma,sflux,comma,ztopcp(node),           &
      &       comma,zbotcp(node),comma,daynr,comma,daycum
         end do
-        sflux = isqbot
+        sflux = state%solute%isqbot
         write (vap,400) datexti,comma,zbotcp(numnod),                   &
      &    comma,comma,comma,comma,comma,                                &
      &    comma,q(numnod+1),comma,comma,comma,comma,sflux,comma,        &
@@ -637,17 +640,17 @@
         call dtdpst ('year-month-day',t1900-0.1d0,inidate)
         do node = 1,numnod
           if (node.eq.1) then
-             sflux = isqtop
+             sflux = state%solute%isqtop
               else
-             sflux = 0.5d0 * (cml(node) + cml(node-1)) * q(node)
+             sflux = 0.5d0 * (state%solute%cml(node) + state%solute%cml(node-1)) * q(node)
            end if
            write (vap,310) inidate,comma,z(node),comma,theta(node),     &
      &       comma,h(node),comma,k(node),comma,qdraincomp(node),comma,  &
-     &       qrot(node),comma,q(node),comma,tsoil(node),comma,cml(node),&
-     &       comma,cmsy(node),comma,sflux,comma,ztopcp(node),           &
+     &       qrot(node),comma,q(node),comma,tsoil(node),comma,state%solute%cml(node),&
+     &       comma,state%solute%cmsy(node),comma,sflux,comma,ztopcp(node),           &
      &       comma,zbotcp(node),comma,daynr,comma,daycum
         end do
-        sflux = isqbot
+        sflux = state%solute%isqbot
         write (vap,410) inidate,comma,zbotcp(numnod),                   &
      &    comma,comma,comma,comma,comma,                                &
      &    comma,q(numnod+1),comma,comma,comma,comma,sflux,comma,        &
@@ -676,17 +679,17 @@
         call dtdpst ('year-month-day,hour:minute:seconds',t1900,datexti)
         do node = 1,numnod
           if (node.eq.1) then
-             sflux = isqtop
+             sflux = state%solute%isqtop
               else
-             sflux = 0.5d0 * (cml(node) + cml(node-1)) * q(node)
+             sflux = 0.5d0 * (state%solute%cml(node) + state%solute%cml(node-1)) * q(node)
            end if
            write (vap,300) datexti,comma,z(node),comma,theta(node),     &
      &       comma,h(node),comma,k(node),comma,qdraincomp(node),comma,  &
-     &       qrot(node),comma,q(node),comma,tsoil(node),comma,cml(node),&
-     &       comma,cmsy(node),comma,sflux,comma,ztopcp(node),           &
+     &       qrot(node),comma,q(node),comma,tsoil(node),comma,state%solute%cml(node),&
+     &       comma,state%solute%cmsy(node),comma,sflux,comma,ztopcp(node),           &
      &       comma,zbotcp(node),comma,daynr,comma,daycum
         end do
-        sflux = isqbot
+        sflux = state%solute%isqbot
         write (vap,400) datexti,comma,zbotcp(numnod),                   &
      &    comma,comma,comma,comma,comma,                                &
      &    comma,q(numnod+1),comma,comma,comma,comma,sflux,comma,        &
@@ -695,17 +698,17 @@
       else
         do node = 1,numnod
           if (node.eq.1) then
-             sflux = isqtop
+             sflux = state%solute%isqtop
               else
-             sflux = 0.5d0 * (cml(node) + cml(node-1)) * q(node)
+             sflux = 0.5d0 * (state%solute%cml(node) + state%solute%cml(node-1)) * q(node)
            end if
            write (vap,310) date,comma,z(node),comma,theta(node),        &
      &       comma,h(node),comma,k(node),comma,qdraincomp(node),comma,  &
-     &       qrot(node),comma,q(node),comma,tsoil(node),comma,cml(node),&
-     &       comma,cmsy(node),comma,sflux,comma,ztopcp(node),           &
+     &       qrot(node),comma,q(node),comma,tsoil(node),comma,state%solute%cml(node),&
+     &       comma,state%solute%cmsy(node),comma,sflux,comma,ztopcp(node),           &
      &       comma,zbotcp(node),comma,daynr,comma,daycum
         end do
-        sflux = isqbot
+        sflux = state%solute%isqbot
         write (vap,410) date,comma,zbotcp(numnod),                      &
      &    comma,comma,comma,comma,comma,                                &
      &    comma,q(numnod+1),comma,comma,comma,comma,sflux,comma,        &
@@ -893,8 +896,10 @@
 !     purpose            : write overview balances to bal file
 ! ---------------------------------------------------------------------
       ! SS-SWST Phase 2 Task 11: cqdra,cqdrain removed from globals (now via state%surfacewater).
+      ! SS-SLST Phase 1 Task 5: samini,sampro,samcra,sqprec,sqirrig,sqbot,dectot,rottot,sqrap,sqdra
+      !   migrated to state%solute.
       use variables, only: zbotcp,bal,logf,swscre,swdra,numnod,nrlevs,swsolu,ioutdat,cevap,cgird,cgrai,cqbot,tstart,cqrot,crunoff,crunoffCN,     &
-                           crunon,cQMpOutDrRap,samini,sampro,samcra,sqprec,sqirrig,sqbot,dectot,rottot,sqrap,sqdra,pond,volact,                    &
+                           crunon,cQMpOutDrRap,pond,volact,                    &
                            volini,t1900,outdat,outfil,pathwork,project,caintc,csubl,PondIni,WaSrDm1,WaSrDm2,WaSrDm1Ini,WaSrDm2Ini,                &
                            swsnow,cgsnow,csnrai,snowinco,ssnow,cqssdi
       use swap_state_mod, only: swap_state_t
@@ -942,13 +947,13 @@
       write (bal,22) -zbotcp(numnod)
 
       if (swsolu .eq. 1) then
-          write (bal,24) (volact+pond+WaSrDm1+WaSrDm2+ssnow),           &
-     &                                            (sampro+samcra),      &
-     &                  (volini+PondIni+WaSrDm1Ini+WaSrDm2Ini+snowinco),&
-     &                                             samini,              &
-     &                  (volact+pond+WaSrDm1+WaSrDm2+ssnow-             &
-     &                   volini-PondIni-WaSrDm1Ini-WaSrDm2Ini-snowinco),&
-     &                                            (sampro+samcra-samini)
+          write (bal,24) (volact+pond+WaSrDm1+WaSrDm2+ssnow),                   &
+     &                                            (state%solute%sampro+state%solute%samcra),      &
+     &                  (volini+PondIni+WaSrDm1Ini+WaSrDm2Ini+snowinco),         &
+     &                                             state%solute%samini,           &
+     &                  (volact+pond+WaSrDm1+WaSrDm2+ssnow-                      &
+     &                   volini-PondIni-WaSrDm1Ini-WaSrDm2Ini-snowinco),         &
+     &                                            (state%solute%sampro+state%solute%samcra-state%solute%samini)
       else
           write (bal,25) (volact+pond+WaSrDm1+WaSrDm2+ssnow),           &
      &                  (volini+PondIni+WaSrDm1Ini+WaSrDm2Ini+snowinco),&
@@ -981,9 +986,11 @@
      &   (caintc+crunoff+crunoffCN+cqrot+cevap+csubl+cQMpOutDrRap+state%surfacewater%cqdra)
 
       if (swsolu .eq. 1) then
-        write (bal,34) sqprec,dectot,sqirrig,rottot,sqbot,sqrap,sqdra
-        write (bal,36) (sqprec+sqirrig+sqbot),                          &
-     &    (dectot+rottot+sqrap+sqdra)
+        associate (sl => state%solute)
+          write (bal,34) sl%sqprec,sl%dectot,sl%sqirrig,sl%rottot,sl%sqbot,sl%sqrap,sl%sqdra
+          write (bal,36) (sl%sqprec+sl%sqirrig+sl%sqbot),              &
+     &      (sl%dectot+sl%rottot+sl%sqrap+sl%sqdra)
+        end associate
       endif
 
  20   format(/'Period',t20,':',t23,a11,' until  ',a11)
@@ -1038,7 +1045,8 @@
 !     date               : July 2002
 !     purpose            : write final result to .end file
 ! ---------------------------------------------------------------------
-      use variables, only: t1900,swend,numnod,h,flSolute,flAgeTracer,cml,z,fltemperature,tsoil,                                                             &
+      ! SS-SLST Phase 1 Task 5: cml migrated to state%solute.
+      use variables, only: t1900,swend,numnod,h,flSolute,flAgeTracer,z,fltemperature,tsoil,                                                             &
                            ssnow,pond,dt,icrop,croptype,cropfil,flSurfaceWater,swredu,ldwet,spev,saev,outfil,pathwork,project,                          &
                            rd,rdpot,dvs,flanthesis,tsum,ilvold,ilvoldpot,wrt,wrtpot,tadw,tadwpot,wst,wstpot,wso,wsopot,wlv,wlvpot,laiexp,lai,laipot,        &
                            dwrt,dwrtpot,dwlv,dwlvpot,dwst,dwstpot,dwlvSoil,dwlvCrop,gasst,gasstpot,mrest,mrestpot,                                          &
@@ -1094,7 +1102,7 @@
         write(fin,'(/,"* Solute concentrations (z in cm; Cml in mg/cm3)")')
         write(fin,'("     z_Cml          Cml")')
         do i = 1, numnod
-          write (fin,'(f10.1," ",1p,e12.5)') z(i), cml(i)
+          write (fin,'(f10.1," ",1p,e12.5)') z(i), state%solute%cml(i)
         end do
       endif
 
@@ -1526,7 +1534,7 @@
       end
 
 ! ----------------------------------------------------------------------
-      subroutine SoluteOutput(task)
+      subroutine SoluteOutput(task, state)
       use error_mod, only: fatalerr_collected
 ! ----------------------------------------------------------------------
 !     Date               : November 2004
@@ -1534,9 +1542,11 @@
 ! ----------------------------------------------------------------------
 
       use Variables
+      use swap_state_mod, only: swap_state_t
       implicit none
 
       integer task
+      type(swap_state_t), intent(in) :: state
 
       select case (task)
       case (1)
@@ -1544,7 +1554,7 @@
 ! === open output files and write headers ===============================
 
 ! --  sba file
-      if (swsba .eq. 1) call outsba (1)
+      if (swsba .eq. 1) call outsba (1, state)
 
       return
 
@@ -1553,7 +1563,7 @@
 ! === write actual data ===============================
 
 ! --  sba file
-      if (swsba .eq. 1) call outsba (2)
+      if (swsba .eq. 1) call outsba (2, state)
 
       return
 
@@ -1572,19 +1582,23 @@
       end
 
 ! ----------------------------------------------------------------------
-      subroutine outsba (task)
+      subroutine outsba (task, state)
       use error_mod, only: fatalerr_collected
 ! ----------------------------------------------------------------------
 !     date               : July 2002
 !     purpose            : output of salt balance
 ! ---------------------------------------------------------------------
-      use variables, only: sba,daynr,daycum,sampro,sqbot,project,sqdra,solbal,dectot,rottot,sqprec,                    &
-                           date,sqirrig,outfil,pathwork,flheader
+      ! SS-SLST Phase 1 Task 5: sampro,sqbot,sqdra,solbal,dectot,rottot,sqprec,sqirrig
+      !   migrated to state%solute.
+      use variables, only: sba,daynr,daycum,project,                   &
+                           date,outfil,pathwork,flheader
+      use swap_state_mod, only: swap_state_t
       use file_io_mod, only: file_open
       implicit none
 
 ! --- global
       integer   task
+      type(swap_state_t), intent(in) :: state
 
 ! --- local variables ------------------
       character(len=300) filnam
@@ -1621,9 +1635,11 @@
 
 ! --- write output solute balance components ----------------------------
 
-      write(sba,15) date,comma,daynr,comma,daycum,comma,(sqprec+sqirrig)&
-     & ,comma,rottot,comma,dectot,comma,sqdra,comma,sqbot,comma,        &
-     & sampro,comma,solbal
+      associate (sl => state%solute)
+        write(sba,15) date,comma,daynr,comma,daycum,comma,              &
+     &   (sl%sqprec+sl%sqirrig),comma,sl%rottot,comma,sl%dectot,        &
+     &   comma,sl%sqdra,comma,sl%sqbot,comma,sl%sampro,comma,sl%solbal
+      end associate
 
  15   format(a11,a1,i4,a1,i6,6(a1,e14.5),a1,e14.2)
 
@@ -1696,7 +1712,8 @@
 !     This routine is already unreachable via call-site guards in swap.f90,
 !     but the explicit guard here makes the gating visible at the definition.
       ! SS-SWST Phase 2 Task 11: inqdra removed (now via state%surfacewater%inqdra).
-      use variables, only: daynr,daycum,date,outper,project,nrlevs,outfil,pathwork,numnod,z,cml,            &
+      ! SS-SLST Phase 1 Task 5: cml migrated to state%solute (body is gated by flAgeTracer guard).
+      use variables, only: daynr,daycum,date,outper,project,nrlevs,outfil,pathwork,numnod,z,            &
                            AgeGwl1m,icAgeBot,icAgeDra,icAgeRot,icAgeSur,flAgeTracer
       use swap_state_mod, only: swap_state_t
       use swap_array_dimensions, only: madr
@@ -1766,7 +1783,7 @@
 
 !     age of groundwater as profile
       write(agep,15) date,comma,daynr,comma,daycum,                     &
-     &               (comma,cml(node),node=1,numnod)
+     &               (comma,state%solute%cml(node),node=1,numnod)
  15   format(a11,a1,i4,a1,i6,1p,1024(a1,e10.3))
 
 !     age of groundwater in effluents: drains, transpiration, leaching, runoff
@@ -4008,6 +4025,9 @@ use error_mod, only: fatalerr_collected
 ! Contains help routines: do_write_csv; check_list; remove_sqbr; det_node; Make_Header
 
 ! import global variables continaing possible output
+! SS-SLST Phase 1 Task 5: cml,cmsy,imsqprec,imsqirrig,imsqbot,imsqdra,imdectot,imrottot,sampro
+!   removed from this dead-code routine's variable import (now via state%solute when active).
+!   csv_write is superseded by csv_out in swap_csv_output.f90 and is never called.
 use variables, only: pathwork, outfil, project, InList_csv,                   &
                      date, iptra, iqrot, iqreddry, iqredwet, iqredsol, gwl,   &
                      tsum, pgasspot, pgass, cwdmpot, cwdm, wsopot, wso,       &
@@ -4019,9 +4039,8 @@ use variables, only: pathwork, outfil, project, InList_csv,                   &
                      ipeva, ievap, iQMpOutDrRap, iqbot, pond,                 &
                      iqredfrs, wlvpot, wlv, wstpot, wst, wrtpot, wrt,         &
                      dwso,dwlv,dwlvpot,dwst,dwstpot,dwrt,dwrtpot,             &
-                     dvs, ch, cf, K, cml, cmsy, c_top, flprintshort, t1900,   &
-                     imsqprec, imsqirrig, imsqbot, imsqdra, imdectot,         &
-                     imrottot, sampro, wc10, Runoff_CN, iqtdo, iqtup,         &
+                     dvs, ch, cf, K, c_top, flprintshort, t1900,              &
+                     wc10, Runoff_CN, iqtdo, iqtup,                           &
                      iqssdi, volact, ssnow, volini, pondini, irunocn, isubl
 
 implicit none
@@ -4237,14 +4256,16 @@ case (2)
    if (iCSV(52) == 1) call do_write_csv (plossdm)              ! PLOSSDM
    if (iCSV(53) == 1) call do_write_csv (lossdm)               ! LOSSDM
 
-   ! solute: imsqprec, imsqirrig, imsqbot, imsqdra, imdectot, imrottot, sampro
-   if (iCSV(54) == 1) call do_write_csv (imsqprec)             ! SQPREC
-   if (iCSV(55) == 1) call do_write_csv (imsqirrig)            ! SQIRRIG
-   if (iCSV(56) == 1) call do_write_csv (imsqbot)              ! SQBOT
-   if (iCSV(57) == 1) call do_write_csv (imsqdra)              ! SQDRA
-   if (iCSV(58) == 1) call do_write_csv (imdectot)             ! DECTOT
-   if (iCSV(59) == 1) call do_write_csv (imrottot)             ! ROTTOT
-   if (iCSV(60) == 1) call do_write_csv (sampro)               ! SAMPRO
+   ! solute: formerly imsqprec, imsqirrig, imsqbot, imsqdra, imdectot, imrottot, sampro
+   ! csv_write is dead code (superseded by csv_out in swap_csv_output.f90); these writes
+   ! are never executed. Fields are now owned by state%solute. Left as stubs.
+   if (iCSV(54) == 1) continue                                 ! SQPREC  (state%solute%imsqprec)
+   if (iCSV(55) == 1) continue                                 ! SQIRRIG (state%solute%imsqirrig)
+   if (iCSV(56) == 1) continue                                 ! SQBOT   (state%solute%imsqbot)
+   if (iCSV(57) == 1) continue                                 ! SQDRA   (state%solute%imsqdra)
+   if (iCSV(58) == 1) continue                                 ! DECTOT  (state%solute%imdectot)
+   if (iCSV(59) == 1) continue                                 ! ROTTOT  (state%solute%imrottot)
+   if (iCSV(60) == 1) continue                                 ! SAMPRO  (state%solute%sampro)
 
    ! surface: water content, runoff, net inflow, net outflow, max inf rate
    if (iCSV(61) == 1) call do_write_csv (wc10)                 ! WC10
@@ -4287,14 +4308,12 @@ case (2)
       end do
    end if
    if (iCSV(71) == 1) then
-      do j = 1, NumNodes_CONC
-         call do_write_csv (cml(Nodes_CONC(j)))
-      end do
+      ! dead code: cml now state%solute%cml; csv_write is superseded by csv_out
+      continue
    end if
    if (iCSV(72) == 1) then
-      do j = 1, NumNodes_CONCADS
-         call do_write_csv (cmsy(Nodes_CONCADS(j)))
-      end do
+      ! dead code: cmsy now state%solute%cmsy; csv_write is superseded by csv_out
+      continue
    end if
    if (iCSV(73) == 1) then
       do j = 1, NumNodes_O2TOP
@@ -4638,7 +4657,8 @@ use error_mod, only: fatalerr_collected
 ! Contains help routines: do_write_csv; check_list; remove_sqbr; det_node; Make_Header
 
 ! import global variables contianing possible output
-use variables, only: pathwork, outfil, project, InList_csv_tz, numnod, z, flprintshort, date, t1900, h, theta, tsoil, K, cml, cmsy, c_top, HEACAP, HEACON
+! SS-SLST Phase 1 Task 5: cml,cmsy removed (dead-code routine; superseded by csv_out_tz in swap_csv_output.f90).
+use variables, only: pathwork, outfil, project, InList_csv_tz, numnod, z, flprintshort, date, t1900, h, theta, tsoil, K, c_top, HEACAP, HEACON
 
 implicit none
 ! global
@@ -4741,8 +4761,8 @@ case (2)
     if (iCSV(2)  == 1) call do_write_csv_tz (theta(j))
     if (iCSV(3)  == 1) call do_write_csv_tz (tsoil(j))
     if (iCSV(4)  == 1) call do_write_csv_tz (k(j))
-    if (iCSV(5)  == 1) call do_write_csv_tz (cml(j))
-    if (iCSV(6)  == 1) call do_write_csv_tz (cmsy(j))
+    if (iCSV(5)  == 1) continue                                    ! dead code: cml now state%solute%cml
+    if (iCSV(6)  == 1) continue                                    ! dead code: cmsy now state%solute%cmsy
     if (iCSV(7)  == 1) call do_write_csv_tz (c_top(j))
     if (iCSV(8)  == 1) call do_write_csv_tz (HEACAP(j)/1.0d-6)    ! from J/cm3/K  to J/m3/K
     if (iCSV(9)  == 1) call do_write_csv_tz (HEACON(j)/864.0d0)   ! from J/cm/K/d to W/m/K
