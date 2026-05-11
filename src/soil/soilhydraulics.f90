@@ -1188,73 +1188,46 @@ contains
          ! Reset intermediate soil water fluxes
          if (flDayStart) then
           iqredwet_day = 0.0d0
-          state%soilwater%intr%iqredwet_day = 0.0_real64        ! [SS-SWC S-1.4b]
           iqreddry_day = 0.0d0
-          state%soilwater%intr%iqreddry_day = 0.0_real64        ! [SS-SWC S-1.4b]
           iqredsol_day = 0.0d0
-          state%soilwater%intr%iqredsol_day = 0.0_real64        ! [SS-SWC S-1.4b]
           iqredfrs_day = 0.0d0
-          state%soilwater%intr%iqredfrs_day = 0.0_real64        ! [SS-SWC S-1.4b]
           iptra_day    = 0.0d0
-          state%soilwater%intr%iptra_day    = 0.0_real64        ! [SS-SWC S-1.4b]
           do node = 1,numnod
             qpotrot_day(node) = 0.d0
-            state%soilwater%intr%qpotrot_day(node) = 0.0_real64 ! [SS-SWC S-1.4b]
             qredtot_day(node) = 0.d0
-            state%soilwater%intr%qredtot_day(node) = 0.0_real64 ! [SS-SWC S-1.4b]
           enddo
+          call state%soilwater%intr%reset_per_day()              ! [SS-SWC S-2.1]
       end if
       
       if (flzerointr) then
         do node = 1,numnod
           inqrot(node) = 0.0d0
-          state%soilwater%intr%inqrot(node) = 0.0_real64        ! [SS-SWC S-1.4b]
           inqssdi(node) = 0.0d0
-          state%soilwater%intr%inqssdi(node) = 0.0_real64       ! [SS-SWC S-1.4b]
           inq(node) = 0.0d0
-          state%soilwater%intr%inq(node) = 0.0_real64           ! [SS-SWC S-1.4b]
         enddo
         inq(numnod+1) = 0.0d0
-        state%soilwater%intr%inq(numnod+1) = 0.0_real64         ! [SS-SWC S-1.4b]
         iqrot = 0.0d0
-        state%soilwater%intr%iqrot = 0.0_real64                  ! [SS-SWC S-1.4b]
         iqssdi = 0.0d0
-        state%soilwater%intr%iqssdi = 0.0_real64                 ! [SS-SWC S-1.4b]
         iqredwet = 0.0d0
-        state%soilwater%intr%iqredwet = 0.0_real64               ! [SS-SWC S-1.4b]
         iqreddry = 0.0d0
-        state%soilwater%intr%iqreddry = 0.0_real64               ! [SS-SWC S-1.4b]
         iqredsol = 0.0d0
-        state%soilwater%intr%iqredsol = 0.0_real64               ! [SS-SWC S-1.4b]
         iqredfrs = 0.0d0
-        state%soilwater%intr%iqredfrs = 0.0_real64               ! [SS-SWC S-1.4b]
         ies0 = 0.0d0
-        state%soilwater%intr%ies0 = 0.0_real64                   ! [SS-SWC S-1.4b]
         iet0 = 0.0d0
-        state%soilwater%intr%iet0 = 0.0_real64                   ! [SS-SWC S-1.4b]
         iew0 = 0.0d0
-        state%soilwater%intr%iew0 = 0.0_real64                   ! [SS-SWC S-1.4b]
         iintc = 0.0d0
-        state%soilwater%intr%iintc = 0.0_real64                  ! [SS-SWC S-1.4b]
         ! [SS-ATM A-2.6] iptra/ipeva/ievap retired — zeroed via state%atmosphere%intr%reset()
         ! [SS-ATM A-2.1] atmosphere intr cohort zeroed by state%atmosphere%intr%reset()
         ! in meteoday ResetMetFlx (Option A consolidation)
         iruno = 0.0d0
-        state%soilwater%intr%iruno = 0.0_real64                  ! [SS-SWC S-1.4b]
         irunoCN = 0.0d0
-        state%soilwater%intr%irunoCN = 0.0_real64                ! [SS-SWC S-1.4b]
         iqbot = 0.0d0
-        state%soilwater%intr%iqbot = 0.0_real64                  ! [SS-SWC S-1.4b]
         iqtdo = 0.0d0
-        state%soilwater%intr%iqtdo = 0.0_real64                  ! [SS-SWC S-1.4b]
         iqtup = 0.0d0
-        state%soilwater%intr%iqtup = 0.0_real64                  ! [SS-SWC S-1.4b]
         irunon = 0.0d0
-        state%soilwater%intr%irunon = 0.0_real64                 ! [SS-SWC S-1.4b]
         iqdo(1:numnod+1) = 0.0d0
-        state%soilwater%intr%iqdo = 0.0_real64                   ! [SS-SWC S-1.4b]
         iqup(1:numnod+1) = 0.0d0
-        state%soilwater%intr%iqup = 0.0_real64                   ! [SS-SWC S-1.4b]
+        call state%soilwater%intr%reset()                        ! [SS-SWC S-2.1]
 
         IPondBeg = Pond
         state%soilwater%intr%IPondBeg = Pond                     ! [SS-SWC S-1.4b]
@@ -1270,32 +1243,21 @@ contains
       ! Reset cumulative soil water fluxes
       if (flzerocumu) then
         cqssdi = 0.0d0
-        state%soilwater%cumu%cqssdi = 0.0_real64                 ! [SS-SWC S-1.4b]
         cqrot = 0.0d0
-        state%soilwater%cumu%cqrot = 0.0_real64                  ! [SS-SWC S-1.4b]
         cqbot = 0.0d0
-        state%soilwater%cumu%cqbot = 0.0_real64                  ! [SS-SWC S-1.4b]
         cqbotdo = 0.0d0
-        state%soilwater%cumu%cqbotdo = 0.0_real64                ! [SS-SWC S-1.4b]
         cqbotup = 0.0d0
-        state%soilwater%cumu%cqbotup = 0.0_real64                ! [SS-SWC S-1.4b]
         ! [SS-ATM A-2.6] cptra/cpeva/cevap retired — zeroed via state%atmosphere%cumu%reset()
         ! [SS-ATM A-2.1] atmosphere cumu cohort zeroed by state%atmosphere%cumu%reset()
         ! in meteoday ResetMetFlx (Option A consolidation)
         cinund = 0.0d0
-        state%soilwater%cumu%cinund = 0.0_real64                  ! [SS-SWC S-1.4b]
         crunon = 0.0d0
-        state%soilwater%cumu%crunon = 0.0_real64                  ! [SS-SWC S-1.4b]
         crunoff = 0.0d0
-        state%soilwater%cumu%crunoff = 0.0_real64                 ! [SS-SWC S-1.4b]
         crunoffCN = 0.0d0
-        state%soilwater%cumu%crunoffCN = 0.0_real64               ! [SS-SWC S-1.4b]
         cqtdo = 0.0d0
-        state%soilwater%cumu%cqtdo = 0.0_real64                   ! [SS-SWC S-1.4b]
         cqtup = 0.0d0
-        state%soilwater%cumu%cqtup = 0.0_real64                   ! [SS-SWC S-1.4b]
         cqprai = 0.0d0
-        state%soilwater%cumu%cqprai = 0.0_real64                  ! [SS-SWC S-1.4b]
+        call state%soilwater%cumu%reset()                         ! [SS-SWC S-2.1]
 
         ! Macropore variables
         if (flMacroPore) call macropore(6, state)
