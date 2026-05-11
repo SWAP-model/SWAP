@@ -209,9 +209,10 @@ end module runoff_mod
 !! @date Last modified March 2014, refactored February 2026
 module meteo_process_mod
    use error_mod, only: fatalerr_collected
+   use swap_state_mod, only: swap_state_t
    implicit none
    private
-   
+
    public :: ReadMeteoDay
    public :: ResetMetFlx
 
@@ -256,13 +257,15 @@ contains
   !! Purpose: Returns meteorological fluxes of current day or of parts of a day 
   !! (detailed meteo input)
   !! @endnote
-  subroutine ReadMeteoDay
+  subroutine ReadMeteoDay(state)
       ! use variables
       use variables, only: out_tmn, out_tmx, out_hum, out_win, out_etr, out_wet, swrain, wet, rh, tav, tavd, out_rad, yearmeteo, arai, grai, atmx, ahum, aetr, date, arad, t1900, ssnow, teprrain, teprsnow, &
                         detrecord, nmetdetail, dettime, detrad, dethum, dettav, atav, swmetdetail, daymeteo, daynrfirst, daynrlast, rad, tmn, tmx, pathatm, awin, atmn, metfil, detrain, swsnow, gsnow, snrai, irectotal, detwind, fprecnosnow
       use MeteoVars
       use precipitation_mod, only: PartitionPrecipitation
       implicit none
+
+      type(swap_state_t), intent(inout) :: state  !! [SS-ATM] threaded for atmosphere dual-writes
 
     ! --- local
     character(len=11)  detdate
@@ -368,7 +371,7 @@ contains
     ! Call precipitation partitioning module
     call PartitionPrecipitation(swmetdetail, swsnow, tav, TePrRain, TePrSnow, &
                                 ssnow, nmetdetail, arain, grai, gsnow, snrai, &
-                                fprecnosnow, restint)
+                                fprecnosnow, restint, state)
     return
   end subroutine ReadMeteoDay
 

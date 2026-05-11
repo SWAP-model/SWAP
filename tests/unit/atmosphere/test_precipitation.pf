@@ -5,8 +5,10 @@
 subroutine test_partition_all_rain_when_tav_gt_threshold()
    use funit
    use precipitation_mod
+   use swap_state_mod, only: swap_state_t
    real(8) :: ssnow, grai, gsnow, snrai, fprecnosnow, restint
    real(8) :: arain(1)
+   type(swap_state_t) :: state
 
    ssnow = 0.0d0
    grai = 10.0d0         ! mm (will be converted to cm: 1.0)
@@ -14,7 +16,7 @@ subroutine test_partition_all_rain_when_tav_gt_threshold()
 
    call PartitionPrecipitation(0, 1, 5.0d0, 2.0d0, -2.0d0, &
                                ssnow, 1, arain, grai, &
-                               gsnow, snrai, fprecnosnow, restint)
+                               gsnow, snrai, fprecnosnow, restint, state)
 
    ! mm -> cm conversion
    @assertEqual(1.0d0, grai, 1.0d-12)
@@ -24,14 +26,21 @@ subroutine test_partition_all_rain_when_tav_gt_threshold()
    @assertEqual(0.0d0, snrai, 1.0d-12)
    ! all precip reaches surface
    @assertEqual(1.0d0, fprecnosnow, 1.0d-12)
+   ! dual-write verification
+   @assertEqual(1.0d0, state%atmosphere%grai, 1.0d-12)
+   @assertEqual(0.0d0, state%atmosphere%gsnow, 1.0d-12)
+   @assertEqual(0.0d0, state%atmosphere%snrai, 1.0d-12)
+   @assertEqual(1.0d0, state%atmosphere%fprecnosnow, 1.0d-12)
 end subroutine
 
 @test
 subroutine test_partition_all_snow_when_tav_lt_threshold()
    use funit
    use precipitation_mod
+   use swap_state_mod, only: swap_state_t
    real(8) :: ssnow, grai, gsnow, snrai, fprecnosnow, restint
    real(8) :: arain(1)
+   type(swap_state_t) :: state
 
    ssnow = 0.0d0
    grai = 10.0d0                               ! mm
@@ -39,7 +48,7 @@ subroutine test_partition_all_snow_when_tav_lt_threshold()
 
    call PartitionPrecipitation(0, 1, -5.0d0, 2.0d0, -2.0d0, &
                                ssnow, 1, arain, grai, &
-                               gsnow, snrai, fprecnosnow, restint)
+                               gsnow, snrai, fprecnosnow, restint, state)
 
    @assertEqual(1.0d0, grai, 1.0d-12)
    ! all snow
@@ -48,14 +57,21 @@ subroutine test_partition_all_snow_when_tav_lt_threshold()
    @assertEqual(0.0d0, snrai, 1.0d-12)
    ! nothing reaches ground
    @assertEqual(0.0d0, fprecnosnow, 1.0d-12)
+   ! dual-write verification
+   @assertEqual(1.0d0, state%atmosphere%grai, 1.0d-12)
+   @assertEqual(1.0d0, state%atmosphere%gsnow, 1.0d-12)
+   @assertEqual(0.0d0, state%atmosphere%snrai, 1.0d-12)
+   @assertEqual(0.0d0, state%atmosphere%fprecnosnow, 1.0d-12)
 end subroutine
 
 @test
 subroutine test_partition_linear_interpolation_midpoint()
    use funit
    use precipitation_mod
+   use swap_state_mod, only: swap_state_t
    real(8) :: ssnow, grai, gsnow, snrai, fprecnosnow, restint
    real(8) :: arain(1)
+   type(swap_state_t) :: state
 
    ssnow = 0.0d0
    grai = 10.0d0
@@ -64,18 +80,23 @@ subroutine test_partition_linear_interpolation_midpoint()
    ! Thresholds span 0..4; tav at midpoint (2.0) -> 0.5 snow fraction
    call PartitionPrecipitation(0, 1, 2.0d0, 4.0d0, 0.0d0, &
                                ssnow, 1, arain, grai, &
-                               gsnow, snrai, fprecnosnow, restint)
+                               gsnow, snrai, fprecnosnow, restint, state)
 
    @assertEqual(1.0d0, grai, 1.0d-12)
    @assertEqual(0.5d0, gsnow, 1.0d-12)
+   ! dual-write verification
+   @assertEqual(1.0d0, state%atmosphere%grai, 1.0d-12)
+   @assertEqual(0.5d0, state%atmosphere%gsnow, 1.0d-12)
 end subroutine
 
 @test
 subroutine test_partition_snow_disabled_passthrough()
    use funit
    use precipitation_mod
+   use swap_state_mod, only: swap_state_t
    real(8) :: ssnow, grai, gsnow, snrai, fprecnosnow, restint
    real(8) :: arain(1)
+   type(swap_state_t) :: state
 
    ssnow = 0.0d0
    grai = 10.0d0
@@ -83,11 +104,16 @@ subroutine test_partition_snow_disabled_passthrough()
 
    call PartitionPrecipitation(0, 0, -5.0d0, 2.0d0, -2.0d0, &
                                ssnow, 1, arain, grai, &
-                               gsnow, snrai, fprecnosnow, restint)
+                               gsnow, snrai, fprecnosnow, restint, state)
 
    @assertEqual(1.0d0, grai, 1.0d-12)
    ! snow off -> all rain, gsnow = 0
    @assertEqual(0.0d0, gsnow, 1.0d-12)
    @assertEqual(0.0d0, snrai, 1.0d-12)
    @assertEqual(1.0d0, fprecnosnow, 1.0d-12)
+   ! dual-write verification
+   @assertEqual(1.0d0, state%atmosphere%grai, 1.0d-12)
+   @assertEqual(0.0d0, state%atmosphere%gsnow, 1.0d-12)
+   @assertEqual(0.0d0, state%atmosphere%snrai, 1.0d-12)
+   @assertEqual(1.0d0, state%atmosphere%fprecnosnow, 1.0d-12)
 end subroutine

@@ -272,7 +272,7 @@ if (iTask == 2) then
          !if (iCaller /= 0) call handle_exchange(23, flError)   ! LAI, RD
 
 !        read meteo data for current day
-         call ReadMeteoDay()
+         call ReadMeteoDay(state)  ! SS-ATM A-1.6: state threaded for atmosphere dual-writes
 
 !        check growing season
          call CropGrowth(1, state%heat%tsoil, state)  ! SS-CRP C-1.3: state added for dual-write
