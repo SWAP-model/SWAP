@@ -33,9 +33,11 @@
 
       ! Explicit interfaces for non-module subs that now take tsoil(:)
       interface
-         subroutine ArableLandGerm(task, tsoil)
+         subroutine ArableLandGerm(task, tsoil, state)
+            use swap_state_mod, only: swap_state_t
             integer, intent(in) :: task
             real(8), intent(in) :: tsoil(:)
+            type(swap_state_t), intent(in) :: state
          end subroutine ArableLandGerm
          subroutine grass(task, tsoil, state)
             use swap_state_mod, only: swap_state_t
@@ -237,17 +239,17 @@
           
           ! Preparation before crop growth
           if (.not. flCropPrep) then
-            call ArableLandGerm(2, tsoil)
+            call ArableLandGerm(2, tsoil, state)  ! [SS-SWC S-2.7]
           endif
 
           ! Sowing before crop growth
           if (flCropPrep .and. .not. flCropSow) then
-            call ArableLandGerm(3, tsoil)
+            call ArableLandGerm(3, tsoil, state)  ! [SS-SWC S-2.7]
           endif
 
           ! Germination of arable crop growth
           if (flCropPrep .and. flCropSow) then
-            call ArableLandGerm(4, tsoil)
+            call ArableLandGerm(4, tsoil, state)  ! [SS-SWC S-2.7]
           endif
 
         endif
@@ -274,8 +276,8 @@
           ! are written to state here since those subs lack state access.
           if (swdrought .eq. 2) then
             state%soilwater%hleaf = -2000.d0
-            state%soilwater%hroot(1:numnod) = h(1:numnod)
-            call MatricFlux(1, h(1), 1, dummy_mf_, state)
+            state%soilwater%hroot(1:numnod) = state%soilwater%h(1:numnod)  ! [SS-SWC S-2.7]
+            call MatricFlux(1, state%soilwater%h(1), 1, dummy_mf_, state)  ! [SS-SWC S-2.7]
           endif
 
           flCropReadFile = .false.
@@ -670,7 +672,7 @@
       if(dabs(state%atmosphere%ptra).lt.nihil) then
         reltr = 1.0d0
       else
-        reltr = max(min(tra/state%atmosphere%ptra,1.0d0),0.0d0)
+        reltr = max(min(state%soilwater%intr%tra/state%atmosphere%ptra,1.0d0),0.0d0)  ! [SS-SWC S-2.7]
       endif
 
 ! ----integrals of the crop --------------------------------------------
@@ -721,7 +723,7 @@
         if (state%atmosphere%ptra.lt.nihil .or.             &
      &      (present(state) .and.                           &
      &       state%soilwater%flWrtNonox)) rr = 0.0d0
-        if (swdmi2rd.eq.1 .and. state%atmosphere%ptra.ge.nihil) rr = rr * tra/state%atmosphere%ptra
+        if (swdmi2rd.eq.1 .and. state%atmosphere%ptra.ge.nihil) rr = rr * state%soilwater%intr%tra/state%atmosphere%ptra  ! [SS-SWC S-2.7]
         rd = rd + rr
       endif
 
@@ -859,24 +861,28 @@
       end
 
 ! ----------------------------------------------------------------------
-      subroutine ArableLandGerm(task, tsoil)
+      subroutine ArableLandGerm(task, tsoil, state)
 ! ----------------------------------------------------------------------
 !     update             : December 2017
 !     date               : December 2017
 !     purpose            : Crop growth
 ! SS-HEAT pre-Task-8: tsoil(:) non-optional dummy arg; callers pass
 !   state%heat%tsoil. Global tsoil excluded via rename.
+! SS-SWC S-2.7: state added (intent in) for soil-water-core h reader cutover.
 ! ----------------------------------------------------------------------
       use variables, dummy_tsoil_alg_ => tsoil
       !! Rename config-staging tsoil to avoid clash with dummy arg tsoil.
       !! [SS-HEAT] Task 9: tsoil retained as config-staging buffer; global is not compute state.
       use swap_constants, only: small
       use error_mod, only: fatalerr_collected
+      use swap_state_mod, only: swap_state_t
       implicit none
 
       integer  task,node
       real(8), intent(in) :: tsoil(:)
       !! Soil temperature array from state%heat%tsoil.
+      type(swap_state_t), intent(in) :: state
+      !! State record; state%soilwater%h used for pressure-head reads. [SS-SWC S-2.7]
       real(8)  drz1,hrz1,pFz1
       real(8)  tsumemesub
       
@@ -890,11 +896,11 @@
       case (2)
       
         node   = 1
-        dhPrep = h(node) - hPrep
+        dhPrep = state%soilwater%h(node) - hPrep                          ! [SS-SWC S-2.7]
         drz1   = -1.d0 * zPrep - dz(node)
         do while (drz1 .gt. 0.d0)
           node   = node + 1
-          dhPrep = max(dhPrep,h(node) - hPrep)
+          dhPrep = max(dhPrep,state%soilwater%h(node) - hPrep)            ! [SS-SWC S-2.7]
           drz1   = drz1 - dz(node)
         enddo
         
@@ -916,11 +922,11 @@
       case (3)  
       
         node   = 1
-        dhSow  = h(node) - hSow
+        dhSow  = state%soilwater%h(node) - hSow                           ! [SS-SWC S-2.7]
         drz1   = -1.d0 * zSow - dz(node)
         do while (drz1 .gt. 0.d0)
           node   = node + 1
-          dhSow  = max(dhSow,h(node) - hSow)
+          dhSow  = max(dhSow,state%soilwater%h(node) - hSow)              ! [SS-SWC S-2.7]
           drz1   = drz1 - dz(node)
         enddo
           
@@ -959,7 +965,7 @@
           
           ! ---   calculate average pressure head of rootzone ---
           if (dabs(zgerm-0.d0) .lt. small) then
-            hrz1 = h(1)
+            hrz1 = state%soilwater%h(1)                                   ! [SS-SWC S-2.7]
           else
             node = 0
             hrz1 = 0.0d0
@@ -967,9 +973,9 @@
             do while (drz1 .gt. 0.d0)
               node = node + 1
               if (drz1 - dz(node) .ge. 0.d0) then
-                hrz1 = hrz1+h(node)*dz(node)/(zgerm*(-1.d0))
+                hrz1 = hrz1+state%soilwater%h(node)*dz(node)/(zgerm*(-1.d0))  ! [SS-SWC S-2.7]
               else
-                hrz1 = hrz1+h(node)*drz1/(zgerm*(-1.d0))
+                hrz1 = hrz1+state%soilwater%h(node)*drz1/(zgerm*(-1.d0))      ! [SS-SWC S-2.7]
               endif
               drz1 = drz1 - dz(node)
             enddo
@@ -1709,13 +1715,13 @@
 ! === with optional calculation of (flCropNut) water AND nutrient stress
 
 ! --- rates of change of the crop variables ----------------------------
- 
+
 ! --- water stress reduction of pgass to gass
       ! SS-ATM Phase 2 Task A-2.3: ptra read from state%atmosphere (atmosphere home).
       if(dabs(state%atmosphere%ptra).lt.nihil) then
         reltr = 1.0d0
       else
-        reltr = max(0.0d0,min(1.0d0,tra/state%atmosphere%ptra))
+        reltr = max(0.0d0,min(1.0d0,state%soilwater%intr%tra/state%atmosphere%ptra))  ! [SS-SWC S-2.7]
       endif
 
 ! --- nitrogen stress reduction of pgass to gass
@@ -2722,7 +2728,7 @@
 !           losses due to treading
             fralossmow = 0.d0
             if (swlossmow.eq.1) then
-              fralossmow = afgen(lossmowtab,200,h(nodmow))
+              fralossmow = afgen(lossmowtab,200,state%soilwater%h(nodmow))  ! [SS-SWC S-2.7]
             end if
 
 !           harvest
@@ -2787,7 +2793,7 @@
 !           Extra losses due to treading in case pressure head is insufficient
             fralossgrz = 0.d0
             if (swlossgrz.eq.1) then
-              fralossgrz = afgen(lossgrztab,200,h(nodgrz))
+              fralossgrz = afgen(lossgrztab,200,state%soilwater%h(nodgrz))  ! [SS-SWC S-2.7]
             end if
             lossgrazpot = lossgrazpot + tagppot * fralossgrz
 
@@ -3008,7 +3014,7 @@
         if(dabs(state%atmosphere%ptra).lt.nihil) then
           reltr = 1.0d0
         else
-          reltr = max(0.0d0,min(1.0d0,tra/state%atmosphere%ptra))
+          reltr = max(0.0d0,min(1.0d0,state%soilwater%intr%tra/state%atmosphere%ptra))  ! [SS-SWC S-2.7]
         endif
         gass = pgass * reltr
 
@@ -3182,7 +3188,7 @@
 !         losses due to treading
           FraLossMow = 0.d0
           if (swlossmow.eq.1) then
-            FraLossMow = afgen(lossmowtab,200,h(nodmow))
+            FraLossMow = afgen(lossmowtab,200,state%soilwater%h(nodmow))  ! [SS-SWC S-2.7]
           end if
           
 !         harvest
@@ -3247,7 +3253,7 @@
 !           Extra losses due to treading in case pressure head is insufficient
             fralossgrz = 0.d0
             if (swlossgrz.eq.1) then
-              fralossgrz = afgen(lossgrztab,200,h(nodgrz))
+              fralossgrz = afgen(lossgrztab,200,state%soilwater%h(nodgrz))  ! [SS-SWC S-2.7]
             end if
             lossgraz = lossgraz + tagp * fralossgrz
 

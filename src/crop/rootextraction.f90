@@ -75,9 +75,12 @@ module rootextraction_mod
 
 ! --- SS-CRP Phase 2 C-2.5: ASSOCIATE for the main compute body (state-only).
 ! --- SS-ATM Phase 2 Task A-2.3: at_ptra, at_atmdem added for atmosphere reader cutover.
+! --- SS-SWC S-2.7: sw_h, sw_theta added for soil-water-core reader cutover.
       associate( &
          at_ptra       => state%atmosphere%ptra,       &
          at_atmdem     => state%atmosphere%atmdem,      &
+         sw_h          => state%soilwater%h,           &   ! [SS-SWC S-2.7]
+         sw_theta      => state%soilwater%theta,       &   ! [SS-SWC S-2.7]
          cw_qrot       => state%soilwater%qrot,        &
          cw_qpotrot    => state%soilwater%qpotrot,     &
          cw_qredwet    => state%soilwater%qredwet,     &
@@ -141,10 +144,10 @@ module rootextraction_mod
             else
               hlim2 = hlim2u
             endif
-            if (h(node).le.hlim1.and.h(node).gt.hlim2) then
-              alpwet = (hlim1-h(node))/(hlim1-hlim2)
+            if (sw_h(node).le.hlim1.and.sw_h(node).gt.hlim2) then   ! [SS-SWC S-2.7]
+              alpwet = (hlim1-sw_h(node))/(hlim1-hlim2)               ! [SS-SWC S-2.7]
             endif
-            if (h(node).gt.hlim1) then
+            if (sw_h(node).gt.hlim1) then                             ! [SS-SWC S-2.7]
               alpwet = 0.0d0
             endif
 
@@ -160,7 +163,7 @@ module rootextraction_mod
             ! use reproduction functions
             else
               ! SS-HEAT Phase 2 Task 6: pass tsoil from state%heat
-              call OxygenReproFunction (OxygenSlope,OxygenIntercept,theta,thetas,state%heat%tsoil,node,z,dz,alpwet)
+              call OxygenReproFunction (OxygenSlope,OxygenIntercept,sw_theta,state%soilwater%thetas,state%heat%tsoil,node,z,dz,alpwet)  ! [SS-SWC S-2.7]
             endif
 
           endif
@@ -181,10 +184,10 @@ module rootextraction_mod
 
         ! Feddes linear reduction based on pressure head
         if (swdrought .eq. 1) then
-          if (h(node) .lt. hlim4) then
+          if (sw_h(node) .lt. hlim4) then                           ! [SS-SWC S-2.7]
             alpdry = 0.0d0
-          elseif (h(node).le.hlim3) then
-            alpdry = (hlim4-h(node))/(hlim4-hlim3)
+          elseif (sw_h(node).le.hlim3) then                         ! [SS-SWC S-2.7]
+            alpdry = (hlim4-sw_h(node))/(hlim4-hlim3)               ! [SS-SWC S-2.7]
           endif
         endif
 
@@ -354,8 +357,11 @@ module rootextraction_mod
 
 ! --- SS-CRP Phase 2 C-2.5: ASSOCIATE for JvL per-node arrays and scalars (state-only).
 ! --- SS-ATM Phase 2 Task A-2.3: at_ptra added for atmosphere reader cutover.
+! --- SS-SWC S-2.7: sw_h, sw_theta added for soil-water-core reader cutover.
       associate( &
          at_ptra     => state%atmosphere%ptra,    &
+         sw_h        => state%soilwater%h,        &   ! [SS-SWC S-2.7]
+         sw_theta    => state%soilwater%theta,    &   ! [SS-SWC S-2.7]
          cw_mflux    => state%soilwater%mflux,    &
          cw_mroot    => state%soilwater%mroot,    &
          cw_hroot    => state%soilwater%hroot,    &
@@ -388,7 +394,7 @@ module rootextraction_mod
 ! --- give hroot a value when root zone becomes larger and store previous values
       do node = 1, noddrz
         if (abs(cw_hroot(node)) .lt. 1.0d-12) then
-          cw_hroot(node) = h(node)
+          cw_hroot(node) = sw_h(node)            ! [SS-SWC S-2.7]
         end if
         hrootm1(node) = cw_hroot(node)
       enddo
@@ -418,8 +424,8 @@ module rootextraction_mod
 
 ! --- calculate current matric flux potential in soil water
       do node = 1,noddrz
-        h(node) = min(1.0d3,max(h(node),1.0d-8))
-        call MatricFlux(2,h(node),node,cw_mflux(node),state)
+        sw_h(node) = min(1.0d3,max(sw_h(node),1.0d-8))  ! [SS-SWC S-2.7]
+        call MatricFlux(2,sw_h(node),node,cw_mflux(node),state)  ! [SS-SWC S-2.7]
       enddo
 
 ! --- interpolate matric flux potential in lowest compartment that is partly filled with roots
@@ -430,9 +436,9 @@ module rootextraction_mod
       endif
 
 ! --- determine highest pressure head in root zone
-      hwet = h(1)
+      hwet = sw_h(1)                                     ! [SS-SWC S-2.7]
       do node = 2,noddrz
-        if (h(node) .gt. hwet) hwet = h(node)
+        if (sw_h(node) .gt. hwet) hwet = sw_h(node)     ! [SS-SWC S-2.7]
       enddo
 
 ! --- determine whether qrosum < ptra (flstress = true)
@@ -704,8 +710,11 @@ module rootextraction_mod
 
 ! --- SS-CRP Phase 2 C-2.5: ASSOCIATE for JvL loop per-node and scalar fields (state-only).
 ! --- SS-ATM Phase 2 Task A-2.3: at_ptra added for atmosphere reader cutover.
+! --- SS-SWC S-2.7: sw_h, sw_theta added for soil-water-core reader cutover.
       associate( &
          at_ptra    => state%atmosphere%ptra,   &
+         sw_h       => state%soilwater%h,       &   ! [SS-SWC S-2.7]
+         sw_theta   => state%soilwater%theta,   &   ! [SS-SWC S-2.7]
          cw_qrot   => state%soilwater%qrot,    &
          cw_qrosum => state%soilwater%qrosum,  &
          cw_hroot  => state%soilwater%hroot,   &
@@ -723,12 +732,12 @@ module rootextraction_mod
 
       do node = 1,noddrz
 ! ---   determine h and matricflux potential at root-soil interface
-        if (h(node) .gt. -1.d0) then
+        if (sw_h(node) .gt. -1.d0) then                                                ! [SS-SWC S-2.7]
 ! ---      very wet conditions
            lay = layer(node)
            ConducSoil = ksatfit(lay) / (rootcoefa*state%soilwater%rmax(node)) /        &
      &                  log(rootcoefa*state%soilwater%rmax(node)/rootradius)
-           cw_hroot(node) = (ConducSoil*h(node) + ConducRoot*state%soilwater%Hxylem) /    &
+           cw_hroot(node) = (ConducSoil*sw_h(node) + ConducRoot*state%soilwater%Hxylem) /  &  ! [SS-SWC S-2.7]
      &                   (ConducSoil + ConducRoot)
         else
 ! ---      common conditions
@@ -746,8 +755,8 @@ module rootextraction_mod
             else
               x3 = x1 - (x2-x1)*Fx1 / (Fx2-Fx1)
             endif
-            x3 = max(x3,min(state%soilwater%Hxylem,h(node)))
-            x3 = min(x3,max(state%soilwater%Hxylem,h(node)))
+            x3 = max(x3,min(state%soilwater%Hxylem,sw_h(node)))   ! [SS-SWC S-2.7]
+            x3 = min(x3,max(state%soilwater%Hxylem,sw_h(node)))   ! [SS-SWC S-2.7]
 ! ---       fatal error if too many iterations
             counter = counter + 1
             if (counter .gt. 50) then
@@ -768,7 +777,7 @@ module rootextraction_mod
      &                 (cw_mflux(node)-cw_mroot(node)) * dz(node)
           if (cw_mflux(node) .gt. cw_mroot(node) ) then
 ! ---       water extraction, set maximum flux to 10% of available soil water
-            qmax = (theta(node) - twilt(node)) * dz(node) * 0.1d0 / dt
+            qmax = (sw_theta(node) - twilt(node)) * dz(node) * 0.1d0 / dt  ! [SS-SWC S-2.7]
             qmax = min(qmax,at_ptra)
             cw_qrot(node) = min(cw_qrot(node),qmax)
           else
@@ -779,7 +788,7 @@ module rootextraction_mod
             else
 ! ---         no hydraulic lift allowed
               cw_qrot(node) = 0.d0
-              cw_hroot(node) = h(node)
+              cw_hroot(node) = sw_h(node)            ! [SS-SWC S-2.7]
               cw_mroot(node) = cw_mflux(node)
             endif
           endif
@@ -790,7 +799,7 @@ module rootextraction_mod
      &                 (cw_mflux(node)-cw_mroot(node)) * depth
           if (cw_mflux(node) .gt. cw_mroot(node) ) then
 ! ---       water extraction, set maximum flux to 10% of available soil water
-            qmax = (theta(node) - twilt(node)) * depth * 0.1d0 / dt
+            qmax = (sw_theta(node) - twilt(node)) * depth * 0.1d0 / dt  ! [SS-SWC S-2.7]
             qmax = min(qmax,at_ptra)
             cw_qrot(node) = min(cw_qrot(node),qmax)
           else
@@ -801,7 +810,7 @@ module rootextraction_mod
             else
 ! ---         no hydraulic lift allowed
               cw_qrot(node) = 0.d0
-              cw_hroot(node) = h(node)
+              cw_hroot(node) = sw_h(node)            ! [SS-SWC S-2.7]
               cw_mroot(node) = cw_mflux(node)
             endif
           endif

@@ -196,21 +196,21 @@ contains
 
 ! --- set soil density [kg m-3]      
       soil_density = bdens(lay) 
-! --- set parameter n of soil hydraulic functions           
-      gen_n = cofgen(6,node) 
-! --- set saturated water content [-]      
-      sat_water_cont = cofgen(2,node) 
-! --- set parameter alpha [1/Pa] of soil hydraulic functions, so divide main swap alpha by 100     ## MH: =0.01* 
-      alpha = 0.01d0*cofgen(4,node)
+! --- set parameter n of soil hydraulic functions
+      gen_n = state%soilwater%cofgen(6,node)          ! [SS-SWC S-2.7]
+! --- set saturated water content [-]
+      sat_water_cont = state%soilwater%cofgen(2,node) ! [SS-SWC S-2.7]
+! --- set parameter alpha [1/Pa] of soil hydraulic functions, so divide main swap alpha by 100     ## MH: =0.01*
+      alpha = 0.01d0*state%soilwater%cofgen(4,node)   ! [SS-SWC S-2.7]
 ! --- set percentage organic matter [%]
       perc_org_mat = orgmat(lay)*100.0d0 
 ! --- set percentage sand in % of total soil            
       percentage_sand = (psand(lay)*(1.0d0-orgmat(lay)))*100.0d0 
-! --- get soil moisture content as defined in further calculations within this routine [-]      
-      theta0 = theta(node) 
-! --- gas filled porosity      
-      gas_filled_porosity = sat_water_cont-theta0    
-      if (h(node) >= 0.0d0) gas_filled_porosity = 0.0d0     ! be sure when saturated that gas_filled_porosity = 0
+! --- get soil moisture content as defined in further calculations within this routine [-]
+      theta0 = state%soilwater%theta(node)              ! [SS-SWC S-2.7]
+! --- gas filled porosity
+      gas_filled_porosity = sat_water_cont-theta0
+      if (state%soilwater%h(node) >= 0.0d0) gas_filled_porosity = 0.0d0  ! [SS-SWC S-2.7] be sure when saturated that gas_filled_porosity = 0
 
 ! --- thickness of the soil compartment [m]     ## MH: =0.01* 
       depth = 0.01d0*dz(node)
@@ -250,7 +250,7 @@ contains
 
 
 ! --- Calculate matric potential [Pa]
-       matric_potential = -100.0d0 * h(node)          
+       matric_potential = -100.0d0 * state%soilwater%h(node)   ! [SS-SWC S-2.7]
 ! --- if gas filled porosity = 0, then root water uptake = 0. Store results and go to end of routine.        
       if (gas_filled_porosity .lt. 1.0d-4) then !RB20131106 .eq. 0
          ! RB 20140106 start if statement added; if max_resp_factor = 1 then no stress so rwufactor = 1        
@@ -274,7 +274,7 @@ contains
             end do
           end do
 ! --- Get differential water capacity at actual node, (/L --> /Pa)
-          diff_water_cap_actual = 0.01d0*dimoca(node)
+          diff_water_cap_actual = 0.01d0*state%soilwater%dimoca(node)  ! [SS-SWC S-2.7]
           numrec_tab = j-1
         endif
 
@@ -379,19 +379,21 @@ contains
 ! --- get theta at h=-100 cm and at h=-500 cm; for diffusion coef
       theta100        = watcon(i,h100)
       theta500        = watcon(i,h500)
-      sat_water_cont  = cofgen(2,i)
+      sat_water_cont  = state%soilwater%cofgen(2,i)                                                   ! [SS-SWC S-2.7]
       gfp100(i)       = sat_water_cont - theta100
       campbell_b      = (log10h500-log10h100) / (dlog10(theta100)-dlog10(theta500))
       d_soil_term1(i) = 2.0d0*(gfp100(i)**3)+0.04d0*gfp100(i)
       d_soil_term2(i) = 2.0d0+3.0d0/campbell_b
 !     for use in FUNC
 !     cofgen(x,i): x = 1...12
-!     1 = thetar; 2 = thetas, 3 = Ksatfit; 4 = alpha; 5 = lambda; 6 = n; 7 = m (=1-1/n); 
+!     1 = thetar; 2 = thetas, 3 = Ksatfit; 4 = alpha; 5 = lambda; 6 = n; 7 = m (=1-1/n);
 !     8 = dummy; 9 = h_enpr; 10 = Ksatexm; 11 = relsatthr; 12 = Ksatthr
 !     Calculate (sat_water_cont - res_water_cont) * alpha * gen_m * gen_n
-      Capac_term(i)   = (cofgen(2,i) - cofgen(1,i)) * 0.01d0*cofgen(4,i) * cofgen(6,i) * cofgen(7,i)
-      Nmin1(i)        = cofgen(6,i) - 1.0d0
-      Mplus1(i)       = cofgen(7,i) + 1.0d0 
+      Capac_term(i)   = (state%soilwater%cofgen(2,i) - state%soilwater%cofgen(1,i)) * &  ! [SS-SWC S-2.7]
+     &                  0.01d0*state%soilwater%cofgen(4,i) *                           &  ! [SS-SWC S-2.7]
+     &                  state%soilwater%cofgen(6,i) * state%soilwater%cofgen(7,i)         ! [SS-SWC S-2.7]
+      Nmin1(i)        = state%soilwater%cofgen(6,i) - 1.0d0                              ! [SS-SWC S-2.7]
+      Mplus1(i)       = state%soilwater%cofgen(7,i) + 1.0d0                              ! [SS-SWC S-2.7]
    end do
 ! --- microbial respiration calculated from organic matter content in actual soil compartment; keep this value fixed
    shape_factor_microbialr = 0.9d0 
