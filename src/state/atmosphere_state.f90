@@ -1,0 +1,207 @@
+!> @file atmosphere_state.f90
+!! Typed state record for the atmosphere subsystem (ADR 0037).
+!!
+!! Debuts the ADR 0033 cohort pattern at type-creation — two nested
+!! sub-records replace 3 scattered reset blocks that currently live in
+!! meteoday.f90, soilhydraulics.f90, and snow.f90:
+!!
+!!   atmosphere_intermediate_t (8 fields, flzerointr-reset)
+!!     igrai, inrai, ipeva, iptra, ievap, igsnow, isubl, isnrai
+!!
+!!   atmosphere_cumulative_t (10 fields, flzerocumu-reset)
+!!     cgrai, cnrai, caintc, cpeva, cptra, cevap, cgsnow, csubl, csnrai, cmelt
+!!
+!! atmosphere_state_t holds:
+!!   22 flat top-level scalars (11 instantaneous + 9 per-day + 3 per-event)
+!!   + type(atmosphere_intermediate_t) :: intr
+!!   + type(atmosphere_cumulative_t)   :: cumu
+!!   = 40 total fields, all scalars (no per-node arrays).
+!!
+!! atmosphere_init(atm) zeroes all 22 flat scalars explicitly. Cohort
+!! sub-records are already zero-defaulted at declaration; atmosphere_init
+!! re-zeroes them explicitly for forward-compat with future arcs that
+!! might add allocatable arrays.
+!!
+!! Excluded:
+!!   - nird/gird — irrigation-owned; deferred to irrigation arc.
+!!   - pond      — soil-water-core arc territory (boundary D5 deferral).
+!!   - Orchestration structure of meteoday.f90/meteodt.f90 — future
+!!     atmosphere REFACTOR arc.
+!!
+!! See ADR 0037, docs/superpowers/specs/2026-05-11-state-migration-atmosphere-design.md
+!!     docs/superpowers/plans/2026-05-11-atmosphere-state-migration.md
+
+module atmosphere_state_mod
+   use, intrinsic :: iso_fortran_env, only: real64
+   implicit none
+   private
+   public :: atmosphere_state_t
+   public :: atmosphere_intermediate_t
+   public :: atmosphere_cumulative_t
+   public :: atmosphere_init
+
+   !> Intermediate accumulators — reset when flzerointr fires.
+   !! These 8 fields accumulate within the intermediate output interval;
+   !! their reset block currently lives in three places (meteoday.f90,
+   !! soilhydraulics.f90, waterbalance.f90). After migration, the single
+   !! owner is intr%reset() called under the flzerointr gate.
+   type :: atmosphere_intermediate_t
+      real(real64) :: igrai  = 0.0_real64   !< intermediate gross rainfall (cm)
+      real(real64) :: inrai  = 0.0_real64   !< intermediate net rainfall (cm)
+      real(real64) :: ipeva  = 0.0_real64   !< intermediate potential soil evaporation (cm)
+      real(real64) :: iptra  = 0.0_real64   !< intermediate potential transpiration (cm)
+      real(real64) :: ievap  = 0.0_real64   !< intermediate actual evaporation (cm)
+      real(real64) :: igsnow = 0.0_real64   !< intermediate gross snowfall (cm)
+      real(real64) :: isubl  = 0.0_real64   !< intermediate sublimation (cm)
+      real(real64) :: isnrai = 0.0_real64   !< intermediate snow-rain partition (cm)
+   contains
+      procedure :: reset => atmosphere_intermediate_reset
+   end type atmosphere_intermediate_t
+
+   !> Cumulative accumulators — reset when flzerocumu fires.
+   !! These 10 fields accumulate over the full simulation output interval;
+   !! their reset block is currently scattered across meteoday.f90,
+   !! soilhydraulics.f90, and snow.f90. After migration, the single owner
+   !! is cumu%reset() called under the flzerocumu gate.
+   type :: atmosphere_cumulative_t
+      real(real64) :: cgrai  = 0.0_real64   !< cumulative gross rainfall (cm)
+      real(real64) :: cnrai  = 0.0_real64   !< cumulative net rainfall (cm)
+      real(real64) :: caintc = 0.0_real64   !< cumulative actual interception (cm)
+      real(real64) :: cpeva  = 0.0_real64   !< cumulative potential soil evaporation (cm)
+      real(real64) :: cptra  = 0.0_real64   !< cumulative potential transpiration (cm)
+      real(real64) :: cevap  = 0.0_real64   !< cumulative actual evaporation (cm)
+      real(real64) :: cgsnow = 0.0_real64   !< cumulative gross snowfall (cm)
+      real(real64) :: csubl  = 0.0_real64   !< cumulative sublimation (cm)
+      real(real64) :: csnrai = 0.0_real64   !< cumulative snow-rain partition (cm)
+      real(real64) :: cmelt  = 0.0_real64   !< cumulative snowmelt (cm)
+   contains
+      procedure :: reset => atmosphere_cumulative_reset
+   end type atmosphere_cumulative_t
+
+   !> Top-level atmosphere state record. 40 fields total:
+   !! 22 flat scalars (11 instantaneous + 9 per-day + 3 per-event)
+   !! + 8 intermediate cohort fields (intr)
+   !! + 10 cumulative cohort fields (cumu).
+   !!
+   !! All fields are scalars — no per-node arrays.
+   !! ASSOCIATE prefix at_  is used in large compute bodies.
+   type :: atmosphere_state_t
+
+      ! -----------------------------------------------------------------------
+      ! Instantaneous scalars (11) — updated every timestep
+      ! -----------------------------------------------------------------------
+      real(real64) :: peva     = 0.0_real64  !< potential soil evaporation (cm/d)
+      real(real64) :: ptra     = 0.0_real64  !< potential transpiration (cm/d)
+      real(real64) :: empreva  = 0.0_real64  !< actual soil evaporation after reduction (cm/d)
+      real(real64) :: melt     = 0.0_real64  !< snowmelt this timestep (cm)
+      real(real64) :: subl     = 0.0_real64  !< sublimation this timestep (cm)
+      real(real64) :: slw      = 0.0_real64  !< liquid water in snowpack (cm)
+      real(real64) :: ssnow    = 0.0_real64  !< snow storage (cm water equivalent)
+      real(real64) :: snowinco = 0.0_real64  !< snow-in-canopy snapshot (cm w.e.)
+      real(real64) :: graidt   = 0.0_real64  !< gross rainfall this timestep (cm)
+      real(real64) :: nraidt   = 0.0_real64  !< net rainfall this timestep (cm)
+      real(real64) :: aintcdt  = 0.0_real64  !< actual interception this timestep (cm)
+
+      ! -----------------------------------------------------------------------
+      ! Per-day scalars (9) — updated once per day in ProcessMeteoDay
+      ! -----------------------------------------------------------------------
+      real(real64) :: grai        = 0.0_real64  !< gross daily rainfall (cm)
+      real(real64) :: nraida      = 0.0_real64  !< net daily rainfall after interception (cm)
+      real(real64) :: atmdem      = 0.0_real64  !< atmospheric demand (cm/d)
+      real(real64) :: pevaday     = 0.0_real64  !< potential evaporation for the day (cm/d)
+      real(real64) :: ptraday     = 0.0_real64  !< potential transpiration for the day (cm/d)
+      real(real64) :: gsnow       = 0.0_real64  !< gross daily snowfall (cm)
+      real(real64) :: snrai       = 0.0_real64  !< daily snow-rain partition (cm)
+      real(real64) :: fprecnosnow = 0.0_real64  !< fraction of precipitation that is rain (-)
+      real(real64) :: sicact      = 0.0_real64  !< actual interception storage capacity (cm)
+
+      ! -----------------------------------------------------------------------
+      ! Per-event / tillage-reset scalars (3)
+      ! -----------------------------------------------------------------------
+      real(real64) :: ldwet = 0.0_real64  !< leaf area index for wet canopy (-)
+      real(real64) :: spev  = 0.0_real64  !< soil evaporation reduction factor (-)
+      real(real64) :: saev  = 0.0_real64  !< actual soil evaporation after reduction (cm/d)
+
+      ! -----------------------------------------------------------------------
+      ! Cohort sub-records
+      ! -----------------------------------------------------------------------
+      type(atmosphere_intermediate_t) :: intr  !< intermediate accumulators (flzerointr-reset)
+      type(atmosphere_cumulative_t)   :: cumu  !< cumulative accumulators (flzerocumu-reset)
+
+   end type atmosphere_state_t
+
+contains
+
+   !> Zero all 22 flat scalars and both cohort sub-records.
+   !! Called once at simulation init (swap.f90:188, after soilwater_init).
+   !! Explicit zeroing of cohort fields is forward-compat for future arcs
+   !! that may add allocatable arrays to the sub-records.
+   subroutine atmosphere_init(atm)
+      type(atmosphere_state_t), intent(inout) :: atm
+
+      ! Instantaneous (11)
+      atm%peva     = 0.0_real64
+      atm%ptra     = 0.0_real64
+      atm%empreva  = 0.0_real64
+      atm%melt     = 0.0_real64
+      atm%subl     = 0.0_real64
+      atm%slw      = 0.0_real64
+      atm%ssnow    = 0.0_real64
+      atm%snowinco = 0.0_real64
+      atm%graidt   = 0.0_real64
+      atm%nraidt   = 0.0_real64
+      atm%aintcdt  = 0.0_real64
+
+      ! Per-day (9)
+      atm%grai        = 0.0_real64
+      atm%nraida      = 0.0_real64
+      atm%atmdem      = 0.0_real64
+      atm%pevaday     = 0.0_real64
+      atm%ptraday     = 0.0_real64
+      atm%gsnow       = 0.0_real64
+      atm%snrai       = 0.0_real64
+      atm%fprecnosnow = 0.0_real64
+      atm%sicact      = 0.0_real64
+
+      ! Per-event (3)
+      atm%ldwet = 0.0_real64
+      atm%spev  = 0.0_real64
+      atm%saev  = 0.0_real64
+
+      ! Cohort sub-records
+      call atm%intr%reset()
+      call atm%cumu%reset()
+
+   end subroutine atmosphere_init
+
+   !> Zero all 8 intermediate cohort fields.
+   !! Called under the flzerointr gate (replaces 3 scattered reset blocks).
+   subroutine atmosphere_intermediate_reset(self)
+      class(atmosphere_intermediate_t), intent(inout) :: self
+      self%igrai  = 0.0_real64
+      self%inrai  = 0.0_real64
+      self%ipeva  = 0.0_real64
+      self%iptra  = 0.0_real64
+      self%ievap  = 0.0_real64
+      self%igsnow = 0.0_real64
+      self%isubl  = 0.0_real64
+      self%isnrai = 0.0_real64
+   end subroutine atmosphere_intermediate_reset
+
+   !> Zero all 10 cumulative cohort fields.
+   !! Called under the flzerocumu gate (replaces 3 scattered reset blocks).
+   subroutine atmosphere_cumulative_reset(self)
+      class(atmosphere_cumulative_t), intent(inout) :: self
+      self%cgrai  = 0.0_real64
+      self%cnrai  = 0.0_real64
+      self%caintc = 0.0_real64
+      self%cpeva  = 0.0_real64
+      self%cptra  = 0.0_real64
+      self%cevap  = 0.0_real64
+      self%cgsnow = 0.0_real64
+      self%csubl  = 0.0_real64
+      self%csnrai = 0.0_real64
+      self%cmelt  = 0.0_real64
+   end subroutine atmosphere_cumulative_reset
+
+end module atmosphere_state_mod

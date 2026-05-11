@@ -1,0 +1,311 @@
+! Tests for atmosphere_state_t — typed state record for the atmosphere
+! subsystem (ADR 0037, A-1.1).
+!
+! Type layout:
+!   atmosphere_state_t:
+!     22 flat scalars (11 instantaneous + 9 per-day + 3 per-event)
+!     + atmosphere_intermediate_t (8 fields, flzerointr-reset) :: intr
+!     + atmosphere_cumulative_t   (10 fields, flzerocumu-reset) :: cumu
+!
+! Cohort pattern debuted at type-creation (first arc not to retrofit an
+! existing flat type — surfacewater pilot retrofitted; this is fresh).
+!
+! See docs/superpowers/specs/2026-05-11-state-migration-atmosphere-design.md
+!     docs/superpowers/plans/2026-05-11-atmosphere-state-migration.md
+
+! =============================================================================
+! Test 1: All 22 flat scalars default to 0.0
+! =============================================================================
+@test
+subroutine test_atmosphere_state_flat_defaults()
+   use funit
+   use iso_fortran_env, only: real64
+   use atmosphere_state_mod, only: atmosphere_state_t
+   type(atmosphere_state_t) :: atm
+
+   ! Instantaneous (11)
+   @assertEqual(0.0_real64, atm%peva,     1.0e-12_real64)
+   @assertEqual(0.0_real64, atm%ptra,     1.0e-12_real64)
+   @assertEqual(0.0_real64, atm%empreva,  1.0e-12_real64)
+   @assertEqual(0.0_real64, atm%melt,     1.0e-12_real64)
+   @assertEqual(0.0_real64, atm%subl,     1.0e-12_real64)
+   @assertEqual(0.0_real64, atm%slw,      1.0e-12_real64)
+   @assertEqual(0.0_real64, atm%ssnow,    1.0e-12_real64)
+   @assertEqual(0.0_real64, atm%snowinco, 1.0e-12_real64)
+   @assertEqual(0.0_real64, atm%graidt,   1.0e-12_real64)
+   @assertEqual(0.0_real64, atm%nraidt,   1.0e-12_real64)
+   @assertEqual(0.0_real64, atm%aintcdt,  1.0e-12_real64)
+
+   ! Per-day (9)
+   @assertEqual(0.0_real64, atm%grai,        1.0e-12_real64)
+   @assertEqual(0.0_real64, atm%nraida,      1.0e-12_real64)
+   @assertEqual(0.0_real64, atm%atmdem,      1.0e-12_real64)
+   @assertEqual(0.0_real64, atm%pevaday,     1.0e-12_real64)
+   @assertEqual(0.0_real64, atm%ptraday,     1.0e-12_real64)
+   @assertEqual(0.0_real64, atm%gsnow,       1.0e-12_real64)
+   @assertEqual(0.0_real64, atm%snrai,       1.0e-12_real64)
+   @assertEqual(0.0_real64, atm%fprecnosnow, 1.0e-12_real64)
+   @assertEqual(0.0_real64, atm%sicact,      1.0e-12_real64)
+
+   ! Per-event (3)
+   @assertEqual(0.0_real64, atm%ldwet, 1.0e-12_real64)
+   @assertEqual(0.0_real64, atm%spev,  1.0e-12_real64)
+   @assertEqual(0.0_real64, atm%saev,  1.0e-12_real64)
+end subroutine test_atmosphere_state_flat_defaults
+
+! =============================================================================
+! Test 2: All cohort scalars default to 0.0
+! =============================================================================
+@test
+subroutine test_atmosphere_state_cohort_defaults()
+   use funit
+   use iso_fortran_env, only: real64
+   use atmosphere_state_mod, only: atmosphere_state_t
+   type(atmosphere_state_t) :: atm
+
+   ! atmosphere_intermediate_t (8)
+   @assertEqual(0.0_real64, atm%intr%igrai,  1.0e-12_real64)
+   @assertEqual(0.0_real64, atm%intr%inrai,  1.0e-12_real64)
+   @assertEqual(0.0_real64, atm%intr%ipeva,  1.0e-12_real64)
+   @assertEqual(0.0_real64, atm%intr%iptra,  1.0e-12_real64)
+   @assertEqual(0.0_real64, atm%intr%ievap,  1.0e-12_real64)
+   @assertEqual(0.0_real64, atm%intr%igsnow, 1.0e-12_real64)
+   @assertEqual(0.0_real64, atm%intr%isubl,  1.0e-12_real64)
+   @assertEqual(0.0_real64, atm%intr%isnrai, 1.0e-12_real64)
+
+   ! atmosphere_cumulative_t (10)
+   @assertEqual(0.0_real64, atm%cumu%cgrai,  1.0e-12_real64)
+   @assertEqual(0.0_real64, atm%cumu%cnrai,  1.0e-12_real64)
+   @assertEqual(0.0_real64, atm%cumu%caintc, 1.0e-12_real64)
+   @assertEqual(0.0_real64, atm%cumu%cpeva,  1.0e-12_real64)
+   @assertEqual(0.0_real64, atm%cumu%cptra,  1.0e-12_real64)
+   @assertEqual(0.0_real64, atm%cumu%cevap,  1.0e-12_real64)
+   @assertEqual(0.0_real64, atm%cumu%cgsnow, 1.0e-12_real64)
+   @assertEqual(0.0_real64, atm%cumu%csubl,  1.0e-12_real64)
+   @assertEqual(0.0_real64, atm%cumu%csnrai, 1.0e-12_real64)
+   @assertEqual(0.0_real64, atm%cumu%cmelt,  1.0e-12_real64)
+end subroutine test_atmosphere_state_cohort_defaults
+
+! =============================================================================
+! Test 3: atmosphere_init zeroes all flat scalars even when pre-set non-zero
+! =============================================================================
+@test
+subroutine test_atmosphere_init_zeroes_flat_scalars()
+   use funit
+   use iso_fortran_env, only: real64
+   use atmosphere_state_mod, only: atmosphere_state_t, atmosphere_init
+   type(atmosphere_state_t) :: atm
+
+   ! Pre-load with non-zero values
+   atm%peva     = 5.0_real64
+   atm%ptra     = 3.0_real64
+   atm%empreva  = 2.0_real64
+   atm%melt     = 1.0_real64
+   atm%subl     = 0.5_real64
+   atm%slw      = 0.1_real64
+   atm%ssnow    = 10.0_real64
+   atm%snowinco = 8.0_real64
+   atm%graidt   = 0.4_real64
+   atm%nraidt   = 0.3_real64
+   atm%aintcdt  = 0.1_real64
+   atm%grai        = 12.0_real64
+   atm%nraida      = 11.0_real64
+   atm%atmdem      = 4.5_real64
+   atm%pevaday     = 3.2_real64
+   atm%ptraday     = 2.8_real64
+   atm%gsnow       = 7.0_real64
+   atm%snrai       = 6.0_real64
+   atm%fprecnosnow = 0.9_real64
+   atm%sicact      = 0.2_real64
+   atm%ldwet = 1.5_real64
+   atm%spev  = 0.8_real64
+   atm%saev  = 0.6_real64
+
+   call atmosphere_init(atm)
+
+   ! Instantaneous must be zero
+   @assertEqual(0.0_real64, atm%peva,     1.0e-12_real64)
+   @assertEqual(0.0_real64, atm%ptra,     1.0e-12_real64)
+   @assertEqual(0.0_real64, atm%empreva,  1.0e-12_real64)
+   @assertEqual(0.0_real64, atm%melt,     1.0e-12_real64)
+   @assertEqual(0.0_real64, atm%subl,     1.0e-12_real64)
+   @assertEqual(0.0_real64, atm%slw,      1.0e-12_real64)
+   @assertEqual(0.0_real64, atm%ssnow,    1.0e-12_real64)
+   @assertEqual(0.0_real64, atm%snowinco, 1.0e-12_real64)
+   @assertEqual(0.0_real64, atm%graidt,   1.0e-12_real64)
+   @assertEqual(0.0_real64, atm%nraidt,   1.0e-12_real64)
+   @assertEqual(0.0_real64, atm%aintcdt,  1.0e-12_real64)
+   ! Per-day must be zero
+   @assertEqual(0.0_real64, atm%grai,        1.0e-12_real64)
+   @assertEqual(0.0_real64, atm%nraida,      1.0e-12_real64)
+   @assertEqual(0.0_real64, atm%atmdem,      1.0e-12_real64)
+   @assertEqual(0.0_real64, atm%pevaday,     1.0e-12_real64)
+   @assertEqual(0.0_real64, atm%ptraday,     1.0e-12_real64)
+   @assertEqual(0.0_real64, atm%gsnow,       1.0e-12_real64)
+   @assertEqual(0.0_real64, atm%snrai,       1.0e-12_real64)
+   @assertEqual(0.0_real64, atm%fprecnosnow, 1.0e-12_real64)
+   @assertEqual(0.0_real64, atm%sicact,      1.0e-12_real64)
+   ! Per-event must be zero
+   @assertEqual(0.0_real64, atm%ldwet, 1.0e-12_real64)
+   @assertEqual(0.0_real64, atm%spev,  1.0e-12_real64)
+   @assertEqual(0.0_real64, atm%saev,  1.0e-12_real64)
+end subroutine test_atmosphere_init_zeroes_flat_scalars
+
+! =============================================================================
+! Test 4: intr%reset() zeroes all 8 intermediate fields
+! =============================================================================
+@test
+subroutine test_atmosphere_intr_reset_zeroes_all_fields()
+   use funit
+   use iso_fortran_env, only: real64
+   use atmosphere_state_mod, only: atmosphere_state_t
+   type(atmosphere_state_t) :: atm
+
+   ! Seed intermediate cohort with non-zero values
+   atm%intr%igrai  = 1.1_real64
+   atm%intr%inrai  = 0.8_real64
+   atm%intr%ipeva  = 3.2_real64
+   atm%intr%iptra  = 2.5_real64
+   atm%intr%ievap  = 0.4_real64
+   atm%intr%igsnow = 5.0_real64
+   atm%intr%isubl  = 0.3_real64
+   atm%intr%isnrai = 0.7_real64
+
+   call atm%intr%reset()
+
+   @assertEqual(0.0_real64, atm%intr%igrai,  1.0e-12_real64)
+   @assertEqual(0.0_real64, atm%intr%inrai,  1.0e-12_real64)
+   @assertEqual(0.0_real64, atm%intr%ipeva,  1.0e-12_real64)
+   @assertEqual(0.0_real64, atm%intr%iptra,  1.0e-12_real64)
+   @assertEqual(0.0_real64, atm%intr%ievap,  1.0e-12_real64)
+   @assertEqual(0.0_real64, atm%intr%igsnow, 1.0e-12_real64)
+   @assertEqual(0.0_real64, atm%intr%isubl,  1.0e-12_real64)
+   @assertEqual(0.0_real64, atm%intr%isnrai, 1.0e-12_real64)
+end subroutine test_atmosphere_intr_reset_zeroes_all_fields
+
+! =============================================================================
+! Test 5: cumu%reset() zeroes all 10 cumulative fields
+! =============================================================================
+@test
+subroutine test_atmosphere_cumu_reset_zeroes_all_fields()
+   use funit
+   use iso_fortran_env, only: real64
+   use atmosphere_state_mod, only: atmosphere_state_t
+   type(atmosphere_state_t) :: atm
+
+   ! Seed cumulative cohort with non-zero values
+   atm%cumu%cgrai  = 100.0_real64
+   atm%cumu%cnrai  = 88.0_real64
+   atm%cumu%caintc = 12.0_real64
+   atm%cumu%cpeva  = 45.0_real64
+   atm%cumu%cptra  = 30.0_real64
+   atm%cumu%cevap  = 40.0_real64
+   atm%cumu%cgsnow = 20.0_real64
+   atm%cumu%csubl  = 5.0_real64
+   atm%cumu%csnrai = 15.0_real64
+   atm%cumu%cmelt  = 18.0_real64
+
+   call atm%cumu%reset()
+
+   @assertEqual(0.0_real64, atm%cumu%cgrai,  1.0e-12_real64)
+   @assertEqual(0.0_real64, atm%cumu%cnrai,  1.0e-12_real64)
+   @assertEqual(0.0_real64, atm%cumu%caintc, 1.0e-12_real64)
+   @assertEqual(0.0_real64, atm%cumu%cpeva,  1.0e-12_real64)
+   @assertEqual(0.0_real64, atm%cumu%cptra,  1.0e-12_real64)
+   @assertEqual(0.0_real64, atm%cumu%cevap,  1.0e-12_real64)
+   @assertEqual(0.0_real64, atm%cumu%cgsnow, 1.0e-12_real64)
+   @assertEqual(0.0_real64, atm%cumu%csubl,  1.0e-12_real64)
+   @assertEqual(0.0_real64, atm%cumu%csnrai, 1.0e-12_real64)
+   @assertEqual(0.0_real64, atm%cumu%cmelt,  1.0e-12_real64)
+end subroutine test_atmosphere_cumu_reset_zeroes_all_fields
+
+! =============================================================================
+! Test 6: intr%reset() is orthogonal — does NOT touch cumu or flat fields
+! =============================================================================
+@test
+subroutine test_atmosphere_intr_reset_orthogonal()
+   use funit
+   use iso_fortran_env, only: real64
+   use atmosphere_state_mod, only: atmosphere_state_t
+   type(atmosphere_state_t) :: atm
+
+   ! Seed everything with sentinel values
+   atm%peva          = 9.1_real64
+   atm%cumu%cgrai    = 77.0_real64
+   atm%cumu%cmelt    = 33.0_real64
+   atm%intr%igrai    = 1.5_real64
+   atm%intr%isnrai   = 0.4_real64
+
+   call atm%intr%reset()
+
+   ! intr fields must be zeroed
+   @assertEqual(0.0_real64, atm%intr%igrai,  1.0e-12_real64)
+   @assertEqual(0.0_real64, atm%intr%isnrai, 1.0e-12_real64)
+
+   ! Flat scalars must be untouched
+   @assertEqual(9.1_real64, atm%peva, 1.0e-12_real64)
+
+   ! cumu fields must be untouched
+   @assertEqual(77.0_real64, atm%cumu%cgrai, 1.0e-12_real64)
+   @assertEqual(33.0_real64, atm%cumu%cmelt, 1.0e-12_real64)
+end subroutine test_atmosphere_intr_reset_orthogonal
+
+! =============================================================================
+! Test 7: cumu%reset() is orthogonal — does NOT touch intr or flat fields
+! =============================================================================
+@test
+subroutine test_atmosphere_cumu_reset_orthogonal()
+   use funit
+   use iso_fortran_env, only: real64
+   use atmosphere_state_mod, only: atmosphere_state_t
+   type(atmosphere_state_t) :: atm
+
+   ! Seed everything with sentinel values
+   atm%ssnow         = 5.5_real64
+   atm%intr%igrai    = 1.2_real64
+   atm%intr%isubl    = 0.6_real64
+   atm%cumu%cgrai    = 90.0_real64
+   atm%cumu%cpeva    = 44.0_real64
+
+   call atm%cumu%reset()
+
+   ! cumu fields must be zeroed
+   @assertEqual(0.0_real64, atm%cumu%cgrai, 1.0e-12_real64)
+   @assertEqual(0.0_real64, atm%cumu%cpeva, 1.0e-12_real64)
+
+   ! Flat scalars must be untouched
+   @assertEqual(5.5_real64, atm%ssnow, 1.0e-12_real64)
+
+   ! intr fields must be untouched
+   @assertEqual(1.2_real64, atm%intr%igrai, 1.0e-12_real64)
+   @assertEqual(0.6_real64, atm%intr%isubl, 1.0e-12_real64)
+end subroutine test_atmosphere_cumu_reset_orthogonal
+
+! =============================================================================
+! Test 8: Two independent atmosphere_state_t instances share no state
+! =============================================================================
+@test
+subroutine test_atmosphere_state_two_instances_independent()
+   use funit
+   use iso_fortran_env, only: real64
+   use atmosphere_state_mod, only: atmosphere_state_t
+   type(atmosphere_state_t) :: atm1, atm2
+
+   ! Write to atm1
+   atm1%peva          = 4.0_real64
+   atm1%ssnow         = 10.0_real64
+   atm1%intr%igrai    = 2.0_real64
+   atm1%cumu%cgrai    = 50.0_real64
+
+   ! atm2 must retain defaults, unaffected by atm1
+   @assertEqual(0.0_real64, atm2%peva,       1.0e-12_real64)
+   @assertEqual(0.0_real64, atm2%ssnow,      1.0e-12_real64)
+   @assertEqual(0.0_real64, atm2%intr%igrai, 1.0e-12_real64)
+   @assertEqual(0.0_real64, atm2%cumu%cgrai, 1.0e-12_real64)
+
+   ! atm1 reads must match what we wrote
+   @assertEqual( 4.0_real64, atm1%peva,       1.0e-12_real64)
+   @assertEqual(10.0_real64, atm1%ssnow,      1.0e-12_real64)
+   @assertEqual( 2.0_real64, atm1%intr%igrai, 1.0e-12_real64)
+   @assertEqual(50.0_real64, atm1%cumu%cgrai, 1.0e-12_real64)
+end subroutine test_atmosphere_state_two_instances_independent
