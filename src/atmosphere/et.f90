@@ -11,6 +11,7 @@
 !! @endnote
 module et_mod
    use error_mod, only: fatalerr_collected
+   use swap_state_mod, only: swap_state_t
     implicit none
     private
 
@@ -607,7 +608,7 @@ contains
       !! - rsigni: threshold rainfall amount
       !! - spev, saev: state variables for Boesten-Stroosnijder method
       !! @endnote
-      subroutine reduceva (task,nrai)
+      subroutine reduceva (task, nrai, state)
       use variables, only: swredu,fldaystart,cofred,dt,empreva,    &
      &               ldwet,nird,peva,pond,rsigni,spev,saev
       implicit none
@@ -617,6 +618,8 @@ contains
           !! Task selector: 1 = daily basis, 2 = timestep basis
         real(8), intent(in) :: nrai
           !! Rainfall amount [mm]
+        type(swap_state_t), intent(inout) :: state
+          !! Simulation state (atmosphere fields dual-written here)
 
         ! Local variables
         real(8) :: timestep
@@ -633,12 +636,23 @@ contains
             timestep = dt     ! Sub-daily
         end if
 
+        associate( &
+            at_empreva => state%atmosphere%empreva, &
+            at_ldwet   => state%atmosphere%ldwet,   &
+            at_spev    => state%atmosphere%spev,     &
+            at_saev    => state%atmosphere%saev      &
+        )
+
         ! Check for ponding (no reduction needed)
-        if (pond > POND_THRESHOLD) then
+        if (pond > POND_THRESHOLD) then  ! [SS-ATM] reads legacy pond — soil-water-core arc migrates
             empreva = peva
+            at_empreva = empreva
             ldwet = 0.0d0
+            at_ldwet = ldwet
             spev = 0.0d0
+            at_spev = spev
             saev = 0.0d0
+            at_saev = saev
             return
         end if
 
@@ -648,12 +662,19 @@ contains
             ! Black model
             call black_reduction(nrai, nird, peva, cofred, rsigni, &
                                 ldwet, empreva, timestep, fldaystart, task)
+            at_ldwet   = ldwet
+            at_empreva = empreva
         case (2)
             ! Boesten-Stroosnijder model
             call boesten_stroosnijder_reduction(nrai, nird, peva, cofred, &
                                               spev, saev, empreva, timestep)
+            at_spev    = spev
+            at_saev    = saev
+            at_empreva = empreva
         case default
             call fatalerr_collected('reduceva', 'Unknown reduction method SWREDU')
         end select
+
+        end associate
       end subroutine reduceva
 end module et_mod

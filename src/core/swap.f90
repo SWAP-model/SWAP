@@ -262,7 +262,7 @@ if (iTask == 2) then
 
 !     get Meteo data (skip meteo-file I/O in external/DLL mode)
    if (iCaller == 0) then
-      if (flYearStart) call ReadMeteoYear
+      if (flYearStart) call ReadMeteoYear(state)
    end if
 
       if (flDayStart) then
@@ -284,13 +284,13 @@ if (iTask == 2) then
          if (flIrrigate) call irrigation(2, state)
 
 !        process Meteo data
-         call ProcessMeteoDay()
+         call ProcessMeteoDay(state)
          if (flTillage) call DoTillage(2)
 
       end if
 
 !     process Meteo data
-      if (flMeteoDt .or. flETSine) call MeteoDT()
+      if (flMeteoDt .or. flETSine) call MeteoDT(state)
 
 !     shared simulation
       if (flSwapShared .and. flDayStart) call SharedSimulation(2)

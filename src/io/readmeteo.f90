@@ -7,7 +7,7 @@
 
 ! SUBROUTINE 1.
 ! ----------------------------------------------------------------------
-      subroutine ReadMeteoYear
+      subroutine ReadMeteoYear(state)
       use error_mod, only: fatalerr_collected
 ! ----------------------------------------------------------------------
 !     Last modified      : March 2014
@@ -15,7 +15,11 @@
 ! ----------------------------------------------------------------------
       use variables
       use meteodt_mod, only: MeteoDT
+      use swap_state_mod, only: swap_state_t
       implicit none
+
+      type(swap_state_t), intent(inout) :: state
+        !! Simulation state (passed through to MeteoDT/reduceva for atmosphere dual-writes)
     
 ! --- global
 !   - general     
@@ -219,7 +223,7 @@
 ! --- reopen present year for processing rain intensity data at beginning MeteoDt      
       if (swrain .gt. 0) then
          flYearStart = .true.
-         call MeteoDT
+         call MeteoDT(state)
       endif
 
       return

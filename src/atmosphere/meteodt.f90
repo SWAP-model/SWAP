@@ -21,6 +21,7 @@
 !! 4. [[ETSine]] - distributes potential transpiration & evaporation according to sine wave; called in MeteoDT (optional)
 module meteodt_mod
 
+   use swap_state_mod, only: swap_state_t
    implicit none
    private
    public :: MeteoDT
@@ -51,9 +52,12 @@ contains
   !! Purpose: Returns meteorological fluxes of current day or of parts of a day
   !! (detailed meteo input)
   !! @endnote
-   subroutine MeteoDT
+   subroutine MeteoDT(state)
       use variables
       implicit none
+
+      type(swap_state_t), intent(inout) :: state
+        !! Simulation state (passed through to reduceva for atmosphere dual-writes)
 
       ! --- meteo input handling on yearly and daily basis ---
 
@@ -68,12 +72,12 @@ contains
       ! Update actual rain record and set precipitation fluxes per time step
       ! or update actual meteo record and set meteo fluxes per time step
       if (flMeteoDT) then
-         call ProcessMeteoTsteps
+         call ProcessMeteoTsteps(state)
       end if
 
       ! Distribute potential transpiration and evaporation according to sine wave
       if (flETSine) then
-         call ETSine
+         call ETSine(state)
       end if
    end subroutine MeteoDT
 
@@ -320,10 +324,13 @@ contains
   !! Purpose: Calculations of meteo variables on time step basis
   !! (in case of precipitation intensities [swrain 1-3] or detailed meteo input)
   !! @endnote
-   subroutine ProcessMeteoTsteps
+   subroutine ProcessMeteoTsteps(state)
       use variables
       use et_mod, only: reduceva
       implicit none
+
+      type(swap_state_t), intent(inout) :: state
+        !! Simulation state (passed through to reduceva for atmosphere dual-writes)
 
       ! === Precipitation intensities ===
 
@@ -355,7 +362,7 @@ contains
          end if
 
          ! Per time step: calculate soil evaporation rate of current time step
-         call reduceva(2, nraida)
+         call reduceva(2, nraida, state)
 
       end if
 
@@ -401,10 +408,13 @@ contains
   !! sine wave during photoperiodic daylight
   !! Note: tsunrise_atm and tsunset_atm are now module-level in variables.f90
   !! @endnote
-   subroutine ETSine
+   subroutine ETSine(state)
       use variables
       use et_mod, only: reduceva
       implicit none
+
+      type(swap_state_t), intent(inout) :: state
+        !! Simulation state (passed through to reduceva for atmosphere dual-writes)
 
       ! --- local
       real(8) daytime, pi, dayl, sinld, cosld, fraction
@@ -445,7 +455,7 @@ contains
       ptra = ptraday*fraction/dt
 
       ! Actual soil evaporation rate of current moment
-      call reduceva(2, nraida)
+      call reduceva(2, nraida, state)
 
       return
    end subroutine ETSine

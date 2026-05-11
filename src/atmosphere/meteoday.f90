@@ -451,14 +451,15 @@ end module meteo_process_mod
 !! @author Original SWAP development team
 !! @date Last modified February 2014, refactored February 2026
 module meteo_mod
-  
+
   use meteo_process_mod, only: ReadMeteoDay, ResetMetFlx
   use interception_mod, only: VonHHBraden, Gash, ruttervw, DivIntercep
   use et_mod, only: PenMon, reduceva
   use runoff_mod, only: CNmethod
-  
+  use swap_state_mod, only: swap_state_t
+
   implicit none
-  
+
   private
   public :: ProcessMeteoDay
 
@@ -489,7 +490,7 @@ contains
   !! Supports both daily (swmetdetail=0) and detailed (swmetdetail=1) meteorology
   !! Uses module variables from Variables and MeteoVars
   !! @endnote
-  subroutine ProcessMeteoDay
+  subroutine ProcessMeteoDay(state)
     ! use Variables
     use variables, only: lai, grai, gird, swinter, gsnow, ssnow, swmetdetail, nmetdetail, swetr, flCropEmergence, et0, ew0, es0, swcf, swcfbs, cfbs, &
     cf, cfeic, rad, arad, metperiod, tav, atav, ahum, logf, swscre, daynr, lat, alt, altw, angstroma, angstromb, rsc, ch, daylp, flmetdetail, albedo, tmn, tmx, rsw, difpp, &
@@ -503,6 +504,9 @@ contains
     use interception_mod, only: VonHHBraden, Gash, ruttervw, msw1eic, DivIntercep
     use swap_constants, only: nihil, small
     implicit none
+
+    type(swap_state_t), intent(inout) :: state
+      !! Simulation state (passed through to reduceva for atmosphere dual-writes)
 
     real(8)  rcs
     data     rcs/0.15d0/
@@ -805,7 +809,7 @@ contains
 
       ! Soil evaporation rate of today
       if (.not. fletsine) then
-        call reduceva (1,nraida)
+        call reduceva (1, nraida, state)
       endif
 
       ! Save daily potential values for use in ETSine
