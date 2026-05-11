@@ -8,7 +8,7 @@
 ! src/io/readswap.f90 — none of them are here. Phase 4e Task A4/A5
 ! replaces all of this file's calls via fatalerr_collected (singleton).
 ! ----------------------------------------------------------------------
-      subroutine CropGrowth(task, tsoil)
+      subroutine CropGrowth(task, tsoil, state)
 ! ----------------------------------------------------------------------
 !     UpDate             : May 2014
 !     Date               : Aug 2004
@@ -16,6 +16,9 @@
 !                          calculation of rate/state variables and output
 ! SS-HEAT pre-Task-8: tsoil passed as non-optional arg (from state%heat%tsoil
 !   at caller); threaded down to ArableLandGerm / grass / sumttd.
+! SS-CRP Phase 1 C-1.3: state added (intent inout) for dual-write of
+!   hroot/hleaf/mfluxtable into state%soilwater on task=1.
+!   tsoil retained: still threaded to ArableLandGerm / grass / sumttd.
 ! ----------------------------------------------------------------------
 
       use variables, dummy_tsoil_cg_ => tsoil
@@ -25,6 +28,7 @@
       use rootextraction_mod, only: MatricFlux
       use swap_constants, only: tiny
       use error_mod, only: fatalerr_collected
+      use swap_state_mod, only: swap_state_t
       implicit none
 
       ! Explicit interfaces for non-module subs that now take tsoil(:)
@@ -42,6 +46,8 @@
       integer task
       real(8), intent(in) :: tsoil(:)
       !! Soil temperature array from state%heat%tsoil, passed by caller.
+      type(swap_state_t), intent(inout) :: state
+      !! Full typed state record; state%soilwater written on task=1 (dual-write).
       integer i, node
       real(8) sumtmin
       
@@ -243,13 +249,23 @@
           
           ! fixed crop development
           if (croptype(icrop) .eq. 1 .and. flCropEmergence) call CropFixed(1)
-          
+
           ! detailed crop growth
           if (croptype(icrop) .eq. 2 .and. flCropEmergence) call Wofost(1)
-          
+
           ! detailed grass growth
           if (croptype(icrop) .eq. 3) call Grass(1, tsoil)
-          
+
+          ! SS-CRP Phase 1 C-1.3: dual-write hroot/hleaf/mfluxtable from legacy
+          ! globals into state%soilwater.  This is Phase 1 copy-out — legacy writes
+          ! above are preserved; Phase 2 will flip readers to state and retire globals.
+          ! Guard: only active when swdrought=2 (the JvL microscopic path).
+          if (swdrought .eq. 2) then
+            state%soilwater%hleaf = hleaf
+            state%soilwater%hroot(1:numnod) = hroot(1:numnod)
+            state%soilwater%mfluxtable(1:numlay,1:801) = mfluxtable(1:numlay,1:801)
+          endif
+
           flCropReadFile = .false.
 
         endif

@@ -105,10 +105,14 @@ implicit none
 
 ! SS-HEAT pre-Task-8: explicit interface for CropGrowth (external non-module sub
 ! that now takes tsoil(:) assumed-shape arg; interface required for caller).
+! SS-CRP Phase 1 C-1.3: state added (intent inout) for hroot/hleaf/mfluxtable
+! dual-write into state%soilwater on task=1.
 interface
-   subroutine CropGrowth(task, tsoil)
+   subroutine CropGrowth(task, tsoil, state)
+      use swap_state_mod, only: swap_state_t
       integer, intent(in) :: task
       real(8), intent(in) :: tsoil(:)
+      type(swap_state_t), intent(inout) :: state
    end subroutine CropGrowth
 end interface
 
@@ -269,7 +273,7 @@ if (iTask == 2) then
          call ReadMeteoDay()
 
 !        check growing season
-         call CropGrowth(1, state%heat%tsoil)
+         call CropGrowth(1, state%heat%tsoil, state)  ! SS-CRP C-1.3: state added for dual-write
 
 !        Specific for exchange when called as DLL
          if (iCaller /= 0) call handle_exchange(23, flError)   ! LAI, RD
@@ -354,7 +358,7 @@ if (iTask == 2) then
 
 !        calculate potential crop growth
 !        this is skipped in case called externally
-         if (iCaller == 0 .and. flCropCalendar) call CropGrowth(2, state%heat%tsoil)
+         if (iCaller == 0 .and. flCropCalendar) call CropGrowth(2, state%heat%tsoil, state)
 
 !        amendent of crop residues from previous day
          if (flCropNut) call SoilManagement(5, state)
@@ -364,14 +368,14 @@ if (iTask == 2) then
 
 !        calculate actual crop growth (calculation of actual crop rate and state variables)
 !        this is skipped in case called externally, so that LAI and CF remain their input values (for printing)
-         if (iCaller == 0  .and. flCropCalendar) call CropGrowth(3, state%heat%tsoil)
+         if (iCaller == 0  .and. flCropCalendar) call CropGrowth(3, state%heat%tsoil, state)
 
 !        Simulate Soil Nutrient processes
          if (flCropNut) call SoilManagement(4, state)
 
 !        harvest of crop
 !        this is skipped in case called externally, so that LAI and CF remain their input values (for printing)
-         if (iCaller == 0 .and. flCropCalendar) call CropGrowth(4, state%heat%tsoil)
+         if (iCaller == 0 .and. flCropCalendar) call CropGrowth(4, state%heat%tsoil, state)
 
 !        timing statistics : prevent (near) endless simulations
          if (flMaxIterTime) call IterTime(2)
