@@ -339,6 +339,8 @@ contains
          graidt = fprecnosnow*rainfluxarray(rainrec)
          nraidt = finterception*graidt
          aintcdt = (1.d0 - finterception)*graidt
+         state%atmosphere%nraidt  = nraidt   ! [SS-ATM] dual-write
+         state%atmosphere%aintcdt = aintcdt  ! [SS-ATM] dual-write
 
          ! Calculate minimum time step length for occurrence of next rain event
          ! (tcum + dt = time at end of current timestep)
@@ -359,6 +361,8 @@ contains
             graidt = grain(wrecord)
             nraidt = nrain(wrecord)
             aintcdt = graidt - nraidt
+            state%atmosphere%nraidt  = nraidt   ! [SS-ATM] dual-write
+            state%atmosphere%aintcdt = aintcdt  ! [SS-ATM] dual-write
 
             flUpdMetDet = .false.
          end if

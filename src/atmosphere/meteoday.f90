@@ -408,10 +408,9 @@ contains
   !! @endnote
   subroutine ResetMetFlx (state)
       use variables, only: flzerointr,flzerocumu,caintc,cgrai,cnrai,igrai,inrai,iprec
-      use, intrinsic :: iso_fortran_env, only: real64
       implicit none
 
-      type(swap_state_t), intent(inout) :: state  !! [SS-ATM] dual-write cohort resets
+      type(swap_state_t), intent(inout) :: state  !! [SS-ATM A-2.1] cohort reset() dispatch
 
     ! --- local
 
@@ -419,19 +418,18 @@ contains
     if (flzerointr) then
       iprec = 0.0d0
       igrai = 0.0d0
-      state%atmosphere%intr%igrai = 0.0_real64   ! [SS-ATM] dual-write intr reset
       inrai = 0.0d0
-      state%atmosphere%intr%inrai = 0.0_real64   ! [SS-ATM] dual-write intr reset
+      ! [SS-ATM A-2.1] D5 cohort consolidation: single canonical reset for all 8 intr fields
+      call state%atmosphere%intr%reset()
     endif
 
     ! Reset cumulative meteorological fluxes
     if (flzerocumu) then
       cgrai = 0.0d0
-      state%atmosphere%cumu%cgrai = 0.0_real64   ! [SS-ATM] dual-write cumu reset
       cnrai = 0.0d0
-      state%atmosphere%cumu%cnrai = 0.0_real64   ! [SS-ATM] dual-write cumu reset
       caintc = 0.0d0
-      state%atmosphere%cumu%caintc = 0.0_real64  ! [SS-ATM] dual-write cumu reset
+      ! [SS-ATM A-2.1] D5 cohort consolidation: single canonical reset for all 10 cumu fields
+      call state%atmosphere%cumu%reset()
     endif
 
     return
@@ -845,6 +843,8 @@ contains
           nraidt = nraidt - Runoff_CN
         end if
         aintcdt = rainflux - netrainflux  ! aintcdt involves ONLY interception of RAIN
+        state%atmosphere%nraidt  = nraidt   ! [SS-ATM] dual-write
+        state%atmosphere%aintcdt = aintcdt  ! [SS-ATM] dual-write
       endif
 
       ! Soil evaporation rate of today
@@ -916,6 +916,8 @@ contains
       graidt = grain(1)
       nraidt = nrain(1)
       aintcdt = graidt - nraidt    ! aintcdt involves ONLY interception of RAIN
+      state%atmosphere%nraidt  = nraidt   ! [SS-ATM] dual-write
+      state%atmosphere%aintcdt = aintcdt  ! [SS-ATM] dual-write
 
     endif
 

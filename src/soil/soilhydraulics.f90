@@ -106,7 +106,7 @@ contains
          fllowgwl = .false.
          if(state%soilwater%gwlinp.ge.z(1)-1.0d-4)then
 
-            q0 = (nraidt+nird+melt)*(1.0d0-ArMpSs) + runon - state%soilwater%reva
+            q0 = (state%atmosphere%nraidt+nird+state%atmosphere%melt)*(1.0d0-ArMpSs) + runon - state%soilwater%reva  ! [SS-ATM] read nraidt,melt from state%atmosphere
             call pondrunoff (state)
             q1 = - q0 + (pond - pondm1)/dt + state%soilwater%runots / dt
             theta(1) = watcon(1,state%soilwater%gwlinp)
@@ -636,7 +636,7 @@ contains
          if (state%soilwater%ftoph) then
             state%soilwater%qtop = -kmean(1)*((state%soilwater%hsurf - h(1))/disnod(1)+1.0d0)
             if(.not.flnonconv .and. (.not.FlMacropore .or. IcTopMp.gt.1)) then
-               deviat = pond - pondm1 + state%soilwater%reva*dt - (nraidt+nird+Melt)*dt &
+               deviat = pond - pondm1 + state%soilwater%reva*dt - (state%atmosphere%nraidt+nird+state%atmosphere%melt)*dt &  ! [SS-ATM] read nraidt,melt from state%atmosphere
      &                - runon*dt  +  state%soilwater%runots  - state%soilwater%qtop * dt
                if( abs(deviat) .gt. CritDevPondDt) then
                   flnonconv3 = .true. ; flnonconv   = .true.
@@ -646,9 +646,9 @@ contains
          end if
 
          if(FlMacropore)then
-            deviat = pond - pondm1 + state%soilwater%reva*dt - (nraidt+nird+Melt)*dt  &
+            deviat = pond - pondm1 + state%soilwater%reva*dt - (state%atmosphere%nraidt+nird+state%atmosphere%melt)*dt  &  ! [SS-ATM] read nraidt,melt from state%atmosphere
      &             - runon*dt  +  state%soilwater%runots  - state%soilwater%qtop * dt  &
-     &             + ArMpSs * (nraidt+nird+Melt)*dt + state%soilwater%QMpLatSs
+     &             + ArMpSs * (state%atmosphere%nraidt+nird+state%atmosphere%melt)*dt + state%soilwater%QMpLatSs
             if( abs(deviat) .gt. CritDevPondDt) then
                flnonconv3 = .true. ; flnonconv   = .true.
                flnonconv3 = flnonconv3 ! for Forcheck
@@ -848,6 +848,7 @@ contains
       use macropore_mod, only: macropore
       use soilwaterbalance_mod, only: calcgwl, watstor, integral, fluxes
       use swap_state_mod, only: swap_state_t
+      use, intrinsic :: iso_fortran_env, only: real64  ! [SS-ATM] for atmosphere state dual-writes
       implicit none
 
       ! Arguments
@@ -868,11 +869,15 @@ contains
          ! Initialize miscellaneous
          hatm = -2.75d+05
       nraidt = 0.0d0
+      state%atmosphere%nraidt = 0.0_real64  ! [SS-ATM] dual-write init
       nird = 0.0d0
       if (swinco.ne.3) then
         ldwet = 0.d0
+        state%atmosphere%ldwet = 0.0_real64  ! [SS-ATM] dual-write init
         spev = 0.d0
+        state%atmosphere%spev = 0.0_real64   ! [SS-ATM] dual-write init
         saev = 0.d0
+        state%atmosphere%saev = 0.0_real64   ! [SS-ATM] dual-write init
       endif
       runon = 0.0d0
       state%soilwater%qtop = 0.d0
@@ -1112,6 +1117,8 @@ contains
         iptra = 0.0d0
         ipeva = 0.0d0
         ievap = 0.0d0
+        ! [SS-ATM A-2.1] atmosphere intr cohort zeroed by state%atmosphere%intr%reset()
+        ! in meteoday ResetMetFlx (Option A consolidation)
         iruno = 0.0d0
         irunoCN = 0.0d0
         iqbot = 0.0d0
@@ -1140,6 +1147,8 @@ contains
         cptra = 0.0d0
         cpeva = 0.0d0
         cevap = 0.0d0
+        ! [SS-ATM A-2.1] atmosphere cumu cohort zeroed by state%atmosphere%cumu%reset()
+        ! in meteoday ResetMetFlx (Option A consolidation)
         cinund = 0.0d0
         crunon = 0.0d0
         crunoff = 0.0d0
