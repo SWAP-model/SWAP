@@ -268,6 +268,32 @@ Crop-uptake was migration #6 and the second coupling-surface arc of the soil-wat
 
 ---
 
+---
+
+## Lessons from atmosphere migration (ADR 0037, added 2026-05-11)
+
+Atmosphere was migration #7 and the third coupling-surface arc of the soil-water decomposition. Six lessons generalize to future arcs.
+
+1. **Pre-flight dual-write coverage check — verify non-zero writes before reader cutover.** Before cutting over any reader in Phase 2, confirm each field has at least one non-zero dual-write site (beyond zero-init and `reset()` calls):
+
+   ```bash
+   grep -rn "state%<sub>%<field>\s*=" src/ | grep -v "0\.0\|0_real64"
+   ```
+
+   Must return at least one result. If only zero-init or `reset()` writes are found, dual-write coverage is missing for non-zero accumulation paths — fix in Phase 1 first. **Caught by A-2.1's `nraidt`/`aintcdt` regression**: accumulator dual-writes in `waterbalance.f90` had not been added before reader cutover, causing the regression. A-2.2 and A-2.5 applied this check successfully.
+
+2. **Multi-owner cumulative reset → cohort `reset()` consolidation.** When several files reset overlapping cohort fields under the same `if (flzero*)` block (atmosphere had `meteoday.f90` + `snow.f90` + `soilhydraulics.f90` all resetting cumulative cohort fields at 3 separate inline blocks), consolidate to a single `call state%X%cumu%reset()` at the canonical reset site (the first occurrence in the timestep, typically the per-day init). Drop all redundant scattered zero-writes. Confirms ADR 0033's cohort pattern value beyond the surfacewater pilot.
+
+3. **Cohort-pattern debut in new records — introduce at type-creation, not as retrofit.** When a state record is introduced from scratch and the subsystem has both cumulative and intermediate fields sharing reset gates, design the cohorts into the type from the start (`atmosphere_state_t` is the worked example). surfacewater retrofitted cohorts onto an existing flat type (ADR 0033 Phases A+B); atmosphere introduced them at type-creation, which is cleaner. Future new state records with `flzero*`-gated fields should follow the atmosphere precedent.
+
+4. **Co-writer accumulators of cohort fields surface dual-write gaps during Phase 2.** When Phase 2 reader cutover causes regressions, the cause is often that a routine OUTSIDE the home tree ACCUMULATES cohort fields (here: `waterbalance.f90:UpdateWaterBalance` accumulates `igrai`, `inrai`, `ipeva`, `iptra`, `cpeva`, `cptra`, `cevap`, `caintc`, `cgrai`, `cnrai` — 10 atmosphere intermediate+cumulative fields). The home-tree dual-writes cover the compute-write sites; co-writer accumulator sites need separate dual-write additions. During Phase 1 design, explicitly inventory accumulate-write sites in `waterbalance.f90` and other external co-writers — do not rely on grep of the home tree alone.
+
+5. **Architectural state-arg additions during Phase 2.6 are a natural cost, not scope creep.** Compile-driven discovery surfaces routines that need `state` for the first time when hidden global references are exposed. In this arc: `DoTillage`, `CNmethod`, `checkmassbal`, and `Consolidate_Bdens` all gained `state` args during Phase 2.6. These routines had no state plumbing because no prior migration needed them; atmosphere's wider coupling surface is what surfaces them. Budget 4–8 such additions per arc proportional to the number of external reader files. They are structural improvements, not rework.
+
+6. **Field-count progression as scope indicator for arc decomposition.** Heat: 11 fields. Boundary: 12. Crop-uptake: 23. Atmosphere: 40. Larger arcs benefit disproportionately from coupling-surface decomposition — a single soil-water mega-arc would have been unmanageable. Atmosphere's cohort layout and dual 7-file home tree would not have been tractable under the boundary/heat flat precedent. When a subsystem's field-count exceeds ~25 AND the fields span multiple reset cadences, coupling-surface decomposition is the right default, even if it produces 4+ sequential arcs.
+
+---
+
 ## Reference ADRs
 
 - ADR 0030 — Surface-water state-type migration (pilot)
@@ -277,3 +303,4 @@ Crop-uptake was migration #6 and the second coupling-surface arc of the soil-wat
 - ADR 0034 — Heat subsystem state-type migration
 - ADR 0035 — Boundary subsystem state-type migration (first coupling-surface arc)
 - ADR 0036 — Crop water uptake state-type migration (second coupling-surface arc)
+- ADR 0037 — Atmosphere subsystem state-type migration (third coupling-surface arc)
