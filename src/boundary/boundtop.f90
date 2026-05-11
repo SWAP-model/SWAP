@@ -144,10 +144,12 @@ contains
          state%soilwater%ftoph  = .true.
          state%soilwater%hsurf  = hAtm
          kmean(1) = k1Atm
+         state%soilwater%kmean(1) = k1Atm
          pond     = 0.0d0
+         state%soilwater%pond = 0.0d0
          state%soilwater%runots = 0.0d0
          return
-      endif             
+      endif
 
 !     maximum conductivity assuming saturation at ground surface (z=0)
       if(fluseksatexm(1))then
@@ -162,13 +164,16 @@ contains
       if (h0.le.1.0d-6) then
          state%soilwater%ftoph  = .false.
          kmean(1) = 0.0d0
+         state%soilwater%kmean(1) = 0.0d0
          state%soilwater%hsurf  = 0.0d0
          pond     = 0.0d0
+         state%soilwater%pond   = 0.0d0
          state%soilwater%runots = 0.0d0
          state%soilwater%qtop   = q1
       else                 ! ponding occurs
          state%soilwater%ftoph  = .true.
          kmean(1) = k1max
+         state%soilwater%kmean(1) = k1max
          state%soilwater%FlRunoff = .true. ! runoff potential possible
 
 ! --- calculate max value of pond without runoff
@@ -183,6 +188,7 @@ contains
                RsRoMp  = (h0max + (state%atmosphere%nraidt+nird+state%atmosphere%melt)*ArMpSs*dt) / KsMpSs
                p2Mp    = 1.0d0 / (p1 + 1.0d0 + dt/RsRoMp)
                pond    = (h0max - PndmxMp) * p2Mp/p2
+               state%soilwater%pond = pond
                state%soilwater%QMpLatSs = pond * dt/RsRoMp
                state%soilwater%QMpLatSs = dmin1(state%soilwater%QMpLatSs,h0max)
                if (state%soilwater%QMpLatSs.lt.1.0d-7) state%soilwater%QMpLatSs = 0.0d0
@@ -256,6 +262,7 @@ contains
       if(h0max.le.pondmx)then
          state%soilwater%runots = 0.0d0
          pond     = h0max
+         state%soilwater%pond  = pond
          state%soilwater%hsurf = pond
          return
       end if
@@ -264,6 +271,7 @@ contains
       if(dabs(state%soilwater%runots).lt.1.0d-6)then
 !        if no runoff occurs: first estimation of pond is OK
          pond     = h0max
+         state%soilwater%pond  = pond
          state%soilwater%hsurf = pond
          return
       else if(dabs(state%soilwater%runots).ge.1.0d-6 .and. swdra.ne.2 .and.             &
@@ -273,6 +281,7 @@ contains
 
          pond     = p2 * ( pondm1 + q0*dt - k1max*dt + p1*h(1) +        &
      &                     dt/rsro * pondmx )
+         state%soilwater%pond   = pond
          state%soilwater%runots = runoff(state)
          state%soilwater%hsurf  = pond
          return
@@ -288,6 +297,7 @@ contains
          h0min = 0.0d0
          do i=1,30
             pond   = 0.5d0 * (h0max + h0min)
+            state%soilwater%pond   = pond
             state%soilwater%runots = runoff(state)
             h0     = p2 * ( pondm1 +q0*dt -k1max*dt +p1*h(1) -state%soilwater%runots)
 
@@ -306,6 +316,7 @@ contains
 
 !     if convergence has not been reached: proceed with final value
       pond   = 0.5d0 * (h0max + h0min)
+      state%soilwater%pond   = pond
       state%soilwater%runots = runoff(state)
       state%soilwater%hsurf  = pond
 
