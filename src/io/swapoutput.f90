@@ -1993,7 +1993,8 @@
             thetadum(node) = thetar(node) + dble(j-1) *               &
      &                    (thetas(node)-thetar(node)) / 20.0d0
             call devries (thetadum,heacap_loc,heacnd, &
-     &                    state%heat%fquartz, state%heat%fclay, state%heat%forg)
+     &                    state%heat%fquartz, state%heat%fclay, state%heat%forg, &
+     &                    state%soilwater%thetas)   ! [SS-SWC S-2.10]
             write(hea,22) lay, comma, thetadum(node), comma,            &
      &                 heacap_loc(node), comma, heacnd(node)
 22          format(i4,a1,f8.5,2(a1,e14.5))

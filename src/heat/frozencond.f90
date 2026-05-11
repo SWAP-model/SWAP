@@ -216,16 +216,20 @@ contains
     state%soilwater%qbot = state%soilwater%qbot_nonfrozen
 
     associate( &
-        ht_rfcp        => state%heat%rfcp,       &
-        ht_nodfrostbot => state%heat%nodfrostbot, &
-        ht_zfrostbot   => state%heat%zfrostbot)
+        ht_rfcp          => state%heat%rfcp,            &
+        ht_nodfrostbot   => state%heat%nodfrostbot,     &
+        ht_zfrostbot     => state%heat%zfrostbot,       &
+        sw_theta         => state%soilwater%theta,      &  ! [SS-SWC S-2.10]
+        sw_thetas        => state%soilwater%thetas,     &  ! [SS-SWC S-2.10]
+        sw_fluseksatexm  => state%soilwater%fluseksatexm, & ! [SS-SWC S-2.10]
+        sw_gwl           => state%soilwater%gwl)           ! [SS-SWC S-2.10]
 
     ! Verify available air volume in frozen zone
     node = numnod
     volair = 0.0d0
     frozencomp = .true.
     do while (frozencomp)
-      volair = volair + (thetas(node)-theta(node))*dz(node)
+      volair = volair + (sw_thetas(node)-sw_theta(node))*dz(node)  ! [SS-SWC S-2.10]
       node = node - 1
       if(node.eq.0)then
         frozencomp = .false.
@@ -259,7 +263,7 @@ contains
         enddo
 
         do node=1,numnod
-          if(fluseksatexm(node))then
+          if(sw_fluseksatexm(node))then                             ! [SS-SWC S-2.10]
             ksatcp(node)  = ksatexm(layer(node))*ht_rfcp(node) + &
                             (1.0d0-ht_rfcp(node))*hconode_vsmall
           else
@@ -297,8 +301,8 @@ contains
         end if
 
         if (swdivd.eq.1) then
-          ztop = min(gwl,ht_zfrostbot)
-          call divdra (numnod,nrlevs,dz,ksatcp,ksatcp,fluseksatexm, &
+          ztop = min(sw_gwl,ht_zfrostbot)                          ! [SS-SWC S-2.10]
+          call divdra (numnod,nrlevs,dz,ksatcp,ksatcp,sw_fluseksatexm, & ! [SS-SWC S-2.10]
                        layercp,cofanicp,ztop,L,qdrain,qdra, &
                        Swdivdinf,Swnrsrf,SwTopnrsrf,Zbotdr, &
                        dt,FacDpthInf,owltab,t1900)

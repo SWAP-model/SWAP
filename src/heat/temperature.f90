@@ -102,14 +102,17 @@ contains
     character(len=200) messag
 
     associate( &
-        ht_tsoil         => state%heat%tsoil,   &
-        ht_heacap        => state%heat%heacap,  &
-        ht_heacon        => state%heat%heacon,  &
-        ht_fquartz       => state%heat%fquartz, &
-        ht_fclay         => state%heat%fclay,   &
-        ht_forg          => state%heat%forg,    &
-        ht_tetop         => state%heat%tetop,   &
-        ht_tebot         => state%heat%tebot)
+        ht_tsoil         => state%heat%tsoil,           &
+        ht_heacap        => state%heat%heacap,          &
+        ht_heacon        => state%heat%heacon,          &
+        ht_fquartz       => state%heat%fquartz,         &
+        ht_fclay         => state%heat%fclay,           &
+        ht_forg          => state%heat%forg,            &
+        ht_tetop         => state%heat%tetop,           &
+        ht_tebot         => state%heat%tebot,           &
+        sw_theta         => state%soilwater%theta,      &  ! [SS-SWC S-2.10]
+        sw_thetm1        => state%soilwater%thetm1,     &  ! [SS-SWC S-2.10]
+        sw_thetas        => state%soilwater%thetas)        ! [SS-SWC S-2.10]
 
     select case (task)
     case (1)
@@ -142,7 +145,7 @@ contains
         do i = 1, numnod
           lay = layer(i)
           dummy = orgmat(lay)/(1.0d0 - orgmat(lay))
-          gmineral = (1.0d0 - thetas(i)) / (0.370d0 + 0.714d0*dummy)
+          gmineral = (1.0d0 - sw_thetas(i)) / (0.370d0 + 0.714d0*dummy)   ! [SS-SWC S-2.10]
           ht_fquartz(i) = (psand(lay) + psilt(lay))*gmineral/2.7d0
           ht_fclay(i)   = pclay(lay)*gmineral/2.7d0
           ht_forg(i)    = dummy*gmineral/1.4d0
@@ -200,12 +203,12 @@ contains
 
         ! Compute heat conductivity and capacity
         do i = 1,numnod
-          theave(i) = 0.5d0 * (theta(i) + thetm1(i))
+          theave(i) = 0.5d0 * (sw_theta(i) + sw_thetm1(i))   ! [SS-SWC S-2.10]
         enddo
 
         ! Calculate nodal heat capacity and thermal conductivity
         ! heacap_loc is a local workspace (macp-sized) so devries explicit-shape args are satisfied
-        call devries(theave,heacap_loc,heacnd,ht_fquartz,ht_fclay,ht_forg)
+        call devries(theave,heacap_loc,heacnd,ht_fquartz,ht_fclay,ht_forg,sw_thetas)  ! [SS-SWC S-2.10]
         ht_heacon(1) = heacnd(1)
         do i = 2,numnod
           ht_heacon(i) = 0.5d0 * (heacnd(i) + heacnd(i-1))
@@ -332,7 +335,8 @@ contains
   !!
   !! Input:
   !! - NumNod: number of compartments (-)
-  !! - theta/THETAS: volumetric soil moisture / saturated vol. s. moist (-)
+  !! - theta: average volumetric soil moisture (m³/m³) — local arg, not VARIABLES
+  !! - thetas_in: saturated vol. moisture per node — caller supplies from state%soilwater%thetas [SS-SWC S-2.10]
   !! - fquartz_in, fclay_in, forg_in: volume fractions of sand, clay and org. matter
   !!   (passed explicitly; callers supply from state%heat to avoid stale global reads)
   !!
@@ -340,8 +344,8 @@ contains
   !! - HeaCap: heat capacity (J/m³/K)
   !! - HeaCon: thermal conductivity (W/m/K)
   !! @endnote
-  subroutine Devries (theta,HeaCap,HeaCon,fquartz_in,fclay_in,forg_in)
-    use variables, only: NumNod,THETAS
+  subroutine Devries (theta,HeaCap,HeaCon,fquartz_in,fclay_in,forg_in,thetas_in)
+    use variables, only: NumNod
     use swap_array_dimensions, only: macp
     implicit none
 
@@ -358,6 +362,8 @@ contains
     !! Volume fraction of clay per node
     real(8), intent(in) :: forg_in(*)
     !! Volume fraction of organic matter per node
+    real(8), intent(in) :: thetas_in(*)
+    !! Saturated water content per node (caller supplies from state%soilwater%thetas)  [SS-SWC S-2.10]
 
     ! Local variables
     integer Node
@@ -437,13 +443,13 @@ contains
     do Node = 1,NumNod
 
       ! (1) Air fraction and related parameters
-      fAir(Node) = THETAS(Node) - theta(Node)
+      fAir(Node) = thetas_in(Node) - theta(Node)              ! [SS-SWC S-2.10]
 
       ! Determine shape factor of air
       if (theta(node) .gt. thetadry) then
-        GAir = 0.333d0 - fair(node)/thetas(node)*0.298d0
+        GAir = 0.333d0 - fair(node)/thetas_in(node)*0.298d0   ! [SS-SWC S-2.10]
       else
-        GAirdry = 0.333d0 - fair(node)/thetas(node)*0.298d0
+        GAirdry = 0.333d0 - fair(node)/thetas_in(node)*0.298d0 ! [SS-SWC S-2.10]
         GAir = 0.013d0 + theta(node)/thetaDry*(GAirdry - 0.013d0)
       endif
 
