@@ -85,7 +85,7 @@ contains
             !       a combination of inconsistent boundary conditions, and
             !       the pressure head at the bottom tends to very low values,
             !       then the choice for swbotb=2 is not appropriate.
-            if (h(numnod) .lt. -1.0d+7) then ! oven dry conditions at bottom
+            if (state%soilwater%h(numnod) .lt. -1.0d+7) then ! oven dry conditions at bottom  ! [SS-SWC S-2.5]
                 if (swbotb .eq. 2) then
                     write (messag, '(a)') 'Oven dry conditions in lowest'
                     write (messag, '(a)') 'compartment therefore switched to'
@@ -111,14 +111,14 @@ contains
 
             ! ---   free drainage assumed in case of h(numnod) < -1.0E7
             if (swbotb .eq. -2) then
-                state%soilwater%qbot = -1.0d0*kmean(numnod + 1)
+                state%soilwater%qbot = -1.0d0*state%soilwater%kmean(numnod + 1)  ! [SS-SWC S-2.5]
             end if
 
         end if
 
         ! --- seepage or infiltration from/to deep groundwater
         if (swbotb .eq. 3) then
-            gwlmean = hdrain + shape*(gwl - hdrain)
+            gwlmean = hdrain + shape*(state%soilwater%gwl - hdrain)           ! [SS-SWC S-2.5]
             ! ---   determine hydraulic head of deep aquifer
             if (sw3 .eq. 1) then
                 state%soilwater%deepgw = aqave + aqamp*dcos(twopi/aqper*(t - aqtmax))
@@ -135,9 +135,9 @@ contains
                 end do
                 nodnumgwl = node
                 satnodgwl = gwlmean - zbotcp(nodnumgwl)
-                cvalprof = satnodgwl/cofgen(3, nodnumgwl)
+                cvalprof = satnodgwl/state%soilwater%cofgen(3, nodnumgwl)     ! [SS-SWC S-2.5]
                 do node = nodnumgwl + 1, numnod
-                    cvalprof = cvalprof + dz(node)/cofgen(3, node)
+                    cvalprof = cvalprof + dz(node)/state%soilwater%cofgen(3, node)  ! [SS-SWC S-2.5]
                 end do
             elseif (SwBotb3ResVert .eq. 1) then
                 cvalprof = 0.0d0
@@ -154,12 +154,12 @@ contains
 ! --- flux calculated as function of h
         if (swbotb .eq. 4) then
             if (swqhbot .eq. 1) then
-                state%soilwater%qbot = cofqha*dexp(cofqhb*dabs(gwl))
+                state%soilwater%qbot = cofqha*dexp(cofqhb*dabs(state%soilwater%gwl))  ! [SS-SWC S-2.5]
                 if (swcofqhc .eq. 1) then
                     state%soilwater%qbot = state%soilwater%qbot + cofqhc
                 end if
             else if (swqhbot .eq. 2) then
-                state%soilwater%qbot = afgen(qbotab, mabbc*2, dabs(gwl))
+                state%soilwater%qbot = afgen(qbotab, mabbc*2, dabs(state%soilwater%gwl))  ! [SS-SWC S-2.5]
             end if
         end if
 
@@ -171,7 +171,7 @@ contains
             kmean(numnod + 1) = hconduc(numnod, state%soilwater%hbot, thetabot, state%heat%rfcp(numnod), state%heat%tsoil(numnod))
             state%soilwater%kmean(numnod + 1) = kmean(numnod + 1)   ! [SS-SWC S-1.8]
             if (flMacroPore) then
-                kmean(numnod + 1) = FrArMtrx(numnod)*kmean(numnod + 1)
+                kmean(numnod + 1) = state%soilwater%FrArMtrx(numnod)*kmean(numnod + 1)   ! [SS-SWC S-2.5]
                 state%soilwater%kmean(numnod + 1) = kmean(numnod + 1)   ! [SS-SWC S-1.8]
             end if
         end if
@@ -183,7 +183,7 @@ contains
 
 ! --- free drainage
         if (swbotb .eq. 7) then
-            state%soilwater%qbot = -1.0d0*kmean(numnod + 1)
+            state%soilwater%qbot = -1.0d0*state%soilwater%kmean(numnod + 1)  ! [SS-SWC S-2.5]
         end if
 
 ! --- lysimeter with free drainage

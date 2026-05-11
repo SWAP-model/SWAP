@@ -107,20 +107,20 @@ contains
 
 ! --- Calculate hydraulic conductivity corresponding with hAtm
       if (hAtm.lt.0.0d0) Then
-         TheAtm = watcon(1,dble(hatm))
-         ksurf  = hconduc (1,dble(hatm),TheAtm,state%heat%rfcp(1),state%heat%tsoil(1))
+         TheAtm = watcon(1,dble(state%soilwater%hatm))                       ! [SS-SWC S-2.5]
+         ksurf  = hconduc (1,dble(state%soilwater%hatm),TheAtm,state%heat%rfcp(1),state%heat%tsoil(1))  ! [SS-SWC S-2.5]
          if(FlMacropore) then
-            ksurf = FrArMtrx(1) * ksurf
+            ksurf = state%soilwater%FrArMtrx(1) * ksurf                      ! [SS-SWC S-2.5]
          endif
       else
 
 ! --- This only occurs if RH is 100% in SWAPS, never used for SWAP
-         kSurf = k(1)
+         kSurf = state%soilwater%k(1)                                         ! [SS-SWC S-2.5]
       endif
-      k1Atm = hcomean(swkmean,kSurf,k(1),dz(1),dz(1))
+      k1Atm = hcomean(swkmean,kSurf,state%soilwater%k(1),dz(1),dz(1))        ! [SS-SWC S-2.5]
 
 ! --- maximum evaporation rate according to Darcy
-      Emax = -k1Atm * ((hatm-h(1))/disnod(1)+1.0d0)
+      Emax = -k1Atm * ((state%soilwater%hatm-state%soilwater%h(1))/disnod(1)+1.0d0)  ! [SS-SWC S-2.5]
       
 ! --- determine reduced soil evaporation rate
       ! SS-ATM A-2.6: peva/empreva retired — read from state%atmosphere
@@ -137,7 +137,7 @@ contains
       if (FlMacropore .and. Z_Tp.gt.-1.d-8) ArMpSs = ArMpTp   
       ! SS-ATM A-2.6: nraidt/melt retired — read from state%atmosphere
       q0 = (state%atmosphere%nraidt+nird+state%atmosphere%melt)*(1.0d0-ArMpSs) + runon - state%soilwater%reva
-      q1 = - q0 - pondm1/dt
+      q1 = - q0 - state%soilwater%pondm1/dt                                   ! [SS-SWC S-2.5]
 
 !     check whether the atmospheric demand condition applies
       if (q1 .ge. 0.0d0 .and. q1.gt.Emax) then
@@ -152,15 +152,15 @@ contains
       endif
 
 !     maximum conductivity assuming saturation at ground surface (z=0)
-      if(fluseksatexm(1))then
+      if(state%soilwater%fluseksatexm(1))then                                 ! [SS-SWC S-2.5]
          ks = state%heat%rfcp(1)*ksatexm(1) + (1.0d0-state%heat%rfcp(1))*hconode_vsmall
       else
          ks = state%heat%rfcp(1)*ksatfit(1) + (1.0d0-state%heat%rfcp(1))*hconode_vsmall
       endif
-      k1max = hcomean(swkmean,ks,k(1),dz(1),dz(1))
-!     check whether application of flux=q1 will yield a pressure head >0 
+      k1max = hcomean(swkmean,ks,state%soilwater%k(1),dz(1),dz(1))           ! [SS-SWC S-2.5]
+!     check whether application of flux=q1 will yield a pressure head >0
 !     at ground surface. If not: flux boundary condition is valid
-      h0    = h(1) - disnod(1)*(q1/k1max+1.0d0)
+      h0    = state%soilwater%h(1) - disnod(1)*(q1/k1max+1.0d0)             ! [SS-SWC S-2.5]
       if (h0.le.1.0d-6) then
          state%soilwater%ftoph  = .false.
          kmean(1) = 0.0d0
@@ -179,7 +179,7 @@ contains
 ! --- calculate max value of pond without runoff
          p1     = k1max/disnod(1) * dt
          p2     = 1.0d0/(p1+1.0d0)
-         h0max  = p2 * ( pondm1 + q0*dt - k1max*dt + p1*h(1) ) 
+         h0max  = p2 * ( state%soilwater%pondm1 + q0*dt - k1max*dt + p1*state%soilwater%h(1) )  ! [SS-SWC S-2.5]
 
 ! --- in case of macropores, calc. potential overland flow into macrop.: QMpLatSs
          if (FlMacropore .and. Z_Tp.gt.-1.d-8) then                     ! Adaptation for GEM 
@@ -212,8 +212,8 @@ contains
 !     Functions called   : runoff
 !     File usage         : -
 ! ----------------------------------------------------------------------
-      use variables, only: swdra,FlMacropore,disnod,dt,h,H0max,k1max,pondm1,pondmx,q0,rsro,rsroexp, &
-                           pond,swpondmx,pondmxtab,t1900
+      use variables, only: swdra,FlMacropore,disnod,dt,H0max,k1max,pondmx,q0,rsro,rsroexp, &
+                           pond,swpondmx,pondmxtab,t1900  ! h,pondm1 dropped [SS-SWC S-2.5]
       use array_utils, only: afgen
       use surfacewater_utils, only: runoff
       use swap_state_mod, only: swap_state_t
@@ -241,7 +241,7 @@ contains
             q0hlp  = q0 - state%soilwater%QMpLatSs/dt
             p1     = k1max/disnod(1) * dt
             p2     = 1.0d0/(p1+1.0d0)
-            h0max  = p2 * ( pondm1 + q0hlp*dt - k1max*dt + p1*h(1) )
+            h0max  = p2 * ( state%soilwater%pondm1 + q0hlp*dt - k1max*dt + p1*state%soilwater%h(1) )  ! [SS-SWC S-2.5]
             if (h0max.lt.-1.d-9) then
                state%soilwater%QMpLatSs = state%soilwater%QMpLatSs + h0max
                h0max = 0.d0
@@ -279,7 +279,7 @@ contains
          p1 = k1max/disnod(1) * dt
          p2 = 1.0d0 / (p1 + 1.0d0 + dt/rsro)
 
-         pond     = p2 * ( pondm1 + q0*dt - k1max*dt + p1*h(1) +        &
+         pond     = p2 * ( state%soilwater%pondm1 + q0*dt - k1max*dt + p1*state%soilwater%h(1) +  &  ! [SS-SWC S-2.5]
      &                     dt/rsro * pondmx )
          state%soilwater%pond   = pond
          state%soilwater%runots = runoff(state)
@@ -293,13 +293,13 @@ contains
          p2 = 1.0d0/(p1+1.0d0)
 
 !        estimation of maximum ponding: ignore runoff
-         h0max = p2 * ( pondm1 + q0*dt - k1max*dt + p1*h(1) )
+         h0max = p2 * ( state%soilwater%pondm1 + q0*dt - k1max*dt + p1*state%soilwater%h(1) )  ! [SS-SWC S-2.5]
          h0min = 0.0d0
          do i=1,30
             pond   = 0.5d0 * (h0max + h0min)
             state%soilwater%pond   = pond
             state%soilwater%runots = runoff(state)
-            h0     = p2 * ( pondm1 +q0*dt -k1max*dt +p1*h(1) -state%soilwater%runots)
+            h0     = p2 * ( state%soilwater%pondm1 +q0*dt -k1max*dt +p1*state%soilwater%h(1) -state%soilwater%runots)  ! [SS-SWC S-2.5]
 
             if(dabs(pond-h0).lt.1.0d-6)then
                state%soilwater%hsurf = pond
