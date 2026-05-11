@@ -419,33 +419,52 @@ contains
       ! determine daily actual transpiration
       if (fldaystart) tra = 0.0d0
       tra = tra + qrotts
+      state%soilwater%intr%tra = state%soilwater%intr%tra + qrotts     ! S-1.5 dual-write (per-day)
 
       ! add time step fluxes to intermediate totals
       iqrot = iqrot + qrotts
+      state%soilwater%intr%iqrot = state%soilwater%intr%iqrot + qrotts  ! S-1.5 dual-write
       do node = 1,noddrz
         ! SS-CRP Phase 2 Task C-2.2: qrot/qpotrot/qredwet/qreddry/qredsol/qredfrs -> state%soilwater
         inqrot(node) = inqrot(node) + state%soilwater%qrot(node) * dt
+        state%soilwater%intr%inqrot(node) = state%soilwater%intr%inqrot(node) + state%soilwater%qrot(node) * dt  ! S-1.5 dual-write
         qpotrot_day(node) = qpotrot_day(node) + state%soilwater%qpotrot(node) * dt
+        state%soilwater%intr%qpotrot_day(node) = state%soilwater%intr%qpotrot_day(node) + state%soilwater%qpotrot(node) * dt  ! S-1.5 dual-write (per-day)
         qredtot_day(node) = qredtot_day(node) + (state%soilwater%qredwet(node) + state%soilwater%qreddry(node) + state%soilwater%qredsol(node) + state%soilwater%qredfrs(node)) * dt
+        state%soilwater%intr%qredtot_day(node) = state%soilwater%intr%qredtot_day(node) + (state%soilwater%qredwet(node) + state%soilwater%qreddry(node) + state%soilwater%qredsol(node) + state%soilwater%qredfrs(node)) * dt  ! S-1.5 dual-write (per-day)
       end do
       do node = 1,numnod
         inqssdi(node) = inqssdi(node) + qssdi(node) * dt
+        state%soilwater%intr%inqssdi(node) = state%soilwater%intr%inqssdi(node) + qssdi(node) * dt  ! S-1.5 dual-write
         iqssdi = iqssdi + qssdi(node) * dt
+        state%soilwater%intr%iqssdi = state%soilwater%intr%iqssdi + qssdi(node) * dt               ! S-1.5 dual-write
       end do
       ! SS-CRP Phase 2 Task C-2.2: qredXXXsum -> state%soilwater%qredXXXsum
       iqredwet = iqredwet + state%soilwater%qredwetsum*dt
+      state%soilwater%intr%iqredwet = state%soilwater%intr%iqredwet + state%soilwater%qredwetsum*dt  ! S-1.5 dual-write
       iqreddry = iqreddry + state%soilwater%qreddrysum*dt
+      state%soilwater%intr%iqreddry = state%soilwater%intr%iqreddry + state%soilwater%qreddrysum*dt  ! S-1.5 dual-write
       iqredsol = iqredsol + state%soilwater%qredsolsum*dt
+      state%soilwater%intr%iqredsol = state%soilwater%intr%iqredsol + state%soilwater%qredsolsum*dt  ! S-1.5 dual-write
       iqredfrs = iqredfrs + state%soilwater%qredfrssum*dt
+      state%soilwater%intr%iqredfrs = state%soilwater%intr%iqredfrs + state%soilwater%qredfrssum*dt  ! S-1.5 dual-write
       iqredwet_day = iqredwet_day + state%soilwater%qredwetsum*dt
+      state%soilwater%intr%iqredwet_day = state%soilwater%intr%iqredwet_day + state%soilwater%qredwetsum*dt  ! S-1.5 dual-write (per-day)
       iqreddry_day = iqreddry_day + state%soilwater%qreddrysum*dt
+      state%soilwater%intr%iqreddry_day = state%soilwater%intr%iqreddry_day + state%soilwater%qreddrysum*dt  ! S-1.5 dual-write (per-day)
       iqredsol_day = iqredsol_day + state%soilwater%qredsolsum*dt
+      state%soilwater%intr%iqredsol_day = state%soilwater%intr%iqredsol_day + state%soilwater%qredsolsum*dt  ! S-1.5 dual-write (per-day)
       iqredfrs_day = iqredfrs_day + state%soilwater%qredfrssum*dt
+      state%soilwater%intr%iqredfrs_day = state%soilwater%intr%iqredfrs_day + state%soilwater%qredfrssum*dt  ! S-1.5 dual-write (per-day)
       ! SS-ATM Phase 2 Task A-2.2: ptra read from state%atmosphere (atmosphere home).
       iptra_day    = iptra_day    + state%atmosphere%ptra * dt
+      state%soilwater%intr%iptra_day = state%soilwater%intr%iptra_day + state%atmosphere%ptra * dt  ! S-1.5 dual-write (per-day)
       ies0 = ies0 + 0.1d0*es0*dt
+      state%soilwater%intr%ies0 = state%soilwater%intr%ies0 + 0.1d0*es0*dt  ! S-1.5 dual-write
       iet0 = iet0 + 0.1d0*et0*dt
+      state%soilwater%intr%iet0 = state%soilwater%intr%iet0 + 0.1d0*et0*dt  ! S-1.5 dual-write
       iew0 = iew0 + 0.1d0*ew0*dt
+      state%soilwater%intr%iew0 = state%soilwater%intr%iew0 + 0.1d0*ew0*dt  ! S-1.5 dual-write
 
       ! SS-SWST Phase 2 Task 7: iqdra/inqdra* accumulated directly into state; global dropped.
       ! ADR 0031 Phase 2 Task 5: qdra global deleted; read from state%drainage%qdra.
@@ -469,36 +488,49 @@ contains
 
       ! SS-ATM Phase 2 Task A-2.2: aintcdt read from state%atmosphere (atmosphere home).
       iintc = iintc + (state%atmosphere%aintcdt+gird-nird)*dt
+      state%soilwater%intr%iintc = state%soilwater%intr%iintc + (state%atmosphere%aintcdt+gird-nird)*dt  ! S-1.5 dual-write
 
       state%atmosphere%intr%iptra = state%atmosphere%intr%iptra + ptrats
       state%atmosphere%intr%ipeva = state%atmosphere%intr%ipeva + pevats
       state%atmosphere%intr%ievap = state%atmosphere%intr%ievap + revats
       ! SS-BND Phase 2 Task B-2.2: runots read from state%soilwater (boundary home).
       iruno = iruno + state%soilwater%runots
+      state%soilwater%intr%iruno = state%soilwater%intr%iruno + state%soilwater%runots  ! S-1.5 dual-write
       irunon = irunon + runon*dt
+      state%soilwater%intr%irunon = state%soilwater%intr%irunon + runon*dt  ! S-1.5 dual-write
       ! SS-ATM Phase 2 Task A-2.2: graidt/nraidt read from state%atmosphere (atmosphere home).
       iprec = iprec + (state%atmosphere%graidt+gird)*dt
+      state%soilwater%intr%iprec = state%soilwater%intr%iprec + (state%atmosphere%graidt+gird)*dt  ! S-1.5 dual-write
       state%atmosphere%intr%igrai = state%atmosphere%intr%igrai + state%atmosphere%graidt*dt
       igird = igird + gird*dt
+      state%soilwater%intr%igird = state%soilwater%intr%igird + gird*dt  ! S-1.5 dual-write
       state%atmosphere%intr%inrai = state%atmosphere%intr%inrai + state%atmosphere%nraidt*dt
       inird = inird + nird*dt
+      state%soilwater%intr%inird = state%soilwater%intr%inird + nird*dt  ! S-1.5 dual-write
       iqbot = iqbot + qbotts
+      state%soilwater%intr%iqbot = state%soilwater%intr%iqbot + qbotts  ! S-1.5 dual-write
       if (q(1) < 0.0d0) then
          iqtdo = iqtdo - q(1)*dt
+         state%soilwater%intr%iqtdo = state%soilwater%intr%iqtdo - q(1)*dt  ! S-1.5 dual-write
       else
          iqtup = iqtup + q(1)*dt
+         state%soilwater%intr%iqtup = state%soilwater%intr%iqtup + q(1)*dt  ! S-1.5 dual-write
       end if
       do node = 1, numnod+1
          if (q(node) < 0.0d0) then
             iqdo(node) = iqdo(node) - q(node)*dt
+            state%soilwater%intr%iqdo(node) = state%soilwater%intr%iqdo(node) - q(node)*dt  ! S-1.5 dual-write
          else
             iqup(node) = iqup(node) + q(node)*dt
+            state%soilwater%intr%iqup(node) = state%soilwater%intr%iqup(node) + q(node)*dt  ! S-1.5 dual-write
          end if
       end do
 
       ! add time step fluxes to total cumulative values
       cqssdi = cqssdi + qssdisum*dt
+      state%soilwater%cumu%cqssdi = state%soilwater%cumu%cqssdi + qssdisum*dt  ! S-1.5 dual-write
       cqrot = cqrot + qrotts
+      state%soilwater%cumu%cqrot = state%soilwater%cumu%cqrot + qrotts          ! S-1.5 dual-write
       ! SS-SWST Phase 2 Task 7: cqdra accumulated directly into state; global dropped.
       state%surfacewater%drainage_cumulative%cqdra = state%surfacewater%drainage_cumulative%cqdra + qdrats
       state%atmosphere%cumu%cptra = state%atmosphere%cumu%cptra + ptrats
@@ -506,11 +538,15 @@ contains
       state%atmosphere%cumu%cevap = state%atmosphere%cumu%cevap + revats
       if (state%soilwater%runots.lt.0.0d0) then
         cinund = cinund - state%soilwater%runots
+        state%soilwater%cumu%cinund = state%soilwater%cumu%cinund - state%soilwater%runots  ! S-1.5 dual-write
       else if (state%soilwater%runots.gt.0.0d0) then
         crunoff = crunoff + state%soilwater%runots
+        state%soilwater%cumu%crunoff = state%soilwater%cumu%crunoff + state%soilwater%runots  ! S-1.5 dual-write
       endif
       irunoCN = irunoCN + Runoff_CN*dt
+      state%soilwater%intr%irunoCN = state%soilwater%intr%irunoCN + Runoff_CN*dt  ! S-1.5 dual-write (intr)
       crunoffCN = crunoffCN + Runoff_CN*dt
+      state%soilwater%cumu%crunoffCN = state%soilwater%cumu%crunoffCN + Runoff_CN*dt  ! S-1.5 dual-write
 
       ! SS-ATM Phase 2 Task A-2.2: aintcdt/graidt/nraidt read from state%atmosphere (atmosphere home).
       state%atmosphere%cumu%caintc = state%atmosphere%cumu%caintc + (state%atmosphere%aintcdt+gird-nird)*dt
@@ -519,14 +555,19 @@ contains
       state%atmosphere%cumu%cnrai = state%atmosphere%cumu%cnrai + state%atmosphere%nraidt*dt
 !      cnrai = cgrai - caintc
       cgird = cgird + gird*dt
+      state%soilwater%cumu%cgird = state%soilwater%cumu%cgird + gird*dt  ! S-1.5 dual-write
       cnird = cnird + nird*dt
+      state%soilwater%cumu%cnird = state%soilwater%cumu%cnird + nird*dt  ! S-1.5 dual-write
 
       if (qbotts.lt.0.0d0) then
         cqbotdo = cqbotdo - qbotts
+        state%soilwater%cumu%cqbotdo = state%soilwater%cumu%cqbotdo - qbotts  ! S-1.5 dual-write
       else if (qbotts.gt.0.0d0) then
         cqbotup = cqbotup + qbotts
+        state%soilwater%cumu%cqbotup = state%soilwater%cumu%cqbotup + qbotts  ! S-1.5 dual-write
       endif
       cqbot = cqbot + qbotts
+      state%soilwater%cumu%cqbot = state%soilwater%cumu%cqbot + qbotts  ! S-1.5 dual-write
       ! SS-SWST Phase 2 Task 7: cqdrain/in/out accumulated directly into state; globals dropped.
       if (allocated(state%surfacewater%drainage_cumulative%cqdrain)) then
         do level = 1,nrlevs
@@ -544,11 +585,15 @@ contains
       ! rain on the ponding surface
       ! SS-ATM Phase 2 Task A-2.2: nraidt read from state%atmosphere (atmosphere home).
       cqprai = cqprai + state%atmosphere%nraidt*dt
+      state%soilwater%cumu%cqprai = state%soilwater%cumu%cqprai + state%atmosphere%nraidt*dt  ! S-1.5 dual-write
       crunon = crunon + runon*dt
+      state%soilwater%cumu%crunon = state%soilwater%cumu%crunon + runon*dt  ! S-1.5 dual-write
       if (q(1).lt.0.0d0) then
         cqtdo = cqtdo - q(1)*dt
+        state%soilwater%cumu%cqtdo = state%soilwater%cumu%cqtdo - q(1)*dt  ! S-1.5 dual-write
       else if (q(1).gt.0.0d0) then
         cqtup = cqtup + q(1)*dt
+        state%soilwater%cumu%cqtup = state%soilwater%cumu%cqtup + q(1)*dt  ! S-1.5 dual-write
       endif
 
       ! compensate water balance error of this time step during remaining day part
