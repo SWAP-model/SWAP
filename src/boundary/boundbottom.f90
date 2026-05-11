@@ -169,8 +169,10 @@ contains
             thetabot = watcon(numnod, state%soilwater%hbot)
 
             kmean(numnod + 1) = hconduc(numnod, state%soilwater%hbot, thetabot, state%heat%rfcp(numnod))
+            state%soilwater%kmean(numnod + 1) = kmean(numnod + 1)   ! [SS-SWC S-1.8]
             if (flMacroPore) then
                 kmean(numnod + 1) = FrArMtrx(numnod)*kmean(numnod + 1)
+                state%soilwater%kmean(numnod + 1) = kmean(numnod + 1)   ! [SS-SWC S-1.8]
             end if
         end if
 
