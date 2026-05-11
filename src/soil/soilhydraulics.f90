@@ -74,6 +74,12 @@ contains
       ! Note: flwarn_hc, iwarn_hc, nstep_hc moved to variables.f90 module
       ! (previously local SAVE variables - now global for multi-instance support)
 
+      ! [SS-SWC S-1.4a] ASSOCIATE block: dual-writes for theta/h in headcalc
+      associate( &
+         sw_theta => state%soilwater%theta, &
+         sw_h     => state%soilwater%h      &
+      )
+
       if (fldaystart) then
          flwarn_hc = .true.
          iwarn_hc = 0
@@ -110,6 +116,7 @@ contains
             call pondrunoff (state)
             q1 = - q0 + (pond - pondm1)/dt + state%soilwater%runots / dt
             theta(1) = watcon(1,state%soilwater%gwlinp)
+            sw_theta(1) = theta(1)                              ! [SS-SWC S-1.4a]
             kmean(1) = hconduc(1,state%soilwater%gwlinp,theta(1),state%heat%rfcp(1))
             ! In case of static macropores FrArMtrx < 1
             if(FlMacropore) kmean(1) = FrArMtrx(1) * kmean(1)
@@ -121,8 +128,10 @@ contains
             end do
             state%soilwater%qbot = qv(numnod+1)
             h(1) = state%soilwater%gwlinp + disnod(1)*(qv(1)/kmean(1)+1.0d0)
+            sw_h(1) = h(1)                                      ! [SS-SWC S-1.4a]
             do i=2,numnod
                h(i) = h(i-1) + disnod(i)*(qv(i)/kmean(i)+1.0d0)
+               sw_h(i) = h(i)                                   ! [SS-SWC S-1.4a]
             end do
 
             if(SwKimpl.eq.1)then
@@ -235,6 +244,7 @@ contains
 
       if(swbotb.eq.1 .and. (.not.fllowgwl))then
          theta(NN)= watcon(NN,h(NN))
+         sw_theta(NN) = theta(NN)                               ! [SS-SWC S-1.4a]
          k(NN)    = hconduc(NN,h(NN),theta(NN),state%heat%rfcp(NN))
          ! In case of static macropores FrArMtrx < 1
          if(FlMacropore) k(NN) = FrArMtrx(NN) * k(NN)
@@ -433,14 +443,17 @@ contains
                end do
                do i = 1,NN
                   h(i) = hold(i) - difh(i) * min(1.0d0, 1.0d0 / factmax)
+                  sw_h(i) = h(i)                                ! [SS-SWC S-1.4a]
                end do
             else
                do i = 1,NN
                   h(i) = hold(i) - factor * difh(i)
+                  sw_h(i) = h(i)                                ! [SS-SWC S-1.4a]
                end do
             end if
             do i = 1,NN
               theta(i) = watcon(i,h(i))
+              sw_theta(i) = theta(i)                            ! [SS-SWC S-1.4a]
             enddo
             do i=2,NN
                hgrad(i) = (h(i-1)-h(i))/disnod(i) + 1.0d0
@@ -517,6 +530,7 @@ contains
 
             if(swbotb.eq.1 .and. (.not.fllowgwl))then
                theta(NN) = watcon(NN,h(NN))
+               sw_theta(NN) = theta(NN)                         ! [SS-SWC S-1.4a]
                k(NN)     = hconduc(NN,h(NN),theta(NN),state%heat%rfcp(NN))
                ! In case of static macropores FrArMtrx < 1
                if(FlMacropore)  k(NN) = FrArMtrx(NN) * k(NN)
@@ -713,6 +727,7 @@ contains
                qv(1) = state%soilwater%qtop
                do i=NN+1,numnod
                   theta(i) = cofgen(2,i)
+                  sw_theta(i) = theta(i)                        ! [SS-SWC S-1.4a]
                end do
                do i=1,numnod
                  qv(i+1) = qv(i) +dz(i)*FrArMtrx(i)*(theta(i)-thetm1(i))&
@@ -722,6 +737,7 @@ contains
 
                do i=NN+1,numnod
                   h(i) = h(i-1) + disnod(i)*(qv(i)/kmean(i)+1.0d0)
+                  sw_h(i) = h(i)                                ! [SS-SWC S-1.4a]
                end do
 
             end if
@@ -751,7 +767,9 @@ contains
          ! Reset soil state variables
          do j = 1,numnod
             h(j) = hm1(j)
+            sw_h(j) = h(j)                                      ! [SS-SWC S-1.4a]
             theta(j) = thetm1(j)
+            sw_theta(j) = theta(j)                              ! [SS-SWC S-1.4a]
          enddo
          kmean(numnod+1) = k(numnod)
          gwl    = gwlm1
@@ -824,6 +842,8 @@ contains
          return
 
       endif
+
+      end associate  ! sw_theta / sw_h => state%soilwater [SS-SWC S-1.4a]
 
    end subroutine headcalc
 
@@ -1209,7 +1229,7 @@ contains
       endif
 
       ! Save state variables of time = t
-      call SoilWaterStateVar(1)
+      call SoilWaterStateVar(1, state)
 
       ! Calculate new soil water state variables
       call headcalc(state)
@@ -1242,7 +1262,7 @@ contains
       call integral (state)
 
       ! Update parameters for soil water hystereses
-      if (swhyst.ne.0) call hysteresis ()
+      if (swhyst.ne.0) call hysteresis (state)
 
       case default
          call fatalerr_collected ('SoilWater', 'Illegal value for TASK')
@@ -1262,14 +1282,20 @@ contains
    !! Date: January 2007
    !! @endnote
    !!
-   subroutine SoilWaterStateVar(task)
+   subroutine SoilWaterStateVar(task, state)
 
 ! --- global variables
       use Variables
+      use swap_state_mod, only: swap_state_t
+      use, intrinsic :: iso_fortran_env, only: real64
       implicit none
 
+      ! Arguments
+      integer task
+      type(swap_state_t), intent(inout) :: state
+
       ! Local variables
-      integer task, i
+      integer i
 
       select case (task)
       case (1)
@@ -1277,10 +1303,14 @@ contains
          ! Save state variables of time = t
          do i = 1,numnod
         hm1(i) = h(i)
+        state%soilwater%hm1(i) = h(i)            ! [SS-SWC S-1.4a]
         thetm1(i) = theta(i)
+        state%soilwater%thetm1(i) = theta(i)     ! [SS-SWC S-1.4a]
       enddo
       gwlm1 = gwl
+      state%soilwater%gwlm1 = gwl                 ! [SS-SWC S-1.4a]
       pondm1 = pond
+      state%soilwater%pondm1 = pond               ! [SS-SWC S-1.4a]
 
       return
 
@@ -1289,11 +1319,15 @@ contains
          ! Reset soil state variables
          do i = 1,numnod
         h(i) = hm1(i)
+        state%soilwater%h(i) = hm1(i)            ! [SS-SWC S-1.4a]
         theta(i) = thetm1(i)
+        state%soilwater%theta(i) = thetm1(i)     ! [SS-SWC S-1.4a]
       enddo
       kmean(numnod+1) = k(numnod)
       gwl    = gwlm1
+      state%soilwater%gwl = gwlm1                 ! [SS-SWC S-1.4a]
       pond   = pondm1
+      state%soilwater%pond = pondm1               ! [SS-SWC S-1.4a]
 
       case default
          call fatalerr_collected ('SoilWaterStateVar', 'Illegal value for TASK')
@@ -1311,12 +1345,16 @@ contains
    !! Date: 23/10/2000
    !! @endnote
    !!
-   subroutine hysteresis ()
+   subroutine hysteresis (state)
       use variables, only: numnod,layer,h,hm1,indeks,tau,paramvg,cofgen,dimoca,theta,disnod
       use soilhydraulics_utils, only: moiscap, prhead
       use swap_array_dimensions, only: macp
+      use swap_state_mod, only: swap_state_t
 
       implicit none
+
+      ! Arguments
+      type(swap_state_t), intent(inout) :: state
 
       ! Local variables
       integer node,lay,indtem(macp)
@@ -1350,6 +1388,7 @@ contains
 
          ! Change index
          indeks(node) = -1*indeks(node)
+         state%soilwater%indeks(node) = indeks(node)            ! [SS-SWC S-1.4a]
 
          ! Update alfa, thetar and thetas
          if (indeks(node).eq.1) then
@@ -1363,10 +1402,16 @@ contains
           if(thetar(node).lt.paramvg(1,lay)) thetar(node)=paramvg(1,lay)
           if(thetar(node).gt.paramvg(2,lay)) thetar(node)=paramvg(2,lay)
           cofgen(4,node) = alfamg(node)
+          state%soilwater%cofgen(4,node) = alfamg(node)         ! [SS-SWC S-1.4a]
           cofgen(1,node) = thetar(node)
+          state%soilwater%cofgen(1,node) = thetar(node)         ! [SS-SWC S-1.4a]
+          state%soilwater%thetar(node)   = thetar(node)         ! [SS-SWC S-1.4a]
           cofgen(2,node) = thetas(node)
+          state%soilwater%cofgen(2,node) = thetas(node)         ! [SS-SWC S-1.4a]
+          state%soilwater%thetas(node)   = thetas(node)         ! [SS-SWC S-1.4a]
           if (abs(fvalue-thetar(node)) .gt. 1.d-10) then
              h(node) = prhead(node,disnod(node),theta(node),cofgen,h)
+             state%soilwater%h(node) = h(node)                  ! [SS-SWC S-1.4a]
           endif
         else
            ! Drying branch
@@ -1379,10 +1424,16 @@ contains
           if(thetas(node).lt.paramvg(1,lay)) thetas(node)=paramvg(1,lay)
           if(thetas(node).gt.paramvg(2,lay)) thetas(node)=paramvg(2,lay)
           cofgen(4,node) = alfamg(node)
+          state%soilwater%cofgen(4,node) = alfamg(node)         ! [SS-SWC S-1.4a]
           cofgen(1,node) = thetar(node)
+          state%soilwater%cofgen(1,node) = thetar(node)         ! [SS-SWC S-1.4a]
+          state%soilwater%thetar(node)   = thetar(node)         ! [SS-SWC S-1.4a]
           cofgen(2,node) = thetas(node)
+          state%soilwater%cofgen(2,node) = thetas(node)         ! [SS-SWC S-1.4a]
+          state%soilwater%thetas(node)   = thetas(node)         ! [SS-SWC S-1.4a]
           if (abs(fvalue-thetas(node)) .gt. 1.d-10) then
              h(node) = prhead(node,disnod(node),theta(node),cofgen,h)
+             state%soilwater%h(node) = h(node)                  ! [SS-SWC S-1.4a]
           endif
         endif
 

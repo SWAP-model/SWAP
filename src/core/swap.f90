@@ -342,7 +342,7 @@ if (iTask == 2) then
 
 !        update time variables and switches/flags
          if (fldecdt .or. (flMacroPore .and. FlDecMpRat))then
-            call SoilWaterStateVar(2)
+            call SoilWaterStateVar(2, state)
             call TimeControl(3)
             fldtreduce = .true.
          end if

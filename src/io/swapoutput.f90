@@ -3900,7 +3900,7 @@
 ! ---   calculate SoilWater
            if (.not.fldecdt) then
 ! --- save state variables of time = t
-              call SoilWaterStateVar(1)
+              call SoilWaterStateVar(1, state_om)
 
 ! --- calculate new soil water state variables
               call headcalc(state_om)
@@ -3912,7 +3912,7 @@
 
 ! ---   update time variables and switches/flags
            if(fldecdt .or. (flMacroPore .and. FlDecMpRat))then
-              call SoilWaterStateVar(2)
+              call SoilWaterStateVar(2, state_om)
               call TimeControl(3)
               fldtreduce = .true.
            end if
