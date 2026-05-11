@@ -323,7 +323,8 @@ contains
       !> @endnote
       ! SS-SWST Phase 2 Task 11 A2: state added to fluxes() so qdra/qdrtot read from state.
       subroutine fluxes (state)
-      use variables, only: q,dt,inq,numnod,thetm1,theta,dz,qrot,qimmob,qrosum,volact,volm1,swbotb,     &
+      ! SS-CRP Phase 2 Task C-2.2: qrot/qrosum removed from use variables; read from state%soilwater.
+      use variables, only: q,dt,inq,numnod,thetm1,theta,dz,qimmob,volact,volm1,swbotb,     &
                            FrArMtrx,QExcMpMtx,QMaPo,nrlevs,fllowgwl,qssdi, qssdisum
       use swap_state_mod, only: swap_state_t
       implicit none
@@ -336,7 +337,8 @@ contains
       if (swbotb .eq. 5 .or. swbotb .eq. 7 .or.                         &
      &    swbotb .eq. 8 .or. swbotb .eq. -2 .or.                        &
      &    (swbotb .eq. 1 .and. fllowgwl)) then
-        state%soilwater%qbot = state%soilwater%qtop + qrosum + state%surfacewater%qdrtot - QMaPo + (volact-volm1)/dt - qssdisum
+        ! SS-CRP Phase 2 Task C-2.2: qrosum -> state%soilwater%qrosum
+        state%soilwater%qbot = state%soilwater%qtop + state%soilwater%qrosum + state%surfacewater%qdrtot - QMaPo + (volact-volm1)/dt - qssdisum
       endif
 
       ! calculate fluxes (cm/d) from changes in volume per compartment
@@ -344,8 +346,9 @@ contains
       q(i) = state%soilwater%qbot
       inq(i) = inq(i) + q(i)*dt
       do i = numnod,1,-1
+        ! SS-CRP Phase 2 Task C-2.2: qrot(i) -> state%soilwater%qrot(i)
         q(i) = - (theta(i)-thetm1(i)+qimmob(i))*FrArMtrx(i)*dz(i)/dt +  &
-     &                q(i+1)-qrot(i)+QExcMpMtx(i)+qssdi(i)
+     &                q(i+1)-state%soilwater%qrot(i)+QExcMpMtx(i)+qssdi(i)
 
         if (allocated(state%drainage%qdra)) then
           do level=1,nrlevs
@@ -404,7 +407,8 @@ contains
       qbotts = state%soilwater%qbot*dt
 
       ! total root extraction of this timestep
-      qrotts = qrosum * dt
+      ! SS-CRP Phase 2 Task C-2.2: qrosum -> state%soilwater%qrosum
+      qrotts = state%soilwater%qrosum * dt
 
       ! total drainage flux of this timestep
       ! SS-SWST Phase 2 Task 11 A2: qdrtot removed from globals; read from state.
@@ -417,22 +421,24 @@ contains
       ! add time step fluxes to intermediate totals
       iqrot = iqrot + qrotts
       do node = 1,noddrz
-        inqrot(node) = inqrot(node) + qrot(node) * dt
-        qpotrot_day(node) = qpotrot_day(node) + qpotrot(node) * dt
-        qredtot_day(node) = qredtot_day(node) + (qredwet(node) + qreddry(node) + qredsol(node) + qredfrs(node)) * dt
+        ! SS-CRP Phase 2 Task C-2.2: qrot/qpotrot/qredwet/qreddry/qredsol/qredfrs -> state%soilwater
+        inqrot(node) = inqrot(node) + state%soilwater%qrot(node) * dt
+        qpotrot_day(node) = qpotrot_day(node) + state%soilwater%qpotrot(node) * dt
+        qredtot_day(node) = qredtot_day(node) + (state%soilwater%qredwet(node) + state%soilwater%qreddry(node) + state%soilwater%qredsol(node) + state%soilwater%qredfrs(node)) * dt
       end do
       do node = 1,numnod
         inqssdi(node) = inqssdi(node) + qssdi(node) * dt
         iqssdi = iqssdi + qssdi(node) * dt
       end do
-      iqredwet = iqredwet + qredwetsum*dt
-      iqreddry = iqreddry + qreddrysum*dt
-      iqredsol = iqredsol + qredsolsum*dt
-      iqredfrs = iqredfrs + qredfrssum*dt
-      iqredwet_day = iqredwet_day + qredwetsum*dt
-      iqreddry_day = iqreddry_day + qreddrysum*dt
-      iqredsol_day = iqredsol_day + qredsolsum*dt
-      iqredfrs_day = iqredfrs_day + qredfrssum*dt
+      ! SS-CRP Phase 2 Task C-2.2: qredXXXsum -> state%soilwater%qredXXXsum
+      iqredwet = iqredwet + state%soilwater%qredwetsum*dt
+      iqreddry = iqreddry + state%soilwater%qreddrysum*dt
+      iqredsol = iqredsol + state%soilwater%qredsolsum*dt
+      iqredfrs = iqredfrs + state%soilwater%qredfrssum*dt
+      iqredwet_day = iqredwet_day + state%soilwater%qredwetsum*dt
+      iqreddry_day = iqreddry_day + state%soilwater%qreddrysum*dt
+      iqredsol_day = iqredsol_day + state%soilwater%qredsolsum*dt
+      iqredfrs_day = iqredfrs_day + state%soilwater%qredfrssum*dt
       iptra_day    = iptra_day    + ptra * dt
       ies0 = ies0 + 0.1d0*es0*dt
       iet0 = iet0 + 0.1d0*et0*dt
