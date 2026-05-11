@@ -39,8 +39,8 @@ module tillage_mod
 
    subroutine DoTillage (iTask, state)
    ! global
-   integer, intent(in)                       :: iTask                               ! Task
-   type(swap_state_t), intent(in)            :: state                               ! [SS-ATM A-2.6] for retired nraida
+   integer, intent(in)                          :: iTask                               ! Task
+   type(swap_state_t), intent(inout)            :: state                               ! [SS-ATM A-2.6] for retired nraida; [SS-SWC S-1.9] inout for soilwater dual-writes
    ! local (not to be saved)
    integer                                   :: i
    character(len=20)                         :: STRNG
@@ -111,19 +111,19 @@ module tillage_mod
          call DTDPST ("YEAR-MONTHST-DAY", t1900, STRNG)
          if (trim(STRNG) == "2016-Apr-05") then
             BDENS(1) = 1000.0d0
-            call Change_MvGpars
-            Call Adapt_WC_H (TEST)
+            call Change_MvGpars(state)              ! [SS-SWC S-1.9]
+            Call Adapt_WC_H (TEST, state)           ! [SS-SWC S-1.9]
          else if (trim(STRNG) == "2016-Apr-11") then
             BDENS(1) = 1250.0d0
-            call Change_MvGpars
-            Call Adapt_WC_H (TEST)
+            call Change_MvGpars(state)              ! [SS-SWC S-1.9]
+            Call Adapt_WC_H (TEST, state)           ! [SS-SWC S-1.9]
          else if (trim(STRNG) == "2016-Apr-18") then
             BDENS(1) = 1325.0d0        ! no ponding occurs
             !!!BDENS(1) = 1406.322d0   ! in this specific test this change causes ponding
-            call Change_MvGpars
-            Call Adapt_WC_H (TEST)
+            call Change_MvGpars(state)              ! [SS-SWC S-1.9]
+            Call Adapt_WC_H (TEST, state)           ! [SS-SWC S-1.9]
          end if
-         
+
       else
          if (Test2) then
             ! for technical test
@@ -131,14 +131,14 @@ module tillage_mod
             if (trim(STRNG) == "2005-Jun-05") then
                Rho_cons(1) = 1350.0d0
                K_R_cons(1) =  10.0d0
-               call Change_MvGpars
-               Call Adapt_WC_H (TEST)
+               call Change_MvGpars(state)           ! [SS-SWC S-1.9]
+               Call Adapt_WC_H (TEST, state)        ! [SS-SWC S-1.9]
             end if
             if (trim(STRNG) == "2005-Oct-30") then
                Rho_cons(1) = 1900.0d0
                K_R_cons(1) =    0.1d0
-               call Change_MvGpars
-               Call Adapt_WC_H (TEST)
+               call Change_MvGpars(state)           ! [SS-SWC S-1.9]
+               Call Adapt_WC_H (TEST, state)        ! [SS-SWC S-1.9]
             end if
          end if
          ! normal usage
@@ -151,9 +151,9 @@ module tillage_mod
             ! SS-ATM A-2.6: pass state for retired nraida
             call Consolidate_Bdens(state)
          end if
-      
-         call Change_MvGpars
-         
+
+         call Change_MvGpars(state)                 ! [SS-SWC S-1.9]
+
          call DTDPST ("YEAR-MONTHST-DAY", t1900, STRNG)
          if (trim(STRNG) == "2005-Apr-05") then
             !ParamVG(5,1) = -2.0d0
@@ -168,8 +168,8 @@ module tillage_mod
 
          
          
-         Call Adapt_WC_H (TEST)
-         
+         Call Adapt_WC_H (TEST, state)              ! [SS-SWC S-1.9]
+
       end if
       
 
@@ -196,8 +196,9 @@ module tillage_mod
    end subroutine DoTillage
 
 ! **************************************************** Change_MvGpars *********************************************************
-   subroutine Change_MvGpars
+   subroutine Change_MvGpars (state)                ! [SS-SWC S-1.9] state added for cofgen dual-write
    implicit none
+   type(swap_state_t), intent(inout) :: state        ! [SS-SWC S-1.9]
    integer              :: i, node, lay
    integer, parameter   :: Delta = 4
    integer, parameter   :: DeltaMin7 = Delta - 7
@@ -244,19 +245,21 @@ module tillage_mod
    do node = 1, MaxNumSoilCP
       lay = layer(node)
       CofGen(1:10,node) = ParamVG(1:10,lay)
+      state%soilwater%cofgen(1:10,node) = ParamVG(1:10,lay)  ! [SS-SWC S-1.9]
       ! CofGen(11) and CofGen(12) are not used and not need to be changed
       !CofGen(11,node) = relsatthr(lay)
       !CofGen(12,node) = ksatthr(lay)
    end do
    !!!thetsl(1:numlay) = ParamVG(2,1:numlay)
-   
+
    end subroutine Change_MvGpars
    
 ! **************************************************** Adapt_WC_H *********************************************************
-   subroutine Adapt_WC_H (TEST)
+   subroutine Adapt_WC_H (TEST, state)                ! [SS-SWC S-1.9] state added for theta/h/pond dual-write
    use soilhydraulics_utils, only: watcon, hconduc, prhead
    implicit none
-   
+
+   type(swap_state_t), intent(inout) :: state          ! [SS-SWC S-1.9]
    integer                          :: i
    real(8)                          :: sumWCtmin1, sumWCt, dwc, wcr, wcs, summ, dif
    real(8), dimension(MaxNumSoilCP) :: wc, hold, wcold
@@ -279,10 +282,13 @@ module tillage_mod
          wcs = ParamVG(2,layer(i))
          if (theta(i) < wcs) then
             h(i) = prhead(i, disnod(i), theta(i), CofGen, h)
+            state%soilwater%h(i) = h(i)                      ! [SS-SWC S-1.9]
          else
             summ = summ + (wcs - theta(i))*dz(i)
             theta(i) = wcs
+            state%soilwater%theta(i) = theta(i)              ! [SS-SWC S-1.9]
             h(i) = 0.0d0
+            state%soilwater%h(i) = h(i)                      ! [SS-SWC S-1.9]
          end if
       end do
       if (summ > 0.0d0) then
@@ -292,9 +298,11 @@ module tillage_mod
             if (dif > 0.0d0) then
                if (dif < summ) then
                   theta(i) = wcs
+                  state%soilwater%theta(i) = theta(i)        ! [SS-SWC S-1.9]
                   summ = summ - dif
                else
                   theta(i) = theta(i) + dif
+                  state%soilwater%theta(i) = theta(i)        ! [SS-SWC S-1.9]
                   summ = 0.0d0
                   exit
                end if
@@ -302,6 +310,7 @@ module tillage_mod
          end do
       end if
       pond = summ
+      state%soilwater%pond = pond                            ! [SS-SWC S-1.9]
 
    case (2)
       sumWCtmin1 = sum(theta(1:MaxNumSoilCP))
@@ -328,12 +337,15 @@ module tillage_mod
                wc(i) = wc(i) + (wcs - wc(i)) * sumDWC / sumAvail1
                if (wc(i) > wcs) then
                   pond = pond + (wc(i) - wcs) * dz(i)
+                  state%soilwater%pond = pond                ! [SS-SWC S-1.9]
                   wc(i) = wcs
                   write(333,'(A,I5,F12.4)') Date, i, pond
                end if
             end if
             h(i) = prhead(i, disnod(i), wc(i), CofGen, h)
+            state%soilwater%h(i) = h(i)                     ! [SS-SWC S-1.9]
             theta(i) = wc(i)
+            state%soilwater%theta(i) = theta(i)             ! [SS-SWC S-1.9]
          end do
       else if (sumWCt > sumWCtmin1) then
          ! water to be removed; same as sumDWC < 0.0
@@ -345,7 +357,9 @@ module tillage_mod
             wcr = ParamVG(1,layer(i))
             wc(i) = wc(i) + (wc(i) - wcr) * sumDWC / sumAvail2
             h(i) = prhead(i, disnod(i), wc(i), CofGen, h)
+            state%soilwater%h(i) = h(i)                     ! [SS-SWC S-1.9]
             theta(i) = wc(i)
+            state%soilwater%theta(i) = theta(i)             ! [SS-SWC S-1.9]
          end do
          
       endif
