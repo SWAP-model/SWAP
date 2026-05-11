@@ -220,9 +220,10 @@ contains
             imdectot = imdectot + ctrans*dtsolu*dz(i)
 
 ! --- solute uptake by plant roots
-            crot   = tscf*qrot(i)*cml(i)/dz(i)
-            rottot = rottot + tscf*qrot(i)*cml(i)*dtsolu
-            imrottot = imrottot + tscf*qrot(i)*cml(i)*dtsolu
+            ! SS-CRP Phase 2 C-2.3: qrot read from state%soilwater
+            crot   = tscf*state%soilwater%qrot(i)*cml(i)/dz(i)
+            rottot = rottot + tscf*state%soilwater%qrot(i)*cml(i)*dtsolu
+            imrottot = imrottot + tscf*state%soilwater%qrot(i)*cml(i)*dtsolu
 
 ! --- lateral drainage
             ! SS-SWST Phase 2 Task 11: qdra read from state (global dropped).

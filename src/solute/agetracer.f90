@@ -221,8 +221,9 @@ contains
             endif
 
 ! --- Age tracer uptake by plant roots
-            Agerot = qrot(i)*Ageml(i)/dz(i)
-            rottot = rottot + qrot(i)*Ageml(i)*dtsolu
+            ! SS-CRP Phase 2 C-2.3: qrot read from state%soilwater
+            Agerot = state%soilwater%qrot(i)*Ageml(i)/dz(i)
+            rottot = rottot + state%soilwater%qrot(i)*Ageml(i)*dtsolu
 
 ! --- Age tracer uptake by soil evaporation ???
 !            Ageevp = evso??*Ageml(i)/dz(i)
@@ -262,7 +263,8 @@ contains
          icAgetopupw = icAgetopupw + max(0.0d0,q(1))*                   &
      &                              0.5d0*(Ageml(1)+cml(1))*dtsolu
          do i = 1,numnod
-            icAgerot = icAgerot + qrot(i)*                              &
+            ! SS-CRP Phase 2 C-2.3: qrot read from state%soilwater
+            icAgerot = icAgerot + state%soilwater%qrot(i)*              &
      &                              0.5d0*(Ageml(i)+cml(i))*dtsolu
             do level = 1,nrlevs
                icAgedra(level) = icAgedra(level) + qdra(level,i)*       &
