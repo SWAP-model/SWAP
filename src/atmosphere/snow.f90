@@ -35,8 +35,8 @@ contains
 
       ! Arguments
       integer, intent(in) :: task
-      ! SS-HEAT Phase 2 Task 6: optional state for reading tsoil from state%heat
-      type(swap_state_t), optional, intent(in) :: state
+      ! SS-ATM Phase 1 Task A-1.3: non-optional intent(inout) — prepares for A-1.7 dual-writes
+      type(swap_state_t), intent(inout) :: state
     !! Task selector: 1=initialization, 2=calculation
 
       ! Local variables
@@ -112,12 +112,8 @@ contains
 
          ! --- when the soil surface is above the freezing point there will be
          ! --- no accumulation of fresh snow.
-         ! SS-HEAT Phase 2 Task 6: read tsoil(1) from state%heat when available
-         if (present(state)) then
-            tsoil_surf = state%heat%tsoil(1)
-         else
-            tsoil_surf = tsoil(1)
-         end if
+         ! SS-ATM Phase 1 Task A-1.3: state is now mandatory — read tsoil(1) directly
+         tsoil_surf = state%heat%tsoil(1)
          if (tsoil_surf .gt. 0.5d0 .and. ssnow .lt. 1.0d-6 .and. gsnow .gt. 0.0d0) then
             ssnow = 0.0d0
             melt = gsnow
