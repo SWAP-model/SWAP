@@ -248,6 +248,26 @@ Boundary was migration #5 and the first coupling-surface arc of the soil-water d
 
 ---
 
+---
+
+## Lessons from crop-uptake migration (ADR 0036, added 2026-05-11)
+
+Crop-uptake was migration #6 and the second coupling-surface arc of the soil-water decomposition. Six lessons generalize to future arcs.
+
+1. **`soilwater_init` signature-bump precedent — bump once, all subsequent arcs benefit.** When `state%X_init` starts as `(state)` for scalar-only arcs (boundary) and a later arc needs per-node arrays, bump the signature to `(state, numnod, nlay)` in that arc. Do not try to retrofit per-arc with different dimension arguments — one clean signature change covers all subsequent arcs. The boundary design anticipated this explicitly ("later arcs will add per-node arrays"); crop-uptake landed it exactly as planned. Atmosphere and soil-water-core arcs inherit the stable signature without further surgery.
+
+2. **Move init to the state-aware dispatcher, not the leaf subroutines.** When a global is initialized inside subroutines that lack state plumbing (here: `MatricFlux(1)` called from CropFixed/Wofost/Grass task=1 init paths), and threading state into those leaf subroutines is expensive, move the init to the dispatcher that already has state (`CropGrowth(1)` in this arc). The dispatcher becomes the canonical init site; the leaf paths lose their co-write. This generalizes boundary's lesson #2 (defer un-plumbed co-writers): when the dispatcher is state-plumbed but the leaves are not, the dispatcher is the natural migration point. Note: if the init also depends on values computed after state init (as `mfluxtable` depended on `SoilHydraulics(1)` outputs), allocate in `soilwater_init` but build in the dispatcher.
+
+3. **Optional-state-arg for 5+ hidden readers in large compute subroutines.** When compile-driven discovery surfaces many readers spread across large subroutines (here: `flWrtNonox` at 5 sites across `CropFixed(3)`, `CropWofost(3)`, `CropGrass(3)/(3)/(3)` — three large compute blocks where full state threading would require touching hundreds of lines), add `optional intent(in) :: state` to the subroutine and thread state from the dispatcher. The bare-name fallback (read legacy global when state absent) handles call chains without state. Performance is irrelevant (flag reads). This is symmetric with the heat arc's `MatricFlux` optional-state pattern (playbook gotcha #3) and confirms the pattern generalizes beyond single-callee cases.
+
+4. **Stub-errored config paths are zero-risk migration.** Fields gated by config switches that stub-error at TOML parse time (here: `swdrought=2` gates all 14 JvL fields; `swcalt=1` in the heat arc gated the analytical-method path) cannot be exercised at runtime through TOML. Their migration is byte-identical-free by construction — the JvL compute block can change freely without regression impact. The work is code-review hygiene, not regression risk. Document this explicitly in the ADR so future reviewers do not demand integration test coverage for un-exercisable paths.
+
+5. **Naming-prefix discriminator for cohort ownership (`q*` / `i*` / `c*`).** When a subsystem has multiple temporal variants of the same field (here: `qrot` instantaneous, `iqrot` period-sum, `cqrot` cumulative, `qpotrot_day` per-day), the prefix discriminates arc ownership. Crop-uptake owns the `q*` instantaneous fields; soil-water-core owns the `i*` and `c*` accumulators and `*_day` intermediates. Apply this taxonomy during discovery Section 2 categorization to cleanly separate arc scope without ambiguity. When in doubt: who resets it (`flzerointr` / `flzerocumu` gates) determines the owner.
+
+6. **Compile-iteration count as arc-maturity signal.** The number of compile-driven Phase 2.7 iterations tracks how much the pattern has matured: boundary needed 8 iterations (first coupling-surface arc; many surprises); crop-uptake needed 2 iterations (second arc; prior lessons applied). Each successive arc benefits from the playbook accumulating. When scoping a new arc, estimate compile-iteration count by counting how many state-arg windfalls accumulated from prior arcs — more windfalls means fewer hidden readers means fewer iterations.
+
+---
+
 ## Reference ADRs
 
 - ADR 0030 — Surface-water state-type migration (pilot)
@@ -256,3 +276,4 @@ Boundary was migration #5 and the first coupling-surface arc of the soil-water d
 - ADR 0033 — Cumulative reset cohorts
 - ADR 0034 — Heat subsystem state-type migration
 - ADR 0035 — Boundary subsystem state-type migration (first coupling-surface arc)
+- ADR 0036 — Crop water uptake state-type migration (second coupling-surface arc)
