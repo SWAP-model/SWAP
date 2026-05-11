@@ -43,7 +43,7 @@ module rootextraction_mod
       use oxygenstress_mod, only: OxygenStress, OxygenReproFunction
       implicit none
 
-      type(swap_state_t), intent(in) :: state
+      type(swap_state_t), intent(inout) :: state
 
 ! --- local variables
       integer node
@@ -51,18 +51,25 @@ module rootextraction_mod
       real(8) alpdry,alpwet,alpsol,alpfrs,alptot,vsmall
       real(8) alpdrycom,alpwetcom,alpsolcom,alpfrscom,alptotcom
       real(8) rd_noddrz, redtot
-      
+
       parameter (vsmall = 1.0d-14)
 
-! ----------------------------------------------------------------------
-! --- reset root water extraction array
+! --- SS-CRP Phase 1 C-1.4: reset dual-write (before early-return checks).
+!     These writes happen unconditionally on every call.
       qrot(1:numnod) = 0.0d0
+      state%soilwater%qrot(1:numnod) = 0.0d0
       Tactual = qrosum
+      state%soilwater%Tactual = qrosum
       qrosum = 0.0d0
+      state%soilwater%qrosum = 0.0d0
       qreddrysum = 0.0d0
+      state%soilwater%qreddrysum = 0.0d0
       qredwetsum = 0.0d0
+      state%soilwater%qredwetsum = 0.0d0
       qredsolsum = 0.0d0
+      state%soilwater%qredsolsum = 0.0d0
       qredfrssum = 0.0d0
+      state%soilwater%qredfrssum = 0.0d0
 
 ! --- skip routine if the crop has not emerged
 !      if (.not.flcropEmergence) return
@@ -70,13 +77,28 @@ module rootextraction_mod
 ! --- skip routine if there are no roots
       if (rd .lt. vsmall) return
 
-! --- skip routine if transpiration rate is zero                        
-      if (ptra .lt. 1.d-10) then                                        
-        return                                                          
-      endif                                                             
-                                                                        
+! --- skip routine if transpiration rate is zero
+      if (ptra .lt. 1.d-10) return
+
+! --- SS-CRP Phase 1 C-1.4: ASSOCIATE for the main compute body.
+!     All further legacy writes are mirrored to state%soilwater via cw_* aliases.
+      associate( &
+         cw_qrot       => state%soilwater%qrot,       &
+         cw_qpotrot    => state%soilwater%qpotrot,    &
+         cw_qredwet    => state%soilwater%qredwet,    &
+         cw_qreddry    => state%soilwater%qreddry,    &
+         cw_qredsol    => state%soilwater%qredsol,    &
+         cw_qredfrs    => state%soilwater%qredfrs,    &
+         cw_qrosum     => state%soilwater%qrosum,     &
+         cw_qredwetsum => state%soilwater%qredwetsum, &
+         cw_qreddrysum => state%soilwater%qreddrysum, &
+         cw_qredsolsum => state%soilwater%qredsolsum, &
+         cw_qredfrssum => state%soilwater%qredfrssum, &
+         cw_flWrtNonox => state%soilwater%flWrtNonox  &
+      )
+
 ! --- DROUGHT REDUCTION ACCORDING TO FEDDES ET AL. (1978)
-      if (swdrought .eq. 1) then                                   
+      if (swdrought .eq. 1) then
 
 ! --- calculate potential root extraction of the compartments
         ! 22-10-2018: bug repair signalled by Paul van Walsum: division not by rd but by depth bottom of last compartment where roots are present
@@ -86,6 +108,7 @@ module rootextraction_mod
           top = abs(ztopcp(node) / rd_noddrz)
           bot = abs(zbotcp(node) / rd_noddrz)
           qrot(node)=(afgen(cumdens,202,bot)-afgen(cumdens,202,top))* ptra
+          cw_qrot(node) = qrot(node)
         enddo
 
 ! --- calculating critical point hlim3 according to feddes
@@ -93,7 +116,7 @@ module rootextraction_mod
           hlim3 = hlim3l
         elseif (atmdem .le. adcrh) then
           hlim3 = hlim3h + ((adcrh - atmdem) / (adcrh - adcrl)) * (hlim3l - hlim3h)
-        else 
+        else
           hlim3 = hlim3h
         endif
       endif
@@ -106,6 +129,7 @@ module rootextraction_mod
 ! === COMBINATION OF OXYGEN, DROUGHT, SALT AND FROST STRESS ====
 
       qrosum = 0.0d0
+      cw_qrosum = 0.0d0
 
       do 200 node = 1,noddrz
         alpdry = 1.0d0
@@ -115,7 +139,7 @@ module rootextraction_mod
 
 ! ---   reduction due to oxygen stress
         if (swoxygen .ne. 0) then
-        
+
           ! Feddes linear reduction based on pressure head
           if (swoxygen .eq. 1) then
 
@@ -131,7 +155,7 @@ module rootextraction_mod
               alpwet = 0.0d0
             endif
 
-          ! Bartholomeus non-linear reduction based on gas filled porosity          
+          ! Bartholomeus non-linear reduction based on gas filled porosity
           elseif (swoxygen .eq. 2) then
 
             ! use physical processes
@@ -139,7 +163,7 @@ module rootextraction_mod
 !##MH         call OxygenStress(node,alpwet,ResultsOxygenStress)
               ! SS-HEAT Phase 2 Task 6: pass state so OxygenStress reads tsoil from state%heat
               call OxygenStress(node,alpwet,state)
-            
+
             ! use reproduction functions
             else
               ! SS-HEAT Phase 2 Task 6: pass tsoil from state%heat
@@ -147,19 +171,23 @@ module rootextraction_mod
             endif
 
           endif
-        
+
 ! ---     Stop root development in case of oxgenstress at noddrz
 !         WOFOST: root zone remain the aim, but biomass is increasing
 !         GRASS : stop root development
           flWrtNonox = .false.
+          cw_flWrtNonox = .false.
           if (swWrtNonox .eq. 1 .and. node .eq. noddrz) then
-            if (alpwet .lt. aeratecrit) flWrtNonox = .true.
+            if (alpwet .lt. aeratecrit) then
+              flWrtNonox = .true.
+              cw_flWrtNonox = .true.
+            end if
           endif
 
         endif
 
 ! ---   reduction due to drought stress
-        
+
         ! Feddes linear reduction based on pressure head
         if (swdrought .eq. 1) then
           if (h(node) .lt. hlim4) then
@@ -168,15 +196,15 @@ module rootextraction_mod
             alpdry = (hlim4-h(node))/(hlim4-hlim3)
           endif
         endif
-        
-        ! JongvanLier microscopic concept for drought        
+
+        ! JongvanLier microscopic concept for drought
         if (swdrought .eq. 2) then
           alpdry = alpJvLier
         endif
 
 ! ---   reduction due to salt stress
-        
-        ! reduction according to Maas and Hoffman linear reduction function        
+
+        ! reduction according to Maas and Hoffman linear reduction function
         if (swsalinity .eq. 1) then
           if (state%solute%cml(node) .gt. saltmax) then
             alpsol = 1.0d0 - (state%solute%cml(node) - saltmax) * saltslope
@@ -196,39 +224,54 @@ module rootextraction_mod
 
 ! ----  overall reduction
         qpotrot(node) = qrot(node)
+        cw_qpotrot(node) = qrot(node)
         qrot(node) = qrot(node) * alpwet * alpdry * alpsol * alpfrs
+        cw_qrot(node) = qrot(node)
         qrosum = qrot(node) + qrosum
+        cw_qrosum = qrosum
 
 ! ----  apportionment to different types stresses (cm)
-        
+
         qred = qpotrot(node) - qrot(node)
         if (qred .lt. vsmall)then
-          
+
           ! no stress
           qredwet(node) = 0.d0
+          cw_qredwet(node) = 0.d0
           qreddry(node) = 0.d0
+          cw_qreddry(node) = 0.d0
           qredsol(node) = 0.d0
+          cw_qredsol(node) = 0.d0
           qredfrs(node) = 0.d0
-        
+          cw_qredfrs(node) = 0.d0
+
         else
 
           ! multiplication of stressors
           alptot = (1 - alpwet) + (1 - alpdry) + (1 - alpsol) + (1 - alpfrs)
-          
-          ! contribution of each stressor (lineair approach) 
+
+          ! contribution of each stressor (lineair approach)
           qredwet(node) = (1 - alpwet) / alptot * qred
+          cw_qredwet(node) = qredwet(node)
           qreddry(node) = (1 - alpdry) / alptot * qred
+          cw_qreddry(node) = qreddry(node)
           qredsol(node) = (1 - alpsol) / alptot * qred
+          cw_qredsol(node) = qredsol(node)
           qredfrs(node) = (1 - alpfrs) / alptot * qred
+          cw_qredfrs(node) = qredfrs(node)
 
           ! sum of each stressor (rootzone)
           qredwetsum = qredwetsum + qredwet(node)
+          cw_qredwetsum = qredwetsum
           qreddrysum = qreddrysum + qreddry(node)
+          cw_qreddrysum = qreddrysum
           qredsolsum = qredsolsum + qredsol(node)
+          cw_qredsolsum = qredsolsum
           qredfrssum = qredfrssum + qredfrs(node)
-          
+          cw_qredfrssum = qredfrssum
+
         end if
- 
+
 200   continue
 
 ! --- compensated root water uptake according to Jarvis (1989) or Walsum (2020)
@@ -238,18 +281,18 @@ module rootextraction_mod
         if (swcompensate .eq. 2) then
             alphacrit = min((dcritrtz + rdm - rd_noddrz) / rdm, 1.0d0)
         end if
-        
+
         alptot = qrosum / ptra
         qred = ptra - qrosum
-        if (abs(alphacrit - 1.0d0) .ge. vsmall .and. qred .gt. vsmall .and. alptot .ge. 0.05d0) then   
+        if (abs(alphacrit - 1.0d0) .ge. vsmall .and. qred .gt. vsmall .and. alptot .ge. 0.05d0) then
           ! Only compensation when rootextraction and transpiration reduction is greater than vsmall
-          ! and when alptot > 0.05, i.e. when there is less than 95% stress reduction. This minimum is 
+          ! and when alptot > 0.05, i.e. when there is less than 95% stress reduction. This minimum is
           ! also important for the approximation of alp... in the next 4 lines.
           alpdry = alptot**(qreddrysum/qred)
           alpwet = alptot**(qredwetsum/qred)
           alpsol = alptot**(qredsolsum/qred)
           alpfrs = alptot**(qredfrssum/qred)
-          
+
           if (swstressor .eq. 1) then
             alptotcom = min(alptot / alphacrit, 1.d0)
             alpdrycom = alpdry
@@ -276,28 +319,39 @@ module rootextraction_mod
           ! Change the abstraction of the roots
           do node = 1,noddrz
             qrot(node) = qrot(node) * alptotcom / alptot
+            cw_qrot(node) = qrot(node)
           enddo
-          
+
           ! Change the sum-parameters
           qrosum = ptra * alptotcom
+          cw_qrosum = qrosum
           qred = ptra - qrosum
           if (qred .lt. vsmall) then
             ! There is no stress.
             qredwetsum = 0.0d0
+            cw_qredwetsum = 0.0d0
             qreddrysum = 0.0d0
+            cw_qreddrysum = 0.0d0
             qredsolsum = 0.0d0
+            cw_qredsolsum = 0.0d0
             qredfrssum = 0.0d0
+            cw_qredfrssum = 0.0d0
           else
-            redtot = (1 - alpwetcom) + (1 - alpdrycom) + (1 - alpsolcom) + (1 - alpfrscom)   
+            redtot = (1 - alpwetcom) + (1 - alpdrycom) + (1 - alpsolcom) + (1 - alpfrscom)
             qredwetsum = (1 - alpwetcom) / redtot * qred
+            cw_qredwetsum = qredwetsum
             qreddrysum = (1 - alpdrycom) / redtot * qred
+            cw_qreddrysum = qreddrysum
             qredsolsum = (1 - alpsolcom) / redtot * qred
+            cw_qredsolsum = qredsolsum
             qredfrssum = (1 - alpfrscom) / redtot * qred
+            cw_qredfrssum = qredfrssum
           endif
         endif
-          
+
       endif
-      
+
+      end associate
       return
 
         end subroutine RootExtraction
@@ -320,7 +374,7 @@ module rootextraction_mod
       use array_utils, only: afgen
       implicit none
 
-      type(swap_state_t), intent(in) :: state
+      type(swap_state_t), intent(inout) :: state
 
 ! --- local variables
       integer node,counter
@@ -331,7 +385,22 @@ module rootextraction_mod
       real(8) maxstep,dHPLant,dHPlantMax
       logical flconverg,flstress
       character(len=200) messag
-  
+
+! --- SS-CRP Phase 1 C-1.4: dual-write associates for JvL per-node arrays and scalars.
+      associate( &
+         cw_mflux    => state%soilwater%mflux,    &
+         cw_mroot    => state%soilwater%mroot,    &
+         cw_hroot    => state%soilwater%hroot,    &
+         cw_rootrho  => state%soilwater%rootrho,  &
+         cw_rootphi  => state%soilwater%rootphi,  &
+         cw_rmax     => state%soilwater%rmax,     &
+         cw_hleaf    => state%soilwater%hleaf,    &
+         cw_Hxylem   => state%soilwater%Hxylem,   &
+         cw_qrosum   => state%soilwater%qrosum,   &
+         cw_qrot     => state%soilwater%qrot,     &
+         cw_alpJvLier => state%soilwater%alpJvLier &
+      )
+
 ! --- initialization
       phi = 3.1415926d0
       counter = 0
@@ -342,28 +411,39 @@ module rootextraction_mod
 ! --- reset values below root zone to zero
       do node = noddrz+1,numnod
         mflux(node) = 0.d0
+        cw_mflux(node) = 0.d0
         mroot(node) = 0.d0
+        cw_mroot(node) = 0.d0
         hroot(node) = 0.d0
+        cw_hroot(node) = 0.d0
         rootrho(node) = 0.d0
+        cw_rootrho(node) = 0.d0
         rootphi(node) = 0.d0
+        cw_rootphi(node) = 0.d0
       enddo
 
 ! --- give hroot a value when root zone becomes larger and store previous values
       do node = 1, noddrz
-        if (abs(hroot(node)) .lt. 1.0d-12) hroot(node) = h(node)
+        if (abs(hroot(node)) .lt. 1.0d-12) then
+          hroot(node) = h(node)
+          cw_hroot(node) = h(node)
+        end if
         hrootm1(node) = hroot(node)
       enddo
-      
+
 ! --- initialization of rootrho and rootphi
       do node = 1,noddrz-1
         reldepth = -z(node)/rd
         rdensity = afgen(rdctb,22,reldepth)
         rmax(node) = 1.d0/dsqrt(phi*rdensity)
+        cw_rmax(node) = rmax(node)
         rootrho(node) = 4.d0/(rootradius*rootradius-rootcoefa*rmax(node)&
      &      *rootcoefa*rmax(node) + 2.d0 * (rmax(node)*rmax(node) +     &
      &      rootradius*rootradius)*log(rootcoefa*rmax(node)/rootradius))
+        cw_rootrho(node) = rootrho(node)
         rootphi(node) = rootrho(node) * rmax(node)*rmax(node) *         &
      &     log(rootradius/rxylem) * 0.5d0 / kroot
+        cw_rootphi(node) = rootphi(node)
       enddo
 ! --- last node, partly filled with roots
       node = noddrz
@@ -371,16 +451,20 @@ module rootextraction_mod
       reldepth = meandepth/(-rd)
       rdensity = afgen(rdctb,22,reldepth)
       rmax(node) = 1.d0/dsqrt(phi*rdensity)
+      cw_rmax(node) = rmax(node)
       rootrho(node) = 4.d0/(rootradius*rootradius-rootcoefa*rmax(node)  &
      &      *rootcoefa*rmax(node) + 2.d0 * (rmax(node)*rmax(node) +     &
      &      rootradius*rootradius)*log(rootcoefa*rmax(node)/rootradius))
+      cw_rootrho(node) = rootrho(node)
       rootphi(node) = rootrho(node) * rmax(node)*rmax(node) *           &
      &     log(rootradius/rxylem) * 0.5d0 / kroot
+      cw_rootphi(node) = rootphi(node)
 
 ! --- calculate current matric flux potential in soil water
       do node = 1,noddrz
         h(node) = min(1.0d3,max(h(node),1.0d-8))
         call MatricFlux(2,h(node),node,mflux(node),state)
+        cw_mflux(node) = mflux(node)
       enddo
 
 ! --- interpolate matric flux potential in lowest compartment that is partly filled with roots
@@ -388,6 +472,7 @@ module rootextraction_mod
       if (node.gt.1) then
          mflux(node) = mflux(node) + (mflux(node-1)-mflux(node))/       &
      &                 disnod(node) * (meandepth-z(node))
+         cw_mflux(node) = mflux(node)
       endif
 
 ! --- determine highest pressure head in root zone
@@ -399,16 +484,19 @@ module rootextraction_mod
 ! --- determine whether qrosum < ptra (flstress = true)
 ! --- calculate root water extraction qrosum at Hleaf = wiltpoint and Tactual = Ptra
       Hleaf = wiltpoint
+      cw_hleaf = wiltpoint
       dHPlant = ptra/Kstem
       if (dHPlant .gt. (hwet - wiltpoint)) flstress = .true.
 
       HXylem = Hleaf + dHPLant
+      cw_Hxylem = HXylem
       call JongvanLierLoop(state)
       if (qrosum .lt. ptra) flstress = .true.
 
 ! --- set hroot to previous values
       do node = 1,noddrz
         hroot(node) = hrootm1(node)
+        cw_hroot(node) = hrootm1(node)
       enddo
 
 ! --- FLSTRESS = FALSE: DETERMINE HLEAF WITH TACTUAL = PTRA
@@ -416,7 +504,9 @@ module rootextraction_mod
 
 ! --- calculate root extraction at previous value of hleaf
       Hleaf = Hleafm1
+      cw_hleaf = Hleafm1
       HXylem = Hleaf + dHPLant
+      cw_Hxylem = HXylem
       call JongvanLierLoop(state)
 
 ! --- check convergence
@@ -428,12 +518,12 @@ module rootextraction_mod
 
 ! --- start search on correct value of pressure head in leaves
       do while (.not. flconverg)
-      
+
 ! --- reset y1 and Fy1
       y1 = y3
       Fy1 = Fy3
 
-      if (qrosum .lt. ptra) then 
+      if (qrosum .lt. ptra) then
 ! ---   root water extraction too small, decrease Hleaf
           y2 = y1 - StepHr*log10(max(abs(y1),1.d0))
       else
@@ -443,10 +533,12 @@ module rootextraction_mod
 
 ! --- calculate root extraction at modified pressure head y2 in leaf
       hleaf = y2
+      cw_hleaf = y2
       HXylem = Hleaf + dHPLant
+      cw_Hxylem = HXylem
       call JongvanLierLoop(state)
       Fy2 = ptra - qrosum
-      
+
 ! --- determine new value of leaf pressure head with Newton Raphson algorithm
       if (abs(Fy1-Fy2).lt. 1.d-10) then
 ! ---   take maximum step
@@ -474,15 +566,17 @@ module rootextraction_mod
       endif
       y3 = min(y3,hwet)
       y3 = max(y3,wiltpoint)
-        
+
 ! --- new estimated value of leaf pressure head is equal to y3!
  300  Hleaf = y3
+      cw_hleaf = y3
       Hxylem = Hleaf + dHPlant
+      cw_Hxylem = Hxylem
 
 ! --- calculate root extraction at y3
       call JongvanLierLoop(state)
       Fy3 = ptra - qrosum
-    
+
 ! --- check convergence
       if (abs(qrosum-ptra) .lt. taccur .or.                             &
      &       abs(y3-y1) .lt. 1.0d0) flconverg = .true.
@@ -498,7 +592,7 @@ module rootextraction_mod
 
 ! --- apply linear interpolation when Fy1 and Fy3 have opposite sign
       if (.not. flconverg) then
-        if (((Fy1 .gt. 0.d0 .and. Fy3 .lt. 0.d0) .or.                   & 
+        if (((Fy1 .gt. 0.d0 .and. Fy3 .lt. 0.d0) .or.                   &
      &                     (Fy1 .lt. 0.d0 .and. Fy3 .gt. 0.d0)) .and.   &
      &                      abs(y1-y3) .gt. 1.d0) then
 
@@ -513,9 +607,12 @@ module rootextraction_mod
       enddo
 
       qrosum = ptra
+      cw_qrosum = ptra
       Hleaf = y3
+      cw_hleaf = y3
       dHplant = qrosum/kstem
       Hxylem = Hleaf + dHPlant
+      cw_Hxylem = Hxylem
 
       else
 ! --- FLSTRESS = TRUE: DETERMINE QROSUM WITH HLEAF = WILTPOINT
@@ -523,12 +620,14 @@ module rootextraction_mod
 
 ! --- calculate root extraction at previous value of qrosum
       Hleaf = wiltpoint
+      cw_hleaf = wiltpoint
       dHplant = tactual/kstem
       if (dHplant .gt. (hwet - wiltpoint)) then
         dHplant = 0.98 * (hwet - wiltpoint)
         tactual = dHplant * kstem
       endif
       HXylem = Hleaf + dHPLant
+      cw_Hxylem = HXylem
       call JongvanLierLoop(state)
 
 ! --- check convergence
@@ -540,12 +639,12 @@ module rootextraction_mod
 
 ! --- start search on correct value of qrosum
       do while (.not. flconverg)
-      
+
 ! --- reset y1 and Fy1
       y1 = y3
       Fy1 = Fy3
 
-      if (tactual .gt. qrosum) then 
+      if (tactual .gt. qrosum) then
 ! ---   root water extraction less than adopted, decrease tactual
           y2 = y1 - 0.001d0
       else
@@ -557,9 +656,10 @@ module rootextraction_mod
       tactual = y2
       dHplant = tactual/kstem
       HXylem = Hleaf + dHPLant
+      cw_Hxylem = HXylem
       call JongvanLierLoop(state)
       Fy2 = tactual - qrosum
-      
+
 ! --- determine new value of tactual with Newton Raphson algorithm
         y3 = y1 - (y2-y1)*Fy1 / (Fy2-Fy1)
         maxstep = 0.05d0
@@ -571,16 +671,17 @@ module rootextraction_mod
       dHPlantMax = hwet - wiltpoint
       y3 = min(y3,(dHPlantMax * Kstem))
       y3 = max(y3,0.d0)
-        
+
 ! --- new estimated value of tactual is equal to y3!
  400  tactual = y3
       dHPlant = tactual/kstem
       Hxylem = Hleaf + dHPlant
+      cw_Hxylem = Hxylem
 
 ! --- calculate root extraction at y3
       call JongvanLierLoop(state)
       Fy3 = tactual - qrosum
-    
+
 ! --- check convergence
       if (abs(tactual - qrosum) .lt. taccur) flconverg = .true.
 
@@ -608,14 +709,17 @@ module rootextraction_mod
 
       dHplant = qrosum/kstem
       Hxylem = Hleaf + dHPlant
+      cw_Hxylem = Hxylem
 
       endif
 
 ! --- qrot(node) has been calculated based on Jong van Lier (2013)
 
       qrosum = 0.0d0
+      cw_qrosum = 0.0d0
       do node = 1,noddrz
         qrosum = qrot(node) + qrosum
+        cw_qrosum = qrosum
       enddo
 
       if ( (ptra - qrosum) .lt. taccur) then
@@ -623,18 +727,24 @@ module rootextraction_mod
         ratio = ptra / qrosum
         do node = 1,noddrz
           qrot(node) = qrot(node) * ratio
+          cw_qrot(node) = qrot(node)
         enddo
         qrosum = ptra
+        cw_qrosum = ptra
         alpJvLier = 1.d0
-      else 
+        cw_alpJvLier = 1.d0
+      else
 ! ---   drought reduction factor
         alpJvLier = qrosum / ptra
+        cw_alpJvLier = alpJvLier
 ! ---   calculate potential qrot
         do node = 1,noddrz
           qrot(node) = qrot(node)/alpJvLier
+          cw_qrot(node) = qrot(node)
         enddo
       endif
 
+      end associate
       return
 
   end subroutine JongvanLier
@@ -654,7 +764,7 @@ module rootextraction_mod
       use variables
       implicit none
 
-      type(swap_state_t), intent(in) :: state
+      type(swap_state_t), intent(inout) :: state
 
 ! --- local variables
       integer counter,node,lay
@@ -662,14 +772,23 @@ module rootextraction_mod
       real(8) step,mflux1,mflux2,depth
       character(len=200) messag
 
+! --- SS-CRP Phase 1 C-1.4: dual-write associates for JvL loop per-node and scalar fields.
+      associate( &
+         cw_qrot   => state%soilwater%qrot,   &
+         cw_qrosum => state%soilwater%qrosum, &
+         cw_hroot  => state%soilwater%hroot,  &
+         cw_mroot  => state%soilwater%mroot   &
+      )
+
 ! --  initialisatie
       qrosum = 0.d0
+      cw_qrosum = 0.d0
       x1 = 999.d0
       counter = 0
       ConducRoot = KRoot / rootradius / log(rootradius/rxylem)
 
       do node = 1,noddrz
-! ---   determine h and matricflux potential at root-soil interface 
+! ---   determine h and matricflux potential at root-soil interface
         if (h(node) .gt. -1.d0) then
 ! ---      very wet conditions
            lay = layer(node)
@@ -677,6 +796,7 @@ module rootextraction_mod
      &                  log(rootcoefa*rmax(node)/rootradius)
            hroot(node) = (ConducSoil*h(node) + ConducRoot*hxylem) /    &
      &                   (ConducSoil + ConducRoot)
+           cw_hroot(node) = hroot(node)
         else
 ! ---      common conditions
           x3 = hroot(node)
@@ -707,8 +827,10 @@ module rootextraction_mod
           x1 = 999.d0
           counter = 0
           hroot(node) = x3
+          cw_hroot(node) = x3
         endif
         call MatricFlux(2,hroot(node),node,MRoot(node),state)
+        cw_mroot(node) = MRoot(node)
 ! ---   calculate root water extraction flux
         if (node .lt. noddrz) then
           qrot(node) = rooteff * rootrho(node) *                        &
@@ -727,7 +849,9 @@ module rootextraction_mod
 ! ---         no hydraulic lift allowed
               qrot(node) = 0.d0
               hroot(node) = h(node)
+              cw_hroot(node) = h(node)
               Mroot(node) = Mflux(node)
+              cw_mroot(node) = Mflux(node)
             endif
           endif
         else
@@ -749,13 +873,18 @@ module rootextraction_mod
 ! ---         no hydraulic lift allowed
               qrot(node) = 0.d0
               hroot(node) = h(node)
+              cw_hroot(node) = h(node)
               Mroot(node) = Mflux(node)
+              cw_mroot(node) = Mflux(node)
             endif
           endif
         endif
+        cw_qrot(node) = qrot(node)
         qrosum = qrot(node) + qrosum
+        cw_qrosum = qrosum
       enddo
 
+      end associate
       return
   end subroutine JongvanLierLoop
 
