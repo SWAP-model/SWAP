@@ -531,7 +531,7 @@ contains
     ! Divide interception into rain part and irrigation part and
     ! calculate net rain (nraida) and net sprinkling irrigation (nird)
     if (swinter.ne.3) &
-      call DivIntercep (aintc)
+      call DivIntercep (aintc, state)
 
     ! === LOOP over dayparts ===
 
@@ -650,11 +650,11 @@ contains
         endif
 
         ! Calculate interception, method Rutter
-        call ruttervw (gctp,aintc,eintc)
+        call ruttervw (gctp,aintc,eintc,state)
 
         ! Divide interception into rain part and irrigation part and
         ! calculate net rain (nraida) and net sprinkling irrigation (nird)
-        call DivIntercep(aintc)
+        call DivIntercep(aintc, state)
       endif
 
       ! === Section 6: Fraction of the day or period the crop is wet ===

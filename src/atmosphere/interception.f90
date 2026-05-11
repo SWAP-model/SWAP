@@ -14,6 +14,8 @@
 !> @date Last modified: July 2012
 module interception_mod
 
+  use swap_state_mod, only: swap_state_t
+
   public :: VonHHBraden, Gash, ruttervw, msw1eic, DivIntercep
 
 contains
@@ -153,7 +155,7 @@ contains
   !> sicact (storage on vegetation canopy [cm]) is both input and output via
   !> variables module
   !> @endnote
-  subroutine ruttervw (gctp,aintc,eintc)
+  subroutine ruttervw (gctp,aintc,eintc,state)
     use variables, only: logf,dt,sicact,siccapact,fimin,ew0,grai
     implicit none
 
@@ -161,6 +163,7 @@ contains
     real(8), intent(in)  :: gctp   ! Soil cover [-]
     real(8), intent(out) :: aintc  ! Intercepted rainfall [cm/d]
     real(8), intent(out) :: eintc  ! Interception evaporation [cm/d]
+    type(swap_state_t), intent(inout) :: state  ! Simulation state for dual-write
 
     ! Local variables
     integer(4) :: nuk_i4, ibd_i4(1), ib_i4
@@ -187,6 +190,7 @@ contains
                  Eicdtsw_r4,tcap_r4,beta_r4,zeta_r4,fricdtsw_r4,ib_i4)
 
     sicact = DBLE(Sic_r4(1))
+    state%atmosphere%sicact = sicact   ! [SS-ATM] dual-write: interception storage on canopy
     aintc  = DBLE(Picdtsw_r4(1))
     eintc  = DBLE(Eicdtsw_r4(1))
 
@@ -390,24 +394,28 @@ contains
   !>
   !> Output to variables module: nird, nraida
   !> @endnote
-  subroutine DivIntercep (aintc)
+  subroutine DivIntercep (aintc, state)
     use variables, only: isua,gird,grai,gsnow,snrai,nird,nraida
     implicit none
 
     ! Arguments
     real(8), intent(in) :: aintc   ! Total interception [cm/d]
+    type(swap_state_t), intent(inout) :: state  ! Simulation state for dual-write
 
     ! Divide interception into rain and irrigation parts
     ! and calculate net rain and net sprinkling irrigation
     if (aintc.lt.0.001d0) then
       nraida = grai - gsnow - snrai
+      state%atmosphere%nraida = nraida  ! [SS-ATM] dual-write: net daily rainfall after interception
       nird = gird
     else
       if (isua.eq.0) then
         nraida = grai-aintc*(grai/(grai+gird))
+        state%atmosphere%nraida = nraida  ! [SS-ATM] dual-write
         nird = gird-aintc*(gird/(grai+gird))
       else
         nraida = grai-aintc
+        state%atmosphere%nraida = nraida  ! [SS-ATM] dual-write
         nird = gird
       endif
     endif
