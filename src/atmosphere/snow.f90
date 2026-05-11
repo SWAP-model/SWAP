@@ -73,11 +73,9 @@ contains
          ! === initialization ===================================================
 
          if (swinco .eq. 3) then
-            snowinco = ssnow
-            state%atmosphere%snowinco = snowinco  ! [SS-ATM] dual-write
+            state%atmosphere%snowinco = state%atmosphere%ssnow
          else
-            ssnow = snowinco
-            state%atmosphere%ssnow = ssnow  ! [SS-ATM] dual-write
+            state%atmosphere%ssnow = state%atmosphere%snowinco
          end if
 
          return
@@ -106,44 +104,31 @@ contains
 
          ! --- reset intermediate snow states
          if (flzerointr) then
-            igsnow = 0.0d0
-            at_igsnow = 0.0_real64  ! [SS-ATM] dual-write intr reset
-            isubl = 0.0d0
-            at_isubl = 0.0_real64   ! [SS-ATM] dual-write intr reset
-            isnrai = 0.0d0
-            at_isnrai = 0.0_real64  ! [SS-ATM] dual-write intr reset
-            ISsnowBeg = Ssnow
+            at_igsnow = 0.0_real64
+            at_isubl  = 0.0_real64
+            at_isnrai = 0.0_real64
+            ISsnowBeg = at_ssnow
          end if
 
          ! --- reset cumulative snow states
          if (flzerocumu) then
-            cgsnow = 0.0d0
-            at_cgsnow = 0.0_real64  ! [SS-ATM] dual-write cumu reset
-            csubl = 0.0d0
-            at_csubl = 0.0_real64   ! [SS-ATM] dual-write cumu reset
-            csnrai = 0.0d0
-            at_csnrai = 0.0_real64  ! [SS-ATM] dual-write cumu reset
-            cmelt = 0.0d0
-            at_cmelt = 0.0_real64   ! [SS-ATM] dual-write cumu reset
-            snowinco = ssnow
-            at_snowinco = snowinco  ! [SS-ATM] dual-write
+            at_cgsnow   = 0.0_real64
+            at_csubl    = 0.0_real64
+            at_csnrai   = 0.0_real64
+            at_cmelt    = 0.0_real64
+            at_snowinco = at_ssnow
          end if
 
          ! --- when there is snowpack calculate the amount of sublimation
-         subl = 0.0d0
-         at_subl = 0.0_real64  ! [SS-ATM] dual-write
+         at_subl = 0.0_real64
          if (swsublim .eq. 0) then
-            if (ssnow .gt. 0.0d0) then
-               subl = peva
-               at_subl = subl       ! [SS-ATM] dual-write
+            if (at_ssnow .gt. 0.0d0) then
+               at_subl = at_peva
                if (swetsine .eq. 1) then
-                  subl = pevaday
-                  at_subl = subl    ! [SS-ATM] dual-write
+                  at_subl = state%atmosphere%pevaday
                end if
-               empreva = 0.0d0
-               at_empreva = 0.0_real64  ! [SS-ATM] dual-write
-               peva = 0.0d0
-               at_peva = 0.0_real64     ! [SS-ATM] dual-write
+               at_empreva = 0.0_real64
+               at_peva    = 0.0_real64
             end if
          end if
 
@@ -151,83 +136,63 @@ contains
          ! --- no accumulation of fresh snow.
          ! SS-ATM Phase 1 Task A-1.3: state is now mandatory — read tsoil(1) directly
          tsoil_surf = state%heat%tsoil(1)
-         if (tsoil_surf .gt. 0.5d0 .and. ssnow .lt. 1.0d-6 .and. gsnow .gt. 0.0d0) then
-            ssnow = 0.0d0
-            at_ssnow = 0.0_real64  ! [SS-ATM] dual-write
-            melt = gsnow
-            at_melt = melt         ! [SS-ATM] dual-write
-            subl = 0.d0
-            at_subl = 0.0_real64   ! [SS-ATM] dual-write
+         if (tsoil_surf .gt. 0.5d0 .and. at_ssnow .lt. 1.0d-6 .and. state%atmosphere%gsnow .gt. 0.0d0) then
+            at_ssnow = 0.0_real64
+            at_melt  = state%atmosphere%gsnow
+            at_subl  = 0.0_real64
          else
 
             ! --- amount of snowmelt [cm swe] negative values of smelt: see 'melt = '
             smelt = snowcoef*(tav - ts)
 
             ! --- extra snowmelt when there falls rain on the snowpack [cm swe]
-            if (snrai .gt. 0.0d0) then
-               smeltr = snrai*cwat*(tav - ts)/lm
+            if (state%atmosphere%snrai .gt. 0.0d0) then
+               smeltr = state%atmosphere%snrai*cwat*(tav - ts)/lm
             else
                smeltr = 0.0d0
             end if
 
             ! --- total snowmelt [cm swe]; negative values of smelt can partly compensate smeltr
-            melt = max(0.0d0, (smelt + smeltr))
-            at_melt = melt  ! [SS-ATM] dual-write
+            at_melt = max(0.0d0, (smelt + smeltr))
 
             ! --- amount of snow left [cm swe] without storage of liquid water slw
-            ssnow = ssnow + gsnow - subl - melt - slw
-            at_ssnow = ssnow  ! [SS-ATM] dual-write
+            at_ssnow = at_ssnow + state%atmosphere%gsnow - at_subl - at_melt - at_slw
 
             ! --- potential amount of liquid water storage
-            slw = slw + snrai
-            at_slw = slw  ! [SS-ATM] dual-write
+            at_slw = at_slw + state%atmosphere%snrai
 
             ! --- maximum retention of liquid water in snow is fraction 0.07 of total water storage
-            slw_max = 0.07*(slw + ssnow)
+            slw_max = 0.07*(at_slw + at_ssnow)
 
             ! --- drainage of liquid water from snow
-            qlw = max(0.0d0, slw - slw_max)
+            qlw = max(0.0d0, at_slw - slw_max)
 
             ! --- remaining storage of liquid water in snow
-            slw = slw - qlw
-            at_slw = slw  ! [SS-ATM] dual-write
+            at_slw = at_slw - qlw
 
             ! --- reset total snow storage and total melt
-            ssnow = ssnow + slw
-            at_ssnow = ssnow  ! [SS-ATM] dual-write
-            melt = melt + qlw
-            at_melt = melt    ! [SS-ATM] dual-write
+            at_ssnow = at_ssnow + at_slw
+            at_melt  = at_melt + qlw
 
             ! --- in case of snow deficit: adapt snow loss terms melt and sublimation
-            if (ssnow .lt. 0.0d0) then
-               SnDefit = -Ssnow
-               SnLoss = melt + subl
-               melt = (1.d0 - SnDefit/SnLoss)*melt
-               at_melt = melt  ! [SS-ATM] dual-write
-               subl = (1.d0 - SnDefit/SnLoss)*subl
-               at_subl = subl  ! [SS-ATM] dual-write
-               Ssnow = 0.d0
-               at_ssnow = 0.0_real64  ! [SS-ATM] dual-write
-               slw = 0.d0
-               at_slw = 0.0_real64    ! [SS-ATM] dual-write
+            if (at_ssnow .lt. 0.0d0) then
+               SnDefit = -at_ssnow
+               SnLoss  = at_melt + at_subl
+               at_melt = (1.d0 - SnDefit/SnLoss)*at_melt
+               at_subl = (1.d0 - SnDefit/SnLoss)*at_subl
+               at_ssnow = 0.0_real64
+               at_slw   = 0.0_real64
             end if
          end if
 
          ! --- set cumulative amounts
-         igsnow = igsnow + gsnow
-         at_igsnow = igsnow  ! [SS-ATM] dual-write intr
-         isubl = isubl + subl
-         at_isubl = isubl    ! [SS-ATM] dual-write intr
-         isnrai = isnrai + snrai
-         at_isnrai = isnrai  ! [SS-ATM] dual-write intr
-         cgsnow = cgsnow + gsnow
-         at_cgsnow = cgsnow  ! [SS-ATM] dual-write cumu
-         csubl = csubl + subl
-         at_csubl = csubl    ! [SS-ATM] dual-write cumu
-         cmelt = cmelt + melt
-         at_cmelt = cmelt    ! [SS-ATM] dual-write cumu
-         csnrai = csnrai + snrai
-         at_csnrai = csnrai  ! [SS-ATM] dual-write cumu
+         at_igsnow = at_igsnow + state%atmosphere%gsnow
+         at_isubl  = at_isubl  + at_subl
+         at_isnrai = at_isnrai + state%atmosphere%snrai
+         at_cgsnow = at_cgsnow + state%atmosphere%gsnow
+         at_csubl  = at_csubl  + at_subl
+         at_cmelt  = at_cmelt  + at_melt
+         at_csnrai = at_csnrai + state%atmosphere%snrai
 
          end associate
 

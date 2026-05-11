@@ -558,15 +558,12 @@ contains
       if (config%soil%swinco == 3) then
          if (allocated(config%soil%initial%h_file) .and. &
              len_trim(config%soil%initial%h_file) > 0) then
-            ssnow   = config%soil%initial%ssnow
-            slw     = config%soil%initial%slw
+            ! [SS-ATM A-2.6] ssnow/ldwet/slw retired to state%atmosphere; seeded in swap.f90 after atmosphere_init
             pond    = config%soil%initial%pond
             pondini = pond
-            ldwet   = config%soil%initial%ldwet
             dt      = config%soil%initial%dt
             atmin7(:) = config%soil%initial%atmin7(:)
-            ! Legacy zeroes ssnow when swsnow != 1 (readswap.f90:1606-1613).
-            if (config%meteo%snow%swsnow /= 1) ssnow = 0.0d0
+            ! [SS-ATM A-2.6] Legacy zeroes ssnow when swsnow != 1: now handled in swap.f90 during state seeding
 
             ! Note: [soil.initial].pondini (pre-existing top-level field) is
             ! NOT consumed by this swinco=3 path — only [soil.initial].pond

@@ -336,12 +336,9 @@ contains
 
       if (flrainintens) then
          ! Per time step: set precipitation fluxes for current time step
-         graidt = fprecnosnow*rainfluxarray(rainrec)
-         nraidt = finterception*graidt
-         aintcdt = (1.d0 - finterception)*graidt
-         state%atmosphere%graidt  = graidt   ! [SS-ATM] dual-write
-         state%atmosphere%nraidt  = nraidt   ! [SS-ATM] dual-write
-         state%atmosphere%aintcdt = aintcdt  ! [SS-ATM] dual-write
+         state%atmosphere%graidt  = state%atmosphere%fprecnosnow*rainfluxarray(rainrec)
+         state%atmosphere%nraidt  = finterception*state%atmosphere%graidt
+         state%atmosphere%aintcdt = (1.d0 - finterception)*state%atmosphere%graidt
 
          ! Calculate minimum time step length for occurrence of next rain event
          ! (tcum + dt = time at end of current timestep)
@@ -355,22 +352,17 @@ contains
             ! Per meteo time interval: update actual meteo record and set fluxes
             ! for current time of detailed meteo input
             wrecord = wrecord + 1
-            ptra = tpot(wrecord)
-            peva = epot(wrecord)
-            state%atmosphere%ptra = ptra  ! [SS-ATM] dual-write
-            state%atmosphere%peva = peva  ! [SS-ATM] dual-write
-            graidt = grain(wrecord)
-            nraidt = nrain(wrecord)
-            aintcdt = graidt - nraidt
-            state%atmosphere%graidt  = graidt   ! [SS-ATM] dual-write
-            state%atmosphere%nraidt  = nraidt   ! [SS-ATM] dual-write
-            state%atmosphere%aintcdt = aintcdt  ! [SS-ATM] dual-write
+            state%atmosphere%ptra = tpot(wrecord)
+            state%atmosphere%peva = epot(wrecord)
+            state%atmosphere%graidt  = grain(wrecord)
+            state%atmosphere%nraidt  = nrain(wrecord)
+            state%atmosphere%aintcdt = state%atmosphere%graidt - state%atmosphere%nraidt
 
             flUpdMetDet = .false.
          end if
 
          ! Per time step: calculate soil evaporation rate of current time step
-         call reduceva(2, nraida, state)
+         call reduceva(2, state%atmosphere%nraida, state)
 
       end if
 
@@ -459,13 +451,12 @@ contains
       end if
 
       ! Set E and T fluxes
-      peva = pevaday*fraction/dt
-      ptra = ptraday*fraction/dt
-      state%atmosphere%peva = peva  ! [SS-ATM] dual-write
-      state%atmosphere%ptra = ptra  ! [SS-ATM] dual-write
+      state%atmosphere%peva = state%atmosphere%pevaday*fraction/dt
+      state%atmosphere%ptra = state%atmosphere%ptraday*fraction/dt
 
       ! Actual soil evaporation rate of current moment
-      call reduceva(2, nraida, state)
+      ! SS-ATM A-2.6: nraida retired — read from state%atmosphere%nraida
+      call reduceva(2, state%atmosphere%nraida, state)
 
       return
    end subroutine ETSine

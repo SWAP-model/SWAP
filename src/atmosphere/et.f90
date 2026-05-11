@@ -609,8 +609,8 @@ contains
       !! - spev, saev: state variables for Boesten-Stroosnijder method
       !! @endnote
       subroutine reduceva (task, nrai, state)
-      use variables, only: swredu,fldaystart,cofred,dt,empreva,    &
-     &               ldwet,nird,peva,pond,rsigni,spev,saev
+      use variables, only: swredu,fldaystart,cofred,dt,    &
+     &               nird,pond,rsigni
       implicit none
 
         ! Arguments
@@ -645,14 +645,10 @@ contains
 
         ! Check for ponding (no reduction needed)
         if (pond > POND_THRESHOLD) then  ! [SS-ATM] reads legacy pond — soil-water-core arc migrates
-            empreva = peva
-            at_empreva = empreva
-            ldwet = 0.0d0
-            at_ldwet = ldwet
-            spev = 0.0d0
-            at_spev = spev
-            saev = 0.0d0
-            at_saev = saev
+            at_empreva = state%atmosphere%peva
+            at_ldwet   = 0.0d0
+            at_spev    = 0.0d0
+            at_saev    = 0.0d0
             return
         end if
 
@@ -660,17 +656,12 @@ contains
         select case (swredu)
         case (1)
             ! Black model
-            call black_reduction(nrai, nird, peva, cofred, rsigni, &
-                                ldwet, empreva, timestep, fldaystart, task)
-            at_ldwet   = ldwet
-            at_empreva = empreva
+            call black_reduction(nrai, nird, state%atmosphere%peva, cofred, rsigni, &
+                                at_ldwet, at_empreva, timestep, fldaystart, task)
         case (2)
             ! Boesten-Stroosnijder model
-            call boesten_stroosnijder_reduction(nrai, nird, peva, cofred, &
-                                              spev, saev, empreva, timestep)
-            at_spev    = spev
-            at_saev    = saev
-            at_empreva = empreva
+            call boesten_stroosnijder_reduction(nrai, nird, state%atmosphere%peva, cofred, &
+                                              at_spev, at_saev, at_empreva, timestep)
         case default
             call fatalerr_collected('reduceva', 'Unknown reduction method SWREDU')
         end select

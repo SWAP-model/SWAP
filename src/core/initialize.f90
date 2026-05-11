@@ -99,17 +99,10 @@
       swrain             = 0 
       wrecord            = 0 
       yearmeteo          = 0 
-      aintcdt            = 0.0d0 
-      alt                = 0.0d0 
-      altw               = 0.0d0 
-      atmdem             = 0.0d0 
-      caintc             = 0.0d0 
-      cevap              = 0.0d0 
-      cgrai              = 0.0d0 
-      cnrai              = 0.0d0 
-      cpeva              = 0.0d0 
-      cptra              = 0.0d0 
-      daylp              = 0.0d0 
+      ! [SS-ATM A-2.6] aintcdt/atmdem/caintc/cevap/cgrai/cnrai/cpeva/cptra retired to state%atmosphere
+      alt                = 0.0d0
+      altw               = 0.0d0
+      daylp              = 0.0d0
 
 ! --- only for bulb crops (tulips etc..)
       dwbl             = 0.0d0
@@ -124,30 +117,18 @@
       dwrtpot            = 0.0d0 
       dwst               = 0.0d0 
       dwstpot            = 0.0d0 
-      empreva            = 0.0d0 
-      epot               = 0.0d0 
-      cfevappond         = 0.0d0 
-      finterception      = 0.0d0 
-      fprecnosnow        = 0.0d0 
-      grai               = 0.0d0 
-      graidt             = 0.0d0 
-      grain              = 0.0d0 
-      ievap              = 0.0d0 
-      inrai              = 0.0d0 
-      ipeva              = 0.0d0 
-      iptra              = 0.0d0 
+      ! [SS-ATM A-2.6] empreva/fprecnosnow/grai/graidt/ievap/inrai/ipeva/iptra retired to state%atmosphere
+      epot               = 0.0d0
+      cfevappond         = 0.0d0
+      finterception      = 0.0d0
+      grain              = 0.0d0
       laiexp             = 0.0d0 
       laiexppot          = 0.0d0 
       laimax             = 0.0d0 
       lat                = 0.0d0 
       metperiod          = 0.0d0 
-      nraida             = 0.0d0 
-      nraidt             = 0.0d0 
-      nrain              = 0.0d0 
-      peva               = 0.0d0 
-      pevaday            = 0.0d0 
-      ptra               = 0.0d0 
-      ptraday            = 0.0d0 
+      ! [SS-ATM A-2.6] nraida/nraidt/peva/pevaday/ptra/ptraday retired to state%atmosphere
+      nrain              = 0.0d0
       rad                = 0.0d0 
       rainamount         = 0.0d0 
       raintab            = 0.0d0 
@@ -355,7 +336,7 @@
       hsublay            = 0.0d0
       ! [SS-BND B-2.7] hsurf retired — soilwater_init handles init via state%soilwater
       ! hsurf              = 0.0d0
-      igrai              = 0.0d0 
+      ! [SS-ATM A-2.6] igrai retired to state%atmosphere%intr%igrai
       ies0               = 0.0d0
       iet0               = 0.0d0
       iew0               = 0.0d0
@@ -397,7 +378,7 @@
       kvbot              = 0.0d0 
       kvtop              = 0.0d0 
       L                  = 0.0d0 
-      ldwet              = 0.0d0 
+      ! [SS-ATM A-2.6] ldwet retired to state%atmosphere%ldwet
       ! [SS-CRP C-2.5] mfluxtable retired — soilwater_init handles init via state%soilwater (ADR 0036)
       ! mfluxtable         = 0.0d0
       ! [SS-CRP C-2.5] mflux retired — soilwater_init handles init via state%soilwater (ADR 0036)
@@ -449,12 +430,12 @@
       runonarr           = 0.0d0 
       ! [SS-BND B-2.7] runots retired — soilwater_init handles init via state%soilwater
       ! runots             = 0.0d0
-      saev               = 0.0d0 
+      ! [SS-ATM A-2.6] saev retired to state%atmosphere%saev
       shape              = 0.0d0 
       sinamp             = 0.0d0 
       sinave             = 0.0d0 
       sinmax             = 0.0d0 
-      spev               = 0.0d0 
+      ! [SS-ATM A-2.6] spev retired to state%atmosphere%spev
       sptab              = 0.0d0  
       sptablay           = 0.0d0 
       tau                = 0.0d0 
@@ -520,23 +501,11 @@
       fltemperature      = .false. 
 
 ! --- snow variables
-      snw                = 0 
-      swsnow             = 0 
-      cgsnow             = 0.0d0 
-      cmelt              = 0.0d0 
-      csnrai             = 0.0d0 
-      csubl              = 0.0d0 
-      gsnow              = 0.0d0 
-      igsnow             = 0.0d0
-      isnrai             = 0.0d0 
-      isubl              = 0.0d0 
-      melt               = 0.0d0 
-      snowcoef           = 0.0d0 
-      snowinco           = 0.0d0 
-      snrai              = 0.0d0 
-      ssnow              = 0.0d0
-      slw                = 0.0d0 
-      subl               = 0.0d0 
+      snw                = 0
+      swsnow             = 0
+      ! [SS-ATM A-2.6] cgsnow/cmelt/csnrai/csubl/gsnow/igsnow/isnrai/isubl/melt/
+      !                snowinco/snrai/ssnow/slw/subl retired to state%atmosphere (cumu/intr/flat scalars)
+      snowcoef           = 0.0d0
       TePrRain           = 0.0d0 
       TePrSnow           = 0.0d0 
       flsnow             = .false. 
@@ -927,7 +896,7 @@
       HarLosOrm_tot      = 0.0d0
       
 ! --- interception
-      sicact             = 0.0d0
+      ! [SS-ATM A-2.6] sicact retired to state%atmosphere%sicact
       
 ! --- rooting
       rdctb              = 0.0d0 

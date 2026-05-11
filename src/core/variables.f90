@@ -129,7 +129,11 @@
       integer   am(mrain)          ! Array with month numbers in meteo file
       real(8)   aetr(366)          ! Array with daily ETref input data (L/T)
       real(8)   ahum(366)          ! Array with daily humidity input data (M/L/T2)  
-      real(8)   aintcdt            ! Interception flux of ONLY Rain during iteration timesteps (L/T) 
+      ! ========================================================================
+      ! [SS-ATM] retired 2026-05-11 — atmosphere subsystem migrated to state%atmosphere
+      !   See: ADR 0037 (A-2.7)
+      ! ========================================================================
+      ! real(8) :: aintcdt   ! Interception flux of ONLY Rain during iteration timesteps (L/T)
       real(8)   alt                ! Altitude of meteorological station (L)
       real(8)   altw               ! Height of wind speed measurement (L)
       real(8)   angstroma          ! first  angstrom coefficient [-]
@@ -137,17 +141,17 @@
       real(8)   arad(366)          ! Array with daily radiation input data (M/T2)
       real(8)   arai(366)          ! Array with daily precipitation sum input data (L/T)
       real(8)   atav(96)           ! In case of detailed weather input, air temperature of each weather record (L/T)
-      real(8)   atmdem             ! Atmospheric demand = daily potential transpiration of a dry crop (L/T)
+      ! real(8) :: atmdem    ! Atmospheric demand = daily potential transpiration of a dry crop (L/T)
       real(8)   atmin7(7)          ! Array with minimum temperatures of last week (C)
       real(8)   atmn(366)          ! Array with daily minimum temperature input data (  )
       real(8)   atmx(366)          ! Array with daily maximum temperature input data (  )
-      real(8)   awin(366)          ! Array with daily wind speed input data (L/T)     
-      real(8)   caintc             ! Cumulative amount of rainfall interception (L)
-      real(8)   cevap              ! Cumulative amount of actual soil evaporation (L)
-      real(8)   cgrai              ! Cumulative amount of gross precipitation (L)
-      real(8)   cnrai              ! Cumulative amount of net precipitation (L)
-      real(8)   cpeva              ! Cumulative amount of potential soil evaporation (L)
-      real(8)   cptra              ! Cumulative amount of potential transpiration (L)
+      real(8)   awin(366)          ! Array with daily wind speed input data (L/T)
+      ! real(8) :: caintc    ! Cumulative amount of rainfall interception (L)
+      ! real(8) :: cevap     ! Cumulative amount of actual soil evaporation (L)
+      ! real(8) :: cgrai     ! Cumulative amount of gross precipitation (L)
+      ! real(8) :: cnrai     ! Cumulative amount of net precipitation (L)
+      ! real(8) :: cpeva     ! Cumulative amount of potential soil evaporation (L)
+      ! real(8) :: cptra     ! Cumulative amount of potential transpiration (L)
       real(8)   daylp              ! Photoperiodic daylength in hours (T)
       real(8)   dethum(nmetfile)   ! Array with detailed humidity input data (M/L/T2) 
       real(8)   detrad(nmetfile)   ! Array with detailed radiation input data (M/T2
@@ -156,27 +160,27 @@
       real(8)   dettime(nmetfile)  ! Array with dates of detailed meteo input data
       real(8)   detwind(nmetfile)  ! Array with detailed wind speed input data (L/T)   
       real(8)   dtEventRain        ! Time step length for next precipitation event (T)
-      real(8)   empreva            ! Reduced soil evaporation flux according to empirical functions (L/T)
+      ! real(8) :: empreva   ! Reduced soil evaporation flux according to empirical functions (L/T)
       real(8)   epot(96)           ! In case of detailed weather input, calculated Epot of each weather record (L/T)
       real(8)   cfevappond         ! Parameter equal to the ratio ponding layer evaporation / ETref (-)
       real(8)   finterception      ! Ratio net / gross rain flux in case of detailed rainfall data (-)
-      real(8)   fprecnosnow        ! Ratio rain (excl. snow and rain on snow) / gross rain flux in case of detailed rainfall data (-)
-      real(8)   grai               ! Daily gross rain flux (L/T), without rain on snow
-      real(8)   graidt             ! Gross precipitation flux during iteration timesteps (L/T) 
+      ! real(8) :: fprecnosnow  ! Ratio rain (excl. snow and rain on snow) / gross rain flux (-)
+      ! real(8) :: grai        ! Daily gross rain flux (L/T), without rain on snow
+      ! real(8) :: graidt      ! Gross precipitation flux during iteration timesteps (L/T)
       real(8)   grain(96)          ! In case of detailed weather input, gross rain flux of each weather record (L/T)
-      real(8)   ievap              ! Intermediate amount of actual soil evaporation (L)
-      real(8)   inrai              ! Intermediate amount of net precipitation (L)
-      real(8)   ipeva              ! Intermediate amount of potential soil evaporation (L)
-      real(8)   iptra              ! Intermediate amount of potential transpiration (L)
+      ! real(8) :: ievap       ! Intermediate amount of actual soil evaporation (L)
+      ! real(8) :: inrai       ! Intermediate amount of net precipitation (L)
+      ! real(8) :: ipeva       ! Intermediate amount of potential soil evaporation (L)
+      ! real(8) :: iptra       ! Intermediate amount of potential transpiration (L)
       real(8)   lat                ! Latitude of meteorological station (degrees)
       real(8)   metperiod          ! Length of weather record in case of detailed ET and rainfall input
-      real(8)   nraida             ! Daily average net precipitation flux (L/T)
-      real(8)   nraidt             ! Net precipitation flux during iteration timesteps (L/T)
+      ! real(8) :: nraida      ! Daily average net precipitation flux (L/T)
+      ! real(8) :: nraidt      ! Net precipitation flux during iteration timesteps (L/T)
       real(8)   nrain(96)          ! In case of detailed weather input, calculated netto rain of each weather record (L/T)
-      real(8)   peva               ! Potential soil evaporation flux (L/T)
-      real(8)   pevaday            ! Potential soil evaporation of one day (L)
-      real(8)   ptra               ! Potential transpiration flux (L/T)
-      real(8)   ptraday            ! Potential transpiration of one day (L)
+      ! real(8) :: peva        ! Potential soil evaporation flux (L/T)
+      ! real(8) :: pevaday     ! Potential soil evaporation of one day (L)
+      ! real(8) :: ptra        ! Potential transpiration flux (L/T)
+      ! real(8) :: ptraday     ! Potential transpiration of one day (L)
       real(8)   rad                ! Global solar radiation (J/m2/d)
       real(8)   rainamount(mrain)  ! Array with short duration rainfall amounts (L)
       real(8)   raintab(60)        ! Array with mean rainfall intensity (L/T) as function of time (T)
@@ -412,7 +416,7 @@
       real(8)   siccaptb(2*magrs)  ! NHI interception model: interception capacity as a function of time (T)
       real(8)   fimin              ! start-up saturation fraction for relative interception evaporation (-)
       real(8)   siccapact          ! interceprion storage capacity of canopy (cm)
-      real(8)   sicact             ! amount of water stored on canopy (cm)
+      ! real(8) :: sicact        ! amount of water stored on canopy (cm) — [SS-ATM] retired 2026-05-11
       real(8)   siccaplai          ! interception storage per unit of LAI (cm/LAI)
       real(8)   q10                ! Relative increase of respiration rate with temperature (/10 oC)
       real(8)   q10_microbial      ! Relative increase in microbial respiration at temperature increase of 10 �C [1.0..4.0 -, R]
@@ -824,7 +828,7 @@
       ! real(8)   hsurf              ! Soil water pressure head at the soil surface (cm)
       ! [SS-CRP] retired 2026-05-11 — moved to state%soilwater%Hxylem (ADR 0036)
       ! real(8)   Hxylem             ! Pressure head in root xylem (L)
-      real(8)   igrai              ! Intermediate amount of gross rainfall (L)
+      ! real(8) :: igrai         ! Intermediate amount of gross rainfall (L) — [SS-ATM] retired 2026-05-11
       real(8)   ies0               ! Intermediate potential evaporation rate from a wet bare soil [cm/d]
       real(8)   iet0               ! Intermediate potential transpiration rate from a dry crop [cm/d]
       real(8)   iew0               ! Intermediate potential transpiration rate from a wet crop [cm/d]
@@ -870,7 +874,7 @@
       real(8)   kvbot              ! Vertical hydraulic conductivity of bottom layer (L/T)
       real(8)   kvtop              ! Vertical hydraulic conductivity of top layer (L/T)
       real(8)   L(Madr)            ! Array with spacing between drains for each drainage level (L)
-      real(8)   ldwet              ! Length of dry period (L) as used in Black's model for reduction of soil evaporation
+      ! real(8) :: ldwet         ! Length of dry period (L) as used in Black's model — [SS-ATM] retired 2026-05-11
       ! [SS-CRP] retired 2026-05-11 — moved to state%soilwater%mfluxtable (ADR 0036)
       ! real(8)   mfluxtable(maho,801)  ! Reference table with matric flux potential of each soil layer (L2/T)
       ! [SS-CRP] retired 2026-05-11 — moved to state%soilwater%mflux (ADR 0036)
@@ -973,12 +977,12 @@
       real(8)   runonarr(maday)    ! Array with runon (L) data for each day
       ! [SS-BND] retired 2026-05-11 — boundary subsystem migrated to state%soilwater (ADR 0035)
       ! real(8)   runots             ! Amount of runoff during a time step (L)
-      real(8)   saev               ! Cumulative actual evaporation (L) as used in the model of Boesten/Stroosnijder for reduction of E
+      ! real(8) :: saev          ! Cumulative actual evaporation (L) Boesten/Stroosnijder — [SS-ATM] retired 2026-05-11
       real(8)   shape              ! Shape factor: ratio between the mean and the maximum groundwater level elevation above the drainage base (-)
       real(8)   sinamp             ! Amplitude of prescribed bottom flux (L/T) in case of sine function
       real(8)   sinave             ! Average value of prescribed bottom flux (L/T) in case of sine function
       real(8)   sinmax             ! Time of the year with maximum bottom flux in case of prescribed sine function
-      real(8)   spev               ! Cumulative potential evaporation (L) as used in the model of Boesten/Stroosnijder for reduction of E
+      ! real(8) :: spev          ! Cumulative potential evaporation (L) Boesten/Stroosnijder — [SS-ATM] retired 2026-05-11
       real(8)   sptab(7,macp,matab)    ! Soil Physical functions (h,theta,k,dthetadh,dkdtheta) tabulated for each model compartment
       real(8)   sptablay(7,maho,matab) ! Soil Physical functions (h,theta,k,dthetadh,dkdtheta) tabulated for each soil layer
       real(8)   StepHr             ! Maximum difference of Hroot and Hxylem between iterations; convergence criterium  (L)
@@ -1063,21 +1067,25 @@
       integer   snw                ! Internal number of output file *.SNW with snow pack data
       integer   swsnow             ! Switch for simulation of snow accumulation and melt: 0 = no; 1 = yes
       integer   swsublim           ! Switch for suppressing simulation of sublimation of snow: 1 = suppress ! Adaptation 3 for PEARL-MACRO
-      real(8)   cgsnow             ! Cumulative amount of gross snow fall (L water)
-      real(8)   cmelt              ! Cumulative amount of melted snow (L water)
-      real(8)   csnrai             ! Cumulative amount of net snow fall (L water)
-      real(8)   csubl              ! Cumulative amount of sublimated snow (L water)
-      real(8)   gsnow              ! Gross snow rate (L/T)
-      real(8)   igsnow             ! Incremental amount of gross snow fall (L water)
-      real(8)   isnrai             ! Incremental amount of net snow fall (L water)
-      real(8)   isubl              ! Incremental amount of sublimated snow (L water)
-      real(8)   melt               ! Melting rate (L/T)
-      real(8)   slw                ! liquid water stored in snow pack           ! RobPearlMacro
+      ! ========================================================================
+      ! [SS-ATM] retired 2026-05-11 — snow scalars migrated to state%atmosphere (flat) / %cumu / %intr
+      !   See: ADR 0037 (A-2.7)
+      ! ========================================================================
+      ! real(8) :: cgsnow    ! Cumulative amount of gross snow fall (L water)
+      ! real(8) :: cmelt     ! Cumulative amount of melted snow (L water)
+      ! real(8) :: csnrai    ! Cumulative amount of net snow fall (L water)
+      ! real(8) :: csubl     ! Cumulative amount of sublimated snow (L water)
+      ! real(8) :: gsnow     ! Gross snow rate (L/T)
+      ! real(8) :: igsnow    ! Incremental amount of gross snow fall (L water)
+      ! real(8) :: isnrai    ! Incremental amount of net snow fall (L water)
+      ! real(8) :: isubl     ! Incremental amount of sublimated snow (L water)
+      ! real(8) :: melt      ! Melting rate (L/T)
+      ! real(8) :: slw       ! liquid water stored in snow pack
       real(8)   snowcoef           ! Snow melt factor (-)
-      real(8)   snowinco           ! Amount of snow (L water) at start of balance period
-      real(8)   snrai              ! Net rain rate on snow pack (L/T)
-      real(8)   ssnow              ! Amount of snow (L water)
-      real(8)   subl               ! Sublimation rate (L/T)
+      ! real(8) :: snowinco  ! Amount of snow (L water) at start of balance period
+      ! real(8) :: snrai     ! Net rain rate on snow pack (L/T)
+      ! real(8) :: ssnow     ! Amount of snow (L water)
+      ! real(8) :: subl      ! Sublimation rate (L/T)
       real(8)   TePrRain           ! Temperature above which all precipitation is rain,[ 0.0...5.0 oC, R]
       real(8)   TePrSnow           ! Temperature below which all precipitation is snow,[-5.0...0.0 oC, R]
       logical   flsnow             ! Flag indicating simulation of snow accumulation and melt

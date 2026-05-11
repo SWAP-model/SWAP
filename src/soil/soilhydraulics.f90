@@ -868,16 +868,12 @@ contains
 
          ! Initialize miscellaneous
          hatm = -2.75d+05
-      nraidt = 0.0d0
-      state%atmosphere%nraidt = 0.0_real64  ! [SS-ATM] dual-write init
+      state%atmosphere%nraidt = 0.0_real64
       nird = 0.0d0
       if (swinco.ne.3) then
-        ldwet = 0.d0
-        state%atmosphere%ldwet = 0.0_real64  ! [SS-ATM] dual-write init
-        spev = 0.d0
-        state%atmosphere%spev = 0.0_real64   ! [SS-ATM] dual-write init
-        saev = 0.d0
-        state%atmosphere%saev = 0.0_real64   ! [SS-ATM] dual-write init
+        state%atmosphere%ldwet = 0.0_real64
+        state%atmosphere%spev  = 0.0_real64
+        state%atmosphere%saev  = 0.0_real64
       endif
       runon = 0.0d0
       state%soilwater%qtop = 0.d0
@@ -1114,9 +1110,7 @@ contains
         iet0 = 0.0d0
         iew0 = 0.0d0
         iintc = 0.0d0
-        iptra = 0.0d0
-        ipeva = 0.0d0
-        ievap = 0.0d0
+        ! [SS-ATM A-2.6] iptra/ipeva/ievap retired — zeroed via state%atmosphere%intr%reset()
         ! [SS-ATM A-2.1] atmosphere intr cohort zeroed by state%atmosphere%intr%reset()
         ! in meteoday ResetMetFlx (Option A consolidation)
         iruno = 0.0d0
@@ -1144,9 +1138,7 @@ contains
         cqbot = 0.0d0
         cqbotdo = 0.0d0
         cqbotup = 0.0d0
-        cptra = 0.0d0
-        cpeva = 0.0d0
-        cevap = 0.0d0
+        ! [SS-ATM A-2.6] cptra/cpeva/cevap retired — zeroed via state%atmosphere%cumu%reset()
         ! [SS-ATM A-2.1] atmosphere cumu cohort zeroed by state%atmosphere%cumu%reset()
         ! in meteoday ResetMetFlx (Option A consolidation)
         cinund = 0.0d0

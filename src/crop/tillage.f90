@@ -3,8 +3,9 @@
 
 module tillage_mod
    use error_mod, only: fatalerr_collected
+   use swap_state_mod, only: swap_state_t  ! [SS-ATM A-2.6] nraida retired from variables to state%atmosphere
 
-   use variables, only: t1900, date, swhyst, swsolu, swoxygen, flMacroPore, flksatexm, zbotcp, NumNod, Bdens, layer, nraida, ParamVG, CofGen, &
+   use variables, only: t1900, date, swhyst, swsolu, swoxygen, flMacroPore, flksatexm, zbotcp, NumNod, Bdens, layer, ParamVG, CofGen, &
                         NumLay, pond, theta, h, dz, disnod, botcom, psilt, pclay, SwDiscrvert, tend, &
                         ! Tillage bridge variables with renaming (SAVE statements removed)
                         swtill => till_swtill, Ntill => till_Ntill, iTill => till_iTill, &
@@ -36,9 +37,10 @@ module tillage_mod
    
    contains
 
-   subroutine DoTillage (iTask)
+   subroutine DoTillage (iTask, state)
    ! global
    integer, intent(in)                       :: iTask                               ! Task
+   type(swap_state_t), intent(in)            :: state                               ! [SS-ATM A-2.6] for retired nraida
    ! local (not to be saved)
    integer                                   :: i
    character(len=20)                         :: STRNG
@@ -146,7 +148,8 @@ module tillage_mod
             call Change_Bdens
             iTill = iTill + 1       ! set counter for next tillage event
          else
-            call Consolidate_Bdens
+            ! SS-ATM A-2.6: pass state for retired nraida
+            call Consolidate_Bdens(state)
          end if
       
          call Change_MvGpars
@@ -174,11 +177,11 @@ module tillage_mod
       ! OUTPUT
       if (TEST) then
          call DTDPST ("YEAR-MONTHST-DAY", t1900, STRNG)
-         write (222,'(A,F15.5,10(I3,F15.5))') trim(DATE), nraida, (i, Bdens(i), i = 1, MaxNumSoilHo)
-         write (224,'(A,10F15.5)') trim(DATE), theta(5), theta(10), theta(20), theta(27), theta(35), nraida, sumDWC, sumAvail1, sumAvail2
+         write (222,'(A,F15.5,10(I3,F15.5))') trim(DATE), state%atmosphere%nraida, (i, Bdens(i), i = 1, MaxNumSoilHo)
+         write (224,'(A,10F15.5)') trim(DATE), theta(5), theta(10), theta(20), theta(27), theta(35), state%atmosphere%nraida, sumDWC, sumAvail1, sumAvail2
          write (226,'(A,10F15.5)') trim(DATE), (CofGen(i,1), i = 1, 10)
       end if
-         write (222,'(A,F15.5,10(I3,F15.5))') trim(DATE), nraida, (i, Bdens(i), i = 1, MaxNumSoilHo)
+         write (222,'(A,F15.5,10(I3,F15.5))') trim(DATE), state%atmosphere%nraida, (i, Bdens(i), i = 1, MaxNumSoilHo)
          write (226,'(A,10F15.5)') trim(DATE), (CofGen(i,1), i = 1, 10)
       continue
 
@@ -361,14 +364,16 @@ write(124,'(A,1P,12E12.5)') Date, Bdens(1), ParamVG(2,layer(1)), theta(1), h(1),
 
    
 ! **************************************************** Consolidate_Bdens *********************************************************
-   subroutine Consolidate_Bdens
+   subroutine Consolidate_Bdens (state)
+   ! [SS-ATM A-2.6] state added for retired nraida
    implicit none
+   type(swap_state_t), intent(in) :: state
    integer :: i
 
    if (iTill == 1) return        ! in the beginning before first tillage event: do nothing
 
-   forall (i=1:MaxNumSoilHo) Bdens(i) = Rho_cons(i) - (Rho_cons(i) - Rho_last(i)) * dexp(-K_R_cons(i)*nraida*10.0d0)    ! 10: to transform nraida from cm to mm
-   write(123,'(A,1P,10E12.5)') Date, nraida, Bdens(1:MaxNumSoilHo)
+   forall (i=1:MaxNumSoilHo) Bdens(i) = Rho_cons(i) - (Rho_cons(i) - Rho_last(i)) * dexp(-K_R_cons(i)*state%atmosphere%nraida*10.0d0)    ! 10: to transform nraida from cm to mm
+   write(123,'(A,1P,10E12.5)') Date, state%atmosphere%nraida, Bdens(1:MaxNumSoilHo)
    end subroutine Consolidate_Bdens
    
 ! **************************************************** Change_Bdens *********************************************************

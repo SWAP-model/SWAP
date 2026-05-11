@@ -470,22 +470,17 @@ contains
       ! SS-ATM Phase 2 Task A-2.2: aintcdt read from state%atmosphere (atmosphere home).
       iintc = iintc + (state%atmosphere%aintcdt+gird-nird)*dt
 
-      iptra = iptra + ptrats
-      state%atmosphere%intr%iptra = iptra   ! [SS-ATM A-2.5] dual-write intr
-      ipeva = ipeva + pevats
-      state%atmosphere%intr%ipeva = ipeva   ! [SS-ATM A-2.5] dual-write intr
-      ievap = ievap + revats
-      state%atmosphere%intr%ievap = ievap   ! [SS-ATM A-2.5] dual-write intr
+      state%atmosphere%intr%iptra = state%atmosphere%intr%iptra + ptrats
+      state%atmosphere%intr%ipeva = state%atmosphere%intr%ipeva + pevats
+      state%atmosphere%intr%ievap = state%atmosphere%intr%ievap + revats
       ! SS-BND Phase 2 Task B-2.2: runots read from state%soilwater (boundary home).
       iruno = iruno + state%soilwater%runots
       irunon = irunon + runon*dt
       ! SS-ATM Phase 2 Task A-2.2: graidt/nraidt read from state%atmosphere (atmosphere home).
       iprec = iprec + (state%atmosphere%graidt+gird)*dt
-      igrai = igrai + state%atmosphere%graidt*dt
-      state%atmosphere%intr%igrai = igrai   ! [SS-ATM A-2.5] dual-write intr
+      state%atmosphere%intr%igrai = state%atmosphere%intr%igrai + state%atmosphere%graidt*dt
       igird = igird + gird*dt
-      inrai = inrai + state%atmosphere%nraidt*dt
-      state%atmosphere%intr%inrai = inrai   ! [SS-ATM A-2.5] dual-write intr
+      state%atmosphere%intr%inrai = state%atmosphere%intr%inrai + state%atmosphere%nraidt*dt
       inird = inird + nird*dt
       iqbot = iqbot + qbotts
       if (q(1) < 0.0d0) then
@@ -506,12 +501,9 @@ contains
       cqrot = cqrot + qrotts
       ! SS-SWST Phase 2 Task 7: cqdra accumulated directly into state; global dropped.
       state%surfacewater%drainage_cumulative%cqdra = state%surfacewater%drainage_cumulative%cqdra + qdrats
-      cptra = cptra + ptrats
-      state%atmosphere%cumu%cptra = cptra   ! [SS-ATM A-2.5] dual-write cumu
-      cpeva = cpeva + pevats
-      state%atmosphere%cumu%cpeva = cpeva   ! [SS-ATM A-2.5] dual-write cumu
-      cevap = cevap + revats
-      state%atmosphere%cumu%cevap = cevap   ! [SS-ATM A-2.5] dual-write cumu
+      state%atmosphere%cumu%cptra = state%atmosphere%cumu%cptra + ptrats
+      state%atmosphere%cumu%cpeva = state%atmosphere%cumu%cpeva + pevats
+      state%atmosphere%cumu%cevap = state%atmosphere%cumu%cevap + revats
       if (state%soilwater%runots.lt.0.0d0) then
         cinund = cinund - state%soilwater%runots
       else if (state%soilwater%runots.gt.0.0d0) then
@@ -521,13 +513,10 @@ contains
       crunoffCN = crunoffCN + Runoff_CN*dt
 
       ! SS-ATM Phase 2 Task A-2.2: aintcdt/graidt/nraidt read from state%atmosphere (atmosphere home).
-      caintc = caintc + (state%atmosphere%aintcdt+gird-nird)*dt
-      state%atmosphere%cumu%caintc = caintc  ! [SS-ATM A-2.5] dual-write cumu
+      state%atmosphere%cumu%caintc = state%atmosphere%cumu%caintc + (state%atmosphere%aintcdt+gird-nird)*dt
 
-      cgrai = cgrai + state%atmosphere%graidt*dt
-      state%atmosphere%cumu%cgrai = cgrai    ! [SS-ATM A-2.5] dual-write cumu
-      cnrai = cnrai + state%atmosphere%nraidt*dt
-      state%atmosphere%cumu%cnrai = cnrai    ! [SS-ATM A-2.5] dual-write cumu
+      state%atmosphere%cumu%cgrai = state%atmosphere%cumu%cgrai + state%atmosphere%graidt*dt
+      state%atmosphere%cumu%cnrai = state%atmosphere%cumu%cnrai + state%atmosphere%nraidt*dt
 !      cnrai = cgrai - caintc
       cgird = cgird + gird*dt
       cnird = cnird + nird*dt
@@ -565,12 +554,14 @@ contains
       ! compensate water balance error of this time step during remaining day part
       ! cumulative water balance error
       if (swsnow.eq.0) then
-        wbalance = cnrai + cnird + crunon - crunoff - cqrot - cevap     &
+        ! SS-ATM A-2.6: cnrai/cevap retired; read from state%atmosphere%cumu
+        wbalance = state%atmosphere%cumu%cnrai + cnird + crunon - crunoff - cqrot - state%atmosphere%cumu%cevap     &
      &        - state%surfacewater%drainage_cumulative%cqdra + cqbot + volini - volact + PondIni - pond + cqssdi
       else
          ! SS-ATM Phase 2 Task A-2.2: cmelt read from state%atmosphere%cumu (atmosphere home).
+         ! SS-ATM A-2.6: cevap retired — read from state%atmosphere%cumu%cevap
          wbalance = cqprai + cnird + state%atmosphere%cumu%cmelt + crunon - crunoff           &
-     &        - cqrot - cevap - state%surfacewater%drainage_cumulative%cqdra     &
+     &        - cqrot - state%atmosphere%cumu%cevap - state%surfacewater%drainage_cumulative%cqdra     &
      &        + cqbot + volini - volact + PondIni - pond + cqssdi
       endif
 
@@ -611,11 +602,12 @@ contains
       !>
       !> SAVE removed - dev_cmb now in variables.f90 module
       !> @endnote
-      subroutine checkmassbal (flopenfiledev,inqdranew,iqexcmtxdm1cpnew,iqexcmtxdm2cpnew,inqnew,iqoutdrrapcpnew,inqrotnew,ithetabegnew,thetanew)
+      subroutine checkmassbal (flopenfiledev,inqdranew,iqexcmtxdm1cpnew,iqexcmtxdm2cpnew,inqnew,iqoutdrrapcpnew,inqrotnew,ithetabegnew,thetanew,state)
       use variables, only: DayCum,nrlevs,NumNodNew,IcTopMp,FlMacropore,outfil,pathwork,DZNew,    &
-                           CritDevMasBal,ievap,igird,igrai,igSnow,inird,inrai,IPondBeg,IQInTopVrtDm1,IQInTopLatDm1,IQInTopVrtDm2, &
-                           IQInTopLatDm2,ISsnowBeg,iruno,irunon,isnrai,iSubl,pond,Ssnow,IWaSrDm1Beg,IWaSrDm2Beg,WaSrDm1,WaSrDm2, &
+                           CritDevMasBal,igird,inird,IPondBeg,IQInTopVrtDm1,IQInTopLatDm1,IQInTopVrtDm2, &
+                           IQInTopLatDm2,ISsnowBeg,iruno,irunon,pond,IWaSrDm1Beg,IWaSrDm2Beg,WaSrDm1,WaSrDm2, &
                            dev_cmb
+      use swap_state_mod, only: swap_state_t
       use swap_array_dimensions, only: macp, madr
       use file_io_mod, only: file_open
       implicit none
@@ -626,6 +618,7 @@ contains
       real(8) inqNew(macp+1), IQOutDrRapCpNew(macp), inqrotNew(macp)
       real(8) IThetaBegNew(MaCp),thetaNew(macp)
       logical FlOpenFileDev
+      type(swap_state_t), intent(in) :: state  ! [SS-ATM A-2.6] for retired igrai/inrai/ievap/igSnow/isnrai/isubl
 
       ! local
       integer Level, ic
@@ -649,7 +642,8 @@ contains
       FlWriteDevDm2 = .false.
 
       ! 1) Ponding layer
-      SrDif = IPondBeg-Pond + ISsnowBeg-Ssnow
+      ! SS-ATM A-2.6: Ssnow retired — read from state%atmosphere%ssnow
+      SrDif = IPondBeg-Pond + ISsnowBeg-state%atmosphere%ssnow
       IQInTopPreDm= 0.d0
       IQInTopLatDm= 0.d0
       if (FlMacropore .and. IcTopMp.eq.1) then
@@ -658,8 +652,9 @@ contains
       endif
 
       ! Deviation mass balance Ponding layer in cm
-      DevMasBalPnd = igrai + igsnow + igird + irunon + inqNew(1) + SrDif &
-     &             - (igrai-inrai-isnrai + igird-inird + isubl + ievap + iruno) &
+      ! SS-ATM A-2.6: igrai/inrai/ievap/igSnow/isnrai/isubl retired — read from state%atmosphere
+      DevMasBalPnd = state%atmosphere%intr%igrai + state%atmosphere%intr%igsnow + igird + irunon + inqNew(1) + SrDif &
+     &             - (state%atmosphere%intr%igrai-state%atmosphere%intr%inrai-state%atmosphere%intr%isnrai + igird-inird + state%atmosphere%intr%isubl + state%atmosphere%intr%ievap + iruno) &
      &             - IQInTopPreDm - IQInTopLatDm
 
       ! Check mass balance against criteria
@@ -761,9 +756,11 @@ contains
       endif
 
       ! Write deviations of water balance Top system
+      ! SS-ATM A-2.6: igrai/inrai/igsnow/isnrai/isubl/ievap retired — read from state%atmosphere%intr
       if (FlWriteDevPnd) write(dev_cmb,3) daycum, DevMasBalPnd, &
-     &    igrai, igsnow, igird, irunon, isnrai, igrai-inrai,igird-inird, &
-     &    isubl,ievap, iruno, inqNew(1), Pond, IPondBeg, Ssnow, &
+     &    state%atmosphere%intr%igrai, state%atmosphere%intr%igsnow, igird, irunon, state%atmosphere%intr%isnrai, &
+     &    state%atmosphere%intr%igrai-state%atmosphere%intr%inrai, igird-inird, &
+     &    state%atmosphere%intr%isubl, state%atmosphere%intr%ievap, iruno, inqNew(1), Pond, IPondBeg, state%atmosphere%ssnow, &
      &    ISsnowBeg,IQInTopPreDm, IQInTopLatDm
 
       ! Write deviations of water balance whole Profile

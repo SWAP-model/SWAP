@@ -33,22 +33,24 @@ contains
   !>
   !> Uses exponential relation between soil cover and LAI.
   !>
-  !> Input from variables module: grai, gird, kdif, kdir, cofab, lai, isua
+  !> Input from variables module: gird, kdif, kdir, cofab, lai, isua
+  !> [SS-ATM A-2.6] grai retired from variables — now passed as explicit argument
   !> @endnote
-  subroutine VonHHBraden (aintc)
-    use variables, only: grai,gird,kdif,kdir,cofab,lai,isua
+  subroutine VonHHBraden (aintc, grai_in)
+    use variables, only: gird,kdif,kdir,cofab,lai,isua
     implicit none
 
     ! Arguments
-    real(8), intent(out) :: aintc  ! Amount of rainfall interception during current day [cm/d]
+    real(8), intent(out) :: aintc   ! Amount of rainfall interception during current day [cm/d]
+    real(8), intent(in)  :: grai_in ! Gross daily rain flux (L/T) — [SS-ATM A-2.6] from state%atmosphere%grai
 
     ! Local variables
     real(8) :: rpd                 ! Intercepted precipitation (rain+irrig) [mm]
     real(8) :: cofbb               ! Interception coefficient b Von Hoyningen-Hune and Braden [-]
 
     ! Intercepted precipitation (rain+irrig) in mm
-    rpd = grai*10.0d0
-    if (isua.eq.0) rpd = (grai+gird)*10.0d0
+    rpd = grai_in*10.0d0
+    if (isua.eq.0) rpd = (grai_in+gird)*10.0d0
 
     ! Exponential relation between soil cover and lai
     cofbb = 1.0d0 - dexp(-1.0d0*kdif*kdir*lai)
@@ -78,17 +80,19 @@ contains
   !> Reference: Gash, J.H.C. (1995). An analytical framework for estimating
   !> evaporation using rainfall and forest data.
   !>
-  !> Input from variables module: grai, gird, avevaptb, avprectb, pfreetb,
+  !> Input from variables module: gird, avevaptb, avprectb, pfreetb,
   !> pstemtb, scanopytb, isua, t
+  !> [SS-ATM A-2.6] grai retired from variables — now passed as explicit argument
   !> @endnote
-  subroutine Gash (aintc)
-    use variables, only: grai,gird,avevaptb,avprectb,pfreetb,pstemtb,scanopytb,isua,t
+  subroutine Gash (aintc, grai_in)
+    use variables, only: gird,avevaptb,avprectb,pfreetb,pstemtb,scanopytb,isua,t
     use array_utils, only: afgen
     use swap_array_dimensions, only: magrs
     implicit none
 
     ! Arguments
-    real(8), intent(out) :: aintc  ! Amount of rainfall interception during current day [cm/d]
+    real(8), intent(out) :: aintc   ! Amount of rainfall interception during current day [cm/d]
+    real(8), intent(in)  :: grai_in ! Gross daily rain flux (L/T) — [SS-ATM A-2.6] from state%atmosphere%grai
 
     ! Local variables
     real(8) :: avevap              ! Average evaporation intensity during shower [-]
@@ -101,10 +105,11 @@ contains
     real(8) :: scanopy             ! Storage capacity of canopy [cm]
 
     ! Intercepted precipitation (rain+irrig) in cm
+    ! SS-ATM A-2.6: grai_in replaces retired global grai
     if (isua.eq.0) then
-      rpd = grai+gird
+      rpd = grai_in+gird
     else
-      rpd = grai
+      rpd = grai_in
     endif
 
     ! Calculate interception for forests according to Gash (1995)
@@ -124,7 +129,7 @@ contains
     endif
 
     ! Interception: evaporation of intercepted precipitation in cm
-    if (grai .lt. psatcan) then
+    if (grai_in .lt. psatcan) then
       aintc = cGash * rpd
     else
       aintc = cGash * ( psatcan + &
@@ -156,7 +161,7 @@ contains
   !> variables module
   !> @endnote
   subroutine ruttervw (gctp,aintc,eintc,state)
-    use variables, only: logf,dt,sicact,siccapact,fimin,ew0,grai
+    use variables, only: logf,dt,siccapact,fimin,ew0
     implicit none
 
     ! Arguments
@@ -182,15 +187,14 @@ contains
     vxick_r4(1)  = REAL(siccapact)
     fecmnk_r4(1) = REAL(fimin)
     ETw0_r4(1)   = REAL(ew0*0.1d0)
-    Pgdtsw_r4(1) = REAL(grai)
-    Sic_r4(1)    = REAL(sicact)
+    Pgdtsw_r4(1) = REAL(state%atmosphere%grai)
+    Sic_r4(1)    = REAL(state%atmosphere%sicact)
 
     call msw1eic(nuk_i4,ibd_i4,dc_r4,dtsw_r4,csk_r4,vxick_r4, &
                  fecmnk_r4,ETw0_r4,Pgdtsw_r4,Sic_r4,Sicolddtsw_r4,Picdtsw_r4, &
                  Eicdtsw_r4,tcap_r4,beta_r4,zeta_r4,fricdtsw_r4,ib_i4)
 
-    sicact = DBLE(Sic_r4(1))
-    state%atmosphere%sicact = sicact   ! [SS-ATM] dual-write: interception storage on canopy
+    state%atmosphere%sicact = DBLE(Sic_r4(1))   ! [SS-ATM] retired legacy sicact global
     aintc  = DBLE(Picdtsw_r4(1))
     eintc  = DBLE(Eicdtsw_r4(1))
 
@@ -395,7 +399,7 @@ contains
   !> Output to variables module: nird, nraida
   !> @endnote
   subroutine DivIntercep (aintc, state)
-    use variables, only: isua,gird,grai,gsnow,snrai,nird,nraida
+    use variables, only: isua,gird,nird
     implicit none
 
     ! Arguments
@@ -405,17 +409,14 @@ contains
     ! Divide interception into rain and irrigation parts
     ! and calculate net rain and net sprinkling irrigation
     if (aintc.lt.0.001d0) then
-      nraida = grai - gsnow - snrai
-      state%atmosphere%nraida = nraida  ! [SS-ATM] dual-write: net daily rainfall after interception
+      state%atmosphere%nraida = state%atmosphere%grai - state%atmosphere%gsnow - state%atmosphere%snrai
       nird = gird
     else
       if (isua.eq.0) then
-        nraida = grai-aintc*(grai/(grai+gird))
-        state%atmosphere%nraida = nraida  ! [SS-ATM] dual-write
-        nird = gird-aintc*(gird/(grai+gird))
+        state%atmosphere%nraida = state%atmosphere%grai - aintc*(state%atmosphere%grai/(state%atmosphere%grai+gird))
+        nird = gird-aintc*(gird/(state%atmosphere%grai+gird))
       else
-        nraida = grai-aintc
-        state%atmosphere%nraida = nraida  ! [SS-ATM] dual-write
+        state%atmosphere%nraida = state%atmosphere%grai - aintc
         nird = gird
       endif
     endif

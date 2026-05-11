@@ -2844,7 +2844,7 @@
 
         if (swafo.ge.2 .and. CritDevMasBal.gt.1.d-30) then
 ! --- Checking of mass balances of sub systems per period OutPer
-           call checkmassbal (flopenfiledev,inqdranew,inqexcmtxdm1cpnew,inqexcmtxdm2cpnew,inqnew,inqoutdrrapcpnew,inqrotnew,ithetabegnew,thetanew)
+           call checkmassbal (flopenfiledev,inqdranew,inqexcmtxdm1cpnew,inqexcmtxdm2cpnew,inqnew,inqoutdrrapcpnew,inqrotnew,ithetabegnew,thetanew,state)
         end if
 
 30    format (1x,f6.0,7(1x,f9.6),3(1x,f7.4))
@@ -3110,7 +3110,7 @@
       if ((swaun.ge.1.or.swafo.ge.1) .and. CritDevMasBal.gt.1.d-30) then
 
 ! --- Checking of mass balances of sub systems per period OutPer
-        call checkmassbal (flopenfiledev,inqdranew,inqexcmtxdm1cpnew,inqexcmtxdm2cpnew,inqnew,inqoutdrrapcpnew,inqrotnew,ithetabegnew,thetanew)
+        call checkmassbal (flopenfiledev,inqdranew,inqexcmtxdm1cpnew,inqexcmtxdm2cpnew,inqnew,inqoutdrrapcpnew,inqrotnew,ithetabegnew,thetanew,state)
 
       endif
 

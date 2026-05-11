@@ -250,7 +250,8 @@
 ! option to reduce irrigation on rainy (> raithreshold) day
 ! raithreshold =     ! threshold (cm/d) to define rainy days;  used to reduce irrigation
                grai_red = 0.0d0
-               if (grai .gt. raithreshold) grai_red = grai
+               ! SS-ATM A-2.6: grai retired — read from state%atmosphere%grai
+               if (state%atmosphere%grai .gt. raithreshold) grai_red = state%atmosphere%grai
                gird = max (0.0d0,cdef+dps1*0.1d0-grai_red) 
 ! PG/JK start  15-feb-2010
             end if

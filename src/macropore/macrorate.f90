@@ -105,7 +105,8 @@ SUBROUTINE MACRORATE(ITask,ICpBtDm,ICpBtPerZon,ICpSatGWl,         &
 
 ! --- Check whether the macropore status requires the working of this subroutine
       if (IcTopMp.eq.1) then                                        ! no covering layer on top of macropores
-         FlwInTopPot= state%soilwater%QMpLatSs + ArMpTp * (NRaiDt+NIrd+Melt) * DT
+         ! SS-ATM A-2.6: NRaiDt/Melt retired — read from state%atmosphere
+         FlwInTopPot= state%soilwater%QMpLatSs + ArMpTp * (state%atmosphere%nraidt+NIrd+state%atmosphere%melt) * DT
       else                                                          ! covering layer on top of macropores
          FlwInTopPot= 0.d0
       endif
@@ -152,7 +153,8 @@ SUBROUTINE MACRORATE(ITask,ICpBtDm,ICpBtPerZon,ICpSatGWl,         &
          FlwInTopLatDmPot(id)= 0.d0
 
          if (IcTopMp.eq.1) then                                        ! no covering layer on top of macropores
-            FlwInTopVrtDmPot(id)= ArMpTpDm(id) * (NRaiDt+NIrd+Melt) * DT
+            ! SS-ATM A-2.6: NRaiDt/Melt retired — read from state%atmosphere
+            FlwInTopVrtDmPot(id)= ArMpTpDm(id) * (state%atmosphere%nraidt+NIrd+state%atmosphere%melt) * DT
             if (ArMpTp.gt.0.d0) FlwInTopLatDmPot(id)= ArMpTpDm(id)/ArMpTp * state%soilwater%QMpLatSs
          else                                                          ! covering layer on top of macropores
             ic = IcTopMp-1

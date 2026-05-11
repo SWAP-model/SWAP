@@ -167,9 +167,11 @@ contains
          end if
       end do
       end associate  ! inqdra from state%surfacewater
-      help = 1.0d-2 * (igrai+isnrai+igsnow+igird-iintc+irunon-iruno) /  &
+      ! SS-ATM A-2.6: igrai/isnrai/igsnow/ievap retired — read from state%atmosphere%intr
+      help = 1.0d-2 * (state%atmosphere%intr%igrai+state%atmosphere%intr%isnrai+ &
+     &                 state%atmosphere%intr%igsnow+igird-iintc+irunon-iruno) /  &
      &                 outper
-      SoilEvap = 1.0d-2 * ievap / outper
+      SoilEvap = 1.0d-2 * state%atmosphere%intr%ievap / outper
       Wflux_inTop   = help 
       Wflux_inLat   = 1.0d-2 * dum3 
       Wflux_transp  = 1.0d-2 * dum2 

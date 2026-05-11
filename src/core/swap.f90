@@ -188,13 +188,25 @@ if (iTask == 1) then
    call CalcGrid()
    call soilwater_init(state%soilwater, numnod, numlay)   ! SS-CRP Phase 1 C-1.2: allocate per-node arrays + mfluxtable
    call atmosphere_init(state%atmosphere)                 ! SS-ATM Phase 1 A-1.2: zero all 22 flat scalars + cohort sub-records
+   ! [SS-ATM A-2.6] swinco=3 warm-restart: seed state%atmosphere directly from config (legacy globals retired)
+   if (config%soil%swinco == 3) then
+      if (allocated(config%soil%initial%h_file) .and. &
+          len_trim(config%soil%initial%h_file) > 0) then
+         state%atmosphere%ssnow = config%soil%initial%ssnow
+         state%atmosphere%ldwet = config%soil%initial%ldwet
+         state%atmosphere%slw   = config%soil%initial%slw
+         ! spev/saev not in config; remain zero from atmosphere_init (evaporation counters reset on rain)
+         if (config%meteo%snow%swsnow /= 1) state%atmosphere%ssnow = 0.0d0
+      end if
+   end if
 
-   if (flTillage) call DoTillage(1)
+   if (flTillage) call DoTillage(1, state)
    if (flSSDI)    call SSDI_irrigation(1)
 
 !  initialize SoilWater rate/state variables
    call SoilWater(1, state)
-   if (swuseCN == 1) call CNmethod(1)
+   ! SS-ATM A-2.6: state added — CNmethod signature updated for retired nraidt/melt
+   if (swuseCN == 1) call CNmethod(1, state)
 
 !  Allocate and initialise drainage state arrays.  Config is passed so
 !  drainage_init can seed state%drainage%wetper(1) from config%drain%wetper
@@ -285,7 +297,7 @@ if (iTask == 2) then
 
 !        process Meteo data
          call ProcessMeteoDay(state)
-         if (flTillage) call DoTillage(2)
+         if (flTillage) call DoTillage(2, state)
 
       end if
 
@@ -394,7 +406,7 @@ if (iTask == 2) then
          if (flOutput) then
             call SwapOutput(2, state)
             call SoilWaterOutput(2, state)
-            if (flTillage) call DoTillage(3)
+            if (flTillage) call DoTillage(3, state)
             if (flTemperature)   call TemperatureOutput(2, state)
             if (flSolute)        call SoluteOutput(2, state)
             if (flAgeTracer)     call AgeTracerOutput(2, state)
@@ -471,7 +483,8 @@ contains
    subroutine handle_exchange(task, flError)
    use variables, only : swetr, swdivide, swmetdetail, swrain, logf
    use variables, only : t1900, iyear, Tstart, Tend, numnod, dz, theta
-   use variables, only : lai, ch, rd, iptra, iqrot, inqrot, flCropCalendar, flCropEmergence, flCropHarvest
+   ! SS-ATM A-2.6: iptra retired — read from state%atmosphere%intr%iptra (host association)
+   use variables, only : lai, ch, rd, iqrot, inqrot, flCropCalendar, flCropEmergence, flCropHarvest
    use variables, only : arad, atmn, atmx, awin, ahum, wet, arai, aetr, rainfluxarray, raintimearray   !, rainamount
    use variables, only : ex_tlast, daynrfirst, daynrlast
    implicit none
@@ -513,7 +526,8 @@ contains
 
       fromswap%tstart     = Tstart
       fromswap%tend       = Tend
-      fromswap%tpot       = iptra
+      ! SS-ATM A-2.6: iptra retired — read from state%atmosphere%intr%iptra
+      fromswap%tpot       = state%atmosphere%intr%iptra
       fromswap%tact       = iqrot
       fromswap%numnodes   = numnod
       !allocate(fromswap%dz(numnod));  fromswap%dz(1:numnod)  = dz(1:numnod)
@@ -595,7 +609,8 @@ contains
 
    if (task == 29) then
       fromswap%numnodes      = numnod
-      fromswap%tpot          = iptra
+      ! SS-ATM A-2.6: iptra retired — read from state%atmosphere%intr%iptra
+      fromswap%tpot          = state%atmosphere%intr%iptra
       fromswap%tact          = iqrot
       !if(.not.allocated(fromswap%dz))  allocate(fromswap%dz(numnod));  fromswap%dz(1:numnod)  = dz(1:numnod)
       !if(.not.allocated(fromswap%wc))  allocate(fromswap%wc(numnod));  fromswap%wc(1:numnod)  = theta(1:numnod)

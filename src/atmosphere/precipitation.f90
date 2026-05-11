@@ -74,54 +74,54 @@ contains
 
          ! Convert precipitation from mm to cm
          grai = grai*0.1d0
-         state%atmosphere%grai = grai  ! [SS-ATM] dual-write
+         state%atmosphere%grai = grai
 
          if (swsnow == 1) then
             ! Temperature-based snow partitioning
             if (tav > TePrRain) then
                ! All precipitation as rain (warm conditions)
                gsnow = 0.0d0
-               state%atmosphere%gsnow = 0.0_real64  ! [SS-ATM] dual-write
+               state%atmosphere%gsnow = 0.0_real64
 
             elseif (tav < TePrSnow) then
                ! All precipitation as snow (cold conditions)
                gsnow = grai
-               state%atmosphere%gsnow = grai  ! [SS-ATM] dual-write
+               state%atmosphere%gsnow = grai
 
             else
                ! Linear interpolation between transition temperatures
                snow_fraction = (TePrRain - tav)/(TePrRain - TePrSnow)
                gsnow = grai*snow_fraction
-               state%atmosphere%gsnow = gsnow  ! [SS-ATM] dual-write
+               state%atmosphere%gsnow = gsnow
             end if
 
             ! Calculate rainfall on existing snowpack (only counted if snowpack exists)
             if (ssnow > 1.0d-6) then
                snrai = grai - gsnow
-               state%atmosphere%snrai = snrai  ! [SS-ATM] dual-write
+               state%atmosphere%snrai = snrai
             else
                snrai = 0.0d0
-               state%atmosphere%snrai = 0.0_real64  ! [SS-ATM] dual-write
+               state%atmosphere%snrai = 0.0_real64
             end if
 
             ! Fraction of precipitation reaching soil surface
             ! (excludes snow accumulation and rain on snowpack)
             if (grai > 0.0d0) then
                fprecnosnow = 1.0d0 - (gsnow + snrai)/grai
-               state%atmosphere%fprecnosnow = fprecnosnow  ! [SS-ATM] dual-write
+               state%atmosphere%fprecnosnow = fprecnosnow
             else
                fprecnosnow = 0.0d0
-               state%atmosphere%fprecnosnow = 0.0_real64  ! [SS-ATM] dual-write
+               state%atmosphere%fprecnosnow = 0.0_real64
             end if
 
          else
             ! Snow calculations disabled
             gsnow = 0.0d0
-            state%atmosphere%gsnow = 0.0_real64       ! [SS-ATM] dual-write
+            state%atmosphere%gsnow = 0.0_real64
             snrai = 0.0d0
-            state%atmosphere%snrai = 0.0_real64       ! [SS-ATM] dual-write
+            state%atmosphere%snrai = 0.0_real64
             fprecnosnow = 1.0d0
-            state%atmosphere%fprecnosnow = 1.0_real64 ! [SS-ATM] dual-write
+            state%atmosphere%fprecnosnow = 1.0_real64
          end if
 
       elseif (swmetdetail == 1) then
@@ -132,20 +132,20 @@ contains
          do i = 1, nmetdetail
             grai = grai + arain(i)
          end do
-         state%atmosphere%grai = grai  ! [SS-ATM] dual-write
+         state%atmosphere%grai = grai
 
          ! Initialize remaining interception storage
          restint = 0.0d0
 
          ! Snow calculations not supported for detailed meteorology
          gsnow = 0.0d0
-         state%atmosphere%gsnow = 0.0_real64       ! [SS-ATM] dual-write
+         state%atmosphere%gsnow = 0.0_real64
          ssnow = 0.0d0  ! Note: This modifies a state variable - consider refactoring
-         state%atmosphere%ssnow = 0.0_real64        ! [SS-ATM] dual-write (D11: verbatim mutation preserved)
+         state%atmosphere%ssnow = 0.0_real64        ! (D11: verbatim mutation preserved)
          snrai = 0.0d0
-         state%atmosphere%snrai = 0.0_real64       ! [SS-ATM] dual-write
+         state%atmosphere%snrai = 0.0_real64
          fprecnosnow = 1.0d0
-         state%atmosphere%fprecnosnow = 1.0_real64 ! [SS-ATM] dual-write
+         state%atmosphere%fprecnosnow = 1.0_real64
       end if
 
    end subroutine PartitionPrecipitation

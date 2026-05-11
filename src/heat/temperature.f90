@@ -162,12 +162,13 @@ contains
         if (swtopbhea .eq. 2) then
           ! Use specified soil surface temperatures as top boundary condition
           ht_tetop = afgen (temtoptab,2*mabbc,t1900+dt)
-        elseif (dabs(ssnow).gt.1.0d-10) then
+        ! SS-ATM A-2.6: ssnow retired — read from state%atmosphere%ssnow
+        elseif (dabs(state%atmosphere%ssnow).gt.1.0d-10) then
           ! Air temperature cannot be used with a snow layer,
           ! calculate temperature on soil-snow interface
           Rosnw = 170.0d0
           heaconsnw = 2.86d-6 * 864.0d0 * Rosnw**2.d0
-          dzsnw = ssnow / 0.170d0
+          dzsnw = state%atmosphere%ssnow / 0.170d0
           if (ht_heacon(1).lt.1.d-10) ht_heacon(1) = 100.0d0
           apar = (0.5d0*heaconsnw*dz(1)) / (ht_heacon(1)*dzsnw)
           if (flmetdetail) then

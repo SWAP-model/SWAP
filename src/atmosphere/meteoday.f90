@@ -64,6 +64,7 @@ end module MeteoVars
 module runoff_mod
    use error_mod, only: fatalerr_collected
    use soilhydraulics_utils, only: watcon
+   use swap_state_mod, only: swap_state_t  ! [SS-ATM A-2.6] nraidt/melt retired to state%atmosphere
    implicit none
    private
    
@@ -77,7 +78,7 @@ module runoff_mod
 
 contains
 
-  subroutine CNmethod(Itask)
+  subroutine CNmethod(Itask, state)
     !> Calculate surface runoff using the SCS Curve Number method
     !!
     !! This subroutine operates in two modes controlled by the Itask parameter:
@@ -95,12 +96,14 @@ contains
     !! USDA-NRCS National Engineering Handbook, Part 630 Hydrology
     !!
     !! @warning CNref values > 170 will cause numerical issues in CNdry calculation
-    use variables, only: CNref, CNdry, CNwet, ThetaRef, theta, nraidt, Runoff_CN, zbotcp, dz, numnod, t1900, wc_cor, iCNtab, CNtimTAB, CNrefTAB, melt, wc10, &
+    ! [SS-ATM A-2.6] nraidt/melt retired from variables; state added to read from state%atmosphere
+    use variables, only: CNref, CNdry, CNwet, ThetaRef, theta, Runoff_CN, zbotcp, dz, numnod, t1900, wc_cor, iCNtab, CNtimTAB, CNrefTAB, wc10, &
                         nod10_cn, icn_atm, z10_cn
     use soilhydraulics_utils, only: watcon
     implicit none
     ! global
     integer, intent(in)  :: Itask
+    type(swap_state_t), intent(inout) :: state  ! [SS-ATM A-2.6] for retired nraidt/melt
     ! local
     integer              :: i
     real(8)              :: wc1, wc2, CN, S, Ia
@@ -173,8 +176,10 @@ contains
       S = 2540d0/CN-25.4d0    ! in cm
       Ia = 0.2d0*S
     !   Ia = 0.3d0*S
-      if (nraidt+melt > Ia) then
-          Runoff_CN = (nraidt+melt-Ia)**2/(nraidt+melt-Ia+S)
+      ! SS-ATM A-2.6: nraidt/melt retired — read from state%atmosphere
+      if (state%atmosphere%nraidt+state%atmosphere%melt > Ia) then
+          Runoff_CN = (state%atmosphere%nraidt+state%atmosphere%melt-Ia)**2/ &
+                      (state%atmosphere%nraidt+state%atmosphere%melt-Ia+S)
       else
           Runoff_CN = 0.0d0
       end if
@@ -259,8 +264,8 @@ contains
   !! @endnote
   subroutine ReadMeteoDay(state)
       ! use variables
-      use variables, only: out_tmn, out_tmx, out_hum, out_win, out_etr, out_wet, swrain, wet, rh, tav, tavd, out_rad, yearmeteo, arai, grai, atmx, ahum, aetr, date, arad, t1900, ssnow, teprrain, teprsnow, &
-                        detrecord, nmetdetail, dettime, detrad, dethum, dettav, atav, swmetdetail, daymeteo, daynrfirst, daynrlast, rad, tmn, tmx, pathatm, awin, atmn, metfil, detrain, swsnow, gsnow, snrai, irectotal, detwind, fprecnosnow
+      use variables, only: out_tmn, out_tmx, out_hum, out_win, out_etr, out_wet, swrain, wet, rh, tav, tavd, out_rad, yearmeteo, arai, atmx, ahum, aetr, date, arad, t1900, teprrain, teprsnow, &
+                        detrecord, nmetdetail, dettime, detrad, dethum, dettav, atav, swmetdetail, daymeteo, daynrfirst, daynrlast, rad, tmn, tmx, pathatm, awin, atmn, metfil, detrain, swsnow, irectotal, detwind
       use MeteoVars
       use precipitation_mod, only: PartitionPrecipitation
       implicit none
@@ -268,6 +273,9 @@ contains
       type(swap_state_t), intent(inout) :: state  !! [SS-ATM] threaded for atmosphere dual-writes
 
     ! --- local
+    ! [SS-ATM A-2.6] grai/gsnow/snrai/ssnow/fprecnosnow are transitional locals fed to
+    ! PartitionPrecipitation; state%atmosphere%X is the canonical write target.
+    real(8) :: grai, gsnow, snrai, ssnow, fprecnosnow
     character(len=11)  detdate
     character(len=3)   ext
     character(len=200) filnam
@@ -295,8 +303,7 @@ contains
       tmx  = atmx(daymeteo+1-daynrfirst)
       hum  = ahum(daymeteo+1-daynrfirst)
       win  = awin(daymeteo+1-daynrfirst)
-      grai = arai(daymeteo+1-daynrfirst)
-      state%atmosphere%grai = grai  ! [SS-ATM] dual-write
+      grai = arai(daymeteo+1-daynrfirst)  ! [SS-ATM A-2.6] local; PartitionPrecipitation converts mm->cm and writes state
       etr  = aetr(daymeteo+1-daynrfirst)
 
       ! If hum is missing or tav cannot be calculated: set rh at -99.0
@@ -370,6 +377,9 @@ contains
     ! end 1.
 
     ! Call precipitation partitioning module
+    ! [SS-ATM A-2.6] ssnow seeded from state (intent inout for read in swmetdetail==0 path);
+    ! state%atmosphere%ssnow is written directly by PartitionPrecipitation in swmetdetail==1.
+    ssnow = state%atmosphere%ssnow
     call PartitionPrecipitation(swmetdetail, swsnow, tav, TePrRain, TePrSnow, &
                                 ssnow, nmetdetail, arain, grai, gsnow, snrai, &
                                 fprecnosnow, restint, state)
@@ -407,7 +417,7 @@ contains
   !!            O - caintc, cgrai, cnrai, igrai, inrai, iprec
   !! @endnote
   subroutine ResetMetFlx (state)
-      use variables, only: flzerointr,flzerocumu,caintc,cgrai,cnrai,igrai,inrai,iprec
+      use variables, only: flzerointr,flzerocumu,iprec
       implicit none
 
       type(swap_state_t), intent(inout) :: state  !! [SS-ATM A-2.1] cohort reset() dispatch
@@ -417,18 +427,13 @@ contains
     ! Reset cumulative intermediate fluxes
     if (flzerointr) then
       iprec = 0.0d0
-      igrai = 0.0d0
-      inrai = 0.0d0
-      ! [SS-ATM A-2.1] D5 cohort consolidation: single canonical reset for all 8 intr fields
+      ! [SS-ATM A-2.6] canonical reset for all 8 intr fields; legacy igrai/inrai retired
       call state%atmosphere%intr%reset()
     endif
 
     ! Reset cumulative meteorological fluxes
     if (flzerocumu) then
-      cgrai = 0.0d0
-      cnrai = 0.0d0
-      caintc = 0.0d0
-      ! [SS-ATM A-2.1] D5 cohort consolidation: single canonical reset for all 10 cumu fields
+      ! [SS-ATM A-2.6] canonical reset for all 10 cumu fields; legacy cgrai/cnrai/caintc retired
       call state%atmosphere%cumu%reset()
     endif
 
@@ -502,11 +507,11 @@ contains
   !! @endnote
   subroutine ProcessMeteoDay(state)
     ! use Variables
-    use variables, only: lai, grai, gird, swinter, gsnow, ssnow, swmetdetail, nmetdetail, swetr, flCropEmergence, et0, ew0, es0, swcf, swcfbs, cfbs, &
+    use variables, only: lai, gird, swinter, swmetdetail, nmetdetail, swetr, flCropEmergence, et0, ew0, es0, swcf, swcfbs, cfbs, &
     cf, cfeic, rad, arad, metperiod, tav, atav, ahum, logf, swscre, daynr, lat, alt, altw, angstroma, angstromb, rsc, ch, daylp, flmetdetail, albedo, tmn, tmx, rsw, difpp, &
-    dsinbe, atmtr, rsoil, swdivide, kdif, kdir, croptype, swgc, gc, siccapact, siccaptb, icrop, t, dt, peva, flcropcalendar, &
-     flCropHarvest, pond, cfevappond, ptra, flco2, fco2tra, tpot, epot, grain, nrain, nraida, finterception, swrain, fprecnosnow, graidt, nraidt, &
-     swusecn, runoff_cn, aintcdt, fletsine, ptraday, pevaday, atmdem, rh, tavd
+    dsinbe, atmtr, rsoil, swdivide, kdif, kdir, croptype, swgc, gc, siccapact, siccaptb, icrop, t, dt, flcropcalendar, &
+     flCropHarvest, pond, cfevappond, flco2, fco2tra, tpot, epot, grain, nrain, finterception, swrain, &
+     swusecn, runoff_cn, fletsine, rh, tavd
     use swap_array_dimensions, only: magrs
     use MeteoVars
     use array_utils, only: afgen
@@ -535,18 +540,20 @@ contains
     ! === Section 3: Interception calculations ===
 
     ! Calculation of interception and net rain & net irrigation depth [cm]
-    if ((lai .lt. 1.d-3) .or. (grai+gird .lt. 1.d-5) .or. &
-        (swinter.eq.0) .or. (gsnow.gt.0.0d0) .or.(ssnow.gt.0.0d0)) then
+    if ((lai .lt. 1.d-3) .or. (state%atmosphere%grai+gird .lt. 1.d-5) .or. &
+        (swinter.eq.0) .or. (state%atmosphere%gsnow.gt.0.0d0) .or.(state%atmosphere%ssnow.gt.0.0d0)) then
 
       ! No vegetation, rainfall/irrigation or interception calculation
       aintc = 0.d0
 
     else if (swinter .eq. 1) then
       ! Calculate interception, method Von Hoyningen-Hune and Braden
-      call VonHHBraden (aintc)
+      ! SS-ATM A-2.6: grai retired — pass state%atmosphere%grai explicitly
+      call VonHHBraden (aintc, state%atmosphere%grai)
     else if (swinter .eq. 2) then
       ! Calculate interception, method Gash (1995)
-      call Gash (aintc)
+      ! SS-ATM A-2.6: grai retired — pass state%atmosphere%grai explicitly
+      call Gash (aintc, state%atmosphere%grai)
     end if
 
     ! Divide interception into rain part and irrigation part and
@@ -706,11 +713,11 @@ contains
         endif
       ! Fraction of the period the crop is wet
       elseif (swmetdetail.eq.1) then
-        if (grai .lt. 1.0d-12) then
+        if (state%atmosphere%grai .lt. 1.0d-12) then
           interc = 0.0d0
           wfrac  = 0.0d0
         else
-          interc = restint + aintc * arain(irecord) / grai
+          interc = restint + aintc * arain(irecord) / state%atmosphere%grai
           if (ew0.lt.0.0001d0) then
             wfrac = 0.0d0
           else
@@ -728,21 +735,17 @@ contains
       ! === Section 7: Potential soil evaporation & transpiration ===
 
       ! Potential soil evaporation (peva) [cm/d]
-      peva = max(0.0d0, (es0*dexp(-1.0d0*kdir*kdif*lai)*0.1d0))
-      at_peva = peva  ! [SS-ATM] dual-write
+      at_peva = max(0.0d0, (es0*dexp(-1.0d0*kdir*kdif*lai)*0.1d0))
       if (swcf.ne.3 .or. (swmetdetail.eq.0 .and. swinter.ne.3)) then
-        peva = max(0.0d0,(1.0d0-wfrac)*peva)
-        at_peva = peva  ! [SS-ATM] dual-write
+        at_peva = max(0.0d0,(1.0d0-wfrac)*at_peva)
       end if
 
       ! Alternative for peva (simple model, soil cover fraction specified)
       if (flCropCalendar .and. .not.flCropHarvest) then
         if (croptype(icrop).eq.1 .and. swgc.eq.2) then
-          peva = (1.0d0-gc)*es0*0.1d0
-          at_peva = peva  ! [SS-ATM] dual-write
+          at_peva = (1.0d0-gc)*es0*0.1d0
           if (swcf.ne.3 .or. (swmetdetail.eq.0 .and. swinter.ne.3)) then
-            peva = (1.0d0-wfrac)*peva
-            at_peva = peva  ! [SS-ATM] dual-write
+            at_peva = (1.0d0-wfrac)*at_peva
           end if
         endif
       endif
@@ -750,15 +753,12 @@ contains
       ! Adapt peva in case of ponding
       if (pond .gt. 1.0d-10) then
         if (SwETr.eq.0 .and. es0.gt.1.0d-8) then
-          peva = ew0/es0 * peva
-          at_peva = peva  ! [SS-ATM] dual-write
+          at_peva = ew0/es0 * at_peva
         elseif (es0.gt.1.0d-8) then
           if (swcfbs .eq. 1 .and. cfbs .gt. small) then
-            peva = cfevappond * peva / cfbs
-            at_peva = peva  ! [SS-ATM] dual-write
+            at_peva = cfevappond * at_peva / cfbs
           else
-            peva = cfevappond * peva
-            at_peva = peva  ! [SS-ATM] dual-write
+            at_peva = cfevappond * at_peva
           endif
         endif
       endif
@@ -766,51 +766,43 @@ contains
       ! Potential soil evaporation [cm/d] according to PMdirect
       if (swdivide .eq. 1) then
         if (pond .gt. 1.0d-10) then
-          peva = Edirectpond*0.1d0
-          at_peva = peva  ! [SS-ATM] dual-write
+          at_peva = Edirectpond*0.1d0
         else
-          peva = Edirect*0.1d0
-          at_peva = peva  ! [SS-ATM] dual-write
+          at_peva = Edirect*0.1d0
         endif
       endif
 
       ! Potential transpiration (ptra) [cm/d]
       if (swcf .ne. 3) then
-        ptra = ((1.0d0-wfrac)*et0-peva*10.0d0)*0.1d0
-        at_ptra = ptra  ! [SS-ATM] dual-write
+        at_ptra = ((1.0d0-wfrac)*et0-at_peva*10.0d0)*0.1d0
       else
-        ptra = (1.0d0-wfrac)*et0*0.1d0
-        at_ptra = ptra  ! [SS-ATM] dual-write
+        at_ptra = (1.0d0-wfrac)*et0*0.1d0
       endif
-      ptra = max(ptra,(1.01d0*nihil))
-      at_ptra = ptra  ! [SS-ATM] dual-write
+      at_ptra = max(at_ptra,(1.01d0*nihil))
 
       ! Potential transpiration [cm/d] according to PMdirect
       if (swdivide .eq. 1) then
-        ptra = (1.0d0-wfrac) * Tdirect * 0.1d0
-        at_ptra = ptra  ! [SS-ATM] dual-write
-        ptra = max(ptra,(1.01d0*nihil))
-        at_ptra = ptra  ! [SS-ATM] dual-write
+        at_ptra = (1.0d0-wfrac) * Tdirect * 0.1d0
+        at_ptra = max(at_ptra,(1.01d0*nihil))
       endif
 
       ! Correction of potential transpiration as a function of atmospheric CO2 concentration
       if (flCO2 .and. flCropEmergence) then
-        ptra = fco2tra * ptra
-        at_ptra = ptra  ! [SS-ATM] dual-write
+        at_ptra = fco2tra * at_ptra
       endif
 
       ! === Section 8: Results for detailed weather records ===
 
       ! Result of detailed weather records (cm/d)
       if (swmetdetail.eq.1) then
-        tpot(irecord) = ptra
-        epot(irecord) = peva
-        if (grai .lt. 1.0d-12) then
+        tpot(irecord) = at_ptra
+        epot(irecord) = at_peva
+        if (state%atmosphere%grai .lt. 1.0d-12) then
           grain(irecord) = 0.0d0
           nrain(irecord) = 0.0d0
         else
           grain(irecord) = arain(irecord) / metperiod
-          nrain(irecord) = arain(irecord) / metperiod * nraida /grai
+          nrain(irecord) = arain(irecord) / metperiod * state%atmosphere%nraida / state%atmosphere%grai
         endif
       endif
 
@@ -822,10 +814,10 @@ contains
     if (swmetdetail.eq.0) then
 
       ! Finterception: ratio net / gross rain flux; net rainflux = gross - interception
-      if (grai.gt.1.d-5) then
+      if (state%atmosphere%grai.gt.1.d-5) then
         ! finterception is exclusively meant for dividing rain flux into interception part
         ! and net rain part; not for sprinkler irrigation!
-        finterception = nraida / grai
+        finterception = state%atmosphere%nraida / state%atmosphere%grai
         if (aintc.lt.1.0d-5) finterception = 1.0d0
       else
         finterception = 1.0d0
@@ -834,34 +826,29 @@ contains
       ! In case of daily precipitation sum: set actual gross and net rainflux,
       ! and interception on TIMESTEP basis
       if (swrain.eq.0) then
-        rainflux    = fprecnosnow * grai
+        rainflux    = state%atmosphere%fprecnosnow * state%atmosphere%grai
         netrainflux = finterception * rainflux
-        graidt  = rainflux
-        nraidt  = netrainflux
+        state%atmosphere%graidt  = rainflux
+        state%atmosphere%nraidt  = netrainflux
         if (swuseCN == 1) then
-          call CNmethod(2)
-          nraidt = nraidt - Runoff_CN
+          ! SS-ATM A-2.6: state added — CNmethod needs nraidt/melt from state%atmosphere
+          call CNmethod(2, state)
+          state%atmosphere%nraidt = state%atmosphere%nraidt - Runoff_CN
         end if
-        aintcdt = rainflux - netrainflux  ! aintcdt involves ONLY interception of RAIN
-        state%atmosphere%graidt  = graidt   ! [SS-ATM] dual-write
-        state%atmosphere%nraidt  = nraidt   ! [SS-ATM] dual-write
-        state%atmosphere%aintcdt = aintcdt  ! [SS-ATM] dual-write
+        state%atmosphere%aintcdt = rainflux - state%atmosphere%nraidt  ! aintcdt involves ONLY interception of RAIN
       endif
 
       ! Soil evaporation rate of today
       if (.not. fletsine) then
-        call reduceva (1, nraida, state)
+        call reduceva (1, state%atmosphere%nraida, state)
       endif
 
       ! Save daily potential values for use in ETSine
-      ptraday = ptra
-      at_ptraday = ptraday  ! [SS-ATM] dual-write
-      pevaday = peva
-      at_pevaday = pevaday  ! [SS-ATM] dual-write
+      at_ptraday = at_ptra
+      at_pevaday = at_peva
 
       ! Calculate atmospheric demand [cm]
-      atmdem = et0*0.1d0
-      at_atmdem = atmdem  ! [SS-ATM] dual-write
+      at_atmdem = et0*0.1d0
 
     endif
 
@@ -902,24 +889,18 @@ contains
 
       ! Daily radiation (J/m2/d) and atmospheric demand (cm/d)
       rad = 0.d0
-      atmdem = 0.d0
+      at_atmdem = 0.d0
       do i = 1,nmetdetail
         rad = rad + arad(i)
-        atmdem = atmdem + tpot(i)
+        at_atmdem = at_atmdem + tpot(i)
       enddo
-      at_atmdem = atmdem  ! [SS-ATM] dual-write
 
       ! Fluxes of current time step (start of the day)
-      ptra = tpot(1)
-      at_ptra = ptra  ! [SS-ATM] dual-write
-      peva = epot(1)
-      at_peva = peva  ! [SS-ATM] dual-write
-      graidt = grain(1)
-      nraidt = nrain(1)
-      aintcdt = graidt - nraidt    ! aintcdt involves ONLY interception of RAIN
-      state%atmosphere%graidt  = graidt   ! [SS-ATM] dual-write
-      state%atmosphere%nraidt  = nraidt   ! [SS-ATM] dual-write
-      state%atmosphere%aintcdt = aintcdt  ! [SS-ATM] dual-write
+      at_ptra = tpot(1)
+      at_peva = epot(1)
+      state%atmosphere%graidt  = grain(1)
+      state%atmosphere%nraidt  = nrain(1)
+      state%atmosphere%aintcdt = state%atmosphere%graidt - state%atmosphere%nraidt  ! aintcdt involves ONLY interception of RAIN
 
     endif
 

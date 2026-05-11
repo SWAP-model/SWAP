@@ -123,10 +123,11 @@ contains
       Emax = -k1Atm * ((hatm-h(1))/disnod(1)+1.0d0)
       
 ! --- determine reduced soil evaporation rate
+      ! SS-ATM A-2.6: peva/empreva retired — read from state%atmosphere
       if (swredu .eq. 0) then
-        state%soilwater%reva = min(peva,max(0.0d0,Emax))
+        state%soilwater%reva = min(state%atmosphere%peva,max(0.0d0,Emax))
       else
-        state%soilwater%reva = min(empreva,max(0.0d0,Emax))
+        state%soilwater%reva = min(state%atmosphere%empreva,max(0.0d0,Emax))
       endif
 
 !     H I G H   A T M O S P H E R I C   D E M A N D
@@ -134,7 +135,8 @@ contains
 !     and remaining ponding of previous timestep
       ArMpSs = 0.d0                                           !     set value of macropore area at soil surface
       if (FlMacropore .and. Z_Tp.gt.-1.d-8) ArMpSs = ArMpTp   
-      q0 = (nraidt+nird+melt)*(1.0d0-ArMpSs) + runon - state%soilwater%reva
+      ! SS-ATM A-2.6: nraidt/melt retired — read from state%atmosphere
+      q0 = (state%atmosphere%nraidt+nird+state%atmosphere%melt)*(1.0d0-ArMpSs) + runon - state%soilwater%reva
       q1 = - q0 - pondm1/dt
 
 !     check whether the atmospheric demand condition applies
@@ -177,7 +179,8 @@ contains
 ! --- in case of macropores, calc. potential overland flow into macrop.: QMpLatSs
          if (FlMacropore .and. Z_Tp.gt.-1.d-8) then                     ! Adaptation for GEM 
             if (h0max.gt.PndmxMp) then
-               RsRoMp  = (h0max + (nraidt+nird+melt)*ArMpSs*dt) / KsMpSs
+               ! SS-ATM A-2.6: nraidt/melt retired — read from state%atmosphere
+               RsRoMp  = (h0max + (state%atmosphere%nraidt+nird+state%atmosphere%melt)*ArMpSs*dt) / KsMpSs
                p2Mp    = 1.0d0 / (p1 + 1.0d0 + dt/RsRoMp)
                pond    = (h0max - PndmxMp) * p2Mp/p2
                state%soilwater%QMpLatSs = pond * dt/RsRoMp
