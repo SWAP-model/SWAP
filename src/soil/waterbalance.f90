@@ -43,12 +43,16 @@ contains
       implicit none
       ! SS-BND B-2.7: state added to read state%soilwater%gwlinp (gwlinp global retired)
       ! SS-SWC S-1.6: intent(in) -> intent(inout) to allow gwl/nodgwl/pegwl/bpegwl/npegwl/gwlflcpzo/nodgwlflcpzo dual-writes
+      ! SS-SWC S-2.4: h/pond reads cut over to state%soilwater; level/watertable pass state
       type(swap_state_t), intent(inout) :: state
       ! local
       integer   i, node, nodhlp, nodheq1
       logical   flsat,flunsat
       character(len=200) messag
       character(len=19) datexti
+
+      ! S-2.4 ASSOCIATE: alias state%soilwater arrays for h/pond reads
+      associate( sw_h => state%soilwater%h, sw_pond => state%soilwater%pond )
 
       ! set initial values
       gwl       = 999.0d0
@@ -62,7 +66,7 @@ contains
       nodheq1   = numnod
 
       ! search for groundwater table
-      if (h(numnod).ge.0.0d0) flsat  = .true.
+      if (sw_h(numnod).ge.0.0d0) flsat  = .true.      ! S-2.4 read cutover: h -> sw_h
 
       node = numnod
       nodgwlflcpzo = numnod + 1
@@ -72,31 +76,31 @@ contains
       do while (flsat .and. node.gt.1)
          node = node - 1
          if(swbotb.eq.1)then
-            if (h(node) .lt. 0.0d0) then
-               gwl = z(node+1) + h(node+1) / (h(node+1)-h(node)) * disnod(node+1)
+            if (sw_h(node) .lt. 0.0d0) then                  ! S-2.4 read cutover
+               gwl = z(node+1) + sw_h(node+1) / (sw_h(node+1)-sw_h(node)) * disnod(node+1)  ! S-2.4
                state%soilwater%gwl    = gwl                   ! S-1.6 dual-write
                flsat   =.false.
                nodgwl  = node
                state%soilwater%nodgwl = node                  ! S-1.6 dual-write
             endif
          else
-            if (h(node) .lt. 1.0d0 .and. nodheq1.eq.numnod) nodheq1 = node
+            if (sw_h(node) .lt. 1.0d0 .and. nodheq1.eq.numnod) nodheq1 = node  ! S-2.4
 
-            if (h(node) .lt. 0.0d0) then
+            if (sw_h(node) .lt. 0.0d0) then                  ! S-2.4 read cutover
                if (.not.flmacropore) then
                   flsat  = .false.
                   nodgwl = node
                   state%soilwater%nodgwl = node                ! S-1.6 dual-write
-                  gwl    = level (1,node,nodheq1)
+                  gwl    = level (state,1,node,nodheq1)        ! S-2.4: pass state to level
                   state%soilwater%gwl    = gwl                 ! S-1.6 dual-write
                elseif (flmacropore) then
                   if (gwl.gt.990.0d0) then
                      nodgwl = node
                      state%soilwater%nodgwl = node             ! S-1.6 dual-write
-                     gwl    = level (2,node,nodheq1)
+                     gwl    = level (state,2,node,nodheq1)     ! S-2.4: pass state to level
                      state%soilwater%gwl    = gwl              ! S-1.6 dual-write
                   endif
-                  call watertable (node,nodgwlflcpzo,nodhlp,nodheq1,0.0d0,flsat,gwlflcpzo)
+                  call watertable (state,node,nodgwlflcpzo,nodhlp,nodheq1,0.0d0,flsat,gwlflcpzo)  ! S-2.4
                   state%soilwater%nodgwlflcpzo = nodgwlflcpzo  ! S-1.6 dual-write (watertable out-arg)
                   state%soilwater%gwlflcpzo    = gwlflcpzo     ! S-1.6 dual-write (watertable out-arg)
                endif
@@ -106,11 +110,11 @@ contains
 
       ! whole profile saturated, then add ponding layer to groundwater level
       if (flsat)then
-         if(h(1) .gt. 0.0d0)then
-            if (pond .lt. 1.d-8) then
-               gwl = min(z(1)+h(1),pond)
+         if(sw_h(1) .gt. 0.0d0)then                          ! S-2.4 read cutover
+            if (sw_pond .lt. 1.d-8) then                     ! S-2.4 read cutover: pond -> sw_pond
+               gwl = min(z(1)+sw_h(1),sw_pond)               ! S-2.4
             else
-               gwl = pond
+               gwl = sw_pond                                  ! S-2.4
             endif
          else
             gwl = 0.0d0
@@ -124,16 +128,16 @@ contains
             gwlflcpzo    = gwl
             state%soilwater%gwlflcpzo    = gwl                ! S-1.6 dual-write
          endif
-      endif         
- 
+      endif
+
       ! search for perched groundwater table
 
       ! first, search for first saturated compartment (i) above groundwater level
       i = nodhlp
       flunsat = .true.
       do while (flunsat .and. i.ge.1)
-         if (h(i).ge.0.0d0) flunsat = .false.
-         i = i - 1 
+         if (sw_h(i).ge.0.0d0) flunsat = .false.             ! S-2.4 read cutover
+         i = i - 1
       enddo
 
       ! if saturated compartment above gwl exists, then find perched groundwater table
@@ -147,17 +151,17 @@ contains
          do while (flsat .and. node.gt.1)
             node = node - 1
 
-            if (h(node) .lt. 1.0d0 .and. nodheq1.eq.bpegwl) nodheq1 = node
+            if (sw_h(node) .lt. 1.0d0 .and. nodheq1.eq.bpegwl) nodheq1 = node  ! S-2.4
 
-            if (h(node) .lt. 0.0d0) then
+            if (sw_h(node) .lt. 0.0d0) then                  ! S-2.4 read cutover
                if (.not.flmacropore) then
                   flsat = .false.
                   npegwl = node
                   state%soilwater%npegwl = node                ! S-1.6 dual-write
-                  pegwl  = level (1,node,nodheq1)
+                  pegwl  = level (state,1,node,nodheq1)        ! S-2.4: pass state to level
                   state%soilwater%pegwl  = pegwl               ! S-1.6 dual-write
                elseif (flmacropore) then
-                  call watertable (node,npegwl,nodhlp,nodheq1,CritUndSatVol,flsat,pegwl)
+                  call watertable (state,node,npegwl,nodhlp,nodheq1,CritUndSatVol,flsat,pegwl)  ! S-2.4
                   state%soilwater%npegwl = npegwl              ! S-1.6 dual-write (watertable out-arg)
                   state%soilwater%pegwl  = pegwl               ! S-1.6 dual-write (watertable out-arg)
                endif
@@ -166,11 +170,11 @@ contains
 
          ! whole profile saturated, then add ponding layer to perched groundwater level
          if (flsat)then
-            if(h(1) .gt. 0.0d0)then
-               if (pond .lt. 1.d-8) then
-                  pegwl = min(z(1)+h(1),pond)
+            if(sw_h(1) .gt. 0.0d0)then                       ! S-2.4 read cutover
+               if (sw_pond .lt. 1.d-8) then                  ! S-2.4 read cutover
+                  pegwl = min(z(1)+sw_h(1),sw_pond)          ! S-2.4
                else
-                  pegwl = pond
+                  pegwl = sw_pond                             ! S-2.4
                endif
             else
                pegwl = 0.0d0
@@ -185,6 +189,8 @@ contains
          npegwl = -1
          state%soilwater%npegwl = -1                          ! S-1.6 dual-write
       endif
+
+      end associate  ! sw_h, sw_pond (S-2.4)
 
       ! fatal error if gwl below profile and flux has to be calculated
       if ((swbotb.eq.3.or.swbotb.eq.4).and.gwl.gt.998.0d0) then
@@ -225,21 +231,26 @@ contains
       !> @note
       !> Date: April 2008
       !> @endnote
-      function level (swoptlev,node,nodheq1)
+      ! SS-SWC S-2.4: state added as first arg so h reads come from state%soilwater%h
+      function level (state,swoptlev,node,nodheq1)
       use variables, only: numnod, disnod, dz, h, z, zbotcp
       implicit none
-      
+
+      type(swap_state_t), intent(in) :: state
       integer node, nodheq1, swoptlev
       integer i
       real(8) levm1, levp1
       real(8) level
 
+      ! S-2.4 ASSOCIATE: alias state%soilwater%h for reads inside level
+      associate( sw_h => state%soilwater%h )
+
       if (swoptlev.eq.1) then
          ! groundwater level equals elevation head where h = 0
-         if (h(node+1).ge.0.0d0)then
-            level = z(node+1) + h(node+1) / (h(node+1)-h(node)) * disnod(node+1)
-         else   
-            level = zbotcp(node) - h(node)
+         if (sw_h(node+1).ge.0.0d0)then                     ! S-2.4 read cutover
+            level = z(node+1) + sw_h(node+1) / (sw_h(node+1)-sw_h(node)) * disnod(node+1)  ! S-2.4
+         else
+            level = zbotcp(node) - sw_h(node)               ! S-2.4
             level = min(z(node),max(zbotcp(node),level))
          end if
 
@@ -250,24 +261,26 @@ contains
          if (nodheq1.eq.numnod) then
             levp1 = z(i) - 0.5d0 * dz(i)
          else
-            levp1 = z(i) - (z(i) - z(i+1)) * (1.d0-h(i)) / (h(i+1)-h(i))
+            levp1 = z(i) - (z(i) - z(i+1)) * (1.d0-sw_h(i)) / (sw_h(i+1)-sw_h(i))  ! S-2.4
          endif
          ! elevation head of h = -1
          i = node
-         do while (h(i).gt.-1.d0 .and. i.gt.1)
+         do while (sw_h(i).gt.-1.d0 .and. i.gt.1)          ! S-2.4 read cutover
             i = i - 1
          enddo
-         if (i.eq.1 .and. h(1).gt.-1.d0 .and. node.gt.2) then
+         if (i.eq.1 .and. sw_h(1).gt.-1.d0 .and. node.gt.2) then   ! S-2.4
             ! no compartment with pressure head < -1 cm in top of profile:
             ! use elevation head of h = 0 as estimation for groundwater level
-            levm1 = z(node+1) + h(node+1) / (h(node+1)-h(node)) * disnod(node+1)
+            levm1 = z(node+1) + sw_h(node+1) / (sw_h(node+1)-sw_h(node)) * disnod(node+1)  ! S-2.4
             levp1 = levm1
          else
-            levm1 = z(i+1) + (z(i) - z(i+1)) * (1.d0+h(i+1)) / (h(i+1)-h(i))
+            levm1 = z(i+1) + (z(i) - z(i+1)) * (1.d0+sw_h(i+1)) / (sw_h(i+1)-sw_h(i))  ! S-2.4
          endif
          ! groundwater level = average of levp1 and levm1
          level = (levp1 + levm1) / 2.d0
       endif
+
+      end associate  ! sw_h (S-2.4)
 
       return
     end function level
@@ -293,22 +306,30 @@ contains
       !>
       !> NODGWL is NOT node with GWL, but DEEPEST UNSATURATED NODE
       !> @endnote
-      subroutine watertable (node,nodlev,nodhlp,nodheq1,CritUndSatVol,flsat,waterlevel)
+      ! SS-SWC S-2.4: state added as first arg so h/Theta/ThetaS reads come from state%soilwater
+      subroutine watertable (state,node,nodlev,nodhlp,nodheq1,CritUndSatVol,flsat,waterlevel)
       use variables, only: numnod,dz,h,Theta,ThetaS,z
       implicit none
 
+      type(swap_state_t), intent(in) :: state
       integer node,nodhlp,nodheq1,nodlev
       logical flsat
       real(8) waterlevel
       integer i
       real(8) CritUndSatVol, TotUndSatVol
       logical flsat2
+
+      ! S-2.4 ASSOCIATE: alias state%soilwater arrays for h/Theta/ThetaS reads
+      associate( sw_h     => state%soilwater%h,     &
+                 sw_theta => state%soilwater%theta,  &
+                 sw_thetas => state%soilwater%thetas )
+
       TotUndSatVol = 0.0d0
-      flsat2 = .false. 
+      flsat2 = .false.
       i = node
       do while (TotUndSatVol.lt.CritUndSatVol .and. .not.flsat2 .and. i.ge.1)
-         TotUndSatVol = TotUndSatVol + (ThetaS(i) - Theta(i)) * dz(i)
-         if (h(i).gt.-1.d-7) flsat2 = .true.
+         TotUndSatVol = TotUndSatVol + (sw_thetas(i) - sw_theta(i)) * dz(i)  ! S-2.4 read cutover
+         if (sw_h(i).gt.-1.d-7) flsat2 = .true.                              ! S-2.4 read cutover
          i = i - 1
       enddo
 !
@@ -321,12 +342,12 @@ contains
          node   = i + 1
       endif
 !
-      if (.not.flsat) then        
-! find groundwater level containing node   
-         if (CritUndSatVol.gt.0.d0) then  
-            waterlevel = level(1,node,nodheq1)
+      if (.not.flsat) then
+! find groundwater level containing node
+         if (CritUndSatVol.gt.0.d0) then
+            waterlevel = level(state,1,node,nodheq1)          ! S-2.4: pass state to level
          else
-            waterlevel = level(2,node,nodheq1)
+            waterlevel = level(state,2,node,nodheq1)          ! S-2.4: pass state to level
          endif
          i = max(node-2,1)
          do while(z(i)-0.5d0*dz(i).gt.waterlevel .and. i.gt.2 .and. i.lt.numnod)
@@ -334,6 +355,8 @@ contains
          enddo
          nodlev = min(max(i,1),numnod)
       endif
+
+      end associate  ! sw_h, sw_theta, sw_thetas (S-2.4)
 
       return
     end subroutine watertable
@@ -349,6 +372,7 @@ contains
       !> Date: 29/9/99
       !> @endnote
       ! SS-SWST Phase 2 Task 11 A2: state added to fluxes() so qdra/qdrtot read from state.
+      ! SS-SWC S-2.4: theta/thetm1/FrArMtrx/volact/volm1/fllowgwl/q/inq reads cut over to state%soilwater
       subroutine fluxes (state)
       ! SS-CRP Phase 2 Task C-2.2: qrot/qrosum removed from use variables; read from state%soilwater.
       use variables, only: q,dt,inq,numnod,thetm1,theta,dz,qimmob,volact,volm1,swbotb,     &
@@ -359,35 +383,48 @@ contains
       type(swap_state_t), intent(inout) :: state
       integer i,level
 
+      ! S-2.4 ASSOCIATE: alias state%soilwater arrays/scalars for read cutover
+      associate( sw_theta   => state%soilwater%theta,   &
+                 sw_thetm1  => state%soilwater%thetm1,  &
+                 sw_FrArMtrx => state%soilwater%FrArMtrx, &
+                 sw_q       => state%soilwater%q,       &
+                 sw_inq     => state%soilwater%intr%inq, &
+                 sw_volact  => state%soilwater%volact,  &
+                 sw_volm1   => state%soilwater%volm1,   &
+                 sw_fllowgwl => state%soilwater%fllowgwl )
+
       ! determine qbot if not specified
       ! SS-BND B-2.7: qtop and qbot read/written via state%soilwater (globals retired)
       if (swbotb .eq. 5 .or. swbotb .eq. 7 .or.                         &
      &    swbotb .eq. 8 .or. swbotb .eq. -2 .or.                        &
-     &    (swbotb .eq. 1 .and. fllowgwl)) then
+     &    (swbotb .eq. 1 .and. sw_fllowgwl)) then        ! S-2.4 read cutover: fllowgwl -> sw_fllowgwl
         ! SS-CRP Phase 2 Task C-2.2: qrosum -> state%soilwater%qrosum
-        state%soilwater%qbot = state%soilwater%qtop + state%soilwater%qrosum + state%surfacewater%qdrtot - QMaPo + (volact-volm1)/dt - qssdisum
+        state%soilwater%qbot = state%soilwater%qtop + state%soilwater%qrosum + state%surfacewater%qdrtot - QMaPo + (sw_volact-sw_volm1)/dt - qssdisum  ! S-2.4
       endif
 
       ! calculate fluxes (cm/d) from changes in volume per compartment
       i = numnod+1
       q(i) = state%soilwater%qbot
-      state%soilwater%q(i)        = q(i)                      ! S-1.6 dual-write
-      inq(i) = inq(i) + q(i)*dt
-      state%soilwater%intr%inq(i) = inq(i)                    ! S-1.6 dual-write (snapshot after accumulation)
+      sw_q(i)              = q(i)                             ! S-1.6 dual-write (via ASSOCIATE)
+      inq(i) = sw_inq(i) + q(i)*dt                           ! S-2.4 read cutover: inq(i) -> sw_inq(i)
+      state%soilwater%intr%inq(i) = inq(i)                   ! S-1.6 dual-write (snapshot after accumulation)
       do i = numnod,1,-1
         ! SS-CRP Phase 2 Task C-2.2: qrot(i) -> state%soilwater%qrot(i)
-        q(i) = - (theta(i)-thetm1(i)+qimmob(i))*FrArMtrx(i)*dz(i)/dt +  &
-     &                q(i+1)-state%soilwater%qrot(i)+QExcMpMtx(i)+qssdi(i)
+        ! S-2.4: theta/thetm1/FrArMtrx -> sw_theta/sw_thetm1/sw_FrArMtrx; q(i+1) -> sw_q(i+1)
+        q(i) = - (sw_theta(i)-sw_thetm1(i)+qimmob(i))*sw_FrArMtrx(i)*dz(i)/dt +  &
+     &                sw_q(i+1)-state%soilwater%qrot(i)+QExcMpMtx(i)+qssdi(i)
 
         if (allocated(state%drainage%qdra)) then
           do level=1,nrlevs
              q(i) = q(i) - state%drainage%qdra(level,i)
           enddo
         end if
-        state%soilwater%q(i)        = q(i)                    ! S-1.6 dual-write
-        inq(i) = inq(i) + q(i)*dt
-        state%soilwater%intr%inq(i) = inq(i)                  ! S-1.6 dual-write (snapshot after accumulation)
+        sw_q(i)              = q(i)                          ! S-1.6 dual-write
+        inq(i) = sw_inq(i) + q(i)*dt                        ! S-2.4 read cutover: inq(i) -> sw_inq(i)
+        state%soilwater%intr%inq(i) = inq(i)                ! S-1.6 dual-write (snapshot after accumulation)
       end do
+
+      end associate  ! sw_theta etc (S-2.4)
 
       return
       end
@@ -527,8 +564,9 @@ contains
       ! SS-BND Phase 2 Task B-2.2: runots read from state%soilwater (boundary home).
       iruno = iruno + state%soilwater%runots
       state%soilwater%intr%iruno = state%soilwater%intr%iruno + state%soilwater%runots  ! S-1.5 dual-write
-      irunon = irunon + runon*dt
-      state%soilwater%intr%irunon = state%soilwater%intr%irunon + runon*dt  ! S-1.5 dual-write
+      ! SS-SWC S-2.4: runon read cutover to state%soilwater%runon
+      irunon = irunon + state%soilwater%runon*dt              ! S-2.4 read cutover: runon -> state%soilwater%runon
+      state%soilwater%intr%irunon = state%soilwater%intr%irunon + state%soilwater%runon*dt  ! S-1.5 dual-write
       ! SS-ATM Phase 2 Task A-2.2: graidt/nraidt read from state%atmosphere (atmosphere home).
       iprec = iprec + (state%atmosphere%graidt+gird)*dt
       state%soilwater%intr%iprec = state%soilwater%intr%iprec + (state%atmosphere%graidt+gird)*dt  ! S-1.5 dual-write
@@ -540,20 +578,21 @@ contains
       state%soilwater%intr%inird = state%soilwater%intr%inird + nird*dt  ! S-1.5 dual-write
       iqbot = iqbot + qbotts
       state%soilwater%intr%iqbot = state%soilwater%intr%iqbot + qbotts  ! S-1.5 dual-write
-      if (q(1) < 0.0d0) then
-         iqtdo = iqtdo - q(1)*dt
-         state%soilwater%intr%iqtdo = state%soilwater%intr%iqtdo - q(1)*dt  ! S-1.5 dual-write
+      ! SS-SWC S-2.4: q(1)/q(node) read cutover to state%soilwater%q
+      if (state%soilwater%q(1) < 0.0d0) then                ! S-2.4 read cutover: q(1) -> state%soilwater%q(1)
+         iqtdo = iqtdo - state%soilwater%q(1)*dt             ! S-2.4
+         state%soilwater%intr%iqtdo = state%soilwater%intr%iqtdo - state%soilwater%q(1)*dt  ! S-1.5 dual-write
       else
-         iqtup = iqtup + q(1)*dt
-         state%soilwater%intr%iqtup = state%soilwater%intr%iqtup + q(1)*dt  ! S-1.5 dual-write
+         iqtup = iqtup + state%soilwater%q(1)*dt             ! S-2.4
+         state%soilwater%intr%iqtup = state%soilwater%intr%iqtup + state%soilwater%q(1)*dt  ! S-1.5 dual-write
       end if
       do node = 1, numnod+1
-         if (q(node) < 0.0d0) then
-            iqdo(node) = iqdo(node) - q(node)*dt
-            state%soilwater%intr%iqdo(node) = state%soilwater%intr%iqdo(node) - q(node)*dt  ! S-1.5 dual-write
+         if (state%soilwater%q(node) < 0.0d0) then          ! S-2.4 read cutover: q(node) -> state%soilwater%q
+            iqdo(node) = iqdo(node) - state%soilwater%q(node)*dt          ! S-2.4
+            state%soilwater%intr%iqdo(node) = state%soilwater%intr%iqdo(node) - state%soilwater%q(node)*dt  ! S-1.5 dual-write
          else
-            iqup(node) = iqup(node) + q(node)*dt
-            state%soilwater%intr%iqup(node) = state%soilwater%intr%iqup(node) + q(node)*dt  ! S-1.5 dual-write
+            iqup(node) = iqup(node) + state%soilwater%q(node)*dt          ! S-2.4
+            state%soilwater%intr%iqup(node) = state%soilwater%intr%iqup(node) + state%soilwater%q(node)*dt  ! S-1.5 dual-write
          end if
       end do
 
@@ -617,28 +656,42 @@ contains
       ! SS-ATM Phase 2 Task A-2.2: nraidt read from state%atmosphere (atmosphere home).
       cqprai = cqprai + state%atmosphere%nraidt*dt
       state%soilwater%cumu%cqprai = state%soilwater%cumu%cqprai + state%atmosphere%nraidt*dt  ! S-1.5 dual-write
-      crunon = crunon + runon*dt
-      state%soilwater%cumu%crunon = state%soilwater%cumu%crunon + runon*dt  ! S-1.5 dual-write
-      if (q(1).lt.0.0d0) then
-        cqtdo = cqtdo - q(1)*dt
-        state%soilwater%cumu%cqtdo = state%soilwater%cumu%cqtdo - q(1)*dt  ! S-1.5 dual-write
-      else if (q(1).gt.0.0d0) then
-        cqtup = cqtup + q(1)*dt
-        state%soilwater%cumu%cqtup = state%soilwater%cumu%cqtup + q(1)*dt  ! S-1.5 dual-write
+      ! SS-SWC S-2.4: runon read cutover to state%soilwater%runon
+      crunon = crunon + state%soilwater%runon*dt               ! S-2.4 read cutover: runon -> state%soilwater%runon
+      state%soilwater%cumu%crunon = state%soilwater%cumu%crunon + state%soilwater%runon*dt  ! S-1.5 dual-write
+      ! SS-SWC S-2.4: q(1) read cutover to state%soilwater%q(1)
+      if (state%soilwater%q(1).lt.0.0d0) then                 ! S-2.4 read cutover
+        cqtdo = cqtdo - state%soilwater%q(1)*dt               ! S-2.4
+        state%soilwater%cumu%cqtdo = state%soilwater%cumu%cqtdo - state%soilwater%q(1)*dt  ! S-1.5 dual-write
+      else if (state%soilwater%q(1).gt.0.0d0) then            ! S-2.4
+        cqtup = cqtup + state%soilwater%q(1)*dt               ! S-2.4
+        state%soilwater%cumu%cqtup = state%soilwater%cumu%cqtup + state%soilwater%q(1)*dt  ! S-1.5 dual-write
       endif
 
       ! compensate water balance error of this time step during remaining day part
       ! cumulative water balance error
+      ! SS-SWC S-2.4: cnird/crunon/crunoff/cqrot/cqbot/volini/volact/PondIni/pond/cqssdi/cqprai
+      !               read cutover to state%soilwater%cumu / state%soilwater flat fields
       if (swsnow.eq.0) then
         ! SS-ATM A-2.6: cnrai/cevap retired; read from state%atmosphere%cumu
-        wbalance = state%atmosphere%cumu%cnrai + cnird + crunon - crunoff - cqrot - state%atmosphere%cumu%cevap     &
-     &        - state%surfacewater%drainage_cumulative%cqdra + cqbot + volini - volact + PondIni - pond + cqssdi
+        wbalance = state%atmosphere%cumu%cnrai + state%soilwater%cumu%cnird           &  ! S-2.4
+     &        + state%soilwater%cumu%crunon - state%soilwater%cumu%crunoff             &  ! S-2.4
+     &        - state%soilwater%cumu%cqrot - state%atmosphere%cumu%cevap              &  ! S-2.4
+     &        - state%surfacewater%drainage_cumulative%cqdra                          &
+     &        + state%soilwater%cumu%cqbot + state%soilwater%volini                   &  ! S-2.4
+     &        - state%soilwater%volact + state%soilwater%pondini                      &  ! S-2.4
+     &        - state%soilwater%pond + state%soilwater%cumu%cqssdi                       ! S-2.4
       else
          ! SS-ATM Phase 2 Task A-2.2: cmelt read from state%atmosphere%cumu (atmosphere home).
          ! SS-ATM A-2.6: cevap retired — read from state%atmosphere%cumu%cevap
-         wbalance = cqprai + cnird + state%atmosphere%cumu%cmelt + crunon - crunoff           &
-     &        - cqrot - state%atmosphere%cumu%cevap - state%surfacewater%drainage_cumulative%cqdra     &
-     &        + cqbot + volini - volact + PondIni - pond + cqssdi
+         wbalance = state%soilwater%cumu%cqprai + state%soilwater%cumu%cnird          &  ! S-2.4
+     &        + state%atmosphere%cumu%cmelt                                           &
+     &        + state%soilwater%cumu%crunon - state%soilwater%cumu%crunoff            &  ! S-2.4
+     &        - state%soilwater%cumu%cqrot - state%atmosphere%cumu%cevap             &  ! S-2.4
+     &        - state%surfacewater%drainage_cumulative%cqdra                          &
+     &        + state%soilwater%cumu%cqbot + state%soilwater%volini                   &  ! S-2.4
+     &        - state%soilwater%volact + state%soilwater%pondini                      &  ! S-2.4
+     &        - state%soilwater%pond + state%soilwater%cumu%cqssdi                       ! S-2.4
       endif
 
       if (FlMacropore) wbalance = wbalance - cQMpOutDrRap -            &
@@ -898,6 +951,7 @@ contains
       !>
       !> Differences SWAP/SWAPS: SWAPS has extra parameters
       !> @endnote
+      ! SS-SWC S-2.4: theta/FrArMtrx/volact reads cut over to state%soilwater
       subroutine watstor (state)
       use variables, only: volm1,volact,numnod,theta,dz,FrArMtrx
       use swap_state_mod, only: swap_state_t
@@ -907,11 +961,14 @@ contains
       INTEGER i
 
       ! update soil profile water storage
-      volm1 = volact
-      state%soilwater%volm1  = volact                         ! S-1.6 dual-write
+      ! S-2.4: volact read from state%soilwater%volact (read cutover)
+      volm1 = state%soilwater%volact                          ! S-2.4 read cutover: volact -> state%soilwater%volact
+      state%soilwater%volm1  = state%soilwater%volact         ! S-1.6 dual-write
       volact = 0.0d0
+      state%soilwater%volact = 0.0d0                         ! S-2.4: reset state alongside global
       do 10 i = 1,numnod
-        volact = volact+theta(i)*dz(i)*FrArMtrx(i)
+        ! S-2.4: theta/FrArMtrx reads cut over to state%soilwater%theta/FrArMtrx
+        volact = volact + state%soilwater%theta(i)*dz(i)*state%soilwater%FrArMtrx(i)  ! S-2.4
  10   continue
       state%soilwater%volact = volact                         ! S-1.6 dual-write
 

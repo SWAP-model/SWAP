@@ -96,8 +96,8 @@ contains
 ! --- Initialisation
 
 ! --- runon of present day
-      if (flDayStart .and. flrunon) runon = runonarr(daycum+1)      
-
+      if (flDayStart .and. flrunon) runon = runonarr(daycum+1)
+      state%soilwater%runon = runon                              ! [SS-SWC S-2.4] dual-write
 
       state%soilwater%FlRunoff = .false.
       state%soilwater%QMpLatSs = 0.0d0

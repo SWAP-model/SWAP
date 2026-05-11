@@ -148,6 +148,7 @@ contains
       volact = 0.0d0
       call watstor (state)                                ! [SS-SWC S-1.6] state arg added
       volini = volact
+      state%soilwater%volini = state%soilwater%volact     ! [SS-SWC S-2.4] dual-write (macropore init path)
 
       ! Initialisation of intermediate and cumulative values
       call MACRORESET(0)
