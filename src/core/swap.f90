@@ -181,7 +181,7 @@ if (iTask == 1) then
 
 !  calculate grid parameters
    call CalcGrid()
-   call soilwater_init(state%soilwater)   ! SS-BND Phase 1 B-1.2: zero soilwater state (forward-compat for per-node arrays)
+   call soilwater_init(state%soilwater, numnod, numlay)   ! SS-CRP Phase 1 C-1.2: allocate per-node arrays + mfluxtable
 
    if (flTillage) call DoTillage(1)
    if (flSSDI)    call SSDI_irrigation(1)

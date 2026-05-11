@@ -9,7 +9,7 @@
 !!     qbot, qbot_nonfrozen, hbot, gwlinp, deepgw
 !!
 !! Crop water uptake subset (22 fields — ADR 0036):
-!!   Per-node arrays (allocated by soilwater_init in C-1.2):
+!!   Per-node arrays (allocated by soilwater_init, C-1.2):
 !!     Primary Feddes+stress path: qrot, qpotrot, qredwet, qreddry, qredsol, qredfrs
 !!     JvL microscopic path: mflux, mroot, hroot, rootrho, rootphi, rmax
 !!     Init-once lookup table: mfluxtable
@@ -58,7 +58,7 @@ module soilwater_state_mod
       ! ===========================================================================
       ! CROP WATER UPTAKE (22 fields — ADR 0036, 2026-05-11)
       ! ===========================================================================
-      ! Per-node arrays (allocated by soilwater_init in C-1.2; unallocated here):
+      ! Per-node arrays (allocated by soilwater_init, C-1.2):
 
       ! Primary Feddes+stress path (6 per-node arrays):
       real(real64), allocatable :: qrot(:)      !! per-node root sink term (cm/d)
@@ -101,10 +101,18 @@ contains
 
    !> Lifecycle init for soilwater typed state.
    !! Zeros/resets all scalar fields in both the boundary subset (ADR 0035)
-   !! and the crop-uptake scalar subset (ADR 0036).  Per-node allocatable
-   !! arrays (qrot, qpotrot, qredwet, qreddry, qredsol, qredfrs, mflux,
-   !! mroot, hroot, rootrho, rootphi, rmax, mfluxtable) are NOT allocated
-   !! here — that is deferred to C-1.2 when the signature gains numnod/nlay.
+   !! and the crop-uptake scalar subset (ADR 0036).  Also allocates all 13
+   !! per-node / per-layer allocatable arrays and zeros them:
+   !!   12 per-node arrays sized numnod:
+   !!     qrot, qpotrot, qredwet, qreddry, qredsol, qredfrs  (Feddes path)
+   !!     mflux, mroot, hroot, rootrho, rootphi, rmax         (JvL path)
+   !!   1 lookup table mfluxtable(nlay, 801) — allocated here, zeroed here.
+   !!     NOTE: the table is built (filled) by MatricFlux(1) inside
+   !!     CropGrowth(1) — not here.  MatricFlux(1) depends on ksatfit,
+   !!     wiltpoint, and cofgen which are not yet populated when
+   !!     soilwater_init runs (they are set by SoilHydraulics(1) inside
+   !!     SoilWater(1) at swap.f90:190).  Relocation of the build step is
+   !!     therefore BLOCKED; see ADR 0036 §mfluxtable disposition.
    !!
    !! Takes soilwater_state_t directly (not swap_state_t) to avoid a circular
    !! dependency: soilwater_state_mod is used by swap_state_mod.
@@ -112,9 +120,11 @@ contains
    !! Called from swap.f90 immediately after CalcGrid(), before DoTillage(1).
    !!
    !! Design: docs/superpowers/specs/2026-05-10-state-migration-boundary-design.md D8
-   !!         docs/superpowers/specs/2026-05-10-state-migration-crop-uptake-design.md
-   subroutine soilwater_init(sw)
+   !!         docs/superpowers/specs/2026-05-10-state-migration-crop-uptake-design.md D4/D6
+   subroutine soilwater_init(sw, numnod, nlay)
       type(soilwater_state_t), intent(inout) :: sw
+      integer, intent(in) :: numnod  !! number of soil nodes (from CalcGrid)
+      integer, intent(in) :: nlay    !! number of soil layers (from CalcGrid)
 
       ! Top-boundary fields
       sw%qtop      = 0.0_real64
@@ -133,7 +143,6 @@ contains
       sw%deepgw         = 0.0_real64
 
       ! Crop-uptake scalars (ADR 0036 — C-1.1)
-      ! Per-node arrays are allocated in C-1.2; scalars zeroed here.
       sw%qrosum      = 0.0_real64
       sw%qredwetsum  = 0.0_real64
       sw%qreddrysum  = 0.0_real64
@@ -144,6 +153,28 @@ contains
       sw%alpJvLier   = 0.0_real64
       sw%hleaf       = 0.0_real64
       sw%Hxylem      = 0.0_real64
+
+      ! Per-node arrays — Feddes + stress path (ADR 0036, C-1.2)
+      allocate(sw%qrot(numnod));    sw%qrot    = 0.0_real64
+      allocate(sw%qpotrot(numnod)); sw%qpotrot = 0.0_real64
+      allocate(sw%qredwet(numnod)); sw%qredwet = 0.0_real64
+      allocate(sw%qreddry(numnod)); sw%qreddry = 0.0_real64
+      allocate(sw%qredsol(numnod)); sw%qredsol = 0.0_real64
+      allocate(sw%qredfrs(numnod)); sw%qredfrs = 0.0_real64
+
+      ! Per-node arrays — JvL microscopic path (ADR 0036, C-1.2)
+      allocate(sw%mflux(numnod));   sw%mflux   = 0.0_real64
+      allocate(sw%mroot(numnod));   sw%mroot   = 0.0_real64
+      allocate(sw%hroot(numnod));   sw%hroot   = 0.0_real64
+      allocate(sw%rootrho(numnod)); sw%rootrho = 0.0_real64
+      allocate(sw%rootphi(numnod)); sw%rootphi = 0.0_real64
+      allocate(sw%rmax(numnod));    sw%rmax    = 0.0_real64
+
+      ! Lookup table — allocated here; built by MatricFlux(1) in CropGrowth(1)
+      ! (build is BLOCKED from relocation: ksatfit/wiltpoint/cofgen not yet
+      ! populated when this routine runs — see ADR 0036 §mfluxtable disposition)
+      allocate(sw%mfluxtable(nlay, 801)); sw%mfluxtable = 0.0_real64
+
    end subroutine soilwater_init
 
 end module soilwater_state_mod

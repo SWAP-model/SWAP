@@ -13,9 +13,9 @@
 !   Flag: flWrtNonox
 !   JvL scalars: Tactual, alpJvLier, hleaf, Hxylem
 !
-! Allocatable arrays are unallocated until soilwater_init(sw, numnod, nlay)
-! is called in C-1.2. This file covers: defaults, lifecycle (allocatable
-! status), round-trips, and aggregator path.
+! Allocatable arrays are allocated by soilwater_init(sw, numnod, nlay) (C-1.2).
+! This file covers: defaults, lifecycle (allocatable status), round-trips,
+! aggregator path, and post-init allocation shape + zero checks.
 !
 ! See docs/superpowers/specs/2026-05-10-state-migration-boundary-design.md
 !     docs/superpowers/specs/2026-05-10-state-migration-crop-uptake-design.md
@@ -98,7 +98,7 @@ subroutine test_soilwater_init_zeros_state()
    sw%gwlinp         = 250.0_real64
    sw%deepgw         = -400.0_real64
 
-   call soilwater_init(sw)
+   call soilwater_init(sw, 5, 2)
 
    ! All reals must be zero
    @assertEqual(0.0_real64, sw%qtop,           1.0e-12_real64)
@@ -268,7 +268,7 @@ end subroutine test_soilwater_cropuptake_aggregator_access
 subroutine test_soilwater_cropuptake_soilwater_init_zeros_new_scalars()
    ! soilwater_init zeroes all boundary AND new crop-uptake scalar fields
    ! even when they were pre-set to non-zero values.
-   ! (Per-node arrays remain unallocated until C-1.2 — not tested here.)
+   ! Per-node arrays are allocated by soilwater_init (C-1.2).
    use funit
    use iso_fortran_env, only: real64
    use soilwater_state_mod, only: soilwater_state_t, soilwater_init
@@ -286,7 +286,7 @@ subroutine test_soilwater_cropuptake_soilwater_init_zeros_new_scalars()
    sw%Hxylem     = -100.0_real64
    sw%flWrtNonox = .true.
 
-   call soilwater_init(sw)
+   call soilwater_init(sw, 5, 2)
 
    @assertEqual(0.0_real64, sw%qrosum,       1.0e-12_real64)
    @assertEqual(0.0_real64, sw%qredwetsum,   1.0e-12_real64)
@@ -299,3 +299,115 @@ subroutine test_soilwater_cropuptake_soilwater_init_zeros_new_scalars()
    @assertEqual(0.0_real64, sw%Hxylem,       1.0e-12_real64)
    @assertFalse(sw%flWrtNonox)
 end subroutine test_soilwater_cropuptake_soilwater_init_zeros_new_scalars
+
+! =============================================================================
+! C-1.2 — soilwater_init(sw, numnod, nlay) allocation tests (ADR 0036)
+! =============================================================================
+
+@test
+subroutine test_soilwater_init_allocates_per_node_arrays()
+   ! After soilwater_init(sw, numnod, nlay) all 12 per-node arrays must be
+   ! allocated with size == numnod.
+   use funit
+   use iso_fortran_env, only: real64
+   use soilwater_state_mod, only: soilwater_state_t, soilwater_init
+   type(soilwater_state_t) :: sw
+   integer, parameter :: n = 10, nl = 3
+
+   call soilwater_init(sw, n, nl)
+
+   ! Feddes + stress path
+   @assertTrue(allocated(sw%qrot))
+   @assertTrue(allocated(sw%qpotrot))
+   @assertTrue(allocated(sw%qredwet))
+   @assertTrue(allocated(sw%qreddry))
+   @assertTrue(allocated(sw%qredsol))
+   @assertTrue(allocated(sw%qredfrs))
+
+   ! JvL microscopic path
+   @assertTrue(allocated(sw%mflux))
+   @assertTrue(allocated(sw%mroot))
+   @assertTrue(allocated(sw%hroot))
+   @assertTrue(allocated(sw%rootrho))
+   @assertTrue(allocated(sw%rootphi))
+   @assertTrue(allocated(sw%rmax))
+
+   ! Sizes must equal numnod
+   @assertEqual(n, size(sw%qrot))
+   @assertEqual(n, size(sw%qpotrot))
+   @assertEqual(n, size(sw%qredwet))
+   @assertEqual(n, size(sw%qreddry))
+   @assertEqual(n, size(sw%qredsol))
+   @assertEqual(n, size(sw%qredfrs))
+   @assertEqual(n, size(sw%mflux))
+   @assertEqual(n, size(sw%mroot))
+   @assertEqual(n, size(sw%hroot))
+   @assertEqual(n, size(sw%rootrho))
+   @assertEqual(n, size(sw%rootphi))
+   @assertEqual(n, size(sw%rmax))
+end subroutine test_soilwater_init_allocates_per_node_arrays
+
+@test
+subroutine test_soilwater_init_allocates_mfluxtable()
+   ! mfluxtable must be allocated with shape (nlay, 801) after init.
+   use funit
+   use iso_fortran_env, only: real64
+   use soilwater_state_mod, only: soilwater_state_t, soilwater_init
+   type(soilwater_state_t) :: sw
+   integer, parameter :: n = 5, nl = 4
+
+   call soilwater_init(sw, n, nl)
+
+   @assertTrue(allocated(sw%mfluxtable))
+   @assertEqual(nl,  size(sw%mfluxtable, 1))
+   @assertEqual(801, size(sw%mfluxtable, 2))
+end subroutine test_soilwater_init_allocates_mfluxtable
+
+@test
+subroutine test_soilwater_init_per_node_arrays_zeroed()
+   ! All per-node arrays and mfluxtable must be zero after init.
+   use funit
+   use iso_fortran_env, only: real64
+   use soilwater_state_mod, only: soilwater_state_t, soilwater_init
+   type(soilwater_state_t) :: sw
+   integer, parameter :: n = 6, nl = 2
+
+   call soilwater_init(sw, n, nl)
+
+   @assertEqual(0.0_real64, maxval(abs(sw%qrot)),    1.0e-12_real64)
+   @assertEqual(0.0_real64, maxval(abs(sw%qpotrot)), 1.0e-12_real64)
+   @assertEqual(0.0_real64, maxval(abs(sw%qredwet)), 1.0e-12_real64)
+   @assertEqual(0.0_real64, maxval(abs(sw%qreddry)), 1.0e-12_real64)
+   @assertEqual(0.0_real64, maxval(abs(sw%qredsol)), 1.0e-12_real64)
+   @assertEqual(0.0_real64, maxval(abs(sw%qredfrs)), 1.0e-12_real64)
+   @assertEqual(0.0_real64, maxval(abs(sw%mflux)),   1.0e-12_real64)
+   @assertEqual(0.0_real64, maxval(abs(sw%mroot)),   1.0e-12_real64)
+   @assertEqual(0.0_real64, maxval(abs(sw%hroot)),   1.0e-12_real64)
+   @assertEqual(0.0_real64, maxval(abs(sw%rootrho)), 1.0e-12_real64)
+   @assertEqual(0.0_real64, maxval(abs(sw%rootphi)), 1.0e-12_real64)
+   @assertEqual(0.0_real64, maxval(abs(sw%rmax)),    1.0e-12_real64)
+   @assertEqual(0.0_real64, maxval(abs(sw%mfluxtable)), 1.0e-12_real64)
+end subroutine test_soilwater_init_per_node_arrays_zeroed
+
+@test
+subroutine test_soilwater_init_different_sizes()
+   ! Calling init with different numnod/nlay produces correct shapes.
+   ! Verifies the size arguments are actually honoured.
+   use funit
+   use iso_fortran_env, only: real64
+   use soilwater_state_mod, only: soilwater_state_t, soilwater_init
+   type(soilwater_state_t) :: sw1, sw2
+   integer, parameter :: n1 = 20, nl1 = 5
+   integer, parameter :: n2 = 3,  nl2 = 1
+
+   call soilwater_init(sw1, n1, nl1)
+   call soilwater_init(sw2, n2, nl2)
+
+   @assertEqual(n1,  size(sw1%qrot))
+   @assertEqual(nl1, size(sw1%mfluxtable, 1))
+   @assertEqual(801, size(sw1%mfluxtable, 2))
+
+   @assertEqual(n2,  size(sw2%qrot))
+   @assertEqual(nl2, size(sw2%mfluxtable, 1))
+   @assertEqual(801, size(sw2%mfluxtable, 2))
+end subroutine test_soilwater_init_different_sizes
