@@ -114,7 +114,7 @@ contains
       ! === Initialization ===
 
       ! Determine macropore geometry (incl. static macropore volume)
-      call MACROGEOM
+      call MACROGEOM(state)
 
       ! Initialisation of flag for drain tube flDraTub and drainage basis ZDraBas
       if (SwDrRap.Eq.1 .and. SwDra.gt.0) then
@@ -264,9 +264,12 @@ contains
   !! Functions called: -
   !! File usage: -
   !! @endnote
-  subroutine MACROGEOM
+  subroutine MACROGEOM(state)
       use Variables
+      use swap_state_mod, only: swap_state_t      ! [SS-SWC S-1.11]
+      use, intrinsic :: iso_fortran_env, only: real64  ! [SS-SWC S-1.11]
       implicit NONE
+      type(swap_state_t), intent(inout) :: state   ! [SS-SWC S-1.11]
 
       ! ----------------------------------------------------------------------
       ! --- local
@@ -433,6 +436,7 @@ contains
          !        Fraction of unit of horizontal area that is left for soil matrix after 
          !        substraction of static macropores
          FrArMtrx(ic)= 1.d0 - VlMpStCp(ic)/Dz(ic)
+         state%soilwater%FrArMtrx(ic) = real(FrArMtrx(ic), real64)  ! [SS-SWC S-1.11]
   40  continue
 
       ! - C. CALCULATION OF VOLUMETRIC PROPORTIONS PER COMPARTMENT FOR THE MP DOMAINS 
@@ -548,6 +552,7 @@ contains
                PpDmCp(id,ic)= 0.d0
             enddo
             FrArMtrx(ic)= 1.d0
+            state%soilwater%FrArMtrx(ic) = 1.0_real64             ! [SS-SWC S-1.11]
          enddo
       endif
 
