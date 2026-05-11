@@ -354,6 +354,8 @@ contains
             wrecord = wrecord + 1
             ptra = tpot(wrecord)
             peva = epot(wrecord)
+            state%atmosphere%ptra = ptra  ! [SS-ATM] dual-write
+            state%atmosphere%peva = peva  ! [SS-ATM] dual-write
             graidt = grain(wrecord)
             nraidt = nrain(wrecord)
             aintcdt = graidt - nraidt
@@ -453,6 +455,8 @@ contains
       ! Set E and T fluxes
       peva = pevaday*fraction/dt
       ptra = ptraday*fraction/dt
+      state%atmosphere%peva = peva  ! [SS-ATM] dual-write
+      state%atmosphere%ptra = ptra  ! [SS-ATM] dual-write
 
       ! Actual soil evaporation rate of current moment
       call reduceva(2, nraida, state)
