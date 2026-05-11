@@ -142,7 +142,7 @@ contains
                       ICpBtDm,ICpBtPerZon,ICpSatGWl,ICpSatPeGWl,ICpTpPerZon, &
                       ICpTpSatZon,ICpTpWaSrDm,ArMpTpDm, AwlCorFac,FrMpWalWet, &
                       SorpDmCp,ThtSrpRefDmCp, TimAbsCumDmCp,VlMpDm,VlMpDmCp, &
-                      WaSrMp,WaSrMpDmCp,ZBtDm,ZWaLevDm)
+                      WaSrMp,WaSrMpDmCp,ZBtDm,ZWaLevDm, state)   ! [SS-SWC S-2.9]
 
       ! Calculate initial waterstorage in matrix on basis FrArMtrx
       volact = 0.0d0
@@ -193,7 +193,7 @@ contains
                       ICpBtDm,ICpBtPerZon,ICpSatGWl,ICpSatPeGWl,ICpTpPerZon, &
                       ICpTpSatZon,ICpTpWaSrDm,ArMpTpDm, AwlCorFac,FrMpWalWet, &
                       SorpDmCp,ThtSrpRefDmCp, TimAbsCumDmCp,VlMpDm,VlMpDmCp, &
-                      WaSrMp,WaSrMpDmCp,ZBtDm,ZWaLevDm)
+                      WaSrMp,WaSrMpDmCp,ZBtDm,ZWaLevDm, state)   ! [SS-SWC S-2.9]
 
       ! Integration of Cumulative and Intermediate values
       call MACROINTEGRAL(flBegin,FrMpWalWet, &
@@ -1064,7 +1064,7 @@ contains
       ! - E. CALCULATION OF SORPTIVITY PARAMETERS SorpAlfa and SorpMax FROM SOIL
       !      HYDRAULIC FUNCTIONS according to PARLANGE
       do 80 il= 1, NumLay
-         call PARLANGE(SwSorp(il),il)
+         call PARLANGE(SwSorp(il),il,state)  ! [SS-SWC S-2.9] state for cofgen/h
   80  continue
 
       end associate
@@ -1113,13 +1113,15 @@ contains
   !! emperical sorptivity relation to the Parlange curve
   !! Functions called: moiscap, hconduc, prhead, watcon
   !! @endnote
-  subroutine PARLANGE(SwSrp,il)
+  subroutine PARLANGE(SwSrp,il,state)
       use Variables
       use soilhydraulics_utils, only: watcon, moiscap, hconduc, prhead
+      use swap_state_mod, only: swap_state_t   ! [SS-SWC S-2.9]
       implicit NONE
 
       ! --- global                                                       In
       integer il, SwSrp
+      type(swap_state_t), intent(in) :: state   ! [SS-SWC S-2.9]
       ! ----------------------------------------------------------------------
       ! --- local
       integer in, is, it, itIntv, Node, Nsteps
@@ -1144,7 +1146,7 @@ contains
       do 10 it= 1, Nsteps
          if (Thet(it).gt.ThetaS(Node) .or. it.eq.Nsteps) Thet(it)=      &
      &                  ThetaS(Node) - 0.5d0*ThetStep
-         Head = prhead (Node,dum,Thet(it),cofgen,h)
+         Head = prhead (Node,dum,Thet(it),state%soilwater%cofgen,state%soilwater%h)  ! [SS-SWC S-2.9]
          K_h = hconduc (Node,Head,Thet(it),Dum,20.0d0)  ! SS-SWC S-2.2: no state in PARLANGE; 20°C reference for sorptivity init
          Difmoiscap = moiscap (Node,Head)
          Diffus_h(it)= K_h / difmoiscap
@@ -1663,7 +1665,7 @@ contains
      &             ICpTpPerZon,ICpTpSatZon,ICpTpWaSrDm,ArMpTpDm,        &
      &             AwlCorFac,FrMpWalWet,SorpDmCp,ThtSrpRefDmCp,         &
      &             TimAbsCumDmCp,VlMpDm,VlMpDmCp,WaSrMp,                &
-     &             WaSrMpDmCp,ZBtDm,ZWaLevDm)
+     &             WaSrMpDmCp,ZBtDm,ZWaLevDm, state)   ! [SS-SWC S-2.9]
       ! ----------------------------------------------------------------------
       ! --- Exclude work arrays passed as arguments (now module-level in variables.f90)
       use Variables, NnCrAr_v => NnCrAr, FlEndSrpEvt_v => FlEndSrpEvt, &
@@ -1678,13 +1680,15 @@ contains
      &    ThtSrpRefDmCp_v => ThtSrpRefDmCp, TimAbsCumDmCp_v => TimAbsCumDmCp, &
      &    VlMpDm_v => VlMpDm, VlMpDmCp_v => VlMpDmCp, WaSrMp_v => WaSrMp, &
      &    WaSrMpDmCp_v => WaSrMpDmCp, ZBtDm_v => ZBtDm, ZWaLevDm_v => ZWaLevDm
+      use swap_state_mod, only: swap_state_t   ! [SS-SWC S-2.9]
       implicit NONE
 
       ! --- global                                                       In
       integer NnCrAr
-      real(8) QExcMtxDmCp(MaDm,MaCp),QInTopLatDm(MaDm) 
-      real(8) QInTopVrtDm(MaDm), QOutDrRapCp(MaCp), WaSrMpDm(MaDm)   
-      logical FlEndSrpEvt(MaDm,MaCp)                                      
+      real(8) QExcMtxDmCp(MaDm,MaCp),QInTopLatDm(MaDm)
+      real(8) QInTopVrtDm(MaDm), QOutDrRapCp(MaCp), WaSrMpDm(MaDm)
+      logical FlEndSrpEvt(MaDm,MaCp)
+      type(swap_state_t), intent(in) :: state   ! [SS-SWC S-2.9]                                      
       !     -                                                            Out
       integer ICpBtDm(MaDm), ICpBtPerZon, ICpSatGWl,ICpSatPeGWl 
       integer ICpTpPerZon, ICpTpSatZon, ICpTpWaSrDm(MaDm) 
@@ -1734,14 +1738,14 @@ contains
       endif
       do 20 ic= IcTopMp, NodGwlHlp
          il= Layer(ic)
-         if ((SwSoilShr(il).ne.0) .and. Theta(ic).lt.ThetaS(ic)-1.d-4)  &
+         if ((SwSoilShr(il).ne.0) .and. state%soilwater%theta(ic).lt.ThetaS(ic)-1.d-4)  &   ! [SS-SWC S-2.9]
      &   then
             VlShriRel= SHRINK(SwSoilShr(il),SwShrInp(il),ShrParA(il),   &
      &         ShrParB(il),ShrParC(il),ShrParD(il),ShrParE(il),         &
-     &         Theta(ic),ThetaS(ic))
+     &         state%soilwater%theta(ic),ThetaS(ic))                      ! [SS-SWC S-2.9]
             VlShriCp= VlShriRel * Dz(ic) ! VoLume of SHRInkage per unit hor. area
             !
-            if (Theta(ic).gt.ThetM1(ic)-1.d-8 .and.                     &
+            if (state%soilwater%theta(ic).gt.ThetM1(ic)-1.d-8 .and.     &   ! [SS-SWC S-2.9]
      &          (VlMpDyCp(ic).gt.0.d0 .or.                              &
      &          (VlMpDyCp(max0(1,ic-1))+VlMpDyCp(ic+1).gt.0.d0))) then
                !              Increasing moisture content in case of cracked soil compartment
@@ -1751,12 +1755,12 @@ contains
                CritThet= ThetCrMp(il)
             endif
 
-            !           SUBSIDence (SubsidCp) and VoLume of DYnamic MacroPores (VlMpDyCp) 
+            !           SUBSIDence (SubsidCp) and VoLume of DYnamic MacroPores (VlMpDyCp)
             !           per ComPartment (cm3 per cm2 hor. area of soil matrix)
-            if (Theta(ic).lt.CritThet) then
+            if (state%soilwater%theta(ic).lt.CritThet) then               ! [SS-SWC S-2.9]
                SubsidCp(ic)= (1.d0-(1.d0-VlShriRel)**(1.d0/GeomFac(il)))   &
      &                       * Dz(ic)
-               VlMpDyCp(ic)= FrArMtrx(ic) * (VlShriCp - SubsidCp(ic)) *    &
+               VlMpDyCp(ic)= state%soilwater%FrArMtrx(ic) * (VlShriCp - SubsidCp(ic)) *    &   ! [SS-SWC S-2.9]
      &                             Dz(ic) / (Dz(ic) - SubsidCp(ic))
             else
                SubsidCp(ic)= VlShriCp

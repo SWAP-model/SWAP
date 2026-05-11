@@ -144,7 +144,7 @@ SUBROUTINE MACRORATE(ITask,ICpBtDm,ICpBtPerZon,ICpSatGWl,         &
      &          ICpTpWaSrDm(id),ICpTpPerZon,id,FrMpWalWet,FrReduQ,Henpr1,&
      &          PeGWL,QInMtxSatDmCp,QOutMtxSatDmCp,ZWaLevDm(id),        &
      &          FlwInIntSatDmCpPot,FlwInIntSatDmPot,FlwOutMtxSatDmCpPot,&
-     &          FlwOutMtxSatDmPot(id))
+     &          FlwOutMtxSatDmPot(id), state)                              ! [SS-SWC S-2.9]
 
 ! - 1. CASE 1:   INCOMING WATER FLOWS
 !   1.a. INFLoW into macropores at soil surface (FlwInTop...) by infiltration:
@@ -160,13 +160,13 @@ SUBROUTINE MACRORATE(ITask,ICpBtDm,ICpBtPerZon,ICpSatGWl,         &
             ic = IcTopMp-1
             Henpr1 = 0.d0 ! H_enpr(1) 
             CritHtop = Henpr1
-            if (h(ic).gt.CritHtop) then  
+            if (state%soilwater%h(ic).gt.CritHtop) then                  ! [SS-SWC S-2.9]
                !Lay= Layer(ic)
                Ld   = dipomi
-               r0   = 0.5d0 * dipomi * (1.d0 - dsqrt(1.d0-VlMpStCp(IcTopMp)-VlMpDyCp(IcTopMp)))              
+               r0   = 0.5d0 * dipomi * (1.d0 - dsqrt(1.d0-VlMpStCp(IcTopMp)-VlMpDyCp(IcTopMp)))
                w_geom = 1.d0 / (1.d0 + Ld/(pi*dz(ic)/2.d0)*log((Ld/(pi*r0))) + Ld**2/(6.d0*dz(ic)**2))
 !
-               FlwInTopVrtDmPot(id)= w_geom * KsatCovLay * ((h(ic)-Henpr1) /(dz(ic)/2.d0) + 1.d0) * DT
+               FlwInTopVrtDmPot(id)= w_geom * KsatCovLay * ((state%soilwater%h(ic)-Henpr1) /(dz(ic)/2.d0) + 1.d0) * DT   ! [SS-SWC S-2.9]
                FlwInTopVrtDmPot(id)= ArMpTpDm(id)/ArMpTp * max(0.d0,FlwInTopVrtDmPot(id)) 
             else
                FlwInTopVrtDmPot(id)= 0.d0
@@ -178,29 +178,29 @@ SUBROUTINE MACRORATE(ITask,ICpBtDm,ICpBtPerZon,ICpSatGWl,         &
      &          ICpTpWaSrDm(id),ICpTpPerZon,id,FrMpWalWet,FrReduQ,Henpr1,&
      &          PeGWL,QInMtxSatDmCp,QOutMtxSatDmCp,ZWaLevDm(id),        &
      &          FlwInIntSatDmCpPot,FlwInIntSatDmPot,FlwOutMtxSatDmCpPot,&
-     &          FlwOutMtxSatDmPot(id))
+     &          FlwOutMtxSatDmPot(id), state)                              ! [SS-SWC S-2.9]
 
 !   1.c. INFLoW into macropores from SATurated MaTriX compartm. (exfiltration): 
          call SATFLOW(1,ICpBtDm(id),NumNod,ICpSatGWl,ICpTpWaSrDm(id),   &
      &          ICpTpSatZon,id,FrMpWalWet,FrReduQ,Henpr1,GWlFlCpZo,     &
      &          QInMtxSatDmCp,QOutMtxSatDmCp,ZWaLevDm(id),              &
      &          FlwInMtxSatDmCpPot,FlwInMtxSatDmPot,FlwOutMtxSatDmCpPot,&
-     &          FlwOutMtxSatDmPot(id))
+     &          FlwOutMtxSatDmPot(id), state)                             ! [SS-SWC S-2.9]
 
-! - 2. CASE 2:   OUTGOING WATER FLOWS 
-!   2.a. OUTFLoW out off macrop. into SATurated MaTriX compartm. (infiltrat.): 
+! - 2. CASE 2:   OUTGOING WATER FLOWS
+!   2.a. OUTFLoW out off macrop. into SATurated MaTriX compartm. (infiltrat.):
          call SATFLOW(2,ICpBtDm(id),NumNod,ICpSatGWl,ICpTpWaSrDm(id),   &
      &          ICpTpPerZon,id,FrMpWalWet,FrReduQ,Henpr1,GWlFlCpZo,     &
      &          QInMtxSatDmCp,QOutMtxSatDmCp,ZWaLevDm(id),              &
      &          FlwInMtxSatDmCpPot,FlwInMtxSatDmPot,FlwOutMtxSatDmCpPot,&
-     &          FlwOutMtxSatDmPot(id))
+     &          FlwOutMtxSatDmPot(id), state)                             ! [SS-SWC S-2.9]
 
 !   2.b. OUTFLoW out off macrop. into UNSaturated MaTriX compart. (absorption): 
          call ABSORPTION(1,ICpBtDm(id),ICpBtPerZon,ICpTpPerZon,         &
      &          ICpTpSatZon,ICpTpWaSrDm(id),id,AwlCorFac,FrMpWalWet,    &
      &          FrReduQ,QOutMtxUnsDmCp,SorpDmCp,ThtSrpRefDmCp,          &
      &          TimAbsCumDmCp,FlwOutMtxUnsDmCpPot,FlwOutMtxUnsDmPot(id),&
-     &          FlEndSrpEvt,ZWaLevDm)
+     &          FlEndSrpEvt,ZWaLevDm, state)                              ! [SS-SWC S-2.9]
 
 !   2.c. OUTFLoW out off macropores by RAPid DRainage. Only Main Domain (id= 1): 
          call RAPIDDRAIN(id,ICpBtDm(1),ICpTpWaSrDm(1),flDraTub,         &
@@ -390,7 +390,7 @@ SUBROUTINE MACRORATE(ITask,ICpBtDm,ICpBtPerZon,ICpSatGWl,         &
      &          ICpTpSatZon,ICpTpWaSrDm(id),id,AwlCorFac,FrMpWalWet,    &
      &          FrReduQ,QOutMtxUnsDmCp,SorpDmCp,ThtSrpRefDmCp,          &
      &          TimAbsCumDmCp,FlwOutMtxUnsDmCpPot,FlwOutMtxUnsDmPot(id),&
-     &          FlEndSrpEvt,ZWaLevDm)
+     &          FlEndSrpEvt,ZWaLevDm, state)                              ! [SS-SWC S-2.9]
  260  continue
 !
 !   2. exchange with saturated matrix
@@ -400,7 +400,7 @@ SUBROUTINE MACRORATE(ITask,ICpBtDm,ICpBtPerZon,ICpSatGWl,         &
      &          QInMtxSatDmCp,                                          &
      &          QOutMtxSatDmCp,ZWaLevDm(id),FlwInMtxSatDmCpPot,         &
      &          FlwInMtxSatDmPot,FlwOutMtxSatDmCpPot,                   &
-     &          FlwOutMtxSatDmPot(id))
+     &          FlwOutMtxSatDmPot(id), state)                            ! [SS-SWC S-2.9]
 
  270  continue
 
@@ -412,9 +412,10 @@ SUBROUTINE MACRORATE(ITask,ICpBtDm,ICpBtPerZon,ICpSatGWl,         &
       SUBROUTINE SATFLOW(ITask,ICpBtDm,ICpBtZon,ICpSatLev,ICpTpWaSrDm,  &
      &              ICpTpZon,id,FrMpWalWet,FrReduQ,Henpr1,Lev,          &
      &              QInMtxSatDmCp,QOutMtxSatDmCp,ZWaLevDm,              &
-     &              FlwInDmCpPot,FlwInDmPot,FlwOutDmCpPot,FlwOutDmPot)
+     &              FlwInDmCpPot,FlwInDmPot,FlwOutDmCpPot,FlwOutDmPot,  &
+     &              state)                                                ! [SS-SWC S-2.9]
 ! ----------------------------------------------------------------------
-!     Date               : April 2008                                        
+!     Date               : April 2008
 !     Purpose            : To calculate water exchange between macropores
 !                        : and the SATURATED soil matrix
 !     Functions called   : -
@@ -423,12 +424,14 @@ SUBROUTINE MACRORATE(ITask,ICpBtDm,ICpBtPerZon,ICpSatGWl,         &
       use Variables, ICpBtDm_v => ICpBtDm, ICpTpWaSrDm_v => ICpTpWaSrDm, &
      &    FrMpWalWet_v => FrMpWalWet, ZWaLevDm_v => ZWaLevDm, &
      &    QInMtxSatDmCp_v => QInMtxSatDmCp, QOutMtxSatDmCp_v => QOutMtxSatDmCp
+      use swap_state_mod, only: swap_state_t   ! [SS-SWC S-2.9]
       implicit NONE
 
 ! --- global                                                          In
       integer id, ICpBtDm, ICpBtZon,ICpSatLev,ICpTpWaSrDm,ICpTpZon,ITask
-      real(8) FrMpWalWet(MaDm,MaCp), FrReduQ, Henpr1, Lev, ZWaLevDm 
+      real(8) FrMpWalWet(MaDm,MaCp), FrReduQ, Henpr1, Lev, ZWaLevDm
       real(8) QInMtxSatDmCp(MaDm,MaCp), QOutMtxSatDmCp(MaDm,MaCp)
+      type(swap_state_t), intent(in) :: state   ! [SS-SWC S-2.9]
 !     -                                                              Out
       real(8) FlwInDmCpPot(MaCp), FlwInDmPot
       real(8) FlwOutDmCpPot(MaDm,MaCp), FlwOutDmPot
@@ -570,8 +573,8 @@ SUBROUTINE MACRORATE(ITask,ICpBtDm,ICpBtPerZon,ICpSatGWl,         &
       if (IcTopMp.gt.1)  then
          ic = IcTopMp-1
          CritHtop = 0.d0   !        Henpr1                      ! Adapted for GEM: test for H_enpr
-         if (h(ic).gt.CritHtop) then  
-            DelHDmCp(id,ic) = 0.d0 - (h(ic)-Henpr1)  ! Adapted for GEM: test for H_enpr
+         if (state%soilwater%h(ic).gt.CritHtop) then                    ! [SS-SWC S-2.9]
+            DelHDmCp(id,ic) = 0.d0 - (state%soilwater%h(ic)-Henpr1)    ! [SS-SWC S-2.9]
             dFdhMp(ic)= dFdhMp(ic) + QInMtxSatDmCp(id,ic) / DelHDmCp(id,IcTopMp-1)   
          endif        
       endif
@@ -589,10 +592,10 @@ SUBROUTINE MACRORATE(ITask,ICpBtDm,ICpBtPerZon,ICpSatGWl,         &
      &              ICpTpSatZon,ICpTpWaSrDm,id,AwlCorFac,FrMpWalWet,    &
      &              FrReduQ,QOutMtxUnsDmCp,SorpDmCp,ThtSrpRefDmCp,      &
      &              TimAbsCumDmCp,FlwOutMtxUnsDmCpPot,FlwOutMtxUnsDmPot,&
-     &              FlEndSrpEvt,ZWaLevDm)
+     &              FlEndSrpEvt,ZWaLevDm, state)                          ! [SS-SWC S-2.9]
 
 ! ----------------------------------------------------------------------
-!     Date               : May 2005                                        
+!     Date               : May 2005
 !     Purpose            : To calculate absorption of macropore water into the
 !                          unsaturated matrix by sorptivity under dry conditions
 !                          and by pressure head gradient with Darcy
@@ -607,15 +610,17 @@ SUBROUTINE MACRORATE(ITask,ICpBtDm,ICpBtPerZon,ICpSatGWl,         &
      &    TimAbsCumDmCp_v => TimAbsCumDmCp, FlEndSrpEvt_v => FlEndSrpEvt, &
      &    ZWaLevDm_v => ZWaLevDm
       use soilhydraulics_utils, only: moiscap
+      use swap_state_mod, only: swap_state_t   ! [SS-SWC S-2.9]
       implicit NONE
 
 ! --- global                                                          In
       integer id, ICpBtDm, ICpBtPerZon, ICpTpPerZon, ICpTpSatZon
       integer ICpTpWaSrDm, ITask
-      real(8) AwlCorFac(Macp), FrMpWalWet(MaDm,MaCp) 
+      real(8) AwlCorFac(Macp), FrMpWalWet(MaDm,MaCp)
       real(8) QOutMtxUnsDmCp(MaDm,MaCp), SorpDmCp(MaDm,MaCp)
       real(8) ThtSrpRefDmCp(MaDm,MaCp), TimAbsCumDmCp(MaDm,MaCp)
       real(8) ZWaLevDm(MaDm), FrReduQ
+      type(swap_state_t), intent(in) :: state   ! [SS-SWC S-2.9]
 !     -                                                              Out
       real(8) FlwOutMtxUnsDmCpPot(MaDm,MaCp), FlwOutMtxUnsDmPot
       logical FlEndSrpEvt(MaDm,MaCp)
@@ -641,64 +646,71 @@ SUBROUTINE MACRORATE(ITask,ICpBtDm,ICpBtPerZon,ICpSatGWl,         &
       CritSatDefMtx= 1.0d-8
       QSorpMax     = 1.0d3                                     
 !
+      ! [SS-SWC S-2.9] ASSOCIATE aliases for state reads in ABSORPTION
+      associate( sw_theta  => state%soilwater%theta,  &
+                 sw_h      => state%soilwater%h,      &
+                 sw_thetas => state%soilwater%thetas, &
+                 sw_thetar => state%soilwater%thetar, &
+                 sw_k      => state%soilwater%k )
+
       select case (itask)
       case (1)
 ! --- Calculate potential Absorption
       do 100 ic= ICpTpWaSrDm, ICpBtUnsMtxDm
-         if (ic.gt.ICpBtPerZon .or. ic.lt.ICpTpPerZon) then 
+         if (ic.gt.ICpBtPerZon .or. ic.lt.ICpTpPerZon) then
 !
             Lay      = Layer(ic)
-! - I By Sorptivity           
+! - I By Sorptivity
             Time     = TimAbsCumDmCp(id,ic)
-            SatDefMtx= ThetaS(ic) - Theta(ic)
+            SatDefMtx= sw_thetas(ic) - sw_theta(ic)                      ! [SS-SWC S-2.9]
             if (SatDefMtx.lt.CritSatDefMtx) then
 !    -  Matrix too wet: no sorptivity
                AbsSorp = 0.d0
             else
-               if (Time.lt.1.d-8) then  
+               if (Time.lt.1.d-8) then
 !    -  Start a new sorptivity event; set ThtSrpRefDmCp(id,ic) and SorpDmCp
 !    - ThtSrpRefDmCp = Thet_sat + Delta_thet_theor. = Thet_sat + Thet_theor. - Thet_0
-!      Delta_thet_theor. = theoretical increase of theta (calculated in MacroState) 
-                  ThtSrpRefDmCp(id,ic)= ThetaS(ic)  ! initial, delta_theta = 0
+!      Delta_thet_theor. = theoretical increase of theta (calculated in MacroState)
+                  ThtSrpRefDmCp(id,ic)= sw_thetas(ic)                    ! [SS-SWC S-2.9]
                   SorpDmCp(id,ic)= SorpMax(Lay) *                       &
-     &                          ((ThetaS(ic)-Theta(ic)) /               &
-     &                          (ThetaS(ic)-ThetaR(ic)))** SorpAlfa(Lay)
+     &                          ((sw_thetas(ic)-sw_theta(ic)) /          &   ! [SS-SWC S-2.9]
+     &                          (sw_thetas(ic)-sw_thetar(ic)))** SorpAlfa(Lay)  ! [SS-SWC S-2.9]
                   SorpAct = SorpDmCp(id,ic)
-               elseif((ThtSrpRefDmCp(id,ic)-Theta(ic)).gt.CritSatDefMtx) then 
+               elseif((ThtSrpRefDmCp(id,ic)-sw_theta(ic)).gt.CritSatDefMtx) then   ! [SS-SWC S-2.9]
 !    -  Continue existing sorptivity event; set SorpAct
                   SorpAct= SorpMax(Lay) *                               &
-     &                     ((ThtSrpRefDmCp(id,ic)-Theta(ic)) /          &
-     &                     (ThetaS(ic)-ThetaR(ic)))** SorpAlfa(Lay)
+     &                     ((ThtSrpRefDmCp(id,ic)-sw_theta(ic)) /        &   ! [SS-SWC S-2.9]
+     &                     (sw_thetas(ic)-sw_thetar(ic)))** SorpAlfa(Lay)    ! [SS-SWC S-2.9]
                else
 !    -  End existing sorptivity event
                   SorpAct= 0.d0
                endif
                AbsSorp = SorpAct * PpDmCp(id,ic) * (4.d0 *AwlCorFac(ic)*&
-     &               DZ(ic) / DiPoCp(ic)) * (dsqrt(Time+DT)-dsqrt(Time))   
+     &               DZ(ic) / DiPoCp(ic)) * (dsqrt(Time+DT)-dsqrt(Time))
                if (ic.eq.ICpTpWaSrDm) AbsSorp= FrMpWalWet(id,ic)*AbsSorp
 ! --- Limit peak amount of absorbed water at beginning of sorptiviy event
                AbsSorp = dmin1(QSorpMax*DT*DZ(ic),AbsSorp)
             endif
 
-!   II By Darcy 
+!   II By Darcy
 
             HMp = ZWaLevDm(id) - Z(ic)  ! head in macropore domain, assuming static equilibrium
             HMp = dmax1(0.d0,HMp)       ! no negative head in macropores
-            if (H(ic).lt.H_enpr(lay)-1.d-8 .and. HMp.gt.1.d-8) then     ! Adapted for GEM: test for H_enpr        
-               DelH= dmax1(0.d0,HMp - H(ic))
+            if (sw_h(ic).lt.H_enpr(lay)-1.d-8 .and. HMp.gt.1.d-8) then  ! [SS-SWC S-2.9]
+               DelH= dmax1(0.d0,HMp - sw_h(ic))                          ! [SS-SWC S-2.9]
             else
                DelH= 0.d0
             endif
             DelHDmCp(id,ic)= DelH     ! save head difference for calculation of derivative
                                       ! reciporocal resistance for calculation of derivative
             RecRes  = ShapeFacMp * 8.0d0 * PpDmCp(id,ic) * DZ(ic) *     &
-     &                K(ic) / DiPoCp(ic)**2
+     &                sw_k(ic) / DiPoCp(ic)**2                            ! [SS-SWC S-2.9]
             if (ic.eq.ICpTpWaSrDm) RecRes = FrMpWalWet(id,ic) * RecRes
             AbsDarc = RecRes * DelH * DT
 !
             SorpFac = SorpFacParl(lay) + (1.d0-SorpFacParl(lay)) *      &
-     &                ( 1.d0 -(dmax1((ThetaS(ic)-Theta(ic)),0.d0) /     &
-     &                         (ThetaS(ic)-ThetaR(ic)))**SorpAlfa(Lay) )
+     &                ( 1.d0 -(dmax1((sw_thetas(ic)-sw_theta(ic)),0.d0) / &   ! [SS-SWC S-2.9]
+     &                         (sw_thetas(ic)-sw_thetar(ic)))**SorpAlfa(Lay) )  ! [SS-SWC S-2.9]
 
             if (SwDarcy.eq.0) AbsDarc = 0.d0
 
@@ -739,15 +751,15 @@ SUBROUTINE MACRORATE(ITask,ICpBtDm,ICpBtPerZon,ICpSatGWl,         &
                if (FlSorp(id,ic)) then
                   Lay   = Layer(ic)
                   Deriv = - QOutMtxUnsDmCp(id,ic) * SorpAlfa(Lay) /     &
-     &                    (ThtSrpRefDmCp(id,ic) - Theta(ic))
-                  Deriv = Deriv * moiscap(ic,H(ic))
+     &                    (ThtSrpRefDmCp(id,ic) - sw_theta(ic))          ! [SS-SWC S-2.9]
+                  Deriv = Deriv * moiscap(ic,sw_h(ic))                   ! [SS-SWC S-2.9]
                else
                   Deriv = 0.d0
                   if (abs(DelHDmCp(id,ic)).gt.1.d-14) then
                      Deriv = - QOutMtxUnsDmCp(id,ic) / DelHDmCp(id,ic)
                   endif
                endif
-               dFdhMp(ic)= dFdhMp(ic) + Deriv   
+               dFdhMp(ic)= dFdhMp(ic) + Deriv
             endif
          endif
       end do
@@ -755,6 +767,8 @@ SUBROUTINE MACRORATE(ITask,ICpBtDm,ICpBtPerZon,ICpSatGWl,         &
       case default
          call fatalerr_collected ('Absorption', 'Illegal value for TASK')
       end select
+
+      end associate   ! [SS-SWC S-2.9] sw_theta/sw_h/sw_thetas/sw_thetar/sw_k
 
       return
       end
