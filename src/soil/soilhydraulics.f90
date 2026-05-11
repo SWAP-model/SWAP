@@ -117,7 +117,7 @@ contains
             qv(1) = q1
             do i=1,numnod
                qv(i+1) = qv(i) +dz(i)*FrArMtrx(i)*(theta(i)-thetm1(i))  &
-     &                          / dt+ sink(i) - source(i) + qrot(i)
+     &                          / dt+ sink(i) - source(i) + state%soilwater%qrot(i)
             end do
             state%soilwater%qbot = qv(numnod+1)
             h(1) = state%soilwater%gwlinp + disnod(1)*(qv(1)/kmean(1)+1.0d0)
@@ -199,7 +199,7 @@ contains
          hgrad(i) = (h(i-1)-h(i))/disnod(i) + 1.0d0
       end do
 
-      F(1) = (theta(1)-thetm1(1))*FrArMtrx(1)*dz(1)/dt + sink(1) - source(1) + qrot(1) + kmean(2) * hgrad(2)
+      F(1) = (theta(1)-thetm1(1))*FrArMtrx(1)*dz(1)/dt + sink(1) - source(1) + state%soilwater%qrot(1) + kmean(2) * hgrad(2)
 
       call boundtop(state)  ! [SS-HEAT] Task 9: state passed for rfcp access
 
@@ -219,7 +219,7 @@ contains
 
       do i=2,NN-1
          F(i) = (theta(i)-thetm1(i))*FrArMtrx(i)*dz(i)/dt + sink(i) - source(i) +     &
-     &          qrot(i) - kmean(i) * hgrad(i) + kmean(i+1) * hgrad(i+1)
+     &          state%soilwater%qrot(i) - kmean(i) * hgrad(i) + kmean(i+1) * hgrad(i+1)
       end do
 
       if(swbotb.eq.1 .and. (.not.fllowgwl))then
@@ -241,11 +241,11 @@ contains
          kmean(NN+1) = hcomean(swkmean,k(NN),cofgen(3,(NN+1)),          &
      &                        dz(NN),dz(NN+1))
          F(NN) = (theta(NN) - thetm1(NN))*FrArMtrx(NN)*dz(NN)/dt +      &
-     &           sink(NN)-source(NN)+qrot(NN)-kmean(NN)*hgrad(NN) +kmean(NN+1)*hgrad(NN+1)
+     &           sink(NN)-source(NN)+state%soilwater%qrot(NN)-kmean(NN)*hgrad(NN) +kmean(NN+1)*hgrad(NN+1)
       else
 
          F(NN) = (theta(NN) - thetm1(NN))*FrArMtrx(NN)*dz(NN)/dt        &
-     &         - kmean(NN) * hgrad(NN) + sink(NN) - source(NN) + qrot(NN) 
+     &         - kmean(NN) * hgrad(NN) + sink(NN) - source(NN) + state%soilwater%qrot(NN)
 
          if(swbotb.eq.3.and.swbotb3Impl.eq.1)then ! Cauchy-relation, implemented as head boundary
             if (SwBotb3ResVert.eq.0) then
@@ -478,7 +478,7 @@ contains
 
             ! Calculate F-function
             F(1) = (theta(1) - thetm1(1))*FrArMtrx(1)*dz(1)/dt + sink(1) - source(1) &
-     &           + qrot(1) + kmean(2) * hgrad(2)
+     &           + state%soilwater%qrot(1) + kmean(2) * hgrad(2)
 
             if (FlMacropore) QMpLatSsSav = state%soilwater%QMpLatSs
 
@@ -504,7 +504,7 @@ contains
 
             do i=2,NN-1
                F(i) = (theta(i)-thetm1(i))*FrArMtrx(i)*dz(i)/dt + sink(i) - source(i) &
-     &              + qrot(i) - kmean(i)*hgrad(i)+kmean(i+1)*hgrad(i+1)
+     &              + state%soilwater%qrot(i) - kmean(i)*hgrad(i)+kmean(i+1)*hgrad(i+1)
             end do
 
             if(swbotb.eq.1 .and. (.not.fllowgwl))then
@@ -524,11 +524,11 @@ contains
      &                       ,dz(NN),dz(NN+1))
                F(NN) = (theta(NN) - thetm1(NN))*FrArMtrx(NN)*dz(NN)/dt  &
      &            - kmean(NN) * hgrad(NN) + kmean(NN+1) * hgrad(NN+1)   &
-     &            + sink(NN) - source(NN) + qrot(NN)
+     &            + sink(NN) - source(NN) + state%soilwater%qrot(NN)
             else
                F(NN) = (theta(NN) - thetm1(NN))*FrArMtrx(NN)*dz(NN)/dt  &
      &               - kmean(NN) * hgrad(NN)                            &
-     &               + sink(NN) - source(NN) + qrot(NN)
+     &               + sink(NN) - source(NN) + state%soilwater%qrot(NN)
                if(swbotb.eq.3.and.swbotb3Impl.eq.1)then ! Cauchy
                   if (SwBotb3ResVert.eq.0) then
                      state%soilwater%qbot = - (h(NN)+z(NN)-state%soilwater%deepgw) /       &
@@ -716,7 +716,7 @@ contains
                end do
                do i=1,numnod
                  qv(i+1) = qv(i) +dz(i)*FrArMtrx(i)*(theta(i)-thetm1(i))&
-     &                          / dt + sink(i) - source(i) + qrot(i)
+     &                          / dt + sink(i) - source(i) + state%soilwater%qrot(i)
                end do
                state%soilwater%qbot = qv(numnod+1)
 
