@@ -5,13 +5,15 @@ module SWAP_csv_output
    !   removed from module-level use variables (now via state%solute in set_values/fill_values).
    ! SS-HEAT Phase 1 Task 5: TeTop,TeBot,Tsoil,heacap,heacon removed from module-level use variables
    !   (now via state%heat in set_values/fill_values).
-   use variables, only: igsnow,igird,iintc,irunon,iruno,ipeva,ievap,iqbot,                                                       &
-                        gwl,pond,iptra,iqrot,iqreddry,iqredwet,iqredsol,iqredfrs,tsum,dvs,pgasspot,pgass,                        &
+   ! SS-ATM A-2.5: igsnow,ipeva,ievap,iptra,ssnow,igrai,isnrai,isubl,inrai removed from module-level use variables
+   !   (now via state%atmosphere%intr and state%atmosphere in set_values/fill_values).
+   use variables, only: igird,iintc,irunon,iruno,iqbot,                                                                          &
+                        gwl,pond,iqrot,iqreddry,iqredwet,iqredsol,iqredfrs,tsum,dvs,pgasspot,pgass,                             &
                         cwdmpot,cwdm,wsopot,wso,wlvpot,wlv,wstpot,wst,wrtpot,wrt,dwso,dwlv,dwlvpot,dwst,dwstpot,dwrt,dwrtpot,    &
                         ch,cf,laipot,lai,rdpot,rd,tagppot,tagp,tagptpot,tagpt,cuptgrazpot,cuptgraz,plossdm,lossdm,               &
-                        wc10,Runoff_CN,iqtdo,iqtup,iqinfmax,ies0,iet0,iew0,inrai,inird,volact,ssnow,iqssdi,                     &
+                        wc10,Runoff_CN,iqtdo,iqtup,iqinfmax,ies0,iet0,iew0,inird,volact,iqssdi,                     &
                         flprintshort, date, t1900, dz, numnod, zbotcp, ztopcp, H, theta, K, inq, inqrot,                        &
-                        igrai, isnrai, iqmpoutdrrap, irunocn, isubl, c_top, inqssdi, nrlevs, frarmtrx,                          &
+                        iqmpoutdrrap, irunocn, c_top, inqssdi, nrlevs, frarmtrx,                          &
                         iqdo, iqup, pathwork, outfil, project, InList_csv, macp, madr
    use swap_state_mod, only: swap_state_t
 
@@ -226,22 +228,23 @@ module SWAP_csv_output
    ! this provides the actual link between user-supplied name and internal variable name (MUST be uppercase)
    do concurrent (i = 1:M, vars%iyes(i) == 1)
       ! single valued vars
-      if (vars%name(i) == 'RAIN')        vars%value(1,i) = igrai + isnrai
-      if (vars%name(i) == 'RAIN_NET')    vars%value(1,i) = inrai
-      if (vars%name(i) == 'SNOW')        vars%value(1,i) = igsnow
+      ! SS-ATM A-2.5: igrai,isnrai,inrai,igsnow,ipeva,ievap,isubl,iptra,ssnow from state%atmosphere.
+      if (vars%name(i) == 'RAIN')        vars%value(1,i) = state%atmosphere%intr%igrai + state%atmosphere%intr%isnrai
+      if (vars%name(i) == 'RAIN_NET')    vars%value(1,i) = state%atmosphere%intr%inrai
+      if (vars%name(i) == 'SNOW')        vars%value(1,i) = state%atmosphere%intr%igsnow
       if (vars%name(i) == 'IRRIG')       vars%value(1,i) = igird
       if (vars%name(i) == 'IRRIG_NET')   vars%value(1,i) = inird
       if (vars%name(i) == 'INTERC')      vars%value(1,i) = iintc
       if (vars%name(i) == 'RUNON')       vars%value(1,i) = irunon
       if (vars%name(i) == 'RUNOFF')      vars%value(1,i) = iruno
-      if (vars%name(i) == 'EPOT')        vars%value(1,i) = ipeva
-      if (vars%name(i) == 'EACT')        vars%value(1,i) = ievap
-      if (vars%name(i) == 'SUBLIM')      vars%value(1,i) = isubl
+      if (vars%name(i) == 'EPOT')        vars%value(1,i) = state%atmosphere%intr%ipeva
+      if (vars%name(i) == 'EACT')        vars%value(1,i) = state%atmosphere%intr%ievap
+      if (vars%name(i) == 'SUBLIM')      vars%value(1,i) = state%atmosphere%intr%isubl
       if (vars%name(i) == 'DRAINAGE')    vars%value(1,i) = state%surfacewater%intermediate%iqdra + iQMpOutDrRap
       if (vars%name(i) == 'QBOTTOM')     vars%value(1,i) = iqbot
       if (vars%name(i) == 'GWL')         vars%value(1,i) = gwl
       if (vars%name(i) == 'POND')        vars%value(1,i) = pond
-      if (vars%name(i) == 'TPOT')        vars%value(1,i) = iptra
+      if (vars%name(i) == 'TPOT')        vars%value(1,i) = state%atmosphere%intr%iptra
       if (vars%name(i) == 'TACT')        vars%value(1,i) = iqrot
       if (vars%name(i) == 'TREDDRY')     vars%value(1,i) = iqreddry
       if (vars%name(i) == 'TREDWET')     vars%value(1,i) = iqredwet
@@ -253,7 +256,7 @@ module SWAP_csv_output
       if (vars%name(i) == 'DSTOR')       vars%value(1,i) = dstor
       if (vars%name(i) == 'BALDEV')      vars%value(1,i) = baldev
       if (vars%name(i) == 'VOLACT')      vars%value(1,i) = volact
-      if (vars%name(i) == 'SSNOW')       vars%value(1,i) = ssnow
+      if (vars%name(i) == 'SSNOW')       vars%value(1,i) = state%atmosphere%ssnow
       if (vars%name(i) == 'QSSDI')       vars%value(1,i) = iqssdi
       if (vars%name(i) == 'TSUM')        vars%value(1,i) = tsum
       if (vars%name(i) == 'DVS')         vars%value(1,i) = dvs
@@ -380,9 +383,10 @@ module SWAP_csv_output
       call makeheader(iuncsv, filcsv)
 
       ! store inital values
+      ! SS-ATM A-2.5: ssnow read from state%atmosphere (atmosphere home).
       VolOld  = volact
       PondOld = pond
-      SnowOld = ssnow
+      SnowOld = state%atmosphere%ssnow
 
    case (2)
       ! dynamic
@@ -467,14 +471,15 @@ module SWAP_csv_output
    integer :: i
 
    ! change in storage and deviation in mass balance
-   dstor        = (volact + pond + ssnow) - (VolOld + PondOld + SnowOld)
-   baldev       = (igrai+isnrai+igsnow+igird+irunon + iqssdi) - dstor -             &
-                  (iintc+iruno+irunoCN+iqrot+ievap+isubl+iQMpOutDrRap+state%surfacewater%intermediate%iqdra+(-1.0d0*iqbot))
+   ! SS-ATM A-2.5: ssnow,igrai,isnrai,igsnow,ievap,isubl from state%atmosphere.
+   dstor        = (volact + pond + state%atmosphere%ssnow) - (VolOld + PondOld + SnowOld)
+   baldev       = (state%atmosphere%intr%igrai+state%atmosphere%intr%isnrai+state%atmosphere%intr%igsnow+igird+irunon + iqssdi) - dstor -             &
+                  (iintc+iruno+irunoCN+iqrot+state%atmosphere%intr%ievap+state%atmosphere%intr%isubl+iQMpOutDrRap+state%surfacewater%intermediate%iqdra+(-1.0d0*iqbot))
 
    ! replace Old values by current values (needed for next output moment)
    VolOld  = volact
    PondOld = pond
-   SnowOld = ssnow
+   SnowOld = state%atmosphere%ssnow
 
    ! H, WC, TEMP, K, CONC, CONCADS, O2TOP
    if (lp_H%fldo)   lp_H%vals(1:vars%Nnodes(lp_H%jpos))     =       H(vars%nodes(1:vars%Nnodes(lp_H%jpos), lp_H%jpos))

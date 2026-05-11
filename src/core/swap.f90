@@ -236,7 +236,7 @@ if (iTask == 1) then
       if (flTemperature)  call TemperatureOutput(1, state)
       if (flSolute)       call SoluteOutput(1, state)
       if (flAgeTracer)    call AgeTracerOutput(1, state)
-      if (flSnow)         call SnowOutput(1)
+      if (flSnow)         call SnowOutput(1, state)
       if (flMacroPore)    call MacroPoreOutput(1)
       if (flSurfaceWater) call SurfaceWaterOutput(1, state)
    end if
@@ -398,7 +398,7 @@ if (iTask == 2) then
             if (flTemperature)   call TemperatureOutput(2, state)
             if (flSolute)        call SoluteOutput(2, state)
             if (flAgeTracer)     call AgeTracerOutput(2, state)
-            if (flSnow)          call SnowOutput(2)
+            if (flSnow)          call SnowOutput(2, state)
             if (flMacroPore)     call MacroPoreOutput(2)
             if (flSurfaceWater) then
                if (daynr == merge(366, 365, dtleap(iyear))) &
@@ -448,7 +448,7 @@ if (iTask == 3) then
       if (flSolute)             call SoluteOutput(3, state)
       if (flAgeTracer)          call AgeTracerOutput(3, state)
       if (flIrrigate)           call IrrigationOutput(3)
-      if (flSnow)               call SnowOutput(3)
+      if (flSnow)               call SnowOutput(3, state)
       if (flMacroPore)          call MacroPoreOutput(3)
       if (flSurfaceWater)       call SurfaceWaterOutput(3, state)
       if (flCropNut)            call SoilManagement(7, state)

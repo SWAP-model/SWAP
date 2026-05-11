@@ -471,16 +471,21 @@ contains
       iintc = iintc + (state%atmosphere%aintcdt+gird-nird)*dt
 
       iptra = iptra + ptrats
+      state%atmosphere%intr%iptra = iptra   ! [SS-ATM A-2.5] dual-write intr
       ipeva = ipeva + pevats
+      state%atmosphere%intr%ipeva = ipeva   ! [SS-ATM A-2.5] dual-write intr
       ievap = ievap + revats
+      state%atmosphere%intr%ievap = ievap   ! [SS-ATM A-2.5] dual-write intr
       ! SS-BND Phase 2 Task B-2.2: runots read from state%soilwater (boundary home).
       iruno = iruno + state%soilwater%runots
       irunon = irunon + runon*dt
       ! SS-ATM Phase 2 Task A-2.2: graidt/nraidt read from state%atmosphere (atmosphere home).
       iprec = iprec + (state%atmosphere%graidt+gird)*dt
       igrai = igrai + state%atmosphere%graidt*dt
+      state%atmosphere%intr%igrai = igrai   ! [SS-ATM A-2.5] dual-write intr
       igird = igird + gird*dt
       inrai = inrai + state%atmosphere%nraidt*dt
+      state%atmosphere%intr%inrai = inrai   ! [SS-ATM A-2.5] dual-write intr
       inird = inird + nird*dt
       iqbot = iqbot + qbotts
       if (q(1) < 0.0d0) then
@@ -502,8 +507,11 @@ contains
       ! SS-SWST Phase 2 Task 7: cqdra accumulated directly into state; global dropped.
       state%surfacewater%drainage_cumulative%cqdra = state%surfacewater%drainage_cumulative%cqdra + qdrats
       cptra = cptra + ptrats
+      state%atmosphere%cumu%cptra = cptra   ! [SS-ATM A-2.5] dual-write cumu
       cpeva = cpeva + pevats
+      state%atmosphere%cumu%cpeva = cpeva   ! [SS-ATM A-2.5] dual-write cumu
       cevap = cevap + revats
+      state%atmosphere%cumu%cevap = cevap   ! [SS-ATM A-2.5] dual-write cumu
       if (state%soilwater%runots.lt.0.0d0) then
         cinund = cinund - state%soilwater%runots
       else if (state%soilwater%runots.gt.0.0d0) then
@@ -514,9 +522,12 @@ contains
 
       ! SS-ATM Phase 2 Task A-2.2: aintcdt/graidt/nraidt read from state%atmosphere (atmosphere home).
       caintc = caintc + (state%atmosphere%aintcdt+gird-nird)*dt
+      state%atmosphere%cumu%caintc = caintc  ! [SS-ATM A-2.5] dual-write cumu
 
       cgrai = cgrai + state%atmosphere%graidt*dt
+      state%atmosphere%cumu%cgrai = cgrai    ! [SS-ATM A-2.5] dual-write cumu
       cnrai = cnrai + state%atmosphere%nraidt*dt
+      state%atmosphere%cumu%cnrai = cnrai    ! [SS-ATM A-2.5] dual-write cumu
 !      cnrai = cgrai - caintc
       cgird = cgird + gird*dt
       cnird = cnird + nird*dt
