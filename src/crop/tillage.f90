@@ -5,8 +5,8 @@ module tillage_mod
    use error_mod, only: fatalerr_collected
    use swap_state_mod, only: swap_state_t  ! [SS-ATM A-2.6] nraida retired from variables to state%atmosphere
 
-   use variables, only: t1900, date, swhyst, swsolu, swoxygen, flMacroPore, flksatexm, zbotcp, NumNod, Bdens, layer, ParamVG, CofGen, &
-                        NumLay, pond, theta, h, dz, disnod, botcom, psilt, pclay, SwDiscrvert, tend, &
+   use variables, only: t1900, date, swhyst, swsolu, swoxygen, flMacroPore, flksatexm, zbotcp, NumNod, Bdens, layer, ParamVG, &
+                        NumLay, dz, disnod, botcom, psilt, pclay, SwDiscrvert, tend, &  ! [SS-SWC S-2.6] CofGen/pond/theta/h retired to state%soilwater
                         ! Tillage bridge variables with renaming (SAVE statements removed)
                         swtill => till_swtill, Ntill => till_Ntill, iTill => till_iTill, &
                         Ntypes => till_Ntypes, i_n_model => till_i_n_model, iRedist => till_iRedist, &
@@ -178,11 +178,11 @@ module tillage_mod
       if (TEST) then
          call DTDPST ("YEAR-MONTHST-DAY", t1900, STRNG)
          write (222,'(A,F15.5,10(I3,F15.5))') trim(DATE), state%atmosphere%nraida, (i, Bdens(i), i = 1, MaxNumSoilHo)
-         write (224,'(A,10F15.5)') trim(DATE), theta(5), theta(10), theta(20), theta(27), theta(35), state%atmosphere%nraida, sumDWC, sumAvail1, sumAvail2
-         write (226,'(A,10F15.5)') trim(DATE), (CofGen(i,1), i = 1, 10)
+         write (224,'(A,10F15.5)') trim(DATE), state%soilwater%theta(5), state%soilwater%theta(10), state%soilwater%theta(20), state%soilwater%theta(27), state%soilwater%theta(35), state%atmosphere%nraida, sumDWC, sumAvail1, sumAvail2  ! [SS-SWC S-2.6]
+         write (226,'(A,10F15.5)') trim(DATE), (state%soilwater%cofgen(i,1), i = 1, 10)  ! [SS-SWC S-2.6]
       end if
          write (222,'(A,F15.5,10(I3,F15.5))') trim(DATE), state%atmosphere%nraida, (i, Bdens(i), i = 1, MaxNumSoilHo)
-         write (226,'(A,10F15.5)') trim(DATE), (CofGen(i,1), i = 1, 10)
+         write (226,'(A,10F15.5)') trim(DATE), (state%soilwater%cofgen(i,1), i = 1, 10)  ! [SS-SWC S-2.6]
       continue
 
    case (4)
@@ -196,9 +196,9 @@ module tillage_mod
    end subroutine DoTillage
 
 ! **************************************************** Change_MvGpars *********************************************************
-   subroutine Change_MvGpars (state)                ! [SS-SWC S-1.9] state added for cofgen dual-write
+   subroutine Change_MvGpars (state)                ! [SS-SWC S-2.6] cofgen reads cut over to state%soilwater%cofgen
    implicit none
-   type(swap_state_t), intent(inout) :: state        ! [SS-SWC S-1.9]
+   type(swap_state_t), intent(inout) :: state
    integer              :: i, node, lay
    integer, parameter   :: Delta = 4
    integer, parameter   :: DeltaMin7 = Delta - 7
@@ -244,8 +244,7 @@ module tillage_mod
    ! Second: fill COFGEN
    do node = 1, MaxNumSoilCP
       lay = layer(node)
-      CofGen(1:10,node) = ParamVG(1:10,lay)
-      state%soilwater%cofgen(1:10,node) = ParamVG(1:10,lay)  ! [SS-SWC S-1.9]
+      state%soilwater%cofgen(1:10,node) = ParamVG(1:10,lay)  ! [SS-SWC S-2.6] legacy CofGen write dropped
       ! CofGen(11) and CofGen(12) are not used and not need to be changed
       !CofGen(11,node) = relsatthr(lay)
       !CofGen(12,node) = ksatthr(lay)
@@ -255,74 +254,69 @@ module tillage_mod
    end subroutine Change_MvGpars
    
 ! **************************************************** Adapt_WC_H *********************************************************
-   subroutine Adapt_WC_H (TEST, state)                ! [SS-SWC S-1.9] state added for theta/h/pond dual-write
+   subroutine Adapt_WC_H (TEST, state)                ! [SS-SWC S-2.6] theta/h/pond reads cut over to state%soilwater
    use soilhydraulics_utils, only: watcon, hconduc, prhead
    implicit none
 
-   type(swap_state_t), intent(inout) :: state          ! [SS-SWC S-1.9]
+   type(swap_state_t), intent(inout) :: state
    integer                          :: i
    real(8)                          :: sumWCtmin1, sumWCt, dwc, wcr, wcs, summ, dif
    real(8), dimension(MaxNumSoilCP) :: wc, hold, wcold
    logical                          :: TEST
-   
+
    if (TEST) then
-      hold(1:MaxNumSoilCP) = h(1:MaxNumSoilCP)
-      wcold(1:MaxNumSoilCP) = theta(1:MaxNumSoilCP)
+      hold(1:MaxNumSoilCP)  = state%soilwater%h(1:MaxNumSoilCP)      ! [SS-SWC S-2.6]
+      wcold(1:MaxNumSoilCP) = state%soilwater%theta(1:MaxNumSoilCP)  ! [SS-SWC S-2.6]
    end if
-   
+
    select case (iRedist)
    case (0)
       if (.not.TEST) call fatalerr_collected ('Adapt_WC_H', 'Option iRedist = 0 only allowed in combination with TEST option')
       continue
-      
+
    case (1)
       ! keep current wc values (wc_new = wc_old) and only change h; exception: when wc_old > wcs_new: alternative redistribution required
       summ = 0.0d0
       do i = 1, MaxNumSoilCP
          wcs = ParamVG(2,layer(i))
-         if (theta(i) < wcs) then
-            h(i) = prhead(i, disnod(i), theta(i), CofGen, h)
-            state%soilwater%h(i) = h(i)                      ! [SS-SWC S-1.9]
+         if (state%soilwater%theta(i) < wcs) then                                                       ! [SS-SWC S-2.6]
+            state%soilwater%h(i) = prhead(i, disnod(i), state%soilwater%theta(i), &                    ! [SS-SWC S-2.6]
+                                          state%soilwater%cofgen, state%soilwater%h)                    ! [SS-SWC S-2.6]
          else
-            summ = summ + (wcs - theta(i))*dz(i)
-            theta(i) = wcs
-            state%soilwater%theta(i) = theta(i)              ! [SS-SWC S-1.9]
-            h(i) = 0.0d0
-            state%soilwater%h(i) = h(i)                      ! [SS-SWC S-1.9]
+            summ = summ + (wcs - state%soilwater%theta(i))*dz(i)                                       ! [SS-SWC S-2.6]
+            state%soilwater%theta(i) = wcs                                                              ! [SS-SWC S-2.6]
+            state%soilwater%h(i) = 0.0d0                                                               ! [SS-SWC S-2.6]
          end if
       end do
       if (summ > 0.0d0) then
          do i = MaxNumSoilCP, 1, -1
             wcs = ParamVG(2,layer(i))
-            dif = wcs - theta(i)
+            dif = wcs - state%soilwater%theta(i)                                                        ! [SS-SWC S-2.6]
             if (dif > 0.0d0) then
                if (dif < summ) then
-                  theta(i) = wcs
-                  state%soilwater%theta(i) = theta(i)        ! [SS-SWC S-1.9]
+                  state%soilwater%theta(i) = wcs                                                        ! [SS-SWC S-2.6]
                   summ = summ - dif
                else
-                  theta(i) = theta(i) + dif
-                  state%soilwater%theta(i) = theta(i)        ! [SS-SWC S-1.9]
+                  state%soilwater%theta(i) = state%soilwater%theta(i) + dif                            ! [SS-SWC S-2.6]
                   summ = 0.0d0
                   exit
                end if
             end if
          end do
       end if
-      pond = summ
-      state%soilwater%pond = pond                            ! [SS-SWC S-1.9]
+      state%soilwater%pond = summ                                                                        ! [SS-SWC S-2.6]
 
    case (2)
-      sumWCtmin1 = sum(theta(1:MaxNumSoilCP))
+      sumWCtmin1 = sum(state%soilwater%theta(1:MaxNumSoilCP))                                           ! [SS-SWC S-2.6]
       sumWCt = 0.0d0
       sumDWC = 0.0d0
       do i = 1, MaxNumSoilCP
-         wc(i) = watcon(i,h(i))
+         wc(i) = watcon(i,state%soilwater%h(i))                                                         ! [SS-SWC S-2.6]
          sumWCt = sumWCt + wc(i)
-         dwc = theta(i) - wc(i)
+         dwc = state%soilwater%theta(i) - wc(i)                                                         ! [SS-SWC S-2.6]
          sumDWC = sumDWC + dwc * dz(i)
       end do
-   
+
       sumAvail1 = 0.0d0
       sumAvail2 = 0.0d0
       if (sumWCt < sumWCtmin1) then
@@ -336,16 +330,14 @@ module tillage_mod
             if (sumAvail1 > 0.0d0) then
                wc(i) = wc(i) + (wcs - wc(i)) * sumDWC / sumAvail1
                if (wc(i) > wcs) then
-                  pond = pond + (wc(i) - wcs) * dz(i)
-                  state%soilwater%pond = pond                ! [SS-SWC S-1.9]
+                  state%soilwater%pond = state%soilwater%pond + (wc(i) - wcs) * dz(i)                  ! [SS-SWC S-2.6]
                   wc(i) = wcs
-                  write(333,'(A,I5,F12.4)') Date, i, pond
+                  write(333,'(A,I5,F12.4)') Date, i, state%soilwater%pond                              ! [SS-SWC S-2.6]
                end if
             end if
-            h(i) = prhead(i, disnod(i), wc(i), CofGen, h)
-            state%soilwater%h(i) = h(i)                     ! [SS-SWC S-1.9]
-            theta(i) = wc(i)
-            state%soilwater%theta(i) = theta(i)             ! [SS-SWC S-1.9]
+            state%soilwater%h(i)     = prhead(i, disnod(i), wc(i), &                                   ! [SS-SWC S-2.6]
+                                               state%soilwater%cofgen, state%soilwater%h)               ! [SS-SWC S-2.6]
+            state%soilwater%theta(i) = wc(i)                                                            ! [SS-SWC S-2.6]
          end do
       else if (sumWCt > sumWCtmin1) then
          ! water to be removed; same as sumDWC < 0.0
@@ -356,24 +348,27 @@ module tillage_mod
          do i = 1, MaxNumSoilCP
             wcr = ParamVG(1,layer(i))
             wc(i) = wc(i) + (wc(i) - wcr) * sumDWC / sumAvail2
-            h(i) = prhead(i, disnod(i), wc(i), CofGen, h)
-            state%soilwater%h(i) = h(i)                     ! [SS-SWC S-1.9]
-            theta(i) = wc(i)
-            state%soilwater%theta(i) = theta(i)             ! [SS-SWC S-1.9]
+            state%soilwater%h(i)     = prhead(i, disnod(i), wc(i), &                                   ! [SS-SWC S-2.6]
+                                               state%soilwater%cofgen, state%soilwater%h)               ! [SS-SWC S-2.6]
+            state%soilwater%theta(i) = wc(i)                                                            ! [SS-SWC S-2.6]
          end do
-         
+
       endif
-   
+
    end select
-   
+
    if (TEST) then
       do i = 1, MaxNumSoilCP
          wcs = ParamVG(2,layer(i))
-         write (444,'(I5,8(A1,F12.6))') i, ',', hold(i), ',', wcold(i), ',', h(i), ',', theta(i), ',', sumDWC, ',', sumAvail1, ',', sumAvail2, ',', theta(i)/wcs
+         write (444,'(I5,8(A1,F12.6))') i, ',', hold(i), ',', wcold(i), ',', state%soilwater%h(i), ',', state%soilwater%theta(i), &  ! [SS-SWC S-2.6]
+                                        ',', sumDWC, ',', sumAvail1, ',', sumAvail2, ',', state%soilwater%theta(i)/wcs               ! [SS-SWC S-2.6]
       end do
    end if
-write(124,'(A,1P,12E12.5)') Date, Bdens(1), ParamVG(2,layer(1)), theta(1), h(1), hconduc(1,h(1),theta(1),1.0d0,state%heat%tsoil(1)), ParamVG(3,layer(1)), Bdens(2), ParamVG(2,layer(2)),theta(2), h(2), hconduc(2,h(2),theta(2),1.0d0,state%heat%tsoil(2)), ParamVG(3,layer(2))
-   
+write(124,'(A,1P,12E12.5)') Date, Bdens(1), ParamVG(2,layer(1)), state%soilwater%theta(1), state%soilwater%h(1), &  ! [SS-SWC S-2.6]
+   hconduc(1,state%soilwater%h(1),state%soilwater%theta(1),1.0d0,state%heat%tsoil(1)), ParamVG(3,layer(1)),          & ! [SS-SWC S-2.6]
+   Bdens(2), ParamVG(2,layer(2)), state%soilwater%theta(2), state%soilwater%h(2),                                     & ! [SS-SWC S-2.6]
+   hconduc(2,state%soilwater%h(2),state%soilwater%theta(2),1.0d0,state%heat%tsoil(2)), ParamVG(3,layer(2))              ! [SS-SWC S-2.6]
+
    end subroutine Adapt_WC_H
 
    
