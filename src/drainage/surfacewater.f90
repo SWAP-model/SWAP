@@ -124,16 +124,17 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
 !cD        do level=1,nrlevs
 !cD           qdrain_old(level) = qdrain(level)
 !cD        end do
+         ! SS-SWC Phase 2 S-2.8: gwl read from state%soilwater
          call divdra (numnod,nrlevs,dz,ksatfit,ksatexm,fluseksatexm,    &
-            layer,cofani,gwl,l,state%drainage%qdrain,state%drainage%qdra,Swdivdinf,Swnrsrf, &
+            layer,cofani,state%soilwater%gwl,l,state%drainage%qdrain,state%drainage%qdra,Swdivdinf,Swnrsrf, &
      &      SwTopnrsrf,Zbotdr,dt,FacDpthInf,owltab,t1900)
 
 !        redistribute qdrain with new top boundary for discharge layers
          if(swdislay.eq.2) then
             do level=1,nrlevs
                if(swtopdislay(level).eq.1)  then
-                  zTopDisLay(level) = fTopDisLay(level) * gwl  +        &
-     &                       (1.0d0-fTopDisLay(level)) * (gwl-dh)
+                  zTopDisLay(level) = fTopDisLay(level) * state%soilwater%gwl  +        &
+     &                       (1.0d0-fTopDisLay(level)) * (state%soilwater%gwl-dh)
                end if
             end do
          end if
@@ -306,9 +307,10 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
       !!@endnote
       ! SS-SWST Phase 2 Task 11: wlstar global removed; use sw_wlstar (state alias) throughout.
       ! SS-BND Phase 2 Task B-2.4: runots removed from use clause; read via state%soilwater%runots.
-      use variables, only: tcum,NRPRI,impend,nmper,swman,hbweir,gwl,wlsman,gwlcrit,nphase,dropr,wscap,   &
-                           dt,QRapDra,zbotdr,alphaw,betaw,osswlm,T,NUMNOD,THETAS,THETA,DZ,VCRIT,NODHD,HCRIT, &
-                           H,SWQHR,QQHTAB,wldip,intwl,t1900,logf,swscre,fldtmin,rsro,pond,pondmx
+      ! SS-SWC Phase 2 S-2.8: gwl,pond,THETA,THETAS,H removed from use-list; read from state%soilwater.
+      use variables, only: tcum,NRPRI,impend,nmper,swman,hbweir,wlsman,gwlcrit,nphase,dropr,wscap,   &
+                           dt,QRapDra,zbotdr,alphaw,betaw,osswlm,T,NUMNOD,DZ,VCRIT,NODHD,HCRIT, &
+                           SWQHR,QQHTAB,wldip,intwl,t1900,logf,swscre,fldtmin,rsro,pondmx
       use swap_state_mod, only: swap_state_t
       use surfacewater_utils, only: wlevst, swstlev, qhtab
       IMPLICIT NONE
@@ -388,15 +390,17 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
         if (abs(rday-1.0*intday).lt.0.00001d0 .or. tcum.lt.1.0d-10) then
 
           iphase = nphase(imper)
-          do while(gwl.gt.gwlcrit(imper,iphase).and.iphase.gt.1)
+          ! SS-SWC Phase 2 S-2.8: gwl read from state%soilwater
+          do while(state%soilwater%gwl.gt.gwlcrit(imper,iphase).and.iphase.gt.1)
             iphase = iphase-1
           enddo
 
 ! --- compare total air volume with VCRIT, adapt iphase
           ! VTAIR global write dropped; sw_vtair (state alias) used as accumulator.
+          ! SS-SWC Phase 2 S-2.8: THETAS/THETA read from state%soilwater
           sw_vtair = 0.0d0
           do NODE = 1,NUMNOD
-            sw_vtair = sw_vtair + (THETAS(NODE)-THETA(NODE))            &
+            sw_vtair = sw_vtair + (state%soilwater%thetas(NODE)-state%soilwater%theta(NODE)) &
      &              *abs(DZ(NODE))
           enddo
           do while (sw_vtair.lt.VCRIT(imper,iphase).AND.IPHASE.gt.1)
@@ -404,12 +408,13 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
           enddo
 
 ! --- compare H(nodhd(imper)) with HCRIT, adapt iphase
-          do while (h(nodhd(imper)).gt.hcrit(imper,iphase)              &
+          ! SS-SWC Phase 2 S-2.8: H read from state%soilwater
+          do while (state%soilwater%h(nodhd(imper)).gt.hcrit(imper,iphase) &
      &                            .and.iphase.gt.1)
             iphase = iphase - 1
           enddo
           ! hwlman global write dropped; sw_hwlman (state alias) set directly.
-          sw_hwlman = h(nodhd(imper))
+          sw_hwlman = state%soilwater%h(nodhd(imper))
 
           wlstx = wlsman(imper,iphase)
         else
@@ -587,7 +592,8 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
 
 !        ponding in case of extended drainage may limit timestep
 
-      if (sw_wls.gt.pondmx .or. pond.gt.pondmx) then
+      ! SS-SWC Phase 2 S-2.8: pond read from state%soilwater
+      if (sw_wls.gt.pondmx .or. state%soilwater%pond.gt.pondmx) then
         if(dt .gt. 0.02*rsro) then
           request_smaller_dt = .true.
         end if

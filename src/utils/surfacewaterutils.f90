@@ -11,7 +11,8 @@ module surfacewater_utils
    use error_mod, only: fatalerr_collected
    use iso_fortran_env, only: real64
    ! SS-SWST Phase 2 Task 11: imper removed from globals; callers pass it explicitly.
-   use variables, only: hqhtab, qqhtab, swdra, pond, pondmx, rsro, rsroexp, dt
+   ! SS-SWC Phase 2 S-2.8: pond removed from use-list; read from state%soilwater%pond in runoff().
+   use variables, only: hqhtab, qqhtab, swdra, pondmx, rsro, rsroexp, dt
    use swap_state_mod, only: swap_state_t
 
    implicit none
@@ -216,7 +217,10 @@ contains
       ! Local variables
       real(real64) :: inun_max
 
-      associate(sw_wls => state%surfacewater%wls, sw_swst => state%surfacewater%swst)
+      associate(sw_wls  => state%surfacewater%wls,   &
+                sw_swst => state%surfacewater%swst,  &
+                ! SS-SWC Phase 2 S-2.8: pond read from state%soilwater
+                pond    => state%soilwater%pond)
 
       runoff = 0.0_real64
 

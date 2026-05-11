@@ -101,6 +101,19 @@ contains
 !  before calling — so this body executes only if flAgeTracer is .false.,
 !  in which case it drops straight to the end select and returns.]
 
+! SS-SWC Phase 2 S-2.8: theta/thetsl/q/thetm1/gwl/nodgwl/thetas/pond
+!  read from state%soilwater (reader cutover; body is preserved but unreachable).
+      associate( &
+         sw_theta  => state%soilwater%theta,   &
+         sw_thetm1 => state%soilwater%thetm1,  &
+         sw_thetas => state%soilwater%thetas,  &
+         sw_thetsl => state%soilwater%thetsl,  &
+         sw_q      => state%soilwater%q,       &
+         sw_gwl    => state%soilwater%gwl,     &
+         sw_nodgwl => state%soilwater%nodgwl,  &
+         sw_pond   => state%soilwater%pond     &
+      )
+
 ! ----------------------------------------------------------------------
 
       select case (task)
@@ -132,7 +145,7 @@ contains
 ! --- determine derived solute concentrations
       samini = 0.0d0
       do i = 1,numnod
-         Agemsy(i) = theta(i)*Ageml(i)
+         Agemsy(i) = sw_theta(i)*Ageml(i)
          samini = samini + Agemsy(i) * dz(i)
       end do
 
@@ -163,11 +176,12 @@ contains
 ! --- determine maximum timestep
       dtsolu = dt
       do i = 1,numnod
-        thetav = inpola(i+1)*theta(i)+inpolb(i)*theta(i+1)
-        diffus = ddif * (thetav**2.33d0)/(thetsl(layer(i))**2)
-        dispr = diffus+ldis(layer(i))*abs(q(i))/theta(i)
+        ! SS-SWC Phase 2 S-2.8: theta/thetsl/q read from state%soilwater
+        thetav = inpola(i+1)*sw_theta(i)+inpolb(i)*sw_theta(i+1)
+        diffus = ddif * (thetav**2.33d0)/(sw_thetsl(layer(i))**2)
+        dispr = diffus+ldis(layer(i))*abs(sw_q(i))/sw_theta(i)
         if (dispr.lt.1.0d-8) dispr = 1.0d-8
-        dummy = dz(i)*dz(i)*theta(i)/2.0/dispr
+        dummy = dz(i)*dz(i)*sw_theta(i)/2.0/dispr
         dtsolu = min(dtsolu,dummy)
       enddo
 
@@ -186,8 +200,9 @@ contains
          Agesurf = (nird*Ageirr + state%atmosphere%nraidt*Agepre)*dtsolu +               &
      &                                       Pondm1*Agepondm1              ! gr cm-2
          ! SS-BND Phase 2 Task B-2.3: qtop/runots read from state%soilwater (boundary home).
+         ! SS-SWC Phase 2 S-2.8: pond read from state%soilwater
          if (state%soilwater%qtop.lt.-1.d-6) then
-            Agepond  = Agesurf / (pond-state%soilwater%qtop*dtsolu)                        ! gr cm-3
+            Agepond  = Agesurf / (sw_pond-state%soilwater%qtop*dtsolu)                        ! gr cm-3
             Agefluxt = state%soilwater%qtop*(1.0d0-ArMpSs)*Agepond*dtsolu                  ! gr cm-2
             Agesurf  = Agesurf + Agefluxt                                                   ! gr cm-2
             isqtop   = state%soilwater%qtop*(1.0d0-ArMpSs)*Agepond                         ! gr cm-2 d-1
@@ -206,18 +221,20 @@ contains
 ! --- convective and dispersive fluxes
             if (i .lt. numnod) then
                Agemlav = inpola(i+1) * Ageml(i) + inpolb(i) * Ageml(i+1)
-               thetav = inpola(i+1)*theta(i)+inpolb(i)*theta(i+1)
-               vpore = abs(q(i+1))/thetav
-               diffus = ddif*(thetav**2.33d0)/(thetsl(layer(i))**2)
+               ! SS-SWC Phase 2 S-2.8: theta/thetsl/q read from state%soilwater
+               thetav = inpola(i+1)*sw_theta(i)+inpolb(i)*sw_theta(i+1)
+               vpore = abs(sw_q(i+1))/thetav
+               diffus = ddif*(thetav**2.33d0)/(sw_thetsl(layer(i))**2)
                dispr = diffus + ldis(layer(i)) * vpore +                &
      &                         0.5d0 * dtsolu*vpore*vpore
-               Agefluxb = (q(i+1)*Agemlav +thetav * dispr               &
+               Agefluxb = (sw_q(i+1)*Agemlav +thetav * dispr               &
      &                  *(Ageml(i+1)-Ageml(i))/disnod(i+1))*dtsolu
             else
-               if (q(i+1).gt.0.0d0) then
-                  Agefluxb = q(i+1)*Agedrain*dtsolu
+               ! SS-SWC Phase 2 S-2.8: q(numnod+1) read from state%soilwater
+               if (sw_q(i+1).gt.0.0d0) then
+                  Agefluxb = sw_q(i+1)*Agedrain*dtsolu
                else
-                  Agefluxb = q(i+1)*Ageml(i)*dtsolu
+                  Agefluxb = sw_q(i+1)*Ageml(i)*dtsolu
                endif
             endif
 
@@ -247,12 +264,13 @@ contains
             sqdra = sqdra + Agedrtot*dz(i)*dtsolu
 
 ! --- zero order production
-            AgeProd = 1.0d0 * 0.5d0*(theta(i)+thetm1(i))
+            ! SS-SWC Phase 2 S-2.8: theta/thetm1 read from state%soilwater
+            AgeProd = 1.0d0 * 0.5d0*(sw_theta(i)+sw_thetm1(i))
 
 ! --- conservation equation for the substance
             Agemsy(i) = Agemsy(i) + (Agefluxb-Agefluxt) / dz(i) +       &
      &                  (-Agerot-Agedrtot+AgeProd) * dtsolu
-            Ageml(i) = Agemsy(i) / theta(i)
+            Ageml(i) = Agemsy(i) / sw_theta(i)
 
 !           make top flux next compartment equal to current bottom flux
             Agefluxt = Agefluxb
@@ -261,7 +279,8 @@ contains
          enddo
 
 !        age of effluent terms
-         icAgetopupw = icAgetopupw + max(0.0d0,q(1))*                   &
+         ! SS-SWC Phase 2 S-2.8: q(1) read from state%soilwater
+         icAgetopupw = icAgetopupw + max(0.0d0,sw_q(1))*                   &
      &                              0.5d0*(Ageml(1)+cml(1))*dtsolu
          do i = 1,numnod
             ! SS-CRP Phase 2 C-2.3: qrot read from state%soilwater
@@ -272,24 +291,26 @@ contains
      &                              0.5d0*(Ageml(i)+cml(i))*dtsolu
             end do
          end do
-         icAgebot = icAgebot - min(q(numnod+1),0.0d0)*                  &
+         ! SS-SWC Phase 2 S-2.8: q(numnod+1) read from state%soilwater
+         icAgebot = icAgebot - min(sw_q(numnod+1),0.0d0)*                  &
      &                         0.5d0*(Ageml(numnod)+cml(numnod))*dtsolu
 
       end do
       end associate  ! qdra from state%surfacewater
 
 !     age of variable 1m-plane of groundwater
-      i = nodgwl+1
+      ! SS-SWC Phase 2 S-2.8: nodgwl/gwl/thetas read from state%soilwater
+      i = sw_nodgwl+1
       zzbot = zbotcp(i)
       zztop = ztopcp(i)
       sum0 = 0.0d0
       sum1 = 0.0d0
-      do while(gwl-100.0d0.lt.zzbot .and. i.le.numnod)
-         if(gwl.lt.zztop) zztop = gwl
-         if(gwl-100.0d0.gt.zzbot) zzbot = gwl-100.0d0
+      do while(sw_gwl-100.0d0.lt.zzbot .and. i.le.numnod)
+         if(sw_gwl.lt.zztop) zztop = sw_gwl
+         if(sw_gwl-100.0d0.gt.zzbot) zzbot = sw_gwl-100.0d0
          deltaz = zztop - zzbot
-         sum1   = sum1 + deltaz * Ageml(i) * thetas(i)
-         sum0   = sum0 + deltaz * thetas(i)
+         sum1   = sum1 + deltaz * Ageml(i) * sw_thetas(i)
+         sum0   = sum0 + deltaz * sw_thetas(i)
          i = i + 1
          zztop = ztopcp(i)
          zzbot = zbotcp(i)
@@ -309,6 +330,8 @@ contains
       case default
          call fatalerr_collected ('AgeTracer', 'Illegal value for TASK')
       end select
+
+      end associate  ! sw_theta, sw_thetm1, sw_thetas, sw_thetsl, sw_q, sw_gwl, sw_nodgwl, sw_pond
 
       return
       end subroutine AgeTracer

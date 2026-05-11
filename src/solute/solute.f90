@@ -51,7 +51,10 @@ contains
          cml    => state%solute%cml,                      &
          cmsy   => state%solute%cmsy,                     &
          samini => state%solute%cumulative%samini,         &
-         sampro => state%solute%sampro                     &
+         sampro => state%solute%sampro,                    &
+         ! SS-SWC Phase 2 S-2.8: theta/thetsl read from state%soilwater
+         sw_theta  => state%soilwater%theta,               &
+         sw_thetsl => state%soilwater%thetsl               &
       )
 
 ! --- determine initial solute profile from input concentrations
@@ -72,14 +75,14 @@ contains
          bdenskf(i)         = bdens(layer(i))*kf(layer(i))
          bdenskfcref(i)     = bdenskf(i)*cref
          bdenskfsatporos(i) = bdens(layer(i))*kfsat + poros
-         cmsy(i) = (theta(i)*cml(i) + bdenskfcref(i)*(cml(i)/cref)**frexp)
+         cmsy(i) = (sw_theta(i)*cml(i) + bdenskfcref(i)*(cml(i)/cref)**frexp)
          samini = samini + cmsy(i) * dz(i)
-         ddiffwcs(i) = ddif / (thetsl(layer(i))**2)
+         ddiffwcs(i) = ddif / (sw_thetsl(layer(i))**2)
          decpotfdepth(i) = decpot(layer(i))*fdepth(layer(i))
       end do
       sampro = samini
 
-      end associate  ! cml, cmsy, samini, sampro (case 1)
+      end associate  ! cml, cmsy, samini, sampro, sw_theta, sw_thetsl (case 1)
 
       case (2)
 
@@ -110,7 +113,11 @@ contains
          imsqbot  => state%solute%intermediate%imsqbot,       &
          sqdra    => state%solute%cumulative%sqdra,           &
          imsqdra  => state%solute%intermediate%imsqdra,       &
-         sqsur    => state%solute%cumulative%sqsur            &
+         sqsur    => state%solute%cumulative%sqsur,           &
+         ! SS-SWC Phase 2 S-2.8: theta/thetsl/q read from state%soilwater
+         sw_theta  => state%soilwater%theta,                  &
+         sw_thetsl => state%soilwater%thetsl,                 &
+         sw_q      => state%soilwater%q                       &
       )
 
 ! --- reset cumulative solute fluxes
@@ -141,15 +148,16 @@ contains
 ! --- determine maximum timestep
       dtsolu = dt
       do i = 1,numnod
-        thetav(i) = inpola(i+1)*theta(i)+inpolb(i)*theta(i+1)
+        ! SS-SWC Phase 2 S-2.8: theta/q read from state%soilwater
+        thetav(i) = inpola(i+1)*sw_theta(i)+inpolb(i)*sw_theta(i+1)
         diffus(i) = ddiffwcs(i) * thetav(i)**2.33d0
         if (i < numnod) then
-            vpore     = abs(q(i+1))/thetav(i)
+            vpore     = abs(sw_q(i+1))/thetav(i)
             dispr1(i) = diffus(i) + ldis(layer(i)) * vpore
             vpore2(i) = vpore*vpore
          end if
 
-        dispr = diffus(i)+ldis(layer(i))*abs(q(i))/theta(i)
+        dispr = diffus(i)+ldis(layer(i))*abs(sw_q(i))/sw_theta(i)
         if (dispr.lt.1.0d-8) dispr = 1.0d-8
         !dummy = dz(i)*dz(i)*theta(i)/(2.0d0*dispr)
         dummy = dz(i)*dz(i)/(2.0d0*dispr)
@@ -172,8 +180,9 @@ contains
          ! SS-ATM Phase 2 Task A-2.4: nraidt read from state%atmosphere (atmosphere home).
          csurf = (nird*cirr + state%atmosphere%nraidt*cpre)*dtsolu + csurf   ! gr cm-2
          ! SS-BND Phase 2 Task B-2.3: qtop read from state%soilwater (boundary home).
+         ! SS-SWC Phase 2 S-2.8: pond read from state%soilwater
          if (state%soilwater%qtop.lt.-1.d-6) then
-            cpond  = csurf / (pond-state%soilwater%qtop*dtsolu)             ! gr cm-3
+            cpond  = csurf / (state%soilwater%pond-state%soilwater%qtop*dtsolu)  ! gr cm-3
             cfluxt = state%soilwater%qtop*(1.0d0-ArMpSs)*cpond*dtsolu       ! gr cm-2
             csurf  = csurf + cfluxt                                          ! gr cm-2
             isqtop = state%soilwater%qtop*(1.0d0-ArMpSs)*cpond              ! gr cm-2 d-1
@@ -194,12 +203,13 @@ contains
                !diffus = ddif*(thetav**2.33d0)/(thetsl(layer(i))**2)
                !dispr = diffus + ldis(layer(i)) * vpore + 0.5d0 * dtsolu*vpore*vpore
                dispr = dispr1(i) + 0.5d0 * dtsolu*vpore2(i)
-               cfluxb = (q(i+1)*cmlav + thetav(i) * dispr * (cml(i+1)-cml(i))/disnod(i+1))*dtsolu
+               cfluxb = (sw_q(i+1)*cmlav + thetav(i) * dispr * (cml(i+1)-cml(i))/disnod(i+1))*dtsolu
             else
-               if (q(i+1).gt.0.0d0) then
-                  cfluxb = q(i+1)*cseep*dtsolu
+               ! SS-SWC Phase 2 S-2.8: q(numnod+1) read from state%soilwater
+               if (sw_q(i+1).gt.0.0d0) then
+                  cfluxb = sw_q(i+1)*cseep*dtsolu
                else
-                  cfluxb = q(i+1)*cml(i)*dtsolu
+                  cfluxb = sw_q(i+1)*cml(i)*dtsolu
                endif
             endif
 
@@ -214,9 +224,10 @@ contains
             else
               ftemp = 0.0d0
             endif
-            ftheta = min(1.0d0,(theta(i)/rtheta)**bexp)
+            ! SS-SWC Phase 2 S-2.8: theta read from state%soilwater
+            ftheta = min(1.0d0,(sw_theta(i)/rtheta)**bexp)
             decact = decpotfdepth(i) * ftemp * ftheta
-            ctrans = decact*theta(i)*cml(i) + decact*bdenskfcref(i)*((cml(i)/cref)**frexp)
+            ctrans = decact*sw_theta(i)*cml(i) + decact*bdenskfcref(i)*((cml(i)/cref)**frexp)
             dectot = dectot + ctrans*dtsolu*dz(i)
             imdectot = imdectot + ctrans*dtsolu*dz(i)
 
@@ -254,13 +265,14 @@ contains
                cml(i)  = 0.0d0
             else
                if (abs(frexp-1.0d0).lt.0.001d0) then
-                  cml(i) = cmsy(i) / (theta(i) + bdenskf(i))
+                  ! SS-SWC Phase 2 S-2.8: theta read from state%soilwater
+                  cml(i) = cmsy(i) / (sw_theta(i) + bdenskf(i))
                else
                   if (cml(i).lt.vsmall) cml(i) = vsmall
                   do while (differ)
                      old    = cml(i)
                      dummy  = bdenskf(i)*(cml(i)/cref)**(frexp-1.0d0)
-                     cml(i) = cmsy(i)/(theta(i)+dummy)
+                     cml(i) = cmsy(i)/(sw_theta(i)+dummy)
                      if (abs(cml(i)-old).lt.rer*cml(i)) differ = .false.
                   enddo
                endif
@@ -305,10 +317,11 @@ contains
       end associate  ! qdra, qdrtot from state%surfacewater
 
 ! --- current solute flux at bottom of soil column
-      if (q(numnod+1) .gt. 0.0d0) then
-        isqbot = q(numnod+1) * cseep
+      ! SS-SWC Phase 2 S-2.8: q(numnod+1) read from state%soilwater
+      if (sw_q(numnod+1) .gt. 0.0d0) then
+        isqbot = sw_q(numnod+1) * cseep
       else
-        isqbot = q(numnod+1) * cml(numnod)
+        isqbot = sw_q(numnod+1) * cml(numnod)
       endif
 
 ! === calculate solute balance components ========================
