@@ -109,7 +109,7 @@
          if (swvap.eq.1) call outvap (1, state)
 
 ! --     rot file, only when drought stress according to De Jong van Lier
-         if (swdrought.eq.2) call outrot(1)
+         if (swdrought.eq.2) call outrot(1, state)
 
 ! --     capillary rise output file
          if(swcapriseoutput) call capriseoutput(task)
@@ -152,7 +152,7 @@
          if (swvap.eq.1) call outvap (2, state)
 
 ! --     rot file
-         if (swdrought.eq.2 .and. ptra .gt. 1.0d-10) call outrot (2)
+         if (swdrought.eq.2 .and. ptra .gt. 1.0d-10) call outrot (2, state)
 
 ! --     capillary rise output file
          if(swcapriseoutput) call capriseoutput(task)
@@ -577,8 +577,9 @@
 ! ---------------------------------------------------------------------
       ! SS-SLST Phase 1 Task 5: cml, cmsy, isqtop, isqbot migrated to state%solute.
       ! SS-HEAT Phase 2 Task 6: tsoil removed from only-list; reads via state%heat%tsoil.
+      ! SS-CRP Phase 2 Task C-2.4: qrot removed from only-list; reads via state%soilwater%qrot.
       use variables, only: ztopcp, zbotcp, vap,daynr,numnod,daycum,z,t1900,theta,h,k,q,outfil,     &
-                           pathwork,project,swheader,qdraincomp,qrot,date,flprintshort
+                           pathwork,project,swheader,qdraincomp,date,flprintshort
       use swap_state_mod, only: swap_state_t
       use file_io_mod, only: file_open
       implicit none
@@ -627,7 +628,7 @@
            end if
            write (vap,300) datexti,comma,z(node),comma,theta(node),     &
      &       comma,h(node),comma,k(node),comma,qdraincomp(node),comma,  &
-     &       qrot(node),comma,q(node),comma,state%heat%tsoil(node),comma,state%solute%cml(node),&
+     &       state%soilwater%qrot(node),comma,q(node),comma,state%heat%tsoil(node),comma,state%solute%cml(node),&
      &       comma,state%solute%cmsy(node),comma,sflux,comma,ztopcp(node),           &
      &       comma,zbotcp(node),comma,daynr,comma,daycum
         end do
@@ -648,7 +649,7 @@
            end if
            write (vap,310) inidate,comma,z(node),comma,theta(node),     &
      &       comma,h(node),comma,k(node),comma,qdraincomp(node),comma,  &
-     &       qrot(node),comma,q(node),comma,state%heat%tsoil(node),comma,state%solute%cml(node),&
+     &       state%soilwater%qrot(node),comma,q(node),comma,state%heat%tsoil(node),comma,state%solute%cml(node),&
      &       comma,state%solute%cmsy(node),comma,sflux,comma,ztopcp(node),           &
      &       comma,zbotcp(node),comma,daynr,comma,daycum
         end do
@@ -687,7 +688,7 @@
            end if
            write (vap,300) datexti,comma,z(node),comma,theta(node),     &
      &       comma,h(node),comma,k(node),comma,qdraincomp(node),comma,  &
-     &       qrot(node),comma,q(node),comma,state%heat%tsoil(node),comma,state%solute%cml(node),&
+     &       state%soilwater%qrot(node),comma,q(node),comma,state%heat%tsoil(node),comma,state%solute%cml(node),&
      &       comma,state%solute%cmsy(node),comma,sflux,comma,ztopcp(node),           &
      &       comma,zbotcp(node),comma,daynr,comma,daycum
         end do
@@ -706,7 +707,7 @@
            end if
            write (vap,310) date,comma,z(node),comma,theta(node),        &
      &       comma,h(node),comma,k(node),comma,qdraincomp(node),comma,  &
-     &       qrot(node),comma,q(node),comma,state%heat%tsoil(node),comma,state%solute%cml(node),&
+     &       state%soilwater%qrot(node),comma,q(node),comma,state%heat%tsoil(node),comma,state%solute%cml(node),&
      &       comma,state%solute%cmsy(node),comma,sflux,comma,ztopcp(node),           &
      &       comma,zbotcp(node),comma,daynr,comma,daycum
         end do
@@ -764,20 +765,24 @@
       end
 
 ! ----------------------------------------------------------------------
-      subroutine outrot (task)
+      subroutine outrot (task, state)
       use error_mod, only: fatalerr_collected
 
 ! ----------------------------------------------------------------------
 !     date               : February 2012
 !     purpose            : write output of microscopic root water uptake
 ! ---------------------------------------------------------------------
-      use variables, only: ztopcp, zbotcp,rot,daynr,noddrz,daycum,z,hxylem,t1900,theta,hm1,q,outfil,pathwork,project,swheader,qrot,      &
-                           date,flprintshort,hroot,inq,inqrot,mroot,mflux,rootrho,rootphi,hleaf
+      ! SS-CRP Phase 2 Task C-2.4: qrot, hroot, mroot, mflux, rootrho, rootphi, hleaf, hxylem
+      !   removed from only-list; reads via state%soilwater.
+      use variables, only: ztopcp, zbotcp,rot,daynr,noddrz,daycum,z,t1900,theta,hm1,q,outfil,pathwork,project,swheader, &
+                           date,flprintshort,inq,inqrot
+      use swap_state_mod, only: swap_state_t
       use file_io_mod, only: file_open
       implicit none
 
 ! --- global
       integer   task
+      type(swap_state_t), intent(in) :: state
 
 ! --- local
       integer   node
@@ -828,23 +833,27 @@
 ! ---   determine date and date-time
         call dtdpst ('year-month-day,hour:minute:seconds',t1900,datexti)
         do node = 1,noddrz
-           write (rot,300) datexti,comma,z(node),comma,hleaf,comma,     &
-     &       hxylem,comma,                                              &
-     &       hroot(node),comma,hm1(node),comma,inqrot(node),comma,      &
-     &       qrot(node),comma,inq(node),comma,q(node),comma,mroot(node),&
-     &       comma,mflux(node),comma,rootrho(node),comma,rootphi(node), &
-     &       comma,theta(node),comma,ztopcp(node),comma,                &
+           write (rot,300) datexti,comma,z(node),comma,state%soilwater%hleaf,comma,  &
+     &       state%soilwater%Hxylem,comma,                                            &
+     &       state%soilwater%hroot(node),comma,hm1(node),comma,inqrot(node),comma,   &
+     &       state%soilwater%qrot(node),comma,inq(node),comma,q(node),               &
+     &       comma,state%soilwater%mroot(node),                                       &
+     &       comma,state%soilwater%mflux(node),comma,state%soilwater%rootrho(node),  &
+     &       comma,state%soilwater%rootphi(node),                                     &
+     &       comma,theta(node),comma,ztopcp(node),comma,                              &
      &       zbotcp(node),comma,daynr,comma,daycum
         end do
 
       else
         do node = 1,noddrz
-           write (rot,310) date,comma,z(node),comma,hleaf,comma,        &
-     &       hxylem,comma,                                              &
-     &       hroot(node),comma,hm1(node),comma,inqrot(node),comma,      &
-     &       qrot(node),comma,inq(node),comma,q(node),comma,mroot(node),&
-     &       comma,mflux(node),comma,rootrho(node),comma,rootphi(node), &
-     &       comma,theta(node),comma,ztopcp(node),comma,                &
+           write (rot,310) date,comma,z(node),comma,state%soilwater%hleaf,comma,     &
+     &       state%soilwater%Hxylem,comma,                                            &
+     &       state%soilwater%hroot(node),comma,hm1(node),comma,inqrot(node),comma,   &
+     &       state%soilwater%qrot(node),comma,inq(node),comma,q(node),               &
+     &       comma,state%soilwater%mroot(node),                                       &
+     &       comma,state%soilwater%mflux(node),comma,state%soilwater%rootrho(node),  &
+     &       comma,state%soilwater%rootphi(node),                                     &
+     &       comma,theta(node),comma,ztopcp(node),comma,                              &
      &       zbotcp(node),comma,daynr,comma,daycum
         end do
 
