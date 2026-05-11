@@ -1,11 +1,24 @@
 ! Tests for soilwater_state_t — typed state record for the soil-water
-! boundary subsystem. Phase 1 of the boundary state-migration arc (B-1.1).
+! boundary subsystem (ADR 0035, B-1.1) and crop water uptake subsystem
+! (ADR 0036, C-1.1).
 !
-! 12 scalar fields: 7 top-boundary (qtop, reva, hsurf, runots, QMpLatSs,
-! ftoph, FlRunoff) + 5 bottom-boundary (qbot, qbot_nonfrozen, hbot,
-! gwlinp, deepgw). All instantaneous — flat layout, no cohort sub-records.
+! Boundary subset: 12 scalar fields: 7 top-boundary (qtop, reva, hsurf,
+! runots, QMpLatSs, ftoph, FlRunoff) + 5 bottom-boundary (qbot,
+! qbot_nonfrozen, hbot, gwlinp, deepgw). All instantaneous.
 !
-! See docs/superpowers/specs/2026-05-10-state-migration-boundary-design.md.
+! Crop-uptake subset (22 fields — C-1.1):
+!   Per-node allocatables: qrot, qpotrot, qredwet, qreddry, qredsol,
+!     qredfrs, mflux, mroot, hroot, rootrho, rootphi, rmax, mfluxtable
+!   Scalars: qrosum, qredwetsum, qreddrysum, qredsolsum, qredfrssum
+!   Flag: flWrtNonox
+!   JvL scalars: Tactual, alpJvLier, hleaf, Hxylem
+!
+! Allocatable arrays are unallocated until soilwater_init(sw, numnod, nlay)
+! is called in C-1.2. This file covers: defaults, lifecycle (allocatable
+! status), round-trips, and aggregator path.
+!
+! See docs/superpowers/specs/2026-05-10-state-migration-boundary-design.md
+!     docs/superpowers/specs/2026-05-10-state-migration-crop-uptake-design.md
 
 @test
 subroutine test_soilwater_state_default_reals()
@@ -125,3 +138,164 @@ subroutine test_soilwater_state_aggregator_access()
    @assertEqual(-350.0_real64, state%soilwater%deepgw, 1.0e-12_real64)
    @assertTrue(state%soilwater%FlRunoff)
 end subroutine test_soilwater_state_aggregator_access
+
+! =============================================================================
+! C-1.1 — Crop water uptake extension tests (ADR 0036)
+! =============================================================================
+
+@test
+subroutine test_soilwater_cropuptake_scalar_defaults()
+   ! All new crop-uptake scalar fields default to 0.0 / .false.
+   use funit
+   use iso_fortran_env, only: real64
+   use soilwater_state_mod, only: soilwater_state_t
+   type(soilwater_state_t) :: sw
+
+   @assertEqual(0.0_real64, sw%qrosum,       1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%qredwetsum,   1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%qreddrysum,   1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%qredsolsum,   1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%qredfrssum,   1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%Tactual,      1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%alpJvLier,    1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%hleaf,        1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%Hxylem,       1.0e-12_real64)
+   @assertFalse(sw%flWrtNonox)
+end subroutine test_soilwater_cropuptake_scalar_defaults
+
+@test
+subroutine test_soilwater_cropuptake_allocatables_not_allocated()
+   ! All 13 new allocatable arrays start unallocated before soilwater_init.
+   ! Allocation is deferred to C-1.2 (soilwater_init signature bump).
+   use funit
+   use soilwater_state_mod, only: soilwater_state_t
+   type(soilwater_state_t) :: sw
+
+   ! Primary Feddes+stress arrays
+   @assertFalse(allocated(sw%qrot))
+   @assertFalse(allocated(sw%qpotrot))
+   @assertFalse(allocated(sw%qredwet))
+   @assertFalse(allocated(sw%qreddry))
+   @assertFalse(allocated(sw%qredsol))
+   @assertFalse(allocated(sw%qredfrs))
+
+   ! JvL per-node arrays
+   @assertFalse(allocated(sw%mflux))
+   @assertFalse(allocated(sw%mroot))
+   @assertFalse(allocated(sw%hroot))
+   @assertFalse(allocated(sw%rootrho))
+   @assertFalse(allocated(sw%rootphi))
+   @assertFalse(allocated(sw%rmax))
+
+   ! Init-once lookup table
+   @assertFalse(allocated(sw%mfluxtable))
+end subroutine test_soilwater_cropuptake_allocatables_not_allocated
+
+@test
+subroutine test_soilwater_cropuptake_scalar_roundtrip()
+   ! Scalar write/read round-trip for representative crop-uptake scalars.
+   use funit
+   use iso_fortran_env, only: real64
+   use soilwater_state_mod, only: soilwater_state_t
+   type(soilwater_state_t) :: sw
+
+   sw%qrosum     = 0.42_real64
+   sw%qreddrysum = 0.10_real64
+   sw%Tactual    = 0.38_real64
+   sw%alpJvLier  = 1.23_real64
+   sw%hleaf      = -1500.0_real64
+   sw%Hxylem     = -200.0_real64
+   sw%flWrtNonox = .true.
+
+   @assertEqual( 0.42_real64,     sw%qrosum,     1.0e-12_real64)
+   @assertEqual( 0.10_real64,     sw%qreddrysum, 1.0e-12_real64)
+   @assertEqual( 0.38_real64,     sw%Tactual,    1.0e-12_real64)
+   @assertEqual( 1.23_real64,     sw%alpJvLier,  1.0e-12_real64)
+   @assertEqual(-1500.0_real64,   sw%hleaf,      1.0e-12_real64)
+   @assertEqual(-200.0_real64,    sw%Hxylem,     1.0e-12_real64)
+   @assertTrue(sw%flWrtNonox)
+end subroutine test_soilwater_cropuptake_scalar_roundtrip
+
+@test
+subroutine test_soilwater_cropuptake_two_instances_independent()
+   ! Two soilwater_state_t instances share no state (value semantics).
+   use funit
+   use iso_fortran_env, only: real64
+   use soilwater_state_mod, only: soilwater_state_t
+   type(soilwater_state_t) :: sw1, sw2
+
+   sw1%qrosum     = 1.0_real64
+   sw1%alpJvLier  = 2.0_real64
+   sw1%flWrtNonox = .true.
+
+   ! sw2 must retain defaults, unaffected by sw1 assignments
+   @assertEqual(0.0_real64, sw2%qrosum,    1.0e-12_real64)
+   @assertEqual(0.0_real64, sw2%alpJvLier, 1.0e-12_real64)
+   @assertFalse(sw2%flWrtNonox)
+
+   ! sw1 reads must match what we wrote
+   @assertEqual(1.0_real64, sw1%qrosum,    1.0e-12_real64)
+   @assertEqual(2.0_real64, sw1%alpJvLier, 1.0e-12_real64)
+   @assertTrue(sw1%flWrtNonox)
+end subroutine test_soilwater_cropuptake_two_instances_independent
+
+@test
+subroutine test_soilwater_cropuptake_aggregator_access()
+   ! Aggregator path: state%soilwater%<crop-uptake-field> round-trip.
+   use funit
+   use iso_fortran_env, only: real64
+   use swap_state_mod, only: swap_state_t
+   type(swap_state_t) :: state
+
+   ! Defaults via aggregator
+   @assertEqual(0.0_real64, state%soilwater%qrosum,    1.0e-12_real64)
+   @assertEqual(0.0_real64, state%soilwater%Tactual,   1.0e-12_real64)
+   @assertFalse(state%soilwater%flWrtNonox)
+   @assertFalse(allocated(state%soilwater%qrot))
+   @assertFalse(allocated(state%soilwater%mfluxtable))
+
+   ! Write and read back through aggregator
+   state%soilwater%qrosum     = 0.75_real64
+   state%soilwater%hleaf      = -900.0_real64
+   state%soilwater%flWrtNonox = .true.
+
+   @assertEqual(  0.75_real64, state%soilwater%qrosum, 1.0e-12_real64)
+   @assertEqual(-900.0_real64, state%soilwater%hleaf,  1.0e-12_real64)
+   @assertTrue(state%soilwater%flWrtNonox)
+end subroutine test_soilwater_cropuptake_aggregator_access
+
+@test
+subroutine test_soilwater_cropuptake_soilwater_init_zeros_new_scalars()
+   ! soilwater_init zeroes all boundary AND new crop-uptake scalar fields
+   ! even when they were pre-set to non-zero values.
+   ! (Per-node arrays remain unallocated until C-1.2 — not tested here.)
+   use funit
+   use iso_fortran_env, only: real64
+   use soilwater_state_mod, only: soilwater_state_t, soilwater_init
+   type(soilwater_state_t) :: sw
+
+   ! Pre-load with non-zero / non-default values
+   sw%qrosum     = 5.0_real64
+   sw%qredwetsum = 1.0_real64
+   sw%qreddrysum = 2.0_real64
+   sw%qredsolsum = 0.5_real64
+   sw%qredfrssum = 0.1_real64
+   sw%Tactual    = 3.0_real64
+   sw%alpJvLier  = 1.5_real64
+   sw%hleaf      = -2000.0_real64
+   sw%Hxylem     = -100.0_real64
+   sw%flWrtNonox = .true.
+
+   call soilwater_init(sw)
+
+   @assertEqual(0.0_real64, sw%qrosum,       1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%qredwetsum,   1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%qreddrysum,   1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%qredsolsum,   1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%qredfrssum,   1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%Tactual,      1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%alpJvLier,    1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%hleaf,        1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%Hxylem,       1.0e-12_real64)
+   @assertFalse(sw%flWrtNonox)
+end subroutine test_soilwater_cropuptake_soilwater_init_zeros_new_scalars
