@@ -7,14 +7,16 @@ module SWAP_csv_output
    !   (now via state%heat in set_values/fill_values).
    ! SS-ATM A-2.5: igsnow,ipeva,ievap,iptra,ssnow,igrai,isnrai,isubl,inrai removed from module-level use variables
    !   (now via state%atmosphere%intr and state%atmosphere in set_values/fill_values).
-   use variables, only: igird,iintc,irunon,iruno,iqbot,                                                                          &
-                        gwl,pond,iqrot,iqreddry,iqredwet,iqredsol,iqredfrs,tsum,dvs,pgasspot,pgass,                             &
+   ! SS-SWC S-2.11: gwl,pond,iqbot,iqrot,iqreddry,iqredwet,iqredsol,iqredfrs,ies0,iet0,iew0,iqssdi,volact,
+   !   H,theta,K,inq,inqrot,inqssdi,iqdo,iqup,FrArMtrx,irunon,iruno,iintc,igird,inird,irunoCN,iqtdo,iqtup
+   !   removed from module-level use variables (now via state%soilwater in set_values/fill_values).
+   use variables, only: tsum,dvs,pgasspot,pgass,                                                                                 &
                         cwdmpot,cwdm,wsopot,wso,wlvpot,wlv,wstpot,wst,wrtpot,wrt,dwso,dwlv,dwlvpot,dwst,dwstpot,dwrt,dwrtpot,    &
                         ch,cf,laipot,lai,rdpot,rd,tagppot,tagp,tagptpot,tagpt,cuptgrazpot,cuptgraz,plossdm,lossdm,               &
-                        wc10,Runoff_CN,iqtdo,iqtup,iqinfmax,ies0,iet0,iew0,inird,volact,iqssdi,                     &
-                        flprintshort, date, t1900, dz, numnod, zbotcp, ztopcp, H, theta, K, inq, inqrot,                        &
-                        iqmpoutdrrap, irunocn, c_top, inqssdi, nrlevs, frarmtrx,                          &
-                        iqdo, iqup, pathwork, outfil, project, InList_csv, macp, madr
+                        wc10,Runoff_CN,iqinfmax,                                                                    &
+                        flprintshort, date, t1900, dz, numnod, zbotcp, ztopcp,                                                  &
+                        iqmpoutdrrap, c_top, nrlevs,                                                                             &
+                        pathwork, outfil, project, InList_csv, macp, madr
    use swap_state_mod, only: swap_state_t
 
    implicit none
@@ -232,32 +234,37 @@ module SWAP_csv_output
       if (vars%name(i) == 'RAIN')        vars%value(1,i) = state%atmosphere%intr%igrai + state%atmosphere%intr%isnrai
       if (vars%name(i) == 'RAIN_NET')    vars%value(1,i) = state%atmosphere%intr%inrai
       if (vars%name(i) == 'SNOW')        vars%value(1,i) = state%atmosphere%intr%igsnow
-      if (vars%name(i) == 'IRRIG')       vars%value(1,i) = igird
-      if (vars%name(i) == 'IRRIG_NET')   vars%value(1,i) = inird
-      if (vars%name(i) == 'INTERC')      vars%value(1,i) = iintc
-      if (vars%name(i) == 'RUNON')       vars%value(1,i) = irunon
-      if (vars%name(i) == 'RUNOFF')      vars%value(1,i) = iruno
+      ! SS-SWC S-2.11: igird,inird,iintc,irunon,iruno read from state%soilwater%intr.
+      if (vars%name(i) == 'IRRIG')       vars%value(1,i) = state%soilwater%intr%igird
+      if (vars%name(i) == 'IRRIG_NET')   vars%value(1,i) = state%soilwater%intr%inird
+      if (vars%name(i) == 'INTERC')      vars%value(1,i) = state%soilwater%intr%iintc
+      if (vars%name(i) == 'RUNON')       vars%value(1,i) = state%soilwater%intr%irunon
+      if (vars%name(i) == 'RUNOFF')      vars%value(1,i) = state%soilwater%intr%iruno
       if (vars%name(i) == 'EPOT')        vars%value(1,i) = state%atmosphere%intr%ipeva
       if (vars%name(i) == 'EACT')        vars%value(1,i) = state%atmosphere%intr%ievap
       if (vars%name(i) == 'SUBLIM')      vars%value(1,i) = state%atmosphere%intr%isubl
       if (vars%name(i) == 'DRAINAGE')    vars%value(1,i) = state%surfacewater%intermediate%iqdra + iQMpOutDrRap
-      if (vars%name(i) == 'QBOTTOM')     vars%value(1,i) = iqbot
-      if (vars%name(i) == 'GWL')         vars%value(1,i) = gwl
-      if (vars%name(i) == 'POND')        vars%value(1,i) = pond
+      ! SS-SWC S-2.11: iqbot,gwl,pond read from state%soilwater.
+      if (vars%name(i) == 'QBOTTOM')     vars%value(1,i) = state%soilwater%intr%iqbot
+      if (vars%name(i) == 'GWL')         vars%value(1,i) = state%soilwater%gwl
+      if (vars%name(i) == 'POND')        vars%value(1,i) = state%soilwater%pond
       if (vars%name(i) == 'TPOT')        vars%value(1,i) = state%atmosphere%intr%iptra
-      if (vars%name(i) == 'TACT')        vars%value(1,i) = iqrot
-      if (vars%name(i) == 'TREDDRY')     vars%value(1,i) = iqreddry
-      if (vars%name(i) == 'TREDWET')     vars%value(1,i) = iqredwet
-      if (vars%name(i) == 'TREDSOL')     vars%value(1,i) = iqredsol
-      if (vars%name(i) == 'TREDFRS')     vars%value(1,i) = iqredfrs
-      if (vars%name(i) == 'ES0')         vars%value(1,i) = ies0
-      if (vars%name(i) == 'ET0')         vars%value(1,i) = iet0
-      if (vars%name(i) == 'EW0')         vars%value(1,i) = iew0
+      ! SS-SWC S-2.11: iqrot,iqreddry,iqredwet,iqredsol,iqredfrs,ies0,iet0,iew0 read from state%soilwater%intr.
+      if (vars%name(i) == 'TACT')        vars%value(1,i) = state%soilwater%intr%iqrot
+      if (vars%name(i) == 'TREDDRY')     vars%value(1,i) = state%soilwater%intr%iqreddry
+      if (vars%name(i) == 'TREDWET')     vars%value(1,i) = state%soilwater%intr%iqredwet
+      if (vars%name(i) == 'TREDSOL')     vars%value(1,i) = state%soilwater%intr%iqredsol
+      if (vars%name(i) == 'TREDFRS')     vars%value(1,i) = state%soilwater%intr%iqredfrs
+      if (vars%name(i) == 'ES0')         vars%value(1,i) = state%soilwater%intr%ies0
+      if (vars%name(i) == 'ET0')         vars%value(1,i) = state%soilwater%intr%iet0
+      if (vars%name(i) == 'EW0')         vars%value(1,i) = state%soilwater%intr%iew0
       if (vars%name(i) == 'DSTOR')       vars%value(1,i) = dstor
       if (vars%name(i) == 'BALDEV')      vars%value(1,i) = baldev
-      if (vars%name(i) == 'VOLACT')      vars%value(1,i) = volact
+      ! SS-SWC S-2.11: volact read from state%soilwater.
+      if (vars%name(i) == 'VOLACT')      vars%value(1,i) = state%soilwater%volact
       if (vars%name(i) == 'SSNOW')       vars%value(1,i) = state%atmosphere%ssnow
-      if (vars%name(i) == 'QSSDI')       vars%value(1,i) = iqssdi
+      ! SS-SWC S-2.11: iqssdi read from state%soilwater%intr.
+      if (vars%name(i) == 'QSSDI')       vars%value(1,i) = state%soilwater%intr%iqssdi
       if (vars%name(i) == 'TSUM')        vars%value(1,i) = tsum
       if (vars%name(i) == 'DVS')         vars%value(1,i) = dvs
       if (vars%name(i) == 'PGASSPOT')    vars%value(1,i) = pgasspot
@@ -303,8 +310,9 @@ module SWAP_csv_output
       if (vars%name(i) == 'SOLBAL')      vars%value(1,i) = state%solute%solbal
       if (vars%name(i) == 'WC10')        vars%value(1,i) = wc10
       if (vars%name(i) == 'RUNOFFCN')    vars%value(1,i) = Runoff_CN
-      if (vars%name(i) == 'QTOPIN')      vars%value(1,i) = iqtdo
-      if (vars%name(i) == 'QTOPOUT')     vars%value(1,i) = iqtup
+      ! SS-SWC S-2.11: iqtdo,iqtup read from state%soilwater%intr.
+      if (vars%name(i) == 'QTOPIN')      vars%value(1,i) = state%soilwater%intr%iqtdo
+      if (vars%name(i) == 'QTOPOUT')     vars%value(1,i) = state%soilwater%intr%iqtup
       if (vars%name(i) == 'QINFMAX')     vars%value(1,i) = iqinfmax
       if (vars%name(i) == 'TETOP')       vars%value(1,i) = state%heat%tetop
       if (vars%name(i) == 'TEBOT')       vars%value(1,i) = state%heat%tebot
@@ -384,8 +392,9 @@ module SWAP_csv_output
 
       ! store inital values
       ! SS-ATM A-2.5: ssnow read from state%atmosphere (atmosphere home).
-      VolOld  = volact
-      PondOld = pond
+      ! SS-SWC S-2.11: volact,pond read from state%soilwater.
+      VolOld  = state%soilwater%volact
+      PondOld = state%soilwater%pond
       SnowOld = state%atmosphere%ssnow
 
    case (2)
@@ -472,30 +481,36 @@ module SWAP_csv_output
 
    ! change in storage and deviation in mass balance
    ! SS-ATM A-2.5: ssnow,igrai,isnrai,igsnow,ievap,isubl from state%atmosphere.
-   dstor        = (volact + pond + state%atmosphere%ssnow) - (VolOld + PondOld + SnowOld)
-   baldev       = (state%atmosphere%intr%igrai+state%atmosphere%intr%isnrai+state%atmosphere%intr%igsnow+igird+irunon + iqssdi) - dstor -             &
-                  (iintc+iruno+irunoCN+iqrot+state%atmosphere%intr%ievap+state%atmosphere%intr%isubl+iQMpOutDrRap+state%surfacewater%intermediate%iqdra+(-1.0d0*iqbot))
+   ! SS-SWC S-2.11: volact,pond,igird,irunon,iqssdi,iintc,iruno,irunoCN,iqrot,iqbot read from state%soilwater.
+   dstor        = (state%soilwater%volact + state%soilwater%pond + state%atmosphere%ssnow) - (VolOld + PondOld + SnowOld)
+   baldev       = (state%atmosphere%intr%igrai+state%atmosphere%intr%isnrai+state%atmosphere%intr%igsnow+               &
+                   state%soilwater%intr%igird+state%soilwater%intr%irunon + state%soilwater%intr%iqssdi) - dstor -     &
+                  (state%soilwater%intr%iintc+state%soilwater%intr%iruno+state%soilwater%intr%irunoCN+                 &
+                   state%soilwater%intr%iqrot+state%atmosphere%intr%ievap+state%atmosphere%intr%isubl+                 &
+                   iQMpOutDrRap+state%surfacewater%intermediate%iqdra+(-1.0d0*state%soilwater%intr%iqbot))
 
    ! replace Old values by current values (needed for next output moment)
-   VolOld  = volact
-   PondOld = pond
+   VolOld  = state%soilwater%volact
+   PondOld = state%soilwater%pond
    SnowOld = state%atmosphere%ssnow
 
    ! H, WC, TEMP, K, CONC, CONCADS, O2TOP
-   if (lp_H%fldo)   lp_H%vals(1:vars%Nnodes(lp_H%jpos))     =       H(vars%nodes(1:vars%Nnodes(lp_H%jpos), lp_H%jpos))
-   if (lp_WC%fldo)  lp_WC%vals(1:vars%Nnodes(lp_WC%jpos))   =   theta(vars%nodes(1:vars%Nnodes(lp_WC%jpos),lp_WC%jpos))
-   if (lp_K%fldo)   lp_K%vals(1:vars%Nnodes(lp_K%jpos))     =       K(vars%nodes(1:vars%Nnodes(lp_K%jpos), lp_K%jpos))
+   ! SS-SWC S-2.11: H,theta,K read from state%soilwater.
+   if (lp_H%fldo)   lp_H%vals(1:vars%Nnodes(lp_H%jpos))     = state%soilwater%H(vars%nodes(1:vars%Nnodes(lp_H%jpos), lp_H%jpos))
+   if (lp_WC%fldo)  lp_WC%vals(1:vars%Nnodes(lp_WC%jpos))   = state%soilwater%theta(vars%nodes(1:vars%Nnodes(lp_WC%jpos),lp_WC%jpos))
+   if (lp_K%fldo)   lp_K%vals(1:vars%Nnodes(lp_K%jpos))     = state%soilwater%K(vars%nodes(1:vars%Nnodes(lp_K%jpos), lp_K%jpos))
    if (lp_T%fldo)   lp_T%vals(1:vars%Nnodes(lp_T%jpos))     =   state%heat%tsoil(vars%nodes(1:vars%Nnodes(lp_T%jpos), lp_T%jpos))
    if (lp_C%fldo)   lp_C%vals(1:vars%Nnodes(lp_C%jpos))     =     state%solute%cml(vars%nodes(1:vars%Nnodes(lp_C%jpos), lp_C%jpos))
    if (lp_CA%fldo)  lp_CA%vals(1:vars%Nnodes(lp_CA%jpos))   =    state%solute%cmsy(vars%nodes(1:vars%Nnodes(lp_CA%jpos),lp_CA%jpos))
    if (lp_O2%fldo)  lp_O2%vals(1:vars%Nnodes(lp_O2%jpos))   =   c_top(vars%nodes(1:vars%Nnodes(lp_O2%jpos),lp_O2%jpos))
 
    ! HEACAP, HEACON, DRAIN, RWU, FLUX, SSDI
+   ! SS-SWC S-2.11: inqrot,inq,inqssdi read from state%soilwater%intr.
    if (lp_HCA%fldo) lp_HCA%vals(1:vars%Nnodes(lp_HCA%jpos)) =  state%heat%heacap(vars%nodes(1:vars%Nnodes(lp_HCA%jpos),lp_HCA%jpos))
    if (lp_HCO%fldo) lp_HCO%vals(1:vars%Nnodes(lp_HCO%jpos)) =  state%heat%heacon(vars%nodes(1:vars%Nnodes(lp_HCO%jpos),lp_HCO%jpos))
-   if (lp_RWU%fldo) lp_RWU%vals(1:vars%Nnodes(lp_RWU%jpos)) =  inqrot(vars%nodes(1:vars%Nnodes(lp_RWU%jpos),lp_RWU%jpos))
-   if (lp_Q%fldo)   lp_Q%vals(1:vars%Nnodes(lp_Q%jpos))     =     inq(vars%nodes(1:vars%Nnodes(lp_Q%jpos),  lp_Q%jpos))
-   if (lp_SI%fldo)  lp_SI%vals(1:vars%Nnodes(lp_SI%jpos))   = inqssdi(vars%nodes(1:vars%Nnodes(lp_SI%jpos), lp_SI%jpos))
+   if (lp_RWU%fldo) lp_RWU%vals(1:vars%Nnodes(lp_RWU%jpos)) =  state%soilwater%intr%inqrot(vars%nodes(1:vars%Nnodes(lp_RWU%jpos),lp_RWU%jpos))
+   if (lp_Q%fldo)   lp_Q%vals(1:vars%Nnodes(lp_Q%jpos))     =  state%soilwater%intr%inq(vars%nodes(1:vars%Nnodes(lp_Q%jpos),  lp_Q%jpos))
+   if (lp_SI%fldo)  lp_SI%vals(1:vars%Nnodes(lp_SI%jpos))   =  state%soilwater%intr%inqssdi(vars%nodes(1:vars%Nnodes(lp_SI%jpos), lp_SI%jpos))
 
    ! summed for all drainage levels
    if (lp_DRA%fldo) then
@@ -503,31 +518,36 @@ module SWAP_csv_output
    end if
 
    ! handle subregions: WTOT, QTRANS, QTOP, QBOT, QDRA, lp_QTIN, lp_QTOU, lp_QBIN, lp_QBOU, lp_QDIN, lp_QDOU
-   if (lp_WTOT%fldo) call fill_1(vars%Nnodes(lp_WTOT%jpos), lp_WTOT%jpos, vars%nodes, lp_WTOT%vals, 1, theta, dz, FrArMtrx)
+   ! SS-SWC S-2.11: theta,FrArMtrx,inqrot,inq,iqdo,iqup read from state%soilwater.
+   if (lp_WTOT%fldo) call fill_1(vars%Nnodes(lp_WTOT%jpos), lp_WTOT%jpos, vars%nodes, lp_WTOT%vals, 1, &
+                                  state%soilwater%theta, dz, state%soilwater%FrArMtrx)
 
    ! summed sink-terms inside subregion
-   if (lp_QTRA%fldo) call fill_1(vars%Nnodes(lp_QTRA%jpos), lp_QTRA%jpos, vars%nodes, lp_QTRA%vals, 0, inqrot)
+   if (lp_QTRA%fldo) call fill_1(vars%Nnodes(lp_QTRA%jpos), lp_QTRA%jpos, vars%nodes, lp_QTRA%vals, 0, &
+                                  state%soilwater%intr%inqrot)
    if (lp_QDRA%fldo) call fill_2(vars%Nnodes(lp_QDRA%jpos), lp_QDRA%jpos, vars%nodes, lp_QDRA%vals, nrlevs, state%surfacewater%intermediate%inqdra)
    if (lp_QDIN%fldo) call fill_2(vars%Nnodes(lp_QDIN%jpos), lp_QDIN%jpos, vars%nodes, lp_QDIN%vals, nrlevs, state%surfacewater%intermediate%inqdra_in)
    if (lp_QDOU%fldo) call fill_2(vars%Nnodes(lp_QDOU%jpos), lp_QDOU%jpos, vars%nodes, lp_QDOU%vals, nrlevs, state%surfacewater%intermediate%inqdra_out)
 
    ! fluxes at top and bottom boudanries of subregions
-   if (lp_QTOP%fldo) call fill_3(vars%Nnodes(lp_QTOP%jpos), lp_QTOP%jpos, 1, 0, vars%nodes, lp_QTOP%vals, -inq)
-   if (lp_QBOT%fldo) call fill_3(vars%Nnodes(lp_QBOT%jpos), lp_QBOT%jpos, 0, 1, vars%nodes, lp_QBOT%vals, -inq)
-   if (lp_QTIN%fldo) call fill_3(vars%Nnodes(lp_QTIN%jpos), lp_QTIN%jpos, 1, 0, vars%nodes, lp_QTIN%vals, iqdo)
-   if (lp_QTOU%fldo) call fill_3(vars%Nnodes(lp_QTOU%jpos), lp_QTOU%jpos, 1, 0, vars%nodes, lp_QTOU%vals, iqup)
-   if (lp_QBIN%fldo) call fill_3(vars%Nnodes(lp_QBIN%jpos), lp_QBIN%jpos, 0, 1, vars%nodes, lp_QBIN%vals, iqup)
-   if (lp_QBOU%fldo) call fill_3(vars%Nnodes(lp_QBOU%jpos), lp_QBOU%jpos, 0, 1, vars%nodes, lp_QBOU%vals, iqdo)
+   if (lp_QTOP%fldo) call fill_3(vars%Nnodes(lp_QTOP%jpos), lp_QTOP%jpos, 1, 0, vars%nodes, lp_QTOP%vals, -state%soilwater%intr%inq)
+   if (lp_QBOT%fldo) call fill_3(vars%Nnodes(lp_QBOT%jpos), lp_QBOT%jpos, 0, 1, vars%nodes, lp_QBOT%vals, -state%soilwater%intr%inq)
+   if (lp_QTIN%fldo) call fill_3(vars%Nnodes(lp_QTIN%jpos), lp_QTIN%jpos, 1, 0, vars%nodes, lp_QTIN%vals, state%soilwater%intr%iqdo)
+   if (lp_QTOU%fldo) call fill_3(vars%Nnodes(lp_QTOU%jpos), lp_QTOU%jpos, 1, 0, vars%nodes, lp_QTOU%vals, state%soilwater%intr%iqup)
+   if (lp_QBIN%fldo) call fill_3(vars%Nnodes(lp_QBIN%jpos), lp_QBIN%jpos, 0, 1, vars%nodes, lp_QBIN%vals, state%soilwater%intr%iqup)
+   if (lp_QBOU%fldo) call fill_3(vars%Nnodes(lp_QBOU%jpos), lp_QBOU%jpos, 0, 1, vars%nodes, lp_QBOU%vals, state%soilwater%intr%iqdo)
 
    end subroutine fill_values
 
    subroutine fill_1(Nnodes, jpos, nodes, vals, iwtot, swap_vals, dz, fr)
    ! global
+   ! SS-SWC S-2.11: swap_vals, dz, fr changed to assumed-shape (:) to support
+   !   state%soilwater arrays allocated as numnod rather than macp.
    integer,                        intent(in)            :: Nnodes, jpos, iwtot
    integer, dimension(Mnodes,M),   intent(in)            :: nodes
    real(8), dimension(Nnodes),     intent(out)           :: vals
-   real(8), dimension(macp),       intent(in)            :: swap_vals
-   real(8), dimension(macp),       intent(in), optional  :: dz, fr
+   real(8), dimension(:),          intent(in)            :: swap_vals
+   real(8), dimension(:),          intent(in), optional  :: dz, fr
    ! local
    integer                                               :: i, j
    do i = 1, Nnodes
@@ -560,10 +580,11 @@ module SWAP_csv_output
 
    subroutine fill_3(Nnodes, jpos, low, raise, nodes, vals, swap_vals)
    ! global
+   ! SS-SWC S-2.11: swap_vals changed to assumed-shape (:) to support state%soilwater arrays.
    integer,                        intent(in)   :: Nnodes, jpos, low, raise
    integer, dimension(Mnodes,M),   intent(in)   :: nodes
    real(8), dimension(Nnodes),     intent(out)  :: vals
-   real(8), dimension(macp),       intent(in)   :: swap_vals
+   real(8), dimension(:),          intent(in)   :: swap_vals
    ! local
    integer                                      :: i, j
    do i = 1, Nnodes
@@ -958,8 +979,9 @@ subroutine csv_out_tz (iTask, state)
 ! import global variables contianing possible output
 ! SS-SLST Phase 1 Task 5: cml,cmsy migrated to state%solute.
 ! SS-HEAT Phase 1 Task 5: tsoil, HEACAP, HEACON removed (now via state%heat).
+! SS-SWC S-2.11: h,theta,K,inqrot removed (now via state%soilwater).
 use variables, only: pathwork, outfil, project, InList_csv_tz, tz_z1_z2, numnod, z, zbotcp, flprintshort, date, t1900, &
-                     h, theta, K, c_top, inqrot
+                     c_top
 use swap_state_mod, only: swap_state_t
 use file_io_mod, only: file_open
 
@@ -1093,16 +1115,19 @@ case (2)
     ! programmer is responsible for correct correspondence between Names (and their position) in Allowed and
     ! actual SWAP variables as used below
 
-    if (iCSV(1)  == 1) call do_write_csv_tz (h(j))
-    if (iCSV(2)  == 1) call do_write_csv_tz (theta(j))
+    ! SS-SWC S-2.11: h,theta read from state%soilwater.
+    if (iCSV(1)  == 1) call do_write_csv_tz (state%soilwater%h(j))
+    if (iCSV(2)  == 1) call do_write_csv_tz (state%soilwater%theta(j))
     if (iCSV(3)  == 1) call do_write_csv_tz (state%heat%tsoil(j))
-    if (iCSV(4)  == 1) call do_write_csv_tz (k(j))
+    ! SS-SWC S-2.11: k read from state%soilwater.
+    if (iCSV(4)  == 1) call do_write_csv_tz (state%soilwater%k(j))
     if (iCSV(5)  == 1) call do_write_csv_tz (state%solute%cml(j))
     if (iCSV(6)  == 1) call do_write_csv_tz (state%solute%cmsy(j))
     if (iCSV(7)  == 1) call do_write_csv_tz (c_top(j))
     if (iCSV(8)  == 1) call do_write_csv_tz (state%heat%heacap(j)/1.0d-6)    ! from J/cm3/K  to J/m3/K
     if (iCSV(9)  == 1) call do_write_csv_tz (state%heat%heacon(j)/864.0d0)   ! from J/cm/K/d to W/m/K
-    if (iCSV(10) == 1) call do_write_csv_tz (inqrot(j))
+    ! SS-SWC S-2.11: inqrot read from state%soilwater%intr.
+    if (iCSV(10) == 1) call do_write_csv_tz (state%soilwater%intr%inqrot(j))
 
     ! finalize record (advance to next line)
     write (iuncsv,*)

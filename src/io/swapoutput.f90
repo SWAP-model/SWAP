@@ -212,9 +212,9 @@
 ! ---------------------------------------------------------------------
       ! SS-ATM A-2.5: cevap,cgrai,csnrai,cnrai,cpeva,cptra removed from only-list; reads via state%atmosphere.
       ! SS-ATM A-2.5: ssnow,snowinco removed from only-list; reads via state%atmosphere.
-      use variables, only: wba,daynr,daycum,swscre,cgird,cnird,cqbot,cqrot,crunon,                     &
-                           crunoff,gwl,cQMpOutDrRap,pond,t1900,date,volact,volini,wbalance,outfil,pathwork,project,flprintshort,floutput,       &
-                           swsnow,cqprai,PondIni,flheader,flmacropore
+      ! SS-SWC S-2.11: gwl,pond,volact,volini,wbalance,PondIni,cqbot,cqrot,crunon,crunoff,cgird,cnird removed; reads via state%soilwater.
+      use variables, only: wba,daynr,daycum,swscre,cQMpOutDrRap,t1900,date,outfil,pathwork,project,flprintshort,floutput,       &
+                           swsnow,cqprai,flheader,flmacropore
       use swap_state_mod, only: swap_state_t
       use file_io_mod, only: file_open
       implicit none
@@ -301,8 +301,10 @@
 
 ! --- write output record wba file
       gwlout = "          "
-      if (gwl.lt.998.0d0)  write(gwlout,'(f9.1)') gwl
+      ! SS-SWC S-2.11: gwl read from state%soilwater.
+      if (state%soilwater%gwl.lt.998.0d0)  write(gwlout,'(f9.1)') state%soilwater%gwl
       ! SS-ATM A-2.5: ssnow/snowinco read from state%atmosphere; c-fields from state%atmosphere%cumu.
+      ! SS-SWC S-2.11: pond,volact,volini,PondIni,wbalance,cqbot,cqrot,crunon,crunoff,cgird,cnird via state%soilwater.
       associate( &
         at_cgrai   => state%atmosphere%cumu%cgrai,   &
         at_csnrai  => state%atmosphere%cumu%csnrai,  &
@@ -311,52 +313,63 @@
         at_cpeva   => state%atmosphere%cumu%cpeva,   &
         at_cevap   => state%atmosphere%cumu%cevap,   &
         at_ssnow   => state%atmosphere%ssnow,        &
-        at_snowinco => state%atmosphere%snowinco     &
+        at_snowinco => state%atmosphere%snowinco,    &
+        sw_pond    => state%soilwater%pond,          &
+        sw_volact  => state%soilwater%volact,        &
+        sw_volini  => state%soilwater%volini,        &
+        sw_pondini => state%soilwater%pondini,       &
+        sw_wbalance => state%soilwater%wbalance,     &
+        sw_cqbot   => state%soilwater%cumu%cqbot,   &
+        sw_cqrot   => state%soilwater%cumu%cqrot,   &
+        sw_crunon  => state%soilwater%cumu%crunon,  &
+        sw_crunoff => state%soilwater%cumu%crunoff, &
+        sw_cgird   => state%soilwater%cumu%cgird,   &
+        sw_cnird   => state%soilwater%cumu%cnird    &
       )
       if (swsnow.eq.0) then
-        dstor = (volact + pond) - (volini + PondIni)
+        dstor = (sw_volact + sw_pond) - (sw_volini + sw_pondini)
         if (flprintshort) then
           write (wba,25) datexti,comma,daynr,comma,daycum,comma,          &
-     &    at_cgrai+at_csnrai,comma,at_cnrai,comma,cgird,comma,cnird,comma,crunon,&
-     &    comma,crunoff,comma,at_cptra,comma,cqrot,comma,at_cpeva,comma,at_cevap,&
-     &    comma,(state%surfacewater%drainage_cumulative%cqdra+cQMpOutDrRap),comma,cqbot,comma,&
-     &    dstor,comma,gwlout,comma,pond,comma,wbalance,comma,date
+     &    at_cgrai+at_csnrai,comma,at_cnrai,comma,sw_cgird,comma,sw_cnird,comma,sw_crunon,&
+     &    comma,sw_crunoff,comma,at_cptra,comma,sw_cqrot,comma,at_cpeva,comma,at_cevap,&
+     &    comma,(state%surfacewater%drainage_cumulative%cqdra+cQMpOutDrRap),comma,sw_cqbot,comma,&
+     &    dstor,comma,gwlout,comma,sw_pond,comma,sw_wbalance,comma,date
         else
           if(FlMacropore) then
             write (wba,30) date,comma,daynr,comma,daycum,comma,           &
-     &    at_cgrai+at_csnrai,comma,cqprai,comma,cgird,comma,cnird,comma,  &
-     &    crunon,comma,crunoff,comma,at_cptra,comma,cqrot,comma,at_cpeva, &
-     &    comma,at_cevap,comma,state%surfacewater%drainage_cumulative%cqdra,comma,cQMpOutDrRap,comma,cqbot,comma, &   !!! aanpassing GEM
-     &    dstor,comma,gwlout,comma,pond,comma,wbalance,comma,date
+     &    at_cgrai+at_csnrai,comma,cqprai,comma,sw_cgird,comma,sw_cnird,comma,  &
+     &    sw_crunon,comma,sw_crunoff,comma,at_cptra,comma,sw_cqrot,comma,at_cpeva, &
+     &    comma,at_cevap,comma,state%surfacewater%drainage_cumulative%cqdra,comma,cQMpOutDrRap,comma,sw_cqbot,comma, &   !!! aanpassing GEM
+     &    dstor,comma,gwlout,comma,sw_pond,comma,sw_wbalance,comma,date
           else
             write (wba,31) date,comma,daynr,comma,daycum,comma,           &
-     &    at_cgrai+at_csnrai,comma,cqprai,comma,cgird,comma,cnird,comma,  &
-     &    crunon,comma,crunoff,comma,at_cptra,comma,cqrot,comma,at_cpeva, &
-     &    comma,at_cevap,comma,(state%surfacewater%drainage_cumulative%cqdra+cQMpOutDrRap),comma,cqbot,comma,&
-     &    dstor,comma,gwlout,comma,pond,comma,wbalance,comma,date
+     &    at_cgrai+at_csnrai,comma,cqprai,comma,sw_cgird,comma,sw_cnird,comma,  &
+     &    sw_crunon,comma,sw_crunoff,comma,at_cptra,comma,sw_cqrot,comma,at_cpeva, &
+     &    comma,at_cevap,comma,(state%surfacewater%drainage_cumulative%cqdra+cQMpOutDrRap),comma,sw_cqbot,comma,&
+     &    dstor,comma,gwlout,comma,sw_pond,comma,sw_wbalance,comma,date
           endif
         endif
       else
-        dstor = (volact + pond + at_ssnow) - (volini + PondIni + at_snowinco)
+        dstor = (sw_volact + sw_pond + at_ssnow) - (sw_volini + sw_pondini + at_snowinco)
         if (flprintshort) then
           write (wba,25) datexti,comma,daynr,comma,daycum,comma,          &
-     &    at_cgrai+at_csnrai,comma,at_cnrai,comma,cgird,comma,cnird,comma,crunon,&
-     &    comma,crunoff,comma,at_cptra,comma,cqrot,comma,at_cpeva,comma,at_cevap,&
-     &    comma,(state%surfacewater%drainage_cumulative%cqdra+cQMpOutDrRap),comma,cqbot,comma,&
-     &    dstor,comma,gwlout,comma,pond,comma,wbalance,comma,date
+     &    at_cgrai+at_csnrai,comma,at_cnrai,comma,sw_cgird,comma,sw_cnird,comma,sw_crunon,&
+     &    comma,sw_crunoff,comma,at_cptra,comma,sw_cqrot,comma,at_cpeva,comma,at_cevap,&
+     &    comma,(state%surfacewater%drainage_cumulative%cqdra+cQMpOutDrRap),comma,sw_cqbot,comma,&
+     &    dstor,comma,gwlout,comma,sw_pond,comma,sw_wbalance,comma,date
         else
           if(FlMacropore) then
             write (wba,30) date,comma,daynr,comma,daycum,comma,           &
-     &    at_cgrai+at_csnrai,comma,cqprai,comma,cgird,comma,cnird,comma,  &
-     &    crunon,comma,crunoff,comma,at_cptra,comma,cqrot,comma,at_cpeva, &
-     &    comma,at_cevap,comma,state%surfacewater%drainage_cumulative%cqdra,comma,cQMpOutDrRap,comma,cqbot,comma, &   !!! aanpassing GEM
-     &    dstor,comma,gwlout,comma,pond,comma,wbalance,comma,date
+     &    at_cgrai+at_csnrai,comma,cqprai,comma,sw_cgird,comma,sw_cnird,comma,  &
+     &    sw_crunon,comma,sw_crunoff,comma,at_cptra,comma,sw_cqrot,comma,at_cpeva, &
+     &    comma,at_cevap,comma,state%surfacewater%drainage_cumulative%cqdra,comma,cQMpOutDrRap,comma,sw_cqbot,comma, &   !!! aanpassing GEM
+     &    dstor,comma,gwlout,comma,sw_pond,comma,sw_wbalance,comma,date
           else
             write (wba,31) date,comma,daynr,comma,daycum,comma,           &
-     &    at_cgrai+at_csnrai,comma,cqprai,comma,cgird,comma,cnird,comma,  &
-     &    crunon,comma,crunoff,comma,at_cptra,comma,cqrot,comma,at_cpeva, &
-     &    comma,at_cevap,comma,(state%surfacewater%drainage_cumulative%cqdra+cQMpOutDrRap),comma,cqbot,comma,&
-     &    dstor,comma,gwlout,comma,pond,comma,wbalance,comma,date
+     &    at_cgrai+at_csnrai,comma,cqprai,comma,sw_cgird,comma,sw_cnird,comma,  &
+     &    sw_crunon,comma,sw_crunoff,comma,at_cptra,comma,sw_cqrot,comma,at_cpeva, &
+     &    comma,at_cevap,comma,(state%surfacewater%drainage_cumulative%cqdra+cQMpOutDrRap),comma,sw_cqbot,comma,&
+     &    dstor,comma,gwlout,comma,sw_pond,comma,sw_wbalance,comma,date
           endif
         endif
       endif
@@ -372,12 +385,13 @@
 
 ! --- write output record screen
       ! SS-ATM A-2.5: cgrai/cevap read from state%atmosphere%cumu.
+      ! SS-SWC S-2.11: cqrot,cqbot,gwl,wbalance,crunoff,cgird via state%soilwater.
       if (swscre.eq.1 .and. floutput) then
         if (flheader) write (*,22)
         write (unit=*, fmt=40)                                          &
-     &                date,state%atmosphere%cumu%cgrai,cgird,crunoff,   &
-     &                cqrot,state%atmosphere%cumu%cevap,                 &
-     &                (state%surfacewater%drainage_cumulative%cqdra+cQMpOutDrRap),cqbot,gwl,wbalance
+     &                date,state%atmosphere%cumu%cgrai,state%soilwater%cumu%cgird,state%soilwater%cumu%crunoff, &
+     &                state%soilwater%cumu%cqrot,state%atmosphere%cumu%cevap,                 &
+     &                (state%surfacewater%drainage_cumulative%cqdra+cQMpOutDrRap),state%soilwater%cumu%cqbot,state%soilwater%gwl,state%soilwater%wbalance
  40     format(1x,a11,f8.1,6f7.2,f7.1,f7.2)
       endif
 
@@ -397,8 +411,8 @@
 ! ---------------------------------------------------------------------
       ! SS-ATM A-2.5: igrai,isnrai,igsnow,iptra,ipeva,ievap,isubl removed from only-list; reads via state%atmosphere.
       ! SS-ATM A-2.5: ssnow,snowinco removed from only-list; reads via state%atmosphere.
-      use variables, only: inc,daynr,daycum,igird,iintc,irunon,iruno,irunoCN,iqrot,  &
-                           iQMpOutDrRap,iqbot,t1900,date,outfil,pathwork,project,flheader,gwl,volact,volini,pond,PondIni,flprintshort
+      ! SS-SWC S-2.11: gwl,pond,volact,volini,PondIni,iqbot,iqrot,igird,iintc,irunon,iruno,irunoCN removed; reads via state%soilwater.
+      use variables, only: inc,daynr,daycum,iQMpOutDrRap,t1900,date,outfil,pathwork,project,flheader,flprintshort
       use swap_state_mod, only: swap_state_t
       use file_io_mod, only: file_open
       implicit none
@@ -450,8 +464,9 @@
 
 
       ! SS-ATM A-2.5: snowinco read from state%atmosphere (atmosphere home).
-      VolOld  = volini
-      PondOld = PondIni
+      ! SS-SWC S-2.11: volini,PondIni read from state%soilwater.
+      VolOld  = state%soilwater%volini
+      PondOld = state%soilwater%pondini
       SnowOld = state%atmosphere%snowinco
 
       return
@@ -472,6 +487,7 @@
 
 ! --- write output record .inc file
       ! SS-ATM A-2.5: ssnow,snowinco,igrai,isnrai,igsnow,iptra,ipeva,ievap,isubl from state%atmosphere.
+      ! SS-SWC S-2.11: gwl,pond,volact,PondIni,igird,iintc,irunon,iruno,irunoCN,iqrot,iqbot via state%soilwater.
       associate( &
         at_igrai  => state%atmosphere%intr%igrai,  &
         at_inrai  => state%atmosphere%intr%inrai,  &
@@ -481,33 +497,43 @@
         at_ievap  => state%atmosphere%intr%ievap,  &
         at_isubl  => state%atmosphere%intr%isubl,  &
         at_isnrai => state%atmosphere%intr%isnrai, &
-        at_ssnow  => state%atmosphere%ssnow        &
+        at_ssnow  => state%atmosphere%ssnow,       &
+        sw_gwl    => state%soilwater%gwl,          &
+        sw_pond   => state%soilwater%pond,         &
+        sw_volact => state%soilwater%volact,       &
+        sw_igird  => state%soilwater%intr%igird,  &
+        sw_iintc  => state%soilwater%intr%iintc,  &
+        sw_irunon => state%soilwater%intr%irunon, &
+        sw_iruno  => state%soilwater%intr%iruno,  &
+        sw_irunoCN => state%soilwater%intr%irunoCN, &
+        sw_iqrot  => state%soilwater%intr%iqrot,  &
+        sw_iqbot  => state%soilwater%intr%iqbot   &
       )
       gwlout = "          "
-      if (gwl.lt.998.0d0)  write(gwlout,'(f9.1)') gwl
-      dstor = (volact + pond + at_ssnow) - (VolOld + PondOld + SnowOld)
-      baldev = (at_igrai+at_isnrai+at_igsnow+igird+irunon) - dstor -    &
-     & (iintc+iruno+irunoCN+iqrot+at_ievap+at_isubl+iQMpOutDrRap+state%surfacewater%intermediate%iqdra+(-1.0d0*iqbot))
+      if (sw_gwl.lt.998.0d0)  write(gwlout,'(f9.1)') sw_gwl
+      dstor = (sw_volact + sw_pond + at_ssnow) - (VolOld + PondOld + SnowOld)
+      baldev = (at_igrai+at_isnrai+at_igsnow+sw_igird+sw_irunon) - dstor -    &
+     & (sw_iintc+sw_iruno+sw_irunoCN+sw_iqrot+at_ievap+at_isubl+iQMpOutDrRap+state%surfacewater%intermediate%iqdra+(-1.0d0*sw_iqbot))
       if (flprintshort) then
         write (inc,20) datexti,comma,daynr,comma,daycum,comma,          &
-     &    at_igrai+at_isnrai,comma,at_igsnow,comma,igird,comma,iintc,   &
-     &    comma,irunon,comma,iruno+irunoCN,comma,at_iptra,comma,iqrot,   &
+     &    at_igrai+at_isnrai,comma,at_igsnow,comma,sw_igird,comma,sw_iintc, &
+     &    comma,sw_irunon,comma,sw_iruno+sw_irunoCN,comma,at_iptra,comma,sw_iqrot, &
      &    comma,at_ipeva,comma,at_ievap,comma,                           &
-     &    (iQMpOutDrRap+state%surfacewater%intermediate%iqdra),comma,iqbot,&
+     &    (iQMpOutDrRap+state%surfacewater%intermediate%iqdra),comma,sw_iqbot,&
      &    comma,gwlout,comma,dstor,comma,baldev            !comma,storage
       else
         write (inc,22) date,comma,daynr,comma,daycum,comma,             &
-     &    at_igrai+at_isnrai,comma,at_igsnow,comma,igird,comma,iintc,   &
-     &    comma,irunon,comma,iruno+irunoCN,comma,at_iptra,comma,iqrot,   &
+     &    at_igrai+at_isnrai,comma,at_igsnow,comma,sw_igird,comma,sw_iintc, &
+     &    comma,sw_irunon,comma,sw_iruno+sw_irunoCN,comma,at_iptra,comma,sw_iqrot, &
      &    comma,at_ipeva,comma,at_ievap,comma,                           &
-     &    (iQMpOutDrRap+state%surfacewater%intermediate%iqdra),comma,iqbot,&
+     &    (iQMpOutDrRap+state%surfacewater%intermediate%iqdra),comma,sw_iqbot,&
      &    comma,gwlout,comma,dstor,comma,baldev           !comma,storage
       endif
  20   format (a19,a1,i3,a1,i6,12(a1,f10.5),2a,2(a1,f10.5))     !,(a1,e12.5)
  22   format (a11,a1,i3,a1,i6,12(a1,f10.5),2a,2(a1,f10.5))     !,(a1,e12.5)
 
-      VolOld = volact
-      PondOld = pond
+      VolOld = sw_volact
+      PondOld = sw_pond
       SnowOld = at_ssnow
       end associate
 
@@ -526,7 +552,8 @@
 !     purpose            : write ETpot and stress factors to outfil.str file
 ! ---------------------------------------------------------------------
       ! SS-ATM A-2.5: ipeva,iptra removed from only-list; reads via state%atmosphere%intr.
-      use variables, only: str,daynr,daycum,ies0,iet0,iew0,iqrot,iqredwet,iqreddry,iqredsol,iqredfrs,t1900,   &
+      ! SS-SWC S-2.11: ies0,iet0,iew0,iqrot,iqredwet,iqreddry,iqredsol,iqredfrs removed; reads via state%soilwater%intr.
+      use variables, only: str,daynr,daycum,t1900,   &
                            date,outfil,pathwork,project,flheader,flprintshort
       use swap_state_mod, only: swap_state_t
       use file_io_mod, only: file_open
@@ -586,18 +613,21 @@
 
 ! --- write output record .str file
       ! SS-ATM A-2.5: ipeva,iptra read from state%atmosphere%intr (atmosphere home).
+      ! SS-SWC S-2.11: ies0,iet0,iew0,iqrot,iqredwet,iqreddry,iqredsol,iqredfrs via state%soilwater%intr.
       if (flprintshort) then
         write (str,20) datexti,comma,daynr,comma,daycum,                &
-     &                 comma,ies0,comma,iet0,comma,iew0,                 &
+     &                 comma,state%soilwater%intr%ies0,comma,state%soilwater%intr%iet0,comma,state%soilwater%intr%iew0, &
      &                 comma,state%atmosphere%intr%ipeva,                 &
-     &                 comma,state%atmosphere%intr%iptra,comma,iqrot,    &
-     &                 comma,iqredwet,comma,iqreddry,comma,iqredsol,comma,iqredfrs
+     &                 comma,state%atmosphere%intr%iptra,comma,state%soilwater%intr%iqrot, &
+     &                 comma,state%soilwater%intr%iqredwet,comma,state%soilwater%intr%iqreddry, &
+     &                 comma,state%soilwater%intr%iqredsol,comma,state%soilwater%intr%iqredfrs
       else
         write (str,22) date,comma,daynr,comma,daycum,                   &
-     &                 comma,ies0,comma,iet0,comma,iew0,                 &
+     &                 comma,state%soilwater%intr%ies0,comma,state%soilwater%intr%iet0,comma,state%soilwater%intr%iew0, &
      &                 comma,state%atmosphere%intr%ipeva,                 &
-     &                 comma,state%atmosphere%intr%iptra,comma,iqrot,    &
-     &                 comma,iqredwet,comma,iqreddry,comma,iqredsol,comma,iqredfrs
+     &                 comma,state%atmosphere%intr%iptra,comma,state%soilwater%intr%iqrot, &
+     &                 comma,state%soilwater%intr%iqredwet,comma,state%soilwater%intr%iqreddry, &
+     &                 comma,state%soilwater%intr%iqredsol,comma,state%soilwater%intr%iqredfrs
       endif
  20   format (a19,a1,i3,a1,i6,10(a1,f8.4))
  22   format (a11,a1,i3,a1,i6,10(a1,f8.4))
@@ -619,7 +649,8 @@
       ! SS-SLST Phase 1 Task 5: cml, cmsy, isqtop, isqbot migrated to state%solute.
       ! SS-HEAT Phase 2 Task 6: tsoil removed from only-list; reads via state%heat%tsoil.
       ! SS-CRP Phase 2 Task C-2.4: qrot removed from only-list; reads via state%soilwater%qrot.
-      use variables, only: ztopcp, zbotcp, vap,daynr,numnod,daycum,z,t1900,theta,h,k,q,outfil,     &
+      ! SS-SWC S-2.11: theta,h,k,q removed from only-list; reads via state%soilwater.
+      use variables, only: ztopcp, zbotcp, vap,daynr,numnod,daycum,z,t1900,outfil,     &
                            pathwork,project,swheader,qdraincomp,date,flprintshort
       use swap_state_mod, only: swap_state_t
       use file_io_mod, only: file_open
@@ -658,6 +689,13 @@
 
 ! --- write initial profile data to vap file
 
+      ! SS-SWC S-2.11: theta,h,k,q read from state%soilwater.
+      associate( &
+        sw_theta => state%soilwater%theta, &
+        sw_h     => state%soilwater%h,     &
+        sw_k     => state%soilwater%k,     &
+        sw_q     => state%soilwater%q      &
+      )
       if (flprintshort) then
 ! ---   determine date and date-time
         call dtdpst ('year-month-day,hour:minute:seconds',t1900,datexti)
@@ -665,18 +703,18 @@
           if (node.eq.1) then
              sflux = state%solute%isqtop
               else
-             sflux = 0.5d0 * (state%solute%cml(node) + state%solute%cml(node-1)) * q(node)
+             sflux = 0.5d0 * (state%solute%cml(node) + state%solute%cml(node-1)) * sw_q(node)
            end if
-           write (vap,300) datexti,comma,z(node),comma,theta(node),     &
-     &       comma,h(node),comma,k(node),comma,qdraincomp(node),comma,  &
-     &       state%soilwater%qrot(node),comma,q(node),comma,state%heat%tsoil(node),comma,state%solute%cml(node),&
+           write (vap,300) datexti,comma,z(node),comma,sw_theta(node),  &
+     &       comma,sw_h(node),comma,sw_k(node),comma,qdraincomp(node),comma,  &
+     &       state%soilwater%qrot(node),comma,sw_q(node),comma,state%heat%tsoil(node),comma,state%solute%cml(node),&
      &       comma,state%solute%cmsy(node),comma,sflux,comma,ztopcp(node),           &
      &       comma,zbotcp(node),comma,daynr,comma,daycum
         end do
         sflux = state%solute%isqbot
         write (vap,400) datexti,comma,zbotcp(numnod),                   &
      &    comma,comma,comma,comma,comma,                                &
-     &    comma,q(numnod+1),comma,comma,comma,comma,sflux,comma,        &
+     &    comma,sw_q(numnod+1),comma,comma,comma,comma,sflux,comma,     &
      &    zbotcp(numnod),comma,comma,daynr,comma,daycum
 
       else
@@ -686,21 +724,22 @@
           if (node.eq.1) then
              sflux = state%solute%isqtop
               else
-             sflux = 0.5d0 * (state%solute%cml(node) + state%solute%cml(node-1)) * q(node)
+             sflux = 0.5d0 * (state%solute%cml(node) + state%solute%cml(node-1)) * sw_q(node)
            end if
-           write (vap,310) inidate,comma,z(node),comma,theta(node),     &
-     &       comma,h(node),comma,k(node),comma,qdraincomp(node),comma,  &
-     &       state%soilwater%qrot(node),comma,q(node),comma,state%heat%tsoil(node),comma,state%solute%cml(node),&
+           write (vap,310) inidate,comma,z(node),comma,sw_theta(node),  &
+     &       comma,sw_h(node),comma,sw_k(node),comma,qdraincomp(node),comma,  &
+     &       state%soilwater%qrot(node),comma,sw_q(node),comma,state%heat%tsoil(node),comma,state%solute%cml(node),&
      &       comma,state%solute%cmsy(node),comma,sflux,comma,ztopcp(node),           &
      &       comma,zbotcp(node),comma,daynr,comma,daycum
         end do
         sflux = state%solute%isqbot
         write (vap,410) inidate,comma,zbotcp(numnod),                   &
      &    comma,comma,comma,comma,comma,                                &
-     &    comma,q(numnod+1),comma,comma,comma,comma,sflux,comma,        &
+     &    comma,sw_q(numnod+1),comma,comma,comma,comma,sflux,comma,     &
      &    zbotcp(numnod),comma,comma,daynr,comma,daycum
 
       endif
+      end associate
 
       return
 
@@ -718,6 +757,13 @@
         endif
       endif
 
+      ! SS-SWC S-2.11: theta,h,k,q read from state%soilwater.
+      associate( &
+        sw_theta => state%soilwater%theta, &
+        sw_h     => state%soilwater%h,     &
+        sw_k     => state%soilwater%k,     &
+        sw_q     => state%soilwater%q      &
+      )
       if (flprintshort) then
 ! ---   determine date and date-time
         call dtdpst ('year-month-day,hour:minute:seconds',t1900,datexti)
@@ -725,18 +771,18 @@
           if (node.eq.1) then
              sflux = state%solute%isqtop
               else
-             sflux = 0.5d0 * (state%solute%cml(node) + state%solute%cml(node-1)) * q(node)
+             sflux = 0.5d0 * (state%solute%cml(node) + state%solute%cml(node-1)) * sw_q(node)
            end if
-           write (vap,300) datexti,comma,z(node),comma,theta(node),     &
-     &       comma,h(node),comma,k(node),comma,qdraincomp(node),comma,  &
-     &       state%soilwater%qrot(node),comma,q(node),comma,state%heat%tsoil(node),comma,state%solute%cml(node),&
+           write (vap,300) datexti,comma,z(node),comma,sw_theta(node),  &
+     &       comma,sw_h(node),comma,sw_k(node),comma,qdraincomp(node),comma,  &
+     &       state%soilwater%qrot(node),comma,sw_q(node),comma,state%heat%tsoil(node),comma,state%solute%cml(node),&
      &       comma,state%solute%cmsy(node),comma,sflux,comma,ztopcp(node),           &
      &       comma,zbotcp(node),comma,daynr,comma,daycum
         end do
         sflux = state%solute%isqbot
         write (vap,400) datexti,comma,zbotcp(numnod),                   &
      &    comma,comma,comma,comma,comma,                                &
-     &    comma,q(numnod+1),comma,comma,comma,comma,sflux,comma,        &
+     &    comma,sw_q(numnod+1),comma,comma,comma,comma,sflux,comma,     &
      &    zbotcp(numnod),comma,comma,daynr,comma,daycum
 
       else
@@ -744,21 +790,22 @@
           if (node.eq.1) then
              sflux = state%solute%isqtop
               else
-             sflux = 0.5d0 * (state%solute%cml(node) + state%solute%cml(node-1)) * q(node)
+             sflux = 0.5d0 * (state%solute%cml(node) + state%solute%cml(node-1)) * sw_q(node)
            end if
-           write (vap,310) date,comma,z(node),comma,theta(node),        &
-     &       comma,h(node),comma,k(node),comma,qdraincomp(node),comma,  &
-     &       state%soilwater%qrot(node),comma,q(node),comma,state%heat%tsoil(node),comma,state%solute%cml(node),&
+           write (vap,310) date,comma,z(node),comma,sw_theta(node),     &
+     &       comma,sw_h(node),comma,sw_k(node),comma,qdraincomp(node),comma,  &
+     &       state%soilwater%qrot(node),comma,sw_q(node),comma,state%heat%tsoil(node),comma,state%solute%cml(node),&
      &       comma,state%solute%cmsy(node),comma,sflux,comma,ztopcp(node),           &
      &       comma,zbotcp(node),comma,daynr,comma,daycum
         end do
         sflux = state%solute%isqbot
         write (vap,410) date,comma,zbotcp(numnod),                      &
      &    comma,comma,comma,comma,comma,                                &
-     &    comma,q(numnod+1),comma,comma,comma,comma,sflux,comma,        &
+     &    comma,sw_q(numnod+1),comma,comma,comma,comma,sflux,comma,     &
      &    zbotcp(numnod),comma,comma,daynr,comma,daycum
 
       endif
+      end associate
 
  100  format(                                                           &
      & '* Explanation:   instantaneous fluxes of drainage, ',           &
@@ -815,8 +862,9 @@
 ! ---------------------------------------------------------------------
       ! SS-CRP Phase 2 Task C-2.4: qrot, hroot, mroot, mflux, rootrho, rootphi, hleaf, hxylem
       !   removed from only-list; reads via state%soilwater.
-      use variables, only: ztopcp, zbotcp,rot,daynr,noddrz,daycum,z,t1900,theta,hm1,q,outfil,pathwork,project,swheader, &
-                           date,flprintshort,inq,inqrot
+      ! SS-SWC S-2.11: theta,hm1,q,inq,inqrot removed from only-list; reads via state%soilwater.
+      use variables, only: ztopcp, zbotcp,rot,daynr,noddrz,daycum,z,t1900,outfil,pathwork,project,swheader, &
+                           date,flprintshort
       use swap_state_mod, only: swap_state_t
       use file_io_mod, only: file_open
       implicit none
@@ -870,18 +918,19 @@
         endif
       endif
 
+      ! SS-SWC S-2.11: theta,hm1,q,inq,inqrot read from state%soilwater.
       if (flprintshort) then
 ! ---   determine date and date-time
         call dtdpst ('year-month-day,hour:minute:seconds',t1900,datexti)
         do node = 1,noddrz
            write (rot,300) datexti,comma,z(node),comma,state%soilwater%hleaf,comma,  &
      &       state%soilwater%Hxylem,comma,                                            &
-     &       state%soilwater%hroot(node),comma,hm1(node),comma,inqrot(node),comma,   &
-     &       state%soilwater%qrot(node),comma,inq(node),comma,q(node),               &
+     &       state%soilwater%hroot(node),comma,state%soilwater%hm1(node),comma,state%soilwater%intr%inqrot(node),comma, &
+     &       state%soilwater%qrot(node),comma,state%soilwater%intr%inq(node),comma,state%soilwater%q(node), &
      &       comma,state%soilwater%mroot(node),                                       &
      &       comma,state%soilwater%mflux(node),comma,state%soilwater%rootrho(node),  &
      &       comma,state%soilwater%rootphi(node),                                     &
-     &       comma,theta(node),comma,ztopcp(node),comma,                              &
+     &       comma,state%soilwater%theta(node),comma,ztopcp(node),comma,              &
      &       zbotcp(node),comma,daynr,comma,daycum
         end do
 
@@ -889,12 +938,12 @@
         do node = 1,noddrz
            write (rot,310) date,comma,z(node),comma,state%soilwater%hleaf,comma,     &
      &       state%soilwater%Hxylem,comma,                                            &
-     &       state%soilwater%hroot(node),comma,hm1(node),comma,inqrot(node),comma,   &
-     &       state%soilwater%qrot(node),comma,inq(node),comma,q(node),               &
+     &       state%soilwater%hroot(node),comma,state%soilwater%hm1(node),comma,state%soilwater%intr%inqrot(node),comma, &
+     &       state%soilwater%qrot(node),comma,state%soilwater%intr%inq(node),comma,state%soilwater%q(node), &
      &       comma,state%soilwater%mroot(node),                                       &
      &       comma,state%soilwater%mflux(node),comma,state%soilwater%rootrho(node),  &
      &       comma,state%soilwater%rootphi(node),                                     &
-     &       comma,theta(node),comma,ztopcp(node),comma,                              &
+     &       comma,state%soilwater%theta(node),comma,ztopcp(node),comma,              &
      &       zbotcp(node),comma,daynr,comma,daycum
         end do
 
@@ -953,10 +1002,11 @@
       ! SS-ATM A-2.5: cevap,cgrai,cainc,csubl removed from only-list; reads via state%atmosphere%cumu.
       ! SS-ATM A-2.5: cgsnow,csnrai removed from only-list; reads via state%atmosphere%cumu.
       ! SS-ATM A-2.5: snowinco,ssnow removed from only-list; reads via state%atmosphere.
-      use variables, only: zbotcp,bal,logf,swscre,swdra,numnod,nrlevs,swsolu,ioutdat,cgird,cqbot,tstart,cqrot,crunoff,crunoffCN,     &
-                           crunon,cQMpOutDrRap,pond,volact,                    &
-                           volini,t1900,outdat,outfil,pathwork,project,PondIni,WaSrDm1,WaSrDm2,WaSrDm1Ini,WaSrDm2Ini,                &
-                           swsnow,cqssdi
+      ! SS-SWC S-2.11: pond,volact,volini,PondIni,cqbot,cqrot,crunoff,crunoffCN,crunon,cgird,cqssdi removed; reads via state%soilwater.
+      use variables, only: zbotcp,bal,logf,swscre,swdra,numnod,nrlevs,swsolu,ioutdat,tstart,     &
+                           cQMpOutDrRap,                    &
+                           t1900,outdat,outfil,pathwork,project,WaSrDm1,WaSrDm2,WaSrDm1Ini,WaSrDm2Ini,                &
+                           swsnow
       use swap_state_mod, only: swap_state_t
       use file_io_mod, only: file_open
       implicit none
@@ -1002,6 +1052,7 @@
       write (bal,22) -zbotcp(numnod)
 
       ! SS-ATM A-2.5: ssnow,snowinco,cgrai,cgsnow,csnrai,caintc,cevap,csubl from state%atmosphere.
+      ! SS-SWC S-2.11: pond,volact,volini,PondIni,cqbot,cqrot,crunoff,crunoffCN,crunon,cgird,cqssdi via state%soilwater.
       associate( &
         at_ssnow   => state%atmosphere%ssnow,           &
         at_snowinco => state%atmosphere%snowinco,        &
@@ -1010,21 +1061,32 @@
         at_csnrai  => state%atmosphere%cumu%csnrai,      &
         at_caintc  => state%atmosphere%cumu%caintc,      &
         at_cevap   => state%atmosphere%cumu%cevap,       &
-        at_csubl   => state%atmosphere%cumu%csubl        &
+        at_csubl   => state%atmosphere%cumu%csubl,       &
+        sw_pond    => state%soilwater%pond,              &
+        sw_volact  => state%soilwater%volact,            &
+        sw_volini  => state%soilwater%volini,            &
+        sw_pondini => state%soilwater%pondini,           &
+        sw_cqbot   => state%soilwater%cumu%cqbot,       &
+        sw_cqrot   => state%soilwater%cumu%cqrot,       &
+        sw_crunoff => state%soilwater%cumu%crunoff,     &
+        sw_crunoffCN => state%soilwater%cumu%crunoffCN, &
+        sw_crunon  => state%soilwater%cumu%crunon,      &
+        sw_cgird   => state%soilwater%cumu%cgird,       &
+        sw_cqssdi  => state%soilwater%cumu%cqssdi       &
       )
       if (swsolu .eq. 1) then
-          write (bal,24) (volact+pond+WaSrDm1+WaSrDm2+at_ssnow),                &
+          write (bal,24) (sw_volact+sw_pond+WaSrDm1+WaSrDm2+at_ssnow),                &
      &                                            (state%solute%sampro+state%solute%samcra),      &
-     &                  (volini+PondIni+WaSrDm1Ini+WaSrDm2Ini+at_snowinco),      &
+     &                  (sw_volini+sw_pondini+WaSrDm1Ini+WaSrDm2Ini+at_snowinco),      &
      &                                             state%solute%cumulative%samini,           &
-     &                  (volact+pond+WaSrDm1+WaSrDm2+at_ssnow-                   &
-     &                   volini-PondIni-WaSrDm1Ini-WaSrDm2Ini-at_snowinco),      &
+     &                  (sw_volact+sw_pond+WaSrDm1+WaSrDm2+at_ssnow-                   &
+     &                   sw_volini-sw_pondini-WaSrDm1Ini-WaSrDm2Ini-at_snowinco),      &
      &                                            (state%solute%sampro+state%solute%samcra-state%solute%cumulative%samini)
       else
-          write (bal,25) (volact+pond+WaSrDm1+WaSrDm2+at_ssnow),        &
-     &                  (volini+PondIni+WaSrDm1Ini+WaSrDm2Ini+at_snowinco),&
-     &                  (volact+pond+WaSrDm1+WaSrDm2+at_ssnow-          &
-     &                   volini-PondIni-WaSrDm1Ini-WaSrDm2Ini-at_snowinco)
+          write (bal,25) (sw_volact+sw_pond+WaSrDm1+WaSrDm2+at_ssnow),        &
+     &                  (sw_volini+sw_pondini+WaSrDm1Ini+WaSrDm2Ini+at_snowinco),&
+     &                  (sw_volact+sw_pond+WaSrDm1+WaSrDm2+at_ssnow-          &
+     &                   sw_volini-sw_pondini-WaSrDm1Ini-WaSrDm2Ini-at_snowinco)
       endif
 
       precip = at_cgrai
@@ -1033,10 +1095,10 @@
       endif
 
       if (swsnow.eq.1) then
-         write (bal,26) precip,at_caintc,crunon,crunoff,cqssdi,crunoffCN,cgird,cqrot,cqbot, &
+         write (bal,26) precip,at_caintc,sw_crunon,sw_crunoff,sw_cqssdi,sw_crunoffCN,sw_cgird,sw_cqrot,sw_cqbot, &
      &               (at_cevap+at_csubl),cQMpOutDrRap
       else
-         write (bal,27) precip,at_caintc,crunon,crunoff,cqssdi,crunoffCN,cgird,cqrot,cqbot, &
+         write (bal,27) precip,at_caintc,sw_crunon,sw_crunoff,sw_cqssdi,sw_crunoffCN,sw_cgird,sw_cqrot,sw_cqbot, &
      &               (at_cevap+at_csubl),cQMpOutDrRap
       endif
 
@@ -1048,8 +1110,8 @@
           end do
         end if
       endif
-      write(bal,30) (precip+cgird+cqbot+crunon+cqssdi),                      &
-     &   (at_caintc+crunoff+crunoffCN+cqrot+at_cevap+at_csubl+cQMpOutDrRap+state%surfacewater%drainage_cumulative%cqdra)
+      write(bal,30) (precip+sw_cgird+sw_cqbot+sw_crunon+sw_cqssdi),                      &
+     &   (at_caintc+sw_crunoff+sw_crunoffCN+sw_cqrot+at_cevap+at_csubl+cQMpOutDrRap+state%surfacewater%drainage_cumulative%cqdra)
       end associate
 
       if (swsolu .eq. 1) then
@@ -1115,8 +1177,9 @@
       ! SS-SLST Phase 1 Task 5: cml migrated to state%solute.
       ! SS-HEAT Phase 2 Task 6: tsoil removed from only-list; reads via state%heat%tsoil.
       ! SS-ATM A-2.5: ssnow,slw,ldwet,spev,saev,sicact removed from only-list; reads via state%atmosphere.
-      use variables, only: t1900,swend,numnod,h,flSolute,flAgeTracer,z,fltemperature,                                                                   &
-                           pond,dt,icrop,croptype,cropfil,flSurfaceWater,swredu,outfil,pathwork,project,                          &
+      ! SS-SWC S-2.11: pond,h removed from only-list; reads via state%soilwater.
+      use variables, only: t1900,swend,numnod,flSolute,flAgeTracer,z,fltemperature,                                                                   &
+                           dt,icrop,croptype,cropfil,flSurfaceWater,swredu,outfil,pathwork,project,                          &
                            rd,rdpot,dvs,flanthesis,tsum,ilvold,ilvoldpot,wrt,wrtpot,tadw,tadwpot,wst,wstpot,wso,wsopot,wlv,wlvpot,laiexp,lai,laipot,        &
                            dwrt,dwrtpot,dwlv,dwlvpot,dwst,dwstpot,dwlvSoil,dwlvCrop,gasst,gasstpot,mrest,mrestpot,                                          &
                            cwdm,cwdmpot,sla,slapot,lvage,lvagepot,lv,lvpot,daycrop,nofd,atmin7,tsumgerm,rid,flgrazingpot,idregr,                            &
@@ -1157,14 +1220,15 @@
       write(fin,'(" Ssnow = ", e12.5)') state%atmosphere%ssnow
       write(fin,'(/,"* Liquid water in snow layer (cm)")')
       write(fin,'(" Slw = ", e12.5)') state%atmosphere%slw
+      ! SS-SWC S-2.11: pond,h read from state%soilwater.
       write(fin,'(/,"* Ponding layer (Pond in cm)")')
-      write(fin,'(" Pond = ", e12.5)') pond
+      write(fin,'(" Pond = ", e12.5)') state%soilwater%pond
 
       ! write soil water pressure heads
       write(fin,'(/,"* Soil water pressure heads  (z in cm; h in cm)")')
       write(fin,'("       z_h            h")')
       do i = 1, numnod
-        write (fin,'(f10.1," ",1p,e12.5)') z(i), h(i)
+        write (fin,'(f10.1," ",1p,e12.5)') z(i), state%soilwater%h(i)
       end do
 
       ! write solute concentrations
@@ -1980,8 +2044,9 @@
       write(hea,'(a)') 'layer, theta,heacap(J/cm3/K),heacnd(J/cm/K/d)'
 
 ! --- write thermal properties: heat capacity and thermal conductivity
+      ! SS-SWC S-2.11: thetas,thetar read from state%soilwater.
       do node = 1,numnod
-        thetadum(node) = thetas(node)
+        thetadum(node) = state%soilwater%thetas(node)
       enddo
       do lay = 1,numlay
 !         find first Node of the Layer
@@ -1990,8 +2055,8 @@
             Node= Node + 1
           enddo
           do j = 1,21
-            thetadum(node) = thetar(node) + dble(j-1) *               &
-     &                    (thetas(node)-thetar(node)) / 20.0d0
+            thetadum(node) = state%soilwater%thetar(node) + dble(j-1) *               &
+     &                    (state%soilwater%thetas(node)-state%soilwater%thetar(node)) / 20.0d0
             call devries (thetadum,heacap_loc,heacnd, &
      &                    state%heat%fquartz, state%heat%fclay, state%heat%forg, &
      &                    state%soilwater%thetas)   ! [SS-SWC S-2.10]
@@ -2374,10 +2439,11 @@
       ! SS-SWST Phase 2 Task 11: cqdrainin,cqdrainout removed (now via state%surfacewater).
       ! SS-ATM A-2.5: cgrai,cnrai,cevap,cgsnow,cmelt,caintc,csnrai,csubl removed; reads via state%atmosphere%cumu.
       ! SS-ATM A-2.5: snowinco,ssnow removed; reads via state%atmosphere.
-      use variables, only: zbotcp,blc,outfil,pathwork,cgird,cnird,cqrot,volact,volini,FlMacropore,nrlevs,swirfix,       &
-                           schedule,numnod,cqprai,ioutdat,t1900,outdat,tstart,project,pond,pondini,     &
-                           cinund,crunoff,cqtdo,cqtup,cqbotdo,cqbotup,crunon,IcTopMp,CQMpInTopVrtDm1,CQMpInTopVrtDm2,                     &
-                           CQMpInTopLatDm1,CQMpInTopLatDm2,cqssdi
+      ! SS-SWC S-2.11: pond,pondini,volact,volini,cgird,cnird,cqrot,cinund,crunoff,cqtdo,cqtup,cqbotdo,cqbotup,crunon,cqssdi,cqprai removed; reads via state%soilwater.
+      use variables, only: zbotcp,blc,outfil,pathwork,FlMacropore,nrlevs,swirfix,       &
+                           schedule,numnod,ioutdat,t1900,outdat,tstart,project,     &
+                           IcTopMp,CQMpInTopVrtDm1,CQMpInTopVrtDm2,                     &
+                           CQMpInTopLatDm1,CQMpInTopLatDm2
       use swap_state_mod, only: swap_state_t
       use file_io_mod, only: file_open
       implicit none
@@ -2437,6 +2503,7 @@
 
 ! --- write output record
       ! SS-ATM A-2.5: snowinco,ssnow,cgrai,cnrai,cgsnow,csnrai,cmelt,caintc,csubl,cevap from state%atmosphere.
+      ! SS-SWC S-2.11: pond,pondini,volact,volini,cgird,cnird,cqrot,cinund,crunoff,cqtdo,cqtup,cqbotdo,cqbotup,crunon,cqssdi,cqprai via state%soilwater.
       associate( &
         at_snowinco => state%atmosphere%snowinco,        &
         at_ssnow    => state%atmosphere%ssnow,           &
@@ -2447,28 +2514,44 @@
         at_cmelt    => state%atmosphere%cumu%cmelt,      &
         at_caintc   => state%atmosphere%cumu%caintc,     &
         at_csubl    => state%atmosphere%cumu%csubl,      &
-        at_cevap    => state%atmosphere%cumu%cevap       &
+        at_cevap    => state%atmosphere%cumu%cevap,      &
+        sw_pond    => state%soilwater%pond,              &
+        sw_pondini => state%soilwater%pondini,           &
+        sw_volact  => state%soilwater%volact,            &
+        sw_volini  => state%soilwater%volini,            &
+        sw_cgird   => state%soilwater%cumu%cgird,       &
+        sw_cnird   => state%soilwater%cumu%cnird,       &
+        sw_cqrot   => state%soilwater%cumu%cqrot,       &
+        sw_cinund  => state%soilwater%cumu%cinund,      &
+        sw_crunoff => state%soilwater%cumu%crunoff,     &
+        sw_cqtdo   => state%soilwater%cumu%cqtdo,       &
+        sw_cqtup   => state%soilwater%cumu%cqtup,       &
+        sw_cqbotdo => state%soilwater%cumu%cqbotdo,     &
+        sw_cqbotup => state%soilwater%cumu%cqbotup,     &
+        sw_crunon  => state%soilwater%cumu%crunon,      &
+        sw_cqssdi  => state%soilwater%cumu%cqssdi,      &
+        sw_cqprai  => state%soilwater%cumu%cqprai       &
       )
       write (blc,20) datbegin,datend
       write (blc,22) -zbotcp(numnod)
       write (blc,40)
-      write (blc,41) at_snowinco,pondini,volini,at_ssnow,pond,volact
+      write (blc,41) at_snowinco,sw_pondini,sw_volini,at_ssnow,sw_pond,sw_volact
       write (blc,42) at_cgrai
-      write (blc,44) at_csnrai,cqprai,at_cnrai
+      write (blc,44) at_csnrai,sw_cqprai,at_cnrai
       if (swirfix.eq.1 .or. schedule.eq.1) then
-        write (blc,46) cgird
-        write (blc,67) cnird,cnird
+        write (blc,46) sw_cgird
+        write (blc,67) sw_cnird,sw_cnird
       endif
       write (blc,45) at_caintc
       write (blc,43) at_cgsnow
       write (blc,47) at_cmelt,at_cmelt
       write (blc,68) at_csubl
-      write (blc,48) cqssdi, cqrot
+      write (blc,48) sw_cqssdi, sw_cqrot
       write (blc,491) at_cevap
-      write (blc,492) crunon,crunoff
-      write (blc,50) cinund
-      write (blc,52) cqtdo,cqtdo
-      write (blc,53) cqtup,cqtup
+      write (blc,492) sw_crunon,sw_crunoff
+      write (blc,50) sw_cinund
+      write (blc,52) sw_cqtdo,sw_cqtdo
+      write (blc,53) sw_cqtup,sw_cqtup
       if (FlMacropore)  write(blc,54) CQMpInTop, CQMpInfMtx, CQMpExfMtx
 
       ! SS-SWST Phase 2 Task 11: cqdrainin/cqdrainout global fallbacks removed; state authoritative.
@@ -2480,22 +2563,22 @@
           enddo
         end if
       endif
-      write (blc,61) cqbotup,cqbotdo
+      write (blc,61) sw_cqbotup,sw_cqbotdo
 
 ! --- sum
-      plantin = at_cgrai+cgird
+      plantin = at_cgrai+sw_cgird
       snowin = at_snowinco+at_cgsnow+at_csnrai
-      pondin = pondini+cqprai+cnird+at_cmelt+cinund+cqtup+crunon
-      soilin = volini+cqtdo+cqbotup+CQMpInfMtx
+      pondin = sw_pondini+sw_cqprai+sw_cnird+at_cmelt+sw_cinund+sw_cqtup+sw_crunon
+      soilin = sw_volini+sw_cqtdo+sw_cqbotup+CQMpInfMtx
       if (allocated(state%surfacewater%drainage_cumulative%cqdrainin)) then
         do level = 1,nrlevs
           soilin = soilin + state%surfacewater%drainage_cumulative%cqdrainin(level)
         enddo
       end if
-      plantout = at_cnrai+at_caintc+cnird
+      plantout = at_cnrai+at_caintc+sw_cnird
       snowout = at_cmelt+at_ssnow+at_csubl
-      pondout = pond+crunoff+cqtdo+at_cevap+CQMpInTop
-      soilout = volact+cqrot+cqtup+cqbotdo+CQMpExfMtx-cqssdi
+      pondout = sw_pond+sw_crunoff+sw_cqtdo+at_cevap+CQMpInTop
+      soilout = sw_volact+sw_cqrot+sw_cqtup+sw_cqbotdo+CQMpExfMtx-sw_cqssdi
       if (allocated(state%surfacewater%drainage_cumulative%cqdrainout)) then
         do level = 1,nrlevs
           soilout = soilout + state%surfacewater%drainage_cumulative%cqdrainout(level)
@@ -2504,7 +2587,7 @@
 
       write (blc,63) plantin,snowin,pondin,soilin,plantout,snowout,     &
      &       pondout,soilout
-      write (blc,64) (at_ssnow-at_snowinco),(pond-pondini),(volact-volini)
+      write (blc,64) (at_ssnow-at_snowinco),(sw_pond-sw_pondini),(sw_volact-sw_volini)
       write (blc,65) (plantout-plantin),(snowout-snowin),               &
      &     (pondout-pondin),(soilout-soilin)
       end associate
@@ -2562,9 +2645,10 @@
 ! ---------------------------------------------------------------------
       ! SS-HEAT Phase 2 Task 6: tsoil removed from only-list; reads via state%heat%tsoil.
       ! SS-ATM A-2.5: Ssnow,igrai,isnrai,igsnow,isubl,ievap,ipeva,iptra removed; reads via state%atmosphere.
-      use variables, only: afo,outfil,pathwork,numnod,outper,period,pond,gwl,nrlevs,    &
-                           iruno,numlay,botcom,thetas,kdif,kdir,swafo,igird,inird,iintc,gc,lai,tav,rd,cf,wbalance, &
-                           project,tstart,tend,swdiscrvert,numnodnew,dznew,FlMacropore,irunon,IcTopMp,     &
+      ! SS-SWC S-2.11: gwl,pond,thetas,wbalance,igird,inird,iintc,iruno,irunon removed; reads via state%soilwater.
+      use variables, only: afo,outfil,pathwork,numnod,outper,period,nrlevs,    &
+                           numlay,botcom,kdif,kdir,swafo,gc,lai,tav,rd,cf, &
+                           project,tstart,tend,swdiscrvert,numnodnew,dznew,FlMacropore,IcTopMp,     &
                            WalevDm1,VlMpDm1,WaSrDm1,VlMpDm2,WaSrDm2,IQInTopVrtDm1,IQInTopLatDm1,            &
                            IQInTopVrtDm2,IQInTopLatDm2,        &
                            CritDevMasBal,tcum,nod1lay,out_etr,out_hum,out_rad,out_tmn,out_tmx,out_wet,out_win, FlOpenFileDev
@@ -2678,7 +2762,8 @@
       write (afo,4010) numnodNew,numlay,nrlevs
       write (afo,4010) (botcomNew(lay),lay=1,numlay)
 !  -    ThetaS should be known for new soil layers; this works but is not very nice
-      write (afo,4020) (real(thetas(botcom(lay))), lay=1,numlay)
+      ! SS-SWC S-2.11: thetas read from state%soilwater.
+      write (afo,4020) (real(state%soilwater%thetas(botcom(lay))), lay=1,numlay)
 
       do lay = 1,numlay
 !        find first Node of the Layer
@@ -2705,7 +2790,8 @@
       endif
 
       write (afo,4020) (real(thetaNew(node)),node=1,numnodNew)
-      write (afo,4020) -0.01*real(gwl),0.01*real(pond)
+      ! SS-SWC S-2.11: gwl,pond read from state%soilwater.
+      write (afo,4020) -0.01*real(state%soilwater%gwl),0.01*real(state%soilwater%pond)
 
       if (swafo.ge.2) then
          ! SS-ATM A-2.5: Ssnow read from state%atmosphere (atmosphere home).
@@ -2741,6 +2827,7 @@
                               inqoutdrrapcpnew,vlmpstdm1new,vlmpstdm2new,state)
 
         ! SS-ATM A-2.5: igrai,isnrai,igsnow,isubl,ievap,ipeva,iptra,ssnow from state%atmosphere.
+        ! SS-SWC S-2.11: gwl,pond,wbalance,igird,inird,iintc,iruno,irunon via state%soilwater.
         associate( &
           at_igrai  => state%atmosphere%intr%igrai,  &
           at_inrai  => state%atmosphere%intr%inrai,  &
@@ -2750,34 +2837,42 @@
           at_ievap  => state%atmosphere%intr%ievap,  &
           at_isubl  => state%atmosphere%intr%isubl,  &
           at_isnrai => state%atmosphere%intr%isnrai, &
-          at_ssnow  => state%atmosphere%ssnow        &
+          at_ssnow  => state%atmosphere%ssnow,       &
+          sw_igird  => state%soilwater%intr%igird,  &
+          sw_inird  => state%soilwater%intr%inird,  &
+          sw_iintc  => state%soilwater%intr%iintc,  &
+          sw_irunon => state%soilwater%intr%irunon, &
+          sw_iruno  => state%soilwater%intr%iruno,  &
+          sw_gwl    => state%soilwater%gwl,          &
+          sw_pond   => state%soilwater%pond,         &
+          sw_wbal   => state%soilwater%wbalance      &
         )
         if (swafo.eq.1) then
           write (afo,30) real(tcum),                                    &
-     &    0.01*real((at_igrai+igird)/outper),                           &
-     &    0.01*real(iintc/outper),                                      &
+     &    0.01*real((at_igrai+sw_igird)/outper),                        &
+     &    0.01*real(sw_iintc/outper),                                   &
      &    0.01*real(at_ievap/outper),                                   &
      &    0.0,                                                          &
      &    0.01*real(at_ipeva/outper),0.01*real(at_iptra/outper),        &
-     &    0.01*real(iruno/outper),                                      &
-     &    -0.01*real(gwl),0.01*real(pond)
+     &    0.01*real(sw_iruno/outper),                                   &
+     &    -0.01*real(sw_gwl),0.01*real(sw_pond)
         elseif (swafo.ge.2) then
 !          write (afo,*) real(t), real(outper),
           write (afo,33) (brund*1.0d0-1.0d0+tcum), real(outper),        &
      &        0.01*real((at_igrai+at_isnrai)/outper),                   &
      &        0.01*real(at_igsnow/outper),                              &
-     &        0.01*real(igird/outper),                                  &
-     &        0.01*real( (iintc-(igird-inird))/outper ),                &
-     &        0.01*real( (igird-inird)/outper ),                        &
+     &        0.01*real(sw_igird/outper),                               &
+     &        0.01*real( (sw_iintc-(sw_igird-sw_inird))/outper ),       &
+     &        0.01*real( (sw_igird-sw_inird)/outper ),                  &
      &        0.01*real(at_isubl/outper),                               &
      &        0.01*real(at_ievap/outper),                               &
      &        0.0,                                                      &
      &        0.01*real(at_ipeva/outper),                               &
      &        0.01*real(at_iptra/outper),                               &
-     &        0.01*real(irunon/outper),                                 &
-     &        0.01*real(iruno/outper),                                  &
-     &        -0.01*real(gwl), 0.01*real(pond),                         &
-     &        0.01*real(at_ssnow), 0.01*real(wbalance)
+     &        0.01*real(sw_irunon/outper),                              &
+     &        0.01*real(sw_iruno/outper),                               &
+     &        -0.01*real(sw_gwl), 0.01*real(sw_pond),                   &
+     &        0.01*real(at_ssnow), 0.01*real(sw_wbal)
         endif
         end associate
         write (afo,40) (real(hNew(node))           ,node=1,numnodNew)
@@ -2873,9 +2968,10 @@
 ! ---------------------------------------------------------------------
       ! SS-HEAT Phase 2 Task 6: tsoil removed from only-list; reads via state%heat%tsoil.
       ! SS-ATM A-2.5: Ssnow,igrai,isnrai,igsnow,isubl,ievap,ipeva,iptra removed; reads via state%atmosphere.
-      use variables, only: aun,outfil,pathwork,numnod,outper,period,pond,gwl,nrlevs,    &
-                           iruno,numlay,botcom,thetas,kdif,kdir,swaun,igird,inird,iintc,gc,lai,tav,rd,cf,wbalance, &
-                           project,tstart,tend,swdiscrvert,numnodnew,dznew,SwAfo,FlMacropore,irunon, &
+      ! SS-SWC S-2.11: gwl,pond,thetas,wbalance,igird,inird,iintc,iruno,irunon removed; reads via state%soilwater.
+      use variables, only: aun,outfil,pathwork,numnod,outper,period,nrlevs,    &
+                           numlay,botcom,kdif,kdir,swaun,gc,lai,tav,rd,cf, &
+                           project,tstart,tend,swdiscrvert,numnodnew,dznew,SwAfo,FlMacropore, &
                            WalevDm1,VlMpDm1,WaSrDm1,VlMpDm2,WaSrDm2,IQInTopVrtDm1,IQInTopLatDm1,   &
                            IQInTopVrtDm2,IQInTopLatDm2,CritDevMasBal,tcum,nod1lay, FlOpenFileDev
       use soilhydraulics_utils, only: watcon
@@ -2978,7 +3074,8 @@
       write (aun) numnodNew,numlay,nrlevs
       write (aun) (botcomNew(lay),lay=1,numlay)
 !  -  ThetaS should be known for new soil layers; this works but is not very nice
-      write (aun) (real(thetas(botcom(lay))), lay=1,numlay)
+      ! SS-SWC S-2.11: thetas read from state%soilwater.
+      write (aun) (real(state%soilwater%thetas(botcom(lay))), lay=1,numlay)
 
       do lay = 1,numlay
 !        find first Node of the Layer
@@ -3003,7 +3100,8 @@
       endif
 
       write (aun) (real(thetaNew(node)),node=1,numnodNew)
-      write (aun) -0.01*real(gwl),0.01*real(pond)
+      ! SS-SWC S-2.11: gwl,pond read from state%soilwater.
+      write (aun) -0.01*real(state%soilwater%gwl),0.01*real(state%soilwater%pond)
 
       if (swaun.eq.2) then
         ! SS-ATM A-2.5: Ssnow read from state%atmosphere (atmosphere home).
@@ -3034,6 +3132,7 @@
                             inqoutdrrapcpnew,vlmpstdm1new,vlmpstdm2new,state)
 
       ! SS-ATM A-2.5: igrai,isnrai,igsnow,isubl,ievap,ipeva,iptra,ssnow from state%atmosphere.
+      ! SS-SWC S-2.11: gwl,pond,wbalance,igird,inird,iintc,iruno,irunon via state%soilwater.
       associate( &
         at_igrai  => state%atmosphere%intr%igrai,  &
         at_igsnow => state%atmosphere%intr%igsnow, &
@@ -3042,34 +3141,42 @@
         at_ievap  => state%atmosphere%intr%ievap,  &
         at_isubl  => state%atmosphere%intr%isubl,  &
         at_isnrai => state%atmosphere%intr%isnrai, &
-        at_ssnow  => state%atmosphere%ssnow        &
+        at_ssnow  => state%atmosphere%ssnow,       &
+        sw_igird  => state%soilwater%intr%igird,  &
+        sw_inird  => state%soilwater%intr%inird,  &
+        sw_iintc  => state%soilwater%intr%iintc,  &
+        sw_irunon => state%soilwater%intr%irunon, &
+        sw_iruno  => state%soilwater%intr%iruno,  &
+        sw_gwl    => state%soilwater%gwl,          &
+        sw_pond   => state%soilwater%pond,         &
+        sw_wbal   => state%soilwater%wbalance      &
       )
       if (swaun.eq.1) then
         write (aun) real(tcum),                                         &
-     &    0.01*real((at_igrai+igird)/outper),                           &
-     &    0.01*real(iintc/outper),                                      &
+     &    0.01*real((at_igrai+sw_igird)/outper),                        &
+     &    0.01*real(sw_iintc/outper),                                   &
      &    0.01*real(at_ievap/outper),                                   &
      &    0.0,                                                          &
      &    0.01*real(at_ipeva/outper),                                   &
      &    0.01*real(at_iptra/outper),                                   &
-     &    0.01*real(iruno/outper),                                      &
-     &    -0.01*real(gwl),0.01*real(pond)
+     &    0.01*real(sw_iruno/outper),                                   &
+     &    -0.01*real(sw_gwl),0.01*real(sw_pond)
       elseif (swaun.eq.2) then
         write (aun) real(brund*1.0d0-1.0d0+tcum), real(outper),         &
      &        0.01*real((at_igrai+at_isnrai)/outper),                   &
      &        0.01*real(at_igsnow/outper),                              &
-     &        0.01*real(igird/outper),                                  &
-     &        0.01*real( (iintc-(igird-inird))/outper ),                &
-     &        0.01*real( (igird-inird)/outper ),                        &
+     &        0.01*real(sw_igird/outper),                               &
+     &        0.01*real( (sw_iintc-(sw_igird-sw_inird))/outper ),       &
+     &        0.01*real( (sw_igird-sw_inird)/outper ),                  &
      &        0.01*real(at_isubl/outper),                               &
      &        0.01*real(at_ievap/outper),                               &
      &        0.0,                                                      &
      &        0.01*real(at_ipeva/outper),                               &
      &        0.01*real(at_iptra/outper),                               &
-     &        0.01*real(irunon/outper),                                 &
-     &        0.01*real(iruno/outper),                                  &
-     &        -0.01*real(gwl), 0.01*real(pond),                         &
-     &        0.01*real(at_ssnow), 0.01*real(wbalance)
+     &        0.01*real(sw_irunon/outper),                              &
+     &        0.01*real(sw_iruno/outper),                               &
+     &        -0.01*real(sw_gwl), 0.01*real(sw_pond),                   &
+     &        0.01*real(at_ssnow), 0.01*real(sw_wbal)
       endif
       end associate
       write (aun) (real(hNew(node))                 ,node=1,numnodNew)
@@ -3345,7 +3452,8 @@
 !                          data to OUTNAM.MAN. The files overlap
 ! ---------------------------------------------------------------------
       ! SS-SWST Phase 2 Task 11: imper removed from globals (now local variable in outswb).
-      use variables, only: outfil,pathwork,daynr,daycum,hbweir,gwl,pond,crunoff,           &
+      ! SS-SWC S-2.11: gwl,pond removed from only-list; reads via state%soilwater.
+      use variables, only: outfil,pathwork,daynr,daycum,hbweir,crunoff,           &
                            cQMpOutDrRap,swb,swsec,swman,nmper,impend,project,logf,swscre,date,t1900,t,outper,iyear
       use swap_state_mod, only: swap_state_t
       use file_io_mod, only: file_open
@@ -3422,10 +3530,10 @@
       endif
 
 ! --- add ponding to groundwater level, if gwl at soil surface:
-      if (abs(gwl) .lt. 1.0d-7) then
-          gwlev = pond
+      if (abs(state%soilwater%gwl) .lt. 1.0d-7) then
+          gwlev = state%soilwater%pond
       else
-          gwlev = gwl
+          gwlev = state%soilwater%gwl
       endif
 
 ! --- write record for initial state
@@ -3496,10 +3604,10 @@
       endif
 
 ! --- add ponding to groundwater level, if gwl at soil surface:
-      if (abs(gwl) .lt. 1.0d-7) then
-          gwlev = pond
+      if (abs(state%soilwater%gwl) .lt. 1.0d-7) then
+          gwlev = state%soilwater%pond
       else
-          gwlev = gwl
+          gwlev = state%soilwater%gwl
       endif
 
 ! --- write output record OUTNAM.SWB
@@ -3809,9 +3917,10 @@
      &        'date,cumtime,qvss,qtr,qevs,qrun,qdr,qbot,qre,qv1m,'//    &
      &        'gwlt0,gwlt1,vt0,vt1,stocoav,stocot1')
 
+      ! SS-SWC S-2.11: cofgen read from state_main%soilwater.
       vsat = 0.0d0
       do nod = 1,numnod
-         vsat = vsat + cofgen(2,nod) * dz(nod)
+         vsat = vsat + state_main%soilwater%cofgen(2,nod) * dz(nod)
       end do
 
       ! SS-SWST Phase 1: initialize the local saved state for
@@ -3828,6 +3937,7 @@
 ! --- write header in case of new balance period
       if (flheader) write (sto,10)
 ! --- write actual data
+      ! SS-SWC S-2.11: theta read from state_main%soilwater.
       vt1 = 0.0d0
       do nod = 1,numnod
          if(nod.gt.1)then
@@ -3835,13 +3945,14 @@
               nod1m = nod
            end if
          end if
-         vt1 = vt1 + theta(nod) * dz(nod)
+         vt1 = vt1 + state_main%soilwater%theta(nod) * dz(nod)
       end do
       vt1 = vsat - vt1
       ! SS-SWST Phase 2 Task 11 A3: iqdra now lives in state; read from main state.
-      qre = state_main%surfacewater%intermediate%iqdra - iqbot
-      qv1m = q(nod1m)
-      gwlt1 = gwl
+      ! SS-SWC S-2.11: iqbot,q,gwl read from state_main%soilwater.
+      qre = state_main%surfacewater%intermediate%iqdra - state_main%soilwater%intr%iqbot
+      qv1m = state_main%soilwater%q(nod1m)
+      gwlt1 = state_main%soilwater%gwl
       if(dabs(gwlt1 - gwlt0) .gt.1.0d-6)then
          stocoav = - (vt1 - vt0) / (gwlt1 - gwlt0)
       else
@@ -3855,22 +3966,24 @@
 
 ! --- initilization
       ! SS-ATM A-2.5: ievap read from state_main%atmosphere%intr (atmosphere home).
-      xd(1) = q(1)
-      xd(2) = iqrot
+      ! SS-SWC S-2.11: q,iqrot,iruno,iqbot read from state_main%soilwater.
+      xd(1) = state_main%soilwater%q(1)
+      xd(2) = state_main%soilwater%intr%iqrot
       xd(3) = state_main%atmosphere%intr%ievap
-      xd(4) = iruno
+      xd(4) = state_main%soilwater%intr%iruno
       ! SS-SWST Phase 2 Task 11 A3: iqdra now lives in state; read from main state.
       xd(5) = state_main%surfacewater%intermediate%iqdra
-      xd(6) = iqbot
+      xd(6) = state_main%soilwater%intr%iqbot
 
       swBotbtmp = swbotb
       ! B-2.7: save state%soilwater%qbot (legacy qbot global retired)
+      ! SS-SWC S-2.11: gwl,pond,theta,h snapshots retargeted to state_main%soilwater.
       qbottmp = state_main%soilwater%qbot
-      gwltmp = gwl
-      pondtmp = pond
+      gwltmp  = state_main%soilwater%gwl
+      pondtmp = state_main%soilwater%pond
       do nod =1,numnod
-         thetatmp(nod) = theta(nod)
-         htmp(nod)     = h(nod)
+         thetatmp(nod) = state_main%soilwater%theta(nod)
+         htmp(nod)     = state_main%soilwater%h(nod)
       end do
 
 
@@ -3920,9 +4033,10 @@
 
         end do
 
+        ! SS-SWC S-2.11: theta read from state_main%soilwater (perturbation arm result).
         vt2 = 0.0d0
         do nod = 1,numnod
-           vt2 = vt2 + theta(nod) * dz(nod)
+           vt2 = vt2 + state_main%soilwater%theta(nod) * dz(nod)
         end do
         vair(i) = vsat - vt2
 
@@ -3939,13 +4053,14 @@
 
 
       swbotb = swBotbtmp
-      ! B-2.7: restore state%soilwater%qbot (legacy qbot global retired; gwl/pond stay legacy)
+      ! B-2.7: restore state%soilwater%qbot (legacy qbot global retired)
+      ! SS-SWC S-2.11: gwl,pond,theta,h restores retargeted to state_main%soilwater.
       state_main%soilwater%qbot = qbottmp
-      gwl = gwltmp
-      pond = pondtmp
+      state_main%soilwater%gwl  = gwltmp
+      state_main%soilwater%pond = pondtmp
       do nod =1,numnod
-         theta(nod) = thetatmp(nod)
-         h(nod)     = htmp(nod)
+         state_main%soilwater%theta(nod) = thetatmp(nod)
+         state_main%soilwater%h(nod)     = htmp(nod)
       end do
 
 
@@ -4035,7 +4150,8 @@
 subroutine outrume (task, state)
 use error_mod, only: fatalerr_collected
 ! SS-ATM A-2.5: igrai removed from only-list; reads via state%atmosphere%intr.
-use variables, only: tcum,outper,numnod,dz,theta,thetas,iruno,pond,gwl
+! SS-SWC S-2.11: theta,thetas,iruno,pond,gwl removed from only-list; reads via state%soilwater.
+use variables, only: tcum,outper,numnod,dz
 use swap_state_mod, only: swap_state_t
 implicit none
 
@@ -4095,19 +4211,20 @@ case (1)
 case (2)
    VT = 0.0d0
    do i = 1, LZnod
-      VT = VT + dz(i)*(thetas(i)-theta(i))
+      VT = VT + dz(i)*(state%soilwater%thetas(i)-state%soilwater%theta(i))
    end do
    WC = 0.0d0
    do i = 1, LZnod2
-      WC = WC + dz(i)*theta(i)
+      WC = WC + dz(i)*state%soilwater%theta(i)
    end do
    WC = WC/LZ2
 
 !  d, cm, cm/d, cm/d, cm, cm
 !!!   write (iunout) real(tcum),real(VT),real(igrai/outper),real(iruno/outper),real(pond),real(gwl)
    ! SS-ATM A-2.5: igrai read from state%atmosphere%intr (atmosphere home).
+   ! SS-SWC S-2.11: iruno read from state%soilwater%intr.
    RainRate   = state%atmosphere%intr%igrai/outper
-   RunoffRate = iruno/outper
+   RunoffRate = state%soilwater%intr%iruno/outper
    iDay       = int(tcum)
 !!!   write (iunout,'(20F12.6)') real(tcum),real(VT)
 
@@ -4118,8 +4235,8 @@ case (2)
             SumRunOff = RunoffRate*(tcum-iDay) ! likely zero
             VTstart   = VT
             WCstart   = WC
-            hstart    = Pond
-            GWLstart  = GWL
+            hstart    = state%soilwater%pond
+            GWLstart  = state%soilwater%gwl
             iDayOld   = iDay
          else if (RunoffRate > 0.0d0) then  ! start new runoff event!
             Event  = .true.
@@ -4153,8 +4270,8 @@ case (2)
       SumRain   = RainRate*tcum
       SumRunOff = RunoffRate*tcum
       VTstart   = VT
-      GWLstart  = GWL
-      hstart    = Pond
+      GWLstart  = state%soilwater%gwl
+      hstart    = state%soilwater%pond
       iDayOld   = iDay
       DayOld    = tcum
    end if
