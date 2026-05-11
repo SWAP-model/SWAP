@@ -918,3 +918,245 @@ subroutine test_swcore_two_instances_independent()
    @assertEqual(9.0_real64, sw1%intr%iqrot,    1.0e-12_real64)
    @assertEqual(3.0_real64, sw1%cumu%cqrot,    1.0e-12_real64)
 end subroutine test_swcore_two_instances_independent
+
+! =============================================================================
+! S-1.2 — soilwater_init body growth tests (ADR 0038)
+! =============================================================================
+
+@test
+subroutine test_swcore_init_allocates_flat_per_node_arrays()
+   ! After soilwater_init, all 11 flat per-node real arrays are allocated
+   ! with size == numnod.  The logical and integer arrays also allocated.
+   use funit
+   use iso_fortran_env, only: real64
+   use soilwater_state_mod, only: soilwater_state_t, soilwater_init
+   type(soilwater_state_t) :: sw
+   integer, parameter :: n = 8, nl = 3
+
+   call soilwater_init(sw, n, nl)
+
+   ! Per-node real arrays (sized numnod)
+   @assertTrue(allocated(sw%theta))
+   @assertTrue(allocated(sw%thetm1))
+   @assertTrue(allocated(sw%thetar))
+   @assertTrue(allocated(sw%thetas))
+   @assertTrue(allocated(sw%h))
+   @assertTrue(allocated(sw%hm1))
+   @assertTrue(allocated(sw%dimoca))
+   @assertTrue(allocated(sw%FrArMtrx))
+   @assertTrue(allocated(sw%evp))
+
+   ! Per-node logical and integer arrays
+   @assertTrue(allocated(sw%fluseksatexm))
+   @assertTrue(allocated(sw%indeks))
+
+   ! Sizes
+   @assertEqual(n, size(sw%theta))
+   @assertEqual(n, size(sw%thetm1))
+   @assertEqual(n, size(sw%thetar))
+   @assertEqual(n, size(sw%thetas))
+   @assertEqual(n, size(sw%h))
+   @assertEqual(n, size(sw%hm1))
+   @assertEqual(n, size(sw%dimoca))
+   @assertEqual(n, size(sw%FrArMtrx))
+   @assertEqual(n, size(sw%evp))
+   @assertEqual(n, size(sw%fluseksatexm))
+   @assertEqual(n, size(sw%indeks))
+end subroutine test_swcore_init_allocates_flat_per_node_arrays
+
+@test
+subroutine test_swcore_init_allocates_flux_arrays_numnod_plus1()
+   ! q, k, kmean are sized numnod+1 (one per node boundary).
+   ! Legacy: q(macp+1), k(macp+1), kmean(macp+1).
+   use funit
+   use iso_fortran_env, only: real64
+   use soilwater_state_mod, only: soilwater_state_t, soilwater_init
+   type(soilwater_state_t) :: sw
+   integer, parameter :: n = 7, nl = 2
+
+   call soilwater_init(sw, n, nl)
+
+   @assertTrue(allocated(sw%q))
+   @assertTrue(allocated(sw%k))
+   @assertTrue(allocated(sw%kmean))
+   @assertEqual(n+1, size(sw%q))
+   @assertEqual(n+1, size(sw%k))
+   @assertEqual(n+1, size(sw%kmean))
+end subroutine test_swcore_init_allocates_flux_arrays_numnod_plus1
+
+@test
+subroutine test_swcore_init_allocates_cofgen_and_thetsl()
+   ! cofgen(21, numnod) — Mualem-VG parameters.
+   ! thetsl(nlay) — saturated water content per soil layer.
+   use funit
+   use iso_fortran_env, only: real64
+   use soilwater_state_mod, only: soilwater_state_t, soilwater_init
+   type(soilwater_state_t) :: sw
+   integer, parameter :: n = 5, nl = 4
+
+   call soilwater_init(sw, n, nl)
+
+   @assertTrue(allocated(sw%cofgen))
+   @assertTrue(allocated(sw%thetsl))
+   @assertEqual(21, size(sw%cofgen, 1))
+   @assertEqual(n,  size(sw%cofgen, 2))
+   @assertEqual(nl, size(sw%thetsl))
+end subroutine test_swcore_init_allocates_cofgen_and_thetsl
+
+@test
+subroutine test_swcore_init_flat_arrays_zeroed()
+   ! All newly allocated flat per-node arrays are zero after init.
+   use funit
+   use iso_fortran_env, only: real64
+   use soilwater_state_mod, only: soilwater_state_t, soilwater_init
+   type(soilwater_state_t) :: sw
+   integer, parameter :: n = 6, nl = 2
+
+   call soilwater_init(sw, n, nl)
+
+   ! Real per-node arrays (numnod)
+   @assertEqual(0.0_real64, maxval(abs(sw%theta)),    1.0e-12_real64)
+   @assertEqual(0.0_real64, maxval(abs(sw%thetm1)),   1.0e-12_real64)
+   @assertEqual(0.0_real64, maxval(abs(sw%thetar)),   1.0e-12_real64)
+   @assertEqual(0.0_real64, maxval(abs(sw%thetas)),   1.0e-12_real64)
+   @assertEqual(0.0_real64, maxval(abs(sw%h)),        1.0e-12_real64)
+   @assertEqual(0.0_real64, maxval(abs(sw%hm1)),      1.0e-12_real64)
+   @assertEqual(0.0_real64, maxval(abs(sw%dimoca)),   1.0e-12_real64)
+   @assertEqual(0.0_real64, maxval(abs(sw%FrArMtrx)), 1.0e-12_real64)
+   @assertEqual(0.0_real64, maxval(abs(sw%evp)),      1.0e-12_real64)
+
+   ! Integer per-node array
+   @assertEqual(0, maxval(abs(sw%indeks)))
+
+   ! Flux arrays (numnod+1)
+   @assertEqual(0.0_real64, maxval(abs(sw%q)),     1.0e-12_real64)
+   @assertEqual(0.0_real64, maxval(abs(sw%k)),     1.0e-12_real64)
+   @assertEqual(0.0_real64, maxval(abs(sw%kmean)), 1.0e-12_real64)
+
+   ! cofgen and thetsl
+   @assertEqual(0.0_real64, maxval(abs(sw%cofgen)), 1.0e-12_real64)
+   @assertEqual(0.0_real64, maxval(abs(sw%thetsl)), 1.0e-12_real64)
+end subroutine test_swcore_init_flat_arrays_zeroed
+
+@test
+subroutine test_swcore_init_hatm_nonzero_default()
+   ! hatm must be initialized to -2.75e5 (not 0.0) by soilwater_init.
+   ! Mirrors legacy soilhydraulics.f90:870 hatm = -2.75d+05.
+   use funit
+   use iso_fortran_env, only: real64
+   use soilwater_state_mod, only: soilwater_state_t, soilwater_init
+   type(soilwater_state_t) :: sw
+   integer, parameter :: n = 4, nl = 2
+
+   call soilwater_init(sw, n, nl)
+
+   @assertEqual(-2.75e5_real64, sw%hatm, 1.0e-6_real64)
+end subroutine test_swcore_init_hatm_nonzero_default
+
+@test
+subroutine test_swcore_init_allocates_intr_cohort_arrays()
+   ! soilwater_init allocates all 8 intr cohort arrays with correct sizes.
+   ! inqrot, inqssdi, IThetaBeg: sized numnod.
+   ! inq, iqdo, iqup: sized numnod+1 (flux boundaries).
+   ! qpotrot_day, qredtot_day: sized numnod (per-day uptake).
+   use funit
+   use iso_fortran_env, only: real64
+   use soilwater_state_mod, only: soilwater_state_t, soilwater_init
+   type(soilwater_state_t) :: sw
+   integer, parameter :: n = 9, nl = 3
+
+   call soilwater_init(sw, n, nl)
+
+   ! Allocated checks
+   @assertTrue(allocated(sw%intr%inq))
+   @assertTrue(allocated(sw%intr%inqrot))
+   @assertTrue(allocated(sw%intr%inqssdi))
+   @assertTrue(allocated(sw%intr%iqdo))
+   @assertTrue(allocated(sw%intr%iqup))
+   @assertTrue(allocated(sw%intr%IThetaBeg))
+   @assertTrue(allocated(sw%intr%qpotrot_day))
+   @assertTrue(allocated(sw%intr%qredtot_day))
+
+   ! Sizes: numnod+1 for flux arrays, numnod for node arrays
+   @assertEqual(n+1, size(sw%intr%inq))
+   @assertEqual(n,   size(sw%intr%inqrot))
+   @assertEqual(n,   size(sw%intr%inqssdi))
+   @assertEqual(n+1, size(sw%intr%iqdo))
+   @assertEqual(n+1, size(sw%intr%iqup))
+   @assertEqual(n,   size(sw%intr%IThetaBeg))
+   @assertEqual(n,   size(sw%intr%qpotrot_day))
+   @assertEqual(n,   size(sw%intr%qredtot_day))
+end subroutine test_swcore_init_allocates_intr_cohort_arrays
+
+@test
+subroutine test_swcore_init_intr_cohort_arrays_zeroed()
+   ! All 8 intr cohort arrays are zero after soilwater_init.
+   use funit
+   use iso_fortran_env, only: real64
+   use soilwater_state_mod, only: soilwater_state_t, soilwater_init
+   type(soilwater_state_t) :: sw
+   integer, parameter :: n = 5, nl = 2
+
+   call soilwater_init(sw, n, nl)
+
+   @assertEqual(0.0_real64, maxval(abs(sw%intr%inq)),          1.0e-12_real64)
+   @assertEqual(0.0_real64, maxval(abs(sw%intr%inqrot)),       1.0e-12_real64)
+   @assertEqual(0.0_real64, maxval(abs(sw%intr%inqssdi)),      1.0e-12_real64)
+   @assertEqual(0.0_real64, maxval(abs(sw%intr%iqdo)),         1.0e-12_real64)
+   @assertEqual(0.0_real64, maxval(abs(sw%intr%iqup)),         1.0e-12_real64)
+   @assertEqual(0.0_real64, maxval(abs(sw%intr%IThetaBeg)),    1.0e-12_real64)
+   @assertEqual(0.0_real64, maxval(abs(sw%intr%qpotrot_day)),  1.0e-12_real64)
+   @assertEqual(0.0_real64, maxval(abs(sw%intr%qredtot_day)),  1.0e-12_real64)
+end subroutine test_swcore_init_intr_cohort_arrays_zeroed
+
+@test
+subroutine test_swcore_init_different_sizes_core()
+   ! Two instances with different numnod/nlay have correct array shapes.
+   ! Cross-checks that numnod and nlay are honoured for all new arrays.
+   use funit
+   use iso_fortran_env, only: real64
+   use soilwater_state_mod, only: soilwater_state_t, soilwater_init
+   type(soilwater_state_t) :: sw1, sw2
+   integer, parameter :: n1 = 15, nl1 = 6
+   integer, parameter :: n2 = 3,  nl2 = 1
+
+   call soilwater_init(sw1, n1, nl1)
+   call soilwater_init(sw2, n2, nl2)
+
+   ! sw1 shapes
+   @assertEqual(n1,    size(sw1%theta))
+   @assertEqual(n1+1,  size(sw1%q))
+   @assertEqual(n1+1,  size(sw1%kmean))
+   @assertEqual(21,    size(sw1%cofgen, 1))
+   @assertEqual(n1,    size(sw1%cofgen, 2))
+   @assertEqual(nl1,   size(sw1%thetsl))
+   @assertEqual(n1+1,  size(sw1%intr%inq))
+   @assertEqual(n1,    size(sw1%intr%inqrot))
+   @assertEqual(n1,    size(sw1%intr%qpotrot_day))
+
+   ! sw2 shapes
+   @assertEqual(n2,    size(sw2%theta))
+   @assertEqual(n2+1,  size(sw2%q))
+   @assertEqual(n2+1,  size(sw2%kmean))
+   @assertEqual(21,    size(sw2%cofgen, 1))
+   @assertEqual(n2,    size(sw2%cofgen, 2))
+   @assertEqual(nl2,   size(sw2%thetsl))
+   @assertEqual(n2+1,  size(sw2%intr%inq))
+   @assertEqual(n2,    size(sw2%intr%inqrot))
+   @assertEqual(n2,    size(sw2%intr%qpotrot_day))
+end subroutine test_swcore_init_different_sizes_core
+
+@test
+subroutine test_swcore_init_hatm_overrides_preloaded_value()
+   ! soilwater_init MUST set hatm = -2.75e5 even when called on an instance
+   ! that had hatm pre-set to a different value.
+   use funit
+   use iso_fortran_env, only: real64
+   use soilwater_state_mod, only: soilwater_state_t, soilwater_init
+   type(soilwater_state_t) :: sw
+
+   sw%hatm = 99.0_real64  ! pre-load with a bogus value
+   call soilwater_init(sw, 4, 2)
+
+   @assertEqual(-2.75e5_real64, sw%hatm, 1.0e-6_real64)
+end subroutine test_swcore_init_hatm_overrides_preloaded_value

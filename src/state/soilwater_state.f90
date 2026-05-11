@@ -279,7 +279,7 @@ contains
    !> Lifecycle init for soilwater typed state.
    !! Zeros/resets all scalar fields in both the boundary subset (ADR 0035)
    !! and the crop-uptake scalar subset (ADR 0036).  Also allocates all 13
-   !! per-node / per-layer allocatable arrays and zeros them:
+   !! crop-uptake per-node / per-layer allocatable arrays and zeros them:
    !!   12 per-node arrays sized numnod:
    !!     qrot, qpotrot, qredwet, qreddry, qredsol, qredfrs  (Feddes path)
    !!     mflux, mroot, hroot, rootrho, rootphi, rmax         (JvL path)
@@ -291,10 +291,16 @@ contains
    !!     SoilWater(1) at swap.f90:190).  Relocation of the build step is
    !!     therefore BLOCKED; see ADR 0036 §mfluxtable disposition.
    !!
-   !! NOTE: Soil-water core arrays (theta, h, q, k, kmean, dimoca, cofgen,
-   !!   FrArMtrx, fluseksatexm, indeks, evp, thetsl, and all cohort arrays)
-   !!   are NOT yet allocated here — that is S-1.2.  They remain unallocated
-   !!   after this call.
+   !! Also allocates and zeroes all soil-water core arrays (ADR 0038, S-1.2):
+   !!   14 flat per-node arrays sized numnod: theta, thetm1, thetar, thetas,
+   !!     h, hm1, dimoca, FrArMtrx, evp, indeks, fluseksatexm (logical)
+   !!   3 flat per-node+1 arrays sized numnod+1: q, k, kmean (flux boundaries)
+   !!   1 flat 2D parameter array: cofgen(21, numnod) — Mualem-VG params
+   !!   1 flat per-layer array sized nlay: thetsl
+   !!   intr cohort arrays: inqrot, inqssdi, IThetaBeg (numnod),
+   !!                       inq, iqdo, iqup (numnod+1),
+   !!                       qpotrot_day, qredtot_day (numnod)
+   !!   Non-zero default: hatm = -2.75e5_real64 (mirrors soilhydraulics.f90:870)
    !!
    !! Takes soilwater_state_t directly (not swap_state_t) to avoid a circular
    !! dependency: soilwater_state_mod is used by swap_state_mod.
@@ -358,8 +364,66 @@ contains
       ! populated when this routine runs — see ADR 0036 §mfluxtable disposition)
       allocate(sw%mfluxtable(nlay, 801)); sw%mfluxtable = 0.0_real64
 
-      ! NOTE: Soil-water core arrays (ADR 0038) are NOT allocated here.
-      ! That is done in S-1.2 (soilwater_init body growth).
+      ! ===========================================================================
+      ! SOIL-WATER CORE — flat per-node / per-layer arrays (ADR 0038, S-1.2)
+      ! ===========================================================================
+
+      ! Per-node arrays sized numnod (10 arrays):
+      allocate(sw%theta(numnod));        sw%theta        = 0.0_real64
+      allocate(sw%thetm1(numnod));       sw%thetm1       = 0.0_real64
+      allocate(sw%thetar(numnod));       sw%thetar       = 0.0_real64
+      allocate(sw%thetas(numnod));       sw%thetas       = 0.0_real64
+      allocate(sw%h(numnod));            sw%h            = 0.0_real64
+      allocate(sw%hm1(numnod));          sw%hm1          = 0.0_real64
+      allocate(sw%dimoca(numnod));       sw%dimoca       = 0.0_real64
+      allocate(sw%FrArMtrx(numnod));     sw%FrArMtrx     = 0.0_real64
+      allocate(sw%evp(numnod));          sw%evp          = 0.0_real64
+      allocate(sw%indeks(numnod));       sw%indeks       = 0
+
+      ! Per-node logical array sized numnod:
+      allocate(sw%fluseksatexm(numnod)); sw%fluseksatexm = .false.
+
+      ! Per-node arrays sized numnod+1 (flux arrays — one value per node boundary):
+      ! Legacy: q(macp+1), k(macp+1), kmean(macp+1)
+      allocate(sw%q(numnod+1));          sw%q            = 0.0_real64
+      allocate(sw%k(numnod+1));          sw%k            = 0.0_real64
+      allocate(sw%kmean(numnod+1));      sw%kmean        = 0.0_real64
+
+      ! 2D parameter array: cofgen(21, numnod) — legacy cofgen(21, macp)
+      allocate(sw%cofgen(21, numnod));   sw%cofgen       = 0.0_real64
+
+      ! Per-layer array sized nlay (thetsl per soil layer, not per node):
+      ! Legacy: thetsl(maho) where maho = max number of soil layers
+      allocate(sw%thetsl(nlay));         sw%thetsl       = 0.0_real64
+
+      ! ===========================================================================
+      ! SOIL-WATER CORE — intermediate cohort arrays (ADR 0038, S-1.2)
+      ! ===========================================================================
+
+      ! Non-per-day per-node arrays sized numnod:
+      allocate(sw%intr%inqrot(numnod));    sw%intr%inqrot    = 0.0_real64
+      allocate(sw%intr%inqssdi(numnod));   sw%intr%inqssdi   = 0.0_real64
+      allocate(sw%intr%IThetaBeg(numnod)); sw%intr%IThetaBeg = 0.0_real64
+
+      ! Non-per-day per-node flux arrays sized numnod+1:
+      ! Legacy: inq(macp+1), iqdo(macp+1), iqup(macp+1)
+      allocate(sw%intr%inq(numnod+1));     sw%intr%inq       = 0.0_real64
+      allocate(sw%intr%iqdo(numnod+1));    sw%intr%iqdo      = 0.0_real64
+      allocate(sw%intr%iqup(numnod+1));    sw%intr%iqup      = 0.0_real64
+
+      ! Per-day per-node arrays sized numnod:
+      ! Legacy: qpotrot_day(macp), qredtot_day(macp)
+      allocate(sw%intr%qpotrot_day(numnod)); sw%intr%qpotrot_day = 0.0_real64
+      allocate(sw%intr%qredtot_day(numnod)); sw%intr%qredtot_day = 0.0_real64
+
+      ! ===========================================================================
+      ! NON-ZERO DEFAULTS (ADR 0038, S-1.2)
+      ! ===========================================================================
+
+      ! hatm: air pressure head near soil surface; legacy soilhydraulics.f90:870
+      ! sets hatm = -2.75d+05 at SoilWater(1) task 1 init.  We mirror that here
+      ! so sw%hatm is consistent from the moment soilwater_init returns.
+      sw%hatm = -2.75e5_real64
 
    end subroutine soilwater_init
 
