@@ -275,7 +275,7 @@ contains
 
     ! ----------------------------------------------------------------------
 
-    call ResetMetFlx ()
+    call ResetMetFlx (state)
 
     ! 1: Check whether meteo data are available of today; pass on weather of today
     ! 1.0 Daily Meteo 0000000000000000000000000000000000000000000000000000000 Daily Meteo
@@ -296,6 +296,7 @@ contains
       hum  = ahum(daymeteo+1-daynrfirst)
       win  = awin(daymeteo+1-daynrfirst)
       grai = arai(daymeteo+1-daynrfirst)
+      state%atmosphere%grai = grai  ! [SS-ATM] dual-write
       etr  = aetr(daymeteo+1-daynrfirst)
 
       ! If hum is missing or tav cannot be calculated: set rh at -99.0
@@ -405,9 +406,12 @@ contains
   !! Interface: I - flzerointr, flzerocumu, caintc, cgrai, cnrai, igrai, inrai, iprec
   !!            O - caintc, cgrai, cnrai, igrai, inrai, iprec
   !! @endnote
-  subroutine ResetMetFlx ()
+  subroutine ResetMetFlx (state)
       use variables, only: flzerointr,flzerocumu,caintc,cgrai,cnrai,igrai,inrai,iprec
+      use, intrinsic :: iso_fortran_env, only: real64
       implicit none
+
+      type(swap_state_t), intent(inout) :: state  !! [SS-ATM] dual-write cohort resets
 
     ! --- local
 
@@ -415,14 +419,19 @@ contains
     if (flzerointr) then
       iprec = 0.0d0
       igrai = 0.0d0
+      state%atmosphere%intr%igrai = 0.0_real64   ! [SS-ATM] dual-write intr reset
       inrai = 0.0d0
+      state%atmosphere%intr%inrai = 0.0_real64   ! [SS-ATM] dual-write intr reset
     endif
 
     ! Reset cumulative meteorological fluxes
     if (flzerocumu) then
       cgrai = 0.0d0
+      state%atmosphere%cumu%cgrai = 0.0_real64   ! [SS-ATM] dual-write cumu reset
       cnrai = 0.0d0
+      state%atmosphere%cumu%cnrai = 0.0_real64   ! [SS-ATM] dual-write cumu reset
       caintc = 0.0d0
+      state%atmosphere%cumu%caintc = 0.0_real64  ! [SS-ATM] dual-write cumu reset
     endif
 
     return
@@ -506,6 +515,7 @@ contains
     use runoff_mod, only: CNmethod
     use interception_mod, only: VonHHBraden, Gash, ruttervw, msw1eic, DivIntercep
     use swap_constants, only: nihil, small
+    use, intrinsic :: iso_fortran_env, only: real64
     implicit none
 
     type(swap_state_t), intent(inout) :: state
@@ -513,6 +523,16 @@ contains
 
     real(8)  rcs
     data     rcs/0.15d0/
+
+    ! SS-ATM Phase 1 Task A-1.8: ASSOCIATE aliases for atmosphere flat-scalar dual-writes
+    associate( &
+       at_peva    => state%atmosphere%peva,    &
+       at_ptra    => state%atmosphere%ptra,    &
+       at_atmdem  => state%atmosphere%atmdem,  &
+       at_grai    => state%atmosphere%grai,    &
+       at_pevaday => state%atmosphere%pevaday, &
+       at_ptraday => state%atmosphere%ptraday  &
+    )
 
     ! === Section 3: Interception calculations ===
 
@@ -711,15 +731,21 @@ contains
 
       ! Potential soil evaporation (peva) [cm/d]
       peva = max(0.0d0, (es0*dexp(-1.0d0*kdir*kdif*lai)*0.1d0))
-      if (swcf.ne.3 .or. (swmetdetail.eq.0 .and. swinter.ne.3)) &
+      at_peva = peva  ! [SS-ATM] dual-write
+      if (swcf.ne.3 .or. (swmetdetail.eq.0 .and. swinter.ne.3)) then
         peva = max(0.0d0,(1.0d0-wfrac)*peva)
+        at_peva = peva  ! [SS-ATM] dual-write
+      end if
 
       ! Alternative for peva (simple model, soil cover fraction specified)
       if (flCropCalendar .and. .not.flCropHarvest) then
         if (croptype(icrop).eq.1 .and. swgc.eq.2) then
           peva = (1.0d0-gc)*es0*0.1d0
-          if (swcf.ne.3 .or. (swmetdetail.eq.0 .and. swinter.ne.3)) &
+          at_peva = peva  ! [SS-ATM] dual-write
+          if (swcf.ne.3 .or. (swmetdetail.eq.0 .and. swinter.ne.3)) then
             peva = (1.0d0-wfrac)*peva
+            at_peva = peva  ! [SS-ATM] dual-write
+          end if
         endif
       endif
 
@@ -727,11 +753,14 @@ contains
       if (pond .gt. 1.0d-10) then
         if (SwETr.eq.0 .and. es0.gt.1.0d-8) then
           peva = ew0/es0 * peva
+          at_peva = peva  ! [SS-ATM] dual-write
         elseif (es0.gt.1.0d-8) then
           if (swcfbs .eq. 1 .and. cfbs .gt. small) then
             peva = cfevappond * peva / cfbs
+            at_peva = peva  ! [SS-ATM] dual-write
           else
             peva = cfevappond * peva
+            at_peva = peva  ! [SS-ATM] dual-write
           endif
         endif
       endif
@@ -740,28 +769,36 @@ contains
       if (swdivide .eq. 1) then
         if (pond .gt. 1.0d-10) then
           peva = Edirectpond*0.1d0
+          at_peva = peva  ! [SS-ATM] dual-write
         else
           peva = Edirect*0.1d0
+          at_peva = peva  ! [SS-ATM] dual-write
         endif
       endif
 
       ! Potential transpiration (ptra) [cm/d]
       if (swcf .ne. 3) then
         ptra = ((1.0d0-wfrac)*et0-peva*10.0d0)*0.1d0
+        at_ptra = ptra  ! [SS-ATM] dual-write
       else
         ptra = (1.0d0-wfrac)*et0*0.1d0
+        at_ptra = ptra  ! [SS-ATM] dual-write
       endif
       ptra = max(ptra,(1.01d0*nihil))
+      at_ptra = ptra  ! [SS-ATM] dual-write
 
       ! Potential transpiration [cm/d] according to PMdirect
       if (swdivide .eq. 1) then
         ptra = (1.0d0-wfrac) * Tdirect * 0.1d0
+        at_ptra = ptra  ! [SS-ATM] dual-write
         ptra = max(ptra,(1.01d0*nihil))
+        at_ptra = ptra  ! [SS-ATM] dual-write
       endif
 
       ! Correction of potential transpiration as a function of atmospheric CO2 concentration
       if (flCO2 .and. flCropEmergence) then
         ptra = fco2tra * ptra
+        at_ptra = ptra  ! [SS-ATM] dual-write
       endif
 
       ! === Section 8: Results for detailed weather records ===
@@ -817,10 +854,13 @@ contains
 
       ! Save daily potential values for use in ETSine
       ptraday = ptra
+      at_ptraday = ptraday  ! [SS-ATM] dual-write
       pevaday = peva
+      at_pevaday = pevaday  ! [SS-ATM] dual-write
 
       ! Calculate atmospheric demand [cm]
       atmdem = et0*0.1d0
+      at_atmdem = atmdem  ! [SS-ATM] dual-write
 
     endif
 
@@ -866,15 +906,20 @@ contains
         rad = rad + arad(i)
         atmdem = atmdem + tpot(i)
       enddo
+      at_atmdem = atmdem  ! [SS-ATM] dual-write
 
       ! Fluxes of current time step (start of the day)
       ptra = tpot(1)
+      at_ptra = ptra  ! [SS-ATM] dual-write
       peva = epot(1)
+      at_peva = peva  ! [SS-ATM] dual-write
       graidt = grain(1)
       nraidt = nrain(1)
       aintcdt = graidt - nraidt    ! aintcdt involves ONLY interception of RAIN
 
     endif
+
+    end associate  ! at_peva, at_ptra, at_atmdem, at_grai, at_pevaday, at_ptraday
 
   end subroutine ProcessMeteoDay
 
