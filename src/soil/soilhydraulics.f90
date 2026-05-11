@@ -866,8 +866,13 @@ contains
 
          ! Initialize Soilwater rate/state variables
 
+         ! [SS-SWC S-1.3] ASSOCIATE block: dual-writes mirror every legacy global
+         ! write into state%soilwater for all ~30 init-path fields.
+         associate(sw => state%soilwater)
+
          ! Initialize miscellaneous
          hatm = -2.75d+05
+         sw%hatm = -2.75e5_real64                           ! [SS-SWC S-1.3]
       state%atmosphere%nraidt = 0.0_real64
       nird = 0.0d0
       if (swinco.ne.3) then
@@ -876,13 +881,16 @@ contains
         state%atmosphere%saev  = 0.0_real64
       endif
       runon = 0.0d0
+      sw%runon = 0.0_real64                                 ! [SS-SWC S-1.3]
       state%soilwater%qtop = 0.d0
       do i = 1,numnod+1
         q(i) = 0.0d0
+        sw%q(i) = 0.0_real64                               ! [SS-SWC S-1.3]
       enddo
       do i = 1,macp
         evp(i) = 0.0d0
       enddo
+      sw%evp = 0.0_real64                                  ! [SS-SWC S-1.3] state sized numnod; blanket zero
       ! [SS-HEAT] Task 9: legacy rfcp global retired; state%heat%rfcp is authoritative
       if (allocated(state%heat%rfcp)) state%heat%rfcp = 1.0d0
       state%surfacewater%vtair = 0.0d0
@@ -890,12 +898,13 @@ contains
 
       ! Soil physics: tabulated or MualemVanGenuchten functions
       cofgen = 0.0d0
+      sw%cofgen = 0.0_real64                               ! [SS-SWC S-1.3]
       if(swsophy.eq.1) then
          ! Tabulated functions (h,theta,k,dthetadh,dkdtheta) tabulated
          do node = 1,numnod
           numtab(node) = numtablay(layer(node))
           do i=0,matabentries
-             ientrytab(node,i) = ientrytablay(layer(node),i) 
+             ientrytab(node,i) = ientrytablay(layer(node),i)
           end do
         end do
         do node = 1,numnod
@@ -906,13 +915,18 @@ contains
           end do
           ! Assign values to cofgen
           cofgen(1,node) = 0.0d0                          ! thetar
+          sw%cofgen(1,node) = 0.0_real64                  ! [SS-SWC S-1.3]
           cofgen(2,node) = sptab(2,node,numtab(node))     ! thetas
+          sw%cofgen(2,node) = cofgen(2,node)              ! [SS-SWC S-1.3]
           cofgen(3,node) = sptab(3,node,numtab(node))     ! ksat
+          sw%cofgen(3,node) = cofgen(3,node)              ! [SS-SWC S-1.3]
           if (do_ln_trans) cofgen(3,node) = dexp(cofgen(3,node))
+          if (do_ln_trans) sw%cofgen(3,node) = cofgen(3,node)  ! [SS-SWC S-1.3]
         end do
         do lay = 1,numlay
           ksatfit(lay) = cofgen(3,nod1lay(lay))
           thetsl(lay) = cofgen(2,nod1lay(lay))
+          sw%thetsl(lay) = thetsl(lay)                    ! [SS-SWC S-1.3]
         end do
       else
          ! MvanG functions
@@ -920,27 +934,37 @@ contains
           lay = layer(node)
           do i = 1, 10
             cofgen(i,node) = paramvg(i,lay)
+            sw%cofgen(i,node) = cofgen(i,node)            ! [SS-SWC S-1.3]
           end do
           ! Assign dummy value to alphaw
           cofgen(8,node) = -9999.9d0
+          sw%cofgen(8,node) = -9999.9d0                   ! [SS-SWC S-1.3]
           if (cofgen(10,node) > 0.0d0) fluseksatexm(node) = .true.
+          if (cofgen(10,node) > 0.0d0) sw%fluseksatexm(node) = .true.  ! [SS-SWC S-1.3]
           cofgen(11,node) = relsatthr(lay)
+          sw%cofgen(11,node) = relsatthr(lay)             ! [SS-SWC S-1.3]
           cofgen(12,node) = ksatthr(lay)
+          sw%cofgen(12,node) = ksatthr(lay)               ! [SS-SWC S-1.3]
           if (iHWCKmodel(lay) ==  3 .OR. iHWCKmodel(lay) ==  6 .OR. iHWCKmodel(lay) ==  7 .OR. &
               iHWCKmodel(lay) == 10 .OR. iHWCKmodel(lay) == 11) then
              cofgen(13:17,node) = paramvg(13:17,lay)
+             sw%cofgen(13:17,node) = paramvg(13:17,lay)   ! [SS-SWC S-1.3]
           end if
           if (iHWCKmodel(lay) ==  5 .OR. iHWCKmodel(lay) ==  7) then
              cofgen(18,node) = paramvg(18,lay)
+             sw%cofgen(18,node) = paramvg(18,lay)         ! [SS-SWC S-1.3]
           end if
           if (iHWCKmodel(lay) ==  8 .OR. iHWCKmodel(lay) ==  9 .OR. &
               iHWCKmodel(lay) == 10 .OR. iHWCKmodel(lay) == 11) then
              cofgen(18:21,node) = paramvg(18:21,lay)
+             sw%cofgen(18:21,node) = paramvg(18:21,lay)   ! [SS-SWC S-1.3]
           end if
         end do
         thetsl = 0.0d0
+        sw%thetsl = 0.0_real64                            ! [SS-SWC S-1.3]
         do lay = 1, numlay
           thetsl(lay) = paramvg(2,lay)
+          sw%thetsl(lay) = paramvg(2,lay)                 ! [SS-SWC S-1.3]
         end do
       endif
 
@@ -948,16 +972,22 @@ contains
       do node = 1,numnod
         lay = layer(node)
         thetar(node) = cofgen(1,node)
+        sw%thetar(node) = cofgen(1,node)                  ! [SS-SWC S-1.3]
         thetas(node) = cofgen(2,node)
+        sw%thetas(node) = cofgen(2,node)                  ! [SS-SWC S-1.3]
         !!! Kroes: disable combi of swsophy=1 and swhyst=1
         if (swhyst.eq.1) then
            ! Wetting curve
            indeks(node) = 1
+           sw%indeks(node) = 1                            ! [SS-SWC S-1.3]
            cofgen(4,node) = paramvg(8,lay)
+           sw%cofgen(4,node) = paramvg(8,lay)             ! [SS-SWC S-1.3]
         elseif (swhyst.eq.0.or.swhyst.eq.2) then
            ! Drying branch or simulation without hysteresis
            indeks(node) = -1
+           sw%indeks(node) = -1                           ! [SS-SWC S-1.3]
            cofgen(4,node) = paramvg(4,lay)
+           sw%cofgen(4,node) = paramvg(4,lay)             ! [SS-SWC S-1.3]
         endif
       end do
 
@@ -981,6 +1011,7 @@ contains
         end do
         do i = 1, numnod
           h(i) = afgen(tab,macp*2,abs(z(i)))
+          sw%h(i) = h(i)                                  ! [SS-SWC S-1.3]
         end do
       endif
       if (swinco.eq.2 .and. swbotb.ne.8) then
@@ -1008,16 +1039,19 @@ contains
           end do
           if (h(i) .lt. -1.d-5) then
             gwl = z(i+1) + h(i+1) / (h(i+1) - h(i)) * (z(i) - z(i+1))
+            sw%gwl = gwl                                  ! [SS-SWC S-1.3]
             ! Assume hydrostatic equilibrium in saturated part
             do j = i+1, numnod
               h(j) = gwl - z(j)
+              sw%h(j) = h(j)                              ! [SS-SWC S-1.3]
             end do
           endif
         endif
       else
          ! Pressure head profile is calculated from groundwater level
-         if (swbotb.eq.1) then  
+         if (swbotb.eq.1) then
           gwl = afgen (gwltab,mabbc*2,t1900+dt-1.d0)
+          sw%gwl = gwl                                    ! [SS-SWC S-1.3]
 
           if(abs(gwl-(z(numnod)-0.5d0*dz(numnod))) .lt.1.0d-4) then
           messag = 'Groundwaterlevel as bottom boundary (SWBOTB=1) is'//&
@@ -1027,45 +1061,60 @@ contains
           endif
         else
           gwl = gwli
+          sw%gwl = gwl                                    ! [SS-SWC S-1.3]
         endif
-        if (gwl.gt.0.0d0) then 
+        if (gwl.gt.0.0d0) then
           pond = gwl
+          sw%pond = gwl                                   ! [SS-SWC S-1.3]
         else
           pond = 0.0d0
+          sw%pond = 0.0_real64                            ! [SS-SWC S-1.3]
         endif
         do i = 1,numnod
           h(i) = gwl - z(i)
+          sw%h(i) = h(i)                                  ! [SS-SWC S-1.3]
         end do
       endif
 
       ! In case of preferential flow, adjust Van Genuchten parameters
       do i = 1, numnod
         theta(i) = watcon(i,h(i))
+        sw%theta(i) = theta(i)                            ! [SS-SWC S-1.3]
       end do
 
       ! Hydraulic conductivities, differential moisture capacities
       ! and mean hydraulic conductivities for each node
       do node = 1,numnod
         dimoca(node) = moiscap(node,h(node))
+        sw%dimoca(node) = dimoca(node)                    ! [SS-SWC S-1.3]
 
         FrArMtrx(node) = 1.d0
+        sw%FrArMtrx(node) = 1.0_real64                   ! [SS-SWC S-1.3]
         k(node) = hconduc (node,h(node),theta(node),state%heat%rfcp(node))
+        sw%k(node) = k(node)                              ! [SS-SWC S-1.3]
         if(FlMacropore)  k(node) = FrArMtrx(node) * k(node)
+        if(FlMacropore)  sw%k(node) = k(node)            ! [SS-SWC S-1.3]
 
         if(node.gt.1) kmean(node) =  hcomean(swkmean,k(node-1),k(node),dz(node-1),dz(node))
+        if(node.gt.1) sw%kmean(node) = kmean(node)       ! [SS-SWC S-1.3]
       end do
       kmean(numnod+1) = k(numnod)
+      sw%kmean(numnod+1) = k(numnod)                     ! [SS-SWC S-1.3]
 
       ! Initial soil water storage
       if (.not.flMacroPore) then
          do i = 1, NumNod
             FrArMtrx(i) = 1.d0
+            sw%FrArMtrx(i) = 1.0_real64                  ! [SS-SWC S-1.3]
          enddo
          volact = 0.0d0
+         sw%volact = 0.0_real64                           ! [SS-SWC S-1.3]
          call watstor ()
          volini = volact
+         sw%volini = volact                               ! [SS-SWC S-1.3]
       endif
       pondini = pond
+      sw%pondini = pond                                   ! [SS-SWC S-1.3]
 
       ! Initial groundwater level
       call calcgwl (state)
@@ -1073,6 +1122,8 @@ contains
       call log_info('soilwater', 'Soil state initialized: gwl=' // to_str(real(gwl,4)) // &
                     ' cm, numnod=' // to_str(numnod) // ', numlay=' // to_str(numlay) // &
                     ', volini=' // to_str(real(volini,4)) // ' cm')
+
+         end associate  ! sw => state%soilwater [SS-SWC S-1.3]
 
       return
 
