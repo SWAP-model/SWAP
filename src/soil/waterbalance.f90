@@ -385,18 +385,20 @@ contains
       real(8) qrotts,qdrats,ptrats,pevats,revats,qbotts
              
       if (flzerointr) then
-        igrai = 0.d0
-        inrai = 0.d0
+        ! SS-ATM Phase 2 Task A-2.2 (D6): igrai/inrai removed — canonical reset
+        ! is state%atmosphere%intr%reset() invoked in meteoday's ResetMetFlx (A-2.1).
         iprec = 0.d0
         igird = 0.d0
         inird = 0.d0
       endif
 
       ! potential transpiration of this timestep
-      ptrats = ptra * dt
+      ! SS-ATM Phase 2 Task A-2.2: ptra read from state%atmosphere (atmosphere home).
+      ptrats = state%atmosphere%ptra * dt
 
       ! potential soil evaporation of this timestep
-      pevats = peva * dt
+      ! SS-ATM Phase 2 Task A-2.2: peva read from state%atmosphere (atmosphere home).
+      pevats = state%atmosphere%peva * dt
 
       ! reduced soil evaporation of this timestep
       ! SS-BND Phase 2 Task B-2.2: reva read from state%soilwater (boundary home).
@@ -439,7 +441,8 @@ contains
       iqreddry_day = iqreddry_day + state%soilwater%qreddrysum*dt
       iqredsol_day = iqredsol_day + state%soilwater%qredsolsum*dt
       iqredfrs_day = iqredfrs_day + state%soilwater%qredfrssum*dt
-      iptra_day    = iptra_day    + ptra * dt
+      ! SS-ATM Phase 2 Task A-2.2: ptra read from state%atmosphere (atmosphere home).
+      iptra_day    = iptra_day    + state%atmosphere%ptra * dt
       ies0 = ies0 + 0.1d0*es0*dt
       iet0 = iet0 + 0.1d0*et0*dt
       iew0 = iew0 + 0.1d0*ew0*dt
@@ -464,7 +467,8 @@ contains
         end do
       end do
 
-      iintc = iintc + (aintcdt+gird-nird)*dt
+      ! SS-ATM Phase 2 Task A-2.2: aintcdt read from state%atmosphere (atmosphere home).
+      iintc = iintc + (state%atmosphere%aintcdt+gird-nird)*dt
 
       iptra = iptra + ptrats
       ipeva = ipeva + pevats
@@ -472,10 +476,11 @@ contains
       ! SS-BND Phase 2 Task B-2.2: runots read from state%soilwater (boundary home).
       iruno = iruno + state%soilwater%runots
       irunon = irunon + runon*dt
-      iprec = iprec + (graidt+gird)*dt
-      igrai = igrai + graidt*dt
+      ! SS-ATM Phase 2 Task A-2.2: graidt/nraidt read from state%atmosphere (atmosphere home).
+      iprec = iprec + (state%atmosphere%graidt+gird)*dt
+      igrai = igrai + state%atmosphere%graidt*dt
       igird = igird + gird*dt
-      inrai = inrai + nraidt*dt
+      inrai = inrai + state%atmosphere%nraidt*dt
       inird = inird + nird*dt
       iqbot = iqbot + qbotts
       if (q(1) < 0.0d0) then
@@ -507,10 +512,11 @@ contains
       irunoCN = irunoCN + Runoff_CN*dt
       crunoffCN = crunoffCN + Runoff_CN*dt
 
-      caintc = caintc + (aintcdt+gird-nird)*dt
+      ! SS-ATM Phase 2 Task A-2.2: aintcdt/graidt/nraidt read from state%atmosphere (atmosphere home).
+      caintc = caintc + (state%atmosphere%aintcdt+gird-nird)*dt
 
-      cgrai = cgrai + graidt*dt
-      cnrai = cnrai + nraidt*dt
+      cgrai = cgrai + state%atmosphere%graidt*dt
+      cnrai = cnrai + state%atmosphere%nraidt*dt
 !      cnrai = cgrai - caintc
       cgird = cgird + gird*dt
       cnird = cnird + nird*dt
@@ -536,7 +542,8 @@ contains
       end if
 
       ! rain on the ponding surface
-      cqprai = cqprai + nraidt*dt
+      ! SS-ATM Phase 2 Task A-2.2: nraidt read from state%atmosphere (atmosphere home).
+      cqprai = cqprai + state%atmosphere%nraidt*dt
       crunon = crunon + runon*dt
       if (q(1).lt.0.0d0) then
         cqtdo = cqtdo - q(1)*dt
@@ -550,7 +557,8 @@ contains
         wbalance = cnrai + cnird + crunon - crunoff - cqrot - cevap     &
      &        - state%surfacewater%drainage_cumulative%cqdra + cqbot + volini - volact + PondIni - pond + cqssdi
       else
-         wbalance = cqprai + cnird + cmelt + crunon - crunoff           &
+         ! SS-ATM Phase 2 Task A-2.2: cmelt read from state%atmosphere%cumu (atmosphere home).
+         wbalance = cqprai + cnird + state%atmosphere%cumu%cmelt + crunon - crunoff           &
      &        - cqrot - cevap - state%surfacewater%drainage_cumulative%cqdra     &
      &        + cqbot + volini - volact + PondIni - pond + cqssdi
       endif

@@ -843,6 +843,7 @@ contains
           nraidt = nraidt - Runoff_CN
         end if
         aintcdt = rainflux - netrainflux  ! aintcdt involves ONLY interception of RAIN
+        state%atmosphere%graidt  = graidt   ! [SS-ATM] dual-write
         state%atmosphere%nraidt  = nraidt   ! [SS-ATM] dual-write
         state%atmosphere%aintcdt = aintcdt  ! [SS-ATM] dual-write
       endif
@@ -916,6 +917,7 @@ contains
       graidt = grain(1)
       nraidt = nrain(1)
       aintcdt = graidt - nraidt    ! aintcdt involves ONLY interception of RAIN
+      state%atmosphere%graidt  = graidt   ! [SS-ATM] dual-write
       state%atmosphere%nraidt  = nraidt   ! [SS-ATM] dual-write
       state%atmosphere%aintcdt = aintcdt  ! [SS-ATM] dual-write
 
