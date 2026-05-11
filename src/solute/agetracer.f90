@@ -182,7 +182,8 @@ contains
          tcumsol   = tcumsol + dtsolu
 
 ! --- solute flux at soil surface
-         Agesurf = (nird*Ageirr + nraidt*Agepre)*dtsolu +               &
+         ! SS-ATM Phase 2 Task A-2.4: nraidt read from state%atmosphere (atmosphere home).
+         Agesurf = (nird*Ageirr + state%atmosphere%nraidt*Agepre)*dtsolu +               &
      &                                       Pondm1*Agepondm1              ! gr cm-2
          ! SS-BND Phase 2 Task B-2.3: qtop/runots read from state%soilwater (boundary home).
          if (state%soilwater%qtop.lt.-1.d-6) then

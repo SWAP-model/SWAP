@@ -169,7 +169,8 @@ contains
          tcumsol = tcumsol + dtsolu
 
 ! --- solute flux at soil surface
-         csurf = (nird*cirr + nraidt*cpre)*dtsolu + csurf   ! gr cm-2
+         ! SS-ATM Phase 2 Task A-2.4: nraidt read from state%atmosphere (atmosphere home).
+         csurf = (nird*cirr + state%atmosphere%nraidt*cpre)*dtsolu + csurf   ! gr cm-2
          ! SS-BND Phase 2 Task B-2.3: qtop read from state%soilwater (boundary home).
          if (state%soilwater%qtop.lt.-1.d-6) then
             cpond  = csurf / (pond-state%soilwater%qtop*dtsolu)             ! gr cm-3
@@ -321,8 +322,9 @@ contains
 !      if (swbr .eq. 1) samaq = cdrain*poros*daquif
 
 ! --- add time step fluxes to total cumulative values
-      sqprec = sqprec + nraidt * cpre * dt
-      imsqprec = imsqprec + nraidt * cpre * dt
+      ! SS-ATM Phase 2 Task A-2.4: nraidt read from state%atmosphere (atmosphere home).
+      sqprec = sqprec + state%atmosphere%nraidt * cpre * dt
+      imsqprec = imsqprec + state%atmosphere%nraidt * cpre * dt
       sqirrig = sqirrig + nird * cirr * dt
       imsqirrig = imsqirrig + nird * cirr * dt
 
