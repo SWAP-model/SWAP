@@ -68,3 +68,71 @@ subroutine test_swap_state_has_heat()
    @assertFalse(allocated(state%heat%tsoil))
    @assertFalse(allocated(state%heat%rfcp))
 end subroutine test_swap_state_has_heat
+
+@test
+subroutine test_swap_state_has_atmosphere()
+   ! A-1.2: confirm state%atmosphere access path is reachable and defaults
+   ! to zero for representative flat scalars, intr cohort, and cumu cohort.
+   use funit
+   use iso_fortran_env, only: real64
+   use swap_state_mod, only: swap_state_t
+   type(swap_state_t) :: state
+
+   ! Flat scalars
+   @assertEqual(0.0_real64, state%atmosphere%peva,        1.0e-12_real64)
+   @assertEqual(0.0_real64, state%atmosphere%ssnow,       1.0e-12_real64)
+   @assertEqual(0.0_real64, state%atmosphere%grai,        1.0e-12_real64)
+   @assertEqual(0.0_real64, state%atmosphere%atmdem,      1.0e-12_real64)
+   @assertEqual(0.0_real64, state%atmosphere%ldwet,       1.0e-12_real64)
+   ! Intermediate cohort
+   @assertEqual(0.0_real64, state%atmosphere%intr%igrai,  1.0e-12_real64)
+   @assertEqual(0.0_real64, state%atmosphere%intr%ipeva,  1.0e-12_real64)
+   ! Cumulative cohort
+   @assertEqual(0.0_real64, state%atmosphere%cumu%cgrai,  1.0e-12_real64)
+   @assertEqual(0.0_real64, state%atmosphere%cumu%cmelt,  1.0e-12_real64)
+end subroutine test_swap_state_has_atmosphere
+
+@test
+subroutine test_swap_state_atmosphere_set_read_roundtrip()
+   ! A-1.2: set a value via state%atmosphere, read back.
+   use funit
+   use iso_fortran_env, only: real64
+   use swap_state_mod, only: swap_state_t
+   type(swap_state_t) :: state
+
+   state%atmosphere%peva       = 3.5_real64
+   state%atmosphere%ssnow      = 12.0_real64
+   state%atmosphere%intr%igrai = 1.8_real64
+   state%atmosphere%cumu%cgrai = 88.0_real64
+
+   @assertEqual( 3.5_real64, state%atmosphere%peva,       1.0e-12_real64)
+   @assertEqual(12.0_real64, state%atmosphere%ssnow,      1.0e-12_real64)
+   @assertEqual( 1.8_real64, state%atmosphere%intr%igrai, 1.0e-12_real64)
+   @assertEqual(88.0_real64, state%atmosphere%cumu%cgrai, 1.0e-12_real64)
+end subroutine test_swap_state_atmosphere_set_read_roundtrip
+
+@test
+subroutine test_swap_state_atmosphere_intr_reset_via_aggregator()
+   ! A-1.2: confirm state%atmosphere%intr%reset() is callable through
+   ! the swap_state_t aggregator path.
+   use funit
+   use iso_fortran_env, only: real64
+   use swap_state_mod, only: swap_state_t
+   type(swap_state_t) :: state
+
+   ! Seed intr cohort with non-zero values
+   state%atmosphere%intr%igrai  = 5.0_real64
+   state%atmosphere%intr%ipeva  = 3.0_real64
+   state%atmosphere%intr%isnrai = 1.5_real64
+
+   ! A flat scalar must remain untouched by intr%reset
+   state%atmosphere%peva = 9.9_real64
+
+   call state%atmosphere%intr%reset()
+
+   @assertEqual(0.0_real64, state%atmosphere%intr%igrai,  1.0e-12_real64)
+   @assertEqual(0.0_real64, state%atmosphere%intr%ipeva,  1.0e-12_real64)
+   @assertEqual(0.0_real64, state%atmosphere%intr%isnrai, 1.0e-12_real64)
+   ! Flat scalar untouched
+   @assertEqual(9.9_real64, state%atmosphere%peva,        1.0e-12_real64)
+end subroutine test_swap_state_atmosphere_intr_reset_via_aggregator

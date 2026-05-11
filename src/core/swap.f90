@@ -72,6 +72,7 @@ use variables, only : flyearstart, fldaystart, flswapshared, flsurfacewater, flm
 use timestep_control_mod, only: fldecdt
 use swap_state_mod, only: swap_state_t
 use soilwater_state_mod, only: soilwater_init
+use atmosphere_state_mod, only: atmosphere_init
 use drainage_mod, only: drainage, drainage_init
 use surfacewater_mod, only: SurfaceWater, surfacewater_year_reset
                       ! for debugging
@@ -186,6 +187,7 @@ if (iTask == 1) then
 !  calculate grid parameters
    call CalcGrid()
    call soilwater_init(state%soilwater, numnod, numlay)   ! SS-CRP Phase 1 C-1.2: allocate per-node arrays + mfluxtable
+   call atmosphere_init(state%atmosphere)                 ! SS-ATM Phase 1 A-1.2: zero all 22 flat scalars + cohort sub-records
 
    if (flTillage) call DoTillage(1)
    if (flSSDI)    call SSDI_irrigation(1)
