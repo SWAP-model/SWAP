@@ -37,20 +37,33 @@
             integer, intent(in) :: task
             real(8), intent(in) :: tsoil(:)
          end subroutine ArableLandGerm
-         subroutine grass(task, tsoil)
-            integer, intent(in) :: task
+         subroutine grass(task, tsoil, state)
+            use swap_state_mod, only: swap_state_t
+            integer :: task
             real(8), intent(in) :: tsoil(:)
+            type(swap_state_t), intent(in), optional :: state
          end subroutine grass
+         subroutine cropfixed(task, state)
+            use swap_state_mod, only: swap_state_t
+            integer :: task
+            type(swap_state_t), intent(in), optional :: state
+         end subroutine cropfixed
+         subroutine wofost(task, state)
+            use swap_state_mod, only: swap_state_t
+            integer :: task
+            type(swap_state_t), intent(in), optional :: state
+         end subroutine wofost
       end interface
 
       integer task
       real(8), intent(in) :: tsoil(:)
       !! Soil temperature array from state%heat%tsoil, passed by caller.
       type(swap_state_t), intent(inout) :: state
-      !! Full typed state record; state%soilwater written on task=1 (dual-write).
+      !! Full typed state record; state%soilwater%hleaf/hroot/mfluxtable written on task=1.
       integer i, node
       real(8) sumtmin
-      
+      real(8) dummy_mf_   ! dummy outcome arg for MatricFlux(1) init call
+
       ! assimilation
       real(8) dayl,cosld,sinld
       real(8) effc,amax
@@ -248,22 +261,21 @@
         if (flCropReadFile) then
           
           ! fixed crop development
-          if (croptype(icrop) .eq. 1 .and. flCropEmergence) call CropFixed(1)
+          if (croptype(icrop) .eq. 1 .and. flCropEmergence) call CropFixed(1, state)
 
           ! detailed crop growth
-          if (croptype(icrop) .eq. 2 .and. flCropEmergence) call Wofost(1)
+          if (croptype(icrop) .eq. 2 .and. flCropEmergence) call Wofost(1, state)
 
           ! detailed grass growth
-          if (croptype(icrop) .eq. 3) call Grass(1, tsoil)
+          if (croptype(icrop) .eq. 3) call Grass(1, tsoil, state)
 
-          ! SS-CRP Phase 1 C-1.3: dual-write hroot/hleaf/mfluxtable from legacy
-          ! globals into state%soilwater.  This is Phase 1 copy-out — legacy writes
-          ! above are preserved; Phase 2 will flip readers to state and retire globals.
-          ! Guard: only active when swdrought=2 (the JvL microscopic path).
+          ! SS-CRP Phase 2 C-2.5: init JvL state directly (legacy globals retired).
+          ! CropFixed/Wofost/Grass(1) set flhydrlift and twilt; hroot/hleaf/mfluxtable
+          ! are written to state here since those subs lack state access.
           if (swdrought .eq. 2) then
-            state%soilwater%hleaf = hleaf
-            state%soilwater%hroot(1:numnod) = hroot(1:numnod)
-            state%soilwater%mfluxtable(1:numlay,1:801) = mfluxtable(1:numlay,1:801)
+            state%soilwater%hleaf = -2000.d0
+            state%soilwater%hroot(1:numnod) = h(1:numnod)
+            call MatricFlux(1, h(1), 1, dummy_mf_, state)
           endif
 
           flCropReadFile = .false.
@@ -401,12 +413,12 @@
 ! --- detailed crop growth -------------------------------------------------
       if (croptype(icrop) .eq. 2) then
         if (flCropEmergence) then
-          call Wofost(2)
+          call Wofost(2, state)
         endif
-      endif  
+      endif
 ! --- detailed grass growth  -----------------------------------------------
       if (croptype(icrop) .eq. 3) then
-        call Grass(2, tsoil)
+        call Grass(2, tsoil, state)
       endif
 
       return
@@ -420,18 +432,18 @@
 ! --- fixed crop development -----------------------------------------------
       if (croptype(icrop).eq.1) then
         if(flCropEmergence) then
-          call CropFixed(3)
+          call CropFixed(3, state)
         endif
       endif
 ! --- detailed crop growth -------------------------------------------------
       if (croptype(icrop).eq.2) then
         if (flCropEmergence) then
-          call Wofost(3)
+          call Wofost(3, state)
          endif
       endif
 ! --- detailed grass growth  -----------------------------------------------
       if (croptype(icrop).eq.3) then
-        call Grass(3, tsoil)
+        call Grass(3, tsoil, state)
       endif
 
       return
@@ -457,11 +469,11 @@
         
         if (flCropEmergence .or. flHarvestDay) then
           if (croptype(icrop).eq.1) then
-            call CropFixed(4) 
-          endif  
+            call CropFixed(4, state)
+          endif
           if (croptype(icrop).eq.2) then
-            call Wofost(4) 
-          endif  
+            call Wofost(4, state)
+          endif
         endif
 
       endif
@@ -503,10 +515,11 @@
       end
 !
 ! ----------------------------------------------------------------------
-      subroutine cropfixed (task)
+      subroutine cropfixed (task, state)
 ! ----------------------------------------------------------------------
-!     date               : august 2004                           
-!     purpose            : simple crop growth routine for swap 
+!     date               : august 2004
+!     purpose            : simple crop growth routine for swap
+! SS-CRP C-2.5: state added (optional, intent in) to read flWrtNonox.
 ! ----------------------------------------------------------------------
       use variables
       use soilhydraulics_utils, only: watcon
@@ -514,12 +527,15 @@
       use rootextraction_mod, only: MatricFlux
       use swap_constants, only: tiny, nihil
       use error_mod, only: fatalerr_collected
+      use swap_state_mod, only: swap_state_t
       implicit none
+
+      type(swap_state_t), intent(in), optional :: state
 
 ! --- local variables
       integer   i,task,lcc,swhydrlift
       real(8)   dummy,dtsum,dvr
-      
+
 ! --- rooting
       real(8)   rrpot,rr
       
@@ -612,9 +628,9 @@
 ! --- initial ratio root total respiration / maintenance respiration; oxygen module
       max_resp_factor = afgen (mrftb,(2*magrs),dvs)
 
-! --- initialize matric flux potential and hleaf
-      if (swdrought .eq. 2) then                                        
-        call MatricFlux(1,h(1),1,dummy)
+! --- initialize matric flux potential (SS-CRP C-2.5: hroot/hleaf/mfluxtable
+!     init moved to CropGrowth dispatcher which has access to state).
+      if (swdrought .eq. 2) then
         if (swhydrlift .eq. 1) then
           flhydrlift = .true.
         else
@@ -622,12 +638,10 @@
         endif
         do i = 1,numnod
          twilt(i) = watcon(i,wiltpoint)
-         hroot(i) = h(i)
         enddo
-        hleaf = -2000.d0
-      endif                                                             
+      endif
 
-      return          
+      return
 
       case (2)
       continue
@@ -702,7 +716,9 @@
         rdpot = rdpot + rrpot
 
         rr = min (rdm-rd,rri)
-        if (ptra.lt.nihil .or. flWrtNonox)     rr = 0.0d0
+        if (ptra.lt.nihil .or.                              &
+     &      (present(state) .and.                           &
+     &       state%soilwater%flWrtNonox)) rr = 0.0d0
         if (swdmi2rd.eq.1 .and. ptra.ge.nihil) rr = rr * tra/ptra
         rd = rd + rr
       endif
@@ -1046,11 +1062,12 @@
       end
     
 ! ----------------------------------------------------------------------
-      subroutine wofost(task)
+      subroutine wofost(task, state)
 ! ----------------------------------------------------------------------
 !     update             : march 2015
 !     date               : october 2004
 !     purpose            : detailed crop growth routine
+! SS-CRP C-2.5: state added (optional, intent in) to read flWrtNonox.
 ! ----------------------------------------------------------------------
       use variables
       use wofost_soil_interface
@@ -1059,8 +1076,11 @@
       use rootextraction_mod, only: MatricFlux
         use swap_constants, only: tiny, nihil
       use error_mod, only: fatalerr_collected
+      use swap_state_mod, only: swap_state_t
       implicit none
- 
+
+      type(swap_state_t), intent(in), optional :: state
+
       integer   i1,task,swhydrlift,i
 
       real(8)   asrc,ccheck,cvf
@@ -1342,9 +1362,9 @@
         siccapact = siccaplai*lai
       endif
 
-! --- initialize matric flux potential and hleaf
-      if (swdrought .eq. 2) then                                        
-        call MatricFlux(1,h(1),1,dummy)
+! --- initialize matric flux potential (SS-CRP C-2.5: hroot/hleaf/mfluxtable
+!     init moved to CropGrowth dispatcher which has access to state).
+      if (swdrought .eq. 2) then
         if (swhydrlift .eq. 1) then
           flhydrlift = .true.
         else
@@ -1352,10 +1372,8 @@
         endif
         do i = 1,numnod
          twilt(i) = watcon(i,wiltpoint)
-         hroot(i) = h(i)
         enddo
-        hleaf = -2000.d0
-      endif                                                             
+      endif
 
 ! -      n-p-k 
       if( flCropNut) then
@@ -1755,8 +1773,9 @@
 
 ! --- growth rate roots and aerial parts
       call relgrwt(dmi,fr,fl,fs,fo,grrt,grlv,grst,grso,admi)
-      if (swrd.eq.3 .and. flWrtNonox) grrt = 0.d0
-      
+      if (swrd.eq.3 .and. present(state) .and.                          &
+     &    state%soilwater%flWrtNonox) grrt = 0.d0
+
 ! --- death of leaves due to water stress or high lai or nitrogen stress
       call deaths(flcropnut,wlv,kdif,lai,NNI,perdl,rdrns,reltr,dslv)
 
@@ -2117,10 +2136,12 @@
         rdpot = rdpot + rrpot
 
         rr = min (rdm-rd,rri)
-        if (fr.le.0.0d0 .or. pgass.lt.1.0d0 .or. flWrtNonox) rr = 0.0d0
+        if (fr.le.0.0d0 .or. pgass.lt.1.0d0 .or.                      &
+     &      (present(state) .and.                                        &
+     &       state%soilwater%flWrtNonox)) rr = 0.0d0
         if (swdmi2rd.eq.1 .and. pgass.ge.1.0d0)              rr = rr * gass/pgass
         rd = rd + rr
-        
+
       elseif (swrd.eq.3) then
         rdpot = afgen (rlwtb,22,wrtpot)
         rdpot = min(rdpot,rdm)
@@ -2157,12 +2178,13 @@
       end
 
 ! ----------------------------------------------------------------------
-      subroutine grass(task, tsoil)
+      subroutine grass(task, tsoil, state)
 ! ----------------------------------------------------------------------
 !     Date               : November 2004
 !     Purpose            : detailed grass growth routine
 ! SS-HEAT pre-Task-8: tsoil(:) non-optional dummy arg; callers pass
 !   state%heat%tsoil. Threaded through to sumttd calls.
+! SS-CRP C-2.5: state added (optional, intent in) to read flWrtNonox.
 ! ----------------------------------------------------------------------
       use variables, dummy_tsoil_gr_ => tsoil
       !! Rename config-staging tsoil to avoid clash with dummy arg tsoil.
@@ -2172,8 +2194,11 @@
       use rootextraction_mod, only: MatricFlux
       use swap_constants, only: tiny, nihil
       use error_mod, only: fatalerr_collected
+      use swap_state_mod, only: swap_state_t
 
       implicit none
+
+      type(swap_state_t), intent(in), optional :: state
 
       ! Explicit interface for non-module sumttd which now takes tsoil(:)
       interface
@@ -2411,9 +2436,9 @@
         siccapact = siccaplai*lai
       endif
       
-! --- initialize matric flux potential and hleaf
-      if (swdrought .eq. 2) then                                        
-        call MatricFlux(1,h(1),1,dummy)
+! --- initialize matric flux potential (SS-CRP C-2.5: hroot/hleaf/mfluxtable
+!     init moved to CropGrowth dispatcher which has access to state).
+      if (swdrought .eq. 2) then
         if (swhydrlift .eq. 1) then
           flhydrlift = .true.
         else
@@ -2421,10 +2446,8 @@
         endif
         do i = 1,numnod
          twilt(i) = watcon(i,wiltpoint)
-         hroot(i) = h(i)
         enddo
-        hleaf = -2000.d0
-      endif                                                             
+      endif
 
 ! --- harvest
 !     initialise 
@@ -3014,7 +3037,8 @@
         ! in case of SWRD = 3: after reaching maximum live weight of wrtmax, the
         ! growth of the roots is balanced by the death of root tissue
         grrt = fr*dmi
-        if (swrd.eq.3 .and. flWrtNonox) grrt = 0.d0
+        if (swrd.eq.3 .and. present(state) .and.                       &
+     &      state%soilwater%flWrtNonox) grrt = 0.d0
         if (swrd.eq.3 .and. wrt.gt.wrtmax) then
           drrt = grrt
           drrt = max(drrt,wrt*afgen (rdrrtb,30,rid))
@@ -3400,7 +3424,9 @@
           rd = min(rd,rdm)
         elseif (swrd.eq.2) then
           rr = min (rdm-rd,rri)
-          if (fr.le.0.0d0 .or. pgass.lt.1.0d0 .or. flWrtNonox) rr = 0.0d0
+          if (fr.le.0.0d0 .or. pgass.lt.1.0d0 .or.                    &
+     &        (present(state) .and.                                      &
+     &         state%soilwater%flWrtNonox)) rr = 0.0d0
           if (swdmi2rd.eq.1 .and. pgass.ge.1.0d0)              rr = rr * gass/pgass
           rd = rd + rr
         elseif (swrd.eq.3) then

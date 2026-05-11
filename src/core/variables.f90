@@ -322,7 +322,8 @@
       real(8)   adcrl              ! Level of low atmospheric demand (L/T)
       real(8)   air_filled_root_por ! Air filled root porosity [0..1.0 -, R]
       real(8)   albedo             ! Crop reflection coefficient (-)
-      real(8)   alpJvLier          ! Uniform drought reduction factor based on concept Jong van Lier (-)
+      ! [SS-CRP] retired 2026-05-11 — moved to state%soilwater%alpJvLier (ADR 0036)
+      ! real(8)   alpJvLier          ! Uniform drought reduction factor based on concept Jong van Lier (-)
       real(8)   amaxtb(30)         ! Maximum CO2 assimilation rate (kg/ha/hr) as function of development stage (-)
       real(8)   pgasspot           ! Assimilation rate after nitrogen stress and maximum attainable yield, potential crop growth
       real(8)   pgass              ! Assimilation rate after nitrogen stress and maximum attainable yield, actual crop growth
@@ -812,14 +813,17 @@
       real(8)   hbotab(mabbc*2)    ! Array with specified pressure head of lowest compartment (L) as function of time (T)
       real(8)   hcomp(macp)        ! Array with prescribed height of numerical compartments (L) for each sublayer
       real(8)   hdrain             ! Mean drainage level (L) to derive regional average groundwater level for bottom boundary condition
-      real(8)   hleaf              ! Pressure head inside leaves (cm)
+      ! [SS-CRP] retired 2026-05-11 — moved to state%soilwater%hleaf (ADR 0036)
+      ! real(8)   hleaf              ! Pressure head inside leaves (cm)
       real(8)   hm1(macp)          ! Soil water pressure head (L) at former time level
       real(8)   hplate             ! Pressure head of ceramic plate below lysimeter
-      real(8)   hroot(macp)        ! Pressure head of a compartment at the root-soil interface (L)
+      ! [SS-CRP] retired 2026-05-11 — moved to state%soilwater%hroot (ADR 0036)
+      ! real(8)   hroot(macp)        ! Pressure head of a compartment at the root-soil interface (L)
       real(8)   hsublay(macp)      ! Array with prescribed height of sublayers (L)
       ! [SS-BND] retired 2026-05-11 — boundary subsystem migrated to state%soilwater (ADR 0035)
       ! real(8)   hsurf              ! Soil water pressure head at the soil surface (cm)
-      real(8)   Hxylem             ! Pressure head in root xylem (L)
+      ! [SS-CRP] retired 2026-05-11 — moved to state%soilwater%Hxylem (ADR 0036)
+      ! real(8)   Hxylem             ! Pressure head in root xylem (L)
       real(8)   igrai              ! Intermediate amount of gross rainfall (L)
       real(8)   ies0               ! Intermediate potential evaporation rate from a wet bare soil [cm/d]
       real(8)   iet0               ! Intermediate potential transpiration rate from a dry crop [cm/d]
@@ -867,9 +871,12 @@
       real(8)   kvtop              ! Vertical hydraulic conductivity of top layer (L/T)
       real(8)   L(Madr)            ! Array with spacing between drains for each drainage level (L)
       real(8)   ldwet              ! Length of dry period (L) as used in Black's model for reduction of soil evaporation
-      real(8)   mfluxtable(maho,801)  ! Reference table with matric flux potential of each soil layer (L2/T)
-      real(8)   mflux(macp)        ! Actual matric flux potential of each node (L2/T)
-      real(8)   mroot(macp)        ! Matrix flux head of a compartment at the root-soil interface (L2/T)
+      ! [SS-CRP] retired 2026-05-11 — moved to state%soilwater%mfluxtable (ADR 0036)
+      ! real(8)   mfluxtable(maho,801)  ! Reference table with matric flux potential of each soil layer (L2/T)
+      ! [SS-CRP] retired 2026-05-11 — moved to state%soilwater%mflux (ADR 0036)
+      ! real(8)   mflux(macp)        ! Actual matric flux potential of each node (L2/T)
+      ! [SS-CRP] retired 2026-05-11 — moved to state%soilwater%mroot (ADR 0036)
+      ! real(8)   mroot(macp)        ! Matrix flux head of a compartment at the root-soil interface (L2/T)
       real(8)   OxygenIntercept(6) ! Parameters of reproduction function for oxygen stress according to Bartholomeus
       real(8)   OxygenSlope(6)     ! Parameters of reproduction function for oxygen stress according to Bartholomeus
       real(8)   paramvg(21,maho)   ! Array with input values of soil hydraulic parameters according to Mualem - van Genuchten for each soil layer
@@ -893,17 +900,28 @@
       ! real(8)   qdrtot             ! Moved to surfacewater_state_t%qdrtot
       real(8)   qimmob(macp)       ! Soil water flux between mobile and immobile fraction in case of fingered flow (L/T)
       real(8)   qssdisum           ! Total subsurface irrigation flux (L/T)
-      real(8)   qrosum             ! Total root water extraction flux (L/T)
-      real(8)   qredwetsum         ! Total reduction of root water extraction due to wet conditions (L/T)
-      real(8)   qreddrysum         ! Total reduction of root water extraction due to dry conditions (L/T)
-      real(8)   qredsolsum         ! Total reduction of root water extraction due to salt conditions (L/T)
-      real(8)   qredfrssum         ! Total reduction of root water extraction due to frost conditions (L/T)
-      real(8)   qrot(macp)         ! Array with root water extraction flux for each compartment (L/T)
-      real(8)   qpotrot(macp)      ! Array with potential root water extraction flux for each compartment (L/T)
-      real(8)   qredwet(macp)      ! Array with reduction of root water extraction due to wet conditions for each compartment (L/T)
-      real(8)   qreddry(macp)      ! Array with reduction of root water extraction due to dry conditions for each compartment (L/T)
-      real(8)   qredsol(macp)      ! Array with reduction of root water extraction due to salt conditions for each compartment (L/T)
-      real(8)   qredfrs(macp)      ! Array with reduction of root water extraction due to frost conditions for each compartment (L/T)
+      ! [SS-CRP] retired 2026-05-11 — moved to state%soilwater%qrosum (ADR 0036)
+      ! real(8)   qrosum             ! Total root water extraction flux (L/T)
+      ! [SS-CRP] retired 2026-05-11 — moved to state%soilwater%qredwetsum (ADR 0036)
+      ! real(8)   qredwetsum         ! Total reduction of root water extraction due to wet conditions (L/T)
+      ! [SS-CRP] retired 2026-05-11 — moved to state%soilwater%qreddrysum (ADR 0036)
+      ! real(8)   qreddrysum         ! Total reduction of root water extraction due to dry conditions (L/T)
+      ! [SS-CRP] retired 2026-05-11 — moved to state%soilwater%qredsolsum (ADR 0036)
+      ! real(8)   qredsolsum         ! Total reduction of root water extraction due to salt conditions (L/T)
+      ! [SS-CRP] retired 2026-05-11 — moved to state%soilwater%qredfrssum (ADR 0036)
+      ! real(8)   qredfrssum         ! Total reduction of root water extraction due to frost conditions (L/T)
+      ! [SS-CRP] retired 2026-05-11 — moved to state%soilwater%qrot (ADR 0036)
+      ! real(8)   qrot(macp)         ! Array with root water extraction flux for each compartment (L/T)
+      ! [SS-CRP] retired 2026-05-11 — moved to state%soilwater%qpotrot (ADR 0036)
+      ! real(8)   qpotrot(macp)      ! Array with potential root water extraction flux for each compartment (L/T)
+      ! [SS-CRP] retired 2026-05-11 — moved to state%soilwater%qredwet (ADR 0036)
+      ! real(8)   qredwet(macp)      ! Array with reduction of root water extraction due to wet conditions for each compartment (L/T)
+      ! [SS-CRP] retired 2026-05-11 — moved to state%soilwater%qreddry (ADR 0036)
+      ! real(8)   qreddry(macp)      ! Array with reduction of root water extraction due to dry conditions for each compartment (L/T)
+      ! [SS-CRP] retired 2026-05-11 — moved to state%soilwater%qredsol (ADR 0036)
+      ! real(8)   qredsol(macp)      ! Array with reduction of root water extraction due to salt conditions for each compartment (L/T)
+      ! [SS-CRP] retired 2026-05-11 — moved to state%soilwater%qredfrs (ADR 0036)
+      ! real(8)   qredfrs(macp)      ! Array with reduction of root water extraction due to frost conditions for each compartment (L/T)
       real(8)   qssdi(macp)        ! Array with water input via subsurface drip irrigation for each compartment (L/T)
       real(8)   dt_SSDI_event      ! Length of SSDI irrigation event (T)
       
@@ -934,9 +952,12 @@
       ! [SS-HEAT] retired 2026-05-10 — moved to state%heat%rfcp (ADR 0034)
       ! real(8)   rfcp(macp)         ! Reduction factor for frozen conditions in each model compartment (-)
       real(8)   rimlay             ! Vertical resistance of aquitard (T)
-      real(8)   rmax(macp)         ! Radius around roots in which water is extracted (L)
-      real(8)   RootPhi(macp)      ! Factor Phi of a compartment used in drought reduction of De Jong van Lier et al. (T/L)
-      real(8)   RootRho(macp)      ! Factor Rho of a compartment used in drought reduction of De Jong van Lier et al. (/L2)
+      ! [SS-CRP] retired 2026-05-11 — moved to state%soilwater%rmax (ADR 0036)
+      ! real(8)   rmax(macp)         ! Radius around roots in which water is extracted (L)
+      ! [SS-CRP] retired 2026-05-11 — moved to state%soilwater%rootphi (ADR 0036)
+      ! real(8)   RootPhi(macp)      ! Factor Phi of a compartment used in drought reduction of De Jong van Lier et al. (T/L)
+      ! [SS-CRP] retired 2026-05-11 — moved to state%soilwater%rootrho (ADR 0036)
+      ! real(8)   RootRho(macp)      ! Factor Rho of a compartment used in drought reduction of De Jong van Lier et al. (/L2)
       real(8)   rsigni             ! Minimum amount of rainfall (L) which resets the empirical soil evaporation reduction models
       real(8)   rsoil              ! Soil resistance of wet soil of PMdirect (T/L)
       real(8)   rsro               ! Drainage resistance for surface runoff (T)
@@ -962,7 +983,8 @@
       real(8)   sptablay(7,maho,matab) ! Soil Physical functions (h,theta,k,dthetadh,dkdtheta) tabulated for each soil layer
       real(8)   StepHr             ! Maximum difference of Hroot and Hxylem between iterations; convergence criterium  (L)
       real(8)   taccur             ! Maximum absolute difference between simulated and calculated potential transpiration rate (cm/d)
-      real(8)   Tactual            ! Actual transpiration at former iteration in JongvanLier (cm/d)
+      ! [SS-CRP] retired 2026-05-11 — moved to state%soilwater%Tactual (ADR 0036)
+      ! real(8)   Tactual            ! Actual transpiration at former iteration in JongvanLier (cm/d)
       real(8)   tau                ! Minimum pressure head difference (L) to change from wetting to drying in case of hysteresis
       real(8)   theta(macp)        ! Volumic soil water content (-)
       real(8)   thetar(macp)       ! Residual volumic soil water content (-) for each numerical compartment
@@ -1357,7 +1379,8 @@
 
 ! --- root development of dynamic crop growth and oxygen stress
       integer   swWrtNonox         ! switch for checking oxygen stress of root zone development
-      logical   flWrtNonox         ! Flag indicating whether root development is retatarded by oxygen stress 
+      ! [SS-CRP] retired 2026-05-11 — moved to state%soilwater%flWrtNonox (ADR 0036)
+      ! logical   flWrtNonox         ! Flag indicating whether root development is retatarded by oxygen stress 
       real(8)   aeratecrit         ! threshold to stop root zone development in case of oxygenstress; 0.0 minimum oxygen stress, 1.0 maximum oxygenstress [0.0001..1.0 -, R]
 
       ! Initialize o2_ini_stress to .true. (needed for first call to OxygenStress)

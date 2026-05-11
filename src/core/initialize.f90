@@ -350,8 +350,9 @@
       hcomp              = 0.0d0 
       hdrain             = 0.0d0 
       hm1                = 0.0d0 
-      hroot              = 0.0d0 
-      hsublay            = 0.0d0 
+      ! [SS-CRP C-2.5] hroot retired — soilwater_init handles init via state%soilwater (ADR 0036)
+      ! hroot              = 0.0d0
+      hsublay            = 0.0d0
       ! [SS-BND B-2.7] hsurf retired — soilwater_init handles init via state%soilwater
       ! hsurf              = 0.0d0
       igrai              = 0.0d0 
@@ -397,8 +398,10 @@
       kvtop              = 0.0d0 
       L                  = 0.0d0 
       ldwet              = 0.0d0 
-      mfluxtable         = 0.0d0 
-      mflux              = 0.0d0 
+      ! [SS-CRP C-2.5] mfluxtable retired — soilwater_init handles init via state%soilwater (ADR 0036)
+      ! mfluxtable         = 0.0d0
+      ! [SS-CRP C-2.5] mflux retired — soilwater_init handles init via state%soilwater (ADR 0036)
+      ! mflux              = 0.0d0
       paramvg            = 0.0d0 
       pegwl              = 0.0d0 
       pond               = 0.0d0
@@ -417,12 +420,13 @@
       qdrtab             = 0.0d0 
       ! SS-SWST Phase 2 Task 11 C3: qdrtot removed (state%surfacewater%qdrtot initialized in surfacewater_state_t).
       qimmob             = 0.0d0 
-      qrosum             = 0.0d0 
-      qredwetsum         = 0.0d0 
-      qreddrysum         = 0.0d0 
-      qredsolsum         = 0.0d0 
-      qredfrssum         = 0.0d0 
-      qrot               = 0.0d0
+      ! [SS-CRP C-2.5] qrosum/qred*sum/qrot retired — soilwater_init handles init via state%soilwater (ADR 0036)
+      ! qrosum             = 0.0d0
+      ! qredwetsum         = 0.0d0
+      ! qreddrysum         = 0.0d0
+      ! qredsolsum         = 0.0d0
+      ! qredfrssum         = 0.0d0
+      ! qrot               = 0.0d0
       qssdi              = 0.0d0
       ! dt_SSDI_event = 1.0 means "no SSDI sub-day event in progress";
       ! timecontrol.f90:423,620 read this ungated by flSSDI, so the
@@ -787,7 +791,8 @@
 
       flCropHarvest      = .false.
       flHarvestDay       = .false.
-      flWrtNonox         = .false.
+      ! [SS-CRP C-2.5] flWrtNonox retired — soilwater_init handles init via state%soilwater (ADR 0036)
+      ! flWrtNonox         = .false.
 
       daycrop            = 0 
       daygrowth          = 0
@@ -868,8 +873,9 @@
       rms                = 0.0d0 
       rootcoefa          = 0.0d0 
       rootradius         = 0.0d0 
-      rootrho            = 0.0d0 
-      rsc                = 0.0d0 
+      ! [SS-CRP C-2.5] rootrho retired — soilwater_init handles init via state%soilwater (ADR 0036)
+      ! rootrho            = 0.0d0
+      rsc                = 0.0d0
       rsw                = 0.0d0 
 
       scanopytb          = 0.0d0 
