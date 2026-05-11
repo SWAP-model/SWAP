@@ -146,7 +146,7 @@ contains
 
       ! Calculate initial waterstorage in matrix on basis FrArMtrx
       volact = 0.0d0
-      call watstor ()
+      call watstor (state)                                ! [SS-SWC S-1.6] state arg added
       volini = volact
 
       ! Initialisation of intermediate and cumulative values

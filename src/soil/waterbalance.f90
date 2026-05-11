@@ -42,7 +42,8 @@ contains
       use swap_log, only: log_debug, to_str
       implicit none
       ! SS-BND B-2.7: state added to read state%soilwater%gwlinp (gwlinp global retired)
-      type(swap_state_t), intent(in) :: state
+      ! SS-SWC S-1.6: intent(in) -> intent(inout) to allow gwl/nodgwl/pegwl/bpegwl/npegwl/gwlflcpzo/nodgwlflcpzo dual-writes
+      type(swap_state_t), intent(inout) :: state
       ! local
       integer   i, node, nodhlp, nodheq1
       logical   flsat,flunsat
@@ -51,9 +52,12 @@ contains
 
       ! set initial values
       gwl       = 999.0d0
+      state%soilwater%gwl    = 999.0d0                        ! S-1.6 dual-write
       pegwl     = 999.0d0
+      state%soilwater%pegwl  = 999.0d0                        ! S-1.6 dual-write
       flsat     = .false.
       nodgwl    = numnod+1
+      state%soilwater%nodgwl = numnod+1                       ! S-1.6 dual-write
       nodhlp    = numnod
       nodheq1   = numnod
 
@@ -62,14 +66,18 @@ contains
 
       node = numnod
       nodgwlflcpzo = numnod + 1
+      state%soilwater%nodgwlflcpzo = numnod + 1               ! S-1.6 dual-write
       gwlflcpzo    = gwl
+      state%soilwater%gwlflcpzo    = gwl                      ! S-1.6 dual-write
       do while (flsat .and. node.gt.1)
-         node = node - 1 
+         node = node - 1
          if(swbotb.eq.1)then
             if (h(node) .lt. 0.0d0) then
                gwl = z(node+1) + h(node+1) / (h(node+1)-h(node)) * disnod(node+1)
+               state%soilwater%gwl    = gwl                   ! S-1.6 dual-write
                flsat   =.false.
                nodgwl  = node
+               state%soilwater%nodgwl = node                  ! S-1.6 dual-write
             endif
          else
             if (h(node) .lt. 1.0d0 .and. nodheq1.eq.numnod) nodheq1 = node
@@ -78,13 +86,19 @@ contains
                if (.not.flmacropore) then
                   flsat  = .false.
                   nodgwl = node
+                  state%soilwater%nodgwl = node                ! S-1.6 dual-write
                   gwl    = level (1,node,nodheq1)
+                  state%soilwater%gwl    = gwl                 ! S-1.6 dual-write
                elseif (flmacropore) then
                   if (gwl.gt.990.0d0) then
                      nodgwl = node
+                     state%soilwater%nodgwl = node             ! S-1.6 dual-write
                      gwl    = level (2,node,nodheq1)
+                     state%soilwater%gwl    = gwl              ! S-1.6 dual-write
                   endif
                   call watertable (node,nodgwlflcpzo,nodhlp,nodheq1,0.0d0,flsat,gwlflcpzo)
+                  state%soilwater%nodgwlflcpzo = nodgwlflcpzo  ! S-1.6 dual-write (watertable out-arg)
+                  state%soilwater%gwlflcpzo    = gwlflcpzo     ! S-1.6 dual-write (watertable out-arg)
                endif
             endif
          endif
@@ -101,11 +115,15 @@ contains
          else
             gwl = 0.0d0
          end if
+         state%soilwater%gwl    = gwl                         ! S-1.6 dual-write
          nodgwl = 1
+         state%soilwater%nodgwl = 1                           ! S-1.6 dual-write
          if (flmacropore) then
             nodgwlflcpzo = 1
+            state%soilwater%nodgwlflcpzo = 1                  ! S-1.6 dual-write
             gwlflcpzo    = gwl
-         endif         
+            state%soilwater%gwlflcpzo    = gwl                ! S-1.6 dual-write
+         endif
       endif         
  
       ! search for perched groundwater table
@@ -122,6 +140,7 @@ contains
       if (i.ne.0) then
          flsat  = .true.
          bpegwl = i
+         state%soilwater%bpegwl = i                           ! S-1.6 dual-write
          node   = bpegwl
          nodheq1 = bpegwl
 
@@ -134,9 +153,13 @@ contains
                if (.not.flmacropore) then
                   flsat = .false.
                   npegwl = node
+                  state%soilwater%npegwl = node                ! S-1.6 dual-write
                   pegwl  = level (1,node,nodheq1)
+                  state%soilwater%pegwl  = pegwl               ! S-1.6 dual-write
                elseif (flmacropore) then
                   call watertable (node,npegwl,nodhlp,nodheq1,CritUndSatVol,flsat,pegwl)
+                  state%soilwater%npegwl = npegwl              ! S-1.6 dual-write (watertable out-arg)
+                  state%soilwater%pegwl  = pegwl               ! S-1.6 dual-write (watertable out-arg)
                endif
             endif
          end do
@@ -152,11 +175,15 @@ contains
             else
                pegwl = 0.0d0
             end if
+            state%soilwater%pegwl  = pegwl                    ! S-1.6 dual-write
             npegwl = 1
-         endif 
+            state%soilwater%npegwl = 1                        ! S-1.6 dual-write
+         endif
       else
          bpegwl = -1
+         state%soilwater%bpegwl = -1                          ! S-1.6 dual-write
          npegwl = -1
+         state%soilwater%npegwl = -1                          ! S-1.6 dual-write
       endif
 
       ! fatal error if gwl below profile and flux has to be calculated
@@ -344,7 +371,9 @@ contains
       ! calculate fluxes (cm/d) from changes in volume per compartment
       i = numnod+1
       q(i) = state%soilwater%qbot
+      state%soilwater%q(i)        = q(i)                      ! S-1.6 dual-write
       inq(i) = inq(i) + q(i)*dt
+      state%soilwater%intr%inq(i) = inq(i)                    ! S-1.6 dual-write (snapshot after accumulation)
       do i = numnod,1,-1
         ! SS-CRP Phase 2 Task C-2.2: qrot(i) -> state%soilwater%qrot(i)
         q(i) = - (theta(i)-thetm1(i)+qimmob(i))*FrArMtrx(i)*dz(i)/dt +  &
@@ -355,7 +384,9 @@ contains
              q(i) = q(i) - state%drainage%qdra(level,i)
           enddo
         end if
+        state%soilwater%q(i)        = q(i)                    ! S-1.6 dual-write
         inq(i) = inq(i) + q(i)*dt
+        state%soilwater%intr%inq(i) = inq(i)                  ! S-1.6 dual-write (snapshot after accumulation)
       end do
 
       return
@@ -613,6 +644,8 @@ contains
       if (FlMacropore) wbalance = wbalance - cQMpOutDrRap -            &
      &                  (WaSrDm1 + WaSrDm2 - WaSrDm1Ini - WaSrDm2Ini)
 
+      state%soilwater%wbalance = wbalance                      ! S-1.6 dual-write
+
       return
       end
 
@@ -865,18 +898,22 @@ contains
       !>
       !> Differences SWAP/SWAPS: SWAPS has extra parameters
       !> @endnote
-      subroutine watstor ()
-      use variables, only: volm1,volact,numnod,theta,dz,FrArMtrx 
+      subroutine watstor (state)
+      use variables, only: volm1,volact,numnod,theta,dz,FrArMtrx
+      use swap_state_mod, only: swap_state_t
       IMPLICIT NONE
 
+      type(swap_state_t), intent(inout) :: state               ! S-1.6: state added for volm1/volact dual-write
       INTEGER i
 
       ! update soil profile water storage
       volm1 = volact
+      state%soilwater%volm1  = volact                         ! S-1.6 dual-write
       volact = 0.0d0
       do 10 i = 1,numnod
         volact = volact+theta(i)*dz(i)*FrArMtrx(i)
  10   continue
+      state%soilwater%volact = volact                         ! S-1.6 dual-write
 
       return
       end

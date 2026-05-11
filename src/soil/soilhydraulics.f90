@@ -113,6 +113,7 @@ contains
       ! Groundwater level specified
       if(swbotb.eq.1)then
          fllowgwl = .false.
+         state%soilwater%fllowgwl = .false.               ! [SS-SWC S-1.6] dual-write
          if(state%soilwater%gwlinp.ge.z(1)-1.0d-4)then
 
             q0 = (state%atmosphere%nraidt+nird+state%atmosphere%melt)*(1.0d0-ArMpSs) + runon - state%soilwater%reva  ! [SS-ATM] read nraidt,melt from state%atmosphere
@@ -170,6 +171,7 @@ contains
             else
                ! Groundwater below soil profile
                fllowgwl = .true.
+               state%soilwater%fllowgwl = .true.          ! [SS-SWC S-1.6] dual-write
                state%soilwater%hbot = state%soilwater%gwlinp - z(numnod) + 0.5*dz(numnod)
             endif
          end if
@@ -1161,7 +1163,7 @@ contains
          enddo
          volact = 0.0d0
          sw%volact = 0.0_real64                           ! [SS-SWC S-1.3]
-         call watstor ()
+         call watstor (state)                             ! [SS-SWC S-1.6] state arg added
          volini = volact
          sw%volini = volact                               ! [SS-SWC S-1.3]
       endif
@@ -1328,7 +1330,7 @@ contains
       state%soilwater%kmean(numnod+1) = k(numnod)               ! [SS-SWC S-1.4b]
 
       ! Calculate actual water content of profile
-      call watstor ()
+      call watstor (state)                                ! [SS-SWC S-1.6] state arg added
 
       ! Calculate water fluxes between soil compartments
       ! SS-SWST Phase 2 Task 11: state passed so fluxes() reads qdra/qdrtot from state.
