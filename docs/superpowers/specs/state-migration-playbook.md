@@ -224,6 +224,30 @@ These five lessons generalize beyond heat and apply to future subsystem migratio
 
 ---
 
+---
+
+## Lessons from boundary migration (ADR 0035, added 2026-05-10)
+
+Boundary was migration #5 and the first coupling-surface arc of the soil-water decomposition. Eight lessons generalize to future arcs.
+
+1. **Coupling-surface decomposition — decompose large subsystems by coupling surface, not by phase.** When a subsystem owns ~100 globals (soil-water), one arc is too large. Decompose by the surface each arc touches: boundary fields first, then crop-uptake, then atmosphere, then the Richards-interior core. Each arc carves only the fields crossing its surface; the final core arc handles internal state. This minimizes blast radius per commit and produces clean ADR narratives. The anti-pattern is splitting by implementation phase (Phase 0 / Phase 1 / Phase 2) within one giant arc — that keeps blast radius high regardless.
+
+2. **Defer fields with un-plumbed co-writers.** If a field has co-writers outside the home tree that have no `state` argument yet (here: `pond` co-written by `tillage.f90`; `gwl` co-written by `calcgwl()` in `waterbalance.f90`), defer the field rather than expanding the arc to plumb those routines. Each arc stays focused; the co-writer plumbing happens naturally in the arc that owns those routines. Trying to migrate `pond` here would have forced tillage state-plumbing, an init-order guard, and an ASSOCIATE block into a boundary-focused commit sequence.
+
+3. **Pre-existing state-arg windfall — check before scoping.** When previous arcs (here: SS-HEAT Task 9) already plumbed `state` into the home-tree entry points, the current arc reduces to field-carve + reader cutover with no signature surgery. Before scoping discovery, grep all home-tree entry points for `intent(in)` or `intent(inout)` state args. A windfall can cut estimated scope by 30–50%.
+
+4. **Pure-reader files can drop the legacy `use variables, only:` import in Phase 2.** For files that only READ a field and never write it, the global can be removed from the `use variables, only:` clause as soon as reads are migrated to `state%X`. There is no Phase 2.7 dual-write to drop. Mixed reader-writer files (co-write sites) must retain the import until Phase 2.7 cleanup. Identifying pure-reader vs. mixed files during discovery simplifies the Phase 2 task breakdown.
+
+5. **Compile-driven Phase 2.7 is now an expected step, not a surprise.** After dropping dual-writes, the compiler surfaces remaining global references that the grep-based read-only discovery missed. In this arc: 4 hidden readers surfaced (macropore `MACROINTEGRAL`, `waterbalance.f90:calcgwl` fallback branch, vestigial `hbot` in `config_to_variables.f90`, `soilhydraulics.f90` diagnostics block). Expect 4–8 readers per arc; plan for 4–8 compiler-driven fix-up commits. The pattern is: drop dual-write → compile → fix reader → compile again → iterate.
+
+6. **Mini-sim writeback retargeting is a recurring pattern — flag it during discovery.** Output routines that snapshot state, run a parameter-perturbation mini-sim, then restore (drainage's mini-sim was first; boundary's `swapoutput.f90:3745–3820` is the second) need their restore writes retargeted to `state%X` when the field migrates. The pattern is now established; during discovery, grep `swapoutput.f90` for any snapshot+restore block touching the subsystem's owned fields and flag it as a Cat 3 hazard. The fix is always mechanical (retarget the writeback line); the risk is forgetting to check.
+
+7. **Validator error-code distinction — `ERR_VALIDATION_OUT_OF_RANGE` (300) vs `ERR_VALIDATION_ENUM` (301).** When adding pFUnit tests for typed-config validators, distinguish range-check errors from enum-check errors. `swcofqhc` is an integer switch (enum-style), so its out-of-value test expects `ERR_VALIDATION_ENUM` (301), not `ERR_VALIDATION_OUT_OF_RANGE` (300). Caught during B-0.2. General rule: check whether the validator uses `validate_range` or `validate_enum` and match the expected error code in the test.
+
+8. **Init-order trap (recap from heat, confirmed again) — `soilwater_init` before `DoTillage(1)`.** `soilwater_init` was placed at `swap.f90:183`, immediately after `CalcGrid()` and before `DoTillage(1)`, matching the pattern established in the heat arc. This is necessary for forward compatibility: later arcs (crop-uptake) will add per-node arrays to `soilwater_state_t` that must be allocated before tillage runs. The general rule (from heat lesson #1) generalizes: every typed-state init runs early in the `CalcGrid` → `DoTillage(1)` → `SoilWater(1)` sequence; subsequent arcs slot their inits into the same position naturally.
+
+---
+
 ## Reference ADRs
 
 - ADR 0030 — Surface-water state-type migration (pilot)
@@ -231,3 +255,4 @@ These five lessons generalize beyond heat and apply to future subsystem migratio
 - ADR 0032 — Solute state-type migration
 - ADR 0033 — Cumulative reset cohorts
 - ADR 0034 — Heat subsystem state-type migration
+- ADR 0035 — Boundary subsystem state-type migration (first coupling-surface arc)
