@@ -666,10 +666,11 @@
       endif
 
 ! --- water stress
-      if(dabs(ptra).lt.nihil) then
+      ! SS-ATM Phase 2 Task A-2.3: ptra read from state%atmosphere (atmosphere home).
+      if(dabs(state%atmosphere%ptra).lt.nihil) then
         reltr = 1.0d0
       else
-        reltr = max(min(tra/ptra,1.0d0),0.0d0)
+        reltr = max(min(tra/state%atmosphere%ptra,1.0d0),0.0d0)
       endif
 
 ! ----integrals of the crop --------------------------------------------
@@ -712,14 +713,15 @@
         rd    = rdpot
       else
         rrpot = min (rdm-rdpot,rri)
-        if (ptra.lt.nihil) rrpot = 0.0d0
+        ! SS-ATM Phase 2 Task A-2.3: ptra read from state%atmosphere (atmosphere home).
+        if (state%atmosphere%ptra.lt.nihil) rrpot = 0.0d0
         rdpot = rdpot + rrpot
 
         rr = min (rdm-rd,rri)
-        if (ptra.lt.nihil .or.                              &
+        if (state%atmosphere%ptra.lt.nihil .or.             &
      &      (present(state) .and.                           &
      &       state%soilwater%flWrtNonox)) rr = 0.0d0
-        if (swdmi2rd.eq.1 .and. ptra.ge.nihil) rr = rr * tra/ptra
+        if (swdmi2rd.eq.1 .and. state%atmosphere%ptra.ge.nihil) rr = rr * tra/state%atmosphere%ptra
         rd = rd + rr
       endif
 
@@ -1709,10 +1711,11 @@
 ! --- rates of change of the crop variables ----------------------------
  
 ! --- water stress reduction of pgass to gass
-      if(dabs(ptra).lt.nihil) then
+      ! SS-ATM Phase 2 Task A-2.3: ptra read from state%atmosphere (atmosphere home).
+      if(dabs(state%atmosphere%ptra).lt.nihil) then
         reltr = 1.0d0
       else
-        reltr = max(0.0d0,min(1.0d0,tra/ptra))
+        reltr = max(0.0d0,min(1.0d0,tra/state%atmosphere%ptra))
       endif
 
 ! --- nitrogen stress reduction of pgass to gass
@@ -3001,10 +3004,11 @@
 ! ===   daily dry matter production ===
 
 ! ---   water stress reduction of pgass to gass
-        if(dabs(ptra).lt.nihil) then
+        ! SS-ATM Phase 2 Task A-2.3: ptra read from state%atmosphere (atmosphere home).
+        if(dabs(state%atmosphere%ptra).lt.nihil) then
           reltr = 1.0d0
         else
-          reltr = max(0.0d0,min(1.0d0,tra/ptra))
+          reltr = max(0.0d0,min(1.0d0,tra/state%atmosphere%ptra))
         endif
         gass = pgass * reltr
 
