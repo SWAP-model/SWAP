@@ -108,7 +108,7 @@ contains
 ! --- Calculate hydraulic conductivity corresponding with hAtm
       if (hAtm.lt.0.0d0) Then
          TheAtm = watcon(1,dble(hatm))
-         ksurf  = hconduc (1,dble(hatm),TheAtm,state%heat%rfcp(1))
+         ksurf  = hconduc (1,dble(hatm),TheAtm,state%heat%rfcp(1),state%heat%tsoil(1))
          if(FlMacropore) then
             ksurf = FrArMtrx(1) * ksurf
          endif

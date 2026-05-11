@@ -403,18 +403,19 @@ contains
    end function dhconduc
 
    !> Calculate hydraulic conductivity (as a function of THETA)
-   !! @param tsoil_node Optional soil temperature [deg C] at node — when
-   !! supplied by the caller, the WC_K_models_04_11 temperature-dependent
-   !! path reads from state%heat instead of the global tsoil array.
-   !! SS-HEAT Phase 2 Task 6.
+   !! @param tsoil_node Soil temperature [deg C] at node — required by the
+   !! WC_K_models_04_11 temperature-dependent path (iHWCKmodel 4-11).
+   !! All callers must pass state%heat%tsoil(node) or an appropriate
+   !! reference temperature for initialisation contexts.
+   !! SS-SWC Phase 2 S-2.2: sentinel removed, argument made mandatory.
    function hconduc(node, head, theta, rfcp, tsoil_node)
       implicit none
 
       ! Arguments
       integer, intent(in) :: node
       real(real64), intent(in) :: head, theta, rfcp
-      real(real64), optional, intent(in) :: tsoil_node
-      !! SS-HEAT Phase 2 Task 6: soil temperature at node from state%heat (optional)
+      real(real64), intent(in) :: tsoil_node
+      !! SS-SWC Phase 2 S-2.2: soil temperature at node — mandatory (was optional with 0.0 sentinel)
       real(real64) :: hconduc
 
       ! Local variables
@@ -423,17 +424,11 @@ contains
       real(real64) :: h_enpr, n, term2, thetam, relsatthr, ksatthr, ksatexm
       real(real64) :: alfa_2, n_2, m_2, omega_1, s1, s2
       real(real64) :: tsoil_loc
-      !! Local temperature value: from tsoil_node arg (caller must supply when iHWCKmodel 4-11)
       real(real64), parameter :: h_crit = -1.0d-2
 
       hconode_vsmall = 1.0d-10
-      ! [SS-HEAT] Task 9: global tsoil retired. Callers must pass tsoil_node for iHWCKmodel 4-11.
-      ! For all other iHWCKmodel values the temperature path is not reached; tsoil_loc is unused.
-      if (present(tsoil_node)) then
-         tsoil_loc = tsoil_node
-      else
-         tsoil_loc = 0.0_real64   ! [SS-HEAT] Task 9: sentinel — global tsoil retired; iHWCKmodel 4-11 unreachable without tsoil_node
-      end if
+      ! [SS-SWC] S-2.2: tsoil_node is now mandatory; 0.0 sentinel removed.
+      tsoil_loc = tsoil_node
 
       ! Use analytical expression. "hconduc" is calclated as a function of "watcon"
       if (swsophy == 0) then

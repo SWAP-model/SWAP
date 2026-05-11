@@ -865,12 +865,12 @@ module rootextraction_mod
         i = nod1lay(lay)
 
         wcontent = watcon(i,phead1)
-        conduc1 = hconduc (i,phead1,wcontent,10.d0)
+        conduc1 = hconduc (i,phead1,wcontent,10.d0,state%heat%tsoil(i))
 
         do count = start-1,1,-1
           phead2 = -10.d0**(dble(count)/100.d0)
           wcontent = watcon(i,phead2)
-          conduc2 = hconduc (i,phead2,wcontent,10.d0)
+          conduc2 = hconduc (i,phead2,wcontent,10.d0,state%heat%tsoil(i))
           state%soilwater%mfluxtable(lay,count) =                       &
      &         state%soilwater%mfluxtable(lay,count+1) +                &
      &         0.5d0 * (conduc1 + conduc2) * (phead2 - phead1)

@@ -121,7 +121,7 @@ contains
             q1 = - q0 + (pond - pondm1)/dt + state%soilwater%runots / dt
             theta(1) = watcon(1,state%soilwater%gwlinp)
             sw_theta(1) = theta(1)                              ! [SS-SWC S-1.4a]
-            kmean(1) = hconduc(1,state%soilwater%gwlinp,theta(1),state%heat%rfcp(1))
+            kmean(1) = hconduc(1,state%soilwater%gwlinp,theta(1),state%heat%rfcp(1),state%heat%tsoil(1))
             sw_kmean(1) = kmean(1)                              ! [SS-SWC S-1.4b]
             ! In case of static macropores FrArMtrx < 1
             if(FlMacropore) kmean(1) = FrArMtrx(1) * kmean(1)
@@ -142,7 +142,7 @@ contains
 
             if(SwKimpl.eq.1)then
                do i=1,numnod
-                  k(i) = hconduc(i,h(i),theta(i),state%heat%rfcp(i))
+                  k(i) = hconduc(i,h(i),theta(i),state%heat%rfcp(i),state%heat%tsoil(i))
                   sw_k(i) = k(i)                                  ! [SS-SWC S-1.4b]
                   if(FlMacropore)  k(i) = FrArMtrx(i) * k(i)
                   if(FlMacropore)  sw_k(i) = k(i)                 ! [SS-SWC S-1.4b]
@@ -187,7 +187,7 @@ contains
          flcaprise = .false.
       endif
       do i = 1,numnod
-         k(i) = hconduc(i,h(i),theta(i),state%heat%rfcp(i))
+         k(i) = hconduc(i,h(i),theta(i),state%heat%rfcp(i),state%heat%tsoil(i))
 
          if (swcaprise) then
             ! Prevent capillary rise into the root zone !! special for experts only
@@ -259,7 +259,7 @@ contains
       if(swbotb.eq.1 .and. (.not.fllowgwl))then
          theta(NN)= watcon(NN,h(NN))
          sw_theta(NN) = theta(NN)                               ! [SS-SWC S-1.4a]
-         k(NN)    = hconduc(NN,h(NN),theta(NN),state%heat%rfcp(NN))
+         k(NN)    = hconduc(NN,h(NN),theta(NN),state%heat%rfcp(NN),state%heat%tsoil(NN))
          sw_k(NN) = k(NN)                                       ! [SS-SWC S-1.4b]
          ! In case of static macropores FrArMtrx < 1
          if(FlMacropore) k(NN) = FrArMtrx(NN) * k(NN)
@@ -286,7 +286,7 @@ contains
          else if(swbotb.eq.5 .or. (swbotb.eq.1 .and. fllowgwl))then ! pressure head at lower boundary specified
             F(NN) = F(NN) + kmean(NN+1) * hgrad(NN+1)
          else if(swbotb.eq.7 .or. swbotb .eq. -2)then ! free drainage option
-            kmean(numnod+1) = hconduc(numnod,h(numnod),theta(numnod),state%heat%rfcp(numnod))
+            kmean(numnod+1) = hconduc(numnod,h(numnod),theta(numnod),state%heat%rfcp(numnod),state%heat%tsoil(numnod))
             sw_kmean(numnod+1) = kmean(numnod+1)                ! [SS-SWC S-1.4b]
             if(FlMacropore) then
                 kmean(numnod+1) = FrArMtrx(numnod) * kmean(numnod+1)
@@ -483,7 +483,7 @@ contains
             if(SwKimpl.eq.1)then
                call Rootextraction(state)
                do i = 1,NN
-                  k(i) = hconduc(i,h(i),theta(i),state%heat%rfcp(i))
+                  k(i) = hconduc(i,h(i),theta(i),state%heat%rfcp(i),state%heat%tsoil(i))
                   sw_k(i) = k(i)                                  ! [SS-SWC S-1.4b]
                   if(FlMacropore)  k(i) = FrArMtrx(i) * k(i)
                   if(FlMacropore)  sw_k(i) = k(i)                 ! [SS-SWC S-1.4b]
@@ -559,7 +559,7 @@ contains
             if(swbotb.eq.1 .and. (.not.fllowgwl))then
                theta(NN) = watcon(NN,h(NN))
                sw_theta(NN) = theta(NN)                         ! [SS-SWC S-1.4a]
-               k(NN)     = hconduc(NN,h(NN),theta(NN),state%heat%rfcp(NN))
+               k(NN)     = hconduc(NN,h(NN),theta(NN),state%heat%rfcp(NN),state%heat%tsoil(NN))
                sw_k(NN) = k(NN)                                 ! [SS-SWC S-1.4b]
                ! In case of static macropores FrArMtrx < 1
                if(FlMacropore)  k(NN) = FrArMtrx(NN) * k(NN)
@@ -590,7 +590,7 @@ contains
                   ! Pressure head at lower boundary specified
                   F(NN) = F(NN) + kmean(NN+1) * hgrad(NN+1)
                else if(swbotb.eq.7.or. swbotb .eq. -2)then ! free drainage option
-                  kmean(numnod+1) = hconduc(numnod,h(numnod),theta(numnod),state%heat%rfcp(numnod))
+                  kmean(numnod+1) = hconduc(numnod,h(numnod),theta(numnod),state%heat%rfcp(numnod),state%heat%tsoil(numnod))
                   sw_kmean(numnod+1) = kmean(numnod+1)          ! [SS-SWC S-1.4b]
                   if(FlMacropore) then
                      kmean(numnod+1) = FrArMtrx(numnod)*kmean(numnod+1)
@@ -1144,7 +1144,7 @@ contains
 
         FrArMtrx(node) = 1.d0
         sw%FrArMtrx(node) = 1.0_real64                   ! [SS-SWC S-1.3]
-        k(node) = hconduc (node,h(node),theta(node),state%heat%rfcp(node))
+        k(node) = hconduc (node,h(node),theta(node),state%heat%rfcp(node),state%heat%tsoil(node))
         sw%k(node) = k(node)                              ! [SS-SWC S-1.3]
         if(FlMacropore)  k(node) = FrArMtrx(node) * k(node)
         if(FlMacropore)  sw%k(node) = k(node)            ! [SS-SWC S-1.3]
@@ -1279,7 +1279,7 @@ contains
 
          ! Update hydraulic conductivities to time level t+1
          do i = 1,numnod
-         k(i) = hconduc(i,h(i),theta(i),state%heat%rfcp(i))
+         k(i) = hconduc(i,h(i),theta(i),state%heat%rfcp(i),state%heat%tsoil(i))
          state%soilwater%k(i) = k(i)                            ! [SS-SWC S-1.4b]
          if(FlMacropore)  k(i) = FrArMtrx(i) * k(i)
          if(FlMacropore)  state%soilwater%k(i) = k(i)           ! [SS-SWC S-1.4b]

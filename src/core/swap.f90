@@ -203,6 +203,11 @@ if (iTask == 1) then
    if (flTillage) call DoTillage(1, state)
    if (flSSDI)    call SSDI_irrigation(1)
 
+!  Allocate and initialise heat state arrays before SoilWater(1) so that
+!  hconduc can read state%heat%tsoil(node) during hydraulic-conductivity init.
+!  SS-SWC S-2.2: heat_init moved earlier to satisfy mandatory tsoil_node arg.
+   call heat_init(state)                  ! SS-HEAT Phase 1 Task 3: allocate state%heat per-node arrays
+
 !  initialize SoilWater rate/state variables
    call SoilWater(1, state)
    ! SS-ATM A-2.6: state added — CNmethod signature updated for retired nraidt/melt
@@ -214,7 +219,6 @@ if (iTask == 1) then
 !  ADR 0031 Phase 2 Task 5: drainl/wetper/ztopdislay/qdrd globals deleted.
    call drainage_init(state, config)
    if (flSolute) call solute_init(state)   ! SS-SLST Phase 2 Task 7: seed state%solute from config-populated globals
-   call heat_init(state)                  ! SS-HEAT Phase 1 Task 3: allocate state%heat per-node arrays
 
 !  initialize SurfaceWater management variables
    if (flSurfaceWater) call SurfaceWater(1, state, request_smaller_dt)

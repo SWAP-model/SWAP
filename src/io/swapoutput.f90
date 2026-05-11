@@ -2100,7 +2100,7 @@
          do hh = 2, numhead
             thetax = watcon(node,hx(hh))
             dimocax = moiscap(node,hx(hh))
-            kx = hconduc (node,hx(hh),thetax,rfcpx)
+            kx = hconduc (node,hx(hh),thetax,rfcpx,20.0d0)  ! SS-SWC S-2.2: no state in outsoilphys; 20°C reference for diagnostic output
             !dkx = dhconduc (node,hx(hh),thetax,dimocax,rfcpx)
 !           in case of static macropores FrArMtrx < 1
             if(FlMacropore)  kx = FrArMtrx1 * kx

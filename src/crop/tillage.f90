@@ -372,7 +372,7 @@ module tillage_mod
          write (444,'(I5,8(A1,F12.6))') i, ',', hold(i), ',', wcold(i), ',', h(i), ',', theta(i), ',', sumDWC, ',', sumAvail1, ',', sumAvail2, ',', theta(i)/wcs
       end do
    end if
-write(124,'(A,1P,12E12.5)') Date, Bdens(1), ParamVG(2,layer(1)), theta(1), h(1), hconduc(1,h(1),theta(1),1.0d0), ParamVG(3,layer(1)), Bdens(2), ParamVG(2,layer(2)),theta(2), h(2), hconduc(2,h(2),theta(2),1.0d0), ParamVG(3,layer(2))
+write(124,'(A,1P,12E12.5)') Date, Bdens(1), ParamVG(2,layer(1)), theta(1), h(1), hconduc(1,h(1),theta(1),1.0d0,state%heat%tsoil(1)), ParamVG(3,layer(1)), Bdens(2), ParamVG(2,layer(2)),theta(2), h(2), hconduc(2,h(2),theta(2),1.0d0,state%heat%tsoil(2)), ParamVG(3,layer(2))
    
    end subroutine Adapt_WC_H
 

@@ -1144,7 +1144,7 @@ contains
          if (Thet(it).gt.ThetaS(Node) .or. it.eq.Nsteps) Thet(it)=      &
      &                  ThetaS(Node) - 0.5d0*ThetStep
          Head = prhead (Node,dum,Thet(it),cofgen,h)
-         K_h = hconduc (Node,Head,Thet(it),Dum)
+         K_h = hconduc (Node,Head,Thet(it),Dum,20.0d0)  ! SS-SWC S-2.2: no state in PARLANGE; 20°C reference for sorptivity init
          Difmoiscap = moiscap (Node,Head)
          Diffus_h(it)= K_h / difmoiscap
          Thet(it+1)  = Thet(it) + ThetStep
