@@ -3,8 +3,11 @@
 !
 ! See docs/superpowers/specs/2026-05-09-state-migration-surfacewater-design.md.
 !
-! Updated for CRR Phase A Task A3: 11 cumulative/intermediate fields moved
-! into nested cohort sub-records (state%surfacewater%intermediate / %cumulative).
+! Updated for the 2026-05-12 flatten-reset-cohorts arc (ADR 0042): the
+! 11 cumulative/intermediate fields previously held in nested cohort
+! sub-records are now flat fields on surfacewater_state_t, with three
+! named reset procedures (reset_intermediate / reset_cumulative_drainage
+! / reset_cumulative_reservoir) bound on the parent type.
 
 @test
 subroutine test_surfacewater_state_default_scalars()
