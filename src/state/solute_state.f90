@@ -1,53 +1,63 @@
 !> @file solute_state.f90
-!! Typed state record for the solute subsystem. Holds the
-!! solute-owned variables that legacy SWAP kept in the
-!! `variables.f90` globals module.
+!! Typed state record for the solute subsystem.
 !!
 !! Excluded:
-!!   - AgeTracer-specific globals (12 fields: Ageirr, Agedrain, Agepre,
-!!     Agepond, Agepondm1, icAgetopupw, icAgetopdwn, icAgeBot, icAgeDra,
-!!     icAgeRot, icAgeSur, AgeGwl1m) — kept in variables.f90 with
-!!     provenance comments. AgeTracer is currently inert (flAgeTracer is
-!!     always .false.); to reactivate, define agetracer_state_t and
-!!     migrate. See discovery doc Hazard #4.
-!!   - `ArMpSs` — shared working buffer co-written by solute,
-!!     soilhydraulics, and boundtop (all three reset and re-derive it
-!!     each timestep). It is not true subsystem state. Stays as a global
-!!     until macropore migration sorts ownership. See Hazard #3.
+!!   - AgeTracer-specific globals (12 fields) — kept in variables.f90.
+!!   - `ArMpSs` — shared working buffer; stays as a global until macropore
+!!     migration sorts ownership.
 !!
 !! `sqrap` and `samcra` are solute balance output fields zeroed in
-!! initialize.f90. They are not written by solute.f90 in the current
-!! codebase (rapid drainage and crack entrainment paths are inactive), but
-!! are included here as they are definitionally part of the solute balance.
+!! initialize.f90; included here as part of the solute balance.
 !!
-!! See ADR 0032-to-be (state-migration solute subsystem) and the
-!! 2026-05-10 design spec.
+!! Reset cadence is expressed by named procedures on the parent type:
+!!   - reset_intermediate() — flzerointr gate (6 fields)
+!!   - reset_cumulative()   — flzerocumu gate (9 fields)
+!! The `samini = sampro` rebase is physics, not cohort policy; it stays
+!! inline at the call site in solute.f90.
+!!
+!! Originally introduced as nested cohort sub-records in ADR 0033 (Phase B).
+!! Flattened in the 2026-05-12 reset-cohort-flattening arc.
 
 module solute_state_mod
    use, intrinsic :: iso_fortran_env, only: real64
    implicit none
    private
    public :: solute_state_t
-   public :: solute_intermediate_t
-   public :: solute_cumulative_t
 
-   !> Solute intermediate accumulators — reset when flzerointr fires.
-   type :: solute_intermediate_t
+   type :: solute_state_t
+
+      ! === per-node arrays (macp-sized; allocated by caller from config) ===
+      real(real64), allocatable :: cml(:)    !! soil solute concentration (M/L3 water) in mobile region
+      real(real64), allocatable :: cmsy(:)   !! dissolved + adsorbed solute concentration (M/L3 soil volume)
+
+      ! === scalar state updated during solute time-stepping (no flag-gated reset) ===
+      real(real64) :: cpond   = 0.0_real64
+      real(real64) :: cdrain  = 0.0_real64
+      real(real64) :: cseep   = 0.0_real64
+      real(real64) :: dtsolu  = 0.0_real64
+
+      ! === instantaneous fluxes (per-step; zeroed unconditionally inside solute(2)) ===
+      real(real64) :: isqbot  = 0.0_real64
+      real(real64) :: isqtop  = 0.0_real64
+
+      ! === running totals (not reset by flzerointr/flzerocumu) ===
+      real(real64) :: sampro  = 0.0_real64
+      real(real64) :: samcra  = 0.0_real64
+      real(real64) :: solbal  = 0.0_real64
+      real(real64) :: sqrap   = 0.0_real64
+
+      ! === intermediate (reset_intermediate / gate: flzerointr) ===
       real(real64) :: imsqprec  = 0.0_real64
       real(real64) :: imsqirrig = 0.0_real64
       real(real64) :: imsqbot   = 0.0_real64
       real(real64) :: imsqdra   = 0.0_real64
       real(real64) :: imdectot  = 0.0_real64
       real(real64) :: imrottot  = 0.0_real64
-   contains
-      procedure :: reset => solute_intermediate_reset
-   end type solute_intermediate_t
 
-   !> Solute cumulative balance fields — reset when flzerocumu fires.
-   !! samini is in the cumulative cohort and zeroed by reset();
-   !! the samini = sampro mass-balance rebase is physics not cohort
-   !! policy and lives inline at the call site (see solute.f90).
-   type :: solute_cumulative_t
+      ! === cumulative (reset_cumulative / gate: flzerocumu) ===
+      !! samini is in the cumulative cohort and zeroed by reset_cumulative();
+      !! the samini = sampro mass-balance rebase is physics not cohort
+      !! policy and lives inline at the call site (see solute.f90).
       real(real64) :: sqprec  = 0.0_real64
       real(real64) :: sqirrig = 0.0_real64
       real(real64) :: sqbot   = 0.0_real64
@@ -57,52 +67,28 @@ module solute_state_mod
       real(real64) :: rottot  = 0.0_real64
       real(real64) :: csurf   = 0.0_real64
       real(real64) :: samini  = 0.0_real64
+
    contains
-      procedure :: reset => solute_cumulative_reset
-   end type solute_cumulative_t
-
-   type :: solute_state_t
-
-      ! Per-node arrays (macp-sized) — allocated by caller from config dimensions
-      real(real64), allocatable :: cml(:)    !! soil solute concentration (M/L3 water) in mobile region
-      real(real64), allocatable :: cmsy(:)   !! dissolved + adsorbed solute concentration (M/L3 soil volume)
-
-      ! Scalar state variables updated during solute time-stepping
-      real(real64) :: cpond   = 0.0_real64  !! mean solute concentration (M/L3) in ponding layer
-      real(real64) :: cdrain  = 0.0_real64  !! mean solute conc in aquifer or drainage system (M/L3 water)
-      real(real64) :: cseep   = 0.0_real64  !! mean solute conc in upward seepage water at bottom (M/L3 water)
-      real(real64) :: dtsolu  = 0.0_real64  !! solute sub-timestep (T)
-
-      ! Instantaneous fluxes (per-step, reset each outer timestep)
-      real(real64) :: isqbot  = 0.0_real64  !! instantaneous solute flux at profile bottom (M/L2/T)
-      real(real64) :: isqtop  = 0.0_real64  !! instantaneous solute flux through soil surface (M/L2/T)
-
-      ! Running totals (not cohort-owned: not reset by flzerointr/flzerocumu)
-      real(real64) :: sampro  = 0.0_real64  !! total solutes (M/L2) in soil column (running sum)
-      real(real64) :: samcra  = 0.0_real64  !! total solutes (M/L2) entrapped in cracks
-      real(real64) :: solbal  = 0.0_real64  !! cumulative solute balance error (M/L2)
-      real(real64) :: sqrap   = 0.0_real64  !! cumulative solutes in rapid drainage (M/L2)
-
-      ! Cohort sub-records — reset by flzerointr / flzerocumu respectively
-      type(solute_intermediate_t) :: intermediate
-      type(solute_cumulative_t)   :: cumulative
-
+      procedure :: reset_intermediate => solute_reset_intermediate
+      procedure :: reset_cumulative   => solute_reset_cumulative
    end type solute_state_t
 
 contains
 
-   subroutine solute_intermediate_reset(self)
-      class(solute_intermediate_t), intent(inout) :: self
+   !> Zero the 6 intermediate fields. Called under flzerointr.
+   subroutine solute_reset_intermediate(self)
+      class(solute_state_t), intent(inout) :: self
       self%imsqprec  = 0.0_real64
       self%imsqirrig = 0.0_real64
       self%imsqbot   = 0.0_real64
       self%imsqdra   = 0.0_real64
       self%imdectot  = 0.0_real64
       self%imrottot  = 0.0_real64
-   end subroutine solute_intermediate_reset
+   end subroutine solute_reset_intermediate
 
-   subroutine solute_cumulative_reset(self)
-      class(solute_cumulative_t), intent(inout) :: self
+   !> Zero the 9 cumulative fields. Called under flzerocumu.
+   subroutine solute_reset_cumulative(self)
+      class(solute_state_t), intent(inout) :: self
       self%sqprec  = 0.0_real64
       self%sqirrig = 0.0_real64
       self%sqbot   = 0.0_real64
@@ -112,6 +98,6 @@ contains
       self%rottot  = 0.0_real64
       self%csurf   = 0.0_real64
       self%samini  = 0.0_real64
-   end subroutine solute_cumulative_reset
+   end subroutine solute_reset_cumulative
 
 end module solute_state_mod

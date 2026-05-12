@@ -1,7 +1,6 @@
-! Tests for solute_state_t — typed state record for the solute
-! subsystem. Phase 1 of the solute state-migration arc.
-!
-! See docs/superpowers/specs/2026-05-10-state-migration-solute-design.md.
+! Tests for solute_state_t — typed state record for the solute subsystem.
+! Cohort sub-records flattened 2026-05-12; reset procedures now bound on
+! solute_state_t directly (reset_intermediate / reset_cumulative).
 
 @test
 subroutine test_solute_state_default_scalars()
@@ -10,24 +9,24 @@ subroutine test_solute_state_default_scalars()
    use solute_state_mod, only: solute_state_t
    type(solute_state_t) :: sl
 
-   ! cumulative cohort fields
-   @assertEqual(0.0_real64, sl%cumulative%samini,   1.0e-12_real64)
-   @assertEqual(0.0_real64, sl%cumulative%dectot,   1.0e-12_real64)
-   @assertEqual(0.0_real64, sl%cumulative%rottot,   1.0e-12_real64)
-   @assertEqual(0.0_real64, sl%cumulative%sqprec,   1.0e-12_real64)
-   @assertEqual(0.0_real64, sl%cumulative%sqirrig,  1.0e-12_real64)
-   @assertEqual(0.0_real64, sl%cumulative%sqdra,    1.0e-12_real64)
-   @assertEqual(0.0_real64, sl%cumulative%sqbot,    1.0e-12_real64)
-   @assertEqual(0.0_real64, sl%cumulative%sqsur,    1.0e-12_real64)
-   @assertEqual(0.0_real64, sl%cumulative%csurf,    1.0e-12_real64)
-   ! intermediate cohort fields
-   @assertEqual(0.0_real64, sl%intermediate%imsqprec,  1.0e-12_real64)
-   @assertEqual(0.0_real64, sl%intermediate%imsqirrig, 1.0e-12_real64)
-   @assertEqual(0.0_real64, sl%intermediate%imsqbot,   1.0e-12_real64)
-   @assertEqual(0.0_real64, sl%intermediate%imsqdra,   1.0e-12_real64)
-   @assertEqual(0.0_real64, sl%intermediate%imdectot,  1.0e-12_real64)
-   @assertEqual(0.0_real64, sl%intermediate%imrottot,  1.0e-12_real64)
-   ! flat scalar fields remaining in solute_state_t
+   ! cumulative fields
+   @assertEqual(0.0_real64, sl%samini,   1.0e-12_real64)
+   @assertEqual(0.0_real64, sl%dectot,   1.0e-12_real64)
+   @assertEqual(0.0_real64, sl%rottot,   1.0e-12_real64)
+   @assertEqual(0.0_real64, sl%sqprec,   1.0e-12_real64)
+   @assertEqual(0.0_real64, sl%sqirrig,  1.0e-12_real64)
+   @assertEqual(0.0_real64, sl%sqdra,    1.0e-12_real64)
+   @assertEqual(0.0_real64, sl%sqbot,    1.0e-12_real64)
+   @assertEqual(0.0_real64, sl%sqsur,    1.0e-12_real64)
+   @assertEqual(0.0_real64, sl%csurf,    1.0e-12_real64)
+   ! intermediate fields
+   @assertEqual(0.0_real64, sl%imsqprec,  1.0e-12_real64)
+   @assertEqual(0.0_real64, sl%imsqirrig, 1.0e-12_real64)
+   @assertEqual(0.0_real64, sl%imsqbot,   1.0e-12_real64)
+   @assertEqual(0.0_real64, sl%imsqdra,   1.0e-12_real64)
+   @assertEqual(0.0_real64, sl%imdectot,  1.0e-12_real64)
+   @assertEqual(0.0_real64, sl%imrottot,  1.0e-12_real64)
+   ! other scalar fields
    @assertEqual(0.0_real64, sl%sampro,   1.0e-12_real64)
    @assertEqual(0.0_real64, sl%samcra,   1.0e-12_real64)
    @assertEqual(0.0_real64, sl%solbal,   1.0e-12_real64)
@@ -50,8 +49,6 @@ end subroutine test_solute_state_arrays_unallocated
 
 @test
 subroutine test_solute_state_array_allocation()
-   ! Caller (solute_init / main loop) allocates per-node arrays.
-   ! Verify the allocation pattern works.
    use funit
    use iso_fortran_env, only: real64
    use solute_state_mod, only: solute_state_t
@@ -69,15 +66,14 @@ end subroutine test_solute_state_array_allocation
 
 @test
 subroutine test_solute_state_independent_instances()
-   ! Two instances must be independent (no shared module storage).
    use funit
    use iso_fortran_env, only: real64
    use solute_state_mod, only: solute_state_t
    type(solute_state_t) :: sl_a, sl_b
 
-   sl_a%cumulative%samini = 1.5_real64
-   sl_b%cumulative%samini = -2.5_real64
+   sl_a%samini = 1.5_real64
+   sl_b%samini = -2.5_real64
 
-   @assertEqual(1.5_real64,  sl_a%cumulative%samini, 1.0e-12_real64)
-   @assertEqual(-2.5_real64, sl_b%cumulative%samini, 1.0e-12_real64)
+   @assertEqual(1.5_real64,  sl_a%samini, 1.0e-12_real64)
+   @assertEqual(-2.5_real64, sl_b%samini, 1.0e-12_real64)
 end subroutine test_solute_state_independent_instances

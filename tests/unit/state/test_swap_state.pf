@@ -49,7 +49,7 @@ subroutine test_swap_state_has_solute()
    use swap_state_mod, only: swap_state_t
    type(swap_state_t) :: state
 
-   @assertEqual(0.0_real64, state%solute%cumulative%samini, 1.0e-12_real64)
+   @assertEqual(0.0_real64, state%solute%samini, 1.0e-12_real64)
    @assertEqual(0.0_real64, state%solute%solbal, 1.0e-12_real64)
    @assertFalse(allocated(state%solute%cml))
    @assertFalse(allocated(state%solute%cmsy))

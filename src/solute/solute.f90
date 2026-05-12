@@ -50,7 +50,7 @@ contains
       associate( &
          cml    => state%solute%cml,                      &
          cmsy   => state%solute%cmsy,                     &
-         samini => state%solute%cumulative%samini,         &
+         samini => state%solute%samini,         &
          sampro => state%solute%sampro,                    &
          ! SS-SWC Phase 2 S-2.8: theta/thetsl read from state%soilwater
          sw_theta  => state%soilwater%theta,               &
@@ -94,29 +94,29 @@ contains
          tc_dt    => state%timecontrol%dt,                    &  ! TC-12
          cml      => state%solute%cml,                        &
          cmsy     => state%solute%cmsy,                       &
-         csurf    => state%solute%cumulative%csurf,           &
+         csurf    => state%solute%csurf,           &
          cpond    => state%solute%cpond,                      &
          cdrain   => state%solute%cdrain,                     &
          cseep    => state%solute%cseep,                      &
          dtsolu   => state%solute%dtsolu,                     &
          isqbot   => state%solute%isqbot,                     &
          isqtop   => state%solute%isqtop,                     &
-         samini   => state%solute%cumulative%samini,          &
+         samini   => state%solute%samini,          &
          sampro   => state%solute%sampro,                     &
          solbal   => state%solute%solbal,                     &
-         dectot   => state%solute%cumulative%dectot,          &
-         imdectot => state%solute%intermediate%imdectot,      &
-         rottot   => state%solute%cumulative%rottot,          &
-         imrottot => state%solute%intermediate%imrottot,      &
-         sqprec   => state%solute%cumulative%sqprec,          &
-         imsqprec => state%solute%intermediate%imsqprec,      &
-         sqirrig  => state%solute%cumulative%sqirrig,         &
-         imsqirrig=> state%solute%intermediate%imsqirrig,     &
-         sqbot    => state%solute%cumulative%sqbot,           &
-         imsqbot  => state%solute%intermediate%imsqbot,       &
-         sqdra    => state%solute%cumulative%sqdra,           &
-         imsqdra  => state%solute%intermediate%imsqdra,       &
-         sqsur    => state%solute%cumulative%sqsur,           &
+         dectot   => state%solute%dectot,          &
+         imdectot => state%solute%imdectot,      &
+         rottot   => state%solute%rottot,          &
+         imrottot => state%solute%imrottot,      &
+         sqprec   => state%solute%sqprec,          &
+         imsqprec => state%solute%imsqprec,      &
+         sqirrig  => state%solute%sqirrig,         &
+         imsqirrig=> state%solute%imsqirrig,     &
+         sqbot    => state%solute%sqbot,           &
+         imsqbot  => state%solute%imsqbot,       &
+         sqdra    => state%solute%sqdra,           &
+         imsqdra  => state%solute%imsqdra,       &
+         sqsur    => state%solute%sqsur,           &
          ! SS-SWC Phase 2 S-2.8: theta/thetsl/q read from state%soilwater
          sw_theta  => state%soilwater%theta,                  &
          sw_thetsl => state%soilwater%thetsl,                 &
@@ -125,9 +125,9 @@ contains
 
 ! --- reset cumulative solute fluxes
       ! SS-CRR Phase B Task B4: cohort-owned reset; see solute_state_mod.
-      if (flzerointr) call state%solute%intermediate%reset()
+      if (flzerointr) call state%solute%reset_intermediate()
       if (flzerocumu) then
-         call state%solute%cumulative%reset()
+         call state%solute%reset_cumulative()
          ! Rebase mass-balance baseline. samini is in the cumulative cohort
          ! and was zeroed by reset(); physics requires anchoring it to
          ! current profile mass (sampro) for the next balance period. See
