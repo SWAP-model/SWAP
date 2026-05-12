@@ -125,6 +125,7 @@ if get_option('enable_pfunit')
         '../../src/io/toml/write_swap_config.f90',
         '../../src/io/toml/config_to_variables.f90',
         'io/toml/chdir_helper.f90',
+        # swap_mod.f90 (added Task 3) needs the full compute-module chain compiled in the test binary
         '../../src/soil/WC_K_models_04_11.f90',
         '../../src/utils/soilhydraulicsutils.f90',
         '../../src/soil/sptabulated.f90',

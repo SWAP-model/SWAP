@@ -25,32 +25,24 @@ contains
       use soilwater_state_mod, only: soilwater_init
       use atmosphere_state_mod, only: atmosphere_init
       use tillage_state_mod, only: tillage_init
-      use drainage_mod, only: drainage, drainage_init
-      use surfacewater_mod, only: SurfaceWater, surfacewater_year_reset
+      use drainage_mod, only: drainage_init
+      use surfacewater_mod, only: SurfaceWater
       use tillage_mod,   only : DoTillage
       use swap_log, only: log_info
-      use boundbottom_mod, only: BoundBottom
       use runoff_mod, only: CNmethod
-      use meteo_mod, only: ProcessMeteoDay
-      use meteo_process_mod, only: ReadMeteoDay
       use snow_mod, only: snow
-      use meteodt_mod, only: MeteoDT
-      use rootextraction_mod, only: RootExtraction
-      use frozencond_mod, only: FrozenCond, FrozenBounds
       use temperature_mod, only: Temperature, heat_init
       use solute_mod, only: solute, solute_init
       use agetracer_mod, only: AgeTracer
-      use soilgrid_mod, only: CalcGrid, ConvertDiscrVert
-      use soilhydraulics_mod, only: soilwater, SoilWaterStateVar
+      use soilgrid_mod, only: CalcGrid
+      use soilhydraulics_mod, only: soilwater
       use WC_K_models_04_11, only: bind_cofgen_target
       use soilhydraulics_utils, only: bind_state_targets, bind_tc_target
       use config_to_variables_mod, only: h_init_buf, pondini_init_buf, pond_init_buf, &
-                                         tc_iyear_init_buf, tc_imonth_init_buf, tc_dt_init_buf
-      use irrigation_mod, only: irrigation, SSDI_irrigation
-      use management_soil_mod, only: SoilManagement
-      use error_mod, only: fatalerr_collected
+                                         tc_iyear_init_buf, tc_imonth_init_buf, tc_dt_init_buf, &
+                                         config_to_variables
       use load_swap_config_mod, only: load_swap_config
-      use config_to_variables_mod, only: config_to_variables
+      use irrigation_mod, only: SSDI_irrigation
       character(len=*),            intent(in)  :: config_file
       type(swap_state_t),          intent(out) :: state
       type(swap_config_t), target, intent(out) :: config  ! target: crop_config_global => config%crop (set inside body, Task 3)
