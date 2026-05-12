@@ -98,7 +98,8 @@ contains
     !! @warning CNref values > 170 will cause numerical issues in CNdry calculation
     ! [SS-ATM A-2.6] nraidt/melt retired from variables; state added to read from state%atmosphere
     ! [SS-SWC S-2.12B] theta retired — read via state%soilwater%theta
-    use variables, only: CNref, CNdry, CNwet, ThetaRef, Runoff_CN, zbotcp, dz, numnod, t1900, wc_cor, iCNtab, CNtimTAB, CNrefTAB, wc10, &
+    ! SS-TC TC-9: t1900 removed from only-list; read via state%timecontrol.
+    use variables, only: CNref, CNdry, CNwet, ThetaRef, Runoff_CN, zbotcp, dz, numnod, wc_cor, iCNtab, CNtimTAB, CNrefTAB, wc10, &
                         nod10_cn, icn_atm, z10_cn
     use soilhydraulics_utils, only: watcon
     implicit none
@@ -110,6 +111,9 @@ contains
     real(8)              :: wc1, wc2, CN, S, Ia
     ! Note: Nod10, iCN, Z10 are now module-level in variables.f90 as nod10_cn, icn_atm, z10_cn
 
+    ! SS-TC TC-9: t1900 read via state%timecontrol (tc_* alias).
+    associate( tc_t1900 => state%timecontrol%t1900 )  ! TC-9
+
     select case (Itask)
     ! initialization; calculate and store some constants
     case (1)
@@ -119,7 +123,7 @@ contains
       ! set initial position in CNtimTAB
       do i = 2, iCNtab
           if (CNtimTAB(i) < CNtimTAB(i-1)) call fatalerr_collected ('CNmethod', 'CNtimTAB not in ascending order')
-          if (t1900 >= CNtimTAB(i-1) .and. t1900 < CNtimTAB(i)) icn_atm = i-1
+          if (tc_t1900 >= CNtimTAB(i-1) .and. tc_t1900 < CNtimTAB(i)) icn_atm = i-1
       end do
       ! error if start time t1900 not in CNtimTAB
       if (icn_atm == 0) call fatalerr_collected ('CNmethod', 'Start time of simulation not present in CNtimTAB')
@@ -154,7 +158,7 @@ contains
       ! see if t1900 has moved ahead in CNtimTAB; icn_atm can never exceed last entry
       !  if (icn_atm < iCNtab .and. t1900 >= CNtimTAB(icn_atm+1)) icn_atm = icn_atm + 1
       ! Update position in CN time series if time has advanced (do while is more efficient if time steps are large and CN time series is long)
-      do while (icn_atm < iCNtab .and. t1900 >= CNtimTAB(icn_atm + 1))
+      do while (icn_atm < iCNtab .and. tc_t1900 >= CNtimTAB(icn_atm + 1))
         icn_atm = icn_atm + 1
       end do
       CNref = CNrefTAB(icn_atm)
@@ -194,6 +198,8 @@ contains
     case default
       call fatalerr_collected ('CNmethod', 'Illegal Itask option')
     end select
+
+    end associate  ! tc_t1900 => state%timecontrol [TC-9]
 
   end subroutine CNmethod
 
@@ -265,7 +271,8 @@ contains
   !! @endnote
   subroutine ReadMeteoDay(state)
       ! use variables
-      use variables, only: out_tmn, out_tmx, out_hum, out_win, out_etr, out_wet, swrain, wet, rh, tav, tavd, out_rad, yearmeteo, arai, atmx, ahum, aetr, date, arad, t1900, teprrain, teprsnow, &
+      ! SS-TC TC-9: date,t1900 removed from only-list; reads/writes via state%timecontrol.
+      use variables, only: out_tmn, out_tmx, out_hum, out_win, out_etr, out_wet, swrain, wet, rh, tav, tavd, out_rad, yearmeteo, arai, atmx, ahum, aetr, arad, teprrain, teprsnow, &
                         detrecord, nmetdetail, dettime, detrad, dethum, dettav, atav, swmetdetail, daymeteo, daynrfirst, daynrlast, rad, tmn, tmx, pathatm, awin, atmn, metfil, detrain, swsnow, irectotal, detwind
       use MeteoVars
       use precipitation_mod, only: PartitionPrecipitation
@@ -284,6 +291,11 @@ contains
 
     ! ----------------------------------------------------------------------
 
+    ! SS-TC TC-9: date,t1900 read/written via state%timecontrol (tc_* aliases).
+    associate( &
+      tc_t1900 => state%timecontrol%t1900,  &  ! TC-9
+      tc_date  => state%timecontrol%date    )  ! TC-9
+
     call ResetMetFlx (state)
 
     ! 1: Check whether meteo data are available of today; pass on weather of today
@@ -294,7 +306,7 @@ contains
       ! Check availability of meteo data of today
       if (daymeteo.lt.daynrfirst .or. daymeteo.gt.daynrlast) then
         messag ='In meteo file no meteo data are'// &
-                ' available for '//date//'. First adapt meteo file!'
+                ' available for '//tc_date//'. First adapt meteo file!'
         call fatalerr_collected ('meteo',messag)
       end if
 
@@ -353,15 +365,15 @@ contains
         irectotal = irectotal + 1
         if (i .ne. detrecord(irectotal)) then
           messag='In meteo file '//trim(filnam)//' record number(s)'// &
-                 ' are not correct at '//date//'. First adapt meteo file!'
+                 ' are not correct at '//tc_date//'. First adapt meteo file!'
           call fatalerr_collected ('meteo',messag)
         end if
         call dtdpst('year-month-day', &
                     dettime(irectotal)+0.1d0,detdate)
-        call dtdpst('year-month-day',t1900+0.1d0,date)
-        if (detdate .ne. date) then
+        call dtdpst('year-month-day',tc_t1900+0.1d0,tc_date)
+        if (detdate .ne. tc_date) then
           messag ='In meteo file '//trim(filnam)//' the amount of '// &
-                  'records deviate near '//date//'. First adapt meteo file!'
+                  'records deviate near '//tc_date//'. First adapt meteo file!'
           call fatalerr_collected ('meteo',messag)
         end if
 
@@ -384,6 +396,9 @@ contains
     call PartitionPrecipitation(swmetdetail, swsnow, tav, TePrRain, TePrSnow, &
                                 ssnow, nmetdetail, arain, grai, gsnow, snrai, &
                                 fprecnosnow, restint, state)
+
+    end associate  ! tc_t1900, tc_date => state%timecontrol [TC-9]
+
     return
   end subroutine ReadMeteoDay
 
@@ -508,11 +523,12 @@ contains
   !! @endnote
   subroutine ProcessMeteoDay(state)
     ! use Variables
+    ! SS-TC TC-9: daynr,t,dt,flmetdetail,fletsine removed from only-list; reads via state%timecontrol.
     use variables, only: lai, gird, swinter, swmetdetail, nmetdetail, swetr, flCropEmergence, et0, ew0, es0, swcf, swcfbs, cfbs, &
-    cf, cfeic, rad, arad, metperiod, tav, atav, ahum, logf, swscre, daynr, lat, alt, altw, angstroma, angstromb, rsc, ch, daylp, flmetdetail, albedo, tmn, tmx, rsw, difpp, &
-    dsinbe, atmtr, rsoil, swdivide, kdif, kdir, croptype, swgc, gc, siccapact, siccaptb, icrop, t, dt, flcropcalendar, &
+    cf, cfeic, rad, arad, metperiod, tav, atav, ahum, logf, swscre, lat, alt, altw, angstroma, angstromb, rsc, ch, daylp, albedo, tmn, tmx, rsw, difpp, &
+    dsinbe, atmtr, rsoil, swdivide, kdif, kdir, croptype, swgc, gc, siccapact, siccaptb, icrop, flcropcalendar, &
      flCropHarvest, cfevappond, flco2, fco2tra, tpot, epot, grain, nrain, finterception, swrain, &
-     swusecn, runoff_cn, fletsine, rh, tavd
+     swusecn, runoff_cn, rh, tavd
      ! [SS-SWC S-2.12B] pond retired — read via state%soilwater%pond
     use swap_array_dimensions, only: magrs
     use MeteoVars
@@ -530,14 +546,19 @@ contains
     data     rcs/0.15d0/
 
     ! SS-ATM Phase 1 Task A-1.8: ASSOCIATE aliases for atmosphere flat-scalar dual-writes
+    ! SS-TC TC-9: tc_* aliases for daynr, t, dt, flmetdetail added.
     associate( &
-       at_peva    => state%atmosphere%peva,    &
-       at_ptra    => state%atmosphere%ptra,    &
-       at_atmdem  => state%atmosphere%atmdem,  &
-       at_grai    => state%atmosphere%grai,    &
-       at_pevaday => state%atmosphere%pevaday, &
-       at_ptraday => state%atmosphere%ptraday  &
-    )
+       at_peva       => state%atmosphere%peva,        &
+       at_ptra       => state%atmosphere%ptra,        &
+       at_atmdem     => state%atmosphere%atmdem,      &
+       at_grai       => state%atmosphere%grai,        &
+       at_pevaday    => state%atmosphere%pevaday,     &
+       at_ptraday    => state%atmosphere%ptraday,     &
+       tc_daynr       => state%timecontrol%daynr,       &  ! TC-9
+       tc_t           => state%timecontrol%t,           &  ! TC-9
+       tc_dt          => state%timecontrol%dt,          &  ! TC-9
+       tc_flmetdetail => state%timecontrol%flmetdetail, &  ! TC-9
+       tc_fletsine    => state%timecontrol%fletsine     )  ! TC-9
 
     ! === Section 3: Interception calculations ===
 
@@ -611,9 +632,9 @@ contains
 
         ! Calculate evapotranspiration using Penman-Monteith: et0, ew0, es0 (mm/d)
         ! in case of daily meteo (swmetdetail = 0) irecord is always 1
-        call PenMon (logf,swscre,daynr,lat,alt,Altw,angstroma, &
+        call PenMon (logf,swscre,tc_daynr,lat,alt,Altw,angstroma, &
                      angstromb,rcs,rad,tav,hum,win,rsc,es0,et0,ew0,swcf,ch, &
-                     flCropEmergence,daylp,flmetdetail,irecord, &
+                     flCropEmergence,daylp,tc_flmetdetail,irecord, &
                      nmetdetail,albedo,tmn,tmx,rsw,difpp,dsinbe,atmtr, &
                      Edirect,Tdirect,Tdirectwet,rsoil,swdivide,kdif,kdir, &
                      lai,Edirectpond)
@@ -669,14 +690,14 @@ contains
           endif
           dttp = 1.0d0  ! value of 1 d required for the daily meteo option
         elseif (swmetdetail.eq.1) then
-          siccapact = afgen(siccaptb,(2*magrs),t)
+          siccapact = afgen(siccaptb,(2*magrs),tc_t)
           if (croptype(icrop).eq.1 .and. swgc.eq.2) then
             gctp  = gc
           elseif (croptype(icrop).eq.1 .and. swgc.eq.1) then
             gctp  = 1.0d0 - dexp(-1.0d0*kdir*kdif*lai)
           endif
           if (gctp .lt. 1.0d-5) siccapact=0.
-          dttp = dt
+          dttp = tc_dt
         endif
 
         ! Calculate interception, method Rutter
@@ -841,7 +862,7 @@ contains
       endif
 
       ! Soil evaporation rate of today
-      if (.not. fletsine) then
+      if (.not. tc_fletsine) then
         call reduceva (1, state%atmosphere%nraida, state)
       endif
 
@@ -906,7 +927,7 @@ contains
 
     endif
 
-    end associate  ! at_peva, at_ptra, at_atmdem, at_grai, at_pevaday, at_ptraday
+    end associate  ! at_peva/at_ptra/at_atmdem/at_pevaday/at_ptraday + tc_daynr/tc_t/tc_dt/tc_flmetdetail/tc_fletsine [TC-9]
 
   end subroutine ProcessMeteoDay
 

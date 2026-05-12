@@ -53,32 +53,45 @@ contains
   !! (detailed meteo input)
   !! @endnote
    subroutine MeteoDT(state)
+      ! SS-TC TC-9: flYearStart,flrainintens,flmeteodt,fletsine removed from bare use variables;
+      !             reads/writes via state%timecontrol.
       use variables
       implicit none
 
       type(swap_state_t), intent(inout) :: state
         !! Simulation state (passed through to reduceva for atmosphere dual-writes)
 
+      ! SS-TC TC-9: flYearStart,flrainintens,flmeteodt,fletsine read via state%timecontrol (tc_* aliases).
+      associate( &
+        tc_flYearStart  => state%timecontrol%flYearStart,   &  ! TC-9
+        tc_flrainintens => state%timecontrol%flrainintens,  &  ! TC-9
+        tc_flmeteodt    => state%timecontrol%flmeteodt,     &  ! TC-9
+        tc_fletsine     => state%timecontrol%fletsine       )  ! TC-9
+
       ! --- meteo input handling on yearly and daily basis ---
 
       ! Beginning of year: process rain events
-      if (flYearStart .and. flRainIntens) then
-         call ProcessRainEvents()
+      if (tc_flYearStart .and. tc_flrainintens) then
+         call ProcessRainEvents(state)
          flYearStart = .false.
+         tc_flYearStart = .false.   ! SS-TC TC-9 co-write
       end if
 
       ! --- calculations of meteo variables on time step basis ---
 
       ! Update actual rain record and set precipitation fluxes per time step
       ! or update actual meteo record and set meteo fluxes per time step
-      if (flMeteoDT) then
+      if (tc_flmeteodt) then
          call ProcessMeteoTsteps(state)
       end if
 
       ! Distribute potential transpiration and evaporation according to sine wave
-      if (flETSine) then
+      if (tc_fletsine) then
          call ETSine(state)
       end if
+
+      end associate  ! tc_flYearStart, tc_flrainintens, tc_flmeteodt, tc_fletsine => state%timecontrol [TC-9]
+
    end subroutine MeteoDT
 
    !> Process rainfall events for an entire calendar year
@@ -122,17 +135,24 @@ contains
   !!      nmrain, timjan1, rainamount, rainrec
   !! - O: arai, rainfluxarray, raintimearray
   !! @endnote
-   subroutine ProcessRainEvents()
-      use variables, only: swrain,yearmeteo,dtmin,raintab,tcum,tend,tstart,wet,nmrain,timjan1,rainamount,rainrec,arai,rainfluxarray,raintimearray
+   subroutine ProcessRainEvents(state)
+      ! SS-TC TC-9: tcum removed from only-list; read via state%timecontrol.
+      use variables, only: swrain,yearmeteo,dtmin,raintab,tend,tstart,wet,nmrain,timjan1,rainamount,rainrec,arai,rainfluxarray,raintimearray
       use array_utils, only: afgen
       use swap_array_dimensions, only: mrain
       implicit none
+
+      type(swap_state_t), intent(inout) :: state
+        !! Simulation state (for TC reader cutover — tcum via state%timecontrol)
 
       ! --- local
       integer i, iendyear, j, l, nlack, nn, rday, rdaya(367), rdayold
       real(8) araihlp(367), day(mrain), rainam(mrain), rainflux
       real(8) raintime, ratimar(mrain), tendyear, vsmall, wght, wwet(368)
       vsmall = 1.0d-8
+
+      ! SS-TC TC-9: tcum read via state%timecontrol (tc_tcum alias).
+      associate( tc_tcum => state%timecontrol%tcum )  ! TC-9
 
       ! === Process rain events on yearly basis ===
 
@@ -151,7 +171,7 @@ contains
          end do
 
          ! Set first record of raintime and rainflux (= 0)
-         raintimearray(1) = tcum + dtmin
+         raintimearray(1) = tc_tcum + dtmin
          rainam(1) = 0.d0
          rainfluxarray(1) = 0.d0
 
@@ -175,11 +195,11 @@ contains
                else
                   ! First raintime of a day: closure of last period of former day with rain = 0
                   rainrec = rainrec + 2
-                  raintimearray(rainrec) = dble(i - 2) + tcum
+                  raintimearray(rainrec) = dble(i - 2) + tc_tcum
                   rainfluxarray(rainrec) = 0.d0
                end if
                ! Second raintime of a day: closure of first period of the day, rain = rainam
-               raintimearray(rainrec + 1) = dble(i - 2) + tcum + raintime
+               raintimearray(rainrec + 1) = dble(i - 2) + tc_tcum + raintime
                rainfluxarray(rainrec + 1) = rainam(i)/raintime
 
             end if
@@ -188,7 +208,7 @@ contains
          ! Extend array with records at end of current year
          tendyear = 365.d0
          if (mod(yearmeteo, 4) .eq. 0) tendyear = 366.d0
-         raintimearray(rainrec + 2) = tcum + tendyear + dtmin
+         raintimearray(rainrec + 2) = tc_tcum + tendyear + dtmin
          rainfluxarray(rainrec + 2) = 0.d0
 
          ! In case of rain events: 1) calculate daily values, 2) fill raintimearray and rainfluxarray
@@ -273,7 +293,7 @@ contains
          nmrain = rainrec
 
          ! Set first record of arrays
-         raintimearray(1) = tcum + dtmin
+         raintimearray(1) = tc_tcum + dtmin
          rainfluxarray(1) = 0.0d0
 
          ! Calculate rainfluxes (cm/d) and fill rainfluxarray
@@ -292,6 +312,8 @@ contains
 
       ! For swrain = 1-3: determine start rain record
       rainrec = 1
+
+      end associate  ! tc_tcum => state%timecontrol [TC-9]
 
       return
    end subroutine ProcessRainEvents
@@ -325,6 +347,8 @@ contains
   !! (in case of precipitation intensities [swrain 1-3] or detailed meteo input)
   !! @endnote
    subroutine ProcessMeteoTsteps(state)
+      ! SS-TC TC-9: flrainintens,tcum,dt,flmetdetail,flUpdMetDet removed from bare use variables;
+      !             reads/writes via state%timecontrol.
       use variables
       use et_mod, only: reduceva
       implicit none
@@ -332,9 +356,17 @@ contains
       type(swap_state_t), intent(inout) :: state
         !! Simulation state (passed through to reduceva for atmosphere dual-writes)
 
+      ! SS-TC TC-9: tc_* aliases for flrainintens, tcum, dt, flmetdetail, flUpdMetDet.
+      associate( &
+        tc_flrainintens => state%timecontrol%flrainintens,  &  ! TC-9
+        tc_tcum         => state%timecontrol%tcum,          &  ! TC-9
+        tc_dt           => state%timecontrol%dt,            &  ! TC-9
+        tc_flmetdetail  => state%timecontrol%flmetdetail,   &  ! TC-9
+        tc_flUpdMetDet  => state%timecontrol%flUpdMetDet    )  ! TC-9
+
       ! === Precipitation intensities ===
 
-      if (flrainintens) then
+      if (tc_flrainintens) then
          ! Per time step: set precipitation fluxes for current time step
          state%atmosphere%graidt  = state%atmosphere%fprecnosnow*rainfluxarray(rainrec)
          state%atmosphere%nraidt  = finterception*state%atmosphere%graidt
@@ -342,13 +374,13 @@ contains
 
          ! Calculate minimum time step length for occurrence of next rain event
          ! (tcum + dt = time at end of current timestep)
-         dtEventRain = raintimearray(rainrec) - (tcum + dt)
+         dtEventRain = raintimearray(rainrec) - (tc_tcum + tc_dt)
 
          ! === Detailed meteo ===
 
-      elseif (flmetdetail) then
+      elseif (tc_flmetdetail) then
 
-         if (flUpdMetDet) then
+         if (tc_flUpdMetDet) then
             ! Per meteo time interval: update actual meteo record and set fluxes
             ! for current time of detailed meteo input
             wrecord = wrecord + 1
@@ -359,13 +391,15 @@ contains
             state%atmosphere%aintcdt = state%atmosphere%graidt - state%atmosphere%nraidt
 
             flUpdMetDet = .false.
-            state%timecontrol%flUpdMetDet = flUpdMetDet   ! SS-TC Task 5 co-write
+            tc_flUpdMetDet = .false.   ! SS-TC Task 5 / TC-9 co-write
          end if
 
          ! Per time step: calculate soil evaporation rate of current time step
          call reduceva(2, state%atmosphere%nraida, state)
 
       end if
+
+      end associate  ! tc_flrainintens, tc_tcum, tc_dt, tc_flmetdetail, tc_flUpdMetDet => state%timecontrol [TC-9]
 
       return
    end subroutine ProcessMeteoTsteps
@@ -410,6 +444,8 @@ contains
   !! Note: tsunrise_atm and tsunset_atm are now module-level in variables.f90
   !! @endnote
    subroutine ETSine(state)
+      ! SS-TC TC-9: fldaystart,daynr,t1900,dt removed from bare use variables;
+      !             reads via state%timecontrol.
       use variables
       use et_mod, only: reduceva
       implicit none
@@ -421,30 +457,37 @@ contains
       real(8) daytime, pi, dayl, sinld, cosld, fraction
       data pi/3.14159265d0/    ! number pi [-]
 
-      if (fldaystart) then
+      ! SS-TC TC-9: tc_* aliases for fldaystart, daynr, t1900, dt.
+      associate( &
+        tc_fldaystart => state%timecontrol%flDayStart,  &  ! TC-9
+        tc_daynr      => state%timecontrol%daynr,       &  ! TC-9
+        tc_t1900      => state%timecontrol%t1900,       &  ! TC-9
+        tc_dt         => state%timecontrol%dt           )  ! TC-9
+
+      if (tc_fldaystart) then
          ! Determine duration photoperiodic daylight in hours
-         call astro(daynr, lat, rad, dayl, daylp, sinld, cosld, difpp, atmtr, dsinbe)
+         call astro(tc_daynr, lat, rad, dayl, daylp, sinld, cosld, difpp, atmtr, dsinbe)
          ! Determine tsunrise_atm, tsunset_atm and daytime
          tsunrise_atm = 0.5d0 - daylp/48.d0
          tsunset_atm = 0.5d0 + daylp/48.d0
       end if
 
       ! Set time as fraction of the day
-      daytime = t1900 + dt - int(t1900)
+      daytime = tc_t1900 + tc_dt - int(tc_t1900)
 
       ! Determine fraction of fluxes according to sine wave during this time step
       if (daytime .lt. tsunrise_atm) then
          fraction = 0.d0
-      elseif (daytime .gt. tsunrise_atm .and. (daytime - dt) .lt. tsunrise_atm) then
+      elseif (daytime .gt. tsunrise_atm .and. (daytime - tc_dt) .lt. tsunrise_atm) then
          fraction = 0.5d0*(dcos(pi/2.d0 + (tsunrise_atm - 0.5d0)/ &
                                 (tsunset_atm - tsunrise_atm)*pi) - dcos(pi/2.d0 + (daytime - 0.5d0)/ &
                                                                         (tsunset_atm - tsunrise_atm)*pi))
-      elseif ((daytime - dt) .gt. tsunrise_atm .and. (daytime) .lt. tsunset_atm) then
-         fraction = 0.5d0*(dcos(pi/2.d0 + (daytime - dt - 0.5d0)/ &
+      elseif ((daytime - tc_dt) .gt. tsunrise_atm .and. (daytime) .lt. tsunset_atm) then
+         fraction = 0.5d0*(dcos(pi/2.d0 + (daytime - tc_dt - 0.5d0)/ &
                                 (tsunset_atm - tsunrise_atm)*pi) - dcos(pi/2.d0 + (daytime - 0.5d0)/ &
                                                                         (tsunset_atm - tsunrise_atm)*pi))
-      elseif (daytime .gt. tsunset_atm .and. (daytime - dt) .lt. tsunset_atm) then
-         fraction = 0.5d0*(dcos(pi/2.d0 + (daytime - dt - 0.5d0)/ &
+      elseif (daytime .gt. tsunset_atm .and. (daytime - tc_dt) .lt. tsunset_atm) then
+         fraction = 0.5d0*(dcos(pi/2.d0 + (daytime - tc_dt - 0.5d0)/ &
                                 (tsunset_atm - tsunrise_atm)*pi) - dcos(pi/2.d0 + (tsunset_atm - 0.5d0)/ &
                                                                         (tsunset_atm - tsunrise_atm)*pi))
       else
@@ -452,12 +495,14 @@ contains
       end if
 
       ! Set E and T fluxes
-      state%atmosphere%peva = state%atmosphere%pevaday*fraction/dt
-      state%atmosphere%ptra = state%atmosphere%ptraday*fraction/dt
+      state%atmosphere%peva = state%atmosphere%pevaday*fraction/tc_dt
+      state%atmosphere%ptra = state%atmosphere%ptraday*fraction/tc_dt
 
       ! Actual soil evaporation rate of current moment
       ! SS-ATM A-2.6: nraida retired — read from state%atmosphere%nraida
       call reduceva(2, state%atmosphere%nraida, state)
+
+      end associate  ! tc_fldaystart, tc_daynr, tc_t1900, tc_dt => state%timecontrol [TC-9]
 
       return
    end subroutine ETSine

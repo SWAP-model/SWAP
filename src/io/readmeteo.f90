@@ -13,6 +13,7 @@
 !     Last modified      : March 2014
 !     Purpose            : read meteorological data of one calendar year
 ! ----------------------------------------------------------------------
+      ! SS-TC TC-9: t1900,flYearStart removed from bare use variables; reads/writes via state%timecontrol.
       use variables
       use meteodt_mod, only: MeteoDT
       use swap_state_mod, only: swap_state_t
@@ -103,6 +104,11 @@
       end if
 
 !========================= tests and initialization ====================
+
+      ! SS-TC TC-9: t1900,flYearStart read/written via state%timecontrol (tc_* aliases).
+      associate( &
+        tc_t1900       => state%timecontrol%t1900,       &  ! TC-9
+        tc_flYearStart => state%timecontrol%flYearStart  )  ! TC-9
 
 ! --- perform some reliability tests and some initialization
       if (swmetdetail.eq.0) then
@@ -197,9 +203,9 @@
 
       elseif (swmetdetail.eq.1) then
 ! --- initialization of detailed meteo
-  
+
 ! ---   initialize total record number for new weather file
-        irectotal = int(t1900-dettime(1)+0.1d0)*nmetdetail
+        irectotal = int(tc_t1900-dettime(1)+0.1d0)*nmetdetail
 
 ! ---   initialize number of days for running average Tmin
         nofd = 0
@@ -209,8 +215,9 @@
       
 ! --- end of reading meteo data file **********************************
 
-! --- close present year for further reading      
+! --- close present year for further reading
       flYearStart = .false.
+      tc_flYearStart = .false.   ! SS-TC TC-9 co-write
 
 !========================= Read rain file =============================
 
@@ -218,13 +225,16 @@
 ! ---   rainfall events are specified
         call ReadRainEvents()
       endif
-! --- end of reading rain file ****************************************     
+! --- end of reading rain file ****************************************
 
-! --- reopen present year for processing rain intensity data at beginning MeteoDt      
+! --- reopen present year for processing rain intensity data at beginning MeteoDt
       if (swrain .gt. 0) then
          flYearStart = .true.
+         tc_flYearStart = .true.   ! SS-TC TC-9 co-write
          call MeteoDT(state)
       endif
+
+      end associate  ! tc_t1900, tc_flYearStart => state%timecontrol [TC-9]
 
       return
       end subroutine ReadMeteoYear
