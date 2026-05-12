@@ -436,7 +436,7 @@ contains
   !!            O - caintc, cgrai, cnrai, igrai, inrai, iprec
   !! @endnote
   subroutine ResetMetFlx (state)
-      ! [SS-SWC S-2.12B] iprec retired — state%soilwater%intr%reset() handles it
+      ! [SS-SWC S-2.12B] iprec retired — state%soilwater%reset_intermediate() handles it
       use variables, only: flzerointr,flzerocumu
       implicit none
 

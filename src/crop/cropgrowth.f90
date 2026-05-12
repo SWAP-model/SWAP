@@ -682,7 +682,7 @@
       if(dabs(state%atmosphere%ptra).lt.nihil) then
         reltr = 1.0d0
       else
-        reltr = max(min(state%soilwater%intr%tra/state%atmosphere%ptra,1.0d0),0.0d0)  ! [SS-SWC S-2.7]
+        reltr = max(min(state%soilwater%tra/state%atmosphere%ptra,1.0d0),0.0d0)  ! [SS-SWC S-2.7]
       endif
 
 ! ----integrals of the crop --------------------------------------------
@@ -733,7 +733,7 @@
         if (state%atmosphere%ptra.lt.nihil .or.             &
      &      (present(state) .and.                           &
      &       state%soilwater%flWrtNonox)) rr = 0.0d0
-        if (swdmi2rd.eq.1 .and. state%atmosphere%ptra.ge.nihil) rr = rr * state%soilwater%intr%tra/state%atmosphere%ptra  ! [SS-SWC S-2.7]
+        if (swdmi2rd.eq.1 .and. state%atmosphere%ptra.ge.nihil) rr = rr * state%soilwater%tra/state%atmosphere%ptra  ! [SS-SWC S-2.7]
         rd = rd + rr
       endif
 
@@ -1752,7 +1752,7 @@
       if(dabs(state%atmosphere%ptra).lt.nihil) then
         reltr = 1.0d0
       else
-        reltr = max(0.0d0,min(1.0d0,state%soilwater%intr%tra/state%atmosphere%ptra))  ! [SS-SWC S-2.7]
+        reltr = max(0.0d0,min(1.0d0,state%soilwater%tra/state%atmosphere%ptra))  ! [SS-SWC S-2.7]
       endif
 
 ! --- nitrogen stress reduction of pgass to gass
@@ -3059,7 +3059,7 @@
         if(dabs(state%atmosphere%ptra).lt.nihil) then
           reltr = 1.0d0
         else
-          reltr = max(0.0d0,min(1.0d0,state%soilwater%intr%tra/state%atmosphere%ptra))  ! [SS-SWC S-2.7]
+          reltr = max(0.0d0,min(1.0d0,state%soilwater%tra/state%atmosphere%ptra))  ! [SS-SWC S-2.7]
         endif
         gass = pgass * reltr
 
@@ -3554,8 +3554,8 @@
         rel_qrot_day = 0.d0
         rel_qred_day = 0.d0
         do node = 1,noddrz
-          rel_qrot_day = rel_qrot_day + 1 - state%soilwater%intr%qredtot_day(node) / state%soilwater%intr%qpotrot_day(node)
-          rel_qred_day = rel_qred_day + state%soilwater%intr%qredtot_day(node)
+          rel_qrot_day = rel_qrot_day + 1 - state%soilwater%qredtot_day(node) / state%soilwater%qpotrot_day(node)
+          rel_qred_day = rel_qred_day + state%soilwater%qredtot_day(node)
         enddo
         
         if ((gwrt .gt. 0.d0 .and. rel_qrot_day .gt. 0.d0) .or. (gwrt .lt. 0.d0 .and. rel_qred_day .gt. 0.d0)) then
@@ -3577,12 +3577,12 @@
             bot = - cumdens(i-1) * rd_noddrz
             do while (.not. found)
               if (bot .ge. zbotcp(node)) then
-                qrotdis(i) = qrotdis(i) + (1 - state%soilwater%intr%qredtot_day(node) / state%soilwater%intr%qpotrot_day(node)) / (ztopcp(node) - zbotcp(node)) * (top - bot)
-                qreddis(i) = qreddis(i) + state%soilwater%intr%qredtot_day(node) / (ztopcp(node) - zbotcp(node)) * (top - bot)
+                qrotdis(i) = qrotdis(i) + (1 - state%soilwater%qredtot_day(node) / state%soilwater%qpotrot_day(node)) / (ztopcp(node) - zbotcp(node)) * (top - bot)
+                qreddis(i) = qreddis(i) + state%soilwater%qredtot_day(node) / (ztopcp(node) - zbotcp(node)) * (top - bot)
                 found = .true.
               else
-                qrotdis(i) = qrotdis(i) + (1 - state%soilwater%intr%qredtot_day(node) / state%soilwater%intr%qpotrot_day(node)) / (ztopcp(node) - zbotcp(node)) * (top - zbotcp(node))
-                qreddis(i) = qreddis(i) + state%soilwater%intr%qredtot_day(node) / (ztopcp(node) - zbotcp(node)) * (top - zbotcp(node))
+                qrotdis(i) = qrotdis(i) + (1 - state%soilwater%qredtot_day(node) / state%soilwater%qpotrot_day(node)) / (ztopcp(node) - zbotcp(node)) * (top - zbotcp(node))
+                qreddis(i) = qreddis(i) + state%soilwater%qredtot_day(node) / (ztopcp(node) - zbotcp(node)) * (top - zbotcp(node))
                 top = zbotcp(node)
                 node = node + 1
               end if
@@ -3618,7 +3618,7 @@
         end do
 
         do node = 1,noddrz
-          write(888,'(a11,",",i4,3(",",f15.5))') trim(tc_date), node, state%soilwater%intr%qpotrot_day(node), state%soilwater%intr%qredtot_day(node)
+          write(888,'(a11,",",i4,3(",",f15.5))') trim(tc_date), node, state%soilwater%qpotrot_day(node), state%soilwater%qredtot_day(node)
         end do
         ! TEMPORARY OUTPUT  DELETE
 

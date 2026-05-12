@@ -217,9 +217,9 @@ contains
       ! [SS-SWC S-2.12B] read soil-water arrays via state%soilwater (associate)
       associate( sw_h         => state%soilwater%h,                    &
                  sw_theta     => state%soilwater%theta,                &
-                 sw_inq       => state%soilwater%intr%inq,             &
-                 sw_inqrot    => state%soilwater%intr%inqrot,          &
-                 sw_IThetaBeg => state%soilwater%intr%IThetaBeg,       &
+                 sw_inq       => state%soilwater%inq,             &
+                 sw_inqrot    => state%soilwater%inqrot,          &
+                 sw_IThetaBeg => state%soilwater%IThetaBeg,       &
                  sw_cofgen    => state%soilwater%cofgen,               &
                  sw_FrArMtrx  => state%soilwater%FrArMtrx )
 

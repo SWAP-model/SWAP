@@ -228,13 +228,13 @@
         sw_gwl    => state%soilwater%gwl,          &
         sw_pond   => state%soilwater%pond,         &
         sw_volact => state%soilwater%volact,       &
-        sw_igird  => state%soilwater%intr%igird,  &
-        sw_iintc  => state%soilwater%intr%iintc,  &
-        sw_irunon => state%soilwater%intr%irunon, &
-        sw_iruno  => state%soilwater%intr%iruno,  &
-        sw_irunoCN => state%soilwater%intr%irunoCN, &
-        sw_iqrot  => state%soilwater%intr%iqrot,  &
-        sw_iqbot  => state%soilwater%intr%iqbot   &
+        sw_igird  => state%soilwater%igird,  &
+        sw_iintc  => state%soilwater%iintc,  &
+        sw_irunon => state%soilwater%irunon, &
+        sw_iruno  => state%soilwater%iruno,  &
+        sw_irunoCN => state%soilwater%irunoCN, &
+        sw_iqrot  => state%soilwater%iqrot,  &
+        sw_iqbot  => state%soilwater%iqbot   &
       )
       if (tc_flheader) then
         if (tc_flprintshort) then
@@ -367,8 +367,8 @@
         do node = 1,noddrz
            write (rot,300) datexti,comma,z(node),comma,state%soilwater%hleaf,comma,  &
      &       state%soilwater%Hxylem,comma,                                            &
-     &       state%soilwater%hroot(node),comma,state%soilwater%hm1(node),comma,state%soilwater%intr%inqrot(node),comma, &
-     &       state%soilwater%qrot(node),comma,state%soilwater%intr%inq(node),comma,state%soilwater%q(node), &
+     &       state%soilwater%hroot(node),comma,state%soilwater%hm1(node),comma,state%soilwater%inqrot(node),comma, &
+     &       state%soilwater%qrot(node),comma,state%soilwater%inq(node),comma,state%soilwater%q(node), &
      &       comma,state%soilwater%mroot(node),                                       &
      &       comma,state%soilwater%mflux(node),comma,state%soilwater%rootrho(node),  &
      &       comma,state%soilwater%rootphi(node),                                     &
@@ -380,8 +380,8 @@
         do node = 1,noddrz
            write (rot,310) tc_date,comma,z(node),comma,state%soilwater%hleaf,comma,  &
      &       state%soilwater%Hxylem,comma,                                            &
-     &       state%soilwater%hroot(node),comma,state%soilwater%hm1(node),comma,state%soilwater%intr%inqrot(node),comma, &
-     &       state%soilwater%qrot(node),comma,state%soilwater%intr%inq(node),comma,state%soilwater%q(node), &
+     &       state%soilwater%hroot(node),comma,state%soilwater%hm1(node),comma,state%soilwater%inqrot(node),comma, &
+     &       state%soilwater%qrot(node),comma,state%soilwater%inq(node),comma,state%soilwater%q(node), &
      &       comma,state%soilwater%mroot(node),                                       &
      &       comma,state%soilwater%mflux(node),comma,state%soilwater%rootrho(node),  &
      &       comma,state%soilwater%rootphi(node),                                     &
@@ -1457,7 +1457,7 @@ case (2)
    ! SS-ATM A-2.5: igrai read from state%atmosphere%intr (atmosphere home).
    ! SS-SWC S-2.11: iruno read from state%soilwater%intr.
    RainRate   = state%atmosphere%intr%igrai/tc_outper
-   RunoffRate = state%soilwater%intr%iruno/tc_outper
+   RunoffRate = state%soilwater%iruno/tc_outper
    iDay       = int(tc_tcum)
 !!!   write (iunout,'(20F12.6)') real(tc_tcum),real(VT)
 

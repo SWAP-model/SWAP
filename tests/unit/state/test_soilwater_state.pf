@@ -15,8 +15,9 @@
 !
 ! Soil-water core subset (ADR 0038, S-1.1):
 !   Flat instantaneous: 17 per-node/layer arrays + 13 scalars/flags
-!   soilwater_intermediate_t :: intr  (22 non-per-day + 8 per-day fields)
-!   soilwater_cumulative_t   :: cumu  (14 scalar fields)
+!   Intermediate (22 non-per-day + 8 per-day fields), reset_intermediate /
+!     reset_intermediate_per_day on the parent type.
+!   Cumulative (14 scalar fields), reset_cumulative on the parent type.
 !
 ! Allocatable arrays are allocated by soilwater_init(sw, numnod, nlay) (C-1.2).
 ! This file covers: defaults, lifecycle (allocatable status), round-trips,
@@ -502,421 +503,424 @@ end subroutine test_swcore_flat_scalar_roundtrip
 
 @test
 subroutine test_swcore_intr_defaults_zero()
-   ! Fresh soilwater_intermediate_t has all scalar fields = 0.0 by default.
+   ! Fresh soilwater_state_t has all intermediate scalar fields = 0.0 by default.
    ! Arrays are unallocated (no allocation before S-1.2).
    use funit
    use iso_fortran_env, only: real64
-   use soilwater_state_mod, only: soilwater_intermediate_t
-   type(soilwater_intermediate_t) :: intr
+   use soilwater_state_mod, only: soilwater_state_t
+   type(soilwater_state_t) :: sw
 
    ! Non-per-day scalars
-   @assertEqual(0.0_real64, intr%iqrot,     1.0e-12_real64)
-   @assertEqual(0.0_real64, intr%iqssdi,    1.0e-12_real64)
-   @assertEqual(0.0_real64, intr%iqredwet,  1.0e-12_real64)
-   @assertEqual(0.0_real64, intr%iqreddry,  1.0e-12_real64)
-   @assertEqual(0.0_real64, intr%iqredsol,  1.0e-12_real64)
-   @assertEqual(0.0_real64, intr%iqredfrs,  1.0e-12_real64)
-   @assertEqual(0.0_real64, intr%ies0,      1.0e-12_real64)
-   @assertEqual(0.0_real64, intr%iet0,      1.0e-12_real64)
-   @assertEqual(0.0_real64, intr%iew0,      1.0e-12_real64)
-   @assertEqual(0.0_real64, intr%iintc,     1.0e-12_real64)
-   @assertEqual(0.0_real64, intr%iruno,     1.0e-12_real64)
-   @assertEqual(0.0_real64, intr%irunoCN,   1.0e-12_real64)
-   @assertEqual(0.0_real64, intr%irunon,    1.0e-12_real64)
-   @assertEqual(0.0_real64, intr%iqbot,     1.0e-12_real64)
-   @assertEqual(0.0_real64, intr%iqtdo,     1.0e-12_real64)
-   @assertEqual(0.0_real64, intr%iqtup,     1.0e-12_real64)
-   @assertEqual(0.0_real64, intr%IPondBeg,  1.0e-12_real64)
-   @assertEqual(0.0_real64, intr%iprec,     1.0e-12_real64)
-   @assertEqual(0.0_real64, intr%igird,     1.0e-12_real64)
-   @assertEqual(0.0_real64, intr%inird,     1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%iqrot,     1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%iqssdi,    1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%iqredwet,  1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%iqreddry,  1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%iqredsol,  1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%iqredfrs,  1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%ies0,      1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%iet0,      1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%iew0,      1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%iintc,     1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%iruno,     1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%irunoCN,   1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%irunon,    1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%iqbot,     1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%iqtdo,     1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%iqtup,     1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%IPondBeg,  1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%iprec,     1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%igird,     1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%inird,     1.0e-12_real64)
    ! Per-day scalars
-   @assertEqual(0.0_real64, intr%tra,           1.0e-12_real64)
-   @assertEqual(0.0_real64, intr%iqredwet_day,  1.0e-12_real64)
-   @assertEqual(0.0_real64, intr%iqreddry_day,  1.0e-12_real64)
-   @assertEqual(0.0_real64, intr%iqredsol_day,  1.0e-12_real64)
-   @assertEqual(0.0_real64, intr%iqredfrs_day,  1.0e-12_real64)
-   @assertEqual(0.0_real64, intr%iptra_day,     1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%tra,           1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%iqredwet_day,  1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%iqreddry_day,  1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%iqredsol_day,  1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%iqredfrs_day,  1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%iptra_day,     1.0e-12_real64)
    ! Arrays unallocated
-   @assertFalse(allocated(intr%inq))
-   @assertFalse(allocated(intr%inqrot))
-   @assertFalse(allocated(intr%inqssdi))
-   @assertFalse(allocated(intr%iqdo))
-   @assertFalse(allocated(intr%iqup))
-   @assertFalse(allocated(intr%IThetaBeg))
-   @assertFalse(allocated(intr%qpotrot_day))
-   @assertFalse(allocated(intr%qredtot_day))
+   @assertFalse(allocated(sw%inq))
+   @assertFalse(allocated(sw%inqrot))
+   @assertFalse(allocated(sw%inqssdi))
+   @assertFalse(allocated(sw%iqdo))
+   @assertFalse(allocated(sw%iqup))
+   @assertFalse(allocated(sw%IThetaBeg))
+   @assertFalse(allocated(sw%qpotrot_day))
+   @assertFalse(allocated(sw%qredtot_day))
 end subroutine test_swcore_intr_defaults_zero
 
 @test
 subroutine test_swcore_cumu_defaults_zero()
-   ! Fresh soilwater_cumulative_t has all 14 scalar fields = 0.0.
+   ! Fresh soilwater_state_t has all 14 cumulative scalar fields = 0.0.
    use funit
    use iso_fortran_env, only: real64
-   use soilwater_state_mod, only: soilwater_cumulative_t
-   type(soilwater_cumulative_t) :: cumu
+   use soilwater_state_mod, only: soilwater_state_t
+   type(soilwater_state_t) :: sw
 
-   @assertEqual(0.0_real64, cumu%cqssdi,    1.0e-12_real64)
-   @assertEqual(0.0_real64, cumu%cqrot,     1.0e-12_real64)
-   @assertEqual(0.0_real64, cumu%cqbot,     1.0e-12_real64)
-   @assertEqual(0.0_real64, cumu%cqbotdo,   1.0e-12_real64)
-   @assertEqual(0.0_real64, cumu%cqbotup,   1.0e-12_real64)
-   @assertEqual(0.0_real64, cumu%cinund,    1.0e-12_real64)
-   @assertEqual(0.0_real64, cumu%crunon,    1.0e-12_real64)
-   @assertEqual(0.0_real64, cumu%crunoff,   1.0e-12_real64)
-   @assertEqual(0.0_real64, cumu%crunoffCN, 1.0e-12_real64)
-   @assertEqual(0.0_real64, cumu%cqtdo,     1.0e-12_real64)
-   @assertEqual(0.0_real64, cumu%cqtup,     1.0e-12_real64)
-   @assertEqual(0.0_real64, cumu%cqprai,    1.0e-12_real64)
-   @assertEqual(0.0_real64, cumu%cgird,     1.0e-12_real64)
-   @assertEqual(0.0_real64, cumu%cnird,     1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%cqssdi,    1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%cqrot,     1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%cqbot,     1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%cqbotdo,   1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%cqbotup,   1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%cinund,    1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%crunon,    1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%crunoff,   1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%crunoffCN, 1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%cqtdo,     1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%cqtup,     1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%cqprai,    1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%cgird,     1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%cnird,     1.0e-12_real64)
 end subroutine test_swcore_cumu_defaults_zero
 
 @test
 subroutine test_swcore_intr_reset_zeroes_all_non_per_day()
-   ! intr%reset() zeroes all 20 non-per-day scalars.
+   ! reset_intermediate() zeroes all 20 non-per-day scalars.
    ! (Arrays not allocated here; allocated() guard prevents crash.)
    use funit
    use iso_fortran_env, only: real64
-   use soilwater_state_mod, only: soilwater_intermediate_t
-   type(soilwater_intermediate_t) :: intr
+   use soilwater_state_mod, only: soilwater_state_t
+   type(soilwater_state_t) :: sw
 
    ! Seed all non-per-day scalars with non-zero
-   intr%iqrot    = 1.0_real64
-   intr%iqssdi   = 2.0_real64
-   intr%iqredwet = 3.0_real64
-   intr%iqreddry = 4.0_real64
-   intr%iqredsol = 5.0_real64
-   intr%iqredfrs = 6.0_real64
-   intr%ies0     = 7.0_real64
-   intr%iet0     = 8.0_real64
-   intr%iew0     = 9.0_real64
-   intr%iintc    = 10.0_real64
-   intr%iruno    = 11.0_real64
-   intr%irunoCN  = 12.0_real64
-   intr%irunon   = 13.0_real64
-   intr%iqbot    = 14.0_real64
-   intr%iqtdo    = 15.0_real64
-   intr%iqtup    = 16.0_real64
-   intr%IPondBeg = 17.0_real64
-   intr%iprec    = 18.0_real64
-   intr%igird    = 19.0_real64
-   intr%inird    = 20.0_real64
+   sw%iqrot    = 1.0_real64
+   sw%iqssdi   = 2.0_real64
+   sw%iqredwet = 3.0_real64
+   sw%iqreddry = 4.0_real64
+   sw%iqredsol = 5.0_real64
+   sw%iqredfrs = 6.0_real64
+   sw%ies0     = 7.0_real64
+   sw%iet0     = 8.0_real64
+   sw%iew0     = 9.0_real64
+   sw%iintc    = 10.0_real64
+   sw%iruno    = 11.0_real64
+   sw%irunoCN  = 12.0_real64
+   sw%irunon   = 13.0_real64
+   sw%iqbot    = 14.0_real64
+   sw%iqtdo    = 15.0_real64
+   sw%iqtup    = 16.0_real64
+   sw%IPondBeg = 17.0_real64
+   sw%iprec    = 18.0_real64
+   sw%igird    = 19.0_real64
+   sw%inird    = 20.0_real64
 
-   call intr%reset()
+   call sw%reset_intermediate()
 
-   @assertEqual(0.0_real64, intr%iqrot,     1.0e-12_real64)
-   @assertEqual(0.0_real64, intr%iqssdi,    1.0e-12_real64)
-   @assertEqual(0.0_real64, intr%iqredwet,  1.0e-12_real64)
-   @assertEqual(0.0_real64, intr%iqreddry,  1.0e-12_real64)
-   @assertEqual(0.0_real64, intr%iqredsol,  1.0e-12_real64)
-   @assertEqual(0.0_real64, intr%iqredfrs,  1.0e-12_real64)
-   @assertEqual(0.0_real64, intr%ies0,      1.0e-12_real64)
-   @assertEqual(0.0_real64, intr%iet0,      1.0e-12_real64)
-   @assertEqual(0.0_real64, intr%iew0,      1.0e-12_real64)
-   @assertEqual(0.0_real64, intr%iintc,     1.0e-12_real64)
-   @assertEqual(0.0_real64, intr%iruno,     1.0e-12_real64)
-   @assertEqual(0.0_real64, intr%irunoCN,   1.0e-12_real64)
-   @assertEqual(0.0_real64, intr%irunon,    1.0e-12_real64)
-   @assertEqual(0.0_real64, intr%iqbot,     1.0e-12_real64)
-   @assertEqual(0.0_real64, intr%iqtdo,     1.0e-12_real64)
-   @assertEqual(0.0_real64, intr%iqtup,     1.0e-12_real64)
-   @assertEqual(0.0_real64, intr%IPondBeg,  1.0e-12_real64)
-   @assertEqual(0.0_real64, intr%iprec,     1.0e-12_real64)
-   @assertEqual(0.0_real64, intr%igird,     1.0e-12_real64)
-   @assertEqual(0.0_real64, intr%inird,     1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%iqrot,     1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%iqssdi,    1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%iqredwet,  1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%iqreddry,  1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%iqredsol,  1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%iqredfrs,  1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%ies0,      1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%iet0,      1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%iew0,      1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%iintc,     1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%iruno,     1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%irunoCN,   1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%irunon,    1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%iqbot,     1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%iqtdo,     1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%iqtup,     1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%IPondBeg,  1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%iprec,     1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%igird,     1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%inird,     1.0e-12_real64)
 end subroutine test_swcore_intr_reset_zeroes_all_non_per_day
 
 @test
 subroutine test_swcore_intr_reset_also_zeroes_per_day()
-   ! intr%reset() zeroes the 8 per-day fields as well (it subsumes flDayStart).
+   ! reset_intermediate() zeroes the 8 per-day fields as well (it subsumes flDayStart).
    use funit
    use iso_fortran_env, only: real64
-   use soilwater_state_mod, only: soilwater_intermediate_t
-   type(soilwater_intermediate_t) :: intr
+   use soilwater_state_mod, only: soilwater_state_t
+   type(soilwater_state_t) :: sw
 
    ! Seed per-day scalars
-   intr%tra          = 1.5_real64
-   intr%iqredwet_day = 2.5_real64
-   intr%iqreddry_day = 3.5_real64
-   intr%iqredsol_day = 4.5_real64
-   intr%iqredfrs_day = 5.5_real64
-   intr%iptra_day    = 6.5_real64
+   sw%tra          = 1.5_real64
+   sw%iqredwet_day = 2.5_real64
+   sw%iqreddry_day = 3.5_real64
+   sw%iqredsol_day = 4.5_real64
+   sw%iqredfrs_day = 5.5_real64
+   sw%iptra_day    = 6.5_real64
 
-   call intr%reset()
+   call sw%reset_intermediate()
 
-   @assertEqual(0.0_real64, intr%tra,          1.0e-12_real64)
-   @assertEqual(0.0_real64, intr%iqredwet_day, 1.0e-12_real64)
-   @assertEqual(0.0_real64, intr%iqreddry_day, 1.0e-12_real64)
-   @assertEqual(0.0_real64, intr%iqredsol_day, 1.0e-12_real64)
-   @assertEqual(0.0_real64, intr%iqredfrs_day, 1.0e-12_real64)
-   @assertEqual(0.0_real64, intr%iptra_day,    1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%tra,          1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%iqredwet_day, 1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%iqreddry_day, 1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%iqredsol_day, 1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%iqredfrs_day, 1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%iptra_day,    1.0e-12_real64)
 end subroutine test_swcore_intr_reset_also_zeroes_per_day
 
 @test
 subroutine test_swcore_intr_reset_per_day_orthogonality()
-   ! ORTHOGONALITY: intr%reset_per_day() zeroes only the 8 per-day fields.
-   ! Non-per-day scalars seeded non-zero must remain unchanged after reset_per_day.
+   ! ORTHOGONALITY: reset_intermediate_per_day() zeroes only the 8 per-day fields.
+   ! Non-per-day scalars seeded non-zero must remain unchanged after the per-day reset.
    use funit
    use iso_fortran_env, only: real64
-   use soilwater_state_mod, only: soilwater_intermediate_t
-   type(soilwater_intermediate_t) :: intr
+   use soilwater_state_mod, only: soilwater_state_t
+   type(soilwater_state_t) :: sw
 
    ! Seed ALL scalar fields non-zero
-   intr%iqrot        = 1.0_real64
-   intr%iqssdi       = 2.0_real64
-   intr%iqredwet     = 3.0_real64
-   intr%iqreddry     = 4.0_real64
-   intr%iqredsol     = 5.0_real64
-   intr%iqredfrs     = 6.0_real64
-   intr%ies0         = 7.0_real64
-   intr%iet0         = 8.0_real64
-   intr%iew0         = 9.0_real64
-   intr%iintc        = 10.0_real64
-   intr%iruno        = 11.0_real64
-   intr%irunoCN      = 12.0_real64
-   intr%irunon       = 13.0_real64
-   intr%iqbot        = 14.0_real64
-   intr%iqtdo        = 15.0_real64
-   intr%iqtup        = 16.0_real64
-   intr%IPondBeg     = 17.0_real64
-   intr%iprec        = 18.0_real64
-   intr%igird        = 19.0_real64
-   intr%inird        = 20.0_real64
-   intr%tra          = 21.0_real64
-   intr%iqredwet_day = 22.0_real64
-   intr%iqreddry_day = 23.0_real64
-   intr%iqredsol_day = 24.0_real64
-   intr%iqredfrs_day = 25.0_real64
-   intr%iptra_day    = 26.0_real64
+   sw%iqrot        = 1.0_real64
+   sw%iqssdi       = 2.0_real64
+   sw%iqredwet     = 3.0_real64
+   sw%iqreddry     = 4.0_real64
+   sw%iqredsol     = 5.0_real64
+   sw%iqredfrs     = 6.0_real64
+   sw%ies0         = 7.0_real64
+   sw%iet0         = 8.0_real64
+   sw%iew0         = 9.0_real64
+   sw%iintc        = 10.0_real64
+   sw%iruno        = 11.0_real64
+   sw%irunoCN      = 12.0_real64
+   sw%irunon       = 13.0_real64
+   sw%iqbot        = 14.0_real64
+   sw%iqtdo        = 15.0_real64
+   sw%iqtup        = 16.0_real64
+   sw%IPondBeg     = 17.0_real64
+   sw%iprec        = 18.0_real64
+   sw%igird        = 19.0_real64
+   sw%inird        = 20.0_real64
+   sw%tra          = 21.0_real64
+   sw%iqredwet_day = 22.0_real64
+   sw%iqreddry_day = 23.0_real64
+   sw%iqredsol_day = 24.0_real64
+   sw%iqredfrs_day = 25.0_real64
+   sw%iptra_day    = 26.0_real64
 
-   call intr%reset_per_day()
+   call sw%reset_intermediate_per_day()
 
    ! Per-day scalars must be zero
-   @assertEqual(0.0_real64, intr%tra,          1.0e-12_real64)
-   @assertEqual(0.0_real64, intr%iqredwet_day, 1.0e-12_real64)
-   @assertEqual(0.0_real64, intr%iqreddry_day, 1.0e-12_real64)
-   @assertEqual(0.0_real64, intr%iqredsol_day, 1.0e-12_real64)
-   @assertEqual(0.0_real64, intr%iqredfrs_day, 1.0e-12_real64)
-   @assertEqual(0.0_real64, intr%iptra_day,    1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%tra,          1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%iqredwet_day, 1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%iqreddry_day, 1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%iqredsol_day, 1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%iqredfrs_day, 1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%iptra_day,    1.0e-12_real64)
 
    ! Non-per-day scalars must be UNCHANGED (orthogonality)
-   @assertEqual( 1.0_real64, intr%iqrot,     1.0e-12_real64)
-   @assertEqual( 2.0_real64, intr%iqssdi,    1.0e-12_real64)
-   @assertEqual( 3.0_real64, intr%iqredwet,  1.0e-12_real64)
-   @assertEqual( 4.0_real64, intr%iqreddry,  1.0e-12_real64)
-   @assertEqual( 5.0_real64, intr%iqredsol,  1.0e-12_real64)
-   @assertEqual( 6.0_real64, intr%iqredfrs,  1.0e-12_real64)
-   @assertEqual( 7.0_real64, intr%ies0,      1.0e-12_real64)
-   @assertEqual( 8.0_real64, intr%iet0,      1.0e-12_real64)
-   @assertEqual( 9.0_real64, intr%iew0,      1.0e-12_real64)
-   @assertEqual(10.0_real64, intr%iintc,     1.0e-12_real64)
-   @assertEqual(11.0_real64, intr%iruno,     1.0e-12_real64)
-   @assertEqual(12.0_real64, intr%irunoCN,   1.0e-12_real64)
-   @assertEqual(13.0_real64, intr%irunon,    1.0e-12_real64)
-   @assertEqual(14.0_real64, intr%iqbot,     1.0e-12_real64)
-   @assertEqual(15.0_real64, intr%iqtdo,     1.0e-12_real64)
-   @assertEqual(16.0_real64, intr%iqtup,     1.0e-12_real64)
-   @assertEqual(17.0_real64, intr%IPondBeg,  1.0e-12_real64)
-   @assertEqual(18.0_real64, intr%iprec,     1.0e-12_real64)
-   @assertEqual(19.0_real64, intr%igird,     1.0e-12_real64)
-   @assertEqual(20.0_real64, intr%inird,     1.0e-12_real64)
+   @assertEqual( 1.0_real64, sw%iqrot,     1.0e-12_real64)
+   @assertEqual( 2.0_real64, sw%iqssdi,    1.0e-12_real64)
+   @assertEqual( 3.0_real64, sw%iqredwet,  1.0e-12_real64)
+   @assertEqual( 4.0_real64, sw%iqreddry,  1.0e-12_real64)
+   @assertEqual( 5.0_real64, sw%iqredsol,  1.0e-12_real64)
+   @assertEqual( 6.0_real64, sw%iqredfrs,  1.0e-12_real64)
+   @assertEqual( 7.0_real64, sw%ies0,      1.0e-12_real64)
+   @assertEqual( 8.0_real64, sw%iet0,      1.0e-12_real64)
+   @assertEqual( 9.0_real64, sw%iew0,      1.0e-12_real64)
+   @assertEqual(10.0_real64, sw%iintc,     1.0e-12_real64)
+   @assertEqual(11.0_real64, sw%iruno,     1.0e-12_real64)
+   @assertEqual(12.0_real64, sw%irunoCN,   1.0e-12_real64)
+   @assertEqual(13.0_real64, sw%irunon,    1.0e-12_real64)
+   @assertEqual(14.0_real64, sw%iqbot,     1.0e-12_real64)
+   @assertEqual(15.0_real64, sw%iqtdo,     1.0e-12_real64)
+   @assertEqual(16.0_real64, sw%iqtup,     1.0e-12_real64)
+   @assertEqual(17.0_real64, sw%IPondBeg,  1.0e-12_real64)
+   @assertEqual(18.0_real64, sw%iprec,     1.0e-12_real64)
+   @assertEqual(19.0_real64, sw%igird,     1.0e-12_real64)
+   @assertEqual(20.0_real64, sw%inird,     1.0e-12_real64)
 end subroutine test_swcore_intr_reset_per_day_orthogonality
 
 @test
 subroutine test_swcore_intr_reset_with_allocated_arrays()
-   ! intr%reset() zeroes allocated non-per-day arrays (allocated() guard works).
+   ! reset_intermediate() zeroes allocated non-per-day arrays (allocated() guard works).
    use funit
    use iso_fortran_env, only: real64
-   use soilwater_state_mod, only: soilwater_intermediate_t
-   type(soilwater_intermediate_t) :: intr
+   use soilwater_state_mod, only: soilwater_state_t
+   type(soilwater_state_t) :: sw
    integer, parameter :: n = 4
 
    ! Allocate and seed non-per-day arrays
-   allocate(intr%inq(n));       intr%inq       = 5.0_real64
-   allocate(intr%inqrot(n));    intr%inqrot    = 5.0_real64
-   allocate(intr%inqssdi(n));   intr%inqssdi   = 5.0_real64
-   allocate(intr%iqdo(n));      intr%iqdo      = 5.0_real64
-   allocate(intr%iqup(n));      intr%iqup      = 5.0_real64
-   allocate(intr%IThetaBeg(n)); intr%IThetaBeg = 5.0_real64
+   allocate(sw%inq(n));       sw%inq       = 5.0_real64
+   allocate(sw%inqrot(n));    sw%inqrot    = 5.0_real64
+   allocate(sw%inqssdi(n));   sw%inqssdi   = 5.0_real64
+   allocate(sw%iqdo(n));      sw%iqdo      = 5.0_real64
+   allocate(sw%iqup(n));      sw%iqup      = 5.0_real64
+   allocate(sw%IThetaBeg(n)); sw%IThetaBeg = 5.0_real64
 
-   call intr%reset()
+   call sw%reset_intermediate()
 
-   @assertEqual(0.0_real64, maxval(abs(intr%inq)),       1.0e-12_real64)
-   @assertEqual(0.0_real64, maxval(abs(intr%inqrot)),    1.0e-12_real64)
-   @assertEqual(0.0_real64, maxval(abs(intr%inqssdi)),   1.0e-12_real64)
-   @assertEqual(0.0_real64, maxval(abs(intr%iqdo)),      1.0e-12_real64)
-   @assertEqual(0.0_real64, maxval(abs(intr%iqup)),      1.0e-12_real64)
-   @assertEqual(0.0_real64, maxval(abs(intr%IThetaBeg)), 1.0e-12_real64)
+   @assertEqual(0.0_real64, maxval(abs(sw%inq)),       1.0e-12_real64)
+   @assertEqual(0.0_real64, maxval(abs(sw%inqrot)),    1.0e-12_real64)
+   @assertEqual(0.0_real64, maxval(abs(sw%inqssdi)),   1.0e-12_real64)
+   @assertEqual(0.0_real64, maxval(abs(sw%iqdo)),      1.0e-12_real64)
+   @assertEqual(0.0_real64, maxval(abs(sw%iqup)),      1.0e-12_real64)
+   @assertEqual(0.0_real64, maxval(abs(sw%IThetaBeg)), 1.0e-12_real64)
 end subroutine test_swcore_intr_reset_with_allocated_arrays
 
 @test
 subroutine test_swcore_intr_reset_per_day_arrays_allocated()
-   ! reset_per_day() zeroes allocated per-day arrays when they exist.
+   ! reset_intermediate_per_day() zeroes allocated per-day arrays when they exist.
    use funit
    use iso_fortran_env, only: real64
-   use soilwater_state_mod, only: soilwater_intermediate_t
-   type(soilwater_intermediate_t) :: intr
+   use soilwater_state_mod, only: soilwater_state_t
+   type(soilwater_state_t) :: sw
    integer, parameter :: n = 5
 
-   allocate(intr%qpotrot_day(n)); intr%qpotrot_day = 7.0_real64
-   allocate(intr%qredtot_day(n)); intr%qredtot_day = 8.0_real64
+   allocate(sw%qpotrot_day(n)); sw%qpotrot_day = 7.0_real64
+   allocate(sw%qredtot_day(n)); sw%qredtot_day = 8.0_real64
 
-   call intr%reset_per_day()
+   call sw%reset_intermediate_per_day()
 
-   @assertEqual(0.0_real64, maxval(abs(intr%qpotrot_day)), 1.0e-12_real64)
-   @assertEqual(0.0_real64, maxval(abs(intr%qredtot_day)), 1.0e-12_real64)
+   @assertEqual(0.0_real64, maxval(abs(sw%qpotrot_day)), 1.0e-12_real64)
+   @assertEqual(0.0_real64, maxval(abs(sw%qredtot_day)), 1.0e-12_real64)
 end subroutine test_swcore_intr_reset_per_day_arrays_allocated
 
 @test
 subroutine test_swcore_cumu_reset_zeroes_all()
-   ! cumu%reset() zeroes all 14 cumulative scalar fields.
+   ! reset_cumulative() zeroes all 14 cumulative scalar fields.
    use funit
    use iso_fortran_env, only: real64
-   use soilwater_state_mod, only: soilwater_cumulative_t
-   type(soilwater_cumulative_t) :: cumu
+   use soilwater_state_mod, only: soilwater_state_t
+   type(soilwater_state_t) :: sw
 
-   cumu%cqssdi    = 1.0_real64
-   cumu%cqrot     = 2.0_real64
-   cumu%cqbot     = 3.0_real64
-   cumu%cqbotdo   = 4.0_real64
-   cumu%cqbotup   = 5.0_real64
-   cumu%cinund    = 6.0_real64
-   cumu%crunon    = 7.0_real64
-   cumu%crunoff   = 8.0_real64
-   cumu%crunoffCN = 9.0_real64
-   cumu%cqtdo     = 10.0_real64
-   cumu%cqtup     = 11.0_real64
-   cumu%cqprai    = 12.0_real64
-   cumu%cgird     = 13.0_real64
-   cumu%cnird     = 14.0_real64
+   sw%cqssdi    = 1.0_real64
+   sw%cqrot     = 2.0_real64
+   sw%cqbot     = 3.0_real64
+   sw%cqbotdo   = 4.0_real64
+   sw%cqbotup   = 5.0_real64
+   sw%cinund    = 6.0_real64
+   sw%crunon    = 7.0_real64
+   sw%crunoff   = 8.0_real64
+   sw%crunoffCN = 9.0_real64
+   sw%cqtdo     = 10.0_real64
+   sw%cqtup     = 11.0_real64
+   sw%cqprai    = 12.0_real64
+   sw%cgird     = 13.0_real64
+   sw%cnird     = 14.0_real64
 
-   call cumu%reset()
+   call sw%reset_cumulative()
 
-   @assertEqual(0.0_real64, cumu%cqssdi,    1.0e-12_real64)
-   @assertEqual(0.0_real64, cumu%cqrot,     1.0e-12_real64)
-   @assertEqual(0.0_real64, cumu%cqbot,     1.0e-12_real64)
-   @assertEqual(0.0_real64, cumu%cqbotdo,   1.0e-12_real64)
-   @assertEqual(0.0_real64, cumu%cqbotup,   1.0e-12_real64)
-   @assertEqual(0.0_real64, cumu%cinund,    1.0e-12_real64)
-   @assertEqual(0.0_real64, cumu%crunon,    1.0e-12_real64)
-   @assertEqual(0.0_real64, cumu%crunoff,   1.0e-12_real64)
-   @assertEqual(0.0_real64, cumu%crunoffCN, 1.0e-12_real64)
-   @assertEqual(0.0_real64, cumu%cqtdo,     1.0e-12_real64)
-   @assertEqual(0.0_real64, cumu%cqtup,     1.0e-12_real64)
-   @assertEqual(0.0_real64, cumu%cqprai,    1.0e-12_real64)
-   @assertEqual(0.0_real64, cumu%cgird,     1.0e-12_real64)
-   @assertEqual(0.0_real64, cumu%cnird,     1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%cqssdi,    1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%cqrot,     1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%cqbot,     1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%cqbotdo,   1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%cqbotup,   1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%cinund,    1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%crunon,    1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%crunoff,   1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%crunoffCN, 1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%cqtdo,     1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%cqtup,     1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%cqprai,    1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%cgird,     1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%cnird,     1.0e-12_real64)
 end subroutine test_swcore_cumu_reset_zeroes_all
 
 @test
 subroutine test_swcore_cohort_isolation_cumu_reset_leaves_intr()
-   ! Cohort isolation: cumu%reset() does NOT touch intr fields or flat scalars.
+   ! Cohort isolation: reset_cumulative() does NOT touch intermediate fields
+   ! or flat scalars.
    use funit
    use iso_fortran_env, only: real64
    use soilwater_state_mod, only: soilwater_state_t
    type(soilwater_state_t) :: sw
 
-   ! Seed intr scalars and flat scalars
-   sw%intr%iqrot   = 42.0_real64
-   sw%intr%tra     = 10.0_real64
-   sw%pond         = 3.0_real64
-   sw%gwl          = -80.0_real64
+   ! Seed intermediate scalars and flat scalars
+   sw%iqrot   = 42.0_real64
+   sw%tra     = 10.0_real64
+   sw%pond    = 3.0_real64
+   sw%gwl     = -80.0_real64
 
-   ! Seed cumu
-   sw%cumu%cqrot   = 99.0_real64
+   ! Seed cumulative
+   sw%cqrot   = 99.0_real64
 
-   call sw%cumu%reset()
+   call sw%reset_cumulative()
 
-   ! cumu must be zero
-   @assertEqual(0.0_real64, sw%cumu%cqrot, 1.0e-12_real64)
+   ! cumulative must be zero
+   @assertEqual(0.0_real64, sw%cqrot, 1.0e-12_real64)
 
-   ! intr and flat MUST be unchanged
-   @assertEqual(42.0_real64, sw%intr%iqrot, 1.0e-12_real64)
-   @assertEqual(10.0_real64, sw%intr%tra,   1.0e-12_real64)
-   @assertEqual( 3.0_real64, sw%pond,       1.0e-12_real64)
-   @assertEqual(-80.0_real64, sw%gwl,       1.0e-12_real64)
+   ! intermediate and flat MUST be unchanged
+   @assertEqual(42.0_real64, sw%iqrot, 1.0e-12_real64)
+   @assertEqual(10.0_real64, sw%tra,   1.0e-12_real64)
+   @assertEqual( 3.0_real64, sw%pond,  1.0e-12_real64)
+   @assertEqual(-80.0_real64, sw%gwl,  1.0e-12_real64)
 end subroutine test_swcore_cohort_isolation_cumu_reset_leaves_intr
 
 @test
 subroutine test_swcore_cohort_isolation_intr_reset_leaves_cumu()
-   ! Cohort isolation: intr%reset() does NOT touch cumu fields or flat scalars.
+   ! Cohort isolation: reset_intermediate() does NOT touch cumulative fields
+   ! or flat scalars.
    use funit
    use iso_fortran_env, only: real64
    use soilwater_state_mod, only: soilwater_state_t
    type(soilwater_state_t) :: sw
 
-   ! Seed cumu scalars and flat scalars
-   sw%cumu%cqrot   = 77.0_real64
-   sw%cumu%cinund  = 5.5_real64
-   sw%pond         = 1.0_real64
-   sw%volact       = 28.0_real64
+   ! Seed cumulative scalars and flat scalars
+   sw%cqrot   = 77.0_real64
+   sw%cinund  = 5.5_real64
+   sw%pond    = 1.0_real64
+   sw%volact  = 28.0_real64
 
-   ! Seed intr
-   sw%intr%iqrot   = 55.0_real64
+   ! Seed intermediate
+   sw%iqrot   = 55.0_real64
 
-   call sw%intr%reset()
+   call sw%reset_intermediate()
 
-   ! intr must be zero
-   @assertEqual(0.0_real64, sw%intr%iqrot, 1.0e-12_real64)
+   ! intermediate must be zero
+   @assertEqual(0.0_real64, sw%iqrot, 1.0e-12_real64)
 
-   ! cumu and flat MUST be unchanged
-   @assertEqual(77.0_real64, sw%cumu%cqrot,   1.0e-12_real64)
-   @assertEqual( 5.5_real64, sw%cumu%cinund,  1.0e-12_real64)
-   @assertEqual( 1.0_real64, sw%pond,         1.0e-12_real64)
-   @assertEqual(28.0_real64, sw%volact,       1.0e-12_real64)
+   ! cumulative and flat MUST be unchanged
+   @assertEqual(77.0_real64, sw%cqrot,   1.0e-12_real64)
+   @assertEqual( 5.5_real64, sw%cinund,  1.0e-12_real64)
+   @assertEqual( 1.0_real64, sw%pond,    1.0e-12_real64)
+   @assertEqual(28.0_real64, sw%volact,  1.0e-12_real64)
 end subroutine test_swcore_cohort_isolation_intr_reset_leaves_cumu
 
 @test
 subroutine test_swcore_aggregator_access_intr_cumu()
-   ! Aggregator path: state%soilwater%intr%X and state%soilwater%cumu%X
-   ! are accessible and have correct defaults via swap_state_t.
+   ! Aggregator path: state%soilwater%X for flattened intermediate / cumulative
+   ! fields is accessible and has correct defaults via swap_state_t.
    use funit
    use iso_fortran_env, only: real64
    use swap_state_mod, only: swap_state_t
    type(swap_state_t) :: state
 
    ! Defaults via aggregator
-   @assertEqual(0.0_real64, state%soilwater%intr%iqrot,   1.0e-12_real64)
-   @assertEqual(0.0_real64, state%soilwater%intr%tra,     1.0e-12_real64)
-   @assertEqual(0.0_real64, state%soilwater%cumu%cqrot,   1.0e-12_real64)
-   @assertEqual(0.0_real64, state%soilwater%cumu%cgird,   1.0e-12_real64)
-   @assertEqual(0.0_real64, state%soilwater%pond,         1.0e-12_real64)
-   @assertEqual(0.0_real64, state%soilwater%gwl,          1.0e-12_real64)
+   @assertEqual(0.0_real64, state%soilwater%iqrot, 1.0e-12_real64)
+   @assertEqual(0.0_real64, state%soilwater%tra,   1.0e-12_real64)
+   @assertEqual(0.0_real64, state%soilwater%cqrot, 1.0e-12_real64)
+   @assertEqual(0.0_real64, state%soilwater%cgird, 1.0e-12_real64)
+   @assertEqual(0.0_real64, state%soilwater%pond,  1.0e-12_real64)
+   @assertEqual(0.0_real64, state%soilwater%gwl,   1.0e-12_real64)
 
    ! Write and read back through aggregator
-   state%soilwater%intr%iqrot  = 3.14_real64
-   state%soilwater%intr%tra    = 0.5_real64
-   state%soilwater%cumu%cqrot  = 100.0_real64
-   state%soilwater%pond        = 0.2_real64
+   state%soilwater%iqrot = 3.14_real64
+   state%soilwater%tra   = 0.5_real64
+   state%soilwater%cqrot = 100.0_real64
+   state%soilwater%pond  = 0.2_real64
 
-   @assertEqual(  3.14_real64, state%soilwater%intr%iqrot, 1.0e-12_real64)
-   @assertEqual(   0.5_real64, state%soilwater%intr%tra,   1.0e-12_real64)
-   @assertEqual( 100.0_real64, state%soilwater%cumu%cqrot, 1.0e-12_real64)
-   @assertEqual(   0.2_real64, state%soilwater%pond,       1.0e-12_real64)
+   @assertEqual(  3.14_real64, state%soilwater%iqrot, 1.0e-12_real64)
+   @assertEqual(   0.5_real64, state%soilwater%tra,   1.0e-12_real64)
+   @assertEqual( 100.0_real64, state%soilwater%cqrot, 1.0e-12_real64)
+   @assertEqual(   0.2_real64, state%soilwater%pond,  1.0e-12_real64)
 end subroutine test_swcore_aggregator_access_intr_cumu
 
 @test
 subroutine test_swcore_two_instances_independent()
-   ! Two soilwater_state_t instances share no state — cohort fields included.
+   ! Two soilwater_state_t instances share no state — intermediate /
+   ! cumulative fields included.
    use funit
    use iso_fortran_env, only: real64
    use soilwater_state_mod, only: soilwater_state_t
    type(soilwater_state_t) :: sw1, sw2
 
-   sw1%pond          = 5.0_real64
-   sw1%intr%iqrot    = 9.0_real64
-   sw1%cumu%cqrot    = 3.0_real64
+   sw1%pond  = 5.0_real64
+   sw1%iqrot = 9.0_real64
+   sw1%cqrot = 3.0_real64
 
    ! sw2 must retain defaults
-   @assertEqual(0.0_real64, sw2%pond,          1.0e-12_real64)
-   @assertEqual(0.0_real64, sw2%intr%iqrot,    1.0e-12_real64)
-   @assertEqual(0.0_real64, sw2%cumu%cqrot,    1.0e-12_real64)
+   @assertEqual(0.0_real64, sw2%pond,  1.0e-12_real64)
+   @assertEqual(0.0_real64, sw2%iqrot, 1.0e-12_real64)
+   @assertEqual(0.0_real64, sw2%cqrot, 1.0e-12_real64)
 
    ! sw1 reads must match what we wrote
-   @assertEqual(5.0_real64, sw1%pond,          1.0e-12_real64)
-   @assertEqual(9.0_real64, sw1%intr%iqrot,    1.0e-12_real64)
-   @assertEqual(3.0_real64, sw1%cumu%cqrot,    1.0e-12_real64)
+   @assertEqual(5.0_real64, sw1%pond,  1.0e-12_real64)
+   @assertEqual(9.0_real64, sw1%iqrot, 1.0e-12_real64)
+   @assertEqual(3.0_real64, sw1%cqrot, 1.0e-12_real64)
 end subroutine test_swcore_two_instances_independent
 
 ! =============================================================================
@@ -1070,24 +1074,24 @@ subroutine test_swcore_init_allocates_intr_cohort_arrays()
    call soilwater_init(sw, n, nl)
 
    ! Allocated checks
-   @assertTrue(allocated(sw%intr%inq))
-   @assertTrue(allocated(sw%intr%inqrot))
-   @assertTrue(allocated(sw%intr%inqssdi))
-   @assertTrue(allocated(sw%intr%iqdo))
-   @assertTrue(allocated(sw%intr%iqup))
-   @assertTrue(allocated(sw%intr%IThetaBeg))
-   @assertTrue(allocated(sw%intr%qpotrot_day))
-   @assertTrue(allocated(sw%intr%qredtot_day))
+   @assertTrue(allocated(sw%inq))
+   @assertTrue(allocated(sw%inqrot))
+   @assertTrue(allocated(sw%inqssdi))
+   @assertTrue(allocated(sw%iqdo))
+   @assertTrue(allocated(sw%iqup))
+   @assertTrue(allocated(sw%IThetaBeg))
+   @assertTrue(allocated(sw%qpotrot_day))
+   @assertTrue(allocated(sw%qredtot_day))
 
    ! Sizes: numnod+1 for flux arrays, numnod for node arrays
-   @assertEqual(n+1, size(sw%intr%inq))
-   @assertEqual(n,   size(sw%intr%inqrot))
-   @assertEqual(n,   size(sw%intr%inqssdi))
-   @assertEqual(n+1, size(sw%intr%iqdo))
-   @assertEqual(n+1, size(sw%intr%iqup))
-   @assertEqual(n,   size(sw%intr%IThetaBeg))
-   @assertEqual(n,   size(sw%intr%qpotrot_day))
-   @assertEqual(n,   size(sw%intr%qredtot_day))
+   @assertEqual(n+1, size(sw%inq))
+   @assertEqual(n,   size(sw%inqrot))
+   @assertEqual(n,   size(sw%inqssdi))
+   @assertEqual(n+1, size(sw%iqdo))
+   @assertEqual(n+1, size(sw%iqup))
+   @assertEqual(n,   size(sw%IThetaBeg))
+   @assertEqual(n,   size(sw%qpotrot_day))
+   @assertEqual(n,   size(sw%qredtot_day))
 end subroutine test_swcore_init_allocates_intr_cohort_arrays
 
 @test
@@ -1101,14 +1105,14 @@ subroutine test_swcore_init_intr_cohort_arrays_zeroed()
 
    call soilwater_init(sw, n, nl)
 
-   @assertEqual(0.0_real64, maxval(abs(sw%intr%inq)),          1.0e-12_real64)
-   @assertEqual(0.0_real64, maxval(abs(sw%intr%inqrot)),       1.0e-12_real64)
-   @assertEqual(0.0_real64, maxval(abs(sw%intr%inqssdi)),      1.0e-12_real64)
-   @assertEqual(0.0_real64, maxval(abs(sw%intr%iqdo)),         1.0e-12_real64)
-   @assertEqual(0.0_real64, maxval(abs(sw%intr%iqup)),         1.0e-12_real64)
-   @assertEqual(0.0_real64, maxval(abs(sw%intr%IThetaBeg)),    1.0e-12_real64)
-   @assertEqual(0.0_real64, maxval(abs(sw%intr%qpotrot_day)),  1.0e-12_real64)
-   @assertEqual(0.0_real64, maxval(abs(sw%intr%qredtot_day)),  1.0e-12_real64)
+   @assertEqual(0.0_real64, maxval(abs(sw%inq)),          1.0e-12_real64)
+   @assertEqual(0.0_real64, maxval(abs(sw%inqrot)),       1.0e-12_real64)
+   @assertEqual(0.0_real64, maxval(abs(sw%inqssdi)),      1.0e-12_real64)
+   @assertEqual(0.0_real64, maxval(abs(sw%iqdo)),         1.0e-12_real64)
+   @assertEqual(0.0_real64, maxval(abs(sw%iqup)),         1.0e-12_real64)
+   @assertEqual(0.0_real64, maxval(abs(sw%IThetaBeg)),    1.0e-12_real64)
+   @assertEqual(0.0_real64, maxval(abs(sw%qpotrot_day)),  1.0e-12_real64)
+   @assertEqual(0.0_real64, maxval(abs(sw%qredtot_day)),  1.0e-12_real64)
 end subroutine test_swcore_init_intr_cohort_arrays_zeroed
 
 @test
@@ -1132,9 +1136,9 @@ subroutine test_swcore_init_different_sizes_core()
    @assertEqual(21,    size(sw1%cofgen, 1))
    @assertEqual(n1,    size(sw1%cofgen, 2))
    @assertEqual(nl1,   size(sw1%thetsl))
-   @assertEqual(n1+1,  size(sw1%intr%inq))
-   @assertEqual(n1,    size(sw1%intr%inqrot))
-   @assertEqual(n1,    size(sw1%intr%qpotrot_day))
+   @assertEqual(n1+1,  size(sw1%inq))
+   @assertEqual(n1,    size(sw1%inqrot))
+   @assertEqual(n1,    size(sw1%qpotrot_day))
 
    ! sw2 shapes
    @assertEqual(n2,    size(sw2%theta))
@@ -1143,9 +1147,9 @@ subroutine test_swcore_init_different_sizes_core()
    @assertEqual(21,    size(sw2%cofgen, 1))
    @assertEqual(n2,    size(sw2%cofgen, 2))
    @assertEqual(nl2,   size(sw2%thetsl))
-   @assertEqual(n2+1,  size(sw2%intr%inq))
-   @assertEqual(n2,    size(sw2%intr%inqrot))
-   @assertEqual(n2,    size(sw2%intr%qpotrot_day))
+   @assertEqual(n2+1,  size(sw2%inq))
+   @assertEqual(n2,    size(sw2%inqrot))
+   @assertEqual(n2,    size(sw2%qpotrot_day))
 end subroutine test_swcore_init_different_sizes_core
 
 @test

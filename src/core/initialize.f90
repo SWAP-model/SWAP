@@ -101,7 +101,7 @@
       tmnr               = 0.0d0 
       tmx                = 0.0d0 
       tpot               = 0.0d0 
-      ! [SS-SWC] tra retired — soilwater_init handles init via state%soilwater%intr%tra
+      ! [SS-SWC] tra retired — soilwater_init handles init via state%soilwater%tra
       ! tra                = 0.0d0
       ! [SS-TC] fletsine/flmeteodt/flmetdetail/flrainintens retired to state%timecontrol (ADR 0041)
 
@@ -317,7 +317,7 @@
       infres             = 0.0d0 
       inpola             = 0.0d0 
       inpolb             = 0.0d0 
-      ! [SS-SWC] inq retired — soilwater_init handles init via state%soilwater%intr%inq
+      ! [SS-SWC] inq retired — soilwater_init handles init via state%soilwater%inq
       ! inq                = 0.0d0
       ! SS-SWST Phase 2 Task 11 C3: inqdra/inqdra_in/inqdra_out removed (now in state%surfacewater).
       ! Initialized via surfacewater_init with allocate+assign=0.

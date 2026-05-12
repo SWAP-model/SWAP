@@ -606,7 +606,7 @@ contains
       fromswap%tend       = Tend
       ! SS-ATM A-2.6: iptra retired — read from state%atmosphere%intr%iptra
       fromswap%tpot       = state%atmosphere%intr%iptra
-      fromswap%tact       = state%soilwater%intr%iqrot      ! [SS-SWC S-2.12B]
+      fromswap%tact       = state%soilwater%iqrot      ! [SS-SWC S-2.12B]
       fromswap%numnodes   = numnod
       !allocate(fromswap%dz(numnod));  fromswap%dz(1:numnod)  = dz(1:numnod)
       !allocate(fromswap%wc(numnod));  fromswap%wc(1:numnod)  = theta(1:numnod)
@@ -614,7 +614,7 @@ contains
 
       fromswap%dz(1:numnod)  = dz(1:numnod)
       fromswap%wc(1:numnod)  = state%soilwater%theta(1:numnod)        ! [SS-SWC S-2.12B]
-      fromswap%rwu(1:numnod) = state%soilwater%intr%inqrot(1:numnod)  ! [SS-SWC S-2.12B]
+      fromswap%rwu(1:numnod) = state%soilwater%inqrot(1:numnod)  ! [SS-SWC S-2.12B]
       ex_tlast = 0.0d0
    end if
 
@@ -691,7 +691,7 @@ contains
       fromswap%numnodes      = numnod
       ! SS-ATM A-2.6: iptra retired — read from state%atmosphere%intr%iptra
       fromswap%tpot          = state%atmosphere%intr%iptra
-      fromswap%tact          = state%soilwater%intr%iqrot      ! [SS-SWC S-2.12B]
+      fromswap%tact          = state%soilwater%iqrot      ! [SS-SWC S-2.12B]
       !if(.not.allocated(fromswap%dz))  allocate(fromswap%dz(numnod));  fromswap%dz(1:numnod)  = dz(1:numnod)
       !if(.not.allocated(fromswap%wc))  allocate(fromswap%wc(numnod));  fromswap%wc(1:numnod)  = theta(1:numnod)
       !if(.not.allocated(fromswap%rwu)) allocate(fromswap%rwu(numnod)); fromswap%rwu(1:numnod) = 0.0d0

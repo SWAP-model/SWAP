@@ -15,11 +15,11 @@
       !   See: docs/superpowers/specs/2026-05-11-state-migration-soilwater-core-design.md
       !        ADR 0038 (next task S-2.13)
       ! ========================================================================
-      ! real(8)   iqredwet_day       ! moved to state%soilwater%intr%iqredwet_day
-      ! real(8)   iqreddry_day       ! moved to state%soilwater%intr%iqreddry_day
-      ! real(8)   iqredsol_day       ! moved to state%soilwater%intr%iqredsol_day
-      ! real(8)   iqredfrs_day       ! moved to state%soilwater%intr%iqredfrs_day
-      ! real(8)   iptra_day          ! moved to state%soilwater%intr%iptra_day
+      ! real(8)   iqredwet_day       ! moved to state%soilwater%iqredwet_day
+      ! real(8)   iqreddry_day       ! moved to state%soilwater%iqreddry_day
+      ! real(8)   iqredsol_day       ! moved to state%soilwater%iqredsol_day
+      ! real(8)   iqredfrs_day       ! moved to state%soilwater%iqredfrs_day
+      ! real(8)   iptra_day          ! moved to state%soilwater%iptra_day
 
       ! ========================================================================
       ! [SS-TC] retired 2026-05-12 — TimeControl runtime fields moved to
@@ -217,7 +217,7 @@
       real(8)   tmnr               ! Average of minimum air temperature during past 7 days (oC)
       real(8)   tmx                ! Maximum air temperature of current day (oC)
       real(8)   tpot(96)           ! In case of detailed weather input, calculated Tpot of each weather record (L/T)
-      ! [SS-SWC] retired 2026-05-12 — moved to state%soilwater%intr%tra (ADR 0038)
+      ! [SS-SWC] retired 2026-05-12 — moved to state%soilwater%tra (ADR 0038)
       ! real(8)   tra                ! Actual transpiration flux (L/T)
       real(8)   wet(366)           ! Fraction of each day the crop is wet (L)    
       ! [SS-TC] retired 2026-05-12 — moved to state%timecontrol%* (ADR 0041)
@@ -886,7 +886,7 @@
       real(8)   infres(Madr)       ! Array with infiltration resistance (T) for each drainage level
       real(8)   inpola(macp)       ! Weight for interpolation between current node and upper node
       real(8)   inpolb(macp)       ! Weight for interpolation between current node and lower node
-      ! [SS-SWC] retired 2026-05-12 — moved to state%soilwater%intr%inq (ADR 0038)
+      ! [SS-SWC] retired 2026-05-12 — moved to state%soilwater%inq (ADR 0038)
       ! real(8)   inq(macp+1)        ! Array with intermediate amounts of water flow between current and upper compartment (L)
       ! SS-SWST Phase 2 Task 11 C2: inqdra/inqdra_in/inqdra_out removed — state%surfacewater owns them.
       ! real(8)   inqdra(Madr,macp)      ! Moved to surfacewater_state_t%inqdra
@@ -915,7 +915,7 @@
       ! real(8)   iruno              ! Intermediate amount of runoff (L)
       ! real(8)   irunon             ! Intermediate amount of runon (L)
       real(8)   issnowbeg          ! Amount of snow in soil water equivalent (L) at start of current intermediate period
-      ! [SS-SWC] retired 2026-05-12 — moved to state%soilwater%intr%IThetaBeg (ADR 0038)
+      ! [SS-SWC] retired 2026-05-12 — moved to state%soilwater%IThetaBeg (ADR 0038)
       ! real(8)   ithetabeg(macp)    ! Array with volumetric soil water contents (-) for each compartment at start of intermediate period
       ! [SS-SWC] retired 2026-05-12 — moved to state%soilwater%k (ADR 0038)
       ! real(8)   k(macp+1)          ! Array with soil hydraulic conductivity (L/T) for each numerical compartment

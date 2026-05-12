@@ -89,9 +89,9 @@
          tc_t     => state%timecontrol%t        &  ! TC-12
       )
 
-! ---    reset intermediate soil water fluxes — [SS-SWC S-2.12B] handled by state%soilwater%intr%reset()
-         ! igird/inird/cgird/cnird zeroed via state%soilwater%intr%reset() in SoilWater(2)
-         ! and state%soilwater%cumu%reset() in same path.
+! ---    reset intermediate soil water fluxes — [SS-SWC S-2.12B] handled by state%soilwater%reset_intermediate()
+         ! igird/inird/cgird/cnird zeroed via state%soilwater%reset_intermediate() in SoilWater(2)
+         ! and state%soilwater%reset_cumulative() in same path.
 
          gird = 0.0d0
          irrigevent = 0
@@ -160,8 +160,8 @@
                tps1 = afgen(treltab,14,dvs)
 ! ---          transpiration fraction due to drought and salinity stress
                ! [SS-SWC S-2.12B] iptra_day/iqreddry_day/iqredsol_day -> state%soilwater%intr
-               if (state%soilwater%intr%iptra_day .gt. 1.d-10) then
-                  Tred = 1.0d0 - (state%soilwater%intr%iqreddry_day + state%soilwater%intr%iqredsol_day) / state%soilwater%intr%iptra_day
+               if (state%soilwater%iptra_day .gt. 1.d-10) then
+                  Tred = 1.0d0 - (state%soilwater%iqreddry_day + state%soilwater%iqredsol_day) / state%soilwater%iptra_day
                else
                   Tred = 1.0d0
                end if
@@ -380,8 +380,8 @@ real(8)                         :: Tred
          if (ssdi_sched_type == 1) then
             ! transpiration fraction due to drought and salinity stress
             ! [SS-SWC S-2.12B] iptra_day/iqreddry_day/iqredsol_day -> state%soilwater%intr
-            if (state%soilwater%intr%iptra_day .gt. 1.d-10) then
-               Tred = 1.0d0 - (state%soilwater%intr%iqreddry_day + state%soilwater%intr%iqredsol_day) / state%soilwater%intr%iptra_day
+            if (state%soilwater%iptra_day .gt. 1.d-10) then
+               Tred = 1.0d0 - (state%soilwater%iqreddry_day + state%soilwater%iqredsol_day) / state%soilwater%iptra_day
             else
                Tred = 1.0d0
             end if

@@ -160,7 +160,7 @@ contains
       ! SS-SWST Phase 2 Task 5: inqdra read from state%surfacewater
       associate(inqdra => state%surfacewater%intermediate%inqdra)
       do i=1,numnod
-         dum2 = dum2 + state%soilwater%intr%inqrot(i)/state%timecontrol%outper  ! [SS-SWC S-2.12B] TC-12
+         dum2 = dum2 + state%soilwater%inqrot(i)/state%timecontrol%outper  ! [SS-SWC S-2.12B] TC-12
          if(dum1 + 1.0d-2 * dz(i) .lt. dz_WSN)then
             dum1 = dum1 + 1.0d-2 * dz(i)
             do le=1,5
@@ -172,7 +172,7 @@ contains
       ! SS-ATM A-2.6: igrai/isnrai/igsnow/ievap retired — read from state%atmosphere%intr
       ! [SS-SWC S-2.12B] igird/iintc/irunon/iruno -> state%soilwater%intr
       help = 1.0d-2 * (state%atmosphere%intr%igrai+state%atmosphere%intr%isnrai+ &
-     &                 state%atmosphere%intr%igsnow+state%soilwater%intr%igird-state%soilwater%intr%iintc+state%soilwater%intr%irunon-state%soilwater%intr%iruno) /  &
+     &                 state%atmosphere%intr%igsnow+state%soilwater%igird-state%soilwater%iintc+state%soilwater%irunon-state%soilwater%iruno) /  &
      &                 state%timecontrol%outper  ! TC-12
       SoilEvap = 1.0d-2 * state%atmosphere%intr%ievap / state%timecontrol%outper  ! TC-12
       Wflux_inTop   = help 

@@ -26,11 +26,11 @@
 !!     pond, pondm1, pondini, gwl, gwlm1, nodgwl, pegwl, bpegwl, npegwl,
 !!     gwlflcpzo, nodgwlflcpzo, hatm, volact, volm1, volini, wbalance,
 !!     runon, fllowgwl
-!!   Intermediate cohort (soilwater_intermediate_t :: intr):
+!!   Intermediate accumulators (flattened onto parent type):
 !!     22 non-per-day fields (6 arrays + 16 scalars) + 8 per-day fields
-!!     reset() = flzerointr; reset_per_day() = flDayStart
-!!   Cumulative cohort (soilwater_cumulative_t :: cumu):
-!!     14 scalar fields; reset() = flzerocumu
+!!     reset_intermediate() = flzerointr; reset_intermediate_per_day() = flDayStart
+!!   Cumulative accumulators (flattened onto parent type):
+!!     14 scalar fields; reset_cumulative() = flzerocumu
 !!
 !! Excluded (config, not runtime state):
 !!   - swbotb, swqhbot, swtopb — boundary-condition switches; config flags.
@@ -48,118 +48,17 @@ module soilwater_state_mod
    implicit none
    private
    public :: soilwater_state_t, soilwater_init
-   public :: soilwater_intermediate_t
-   public :: soilwater_cumulative_t
-
-   ! ---------------------------------------------------------------------------
-   !> Intermediate accumulators — reset when flzerointr fires (reset()),
-   !! or when flDayStart fires (reset_per_day() for the 8 per-day fields).
-   !!
-   !! 22 non-per-day fields:
-   !!   6 allocatable arrays (per-node, allocated in soilwater_init S-1.2):
-   !!     inq, inqrot, inqssdi, iqdo, iqup, IThetaBeg
-   !!   16 scalars:
-   !!     iqrot, iqssdi, iqredwet, iqreddry, iqredsol, iqredfrs,
-   !!     ies0, iet0, iew0, iintc, iruno, irunoCN, irunon,
-   !!     iqbot, iqtdo, iqtup, IPondBeg, iprec, igird, inird
-   !!
-   !! 8 per-day fields (reset_per_day() only; reset() also touches these):
-   !!   6 per-day scalars: tra, iqredwet_day, iqreddry_day,
-   !!                      iqredsol_day, iqredfrs_day, iptra_day
-   !!   2 per-day arrays:  qpotrot_day(:), qredtot_day(:)
-   !!
-   !! Mild ADR 0033 extension: same cohort type, two distinct reset procedures,
-   !! two distinct activity gates (flzerointr vs flDayStart).
-   !! Mirrors atmosphere_intermediate_t (ADR 0037) pattern.
-   ! ---------------------------------------------------------------------------
-   type :: soilwater_intermediate_t
-
-      ! Per-node flux accumulators (6 allocatable arrays; size numnod or numnod+1)
-      ! Allocated by soilwater_init (S-1.2). Unallocated until then.
-      real(real64), allocatable :: inq(:)       !< intra-period inter-comp flux (cm)
-      real(real64), allocatable :: inqrot(:)    !< intra-period root uptake (cm)
-      real(real64), allocatable :: inqssdi(:)   !< intra-period SSDI flux (cm)
-      real(real64), allocatable :: iqdo(:)      !< intra-period downward flux (cm)
-      real(real64), allocatable :: iqup(:)      !< intra-period upward flux (cm)
-      real(real64), allocatable :: IThetaBeg(:) !< theta at start of intr period (-)
-
-      ! Non-per-day scalars (20; zeroed by both reset() and reset_per_day()-indirectly)
-      real(real64) :: iqrot     = 0.0_real64   !< period root uptake sum (cm)
-      real(real64) :: iqssdi    = 0.0_real64   !< period SSDI flux sum (cm)
-      real(real64) :: iqredwet  = 0.0_real64   !< period wet-stress reduction (cm)
-      real(real64) :: iqreddry  = 0.0_real64   !< period dry-stress reduction (cm)
-      real(real64) :: iqredsol  = 0.0_real64   !< period salt-stress reduction (cm)
-      real(real64) :: iqredfrs  = 0.0_real64   !< period frost-stress reduction (cm)
-      real(real64) :: ies0      = 0.0_real64   !< period reference soil evap (cm)
-      real(real64) :: iet0      = 0.0_real64   !< period reference transpiration (cm)
-      real(real64) :: iew0      = 0.0_real64   !< period reference evaporation (cm)
-      real(real64) :: iintc     = 0.0_real64   !< period interception (cm)
-      real(real64) :: iruno     = 0.0_real64   !< period runoff (cm)
-      real(real64) :: irunoCN   = 0.0_real64   !< period CN runoff (cm)
-      real(real64) :: irunon    = 0.0_real64   !< period runon (cm)
-      real(real64) :: iqbot     = 0.0_real64   !< period bottom flux (cm)
-      real(real64) :: iqtdo     = 0.0_real64   !< period total downward flux (cm)
-      real(real64) :: iqtup     = 0.0_real64   !< period total upward flux (cm)
-      real(real64) :: IPondBeg  = 0.0_real64   !< ponding at start of intr period (cm)
-      real(real64) :: iprec     = 0.0_real64   !< period precipitation (cm)
-      real(real64) :: igird     = 0.0_real64   !< period irrigation gross (cm)
-      real(real64) :: inird     = 0.0_real64   !< period irrigation net (cm)
-
-      ! Per-day cohort (flDayStart gate — zeroed by reset_per_day() and reset())
-      real(real64) :: tra           = 0.0_real64  !< daily actual transpiration (cm)
-      real(real64) :: iqredwet_day  = 0.0_real64  !< per-day wet-stress reduction (cm)
-      real(real64) :: iqreddry_day  = 0.0_real64  !< per-day dry-stress reduction (cm)
-      real(real64) :: iqredsol_day  = 0.0_real64  !< per-day salt-stress reduction (cm)
-      real(real64) :: iqredfrs_day  = 0.0_real64  !< per-day frost-stress reduction (cm)
-      real(real64) :: iptra_day     = 0.0_real64  !< per-day potential transpiration (cm)
-      real(real64), allocatable :: qpotrot_day(:) !< per-day potential uptake per node (cm)
-      real(real64), allocatable :: qredtot_day(:) !< per-day total reduction per node (cm)
-
-   contains
-      procedure :: reset         => soilwater_intermediate_reset      !< zeroes all 22+8 fields (flzerointr)
-      procedure :: reset_per_day => soilwater_per_day_reset           !< zeroes only 8 per-day fields (flDayStart)
-   end type soilwater_intermediate_t
-
-   ! ---------------------------------------------------------------------------
-   !> Cumulative accumulators — reset when flzerocumu fires (reset()).
-   !!
-   !! 14 scalar fields:
-   !!   cqssdi, cqrot, cqbot, cqbotdo, cqbotup, cinund, crunon, crunoff,
-   !!   crunoffCN, cqtdo, cqtup, cqprai, cgird, cnird
-   !!
-   !! No allocatable arrays. All scalars; no allocated() guards needed in reset().
-   !! cgird/cnird: multi-owner with irrigation arc (ADR 0038 D14); irrigation.f90
-   !! continues subset-reset until irrigation arc takes ownership.
-   ! ---------------------------------------------------------------------------
-   type :: soilwater_cumulative_t
-      real(real64) :: cqssdi    = 0.0_real64   !< cumulative SSDI flux (cm)
-      real(real64) :: cqrot     = 0.0_real64   !< cumulative root uptake (cm)
-      real(real64) :: cqbot     = 0.0_real64   !< cumulative bottom flux (cm)
-      real(real64) :: cqbotdo   = 0.0_real64   !< cumulative downward bottom flux (cm)
-      real(real64) :: cqbotup   = 0.0_real64   !< cumulative upward bottom flux (cm)
-      real(real64) :: cinund    = 0.0_real64   !< cumulative inundation (cm)
-      real(real64) :: crunon    = 0.0_real64   !< cumulative runon (cm)
-      real(real64) :: crunoff   = 0.0_real64   !< cumulative runoff (cm)
-      real(real64) :: crunoffCN = 0.0_real64   !< cumulative CN runoff (cm)
-      real(real64) :: cqtdo     = 0.0_real64   !< cumulative total downward flux (cm)
-      real(real64) :: cqtup     = 0.0_real64   !< cumulative total upward flux (cm)
-      real(real64) :: cqprai    = 0.0_real64   !< cumulative precipitation (cm)
-      real(real64) :: cgird     = 0.0_real64   !< cumulative gross irrigation (cm)
-      real(real64) :: cnird     = 0.0_real64   !< cumulative net irrigation (cm)
-   contains
-      procedure :: reset => soilwater_cumulative_reset                !< zeroes all 14 fields (flzerocumu)
-   end type soilwater_cumulative_t
 
    ! ---------------------------------------------------------------------------
    !> Top-level soil-water state record. 109 fields total (35 existing + 74 new):
    !!   12 boundary (ADR 0035)
    !!   22 crop water uptake (ADR 0036)
    !!   30 flat instantaneous — 17 per-node/layer arrays + 13 scalars/flags (ADR 0038)
-   !!   soilwater_intermediate_t :: intr  — 22+8 = 30 fields in cohort
-   !!   soilwater_cumulative_t   :: cumu  — 14 fields in cohort
+   !!   intermediate (flat) — 22+8 = 30 fields, reset_intermediate / reset_intermediate_per_day
+   !!   cumulative (flat)   — 14 fields, reset_cumulative
    !!
    !! Flat instantaneous arrays are unallocated until soilwater_init (S-1.2).
-   !! Cohort arrays are unallocated until soilwater_init (S-1.2).
+   !! Intermediate per-node arrays are unallocated until soilwater_init (S-1.2).
    !! ASSOCIATE prefix sw_ recommended in heavy compute bodies.
    ! ---------------------------------------------------------------------------
    type :: soilwater_state_t
@@ -266,11 +165,75 @@ module soilwater_state_mod
       logical      :: fllowgwl     = .false.      !< flag: gwl is below the soil profile
 
       ! ===========================================================================
-      ! SOIL-WATER CORE — COHORT SUB-RECORDS (ADR 0038, S-1.1)
+      ! INTERMEDIATE accumulators (reset_intermediate / gate: flzerointr)
+      !   subsumes the per-day subset, which has its own reset under flDayStart.
       ! ===========================================================================
 
-      type(soilwater_intermediate_t) :: intr  !< intermediate accumulators (flzerointr + flDayStart gates)
-      type(soilwater_cumulative_t)   :: cumu  !< cumulative accumulators (flzerocumu gate)
+      ! Non-per-day per-node arrays (allocated by soilwater_init)
+      real(real64), allocatable :: inq(:)        !< intra-period inter-comp flux (cm)
+      real(real64), allocatable :: inqrot(:)     !< intra-period root uptake (cm)
+      real(real64), allocatable :: inqssdi(:)    !< intra-period SSDI flux (cm)
+      real(real64), allocatable :: iqdo(:)       !< intra-period downward flux (cm)
+      real(real64), allocatable :: iqup(:)       !< intra-period upward flux (cm)
+      real(real64), allocatable :: IThetaBeg(:)  !< theta at start of intr period (-)
+
+      ! Non-per-day scalars
+      real(real64) :: iqrot     = 0.0_real64
+      real(real64) :: iqssdi    = 0.0_real64
+      real(real64) :: iqredwet  = 0.0_real64
+      real(real64) :: iqreddry  = 0.0_real64
+      real(real64) :: iqredsol  = 0.0_real64
+      real(real64) :: iqredfrs  = 0.0_real64
+      real(real64) :: ies0      = 0.0_real64
+      real(real64) :: iet0      = 0.0_real64
+      real(real64) :: iew0      = 0.0_real64
+      real(real64) :: iintc     = 0.0_real64
+      real(real64) :: iruno     = 0.0_real64
+      real(real64) :: irunoCN   = 0.0_real64
+      real(real64) :: irunon    = 0.0_real64
+      real(real64) :: iqbot     = 0.0_real64
+      real(real64) :: iqtdo     = 0.0_real64
+      real(real64) :: iqtup     = 0.0_real64
+      real(real64) :: IPondBeg  = 0.0_real64
+      real(real64) :: iprec     = 0.0_real64
+      real(real64) :: igird     = 0.0_real64
+      real(real64) :: inird     = 0.0_real64
+
+      ! ===========================================================================
+      ! PER-DAY subset (reset_intermediate_per_day / gate: flDayStart)
+      !   Also zeroed as part of reset_intermediate (flzerointr subsumes flDayStart).
+      ! ===========================================================================
+      real(real64) :: tra           = 0.0_real64
+      real(real64) :: iqredwet_day  = 0.0_real64
+      real(real64) :: iqreddry_day  = 0.0_real64
+      real(real64) :: iqredsol_day  = 0.0_real64
+      real(real64) :: iqredfrs_day  = 0.0_real64
+      real(real64) :: iptra_day     = 0.0_real64
+      real(real64), allocatable :: qpotrot_day(:)
+      real(real64), allocatable :: qredtot_day(:)
+
+      ! ===========================================================================
+      ! CUMULATIVE accumulators (reset_cumulative / gate: flzerocumu)
+      ! ===========================================================================
+      real(real64) :: cqssdi    = 0.0_real64
+      real(real64) :: cqrot     = 0.0_real64
+      real(real64) :: cqbot     = 0.0_real64
+      real(real64) :: cqbotdo   = 0.0_real64
+      real(real64) :: cqbotup   = 0.0_real64
+      real(real64) :: cinund    = 0.0_real64
+      real(real64) :: crunon    = 0.0_real64
+      real(real64) :: crunoff   = 0.0_real64
+      real(real64) :: crunoffCN = 0.0_real64
+      real(real64) :: cqtdo     = 0.0_real64
+      real(real64) :: cqtup     = 0.0_real64
+      real(real64) :: cqprai    = 0.0_real64
+      real(real64) :: cgird     = 0.0_real64
+      real(real64) :: cnird     = 0.0_real64
+
+   contains
+      procedure :: reset_intermediate         => soilwater_reset_intermediate
+      procedure :: reset_intermediate_per_day => soilwater_reset_intermediate_per_day
+      procedure :: reset_cumulative           => soilwater_reset_cumulative
 
    end type soilwater_state_t
 
@@ -403,20 +366,20 @@ contains
       ! ===========================================================================
 
       ! Non-per-day per-node arrays sized numnod:
-      allocate(sw%intr%inqrot(numnod));    sw%intr%inqrot    = 0.0_real64
-      allocate(sw%intr%inqssdi(numnod));   sw%intr%inqssdi   = 0.0_real64
-      allocate(sw%intr%IThetaBeg(numnod)); sw%intr%IThetaBeg = 0.0_real64
+      allocate(sw%inqrot(numnod));    sw%inqrot    = 0.0_real64
+      allocate(sw%inqssdi(numnod));   sw%inqssdi   = 0.0_real64
+      allocate(sw%IThetaBeg(numnod)); sw%IThetaBeg = 0.0_real64
 
       ! Non-per-day per-node flux arrays sized numnod+1:
       ! Legacy: inq(macp+1), iqdo(macp+1), iqup(macp+1)
-      allocate(sw%intr%inq(numnod+1));     sw%intr%inq       = 0.0_real64
-      allocate(sw%intr%iqdo(numnod+1));    sw%intr%iqdo      = 0.0_real64
-      allocate(sw%intr%iqup(numnod+1));    sw%intr%iqup      = 0.0_real64
+      allocate(sw%inq(numnod+1));     sw%inq       = 0.0_real64
+      allocate(sw%iqdo(numnod+1));    sw%iqdo      = 0.0_real64
+      allocate(sw%iqup(numnod+1));    sw%iqup      = 0.0_real64
 
       ! Per-day per-node arrays sized numnod:
       ! Legacy: qpotrot_day(macp), qredtot_day(macp)
-      allocate(sw%intr%qpotrot_day(numnod)); sw%intr%qpotrot_day = 0.0_real64
-      allocate(sw%intr%qredtot_day(numnod)); sw%intr%qredtot_day = 0.0_real64
+      allocate(sw%qpotrot_day(numnod)); sw%qpotrot_day = 0.0_real64
+      allocate(sw%qredtot_day(numnod)); sw%qredtot_day = 0.0_real64
 
       ! ===========================================================================
       ! NON-ZERO DEFAULTS (ADR 0038, S-1.2)
@@ -429,16 +392,12 @@ contains
 
    end subroutine soilwater_init
 
-   ! ---------------------------------------------------------------------------
-   !> Zero ALL fields in the intermediate cohort — called under flzerointr gate.
-   !! Zeroes all 6 non-per-day allocatable arrays (if allocated), all 20
-   !! non-per-day scalars, and all 8 per-day fields (6 scalars + 2 arrays).
-   !! Pattern: atmosphere_intermediate_reset (ADR 0037) extended for arrays.
-   ! ---------------------------------------------------------------------------
-   subroutine soilwater_intermediate_reset(self)
-      class(soilwater_intermediate_t), intent(inout) :: self
+   !> Zero ALL fields in the intermediate cohort — flzerointr gate.
+   !! Includes the per-day subset (flzerointr subsumes flDayStart).
+   subroutine soilwater_reset_intermediate(self)
+      class(soilwater_state_t), intent(inout) :: self
 
-      ! Non-per-day allocatable arrays (allocated() guard — not yet allocated pre-S-1.2)
+      ! Non-per-day allocatable arrays
       if (allocated(self%inq))       self%inq       = 0.0_real64
       if (allocated(self%inqrot))    self%inqrot    = 0.0_real64
       if (allocated(self%inqssdi))   self%inqssdi   = 0.0_real64
@@ -469,39 +428,27 @@ contains
       self%inird    = 0.0_real64
 
       ! Per-day fields — also zeroed by full reset (flzerointr subsumes flDayStart)
-      call soilwater_per_day_reset(self)
+      call soilwater_reset_intermediate_per_day(self)
 
-   end subroutine soilwater_intermediate_reset
+   end subroutine soilwater_reset_intermediate
 
-   ! ---------------------------------------------------------------------------
-   !> Zero only the 8 per-day fields — called under flDayStart gate.
-   !! Zeroes 6 per-day scalars + 2 per-day arrays (if allocated).
-   !! Non-per-day intermediate fields are UNTOUCHED (orthogonality invariant).
-   ! ---------------------------------------------------------------------------
-   subroutine soilwater_per_day_reset(self)
-      class(soilwater_intermediate_t), intent(inout) :: self
-
-      ! Per-day scalars
+   !> Zero only the per-day subset — flDayStart gate.
+   !! Non-per-day intermediate fields are UNTOUCHED.
+   subroutine soilwater_reset_intermediate_per_day(self)
+      class(soilwater_state_t), intent(inout) :: self
       self%tra          = 0.0_real64
       self%iqredwet_day = 0.0_real64
       self%iqreddry_day = 0.0_real64
       self%iqredsol_day = 0.0_real64
       self%iqredfrs_day = 0.0_real64
       self%iptra_day    = 0.0_real64
-
-      ! Per-day arrays (allocated() guard)
       if (allocated(self%qpotrot_day)) self%qpotrot_day = 0.0_real64
       if (allocated(self%qredtot_day)) self%qredtot_day = 0.0_real64
+   end subroutine soilwater_reset_intermediate_per_day
 
-   end subroutine soilwater_per_day_reset
-
-   ! ---------------------------------------------------------------------------
-   !> Zero all 14 cumulative cohort fields — called under flzerocumu gate.
-   !! No allocatable arrays in this type; no allocated() guards needed.
-   !! Pattern: atmosphere_cumulative_reset (ADR 0037).
-   ! ---------------------------------------------------------------------------
-   subroutine soilwater_cumulative_reset(self)
-      class(soilwater_cumulative_t), intent(inout) :: self
+   !> Zero the 14 cumulative fields — flzerocumu gate.
+   subroutine soilwater_reset_cumulative(self)
+      class(soilwater_state_t), intent(inout) :: self
       self%cqssdi    = 0.0_real64
       self%cqrot     = 0.0_real64
       self%cqbot     = 0.0_real64
@@ -516,6 +463,6 @@ contains
       self%cqprai    = 0.0_real64
       self%cgird     = 0.0_real64
       self%cnird     = 0.0_real64
-   end subroutine soilwater_cumulative_reset
+   end subroutine soilwater_reset_cumulative
 
 end module soilwater_state_mod
