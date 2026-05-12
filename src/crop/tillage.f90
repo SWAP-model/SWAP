@@ -5,7 +5,8 @@ module tillage_mod
    use error_mod, only: fatalerr_collected
    use swap_state_mod, only: swap_state_t  ! [SS-ATM A-2.6] nraida retired from variables to state%atmosphere
 
-   use variables, only: t1900, date, swhyst, swsolu, swoxygen, flMacroPore, flksatexm, zbotcp, NumNod, Bdens, layer, ParamVG, &
+   ! SS-TC TC-12: t1900 retired from only-list; read via state%timecontrol%t1900 at each call site.
+   use variables, only: date, swhyst, swsolu, swoxygen, flMacroPore, flksatexm, zbotcp, NumNod, Bdens, layer, ParamVG, &
                         NumLay, dz, disnod, botcom, psilt, pclay, SwDiscrvert, tend, &  ! [SS-SWC S-2.6] CofGen/pond/theta/h retired to state%soilwater
                         ! Tillage bridge variables with renaming (SAVE statements removed)
                         ! [SS-TIL T-5] Groups C/D/E retired from variables — reads via state%tillage
@@ -99,7 +100,7 @@ module tillage_mod
 
       if (TEST) then
          ! for technical test
-         call DTDPST ("YEAR-MONTHST-DAY", t1900, STRNG)
+         call DTDPST ("YEAR-MONTHST-DAY", state%timecontrol%t1900, STRNG)  ! TC-12
          if (trim(STRNG) == "2016-Apr-05") then
             BDENS(1) = 1000.0d0
             call Change_MvGpars(state)              ! [SS-SWC S-1.9]
@@ -118,7 +119,7 @@ module tillage_mod
       else
          if (Test2) then
             ! for technical test
-            call DTDPST ("YEAR-MONTHST-DAY", t1900, STRNG)
+            call DTDPST ("YEAR-MONTHST-DAY", state%timecontrol%t1900, STRNG)  ! TC-12
             if (trim(STRNG) == "2005-Jun-05") then
                ! [SS-TIL T-5] legacy Rho_cons/K_R_cons dropped; canonical via state%tillage
                state%tillage%Rho_cons(1) = 1350.0d0
@@ -135,8 +136,8 @@ module tillage_mod
             end if
          end if
          ! normal usage  [SS-TIL T-5] iTill reads via state%tillage
-         if (state%tillage%iTill <= Ntill .and. nint(t1900) == nint(Date_tillage(state%tillage%iTill))) then
-            call DTDPST ("YEAR-MONTHST-DAY", t1900, STRNG)
+         if (state%tillage%iTill <= Ntill .and. nint(state%timecontrol%t1900) == nint(Date_tillage(state%tillage%iTill))) then  ! TC-12
+            call DTDPST ("YEAR-MONTHST-DAY", state%timecontrol%t1900, STRNG)  ! TC-12
             call Change_Tillage_Info (state%tillage%iTill, state)    ! [SS-TIL T-3] state for Group C dual-writes
             call Change_Bdens(state)
             state%tillage%iTill = state%tillage%iTill + 1   ! [SS-TIL T-5] legacy iTill dropped
@@ -147,7 +148,7 @@ module tillage_mod
 
          call Change_MvGpars(state)                 ! [SS-SWC S-1.9]
 
-         call DTDPST ("YEAR-MONTHST-DAY", t1900, STRNG)
+         call DTDPST ("YEAR-MONTHST-DAY", state%timecontrol%t1900, STRNG)  ! TC-12
          if (trim(STRNG) == "2005-Apr-05") then
             !ParamVG(5,1) = -2.0d0
             !ParamVG(5,1) = -1.5d0
@@ -169,7 +170,7 @@ module tillage_mod
    case (3)
       ! OUTPUT  [SS-TIL T-5] MaxNumSoilHo/sumDWC/sumAvail1/sumAvail2 reads via state%tillage
       if (TEST) then
-         call DTDPST ("YEAR-MONTHST-DAY", t1900, STRNG)
+         call DTDPST ("YEAR-MONTHST-DAY", state%timecontrol%t1900, STRNG)  ! TC-12
          write (222,'(A,F15.5,10(I3,F15.5))') trim(DATE), state%atmosphere%nraida, (i, Bdens(i), i = 1, state%tillage%MaxNumSoilHo)
          write (224,'(A,10F15.5)') trim(DATE), state%soilwater%theta(5), state%soilwater%theta(10), state%soilwater%theta(20), state%soilwater%theta(27), state%soilwater%theta(35), state%atmosphere%nraida, state%tillage%sumDWC, state%tillage%sumAvail1, state%tillage%sumAvail2  ! [SS-SWC S-2.6]
          write (226,'(A,10F15.5)') trim(DATE), (state%soilwater%cofgen(i,1), i = 1, 10)  ! [SS-SWC S-2.6]
@@ -414,11 +415,11 @@ write(124,'(A,1P,12E12.5)') Date, Bdens(1), ParamVG(2,layer(1)), state%soilwater
    type(swap_state_t), intent(inout) :: state
    integer :: i
    state%tillage%iTill = 1
-   if (t1900 <= Date_tillage(1)) state%tillage%iTill = 1
+   if (state%timecontrol%t1900 <= Date_tillage(1)) state%tillage%iTill = 1  ! TC-12
    do i = 2, Ntill
       if (Date_tillage(i) < Date_tillage(i-1)) call fatalerr_collected ('set_iTill', 'Dates in tabulated tillage events must be sorted')
       ! H-4 bug fix: second comparison was Date_tillage(i-1) (tautological); corrected to Date_tillage(i)
-      if (t1900 >= Date_tillage(i-1) .and. t1900 < Date_tillage(i)) state%tillage%iTill = i-1
+      if (state%timecontrol%t1900 >= Date_tillage(i-1) .and. state%timecontrol%t1900 < Date_tillage(i)) state%tillage%iTill = i-1  ! TC-12
    end do
    end subroutine set_iTill
 

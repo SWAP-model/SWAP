@@ -82,7 +82,13 @@
 
 ! ===    determine irrigation rates and states  =============================================
 !        daily
-      
+
+      ! SS-TC TC-12: t1900, t read via state%timecontrol tc_* aliases.
+      associate( &
+         tc_t1900 => state%timecontrol%t1900,  &  ! TC-12
+         tc_t     => state%timecontrol%t        &  ! TC-12
+      )
+
 ! ---    reset intermediate soil water fluxes — [SS-SWC S-2.12B] handled by state%soilwater%intr%reset()
          ! igird/inird/cgird/cnird zeroed via state%soilwater%intr%reset() in SoilWater(2)
          ! and state%soilwater%cumu%reset() in same path.
@@ -92,7 +98,7 @@
 
 ! ---    fixed irrigations events
          if (swirfix .eq. 1) then
-            if (abs(irdate(nirri) - t1900) .lt. 1.d-3) then
+            if (abs(irdate(nirri) - tc_t1900) .lt. 1.d-3) then  ! TC-12
                gird = irdepth(nirri)
                cirr = irconc(nirri)
                isua = irtype(nirri)
@@ -120,11 +126,11 @@
                !datea(2) = endirr(2)
                !datea(3) = endirr(1)        
                !call dtardp (datea, fsec, tendirryrx)
-               if ( (t1900-tstairryrx).gt.1.0d-3 .and. (t1900-tendirryrx).le.1.0d-3 ) then
+               if ( (tc_t1900-tstairryrx).gt.1.0d-3 .and. (tc_t1900-tendirryrx).le.1.0d-3 ) then  ! TC-12
                   flIrriTime = .true.
                end if
             else
-               if ((t-tstairrig).ge.-1.0d-3.and.(t-tendirrig).le.1.0d-3) then
+               if ((tc_t-tstairrig).ge.-1.0d-3.and.(tc_t-tendirrig).le.1.0d-3) then  ! TC-12
                   flIrriTime = .true.
                end if
             end if
@@ -272,6 +278,8 @@
 
          if (irrigevent .ne. 0) flIrrigationOutput = .true.
 
+      end associate  ! tc_t1900, tc_t (SS-TC TC-12)
+
       case default
          call fatalerr_collected ('Irrigation', 'Illegal value for TASK')
       end select
@@ -288,7 +296,8 @@
 subroutine SSDI_irrigation(iTask, state)
 
 ! [SS-SWC S-2.12B] h/theta/iptra_day/iqreddry_day/iqredsol_day retired — read via state%soilwater
-use variables, only: mairg, numnod, tend, tstart, t1900, zbotcp, irrigevent, qssdi, qssdisum, dt_SSDI_event,   &
+! SS-TC TC-12: t1900 retired from only-list; read via state%timecontrol.
+use variables, only: mairg, numnod, tend, tstart, zbotcp, irrigevent, qssdi, qssdisum, dt_SSDI_event,   &
                      swssdi_irr, nod_ssdi_irr, ssdi_schedule_irr, ssdi_sched_type_irr, &
                      nod_ssdi_sensor_irr, ssdi_threshold_irr, ssdi_threshold_z_irr, &
                      ssdi_amount_irr, ssdi_appl_rate_irr, sw_interval_irr, days_interval_irr, &
@@ -350,14 +359,16 @@ real(8)                         :: Tred
       return
       
    case (2)
+      ! SS-TC TC-12: t1900 read via state%timecontrol tc_* alias.
+      associate(tc_t1900 => state%timecontrol%t1900)  ! TC-12
       irrigevent      = 0
       qssdi(1:numnod) = 0.0d0
       dt_SSDI_event   = 1.0d0
       qssdisum        = 0.0d0
-      
+
       if (ssdi_schedule == 0) then
          ! check if today is a day with ssdi
-         if (abs(ssdi_date(nirri) - t1900) .lt. 1.d-3) then
+         if (abs(ssdi_date(nirri) - tc_t1900) .lt. 1.d-3) then  ! TC-12
             irrigevent                     = 2
             dt_SSDI_event                  = ssdi_amount_f(nirri) / ssdi_rate_f(nirri)
             qssdi(nod_ssdi(1):nod_ssdi(2)) = ssdi_rate_f(nirri)
@@ -401,6 +412,8 @@ real(8)                         :: Tred
          end if
          
       end if
+
+      end associate  ! tc_t1900 (SS-TC TC-12)
 
    case (9)
       ! special: reset scheduled irrigation at end of irrigation event

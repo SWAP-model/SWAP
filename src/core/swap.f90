@@ -97,8 +97,9 @@ use agetracer_mod, only: AgeTracer
 use soilgrid_mod, only: CalcGrid, ConvertDiscrVert
 use soilhydraulics_mod, only: soilwater, SoilWaterStateVar
 ! [SS-SWC S-2.12B] binding for legacy cofgen/fluseksatexm reads in utility modules
+! SS-TC TC-12: bind_tc_target for dt pointer in moiscap()
 use WC_K_models_04_11, only: bind_cofgen_target
-use soilhydraulics_utils, only: bind_state_targets
+use soilhydraulics_utils, only: bind_state_targets, bind_tc_target
 ! [SS-SWC S-2.12B] transient seed buffers from config_to_variables
 use config_to_variables_mod, only: h_init_buf, pondini_init_buf, pond_init_buf
 use irrigation_mod, only: irrigation, SSDI_irrigation
@@ -197,6 +198,7 @@ if (iTask == 1) then
    ! resolve to the canonical state%soilwater storage (ADR 0038).
    call bind_cofgen_target(state%soilwater%cofgen)
    call bind_state_targets(state%soilwater%cofgen, state%soilwater%fluseksatexm)
+   call bind_tc_target(state%timecontrol%dt)  ! SS-TC TC-12: wire tc_dt_ptr in moiscap()
    ! [SS-SWC S-2.12B] seed state%soilwater from config buffers populated by config_to_variables.
    ! Retired globals: pondini, pond, h(1..nhead). state%soilwater%h is sized numnod and
    ! receives the swinco=3 initial-profile h values; SoilHydraulics(1) consumes the rest.

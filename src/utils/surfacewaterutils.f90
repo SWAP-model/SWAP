@@ -12,7 +12,8 @@ module surfacewater_utils
    use iso_fortran_env, only: real64
    ! SS-SWST Phase 2 Task 11: imper removed from globals; callers pass it explicitly.
    ! SS-SWC Phase 2 S-2.8: pond removed from use-list; read from state%soilwater%pond in runoff().
-   use variables, only: hqhtab, qqhtab, swdra, pondmx, rsro, rsroexp, dt
+   ! SS-TC TC-12: dt retired from only-list; read via state%timecontrol in runoff().
+   use variables, only: hqhtab, qqhtab, swdra, pondmx, rsro, rsroexp
    use swap_state_mod, only: swap_state_t
 
    implicit none
@@ -217,7 +218,9 @@ contains
       ! Local variables
       real(real64) :: inun_max
 
-      associate(sw_wls  => state%surfacewater%wls,   &
+      ! SS-TC TC-12: dt read via state%timecontrol tc_* alias.
+      associate(tc_dt   => state%timecontrol%dt,      &  ! TC-12
+                sw_wls  => state%surfacewater%wls,   &
                 sw_swst => state%surfacewater%swst,  &
                 ! SS-SWC Phase 2 S-2.8: pond read from state%soilwater
                 pond    => state%soilwater%pond)
@@ -228,12 +231,12 @@ contains
          if (rsro < 1.0d-3) then
             runoff = pond - pondmx
          else
-            runoff = dt / rsro * (pond - pondmx)**rsroexp
+            runoff = tc_dt / rsro * (pond - pondmx)**rsroexp  ! TC-12
          end if
 
       else if (swdra == 2) then
          if (pond > pondmx .and. pond > sw_wls) then
-            runoff = dt / rsro * (pond - max(pondmx, sw_wls))**rsroexp
+            runoff = tc_dt / rsro * (pond - max(pondmx, sw_wls))**rsroexp  ! TC-12
          else if (pond < sw_wls) then
             inun_max = sw_swst - swstlev(state, pond)
             runoff = -min(inun_max, sw_wls - max(pond, pondmx))

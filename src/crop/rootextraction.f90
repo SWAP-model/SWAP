@@ -711,7 +711,9 @@ module rootextraction_mod
 ! --- SS-CRP Phase 2 C-2.5: ASSOCIATE for JvL loop per-node and scalar fields (state-only).
 ! --- SS-ATM Phase 2 Task A-2.3: at_ptra added for atmosphere reader cutover.
 ! --- SS-SWC S-2.7: sw_h, sw_theta added for soil-water-core reader cutover.
+! --- SS-TC TC-12: dt added for timecontrol reader cutover.
       associate( &
+         tc_dt      => state%timecontrol%dt,    &   ! TC-12
          at_ptra    => state%atmosphere%ptra,   &
          sw_h       => state%soilwater%h,       &   ! [SS-SWC S-2.7]
          sw_theta   => state%soilwater%theta,   &   ! [SS-SWC S-2.7]
@@ -777,13 +779,13 @@ module rootextraction_mod
      &                 (cw_mflux(node)-cw_mroot(node)) * dz(node)
           if (cw_mflux(node) .gt. cw_mroot(node) ) then
 ! ---       water extraction, set maximum flux to 10% of available soil water
-            qmax = (sw_theta(node) - twilt(node)) * dz(node) * 0.1d0 / dt  ! [SS-SWC S-2.7]
+            qmax = (sw_theta(node) - twilt(node)) * dz(node) * 0.1d0 / tc_dt  ! [SS-SWC S-2.7] TC-12
             qmax = min(qmax,at_ptra)
             cw_qrot(node) = min(cw_qrot(node),qmax)
           else
 ! ---       possible hydraulic lift, set maximum flux to 0.1% change water content
             if (flhydrlift) then
-              qmax = -0.001d0 * dz(node) / dt
+              qmax = -0.001d0 * dz(node) / tc_dt  ! TC-12
               cw_qrot(node) = max(cw_qrot(node),qmax)
             else
 ! ---         no hydraulic lift allowed
@@ -799,13 +801,13 @@ module rootextraction_mod
      &                 (cw_mflux(node)-cw_mroot(node)) * depth
           if (cw_mflux(node) .gt. cw_mroot(node) ) then
 ! ---       water extraction, set maximum flux to 10% of available soil water
-            qmax = (sw_theta(node) - twilt(node)) * depth * 0.1d0 / dt  ! [SS-SWC S-2.7]
+            qmax = (sw_theta(node) - twilt(node)) * depth * 0.1d0 / tc_dt  ! [SS-SWC S-2.7] TC-12
             qmax = min(qmax,at_ptra)
             cw_qrot(node) = min(cw_qrot(node),qmax)
           else
 ! ---       possible hydraulic lift, set maximum flux to 0.1% change water content
             if (flhydrlift) then
-              qmax = -0.001d0 * depth / dt
+              qmax = -0.001d0 * depth / tc_dt  ! TC-12
               cw_qrot(node) = max(cw_qrot(node),qmax)
             else
 ! ---         no hydraulic lift allowed

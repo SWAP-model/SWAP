@@ -103,7 +103,9 @@ contains
 
 ! SS-SWC Phase 2 S-2.8: theta/thetsl/q/thetm1/gwl/nodgwl/thetas/pond
 !  read from state%soilwater (reader cutover; body is preserved but unreachable).
+! SS-TC TC-12: dt read via state%timecontrol tc_* alias.
       associate( &
+         tc_dt     => state%timecontrol%dt,    &  ! TC-12
          sw_theta  => state%soilwater%theta,   &
          sw_thetm1 => state%soilwater%thetm1,  &
          sw_thetas => state%soilwater%thetas,  &
@@ -174,7 +176,7 @@ contains
       if (FlMacropore .and. Z_Tp.gt.-1.d-8) ArMpSs = ArMpTp
 
 ! --- determine maximum timestep
-      dtsolu = dt
+      dtsolu = tc_dt  ! TC-12
       do i = 1,numnod
         ! SS-SWC Phase 2 S-2.8: theta/thetsl/q read from state%soilwater
         thetav = inpola(i+1)*sw_theta(i)+inpolb(i)*sw_theta(i+1)
@@ -188,10 +190,10 @@ contains
       tcumsol = 0.0
       ! SS-DRST Task 3: qdra read from state%drainage
       associate(qdra => state%drainage%qdra)
-      do while ((dt-tcumsol).gt.1.0d-8)
+      do while ((tc_dt-tcumsol).gt.1.0d-8)  ! TC-12
 
 ! ---    time step and cumulative time
-         dtsolu = min(dtsolu,(dt-tcumsol))
+         dtsolu = min(dtsolu,(tc_dt-tcumsol))  ! TC-12
          dtsolu = max(dtsolu,dtmin)
          tcumsol   = tcumsol + dtsolu
 

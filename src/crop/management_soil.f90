@@ -86,6 +86,8 @@ contains
       ! SAVE removed - isme and nut are already module variables in wofost_soil_declarations
       ! save
 
+      ! SS-TC TC-12: t1900, outper read directly via state%timecontrol.
+
       select case (task)
       case (1)
       ! Legacy nutrient soil-management init (file-open + state
@@ -104,13 +106,13 @@ contains
       cNH4_t0 = cNH4_t
       cNO3_t0 = cNO3_t
       WFrac_t0 = WFrac_t
-      t1900Soil = t1900
+      t1900Soil = state%timecontrol%t1900  ! TC-12
 
       return
 
       case (3)
 ! --- timed soil management events
-      if (abs(TimeAmend(isme) +1.0d0 - t1900) .lt. 1.d-3) then
+      if (abs(TimeAmend(isme) +1.0d0 - state%timecontrol%t1900) .lt. 1.d-3) then  ! TC-12
 
          call Wofost_SoilAmendents
          isme = isme + 1
@@ -139,8 +141,8 @@ contains
       Temp          = dum2 / dum1 
 !      WFrac_t0      = dum3 / dum1
       WFrac_t       = dum4 / dum1
-      dt_WSN        = t1900 - t_WSNold
-      t_WSNold      = t1900
+      dt_WSN        = state%timecontrol%t1900 - t_WSNold  ! TC-12
+      t_WSNold      = state%timecontrol%t1900             ! TC-12
 
       call Wofost_SoilRateConstants(1)
 
@@ -158,11 +160,11 @@ contains
       ! SS-SWST Phase 2 Task 5: inqdra read from state%surfacewater
       associate(inqdra => state%surfacewater%intermediate%inqdra)
       do i=1,numnod
-         dum2 = dum2 + state%soilwater%intr%inqrot(i)/outper  ! [SS-SWC S-2.12B]
+         dum2 = dum2 + state%soilwater%intr%inqrot(i)/state%timecontrol%outper  ! [SS-SWC S-2.12B] TC-12
          if(dum1 + 1.0d-2 * dz(i) .lt. dz_WSN)then
             dum1 = dum1 + 1.0d-2 * dz(i)
             do le=1,5
-               dum3 = dum3 - min(0.0d0, (inqdra(le,i)/outper) )
+               dum3 = dum3 - min(0.0d0, (inqdra(le,i)/state%timecontrol%outper) )  ! TC-12
             end do
          end if
       end do
@@ -171,8 +173,8 @@ contains
       ! [SS-SWC S-2.12B] igird/iintc/irunon/iruno -> state%soilwater%intr
       help = 1.0d-2 * (state%atmosphere%intr%igrai+state%atmosphere%intr%isnrai+ &
      &                 state%atmosphere%intr%igsnow+state%soilwater%intr%igird-state%soilwater%intr%iintc+state%soilwater%intr%irunon-state%soilwater%intr%iruno) /  &
-     &                 outper
-      SoilEvap = 1.0d-2 * state%atmosphere%intr%ievap / outper
+     &                 state%timecontrol%outper  ! TC-12
+      SoilEvap = 1.0d-2 * state%atmosphere%intr%ievap / state%timecontrol%outper  ! TC-12
       Wflux_inTop   = help 
       Wflux_inLat   = 1.0d-2 * dum3 
       Wflux_transp  = 1.0d-2 * dum2 

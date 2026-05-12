@@ -14,8 +14,9 @@ module soilhydraulics_utils
    !! @date February 2026 (modularization)
    use iso_fortran_env, only: real64
    ! [SS-SWC S-2.12B] cofgen/fluseksatexm retired from variables — bound via state%soilwater
+   ! SS-TC TC-12: dt retired from only-list; bound via bind_tc_target (module-level pointer).
    use variables, only: swsophy, numtab, sptab, ientrytab, &
-                        iHWCKmodel, layer, swfrost, dt
+                        iHWCKmodel, layer, swfrost
    ! [SS-HEAT] Task 9: tsoil global retired; hconduc fallback removed (iHWCKmodel 4-11 path unreachable in regression)
    use doln
    use WC_K_models_04_11, only: functionvalue_04_11
@@ -25,10 +26,13 @@ module soilhydraulics_utils
    ! [SS-SWC S-2.12B] module-level pointers; bound once by bind_state_targets(state)
    real(real64), pointer :: cofgen(:,:) => null()
    logical,      pointer :: fluseksatexm(:) => null()
+   ! SS-TC TC-12: module-level pointer for dt; bound once by bind_tc_target
+   real(real64), pointer :: tc_dt_ptr => null()
 
    private
    public :: watcon, moiscap, hconduc, dhconduc, prhead, hcomean, dkmean
    public :: bind_state_targets
+   public :: bind_tc_target  ! SS-TC TC-12
 
 contains
 
@@ -41,6 +45,14 @@ contains
       cofgen       => sw_cofgen_in
       fluseksatexm => sw_fluseksatexm_in
    end subroutine bind_state_targets
+
+   !> [SS-TC TC-12] Bind module-level tc_dt_ptr to state%timecontrol%dt.
+   !! Must be called once after state is allocated (e.g. in swap.f90 init block
+   !! alongside bind_state_targets). Used by moiscap() which has no state arg.
+   subroutine bind_tc_target(tc_dt_in)
+      real(real64), target, intent(in) :: tc_dt_in
+      tc_dt_ptr => tc_dt_in
+   end subroutine bind_tc_target
 
 
    !> Calculate mean hydraulic conductivity between two nodes
@@ -262,7 +274,7 @@ contains
 
                if (head >= 0.0_real64) then
 
-                  moiscap = dt * 1.0d-7
+                  moiscap = tc_dt_ptr * 1.0d-7  ! TC-12
 
                else if (head > h_crit) then
 
@@ -324,14 +336,14 @@ contains
             end if
          end if
       
-         if (head > -1.0_real64 .and. moiscap < (dt * 1.0d-7)) moiscap = dt * 1.0d-7
+         if (head > -1.0_real64 .and. moiscap < (tc_dt_ptr * 1.0d-7)) moiscap = tc_dt_ptr * 1.0d-7  ! TC-12
 
       ! Use tabulated function
       else if (swsophy == 1) then
          dum = head
          if (do_ln_trans .and. head < 0.0_real64) dum = -dlog(-head + 1.0_real64)
          if (head >= -1.0d-9) then
-            moiscap = dt*1.0d-7
+            moiscap = tc_dt_ptr*1.0d-7  ! TC-12
          else if (dum < sptab(1,node,1)) then
             moiscap = 0.0_real64
          else

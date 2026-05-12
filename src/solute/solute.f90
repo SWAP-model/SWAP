@@ -88,7 +88,10 @@ contains
 
 ! === calculate Solute rate variables ========================
 
+      ! SS-TC TC-12: t1900, dt read via state%timecontrol tc_* aliases.
       associate( &
+         tc_t1900 => state%timecontrol%t1900,                 &  ! TC-12
+         tc_dt    => state%timecontrol%dt,                    &  ! TC-12
          cml      => state%solute%cml,                        &
          cmsy     => state%solute%cmsy,                       &
          csurf    => state%solute%cumulative%csurf,           &
@@ -142,11 +145,11 @@ contains
 
 ! --- boundary concentrations
       if (swbotbc .eq. 2) then
-        cseep = afgen (cseeptab,mabbc*2,t1900+dt)
+        cseep = afgen (cseeptab,mabbc*2,tc_t1900+tc_dt)  ! TC-12
       endif
 
 ! --- determine maximum timestep
-      dtsolu = dt
+      dtsolu = tc_dt  ! TC-12
       do i = 1,numnod
         ! SS-SWC Phase 2 S-2.8: theta/q read from state%soilwater
         thetav(i) = inpola(i+1)*sw_theta(i)+inpolb(i)*sw_theta(i+1)
@@ -169,10 +172,10 @@ contains
       ! SS-DRST Task 3: qdra read from state%drainage; qdrtot remains in state%surfacewater
       associate(qdra   => state%drainage%qdra, &
                 qdrtot => state%surfacewater%qdrtot)
-      do while ((dt-tcumsol).gt.1.0d-8)
+      do while ((tc_dt-tcumsol).gt.1.0d-8)  ! TC-12
 
 ! ---    time step and cumulative time
-         dtsolu  = min(dtsolu,(dt-tcumsol))
+         dtsolu  = min(dtsolu,(tc_dt-tcumsol))  ! TC-12
          dtsolu  = max(dtsolu,dtmin)
          tcumsol = tcumsol + dtsolu
 
@@ -336,10 +339,10 @@ contains
 
 ! --- add time step fluxes to total cumulative values
       ! SS-ATM Phase 2 Task A-2.4: nraidt read from state%atmosphere (atmosphere home).
-      sqprec = sqprec + state%atmosphere%nraidt * cpre * dt
-      imsqprec = imsqprec + state%atmosphere%nraidt * cpre * dt
-      sqirrig = sqirrig + nird * cirr * dt
-      imsqirrig = imsqirrig + nird * cirr * dt
+      sqprec = sqprec + state%atmosphere%nraidt * cpre * tc_dt      ! TC-12
+      imsqprec = imsqprec + state%atmosphere%nraidt * cpre * tc_dt  ! TC-12
+      sqirrig = sqirrig + nird * cirr * tc_dt                        ! TC-12
+      imsqirrig = imsqirrig + nird * cirr * tc_dt                    ! TC-12
 
 ! --- cumulative solute balance
       solbal = sampro - sqprec - sqirrig - sqbot + sqdra + dectot + rottot - samini
