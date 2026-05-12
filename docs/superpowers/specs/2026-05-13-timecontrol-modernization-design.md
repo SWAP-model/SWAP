@@ -54,7 +54,7 @@ A caller passing `task=2` silently becomes task=3 under non-convergence flags. T
 
 Convert `TimeControl` and `IterTime` to named procedures in `module timecontrol_mod`. Delete the dual-write redundancy. Delete the implicit dispatch override (preconditioned on a one-task audit). Update the 7 call sites in `swap_mod`. The module joins `swap_modern` so the new file compiles with `-std=f2018 -Wall -Wextra`. Regression byte-for-byte parity is non-negotiable.
 
-`flZeroIntr` / `flZeroCumu` remain global for this arc — they are cross-subsystem reset gates and belong to a separate reset-orchestration arc (referenced from ADR 0033 cohort-flattening work). This arc does not migrate them.
+`flZeroIntr` / `flZeroCumu` are included in this arc. Audit shows the surface is small: all 8 writes are inside `timecontrol.f90` (lines 138, 139, 419, 423, 613, 623, 629, 705, 712, 720, 731, 732) plus 2 init-zero writes in `initialize.f90:28-29`. Eight reader files consume them, and the recently-shipped state-migration arcs already thread `state` into all of them. Migrating the two globals into `state%timecontrol` is a mechanical extension of the same pattern this arc is already applying.
 
 ## Architecture
 
@@ -63,15 +63,16 @@ Convert `TimeControl` and `IterTime` to named procedures in `module timecontrol_
 - `subroutine TimeControl(task, state)` at `src/core/timecontrol.f90:4` — converted to four named procedures inside `module timecontrol_mod`. The legacy free subroutine is deleted.
 - `subroutine IterTime(task, state)` at `src/core/timecontrol.f90:853` — converted to three named procedures inside the same module. The legacy free subroutine is deleted.
 - The implicit override at `timecontrol.f90:117` — deleted after the caller audit confirms the semantics are preserved at the call site.
+- The bare-global `flZeroIntr` and `flZeroCumu` declarations in `variables.f90:117-118` — deleted. Their init-zero writes in `initialize.f90:28-29` — deleted (the new state fields default to `.false.`, so the explicit init is redundant).
 - Dual-write `state%timecontrol%X = X` lines paired with associate-alias writes — deleted throughout case (1) and case (2) bodies (~120 lines).
 - `select case (task)` dispatch — deleted; replaced by direct procedure calls.
 
 ### What stays
 
-- All 61 fields in `state%timecontrol` (`src/state/timecontrol_state.f90`) — unchanged.
+- 61 of the 63 fields in `state%timecontrol` (`src/state/timecontrol_state.f90`) — unchanged. **Two new fields are added: `flZeroIntr` and `flZeroCumu`** (both `logical, default .false.`, joining the Group E "runtime-evaluated boolean flags" cluster).
 - All runtime semantics (every `case (N)` body, with the dead code stripped) — preserved verbatim.
 - The `associate` block aliasing TC fields — each named procedure carries its OWN associate block scoped to the fields it touches. This is cleaner than one shared block: smaller alias lists per procedure, no orphaned aliases from cases that don't apply, and each procedure's signature reflects only what it reads/writes. `timecontrol_advance` has the largest list (~30 aliases, same fields the current case (2) touches); `timecontrol_day_end` has just 2–3 (`dt`).
-- The `use variables` import for non-migrated globals (`dtmin`, `dtmax`, `flZeroIntr`, `flZeroCumu`, `flMacroPore`, `FlDecMpRat`, `dt_SSDI_event`, `flMaxIterTime`, `msteps`, `project`, output-config switches) — scoped with `only:`. Wholesale `use variables` retirement is a separate arc.
+- The `use variables` import for non-migrated globals (`dtmin`, `dtmax`, `flMacroPore`, `FlDecMpRat`, `dt_SSDI_event`, `flMaxIterTime`, `msteps`, `project`, output-config switches) — scoped with `only:`. Wholesale `use variables` retirement is a separate arc.
 
 ### New module layout
 
@@ -95,6 +96,23 @@ end module timecontrol_mod
 ```
 
 Each procedure-body is the corresponding case body from the legacy subroutine, with dual-writes removed and the override deleted. All procedures take `state` as `intent(inout)` (every case mutates `state%timecontrol`).
+
+### Reader-site updates for flZeroIntr / flZeroCumu
+
+Eight files read the two globals. All eight already accept `state` in their relevant subroutine signatures (state-migration arcs threaded it through). Each migration is a localized change to the `use variables` line and the flag access path.
+
+| File | Current pattern | New pattern |
+|---|---|---|
+| `src/atmosphere/meteoday.f90:440,448,454` | `use variables, only: flzerointr, flzerocumu` | drop from use list; read `state%timecontrol%flZeroIntr` / `flZeroCumu` |
+| `src/drainage/surfacewater.f90:103,109` | `if (flzerointr) ...` (state in scope) | `if (state%timecontrol%flZeroIntr) ...` |
+| `src/drainage/drainage.f90:429,502,510` | bare globals in arg list / body | `state%timecontrol%flZeroIntr / flZeroCumu` |
+| `src/atmosphere/snow.f90:106,114` | bare globals | `state%timecontrol%flZeroIntr / flZeroCumu` |
+| `src/soil/soilhydraulics.f90:1136,1148` | bare globals | `state%timecontrol%flZeroIntr / flZeroCumu` |
+| `src/soil/waterbalance.f90:443` | bare global | `state%timecontrol%flZeroIntr` |
+| `src/solute/agetracer.f90:159` | bare global | `state%timecontrol%flZeroCumu` |
+| `src/solute/solute.f90:128,129` | bare globals (state in scope) | `state%timecontrol%flZeroIntr / flZeroCumu` |
+
+If any reader subroutine turns out NOT to have `state` in its signature (a discovery during implementation), threading it through is a localized signature change — the SS-* state migration has established the pattern. Risk: low.
 
 ### Caller updates in `swap_mod`
 
@@ -173,28 +191,29 @@ Plus, after the cutover task, `pixi run check-full` (all 5 cases). Byte-for-byte
 
 ## Out of scope (deferred follow-on work)
 
-- **`flZeroIntr` / `flZeroCumu` migration**: these are cross-subsystem reset gates that should move into the reset-orchestration arc (linked to ADR 0033 cohort-flattening follow-up). Not this arc.
-- **`use variables` wholesale retirement**: the legacy globals import shrinks (`only:` clause) but doesn't disappear. The remaining ~9 symbols still come from globals.
+- **`use variables` wholesale retirement**: the legacy globals import shrinks (`only:` clause and minus `flzerointr`/`flzerocumu`) but doesn't disappear. The remaining ~9 symbols (`dtmin`, `dtmax`, `flMacroPore`, `FlDecMpRat`, `dt_SSDI_event`, `flMaxIterTime`, `msteps`, `project`, output-config switches) still come from globals.
 - **TimeControl unit test expansion**: only one smoke test is added. Comprehensive per-procedure unit tests are deferred — the existing regression cases provide coverage.
 - **`-std=f2018` migration of `state/timecontrol_state.f90`**: the state record is already standards-compliant but lives in `swap_legacy` for build-graph reasons. Promoting it to `swap_modern` is a separate cleanup.
 
 ## Scope and effort
 
-Approximately 11 implementer tasks, in this order:
+Approximately 13 implementer tasks, in this order:
 
 1. Pre-flight baseline (mechanical).
 2. Override audit (instrument, run check-full, capture findings, revert instrumentation).
-3. Create `timecontrol_mod.f90` skeleton with 7 empty procedures + failing pFUnit smoke test.
-4. Migrate case (1) → `timecontrol_init`; strip its dual-writes.
-5. Migrate case (2) → `timecontrol_advance`; strip its dual-writes.
-6. Migrate case (3) → `timecontrol_reduce_dt`.
-7. Migrate case (9) → `timecontrol_day_end`.
-8. Migrate `IterTime` cases (1/2/3) → three named procedures.
-9. Update the 7 callers in `swap_mod`; delete legacy `TimeControl` / `IterTime` from build.
-10. Add `timecontrol_mod` to `modern_sources` in `meson.build`.
-11. Final verification (`check-full` + retirement grep + arc-complete marker).
+3. Add `flZeroIntr` / `flZeroCumu` fields to `timecontrol_state_t` (state schema change; build still uses the bare globals — readers untouched in this task).
+4. Create `timecontrol_mod.f90` skeleton with 7 empty procedures + failing pFUnit smoke test. New module joins `modern_sources` in `meson.build`.
+5. Migrate case (1) → `timecontrol_init`; strip its dual-writes; writes go to `state%timecontrol%flZeroIntr/flZeroCumu` AND the bare globals (interim parity).
+6. Migrate case (2) → `timecontrol_advance`; same dual-write-during-transition strategy.
+7. Migrate case (3) → `timecontrol_reduce_dt`.
+8. Migrate case (9) → `timecontrol_day_end`.
+9. Migrate `IterTime` cases (1/2/3) → three named procedures.
+10. Cutover: update the 7 callers in `swap_mod`; delete legacy `TimeControl` / `IterTime` from the build.
+11. Migrate the 8 reader files to `state%timecontrol%flZeroIntr/flZeroCumu`; stop writing the bare globals from `timecontrol_mod` (drop the transitional dual-writes).
+12. Retire the bare globals: delete `flzerointr` / `flzerocumu` from `variables.f90:117-118` and `initialize.f90:28-29`.
+13. Final verification (`check-full` + retirement grep + arc-complete marker).
 
-Total estimated commit count: 14–18 (similar TDD + fix-loop cadence to SS-DRV).
+Total estimated commit count: 17–21 (TDD + fix-loop cadence similar to SS-DRV, slightly larger due to the flag migration).
 
 ## References
 
