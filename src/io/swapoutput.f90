@@ -142,7 +142,8 @@
       ! SS-ATM A-2.5: igrai,isnrai,igsnow,iptra,ipeva,ievap,isubl removed from only-list; reads via state%atmosphere.
       ! SS-ATM A-2.5: ssnow,snowinco removed from only-list; reads via state%atmosphere.
       ! SS-SWC S-2.11: gwl,pond,volact,volini,PondIni,iqbot,iqrot,igird,iintc,irunon,iruno,irunoCN removed; reads via state%soilwater.
-      use variables, only: inc,daynr,daycum,iQMpOutDrRap,t1900,date,outfil,pathwork,project,flheader,flprintshort
+      ! SS-TC TC-7: daynr,daycum,t1900,date,flheader,flprintshort removed from only-list; reads via state%timecontrol.
+      use variables, only: inc,iQMpOutDrRap,outfil,pathwork,project
       use swap_state_mod, only: swap_state_t
       use file_io_mod, only: file_open
       implicit none
@@ -167,7 +168,7 @@
       select case (task)
       case (1)
 
-      t1900 = t1900
+      ! SS-TC TC-7: t1900 = t1900 no-op removed; t1900 now via state%timecontrol%t1900.
 
 ! --- open output file once
       filnam = trim(pathwork)//trim(outfil)//'.inc'
@@ -176,7 +177,7 @@
       call writehead (inc,1,filnam,filtext,project)
 
 ! --- write header of inc file
-      if (flprintshort) then
+      if (state%timecontrol%flprintshort) then  ! TC-7
         write (inc,10)
       else
         write (inc,12)
@@ -204,21 +205,17 @@
       case (2)
 
 ! --- write header in case of new balance period
-      if (flheader) then
-        if (flprintshort) then
-          write (inc,10)
-        else
-          write (inc,12)
-        endif
-      endif
-
-! --- determine date and date-time
-      call dtdpst ('year-month-day,hour:minute:seconds',t1900,datexti)
-
-! --- write output record .inc file
+      ! SS-TC TC-7: flheader,flprintshort read via state%timecontrol (tc_* aliases below).
+      ! SS-TC TC-7: t1900,daynr,daycum,date read via state%timecontrol (tc_* aliases below).
       ! SS-ATM A-2.5: ssnow,snowinco,igrai,isnrai,igsnow,iptra,ipeva,ievap,isubl from state%atmosphere.
       ! SS-SWC S-2.11: gwl,pond,volact,PondIni,igird,iintc,irunon,iruno,irunoCN,iqrot,iqbot via state%soilwater.
       associate( &
+        tc_flheader     => state%timecontrol%flheader,      &  ! TC-7
+        tc_flprintshort => state%timecontrol%flprintshort,  &  ! TC-7
+        tc_t1900        => state%timecontrol%t1900,         &  ! TC-7
+        tc_daynr        => state%timecontrol%daynr,         &  ! TC-7
+        tc_daycum       => state%timecontrol%daycum,        &  ! TC-7
+        tc_date         => state%timecontrol%date,          &  ! TC-7
         at_igrai  => state%atmosphere%intr%igrai,  &
         at_inrai  => state%atmosphere%intr%inrai,  &
         at_igsnow => state%atmosphere%intr%igsnow, &
@@ -239,20 +236,32 @@
         sw_iqrot  => state%soilwater%intr%iqrot,  &
         sw_iqbot  => state%soilwater%intr%iqbot   &
       )
+      if (tc_flheader) then
+        if (tc_flprintshort) then
+          write (inc,10)
+        else
+          write (inc,12)
+        endif
+      endif
+
+! --- determine date and date-time
+      call dtdpst ('year-month-day,hour:minute:seconds',tc_t1900,datexti)  ! TC-7
+
+! --- write output record .inc file
       gwlout = "          "
       if (sw_gwl.lt.998.0d0)  write(gwlout,'(f9.1)') sw_gwl
       dstor = (sw_volact + sw_pond + at_ssnow) - (VolOld + PondOld + SnowOld)
       baldev = (at_igrai+at_isnrai+at_igsnow+sw_igird+sw_irunon) - dstor -    &
      & (sw_iintc+sw_iruno+sw_irunoCN+sw_iqrot+at_ievap+at_isubl+iQMpOutDrRap+state%surfacewater%intermediate%iqdra+(-1.0d0*sw_iqbot))
-      if (flprintshort) then
-        write (inc,20) datexti,comma,daynr,comma,daycum,comma,          &
+      if (tc_flprintshort) then
+        write (inc,20) datexti,comma,tc_daynr,comma,tc_daycum,comma,     &
      &    at_igrai+at_isnrai,comma,at_igsnow,comma,sw_igird,comma,sw_iintc, &
      &    comma,sw_irunon,comma,sw_iruno+sw_irunoCN,comma,at_iptra,comma,sw_iqrot, &
      &    comma,at_ipeva,comma,at_ievap,comma,                           &
      &    (iQMpOutDrRap+state%surfacewater%intermediate%iqdra),comma,sw_iqbot,&
      &    comma,gwlout,comma,dstor,comma,baldev            !comma,storage
       else
-        write (inc,22) date,comma,daynr,comma,daycum,comma,             &
+        write (inc,22) tc_date,comma,tc_daynr,comma,tc_daycum,comma,     &
      &    at_igrai+at_isnrai,comma,at_igsnow,comma,sw_igird,comma,sw_iintc, &
      &    comma,sw_irunon,comma,sw_iruno+sw_irunoCN,comma,at_iptra,comma,sw_iqrot, &
      &    comma,at_ipeva,comma,at_ievap,comma,                           &
@@ -287,8 +296,8 @@
       ! SS-CRP Phase 2 Task C-2.4: qrot, hroot, mroot, mflux, rootrho, rootphi, hleaf, hxylem
       !   removed from only-list; reads via state%soilwater.
       ! SS-SWC S-2.11: theta,hm1,q,inq,inqrot removed from only-list; reads via state%soilwater.
-      use variables, only: ztopcp, zbotcp,rot,daynr,noddrz,daycum,z,t1900,outfil,pathwork,project,swheader, &
-                           date,flprintshort
+      ! SS-TC TC-7: daynr,daycum,t1900,date,flprintshort removed from only-list; reads via state%timecontrol.
+      use variables, only: ztopcp, zbotcp,rot,noddrz,z,outfil,pathwork,project,swheader
       use swap_state_mod, only: swap_state_t
       use file_io_mod, only: file_open
       implicit none
@@ -319,8 +328,9 @@
       write (rot,100)
 
 ! --- write header in rot file
+      ! SS-TC TC-7: flprintshort,daynr,daycum,t1900,date read via state%timecontrol (tc_* below).
       if (swheader .eq. 0) then
-        if (flprintshort) then
+        if (state%timecontrol%flprintshort) then  ! TC-7
           write (rot,200)
         else
           write (rot,210)
@@ -333,19 +343,27 @@
 
 ! === write actual profile data ===========================================
 
-! --- write header in rot file
+! --- write header in rot file and write actual data
+      ! SS-TC TC-7: flprintshort,t1900,daynr,daycum,date -> state%timecontrol tc_* aliases.
+      ! SS-SWC S-2.11: theta,hm1,q,inq,inqrot read from state%soilwater.
+      associate( &
+        tc_flprintshort => state%timecontrol%flprintshort,  &  ! TC-7
+        tc_t1900        => state%timecontrol%t1900,         &  ! TC-7
+        tc_daynr        => state%timecontrol%daynr,         &  ! TC-7
+        tc_daycum       => state%timecontrol%daycum,        &  ! TC-7
+        tc_date         => state%timecontrol%date           &  ! TC-7
+      )
       if (swheader .eq. 1) then
-        if (flprintshort) then
+        if (tc_flprintshort) then
           write (rot,200)
         else
           write (rot,210)
         endif
       endif
 
-      ! SS-SWC S-2.11: theta,hm1,q,inq,inqrot read from state%soilwater.
-      if (flprintshort) then
+      if (tc_flprintshort) then
 ! ---   determine date and date-time
-        call dtdpst ('year-month-day,hour:minute:seconds',t1900,datexti)
+        call dtdpst ('year-month-day,hour:minute:seconds',tc_t1900,datexti)  ! TC-7
         do node = 1,noddrz
            write (rot,300) datexti,comma,z(node),comma,state%soilwater%hleaf,comma,  &
      &       state%soilwater%Hxylem,comma,                                            &
@@ -355,12 +373,12 @@
      &       comma,state%soilwater%mflux(node),comma,state%soilwater%rootrho(node),  &
      &       comma,state%soilwater%rootphi(node),                                     &
      &       comma,state%soilwater%theta(node),comma,ztopcp(node),comma,              &
-     &       zbotcp(node),comma,daynr,comma,daycum
+     &       zbotcp(node),comma,tc_daynr,comma,tc_daycum
         end do
 
       else
         do node = 1,noddrz
-           write (rot,310) date,comma,z(node),comma,state%soilwater%hleaf,comma,     &
+           write (rot,310) tc_date,comma,z(node),comma,state%soilwater%hleaf,comma,  &
      &       state%soilwater%Hxylem,comma,                                            &
      &       state%soilwater%hroot(node),comma,state%soilwater%hm1(node),comma,state%soilwater%intr%inqrot(node),comma, &
      &       state%soilwater%qrot(node),comma,state%soilwater%intr%inq(node),comma,state%soilwater%q(node), &
@@ -368,10 +386,11 @@
      &       comma,state%soilwater%mflux(node),comma,state%soilwater%rootrho(node),  &
      &       comma,state%soilwater%rootphi(node),                                     &
      &       comma,state%soilwater%theta(node),comma,ztopcp(node),comma,              &
-     &       zbotcp(node),comma,daynr,comma,daycum
+     &       zbotcp(node),comma,tc_daynr,comma,tc_daycum
         end do
 
       endif
+      end associate  ! tc_flprintshort, tc_t1900, tc_daynr, tc_daycum, tc_date (TC-7)
 
  100  format(                                                           &
      & '* Explanation:   fluxes of soil water (qsoilw and iqsoilw)',    &
@@ -743,7 +762,8 @@
 !     but the explicit guard here makes the gating visible at the definition.
       ! SS-SWST Phase 2 Task 11: inqdra removed (now via state%surfacewater%inqdra).
       ! SS-SLST Phase 1 Task 5: cml migrated to state%solute (body is gated by flAgeTracer guard).
-      use variables, only: daynr,daycum,date,outper,project,nrlevs,outfil,pathwork,numnod,z,            &
+      ! SS-TC TC-7: daynr,daycum,date,outper removed from only-list; reads via state%timecontrol.
+      use variables, only: project,nrlevs,outfil,pathwork,numnod,z,                                    &
                            AgeGwl1m,icAgeBot,icAgeDra,icAgeRot,icAgeSur,flAgeTracer
       use swap_state_mod, only: swap_state_t
       use swap_array_dimensions, only: madr
@@ -811,17 +831,25 @@
 
 ! === write actual data =================================================
 
+      ! SS-TC TC-7: date,daynr,daycum,outper read via state%timecontrol tc_* aliases.
+      associate( &
+        tc_date   => state%timecontrol%date,    &  ! TC-7
+        tc_daynr  => state%timecontrol%daynr,   &  ! TC-7
+        tc_daycum => state%timecontrol%daycum,  &  ! TC-7
+        tc_outper => state%timecontrol%outper   &  ! TC-7
+      )
+
 !     age of groundwater as profile
-      write(agep,15) date,comma,daynr,comma,daycum,                     &
+      write(agep,15) tc_date,comma,tc_daynr,comma,tc_daycum,             &
      &               (comma,state%solute%cml(node),node=1,numnod)
  15   format(a11,a1,i4,a1,i6,1p,1024(a1,e10.3))
 
 !     age of groundwater in effluents: drains, transpiration, leaching, runoff
 !     and age (d) of groundwater in upper 1 meter of saturated zone
-      write(agee,16) date,comma,daynr,comma,daycum,comma,AgeGwl1m,comma,&
-     &               icAgeBot/outper,comma,icAgeRot/outper,comma,       &
-     &               icAgeSur/outper,                                   &
-     &               (comma,icAgeDra(level)/outper,level=1,nrlevs)
+      write(agee,16) tc_date,comma,tc_daynr,comma,tc_daycum,comma,AgeGwl1m,comma, &
+     &               icAgeBot/tc_outper,comma,icAgeRot/tc_outper,comma,  &
+     &               icAgeSur/tc_outper,                                  &
+     &               (comma,icAgeDra(level)/tc_outper,level=1,nrlevs)
  16   format(a11,a1,i4,a1,i6,1p,9(a1,e10.3))
 
 !     qdrain discharge-effluent (without infiltration!)
@@ -836,8 +864,10 @@
           enddo
         end if
       enddo
-      write(ageq,16) date,comma,daynr,comma,daycum,                     &
+      write(ageq,16) tc_date,comma,tc_daynr,comma,tc_daycum,             &
      &               (comma,iqdrainout(level),level=1,nrlevs)
+
+      end associate  ! tc_date, tc_daynr, tc_daycum, tc_outper (TC-7)
 
       case default
          call fatalerr_collected ('outage', 'Illegal value for Task')
@@ -911,7 +941,8 @@
 !     purpose            : Output of soil temperatures
 ! ---------------------------------------------------------------------
       ! SS-HEAT Phase 1 Task 5: tsoil, tebot, tetop migrated to state%heat.
-      use variables, only: numnod,date,daynr,tem,daycum,tav,outfil,pathwork,flheader,project
+      ! SS-TC TC-7: date,daynr,daycum,flheader removed from only-list; reads via state%timecontrol.
+      use variables, only: numnod,tem,tav,outfil,pathwork,project
       use swap_state_mod, only: swap_state_t
       implicit none
 
@@ -953,8 +984,10 @@
      & t8,'Date,Day,Daycum,   Tav, Tetop',9(',    T',i1),               &
      &1024(',   T',i2),', TeBot')
 
+      ! SS-TC TC-7: daynr,daycum -> state%timecontrol (direct, case(1) only line).
       write (tem,'(a11,a1,i3,a1,i6,1024(a1,f6.1:))') '    Initial'      &
-     &      ,comma,daynr,comma,daycum,comma,tav,comma,state%heat%tetop,  &
+     &      ,comma,state%timecontrol%daynr,comma,state%timecontrol%daycum, &
+     &      comma,tav,comma,state%heat%tetop,                              &
      &      (comma,state%heat%tsoil(i),i=1,numnod),comma,state%heat%tebot
 
       return
@@ -963,17 +996,25 @@
 
 ! === write actual soil temperature data ================================
 
+      ! SS-TC TC-7: flheader,date,daynr,daycum -> state%timecontrol tc_* aliases.
+      associate( &
+        tc_flheader => state%timecontrol%flheader,  &  ! TC-7
+        tc_date     => state%timecontrol%date,      &  ! TC-7
+        tc_daynr    => state%timecontrol%daynr,     &  ! TC-7
+        tc_daycum   => state%timecontrol%daycum     &  ! TC-7
+      )
 ! --- write header in case of new balance period
-      if (flheader) write (tem,10)
+      if (tc_flheader) write (tem,10)
 
 ! --- write soil temperature profile
 !     PWB: idem
 !      write (tem,'(a11,a1,i3,a1,i6,<numnod+3>(a1,f6.1:))') date
 !     &      ,comma,daynr,comma,daycum,comma,tav,comma,state%heat%tetop,
 !     &      (comma,state%heat%tsoil(i),i=1,numnod),comma,state%heat%tebot
-      write (tem,'(a11,a1,i3,a1,i6,1024(a1,f6.1:))') date               &
-     &      ,comma,daynr,comma,daycum,comma,tav,comma,state%heat%tetop,  &
+      write (tem,'(a11,a1,i3,a1,i6,1024(a1,f6.1:))') tc_date             &
+     &      ,comma,tc_daynr,comma,tc_daycum,comma,tav,comma,state%heat%tetop, &
      &      (comma,state%heat%tsoil(i),i=1,numnod),comma,state%heat%tebot
+      end associate  ! tc_flheader, tc_date, tc_daynr, tc_daycum (TC-7)
 
       case default
          call fatalerr_collected ('outtem', 'Illegal value for Task')
@@ -991,8 +1032,9 @@
 !     Purpose            : open and write snow pack data
 ! ----------------------------------------------------------------------
       ! SS-ATM A-2.5: snrai,gsnow,ssnow,melt,subl reads migrated to state%atmosphere.
+      ! SS-TC TC-7: date,daycum,flheader removed; reads via state%timecontrol.
 
-      use variables
+      use variables, only: pathwork,outfil,project,snw
       use swap_state_mod, only: swap_state_t
       use file_io_mod, only: file_open
       implicit none
@@ -1029,11 +1071,13 @@
 ! === write actual soil temperature data ================================
 
 ! --- write header in case of new balance period
-      if (flheader) write (snw,10)
+      ! SS-TC TC-7: flheader,date,daycum -> state%timecontrol (direct refs, single-use).
+      if (state%timecontrol%flheader) write (snw,10)  ! TC-7
 
 ! --- write actual data
       ! SS-ATM A-2.5: snrai,gsnow,ssnow,melt,subl read from state%atmosphere (atmosphere home).
-      write (snw,20) date,comma,daycum,comma,state%atmosphere%snrai,comma,state%atmosphere%gsnow,      &
+      write (snw,20) state%timecontrol%date,comma,state%timecontrol%daycum, &  ! TC-7
+     &               comma,state%atmosphere%snrai,comma,state%atmosphere%gsnow, &
      &               comma,state%atmosphere%ssnow,comma,state%atmosphere%melt,comma,state%atmosphere%subl
 20    format (a11,a1,i6,1x,5(a1,f10.4))
 
@@ -1304,7 +1348,8 @@ subroutine outrume (task, state)
 use error_mod, only: fatalerr_collected
 ! SS-ATM A-2.5: igrai removed from only-list; reads via state%atmosphere%intr.
 ! SS-SWC S-2.11: theta,thetas,iruno,pond,gwl removed from only-list; reads via state%soilwater.
-use variables, only: tcum,outper,numnod,dz
+! SS-TC TC-7: tcum,outper removed from only-list; reads via state%timecontrol.
+use variables, only: numnod,dz
 use swap_state_mod, only: swap_state_t
 implicit none
 
@@ -1362,6 +1407,11 @@ case (1)
    Nrec      = 0
 
 case (2)
+   ! SS-TC TC-7: tcum,outper -> state%timecontrol via tc_* aliases.
+   associate( &
+      tc_tcum  => state%timecontrol%tcum,   &  ! TC-7
+      tc_outper => state%timecontrol%outper  &  ! TC-7
+   )
    VT = 0.0d0
    do i = 1, LZnod
       VT = VT + dz(i)*(state%soilwater%thetas(i)-state%soilwater%theta(i))
@@ -1373,19 +1423,19 @@ case (2)
    WC = WC/LZ2
 
 !  d, cm, cm/d, cm/d, cm, cm
-!!!   write (iunout) real(tcum),real(VT),real(igrai/outper),real(iruno/outper),real(pond),real(gwl)
+!!!   write (iunout) real(tc_tcum),real(VT),real(igrai/tc_outper),real(iruno/tc_outper),real(pond),real(gwl)
    ! SS-ATM A-2.5: igrai read from state%atmosphere%intr (atmosphere home).
    ! SS-SWC S-2.11: iruno read from state%soilwater%intr.
-   RainRate   = state%atmosphere%intr%igrai/outper
-   RunoffRate = state%soilwater%intr%iruno/outper
-   iDay       = int(tcum)
-!!!   write (iunout,'(20F12.6)') real(tcum),real(VT)
+   RainRate   = state%atmosphere%intr%igrai/tc_outper
+   RunoffRate = state%soilwater%intr%iruno/tc_outper
+   iDay       = int(tc_tcum)
+!!!   write (iunout,'(20F12.6)') real(tc_tcum),real(VT)
 
    if (Nrec > 0) then
       if (.not. Event) then
          if (iDay > iDayOld) then  ! new day, no runoff occurring; restart summations
-            SumRain   = RainRate*(tcum-iDay)
-            SumRunOff = RunoffRate*(tcum-iDay) ! likely zero
+            SumRain   = RainRate*(tc_tcum-iDay)
+            SumRunOff = RunoffRate*(tc_tcum-iDay) ! likely zero
             VTstart   = VT
             WCstart   = WC
             hstart    = state%soilwater%pond
@@ -1394,16 +1444,16 @@ case (2)
          else if (RunoffRate > 0.0d0) then  ! start new runoff event!
             Event  = .true.
             Nevent = Nevent + 1
-            Tr     = tcum-int(tcum)
+            Tr     = tc_tcum-int(tc_tcum)
             Ia     = SumRain*10.0d0 ! mm
             SS     = VTstart*10.0d0 ! mm
             hh     = hstart*10.0d0  ! mm
-            T      = tcum
+            T      = tc_tcum
             GG     = GWLstart
-            DayCum = int(tcum) + 1
+            DayCum = int(tc_tcum) + 1
          end if
-         SumRain   = SumRain   + RainRate*(tcum-DayOld)
-         SumRunoff = SumRunoff + RunoffRate*(tcum-DayOld)
+         SumRain   = SumRain   + RainRate*(tc_tcum-DayOld)
+         SumRunoff = SumRunoff + RunoffRate*(tc_tcum-DayOld)
       else
          if (RunoffRate < 1.0D-10) then  ! stop runoff event
             Event = .false.
@@ -1413,21 +1463,22 @@ case (2)
             S     = 25400.0d0/CN - 254.0d0
             write (iunout2,'(I12,11(A,F12.5))') DayCum, ',', T, ',', Tr, ',', P, ',', Q, ',', Ia, ',', SS, ',', CN, ',', S, ',', hh, ',', GG, ',', WCstart
          end if
-         SumRain   = SumRain   + RainRate*(tcum-DayOld)
-         SumRunoff = SumRunoff + RunoffRate*(tcum-DayOld)
+         SumRain   = SumRain   + RainRate*(tc_tcum-DayOld)
+         SumRunoff = SumRunoff + RunoffRate*(tc_tcum-DayOld)
       end if
-      DayOld    = tcum
+      DayOld    = tc_tcum
 
    else
       Nrec      = Nrec + 1
-      SumRain   = RainRate*tcum
-      SumRunOff = RunoffRate*tcum
+      SumRain   = RainRate*tc_tcum
+      SumRunOff = RunoffRate*tc_tcum
       VTstart   = VT
       GWLstart  = state%soilwater%gwl
       hstart    = state%soilwater%pond
       iDayOld   = iDay
-      DayOld    = tcum
+      DayOld    = tc_tcum
    end if
+   end associate  ! tc_tcum, tc_outper (TC-7)
 
 case (3)
 !!!   close (iunout)
