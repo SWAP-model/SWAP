@@ -14,7 +14,7 @@ contains
    subroutine swap_init(config_file, state, config)
       character(len=*),            intent(in)  :: config_file
       type(swap_state_t),          intent(out) :: state
-      type(swap_config_t), target, intent(out) :: config
+      type(swap_config_t), target, intent(out) :: config  ! target: crop_config_global => config%crop (set inside body, Task 3)
       ! Body filled in Task 3.
    end subroutine swap_init
 

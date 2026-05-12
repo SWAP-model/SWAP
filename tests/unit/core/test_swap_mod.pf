@@ -14,12 +14,13 @@ subroutine test_swap_init_sets_time()
    use swap_state_mod,   only: swap_state_t
    use swap_config_mod,  only: swap_config_t
    use chdir_helper_mod, only: chdir_to
+   use iso_fortran_env,  only: real64
    use funit
    implicit none
    type(swap_state_t)           :: state
    type(swap_config_t), target  :: config
-   logical  :: fl_run_end_captured
-   real(8)  :: t1900_captured
+   logical      :: fl_run_end_captured
+   real(real64) :: t1900_captured
 
    call chdir_to('tests/swap-cases/toml/1.hupselbrook')
    call swap_init('swap.toml', state, config)
@@ -28,7 +29,7 @@ subroutine test_swap_init_sets_time()
    call chdir_to('../../../..')
 
    @assertFalse(fl_run_end_captured)
-   @assertGreaterThan(t1900_captured, 0.0d0)
+   @assertGreaterThan(t1900_captured, 0.0_real64)
 end subroutine
 
 @test
@@ -37,11 +38,12 @@ subroutine test_swap_run_step_advances_time()
    use swap_state_mod,   only: swap_state_t
    use swap_config_mod,  only: swap_config_t
    use chdir_helper_mod, only: chdir_to
+   use iso_fortran_env,  only: real64
    use funit
    implicit none
    type(swap_state_t)           :: state
    type(swap_config_t), target  :: config
-   real(8) :: t_before, t_after
+   real(real64) :: t_before, t_after
 
    call chdir_to('tests/swap-cases/toml/1.hupselbrook')
    call swap_init('swap.toml', state, config)
@@ -59,6 +61,7 @@ subroutine test_swap_full_lifecycle()
    use swap_state_mod,   only: swap_state_t
    use swap_config_mod,  only: swap_config_t
    use chdir_helper_mod, only: chdir_to
+   use iso_fortran_env,  only: real64
    use funit
    implicit none
    type(swap_state_t)           :: state
