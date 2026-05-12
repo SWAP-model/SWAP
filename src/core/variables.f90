@@ -59,7 +59,7 @@
       integer   logf               ! Internal number of logbook output file *.LOG
 
       ! Exchange/DLL persistent state (formerly local SAVE in swap.f90 handle_exchange)
-      real(8)   ex_tlast           ! Last t1900 seen by external caller (days since 1900)
+      real(8)   ex_tlast           ! [SS-DRV Task 6] dead — handle_exchange retired; only initialize.f90 zeros it. Retirement candidate.
       
       ! Oxygen stress persistent state (moved from O2_pars module and OxygenStress subroutine)
       real(8)   o2_w_root          ! Dry weight per root length (kg/m)

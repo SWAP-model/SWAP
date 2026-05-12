@@ -8,6 +8,10 @@
 !     UpDate             : July 2017
 !     Date               : July 2009
 !     Purpose            : open and write data to shared files
+!     SS-DRV Task 6 (2026-05-12): FromSwap/ToSwap stubs retired; their
+!     call sites here are inlined as no-op `continue` statements. The
+!     subroutine itself remains for the actual shared-file work
+!     (task=1 file_open / task=2 writes / task=4 close).
 ! ----------------------------------------------------------------------
 
 !      use Variables

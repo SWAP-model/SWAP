@@ -11,7 +11,7 @@ program swap_main
    implicit none
 
    type(swap_state_t)           :: state
-   type(swap_config_t), target  :: config
+   type(swap_config_t), target  :: config  ! target: crop_config_global pointer set inside swap_init
 
    call log_init(log_level=LOGLEVEL_INFO, log_file='swap_debug.log')
 
@@ -23,7 +23,7 @@ program swap_main
 
    write(*,'(a)')' Swap normal completion!'
    call log_close()
-   call CloseTempFil
+   call CloseTempFil   ! deletes unit-20 scratch file; retirement candidate (see swapoutput.f90)
    call Exit(100)
 
 end program swap_main
