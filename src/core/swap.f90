@@ -274,7 +274,7 @@ if (iTask == 1) then
    if (iCaller == 0) then
       call SwapOutput(1, state)
       call SoilWaterOutput(1, state)
-      if (flIrrigate)     call IrrigationOutput(1)
+!     ADR 0009 Phase 5+: IrrigationOutput deleted (swirg=0).
       if (flTemperature)  call TemperatureOutput(1, state)
       if (flSolute)       call SoluteOutput(1, state)
       if (flAgeTracer)    call AgeTracerOutput(1, state)
@@ -455,7 +455,7 @@ if (iTask == 2) then
                if (swcrp.eq.1) call CropOutput(2)
             end if
          end if
-         if (flIrrigationOutput)          call IrrigationOutput(2)
+!        ADR 0009 Phase 5+: IrrigationOutput deleted (swirg=0).
          if (flDayEnd .and. flCropNut)    call SoilManagement(6, state)
          if (swend.eq.2 .and. flDayEnd)   call soilwateroutput(3, state)
       end if
@@ -489,7 +489,7 @@ if (iTask == 3) then
       if (flTemperature)        call TemperatureOutput(3, state)
       if (flSolute)             call SoluteOutput(3, state)
       if (flAgeTracer)          call AgeTracerOutput(3, state)
-      if (flIrrigate)           call IrrigationOutput(3)
+!     ADR 0009 Phase 5+: IrrigationOutput deleted (swirg=0).
       if (flSnow)               call SnowOutput(3, state)
       if (flMacroPore)          call MacroPoreOutput(3, state)
       if (flSurfaceWater)       call SurfaceWaterOutput(3, state)
