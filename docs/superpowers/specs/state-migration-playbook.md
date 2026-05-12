@@ -336,6 +336,46 @@ Soil-water core was migration #8 and the FINAL coupling-surface arc of the soil-
 
 ---
 
+---
+
+## Lessons from tillage migration (ADR 0039, added 2026-05-12)
+
+Tillage was migration #9 — the smallest arc to date (6 tasks, 2 compile passes, T-4 reader
+cutover a no-op). Three lessons generalize to future arcs.
+
+1. **Config-constant vs runtime-state distinction — split the inventory before scoping.**
+   When retiring globals from a subsystem with mixed legacy storage, classify each owned
+   global by mutability, not just naming convention:
+   - Fields that are **immutable after init** (config-table copies, switch parameters,
+     event-table arrays) are config-constants. If a typed config home already exists, leave
+     them as legacy globals until a config-consolidation arc retires them. Migrating them to
+     a runtime state record would duplicate typed config.
+   - Fields that are **per-event computed, mutated, or accumulated** during the simulation
+     are genuine runtime state and belong in `<subsystem>_state_t`.
+   Apply this split during discovery Section 2 categorization — it sets the scope for the
+   entire arc. Tillage debuted this pattern: 18 of 31 `till_*` globals were config-constants
+   (kept legacy, Groups A+B); only 13 runtime-state fields migrated (Groups C+D+E).
+
+2. **Cross-subsystem side-effect globals stay legacy until a dedicated ownership arc.**
+   When a subsystem writes globals that are read by multiple OTHER subsystems for coupling
+   (here: tillage writes `Bdens` and `ParamVG`; `soilhydraulics.f90`, `solute.f90`, and
+   `oxygenstress.f90` read them), those fields cannot be absorbed into the writer's state
+   record without also migrating all downstream readers. Cross-subsystem ownership
+   clarification is its own arc. Leave such fields as legacy globals with a comment noting
+   the deferred ownership work. Trying to absorb them into the writer's record forces
+   unrelated downstream plumbing and expands blast radius beyond the arc's focus.
+
+3. **Self-contained subsystem hint — flag zero-external-readers during discovery.**
+   If discovery shows zero external compute readers of the subsystem's owned globals (outside
+   the home file and co-writer), the reader cutover task (T-4 in the standard plan) may be
+   a no-op. Flag this during discovery so the plan can drop or stub that task and reduce
+   overall arc scope. Tillage was the first arc to surface this: the "8 external sites"
+   initially found during discovery turned out to be Group A+B config-constants in
+   `config_to_variables.f90` (out of scope), not runtime-state readers. Strategy B (T-5)
+   confirmed: 2 compile passes, zero external reader fixes needed.
+
+---
+
 ## Reference ADRs
 
 - ADR 0030 — Surface-water state-type migration (pilot)
@@ -347,3 +387,4 @@ Soil-water core was migration #8 and the FINAL coupling-surface arc of the soil-
 - ADR 0036 — Crop water uptake state-type migration (second coupling-surface arc)
 - ADR 0037 — Atmosphere subsystem state-type migration (third coupling-surface arc)
 - ADR 0038 — Soil-water core state-type migration (FINAL coupling-surface arc)
+- ADR 0039 — Tillage state-type migration (smallest arc; config-constant vs runtime-state distinction)
