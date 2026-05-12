@@ -24,6 +24,6 @@ program swap_main
    write(*,'(a)')' Swap normal completion!'
    call log_close()
    call CloseTempFil   ! deletes unit-20 scratch file; retirement candidate (see swapoutput.f90)
-   call Exit(100)
+   stop 100
 
 end program swap_main

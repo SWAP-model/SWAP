@@ -50,8 +50,23 @@ endif
 add_project_arguments(gfortran_flags, language: 'fortran')
 
 # ============================================================================
-# Source files
+# Source partitions
 # ============================================================================
+# Modern files: compiled with -std=f2018 -Wall -Wextra.
+# Cross-standard linkage works fine — gfortran .mod files produced by
+# legacy-mode compilation are consumed without issue by f2018-mode
+# compilation. The -std= flag only affects parsing of the file being
+# compiled, not what it can `use`.
+modern_sources = [
+    'src/core/swap_mod.f90',
+    'src/core/swap_bmi_mod.f90',
+]
+
+# Legacy files: project-wide -std=legacy (set by add_project_arguments).
+# Keep every existing entry from the prior `sources` list MINUS the two
+# modern files above and MINUS src/core/swap_main.f90 (which becomes the
+# executable's own source). swap.f90 and sharedexchange.f90 are already
+# deleted in Task 6, so they should not be present here.
 sources = [
     # Core
     'src/core/arrays.f90',
@@ -86,14 +101,14 @@ sources = [
     'src/core/variables.f90',
     'src/core/initialize.f90',
     'src/core/timecontrol.f90',
-    
+
     # Soil
     'src/soil/soilgrid.f90',
     'src/soil/waterbalance.f90',
     'src/soil/soilhydraulics.f90',
     'src/soil/sptabulated.f90',
     'src/soil/WC_K_models_04_11.f90',
-    
+
     # I/O
     'src/io/csv_reader.f90',
     'src/io/file_io.f90',
@@ -133,7 +148,7 @@ sources = [
     'src/atmosphere/snow.f90',
     'src/heat/temperature.f90',
     'src/heat/frozencond.f90',
-    
+
     # Boundaries & Drainage
     'src/boundary/boundtop.f90',
     'src/boundary/boundbottom.f90',
@@ -141,11 +156,11 @@ sources = [
     'src/drainage/divdra.f90',
     'src/drainage/surfacewater_init.f90',
     'src/drainage/surfacewater.f90',
-    
+
     # Solute
     'src/solute/solute.f90',
     'src/solute/agetracer.f90',
-    
+
     # Crop
     'src/crop/wofost_soil_declarations.f90',
     'src/crop/wofost_soil_interface.f90',
@@ -181,17 +196,11 @@ sources = [
     'src/utils/surfacewaterutils.f90',
     'src/utils/soilhydraulicsutils.f90',
     'src/utils/numericalsolvers.f90',
-    
-    # Main (last)
-    'src/core/swap_mod.f90',
-    'src/core/swap_bmi_mod.f90',
-    'src/core/swap_main.f90'
 ]
 
 # ============================================================================
 # External dependency: toml-f
 # ============================================================================
-
 tomlf_prj = subproject(
     'toml-f',
     version: '>=0.2',
@@ -202,16 +211,53 @@ tomlf_prj = subproject(
 tomlf_dep = tomlf_prj.get_variable('tomlf_dep')
 
 # ============================================================================
+# Static libraries (compile-time grouping)
+# ============================================================================
+swap_legacy = static_library('swap_legacy',
+    sources: sources,
+    dependencies: [tomlf_dep],
+    include_directories: src_inc,
+)
+
+swap_legacy_dep = declare_dependency(
+    link_with: swap_legacy,
+    include_directories: src_inc,
+)
+
+swap_modern = static_library('swap_modern',
+    sources: modern_sources,
+    dependencies: [tomlf_dep, swap_legacy_dep],
+    include_directories: src_inc,
+    fortran_args: ['-std=f2018', '-Wall', '-Wextra'],
+)
+
+# ============================================================================
 # Main executable
 # ============================================================================
 # Always statically link with gfortran — see docs/adr/0001-gfortran-first.md.
 link_args = ['-static']
 
-executable('swap', sources,
+executable('swap',
+    sources: 'src/core/swap_main.f90',
+    link_with: [swap_modern, swap_legacy],
     dependencies: [tomlf_dep],
-    link_args: link_args,
+    fortran_args: ['-std=f2018'],
     include_directories: src_inc,
-    install: false
+    link_args: link_args,
+    install: false,
+)
+
+# ============================================================================
+# BMI shared library (Python / imod_coupler entry point)
+# ============================================================================
+# link_whole forces all object files from the static libs into the .so
+# (equivalent to -Wl,--whole-archive), so every BMI symbol is exported.
+# Each member library was already compiled with its appropriate -std= flag.
+swap_bmi_lib = shared_library('swap_bmi',
+    link_whole: [swap_modern, swap_legacy],
+    dependencies: [tomlf_dep],
+    include_directories: src_inc,
+    install: false,
 )
 # ============================================================================
 # Tests
