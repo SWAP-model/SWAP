@@ -1207,155 +1207,73 @@
       real(8)   Agepondm1          ! Age of ponding water previous timestep (d)
       real(8)   icAgetopupw        ! Incremental age leaving top compartment upward (d)
       real(8)   icAgetopdwn        ! Incremental age entering top compartment downward (d)
-      real(8)   ArMpSs             ! Area fraction of macropores at soil surface (-)
+      ! [MACRO-RETIRE 2026-05-12] ADR 0040 — macropore subsystem retired from
+      ! the rescue branch. The following globals are kept as permanent-zero
+      ! placeholders because cross-subsystem code reads them under dead
+      ! `if (flMacroPore)` branches (flMacroPore is forced .false. in init).
+      ! See legacy/swap-4.2.0 for the original SWAP 4.2.0 implementation.
+      real(8)   ArMpSs             ! Area fraction of macropores at soil surface (-)  [retired-zero]
 
-! --- macropore Input parameters
-      integer NumSbDm              ! Number of Subdomains in IC domain (-)
-      integer SwDarcy              ! Switch for eliminating Darcy flow unsaturated zone
-      integer SwDrRap              ! Switch for kind of drainage function (-) TEMPORARY: TEST optio
-      integer SwPowM               ! Switch for double convex/concave freq. distr. curve (-)
-      integer SwShrInp(MaHo)       ! Switch for determining shrinkage curve (-)
-      integer SwSoilShr(MaHo)      ! Switch for kind of soil for determining shrinkage curve (-)
-      integer SwSorp(MaHo)         ! Switch for kind of sorptivity function (-) 
-      real(8) CritUndSatVol        ! Critical value for undersaturation volume (L)
-      real(8) DiPoMa               ! Maximal diameter soil polygones (deep) (L) 
-      real(8) DiPoMi               ! Minimal diameter soil polygones (shallow) (L) 
-      real(8) FKcovlay             ! multiplication factor for conductivity of covering top layer (-) 
-      real(8) GeomFac(MaHo)        ! Geometry factor for (an)isotropic shrinkage (-)
-      real(8) PndmxMp              ! Threshold value for ponding (L) on soil surface before overland flow into macropores starts    
-      real(8) PowM                 ! Power M for frequency distribut. curve IC domain (-)   
-      real(8) PpIcSs               ! Proportion of IC domain at Soil Surface (-)
-      real(8) RapDraReaExp         ! Reaction coefficient for rapid drainage (-)
-      real(8) RapDraResRef(Madr)   ! Reference rapid drainage resistance (T)  
-      real(8) Rzah                 ! Fraction macropores ended at bottom A-horizon (-)
-      real(8) ShapeFacMp           ! Shape factor for description of macropore water exchange with matrix (-)
-      real(8) SorpAlfa(MaHo)       ! Fitting parameter for emperical sorptivity curve (-)
-      real(8) SorpMax(MaHo)        ! Maximal sorptivity at theta residual (L/T^0.5)
-      real(8) SorpFacParl(MaHo)    ! Factor for modifying Parlange function (-)
-      real(8) ShrParA(MaHo)        ! Parameter 1 for describing shrinkage curve (depending on SWSoilShr and SwShrInp)
-      real(8) ShrParB(MaHo)        ! Parameter 2 for describing shrinkage curve (depending on SWSoilShr and SwShrInp)
-      real(8) ShrParC(MaHo)        ! Parameter 3 for describing shrinkage curve (depending on SWSoilShr and SwShrInp)
-      real(8) ShrParD(MaHo)        ! Parameter 4 for describing shrinkage curve (depending on SWSoilShr and SwShrInp)
-      real(8) ShrParE(MaHo)        ! Parameter 5 for describing shrinkage curve (depending on SWSoilShr and SwShrInp)
-      real(8) Spoint               ! Symmetry Point for freq. distr. curve (-)
-      real(8) ThetCrMp(MaHo)       ! Critical volumetric water content below which cracks are formed (L^3/L^3)
-      real(8) VlMpStSs             ! Volume of Static Macropores at Soil Surface (L^3/L^3)
-      real(8) Z_Ah                 ! Depth bottom A-horizon (L)
-      real(8) Z_Ic                 ! Depth bottom Internal Catchment (IC) domain (L)
-      real(8) Z_MB50               ! Depth where static volume of MB domain has decreased to half of original(L) ! Adaptation 4 for PEARL-MACRO  
-      real(8) Z_St                 ! Depth bottom Static macropores (L)
-      real(8) Z_Tp                 ! Depth Top macropores (L)                                          ! Adaptation for GEM                           
-      real(8) ZDiPoMa              ! Depth below which diameter of soil polygons is maximum (L)
-      real(8) ZnCrAr               ! Depth at which crack area of soil surface is calculated (L)
-! --- macropore variables
-      integer ICpBtDmPot(MaDm)     ! Compartment number containing potential bottom depth of domain (-) 
-      integer IcTopMP              ! Compartment with top layer with macropores (-)                    ! Adaptation for GEM 
-      integer IDecMpRat            ! Counter for number of times macropore fluxes are decreased with factor 10 because convergence is not reached (-)
-      ! [SS-SWC] retired 2026-05-12 — moved to state%soilwater%nodgwlflcpzo (ADR 0038)
-      ! integer NodGWlFlCpZo         ! Node directly above groundwater level of full capillary zone (-)
-      integer NumDm                ! Number of macropore domains (-)
-      integer NumLevRapDra         ! Number of drainage level
-      integer SwBma                ! Switch for output file with detailed yearly macropore water balance *.BMA: 0 = no; 1 = yes
-      integer swmacro              ! Switch for macropore option: 0 = no; 1 = yes
-      real(8) ArMpTp               ! Area fraction of macropores at Top of macropores (-) 
-      real(8) cQMpLatSs            ! Cumulative amount of macropore inflow at soil surface by lateral overland flow (L)
-      real(8) cQMpInIntSatDm1      ! Cumulative amount of interflow out off perched groundwater into macropores of domain 1 (MB) (L)
-      real(8) cQMpInIntSatDm2      ! Cumulative amount of interflow out off perched groundwater into macropores of domain 2 (IC) (L)
-      real(8) cQMpInMtxSatDm1      ! Cumulative amount of exfiltration out off saturated matrix into macropores of domain 1 (MB) (L)
-      real(8) cQMpInMtxSatDm2      ! Cumulative amount of exfiltration out off saturated matrix into macropores of domain 2 (IC) (L)
-      real(8) cQMpInTopLatDm1      ! Cumulative amount of lateral overland flow into macropores of domain 1 (MB) (L)
-      real(8) cQMpInTopLatDm2      ! Cumulative amount of lateral overland flow into macropores of domain 2 (IC) (L)
-      real(8) cQMpInTopVrtDm1      ! Cumulative amount of vertical inflow at top of zone with macropores into macropores of domain 1 (MB) (L)
-      real(8) cQMpInTopVrtDm2      ! Cumulative amount of vertical inflow at top of zone with macropores into macropores of domain 2 (IC) (L)
-      real(8) cQMpOutDrRap         ! Cumulative amount of rapid drainage out off macropores of domain 1 (MB) (L)
-      real(8) cQMpOutMtxSatDm1     ! Cumulative amount of infiltration into saturated matrix out off macropores of domain 1 (MB) (L) 
-      real(8) cQMpOutMtxSatDm2     ! Cumulative amount of infiltration into saturated matrix out off macropores of domain 2 (IC) (L)
-      real(8) cQMpOutMtxUnsDm1     ! Cumulative amount of infiltration into unsaturated matrix out off macropores of domain 1 (MB) (L) 
-      real(8) cQMpOutMtxUnsDm2     ! Cumulative amount of infiltration into unsaturated matrix out off macropores of domain 2 (IC) (L) 
-      real(8) DiPoCp(MaCp)         ! Diameter of soil matrix polygon per compartment (L)
-      real(8) dFdhMp(MaCp)         ! Contribution of macropores to derivative of compartment (1/T)
-      real(8) dtold                ! Length of previous Time step (T)
+! --- macropore Input parameters (all retired-zero — see [MACRO-RETIRE 2026-05-12])
+      integer SwSoilShr(MaHo)      ! [retired-zero] kept: soilhydraulics shrinkage branch
+      real(8) ThetCrMp(MaHo)       ! [retired-zero] kept: soilhydraulics shrinkage branch
+      real(8) Z_Tp                 ! [retired-zero] kept: ArMpTp/ArMpSs gating
+      real(8) CritUndSatVol        ! [retired-zero] kept: waterbalance watertable() arg
+! --- macropore variables (selected — most retired by deletion)
+      real(8) ArMpTp               ! [retired-zero] kept: ArMpSs assignment
+      real(8) cQMpLatSs            ! [retired-zero] kept: soilhydraulics zero-write
+      real(8) cQMpOutDrRap         ! [retired-zero] kept: waterbalance wbalance term
+      real(8) dFdhMp(MaCp)         ! [retired-zero] kept: soilhydraulics dFdhM term (always 0)
+      real(8) dtold                ! Length of previous Time step (T)  [non-macropore use]
+      real(8) DiPoCp(MaCp)         ! [retired-zero] kept: soilgrid refinement
+      real(8) iQMpOutDrRap         ! [retired-zero] kept: swap_csv/swapoutput DRAINAGE accumulator
+      real(8) iQInTopLatDm1        ! [retired-zero] kept: waterbalance .BMA writer
+      real(8) iQInTopLatDm2        ! [retired-zero] kept: waterbalance .BMA writer
+      real(8) iQInTopVrtDm1        ! [retired-zero] kept: waterbalance .BMA writer
+      real(8) iQInTopVrtDm2        ! [retired-zero] kept: waterbalance .BMA writer
+      real(8) IAvFrMpWlWtDm1(MaCp) ! [retired-zero] kept: soilgrid refinement
+      real(8) IAvFrMpWlWtDm2(MaCp) ! [retired-zero] kept: soilgrid refinement
+      real(8) iQExcMtxDm1Cp(MaCp)  ! [retired-zero] kept: soilgrid refinement
+      real(8) iQExcMtxDm2Cp(MaCp)  ! [retired-zero] kept: soilgrid refinement
+      real(8) iQOutDrRapCp(MaCp)   ! [retired-zero] kept: soilgrid refinement
+      real(8) IWaSrDm1Beg          ! [retired-zero] kept: waterbalance .BMA writer
+      real(8) IWaSrDm2Beg          ! [retired-zero] kept: waterbalance .BMA writer
+      real(8) WaSrDm1              ! [retired-zero] kept: waterbalance .BMA writer
+      real(8) WaSrDm2              ! [retired-zero] kept: waterbalance .BMA writer
+      real(8) WaSrDm1Ini           ! [retired-zero] kept: waterbalance wbalance term
+      real(8) WaSrDm2Ini           ! [retired-zero] kept: waterbalance wbalance term
+      real(8) VlMpStDm1(MaCp)      ! [retired-zero] kept: soilgrid refinement
+      real(8) VlMpStDm2(MaCp)      ! [retired-zero] kept: soilgrid refinement
+      integer IcTopMP              ! [retired-zero] kept: cross-subsystem ref
+      integer IDecMpRat            ! [retired-zero] kept: soilhydraulics convergence counter
+      real(8) QExcMpMtx(MaCp)      ! [retired-zero] kept: waterbalance use clause
+      real(8) QMaPo                ! [retired-zero] kept: waterbalance qbot term
+      real(8) QRapDra              ! [retired-zero] kept: surfacewater drainage terms
+      ! [MACRO-RETIRE 2026-05-12] note: NumLevRapDra/RapDraReaExp/RapDraResRef
+      ! belong to the drainage subsystem (set by drainage_config), NOT
+      ! macropore — they were grouped here legacy-style. Keep them.
+      integer NumLevRapDra         ! Number of drainage levels for rapid drainage (drainage feature)
+      real(8) RapDraReaExp         ! Reaction coefficient for rapid drainage (drainage feature)
+      real(8) RapDraResRef(Madr)   ! Reference rapid drainage resistance (drainage feature)
+      logical FlDecMpRat           ! [retired-zero] kept: soilhydraulics convergence sentinel
+      logical flmacropore          ! [retired-zero] forced .false. in init — guards dead branches
       ! [SS-BND] retired 2026-05-11 — boundary subsystem migrated to state%soilwater (ADR 0035)
-      ! real(8) QMpLatSs             ! Macropore inflow flux at soil surface by lateral overland flow (L/T)
-      ! [SS-SWC] retired 2026-05-12 — moved to state%soilwater (ADR 0038)
-      ! real(8) FrArMtrx(MaCp)       ! Fraction of horizontal area of soil matrix per compartment (-)
-      ! real(8) GWlFlCpZo            ! Groundwater level of full capillary zone (L) (only unsaturated zones with less than CritUndSatVol air)
-      real(8) IAvFrMpWlWtDm1(MaCp) ! Incremental sum of average wet macropore wall fraction weighted for time step, for domain 1 (MB) (-)
-      real(8) IAvFrMpWlWtDm2(MaCp) ! Incremental sum of average wet macropore wall fraction weighted for time step, for domain 2 (IC) (-)
-      real(8) iQExcMtxDm1Cp(MaCp)  ! Incremental amount of water exchange between matrix and macropores of domain 1 (MB) (L)
-      real(8) iQExcMtxDm2Cp(MaCp)  ! Incremental amount of water exchange between matrix and macropores of domain 2 (IC) (L)
-      real(8) iQInTopLatDm1        ! Incremental amount of lateral overland flow into macropores of domain 1 (MB) (L)
-      real(8) iQInTopLatDm2        ! Incremental amount of lateral overland flow into macropores of domain 2 (IC) (L)
-      real(8) iQInTopVrtDm1        ! Incremental amount of vertical inflow at top of zone with macropores into macropores of domain 1 (MB) (L)
-      real(8) iQInTopVrtDm2        ! Incremental amount of vertical inflow at top of zone with macropores into macropores of domain 2 (IC) (L)
-      real(8) iQMpOutDrRap         ! Incremental amount of rapid drainage out off macropores of domain 1 (MB) (L)
-      real(8) iQOutDrRapCp(MaCp)   ! Incremental amount of rapid drainage out off macropores per compartment (L)
-      real(8) IWaSrDm1Beg          ! Incremental amount of water storage in macropores of domain 1 (MB) at beginning of period (L)
-      real(8) IWaSrDm2Beg          ! Incremental amount of water storage in macropores of domain 2 (IC) at beginning of period (L)
-      real(8) KsatCovLay           ! Saturated conductivity of bottom compartment of covering layer (L/T)
-      real(8) KsMpSs               ! Vertical hydraulic conductivity of macropores at soil surface (L/T) 
-      real(8) PpDmCp(MaDm,MaCp)    ! Volumetric proportion of macropore domain per compartment (-)
-      real(8) PpIcTpMp             ! Proportion of IC domain at Top layer with Macropores (-)                   ! Adaptation for GEM 
-      real(8) QExcMpMtx(MaCp)      ! Water exchange flux between matrix and macropores per compartment (L/T) 
-      real(8) QInTopLatDm1         ! Lateral overland flow flux into macropores of domain 1 (MB) (L/T)
-      real(8) QInTopLatDm2         ! Lateral overland flow flux into macropores of domain 2 (IC) (L/T)
-      real(8) QInTopVrtDm1         ! Vertical inflow flux at top of zone with macropores into macropores of domain 1 (MB) (L/T)
-      real(8) QInTopVrtDm2         ! Vertical inflow flux at top of zone with macropores into macropores of domain 2 (IC) (L/T)
-      real(8) QMaPo                ! Total exchange flux between matrix and macropores (L/T)
-      real(8) QRapDra              ! Total rapid drainage flux (L/T)
-      real(8) SubsidCp(MaCp)       ! Vertical subsidence of matrix per compartment (L)
-      real(8) VlMp                 ! Total macropore volume (L)
-      real(8) VlMpDm1              ! Total macropore volume of domain 1 (MB) (L)
-      real(8) VlMpDm2              ! Total macropore volume of domain 2 (IC) (L)
-      real(8) VlMpDyCp(MaCp)       ! Dynamic macropore volume per compartment (L)
-      real(8) VlMpStCp(MaCp)       ! Static macropore volume per compartment (L)
-      real(8) VlMpStDm1(MaCp)      ! Static macropore volume of domain 1 (MB) per compartment (L)
-      real(8) VlMpStDm2(MaCp)      ! Static macropore volume of domain 2 (IC) per compartment (L)
-      real(8) WaLevDm1             ! Water level in domain 1 (MB) (L)
-      real(8) WaSrDm1              ! Water storage in domain 1 (MB) (L)
-      real(8) WaSrDm1Ini           ! Initial water storage in domain 1 (MB) (L)
-      real(8) WaSrDm2              ! Water storage in domain 2 (IC) (L)
-      real(8) WaSrDm2Ini           ! Initial water storage in domain 2 (IC) (L)
-      ! SS-SWST Phase 2 Task 11 C2: ZDraBas/flInitDraBas removed — state%surfacewater owns them.
-      ! real(8) ZDraBas              ! Moved to surfacewater_state_t%ZDraBas
-      logical FlDecMpRat           ! Flag indicating decrease of macropore fluxes when convergence is not reached
-      ! logical flInitDraBas         ! Moved to surfacewater_state_t%flInitDraBas
-      logical flmacropore          ! Flag indicating simulation of macropore flow
-
-! --- macropore work arrays (previously local SAVE in macropore.f90)
-      integer ICpBtDm(MaDm)        ! Compartment number of bottom domain (-)
-      integer ICpBtPerZon          ! Compartment number of bottom of percolation zone (-)
-      integer ICpSatGWl            ! Compartment at saturated groundwater level (-)
-      integer ICpSatPeGWl          ! Compartment at saturated perched groundwater level (-)
-      integer ICpTpPerZon          ! Compartment number of top of percolation zone (-)
-      integer ICpTpSatZon          ! Compartment number of top of saturated zone (-)
-      integer ICpTpWaSrDm(MaDm)    ! Compartment number of top of water storage per domain (-)
-      integer NnCrAr               ! Number of crack areas (-)
-      real(8) ArMpTpDm(MaDm)       ! Area fraction of macropores at top per domain (-)
-      real(8) AwlCorFac(MaCp)      ! Correction factor for wet macropore wall (-)
-      real(8) FrMpWalWet(MaDm,MaCp) ! Fraction of wet macropore wall per domain/compartment (-)
-      real(8) KDCrRlRef(MaDr)      ! Reference conductivity for crack flow per drainage level (L/T)
-      real(8) QExcMtxDmCp(MaDm,MaCp) ! Exchange flux between matrix and macropores per domain/compartment (L/T)
-      real(8) QInIntSatDmCp(MaDm,MaCp) ! Interflow into macropores from perched groundwater per domain/compartment (L/T)
-      real(8) QInMtxSatDmCp(MaDm,MaCp) ! Inflow from saturated matrix per domain/compartment (L/T)
-      real(8) QInTopLatDm(MaDm)    ! Lateral overland flow into macropores per domain (L/T)
-      real(8) QInTopVrtDm(MaDm)    ! Vertical inflow at top into macropores per domain (L/T)
-      real(8) QOutDrRapCp(MaCp)    ! Rapid drainage outflow per compartment (L/T)
-      real(8) QOutMtxSatDmCp(MaDm,MaCp) ! Outflow to saturated matrix per domain/compartment (L/T)
-      real(8) QOutMtxUnsDmCp(MaDm,MaCp) ! Outflow to unsaturated matrix per domain/compartment (L/T)
-      real(8) SorpDmCp(MaDm,MaCp)  ! Sorptivity per domain/compartment (L/T^0.5)
-      real(8) ThtSrpRefDmCp(MaDm,MaCp) ! Reference theta for sorption per domain/compartment (-)
-      real(8) TimAbsCumDmCp(MaDm,MaCp) ! Cumulative absorption time per domain/compartment (T)
-      real(8) VlMpDm(MaDm)         ! Macropore volume per domain (L)
-      real(8) VlMpDmCp(MaDm,MaCp)  ! Macropore volume per domain/compartment (L)
-      real(8) WaSrMp               ! Total water storage in macropores (L)
-      real(8) WaSrMpDm(MaDm)       ! Water storage per domain (L)
-      real(8) WaSrMpDmCp(MaDm,MaCp) ! Water storage per domain/compartment (L)
-      real(8) ZBtDm(MaDm)          ! Bottom depth per domain (L)
-      real(8) ZWaLevDm(MaDm)       ! Water level per domain (L)
-      logical flBegin              ! Flag indicating beginning of macropore simulation
-      logical flDraTub(MaDr)       ! Flag indicating drain tube per drainage level
-      logical FlEndSrpEvt(MaDm,MaCp) ! Flag indicating end of sorption event per domain/compartment
+      ! [MACRO-RETIRE 2026-05-12] All other macropore globals retired.
+      ! See ADR 0040 and legacy/swap-4.2.0 for the original SWAP 4.2.0
+      ! macropore implementation. The retired set includes ~24 cumulative
+      ! accumulators (cQMp*, iQMp*, iQExcMtx*, iQInTop*, IWaSrDm*,
+      ! IAvFrMpWlWt*), area/depth parameters (NumSbDm, SwDarcy, SwDrRap,
+      ! SwPowM, SwShrInp, SwSorp, CritUndSatVol, DiPoMa, DiPoMi, FKcovlay,
+      ! GeomFac, PndmxMp, PowM, PpIcSs, RapDra*, Rzah, ShapeFacMp, Sorp*,
+      ! ShrPar[A-E], Spoint, VlMpStSs, Z_Ah, Z_Ic, Z_MB50, Z_St, ZDiPoMa,
+      ! ZnCrAr, KsMpSs, KsatCovLay, PpDmCp, PpIcTpMp, ArMpSs and 27 more)
+      ! and macropore work arrays (ICpBt*, ICpTp*, ICpSat*, NnCrAr,
+      ! ArMpTpDm, AwlCorFac, FrMpWalWet, KDCrRlRef, QExcMtxDmCp,
+      ! QIn*SatDmCp, QInTop*Dm, QOut*DmCp, SorpDmCp, ThtSrpRefDmCp,
+      ! TimAbsCumDmCp, VlMpDm*, WaSrMp*, WaSr/WaLev/VlMpDm1/2 etc., ZBtDm,
+      ! ZWaLevDm, flBegin, flDraTub, FlEndSrpEvt, IcTopMP, IDecMpRat,
+      ! NumDm, NumLevRapDra, SwBma, SubsidCp, VlMpDyCp, VlMpStCp,
+      ! VlMpStDm1/2, dFdhMp is kept retired-zero, etc.).
 
 ! --- surface water variables
       integer swswb,swdrf,swsrf,swallo(Madr),swdtyp(Madr),swnrsrf

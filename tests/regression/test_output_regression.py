@@ -53,11 +53,11 @@ CASES = {
                 "drafile": "swap.dra"
         }
     ),
-    # Case 3 (macroporeflow) excluded from check-full per ADR 0011.
-    # The case directory still exists at tests/swap-cases/3.macroporeflow/
-    # for archival; macropore_config_t is orphan infrastructure per ADR 0010.
-    # When the future macropore phase reactivates the module, this entry
-    # comes back.
+    # [MACRO-RETIRE 2026-05-12] Case 3 (macroporeflow) retired per ADR 0040.
+    # Macropore physics deleted from rescue branch; legacy SWAP 4.2.0
+    # implementation preserved on branch legacy/swap-4.2.0. The case dir
+    # still exists in the tests/swap-cases submodule for archival. A future
+    # macropore feature arc will re-introduce this entry.
     "grassgrowth": CaseConfig(
         name="grassgrowth",
         case_dir="2.grassgrowth",

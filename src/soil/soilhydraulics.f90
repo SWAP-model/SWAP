@@ -31,7 +31,7 @@ contains
       use array_utils, only: afgen
       use soilhydraulics_utils, only: watcon, hconduc, moiscap, hcomean, dhconduc
       use swap_constants, only: nihil
-      use macropore_mod, only: macropore
+      ! [MACRO-RETIRE 2026-05-12] macropore_mod retired (ADR 0040).
       use swap_state_mod, only: swap_state_t
       use soilhydraulics_utils, only: dkmean
       use soilwaterbalance_mod, only: calcgwl, fluxes
@@ -223,9 +223,7 @@ contains
 
       call boundtop(state)  ! [SS-HEAT] Task 9: state passed for rfcp access
 
-      if (FlMacropore) then
-         call MACROPORE(2, state)
-      end if
+      ! [MACRO-RETIRE 2026-05-12] MACROPORE(2,...) retired (ADR 0040).
 
       if (state%soilwater%FlRunoff .or. (FlMacropore .and. Z_Tp.gt.-1.d-8))   &   ! Adaptation for GEM
      &    call pondrunoff (state)
@@ -411,14 +409,7 @@ contains
             end if
          end if
 
-         if (FlMacropore .and. .not.flunsatok(3)) then
-            call MACROPORE(3, state)
-
-            do i= 1, nn
-               dFdhM(i) = dFdhM(i) - dFdhMp(i)
-            enddo
-
-         endif
+         ! [MACRO-RETIRE 2026-05-12] MACROPORE(3,...) retired (ADR 0040).
 
          ! Solve the tridiagonal matrix
          call tridag(NN, dFdhU, dFdhM, dFdhL, F, difh, ierror)
@@ -518,17 +509,11 @@ contains
             F(1) = (sw_theta(1) - sw_thetm1(1))*sw_FrArMtrx(1)*dz(1)/dt + sink(1) - source(1) &  ! [SS-SWC S-2.3]
      &           + state%soilwater%qrot(1) + sw_kmean(2) * hgrad(2)
 
-            if (FlMacropore) QMpLatSsSav = state%soilwater%QMpLatSs
+            ! [MACRO-RETIRE 2026-05-12] FlMacropore QMpLatSsSav save retired (ADR 0040).
 
             call boundtop(state)  ! [SS-HEAT] Task 9: state passed for rfcp access
 
-            if (FlMacropore) then
-               if (.not.flunsatok(3)) then
-                  call MACROPORE(2, state)
-               else
-                  state%soilwater%QMpLatSs = QMpLatSsSav
-               endif
-            endif
+            ! [MACRO-RETIRE 2026-05-12] MACROPORE(2,...) retired (ADR 0040).
 
             if (state%soilwater%FlRunoff .or. (FlMacropore .and. Z_Tp.gt.-1.d-8))   &   ! Adaptation for GEM
      &         call pondrunoff (state)
@@ -896,7 +881,7 @@ contains
       use swap_log, only: log_info, to_str
       use array_utils, only: afgen
       use soilhydraulics_utils, only: watcon, hconduc, moiscap, hcomean
-      use macropore_mod, only: macropore
+      ! [MACRO-RETIRE 2026-05-12] macropore_mod retired (ADR 0040).
       use soilwaterbalance_mod, only: calcgwl, watstor, integral, fluxes
       use swap_state_mod, only: swap_state_t
       use, intrinsic :: iso_fortran_env, only: real64  ! [SS-ATM] for atmosphere state dual-writes
@@ -1150,16 +1135,14 @@ contains
           state%soilwater%intr%IThetaBeg(node) = state%soilwater%theta(node)  ! [SS-SWC S-1.4b/S-2.3/S-2.12B]
         enddo
 
-        ! Macropore variables
-        if (flMacroPore) call macropore(5, state)
+        ! [MACRO-RETIRE 2026-05-12] macropore(5,...) retired (ADR 0040).
       endif
 
       ! Reset cumulative soil water fluxes — [SS-SWC S-2.12B] reset() handles all
       if (flzerocumu) then
         call state%soilwater%cumu%reset()                         ! [SS-SWC S-2.1]
 
-        ! Macropore variables
-        if (flMacroPore) call macropore(6, state)
+        ! [MACRO-RETIRE 2026-05-12] macropore(6,...) retired (ADR 0040).
 
         ! Reset initial water storage and ponding
         state%soilwater%volini = state%soilwater%volact          ! [SS-SWC S-2.12B]
@@ -1195,8 +1178,7 @@ contains
       ! SS-SWST Phase 2 Task 11: state passed so fluxes() reads qdra/qdrtot from state.
       call fluxes (state)
 
-      ! Calculation of states macropores and intermediate & cumulative values
-      if (flMacroPore) call macropore(4, state)
+      ! [MACRO-RETIRE 2026-05-12] macropore(4,...) retired (ADR 0040).
 
       ! Calculate cumulative fluxes
       call integral (state)

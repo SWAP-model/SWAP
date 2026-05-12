@@ -40,7 +40,6 @@ ADD_TEST_SUITE(test_hupselbrook_parity_suite)
 ADD_TEST_SUITE(test_bottom_boundary_config_suite)
 ADD_TEST_SUITE(test_heat_config_suite)
 ADD_TEST_SUITE(test_irrigation_config_suite)
-ADD_TEST_SUITE(test_macropore_config_suite)
 ADD_TEST_SUITE(test_solute_config_suite)
 ADD_TEST_SUITE(test_solute_phase0_fields_suite)
 ADD_TEST_SUITE(test_heat_phase0_fields_suite)
@@ -55,10 +54,8 @@ ADD_TEST_SUITE(test_grassgrowth_parity_suite)
 ADD_TEST_SUITE(test_oxygenstress_parity_suite)
 ADD_TEST_SUITE(test_salinitystress_parity_suite)
 ADD_TEST_SUITE(test_surfacewater_parity_suite)
-! DEFERRED: case 3 (macroporeflow) is excluded from regression per ADR
-! 0011 and rejected at TOML validation by SS-4 stub-error. Re-enable
-! when macropore TOML support lands. See ADR 0010 / 0011 / 0018.
-! ADD_TEST_SUITE(test_macroporeflow_parity_suite)
+! [MACRO-RETIRE 2026-05-12] macroporeflow case retired; see ADR 0040 and
+! legacy/swap-4.2.0 for the original SWAP 4.2.0 macropore implementation.
 ADD_TEST_SUITE(test_cropfixed_init_suite)
 ADD_TEST_SUITE(test_cropwofost_init_suite)
 ADD_TEST_SUITE(test_cropgrass_init_suite)

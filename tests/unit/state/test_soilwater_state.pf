@@ -1022,7 +1022,9 @@ subroutine test_swcore_init_flat_arrays_zeroed()
    @assertEqual(0.0_real64, maxval(abs(sw%h)),        1.0e-12_real64)
    @assertEqual(0.0_real64, maxval(abs(sw%hm1)),      1.0e-12_real64)
    @assertEqual(0.0_real64, maxval(abs(sw%dimoca)),   1.0e-12_real64)
-   @assertEqual(0.0_real64, maxval(abs(sw%FrArMtrx)), 1.0e-12_real64)
+   ! [MACRO-RETIRE 2026-05-12] FrArMtrx defaults to 1.0 (whole-matrix) post-macropore retirement (ADR 0040).
+   @assertEqual(1.0_real64, minval(sw%FrArMtrx),      1.0e-12_real64)
+   @assertEqual(1.0_real64, maxval(sw%FrArMtrx),      1.0e-12_real64)
    @assertEqual(0.0_real64, maxval(abs(sw%evp)),      1.0e-12_real64)
 
    ! Integer per-node array

@@ -8,7 +8,7 @@ fs = import('fs')
 
 src_inc = include_directories(
     'src', 'src/core', 'src/io', 'src/io/toml', 'src/soil', 'src/atmosphere',
-    'src/crop', 'src/drainage', 'src/boundary', 'src/macropore',
+    'src/crop', 'src/drainage', 'src/boundary',
     'src/solute', 'src/heat', 'src/utils', 'src/config', 'src/state'
 )
 
@@ -69,7 +69,6 @@ sources = [
     'src/config/bottom_boundary_config.f90',
     'src/config/heat_config.f90',
     'src/config/irrigation_config.f90',
-    'src/config/macropore_config.f90',
     'src/config/solute_config.f90',
     'src/config/surface_water_config.f90',
     'src/config/nutrients_config.f90',
@@ -124,8 +123,7 @@ sources = [
     'src/io/swap_csv_output.f90',
     'src/io/readmeteo.f90',
     'src/io/swapoutput.f90',
-    'src/io/macroporeoutput.f90',
-    
+
     # Atmosphere & Heat
     'src/atmosphere/interception.f90',
     'src/atmosphere/et.f90',
@@ -144,9 +142,7 @@ sources = [
     'src/drainage/surfacewater_init.f90',
     'src/drainage/surfacewater.f90',
     
-    # Macropore & Solute
-    'src/macropore/macropore.f90',
-    'src/macropore/macrorate.f90',
+    # Solute
     'src/solute/solute.f90',
     'src/solute/agetracer.f90',
     

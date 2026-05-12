@@ -603,109 +603,49 @@
       flsolute           = .false. 
       flAgeTracer        = .false. 
 
-! --- macropore Input parameters
-      NumSbDm              = 0 
-      SwDarcy              = 0 
-      SwDrRap              = 0 
-      SwPowM               = 0 
-      SwShrInp             = 0 
-      SwSoilShr            = 0 
-      SwSorp               = 0 
-      DiPoMa               = 0.0d0 
-      DiPoMi               = 0.0d0 
-      CritUndSatVol        = 0.0d0 
-      GeomFac              = 0.0d0 
-      PndmxMp              = 0.0d0 
-      PowM                 = 0.0d0 
-      PpIcSs               = 0.0d0 
-      RapDraReaExp         = 0.0d0 
-      RapDraResRef         = 0.0d0 
-      Rzah                 = 0.0d0 
-      ShapeFacMp           = 0.0d0 
-      SorpAlfa             = 0.0d0 
-      SorpMax              = 0.0d0 
-      SorpFacParl          = 0.0d0 
-      ShrParA              = 0.0d0 
-      ShrParB              = 0.0d0 
-      ShrParC              = 0.0d0 
-      ShrParD              = 0.0d0 
-      ShrParE              = 0.0d0 
-      Spoint               = 0.0d0 
-      ThetCrMp             = 0.0d0 
-      VlMpStSs             = 0.0d0 
-      Z_Ah                 = 0.0d0 
-      Z_Ic                 = 0.0d0 
-      Z_St                 = 0.0d0 
-      ZDiPoMa              = 0.0d0 
-      ZnCrAr               = 0.0d0
- 
-! --- macropore variables
-      ICpBtDmPot           = 0 
+! --- macropore retirement [MACRO-RETIRE 2026-05-12] — ADR 0040
+!     Only the retired-zero placeholders kept in variables.f90 are
+!     initialized here. See legacy/swap-4.2.0 for the original
+!     macropore initialization that populated ~80 macropore globals.
+      SwSoilShr            = 0
+      ThetCrMp             = 0.0d0
+      Z_Tp                 = 0.0d0
+      CritUndSatVol        = 0.0d0
+      ArMpSs               = 0.0d0
+      ArMpTp               = 0.0d0
+      cQMpLatSs            = 0.0d0
+      cQMpOutDrRap         = 0.0d0
+      dFdhMp               = 0.0d0
+      iQMpOutDrRap         = 0.0d0
+      iQInTopLatDm1        = 0.0d0
+      iQInTopLatDm2        = 0.0d0
+      iQInTopVrtDm1        = 0.0d0
+      iQInTopVrtDm2        = 0.0d0
+      IWaSrDm1Beg          = 0.0d0
+      IWaSrDm2Beg          = 0.0d0
+      WaSrDm1              = 0.0d0
+      WaSrDm2              = 0.0d0
+      WaSrDm1Ini           = 0.0d0
+      WaSrDm2Ini           = 0.0d0
+      DiPoCp               = 0.0d0
+      IAvFrMpWlWtDm1       = 0.0d0
+      IAvFrMpWlWtDm2       = 0.0d0
+      iQExcMtxDm1Cp        = 0.0d0
+      iQExcMtxDm2Cp        = 0.0d0
+      iQOutDrRapCp         = 0.0d0
+      VlMpStDm1            = 0.0d0
+      VlMpStDm2            = 0.0d0
+      IcTopMP              = 0
       IDecMpRat            = 0
-      ! [SS-SWC] NodGWlFlCpZo retired — soilwater_init handles init via state%soilwater%nodgwlflcpzo
-      ! NodGWlFlCpZo         = 0
-      NumDm                = 0 
-      NumLevRapDra         = 0 
-      SwBma                = 0 
-      ArMpTp               = 0.0d0 
-      cQMpLatSs            = 0.0d0 
-      cQMpInIntSatDm1      = 0.0d0 
-      cQMpInIntSatDm2      = 0.0d0 
-      cQMpInMtxSatDm1      = 0.0d0 
-      cQMpInMtxSatDm2      = 0.0d0 
-      cQMpInTopLatDm1      = 0.0d0 
-      cQMpInTopLatDm2      = 0.0d0 
-      cQMpInTopVrtDm1      = 0.0d0 
-      cQMpInTopVrtDm2      = 0.0d0 
-      cQMpOutDrRap         = 0.0d0 
-      cQMpOutMtxSatDm1     = 0.0d0 
-      cQMpOutMtxSatDm2     = 0.0d0 
-      cQMpOutMtxUnsDm1     = 0.0d0 
-      cQMpOutMtxUnsDm2     = 0.0d0 
-      DiPoCp               = 0.0d0 
-      dFdhMp               = 0.0d0 
-      ! [SS-BND B-2.7] QMpLatSs retired — soilwater_init handles init via state%soilwater
-      ! QMpLatSs             = 0.0d0
-      ! [SS-SWC] FrArMtrx/GWlFlCpZo retired — soilwater_init handles init via state%soilwater
-      ! FrArMtrx             = 0.0d0
-      ! GWlFlCpZo            = 0.0d0
-      IAvFrMpWlWtDm1       = 0.0d0 
-      IAvFrMpWlWtDm2       = 0.0d0 
-      iQExcMtxDm1Cp        = 0.0d0 
-      iQExcMtxDm2Cp        = 0.0d0 
-      iQInTopLatDm1        = 0.0d0 
-      iQInTopLatDm2        = 0.0d0 
-      iQInTopVrtDm1        = 0.0d0 
-      iQInTopVrtDm2        = 0.0d0 
-      iQMpOutDrRap         = 0.0d0 
-      iQOutDrRapCp         = 0.0d0 
-      IWaSrDm1Beg          = 0.0d0 
-      IWaSrDm2Beg          = 0.0d0 
-      KsMpSs               = 0.0d0 
-      PpDmCp               = 0.0d0 
-      QExcMpMtx            = 0.0d0 
-      QInTopLatDm1         = 0.0d0 
-      QInTopLatDm2         = 0.0d0 
-      QInTopVrtDm1         = 0.0d0 
-      QInTopVrtDm2         = 0.0d0 
-      QMaPo                = 0.0d0 
-      QRapDra              = 0.0d0 
-      SubsidCp             = 0.0d0 
-      VlMp                 = 0.0d0 
-      VlMpDm1              = 0.0d0 
-      VlMpDm2              = 0.0d0 
-      VlMpStCp             = 0.0d0 
-      VlMpStDm1            = 0.0d0 
-      VlMpStDm2            = 0.0d0 
-      WaLevDm1             = 0.0d0 
-      WaSrDm1              = 0.0d0 
-      WaSrDm1Ini           = 0.0d0 
-      WaSrDm2              = 0.0d0 
-      WaSrDm2Ini           = 0.0d0 
-      ! SS-SWST Phase 2 Task 11 C3: ZDraBas/flInitDraBas removed (state%surfacewater owns them).
-      ! ZDraBas=0.0, flInitDraBas=.true. are set by surfacewater_state_t defaults.
+      QExcMpMtx            = 0.0d0
+      QMaPo                = 0.0d0
+      QRapDra              = 0.0d0
+      ! Drainage globals (NOT macropore — kept here next to retired set)
+      NumLevRapDra         = 0
+      RapDraReaExp         = 0.0d0
+      RapDraResRef         = 0.0d0
       FlDecMpRat           = .false.
-      flmacropore          = .false. 
+      flmacropore          = .false.
 
 ! --- surface water variables
       swswb                = 0

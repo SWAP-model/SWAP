@@ -91,8 +91,7 @@ use meteodt_mod, only: MeteoDT
 use rootextraction_mod, only: RootExtraction
 use frozencond_mod, only: FrozenCond, FrozenBounds
 use temperature_mod, only: Temperature, heat_init
-use macropore_mod, only: MACROPORE
-use macroporeoutput_mod, only: MacroPoreOutput
+! [MACRO-RETIRE 2026-05-12] macropore_mod / macroporeoutput_mod retired (ADR 0040).
 use solute_mod, only: solute, solute_init
 use agetracer_mod, only: AgeTracer
 use soilgrid_mod, only: CalcGrid, ConvertDiscrVert
@@ -249,8 +248,8 @@ if (iTask == 1) then
 !  initialize SurfaceWater management variables
    if (flSurfaceWater) call SurfaceWater(1, state, request_smaller_dt)
 
-!  initialize MacroPore rate/state variables
-   if (flMacroPore) call MACROPORE(1, state)
+!  [MACRO-RETIRE 2026-05-12] MACROPORE call retired (ADR 0040). flMacroPore is permanent .false.
+!  if (flMacroPore) call MACROPORE(1, state)
 
 !  initialize SoilTemperature rate/state variables
    if (flTemperature) call Temperature(1, state)
@@ -279,7 +278,7 @@ if (iTask == 1) then
       if (flSolute)       call SoluteOutput(1, state)
       if (flAgeTracer)    call AgeTracerOutput(1, state)
       if (flSnow)         call SnowOutput(1, state)
-      if (flMacroPore)    call MacroPoreOutput(1, state)
+      ! [MACRO-RETIRE 2026-05-12] MacroPoreOutput retired (ADR 0040).
       if (flSurfaceWater) call SurfaceWaterOutput(1, state)
    end if
 
@@ -441,7 +440,7 @@ if (iTask == 2) then
             if (flSolute)        call SoluteOutput(2, state)
             if (flAgeTracer)     call AgeTracerOutput(2, state)
             if (flSnow)          call SnowOutput(2, state)
-            if (flMacroPore)     call MacroPoreOutput(2, state)
+            ! [MACRO-RETIRE 2026-05-12] MacroPoreOutput retired (ADR 0040).
             if (flSurfaceWater) then
                if (daynr == merge(366, 365, dtleap(iyear))) &
                   call surfacewater_year_reset(state%surfacewater)
@@ -491,7 +490,7 @@ if (iTask == 3) then
       if (flAgeTracer)          call AgeTracerOutput(3, state)
 !     ADR 0009 Phase 5+: IrrigationOutput deleted (swirg=0).
       if (flSnow)               call SnowOutput(3, state)
-      if (flMacroPore)          call MacroPoreOutput(3, state)
+      ! [MACRO-RETIRE 2026-05-12] MacroPoreOutput retired (ADR 0040).
       if (flSurfaceWater)       call SurfaceWaterOutput(3, state)
       if (flCropNut)            call SoilManagement(7, state)
    end if

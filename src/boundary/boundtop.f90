@@ -176,20 +176,8 @@ contains
          p2     = 1.0d0/(p1+1.0d0)
          h0max  = p2 * ( state%soilwater%pondm1 + q0*dt - k1max*dt + p1*state%soilwater%h(1) )  ! [SS-SWC S-2.5]
 
-! --- in case of macropores, calc. potential overland flow into macrop.: QMpLatSs
-         if (FlMacropore .and. Z_Tp.gt.-1.d-8) then                     ! Adaptation for GEM 
-            if (h0max.gt.PndmxMp) then
-               ! SS-ATM A-2.6: nraidt/melt retired — read from state%atmosphere
-               RsRoMp  = (h0max + (state%atmosphere%nraidt+nird+state%atmosphere%melt)*ArMpSs*dt) / KsMpSs
-               p2Mp    = 1.0d0 / (p1 + 1.0d0 + dt/RsRoMp)
-               state%soilwater%pond = (h0max - PndmxMp) * p2Mp/p2          ! [SS-SWC S-2.12B]
-               state%soilwater%QMpLatSs = state%soilwater%pond * dt/RsRoMp ! [SS-SWC S-2.12B]
-               state%soilwater%QMpLatSs = dmin1(state%soilwater%QMpLatSs,h0max)
-               if (state%soilwater%QMpLatSs.lt.1.0d-7) state%soilwater%QMpLatSs = 0.0d0
-            else
-               state%soilwater%QMpLatSs = 0.0d0
-            endif
-         endif
+! [MACRO-RETIRE 2026-05-12] macropore overland-flow branch deleted (ADR 0040).
+! Legacy block ran only when FlMacropore=.true. — see legacy/swap-4.2.0.
       endif
 !  
       return

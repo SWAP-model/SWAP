@@ -376,7 +376,9 @@ contains
       allocate(sw%h(numnod));            sw%h            = 0.0_real64
       allocate(sw%hm1(numnod));          sw%hm1          = 0.0_real64
       allocate(sw%dimoca(numnod));       sw%dimoca       = 0.0_real64
-      allocate(sw%FrArMtrx(numnod));     sw%FrArMtrx     = 0.0_real64
+      ! [MACRO-RETIRE 2026-05-12] FrArMtrx defaults to 1.0 (whole-matrix);
+      ! macropore retirement removed the only writer (MACROGEOM). ADR 0040.
+      allocate(sw%FrArMtrx(numnod));     sw%FrArMtrx     = 1.0_real64
       allocate(sw%evp(numnod));          sw%evp          = 0.0_real64
       allocate(sw%indeks(numnod));       sw%indeks       = 0
 
