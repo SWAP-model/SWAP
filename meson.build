@@ -266,3 +266,5 @@ if get_option('enable_pfunit')
     subdir('tests/unit')
 endif
 
+subdir('tests/bmi')
+
