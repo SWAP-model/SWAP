@@ -610,7 +610,8 @@ contains
       !! @endnote
       subroutine reduceva (task, nrai, state)
       ! [SS-SWC S-2.12B] pond retired — read via state%soilwater%pond
-      use variables, only: swredu,fldaystart,cofred,dt,    &
+      ! SS-TC TC-11: dt, fldaystart read via state%timecontrol tc_* aliases.
+      use variables, only: swredu,cofred,    &
      &               nird,rsigni
       implicit none
 
@@ -631,18 +632,21 @@ contains
             call fatalerr_collected('reduceva', 'Illegal value for TASK')
         end if
 
-        if (task == 1) then
-            timestep = 1.0d0  ! Daily
-        else
-            timestep = dt     ! Sub-daily
-        end if
-
+        ! SS-TC TC-11: dt, flDayStart read via state%timecontrol tc_* aliases.
         associate( &
+            tc_dt        => state%timecontrol%dt,         &  ! TC-11
+            tc_flDayStart => state%timecontrol%flDayStart, &  ! TC-11
             at_empreva => state%atmosphere%empreva, &
             at_ldwet   => state%atmosphere%ldwet,   &
             at_spev    => state%atmosphere%spev,     &
             at_saev    => state%atmosphere%saev      &
         )
+
+        if (task == 1) then
+            timestep = 1.0d0  ! Daily
+        else
+            timestep = tc_dt  ! Sub-daily  ! TC-11
+        end if
 
         ! Check for ponding (no reduction needed)
         if (state%soilwater%pond > POND_THRESHOLD) then  ! [SS-SWC S-2.12B]
@@ -658,7 +662,7 @@ contains
         case (1)
             ! Black model
             call black_reduction(nrai, nird, state%atmosphere%peva, cofred, rsigni, &
-                                at_ldwet, at_empreva, timestep, fldaystart, task)
+                                at_ldwet, at_empreva, timestep, tc_flDayStart, task)  ! TC-11
         case (2)
             ! Boesten-Stroosnijder model
             call boesten_stroosnijder_reduction(nrai, nird, state%atmosphere%peva, cofred, &

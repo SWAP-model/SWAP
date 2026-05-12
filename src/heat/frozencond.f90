@@ -215,7 +215,10 @@ contains
     ! Initialize qbot from non-frozen value (SS-BND B-2.7: writes only state%soilwater)
     state%soilwater%qbot = state%soilwater%qbot_nonfrozen
 
+    ! SS-TC TC-11: dt, t1900 read via state%timecontrol tc_* aliases.
     associate( &
+        tc_dt            => state%timecontrol%dt,       &  ! TC-11
+        tc_t1900         => state%timecontrol%t1900,    &  ! TC-11
         ht_rfcp          => state%heat%rfcp,            &
         ht_nodfrostbot   => state%heat%nodfrostbot,     &
         ht_zfrostbot     => state%heat%zfrostbot,       &
@@ -305,7 +308,7 @@ contains
           call divdra (numnod,nrlevs,dz,ksatcp,ksatcp,sw_fluseksatexm, & ! [SS-SWC S-2.10]
                        layercp,cofanicp,ztop,L,qdrain,qdra, &
                        Swdivdinf,Swnrsrf,SwTopnrsrf,Zbotdr, &
-                       dt,FacDpthInf,owltab,t1900)
+                       tc_dt,FacDpthInf,owltab,tc_t1900)  ! TC-11
         endif
       else
 

@@ -101,7 +101,11 @@ contains
     real(8) apar, dzsnw, heaconsnw, Rosnw
     character(len=200) messag
 
+    ! SS-TC TC-11: daynr, t1900, dt read via state%timecontrol tc_* aliases.
     associate( &
+        tc_daynr         => state%timecontrol%daynr,    &  ! TC-11
+        tc_t1900         => state%timecontrol%t1900,    &  ! TC-11
+        tc_dt            => state%timecontrol%dt,       &  ! TC-11
         ht_tsoil         => state%heat%tsoil,           &
         ht_heacap        => state%heat%heacap,          &
         ht_heacon        => state%heat%heacon,          &
@@ -124,7 +128,7 @@ contains
       if (swcalt.eq.1) then
         ! Analytical solution
         do i = 1,numnod
-          ht_tsoil(i) = tmean+tampli*(dsin(0.0172d0*(daynr-timref+91.0d0)+ &
+          ht_tsoil(i) = tmean+tampli*(dsin(0.0172d0*(tc_daynr-timref+91.0d0)+ &  ! TC-11
                         z(i)/ddamp)) / dexp(-z(i)/ddamp)
         enddo
       else
@@ -164,7 +168,7 @@ contains
         ! Set top boundary condition
         if (swtopbhea .eq. 2) then
           ! Use specified soil surface temperatures as top boundary condition
-          ht_tetop = afgen (temtoptab,2*mabbc,t1900+dt)
+          ht_tetop = afgen (temtoptab,2*mabbc,tc_t1900+tc_dt)  ! TC-11
         ! SS-ATM A-2.6: ssnow retired — read from state%atmosphere%ssnow
         elseif (dabs(state%atmosphere%ssnow).gt.1.0d-10) then
           ! Air temperature cannot be used with a snow layer,
@@ -193,7 +197,7 @@ contains
           ht_tebot = ht_tsoil(Numnod)
         elseif (SwBotbHea.eq.2) then
           ! Bottom temperature is prescribed
-          ht_tebot = afgen (tembtab,2*mabbc,t1900+dt)
+          ht_tebot = afgen (tembtab,2*mabbc,tc_t1900+tc_dt)  ! TC-11
         endif
 
         ! Save old temperature profile
@@ -219,15 +223,15 @@ contains
 
         ! Calculation of coefficients for node = 1 (temperature fixed at soil surface)
         i = 1
-        thoma(i) = - dt * ht_heacon(i) / (dz(i) * disnod(i))
-        thomc(i) = - dt * ht_heacon(i+1) / (dz(i) * disnod(i+1))
+        thoma(i) = - tc_dt * ht_heacon(i) / (dz(i) * disnod(i))    ! TC-11
+        thomc(i) = - tc_dt * ht_heacon(i+1) / (dz(i) * disnod(i+1)) ! TC-11
         thomb(i) = ht_heacap(i) - thoma(i) - thomc(i)
         thomf(i) = ht_heacap(i) * tmpold(i) - thoma(i) * ht_tetop
 
         ! Calculation of coefficients for 2 < node < numnod
         do i = 2,numnod-1
-          thoma(i) = - dt * ht_heacon(i) / (dz(i) * disnod(i))
-          thomc(i) = - dt * ht_heacon(i+1) / (dz(i) * disnod(i+1))
+          thoma(i) = - tc_dt * ht_heacon(i) / (dz(i) * disnod(i))    ! TC-11
+          thomc(i) = - tc_dt * ht_heacon(i+1) / (dz(i) * disnod(i+1)) ! TC-11
           thomb(i) = ht_heacap(i) - thoma(i) - thomc(i)
           thomf(i) = ht_heacap(i) * tmpold(i)
         enddo
@@ -237,14 +241,14 @@ contains
         if (SwBotbHea.eq.1) then
           ! No heat flow through bottom of profile assumed
           qhbot = 0.0d0
-          thoma(i) = - dt * ht_heacon(i) / (dz(i) * disnod(i))
+          thoma(i) = - tc_dt * ht_heacon(i) / (dz(i) * disnod(i))    ! TC-11
           thomb(i) = ht_heacap(i) - thoma(i)
-          thomf(i) = ht_heacap(i) * tmpold(i) - (qhbot * dt)/dz(i)
+          thomf(i) = ht_heacap(i) * tmpold(i) - (qhbot * tc_dt)/dz(i)  ! TC-11
         elseif (SwBotbHea.eq.2) then
           ! Bottom temperature is prescribed
           heaconBot = heacnd(i)
-          thoma(i)  = - dt * ht_heacon(i) / (dz(i) * disnod(i))
-          thomc(i)  = - dt * heaconBot / (dz(i) * 0.5d0 * dz(i))
+          thoma(i)  = - tc_dt * ht_heacon(i) / (dz(i) * disnod(i))    ! TC-11
+          thomc(i)  = - tc_dt * heaconBot / (dz(i) * 0.5d0 * dz(i))   ! TC-11
           thomb(i)  = ht_heacap(i) - thoma(i) - thomc(i)
           thomf(i)  = ht_heacap(i) * tmpold(i) - thomc(i) * ht_tebot
         endif
@@ -259,7 +263,7 @@ contains
 
         ! Analytical solution temperature profile
         do i = 1,numnod
-          ht_tsoil(i) = tmean+tampli*(dsin(0.0172d0*(daynr-timref+91.0d0)+ &
+          ht_tsoil(i) = tmean+tampli*(dsin(0.0172d0*(tc_daynr-timref+91.0d0)+ &  ! TC-11
                         z(i)/ddamp)) / dexp(-z(i)/ddamp)
         enddo
 

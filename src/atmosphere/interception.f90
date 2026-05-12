@@ -81,11 +81,12 @@ contains
   !> evaporation using rainfall and forest data.
   !>
   !> Input from variables module: gird, avevaptb, avprectb, pfreetb,
-  !> pstemtb, scanopytb, isua, t
+  !> pstemtb, scanopytb, isua
   !> [SS-ATM A-2.6] grai retired from variables — now passed as explicit argument
+  !> [SS-TC TC-11] t read via state%timecontrol%t (tc_t alias)
   !> @endnote
-  subroutine Gash (aintc, grai_in)
-    use variables, only: gird,avevaptb,avprectb,pfreetb,pstemtb,scanopytb,isua,t
+  subroutine Gash (aintc, grai_in, state)
+    use variables, only: gird,avevaptb,avprectb,pfreetb,pstemtb,scanopytb,isua
     use array_utils, only: afgen
     use swap_array_dimensions, only: magrs
     implicit none
@@ -93,6 +94,7 @@ contains
     ! Arguments
     real(8), intent(out) :: aintc   ! Amount of rainfall interception during current day [cm/d]
     real(8), intent(in)  :: grai_in ! Gross daily rain flux (L/T) — [SS-ATM A-2.6] from state%atmosphere%grai
+    type(swap_state_t), intent(in) :: state  ! SS-TC TC-11: for t via state%timecontrol%t
 
     ! Local variables
     real(8) :: avevap              ! Average evaporation intensity during shower [-]
@@ -113,12 +115,14 @@ contains
     endif
 
     ! Calculate interception for forests according to Gash (1995)
-    pfree = afgen(pfreetb,(2*magrs),t)
-    pstem = afgen(pstemtb,(2*magrs),t)
+    ! SS-TC TC-11: t read via state%timecontrol%t (tc_t alias).
+    associate( tc_t => state%timecontrol%t )  ! TC-11
+    pfree = afgen(pfreetb,(2*magrs),tc_t)
+    pstem = afgen(pstemtb,(2*magrs),tc_t)
     cGash = 1.d0-pfree-pstem
-    scanopy = afgen(scanopytb,(2*magrs),t) / cGash
-    avprec = afgen(avprectb,(2*magrs),t)
-    avevap = afgen(avevaptb,(2*magrs),t) / cGash
+    scanopy = afgen(scanopytb,(2*magrs),tc_t) / cGash
+    avprec = afgen(avprectb,(2*magrs),tc_t)
+    avevap = afgen(avevaptb,(2*magrs),tc_t) / cGash
 
     ! Amount of rainfall to saturate canopy
     if ( (1.0d0 - avevap/avprec) .gt. 1.0d-4) then
@@ -135,6 +139,8 @@ contains
       aintc = cGash * ( psatcan + &
                 avevap*cGash / avprec * (rpd - psatcan) )
     endif
+
+    end associate  ! tc_t => state%timecontrol [TC-11]
 
   end subroutine Gash
 
@@ -161,7 +167,8 @@ contains
   !> variables module
   !> @endnote
   subroutine ruttervw (gctp,aintc,eintc,state)
-    use variables, only: logf,dt,siccapact,fimin,ew0
+    ! SS-TC TC-11: dt read via state%timecontrol%dt (tc_dt alias).
+    use variables, only: logf,siccapact,fimin,ew0
     implicit none
 
     ! Arguments
@@ -182,7 +189,7 @@ contains
     ibd_i4(1)    = 1
     ib_i4        = logf
     dc_r4        = 1.0e-4
-    dtsw_r4      = REAL(dt)
+    dtsw_r4      = REAL(state%timecontrol%dt)  ! TC-11
     csk_r4(1)    = REAL(gctp)
     vxick_r4(1)  = REAL(siccapact)
     fecmnk_r4(1) = REAL(fimin)

@@ -576,7 +576,8 @@ contains
     else if (swinter .eq. 2) then
       ! Calculate interception, method Gash (1995)
       ! SS-ATM A-2.6: grai retired — pass state%atmosphere%grai explicitly
-      call Gash (aintc, state%atmosphere%grai)
+      ! SS-TC TC-11: state added for t via state%timecontrol%t
+      call Gash (aintc, state%atmosphere%grai, state)
     end if
 
     ! Divide interception into rain part and irrigation part and
