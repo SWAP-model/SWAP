@@ -184,6 +184,7 @@ sources = [
     
     # Main (last)
     'src/core/swap_mod.f90',
+    'src/core/swap_bmi_mod.f90',
     'src/core/swap_main.f90'
 ]
 
