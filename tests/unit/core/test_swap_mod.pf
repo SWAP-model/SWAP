@@ -1,0 +1,83 @@
+!> SS-DRV Phase 1: lifecycle smoke tests for swap_mod.
+!! These tests drive a full hupselbrook simulation through the new
+!! module interface. They MUST be the last suite registered so that
+!! the global-state churn (Initialize, file opens) does not leak
+!! into other test suites.
+!!
+!! Pattern: chdir to case dir, call procedure(s), capture results,
+!! chdir back to root, THEN assert. This ensures the cwd restore
+!! always executes even when procedures are empty stubs.
+
+@test
+subroutine test_swap_init_sets_time()
+   use swap_mod,         only: swap_init
+   use swap_state_mod,   only: swap_state_t
+   use swap_config_mod,  only: swap_config_t
+   use chdir_helper_mod, only: chdir_to
+   use funit
+   implicit none
+   type(swap_state_t)           :: state
+   type(swap_config_t), target  :: config
+   logical  :: fl_run_end_captured
+   real(8)  :: t1900_captured
+
+   call chdir_to('tests/swap-cases/toml/1.hupselbrook')
+   call swap_init('swap.toml', state, config)
+   fl_run_end_captured = state%timecontrol%flRunEnd
+   t1900_captured      = state%timecontrol%t1900
+   call chdir_to('../../../..')
+
+   @assertFalse(fl_run_end_captured)
+   @assertGreaterThan(t1900_captured, 0.0d0)
+end subroutine
+
+@test
+subroutine test_swap_run_step_advances_time()
+   use swap_mod,         only: swap_init, swap_run_step
+   use swap_state_mod,   only: swap_state_t
+   use swap_config_mod,  only: swap_config_t
+   use chdir_helper_mod, only: chdir_to
+   use funit
+   implicit none
+   type(swap_state_t)           :: state
+   type(swap_config_t), target  :: config
+   real(8) :: t_before, t_after
+
+   call chdir_to('tests/swap-cases/toml/1.hupselbrook')
+   call swap_init('swap.toml', state, config)
+   t_before = state%timecontrol%t1900
+   call swap_run_step(state, config)
+   t_after = state%timecontrol%t1900
+   call chdir_to('../../../..')
+
+   @assertGreaterThan(t_after, t_before)
+end subroutine
+
+@test
+subroutine test_swap_full_lifecycle()
+   use swap_mod,         only: swap_init, swap_run_step, swap_close
+   use swap_state_mod,   only: swap_state_t
+   use swap_config_mod,  only: swap_config_t
+   use chdir_helper_mod, only: chdir_to
+   use funit
+   implicit none
+   type(swap_state_t)           :: state
+   type(swap_config_t), target  :: config
+   integer :: n_steps
+   integer, parameter :: max_steps = 200000
+   logical :: fl_run_end_captured
+
+   call chdir_to('tests/swap-cases/toml/1.hupselbrook')
+   call swap_init('swap.toml', state, config)
+   n_steps = 0
+   do while (.not. state%timecontrol%flRunEnd .and. n_steps < max_steps)
+      call swap_run_step(state, config)
+      n_steps = n_steps + 1
+   end do
+   call swap_close(state, config)
+   fl_run_end_captured = state%timecontrol%flRunEnd
+   call chdir_to('../../../..')
+
+   @assertTrue(fl_run_end_captured)
+   @assertGreaterThan(n_steps, 0)
+end subroutine

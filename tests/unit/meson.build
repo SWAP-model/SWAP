@@ -141,6 +141,7 @@ if get_option('enable_pfunit')
         '../../src/state/tillage_state.f90',
         '../../src/state/timecontrol_state.f90',
         '../../src/state/swap_state.f90',
+        '../../src/core/swap_mod.f90',
         '../../src/crop/irrigation.f90',
         '../../src/io/file_io.f90',
     ]
@@ -228,6 +229,7 @@ if get_option('enable_pfunit')
         'crop/test_cropfixed_init.pf',
         'crop/test_cropwofost_init.pf',
         'crop/test_cropgrass_init.pf',
+        'core/test_swap_mod.pf',
     ]
 
     # When pf_files is non-empty, build and register the unit-swap-tests

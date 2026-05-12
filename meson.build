@@ -184,6 +184,7 @@ sources = [
     'src/utils/numericalsolvers.f90',
     
     # Main (last)
+    'src/core/swap_mod.f90',
     'src/core/swap.f90',
     'src/core/swap_main.f90'
 ]
