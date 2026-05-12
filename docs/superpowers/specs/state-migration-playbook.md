@@ -376,6 +376,47 @@ cutover a no-op). Three lessons generalize to future arcs.
 
 ---
 
+---
+
+## Lessons from TimeControl migration (ADR 0041, added 2026-05-12)
+
+TimeControl was migration #10 — the most cross-cutting arc to date (62 globals,
+~415 reader sites across 22 files, 4th Strategy B application). Three lessons
+generalize to future arcs.
+
+1. **Single-character field names slip through inventory grep regex.** A regex like
+   `[a-zA-Z][a-zA-Z_0-9]+` requires 2+ characters and silently skips single-char
+   fields (e.g., `t` for simulation time). The pattern matches `t1900` and `tcum`
+   fine but never fires on a bare `t`. Always cross-check inventory grep output
+   against the actual `variables.f90` declarations to catch this: a `grep -n "^\s*real.*::\s*t\b"
+   src/core/variables.f90` sweep after the main inventory grep ensures no
+   single-character field is missed.
+
+2. **Pre-init transient-buffer pattern for state fields seeded BEFORE state
+   allocation.** When `config_to_variables.f90` writes a field at config-time
+   (before any state allocator runs), and that field's home state record is allocated
+   later, use a module-level `<prefix>_<field>_init_buf` global as a hop. The adapter
+   writes to the buffer; the state init routine drains the buffer into state. This
+   generalizes from soilwater-core's `h_init_buf`/`pondini_init_buf` (ADR 0038
+   lesson #4). TC uses `tc_iyear_init_buf`, `tc_imonth_init_buf`, `tc_dt_init_buf`.
+   **When to use:** any field written by `config_to_variables.f90` that belongs to a
+   state record initialized later in the startup sequence. Check the startup order in
+   `swap.f90` during discovery and flag every such field in the hazards section.
+
+3. **ASSOCIATE constraint: single-entry-single-exit.** Fortran ASSOCIATE blocks
+   require single-entry/single-exit semantics. Routines with multiple early `return`
+   statements inside an associate scope produce ICE or runtime errors with gfortran.
+   Encountered in `boundtop.f90`'s PONDRUNOFF block and in `management_soil.f90`'s
+   select-case-with-early-returns. Workaround: declare a local variable of the same
+   type, seed it from state at the top of the routine (`local_x = state%tc%x`), use
+   the local throughout the routine body, and write back to state on exit if the
+   field is mutated (`state%tc%x = local_x`). **General rule:** before introducing
+   ASSOCIATE in any routine, check whether it contains early `return` statements
+   (including `return` inside nested `if` blocks). If so, use the local-variable
+   pattern instead of ASSOCIATE.
+
+---
+
 ## Reference ADRs
 
 - ADR 0030 — Surface-water state-type migration (pilot)
@@ -388,3 +429,4 @@ cutover a no-op). Three lessons generalize to future arcs.
 - ADR 0037 — Atmosphere subsystem state-type migration (third coupling-surface arc)
 - ADR 0038 — Soil-water core state-type migration (FINAL coupling-surface arc)
 - ADR 0039 — Tillage state-type migration (smallest arc; config-constant vs runtime-state distinction)
+- ADR 0041 — TimeControl state-type migration (most cross-cutting arc; largest reader inventory)
