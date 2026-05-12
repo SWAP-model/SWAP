@@ -199,15 +199,13 @@ contains
 
    subroutine swap_run_step(state, config)
       use variables, only : flswapshared, flmacropore, flcropnut, flagetracer, swfrost, &
-                            swusecn, fldecmprat, flcropcalendar, flmaxitertime, &
+                            fldecmprat, flcropcalendar, flmaxitertime, &
                             flharvestday, flcropoutput, swcrp, swend, &
-                            flTillage, flSSDI, &
-                            numnod, numlay
+                            flTillage, flSSDI
       use timestep_control_mod, only: fldecdt
       use surfacewater_mod, only: SurfaceWater, surfacewater_year_reset
       use tillage_mod, only: DoTillage
       use boundbottom_mod, only: BoundBottom
-      use runoff_mod, only: CNmethod
       use meteo_mod, only: ProcessMeteoDay
       use meteo_process_mod, only: ReadMeteoDay
       use snow_mod, only: snow
@@ -221,10 +219,8 @@ contains
       use irrigation_mod, only: irrigation, SSDI_irrigation
       use management_soil_mod, only: SoilManagement
       use drainage_mod, only: drainage
-      use error_mod, only: fatalerr_collected
       type(swap_state_t),  intent(inout) :: state
       type(swap_config_t), intent(in)    :: config
-      logical :: flError
       logical :: request_smaller_dt
       logical, external :: dtleap
 
