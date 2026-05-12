@@ -409,7 +409,7 @@ contains
       use swap_log,  only: log_info
       use management_soil_mod, only: SoilManagement
       type(swap_state_t),  intent(inout) :: state
-      type(swap_config_t), intent(in)    :: config
+      type(swap_config_t), intent(in)    :: config  ! unused: kept for parallel signature with swap_init/swap_run_step
 
 !  iteration and timing statistics
    call IterTime(3, state)
