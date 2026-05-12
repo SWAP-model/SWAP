@@ -252,20 +252,20 @@
       if (sw_gwl.lt.998.0d0)  write(gwlout,'(f9.1)') sw_gwl
       dstor = (sw_volact + sw_pond + at_ssnow) - (VolOld + PondOld + SnowOld)
       baldev = (at_igrai+at_isnrai+at_igsnow+sw_igird+sw_irunon) - dstor -    &
-     & (sw_iintc+sw_iruno+sw_irunoCN+sw_iqrot+at_ievap+at_isubl+iQMpOutDrRap+state%surfacewater%intermediate%iqdra+(-1.0d0*sw_iqbot))
+     & (sw_iintc+sw_iruno+sw_irunoCN+sw_iqrot+at_ievap+at_isubl+iQMpOutDrRap+state%surfacewater%iqdra+(-1.0d0*sw_iqbot))
       if (tc_flprintshort) then
         write (inc,20) datexti,comma,tc_daynr,comma,tc_daycum,comma,     &
      &    at_igrai+at_isnrai,comma,at_igsnow,comma,sw_igird,comma,sw_iintc, &
      &    comma,sw_irunon,comma,sw_iruno+sw_irunoCN,comma,at_iptra,comma,sw_iqrot, &
      &    comma,at_ipeva,comma,at_ievap,comma,                           &
-     &    (iQMpOutDrRap+state%surfacewater%intermediate%iqdra),comma,sw_iqbot,&
+     &    (iQMpOutDrRap+state%surfacewater%iqdra),comma,sw_iqbot,&
      &    comma,gwlout,comma,dstor,comma,baldev            !comma,storage
       else
         write (inc,22) tc_date,comma,tc_daynr,comma,tc_daycum,comma,     &
      &    at_igrai+at_isnrai,comma,at_igsnow,comma,sw_igird,comma,sw_iintc, &
      &    comma,sw_irunon,comma,sw_iruno+sw_irunoCN,comma,at_iptra,comma,sw_iqrot, &
      &    comma,at_ipeva,comma,at_ievap,comma,                           &
-     &    (iQMpOutDrRap+state%surfacewater%intermediate%iqdra),comma,sw_iqbot,&
+     &    (iQMpOutDrRap+state%surfacewater%iqdra),comma,sw_iqbot,&
      &    comma,gwlout,comma,dstor,comma,baldev           !comma,storage
       endif
  20   format (a19,a1,i3,a1,i6,12(a1,f10.5),2a,2(a1,f10.5))     !,(a1,e12.5)
@@ -886,10 +886,10 @@
       ! SS-SWST Phase 2 Task 11: inqdra global fallback removed; state is authoritative.
       do level = 1,nrlevs
         iqdrainout(level) = 0.0d0
-        if (allocated(state%surfacewater%intermediate%inqdra)) then
+        if (allocated(state%surfacewater%inqdra)) then
           do node = 1,numnod
-            if (state%surfacewater%intermediate%inqdra(level,node).gt.0.0d0) then
-             iqdrainout(level) = iqdrainout(level) + state%surfacewater%intermediate%inqdra(level,node)
+            if (state%surfacewater%inqdra(level,node).gt.0.0d0) then
+             iqdrainout(level) = iqdrainout(level) + state%surfacewater%inqdra(level,node)
             endif
           enddo
         end if

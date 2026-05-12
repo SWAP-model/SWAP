@@ -442,29 +442,29 @@ owltab,swallo,drares,infres,qdrtab,nrlevs,swnrsrf,cofintfl,expintfl,shape,FlMacr
 
                ! Allocate per-level state arrays if not yet done (guard for
                ! fldrain path where surfacewater_init may not have been called).
-               if (.not. allocated(state%surfacewater%drainage_cumulative%cqdrain)) then
-                  allocate(state%surfacewater%drainage_cumulative%cqdrain(nrlevs))
-                  state%surfacewater%drainage_cumulative%cqdrain = 0.0d0
+               if (.not. allocated(state%surfacewater%cqdrain)) then
+                  allocate(state%surfacewater%cqdrain(nrlevs))
+                  state%surfacewater%cqdrain = 0.0d0
                end if
-               if (.not. allocated(state%surfacewater%drainage_cumulative%cqdrainin)) then
-                  allocate(state%surfacewater%drainage_cumulative%cqdrainin(nrlevs))
-                  state%surfacewater%drainage_cumulative%cqdrainin = 0.0d0
+               if (.not. allocated(state%surfacewater%cqdrainin)) then
+                  allocate(state%surfacewater%cqdrainin(nrlevs))
+                  state%surfacewater%cqdrainin = 0.0d0
                end if
-               if (.not. allocated(state%surfacewater%drainage_cumulative%cqdrainout)) then
-                  allocate(state%surfacewater%drainage_cumulative%cqdrainout(nrlevs))
-                  state%surfacewater%drainage_cumulative%cqdrainout = 0.0d0
+               if (.not. allocated(state%surfacewater%cqdrainout)) then
+                  allocate(state%surfacewater%cqdrainout(nrlevs))
+                  state%surfacewater%cqdrainout = 0.0d0
                end if
-               if (.not. allocated(state%surfacewater%intermediate%inqdra)) then
-                  allocate(state%surfacewater%intermediate%inqdra(nrlevs, numnod))
-                  state%surfacewater%intermediate%inqdra = 0.0d0
+               if (.not. allocated(state%surfacewater%inqdra)) then
+                  allocate(state%surfacewater%inqdra(nrlevs, numnod))
+                  state%surfacewater%inqdra = 0.0d0
                end if
-               if (.not. allocated(state%surfacewater%intermediate%inqdra_in)) then
-                  allocate(state%surfacewater%intermediate%inqdra_in(nrlevs, numnod))
-                  state%surfacewater%intermediate%inqdra_in = 0.0d0
+               if (.not. allocated(state%surfacewater%inqdra_in)) then
+                  allocate(state%surfacewater%inqdra_in(nrlevs, numnod))
+                  state%surfacewater%inqdra_in = 0.0d0
                end if
-               if (.not. allocated(state%surfacewater%intermediate%inqdra_out)) then
-                  allocate(state%surfacewater%intermediate%inqdra_out(nrlevs, numnod))
-                  state%surfacewater%intermediate%inqdra_out = 0.0d0
+               if (.not. allocated(state%surfacewater%inqdra_out)) then
+                  allocate(state%surfacewater%inqdra_out(nrlevs, numnod))
+                  state%surfacewater%inqdra_out = 0.0d0
                end if
 
                !   - In case of macropores: initialise drainage basis for rapid drainage through macropores
@@ -499,7 +499,7 @@ owltab,swallo,drares,infres,qdrtab,nrlevs,swnrsrf,cofintfl,expintfl,shape,FlMacr
                ! --- reset intermediate soil water fluxes
                ! SS-CRR Phase A Task A5: intermediate cohort is identical at both
                ! call sites; delegate to cohort reset(). See surfacewater_state_mod.
-               if (flzerointr) call state%surfacewater%intermediate%reset()
+               if (flzerointr) call state%surfacewater%reset_intermediate()
 
                ! --- reset cumulative soil water fluxes
                ! SS-CRR Phase A Task A5: drainage zeros a strict subset of the
@@ -509,7 +509,7 @@ owltab,swallo,drares,infres,qdrtab,nrlevs,swnrsrf,cofintfl,expintfl,shape,FlMacr
                ! under swdra=2). Drainage owns the drainage_cumulative reset;
                ! reservoir_cumulative is reset by SurfaceWater(2) and never
                ! accumulates under swdra=1 — so no reset site is needed here.
-               if (flzerocumu) call state%surfacewater%drainage_cumulative%reset()
+               if (flzerocumu) call state%surfacewater%reset_cumulative_drainage()
 
                ! --- reset to zero if groundwater level under soil profile and return
                ! SS-SWC Phase 2 S-2.8: gwl read from state%soilwater

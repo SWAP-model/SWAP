@@ -245,7 +245,7 @@ contains
           inqNew(node) = sw_inq(node)
           inqrotNew(node) = sw_inqrot(node)
           do level=1,nrlevs
-            inqdraNew(level,node) = state%surfacewater%intermediate%inqdra(level,node)
+            inqdraNew(level,node) = state%surfacewater%inqdra(level,node)
           enddo
 
           if (swop.eq.2) then
@@ -408,7 +408,7 @@ contains
               inqdraNew(level,node) = 0.0d0
               Do i = NodeNew(node,1),NodeNew(node,2)
                 inqdraNew(level,node) = inqdraNew(level,node) +         &
-     &                                 state%surfacewater%intermediate%inqdra(level,i)
+     &                                 state%surfacewater%inqdra(level,i)
               Enddo
             Enddo
           Enddo

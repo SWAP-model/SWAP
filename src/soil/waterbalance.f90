@@ -500,16 +500,16 @@ contains
 
       ! SS-SWST Phase 2 Task 7: iqdra/inqdra* accumulated directly into state; global dropped.
       ! ADR 0031 Phase 2 Task 5: qdra global deleted; read from state%drainage%qdra.
-      state%surfacewater%intermediate%iqdra = state%surfacewater%intermediate%iqdra + qdrats + QRapDra*tc_dt  ! TC-6
+      state%surfacewater%iqdra = state%surfacewater%iqdra + qdrats + QRapDra*tc_dt  ! TC-6
       do node = 1,numnod
         qdraincomp(node) = 0.d0
         do level = 1,nrlevs
-          if (allocated(state%surfacewater%intermediate%inqdra) .and. allocated(state%drainage%qdra)) then
-            state%surfacewater%intermediate%inqdra(level,node) = state%surfacewater%intermediate%inqdra(level,node) + state%drainage%qdra(level,node)*tc_dt  ! TC-6
+          if (allocated(state%surfacewater%inqdra) .and. allocated(state%drainage%qdra)) then
+            state%surfacewater%inqdra(level,node) = state%surfacewater%inqdra(level,node) + state%drainage%qdra(level,node)*tc_dt  ! TC-6
             if (state%drainage%qdra(level,node) > 0.0d0) then
-               state%surfacewater%intermediate%inqdra_out(level,node) = state%surfacewater%intermediate%inqdra_out(level,node) + state%drainage%qdra(level,node)*tc_dt  ! TC-6
+               state%surfacewater%inqdra_out(level,node) = state%surfacewater%inqdra_out(level,node) + state%drainage%qdra(level,node)*tc_dt  ! TC-6
             else
-               state%surfacewater%intermediate%inqdra_in(level,node)  = state%surfacewater%intermediate%inqdra_in(level,node) - state%drainage%qdra(level,node)*tc_dt  ! TC-6
+               state%surfacewater%inqdra_in(level,node)  = state%surfacewater%inqdra_in(level,node) - state%drainage%qdra(level,node)*tc_dt  ! TC-6
             end if
           end if
           if (allocated(state%drainage%qdra)) then
@@ -552,7 +552,7 @@ contains
       state%soilwater%cqssdi = state%soilwater%cqssdi + qssdisum*tc_dt                            ! S-2.12B, TC-6
       state%soilwater%cqrot  = state%soilwater%cqrot  + qrotts                                 ! S-2.12B
       ! SS-SWST Phase 2 Task 7: cqdra accumulated directly into state; global dropped.
-      state%surfacewater%drainage_cumulative%cqdra = state%surfacewater%drainage_cumulative%cqdra + qdrats
+      state%surfacewater%cqdra = state%surfacewater%cqdra + qdrats
       state%atmosphere%cumu%cptra = state%atmosphere%cumu%cptra + ptrats
       state%atmosphere%cumu%cpeva = state%atmosphere%cumu%cpeva + pevats
       state%atmosphere%cumu%cevap = state%atmosphere%cumu%cevap + revats
@@ -580,16 +580,16 @@ contains
       endif
       state%soilwater%cqbot = state%soilwater%cqbot + qbotts                                   ! S-2.12B
       ! SS-SWST Phase 2 Task 7: cqdrain/in/out accumulated directly into state; globals dropped.
-      if (allocated(state%surfacewater%drainage_cumulative%cqdrain)) then
+      if (allocated(state%surfacewater%cqdrain)) then
         do level = 1,nrlevs
           ! infiltration
           if (state%drainage%qdrain(level).lt.0.0d0) then
-            state%surfacewater%drainage_cumulative%cqdrainin(level) = state%surfacewater%drainage_cumulative%cqdrainin(level) - state%drainage%qdrain(level)*tc_dt  ! TC-6
+            state%surfacewater%cqdrainin(level) = state%surfacewater%cqdrainin(level) - state%drainage%qdrain(level)*tc_dt  ! TC-6
           ! drainage
           else if (state%drainage%qdrain(level).gt.0.0d0) then
-            state%surfacewater%drainage_cumulative%cqdrainout(level) = state%surfacewater%drainage_cumulative%cqdrainout(level) + state%drainage%qdrain(level)*tc_dt  ! TC-6
+            state%surfacewater%cqdrainout(level) = state%surfacewater%cqdrainout(level) + state%drainage%qdrain(level)*tc_dt  ! TC-6
           endif
-          state%surfacewater%drainage_cumulative%cqdrain(level) = state%surfacewater%drainage_cumulative%cqdrain(level) + state%drainage%qdrain(level)*tc_dt  ! TC-6
+          state%surfacewater%cqdrain(level) = state%surfacewater%cqdrain(level) + state%drainage%qdrain(level)*tc_dt  ! TC-6
         enddo
       end if
 
@@ -611,7 +611,7 @@ contains
         state%soilwater%wbalance = state%atmosphere%cumu%cnrai + state%soilwater%cnird           &
      &        + state%soilwater%crunon - state%soilwater%crunoff                             &
      &        - state%soilwater%cqrot - state%atmosphere%cumu%cevap                              &
-     &        - state%surfacewater%drainage_cumulative%cqdra                                          &
+     &        - state%surfacewater%cqdra                                          &
      &        + state%soilwater%cqbot + state%soilwater%volini                                   &
      &        - state%soilwater%volact + state%soilwater%pondini                                      &
      &        - state%soilwater%pond + state%soilwater%cqssdi
@@ -620,7 +620,7 @@ contains
      &        + state%atmosphere%cumu%cmelt                                                           &
      &        + state%soilwater%crunon - state%soilwater%crunoff                            &
      &        - state%soilwater%cqrot - state%atmosphere%cumu%cevap                              &
-     &        - state%surfacewater%drainage_cumulative%cqdra                                          &
+     &        - state%surfacewater%cqdra                                          &
      &        + state%soilwater%cqbot + state%soilwater%volini                                   &
      &        - state%soilwater%volact + state%soilwater%pondini                                      &
      &        - state%soilwater%pond + state%soilwater%cqssdi

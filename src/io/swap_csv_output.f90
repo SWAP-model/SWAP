@@ -244,7 +244,7 @@ module SWAP_csv_output
       if (vars%name(i) == 'EPOT')        vars%value(1,i) = state%atmosphere%intr%ipeva
       if (vars%name(i) == 'EACT')        vars%value(1,i) = state%atmosphere%intr%ievap
       if (vars%name(i) == 'SUBLIM')      vars%value(1,i) = state%atmosphere%intr%isubl
-      if (vars%name(i) == 'DRAINAGE')    vars%value(1,i) = state%surfacewater%intermediate%iqdra + iQMpOutDrRap
+      if (vars%name(i) == 'DRAINAGE')    vars%value(1,i) = state%surfacewater%iqdra + iQMpOutDrRap
       ! SS-SWC S-2.11: iqbot,gwl,pond read from state%soilwater.
       if (vars%name(i) == 'QBOTTOM')     vars%value(1,i) = state%soilwater%iqbot
       if (vars%name(i) == 'GWL')         vars%value(1,i) = state%soilwater%gwl
@@ -494,7 +494,7 @@ module SWAP_csv_output
                    state%soilwater%igird+state%soilwater%irunon + state%soilwater%iqssdi) - dstor -     &
                   (state%soilwater%iintc+state%soilwater%iruno+state%soilwater%irunoCN+                 &
                    state%soilwater%iqrot+state%atmosphere%intr%ievap+state%atmosphere%intr%isubl+                 &
-                   iQMpOutDrRap+state%surfacewater%intermediate%iqdra+(-1.0d0*state%soilwater%iqbot))
+                   iQMpOutDrRap+state%surfacewater%iqdra+(-1.0d0*state%soilwater%iqbot))
 
    ! replace Old values by current values (needed for next output moment)
    VolOld  = state%soilwater%volact
@@ -521,7 +521,7 @@ module SWAP_csv_output
 
    ! summed for all drainage levels
    if (lp_DRA%fldo) then
-      do i = 1, vars%Nnodes(lp_DRA%jpos); lp_DRA%vals(i) = sum(state%surfacewater%intermediate%inqdra(1:nrlevs,i)); end do
+      do i = 1, vars%Nnodes(lp_DRA%jpos); lp_DRA%vals(i) = sum(state%surfacewater%inqdra(1:nrlevs,i)); end do
    end if
 
    ! handle subregions: WTOT, QTRANS, QTOP, QBOT, QDRA, lp_QTIN, lp_QTOU, lp_QBIN, lp_QBOU, lp_QDIN, lp_QDOU
@@ -532,9 +532,9 @@ module SWAP_csv_output
    ! summed sink-terms inside subregion
    if (lp_QTRA%fldo) call fill_1(vars%Nnodes(lp_QTRA%jpos), lp_QTRA%jpos, vars%nodes, lp_QTRA%vals, 0, &
                                   state%soilwater%inqrot)
-   if (lp_QDRA%fldo) call fill_2(vars%Nnodes(lp_QDRA%jpos), lp_QDRA%jpos, vars%nodes, lp_QDRA%vals, nrlevs, state%surfacewater%intermediate%inqdra)
-   if (lp_QDIN%fldo) call fill_2(vars%Nnodes(lp_QDIN%jpos), lp_QDIN%jpos, vars%nodes, lp_QDIN%vals, nrlevs, state%surfacewater%intermediate%inqdra_in)
-   if (lp_QDOU%fldo) call fill_2(vars%Nnodes(lp_QDOU%jpos), lp_QDOU%jpos, vars%nodes, lp_QDOU%vals, nrlevs, state%surfacewater%intermediate%inqdra_out)
+   if (lp_QDRA%fldo) call fill_2(vars%Nnodes(lp_QDRA%jpos), lp_QDRA%jpos, vars%nodes, lp_QDRA%vals, nrlevs, state%surfacewater%inqdra)
+   if (lp_QDIN%fldo) call fill_2(vars%Nnodes(lp_QDIN%jpos), lp_QDIN%jpos, vars%nodes, lp_QDIN%vals, nrlevs, state%surfacewater%inqdra_in)
+   if (lp_QDOU%fldo) call fill_2(vars%Nnodes(lp_QDOU%jpos), lp_QDOU%jpos, vars%nodes, lp_QDOU%vals, nrlevs, state%surfacewater%inqdra_out)
 
    ! fluxes at top and bottom boudanries of subregions
    if (lp_QTOP%fldo) call fill_3(vars%Nnodes(lp_QTOP%jpos), lp_QTOP%jpos, 1, 0, vars%nodes, lp_QTOP%vals, -state%soilwater%inq)
