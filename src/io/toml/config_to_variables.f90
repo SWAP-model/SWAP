@@ -190,6 +190,7 @@ contains
             call read_csv_table(trim(csvpath), hdr, tbl, errs)
             call errs%abort_if_fatal()
             nmetcsv = size(tbl, 1)
+            if (allocated(metcsv_dat)) deallocate(metcsv_dat)
             allocate(metcsv_dat(nmetcsv, 9))
             do r = 1, nmetcsv
                metcsv_dat(r, :) = tbl(r, :)
@@ -224,6 +225,7 @@ contains
                call read_csv_table(trim(csvpath), hdr, tbl, errs)
                call errs%abort_if_fatal()
                nmetcsv_det = size(tbl, 1)
+               if (allocated(metcsv_det)) deallocate(metcsv_det)
                allocate(metcsv_det(nmetcsv_det, 7))
                do r = 1, nmetcsv_det
                   metcsv_det(r, :) = tbl(r, :)
@@ -249,6 +251,7 @@ contains
                call read_csv_table(trim(csvpath), hdr, tbl, errs)
                call errs%abort_if_fatal()
                nraincsv = size(tbl, 1)
+               if (allocated(raincsv_dat)) deallocate(raincsv_dat)
                allocate(raincsv_dat(nraincsv, 2))
                do r = 1, nraincsv
                   raincsv_dat(r, :) = tbl(r, :)
