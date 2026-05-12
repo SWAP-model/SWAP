@@ -235,7 +235,7 @@ module SWAP_csv_output
       if (vars%name(i) == 'RAIN')        vars%value(1,i) = state%atmosphere%intr%igrai + state%atmosphere%intr%isnrai
       if (vars%name(i) == 'RAIN_NET')    vars%value(1,i) = state%atmosphere%intr%inrai
       if (vars%name(i) == 'SNOW')        vars%value(1,i) = state%atmosphere%intr%igsnow
-      ! SS-SWC S-2.11: igird,inird,iintc,irunon,iruno read from state%soilwater%intr.
+      ! SS-SWC S-2.11: igird,inird,iintc,irunon,iruno read from state%soilwater.
       if (vars%name(i) == 'IRRIG')       vars%value(1,i) = state%soilwater%igird
       if (vars%name(i) == 'IRRIG_NET')   vars%value(1,i) = state%soilwater%inird
       if (vars%name(i) == 'INTERC')      vars%value(1,i) = state%soilwater%iintc
@@ -250,7 +250,7 @@ module SWAP_csv_output
       if (vars%name(i) == 'GWL')         vars%value(1,i) = state%soilwater%gwl
       if (vars%name(i) == 'POND')        vars%value(1,i) = state%soilwater%pond
       if (vars%name(i) == 'TPOT')        vars%value(1,i) = state%atmosphere%intr%iptra
-      ! SS-SWC S-2.11: iqrot,iqreddry,iqredwet,iqredsol,iqredfrs,ies0,iet0,iew0 read from state%soilwater%intr.
+      ! SS-SWC S-2.11: iqrot,iqreddry,iqredwet,iqredsol,iqredfrs,ies0,iet0,iew0 read from state%soilwater.
       if (vars%name(i) == 'TACT')        vars%value(1,i) = state%soilwater%iqrot
       if (vars%name(i) == 'TREDDRY')     vars%value(1,i) = state%soilwater%iqreddry
       if (vars%name(i) == 'TREDWET')     vars%value(1,i) = state%soilwater%iqredwet
@@ -264,7 +264,7 @@ module SWAP_csv_output
       ! SS-SWC S-2.11: volact read from state%soilwater.
       if (vars%name(i) == 'VOLACT')      vars%value(1,i) = state%soilwater%volact
       if (vars%name(i) == 'SSNOW')       vars%value(1,i) = state%atmosphere%ssnow
-      ! SS-SWC S-2.11: iqssdi read from state%soilwater%intr.
+      ! SS-SWC S-2.11: iqssdi read from state%soilwater.
       if (vars%name(i) == 'QSSDI')       vars%value(1,i) = state%soilwater%iqssdi
       if (vars%name(i) == 'TSUM')        vars%value(1,i) = tsum
       if (vars%name(i) == 'DVS')         vars%value(1,i) = dvs
@@ -311,7 +311,7 @@ module SWAP_csv_output
       if (vars%name(i) == 'SOLBAL')      vars%value(1,i) = state%solute%solbal
       if (vars%name(i) == 'WC10')        vars%value(1,i) = wc10
       if (vars%name(i) == 'RUNOFFCN')    vars%value(1,i) = Runoff_CN
-      ! SS-SWC S-2.11: iqtdo,iqtup read from state%soilwater%intr.
+      ! SS-SWC S-2.11: iqtdo,iqtup read from state%soilwater.
       if (vars%name(i) == 'QTOPIN')      vars%value(1,i) = state%soilwater%iqtdo
       if (vars%name(i) == 'QTOPOUT')     vars%value(1,i) = state%soilwater%iqtup
       if (vars%name(i) == 'QINFMAX')     vars%value(1,i) = iqinfmax
@@ -512,7 +512,7 @@ module SWAP_csv_output
    if (lp_O2%fldo)  lp_O2%vals(1:vars%Nnodes(lp_O2%jpos))   =   c_top(vars%nodes(1:vars%Nnodes(lp_O2%jpos),lp_O2%jpos))
 
    ! HEACAP, HEACON, DRAIN, RWU, FLUX, SSDI
-   ! SS-SWC S-2.11: inqrot,inq,inqssdi read from state%soilwater%intr.
+   ! SS-SWC S-2.11: inqrot,inq,inqssdi read from state%soilwater.
    if (lp_HCA%fldo) lp_HCA%vals(1:vars%Nnodes(lp_HCA%jpos)) =  state%heat%heacap(vars%nodes(1:vars%Nnodes(lp_HCA%jpos),lp_HCA%jpos))
    if (lp_HCO%fldo) lp_HCO%vals(1:vars%Nnodes(lp_HCO%jpos)) =  state%heat%heacon(vars%nodes(1:vars%Nnodes(lp_HCO%jpos),lp_HCO%jpos))
    if (lp_RWU%fldo) lp_RWU%vals(1:vars%Nnodes(lp_RWU%jpos)) =  state%soilwater%inqrot(vars%nodes(1:vars%Nnodes(lp_RWU%jpos),lp_RWU%jpos))
@@ -1139,7 +1139,7 @@ case (2)
     if (iCSV(7)  == 1) call do_write_csv_tz (c_top(j))
     if (iCSV(8)  == 1) call do_write_csv_tz (state%heat%heacap(j)/1.0d-6)    ! from J/cm3/K  to J/m3/K
     if (iCSV(9)  == 1) call do_write_csv_tz (state%heat%heacon(j)/864.0d0)   ! from J/cm/K/d to W/m/K
-    ! SS-SWC S-2.11: inqrot read from state%soilwater%intr.
+    ! SS-SWC S-2.11: inqrot read from state%soilwater.
     if (iCSV(10) == 1) call do_write_csv_tz (state%soilwater%inqrot(j))
 
     ! finalize record (advance to next line)

@@ -170,7 +170,7 @@ contains
       end do
       end associate  ! inqdra from state%surfacewater
       ! SS-ATM A-2.6: igrai/isnrai/igsnow/ievap retired — read from state%atmosphere%intr
-      ! [SS-SWC S-2.12B] igird/iintc/irunon/iruno -> state%soilwater%intr
+      ! [SS-SWC S-2.12B] igird/iintc/irunon/iruno -> state%soilwater
       help = 1.0d-2 * (state%atmosphere%intr%igrai+state%atmosphere%intr%isnrai+ &
      &                 state%atmosphere%intr%igsnow+state%soilwater%igird-state%soilwater%iintc+state%soilwater%irunon-state%soilwater%iruno) /  &
      &                 state%timecontrol%outper  ! TC-12

@@ -175,7 +175,7 @@ module soilwater_state_mod
       real(real64), allocatable :: inqssdi(:)    !< intra-period SSDI flux (cm)
       real(real64), allocatable :: iqdo(:)       !< intra-period downward flux (cm)
       real(real64), allocatable :: iqup(:)       !< intra-period upward flux (cm)
-      real(real64), allocatable :: IThetaBeg(:)  !< theta at start of intr period (-)
+      real(real64), allocatable :: IThetaBeg(:)  !< theta at start of intermediate period (-)
 
       ! Non-per-day scalars
       real(real64) :: iqrot     = 0.0_real64
@@ -260,14 +260,14 @@ contains
    !!   3 flat per-node+1 arrays sized numnod+1: q, k, kmean (flux boundaries)
    !!   1 flat 2D parameter array: cofgen(21, numnod) — Mualem-VG params
    !!   1 flat per-layer array sized nlay: thetsl
-   !!   intr cohort arrays: inqrot, inqssdi, IThetaBeg (numnod),
-   !!                       inq, iqdo, iqup (numnod+1),
-   !!                       qpotrot_day, qredtot_day (numnod)
+   !!   intermediate per-node arrays: inqrot, inqssdi, IThetaBeg (numnod),
+   !!                                 inq, iqdo, iqup (numnod+1),
+   !!                                 qpotrot_day, qredtot_day (numnod)
    !!   Non-zero default: hatm = -2.75e5_real64 (mirrors soilhydraulics.f90:870)
    !!
    !! Takes soilwater_state_t directly (not swap_state_t) to avoid a circular
    !! dependency: soilwater_state_mod is used by swap_state_mod.
-   !! Mirrors heat_init pattern but at the sub-record level.
+   !! Mirrors the heat_init pattern.
    !! Called from swap.f90 immediately after CalcGrid(), before DoTillage(1).
    !!
    !! Design: docs/superpowers/specs/2026-05-10-state-migration-boundary-design.md D8
@@ -362,7 +362,7 @@ contains
       allocate(sw%thetsl(nlay));         sw%thetsl       = 0.0_real64
 
       ! ===========================================================================
-      ! SOIL-WATER CORE — intermediate cohort arrays (ADR 0038, S-1.2)
+      ! SOIL-WATER CORE — intermediate-period arrays (ADR 0038, S-1.2)
       ! ===========================================================================
 
       ! Non-per-day per-node arrays sized numnod:
@@ -392,7 +392,7 @@ contains
 
    end subroutine soilwater_init
 
-   !> Zero ALL fields in the intermediate cohort — flzerointr gate.
+   !> Zero ALL intermediate-period fields — flzerointr gate.
    !! Includes the per-day subset (flzerointr subsumes flDayStart).
    subroutine soilwater_reset_intermediate(self)
       class(soilwater_state_t), intent(inout) :: self

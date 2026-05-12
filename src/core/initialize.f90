@@ -122,7 +122,7 @@
       fidtab             = 0.0d0 
       gird               = 0.0d0 
       hcritab            = 0.0d0 
-      ! [SS-SWC] igird/inird retired — soilwater_init handles init via state%soilwater%intr
+      ! [SS-SWC] igird/inird retired — soilwater_init handles init via state%soilwater
       ! igird              = 0.0d0
       ! inird              = 0.0d0
       irconc             = 0.0d0 
@@ -236,7 +236,7 @@
       basegw             = 0.0d0 
       bdens              = 0.0d0 
       cfbs               = 0.0d0 
-      ! [SS-SWC] cgird/cinund/cnird retired — soilwater_init handles init via state%soilwater%cumu
+      ! [SS-SWC] cgird/cinund/cnird retired — soilwater_init handles init via state%soilwater
       ! cgird              = 0.0d0
       ! cinund             = 0.0d0
       ! cnird              = 0.0d0
@@ -246,19 +246,19 @@
       cofqha             = 0.0d0 
       cofqhb             = 0.0d0 
       cofred             = 0.0d0 
-      ! [SS-SWC] cqbot/cqbotdo/cqbotup retired — soilwater_init handles init via state%soilwater%cumu
+      ! [SS-SWC] cqbot/cqbotdo/cqbotup retired — soilwater_init handles init via state%soilwater
       ! cqbot              = 0.0d0
       ! cqbotdo            = 0.0d0
       ! cqbotup            = 0.0d0
       ! SS-SWST Phase 2 Task 11 C3: cqdra/cqdrain/cqdrainin/cqdrainout removed (now in state%surfacewater).
       ! cqdra=0, cqdrain=0, cqdrainin=0, cqdrainout=0 — initialized in surfacewater_state_t defaults.
-      ! [SS-SWC] cqprai/cqssdi/cqtdo/cqtup retired — soilwater_init handles init via state%soilwater%cumu
+      ! [SS-SWC] cqprai/cqssdi/cqtdo/cqtup retired — soilwater_init handles init via state%soilwater
       ! cqprai             = 0.0d0
       ! cqssdi             = 0.0d0
       ! cqtdo              = 0.0d0
       ! cqtup              = 0.0d0
       CritDevMasBal      = 0.0d0 
-      ! [SS-SWC] crunoff/crunoffCN/crunon retired — soilwater_init handles init via state%soilwater%cumu
+      ! [SS-SWC] crunoff/crunoffCN/crunon retired — soilwater_init handles init via state%soilwater
       ! crunoff            = 0.0d0
       ! crunoffCN          = 0.0d0
       ! crunon             = 0.0d0
@@ -309,7 +309,7 @@
       ! [SS-BND B-2.7] hsurf retired — soilwater_init handles init via state%soilwater
       ! hsurf              = 0.0d0
       ! [SS-ATM A-2.6] igrai retired to state%atmosphere%intr%igrai
-      ! [SS-SWC] ies0/iet0/iew0/iintc retired — soilwater_init handles init via state%soilwater%intr
+      ! [SS-SWC] ies0/iet0/iew0/iintc retired — soilwater_init handles init via state%soilwater
       ! ies0               = 0.0d0
       ! iet0               = 0.0d0
       ! iew0               = 0.0d0
@@ -321,7 +321,7 @@
       ! inq                = 0.0d0
       ! SS-SWST Phase 2 Task 11 C3: inqdra/inqdra_in/inqdra_out removed (now in state%surfacewater).
       ! Initialized via surfacewater_init with allocate+assign=0.
-      ! [SS-SWC] inqrot/inqssdi/ipondbeg/iprec/iqbot/iqtdo/iqtup/iqdo/iqup retired — soilwater_init handles init via state%soilwater%intr
+      ! [SS-SWC] inqrot/inqssdi/ipondbeg/iprec/iqbot/iqtdo/iqtup/iqdo/iqup retired — soilwater_init handles init via state%soilwater
       ! inqrot             = 0.0d0
       ! inqssdi            = 0.0d0
       ! ipondbeg           = 0.0d0
@@ -332,7 +332,7 @@
       ! iqdo(1:numnod+1)   = 0.0d0
       ! iqup(1:numnod+1)   = 0.0d0
       ! SS-SWST Phase 2 Task 11 C3: iqdra removed (state%surfacewater%iqdra initialized in surfacewater_state_t).
-      ! [SS-SWC] iqrot/iqssdi/iqredwet/iqreddry/iqredsol/iqredfrs/iruno/irunoCN/irunon retired — soilwater_init handles init via state%soilwater%intr
+      ! [SS-SWC] iqrot/iqssdi/iqredwet/iqreddry/iqredsol/iqredfrs/iruno/irunoCN/irunon retired — soilwater_init handles init via state%soilwater
       ! iqrot              = 0.0d0
       ! iqssdi             = 0.0d0
       ! iqredwet           = 0.0d0

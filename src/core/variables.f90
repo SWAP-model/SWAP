@@ -276,7 +276,7 @@
       real(8)   fidtab(14)         ! Array with prescribed fixed irrigation depth (L) as function of crop development stage
       real(8)   gird               ! Gross irrigation depth (L)
       real(8)   hcritab(14)        ! Array with minimum soil water pressure heads (L) as function of crop development stage
-      ! [SS-SWC] retired 2026-05-12 — moved to state%soilwater%intr (ADR 0038)
+      ! [SS-SWC] retired 2026-05-12 — moved to state%soilwater (ADR 0038)
       ! real(8)   igird              ! Intermediate depth of gross irrigation (L)
       ! real(8)   inird              ! Intermediate depth of net irrigation (L)
       real(8)   irconc(mairg)      ! Array with irrigation concentrations (M/L3) in case of fixed irrigation
@@ -796,7 +796,7 @@
       logical   o2_ini_stress             ! O2 stress initialization flag (initialized to .true. via data statement)
       
       real(8)   cfbs               ! Coefficient (-) to convert potential evapotranspiration into potential evaporation
-      ! [SS-SWC] retired 2026-05-12 — moved to state%soilwater%cumu (ADR 0038)
+      ! [SS-SWC] retired 2026-05-12 — moved to state%soilwater (ADR 0038)
       ! real(8)   cgird              ! Cumulative amount of gross irrigation (L)
       ! real(8)   cinund             ! Cumulative amount of inundation (L)
       ! real(8)   cnird              ! Cumulative amount of net irrigation (L)
@@ -807,7 +807,7 @@
       real(8)   cofqhb             ! Coefficient B in exponential relationship between drainage flux and groundwater level (/T)
       real(8)   cofqhc             ! Coefficient C (flux) in exponential relationship between drainage flux and groundwater level (L/T)
       real(8)   cofred             ! Soil evaporation coefficient of Black or Boesten/Stroosnijder
-      ! [SS-SWC] retired 2026-05-12 — moved to state%soilwater%cumu (ADR 0038)
+      ! [SS-SWC] retired 2026-05-12 — moved to state%soilwater (ADR 0038)
       ! real(8)   cqbot              ! Cumulative amount of water flow through bottom of simulated soil column (L)
       ! real(8)   cqbotdo            ! Cumulative amount of water (L) passed through the soil column bottom in downward direction
       ! real(8)   cqbotup            ! Cumulative amount of water (L) passed through the soil column bottom in upward direction
@@ -816,7 +816,7 @@
       ! real(8)   cqdrain(Madr)      ! Moved to surfacewater_state_t%cqdrain(:)
       ! real(8)   cqdrainin(Madr)    ! Moved to surfacewater_state_t%cqdrainin(:)
       ! real(8)   cqdrainout(Madr)   ! Moved to surfacewater_state_t%cqdrainout(:)
-      ! [SS-SWC] retired 2026-05-12 — moved to state%soilwater%cumu (ADR 0038)
+      ! [SS-SWC] retired 2026-05-12 — moved to state%soilwater (ADR 0038)
       ! real(8)   cqprai             ! Cumulative amount of net rain (L)
       ! real(8)   cqssdi             ! Cumulative amount of subsurface drip irrigation (L)
       ! real(8)   cqrot              ! Cumulative amount of extracted water by roots (L)
@@ -824,7 +824,7 @@
       ! real(8)   cqtup              ! Cumulative amount of water (L) passed through the soil surface in upward direction
       real(8)   CritDevMasBal      ! Maximum error in water balance (L)
       real(8)   CriterHr           ! Maximum difference of Hroot between iterations; convergence criterium  (L)
-      ! [SS-SWC] retired 2026-05-12 — moved to state%soilwater%cumu (ADR 0038)
+      ! [SS-SWC] retired 2026-05-12 — moved to state%soilwater (ADR 0038)
       ! real(8)   crunoff            ! Cumulative runoff (L)
       ! real(8)   crunon             ! Cumulative amount of runon (L)
       ! [SS-BND] retired 2026-05-11 — boundary subsystem migrated to state%soilwater (ADR 0035)
@@ -878,7 +878,7 @@
       ! [SS-CRP] retired 2026-05-11 — moved to state%soilwater%Hxylem (ADR 0036)
       ! real(8)   Hxylem             ! Pressure head in root xylem (L)
       ! real(8) :: igrai         ! Intermediate amount of gross rainfall (L) — [SS-ATM] retired 2026-05-11
-      ! [SS-SWC] retired 2026-05-12 — moved to state%soilwater%intr (ADR 0038)
+      ! [SS-SWC] retired 2026-05-12 — moved to state%soilwater (ADR 0038)
       ! real(8)   ies0               ! Intermediate potential evaporation rate from a wet bare soil [cm/d]
       ! real(8)   iet0               ! Intermediate potential transpiration rate from a dry crop [cm/d]
       ! real(8)   iew0               ! Intermediate potential transpiration rate from a wet crop [cm/d]
@@ -892,7 +892,7 @@
       ! real(8)   inqdra(Madr,macp)      ! Moved to surfacewater_state_t%inqdra
       ! real(8)   inqdra_in(Madr,macp)   ! Moved to surfacewater_state_t%inqdra_in
       ! real(8)   inqdra_out(Madr,macp)  ! Moved to surfacewater_state_t%inqdra_out
-      ! [SS-SWC] retired 2026-05-12 — moved to state%soilwater%intr (ADR 0038)
+      ! [SS-SWC] retired 2026-05-12 — moved to state%soilwater (ADR 0038)
       ! real(8)   inqrot(macp)       ! Array with intermediate amounts of extracted water by roots for each compartment (L)
       ! real(8)   inqssdi(macp)      ! Array with intermediate amounts of subsurface drip irrigation for each compartment (L)
       ! real(8)   qpotrot_day(macp)  ! Array with amounts of potential extracted water by roots for each compartment since start of day (L)
@@ -905,7 +905,7 @@
       ! real(8)   iqdo(macp+1), iqup(macp+1)
       ! SS-SWST Phase 2 Task 11 C2: iqdra removed — state%surfacewater%iqdra owns it.
       ! real(8)   iqdra              ! Moved to surfacewater_state_t%iqdra
-      ! [SS-SWC] retired 2026-05-12 — moved to state%soilwater%intr (ADR 0038)
+      ! [SS-SWC] retired 2026-05-12 — moved to state%soilwater (ADR 0038)
       ! real(8)   iqrot              ! Intermediate amount of extracted water by roots (L)
       ! real(8)   iqssdi             ! Intermediate amount of water input via subsurface drip irrigation (L)
       ! real(8)   iqredwet           ! Intermediate amount of reduced root water extraction due to wet conditions (L)

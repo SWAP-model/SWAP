@@ -1455,7 +1455,7 @@ case (2)
 !  d, cm, cm/d, cm/d, cm, cm
 !!!   write (iunout) real(tc_tcum),real(VT),real(igrai/tc_outper),real(iruno/tc_outper),real(pond),real(gwl)
    ! SS-ATM A-2.5: igrai read from state%atmosphere%intr (atmosphere home).
-   ! SS-SWC S-2.11: iruno read from state%soilwater%intr.
+   ! SS-SWC S-2.11: iruno read from state%soilwater.
    RainRate   = state%atmosphere%intr%igrai/tc_outper
    RunoffRate = state%soilwater%iruno/tc_outper
    iDay       = int(tc_tcum)

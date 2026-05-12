@@ -3527,7 +3527,7 @@
 !              extraction or transpiration reduction (uncompensated).
 ! ----------------------------------------------------------------------
 
-      ! [SS-SWC S-2.12B] qpotrot_day/qredtot_day retired — read via state%soilwater%intr
+      ! [SS-SWC S-2.12B] qpotrot_day/qredtot_day retired — read via state%soilwater
       ! SS-TC TC-10: date read via state%timecontrol tc_date alias (removed from variables use).
       use variables, only: noddrz, zbotcp, ztopcp, cumdens,                   &
                      wrt, gwrt, wrtmin

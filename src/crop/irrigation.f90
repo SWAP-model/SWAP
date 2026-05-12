@@ -159,7 +159,7 @@
             if (tcs.eq.1) then
                tps1 = afgen(treltab,14,dvs)
 ! ---          transpiration fraction due to drought and salinity stress
-               ! [SS-SWC S-2.12B] iptra_day/iqreddry_day/iqredsol_day -> state%soilwater%intr
+               ! [SS-SWC S-2.12B] iptra_day/iqreddry_day/iqredsol_day -> state%soilwater
                if (state%soilwater%iptra_day .gt. 1.d-10) then
                   Tred = 1.0d0 - (state%soilwater%iqreddry_day + state%soilwater%iqredsol_day) / state%soilwater%iptra_day
                else
@@ -379,7 +379,7 @@ real(8)                         :: Tred
          ! scheduling based on exceedance of a certain threshold
          if (ssdi_sched_type == 1) then
             ! transpiration fraction due to drought and salinity stress
-            ! [SS-SWC S-2.12B] iptra_day/iqreddry_day/iqredsol_day -> state%soilwater%intr
+            ! [SS-SWC S-2.12B] iptra_day/iqreddry_day/iqredsol_day -> state%soilwater
             if (state%soilwater%iptra_day .gt. 1.d-10) then
                Tred = 1.0d0 - (state%soilwater%iqreddry_day + state%soilwater%iqredsol_day) / state%soilwater%iptra_day
             else

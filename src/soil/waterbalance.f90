@@ -429,7 +429,7 @@ contains
       subroutine integral (state)
       Use Variables
       ! [SS-TC TC-6] dt and fldaystart reads cut over to state%timecontrol via tc_* aliases below
-      use iso_fortran_env, only: real64        ! [SS-SWC S-2.12B] for state%soilwater%intr resets
+      use iso_fortran_env, only: real64        ! [SS-SWC S-2.12B] needed for 0.0_real64 literal below
       implicit none
 
       type(swap_state_t), intent(inout) :: state
@@ -605,7 +605,7 @@ contains
       ! compensate water balance error of this time step during remaining day part
       ! cumulative water balance error
       ! SS-SWC S-2.4: cnird/crunon/crunoff/cqrot/cqbot/volini/volact/PondIni/pond/cqssdi/cqprai
-      !               read cutover to state%soilwater%cumu / state%soilwater flat fields
+      !               read cutover to state%soilwater flat fields
       ! [SS-SWC S-2.12B] write directly to state%soilwater%wbalance — legacy global retired
       if (swsnow.eq.0) then
         state%soilwater%wbalance = state%atmosphere%cumu%cnrai + state%soilwater%cnird           &
@@ -718,7 +718,7 @@ contains
       endif
 
       ! Deviation mass balance Ponding layer in cm
-      ! [SS-SWC S-2.12B] igird/inird/iruno/irunon -> state%soilwater%intr
+      ! [SS-SWC S-2.12B] igird/inird/iruno/irunon -> state%soilwater
       DevMasBalPnd = state%atmosphere%intr%igrai + state%atmosphere%intr%igsnow + state%soilwater%igird + state%soilwater%irunon + inqNew(1) + SrDif &
      &             - (state%atmosphere%intr%igrai-state%atmosphere%intr%inrai-state%atmosphere%intr%isnrai + state%soilwater%igird-state%soilwater%inird + state%atmosphere%intr%isubl + state%atmosphere%intr%ievap + state%soilwater%iruno) &
      &             - IQInTopPreDm - IQInTopLatDm
