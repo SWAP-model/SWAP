@@ -76,7 +76,7 @@ contains
          ! Irrigation scheduling (set to 0; schedule=1 stub-errored)
          schedule,                                                             &
          ! Simulation time globals needed for dateharvest sentinel
-         tend, yearmeteo
+         tend
       use array_utils,  only: afgen
       use error_mod,    only: fatalerr_collected
       implicit none

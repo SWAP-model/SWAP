@@ -6,7 +6,8 @@ module tillage_mod
    use swap_state_mod, only: swap_state_t  ! [SS-ATM A-2.6] nraida retired from variables to state%atmosphere
 
    ! SS-TC TC-12: t1900 retired from only-list; read via state%timecontrol%t1900 at each call site.
-   use variables, only: date, swhyst, swsolu, swoxygen, flMacroPore, flksatexm, zbotcp, NumNod, Bdens, layer, ParamVG, &
+   ! [SS-TC TC-14] date retired — read via state%timecontrol%date
+   use variables, only: swhyst, swsolu, swoxygen, flMacroPore, flksatexm, zbotcp, NumNod, Bdens, layer, ParamVG, &
                         NumLay, dz, disnod, botcom, psilt, pclay, SwDiscrvert, tend, &  ! [SS-SWC S-2.6] CofGen/pond/theta/h retired to state%soilwater
                         ! Tillage bridge variables with renaming (SAVE statements removed)
                         ! [SS-TIL T-5] Groups C/D/E retired from variables — reads via state%tillage
@@ -171,12 +172,12 @@ module tillage_mod
       ! OUTPUT  [SS-TIL T-5] MaxNumSoilHo/sumDWC/sumAvail1/sumAvail2 reads via state%tillage
       if (TEST) then
          call DTDPST ("YEAR-MONTHST-DAY", state%timecontrol%t1900, STRNG)  ! TC-12
-         write (222,'(A,F15.5,10(I3,F15.5))') trim(DATE), state%atmosphere%nraida, (i, Bdens(i), i = 1, state%tillage%MaxNumSoilHo)
-         write (224,'(A,10F15.5)') trim(DATE), state%soilwater%theta(5), state%soilwater%theta(10), state%soilwater%theta(20), state%soilwater%theta(27), state%soilwater%theta(35), state%atmosphere%nraida, state%tillage%sumDWC, state%tillage%sumAvail1, state%tillage%sumAvail2  ! [SS-SWC S-2.6]
-         write (226,'(A,10F15.5)') trim(DATE), (state%soilwater%cofgen(i,1), i = 1, 10)  ! [SS-SWC S-2.6]
+         write (222,'(A,F15.5,10(I3,F15.5))') trim(state%timecontrol%date), state%atmosphere%nraida, (i, Bdens(i), i = 1, state%tillage%MaxNumSoilHo)
+         write (224,'(A,10F15.5)') trim(state%timecontrol%date), state%soilwater%theta(5), state%soilwater%theta(10), state%soilwater%theta(20), state%soilwater%theta(27), state%soilwater%theta(35), state%atmosphere%nraida, state%tillage%sumDWC, state%tillage%sumAvail1, state%tillage%sumAvail2  ! [SS-SWC S-2.6]
+         write (226,'(A,10F15.5)') trim(state%timecontrol%date), (state%soilwater%cofgen(i,1), i = 1, 10)  ! [SS-SWC S-2.6]
       end if
-         write (222,'(A,F15.5,10(I3,F15.5))') trim(DATE), state%atmosphere%nraida, (i, Bdens(i), i = 1, state%tillage%MaxNumSoilHo)
-         write (226,'(A,10F15.5)') trim(DATE), (state%soilwater%cofgen(i,1), i = 1, 10)  ! [SS-SWC S-2.6]
+         write (222,'(A,F15.5,10(I3,F15.5))') trim(state%timecontrol%date), state%atmosphere%nraida, (i, Bdens(i), i = 1, state%tillage%MaxNumSoilHo)
+         write (226,'(A,10F15.5)') trim(state%timecontrol%date), (state%soilwater%cofgen(i,1), i = 1, 10)  ! [SS-SWC S-2.6]
       continue
 
    case (4)
@@ -331,7 +332,7 @@ module tillage_mod
                if (wc(i) > wcs) then
                   state%soilwater%pond = state%soilwater%pond + (wc(i) - wcs) * dz(i)                  ! [SS-SWC S-2.6]
                   wc(i) = wcs
-                  write(333,'(A,I5,F12.4)') Date, i, state%soilwater%pond                              ! [SS-SWC S-2.6]
+                  write(333,'(A,I5,F12.4)') state%timecontrol%date, i, state%soilwater%pond                              ! [SS-SWC S-2.6]
                end if
             end if
             state%soilwater%h(i)     = prhead(i, disnod(i), wc(i), &                                   ! [SS-SWC S-2.6]
@@ -364,7 +365,7 @@ module tillage_mod
                                         ',', state%soilwater%theta(i)/wcs               ! [SS-SWC S-2.6]
       end do
    end if
-write(124,'(A,1P,12E12.5)') Date, Bdens(1), ParamVG(2,layer(1)), state%soilwater%theta(1), state%soilwater%h(1), &  ! [SS-SWC S-2.6]
+write(124,'(A,1P,12E12.5)') state%timecontrol%date, Bdens(1), ParamVG(2,layer(1)), state%soilwater%theta(1), state%soilwater%h(1), &  ! [SS-SWC S-2.6]
    hconduc(1,state%soilwater%h(1),state%soilwater%theta(1),1.0d0,state%heat%tsoil(1)), ParamVG(3,layer(1)),          & ! [SS-SWC S-2.6]
    Bdens(2), ParamVG(2,layer(2)), state%soilwater%theta(2), state%soilwater%h(2),                                     & ! [SS-SWC S-2.6]
    hconduc(2,state%soilwater%h(2),state%soilwater%theta(2),1.0d0,state%heat%tsoil(2)), ParamVG(3,layer(2))              ! [SS-SWC S-2.6]
@@ -384,7 +385,7 @@ write(124,'(A,1P,12E12.5)') Date, Bdens(1), ParamVG(2,layer(1)), state%soilwater
    if (tl%iTill == 1) return        ! in the beginning before first tillage event: do nothing
 
    forall (i=1:tl%MaxNumSoilHo) Bdens(i) = tl%Rho_cons(i) - (tl%Rho_cons(i) - tl%Rho_last(i)) * dexp(-tl%K_R_cons(i)*state%atmosphere%nraida*10.0d0)    ! 10: to transform nraida from cm to mm
-   write(123,'(A,1P,10E12.5)') Date, state%atmosphere%nraida, Bdens(1:tl%MaxNumSoilHo)
+   write(123,'(A,1P,10E12.5)') state%timecontrol%date, state%atmosphere%nraida, Bdens(1:tl%MaxNumSoilHo)
    end associate
    end subroutine Consolidate_Bdens
    

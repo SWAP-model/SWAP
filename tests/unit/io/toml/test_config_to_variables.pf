@@ -54,8 +54,9 @@ end subroutine test_config_to_variables_general_section
 subroutine test_config_to_variables_simulation_numerical()
    use funit
    use swap_config_mod, only: swap_config_t
-   use config_to_variables_mod, only: config_to_variables
-   use variables, only: dt, dtmin, dtmax, MaxIt, MaxBackTr, taccur
+   use config_to_variables_mod, only: config_to_variables, tc_dt_init_buf
+   ! [SS-TC TC-14] dt retired — buffered through tc_dt_init_buf for swap.f90 seeding
+   use variables, only: dtmin, dtmax, MaxIt, MaxBackTr, taccur
    implicit none
    type(swap_config_t) :: config
 
@@ -68,7 +69,8 @@ subroutine test_config_to_variables_simulation_numerical()
 
    call config_to_variables(config)
 
-   @assertEqual(0.1d0,   dt)
+   ! [SS-TC TC-14] dt staged through transient buffer
+   @assertEqual(0.1d0,   tc_dt_init_buf)
    @assertEqual(1.0d-5,  dtmin)
    @assertEqual(0.5d0,   dtmax)
    @assertEqual(50,      MaxIt)

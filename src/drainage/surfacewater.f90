@@ -315,8 +315,9 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
       ! SS-SWST Phase 2 Task 11: wlstar global removed; use sw_wlstar (state alias) throughout.
       ! SS-BND Phase 2 Task B-2.4: runots removed from use clause; read via state%soilwater%runots.
       ! SS-SWC Phase 2 S-2.8: gwl,pond,THETA,THETAS,H removed from use-list; read from state%soilwater.
+      ! [SS-TC TC-14] T retired — read via state%timecontrol%t
       use variables, only: NRPRI,impend,nmper,swman,hbweir,wlsman,gwlcrit,nphase,dropr,wscap,   &
-                           QRapDra,zbotdr,alphaw,betaw,osswlm,T,NUMNOD,DZ,VCRIT,NODHD,HCRIT, &
+                           QRapDra,zbotdr,alphaw,betaw,osswlm,NUMNOD,DZ,VCRIT,NODHD,HCRIT, &
                            SWQHR,QQHTAB,wldip,intwl,logf,swscre,rsro,pondmx  ! [TC-8: dropped tcum,dt,t1900,fldtmin]
       use swap_state_mod, only: swap_state_t
       use surfacewater_utils, only: wlevst, swstlev, qhtab
@@ -395,7 +396,7 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
 
 ! ---   only adjust it if new subperiod, with length intwl(imper) has
 !       started  (or if it is is the first call)
-        rday = (T+1.0D0)/intwl(imper)
+        rday = (state%timecontrol%t+1.0D0)/intwl(imper)
         intday = int(rday)
 
         if (abs(rday-1.0*intday).lt.0.00001d0 .or. tc_tcum.lt.1.0d-10) then  ! [TC-8]

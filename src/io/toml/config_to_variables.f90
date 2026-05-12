@@ -47,6 +47,7 @@ module config_to_variables_mod
    public :: apply_nutrients
    public :: apply_nutrients_events
    public :: h_init_buf, pondini_init_buf, pond_init_buf
+   public :: tc_iyear_init_buf, tc_imonth_init_buf, tc_dt_init_buf
 
    ! [SS-SWC S-2.12B] transient buffers: swap.f90 copies these into state%soilwater
    ! after soilwater_init runs, then deallocates h_init_buf. Bridge between config-
@@ -55,6 +56,14 @@ module config_to_variables_mod
    real(real64), allocatable :: h_init_buf(:)    !! initial pressure-head profile values
    real(real64) :: pondini_init_buf = 0.0_real64 !! pondini from soil.pondini
    real(real64) :: pond_init_buf    = 0.0_real64 !! pond from soil.initial.pond (swinco=3)
+
+   ! [SS-TC TC-14] transient buffers: swap.f90 copies these into state%timecontrol
+   ! between config_to_variables and TimeControl(1). Bridge for the small set of
+   ! TimeControl fields that the legacy adapter populated as variables%* (now
+   ! retired) before TimeControl owns them in state. (ADR 0041)
+   integer       :: tc_iyear_init_buf  = 0
+   integer       :: tc_imonth_init_buf = 0
+   real(real64)  :: tc_dt_init_buf     = 0.0_real64
 
 contains
 
@@ -94,8 +103,8 @@ contains
          integer :: datea_init(6)
          real    :: fsec_init
          call dtdpar(tstart + 0.1d0, datea_init, fsec_init)
-         iyear  = datea_init(1)
-         imonth = datea_init(2)
+         tc_iyear_init_buf  = datea_init(1)  ! [SS-TC TC-14] seeded into state%timecontrol in swap.f90
+         tc_imonth_init_buf = datea_init(2)  ! [SS-TC TC-14] seeded into state%timecontrol in swap.f90
       end block
 
       ! Legacy finalize for swmonth=1 (mirrors readswap.f90:181-207):
@@ -118,7 +127,7 @@ contains
       ! ---------------------------------------------------------------
       ! Simulation.numerical (audit: 6 fields)
       ! ---------------------------------------------------------------
-      dt        = config%simulation%numerical%dt
+      tc_dt_init_buf = config%simulation%numerical%dt  ! [SS-TC TC-14] seeded into state%timecontrol in swap.f90
       dtmin     = config%simulation%numerical%dtmin
       dtmax     = config%simulation%numerical%dtmax
       MaxIt     = config%simulation%numerical%MaxIt
@@ -574,7 +583,7 @@ contains
             ! [SS-SWC S-2.12B] pond/pondini retired; buffered for swap.f90 to seed state%soilwater after soilwater_init
             pond_init_buf    = config%soil%initial%pond
             pondini_init_buf = config%soil%initial%pond
-            dt      = config%soil%initial%dt
+            tc_dt_init_buf = config%soil%initial%dt  ! [SS-TC TC-14] seeded into state%timecontrol in swap.f90
             atmin7(:) = config%soil%initial%atmin7(:)
             ! [SS-ATM A-2.6] Legacy zeroes ssnow when swsnow != 1: now handled in swap.f90 during state seeding
 
@@ -1290,8 +1299,8 @@ contains
       real(8)  :: outdate_om
 
       datea_om = 0
-      datea_om(1) = iyear
-      datea_om(2) = imonth
+      datea_om(1) = tc_iyear_init_buf   ! [SS-TC TC-14] read from same buffer that seeds state%timecontrol
+      datea_om(2) = tc_imonth_init_buf  ! [SS-TC TC-14]
       if (datea_om(2) < 12) then
          datea_om(2) = datea_om(2) + 1
       else

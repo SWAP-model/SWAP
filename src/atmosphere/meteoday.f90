@@ -272,8 +272,9 @@ contains
   subroutine ReadMeteoDay(state)
       ! use variables
       ! SS-TC TC-9: date,t1900 removed from only-list; reads/writes via state%timecontrol.
-      use variables, only: out_tmn, out_tmx, out_hum, out_win, out_etr, out_wet, swrain, wet, rh, tav, tavd, out_rad, yearmeteo, arai, atmx, ahum, aetr, arad, teprrain, teprsnow, &
-                        detrecord, nmetdetail, dettime, detrad, dethum, dettav, atav, swmetdetail, daymeteo, daynrfirst, daynrlast, rad, tmn, tmx, pathatm, awin, atmn, metfil, detrain, swsnow, irectotal, detwind
+      ! [SS-TC TC-14] yearmeteo, daymeteo retired — read via state%timecontrol
+      use variables, only: out_tmn, out_tmx, out_hum, out_win, out_etr, out_wet, swrain, wet, rh, tav, tavd, out_rad, arai, atmx, ahum, aetr, arad, teprrain, teprsnow, &
+                        detrecord, nmetdetail, dettime, detrad, dethum, dettav, atav, swmetdetail, daynrfirst, daynrlast, rad, tmn, tmx, pathatm, awin, atmn, metfil, detrain, swsnow, irectotal, detwind
       use MeteoVars
       use precipitation_mod, only: PartitionPrecipitation
       implicit none
@@ -291,10 +292,12 @@ contains
 
     ! ----------------------------------------------------------------------
 
-    ! SS-TC TC-9: date,t1900 read/written via state%timecontrol (tc_* aliases).
+    ! [SS-TC TC-14] alias TC fields directly so bare names resolve to state%timecontrol
     associate( &
-      tc_t1900 => state%timecontrol%t1900,  &  ! TC-9
-      tc_date  => state%timecontrol%date    )  ! TC-9
+      tc_t1900 => state%timecontrol%t1900, &
+      tc_date  => state%timecontrol%date,  &
+      yearmeteo => state%timecontrol%yearmeteo, &
+      daymeteo  => state%timecontrol%daymeteo )
 
     call ResetMetFlx (state)
 
@@ -524,8 +527,9 @@ contains
   subroutine ProcessMeteoDay(state)
     ! use Variables
     ! SS-TC TC-9: daynr,t,dt,flmetdetail,fletsine removed from only-list; reads via state%timecontrol.
+    ! [SS-TC TC-14] metperiod retired — read via state%timecontrol
     use variables, only: lai, gird, swinter, swmetdetail, nmetdetail, swetr, flCropEmergence, et0, ew0, es0, swcf, swcfbs, cfbs, &
-    cf, cfeic, rad, arad, metperiod, tav, atav, ahum, logf, swscre, lat, alt, altw, angstroma, angstromb, rsc, ch, daylp, albedo, tmn, tmx, rsw, difpp, &
+    cf, cfeic, rad, arad, tav, atav, ahum, logf, swscre, lat, alt, altw, angstroma, angstromb, rsc, ch, daylp, albedo, tmn, tmx, rsw, difpp, &
     dsinbe, atmtr, rsoil, swdivide, kdif, kdir, croptype, swgc, gc, siccapact, siccaptb, icrop, flcropcalendar, &
      flCropHarvest, cfevappond, flco2, fco2tra, tpot, epot, grain, nrain, finterception, swrain, &
      swusecn, runoff_cn, rh, tavd
@@ -558,7 +562,8 @@ contains
        tc_t           => state%timecontrol%t,           &  ! TC-9
        tc_dt          => state%timecontrol%dt,          &  ! TC-9
        tc_flmetdetail => state%timecontrol%flmetdetail, &  ! TC-9
-       tc_fletsine    => state%timecontrol%fletsine     )  ! TC-9
+       tc_fletsine    => state%timecontrol%fletsine,    &  ! TC-9
+       metperiod      => state%timecontrol%metperiod    )  ! [SS-TC TC-14]
 
     ! === Section 3: Interception calculations ===
 

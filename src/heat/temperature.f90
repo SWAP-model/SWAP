@@ -178,14 +178,14 @@ contains
           dzsnw = state%atmosphere%ssnow / 0.170d0
           if (ht_heacon(1).lt.1.d-10) ht_heacon(1) = 100.0d0
           apar = (0.5d0*heaconsnw*dz(1)) / (ht_heacon(1)*dzsnw)
-          if (flmetdetail) then
-            ht_tetop = (ht_tsoil(1) + apar*atav(wrecord)) / (1.d0+apar)
+          if (state%timecontrol%flmetdetail) then
+            ht_tetop = (ht_tsoil(1) + apar*atav(state%timecontrol%wrecord)) / (1.d0+apar)
           else
             ht_tetop = (ht_tsoil(1) + apar*Tav) / (1.d0+apar)
           endif
         else
-          if (flmetdetail) then
-            ht_tetop = atav(wrecord)
+          if (state%timecontrol%flmetdetail) then
+            ht_tetop = atav(state%timecontrol%wrecord)
           else
             ht_tetop = Tav
           endif

@@ -49,19 +49,69 @@
       dtfletsine = 0.05d0
 
 
-      ! Bind former SAVE locals to explicit, synchronizable module variables
-      associate( datea => tc_datea, &
-           nextyear => tc_nextyear, &
-           flprevious => tc_flprevious, &
-           flTnext => tc_flTnext, &
-           fsec => tc_fsec, &
-           tchange => tc_tchange, &
-           dtEvent => tc_dtEvent, &
-           tEvent => tc_tEvent, &
-           tcumold => tc_tcumold, &
-           dtprevious => tc_dtprevious, &
-           tmptimestart => tc_tmptimestart, &
-           tmptimeend => tc_tmptimeend )
+      ! [SS-TC TC-14] Alias all TimeControl-owned state fields so that bare
+      !   names below resolve to state%timecontrol%* — legacy globals retired (ADR 0041)
+      associate( datea => state%timecontrol%datea, &
+           nextyear => state%timecontrol%nextyear, &
+           flprevious => state%timecontrol%flprevious, &
+           flTnext => state%timecontrol%flTnext, &
+           fsec => state%timecontrol%fsec, &
+           tchange => state%timecontrol%tchange, &
+           dtEvent => state%timecontrol%dtEvent, &
+           tEvent => state%timecontrol%tEvent, &
+           tcumold => state%timecontrol%tcumold, &
+           dtprevious => state%timecontrol%dtprevious, &
+           tmptimestart => state%timecontrol%tmptimestart, &
+           tmptimeend => state%timecontrol%tmptimeend, &
+           iyear => state%timecontrol%iyear, &
+           iyearm1 => state%timecontrol%iyearm1, &
+           imonth => state%timecontrol%imonth, &
+           dt => state%timecontrol%dt, &
+           dtold => state%timecontrol%dtold, &
+           daynr => state%timecontrol%daynr, &
+           daycum => state%timecontrol%daycum, &
+           daymeteo => state%timecontrol%daymeteo, &
+           yearmeteo => state%timecontrol%yearmeteo, &
+           t => state%timecontrol%t, &
+           t1900 => state%timecontrol%t1900, &
+           tcum => state%timecontrol%tcum, &
+           timjan1 => state%timecontrol%timjan1, &
+           outper => state%timecontrol%outper, &
+           cntper => state%timecontrol%cntper, &
+           isteps => state%timecontrol%isteps, &
+           ioutdat => state%timecontrol%ioutdat, &
+           ioutdatint => state%timecontrol%ioutdatint, &
+           nprintcount => state%timecontrol%nprintcount, &
+           rainrec => state%timecontrol%rainrec, &
+           wrecord => state%timecontrol%wrecord, &
+           swmeteo => state%timecontrol%swmeteo, &
+           date => state%timecontrol%date, &
+           metperiod => state%timecontrol%metperiod, &
+           flDayStart => state%timecontrol%flDayStart, &
+           flDayEnd => state%timecontrol%flDayEnd, &
+           flRunEnd => state%timecontrol%flRunEnd, &
+           flYearStart => state%timecontrol%flYearStart, &
+           floutput => state%timecontrol%floutput, &
+           floutputshort => state%timecontrol%floutputshort, &
+           flbaloutput => state%timecontrol%flbaloutput, &
+           flheader => state%timecontrol%flheader, &
+           flheadirg => state%timecontrol%flheadirg, &
+           flIrg1Start => state%timecontrol%flIrg1Start, &
+           flUpdMetDet => state%timecontrol%flUpdMetDet, &
+           fldecdtmin => state%timecontrol%fldecdtmin, &
+           fldtmin => state%timecontrol%fldtmin, &
+           fldtreduce => state%timecontrol%fldtreduce, &
+           flprintshort => state%timecontrol%flprintshort, &
+           flmetdetail => state%timecontrol%flmetdetail, &
+           flmeteodt => state%timecontrol%flmeteodt, &
+           flrainintens => state%timecontrol%flrainintens, &
+           fletsine => state%timecontrol%fletsine, &
+           flIrrigate => state%timecontrol%flIrrigate, &
+           flDrain => state%timecontrol%flDrain, &
+           flSurfaceWater => state%timecontrol%flSurfaceWater, &
+           flTemperature => state%timecontrol%flTemperature, &
+           flSnow => state%timecontrol%flSnow, &
+           flSolute => state%timecontrol%flSolute )
 
       itask = task
       if (itask.eq.2 .and. (fldecdt .or. fldecdtmin)) itask = 3
@@ -71,13 +121,9 @@
 
 ! === initialization ===================================================
 
-! --- transient seed: drain legacy globals written by config_to_variables
-!     into state before any case(1) logic runs (pre-init pattern, D7).
-!     config_to_variables runs before state%timecontrol is allocated, so
-!     the legacy writes are the only values available at this point.
-      state%timecontrol%iyear  = iyear
-      state%timecontrol%imonth = imonth
-      state%timecontrol%dt     = dt
+! [SS-TC TC-14] iyear/imonth/dt seeded into state%timecontrol from
+!   tc_iyear_init_buf / tc_imonth_init_buf / tc_dt_init_buf by swap.f90
+!   before calling TimeControl(1). No-op writes here removed.
 
 ! --- initialize flags ----------------------------
       fldecdt = .false.
@@ -821,15 +867,13 @@
       type(swap_state_t), intent(inout) :: state
       character(len=400) messag
       real(4)       ::   tmptimeinterrupt
-      ! Use module variables (tc_tmptimestart/tc_tmptimeend) for persistence
-      ! to keep IterTime multi-instance safe.
+      ! [SS-TC TC-14] tmptimestart/tmptimeend now persist in state%timecontrol (ADR 0041)
 
       select case (task)
 
       case (1)
 ! --- part1 - initial values
-      call cpu_time(tc_tmptimestart)
-      state%timecontrol%tmptimestart = tc_tmptimestart
+      call cpu_time(state%timecontrol%tmptimestart)
       return
 
       case (2)
@@ -856,10 +900,9 @@
      &     write(logf,'(i7,2x,i10,4x,i10)')i,(itnumb(i,j),j=1,2)
       end do
 
-      call cpu_time(tc_tmptimeend)
-      state%timecontrol%tmptimeend = tc_tmptimeend
+      call cpu_time(state%timecontrol%tmptimeend)
       write(logf,'(/,a12,f12.2,a4)')                                    &
-         &           ' Run-time: ',tc_tmptimeend-tc_tmptimestart,' sec'
+         &           ' Run-time: ',state%timecontrol%tmptimeend - state%timecontrol%tmptimestart,' sec'
      
 
       case default

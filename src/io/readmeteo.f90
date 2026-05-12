@@ -34,7 +34,15 @@
       real(4)   fsec
       real(8)   etrmax,etrmin,hummax,hummin,radmax,radmin,raimax,raimin
       real(8)   tmeteo,tmnmax,tmnmin,tmxmax,tmxmin,winmax,winmin
-      
+
+      ! [SS-TC TC-14] alias TC fields so bare names resolve to state%timecontrol
+      associate( &
+        tc_t1900       => state%timecontrol%t1900,       &
+        tc_flYearStart => state%timecontrol%flYearStart, &
+        yearmeteo      => state%timecontrol%yearmeteo,   &
+        timjan1        => state%timecontrol%timjan1,     &
+        swmeteo        => state%timecontrol%swmeteo )
+
 !========================= Read Meteo file =============================
 
 ! --- detection & handling of missing values ---------------------------
@@ -98,17 +106,12 @@
 ! --- CSV mode is the only supported path (ADR 0014).
 !     Daily mode → MeteoCSVYear. Sub-daily → MeteoCSVDetYear.
       if (swmetdetail == 0) then
-         call MeteoCSVYear(ifnd)
+         call MeteoCSVYear(ifnd, state)
       else
-         call MeteoCSVDetYear(ifnd)
+         call MeteoCSVDetYear(ifnd, state)
       end if
 
 !========================= tests and initialization ====================
-
-      ! SS-TC TC-9: t1900,flYearStart read/written via state%timecontrol (tc_* aliases).
-      associate( &
-        tc_t1900       => state%timecontrol%t1900,       &  ! TC-9
-        tc_flYearStart => state%timecontrol%flYearStart  )  ! TC-9
 
 ! --- perform some reliability tests and some initialization
       if (swmetdetail.eq.0) then
@@ -216,21 +219,19 @@
 ! --- end of reading meteo data file **********************************
 
 ! --- close present year for further reading
-      flYearStart = .false.
-      tc_flYearStart = .false.   ! SS-TC TC-9 co-write
+      tc_flYearStart = .false.   ! [SS-TC TC-14] legacy flYearStart write retired
 
 !========================= Read rain file =============================
 
       if (swrain .eq. 3) then
 ! ---   rainfall events are specified
-        call ReadRainEvents()
+        call ReadRainEvents(state)
       endif
 ! --- end of reading rain file ****************************************
 
 ! --- reopen present year for processing rain intensity data at beginning MeteoDt
       if (swrain .gt. 0) then
-         flYearStart = .true.
-         tc_flYearStart = .true.   ! SS-TC TC-9 co-write
+         tc_flYearStart = .true.   ! [SS-TC TC-14] legacy flYearStart write retired
          call MeteoDT(state)
       endif
 
@@ -242,19 +243,23 @@
 
 ! SUBROUTINE 2.
 ! ----------------------------------------------------------------------
-      subroutine ReadRainEvents()
+      subroutine ReadRainEvents(state)
       use error_mod, only: fatalerr_collected
+      use swap_state_mod, only: swap_state_t
 ! ----------------------------------------------------------------------
 !     Last modified      : February 2014
 !     Purpose            : read rainfall data (events) of one calendar year
 !     Interface:
-!       I   - logf,yearmeteo,pathatm,raincsv_dat,nraincsv
+!       I   - logf,yearmeteo (via state%timecontrol),pathatm,raincsv_dat,nraincsv
 !       O   - nmrain,rainamount,raintimearray
 ! ----------------------------------------------------------------------
-      use variables, only: yearmeteo,nmrain,rainamount,raintimearray, &
+      ! [SS-TC TC-14] yearmeteo retired — read via state%timecontrol
+      use variables, only: nmrain,rainamount,raintimearray, &
                            raincsv_dat, nraincsv
 
       implicit none
+      type(swap_state_t), intent(in) :: state
+      integer :: yearmeteo  ! [SS-TC TC-14] local copy
 
 ! --- local
       character(len=300) messag
@@ -267,6 +272,7 @@
       real(8)  :: t_jan1, t_dec31, tfrac
 
       vsmall = 1.0d-8
+      yearmeteo = state%timecontrol%yearmeteo  ! [SS-TC TC-14]
 
 !========================= CSV path (only supported, ADR 0014) =========
       ! Extract current year's events from the pre-loaded cache.
@@ -331,13 +337,16 @@
 ! after ADR 0014). After return, arad/atmn/atmx/
 ! ahum/awin/arai/aetr/wet/ad/am are populated so that the validation and
 ! rain-array init code in ReadMeteoYear works unchanged.
-subroutine MeteoCSVYear(ifnd)
+subroutine MeteoCSVYear(ifnd, state)
 use error_mod, only: fatalerr_collected
+use swap_state_mod, only: swap_state_t
+! [SS-TC TC-14] yearmeteo/timjan1 retired — accessed via state%timecontrol
 use variables, only: arad, atmn, atmx, ahum, awin, arai, aetr, wet, ad, am, &
-                     yearmeteo, metcsv_dat, nmetcsv, &
-                     daynrfirst, daynrlast, timjan1
+                     metcsv_dat, nmetcsv, &
+                     daynrfirst, daynrlast
 implicit none
 integer, intent(out) :: ifnd
+type(swap_state_t), intent(inout) :: state
 
 integer  :: i, i1, i2, n
 integer  :: datea(6)
@@ -350,8 +359,8 @@ integer :: jday
 external jday
 
 ! Year boundaries in days-since-jd1900
-t_jan1  = real(jday(yearmeteo,  1,  1) - jd1900, 8)
-t_dec31 = real(jday(yearmeteo, 12, 31) - jd1900, 8)
+t_jan1  = real(jday(state%timecontrol%yearmeteo,  1,  1) - jd1900, 8)
+t_dec31 = real(jday(state%timecontrol%yearmeteo, 12, 31) - jd1900, 8)
 
 ! Find row range for this year (metcsv_dat is sorted by date).
 i1 = 0; i2 = 0
@@ -390,17 +399,17 @@ end do
 
 ! daynrfirst / daynrlast via existing DTARDP, matching ReadMeteoYear logic.
 datea = 0; fsec = 0.0
-datea(1) = yearmeteo; datea(2) = 1; datea(3) = 1
+datea(1) = state%timecontrol%yearmeteo; datea(2) = 1; datea(3) = 1
 call dtardp(datea, fsec, t_jan1)
-timjan1 = t_jan1
+state%timecontrol%timjan1 = t_jan1
 
 datea(2) = am(1); datea(3) = ad(1)
 call dtardp(datea, fsec, tval)
-daynrfirst = nint(tval - timjan1 + 1.0d0)
+daynrfirst = nint(tval - state%timecontrol%timjan1 + 1.0d0)
 
 datea(2) = am(n); datea(3) = ad(n)
 call dtardp(datea, fsec, tval)
-daynrlast = nint(tval - timjan1 + 1.0d0)
+daynrlast = nint(tval - state%timecontrol%timjan1 + 1.0d0)
 
 end subroutine MeteoCSVYear
 
@@ -411,13 +420,17 @@ end subroutine MeteoCSVYear
 ! path after ADR 0014).
 ! Populates dettime, detrecord, detrad, dettav, dethum, detwind, detrain.
 ! irectotal and nofd are set by ReadMeteoYear after this returns.
-subroutine MeteoCSVDetYear(ifnd)
+subroutine MeteoCSVDetYear(ifnd, state)
 use error_mod, only: fatalerr_collected
-use variables, only: yearmeteo, metcsv_det, nmetcsv_det, &
+use swap_state_mod, only: swap_state_t
+! [SS-TC TC-14] yearmeteo retired — read via state%timecontrol
+use variables, only: metcsv_det, nmetcsv_det, &
                      dettime, detrecord, detrad, dettav, dethum, detwind, detrain
 use swap_array_dimensions, only: NMETFILE
 implicit none
 integer, intent(out) :: ifnd
+type(swap_state_t), intent(in) :: state
+integer :: yearmeteo  ! [SS-TC TC-14] local copy
 
 integer, parameter :: jd1900 = 2415020
 integer :: jday
@@ -429,6 +442,7 @@ real(8)  :: t_jan1, t_jan1_next
 ! Year boundaries in days-since-jd1900.
 ! All sub-daily timestamps for yearmeteo satisfy:
 !   t_jan1 <= timestamp < t_jan1_next
+yearmeteo = state%timecontrol%yearmeteo  ! [SS-TC TC-14]
 t_jan1      = real(jday(yearmeteo,   1, 1) - jd1900, 8)
 t_jan1_next = real(jday(yearmeteo+1, 1, 1) - jd1900, 8)
 

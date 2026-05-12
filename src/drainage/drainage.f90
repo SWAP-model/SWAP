@@ -179,7 +179,8 @@ contains
       ! ADR 0031 Phase 2 Task 5: wetper removed from use-list; read from state%drainage%wetper(1).
       ! SS-SWC Phase 2 S-2.8: gwl removed from use-list; read from state%soilwater%gwl.
       use variables, only: dramet,zbotdr,basegw,l,ipos,khtop,khbot,kvtop,kvbot,entres,zintf,geofac,swdtyp,      &
-owltab,t1900,swallo,drares,infres,qdrtab,nrlevs,swnrsrf,cofintfl,expintfl,dt,shape,FlMacropore,NumLevRapDra,swliminf,nowltab
+owltab,swallo,drares,infres,qdrtab,nrlevs,swnrsrf,cofintfl,expintfl,shape,FlMacropore,NumLevRapDra,swliminf,nowltab
+      ! [SS-TC TC-14] t1900, dt read via state%timecontrol (ADR 0041)
       use array_utils, only: afgen
 
       ! --- global
@@ -308,7 +309,7 @@ owltab,t1900,swallo,drares,infres,qdrtab,nrlevs,swnrsrf,cofintfl,expintfl,dt,sha
                   !          end do
                   !          x = afgen(temptab,2*nowltab(lev),t1900+dt-1.d0)
                   !          x = afgen(temptab,2*maowl,t1900+dt-1.d0)
-                  x = afgen(owltab(lev, 1:2*nowltab(lev)), 2*nowltab(lev), t1900 + dt - 1.d0)
+                  x = afgen(owltab(lev, 1:2*nowltab(lev)), 2*nowltab(lev), state%timecontrol%t1900 + state%timecontrol%dt - 1.d0)
                   !          x = afgen(owltab(lev,1:2*maowl),2*maowl,t1900+dt-1.d0)
                   if ((x - zbotdr(lev)) .lt. 1.0d-3) then
                      fldry = .true.
@@ -423,10 +424,11 @@ owltab,t1900,swallo,drares,infres,qdrtab,nrlevs,swnrsrf,cofintfl,expintfl,dt,sha
                ! ADR 0031 Phase 2 Task 5: zTopDisLay removed from use-list; declared local below.
                ! SS-SWC Phase 2 S-2.8: gwl removed from use-list; read from state%soilwater%gwl.
                ! [SS-SWC S-2.12B] fluseksatexm retired from variables — read via state%soilwater
-               use variables, only: nrlevs,numnod,dramet,swdtyp,NumLevRapDra,owltab,nowltab,t1900, &
+               ! [SS-TC TC-14] t1900, dt read via state%timecontrol (ADR 0041)
+               use variables, only: nrlevs,numnod,dramet,swdtyp,NumLevRapDra,owltab,nowltab, &
                   zbotdr,flzerointr,flzerocumu,swdivd,swdislay,swtopdislay,fTopDisLay, &
                   dz,ksatfit,ksatexm,layer,cofani,l,Swdivdinf,Swnrsrf,    &
-                  SwTopnrsrf,dt,FacDpthInf,madr
+                  SwTopnrsrf,FacDpthInf,madr
                use array_utils, only: afgen
 
                type(swap_state_t), intent(inout) :: state
@@ -483,7 +485,7 @@ owltab,t1900,swallo,drares,infres,qdrtab,nrlevs,swnrsrf,cofintfl,expintfl,dt,sha
                         !   temptab(i) = owltab(NumLevRapDra,i)
                         !end do
                         !state%surfacewater%ZDraBas = afgen (temptab,2*maowl,t1900)
-                        state%surfacewater%ZDraBas = afgen(owltab(NumLevRapDra, 1:2*nowltab(NumLevRapDra)), 2*nowltab(NumLevRapDra), t1900)
+                        state%surfacewater%ZDraBas = afgen(owltab(NumLevRapDra, 1:2*nowltab(NumLevRapDra)), 2*nowltab(NumLevRapDra), state%timecontrol%t1900)
                      end if
                   end if
 
@@ -531,7 +533,7 @@ owltab,t1900,swallo,drares,infres,qdrtab,nrlevs,swnrsrf,cofintfl,expintfl,dt,sha
                   ! SS-SWC Phase 2 S-2.8: gwl read from state%soilwater
                   call divdra(numnod, nrlevs, dz, ksatfit, ksatexm, state%soilwater%fluseksatexm,    &  ! [SS-SWC S-2.12B]
               &      layer, cofani, state%soilwater%gwl, l, state%drainage%qdrain, state%drainage%qdra, &
-              &      Swdivdinf, Swnrsrf, SwTopnrsrf, Zbotdr, dt, FacDpthInf, owltab, t1900)  !  Divdra, infiltration
+              &      Swdivdinf, Swnrsrf, SwTopnrsrf, Zbotdr, state%timecontrol%dt, FacDpthInf, owltab, state%timecontrol%t1900)  !  Divdra, infiltration
                   !       redistribute qdrain with new top boundary for discharge layers
                   if (swdislay .eq. 2) then
                      do level = 1, nrlevs
@@ -670,9 +672,10 @@ owltab,t1900,swallo,drares,infres,qdrtab,nrlevs,swnrsrf,cofintfl,expintfl,dt,sha
     !!@endnote
   ! SS-DRST Phase 2 Task 4: qdrain removed from use-variables; written via state%drainage%qdrain.
   ! SS-SWC Phase 2 S-2.8: gwl and pond removed from use-list; read from state%soilwater.
-  use variables, only: swsec,swsrf,nrlevs,nrpri,zbotdr,taludr,widthr,pondmx,swdtyp,dt,wlp,l,rdrain,rinfi,          &
+  ! [SS-TC TC-14] t1900, dt read via state%timecontrol (ADR 0041)
+  use variables, only: swsec,swsrf,nrlevs,nrpri,zbotdr,taludr,widthr,pondmx,swdtyp,wlp,l,rdrain,rinfi,          &
               rentry, rexit, gwlinf, impend, nmper, wscap, swnrsrf, rsurfdeep, rsurfshallow, cofintfl,              &
-                                    expintfl, t1900, FlMacropore, NumLevRapdra
+                                    expintfl, FlMacropore, NumLevRapdra
 
 ! --- global
                real(8) dh
@@ -834,17 +837,17 @@ owltab,t1900,swallo,drares,infres,qdrtab,nrlevs,swnrsrf,cofintfl,expintfl,dt,sha
                            messag = 'sw-management periods(IMPER), more than defined'
                            call fatalerr_collected('Bocodre', messag)
                         end if
-                        if (t1900 - 1.d0 + 0.1d-10 .gt. impend(imper)) goto 800
+                        if (state%timecontrol%t1900 - 1.d0 + 0.1d-10 .gt. impend(imper)) goto 800
 
 ! ---   determine whether the system will become empty
-                        dvmax = (state%drainage%qdrd + wscap(imper))*dt
+                        dvmax = (state%drainage%qdrd + wscap(imper))*state%timecontrol%dt
                         swstmax = swst + dvmax
 
                         if (swstmax .lt. 0.0d0) then
 ! ---     storage decreases to below zero, then the surface water system
 !         falls dry; make the total infiltration exactly equal to the
 !         available amount:
-                           qdrdm = -(swst + wscap(imper)*dt)/dt
+                           qdrdm = -(swst + wscap(imper)*state%timecontrol%dt)/state%timecontrol%dt
                            qdratio = qdrdm/state%drainage%qdrd
 
 ! ---     Error handling

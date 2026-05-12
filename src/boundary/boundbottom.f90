@@ -69,6 +69,11 @@ contains
         character(len=300) messag
 
         ! ----------------------------------------------------------------------
+        ! [SS-TC TC-14] alias TC fields for bare reads below
+        associate( t1900 => state%timecontrol%t1900, &
+                   dt    => state%timecontrol%dt,    &
+                   t     => state%timecontrol%t,     &
+                   date  => state%timecontrol%date )
         twopi = 8.0d0*datan(1.0d0)
         freq = twopi/365.0d0
         ! ----------------------------------------------------------------------
@@ -192,6 +197,7 @@ contains
 
         state%soilwater%qbot_nonfrozen = state%soilwater%qbot
 
+        end associate  ! [SS-TC TC-14] t1900/dt/t/date => state%timecontrol
         return
     end subroutine BoundBottom
 

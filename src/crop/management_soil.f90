@@ -468,7 +468,8 @@ contains
       Pcresbott  = Pcresbott  + pnratio * iNLOSSR_1
 
       write (nut,'(a11,a1,i3,a1,i6,99(a1,1pe11.4:))')                   &
-     &    date,comma,daynr,comma,daycum,comma,                          &
+     &    state%timecontrol%date,comma,state%timecontrol%daynr,comma,   &
+     &    state%timecontrol%daycum,comma,                               &
      &    t4*FOM_old,comma,t4*FOM_end,comma,t4*(FOM_old-FOM_end),comma, &
      &    t4*FOM_add,comma,t4*FOM_cres,comma,                           &
      &    t4*FOM2Bio,comma,t4*FOM2Hum,comma,t4*FOM_dis,comma,           &
@@ -564,10 +565,10 @@ contains
 
 ! outout to CROP_EXT file
 
-      if (flCropExt .and.  floutput ) then
+      if (flCropExt .and.  state%timecontrol%floutput ) then
 
          write(cropext,'(a10,8(a1,1pe11.4))')                           &
-     &         date,comma,Ntotuptake,comma,Ptotuptake,comma,DMcressur, &
+     &         state%timecontrol%date,comma,Ntotuptake,comma,Ptotuptake,comma,DMcressur, &
      &         comma,Ncressurf,comma,Pcressurf,comma,DMcresbott,        &
      &         comma,Ncresbott,comma,Pcresbott
 

@@ -8,63 +8,25 @@
       implicit none 
 
 ! --- time & control variables
-      flprintdt          = .false. 
-      flprintshort       = .false. 
-      floutputshort      = .false. 
-      tc_datea            = 0
-      tc_nextyear          = 0
-      tc_flprevious        = 0
-      tc_flTnext           = .false.
-      tc_fsec              = 0.0
-      tc_tchange           = 0.0d0
-      tc_dtEvent           = 0.0d0
-      tc_tEvent            = 0.0d0
-      tc_tcumold           = 0.0d0
-      tc_dtprevious        = 0.0d0
-      tc_tmptimestart      = 0.0
-      tc_tmptimeend        = 0.0
-      nprintday          = 0 
-      nprintcount        = 0 
-      cntper             = 0 
-      daycum             = 0 
-      daynr              = 0 
-      imonth             = 0 
-      ioutdat            = 0 
-      ioutdatint         = 0 
-      isteps             = 0 
-      iyear              = 0 
-      iyearm1            = 0 
-      logf               = 0 
+      flprintdt          = .false.
+      ! [SS-TC] retired 2026-05-12 — TimeControl runtime fields default to zero in state%timecontrol (ADR 0041)
+      nprintday          = 0
+      logf               = 0
       ex_tlast            = 0.0d0
-      period             = 0 
-      swheader           = 0 
-      swodat             = 0 
-      swres              = 0 
-      swscre             = 0 
-      dt                 = 0.0d0 
-      dtmax              = 0.0d0 
-      dtmin              = 0.0d0 
-      outdat             = 0.0d0 
-      outdatint          = 0.0d0 
-      outper             = 0.0d0 
-      t                  = 0.0d0 
-      t1900              = 0.0d0 
-      tcum               = 0.0d0 
-      tend               = 0.0d0 
-      tstart             = 0.0d0 
-      flbaloutput        = .false. 
-      fldayend           = .false. 
-      fldaystart         = .false. 
-      fldecdtmin         = .false.
-      fldtmin            = .false. 
-      fldtreduce         = .false. 
-      flheader           = .false. 
-      floutput           = .false. 
-      flrunend           = .false. 
-      flSwapShared       = .false. 
-      flyearstart        = .false. 
-      flzerocumu         = .false. 
-      flzerointr         = .false. 
+      period             = 0
+      swheader           = 0
+      swodat             = 0
+      swres              = 0
+      swscre             = 0
+      dtmax              = 0.0d0
+      dtmin              = 0.0d0
+      outdat             = 0.0d0
+      outdatint          = 0.0d0
+      tend               = 0.0d0
+      tstart             = 0.0d0
+      flSwapShared       = .false.
+      flzerocumu         = .false.
+      flzerointr         = .false.
 
 ! --- crop variables (not crop specific, such as crop calendar)
       crp                = 0 
@@ -81,24 +43,20 @@
       flCropHarvest      = .false.
       
 ! --- meteo variables
-      daymeteo           = 0 
+      ! [SS-TC] daymeteo/rainrec/swmeteo/wrecord/yearmeteo retired to state%timecontrol (ADR 0041)
       idregr             = 0
       iharvest           = 1
       ilvold             = 0
       ilvoldpot          = 0
       iseqgm             = 0
       iseqgmpot          = 0
-      nmetdetail         = 0 
-      rainrec            = 0 
-      swdivide           = 0 
-      swetr              = 0 
-      swetsine           = 0 
-      swinter            = 0 
-      swmetdetail        = 0 
-      swmeteo            = 0 
-      swrain             = 0 
-      wrecord            = 0 
-      yearmeteo          = 0 
+      nmetdetail         = 0
+      swdivide           = 0
+      swetr              = 0
+      swetsine           = 0
+      swinter            = 0
+      swmetdetail        = 0
+      swrain             = 0
       ! [SS-ATM A-2.6] aintcdt/atmdem/caintc/cevap/cgrai/cnrai/cpeva/cptra retired to state%atmosphere
       alt                = 0.0d0
       altw               = 0.0d0
@@ -126,7 +84,7 @@
       laiexppot          = 0.0d0 
       laimax             = 0.0d0 
       lat                = 0.0d0 
-      metperiod          = 0.0d0 
+      ! [SS-TC] metperiod retired to state%timecontrol%metperiod (ADR 0041)
       ! [SS-ATM A-2.6] nraida/nraidt/peva/pevaday/ptra/ptraday retired to state%atmosphere
       nrain              = 0.0d0
       rad                = 0.0d0 
@@ -145,10 +103,7 @@
       tpot               = 0.0d0 
       ! [SS-SWC] tra retired — soilwater_init handles init via state%soilwater%intr%tra
       ! tra                = 0.0d0
-      fletsine           = .false.
-      flmeteodt          = .false.
-      flmetdetail        = .false. 
-      flrainintens       = .false.
+      ! [SS-TC] fletsine/flmeteodt/flmetdetail/flrainintens retired to state%timecontrol (ADR 0041)
 
 ! --- irrigation variables
       irg                = 0 
@@ -181,9 +136,7 @@
       tstairrig          = 0.0d0 
       tendirrig          = 0.0d0 
       treltab            = 0.0d0 
-      flheadirg          = .false. 
-      flirrigate         = .false. 
-      flIrg1Start        = .false. 
+      ! [SS-TC] flheadirg/flirrigate/flIrg1Start retired to state%timecontrol (ADR 0041)
       FlIrrigationOutput = .false. 
 
 ! --- soilwater variables
@@ -490,7 +443,7 @@
       zi                 = 0.0d0 
       zintf              = 0.0d0 
       ! ztopdislay         = 0.0d0   ! Moved to drainage_state_t — drainage_init handles (ADR 0031)
-      fldrain            = .false. 
+      ! [SS-TC] fldrain retired to state%timecontrol%flDrain (ADR 0041)
       ! [SS-SWC] fllowgwl retired — soilwater_init handles init via state%soilwater%fllowgwl
       ! fllowgwl           = .false.
       flrunon            = .false. 
@@ -529,7 +482,7 @@
       ! [SS-HEAT] Task 9: tetop retired to state%heat%tetop
       ! tetop              = 0.0d0
       zh                 = 0.0d0 
-      fltemperature      = .false. 
+      ! [SS-TC] fltemperature retired to state%timecontrol%flTemperature (ADR 0041)
 
 ! --- snow variables
       snw                = 0
@@ -539,7 +492,7 @@
       snowcoef           = 0.0d0
       TePrRain           = 0.0d0 
       TePrSnow           = 0.0d0 
-      flsnow             = .false. 
+      ! [SS-TC] flsnow retired to state%timecontrol%flSnow (ADR 0041)
 
 ! --- solute variables
       nconc              = 0 
@@ -600,7 +553,7 @@
 !     sqsur              = 0.0d0   ! moved to solute_state_t (ADR 0032)
       tscf               = 0.0d0 
       zc                 = 0.0d0 
-      flsolute           = .false. 
+      ! [SS-TC] flsolute retired to state%timecontrol%flSolute (ADR 0041)
       flAgeTracer        = .false. 
 
 ! --- macropore retirement [MACRO-RETIRE 2026-05-12] — ADR 0040
@@ -707,7 +660,7 @@
       owltab                = 0.0d0
       ! SS-SWST Phase 2 Task 11 C3: hwlman/wlsold removed (state%surfacewater owns them, default=0).
       ! qdrd                  = 0.0d0  ! Moved to drainage_state_t — drainage_init handles (ADR 0031)
-      flsurfacewater       = .false.
+      ! [SS-TC] flsurfacewater retired to state%timecontrol%flSurfaceWater (ADR 0041)
       ! SS-SWST Phase 2 Task 11 C3: overfl removed (state%surfacewater%overfl, default=.false.).
 
       return

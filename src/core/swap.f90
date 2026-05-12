@@ -66,12 +66,12 @@ subroutine swap(iCaller, iTask, toswap, fromswap)
 ! SS-TC TC-13: flyearstart dropped (read via tc_flYearStart ASSOCIATE); fldayend dropped (read via tc_flDayEnd ASSOCIATE)
 !              daynr dropped (read via tc_daynr ASSOCIATE); fldaystart kept (DLL handle_exchange writes via host assoc)
 !              iyear kept (DLL handle_exchange writes via host assoc)
-use variables, only : fldaystart, flswapshared, flsurfacewater, flmacropore, fltemperature, flsnow,        &
-                      flsolute, flcropnut, flirrigate, flagetracer, flrunend, flmeteodt, fletsine, swfrost, fldtreduce, &
-                      swusecn, fldrain, fldecmprat, flcropcalendar, flmaxitertime, floutput,         &
-                      floutputshort, flharvestday, flcropoutput, swcrp, flirrigationoutput, swend, project, &
+! [SS-TC TC-14] TC fields retired from this only-list — accessed via state%timecontrol
+use variables, only : flswapshared, flmacropore, flcropnut, flagetracer, swfrost, &
+                      swusecn, fldecmprat, flcropcalendar, flmaxitertime,                &
+                      flharvestday, flcropoutput, swcrp, flirrigationoutput, swend, project, &
                       flTillage, flSSDI, &
-                      iyear, numnod, numlay
+                      numnod, numlay
 use timestep_control_mod, only: fldecdt
 use swap_state_mod, only: swap_state_t
 use soilwater_state_mod, only: soilwater_init
@@ -104,7 +104,8 @@ use soilhydraulics_mod, only: soilwater, SoilWaterStateVar
 use WC_K_models_04_11, only: bind_cofgen_target
 use soilhydraulics_utils, only: bind_state_targets, bind_tc_target
 ! [SS-SWC S-2.12B] transient seed buffers from config_to_variables
-use config_to_variables_mod, only: h_init_buf, pondini_init_buf, pond_init_buf
+use config_to_variables_mod, only: h_init_buf, pondini_init_buf, pond_init_buf, &
+                                   tc_iyear_init_buf, tc_imonth_init_buf, tc_dt_init_buf
 use irrigation_mod, only: irrigation, SSDI_irrigation
 use management_soil_mod, only: SoilManagement
 use error_mod, only: fatalerr_collected
@@ -187,6 +188,12 @@ if (iTask == 1) then
       call config_to_variables(config)
    end block
 
+   ! [SS-TC TC-14] seed state%timecontrol from transient buffers before
+   ! TimeControl(1) consumes them (iyear/imonth derived from tstart, dt from config).
+   state%timecontrol%iyear  = tc_iyear_init_buf
+   state%timecontrol%imonth = tc_imonth_init_buf
+   state%timecontrol%dt     = tc_dt_init_buf
+
 !  shared simulation
    if (flSwapShared) call SharedSimulation(1)
 
@@ -228,6 +235,14 @@ if (iTask == 1) then
          if (config%meteo%snow%swsnow /= 1) state%atmosphere%ssnow = 0.0d0
       end if
    end if
+
+   ! [SS-TC TC-14] alias TC fields used in init block
+   block
+   associate( &
+      flSnow         => state%timecontrol%flSnow,         &
+      flSolute       => state%timecontrol%flSolute,       &
+      flSurfaceWater => state%timecontrol%flSurfaceWater, &
+      flTemperature  => state%timecontrol%flTemperature )
 
    call tillage_init(state%tillage, numlay)         ! SS-TIL T-2: allocate/zero tillage state unconditionally
    if (flTillage) call DoTillage(1, state)
@@ -286,6 +301,8 @@ if (iTask == 1) then
       ! [MACRO-RETIRE 2026-05-12] MacroPoreOutput retired (ADR 0040).
       if (flSurfaceWater) call SurfaceWaterOutput(1, state)
    end if
+   end associate
+   end block
 
 !  Specific for exchange when called as DLL
    if (iCaller /= 0) call handle_exchange(11, flError, state)
@@ -303,14 +320,25 @@ if (iTask == 2) then
 !  Specific for exchange when called as DLL
    if (iCaller /= 0) call handle_exchange(21, flError, state); if (flError) return
 
-!  SS-TC TC-13: bind TC read-only aliases for timestep-loop flags and calendar fields.
+!  [SS-TC TC-14] bind TC aliases for all timestep-loop fields used below
    associate( &
-      tc_flYearStart => state%timecontrol%flYearStart, &  ! SS-TC TC-13
-      tc_flDayStart  => state%timecontrol%flDayStart,  &  ! SS-TC TC-13
-      tc_flDayEnd    => state%timecontrol%flDayEnd,     &  ! SS-TC TC-13
-      tc_daynr       => state%timecontrol%daynr,        &  ! SS-TC TC-13
-      tc_iyear       => state%timecontrol%iyear          &  ! SS-TC TC-13
-   )
+      tc_flYearStart => state%timecontrol%flYearStart, &
+      tc_flDayStart  => state%timecontrol%flDayStart,  &
+      tc_flDayEnd    => state%timecontrol%flDayEnd,    &
+      tc_daynr       => state%timecontrol%daynr,       &
+      tc_iyear       => state%timecontrol%iyear,       &
+      flrunend       => state%timecontrol%flRunEnd,    &
+      flOutput       => state%timecontrol%floutput,    &
+      flOutputShort  => state%timecontrol%floutputshort,&
+      flMeteoDt      => state%timecontrol%flmeteodt,   &
+      flETSine       => state%timecontrol%fletsine,    &
+      flSnow         => state%timecontrol%flSnow,      &
+      flSolute       => state%timecontrol%flSolute,    &
+      flTemperature  => state%timecontrol%flTemperature,&
+      flDrain        => state%timecontrol%flDrain,     &
+      flSurfaceWater => state%timecontrol%flSurfaceWater,&
+      flIrrigate     => state%timecontrol%flIrrigate,  &
+      fldtreduce     => state%timecontrol%fldtreduce )
 
 !  loop with soil water time step during entire simulation period
    do while (.not.flrunend)
@@ -501,13 +529,14 @@ if (iTask == 3) then
       if (swend.eq.1) call SoilWaterOutput(3, state)
       call SoilWaterOutput(4, state)
       if (swcrp.eq.1) call CropOutput(3, state)
-      if (flTemperature)        call TemperatureOutput(3, state)
-      if (flSolute)             call SoluteOutput(3, state)
+      ! [SS-TC TC-14] flag reads via state%timecontrol
+      if (state%timecontrol%flTemperature)  call TemperatureOutput(3, state)
+      if (state%timecontrol%flSolute)       call SoluteOutput(3, state)
       if (flAgeTracer)          call AgeTracerOutput(3, state)
 !     ADR 0009 Phase 5+: IrrigationOutput deleted (swirg=0).
-      if (flSnow)               call SnowOutput(3, state)
+      if (state%timecontrol%flSnow)         call SnowOutput(3, state)
       ! [MACRO-RETIRE 2026-05-12] MacroPoreOutput retired (ADR 0040).
-      if (flSurfaceWater)       call SurfaceWaterOutput(3, state)
+      if (state%timecontrol%flSurfaceWater) call SurfaceWaterOutput(3, state)
       if (flCropNut)            call SoilManagement(7, state)
    end if
 
@@ -528,7 +557,8 @@ contains
    subroutine handle_exchange(task, flError, state)
    use variables, only : swetr, swdivide, swmetdetail, swrain, logf
    ! [SS-SWC S-2.12B] theta/iqrot/inqrot retired — read via state%soilwater
-   use variables, only : iyear, Tstart, Tend, numnod, dz  ! SS-TC TC-13: t1900 dropped (read via state%timecontrol%t1900)
+   ! [SS-TC TC-14] iyear retired — read via state%timecontrol%iyear
+   use variables, only : Tstart, Tend, numnod, dz  ! SS-TC TC-13: t1900 dropped (read via state%timecontrol%t1900)
    ! SS-ATM A-2.6: iptra retired — read from state%atmosphere%intr%iptra (host association)
    use variables, only : lai, ch, rd, flCropCalendar, flCropEmergence, flCropHarvest
    use variables, only : arad, atmn, atmx, awin, ahum, wet, arai, aetr, rainfluxarray, raintimearray   !, rainamount
@@ -603,16 +633,15 @@ contains
          write (logf, '(A)') 'Only single day allowed: tend must equal tstart'
       end if
 
-      ! need to re-initialize
-      flrunend   = .false.
-      flDayStart = .true.
+      ! need to re-initialize: TimeControl(1) reads tc_iyear_init_buf as the
+      ! pre-init seed, which is then written back into state%timecontrol via
+      ! the transient-buffer pattern. flrunend/flDayStart get reset inside
+      ! TimeControl(1). state is INTENT(IN) in handle_exchange so we cannot
+      ! write state%timecontrol%* directly here.
 
       ! first set iyear for proper use in TimeControl; this allows for start any time, irrespective of tstart in swap.swp
       call dtdpar (Tstart, datea, fsec)
-      iyear = datea(1)
-      ! D8: state%timecontrol%iyear is seeded inside TimeControl(case=1) via the
-      ! transient-buffer pattern — no direct write here (state is INTENT(IN) in
-      ! handle_exchange; the TC pre-init seed at case(1) covers this path).
+      tc_iyear_init_buf = datea(1)  ! [SS-TC TC-14] picked up by TimeControl(1)
       call TimeControl(1, state)
 
       ! External forcing mode: provide full-year availability without reading meteo files

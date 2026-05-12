@@ -88,16 +88,19 @@ contains
 ! ----------------------------------------------------------------------
 ! --- local variables
       real(8) h0,k1Atm,p1,p2,p2Mp,q1,RsRoMp
-      
+      real(8) :: dt   ! [SS-TC TC-14] local copy of state%timecontrol%dt
+
       ! Hydraulic conductivity for complete frozen soils (constant)
       real(8), parameter :: hconode_vsmall = 1.0d-10
 
 ! ----------------------------------------------------------------------
 ! --- Initialisation
+      dt = state%timecontrol%dt   ! [SS-TC TC-14]
 
 ! --- runon of present day
       ! [SS-SWC S-2.12B] legacy runon retired — write directly to state%soilwater%runon
-      if (flDayStart .and. flrunon) state%soilwater%runon = runonarr(daycum+1)
+      ! [SS-TC TC-14] flDayStart/daycum read via state%timecontrol
+      if (state%timecontrol%flDayStart .and. flrunon) state%soilwater%runon = runonarr(state%timecontrol%daycum+1)
 
       state%soilwater%FlRunoff = .false.
       state%soilwater%QMpLatSs = 0.0d0
@@ -179,7 +182,7 @@ contains
 ! [MACRO-RETIRE 2026-05-12] macropore overland-flow branch deleted (ADR 0040).
 ! Legacy block ran only when FlMacropore=.true. — see legacy/swap-4.2.0.
       endif
-!  
+!
       return
       end subroutine boundtop
 
@@ -195,8 +198,9 @@ contains
 !     File usage         : -
 ! ----------------------------------------------------------------------
       ! [SS-SWC S-2.12B] pond retired; read/written via state%soilwater%pond
-      use variables, only: swdra,FlMacropore,disnod,dt,H0max,k1max,pondmx,q0,rsro,rsroexp, &
-                           swpondmx,pondmxtab,t1900  ! h,pondm1 dropped [SS-SWC S-2.5]
+      ! [SS-TC TC-14] dt, t1900 read via state%timecontrol (ADR 0041)
+      use variables, only: swdra,FlMacropore,disnod,H0max,k1max,pondmx,q0,rsro,rsroexp, &
+                           swpondmx,pondmxtab  ! h,pondm1 dropped [SS-SWC S-2.5]
       use array_utils, only: afgen
       use surfacewater_utils, only: runoff
       use swap_state_mod, only: swap_state_t
@@ -209,8 +213,11 @@ contains
       INTEGER i
       real(8) h0,h0min,p1,p2
       real(8) q0hlp
+      real(8) :: dt, t1900   ! [SS-TC TC-14] local copies of state%timecontrol fields
 
 ! ----------------------------------------------------------------------
+      dt    = state%timecontrol%dt
+      t1900 = state%timecontrol%t1900
 
 ! --  in case of time dependent ponding: determine pondmx
       if (swpondmx.eq.1) then

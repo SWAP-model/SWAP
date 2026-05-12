@@ -73,8 +73,7 @@ contains
       ! Beginning of year: process rain events
       if (tc_flYearStart .and. tc_flrainintens) then
          call ProcessRainEvents(state)
-         flYearStart = .false.
-         tc_flYearStart = .false.   ! SS-TC TC-9 co-write
+         tc_flYearStart = .false.   ! [SS-TC TC-14] legacy flYearStart write retired
       end if
 
       ! --- calculations of meteo variables on time step basis ---
@@ -136,8 +135,8 @@ contains
   !! - O: arai, rainfluxarray, raintimearray
   !! @endnote
    subroutine ProcessRainEvents(state)
-      ! SS-TC TC-9: tcum removed from only-list; read via state%timecontrol.
-      use variables, only: swrain,yearmeteo,dtmin,raintab,tend,tstart,wet,nmrain,timjan1,rainamount,rainrec,arai,rainfluxarray,raintimearray
+      ! [SS-TC TC-14] yearmeteo,timjan1,rainrec read/written via state%timecontrol (ADR 0041)
+      use variables, only: swrain,dtmin,raintab,tend,tstart,wet,nmrain,rainamount,arai,rainfluxarray,raintimearray
       use array_utils, only: afgen
       use swap_array_dimensions, only: mrain
       implicit none
@@ -151,8 +150,11 @@ contains
       real(8) raintime, ratimar(mrain), tendyear, vsmall, wght, wwet(368)
       vsmall = 1.0d-8
 
-      ! SS-TC TC-9: tcum read via state%timecontrol (tc_tcum alias).
-      associate( tc_tcum => state%timecontrol%tcum )  ! TC-9
+      ! [SS-TC TC-14] alias TC fields directly so bare names below resolve to state%timecontrol
+      associate( tc_tcum => state%timecontrol%tcum, &
+                 yearmeteo => state%timecontrol%yearmeteo, &
+                 timjan1 => state%timecontrol%timjan1, &
+                 rainrec => state%timecontrol%rainrec )
 
       ! === Process rain events on yearly basis ===
 
@@ -356,13 +358,15 @@ contains
       type(swap_state_t), intent(inout) :: state
         !! Simulation state (passed through to reduceva for atmosphere dual-writes)
 
-      ! SS-TC TC-9: tc_* aliases for flrainintens, tcum, dt, flmetdetail, flUpdMetDet.
+      ! [SS-TC TC-14] alias TC fields directly so bare names below resolve to state%timecontrol
       associate( &
-        tc_flrainintens => state%timecontrol%flrainintens,  &  ! TC-9
-        tc_tcum         => state%timecontrol%tcum,          &  ! TC-9
-        tc_dt           => state%timecontrol%dt,            &  ! TC-9
-        tc_flmetdetail  => state%timecontrol%flmetdetail,   &  ! TC-9
-        tc_flUpdMetDet  => state%timecontrol%flUpdMetDet    )  ! TC-9
+        tc_flrainintens => state%timecontrol%flrainintens,  &
+        tc_tcum         => state%timecontrol%tcum,          &
+        tc_dt           => state%timecontrol%dt,            &
+        tc_flmetdetail  => state%timecontrol%flmetdetail,   &
+        tc_flUpdMetDet  => state%timecontrol%flUpdMetDet,   &
+        rainrec         => state%timecontrol%rainrec,       &
+        wrecord         => state%timecontrol%wrecord )
 
       ! === Precipitation intensities ===
 
@@ -390,8 +394,7 @@ contains
             state%atmosphere%nraidt  = nrain(wrecord)
             state%atmosphere%aintcdt = state%atmosphere%graidt - state%atmosphere%nraidt
 
-            flUpdMetDet = .false.
-            tc_flUpdMetDet = .false.   ! SS-TC Task 5 / TC-9 co-write
+            tc_flUpdMetDet = .false.   ! [SS-TC TC-14] legacy flUpdMetDet write retired
          end if
 
          ! Per time step: calculate soil evaporation rate of current time step

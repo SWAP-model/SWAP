@@ -21,34 +21,41 @@
       ! real(8)   iqredfrs_day       ! moved to state%soilwater%intr%iqredfrs_day
       ! real(8)   iptra_day          ! moved to state%soilwater%intr%iptra_day
 
+      ! ========================================================================
+      ! [SS-TC] retired 2026-05-12 — TimeControl runtime fields moved to
+      !   state%timecontrol. See:
+      !     docs/superpowers/specs/2026-05-12-state-migration-timecontrol-design.md
+      !     ADR 0041 (next task TC-15)
+      ! ========================================================================
       ! TimeControl persistent state (formerly local SAVE variables in timecontrol.f90)
-      integer   tc_datea(6)        ! Date array used in calendar conversions
-      integer   tc_nextyear        ! Year counter used by TimeControl
-      integer   tc_flprevious      ! Status of previous timestep interval
-      logical   tc_flTnext         ! Flag used by TimeControl
-      real(4)   tc_fsec            ! Seconds fraction in date conversions
-      real(8)   tc_tchange         ! Time of next output/control change
-      real(8)   tc_dtEvent         ! Current event time step
-      real(8)   tc_tEvent          ! Time to next event within day
-      real(8)   tc_tcumold         ! Previous cumulative time
-      real(8)   tc_dtprevious      ! Length of previous timestep
-      real(4)   tc_tmptimestart    ! Timing support (IterTime)
-      real(4)   tc_tmptimeend      ! Timing support (IterTime)
-      logical   FlOpenFileDev
+      ! integer   tc_datea(6)        ! moved to state%timecontrol%datea
+      ! integer   tc_nextyear        ! moved to state%timecontrol%nextyear
+      ! integer   tc_flprevious      ! moved to state%timecontrol%flprevious
+      ! logical   tc_flTnext         ! moved to state%timecontrol%flTnext
+      ! real(4)   tc_fsec            ! moved to state%timecontrol%fsec
+      ! real(8)   tc_tchange         ! moved to state%timecontrol%tchange
+      ! real(8)   tc_dtEvent         ! moved to state%timecontrol%dtEvent
+      ! real(8)   tc_tEvent          ! moved to state%timecontrol%tEvent
+      ! real(8)   tc_tcumold         ! moved to state%timecontrol%tcumold
+      ! real(8)   tc_dtprevious      ! moved to state%timecontrol%dtprevious
+      ! real(4)   tc_tmptimestart    ! moved to state%timecontrol%tmptimestart
+      ! real(4)   tc_tmptimeend      ! moved to state%timecontrol%tmptimeend
+      ! logical   FlOpenFileDev      ! moved to state%timecontrol%flOpenFileDev
       integer   nprintday          ! Number of output times during one day
-      logical   flprintdt          ! Flag indicating output every dt 
-      logical   flprintshort       ! Flag indicating several output times during a day
-      logical   floutputshort      ! Flag indicating time for output during a day is reached
-      integer   nprintcount        ! Counter for output during a day 
-      integer   cntper             ! Day number of intermediate period
-      integer   daycum             ! Day number from start of simulation
-      integer   daynr              ! Day number of calendar year
-      integer   imonth             ! Month number of calendar year
-      integer   ioutdat            ! Counter of output date for water and solute balance
-      integer   ioutdatint         ! Counter of intermediate output date
-      integer   isteps             ! Number of time steps from the start of the day
-      integer   iyear              ! Year number of calendar year
-      integer   iyearm1            ! Year number of previous calendar year
+      logical   flprintdt          ! Flag indicating output every dt
+      ! [SS-TC] retired 2026-05-12 — moved to state%timecontrol%* (ADR 0041)
+      ! logical   flprintshort       ! moved to state%timecontrol%flprintshort
+      ! logical   floutputshort      ! moved to state%timecontrol%floutputshort
+      ! integer   nprintcount        ! moved to state%timecontrol%nprintcount
+      ! integer   cntper             ! moved to state%timecontrol%cntper
+      ! integer   daycum             ! moved to state%timecontrol%daycum
+      ! integer   daynr              ! moved to state%timecontrol%daynr
+      ! integer   imonth             ! moved to state%timecontrol%imonth
+      ! integer   ioutdat            ! moved to state%timecontrol%ioutdat
+      ! integer   ioutdatint         ! moved to state%timecontrol%ioutdatint
+      ! integer   isteps             ! moved to state%timecontrol%isteps
+      ! integer   iyear              ! moved to state%timecontrol%iyear
+      ! integer   iyearm1            ! moved to state%timecontrol%iyearm1
       integer   logf               ! Internal number of logbook output file *.LOG
 
       ! Exchange/DLL persistent state (formerly local SAVE in swap.f90 handle_exchange)
@@ -81,37 +88,43 @@
       integer   swodat             ! Switch for extra, specific output dates in the input file: 0 = no; 1 = yes
       integer   swres              ! Switch for counter of output interval: 0 = no reset; 1 = reset at start of calendar year
       integer   swscre             ! Switch of screen display: 0 = no display; 1 = summary water balance; 2 = daynumber
-      real(8)   dt                 ! Time step (T)
+      ! [SS-TC] retired 2026-05-12 — moved to state%timecontrol%dt (ADR 0041)
+      ! real(8)   dt                 ! moved to state%timecontrol%dt
       real(8)   dtmax              ! Maximum time step (T)
       real(8)   dtmin              ! Minimum time step (T)
       real(8)   outdat(maout)      ! Array with output dates for water and solute balances
       real(8)   outdatint(maout)   ! Array with intermediate output dates
-      real(8)   outper             ! Length of actual output interval (T)
-      real(8)   t                  ! Time since start of calendar year (T)
-      real(8)   t1900              ! Time since 1900 (T)
-      real(8)   tcum               ! Time since start of simulation (T)
+      ! [SS-TC] retired 2026-05-12 — moved to state%timecontrol%* (ADR 0041)
+      ! real(8)   outper             ! moved to state%timecontrol%outper
+      ! real(8)   t                  ! moved to state%timecontrol%t
+      ! real(8)   t1900              ! moved to state%timecontrol%t1900
+      ! real(8)   tcum               ! moved to state%timecontrol%tcum
       real(8)   tend               ! End date of simulation run
       real(8)   tstart             ! Start date of simulation run
-      logical   flbaloutput        ! Flag indicating time for output of water and solute balance
-      logical   fldayend           ! Flag indicating end of day
-      logical   fldaystart         ! Flag indicating that this time step is the first one of a day
-      logical   fldecdtmin         ! Flag indicating that the time step should be reset to the minimum time step
-      logical   fldtmin            ! Flag indicating that the time step is equal to the minimum time step
-      logical   fldtreduce
-      logical   flheader           ! Flag indicating that header should be printed in output file
-      logical   floutput           ! Flag indicating time for ouput
-      logical   flrunend           ! Flag indicating end of run
+      ! [SS-TC] retired 2026-05-12 — moved to state%timecontrol%* (ADR 0041)
+      ! logical   flbaloutput        ! moved to state%timecontrol%flbaloutput
+      ! logical   fldayend           ! moved to state%timecontrol%flDayEnd
+      ! logical   fldaystart         ! moved to state%timecontrol%flDayStart
+      ! logical   fldecdtmin         ! moved to state%timecontrol%fldecdtmin
+      ! logical   fldtmin            ! moved to state%timecontrol%fldtmin
+      ! logical   fldtreduce         ! moved to state%timecontrol%fldtreduce
+      ! logical   flheader           ! moved to state%timecontrol%flheader
+      ! logical   floutput           ! moved to state%timecontrol%floutput
+      ! logical   flrunend           ! moved to state%timecontrol%flRunEnd
       logical   flSwapShared       ! Flag to indicate the shared simultaneous simulation with other applications
-      logical   flyearstart        ! Flag indicating the beginning of a new year
-      logical   flzerocumu         ! Flag indicating that cumulative fluxes should be reset to zero
-      logical   flzerointr         ! Flag indicating that intermediate fluxes should be reset to zero
-      character(len=11) date       ! Current date
+      ! [SS-TC] retired 2026-05-12 — moved to state%timecontrol%flYearStart (ADR 0041)
+      ! logical   flyearstart        ! moved to state%timecontrol%flYearStart
+      logical   flzerocumu         ! Flag indicating that cumulative fluxes should be reset to zero (reset-arc)
+      logical   flzerointr         ! Flag indicating that intermediate fluxes should be reset to zero (reset-arc)
+      ! [SS-TC] retired 2026-05-12 — moved to state%timecontrol%date (ADR 0041)
+      ! character(len=11) date       ! moved to state%timecontrol%date
       character(len=16) outfil     ! Name of output file
       character(len=80) pathwork   ! Path to work directory
       character(len=80) project    ! Name of project
 
 ! --- meteo variables
-      integer   daymeteo           ! Calendar day number for which meteorological data should be read from input file
+      ! [SS-TC] retired 2026-05-12 — moved to state%timecontrol%daymeteo (ADR 0041)
+      ! integer   daymeteo           ! moved to state%timecontrol%daymeteo
       integer   daynrfirst         ! First calendar day number for which meteorological data is available in current year
       integer   daynrlast          ! Last calendar day number for which meteorological data is available in current year
       integer   detrecord(nmetfile) ! Record number of meteo file with detailed meteo data (-)
@@ -119,17 +132,20 @@
       integer   nmetdetail         ! Number of detailed records for ET and rainfall per day (-)
       integer   nmrain             ! Number of rain event records (-)
       integer   nofd               ! number of days for running average Tmin (-)
-      integer   rainrec            ! Actual rain record when detailed rainfall are used from separate rain file
+      ! [SS-TC] retired 2026-05-12 — moved to state%timecontrol%rainrec (ADR 0041)
+      ! integer   rainrec            ! moved to state%timecontrol%rainrec
       integer   swdivide           ! Switch on division ET into E and T: 0 = according to the SWAP traditional way; 1 = according to PMdirect
       integer   swetr              ! Switch: 0 = use daily meteorological basic data; 1 = use daily Etref values
       integer   swetsine           ! Switch: 0 = Tp and Ep uniform during a day; 1 = Tp and Ep are distributed as sine waves during a day
       integer   swinter            ! Switch for interception method: 0 = no interception; 1 = agricultural crops; 2 = trees and forests
       integer   swmetdetail        ! Switch: 0 = daily meteorological records; 1 = detailed records for both ET and rainfall
-      integer   swmeteo            ! Switch: 1 = no detailed meteo data; 2 = detailed meteo data are required for crop growth simulation
+      ! [SS-TC] retired 2026-05-12 — moved to state%timecontrol%swmeteo (ADR 0041)
+      ! integer   swmeteo            ! moved to state%timecontrol%swmeteo
       integer   swrain             ! Switch: 0 = use daily rain amounts; 1 = use daily amounts + mean intensity; 
                                    !         2 = use daily amounts + duration; 3 = use detailed rainfall data from separate file
-      integer   wrecord            ! Actual number of weather record in case of detailed weather input (< 1 day)
-      integer   yearmeteo          ! Year for which meteorological data should be read from input file
+      ! [SS-TC] retired 2026-05-12 — moved to state%timecontrol%* (ADR 0041)
+      ! integer   wrecord            ! moved to state%timecontrol%wrecord
+      ! integer   yearmeteo          ! moved to state%timecontrol%yearmeteo
       integer   ad(mrain)          ! Array with day numbers in meteo file
       integer   am(mrain)          ! Array with month numbers in meteo file
       real(8)   aetr(366)          ! Array with daily ETref input data (L/T)
@@ -178,7 +194,8 @@
       ! real(8) :: ipeva       ! Intermediate amount of potential soil evaporation (L)
       ! real(8) :: iptra       ! Intermediate amount of potential transpiration (L)
       real(8)   lat                ! Latitude of meteorological station (degrees)
-      real(8)   metperiod          ! Length of weather record in case of detailed ET and rainfall input
+      ! [SS-TC] retired 2026-05-12 — moved to state%timecontrol%metperiod (ADR 0041)
+      ! real(8)   metperiod          ! moved to state%timecontrol%metperiod
       ! real(8) :: nraida      ! Daily average net precipitation flux (L/T)
       ! real(8) :: nraidt      ! Net precipitation flux during iteration timesteps (L/T)
       real(8)   nrain(96)          ! In case of detailed weather input, calculated netto rain of each weather record (L/T)
@@ -194,7 +211,8 @@
       real(8)   rh                 ! Relative air humidity (-)
       real(8)   tav                ! Average air temperature of a day (oC)
       real(8)   tavd               ! Average air temperature during day time (oC)
-      real(8)   timjan1            ! January first of meteo year as number of day since 1-1-1900(T) 
+      ! [SS-TC] retired 2026-05-12 — moved to state%timecontrol%timjan1 (ADR 0041)
+      ! real(8)   timjan1            ! moved to state%timecontrol%timjan1
       real(8)   tmn                ! Minimum air temperature of current day (oC)
       real(8)   tmnr               ! Average of minimum air temperature during past 7 days (oC)
       real(8)   tmx                ! Maximum air temperature of current day (oC)
@@ -202,11 +220,12 @@
       ! [SS-SWC] retired 2026-05-12 — moved to state%soilwater%intr%tra (ADR 0038)
       ! real(8)   tra                ! Actual transpiration flux (L/T)
       real(8)   wet(366)           ! Fraction of each day the crop is wet (L)    
-      logical   fletsine           ! Flag indicating that Tp and Ep are distributed according to a sine wave 
-      logical   flmeteodt          ! Flag indicating that calculations of meteo variables on time step basis is required    !!!!!!!!!!!  Robnew
-      logical   flmetdetail        ! Flag indicating that detailed meteorological records for both ET and rainfall are used 
-      logical   flrainintens       ! Flag indicating that rainfall intensity info in combination with daily ET records is used              !!!!!!!!!!!  Robnew
-      logical   flupdmetdet        ! Flag indicating that update of detailed meteorological input within the day is required               !!!!!!!!!!!  Robnew
+      ! [SS-TC] retired 2026-05-12 — moved to state%timecontrol%* (ADR 0041)
+      ! logical   fletsine           ! moved to state%timecontrol%fletsine
+      ! logical   flmeteodt          ! moved to state%timecontrol%flmeteodt
+      ! logical   flmetdetail        ! moved to state%timecontrol%flmetdetail
+      ! logical   flrainintens       ! moved to state%timecontrol%flrainintens
+      ! logical   flupdmetdet        ! moved to state%timecontrol%flUpdMetDet
       character(len=200) metfil    ! Name of meteorological input file
       character(len=80) pathatm    ! Path to folder with meteorological input files
       ! CSV meteo cache: pre-loaded by adapter, sliced per year by MeteoCSVYear.
@@ -272,9 +291,10 @@
       real(8)   tstairrig          ! Date after which scheduled irrigation is allowed
       real(8)   tendirrig          ! Date after which scheduled irrigation is NOT allowed
       real(8)   treltab(14)        ! Array with minimum of ratio actual/potential transpiration as function of crop development stage
-      logical   flheadirg          ! Flag indicating that header should be printed in irrigation output file
-      logical   flirrigate         ! Flag indicating irrigation in simulation run (either fixed or scheduled)
-      logical   flIrg1Start        ! Flag indicating irrigation output of 1st crop of the simulation period
+      ! [SS-TC] retired 2026-05-12 — moved to state%timecontrol%* (ADR 0041)
+      ! logical   flheadirg          ! moved to state%timecontrol%flheadirg
+      ! logical   flirrigate         ! moved to state%timecontrol%flIrrigate
+      ! logical   flIrg1Start        ! moved to state%timecontrol%flIrg1Start
       logical   FlIrrigationOutput ! Flag indication irrigation output
       integer   dayfix             ! days since last irrigation event
 
@@ -1058,7 +1078,8 @@
       real(8)   zi(macp)           ! Array with soil depths (L) used to specify initial soil water pressure heads
       real(8)   zintf              ! Depth (L) at which fine top layer ends and coarse sub layer starts
       ! real(8)   ztopdislay(Madr)   ! Moved to drainage_state_t%ztopdislay (ADR 0031)
-      logical   fldrain            ! Flag indicating basic drainage
+      ! [SS-TC] retired 2026-05-12 — moved to state%timecontrol%flDrain (ADR 0041)
+      ! logical   fldrain            ! moved to state%timecontrol%flDrain
       logical   FlHydrLift         ! Flag indicating release of water from root to soil is allowed
       ! [SS-SWC] retired 2026-05-12 — moved to state%soilwater%fllowgwl (ADR 0038)
       ! logical   fllowgwl           ! Flag indicating precribed groundwater level below bottom soil column
@@ -1106,7 +1127,8 @@
       ! real(8)   heacap(macp)       ! Array with heat capacity for all compartments (J/cm3/K)
       ! [SS-HEAT] retired 2026-05-10 — moved to state%heat%heacon (ADR 0034)
       ! real(8)   heacon(macp)       ! Array with heat conductivity for all compartments (J/cm/K/d)
-      logical   fltemperature      ! Flag indicating simulation of soil heat flow
+      ! [SS-TC] retired 2026-05-12 — moved to state%timecontrol%flTemperature (ADR 0041)
+      ! logical   fltemperature      ! moved to state%timecontrol%flTemperature
 
 ! --- snow variables
       integer   snw                ! Internal number of output file *.SNW with snow pack data
@@ -1133,7 +1155,8 @@
       ! real(8) :: subl      ! Sublimation rate (L/T)
       real(8)   TePrRain           ! Temperature above which all precipitation is rain,[ 0.0...5.0 oC, R]
       real(8)   TePrSnow           ! Temperature below which all precipitation is snow,[-5.0...0.0 oC, R]
-      logical   flsnow             ! Flag indicating simulation of snow accumulation and melt
+      ! [SS-TC] retired 2026-05-12 — moved to state%timecontrol%flSnow (ADR 0041)
+      ! logical   flsnow             ! moved to state%timecontrol%flSnow
 
 ! --- solute variables
       integer   nconc              ! Number of initial solute concentrations as provided in the input
@@ -1196,7 +1219,8 @@
 ! real(8)   sqsur              ! Moved to solute_state_t%sqsur (ADR 0032)
       real(8)   tscf               ! Relative uptake of solutes by roots (-)
       real(8)   zc(macp)           ! Array with soil depths (L) used to specify initial solute concentrations
-      logical   flsolute           ! Flag indicating simulation of solute transport
+      ! [SS-TC] retired 2026-05-12 — moved to state%timecontrol%flSolute (ADR 0041)
+      ! logical   flsolute           ! moved to state%timecontrol%flSolute
       logical   flAgeTracer        ! Flag indicating simulation of Ageing (groundwater age)
 
 ! --- age tracer state variables (moved from local SAVE in AgeTracer subroutine)
@@ -1224,7 +1248,8 @@
       real(8) cQMpLatSs            ! [retired-zero] kept: soilhydraulics zero-write
       real(8) cQMpOutDrRap         ! [retired-zero] kept: waterbalance wbalance term
       real(8) dFdhMp(MaCp)         ! [retired-zero] kept: soilhydraulics dFdhM term (always 0)
-      real(8) dtold                ! Length of previous Time step (T)  [non-macropore use]
+      ! [SS-TC] retired 2026-05-12 — moved to state%timecontrol%dtold (ADR 0041)
+      ! real(8) dtold                ! moved to state%timecontrol%dtold
       real(8) DiPoCp(MaCp)         ! [retired-zero] kept: soilgrid refinement
       real(8) iQMpOutDrRap         ! [retired-zero] kept: swap_csv/swapoutput DRAINAGE accumulator
       real(8) iQInTopLatDm1        ! [retired-zero] kept: waterbalance .BMA writer
@@ -1316,7 +1341,8 @@
       ! hwlman removed (surfacewater_state_t%hwlman)
       ! wlsold removed (surfacewater_state_t%wlsold)
       ! SS-SWST Phase 2 Task 11 C2: overfl removed — state%surfacewater%overfl owns it.
-      logical flsurfacewater
+      ! [SS-TC] retired 2026-05-12 — moved to state%timecontrol%flSurfaceWater (ADR 0041)
+      ! logical flsurfacewater
       ! overfl removed (surfacewater_state_t%overfl)
 
       ! Preparation before crop growth
