@@ -496,19 +496,17 @@ owltab,swallo,drares,infres,qdrtab,nrlevs,swnrsrf,cofintfl,expintfl,shape,FlMacr
 
                end if
 
-               ! --- reset intermediate soil water fluxes
-               ! SS-CRR Phase A Task A5: intermediate cohort is identical at both
-               ! call sites; delegate to cohort reset(). See surfacewater_state_mod.
+               ! --- reset intermediate surface-water and drainage fluxes
+               ! Identical reset at both call sites (here and SurfaceWater(2));
+               ! delegate to reset_intermediate(). See surfacewater_state_mod.
                if (flzerointr) call state%surfacewater%reset_intermediate()
 
-               ! --- reset cumulative soil water fluxes
-               ! SS-CRR Phase A Task A5: drainage zeros a strict subset of the
-               ! SS-CRR Phase A correction Task 2: drainage_cumulative cohort
-               ! is gated by fldrain (active under both swdra=1 and swdra=2);
-               ! reservoir_cumulative is gated by flSurfaceWater (active only
-               ! under swdra=2). Drainage owns the drainage_cumulative reset;
-               ! reservoir_cumulative is reset by SurfaceWater(2) and never
-               ! accumulates under swdra=1 — so no reset site is needed here.
+               ! --- reset cumulative drainage fluxes
+               ! reset_cumulative_drainage zeros only the drainage-owned fields
+               ! (cqdra, cqdrain*) — gated by fldrain, active under swdra=1 OR
+               ! swdra=2. The reservoir-owned fields (cqdrd, cwsupp, cwout) are
+               ! reset by SurfaceWater(2) and never accumulate under swdra=1, so
+               ! no reservoir reset site is needed here. See ADR 0042.
                if (flzerocumu) call state%surfacewater%reset_cumulative_drainage()
 
                ! --- reset to zero if groundwater level under soil profile and return
