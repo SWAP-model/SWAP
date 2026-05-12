@@ -359,6 +359,7 @@ contains
             state%atmosphere%aintcdt = state%atmosphere%graidt - state%atmosphere%nraidt
 
             flUpdMetDet = .false.
+            state%timecontrol%flUpdMetDet = flUpdMetDet   ! SS-TC Task 5 co-write
          end if
 
          ! Per time step: calculate soil evaporation rate of current time step
