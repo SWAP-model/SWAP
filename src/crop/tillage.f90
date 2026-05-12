@@ -8,20 +8,16 @@ module tillage_mod
    use variables, only: t1900, date, swhyst, swsolu, swoxygen, flMacroPore, flksatexm, zbotcp, NumNod, Bdens, layer, ParamVG, &
                         NumLay, dz, disnod, botcom, psilt, pclay, SwDiscrvert, tend, &  ! [SS-SWC S-2.6] CofGen/pond/theta/h retired to state%soilwater
                         ! Tillage bridge variables with renaming (SAVE statements removed)
-                        swtill => till_swtill, Ntill => till_Ntill, iTill => till_iTill, &
+                        ! [SS-TIL T-5] Groups C/D/E retired from variables — reads via state%tillage
+                        swtill => till_swtill, Ntill => till_Ntill, &
                         Ntypes => till_Ntypes, i_n_model => till_i_n_model, iRedist => till_iRedist, &
-                        MaxNumSoilHo => till_MaxNumSoilHo, MaxNumSoilCP => till_MaxNumSoilCP, &
                         Max_Z_tillage => till_Max_Z_tillage, &
                         Date_tillage => till_Date_tillage, Z_tillage => till_Z_tillage, &
                         I_tillage => till_I_tillage, Type_Tillage => till_Type_Tillage, &
                         iType_Tillage => till_iType_Tillage, iTT1 => till_iTT1, iTT2 => till_iTT2, &
                         TAB_Rho_tillage => till_TAB_Rho_tillage, TAB_Rho_cons => till_TAB_Rho_cons, &
                         TAB_K_R_cons => till_TAB_K_R_cons, &
-                        TAB_Rho_match => till_TAB_Rho_match, TAB_N_match => till_TAB_N_match, &
-                        Rho_tillage => till_Rho_tillage, Rho_cons => till_Rho_cons, &
-                        Rho_last => till_Rho_last, K_R_cons => till_K_R_cons, &
-                        Rho_match => till_Rho_match, N_match => till_N_match, Slope_match => till_Slope_match, &
-                        sumDWC => till_sumDWC, sumAvail1 => till_sumAvail1, sumAvail2 => till_sumAvail2
+                        TAB_Rho_match => till_TAB_Rho_match, TAB_N_match => till_TAB_N_match
    
    implicit none
 
@@ -59,13 +55,7 @@ module tillage_mod
    case (1)
       ! INITIALIZE
 
-      if (allocated(Rho_tillage)) deallocate(Rho_tillage); allocate(Rho_tillage(NumLay))
-      if (allocated(Rho_cons))    deallocate(Rho_cons);    allocate(Rho_cons(NumLay))
-      if (allocated(Rho_last))    deallocate(Rho_last);    allocate(Rho_last(NumLay))
-      if (allocated(K_R_cons))    deallocate(K_R_cons);    allocate(K_R_cons(NumLay))
-      if (allocated(Rho_match))   deallocate(Rho_match);   allocate(Rho_match(NumLay))
-      if (allocated(N_match))     deallocate(N_match);     allocate(N_match(NumLay))
-      if (allocated(Slope_match)) deallocate(Slope_match); allocate(Slope_match(NumLay))
+      ! [SS-TIL T-5] legacy allocates dropped; state%tillage arrays already allocated in tillage_init (T-1/T-2)
 
       ! some checks: some combinations not (yet) allowed
       if (swtill == 1) then
@@ -89,14 +79,13 @@ module tillage_mod
       call det_MNSH (state)                          ! [SS-TIL T-3] state for MaxNumSoilHo/MaxNumSoilCP dual-write
 
       ! for special case i_n_model = 3: calculate slope per soil layer (remains constant over time)
-      Slope_match = 0.0d0
-      state%tillage%Slope_match = 0.0d0              ! [SS-TIL T-3] Group C dual-write
-      
+      state%tillage%Slope_match = 0.0d0              ! [SS-TIL T-5] legacy Slope_match dropped; canonical via state%tillage
+
       ! TO ADD: CHECK THAT DEPTH OF EACH TILLAGE EVENT CORRESPONDS TO BOTTOM OF SOIL HORIZON; USER MAY NEED TO DEFINE MULTIPLE SUBS-HORIZONS WITHIN A SINGLE REAL SOIL HORIZON
       ! currently: require changes in horizon number (iSoilLayer) at depth Max_Z_tillage
       fine = .false.
       do i = 1, NumLay
-         if (botcom(i) == MaxNumSoilCP) then
+         if (botcom(i) == state%tillage%MaxNumSoilCP) then
             fine = .true.
             exit
          end if
@@ -105,8 +94,8 @@ module tillage_mod
       
    case (2)
       ! RATE/STATE EVENT
-      Rho_last(1:MaxNumSoilHo) = Bdens(1:MaxNumSoilHo)
-      state%tillage%Rho_last(1:MaxNumSoilHo) = Bdens(1:MaxNumSoilHo)   ! [SS-TIL T-3] Group C dual-write
+      ! [SS-TIL T-5] legacy Rho_last dropped; canonical via state%tillage
+      state%tillage%Rho_last(1:state%tillage%MaxNumSoilHo) = Bdens(1:state%tillage%MaxNumSoilHo)
 
       if (TEST) then
          ! for technical test
@@ -131,24 +120,26 @@ module tillage_mod
             ! for technical test
             call DTDPST ("YEAR-MONTHST-DAY", t1900, STRNG)
             if (trim(STRNG) == "2005-Jun-05") then
-               Rho_cons(1) = 1350.0d0;  state%tillage%Rho_cons(1) = 1350.0d0   ! [SS-TIL T-3] Group C dual-write
-               K_R_cons(1) =  10.0d0;   state%tillage%K_R_cons(1) =  10.0d0    ! [SS-TIL T-3] Group C dual-write
+               ! [SS-TIL T-5] legacy Rho_cons/K_R_cons dropped; canonical via state%tillage
+               state%tillage%Rho_cons(1) = 1350.0d0
+               state%tillage%K_R_cons(1) =  10.0d0
                call Change_MvGpars(state)           ! [SS-SWC S-1.9]
                Call Adapt_WC_H (TEST, state)        ! [SS-SWC S-1.9]
             end if
             if (trim(STRNG) == "2005-Oct-30") then
-               Rho_cons(1) = 1900.0d0;  state%tillage%Rho_cons(1) = 1900.0d0   ! [SS-TIL T-3] Group C dual-write
-               K_R_cons(1) =    0.1d0;  state%tillage%K_R_cons(1) =    0.1d0   ! [SS-TIL T-3] Group C dual-write
+               ! [SS-TIL T-5] legacy Rho_cons/K_R_cons dropped; canonical via state%tillage
+               state%tillage%Rho_cons(1) = 1900.0d0
+               state%tillage%K_R_cons(1) =    0.1d0
                call Change_MvGpars(state)           ! [SS-SWC S-1.9]
                Call Adapt_WC_H (TEST, state)        ! [SS-SWC S-1.9]
             end if
          end if
-         ! normal usage
-         if (iTill <= Ntill .and. nint(t1900) == nint(Date_tillage(iTill))) then
+         ! normal usage  [SS-TIL T-5] iTill reads via state%tillage
+         if (state%tillage%iTill <= Ntill .and. nint(t1900) == nint(Date_tillage(state%tillage%iTill))) then
             call DTDPST ("YEAR-MONTHST-DAY", t1900, STRNG)
-            call Change_Tillage_Info (iTill, state)    ! [SS-TIL T-3] state for Group C dual-writes
-            call Change_Bdens
-            iTill = iTill + 1;  state%tillage%iTill = iTill   ! [SS-TIL T-3] Group E dual-write
+            call Change_Tillage_Info (state%tillage%iTill, state)    ! [SS-TIL T-3] state for Group C dual-writes
+            call Change_Bdens(state)
+            state%tillage%iTill = state%tillage%iTill + 1   ! [SS-TIL T-5] legacy iTill dropped
          else
             ! SS-ATM A-2.6: pass state for retired nraida
             call Consolidate_Bdens(state)
@@ -176,14 +167,14 @@ module tillage_mod
       
 
    case (3)
-      ! OUTPUT
+      ! OUTPUT  [SS-TIL T-5] MaxNumSoilHo/sumDWC/sumAvail1/sumAvail2 reads via state%tillage
       if (TEST) then
          call DTDPST ("YEAR-MONTHST-DAY", t1900, STRNG)
-         write (222,'(A,F15.5,10(I3,F15.5))') trim(DATE), state%atmosphere%nraida, (i, Bdens(i), i = 1, MaxNumSoilHo)
-         write (224,'(A,10F15.5)') trim(DATE), state%soilwater%theta(5), state%soilwater%theta(10), state%soilwater%theta(20), state%soilwater%theta(27), state%soilwater%theta(35), state%atmosphere%nraida, sumDWC, sumAvail1, sumAvail2  ! [SS-SWC S-2.6]
+         write (222,'(A,F15.5,10(I3,F15.5))') trim(DATE), state%atmosphere%nraida, (i, Bdens(i), i = 1, state%tillage%MaxNumSoilHo)
+         write (224,'(A,10F15.5)') trim(DATE), state%soilwater%theta(5), state%soilwater%theta(10), state%soilwater%theta(20), state%soilwater%theta(27), state%soilwater%theta(35), state%atmosphere%nraida, state%tillage%sumDWC, state%tillage%sumAvail1, state%tillage%sumAvail2  ! [SS-SWC S-2.6]
          write (226,'(A,10F15.5)') trim(DATE), (state%soilwater%cofgen(i,1), i = 1, 10)  ! [SS-SWC S-2.6]
       end if
-         write (222,'(A,F15.5,10(I3,F15.5))') trim(DATE), state%atmosphere%nraida, (i, Bdens(i), i = 1, MaxNumSoilHo)
+         write (222,'(A,F15.5,10(I3,F15.5))') trim(DATE), state%atmosphere%nraida, (i, Bdens(i), i = 1, state%tillage%MaxNumSoilHo)
          write (226,'(A,10F15.5)') trim(DATE), (state%soilwater%cofgen(i,1), i = 1, 10)  ! [SS-SWC S-2.6]
       continue
 
@@ -207,18 +198,20 @@ module tillage_mod
    real(8), parameter   :: Omega = -3.97d0
    real(8), parameter   :: Rho_s = 2650d0      ! later as input?
    real(8)              :: wcs_last, Epsilon
-   do i = 1 , MaxNumSoilHo
+   ! [SS-TIL T-5] MaxNumSoilHo/MaxNumSoilCP/Rho_last/Slope_match read via state%tillage
+   associate(tl => state%tillage)
+   do i = 1 , tl%MaxNumSoilHo
       wcs_last = ParamVG(2,i)       ! help
-      
+
       ! First, fill PARAMVG
       ! wcr
-      ParamVG(1,i) = ParamVG(1,i) * Bdens(i)/Rho_last(i)
+      ParamVG(1,i) = ParamVG(1,i) * Bdens(i)/tl%Rho_last(i)
       ! wcs
-      ParamVG(2,i) = ParamVG(2,i) * (Rho_s - Bdens(i))/(Rho_s - Rho_last(i))
+      ParamVG(2,i) = ParamVG(2,i) * (Rho_s - Bdens(i))/(Rho_s - tl%Rho_last(i))
       ! ks,fit
-      ParamVG(3,i) = ParamVG(3,i) * (ParamVG(2,i)/wcs_last)**3 * (Bdens(i)/Rho_last(i))**DeltaMin7
+      ParamVG(3,i) = ParamVG(3,i) * (ParamVG(2,i)/wcs_last)**3 * (Bdens(i)/tl%Rho_last(i))**DeltaMin7
       ! alpha
-      ParamVG(4,i) = ParamVG(4,i) * (Bdens(i)/Rho_last(i))**Omega
+      ParamVG(4,i) = ParamVG(4,i) * (Bdens(i)/tl%Rho_last(i))**Omega
       ! lambda: do not change
       !ParamVG(5,i) = ParamVG(5,i)
       ! n
@@ -228,9 +221,9 @@ module tillage_mod
          continue
       case(2)
          Epsilon = -0.97d0 + 1.28d0 * psilt(i) / pclay(i)
-         ParamVG(6,i) = 1.0d0 + (ParamVG(6,i) - 1.0d0) * (Bdens(i)/Rho_last(i))**Epsilon
+         ParamVG(6,i) = 1.0d0 + (ParamVG(6,i) - 1.0d0) * (Bdens(i)/tl%Rho_last(i))**Epsilon
       case(3)
-         ParamVG(6,i) = dmax1(1.001d0, ParamVG(6,i) + (Bdens(i) - Rho_last(i)) * Slope_match(i))
+         ParamVG(6,i) = dmax1(1.001d0, ParamVG(6,i) + (Bdens(i) - tl%Rho_last(i)) * tl%Slope_match(i))
       end select
 
       ! m = 1-1/n
@@ -242,15 +235,16 @@ module tillage_mod
       ! ksatexm: not used; do not change
       !ParamVG(10,i) = ParamVG(10,i)
    end do
-   
+
    ! Second: fill COFGEN
-   do node = 1, MaxNumSoilCP
+   do node = 1, tl%MaxNumSoilCP
       lay = layer(node)
       state%soilwater%cofgen(1:10,node) = ParamVG(1:10,lay)  ! [SS-SWC S-2.6] legacy CofGen write dropped
       ! CofGen(11) and CofGen(12) are not used and not need to be changed
       !CofGen(11,node) = relsatthr(lay)
       !CofGen(12,node) = ksatthr(lay)
    end do
+   end associate
    !!!thetsl(1:numlay) = ParamVG(2,1:numlay)
 
    end subroutine Change_MvGpars
@@ -263,12 +257,13 @@ module tillage_mod
    type(swap_state_t), intent(inout) :: state
    integer                          :: i
    real(8)                          :: sumWCtmin1, sumWCt, dwc, wcr, wcs, summ, dif
-   real(8), dimension(MaxNumSoilCP) :: wc, hold, wcold
+   ! [SS-TIL T-5] MaxNumSoilCP/sumDWC/sumAvail1/sumAvail2 via state%tillage
+   real(8), dimension(state%tillage%MaxNumSoilCP) :: wc, hold, wcold
    logical                          :: TEST
 
    if (TEST) then
-      hold(1:MaxNumSoilCP)  = state%soilwater%h(1:MaxNumSoilCP)      ! [SS-SWC S-2.6]
-      wcold(1:MaxNumSoilCP) = state%soilwater%theta(1:MaxNumSoilCP)  ! [SS-SWC S-2.6]
+      hold(1:state%tillage%MaxNumSoilCP)  = state%soilwater%h(1:state%tillage%MaxNumSoilCP)      ! [SS-SWC S-2.6]
+      wcold(1:state%tillage%MaxNumSoilCP) = state%soilwater%theta(1:state%tillage%MaxNumSoilCP)  ! [SS-SWC S-2.6]
    end if
 
    select case (iRedist)
@@ -279,7 +274,7 @@ module tillage_mod
    case (1)
       ! keep current wc values (wc_new = wc_old) and only change h; exception: when wc_old > wcs_new: alternative redistribution required
       summ = 0.0d0
-      do i = 1, MaxNumSoilCP
+      do i = 1, state%tillage%MaxNumSoilCP
          wcs = ParamVG(2,layer(i))
          if (state%soilwater%theta(i) < wcs) then                                                       ! [SS-SWC S-2.6]
             state%soilwater%h(i) = prhead(i, disnod(i), state%soilwater%theta(i), &                    ! [SS-SWC S-2.6]
@@ -291,7 +286,7 @@ module tillage_mod
          end if
       end do
       if (summ > 0.0d0) then
-         do i = MaxNumSoilCP, 1, -1
+         do i = state%tillage%MaxNumSoilCP, 1, -1
             wcs = ParamVG(2,layer(i))
             dif = wcs - state%soilwater%theta(i)                                                        ! [SS-SWC S-2.6]
             if (dif > 0.0d0) then
@@ -309,30 +304,29 @@ module tillage_mod
       state%soilwater%pond = summ                                                                        ! [SS-SWC S-2.6]
 
    case (2)
-      sumWCtmin1 = sum(state%soilwater%theta(1:MaxNumSoilCP))                                           ! [SS-SWC S-2.6]
+      ! [SS-TIL T-5] sumDWC/sumAvail1/sumAvail2 written directly to state%tillage (legacy scalars retired)
+      sumWCtmin1 = sum(state%soilwater%theta(1:state%tillage%MaxNumSoilCP))                             ! [SS-SWC S-2.6]
       sumWCt = 0.0d0
-      sumDWC = 0.0d0
-      do i = 1, MaxNumSoilCP
+      state%tillage%sumDWC = 0.0d0
+      do i = 1, state%tillage%MaxNumSoilCP
          wc(i) = watcon(i,state%soilwater%h(i))                                                         ! [SS-SWC S-2.6]
          sumWCt = sumWCt + wc(i)
          dwc = state%soilwater%theta(i) - wc(i)                                                         ! [SS-SWC S-2.6]
-         sumDWC = sumDWC + dwc * dz(i)
+         state%tillage%sumDWC = state%tillage%sumDWC + dwc * dz(i)
       end do
-      state%tillage%sumDWC = sumDWC                                                                      ! [SS-TIL T-3] Group D dual-write
 
-      sumAvail1 = 0.0d0
-      sumAvail2 = 0.0d0
+      state%tillage%sumAvail1 = 0.0d0
+      state%tillage%sumAvail2 = 0.0d0
       if (sumWCt < sumWCtmin1) then
          ! water to be added; same as sumDWC > 0.0
-         do i = 1, MaxNumSoilCP
+         do i = 1, state%tillage%MaxNumSoilCP
             wcs = ParamVG(2,layer(i))
-            sumAvail1 = sumAvail1 + (wcs - wc(i))*dz(i)
+            state%tillage%sumAvail1 = state%tillage%sumAvail1 + (wcs - wc(i))*dz(i)
          end do
-         state%tillage%sumAvail1 = sumAvail1                                                             ! [SS-TIL T-3] Group D dual-write
-         do i = 1, MaxNumSoilCP
+         do i = 1, state%tillage%MaxNumSoilCP
             wcs = ParamVG(2,layer(i))
-            if (sumAvail1 > 0.0d0) then
-               wc(i) = wc(i) + (wcs - wc(i)) * sumDWC / sumAvail1
+            if (state%tillage%sumAvail1 > 0.0d0) then
+               wc(i) = wc(i) + (wcs - wc(i)) * state%tillage%sumDWC / state%tillage%sumAvail1
                if (wc(i) > wcs) then
                   state%soilwater%pond = state%soilwater%pond + (wc(i) - wcs) * dz(i)                  ! [SS-SWC S-2.6]
                   wc(i) = wcs
@@ -345,14 +339,13 @@ module tillage_mod
          end do
       else if (sumWCt > sumWCtmin1) then
          ! water to be removed; same as sumDWC < 0.0
-         do i = 1, MaxNumSoilCP
+         do i = 1, state%tillage%MaxNumSoilCP
             wcr = ParamVG(1,layer(i))
-            sumAvail2 = SumAvail2 + (wc(i) - wcr) * dz(i)
+            state%tillage%sumAvail2 = state%tillage%sumAvail2 + (wc(i) - wcr) * dz(i)
          end do
-         state%tillage%sumAvail2 = sumAvail2                                                             ! [SS-TIL T-3] Group D dual-write
-         do i = 1, MaxNumSoilCP
+         do i = 1, state%tillage%MaxNumSoilCP
             wcr = ParamVG(1,layer(i))
-            wc(i) = wc(i) + (wc(i) - wcr) * sumDWC / sumAvail2
+            wc(i) = wc(i) + (wc(i) - wcr) * state%tillage%sumDWC / state%tillage%sumAvail2
             state%soilwater%h(i)     = prhead(i, disnod(i), wc(i), &                                   ! [SS-SWC S-2.6]
                                                state%soilwater%cofgen, state%soilwater%h)               ! [SS-SWC S-2.6]
             state%soilwater%theta(i) = wc(i)                                                            ! [SS-SWC S-2.6]
@@ -363,10 +356,11 @@ module tillage_mod
    end select
 
    if (TEST) then
-      do i = 1, MaxNumSoilCP
+      do i = 1, state%tillage%MaxNumSoilCP
          wcs = ParamVG(2,layer(i))
          write (444,'(I5,8(A1,F12.6))') i, ',', hold(i), ',', wcold(i), ',', state%soilwater%h(i), ',', state%soilwater%theta(i), &  ! [SS-SWC S-2.6]
-                                        ',', sumDWC, ',', sumAvail1, ',', sumAvail2, ',', state%soilwater%theta(i)/wcs               ! [SS-SWC S-2.6]
+                                        ',', state%tillage%sumDWC, ',', state%tillage%sumAvail1, ',', state%tillage%sumAvail2, &
+                                        ',', state%soilwater%theta(i)/wcs               ! [SS-SWC S-2.6]
       end do
    end if
 write(124,'(A,1P,12E12.5)') Date, Bdens(1), ParamVG(2,layer(1)), state%soilwater%theta(1), state%soilwater%h(1), &  ! [SS-SWC S-2.6]
@@ -384,85 +378,83 @@ write(124,'(A,1P,12E12.5)') Date, Bdens(1), ParamVG(2,layer(1)), state%soilwater
    type(swap_state_t), intent(in) :: state
    integer :: i
 
-   if (iTill == 1) return        ! in the beginning before first tillage event: do nothing
+   ! [SS-TIL T-5] iTill/MaxNumSoilHo/Rho_cons/Rho_last/K_R_cons read via state%tillage
+   associate(tl => state%tillage)
+   if (tl%iTill == 1) return        ! in the beginning before first tillage event: do nothing
 
-   forall (i=1:MaxNumSoilHo) Bdens(i) = Rho_cons(i) - (Rho_cons(i) - Rho_last(i)) * dexp(-K_R_cons(i)*state%atmosphere%nraida*10.0d0)    ! 10: to transform nraida from cm to mm
-   write(123,'(A,1P,10E12.5)') Date, state%atmosphere%nraida, Bdens(1:MaxNumSoilHo)
+   forall (i=1:tl%MaxNumSoilHo) Bdens(i) = tl%Rho_cons(i) - (tl%Rho_cons(i) - tl%Rho_last(i)) * dexp(-tl%K_R_cons(i)*state%atmosphere%nraida*10.0d0)    ! 10: to transform nraida from cm to mm
+   write(123,'(A,1P,10E12.5)') Date, state%atmosphere%nraida, Bdens(1:tl%MaxNumSoilHo)
+   end associate
    end subroutine Consolidate_Bdens
    
 ! **************************************************** Change_Bdens *********************************************************
-   subroutine Change_Bdens
+   subroutine Change_Bdens (state)
+   ! [SS-TIL T-5] state added; iTill/Rho_last/Rho_tillage read via state%tillage
    implicit none
+   type(swap_state_t), intent(in) :: state
    integer :: i, NumSoilHo
    ! to check: why this loop to determine NumSoilHo?
    NumSoilHo = 1
+   associate(tl => state%tillage)
    do i = 2, NumNod
-      if (Z_tillage(iTill) > -zbotcp(i-1) .and. Z_tillage(iTill) <= -zbotcp(i)) then
+      if (Z_tillage(tl%iTill) > -zbotcp(i-1) .and. Z_tillage(tl%iTill) <= -zbotcp(i)) then
          NumSoilHo = layer(i)
          exit
       end if
    end do
-   forall (i=1:NumSoilHo) Bdens(i) = Rho_last(i) - I_tillage(iTill) * (Rho_last(i) - Rho_tillage(i))
-   
+   forall (i=1:NumSoilHo) Bdens(i) = tl%Rho_last(i) - I_tillage(tl%iTill) * (tl%Rho_last(i) - tl%Rho_tillage(i))
+   end associate
+
    end subroutine Change_Bdens
    
 ! **************************************************** set_iTill *********************************************************
    subroutine set_iTill (state)
-   ! [SS-TIL T-3] state added for iTill dual-write
+   ! [SS-TIL T-5] legacy iTill dropped; canonical write directly to state%tillage%iTill
    implicit none
    type(swap_state_t), intent(inout) :: state
    integer :: i
-   iTill = 1
-   if (t1900 <= Date_tillage(1)) iTill = 1
+   state%tillage%iTill = 1
+   if (t1900 <= Date_tillage(1)) state%tillage%iTill = 1
    do i = 2, Ntill
       if (Date_tillage(i) < Date_tillage(i-1)) call fatalerr_collected ('set_iTill', 'Dates in tabulated tillage events must be sorted')
       ! H-4 bug fix: second comparison was Date_tillage(i-1) (tautological); corrected to Date_tillage(i)
-      if (t1900 >= Date_tillage(i-1) .and. t1900 < Date_tillage(i)) iTill = i-1   ! [SS-TIL T-3] H-4 fix
+      if (t1900 >= Date_tillage(i-1) .and. t1900 < Date_tillage(i)) state%tillage%iTill = i-1
    end do
-   state%tillage%iTill = iTill                                                     ! [SS-TIL T-3] Group E dual-write
    end subroutine set_iTill
 
 ! **************************************************** det_MNSH *********************************************************
    subroutine det_MNSH (state)
-   ! [SS-TIL T-3] state added for MaxNumSoilHo/MaxNumSoilCP dual-write
+   ! [SS-TIL T-5] legacy MaxNumSoilHo/MaxNumSoilCP dropped; canonical write directly to state%tillage
    implicit none
    type(swap_state_t), intent(inout) :: state
    integer :: i
    do i = 2, NumNod
       if (Max_Z_tillage > -zbotcp(i-1) .and. Max_Z_tillage <= -zbotcp(i)) then
-         MaxNumSoilHo = layer(i);  state%tillage%MaxNumSoilHo = layer(i)   ! [SS-TIL T-3] Group E dual-write
-         MaxNumSoilCP = i;         state%tillage%MaxNumSoilCP = i           ! [SS-TIL T-3] Group E dual-write
+         state%tillage%MaxNumSoilHo = layer(i)
+         state%tillage%MaxNumSoilCP = i
          exit
       end if
    end do
    end subroutine det_MNSH
 
-   subroutine Change_Tillage_Info (iTill, state)
-   ! [SS-TIL T-3] state added for Group C dual-writes
+   subroutine Change_Tillage_Info (iTill_in, state)
+   ! [SS-TIL T-5] legacy Group C arrays dropped; write directly to state%tillage
    implicit none
    ! global
-   integer, intent(in) :: iTill
+   integer, intent(in) :: iTill_in
    type(swap_state_t), intent(inout) :: state
    ! local
    integer :: itype, nlay
 
-   itype               = Type_Tillage(iTill)
-   nlay                = iTT2(itype) - iTT1(itype) + 1
-   Rho_tillage(1:nlay) = TAB_Rho_tillage(iTT1(itype):iTT2(itype))
-   Rho_cons(1:nlay)    = TAB_Rho_cons(iTT1(itype):iTT2(itype))
-   K_R_cons(1:nlay)    = TAB_K_R_cons(iTT1(itype):iTT2(itype))
-   Rho_match(1:nlay)   = TAB_Rho_match(iTT1(itype):iTT2(itype))
-   N_match(1:nlay)     = TAB_N_match(iTT1(itype):iTT2(itype))
-   Slope_match(1:nlay) = (ParamVG(6,1:nlay) - N_match(1:nlay)) / (Rho_cons(1:nlay) - Rho_match(1:nlay))
-
-   ! [SS-TIL T-3] Group C dual-writes — mirror all 7 per-layer arrays into state%tillage
    associate(tl => state%tillage)
-      tl%Rho_tillage(1:nlay) = Rho_tillage(1:nlay)
-      tl%Rho_cons(1:nlay)    = Rho_cons(1:nlay)
-      tl%K_R_cons(1:nlay)    = K_R_cons(1:nlay)
-      tl%Rho_match(1:nlay)   = Rho_match(1:nlay)
-      tl%N_match(1:nlay)     = N_match(1:nlay)
-      tl%Slope_match(1:nlay) = Slope_match(1:nlay)
+   itype               = Type_Tillage(iTill_in)
+   nlay                = iTT2(itype) - iTT1(itype) + 1
+   tl%Rho_tillage(1:nlay) = TAB_Rho_tillage(iTT1(itype):iTT2(itype))
+   tl%Rho_cons(1:nlay)    = TAB_Rho_cons(iTT1(itype):iTT2(itype))
+   tl%K_R_cons(1:nlay)    = TAB_K_R_cons(iTT1(itype):iTT2(itype))
+   tl%Rho_match(1:nlay)   = TAB_Rho_match(iTT1(itype):iTT2(itype))
+   tl%N_match(1:nlay)     = TAB_N_match(iTT1(itype):iTT2(itype))
+   tl%Slope_match(1:nlay) = (ParamVG(6,1:nlay) - tl%N_match(1:nlay)) / (tl%Rho_cons(1:nlay) - tl%Rho_match(1:nlay))
    end associate
    end subroutine Change_Tillage_Info
 

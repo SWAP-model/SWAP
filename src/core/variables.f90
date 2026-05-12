@@ -594,10 +594,15 @@
       integer   till_i_n_model                    ! Switch for n-parameter treatment (1-3)
       integer   till_iRedist                      ! Redistribution type after MvG change
       integer   till_Ntill                        ! Number of tabulated tillage events
-      integer   till_iTill                        ! Current tillage event index
+! ========================================================================
+! [SS-TIL T-5] retired 2026-05-12 — tillage runtime-state globals moved to state%tillage
+!   See: docs/superpowers/specs/2026-05-12-state-migration-tillage-design.md
+!        ADR 0039 (Task T-6)
+! ========================================================================
+!     integer   till_iTill                        ! Current tillage event index
       integer   till_Ntypes                       ! Number of tillage types
-      integer   till_MaxNumSoilHo                 ! Max soil horizons in tillage zone
-      integer   till_MaxNumSoilCP                 ! Max soil compartments in tillage zone
+!     integer   till_MaxNumSoilHo                 ! Max soil horizons in tillage zone
+!     integer   till_MaxNumSoilCP                 ! Max soil compartments in tillage zone
       real(8)   till_Max_Z_tillage                ! Max possible depth of tillage (cm)
       real(8), dimension(:), allocatable :: till_Date_tillage   ! Tillage dates
       real(8), dimension(:), allocatable :: till_Z_tillage      ! Tillage depths (cm)
@@ -611,16 +616,16 @@
       real(8), dimension(:), allocatable :: till_TAB_K_R_cons   ! Consolidation rate constant
       real(8), dimension(:), allocatable :: till_TAB_Rho_match  ! Matching point density
       real(8), dimension(:), allocatable :: till_TAB_N_match    ! Matching point n-value
-      real(8), dimension(:), allocatable :: till_Rho_tillage    ! Post-tillage bulk density per layer
-      real(8), dimension(:), allocatable :: till_Rho_cons       ! Consolidated density per layer
-      real(8), dimension(:), allocatable :: till_Rho_last       ! Previous density per layer
-      real(8), dimension(:), allocatable :: till_K_R_cons       ! Consolidation rate per layer
-      real(8), dimension(:), allocatable :: till_Rho_match      ! Matching point density per layer
-      real(8), dimension(:), allocatable :: till_N_match        ! Matching point n per layer
-      real(8), dimension(:), allocatable :: till_Slope_match    ! Slope at matching point per layer
-      real(8)   till_sumDWC                       ! Sum of water content changes
-      real(8)   till_sumAvail1                    ! Available pore space
-      real(8)   till_sumAvail2                    ! Available water
+!     real(8), dimension(:), allocatable :: till_Rho_tillage    ! Post-tillage bulk density per layer
+!     real(8), dimension(:), allocatable :: till_Rho_cons       ! Consolidated density per layer
+!     real(8), dimension(:), allocatable :: till_Rho_last       ! Previous density per layer
+!     real(8), dimension(:), allocatable :: till_K_R_cons       ! Consolidation rate per layer
+!     real(8), dimension(:), allocatable :: till_Rho_match      ! Matching point density per layer
+!     real(8), dimension(:), allocatable :: till_N_match        ! Matching point n per layer
+!     real(8), dimension(:), allocatable :: till_Slope_match    ! Slope at matching point per layer
+!     real(8)   till_sumDWC                       ! Sum of water content changes
+!     real(8)   till_sumAvail1                    ! Available pore space
+!     real(8)   till_sumAvail2                    ! Available water
 
 ! --- soilwater variables
       integer   iHWCKmodel(maho)   ! indicator what type of water retention and hydraulic conductivity model is used (per soil layer)
