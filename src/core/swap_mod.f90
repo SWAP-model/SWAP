@@ -405,9 +405,36 @@ contains
    end subroutine swap_run_step
 
    subroutine swap_close(state, config)
+      use variables, only : flswapshared, flcropnut, flagetracer, project, swcrp, swend
+      use swap_log,  only: log_info
+      use management_soil_mod, only: SoilManagement
       type(swap_state_t),  intent(inout) :: state
       type(swap_config_t), intent(in)    :: config
-      ! Body filled in Task 5.
+
+!  iteration and timing statistics
+   call IterTime(3, state)
+
+!  close output files (always run; iCaller branch retired)
+   if (flSwapShared) call SharedSimulation(4)
+   call SwapOutput(3, state)
+   if (swend.eq.1) call SoilWaterOutput(3, state)
+   call SoilWaterOutput(4, state)
+   if (swcrp.eq.1) call CropOutput(3, state)
+   ! [SS-TC TC-14] flag reads via state%timecontrol
+   if (state%timecontrol%flTemperature)  call TemperatureOutput(3, state)
+   if (state%timecontrol%flSolute)       call SoluteOutput(3, state)
+   if (flAgeTracer)                      call AgeTracerOutput(3, state)
+!  ADR 0009 Phase 5+: IrrigationOutput deleted (swirg=0).
+   if (state%timecontrol%flSnow)         call SnowOutput(3, state)
+   ! [MACRO-RETIRE 2026-05-12] MacroPoreOutput retired (ADR 0040).
+   if (state%timecontrol%flSurfaceWater) call SurfaceWaterOutput(3, state)
+   if (flCropNut)                        call SoilManagement(7, state)
+
+!  write okay file for external use
+   call WriteSwapOk(Project)
+
+   call log_info('swap', 'Simulation complete for project: ' // trim(project))
+
    end subroutine swap_close
 
 end module swap_mod
