@@ -14,6 +14,7 @@ module swap_state_mod
    use heat_state_mod,         only: heat_state_t
    use soilwater_state_mod,    only: soilwater_state_t
    use atmosphere_state_mod,   only: atmosphere_state_t
+   use tillage_state_mod,      only: tillage_state_t
    implicit none
    private
    public :: swap_state_t
@@ -25,6 +26,7 @@ module swap_state_mod
       type(heat_state_t)         :: heat
       type(soilwater_state_t)    :: soilwater
       type(atmosphere_state_t)   :: atmosphere
+      type(tillage_state_t)      :: tillage
    end type swap_state_t
 
 end module swap_state_mod

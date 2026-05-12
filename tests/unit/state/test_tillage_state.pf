@@ -1,0 +1,210 @@
+! Tests for tillage_state_t — typed state record for the tillage
+! subsystem (ADR 0039, T-1).
+!
+! Type layout:
+!   tillage_state_t:
+!     Group C — 7 per-layer allocatable real(real64) arrays (sized numlay)
+!     Group D — 3 per-step real(real64) scalars  (default 0.0)
+!     Group E — 3 init-once integer fields        (default 0)
+!
+! tillage_init(tl, numlay) allocates Group C arrays, zeroes all fields.
+!
+! See docs/superpowers/specs/2026-05-12-state-migration-tillage-design.md
+!     docs/superpowers/plans/2026-05-12-tillage-state-migration.md
+
+! =============================================================================
+! Test 1: Default values — scalars zero, allocatables NOT allocated
+! =============================================================================
+@test
+subroutine test_tillage_state_defaults()
+   use funit
+   use iso_fortran_env, only: real64
+   use tillage_state_mod, only: tillage_state_t
+   type(tillage_state_t) :: tl
+
+   ! Group D scalars must default to zero
+   @assertEqual(0.0_real64, tl%sumDWC,    1.0e-12_real64)
+   @assertEqual(0.0_real64, tl%sumAvail1, 1.0e-12_real64)
+   @assertEqual(0.0_real64, tl%sumAvail2, 1.0e-12_real64)
+
+   ! Group E integers must default to zero
+   @assertEqual(0, tl%MaxNumSoilHo)
+   @assertEqual(0, tl%MaxNumSoilCP)
+   @assertEqual(0, tl%iTill)
+
+   ! Group C arrays must NOT be allocated before tillage_init
+   @assertFalse(allocated(tl%Rho_tillage))
+   @assertFalse(allocated(tl%Rho_cons))
+   @assertFalse(allocated(tl%Rho_last))
+   @assertFalse(allocated(tl%K_R_cons))
+   @assertFalse(allocated(tl%Rho_match))
+   @assertFalse(allocated(tl%N_match))
+   @assertFalse(allocated(tl%Slope_match))
+end subroutine test_tillage_state_defaults
+
+! =============================================================================
+! Test 2: tillage_init allocates 7 arrays sized numlay, all zero-valued
+! =============================================================================
+@test
+subroutine test_tillage_init_allocates_arrays()
+   use funit
+   use iso_fortran_env, only: real64
+   use tillage_state_mod, only: tillage_state_t, tillage_init
+   type(tillage_state_t) :: tl
+   integer, parameter :: N = 5
+
+   call tillage_init(tl, N)
+
+   ! All Group C arrays must be allocated with size N
+   @assertTrue(allocated(tl%Rho_tillage))
+   @assertTrue(allocated(tl%Rho_cons))
+   @assertTrue(allocated(tl%Rho_last))
+   @assertTrue(allocated(tl%K_R_cons))
+   @assertTrue(allocated(tl%Rho_match))
+   @assertTrue(allocated(tl%N_match))
+   @assertTrue(allocated(tl%Slope_match))
+
+   @assertEqual(N, size(tl%Rho_tillage))
+   @assertEqual(N, size(tl%Rho_cons))
+   @assertEqual(N, size(tl%Rho_last))
+   @assertEqual(N, size(tl%K_R_cons))
+   @assertEqual(N, size(tl%Rho_match))
+   @assertEqual(N, size(tl%N_match))
+   @assertEqual(N, size(tl%Slope_match))
+
+   ! All elements must be zero
+   @assertEqual(0.0_real64, sum(tl%Rho_tillage), 1.0e-12_real64)
+   @assertEqual(0.0_real64, sum(tl%Rho_cons),    1.0e-12_real64)
+   @assertEqual(0.0_real64, sum(tl%Rho_last),    1.0e-12_real64)
+   @assertEqual(0.0_real64, sum(tl%K_R_cons),    1.0e-12_real64)
+   @assertEqual(0.0_real64, sum(tl%Rho_match),   1.0e-12_real64)
+   @assertEqual(0.0_real64, sum(tl%N_match),      1.0e-12_real64)
+   @assertEqual(0.0_real64, sum(tl%Slope_match),  1.0e-12_real64)
+end subroutine test_tillage_init_allocates_arrays
+
+! =============================================================================
+! Test 3: Re-calling tillage_init with different numlay reallocates correctly
+! =============================================================================
+@test
+subroutine test_tillage_init_reallocation()
+   use funit
+   use iso_fortran_env, only: real64
+   use tillage_state_mod, only: tillage_state_t, tillage_init
+   type(tillage_state_t) :: tl
+
+   ! First init with 5
+   call tillage_init(tl, 5)
+   @assertEqual(5, size(tl%Rho_tillage))
+
+   ! Seed one array with non-zero values to confirm reinit zeroes them
+   tl%Rho_tillage = 1.5_real64
+
+   ! Re-init with 10 — must reallocate and zero
+   call tillage_init(tl, 10)
+
+   @assertEqual(10, size(tl%Rho_tillage))
+   @assertEqual(10, size(tl%Rho_cons))
+   @assertEqual(10, size(tl%Slope_match))
+   @assertEqual(0.0_real64, sum(tl%Rho_tillage), 1.0e-12_real64)
+end subroutine test_tillage_init_reallocation
+
+! =============================================================================
+! Test 4: Field write/read round-trip via aggregator path (state%tillage)
+! =============================================================================
+@test
+subroutine test_tillage_state_aggregator_roundtrip()
+   use funit
+   use iso_fortran_env, only: real64
+   use swap_state_mod,   only: swap_state_t
+   use tillage_state_mod, only: tillage_init
+   type(swap_state_t) :: state
+
+   ! Integer cursor round-trip
+   state%tillage%iTill = 3
+   @assertEqual(3, state%tillage%iTill)
+
+   state%tillage%MaxNumSoilHo = 7
+   @assertEqual(7, state%tillage%MaxNumSoilHo)
+
+   state%tillage%MaxNumSoilCP = 12
+   @assertEqual(12, state%tillage%MaxNumSoilCP)
+
+   ! Scalar round-trip
+   state%tillage%sumDWC    = 2.5_real64
+   state%tillage%sumAvail1 = 0.75_real64
+   state%tillage%sumAvail2 = 0.25_real64
+
+   @assertEqual(2.5_real64,  state%tillage%sumDWC,    1.0e-12_real64)
+   @assertEqual(0.75_real64, state%tillage%sumAvail1, 1.0e-12_real64)
+   @assertEqual(0.25_real64, state%tillage%sumAvail2, 1.0e-12_real64)
+
+   ! Array round-trip via aggregator
+   call tillage_init(state%tillage, 4)
+   state%tillage%Rho_tillage(2) = 1.3_real64
+   state%tillage%K_R_cons(4)    = 0.05_real64
+
+   @assertEqual(1.3_real64,  state%tillage%Rho_tillage(2), 1.0e-12_real64)
+   @assertEqual(0.05_real64, state%tillage%K_R_cons(4),    1.0e-12_real64)
+end subroutine test_tillage_state_aggregator_roundtrip
+
+! =============================================================================
+! Test 5: Two independent instances share no state
+! =============================================================================
+@test
+subroutine test_tillage_state_two_instances_independent()
+   use funit
+   use iso_fortran_env, only: real64
+   use tillage_state_mod, only: tillage_state_t, tillage_init
+   type(tillage_state_t) :: tl1, tl2
+
+   call tillage_init(tl1, 3)
+   call tillage_init(tl2, 3)
+
+   ! Write to tl1
+   tl1%iTill         = 5
+   tl1%sumDWC        = 9.9_real64
+   tl1%Rho_tillage(1) = 1.1_real64
+   tl1%Rho_cons(2)   = 1.4_real64
+
+   ! tl2 must retain defaults
+   @assertEqual(0,          tl2%iTill)
+   @assertEqual(0.0_real64, tl2%sumDWC,         1.0e-12_real64)
+   @assertEqual(0.0_real64, tl2%Rho_tillage(1), 1.0e-12_real64)
+   @assertEqual(0.0_real64, tl2%Rho_cons(2),    1.0e-12_real64)
+
+   ! tl1 reads must match what was written
+   @assertEqual(5,          tl1%iTill)
+   @assertEqual(9.9_real64, tl1%sumDWC,         1.0e-12_real64)
+   @assertEqual(1.1_real64, tl1%Rho_tillage(1), 1.0e-12_real64)
+   @assertEqual(1.4_real64, tl1%Rho_cons(2),    1.0e-12_real64)
+end subroutine test_tillage_state_two_instances_independent
+
+! =============================================================================
+! Test 6: tillage_init zeroes scalars even when pre-loaded non-zero
+! =============================================================================
+@test
+subroutine test_tillage_init_zeroes_scalars()
+   use funit
+   use iso_fortran_env, only: real64
+   use tillage_state_mod, only: tillage_state_t, tillage_init
+   type(tillage_state_t) :: tl
+
+   ! Pre-load via first init then mutate
+   call tillage_init(tl, 4)
+   tl%sumDWC        = 3.7_real64
+   tl%sumAvail1     = 0.6_real64
+   tl%sumAvail2     = 0.4_real64
+   tl%MaxNumSoilHo  = 10
+   tl%MaxNumSoilCP  = 8
+   tl%iTill         = 2
+
+   ! Re-initialise — all scalars must be reset to zero
+   call tillage_init(tl, 4)
+
+   @assertEqual(0.0_real64, tl%sumDWC,    1.0e-12_real64)
+   @assertEqual(0.0_real64, tl%sumAvail1, 1.0e-12_real64)
+   @assertEqual(0.0_real64, tl%sumAvail2, 1.0e-12_real64)
+   @assertEqual(0, tl%MaxNumSoilHo)
+   @assertEqual(0, tl%MaxNumSoilCP)
+   @assertEqual(0, tl%iTill)
+end subroutine test_tillage_init_zeroes_scalars
