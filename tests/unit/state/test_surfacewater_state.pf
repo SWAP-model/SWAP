@@ -25,7 +25,7 @@ subroutine test_surfacewater_state_default_scalars()
    @assertEqual(0.0_real64, sw%wlsold,                    1.0e-12_real64)
    @assertEqual(0.0_real64, sw%ZDraBas,                   1.0e-12_real64)
    @assertEqual(0.0_real64, sw%qdrtot,                    1.0e-12_real64)
-   ! cohort scalars — now nested
+   ! intermediate + cumulative scalars (flat fields after 2026-05-12 cohort flattening)
    @assertEqual(0.0_real64, sw%cqdrd,          1.0e-12_real64)
    @assertEqual(0.0_real64, sw%cwsupp,         1.0e-12_real64)
    @assertEqual(0.0_real64, sw%cwout,          1.0e-12_real64)
@@ -69,7 +69,7 @@ end subroutine test_surfacewater_state_sttab_default
 subroutine test_surfacewater_state_arrays_unallocated()
    ! Per-level arrays are allocatable; default state is unallocated.
    ! surfacewater_init allocates them based on drainage config (Madr, macp).
-   ! After CRR Phase A Task A3: arrays live in nested cohort sub-records.
+   ! Reset-eligible arrays live flat on surfacewater_state_t (cohort sub-records retired 2026-05-12).
    use funit
    use surfacewater_state_mod, only: surfacewater_state_t
    type(surfacewater_state_t) :: sw
@@ -86,7 +86,7 @@ end subroutine test_surfacewater_state_arrays_unallocated
 @test
 subroutine test_surfacewater_state_array_allocation()
    ! Caller (surfacewater_init) is responsible for allocating per-level
-   ! arrays. Verify the allocation pattern works via the nested cohort paths.
+   ! arrays. Verify the allocation pattern works on the flat surfacewater_state_t fields.
    use funit
    use iso_fortran_env, only: real64
    use surfacewater_state_mod, only: surfacewater_state_t
