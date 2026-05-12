@@ -71,6 +71,14 @@
 
 ! === initialization ===================================================
 
+! --- transient seed: drain legacy globals written by config_to_variables
+!     into state before any case(1) logic runs (pre-init pattern, D7).
+!     config_to_variables runs before state%timecontrol is allocated, so
+!     the legacy writes are the only values available at this point.
+      state%timecontrol%iyear  = iyear
+      state%timecontrol%imonth = imonth
+      state%timecontrol%dt     = dt
+
 ! --- initialize flags ----------------------------
       fldecdt = .false.
       fldecdtmin = .false.

@@ -594,6 +594,9 @@ contains
       ! first set iyear for proper use in TimeControl; this allows for start any time, irrespective of tstart in swap.swp
       call dtdpar (Tstart, datea, fsec)
       iyear = datea(1)
+      ! D8: state%timecontrol%iyear is seeded inside TimeControl(case=1) via the
+      ! transient-buffer pattern — no direct write here (state is INTENT(IN) in
+      ! handle_exchange; the TC pre-init seed at case(1) covers this path).
       call TimeControl(1, state)
 
       ! External forcing mode: provide full-year availability without reading meteo files
