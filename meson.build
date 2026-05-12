@@ -176,7 +176,6 @@ sources = [
     'src/state/swap_state.f90',
 
     # Utils
-    'src/utils/sharedexchange.f90',
     'src/utils/sharedsimulation.f90',
     'src/utils/arrayutils.f90',
     'src/utils/surfacewaterutils.f90',
@@ -185,7 +184,6 @@ sources = [
     
     # Main (last)
     'src/core/swap_mod.f90',
-    'src/core/swap.f90',
     'src/core/swap_main.f90'
 ]
 

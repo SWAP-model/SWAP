@@ -46,8 +46,9 @@
       Call Get_Command_Argument (number=PosArg,value=strFINA)
       call file_open(unss, strFINA, 'unknown', 'readwrite')
 !     open shared data file
-      call FromSwap(task)
-      call ToSwap(task)
+!     FromSwap(1) / ToSwap(1): retired stubs — inlined as no-ops (SS-DRV Task 6)
+      continue
+      continue
       return
 
       case (2)
@@ -60,20 +61,23 @@
         if(IDread.eq.ID_Shared) flhold=.false.
       end do
 !     read New data
-      call ToSwap(2)
+!     ToSwap(2): retired stub — inlined as no-op (SS-DRV Task 6)
+      continue
       return
 
       case (3)
       rewind(unss)
       write(unss,'(i4)')-1*ID_Shared
 !     write New data
-      call FromSwap(2)
+!     FromSwap(2): retired stub — inlined as no-op (SS-DRV Task 6)
+      continue
       return
 
       case (4)
 ! === close Shared Directive file ===========================
-      call ToSwap(3)
-      call FromSwap(3)
+!     ToSwap(3) / FromSwap(3): retired stubs — inlined as no-ops (SS-DRV Task 6)
+      continue
+      continue
       close (unss)
 
       case default
