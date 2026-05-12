@@ -136,7 +136,7 @@ contains
 
       ! Calculate INITIAL dynamic macropore (crack) volume, total macropore volume
       ! per domain and per compartment, and area of macropores at soil surface
-      ICpTpSatZon= NodGwL + 1
+      ICpTpSatZon= state%soilwater%nodgwl + 1   ! [SS-SWC S-2.12B]
       call MACROSTATE(NnCrAr,FlEndSrpEvt,QExcMtxDmCp, &
                       QInTopLatDm,QInTopVrtDm,QOutDrRapCp,WaSrMpDm, &
                       ICpBtDm,ICpBtPerZon,ICpSatGWl,ICpSatPeGWl,ICpTpPerZon, &
@@ -144,11 +144,10 @@ contains
                       SorpDmCp,ThtSrpRefDmCp, TimAbsCumDmCp,VlMpDm,VlMpDmCp, &
                       WaSrMp,WaSrMpDmCp,ZBtDm,ZWaLevDm, state)   ! [SS-SWC S-2.9]
 
-      ! Calculate initial waterstorage in matrix on basis FrArMtrx
-      volact = 0.0d0
-      call watstor (state)                                ! [SS-SWC S-1.6] state arg added
-      volini = volact
-      state%soilwater%volini = state%soilwater%volact     ! [SS-SWC S-2.4] dual-write (macropore init path)
+      ! Calculate initial waterstorage in matrix on basis FrArMtrx — [SS-SWC S-2.12B]
+      state%soilwater%volact = 0.0d0
+      call watstor (state)
+      state%soilwater%volini = state%soilwater%volact
 
       ! Initialisation of intermediate and cumulative values
       call MACRORESET(0)
@@ -436,8 +435,8 @@ contains
          VlMpStCp(ic)= VlMpStSs * (RelVlMbSt(ic) + RelVlIcSt(ic)) 
          !        Fraction of unit of horizontal area that is left for soil matrix after 
          !        substraction of static macropores
-         FrArMtrx(ic)= 1.d0 - VlMpStCp(ic)/Dz(ic)
-         state%soilwater%FrArMtrx(ic) = real(FrArMtrx(ic), real64)  ! [SS-SWC S-1.11]
+         ! [SS-SWC S-2.12B] legacy FrArMtrx half-write dropped
+         state%soilwater%FrArMtrx(ic) = 1.0_real64 - VlMpStCp(ic)/Dz(ic)
   40  continue
 
       ! - C. CALCULATION OF VOLUMETRIC PROPORTIONS PER COMPARTMENT FOR THE MP DOMAINS 
@@ -552,8 +551,8 @@ contains
             do id = 1, NumDm
                PpDmCp(id,ic)= 0.d0
             enddo
-            FrArMtrx(ic)= 1.d0
-            state%soilwater%FrArMtrx(ic) = 1.0_real64             ! [SS-SWC S-1.11]
+            ! [SS-SWC S-2.12B] legacy FrArMtrx half-write dropped
+            state%soilwater%FrArMtrx(ic) = 1.0_real64
          enddo
       endif
 
@@ -936,16 +935,17 @@ contains
   20  continue
 
       ! --- water volume in macropores in case of static macroprs below groundw level
-      if (VlMpStCp(NodGwl).ge.1.d-7 .or. NodGwl.lt.IcTopMp) then
+      ! [SS-SWC S-2.12B] NodGwl/GWl read from state%soilwater
+      if (VlMpStCp(state%soilwater%nodgwl).ge.1.d-7 .or. state%soilwater%nodgwl.lt.IcTopMp) then
          Zhlp= 0.d0
-         do 30 ic= 1, NodGwl
+         do 30 ic= 1, state%soilwater%nodgwl
             Zhlp= Zhlp - DZ(ic)
   30     continue
-         FrWet= dmax1(0.d0,(GWl-Zhlp)/DZ(NodGwl))
+         FrWet= dmax1(0.d0,(state%soilwater%gwl-Zhlp)/DZ(state%soilwater%nodgwl))
          do 40 id= 1, NumDm
-            do 39 ic= ICpBtDmPot(id), NodGwl, -1
+            do 39 ic= ICpBtDmPot(id), state%soilwater%nodgwl, -1
                FrW= 1.d0
-               if (ic.eq.NodGwl) FrW= FrWet
+               if (ic.eq.state%soilwater%nodgwl) FrW= FrWet
                WaSrMpDm(id)= WaSrMpDm(id)+FrW*VlMpStCp(ic)*PpDmCp(id,ic)
   39        continue
   40     continue
@@ -971,7 +971,7 @@ contains
          endif
 
          call SHRINKPAR(Itask,ShrParA(il),ShrParB(il),ShrParC(il),      &
-     &                  ShrParD(il),ShrParE(il),ThetSL(il))
+     &                  ShrParD(il),ShrParE(il),state%soilwater%thetsl(il))  ! [SS-SWC S-2.12B]
   60  continue
 
       ! - D. CALCULATION OF REFERENCE KD (KDCrRlRef)
@@ -1042,10 +1042,10 @@ contains
                   HHydrStat = ZDraBas - Z(ic)
                   ThetHydrStat = watcon(ic,HHydrStat)
                   if (ic.le.ICpBot .and. Z_St.gt.ZDraBas)               &
-     &              ThetHydrStat = dmin1(0.99d0*Thetas(ic),ThetHydrStat)
+     &              ThetHydrStat = dmin1(0.99d0*state%soilwater%thetas(ic),ThetHydrStat)  ! [SS-SWC S-2.12B]
                   VlShriRl= SHRINK(SwSoilShr(il),SwShrInp(il),          &
      &                  ShrParA(il),ShrParB(il),ShrParC(il),ShrParD(il),&
-     &                  ShrParE(il),ThethydrStat,ThetSL(il))
+     &                  ShrParE(il),ThethydrStat,state%soilwater%thetsl(il))  ! [SS-SWC S-2.12B]
                   VlMpDyRl= VlShriRl -                                  &
      &                      (1.d0 - (1.d0-VlShriRl)**(1.d0/GeomFac(il)))
                else
@@ -1141,11 +1141,12 @@ contains
       !     Calculate Theta(h) and Diffusivity(h) for the relevant range: pF4.2 to h = 0 
       ThetpF4_2= watcon(Node,-1.6d4)
       ThetpF4_2= ThetStep * dble(idnint(ThetpF4_2/ThetStep))
-      NSteps   = idnint((ThetaS(Node)-ThetpF4_2)/ThetStep) + 1
+      ! [SS-SWC S-2.12B] ThetaS read via state%soilwater%thetas
+      NSteps   = idnint((state%soilwater%thetas(Node)-ThetpF4_2)/ThetStep) + 1
       Thet(1)  = ThetpF4_2
       do 10 it= 1, Nsteps
-         if (Thet(it).gt.ThetaS(Node) .or. it.eq.Nsteps) Thet(it)=      &
-     &                  ThetaS(Node) - 0.5d0*ThetStep
+         if (Thet(it).gt.state%soilwater%thetas(Node) .or. it.eq.Nsteps) Thet(it)=      &
+     &                  state%soilwater%thetas(Node) - 0.5d0*ThetStep
          Head = prhead (Node,dum,Thet(it),state%soilwater%cofgen,state%soilwater%h)  ! [SS-SWC S-2.9]
          K_h = hconduc (Node,Head,Thet(it),Dum,20.0d0)  ! SS-SWC S-2.2: no state in PARLANGE; 20°C reference for sorptivity init
          Difmoiscap = moiscap (Node,Head)
@@ -1157,7 +1158,7 @@ contains
       !     for Theta = (ThetaSat+Theta(pF4.2))/2. Exponent Mpow, calculated for this
       !     Theta on basis of SpF4_2, is an excellent predictor for the exponent of
       !     the curve S(Theta)= S0*(1-Theta/ThetaSat)^M for the range pF4.2 to h = 0       
-      itIntv = idnint((ThetaS(Node)-ThetpF4_2) / 2.0d0 / ThetStep)
+      itIntv = idnint((state%soilwater%thetas(Node)-ThetpF4_2) / 2.0d0 / ThetStep)  ! [SS-SWC S-2.12B]
       it= 1
       do 20 is= 1, 2
          Shlp= 0.d0
@@ -1170,14 +1171,15 @@ contains
             SpF4_2= S
          else
             Mpow= dlog10(S/SpF4_2) / dlog10(1.d0 -                      &
-     &                  (Thet(it)-ThetpF4_2) / (ThetaS(Node)-ThetpF4_2))
+     &                  (Thet(it)-ThetpF4_2) / (state%soilwater%thetas(Node)-ThetpF4_2))  ! [SS-SWC S-2.12B]
          endif
          it= it + itIntv
   20  continue
       !
       !     Extrapolate SpF4_2 to S0 at ThetaR(esidual)
-      S0= SpF4_2 * (1.d0 - (ThetaR(Node)-ThetpF4_2) /                   &
-     &                     (ThetaS(Node)-ThetpF4_2) )** Mpow
+      ! [SS-SWC S-2.12B] ThetaR/ThetaS retired — read via state%soilwater
+      S0= SpF4_2 * (1.d0 - (state%soilwater%thetar(Node)-ThetpF4_2) /   &
+     &                     (state%soilwater%thetas(Node)-ThetpF4_2) )** Mpow
       !
       if (SwSrp.eq.1) then
          !        Assign values to variables of subroutine ABSORPTION
@@ -1730,26 +1732,27 @@ contains
       !      NodGwl= deepest unsaturated compartm.
 
       !      GIVE WARNING
-      NodGwlHlp= NodGwlFlCpZo
-      if (NodGwlFlCpZo.gt.NumNod) then
+      NodGwlHlp= state%soilwater%nodgwlflcpzo                       ! [SS-SWC S-2.12B]
+      if (state%soilwater%nodgwlflcpzo.gt.NumNod) then
           !        stop ' Groundwater level below bottom profile; not possible 
           !     &for macropores '
           NodGwlHlp= NumNod
       endif
       do 20 ic= IcTopMp, NodGwlHlp
          il= Layer(ic)
-         if ((SwSoilShr(il).ne.0) .and. state%soilwater%theta(ic).lt.ThetaS(ic)-1.d-4)  &   ! [SS-SWC S-2.9]
+         ! [SS-SWC S-2.12B] ThetaS/ThetM1 retired — read via state%soilwater
+         if ((SwSoilShr(il).ne.0) .and. state%soilwater%theta(ic).lt.state%soilwater%thetas(ic)-1.d-4)  &
      &   then
             VlShriRel= SHRINK(SwSoilShr(il),SwShrInp(il),ShrParA(il),   &
      &         ShrParB(il),ShrParC(il),ShrParD(il),ShrParE(il),         &
-     &         state%soilwater%theta(ic),ThetaS(ic))                      ! [SS-SWC S-2.9]
+     &         state%soilwater%theta(ic),state%soilwater%thetas(ic))
             VlShriCp= VlShriRel * Dz(ic) ! VoLume of SHRInkage per unit hor. area
             !
-            if (state%soilwater%theta(ic).gt.ThetM1(ic)-1.d-8 .and.     &   ! [SS-SWC S-2.9]
+            if (state%soilwater%theta(ic).gt.state%soilwater%thetm1(ic)-1.d-8 .and.     &
      &          (VlMpDyCp(ic).gt.0.d0 .or.                              &
      &          (VlMpDyCp(max0(1,ic-1))+VlMpDyCp(ic+1).gt.0.d0))) then
                !              Increasing moisture content in case of cracked soil compartment
-               CritThet= ThetaS(ic)
+               CritThet= state%soilwater%thetas(ic)
             else
                !              Decreasing moist. cont., or increasing  moist. cont. in not cracked soil
                CritThet= ThetCrMp(il)
@@ -1973,25 +1976,26 @@ contains
       !     Update compartment numbers related to groundwater and perched groundwater level
       !
       !        ICpTpSatZon = top compartment of saturated zone (NodGwl deepest unsat. node)
-      ICpTpSatZon = max(NodGwlFlCpZo+1,IcTopMp) 
-      if (GwlFlCpZo.lt.Z(NodGwlFlCpZo)-0.5d0*DZ(NodGwlFlCpZo)) then
+      ! [SS-SWC S-2.12B] read NodGwlFlCpZo/GwlFlCpZo/NPeGwl/BPeGWl/PeGWl via state%soilwater
+      ICpTpSatZon = max(state%soilwater%nodgwlflcpzo+1,IcTopMp)
+      if (state%soilwater%gwlflcpzo.lt.Z(state%soilwater%nodgwlflcpzo)-0.5d0*DZ(state%soilwater%nodgwlflcpzo)) then
          ICpSatGWl = ICpTpSatZon
       else
          ICpSatGWl = -1
-         if (NodGwlFlCpZo.eq.1 .and. GwlFlCpZo.gt.Z(NodGwlFlCpZo))      &
+         if (state%soilwater%nodgwlflcpzo.eq.1 .and. state%soilwater%gwlflcpzo.gt.Z(state%soilwater%nodgwlflcpzo))      &
      &      ICpTpSatZon = 1
       endif
       !
       !        ICpTpPerZon = top compartment of perched groundwater
-      if (NPeGwl.gt.0) then
+      if (state%soilwater%npegwl.gt.0) then
          !           Perched groundwater exists
-         ICpBtPerZon = BPeGWl
-         ICpTpPerZon = NPeGwl + 1
-         if (PeGWl.lt.Z(NPeGwl)-0.5d0*DZ(NPeGwl)) then
+         ICpBtPerZon = state%soilwater%bpegwl
+         ICpTpPerZon = state%soilwater%npegwl + 1
+         if (state%soilwater%pegwl.lt.Z(state%soilwater%npegwl)-0.5d0*DZ(state%soilwater%npegwl)) then
             ICpSatPeGWl = ICpTpPerZon
          else
             ICpSatPeGWl = -1
-            if (NPeGwl.eq.1 .and. PeGWl.gt.Z(NPeGwl)) ICpTpPerZon = 1
+            if (state%soilwater%npegwl.eq.1 .and. state%soilwater%pegwl.gt.Z(state%soilwater%npegwl)) ICpTpPerZon = 1
          endif
       else
          !           No perched groundwater

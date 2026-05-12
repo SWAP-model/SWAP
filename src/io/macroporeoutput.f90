@@ -9,7 +9,7 @@ module macroporeoutput_mod
 
       contains
       
-      subroutine MacroPoreOutput(task)
+      subroutine MacroPoreOutput(task, state)
 ! ----------------------------------------------------------------------
 !     Date               : Aug 2004
 !     Purpose            : open and write macropore output files
@@ -17,9 +17,11 @@ module macroporeoutput_mod
 
       use Variables
       use file_io_mod, only: file_open
+      use swap_state_mod, only: swap_state_t   ! [SS-SWC S-2.12B]
       implicit none
 
       integer task
+      type(swap_state_t), intent(in) :: state   ! [SS-SWC S-2.12B]
 !     local
       integer ic, id, mpgeom, i
       real(8) cumdz
@@ -60,7 +62,7 @@ module macroporeoutput_mod
       close(mpgeom)
 
 ! --- output of generated shrinkage characteristics
-      call outshrinkchar ()
+      call outshrinkchar (state)  ! [SS-SWC S-2.12B]
 
 ! --  bma file (macropore output)
       if (swbma .eq. 1)                                                 &
@@ -246,7 +248,7 @@ module macroporeoutput_mod
       end subroutine outbma
 
 ! ----------------------------------------------------------------------
-      subroutine outshrinkchar ()
+      subroutine outshrinkchar (state)
 ! ----------------------------------------------------------------------
 !     date               : April 2008
 !     purpose            : Output of shrinkage characteristics as generated
@@ -256,7 +258,10 @@ module macroporeoutput_mod
       use Variables
       use macropore_mod, only: SHRINK
       use file_io_mod, only: file_open
-      implicit none 
+      use swap_state_mod, only: swap_state_t                   ! [SS-SWC S-2.12B]
+      implicit none
+
+      type(swap_state_t), intent(in) :: state                  ! [SS-SWC S-2.12B]
 
 ! --- local variables ------------------
       character(len=300) filnam
@@ -278,19 +283,20 @@ module macroporeoutput_mod
 
 ! --- generate and write shrink characteristics for each soil layer
       do lay = 1,numlay
+         ! [SS-SWC S-2.12B] Thetsl retired — read via state%soilwater%thetsl
          if (SwSoilShr(lay).ne.0) then
-            VlSolidRel= 1.d0 - Thetsl(lay)
-            MoisR = 0.d0            
+            VlSolidRel= 1.d0 - state%soilwater%thetsl(lay)
+            MoisR = 0.d0
             do i = 1, 101
-               Thet =  MoisR * (1.d0-Thetsl(lay))
+               Thet =  MoisR * (1.d0-state%soilwater%thetsl(lay))
                VRhlp = SHRINK(SwSoilShr(lay),SwShrInp(lay),ShrParA(lay),&
      &                        ShrParB(lay),ShrParC(lay),ShrParD(lay),   &
-     &                        ShrParE(lay),Thet,Thetsl(lay))
-               VoidR = (Thetsl(lay) - VRhlp) / VlSolidRel
+     &                        ShrParE(lay),Thet,state%soilwater%thetsl(lay))
+               VoidR = (state%soilwater%thetsl(lay) - VRhlp) / VlSolidRel
                write (shr,22) lay, comma, MoisR, comma, VoidR
  22            format(i10,2(a,f9.4))
 !
-               MoisR = MoisR + Thetsl(lay) / (1.d0-Thetsl(lay)) / 100.d0
+               MoisR = MoisR + state%soilwater%thetsl(lay) / (1.d0-state%soilwater%thetsl(lay)) / 100.d0
             enddo
          endif
       enddo

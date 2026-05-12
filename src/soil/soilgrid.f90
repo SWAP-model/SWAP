@@ -183,8 +183,9 @@ contains
 
       !---- Declarations
       ! SS-SWST Phase 2 Task 5: inqdra read from state%surfacewater; dropped from use variables.
-      use variables, only: SwDiscrvert,nrlevs,numlay,botcom,numnod,dz,h,theta,inq,inqrot,                                 &
-                           IThetaBeg,cofgen,numnodNew,dzNew,DiPoCp,FrArMtrx,IAvFrMpWlWtDm1,IAvFrMpWlWtDm2,           &
+      ! [SS-SWC S-2.12B] h/theta/inq/inqrot/IThetaBeg/cofgen/FrArMtrx retired — read via state%soilwater
+      use variables, only: SwDiscrvert,nrlevs,numlay,botcom,numnod,dz,                                              &
+                           numnodNew,dzNew,DiPoCp,IAvFrMpWlWtDm1,IAvFrMpWlWtDm2,                                    &
                            IQExcMtxDm1Cp,IQExcMtxDm2Cp,IQOutDrRapCp,VlMpStDm1,VlMpStDm2
       use soilhydraulics_utils, only: prhead
       use swap_array_dimensions, only: macp, maho, madr
@@ -213,6 +214,15 @@ contains
       ! SAVE statement removed - local variables are temporary work arrays
       ! ModuleName converted to parameter for proper initialization
 
+      ! [SS-SWC S-2.12B] read soil-water arrays via state%soilwater (associate)
+      associate( sw_h         => state%soilwater%h,                    &
+                 sw_theta     => state%soilwater%theta,                &
+                 sw_inq       => state%soilwater%intr%inq,             &
+                 sw_inqrot    => state%soilwater%intr%inqrot,          &
+                 sw_IThetaBeg => state%soilwater%intr%IThetaBeg,       &
+                 sw_cofgen    => state%soilwater%cofgen,               &
+                 sw_FrArMtrx  => state%soilwater%FrArMtrx )
+
       ! error in call of part
       if (part.lt.1 .or. part.gt.2) then
         write(message,*) 'fatal error in variabel PART '
@@ -229,11 +239,11 @@ contains
         enddo
         do node = 1,numnodNew
           dzNew(node) = dz(node)
-          hNew(node) = h(node)
-          thetaNew(node) = theta(node)
-          IThetaBegNew(node) = IThetaBeg(node)
-          inqNew(node) = inq(node)
-          inqrotNew(node) = inqrot(node)
+          hNew(node) = sw_h(node)
+          thetaNew(node) = sw_theta(node)
+          IThetaBegNew(node) = sw_IThetaBeg(node)
+          inqNew(node) = sw_inq(node)
+          inqrotNew(node) = sw_inqrot(node)
           do level=1,nrlevs
             inqdraNew(level,node) = state%surfacewater%intermediate%inqdra(level,node)
           enddo
@@ -248,14 +258,14 @@ contains
              IQExcMtxDm2CpNew(node) = IQExcMtxDm2Cp(node)
              IAvFrMpWlWtDm2New(node)= IAvFrMpWlWtDm2(node)
 
-             ThetaNew(node)         = FrArMtrx(node)*Theta(node)
-             IThetaBegNew(node)     = FrArMtrx(node)*IThetaBeg(node)
+             ThetaNew(node)         = sw_FrArMtrx(node)*sw_theta(node)
+             IThetaBegNew(node)     = sw_FrArMtrx(node)*sw_IThetaBeg(node)
           endif
         enddo
         do node = 0,numnodNew
            TsoilNew(node) = Tsoil(node)
         enddo
-        inqNew(numnodNew+1) = inq(numnod+1)
+        inqNew(numnodNew+1) = sw_inq(numnod+1)
 
       else if(SwDiscrVert.eq.1) then
         ! initial part (part 1)
@@ -316,14 +326,14 @@ contains
           IThetaBegNew(node) = 0.d0
           Do i = NodeNew(node,1),NodeNew(node,2)
             if (Swop.ne.2) then
-               thetaNew(node) = thetaNew(node)+theta(i)*dz(i)/Total
-               IThetaBegNew(node) = IThetaBegNew(node)+IThetaBeg(i)*    &
+               thetaNew(node) = thetaNew(node)+sw_theta(i)*dz(i)/Total
+               IThetaBegNew(node) = IThetaBegNew(node)+sw_IThetaBeg(i)* &
      &                              dz(i)/Total
             else
-               thetaNew(node) = thetaNew(node)+FrArMtrx(i)*theta(i)*    &
+               thetaNew(node) = thetaNew(node)+sw_FrArMtrx(i)*sw_theta(i)* &
      &                          dz(i)/Total
-               IThetaBegNew(node) = IThetaBegNew(node)+FrArMtrx(i)*     &
-     &                              IThetaBeg(i)*dz(i)/Total
+               IThetaBegNew(node) = IThetaBegNew(node)+sw_FrArMtrx(i)*  &
+     &                              sw_IThetaBeg(i)*dz(i)/Total
             endif
           Enddo
         Enddo
@@ -372,7 +382,7 @@ contains
 
              ! Bug fixed: Rob H 28 okt 2011 - this output for tabulated soil physics is suppressed
              do i = 1, 9
-                cofgenNew(i,node) = cofgen(i,NodeNew(node,2))  ! CofgenNew Newnode = Cofgen bottom old node
+                cofgenNew(i,node) = sw_cofgen(i,NodeNew(node,2))  ! CofgenNew Newnode = Cofgen bottom old node
              enddo
              
             hNew(node) = prhead (node,disnodNew(node),thetaNew(node),cofgenNew,hNew)
@@ -382,15 +392,15 @@ contains
           Do node = 1,NumNodNew
             inqrotNew(node) = 0.0d0
             Do i = NodeNew(node,1),NodeNew(node,2)
-              inqrotNew(node) = inqrotNew(node)+inqrot(i)
-            Enddo               
+              inqrotNew(node) = inqrotNew(node)+sw_inqrot(i)
+            Enddo
           Enddo
 
           ! convert inq to inqNew
           Do node = 1,NumNodNew
-            inqNew(node) = inq(NodeNew(node,1))
+            inqNew(node) = sw_inq(NodeNew(node,1))
           Enddo
-          inqNew(NumNodNew+1) = inq(numnod+1)
+          inqNew(NumNodNew+1) = sw_inq(numnod+1)
 
           ! convert inqdra to inqdraNew based on integration
           Do level = 1,nrlevs
@@ -437,6 +447,7 @@ contains
         call fatalerr_collected(ModuleName,message)
       endif
 
+      end associate  ! [SS-SWC S-2.12B] sw_h/.../sw_FrArMtrx
       return
       end subroutine ConvertDiscrVert
 

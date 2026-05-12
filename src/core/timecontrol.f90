@@ -1,17 +1,21 @@
 ! File VersionID:
 !   $Id: timecontrol.f90 374 2018-03-21 13:12:23Z heine003 $
 ! ----------------------------------------------------------------------
-      subroutine TimeControl(task) 
+      subroutine TimeControl(task, state)
       use error_mod, only: fatalerr_collected
 ! ----------------------------------------------------------------------
-!     Date               : Aug 2004   
+!     Date               : Aug 2004
 !     Purpose            : Handles time variables, switches and flags
 ! ----------------------------------------------------------------------
 
       use variables
       use timestep_control_mod, only: fldecdt
-  use irrigation_mod, only: SSDI_irrigation
+      use irrigation_mod, only: SSDI_irrigation
+      use swap_state_mod, only: swap_state_t            ! [SS-SWC S-2.12B]
       implicit none
+
+      ! [SS-SWC S-2.12B] state added — needed to pass to SSDI_irrigation(9)
+      type(swap_state_t), intent(in) :: state
 ! ----------------------------------------------------------------------
 !     DAYNR  : = daynumber relative to start of calendar year
 !     DAYCUM : = daynumber relative to start of simulation
@@ -477,7 +481,7 @@
 
 !     SSDI: end of subsurface irirgation event reached; reset
       if (flSSDI .and. tcum - int(tcum) + dtCrit > dt_SSDI_event) then
-         call SSDI_irrigation(9)
+         call SSDI_irrigation(9, state)  ! [SS-SWC S-2.12B]
       end if
 
 ! --- update fldtmin

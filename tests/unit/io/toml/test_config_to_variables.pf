@@ -112,8 +112,9 @@ subroutine test_config_to_variables_soil_with_layer_arrays()
    use funit
    use swap_config_mod, only: swap_config_t
    use config_to_variables_mod, only: config_to_variables
-   use variables, only: swsophy, swhyst, swinco, gwli, pondini, pondmx, pond, &
-                        cofani
+   ! [SS-SWC S-2.12B] pondini/pond retired from variables — buffered in config_to_variables_mod
+   use variables, only: swsophy, swhyst, swinco, gwli, pondmx, cofani
+   use config_to_variables_mod, only: pondini_init_buf, pond_init_buf
    implicit none
    type(swap_config_t) :: config
 
@@ -132,9 +133,9 @@ subroutine test_config_to_variables_soil_with_layer_arrays()
    @assertEqual(2,        swhyst)
    @assertEqual(2,        swinco)
    @assertEqual(-75.0d0,  gwli)
-   @assertEqual(0.5d0,    pondini)
-   ! legacy alias: pond <-> pondini
-   @assertEqual(0.5d0,    pond)
+   @assertEqual(0.5d0,    pondini_init_buf)
+   ! legacy alias: pond <-> pondini, buffered for swap.f90 to seed state
+   @assertEqual(0.5d0,    pond_init_buf)
    @assertEqual(1.0d0,    pondmx)
    @assertEqual(1.5d0,    cofani(1))
    @assertEqual(2.0d0,    cofani(2))

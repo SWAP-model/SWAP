@@ -13,18 +13,35 @@ module soilhydraulics_utils
    !! @author Original SWAP team
    !! @date February 2026 (modularization)
    use iso_fortran_env, only: real64
-   use variables, only: cofgen, swsophy, numtab, sptab, ientrytab, &
-                        iHWCKmodel, layer, swfrost, dt, fluseksatexm
+   ! [SS-SWC S-2.12B] cofgen/fluseksatexm retired from variables — bound via state%soilwater
+   use variables, only: swsophy, numtab, sptab, ientrytab, &
+                        iHWCKmodel, layer, swfrost, dt
    ! [SS-HEAT] Task 9: tsoil global retired; hconduc fallback removed (iHWCKmodel 4-11 path unreachable in regression)
    use doln
    use WC_K_models_04_11, only: functionvalue_04_11
-   
+
    implicit none
-   
+
+   ! [SS-SWC S-2.12B] module-level pointers; bound once by bind_state_targets(state)
+   real(real64), pointer :: cofgen(:,:) => null()
+   logical,      pointer :: fluseksatexm(:) => null()
+
    private
    public :: watcon, moiscap, hconduc, dhconduc, prhead, hcomean, dkmean
+   public :: bind_state_targets
 
 contains
+
+   !> [SS-SWC S-2.12B] Bind module-level pointers to state%soilwater.
+   !! Must be called once after state%soilwater is allocated (e.g. in SoilHydraulics(1)
+   !! before any reader uses cofgen/fluseksatexm here).
+   subroutine bind_state_targets(sw_cofgen_in, sw_fluseksatexm_in)
+      real(real64), target, intent(in) :: sw_cofgen_in(:,:)
+      logical,      target, intent(in) :: sw_fluseksatexm_in(:)
+      cofgen       => sw_cofgen_in
+      fluseksatexm => sw_fluseksatexm_in
+   end subroutine bind_state_targets
+
 
    !> Calculate mean hydraulic conductivity between two nodes
    function hcomean(swkmean, kup, klow, dzup, dzlow)

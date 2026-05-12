@@ -96,8 +96,8 @@ contains
 ! --- Initialisation
 
 ! --- runon of present day
-      if (flDayStart .and. flrunon) runon = runonarr(daycum+1)
-      state%soilwater%runon = runon                              ! [SS-SWC S-2.4] dual-write
+      ! [SS-SWC S-2.12B] legacy runon retired — write directly to state%soilwater%runon
+      if (flDayStart .and. flrunon) state%soilwater%runon = runonarr(daycum+1)
 
       state%soilwater%FlRunoff = .false.
       state%soilwater%QMpLatSs = 0.0d0
@@ -105,8 +105,8 @@ contains
 
 !     S O I L   E V A P O R A T I O N
 
-! --- Calculate hydraulic conductivity corresponding with hAtm
-      if (hAtm.lt.0.0d0) Then
+! --- Calculate hydraulic conductivity corresponding with hAtm — [SS-SWC S-2.12B] read from state
+      if (state%soilwater%hatm.lt.0.0d0) Then
          TheAtm = watcon(1,dble(state%soilwater%hatm))                       ! [SS-SWC S-2.5]
          ksurf  = hconduc (1,dble(state%soilwater%hatm),TheAtm,state%heat%rfcp(1),state%heat%tsoil(1))  ! [SS-SWC S-2.5]
          if(FlMacropore) then
@@ -136,17 +136,15 @@ contains
       ArMpSs = 0.d0                                           !     set value of macropore area at soil surface
       if (FlMacropore .and. Z_Tp.gt.-1.d-8) ArMpSs = ArMpTp   
       ! SS-ATM A-2.6: nraidt/melt retired — read from state%atmosphere
-      q0 = (state%atmosphere%nraidt+nird+state%atmosphere%melt)*(1.0d0-ArMpSs) + runon - state%soilwater%reva
-      q1 = - q0 - state%soilwater%pondm1/dt                                   ! [SS-SWC S-2.5]
+      q0 = (state%atmosphere%nraidt+nird+state%atmosphere%melt)*(1.0d0-ArMpSs) + state%soilwater%runon - state%soilwater%reva  ! [SS-SWC S-2.12B]
+      q1 = - q0 - state%soilwater%pondm1/dt
 
 !     check whether the atmospheric demand condition applies
       if (q1 .ge. 0.0d0 .and. q1.gt.Emax) then
          state%soilwater%ftoph  = .true.
-         state%soilwater%hsurf  = hAtm
-         kmean(1) = k1Atm
-         state%soilwater%kmean(1) = k1Atm
-         pond     = 0.0d0
-         state%soilwater%pond = 0.0d0
+         state%soilwater%hsurf  = state%soilwater%hatm                       ! [SS-SWC S-2.12B]
+         state%soilwater%kmean(1) = k1Atm                            ! [SS-SWC S-2.12B]
+         state%soilwater%pond = 0.0d0                                ! [SS-SWC S-2.12B]
          state%soilwater%runots = 0.0d0
          return
       endif
@@ -163,17 +161,14 @@ contains
       h0    = state%soilwater%h(1) - disnod(1)*(q1/k1max+1.0d0)             ! [SS-SWC S-2.5]
       if (h0.le.1.0d-6) then
          state%soilwater%ftoph  = .false.
-         kmean(1) = 0.0d0
-         state%soilwater%kmean(1) = 0.0d0
+         state%soilwater%kmean(1) = 0.0d0                            ! [SS-SWC S-2.12B]
          state%soilwater%hsurf  = 0.0d0
-         pond     = 0.0d0
-         state%soilwater%pond   = 0.0d0
+         state%soilwater%pond   = 0.0d0                              ! [SS-SWC S-2.12B]
          state%soilwater%runots = 0.0d0
          state%soilwater%qtop   = q1
       else                 ! ponding occurs
          state%soilwater%ftoph  = .true.
-         kmean(1) = k1max
-         state%soilwater%kmean(1) = k1max
+         state%soilwater%kmean(1) = k1max                            ! [SS-SWC S-2.12B]
          state%soilwater%FlRunoff = .true. ! runoff potential possible
 
 ! --- calculate max value of pond without runoff
@@ -187,9 +182,8 @@ contains
                ! SS-ATM A-2.6: nraidt/melt retired — read from state%atmosphere
                RsRoMp  = (h0max + (state%atmosphere%nraidt+nird+state%atmosphere%melt)*ArMpSs*dt) / KsMpSs
                p2Mp    = 1.0d0 / (p1 + 1.0d0 + dt/RsRoMp)
-               pond    = (h0max - PndmxMp) * p2Mp/p2
-               state%soilwater%pond = pond
-               state%soilwater%QMpLatSs = pond * dt/RsRoMp
+               state%soilwater%pond = (h0max - PndmxMp) * p2Mp/p2          ! [SS-SWC S-2.12B]
+               state%soilwater%QMpLatSs = state%soilwater%pond * dt/RsRoMp ! [SS-SWC S-2.12B]
                state%soilwater%QMpLatSs = dmin1(state%soilwater%QMpLatSs,h0max)
                if (state%soilwater%QMpLatSs.lt.1.0d-7) state%soilwater%QMpLatSs = 0.0d0
             else
@@ -212,8 +206,9 @@ contains
 !     Functions called   : runoff
 !     File usage         : -
 ! ----------------------------------------------------------------------
+      ! [SS-SWC S-2.12B] pond retired; read/written via state%soilwater%pond
       use variables, only: swdra,FlMacropore,disnod,dt,H0max,k1max,pondmx,q0,rsro,rsroexp, &
-                           pond,swpondmx,pondmxtab,t1900  ! h,pondm1 dropped [SS-SWC S-2.5]
+                           swpondmx,pondmxtab,t1900  ! h,pondm1 dropped [SS-SWC S-2.5]
       use array_utils, only: afgen
       use surfacewater_utils, only: runoff
       use swap_state_mod, only: swap_state_t
@@ -261,29 +256,26 @@ contains
 
       if(h0max.le.pondmx)then
          state%soilwater%runots = 0.0d0
-         pond     = h0max
-         state%soilwater%pond  = pond
-         state%soilwater%hsurf = pond
+         state%soilwater%pond  = h0max                                       ! [SS-SWC S-2.12B]
+         state%soilwater%hsurf = state%soilwater%pond
          return
       end if
 
       state%soilwater%runots = runoff(state)
       if(dabs(state%soilwater%runots).lt.1.0d-6)then
 !        if no runoff occurs: first estimation of pond is OK
-         pond     = h0max
-         state%soilwater%pond  = pond
-         state%soilwater%hsurf = pond
+         state%soilwater%pond  = h0max                                       ! [SS-SWC S-2.12B]
+         state%soilwater%hsurf = state%soilwater%pond
          return
       else if(dabs(state%soilwater%runots).ge.1.0d-6 .and. swdra.ne.2 .and.             &
      &                                dabs(rsroexp-1.0d0).lt.1.0d-6)then
          p1 = k1max/disnod(1) * dt
          p2 = 1.0d0 / (p1 + 1.0d0 + dt/rsro)
 
-         pond     = p2 * ( state%soilwater%pondm1 + q0*dt - k1max*dt + p1*state%soilwater%h(1) +  &  ! [SS-SWC S-2.5]
+         state%soilwater%pond     = p2 * ( state%soilwater%pondm1 + q0*dt - k1max*dt + p1*state%soilwater%h(1) +  &  ! [SS-SWC S-2.12B]
      &                     dt/rsro * pondmx )
-         state%soilwater%pond   = pond
          state%soilwater%runots = runoff(state)
-         state%soilwater%hsurf  = pond
+         state%soilwater%hsurf  = state%soilwater%pond
          return
       else
 
@@ -296,29 +288,27 @@ contains
          h0max = p2 * ( state%soilwater%pondm1 + q0*dt - k1max*dt + p1*state%soilwater%h(1) )  ! [SS-SWC S-2.5]
          h0min = 0.0d0
          do i=1,30
-            pond   = 0.5d0 * (h0max + h0min)
-            state%soilwater%pond   = pond
+            state%soilwater%pond   = 0.5d0 * (h0max + h0min)                 ! [SS-SWC S-2.12B]
             state%soilwater%runots = runoff(state)
-            h0     = p2 * ( state%soilwater%pondm1 +q0*dt -k1max*dt +p1*state%soilwater%h(1) -state%soilwater%runots)  ! [SS-SWC S-2.5]
+            h0     = p2 * ( state%soilwater%pondm1 +q0*dt -k1max*dt +p1*state%soilwater%h(1) -state%soilwater%runots)
 
-            if(dabs(pond-h0).lt.1.0d-6)then
-               state%soilwater%hsurf = pond
+            if(dabs(state%soilwater%pond-h0).lt.1.0d-6)then
+               state%soilwater%hsurf = state%soilwater%pond
                return
             else
-               if(h0.gt.pond)then
-                  h0min = pond
+               if(h0.gt.state%soilwater%pond)then
+                  h0min = state%soilwater%pond
                else
-                  h0max = pond
+                  h0max = state%soilwater%pond
                end if
             end if
          end do
       end if
 
 !     if convergence has not been reached: proceed with final value
-      pond   = 0.5d0 * (h0max + h0min)
-      state%soilwater%pond   = pond
+      state%soilwater%pond   = 0.5d0 * (h0max + h0min)                       ! [SS-SWC S-2.12B]
       state%soilwater%runots = runoff(state)
-      state%soilwater%hsurf  = pond
+      state%soilwater%hsurf  = state%soilwater%pond
 
       return
       end subroutine pondrunoff

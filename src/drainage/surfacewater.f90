@@ -125,7 +125,7 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
 !cD           qdrain_old(level) = qdrain(level)
 !cD        end do
          ! SS-SWC Phase 2 S-2.8: gwl read from state%soilwater
-         call divdra (numnod,nrlevs,dz,ksatfit,ksatexm,fluseksatexm,    &
+         call divdra (numnod,nrlevs,dz,ksatfit,ksatexm,state%soilwater%fluseksatexm,    &  ! [SS-SWC S-2.12B]
             layer,cofani,state%soilwater%gwl,l,state%drainage%qdrain,state%drainage%qdra,Swdivdinf,Swnrsrf, &
      &      SwTopnrsrf,Zbotdr,dt,FacDpthInf,owltab,t1900)
 

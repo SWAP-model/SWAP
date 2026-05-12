@@ -96,6 +96,11 @@ use solute_mod, only: solute, solute_init
 use agetracer_mod, only: AgeTracer
 use soilgrid_mod, only: CalcGrid, ConvertDiscrVert
 use soilhydraulics_mod, only: soilwater, SoilWaterStateVar
+! [SS-SWC S-2.12B] binding for legacy cofgen/fluseksatexm reads in utility modules
+use WC_K_models_04_11, only: bind_cofgen_target
+use soilhydraulics_utils, only: bind_state_targets
+! [SS-SWC S-2.12B] transient seed buffers from config_to_variables
+use config_to_variables_mod, only: h_init_buf, pondini_init_buf, pond_init_buf
 use irrigation_mod, only: irrigation, SSDI_irrigation
 use management_soil_mod, only: SoilManagement
 use error_mod, only: fatalerr_collected
@@ -182,11 +187,30 @@ if (iTask == 1) then
    if (flSwapShared) call SharedSimulation(1)
 
 !  initialize time variables and switches/flags
-   call TimeControl(1)
+   call TimeControl(1, state)
 
 !  calculate grid parameters
    call CalcGrid()
    call soilwater_init(state%soilwater, numnod, numlay)   ! SS-CRP Phase 1 C-1.2: allocate per-node arrays + mfluxtable
+   ! [SS-SWC S-2.12B] bind module-level pointers in utility modules to state%soilwater
+   ! so legacy `cofgen` / `fluseksatexm` reads in WC_K_models_04_11 + soilhydraulics_utils
+   ! resolve to the canonical state%soilwater storage (ADR 0038).
+   call bind_cofgen_target(state%soilwater%cofgen)
+   call bind_state_targets(state%soilwater%cofgen, state%soilwater%fluseksatexm)
+   ! [SS-SWC S-2.12B] seed state%soilwater from config buffers populated by config_to_variables.
+   ! Retired globals: pondini, pond, h(1..nhead). state%soilwater%h is sized numnod and
+   ! receives the swinco=3 initial-profile h values; SoilHydraulics(1) consumes the rest.
+   state%soilwater%pondini = pondini_init_buf
+   state%soilwater%pond    = pond_init_buf
+   if (allocated(h_init_buf)) then
+      block
+         integer :: ki
+         do ki = 1, min(size(h_init_buf), size(state%soilwater%h))
+            state%soilwater%h(ki) = h_init_buf(ki)
+         end do
+      end block
+      deallocate(h_init_buf)
+   end if
    call atmosphere_init(state%atmosphere)                 ! SS-ATM Phase 1 A-1.2: zero all 22 flat scalars + cohort sub-records
    ! [SS-ATM A-2.6] swinco=3 warm-restart: seed state%atmosphere directly from config (legacy globals retired)
    if (config%soil%swinco == 3) then
@@ -201,7 +225,7 @@ if (iTask == 1) then
    end if
 
    if (flTillage) call DoTillage(1, state)
-   if (flSSDI)    call SSDI_irrigation(1)
+   if (flSSDI)    call SSDI_irrigation(1, state)  ! [SS-SWC S-2.12B]
 
 !  Allocate and initialise heat state arrays before SoilWater(1) so that
 !  hconduc can read state%heat%tsoil(node) during hydraulic-conductivity init.
@@ -253,12 +277,12 @@ if (iTask == 1) then
       if (flSolute)       call SoluteOutput(1, state)
       if (flAgeTracer)    call AgeTracerOutput(1, state)
       if (flSnow)         call SnowOutput(1, state)
-      if (flMacroPore)    call MacroPoreOutput(1)
+      if (flMacroPore)    call MacroPoreOutput(1, state)
       if (flSurfaceWater) call SurfaceWaterOutput(1, state)
    end if
 
 !  Specific for exchange when called as DLL
-   if (iCaller /= 0) call handle_exchange(11, flError)
+   if (iCaller /= 0) call handle_exchange(11, flError, state)
 
    call log_info('swap', 'Initialization complete for project: ' // trim(project))
 
@@ -271,7 +295,7 @@ end if
 if (iTask == 2) then
 
 !  Specific for exchange when called as DLL
-   if (iCaller /= 0) call handle_exchange(21, flError); if (flError) return
+   if (iCaller /= 0) call handle_exchange(21, flError, state); if (flError) return
 
 !  loop with soil water time step during entire simulation period
    do while (.not.flrunend)
@@ -284,8 +308,8 @@ if (iTask == 2) then
       if (flDayStart) then
 
 !        Specific for exchange when called as DLL
-         if (iCaller /= 0) call handle_exchange(22, flError)   ! weather
-         !if (iCaller /= 0) call handle_exchange(23, flError)   ! LAI, RD
+         if (iCaller /= 0) call handle_exchange(22, flError, state)   ! weather
+         !if (iCaller /= 0) call handle_exchange(23, flError, state)   ! LAI, RD
 
 !        read meteo data for current day
          call ReadMeteoDay(state)  ! SS-ATM A-1.6: state threaded for atmosphere dual-writes
@@ -294,7 +318,7 @@ if (iTask == 2) then
          call CropGrowth(1, state%heat%tsoil, state)  ! SS-CRP C-1.3: state added for dual-write
 
 !        Specific for exchange when called as DLL
-         if (iCaller /= 0) call handle_exchange(23, flError)   ! LAI, RD
+         if (iCaller /= 0) call handle_exchange(23, flError, state)   ! LAI, RD
 
 !        calculate Irrigation rate/state variables
          if (flIrrigate) call irrigation(2, state)
@@ -347,7 +371,7 @@ if (iTask == 2) then
 !        update time variables and switches/flags
          if (fldecdt .or. (flMacroPore .and. FlDecMpRat))then
             call SoilWaterStateVar(2, state)
-            call TimeControl(3)
+            call TimeControl(3, state)
             fldtreduce = .true.
          end if
 
@@ -366,7 +390,7 @@ if (iTask == 2) then
       if (flAgeTracer) call AgeTracer(2, state)
 
 !     update time variables and switches/flags
-      call TimeControl(2)
+      call TimeControl(2, state)
 
 !     at the end of a day,
       if (flDayEnd) then
@@ -400,8 +424,8 @@ if (iTask == 2) then
 
 !        Better here: check if subsurface irrigation is required for next day,
 !                     and determine if time step needs to be changed due to dt_SSDI_event
-         if (flSSDI) call SSDI_irrigation(2)
-         call TimeControl(9)
+         if (flSSDI) call SSDI_irrigation(2, state)  ! [SS-SWC S-2.12B]
+         call TimeControl(9, state)
 
       end if
 
@@ -415,7 +439,7 @@ if (iTask == 2) then
             if (flSolute)        call SoluteOutput(2, state)
             if (flAgeTracer)     call AgeTracerOutput(2, state)
             if (flSnow)          call SnowOutput(2, state)
-            if (flMacroPore)     call MacroPoreOutput(2)
+            if (flMacroPore)     call MacroPoreOutput(2, state)
             if (flSurfaceWater) then
                if (daynr == merge(366, 365, dtleap(iyear))) &
                   call surfacewater_year_reset(state%surfacewater)
@@ -440,7 +464,7 @@ if (iTask == 2) then
    end do
 
 !  Specific for exchange when called as DLL
-   if (iCaller /= 0) call handle_exchange(29, flError)
+   if (iCaller /= 0) call handle_exchange(29, flError, state)
 
    return
 end if
@@ -465,7 +489,7 @@ if (iTask == 3) then
       if (flAgeTracer)          call AgeTracerOutput(3, state)
       if (flIrrigate)           call IrrigationOutput(3)
       if (flSnow)               call SnowOutput(3, state)
-      if (flMacroPore)          call MacroPoreOutput(3)
+      if (flMacroPore)          call MacroPoreOutput(3, state)
       if (flSurfaceWater)       call SurfaceWaterOutput(3, state)
       if (flCropNut)            call SoilManagement(7, state)
    end if
@@ -474,7 +498,7 @@ if (iTask == 3) then
    call WriteSwapOk(Project)
 
 !  Specific for exchange when called as DLL
-   if (iCaller /= 0) call handle_exchange(31, flError)
+   if (iCaller /= 0) call handle_exchange(31, flError, state)
 
    call log_info('swap', 'Simulation complete for project: ' // trim(project))
 
@@ -484,16 +508,19 @@ end if
 contains
 
 !  routine to handle exchange with calling program
-   subroutine handle_exchange(task, flError)
+   subroutine handle_exchange(task, flError, state)
    use variables, only : swetr, swdivide, swmetdetail, swrain, logf
-   use variables, only : t1900, iyear, Tstart, Tend, numnod, dz, theta
+   ! [SS-SWC S-2.12B] theta/iqrot/inqrot retired — read via state%soilwater
+   use variables, only : t1900, iyear, Tstart, Tend, numnod, dz
    ! SS-ATM A-2.6: iptra retired — read from state%atmosphere%intr%iptra (host association)
-   use variables, only : lai, ch, rd, iqrot, inqrot, flCropCalendar, flCropEmergence, flCropHarvest
+   use variables, only : lai, ch, rd, flCropCalendar, flCropEmergence, flCropHarvest
    use variables, only : arad, atmn, atmx, awin, ahum, wet, arai, aetr, rainfluxarray, raintimearray   !, rainamount
    use variables, only : ex_tlast, daynrfirst, daynrlast
+   use swap_state_mod, only: swap_state_t       ! [SS-SWC S-2.12B]
    implicit none
    integer, intent(in)   :: task
    logical, intent(out)  :: flError
+   type(swap_state_t), intent(in) :: state      ! [SS-SWC S-2.12B]
    ! local
    integer               :: i
    integer, dimension(6) :: datea
@@ -532,15 +559,15 @@ contains
       fromswap%tend       = Tend
       ! SS-ATM A-2.6: iptra retired — read from state%atmosphere%intr%iptra
       fromswap%tpot       = state%atmosphere%intr%iptra
-      fromswap%tact       = iqrot
+      fromswap%tact       = state%soilwater%intr%iqrot      ! [SS-SWC S-2.12B]
       fromswap%numnodes   = numnod
       !allocate(fromswap%dz(numnod));  fromswap%dz(1:numnod)  = dz(1:numnod)
       !allocate(fromswap%wc(numnod));  fromswap%wc(1:numnod)  = theta(1:numnod)
       !allocate(fromswap%rwu(numnod)); fromswap%rwu(1:numnod) = inqrot(1:numnod)
 
       fromswap%dz(1:numnod)  = dz(1:numnod)
-      fromswap%wc(1:numnod)  = theta(1:numnod)
-      fromswap%rwu(1:numnod) = inqrot(1:numnod)
+      fromswap%wc(1:numnod)  = state%soilwater%theta(1:numnod)        ! [SS-SWC S-2.12B]
+      fromswap%rwu(1:numnod) = state%soilwater%intr%inqrot(1:numnod)  ! [SS-SWC S-2.12B]
       ex_tlast = 0.0d0
    end if
 
@@ -566,7 +593,7 @@ contains
       ! first set iyear for proper use in TimeControl; this allows for start any time, irrespective of tstart in swap.swp
       call dtdpar (Tstart, datea, fsec)
       iyear = datea(1)
-      call TimeControl(1)
+      call TimeControl(1, state)
 
       ! External forcing mode: provide full-year availability without reading meteo files
       daynrfirst = 1
@@ -615,12 +642,12 @@ contains
       fromswap%numnodes      = numnod
       ! SS-ATM A-2.6: iptra retired — read from state%atmosphere%intr%iptra
       fromswap%tpot          = state%atmosphere%intr%iptra
-      fromswap%tact          = iqrot
+      fromswap%tact          = state%soilwater%intr%iqrot      ! [SS-SWC S-2.12B]
       !if(.not.allocated(fromswap%dz))  allocate(fromswap%dz(numnod));  fromswap%dz(1:numnod)  = dz(1:numnod)
       !if(.not.allocated(fromswap%wc))  allocate(fromswap%wc(numnod));  fromswap%wc(1:numnod)  = theta(1:numnod)
       !if(.not.allocated(fromswap%rwu)) allocate(fromswap%rwu(numnod)); fromswap%rwu(1:numnod) = 0.0d0
       fromswap%dz(1:numnod)  = dz(1:numnod)
-      fromswap%wc(1:numnod)  = theta(1:numnod)
+      fromswap%wc(1:numnod)  = state%soilwater%theta(1:numnod)  ! [SS-SWC S-2.12B]
       fromswap%rwu(1:numnod) = 0.0d0
       ex_tlast = t1900
    end if

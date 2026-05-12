@@ -2129,7 +2129,7 @@
       endif
 
 ! --- update normalized cumulative root density based on root extraction or stress (cumdens)
-      if (swrdc.eq.1) call update_rootdistribution()
+      if (swrdc.eq.1) call update_rootdistribution(state)
       
 ! --- root extension
       if (swrd.eq.1) then
@@ -3426,7 +3426,7 @@
         laimax = max (lai,laimax)
 
 ! ---   update normalized cumulative root density based on root extraction or stress (cumdens)
-        if (swrdc .eq. 1) call update_rootdistribution()
+        if (swrdc .eq. 1) call update_rootdistribution(state)
         
         ! root extension
         if (swrd.eq.1) then
@@ -3471,22 +3471,24 @@
       end
 
 ! ----------------------------------------------------------------------
-      subroutine update_rootdistribution()
+      subroutine update_rootdistribution(state)
 
 ! ----------------------------------------------------------------------
 !     Date: May 2021
 !     Purpose: dynamic root distribution
 !              The normalized cumulative root density is modified by
-!              growth of root biomass based on relative root water 
+!              growth of root biomass based on relative root water
 !              extraction or transpiration reduction (uncompensated).
 ! ----------------------------------------------------------------------
-      
-      ! import global variables
+
+      ! [SS-SWC S-2.12B] qpotrot_day/qredtot_day retired — read via state%soilwater%intr
       use variables, only: date, noddrz, zbotcp, ztopcp, cumdens,             &
-                     qpotrot_day, qredtot_day,                                &
                      wrt, gwrt, wrtmin
-      ! local      
+      use swap_state_mod, only: swap_state_t  ! [SS-SWC S-2.12B]
+      ! local
       implicit none
+
+      type(swap_state_t), intent(in) :: state  ! [SS-SWC S-2.12B]
  
       integer   node, i
       real(8)   top,bot
@@ -3502,8 +3504,8 @@
         rel_qrot_day = 0.d0
         rel_qred_day = 0.d0
         do node = 1,noddrz
-          rel_qrot_day = rel_qrot_day + 1 - qredtot_day(node) / qpotrot_day(node)
-          rel_qred_day = rel_qred_day + qredtot_day(node)
+          rel_qrot_day = rel_qrot_day + 1 - state%soilwater%intr%qredtot_day(node) / state%soilwater%intr%qpotrot_day(node)
+          rel_qred_day = rel_qred_day + state%soilwater%intr%qredtot_day(node)
         enddo
         
         if ((gwrt .gt. 0.d0 .and. rel_qrot_day .gt. 0.d0) .or. (gwrt .lt. 0.d0 .and. rel_qred_day .gt. 0.d0)) then
@@ -3525,12 +3527,12 @@
             bot = - cumdens(i-1) * rd_noddrz
             do while (.not. found)
               if (bot .ge. zbotcp(node)) then
-                qrotdis(i) = qrotdis(i) + (1 - qredtot_day(node) / qpotrot_day(node)) / (ztopcp(node) - zbotcp(node)) * (top - bot)
-                qreddis(i) = qreddis(i) + qredtot_day(node) / (ztopcp(node) - zbotcp(node)) * (top - bot)
+                qrotdis(i) = qrotdis(i) + (1 - state%soilwater%intr%qredtot_day(node) / state%soilwater%intr%qpotrot_day(node)) / (ztopcp(node) - zbotcp(node)) * (top - bot)
+                qreddis(i) = qreddis(i) + state%soilwater%intr%qredtot_day(node) / (ztopcp(node) - zbotcp(node)) * (top - bot)
                 found = .true.
               else
-                qrotdis(i) = qrotdis(i) + (1 - qredtot_day(node) / qpotrot_day(node)) / (ztopcp(node) - zbotcp(node)) * (top - zbotcp(node))
-                qreddis(i) = qreddis(i) + qredtot_day(node) / (ztopcp(node) - zbotcp(node)) * (top - zbotcp(node))
+                qrotdis(i) = qrotdis(i) + (1 - state%soilwater%intr%qredtot_day(node) / state%soilwater%intr%qpotrot_day(node)) / (ztopcp(node) - zbotcp(node)) * (top - zbotcp(node))
+                qreddis(i) = qreddis(i) + state%soilwater%intr%qredtot_day(node) / (ztopcp(node) - zbotcp(node)) * (top - zbotcp(node))
                 top = zbotcp(node)
                 node = node + 1
               end if
@@ -3566,7 +3568,7 @@
         end do
 
         do node = 1,noddrz
-          write(888,'(a11,",",i4,3(",",f15.5))') trim(date), node, qpotrot_day(node), qredtot_day(node)
+          write(888,'(a11,",",i4,3(",",f15.5))') trim(date), node, state%soilwater%intr%qpotrot_day(node), state%soilwater%intr%qredtot_day(node)
         end do
         ! TEMPORARY OUTPUT  DELETE
         

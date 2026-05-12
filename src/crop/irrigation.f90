@@ -83,17 +83,9 @@
 ! ===    determine irrigation rates and states  =============================================
 !        daily
       
-! ---    reset intermediate soil water fluxes
-         if (flzerointr) then
-            igird = 0.0d0
-            inird = 0.0d0
-         end if
-
-! ---    reset cumulative soil water fluxes
-         if (flzerocumu) then
-            cgird = 0.0d0
-            cnird = 0.0d0
-         end if
+! ---    reset intermediate soil water fluxes — [SS-SWC S-2.12B] handled by state%soilwater%intr%reset()
+         ! igird/inird/cgird/cnird zeroed via state%soilwater%intr%reset() in SoilWater(2)
+         ! and state%soilwater%cumu%reset() in same path.
 
          gird = 0.0d0
          irrigevent = 0
@@ -150,7 +142,7 @@
                wclo = wclos(layer(node))*dz(node);       if (node.eq.noddrz) wclo = wclo*frlow
                wcme = wcmes(layer(node))*dz(node);       if (node.eq.noddrz) wcme = wcme*frlow
                wchi = wchis(layer(node))*dz(node);       if (node.eq.noddrz) wchi = wchi*frlow
-               wcac = watcon(node,h(node))*dz(node);     if (node.eq.noddrz) wcac = wcac*frlow
+               wcac = watcon(node,state%soilwater%h(node))*dz(node);     if (node.eq.noddrz) wcac = wcac*frlow  ! [SS-SWC S-2.12B]
                awlh = awlh+(wclo-wchi)
                awmh = awmh+(wcme-wchi)
                awah = awah+(wcac-wchi)
@@ -161,8 +153,9 @@
             if (tcs.eq.1) then
                tps1 = afgen(treltab,14,dvs)
 ! ---          transpiration fraction due to drought and salinity stress
-               if (iptra_day .gt. 1.d-10) then
-                  Tred = 1.0d0 - (iqreddry_day + iqredsol_day) / iptra_day
+               ! [SS-SWC S-2.12B] iptra_day/iqreddry_day/iqredsol_day -> state%soilwater%intr
+               if (state%soilwater%intr%iptra_day .gt. 1.d-10) then
+                  Tred = 1.0d0 - (state%soilwater%intr%iqreddry_day + state%soilwater%intr%iqredsol_day) / state%soilwater%intr%iptra_day
                else
                   Tred = 1.0d0
                end if
@@ -220,14 +213,14 @@
                phcrit = tps5        ! old statement was: phcrit = -abs(tps5)
 ! PG/JK end    15-feb-2010
 ! ---          compare critical pressure head and actual pressure head
-               if (h(nodsen).le.phcrit) irrigevent = 2
+               if (state%soilwater%h(nodsen).le.phcrit) irrigevent = 2  ! [SS-SWC S-2.12B]
             end if
 
 ! -8-       timing - critical watercontent at dcrit (node=nodsen) exceeded
             if (tcs.eq.8) then
                tps5 = afgen(tcritab,14,dvs)
 ! ---          compare critical water content and actual water content
-               if (theta(nodsen).le.tps5) irrigevent = 2
+               if (state%soilwater%theta(nodsen).le.tps5) irrigevent = 2  ! [SS-SWC S-2.12B]
                !phcrit = prhead(nodsen,disnod(nodsen),tps5,cofgen,h)
             end if
 
@@ -292,18 +285,20 @@
 !!   - 1: initialization/read SSDI settings
 !!   - 2: daily SSDI scheduling and rate assignment
 !!   - 9: reset SSDI event state
-subroutine SSDI_irrigation(iTask)
+subroutine SSDI_irrigation(iTask, state)
 
+! [SS-SWC S-2.12B] h/theta/iptra_day/iqreddry_day/iqredsol_day retired — read via state%soilwater
 use variables, only: mairg, numnod, tend, tstart, t1900, zbotcp, irrigevent, qssdi, qssdisum, dt_SSDI_event,   &
-                     h, theta, iptra_day, iqreddry_day, iqredsol_day, &
                      swssdi_irr, nod_ssdi_irr, ssdi_schedule_irr, ssdi_sched_type_irr, &
                      nod_ssdi_sensor_irr, ssdi_threshold_irr, ssdi_threshold_z_irr, &
                      ssdi_amount_irr, ssdi_appl_rate_irr, sw_interval_irr, days_interval_irr, &
                      days_counter_irr, nirri_ssdi_irr, ssdi_date_irr, ssdi_rate_f_irr, ssdi_amount_f_irr
+use swap_state_mod, only: swap_state_t
 
 implicit none
 ! global
 integer, intent(in) :: iTask
+type(swap_state_t), intent(in) :: state  ! [SS-SWC S-2.12B]
 
 ! local aliases for module variables (for minimal code changes)
 integer                         :: swssdi
@@ -373,18 +368,19 @@ real(8)                         :: Tred
          ! scheduling based on exceedance of a certain threshold
          if (ssdi_sched_type == 1) then
             ! transpiration fraction due to drought and salinity stress
-            if (iptra_day .gt. 1.d-10) then
-               Tred = 1.0d0 - (iqreddry_day + iqredsol_day) / iptra_day
+            ! [SS-SWC S-2.12B] iptra_day/iqreddry_day/iqredsol_day -> state%soilwater%intr
+            if (state%soilwater%intr%iptra_day .gt. 1.d-10) then
+               Tred = 1.0d0 - (state%soilwater%intr%iqreddry_day + state%soilwater%intr%iqredsol_day) / state%soilwater%intr%iptra_day
             else
                Tred = 1.0d0
             end if
             if (Tred .lt. ssdi_threshold) irrigevent = 2
             
          else if (ssdi_sched_type == 2) then
-            if (h(nod_ssdi_sensor) <= ssdi_threshold) irrigevent = 2
+            if (state%soilwater%h(nod_ssdi_sensor) <= ssdi_threshold) irrigevent = 2  ! [SS-SWC S-2.12B]
             
          else if (ssdi_sched_type == 3) then
-            if (theta(nod_ssdi_sensor) <= ssdi_threshold) irrigevent = 2
+            if (state%soilwater%theta(nod_ssdi_sensor) <= ssdi_threshold) irrigevent = 2  ! [SS-SWC S-2.12B]
 
          end if
          

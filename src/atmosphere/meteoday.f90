@@ -97,7 +97,8 @@ contains
     !!
     !! @warning CNref values > 170 will cause numerical issues in CNdry calculation
     ! [SS-ATM A-2.6] nraidt/melt retired from variables; state added to read from state%atmosphere
-    use variables, only: CNref, CNdry, CNwet, ThetaRef, theta, Runoff_CN, zbotcp, dz, numnod, t1900, wc_cor, iCNtab, CNtimTAB, CNrefTAB, wc10, &
+    ! [SS-SWC S-2.12B] theta retired — read via state%soilwater%theta
+    use variables, only: CNref, CNdry, CNwet, ThetaRef, Runoff_CN, zbotcp, dz, numnod, t1900, wc_cor, iCNtab, CNtimTAB, CNrefTAB, wc10, &
                         nod10_cn, icn_atm, z10_cn
     use soilhydraulics_utils, only: watcon
     implicit none
@@ -164,7 +165,7 @@ contains
       if (wc_cor > 0) then
           wc10 = 0.0d0
           do i = 1, nod10_cn
-            wc10 = wc10 + theta(i)*dz(i)
+            wc10 = wc10 + state%soilwater%theta(i)*dz(i)  ! [SS-SWC S-2.12B]
           end do
           wc10 = wc10/z10_cn
           if (wc10 < ThetaRef) then
@@ -417,7 +418,8 @@ contains
   !!            O - caintc, cgrai, cnrai, igrai, inrai, iprec
   !! @endnote
   subroutine ResetMetFlx (state)
-      use variables, only: flzerointr,flzerocumu,iprec
+      ! [SS-SWC S-2.12B] iprec retired — state%soilwater%intr%reset() handles it
+      use variables, only: flzerointr,flzerocumu
       implicit none
 
       type(swap_state_t), intent(inout) :: state  !! [SS-ATM A-2.1] cohort reset() dispatch
@@ -426,7 +428,6 @@ contains
 
     ! Reset cumulative intermediate fluxes
     if (flzerointr) then
-      iprec = 0.0d0
       ! [SS-ATM A-2.6] canonical reset for all 8 intr fields; legacy igrai/inrai retired
       call state%atmosphere%intr%reset()
     endif
@@ -510,8 +511,9 @@ contains
     use variables, only: lai, gird, swinter, swmetdetail, nmetdetail, swetr, flCropEmergence, et0, ew0, es0, swcf, swcfbs, cfbs, &
     cf, cfeic, rad, arad, metperiod, tav, atav, ahum, logf, swscre, daynr, lat, alt, altw, angstroma, angstromb, rsc, ch, daylp, flmetdetail, albedo, tmn, tmx, rsw, difpp, &
     dsinbe, atmtr, rsoil, swdivide, kdif, kdir, croptype, swgc, gc, siccapact, siccaptb, icrop, t, dt, flcropcalendar, &
-     flCropHarvest, pond, cfevappond, flco2, fco2tra, tpot, epot, grain, nrain, finterception, swrain, &
+     flCropHarvest, cfevappond, flco2, fco2tra, tpot, epot, grain, nrain, finterception, swrain, &
      swusecn, runoff_cn, fletsine, rh, tavd
+     ! [SS-SWC S-2.12B] pond retired — read via state%soilwater%pond
     use swap_array_dimensions, only: magrs
     use MeteoVars
     use array_utils, only: afgen
@@ -750,8 +752,8 @@ contains
         endif
       endif
 
-      ! Adapt peva in case of ponding
-      if (pond .gt. 1.0d-10) then
+      ! Adapt peva in case of ponding — [SS-SWC S-2.12B] state%soilwater%pond
+      if (state%soilwater%pond .gt. 1.0d-10) then
         if (SwETr.eq.0 .and. es0.gt.1.0d-8) then
           at_peva = ew0/es0 * at_peva
         elseif (es0.gt.1.0d-8) then
@@ -765,7 +767,7 @@ contains
 
       ! Potential soil evaporation [cm/d] according to PMdirect
       if (swdivide .eq. 1) then
-        if (pond .gt. 1.0d-10) then
+        if (state%soilwater%pond .gt. 1.0d-10) then  ! [SS-SWC S-2.12B]
           at_peva = Edirectpond*0.1d0
         else
           at_peva = Edirect*0.1d0

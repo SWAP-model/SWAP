@@ -112,13 +112,13 @@
          if (swdrought.eq.2) call outrot(1, state)
 
 ! --     capillary rise output file
-         if(swcapriseoutput) call capriseoutput(task)
+         if(swcapriseoutput) call capriseoutput(task, state)
 
 ! --     extensive formatted output file for solute studies
          if (swafo.ge.1) call outafo (task, state)
 
 ! --     generate file with soil physical parameters
-         if (swini .eq. 1) call outsoilphys ()
+         if (swini .eq. 1) call outsoilphys (state)  ! [SS-SWC S-2.12B]
 
 ! --     extensive unformatted output file for solute studies
          if (swaun.ge.1) call outaun (task, state)
@@ -156,7 +156,7 @@
          if (swdrought.eq.2 .and. state%atmosphere%ptra .gt. 1.0d-10) call outrot (2, state)
 
 ! --     capillary rise output file
-         if(swcapriseoutput) call capriseoutput(task)
+         if(swcapriseoutput) call capriseoutput(task, state)
 
 ! --     extensive formatted output file for solute studies
          if (swafo.ge.1) call outafo (task, state)
@@ -191,7 +191,7 @@
          if (swafo.ge.1) close (afo)
          if (swaun.ge.1) close (aun)
          if (swoutputmodflow.eq.1) call OutputModflow(3, state)
-         if (swcapriseoutput) call capriseoutput(3)
+         if (swcapriseoutput) call capriseoutput(3, state)
 
 ! --     special output for RUME project
          if (swrum == 1) call outrume (3, state)
@@ -213,8 +213,9 @@
       ! SS-ATM A-2.5: cevap,cgrai,csnrai,cnrai,cpeva,cptra removed from only-list; reads via state%atmosphere.
       ! SS-ATM A-2.5: ssnow,snowinco removed from only-list; reads via state%atmosphere.
       ! SS-SWC S-2.11: gwl,pond,volact,volini,wbalance,PondIni,cqbot,cqrot,crunon,crunoff,cgird,cnird removed; reads via state%soilwater.
+      ! [SS-SWC S-2.12B] cqprai retired — read via state%soilwater%cumu%cqprai
       use variables, only: wba,daynr,daycum,swscre,cQMpOutDrRap,t1900,date,outfil,pathwork,project,flprintshort,floutput,       &
-                           swsnow,cqprai,flheader,flmacropore
+                           swsnow,flheader,flmacropore
       use swap_state_mod, only: swap_state_t
       use file_io_mod, only: file_open
       implicit none
@@ -324,7 +325,8 @@
         sw_crunon  => state%soilwater%cumu%crunon,  &
         sw_crunoff => state%soilwater%cumu%crunoff, &
         sw_cgird   => state%soilwater%cumu%cgird,   &
-        sw_cnird   => state%soilwater%cumu%cnird    &
+        sw_cnird   => state%soilwater%cumu%cnird,   &
+        sw_cqprai  => state%soilwater%cumu%cqprai   &  ! [SS-SWC S-2.12B]
       )
       if (swsnow.eq.0) then
         dstor = (sw_volact + sw_pond) - (sw_volini + sw_pondini)
@@ -337,13 +339,13 @@
         else
           if(FlMacropore) then
             write (wba,30) date,comma,daynr,comma,daycum,comma,           &
-     &    at_cgrai+at_csnrai,comma,cqprai,comma,sw_cgird,comma,sw_cnird,comma,  &
+     &    at_cgrai+at_csnrai,comma,sw_cqprai,comma,sw_cgird,comma,sw_cnird,comma,  &
      &    sw_crunon,comma,sw_crunoff,comma,at_cptra,comma,sw_cqrot,comma,at_cpeva, &
      &    comma,at_cevap,comma,state%surfacewater%drainage_cumulative%cqdra,comma,cQMpOutDrRap,comma,sw_cqbot,comma, &   !!! aanpassing GEM
      &    dstor,comma,gwlout,comma,sw_pond,comma,sw_wbalance,comma,date
           else
             write (wba,31) date,comma,daynr,comma,daycum,comma,           &
-     &    at_cgrai+at_csnrai,comma,cqprai,comma,sw_cgird,comma,sw_cnird,comma,  &
+     &    at_cgrai+at_csnrai,comma,sw_cqprai,comma,sw_cgird,comma,sw_cnird,comma,  &
      &    sw_crunon,comma,sw_crunoff,comma,at_cptra,comma,sw_cqrot,comma,at_cpeva, &
      &    comma,at_cevap,comma,(state%surfacewater%drainage_cumulative%cqdra+cQMpOutDrRap),comma,sw_cqbot,comma,&
      &    dstor,comma,gwlout,comma,sw_pond,comma,sw_wbalance,comma,date
@@ -360,13 +362,13 @@
         else
           if(FlMacropore) then
             write (wba,30) date,comma,daynr,comma,daycum,comma,           &
-     &    at_cgrai+at_csnrai,comma,cqprai,comma,sw_cgird,comma,sw_cnird,comma,  &
+     &    at_cgrai+at_csnrai,comma,sw_cqprai,comma,sw_cgird,comma,sw_cnird,comma,  &
      &    sw_crunon,comma,sw_crunoff,comma,at_cptra,comma,sw_cqrot,comma,at_cpeva, &
      &    comma,at_cevap,comma,state%surfacewater%drainage_cumulative%cqdra,comma,cQMpOutDrRap,comma,sw_cqbot,comma, &   !!! aanpassing GEM
      &    dstor,comma,gwlout,comma,sw_pond,comma,sw_wbalance,comma,date
           else
             write (wba,31) date,comma,daynr,comma,daycum,comma,           &
-     &    at_cgrai+at_csnrai,comma,cqprai,comma,sw_cgird,comma,sw_cnird,comma,  &
+     &    at_cgrai+at_csnrai,comma,sw_cqprai,comma,sw_cgird,comma,sw_cnird,comma,  &
      &    sw_crunon,comma,sw_crunoff,comma,at_cptra,comma,sw_cqrot,comma,at_cpeva, &
      &    comma,at_cevap,comma,(state%surfacewater%drainage_cumulative%cqdra+cQMpOutDrRap),comma,sw_cqbot,comma,&
      &    dstor,comma,gwlout,comma,sw_pond,comma,sw_wbalance,comma,date
@@ -2073,38 +2075,21 @@
       end
 
 ! ----------------------------------------------------------------------
-      subroutine outsoilphys ()
+      subroutine outsoilphys (state)
 ! ----------------------------------------------------------------------
 !     date               : March 2008
 !     purpose            : Output of soil physical parameters
-!        cofgen(1,node) = ores
-!        cofgen(2,node) = osat
-!        cofgen(3,node) = ksatfit
-!        cofgen(4,node) = alfa
-!        cofgen(5,node) = lexp
-!        cofgen(6,node) = npar
-!        cofgen(7,node) = 1.d0 - (1.d0 / npar)
-!        cofgen(8,node) = dummy
-!        cofgen(9,node) = h_enpr
-!        cofgen(10,node)= ksatexm
-!        cofgen(11,node)= relsatthr
-!        cofgen(12,node)= ksatthr
-!        cofgen(13,node)= alfa_2
-!        cofgen(14,node)= npar_2
-!        cofgen(15,node)= mpar_2 (=1-1/npar_2)
-!        cofgen(16,node)= omega_1
-!        cofgen(17,node)= omega_2 (omega_2=1-omega_1)
-!        cofgen(18,node)= h0
-!        cofgen(19,node)= ha
-!        cofgen(20,node)= apar
-!        cofgen(21,node)= omega_K
+! [SS-SWC S-2.12B] state added — cofgen now read from state%soilwater%cofgen
 ! ---------------------------------------------------------------------
 ! --- global
       use variables
       use doln
       use soilhydraulics_utils, only: watcon, moiscap, hconduc!, dhconduc
       use file_io_mod, only: file_open
+      use swap_state_mod, only: swap_state_t
       implicit none
+
+      type(swap_state_t), intent(in) :: state
 
 ! --- local variables ------------------
       character(len=300) filnam
@@ -2171,8 +2156,9 @@
 !           in case of static macropores FrArMtrx < 1
             if(FlMacropore)  kx = FrArMtrx1 * kx
 !           write output
-            relsat = (thetax-cofgen(1,Node)) /                          &
-     &                 (cofgen(2,Node)-cofgen(1,Node))
+            ! [SS-SWC S-2.12B] cofgen retired — read via state%soilwater%cofgen
+            relsat = (thetax-state%soilwater%cofgen(1,Node)) /          &
+     &                 (state%soilwater%cofgen(2,Node)-state%soilwater%cofgen(1,Node))
             write (soi,22) lay, comma, hx(hh), comma, thetax, comma,    &
      &                     dimocax, comma, relsat, comma, kx!, comma, dkx
  22         format(i10,6(a,1pe15.7))
@@ -3311,7 +3297,8 @@
 !     Purpose            : write drainage fluxes, surface runoff, rapid
 !                          drainage to  OUTNAM.DRF file
 ! ---------------------------------------------------------------------
-      use variables, only: outfil,drf,pathwork,daynr,date,nrpri,nrlevs,crunoff,cQMpOutDrRap,flheader
+      ! [SS-SWC S-2.12B] crunoff retired — read via state%soilwater%cumu%crunoff
+      use variables, only: outfil,drf,pathwork,daynr,date,nrpri,nrlevs,cQMpOutDrRap,flheader
       use swap_state_mod, only: swap_state_t
       use swap_array_dimensions, only: madr
       use file_io_mod, only: file_open
@@ -3418,12 +3405,12 @@
      &  comma,(state%surfacewater%drainage_cumulative%cqdrain(3)-c1qdrain(3)),              &
      &  comma,(state%surfacewater%drainage_cumulative%cqdrain(4)-c1qdrain(4)),              &
      &  comma,(state%surfacewater%drainage_cumulative%cqdrain(5)-c1qdrain(5)),              &
-     &  comma,(state%surfacewater%reservoir_cumulative%cqdrd-c1qdrd),comma,(crunoff-c1runoff),&
+     &  comma,(state%surfacewater%reservoir_cumulative%cqdrd-c1qdrd),comma,(state%soilwater%cumu%crunoff-c1runoff),&
      &  comma,(cQMpOutDrRap-c1qdrar),                                   &
      &  comma,state%surfacewater%drainage_cumulative%cqdrain(1),comma,state%surfacewater%drainage_cumulative%cqdrain(2),&
      &  comma,state%surfacewater%drainage_cumulative%cqdrain(3),comma,state%surfacewater%drainage_cumulative%cqdrain(4),&
      &  comma,state%surfacewater%drainage_cumulative%cqdrain(5),                            &
-     &  comma,state%surfacewater%reservoir_cumulative%cqdrd,comma,crunoff,comma,cQMpOutDrRap
+     &  comma,state%surfacewater%reservoir_cumulative%cqdrd,comma,state%soilwater%cumu%crunoff,comma,cQMpOutDrRap
 
  20   format (A11,a1,I4,8(a1,f8.2),8(a1,f8.1))
 
@@ -3432,7 +3419,7 @@
           c1qdrain(level)=state%surfacewater%drainage_cumulative%cqdrain(level)
       enddo
       c1qdrd = state%surfacewater%reservoir_cumulative%cqdrd
-      c1runoff = crunoff
+      c1runoff = state%soilwater%cumu%crunoff
       c1qdrar = cQMpOutDrRap
 
       case default
@@ -3453,7 +3440,8 @@
 ! ---------------------------------------------------------------------
       ! SS-SWST Phase 2 Task 11: imper removed from globals (now local variable in outswb).
       ! SS-SWC S-2.11: gwl,pond removed from only-list; reads via state%soilwater.
-      use variables, only: outfil,pathwork,daynr,daycum,hbweir,crunoff,           &
+      ! [SS-SWC S-2.12B] crunoff retired — read via state%soilwater%cumu%crunoff
+      use variables, only: outfil,pathwork,daynr,daycum,hbweir,           &
                            cQMpOutDrRap,swb,swsec,swman,nmper,impend,project,logf,swscre,date,t1900,t,outper,iyear
       use swap_state_mod, only: swap_state_t
       use file_io_mod, only: file_open
@@ -3592,7 +3580,7 @@
 
 ! --- water balance error
       delbal = (state%surfacewater%swst + state%surfacewater%reservoir_cumulative%cwout) - &
-     &         (state%surfacewater%swstini + state%surfacewater%reservoir_cumulative%cqdrd + crunoff + &
+     &         (state%surfacewater%swstini + state%surfacewater%reservoir_cumulative%cqdrd + state%soilwater%cumu%crunoff + &
      &          state%surfacewater%reservoir_cumulative%cwsupp + cQMpOutDrRap)
       if (delbal .gt. 0.05d0) then
         call dtdpst                                                     &
@@ -3613,8 +3601,8 @@
 ! --- write output record OUTNAM.SWB
       write (SWB,40) date,comma,daynr,comma,daycum,comma,gwlev,comma,   &
      &  state%surfacewater%wlstar,comma,state%surfacewater%wls,comma,state%surfacewater%swst,comma, &
-     &  (state%surfacewater%reservoir_cumulative%cqdrd+crunoff+cQMpOutDrRap-cqdrf1),comma,(state%surfacewater%reservoir_cumulative%cwsupp-c1wsupp), &
-     &  comma,(state%surfacewater%reservoir_cumulative%cwout-c1wout),comma,(state%surfacewater%reservoir_cumulative%cqdrd+crunoff+cQMpOutDrRap), &
+     &  (state%surfacewater%reservoir_cumulative%cqdrd+state%soilwater%cumu%crunoff+cQMpOutDrRap-cqdrf1),comma,(state%surfacewater%reservoir_cumulative%cwsupp-c1wsupp), &
+     &  comma,(state%surfacewater%reservoir_cumulative%cwout-c1wout),comma,(state%surfacewater%reservoir_cumulative%cqdrd+state%soilwater%cumu%crunoff+cQMpOutDrRap), &
      &  comma,state%surfacewater%reservoir_cumulative%cwsupp,comma,state%surfacewater%reservoir_cumulative%cwout
  40   format (a11,a1,I4,a1,I6,3(a1,f7.1),a1,f6.1,6(a1,f7.2))
 
@@ -3645,7 +3633,7 @@
       endif
 
 ! --- store cumulative values
-      cqdrf1 = (state%surfacewater%reservoir_cumulative%cqdrd+crunoff+cQMpOutDrRap)
+      cqdrf1 = (state%surfacewater%reservoir_cumulative%cqdrd+state%soilwater%cumu%crunoff+cQMpOutDrRap)
       c1wsupp = state%surfacewater%reservoir_cumulative%cwsupp
       c1wout = state%surfacewater%reservoir_cumulative%cwout
 
@@ -4027,7 +4015,7 @@
 ! ---   update time variables and switches/flags
            if(fldecdt .or. (flMacroPore .and. FlDecMpRat))then
               call SoilWaterStateVar(2, state_om)
-              call TimeControl(3)
+              call TimeControl(3, state_om)  ! [SS-SWC S-2.12B] mini-sim uses state_om
               fldtreduce = .true.
            end if
 
@@ -4082,7 +4070,7 @@
 
 
 ! ----------------------------------------------------------------------
-      subroutine capriseoutput(task)
+      subroutine capriseoutput(task, state)
       use error_mod, only: fatalerr_collected
 ! ----------------------------------------------------------------------
 !     Date               : September 2016
@@ -4090,10 +4078,12 @@
 ! ----------------------------------------------------------------------
       use variables
       use file_io_mod, only: file_open
+      use swap_state_mod, only: swap_state_t   ! [SS-SWC S-2.12B]
       implicit none
 
 ! --- global variables ------------------
       integer task
+      type(swap_state_t), intent(in) :: state  ! [SS-SWC S-2.12B]
 ! --- local variables ------------------
       integer   sto
       character(len=300) filnam
@@ -4127,7 +4117,7 @@
 ! === write actual data ================================
       if(rd.gt.0.0d0) then
         write (sto,20) date,comma,tcum,comma,noddrz,comma,rd,comma,&
-    &                  inq(noddrz+1)
+    &                  state%soilwater%intr%inq(noddrz+1)  ! [SS-SWC S-2.12B]
  20     format (a11,a1,f12.4,a1,i4,a1,f10.4,a1,f20.12)
       endif
 

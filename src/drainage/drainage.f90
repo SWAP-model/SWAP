@@ -422,9 +422,10 @@ owltab,t1900,swallo,drares,infres,qdrtab,nrlevs,swnrsrf,cofintfl,expintfl,dt,sha
                ! SS-DRST Phase 2 Task 4: qdrain dropped — bocodrb writes state%drainage%qdrain directly.
                ! ADR 0031 Phase 2 Task 5: zTopDisLay removed from use-list; declared local below.
                ! SS-SWC Phase 2 S-2.8: gwl removed from use-list; read from state%soilwater%gwl.
+               ! [SS-SWC S-2.12B] fluseksatexm retired from variables — read via state%soilwater
                use variables, only: nrlevs,numnod,dramet,swdtyp,NumLevRapDra,owltab,nowltab,t1900, &
                   zbotdr,flzerointr,flzerocumu,swdivd,swdislay,swtopdislay,fTopDisLay, &
-                  dz,ksatfit,ksatexm,fluseksatexm,layer,cofani,l,Swdivdinf,Swnrsrf,    &
+                  dz,ksatfit,ksatexm,layer,cofani,l,Swdivdinf,Swnrsrf,    &
                   SwTopnrsrf,dt,FacDpthInf,madr
                use array_utils, only: afgen
 
@@ -528,7 +529,7 @@ owltab,t1900,swallo,drares,infres,qdrtab,nrlevs,swnrsrf,cofintfl,expintfl,dt,sha
                ! state%drainage%qdra directly — no legacy globals passed here.
                if (swdivd .eq. 1) then
                   ! SS-SWC Phase 2 S-2.8: gwl read from state%soilwater
-                  call divdra(numnod, nrlevs, dz, ksatfit, ksatexm, fluseksatexm,    &
+                  call divdra(numnod, nrlevs, dz, ksatfit, ksatexm, state%soilwater%fluseksatexm,    &  ! [SS-SWC S-2.12B]
               &      layer, cofani, state%soilwater%gwl, l, state%drainage%qdrain, state%drainage%qdra, &
               &      Swdivdinf, Swnrsrf, SwTopnrsrf, Zbotdr, dt, FacDpthInf, owltab, t1900)  !  Divdra, infiltration
                   !       redistribute qdrain with new top boundary for discharge layers

@@ -111,7 +111,7 @@ SUBROUTINE MACRORATE(ITask,ICpBtDm,ICpBtPerZon,ICpSatGWl,         &
          FlwInTopPot= 0.d0
       endif
       if (VlMp.lt.1.d-6 .or. (WaSrMp.lt.1.d-6 .and. FlwInTopPot.lt.1.d-6     &
-     &    .and. ICpBtDm(1).le.NodGwL .and. NPeGwL.lt.IcTopMp) ) then ! not required
+     &    .and. ICpBtDm(1).le.state%soilwater%nodgwl .and. state%soilwater%npegwl.lt.IcTopMp) ) then ! [SS-SWC S-2.12B] not required
          do 20 id= 1, NumDm
             do 19 ic= IcTopMp, NumNod
                FlEndSrpEvt(id,ic)= .true.
@@ -142,7 +142,7 @@ SUBROUTINE MACRORATE(ITask,ICpBtDm,ICpBtPerZon,ICpSatGWl,         &
 ! - 1. CASE 0:   INITIALIZATION
          call SATFLOW(0,ICpBtDm(id),ICpBtPerZon,ICpSatPeGWl,            &
      &          ICpTpWaSrDm(id),ICpTpPerZon,id,FrMpWalWet,FrReduQ,Henpr1,&
-     &          PeGWL,QInMtxSatDmCp,QOutMtxSatDmCp,ZWaLevDm(id),        &
+     &          state%soilwater%pegwl,QInMtxSatDmCp,QOutMtxSatDmCp,ZWaLevDm(id),        &  ! [SS-SWC S-2.12B]
      &          FlwInIntSatDmCpPot,FlwInIntSatDmPot,FlwOutMtxSatDmCpPot,&
      &          FlwOutMtxSatDmPot(id), state)                              ! [SS-SWC S-2.9]
 
@@ -173,16 +173,16 @@ SUBROUTINE MACRORATE(ITask,ICpBtDm,ICpBtPerZon,ICpSatGWl,         &
             endif
          endif
 !
-!   1.b. INFLoW into macropores from SATurated top compartments by INTerflow: 
+!   1.b. INFLoW into macropores from SATurated top compartments by INTerflow:
          call SATFLOW(1,ICpBtDm(id),ICpBtPerZon,ICpSatPeGWl,            &
      &          ICpTpWaSrDm(id),ICpTpPerZon,id,FrMpWalWet,FrReduQ,Henpr1,&
-     &          PeGWL,QInMtxSatDmCp,QOutMtxSatDmCp,ZWaLevDm(id),        &
+     &          state%soilwater%pegwl,QInMtxSatDmCp,QOutMtxSatDmCp,ZWaLevDm(id),        &  ! [SS-SWC S-2.12B]
      &          FlwInIntSatDmCpPot,FlwInIntSatDmPot,FlwOutMtxSatDmCpPot,&
      &          FlwOutMtxSatDmPot(id), state)                              ! [SS-SWC S-2.9]
 
-!   1.c. INFLoW into macropores from SATurated MaTriX compartm. (exfiltration): 
+!   1.c. INFLoW into macropores from SATurated MaTriX compartm. (exfiltration):
          call SATFLOW(1,ICpBtDm(id),NumNod,ICpSatGWl,ICpTpWaSrDm(id),   &
-     &          ICpTpSatZon,id,FrMpWalWet,FrReduQ,Henpr1,GWlFlCpZo,     &
+     &          ICpTpSatZon,id,FrMpWalWet,FrReduQ,Henpr1,state%soilwater%gwlflcpzo,     &  ! [SS-SWC S-2.12B]
      &          QInMtxSatDmCp,QOutMtxSatDmCp,ZWaLevDm(id),              &
      &          FlwInMtxSatDmCpPot,FlwInMtxSatDmPot,FlwOutMtxSatDmCpPot,&
      &          FlwOutMtxSatDmPot(id), state)                             ! [SS-SWC S-2.9]
@@ -190,7 +190,7 @@ SUBROUTINE MACRORATE(ITask,ICpBtDm,ICpBtPerZon,ICpSatGWl,         &
 ! - 2. CASE 2:   OUTGOING WATER FLOWS
 !   2.a. OUTFLoW out off macrop. into SATurated MaTriX compartm. (infiltrat.):
          call SATFLOW(2,ICpBtDm(id),NumNod,ICpSatGWl,ICpTpWaSrDm(id),   &
-     &          ICpTpPerZon,id,FrMpWalWet,FrReduQ,Henpr1,GWlFlCpZo,     &
+     &          ICpTpPerZon,id,FrMpWalWet,FrReduQ,Henpr1,state%soilwater%gwlflcpzo,     &  ! [SS-SWC S-2.12B]
      &          QInMtxSatDmCp,QOutMtxSatDmCp,ZWaLevDm(id),              &
      &          FlwInMtxSatDmCpPot,FlwInMtxSatDmPot,FlwOutMtxSatDmCpPot,&
      &          FlwOutMtxSatDmPot(id), state)                             ! [SS-SWC S-2.9]
@@ -221,8 +221,8 @@ SUBROUTINE MACRORATE(ITask,ICpBtDm,ICpBtPerZon,ICpSatGWl,         &
 ! 
 !   - volume of domain below groundwater level in matrix
          VlMpUndrGwL= 0.d0
-         if (ZBtDm(id).lt.GWlFlCpZo .and. GWlFlCpZo.lt.900.d0)          &  ! GWL = 999. indicates NO groundwater level
-     &       VlMpUndrGwL= VOLUNDR(id,ICpBtDm(id),GWlFlCpZo,VlMpDmCp,    &
+         if (ZBtDm(id).lt.state%soilwater%gwlflcpzo .and. state%soilwater%gwlflcpzo.lt.900.d0)          &  ! [SS-SWC S-2.12B] GWL = 999. indicates NO groundwater level
+     &       VlMpUndrGwL= VOLUNDR(id,ICpBtDm(id),state%soilwater%gwlflcpzo,VlMpDmCp,    &
      &                            ZBtDm(id))
          VlMpUndrGwL= dmin1(VlMpUndrGwL,VlMpDm(id))
          
@@ -396,7 +396,7 @@ SUBROUTINE MACRORATE(ITask,ICpBtDm,ICpBtPerZon,ICpSatGWl,         &
 !   2. exchange with saturated matrix
       do 270 id= 1, NumDm
          call SATFLOW(4,ICpBtDm(id),NumNod,ICpSatGWl,ICpTpWaSrDm(id),   &
-     &          ICpTpSatZon,id,FrMpWalWet,FrReduQ,Henpr1,GWL,           &
+     &          ICpTpSatZon,id,FrMpWalWet,FrReduQ,Henpr1,state%soilwater%gwl,           &  ! [SS-SWC S-2.12B]
      &          QInMtxSatDmCp,                                          &
      &          QOutMtxSatDmCp,ZWaLevDm(id),FlwInMtxSatDmCpPot,         &
      &          FlwInMtxSatDmPot,FlwOutMtxSatDmCpPot,                   &
@@ -481,7 +481,7 @@ SUBROUTINE MACRORATE(ITask,ICpBtDm,ICpBtPerZon,ICpSatGWl,         &
          HMp = ZWaLevDm - Z(ic)  ! head in macropore domain, assuming static equilibrium
          HMp = dmax1(0.d0,HMp)   ! no negative head in macropores
          if (HMp.lt.1.d-8) HMp = 0.d0
-         HMa = H(ic)             ! absolute comparison, no influence H_enpr
+         HMa = state%soilwater%h(ic)             ! [SS-SWC S-2.12B] absolute comparison, no influence H_enpr
          DelH= HMp - HMa         ! differences between heads determines flow direction
          if (HMp.lt.1.d-8 .and. DelH.gt.0.d0) DelH= 0.d0
          if (abs(DelH).lt.1.d-8) DelH = 0.d0
@@ -507,7 +507,7 @@ SUBROUTINE MACRORATE(ITask,ICpBtDm,ICpBtPerZon,ICpSatGWl,         &
                RecRes = ShapeFacMp * 8.0d0 * PpDmCp(id,ic) * DZ(ic) *   &
      &                                       ksatHor / DiPoCp(ic)**2
                if (ic.eq.ICpSatLev) RecRes = RecRes *                   &
-     &                       (GWlFlCpZo - (Z(ic)-0.5d0*DZ(ic))) / DZ(ic)
+     &                       (state%soilwater%gwlflcpzo - (Z(ic)-0.5d0*DZ(ic))) / DZ(ic)  ! [SS-SWC S-2.12B]
                DelHDmCp(id,ic)= DelH ! save head difference for calculation of derivative
             else
 ! - 3. flow equation according to seepage face: Ernst with radial resistance 
@@ -846,7 +846,7 @@ SUBROUTINE MACRORATE(ITask,ICpBtDm,ICpBtPerZon,ICpSatGWl,         &
 !
 ! for open drain: DelH =  zwalevdm - ditch water level or bottom of MB domain !
          DelH=  ZWaLevDm - dmax1(ZDraBas,ZBtDm)
-         if (ZWaLevDm.gt.-1.d-7) DelH= DelH + Pond
+         if (ZWaLevDm.gt.-1.d-7) DelH= DelH + state%soilwater%pond  ! [SS-SWC S-2.12B]
 ! ! in this version: no infiltration
          DelH= dmax1(DelH,0.d0)
          if (KdCrRl.gt.1.d-10) then

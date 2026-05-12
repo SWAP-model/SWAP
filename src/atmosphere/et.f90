@@ -609,8 +609,9 @@ contains
       !! - spev, saev: state variables for Boesten-Stroosnijder method
       !! @endnote
       subroutine reduceva (task, nrai, state)
+      ! [SS-SWC S-2.12B] pond retired — read via state%soilwater%pond
       use variables, only: swredu,fldaystart,cofred,dt,    &
-     &               nird,pond,rsigni
+     &               nird,rsigni
       implicit none
 
         ! Arguments
@@ -644,7 +645,7 @@ contains
         )
 
         ! Check for ponding (no reduction needed)
-        if (pond > POND_THRESHOLD) then  ! [SS-ATM] reads legacy pond — soil-water-core arc migrates
+        if (state%soilwater%pond > POND_THRESHOLD) then  ! [SS-SWC S-2.12B]
             at_empreva = state%atmosphere%peva
             at_ldwet   = 0.0d0
             at_spev    = 0.0d0

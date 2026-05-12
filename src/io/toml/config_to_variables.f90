@@ -36,6 +36,7 @@
 !! field + reader + per-case TOML population). After Phase 4f-extend
 !! closes, no HACK markers should remain in this file.
 module config_to_variables_mod
+   use iso_fortran_env, only: real64
    use swap_config_mod, only: swap_config_t
    implicit none
    private
@@ -45,6 +46,15 @@ module config_to_variables_mod
    public :: apply_irrigation_ssdi
    public :: apply_nutrients
    public :: apply_nutrients_events
+   public :: h_init_buf, pondini_init_buf, pond_init_buf
+
+   ! [SS-SWC S-2.12B] transient buffers: swap.f90 copies these into state%soilwater
+   ! after soilwater_init runs, then deallocates h_init_buf. Bridge between config-
+   ! time loading and state-time consumption (state%soilwater%h not yet allocated
+   ! while config_to_variables runs).
+   real(real64), allocatable :: h_init_buf(:)    !! initial pressure-head profile values
+   real(real64) :: pondini_init_buf = 0.0_real64 !! pondini from soil.pondini
+   real(real64) :: pond_init_buf    = 0.0_real64 !! pond from soil.initial.pond (swinco=3)
 
 contains
 
@@ -487,8 +497,9 @@ contains
       if (flSSDI)    call apply_irrigation_ssdi(config%irrigation%ssdi)
       call apply_nutrients(config%nutrients)
       gwli    = config%soil%gwli
-      pondini = config%soil%pondini
-      pond    = config%soil%pondini    ! legacy alias: pond <-> pondini
+      ! [SS-SWC S-2.12B] pondini/pond retired — buffered for swap.f90 to seed state%soilwater after soilwater_init
+      pondini_init_buf = config%soil%pondini
+      pond_init_buf    = config%soil%pondini    ! legacy alias: pond <-> pondini for swinco<3
       pondmx  = config%soil%pondmx
       rsoil   = config%soil%rsoil
       rsro    = config%soil%rsro
@@ -559,8 +570,9 @@ contains
          if (allocated(config%soil%initial%h_file) .and. &
              len_trim(config%soil%initial%h_file) > 0) then
             ! [SS-ATM A-2.6] ssnow/ldwet/slw retired to state%atmosphere; seeded in swap.f90 after atmosphere_init
-            pond    = config%soil%initial%pond
-            pondini = pond
+            ! [SS-SWC S-2.12B] pond/pondini retired; buffered for swap.f90 to seed state%soilwater after soilwater_init
+            pond_init_buf    = config%soil%initial%pond
+            pondini_init_buf = config%soil%initial%pond
             dt      = config%soil%initial%dt
             atmin7(:) = config%soil%initial%atmin7(:)
             ! [SS-ATM A-2.6] Legacy zeroes ssnow when swsnow != 1: now handled in swap.f90 during state seeding
@@ -585,9 +597,12 @@ contains
                call errs%abort_if_fatal()
                nrows = size(tbl, 1)
                nhead = nrows
+               ! [SS-SWC S-2.12B] h(k) global retired; buffer for swap.f90 to seed state%soilwater%h after soilwater_init
+               if (allocated(h_init_buf)) deallocate(h_init_buf)
+               allocate(h_init_buf(nrows))
                do k = 1, nrows
-                  zi(k) = tbl(k, 1)
-                  h(k)  = tbl(k, 2)
+                  zi(k)            = tbl(k, 1)
+                  h_init_buf(k)    = tbl(k, 2)
                end do
             end block
 

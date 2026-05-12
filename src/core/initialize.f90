@@ -143,7 +143,8 @@
       tmnr               = 0.0d0 
       tmx                = 0.0d0 
       tpot               = 0.0d0 
-      tra                = 0.0d0 
+      ! [SS-SWC] tra retired — soilwater_init handles init via state%soilwater%intr%tra
+      ! tra                = 0.0d0
       fletsine           = .false.
       flmeteodt          = .false.
       flmetdetail        = .false. 
@@ -166,8 +167,9 @@
       fidtab             = 0.0d0 
       gird               = 0.0d0 
       hcritab            = 0.0d0 
-      igird              = 0.0d0 
-      inird              = 0.0d0 
+      ! [SS-SWC] igird/inird retired — soilwater_init handles init via state%soilwater%intr
+      ! igird              = 0.0d0
+      ! inird              = 0.0d0
       irconc             = 0.0d0 
       irdate             = 0.0d0 
       irdepth            = 0.0d0 
@@ -197,7 +199,8 @@
       nstep_hc           = 0          ! Initialize headcalc step counter (previously SAVE variable) 
       dev_cmb            = 0          ! Initialize mass balance deviation file unit (previously SAVE in checkmassbal)
       flksatexm          = .false. 
-      fluseksatexm       = .false. 
+      ! [SS-SWC] fluseksatexm retired — soilwater_init handles init via state%soilwater%fluseksatexm
+      ! fluseksatexm       = .false.
       ! [SS-BND B-2.7] FlRunoff retired — soilwater_init handles init via state%soilwater
       ! FlRunoff           = .false.
       h0max              = 0.0d0 
@@ -208,23 +211,27 @@
       bal                = 0 
       blc                = 0 
       bma                = 0 
-      bpegwl             = 0 
+      ! [SS-SWC] bpegwl retired — soilwater_init handles init via state%soilwater%bpegwl
+      ! bpegwl             = 0
       botcom             = 0 
       dra                = 0 
       dramet             = 0 
       inc                = 0 
-      indeks             = 0 
+      ! [SS-SWC] indeks retired — soilwater_init handles init via state%soilwater%indeks
+      ! indeks             = 0
       ipos               = 0 
       isoillay           = 0 
       layer              = 0 
       msteps             = 0 
       ncomp              = 0 
       nhead              = 0 
-      nodgwl             = 0 
+      ! [SS-SWC] nodgwl retired — soilwater_init handles init via state%soilwater%nodgwl
+      ! nodgwl             = 0
       nod1lay            = 0 
       ! [SS-HEAT] Task 9: nodfrostbot retired to state%heat%nodfrostbot
       ! nodfrostbot        = 0
-      npegwl             = 0 
+      ! [SS-SWC] npegwl retired — soilwater_init handles init via state%soilwater%npegwl
+      ! npegwl             = 0
       nrlevs             = 0 
       nsublay            = 0 
       numbit             = 0 
@@ -276,31 +283,37 @@
       basegw             = 0.0d0 
       bdens              = 0.0d0 
       cfbs               = 0.0d0 
-      cgird              = 0.0d0 
-      cinund             = 0.0d0 
-      cnird              = 0.0d0 
+      ! [SS-SWC] cgird/cinund/cnird retired — soilwater_init handles init via state%soilwater%cumu
+      ! cgird              = 0.0d0
+      ! cinund             = 0.0d0
+      ! cnird              = 0.0d0
       cofani             = 0.0d0 
-      cofgen             = 0.0d0 
+      ! [SS-SWC] cofgen retired — soilwater_init handles init via state%soilwater%cofgen
+      ! cofgen             = 0.0d0
       cofqha             = 0.0d0 
       cofqhb             = 0.0d0 
       cofred             = 0.0d0 
-      cqbot              = 0.0d0 
-      cqbotdo            = 0.0d0 
-      cqbotup            = 0.0d0 
+      ! [SS-SWC] cqbot/cqbotdo/cqbotup retired — soilwater_init handles init via state%soilwater%cumu
+      ! cqbot              = 0.0d0
+      ! cqbotdo            = 0.0d0
+      ! cqbotup            = 0.0d0
       ! SS-SWST Phase 2 Task 11 C3: cqdra/cqdrain/cqdrainin/cqdrainout removed (now in state%surfacewater).
       ! cqdra=0, cqdrain=0, cqdrainin=0, cqdrainout=0 — initialized in surfacewater_state_t defaults.
-      cqprai             = 0.0d0 
-      cqssdi             = 0.0d0
-      cqtdo              = 0.0d0 
-      cqtup              = 0.0d0 
+      ! [SS-SWC] cqprai/cqssdi/cqtdo/cqtup retired — soilwater_init handles init via state%soilwater%cumu
+      ! cqprai             = 0.0d0
+      ! cqssdi             = 0.0d0
+      ! cqtdo              = 0.0d0
+      ! cqtup              = 0.0d0
       CritDevMasBal      = 0.0d0 
-      crunoff            = 0.0d0
-      crunoffCN          = 0.0d0
-      crunon             = 0.0d0 
+      ! [SS-SWC] crunoff/crunoffCN/crunon retired — soilwater_init handles init via state%soilwater%cumu
+      ! crunoff            = 0.0d0
+      ! crunoffCN          = 0.0d0
+      ! crunon             = 0.0d0
       cseeptab           = 0.0d0
       ! [SS-BND B-2.7] deepgw retired — soilwater_init handles init via state%soilwater
       ! deepgw             = 0.0d0
-      dimoca             = 0.0d0 
+      ! [SS-SWC] dimoca retired — soilwater_init handles init via state%soilwater%dimoca
+      ! dimoca             = 0.0d0
       disnod             = 0.0d0 
       ! drainl             = 0.0d0  ! Moved to drainage_state_t — drainage_init handles (ADR 0031)
       drares             = 0.0d0 
@@ -310,68 +323,80 @@
       es0                = 0.0d0 
       et0                = 0.0d0 
       ew0                = 0.0d0 
-      evp                = 0.0d0 
+      ! [SS-SWC] evp retired — soilwater_init handles init via state%soilwater%evp
+      ! evp                = 0.0d0
       FacDpthInf         = 0.0d0 
       ftopdislay         = 0.0d0
       geofac             = 0.0d0 
-      gwl                = 0.0d0 
+      ! [SS-SWC] gwl retired — soilwater_init handles init via state%soilwater%gwl
+      ! gwl                = 0.0d0
       gwlconv            = 0.0d0 
       gwli               = 0.0d0 
       ! [SS-BND B-2.7] gwlinp retired — soilwater_init handles init via state%soilwater
       ! gwlinp             = 0.0d0
-      gwlm1              = 0.0d0 
+      ! [SS-SWC] gwlm1 retired — soilwater_init handles init via state%soilwater%gwlm1
+      ! gwlm1              = 0.0d0
       gwltab             = 0.0d0 
-      h                  = 0.0d0 
+      ! [SS-SWC] h retired — soilwater_init handles init via state%soilwater%h
+      ! h                  = 0.0d0
       h_enpr             = 0.0d0 
       haqtab             = 0.0d0 
-      hatm               = 0.0d0 
+      ! [SS-SWC] hatm retired — soilwater_init handles init via state%soilwater%hatm
+      ! hatm               = 0.0d0
       ! [SS-BND B-2.7] hbot retired — soilwater_init handles init via state%soilwater
       ! hbot               = 0.0d0
       hbotab             = 0.0d0 
       hcomp              = 0.0d0 
       hdrain             = 0.0d0 
-      hm1                = 0.0d0 
+      ! [SS-SWC] hm1 retired — soilwater_init handles init via state%soilwater%hm1
+      ! hm1                = 0.0d0
       ! [SS-CRP C-2.5] hroot retired — soilwater_init handles init via state%soilwater (ADR 0036)
       ! hroot              = 0.0d0
       hsublay            = 0.0d0
       ! [SS-BND B-2.7] hsurf retired — soilwater_init handles init via state%soilwater
       ! hsurf              = 0.0d0
       ! [SS-ATM A-2.6] igrai retired to state%atmosphere%intr%igrai
-      ies0               = 0.0d0
-      iet0               = 0.0d0
-      iew0               = 0.0d0
-      iintc              = 0.0d0
+      ! [SS-SWC] ies0/iet0/iew0/iintc retired — soilwater_init handles init via state%soilwater%intr
+      ! ies0               = 0.0d0
+      ! iet0               = 0.0d0
+      ! iew0               = 0.0d0
+      ! iintc              = 0.0d0
       infres             = 0.0d0 
       inpola             = 0.0d0 
       inpolb             = 0.0d0 
-      inq                = 0.0d0 
+      ! [SS-SWC] inq retired — soilwater_init handles init via state%soilwater%intr%inq
+      ! inq                = 0.0d0
       ! SS-SWST Phase 2 Task 11 C3: inqdra/inqdra_in/inqdra_out removed (now in state%surfacewater).
       ! Initialized via surfacewater_init with allocate+assign=0.
-      inqrot             = 0.0d0
-      inqssdi            = 0.0d0
-      ipondbeg           = 0.0d0 
-      iprec              = 0.0d0 
-      iqbot              = 0.0d0
-      iqtdo              = 0.0d0
-      iqtup              = 0.0d0
-      iqdo(1:numnod+1)   = 0.0d0
-      iqup(1:numnod+1)   = 0.0d0
+      ! [SS-SWC] inqrot/inqssdi/ipondbeg/iprec/iqbot/iqtdo/iqtup/iqdo/iqup retired — soilwater_init handles init via state%soilwater%intr
+      ! inqrot             = 0.0d0
+      ! inqssdi            = 0.0d0
+      ! ipondbeg           = 0.0d0
+      ! iprec              = 0.0d0
+      ! iqbot              = 0.0d0
+      ! iqtdo              = 0.0d0
+      ! iqtup              = 0.0d0
+      ! iqdo(1:numnod+1)   = 0.0d0
+      ! iqup(1:numnod+1)   = 0.0d0
       ! SS-SWST Phase 2 Task 11 C3: iqdra removed (state%surfacewater%iqdra initialized in surfacewater_state_t).
-      iqrot              = 0.0d0
-      iqssdi             = 0.0d0
-      iqredwet           = 0.0d0
-      iqreddry           = 0.0d0
-      iqredsol           = 0.0d0
-      iqredfrs           = 0.0d0
-      iruno              = 0.0d0
-      irunoCN            = 0.0d0
-      irunon             = 0.0d0
+      ! [SS-SWC] iqrot/iqssdi/iqredwet/iqreddry/iqredsol/iqredfrs/iruno/irunoCN/irunon retired — soilwater_init handles init via state%soilwater%intr
+      ! iqrot              = 0.0d0
+      ! iqssdi             = 0.0d0
+      ! iqredwet           = 0.0d0
+      ! iqreddry           = 0.0d0
+      ! iqredsol           = 0.0d0
+      ! iqredfrs           = 0.0d0
+      ! iruno              = 0.0d0
+      ! irunoCN            = 0.0d0
+      ! irunon             = 0.0d0
       issnowbeg          = 0.0d0 
-      ithetabeg          = 0.0d0 
-      k                  = 0.0d0 
+      ! [SS-SWC] ithetabeg/k retired — soilwater_init handles init via state%soilwater
+      ! ithetabeg          = 0.0d0
+      ! k                  = 0.0d0
       khbot              = 0.0d0 
       khtop              = 0.0d0 
-      kmean              = 0.0d0 
+      ! [SS-SWC] kmean retired — soilwater_init handles init via state%soilwater%kmean
+      ! kmean              = 0.0d0
       ksatfit            = 0.0d0 
       ksatexm            = 0.0d0 
       ksatthr            = 0.0d0 
@@ -384,13 +409,15 @@
       ! [SS-CRP C-2.5] mflux retired — soilwater_init handles init via state%soilwater (ADR 0036)
       ! mflux              = 0.0d0
       paramvg            = 0.0d0 
-      pegwl              = 0.0d0 
-      pond               = 0.0d0
-      pondini            = 0.0d0 
-      pondm1             = 0.0d0 
+      ! [SS-SWC] pegwl/pond/pondini/pondm1 retired — soilwater_init handles init via state%soilwater
+      ! pegwl              = 0.0d0
+      ! pond               = 0.0d0
+      ! pondini            = 0.0d0
+      ! pondm1             = 0.0d0
       pondmx             = 0.0d0 
       pondmxtab          = 0.0d0 
-      q                  = 0.0d0 
+      ! [SS-SWC] q retired — soilwater_init handles init via state%soilwater%q
+      ! q                  = 0.0d0
       ! [SS-BND B-2.7] qbot, qbot_nonfrozen retired — soilwater_init handles init via state%soilwater
       ! qbot               = 0.0d0
       qbotab             = 0.0d0
@@ -426,7 +453,8 @@
       rsro               = 0.0d0 
       rsroexp            = 0.0d0
       Runoff_CN          = 0.0d0
-      runon              = 0.0d0 
+      ! [SS-SWC] runon retired — soilwater_init handles init via state%soilwater%runon
+      ! runon              = 0.0d0
       runonarr           = 0.0d0 
       ! [SS-BND B-2.7] runots retired — soilwater_init handles init via state%soilwater
       ! runots             = 0.0d0
@@ -439,16 +467,18 @@
       sptab              = 0.0d0  
       sptablay           = 0.0d0 
       tau                = 0.0d0 
-      theta              = 0.0d0 
-      thetar             = 0.0d0 
-      thetas             = 0.0d0 
-      thetm1             = 0.0d0 
-      thetsl             = 0.0d0 
-      volact             = 0.0d0
-      volini             = 0.0d0 
-      volm1              = 0.0d0 
+      ! [SS-SWC] theta/thetar/thetas/thetm1/thetsl/volact/volini/volm1 retired — soilwater_init handles init via state%soilwater
+      ! theta              = 0.0d0
+      ! thetar             = 0.0d0
+      ! thetas             = 0.0d0
+      ! thetm1             = 0.0d0
+      ! thetsl             = 0.0d0
+      ! volact             = 0.0d0
+      ! volini             = 0.0d0
+      ! volm1              = 0.0d0
       ! SS-SWST Phase 2 Task 11 C3: vtair removed (state%surfacewater%vtair initialized in surfacewater_state_t).
-      wbalance           = 0.0d0 
+      ! [SS-SWC] wbalance retired — soilwater_init handles init via state%soilwater%wbalance
+      ! wbalance           = 0.0d0
       ! wetper             = 0.0d0   ! Moved to drainage_state_t — drainage_init handles (ADR 0031)
       z                  = 0.0d0 
       ztopcp             = 0.0d0
@@ -461,7 +491,8 @@
       zintf              = 0.0d0 
       ! ztopdislay         = 0.0d0   ! Moved to drainage_state_t — drainage_init handles (ADR 0031)
       fldrain            = .false. 
-      fllowgwl           = .false. 
+      ! [SS-SWC] fllowgwl retired — soilwater_init handles init via state%soilwater%fllowgwl
+      ! fllowgwl           = .false.
       flrunon            = .false. 
       ! [SS-BND B-2.7] ftoph retired — soilwater_init handles init via state%soilwater
       ! ftoph              = .false.
@@ -611,7 +642,8 @@
 ! --- macropore variables
       ICpBtDmPot           = 0 
       IDecMpRat            = 0
-      NodGWlFlCpZo         = 0 
+      ! [SS-SWC] NodGWlFlCpZo retired — soilwater_init handles init via state%soilwater%nodgwlflcpzo
+      ! NodGWlFlCpZo         = 0
       NumDm                = 0 
       NumLevRapDra         = 0 
       SwBma                = 0 
@@ -634,8 +666,9 @@
       dFdhMp               = 0.0d0 
       ! [SS-BND B-2.7] QMpLatSs retired — soilwater_init handles init via state%soilwater
       ! QMpLatSs             = 0.0d0
-      FrArMtrx             = 0.0d0 
-      GWlFlCpZo            = 0.0d0 
+      ! [SS-SWC] FrArMtrx/GWlFlCpZo retired — soilwater_init handles init via state%soilwater
+      ! FrArMtrx             = 0.0d0
+      ! GWlFlCpZo            = 0.0d0
       IAvFrMpWlWtDm1       = 0.0d0 
       IAvFrMpWlWtDm2       = 0.0d0 
       iQExcMtxDm1Cp        = 0.0d0 

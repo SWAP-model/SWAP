@@ -1,8 +1,13 @@
 module WC_K_models_04_11
    use error_mod, only: fatalerr_collected
+   use iso_fortran_env, only: real64
 
-use variables, only: cofgen, iHWCKmodel, BiModal, NoVap, layer
+! [SS-SWC S-2.12B] cofgen retired from variables — bound via state%soilwater%cofgen
+use variables, only: iHWCKmodel, BiModal, NoVap, layer
 implicit none
+
+! [SS-SWC S-2.12B] module-level pointer; bound once by bind_cofgen_target(state)
+real(real64), pointer :: cofgen(:,:) => null()
 
 ! curve parameters
 real(8)  :: WCr, WCs, Alpha1, Npar1, Mpar1, Alpha2, Npar2, Mpar2, Lpar, Ksat
@@ -17,11 +22,20 @@ real(8) :: Kcap, Kfilm, Kvap
 
 logical :: L_BiModal, L_NoVap
 
-! all functions are private, except functionvalue_04_11
+! all functions are private, except functionvalue_04_11 and bind_cofgen_target
 private
-public    :: functionvalue_04_11
+public    :: functionvalue_04_11, bind_cofgen_target
 
 contains
+
+   !> [SS-SWC S-2.12B] Bind module-level cofgen pointer to state%soilwater%cofgen.
+   !! Must be called once after state%soilwater is allocated (e.g. in SoilHydraulics(1)
+   !! before any iHWCKmodel >3 path is exercised).
+   subroutine bind_cofgen_target(sw_cofgen_in)
+      real(real64), target, intent(in) :: sw_cofgen_in(:,:)
+      cofgen => sw_cofgen_in
+   end subroutine bind_cofgen_target
+
 
 function functionvalue_04_11 (iType, iNode, h, wc, temp)
 integer, intent(in)             :: iType, iNode
