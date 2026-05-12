@@ -32,6 +32,195 @@ OQ-1.
 
 ---
 
+## REFRESH 2026-05-12 (post-purge, HEAD 9800c66)
+
+**Supersedes the scope-and-count numbers** in Sections 3, 9 (Table), and 10 (OQ-9).
+Field inventory (Section 2), co-writer analysis (Section 4), hazards (Section 7),
+and open questions (Section 10 except OQ-9) remain authoritative.
+
+### Context
+
+Two cleanups landed after this document was written at `01f4e43`:
+
+1. **ADR 0009 Phase 5+ output-writer purge** (`3bc1bbc`) — deleted 16 dead subroutines
+   from `swapoutput.f90`, shrinking it from 4 277 → 1 440 LoC (−2 837 LoC). Most of
+   the ~60 originally-counted swapoutput TC reads were inside the deleted writers
+   (outwba, outvap, outstr, outbal, outend, outafo, outaun, outdrf, outswb,
+   OutputModflow, etc.). The live wrappers that remain still read time fields.
+
+2. **Macropore retirement** (`9800c66`) — deleted `src/macropore/macropore.f90`
+   (2 245 LoC), `src/macropore/macrorate.f90` (911 LoC),
+   `src/io/macroporeoutput.f90` (309 LoC), and `src/config/macropore_config.f90`.
+   All TC reads in those files are gone.
+
+Additionally, `src/atmosphere/snow.f90` shows **0 TC reads** at current HEAD — it was
+fully retargeted by the SS-ATM arc prior to `01f4e43` but was still listed in the
+original 27 because its file existed and matched some grep hits at the time.
+
+### Updated top-line numbers
+
+| Metric | Original | Refreshed | Delta |
+|---|---|---|---|
+| Owned globals (runtime) | 61 | 61 | 0 |
+| Config-constants deferred | 18 | 18 | 0 |
+| Reader files (true TC-global consumers) | 27 | 22 | −5 |
+| Reader sites total (grep pattern, true readers only) | ~500 | ~415 | ~−85 |
+| Co-writers (real) | 5 | 4 | −1 |
+| Suggested task count | 17 | 15 | −2 |
+| Strategy B compile passes | 15–25 | 10–18 | ~−7 |
+
+### Updated reader-file table
+
+Removed from the original 27 (4 deleted + 1 already-migrated):
+
+| File | Reason for removal |
+|---|---|
+| `src/macropore/macropore.f90` | Deleted by macropore retirement (9800c66) |
+| `src/macropore/macrorate.f90` | Deleted by macropore retirement (9800c66) |
+| `src/io/macroporeoutput.f90` | Deleted by macropore retirement (9800c66) |
+| `src/atmosphere/snow.f90` | 0 TC reads at current HEAD (already migrated by SS-ATM arc) |
+| `src/drainage/divdra.f90` | False positive — `dt`/`t1900` are dummy arguments; `use variables` imports only `nowltab` |
+
+Remaining in-scope external reader files (22):
+
+```
+src/atmosphere/et.f90
+src/atmosphere/interception.f90     ← was low-count but present in original grep
+src/atmosphere/meteoday.f90
+src/atmosphere/meteodt.f90
+src/boundary/boundbottom.f90
+src/boundary/boundtop.f90
+src/core/initialize.f90
+src/core/swap.f90
+src/crop/cropgrass_init.f90
+src/crop/cropgrowth.f90
+src/crop/irrigation.f90
+src/crop/management_soil.f90
+src/crop/oxygenstress.f90
+src/crop/rootextraction.f90
+src/crop/tillage.f90
+src/drainage/drainage.f90
+src/drainage/surfacewater.f90
+src/heat/frozencond.f90
+src/heat/temperature.f90
+src/io/readmeteo.f90
+src/io/swap_csv_output.f90
+src/io/swapoutput.f90
+src/io/toml/config_to_variables.f90
+src/soil/soilhydraulics.f90
+src/soil/waterbalance.f90
+src/solute/agetracer.f90
+src/solute/solute.f90
+src/utils/soilhydraulicsutils.f90   ← new addition (imports dt from variables; 4 reads)
+src/utils/surfacewaterutils.f90     ← new addition (imports dt from variables; 5 reads)
+```
+
+Note: `interception.f90` (3 reads), `soilhydraulicsutils.f90` (4 reads), and
+`surfacewaterutils.f90` (5 reads) are minor. The `config_to_variables.f90`,
+`simulation_config.f90` (config struct fields), TOML readers, and state files that
+appeared in a broad grep are **not** true TC-global consumers; they are excluded.
+Total confirmed true reader count: **22** (not 29 as the unfiltered grep suggests).
+
+### Updated per-field counts (Recount 1)
+
+Compared against Section 3.1 originals (grep against all of `src/`, excluding
+`timecontrol.f90` and `variables.f90`):
+
+| Field | Original | Refreshed | Delta | Notes |
+|---|---|---|---|---|
+| `dt` | 264 | 255 | −9 | Most reduction in macropore/deleted writers |
+| `t1900` | 143 | 120 | −23 | Heavy in deleted swapoutput writers |
+| `period` | 92 | 90 | −2 | Mostly config-struct false positives remain |
+| `outper` | 77 | 13 | −64 | Was heavily used in deleted balance output writers |
+| `daynr` | 62 | 37 | −25 | Used in deleted date-print loops |
+| `daycum` | 55 | 27 | −28 | Same |
+| `tcum` | 38 | 29 | −9 | — |
+| `datea` | — | 47 | — | (new tracking; `datea` was `tc_datea` — confirmed TC-owned) |
+| `imonth` | 5 | 5 | 0 | — |
+| `iyear` | 9 | 12 | +3 | Small increase — noise or new callers in existing files |
+| `flprintshort` | 27 | 13 | −14 | Deleted output writers read it heavily |
+
+### Updated per-file TC reads (top consumers, post-purge)
+
+Computed with the same field pattern as Section 3.1:
+
+| File | Reads | vs original estimate |
+|---|---|---|
+| `src/soil/waterbalance.f90` | 69 | ~unchanged (was top consumer) |
+| `src/io/swapoutput.f90` | 53 | was 60+; reduced by purge |
+| `src/drainage/surfacewater.f90` | 34 | — |
+| `src/soil/soilhydraulics.f90` | 33 | — |
+| `src/io/readmeteo.f90` | 32 | — |
+| `src/crop/cropgrowth.f90` | 31 | — |
+| `src/atmosphere/meteodt.f90` | 25 | — |
+| `src/atmosphere/meteoday.f90` | 22 | — |
+| `src/core/initialize.f90` | 20 | — |
+| `src/atmosphere/et.f90` | 19 | — |
+| `src/drainage/drainage.f90` | 18 | — |
+| `src/crop/irrigation.f90` | 18 | — |
+| `src/boundary/boundtop.f90` | 17 | — |
+| `src/io/toml/config_to_variables.f90` | 15 | — |
+| `src/heat/temperature.f90` | 12 | — |
+| `src/core/swap.f90` | 11 | — |
+| `src/crop/tillage.f90` | 10 | — |
+| `src/crop/cropgrass_init.f90` | 10 | — |
+| `src/solute/solute.f90` | 9 | — |
+| `src/crop/management_soil.f90` | 9 | — |
+
+Grand total across 22 true reader files: **~415 read sites**.
+
+Note: `waterbalance.f90` at 69 is now the single largest reader, overtaking
+`swapoutput.f90`. The `swapoutput.f90` count dropped from 60+ to 53 (still
+meaningful — the live wrappers SwapOutput, SoilWaterOutput, SoluteOutput, etc. all
+read time fields).
+
+### Updated co-writer analysis
+
+The purge deleted the `swapoutput.f90` co-write lines for `flheadirg = .false.`
+(line 2310) and `flIrg1Start = .false.` (line 2299) — both were inside deleted
+output writers. `swapoutput.f90` no longer **writes** any TC-owned fields; it only
+reads them. The effective co-writer count drops from 5 to **4**:
+
+| Co-writer | Status | Change |
+|---|---|---|
+| `src/core/initialize.f90` | Still zero-initialises ~35 TC fields | unchanged |
+| `src/core/swap.f90:597` | Still writes `iyear` on DLL re-init path | unchanged |
+| `src/io/toml/config_to_variables.f90` | Still pre-init seeds `iyear`, `imonth`, `dt` | unchanged |
+| `src/atmosphere/meteodt.f90:361` | Still sets `flUpdMetDet = .false.` after consume | unchanged |
+| `src/io/swapoutput.f90` | **Removed** — flag-flip co-writes deleted with purge | −1 |
+
+### Updated task-count recommendation
+
+The task-plan in Section 9 (TC-0.1 through TC-3.1 = 17 tasks) can be trimmed by:
+
+- **Remove TC-2.1 macroporeoutput scope** — `macroporeoutput.f90` no longer exists;
+  TC-2.1 now covers only `swapoutput.f90` + `swap_csv_output.f90` (~60 reads total).
+- **Remove TC-2.8** — `macropore.f90` and `macrorate.f90` are deleted; entire task
+  drops.
+- **TC-1.6 co-writer task is lighter** — swapoutput flag-flip writes are gone;
+  only `swap.f90:597`, `meteodt.f90:361`, `config_to_variables.f90` remain.
+
+Revised estimate: **15 tasks** (was 17). Shape is otherwise identical.
+
+### Updated Strategy B estimate
+
+With ~415 read sites across 22 files (vs ~500 across 27), Strategy B compile
+passes are estimated at **10–18 cycles** (vs 15–25). The reduction is moderate
+because `waterbalance.f90` (69 reads) and `swapoutput.f90` (53 reads) are each
+still large. The soil-water-core precedent of 30 passes was driven by its 500-site
+fanout; this arc should be somewhat lighter.
+
+### Macropore verification
+
+```
+src/macropore/      : no such file or directory  ← confirmed deleted
+src/io/macroporeoutput.f90 : no such file or directory  ← confirmed deleted
+```
+
+TC reads in macropore subsystem: **0** (entire subsystem retired).
+
+---
+
 ## 1. Big picture
 
 ### Subsystem role
