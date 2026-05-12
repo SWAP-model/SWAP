@@ -73,6 +73,7 @@ use timestep_control_mod, only: fldecdt
 use swap_state_mod, only: swap_state_t
 use soilwater_state_mod, only: soilwater_init
 use atmosphere_state_mod, only: atmosphere_init
+use tillage_state_mod, only: tillage_init
 use drainage_mod, only: drainage, drainage_init
 use surfacewater_mod, only: SurfaceWater, surfacewater_year_reset
                       ! for debugging
@@ -224,6 +225,7 @@ if (iTask == 1) then
       end if
    end if
 
+   call tillage_init(state%tillage, numlay)         ! SS-TIL T-2: allocate/zero tillage state unconditionally
    if (flTillage) call DoTillage(1, state)
    if (flSSDI)    call SSDI_irrigation(1, state)  ! [SS-SWC S-2.12B]
 
