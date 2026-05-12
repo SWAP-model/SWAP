@@ -38,7 +38,8 @@ contains
       !> @endnote
       subroutine calcgwl (state)
       ! [SS-SWC S-2.12B] retired globals removed from use clause; all reads/writes via state%soilwater
-      use variables, only: disnod,logf,swscre,swbotb,flmacropore,numnod,z,t1900,CritUndSatVol
+      use variables, only: disnod,logf,swscre,swbotb,flmacropore,numnod,z,CritUndSatVol
+      ! [SS-TC TC-6] t1900 read cut over to state%timecontrol%t1900
       use swap_log, only: log_debug, to_str
       implicit none
       ! SS-BND B-2.7: state added to read state%soilwater%gwlinp (gwlinp global retired)
@@ -185,7 +186,7 @@ contains
       ! warning error if there is inconsistency between defined gwl and soil physics
       if (swbotb.eq.1 .and. (state%soilwater%gwlinp .ge.z(1) .or. state%soilwater%gwl.gt.998.0d0)) then
          ! determine date and date-time
-         call dtdpst('year-month-day,hour:minute:seconds',t1900,datexti)
+         call dtdpst('year-month-day,hour:minute:seconds',state%timecontrol%t1900,datexti)  ! TC-6: t1900 -> state%timecontrol
          write(messag,'(6a)')                                           &
      &         'No groundwater level because unsaturation at bottom ',  &
      &         'compartment ( ', datexti,  ' ). ',                      &
@@ -359,7 +360,8 @@ contains
       ! SS-SWC S-2.4: theta/thetm1/FrArMtrx/volact/volm1/fllowgwl/q/inq reads cut over to state%soilwater
       subroutine fluxes (state)
       ! [SS-SWC S-2.12B] q, inq, thetm1, theta, volact, volm1, FrArMtrx, fllowgwl retired from variables
-      use variables, only: dt,numnod,dz,qimmob,swbotb,QExcMpMtx,QMaPo,nrlevs,qssdi, qssdisum
+      use variables, only: numnod,dz,qimmob,swbotb,QExcMpMtx,QMaPo,nrlevs,qssdi, qssdisum
+      ! [SS-TC TC-6] dt read cut over to state%timecontrol%dt
       use swap_state_mod, only: swap_state_t
       implicit none
 
@@ -367,6 +369,7 @@ contains
       integer i,level
 
       ! S-2.4 ASSOCIATE: alias state%soilwater arrays/scalars for read/write cutover
+      ! [SS-TC TC-6] tc_dt aliases state%timecontrol%dt
       associate( sw_theta   => state%soilwater%theta,   &
                  sw_thetm1  => state%soilwater%thetm1,  &
                  sw_FrArMtrx => state%soilwater%FrArMtrx, &
@@ -374,7 +377,8 @@ contains
                  sw_inq     => state%soilwater%intr%inq, &
                  sw_volact  => state%soilwater%volact,  &
                  sw_volm1   => state%soilwater%volm1,   &
-                 sw_fllowgwl => state%soilwater%fllowgwl )
+                 sw_fllowgwl => state%soilwater%fllowgwl, &
+                 tc_dt      => state%timecontrol%dt )     ! TC-6
 
       ! determine qbot if not specified
       ! SS-BND B-2.7: qtop and qbot read/written via state%soilwater (globals retired)
@@ -382,27 +386,27 @@ contains
      &    swbotb .eq. 8 .or. swbotb .eq. -2 .or.                        &
      &    (swbotb .eq. 1 .and. sw_fllowgwl)) then        ! S-2.4 read cutover: fllowgwl -> sw_fllowgwl
         ! SS-CRP Phase 2 Task C-2.2: qrosum -> state%soilwater%qrosum
-        state%soilwater%qbot = state%soilwater%qtop + state%soilwater%qrosum + state%surfacewater%qdrtot - QMaPo + (sw_volact-sw_volm1)/dt - qssdisum  ! S-2.4
+        state%soilwater%qbot = state%soilwater%qtop + state%soilwater%qrosum + state%surfacewater%qdrtot - QMaPo + (sw_volact-sw_volm1)/tc_dt - qssdisum  ! S-2.4, TC-6
       endif
 
       ! calculate fluxes (cm/d) from changes in volume per compartment
       ! [SS-SWC S-2.12B] all legacy half-writes dropped — state%soilwater is canonical
       i = numnod+1
       sw_q(i)              = state%soilwater%qbot               ! S-1.6/S-2.12B
-      sw_inq(i)            = sw_inq(i) + sw_q(i)*dt             ! S-2.12B
+      sw_inq(i)            = sw_inq(i) + sw_q(i)*tc_dt             ! S-2.12B, TC-6
       do i = numnod,1,-1
-        sw_q(i) = - (sw_theta(i)-sw_thetm1(i)+qimmob(i))*sw_FrArMtrx(i)*dz(i)/dt +  &
-     &                sw_q(i+1)-state%soilwater%qrot(i)+QExcMpMtx(i)+qssdi(i)        ! S-1.6/S-2.12B
+        sw_q(i) = - (sw_theta(i)-sw_thetm1(i)+qimmob(i))*sw_FrArMtrx(i)*dz(i)/tc_dt +  &
+     &                sw_q(i+1)-state%soilwater%qrot(i)+QExcMpMtx(i)+qssdi(i)        ! S-1.6/S-2.12B, TC-6
 
         if (allocated(state%drainage%qdra)) then
           do level=1,nrlevs
              sw_q(i) = sw_q(i) - state%drainage%qdra(level,i)
           enddo
         end if
-        sw_inq(i) = sw_inq(i) + sw_q(i)*dt                       ! S-1.6/S-2.12B
+        sw_inq(i) = sw_inq(i) + sw_q(i)*tc_dt                       ! S-1.6/S-2.12B, TC-6
       end do
 
-      end associate  ! sw_theta etc (S-2.4/S-2.12B)
+      end associate  ! sw_theta etc (S-2.4/S-2.12B/TC-6)
 
       return
       end
@@ -424,13 +428,18 @@ contains
       !> @endnote
       subroutine integral (state)
       Use Variables
+      ! [SS-TC TC-6] dt and fldaystart reads cut over to state%timecontrol via tc_* aliases below
       use iso_fortran_env, only: real64        ! [SS-SWC S-2.12B] for state%soilwater%intr resets
       implicit none
 
       type(swap_state_t), intent(inout) :: state
       integer node,level
       real(8) qrotts,qdrats,ptrats,pevats,revats,qbotts
-             
+
+      ! TC-6 ASSOCIATE: alias TC fields for dense dt / flDayStart reads in integral body
+      associate( tc_dt         => state%timecontrol%dt,        &  ! TC-6
+                 tc_flDayStart => state%timecontrol%flDayStart )   ! TC-6
+
       if (flzerointr) then
         ! SS-ATM Phase 2 Task A-2.2 (D6): igrai/inrai removed — canonical reset
         ! is state%atmosphere%intr%reset() invoked in meteoday's ResetMetFlx (A-2.1).
@@ -439,68 +448,68 @@ contains
 
       ! potential transpiration of this timestep
       ! SS-ATM Phase 2 Task A-2.2: ptra read from state%atmosphere (atmosphere home).
-      ptrats = state%atmosphere%ptra * dt
+      ptrats = state%atmosphere%ptra * tc_dt                         ! TC-6
 
       ! potential soil evaporation of this timestep
       ! SS-ATM Phase 2 Task A-2.2: peva read from state%atmosphere (atmosphere home).
-      pevats = state%atmosphere%peva * dt
+      pevats = state%atmosphere%peva * tc_dt                         ! TC-6
 
       ! reduced soil evaporation of this timestep
       ! SS-BND Phase 2 Task B-2.2: reva read from state%soilwater (boundary home).
-      revats = state%soilwater%reva * dt
+      revats = state%soilwater%reva * tc_dt                          ! TC-6
 
       ! flux lower boundary of this timestep
       ! SS-BND Phase 2 Task B-2.2: qbot read from state%soilwater (boundary home).
-      qbotts = state%soilwater%qbot*dt
+      qbotts = state%soilwater%qbot*tc_dt                            ! TC-6
 
       ! total root extraction of this timestep
       ! SS-CRP Phase 2 Task C-2.2: qrosum -> state%soilwater%qrosum
-      qrotts = state%soilwater%qrosum * dt
+      qrotts = state%soilwater%qrosum * tc_dt                        ! TC-6
 
       ! total drainage flux of this timestep
       ! SS-SWST Phase 2 Task 11 A2: qdrtot removed from globals; read from state.
-      qdrats = state%surfacewater%qdrtot * dt
+      qdrats = state%surfacewater%qdrtot * tc_dt                     ! TC-6
 
       ! determine daily actual transpiration — [SS-SWC S-2.12B] legacy half-writes dropped
-      if (fldaystart) state%soilwater%intr%tra = 0.0_real64                ! S-2.12B
+      if (tc_flDayStart) state%soilwater%intr%tra = 0.0_real64              ! S-2.12B, TC-6: fldaystart -> tc_flDayStart
       state%soilwater%intr%tra = state%soilwater%intr%tra + qrotts          ! S-1.5/S-2.12B
 
       ! add time step fluxes to intermediate totals
       state%soilwater%intr%iqrot = state%soilwater%intr%iqrot + qrotts      ! S-1.5/S-2.12B
       do node = 1,noddrz
-        state%soilwater%intr%inqrot(node) = state%soilwater%intr%inqrot(node) + state%soilwater%qrot(node) * dt  ! S-2.12B
-        state%soilwater%intr%qpotrot_day(node) = state%soilwater%intr%qpotrot_day(node) + state%soilwater%qpotrot(node) * dt  ! S-2.12B
-        state%soilwater%intr%qredtot_day(node) = state%soilwater%intr%qredtot_day(node) + (state%soilwater%qredwet(node) + state%soilwater%qreddry(node) + state%soilwater%qredsol(node) + state%soilwater%qredfrs(node)) * dt  ! S-2.12B
+        state%soilwater%intr%inqrot(node) = state%soilwater%intr%inqrot(node) + state%soilwater%qrot(node) * tc_dt  ! S-2.12B, TC-6
+        state%soilwater%intr%qpotrot_day(node) = state%soilwater%intr%qpotrot_day(node) + state%soilwater%qpotrot(node) * tc_dt  ! S-2.12B, TC-6
+        state%soilwater%intr%qredtot_day(node) = state%soilwater%intr%qredtot_day(node) + (state%soilwater%qredwet(node) + state%soilwater%qreddry(node) + state%soilwater%qredsol(node) + state%soilwater%qredfrs(node)) * tc_dt  ! S-2.12B, TC-6
       end do
       do node = 1,numnod
-        state%soilwater%intr%inqssdi(node) = state%soilwater%intr%inqssdi(node) + qssdi(node) * dt    ! S-2.12B
-        state%soilwater%intr%iqssdi = state%soilwater%intr%iqssdi + qssdi(node) * dt                  ! S-2.12B
+        state%soilwater%intr%inqssdi(node) = state%soilwater%intr%inqssdi(node) + qssdi(node) * tc_dt    ! S-2.12B, TC-6
+        state%soilwater%intr%iqssdi = state%soilwater%intr%iqssdi + qssdi(node) * tc_dt                  ! S-2.12B, TC-6
       end do
-      state%soilwater%intr%iqredwet = state%soilwater%intr%iqredwet + state%soilwater%qredwetsum*dt   ! S-2.12B
-      state%soilwater%intr%iqreddry = state%soilwater%intr%iqreddry + state%soilwater%qreddrysum*dt   ! S-2.12B
-      state%soilwater%intr%iqredsol = state%soilwater%intr%iqredsol + state%soilwater%qredsolsum*dt   ! S-2.12B
-      state%soilwater%intr%iqredfrs = state%soilwater%intr%iqredfrs + state%soilwater%qredfrssum*dt   ! S-2.12B
-      state%soilwater%intr%iqredwet_day = state%soilwater%intr%iqredwet_day + state%soilwater%qredwetsum*dt  ! S-2.12B
-      state%soilwater%intr%iqreddry_day = state%soilwater%intr%iqreddry_day + state%soilwater%qreddrysum*dt  ! S-2.12B
-      state%soilwater%intr%iqredsol_day = state%soilwater%intr%iqredsol_day + state%soilwater%qredsolsum*dt  ! S-2.12B
-      state%soilwater%intr%iqredfrs_day = state%soilwater%intr%iqredfrs_day + state%soilwater%qredfrssum*dt  ! S-2.12B
-      state%soilwater%intr%iptra_day = state%soilwater%intr%iptra_day + state%atmosphere%ptra * dt           ! S-2.12B
-      state%soilwater%intr%ies0 = state%soilwater%intr%ies0 + 0.1d0*es0*dt                                   ! S-2.12B
-      state%soilwater%intr%iet0 = state%soilwater%intr%iet0 + 0.1d0*et0*dt                                   ! S-2.12B
-      state%soilwater%intr%iew0 = state%soilwater%intr%iew0 + 0.1d0*ew0*dt                                   ! S-2.12B
+      state%soilwater%intr%iqredwet = state%soilwater%intr%iqredwet + state%soilwater%qredwetsum*tc_dt   ! S-2.12B, TC-6
+      state%soilwater%intr%iqreddry = state%soilwater%intr%iqreddry + state%soilwater%qreddrysum*tc_dt   ! S-2.12B, TC-6
+      state%soilwater%intr%iqredsol = state%soilwater%intr%iqredsol + state%soilwater%qredsolsum*tc_dt   ! S-2.12B, TC-6
+      state%soilwater%intr%iqredfrs = state%soilwater%intr%iqredfrs + state%soilwater%qredfrssum*tc_dt   ! S-2.12B, TC-6
+      state%soilwater%intr%iqredwet_day = state%soilwater%intr%iqredwet_day + state%soilwater%qredwetsum*tc_dt  ! S-2.12B, TC-6
+      state%soilwater%intr%iqreddry_day = state%soilwater%intr%iqreddry_day + state%soilwater%qreddrysum*tc_dt  ! S-2.12B, TC-6
+      state%soilwater%intr%iqredsol_day = state%soilwater%intr%iqredsol_day + state%soilwater%qredsolsum*tc_dt  ! S-2.12B, TC-6
+      state%soilwater%intr%iqredfrs_day = state%soilwater%intr%iqredfrs_day + state%soilwater%qredfrssum*tc_dt  ! S-2.12B, TC-6
+      state%soilwater%intr%iptra_day = state%soilwater%intr%iptra_day + state%atmosphere%ptra * tc_dt           ! S-2.12B, TC-6
+      state%soilwater%intr%ies0 = state%soilwater%intr%ies0 + 0.1d0*es0*tc_dt                                   ! S-2.12B, TC-6
+      state%soilwater%intr%iet0 = state%soilwater%intr%iet0 + 0.1d0*et0*tc_dt                                   ! S-2.12B, TC-6
+      state%soilwater%intr%iew0 = state%soilwater%intr%iew0 + 0.1d0*ew0*tc_dt                                   ! S-2.12B, TC-6
 
       ! SS-SWST Phase 2 Task 7: iqdra/inqdra* accumulated directly into state; global dropped.
       ! ADR 0031 Phase 2 Task 5: qdra global deleted; read from state%drainage%qdra.
-      state%surfacewater%intermediate%iqdra = state%surfacewater%intermediate%iqdra + qdrats + QRapDra*dt
+      state%surfacewater%intermediate%iqdra = state%surfacewater%intermediate%iqdra + qdrats + QRapDra*tc_dt  ! TC-6
       do node = 1,numnod
         qdraincomp(node) = 0.d0
         do level = 1,nrlevs
           if (allocated(state%surfacewater%intermediate%inqdra) .and. allocated(state%drainage%qdra)) then
-            state%surfacewater%intermediate%inqdra(level,node) = state%surfacewater%intermediate%inqdra(level,node) + state%drainage%qdra(level,node)*dt
+            state%surfacewater%intermediate%inqdra(level,node) = state%surfacewater%intermediate%inqdra(level,node) + state%drainage%qdra(level,node)*tc_dt  ! TC-6
             if (state%drainage%qdra(level,node) > 0.0d0) then
-               state%surfacewater%intermediate%inqdra_out(level,node) = state%surfacewater%intermediate%inqdra_out(level,node) + state%drainage%qdra(level,node)*dt
+               state%surfacewater%intermediate%inqdra_out(level,node) = state%surfacewater%intermediate%inqdra_out(level,node) + state%drainage%qdra(level,node)*tc_dt  ! TC-6
             else
-               state%surfacewater%intermediate%inqdra_in(level,node)  = state%surfacewater%intermediate%inqdra_in(level,node) - state%drainage%qdra(level,node)*dt
+               state%surfacewater%intermediate%inqdra_in(level,node)  = state%surfacewater%intermediate%inqdra_in(level,node) - state%drainage%qdra(level,node)*tc_dt  ! TC-6
             end if
           end if
           if (allocated(state%drainage%qdra)) then
@@ -511,36 +520,36 @@ contains
 
       ! [SS-SWC S-2.12B] all legacy half-writes dropped — state%soilwater is canonical
       ! SS-ATM Phase 2 Task A-2.2: aintcdt read from state%atmosphere (atmosphere home).
-      state%soilwater%intr%iintc = state%soilwater%intr%iintc + (state%atmosphere%aintcdt+gird-nird)*dt  ! S-2.12B
+      state%soilwater%intr%iintc = state%soilwater%intr%iintc + (state%atmosphere%aintcdt+gird-nird)*tc_dt  ! S-2.12B, TC-6
 
       state%atmosphere%intr%iptra = state%atmosphere%intr%iptra + ptrats
       state%atmosphere%intr%ipeva = state%atmosphere%intr%ipeva + pevats
       state%atmosphere%intr%ievap = state%atmosphere%intr%ievap + revats
       ! SS-BND Phase 2 Task B-2.2: runots read from state%soilwater (boundary home).
       state%soilwater%intr%iruno = state%soilwater%intr%iruno + state%soilwater%runots                  ! S-2.12B
-      state%soilwater%intr%irunon = state%soilwater%intr%irunon + state%soilwater%runon*dt              ! S-2.12B
+      state%soilwater%intr%irunon = state%soilwater%intr%irunon + state%soilwater%runon*tc_dt              ! S-2.12B, TC-6
       ! SS-ATM Phase 2 Task A-2.2: graidt/nraidt read from state%atmosphere (atmosphere home).
-      state%soilwater%intr%iprec = state%soilwater%intr%iprec + (state%atmosphere%graidt+gird)*dt       ! S-2.12B
-      state%atmosphere%intr%igrai = state%atmosphere%intr%igrai + state%atmosphere%graidt*dt
-      state%soilwater%intr%igird = state%soilwater%intr%igird + gird*dt                                  ! S-2.12B
-      state%atmosphere%intr%inrai = state%atmosphere%intr%inrai + state%atmosphere%nraidt*dt
-      state%soilwater%intr%inird = state%soilwater%intr%inird + nird*dt                                  ! S-2.12B
+      state%soilwater%intr%iprec = state%soilwater%intr%iprec + (state%atmosphere%graidt+gird)*tc_dt       ! S-2.12B, TC-6
+      state%atmosphere%intr%igrai = state%atmosphere%intr%igrai + state%atmosphere%graidt*tc_dt             ! TC-6
+      state%soilwater%intr%igird = state%soilwater%intr%igird + gird*tc_dt                                  ! S-2.12B, TC-6
+      state%atmosphere%intr%inrai = state%atmosphere%intr%inrai + state%atmosphere%nraidt*tc_dt             ! TC-6
+      state%soilwater%intr%inird = state%soilwater%intr%inird + nird*tc_dt                                  ! S-2.12B, TC-6
       state%soilwater%intr%iqbot = state%soilwater%intr%iqbot + qbotts                                   ! S-2.12B
       if (state%soilwater%q(1) < 0.0d0) then
-         state%soilwater%intr%iqtdo = state%soilwater%intr%iqtdo - state%soilwater%q(1)*dt              ! S-2.12B
+         state%soilwater%intr%iqtdo = state%soilwater%intr%iqtdo - state%soilwater%q(1)*tc_dt              ! S-2.12B, TC-6
       else
-         state%soilwater%intr%iqtup = state%soilwater%intr%iqtup + state%soilwater%q(1)*dt              ! S-2.12B
+         state%soilwater%intr%iqtup = state%soilwater%intr%iqtup + state%soilwater%q(1)*tc_dt              ! S-2.12B, TC-6
       end if
       do node = 1, numnod+1
          if (state%soilwater%q(node) < 0.0d0) then
-            state%soilwater%intr%iqdo(node) = state%soilwater%intr%iqdo(node) - state%soilwater%q(node)*dt  ! S-2.12B
+            state%soilwater%intr%iqdo(node) = state%soilwater%intr%iqdo(node) - state%soilwater%q(node)*tc_dt  ! S-2.12B, TC-6
          else
-            state%soilwater%intr%iqup(node) = state%soilwater%intr%iqup(node) + state%soilwater%q(node)*dt  ! S-2.12B
+            state%soilwater%intr%iqup(node) = state%soilwater%intr%iqup(node) + state%soilwater%q(node)*tc_dt  ! S-2.12B, TC-6
          end if
       end do
 
       ! add time step fluxes to total cumulative values
-      state%soilwater%cumu%cqssdi = state%soilwater%cumu%cqssdi + qssdisum*dt                            ! S-2.12B
+      state%soilwater%cumu%cqssdi = state%soilwater%cumu%cqssdi + qssdisum*tc_dt                            ! S-2.12B, TC-6
       state%soilwater%cumu%cqrot  = state%soilwater%cumu%cqrot  + qrotts                                 ! S-2.12B
       ! SS-SWST Phase 2 Task 7: cqdra accumulated directly into state; global dropped.
       state%surfacewater%drainage_cumulative%cqdra = state%surfacewater%drainage_cumulative%cqdra + qdrats
@@ -552,17 +561,17 @@ contains
       else if (state%soilwater%runots.gt.0.0d0) then
         state%soilwater%cumu%crunoff = state%soilwater%cumu%crunoff + state%soilwater%runots            ! S-2.12B
       endif
-      state%soilwater%intr%irunoCN = state%soilwater%intr%irunoCN + Runoff_CN*dt                         ! S-2.12B
-      state%soilwater%cumu%crunoffCN = state%soilwater%cumu%crunoffCN + Runoff_CN*dt                     ! S-2.12B
+      state%soilwater%intr%irunoCN = state%soilwater%intr%irunoCN + Runoff_CN*tc_dt                         ! S-2.12B, TC-6
+      state%soilwater%cumu%crunoffCN = state%soilwater%cumu%crunoffCN + Runoff_CN*tc_dt                     ! S-2.12B, TC-6
 
       ! SS-ATM Phase 2 Task A-2.2: aintcdt/graidt/nraidt read from state%atmosphere (atmosphere home).
-      state%atmosphere%cumu%caintc = state%atmosphere%cumu%caintc + (state%atmosphere%aintcdt+gird-nird)*dt
+      state%atmosphere%cumu%caintc = state%atmosphere%cumu%caintc + (state%atmosphere%aintcdt+gird-nird)*tc_dt  ! TC-6
 
-      state%atmosphere%cumu%cgrai = state%atmosphere%cumu%cgrai + state%atmosphere%graidt*dt
-      state%atmosphere%cumu%cnrai = state%atmosphere%cumu%cnrai + state%atmosphere%nraidt*dt
+      state%atmosphere%cumu%cgrai = state%atmosphere%cumu%cgrai + state%atmosphere%graidt*tc_dt             ! TC-6
+      state%atmosphere%cumu%cnrai = state%atmosphere%cumu%cnrai + state%atmosphere%nraidt*tc_dt             ! TC-6
 !      cnrai = cgrai - caintc
-      state%soilwater%cumu%cgird = state%soilwater%cumu%cgird + gird*dt                                  ! S-2.12B
-      state%soilwater%cumu%cnird = state%soilwater%cumu%cnird + nird*dt                                  ! S-2.12B
+      state%soilwater%cumu%cgird = state%soilwater%cumu%cgird + gird*tc_dt                                  ! S-2.12B, TC-6
+      state%soilwater%cumu%cnird = state%soilwater%cumu%cnird + nird*tc_dt                                  ! S-2.12B, TC-6
 
       if (qbotts.lt.0.0d0) then
         state%soilwater%cumu%cqbotdo = state%soilwater%cumu%cqbotdo - qbotts                            ! S-2.12B
@@ -575,22 +584,22 @@ contains
         do level = 1,nrlevs
           ! infiltration
           if (state%drainage%qdrain(level).lt.0.0d0) then
-            state%surfacewater%drainage_cumulative%cqdrainin(level) = state%surfacewater%drainage_cumulative%cqdrainin(level) - state%drainage%qdrain(level)*dt
+            state%surfacewater%drainage_cumulative%cqdrainin(level) = state%surfacewater%drainage_cumulative%cqdrainin(level) - state%drainage%qdrain(level)*tc_dt  ! TC-6
           ! drainage
           else if (state%drainage%qdrain(level).gt.0.0d0) then
-            state%surfacewater%drainage_cumulative%cqdrainout(level) = state%surfacewater%drainage_cumulative%cqdrainout(level) + state%drainage%qdrain(level)*dt
+            state%surfacewater%drainage_cumulative%cqdrainout(level) = state%surfacewater%drainage_cumulative%cqdrainout(level) + state%drainage%qdrain(level)*tc_dt  ! TC-6
           endif
-          state%surfacewater%drainage_cumulative%cqdrain(level) = state%surfacewater%drainage_cumulative%cqdrain(level) + state%drainage%qdrain(level)*dt
+          state%surfacewater%drainage_cumulative%cqdrain(level) = state%surfacewater%drainage_cumulative%cqdrain(level) + state%drainage%qdrain(level)*tc_dt  ! TC-6
         enddo
       end if
 
       ! rain on the ponding surface — [SS-SWC S-2.12B] legacy half-writes dropped
-      state%soilwater%cumu%cqprai = state%soilwater%cumu%cqprai + state%atmosphere%nraidt*dt  ! S-2.12B
-      state%soilwater%cumu%crunon = state%soilwater%cumu%crunon + state%soilwater%runon*dt    ! S-2.12B
+      state%soilwater%cumu%cqprai = state%soilwater%cumu%cqprai + state%atmosphere%nraidt*tc_dt  ! S-2.12B, TC-6
+      state%soilwater%cumu%crunon = state%soilwater%cumu%crunon + state%soilwater%runon*tc_dt    ! S-2.12B, TC-6
       if (state%soilwater%q(1).lt.0.0d0) then
-        state%soilwater%cumu%cqtdo = state%soilwater%cumu%cqtdo - state%soilwater%q(1)*dt     ! S-2.12B
+        state%soilwater%cumu%cqtdo = state%soilwater%cumu%cqtdo - state%soilwater%q(1)*tc_dt     ! S-2.12B, TC-6
       else if (state%soilwater%q(1).gt.0.0d0) then
-        state%soilwater%cumu%cqtup = state%soilwater%cumu%cqtup + state%soilwater%q(1)*dt     ! S-2.12B
+        state%soilwater%cumu%cqtup = state%soilwater%cumu%cqtup + state%soilwater%q(1)*tc_dt     ! S-2.12B, TC-6
       endif
 
       ! compensate water balance error of this time step during remaining day part
@@ -619,6 +628,8 @@ contains
 
       if (FlMacropore) state%soilwater%wbalance = state%soilwater%wbalance - cQMpOutDrRap -            &
      &                  (WaSrDm1 + WaSrDm2 - WaSrDm1Ini - WaSrDm2Ini)
+
+      end associate  ! tc_dt, tc_flDayStart (TC-6)
 
       return
       end
@@ -656,10 +667,11 @@ contains
       !> @endnote
       subroutine checkmassbal (flopenfiledev,inqdranew,iqexcmtxdm1cpnew,iqexcmtxdm2cpnew,inqnew,iqoutdrrapcpnew,inqrotnew,ithetabegnew,thetanew,state)
       ! [SS-SWC S-2.12B] igird/inird/IPondBeg/iruno/irunon/pond retired — read from state%soilwater
-      use variables, only: DayCum,nrlevs,NumNodNew,IcTopMp,FlMacropore,outfil,pathwork,DZNew,    &
+      use variables, only: nrlevs,NumNodNew,IcTopMp,FlMacropore,outfil,pathwork,DZNew,    &
                            CritDevMasBal,IQInTopVrtDm1,IQInTopLatDm1,IQInTopVrtDm2, &
                            IQInTopLatDm2,ISsnowBeg,IWaSrDm1Beg,IWaSrDm2Beg,WaSrDm1,WaSrDm2, &
                            dev_cmb
+      ! [SS-TC TC-6] DayCum read cut over to state%timecontrol%daycum
       use swap_state_mod, only: swap_state_t
       use swap_array_dimensions, only: macp, madr
       use file_io_mod, only: file_open
@@ -812,29 +824,29 @@ contains
       ! Write deviations of water balance Top system
       ! SS-ATM A-2.6: igrai/inrai/igsnow/isnrai/isubl/ievap retired — read from state%atmosphere%intr
       ! [SS-SWC S-2.12B] igird/irunon/inird/iruno/Pond/IPondBeg -> state%soilwater
-      if (FlWriteDevPnd) write(dev_cmb,3) daycum, DevMasBalPnd, &
+      if (FlWriteDevPnd) write(dev_cmb,3) state%timecontrol%daycum, DevMasBalPnd, &  ! TC-6: daycum -> state%timecontrol
      &    state%atmosphere%intr%igrai, state%atmosphere%intr%igsnow, state%soilwater%intr%igird, state%soilwater%intr%irunon, state%atmosphere%intr%isnrai, &
      &    state%atmosphere%intr%igrai-state%atmosphere%intr%inrai, state%soilwater%intr%igird-state%soilwater%intr%inird, &
      &    state%atmosphere%intr%isubl, state%atmosphere%intr%ievap, state%soilwater%intr%iruno, inqNew(1), state%soilwater%pond, state%soilwater%intr%IPondBeg, state%atmosphere%ssnow, &
      &    ISsnowBeg,IQInTopPreDm, IQInTopLatDm
 
       ! Write deviations of water balance whole Profile
-      if (FlWriteDevPrf) write(dev_cmb,4) daycum, DevMasBalPrf, &
+      if (FlWriteDevPrf) write(dev_cmb,4) state%timecontrol%daycum, DevMasBalPrf, &  ! TC-6
      &    inqNew(1), inqNew(NumNodNew+1), QrotPrf, QdraPrf, WaSrPrf, &
      &    WaSrPrfBeg, IQExcMtxDm1, IQExcMtxDm2
 
       ! Write deviations of water balance of Individual Soil Compartments
       do ic= 1, numnodnew
-         if (FlWriteDevCmp(ic)) write(dev_cmb,5) daycum,ic,DevMasBalCmp(ic), &
+         if (FlWriteDevCmp(ic)) write(dev_cmb,5) state%timecontrol%daycum,ic,DevMasBalCmp(ic), &  ! TC-6
      &      inqNew(ic), inqNew(ic+1), inqrotNew(ic), Qdra(ic), WaSr(ic), &
      &      WaSrBeg(ic), IQExcMtxDm1CpNew(ic), IQExcMtxDm2CpNew(ic)
       enddo
 
       ! Write deviations of water balance Macropore Domains
-      if (FlWriteDevDm1) write(dev_cmb,6) daycum, DevMasBalDm1, &
+      if (FlWriteDevDm1) write(dev_cmb,6) state%timecontrol%daycum, DevMasBalDm1, &  ! TC-6
      &   IQInTopVrtDm1, IQInTopLatDm1, IQExcMtxDm1, WaSrDm1, &
      &   IWaSrDm1Beg, IQOutDrRap
-      if (FlWriteDevDm2) write(dev_cmb,7) daycum, DevMasBalDm2, &
+      if (FlWriteDevDm2) write(dev_cmb,7) state%timecontrol%daycum, DevMasBalDm2, &  ! TC-6
      &   IQInTopVrtDm2, IQInTopLatDm2, IQExcMtxDm2, WaSrDm2, &
      &   IWaSrDm2Beg
     1 format(' DEVIATIONS WATERBALANCE for different subsystems: 1. Pon'&
