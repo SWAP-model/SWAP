@@ -101,9 +101,16 @@ coverage = { features = ["coverage"], solve-group = "coverage" }
 [tasks]
 #============================================================================
 # BUILD TASKS — single builddir/; pFUnit on by default (ADR 0002).
-# Pass -Denable_pfunit=false to _configure to build the swap binary only.
+# Pass -Denable_pfunit=false to _reconfigure to build the swap binary only.
+#
+# _configure: only runs `meson setup` if builddir is missing. Ninja
+#             handles incremental rebuilds; --reconfigure is only needed
+#             when meson_options.txt or any meson.build changes.
+# _reconfigure: forced setup --reconfigure. Use after changing build
+#               configuration (e.g. `pixi run _reconfigure`).
 #============================================================================
-_configure = { cmd = "FC=gfortran meson setup builddir --reconfigure" }
+_configure = { cmd = "test -f builddir/build.ninja || FC=gfortran meson setup builddir" }
+_reconfigure = { cmd = "FC=gfortran meson setup builddir --reconfigure" }
 build-linux = { cmd = "meson compile -C builddir", depends-on = ["_configure"] }
 
 build-windows-cross = "meson setup builddir_windows --cross-file cross_mingw.txt && meson compile -C builddir_windows"
