@@ -172,6 +172,7 @@ sources = [
     'src/state/soilwater_state.f90',
     'src/state/atmosphere_state.f90',
     'src/state/tillage_state.f90',
+    'src/state/timecontrol_state.f90',
     'src/state/swap_state.f90',
 
     # Utils

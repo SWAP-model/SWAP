@@ -15,6 +15,7 @@ module swap_state_mod
    use soilwater_state_mod,    only: soilwater_state_t
    use atmosphere_state_mod,   only: atmosphere_state_t
    use tillage_state_mod,      only: tillage_state_t
+   use timecontrol_state_mod,  only: timecontrol_state_t
    implicit none
    private
    public :: swap_state_t
@@ -27,6 +28,7 @@ module swap_state_mod
       type(soilwater_state_t)    :: soilwater
       type(atmosphere_state_t)   :: atmosphere
       type(tillage_state_t)      :: tillage
+      type(timecontrol_state_t)  :: timecontrol
    end type swap_state_t
 
 end module swap_state_mod

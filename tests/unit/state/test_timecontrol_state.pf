@@ -1,0 +1,89 @@
+! pFUnit test suite for timecontrol_state_t (SS-TC Task 1).
+!
+! Verifies:
+!   1. Default zero-initialisation of scalar fields.
+!   2. Aggregator access via swap_state_t (state%timecontrol).
+!   3. Two instances are independent (no aliasing through module globals).
+!   4. Real scalar round-trip (t1900, tcum).
+!   5. Integer scalar round-trip (daynr, imonth, ioutdat).
+!   6. Logical scalar round-trip (flDayStart, flDayEnd, flLastTimeStep).
+!
+! See: docs/superpowers/specs/2026-05-12-state-migration-timecontrol-design.md
+
+@test
+subroutine test_default_values_are_zero()
+   use funit
+   use timecontrol_state_mod, only: timecontrol_state_t
+   use iso_fortran_env, only: real64
+   type(timecontrol_state_t) :: tc
+   @assertEqual(0.0_real64, tc%t, 1.0e-12_real64)
+   @assertEqual(0.0_real64, tc%t1900, 1.0e-12_real64)
+   @assertEqual(0, tc%daynr)
+   @assertEqual(0, tc%daycum)
+   @assertEqual(0, tc%iyear)
+   @assertFalse(tc%flDayStart)
+   @assertFalse(tc%flDayEnd)
+end subroutine test_default_values_are_zero
+
+@test
+subroutine test_aggregator_access_via_swap_state()
+   use funit
+   use swap_state_mod, only: swap_state_t
+   type(swap_state_t) :: state
+   state%timecontrol%daynr = 42
+   state%timecontrol%iyear = 2024
+   state%timecontrol%flDayStart = .true.
+   @assertEqual(42, state%timecontrol%daynr)
+   @assertEqual(2024, state%timecontrol%iyear)
+   @assertTrue(state%timecontrol%flDayStart)
+end subroutine test_aggregator_access_via_swap_state
+
+@test
+subroutine test_two_instances_independent()
+   use funit
+   use timecontrol_state_mod, only: timecontrol_state_t
+   use iso_fortran_env, only: real64
+   type(timecontrol_state_t) :: a, b
+   a%dt = 0.125_real64
+   b%dt = 0.250_real64
+   @assertEqual(0.125_real64, a%dt, 1.0e-12_real64)
+   @assertEqual(0.250_real64, b%dt, 1.0e-12_real64)
+end subroutine test_two_instances_independent
+
+@test
+subroutine test_real_scalar_round_trip()
+   use funit
+   use timecontrol_state_mod, only: timecontrol_state_t
+   use iso_fortran_env, only: real64
+   type(timecontrol_state_t) :: tc
+   tc%t1900 = 47482.5_real64
+   tc%tcum = 365.0_real64
+   @assertEqual(47482.5_real64, tc%t1900, 1.0e-12_real64)
+   @assertEqual(365.0_real64, tc%tcum, 1.0e-12_real64)
+end subroutine test_real_scalar_round_trip
+
+@test
+subroutine test_integer_round_trip()
+   use funit
+   use timecontrol_state_mod, only: timecontrol_state_t
+   type(timecontrol_state_t) :: tc
+   tc%daynr = 200
+   tc%imonth = 7
+   tc%ioutdat = 5
+   @assertEqual(200, tc%daynr)
+   @assertEqual(7, tc%imonth)
+   @assertEqual(5, tc%ioutdat)
+end subroutine test_integer_round_trip
+
+@test
+subroutine test_logical_round_trip()
+   use funit
+   use timecontrol_state_mod, only: timecontrol_state_t
+   type(timecontrol_state_t) :: tc
+   tc%flDayStart = .true.
+   tc%flDayEnd = .false.
+   tc%flRunEnd = .true.
+   @assertTrue(tc%flDayStart)
+   @assertFalse(tc%flDayEnd)
+   @assertTrue(tc%flRunEnd)
+end subroutine test_logical_round_trip
