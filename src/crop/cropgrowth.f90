@@ -73,6 +73,12 @@
       ! only for bulb crops (tulips etc..)
       real(8) respmo,decrmo,remo,factblb
 
+      ! SS-TC TC-10: t1900, daynr read via state%timecontrol tc_* aliases.
+      associate( &
+        tc_t1900 => state%timecontrol%t1900,  &  ! TC-10
+        tc_daynr => state%timecontrol%daynr   &  ! TC-10
+      )
+
       select case (task)
 
       case (1)
@@ -86,8 +92,8 @@
         
         if (cropstart(icrop) .lt. 1.d0) exit
         
-        if (t1900 - cropstart(icrop) .gt. -tiny                         &
-     &                 .and. t1900 - cropend(icrop) .lt. tiny) then
+        if (tc_t1900 - cropstart(icrop) .gt. -tiny                      &
+     &                 .and. tc_t1900 - cropend(icrop) .lt. tiny) then
           flCropCalendar = .true.
         else
           icrop = icrop + 1
@@ -103,7 +109,7 @@
 
       ! reset if new crop
       if (flCropCalendar) then
-        if (dabs(t1900 - cropstart(icrop)) .lt. tiny) then
+        if (dabs(tc_t1900 - cropstart(icrop)) .lt. tiny) then
           call InitializeCrop
           flCropReadFile  = .true.
           flCropEmergence = .true.
@@ -288,10 +294,10 @@
         daycrop = daycrop + 1
         
         ! open crp-file
-        if (swcrp.eq.1) call CropOutput(1)
-        
+        if (swcrp.eq.1) call CropOutput(1, state)
+
         ! set correction of CO2 impact
-        call FacCO2()
+        call FacCO2(state)
         
       endif
 
@@ -324,8 +330,8 @@
 ! check DAYNR during the day!!!!!!          
           
         ! phenological development rate 
-        call astro (daynr+1,lat,rad,dayl,daylp,sinld,cosld,difpp,atmtr,dsinbe)
-      
+        call astro (tc_daynr+1,lat,rad,dayl,daylp,sinld,cosld,difpp,atmtr,dsinbe)
+
         ! only for bulb crops (tulips etc..)
         if(swbulb.eq.1) then
           ! remobilisation of carbohydrates from planted material
@@ -460,11 +466,11 @@
 
         ! Check flHarvestDay
         if (swharv.eq.0) then
-          if (dabs(t1900 - cropend(icrop) - 1.d0) .lt. 1.0d-3) then
+          if (dabs(tc_t1900 - cropend(icrop) - 1.d0) .lt. 1.0d-3) then
             flHarvestDay = .true.
           endif
         else
-          if (dvs.ge.dvsend .or. dabs(t1900 - cropend(icrop) - 1.d0) .lt. 1.0d-3) then
+          if (dvs.ge.dvsend .or. dabs(tc_t1900 - cropend(icrop) - 1.d0) .lt. 1.0d-3) then
             flHarvestDay = .true.
           endif
         endif
@@ -500,18 +506,19 @@
 
 ! --- detailed grass growth ------------------------------------------------
       if (croptype(icrop).eq.3)then
-        if (dabs(t1900 - cropend(icrop) - 1.d0) .lt. 1.0d-3) then
+        if (dabs(tc_t1900 - cropend(icrop) - 1.d0) .lt. 1.0d-3) then
           flCropEmergence = .false.
           flCropHarvest   = .true.
         endif
       endif
-      
-      return      
+
+      return
       
       case default
          call fatalerr_collected ('CropGrowth', 'Illegal value for TASK')
       end select
 
+      end associate  ! tc_t1900, tc_daynr => state%timecontrol [TC-10]
       return
 
       end
@@ -522,6 +529,7 @@
 !     date               : august 2004
 !     purpose            : simple crop growth routine for swap
 ! SS-CRP C-2.5: state added (optional, intent in) to read flWrtNonox.
+! SS-TC TC-10: t1900 read via state%timecontrol tc_t1900 alias.
 ! ----------------------------------------------------------------------
       use variables
       use soilhydraulics_utils, only: watcon
@@ -540,9 +548,11 @@
 
 ! --- rooting
       real(8)   rrpot,rr
-      
+
       save
 ! ----------------------------------------------------------------------
+      ! TC-10: t1900 read via state%timecontrol tc_t1900 alias.
+      associate( tc_t1900 => state%timecontrol%t1900 )  ! TC-10
 
       select case (task)
       case (1)
@@ -589,9 +599,9 @@
       endif
 
 ! --- skip next initialization if crop parameters are read from *.END file
-      if (t1900 - tstart .gt. tiny .or. swinco .ne. 3 .or.              &
-     &  dabs(t1900 - cropstart(icrop)) .lt. tiny) then
-        
+      if (tc_t1900 - tstart .gt. tiny .or. swinco .ne. 3 .or.           &
+     &  dabs(tc_t1900 - cropstart(icrop)) .lt. tiny) then
+
         dvs = 0.0d0
 
 ! --- actual rooting depth
@@ -733,23 +743,28 @@
          call fatalerr_collected ('CropFixed', 'Illegal value for TASK')
       end select
 
+      end associate  ! tc_t1900 => state%timecontrol [TC-10]
       return
       end
 
 ! ----------------------------------------------------------------------
-      subroutine cropoutput(task) 
+      subroutine cropoutput(task, state)
 ! ----------------------------------------------------------------------
-!     Date               : Aug 2004   
-!     Purpose            : open and write crop output files 
+!     Date               : Aug 2004
+!     Purpose            : open and write crop output files
+! SS-TC TC-10: state added (intent in); threaded to OutCropFixed /
+!   OutWofost / OutGrass so they can read date,t via state%timecontrol.
 ! ----------------------------------------------------------------------
 
       use variables
       use error_mod, only: fatalerr_collected
       use file_io_mod, only: file_open
+      use swap_state_mod, only: swap_state_t
       implicit none
 
 ! --- local variables ------------------
       integer task   !,numcrop
+      type(swap_state_t), intent(in) :: state
       character(len=200) messag
       character(len=160) filnam,filtext
 
@@ -774,13 +789,13 @@
         call writehead (crp,1,filnam,filtext,project)
 
 ! ---   write header fixed crop growth
-        if (croptype(icrop) .eq. 1) call OutCropFixed(1)
+        if (croptype(icrop) .eq. 1) call OutCropFixed(1, state)
 
 ! ---   write header detailed crop growth
-        if (croptype(icrop) .eq. 2) call OutWofost(1)
+        if (croptype(icrop) .eq. 2) call OutWofost(1, state)
 
 ! ---   write header detailed grass growth
-        if (croptype(icrop) .eq. 3) call OutGrass(1)
+        if (croptype(icrop) .eq. 3) call OutGrass(1, state)
 
         flCropOpenFile = .false.
 
@@ -789,13 +804,13 @@
 ! ---   header for second and subsequent crops
 
 ! ---   write header fixed crop growth
-        if (croptype(icrop).eq.1 .and. swheader.eq.1) call OutCropFixed(1)
+        if (croptype(icrop).eq.1 .and. swheader.eq.1) call OutCropFixed(1, state)
 
-! ---   write header detailed crop growth 
-        if (croptype(icrop).eq.2 .and. swheader.eq.1) call OutWofost(1)
+! ---   write header detailed crop growth
+        if (croptype(icrop).eq.2 .and. swheader.eq.1) call OutWofost(1, state)
 
 ! ---   write header detailed grass growth
-        if (croptype(icrop).eq.3 .and. swheader.eq.1) call OutGrass(1)
+        if (croptype(icrop).eq.3 .and. swheader.eq.1) call OutGrass(1, state)
 
       endif
 
@@ -806,13 +821,13 @@
 ! --- write actual data ----------------------------------------------------
 
 ! --- fixed crop file
-      if (croptype(icrop) .eq. 1) call OutCropFixed(2)
+      if (croptype(icrop) .eq. 1) call OutCropFixed(2, state)
 
-! --- detailed crop growth 
-      if (croptype(icrop) .eq. 2) call OutWofost(2)
-        
+! --- detailed crop growth
+      if (croptype(icrop) .eq. 2) call OutWofost(2, state)
+
 ! --- detailed grass growth
-      if (croptype(icrop) .eq. 3) call OutGrass(2)
+      if (croptype(icrop) .eq. 3) call OutGrass(2, state)
       
       return
 
@@ -1032,38 +1047,44 @@
       end
     
 ! ----------------------------------------------------------------------
-      subroutine FacCO2()
+      subroutine FacCO2(state)
 ! ----------------------------------------------------------------------
 !     update             : February 2018
 !     date               : ?
 !     purpose            : Assimilation correction for CO2 changes in
 !                          atmosphere (Lintul4) added by Iwan Supit
+! SS-TC TC-10: state added (intent in); iyear read via state%timecontrol
+!   tc_iyear alias.
 ! ----------------------------------------------------------------------
       use variables
       use array_utils, only: afgen
       use error_mod, only: fatalerr_collected
+      use swap_state_mod, only: swap_state_t
       implicit none
+
+      type(swap_state_t), intent(in) :: state
 
       integer   ifindi,indexyr
       real(8)   CO2
       character(len=200) messag
-      
+
       ! initialize CO2 impact
       fco2amax = 1.0d0 ! factor to correct AMAX for CO2
       fco2eff  = 1.0d0 ! factor to correct EFF for CO2
       fco2tra  = 1.0d0 ! factor to correct TRA for CO2
 
       ! correction of CO2 impact
+      ! TC-10: iyear read via state%timecontrol%iyear directly (single site, no ASSOCIATE needed).
       if(flco2) then
-        indexyr = ifindi (CO2year, mayrs, 1, mayrs, iyear)
+        indexyr = ifindi (CO2year, mayrs, 1, mayrs, state%timecontrol%iyear)  ! TC-10
         if (indexyr.lt.1 .or. indexyr.gt.mayrs) then
           Messag ='Input if CO2year or CO2ppm inconsistent, correct'
           call fatalerr_collected ('wofost',messag)
         endif
         CO2 = CO2ppm(indexyr)
         fco2amax = afgen(CO2AMAXTB,30,CO2)
-        fco2eff = afgen(CO2EFFTB,30,CO2)    
-        fco2tra = afgen(CO2TRATB,30,CO2)    
+        fco2eff = afgen(CO2EFFTB,30,CO2)
+        fco2tra = afgen(CO2TRATB,30,CO2)
       endif
 
       return
@@ -1076,6 +1097,7 @@
 !     date               : october 2004
 !     purpose            : detailed crop growth routine
 ! SS-CRP C-2.5: state added (optional, intent in) to read flWrtNonox.
+! SS-TC TC-10: t1900,daynr,daycum,date read via state%timecontrol tc_* aliases.
 ! ----------------------------------------------------------------------
       use variables
       use wofost_soil_interface
@@ -1159,12 +1181,21 @@
 
       save
 ! ----------------------------------------------------------------------
+      ! SS-TC TC-10: t1900,t,daynr,daycum,date read via state%timecontrol tc_* aliases.
+      associate( &
+        tc_t1900  => state%timecontrol%t1900,  &  ! TC-10
+        tc_t      => state%timecontrol%t,      &  ! TC-10
+        tc_daynr  => state%timecontrol%daynr,  &  ! TC-10
+        tc_daycum => state%timecontrol%daycum, &  ! TC-10
+        tc_date   => state%timecontrol%date    &  ! TC-10
+      )
+
       select case (task)
-      
+
       case (1)
 
 ! === initialization ====================================================
-      
+
 ! --- read general crop data: dispatch on per-rotation typed-config cache
 !     (ADR 0016). Falls back to legacy reader for rotations whose
 !     .crp.toml is not yet authored. Teardown: end of Phase 4 removes
@@ -1211,13 +1242,13 @@
 
 !        open output files and write header
          if (icrop.eq.1) then
-            call outbalcropOM1(1,pathwork,outfil,project,date,daycrop,  &
-     &         t,dvs,tsum,gass,mres,fr,fl,fs,fo,dmi,cvf,ccheck)
-            call outbalcropOM2(1,pathwork,outfil,project,date,daycrop,  &
-     &         t,dvs,tsum,storagediff,wlv,wst,wso,wrt,delt,         &
+            call outbalcropOM1(1,pathwork,outfil,project,tc_date,daycrop,  &
+     &         tc_t,dvs,tsum,gass,mres,fr,fl,fs,fo,dmi,cvf,ccheck)
+            call outbalcropOM2(1,pathwork,outfil,project,tc_date,daycrop,  &
+     &         tc_t,dvs,tsum,storagediff,wlv,wst,wso,wrt,delt,         &
      &         grlv,grst,grso,grrt,drlv,drst,drso,drrt,ombalan)
-            call outbalcropN(1,pathwork,outfil,project,date,daycrop,    &
-     &         t,dvs,tsum,nuptt,nfixtt,anlvi,ansti,anrti,ansoi,anlv,&
+            call outbalcropN(1,pathwork,outfil,project,tc_date,daycrop, &
+     &         tc_t,dvs,tsum,nuptt,nfixtt,anlvi,ansti,anrti,ansoi,anlv,&
      &         anst,anrt,anso,nlossl,nlossr,nlosss,nbalan,nni)
          endif
       endif
@@ -1233,9 +1264,9 @@
       endif
 
 ! --- skip next initialization if crop parameters are read from *.END file
-      if (t1900 - tstart .gt. tiny .or. swinco .ne. 3 .or.             &
-     &   dabs(t1900 - cropstart(icrop)) .lt. tiny) then
-      
+      if (tc_t1900 - tstart .gt. tiny .or. swinco .ne. 3 .or.           &
+     &   dabs(tc_t1900 - cropstart(icrop)) .lt. tiny) then
+
         dvs = 0.0d0
         flAnthesis = .false.
         tsum = 0.0d0
@@ -1435,7 +1466,7 @@
       else if (swsoybean.eq.1) then
 ! ---   soybean
         call mgtemprf(tav,toptdvr,tmindvr,tmaxdvr,rfmgtemp)
-        call mgphotoprf(mg,daynr,lat,popt,pcrt,flphenodayl,rfmgphotop)
+        call mgphotoprf(mg,tc_daynr,lat,popt,pcrt,flphenodayl,rfmgphotop)
         if (dvs.lt.1.0d0) then 
 ! ---     vegetative phase
           if(flrfphotoveg) then
@@ -1699,7 +1730,7 @@
           else
               if(flvernalised .and. vern.lt.vernsat) then
                  write(messag,'(2a,i6,2a)') ' critical DVS,',           &
-     &           ' for vernalised reached, day = ', daycum,             &
+     &           ' for vernalised reached, day = ', tc_daycum,          &
      &           ' but vernalisation requirements not yet fulfilled ',  &
      &           ' forcing vernalization now'
                  call warn ('wofost',messag,logf,swscre)
@@ -2036,7 +2067,7 @@
 !        during the last day of the crop period: add the weight of living roots 
 !        to the dead roots and reset living weight to zero
          if (flHarvestDay .or. (dvs.ge.dvsend) .or.                     &
-     &                 dabs(t1900-1.0d0-cropend(icrop)).lt.1.0d-3 ) then
+     &                 dabs(tc_t1900-1.0d0-cropend(icrop)).lt.1.0d-3 ) then
             HarLosOrm_rt = wrt
             HarLosOrm_dwlv =  FraHarLosOrm_lv * dwlv
             HarLosOrm_lv   = FraHarLosOrm_lv * wlv + HarLosOrm_dwlv
@@ -2075,14 +2106,14 @@
 ! ----- CHECK and WRITE MASS BALANCE: dry matter of crop
 
 !       output of OM balance1: from air to partitioning (kg/ha DM CH2O)
-        call outbalcropOM1(2,pathwork,outfil,project,date,daycrop,      &
-     &       t,dvs,tsum,gass,mres,fr,fl,fs,fo,dmi,cvf,ccheck)
+        call outbalcropOM1(2,pathwork,outfil,project,tc_date,daycrop,   &
+     &       tc_t,dvs,tsum,gass,mres,fr,fl,fs,fo,dmi,cvf,ccheck)
 
 ! -     OM balance2: storage difference(kg/ha DM CH2O)
         storagediff = (wlv+wst+wso+wrt) - (wlvt0+wstt0+wsot0+wrtt0)
         ombalan = storagediff - ( (grlv+grst+grso+grrt)*delt -          &
-     &            (drlv+drst+drso+drrt)*delt ) 
-!ckro_20171002 harvest losses happen after harvest and should not be 
+     &            (drlv+drst+drso+drrt)*delt )
+!ckro_20171002 harvest losses happen after harvest and should not be
 !    in this balance, therefore this commented out of source code.
 !        storagediff = HarLosOrm_rt + HarLosOrm_lv + HarLosOrm_st +      &
 !     &  HarLosOrm_so -(HarLosOrm_dwlv + HarLosOrm_dwst + HarLosOrm_dwso)
@@ -2094,11 +2125,11 @@
 !           call fatalerr ('wofost',messag)
         endif
 !       output of OM balance2
-        call outbalcropom2(2,pathwork,outfil,project,date,daycrop,      &
-     &         t,dvs,tsum,storagediff,wlv,wst,wso,wrt,delt,             &
+        call outbalcropom2(2,pathwork,outfil,project,tc_date,daycrop,   &
+     &         tc_t,dvs,tsum,storagediff,wlv,wst,wso,wrt,delt,         &
      &         grlv,grst,grso,grrt,drlv,drst,drso,drrt,ombalan)
 
-! ----- CHECK and WRITE MASS BALANCE: nitrogen of crop  
+! ----- CHECK and WRITE MASS BALANCE: nitrogen of crop
 
         NBALAN =  NUPTT + NFIXTT + (ANLVI+ANSTI+ANRTI+ANSOI)            &
      &      - (ANLV+ANST+ANRT+ANSO) - (NLOSSL+NLOSSR+NLOSSS)            &
@@ -2107,18 +2138,18 @@
      &      +  HarLosNit_dwlv + HarLosNit_dwst + HarLosNit_dwso
 
 !       output of N balance
-        call outbalcropN(2,pathwork,outfil,project,date,daycrop,        &
-     &         t,dvs,tsum,NUPTT,NFIXTT,ANLVI,ANSTI,ANRTI,ANSOI,ANLV,&
+        call outbalcropN(2,pathwork,outfil,project,tc_date,daycrop,     &
+     &         tc_t,dvs,tsum,NUPTT,NFIXTT,ANLVI,ANSTI,ANRTI,ANSOI,ANLV,&
      &         ANST,ANRT,ANSO,NLOSSL,NLOSSR,NLOSSS,NBALAN,nni)
         IF (dabs(NBALAN) .GE. 1.0d-03) then
            write(messag,'(1a,i6,a,f8.3)') ' Nitrogen balance not 0,'//  &
-     &     ' simulation stopped, day = ', daycum,' NBAL=',NBALAN
+     &     ' simulation stopped, day = ', tc_daycum,' NBAL=',NBALAN
 !*           call fatalerr ('wofost',messag)
            call warn ('CropGrowth_Wofost',messag,logf,swscre)
         endif
  
         if (flHarvestDay .or. (dvs.ge.dvsend) .or.                      &
-     &                 dabs(t1900-1.0d0-cropend(icrop)).lt.1.0d-3 ) then
+     &                 dabs(tc_t1900-1.0d0-cropend(icrop)).lt.1.0d-3 ) then
           gwst  = 0.0d0
           gwrt  = 0.0d0
           gwso  = 0.0d0
@@ -2183,6 +2214,7 @@
          call fatalerr_collected ('Wofost', 'Illegal value for TASK')
       end select
 
+      end associate  ! tc_t1900, tc_t, tc_daynr, tc_daycum, tc_date => state%timecontrol [TC-10]
       return
       end
 
@@ -2194,6 +2226,8 @@
 ! SS-HEAT pre-Task-8: tsoil(:) non-optional dummy arg; callers pass
 !   state%heat%tsoil. Threaded through to sumttd calls.
 ! SS-CRP C-2.5: state added (optional, intent in) to read flWrtNonox.
+! SS-TC TC-10: t1900,daynr read via state%timecontrol tc_* aliases;
+!   state threaded to sumttd for its own TC reads.
 ! ----------------------------------------------------------------------
       use variables, dummy_tsoil_gr_ => tsoil
       !! Rename config-staging tsoil to avoid clash with dummy arg tsoil.
@@ -2210,12 +2244,15 @@
       type(swap_state_t), intent(in), optional :: state
 
       ! Explicit interface for non-module sumttd which now takes tsoil(:)
+      ! TC-10: sumttd signature updated to include state for TC reads.
       interface
-         subroutine sumttd(task, flGrassGrowth, dateGrassGrowth, tsoil)
-            character(len=*), intent(in)  :: task
-            logical,          intent(out) :: flGrassGrowth
-            character(len=11),intent(out) :: dateGrassGrowth
-            real(8),          intent(in)  :: tsoil(:)
+         subroutine sumttd(task, flGrassGrowth, dateGrassGrowth, tsoil, state)
+            use swap_state_mod, only: swap_state_t
+            character(len=*), intent(in)   :: task
+            logical,          intent(out)  :: flGrassGrowth
+            character(len=11),intent(out)  :: dateGrassGrowth
+            real(8),          intent(in)   :: tsoil(:)
+            type(swap_state_t), intent(in) :: state
          end subroutine sumttd
       end interface
 
@@ -2270,6 +2307,12 @@
 
       save
 ! ----------------------------------------------------------------------
+      ! SS-TC TC-10: t1900,daynr read via state%timecontrol tc_* aliases.
+      associate( &
+        tc_t1900 => state%timecontrol%t1900,  &  ! TC-10
+        tc_daynr => state%timecontrol%daynr   &  ! TC-10
+      )
+
       select case (task)
       case (1)
 
@@ -2340,8 +2383,8 @@
       endif
 
 ! --- skip next initialization if crop parameters are read from *.END file
-      if (t1900 - tstart .gt. tiny .or. swinco .ne. 3 .or.             &
-     &   dabs(t1900 - cropstart(icrop)) .lt. tiny) then
+      if (tc_t1900 - tstart .gt. tiny .or. swinco .ne. 3 .or.          &
+     &   dabs(tc_t1900 - cropstart(icrop)) .lt. tiny) then
 
         iseqgm = 1
         iseqgmpot = iseqgm
@@ -2425,7 +2468,8 @@
         endif
         if (swtsum.eq.2) then
           ! SS-HEAT pre-Task-8: pass tsoil from state%heat%tsoil (via dummy arg) to sumttd.
-          call sumttd('initial',flGrassGrowth,dateGrassGrowth,tsoil)
+          ! SS-TC TC-10: pass state so sumttd can read t1900,date via state%timecontrol.
+          call sumttd('initial',flGrassGrowth,dateGrassGrowth,tsoil,state)
         endif
 
 ! --- end skip above initialization if crop parameters are read from *.END file
@@ -2462,7 +2506,7 @@
 !     initialise 
       if (swharvest.eq.2) then
         iharvest = 1
-        do while (t1900 .gt. dateharvest(iharvest))
+        do while (tc_t1900 .gt. dateharvest(iharvest))
           iharvest = iharvest + 1
         enddo
       endif      
@@ -2530,7 +2574,8 @@
         ! grass growth initiated by temperature, time and depth
         if (swtsum.eq.2) then
           ! SS-HEAT pre-Task-8: pass tsoil from state%heat%tsoil (via dummy arg) to sumttd.
-          if (dateGrassGrowth.eq.'undefined') call sumttd('dynamic',flGrassGrowth,dateGrassGrowth,tsoil)
+          ! SS-TC TC-10: pass state so sumttd can read t1900,date via state%timecontrol.
+          if (dateGrassGrowth.eq.'undefined') call sumttd('dynamic',flGrassGrowth,dateGrassGrowth,tsoil,state)
         endif
       
         ! check if grass growth has started
@@ -2679,24 +2724,24 @@
           if (swharvest .eq. 1) then 
       
             ! use of fixed threshold
-            if (swdmmow .eq. 1) then   
-              if (tagppot .gt. dmharvest .or. (daynr .gt. daylastharvest  &
+            if (swdmmow .eq. 1) then
+              if (tagppot .gt. dmharvest .or. (tc_daynr .gt. daylastharvest  &
      &          .and. tagppot .gt. dmlastharvest)) then
                 flharvestpot = .true.
               endif
-            
+
             ! use of flexible threshold
-            elseif (swdmmow .eq. 2) then 
+            elseif (swdmmow .eq. 2) then
               dmharvest = afgen(dmmowtb,20,rid)
               if (tagppot .gt. dmharvest .or.                           &
      &                 (daygrowthpot .gt. maxdaymow .and. iseqgmpot .gt. 1)) then
                 flharvestpot = .true.
               endif
             endif
-          
+
           ! use fixed dates
-          elseif (swharvest .eq. 2) then  
-            if(t1900 .gt. dateharvest(iharvest)) then
+          elseif (swharvest .eq. 2) then
+            if(tc_t1900 .gt. dateharvest(iharvest)) then
               flharvestpot = .true.
             endif
           endif
@@ -2772,8 +2817,8 @@
               endif
               
             ! use fixed dates
-            elseif (swharvest .eq. 2) then  
-              if(t1900 .gt. dateharvest(iharvest)) then
+            elseif (swharvest .eq. 2) then
+              if(tc_t1900 .gt. dateharvest(iharvest)) then
                 flharvestpot = .true.
               endif
             endif
@@ -3138,14 +3183,14 @@
           if (swharvest .eq. 1) then 
       
             ! use of fixed threshold
-            if (swdmmow .eq. 1) then   
-              if (tagp .gt. dmharvest .or. (daynr .gt. daylastharvest  &
+            if (swdmmow .eq. 1) then
+              if (tagp .gt. dmharvest .or. (tc_daynr .gt. daylastharvest  &
      &          .and. tagp .gt. dmlastharvest)) then
                 flharvest = .true.
               endif
-            
+
             ! use of flexible threshold
-            elseif (swdmmow .eq. 2) then 
+            elseif (swdmmow .eq. 2) then
               dmharvest = afgen(dmmowtb,20,rid)
               if (tagp .gt. dmharvest .or.                           &
      &                 (daygrowth .gt. maxdaymow .and. iseqgm .gt. 1)) then
@@ -3154,8 +3199,8 @@
             endif
           
           ! use fixed dates
-          elseif (swharvest .eq. 2) then  
-            if(t1900 .gt. dateharvest(iharvest)) then
+          elseif (swharvest .eq. 2) then
+            if(tc_t1900 .gt. dateharvest(iharvest)) then
               iharvest = iharvest + 1
               flharvest = .true.
             endif
@@ -3232,8 +3277,8 @@
               endif
             
             ! use fixed dates
-            elseif (swharvest .eq. 2) then  
-              if(t1900 .gt. dateharvest(iharvest)) then
+            elseif (swharvest .eq. 2) then
+              if(tc_t1900 .gt. dateharvest(iharvest)) then
                 iharvest = iharvest + 1
                 flharvest = .true.
               endif
@@ -3467,6 +3512,7 @@
          call fatalerr_collected ('Grass', 'Illegal value for TASK')
       end select
 
+      end associate  ! tc_t1900, tc_daynr => state%timecontrol [TC-10]
       return
       end
 
@@ -3482,21 +3528,25 @@
 ! ----------------------------------------------------------------------
 
       ! [SS-SWC S-2.12B] qpotrot_day/qredtot_day retired — read via state%soilwater%intr
-      use variables, only: date, noddrz, zbotcp, ztopcp, cumdens,             &
+      ! SS-TC TC-10: date read via state%timecontrol tc_date alias (removed from variables use).
+      use variables, only: noddrz, zbotcp, ztopcp, cumdens,                   &
                      wrt, gwrt, wrtmin
       use swap_state_mod, only: swap_state_t  ! [SS-SWC S-2.12B]
       ! local
       implicit none
 
       type(swap_state_t), intent(in) :: state  ! [SS-SWC S-2.12B]
- 
+
       integer   node, i
       real(8)   top,bot
       real(8)   rd_noddrz
       real(8)   rel_qrot_day, rel_qred_day, sum
       real(8)   wrttot, wrtdis(202), qrotdis(202), qreddis(202)
       logical   found
-      
+
+      ! SS-TC TC-10: date read via state%timecontrol tc_date alias.
+      associate( tc_date => state%timecontrol%date )  ! TC-10
+
 ! --- update normalized cumulative root density based on root extraction or stress (cumdens)
 !      if (swrdc .eq. 1) then
           
@@ -3564,16 +3614,17 @@
   
         ! TEMPORARY OUTPUT  DELETE
         do i = 2,202,2
-          write(777,*) trim(date), ",", cumdens(i-1), ",", cumdens(i)
+          write(777,*) trim(tc_date), ",", cumdens(i-1), ",", cumdens(i)
         end do
 
         do node = 1,noddrz
-          write(888,'(a11,",",i4,3(",",f15.5))') trim(date), node, state%soilwater%intr%qpotrot_day(node), state%soilwater%intr%qredtot_day(node)
+          write(888,'(a11,",",i4,3(",",f15.5))') trim(tc_date), node, state%soilwater%intr%qpotrot_day(node), state%soilwater%intr%qredtot_day(node)
         end do
         ! TEMPORARY OUTPUT  DELETE
-        
+
 !      end if
-    
+
+      end associate  ! tc_date => state%timecontrol [TC-10]
       return
       end
     
@@ -4623,7 +4674,7 @@
       return
       end
 
-      subroutine sumttd(task,flGrassGrowth,dateGrassGrowth,tsoil)
+      subroutine sumttd(task,flGrassGrowth,dateGrassGrowth,tsoil,state)
 ! ----------------------------------------------------------------------
 !     Last modified      : Jan 2016
 !     Author             : Joop Kroes
@@ -4642,10 +4693,12 @@
 !       O    L   flGrassGrowth flag indicating grass growth (suppressed=.false. when criteria are not met) [.true .or. .false. -, L]
 ! SS-HEAT pre-Task-8: tsoil now non-optional dummy arg; callers pass state%heat%tsoil
 !   via grass's tsoil dummy arg. Global tsoil excluded via rename.
+! SS-TC TC-10: state added (intent in); t1900,date read via state%timecontrol tc_* aliases.
 ! ----------------------------------------------------------------------
       use Variables, dummy_tsoil_sumttd_ => tsoil
       !! Rename global tsoil to avoid clash with dummy arg tsoil.
       use file_io_mod, only: file_open
+      use swap_state_mod, only: swap_state_t
       implicit none
 
 ! --- arguments
@@ -4654,6 +4707,7 @@
       character(len=11), intent(out) ::  dateGrassGrowth            ! date of start of GrassGrowth
       real(8), intent(in) :: tsoil(:)
       !! Soil temperature array from state%heat%tsoil.
+      type(swap_state_t), intent(in) :: state
 
 ! --- local
       integer    :: tsumtimecum      ! cumulative, from 1-jan, time (nrs of sequential days) with temp above tsumtemp for grass growth [1..20 days, I]
@@ -4669,9 +4723,14 @@
       
       save
 
-      comma = ',' 
+      ! SS-TC TC-10: t1900,date read via state%timecontrol tc_* aliases.
+      associate( &
+        tc_t1900 => state%timecontrol%t1900,  &  ! TC-10
+        tc_date  => state%timecontrol%date    &  ! TC-10
+      )
 
-      
+      comma = ','
+
       select case(task)
 
       case('initial')
@@ -4730,7 +4789,7 @@
           ! no growth as long as 3 criteria are not met
           flGrassGrowth = .false.
           if(fltsumtemp .and. fltsimprev .and. fltsimcount) then
-              call dtdpst ('year-month-day',t1900,dateGrassGrowth)
+              call dtdpst ('year-month-day',tc_t1900,dateGrassGrowth)
               flGrassGrowth = .true.
           endif
 
@@ -4740,11 +4799,12 @@
           endif
 
           ! === write output
-          write (uo,200) Date,comma,z(cmpcrit),comma,tsoil(cmpcrit),    &
+          write (uo,200) tc_date,comma,z(cmpcrit),comma,tsoil(cmpcrit), &
      &           comma,fltsumtemp,comma,fltsimprev,comma,fltsimcount
  200      format (a11,2(a1,f7.2),3(a1,i3))
 
       end select
 
+      end associate  ! tc_t1900, tc_date => state%timecontrol [TC-10]
       return
       end

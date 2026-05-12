@@ -434,20 +434,29 @@
 
 
 ! ----------------------------------------------------------------------
-      subroutine OutCropFixed(task)
+      subroutine OutCropFixed(task, state)
       use error_mod, only: fatalerr_collected
 ! ----------------------------------------------------------------------
 !     Date               : Aug 2004
 !     Purpose            : open and write fixed crop output files
+! SS-TC TC-10: state added (intent in); date,t read via state%timecontrol
+!   tc_* aliases. daycrop remains crop-domain variable (not in TC).
 ! ----------------------------------------------------------------------
-      use variables, only: date,t,daycrop,dvs,tsum,lai,cf,rd,crp,ch
+      use variables, only: daycrop,dvs,tsum,lai,cf,rd,crp,ch
+      use swap_state_mod, only: swap_state_t
       implicit none
 
 ! --- global variables ------------------
       integer task
+      type(swap_state_t), intent(in) :: state
 
 ! --- local
       character(len=1) comma
+! --- TC-10: date, t read via state%timecontrol tc_* aliases.
+      associate( &
+        tc_date => state%timecontrol%date,  &  ! TC-10
+        tc_t    => state%timecontrol%t      &  ! TC-10
+      )
 ! ----------------------------------------------------------------------
       comma = ','
 
@@ -476,7 +485,7 @@
 ! --- write actual data ------------------------------------------------------
 
 ! --- write output record
-      write (crp,200) date,comma,nint(t),comma,daycrop,comma,dvs,comma, &
+      write (crp,200) tc_date,comma,nint(tc_t),comma,daycrop,comma,dvs,comma, &
      & tsum,comma,"       ",comma,lai,comma,ch,comma,cf,                &
      & comma,"       ",comma,nint(rd),                                  &
      & comma,comma,comma,comma,comma,comma,comma,comma,comma,comma,     &
@@ -490,26 +499,36 @@
          call fatalerr_collected ('OutCropFixed', 'Illegal value for Task')
       end select
 
+      end associate  ! tc_date, tc_t => state%timecontrol [TC-10]
       return
       end
 
 ! ----------------------------------------------------------------------
-      subroutine OutWofost(task)
+      subroutine OutWofost(task, state)
       use error_mod, only: fatalerr_collected
 ! ----------------------------------------------------------------------
 !     UpDate             : Aug 2014
 !     Date               : Oct 2004
 !     Purpose            : Write detailed crop growth output files
+! SS-TC TC-10: state added (intent in); date,t read via state%timecontrol
+!   tc_* aliases. daycrop remains crop-domain variable (not in TC).
 ! ----------------------------------------------------------------------
-      use variables, only: date,daycrop,crp,t,dvs,tsum,laipot,lai,rdpot,rd,ch,cf,cwdmpot,cwdm,wsopot,wso,wlvpot,wlv,wstpot,   &
+      use variables, only: daycrop,crp,dvs,tsum,laipot,lai,rdpot,rd,ch,cf,cwdmpot,cwdm,wsopot,wso,wlvpot,wlv,wstpot,   &
                            wst,wrtpot,wrt,dwlvCrop,dwlvSoil,dwst,dwrt,dwso,HarLosOrm_tot,swbulb,wblpot,wbl,dwblpot,dwbl,plwt
+      use swap_state_mod, only: swap_state_t
       implicit none
 
 ! --- global variables ------------------
       integer task
+      type(swap_state_t), intent(in) :: state
 
 ! --- local variables ------------------
       character(len=1) comma
+! --- TC-10: date, t read via state%timecontrol tc_* aliases.
+      associate( &
+        tc_date => state%timecontrol%date,  &  ! TC-10
+        tc_t    => state%timecontrol%t      &  ! TC-10
+      )
 ! ----------------------------------------------------------------------
       comma = ','
 
@@ -557,7 +576,7 @@
 ! --- write actual data ------------------------------------------------------
 
       if(swbulb.eq.0) then
-         write (crp,300) date,comma,nint(t),comma,daycrop,comma,dvs,    &
+         write (crp,300) tc_date,comma,nint(tc_t),comma,daycrop,comma,dvs,    &
      &    comma,tsum,comma,laipot,comma,lai,comma,ch,comma,cf,comma,    &
      &    nint(rdpot),comma,nint(rd),comma,nint(wlvpot),comma,nint(wlv),&
      &    comma,nint(wstpot),comma,nint(wst),comma,nint(wrtpot),        &
@@ -566,7 +585,7 @@
      &    comma,comma,dwlvCrop,comma,dwlvSoil,comma,dwst,comma,dwrt,    &
      &    comma,dwso,comma,HarLosOrm_tot
       elseif(swbulb.eq.1) then
-         write (crp,400) date,comma,nint(t),comma,daycrop,comma,dvs,    &
+         write (crp,400) tc_date,comma,nint(tc_t),comma,daycrop,comma,dvs,    &
      &    comma,tsum,comma,laipot,comma,lai,comma,ch,comma,cf,comma,    &
      &    nint(rdpot),comma,nint(rd),comma,nint(wlvpot),comma,nint(wlv),&
      &    comma,nint(wstpot),comma,nint(wst),comma,nint(wrtpot),        &
@@ -587,26 +606,36 @@
          call fatalerr_collected ('OutWofost', 'Illegal value for Task')
       end select
 
+      end associate  ! tc_date, tc_t => state%timecontrol [TC-10]
       return
       end
 
 ! ----------------------------------------------------------------------
-      subroutine OutGrass(task)
+      subroutine OutGrass(task, state)
       use error_mod, only: fatalerr_collected
 ! ----------------------------------------------------------------------
 !     UpDate             : Aug 2014
 !     Date               : Oct 2004
 !     Purpose            : Write detailed grass simulation output files
+! SS-TC TC-10: state added (intent in); date,t read via state%timecontrol
+!   tc_* aliases. daycrop remains crop-domain variable (not in TC).
 ! ----------------------------------------------------------------------
-      use variables, only: date,daycrop,crp,t,dvs,tsum,laipot,lai,rdpot,rd,ch,cf,tagppot,tagp,tagptpot,tagpt,          &
+      use variables, only: daycrop,crp,dvs,tsum,laipot,lai,rdpot,rd,ch,cf,tagppot,tagp,tagptpot,tagpt,          &
                            wlvpot,wlv,wstpot,wst,wrtpot,wrt,cuptgraz,cuptgrazpot
+      use swap_state_mod, only: swap_state_t
       implicit none
 
 ! --- global variables ------------------
       integer task
+      type(swap_state_t), intent(in) :: state
 
 ! --- local variables ------------------
       character(len=1) comma
+! --- TC-10: date, t read via state%timecontrol tc_* aliases.
+      associate( &
+        tc_date => state%timecontrol%date,  &  ! TC-10
+        tc_t    => state%timecontrol%t      &  ! TC-10
+      )
 ! ----------------------------------------------------------------------
       comma = ','
 
@@ -636,7 +665,7 @@
 ! --- write actual data ------------------------------------------------------
 
 ! --- write output record
-      write (crp,200) date,comma,nint(t),comma,daycrop,comma,dvs,comma, &
+      write (crp,200) tc_date,comma,nint(tc_t),comma,daycrop,comma,dvs,comma, &
      & tsum,comma,laipot,comma,lai,comma,ch,comma,cf,                   &
      & comma,nint(rdpot),comma,nint(rd),                                &
      & comma,nint(wlvpot),comma,nint(wlv),comma,nint(wstpot),           &
@@ -653,6 +682,7 @@
          call fatalerr_collected ('OutGrass', 'Illegal value for Task')
       end select
 
+      end associate  ! tc_date, tc_t => state%timecontrol [TC-10]
       return
       end
 

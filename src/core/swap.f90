@@ -451,7 +451,7 @@ if (iTask == 2) then
          end if
          if (flDayEnd .and. (flOutput .or. flHarvestDay)) then
             if (flCropCalendar .and. flCropOutput) then
-               if (swcrp.eq.1) call CropOutput(2)
+               if (swcrp.eq.1) call CropOutput(2, state)
             end if
          end if
 !        ADR 0009 Phase 5+: IrrigationOutput deleted (swirg=0).
@@ -484,7 +484,7 @@ if (iTask == 3) then
       call SwapOutput(3, state)
       if (swend.eq.1) call SoilWaterOutput(3, state)
       call SoilWaterOutput(4, state)
-      if (swcrp.eq.1) call CropOutput(3)
+      if (swcrp.eq.1) call CropOutput(3, state)
       if (flTemperature)        call TemperatureOutput(3, state)
       if (flSolute)             call SoluteOutput(3, state)
       if (flAgeTracer)          call AgeTracerOutput(3, state)
