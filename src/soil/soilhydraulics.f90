@@ -75,28 +75,34 @@ contains
       ! (previously local SAVE variables - now global for multi-instance support)
 
       ! [SS-SWC S-1.4a/S-1.4b/S-2.3] ASSOCIATE block: dual-writes + reader cutover in headcalc
+      ! [TC-8] TC fields appended for dt/t1900/fldtmin/dtold/flDayStart reader cutover
       associate( &
-         sw_theta    => state%soilwater%theta,    &
-         sw_h        => state%soilwater%h,        &
-         sw_k        => state%soilwater%k,        &
-         sw_kmean    => state%soilwater%kmean,    &
-         sw_dimoca   => state%soilwater%dimoca,   &
-         sw_thetm1   => state%soilwater%thetm1,   &  ! [SS-SWC S-2.3] reader cutover
-         sw_hm1      => state%soilwater%hm1,      &  ! [SS-SWC S-2.3] reader cutover
-         sw_FrArMtrx => state%soilwater%FrArMtrx, &  ! [SS-SWC S-2.3] reader cutover
-         sw_cofgen   => state%soilwater%cofgen,   &  ! [SS-SWC S-2.3] reader cutover
-         sw_nodgwl   => state%soilwater%nodgwl,   &  ! [SS-SWC S-2.3] reader cutover
-         sw_evp      => state%soilwater%evp,      &  ! [SS-SWC S-2.3] reader cutover
-         sw_gwlm1    => state%soilwater%gwlm1,    &  ! [SS-SWC S-2.3] reader cutover
-         sw_pondm1   => state%soilwater%pondm1    &  ! [SS-SWC S-2.3] reader cutover
+         sw_theta       => state%soilwater%theta,    &
+         sw_h           => state%soilwater%h,        &
+         sw_k           => state%soilwater%k,        &
+         sw_kmean       => state%soilwater%kmean,    &
+         sw_dimoca      => state%soilwater%dimoca,   &
+         sw_thetm1      => state%soilwater%thetm1,   &  ! [SS-SWC S-2.3] reader cutover
+         sw_hm1         => state%soilwater%hm1,      &  ! [SS-SWC S-2.3] reader cutover
+         sw_FrArMtrx    => state%soilwater%FrArMtrx, &  ! [SS-SWC S-2.3] reader cutover
+         sw_cofgen      => state%soilwater%cofgen,   &  ! [SS-SWC S-2.3] reader cutover
+         sw_nodgwl      => state%soilwater%nodgwl,   &  ! [SS-SWC S-2.3] reader cutover
+         sw_evp         => state%soilwater%evp,      &  ! [SS-SWC S-2.3] reader cutover
+         sw_gwlm1       => state%soilwater%gwlm1,    &  ! [SS-SWC S-2.3] reader cutover
+         sw_pondm1      => state%soilwater%pondm1,   &  ! [SS-SWC S-2.3] reader cutover
+         tc_dt          => state%timecontrol%dt,        &  ! [TC-8]
+         tc_t1900       => state%timecontrol%t1900,     &  ! [TC-8]
+         tc_fldtmin     => state%timecontrol%fldtmin,   &  ! [TC-8]
+         tc_dtold       => state%timecontrol%dtold,     &  ! [TC-8]
+         tc_flDayStart  => state%timecontrol%flDayStart &  ! [TC-8]
       )
 
-      if (fldaystart) then
+      if (tc_flDayStart) then  ! [TC-8]
          flwarn_hc = .true.
          iwarn_hc = 0
       endif
       call dtdpst                                                       &
-     &        ('year-month-day,hour:minute:seconds',t1900,datetime)
+     &        ('year-month-day,hour:minute:seconds',tc_t1900,datetime)  ! [TC-8]
 
       ! Summation of sink terms (constant for the current time step)
       iBackTr   = 0
@@ -125,7 +131,7 @@ contains
 
             q0 = (state%atmosphere%nraidt+nird+state%atmosphere%melt)*(1.0d0-ArMpSs) + state%soilwater%runon - state%soilwater%reva  ! [SS-ATM/SS-SWC S-2.12B]
             call pondrunoff (state)
-            q1 = - q0 + (state%soilwater%pond - sw_pondm1)/dt + state%soilwater%runots / dt  ! [SS-SWC S-2.12B]
+            q1 = - q0 + (state%soilwater%pond - sw_pondm1)/tc_dt + state%soilwater%runots / tc_dt  ! [SS-SWC S-2.12B] [TC-8]
             sw_theta(1) = watcon(1,state%soilwater%gwlinp)                  ! [SS-SWC S-1.4a/S-2.12B]
             sw_kmean(1) = hconduc(1,state%soilwater%gwlinp,sw_theta(1),state%heat%rfcp(1),state%heat%tsoil(1))  ! [SS-SWC S-1.4b/S-2.12B]
             ! In case of static macropores FrArMtrx < 1
@@ -134,7 +140,7 @@ contains
             qv(1) = q1
             do i=1,numnod
                qv(i+1) = qv(i) +dz(i)*sw_FrArMtrx(i)*(sw_theta(i)-sw_thetm1(i))  &  ! [SS-SWC S-2.12B]
-     &                          / dt+ sink(i) - source(i) + state%soilwater%qrot(i)
+     &                          / tc_dt+ sink(i) - source(i) + state%soilwater%qrot(i)  ! [TC-8]
             end do
             state%soilwater%qbot = qv(numnod+1)
             sw_h(1) = state%soilwater%gwlinp + disnod(1)*(qv(1)/sw_kmean(1)+1.0d0)  ! [SS-SWC S-1.4a/S-2.12B]
@@ -219,7 +225,7 @@ contains
          hgrad(i) = (sw_h(i-1)-sw_h(i))/disnod(i) + 1.0d0
       end do
 
-      F(1) = (sw_theta(1)-sw_thetm1(1))*sw_FrArMtrx(1)*dz(1)/dt + sink(1) - source(1) + state%soilwater%qrot(1) + sw_kmean(2) * hgrad(2)  ! [SS-SWC S-2.3]
+      F(1) = (sw_theta(1)-sw_thetm1(1))*sw_FrArMtrx(1)*dz(1)/tc_dt + sink(1) - source(1) + state%soilwater%qrot(1) + sw_kmean(2) * hgrad(2)  ! [SS-SWC S-2.3] [TC-8]
 
       call boundtop(state)  ! [SS-HEAT] Task 9: state passed for rfcp access
 
@@ -236,7 +242,7 @@ contains
       end if
 
       do i=2,NN-1
-         F(i) = (sw_theta(i)-sw_thetm1(i))*sw_FrArMtrx(i)*dz(i)/dt + sink(i) - source(i) +     &  ! [SS-SWC S-2.3]
+         F(i) = (sw_theta(i)-sw_thetm1(i))*sw_FrArMtrx(i)*dz(i)/tc_dt + sink(i) - source(i) +     &  ! [SS-SWC S-2.3] [TC-8]
      &          state%soilwater%qrot(i) - sw_kmean(i) * hgrad(i) + sw_kmean(i+1) * hgrad(i+1)
       end do
 
@@ -262,11 +268,11 @@ contains
          sw_kmean(NN+1) = hcomean(swkmean,sw_k(NN),sw_cofgen(3,(NN+1)),       &  ! [SS-SWC S-2.3]
      &                        dz(NN),dz(NN+1))
          sw_kmean(NN+1) = sw_kmean(NN+1)                           ! [SS-SWC S-1.4b]
-         F(NN) = (sw_theta(NN) - sw_thetm1(NN))*sw_FrArMtrx(NN)*dz(NN)/dt +      &  ! [SS-SWC S-2.3]
+         F(NN) = (sw_theta(NN) - sw_thetm1(NN))*sw_FrArMtrx(NN)*dz(NN)/tc_dt +      &  ! [SS-SWC S-2.3] [TC-8]
      &           sink(NN)-source(NN)+state%soilwater%qrot(NN)-sw_kmean(NN)*hgrad(NN) +sw_kmean(NN+1)*hgrad(NN+1)
       else
 
-         F(NN) = (sw_theta(NN) - sw_thetm1(NN))*sw_FrArMtrx(NN)*dz(NN)/dt        &  ! [SS-SWC S-2.3]
+         F(NN) = (sw_theta(NN) - sw_thetm1(NN))*sw_FrArMtrx(NN)*dz(NN)/tc_dt        &  ! [SS-SWC S-2.3] [TC-8]
      &         - sw_kmean(NN) * hgrad(NN) + sink(NN) - source(NN) + state%soilwater%qrot(NN)
 
          if(swbotb.eq.3.and.swbotb3Impl.eq.1)then ! Cauchy-relation, implemented as head boundary
@@ -276,7 +282,7 @@ contains
                state%soilwater%qbot = - (sw_h(NN)+z(NN)-state%soilwater%deepgw) / rimlay
             endif
 ! ---       extra groundwater flux might be added
-            if (sw4 .eq. 1) state%soilwater%qbot = state%soilwater%qbot + afgen(qbotab,mabbc*2,t1900+dt)
+            if (sw4 .eq. 1) state%soilwater%qbot = state%soilwater%qbot + afgen(qbotab,mabbc*2,tc_t1900+tc_dt)  ! [TC-8]
             F(NN) = F(NN) - state%soilwater%qbot
          else if(swbotb.eq.5 .or. (swbotb.eq.1 .and. state%soilwater%fllowgwl))then ! pressure head at lower boundary specified
             F(NN) = F(NN) + sw_kmean(NN+1) * hgrad(NN+1)
@@ -318,7 +324,7 @@ contains
       sumold = 0.5d0 * sumold
 
       ! Start iteration loop, MaxIt specified in the input
-      if(fldtmin)then
+      if(tc_fldtmin)then  ! [TC-8]
          MaxIt1 = 2*MaxIt
       else
          MaxIt1 = MaxIt
@@ -354,17 +360,17 @@ contains
          endif
 
          ! Jacobian matrix elements
-         dFdhM(1) = sw_dimoca(1)*sw_FrArMtrx(1)*dz(1)/dt - dFdhL(1)  ! [SS-SWC S-2.3]
+         dFdhM(1) = sw_dimoca(1)*sw_FrArMtrx(1)*dz(1)/tc_dt - dFdhL(1)  ! [SS-SWC S-2.3] [TC-8]
          ! If the head boundary condition applies: add the k1/(0.5*dz1) term
          ! to the first element of the main diagonal
          if(state%soilwater%ftoph) dFdhM(1) = dFdhM(1) + sw_kmean(1)/disnod(1)
 
          do i=2,NN-1
-            dFdhM(i) = sw_dimoca(i)*sw_FrArMtrx(i)*dz(i)/dt - dFdhU(i)        &  ! [SS-SWC S-2.3]
+            dFdhM(i) = sw_dimoca(i)*sw_FrArMtrx(i)*dz(i)/tc_dt - dFdhU(i)        &  ! [SS-SWC S-2.3] [TC-8]
      &                                                - dFdhL(i)
          end do
 
-         dFdhM(NN) = sw_dimoca(NN)*sw_FrArMtrx(NN)*dz(NN)/dt - dFdhU(NN)  ! [SS-SWC S-2.3]
+         dFdhM(NN) = sw_dimoca(NN)*sw_FrArMtrx(NN)*dz(NN)/tc_dt - dFdhU(NN)  ! [SS-SWC S-2.3] [TC-8]
          if(swbotb.eq.1 .and. (.not.state%soilwater%fllowgwl))then
             dFdhM(NN) = dFdhM(NN) + sw_kmean(NN+1)/(z(NN)-state%soilwater%gwlinp)
          else if(swbotb.eq.3.and.swbotb3Impl.eq.1)then ! Cauchy
@@ -415,7 +421,7 @@ contains
          call tridag(NN, dFdhU, dFdhM, dFdhL, F, difh, ierror)
 
          if(ierror.ne.0)then
-            call dtdpst ('year-month-day',t1900+1.001d0,datetmp)
+            call dtdpst ('year-month-day',tc_t1900+1.001d0,datetmp)  ! [TC-8]
             messag = ' Tri-band matrix in HeadCalc appeared to be'//    &
      &               ' singular at '//datetmp//                            &
      &               '   Alternative SOLVER chosen'
@@ -440,7 +446,7 @@ contains
             iBackTr = iBackTr + 1
             ! Factor reduces the change of h (difh) calculated as a full
             ! Newton Raphson step
-            if(fldtmin .and. numbit.gt.MaxIt)then              
+            if(tc_fldtmin .and. numbit.gt.MaxIt)then              ! [TC-8]
                factmax = 0.0d0
                do i = 1,NN
                   if(dabs( hold(i) ) .lt. 1.0d0 )then
@@ -506,7 +512,7 @@ contains
             endif
 
             ! Calculate F-function
-            F(1) = (sw_theta(1) - sw_thetm1(1))*sw_FrArMtrx(1)*dz(1)/dt + sink(1) - source(1) &  ! [SS-SWC S-2.3]
+            F(1) = (sw_theta(1) - sw_thetm1(1))*sw_FrArMtrx(1)*dz(1)/tc_dt + sink(1) - source(1) &  ! [SS-SWC S-2.3] [TC-8]
      &           + state%soilwater%qrot(1) + sw_kmean(2) * hgrad(2)
 
             ! [MACRO-RETIRE 2026-05-12] FlMacropore QMpLatSsSav save retired (ADR 0040).
@@ -526,7 +532,7 @@ contains
             end if
 
             do i=2,NN-1
-               F(i) = (sw_theta(i)-sw_thetm1(i))*sw_FrArMtrx(i)*dz(i)/dt + sink(i) - source(i) &  ! [SS-SWC S-2.3]
+               F(i) = (sw_theta(i)-sw_thetm1(i))*sw_FrArMtrx(i)*dz(i)/tc_dt + sink(i) - source(i) &  ! [SS-SWC S-2.3] [TC-8]
      &              + state%soilwater%qrot(i) - sw_kmean(i)*hgrad(i)+sw_kmean(i+1)*hgrad(i+1)
             end do
 
@@ -549,11 +555,11 @@ contains
                sw_kmean(NN+1) = hcomean(swkmean,sw_k(NN),sw_cofgen(3,(NN+1)) &  ! [SS-SWC S-2.3]
      &                       ,dz(NN),dz(NN+1))
                sw_kmean(NN+1) = sw_kmean(NN+1)                     ! [SS-SWC S-1.4b]
-               F(NN) = (sw_theta(NN) - sw_thetm1(NN))*sw_FrArMtrx(NN)*dz(NN)/dt  &  ! [SS-SWC S-2.3]
+               F(NN) = (sw_theta(NN) - sw_thetm1(NN))*sw_FrArMtrx(NN)*dz(NN)/tc_dt  &  ! [SS-SWC S-2.3] [TC-8]
      &            - sw_kmean(NN) * hgrad(NN) + sw_kmean(NN+1) * hgrad(NN+1)   &
      &            + sink(NN) - source(NN) + state%soilwater%qrot(NN)
             else
-               F(NN) = (sw_theta(NN) - sw_thetm1(NN))*sw_FrArMtrx(NN)*dz(NN)/dt  &  ! [SS-SWC S-2.3]
+               F(NN) = (sw_theta(NN) - sw_thetm1(NN))*sw_FrArMtrx(NN)*dz(NN)/tc_dt  &  ! [SS-SWC S-2.3] [TC-8]
      &               - sw_kmean(NN) * hgrad(NN)                            &
      &               + sink(NN) - source(NN) + state%soilwater%qrot(NN)
                if(swbotb.eq.3.and.swbotb3Impl.eq.1)then ! Cauchy
@@ -565,7 +571,7 @@ contains
                   endif
                   ! Extra groundwater flux might be added
                   if (sw4 .eq. 1) then
-                     state%soilwater%qbot = state%soilwater%qbot + afgen(qbotab,mabbc*2,t1900+dt)
+                     state%soilwater%qbot = state%soilwater%qbot + afgen(qbotab,mabbc*2,tc_t1900+tc_dt)  ! [TC-8]
                   end if
                   F(NN) = F(NN) - state%soilwater%qbot
                else if(swbotb.eq.5 .or.(swbotb.eq.1 .and. state%soilwater%fllowgwl))then
@@ -665,8 +671,8 @@ contains
          if (state%soilwater%ftoph) then
             state%soilwater%qtop = -sw_kmean(1)*((state%soilwater%hsurf - sw_h(1))/disnod(1)+1.0d0)
             if(.not.flnonconv .and. (.not.FlMacropore .or. IcTopMp.gt.1)) then
-               deviat = state%soilwater%pond - sw_pondm1 + state%soilwater%reva*dt - (state%atmosphere%nraidt+nird+state%atmosphere%melt)*dt &  ! [SS-SWC S-2.12B]
-     &                - state%soilwater%runon*dt  +  state%soilwater%runots  - state%soilwater%qtop * dt
+               deviat = state%soilwater%pond - sw_pondm1 + state%soilwater%reva*tc_dt - (state%atmosphere%nraidt+nird+state%atmosphere%melt)*tc_dt &  ! [SS-SWC S-2.12B] [TC-8]
+     &                - state%soilwater%runon*tc_dt  +  state%soilwater%runots  - state%soilwater%qtop * tc_dt  ! [TC-8]
                if( abs(deviat) .gt. CritDevPondDt) then
                   flnonconv3 = .true. ; flnonconv   = .true.
                   flnonconv3 = flnonconv3 ! for Forcheck
@@ -675,9 +681,9 @@ contains
          end if
 
          if(FlMacropore)then
-            deviat = state%soilwater%pond - sw_pondm1 + state%soilwater%reva*dt - (state%atmosphere%nraidt+nird+state%atmosphere%melt)*dt  &  ! [SS-SWC S-2.12B]
-     &             - state%soilwater%runon*dt  +  state%soilwater%runots  - state%soilwater%qtop * dt  &
-     &             + ArMpSs * (state%atmosphere%nraidt+nird+state%atmosphere%melt)*dt + state%soilwater%QMpLatSs
+            deviat = state%soilwater%pond - sw_pondm1 + state%soilwater%reva*tc_dt - (state%atmosphere%nraidt+nird+state%atmosphere%melt)*tc_dt  &  ! [SS-SWC S-2.12B] [TC-8]
+     &             - state%soilwater%runon*tc_dt  +  state%soilwater%runots  - state%soilwater%qtop * tc_dt  &  ! [TC-8]
+     &             + ArMpSs * (state%atmosphere%nraidt+nird+state%atmosphere%melt)*tc_dt + state%soilwater%QMpLatSs  ! [TC-8]
             if( abs(deviat) .gt. CritDevPondDt) then
                flnonconv3 = .true. ; flnonconv   = .true.
                flnonconv3 = flnonconv3 ! for Forcheck
@@ -685,9 +691,9 @@ contains
          end if
 
          ! Implemented to improve iteration performance in case of macropores
-         if(dt.lt. 0.01d0 .and. FlMacropore .and. .not.flnonconv3)then
+         if(tc_dt.lt. 0.01d0 .and. FlMacropore .and. .not.flnonconv3)then  ! [TC-8]
             flok = .true.
-            if (dt.gt.10.d0*dtmin) then
+            if (tc_dt.gt.10.d0*dtmin) then  ! [TC-8] (dtmin = config constant, not TC-owned)
                do i=1,sw_nodgwl                                  ! [SS-SWC S-2.3]
                   if(sw_h(i).gt.0.0d0.and.flnonconv1(i).and.flnonconv2(i)) &
      &            then
@@ -727,8 +733,8 @@ contains
                   if (nstep_hc.lt.10) then
                      nstep_hc = nstep_hc + 1
                   endif
-                  if (dt.gt.dtold .or. nstep_hc.gt.10) then
-                     dtold = dt
+                  if (tc_dt.gt.tc_dtold .or. nstep_hc.gt.10) then  ! [TC-8]
+                     tc_dtold = tc_dt  ! [TC-8]
                      nstep_hc = 0
                      IDecMpRat = IDecMpRat - 1
                   endif
@@ -746,7 +752,7 @@ contains
                end do
                do i=1,numnod
                  qv(i+1) = qv(i) +dz(i)*sw_FrArMtrx(i)*(sw_theta(i)-sw_thetm1(i))&  ! [SS-SWC S-2.3]
-     &                          / dt + sink(i) - source(i) + state%soilwater%qrot(i)
+     &                          / tc_dt + sink(i) - source(i) + state%soilwater%qrot(i)  ! [TC-8]
                end do
                state%soilwater%qbot = qv(numnod+1)
 
@@ -762,7 +768,7 @@ contains
 
             if(swbotb.ne.1.and.abs(state%soilwater%gwl-sw_gwlm1).ge.gwlconv .AND.          &  ! [SS-SWC S-2.12B]
      &         abs(state%soilwater%gwl-999d0).gt.1.d0.and.abs(sw_gwlm1-999d0).gt.1.d0) then  ! [SS-SWC S-2.12B]
-               call dtdpst ('year-month-day',t1900+1.001d0,datetmp)
+               call dtdpst ('year-month-day',tc_t1900+1.001d0,datetmp)  ! [TC-8]
                  messag = ' Change of groundwater level exceeds'//      &
      &           ' criterion at '//datetmp//'. Consider reduction of dtMin'
                call warn ('Headcalc',messag,logf,swscre)
@@ -778,7 +784,7 @@ contains
       End Do
 
       ! Convergence could not been reached
-      if (.not.fldtmin ) then
+      if (.not.tc_fldtmin ) then  ! [TC-8]
          ! Reset soil state variables
          do j = 1,numnod
             sw_h(j) = sw_hm1(j)                                    ! [SS-SWC S-2.3]
@@ -801,7 +807,7 @@ contains
          ! Reset soil state variables
          IDecMpRat  = IDecMpRat + 1
          FlDecMpRat = .true.
-         dtold = dt
+         tc_dtold = tc_dt  ! [TC-8]
 
 !         write(104,'(f10.6,i5)') t, IDecMpRat
 
@@ -812,7 +818,7 @@ contains
          if (flwarn_hc .and. iwarn_hc.lt.5) then
             iwarn_hc = iwarn_hc + 1
             call dtdpst                                                 &
-     &        ('year-month-day,hour:minute:seconds',t1900,datetime)
+     &        ('year-month-day,hour:minute:seconds',tc_t1900,datetime)  ! [TC-8]
             messag = ' No convergence was reached of Richards'//        &
      &        ' equation at '//datetime//                               &
      &        ' no more than 4 warnings per date - SWAP did continue !'
@@ -824,9 +830,9 @@ contains
 
          if(fldumpconvcrit) then
            write(logf,'(a,a19)')   'Datetime = ',datetime
-           write(logf,'(a,f14.6)') 't1900    = ', t1900
-           write(logf,'(a,f10.6)') 'dtmin = ', dtmin
-           write(logf,'(a,f10.6)') 'dt    = ', dt
+           write(logf,'(a,f14.6)') 't1900    = ', tc_t1900  ! [TC-8]
+           write(logf,'(a,f10.6)') 'dtmin = ', dtmin  ! dtmin = config constant, not TC-owned
+           write(logf,'(a,f10.6)') 'dt    = ', tc_dt  ! [TC-8]
            write(logf,'(a,i3)')    'ftoph  = ', state%soilwater%ftoph
            write(logf,'(a,f10.6)') 'CritDevBalCp  = ', CritDevBalCp
            write(logf,'(a,f10.6)') 'CritDevBalTot = ', CritDevBalTot
@@ -1057,7 +1063,7 @@ contains
       else
          ! Pressure head profile is calculated from groundwater level
          if (swbotb.eq.1) then
-          sw%gwl = afgen (gwltab,mabbc*2,t1900+dt-1.d0)   ! [SS-SWC S-1.3/S-2.12B]
+          sw%gwl = afgen (gwltab,mabbc*2,state%timecontrol%t1900+state%timecontrol%dt-1.d0)   ! [SS-SWC S-1.3/S-2.12B] [TC-8]
 
           if(abs(sw%gwl-(z(numnod)-0.5d0*dz(numnod))) .lt.1.0d-4) then
           messag = 'Groundwaterlevel as bottom boundary (SWBOTB=1) is'//&
@@ -1123,7 +1129,7 @@ contains
          ! Calculate Soilwater rate/state variables
 
          ! Reset intermediate soil water fluxes — [SS-SWC S-2.12B] reset() handles all
-         if (flDayStart) then
+         if (state%timecontrol%flDayStart) then  ! [TC-8]
           call state%soilwater%intr%reset_per_day()              ! [SS-SWC S-2.1]
       end if
 
