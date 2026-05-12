@@ -156,7 +156,7 @@ if (iTask == 1) then
    call Initialize
 
 !  iteration and timing statistics
-   call IterTime(1)
+   call IterTime(1, state)
 
 !  Phase 4f strangler-fig: read time-independent input via the TOML
 !  pipeline + config_to_variables adapter. The legacy readswap() entry
@@ -421,7 +421,7 @@ if (iTask == 2) then
          if (iCaller == 0 .and. flCropCalendar) call CropGrowth(4, state%heat%tsoil, state)
 
 !        timing statistics : prevent (near) endless simulations
-         if (flMaxIterTime) call IterTime(2)
+         if (flMaxIterTime) call IterTime(2, state)
 
 !        Better here: check if subsurface irrigation is required for next day,
 !                     and determine if time step needs to be changed due to dt_SSDI_event
@@ -476,7 +476,7 @@ end if
 if (iTask == 3) then
 
 !  iteration and timing statistics
-   call IterTime(3)
+   call IterTime(3, state)
 
 !  close output files (skip in external/DLL mode)
    if (iCaller == 0) then

@@ -15,7 +15,7 @@
       implicit none
 
       ! [SS-SWC S-2.12B] state added — needed to pass to SSDI_irrigation(9)
-      type(swap_state_t), intent(in) :: state
+      type(swap_state_t), intent(inout) :: state
 ! ----------------------------------------------------------------------
 !     DAYNR  : = daynumber relative to start of calendar year
 !     DAYCUM : = daynumber relative to start of simulation
@@ -636,7 +636,7 @@
       end 
 
 
-      subroutine IterTime(task)
+      subroutine IterTime(task, state)
       use error_mod, only: fatalerr_collected
 ! ----------------------------------------------------------------------
 !     date    : 20080303
@@ -645,10 +645,12 @@
 ! ----------------------------------------------------------------------
 ! --- global variables
       use variables
+      use swap_state_mod, only: swap_state_t            ! [SS-TC TC-2]
       implicit none
 
 ! --- local variables
       integer task, i, j, timediff
+      type(swap_state_t), intent(inout) :: state
       character(len=400) messag
       real(4)       ::   tmptimeinterrupt
       ! Use module variables (tc_tmptimestart/tc_tmptimeend) for persistence
