@@ -198,9 +198,214 @@ contains
    end subroutine swap_init
 
    subroutine swap_run_step(state, config)
+      use variables, only : flswapshared, flmacropore, flcropnut, flagetracer, swfrost, &
+                            swusecn, fldecmprat, flcropcalendar, flmaxitertime, &
+                            flharvestday, flcropoutput, swcrp, swend, &
+                            flTillage, flSSDI, &
+                            numnod, numlay
+      use timestep_control_mod, only: fldecdt
+      use surfacewater_mod, only: SurfaceWater, surfacewater_year_reset
+      use tillage_mod, only: DoTillage
+      use boundbottom_mod, only: BoundBottom
+      use runoff_mod, only: CNmethod
+      use meteo_mod, only: ProcessMeteoDay
+      use meteo_process_mod, only: ReadMeteoDay
+      use snow_mod, only: snow
+      use meteodt_mod, only: MeteoDT
+      use rootextraction_mod, only: RootExtraction
+      use frozencond_mod, only: FrozenCond, FrozenBounds
+      use temperature_mod, only: Temperature
+      use solute_mod, only: solute
+      use agetracer_mod, only: AgeTracer
+      use soilhydraulics_mod, only: soilwater, SoilWaterStateVar
+      use irrigation_mod, only: irrigation, SSDI_irrigation
+      use management_soil_mod, only: SoilManagement
+      use drainage_mod, only: drainage
+      use error_mod, only: fatalerr_collected
       type(swap_state_t),  intent(inout) :: state
       type(swap_config_t), intent(in)    :: config
-      ! Body filled in Task 4.
+      logical :: flError
+      logical :: request_smaller_dt
+      logical, external :: dtleap
+
+      interface
+         subroutine CropGrowth(task, tsoil, state)
+            use swap_state_mod, only: swap_state_t
+            integer, intent(in) :: task
+            real(8), intent(in) :: tsoil(:)
+            type(swap_state_t), intent(inout) :: state
+         end subroutine CropGrowth
+      end interface
+
+!  [SS-TC TC-14] bind TC aliases for all timestep-loop fields used below
+   associate( &
+      tc_flYearStart => state%timecontrol%flYearStart, &
+      tc_flDayStart  => state%timecontrol%flDayStart,  &
+      tc_flDayEnd    => state%timecontrol%flDayEnd,    &
+      tc_daynr       => state%timecontrol%daynr,       &
+      tc_iyear       => state%timecontrol%iyear,       &
+      flrunend       => state%timecontrol%flRunEnd,    &
+      flOutput       => state%timecontrol%floutput,    &
+      flOutputShort  => state%timecontrol%floutputshort,&
+      flMeteoDt      => state%timecontrol%flmeteodt,   &
+      flETSine       => state%timecontrol%fletsine,    &
+      flSnow         => state%timecontrol%flSnow,      &
+      flSolute       => state%timecontrol%flSolute,    &
+      flTemperature  => state%timecontrol%flTemperature,&
+      flDrain        => state%timecontrol%flDrain,     &
+      flSurfaceWater => state%timecontrol%flSurfaceWater,&
+      flIrrigate     => state%timecontrol%flIrrigate,  &
+      fldtreduce     => state%timecontrol%fldtreduce )
+
+!     get Meteo data
+   if (tc_flYearStart) call ReadMeteoYear(state)  ! SS-TC TC-13
+
+      if (tc_flDayStart) then  ! SS-TC TC-13
+
+!        read meteo data for current day
+         call ReadMeteoDay(state)  ! SS-ATM A-1.6: state threaded for atmosphere dual-writes
+
+!        check growing season
+         call CropGrowth(1, state%heat%tsoil, state)  ! SS-CRP C-1.3: state added for dual-write
+
+!        calculate Irrigation rate/state variables
+         if (flIrrigate) call irrigation(2, state)
+
+!        process Meteo data
+         call ProcessMeteoDay(state)
+         if (flTillage) call DoTillage(2, state)
+
+      end if
+
+!     process Meteo data
+      if (flMeteoDt .or. flETSine) call MeteoDT(state)
+
+!     shared simulation
+      if (flSwapShared .and. tc_flDayStart) call SharedSimulation(2)  ! SS-TC TC-13
+
+!     calculate Snow: MH+MM - probably to be moved within IF-block above, prior to call ProcessMeteoDay ...
+      ! SS-HEAT Phase 2 Task 6: pass state so Snow reads tsoil from state%heat
+      if (flSnow .and. tc_flDayStart) call Snow(2, state)  ! SS-TC TC-13
+
+!     calculate reduction for conductivities for frozen conditions
+      if (SwFrost.eq.1) then
+         call FrozenCond(state)
+      end if
+
+!     calculate potential and actual root water extraction profile
+      call RootExtraction(state)
+
+!     determine SoilWater bottom boundary conditions
+      call BoundBottom(state)  ! [SS-HEAT] Task 9: state passed for rfcp access
+
+      fldtreduce = .true.
+      do while(fldtreduce)
+         fldtreduce = .false.
+
+!        calculate drainage fluxes
+         if (fldrain)                           call Drainage(state)
+         ! SS-SWST Phase 2: SurfaceWater sets request_smaller_dt; propagate to fldecdt here.
+         if (.not.fldecdt .and. flSurfaceWater) call SurfaceWater(2, state, request_smaller_dt)
+         if (request_smaller_dt) fldecdt = .true.
+         if (SwFrost.eq.1)                      call FrozenBounds(state)
+
+!        calculate SoilWater, incl macropores (headcalc inside may also set fldecdt on non-convergence)
+         if (.not.fldecdt) call SoilWater(2, state)
+
+!        calculate surface water balance
+         if (.not.fldecdt .and. flSurfaceWater) call SurfaceWater(3, state, request_smaller_dt)
+         if (request_smaller_dt) fldecdt = .true.
+
+!        update time variables and switches/flags
+         if (fldecdt .or. (flMacroPore .and. FlDecMpRat))then
+            call SoilWaterStateVar(2, state)
+            call TimeControl(3, state)
+            fldtreduce = .true.
+         end if
+
+      end do
+
+!     calculate SoilWater rate/state variables
+      call SoilWater(3, state)
+
+!     calculate SoilTemperature rate/state variables
+   if (flTemperature) call Temperature(2, state)
+
+!     calculate Solute rate/state variables
+      if (flSolute) call Solute(2, state)
+
+!     calculate Ageing rate/state variables
+      if (flAgeTracer) call AgeTracer(2, state)
+
+!     update time variables and switches/flags
+      call TimeControl(2, state)
+
+!     at the end of a day,
+      if (tc_flDayEnd) then  ! SS-TC TC-13
+
+!        update Soil nutrient status variables
+         if (flCropNut) call SoilManagement(2, state)
+
+!        calculate potential crop growth
+         if (flCropCalendar) call CropGrowth(2, state%heat%tsoil, state)
+
+!        amendent of crop residues from previous day
+         if (flCropNut) call SoilManagement(5, state)
+
+!        amendent of fertilizers of current day
+         if (flCropNut) call SoilManagement(3, state)
+
+!        calculate actual crop growth (calculation of actual crop rate and state variables)
+         if (flCropCalendar) call CropGrowth(3, state%heat%tsoil, state)
+
+!        Simulate Soil Nutrient processes
+         if (flCropNut) call SoilManagement(4, state)
+
+!        harvest of crop
+         if (flCropCalendar) call CropGrowth(4, state%heat%tsoil, state)
+
+!        timing statistics : prevent (near) endless simulations
+         if (flMaxIterTime) call IterTime(2, state)
+
+!        Better here: check if subsurface irrigation is required for next day,
+!                     and determine if time step needs to be changed due to dt_SSDI_event
+         if (flSSDI) call SSDI_irrigation(2, state)  ! [SS-SWC S-2.12B]
+         call TimeControl(9, state)
+
+      end if
+
+!     output section
+         if (flOutput) then
+            call SwapOutput(2, state)
+            call SoilWaterOutput(2, state)
+            if (flTillage) call DoTillage(3, state)
+            if (flTemperature)   call TemperatureOutput(2, state)
+            if (flSolute)        call SoluteOutput(2, state)
+            if (flAgeTracer)     call AgeTracerOutput(2, state)
+            if (flSnow)          call SnowOutput(2, state)
+            ! [MACRO-RETIRE 2026-05-12] MacroPoreOutput retired (ADR 0040).
+            if (flSurfaceWater) then
+               if (tc_daynr == merge(366, 365, dtleap(tc_iyear))) &  ! SS-TC TC-13
+                  call surfacewater_year_reset(state%surfacewater)
+               call SurfaceWaterOutput(2, state)
+            end if
+         else
+            if (flOutputShort)   call SoilWaterOutput(2, state)
+         end if
+         if (tc_flDayEnd .and. (flOutput .or. flHarvestDay)) then  ! SS-TC TC-13
+            if (flCropCalendar .and. flCropOutput) then
+               if (swcrp.eq.1) call CropOutput(2, state)
+            end if
+         end if
+!        ADR 0009 Phase 5+: IrrigationOutput deleted (swirg=0).
+         if (tc_flDayEnd .and. flCropNut)    call SoilManagement(6, state)   ! SS-TC TC-13
+         if (swend.eq.2 .and. tc_flDayEnd)   call soilwateroutput(3, state)  ! SS-TC TC-13
+
+!    shared simulation
+     if (flSwapShared .and. tc_flDayEnd) call SharedSimulation(3)  ! SS-TC TC-13
+
+   end associate  ! SS-TC TC-13: tc_flYearStart, tc_flDayStart, tc_flDayEnd, tc_daynr, tc_iyear
+
    end subroutine swap_run_step
 
    subroutine swap_close(state, config)
