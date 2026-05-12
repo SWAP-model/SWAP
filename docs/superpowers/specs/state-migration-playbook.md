@@ -294,6 +294,48 @@ Atmosphere was migration #7 and the third coupling-surface arc of the soil-water
 
 ---
 
+---
+
+---
+
+## Lessons from soil-water-core migration (ADR 0038, added 2026-05-11)
+
+Soil-water core was migration #8 and the FINAL coupling-surface arc of the soil-water decomposition. Six lessons generalize beyond this arc.
+
+1. **Compile-driven retirement (Strategy B) — the master method for dropping legacy dual-writes.** When the time comes to drop the legacy half of Phase 1 dual-writes and retire the globals, do NOT attempt to manually identify which file to touch first. The which-file-first ordering problem becomes intractable for arcs with 40+ globals spread across 20+ files:
+
+   - Comment out all owned globals in `variables.f90` first (with provenance markers).
+   - The compiler enumerates every remaining legacy reference as a precise compile error.
+   - Each error is an exact instruction: drop the legacy write line, OR migrate a missed read to state, OR drop a use-clause import.
+   - Iterate: fix the batch of errors, recompile, fix the next batch. Typically 20–30 passes for a large arc.
+   - One commit resolves everything.
+
+   This eliminates all guesswork and avoids the "partially-dropped dual-write" state that caused NR-divergence hangs in two prior attempts. Cost: one longer iterative-compile commit. Benefit: structurally unambiguous correctness — the compiler is the exhaustive inventory.
+
+2. **Hidden NR-coupled readers — the canary pattern.** When dropping legacy writes causes an NR-divergence hang (hupselbrook hangs at 99.9% CPU with no output, no error), the bug is: a utility routine called from INSIDE the Newton-Raphson iteration reads a dropped legacy global and gets stale zero-init values. In soil-water, `soilhydraulicsutils.f90` (`hconduc`/`dhconduc`/`watcon`/`moiscap`) and `WC_K_models_04_11.f90` both read `cofgen` and `fluseksatexm` from inside `headcalc`'s NR loop. Once the legacy writes stopped, those reads returned zeros → Richards diverged → hang.
+
+   **General rule:** before dropping legacy writes for any array that feeds the Richards solver, grep for `use variables, only: <array>` in all utility modules called from `headcalc`, `fluxes`, or any tight physics loop. Treat hupselbrook as the canary — if it hangs, the root cause is always a stale NR-coupled read, not a logic bug.
+
+3. **Module-level pointer pattern for utility modules with many callers.** When a utility module (`soilhydraulicsutils.f90`, `WC_K_models_04_11.f90`) provides functions called from 80+ sites and reads a soil-physical-property array (`cofgen`, `fluseksatexm`), threading `state` into all callers is prohibitively expensive. Cleaner: add module-level pointers in the utility module; have the home file (`soilhydraulics.f90`) call a `bind_state_targets` helper once at init time that points those pointers at the state arrays. The utility functions read through the pointers without any signature change; all 81 call sites stay untouched.
+
+   This generalizes: any utility module with a flat `use variables, only: <field>` and 30+ call sites is a pointer-pattern candidate. Threading state is correct but expensive; pointer binding is pragmatic for deeply-shared utilities.
+
+4. **Transient buffer pattern for pre-init config-adapter state writes.** `config_to_variables` runs before any `*_init` call in the startup sequence, so state allocatables are not yet allocated. Use module-level transient buffers in the adapter: capture the values during config-to-variables, then drain them into state after `soilwater_init` completes. This is the same pattern as atmosphere A-2.6's `ssnow`/`ldwet` handling, now confirmed general:
+
+   **General rule:** any config-adapter or init-time writer that runs before `<subsystem>_init` needs either (a) an `allocated()` guard at the write site (heat arc lesson #1) or (b) a transient buffer if the field is a per-node allocatable that cannot be written without allocation. Allocatable scalars can use the `allocated()` guard; per-node arrays need the buffer.
+
+5. **Twin-cohort two-gate-reset — ADR 0033 mild extension.** A single cohort sub-record can carry fields with TWO different reset gates without splitting into two separate types. `soilwater_intermediate_t` demonstrates: `reset()` under `flzerointr` zeroes all 22 fields; `reset_per_day()` under `flDayStart` zeroes only the 8 per-day fields nested inside the same cohort. This is cleaner than adding a separate `soilwater_per_day_t` — it keeps `soilwater_state_t`'s shape parallel to `atmosphere_state_t` (two cohort components, not three) while expressing both reset cadences in the type system.
+
+   **General rule:** when discovery identifies per-day fields that naturally belong to the intermediate reset family (they accumulate within a day and are rolled up into the intermediate period), fold them into `<subsystem>_intermediate_t` with a second `reset_per_day()` method. Only split into a separate type if the per-day fields have a fundamentally different ownership story.
+
+6. **4-arc coupling-surface decomposition validated end-to-end.** The original soil-water mega-discovery (~100 globals, 897 lines) was rejected as a single arc. Four coupling-surface arcs shipped successively: boundary 12 + crop-uptake 23 + atmosphere 40 + core 74 = 149 fields across 4 commits, each byte-identical from Phase 1 through retirement.
+
+   Key measures of success: (a) each arc scoped below 80 owned globals, keeping blast radius manageable; (b) each arc's Phase 1 windfall grew because prior arcs plumbed state into more entry points; (c) no rework was required between arcs — the coupling-surface interfaces were stable; (d) hupselbrook stayed green at 5/5 throughout all four arcs.
+
+   **Generalizes as:** when a subsystem estimates >50 owned globals, look for natural coupling surfaces to decompose — the boundary between callers (top/bottom, crop-sink, atmosphere, core-Richards) is the right cut, not an arbitrary file-count split. The final core arc benefits most from prior arcs' state-arg windfalls.
+
+---
+
 ## Reference ADRs
 
 - ADR 0030 — Surface-water state-type migration (pilot)
@@ -304,3 +346,4 @@ Atmosphere was migration #7 and the third coupling-surface arc of the soil-water
 - ADR 0035 — Boundary subsystem state-type migration (first coupling-surface arc)
 - ADR 0036 — Crop water uptake state-type migration (second coupling-surface arc)
 - ADR 0037 — Atmosphere subsystem state-type migration (third coupling-surface arc)
+- ADR 0038 — Soil-water core state-type migration (FINAL coupling-surface arc)
