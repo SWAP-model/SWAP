@@ -10,11 +10,12 @@ module SWAP_csv_output
    ! SS-SWC S-2.11: gwl,pond,iqbot,iqrot,iqreddry,iqredwet,iqredsol,iqredfrs,ies0,iet0,iew0,iqssdi,volact,
    !   H,theta,K,inq,inqrot,inqssdi,iqdo,iqup,FrArMtrx,irunon,iruno,iintc,igird,inird,irunoCN,iqtdo,iqtup
    !   removed from module-level use variables (now via state%soilwater in set_values/fill_values).
+   ! SS-TC TC-13: flprintshort, date, t1900 dropped (read via state%timecontrol ASSOCIATE in csv_out case(2)).
    use variables, only: tsum,dvs,pgasspot,pgass,                                                                                 &
                         cwdmpot,cwdm,wsopot,wso,wlvpot,wlv,wstpot,wst,wrtpot,wrt,dwso,dwlv,dwlvpot,dwst,dwstpot,dwrt,dwrtpot,    &
                         ch,cf,laipot,lai,rdpot,rd,tagppot,tagp,tagptpot,tagpt,cuptgrazpot,cuptgraz,plossdm,lossdm,               &
                         wc10,Runoff_CN,iqinfmax,                                                                    &
-                        flprintshort, date, t1900, dz, numnod, zbotcp, ztopcp,                                                  &
+                        dz, numnod, zbotcp, ztopcp,                                                  &
                         iqmpoutdrrap, c_top, nrlevs,                                                                             &
                         pathwork, outfil, project, InList_csv, macp, madr
    use swap_state_mod, only: swap_state_t
@@ -406,11 +407,16 @@ module SWAP_csv_output
       ! line contains results in comma-separated format; il is its length
       ! time is first value
       line = ""; il = 0
-      if (.not. flprintshort) then
-         call addstr(line, il, trim(date)); call addstr(line, il, ",")
+      associate( &                                                    ! SS-TC TC-13
+         tc_flprintshort => state%timecontrol%flprintshort, &         ! SS-TC TC-13
+         tc_date         => state%timecontrol%date,         &         ! SS-TC TC-13
+         tc_t1900        => state%timecontrol%t1900          &        ! SS-TC TC-13
+      )
+      if (.not. tc_flprintshort) then                                 ! SS-TC TC-13
+         call addstr(line, il, trim(tc_date)); call addstr(line, il, ",")  ! SS-TC TC-13
       else
          ! determine date-time
-         call dtdpst ('year-month-day hour:minute:seconds', t1900, datexti)
+         call dtdpst ('year-month-day hour:minute:seconds', tc_t1900, datexti)  ! SS-TC TC-13
          call addstr(line, il, trim(datexti)); call addstr(line, il, ",")
       end if
 
@@ -427,6 +433,7 @@ module SWAP_csv_output
 
       ! write result (skip last character which is a comma)
       write(iuncsv,'(A)') line(1:il-1)
+      end associate  ! SS-TC TC-13: tc_flprintshort, tc_date, tc_t1900
 
    case (3)
       close (unit=iuncsv)
@@ -980,7 +987,8 @@ subroutine csv_out_tz (iTask, state)
 ! SS-SLST Phase 1 Task 5: cml,cmsy migrated to state%solute.
 ! SS-HEAT Phase 1 Task 5: tsoil, HEACAP, HEACON removed (now via state%heat).
 ! SS-SWC S-2.11: h,theta,K,inqrot removed (now via state%soilwater).
-use variables, only: pathwork, outfil, project, InList_csv_tz, tz_z1_z2, numnod, z, zbotcp, flprintshort, date, t1900, &
+! SS-TC TC-13: flprintshort, date, t1900 dropped (read via state%timecontrol ASSOCIATE in case(2)).
+use variables, only: pathwork, outfil, project, InList_csv_tz, tz_z1_z2, numnod, z, zbotcp, &
                      c_top
 use swap_state_mod, only: swap_state_t
 use file_io_mod, only: file_open
@@ -1097,14 +1105,19 @@ case (1)
 
 case (2)
 
+  associate( &                                                           ! SS-TC TC-13
+     tc_flprintshort => state%timecontrol%flprintshort, &                ! SS-TC TC-13
+     tc_date         => state%timecontrol%date,         &                ! SS-TC TC-13
+     tc_t1900        => state%timecontrol%t1900          &               ! SS-TC TC-13
+  )
   do j = nod_1, nod_2
 
     ! date and time
-    if (.not. flprintshort) then
-       write (iuncsv,'(2A)',advance='no') trim(date)
+    if (.not. tc_flprintshort) then                                      ! SS-TC TC-13
+       write (iuncsv,'(2A)',advance='no') trim(tc_date)                  ! SS-TC TC-13
     else
        ! determine date-time
-       call dtdpst ('year-month-day hour:minute:seconds',t1900,datexti)
+       call dtdpst ('year-month-day hour:minute:seconds',tc_t1900,datexti)  ! SS-TC TC-13
        write (iuncsv,'(2A)',advance='no') trim(datexti)
     end if
 
@@ -1133,6 +1146,7 @@ case (2)
     write (iuncsv,*)
 
   end do
+  end associate  ! SS-TC TC-13: tc_flprintshort, tc_date, tc_t1900
 
 case (3)
 

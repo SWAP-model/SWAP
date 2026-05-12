@@ -63,12 +63,15 @@ subroutine swap(iCaller, iTask, toswap, fromswap)
 !dec$ attributes dllexport :: SWAP
 
 !     swap modules for data communication
-use variables, only : flyearstart, fldaystart, flswapshared, flsurfacewater, flmacropore, fltemperature, flsnow,        &
+! SS-TC TC-13: flyearstart dropped (read via tc_flYearStart ASSOCIATE); fldayend dropped (read via tc_flDayEnd ASSOCIATE)
+!              daynr dropped (read via tc_daynr ASSOCIATE); fldaystart kept (DLL handle_exchange writes via host assoc)
+!              iyear kept (DLL handle_exchange writes via host assoc)
+use variables, only : fldaystart, flswapshared, flsurfacewater, flmacropore, fltemperature, flsnow,        &
                       flsolute, flcropnut, flirrigate, flagetracer, flrunend, flmeteodt, fletsine, swfrost, fldtreduce, &
-                      swusecn, fldrain, fldecmprat, fldayend, flcropcalendar, flmaxitertime, floutput,         &
+                      swusecn, fldrain, fldecmprat, flcropcalendar, flmaxitertime, floutput,         &
                       floutputshort, flharvestday, flcropoutput, swcrp, flirrigationoutput, swend, project, &
                       flTillage, flSSDI, &
-                      daynr, iyear, numnod, numlay
+                      iyear, numnod, numlay
 use timestep_control_mod, only: fldecdt
 use swap_state_mod, only: swap_state_t
 use soilwater_state_mod, only: soilwater_init
@@ -300,15 +303,24 @@ if (iTask == 2) then
 !  Specific for exchange when called as DLL
    if (iCaller /= 0) call handle_exchange(21, flError, state); if (flError) return
 
+!  SS-TC TC-13: bind TC read-only aliases for timestep-loop flags and calendar fields.
+   associate( &
+      tc_flYearStart => state%timecontrol%flYearStart, &  ! SS-TC TC-13
+      tc_flDayStart  => state%timecontrol%flDayStart,  &  ! SS-TC TC-13
+      tc_flDayEnd    => state%timecontrol%flDayEnd,     &  ! SS-TC TC-13
+      tc_daynr       => state%timecontrol%daynr,        &  ! SS-TC TC-13
+      tc_iyear       => state%timecontrol%iyear          &  ! SS-TC TC-13
+   )
+
 !  loop with soil water time step during entire simulation period
    do while (.not.flrunend)
 
 !     get Meteo data (skip meteo-file I/O in external/DLL mode)
    if (iCaller == 0) then
-      if (flYearStart) call ReadMeteoYear(state)
+      if (tc_flYearStart) call ReadMeteoYear(state)  ! SS-TC TC-13
    end if
 
-      if (flDayStart) then
+      if (tc_flDayStart) then  ! SS-TC TC-13
 
 !        Specific for exchange when called as DLL
          if (iCaller /= 0) call handle_exchange(22, flError, state)   ! weather
@@ -336,11 +348,11 @@ if (iTask == 2) then
       if (flMeteoDt .or. flETSine) call MeteoDT(state)
 
 !     shared simulation
-      if (flSwapShared .and. flDayStart) call SharedSimulation(2)
+      if (flSwapShared .and. tc_flDayStart) call SharedSimulation(2)  ! SS-TC TC-13
 
 !     calculate Snow: MH+MM - probably to be moved within IF-block above, prior to call ProcessMeteoDay ...
       ! SS-HEAT Phase 2 Task 6: pass state so Snow reads tsoil from state%heat
-      if (flSnow .and. flDayStart) call Snow(2, state)
+      if (flSnow .and. tc_flDayStart) call Snow(2, state)  ! SS-TC TC-13
 
 !     calculate reduction for conductivities for frozen conditions
       if (SwFrost.eq.1) then
@@ -396,7 +408,7 @@ if (iTask == 2) then
       call TimeControl(2, state)
 
 !     at the end of a day,
-      if (flDayEnd) then
+      if (tc_flDayEnd) then  ! SS-TC TC-13
 
 !        update Soil nutrient status variables
          if (flCropNut) call SoilManagement(2, state)
@@ -444,30 +456,32 @@ if (iTask == 2) then
             if (flSnow)          call SnowOutput(2, state)
             ! [MACRO-RETIRE 2026-05-12] MacroPoreOutput retired (ADR 0040).
             if (flSurfaceWater) then
-               if (daynr == merge(366, 365, dtleap(iyear))) &
+               if (tc_daynr == merge(366, 365, dtleap(tc_iyear))) &  ! SS-TC TC-13
                   call surfacewater_year_reset(state%surfacewater)
                call SurfaceWaterOutput(2, state)
             end if
          else
             if (flOutputShort)   call SoilWaterOutput(2, state)
          end if
-         if (flDayEnd .and. (flOutput .or. flHarvestDay)) then
+         if (tc_flDayEnd .and. (flOutput .or. flHarvestDay)) then  ! SS-TC TC-13
             if (flCropCalendar .and. flCropOutput) then
                if (swcrp.eq.1) call CropOutput(2, state)
             end if
          end if
 !        ADR 0009 Phase 5+: IrrigationOutput deleted (swirg=0).
-         if (flDayEnd .and. flCropNut)    call SoilManagement(6, state)
-         if (swend.eq.2 .and. flDayEnd)   call soilwateroutput(3, state)
+         if (tc_flDayEnd .and. flCropNut)    call SoilManagement(6, state)   ! SS-TC TC-13
+         if (swend.eq.2 .and. tc_flDayEnd)   call soilwateroutput(3, state)  ! SS-TC TC-13
       end if
 
 !    shared simulation
-     if (flSwapShared .and. flDayEnd) call SharedSimulation(3)
+     if (flSwapShared .and. tc_flDayEnd) call SharedSimulation(3)  ! SS-TC TC-13
 
    end do
 
 !  Specific for exchange when called as DLL
    if (iCaller /= 0) call handle_exchange(29, flError, state)
+
+   end associate  ! SS-TC TC-13: tc_flYearStart, tc_flDayStart, tc_flDayEnd, tc_daynr, tc_iyear
 
    return
 end if
@@ -514,7 +528,7 @@ contains
    subroutine handle_exchange(task, flError, state)
    use variables, only : swetr, swdivide, swmetdetail, swrain, logf
    ! [SS-SWC S-2.12B] theta/iqrot/inqrot retired — read via state%soilwater
-   use variables, only : t1900, iyear, Tstart, Tend, numnod, dz
+   use variables, only : iyear, Tstart, Tend, numnod, dz  ! SS-TC TC-13: t1900 dropped (read via state%timecontrol%t1900)
    ! SS-ATM A-2.6: iptra retired — read from state%atmosphere%intr%iptra (host association)
    use variables, only : lai, ch, rd, flCropCalendar, flCropEmergence, flCropHarvest
    use variables, only : arad, atmn, atmx, awin, ahum, wet, arai, aetr, rainfluxarray, raintimearray   !, rainamount
@@ -655,7 +669,7 @@ contains
       fromswap%dz(1:numnod)  = dz(1:numnod)
       fromswap%wc(1:numnod)  = state%soilwater%theta(1:numnod)  ! [SS-SWC S-2.12B]
       fromswap%rwu(1:numnod) = 0.0d0
-      ex_tlast = t1900
+      ex_tlast = state%timecontrol%t1900  ! SS-TC TC-13
    end if
 
 !  use tasks 31-39 to handle closure aspects
