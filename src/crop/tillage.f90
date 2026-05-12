@@ -49,16 +49,16 @@ module tillage_mod
    logical, parameter                        :: TEST = .false.
 !   logical, parameter                        :: TEST2 = .true.
    logical, parameter                        :: TEST2 = .false.
-   
+
    ! functions
 
    if (iTask > 1 .and. swtill == 0) return      ! no tillage to be considered: return immediately
-   
+
    ! handle iTask
    select case (iTask)
    case (1)
       ! INITIALIZE
-      
+
       if (allocated(Rho_tillage)) deallocate(Rho_tillage); allocate(Rho_tillage(NumLay))
       if (allocated(Rho_cons))    deallocate(Rho_cons);    allocate(Rho_cons(NumLay))
       if (allocated(Rho_last))    deallocate(Rho_last);    allocate(Rho_last(NumLay))
@@ -76,20 +76,21 @@ module tillage_mod
          if (flksatexm)        call fatalerr_collected ('DoTillage', 'flksatexm not (yet) allowed')
          if (SwDiscrvert == 1) call fatalerr_collected ('DoTillage', 'SwDiscrvert = 1 not (yet) allowed')
       end if
-      
+
       ! currently: require all Z_tillage = Max_Z_tillage
       do i = 1, Ntill
 !         if (dabs(Max_Z_tillage - Z_tillage(i)) > 1.0d-2) call fatalerr ('DoTillage', 'For time being: all Z_tillage must equal Max_Z_tillage')
       end do
-      
+
       ! determine entry point in tabulated tillage events based on start value t1900; check if input dates are sorted
-      call set_iTill
-      
+      call set_iTill (state)                         ! [SS-TIL T-3] state for iTill dual-write
+
       ! determine number of horizon at depth Max_Z_tillage (MaxNumSoilHo)
-      call det_MNSH
-    
+      call det_MNSH (state)                          ! [SS-TIL T-3] state for MaxNumSoilHo/MaxNumSoilCP dual-write
+
       ! for special case i_n_model = 3: calculate slope per soil layer (remains constant over time)
       Slope_match = 0.0d0
+      state%tillage%Slope_match = 0.0d0              ! [SS-TIL T-3] Group C dual-write
       
       ! TO ADD: CHECK THAT DEPTH OF EACH TILLAGE EVENT CORRESPONDS TO BOTTOM OF SOIL HORIZON; USER MAY NEED TO DEFINE MULTIPLE SUBS-HORIZONS WITHIN A SINGLE REAL SOIL HORIZON
       ! currently: require changes in horizon number (iSoilLayer) at depth Max_Z_tillage
@@ -105,7 +106,8 @@ module tillage_mod
    case (2)
       ! RATE/STATE EVENT
       Rho_last(1:MaxNumSoilHo) = Bdens(1:MaxNumSoilHo)
-      
+      state%tillage%Rho_last(1:MaxNumSoilHo) = Bdens(1:MaxNumSoilHo)   ! [SS-TIL T-3] Group C dual-write
+
       if (TEST) then
          ! for technical test
          call DTDPST ("YEAR-MONTHST-DAY", t1900, STRNG)
@@ -129,14 +131,14 @@ module tillage_mod
             ! for technical test
             call DTDPST ("YEAR-MONTHST-DAY", t1900, STRNG)
             if (trim(STRNG) == "2005-Jun-05") then
-               Rho_cons(1) = 1350.0d0
-               K_R_cons(1) =  10.0d0
+               Rho_cons(1) = 1350.0d0;  state%tillage%Rho_cons(1) = 1350.0d0   ! [SS-TIL T-3] Group C dual-write
+               K_R_cons(1) =  10.0d0;   state%tillage%K_R_cons(1) =  10.0d0    ! [SS-TIL T-3] Group C dual-write
                call Change_MvGpars(state)           ! [SS-SWC S-1.9]
                Call Adapt_WC_H (TEST, state)        ! [SS-SWC S-1.9]
             end if
             if (trim(STRNG) == "2005-Oct-30") then
-               Rho_cons(1) = 1900.0d0
-               K_R_cons(1) =    0.1d0
+               Rho_cons(1) = 1900.0d0;  state%tillage%Rho_cons(1) = 1900.0d0   ! [SS-TIL T-3] Group C dual-write
+               K_R_cons(1) =    0.1d0;  state%tillage%K_R_cons(1) =    0.1d0   ! [SS-TIL T-3] Group C dual-write
                call Change_MvGpars(state)           ! [SS-SWC S-1.9]
                Call Adapt_WC_H (TEST, state)        ! [SS-SWC S-1.9]
             end if
@@ -144,9 +146,9 @@ module tillage_mod
          ! normal usage
          if (iTill <= Ntill .and. nint(t1900) == nint(Date_tillage(iTill))) then
             call DTDPST ("YEAR-MONTHST-DAY", t1900, STRNG)
-            call Change_Tillage_Info (iTill)
+            call Change_Tillage_Info (iTill, state)    ! [SS-TIL T-3] state for Group C dual-writes
             call Change_Bdens
-            iTill = iTill + 1       ! set counter for next tillage event
+            iTill = iTill + 1;  state%tillage%iTill = iTill   ! [SS-TIL T-3] Group E dual-write
          else
             ! SS-ATM A-2.6: pass state for retired nraida
             call Consolidate_Bdens(state)
@@ -316,6 +318,7 @@ module tillage_mod
          dwc = state%soilwater%theta(i) - wc(i)                                                         ! [SS-SWC S-2.6]
          sumDWC = sumDWC + dwc * dz(i)
       end do
+      state%tillage%sumDWC = sumDWC                                                                      ! [SS-TIL T-3] Group D dual-write
 
       sumAvail1 = 0.0d0
       sumAvail2 = 0.0d0
@@ -325,6 +328,7 @@ module tillage_mod
             wcs = ParamVG(2,layer(i))
             sumAvail1 = sumAvail1 + (wcs - wc(i))*dz(i)
          end do
+         state%tillage%sumAvail1 = sumAvail1                                                             ! [SS-TIL T-3] Group D dual-write
          do i = 1, MaxNumSoilCP
             wcs = ParamVG(2,layer(i))
             if (sumAvail1 > 0.0d0) then
@@ -345,6 +349,7 @@ module tillage_mod
             wcr = ParamVG(1,layer(i))
             sumAvail2 = SumAvail2 + (wc(i) - wcr) * dz(i)
          end do
+         state%tillage%sumAvail2 = sumAvail2                                                             ! [SS-TIL T-3] Group D dual-write
          do i = 1, MaxNumSoilCP
             wcr = ParamVG(1,layer(i))
             wc(i) = wc(i) + (wc(i) - wcr) * sumDWC / sumAvail2
@@ -402,37 +407,45 @@ write(124,'(A,1P,12E12.5)') Date, Bdens(1), ParamVG(2,layer(1)), state%soilwater
    end subroutine Change_Bdens
    
 ! **************************************************** set_iTill *********************************************************
-   subroutine set_iTill
+   subroutine set_iTill (state)
+   ! [SS-TIL T-3] state added for iTill dual-write
    implicit none
+   type(swap_state_t), intent(inout) :: state
    integer :: i
    iTill = 1
    if (t1900 <= Date_tillage(1)) iTill = 1
    do i = 2, Ntill
       if (Date_tillage(i) < Date_tillage(i-1)) call fatalerr_collected ('set_iTill', 'Dates in tabulated tillage events must be sorted')
-      if (t1900 >= Date_tillage(i-1) .and. t1900 < Date_tillage(i-1)) iTill = i-1
+      ! H-4 bug fix: second comparison was Date_tillage(i-1) (tautological); corrected to Date_tillage(i)
+      if (t1900 >= Date_tillage(i-1) .and. t1900 < Date_tillage(i)) iTill = i-1   ! [SS-TIL T-3] H-4 fix
    end do
+   state%tillage%iTill = iTill                                                     ! [SS-TIL T-3] Group E dual-write
    end subroutine set_iTill
 
 ! **************************************************** det_MNSH *********************************************************
-   subroutine det_MNSH
+   subroutine det_MNSH (state)
+   ! [SS-TIL T-3] state added for MaxNumSoilHo/MaxNumSoilCP dual-write
    implicit none
+   type(swap_state_t), intent(inout) :: state
    integer :: i
    do i = 2, NumNod
       if (Max_Z_tillage > -zbotcp(i-1) .and. Max_Z_tillage <= -zbotcp(i)) then
-         MaxNumSoilHo = layer(i)
-         MaxNumSoilCP = i
+         MaxNumSoilHo = layer(i);  state%tillage%MaxNumSoilHo = layer(i)   ! [SS-TIL T-3] Group E dual-write
+         MaxNumSoilCP = i;         state%tillage%MaxNumSoilCP = i           ! [SS-TIL T-3] Group E dual-write
          exit
       end if
    end do
-   end subroutine det_MNSH   
+   end subroutine det_MNSH
 
-   subroutine Change_Tillage_Info (iTill)
+   subroutine Change_Tillage_Info (iTill, state)
+   ! [SS-TIL T-3] state added for Group C dual-writes
    implicit none
    ! global
    integer, intent(in) :: iTill
+   type(swap_state_t), intent(inout) :: state
    ! local
    integer :: itype, nlay
-   
+
    itype               = Type_Tillage(iTill)
    nlay                = iTT2(itype) - iTT1(itype) + 1
    Rho_tillage(1:nlay) = TAB_Rho_tillage(iTT1(itype):iTT2(itype))
@@ -441,6 +454,16 @@ write(124,'(A,1P,12E12.5)') Date, Bdens(1), ParamVG(2,layer(1)), state%soilwater
    Rho_match(1:nlay)   = TAB_Rho_match(iTT1(itype):iTT2(itype))
    N_match(1:nlay)     = TAB_N_match(iTT1(itype):iTT2(itype))
    Slope_match(1:nlay) = (ParamVG(6,1:nlay) - N_match(1:nlay)) / (Rho_cons(1:nlay) - Rho_match(1:nlay))
+
+   ! [SS-TIL T-3] Group C dual-writes — mirror all 7 per-layer arrays into state%tillage
+   associate(tl => state%tillage)
+      tl%Rho_tillage(1:nlay) = Rho_tillage(1:nlay)
+      tl%Rho_cons(1:nlay)    = Rho_cons(1:nlay)
+      tl%K_R_cons(1:nlay)    = K_R_cons(1:nlay)
+      tl%Rho_match(1:nlay)   = Rho_match(1:nlay)
+      tl%N_match(1:nlay)     = N_match(1:nlay)
+      tl%Slope_match(1:nlay) = Slope_match(1:nlay)
+   end associate
    end subroutine Change_Tillage_Info
 
 end module tillage_mod
