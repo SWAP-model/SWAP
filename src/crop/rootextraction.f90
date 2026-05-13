@@ -101,10 +101,10 @@ module rootextraction_mod
 ! --- calculate potential root extraction of the compartments
         ! 22-10-2018: bug repair signalled by Paul van Walsum: division not by rd but by depth bottom of last compartment where roots are present
         !             rd replaced by (newly calculated) rd_noddrz
-        rd_noddrz = abs(zbotcp(noddrz))
+        rd_noddrz = abs(state%mesh%zbotcp(noddrz))  ! [GR-BH C7]
         do node = 1,noddrz
-          top = abs(ztopcp(node) / rd_noddrz)
-          bot = abs(zbotcp(node) / rd_noddrz)
+          top = abs(state%mesh%ztopcp(node) / rd_noddrz)  ! [GR-BH C7]
+          bot = abs(state%mesh%zbotcp(node) / rd_noddrz)  ! [GR-BH C7]
           cw_qrot(node) = (afgen(cumdens,202,bot)-afgen(cumdens,202,top))* at_ptra
         enddo
 
@@ -163,7 +163,7 @@ module rootextraction_mod
             ! use reproduction functions
             else
               ! SS-HEAT Phase 2 Task 6: pass tsoil from state%heat
-              call OxygenReproFunction (OxygenSlope,OxygenIntercept,sw_theta,state%soilwater%thetas,state%heat%tsoil,node,z,dz,alpwet)  ! [SS-SWC S-2.7]
+              call OxygenReproFunction (OxygenSlope,OxygenIntercept,sw_theta,state%soilwater%thetas,state%heat%tsoil,node,z,dz,alpwet,state)  ! [SS-SWC S-2.7] [GR-BH C7]
             endif
 
           endif
@@ -384,7 +384,7 @@ module rootextraction_mod
       flconverg = .false.
 
 ! --- reset values below root zone to zero
-      do node = noddrz+1,numnod
+      do node = noddrz+1,state%mesh%numnod  ! [GR-BH C7]
         cw_mflux(node) = 0.d0
         cw_mroot(node) = 0.d0
         cw_hroot(node) = 0.d0
@@ -402,7 +402,7 @@ module rootextraction_mod
 
 ! --- initialization of rootrho and rootphi
       do node = 1,noddrz-1
-        reldepth = -z(node)/rd
+        reldepth = -state%mesh%z(node)/rd  ! [GR-BH C7]
         rdensity = afgen(rdctb,22,reldepth)
         cw_rmax(node) = 1.d0/dsqrt(phi*rdensity)
         cw_rootrho(node) = 4.d0/(rootradius*rootradius-rootcoefa*cw_rmax(node)&
@@ -413,7 +413,7 @@ module rootextraction_mod
       enddo
 ! --- last node, partly filled with roots
       node = noddrz
-      meandepth = (ztopcp(node)-rd)*0.5d0
+      meandepth = (state%mesh%ztopcp(node)-rd)*0.5d0  ! [GR-BH C7]
       reldepth = meandepth/(-rd)
       rdensity = afgen(rdctb,22,reldepth)
       cw_rmax(node) = 1.d0/dsqrt(phi*rdensity)
@@ -433,7 +433,7 @@ module rootextraction_mod
       node = noddrz
       if (node.gt.1) then
          cw_mflux(node) = cw_mflux(node) + (cw_mflux(node-1)-cw_mflux(node))/       &
-     &                 disnod(node) * (meandepth-z(node))
+     &                 state%mesh%disnod(node) * (meandepth-state%mesh%z(node))  ! [GR-BH C7]
       endif
 
 ! --- determine highest pressure head in root zone
@@ -738,8 +738,8 @@ module rootextraction_mod
 ! ---   determine h and matricflux potential at root-soil interface
         if (sw_h(node) .gt. -1.d0) then                                                ! [SS-SWC S-2.7]
 ! ---      very wet conditions
-           lay = layer(node)
-           ConducSoil = ksatfit(lay) / (rootcoefa*state%soilwater%rmax(node)) /        &
+           lay = state%mesh%layer(node)  ! [GR-BH C7]
+           ConducSoil = state%soilwater%ksatfit(lay) / (rootcoefa*state%soilwater%rmax(node)) /  &  ! [GR-BH C7]
      &                  log(rootcoefa*state%soilwater%rmax(node)/rootradius)
            cw_hroot(node) = (ConducSoil*sw_h(node) + ConducRoot*state%soilwater%Hxylem) /  &  ! [SS-SWC S-2.7]
      &                   (ConducSoil + ConducRoot)
@@ -778,10 +778,10 @@ module rootextraction_mod
 ! ---   calculate root water extraction flux
         if (node .lt. noddrz) then
           cw_qrot(node) = rooteff * cw_rootrho(node) *                        &
-     &                 (cw_mflux(node)-cw_mroot(node)) * dz(node)
+     &                 (cw_mflux(node)-cw_mroot(node)) * state%mesh%dz(node)  ! [GR-BH C7]
           if (cw_mflux(node) .gt. cw_mroot(node) ) then
 ! ---       water extraction, set maximum flux to 10% of available soil water
-            qmax = (sw_theta(node) - twilt(node)) * dz(node) * 0.1d0 / tc_dt  ! [SS-SWC S-2.7] TC-12
+            qmax = (sw_theta(node) - twilt(node)) * state%mesh%dz(node) * 0.1d0 / tc_dt  ! [SS-SWC S-2.7] TC-12 [GR-BH C7]
             qmax = min(qmax,at_ptra)
             cw_qrot(node) = min(cw_qrot(node),qmax)
           else
@@ -798,7 +798,7 @@ module rootextraction_mod
           endif
         else
 ! ---     last node, partly filled with roots
-          depth = ztopcp(node) + rd
+          depth = state%mesh%ztopcp(node) + rd  ! [GR-BH C7]
           cw_qrot(node) = rooteff * cw_rootrho(node) *                        &
      &                 (cw_mflux(node)-cw_mroot(node)) * depth
           if (cw_mflux(node) .gt. cw_mroot(node) ) then
@@ -913,14 +913,14 @@ module rootextraction_mod
 ! === calculation of matric flux potential ===================================
 
 ! --- matric flux potential based on soil water pressure head
-        lay = layer(node)
+        lay = state%mesh%layer(node)  ! [GR-BH C7]
         if (phead .lt. wiltpoint) then
 ! ---     very dry range
           outcome = 0.0d0
         elseif (phead .gt. -1.023293d0) then
 ! ---     very wet range (> -10^0.01)
           outcome = state%soilwater%mfluxtable(lay,1) +                 &
-     &              (phead+1.023293d0)*ksatfit(lay)
+     &              (phead+1.023293d0)*state%soilwater%ksatfit(lay)  ! [GR-BH C7]
         else
 ! ---     direct access table, with linear interpolation
           logphead = 100.d0*log10(-phead)
@@ -933,7 +933,7 @@ module rootextraction_mod
 
 ! --- correction matric flux potential for osmotic head due to salinity
       if (swsalinity .eq. 2) then
-          lay = layer(node)
+          lay = state%mesh%layer(node)  ! [GR-BH C7]
 !         osmotic head in cm
           hosm = salthead * state%solute%cml(node)
           hsalt = wiltpoint + hosm

@@ -7,8 +7,8 @@ module tillage_mod
 
    ! SS-TC TC-12: t1900 retired from only-list; read via state%timecontrol%t1900 at each call site.
    ! [SS-TC TC-14] date retired — read via state%timecontrol%date
-   use variables, only: swhyst, swsolu, swoxygen, flksatexm, zbotcp, NumNod, Bdens, layer, ParamVG, &
-                        NumLay, dz, disnod, botcom, psilt, pclay, SwDiscrvert, &  ! [SS-BMI2 Task 5] tend removed — global retired
+   use variables, only: swhyst, swsolu, swoxygen, Bdens, ParamVG, &
+                        NumLay, botcom, SwDiscrvert, &  ! [GR-BH C7] flksatexm/zbotcp/NumNod/layer/dz/disnod/psilt/pclay->state%mesh/soilwater; [SS-BMI2 Task 5] tend removed — global retired
                         ! Tillage bridge variables with renaming (SAVE statements removed)
                         ! [SS-TIL T-5] Groups C/D/E retired from variables — reads via state%tillage
                         swtill => till_swtill, Ntill => till_Ntill, &
@@ -68,7 +68,7 @@ module tillage_mod
          if (swhyst == 1)      call fatalerr_collected ('DoTillage', 'swhyst = 1 not allowed')
          if (swsolu == 1)      call fatalerr_collected ('DoTillage', 'swsolu = 1 not (yet) allowed')
          if (swoxygen == 2)    call fatalerr_collected ('DoTillage', 'swoxygen = 2 not (yet) allowed')
-         if (flksatexm)        call fatalerr_collected ('DoTillage', 'flksatexm not (yet) allowed')
+         if (state%soilwater%flksatexm) call fatalerr_collected ('DoTillage', 'flksatexm not (yet) allowed')  ! [GR-BH C7]
          if (SwDiscrvert == 1) call fatalerr_collected ('DoTillage', 'SwDiscrvert = 1 not (yet) allowed')
       end if
 
@@ -242,7 +242,7 @@ module tillage_mod
          !ParamVG(6,i) = ParamVG(6,i)
          continue
       case(2)
-         Epsilon = -0.97d0 + 1.28d0 * psilt(i) / pclay(i)
+         Epsilon = -0.97d0 + 1.28d0 * state%soilwater%psilt(i) / state%soilwater%pclay(i)  ! [GR-BH C7]
          ParamVG(6,i) = 1.0d0 + (ParamVG(6,i) - 1.0d0) * (Bdens(i)/tl%Rho_last(i))**Epsilon
       case(3)
          ParamVG(6,i) = dmax1(1.001d0, ParamVG(6,i) + (Bdens(i) - tl%Rho_last(i)) * tl%Slope_match(i))
@@ -260,7 +260,7 @@ module tillage_mod
 
    ! Second: update vg_params (first 10 fields, indices 1-10; index 8 is sentinel, not a real paramvg slot)
    do node = 1, tl%MaxNumSoilCP
-      lay = layer(node)
+      lay = state%mesh%layer(node)  ! [GR-BH C7]
       state%soilwater%vg_params(node)%thetar          = ParamVG(1, lay)  ! [SS-GR-UTILS Task 15]
       state%soilwater%vg_params(node)%thetas          = ParamVG(2, lay)  ! [SS-GR-UTILS Task 15]
       state%soilwater%vg_params(node)%ksat            = ParamVG(3, lay)  ! [SS-GR-UTILS Task 15]
@@ -304,20 +304,20 @@ module tillage_mod
       ! keep current wc values (wc_new = wc_old) and only change h; exception: when wc_old > wcs_new: alternative redistribution required
       summ = 0.0d0
       do i = 1, state%tillage%MaxNumSoilCP
-         wcs = ParamVG(2,layer(i))
+         wcs = ParamVG(2,state%mesh%layer(i))  ! [GR-BH C7]
          if (state%soilwater%theta(i) < wcs) then                                                       ! [SS-SWC S-2.6]
-            state%soilwater%h(i) = prhead(disnod(i), state%soilwater%theta(i), state%soilwater%h, &    ! [SS-SWC S-2.6] [SS-GR-UTILS Task 8]
+            state%soilwater%h(i) = prhead(state%mesh%disnod(i), state%soilwater%theta(i), state%soilwater%h, &  ! [SS-SWC S-2.6] [SS-GR-UTILS Task 8] [GR-BH C7]
                                           state%soilwater%iHWCKmodel(state%soilwater%layer(i)), &       ! [SS-SWC S-2.6] [SS-GR-UTILS Task 8]
                                           i, state%soilwater)                                           ! [SS-SWC S-2.6] [SS-GR-UTILS Task 8]
          else
-            summ = summ + (wcs - state%soilwater%theta(i))*dz(i)                                       ! [SS-SWC S-2.6]
+            summ = summ + (wcs - state%soilwater%theta(i))*state%mesh%dz(i)  ! [SS-SWC S-2.6] [GR-BH C7]
             state%soilwater%theta(i) = wcs                                                              ! [SS-SWC S-2.6]
             state%soilwater%h(i) = 0.0d0                                                               ! [SS-SWC S-2.6]
          end if
       end do
       if (summ > 0.0d0) then
          do i = state%tillage%MaxNumSoilCP, 1, -1
-            wcs = ParamVG(2,layer(i))
+            wcs = ParamVG(2,state%mesh%layer(i))  ! [GR-BH C7]
             dif = wcs - state%soilwater%theta(i)                                                        ! [SS-SWC S-2.6]
             if (dif > 0.0d0) then
                if (dif < summ) then
@@ -345,7 +345,7 @@ module tillage_mod
                          i, state%soilwater)                       ! [SS-SWC S-2.6] [SS-GR-UTILS Task 5]
          sumWCt = sumWCt + wc(i)
          dwc = state%soilwater%theta(i) - wc(i)                                                         ! [SS-SWC S-2.6]
-         state%tillage%sumDWC = state%tillage%sumDWC + dwc * dz(i)
+         state%tillage%sumDWC = state%tillage%sumDWC + dwc * state%mesh%dz(i)  ! [GR-BH C7]
       end do
 
       state%tillage%sumAvail1 = 0.0d0
@@ -353,20 +353,20 @@ module tillage_mod
       if (sumWCt < sumWCtmin1) then
          ! water to be added; same as sumDWC > 0.0
          do i = 1, state%tillage%MaxNumSoilCP
-            wcs = ParamVG(2,layer(i))
-            state%tillage%sumAvail1 = state%tillage%sumAvail1 + (wcs - wc(i))*dz(i)
+            wcs = ParamVG(2,state%mesh%layer(i))  ! [GR-BH C7]
+            state%tillage%sumAvail1 = state%tillage%sumAvail1 + (wcs - wc(i))*state%mesh%dz(i)  ! [GR-BH C7]
          end do
          do i = 1, state%tillage%MaxNumSoilCP
-            wcs = ParamVG(2,layer(i))
+            wcs = ParamVG(2,state%mesh%layer(i))  ! [GR-BH C7]
             if (state%tillage%sumAvail1 > 0.0d0) then
                wc(i) = wc(i) + (wcs - wc(i)) * state%tillage%sumDWC / state%tillage%sumAvail1
                if (wc(i) > wcs) then
-                  state%soilwater%pond = state%soilwater%pond + (wc(i) - wcs) * dz(i)                  ! [SS-SWC S-2.6]
+                  state%soilwater%pond = state%soilwater%pond + (wc(i) - wcs) * state%mesh%dz(i)  ! [SS-SWC S-2.6] [GR-BH C7]
                   wc(i) = wcs
                   write(333,'(A,I5,F12.4)') state%timecontrol%date, i, state%soilwater%pond                              ! [SS-SWC S-2.6]
                end if
             end if
-            state%soilwater%h(i)     = prhead(disnod(i), wc(i), state%soilwater%h, &                    ! [SS-SWC S-2.6] [SS-GR-UTILS Task 8]
+            state%soilwater%h(i)     = prhead(state%mesh%disnod(i), wc(i), state%soilwater%h, &  ! [SS-SWC S-2.6] [SS-GR-UTILS Task 8] [GR-BH C7]
                                                state%soilwater%iHWCKmodel(state%soilwater%layer(i)), &  ! [SS-SWC S-2.6] [SS-GR-UTILS Task 8]
                                                i, state%soilwater)                                      ! [SS-SWC S-2.6] [SS-GR-UTILS Task 8]
             state%soilwater%theta(i) = wc(i)                                                            ! [SS-SWC S-2.6]
@@ -374,13 +374,13 @@ module tillage_mod
       else if (sumWCt > sumWCtmin1) then
          ! water to be removed; same as sumDWC < 0.0
          do i = 1, state%tillage%MaxNumSoilCP
-            wcr = ParamVG(1,layer(i))
-            state%tillage%sumAvail2 = state%tillage%sumAvail2 + (wc(i) - wcr) * dz(i)
+            wcr = ParamVG(1,state%mesh%layer(i))  ! [GR-BH C7]
+            state%tillage%sumAvail2 = state%tillage%sumAvail2 + (wc(i) - wcr) * state%mesh%dz(i)  ! [GR-BH C7]
          end do
          do i = 1, state%tillage%MaxNumSoilCP
-            wcr = ParamVG(1,layer(i))
+            wcr = ParamVG(1,state%mesh%layer(i))  ! [GR-BH C7]
             wc(i) = wc(i) + (wc(i) - wcr) * state%tillage%sumDWC / state%tillage%sumAvail2
-            state%soilwater%h(i)     = prhead(disnod(i), wc(i), state%soilwater%h, &                    ! [SS-SWC S-2.6] [SS-GR-UTILS Task 8]
+            state%soilwater%h(i)     = prhead(state%mesh%disnod(i), wc(i), state%soilwater%h, &  ! [SS-SWC S-2.6] [SS-GR-UTILS Task 8] [GR-BH C7]
                                                state%soilwater%iHWCKmodel(state%soilwater%layer(i)), &  ! [SS-SWC S-2.6] [SS-GR-UTILS Task 8]
                                                i, state%soilwater)                                      ! [SS-SWC S-2.6] [SS-GR-UTILS Task 8]
             state%soilwater%theta(i) = wc(i)                                                            ! [SS-SWC S-2.6]
@@ -392,22 +392,22 @@ module tillage_mod
 
    if (TEST) then
       do i = 1, state%tillage%MaxNumSoilCP
-         wcs = ParamVG(2,layer(i))
+         wcs = ParamVG(2,state%mesh%layer(i))  ! [GR-BH C7]
          write (444,'(I5,8(A1,F12.6))') i, ',', hold(i), ',', wcold(i), ',', state%soilwater%h(i), ',', state%soilwater%theta(i), &  ! [SS-SWC S-2.6]
                                         ',', state%tillage%sumDWC, ',', state%tillage%sumAvail1, ',', state%tillage%sumAvail2, &
                                         ',', state%soilwater%theta(i)/wcs               ! [SS-SWC S-2.6]
       end do
    end if
-write(124,'(A,1P,12E12.5)') state%timecontrol%date, Bdens(1), ParamVG(2,layer(1)), state%soilwater%theta(1), state%soilwater%h(1), &  ! [SS-SWC S-2.6]
+write(124,'(A,1P,12E12.5)') state%timecontrol%date, Bdens(1), ParamVG(2,state%mesh%layer(1)), state%soilwater%theta(1), state%soilwater%h(1), &  ! [SS-SWC S-2.6] [GR-BH C7]
    hconduc(state%soilwater%h(1),state%soilwater%theta(1),1.0d0,state%heat%tsoil(1), &                                  ! [SS-GR-UTILS Task 6]
            state%soilwater%vg_params(1), &
            state%soilwater%iHWCKmodel(state%soilwater%layer(1)), &
-           state%soilwater%fluseksatexm(1), 1, state%soilwater), ParamVG(3,layer(1)),          & ! [SS-SWC S-2.6]
-   Bdens(2), ParamVG(2,layer(2)), state%soilwater%theta(2), state%soilwater%h(2),                                     & ! [SS-SWC S-2.6]
+           state%soilwater%fluseksatexm(1), 1, state%soilwater), ParamVG(3,state%mesh%layer(1)),          & ! [SS-SWC S-2.6] [GR-BH C7]
+   Bdens(2), ParamVG(2,state%mesh%layer(2)), state%soilwater%theta(2), state%soilwater%h(2),                           & ! [SS-SWC S-2.6] [GR-BH C7]
    hconduc(state%soilwater%h(2),state%soilwater%theta(2),1.0d0,state%heat%tsoil(2), &                                  ! [SS-GR-UTILS Task 6]
            state%soilwater%vg_params(2), &
            state%soilwater%iHWCKmodel(state%soilwater%layer(2)), &
-           state%soilwater%fluseksatexm(2), 2, state%soilwater), ParamVG(3,layer(2))              ! [SS-SWC S-2.6]
+           state%soilwater%fluseksatexm(2), 2, state%soilwater), ParamVG(3,state%mesh%layer(2))  ! [SS-SWC S-2.6] [GR-BH C7]
 
    end subroutine Adapt_WC_H
 
@@ -437,9 +437,9 @@ write(124,'(A,1P,12E12.5)') state%timecontrol%date, Bdens(1), ParamVG(2,layer(1)
    ! to check: why this loop to determine NumSoilHo?
    NumSoilHo = 1
    associate(tl => state%tillage)
-   do i = 2, NumNod
-      if (Z_tillage(tl%iTill) > -zbotcp(i-1) .and. Z_tillage(tl%iTill) <= -zbotcp(i)) then
-         NumSoilHo = layer(i)
+   do i = 2, state%mesh%numnod  ! [GR-BH C7]
+      if (Z_tillage(tl%iTill) > -state%mesh%zbotcp(i-1) .and. Z_tillage(tl%iTill) <= -state%mesh%zbotcp(i)) then  ! [GR-BH C7]
+         NumSoilHo = state%mesh%layer(i)  ! [GR-BH C7]
          exit
       end if
    end do
@@ -469,9 +469,9 @@ write(124,'(A,1P,12E12.5)') state%timecontrol%date, Bdens(1), ParamVG(2,layer(1)
    implicit none
    type(swap_state_t), intent(inout) :: state
    integer :: i
-   do i = 2, NumNod
-      if (Max_Z_tillage > -zbotcp(i-1) .and. Max_Z_tillage <= -zbotcp(i)) then
-         state%tillage%MaxNumSoilHo = layer(i)
+   do i = 2, state%mesh%numnod  ! [GR-BH C7]
+      if (Max_Z_tillage > -state%mesh%zbotcp(i-1) .and. Max_Z_tillage <= -state%mesh%zbotcp(i)) then  ! [GR-BH C7]
+         state%tillage%MaxNumSoilHo = state%mesh%layer(i)  ! [GR-BH C7]
          state%tillage%MaxNumSoilCP = i
          exit
       end if

@@ -319,7 +319,7 @@
 
       ! determine lowest compartment containing roots
       node = 1
-      do while (zbotcp(node) .gt. (-rd + 1.d-8))
+      do while (state%mesh%zbotcp(node) .gt. (-rd + 1.d-8))  ! [GR-BH C7]
         node = node + 1
       end do
       noddrz = node        
@@ -650,7 +650,7 @@
         else
           flhydrlift = .false.
         endif
-        do i = 1,numnod
+        do i = 1,state%mesh%numnod  ! [GR-BH C7]
          twilt(i) = watcon(wiltpoint, &
                             state%soilwater%vg_params(i), &
                             state%soilwater%iHWCKmodel(state%soilwater%layer(i)), &
@@ -933,11 +933,11 @@
       
         node   = 1
         dhPrep = state%soilwater%h(node) - hPrep                          ! [SS-SWC S-2.7]
-        drz1   = -1.d0 * zPrep - dz(node)
+        drz1   = -1.d0 * zPrep - state%mesh%dz(node)  ! [GR-BH C7]
         do while (drz1 .gt. 0.d0)
           node   = node + 1
           dhPrep = max(dhPrep,state%soilwater%h(node) - hPrep)            ! [SS-SWC S-2.7]
-          drz1   = drz1 - dz(node)
+          drz1   = drz1 - state%mesh%dz(node)  ! [GR-BH C7]
         enddo
         
         flCropPrep = .true.
@@ -959,18 +959,18 @@
       
         node   = 1
         dhSow  = state%soilwater%h(node) - hSow                           ! [SS-SWC S-2.7]
-        drz1   = -1.d0 * zSow - dz(node)
+        drz1   = -1.d0 * zSow - state%mesh%dz(node)  ! [GR-BH C7]
         do while (drz1 .gt. 0.d0)
           node   = node + 1
           dhSow  = max(dhSow,state%soilwater%h(node) - hSow)              ! [SS-SWC S-2.7]
-          drz1   = drz1 - dz(node)
+          drz1   = drz1 - state%mesh%dz(node)  ! [GR-BH C7]
         enddo
-          
+
         node     = 1
-        drz1     = -1.d0 * zTempSow - dz(node)
+        drz1     = -1.d0 * zTempSow - state%mesh%dz(node)  ! [GR-BH C7]
         do while (drz1 .gt. 0.d0)
           node   = node + 1
-          drz1 = drz1 - dz(node)
+          drz1 = drz1 - state%mesh%dz(node)  ! [GR-BH C7]
         enddo
         
         ! SS-HEAT pre-Task-8: tsoil read from dummy arg (state%heat%tsoil via caller).
@@ -1008,12 +1008,12 @@
             drz1 = zgerm * (-1.d0)
             do while (drz1 .gt. 0.d0)
               node = node + 1
-              if (drz1 - dz(node) .ge. 0.d0) then
-                hrz1 = hrz1+state%soilwater%h(node)*dz(node)/(zgerm*(-1.d0))  ! [SS-SWC S-2.7]
+              if (drz1 - state%mesh%dz(node) .ge. 0.d0) then  ! [GR-BH C7]
+                hrz1 = hrz1+state%soilwater%h(node)*state%mesh%dz(node)/(zgerm*(-1.d0))  ! [SS-SWC S-2.7] [GR-BH C7]
               else
                 hrz1 = hrz1+state%soilwater%h(node)*drz1/(zgerm*(-1.d0))      ! [SS-SWC S-2.7]
               endif
-              drz1 = drz1 - dz(node)
+              drz1 = drz1 - state%mesh%dz(node)  ! [GR-BH C7]
             enddo
           endif
         
@@ -1433,7 +1433,7 @@
         else
           flhydrlift = .false.
         endif
-        do i = 1,numnod
+        do i = 1,state%mesh%numnod  ! [GR-BH C7]
          twilt(i) = watcon(wiltpoint, &
                             state%soilwater%vg_params(i), &
                             state%soilwater%iHWCKmodel(state%soilwater%layer(i)), &
@@ -2527,7 +2527,7 @@
         else
           flhydrlift = .false.
         endif
-        do i = 1,numnod
+        do i = 1,state%mesh%numnod  ! [GR-BH C7]
          twilt(i) = watcon(wiltpoint, &
                             state%soilwater%vg_params(i), &
                             state%soilwater%iHWCKmodel(state%soilwater%layer(i)), &
@@ -2549,10 +2549,10 @@
          
         ! Find node for monitoring work-ability during mowing
         nodmow = 1
-        drz1       = -1.d0 * zmow - dz(nodmow)
+        drz1       = -1.d0 * zmow - state%mesh%dz(nodmow)  ! [GR-BH C7]
         do while (drz1 .gt. 0.d0)
           nodmow   = nodmow + 1
-          drz1 = drz1 - dz(nodmow)
+          drz1 = drz1 - state%mesh%dz(nodmow)  ! [GR-BH C7]
         enddo
       
       endif   
@@ -2561,10 +2561,10 @@
         
         ! Find node and layer for monitoring work-ability at start of grazing
         nodgrz = 1
-        drz1       = -1.d0 * zgrz - dz(nodgrz)
+        drz1       = -1.d0 * zgrz - state%mesh%dz(nodgrz)  ! [GR-BH C7]
         do while (drz1 .gt. 0.d0)
           nodgrz   = nodgrz + 1
-          drz1 = drz1 - dz(nodgrz)
+          drz1 = drz1 - state%mesh%dz(nodgrz)  ! [GR-BH C7]
         enddo
          
       endif
@@ -3562,8 +3562,8 @@
 
       ! [SS-SWC S-2.12B] qpotrot_day/qredtot_day retired — read via state%soilwater
       ! SS-TC TC-10: date read via state%timecontrol tc_date alias (removed from variables use).
-      use variables, only: noddrz, zbotcp, ztopcp, cumdens,                   &
-                     wrt, gwrt, wrtmin
+      use variables, only: noddrz, cumdens,                   &
+                     wrt, gwrt, wrtmin  ! [GR-BH C7] zbotcp/ztopcp->state%mesh
       use swap_state_mod, only: swap_state_t  ! [SS-SWC S-2.12B]
       ! local
       implicit none
@@ -3595,7 +3595,7 @@
         
           ! distribution roots and root extraction at relative depth
           ! root extraction and root weight based on previous day
-          rd_noddrz = abs(zbotcp(noddrz))
+          rd_noddrz = abs(state%mesh%zbotcp(noddrz))  ! [GR-BH C7]
           node = 1
           do i = 4,202,2
             
@@ -3609,14 +3609,14 @@
             top = - cumdens(i-3) * rd_noddrz
             bot = - cumdens(i-1) * rd_noddrz
             do while (.not. found)
-              if (bot .ge. zbotcp(node)) then
-                qrotdis(i) = qrotdis(i) + (1 - state%soilwater%qredtot_day(node) / state%soilwater%qpotrot_day(node)) / (ztopcp(node) - zbotcp(node)) * (top - bot)
-                qreddis(i) = qreddis(i) + state%soilwater%qredtot_day(node) / (ztopcp(node) - zbotcp(node)) * (top - bot)
+              if (bot .ge. state%mesh%zbotcp(node)) then  ! [GR-BH C7]
+                qrotdis(i) = qrotdis(i) + (1 - state%soilwater%qredtot_day(node) / state%soilwater%qpotrot_day(node)) / (state%mesh%ztopcp(node) - state%mesh%zbotcp(node)) * (top - bot)  ! [GR-BH C7]
+                qreddis(i) = qreddis(i) + state%soilwater%qredtot_day(node) / (state%mesh%ztopcp(node) - state%mesh%zbotcp(node)) * (top - bot)  ! [GR-BH C7]
                 found = .true.
               else
-                qrotdis(i) = qrotdis(i) + (1 - state%soilwater%qredtot_day(node) / state%soilwater%qpotrot_day(node)) / (ztopcp(node) - zbotcp(node)) * (top - zbotcp(node))
-                qreddis(i) = qreddis(i) + state%soilwater%qredtot_day(node) / (ztopcp(node) - zbotcp(node)) * (top - zbotcp(node))
-                top = zbotcp(node)
+                qrotdis(i) = qrotdis(i) + (1 - state%soilwater%qredtot_day(node) / state%soilwater%qpotrot_day(node)) / (state%mesh%ztopcp(node) - state%mesh%zbotcp(node)) * (top - state%mesh%zbotcp(node))  ! [GR-BH C7]
+                qreddis(i) = qreddis(i) + state%soilwater%qredtot_day(node) / (state%mesh%ztopcp(node) - state%mesh%zbotcp(node)) * (top - state%mesh%zbotcp(node))  ! [GR-BH C7]
+                top = state%mesh%zbotcp(node)  ! [GR-BH C7]
                 node = node + 1
               end if
             end do
@@ -4772,8 +4772,8 @@
           fltsimprev = .false.
           ! find depth of compartment with critical soil temperature
           cmpcrit = 1
-          do node = 1, numnod
-             if (z(node) .le. (-1.0d0*tsumdepth)) then
+          do node = 1, state%mesh%numnod  ! [GR-BH C7]
+             if (state%mesh%z(node) .le. (-1.0d0*tsumdepth)) then  ! [GR-BH C7]
                 cmpcrit = node
                 exit
              endif
@@ -4832,7 +4832,7 @@
           endif
 
           ! === write output
-          write (uo,200) tc_date,comma,z(cmpcrit),comma,tsoil(cmpcrit), &
+          write (uo,200) tc_date,comma,state%mesh%z(cmpcrit),comma,tsoil(cmpcrit), &  ! [GR-BH C7]
      &           comma,fltsumtemp,comma,fltsimprev,comma,fltsimcount
  200      format (a11,2(a1,f7.2),3(a1,i3))
 

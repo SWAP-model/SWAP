@@ -142,12 +142,12 @@
 
 ! ---       determine water holding capacity, readily available water, 
 ! ---       actual available water and water deficit
-            frlow = (ztopcp(noddrz) + rd) / dz(noddrz)
+            frlow = (state%mesh%ztopcp(noddrz) + rd) / state%mesh%dz(noddrz)  ! [GR-BH C7]
             awlh = 0.0d0; awmh = 0.0d0; awah = 0.0d0; cdef = 0.0d0
             do node = 1,noddrz
-               wclo = wclos(layer(node))*dz(node);       if (node.eq.noddrz) wclo = wclo*frlow
-               wcme = wcmes(layer(node))*dz(node);       if (node.eq.noddrz) wcme = wcme*frlow
-               wchi = wchis(layer(node))*dz(node);       if (node.eq.noddrz) wchi = wchi*frlow
+               wclo = wclos(state%mesh%layer(node))*state%mesh%dz(node);       if (node.eq.noddrz) wclo = wclo*frlow  ! [GR-BH C7]
+               wcme = wcmes(state%mesh%layer(node))*state%mesh%dz(node);       if (node.eq.noddrz) wcme = wcme*frlow  ! [GR-BH C7]
+               wchi = wchis(state%mesh%layer(node))*state%mesh%dz(node);       if (node.eq.noddrz) wchi = wchi*frlow  ! [GR-BH C7]
                wcac = watcon(state%soilwater%h(node), &
                               state%soilwater%vg_params(node), &
                               state%soilwater%iHWCKmodel(state%soilwater%layer(node)), &
@@ -301,7 +301,7 @@ subroutine SSDI_irrigation(iTask, state)
 
 ! [SS-SWC S-2.12B] h/theta/iptra_day/iqreddry_day/iqredsol_day retired — read via state%soilwater
 ! SS-TC TC-12: t1900 retired from only-list; read via state%timecontrol.
-use variables, only: mairg, numnod, zbotcp, irrigevent, qssdi, qssdisum, dt_SSDI_event,   &
+use variables, only: mairg, irrigevent, qssdi, qssdisum, dt_SSDI_event,   &  ! [GR-BH C7] numnod->state%mesh%numnod; zbotcp unused dropped
                      swssdi_irr, nod_ssdi_irr, ssdi_schedule_irr, ssdi_sched_type_irr, &
                      nod_ssdi_sensor_irr, ssdi_threshold_irr, ssdi_threshold_z_irr, &
                      ssdi_amount_irr, ssdi_appl_rate_irr, sw_interval_irr, days_interval_irr, &
@@ -366,7 +366,7 @@ real(8)                         :: Tred
       ! SS-TC TC-12: t1900 read via state%timecontrol tc_* alias.
       associate(tc_t1900 => state%timecontrol%t1900)  ! TC-12
       irrigevent      = 0
-      qssdi(1:numnod) = 0.0d0
+      qssdi(1:state%mesh%numnod) = 0.0d0  ! [GR-BH C7]
       dt_SSDI_event   = 1.0d0
       qssdisum        = 0.0d0
 
@@ -422,7 +422,7 @@ real(8)                         :: Tred
    case (9)
       ! special: reset scheduled irrigation at end of irrigation event
       irrigevent      = 0
-      qssdi(1:numnod) = 0.0d0
+      qssdi(1:state%mesh%numnod) = 0.0d0  ! [GR-BH C7]
       dt_SSDI_event   = 1.0d0
       qssdisum        = 0.0d0
       

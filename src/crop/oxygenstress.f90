@@ -64,7 +64,7 @@ module O2_pars
    ! ## MH: O2_pars module provides access to oxygen stress variables
    ! Phase 1 scaffolding: variables now stored in variables module with o2_ prefix
    ! This module provides the original names as aliases for backward compatibility
-   use variables, only: c_mroot,f_senes,max_resp_factor,q10_root,q10_microbial,shape_factor_rootr,specific_resp_humus,ztopcp, &
+   use variables, only: c_mroot,f_senes,max_resp_factor,q10_root,q10_microbial,shape_factor_rootr,specific_resp_humus, &  ! [GR-BH C7] ztopcp->state%mesh%ztopcp
                         ! Oxygen stress persistent state aliases (original_name => module_name)
                         w_root => o2_w_root, w_root_z0 => o2_w_root_z0, &
                         soil_temp => o2_soil_temp, sat_water_cont => o2_sat_water_cont, &
@@ -134,10 +134,10 @@ contains
 
 !## MH : some initial calculations      
       if (o2_ini_stress) then
-         if (iHWCKmodel(layer(node)) == 3) then
+         if (iHWCKmodel(state%mesh%layer(node)) == 3) then  ! [GR-BH C7]
             call fatalerr_collected ('OxygenStress', 'Combination of OxygenStress and bi-modal MvG (iHWCKmodel=3) is not (yet) possible!')
          end if
-         call calc_ini_pars (numnod)
+         call calc_ini_pars (state%mesh%numnod)  ! [GR-BH C7]
          ! Save to module arrays after initialization
          o2_d_soil_term1 = d_soil_term1
          o2_d_soil_term2 = d_soil_term2
@@ -166,7 +166,7 @@ contains
       resp_factor = 1.0d0
 
 ! --- soil layer in SWAP
-      lay = layer(node)
+      lay = state%mesh%layer(node)  ! [GR-BH C7]
 
 ! --- dry weight of root per unit length of root [kg/m]
       w_root = 1.0d0/SRL
@@ -203,9 +203,9 @@ contains
 ! --- set parameter alpha [1/Pa] of soil hydraulic functions, so divide main swap alpha by 100     ## MH: =0.01*
       alpha = 0.01d0*state%soilwater%vg_params(node)%alpha   ! [SS-GR-UTILS Task 15]
 ! --- set percentage organic matter [%]
-      perc_org_mat = orgmat(lay)*100.0d0 
-! --- set percentage sand in % of total soil            
-      percentage_sand = (psand(lay)*(1.0d0-orgmat(lay)))*100.0d0 
+      perc_org_mat = state%soilwater%orgmat(lay)*100.0d0   ! [GR-BH C7]
+! --- set percentage sand in % of total soil
+      percentage_sand = (state%soilwater%psand(lay)*(1.0d0-state%soilwater%orgmat(lay)))*100.0d0   ! [GR-BH C7]
 ! --- get soil moisture content as defined in further calculations within this routine [-]
       theta0 = state%soilwater%theta(node)              ! [SS-SWC S-2.7]
 ! --- gas filled porosity
@@ -213,7 +213,7 @@ contains
       if (state%soilwater%h(node) >= 0.0d0) gas_filled_porosity = 0.0d0  ! [SS-SWC S-2.7] be sure when saturated that gas_filled_porosity = 0
 
 ! --- thickness of the soil compartment [m]     ## MH: =0.01* 
-      depth = 0.01d0*dz(node)
+      depth = 0.01d0*state%mesh%dz(node)  ! [GR-BH C7]
 ! --- temperature in the soil compartment [K]
       ! SS-HEAT Phase 2 Task 6: read tsoil from state%heat when available
       if (present(state)) then
@@ -227,16 +227,16 @@ contains
 !new:  
 ! --- static crop. w_root_z0 relative to value of top layer              
       if (croptype(icrop) .eq. 1) then
-            rdepth_top = -ztopcp(1)/rd ! (-z(1)-0.5d0*dz(1))/rd
+            rdepth_top = -state%mesh%ztopcp(1)/rd ! (-z(1)-0.5d0*dz(1))/rd  [GR-BH C7]
             rdens_top  = afgen(rdctb,22,rdepth_top)
-            rdepth     = -ztopcp(node)/rd ! (-z(node)-0.5d0*dz(node))/rd
+            rdepth     = -state%mesh%ztopcp(node)/rd ! (-z(node)-0.5d0*dz(node))/rd  [GR-BH C7]
             rdens      = afgen(rdctb,22,rdepth) 
             w_root_z0  = w_root_ss * rdens/rdens_top !static crop
       endif
 ! --- calculate wrootz0 [kg/m3] at top of the compartments !adj RB 20171201
 ! --- dynamic crop. wrt [kg/ha] = 10-4 kg/m2; 
       if ((croptype(icrop) .eq. 2) .or. (croptype(icrop) .eq. 3)) then
-        top1 = dabs(ztopcp(node) / rd) ! relative depth top
+        top1 = dabs(state%mesh%ztopcp(node) / rd) ! relative depth top  [GR-BH C7]
         top2 = top1 + 1.0d-6 ! define 'infinite' thin layer; fraction
         
         w_root_z0 = 1.0d6*                                   & ! rescale fraction to 1 (top 2)
@@ -1540,19 +1540,21 @@ contains
 
 ! ----------------------------------------------------------------------
       subroutine OxygenReproFunction (OxygenSlope,OxygenIntercept,      &
-     &   theta,thetas,tsoil,node,z,dz,rwu_factor)
+     &   theta,thetas,tsoil,node,z,dz,rwu_factor,state)
 ! ----------------------------------------------------------------------
 !     date               : January 2010
 !     purpose            : Calculate oxygen stress according to reproduction function
+! [GR-BH C7] state added for zbotcp->state%mesh%zbotcp migration.
 ! ----------------------------------------------------------------------
-      use variables, only: zbotcp
       use swap_array_dimensions, only: macp
+      use swap_state_mod, only: swap_state_t  ! [GR-BH C7]
       implicit none
 
 ! --- global
       integer node,i
       real(8) OxygenSlope(6),OxygenIntercept(6),theta(macp),thetas(macp)
       real(8) tsoil(macp),z(macp),dz(macp)
+      type(swap_state_t), intent(in) :: state  ! [GR-BH C7]
 
 ! --- local
       real(8) intercept,slope,sum_porosity
@@ -1575,7 +1577,7 @@ contains
         sum_porosity = sum_porosity +                                   &
      &                 (thetas(i) - theta(i)) * dz(i)
       enddo
-      mean_gas_filled_porosity = sum_porosity /(-zbotcp(node))
+      mean_gas_filled_porosity = sum_porosity /(-state%mesh%zbotcp(node))  ! [GR-BH C7]
 
       intercept = OxygenIntercept(1)*soil_temp**2 +                     &
      &            OxygenIntercept(2)*depth_ss**2 +                      &
