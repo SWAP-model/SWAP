@@ -153,7 +153,6 @@ sources = [
     'src/boundary/boundbottom.f90',
     'src/drainage/drainage.f90',
     'src/drainage/divdra.f90',
-    'src/drainage/surfacewater_init.f90',
     'src/drainage/surfacewater.f90',
 
     # Solute

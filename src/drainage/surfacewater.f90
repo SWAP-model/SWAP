@@ -35,7 +35,6 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
       !! compartments and handles both primary and secondary drainage systems.
       use Variables
       use array_utils, only: afgen
-      use surfacewater_init_mod, only: surfacewater_init
       use swap_state_mod, only: swap_state_t
       implicit none
       integer,            intent(in)    :: task
@@ -60,37 +59,12 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
       select case (task)
       case (1)
 
-! === initialization ===================================================
-
-! --- read input data
-      call surfacewater_init (state)
-
-      ! hwlman and vtair global writes dropped: only output reads them,
-      ! via state%surfacewater%hwlman / state%surfacewater%vtair.
-      state%surfacewater%hwlman = 0.0d0
-      state%surfacewater%vtair  = 0.0d0
-
-!   - In case of macropores: initialise drainage basis for rapid drainage through macropores
-      if (state%surfacewater%flInitDraBas) then
-         if (NumLevRapDra.gt.nrlevs) then
-            messag = ' NUMLEVRAPDRA greater then NRLEVS'
-            call fatalerr_collected('MacroRead',messag)
-         endif
-!
-         if (swdtyp(NumLevRapDra).eq.1) then
-            state%surfacewater%ZDraBas = zbotdr(NumLevRapDra)    ! drain tube
-         elseif (Swsec.eq.1) then
-            state%surfacewater%ZDraBas = afgen (wlstab,2*maowl,tc_t1900) ! open drain, surf.wat. level input  ! [TC-8]
-         elseif (Swsec.eq.2) then
-            ! SS-SWST Phase 2 Task 11: wlstar global removed; read from state (set by surfacewater_init).
-            state%surfacewater%ZDraBas = state%surfacewater%wlstar   ! open drain, srf.wat. level simulated
-         endif
-!
-         state%surfacewater%flInitDraBas = .false.
-!
-         Return
-!
-      endif
+! === initialization — HOISTED ==========================================
+! State init for surfacewater was hoisted to swap_init's S4 pass on 2026-05-13
+! (spec docs/superpowers/specs/2026-05-13-state-init-pilot-surfacewater-design.md).
+! state%surfacewater%init(...) runs directly from swap_init before this Phase-1 task.
+! case(1) is kept as a no-op stub to preserve the task=1 dispatcher signature;
+! removal of the dispatcher case is a separate cleanup follow-up.
 
       return
 
