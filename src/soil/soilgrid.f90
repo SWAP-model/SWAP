@@ -208,7 +208,6 @@ contains
       ! local variables
       integer   lay,node,nodeN,nodeNew(macp,2),i,level
       real(8)   disnodNew(macp+1),total,zNew(macp)
-      real(8)   CofgenNew(21,macp)
       type(vanGenuchten_params_t) :: vg_tentative
       character(len=80) Message
       character(len=*), parameter :: ModuleName = 'ConvertDiscrVert'
@@ -222,7 +221,6 @@ contains
                  sw_inq       => state%soilwater%inq,             &
                  sw_inqrot    => state%soilwater%inqrot,          &
                  sw_IThetaBeg => state%soilwater%IThetaBeg,       &
-                 sw_cofgen    => state%soilwater%cofgen,               &
                  sw_FrArMtrx  => state%soilwater%FrArMtrx )
 
       ! error in call of part
@@ -381,11 +379,6 @@ contains
 
           ! Determine hNew
           do node = 1,numnodNew
-
-             ! Bug fixed: Rob H 28 okt 2011 - this output for tabulated soil physics is suppressed
-             do i = 1, 9
-                cofgenNew(i,node) = sw_cofgen(i,NodeNew(node,2))  ! CofgenNew Newnode = Cofgen bottom old node
-             enddo
 
              ! Build tentative vg from the source (bottom old) node's typed params  [SS-GR-UTILS Task 8]
              vg_tentative = state%soilwater%vg_params(NodeNew(node,2))
