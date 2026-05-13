@@ -339,7 +339,7 @@ contains
       call RootExtraction(state)
 
 !     determine SoilWater bottom boundary conditions
-      call BoundBottom(state)  ! [SS-HEAT] Task 9: state passed for rfcp access
+      call BoundBottom(state, config)  ! [SS-GR-BH Task 18]: config added for bottom_boundary fields
 
       fldtreduce = .true.
       do while(fldtreduce)
