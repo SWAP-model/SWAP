@@ -91,7 +91,7 @@ contains
       use, intrinsic :: iso_fortran_env, only: real64
       use swap_state_mod, only: swap_state_t
       use swap_config_mod, only: swap_config_t
-      use variables, only: nrlevs, numnod
+      use variables, only: nrlevs, numnod, MAOWL
       type(swap_state_t),  intent(inout) :: state
       type(swap_config_t), intent(in)    :: config
 
@@ -102,7 +102,7 @@ contains
       if (.not. allocated(state%drainage%qdra))       allocate(state%drainage%qdra(nrlevs, numnod))
       if (.not. allocated(state%drainage%L))          allocate(state%drainage%L(nrlevs))
       if (.not. allocated(state%drainage%zbotdr))     allocate(state%drainage%zbotdr(nrlevs))
-      if (.not. allocated(state%drainage%owltab))     allocate(state%drainage%owltab(nrlevs))
+      if (.not. allocated(state%drainage%owltab))     allocate(state%drainage%owltab(nrlevs, 2*MAOWL))
 
       ! Geometry arrays: start at zero; seed state%drainage%wetper(1) from config when
       ! dramet==2 (Hooghoudt/Ernst) — the only config-sourced geometry

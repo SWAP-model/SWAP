@@ -191,9 +191,10 @@ contains
    ! L and zbotdr: legacy arrays are Madr(=5)-sized, state arrays are nrlevs-sized (nrlevs <= Madr).
    state%drainage%L(:)      = L(1:size(state%drainage%L))
    state%drainage%zbotdr(:) = zbotdr(1:size(state%drainage%zbotdr))
-   ! owltab: legacy is (Madr, 2*maowl) 2D; state is 1D(nrlevs) stub.
-   ! Copy first time-value per level as a Phase A placeholder; full 2D migration deferred.
-   state%drainage%owltab(:) = owltab(1:size(state%drainage%owltab), 1)
+   ! owltab: legacy is (Madr, 2*maowl) 2D; state is (nrlevs, 2*maowl) 2D.
+   ! Copy full 2D table, respecting state allocation dimensions.
+   state%drainage%owltab(:,:) = owltab(1:size(state%drainage%owltab,1), &
+                                       1:size(state%drainage%owltab,2))
    if (flSolute) call solute_init(state)   ! SS-SLST Phase 2 Task 7: seed state%solute from config-populated globals
 
 !  initialize SurfaceWater management variables

@@ -39,7 +39,7 @@ module drainage_state_mod
       real(real64) :: FacDpthInf = 0.0_real64
       real(real64), allocatable :: L(:)       !! drainage spacing per level [cm]
       real(real64), allocatable :: zbotdr(:)  !! drainage depth per level [cm]
-      real(real64), allocatable :: owltab(:)  !! open-water level table
+      real(real64), allocatable :: owltab(:,:)  !! open-water level table (level × 2*maowl time-value pairs)
    end type drainage_state_t
 
 end module drainage_state_mod
