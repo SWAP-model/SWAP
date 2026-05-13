@@ -12,11 +12,45 @@ module swap_mod
    use swap_config_mod, only: swap_config_t
    implicit none
    private
-   public :: swap_init, swap_run_step, swap_close
+   public :: swap_init, swap_run_step, swap_close, swap_init_from_loaded_config
 
 contains
 
    subroutine swap_init(config_file, state, config)
+      use load_swap_config_mod, only: load_swap_config
+      character(len=*),            intent(in)  :: config_file
+      type(swap_state_t),          intent(out) :: state
+      type(swap_config_t), target, intent(out) :: config  ! target: crop_config_global => config%crop (set inside body, Task 3)
+
+!  Phase 4f strangler-fig: read time-independent input via the TOML
+!  pipeline + config_to_variables adapter. The legacy readswap() entry
+!  point is no longer called from the runtime path (see ADR 0007); it
+!  survives in src/io/readswap.f90 only as a parity-test fixture. The
+!  binary expects swap.toml in the current directory; abort_if_fatal
+!  terminates with a clear summary if the file is absent or fails
+!  validate/finalize.
+!
+!  Remaining strangler-fig debt: ~10 individual HACK Phase 4f-extend
+!  slots in config_to_variables.f90 for legacy globals not yet covered
+!  by typed schema slots (SWREDU, RSIGNI, CFEVAPPOND, iHWCKmodel, RDS,
+!  ksatexm path, etc.). Each slot is a small typed-config extension +
+!  adapter wiring. The deeper follow-on (per ADR 0016) is the config-
+!  passing refactor — eliminate variables-module mutation by passing
+!  typed config + state to compute subs explicitly.
+   block
+      use error_mod, only: error_collection_t
+      type(error_collection_t) :: errors
+      call load_swap_config(config_file, config, errors)
+      call config%validate(errors)
+      call config%finalize(errors)
+      call errors%abort_if_fatal()
+   end block
+
+   call swap_init_from_loaded_config(state, config)
+
+   end subroutine swap_init
+
+   subroutine swap_init_from_loaded_config(state, config)
       use variables, only : flswapshared, flmacropore, flcropnut, flagetracer, swfrost, &
                             swusecn, fldecmprat, flcropcalendar, &
                             flharvestday, flcropoutput, swcrp, flirrigationoutput, swend, project, &
@@ -41,12 +75,10 @@ contains
       use config_to_variables_mod, only: h_init_buf, pondini_init_buf, pond_init_buf, &
                                          tc_iyear_init_buf, tc_imonth_init_buf, tc_dt_init_buf, &
                                          config_to_variables
-      use load_swap_config_mod, only: load_swap_config
       use irrigation_mod, only: SSDI_irrigation
       use timecontrol_mod, only: timecontrol_init, itertime_init
-      character(len=*),            intent(in)  :: config_file
-      type(swap_state_t),          intent(out) :: state
-      type(swap_config_t), target, intent(out) :: config  ! target: crop_config_global => config%crop (set inside body, Task 3)
+      type(swap_state_t),          intent(out)   :: state
+      type(swap_config_t), target, intent(inout) :: config  ! target: crop_config_global => config%crop (Task 3); inout: already loaded by caller
       logical :: request_smaller_dt   ! intent(out) dummy for SurfaceWater(1)
 
 !  Initialization of all variables in Module Variables
@@ -55,30 +87,8 @@ contains
 !  iteration and timing statistics
    call itertime_init(state)
 
-!  Phase 4f strangler-fig: read time-independent input via the TOML
-!  pipeline + config_to_variables adapter. The legacy readswap() entry
-!  point is no longer called from the runtime path (see ADR 0007); it
-!  survives in src/io/readswap.f90 only as a parity-test fixture. The
-!  binary expects swap.toml in the current directory; abort_if_fatal
-!  terminates with a clear summary if the file is absent or fails
-!  validate/finalize.
-!
-!  Remaining strangler-fig debt: ~10 individual HACK Phase 4f-extend
-!  slots in config_to_variables.f90 for legacy globals not yet covered
-!  by typed schema slots (SWREDU, RSIGNI, CFEVAPPOND, iHWCKmodel, RDS,
-!  ksatexm path, etc.). Each slot is a small typed-config extension +
-!  adapter wiring. The deeper follow-on (per ADR 0016) is the config-
-!  passing refactor — eliminate variables-module mutation by passing
-!  typed config + state to compute subs explicitly.
-   block
-      use error_mod, only: error_collection_t
-      type(error_collection_t) :: errors
-      call load_swap_config(config_file, config, errors)
-      call config%validate(errors)
-      call config%finalize(errors)
-      call errors%abort_if_fatal()
-      call config_to_variables(config, state)
-   end block
+!  config_to_variables seeds state%timecontrol from config (Task 5).
+   call config_to_variables(config, state)
 
    ! [SS-TC TC-14] seed state%timecontrol from transient buffers before
    ! TimeControl(1) consumes them (iyear/imonth derived from tstart, dt from config).
@@ -200,7 +210,7 @@ contains
 
    call log_info('swap', 'Initialization complete for project: ' // trim(project))
 
-   end subroutine swap_init
+   end subroutine swap_init_from_loaded_config
 
    subroutine swap_run_step(state, config)
       use variables, only : flswapshared, flmacropore, flcropnut, flagetracer, swfrost, &

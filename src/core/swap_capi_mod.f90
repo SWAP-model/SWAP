@@ -8,7 +8,7 @@ module swap_capi_mod
    use iso_c_binding,   only: c_char, c_double, c_int, c_size_t, &
                                c_null_char, c_ptr, c_null_ptr,    &
                                c_loc, c_f_pointer
-   use swap_mod,        only: swap_init, swap_run_step, swap_close
+   use swap_mod,        only: swap_init, swap_run_step, swap_close, swap_init_from_loaded_config
    use swap_state_mod,  only: swap_state_t
    use swap_config_mod, only: swap_config_t
    use load_swap_config_string_mod, only: load_swap_config_from_string
@@ -62,11 +62,7 @@ contains
          return
       end if
 
-      ! NOTE: this calls swap_init which reads 'swap.toml' from disk in
-      ! its current form. Task 18 introduces swap_init_from_loaded_config
-      ! to skip the file read and consume the already-loaded capi_config.
-      ! For Task 17, use a placeholder call: do nothing past validation.
-      ! Task 18 wires the real init.
+      call swap_init_from_loaded_config(capi_state, capi_config)
       ierr = 0
    end function swap_initialize_from_toml_string
 
