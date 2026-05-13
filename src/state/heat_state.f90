@@ -24,6 +24,7 @@
 
 module heat_state_mod
    use, intrinsic :: iso_fortran_env, only: real64
+   use iso_c_binding, only: c_double
    implicit none
    private
    public :: heat_state_t
@@ -47,6 +48,12 @@ module heat_state_mod
       real(real64) :: zfrostbot  = 0.0_real64  !! depth of bottom of frozen layer (L)
       real(real64) :: zfrosttop  = 0.0_real64  !! depth of top of frozen layer (L)
       integer      :: nodfrostbot = 0           !! node number of deepest frozen node
+
+      !> [SS-BMI2] Temperature output row buffer (outtem).
+      !! Sized to 4 + numnod columns: date, daynr, daycum, tav, tetop, T(1..numnod), tebot.
+      real(c_double),    allocatable :: output_row(:)
+      character(len=32), allocatable :: output_columns(:)
+      integer                        :: output_n_cols = 0
 
    end type heat_state_t
 

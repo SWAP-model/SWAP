@@ -1030,6 +1030,7 @@
 ! ----------------------------------------------------------------------
 !     Date               : November 2004
 !     Purpose            : open and write soil temperature output files
+! [SS-BMI2] inout: init/cleanup of heat output_row buffer
 ! ----------------------------------------------------------------------
 
 ! --- global variables ------------------
@@ -1038,7 +1039,8 @@
 
       implicit none
       integer task
-      type(swap_state_t), intent(in) :: state
+      ! [SS-BMI2] inout: init/cleanup of heat output_row buffer
+      type(swap_state_t), intent(inout) :: state
 
 
       select case (task)
@@ -1047,6 +1049,9 @@
 ! === open output files and write headers ===============================
 
 ! ADR 0009 Phase 5+: outheapar deleted (swini=0).
+
+      ! [SS-BMI2] allocate heat output row buffer (builder always runs)
+      call init_temperature_output_buffer(state)
 
 ! --  tem file
       if (swtem .eq. 1) call outtem (task, state)
@@ -1067,7 +1072,13 @@
 ! === close output files ===========================
 
 ! --- close tem file
-      if (swtem .eq. 1) close (tem)
+      if (swtem .eq. 1) then
+         ! [SS-BMI2] headless guard: .tem file was only opened when not headless
+         if (.not. state%timecontrol%headless) close (tem)
+      end if
+
+      ! [SS-BMI2] deallocate heat output row buffer
+      call cleanup_temperature_output_buffer(state)
 
       case default
          call fatalerr_collected ('TemperatureOutput', 'Illegal value for Task')
@@ -1087,6 +1098,7 @@
 ! ----------------------------------------------------------------------
 !     date               : November 2004
 !     purpose            : Output of soil temperatures
+! [SS-BMI2] inout: build_temperature_output_row writes to state%heat%output_row
 ! ---------------------------------------------------------------------
       ! SS-HEAT Phase 1 Task 5: tsoil, tebot, tetop migrated to state%heat.
       ! SS-TC TC-7: date,daynr,daycum,flheader removed from only-list; reads via state%timecontrol.
@@ -1096,7 +1108,8 @@
 
 ! --- global
       integer   task
-      type(swap_state_t), intent(in) :: state
+      ! [SS-BMI2] inout: build_temperature_output_row writes to state%heat%output_row
+      type(swap_state_t), intent(inout) :: state
 
 ! --- local variables ------------------
       integer      i, reclngth
@@ -1109,20 +1122,28 @@
       select case (task)
       case (1)
 
-! === open output file =================================================
-      filnam = trim(pathwork)//trim(outfil)//'.tem'
-!      reclngth = 36 + 7*numnod
-      reclngth = 50 + 7*numnod
-      open(newunit=tem,file=filnam,status='unknown',recl=reclngth)
-      filtext = 'soil temperature profiles (oC)'
-      call writehead (tem,1,filnam,filtext,project)
+! === open output file (headless: skip file I/O) ======================
+      if (.not. state%timecontrol%headless) then
+         filnam = trim(pathwork)//trim(outfil)//'.tem'
+!         reclngth = 36 + 7*numnod
+         reclngth = 50 + 7*numnod
+         open(newunit=tem,file=filnam,status='unknown',recl=reclngth)
+         filtext = 'soil temperature profiles (oC)'
+         call writehead (tem,1,filnam,filtext,project)
 
 ! --- write header
-      if (numnod.le.9) then
-         write (tem,10) (i,i=1,numnod)
-      else
-         write (tem,11) (i,i=1,9), (i,i=10,numnod)
-      endif
+         if (numnod.le.9) then
+            write (tem,10) (i,i=1,numnod)
+         else
+            write (tem,11) (i,i=1,9), (i,i=10,numnod)
+         endif
+
+         ! SS-TC TC-7: daynr,daycum -> state%timecontrol (direct, case(1) only line).
+         write (tem,'(a11,a1,i3,a1,i6,1024(a1,f6.1:))') '    Initial'      &
+     &         ,comma,state%timecontrol%daynr,comma,state%timecontrol%daycum, &
+     &         comma,tav,comma,state%heat%tetop,                              &
+     &         (comma,state%heat%tsoil(i),i=1,numnod),comma,state%heat%tebot
+      end if
 
  10   format('*',/,                                                     &
      & t8,'Date,Day,Daycum,   Tav, Tetop',9(',    T',i1),               &
@@ -1132,37 +1153,32 @@
      & t8,'Date,Day,Daycum,   Tav, Tetop',9(',    T',i1),               &
      &1024(',   T',i2),', TeBot')
 
-      ! SS-TC TC-7: daynr,daycum -> state%timecontrol (direct, case(1) only line).
-      write (tem,'(a11,a1,i3,a1,i6,1024(a1,f6.1:))') '    Initial'      &
-     &      ,comma,state%timecontrol%daynr,comma,state%timecontrol%daycum, &
-     &      comma,tav,comma,state%heat%tetop,                              &
-     &      (comma,state%heat%tsoil(i),i=1,numnod),comma,state%heat%tebot
-
       return
 
       case (2)
 
 ! === write actual soil temperature data ================================
 
-      ! SS-TC TC-7: flheader,date,daynr,daycum -> state%timecontrol tc_* aliases.
-      associate( &
-        tc_flheader => state%timecontrol%flheader,  &  ! TC-7
-        tc_date     => state%timecontrol%date,      &  ! TC-7
-        tc_daynr    => state%timecontrol%daynr,     &  ! TC-7
-        tc_daycum   => state%timecontrol%daycum     &  ! TC-7
-      )
+      ! [SS-BMI2] build output row buffer (always runs, headless-independent)
+      call build_temperature_output_row(state)
+
+      if (.not. state%timecontrol%headless) then
+         ! SS-TC TC-7: flheader,date,daynr,daycum -> state%timecontrol tc_* aliases.
+         associate( &
+           tc_flheader => state%timecontrol%flheader,  &  ! TC-7
+           tc_date     => state%timecontrol%date,      &  ! TC-7
+           tc_daynr    => state%timecontrol%daynr,     &  ! TC-7
+           tc_daycum   => state%timecontrol%daycum     &  ! TC-7
+         )
 ! --- write header in case of new balance period
-      if (tc_flheader) write (tem,10)
+         if (tc_flheader) write (tem,10)
 
 ! --- write soil temperature profile
-!     PWB: idem
-!      write (tem,'(a11,a1,i3,a1,i6,<numnod+3>(a1,f6.1:))') date
-!     &      ,comma,daynr,comma,daycum,comma,tav,comma,state%heat%tetop,
-!     &      (comma,state%heat%tsoil(i),i=1,numnod),comma,state%heat%tebot
-      write (tem,'(a11,a1,i3,a1,i6,1024(a1,f6.1:))') tc_date             &
-     &      ,comma,tc_daynr,comma,tc_daycum,comma,tav,comma,state%heat%tetop, &
-     &      (comma,state%heat%tsoil(i),i=1,numnod),comma,state%heat%tebot
-      end associate  ! tc_flheader, tc_date, tc_daynr, tc_daycum (TC-7)
+         write (tem,'(a11,a1,i3,a1,i6,1024(a1,f6.1:))') tc_date             &
+     &         ,comma,tc_daynr,comma,tc_daycum,comma,tav,comma,state%heat%tetop, &
+     &         (comma,state%heat%tsoil(i),i=1,numnod),comma,state%heat%tebot
+         end associate  ! tc_flheader, tc_date, tc_daynr, tc_daycum (TC-7)
+      end if
 
       case default
          call fatalerr_collected ('outtem', 'Illegal value for Task')
@@ -1170,6 +1186,84 @@
 
       return
       end
+
+
+! ----------------------------------------------------------------------
+! [SS-BMI2] Temperature output buffer helpers (canonical output-sink pattern)
+! Mirror of water_balance buffer helpers in swapoutput.f90 (Task 8).
+! N_COLS = numnod + 5: t1900, daynr, daycum, tav, tetop, T(1..numnod), tebot
+! ----------------------------------------------------------------------
+
+      subroutine init_temperature_output_buffer(state)
+! ----------------------------------------------------------------------
+!     Allocate state%heat%output_row and set column names.
+!     Called from TemperatureOutput(1) — always runs, headless-independent.
+!     N = numnod + 5: t1900(date), daynr, daycum, tav, tetop, T(1..numnod), tebot
+! ----------------------------------------------------------------------
+      use swap_state_mod, only: swap_state_t
+      use variables,      only: numnod
+      use iso_c_binding,  only: c_double
+      implicit none
+      type(swap_state_t), intent(inout) :: state
+      integer :: i, N
+      character(len=32) :: colname
+
+      N = numnod + 5
+      state%heat%output_n_cols = N
+      if (.not. allocated(state%heat%output_row))     allocate(state%heat%output_row(N))
+      if (.not. allocated(state%heat%output_columns)) allocate(state%heat%output_columns(N))
+      state%heat%output_row     = 0.0_c_double
+      state%heat%output_columns(1) = 'date'
+      state%heat%output_columns(2) = 'daynr'
+      state%heat%output_columns(3) = 'daycum'
+      state%heat%output_columns(4) = 'tav'
+      state%heat%output_columns(5) = 'tetop'
+      do i = 1, numnod
+         write(colname,'(a,i0)') 'T', i
+         state%heat%output_columns(5 + i) = colname
+      end do
+      state%heat%output_columns(N) = 'tebot'
+      end subroutine init_temperature_output_buffer
+
+
+      subroutine build_temperature_output_row(state)
+! ----------------------------------------------------------------------
+!     Fill state%heat%output_row(:) with the current temperature values.
+!     Called from outtem(2) — always runs, headless-independent.
+!     Column order: t1900, daynr, daycum, tav, tetop, T(1..numnod), tebot.
+! ----------------------------------------------------------------------
+      use swap_state_mod, only: swap_state_t
+      use variables,      only: numnod, tav
+      use iso_c_binding,  only: c_double
+      implicit none
+      type(swap_state_t), intent(inout) :: state
+      integer :: i
+
+      state%heat%output_row(1) = real(state%timecontrol%t1900,  c_double)  ! date
+      state%heat%output_row(2) = real(state%timecontrol%daynr,  c_double)  ! day of year
+      state%heat%output_row(3) = real(state%timecontrol%daycum, c_double)  ! cumulative day
+      state%heat%output_row(4) = real(tav,                       c_double)  ! average temperature
+      state%heat%output_row(5) = real(state%heat%tetop,          c_double)  ! top boundary temp
+      do i = 1, numnod
+         state%heat%output_row(5 + i) = real(state%heat%tsoil(i), c_double)
+      end do
+      state%heat%output_row(state%heat%output_n_cols) = real(state%heat%tebot, c_double)
+      end subroutine build_temperature_output_row
+
+
+      subroutine cleanup_temperature_output_buffer(state)
+! ----------------------------------------------------------------------
+!     Deallocate state%heat%output_row and reset counter.
+!     Called from TemperatureOutput(3) — always runs, headless-independent.
+! ----------------------------------------------------------------------
+      use swap_state_mod, only: swap_state_t
+      implicit none
+      type(swap_state_t), intent(inout) :: state
+
+      if (allocated(state%heat%output_row))     deallocate(state%heat%output_row)
+      if (allocated(state%heat%output_columns)) deallocate(state%heat%output_columns)
+      state%heat%output_n_cols = 0
+      end subroutine cleanup_temperature_output_buffer
 
 
 ! ----------------------------------------------------------------------
