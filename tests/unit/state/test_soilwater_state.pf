@@ -470,7 +470,7 @@ subroutine test_swcore_flat_arrays_not_allocated()
    @assertFalse(allocated(sw%k))
    @assertFalse(allocated(sw%kmean))
    @assertFalse(allocated(sw%dimoca))
-   @assertFalse(allocated(sw%cofgen))
+   @assertFalse(allocated(sw%vg_params))
    @assertFalse(allocated(sw%FrArMtrx))
    @assertFalse(allocated(sw%fluseksatexm))
    @assertFalse(allocated(sw%indeks))
@@ -989,8 +989,8 @@ subroutine test_swcore_init_allocates_flux_arrays_numnod_plus1()
 end subroutine test_swcore_init_allocates_flux_arrays_numnod_plus1
 
 @test
-subroutine test_swcore_init_allocates_cofgen_and_thetsl()
-   ! cofgen(21, numnod) — Mualem-VG parameters.
+subroutine test_swcore_init_allocates_vg_params_and_thetsl()
+   ! vg_params(numnod) — typed Mualem-VG parameters (replaces legacy cofgen).  [SS-GR-UTILS Task 15]
    ! thetsl(nlay) — saturated water content per soil layer.
    use funit
    use iso_fortran_env, only: real64
@@ -1000,12 +1000,11 @@ subroutine test_swcore_init_allocates_cofgen_and_thetsl()
 
    call soilwater_init(sw, n, nl)
 
-   @assertTrue(allocated(sw%cofgen))
+   @assertTrue(allocated(sw%vg_params))
    @assertTrue(allocated(sw%thetsl))
-   @assertEqual(21, size(sw%cofgen, 1))
-   @assertEqual(n,  size(sw%cofgen, 2))
+   @assertEqual(n,  size(sw%vg_params))
    @assertEqual(nl, size(sw%thetsl))
-end subroutine test_swcore_init_allocates_cofgen_and_thetsl
+end subroutine test_swcore_init_allocates_vg_params_and_thetsl
 
 @test
 subroutine test_swcore_init_flat_arrays_zeroed()
@@ -1039,8 +1038,7 @@ subroutine test_swcore_init_flat_arrays_zeroed()
    @assertEqual(0.0_real64, maxval(abs(sw%k)),     1.0e-12_real64)
    @assertEqual(0.0_real64, maxval(abs(sw%kmean)), 1.0e-12_real64)
 
-   ! cofgen and thetsl
-   @assertEqual(0.0_real64, maxval(abs(sw%cofgen)), 1.0e-12_real64)
+   ! thetsl (cofgen retired — vg_params components default-init to 0.0 from type)  [SS-GR-UTILS Task 15]
    @assertEqual(0.0_real64, maxval(abs(sw%thetsl)), 1.0e-12_real64)
 end subroutine test_swcore_init_flat_arrays_zeroed
 
@@ -1129,23 +1127,21 @@ subroutine test_swcore_init_different_sizes_core()
    call soilwater_init(sw1, n1, nl1)
    call soilwater_init(sw2, n2, nl2)
 
-   ! sw1 shapes
+   ! sw1 shapes  [SS-GR-UTILS Task 15] cofgen retired; vg_params replaces it
    @assertEqual(n1,    size(sw1%theta))
    @assertEqual(n1+1,  size(sw1%q))
    @assertEqual(n1+1,  size(sw1%kmean))
-   @assertEqual(21,    size(sw1%cofgen, 1))
-   @assertEqual(n1,    size(sw1%cofgen, 2))
+   @assertEqual(n1,    size(sw1%vg_params))
    @assertEqual(nl1,   size(sw1%thetsl))
    @assertEqual(n1+1,  size(sw1%inq))
    @assertEqual(n1,    size(sw1%inqrot))
    @assertEqual(n1,    size(sw1%qpotrot_day))
 
-   ! sw2 shapes
+   ! sw2 shapes  [SS-GR-UTILS Task 15] cofgen retired; vg_params replaces it
    @assertEqual(n2,    size(sw2%theta))
    @assertEqual(n2+1,  size(sw2%q))
    @assertEqual(n2+1,  size(sw2%kmean))
-   @assertEqual(21,    size(sw2%cofgen, 1))
-   @assertEqual(n2,    size(sw2%cofgen, 2))
+   @assertEqual(n2,    size(sw2%vg_params))
    @assertEqual(nl2,   size(sw2%thetsl))
    @assertEqual(n2+1,  size(sw2%inq))
    @assertEqual(n2,    size(sw2%inqrot))

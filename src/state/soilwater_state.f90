@@ -138,7 +138,6 @@ module soilwater_state_mod
       real(real64), allocatable :: k(:)            !< hydraulic conductivity per node (cm/d)
       real(real64), allocatable :: kmean(:)        !< mean K at node interface (cm/d)
       real(real64), allocatable :: dimoca(:)       !< differential moisture capacity per node (1/cm)
-      real(real64), allocatable :: cofgen(:,:)     !< Mualem-VG parameters (21 × numnod)
       type(vanGenuchten_params_t), allocatable :: vg_params(:)   !< [SS-GR-UTILS] typed VG parameters, one per node
 
       ! [SS-GR-UTILS] Soil hydraulic property metadata (migrated from variables.f90).
@@ -379,8 +378,6 @@ contains
       allocate(sw%k(numnod+1));          sw%k            = 0.0_real64
       allocate(sw%kmean(numnod+1));      sw%kmean        = 0.0_real64
 
-      ! 2D parameter array: cofgen(21, numnod) — legacy cofgen(21, macp)
-      allocate(sw%cofgen(21, numnod));   sw%cofgen       = 0.0_real64
       allocate(sw%vg_params(numnod))    ! [SS-GR-UTILS] components default-init from type
 
       ! [SS-GR-UTILS] Soil hydraulic property metadata (Task 4)

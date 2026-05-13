@@ -140,9 +140,9 @@ contains
                 end do
                 nodnumgwl = node
                 satnodgwl = gwlmean - zbotcp(nodnumgwl)
-                cvalprof = satnodgwl/state%soilwater%cofgen(3, nodnumgwl)     ! [SS-SWC S-2.5]
+                cvalprof = satnodgwl/state%soilwater%vg_params(nodnumgwl)%ksat     ! [SS-GR-UTILS Task 15]
                 do node = nodnumgwl + 1, numnod
-                    cvalprof = cvalprof + dz(node)/state%soilwater%cofgen(3, node)  ! [SS-SWC S-2.5]
+                    cvalprof = cvalprof + dz(node)/state%soilwater%vg_params(node)%ksat  ! [SS-GR-UTILS Task 15]
                 end do
             elseif (SwBotb3ResVert .eq. 1) then
                 cvalprof = 0.0d0

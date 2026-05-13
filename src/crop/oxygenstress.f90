@@ -197,11 +197,11 @@ contains
 ! --- set soil density [kg m-3]      
       soil_density = bdens(lay) 
 ! --- set parameter n of soil hydraulic functions
-      gen_n = state%soilwater%cofgen(6,node)          ! [SS-SWC S-2.7]
+      gen_n = state%soilwater%vg_params(node)%npar          ! [SS-GR-UTILS Task 15]
 ! --- set saturated water content [-]
-      sat_water_cont = state%soilwater%cofgen(2,node) ! [SS-SWC S-2.7]
+      sat_water_cont = state%soilwater%vg_params(node)%thetas ! [SS-GR-UTILS Task 15]
 ! --- set parameter alpha [1/Pa] of soil hydraulic functions, so divide main swap alpha by 100     ## MH: =0.01*
-      alpha = 0.01d0*state%soilwater%cofgen(4,node)   ! [SS-SWC S-2.7]
+      alpha = 0.01d0*state%soilwater%vg_params(node)%alpha   ! [SS-GR-UTILS Task 15]
 ! --- set percentage organic matter [%]
       perc_org_mat = orgmat(lay)*100.0d0 
 ! --- set percentage sand in % of total soil            
@@ -385,21 +385,18 @@ contains
                                 state%soilwater%vg_params(i), &
                                 state%soilwater%iHWCKmodel(state%soilwater%layer(i)), &
                                 i, state%soilwater)               ! [SS-GR-UTILS Task 5]
-      sat_water_cont  = state%soilwater%cofgen(2,i)                                                   ! [SS-SWC S-2.7]
+      sat_water_cont  = state%soilwater%vg_params(i)%thetas                                           ! [SS-GR-UTILS Task 15]
       gfp100(i)       = sat_water_cont - theta100
       campbell_b      = (log10h500-log10h100) / (dlog10(theta100)-dlog10(theta500))
       d_soil_term1(i) = 2.0d0*(gfp100(i)**3)+0.04d0*gfp100(i)
       d_soil_term2(i) = 2.0d0+3.0d0/campbell_b
-!     for use in FUNC
-!     cofgen(x,i): x = 1...12
-!     1 = thetar; 2 = thetas, 3 = Ksatfit; 4 = alpha; 5 = lambda; 6 = n; 7 = m (=1-1/n);
-!     8 = dummy; 9 = h_enpr; 10 = Ksatexm; 11 = relsatthr; 12 = Ksatthr
+!     for use in FUNC — vg_params fields: thetar, thetas, ksat, alpha, lpar, npar, mpar, ...
 !     Calculate (sat_water_cont - res_water_cont) * alpha * gen_m * gen_n
-      Capac_term(i)   = (state%soilwater%cofgen(2,i) - state%soilwater%cofgen(1,i)) * &  ! [SS-SWC S-2.7]
-     &                  0.01d0*state%soilwater%cofgen(4,i) *                           &  ! [SS-SWC S-2.7]
-     &                  state%soilwater%cofgen(6,i) * state%soilwater%cofgen(7,i)         ! [SS-SWC S-2.7]
-      Nmin1(i)        = state%soilwater%cofgen(6,i) - 1.0d0                              ! [SS-SWC S-2.7]
-      Mplus1(i)       = state%soilwater%cofgen(7,i) + 1.0d0                              ! [SS-SWC S-2.7]
+      Capac_term(i)   = (state%soilwater%vg_params(i)%thetas - state%soilwater%vg_params(i)%thetar) * &  ! [SS-GR-UTILS Task 15]
+     &                  0.01d0*state%soilwater%vg_params(i)%alpha *                                   &  ! [SS-GR-UTILS Task 15]
+     &                  state%soilwater%vg_params(i)%npar * state%soilwater%vg_params(i)%mpar            ! [SS-GR-UTILS Task 15]
+      Nmin1(i)        = state%soilwater%vg_params(i)%npar - 1.0d0                                        ! [SS-GR-UTILS Task 15]
+      Mplus1(i)       = state%soilwater%vg_params(i)%mpar + 1.0d0                                        ! [SS-GR-UTILS Task 15]
    end do
 ! --- microbial respiration calculated from organic matter content in actual soil compartment; keep this value fixed
    shape_factor_microbialr = 0.9d0 

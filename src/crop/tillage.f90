@@ -183,10 +183,20 @@ module tillage_mod
             call DTDPST ("YEAR-MONTHST-DAY", state%timecontrol%t1900, STRNG)  ! TC-12
             write (222,'(A,F15.5,10(I3,F15.5))') trim(state%timecontrol%date), state%atmosphere%nraida, (i, Bdens(i), i = 1, state%tillage%MaxNumSoilHo)
             write (224,'(A,10F15.5)') trim(state%timecontrol%date), state%soilwater%theta(5), state%soilwater%theta(10), state%soilwater%theta(20), state%soilwater%theta(27), state%soilwater%theta(35), state%atmosphere%nraida, state%tillage%sumDWC, state%tillage%sumAvail1, state%tillage%sumAvail2  ! [SS-SWC S-2.6]
-            write (226,'(A,10F15.5)') trim(state%timecontrol%date), (state%soilwater%cofgen(i,1), i = 1, 10)  ! [SS-SWC S-2.6]
+            write (226,'(A,10F15.5)') trim(state%timecontrol%date), &  ! [SS-GR-UTILS Task 15]
+     &         state%soilwater%vg_params(1)%thetar, state%soilwater%vg_params(1)%thetas, &
+     &         state%soilwater%vg_params(1)%ksat,   state%soilwater%vg_params(1)%alpha,  &
+     &         state%soilwater%vg_params(1)%lpar,   state%soilwater%vg_params(1)%npar,   &
+     &         state%soilwater%vg_params(1)%mpar,   state%soilwater%vg_params(1)%alphaw_sentinel, &
+     &         state%soilwater%vg_params(1)%h_enpr, state%soilwater%vg_params(1)%ksatexm
          end if
          write (222,'(A,F15.5,10(I3,F15.5))') trim(state%timecontrol%date), state%atmosphere%nraida, (i, Bdens(i), i = 1, state%tillage%MaxNumSoilHo)
-         write (226,'(A,10F15.5)') trim(state%timecontrol%date), (state%soilwater%cofgen(i,1), i = 1, 10)  ! [SS-SWC S-2.6]
+         write (226,'(A,10F15.5)') trim(state%timecontrol%date), &  ! [SS-GR-UTILS Task 15]
+     &      state%soilwater%vg_params(1)%thetar, state%soilwater%vg_params(1)%thetas, &
+     &      state%soilwater%vg_params(1)%ksat,   state%soilwater%vg_params(1)%alpha,  &
+     &      state%soilwater%vg_params(1)%lpar,   state%soilwater%vg_params(1)%npar,   &
+     &      state%soilwater%vg_params(1)%mpar,   state%soilwater%vg_params(1)%alphaw_sentinel, &
+     &      state%soilwater%vg_params(1)%h_enpr, state%soilwater%vg_params(1)%ksatexm
       end if
 
    case (4)
@@ -248,13 +258,20 @@ module tillage_mod
       !ParamVG(10,i) = ParamVG(10,i)
    end do
 
-   ! Second: fill COFGEN
+   ! Second: update vg_params (first 10 fields, indices 1-10; index 8 is sentinel, not a real paramvg slot)
    do node = 1, tl%MaxNumSoilCP
       lay = layer(node)
-      state%soilwater%cofgen(1:10,node) = ParamVG(1:10,lay)  ! [SS-SWC S-2.6] legacy CofGen write dropped
-      ! CofGen(11) and CofGen(12) are not used and not need to be changed
-      !CofGen(11,node) = relsatthr(lay)
-      !CofGen(12,node) = ksatthr(lay)
+      state%soilwater%vg_params(node)%thetar          = ParamVG(1, lay)  ! [SS-GR-UTILS Task 15]
+      state%soilwater%vg_params(node)%thetas          = ParamVG(2, lay)  ! [SS-GR-UTILS Task 15]
+      state%soilwater%vg_params(node)%ksat            = ParamVG(3, lay)  ! [SS-GR-UTILS Task 15]
+      state%soilwater%vg_params(node)%alpha           = ParamVG(4, lay)  ! [SS-GR-UTILS Task 15]
+      state%soilwater%vg_params(node)%lpar            = ParamVG(5, lay)  ! [SS-GR-UTILS Task 15]
+      state%soilwater%vg_params(node)%npar            = ParamVG(6, lay)  ! [SS-GR-UTILS Task 15]
+      state%soilwater%vg_params(node)%mpar            = ParamVG(7, lay)  ! [SS-GR-UTILS Task 15]
+      ! ParamVG(8) is alphaw_sentinel — keep existing sentinel value, not re-read from paramvg
+      state%soilwater%vg_params(node)%h_enpr          = ParamVG(9, lay)  ! [SS-GR-UTILS Task 15]
+      state%soilwater%vg_params(node)%ksatexm         = ParamVG(10, lay) ! [SS-GR-UTILS Task 15]
+      ! relsatthr (index 11) and ksatthr (index 12) are not changed by tillage
    end do
    end associate
    !!!thetsl(1:numlay) = ParamVG(2,1:numlay)

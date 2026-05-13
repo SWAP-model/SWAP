@@ -85,7 +85,6 @@ contains
          sw_thetm1      => state%soilwater%thetm1,   &  ! [SS-SWC S-2.3] reader cutover
          sw_hm1         => state%soilwater%hm1,      &  ! [SS-SWC S-2.3] reader cutover
          sw_FrArMtrx    => state%soilwater%FrArMtrx, &  ! [SS-SWC S-2.3] reader cutover
-         sw_cofgen      => state%soilwater%cofgen,   &  ! [SS-SWC S-2.3] reader cutover
          sw_nodgwl      => state%soilwater%nodgwl,   &  ! [SS-SWC S-2.3] reader cutover
          sw_evp         => state%soilwater%evp,      &  ! [SS-SWC S-2.3] reader cutover
          sw_gwlm1       => state%soilwater%gwlm1,    &  ! [SS-SWC S-2.3] reader cutover
@@ -274,7 +273,7 @@ contains
                               state%soilwater%iHWCKmodel(state%soilwater%layer(NN)), &
                               state%soilwater%fluseksatexm(NN), &
                               NN, state%soilwater)                             ! [SS-GR-UTILS Task 6]
-         sw_kmean(NN+1) = hcomean(swkmean,sw_k(NN),sw_cofgen(3,(NN+1)),       &  ! [SS-SWC S-2.3]
+         sw_kmean(NN+1) = hcomean(swkmean,sw_k(NN),state%soilwater%vg_params(NN+1)%ksat, &  ! [SS-GR-UTILS Task 15]
      &                        dz(NN),dz(NN+1))
          F(NN) = (sw_theta(NN) - sw_thetm1(NN))*sw_FrArMtrx(NN)*dz(NN)/tc_dt +      &  ! [SS-SWC S-2.3] [TC-8]
      &           sink(NN)-source(NN)+state%soilwater%qrot(NN)-sw_kmean(NN)*hgrad(NN) +sw_kmean(NN+1)*hgrad(NN+1)
@@ -567,7 +566,7 @@ contains
                                       state%soilwater%fluseksatexm(NN), &
                                       NN, state%soilwater)                     ! [SS-GR-UTILS Task 6]
                sw_k(NN) = sw_k(NN)                                 ! [SS-SWC S-1.4b]
-               sw_kmean(NN+1) = hcomean(swkmean,sw_k(NN),sw_cofgen(3,(NN+1)) &  ! [SS-SWC S-2.3]
+               sw_kmean(NN+1) = hcomean(swkmean,sw_k(NN),state%soilwater%vg_params(NN+1)%ksat &  ! [SS-GR-UTILS Task 15]
      &                       ,dz(NN),dz(NN+1))
                sw_kmean(NN+1) = sw_kmean(NN+1)                     ! [SS-SWC S-1.4b]
                F(NN) = (sw_theta(NN) - sw_thetm1(NN))*sw_FrArMtrx(NN)*dz(NN)/tc_dt  &  ! [SS-SWC S-2.3] [TC-8]
@@ -701,7 +700,7 @@ contains
                ! system
                qv(1) = state%soilwater%qtop
                do i=NN+1,numnod
-                  sw_theta(i) = sw_cofgen(2,i)                     ! [SS-SWC S-2.3]
+                  sw_theta(i) = state%soilwater%vg_params(i)%thetas ! [SS-GR-UTILS Task 15]
                   sw_theta(i) = sw_theta(i)                        ! [SS-SWC S-1.4a]
                end do
                do i=1,numnod
@@ -877,8 +876,6 @@ contains
       cQMpLatSs = 0.0d0
 
       ! Soil physics: tabulated or MualemVanGenuchten functions
-      sw%cofgen = 0.0_real64                               ! [SS-SWC S-1.3/S-2.12B]
-
       ! [SS-GR-UTILS Task 4] Mirror layer + iHWCKmodel into state (both branches).
       ! layer(:) set by CalcGrid; iHWCKmodel(:) set by config_to_variables.
       ! State fields allocated by soilwater_init which ran before SoilHydraulics(1).
@@ -904,15 +901,11 @@ contains
               sptab(i,node,j) = sptablay(i,layer(node),j)
             end do
           end do
-          ! Assign values to cofgen — [SS-SWC S-2.12B] legacy half-writes dropped
-          sw%cofgen(1,node) = 0.0_real64                  ! thetar
-          sw%cofgen(2,node) = sptab(2,node,numtab(node))  ! thetas
-          sw%cofgen(3,node) = sptab(3,node,numtab(node))  ! ksat
-          if (do_ln_trans) sw%cofgen(3,node) = dexp(sw%cofgen(3,node))
-          ! [SS-GR-UTILS] Mirror tabulated cofgen writes into typed vg_params
-          sw%vg_params(node)%thetar = sw%cofgen(1,node)
-          sw%vg_params(node)%thetas = sw%cofgen(2,node)
-          sw%vg_params(node)%ksat   = sw%cofgen(3,node)
+          ! Populate vg_params directly — [SS-GR-UTILS Task 15] cofgen removed
+          sw%vg_params(node)%thetar = 0.0_real64
+          sw%vg_params(node)%thetas = sptab(2, node, numtab(node))
+          sw%vg_params(node)%ksat   = sptab(3, node, numtab(node))
+          if (do_ln_trans) sw%vg_params(node)%ksat = dexp(sw%vg_params(node)%ksat)
           ! [SS-GR-UTILS Task 4] Mirror numtab/ientrytab/sptab into state (swsophy=1 only).
           sw%numtab(node) = numtab(node)
           do i = 0, matabentries
@@ -932,47 +925,38 @@ contains
          ! MvanG functions
          do node = 1,numnod
           lay = layer(node)
-          do i = 1, 10
-            sw%cofgen(i,node) = paramvg(i,lay)            ! [SS-SWC S-1.3/S-2.12B]
-          end do
-          ! Assign dummy value to alphaw
-          sw%cofgen(8,node) = -9999.9d0                   ! [SS-SWC S-1.3/S-2.12B]
-          if (sw%vg_params(node)%ksatexm > 0.0d0) sw%fluseksatexm(node) = .true.  ! [SS-SWC S-2.12B]
-          sw%cofgen(11,node) = relsatthr(lay)             ! [SS-SWC S-1.3/S-2.12B]
-          sw%cofgen(12,node) = ksatthr(lay)               ! [SS-SWC S-1.3/S-2.12B]
+          ! Populate vg_params directly — [SS-GR-UTILS Task 15] cofgen removed
+          sw%vg_params(node)%thetar           = paramvg(1, lay)
+          sw%vg_params(node)%thetas           = paramvg(2, lay)
+          sw%vg_params(node)%ksat             = paramvg(3, lay)
+          sw%vg_params(node)%alpha            = paramvg(4, lay)
+          sw%vg_params(node)%lpar             = paramvg(5, lay)
+          sw%vg_params(node)%npar             = paramvg(6, lay)
+          sw%vg_params(node)%mpar             = paramvg(7, lay)
+          sw%vg_params(node)%alphaw_sentinel  = -9999.9_real64
+          sw%vg_params(node)%h_enpr           = paramvg(9, lay)
+          sw%vg_params(node)%ksatexm          = paramvg(10, lay)
+          if (sw%vg_params(node)%ksatexm > 0.0_real64) sw%fluseksatexm(node) = .true.
+          sw%vg_params(node)%relsatthr        = relsatthr(lay)
+          sw%vg_params(node)%ksatthr          = ksatthr(lay)
           if (iHWCKmodel(lay) ==  3 .OR. iHWCKmodel(lay) ==  6 .OR. iHWCKmodel(lay) ==  7 .OR. &
               iHWCKmodel(lay) == 10 .OR. iHWCKmodel(lay) == 11) then
-             sw%cofgen(13:17,node) = paramvg(13:17,lay)   ! [SS-SWC S-1.3/S-2.12B]
+             sw%vg_params(node)%alpha_2  = paramvg(13, lay)
+             sw%vg_params(node)%npar_2   = paramvg(14, lay)
+             sw%vg_params(node)%mpar_2   = paramvg(15, lay)
+             sw%vg_params(node)%omega_1  = paramvg(16, lay)
+             sw%vg_params(node)%omega_2  = paramvg(17, lay)
           end if
           if (iHWCKmodel(lay) ==  5 .OR. iHWCKmodel(lay) ==  7) then
-             sw%cofgen(18,node) = paramvg(18,lay)         ! [SS-SWC S-1.3/S-2.12B]
+             sw%vg_params(node)%h0 = paramvg(18, lay)
           end if
           if (iHWCKmodel(lay) ==  8 .OR. iHWCKmodel(lay) ==  9 .OR. &
               iHWCKmodel(lay) == 10 .OR. iHWCKmodel(lay) == 11) then
-             sw%cofgen(18:21,node) = paramvg(18:21,lay)   ! [SS-SWC S-1.3/S-2.12B]
+             sw%vg_params(node)%h0      = paramvg(18, lay)
+             sw%vg_params(node)%ha      = paramvg(19, lay)
+             sw%vg_params(node)%apar    = paramvg(20, lay)
+             sw%vg_params(node)%omega_k = paramvg(21, lay)
           end if
-          ! [SS-GR-UTILS] Mirror analytical cofgen writes into typed vg_params
-          sw%vg_params(node)%thetar          = sw%cofgen(1,node)
-          sw%vg_params(node)%thetas          = sw%cofgen(2,node)
-          sw%vg_params(node)%ksat            = sw%cofgen(3,node)
-          sw%vg_params(node)%alpha           = sw%cofgen(4,node)
-          sw%vg_params(node)%lpar            = sw%cofgen(5,node)
-          sw%vg_params(node)%npar            = sw%cofgen(6,node)
-          sw%vg_params(node)%mpar            = sw%cofgen(7,node)
-          sw%vg_params(node)%alphaw_sentinel = sw%cofgen(8,node)
-          sw%vg_params(node)%h_enpr          = sw%cofgen(9,node)
-          sw%vg_params(node)%ksatexm         = sw%cofgen(10,node)
-          sw%vg_params(node)%relsatthr       = sw%cofgen(11,node)
-          sw%vg_params(node)%ksatthr         = sw%cofgen(12,node)
-          sw%vg_params(node)%alpha_2         = sw%cofgen(13,node)
-          sw%vg_params(node)%npar_2          = sw%cofgen(14,node)
-          sw%vg_params(node)%mpar_2          = sw%cofgen(15,node)
-          sw%vg_params(node)%omega_1         = sw%cofgen(16,node)
-          sw%vg_params(node)%omega_2         = sw%cofgen(17,node)
-          sw%vg_params(node)%h0              = sw%cofgen(18,node)
-          sw%vg_params(node)%ha              = sw%cofgen(19,node)
-          sw%vg_params(node)%apar            = sw%cofgen(20,node)
-          sw%vg_params(node)%omega_k         = sw%cofgen(21,node)
         end do
         sw%thetsl = 0.0_real64                            ! [SS-SWC S-1.3/S-2.12B]
         do lay = 1, numlay
@@ -989,11 +973,11 @@ contains
         if (swhyst.eq.1) then
            ! Wetting curve
            sw%indeks(node) = 1                            ! [SS-SWC S-1.3/S-2.12B]
-           sw%cofgen(4,node) = paramvg(8,lay)             ! [SS-SWC S-1.3/S-2.12B]
+           sw%vg_params(node)%alpha = paramvg(8,lay)      ! [SS-GR-UTILS Task 15] hysteresis: wetting alpha
         elseif (swhyst.eq.0.or.swhyst.eq.2) then
            ! Drying branch or simulation without hysteresis
            sw%indeks(node) = -1                           ! [SS-SWC S-1.3/S-2.12B]
-           sw%cofgen(4,node) = paramvg(4,lay)             ! [SS-SWC S-1.3/S-2.12B]
+           sw%vg_params(node)%alpha = paramvg(4,lay)      ! [SS-GR-UTILS Task 15] hysteresis: drying alpha
         endif
       end do
 
@@ -1275,13 +1259,12 @@ contains
       real(8) thetar(macp),thetas(macp),alfamg(macp)
       type(vanGenuchten_params_t) :: vg_hys
 
-      ! [SS-SWC S-2.3] reader cutover: read h/hm1/theta/indeks/cofgen/dimoca from state
+      ! [SS-SWC S-2.3] reader cutover: read h/hm1/theta/indeks/dimoca from state
       associate( &
          sw_h      => state%soilwater%h,       &
          sw_hm1    => state%soilwater%hm1,     &
          sw_theta  => state%soilwater%theta,   &
          sw_indeks => state%soilwater%indeks,  &
-         sw_cofgen => state%soilwater%cofgen,  &
          sw_dimoca => state%soilwater%dimoca   &
       )
 
@@ -1325,12 +1308,12 @@ contains
             fvalue = thetar(node)
           if(thetar(node).lt.paramvg(1,lay)) thetar(node)=paramvg(1,lay)
           if(thetar(node).gt.paramvg(2,lay)) thetar(node)=paramvg(2,lay)
-          ! [SS-SWC S-2.12B] legacy cofgen/h half-writes dropped
-          state%soilwater%cofgen(4,node) = alfamg(node)         ! [SS-SWC S-1.4a/S-2.12B]
-          state%soilwater%cofgen(1,node) = thetar(node)         ! [SS-SWC S-1.4a/S-2.12B]
-          state%soilwater%thetar(node)   = thetar(node)         ! [SS-SWC S-1.4a]
-          state%soilwater%cofgen(2,node) = thetas(node)         ! [SS-SWC S-1.4a/S-2.12B]
-          state%soilwater%thetas(node)   = thetas(node)         ! [SS-SWC S-1.4a]
+          ! [SS-GR-UTILS Task 15] write directly to vg_params (cofgen retired)
+          state%soilwater%vg_params(node)%alpha  = alfamg(node)
+          state%soilwater%vg_params(node)%thetar = thetar(node)
+          state%soilwater%thetar(node)           = thetar(node) ! [SS-SWC S-1.4a]
+          state%soilwater%vg_params(node)%thetas = thetas(node)
+          state%soilwater%thetas(node)           = thetas(node) ! [SS-SWC S-1.4a]
           if (abs(fvalue-thetar(node)) .gt. 1.d-10) then
              ! Build vg with locally modified thetar/thetas/alpha for wetting branch  [SS-GR-UTILS Task 8]
              vg_hys         = state%soilwater%vg_params(node)
@@ -1351,12 +1334,12 @@ contains
             fvalue = thetas(node)
           if(thetas(node).lt.paramvg(1,lay)) thetas(node)=paramvg(1,lay)
           if(thetas(node).gt.paramvg(2,lay)) thetas(node)=paramvg(2,lay)
-          ! [SS-SWC S-2.12B] legacy cofgen/h half-writes dropped
-          state%soilwater%cofgen(4,node) = alfamg(node)         ! [SS-SWC S-1.4a/S-2.12B]
-          state%soilwater%cofgen(1,node) = thetar(node)         ! [SS-SWC S-1.4a/S-2.12B]
-          state%soilwater%thetar(node)   = thetar(node)         ! [SS-SWC S-1.4a]
-          state%soilwater%cofgen(2,node) = thetas(node)         ! [SS-SWC S-1.4a/S-2.12B]
-          state%soilwater%thetas(node)   = thetas(node)         ! [SS-SWC S-1.4a]
+          ! [SS-GR-UTILS Task 15] write directly to vg_params (cofgen retired)
+          state%soilwater%vg_params(node)%alpha  = alfamg(node)
+          state%soilwater%vg_params(node)%thetar = thetar(node)
+          state%soilwater%thetar(node)           = thetar(node) ! [SS-SWC S-1.4a]
+          state%soilwater%vg_params(node)%thetas = thetas(node)
+          state%soilwater%thetas(node)           = thetas(node) ! [SS-SWC S-1.4a]
           if (abs(fvalue-thetas(node)) .gt. 1.d-10) then
              ! Build vg with locally modified thetar/thetas/alpha for drying branch  [SS-GR-UTILS Task 8]
              vg_hys         = state%soilwater%vg_params(node)
