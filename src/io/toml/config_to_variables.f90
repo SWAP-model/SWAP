@@ -337,12 +337,8 @@ contains
          end if
       end if
 
-      ! Per-soil-physical-layer anisotropy ratio (legacy COFANI in .dra).
-      if (allocated(config%drain%cofani)) then
-         do i = 1, size(config%drain%cofani)
-            cofani(i) = config%drain%cofani(i)
-         end do
-      end if
+      ! [GR-BH Task 36] cofani global retired — precedence logic moved to swap_mod.f90
+      ! config%drain%cofani is consumed directly by swap_mod seeding block.
 
       if (allocated(config%drain%swdtyp)) then
          do i = 1, size(config%drain%swdtyp)
@@ -573,21 +569,15 @@ contains
             hcomp(i) = config%soil%hcomp(i)
          end do
       end if
-      if (allocated(config%soil%orgmat)) then
-         do i = 1, size(config%soil%orgmat)
-            orgmat(i) = config%soil%orgmat(i)
-         end do
-      end if
+      ! [GR-BH Task 36] orgmat global retired — seeded via state%soilwater%orgmat in swap_mod.f90
+      ! config%soil%orgmat is consumed directly by swap_mod seeding block.
       if (allocated(config%soil%bdens)) then
          do i = 1, size(config%soil%bdens)
             bdens(i) = config%soil%bdens(i)
          end do
       end if
-      if (allocated(config%soil%cofani)) then
-         do i = 1, size(config%soil%cofani)
-            cofani(i) = config%soil%cofani(i)
-         end do
-      end if
+      ! [GR-BH Task 36] cofani global retired — consumed via config%soil%cofani in swap_mod.f90
+      ! (soil.cofani overrides drain.cofani — precedence preserved in swap_mod seeding block)
 
       ! [soil.initial] CSV path for swinco=3 warm restart. The typed
       ! soil.initial schema + per-profile CSV companions are the only
@@ -947,19 +937,8 @@ contains
 
       ! psand/psilt/pclay: legacy global writes retired — state%soilwater%psand/psilt/pclay
       ! now sourced directly from config%heat in swap_mod.f90 [SS-GR-BH A6].
-      if (allocated(config%heat%porg)) then
-         ! [SS-HEAT] Task 9: forg global retired — temperature.f90 computes ht_forg from orgmat, not from global forg
-         ! Also populate orgmat (per-layer array, oxygenstress.f90:202 Bartholomeus).
-         ! ASCII readswap.f90:1062 sets it from the ORGMAT column. Without this,
-         ! orgmat stays at Initialize.f90:485 (all zeros) → zero microbial O2 demand
-         ! → wrong Bartholomeus O2 stress. Only backfill when caller didn't explicitly
-         ! supply [soil].orgmat.
-         if (.not. allocated(config%soil%orgmat)) then
-            do i = 1, min(size(config%heat%porg), size(orgmat))
-               orgmat(i) = config%heat%porg(i)
-            end do
-         end if
-      end if
+      ! [GR-BH Task 36] orgmat global retired — heat.porg→orgmat backfill now handled in
+      ! swap_mod.f90 seeding block (state%soilwater%orgmat). config%heat%porg consumed directly.
       ! Initial soil temperature table tsoil_init(:,1:2) — column 1 (depth)
       ! mirrors legacy `zh`, column 2 (temp) mirrors legacy `tsoil(1..nheat)`.
       ! `nheat` is the number of (depth, temp) pairs; it gates the afgen

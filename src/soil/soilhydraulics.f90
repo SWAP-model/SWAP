@@ -69,6 +69,9 @@ contains
       ! Function and solver variables
       integer indx(macp), ierror
       real(8) a(macp,3), a1(macp,1), b(macp), d, q1
+      ! [GR-BH Task 36] q0 and ArMpSs retired from variables.f90 — made local (ADR 0040 complete)
+      real(8) q0       ! surface flux for boundary (local; used only in swbotb=1 branch)
+      real(8) ArMpSs   ! macropore area fraction at soil surface (local; always 0.d0, ADR 0040)
       logical flok
 
       ! Note: flwarn_hc, iwarn_hc, nstep_hc moved to variables.f90 module
@@ -933,7 +936,7 @@ contains
           end do
         end do
         do lay = 1,numlay
-          ksatfit(lay) = sw%vg_params(nod1lay(lay))%ksat   ! [SS-SWC S-2.3]
+          sw%ksatfit(lay) = sw%vg_params(nod1lay(lay))%ksat   ! [SS-SWC S-2.3] [GR-BH Task 36] ksatfit global retired
           sw%thetsl(lay) = sw%vg_params(nod1lay(lay))%thetas  ! [SS-SWC S-1.3/S-2.12B]
         end do
       else

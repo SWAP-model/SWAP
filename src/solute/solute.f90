@@ -31,6 +31,8 @@ contains
       real(8) cdrtot,ctrans,crot,dispr,old,dummy,vpore
       real(8) isqdra,tab(mabbc*2)
       real(8) tcumsol
+      ! [GR-BH Task 36] ArMpSs retired from variables.f90 — local (always 0.d0, ADR 0040 complete)
+      real(8) ArMpSs
       logical differ
 !     work arrays for intermediate calculations (recomputed each timestep)
       real(8), dimension(macp) :: thetav, diffus, dispr1, vpore2, ddiffwcs, bdenskf, bdenskfcref, bdenskfsatporos, decpotfdepth

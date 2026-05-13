@@ -123,7 +123,8 @@ subroutine test_config_to_variables_soil_with_layer_arrays()
    use config_to_variables_mod, only: config_to_variables
    use swap_state_mod, only: swap_state_t
    ! [SS-SWC S-2.12B] pondini/pond retired from variables — buffered in config_to_variables_mod
-   use variables, only: swsophy, swhyst, swinco, gwli, pondmx, cofani
+   ! [GR-BH Task 36] cofani global retired — seeded via state%soilwater%cofani in swap_mod.f90
+   use variables, only: swsophy, swhyst, swinco, gwli, pondmx
    use config_to_variables_mod, only: pondini_init_buf, pond_init_buf
    implicit none
    type(swap_config_t) :: config
@@ -148,9 +149,8 @@ subroutine test_config_to_variables_soil_with_layer_arrays()
    ! legacy alias: pond <-> pondini, buffered for swap.f90 to seed state
    @assertEqual(0.5d0,    pond_init_buf)
    @assertEqual(1.0d0,    pondmx)
-   @assertEqual(1.5d0,    cofani(1))
-   @assertEqual(2.0d0,    cofani(2))
-   @assertEqual(2.5d0,    cofani(3))
+   ! [GR-BH Task 36] cofani global retired: config_to_variables no longer writes to bare global.
+   ! state%soilwater%cofani is seeded from config in swap_mod.f90 (swap_init_from_loaded_config).
 end subroutine test_config_to_variables_soil_with_layer_arrays
 
 

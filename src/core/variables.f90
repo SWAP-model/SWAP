@@ -669,7 +669,8 @@
       integer   iwarn_hc           ! Headcalc warning counter (previously SAVE variable)
       integer   nstep_hc           ! Headcalc step counter (previously SAVE variable)
       integer   dev_cmb            ! Mass balance deviation file unit (previously SAVE in checkmassbal)
-      logical   flksatexm          ! flag Ksatexm variable present in input file 
+      ! [GR-BH Task 36] retired 2026-05-13 — moved to state%soilwater%flksatexm (GR-BH arc)
+      ! logical   flksatexm          ! flag Ksatexm variable present in input file
       ! [SS-SWC] retired 2026-05-12 — moved to state%soilwater%fluseksatexm (ADR 0038)
       ! logical   fluseksatexm(macp) ! flag per node: yes/no make use of Ksatexm (Ksat examined in lab or field) extension in h-range [-2,0]
       ! [SS-BMI2 Task 5] retired 2026-05-13 — moved to state%timecontrol (ADR 0041)
@@ -679,9 +680,10 @@
       logical   swcaprise          ! flag to minimize cap.rise to rootzone (for experts only)
       logical   swcapriseoutput    ! flag to generate an output file with cap.rise to/form rootzone (for experts only)
 
-      real(8)   h0max
-      real(8)   k1max
-      real(8)   q0
+      ! [GR-BH Task 36] retired 2026-05-13 — moved to state%soilwater%H0max/k1max/q0 (GR-BH arc)
+      ! real(8)   h0max
+      ! real(8)   k1max
+      ! real(8)   q0
 
       integer   afo                ! Internal number of output file *.AFO with formatted hydrologic data for soil water quality models
       integer   aun                ! Internal number of output file *.AUN with unformatted hydrologic data for soil water quality models
@@ -739,7 +741,8 @@
       integer   swbal              ! Switch for output file with yearly water balance *.BAL: 0 = no; 1 = yes
       integer   swblc              ! Switch for output file with detailed yearly water balance *.BLC: 0 = no
       integer   swsba              ! Switch for output file with daily solute balance *.SBA: 0 = no; 1 = yes; 1 = yes
-      integer   swbotb             ! Switch for bottom boundary condition (see *.SWP input file for overview)
+      ! [GR-BH Task 36] retired 2026-05-13 — moved to state%soilwater%swbotb_runtime (GR-BH arc)
+      ! integer   swbotb             ! Switch for bottom boundary condition (see *.SWP input file for overview)
       integer   swbotb3Impl        ! Switch for implicit solution with lower boundary option 3 (Cauchy): 0 = explicit, 1 = implicit
       integer   SwBotb3ResVert     ! Switch to suppress addition of vertical resistance between bottom of model and groundwater level
       integer   swcfbs             ! Switch for use of coefficient CFBS to convert potential ET into potential E: 0 = no; 1 = yes
@@ -804,7 +807,8 @@
       ! real(8)   cgird              ! Cumulative amount of gross irrigation (L)
       ! real(8)   cinund             ! Cumulative amount of inundation (L)
       ! real(8)   cnird              ! Cumulative amount of net irrigation (L)
-      real(8)   cofani(maho)       ! Anisotropy coefficient (horizontal / vertical saturated hydraulic conductivity) (-)
+      ! [GR-BH Task 36] retired 2026-05-13 — moved to state%soilwater%cofani (GR-BH arc)
+      ! real(8)   cofani(maho)       ! Anisotropy coefficient (horizontal / vertical saturated hydraulic conductivity) (-)
       ! [SS-SWC] retired 2026-05-12 — moved to state%soilwater%cofgen (ADR 0038)
       ! real(8)   cofgen(21,macp)    ! Array (adjusted by hysteresis) soil hydraulic parameters according to Mualem - van Genuchten for each soil layer
       real(8)   cofqha             ! Coefficient A in exponential relationship between drainage flux and groundwater level (L/T)
@@ -928,8 +932,9 @@
       ! [SS-SWC] retired 2026-05-12 — moved to state%soilwater%kmean (ADR 0038)
       ! real(8)   kmean(macp+1)      ! Array with mean soil hydraulic conductivity (L/T) at the interface of current and upper compartment
       real(8)   Kroot              ! Hydraulic, radial conductivity of root tissue (L/T)
-      real(8)   ksatfit(maho)      ! Array with saturated hydraulic conductivity (L/T) for each soil layer: fitted on VG based on lab data
-      real(8)   ksatexm(maho)      ! Array with saturated hydraulic conductivity (L/T) for each soil layer: examined in lab or field 
+      ! [GR-BH Task 36] retired 2026-05-13 — moved to state%soilwater%ksatfit/ksatexm (GR-BH arc)
+      ! real(8)   ksatfit(maho)      ! Array with saturated hydraulic conductivity (L/T) for each soil layer: fitted on VG based on lab data
+      ! real(8)   ksatexm(maho)      ! Array with saturated hydraulic conductivity (L/T) for each soil layer: examined in lab or field
       real(8)   ksatthr(maho)      ! Array with saturated hydraulic conductivity (L/T) for each soil layer: to interpolate VG and Ksatexm
       real(8)   kstem              ! Conductance in the path from leaf to root xylem (/d)
       real(8)   kvbot              ! Vertical hydraulic conductivity of bottom layer (L/T)
@@ -1108,10 +1113,11 @@
       ! real(8)   forg(macp)         ! Array with gravimetric organic matter content (g/g mineral parts) of each numerical compartment
       ! [SS-HEAT] retired 2026-05-10 — moved to state%heat%fquartz (ADR 0034)
       ! real(8)   fquartz(macp)      ! Array with gravimetric content of sand+silt (g/g mineral parts) of each numerical compartment
-      real(8)   orgmat(maho)       ! Array with gravimetric organic matter content (g/g mineral parts) for each soil layer
-      real(8)   pclay(maho)        ! Array with gravimetric clay content (g/g mineral parts) for each soil layer
-      real(8)   psand(maho)        ! Array with gravimetric sand content (g/g mineral parts) for each soil layer
-      real(8)   psilt(maho)        ! Array with gravimetric silt content (g/g mineral parts) for each soil layer
+      ! [GR-BH Task 36] retired 2026-05-13 — moved to state%soilwater%orgmat/pclay/psand/psilt (GR-BH arc)
+      ! real(8)   orgmat(maho)       ! Array with gravimetric organic matter content (g/g mineral parts) for each soil layer
+      ! real(8)   pclay(maho)        ! Array with gravimetric clay content (g/g mineral parts) for each soil layer
+      ! real(8)   psand(maho)        ! Array with gravimetric sand content (g/g mineral parts) for each soil layer
+      ! real(8)   psilt(maho)        ! Array with gravimetric silt content (g/g mineral parts) for each soil layer
       real(8)   tampli             ! Amplitude of prescribed annual temperature wave (�C) at soil surface
       ! [SS-HEAT] retired 2026-05-10 — moved to state%heat%tebot (ADR 0034)
       ! real(8)   tebot              ! Temperatures (�C) at bottom of soil profile
@@ -1240,7 +1246,8 @@
       ! placeholders because cross-subsystem code reads them under dead
       ! `if (flMacroPore)` branches (flMacroPore is forced .false. in init).
       ! See legacy/swap-4.2.0 for the original SWAP 4.2.0 implementation.
-      real(8)   ArMpSs             ! Area fraction of macropores at soil surface (-)  [retired-zero]
+      ! [GR-BH Task 36] retired 2026-05-13 — ArMpSs made local in soilhydraulics/solute/agetracer (GR-BH arc, ADR 0040 complete)
+      ! real(8)   ArMpSs             ! Area fraction of macropores at soil surface (-)  [retired-zero]
 
 ! --- macropore Input parameters (all retired-zero — see [MACRO-RETIRE 2026-05-12])
       integer SwSoilShr(MaHo)      ! [retired-zero] kept: soilhydraulics shrinkage branch

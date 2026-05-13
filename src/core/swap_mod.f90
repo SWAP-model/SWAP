@@ -56,8 +56,6 @@ contains
                             flharvestday, flcropoutput, swcrp, flirrigationoutput, swend, project, &
                             flTillage, flSSDI, &
                             numlay, &
-                            cofani, &
-                            orgmat, &
                             L, zbotdr, owltab, nowltab
       use soilwater_state_mod, only: soilwater_init
       use atmosphere_state_mod, only: atmosphere_init
@@ -109,15 +107,23 @@ contains
    call soilwater_init(state%soilwater, state%mesh%numnod, numlay)   ! SS-CRP Phase 1 C-1.2: allocate per-node arrays + mfluxtable
    ! [SS-GR-BH A6] soilwater layer flats — placed here because soilwater_init
    ! allocates the state arrays (nlay-sized) AFTER config_to_variables runs.
-   ! ksatexm/ksatfit/psand/psilt/pclay sourced directly from config (legacy globals retired).
-   ! cofani/orgmat: multi-source precedence — still read from legacy globals (deferred Task 36).
+   ! All layer flats sourced directly from config (legacy globals retired Task 36).
    if (allocated(config%soil%hydraulics%ksatexm)) &
       state%soilwater%ksatexm(:) = config%soil%hydraulics%ksatexm(1:size(state%soilwater%ksatexm))
    if (allocated(config%soil%hydraulics%ksatfit)) &
       state%soilwater%ksatfit(:) = config%soil%hydraulics%ksatfit(1:size(state%soilwater%ksatfit))
-   state%soilwater%cofani(:)   = cofani(1:size(state%soilwater%cofani))
-   state%soilwater%flksatexm   = .false.   ! never set in adapter; matches initialize.f90:145
-   state%soilwater%orgmat(:)   = orgmat(1:size(state%soilwater%orgmat))
+   ! [GR-BH Task 36] cofani multi-source: drain.cofani first, soil.cofani overrides (soil wins).
+   if (allocated(config%drain%cofani)) &
+      state%soilwater%cofani(1:size(config%drain%cofani)) = config%drain%cofani
+   if (allocated(config%soil%cofani)) &
+      state%soilwater%cofani(1:size(config%soil%cofani))  = config%soil%cofani
+   state%soilwater%flksatexm   = .false.   ! never set in adapter
+   ! [GR-BH Task 36] orgmat multi-source: soil.orgmat first; heat.porg backfills when absent.
+   if (allocated(config%soil%orgmat)) &
+      state%soilwater%orgmat(1:size(config%soil%orgmat))  = config%soil%orgmat
+   if (.not. allocated(config%soil%orgmat) .and. allocated(config%heat%porg)) &
+      state%soilwater%orgmat(1:min(size(config%heat%porg), size(state%soilwater%orgmat))) = &
+         config%heat%porg(1:min(size(config%heat%porg), size(state%soilwater%orgmat)))
    if (allocated(config%heat%psand)) &
       state%soilwater%psand(:) = config%heat%psand(1:size(state%soilwater%psand))
    if (allocated(config%heat%psilt)) &

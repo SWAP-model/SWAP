@@ -142,14 +142,16 @@
       iwarn_hc           = 0          ! Initialize headcalc warning counter (previously SAVE variable)
       nstep_hc           = 0          ! Initialize headcalc step counter (previously SAVE variable) 
       dev_cmb            = 0          ! Initialize mass balance deviation file unit (previously SAVE in checkmassbal)
-      flksatexm          = .false. 
+      ! [GR-BH Task 36] flksatexm retired — seeded via state%soilwater%flksatexm in soilwater_init
+      ! flksatexm          = .false.
       ! [SS-SWC] fluseksatexm retired — soilwater_init handles init via state%soilwater%fluseksatexm
       ! fluseksatexm       = .false.
       ! [SS-BND B-2.7] FlRunoff retired — soilwater_init handles init via state%soilwater
       ! FlRunoff           = .false.
-      h0max              = 0.0d0 
-      k1max              = 0.0d0 
-      q0                 = 0.0d0 
+      ! [GR-BH Task 36] H0max/k1max/q0 retired — seeded via state%soilwater in swap_mod.f90
+      ! h0max              = 0.0d0
+      ! k1max              = 0.0d0
+      ! q0                 = 0.0d0
       afo                = 0 
       aun                = 0 
       bal                = 0 
@@ -195,7 +197,8 @@
       swblc              = 0 
       swwba              = 0
       swsba              = 0
-      swbotb             = 0 
+      ! [GR-BH Task 36] swbotb retired — seeded via state%soilwater%swbotb_runtime in swap_mod.f90
+      ! swbotb             = 0
       swbotbc            = 0 
       swbotb3Impl        = 0 
       SwBotb3ResVert     = 0 
@@ -231,7 +234,8 @@
       ! cgird              = 0.0d0
       ! cinund             = 0.0d0
       ! cnird              = 0.0d0
-      cofani             = 0.0d0 
+      ! [GR-BH Task 36] cofani retired — seeded via state%soilwater%cofani in swap_mod.f90
+      ! cofani             = 0.0d0
       ! [SS-SWC] cofgen retired — soilwater_init handles init via state%soilwater%cofgen
       ! cofgen             = 0.0d0
       cofqha             = 0.0d0 
@@ -341,8 +345,9 @@
       khtop              = 0.0d0 
       ! [SS-SWC] kmean retired — soilwater_init handles init via state%soilwater%kmean
       ! kmean              = 0.0d0
-      ksatfit            = 0.0d0 
-      ksatexm            = 0.0d0 
+      ! [GR-BH Task 36] ksatfit/ksatexm retired — seeded via state%soilwater in swap_mod.f90
+      ! ksatfit            = 0.0d0
+      ! ksatexm            = 0.0d0
       ksatthr            = 0.0d0 
       kvbot              = 0.0d0 
       kvtop              = 0.0d0 
@@ -454,10 +459,11 @@
       ! fclay              = 0.0d0
       ! forg               = 0.0d0
       ! fquartz            = 0.0d0
-      orgmat             = 0.0d0
-      pclay              = 0.0d0 
-      psand              = 0.0d0 
-      psilt              = 0.0d0 
+      ! [GR-BH Task 36] orgmat/pclay/psand/psilt retired — seeded via state%soilwater in swap_mod.f90
+      ! orgmat             = 0.0d0
+      ! pclay              = 0.0d0
+      ! psand              = 0.0d0
+      ! psilt              = 0.0d0
       tampli             = 0.0d0 
       ! [SS-HEAT] Task 9: tebot retired to state%heat%tebot
       ! tebot              = 0.0d0
@@ -553,7 +559,8 @@
       ThetCrMp             = 0.0d0
       Z_Tp                 = 0.0d0
       CritUndSatVol        = 0.0d0
-      ArMpSs               = 0.0d0
+      ! [GR-BH Task 36] ArMpSs retired — made local in soilhydraulics/solute/agetracer (ADR 0040 complete)
+      ! ArMpSs               = 0.0d0
       ArMpTp               = 0.0d0
       cQMpLatSs            = 0.0d0
       cQMpOutDrRap         = 0.0d0

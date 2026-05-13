@@ -72,6 +72,8 @@ contains
       real(8) Agedrtot,Agerot,dispr,diffus,dummy
       real(8) vpore,isqdra,tab(mabbc*2)
       real(8) tcumsol
+      ! [GR-BH Task 36] ArMpSs retired from variables.f90 — local (always 0.d0, ADR 0040 complete)
+      real(8) ArMpSs
 !
 !      real(8) Ageevp
       real(8) Ageml(macp)    ! Array with age mass solute concentration (M/L3 water)
