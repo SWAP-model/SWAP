@@ -25,6 +25,21 @@ module swap_capi_mod
 contains
 
    !----------------------------------------------------------------------
+   ! Private helpers
+   !----------------------------------------------------------------------
+
+   subroutine c_to_f_string(c_str, f_str)
+      character(kind=c_char), intent(in)  :: c_str(*)
+      character(len=*),       intent(out) :: f_str
+      integer :: i
+      f_str = ' '
+      do i = 1, len(f_str)
+         if (c_str(i) == c_null_char) exit
+         f_str(i:i) = c_str(i)
+      end do
+   end subroutine c_to_f_string
+
+   !----------------------------------------------------------------------
    ! Lifecycle
    !----------------------------------------------------------------------
 
@@ -80,7 +95,7 @@ contains
    end function swap_attach_meteo_buffer
 
    !----------------------------------------------------------------------
-   ! Stubs filled by Tasks 19-22
+   ! Task 19: swap_view_array — zero-copy array accessor
    !----------------------------------------------------------------------
 
    function swap_view_array(name, ptr, n) result(ierr) bind(C, name='swap_view_array')
@@ -88,10 +103,37 @@ contains
       type(c_ptr),            intent(out) :: ptr
       integer(c_int),         intent(out) :: n
       integer(c_int)                      :: ierr
-      ! [SS-BMI2 Task 19] body to be filled with c_loc-based dispatch.
-      ierr = 1
-      ptr = c_null_ptr
-      n   = 0
+      character(len=64) :: f_name
+      call c_to_f_string(name, f_name)
+      ierr = 0
+      select case (trim(f_name))
+      case ('theta')
+         if (.not. allocated(capi_state%soilwater%theta)) then
+            ierr = 2; ptr = c_null_ptr; n = 0; return
+         end if
+         ptr = c_loc(capi_state%soilwater%theta(1))
+         n   = size(capi_state%soilwater%theta)
+      case ('h')
+         if (.not. allocated(capi_state%soilwater%h)) then
+            ierr = 2; ptr = c_null_ptr; n = 0; return
+         end if
+         ptr = c_loc(capi_state%soilwater%h(1))
+         n   = size(capi_state%soilwater%h)
+      case ('tsoil')
+         if (.not. allocated(capi_state%heat%tsoil)) then
+            ierr = 2; ptr = c_null_ptr; n = 0; return
+         end if
+         ptr = c_loc(capi_state%heat%tsoil(1))
+         n   = size(capi_state%heat%tsoil)
+      case ('inqrot')
+         if (.not. allocated(capi_state%soilwater%inqrot)) then
+            ierr = 2; ptr = c_null_ptr; n = 0; return
+         end if
+         ptr = c_loc(capi_state%soilwater%inqrot(1))
+         n   = size(capi_state%soilwater%inqrot)
+      case default
+         ierr = 1; ptr = c_null_ptr; n = 0
+      end select
    end function swap_view_array
 
    function swap_get_scalar(name, value) result(ierr) bind(C, name='swap_get_scalar')
