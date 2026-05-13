@@ -190,6 +190,7 @@ contains
       use soilhydraulics_utils, only: prhead
       use swap_array_dimensions, only: macp, maho, madr
       use swap_state_mod, only: swap_state_t
+      use hydraulic_params_mod, only: vanGenuchten_params_t
       IMPLICIT NONE
 
       type(swap_state_t), intent(in) :: state
@@ -208,6 +209,7 @@ contains
       integer   lay,node,nodeN,nodeNew(macp,2),i,level
       real(8)   disnodNew(macp+1),total,zNew(macp)
       real(8)   CofgenNew(21,macp)
+      type(vanGenuchten_params_t) :: vg_tentative
       character(len=80) Message
       character(len=*), parameter :: ModuleName = 'ConvertDiscrVert'
 
@@ -384,8 +386,12 @@ contains
              do i = 1, 9
                 cofgenNew(i,node) = sw_cofgen(i,NodeNew(node,2))  ! CofgenNew Newnode = Cofgen bottom old node
              enddo
-             
-            hNew(node) = prhead (node,disnodNew(node),thetaNew(node),cofgenNew,hNew)
+
+             ! Build tentative vg from the source (bottom old) node's typed params  [SS-GR-UTILS Task 8]
+             vg_tentative = state%soilwater%vg_params(NodeNew(node,2))
+             hNew(node) = prhead(disnodNew(node), thetaNew(node), hNew, &
+                                 state%soilwater%iHWCKmodel(state%soilwater%layer(node)), &
+                                 node, state%soilwater, vg_in=vg_tentative)
           enddo
 
           ! convert inqrot to inqrotNew based on integration

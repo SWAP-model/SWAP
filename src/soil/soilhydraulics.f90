@@ -1262,6 +1262,7 @@ contains
       use soilhydraulics_utils, only: moiscap, prhead
       use swap_array_dimensions, only: macp
       use swap_state_mod, only: swap_state_t
+      use hydraulic_params_mod, only: vanGenuchten_params_t
 
       implicit none
 
@@ -1272,6 +1273,7 @@ contains
       integer node,lay,indtem(macp)
       real(8) delp,sew,sed,fvalue
       real(8) thetar(macp),thetas(macp),alfamg(macp)
+      type(vanGenuchten_params_t) :: vg_hys
 
       ! [SS-SWC S-2.3] reader cutover: read h/hm1/theta/indeks/cofgen/dimoca from state
       associate( &
@@ -1330,7 +1332,14 @@ contains
           state%soilwater%cofgen(2,node) = thetas(node)         ! [SS-SWC S-1.4a/S-2.12B]
           state%soilwater%thetas(node)   = thetas(node)         ! [SS-SWC S-1.4a]
           if (abs(fvalue-thetar(node)) .gt. 1.d-10) then
-             state%soilwater%h(node) = prhead(node,disnod(node),sw_theta(node),sw_cofgen,sw_h)  ! [SS-SWC S-2.12B]
+             ! Build vg with locally modified thetar/thetas/alpha for wetting branch  [SS-GR-UTILS Task 8]
+             vg_hys         = state%soilwater%vg_params(node)
+             vg_hys%thetar  = thetar(node)
+             vg_hys%thetas  = thetas(node)
+             vg_hys%alpha   = alfamg(node)
+             state%soilwater%h(node) = prhead(disnod(node), sw_theta(node), sw_h, &
+                                              state%soilwater%iHWCKmodel(state%soilwater%layer(node)), &
+                                              node, state%soilwater, vg_in=vg_hys)  ! [SS-SWC S-2.12B] [SS-GR-UTILS Task 8]
           endif
         else
            ! Drying branch
@@ -1349,7 +1358,14 @@ contains
           state%soilwater%cofgen(2,node) = thetas(node)         ! [SS-SWC S-1.4a/S-2.12B]
           state%soilwater%thetas(node)   = thetas(node)         ! [SS-SWC S-1.4a]
           if (abs(fvalue-thetas(node)) .gt. 1.d-10) then
-             state%soilwater%h(node) = prhead(node,disnod(node),sw_theta(node),sw_cofgen,sw_h)  ! [SS-SWC S-2.12B]
+             ! Build vg with locally modified thetar/thetas/alpha for drying branch  [SS-GR-UTILS Task 8]
+             vg_hys         = state%soilwater%vg_params(node)
+             vg_hys%thetar  = thetar(node)
+             vg_hys%thetas  = thetas(node)
+             vg_hys%alpha   = alfamg(node)
+             state%soilwater%h(node) = prhead(disnod(node), sw_theta(node), sw_h, &
+                                              state%soilwater%iHWCKmodel(state%soilwater%layer(node)), &
+                                              node, state%soilwater, vg_in=vg_hys)  ! [SS-SWC S-2.12B] [SS-GR-UTILS Task 8]
           endif
         endif
 

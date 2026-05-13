@@ -289,8 +289,9 @@ module tillage_mod
       do i = 1, state%tillage%MaxNumSoilCP
          wcs = ParamVG(2,layer(i))
          if (state%soilwater%theta(i) < wcs) then                                                       ! [SS-SWC S-2.6]
-            state%soilwater%h(i) = prhead(i, disnod(i), state%soilwater%theta(i), &                    ! [SS-SWC S-2.6]
-                                          state%soilwater%cofgen, state%soilwater%h)                    ! [SS-SWC S-2.6]
+            state%soilwater%h(i) = prhead(disnod(i), state%soilwater%theta(i), state%soilwater%h, &    ! [SS-SWC S-2.6] [SS-GR-UTILS Task 8]
+                                          state%soilwater%iHWCKmodel(state%soilwater%layer(i)), &       ! [SS-SWC S-2.6] [SS-GR-UTILS Task 8]
+                                          i, state%soilwater)                                           ! [SS-SWC S-2.6] [SS-GR-UTILS Task 8]
          else
             summ = summ + (wcs - state%soilwater%theta(i))*dz(i)                                       ! [SS-SWC S-2.6]
             state%soilwater%theta(i) = wcs                                                              ! [SS-SWC S-2.6]
@@ -348,8 +349,9 @@ module tillage_mod
                   write(333,'(A,I5,F12.4)') state%timecontrol%date, i, state%soilwater%pond                              ! [SS-SWC S-2.6]
                end if
             end if
-            state%soilwater%h(i)     = prhead(i, disnod(i), wc(i), &                                   ! [SS-SWC S-2.6]
-                                               state%soilwater%cofgen, state%soilwater%h)               ! [SS-SWC S-2.6]
+            state%soilwater%h(i)     = prhead(disnod(i), wc(i), state%soilwater%h, &                    ! [SS-SWC S-2.6] [SS-GR-UTILS Task 8]
+                                               state%soilwater%iHWCKmodel(state%soilwater%layer(i)), &  ! [SS-SWC S-2.6] [SS-GR-UTILS Task 8]
+                                               i, state%soilwater)                                      ! [SS-SWC S-2.6] [SS-GR-UTILS Task 8]
             state%soilwater%theta(i) = wc(i)                                                            ! [SS-SWC S-2.6]
          end do
       else if (sumWCt > sumWCtmin1) then
@@ -361,8 +363,9 @@ module tillage_mod
          do i = 1, state%tillage%MaxNumSoilCP
             wcr = ParamVG(1,layer(i))
             wc(i) = wc(i) + (wc(i) - wcr) * state%tillage%sumDWC / state%tillage%sumAvail2
-            state%soilwater%h(i)     = prhead(i, disnod(i), wc(i), &                                   ! [SS-SWC S-2.6]
-                                               state%soilwater%cofgen, state%soilwater%h)               ! [SS-SWC S-2.6]
+            state%soilwater%h(i)     = prhead(disnod(i), wc(i), state%soilwater%h, &                    ! [SS-SWC S-2.6] [SS-GR-UTILS Task 8]
+                                               state%soilwater%iHWCKmodel(state%soilwater%layer(i)), &  ! [SS-SWC S-2.6] [SS-GR-UTILS Task 8]
+                                               i, state%soilwater)                                      ! [SS-SWC S-2.6] [SS-GR-UTILS Task 8]
             state%soilwater%theta(i) = wc(i)                                                            ! [SS-SWC S-2.6]
          end do
 

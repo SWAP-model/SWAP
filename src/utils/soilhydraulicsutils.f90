@@ -589,88 +589,102 @@ contains
 
    !> Calculate pressure head from water content
    !! @note
-   !! MH: since in routine convertdiscrvert prhead needs to be called with NEW distribution of cofgen and h,
-   !!     cofgen_in and h_in are requied as input (and cannot be imported from variables as cofgen and h)
+   !! New typed signature (SS-GR-UTILS Task 8). Optional vg_in allows
+   !! callers to pass a tentative / locally-modified vg struct (e.g.
+   !! soilgrid grid-redistribution, hysteresis parameter update).
+   !! When vg_in is absent the node's vg_params entry from state is used.
    !! @endnote
-   function prhead(node, disnod, wcon, cofgen_in, h_in)
-      use variables, only: swsophy, numtab, sptab, ientrytab, iHWCKmodel, layer
-      use swap_array_dimensions, only: macp
+   function prhead(disnod, wcon, h_in, model, node, soilwater, vg_in) result(h_out)
+      use soilwater_state_mod,  only: soilwater_state_t
+      use hydraulic_params_mod, only: vanGenuchten_params_t
 
       implicit none
 
       ! Arguments
-      integer, intent(in) :: node
-      real(real64), intent(in) :: disnod, wcon
-      real(real64), intent(in) :: h_in(macp), cofgen_in(21,macp)
-      real(real64) :: prhead
+      real(real64),                intent(in)           :: disnod
+      real(real64),                intent(in)           :: wcon
+      real(real64),                intent(in)           :: h_in(:)
+      integer,                     intent(in)           :: model
+      integer,                     intent(in)           :: node
+      type(soilwater_state_t),     intent(in)           :: soilwater
+      type(vanGenuchten_params_t), intent(in), optional :: vg_in
+      real(real64) :: h_out
 
       ! Local variables
+      type(vanGenuchten_params_t) :: vg
       real(real64) :: alfamg, thetar, thetas, h_enpr, s_enpr, npar, mpar, relsat
       real(real64) :: help, dummy, prh
 
-      if (swsophy == 0) then
-         thetar = cofgen_in(1,node)
-         thetas = cofgen_in(2,node)
-         alfamg = cofgen_in(4,node)
-         npar   = cofgen_in(6,node)
-         mpar   = cofgen_in(7,node)
-         h_enpr = cofgen_in(9,node)
-         
-         if (iHWCKmodel(layer(node)) == 2) then
+      if (present(vg_in)) then
+         vg = vg_in
+      else
+         vg = soilwater%vg_params(node)
+      end if
+
+      if (soilwater%swsophy == 0) then
+         thetar = vg%thetar
+         thetas = vg%thetas
+         alfamg = vg%alpha
+         npar   = vg%npar
+         mpar   = vg%mpar
+         h_enpr = vg%h_enpr
+
+         if (model == 2) then
             ! Exponential relationships; special for testing against analytical solutions
             relsat = (wcon - thetar) / (thetas - thetar)
-            prhead = dlog(relsat) / alfamg
-            
+            h_out = dlog(relsat) / alfamg
+
          else  ! Use default MvG
 
             if (thetas - wcon < 1.0d-6) then
 
                ! Saturated pressure head
                if (node == 1) then
-                  prhead = disnod
+                  h_out = disnod
                else
-                  prhead = h_in(node-1) + disnod
+                  h_out = h_in(node-1) + disnod
                end if
-               prhead = dmax1(prhead, h_enpr)
+               h_out = dmax1(h_out, h_enpr)
             else
                if (wcon - thetar < 1.0d-6) then
-                  prhead = -1.0d12
+                  h_out = -1.0d12
                else
 
                   ! For modified VanGenuchten model:
-                  ! - S_enpr: relative saturation at Entry Pressure h_enpr 
+                  ! - S_enpr: relative saturation at Entry Pressure h_enpr
                   s_enpr = (abs(alfamg*h_enpr)) ** npar
                   s_enpr = (1.0_real64 + s_enpr) ** (-mpar)
 
                   ! First calculate the inverse of the sorptivity
-                  help = (thetas - thetar) / (wcon - thetar) / s_enpr    
+                  help = (thetas - thetar) / (wcon - thetar) / s_enpr
                   ! Raise to the power 1/m
                   help = help ** (1.0_real64 / mpar)
-                  ! Subtract one and raise to the power 1/n 
+                  ! Subtract one and raise to the power 1/n
                   help = (help - 1.0_real64) ** (1.0_real64 / npar)
                   ! Divide by alpha
-                  prhead = -1.0_real64 * abs(help/alfamg)
+                  h_out = -1.0_real64 * abs(help/alfamg)
                end if
             end if
          end if
 
-      else if (swsophy == 1) then
-         if (sptab(2,node,numtab(node)) - wcon < 1.0d-6) then
+      else if (soilwater%swsophy == 1) then
+         if (soilwater%sptab(2,node,soilwater%numtab(node)) - wcon < 1.0d-6) then
 
             ! Saturated pressure head
             if (node == 1) then
-               prhead = disnod
+               h_out = disnod
             else
-               prhead = h_in(node-1) + disnod
+               h_out = h_in(node-1) + disnod
             end if
-            prhead = dmax1(prhead, 0.0_real64)
+            h_out = dmax1(h_out, 0.0_real64)
          else
 
-            call EvalTabulatedFunction(1, numtab(node), 1, 2, 4, node, sptab, ientrytab, prh, wcon, dummy, 1)
-            prhead = prh
+            call EvalTabulatedFunction(1, soilwater%numtab(node), 1, 2, 4, node, &
+                                       soilwater%sptab, soilwater%ientrytab, prh, wcon, dummy, 1)
+            h_out = prh
          end if
       end if
-      
+
    end function prhead
 
    !> Calculate derivative of mean hydraulic conductivity with respect to main node conductivity
