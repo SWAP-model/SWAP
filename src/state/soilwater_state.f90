@@ -46,6 +46,7 @@
 module soilwater_state_mod
    use, intrinsic :: iso_fortran_env, only: real64
    use iso_c_binding, only: c_double
+   use hydraulic_params_mod, only: vanGenuchten_params_t
    implicit none
    private
    public :: soilwater_state_t, soilwater_init
@@ -138,6 +139,7 @@ module soilwater_state_mod
       real(real64), allocatable :: kmean(:)        !< mean K at node interface (cm/d)
       real(real64), allocatable :: dimoca(:)       !< differential moisture capacity per node (1/cm)
       real(real64), allocatable :: cofgen(:,:)     !< Mualem-VG parameters (21 × numnod)
+      type(vanGenuchten_params_t), allocatable :: vg_params(:)   !< [SS-GR-UTILS] typed VG parameters, one per node
       real(real64), allocatable :: FrArMtrx(:)    !< matrix-area fraction per node (-)
       logical,      allocatable :: fluseksatexm(:) !< per-node Ksatexm flag (-)
       integer,      allocatable :: indeks(:)       !< hysteresis branch index per node (+1/-1)
@@ -366,6 +368,7 @@ contains
 
       ! 2D parameter array: cofgen(21, numnod) — legacy cofgen(21, macp)
       allocate(sw%cofgen(21, numnod));   sw%cofgen       = 0.0_real64
+      allocate(sw%vg_params(numnod))    ! [SS-GR-UTILS] components default-init from type
 
       ! Per-layer array sized nlay (thetsl per soil layer, not per node):
       ! Legacy: thetsl(maho) where maho = max number of soil layers

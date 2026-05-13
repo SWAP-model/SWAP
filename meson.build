@@ -185,6 +185,7 @@ sources = [
     'src/state/drainage_state.f90',
     'src/state/solute_state.f90',
     'src/state/heat_state.f90',
+    'src/state/hydraulic_params_mod.f90',
     'src/state/soilwater_state.f90',
     'src/state/atmosphere_state.f90',
     'src/state/tillage_state.f90',
