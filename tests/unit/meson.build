@@ -180,6 +180,7 @@ if get_option('enable_pfunit')
         '../../src/core/swap_mod.f90',
         '../../src/crop/irrigation.f90',
         '../../src/io/file_io.f90',
+        '../../src/core/timecontrol_mod.f90',
     ]
 
     pfunit_base_sources = test_base_sources + pfunit_extra_sources
@@ -266,6 +267,7 @@ if get_option('enable_pfunit')
         'crop/test_cropwofost_init.pf',
         'crop/test_cropgrass_init.pf',
         'core/test_swap_mod.pf',
+        'core/test_timecontrol_mod.pf',
     ]
 
     # When pf_files is non-empty, build and register the unit-swap-tests

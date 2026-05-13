@@ -60,6 +60,7 @@ add_project_arguments(gfortran_flags, language: 'fortran')
 modern_sources = [
     'src/core/swap_mod.f90',
     'src/core/swap_bmi_mod.f90',
+    'src/core/timecontrol_mod.f90',
 ]
 
 # Legacy files: project-wide -std=legacy (set by add_project_arguments).

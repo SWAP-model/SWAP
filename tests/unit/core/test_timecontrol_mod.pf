@@ -1,0 +1,74 @@
+!> SS-TCM lifecycle smoke test for timecontrol_mod.
+!! Tests the named procedures in sequence against a hupselbrook init.
+!! These tests MUST be registered AFTER test_swap_mod_suite in
+!! testSuites.inc — both suites mutate global state via Initialize.
+@test
+subroutine test_timecontrol_init_sets_iyear()
+   use timecontrol_mod,  only: timecontrol_init
+   use swap_state_mod,   only: swap_state_t
+   use swap_config_mod,  only: swap_config_t
+   use swap_mod,         only: swap_init
+   use chdir_helper_mod, only: chdir_to
+   use iso_fortran_env,  only: real64
+   use funit
+   implicit none
+   type(swap_state_t)           :: state
+   type(swap_config_t), target  :: config
+   integer :: iyear_captured
+
+   call chdir_to('tests/swap-cases/toml/1.hupselbrook')
+   call swap_init('swap.toml', state, config)
+   iyear_captured = state%timecontrol%iyear
+   call chdir_to('../../../..')
+
+   @assertGreaterThan(iyear_captured, 1900)
+end subroutine
+
+@test
+subroutine test_timecontrol_advance_changes_daynr()
+   use timecontrol_mod,  only: timecontrol_advance
+   use swap_state_mod,   only: swap_state_t
+   use swap_config_mod,  only: swap_config_t
+   use swap_mod,         only: swap_init, swap_run_step
+   use chdir_helper_mod, only: chdir_to
+   use iso_fortran_env,  only: real64
+   use funit
+   implicit none
+   type(swap_state_t)           :: state
+   type(swap_config_t), target  :: config
+   integer :: daynr_before, daynr_after
+
+   call chdir_to('tests/swap-cases/toml/1.hupselbrook')
+   call swap_init('swap.toml', state, config)
+   daynr_before = state%timecontrol%daynr
+   call swap_run_step(state, config)
+   daynr_after = state%timecontrol%daynr
+   call chdir_to('../../../..')
+
+   @assertGreaterThanOrEqual(daynr_after, daynr_before)
+end subroutine
+
+@test
+subroutine test_timecontrol_flzerointr_initialized()
+   ! After timecontrol_init runs (via swap_init), flZeroIntr in state
+   ! must be .true. — matches legacy case (1) line `flZeroIntr = .true.`
+   ! semantics. Discriminating test: passes only after Task 10 cutover,
+   ! when state%timecontrol%flZeroIntr is written by timecontrol_init.
+   use swap_state_mod,   only: swap_state_t
+   use swap_config_mod,  only: swap_config_t
+   use swap_mod,         only: swap_init
+   use chdir_helper_mod, only: chdir_to
+   use iso_fortran_env,  only: real64
+   use funit
+   implicit none
+   type(swap_state_t)           :: state
+   type(swap_config_t), target  :: config
+   logical :: flzerointr_captured
+
+   call chdir_to('tests/swap-cases/toml/1.hupselbrook')
+   call swap_init('swap.toml', state, config)
+   flzerointr_captured = state%timecontrol%flZeroIntr
+   call chdir_to('../../../..')
+
+   @assertTrue(flzerointr_captured)
+end subroutine
