@@ -125,8 +125,8 @@ contains
 
 ! --- reset cumulative solute fluxes
       ! SS-CRR Phase B Task B4: cohort-owned reset; see solute_state_mod.
-      if (flzerointr) call state%solute%reset_intermediate()
-      if (flzerocumu) then
+      if (state%timecontrol%flZeroIntr) call state%solute%reset_intermediate()
+      if (state%timecontrol%flZeroCumu) then
          call state%solute%reset_cumulative()
          ! Rebase mass-balance baseline. samini is in the cumulative cohort
          ! and was zeroed by reset(); physics requires anchoring it to
