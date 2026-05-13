@@ -399,7 +399,7 @@ contains
       if (tc_flDayStart) then  ! SS-TC TC-13
 
 !        read meteo data for current day
-         call ReadMeteoDay(state)  ! SS-ATM A-1.6: state threaded for atmosphere dual-writes
+         call ReadMeteoDay(state, config)  ! SS-ATM A-1.6 / SS-GR-ATM B23: state + config threaded
 
 !        check growing season
          call CropGrowth(1, state%heat%tsoil, state)  ! SS-CRP C-1.3: state added for dual-write

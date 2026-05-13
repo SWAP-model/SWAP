@@ -234,6 +234,7 @@ end module runoff_mod
 module meteo_process_mod
    use error_mod, only: fatalerr_collected
    use swap_state_mod, only: swap_state_t
+   use swap_config_mod, only: swap_config_t   ! [SS-GR-ATM B23] config added for meteo switches
    implicit none
    private
 
@@ -281,17 +282,22 @@ contains
   !! Purpose: Returns meteorological fluxes of current day or of parts of a day 
   !! (detailed meteo input)
   !! @endnote
-  subroutine ReadMeteoDay(state)
-      ! use variables
+  subroutine ReadMeteoDay(state, config)
+      ! [SS-GR-ATM B23] use variables dropped; symbols → state%atmosphere/config%meteo
       ! SS-TC TC-9: date,t1900 removed from only-list; reads/writes via state%timecontrol.
       ! [SS-TC TC-14] yearmeteo, daymeteo retired — read via state%timecontrol
-      use variables, only: out_tmn, out_tmx, out_hum, out_win, out_etr, out_wet, swrain, wet, rh, tav, tavd, out_rad, arai, atmx, ahum, aetr, arad, teprrain, teprsnow, &
-                        detrecord, nmetdetail, dettime, detrad, dethum, dettav, atav, swmetdetail, daynrfirst, daynrlast, rad, tmn, tmx, pathatm, awin, atmn, metfil, detrain, swsnow, irectotal, detwind
+      ! [SS-GR-ATM B23] DEFERRED symbols (not yet in state):
+      use variables, only: &
+          rad, tmn, tmx,                                  &  ! B23 DEFERRED — daily scalars
+          pathatm, metfil,                                &  ! B23 DEFERRED — filename strings
+          detrecord, dettime, detrad, dethum, dettav,     &  ! B23 DEFERRED — detail arrays
+          detrain, detwind, irectotal                        ! B23 DEFERRED — detail arrays + counter
       use MeteoVars
       use precipitation_mod, only: PartitionPrecipitation
       implicit none
 
-      type(swap_state_t), intent(inout) :: state  !! [SS-ATM] threaded for atmosphere dual-writes
+      type(swap_state_t),   intent(inout) :: state   !! [SS-ATM] threaded for atmosphere dual-writes
+      type(swap_config_t),  intent(in)    :: config  !! [SS-GR-ATM B23] for meteo config switches
 
     ! --- local
     ! [SS-ATM A-2.6] grai/gsnow/snrai/ssnow/fprecnosnow are transitional locals fed to
@@ -315,77 +321,68 @@ contains
 
     ! 1: Check whether meteo data are available of today; pass on weather of today
     ! 1.0 Daily Meteo 0000000000000000000000000000000000000000000000000000000 Daily Meteo
-    
-    if (swmetdetail.eq.0) then
+
+    if (config%meteo%swmetdetail.eq.0) then
 
       ! Check availability of meteo data of today
-      if (daymeteo.lt.daynrfirst .or. daymeteo.gt.daynrlast) then
+      if (daymeteo.lt.state%atmosphere%daynrfirst .or. daymeteo.gt.state%atmosphere%daynrlast) then
         messag ='In meteo file no meteo data are'// &
                 ' available for '//tc_date//'. First adapt meteo file!'
         call fatalerr_collected ('meteo',messag)
       end if
 
       ! Pass on weather values of today
-      rad  = arad(daymeteo+1-daynrfirst)
-      tmn  = atmn(daymeteo+1-daynrfirst)
-      tmx  = atmx(daymeteo+1-daynrfirst)
-      hum  = ahum(daymeteo+1-daynrfirst)
-      win  = awin(daymeteo+1-daynrfirst)
-      grai = arai(daymeteo+1-daynrfirst)  ! [SS-ATM A-2.6] local; PartitionPrecipitation converts mm->cm and writes state
-      etr  = aetr(daymeteo+1-daynrfirst)
+      rad  = state%atmosphere%arad(daymeteo+1-state%atmosphere%daynrfirst)
+      tmn  = state%atmosphere%atmn(daymeteo+1-state%atmosphere%daynrfirst)
+      tmx  = state%atmosphere%atmx(daymeteo+1-state%atmosphere%daynrfirst)
+      hum  = state%atmosphere%ahum(daymeteo+1-state%atmosphere%daynrfirst)
+      win  = state%atmosphere%awin(daymeteo+1-state%atmosphere%daynrfirst)
+      grai = state%atmosphere%arai(daymeteo+1-state%atmosphere%daynrfirst)  ! [SS-ATM A-2.6] local; PartitionPrecipitation converts mm->cm and writes state
+      etr  = state%atmosphere%aetr(daymeteo+1-state%atmosphere%daynrfirst)
 
       ! If hum is missing or tav cannot be calculated: set rh at -99.0
-      rh = 1.0d0
+      state%atmosphere%rh = 1.0d0
       if (hum.lt.-98.0d0 .or. tmn.lt.-98.0d0 .or. tmx.lt.-98.0d0) &
-        rh=-99.0d0
+        state%atmosphere%rh=-99.0d0
 
       ! Calculate 24h average temperature
-      tav = (tmx+tmn)*0.5d0
+      state%atmosphere%Tav = (tmx+tmn)*0.5d0
       ! Calculate average day temperature
-      tavd = (tmx+tav)*0.5d0
-      state%atmosphere%tavd = tavd   ! [SS-GR-ATM A5.5] runtime dual-write
+      state%atmosphere%tavd = (tmx+state%atmosphere%Tav)*0.5d0   ! [SS-GR-ATM B23] direct state write
 
-      if (rh.ge.-98.0d0) then
+      if (state%atmosphere%rh.ge.-98.0d0) then
         ! Calculate saturated vapour pressure [kpa]
         svp = 0.3055d0*(dexp(17.27d0*tmn/(tmn+237.3d0)) + &
                         dexp(17.27d0*tmx/(tmx+237.3d0)))
         ! Calculate relative humidity [fraction]
-        rh = min(hum/svp,1.0d0)
+        state%atmosphere%rh = min(hum/svp,1.0d0)   ! [SS-GR-ATM B23] direct state write
       endif
-      state%atmosphere%rh = rh   ! [SS-GR-ATM A5.5] runtime dual-write
 
       ! CFO file for PEARL: save meteo variables of today for output
-      out_rad = real(rad)
-      state%atmosphere%out_rad = real(out_rad, kind=8)   ! [SS-GR-ATM A5.5] runtime dual-write (real4→real64)
-      out_tmn = real(tmn)
-      state%atmosphere%out_tmn = real(out_tmn, kind=8)   ! [SS-GR-ATM A5.5] runtime dual-write (real4→real64)
-      out_tmx = real(tmx)
-      state%atmosphere%out_tmx = real(out_tmx, kind=8)   ! [SS-GR-ATM A5.5] runtime dual-write (real4→real64)
-      out_hum = real(hum)
-      state%atmosphere%out_hum = real(out_hum, kind=8)   ! [SS-GR-ATM A5.5] runtime dual-write (real4→real64)
-      out_win = real(win)
-      state%atmosphere%out_win = real(out_win, kind=8)   ! [SS-GR-ATM A5.5] runtime dual-write (real4→real64)
-      out_etr = real(etr)*0.001
-      state%atmosphere%out_etr = real(out_etr, kind=8)   ! [SS-GR-ATM A5.5] runtime dual-write (real4→real64)
-      if (swrain.eq.2) then
-        out_wet = real(wet(daymeteo+1-daynrfirst))
+      state%atmosphere%out_rad = real(rad, kind=8)          ! [SS-GR-ATM B23] direct state write
+      state%atmosphere%out_tmn = real(tmn, kind=8)          ! [SS-GR-ATM B23] direct state write
+      state%atmosphere%out_tmx = real(tmx, kind=8)          ! [SS-GR-ATM B23] direct state write
+      state%atmosphere%out_hum = real(hum, kind=8)          ! [SS-GR-ATM B23] direct state write
+      state%atmosphere%out_win = real(win, kind=8)          ! [SS-GR-ATM B23] direct state write
+      state%atmosphere%out_etr = real(etr, kind=8)*0.001d0  ! [SS-GR-ATM B23] direct state write
+      if (config%meteo%swrain.eq.2) then
+        state%atmosphere%out_wet = real(state%atmosphere%wet(daymeteo+1-state%atmosphere%daynrfirst), kind=8)  ! [SS-GR-ATM B23]
       else
-        out_wet = -1.0
+        state%atmosphere%out_wet = -1.0d0
       endif
-      state%atmosphere%out_wet = real(out_wet, kind=8)   ! [SS-GR-ATM A5.5] runtime dual-write (real4→real64)
-    
+
     ! end 1 Daily Meteo 00000000000000000000000000000000000000000000000000000 Daily Meteo
-    
+
     ! 1.1 Detailed Meteo 1111111111111111111111111111111111111111111111111111 Detailed Meteo
-    
-    elseif (swmetdetail.eq.1) then
+
+    elseif (config%meteo%swmetdetail.eq.1) then
 
       ! Check availability of meteo data of today
       ! Compose filename meteorological file for use in warnings
       write (ext,'(i3.3)') mod(yearmeteo,1000)
       filnam = trim(pathatm)//trim(metfil)//'.'//trim(ext)
 
-      do i = 1, nmetdetail
+      do i = 1, config%meteo%nmetdetail
         irectotal = irectotal + 1
         if (i .ne. detrecord(irectotal)) then
           messag='In meteo file '//trim(filnam)//' record number(s)'// &
@@ -402,14 +399,14 @@ contains
         end if
 
         ! Pass on weather records of today
-        arad(i)  = detrad(irectotal)
-        ahum(i)  = dethum(irectotal)
-        atav(i)  = dettav(irectotal)
+        state%atmosphere%arad(i)  = detrad(irectotal)
+        state%atmosphere%ahum(i)  = dethum(irectotal)
+        state%atmosphere%atav(i)  = dettav(irectotal)
         awind(i) = detwind(irectotal)
         arain(i) = detrain(irectotal) * 0.1d0 ! convert from mm to cm
       enddo
     endif
-    
+
     ! end 1 Detailed Meteo 11111111111111111111111111111111111111111111111111 Detailed Meteo
     ! end 1.
 
@@ -417,8 +414,10 @@ contains
     ! [SS-ATM A-2.6] ssnow seeded from state (intent inout for read in swmetdetail==0 path);
     ! state%atmosphere%ssnow is written directly by PartitionPrecipitation in swmetdetail==1.
     ssnow = state%atmosphere%ssnow
-    call PartitionPrecipitation(swmetdetail, swsnow, tav, TePrRain, TePrSnow, &
-                                ssnow, nmetdetail, arain, grai, gsnow, snrai, &
+    call PartitionPrecipitation(config%meteo%swmetdetail, config%meteo%snow%swsnow, &
+                                state%atmosphere%Tav, state%atmosphere%teprrain, &
+                                state%atmosphere%teprsnow, &
+                                ssnow, config%meteo%nmetdetail, arain, grai, gsnow, snrai, &
                                 fprecnosnow, restint, state)
 
     end associate  ! tc_t1900, tc_date => state%timecontrol [TC-9]
