@@ -17,10 +17,10 @@
 !!   + type(atmosphere_cumulative_t)   :: cumu
 !!   = 40 total fields, all scalars (no per-node arrays).
 !!
-!! atmosphere_init(atm) zeroes all 22 flat scalars explicitly. Cohort
-!! sub-records are already zero-defaulted at declaration; atmosphere_init
-!! re-zeroes them explicitly for forward-compat with future arcs that
-!! might add allocatable arrays.
+!! state%atmosphere%init(config%meteo) zeroes all 22 flat scalars explicitly. Cohort
+!! sub-records are already zero-defaulted at declaration; init re-zeroes
+!! them explicitly for forward-compat with future arcs that might add
+!! allocatable arrays.
 !!
 !! Excluded:
 !!   - nird/gird — irrigation-owned; deferred to irrigation arc.
@@ -40,7 +40,6 @@ module atmosphere_state_mod
    public :: atmosphere_state_t
    public :: atmosphere_intermediate_t
    public :: atmosphere_cumulative_t
-   public :: atmosphere_init
 
    !> Intermediate accumulators — reset when flzerointr fires.
    !! These 8 fields accumulate within the intermediate output interval;
@@ -200,51 +199,56 @@ module atmosphere_state_mod
       real(real64) :: out_wet = 0.0_real64   !! rainfall duration of current day (d)
       real(real64) :: out_rad = 0.0_real64   !! global solar radiation (kJ/m2)
 
+   contains
+      procedure :: init => atmosphere_state_init
    end type atmosphere_state_t
 
 contains
 
    !> Zero all 22 flat scalars and both cohort sub-records.
-   !! Called once at simulation init (swap.f90:188, after soilwater_init).
-   !! Explicit zeroing of cohort fields is forward-compat for future arcs
-   !! that may add allocatable arrays to the sub-records.
-   subroutine atmosphere_init(atm)
-      type(atmosphere_state_t), intent(inout) :: atm
+   !! Type-bound init — call as state%atmosphere%init(config%meteo).
+   !! meteo_cfg arg reserved for future config-driven seed migration;
+   !! all seeding currently done by the dual-write block in swap_mod.f90.
+   !! Mirrors heat_state%init (GR-BH Task 11).
+   subroutine atmosphere_state_init(self, meteo_cfg)
+      use meteorology_config_mod, only: meteorology_config_t
+      class(atmosphere_state_t),  intent(inout) :: self
+      type(meteorology_config_t), intent(in)    :: meteo_cfg
 
       ! Instantaneous (11)
-      atm%peva     = 0.0_real64
-      atm%ptra     = 0.0_real64
-      atm%empreva  = 0.0_real64
-      atm%melt     = 0.0_real64
-      atm%subl     = 0.0_real64
-      atm%slw      = 0.0_real64
-      atm%ssnow    = 0.0_real64
-      atm%snowinco = 0.0_real64
-      atm%graidt   = 0.0_real64
-      atm%nraidt   = 0.0_real64
-      atm%aintcdt  = 0.0_real64
+      self%peva     = 0.0_real64
+      self%ptra     = 0.0_real64
+      self%empreva  = 0.0_real64
+      self%melt     = 0.0_real64
+      self%subl     = 0.0_real64
+      self%slw      = 0.0_real64
+      self%ssnow    = 0.0_real64
+      self%snowinco = 0.0_real64
+      self%graidt   = 0.0_real64
+      self%nraidt   = 0.0_real64
+      self%aintcdt  = 0.0_real64
 
       ! Per-day (9)
-      atm%grai        = 0.0_real64
-      atm%nraida      = 0.0_real64
-      atm%atmdem      = 0.0_real64
-      atm%pevaday     = 0.0_real64
-      atm%ptraday     = 0.0_real64
-      atm%gsnow       = 0.0_real64
-      atm%snrai       = 0.0_real64
-      atm%fprecnosnow = 0.0_real64
-      atm%sicact      = 0.0_real64
+      self%grai        = 0.0_real64
+      self%nraida      = 0.0_real64
+      self%atmdem      = 0.0_real64
+      self%pevaday     = 0.0_real64
+      self%ptraday     = 0.0_real64
+      self%gsnow       = 0.0_real64
+      self%snrai       = 0.0_real64
+      self%fprecnosnow = 0.0_real64
+      self%sicact      = 0.0_real64
 
       ! Per-event (3)
-      atm%ldwet = 0.0_real64
-      atm%spev  = 0.0_real64
-      atm%saev  = 0.0_real64
+      self%ldwet = 0.0_real64
+      self%spev  = 0.0_real64
+      self%saev  = 0.0_real64
 
       ! Cohort sub-records
-      call atm%intr%reset()
-      call atm%cumu%reset()
+      call self%intr%reset()
+      call self%cumu%reset()
 
-   end subroutine atmosphere_init
+   end subroutine atmosphere_state_init
 
    !> Zero all 8 intermediate cohort fields.
    !! Called under the flzerointr gate (replaces 3 scattered reset blocks).

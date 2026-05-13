@@ -65,7 +65,6 @@ contains
                             out_tmn, out_tmx, out_hum, out_win, out_etr, out_wet, out_rad, &
                             lai, kdif, kdir, cofab, cfbs, swcf, swcfbs, gird, flCropEmergence, et0, ew0, es0
       use soilwater_state_mod, only: soilwater_init
-      use atmosphere_state_mod, only: atmosphere_init
       use tillage_state_mod, only: tillage_init
       use drainage_mod, only: drainage_init
       use surfacewater_mod, only: SurfaceWater
@@ -156,7 +155,7 @@ contains
       end block
       deallocate(h_init_buf)
    end if
-   call atmosphere_init(state%atmosphere)                 ! SS-ATM Phase 1 A-1.2: zero all 22 flat scalars + cohort sub-records
+   call state%atmosphere%init(config%meteo)               ! GR-ATM Task 14: type-bound init; zeroes all 22 flat scalars + cohort sub-records
    ! [SS-ATM A-2.6] swinco=3 warm-restart: seed state%atmosphere directly from config (legacy globals retired)
    if (config%soil%swinco == 3) then
       if (allocated(config%soil%initial%h_file) .and. &
@@ -164,7 +163,7 @@ contains
          state%atmosphere%ssnow = config%soil%initial%ssnow
          state%atmosphere%ldwet = config%soil%initial%ldwet
          state%atmosphere%slw   = config%soil%initial%slw
-         ! spev/saev not in config; remain zero from atmosphere_init (evaporation counters reset on rain)
+         ! spev/saev not in config; remain zero from atmosphere%init (evaporation counters reset on rain)
          if (config%meteo%snow%swsnow /= 1) state%atmosphere%ssnow = 0.0d0
       end if
    end if
