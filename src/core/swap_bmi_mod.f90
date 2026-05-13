@@ -14,7 +14,7 @@ module swap_bmi_mod
    ! methods (update/finalize) and the CAPI accessors all operate on the
    ! same (state, config) pair.
    use swap_capi_mod,   only: bmi_state => capi_state, bmi_config => capi_config
-   use variables,       only: numnod, dz
+   ! [GR-BH Task 24] numnod/dz removed — now read via bmi_state%mesh%numnod / bmi_state%mesh%dz
    implicit none
    private
 
@@ -305,7 +305,7 @@ contains
       select case (trim(name))
       case ('soil_water_content', 'pressure_head', 'soil_temperature')
          ! Profile arrays: numnod elements × 8 bytes
-         nb = numnod * 8
+         nb = bmi_state%mesh%numnod * 8
       case ('groundwater_level', 'bottom_flux', 'actual_evapotranspiration', &
             'recharge', 'surface_runoff', &
             'groundwater_level_imposed', 'bottom_flux_imposed')
@@ -352,7 +352,7 @@ contains
       integer(c_int), value,  intent(in)  :: grid_id
       integer(c_int),         intent(out) :: sz
       integer(c_int)                      :: rc
-      sz = numnod
+      sz = bmi_state%mesh%numnod
       rc = 0
    end function bmi_get_grid_size
 
@@ -361,7 +361,7 @@ contains
       integer(c_int),         intent(out) :: shape_arr(*)
       integer(c_int), value,  intent(in)  :: max_n
       integer(c_int)                      :: rc
-      if (max_n >= 1) shape_arr(1) = numnod
+      if (max_n >= 1) shape_arr(1) = bmi_state%mesh%numnod
       rc = 0
    end function bmi_get_grid_shape
 
@@ -369,7 +369,7 @@ contains
       integer(c_int), value,  intent(in)  :: grid_id
       integer(c_int),         intent(out) :: count
       integer(c_int)                      :: rc
-      count = numnod
+      count = bmi_state%mesh%numnod
       rc = 0
    end function bmi_get_grid_node_count
 
@@ -381,10 +381,10 @@ contains
       integer(c_int)                      :: rc
       integer :: i, m
       real(c_double) :: cumz
-      m = min(max_n, numnod)
+      m = min(max_n, bmi_state%mesh%numnod)
       cumz = 0.0_c_double
       do i = 1, m
-         cumz = cumz - dz(i)   ! negative-downward
+         cumz = cumz - bmi_state%mesh%dz(i)   ! negative-downward
          z_arr(i) = cumz
       end do
       rc = 0
