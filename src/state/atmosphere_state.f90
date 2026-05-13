@@ -34,6 +34,7 @@
 module atmosphere_state_mod
    use, intrinsic :: iso_fortran_env, only: real64
    use iso_c_binding, only: c_double
+   use swap_array_dimensions, only: magrs
    implicit none
    private
    public :: atmosphere_state_t
@@ -137,6 +138,16 @@ module atmosphere_state_mod
       real(c_double),    allocatable :: snow_output_row(:)
       character(len=32), allocatable :: snow_output_columns(:)
       integer                        :: snow_output_n_cols = 0
+
+      ! [SS-GR-ATM A3] Block 1: daily meteo input arrays (366-sized fixed)
+      real(real64) :: arad(366) = 0.0_real64    !! daily radiation input
+      real(real64) :: atmn(366) = 0.0_real64    !! daily min temperature
+      real(real64) :: atmx(366) = 0.0_real64    !! daily max temperature
+      real(real64) :: ahum(366) = 0.0_real64    !! daily humidity
+      real(real64) :: awin(366) = 0.0_real64    !! daily wind speed
+      real(real64) :: arai(366) = 0.0_real64    !! daily rainfall
+      real(real64) :: aetr(366) = 0.0_real64    !! daily ETref
+      real(real64) :: wet(366)  = 0.0_real64    !! daily wet-fraction
 
    end type atmosphere_state_t
 
