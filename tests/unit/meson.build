@@ -143,7 +143,6 @@ if get_option('enable_pfunit')
         '../../src/state/swap_state.f90',
         '../../src/core/timestep_control_mod.f90',
         '../../src/core/initialize.f90',
-        '../../src/core/timecontrol.f90',
         '../../src/soil/soilgrid.f90',
         '../../src/soil/waterbalance.f90',
         '../../src/soil/soilhydraulics.f90',

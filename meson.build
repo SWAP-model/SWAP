@@ -101,8 +101,6 @@ sources = [
     'src/core/timestep_control_mod.f90',
     'src/core/variables.f90',
     'src/core/initialize.f90',
-    'src/core/timecontrol.f90',
-
     # Soil
     'src/soil/soilgrid.f90',
     'src/soil/waterbalance.f90',

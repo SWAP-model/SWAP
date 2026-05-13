@@ -43,6 +43,7 @@ contains
                                          config_to_variables
       use load_swap_config_mod, only: load_swap_config
       use irrigation_mod, only: SSDI_irrigation
+      use timecontrol_mod, only: timecontrol_init, itertime_init
       character(len=*),            intent(in)  :: config_file
       type(swap_state_t),          intent(out) :: state
       type(swap_config_t), target, intent(out) :: config  ! target: crop_config_global => config%crop (set inside body, Task 3)
@@ -52,7 +53,7 @@ contains
    call Initialize
 
 !  iteration and timing statistics
-   call IterTime(1, state)
+   call itertime_init(state)
 
 !  Phase 4f strangler-fig: read time-independent input via the TOML
 !  pipeline + config_to_variables adapter. The legacy readswap() entry
@@ -89,7 +90,7 @@ contains
    if (flSwapShared) call SharedSimulation(1)
 
 !  initialize time variables and switches/flags
-   call TimeControl(1, state)
+   call timecontrol_init(state)
 
 !  calculate grid parameters
    call CalcGrid()
@@ -203,6 +204,8 @@ contains
                             flharvestday, flcropoutput, swcrp, swend, &
                             flTillage, flSSDI
       use timestep_control_mod, only: fldecdt
+      use timecontrol_mod, only: timecontrol_advance, timecontrol_reduce_dt, &
+                                  timecontrol_day_end, itertime_check
       use surfacewater_mod, only: SurfaceWater, surfacewater_year_reset
       use tillage_mod, only: DoTillage
       use boundbottom_mod, only: BoundBottom
@@ -315,7 +318,7 @@ contains
 !        update time variables and switches/flags
          if (fldecdt .or. (flMacroPore .and. FlDecMpRat))then
             call SoilWaterStateVar(2, state)
-            call TimeControl(3, state)
+            call timecontrol_reduce_dt(state)
             fldtreduce = .true.
          end if
 
@@ -334,7 +337,7 @@ contains
       if (flAgeTracer) call AgeTracer(2, state)
 
 !     update time variables and switches/flags
-      call TimeControl(2, state)
+      call timecontrol_advance(state)
 
 !     at the end of a day,
       if (tc_flDayEnd) then  ! SS-TC TC-13
@@ -361,12 +364,12 @@ contains
          if (flCropCalendar) call CropGrowth(4, state%heat%tsoil, state)
 
 !        timing statistics : prevent (near) endless simulations
-         if (flMaxIterTime) call IterTime(2, state)
+         if (flMaxIterTime) call itertime_check(state)
 
 !        Better here: check if subsurface irrigation is required for next day,
 !                     and determine if time step needs to be changed due to dt_SSDI_event
          if (flSSDI) call SSDI_irrigation(2, state)  ! [SS-SWC S-2.12B]
-         call TimeControl(9, state)
+         call timecontrol_day_end(state)
 
       end if
 
@@ -408,11 +411,12 @@ contains
       use variables, only : flswapshared, flcropnut, flagetracer, project, swcrp, swend
       use swap_log,  only: log_info
       use management_soil_mod, only: SoilManagement
+      use timecontrol_mod, only: itertime_close
       type(swap_state_t),  intent(inout) :: state
       type(swap_config_t), intent(in)    :: config  ! unused: kept for parallel signature with swap_init/swap_run_step
 
 !  iteration and timing statistics
-   call IterTime(3, state)
+   call itertime_close(state)
 
 !  close output files (always run; iCaller branch retired)
    if (flSwapShared) call SharedSimulation(4)
