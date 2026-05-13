@@ -156,6 +156,17 @@ module atmosphere_state_mod
       real(real64) :: grain(96) = 0.0_real64    !! sub-daily gross rain
       real(real64) :: nrain(96) = 0.0_real64    !! sub-daily net rain
 
+      ! [SS-GR-ATM A5] Block 3: derived meteo scalars
+      real(real64) :: Tav        = 0.0_real64    !! daily mean air temp
+      real(real64) :: tavd       = 0.0_real64    !! daytime mean air temp
+      real(real64) :: rh         = 0.0_real64    !! relative humidity
+      integer      :: daynrfirst = 0             !! first day in meteo year
+      integer      :: daynrlast  = 0             !! last day in meteo year
+      real(real64) :: atmin7(7)  = 0.0_real64    !! 7-day min-temp buffer
+      integer      :: nofd       = 0             !! current day-of-running-avg
+      real(real64) :: teprrain   = 0.0_real64    !! threshold rain temp
+      real(real64) :: teprsnow   = 0.0_real64    !! threshold snow temp
+
    end type atmosphere_state_t
 
 contains
