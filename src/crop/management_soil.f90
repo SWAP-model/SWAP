@@ -127,7 +127,10 @@ contains
       dum1=0.0; dum2=0.0; dum3=0.0; dum4=0.0
       idum = 0
       ! SS-HEAT Phase 2 Task 6: read tsoil from state%heat
-      associate(tsoil => state%heat%tsoil)
+      ! [GR-BH Audit 31] numnod/dz aliased via state%mesh
+      associate(tsoil  => state%heat%tsoil,     &
+                numnod => state%mesh%numnod,     &  ! [GR-BH Audit 31]
+                dz     => state%mesh%dz          )  ! [GR-BH Audit 31]
       do i=1,numnod
          if(dum1 + 1.0d-2 * dz(i) .lt. dz_WSN)then
             idum = idum + 1
@@ -137,7 +140,7 @@ contains
             dum4 = dum4 + state%soilwater%theta(i) * 1.0d-2 * dz(i)  ! [SS-SWC S-2.12B]
          end if
       end do
-      end associate
+      end associate  ! tsoil, numnod, dz [GR-BH Audit 31]
       Temp          = dum2 / dum1 
 !      WFrac_t0      = dum3 / dum1
       WFrac_t       = dum4 / dum1
@@ -158,7 +161,10 @@ contains
       idum = 0
 
       ! SS-SWST Phase 2 Task 5: inqdra read from state%surfacewater
-      associate(inqdra => state%surfacewater%inqdra)
+      ! [GR-BH Audit 31] numnod/dz aliased via state%mesh
+      associate(inqdra => state%surfacewater%inqdra,  &
+                numnod => state%mesh%numnod,           &  ! [GR-BH Audit 31]
+                dz     => state%mesh%dz                )  ! [GR-BH Audit 31]
       do i=1,numnod
          dum2 = dum2 + state%soilwater%inqrot(i)/state%timecontrol%outper  ! [SS-SWC S-2.12B] TC-12
          if(dum1 + 1.0d-2 * dz(i) .lt. dz_WSN)then
@@ -168,7 +174,7 @@ contains
             end do
          end if
       end do
-      end associate  ! inqdra from state%surfacewater
+      end associate  ! inqdra from state%surfacewater; numnod/dz [GR-BH Audit 31]
       ! SS-ATM A-2.6: igrai/isnrai/igsnow/ievap retired — read from state%atmosphere%intr
       ! [SS-SWC S-2.12B] igird/iintc/irunon/iruno -> state%soilwater
       help = 1.0d-2 * (state%atmosphere%intr%igrai+state%atmosphere%intr%isnrai+ &

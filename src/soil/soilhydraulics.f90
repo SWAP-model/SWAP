@@ -98,10 +98,12 @@ contains
          MaxIt          => state%timecontrol%MaxIt,      &  ! [SS-BMI2 Task 4]
          dtmin          => state%timecontrol%dtmin,      &  ! [SS-BMI2 Task 4]
          swscre         => state%timecontrol%swscre,     &  ! [SS-BMI2 Task 4]
-         numnod         => state%mesh%numnod,            &  ! [GR-BH C4]
-         dz             => state%mesh%dz,               &  ! [GR-BH C4]
-         z              => state%mesh%z,                &  ! [GR-BH C4]
-         disnod         => state%mesh%disnod            )  ! [GR-BH C4]
+         numnod         => state%mesh%numnod,                       &  ! [GR-BH C4]
+         dz             => state%mesh%dz,                        &  ! [GR-BH C4]
+         z              => state%mesh%z,                         &  ! [GR-BH C4]
+         disnod         => state%mesh%disnod,                    &  ! [GR-BH C4]
+         nrlevs         => state%drainage%nrlevs,                &  ! [GR-BH Audit 31]
+         swbotb         => state%soilwater%swbotb_runtime        )  ! [GR-BH Audit 31]
 
       if (tc_flDayStart) then  ! [TC-8]
          flwarn_hc = .true.
@@ -812,7 +814,7 @@ contains
 
       endif
 
-      end associate  ! sw_theta/.../sw_gwlm1 => state%soilwater [SS-SWC S-1.4a/b/S-2.3]; numnod/dz/z/disnod [GR-BH C4]
+      end associate  ! sw_theta/.../sw_gwlm1 => state%soilwater [SS-SWC S-1.4a/b/S-2.3]; numnod/dz/z/disnod [GR-BH C4]; nrlevs/swbotb [GR-BH Audit 31]
 
    end subroutine headcalc
 
@@ -851,10 +853,12 @@ contains
       character(len=200) messag
 
       ! [GR-BH C4] mesh globals aliased via state%mesh for all cases
-      associate( numnod => state%mesh%numnod, &  ! [GR-BH C4]
-                 dz     => state%mesh%dz,     &  ! [GR-BH C4]
-                 z      => state%mesh%z,      &  ! [GR-BH C4]
-                 layer  => state%mesh%layer   )  ! [GR-BH C4]
+      ! [GR-BH Audit 31] swbotb aliased via state%soilwater%swbotb_runtime
+      associate( numnod => state%mesh%numnod,                &  ! [GR-BH C4]
+                 dz     => state%mesh%dz,                    &  ! [GR-BH C4]
+                 z      => state%mesh%z,                     &  ! [GR-BH C4]
+                 layer  => state%mesh%layer,                  &  ! [GR-BH C4]
+                 swbotb => state%soilwater%swbotb_runtime     )  ! [GR-BH Audit 31]
 
       select case (task)
       case (1)
@@ -1181,7 +1185,7 @@ contains
          call fatalerr_collected ('SoilWater', 'Illegal value for TASK')
       end select
 
-      end associate  ! numnod/dz/z/layer [GR-BH C4]
+      end associate  ! numnod/dz/z/layer [GR-BH C4]; swbotb [GR-BH Audit 31]
 
       return
       end subroutine soilwater

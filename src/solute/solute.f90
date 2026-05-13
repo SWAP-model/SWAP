@@ -47,6 +47,7 @@ contains
 
 ! === initialize Solute rate/state variables ===========================
 
+      ! [GR-BH Audit 31] numnod/dz/z aliased via state%mesh
       associate( &
          cml    => state%solute%cml,                      &
          cmsy   => state%solute%cmsy,                     &
@@ -54,7 +55,10 @@ contains
          sampro => state%solute%sampro,                    &
          ! SS-SWC Phase 2 S-2.8: theta/thetsl read from state%soilwater
          sw_theta  => state%soilwater%theta,               &
-         sw_thetsl => state%soilwater%thetsl               &
+         sw_thetsl => state%soilwater%thetsl,              &
+         numnod    => state%mesh%numnod,                   &  ! [GR-BH Audit 31]
+         dz        => state%mesh%dz,                       &  ! [GR-BH Audit 31]
+         z         => state%mesh%z                         &  ! [GR-BH Audit 31]
       )
 
 ! --- determine initial solute profile from input concentrations
@@ -82,13 +86,14 @@ contains
       end do
       sampro = samini
 
-      end associate  ! cml, cmsy, samini, sampro, sw_theta, sw_thetsl (case 1)
+      end associate  ! cml, cmsy, samini, sampro, sw_theta, sw_thetsl (case 1); numnod/dz/z [GR-BH Audit 31]
 
       case (2)
 
 ! === calculate Solute rate variables ========================
 
       ! SS-TC TC-12: t1900, dt read via state%timecontrol tc_* aliases.
+      ! [GR-BH Audit 31] numnod/dz/disnod/nrlevs aliased via state%
       associate( &
          tc_t1900 => state%timecontrol%t1900,                 &  ! TC-12
          tc_dt    => state%timecontrol%dt,                    &  ! TC-12
@@ -120,7 +125,11 @@ contains
          ! SS-SWC Phase 2 S-2.8: theta/thetsl/q read from state%soilwater
          sw_theta  => state%soilwater%theta,                  &
          sw_thetsl => state%soilwater%thetsl,                 &
-         sw_q      => state%soilwater%q                       &
+         sw_q      => state%soilwater%q,                      &
+         numnod    => state%mesh%numnod,                      &  ! [GR-BH Audit 31]
+         dz        => state%mesh%dz,                          &  ! [GR-BH Audit 31]
+         disnod    => state%mesh%disnod,                      &  ! [GR-BH Audit 31]
+         nrlevs    => state%drainage%nrlevs                   &  ! [GR-BH Audit 31]
       )
 
 ! --- reset cumulative solute fluxes
@@ -349,7 +358,7 @@ contains
 ! --- cumulative solute balance
       solbal = sampro - sqprec - sqirrig - sqbot + sqdra + dectot + rottot - samini
 
-      end associate  ! cml, cmsy, csurf, cpond, ..., sqsur (case 2)
+      end associate  ! cml, cmsy, csurf, cpond, ..., sqsur (case 2); numnod/dz/disnod/nrlevs [GR-BH Audit 31]
 
       case default
          call fatalerr_collected ('Solute', 'Illegal value for TASK')
@@ -370,19 +379,20 @@ contains
 subroutine solute_init(state)
    use, intrinsic :: iso_fortran_env, only: real64
    use swap_state_mod, only: swap_state_t
-   use Variables, only: numnod, cml, cmsy
+   ! [GR-BH Audit 31] numnod removed from use-list; read via state%mesh%numnod
+   use Variables, only: cml, cmsy
    implicit none
    type(swap_state_t), intent(inout) :: state
 
    if (.not. allocated(state%solute%cml)) then
-      allocate(state%solute%cml(numnod))
+      allocate(state%solute%cml(state%mesh%numnod))   ! [GR-BH Audit 31]
    end if
    if (.not. allocated(state%solute%cmsy)) then
-      allocate(state%solute%cmsy(numnod))
+      allocate(state%solute%cmsy(state%mesh%numnod))  ! [GR-BH Audit 31]
    end if
 
-   state%solute%cml(:)  = cml(1:numnod)
-   state%solute%cmsy(:) = cmsy(1:numnod)
+   state%solute%cml(:)  = cml(1:state%mesh%numnod)   ! [GR-BH Audit 31]
+   state%solute%cmsy(:) = cmsy(1:state%mesh%numnod)  ! [GR-BH Audit 31]
 end subroutine solute_init
 
 end module solute_mod

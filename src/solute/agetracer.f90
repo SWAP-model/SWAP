@@ -104,6 +104,8 @@ contains
 ! SS-SWC Phase 2 S-2.8: theta/thetsl/q/thetm1/gwl/nodgwl/thetas/pond
 !  read from state%soilwater (reader cutover; body is preserved but unreachable).
 ! SS-TC TC-12: dt read via state%timecontrol tc_* alias.
+      ! [GR-BH Audit 31] numnod/dz/disnod/zbotcp/ztopcp aliased via state%mesh;
+      !   nrlevs aliased via state%drainage
       associate( &
          tc_dt     => state%timecontrol%dt,    &  ! TC-12
          sw_theta  => state%soilwater%theta,   &
@@ -113,7 +115,13 @@ contains
          sw_q      => state%soilwater%q,       &
          sw_gwl    => state%soilwater%gwl,     &
          sw_nodgwl => state%soilwater%nodgwl,  &
-         sw_pond   => state%soilwater%pond     &
+         sw_pond   => state%soilwater%pond,    &
+         numnod    => state%mesh%numnod,       &  ! [GR-BH Audit 31]
+         dz        => state%mesh%dz,           &  ! [GR-BH Audit 31]
+         disnod    => state%mesh%disnod,       &  ! [GR-BH Audit 31]
+         zbotcp    => state%mesh%zbotcp,       &  ! [GR-BH Audit 31]
+         ztopcp    => state%mesh%ztopcp,       &  ! [GR-BH Audit 31]
+         nrlevs    => state%drainage%nrlevs    &  ! [GR-BH Audit 31]
       )
 
 ! ----------------------------------------------------------------------
@@ -335,7 +343,7 @@ contains
          call fatalerr_collected ('AgeTracer', 'Illegal value for TASK')
       end select
 
-      end associate  ! sw_theta, sw_thetm1, sw_thetas, sw_thetsl, sw_q, sw_gwl, sw_nodgwl, sw_pond
+      end associate  ! sw_theta, sw_thetm1, sw_thetas, sw_thetsl, sw_q, sw_gwl, sw_nodgwl, sw_pond; numnod/dz/disnod/zbotcp/ztopcp/nrlevs [GR-BH Audit 31]
 
       return
       end subroutine AgeTracer
