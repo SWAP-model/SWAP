@@ -140,17 +140,35 @@ contains
       character(kind=c_char), intent(in)  :: name(*)
       real(c_double),         intent(out) :: value
       integer(c_int)                      :: ierr
-      ! [SS-BMI2 Task 20]
-      ierr = 1
-      value = 0.0_c_double
+      character(len=64) :: f_name
+      call c_to_f_string(name, f_name)
+      ierr = 0
+      select case (trim(f_name))
+      case ('tstart');   value = capi_state%timecontrol%tstart
+      case ('tend');     value = capi_state%timecontrol%tend
+      case ('dt');       value = capi_state%timecontrol%dt
+      case ('t1900');    value = capi_state%timecontrol%t1900
+      case ('daynr');    value = real(capi_state%timecontrol%daynr, c_double)
+      case ('iptra');    value = capi_state%atmosphere%intr%iptra
+      case ('iqrot');    value = capi_state%soilwater%iqrot
+      case ('flRunEnd'); value = merge(1.0_c_double, 0.0_c_double, capi_state%timecontrol%flRunEnd)
+      case default;      ierr = 1; value = 0.0_c_double
+      end select
    end function swap_get_scalar
 
    function swap_set_scalar(name, value) result(ierr) bind(C, name='swap_set_scalar')
       character(kind=c_char), intent(in) :: name(*)
       real(c_double),  value, intent(in) :: value
       integer(c_int)                     :: ierr
-      ! [SS-BMI2 Task 20]
-      ierr = 1
+      character(len=64) :: f_name
+      call c_to_f_string(name, f_name)
+      ! [SS-BMI2 Phase 2 settable allowlist — currently empty]
+      ! Most names rejected with rc=2. Add settable variables as needed
+      ! when external-crop-driver / coupling workflows arrive.
+      select case (trim(f_name))
+      case default
+         ierr = 2
+      end select
    end function swap_set_scalar
 
    function swap_get_output_row(stream, row_ptr, names_ptr, n) result(ierr) &
