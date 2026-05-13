@@ -22,8 +22,7 @@ module boundtop_mod
       use surfacewater_utils,    only: runoff
       use variables,             only: nird,                &  ! [SS-GR-BH B10] DEFERRED to Arc 8 (irrigation cluster)
                                        swkmean, swredu,    &  ! [SS-GR-BH B10] DEFERRED: config%simulation/meteo; cascade via headcalc
-                                       flrunon, runonarr,  &  ! [SS-GR-BH B10] DEFERRED: not yet in config
-                                       q0, k1max, H0max       ! [SS-GR-BH B10] dual-write: legacy globals kept until PONDRUNOFF migrated (Task 21)
+                                       flrunon, runonarr      ! [SS-GR-BH B10] DEFERRED: not yet in config
       implicit none
 
       private
@@ -146,7 +145,6 @@ contains
       ! [SS-GR-BH B10] ArMpSs assignment deleted (macropore retired ADR 0040 — factor *(1-0)=1 is identity, bit-equivalent)
       ! SS-ATM A-2.6: nraidt/melt retired — read from state%atmosphere
       state%soilwater%q0 = (state%atmosphere%nraidt+nird+state%atmosphere%melt) + state%soilwater%runon - state%soilwater%reva  ! [SS-GR-BH B10]
-      q0 = state%soilwater%q0    ! [SS-GR-BH B10] dual-write: keep legacy global in sync until PONDRUNOFF migrated (Task 21)
       q1 = - state%soilwater%q0 - state%soilwater%pondm1/dt
 
 !     check whether the atmospheric demand condition applies
@@ -166,7 +164,6 @@ contains
          ks = state%heat%rfcp(1)*state%soilwater%ksatfit(state%mesh%layer(1)) + (1.0d0-state%heat%rfcp(1))*hconode_vsmall  ! [SS-GR-BH B10]
       endif
       state%soilwater%k1max = hcomean(swkmean,ks,state%soilwater%k(1),state%mesh%dz(1),state%mesh%dz(1))  ! [SS-GR-BH B10]
-      k1max = state%soilwater%k1max   ! [SS-GR-BH B10] dual-write: keep legacy global in sync until PONDRUNOFF migrated (Task 21)
 !     check whether application of flux=q1 will yield a pressure head >0
 !     at ground surface. If not: flux boundary condition is valid
       h0    = state%soilwater%h(1) - state%mesh%disnod(1)*(q1/state%soilwater%k1max+1.0d0)  ! [SS-SWC S-2.5] [SS-GR-BH B10]
@@ -186,7 +183,6 @@ contains
          p1     = state%soilwater%k1max/state%mesh%disnod(1) * dt           ! [SS-GR-BH B10]
          p2     = 1.0d0/(p1+1.0d0)
          state%soilwater%H0max  = p2 * ( state%soilwater%pondm1 + state%soilwater%q0*dt - state%soilwater%k1max*dt + p1*state%soilwater%h(1) )  ! [SS-GR-BH B10]
-         H0max = state%soilwater%H0max  ! [SS-GR-BH B10] dual-write: keep legacy global in sync until PONDRUNOFF migrated (Task 21)
 
 ! [MACRO-RETIRE 2026-05-12] macropore overland-flow branch deleted (ADR 0040).
 ! Legacy block ran only when FlMacropore=.true. — see legacy/swap-4.2.0.
@@ -208,11 +204,10 @@ contains
 ! ----------------------------------------------------------------------
       ! [SS-SWC S-2.12B] pond retired; read/written via state%soilwater%pond
       ! [SS-TC TC-14] dt, t1900 read via state%timecontrol (ADR 0041)
-      use variables, only: swdra,disnod,H0max,k1max,pondmx,q0,rsro,rsroexp, &
-                           swpondmx,pondmxtab,mairg  ! h,pondm1 dropped [SS-SWC S-2.5]; mairg added [SS-GR-BH B10]
-      use array_utils, only: afgen
-      use surfacewater_utils, only: runoff
-      use swap_state_mod, only: swap_state_t
+      use variables,             only: swpondmx, pondmxtab, mairg  ! [SS-GR-BH B11] DEFERRED: swpondmx/pondmxtab not yet in config
+      use array_utils,           only: afgen
+      use surfacewater_utils,    only: runoff
+      use swap_state_mod,        only: swap_state_t
       implicit none
 
 ! --- arguments
@@ -229,16 +224,16 @@ contains
 
 ! --  in case of time dependent ponding: determine pondmx
       if (swpondmx.eq.1) then
-         pondmx = afgen (pondmxtab,2*mairg,t1900+dt)
+         state%surfacewater%pondmx = afgen (pondmxtab,2*mairg,t1900+dt)      ! [SS-GR-BH B11]
       endif
 
 ! --- check whether h0max, the max value of pond, yields a runoff
 
 !      if(swdra.ne.2 .and. h0max.le.pondmx)then
 
-      if(h0max.le.pondmx)then
+      if(state%soilwater%H0max.le.state%surfacewater%pondmx)then             ! [SS-GR-BH B11]
          state%soilwater%runots = 0.0d0
-         state%soilwater%pond  = h0max                                       ! [SS-SWC S-2.12B]
+         state%soilwater%pond  = state%soilwater%H0max                       ! [SS-SWC S-2.12B] [SS-GR-BH B11]
          state%soilwater%hsurf = state%soilwater%pond
          return
       end if
@@ -246,16 +241,16 @@ contains
       state%soilwater%runots = runoff(state)
       if(dabs(state%soilwater%runots).lt.1.0d-6)then
 !        if no runoff occurs: first estimation of pond is OK
-         state%soilwater%pond  = h0max                                       ! [SS-SWC S-2.12B]
+         state%soilwater%pond  = state%soilwater%H0max                       ! [SS-SWC S-2.12B] [SS-GR-BH B11]
          state%soilwater%hsurf = state%soilwater%pond
          return
-      else if(dabs(state%soilwater%runots).ge.1.0d-6 .and. swdra.ne.2 .and.             &
-     &                                dabs(rsroexp-1.0d0).lt.1.0d-6)then
-         p1 = k1max/disnod(1) * dt
-         p2 = 1.0d0 / (p1 + 1.0d0 + dt/rsro)
+      else if(dabs(state%soilwater%runots).ge.1.0d-6 .and. state%surfacewater%swdra.ne.2 .and.             &
+     &                                dabs(state%surfacewater%rsroexp-1.0d0).lt.1.0d-6)then  ! [SS-GR-BH B11]
+         p1 = state%soilwater%k1max/state%mesh%disnod(1) * dt                ! [SS-GR-BH B11]
+         p2 = 1.0d0 / (p1 + 1.0d0 + dt/state%surfacewater%rsro)             ! [SS-GR-BH B11]
 
-         state%soilwater%pond     = p2 * ( state%soilwater%pondm1 + q0*dt - k1max*dt + p1*state%soilwater%h(1) +  &  ! [SS-SWC S-2.12B]
-     &                     dt/rsro * pondmx )
+         state%soilwater%pond     = p2 * ( state%soilwater%pondm1 + state%soilwater%q0*dt - state%soilwater%k1max*dt + p1*state%soilwater%h(1) +  &  ! [SS-SWC S-2.12B] [SS-GR-BH B11]
+     &                     dt/state%surfacewater%rsro * state%surfacewater%pondmx )  ! [SS-GR-BH B11]
          state%soilwater%runots = runoff(state)
          state%soilwater%hsurf  = state%soilwater%pond
          return
@@ -263,16 +258,16 @@ contains
 
 !        if runoff occurs: find values for pond and runots iteratively
 
-         p1 = k1max/disnod(1) * dt
+         p1 = state%soilwater%k1max/state%mesh%disnod(1) * dt                ! [SS-GR-BH B11]
          p2 = 1.0d0/(p1+1.0d0)
 
 !        estimation of maximum ponding: ignore runoff
-         h0max = p2 * ( state%soilwater%pondm1 + q0*dt - k1max*dt + p1*state%soilwater%h(1) )  ! [SS-SWC S-2.5]
+         state%soilwater%H0max = p2 * ( state%soilwater%pondm1 + state%soilwater%q0*dt - state%soilwater%k1max*dt + p1*state%soilwater%h(1) )  ! [SS-SWC S-2.5] [SS-GR-BH B11]
          h0min = 0.0d0
          do i=1,30
-            state%soilwater%pond   = 0.5d0 * (h0max + h0min)                 ! [SS-SWC S-2.12B]
+            state%soilwater%pond   = 0.5d0 * (state%soilwater%H0max + h0min)  ! [SS-SWC S-2.12B] [SS-GR-BH B11]
             state%soilwater%runots = runoff(state)
-            h0     = p2 * ( state%soilwater%pondm1 +q0*dt -k1max*dt +p1*state%soilwater%h(1) -state%soilwater%runots)
+            h0     = p2 * ( state%soilwater%pondm1 +state%soilwater%q0*dt -state%soilwater%k1max*dt +p1*state%soilwater%h(1) -state%soilwater%runots)  ! [SS-GR-BH B11]
 
             if(dabs(state%soilwater%pond-h0).lt.1.0d-6)then
                state%soilwater%hsurf = state%soilwater%pond
@@ -281,14 +276,14 @@ contains
                if(h0.gt.state%soilwater%pond)then
                   h0min = state%soilwater%pond
                else
-                  h0max = state%soilwater%pond
+                  state%soilwater%H0max = state%soilwater%pond               ! [SS-GR-BH B11]
                end if
             end if
          end do
       end if
 
 !     if convergence has not been reached: proceed with final value
-      state%soilwater%pond   = 0.5d0 * (h0max + h0min)                       ! [SS-SWC S-2.12B]
+      state%soilwater%pond   = 0.5d0 * (state%soilwater%H0max + h0min)       ! [SS-SWC S-2.12B] [SS-GR-BH B11]
       state%soilwater%runots = runoff(state)
       state%soilwater%hsurf  = state%soilwater%pond
 
