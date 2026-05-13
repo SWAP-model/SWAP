@@ -233,7 +233,7 @@ contains
 
         ! Calculate nodal heat capacity and thermal conductivity
         ! heacap_loc is a local workspace (macp-sized) so devries explicit-shape args are satisfied
-        call devries(theave,heacap_loc,heacnd,ht_fquartz,ht_fclay,ht_forg,sw_thetas)  ! [SS-SWC S-2.10]
+        call devries(state%mesh%numnod,theave,heacap_loc,heacnd,ht_fquartz,ht_fclay,ht_forg,sw_thetas)  ! [SS-SWC S-2.10]
         ht_heacon(1) = heacnd(1)
         do i = 2,state%mesh%numnod
           ht_heacon(i) = 0.5d0 * (heacnd(i) + heacnd(i-1))
@@ -369,12 +369,13 @@ contains
   !! - HeaCap: heat capacity (J/m³/K)
   !! - HeaCon: thermal conductivity (W/m/K)
   !! @endnote
-  subroutine Devries (theta,HeaCap,HeaCon,fquartz_in,fclay_in,forg_in,thetas_in)
-    use variables, only: NumNod
+  subroutine Devries (numnod_in, theta,HeaCap,HeaCon,fquartz_in,fclay_in,forg_in,thetas_in)
     use swap_array_dimensions, only: macp
     implicit none
 
     ! Arguments
+    integer, intent(in) :: numnod_in
+    !! Number of nodes (compartments)
     real(8) theta(macp)
     !! Average water content (m³/m³) - different from theta in VARIABLES
     real(8) HeaCap(MACP)
@@ -465,7 +466,7 @@ contains
     real(8), parameter :: kowXkOrg    = kow*kOrg
     real(8), parameter :: kwwXkWat    = kww*kWat
 
-    do Node = 1,NumNod
+    do Node = 1,numnod_in
 
       ! (1) Air fraction and related parameters
       fAir(Node) = thetas_in(Node) - theta(Node)              ! [SS-SWC S-2.10]
