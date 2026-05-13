@@ -35,6 +35,13 @@ module swap_state_mod
       real(c_double),    allocatable :: water_balance_row(:)
       character(len=32), allocatable :: water_balance_columns(:)
       integer                        :: water_balance_n_cols = 0
+
+      ! [SS-BMI2] crop output stream (cropoutput/OutCropFixed/OutWofost/OutGrass).
+      ! Lives at top-level swap_state_t; no crop_state_t exists today.
+      ! N is dynamic: varies by croptype (fixed/wofost/grass) and user config.
+      real(c_double),    allocatable :: crop_output_row(:)
+      character(len=32), allocatable :: crop_output_columns(:)
+      integer                        :: crop_output_n_cols = 0
    end type swap_state_t
 
 end module swap_state_mod

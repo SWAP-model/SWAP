@@ -756,6 +756,7 @@
 !     Purpose            : open and write crop output files
 ! SS-TC TC-10: state added (intent in); threaded to OutCropFixed /
 !   OutWofost / OutGrass so they can read date,t via state%timecontrol.
+! [SS-BMI2] inout: init/cleanup of crop_output_row buffer at top-level state.
 ! ----------------------------------------------------------------------
 
       use variables
@@ -766,7 +767,8 @@
 
 ! --- local variables ------------------
       integer task   !,numcrop
-      type(swap_state_t), intent(in) :: state
+      ! [SS-BMI2] inout: init/cleanup of crop_output_row buffer at top-level state.
+      type(swap_state_t), intent(inout) :: state
       character(len=200) messag
       character(len=160) filnam,filtext
 
@@ -775,44 +777,50 @@
 
 ! === open crop output file and write headers =====================
 
+      ! [SS-BMI2] allocate crop output buffer (builder always runs; dynamic by croptype)
+      call init_crop_output_buffer(state)
+
 ! --- open crop output file
       if (flCropOpenFile) then
 
+         if (.not. state%timecontrol%headless) then
 ! ---   open crop output file and write general header (*.crp)
-        if (trim(outfil).eq.trim(cropfil(1))) then
-          Messag = 'The name of the input crop-file (''//trim(cropfil'//&
-     &   '(icrop))//'') cannot be equal to the name of'                 &
-     &   //'the output crop-file '//trim(outfil)//' Adjust a filename !'
-          call fatalerr_collected ('crops',messag)
-        endif
-        filnam = trim(pathwork)//trim(outfil)//'.crp'
-        call file_open(crp, filnam, 'replace', 'write')
-        filtext = 'output data of simple or detailed crop growth model'
-        call writehead (crp,1,filnam,filtext,project)
+            if (trim(outfil).eq.trim(cropfil(1))) then
+               Messag = 'The name of the input crop-file (''//trim(cropfil'//&
+     &      '(icrop))//'') cannot be equal to the name of'                   &
+     &      //'the output crop-file '//trim(outfil)//' Adjust a filename !'
+               call fatalerr_collected ('crops',messag)
+            endif
+            filnam = trim(pathwork)//trim(outfil)//'.crp'
+            call file_open(crp, filnam, 'replace', 'write')
+            filtext = 'output data of simple or detailed crop growth model'
+            call writehead (crp,1,filnam,filtext,project)
 
 ! ---   write header fixed crop growth
-        if (croptype(icrop) .eq. 1) call OutCropFixed(1, state)
+            if (croptype(icrop) .eq. 1) call OutCropFixed(1, state)
 
 ! ---   write header detailed crop growth
-        if (croptype(icrop) .eq. 2) call OutWofost(1, state)
+            if (croptype(icrop) .eq. 2) call OutWofost(1, state)
 
 ! ---   write header detailed grass growth
-        if (croptype(icrop) .eq. 3) call OutGrass(1, state)
+            if (croptype(icrop) .eq. 3) call OutGrass(1, state)
+         end if
 
-        flCropOpenFile = .false.
+         flCropOpenFile = .false.
 
       else
 
+         if (.not. state%timecontrol%headless) then
 ! ---   header for second and subsequent crops
-
 ! ---   write header fixed crop growth
-        if (croptype(icrop).eq.1 .and. state%timecontrol%swheader.eq.1) call OutCropFixed(1, state)  ! [SS-BMI2 Task 4]
+            if (croptype(icrop).eq.1 .and. state%timecontrol%swheader.eq.1) call OutCropFixed(1, state)  ! [SS-BMI2 Task 4]
 
 ! ---   write header detailed crop growth
-        if (croptype(icrop).eq.2 .and. state%timecontrol%swheader.eq.1) call OutWofost(1, state)  ! [SS-BMI2 Task 4]
+            if (croptype(icrop).eq.2 .and. state%timecontrol%swheader.eq.1) call OutWofost(1, state)  ! [SS-BMI2 Task 4]
 
 ! ---   write header detailed grass growth
-        if (croptype(icrop).eq.3 .and. state%timecontrol%swheader.eq.1) call OutGrass(1, state)  ! [SS-BMI2 Task 4]
+            if (croptype(icrop).eq.3 .and. state%timecontrol%swheader.eq.1) call OutGrass(1, state)  ! [SS-BMI2 Task 4]
+         end if
 
       endif
 
@@ -821,29 +829,37 @@
       case (2)
 
 ! --- write actual data ----------------------------------------------------
+! [SS-BMI2] build crop output row buffer (placeholder; full build deferred to crop output refactor arc)
+      call build_crop_output_row(state)
 
+      if (.not. state%timecontrol%headless) then
 ! --- fixed crop file
-      if (croptype(icrop) .eq. 1) call OutCropFixed(2, state)
+         if (croptype(icrop) .eq. 1) call OutCropFixed(2, state)
 
 ! --- detailed crop growth
-      if (croptype(icrop) .eq. 2) call OutWofost(2, state)
+         if (croptype(icrop) .eq. 2) call OutWofost(2, state)
 
 ! --- detailed grass growth
-      if (croptype(icrop) .eq. 3) call OutGrass(2, state)
-      
+         if (croptype(icrop) .eq. 3) call OutGrass(2, state)
+      end if
+
       return
 
       case (3)
 ! --- close crop output file ------------------------------------------------
 
-      close (crp)
+      ! [SS-BMI2] headless guard: .crp file was only opened when not headless
+      if (.not. state%timecontrol%headless) close (crp)
+
+      ! [SS-BMI2] deallocate crop output buffer
+      call cleanup_crop_output_buffer(state)
 
       case default
          call fatalerr_collected ('CropOutput', 'Illegal value for TASK')
       end select
 
       return
-      end 
+      end
 
 ! ----------------------------------------------------------------------
       subroutine nocrop ()
@@ -4816,3 +4832,59 @@
       end associate  ! tc_t1900, tc_date => state%timecontrol [TC-10]
       return
       end
+
+
+! ----------------------------------------------------------------------
+! [SS-BMI2] Crop output buffer helpers (canonical output-sink pattern)
+! Buffer lives at top-level swap_state_t (no crop_state_t today).
+! N is dynamic — varies by croptype; placeholder N=1 until full crop
+! output migration arc populates the row from OutCropFixed/OutWofost/OutGrass.
+! ----------------------------------------------------------------------
+
+      subroutine init_crop_output_buffer(state)
+! ----------------------------------------------------------------------
+!     Allocate state%crop_output_row and set column names.
+!     Called from cropoutput(1) — always runs, headless-independent.
+!     Currently: N=1 placeholder. Full migration deferred to crop arc.
+! ----------------------------------------------------------------------
+      use swap_state_mod, only: swap_state_t
+      use iso_c_binding,  only: c_double
+      implicit none
+      type(swap_state_t), intent(inout) :: state
+      integer, parameter :: N = 1
+
+      state%crop_output_n_cols = N
+      if (.not. allocated(state%crop_output_row))     allocate(state%crop_output_row(N))
+      if (.not. allocated(state%crop_output_columns)) allocate(state%crop_output_columns(N))
+      state%crop_output_row     = 0.0_c_double
+      state%crop_output_columns(1) = 'placeholder'
+      end subroutine init_crop_output_buffer
+
+
+      subroutine build_crop_output_row(state)
+! ----------------------------------------------------------------------
+!     Fill state%crop_output_row(:) — currently a no-op placeholder.
+!     Called from cropoutput(2) — always runs, headless-independent.
+!     Full build (OutCropFixed/OutWofost/OutGrass values) deferred to
+!     the crop output migration arc.
+! ----------------------------------------------------------------------
+      use swap_state_mod, only: swap_state_t
+      implicit none
+      type(swap_state_t), intent(inout) :: state
+      ! No-op: buffer populated when crop output migration arc runs.
+      end subroutine build_crop_output_row
+
+
+      subroutine cleanup_crop_output_buffer(state)
+! ----------------------------------------------------------------------
+!     Deallocate state%crop_output_row and reset counter.
+!     Called from cropoutput(3) — always runs, headless-independent.
+! ----------------------------------------------------------------------
+      use swap_state_mod, only: swap_state_t
+      implicit none
+      type(swap_state_t), intent(inout) :: state
+
+      if (allocated(state%crop_output_row))     deallocate(state%crop_output_row)
+      if (allocated(state%crop_output_columns)) deallocate(state%crop_output_columns)
+      state%crop_output_n_cols = 0
+      end subroutine cleanup_crop_output_buffer
