@@ -99,8 +99,9 @@ contains
     ! [SS-ATM A-2.6] nraidt/melt retired from variables; state added to read from state%atmosphere
     ! [SS-SWC S-2.12B] theta retired — read via state%soilwater%theta
     ! SS-TC TC-9: t1900 removed from only-list; read via state%timecontrol.
-    use variables, only: CNref, CNdry, CNwet, ThetaRef, Runoff_CN, zbotcp, dz, numnod, wc_cor, iCNtab, CNtimTAB, CNrefTAB, wc10, &
+    use variables, only: CNref, CNdry, CNwet, ThetaRef, Runoff_CN, wc_cor, iCNtab, CNtimTAB, CNrefTAB, wc10, &
                         nod10_cn, icn_atm, z10_cn
+    ! GR-BH: numnod, zbotcp, dz migrated to state%mesh%X
     use soilhydraulics_utils, only: watcon
     implicit none
     ! global
@@ -129,10 +130,10 @@ contains
       if (icn_atm == 0) call fatalerr_collected ('CNmethod', 'Start time of simulation not present in CNtimTAB')
       
     !  to be replaced by average for layer 0-10 cm
-      do i = 1, numnod
-          if (zbotcp(i) < -DEPTH_10CM) then
+      do i = 1, state%mesh%numnod
+          if (state%mesh%zbotcp(i) < -DEPTH_10CM) then
             nod10_cn = i-1
-            z10_cn = -zbotcp(nod10_cn)
+            z10_cn = -state%mesh%zbotcp(nod10_cn)
             exit
           end if
       end do
@@ -147,7 +148,7 @@ contains
                           state%soilwater%vg_params(i), &
                           state%soilwater%iHWCKmodel(state%soilwater%layer(i)), &
                           i, state%soilwater)                      ! [SS-GR-UTILS Task 5]
-            ThetaRef = ThetaRef + (wc1+wc2)*0.5d0*dz(i)
+            ThetaRef = ThetaRef + (wc1+wc2)*0.5d0*state%mesh%dz(i)
           else if (wc_cor == 2) then
             wc1 = watcon(0.0d0, &
                           state%soilwater%vg_params(i), &
@@ -157,7 +158,7 @@ contains
                           state%soilwater%vg_params(i), &
                           state%soilwater%iHWCKmodel(state%soilwater%layer(i)), &
                           i, state%soilwater)                      ! [SS-GR-UTILS Task 5]
-            ThetaRef = ThetaRef + (wc1+wc2)*0.5d0*dz(i)
+            ThetaRef = ThetaRef + (wc1+wc2)*0.5d0*state%mesh%dz(i)
           end if
       end do
       ThetaRef = ThetaRef/z10_cn
@@ -181,7 +182,7 @@ contains
       if (wc_cor > 0) then
           wc10 = 0.0d0
           do i = 1, nod10_cn
-            wc10 = wc10 + state%soilwater%theta(i)*dz(i)  ! [SS-SWC S-2.12B]
+            wc10 = wc10 + state%soilwater%theta(i)*state%mesh%dz(i)  ! [SS-SWC S-2.12B]
           end do
           wc10 = wc10/z10_cn
           if (wc10 < ThetaRef) then
