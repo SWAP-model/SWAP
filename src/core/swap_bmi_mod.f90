@@ -74,8 +74,39 @@ contains
          dest(1:m) = bmi_state%soilwater%theta(1:m)
          if (m < n) dest(m+1:n) = 0.0_c_double
          rc = 0
+      case ('pressure_head')
+         m = min(n, size(bmi_state%soilwater%h))
+         dest(1:m) = bmi_state%soilwater%h(1:m)
+         if (m < n) dest(m+1:n) = 0.0_c_double
+         rc = 0
+      case ('soil_temperature')
+         m = min(n, size(bmi_state%heat%tsoil))
+         dest(1:m) = bmi_state%heat%tsoil(1:m)
+         if (m < n) dest(m+1:n) = 0.0_c_double
+         rc = 0
+      case ('groundwater_level')
+         ! state%soilwater%gwl verified: soilwater_state.f90 line 152
+         if (n >= 1) dest(1) = bmi_state%soilwater%gwl
+         if (n > 1)  dest(2:n) = 0.0_c_double
+         rc = 0
+      case ('bottom_flux')
+         ! state%soilwater%qbot verified: soilwater_state.f90 line 79
+         if (n >= 1) dest(1) = bmi_state%soilwater%qbot
+         if (n > 1)  dest(2:n) = 0.0_c_double
+         rc = 0
       case ('actual_evapotranspiration')
+         ! state%soilwater%iqrot verified: soilwater_state.f90 line 182
          if (n >= 1) dest(1) = bmi_state%soilwater%iqrot
+         if (n > 1)  dest(2:n) = 0.0_c_double
+         rc = 0
+      case ('recharge')
+         ! sign: positive = downward into aquifer (recharge), hence -qbot
+         if (n >= 1) dest(1) = -bmi_state%soilwater%qbot
+         if (n > 1)  dest(2:n) = 0.0_c_double
+         rc = 0
+      case ('surface_runoff')
+         ! state%soilwater%runots verified: soilwater_state.f90 line 72
+         if (n >= 1) dest(1) = bmi_state%soilwater%runots
          if (n > 1)  dest(2:n) = 0.0_c_double
          rc = 0
       case default
@@ -108,7 +139,20 @@ contains
       integer(c_int),  value, intent(in) :: n
       real(c_double),         intent(in) :: src(n)
       integer(c_int)                     :: rc
-      rc = 1                       ! BMI-STUB Phase 2 — no settable variables yet
+      character(len=64) :: name
+      call c_to_f_string(var_name, name)
+      rc = 0
+      select case (trim(name))
+      case ('groundwater_level_imposed')
+         ! Sets bottom Dirichlet BC: overwrite last node pressure head.
+         ! Full MODFLOW exchange plumbing (swdrasur/BoundBottom) is a follow-on.
+         if (n >= 1) bmi_state%soilwater%h(size(bmi_state%soilwater%h)) = src(1)
+      case ('bottom_flux_imposed')
+         ! Sets bottom Neumann BC via state%soilwater%qbot.
+         if (n >= 1) bmi_state%soilwater%qbot = src(1)
+      case default
+         rc = 2   ! not settable
+      end select
    end function bmi_set_value_double
 
    !----------------------------------------------------------------------
