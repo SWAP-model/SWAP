@@ -60,11 +60,10 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
       case (1)
 
 ! === initialization — HOISTED ==========================================
-! State init for surfacewater was hoisted to swap_init's S4 pass on 2026-05-13
+! state%surfacewater%init(...) is now called directly from swap_init's S4 pass
 ! (spec docs/superpowers/specs/2026-05-13-state-init-pilot-surfacewater-design.md).
-! state%surfacewater%init(...) runs directly from swap_init before this Phase-1 task.
-! case(1) is kept as a no-op stub to preserve the task=1 dispatcher signature;
-! removal of the dispatcher case is a separate cleanup follow-up.
+! Stub kept to preserve the task=1 dispatcher signature; case removal is a
+! separate cleanup follow-up.
 
       return
 

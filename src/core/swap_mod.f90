@@ -158,10 +158,11 @@ contains
    if (flSolute) call solute_init(state)   ! SS-SLST Phase 2 Task 7: seed state%solute from config-populated globals
 
 !  initialize SurfaceWater management variables
-   ! State init S4: hoisted out of SurfaceWater(task=1) per the 2026-05-13
-   ! state-init pilot (spec docs/superpowers/specs/2026-05-13-state-init-pilot-surfacewater-design.md).
+   ! S4 state init for surfacewater (spec docs/superpowers/specs/2026-05-13-state-init-pilot-surfacewater-design.md).
    if (flSurfaceWater) call state%surfacewater%init(config%surface_water, config%drain, numnod)
-   if (flSurfaceWater) call SurfaceWater(1, state, request_smaller_dt)   ! case(1) is now a stub
+   ! SurfaceWater(task=1)'s case(1) is now a no-op stub; init was hoisted to the line above.
+   ! Dispatcher-case removal is a separate cleanup follow-up.
+   if (flSurfaceWater) call SurfaceWater(1, state, request_smaller_dt)
 
 !  [MACRO-RETIRE 2026-05-12] MACROPORE call retired (ADR 0040). flMacroPore is permanent .false.
 !  if (flMacroPore) call MACROPORE(1, state)
