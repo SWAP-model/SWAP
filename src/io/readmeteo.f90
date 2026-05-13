@@ -134,11 +134,13 @@
          datea(3) = ad(1)
          call dtardp (datea,fsec,tmeteo)
          daynrfirst = nint ( tmeteo - timjan1 + 1.0d0 )
+         state%atmosphere%daynrfirst = daynrfirst   ! [SS-GR-ATM A5.6] runtime dual-write
          datea(2) = am(ifnd)
          datea(3) = ad(ifnd)
 
          call dtardp (datea,fsec,tmeteo)
          daynrlast = nint ( tmeteo - timjan1 + 1.0d0 )
+         state%atmosphere%daynrlast = daynrlast   ! [SS-GR-ATM A5.6] runtime dual-write
 
 ! --- check date 
          do i = 2, ifnd-1
@@ -217,6 +219,7 @@
 
 ! ---   initialize number of days for running average Tmin
         nofd = 0
+        state%atmosphere%nofd = nofd   ! [SS-GR-ATM A5.6] runtime dual-write
       
       endif
 ! --- end of initialization of detailed meteo   
@@ -407,6 +410,15 @@ do i = 1, ifnd
    ahum(i) = get_external_meteo_value(i1+i-1, 7)          ! vapor (kPa)
    awin(i) = get_external_meteo_value(i1+i-1, 8)          ! wind (m/s)
    wet(i)  = -99.9d0                                       ! missing — no wet-flag column yet
+   ! [SS-GR-ATM A5.6] per-element dual-writes
+   state%atmosphere%arai(i) = arai(i)
+   state%atmosphere%atmn(i) = atmn(i)
+   state%atmosphere%atmx(i) = atmx(i)
+   state%atmosphere%aetr(i) = aetr(i)
+   state%atmosphere%arad(i) = arad(i)
+   state%atmosphere%ahum(i) = ahum(i)
+   state%atmosphere%awin(i) = awin(i)
+   state%atmosphere%wet(i)  = wet(i)
 end do
 
 ! Backfill ad/am from the date column (days-since-jd1900 → month/day).
@@ -423,10 +435,12 @@ state%timecontrol%timjan1 = t_jan1
 datea(2) = am(1); datea(3) = ad(1)
 call dtardp(datea, fsec, tval)
 daynrfirst = nint(tval - state%timecontrol%timjan1 + 1.0d0)
+state%atmosphere%daynrfirst = daynrfirst   ! [SS-GR-ATM A5.6] runtime dual-write
 
 datea(2) = am(ifnd); datea(3) = ad(ifnd)
 call dtardp(datea, fsec, tval)
 daynrlast = nint(tval - state%timecontrol%timjan1 + 1.0d0)
+state%atmosphere%daynrlast = daynrlast   ! [SS-GR-ATM A5.6] runtime dual-write
 
 end subroutine read_meteo_from_external_buffer_year
 
@@ -483,13 +497,21 @@ ifnd = n
 
 ! Populate per-day arrays.
 arad(1:n) = metcsv_dat(i1:i2, 2) * 1000.0d0   ! kJ/m2/d → J/m2/d
+state%atmosphere%arad(1:n) = arad(1:n)   ! [SS-GR-ATM A5.6] runtime dual-write
 atmn(1:n) = metcsv_dat(i1:i2, 3)
+state%atmosphere%atmn(1:n) = atmn(1:n)   ! [SS-GR-ATM A5.6] runtime dual-write
 atmx(1:n) = metcsv_dat(i1:i2, 4)
+state%atmosphere%atmx(1:n) = atmx(1:n)   ! [SS-GR-ATM A5.6] runtime dual-write
 ahum(1:n) = metcsv_dat(i1:i2, 5)
+state%atmosphere%ahum(1:n) = ahum(1:n)   ! [SS-GR-ATM A5.6] runtime dual-write
 awin(1:n) = metcsv_dat(i1:i2, 6)
+state%atmosphere%awin(1:n) = awin(1:n)   ! [SS-GR-ATM A5.6] runtime dual-write
 arai(1:n) = metcsv_dat(i1:i2, 7)
+state%atmosphere%arai(1:n) = arai(1:n)   ! [SS-GR-ATM A5.6] runtime dual-write
 aetr(1:n) = metcsv_dat(i1:i2, 8)
+state%atmosphere%aetr(1:n) = aetr(1:n)   ! [SS-GR-ATM A5.6] runtime dual-write
 wet(1:n)  = metcsv_dat(i1:i2, 9)
+state%atmosphere%wet(1:n)  = wet(1:n)    ! [SS-GR-ATM A5.6] runtime dual-write
 
 ! Backfill ad/am from the date column (days-since-jd1900 → month/day).
 ! ReadMeteoYear's validation code uses am(i)/ad(i) to build raintimearray.
@@ -506,10 +528,12 @@ state%timecontrol%timjan1 = t_jan1
 datea(2) = am(1); datea(3) = ad(1)
 call dtardp(datea, fsec, tval)
 daynrfirst = nint(tval - state%timecontrol%timjan1 + 1.0d0)
+state%atmosphere%daynrfirst = daynrfirst   ! [SS-GR-ATM A5.6] runtime dual-write
 
 datea(2) = am(n); datea(3) = ad(n)
 call dtardp(datea, fsec, tval)
 daynrlast = nint(tval - state%timecontrol%timjan1 + 1.0d0)
+state%atmosphere%daynrlast = daynrlast   ! [SS-GR-ATM A5.6] runtime dual-write
 
 end subroutine MeteoCSVYear
 
