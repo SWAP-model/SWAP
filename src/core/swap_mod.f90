@@ -332,7 +332,7 @@ contains
 
 !     calculate reduction for conductivities for frozen conditions
       if (SwFrost.eq.1) then
-         call FrozenCond(state)
+         call FrozenCond(state, config)
       end if
 
 !     calculate potential and actual root water extraction profile

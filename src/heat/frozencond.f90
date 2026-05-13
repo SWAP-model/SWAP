@@ -67,12 +67,13 @@ contains
   !! Purpose: If soil temperatures are simulated, determine the reduction factors
   !! and frozen depth for frozen conditions
   !! @endnote
-  subroutine FrozenCond(state)
-    use variables
+  subroutine FrozenCond(state, config)
     use swap_state_mod, only: swap_state_t
+    use swap_config_mod, only: swap_config_t
     implicit none
 
-    type(swap_state_t), intent(inout) :: state
+    type(swap_state_t),  intent(inout) :: state
+    type(swap_config_t), intent(in)    :: config
     !! Typed simulation state — reads tsoil/tetop from state; writes rfcp/frozen-zone to state only
 
     ! Local variables
@@ -88,17 +89,17 @@ contains
         ht_zfrosttop   => state%heat%zfrosttop)
 
     ! Calculate reduction factor for each node
-    do node=1,numnod
+    do node=1,state%mesh%numnod
       ht_rfcp(node) = 1.0d0
-      if (swfrost.eq.1)then
-        if(ht_tsoil(node).ge.tfroststa)then
+      if (config%soil%frost%swfrost.eq.1)then
+        if(ht_tsoil(node).ge.config%heat%tfroststa)then
           ht_rfcp(node) = 1.0d0
-        else if(ht_tsoil(node).le.tfrostend) then
+        else if(ht_tsoil(node).le.config%heat%tfrostend) then
           ht_rfcp(node) = 0.0d0
-        else if(ht_tsoil(node).lt.tfroststa .and. &
-                ht_tsoil(node).gt.tfrostend) then
-          ht_rfcp(node) = (ht_tsoil(node)-tfrostend)/ &
-                          (tfroststa-tfrostend)
+        else if(ht_tsoil(node).lt.config%heat%tfroststa .and. &
+                ht_tsoil(node).gt.config%heat%tfrostend) then
+          ht_rfcp(node) = (ht_tsoil(node)-config%heat%tfrostend)/ &
+                          (config%heat%tfroststa-config%heat%tfrostend)
         endif
       endif
     end do
@@ -110,12 +111,12 @@ contains
     ht_zfrosttop        = 0.0d0
 
     ! Search from bottom upward for frozen zone
-    node = numnod
+    node = state%mesh%numnod
     do while (flthaw .and. node.gt.1)
       node = node - 1
-      if(ht_tsoil(node) .le. tfrostend+1.0d-6)then
-        ht_zfrostbot = z(node+1) + disnod(node+1) * &
-                       (tfrostend-ht_tsoil(node+1)) / &
+      if(ht_tsoil(node) .le. config%heat%tfrostend+1.0d-6)then
+        ht_zfrostbot = state%mesh%z(node+1) + state%mesh%disnod(node+1) * &
+                       (config%heat%tfrostend-ht_tsoil(node+1)) / &
                        (ht_tsoil(node)-ht_tsoil(node+1))
         flthaw           = .false.
         ht_nodfrostbot   = node
@@ -128,19 +129,19 @@ contains
       node = 0
       do while (flthaw .and. node.lt.ht_nodfrostbot)
         node = node + 1
-        if(ht_tsoil(node) .le. tfrostend+1.0d-6)then
+        if(ht_tsoil(node) .le. config%heat%tfrostend+1.0d-6)then
           if(node.eq.1) then
-            if(ht_tetop.le.tfrostend) then
+            if(ht_tetop.le.config%heat%tfrostend) then
               ht_zfrosttop = 0.0d0
             else
-              ht_zfrosttop = z(node) - &
-                             (z(node) - 0.0d0) * &
-                             (ht_tsoil(node)-tfrostend) / &
+              ht_zfrosttop = state%mesh%z(node) - &
+                             (state%mesh%z(node) - 0.0d0) * &
+                             (ht_tsoil(node)-config%heat%tfrostend) / &
                              (ht_tsoil(node)-ht_tetop)
             endif
           else
-            ht_zfrosttop = z(node) + disnod(node) * &
-                           (ht_tsoil(node)-tfrostend) / &
+            ht_zfrosttop = state%mesh%z(node) + state%mesh%disnod(node) * &
+                           (ht_tsoil(node)-config%heat%tfrostend) / &
                            (ht_tsoil(node)-ht_tsoil(node-1))
           endif
           ht_zfrosttop = min(0.0d0,ht_zfrosttop)
