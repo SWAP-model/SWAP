@@ -185,6 +185,7 @@ contains
             wc10 = wc10 + state%soilwater%theta(i)*state%mesh%dz(i)  ! [SS-SWC S-2.12B]
           end do
           wc10 = wc10/z10_cn
+          state%atmosphere%wc10 = wc10   ! [SS-GR-ATM A5.5] runtime dual-write
           if (wc10 < ThetaRef) then
             CN = CNdry + wc10/ThetaRef*(CNref-CNdry)
           else
@@ -201,6 +202,7 @@ contains
       else
           Runoff_CN = 0.0d0
       end if
+      state%atmosphere%Runoff_CN = Runoff_CN   ! [SS-GR-ATM A5.5] runtime dual-write
       
       ! for testing intermediate output
       !!!if (int(t1900) > t1900_old) then
@@ -344,6 +346,7 @@ contains
       tav = (tmx+tmn)*0.5d0
       ! Calculate average day temperature
       tavd = (tmx+tav)*0.5d0
+      state%atmosphere%tavd = tavd   ! [SS-GR-ATM A5.5] runtime dual-write
 
       if (rh.ge.-98.0d0) then
         ! Calculate saturated vapour pressure [kpa]
@@ -352,19 +355,27 @@ contains
         ! Calculate relative humidity [fraction]
         rh = min(hum/svp,1.0d0)
       endif
+      state%atmosphere%rh = rh   ! [SS-GR-ATM A5.5] runtime dual-write
 
       ! CFO file for PEARL: save meteo variables of today for output
       out_rad = real(rad)
+      state%atmosphere%out_rad = real(out_rad, kind=8)   ! [SS-GR-ATM A5.5] runtime dual-write (real4→real64)
       out_tmn = real(tmn)
+      state%atmosphere%out_tmn = real(out_tmn, kind=8)   ! [SS-GR-ATM A5.5] runtime dual-write (real4→real64)
       out_tmx = real(tmx)
+      state%atmosphere%out_tmx = real(out_tmx, kind=8)   ! [SS-GR-ATM A5.5] runtime dual-write (real4→real64)
       out_hum = real(hum)
+      state%atmosphere%out_hum = real(out_hum, kind=8)   ! [SS-GR-ATM A5.5] runtime dual-write (real4→real64)
       out_win = real(win)
+      state%atmosphere%out_win = real(out_win, kind=8)   ! [SS-GR-ATM A5.5] runtime dual-write (real4→real64)
       out_etr = real(etr)*0.001
+      state%atmosphere%out_etr = real(out_etr, kind=8)   ! [SS-GR-ATM A5.5] runtime dual-write (real4→real64)
       if (swrain.eq.2) then
         out_wet = real(wet(daymeteo+1-daynrfirst))
       else
         out_wet = -1.0
       endif
+      state%atmosphere%out_wet = real(out_wet, kind=8)   ! [SS-GR-ATM A5.5] runtime dual-write (real4→real64)
     
     ! end 1 Daily Meteo 00000000000000000000000000000000000000000000000000000 Daily Meteo
     
@@ -695,6 +706,10 @@ contains
         endif
 
       endif
+      ! [SS-GR-ATM A5.5] mirror final et0/ew0/es0 values to state%crop
+      state%crop%et0 = et0
+      state%crop%ew0 = ew0
+      state%crop%es0 = es0
 
       ! === Section 5: Interception option NHI (adapted Rutter model) ===
 
@@ -705,17 +720,24 @@ contains
             gctp  = gc
           else
             gctp  = 1.0d0 - dexp(-1.0d0*kdir*kdif*lai)
-            if (gctp .lt. 1.0d-5) siccapact=0.
+            if (gctp .lt. 1.0d-5) then
+              siccapact=0.
+              state%atmosphere%siccapact = siccapact   ! [SS-GR-ATM A5.5] dual-write
+            endif
           endif
           dttp = 1.0d0  ! value of 1 d required for the daily meteo option
         elseif (swmetdetail.eq.1) then
           siccapact = afgen(siccaptb,(2*magrs),tc_t)
+          state%atmosphere%siccapact = siccapact   ! [SS-GR-ATM A5.5] dual-write
           if (croptype(icrop).eq.1 .and. swgc.eq.2) then
             gctp  = gc
           elseif (croptype(icrop).eq.1 .and. swgc.eq.1) then
             gctp  = 1.0d0 - dexp(-1.0d0*kdir*kdif*lai)
           endif
-          if (gctp .lt. 1.0d-5) siccapact=0.
+          if (gctp .lt. 1.0d-5) then
+            siccapact=0.
+            state%atmosphere%siccapact = siccapact   ! [SS-GR-ATM A5.5] dual-write
+          endif
           dttp = tc_dt
         endif
 
@@ -917,6 +939,7 @@ contains
                       dexp(17.27d0*tmx/(tmx+237.3d0)))
       ! Calculate relative humidity [fraction]
       rh = min(hum/svp,1.0d0)
+      state%atmosphere%rh = rh   ! [SS-GR-ATM A5.5] runtime dual-write
 
       ! Average temperature between 6 and 18 hour
       sumtav = 0.d0
@@ -928,6 +951,7 @@ contains
         count = count + 1
       enddo
       tavd = sumtav / count
+      state%atmosphere%tavd = tavd   ! [SS-GR-ATM A5.5] runtime dual-write
 
       ! Daily radiation (J/m2/d) and atmospheric demand (cm/d)
       rad = 0.d0
