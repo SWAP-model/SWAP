@@ -156,7 +156,7 @@ contains
 ! === calculate Solute rate variables ========================
 
 ! --- reset cumulative solute fluxes
-      if (flzerocumu) then
+      if (state%timecontrol%flZeroCumu) then
         icAgesur    = 0.0d0
         icAgetopdwn = 0.0d0
         icAgetopupw = 0.0d0
