@@ -166,20 +166,20 @@ contains
   !>
   !> Adapted Rutter method of Van Walsum & Supit (2012).
   !>
-  !> Input from variables module: logf, dt, sicact, siccapact, fimin, ew0, grai
+  !> Input via state: state%atmosphere%siccapact/fimin/grai/sicact, state%crop%ew0, state%timecontrol%dt
+  !> logf retained via narrow use-only (Arc 9 deferral).
   !>
   !> sicact (storage on vegetation canopy [cm]) is both input and output via
-  !> variables module
+  !> state%atmosphere%sicact
   !> @endnote
   subroutine ruttervw (gctp,aintc,eintc,state)
     ! SS-TC TC-11: dt read via state%timecontrol%dt (tc_dt alias).
     ! [SS-GR-ATM B6] logf DEFERRED to Arc 9 (log-file migration).
-    ! [SS-GR-ATM B10] siccapact → state%atmosphere%siccapact DEFERRED: updated dynamically in
-    ! meteoday.f90/cropgrowth.f90 but state field only seeded once at init — stale during run.
-    ! [SS-GR-ATM B10] fimin → state%atmosphere%fimin DEFERRED: same init-only seeding caveat.
-    ! [SS-GR-ATM B10] ew0 → state%crop%ew0 DEFERRED: updated in et.f90/meteoday.f90 but
-    ! state%crop field only seeded once at init.
-    use variables, only: logf,siccapact,fimin,ew0
+    ! [SS-GR-ATM B10] siccapact → state%atmosphere%siccapact
+    ! [SS-GR-ATM B10] fimin → state%atmosphere%fimin
+    ! [SS-GR-ATM B10] ew0 → state%crop%ew0
+    ! Phase A.5 runtime dual-writes ensure state tracks legacy at runtime.
+    use variables, only: logf   ! [SS-GR-ATM B6] DEFERRED to Arc 9
     implicit none
 
     ! Arguments
@@ -202,9 +202,9 @@ contains
     dc_r4        = 1.0e-4
     dtsw_r4      = REAL(state%timecontrol%dt)  ! TC-11
     csk_r4(1)    = REAL(gctp)
-    vxick_r4(1)  = REAL(siccapact)
-    fecmnk_r4(1) = REAL(fimin)
-    ETw0_r4(1)   = REAL(ew0*0.1d0)
+    vxick_r4(1)  = REAL(state%atmosphere%siccapact)
+    fecmnk_r4(1) = REAL(state%atmosphere%fimin)
+    ETw0_r4(1)   = REAL(state%crop%ew0*0.1d0)
     Pgdtsw_r4(1) = REAL(state%atmosphere%grai)
     Sic_r4(1)    = REAL(state%atmosphere%sicact)
 
