@@ -91,6 +91,10 @@ contains
       use, intrinsic :: iso_fortran_env, only: real64
       use swap_state_mod, only: swap_state_t
       use swap_config_mod, only: swap_config_t
+      ! GR-BH Task 28 NOTE: drainage_init is called BEFORE state%drainage%nrlevs and
+      ! state%mesh%numnod are seeded (swap_mod.f90 seeds them after the call).
+      ! Therefore we still read from the globals nrlevs/numnod here for allocation,
+      ! which is correct: those globals are populated before drainage_init is called.
       use variables, only: nrlevs, numnod, MAOWL
       type(swap_state_t),  intent(inout) :: state
       type(swap_config_t), intent(in)    :: config
@@ -181,8 +185,9 @@ contains
     !!
       ! ADR 0031 Phase 2 Task 5: wetper removed from use-list; read from state%drainage%wetper(1).
       ! SS-SWC Phase 2 S-2.8: gwl removed from use-list; read from state%soilwater%gwl.
-      use variables, only: dramet,zbotdr,basegw,l,ipos,khtop,khbot,kvtop,kvbot,entres,zintf,geofac,swdtyp,      &
-owltab,swallo,drares,infres,qdrtab,nrlevs,swnrsrf,cofintfl,expintfl,shape,FlMacropore,NumLevRapDra,swliminf,nowltab
+      ! GR-BH Task 28: zbotdr, l, nrlevs, swnrsrf, owltab migrated off variables → state%drainage%X.
+      use variables, only: dramet,basegw,ipos,khtop,khbot,kvtop,kvbot,entres,zintf,geofac,swdtyp,      &
+swallo,drares,infres,qdrtab,cofintfl,expintfl,shape,FlMacropore,NumLevRapDra,swliminf,nowltab
       ! [SS-TC TC-14] t1900, dt read via state%timecontrol (ADR 0041)
       use array_utils, only: afgen
 
@@ -205,8 +210,14 @@ owltab,swallo,drares,infres,qdrtab,nrlevs,swnrsrf,cofintfl,expintfl,shape,FlMacr
       ! ----------------------------------------------------------------------
 
       ! SS-DRST Phase 2 Task 4: qdrain alias points directly to state; no legacy global written.
-      associate(ZDraBas => state%surfacewater%ZDraBas, &
-                qdrain  => state%drainage%qdrain)
+      ! GR-BH Task 28: zbotdr/l/nrlevs/swnrsrf/owltab aliased from state%drainage.
+      associate(ZDraBas  => state%surfacewater%ZDraBas,  &
+                qdrain   => state%drainage%qdrain,       &
+                zbotdr   => state%drainage%zbotdr,       &  ! GR-BH Task 28
+                l        => state%drainage%L,            &  ! GR-BH Task 28
+                nrlevs   => state%drainage%nrlevs,       &  ! GR-BH Task 28
+                swnrsrf  => state%drainage%swnrsrf,      &  ! GR-BH Task 28
+                owltab   => state%drainage%owltab        )  ! GR-BH Task 28
 
       ! SS-SWC Phase 2 S-2.8: gwl read from state%soilwater
       gwldra = state%soilwater%gwl
@@ -428,10 +439,10 @@ owltab,swallo,drares,infres,qdrtab,nrlevs,swnrsrf,cofintfl,expintfl,shape,FlMacr
                ! SS-SWC Phase 2 S-2.8: gwl removed from use-list; read from state%soilwater%gwl.
                ! [SS-SWC S-2.12B] fluseksatexm retired from variables — read via state%soilwater
                ! [SS-TC TC-14] t1900, dt read via state%timecontrol (ADR 0041)
-               use variables, only: nrlevs,numnod,dramet,swdtyp,NumLevRapDra,owltab,nowltab, &
-                  zbotdr,swdivd,swdislay,swtopdislay,fTopDisLay, &
-                  dz,ksatfit,ksatexm,layer,cofani,l,Swdivdinf,Swnrsrf,    &
-                  SwTopnrsrf,FacDpthInf,madr
+               ! GR-BH Task 28: nrlevs/numnod/dz/layer/ksatfit/ksatexm/cofani/l/zbotdr/
+               !   swdivd/Swdivdinf/Swnrsrf/SwTopnrsrf/FacDpthInf/owltab off variables → state.
+               use variables, only: dramet,swdtyp,NumLevRapDra,nowltab, &
+                  swdislay,swtopdislay,fTopDisLay,madr
                use array_utils, only: afgen
 
                type(swap_state_t), intent(inout) :: state
@@ -443,61 +454,72 @@ owltab,swallo,drares,infres,qdrtab,nrlevs,swnrsrf,cofintfl,expintfl,shape,FlMacr
                integer nodeTopDisLay(madr)
                CHARACTER(len=33) messag
 
+               associate( &
+                  ms_numnod   => state%mesh%numnod,             &  ! GR-BH Task 28
+                  ms_dz       => state%mesh%dz,                 &  ! GR-BH Task 28
+                  ms_layer    => state%mesh%layer,              &  ! GR-BH Task 28
+                  dr_nrlevs   => state%drainage%nrlevs,         &  ! GR-BH Task 28
+                  dr_swdivd   => state%drainage%swdivd,         &  ! GR-BH Task 28
+                  dr_swnrsrf  => state%drainage%swnrsrf,        &  ! GR-BH Task 28
+                  dr_swdivdinf  => state%drainage%swdivdinf,    &  ! GR-BH Task 28
+                  dr_swtopnrsrf => state%drainage%swtopnrsrf,   &  ! GR-BH Task 28
+                  dr_FacDpthInf => state%drainage%FacDpthInf,   &  ! GR-BH Task 28
+                  dr_zbotdr   => state%drainage%zbotdr,         &  ! GR-BH Task 28
+                  dr_L        => state%drainage%L,              &  ! GR-BH Task 28
+                  dr_owltab   => state%drainage%owltab,         &  ! GR-BH Task 28
+                  sw_ksatfit  => state%soilwater%ksatfit,       &  ! GR-BH Task 28
+                  sw_ksatexm  => state%soilwater%ksatexm,       &  ! GR-BH Task 28
+                  sw_cofani   => state%soilwater%cofani          )  ! GR-BH Task 28
+
                ! Allocate per-level state arrays if not yet done (guard for
                ! fldrain path where surfacewater_init may not have been called).
                if (.not. allocated(state%surfacewater%cqdrain)) then
-                  allocate(state%surfacewater%cqdrain(nrlevs))
+                  allocate(state%surfacewater%cqdrain(dr_nrlevs))
                   state%surfacewater%cqdrain = 0.0d0
                end if
                if (.not. allocated(state%surfacewater%cqdrainin)) then
-                  allocate(state%surfacewater%cqdrainin(nrlevs))
+                  allocate(state%surfacewater%cqdrainin(dr_nrlevs))
                   state%surfacewater%cqdrainin = 0.0d0
                end if
                if (.not. allocated(state%surfacewater%cqdrainout)) then
-                  allocate(state%surfacewater%cqdrainout(nrlevs))
+                  allocate(state%surfacewater%cqdrainout(dr_nrlevs))
                   state%surfacewater%cqdrainout = 0.0d0
                end if
                if (.not. allocated(state%surfacewater%inqdra)) then
-                  allocate(state%surfacewater%inqdra(nrlevs, numnod))
+                  allocate(state%surfacewater%inqdra(dr_nrlevs, ms_numnod))
                   state%surfacewater%inqdra = 0.0d0
                end if
                if (.not. allocated(state%surfacewater%inqdra_in)) then
-                  allocate(state%surfacewater%inqdra_in(nrlevs, numnod))
+                  allocate(state%surfacewater%inqdra_in(dr_nrlevs, ms_numnod))
                   state%surfacewater%inqdra_in = 0.0d0
                end if
                if (.not. allocated(state%surfacewater%inqdra_out)) then
-                  allocate(state%surfacewater%inqdra_out(nrlevs, numnod))
+                  allocate(state%surfacewater%inqdra_out(dr_nrlevs, ms_numnod))
                   state%surfacewater%inqdra_out = 0.0d0
                end if
 
                !   - In case of macropores: initialise drainage basis for rapid drainage through macropores
                if (state%surfacewater%flInitDraBas) then
-                  if (NumLevRapDra .gt. nrlevs) then
+                  if (NumLevRapDra .gt. dr_nrlevs) then
                      messag = ' NUMLEVRAPDRA greater then NRLEVS'
                      call fatalerr_collected('MacroRead', messag)
                   end if
 
                   ! SS-SWST Phase 2 Task 11: ZDraBas global dropped; write only to state.
                   if (dramet .lt. 3) then
-                     state%surfacewater%ZDraBas = zbotdr(1)
+                     state%surfacewater%ZDraBas = dr_zbotdr(1)
                   else
                      if (swdtyp(NumLevRapDra) .eq. 1) then
-                        state%surfacewater%ZDraBas = zbotdr(NumLevRapDra)
+                        state%surfacewater%ZDraBas = dr_zbotdr(NumLevRapDra)
                      else
-                        !do i = 1,2*maowl
-                        !   temptab(i) = owltab(NumLevRapDra,i)
-                        !end do
-                        !state%surfacewater%ZDraBas = afgen (temptab,2*maowl,t1900)
-                        state%surfacewater%ZDraBas = afgen(owltab(NumLevRapDra, 1:2*nowltab(NumLevRapDra)), 2*nowltab(NumLevRapDra), state%timecontrol%t1900)
+                        state%surfacewater%ZDraBas = afgen(dr_owltab(NumLevRapDra, 1:2*nowltab(NumLevRapDra)), 2*nowltab(NumLevRapDra), state%timecontrol%t1900)
                      end if
                   end if
 
                   ! SS-SWST Phase 2 Task 11 B1: flInitDraBas global write dropped.
                   state%surfacewater%flInitDraBas = .false.
 
-                  Return
-
-               end if
+               else  ! .not. flInitDraBas — normal timestep path
 
                ! --- reset intermediate surface-water and drainage fluxes
                ! Identical reset at both call sites (here and SurfaceWater(2));
@@ -512,16 +534,14 @@ owltab,swallo,drares,infres,qdrtab,nrlevs,swnrsrf,cofintfl,expintfl,shape,FlMacr
                ! no reservoir reset site is needed here. See ADR 0042.
                if (state%timecontrol%flZeroCumu) call state%surfacewater%reset_cumulative_drainage()
 
-               ! --- reset to zero if groundwater level under soil profile and return
+               ! --- reset to zero if groundwater level under soil profile and skip
                ! SS-SWC Phase 2 S-2.8: gwl read from state%soilwater
                if (state%soilwater%gwl .gt. 998.0d0) then
-                  ! SS-DRST Phase 2 Task 3: zero state directly; legacy global qdrain
-                  ! still zeroed so bocodrb's own use-variables path stays consistent.
-                  do level = 1, nrlevs
+                  ! SS-DRST Phase 2 Task 3: zero state directly.
+                  do level = 1, dr_nrlevs
                      state%drainage%qdrain(level) = 0.0d0
                   end do
-                  return
-               end if
+               else
 
                ! --- calculate total drainage rate and state variables
                ! SS-DRST Phase 2 Task 4: bocodrb writes state%drainage%qdrain directly; no bridge sync.
@@ -530,14 +550,14 @@ owltab,swallo,drares,infres,qdrtab,nrlevs,swnrsrf,cofintfl,expintfl,shape,FlMacr
                ! --- partition drainage flux over compartments
                ! SS-DRST Phase 2 Task 3: divdra reads/writes state%drainage%qdrain and
                ! state%drainage%qdra directly — no legacy globals passed here.
-               if (swdivd .eq. 1) then
+               if (dr_swdivd .eq. 1) then
                   ! SS-SWC Phase 2 S-2.8: gwl read from state%soilwater
-                  call divdra(numnod, nrlevs, dz, ksatfit, ksatexm, state%soilwater%fluseksatexm,    &  ! [SS-SWC S-2.12B]
-              &      layer, cofani, state%soilwater%gwl, l, state%drainage%qdrain, state%drainage%qdra, &
-              &      Swdivdinf, Swnrsrf, SwTopnrsrf, Zbotdr, state%timecontrol%dt, FacDpthInf, owltab, state%timecontrol%t1900)  !  Divdra, infiltration
+                  call divdra(ms_numnod, dr_nrlevs, ms_dz, sw_ksatfit, sw_ksatexm, state%soilwater%fluseksatexm,    &  ! [SS-SWC S-2.12B]
+              &      ms_layer, sw_cofani, state%soilwater%gwl, dr_L, state%drainage%qdrain, state%drainage%qdra, &
+              &      dr_swdivdinf, dr_swnrsrf, dr_swtopnrsrf, dr_zbotdr, state%timecontrol%dt, dr_FacDpthInf, dr_owltab, state%timecontrol%t1900)  !  Divdra, infiltration
                   !       redistribute qdrain with new top boundary for discharge layers
                   if (swdislay .eq. 2) then
-                     do level = 1, nrlevs
+                     do level = 1, dr_nrlevs
                         if (swtopdislay(level) .eq. 1) then
                            zTopDisLay(level) = fTopDisLay(level)*state%soilwater%gwl +        &
               &                       (1.0d0 - fTopDisLay(level))*(state%soilwater%gwl - dh)
@@ -545,22 +565,22 @@ owltab,swallo,drares,infres,qdrtab,nrlevs,swnrsrf,cofintfl,expintfl,shape,FlMacr
                      end do
                   end if
                   if (swdislay .eq. 1 .or. swdislay .eq. 2) then
-                     do level = 1, nrlevs
+                     do level = 1, dr_nrlevs
                         if (swtopdislay(level) .eq. 1) then
                            !                 find node nr of new top of discharge layer
                            nodeTopDisLay(level) = 1
-                           zCum = -dz(1)
+                           zCum = -ms_dz(1)
                            do while (zTopDisLay(level) .lt. zCum)
                               nodeTopDisLay(level) = nodeTopDisLay(level) + 1
-                              zCum = zCum - dz(nodeTopDisLay(level))
+                              zCum = zCum - ms_dz(nodeTopDisLay(level))
                            end do
                            !                 saturated part (difzTopDisLay(lev)) of compartment containing waterlevel
                            difzTopDisLay(level) = zTopDisLay(level) - zCum
                            ratiodz =                                             &
-              &                     difzTopDisLay(level)/dz(nodeTopDisLay(level))
+              &                     difzTopDisLay(level)/ms_dz(nodeTopDisLay(level))
                            sumqdr(level) =                                       &
               &                        ratiodz*state%drainage%qdra(level, nodeTopDisLay(level))
-                           do node = nodeTopDisLay(level) + 1, numnod
+                           do node = nodeTopDisLay(level) + 1, ms_numnod
                               sumqdr(level) = sumqdr(level) + state%drainage%qdra(level, node)
                            end do
                            if (dabs(sumqdr(level)) .lt. 1.0d-8) then
@@ -574,7 +594,7 @@ owltab,swallo,drares,infres,qdrtab,nrlevs,swnrsrf,cofintfl,expintfl,shape,FlMacr
                            end do
                            state%drainage%qdra(level, nodeTopDisLay(level)) =       &
               &                state%drainage%qdra(level, nodeTopDisLay(level))*ratio*ratiodz
-                           do node = nodeTopDisLay(level) + 1, numnod
+                           do node = nodeTopDisLay(level) + 1, ms_numnod
                               state%drainage%qdra(level, node) = state%drainage%qdra(level, node)*ratio
                            end do
                         end if
@@ -582,22 +602,28 @@ owltab,swallo,drares,infres,qdrtab,nrlevs,swnrsrf,cofintfl,expintfl,shape,FlMacr
                   end if
                else
                   ! --- drainage flux through lowest compartment
-                  do level = 1, nrlevs
-                     do node = 1, numnod - 1
+                  do level = 1, dr_nrlevs
+                     do node = 1, ms_numnod - 1
                         state%drainage%qdra(level, node) = 0.0d0
                      end do
-                     state%drainage%qdra(level, numnod) = state%drainage%qdrain(level)
+                     state%drainage%qdra(level, ms_numnod) = state%drainage%qdrain(level)
                   end do
                end if
 
                ! SS-SWST Phase 2 Task 11 B1: qdrtot global write dropped; only state written.
                state%surfacewater%qdrtot = 0.0d0
-               do level = 1, nrlevs
+               do level = 1, dr_nrlevs
                   state%surfacewater%qdrtot = state%surfacewater%qdrtot + state%drainage%qdrain(level)
                end do
 
+               end if  ! gwl > 998 skip
+
+               end if  ! flInitDraBas vs. normal timestep
+
                ! SS-DRST Phase 2 Task 4: state%drainage%qdrain is authoritative; legacy global
                ! qdrain no longer written here or by bocodrb.
+
+               end associate  ! mesh/drainage/soilwater aliases  [GR-BH Task 28]
 
             end subroutine drainage
 
@@ -674,8 +700,9 @@ owltab,swallo,drares,infres,qdrtab,nrlevs,swnrsrf,cofintfl,expintfl,shape,FlMacr
   ! SS-DRST Phase 2 Task 4: qdrain removed from use-variables; written via state%drainage%qdrain.
   ! SS-SWC Phase 2 S-2.8: gwl and pond removed from use-list; read from state%soilwater.
   ! [SS-TC TC-14] t1900, dt read via state%timecontrol (ADR 0041)
-  use variables, only: swsec,swsrf,nrlevs,nrpri,zbotdr,taludr,widthr,pondmx,swdtyp,wlp,l,rdrain,rinfi,          &
-              rentry, rexit, gwlinf, impend, nmper, wscap, swnrsrf, rsurfdeep, rsurfshallow, cofintfl,              &
+  ! GR-BH Task 28: zbotdr, l, nrlevs, swnrsrf off variables → state%drainage%X.
+  use variables, only: swsec,swsrf,nrpri,taludr,widthr,pondmx,swdtyp,wlp,rdrain,rinfi,          &
+              rentry, rexit, gwlinf, impend, nmper, wscap, rsurfdeep, rsurfshallow, cofintfl,              &
                                     expintfl, FlMacropore, NumLevRapdra
 
 ! --- global
@@ -691,13 +718,18 @@ owltab,swallo,drares,infres,qdrtab,nrlevs,swnrsrf,cofintfl,expintfl,shape,FlMacr
 
                ! SS-DRST Phase 2 Task 4: qdrain alias points directly to state; no legacy global written.
                ! SS-SWC Phase 2 S-2.8: gwl/pond read from state%soilwater via ASSOCIATE aliases.
+               ! GR-BH Task 28: zbotdr/l/nrlevs/swnrsrf aliased from state%drainage.
                associate( &
-                  wls    => state%surfacewater%wls,    &
-                  swst   => state%surfacewater%swst,   &
+                  wls     => state%surfacewater%wls,    &
+                  swst    => state%surfacewater%swst,   &
                   ZDraBas => state%surfacewater%ZDraBas, &
-                  qdrain  => state%drainage%qdrain,    &
-                  gwl    => state%soilwater%gwl,       &
-                  pond   => state%soilwater%pond)
+                  qdrain  => state%drainage%qdrain,     &
+                  zbotdr  => state%drainage%zbotdr,     &  ! GR-BH Task 28
+                  l       => state%drainage%L,          &  ! GR-BH Task 28
+                  nrlevs  => state%drainage%nrlevs,     &  ! GR-BH Task 28
+                  swnrsrf => state%drainage%swnrsrf,    &  ! GR-BH Task 28
+                  gwl     => state%soilwater%gwl,       &
+                  pond    => state%soilwater%pond)
 
 ! --- Spec D7: zero drainage when groundwater is dry.
 !     Was in SurfaceWater(2) in legacy code; relocated here per ADR 0030

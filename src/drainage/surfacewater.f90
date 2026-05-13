@@ -52,8 +52,22 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
 
       associate( &
          tc_dt    => state%timecontrol%dt,    &  ! TC-8: SurfaceWater TC reader cutover
-         tc_t1900 => state%timecontrol%t1900  &  ! TC-8
-      )
+         tc_t1900 => state%timecontrol%t1900, &  ! TC-8
+         ms_numnod    => state%mesh%numnod,             &  ! GR-BH Task 28
+         ms_dz        => state%mesh%dz,                 &  ! GR-BH Task 28
+         ms_layer     => state%mesh%layer,              &  ! GR-BH Task 28
+         dr_nrlevs    => state%drainage%nrlevs,         &  ! GR-BH Task 28
+         dr_swdivd    => state%drainage%swdivd,         &  ! GR-BH Task 28
+         dr_swnrsrf   => state%drainage%swnrsrf,        &  ! GR-BH Task 28
+         dr_swdivdinf  => state%drainage%swdivdinf,     &  ! GR-BH Task 28
+         dr_swtopnrsrf => state%drainage%swtopnrsrf,    &  ! GR-BH Task 28
+         dr_FacDpthInf => state%drainage%FacDpthInf,   &  ! GR-BH Task 28
+         dr_zbotdr    => state%drainage%zbotdr,         &  ! GR-BH Task 28
+         dr_L         => state%drainage%L,              &  ! GR-BH Task 28
+         dr_owltab    => state%drainage%owltab,         &  ! GR-BH Task 28
+         sw_ksatfit   => state%soilwater%ksatfit,       &  ! GR-BH Task 28
+         sw_ksatexm   => state%soilwater%ksatexm,       &  ! GR-BH Task 28
+         sw_cofani    => state%soilwater%cofani          )  ! GR-BH Task 28
 
 ! ----------------------------------------------------------------------
       select case (task)
@@ -92,24 +106,26 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
 
       ! ADR 0031 Phase 2 Task 5: qdra global deleted; state%drainage%qdra is
       ! the sole working array throughout.  Sync loops removed.
-      do level=1,nrlevs
-         do node = 1,numnod
+      ! GR-BH Task 28: nrlevs/numnod/dz/swdivd/ksatfit/ksatexm/layer/cofani/l/zbotdr/
+      !   Swdivdinf/Swnrsrf/SwTopnrsrf/FacDpthInf/owltab → state aliases.
+      do level=1,dr_nrlevs
+         do node = 1,ms_numnod
             state%drainage%qdra(level,node) = 0.0d0
          end do
       end do
 
-      if (swdivd.eq.1) then
+      if (dr_swdivd.eq.1) then
 !cD        do level=1,nrlevs
 !cD           qdrain_old(level) = qdrain(level)
 !cD        end do
          ! SS-SWC Phase 2 S-2.8: gwl read from state%soilwater
-         call divdra (numnod,nrlevs,dz,ksatfit,ksatexm,state%soilwater%fluseksatexm,    &  ! [SS-SWC S-2.12B]
-            layer,cofani,state%soilwater%gwl,l,state%drainage%qdrain,state%drainage%qdra,Swdivdinf,Swnrsrf, &
-     &      SwTopnrsrf,Zbotdr,tc_dt,FacDpthInf,owltab,tc_t1900)  ! [TC-8]
+         call divdra (ms_numnod,dr_nrlevs,ms_dz,sw_ksatfit,sw_ksatexm,state%soilwater%fluseksatexm,    &  ! [SS-SWC S-2.12B]
+            ms_layer,sw_cofani,state%soilwater%gwl,dr_L,state%drainage%qdrain,state%drainage%qdra,dr_swdivdinf,dr_swnrsrf, &
+     &      dr_swtopnrsrf,dr_zbotdr,tc_dt,dr_FacDpthInf,dr_owltab,tc_t1900)  ! [TC-8, GR-BH Task 28]
 
 !        redistribute qdrain with new top boundary for discharge layers
          if(swdislay.eq.2) then
-            do level=1,nrlevs
+            do level=1,dr_nrlevs
                if(swtopdislay(level).eq.1)  then
                   zTopDisLay(level) = fTopDisLay(level) * state%soilwater%gwl  +        &
      &                       (1.0d0-fTopDisLay(level)) * (state%soilwater%gwl-dh)
@@ -117,22 +133,22 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
             end do
          end if
          if(swdislay.eq.1 .or. swdislay.eq.2) then
-            do level=1,nrlevs
+            do level=1,dr_nrlevs
                if(swtopdislay(level).eq.1)  then
 !                 find node nr of new top of discharge layer
                   nodeTopDisLay(level) = 1
-                  zCum               = - dz(1)
+                  zCum               = - ms_dz(1)
                   do while (zTopDisLay(level) .lt. zCum)
                      nodeTopDisLay(level) = nodeTopDisLay(level) + 1
-                     zCum              = zCum - dz(nodeTopDisLay(level))
+                     zCum              = zCum - ms_dz(nodeTopDisLay(level))
                   enddo
 !                 saturated part (difzTopDisLay(lev)) of compartment containing waterlevel
                   difzTopDisLay(level) = zTopDisLay(level) - zCum
                   ratiodz =                                             &
-     &                     difzTopDisLay(level)/dz(nodeTopDisLay(level))
+     &                     difzTopDisLay(level)/ms_dz(nodeTopDisLay(level))
                   sumqdr(level) =                                       &
      &                        ratiodz * state%drainage%qdra(level,nodeTopDisLay(level))
-                  do node = nodeTopDisLay(level)+1,numnod
+                  do node = nodeTopDisLay(level)+1,ms_numnod
                      sumqdr(level) =  sumqdr(level) + state%drainage%qdra(level,node)
                   end do
                   if( dabs(sumqdr(level)) .lt. 1.0d-8)then
@@ -146,7 +162,7 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
                   end do
                   state%drainage%qdra(level,nodeTopDisLay(level)) =                    &
      &                state%drainage%qdra(level,nodeTopDisLay(level)) * ratio * ratiodz
-                  do node = nodeTopDisLay(level)+1,numnod
+                  do node = nodeTopDisLay(level)+1,ms_numnod
                      state%drainage%qdra(level,node) = state%drainage%qdra(level,node)* ratio
                   end do
                endif
@@ -172,14 +188,14 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
 
       else
 ! --- drainage flux through lowest compartment
-        do level = 1,nrlevs
-           state%drainage%qdra(level,numnod) = state%drainage%qdrain(level)
+        do level = 1,dr_nrlevs
+           state%drainage%qdra(level,ms_numnod) = state%drainage%qdrain(level)
         end do
       endif
 
       ! SS-SWST Phase 2 Task 11: qdrtot global write dropped; only state written.
       state%surfacewater%qdrtot = 0.0d0
-      do level=1,nrlevs
+      do level=1,dr_nrlevs
           state%surfacewater%qdrtot = state%surfacewater%qdrtot + state%drainage%qdrain(level)
       end do
 
@@ -289,8 +305,9 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
       ! SS-BND Phase 2 Task B-2.4: runots removed from use clause; read via state%soilwater%runots.
       ! SS-SWC Phase 2 S-2.8: gwl,pond,THETA,THETAS,H removed from use-list; read from state%soilwater.
       ! [SS-TC TC-14] T retired — read via state%timecontrol%t
+      ! GR-BH Task 28: zbotdr/NUMNOD/DZ off variables → state%drainage/mesh aliases.
       use variables, only: NRPRI,impend,nmper,swman,hbweir,wlsman,gwlcrit,nphase,dropr,wscap,   &
-                           QRapDra,zbotdr,alphaw,betaw,osswlm,NUMNOD,DZ,VCRIT,NODHD,HCRIT, &
+                           QRapDra,alphaw,betaw,osswlm,VCRIT,NODHD,HCRIT, &
                            SWQHR,QQHTAB,wldip,intwl,logf,rsro,pondmx  ! [TC-8: dropped tcum,dt,t1900,fldtmin]
       use swap_state_mod, only: swap_state_t
       use surfacewater_utils, only: wlevst, swstlev, qhtab
@@ -329,8 +346,11 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
          tc_dt      => state%timecontrol%dt,     &  ! TC-8: WLEVBAL TC reader cutover
          tc_t1900   => state%timecontrol%t1900,  &  ! TC-8
          tc_tcum    => state%timecontrol%tcum,   &  ! TC-8
-         tc_fldtmin => state%timecontrol%fldtmin, &  ! TC-8
-         swscre     => state%timecontrol%swscre  )  ! [SS-BMI2 Task 4]
+         tc_fldtmin  => state%timecontrol%fldtmin,  &  ! TC-8
+         swscre      => state%timecontrol%swscre,   &  ! [SS-BMI2 Task 4]
+         dr_zbotdr   => state%drainage%zbotdr,      &  ! GR-BH Task 28
+         ms_numnod   => state%mesh%numnod,          &  ! GR-BH Task 28
+         ms_dz       => state%mesh%dz               )  ! GR-BH Task 28
 
 ! --- resetting of flag for overflowing of automatic weir
       ! overfl global write dropped: only sw_overfl (state alias) used henceforth.
@@ -385,9 +405,9 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
           ! VTAIR global write dropped; sw_vtair (state alias) used as accumulator.
           ! SS-SWC Phase 2 S-2.8: THETAS/THETA read from state%soilwater
           sw_vtair = 0.0d0
-          do NODE = 1,NUMNOD
+          do NODE = 1,ms_numnod
             sw_vtair = sw_vtair + (state%soilwater%thetas(NODE)-state%soilwater%theta(NODE)) &
-     &              *abs(DZ(NODE))
+     &              *abs(ms_dz(NODE))
           enddo
           do while (sw_vtair.lt.VCRIT(imper,iphase).AND.IPHASE.gt.1)
             iphase = iphase - 1
@@ -430,7 +450,7 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
 
 ! --- level and storage for "max. level for supply"
       wlstara = sw_wlstar - wldip(imper)
-      if (wlstara .gt. (zbotdr(1+nrpri)+1.d-4)) then
+      if (wlstara .gt. (dr_zbotdr(1+nrpri)+1.d-4)) then
          swsttara = swstlev(state, wlstara)
          wsmax = wscap(imper)
       else
@@ -455,7 +475,7 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
         wsupp = wsmax
         wdis = 0.0d0
         sw_swst = 0.0d0
-        sw_wls = zbotdr(nrpri+1)
+        sw_wls = dr_zbotdr(nrpri+1)
 
       elseif (swstmax .ge. 0.0d0 .and. swstmax .lt. swsttara) then
 ! --- system will not become full - set supply to max. capacity
