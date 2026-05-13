@@ -3,8 +3,8 @@
 !! Seven named lifecycle procedures replace the magic-int dispatch
 !! (task=1/2/3/9 + IterTime task=1/2/3). State threaded explicitly;
 !! each procedure carries its own associate block. flZeroIntr and
-!! flZeroCumu are owned by state%timecontrol — bare globals
-!! consumed by Task 11 readers retire in Task 12.
+!! flZeroCumu are owned by state%timecontrol; bare globals
+!! flzerointr/flzerocumu retire in Task 12 (variables.f90/initialize.f90).
 module timecontrol_mod
    use swap_state_mod, only: swap_state_t
    implicit none
@@ -21,7 +21,6 @@ contains
                             flprintdt, nprintday, logf, flCropCalendar, &
                             swirfix, swsnow, swdra, &
                             swhea, swsolu, swetsine, swrain, swmetdetail, &
-                            flzerointr, flzerocumu, &
                             nmetdetail, nirri, swinco, icrop, &
                             cropstart, croptype, project
       use timestep_control_mod, only: fldecdt
@@ -113,10 +112,8 @@ contains
       flRunEnd = .false.
       flDayStart = .true.
       fldtmin = .false.
-      flZeroIntr = .true.
-      flZeroCumu = .true.
-      state%timecontrol%flZeroIntr = .true.   ! [SS-TCM transition] dual-write; readers cut over Task 11
-      state%timecontrol%flZeroCumu = .true.   ! [SS-TCM transition] dual-write; readers cut over Task 11
+      state%timecontrol%flZeroIntr = .true.   ! reset gate: intermediate accumulators
+      state%timecontrol%flZeroCumu = .true.   ! reset gate: cumulative accumulators
       floutput = .false.
       flbaloutput = .false.
       flheader = .false.
@@ -299,7 +296,7 @@ contains
    subroutine timecontrol_advance(state)
       use variables, only: dtmin, dtmax, period, outdat, outdatint, tend, tstart, &
                             nprintday, swheader, swres, swscre, &
-                            flCropCalendar, msteps, flzerointr, flzerocumu, &
+                            flCropCalendar, msteps, &
                             flprintdt, swrain, swmetdetail, &
                             flCropHarvest, flCropOutput, croptype, &
                             raintimearray, dtEventRain, dt_SSDI_event, flSSDI, &
@@ -417,12 +414,10 @@ contains
 !        endif
 
 ! ---   set flags for reset intermediate and cumulative fluxes
-        flZeroCumu = .false.
-        state%timecontrol%flZeroCumu = .false.   ! [SS-TCM transition] dual-write; readers cut over Task 11
-        if (flZeroIntr) then
+        state%timecontrol%flZeroCumu = .false.
+        if (state%timecontrol%flZeroIntr) then
           outper = 0.0d0
-          flZeroIntr = .false.
-          state%timecontrol%flZeroIntr = .false.   ! [SS-TCM transition] dual-write; readers cut over Task 11
+          state%timecontrol%flZeroIntr = .false.
         endif
 
 ! ---   set flags for output
@@ -574,22 +569,19 @@ contains
 ! --- in case of output during a day
       if (flprintshort) then
         floutputshort = .false.
-        flzerointr = .false.
-        state%timecontrol%flZeroIntr = .false.   ! [SS-TCM transition] dual-write; readers cut over Task 11
+        state%timecontrol%flZeroIntr = .false.
 ! ---   determine whether output is required
         if (flprintdt) then
            outper = tcum - tcumold
            tcumold = tcum
            if (abs(outdatint(ioutdatint) - t1900 + 1.d0).lt.1.d-3) then
               floutputshort = .true.
-              flzerointr = .true.
-              state%timecontrol%flZeroIntr = .true.   ! [SS-TCM transition] dual-write; readers cut over Task 11
+              state%timecontrol%flZeroIntr = .true.
            endif
         else
            if (tcum+dtCrit .gt. dble(nprintcount)/dble(nprintday)) then
               floutputshort = .true.
-              flzerointr = .true.
-              state%timecontrol%flZeroIntr = .true.   ! [SS-TCM transition] dual-write; readers cut over Task 11
+              state%timecontrol%flZeroIntr = .true.
               outper = tcum - tcumold
               tcumold = tcum
            endif
@@ -652,22 +644,19 @@ contains
         if (cntper .eq. period .and. .not.flprintdt) then
           cntper = 0
           floutput = .true.
-          flzerointr = .true.
-          state%timecontrol%flZeroIntr = .true.   ! [SS-TCM transition] dual-write; readers cut over Task 11
+          state%timecontrol%flZeroIntr = .true.
         endif
 
         if(flprintdt) then
           if (abs(outdatint(ioutdatint) - t1900 + dt) .lt. 1.d-3) then
             floutput = .true.
-            flzerointr = .true.
-            state%timecontrol%flZeroIntr = .true.   ! [SS-TCM transition] dual-write; readers cut over Task 11
+            state%timecontrol%flZeroIntr = .true.
             ioutdatint = ioutdatint + 1
           endif
         else
           if (abs(outdatint(ioutdatint) - t1900 + 1.d0) .lt. 1.d-3) then
             floutput = .true.
-            flzerointr = .true.
-            state%timecontrol%flZeroIntr = .true.   ! [SS-TCM transition] dual-write; readers cut over Task 11
+            state%timecontrol%flZeroIntr = .true.
             ioutdatint = ioutdatint + 1
           endif
         endif
@@ -675,10 +664,8 @@ contains
 ! ---     output of water and solute balances
           floutput = .true.
           flbaloutput = .true.
-          flzerointr = .true.
-          state%timecontrol%flZeroIntr = .true.   ! [SS-TCM transition] dual-write; readers cut over Task 11
-          flzerocumu = .true.
-          state%timecontrol%flZeroCumu = .true.   ! [SS-TCM transition] dual-write; readers cut over Task 11
+          state%timecontrol%flZeroIntr = .true.
+          state%timecontrol%flZeroCumu = .true.
           ioutdat = ioutdat + 1
         endif
 
