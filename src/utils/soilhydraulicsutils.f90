@@ -225,14 +225,20 @@ contains
    end function watcon
 
    !> Calculate differential moisture capacity (as a function of pressure head)
-   function moiscap(node, head)
+   !! [SS-GR-UTILS Task 7] New signature: explicit vg record + model + dt + soilwater
+   function moiscap(h, vg, model, dt, node, soilwater) result(c)
+      use soilwater_state_mod,  only: soilwater_state_t
+      use hydraulic_params_mod, only: vanGenuchten_params_t
       implicit none
-      
-      ! Arguments
-      integer, intent(in) :: node
-      real(real64), intent(in) :: head
-      real(real64) :: moiscap
-      
+
+      real(real64),                  intent(in) :: h
+      type(vanGenuchten_params_t),   intent(in) :: vg
+      integer,                       intent(in) :: model
+      real(real64),                  intent(in) :: dt
+      integer,                       intent(in) :: node
+      type(soilwater_state_t),       intent(in) :: soilwater
+      real(real64) :: c
+
       ! Local variables
       real(real64) :: h_enpr, m, n, alphah, s_enpr
       real(real64), parameter :: h_crit = -1.0d-2
@@ -241,57 +247,57 @@ contains
       real(real64) :: alfa_2, n_2, m_2, omega_1
 
       ! Use analytical expression
-      if (swsophy == 0) then
+      if (soilwater%swsophy == 0) then
 
-         thetar = cofgen(1,node)
-         thetas = cofgen(2,node)
-         alfamg = cofgen(4,node)
-         n      = cofgen(6,node)
-         m      = cofgen(7,node)
-         h_enpr = cofgen(9,node)
+         thetar = vg%thetar
+         thetas = vg%thetas
+         alfamg = vg%alpha
+         n      = vg%npar
+         m      = vg%mpar
+         h_enpr = vg%h_enpr
 
-         if (iHWCKmodel(layer(node)) == 2) then
+         if (model == 2) then
             ! Exponential relationships; special for testing against analytical solutions
-            moiscap = alfamg * (thetas - thetar) * dexp(alfamg*head)
-            
-         else if (iHWCKmodel(layer(node)) == 3) then
+            c = alfamg * (thetas - thetar) * dexp(alfamg*h)
+
+         else if (model == 3) then
             ! Bi-modal MvG relationships; basic form without air-entry h_enpr or h_crit
-            alfa_2  = cofgen(13,node)
-            n_2     = cofgen(14,node)
-            m_2     = cofgen(15,node)
-            omega_1 = cofgen(16,node)
-            if (head < 0.0_real64) then
-               moiscap = omega_1*alfamg*n*m*(dabs(alfamg*head))**(n - 1.0_real64) * &
-                    (1.0_real64 + (dabs(alfamg*head))**n)**(-1.0_real64 - m)
-               moiscap = moiscap + (1.0_real64 - omega_1)*alfa_2*n_2*m_2* &
-                    (dabs(alfa_2*head))**(n_2 - 1.0_real64) * &
-                    (1.0_real64 + (dabs(alfa_2*head))**n_2)**(-1.0_real64 - m_2)
-               moiscap = (thetas - thetar) * moiscap
+            alfa_2  = vg%alpha_2
+            n_2     = vg%npar_2
+            m_2     = vg%mpar_2
+            omega_1 = vg%omega_1
+            if (h < 0.0_real64) then
+               c = omega_1*alfamg*n*m*(dabs(alfamg*h))**(n - 1.0_real64) * &
+                    (1.0_real64 + (dabs(alfamg*h))**n)**(-1.0_real64 - m)
+               c = c + (1.0_real64 - omega_1)*alfa_2*n_2*m_2* &
+                    (dabs(alfa_2*h))**(n_2 - 1.0_real64) * &
+                    (1.0_real64 + (dabs(alfa_2*h))**n_2)**(-1.0_real64 - m_2)
+               c = (thetas - thetar) * c
             else
-               moiscap = 0.0_real64
+               c = 0.0_real64
             end if
 
-         else if (iHWCKmodel(layer(node)) > 3 .and. iHWCKmodel(layer(node)) < 12) then
-            moiscap = functionvalue_04_11(3, node, head)
+         else if (model > 3 .and. model < 12) then
+            c = functionvalue_04_11(3, node, h)
 
          else  ! Use default MvG
-         
+
             if (h_enpr > h_crit) then
 
-               if (head >= 0.0_real64) then
+               if (h >= 0.0_real64) then
 
-                  moiscap = tc_dt_ptr * 1.0d-7  ! TC-12
+                  c = dt * 1.0d-7  ! TC-12
 
-               else if (head > h_crit) then
+               else if (h > h_crit) then
 
                   ! [SS-GR-UTILS Task 5] inlined: watcon at h_crit (swsophy==0, default MvG branch)
                   term1 = (dabs(alfamg*h_crit)) ** n
                   term1 = thetar + (thetas - thetar) / ((1.0_real64 + term1) ** m)
-                  moiscap = (thetas - term1) / (-h_crit)
+                  c = (thetas - term1) / (-h_crit)
                else
 
                   ! Use analytical evaluation of capacity
-                  alphah = dabs(alfamg*head)
+                  alphah = dabs(alfamg*h)
 
                   ! Compute |alpha * h| to the power n-1
                   term1 = alphah ** (n - 1.0_real64)
@@ -306,13 +312,13 @@ contains
                   term2 = (thetas - thetar) / term2
 
                   ! Calculate the differential moisture capacity
-                  moiscap = dabs(-1.0_real64 * n * m * alfamg * term2 * term1)
+                  c = dabs(-1.0_real64 * n * m * alfamg * term2 * term1)
                end if
             else
 
                h105 = 1.05_real64 * h_enpr
 
-               if (head >= h105) then
+               if (h >= h105) then
                   t105 = thetar + (thetas - thetar) * &
                        ((1.0_real64 + (dabs(alfamg*h_enpr)) ** n) ** m) / &
                        ((1.0_real64 + (dabs(alfamg*h105)) ** n) ** m)
@@ -323,42 +329,43 @@ contains
                   a = (t105 - thetas - C105*h105) / (C105*h105**2)
                   b = (t105**2 - 2*t105*thetas + thetas**2) / &
                        (t105 - thetas - C105*h105)
-                  moiscap = b*a / ((1.0_real64 + a*head)**2)
+                  c = b*a / ((1.0_real64 + a*h)**2)
 
                else
 
-                  alphah = dabs(alfamg*head)
+                  alphah = dabs(alfamg*h)
                   term1 = alphah ** (n - 1.0_real64)
                   term2 = term1 * alphah
                   term2 = (1.0_real64 + term2) ** (m + 1.0_real64)
                   term2 = (thetas - thetar) / term2
 
                   ! For modified VanGenuchten model:
-                  ! - S_enpr: relative saturation at Entry Pressure h_enpr 
+                  ! - S_enpr: relative saturation at Entry Pressure h_enpr
                   s_enpr = (1.0_real64 + (dabs(alfamg*h_enpr)) ** n) ** m
 
-                  moiscap = dabs(-1.0_real64 * n * m * alfamg*term2*term1)*s_enpr
-  
+                  c = dabs(-1.0_real64 * n * m * alfamg*term2*term1)*s_enpr
+
                end if
 
             end if
          end if
-      
-         if (head > -1.0_real64 .and. moiscap < (tc_dt_ptr * 1.0d-7)) moiscap = tc_dt_ptr * 1.0d-7  ! TC-12
+
+         if (h > -1.0_real64 .and. c < (dt * 1.0d-7)) c = dt * 1.0d-7  ! TC-12
 
       ! Use tabulated function
-      else if (swsophy == 1) then
-         dum = head
-         if (do_ln_trans .and. head < 0.0_real64) dum = -dlog(-head + 1.0_real64)
-         if (head >= -1.0d-9) then
-            moiscap = tc_dt_ptr*1.0d-7  ! TC-12
-         else if (dum < sptab(1,node,1)) then
-            moiscap = 0.0_real64
+      else if (soilwater%swsophy == 1) then
+         dum = h
+         if (do_ln_trans .and. h < 0.0_real64) dum = -dlog(-h + 1.0_real64)
+         if (h >= -1.0d-9) then
+            c = dt*1.0d-7  ! TC-12
+         else if (dum < soilwater%sptab(1,node,1)) then
+            c = 0.0_real64
          else
-            call EvalTabulatedFunction(0, numtab(node), 1, 2, 4, node, sptab, ientrytab, head, dummy, moiscap, 3)
+            call EvalTabulatedFunction(0, soilwater%numtab(node), 1, 2, 4, node, &
+                                       soilwater%sptab, soilwater%ientrytab, h, dummy, c, 3)
          end if
       end if
-      
+
    end function moiscap
 
    !> Calculate derivative of hydraulic conductivity (as a function of pressure head)

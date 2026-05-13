@@ -340,7 +340,11 @@ contains
 
             ! Derivative of theta to h (differential moisture capacity),
             ! as part of main diagonal
-            sw_dimoca(i) = moiscap(i,sw_h(i))
+            sw_dimoca(i) = moiscap(sw_h(i), &
+                                    state%soilwater%vg_params(i), &
+                                    state%soilwater%iHWCKmodel(state%soilwater%layer(i)), &
+                                    state%timecontrol%dt, &
+                                    i, state%soilwater)              ! [SS-GR-UTILS Task 7]
             sw_dimoca(i) = sw_dimoca(i)                              ! [SS-SWC S-1.4b]
 
          enddo
@@ -1070,7 +1074,11 @@ contains
       ! Hydraulic conductivities, differential moisture capacities
       ! and mean hydraulic conductivities for each node
       do node = 1,numnod
-        sw%dimoca(node) = moiscap(node,sw%h(node))        ! [SS-SWC S-1.3/S-2.12B]
+        sw%dimoca(node) = moiscap(sw%h(node), &
+                                  sw%vg_params(node), &
+                                  sw%iHWCKmodel(sw%layer(node)), &
+                                  state%timecontrol%dt, &
+                                  node, state%soilwater)             ! [SS-SWC S-1.3/S-2.12B] [SS-GR-UTILS Task 7]
 
         sw%FrArMtrx(node) = 1.0_real64                    ! [SS-SWC S-1.3/S-2.12B]
         sw%k(node) = hconduc(sw%h(node),sw%theta(node),state%heat%rfcp(node),state%heat%tsoil(node), &
@@ -1347,7 +1355,11 @@ contains
 
          ! Update capacity
          ! [SS-SWC S-2.12B] legacy dimoca half-write dropped
-         state%soilwater%dimoca(node) = moiscap(node,sw_h(node))  ! [SS-SWC S-1.4b/S-2.12B]
+         state%soilwater%dimoca(node) = moiscap(sw_h(node), &
+                                              state%soilwater%vg_params(node), &
+                                              state%soilwater%iHWCKmodel(state%soilwater%layer(node)), &
+                                              state%timecontrol%dt, &
+                                              node, state%soilwater)  ! [SS-SWC S-1.4b/S-2.12B] [SS-GR-UTILS Task 7]
  100  continue
 
       end associate  ! sw_h/.../sw_dimoca => state%soilwater [SS-SWC S-2.3]
