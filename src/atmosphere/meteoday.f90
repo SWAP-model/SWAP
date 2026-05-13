@@ -528,7 +528,7 @@ contains
     ! SS-TC TC-9: daynr,t,dt,flmetdetail,fletsine removed from only-list; reads via state%timecontrol.
     ! [SS-TC TC-14] metperiod retired — read via state%timecontrol
     use variables, only: lai, gird, swinter, swmetdetail, nmetdetail, swetr, flCropEmergence, et0, ew0, es0, swcf, swcfbs, cfbs, &
-    cf, cfeic, rad, arad, tav, atav, ahum, logf, swscre, lat, alt, altw, angstroma, angstromb, rsc, ch, daylp, albedo, tmn, tmx, rsw, difpp, &
+    cf, cfeic, rad, arad, tav, atav, ahum, logf, lat, alt, altw, angstroma, angstromb, rsc, ch, daylp, albedo, tmn, tmx, rsw, difpp, &
     dsinbe, atmtr, rsoil, swdivide, kdif, kdir, croptype, swgc, gc, siccapact, siccaptb, icrop, flcropcalendar, &
      flCropHarvest, cfevappond, flco2, fco2tra, tpot, epot, grain, nrain, finterception, swrain, &
      swusecn, runoff_cn, rh, tavd
@@ -562,7 +562,8 @@ contains
        tc_dt          => state%timecontrol%dt,          &  ! TC-9
        tc_flmetdetail => state%timecontrol%flmetdetail, &  ! TC-9
        tc_fletsine    => state%timecontrol%fletsine,    &  ! TC-9
-       metperiod      => state%timecontrol%metperiod    )  ! [SS-TC TC-14]
+       metperiod      => state%timecontrol%metperiod,   &  ! [SS-TC TC-14]
+       swscre         => state%timecontrol%swscre       )  ! [SS-BMI2 Task 4]
 
     ! === Section 3: Interception calculations ===
 

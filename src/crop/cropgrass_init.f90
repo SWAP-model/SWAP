@@ -30,7 +30,7 @@ module cropgrass_init_mod
 
 contains
 
-   subroutine cropgrass_init_from_config(cfg, icrop)
+   subroutine cropgrass_init_from_config(cfg, icrop, tend_val, tstart_val)
       use variables, only: &
          ! ET-related
          swcf, albedo, rsw, rsc, cftb, chtb,                                &
@@ -74,15 +74,15 @@ contains
          ! CO2 (flCO2 only; swco2 is a local in readgrass, not a global)
          flCO2,                                                               &
          ! Irrigation scheduling (set to 0; schedule=1 stub-errored)
-         schedule,                                                             &
-         ! Simulation time globals needed for dateharvest sentinel
-         tend
+         schedule
       use array_utils,  only: afgen
       use error_mod,    only: fatalerr_collected
       implicit none
 
       type(cropgrass_config_t), intent(in) :: cfg
-      integer,                  intent(in) :: icrop  ! rotation slot (reserved)
+      integer,                  intent(in) :: icrop      ! rotation slot (reserved)
+      real(real64),             intent(in) :: tend_val   ! [SS-BMI2 Task 4] state%timecontrol%tend
+      real(real64),             intent(in) :: tstart_val ! [SS-BMI2 Task 4] state%timecontrol%tstart
 
       integer      :: i
       real(real64) :: depth, sum_val
@@ -331,7 +331,7 @@ contains
          ! of each crop period.  populate_dateharvest anchors the DOY→t1900
          ! mapping to tstart (first simulation year), not yearmeteo, so the
          ! same full date sequence is reproduced correctly every time.
-         call populate_dateharvest(cfg, tend)
+         call populate_dateharvest(cfg, tend_val, tstart_val)  ! [SS-BMI2 Task 4]
       end if
 
       ! Regrowth delay table (readgrass lines 4028-4035).
@@ -405,11 +405,12 @@ contains
    !
    ! Sentinel: dateharvest(nmow+1) = tend + 1.0  (legacy line 4023).
    ! ------------------------------------------------------------------
-   subroutine populate_dateharvest(cfg, tend_val)
-      use variables, only: dateharvest, tstart
+   subroutine populate_dateharvest(cfg, tend_val, tstart_val)
+      use variables, only: dateharvest
       implicit none
       type(cropgrass_config_t), intent(in) :: cfg
       real(real64),             intent(in) :: tend_val
+      real(real64),             intent(in) :: tstart_val  ! [SS-BMI2 Task 4]
 
       integer      :: i, cur_year, start_year
       real(real64) :: t_jan1
@@ -417,11 +418,11 @@ contains
       if (.not. allocated(cfg%mowing_dates)) return
       if (cfg%nmow <= 0) return
 
-      ! Derive the simulation start year from tstart.
+      ! Derive the simulation start year from tstart_val (= state%timecontrol%tstart).
       ! This is stable across all crop rotations: mowing_dates span the
       ! entire simulation, so we always anchor the DOY→t1900 mapping to
       ! the first simulation year regardless of which rotation icrop we are.
-      start_year = year_from_t1900(int(tstart))
+      start_year = year_from_t1900(int(tstart_val))  ! [SS-BMI2 Task 4]
       cur_year   = start_year
       t_jan1     = real(t1900_from_year(cur_year), real64)
 

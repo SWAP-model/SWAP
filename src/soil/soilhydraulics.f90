@@ -94,8 +94,10 @@ contains
          tc_t1900       => state%timecontrol%t1900,     &  ! [TC-8]
          tc_fldtmin     => state%timecontrol%fldtmin,   &  ! [TC-8]
          tc_dtold       => state%timecontrol%dtold,     &  ! [TC-8]
-         tc_flDayStart  => state%timecontrol%flDayStart &  ! [TC-8]
-      )
+         tc_flDayStart  => state%timecontrol%flDayStart, &  ! [TC-8]
+         MaxIt          => state%timecontrol%MaxIt,      &  ! [SS-BMI2 Task 4]
+         dtmin          => state%timecontrol%dtmin,      &  ! [SS-BMI2 Task 4]
+         swscre         => state%timecontrol%swscre      )  ! [SS-BMI2 Task 4]
 
       if (tc_flDayStart) then  ! [TC-8]
          flwarn_hc = .true.
@@ -831,7 +833,7 @@ contains
          if(fldumpconvcrit) then
            write(logf,'(a,a19)')   'Datetime = ',datetime
            write(logf,'(a,f14.6)') 't1900    = ', tc_t1900  ! [TC-8]
-           write(logf,'(a,f10.6)') 'dtmin = ', dtmin  ! dtmin = config constant, not TC-owned
+           write(logf,'(a,f10.6)') 'dtmin = ', dtmin  ! [SS-BMI2 Task 4] via state%timecontrol alias
            write(logf,'(a,f10.6)') 'dt    = ', tc_dt  ! [TC-8]
            write(logf,'(a,i3)')    'ftoph  = ', state%soilwater%ftoph
            write(logf,'(a,f10.6)') 'CritDevBalCp  = ', CritDevBalCp

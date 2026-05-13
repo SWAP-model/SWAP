@@ -170,8 +170,10 @@ contains
 
       tcumsol = 0.0d0
       ! SS-DRST Task 3: qdra read from state%drainage; qdrtot remains in state%surfacewater
-      associate(qdra   => state%drainage%qdra, &
-                qdrtot => state%surfacewater%qdrtot)
+      ! [SS-BMI2 Task 4] dtmin aliased from state%timecontrol
+      associate(qdra   => state%drainage%qdra,   &
+                qdrtot => state%surfacewater%qdrtot, &
+                dtmin  => state%timecontrol%dtmin )
       do while ((tc_dt-tcumsol).gt.1.0d-8)  ! TC-12
 
 ! ---    time step and cumulative time

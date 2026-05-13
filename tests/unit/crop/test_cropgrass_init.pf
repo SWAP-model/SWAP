@@ -28,7 +28,7 @@ subroutine test_cropgrass_init_writes_kdif()
    cfg%kdif = 0.60d0
    cfg%kdir = 0.75d0
 
-   call cropgrass_init_from_config(cfg, 1)
+   call cropgrass_init_from_config(cfg, 1, 0.0d0, 0.0d0)  ! [SS-BMI2 Task 4] tend_val, tstart_val
 
    @assertEqual(0.60d0, kdif, 1.0d-12)
    @assertEqual(0.75d0, kdir, 1.0d-12)
@@ -64,7 +64,7 @@ subroutine test_cropgrass_init_cumdens_linear_decline()
    allocate(cfg%rdctb(4))
    cfg%rdctb = [0.0d0, 1.0d0, 1.0d0, 0.0d0]
 
-   call cropgrass_init_from_config(cfg, 1)
+   call cropgrass_init_from_config(cfg, 1, 0.0d0, 0.0d0)  ! [SS-BMI2 Task 4] tend_val, tstart_val
 
    @assertEqual(0.0d0, cumdens(2),   1.0d-6)
    @assertEqual(1.0d0, cumdens(202), 1.0d-6)
@@ -101,7 +101,7 @@ subroutine test_cropgrass_init_swoxygen2_writes_srl()
    allocate(cfg%rdctb(4))
    cfg%rdctb = [0.0d0, 1.0d0, 1.0d0, 0.0d0]
 
-   call cropgrass_init_from_config(cfg, 1)
+   call cropgrass_init_from_config(cfg, 1, 0.0d0, 0.0d0)  ! [SS-BMI2 Task 4] tend_val, tstart_val
 
    @assertEqual(383571.0d0, srl, 1.0d0)
 end subroutine test_cropgrass_init_swoxygen2_writes_srl
@@ -133,7 +133,7 @@ subroutine test_cropgrass_init_swcompensate1_writes_alphacrit()
    allocate(cfg%rdctb(4))
    cfg%rdctb = [0.0d0, 1.0d0, 1.0d0, 0.0d0]
 
-   call cropgrass_init_from_config(cfg, 1)
+   call cropgrass_init_from_config(cfg, 1, 0.0d0, 0.0d0)  ! [SS-BMI2 Task 4] tend_val, tstart_val
 
    @assertEqual(0.7d0, alphacrit, 1.0d-12)
 end subroutine test_cropgrass_init_swcompensate1_writes_alphacrit
@@ -149,10 +149,12 @@ subroutine test_cropgrass_init_swharvest2_populates_dateharvest()
    use funit
    use cropgrass_init_mod, only: cropgrass_init_from_config
    use cropgrass_config_mod, only: cropgrass_config_t
-   use variables, only: dateharvest, tend, tstart
+   use variables, only: dateharvest
+   use, intrinsic :: iso_fortran_env, only: real64
    implicit none
    type(cropgrass_config_t) :: cfg
    integer :: nmow_val
+   real(real64) :: tend_val, tstart_val  ! [SS-BMI2 Task 4] formerly globals
 
    cfg%swharv       = 2
    cfg%nmow         = 3
@@ -175,15 +177,15 @@ subroutine test_cropgrass_init_swharvest2_populates_dateharvest()
    allocate(cfg%rdctb(4))
    cfg%rdctb = [0.0d0, 1.0d0, 1.0d0, 0.0d0]
 
-   ! Anchor the date math: tstart = days-since-1900 for 2000-01-01 (36525)
+   ! Anchor the date math: tstart_val = days-since-1900 for 2000-01-01 (36525)
    ! so dateharvest(i) = 36525 + DOY_i - 1.
-   tstart = 36525.0d0
-   tend   = 36525.0d0 + 365.0d0   ! end-of-year-2000 sentinel
+   tstart_val = 36525.0d0                      ! [SS-BMI2 Task 4] formerly tstart global
+   tend_val   = 36525.0d0 + 365.0d0            ! [SS-BMI2 Task 4] formerly tend global
 
-   call cropgrass_init_from_config(cfg, 1)
+   call cropgrass_init_from_config(cfg, 1, tend_val, tstart_val)  ! [SS-BMI2 Task 4]
 
    ! Sentinel: dateharvest(nmow+1) = tend + 1.0
-   @assertEqual(tend + 1.0d0, dateharvest(nmow_val + 1), 1.0d-6)
+   @assertEqual(tend_val + 1.0d0, dateharvest(nmow_val + 1), 1.0d-6)
    ! DOYs in same year (127, 149, 176) anchored to 2000-01-01.
    @assertEqual(36525.0d0 + 127.0d0 - 1.0d0, dateharvest(1), 1.0d-12)
    @assertEqual(36525.0d0 + 149.0d0 - 1.0d0, dateharvest(2), 1.0d-12)

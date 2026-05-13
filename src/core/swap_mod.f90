@@ -18,7 +18,7 @@ contains
 
    subroutine swap_init(config_file, state, config)
       use variables, only : flswapshared, flmacropore, flcropnut, flagetracer, swfrost, &
-                            swusecn, fldecmprat, flcropcalendar, flmaxitertime, &
+                            swusecn, fldecmprat, flcropcalendar, &
                             flharvestday, flcropoutput, swcrp, flirrigationoutput, swend, project, &
                             flTillage, flSSDI, &
                             numnod, numlay
@@ -204,7 +204,7 @@ contains
 
    subroutine swap_run_step(state, config)
       use variables, only : flswapshared, flmacropore, flcropnut, flagetracer, swfrost, &
-                            fldecmprat, flcropcalendar, flmaxitertime, &
+                            fldecmprat, flcropcalendar, &
                             flharvestday, flcropoutput, swcrp, swend, &
                             flTillage, flSSDI
       use timestep_control_mod, only: fldecdt
@@ -368,7 +368,7 @@ contains
          if (flCropCalendar) call CropGrowth(4, state%heat%tsoil, state)
 
 !        timing statistics : prevent (near) endless simulations
-         if (flMaxIterTime) call itertime_check(state)
+         if (state%timecontrol%flMaxIterTime) call itertime_check(state)  ! [SS-BMI2 Task 4]
 
 !        Better here: check if subsurface irrigation is required for next day,
 !                     and determine if time step needs to be changed due to dt_SSDI_event

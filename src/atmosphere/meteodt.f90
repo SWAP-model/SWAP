@@ -136,7 +136,7 @@ contains
   !! @endnote
    subroutine ProcessRainEvents(state)
       ! [SS-TC TC-14] yearmeteo,timjan1,rainrec read/written via state%timecontrol (ADR 0041)
-      use variables, only: swrain,dtmin,raintab,tend,tstart,wet,nmrain,rainamount,arai,rainfluxarray,raintimearray
+      use variables, only: swrain,raintab,wet,nmrain,rainamount,arai,rainfluxarray,raintimearray
       use array_utils, only: afgen
       use swap_array_dimensions, only: mrain
       implicit none
@@ -151,10 +151,14 @@ contains
       vsmall = 1.0d-8
 
       ! [SS-TC TC-14] alias TC fields directly so bare names below resolve to state%timecontrol
+      ! [SS-BMI2 Task 4] tstart, tend, dtmin added to associate — retire globals in Task 5
       associate( tc_tcum => state%timecontrol%tcum, &
                  yearmeteo => state%timecontrol%yearmeteo, &
                  timjan1 => state%timecontrol%timjan1, &
-                 rainrec => state%timecontrol%rainrec )
+                 rainrec => state%timecontrol%rainrec, &
+                 tstart  => state%timecontrol%tstart, &
+                 tend    => state%timecontrol%tend, &
+                 dtmin   => state%timecontrol%dtmin )
 
       ! === Process rain events on yearly basis ===
 

@@ -297,7 +297,7 @@
       !   removed from only-list; reads via state%soilwater.
       ! SS-SWC S-2.11: theta,hm1,q,inq,inqrot removed from only-list; reads via state%soilwater.
       ! SS-TC TC-7: daynr,daycum,t1900,date,flprintshort removed from only-list; reads via state%timecontrol.
-      use variables, only: ztopcp, zbotcp,rot,noddrz,z,outfil,pathwork,project,swheader
+      use variables, only: ztopcp, zbotcp,rot,noddrz,z,outfil,pathwork,project
       use swap_state_mod, only: swap_state_t
       use file_io_mod, only: file_open
       implicit none
@@ -329,7 +329,7 @@
 
 ! --- write header in rot file
       ! SS-TC TC-7: flprintshort,daynr,daycum,t1900,date read via state%timecontrol (tc_* below).
-      if (swheader .eq. 0) then
+      if (state%timecontrol%swheader .eq. 0) then  ! [SS-BMI2 Task 4]
         if (state%timecontrol%flprintshort) then  ! TC-7
           write (rot,200)
         else
@@ -353,7 +353,7 @@
         tc_daycum       => state%timecontrol%daycum,        &  ! TC-7
         tc_date         => state%timecontrol%date           &  ! TC-7
       )
-      if (swheader .eq. 1) then
+      if (state%timecontrol%swheader .eq. 1) then  ! [SS-BMI2 Task 4]
         if (tc_flprintshort) then
           write (rot,200)
         else

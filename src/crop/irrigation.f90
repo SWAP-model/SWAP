@@ -297,7 +297,7 @@ subroutine SSDI_irrigation(iTask, state)
 
 ! [SS-SWC S-2.12B] h/theta/iptra_day/iqreddry_day/iqredsol_day retired — read via state%soilwater
 ! SS-TC TC-12: t1900 retired from only-list; read via state%timecontrol.
-use variables, only: mairg, numnod, tend, tstart, zbotcp, irrigevent, qssdi, qssdisum, dt_SSDI_event,   &
+use variables, only: mairg, numnod, zbotcp, irrigevent, qssdi, qssdisum, dt_SSDI_event,   &
                      swssdi_irr, nod_ssdi_irr, ssdi_schedule_irr, ssdi_sched_type_irr, &
                      nod_ssdi_sensor_irr, ssdi_threshold_irr, ssdi_threshold_z_irr, &
                      ssdi_amount_irr, ssdi_appl_rate_irr, sw_interval_irr, days_interval_irr, &

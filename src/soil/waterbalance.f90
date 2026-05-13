@@ -38,7 +38,7 @@ contains
       !> @endnote
       subroutine calcgwl (state)
       ! [SS-SWC S-2.12B] retired globals removed from use clause; all reads/writes via state%soilwater
-      use variables, only: disnod,logf,swscre,swbotb,flmacropore,numnod,z,CritUndSatVol
+      use variables, only: disnod,logf,swbotb,flmacropore,numnod,z,CritUndSatVol
       ! [SS-TC TC-6] t1900 read cut over to state%timecontrol%t1900
       use swap_log, only: log_debug, to_str
       implicit none
@@ -192,7 +192,7 @@ contains
      &         'compartment ( ', datexti,  ' ). ',                      &
      &         'This is caused by inconsistency between ',              &
      &         'given gwl and soil physical parameters '
-         call warn ('Calcgwl',messag,logf,swscre)
+         call warn ('Calcgwl',messag,logf,state%timecontrol%swscre)  ! [SS-BMI2 Task 4]
       endif
 
       return

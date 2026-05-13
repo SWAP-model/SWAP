@@ -291,7 +291,7 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
       ! [SS-TC TC-14] T retired — read via state%timecontrol%t
       use variables, only: NRPRI,impend,nmper,swman,hbweir,wlsman,gwlcrit,nphase,dropr,wscap,   &
                            QRapDra,zbotdr,alphaw,betaw,osswlm,NUMNOD,DZ,VCRIT,NODHD,HCRIT, &
-                           SWQHR,QQHTAB,wldip,intwl,logf,swscre,rsro,pondmx  ! [TC-8: dropped tcum,dt,t1900,fldtmin]
+                           SWQHR,QQHTAB,wldip,intwl,logf,rsro,pondmx  ! [TC-8: dropped tcum,dt,t1900,fldtmin]
       use swap_state_mod, only: swap_state_t
       use surfacewater_utils, only: wlevst, swstlev, qhtab
       IMPLICIT NONE
@@ -329,7 +329,8 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
          tc_dt      => state%timecontrol%dt,     &  ! TC-8: WLEVBAL TC reader cutover
          tc_t1900   => state%timecontrol%t1900,  &  ! TC-8
          tc_tcum    => state%timecontrol%tcum,   &  ! TC-8
-         tc_fldtmin => state%timecontrol%fldtmin )  ! TC-8
+         tc_fldtmin => state%timecontrol%fldtmin, &  ! TC-8
+         swscre     => state%timecontrol%swscre  )  ! [SS-BMI2 Task 4]
 
 ! --- resetting of flag for overflowing of automatic weir
       ! overfl global write dropped: only sw_overfl (state alias) used henceforth.

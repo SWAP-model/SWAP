@@ -552,7 +552,9 @@
       save
 ! ----------------------------------------------------------------------
       ! TC-10: t1900 read via state%timecontrol tc_t1900 alias.
-      associate( tc_t1900 => state%timecontrol%t1900 )  ! TC-10
+      ! [SS-BMI2 Task 4] tstart added to associate
+      associate( tc_t1900 => state%timecontrol%t1900, &  ! TC-10
+                 tstart   => state%timecontrol%tstart )   ! [SS-BMI2 Task 4]
 
       select case (task)
       case (1)
@@ -804,13 +806,13 @@
 ! ---   header for second and subsequent crops
 
 ! ---   write header fixed crop growth
-        if (croptype(icrop).eq.1 .and. swheader.eq.1) call OutCropFixed(1, state)
+        if (croptype(icrop).eq.1 .and. state%timecontrol%swheader.eq.1) call OutCropFixed(1, state)  ! [SS-BMI2 Task 4]
 
 ! ---   write header detailed crop growth
-        if (croptype(icrop).eq.2 .and. swheader.eq.1) call OutWofost(1, state)
+        if (croptype(icrop).eq.2 .and. state%timecontrol%swheader.eq.1) call OutWofost(1, state)  ! [SS-BMI2 Task 4]
 
 ! ---   write header detailed grass growth
-        if (croptype(icrop).eq.3 .and. swheader.eq.1) call OutGrass(1, state)
+        if (croptype(icrop).eq.3 .and. state%timecontrol%swheader.eq.1) call OutGrass(1, state)  ! [SS-BMI2 Task 4]
 
       endif
 
@@ -1182,12 +1184,15 @@
       save
 ! ----------------------------------------------------------------------
       ! SS-TC TC-10: t1900,t,daynr,daycum,date read via state%timecontrol tc_* aliases.
+      ! [SS-BMI2 Task 4] tstart, swscre added to associate
       associate( &
         tc_t1900  => state%timecontrol%t1900,  &  ! TC-10
         tc_t      => state%timecontrol%t,      &  ! TC-10
         tc_daynr  => state%timecontrol%daynr,  &  ! TC-10
         tc_daycum => state%timecontrol%daycum, &  ! TC-10
-        tc_date   => state%timecontrol%date    &  ! TC-10
+        tc_date   => state%timecontrol%date,   &  ! TC-10
+        tstart    => state%timecontrol%tstart, &  ! [SS-BMI2 Task 4]
+        swscre    => state%timecontrol%swscre  &  ! [SS-BMI2 Task 4]
       )
 
       select case (task)
@@ -2308,9 +2313,11 @@
       save
 ! ----------------------------------------------------------------------
       ! SS-TC TC-10: t1900,daynr read via state%timecontrol tc_* aliases.
+      ! [SS-BMI2 Task 4] tstart added to associate
       associate( &
         tc_t1900 => state%timecontrol%t1900,  &  ! TC-10
-        tc_daynr => state%timecontrol%daynr   &  ! TC-10
+        tc_daynr => state%timecontrol%daynr,  &  ! TC-10
+        tstart   => state%timecontrol%tstart  &  ! [SS-BMI2 Task 4]
       )
 
       select case (task)
@@ -2356,7 +2363,8 @@
                LSDb           = 0.0d0   ! grazing stub-guarded; populated via daysgrazingtab/uptgrazingtab/lossgrazingtab by init
                tagprest       = cfg%tagprest
                swhydrlift     = 0       ! swdrought=2 stub-errored; mirror cropfixed/cropwofost default
-               call cropgrass_init_from_config(cfg, icrop)
+               call cropgrass_init_from_config(cfg, icrop, &
+                  state%timecontrol%tend, state%timecontrol%tstart)  ! [SS-BMI2 Task 4]
             end associate
          else
             ! ADR 0016 cache-miss: typed config required for type=3 rotations.

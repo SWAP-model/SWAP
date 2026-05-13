@@ -372,7 +372,8 @@ module rootextraction_mod
          cw_Hxylem   => state%soilwater%Hxylem,   &
          cw_qrosum   => state%soilwater%qrosum,   &
          cw_qrot     => state%soilwater%qrot,     &
-         cw_alpJvLier => state%soilwater%alpJvLier &
+         cw_alpJvLier => state%soilwater%alpJvLier, &
+         swscre       => state%timecontrol%swscre  &  ! [SS-BMI2 Task 4]
       )
 
 ! --- initialization
@@ -723,7 +724,8 @@ module rootextraction_mod
          cw_mroot  => state%soilwater%mroot,   &
          cw_mflux  => state%soilwater%mflux,   &
          cw_rootphi => state%soilwater%rootphi, &
-         cw_rootrho => state%soilwater%rootrho  &
+         cw_rootrho => state%soilwater%rootrho, &
+         swscre     => state%timecontrol%swscre &  ! [SS-BMI2 Task 4]
       )
 
 ! --  initialisatie
