@@ -185,7 +185,8 @@ contains
       ! SS-SWST Phase 2 Task 5: inqdra read from state%surfacewater; dropped from use variables.
       ! [SS-SWC S-2.12B] h/theta/inq/inqrot/IThetaBeg/cofgen/FrArMtrx retired — read via state%soilwater
       ! [GR-BH C4] numnod/dz migrated to state%mesh
-      use variables, only: SwDiscrvert,nrlevs,numlay,botcom,                                                         &
+      ! [GR-BH Audit 31] nrlevs retired from use-list; read via state%drainage%nrlevs
+      use variables, only: SwDiscrvert,numlay,botcom,                                                                &
                            numnodNew,dzNew,DiPoCp,IAvFrMpWlWtDm1,IAvFrMpWlWtDm2,                                    &
                            IQExcMtxDm1Cp,IQExcMtxDm2Cp,IQOutDrRapCp,VlMpStDm1,VlMpStDm2
       use soilhydraulics_utils, only: prhead
@@ -248,7 +249,7 @@ contains
           IThetaBegNew(node) = sw_IThetaBeg(node)
           inqNew(node) = sw_inq(node)
           inqrotNew(node) = sw_inqrot(node)
-          do level=1,nrlevs
+          do level=1,state%drainage%nrlevs   ! [GR-BH Audit 31]
             inqdraNew(level,node) = state%surfacewater%inqdra(level,node)
           enddo
 
@@ -406,7 +407,7 @@ contains
           inqNew(NumNodNew+1) = sw_inq(numnod+1)
 
           ! convert inqdra to inqdraNew based on integration
-          Do level = 1,nrlevs
+          Do level = 1,state%drainage%nrlevs   ! [GR-BH Audit 31]
             Do node = 1,NumNodNew
               inqdraNew(level,node) = 0.0d0
               Do i = NodeNew(node,1),NodeNew(node,2)
