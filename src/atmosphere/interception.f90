@@ -37,6 +37,9 @@ contains
   !> [SS-ATM A-2.6] grai retired from variables — now passed as explicit argument
   !> @endnote
   subroutine VonHHBraden (aintc, grai_in)
+    ! [SS-GR-ATM B8] DEFERRED: gird/kdif/kdir/cofab/lai → state%crop%X pending
+    ! cropgrowth/cropfixed_init/cropgrass_init/cropwofost_init/irrigation dual-write.
+    ! isua → state%atmosphere%isua deferred pending irrigation.f90 dual-write.
     use variables, only: gird,kdif,kdir,cofab,lai,isua
     implicit none
 
@@ -86,6 +89,11 @@ contains
   !> [SS-TC TC-11] t read via state%timecontrol%t (tc_t alias)
   !> @endnote
   subroutine Gash (aintc, grai_in, state)
+    ! [SS-GR-ATM B9] DEFERRED: avevaptb/avprectb/pfreetb/pstemtb/scanopytb → state%atmosphere%X
+    ! pending verification that state fields are kept in sync during simulation
+    ! (currently seeded once at init in swap_init_from_loaded_config, not updated dynamically).
+    ! gird → state%crop%gird deferred pending cropgrowth/irrigation dual-write.
+    ! isua → state%atmosphere%isua deferred pending irrigation.f90 dual-write.
     use variables, only: gird,avevaptb,avprectb,pfreetb,pstemtb,scanopytb,isua
     use array_utils, only: afgen
     use swap_array_dimensions, only: magrs
@@ -168,6 +176,12 @@ contains
   !> @endnote
   subroutine ruttervw (gctp,aintc,eintc,state)
     ! SS-TC TC-11: dt read via state%timecontrol%dt (tc_dt alias).
+    ! [SS-GR-ATM B6] logf DEFERRED to Arc 9 (log-file migration).
+    ! [SS-GR-ATM B10] siccapact → state%atmosphere%siccapact DEFERRED: updated dynamically in
+    ! meteoday.f90/cropgrowth.f90 but state field only seeded once at init — stale during run.
+    ! [SS-GR-ATM B10] fimin → state%atmosphere%fimin DEFERRED: same init-only seeding caveat.
+    ! [SS-GR-ATM B10] ew0 → state%crop%ew0 DEFERRED: updated in et.f90/meteoday.f90 but
+    ! state%crop field only seeded once at init.
     use variables, only: logf,siccapact,fimin,ew0
     implicit none
 
@@ -406,6 +420,9 @@ contains
   !> Output to variables module: nird, nraida
   !> @endnote
   subroutine DivIntercep (aintc, state)
+    ! [SS-GR-ATM B7] nird DEFERRED to Arc 8 (irrigation arc).
+    ! [SS-GR-ATM B11] isua → state%atmosphere%isua DEFERRED pending irrigation.f90 dual-write.
+    ! [SS-GR-ATM B11] gird → state%crop%gird DEFERRED pending irrigation.f90/cropgrowth dual-write.
     use variables, only: isua,gird,nird
     implicit none
 
