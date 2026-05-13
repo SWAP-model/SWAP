@@ -426,7 +426,7 @@ owltab,swallo,drares,infres,qdrtab,nrlevs,swnrsrf,cofintfl,expintfl,shape,FlMacr
                ! [SS-SWC S-2.12B] fluseksatexm retired from variables — read via state%soilwater
                ! [SS-TC TC-14] t1900, dt read via state%timecontrol (ADR 0041)
                use variables, only: nrlevs,numnod,dramet,swdtyp,NumLevRapDra,owltab,nowltab, &
-                  zbotdr,flzerointr,flzerocumu,swdivd,swdislay,swtopdislay,fTopDisLay, &
+                  zbotdr,swdivd,swdislay,swtopdislay,fTopDisLay, &
                   dz,ksatfit,ksatexm,layer,cofani,l,Swdivdinf,Swnrsrf,    &
                   SwTopnrsrf,FacDpthInf,madr
                use array_utils, only: afgen
@@ -499,7 +499,7 @@ owltab,swallo,drares,infres,qdrtab,nrlevs,swnrsrf,cofintfl,expintfl,shape,FlMacr
                ! --- reset intermediate surface-water and drainage fluxes
                ! Identical reset at both call sites (here and SurfaceWater(2));
                ! delegate to reset_intermediate(). See surfacewater_state_mod.
-               if (flzerointr) call state%surfacewater%reset_intermediate()
+               if (state%timecontrol%flZeroIntr) call state%surfacewater%reset_intermediate()
 
                ! --- reset cumulative drainage fluxes
                ! reset_cumulative_drainage zeros only the drainage-owned fields
@@ -507,7 +507,7 @@ owltab,swallo,drares,infres,qdrtab,nrlevs,swnrsrf,cofintfl,expintfl,shape,FlMacr
                ! swdra=2. The reservoir-owned fields (cqdrd, cwsupp, cwout) are
                ! reset by SurfaceWater(2) and never accumulate under swdra=1, so
                ! no reservoir reset site is needed here. See ADR 0042.
-               if (flzerocumu) call state%surfacewater%reset_cumulative_drainage()
+               if (state%timecontrol%flZeroCumu) call state%surfacewater%reset_cumulative_drainage()
 
                ! --- reset to zero if groundwater level under soil profile and return
                ! SS-SWC Phase 2 S-2.8: gwl read from state%soilwater
