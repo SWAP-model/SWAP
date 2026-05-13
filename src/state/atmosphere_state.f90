@@ -149,6 +149,13 @@ module atmosphere_state_mod
       real(real64) :: aetr(366) = 0.0_real64    !! daily ETref
       real(real64) :: wet(366)  = 0.0_real64    !! daily wet-fraction
 
+      ! [SS-GR-ATM A4] Block 2: sub-daily detailed arrays (96-sized; swmetdetail==1)
+      real(real64) :: atav(96)  = 0.0_real64    !! sub-daily air temp
+      real(real64) :: epot(96)  = 0.0_real64    !! sub-daily potential evap
+      real(real64) :: tpot(96)  = 0.0_real64    !! sub-daily potential transp
+      real(real64) :: grain(96) = 0.0_real64    !! sub-daily gross rain
+      real(real64) :: nrain(96) = 0.0_real64    !! sub-daily net rain
+
    end type atmosphere_state_t
 
 contains
