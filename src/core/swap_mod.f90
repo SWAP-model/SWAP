@@ -208,7 +208,7 @@ contains
 !  if (flMacroPore) call MACROPORE(1, state)
 
 !  initialize SoilTemperature rate/state variables
-   if (flTemperature) call Temperature(1, state)
+   if (flTemperature) call Temperature(1, state, config)
 
 !  initialize Snow rate/state variables
    ! SS-HEAT Phase 2 Task 6: pass state so Snow reads tsoil from state%heat
@@ -372,7 +372,7 @@ contains
       call SoilWater(3, state)
 
 !     calculate SoilTemperature rate/state variables
-   if (flTemperature) call Temperature(2, state)
+   if (flTemperature) call Temperature(2, state, config)
 
 !     calculate Solute rate/state variables
       if (flSolute) call Solute(2, state)
