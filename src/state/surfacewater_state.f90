@@ -95,6 +95,25 @@ contains
          end if
       end if
 
+      ! Legacy global write retained for now: bocodre reads wlp via `use variables`
+      ! for the primary surface water level (not surfacewater-state owned). A separate
+      ! arc will migrate readers; this write stays until then.
+      block
+         use variables, only: wlp
+         wlp = 0.0_real64  ! swsrf=2 has no primary system
+      end block
+
+      ! ---- L1: zero defaults ----
+      self%numadj = 0
+      self%wlsbak = 0.0_real64
+
+      ! ---- L2: config-derived seeds ----
+      ! wls1 = wlact - altcu (legacy rddre line; altcu=0 enforced by drainage_config_validate
+      ! so this equals wlact). Inlined here — retires the wls1_init transient buffer
+      ! indirection at the call site once the hoist lands in Task 5.
+      self%wls    = config_sw%wlact - config_drain%altcu
+      self%wlstar = self%wls
+
       ! Allocate per-level arrays.
       allocate(self%cqdrain    (config_drain%nrlevs));            self%cqdrain    = 0.0_real64
       allocate(self%cqdrainin  (config_drain%nrlevs));            self%cqdrainin  = 0.0_real64
