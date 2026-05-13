@@ -101,8 +101,11 @@
       enddo
       
 ! --- bare soil condition  ----------------------------------------------------
-      if (.not. flCropEmergence .or. flCropHarvest) then          
+      if (.not. flCropEmergence .or. flCropHarvest) then
         call nocrop ()
+        state%crop%lai = lai   ! [SS-GR-ATM fix] nocrop zeroes lai; state%crop%lai must follow or
+                               ! ProcessMeteoDay (reads state%crop%lai) sees stale non-zero lai
+                               ! on fallow days, triggering wrong interception in VonHHBraden.
       endif
 
 ! --- check crop emergence ----------------------------------------------------
