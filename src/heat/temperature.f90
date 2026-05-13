@@ -38,7 +38,7 @@ module temperature_mod
    use error_mod, only: fatalerr_collected
   implicit none
   private
-  public :: temperature, devries, heat_init
+  public :: temperature, devries
 
 contains
 
@@ -527,37 +527,6 @@ contains
 
     return
   end subroutine Devries
-
-  !> Lifecycle init for heat typed state. Allocates per-node arrays
-  !! from numnod and seeds them. Called from swap_main once per
-  !! simulation, after config_to_variables has populated the legacy
-  !! globals. Mirrors drainage_init / solute_init patterns.
-  subroutine heat_init(state)
-    use, intrinsic :: iso_fortran_env, only: real64
-    use swap_state_mod, only: swap_state_t
-    use Variables, only: numnod
-    implicit none
-    type(swap_state_t), intent(inout) :: state
-
-    if (.not. allocated(state%heat%tsoil))   allocate(state%heat%tsoil(numnod))
-    if (.not. allocated(state%heat%heacap))  allocate(state%heat%heacap(numnod))
-    if (.not. allocated(state%heat%heacon))  allocate(state%heat%heacon(numnod))
-    if (.not. allocated(state%heat%rfcp))    allocate(state%heat%rfcp(numnod))
-    if (.not. allocated(state%heat%fquartz)) allocate(state%heat%fquartz(numnod))
-    if (.not. allocated(state%heat%fclay))   allocate(state%heat%fclay(numnod))
-    if (.not. allocated(state%heat%forg))    allocate(state%heat%forg(numnod))
-
-    state%heat%tsoil   = 0.0_real64
-    state%heat%heacap  = 0.0_real64
-    state%heat%heacon  = 0.0_real64
-    state%heat%rfcp    = 1.0_real64    ! NB: 1.0 not 0.0 — matches legacy initial value
-    state%heat%fquartz = 0.0_real64
-    state%heat%fclay   = 0.0_real64
-    state%heat%forg    = 0.0_real64
-
-    ! Scalars (tetop, tebot, zfrostbot, zfrosttop, nodfrostbot) keep
-    ! their type defaults (zero) — no explicit reset needed here.
-  end subroutine heat_init
 
 end module temperature_mod
 

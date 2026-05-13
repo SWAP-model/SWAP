@@ -71,7 +71,7 @@ contains
       use swap_log, only: log_info
       use runoff_mod, only: CNmethod
       use snow_mod, only: snow
-      use temperature_mod, only: Temperature, heat_init
+      use temperature_mod, only: Temperature
       use solute_mod, only: solute, solute_init
       use agetracer_mod, only: AgeTracer
       use soilgrid_mod, only: CalcGrid
@@ -169,7 +169,7 @@ contains
 !  Allocate and initialise heat state arrays before SoilWater(1) so that
 !  hconduc can read state%heat%tsoil(node) during hydraulic-conductivity init.
 !  SS-SWC S-2.2: heat_init moved earlier to satisfy mandatory tsoil_node arg.
-   call heat_init(state)                  ! SS-HEAT Phase 1 Task 3: allocate state%heat per-node arrays
+   call state%heat%init(config%heat, state%mesh%numnod)  ! GR-BH Task 11: type-bound init
 
 !  initialize SoilWater rate/state variables
    call SoilWater(1, state)

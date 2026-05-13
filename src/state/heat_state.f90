@@ -25,6 +25,7 @@
 module heat_state_mod
    use, intrinsic :: iso_fortran_env, only: real64
    use iso_c_binding, only: c_double
+   use heat_config_mod, only: heat_config_t
    implicit none
    private
    public :: heat_state_t
@@ -55,6 +56,35 @@ module heat_state_mod
       character(len=32), allocatable :: output_columns(:)
       integer                        :: output_n_cols = 0
 
+   contains
+      procedure :: init => heat_state_init
    end type heat_state_t
+
+contains
+
+   subroutine heat_state_init(self, heat_cfg, numnod_in)
+      use, intrinsic :: iso_fortran_env, only: real64
+      use heat_config_mod, only: heat_config_t
+      class(heat_state_t),    intent(inout) :: self
+      type(heat_config_t),    intent(in)    :: heat_cfg
+      integer,                intent(in)    :: numnod_in
+
+      ! heat_cfg currently unused; signature reserved for future seed migration.
+      if (.not. allocated(self%tsoil))   allocate(self%tsoil(numnod_in))
+      if (.not. allocated(self%heacap))  allocate(self%heacap(numnod_in))
+      if (.not. allocated(self%heacon))  allocate(self%heacon(numnod_in))
+      if (.not. allocated(self%rfcp))    allocate(self%rfcp(numnod_in))
+      if (.not. allocated(self%fquartz)) allocate(self%fquartz(numnod_in))
+      if (.not. allocated(self%fclay))   allocate(self%fclay(numnod_in))
+      if (.not. allocated(self%forg))    allocate(self%forg(numnod_in))
+
+      self%tsoil   = 0.0_real64
+      self%heacap  = 0.0_real64
+      self%heacon  = 0.0_real64
+      self%rfcp    = 1.0_real64    ! NB: 1.0 not 0.0 — matches legacy initial value
+      self%fquartz = 0.0_real64
+      self%fclay   = 0.0_real64
+      self%forg    = 0.0_real64
+   end subroutine heat_state_init
 
 end module heat_state_mod
