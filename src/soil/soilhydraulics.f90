@@ -1133,7 +1133,7 @@ contains
           call state%soilwater%reset_intermediate_per_day()              ! [SS-SWC S-2.1]
       end if
 
-      if (flzerointr) then
+      if (state%timecontrol%flZeroIntr) then
         call state%soilwater%reset_intermediate()                        ! [SS-SWC S-2.1]
 
         state%soilwater%IPondBeg = state%soilwater%pond     ! [SS-SWC S-1.4b/S-2.3/S-2.12B]
@@ -1145,7 +1145,7 @@ contains
       endif
 
       ! Reset cumulative soil water fluxes — [SS-SWC S-2.12B] reset() handles all
-      if (flzerocumu) then
+      if (state%timecontrol%flZeroCumu) then
         call state%soilwater%reset_cumulative()                         ! [SS-SWC S-2.1]
 
         ! [MACRO-RETIRE 2026-05-12] macropore(6,...) retired (ADR 0040).
