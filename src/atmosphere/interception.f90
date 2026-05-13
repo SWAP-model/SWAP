@@ -33,19 +33,19 @@ contains
   !>
   !> Uses exponential relation between soil cover and LAI.
   !>
-  !> Input from variables module: gird, kdif, kdir, cofab, lai, isua
+  !> Input via state: state%crop%gird/kdif/kdir/cofab/lai, state%atmosphere%isua
   !> [SS-ATM A-2.6] grai retired from variables — now passed as explicit argument
   !> @endnote
-  subroutine VonHHBraden (aintc, grai_in)
-    ! [SS-GR-ATM B8] DEFERRED: gird/kdif/kdir/cofab/lai → state%crop%X pending
-    ! cropgrowth/cropfixed_init/cropgrass_init/cropwofost_init/irrigation dual-write.
-    ! isua → state%atmosphere%isua deferred pending irrigation.f90 dual-write.
-    use variables, only: gird,kdif,kdir,cofab,lai,isua
+  subroutine VonHHBraden (aintc, grai_in, state)
+    ! [SS-GR-ATM B8] gird/kdif/kdir/cofab/lai → state%crop%X
+    ! isua → state%atmosphere%isua
+    ! Phase A.5 runtime dual-writes ensure state tracks legacy at runtime.
     implicit none
 
     ! Arguments
     real(8), intent(out) :: aintc   ! Amount of rainfall interception during current day [cm/d]
     real(8), intent(in)  :: grai_in ! Gross daily rain flux (L/T) — [SS-ATM A-2.6] from state%atmosphere%grai
+    type(swap_state_t), intent(in) :: state  ! Simulation state
 
     ! Local variables
     real(8) :: rpd                 ! Intercepted precipitation (rain+irrig) [mm]
@@ -53,16 +53,16 @@ contains
 
     ! Intercepted precipitation (rain+irrig) in mm
     rpd = grai_in*10.0d0
-    if (isua.eq.0) rpd = (grai_in+gird)*10.0d0
+    if (state%atmosphere%isua .eq. 0) rpd = (grai_in + state%crop%gird)*10.0d0
 
     ! Exponential relation between soil cover and lai
-    cofbb = 1.0d0 - dexp(-1.0d0*kdif*kdir*lai)
+    cofbb = 1.0d0 - dexp(-1.0d0*state%crop%kdif*state%crop%kdir*state%crop%lai)
     cofbb = min(cofbb,1.0d0)
 
     ! Interception: evaporation of intercepted precipitation in cm
-    if (cofab.gt.0.000001d0) then
-      aintc = (cofab*lai*(1.0d0-(1/(1.0d0+rpd*cofbb/ &
-                                  (cofab*lai)))))*0.1d0
+    if (state%crop%cofab .gt. 0.000001d0) then
+      aintc = (state%crop%cofab*state%crop%lai*(1.0d0-(1/(1.0d0+rpd*cofbb/ &
+                                  (state%crop%cofab*state%crop%lai)))))*0.1d0
     else
       aintc = 0.0d0
     endif

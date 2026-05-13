@@ -601,7 +601,8 @@ contains
     else if (swinter .eq. 1) then
       ! Calculate interception, method Von Hoyningen-Hune and Braden
       ! SS-ATM A-2.6: grai retired — pass state%atmosphere%grai explicitly
-      call VonHHBraden (aintc, state%atmosphere%grai)
+      ! SS-GR-ATM B8: state added for crop/atmosphere fields
+      call VonHHBraden (aintc, state%atmosphere%grai, state)
     else if (swinter .eq. 2) then
       ! Calculate interception, method Gash (1995)
       ! SS-ATM A-2.6: grai retired — pass state%atmosphere%grai explicitly
