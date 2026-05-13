@@ -99,8 +99,7 @@ contains
     ! [SS-ATM A-2.6] nraidt/melt retired from variables; state added to read from state%atmosphere
     ! [SS-SWC S-2.12B] theta retired — read via state%soilwater%theta
     ! SS-TC TC-9: t1900 removed from only-list; read via state%timecontrol.
-    use variables, only: CNref, CNdry, CNwet, ThetaRef, Runoff_CN, wc_cor, iCNtab, CNtimTAB, CNrefTAB, wc10, &
-                        nod10_cn, icn_atm, z10_cn
+    ! [SS-GR-ATM B22] CN symbols → state%atmosphere%X (nod10_cn/icn_atm/z10_cn added to atmosphere_state)
     ! GR-BH: numnod, zbotcp, dz migrated to state%mesh%X
     use soilhydraulics_utils, only: watcon
     implicit none
@@ -110,7 +109,7 @@ contains
     ! local
     integer              :: i
     real(8)              :: wc1, wc2, CN, S, Ia
-    ! Note: Nod10, iCN, Z10 are now module-level in variables.f90 as nod10_cn, icn_atm, z10_cn
+    ! Note: nod10_cn/icn_atm/z10_cn migrated to state%atmosphere (B22)
 
     ! SS-TC TC-9: t1900 read via state%timecontrol (tc_* alias).
     associate( tc_t1900 => state%timecontrol%t1900 )  ! TC-9
@@ -119,27 +118,27 @@ contains
     ! initialization; calculate and store some constants
     case (1)
 
-      icn_atm = 0
+      state%atmosphere%icn_atm = 0
       ! check if times in CNtimeTAB are in ascending order
       ! set initial position in CNtimTAB
-      do i = 2, iCNtab
-          if (CNtimTAB(i) < CNtimTAB(i-1)) call fatalerr_collected ('CNmethod', 'CNtimTAB not in ascending order')
-          if (tc_t1900 >= CNtimTAB(i-1) .and. tc_t1900 < CNtimTAB(i)) icn_atm = i-1
+      do i = 2, state%atmosphere%iCNtab
+          if (state%atmosphere%CNtimTAB(i) < state%atmosphere%CNtimTAB(i-1)) call fatalerr_collected ('CNmethod', 'CNtimTAB not in ascending order')
+          if (tc_t1900 >= state%atmosphere%CNtimTAB(i-1) .and. tc_t1900 < state%atmosphere%CNtimTAB(i)) state%atmosphere%icn_atm = i-1
       end do
       ! error if start time t1900 not in CNtimTAB
-      if (icn_atm == 0) call fatalerr_collected ('CNmethod', 'Start time of simulation not present in CNtimTAB')
-      
+      if (state%atmosphere%icn_atm == 0) call fatalerr_collected ('CNmethod', 'Start time of simulation not present in CNtimTAB')
+
     !  to be replaced by average for layer 0-10 cm
       do i = 1, state%mesh%numnod
           if (state%mesh%zbotcp(i) < -DEPTH_10CM) then
-            nod10_cn = i-1
-            z10_cn = -state%mesh%zbotcp(nod10_cn)
+            state%atmosphere%nod10_cn = i-1
+            state%atmosphere%z10_cn = -state%mesh%zbotcp(state%atmosphere%nod10_cn)
             exit
           end if
       end do
-      ThetaRef = 0.0d0
-      do i = 1, nod10_cn
-          if (wc_cor == 1) then
+      state%atmosphere%ThetaRef = 0.0d0
+      do i = 1, state%atmosphere%nod10_cn
+          if (state%atmosphere%wc_cor == 1) then
             wc1 = watcon(H_FIELD_CAPACITY, &
                           state%soilwater%vg_params(i), &
                           state%soilwater%iHWCKmodel(state%soilwater%layer(i)), &
@@ -148,8 +147,8 @@ contains
                           state%soilwater%vg_params(i), &
                           state%soilwater%iHWCKmodel(state%soilwater%layer(i)), &
                           i, state%soilwater)                      ! [SS-GR-UTILS Task 5]
-            ThetaRef = ThetaRef + (wc1+wc2)*0.5d0*state%mesh%dz(i)
-          else if (wc_cor == 2) then
+            state%atmosphere%ThetaRef = state%atmosphere%ThetaRef + (wc1+wc2)*0.5d0*state%mesh%dz(i)
+          else if (state%atmosphere%wc_cor == 2) then
             wc1 = watcon(0.0d0, &
                           state%soilwater%vg_params(i), &
                           state%soilwater%iHWCKmodel(state%soilwater%layer(i)), &
@@ -158,10 +157,10 @@ contains
                           state%soilwater%vg_params(i), &
                           state%soilwater%iHWCKmodel(state%soilwater%layer(i)), &
                           i, state%soilwater)                      ! [SS-GR-UTILS Task 5]
-            ThetaRef = ThetaRef + (wc1+wc2)*0.5d0*state%mesh%dz(i)
+            state%atmosphere%ThetaRef = state%atmosphere%ThetaRef + (wc1+wc2)*0.5d0*state%mesh%dz(i)
           end if
       end do
-      ThetaRef = ThetaRef/z10_cn
+      state%atmosphere%ThetaRef = state%atmosphere%ThetaRef/state%atmosphere%z10_cn
       
       !!!t1900_old = int(t1900) - 1 ! for testing intermediate output
       
@@ -171,25 +170,24 @@ contains
       ! see if t1900 has moved ahead in CNtimTAB; icn_atm can never exceed last entry
       !  if (icn_atm < iCNtab .and. t1900 >= CNtimTAB(icn_atm+1)) icn_atm = icn_atm + 1
       ! Update position in CN time series if time has advanced (do while is more efficient if time steps are large and CN time series is long)
-      do while (icn_atm < iCNtab .and. tc_t1900 >= CNtimTAB(icn_atm + 1))
-        icn_atm = icn_atm + 1
+      do while (state%atmosphere%icn_atm < state%atmosphere%iCNtab .and. tc_t1900 >= state%atmosphere%CNtimTAB(state%atmosphere%icn_atm + 1))
+        state%atmosphere%icn_atm = state%atmosphere%icn_atm + 1
       end do
-      CNref = CNrefTAB(icn_atm)
-      CN    = CNref
-      CNdry =  4.2d0*CNref/(10.0d0-0.058d0*CNref)
-      CNwet = 23.0d0*CNref/(10.0d0+0.13d0*CNref)
+      state%atmosphere%CNref = state%atmosphere%CNrefTAB(state%atmosphere%icn_atm)
+      CN    = state%atmosphere%CNref
+      state%atmosphere%CNdry =  4.2d0*state%atmosphere%CNref/(10.0d0-0.058d0*state%atmosphere%CNref)
+      state%atmosphere%CNwet = 23.0d0*state%atmosphere%CNref/(10.0d0+0.13d0*state%atmosphere%CNref)
 
-      if (wc_cor > 0) then
-          wc10 = 0.0d0
-          do i = 1, nod10_cn
-            wc10 = wc10 + state%soilwater%theta(i)*state%mesh%dz(i)  ! [SS-SWC S-2.12B]
+      if (state%atmosphere%wc_cor > 0) then
+          state%atmosphere%wc10 = 0.0d0
+          do i = 1, state%atmosphere%nod10_cn
+            state%atmosphere%wc10 = state%atmosphere%wc10 + state%soilwater%theta(i)*state%mesh%dz(i)  ! [SS-SWC S-2.12B]
           end do
-          wc10 = wc10/z10_cn
-          state%atmosphere%wc10 = wc10   ! [SS-GR-ATM A5.5] runtime dual-write
-          if (wc10 < ThetaRef) then
-            CN = CNdry + wc10/ThetaRef*(CNref-CNdry)
+          state%atmosphere%wc10 = state%atmosphere%wc10/state%atmosphere%z10_cn
+          if (state%atmosphere%wc10 < state%atmosphere%ThetaRef) then
+            CN = state%atmosphere%CNdry + state%atmosphere%wc10/state%atmosphere%ThetaRef*(state%atmosphere%CNref-state%atmosphere%CNdry)
           else
-            CN = CNref + (wc10-ThetaRef)/ThetaRef*(CNwet-CNref)
+            CN = state%atmosphere%CNref + (state%atmosphere%wc10-state%atmosphere%ThetaRef)/state%atmosphere%ThetaRef*(state%atmosphere%CNwet-state%atmosphere%CNref)
           end if
       end if
       S = 2540d0/CN-25.4d0    ! in cm
@@ -197,12 +195,11 @@ contains
     !   Ia = 0.3d0*S
       ! SS-ATM A-2.6: nraidt/melt retired — read from state%atmosphere
       if (state%atmosphere%nraidt+state%atmosphere%melt > Ia) then
-          Runoff_CN = (state%atmosphere%nraidt+state%atmosphere%melt-Ia)**2/ &
+          state%atmosphere%Runoff_CN = (state%atmosphere%nraidt+state%atmosphere%melt-Ia)**2/ &
                       (state%atmosphere%nraidt+state%atmosphere%melt-Ia+S)
       else
-          Runoff_CN = 0.0d0
+          state%atmosphere%Runoff_CN = 0.0d0
       end if
-      state%atmosphere%Runoff_CN = Runoff_CN   ! [SS-GR-ATM A5.5] runtime dual-write
       
       ! for testing intermediate output
       !!!if (int(t1900) > t1900_old) then

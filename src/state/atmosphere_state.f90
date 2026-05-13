@@ -187,6 +187,10 @@ module atmosphere_state_mod
       integer      :: iCNtab            = 0
       real(real64) :: CNtimTAB(mayrs*5) = 0.0_real64   !! CN time table (legacy dim: mayrs*5=1000)
       real(real64) :: CNrefTAB(mayrs*5) = 0.0_real64   !! CN ref  table (legacy dim: mayrs*5=1000)
+      ! [SS-GR-ATM B22] CN method internal state (formerly variables.f90 module-level)
+      integer      :: nod10_cn          = 0             !! node index at ~10 cm depth for CN method
+      integer      :: icn_atm           = 0             !! current position in CN time series
+      real(real64) :: z10_cn            = 0.0_real64    !! depth to nod10_cn node (cm)
 
       ! [SS-GR-ATM A8] Block 6: daily output scalars (real(4) in variables.f90;
       ! real(real64) here — promoted for state consistency; meteoday.f90 writes
