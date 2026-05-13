@@ -167,6 +167,16 @@ module atmosphere_state_mod
       real(real64) :: teprrain   = 0.0_real64    !! threshold rain temp
       real(real64) :: teprsnow   = 0.0_real64    !! threshold snow temp
 
+      ! [SS-GR-ATM A6] Block 4: interception state/params
+      real(real64) :: siccapact          = 0.0_real64
+      real(real64) :: fimin              = 0.0_real64
+      integer      :: isua               = 0
+      real(real64) :: avevaptb(2*magrs)  = 0.0_real64  !! actual evap table
+      real(real64) :: avprectb(2*magrs)  = 0.0_real64  !! actual precip table
+      real(real64) :: pfreetb(2*magrs)   = 0.0_real64  !! free throughfall table
+      real(real64) :: pstemtb(2*magrs)   = 0.0_real64  !! stemflow table
+      real(real64) :: scanopytb(2*magrs) = 0.0_real64  !! canopy storage table
+
    end type atmosphere_state_t
 
 contains
