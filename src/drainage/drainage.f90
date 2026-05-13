@@ -91,11 +91,9 @@ contains
       use, intrinsic :: iso_fortran_env, only: real64
       use swap_state_mod, only: swap_state_t
       use swap_config_mod, only: swap_config_t
-      ! GR-BH Task 28 NOTE: drainage_init is called BEFORE state%drainage%nrlevs and
-      ! state%mesh%numnod are seeded (swap_mod.f90 seeds them after the call).
-      ! Therefore we still read from the globals nrlevs/numnod here for allocation,
-      ! which is correct: those globals are populated before drainage_init is called.
-      use variables, only: nrlevs, numnod, MAOWL
+      ! [GR-BH Task 35] drainage_init is called AFTER CalcGrid (swap_mod.f90 line 108 vs 185),
+      ! so state%mesh%numnod is already populated. numnod global deleted; use state%mesh%numnod.
+      use variables, only: nrlevs, MAOWL
       type(swap_state_t),  intent(inout) :: state
       type(swap_config_t), intent(in)    :: config
 
@@ -103,7 +101,7 @@ contains
       if (.not. allocated(state%drainage%drainl))     allocate(state%drainage%drainl(nrlevs))
       if (.not. allocated(state%drainage%wetper))     allocate(state%drainage%wetper(nrlevs))
       if (.not. allocated(state%drainage%ztopdislay)) allocate(state%drainage%ztopdislay(nrlevs))
-      if (.not. allocated(state%drainage%qdra))       allocate(state%drainage%qdra(nrlevs, numnod))
+      if (.not. allocated(state%drainage%qdra))       allocate(state%drainage%qdra(nrlevs, state%mesh%numnod))
       if (.not. allocated(state%drainage%L))          allocate(state%drainage%L(nrlevs))
       if (.not. allocated(state%drainage%zbotdr))     allocate(state%drainage%zbotdr(nrlevs))
       if (.not. allocated(state%drainage%owltab))     allocate(state%drainage%owltab(nrlevs, 2*MAOWL))

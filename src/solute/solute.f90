@@ -48,6 +48,7 @@ contains
 ! === initialize Solute rate/state variables ===========================
 
       ! [GR-BH Audit 31] numnod/dz/z aliased via state%mesh
+      ! [GR-BH Task 35] layer added to associate (global deleted)
       associate( &
          cml    => state%solute%cml,                      &
          cmsy   => state%solute%cmsy,                     &
@@ -58,7 +59,8 @@ contains
          sw_thetsl => state%soilwater%thetsl,              &
          numnod    => state%mesh%numnod,                   &  ! [GR-BH Audit 31]
          dz        => state%mesh%dz,                       &  ! [GR-BH Audit 31]
-         z         => state%mesh%z                         &  ! [GR-BH Audit 31]
+         z         => state%mesh%z,                        &  ! [GR-BH Audit 31]
+         layer     => state%mesh%layer                     &  ! [GR-BH Task 35]
       )
 
 ! --- determine initial solute profile from input concentrations
@@ -129,7 +131,8 @@ contains
          numnod    => state%mesh%numnod,                      &  ! [GR-BH Audit 31]
          dz        => state%mesh%dz,                          &  ! [GR-BH Audit 31]
          disnod    => state%mesh%disnod,                      &  ! [GR-BH Audit 31]
-         nrlevs    => state%drainage%nrlevs                   &  ! [GR-BH Audit 31]
+         nrlevs    => state%drainage%nrlevs,                  &  ! [GR-BH Audit 31]
+         layer     => state%mesh%layer                        &  ! [GR-BH Task 35]
       )
 
 ! --- reset cumulative solute fluxes

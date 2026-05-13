@@ -700,7 +700,7 @@
       ! integer   indeks(macp)       ! Index denoting wetting or drying curve in case of hysteresis: 1 = wetting; -1 = drying
       integer   ipos               ! Switch for position of drain (see *.DRA input file for overview)
       integer   isoillay(maho)     ! Number of soil layer, starting with 1 at the soil surface
-      integer   layer(macp)        ! Array with soil layer number for each compartment
+      ! [GR-BH Task 35] layer(macp) retired — moved to state%mesh%layer
       ! [SS-BMI2 Task 5] retired 2026-05-13 — moved to state%timecontrol%msteps (ADR 0041)
       ! integer   msteps             ! moved to state%timecontrol%msteps
       integer   ncomp(macp)        ! Array with number of compartments in each sublayer
@@ -717,7 +717,7 @@
       integer   nsublay            ! Number of sublayers in the soil profile
       integer   numbit             ! Iteration number for solving Richards equation
       integer   numlay             ! Number of (physical) soil layers
-      integer   numnod             ! Number of nodes or compartments
+      ! [GR-BH Task 35] numnod retired — moved to state%mesh%numnod
       integer   numnodnew          ! Number of desired nodes for soil water quality models
       integer   numtab(macp)       ! Number of table entries of soil physical values for each model compartment
       integer   numtablay(maho)    ! Number of table entries of soil physical values for each soil layer
@@ -835,10 +835,10 @@
       ! real(8)   deepgw             ! hydraulic head in aquifer (L)
       ! [SS-SWC] retired 2026-05-12 — moved to state%soilwater%dimoca (ADR 0038)
       ! real(8)   dimoca(macp)       ! Differential soil moisture capacity (/L)
-      real(8)   disnod(macp+1)     ! Distance between actual node and upper node (L)
+      ! [GR-BH Task 35] disnod(macp+1) retired — moved to state%mesh%disnod
       ! real(8)   drainl(Madr)       ! Moved to drainage_state_t%drainl (ADR 0031)
       real(8)   drares(Madr)       ! Array with drainage resistance (T) for each drainage level
-      real(8)   dz(macp)           ! Compartment thickness (L)
+      ! [GR-BH Task 35] dz(macp) retired — moved to state%mesh%dz
       real(8)   dznew(macp)        ! Desired thickness of compartments for soil water quality models (L)
       real(8)   entres             ! Drain entry resistance (T)
       real(8)   es0                !  potential evaporation rate from a wet bare soil [mm/d]
@@ -1071,9 +1071,9 @@
       ! [SS-SWC] retired 2026-05-12 — moved to state%soilwater%wbalance (ADR 0038)
       ! real(8)   wbalance           ! Cumulative water balance error (L)
       ! real(8)   wetper(Madr)       ! Moved to drainage_state_t%wetper (ADR 0031)
-      real(8)   z(macp)            ! Depth of a node (L)
-      real(8)   ztopcp(macp)       ! Depth of top    boundary of layer(node) (L)
-      real(8)   zbotcp(macp)       ! Depth of bottom boundary of layer(node) (L)
+      ! [GR-BH Task 35] z(macp) retired — moved to state%mesh%z
+      ! [GR-BH Task 35] ztopcp(macp) retired — moved to state%mesh%ztopcp
+      ! [GR-BH Task 35] zbotcp(macp) retired — moved to state%mesh%zbotcp
       ! [SS-HEAT] retired 2026-05-10 — moved to state%heat%zfrostbot (ADR 0034)
       ! real(8)   zfrostbot          ! Depth of bottom of frost layer (L)
       ! [SS-HEAT] retired 2026-05-10 — moved to state%heat%zfrosttop (ADR 0034)

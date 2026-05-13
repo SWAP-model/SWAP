@@ -55,8 +55,7 @@ contains
                             swusecn, flcropcalendar, &
                             flharvestday, flcropoutput, swcrp, flirrigationoutput, swend, project, &
                             flTillage, flSSDI, &
-                            numnod, numlay, &
-                            dz, z, disnod, ztopcp, zbotcp, layer, &
+                            numlay, &
                             cofani, &
                             orgmat, &
                             L, zbotdr, owltab, nowltab
@@ -105,10 +104,9 @@ contains
    call timecontrol_init(state)
 
 !  calculate grid parameters
-   call CalcGrid()
-   ! [SS-GR-BH A3] dual-write: populate state%mesh alongside legacy mesh globals
-   call state%mesh%init(numnod, dz, z, disnod, ztopcp, zbotcp, layer)
-   call soilwater_init(state%soilwater, numnod, numlay)   ! SS-CRP Phase 1 C-1.2: allocate per-node arrays + mfluxtable
+   ! [GR-BH Task 35] CalcGrid now writes directly to state%mesh%X; state%mesh%init bridge retired
+   call CalcGrid(state)
+   call soilwater_init(state%soilwater, state%mesh%numnod, numlay)   ! SS-CRP Phase 1 C-1.2: allocate per-node arrays + mfluxtable
    ! [SS-GR-BH A6] soilwater layer flats — placed here because soilwater_init
    ! allocates the state arrays (nlay-sized) AFTER config_to_variables runs.
    ! ksatexm/ksatfit/psand/psilt/pclay sourced directly from config (legacy globals retired).
@@ -208,7 +206,7 @@ contains
 
 !  initialize SurfaceWater management variables
    ! S4 state init for surfacewater (spec docs/superpowers/specs/2026-05-13-state-init-pilot-surfacewater-design.md).
-   if (flSurfaceWater) call state%surfacewater%init(config%surface_water, config%drain, numnod)
+   if (flSurfaceWater) call state%surfacewater%init(config%surface_water, config%drain, state%mesh%numnod)
    ! SurfaceWater(task=1)'s case(1) is now a no-op stub; init was hoisted to the line above.
    ! Dispatcher-case removal is a separate cleanup follow-up.
    if (flSurfaceWater) call SurfaceWater(1, state, request_smaller_dt)

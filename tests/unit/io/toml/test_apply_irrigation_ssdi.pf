@@ -14,28 +14,56 @@ subroutine test_irrigation_ssdi_default_init()
    call assertEqual(1, cfg%ssdi%scheduled%days_interval, 'days_interval default')
 end subroutine
 
+! Helper: build a minimal mesh state for ssdi_z resolution tests.
+! 4-node grid with zbotcp: -10, -25, -40, -60 cm.
+subroutine build_test_mesh(state)
+   use swap_state_mod, only: swap_state_t
+   use, intrinsic :: iso_fortran_env, only: real64
+   type(swap_state_t), intent(inout) :: state
+   integer,      parameter :: nn = 4
+   real(real64), parameter :: dz_v(nn) = [10.d0, 15.d0, 15.d0, 20.d0]
+   real(real64) :: z_v(nn), disnod_v(nn+1), ztopcp_v(nn), zbotcp_v(nn)
+   integer :: layer_v(nn), i
+   ! Build z from dz
+   z_v(1) = -0.5d0 * dz_v(1)
+   do i = 2, nn
+      z_v(i) = z_v(i-1) - 0.5d0*(dz_v(i-1)+dz_v(i))
+   end do
+   disnod_v(1) = -z_v(1)
+   do i = 2, nn
+      disnod_v(i) = z_v(i-1) - z_v(i)
+   end do
+   disnod_v(nn+1) = 0.5d0*dz_v(nn)
+   ztopcp_v(1) = 0.d0
+   zbotcp_v(1) = -dz_v(1)
+   do i = 2, nn
+      ztopcp_v(i) = zbotcp_v(i-1)
+      zbotcp_v(i) = zbotcp_v(i-1) - dz_v(i)
+   end do
+   layer_v = 1
+   call state%mesh%init(nn, dz_v, z_v, disnod_v, ztopcp_v, zbotcp_v, layer_v)
+end subroutine
+
 @test
 subroutine test_apply_mode0_populates_globals_from_csv()
    use irrigation_config_mod, only: irrigation_ssdi_t
    use config_to_variables_mod, only: apply_irrigation_ssdi
    ! [SS-TC TC-14] t1900 retired from variables — apply_irrigation_ssdi does not read it
    ! [SS-BMI2 Task 5] tstart, tend retired from variables — passed as arguments
+   ! [GR-BH Task 35] NumNod/zbotcp globals deleted — supplied via state%mesh
    use variables, only: ssdi_date_irr, ssdi_rate_f_irr, ssdi_amount_f_irr, &
-                        nod_ssdi_irr, nirri_ssdi_irr,                       &
-                        NumNod, zbotcp, pathwork
+                        nod_ssdi_irr, nirri_ssdi_irr, pathwork
+   use swap_state_mod, only: swap_state_t
    use, intrinsic :: iso_fortran_env, only: real64
    use funit
    implicit none
    type(irrigation_ssdi_t) :: ssdi
+   type(swap_state_t) :: state
    integer :: dy_apr15
    real(real64) :: tstart_val, tend_val
 
-   ! Minimal grid for ssdi_z resolution.
-   NumNod = 4
-   zbotcp(1) = -10.0d0
-   zbotcp(2) = -25.0d0
-   zbotcp(3) = -40.0d0
-   zbotcp(4) = -60.0d0
+   ! Minimal grid for ssdi_z resolution via state%mesh.
+   call build_test_mesh(state)
 
    ! Simulation window covers the fixture dates (2003-04-15 .. 2003-06-10).
    tstart_val = 37621.0_real64   ! 2003-01-01 (days since 1900)
@@ -47,7 +75,7 @@ subroutine test_apply_mode0_populates_globals_from_csv()
    allocate(character(len=20) :: ssdi%fixed%events_file)
    ssdi%fixed%events_file = 'ssdi_events_small.csv'
 
-   call apply_irrigation_ssdi(ssdi, tstart_val, tend_val)
+   call apply_irrigation_ssdi(ssdi, tstart_val, tend_val, state)
 
    ! nod_ssdi(1) should point to the node whose zbotcp <= -25 (node 2)
    ! nod_ssdi(2) should point to the node whose zbotcp <= -40 (node 3)
@@ -73,22 +101,22 @@ end subroutine
 subroutine test_apply_mode1_copies_scheduled_block()
    use irrigation_config_mod, only: irrigation_ssdi_t
    use config_to_variables_mod, only: apply_irrigation_ssdi
+   ! [GR-BH Task 35] NumNod/zbotcp globals deleted — supplied via state%mesh
    use variables, only: ssdi_sched_type_irr, ssdi_threshold_irr,        &
                         ssdi_threshold_z_irr, ssdi_amount_irr,          &
                         ssdi_appl_rate_irr, sw_interval_irr,            &
                         days_interval_irr, dt_SSDI_event, nirri_ssdi_irr, &
-                        nod_ssdi_irr, NumNod, zbotcp
+                        nod_ssdi_irr
+   use swap_state_mod, only: swap_state_t
    use, intrinsic :: iso_fortran_env, only: real64
    use funit
    implicit none
    type(irrigation_ssdi_t) :: ssdi
+   type(swap_state_t) :: state
    real(real64) :: tstart_val, tend_val
 
-   NumNod = 4
-   zbotcp(1) = -10.0d0
-   zbotcp(2) = -25.0d0
-   zbotcp(3) = -40.0d0
-   zbotcp(4) = -60.0d0
+   ! Minimal grid for ssdi_z resolution via state%mesh.
+   call build_test_mesh(state)
 
    ! [SS-BMI2 Task 5] tstart, tend passed as arguments (not bare globals)
    tstart_val = 37621.0_real64
@@ -103,7 +131,7 @@ subroutine test_apply_mode1_copies_scheduled_block()
    ssdi%scheduled%sw_interval   = 0
    ssdi%scheduled%days_interval = 1
 
-   call apply_irrigation_ssdi(ssdi, tstart_val, tend_val)
+   call apply_irrigation_ssdi(ssdi, tstart_val, tend_val, state)
 
    @assertEqual(2, nod_ssdi_irr(1))
    @assertEqual(3, nod_ssdi_irr(2))

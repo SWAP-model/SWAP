@@ -151,7 +151,7 @@
                wcac = watcon(state%soilwater%h(node), &
                               state%soilwater%vg_params(node), &
                               state%soilwater%iHWCKmodel(state%soilwater%layer(node)), &
-                              node, state%soilwater) * dz(node)    ! [SS-SWC S-2.12B] [SS-GR-UTILS Task 5]
+                              node, state%soilwater) * state%mesh%dz(node)    ! [SS-SWC S-2.12B] [SS-GR-UTILS Task 5] [GR-BH Task 35]
                if (node.eq.noddrz) wcac = wcac*frlow
                awlh = awlh+(wclo-wchi)
                awmh = awmh+(wcme-wchi)

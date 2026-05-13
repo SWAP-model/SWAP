@@ -282,7 +282,7 @@
           ! are written to state here since those subs lack state access.
           if (swdrought .eq. 2) then
             state%soilwater%hleaf = -2000.d0
-            state%soilwater%hroot(1:numnod) = state%soilwater%h(1:numnod)  ! [SS-SWC S-2.7]
+            state%soilwater%hroot(1:state%mesh%numnod) = state%soilwater%h(1:state%mesh%numnod)  ! [SS-SWC S-2.7] [GR-BH Task 35]
             call MatricFlux(1, state%soilwater%h(1), 1, dummy_mf_, state)  ! [SS-SWC S-2.7]
           endif
 

@@ -515,10 +515,10 @@ contains
       swssdi_irr  = config%irrigation%swssdi
       flTillage = (config%soil%swtill == 1)
       flSSDI    = (config%irrigation%swssdi == 1)
-      if (flTillage) call apply_soil_tillage(config%soil%tillage, state%timecontrol%tend)
+      if (flTillage) call apply_soil_tillage(config%soil%tillage, state%timecontrol%tend, state)
       if (flSSDI)    call apply_irrigation_ssdi(config%irrigation%ssdi, &
                                                state%timecontrol%tstart, &
-                                               state%timecontrol%tend)
+                                               state%timecontrol%tend, state)
       call apply_nutrients(config%nutrients)
       gwli    = config%soil%gwli
       ! [SS-SWC S-2.12B] pondini/pond retired — buffered for swap.f90 to seed state%soilwater after soilwater_init
@@ -1374,10 +1374,11 @@ contains
    !! parses event dates to days-since-1900, sets the Ntill+1 sentinel
    !! (tend + 1), computes Max_Z_tillage and the iTT1/iTT2 first/last-position
    !! indices. Replaces the deleted Read_Tillage subroutine (Task 5).
-   subroutine apply_soil_tillage(tillage, tend)
+   subroutine apply_soil_tillage(tillage, tend, state)
       use, intrinsic :: iso_fortran_env, only: real64
       use soil_config_mod, only: soil_tillage_t
       use error_mod, only: fatalerr_collected
+      use swap_state_mod, only: swap_state_t
       use variables, only: Ntill         => till_Ntill, &
                            Ntypes        => till_Ntypes, &
                            i_n_model     => till_i_n_model, &
@@ -1394,10 +1395,10 @@ contains
                            TAB_Rho_match   => till_TAB_Rho_match, &
                            TAB_N_match     => till_TAB_N_match, &
                            iTT1 => till_iTT1, &
-                           iTT2 => till_iTT2, &
-                           NumNod, zbotcp
-      type(soil_tillage_t), intent(in) :: tillage
-      real(real64),         intent(in) :: tend
+                           iTT2 => till_iTT2
+      type(soil_tillage_t), intent(in)    :: tillage
+      real(real64),         intent(in)    :: tend
+      type(swap_state_t),   intent(inout) :: state   ! [GR-BH Task 35] replaces NumNod/zbotcp globals
 
       integer :: i, j
 
@@ -1421,18 +1422,23 @@ contains
       end do
       Date_tillage(Ntill + 1) = tend + 1.0_real64
 
-      ! Deferred z-range check (validator can't see NumNod / zbotcp).
+      ! Deferred z-range check (validator can't see numnod / zbotcp).
       ! TODO: route this error through whatever error-collection mechanism
       ! config_to_variables uses; for now, fatalerr_collected on violation.
       ! The test test_apply_z_outside_grid_raises_error is deferred because
       ! catching a STOP in pFUnit is awkward — verified manually for now.
-      do i = 1, Ntill
-         if (Z_tillage(i) < 0.0_real64 .or. &
-             Z_tillage(i) > abs(zbotcp(NumNod))) then
-            call fatalerr_collected('apply_soil_tillage', &
-               'Z_tillage value is outside the model grid depth range')
-         end if
-      end do
+      ! [GR-BH Task 35] NumNod/zbotcp globals replaced by state%mesh fields.
+      ! Guard: mesh is not yet populated when called from config_to_variables
+      ! (CalcGrid runs after); skip z-range check until mesh is built.
+      if (state%mesh%numnod > 0 .and. allocated(state%mesh%zbotcp)) then
+         do i = 1, Ntill
+            if (Z_tillage(i) < 0.0_real64 .or. &
+                Z_tillage(i) > abs(state%mesh%zbotcp(state%mesh%numnod))) then
+               call fatalerr_collected('apply_soil_tillage', &
+                  'Z_tillage value is outside the model grid depth range')
+            end if
+         end do
+      end if
 
       ! Per-type arrays.
       if (allocated(iType_Tillage))   deallocate(iType_Tillage);   allocate(iType_Tillage(Ntypes))
@@ -1481,27 +1487,34 @@ contains
    !!
    !! Replaces SSDI_irrigation(1) and read_ssdi_input (deletion in
    !! Task 5).
-   subroutine apply_irrigation_ssdi(ssdi, tstart, tend)
+   subroutine apply_irrigation_ssdi(ssdi, tstart, tend, state)
       use, intrinsic :: iso_fortran_env, only: real64
       use irrigation_config_mod, only: irrigation_ssdi_t
       use error_mod, only: fatalerr_collected
-      use variables, only: NumNod, zbotcp,                                &
-                           nod_ssdi_irr, qssdi, dt_SSDI_event
-      type(irrigation_ssdi_t), intent(in) :: ssdi
-      real(real64),            intent(in) :: tstart, tend
+      use swap_state_mod, only: swap_state_t
+      use variables, only: nod_ssdi_irr, qssdi, dt_SSDI_event
+      type(irrigation_ssdi_t), intent(in)    :: ssdi
+      real(real64),            intent(in)    :: tstart, tend
+      type(swap_state_t),      intent(inout) :: state   ! [GR-BH Task 35] replaces NumNod/zbotcp globals
 
       integer :: i, j, nod_top, nod_bot, ncomp
 
       ! Resolve ssdi_z(1:2) -> layer indices via zbotcp walk.
       ! Mirrors the legacy SSDI_irrigation(1) loop at irrigation.f90:387-393.
-      do j = 1, 2
-         i = 1
-         do while (zbotcp(i) > (ssdi%ssdi_z(j) + 1.0e-5_real64))
-            i = i + 1
-            if (i > NumNod) exit
+      ! [GR-BH Task 35] zbotcp/NumNod globals replaced by state%mesh fields.
+      ! Guard: mesh not yet populated at config_to_variables call time;
+      ! nod_ssdi_irr defaults to 0 if mesh not built (resolved after CalcGrid).
+      nod_ssdi_irr = 0
+      if (state%mesh%numnod > 0 .and. allocated(state%mesh%zbotcp)) then
+         do j = 1, 2
+            i = 1
+            do while (state%mesh%zbotcp(i) > (ssdi%ssdi_z(j) + 1.0e-5_real64))
+               i = i + 1
+               if (i > state%mesh%numnod) exit
+            end do
+            nod_ssdi_irr(j) = i
          end do
-         nod_ssdi_irr(j) = i
-      end do
+      end if
       nod_top = nod_ssdi_irr(1)
       nod_bot = nod_ssdi_irr(2)
       ncomp   = nod_bot - nod_top + 1

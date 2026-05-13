@@ -55,7 +55,7 @@ module rootextraction_mod
       parameter (vsmall = 1.0d-14)
 
 ! --- SS-CRP Phase 2 C-2.5: reset writes — legacy globals dropped; state-only.
-      state%soilwater%qrot(1:numnod) = 0.0d0
+      state%soilwater%qrot(1:state%mesh%numnod) = 0.0d0   ! [GR-BH Task 35] numnod global deleted
       state%soilwater%Tactual = state%soilwater%qrosum
       state%soilwater%qrosum = 0.0d0
       state%soilwater%qreddrysum = 0.0d0
@@ -163,7 +163,7 @@ module rootextraction_mod
             ! use reproduction functions
             else
               ! SS-HEAT Phase 2 Task 6: pass tsoil from state%heat
-              call OxygenReproFunction (OxygenSlope,OxygenIntercept,sw_theta,state%soilwater%thetas,state%heat%tsoil,node,z,dz,alpwet,state)  ! [SS-SWC S-2.7] [GR-BH C7]
+              call OxygenReproFunction (OxygenSlope,OxygenIntercept,sw_theta,state%soilwater%thetas,state%heat%tsoil,node,state%mesh%z,state%mesh%dz,alpwet,state)  ! [SS-SWC S-2.7] [GR-BH C7] [GR-BH Task 35]
             endif
 
           endif
@@ -787,7 +787,7 @@ module rootextraction_mod
           else
 ! ---       possible hydraulic lift, set maximum flux to 0.1% change water content
             if (flhydrlift) then
-              qmax = -0.001d0 * dz(node) / tc_dt  ! TC-12
+              qmax = -0.001d0 * state%mesh%dz(node) / tc_dt  ! TC-12 [GR-BH Task 35]
               cw_qrot(node) = max(cw_qrot(node),qmax)
             else
 ! ---         no hydraulic lift allowed

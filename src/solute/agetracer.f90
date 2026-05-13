@@ -106,6 +106,7 @@ contains
 ! SS-TC TC-12: dt read via state%timecontrol tc_* alias.
       ! [GR-BH Audit 31] numnod/dz/disnod/zbotcp/ztopcp aliased via state%mesh;
       !   nrlevs aliased via state%drainage
+      ! [GR-BH Task 35] z and layer added to associate (globals deleted)
       associate( &
          tc_dt     => state%timecontrol%dt,    &  ! TC-12
          sw_theta  => state%soilwater%theta,   &
@@ -118,9 +119,11 @@ contains
          sw_pond   => state%soilwater%pond,    &
          numnod    => state%mesh%numnod,       &  ! [GR-BH Audit 31]
          dz        => state%mesh%dz,           &  ! [GR-BH Audit 31]
+         z         => state%mesh%z,            &  ! [GR-BH Task 35]
          disnod    => state%mesh%disnod,       &  ! [GR-BH Audit 31]
          zbotcp    => state%mesh%zbotcp,       &  ! [GR-BH Audit 31]
          ztopcp    => state%mesh%ztopcp,       &  ! [GR-BH Audit 31]
+         layer     => state%mesh%layer,        &  ! [GR-BH Task 35]
          nrlevs    => state%drainage%nrlevs    &  ! [GR-BH Audit 31]
       )
 

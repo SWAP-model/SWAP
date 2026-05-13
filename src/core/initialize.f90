@@ -165,7 +165,7 @@
       ! indeks             = 0
       ipos               = 0 
       isoillay           = 0 
-      layer              = 0
+      ! [GR-BH Task 35] layer retired to state%mesh%layer
       ! [SS-BMI2 Task 5] msteps retired 2026-05-13 — moved to state%timecontrol%msteps
       ncomp              = 0 
       nhead              = 0 
@@ -180,7 +180,7 @@
       nsublay            = 0 
       numbit             = 0 
       numlay             = 0 
-      numnod             = 0 
+      ! [GR-BH Task 35] numnod retired to state%mesh%numnod
       numnodnew          = 0 
       numtab             = 0 
       numtablay          = 0 
@@ -258,10 +258,10 @@
       ! deepgw             = 0.0d0
       ! [SS-SWC] dimoca retired — soilwater_init handles init via state%soilwater%dimoca
       ! dimoca             = 0.0d0
-      disnod             = 0.0d0 
+      ! [GR-BH Task 35] disnod retired to state%mesh%disnod
       ! drainl             = 0.0d0  ! Moved to drainage_state_t — drainage_init handles (ADR 0031)
       drares             = 0.0d0 
-      dz                 = 0.0d0 
+      ! [GR-BH Task 35] dz retired to state%mesh%dz
       dznew              = 0.0d0 
       entres             = 0.0d0 
       es0                = 0.0d0 
@@ -424,9 +424,7 @@
       ! [SS-SWC] wbalance retired — soilwater_init handles init via state%soilwater%wbalance
       ! wbalance           = 0.0d0
       ! wetper             = 0.0d0   ! Moved to drainage_state_t — drainage_init handles (ADR 0031)
-      z                  = 0.0d0 
-      ztopcp             = 0.0d0
-      zbotcp             = 0.0d0
+      ! [GR-BH Task 35] z/ztopcp/zbotcp retired to state%mesh%z/ztopcp/zbotcp
       ! [SS-HEAT] Task 9: zfrostbot/zfrosttop retired to state%heat
       ! zfrostbot          = 0.0d0
       ! zfrosttop          = 0.0d0

@@ -18,10 +18,18 @@ contains
       !! Date: Aug 2004
       !! Purpose: calculate grid parameters
       !! @endnote
-      subroutine calcgrid 
+      !!
+      !! [GR-BH Task 35] signature gained state arg; mesh globals written directly
+      !! to state%mesh%X. Legacy globals numlay/botcom/inpola/inpolb/nod1lay kept.
+      subroutine calcgrid(state)
 
-      use variables
+      use variables, only: nsublay, hcomp, hsublay, ncomp, isoillay, &
+                           numlay, botcom, inpola, inpolb, nod1lay
+      use swap_state_mod, only: swap_state_t
+      use swap_array_dimensions, only: macp
       implicit none
+
+      type(swap_state_t), intent(inout) :: state
 
       integer i,j,lay,node,layold
       character(len=200) messag
@@ -40,60 +48,74 @@ contains
         endif
       end do
 
+      ! Allocate state%mesh arrays sized for macp (upper bound; trimmed below).
+      if (allocated(state%mesh%dz))     deallocate(state%mesh%dz)
+      if (allocated(state%mesh%z))      deallocate(state%mesh%z)
+      if (allocated(state%mesh%disnod)) deallocate(state%mesh%disnod)
+      if (allocated(state%mesh%ztopcp)) deallocate(state%mesh%ztopcp)
+      if (allocated(state%mesh%zbotcp)) deallocate(state%mesh%zbotcp)
+      if (allocated(state%mesh%layer))  deallocate(state%mesh%layer)
+      allocate(state%mesh%dz(macp))
+      allocate(state%mesh%z(macp))
+      allocate(state%mesh%disnod(macp+1))
+      allocate(state%mesh%ztopcp(macp))
+      allocate(state%mesh%zbotcp(macp))
+      allocate(state%mesh%layer(macp))
+
       ! position of nodal points and distances between them; also layer of each node
       node = 0
       do i = 1,nsublay
         do j = 1,ncomp(i)
           node = node + 1
-          dz(node) = hcomp(i)          
+          state%mesh%dz(node) = hcomp(i)
           if (node .eq. 1) then
-            z(node) = - 0.5 * dz(node)
-            disnod(node) = - z(node)
-            layer(node) = isoillay(i)
+            state%mesh%z(node)      = - 0.5d0 * state%mesh%dz(node)
+            state%mesh%disnod(node) = - state%mesh%z(node)
+            state%mesh%layer(node)  = isoillay(i)
           else
-            z(node) = z(node-1) - 0.5*(dz(node-1)+dz(node))
-            disnod(node) = z(node-1)-z(node)
-            layer(node) = isoillay(i)
+            state%mesh%z(node)      = state%mesh%z(node-1) - 0.5d0*(state%mesh%dz(node-1)+state%mesh%dz(node))
+            state%mesh%disnod(node) = state%mesh%z(node-1) - state%mesh%z(node)
+            state%mesh%layer(node)  = isoillay(i)
           endif
         end do
       end do
-      numnod = node
-      disnod(numnod+1) = 0.5*dz(numnod)
+      state%mesh%numnod = node
+      state%mesh%disnod(state%mesh%numnod+1) = 0.5d0 * state%mesh%dz(state%mesh%numnod)
 
       ! store top and bottom depths of each compartment (2019-05-17, MH)
-      do i = 1, numnod
+      do i = 1, state%mesh%numnod
          if (i == 1) then
-            ztopcp(i) = 0.0d0
-            zbotcp(i) = -dz(i)
+            state%mesh%ztopcp(i) = 0.0d0
+            state%mesh%zbotcp(i) = -state%mesh%dz(i)
          else
-            ztopcp(i) = zbotcp(i-1)
-            zbotcp(i) = zbotcp(i-1) - dz(i)
+            state%mesh%ztopcp(i) = state%mesh%zbotcp(i-1)
+            state%mesh%zbotcp(i) = state%mesh%zbotcp(i-1) - state%mesh%dz(i)
          end if
-      end do      
-      
+      end do
+
       ! determine bottom compartment of each soil layer
       layold = 1
-      do node = 1, numnod
-        if (layer(node) .gt. layold) then
+      do node = 1, state%mesh%numnod
+        if (state%mesh%layer(node) .gt. layold) then
           botcom(layold) = node - 1
           layold = layold + 1
         endif
       end do
       numlay = layold
-      botcom(numlay) = numnod
+      botcom(numlay) = state%mesh%numnod
 
       ! linear interpolation values between nodes
-      inpolb(1) = 0.5*dz(1)/disnod(2)
-      do node = 2,numnod-1
-        inpola(node) = 0.5*dz(node)/disnod(node)
-        inpolb(node) = 0.5*dz(node)/disnod(node+1)
+      inpolb(1) = 0.5d0*state%mesh%dz(1)/state%mesh%disnod(2)
+      do node = 2,state%mesh%numnod-1
+        inpola(node) = 0.5d0*state%mesh%dz(node)/state%mesh%disnod(node)
+        inpolb(node) = 0.5d0*state%mesh%dz(node)/state%mesh%disnod(node+1)
       end do
-      inpola(numnod) = 0.5*dz(numnod)/disnod(numnod)
+      inpola(state%mesh%numnod) = 0.5d0*state%mesh%dz(state%mesh%numnod)/state%mesh%disnod(state%mesh%numnod)
 
       ! find first Node of the Layer
       do lay = 1,numlay
         Node = 1
-        do while(Layer(Node).ne.lay)
+        do while(state%mesh%layer(Node).ne.lay)
            Node = Node + 1
         enddo
         nod1lay(lay) = node
