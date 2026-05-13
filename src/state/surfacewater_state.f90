@@ -164,6 +164,35 @@ contains
       self%swstini = swstlev_from_table(self%sttab, self%wls)
       self%swst    = self%swstini
 
+      ! ---- Post-init shape math (was in SurfaceWater(task=1) post-call block) ----
+      ! hwlman/vtair: only output reads them; default to zero here.
+      self%hwlman = 0.0_real64
+      self%vtair  = 0.0_real64
+
+      ! ZDraBas: macropore drainage basis. Only initialized once (flInitDraBas guards
+      ! subsequent runs but in the pilot init always runs once at startup so we
+      ! unconditionally set it here and clear the flag).
+      !
+      ! NOTE: NumLevRapDra and wlstab/maowl/tc_t1900 are legacy globals; macropore
+      ! is retired (ADR 0040), so NumLevRapDra is permanently 0 and the swdtyp(0)
+      ! branch is unreachable. For swsec=2 (the only branch we support on the TOML
+      ! path; the validator enforces this), ZDraBas := wlstar — which we already
+      ! seeded in the L2 step.
+      if (config_sw%swsec == 2) then
+         self%ZDraBas = self%wlstar
+      end if
+      ! swsec=1 branch (legacy wlstab table lookup) and swdtyp(NumLevRapDra)=1 branch
+      ! (drain tube — needs zbotdr(NumLevRapDra) where NumLevRapDra=0 under
+      ! macropore-retire) are both UNREACHABLE on the TOML path. Validator rejects
+      ! swsec=1; macropore retirement zeros NumLevRapDra. Defensive guard added:
+      if (config_sw%swsec /= 2) then
+         call fatalerr_collected('surfacewater_state_init', &
+            'swsec /= 2 not supported on the TOML path (validator rejects)')
+         return
+      end if
+
+      self%flInitDraBas = .false.
+
       ! ---- Legacy global write retained for now ----
       ! bocodre reads wlp via `use variables` for the primary surface water level
       ! (not surfacewater-state owned). A separate arc will migrate readers;

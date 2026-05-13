@@ -262,3 +262,38 @@ subroutine test_surfacewater_init_computes_swst_from_sttab()
    @assertEqual(swstlev_from_table(sw%sttab, sw%wls), sw%swst,    1.0e-12_real64)
    @assertEqual(sw%swst, sw%swstini, 1.0e-12_real64)
 end subroutine test_surfacewater_init_computes_swst_from_sttab
+
+@test
+subroutine test_surfacewater_init_sets_zdrabas_for_swsec_2()
+   use funit
+   use iso_fortran_env, only: real64
+   use surfacewater_state_mod, only: surfacewater_state_t
+   use surface_water_config_mod, only: surface_water_config_t
+   use drainage_config_mod, only: drainage_config_t
+   type(surfacewater_state_t)   :: sw
+   type(surface_water_config_t) :: cfg_sw
+   type(drainage_config_t)      :: cfg_drain
+   integer, parameter :: nrlevs = 1
+   integer, parameter :: numnod = 10
+
+   cfg_sw%swsrf = 2;  cfg_sw%swsec = 2;  cfg_sw%swqhr = 1
+   cfg_sw%nmper = 1
+   allocate(cfg_sw%swman(1));  cfg_sw%swman = 1
+   cfg_sw%wlact = -25.0_real64
+
+   cfg_drain%nrlevs = nrlevs
+   cfg_drain%altcu  = 0.0_real64
+   allocate(cfg_drain%zbotdr(nrlevs));  cfg_drain%zbotdr = -100.0_real64
+   allocate(cfg_drain%swdtyp(nrlevs));  cfg_drain%swdtyp = 0
+   allocate(cfg_drain%widthr(nrlevs));  cfg_drain%widthr = 1.0_real64
+   allocate(cfg_drain%taludr(nrlevs));  cfg_drain%taludr = 2.0_real64
+   allocate(cfg_drain%l(nrlevs));       cfg_drain%l      = 1000.0_real64
+
+   call sw%init(cfg_sw, cfg_drain, numnod)
+
+   ! swsec=2 → ZDraBas = wlstar = wls = -25.
+   @assertEqual(-25.0_real64, sw%ZDraBas, 1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%hwlman, 1.0e-12_real64)
+   @assertEqual(0.0_real64, sw%vtair,  1.0e-12_real64)
+   @assertFalse(sw%flInitDraBas)
+end subroutine test_surfacewater_init_sets_zdrabas_for_swsec_2
