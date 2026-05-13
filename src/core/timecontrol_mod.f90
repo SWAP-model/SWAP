@@ -22,7 +22,9 @@ contains
                             swirfix, swsnow, swdra, &
                             swhea, swsolu, swetsine, swrain, swmetdetail, &
                             nmetdetail, nirri, swinco, icrop, &
-                            cropstart, croptype, project
+                            cropstart, croptype, project, &
+                            swheader, swodat, swres, &
+                            MaxIt, MaxIterTime, msteps, flMaxIterTime
       use timestep_control_mod, only: fldecdt
       use error_mod, only: fatalerr_collected
       implicit none
@@ -121,6 +123,25 @@ contains
       flIrg1Start = .true.
       flUpdMetDet = .true.
       flYearStart = .true.
+
+! [SS-BMI2] Seed state-side copies of time bounds, dt limits, output cadence,
+! and iteration control. Bare globals (still in variables.f90) keep working;
+! both writes happen until Task 4 migrates readers and Task 5 retires globals.
+      state%timecontrol%tstart        = tstart
+      state%timecontrol%tend          = tend
+      state%timecontrol%dtmin         = dtmin
+      state%timecontrol%dtmax         = dtmax
+      state%timecontrol%period        = period
+      state%timecontrol%nprintday     = nprintday
+      state%timecontrol%flprintdt     = flprintdt
+      state%timecontrol%swheader      = swheader
+      state%timecontrol%swodat        = swodat
+      state%timecontrol%swres         = swres
+      state%timecontrol%swscre        = swscre
+      state%timecontrol%MaxIt         = MaxIt
+      state%timecontrol%MaxIterTime   = MaxIterTime
+      state%timecontrol%msteps        = msteps
+      state%timecontrol%flMaxIterTime = flMaxIterTime
 
       if (nprintday .gt. 1 .or. flprintdt) then
         flprintshort = .true.
