@@ -184,7 +184,8 @@ contains
       !---- Declarations
       ! SS-SWST Phase 2 Task 5: inqdra read from state%surfacewater; dropped from use variables.
       ! [SS-SWC S-2.12B] h/theta/inq/inqrot/IThetaBeg/cofgen/FrArMtrx retired — read via state%soilwater
-      use variables, only: SwDiscrvert,nrlevs,numlay,botcom,numnod,dz,                                              &
+      ! [GR-BH C4] numnod/dz migrated to state%mesh
+      use variables, only: SwDiscrvert,nrlevs,numlay,botcom,                                                         &
                            numnodNew,dzNew,DiPoCp,IAvFrMpWlWtDm1,IAvFrMpWlWtDm2,                                    &
                            IQExcMtxDm1Cp,IQExcMtxDm2Cp,IQOutDrRapCp,VlMpStDm1,VlMpStDm2
       use soilhydraulics_utils, only: prhead
@@ -216,12 +217,15 @@ contains
       ! ModuleName converted to parameter for proper initialization
 
       ! [SS-SWC S-2.12B] read soil-water arrays via state%soilwater (associate)
+      ! [GR-BH C4] mesh globals aliased via state%mesh
       associate( sw_h         => state%soilwater%h,                    &
                  sw_theta     => state%soilwater%theta,                &
                  sw_inq       => state%soilwater%inq,             &
                  sw_inqrot    => state%soilwater%inqrot,          &
                  sw_IThetaBeg => state%soilwater%IThetaBeg,       &
-                 sw_FrArMtrx  => state%soilwater%FrArMtrx )
+                 sw_FrArMtrx  => state%soilwater%FrArMtrx,        &
+                 numnod       => state%mesh%numnod,                &  ! [GR-BH C4]
+                 dz           => state%mesh%dz                     )  ! [GR-BH C4]
 
       ! error in call of part
       if (part.lt.1 .or. part.gt.2) then
@@ -446,7 +450,7 @@ contains
         call fatalerr_collected(ModuleName,message)
       endif
 
-      end associate  ! [SS-SWC S-2.12B] sw_h/.../sw_FrArMtrx
+      end associate  ! [SS-SWC S-2.12B] sw_h/.../sw_FrArMtrx; [GR-BH C4] numnod/dz
       return
       end subroutine ConvertDiscrVert
 

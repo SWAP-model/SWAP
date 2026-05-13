@@ -76,6 +76,7 @@ contains
 
       ! [SS-SWC S-1.4a/S-1.4b/S-2.3] ASSOCIATE block: dual-writes + reader cutover in headcalc
       ! [TC-8] TC fields appended for dt/t1900/fldtmin/dtold/flDayStart reader cutover
+      ! [GR-BH C4] mesh globals aliased via state%mesh
       associate( &
          sw_theta       => state%soilwater%theta,    &
          sw_h           => state%soilwater%h,        &
@@ -96,7 +97,11 @@ contains
          tc_flDayStart  => state%timecontrol%flDayStart, &  ! [TC-8]
          MaxIt          => state%timecontrol%MaxIt,      &  ! [SS-BMI2 Task 4]
          dtmin          => state%timecontrol%dtmin,      &  ! [SS-BMI2 Task 4]
-         swscre         => state%timecontrol%swscre      )  ! [SS-BMI2 Task 4]
+         swscre         => state%timecontrol%swscre,     &  ! [SS-BMI2 Task 4]
+         numnod         => state%mesh%numnod,            &  ! [GR-BH C4]
+         dz             => state%mesh%dz,               &  ! [GR-BH C4]
+         z              => state%mesh%z,                &  ! [GR-BH C4]
+         disnod         => state%mesh%disnod            )  ! [GR-BH C4]
 
       if (tc_flDayStart) then  ! [TC-8]
          flwarn_hc = .true.
@@ -807,7 +812,7 @@ contains
 
       endif
 
-      end associate  ! sw_theta/.../sw_gwlm1 => state%soilwater [SS-SWC S-1.4a/b/S-2.3]
+      end associate  ! sw_theta/.../sw_gwlm1 => state%soilwater [SS-SWC S-1.4a/b/S-2.3]; numnod/dz/z/disnod [GR-BH C4]
 
    end subroutine headcalc
 
@@ -844,6 +849,12 @@ contains
 
       real(8) tab(mabbc*2)
       character(len=200) messag
+
+      ! [GR-BH C4] mesh globals aliased via state%mesh for all cases
+      associate( numnod => state%mesh%numnod, &  ! [GR-BH C4]
+                 dz     => state%mesh%dz,     &  ! [GR-BH C4]
+                 z      => state%mesh%z,      &  ! [GR-BH C4]
+                 layer  => state%mesh%layer   )  ! [GR-BH C4]
 
       select case (task)
       case (1)
@@ -1170,6 +1181,8 @@ contains
          call fatalerr_collected ('SoilWater', 'Illegal value for TASK')
       end select
 
+      end associate  ! numnod/dz/z/layer [GR-BH C4]
+
       return
       end subroutine soilwater
 
@@ -1200,6 +1213,9 @@ contains
       integer i
 
       ! [SS-SWC S-2.12B] legacy h/hm1/theta/thetm1/gwl/gwlm1/pond/pondm1/k/kmean half-writes dropped
+      ! [GR-BH C4] numnod aliased via state%mesh
+      associate( numnod => state%mesh%numnod )  ! [GR-BH C4]
+
       select case (task)
       case (1)
 
@@ -1228,6 +1244,8 @@ contains
          call fatalerr_collected ('SoilWaterStateVar', 'Illegal value for TASK')
       end select
 
+      end associate  ! numnod [GR-BH C4]
+
       return
       end subroutine SoilWaterStateVar
 
@@ -1242,7 +1260,8 @@ contains
    !!
    subroutine hysteresis (state)
       ! [SS-SWC S-2.12B] h/hm1/indeks/cofgen/dimoca/theta retired — read via state%soilwater
-      use variables, only: numnod,layer,tau,paramvg,disnod
+      ! [GR-BH C4] numnod/layer/disnod migrated to state%mesh
+      use variables, only: tau,paramvg
       use soilhydraulics_utils, only: moiscap, prhead
       use swap_array_dimensions, only: macp
       use swap_state_mod, only: swap_state_t
@@ -1260,13 +1279,16 @@ contains
       type(vanGenuchten_params_t) :: vg_hys
 
       ! [SS-SWC S-2.3] reader cutover: read h/hm1/theta/indeks/dimoca from state
+      ! [GR-BH C4] mesh globals aliased via state%mesh
       associate( &
          sw_h      => state%soilwater%h,       &
          sw_hm1    => state%soilwater%hm1,     &
          sw_theta  => state%soilwater%theta,   &
          sw_indeks => state%soilwater%indeks,  &
-         sw_dimoca => state%soilwater%dimoca   &
-      )
+         sw_dimoca => state%soilwater%dimoca,  &
+         numnod    => state%mesh%numnod,        &  ! [GR-BH C4]
+         layer     => state%mesh%layer,         &  ! [GR-BH C4]
+         disnod    => state%mesh%disnod          )  ! [GR-BH C4]
 
       ! Check for reversal
       do node = 1,numnod
@@ -1361,7 +1383,7 @@ contains
                                               node, state%soilwater)  ! [SS-SWC S-1.4b/S-2.12B] [SS-GR-UTILS Task 7]
  100  continue
 
-      end associate  ! sw_h/.../sw_dimoca => state%soilwater [SS-SWC S-2.3]
+      end associate  ! sw_h/.../sw_dimoca => state%soilwater [SS-SWC S-2.3]; numnod/layer/disnod [GR-BH C4]
 
       return
       end subroutine hysteresis

@@ -38,7 +38,8 @@ contains
       !> @endnote
       subroutine calcgwl (state)
       ! [SS-SWC S-2.12B] retired globals removed from use clause; all reads/writes via state%soilwater
-      use variables, only: disnod,logf,swbotb,flmacropore,numnod,z,CritUndSatVol
+      ! [GR-BH C4] numnod/z/disnod migrated to state%mesh
+      use variables, only: logf,swbotb,flmacropore,CritUndSatVol
       ! [SS-TC TC-6] t1900 read cut over to state%timecontrol%t1900
       use swap_log, only: log_debug, to_str
       implicit none
@@ -55,8 +56,13 @@ contains
       character(len=19) datexti
 
       ! S-2.4 ASSOCIATE: alias state%soilwater arrays for h/pond reads
-      associate( sw_h => state%soilwater%h, sw_pond => state%soilwater%pond, &
-                 sw_gwl => state%soilwater%gwl )
+      ! [GR-BH C4] mesh globals aliased via state%mesh
+      associate( sw_h   => state%soilwater%h,   &
+                 sw_pond => state%soilwater%pond, &
+                 sw_gwl  => state%soilwater%gwl,  &
+                 numnod  => state%mesh%numnod,     &  ! [GR-BH C4]
+                 z       => state%mesh%z,          &  ! [GR-BH C4]
+                 disnod  => state%mesh%disnod       )  ! [GR-BH C4]
 
       ! set initial values — [SS-SWC S-2.12B] legacy half-writes dropped
       sw_gwl    = 999.0d0                                     ! S-1.6/S-2.12B
@@ -173,7 +179,7 @@ contains
          state%soilwater%npegwl = -1                          ! S-1.6/S-2.12B
       endif
 
-      end associate  ! sw_h, sw_pond, sw_gwl (S-2.4/S-2.12B)
+      end associate  ! sw_h, sw_pond, sw_gwl (S-2.4/S-2.12B); numnod/z/disnod [GR-BH C4]
 
       ! fatal error if gwl below profile and flux has to be calculated
       if ((swbotb.eq.3.or.swbotb.eq.4).and.state%soilwater%gwl.gt.998.0d0) then
@@ -184,7 +190,7 @@ contains
       endif
 
       ! warning error if there is inconsistency between defined gwl and soil physics
-      if (swbotb.eq.1 .and. (state%soilwater%gwlinp .ge.z(1) .or. state%soilwater%gwl.gt.998.0d0)) then
+      if (swbotb.eq.1 .and. (state%soilwater%gwlinp .ge.state%mesh%z(1) .or. state%soilwater%gwl.gt.998.0d0)) then  ! [GR-BH C4]
          ! determine date and date-time
          call dtdpst('year-month-day,hour:minute:seconds',state%timecontrol%t1900,datexti)  ! TC-6: t1900 -> state%timecontrol
          write(messag,'(6a)')                                           &
@@ -217,7 +223,7 @@ contains
       ! SS-SWC S-2.4: state added as first arg so h reads come from state%soilwater%h
       function level (state,swoptlev,node,nodheq1)
       ! [SS-SWC S-2.12B] h retired from use clause; read via state%soilwater%h (associate below)
-      use variables, only: numnod, disnod, dz, z, zbotcp
+      ! [GR-BH C4] numnod/disnod/dz/z/zbotcp migrated to state%mesh; use variables no longer needed here
       implicit none
 
       type(swap_state_t), intent(in) :: state
@@ -227,7 +233,13 @@ contains
       real(8) level
 
       ! S-2.4 ASSOCIATE: alias state%soilwater%h for reads inside level
-      associate( sw_h => state%soilwater%h )
+      ! [GR-BH C4] mesh globals aliased via state%mesh
+      associate( sw_h   => state%soilwater%h,   &
+                 numnod => state%mesh%numnod,     &  ! [GR-BH C4]
+                 disnod => state%mesh%disnod,     &  ! [GR-BH C4]
+                 dz     => state%mesh%dz,         &  ! [GR-BH C4]
+                 z      => state%mesh%z,          &  ! [GR-BH C4]
+                 zbotcp => state%mesh%zbotcp       )  ! [GR-BH C4]
 
       if (swoptlev.eq.1) then
          ! groundwater level equals elevation head where h = 0
@@ -264,7 +276,7 @@ contains
          level = (levp1 + levm1) / 2.d0
       endif
 
-      end associate  ! sw_h (S-2.4)
+      end associate  ! sw_h (S-2.4); numnod/disnod/dz/z/zbotcp [GR-BH C4]
 
       return
     end function level
@@ -293,7 +305,7 @@ contains
       ! SS-SWC S-2.4: state added as first arg so h/Theta/ThetaS reads come from state%soilwater
       subroutine watertable (state,node,nodlev,nodhlp,nodheq1,CritUndSatVol,flsat,waterlevel)
       ! [SS-SWC S-2.12B] h/Theta/ThetaS retired — read via state%soilwater (associate below)
-      use variables, only: numnod,dz,z
+      ! [GR-BH C4] numnod/dz/z migrated to state%mesh; use variables no longer needed here
       implicit none
 
       type(swap_state_t), intent(in) :: state
@@ -305,9 +317,13 @@ contains
       logical flsat2
 
       ! S-2.4 ASSOCIATE: alias state%soilwater arrays for h/Theta/ThetaS reads
-      associate( sw_h     => state%soilwater%h,     &
-                 sw_theta => state%soilwater%theta,  &
-                 sw_thetas => state%soilwater%thetas )
+      ! [GR-BH C4] mesh globals aliased via state%mesh
+      associate( sw_h      => state%soilwater%h,     &
+                 sw_theta  => state%soilwater%theta,  &
+                 sw_thetas => state%soilwater%thetas, &
+                 numnod    => state%mesh%numnod,       &  ! [GR-BH C4]
+                 dz        => state%mesh%dz,           &  ! [GR-BH C4]
+                 z         => state%mesh%z              )  ! [GR-BH C4]
 
       TotUndSatVol = 0.0d0
       flsat2 = .false.
@@ -341,7 +357,7 @@ contains
          nodlev = min(max(i,1),numnod)
       endif
 
-      end associate  ! sw_h, sw_theta, sw_thetas (S-2.4)
+      end associate  ! sw_h, sw_theta, sw_thetas (S-2.4); numnod/dz/z [GR-BH C4]
 
       return
     end subroutine watertable
@@ -360,7 +376,8 @@ contains
       ! SS-SWC S-2.4: theta/thetm1/FrArMtrx/volact/volm1/fllowgwl/q/inq reads cut over to state%soilwater
       subroutine fluxes (state)
       ! [SS-SWC S-2.12B] q, inq, thetm1, theta, volact, volm1, FrArMtrx, fllowgwl retired from variables
-      use variables, only: numnod,dz,qimmob,swbotb,QExcMpMtx,QMaPo,nrlevs,qssdi, qssdisum
+      ! [GR-BH C4] numnod/dz migrated to state%mesh
+      use variables, only: qimmob,swbotb,QExcMpMtx,QMaPo,nrlevs,qssdi, qssdisum
       ! [SS-TC TC-6] dt read cut over to state%timecontrol%dt
       use swap_state_mod, only: swap_state_t
       implicit none
@@ -370,15 +387,18 @@ contains
 
       ! S-2.4 ASSOCIATE: alias state%soilwater arrays/scalars for read/write cutover
       ! [SS-TC TC-6] tc_dt aliases state%timecontrol%dt
-      associate( sw_theta   => state%soilwater%theta,   &
-                 sw_thetm1  => state%soilwater%thetm1,  &
+      ! [GR-BH C4] mesh globals aliased via state%mesh
+      associate( sw_theta    => state%soilwater%theta,   &
+                 sw_thetm1   => state%soilwater%thetm1,  &
                  sw_FrArMtrx => state%soilwater%FrArMtrx, &
-                 sw_q       => state%soilwater%q,       &
-                 sw_inq     => state%soilwater%inq, &
-                 sw_volact  => state%soilwater%volact,  &
-                 sw_volm1   => state%soilwater%volm1,   &
+                 sw_q        => state%soilwater%q,       &
+                 sw_inq      => state%soilwater%inq,     &
+                 sw_volact   => state%soilwater%volact,  &
+                 sw_volm1    => state%soilwater%volm1,   &
                  sw_fllowgwl => state%soilwater%fllowgwl, &
-                 tc_dt      => state%timecontrol%dt )     ! TC-6
+                 tc_dt       => state%timecontrol%dt,     &  ! TC-6
+                 numnod      => state%mesh%numnod,         &  ! [GR-BH C4]
+                 dz          => state%mesh%dz               )  ! [GR-BH C4]
 
       ! determine qbot if not specified
       ! SS-BND B-2.7: qtop and qbot read/written via state%soilwater (globals retired)
@@ -406,7 +426,7 @@ contains
         sw_inq(i) = sw_inq(i) + sw_q(i)*tc_dt                       ! S-1.6/S-2.12B, TC-6
       end do
 
-      end associate  ! sw_theta etc (S-2.4/S-2.12B/TC-6)
+      end associate  ! sw_theta etc (S-2.4/S-2.12B/TC-6); numnod/dz [GR-BH C4]
 
       return
       end
@@ -437,8 +457,10 @@ contains
       real(8) qrotts,qdrats,ptrats,pevats,revats,qbotts
 
       ! TC-6 ASSOCIATE: alias TC fields for dense dt / flDayStart reads in integral body
-      associate( tc_dt         => state%timecontrol%dt,        &  ! TC-6
-                 tc_flDayStart => state%timecontrol%flDayStart )   ! TC-6
+      ! [GR-BH C4] numnod aliased via state%mesh
+      associate( tc_dt         => state%timecontrol%dt,         &  ! TC-6
+                 tc_flDayStart => state%timecontrol%flDayStart,  &  ! TC-6
+                 numnod        => state%mesh%numnod               )  ! [GR-BH C4]
 
       if (state%timecontrol%flZeroIntr) then
         ! SS-ATM Phase 2 Task A-2.2 (D6): igrai/inrai removed — canonical reset
@@ -629,7 +651,7 @@ contains
       if (FlMacropore) state%soilwater%wbalance = state%soilwater%wbalance - cQMpOutDrRap -            &
      &                  (WaSrDm1 + WaSrDm2 - WaSrDm1Ini - WaSrDm2Ini)
 
-      end associate  ! tc_dt, tc_flDayStart (TC-6)
+      end associate  ! tc_dt, tc_flDayStart (TC-6); numnod [GR-BH C4]
 
       return
       end
@@ -890,12 +912,16 @@ contains
       ! SS-SWC S-2.4: theta/FrArMtrx/volact reads cut over to state%soilwater
       subroutine watstor (state)
       ! [SS-SWC S-2.12B] volm1/volact/theta/FrArMtrx retired from variables; all via state%soilwater
-      use variables, only: numnod,dz
+      ! [GR-BH C4] numnod/dz migrated to state%mesh; use variables no longer needed here
       use swap_state_mod, only: swap_state_t
       IMPLICIT NONE
 
       type(swap_state_t), intent(inout) :: state
       INTEGER i
+
+      ! [GR-BH C4] mesh globals aliased via state%mesh
+      associate( numnod => state%mesh%numnod, &  ! [GR-BH C4]
+                 dz     => state%mesh%dz       )  ! [GR-BH C4]
 
       ! update soil profile water storage — [SS-SWC S-2.12B] legacy half-writes dropped
       state%soilwater%volm1  = state%soilwater%volact
@@ -903,6 +929,8 @@ contains
       do 10 i = 1,numnod
         state%soilwater%volact = state%soilwater%volact + state%soilwater%theta(i)*dz(i)*state%soilwater%FrArMtrx(i)
  10   continue
+
+      end associate  ! numnod/dz [GR-BH C4]
 
       return
       end
