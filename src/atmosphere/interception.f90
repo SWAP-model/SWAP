@@ -83,18 +83,15 @@ contains
   !> Reference: Gash, J.H.C. (1995). An analytical framework for estimating
   !> evaporation using rainfall and forest data.
   !>
-  !> Input from variables module: gird, avevaptb, avprectb, pfreetb,
-  !> pstemtb, scanopytb, isua
+  !> Input via state: state%crop%gird, state%atmosphere%avevaptb/avprectb/pfreetb/pstemtb/scanopytb/isua
   !> [SS-ATM A-2.6] grai retired from variables — now passed as explicit argument
   !> [SS-TC TC-11] t read via state%timecontrol%t (tc_t alias)
   !> @endnote
   subroutine Gash (aintc, grai_in, state)
-    ! [SS-GR-ATM B9] DEFERRED: avevaptb/avprectb/pfreetb/pstemtb/scanopytb → state%atmosphere%X
-    ! pending verification that state fields are kept in sync during simulation
-    ! (currently seeded once at init in swap_init_from_loaded_config, not updated dynamically).
-    ! gird → state%crop%gird deferred pending cropgrowth/irrigation dual-write.
-    ! isua → state%atmosphere%isua deferred pending irrigation.f90 dual-write.
-    use variables, only: gird,avevaptb,avprectb,pfreetb,pstemtb,scanopytb,isua
+    ! [SS-GR-ATM B9] gird → state%crop%gird.
+    ! avevaptb/avprectb/pfreetb/pstemtb/scanopytb → state%atmosphere%X.
+    ! isua → state%atmosphere%isua.
+    ! Phase A.5 runtime dual-writes ensure state tracks legacy at runtime.
     use array_utils, only: afgen
     use swap_array_dimensions, only: magrs
     implicit none
@@ -102,7 +99,7 @@ contains
     ! Arguments
     real(8), intent(out) :: aintc   ! Amount of rainfall interception during current day [cm/d]
     real(8), intent(in)  :: grai_in ! Gross daily rain flux (L/T) — [SS-ATM A-2.6] from state%atmosphere%grai
-    type(swap_state_t), intent(in) :: state  ! SS-TC TC-11: for t via state%timecontrol%t
+    type(swap_state_t), intent(in) :: state  ! SS-TC TC-11: for t via state%timecontrol%t; SS-GR-ATM B9: crop/atmosphere fields
 
     ! Local variables
     real(8) :: avevap              ! Average evaporation intensity during shower [-]
@@ -116,8 +113,8 @@ contains
 
     ! Intercepted precipitation (rain+irrig) in cm
     ! SS-ATM A-2.6: grai_in replaces retired global grai
-    if (isua.eq.0) then
-      rpd = grai_in+gird
+    if (state%atmosphere%isua .eq. 0) then
+      rpd = grai_in + state%crop%gird
     else
       rpd = grai_in
     endif
@@ -125,12 +122,12 @@ contains
     ! Calculate interception for forests according to Gash (1995)
     ! SS-TC TC-11: t read via state%timecontrol%t (tc_t alias).
     associate( tc_t => state%timecontrol%t )  ! TC-11
-    pfree = afgen(pfreetb,(2*magrs),tc_t)
-    pstem = afgen(pstemtb,(2*magrs),tc_t)
+    pfree = afgen(state%atmosphere%pfreetb,(2*magrs),tc_t)
+    pstem = afgen(state%atmosphere%pstemtb,(2*magrs),tc_t)
     cGash = 1.d0-pfree-pstem
-    scanopy = afgen(scanopytb,(2*magrs),tc_t) / cGash
-    avprec = afgen(avprectb,(2*magrs),tc_t)
-    avevap = afgen(avevaptb,(2*magrs),tc_t) / cGash
+    scanopy = afgen(state%atmosphere%scanopytb,(2*magrs),tc_t) / cGash
+    avprec = afgen(state%atmosphere%avprectb,(2*magrs),tc_t)
+    avevap = afgen(state%atmosphere%avevaptb,(2*magrs),tc_t) / cGash
 
     ! Amount of rainfall to saturate canopy
     if ( (1.0d0 - avevap/avprec) .gt. 1.0d-4) then
