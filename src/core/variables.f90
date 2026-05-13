@@ -114,8 +114,6 @@
       logical   flSwapShared       ! Flag to indicate the shared simultaneous simulation with other applications
       ! [SS-TC] retired 2026-05-12 — moved to state%timecontrol%flYearStart (ADR 0041)
       ! logical   flyearstart        ! moved to state%timecontrol%flYearStart
-      logical   flzerocumu         ! Flag indicating that cumulative fluxes should be reset to zero (reset-arc)
-      logical   flzerointr         ! Flag indicating that intermediate fluxes should be reset to zero (reset-arc)
       ! [SS-TC] retired 2026-05-12 — moved to state%timecontrol%date (ADR 0041)
       ! character(len=11) date       ! moved to state%timecontrol%date
       character(len=16) outfil     ! Name of output file

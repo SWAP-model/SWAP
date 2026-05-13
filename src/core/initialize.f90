@@ -25,8 +25,6 @@
       tend               = 0.0d0
       tstart             = 0.0d0
       flSwapShared       = .false.
-      flzerocumu         = .false.
-      flzerointr         = .false.
 
 ! --- crop variables (not crop specific, such as crop calendar)
       crp                = 0 

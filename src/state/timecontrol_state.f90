@@ -37,8 +37,6 @@
 !! Excluded (deferred per design doc):
 !!   - Group A: 18 config-constants (tstart, tend, dtmin, dtmax,
 !!     nprintday, period, etc.) — already in simulation_config_t.
-!!   - Group B: flZeroIntr / flZeroCumu — cross-subsystem reset gates;
-!!     future reset-orchestration arc.
 !!   - dtEventRain — cross-owned with meteodt (atmosphere writer).
 !!
 !! Field name mappings from legacy globals (tc_* prefix dropped):
