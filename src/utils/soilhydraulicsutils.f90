@@ -13,46 +13,16 @@ module soilhydraulics_utils
    !! @author Original SWAP team
    !! @date February 2026 (modularization)
    use iso_fortran_env, only: real64
-   ! [SS-SWC S-2.12B] cofgen/fluseksatexm retired from variables — bound via state%soilwater
-   ! SS-TC TC-12: dt retired from only-list; bound via bind_tc_target (module-level pointer).
-   use variables, only: swsophy, numtab, sptab, ientrytab, &
-                        iHWCKmodel, layer, swfrost
    ! [SS-HEAT] Task 9: tsoil global retired; hconduc fallback removed (iHWCKmodel 4-11 path unreachable in regression)
    use doln
    use WC_K_models_04_11, only: functionvalue_04_11
 
    implicit none
 
-   ! [SS-SWC S-2.12B] module-level pointers; bound once by bind_state_targets(state)
-   real(real64), pointer :: cofgen(:,:) => null()
-   logical,      pointer :: fluseksatexm(:) => null()
-   ! SS-TC TC-12: module-level pointer for dt; bound once by bind_tc_target
-   real(real64), pointer :: tc_dt_ptr => null()
-
    private
    public :: watcon, moiscap, hconduc, dhconduc, prhead, hcomean, dkmean
-   public :: bind_state_targets
-   public :: bind_tc_target  ! SS-TC TC-12
 
 contains
-
-   !> [SS-SWC S-2.12B] Bind module-level pointers to state%soilwater.
-   !! Must be called once after state%soilwater is allocated (e.g. in SoilHydraulics(1)
-   !! before any reader uses cofgen/fluseksatexm here).
-   subroutine bind_state_targets(sw_cofgen_in, sw_fluseksatexm_in)
-      real(real64), target, intent(in) :: sw_cofgen_in(:,:)
-      logical,      target, intent(in) :: sw_fluseksatexm_in(:)
-      cofgen       => sw_cofgen_in
-      fluseksatexm => sw_fluseksatexm_in
-   end subroutine bind_state_targets
-
-   !> [SS-TC TC-12] Bind module-level tc_dt_ptr to state%timecontrol%dt.
-   !! Must be called once after state is allocated (e.g. in swap.f90 init block
-   !! alongside bind_state_targets). Used by moiscap() which has no state arg.
-   subroutine bind_tc_target(tc_dt_in)
-      real(real64), target, intent(in) :: tc_dt_in
-      tc_dt_ptr => tc_dt_in
-   end subroutine bind_tc_target
 
 
    !> Calculate mean hydraulic conductivity between two nodes
@@ -450,7 +420,7 @@ contains
       end if
 
       ! In case of frost conditions
-      if (swfrost == 1) then
+      if (soilwater%swfrost == 1) then
          dkdh = dkdh * rfcp
       end if
 
@@ -588,7 +558,7 @@ contains
       end if
 
       ! In case of frost conditions
-      if (swfrost == 1) then
+      if (soilwater%swfrost == 1) then
          k = k * rfcp + hconode_vsmall * (1.0_real64 - rfcp)
       end if
 

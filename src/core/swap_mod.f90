@@ -70,7 +70,6 @@ contains
       use agetracer_mod, only: AgeTracer
       use soilgrid_mod, only: CalcGrid
       use soilhydraulics_mod, only: soilwater
-      use soilhydraulics_utils, only: bind_state_targets, bind_tc_target
       use config_to_variables_mod, only: h_init_buf, pondini_init_buf, pond_init_buf, &
                                          tc_iyear_init_buf, tc_imonth_init_buf, tc_dt_init_buf, &
                                          config_to_variables
@@ -104,11 +103,6 @@ contains
 !  calculate grid parameters
    call CalcGrid()
    call soilwater_init(state%soilwater, numnod, numlay)   ! SS-CRP Phase 1 C-1.2: allocate per-node arrays + mfluxtable
-   ! [SS-SWC S-2.12B] bind module-level pointers in utility modules to state%soilwater
-   ! so legacy `cofgen` / `fluseksatexm` reads in soilhydraulics_utils
-   ! resolve to the canonical state%soilwater storage (ADR 0038).
-   call bind_state_targets(state%soilwater%cofgen, state%soilwater%fluseksatexm)
-   call bind_tc_target(state%timecontrol%dt)  ! SS-TC TC-12: wire tc_dt_ptr in moiscap()
    ! [SS-SWC S-2.12B] seed state%soilwater from config buffers populated by config_to_variables.
    ! Retired globals: pondini, pond, h(1..nhead). state%soilwater%h is sized numnod and
    ! receives the swinco=3 initial-profile h values; SoilHydraulics(1) consumes the rest.
