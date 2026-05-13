@@ -18,7 +18,8 @@ module surfacewater_state_mod
    type :: surfacewater_state_t
 
       ! === per-step / per-day scalars (no flag-gated reset) ===
-      real(real64) :: wls           = 0.0_real64    ! surface water level (cm)
+      real(real64) :: wls           = 0.0_real64    ! secondary surface water level (cm)
+      real(real64) :: wlp           = 0.0_real64    ! primary surface water level (cm)
       real(real64) :: wlstar        = 0.0_real64    ! target surface water level (cm)
       real(real64) :: swst          = 0.0_real64    ! storage per unit area (cm)
       real(real64) :: swstini       = 0.0_real64    ! initial storage (cm)
@@ -59,6 +60,17 @@ module surfacewater_state_mod
       real(real64) :: cqdrd  = 0.0_real64   ! cumulative drain into reservoir (cm)
       real(real64) :: cwsupp = 0.0_real64   ! cumulative external supply (cm)
       real(real64) :: cwout  = 0.0_real64   ! cumulative outflow (cm)
+
+      ! [SS-GR-UTILS] Surface-water utils config (migrated from variables.f90).
+      ! Populated by config_to_variables as transitional dual-writes;
+      ! bare globals retire in Arc 9. hqhtab/qqhtab used by surfacewaterutils.f90.
+      ! Legacy rank: hqhtab(mamp,mamte) = (10*366, 25). State uses same shape.
+      real(real64),    allocatable  :: hqhtab(:,:)     !< Q-h table heads (mamp × mamte)
+      real(real64),    allocatable  :: qqhtab(:,:)     !< Q-h table discharges (mamp × mamte)
+      integer                       :: swdra      = 0        !< drainage switch
+      real(real64)                  :: pondmx     = 0.0_real64  !< max ponding depth (cm)
+      real(real64)                  :: rsro       = 0.0_real64  !< runoff resistance (d)
+      real(real64)                  :: rsroexp    = 0.0_real64  !< runoff exponent (-)
 
       !> [SS-BMI2] Surface water output row buffer (SurfaceWaterOutput stream).
       !! Currently placeholder only — SurfaceWaterOutput body was deleted by ADR 0009 Phase 5+
@@ -103,6 +115,12 @@ contains
             return
          end if
       end if
+
+      ! ---- L0: allocate legacy-mirror arrays ----
+      ! hqhtab/qqhtab mirror legacy globals hqhtab(mamp,mamte) = (10*366, 25).
+      ! Zero-initialised; populated by config_to_variables dual-write.
+      allocate(self%hqhtab(3660, 25)); self%hqhtab = 0.0_real64
+      allocate(self%qqhtab(3660, 25)); self%qqhtab = 0.0_real64
 
       ! ---- L1: zero defaults ----
       self%numadj = 0
@@ -190,15 +208,9 @@ contains
       self%ZDraBas      = self%wlstar
       self%flInitDraBas = .false.
 
-      ! ---- Legacy global write retained for now ----
-      ! bocodre reads wlp via `use variables` for the primary surface water level
-      ! (not surfacewater-state owned). A separate arc will migrate readers;
-      ! this write stays until then. Block-scoped `use` confines the legacy
-      ! import to these two lines.
-      block
-         use variables, only: wlp
-         wlp = 0.0_real64  ! swsrf=2 has no primary system
-      end block
+      ! self%wlp keeps its default 0.0 — swsrf=2 has no primary system.
+      ! Read by bocodre via state%surfacewater%wlp; swsrf=3 (which would
+      ! otherwise populate it from wlptab) is rejected by the validator.
 
    end subroutine surfacewater_state_init
 

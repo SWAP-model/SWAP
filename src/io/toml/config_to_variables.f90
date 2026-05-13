@@ -296,6 +296,7 @@ contains
       ! Drainage (audit: 20 fields + surface_runoff sub-section)
       ! ---------------------------------------------------------------
       swdra    = config%drain%swdra
+      state%surfacewater%swdra = swdra   ! [SS-GR-UTILS Task 4] dual-write
       dramet   = config%drain%dramet
       swdivd   = config%drain%swdivd
       swdislay = config%drain%swdislay
@@ -500,6 +501,7 @@ contains
       ! Soil (audit: 15 + discretization + frost)
       ! ---------------------------------------------------------------
       swsophy = config%soil%swsophy
+      state%soilwater%swsophy = swsophy   ! [SS-GR-UTILS Task 4] dual-write
       swhyst  = config%soil%swhyst
       swinco  = config%soil%swinco
       ! [MACRO-RETIRE 2026-05-12] swmacro global retired (ADR 0040).
@@ -523,9 +525,12 @@ contains
       pondini_init_buf = config%soil%pondini
       pond_init_buf    = config%soil%pondini    ! legacy alias: pond <-> pondini for swinco<3
       pondmx  = config%soil%pondmx
+      state%surfacewater%pondmx = pondmx     ! [SS-GR-UTILS Task 4] dual-write
       rsoil   = config%soil%rsoil
       rsro    = config%soil%rsro
+      state%surfacewater%rsro = rsro         ! [SS-GR-UTILS Task 4] dual-write
       rsroexp = config%soil%rsroexp
+      state%surfacewater%rsroexp = rsroexp   ! [SS-GR-UTILS Task 4] dual-write
       ! Legacy parses .swp `SWRUNON` into a local int; the persistent
       ! global is the boolean `flrunon`. Mirror that mapping here.
       flrunon = (config%soil%swrunon == 1)
@@ -739,6 +744,7 @@ contains
 
       ! Soil.frost
       swfrost   = config%soil%frost%swfrost
+      state%soilwater%swfrost = swfrost   ! [SS-GR-UTILS Task 4] dual-write
       swsublim  = config%soil%frost%swsublim
       ! tfroststa/tfrostend live in heat block per audit (and per legacy);
       ! do not double-write here from soil%frost — heat block below owns it.

@@ -827,6 +827,18 @@ contains
 
       ! Soil physics: tabulated or MualemVanGenuchten functions
       sw%cofgen = 0.0_real64                               ! [SS-SWC S-1.3/S-2.12B]
+
+      ! [SS-GR-UTILS Task 4] Mirror layer + iHWCKmodel into state (both branches).
+      ! layer(:) set by CalcGrid; iHWCKmodel(:) set by config_to_variables.
+      ! State fields allocated by soilwater_init which ran before SoilHydraulics(1).
+      do node = 1, numnod
+         sw%layer(node) = layer(node)
+      end do
+      do lay = 1, numlay
+         sw%iHWCKmodel(lay) = iHWCKmodel(lay)
+      end do
+      ! BiModal/NoVap: only set via legacy readswap (not TOML path); stay .false.
+
       if(swsophy.eq.1) then
          ! Tabulated functions (h,theta,k,dthetadh,dkdtheta) tabulated
          do node = 1,numnod
@@ -850,6 +862,16 @@ contains
           sw%vg_params(node)%thetar = sw%cofgen(1,node)
           sw%vg_params(node)%thetas = sw%cofgen(2,node)
           sw%vg_params(node)%ksat   = sw%cofgen(3,node)
+          ! [SS-GR-UTILS Task 4] Mirror numtab/ientrytab/sptab into state (swsophy=1 only).
+          sw%numtab(node) = numtab(node)
+          do i = 0, matabentries
+             sw%ientrytab(node,i) = ientrytab(node,i)
+          end do
+          do i = 1, 7
+             do j = 1, numtab(node)
+                sw%sptab(i,node,j) = sptab(i,node,j)
+             end do
+          end do
         end do
         do lay = 1,numlay
           ksatfit(lay) = sw%cofgen(3,nod1lay(lay))        ! [SS-SWC S-2.3]
