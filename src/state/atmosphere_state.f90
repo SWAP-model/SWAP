@@ -34,7 +34,7 @@
 module atmosphere_state_mod
    use, intrinsic :: iso_fortran_env, only: real64
    use iso_c_binding, only: c_double
-   use swap_array_dimensions, only: magrs
+   use swap_array_dimensions, only: magrs, mayrs
    implicit none
    private
    public :: atmosphere_state_t
@@ -183,20 +183,22 @@ module atmosphere_state_mod
       real(real64) :: CNwet             = 0.0_real64
       real(real64) :: ThetaRef          = 0.0_real64
       real(real64) :: Runoff_CN         = 0.0_real64
-      real(real64) :: wc_cor            = 0.0_real64
+      integer      :: wc_cor            = 0
       real(real64) :: wc10              = 0.0_real64
       integer      :: iCNtab            = 0
-      real(real64) :: CNtimTAB(2*magrs) = 0.0_real64
-      real(real64) :: CNrefTAB(2*magrs) = 0.0_real64
+      real(real64) :: CNtimTAB(mayrs*5) = 0.0_real64   !! CN time table (legacy dim: mayrs*5=1000)
+      real(real64) :: CNrefTAB(mayrs*5) = 0.0_real64   !! CN ref  table (legacy dim: mayrs*5=1000)
 
-      ! [SS-GR-ATM A8] Block 6: output flag toggles
-      logical :: out_tmn = .false.
-      logical :: out_tmx = .false.
-      logical :: out_hum = .false.
-      logical :: out_win = .false.
-      logical :: out_etr = .false.
-      logical :: out_wet = .false.
-      logical :: out_rad = .false.
+      ! [SS-GR-ATM A8] Block 6: daily output scalars (real(4) in variables.f90;
+      ! real(real64) here — promoted for state consistency; meteoday.f90 writes
+      ! these per day before CSV output; dual-write mirrors legacy global values).
+      real(real64) :: out_tmn = 0.0_real64   !! min air temperature of current day (oC)
+      real(real64) :: out_tmx = 0.0_real64   !! max air temperature of current day (oC)
+      real(real64) :: out_hum = 0.0_real64   !! air humidity of current day (kPa)
+      real(real64) :: out_win = 0.0_real64   !! average wind speed of current day (m/s)
+      real(real64) :: out_etr = 0.0_real64   !! reference ET of current day (m/d)
+      real(real64) :: out_wet = 0.0_real64   !! rainfall duration of current day (d)
+      real(real64) :: out_rad = 0.0_real64   !! global solar radiation (kJ/m2)
 
    end type atmosphere_state_t
 

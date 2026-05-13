@@ -56,7 +56,14 @@ contains
                             flharvestday, flcropoutput, swcrp, flirrigationoutput, swend, project, &
                             flTillage, flSSDI, &
                             numlay, &
-                            owltab, nowltab
+                            owltab, nowltab, &
+                            arad, atmn, atmx, ahum, awin, arai, aetr, wet, &
+                            atav, epot, tpot, grain, nrain, &
+                            tav, tavd, rh, daynrfirst, daynrlast, atmin7, nofd, teprrain, teprsnow, &
+                            siccapact, fimin, isua, avevaptb, avprectb, pfreetb, pstemtb, scanopytb, &
+                            CNref, CNdry, CNwet, ThetaRef, Runoff_CN, wc_cor, wc10, iCNtab, CNtimTAB, CNrefTAB, &
+                            out_tmn, out_tmx, out_hum, out_win, out_etr, out_wet, out_rad, &
+                            lai, kdif, kdir, cofab, cfbs, swcf, swcfbs, gird, flCropEmergence, et0, ew0, es0
       use soilwater_state_mod, only: soilwater_init
       use atmosphere_state_mod, only: atmosphere_init
       use tillage_state_mod, only: tillage_init
@@ -161,6 +168,75 @@ contains
          if (config%meteo%snow%swsnow /= 1) state%atmosphere%ssnow = 0.0d0
       end if
    end if
+
+   ! [SS-GR-ATM A10] dual-write Block 1 (daily meteo arrays) + Block 2 (sub-daily)
+   state%atmosphere%arad  = arad
+   state%atmosphere%atmn  = atmn
+   state%atmosphere%atmx  = atmx
+   state%atmosphere%ahum  = ahum
+   state%atmosphere%awin  = awin
+   state%atmosphere%arai  = arai
+   state%atmosphere%aetr  = aetr
+   state%atmosphere%wet   = wet
+   state%atmosphere%atav  = atav
+   state%atmosphere%epot  = epot
+   state%atmosphere%tpot  = tpot
+   state%atmosphere%grain = grain
+   state%atmosphere%nrain = nrain
+
+   ! [SS-GR-ATM A11] dual-write Block 3 (derived scalars) + Block 4 (interception) + Block 5 (CN)
+   state%atmosphere%Tav        = tav
+   state%atmosphere%tavd       = tavd
+   state%atmosphere%rh         = rh
+   state%atmosphere%daynrfirst = daynrfirst
+   state%atmosphere%daynrlast  = daynrlast
+   state%atmosphere%atmin7     = atmin7
+   state%atmosphere%nofd       = nofd
+   state%atmosphere%teprrain   = teprrain
+   state%atmosphere%teprsnow   = teprsnow
+
+   state%atmosphere%siccapact = siccapact
+   state%atmosphere%fimin     = fimin
+   state%atmosphere%isua      = isua
+   state%atmosphere%avevaptb  = avevaptb
+   state%atmosphere%avprectb  = avprectb
+   state%atmosphere%pfreetb   = pfreetb
+   state%atmosphere%pstemtb   = pstemtb
+   state%atmosphere%scanopytb = scanopytb
+
+   state%atmosphere%CNref     = CNref
+   state%atmosphere%CNdry     = CNdry
+   state%atmosphere%CNwet     = CNwet
+   state%atmosphere%ThetaRef  = ThetaRef
+   state%atmosphere%Runoff_CN = Runoff_CN
+   state%atmosphere%wc_cor    = wc_cor
+   state%atmosphere%wc10      = wc10
+   state%atmosphere%iCNtab    = iCNtab
+   state%atmosphere%CNtimTAB  = CNtimTAB
+   state%atmosphere%CNrefTAB  = CNrefTAB
+
+   ! [SS-GR-ATM A12] dual-write Block 6 (daily output scalars)
+   state%atmosphere%out_tmn = real(out_tmn, kind=8)
+   state%atmosphere%out_tmx = real(out_tmx, kind=8)
+   state%atmosphere%out_hum = real(out_hum, kind=8)
+   state%atmosphere%out_win = real(out_win, kind=8)
+   state%atmosphere%out_etr = real(out_etr, kind=8)
+   state%atmosphere%out_wet = real(out_wet, kind=8)
+   state%atmosphere%out_rad = real(out_rad, kind=8)
+
+   ! [SS-GR-ATM A12] seed state%crop from legacy crop globals
+   state%crop%lai             = lai
+   state%crop%kdif            = kdif
+   state%crop%kdir            = kdir
+   state%crop%cofab           = cofab
+   state%crop%cfbs            = cfbs
+   state%crop%swcf            = swcf
+   state%crop%swcfbs          = swcfbs
+   state%crop%gird            = gird
+   state%crop%flCropEmergence = flCropEmergence
+   state%crop%et0             = et0
+   state%crop%ew0             = ew0
+   state%crop%es0             = es0
 
    ! [SS-TC TC-14] alias TC fields used in init block
    block
