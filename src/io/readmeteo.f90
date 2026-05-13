@@ -17,6 +17,7 @@
       use variables
       use meteodt_mod, only: MeteoDT
       use swap_state_mod, only: swap_state_t
+      use meteo_buffer_mod, only: get_meteo_mode, METEO_MODE_EXTERNAL_BUFFER
       implicit none
 
       type(swap_state_t), intent(inout) :: state
@@ -103,9 +104,13 @@
 !   - 1 swmetdetail = 0; daily input
 !   - 2 swmetdetail = 1; detailed input for nmetdetail time intervals per day
 
-! --- CSV mode is the only supported path (ADR 0014).
+! --- SS-BMI2: external buffer mode bypasses the CSV reader (daily path only).
+!     Sub-daily / detailed meteo always stays on CSV in Phase 2.
+      if (swmetdetail == 0 .and. get_meteo_mode() == METEO_MODE_EXTERNAL_BUFFER) then
+         call read_meteo_from_external_buffer_year(ifnd, state)
+! --- CSV mode is the only supported path otherwise (ADR 0014).
 !     Daily mode → MeteoCSVYear. Sub-daily → MeteoCSVDetYear.
-      if (swmetdetail == 0) then
+      else if (swmetdetail == 0) then
          call MeteoCSVYear(ifnd, state)
       else
          call MeteoCSVDetYear(ifnd, state)
@@ -329,6 +334,101 @@
 
       return
       end subroutine ReadRainEvents
+
+
+! SUBROUTINE: read_meteo_from_external_buffer_year
+! SS-BMI2 Task 7: populate per-day meteo arrays from the externally-supplied
+! buffer when mode == METEO_MODE_EXTERNAL_BUFFER. Mirrors MeteoCSVYear output
+! contract: arad/atmn/atmx/ahum/awin/arai/aetr/ad/am/daynrfirst/daynrlast/
+! timjan1/ifnd are all set so ReadMeteoYear's post-call validation is unaffected.
+!
+! Canonical buffer column order (1-based):
+!   1: date (days since JD 1900, same convention as metcsv_dat col 1)
+!   2: rain        (mm/d  → arai)
+!   3: tmin        (deg C → atmn)
+!   4: tmax        (deg C → atmx)
+!   5: et_ref      (mm/d  → aetr; -99.9 = compute internally)
+!   6: radiation   (kJ/m2/d → arad, converted to J/m2/d by ×1000)
+!   7: vapor       (kPa   → ahum)
+!   8: wind        (m/s   → awin)
+! wet(:) is set to -99.9 (missing) — caller can set swrain≠2 or supply a
+! separate wet flag column in a future extension.
+subroutine read_meteo_from_external_buffer_year(ifnd, state)
+use meteo_buffer_mod, only: get_external_meteo_value, get_external_meteo_n_days, &
+                            get_external_meteo_n_cols
+use swap_state_mod,   only: swap_state_t
+use variables,        only: arad, atmn, atmx, ahum, awin, arai, aetr, wet, ad, am, &
+                            daynrfirst, daynrlast
+use swap_array_dimensions, only: NMETFILE
+implicit none
+integer,             intent(out)   :: ifnd
+type(swap_state_t),  intent(inout) :: state
+
+integer,  parameter :: jd1900 = 2415020
+integer             :: i, i1, i2, n, n_buf
+real(8)             :: t_jan1, t_dec31, tval, col1_val
+integer             :: datea(6)
+real(4)             :: fsec
+integer             :: jday
+external               jday
+
+! Year boundaries in days-since-jd1900 (same convention as metcsv_dat)
+t_jan1  = real(jday(state%timecontrol%yearmeteo,  1,  1) - jd1900, 8)
+t_dec31 = real(jday(state%timecontrol%yearmeteo, 12, 31) - jd1900, 8)
+
+n_buf = get_external_meteo_n_days()
+
+! Find row range in the buffer for yearmeteo.
+i1 = 0; i2 = 0
+do i = 1, n_buf
+   col1_val = get_external_meteo_value(i, 1)
+   if (col1_val >= t_jan1 - 0.5d0 .and. col1_val <= t_dec31 + 0.5d0) then
+      if (i1 == 0) i1 = i
+      i2 = i
+   end if
+end do
+
+if (i1 == 0) then
+   ! No rows for this year — return 0; ReadMeteoYear will catch via validation.
+   ifnd = 0
+   return
+end if
+
+n = i2 - i1 + 1
+ifnd = min(n, NMETFILE)
+
+! Populate per-day arrays (canonical buffer column order).
+do i = 1, ifnd
+   arai(i) = get_external_meteo_value(i1+i-1, 2)          ! rain (mm/d)
+   atmn(i) = get_external_meteo_value(i1+i-1, 3)          ! tmin (deg C)
+   atmx(i) = get_external_meteo_value(i1+i-1, 4)          ! tmax (deg C)
+   aetr(i) = get_external_meteo_value(i1+i-1, 5)          ! et_ref (mm/d)
+   arad(i) = get_external_meteo_value(i1+i-1, 6) * 1000.0d0  ! kJ→J /m2/d
+   ahum(i) = get_external_meteo_value(i1+i-1, 7)          ! vapor (kPa)
+   awin(i) = get_external_meteo_value(i1+i-1, 8)          ! wind (m/s)
+   wet(i)  = -99.9d0                                       ! missing — no wet-flag column yet
+end do
+
+! Backfill ad/am from the date column (days-since-jd1900 → month/day).
+do i = 1, ifnd
+   call days1900_to_md(nint(get_external_meteo_value(i1+i-1, 1)), am(i), ad(i))
+end do
+
+! daynrfirst / daynrlast and timjan1 — mirror MeteoCSVYear logic.
+datea = 0; fsec = 0.0
+datea(1) = state%timecontrol%yearmeteo; datea(2) = 1; datea(3) = 1
+call dtardp(datea, fsec, t_jan1)
+state%timecontrol%timjan1 = t_jan1
+
+datea(2) = am(1); datea(3) = ad(1)
+call dtardp(datea, fsec, tval)
+daynrfirst = nint(tval - state%timecontrol%timjan1 + 1.0d0)
+
+datea(2) = am(ifnd); datea(3) = ad(ifnd)
+call dtardp(datea, fsec, tval)
+daynrlast = nint(tval - state%timecontrol%timjan1 + 1.0d0)
+
+end subroutine read_meteo_from_external_buffer_year
 
 
 ! SUBROUTINE: MeteoCSVYear
