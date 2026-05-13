@@ -1,7 +1,7 @@
 !> @file timecontrol_state.f90
 !! Typed state record for the TimeControl subsystem (ADR 0041, Task TC-1).
 !!
-!! Holds 63 runtime-state fields owned by timecontrol.f90 and IterTime:
+!! Holds 79 runtime-state fields owned by timecontrol.f90 and IterTime:
 !!
 !!   Group C — 16 runtime clock + calendar scalars:
 !!     Real(8): t, t1900, tcum, timjan1
@@ -163,6 +163,31 @@ module timecontrol_state_mod
       logical :: flSolute       = .false.  !! solute module active
       logical :: flIrrigate     = .false.  !! fixed irrigation active (swirfix==1)
       logical :: flOpenFileDev  = .false.  !! developer output file open flag
+
+      ! [SS-BMI2] time bounds + dt limits (migrated from variables.f90)
+      real(real64) :: tstart      = 0.0_real64  !! simulation start (days since 1900)
+      real(real64) :: tend        = 0.0_real64  !! simulation end (days since 1900)
+      real(real64) :: dtmin       = 0.0_real64  !! minimum timestep (d)
+      real(real64) :: dtmax       = 0.0_real64  !! maximum timestep (d)
+
+      ! [SS-BMI2] output cadence + format switches (migrated from variables.f90)
+      integer      :: period      = 0           !! output period length (d)
+      integer      :: nprintday   = 0           !! number of output times per day
+      logical      :: flprintdt   = .false.     !! sub-daily print active
+      integer      :: swheader    = 0           !! header-print switch
+      integer      :: swodat      = 0           !! output-date switch
+      integer      :: swres       = 0           !! result-file switch
+      integer      :: swscre      = 0           !! screen-write switch
+
+      ! [SS-BMI2] iteration control (migrated from variables.f90)
+      integer      :: MaxIt        = 0          !! max Richards iterations
+      integer      :: MaxIterTime  = 0          !! max CPU seconds before abort
+      integer      :: msteps       = 0          !! max timesteps per day
+      logical      :: flMaxIterTime = .false.   !! iteration-time guard active
+
+      ! [SS-BMI2] cffi runtime mode — set by swap_set_headless before initialize.
+      ! When .true., output formatters fill state buffers but skip file open/write.
+      logical      :: headless    = .false.     !! cffi headless mode (no CSV files)
 
       ! [SS-TCM] cross-subsystem reset gates (migrated from variables.f90)
       ! Owned by TimeControl; consumed by 8 physics readers. Reset
