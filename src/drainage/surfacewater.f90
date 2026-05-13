@@ -100,13 +100,13 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
 
 ! --- reset intermediate surface water and drainage fluxes
       ! SS-CRR Phase A Task A4: cohort-owned reset; see surfacewater_state_mod.
-      if (flzerointr) call state%surfacewater%reset_intermediate()
+      if (state%timecontrol%flZeroIntr) call state%surfacewater%reset_intermediate()
 
 ! --- reset cumulative surface water and drainage fluxes
       ! SS-CRR Phase A correction Task 2: cumulative cohort partitioned by activity gate.
       ! SurfaceWater(2) is the canonical owner for both cohorts under swdra=2 (the only
       ! swdra value at which this code runs — see flSurfaceWater wiring in timecontrol).
-      if (flzerocumu) then
+      if (state%timecontrol%flZeroCumu) then
          call state%surfacewater%reset_cumulative_drainage()
          call state%surfacewater%reset_cumulative_reservoir()
       end if
