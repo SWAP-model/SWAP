@@ -6,6 +6,7 @@
 
 module surfacewater_state_mod
    use, intrinsic :: iso_fortran_env, only: real64
+   use iso_c_binding, only: c_double
    use surface_water_config_mod, only: surface_water_config_t
    use drainage_config_mod,      only: drainage_config_t
    use error_mod,                only: fatalerr_collected
@@ -58,6 +59,13 @@ module surfacewater_state_mod
       real(real64) :: cqdrd  = 0.0_real64   ! cumulative drain into reservoir (cm)
       real(real64) :: cwsupp = 0.0_real64   ! cumulative external supply (cm)
       real(real64) :: cwout  = 0.0_real64   ! cumulative outflow (cm)
+
+      !> [SS-BMI2] Surface water output row buffer (SurfaceWaterOutput stream).
+      !! Currently placeholder only — SurfaceWaterOutput body was deleted by ADR 0009 Phase 5+
+      !! (outdrf/outswb deleted, swdrf=0, swswb=0).
+      real(c_double),    allocatable :: output_row(:)
+      character(len=32), allocatable :: output_columns(:)
+      integer                        :: output_n_cols = 0
 
    contains
       procedure :: init                       => surfacewater_state_init

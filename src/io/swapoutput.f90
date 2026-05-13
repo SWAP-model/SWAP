@@ -1550,6 +1550,7 @@
 ! ----------------------------------------------------------------------
 !     Date               : Aug 2004
 !     Purpose            : open and write surface water output files
+! [SS-BMI2] inout: init/cleanup of surfacewater output_row buffer
 ! ----------------------------------------------------------------------
 
       use variables
@@ -1557,7 +1558,8 @@
       implicit none
 
       integer task
-      type(swap_state_t), intent(in) :: state
+      ! [SS-BMI2] inout: init/cleanup of surfacewater output_row buffer
+      type(swap_state_t), intent(inout) :: state
 
       select case (task)
       case (1)
@@ -1565,12 +1567,16 @@
 ! === open output files and write headers ===============================
 ! ADR 0009 Phase 5+: outdrf / outswb deleted (swdrf=0, swswb=0).
 
+      ! [SS-BMI2] allocate surfacewater output buffer (placeholder; outdrf/outswb deleted)
+      call init_surfacewater_output_buffer(state)
+
       return
 
       case (2)
 
 ! === write actual data ===============================
 ! ADR 0009 Phase 5+: outdrf / outswb deleted (swdrf=0, swswb=0).
+! [SS-BMI2] no build call needed; output body was deleted, buffer stays zeroed.
 
       return
 
@@ -1579,12 +1585,55 @@
 ! === close output files ===========================
 ! ADR 0009 Phase 5+: drf / swb file units no longer opened.
 
+      ! [SS-BMI2] deallocate surfacewater output buffer
+      call cleanup_surfacewater_output_buffer(state)
+
       case default
          call fatalerr_collected ('SurfaceWaterOutput', 'Illegal value for Task')
       end select
 
       return
       end
+
+
+! ----------------------------------------------------------------------
+! [SS-BMI2] SurfaceWater output buffer helpers (canonical output-sink pattern)
+! SurfaceWaterOutput body was deleted by ADR 0009 Phase 5+ (outdrf/outswb).
+! Placeholder with N=1 until output is reinstated.
+! ----------------------------------------------------------------------
+
+      subroutine init_surfacewater_output_buffer(state)
+! ----------------------------------------------------------------------
+!     Allocate state%surfacewater%output_row (placeholder; outdrf/outswb deleted ADR 0009).
+!     Called from SurfaceWaterOutput(1) — always runs, headless-independent.
+! ----------------------------------------------------------------------
+      use swap_state_mod, only: swap_state_t
+      use iso_c_binding,  only: c_double
+      implicit none
+      type(swap_state_t), intent(inout) :: state
+      integer, parameter :: N = 1
+
+      state%surfacewater%output_n_cols = N
+      if (.not. allocated(state%surfacewater%output_row))     allocate(state%surfacewater%output_row(N))
+      if (.not. allocated(state%surfacewater%output_columns)) allocate(state%surfacewater%output_columns(N))
+      state%surfacewater%output_row     = 0.0_c_double
+      state%surfacewater%output_columns(1) = 'placeholder'
+      end subroutine init_surfacewater_output_buffer
+
+
+      subroutine cleanup_surfacewater_output_buffer(state)
+! ----------------------------------------------------------------------
+!     Deallocate state%surfacewater%output_row and reset counter.
+!     Called from SurfaceWaterOutput(3) — always runs, headless-independent.
+! ----------------------------------------------------------------------
+      use swap_state_mod, only: swap_state_t
+      implicit none
+      type(swap_state_t), intent(inout) :: state
+
+      if (allocated(state%surfacewater%output_row))     deallocate(state%surfacewater%output_row)
+      if (allocated(state%surfacewater%output_columns)) deallocate(state%surfacewater%output_columns)
+      state%surfacewater%output_n_cols = 0
+      end subroutine cleanup_surfacewater_output_buffer
 
 
 
