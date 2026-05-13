@@ -829,8 +829,19 @@ contains
    end subroutine timecontrol_reduce_dt
 
    subroutine timecontrol_day_end(state)
+      use variables, only: dt_SSDI_event
+      implicit none
       type(swap_state_t), intent(inout) :: state
-      ! Body filled in Task 8 (migrated from timecontrol.f90 case (9)).
+
+      ! Minimal associate block — only `dt` is referenced.
+      associate( dt => state%timecontrol%dt )
+
+!        special: at end of day, the possible initial time step for next day may be too large: adapt if necessary
+         if (dt_SSDI_event < 1.0d0) then
+            dt = min(dt, dt_SSDI_event)
+         end if
+
+      end associate
    end subroutine timecontrol_day_end
 
    subroutine itertime_init(state)
