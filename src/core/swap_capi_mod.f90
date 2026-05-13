@@ -22,6 +22,19 @@ module swap_capi_mod
    type(swap_state_t),          save, target :: capi_state
    type(swap_config_t), target, save         :: capi_config
 
+   type, bind(C), public :: swap_water_balance_t
+      real(c_double) :: rain
+      real(c_double) :: evap_pot
+      real(c_double) :: evap_act
+      real(c_double) :: transp_pot
+      real(c_double) :: transp_act
+      real(c_double) :: runoff
+      real(c_double) :: drain
+      real(c_double) :: percolation
+      real(c_double) :: storage_change
+      real(c_double) :: balance_error
+   end type swap_water_balance_t
+
 contains
 
    !----------------------------------------------------------------------
@@ -170,6 +183,26 @@ contains
          ierr = 2
       end select
    end function swap_set_scalar
+
+   !----------------------------------------------------------------------
+   ! Task 21: swap_get_water_balance — bind(C) struct accessor
+   !----------------------------------------------------------------------
+
+   function swap_get_water_balance(summary) result(ierr) bind(C, name='swap_get_water_balance')
+      type(swap_water_balance_t), intent(out) :: summary
+      integer(c_int)                          :: ierr
+      summary%rain           = capi_state%atmosphere%cumu%cgrai
+      summary%evap_pot       = capi_state%atmosphere%cumu%cpeva
+      summary%evap_act       = capi_state%atmosphere%cumu%cevap
+      summary%transp_pot     = capi_state%atmosphere%cumu%cptra
+      summary%transp_act     = capi_state%soilwater%iqrot
+      summary%runoff         = capi_state%soilwater%crunoff
+      summary%drain          = 0.0_c_double
+      summary%percolation    = capi_state%soilwater%cqbot
+      summary%storage_change = 0.0_c_double
+      summary%balance_error  = 0.0_c_double
+      ierr = 0
+   end function swap_get_water_balance
 
    function swap_get_output_row(stream, row_ptr, names_ptr, n) result(ierr) &
             bind(C, name='swap_get_output_row')
