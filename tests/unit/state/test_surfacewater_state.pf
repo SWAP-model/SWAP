@@ -107,3 +107,46 @@ subroutine test_surfacewater_state_array_allocation()
    ! qdra allocation now tested in test_drainage_state.pf
    @assertTrue(allocated(sw%inqdra))
 end subroutine test_surfacewater_state_array_allocation
+
+@test
+subroutine test_surfacewater_init_allocates_cohort_arrays()
+   use funit
+   use iso_fortran_env, only: real64
+   use surfacewater_state_mod, only: surfacewater_state_t
+   use surface_water_config_mod, only: surface_water_config_t
+   use drainage_config_mod, only: drainage_config_t
+   type(surfacewater_state_t)   :: sw
+   type(surface_water_config_t) :: cfg_sw
+   type(drainage_config_t)      :: cfg_drain
+   integer, parameter :: nrlevs = 3
+   integer, parameter :: numnod = 50
+
+   ! Minimal valid config for swsrf=2, swsec=2, swqhr=1, no automatic weir.
+   cfg_sw%swsrf = 2
+   cfg_sw%swsec = 2
+   cfg_sw%swqhr = 1
+   cfg_sw%nmper = 1
+   allocate(cfg_sw%swman(1));  cfg_sw%swman = 1
+   cfg_sw%wlact = -50.0_real64
+
+   cfg_drain%nrlevs = nrlevs
+   cfg_drain%altcu  = 0.0_real64
+   allocate(cfg_drain%zbotdr(nrlevs));   cfg_drain%zbotdr = [-100.0_real64, -120.0_real64, -150.0_real64]
+   allocate(cfg_drain%swdtyp(nrlevs));   cfg_drain%swdtyp = 0     ! open channels
+   allocate(cfg_drain%widthr(nrlevs));   cfg_drain%widthr = 1.0_real64
+   allocate(cfg_drain%taludr(nrlevs));   cfg_drain%taludr = 2.0_real64
+   allocate(cfg_drain%l(nrlevs));        cfg_drain%l      = 1000.0_real64
+
+   call sw%init(cfg_sw, cfg_drain, numnod)
+
+   @assertTrue(allocated(sw%cqdrain))
+   @assertTrue(allocated(sw%cqdrainin))
+   @assertTrue(allocated(sw%cqdrainout))
+   @assertTrue(allocated(sw%inqdra))
+   @assertTrue(allocated(sw%inqdra_in))
+   @assertTrue(allocated(sw%inqdra_out))
+   @assertEqual(nrlevs, size(sw%cqdrain))
+   @assertEqual([nrlevs, numnod], shape(sw%inqdra))
+   @assertEqual([nrlevs, numnod], shape(sw%inqdra_in))
+   @assertEqual([nrlevs, numnod], shape(sw%inqdra_out))
+end subroutine test_surfacewater_init_allocates_cohort_arrays

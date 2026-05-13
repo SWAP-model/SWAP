@@ -6,6 +6,9 @@
 
 module surfacewater_state_mod
    use, intrinsic :: iso_fortran_env, only: real64
+   use surface_water_config_mod, only: surface_water_config_t
+   use drainage_config_mod,      only: drainage_config_t
+   use error_mod,                only: fatalerr_collected
    implicit none
    private
    public :: surfacewater_state_t
@@ -56,12 +59,51 @@ module surfacewater_state_mod
       real(real64) :: cwout  = 0.0_real64   ! cumulative outflow (cm)
 
    contains
+      procedure :: init                       => surfacewater_state_init
       procedure :: reset_intermediate         => surfacewater_reset_intermediate
       procedure :: reset_cumulative_drainage  => surfacewater_reset_cumulative_drainage
       procedure :: reset_cumulative_reservoir => surfacewater_reset_cumulative_reservoir
    end type surfacewater_state_t
 
 contains
+
+   !> One-time runtime initialization for surfacewater state.
+   !! Replaces the surviving math from legacy `rddre` (now retired from
+   !! readswap) plus the post-init block inside `SurfaceWater(task=1)`.
+   !!
+   !! Scope: swsrf=2, swsec=2, swqhr=1, swman=1, drainage.altcu=0 only.
+   !! Other branches are guarded with fatalerr_collected (defense in
+   !! depth — surface_water_config_validate rejects them upstream too).
+   subroutine surfacewater_state_init(self, config_sw, config_drain, numnod)
+      class(surfacewater_state_t),  intent(inout) :: self
+      type(surface_water_config_t), intent(in)    :: config_sw
+      type(drainage_config_t),      intent(in)    :: config_drain
+      integer,                      intent(in)    :: numnod
+
+      ! Defensive guards mirroring surface_water_config_validate.
+      ! swman is a fixed-size array (dimensioned mamp); slice 1:nmper.
+      if (config_sw%swsrf == 3 .or. config_sw%swsec == 1 .or. config_sw%swqhr == 2) then
+         call fatalerr_collected('surfacewater_state_init', &
+            'swsrf=3, swsec=1, or swqhr=2 not supported on the TOML path')
+         return
+      end if
+      if (allocated(config_sw%swman)) then
+         if (any(config_sw%swman(1:config_sw%nmper) == 2)) then
+            call fatalerr_collected('surfacewater_state_init', &
+               'swman=2 (automatic weir) not supported on the TOML path')
+            return
+         end if
+      end if
+
+      ! Allocate per-level arrays.
+      allocate(self%cqdrain    (config_drain%nrlevs));            self%cqdrain    = 0.0_real64
+      allocate(self%cqdrainin  (config_drain%nrlevs));            self%cqdrainin  = 0.0_real64
+      allocate(self%cqdrainout (config_drain%nrlevs));            self%cqdrainout = 0.0_real64
+      allocate(self%inqdra     (config_drain%nrlevs, numnod));    self%inqdra     = 0.0_real64
+      allocate(self%inqdra_in  (config_drain%nrlevs, numnod));    self%inqdra_in  = 0.0_real64
+      allocate(self%inqdra_out (config_drain%nrlevs, numnod));    self%inqdra_out = 0.0_real64
+
+   end subroutine surfacewater_state_init
 
    !> Zero the intermediate cohort — flzerointr gate.
    !! Allocatable arrays are zeroed only if allocated.
