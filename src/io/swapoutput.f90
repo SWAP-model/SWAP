@@ -1367,6 +1367,7 @@
 ! ----------------------------------------------------------------------
 !     Date               : December 2004
 !     Purpose            : open and write snow pack data
+! [SS-BMI2] inout: init/cleanup of atmosphere snow_output_row buffer
 ! ----------------------------------------------------------------------
       ! SS-ATM A-2.5: snrai,gsnow,ssnow,melt,subl reads migrated to state%atmosphere.
       ! SS-TC TC-7: date,daycum,flheader removed; reads via state%timecontrol.
@@ -1378,7 +1379,8 @@
 
 ! --- global variables ------------------
       integer task
-      type(swap_state_t), intent(in) :: state
+      ! [SS-BMI2] inout: init/cleanup of atmosphere snow_output_row buffer
+      type(swap_state_t), intent(inout) :: state
 ! --- local variables ------------------
       character(len=300) filnam
       character(len=80)  filtext
@@ -1389,14 +1391,21 @@
       select case (task)
       case (1)
 
-! === open output file =================================================
-      filnam = trim(pathwork)//trim(outfil)//'.snw'
-      call file_open(snw,filnam,'replace','write')
-      filtext = 'snow pack output data (cm/period)'
-      call writehead (snw,1,filnam,filtext,project)
+! === open output file (headless: skip file I/O) =======================
+
+      ! [SS-BMI2] allocate snow output row buffer (builder always runs)
+      call init_snow_output_buffer(state)
+
+      if (.not. state%timecontrol%headless) then
+         filnam = trim(pathwork)//trim(outfil)//'.snw'
+         call file_open(snw,filnam,'replace','write')
+         filtext = 'snow pack output data (cm/period)'
+         call writehead (snw,1,filnam,filtext,project)
 
 ! --- write header
-      write (snw,10)
+         write (snw,10)
+      end if
+
  10   format ('*',/,                                                    &
      &   '    date,      dcum,  rainfall,  snowfall,snowstorage, ',     &
      &   'meltflux,sublimation')
@@ -1405,18 +1414,23 @@
 
       case (2)
 
-! === write actual soil temperature data ================================
+! === write actual snow data ================================
 
+      ! [SS-BMI2] build snow output row buffer (always runs, headless-independent)
+      call build_snow_output_row(state)
+
+      if (.not. state%timecontrol%headless) then
 ! --- write header in case of new balance period
-      ! SS-TC TC-7: flheader,date,daycum -> state%timecontrol (direct refs, single-use).
-      if (state%timecontrol%flheader) write (snw,10)  ! TC-7
+         ! SS-TC TC-7: flheader,date,daycum -> state%timecontrol (direct refs, single-use).
+         if (state%timecontrol%flheader) write (snw,10)  ! TC-7
 
 ! --- write actual data
-      ! SS-ATM A-2.5: snrai,gsnow,ssnow,melt,subl read from state%atmosphere (atmosphere home).
-      write (snw,20) state%timecontrol%date,comma,state%timecontrol%daycum, &  ! TC-7
-     &               comma,state%atmosphere%snrai,comma,state%atmosphere%gsnow, &
-     &               comma,state%atmosphere%ssnow,comma,state%atmosphere%melt,comma,state%atmosphere%subl
-20    format (a11,a1,i6,1x,5(a1,f10.4))
+         ! SS-ATM A-2.5: snrai,gsnow,ssnow,melt,subl read from state%atmosphere (atmosphere home).
+         write (snw,20) state%timecontrol%date,comma,state%timecontrol%daycum, &  ! TC-7
+     &                  comma,state%atmosphere%snrai,comma,state%atmosphere%gsnow, &
+     &                  comma,state%atmosphere%ssnow,comma,state%atmosphere%melt,comma,state%atmosphere%subl
+ 20      format (a11,a1,i6,1x,5(a1,f10.4))
+      end if
 
       return
 
@@ -1425,7 +1439,11 @@
 ! === close output file ===========================
 
 ! --- close snw file
-      close (snw)
+      ! [SS-BMI2] headless guard: .snw file was only opened when not headless
+      if (.not. state%timecontrol%headless) close (snw)
+
+      ! [SS-BMI2] deallocate snow output row buffer
+      call cleanup_snow_output_buffer(state)
 
       case default
          call fatalerr_collected ('SnowOutput', 'Illegal value for Task')
@@ -1433,6 +1451,73 @@
 
       return
       end
+
+
+! ----------------------------------------------------------------------
+! [SS-BMI2] Snow output buffer helpers (canonical output-sink pattern)
+! N = 7: t1900, daycum, snrai, gsnow, ssnow, melt, subl
+! ----------------------------------------------------------------------
+
+      subroutine init_snow_output_buffer(state)
+! ----------------------------------------------------------------------
+!     Allocate state%atmosphere%snow_output_row and set column names.
+!     Called from SnowOutput(1) — always runs, headless-independent.
+!     N = 7: t1900(date), daycum, snrai, gsnow, ssnow, melt, subl
+! ----------------------------------------------------------------------
+      use swap_state_mod, only: swap_state_t
+      use iso_c_binding,  only: c_double
+      implicit none
+      type(swap_state_t), intent(inout) :: state
+      integer, parameter :: N = 7
+
+      state%atmosphere%snow_output_n_cols = N
+      if (.not. allocated(state%atmosphere%snow_output_row))     allocate(state%atmosphere%snow_output_row(N))
+      if (.not. allocated(state%atmosphere%snow_output_columns)) allocate(state%atmosphere%snow_output_columns(N))
+      state%atmosphere%snow_output_row     = 0.0_c_double
+      state%atmosphere%snow_output_columns(1) = 'date'
+      state%atmosphere%snow_output_columns(2) = 'daycum'
+      state%atmosphere%snow_output_columns(3) = 'snrai'
+      state%atmosphere%snow_output_columns(4) = 'gsnow'
+      state%atmosphere%snow_output_columns(5) = 'ssnow'
+      state%atmosphere%snow_output_columns(6) = 'melt'
+      state%atmosphere%snow_output_columns(7) = 'subl'
+      end subroutine init_snow_output_buffer
+
+
+      subroutine build_snow_output_row(state)
+! ----------------------------------------------------------------------
+!     Fill state%atmosphere%snow_output_row(:) with the current snow values.
+!     Called from SnowOutput(2) — always runs, headless-independent.
+!     Column order: t1900, daycum, snrai, gsnow, ssnow, melt, subl.
+! ----------------------------------------------------------------------
+      use swap_state_mod, only: swap_state_t
+      use iso_c_binding,  only: c_double
+      implicit none
+      type(swap_state_t), intent(inout) :: state
+
+      state%atmosphere%snow_output_row(1) = real(state%timecontrol%t1900,     c_double)
+      state%atmosphere%snow_output_row(2) = real(state%timecontrol%daycum,    c_double)
+      state%atmosphere%snow_output_row(3) = real(state%atmosphere%snrai,      c_double)
+      state%atmosphere%snow_output_row(4) = real(state%atmosphere%gsnow,      c_double)
+      state%atmosphere%snow_output_row(5) = real(state%atmosphere%ssnow,      c_double)
+      state%atmosphere%snow_output_row(6) = real(state%atmosphere%melt,       c_double)
+      state%atmosphere%snow_output_row(7) = real(state%atmosphere%subl,       c_double)
+      end subroutine build_snow_output_row
+
+
+      subroutine cleanup_snow_output_buffer(state)
+! ----------------------------------------------------------------------
+!     Deallocate state%atmosphere%snow_output_row and reset counter.
+!     Called from SnowOutput(3) — always runs, headless-independent.
+! ----------------------------------------------------------------------
+      use swap_state_mod, only: swap_state_t
+      implicit none
+      type(swap_state_t), intent(inout) :: state
+
+      if (allocated(state%atmosphere%snow_output_row))     deallocate(state%atmosphere%snow_output_row)
+      if (allocated(state%atmosphere%snow_output_columns)) deallocate(state%atmosphere%snow_output_columns)
+      state%atmosphere%snow_output_n_cols = 0
+      end subroutine cleanup_snow_output_buffer
 
 
 

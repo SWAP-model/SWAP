@@ -33,6 +33,7 @@
 
 module atmosphere_state_mod
    use, intrinsic :: iso_fortran_env, only: real64
+   use iso_c_binding, only: c_double
    implicit none
    private
    public :: atmosphere_state_t
@@ -127,6 +128,15 @@ module atmosphere_state_mod
       ! -----------------------------------------------------------------------
       type(atmosphere_intermediate_t) :: intr  !< intermediate accumulators (flzerointr-reset)
       type(atmosphere_cumulative_t)   :: cumu  !< cumulative accumulators (flzerocumu-reset)
+
+      ! -----------------------------------------------------------------------
+      ! [SS-BMI2] Snow output row buffer (SnowOutput stream).
+      ! Prefix snow_output_ used to namespace for future atmosphere output streams.
+      ! N = 7: t1900, daycum, snrai, gsnow, ssnow, melt, subl
+      ! -----------------------------------------------------------------------
+      real(c_double),    allocatable :: snow_output_row(:)
+      character(len=32), allocatable :: snow_output_columns(:)
+      integer                        :: snow_output_n_cols = 0
 
    end type atmosphere_state_t
 
