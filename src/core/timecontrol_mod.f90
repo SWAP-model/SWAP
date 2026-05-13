@@ -720,8 +720,112 @@ contains
    end subroutine timecontrol_advance
 
    subroutine timecontrol_reduce_dt(state)
+      use variables, only: dtmin, dtmax, flMacroPore, FlDecMpRat
+      use timestep_control_mod, only: fldecdt
+      implicit none
       type(swap_state_t), intent(inout) :: state
-      ! Body filled in Task 7 (migrated from timecontrol.f90 case (3)).
+
+      ! Associate block — full alias list for consistency with timecontrol_init / _advance.
+      associate( datea => state%timecontrol%datea, &
+           nextyear => state%timecontrol%nextyear, &
+           flprevious => state%timecontrol%flprevious, &
+           flTnext => state%timecontrol%flTnext, &
+           fsec => state%timecontrol%fsec, &
+           tchange => state%timecontrol%tchange, &
+           dtEvent => state%timecontrol%dtEvent, &
+           tEvent => state%timecontrol%tEvent, &
+           tcumold => state%timecontrol%tcumold, &
+           dtprevious => state%timecontrol%dtprevious, &
+           tmptimestart => state%timecontrol%tmptimestart, &
+           tmptimeend => state%timecontrol%tmptimeend, &
+           iyear => state%timecontrol%iyear, &
+           iyearm1 => state%timecontrol%iyearm1, &
+           imonth => state%timecontrol%imonth, &
+           dt => state%timecontrol%dt, &
+           dtold => state%timecontrol%dtold, &
+           daynr => state%timecontrol%daynr, &
+           daycum => state%timecontrol%daycum, &
+           daymeteo => state%timecontrol%daymeteo, &
+           yearmeteo => state%timecontrol%yearmeteo, &
+           t => state%timecontrol%t, &
+           t1900 => state%timecontrol%t1900, &
+           tcum => state%timecontrol%tcum, &
+           timjan1 => state%timecontrol%timjan1, &
+           outper => state%timecontrol%outper, &
+           cntper => state%timecontrol%cntper, &
+           isteps => state%timecontrol%isteps, &
+           ioutdat => state%timecontrol%ioutdat, &
+           ioutdatint => state%timecontrol%ioutdatint, &
+           nprintcount => state%timecontrol%nprintcount, &
+           rainrec => state%timecontrol%rainrec, &
+           wrecord => state%timecontrol%wrecord, &
+           swmeteo => state%timecontrol%swmeteo, &
+           date => state%timecontrol%date, &
+           metperiod => state%timecontrol%metperiod, &
+           flDayStart => state%timecontrol%flDayStart, &
+           flDayEnd => state%timecontrol%flDayEnd, &
+           flRunEnd => state%timecontrol%flRunEnd, &
+           flYearStart => state%timecontrol%flYearStart, &
+           floutput => state%timecontrol%floutput, &
+           floutputshort => state%timecontrol%floutputshort, &
+           flbaloutput => state%timecontrol%flbaloutput, &
+           flheader => state%timecontrol%flheader, &
+           flheadirg => state%timecontrol%flheadirg, &
+           flIrg1Start => state%timecontrol%flIrg1Start, &
+           flUpdMetDet => state%timecontrol%flUpdMetDet, &
+           fldecdtmin => state%timecontrol%fldecdtmin, &
+           fldtmin => state%timecontrol%fldtmin, &
+           fldtreduce => state%timecontrol%fldtreduce, &
+           flprintshort => state%timecontrol%flprintshort, &
+           flmetdetail => state%timecontrol%flmetdetail, &
+           flmeteodt => state%timecontrol%flmeteodt, &
+           flrainintens => state%timecontrol%flrainintens, &
+           fletsine => state%timecontrol%fletsine, &
+           flIrrigate => state%timecontrol%flIrrigate, &
+           flDrain => state%timecontrol%flDrain, &
+           flSurfaceWater => state%timecontrol%flSurfaceWater, &
+           flTemperature => state%timecontrol%flTemperature, &
+           flSnow => state%timecontrol%flSnow, &
+           flSolute => state%timecontrol%flSolute )
+
+! === reduce time step ===================================================
+
+! --- decrease time step in case of no convergence in headcalc
+      if (fldecdt) then
+        if (dt .gt. 3.0*dtmin) then
+          dt = dt / 3.0
+!         force dt to equal multiple dtmin to prevent very small dt-values at end of day
+!          dt = dtmin * dble(max(1,int(dt/dtmin)))
+        else
+          dt = dtmin
+          fldtmin = .true.
+        endif
+        fldecdt = .false.
+        flprevious = 1
+        dtprevious = dt
+        flTnext = .false.
+
+        return
+      endif
+
+! --- decrease time step to dtmin if required by boundtop
+      if (fldecdtmin) then
+        dt = dtmin
+        fldtmin = .true.
+        fldecdtmin = .false.
+        flprevious = 1
+        dtprevious = dt
+        return
+      endif
+
+! --- decrease in case of Macropores
+      if (flMacroPore .and. FlDecMpRat) then
+        dt = dsqrt(dtmin*dtmax)
+        dtprevious = dt
+        return
+      endif
+
+      end associate
    end subroutine timecontrol_reduce_dt
 
    subroutine timecontrol_day_end(state)
