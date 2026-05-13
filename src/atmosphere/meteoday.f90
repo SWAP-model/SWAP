@@ -437,7 +437,6 @@ contains
   !! @endnote
   subroutine ResetMetFlx (state)
       ! [SS-SWC S-2.12B] iprec retired — state%soilwater%reset_intermediate() handles it
-      use variables, only: flzerointr,flzerocumu
       implicit none
 
       type(swap_state_t), intent(inout) :: state  !! [SS-ATM A-2.1] cohort reset() dispatch
@@ -445,13 +444,13 @@ contains
     ! --- local
 
     ! Reset cumulative intermediate fluxes
-    if (flzerointr) then
+    if (state%timecontrol%flZeroIntr) then
       ! [SS-ATM A-2.6] canonical reset for all 8 intr fields; legacy igrai/inrai retired
       call state%atmosphere%intr%reset()
     endif
 
     ! Reset cumulative meteorological fluxes
-    if (flzerocumu) then
+    if (state%timecontrol%flZeroCumu) then
       ! [SS-ATM A-2.6] canonical reset for all 10 cumu fields; legacy cgrai/cnrai/caintc retired
       call state%atmosphere%cumu%reset()
     endif
