@@ -81,7 +81,7 @@ contains
       integer,                      intent(in)    :: numnod
 
       ! Defensive guards mirroring surface_water_config_validate.
-      ! swman is a fixed-size array (dimensioned mamp); slice 1:nmper.
+      ! swman is allocatable; slice 1:nmper covers the active management periods.
       if (config_sw%swsrf == 3 .or. config_sw%swsec == 1 .or. config_sw%swqhr == 2) then
          call fatalerr_collected('surfacewater_state_init', &
             'swsrf=3, swsec=1, or swqhr=2 not supported on the TOML path')
