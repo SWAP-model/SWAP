@@ -408,7 +408,7 @@ contains
          if (flIrrigate) call irrigation(2, state)
 
 !        process Meteo data
-         call ProcessMeteoDay(state)
+         call ProcessMeteoDay(state, config)  ! SS-GR-ATM B24: config added
          if (flTillage) call DoTillage(2, state)
 
       end if
