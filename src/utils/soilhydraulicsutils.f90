@@ -362,33 +362,38 @@ contains
    end function moiscap
 
    !> Calculate derivative of hydraulic conductivity (as a function of pressure head)
-   function dhconduc(node, head, theta, dimocap, rfcp)
+   !! [SS-GR-UTILS Task 6] New signature: explicit vg record + model + soilwater
+   function dhconduc(h, theta, dimoca, rfcp, vg, model, node, soilwater) result(dkdh)
+      use soilwater_state_mod,  only: soilwater_state_t
+      use hydraulic_params_mod, only: vanGenuchten_params_t
       implicit none
-      
-      ! Arguments
-      integer, intent(in) :: node
-      real(real64), intent(in) :: head, theta, dimocap, rfcp
-      real(real64) :: dhconduc
-      
+
+      real(real64),                  intent(in) :: h, theta, dimoca, rfcp
+      type(vanGenuchten_params_t),   intent(in) :: vg
+      integer,                       intent(in) :: model
+      integer,                       intent(in) :: node
+      type(soilwater_state_t),       intent(in) :: soilwater
+      real(real64) :: dkdh
+
       ! Local variables
       real(real64) :: term0, term1, term2, term3, term4, relsat, dummy
       real(real64) :: m, n, ksatfit, lambda, h_enpr, s_enpr, thetar, thetas, alfamg
       character(len=200) :: messag
 
       ! Use analytical expression. "hconduc" is calclated as a function of "watcon"
-      if (swsophy == 0) then
-         thetar = cofgen(1,node)
-         thetas = cofgen(2,node)
-         alfamg = cofgen(4,node)
-         ksatfit = cofgen(3,node)
-         lambda = cofgen(5,node)
-         n = cofgen(6,node)
-         m = cofgen(7,node)
-         h_enpr = cofgen(9,node)
-         
-         if (iHWCKmodel(node) == 2) then
-            dhconduc = alfamg*ksatfit*dexp(alfamg*head)
-            
+      if (soilwater%swsophy == 0) then
+         thetar  = vg%thetar
+         thetas  = vg%thetas
+         alfamg  = vg%alpha
+         ksatfit = vg%ksat
+         lambda  = vg%lpar
+         n       = vg%npar
+         m       = vg%mpar
+         h_enpr  = vg%h_enpr
+
+         if (model == 2) then
+            dkdh = alfamg*ksatfit*dexp(alfamg*h)
+
          else  ! Use default MvG
 
             ! For modified VanGenuchten model:
@@ -398,119 +403,116 @@ contains
 
             relsat = (theta - thetar) / (thetas - thetar)
 
-            if (cofgen(10,node) > 0.0_real64 .and. relsat > cofgen(11,node)) then
+            if (vg%ksatexm > 0.0_real64 .and. relsat > vg%relsatthr) then
                messag = 'Linear interpolation option for examined ksat not' // &
                     ' yet implemented for implicit hydraulic conductivity ' // &
-                    '(swKimpl=1) in iteration scheme' 
+                    '(swKimpl=1) in iteration scheme'
                call fatalerr_collected('dhconduc', messag)
             end if
 
             if (relsat < 0.001_real64) then
-               dhconduc = 0.0_real64
+               dkdh = 0.0_real64
             else if (relsat > s_enpr) then
-               dhconduc = 1.0d-12
+               dkdh = 1.0d-12
             else
-               dhconduc = dimocap / (thetas - thetar)
-               term0    = (s_enpr*relsat)**(1.0_real64/m)
-               term1    = 1.0_real64 - term0
-               term2    = (2.0_real64 + lambda)*term0 - lambda
-               term3    = term1 ** (m - 1.0_real64)
-               term4    = 1.0_real64 - (1.0_real64 - s_enpr**(1.0_real64/m)) ** m
-               dhconduc = dhconduc * ksatfit * relsat ** (lambda - 1.0_real64)
-               dhconduc = dhconduc * (1.0_real64 - term1 ** m)
-               dhconduc = dhconduc * (lambda + term2 * term3)
-               dhconduc = dhconduc / (term4**2)
+               dkdh  = dimoca / (thetas - thetar)
+               term0 = (s_enpr*relsat)**(1.0_real64/m)
+               term1 = 1.0_real64 - term0
+               term2 = (2.0_real64 + lambda)*term0 - lambda
+               term3 = term1 ** (m - 1.0_real64)
+               term4 = 1.0_real64 - (1.0_real64 - s_enpr**(1.0_real64/m)) ** m
+               dkdh  = dkdh * ksatfit * relsat ** (lambda - 1.0_real64)
+               dkdh  = dkdh * (1.0_real64 - term1 ** m)
+               dkdh  = dkdh * (lambda + term2 * term3)
+               dkdh  = dkdh / (term4**2)
             end if
          end if
 
       ! Use tabulated function. "dhconduc" is calclated as a function of "head"
-      else if (swsophy == 1) then
-         if (theta >= sptab(2,node,numtab(node)) - 1.0d-9) then
-            dhconduc = 1.0d+08
+      else if (soilwater%swsophy == 1) then
+         if (theta >= soilwater%sptab(2,node,soilwater%numtab(node)) - 1.0d-9) then
+            dkdh = 1.0d+08
          else
-            call EvalTabulatedFunction(0, numtab(node), 1, 3, 5, node, sptab, ientrytab, head, dummy, dhconduc, 4)
+            call EvalTabulatedFunction(0, soilwater%numtab(node), 1, 3, 5, node, &
+                                       soilwater%sptab, soilwater%ientrytab, h, dummy, dkdh, 4)
          end if
       end if
 
       ! In case of frost conditions
       if (swfrost == 1) then
-         dhconduc = dhconduc * rfcp
-      end if  
-      
+         dkdh = dkdh * rfcp
+      end if
+
    end function dhconduc
 
    !> Calculate hydraulic conductivity (as a function of THETA)
-   !! @param tsoil_node Soil temperature [deg C] at node — required by the
-   !! WC_K_models_04_11 temperature-dependent path (iHWCKmodel 4-11).
-   !! All callers must pass state%heat%tsoil(node) or an appropriate
-   !! reference temperature for initialisation contexts.
-   !! SS-SWC Phase 2 S-2.2: sentinel removed, argument made mandatory.
-   function hconduc(node, head, theta, rfcp, tsoil_node)
+   !! [SS-GR-UTILS Task 6] New signature: explicit vg record + model + use_ksatexm + soilwater
+   function hconduc(h, theta, rfcp, tsoil_node, vg, model, use_ksatexm, node, soilwater) result(k)
+      use soilwater_state_mod,  only: soilwater_state_t
+      use hydraulic_params_mod, only: vanGenuchten_params_t
       implicit none
 
-      ! Arguments
-      integer, intent(in) :: node
-      real(real64), intent(in) :: head, theta, rfcp
-      real(real64), intent(in) :: tsoil_node
-      !! SS-SWC Phase 2 S-2.2: soil temperature at node — mandatory (was optional with 0.0 sentinel)
-      real(real64) :: hconduc
+      real(real64),                  intent(in) :: h, theta, rfcp, tsoil_node
+      type(vanGenuchten_params_t),   intent(in) :: vg
+      integer,                       intent(in) :: model       ! iHWCKmodel value
+      logical,                       intent(in) :: use_ksatexm ! fluseksatexm flag
+      integer,                       intent(in) :: node        ! for swsophy=1 / functionvalue_04_11
+      type(soilwater_state_t),       intent(in) :: soilwater   ! for swsophy=1 (sptab/numtab)
+      real(real64) :: k
 
       ! Local variables
       real(real64) :: term1, relsat, hconode_vsmall, m, ksatfit, lambda, dummy
       real(real64) :: relsatm, relsat1, alfamg, thetar, thetas
       real(real64) :: h_enpr, n, term2, thetam, relsatthr, ksatthr, ksatexm
       real(real64) :: alfa_2, n_2, m_2, omega_1, s1, s2
-      real(real64) :: tsoil_loc
       real(real64), parameter :: h_crit = -1.0d-2
 
       hconode_vsmall = 1.0d-10
-      ! [SS-SWC] S-2.2: tsoil_node is now mandatory; 0.0 sentinel removed.
-      tsoil_loc = tsoil_node
 
       ! Use analytical expression. "hconduc" is calclated as a function of "watcon"
-      if (swsophy == 0) then
-         thetar = cofgen(1,node)
-         thetas = cofgen(2,node)
-         alfamg = cofgen(4,node)
-         ksatfit = cofgen(3,node)
-         lambda = cofgen(5,node)
-         n = cofgen(6,node)
-         m = cofgen(7,node)
-         h_enpr = cofgen(9,node)
-         
-         if (iHWCKmodel(layer(node)) == 2) then
-            ! Exponential relationships; special for testing against analytical solutions
-            relsat  = (theta - thetar) / (thetas - thetar)
-            hconduc = ksatfit*relsat
+      if (soilwater%swsophy == 0) then
+         thetar  = vg%thetar
+         thetas  = vg%thetas
+         alfamg  = vg%alpha
+         ksatfit = vg%ksat
+         lambda  = vg%lpar
+         n       = vg%npar
+         m       = vg%mpar
+         h_enpr  = vg%h_enpr
 
-         else if (iHWCKmodel(layer(node)) == 3) then
+         if (model == 2) then
+            ! Exponential relationships; special for testing against analytical solutions
+            relsat = (theta - thetar) / (thetas - thetar)
+            k      = ksatfit*relsat
+
+         else if (model == 3) then
             ! Bi-modal MvG relationships; basic form without air-entry h_enpr or h_crit
-            alfa_2  = cofgen(13,node)
-            n_2     = cofgen(14,node)
-            m_2     = cofgen(15,node)
-            omega_1 = cofgen(16,node)
+            alfa_2  = vg%alpha_2
+            n_2     = vg%npar_2
+            m_2     = vg%mpar_2
+            omega_1 = vg%omega_1
             relsat  = (theta - thetar) / (thetas - thetar)
             if (relsat < 1.0_real64) then
-               s1 = (1.0_real64 + (dabs(alfamg*head))**n)**(-m)
-               s2 = (1.0_real64 + (dabs(alfa_2*head))**n_2)**(-m_2)
+               s1    = (1.0_real64 + (dabs(alfamg*h))**n)**(-m)
+               s2    = (1.0_real64 + (dabs(alfa_2*h))**n_2)**(-m_2)
                term1 = omega_1*alfamg*(1.0_real64 - s1**(1.0_real64/m))**m
                term2 = (1.0_real64 - omega_1)*alfa_2*(1.0_real64 - s2**(1.0_real64/m_2))**m_2
-               hconduc = ksatfit * (omega_1*s1 + (1.0_real64 - omega_1)*s2)**lambda
-               hconduc = hconduc * (1.0_real64 - (term1 + term2) / (omega_1*alfamg + (1.0_real64 - omega_1)*alfa_2))**2
+               k     = ksatfit * (omega_1*s1 + (1.0_real64 - omega_1)*s2)**lambda
+               k     = k * (1.0_real64 - (term1 + term2) / (omega_1*alfamg + (1.0_real64 - omega_1)*alfa_2))**2
             else
-               hconduc = ksatfit
+               k = ksatfit
             end if
-            
-         else if (iHWCKmodel(layer(node)) > 3 .and. iHWCKmodel(layer(node)) < 12) then
-            ! SS-HEAT Phase 2 Task 6: use tsoil_loc (from state%heat or global fallback)
-            hconduc = functionvalue_04_11(2, node, head, wc=theta, temp=tsoil_loc)
-            
+
+         else if (model > 3 .and. model < 12) then
+            ! SS-HEAT Phase 2 Task 6: use tsoil_node (from state%heat)
+            k = functionvalue_04_11(2, node, h, wc=theta, temp=tsoil_node)
+
          else  ! Use default MvG
 
-            if (fluseksatexm(node)) then 
-               ksatexm   = cofgen(10,node)
-               relsatthr = cofgen(11,node)
-               ksatthr   = cofgen(12,node)
+            if (use_ksatexm) then
+               ksatexm   = vg%ksatexm
+               relsatthr = vg%relsatthr
+               ksatthr   = vg%ksatthr
             else
                ksatexm   = 0.0_real64
                relsatthr = 0.0_real64
@@ -518,63 +520,64 @@ contains
             end if
 
             relsat = (theta - thetar) / (thetas - thetar)
-      
-            if (fluseksatexm(node) .and. relsat > relsatthr) then
 
-               term1   = (relsat - relsatthr) / (1.0_real64 - relsatthr)
-               hconduc = term1 * ksatexm + (1.0_real64 - term1) * ksatthr
+            if (use_ksatexm .and. relsat > relsatthr) then
+
+               term1 = (relsat - relsatthr) / (1.0_real64 - relsatthr)
+               k     = term1 * ksatexm + (1.0_real64 - term1) * ksatthr
 
             else
                if (h_enpr > h_crit) then
 
-                  if (head < -1.0d14) then
-                     hconduc = hconode_vsmall
+                  if (h < -1.0d14) then
+                     k = hconode_vsmall
                   else if (relsat > (1.0_real64 - 1.0d-6)) then
-                     hconduc = ksatfit
+                     k = ksatfit
                   else
-                     term1   = (1.0_real64 - relsat**(1.0_real64/m)) ** m
-                     hconduc = ksatfit * (relsat**lambda) * (1.0_real64 - term1) * (1.0_real64 - term1)
+                     term1 = (1.0_real64 - relsat**(1.0_real64/m)) ** m
+                     k     = ksatfit * (relsat**lambda) * (1.0_real64 - term1) * (1.0_real64 - term1)
                   end if
 
                else
-                  ! For modified VanGenuchten model 
+                  ! For modified VanGenuchten model
                   thetam = thetar + (thetas - thetar) * ((1.0_real64 + (abs(alfamg*h_enpr)) ** n) ** m)
-                  if (head < -1.0d14) then
-                     hconduc = hconode_vsmall
-                  else 
+                  if (h < -1.0d14) then
+                     k = hconode_vsmall
+                  else
                      if (theta >= thetam) then
-                        hconduc = ksatfit
+                        k = ksatfit
                      else
                         relsatm = (theta - thetar) / (thetam - thetar)
                         relsat1 = (thetas - thetar) / (thetam - thetar)
                         term1   = (1.0_real64 - (relsatm) ** (1.0_real64/m)) ** m
                         term2   = (1.0_real64 - (relsat1) ** (1.0_real64/m)) ** m
-                        hconduc = ksatfit*(relsat**lambda) * ((1.0_real64 - term1) / (1.0_real64 - term2)) ** 2
+                        k       = ksatfit*(relsat**lambda) * ((1.0_real64 - term1) / (1.0_real64 - term2)) ** 2
                      end if
                   end if
                end if
-               hconduc = min(hconduc, ksatfit)
+               k = min(k, ksatfit)
             end if
          end if
 
       ! Use tabulated function. "hconduc" is calclated as a function of "head"
-      else if (swsophy == 1) then
-         if (theta >= sptab(2,node,numtab(node)) - 1.0d-9) then
-            hconduc = sptab(3,node,numtab(node))
-            if (do_ln_trans) hconduc = dexp(hconduc)
-         else if (theta <= sptab(2,node,1) + 1.0d-9) then
-            hconduc = sptab(3,node,1)            
-            if (do_ln_trans) hconduc = dexp(hconduc)
+      else if (soilwater%swsophy == 1) then
+         if (theta >= soilwater%sptab(2,node,soilwater%numtab(node)) - 1.0d-9) then
+            k = soilwater%sptab(3,node,soilwater%numtab(node))
+            if (do_ln_trans) k = dexp(k)
+         else if (theta <= soilwater%sptab(2,node,1) + 1.0d-9) then
+            k = soilwater%sptab(3,node,1)
+            if (do_ln_trans) k = dexp(k)
          else
-            call EvalTabulatedFunction(0, numtab(node), 1, 3, 5, node, sptab, ientrytab, head, hconduc, dummy, 2)
+            call EvalTabulatedFunction(0, soilwater%numtab(node), 1, 3, 5, node, &
+                                       soilwater%sptab, soilwater%ientrytab, h, k, dummy, 2)
          end if
       end if
 
       ! In case of frost conditions
       if (swfrost == 1) then
-         hconduc = hconduc * rfcp + hconode_vsmall * (1.0_real64 - rfcp)
-      end if  
-      
+         k = k * rfcp + hconode_vsmall * (1.0_real64 - rfcp)
+      end if
+
    end function hconduc
 
    !> Calculate pressure head from water content

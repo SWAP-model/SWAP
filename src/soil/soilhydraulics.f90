@@ -136,7 +136,11 @@ contains
                                   state%soilwater%vg_params(1), &
                                   state%soilwater%iHWCKmodel(state%soilwater%layer(1)), &
                                   1, state%soilwater)                         ! [SS-SWC S-1.4a/S-2.12B] [SS-GR-UTILS Task 5]
-            sw_kmean(1) = hconduc(1,state%soilwater%gwlinp,sw_theta(1),state%heat%rfcp(1),state%heat%tsoil(1))  ! [SS-SWC S-1.4b/S-2.12B]
+            sw_kmean(1) = hconduc(state%soilwater%gwlinp,sw_theta(1),state%heat%rfcp(1),state%heat%tsoil(1), &
+                                  state%soilwater%vg_params(1), &
+                                  state%soilwater%iHWCKmodel(state%soilwater%layer(1)), &
+                                  state%soilwater%fluseksatexm(1), &
+                                  1, state%soilwater)                          ! [SS-SWC S-1.4b/S-2.12B] [SS-GR-UTILS Task 6]
 
             qv(1) = q1
             do i=1,numnod
@@ -151,7 +155,11 @@ contains
 
             if(SwKimpl.eq.1)then
                do i=1,numnod
-                  sw_k(i) = hconduc(i,sw_h(i),sw_theta(i),state%heat%rfcp(i),state%heat%tsoil(i))  ! [SS-SWC S-1.4b/S-2.12B]
+                  sw_k(i) = hconduc(sw_h(i),sw_theta(i),state%heat%rfcp(i),state%heat%tsoil(i), &
+                                    state%soilwater%vg_params(i), &
+                                    state%soilwater%iHWCKmodel(state%soilwater%layer(i)), &
+                                    state%soilwater%fluseksatexm(i), &
+                                    i, state%soilwater)                        ! [SS-SWC S-1.4b/S-2.12B] [SS-GR-UTILS Task 6]
                   if(i.gt.1)then
                      sw_kmean(i) = hcomean(swkmean,sw_k(i-1),sw_k(i),dz(i-1),dz(i))  ! [SS-SWC S-1.4b/S-2.12B]
                   end if
@@ -190,7 +198,11 @@ contains
          flcaprise = .false.
       endif
       do i = 1,numnod
-         sw_k(i) = hconduc(i,sw_h(i),sw_theta(i),state%heat%rfcp(i),state%heat%tsoil(i))
+         sw_k(i) = hconduc(sw_h(i),sw_theta(i),state%heat%rfcp(i),state%heat%tsoil(i), &
+                           state%soilwater%vg_params(i), &
+                           state%soilwater%iHWCKmodel(state%soilwater%layer(i)), &
+                           state%soilwater%fluseksatexm(i), &
+                           i, state%soilwater)                                 ! [SS-GR-UTILS Task 6]
 
          if (swcaprise) then
             ! Prevent capillary rise into the root zone !! special for experts only
@@ -257,7 +269,11 @@ contains
                               state%soilwater%vg_params(NN), &
                               state%soilwater%iHWCKmodel(state%soilwater%layer(NN)), &
                               NN, state%soilwater)                            ! [SS-GR-UTILS Task 5]
-         sw_k(NN)    = hconduc(NN,sw_h(NN),sw_theta(NN),state%heat%rfcp(NN),state%heat%tsoil(NN))
+         sw_k(NN)    = hconduc(sw_h(NN),sw_theta(NN),state%heat%rfcp(NN),state%heat%tsoil(NN), &
+                              state%soilwater%vg_params(NN), &
+                              state%soilwater%iHWCKmodel(state%soilwater%layer(NN)), &
+                              state%soilwater%fluseksatexm(NN), &
+                              NN, state%soilwater)                             ! [SS-GR-UTILS Task 6]
          sw_kmean(NN+1) = hcomean(swkmean,sw_k(NN),sw_cofgen(3,(NN+1)),       &  ! [SS-SWC S-2.3]
      &                        dz(NN),dz(NN+1))
          F(NN) = (sw_theta(NN) - sw_thetm1(NN))*sw_FrArMtrx(NN)*dz(NN)/tc_dt +      &  ! [SS-SWC S-2.3] [TC-8]
@@ -279,7 +295,11 @@ contains
          else if(swbotb.eq.5 .or. (swbotb.eq.1 .and. state%soilwater%fllowgwl))then ! pressure head at lower boundary specified
             F(NN) = F(NN) + sw_kmean(NN+1) * hgrad(NN+1)
          else if(swbotb.eq.7 .or. swbotb .eq. -2)then ! free drainage option
-            sw_kmean(numnod+1) = hconduc(numnod,sw_h(numnod),sw_theta(numnod),state%heat%rfcp(numnod),state%heat%tsoil(numnod))
+            sw_kmean(numnod+1) = hconduc(sw_h(numnod),sw_theta(numnod),state%heat%rfcp(numnod),state%heat%tsoil(numnod), &
+                                         state%soilwater%vg_params(numnod), &
+                                         state%soilwater%iHWCKmodel(state%soilwater%layer(numnod)), &
+                                         state%soilwater%fluseksatexm(numnod), &
+                                         numnod, state%soilwater)              ! [SS-GR-UTILS Task 6]
             state%soilwater%qbot = -1.0d0 * sw_kmean(numnod+1)
             F(NN) = F(NN) - state%soilwater%qbot
          ! Lysimeter option
@@ -327,7 +347,10 @@ contains
 
          if(SwKimpl.eq.1)then
             do i = 1, NN
-               dkdh(i)= dhconduc(i,sw_h(i),sw_theta(i),sw_dimoca(i),state%heat%rfcp(i))
+               dkdh(i) = dhconduc(sw_h(i),sw_theta(i),sw_dimoca(i),state%heat%rfcp(i), &
+                                   state%soilwater%vg_params(i), &
+                                   state%soilwater%iHWCKmodel(state%soilwater%layer(i)), &
+                                   i, state%soilwater)                         ! [SS-GR-UTILS Task 6]
             enddo
             do i=2,NN
                dFdhU(i)   = - sw_kmean(i)  /disnod(i)
@@ -460,7 +483,11 @@ contains
             if(SwKimpl.eq.1)then
                call Rootextraction(state)
                do i = 1,NN
-                  sw_k(i) = hconduc(i,sw_h(i),sw_theta(i),state%heat%rfcp(i),state%heat%tsoil(i))
+                  sw_k(i) = hconduc(sw_h(i),sw_theta(i),state%heat%rfcp(i),state%heat%tsoil(i), &
+                                    state%soilwater%vg_params(i), &
+                                    state%soilwater%iHWCKmodel(state%soilwater%layer(i)), &
+                                    state%soilwater%fluseksatexm(i), &
+                                    i, state%soilwater)                        ! [SS-GR-UTILS Task 6]
                   sw_k(i) = sw_k(i)                                  ! [SS-SWC S-1.4b]
                   if(i.gt.1)then
                      sw_kmean(i)=hcomean(swkmean,sw_k(i-1),sw_k(i),dz(i-1),dz(i))
@@ -530,7 +557,11 @@ contains
                                      state%soilwater%iHWCKmodel(state%soilwater%layer(NN)), &
                                      NN, state%soilwater)          ! [SS-GR-UTILS Task 5]
                sw_theta(NN) = sw_theta(NN)                         ! [SS-SWC S-1.4a]
-               sw_k(NN)     = hconduc(NN,sw_h(NN),sw_theta(NN),state%heat%rfcp(NN),state%heat%tsoil(NN))
+               sw_k(NN)     = hconduc(sw_h(NN),sw_theta(NN),state%heat%rfcp(NN),state%heat%tsoil(NN), &
+                                      state%soilwater%vg_params(NN), &
+                                      state%soilwater%iHWCKmodel(state%soilwater%layer(NN)), &
+                                      state%soilwater%fluseksatexm(NN), &
+                                      NN, state%soilwater)                     ! [SS-GR-UTILS Task 6]
                sw_k(NN) = sw_k(NN)                                 ! [SS-SWC S-1.4b]
                sw_kmean(NN+1) = hcomean(swkmean,sw_k(NN),sw_cofgen(3,(NN+1)) &  ! [SS-SWC S-2.3]
      &                       ,dz(NN),dz(NN+1))
@@ -558,7 +589,11 @@ contains
                   ! Pressure head at lower boundary specified
                   F(NN) = F(NN) + sw_kmean(NN+1) * hgrad(NN+1)
                else if(swbotb.eq.7.or. swbotb .eq. -2)then ! free drainage option
-                  sw_kmean(numnod+1) = hconduc(numnod,sw_h(numnod),sw_theta(numnod),state%heat%rfcp(numnod),state%heat%tsoil(numnod))
+                  sw_kmean(numnod+1) = hconduc(sw_h(numnod),sw_theta(numnod),state%heat%rfcp(numnod),state%heat%tsoil(numnod), &
+                                               state%soilwater%vg_params(numnod), &
+                                               state%soilwater%iHWCKmodel(state%soilwater%layer(numnod)), &
+                                               state%soilwater%fluseksatexm(numnod), &
+                                               numnod, state%soilwater)        ! [SS-GR-UTILS Task 6]
                   sw_kmean(numnod+1) = sw_kmean(numnod+1)          ! [SS-SWC S-1.4b]
                   state%soilwater%qbot = -1.0d0 * sw_kmean(numnod+1)
                   F(NN) = F(NN) - state%soilwater%qbot
@@ -1038,7 +1073,11 @@ contains
         sw%dimoca(node) = moiscap(node,sw%h(node))        ! [SS-SWC S-1.3/S-2.12B]
 
         sw%FrArMtrx(node) = 1.0_real64                    ! [SS-SWC S-1.3/S-2.12B]
-        sw%k(node) = hconduc (node,sw%h(node),sw%theta(node),state%heat%rfcp(node),state%heat%tsoil(node))  ! [SS-SWC S-1.3/S-2.12B]
+        sw%k(node) = hconduc(sw%h(node),sw%theta(node),state%heat%rfcp(node),state%heat%tsoil(node), &
+                             sw%vg_params(node), &
+                             sw%iHWCKmodel(sw%layer(node)), &
+                             sw%fluseksatexm(node), &
+                             node, state%soilwater)                            ! [SS-SWC S-1.3/S-2.12B] [SS-GR-UTILS Task 6]
 
         if(node.gt.1) sw%kmean(node) = hcomean(swkmean,sw%k(node-1),sw%k(node),dz(node-1),dz(node))  ! [SS-SWC S-1.3/S-2.12B]
       end do
@@ -1108,8 +1147,12 @@ contains
          ! Update hydraulic conductivities to time level t+1
          ! [SS-SWC S-2.12B] all legacy half-writes dropped
          do i = 1,numnod
-         state%soilwater%k(i) = hconduc(i,state%soilwater%h(i),state%soilwater%theta(i),  &  ! [SS-SWC S-1.4b/S-2.12B]
-     &                  state%heat%rfcp(i),state%heat%tsoil(i))
+         state%soilwater%k(i) = hconduc(state%soilwater%h(i),state%soilwater%theta(i), &
+                                        state%heat%rfcp(i),state%heat%tsoil(i), &
+                                        state%soilwater%vg_params(i), &
+                                        state%soilwater%iHWCKmodel(state%soilwater%layer(i)), &
+                                        state%soilwater%fluseksatexm(i), &
+                                        i, state%soilwater)                    ! [SS-SWC S-1.4b/S-2.12B] [SS-GR-UTILS Task 6]
          if(i.gt.1)then
             state%soilwater%kmean(i) = hcomean(swkmean,state%soilwater%k(i-1),state%soilwater%k(i),dz(i-1),dz(i))  ! [SS-SWC S-1.4b/S-2.12B]
          end if

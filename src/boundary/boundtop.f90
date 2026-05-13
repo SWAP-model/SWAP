@@ -114,7 +114,11 @@ contains
                          state%soilwater%vg_params(1), &
                          state%soilwater%iHWCKmodel(state%soilwater%layer(1)), &
                          1, state%soilwater)                                  ! [SS-SWC S-2.5] [SS-GR-UTILS Task 5]
-         ksurf  = hconduc (1,dble(state%soilwater%hatm),TheAtm,state%heat%rfcp(1),state%heat%tsoil(1))  ! [SS-SWC S-2.5]
+         ksurf  = hconduc(dble(state%soilwater%hatm),TheAtm,state%heat%rfcp(1),state%heat%tsoil(1), &
+                          state%soilwater%vg_params(1), &
+                          state%soilwater%iHWCKmodel(state%soilwater%layer(1)), &
+                          state%soilwater%fluseksatexm(1), &
+                          1, state%soilwater)                                  ! [SS-SWC S-2.5] [SS-GR-UTILS Task 6]
       else
 
 ! --- This only occurs if RH is 100% in SWAPS, never used for SWAP

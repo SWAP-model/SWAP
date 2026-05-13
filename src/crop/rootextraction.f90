@@ -881,7 +881,11 @@ module rootextraction_mod
                            state%soilwater%vg_params(i), &
                            state%soilwater%iHWCKmodel(state%soilwater%layer(i)), &
                            i, state%soilwater)                     ! [SS-GR-UTILS Task 5]
-        conduc1 = hconduc (i,phead1,wcontent,10.d0,state%heat%tsoil(i))
+        conduc1 = hconduc(phead1,wcontent,10.d0,state%heat%tsoil(i), &
+                          state%soilwater%vg_params(i), &
+                          state%soilwater%iHWCKmodel(state%soilwater%layer(i)), &
+                          state%soilwater%fluseksatexm(i), &
+                          i, state%soilwater)                      ! [SS-GR-UTILS Task 6]
 
         do count = start-1,1,-1
           phead2 = -10.d0**(dble(count)/100.d0)
@@ -889,7 +893,11 @@ module rootextraction_mod
                              state%soilwater%vg_params(i), &
                              state%soilwater%iHWCKmodel(state%soilwater%layer(i)), &
                              i, state%soilwater)                   ! [SS-GR-UTILS Task 5]
-          conduc2 = hconduc (i,phead2,wcontent,10.d0,state%heat%tsoil(i))
+          conduc2 = hconduc(phead2,wcontent,10.d0,state%heat%tsoil(i), &
+                             state%soilwater%vg_params(i), &
+                             state%soilwater%iHWCKmodel(state%soilwater%layer(i)), &
+                             state%soilwater%fluseksatexm(i), &
+                             i, state%soilwater)                   ! [SS-GR-UTILS Task 6]
           state%soilwater%mfluxtable(lay,count) =                       &
      &         state%soilwater%mfluxtable(lay,count+1) +                &
      &         0.5d0 * (conduc1 + conduc2) * (phead2 - phead1)

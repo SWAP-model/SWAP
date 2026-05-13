@@ -177,7 +177,12 @@ contains
                                numnod, state%soilwater)            ! [SS-GR-UTILS Task 5]
 
             ! [SS-SWC S-2.12B] legacy kmean half-write dropped — write directly to state
-            state%soilwater%kmean(numnod + 1) = hconduc(numnod, state%soilwater%hbot, thetabot, state%heat%rfcp(numnod), state%heat%tsoil(numnod))
+            state%soilwater%kmean(numnod + 1) = hconduc(state%soilwater%hbot, thetabot, &
+                                                        state%heat%rfcp(numnod), state%heat%tsoil(numnod), &
+                                                        state%soilwater%vg_params(numnod), &
+                                                        state%soilwater%iHWCKmodel(state%soilwater%layer(numnod)), &
+                                                        state%soilwater%fluseksatexm(numnod), &
+                                                        numnod, state%soilwater)  ! [SS-GR-UTILS Task 6]
         end if
 
 ! --- zero flux at the bottom

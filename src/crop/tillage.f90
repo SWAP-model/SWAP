@@ -379,9 +379,15 @@ module tillage_mod
       end do
    end if
 write(124,'(A,1P,12E12.5)') state%timecontrol%date, Bdens(1), ParamVG(2,layer(1)), state%soilwater%theta(1), state%soilwater%h(1), &  ! [SS-SWC S-2.6]
-   hconduc(1,state%soilwater%h(1),state%soilwater%theta(1),1.0d0,state%heat%tsoil(1)), ParamVG(3,layer(1)),          & ! [SS-SWC S-2.6]
+   hconduc(state%soilwater%h(1),state%soilwater%theta(1),1.0d0,state%heat%tsoil(1), &                                  ! [SS-GR-UTILS Task 6]
+           state%soilwater%vg_params(1), &
+           state%soilwater%iHWCKmodel(state%soilwater%layer(1)), &
+           state%soilwater%fluseksatexm(1), 1, state%soilwater), ParamVG(3,layer(1)),          & ! [SS-SWC S-2.6]
    Bdens(2), ParamVG(2,layer(2)), state%soilwater%theta(2), state%soilwater%h(2),                                     & ! [SS-SWC S-2.6]
-   hconduc(2,state%soilwater%h(2),state%soilwater%theta(2),1.0d0,state%heat%tsoil(2)), ParamVG(3,layer(2))              ! [SS-SWC S-2.6]
+   hconduc(state%soilwater%h(2),state%soilwater%theta(2),1.0d0,state%heat%tsoil(2), &                                  ! [SS-GR-UTILS Task 6]
+           state%soilwater%vg_params(2), &
+           state%soilwater%iHWCKmodel(state%soilwater%layer(2)), &
+           state%soilwater%fluseksatexm(2), 2, state%soilwater), ParamVG(3,layer(2))              ! [SS-SWC S-2.6]
 
    end subroutine Adapt_WC_H
 
