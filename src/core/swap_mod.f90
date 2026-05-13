@@ -55,7 +55,8 @@ contains
                             swusecn, flcropcalendar, &
                             flharvestday, flcropoutput, swcrp, flirrigationoutput, swend, project, &
                             flTillage, flSSDI, &
-                            numnod, numlay
+                            numnod, numlay, &
+                            dz, z, disnod, ztopcp, zbotcp, layer
       use soilwater_state_mod, only: soilwater_init
       use atmosphere_state_mod, only: atmosphere_init
       use tillage_state_mod, only: tillage_init
@@ -102,6 +103,8 @@ contains
 
 !  calculate grid parameters
    call CalcGrid()
+   ! [SS-GR-BH A3] dual-write: populate state%mesh alongside legacy mesh globals
+   call state%mesh%init(numnod, dz, z, disnod, ztopcp, zbotcp, layer)
    call soilwater_init(state%soilwater, numnod, numlay)   ! SS-CRP Phase 1 C-1.2: allocate per-node arrays + mfluxtable
    ! [SS-SWC S-2.12B] seed state%soilwater from config buffers populated by config_to_variables.
    ! Retired globals: pondini, pond, h(1..nhead). state%soilwater%h is sized numnod and
