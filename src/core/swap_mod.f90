@@ -59,7 +59,6 @@ contains
                             dz, z, disnod, ztopcp, zbotcp, layer, &
                             cofani, &
                             orgmat, &
-                            nrlevs, swdivd, swnrsrf, swtopnrsrf, swdivdinf, FacDpthInf, &
                             L, zbotdr, owltab, nowltab
       use soilwater_state_mod, only: soilwater_init
       use atmosphere_state_mod, only: atmosphere_init
@@ -186,18 +185,23 @@ contains
 !  (dramet==2) without reading the now-deleted legacy global wetper.
 !  ADR 0031 Phase 2 Task 5: drainl/wetper/ztopdislay/qdrd globals deleted.
    call drainage_init(state, config)
-   ! [SS-GR-BH A9] dual-write: state%drainage geometry + switches
-   state%drainage%nrlevs     = nrlevs
-   state%drainage%swdivd     = swdivd
-   state%drainage%swnrsrf    = swnrsrf
-   state%drainage%swtopnrsrf = swtopnrsrf
-   state%drainage%swdivdinf  = swdivdinf
-   state%drainage%FacDpthInf = FacDpthInf
-   ! L and zbotdr: legacy arrays are Madr(=5)-sized, state arrays are nrlevs-sized (nrlevs <= Madr).
+   ! [SS-GR-BH A9] state%drainage geometry + switches sourced from config (legacy globals retired as mirrors).
+   ! nrlevs/swdivd/swnrsrf/swtopnrsrf/swdivdinf/FacDpthInf: clean single-source in config%drain — mirrors sourced
+   ! directly from config; legacy globals removed from swap_mod use-list.
+   ! Adapter writes in config_to_variables.f90 retained: drainage.f90 runtime still reads these globals.
+   ! Task 37 will delete declarations from variables.f90.
+   state%drainage%nrlevs     = config%drain%nrlevs
+   state%drainage%swdivd     = config%drain%swdivd
+   state%drainage%swnrsrf    = config%drain%surface_runoff%swnrsrf
+   state%drainage%swtopnrsrf = config%drain%surface_runoff%swtopnrsrf
+   state%drainage%swdivdinf  = config%drain%surface_runoff%swdivdinf
+   state%drainage%FacDpthInf = config%drain%surface_runoff%facdpthinf
+   ! L and zbotdr: multi-source (DRAMET=2 scalar + per-level array, unit conversion for L).
+   ! Deferred to Task 37; still read from legacy globals populated by adapter.
    state%drainage%L(:)      = L(1:size(state%drainage%L))
    state%drainage%zbotdr(:) = zbotdr(1:size(state%drainage%zbotdr))
-   ! owltab: legacy is (Madr, 2*maowl) 2D; state is (nrlevs, 2*maowl) 2D.
-   ! Copy full 2D table, respecting state allocation dimensions.
+   ! owltab: populated via CSV file loop in config_to_variables.f90 — no clean single config source.
+   ! Deferred to Task 37.
    state%drainage%owltab(:,:) = owltab(1:size(state%drainage%owltab,1), &
                                        1:size(state%drainage%owltab,2))
    if (flSolute) call solute_init(state)   ! SS-SLST Phase 2 Task 7: seed state%solute from config-populated globals
