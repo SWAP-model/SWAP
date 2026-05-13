@@ -189,6 +189,15 @@ module atmosphere_state_mod
       real(real64) :: CNtimTAB(2*magrs) = 0.0_real64
       real(real64) :: CNrefTAB(2*magrs) = 0.0_real64
 
+      ! [SS-GR-ATM A8] Block 6: output flag toggles
+      logical :: out_tmn = .false.
+      logical :: out_tmx = .false.
+      logical :: out_hum = .false.
+      logical :: out_win = .false.
+      logical :: out_etr = .false.
+      logical :: out_wet = .false.
+      logical :: out_rad = .false.
+
    end type atmosphere_state_t
 
 contains
