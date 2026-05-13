@@ -184,3 +184,81 @@ subroutine test_surfacewater_init_sets_wls_from_config()
    @assertEqual(0, sw%numadj)
    @assertEqual(0.0_real64, sum(sw%wlsbak), 1.0e-12_real64)
 end subroutine test_surfacewater_init_sets_wls_from_config
+
+@test
+subroutine test_surfacewater_init_builds_sttab()
+   use funit
+   use iso_fortran_env, only: real64
+   use surfacewater_state_mod, only: surfacewater_state_t
+   use surface_water_config_mod, only: surface_water_config_t
+   use drainage_config_mod, only: drainage_config_t
+   type(surfacewater_state_t)   :: sw
+   type(surface_water_config_t) :: cfg_sw
+   type(drainage_config_t)      :: cfg_drain
+   integer, parameter :: nrlevs = 1
+   integer, parameter :: numnod = 10
+   real(real64), parameter :: zbot = -100.0_real64
+   integer :: i
+
+   cfg_sw%swsrf = 2;  cfg_sw%swsec = 2;  cfg_sw%swqhr = 1
+   cfg_sw%nmper = 1
+   allocate(cfg_sw%swman(1));  cfg_sw%swman = 1
+   cfg_sw%wlact = -50.0_real64
+
+   cfg_drain%nrlevs = nrlevs
+   cfg_drain%altcu  = 0.0_real64
+   allocate(cfg_drain%zbotdr(nrlevs));  cfg_drain%zbotdr = zbot
+   allocate(cfg_drain%swdtyp(nrlevs));  cfg_drain%swdtyp = 0
+   allocate(cfg_drain%widthr(nrlevs));  cfg_drain%widthr = 1.0_real64
+   allocate(cfg_drain%taludr(nrlevs));  cfg_drain%taludr = 2.0_real64
+   allocate(cfg_drain%l(nrlevs));       cfg_drain%l      = 1000.0_real64
+
+   call sw%init(cfg_sw, cfg_drain, numnod)
+
+   ! Row 1 = +100, row 2 = 0, rows 3..22 divide [0, zbot] = [0, -100] into 20 compartments.
+   ! Row 3 = zbot * (3-2)/20 = -100*1/20 = -5. Row 22 = zbot * (22-2)/20 = -100.
+   @assertEqual( 100.0_real64, sw%sttab(1, 1), 1.0e-12_real64)
+   @assertEqual(   0.0_real64, sw%sttab(2, 1), 1.0e-12_real64)
+   @assertEqual(  -5.0_real64, sw%sttab(3, 1), 1.0e-12_real64)
+   @assertEqual(-100.0_real64, sw%sttab(22, 1), 1.0e-12_real64)
+
+   ! Storage column must be monotonically decreasing as depth increases
+   ! (more depth = more volume from the table-row perspective).
+   do i = 1, 21
+      @assertTrue(sw%sttab(i, 2) >= sw%sttab(i+1, 2))
+   end do
+end subroutine test_surfacewater_init_builds_sttab
+
+@test
+subroutine test_surfacewater_init_computes_swst_from_sttab()
+   use funit
+   use iso_fortran_env, only: real64
+   use surfacewater_state_mod, only: surfacewater_state_t
+   use surface_water_config_mod, only: surface_water_config_t
+   use drainage_config_mod, only: drainage_config_t
+   use surfacewater_utils, only: swstlev_from_table
+   type(surfacewater_state_t)   :: sw
+   type(surface_water_config_t) :: cfg_sw
+   type(drainage_config_t)      :: cfg_drain
+   integer, parameter :: nrlevs = 1
+   integer, parameter :: numnod = 10
+
+   cfg_sw%swsrf = 2;  cfg_sw%swsec = 2;  cfg_sw%swqhr = 1
+   cfg_sw%nmper = 1
+   allocate(cfg_sw%swman(1));  cfg_sw%swman = 1
+   cfg_sw%wlact = -50.0_real64
+
+   cfg_drain%nrlevs = nrlevs
+   cfg_drain%altcu  = 0.0_real64
+   allocate(cfg_drain%zbotdr(nrlevs));  cfg_drain%zbotdr = -100.0_real64
+   allocate(cfg_drain%swdtyp(nrlevs));  cfg_drain%swdtyp = 0
+   allocate(cfg_drain%widthr(nrlevs));  cfg_drain%widthr = 1.0_real64
+   allocate(cfg_drain%taludr(nrlevs));  cfg_drain%taludr = 2.0_real64
+   allocate(cfg_drain%l(nrlevs));       cfg_drain%l      = 1000.0_real64
+
+   call sw%init(cfg_sw, cfg_drain, numnod)
+
+   ! swst and swstini must equal the table-lookup at wls=-50.
+   @assertEqual(swstlev_from_table(sw%sttab, sw%wls), sw%swst,    1.0e-12_real64)
+   @assertEqual(sw%swst, sw%swstini, 1.0e-12_real64)
+end subroutine test_surfacewater_init_computes_swst_from_sttab

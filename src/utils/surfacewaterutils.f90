@@ -15,11 +15,15 @@ module surfacewater_utils
    ! SS-TC TC-12: dt retired from only-list; read via state%timecontrol in runoff().
    use variables, only: hqhtab, qqhtab, swdra, pondmx, rsro, rsroexp
    use swap_state_mod, only: swap_state_t
+   ! swstlev_from_table is defined in surfacewater_state_mod to avoid a
+   ! circular dependency (this module already pulls in swap_state_mod,
+   ! which transitively depends on surfacewater_state_mod).
+   use surfacewater_state_mod, only: swstlev_from_table
 
    implicit none
 
    private
-   public :: wlevst, swstlev, qhtab, runoff
+   public :: wlevst, swstlev, swstlev_from_table, qhtab, runoff
 contains
 
    !> Calculate surface water level from surface water storage using table lookup
@@ -101,40 +105,11 @@ contains
    !!@endwarning
    function swstlev(state, wlev) result(swstlev_r)
       implicit none
-
-      ! Arguments
       type(swap_state_t), intent(in) :: state
       real(real64),       intent(in) :: wlev
       real(real64) :: swstlev_r
 
-      ! Local variables
-      integer :: i
-      real(real64) :: dwl
-      character(len=200) :: messag
-
-      associate(sttab => state%surfacewater%sttab)
-
-      if (wlev < sttab(22,1)) then
-         messag = 'Surface water storage below bottom of table'
-         call fatalerr_collected('swstlev', messag)
-      end if
-
-      if (wlev > sttab(1,1)) then
-         messag = 'Surface water storage above top of table'
-         call fatalerr_collected('swstlev', messag)
-      end if
-
-      i = 0
-      do
-         i = i + 1
-         if (wlev >= sttab(i+1,1) .and. wlev <= sttab(i,1)) exit
-      end do
-
-      dwl = (wlev - sttab(i+1,1)) / (sttab(i,1) - sttab(i+1,1))
-      swstlev_r = sttab(i+1,2) + dwl * (sttab(i,2) - sttab(i+1,2))
-
-      end associate
-
+      swstlev_r = swstlev_from_table(state%surfacewater%sttab, wlev)
    end function swstlev
 
 

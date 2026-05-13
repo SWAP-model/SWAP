@@ -12,6 +12,7 @@ module surfacewater_state_mod
    implicit none
    private
    public :: surfacewater_state_t
+   public :: swstlev_from_table
 
    type :: surfacewater_state_t
 
@@ -114,6 +115,55 @@ contains
       allocate(self%inqdra_in  (config_drain%nrlevs, numnod));    self%inqdra_in  = 0.0_real64
       allocate(self%inqdra_out (config_drain%nrlevs, numnod));    self%inqdra_out = 0.0_real64
 
+      ! ---- L3: readswap-style shape math (sttab + swst init) ----
+      !
+      ! sttab(:,1): water-level rows.
+      !   Row 1 = +100cm above soil surface (top).
+      !   Row 2 = 0cm (soil surface).
+      !   Rows 3..22: divide [0, zbotdr(1+nrpri)] into 20 compartments.
+      ! For swsrf=2 (no primary system) nrpri=0, so zbotdr index is 1.
+      block
+         integer :: i, ilev, nrpri
+         real(real64) :: wdepth, wvolum, wbreadth
+
+         nrpri = 0
+
+         self%sttab(1, 1) = 100.0_real64
+         self%sttab(2, 1) =   0.0_real64
+         do i = 3, 22
+            self%sttab(i, 1) = config_drain%zbotdr(1 + nrpri) * real(i - 2, real64) / 20.0_real64
+         end do
+
+         ! sttab(:,2): storage volume per unit area (cm), summed across
+         ! open-channel levels (swdtyp=0). Verbatim port from legacy rddre
+         ! (readswap.f90:4878-4897). l(:) is in centimetres (D6 conversion
+         ! done at TOML read time).
+         do i = 1, 22
+            self%sttab(i, 2) = 0.0_real64
+            do ilev = 1 + nrpri, config_drain%nrlevs
+               if (config_drain%swdtyp(ilev) == 0 .and. self%sttab(i, 1) > config_drain%zbotdr(ilev)) then
+                  if (self%sttab(i, 1) <= 0.0_real64) then
+                     ! Trapezium below soil surface
+                     wdepth = self%sttab(i, 1) - config_drain%zbotdr(ilev)
+                     wvolum = wdepth * (config_drain%widthr(ilev) + wdepth / config_drain%taludr(ilev))
+                  else
+                     ! Trapezium up to surface, plus rectangle above
+                     wdepth   = -config_drain%zbotdr(ilev)
+                     wvolum   = wdepth * (config_drain%widthr(ilev) + wdepth / config_drain%taludr(ilev))
+                     wbreadth = config_drain%widthr(ilev) + 2.0_real64 * wdepth / config_drain%taludr(ilev)
+                     wdepth   = self%sttab(i, 1)
+                     wvolum   = wvolum + wbreadth * wdepth
+                  end if
+                  self%sttab(i, 2) = self%sttab(i, 2) + wvolum / config_drain%l(ilev)
+               end if
+            end do
+         end do
+      end block
+
+      ! Initial storage state derived from sttab + wls.
+      self%swstini = swstlev_from_table(self%sttab, self%wls)
+      self%swst    = self%swstini
+
       ! ---- Legacy global write retained for now ----
       ! bocodre reads wlp via `use variables` for the primary surface water level
       ! (not surfacewater-state owned). A separate arc will migrate readers;
@@ -145,6 +195,43 @@ contains
       if (allocated(self%cqdrainin))  self%cqdrainin  = 0.0_real64
       if (allocated(self%cqdrainout)) self%cqdrainout = 0.0_real64
    end subroutine surfacewater_reset_cumulative_drainage
+
+   !> Pure-table-lookup variant of `swstlev` — operates directly on the storage
+   !! table without needing a full `swap_state_t`. Used by `surfacewater_state_t%init`
+   !! where only the partially-populated state is available, and by the
+   !! `swstlev(state, wlev)` wrapper in `surfacewater_utils`.
+   !!
+   !! Lives here (rather than `surfacewater_utils`) to avoid a circular
+   !! module dependency: `surfacewater_utils` already depends on
+   !! `swap_state_mod` (which depends on this module).
+   function swstlev_from_table(sttab, wlev) result(swstlev_r)
+      implicit none
+      real(real64), intent(in) :: sttab(22, 2)
+      real(real64), intent(in) :: wlev
+      real(real64) :: swstlev_r
+
+      integer :: i
+      real(real64) :: dwl
+      character(len=200) :: messag
+
+      if (wlev < sttab(22,1)) then
+         messag = 'Surface water storage below bottom of table'
+         call fatalerr_collected('swstlev_from_table', messag)
+      end if
+      if (wlev > sttab(1,1)) then
+         messag = 'Surface water storage above top of table'
+         call fatalerr_collected('swstlev_from_table', messag)
+      end if
+
+      i = 0
+      do
+         i = i + 1
+         if (wlev >= sttab(i+1,1) .and. wlev <= sttab(i,1)) exit
+      end do
+
+      dwl = (wlev - sttab(i+1,1)) / (sttab(i,1) - sttab(i+1,1))
+      swstlev_r = sttab(i+1,2) + dwl * (sttab(i,2) - sttab(i+1,2))
+   end function swstlev_from_table
 
    !> Zero the reservoir-cumulative cohort — flzerocumu gate, flSurfaceWater partition.
    !! Three scalars; no allocatables.
