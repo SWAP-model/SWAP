@@ -58,7 +58,8 @@ contains
                             numnod, numlay, &
                             dz, z, disnod, ztopcp, zbotcp, layer, &
                             ksatexm, ksatfit, cofani, flksatexm, &
-                            orgmat, psand, psilt, pclay
+                            orgmat, psand, psilt, pclay, &
+                            swbotb
       use soilwater_state_mod, only: soilwater_init
       use atmosphere_state_mod, only: atmosphere_init
       use tillage_state_mod, only: tillage_init
@@ -119,6 +120,11 @@ contains
    state%soilwater%psand(:)    = psand(1:size(state%soilwater%psand))
    state%soilwater%psilt(:)    = psilt(1:size(state%soilwater%psilt))
    state%soilwater%pclay(:)    = pclay(1:size(state%soilwater%pclay))
+   ! [SS-GR-BH A7] dual-write: seed soilwater runtime scalars
+   state%soilwater%swbotb_runtime = swbotb
+   state%soilwater%q0    = 0.0d0
+   state%soilwater%k1max = 0.0d0
+   state%soilwater%H0max = 0.0d0
    ! [SS-SWC S-2.12B] seed state%soilwater from config buffers populated by config_to_variables.
    ! Retired globals: pondini, pond, h(1..nhead). state%soilwater%h is sized numnod and
    ! receives the swinco=3 initial-profile h values; SoilHydraulics(1) consumes the rest.
