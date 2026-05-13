@@ -877,12 +877,18 @@ module rootextraction_mod
 !       find first Node of the Layer
         i = nod1lay(lay)
 
-        wcontent = watcon(i,phead1)
+        wcontent = watcon(phead1, &
+                           state%soilwater%vg_params(i), &
+                           state%soilwater%iHWCKmodel(state%soilwater%layer(i)), &
+                           i, state%soilwater)                     ! [SS-GR-UTILS Task 5]
         conduc1 = hconduc (i,phead1,wcontent,10.d0,state%heat%tsoil(i))
 
         do count = start-1,1,-1
           phead2 = -10.d0**(dble(count)/100.d0)
-          wcontent = watcon(i,phead2)
+          wcontent = watcon(phead2, &
+                             state%soilwater%vg_params(i), &
+                             state%soilwater%iHWCKmodel(state%soilwater%layer(i)), &
+                             i, state%soilwater)                   ! [SS-GR-UTILS Task 5]
           conduc2 = hconduc (i,phead2,wcontent,10.d0,state%heat%tsoil(i))
           state%soilwater%mfluxtable(lay,count) =                       &
      &         state%soilwater%mfluxtable(lay,count+1) +                &

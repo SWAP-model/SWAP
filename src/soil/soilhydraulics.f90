@@ -132,7 +132,10 @@ contains
             q0 = (state%atmosphere%nraidt+nird+state%atmosphere%melt)*(1.0d0-ArMpSs) + state%soilwater%runon - state%soilwater%reva  ! [SS-ATM/SS-SWC S-2.12B]
             call pondrunoff (state)
             q1 = - q0 + (state%soilwater%pond - sw_pondm1)/tc_dt + state%soilwater%runots / tc_dt  ! [SS-SWC S-2.12B] [TC-8]
-            sw_theta(1) = watcon(1,state%soilwater%gwlinp)                  ! [SS-SWC S-1.4a/S-2.12B]
+            sw_theta(1) = watcon(state%soilwater%gwlinp, &
+                                  state%soilwater%vg_params(1), &
+                                  state%soilwater%iHWCKmodel(state%soilwater%layer(1)), &
+                                  1, state%soilwater)                         ! [SS-SWC S-1.4a/S-2.12B] [SS-GR-UTILS Task 5]
             sw_kmean(1) = hconduc(1,state%soilwater%gwlinp,sw_theta(1),state%heat%rfcp(1),state%heat%tsoil(1))  ! [SS-SWC S-1.4b/S-2.12B]
 
             qv(1) = q1
@@ -250,7 +253,10 @@ contains
       end if
 
       if(swbotb.eq.1 .and. (.not.state%soilwater%fllowgwl))then
-         sw_theta(NN)= watcon(NN,sw_h(NN))
+         sw_theta(NN)= watcon(sw_h(NN), &
+                              state%soilwater%vg_params(NN), &
+                              state%soilwater%iHWCKmodel(state%soilwater%layer(NN)), &
+                              NN, state%soilwater)                            ! [SS-GR-UTILS Task 5]
          sw_k(NN)    = hconduc(NN,sw_h(NN),sw_theta(NN),state%heat%rfcp(NN),state%heat%tsoil(NN))
          sw_kmean(NN+1) = hcomean(swkmean,sw_k(NN),sw_cofgen(3,(NN+1)),       &  ! [SS-SWC S-2.3]
      &                        dz(NN),dz(NN+1))
@@ -440,7 +446,10 @@ contains
                end do
             end if
             do i = 1,NN
-              sw_theta(i) = watcon(i,sw_h(i))
+              sw_theta(i) = watcon(sw_h(i), &
+                                   state%soilwater%vg_params(i), &
+                                   state%soilwater%iHWCKmodel(state%soilwater%layer(i)), &
+                                   i, state%soilwater)            ! [SS-GR-UTILS Task 5]
               sw_theta(i) = sw_theta(i)                            ! [SS-SWC S-1.4a]
             enddo
             do i=2,NN
@@ -516,7 +525,10 @@ contains
             end if
 
             if(swbotb.eq.1 .and. (.not.state%soilwater%fllowgwl))then
-               sw_theta(NN) = watcon(NN,sw_h(NN))
+               sw_theta(NN) = watcon(sw_h(NN), &
+                                     state%soilwater%vg_params(NN), &
+                                     state%soilwater%iHWCKmodel(state%soilwater%layer(NN)), &
+                                     NN, state%soilwater)          ! [SS-GR-UTILS Task 5]
                sw_theta(NN) = sw_theta(NN)                         ! [SS-SWC S-1.4a]
                sw_k(NN)     = hconduc(NN,sw_h(NN),sw_theta(NN),state%heat%rfcp(NN),state%heat%tsoil(NN))
                sw_k(NN) = sw_k(NN)                                 ! [SS-SWC S-1.4b]
@@ -1014,7 +1026,10 @@ contains
 
       ! In case of preferential flow, adjust Van Genuchten parameters
       do i = 1, numnod
-        sw%theta(i) = watcon(i,sw%h(i))                   ! [SS-SWC S-1.3/S-2.12B]
+        sw%theta(i) = watcon(sw%h(i), &
+                              sw%vg_params(i), &
+                              sw%iHWCKmodel(sw%layer(i)), &
+                              i, state%soilwater)                  ! [SS-SWC S-1.3/S-2.12B] [SS-GR-UTILS Task 5]
       end do
 
       ! Hydraulic conductivities, differential moisture capacities

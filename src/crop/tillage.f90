@@ -7,7 +7,7 @@ module tillage_mod
 
    ! SS-TC TC-12: t1900 retired from only-list; read via state%timecontrol%t1900 at each call site.
    ! [SS-TC TC-14] date retired — read via state%timecontrol%date
-   use variables, only: swhyst, swsolu, swoxygen, flMacroPore, flksatexm, zbotcp, NumNod, Bdens, layer, ParamVG, &
+   use variables, only: swhyst, swsolu, swoxygen, flksatexm, zbotcp, NumNod, Bdens, layer, ParamVG, &
                         NumLay, dz, disnod, botcom, psilt, pclay, SwDiscrvert, &  ! [SS-BMI2 Task 5] tend removed — global retired
                         ! Tillage bridge variables with renaming (SAVE statements removed)
                         ! [SS-TIL T-5] Groups C/D/E retired from variables — reads via state%tillage
@@ -68,7 +68,6 @@ module tillage_mod
          if (swhyst == 1)      call fatalerr_collected ('DoTillage', 'swhyst = 1 not allowed')
          if (swsolu == 1)      call fatalerr_collected ('DoTillage', 'swsolu = 1 not (yet) allowed')
          if (swoxygen == 2)    call fatalerr_collected ('DoTillage', 'swoxygen = 2 not (yet) allowed')
-         if (flMacroPore)      call fatalerr_collected ('DoTillage', 'swmacro = 1 not (yet) allowed')
          if (flksatexm)        call fatalerr_collected ('DoTillage', 'flksatexm not (yet) allowed')
          if (SwDiscrvert == 1) call fatalerr_collected ('DoTillage', 'SwDiscrvert = 1 not (yet) allowed')
       end if
@@ -322,7 +321,10 @@ module tillage_mod
       sumWCt = 0.0d0
       state%tillage%sumDWC = 0.0d0
       do i = 1, state%tillage%MaxNumSoilCP
-         wc(i) = watcon(i,state%soilwater%h(i))                                                         ! [SS-SWC S-2.6]
+         wc(i) = watcon(state%soilwater%h(i), &
+                         state%soilwater%vg_params(i), &
+                         state%soilwater%iHWCKmodel(state%soilwater%layer(i)), &
+                         i, state%soilwater)                       ! [SS-SWC S-2.6] [SS-GR-UTILS Task 5]
          sumWCt = sumWCt + wc(i)
          dwc = state%soilwater%theta(i) - wc(i)                                                         ! [SS-SWC S-2.6]
          state%tillage%sumDWC = state%tillage%sumDWC + dwc * dz(i)

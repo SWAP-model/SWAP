@@ -651,7 +651,10 @@
           flhydrlift = .false.
         endif
         do i = 1,numnod
-         twilt(i) = watcon(i,wiltpoint)
+         twilt(i) = watcon(wiltpoint, &
+                            state%soilwater%vg_params(i), &
+                            state%soilwater%iHWCKmodel(state%soilwater%layer(i)), &
+                            i, state%soilwater)                    ! [SS-GR-UTILS Task 5]
         enddo
       endif
 
@@ -1431,7 +1434,10 @@
           flhydrlift = .false.
         endif
         do i = 1,numnod
-         twilt(i) = watcon(i,wiltpoint)
+         twilt(i) = watcon(wiltpoint, &
+                            state%soilwater%vg_params(i), &
+                            state%soilwater%iHWCKmodel(state%soilwater%layer(i)), &
+                            i, state%soilwater)                    ! [SS-GR-UTILS Task 5]
         enddo
       endif
 
@@ -2522,7 +2528,10 @@
           flhydrlift = .false.
         endif
         do i = 1,numnod
-         twilt(i) = watcon(i,wiltpoint)
+         twilt(i) = watcon(wiltpoint, &
+                            state%soilwater%vg_params(i), &
+                            state%soilwater%iHWCKmodel(state%soilwater%layer(i)), &
+                            i, state%soilwater)                    ! [SS-GR-UTILS Task 5]
         enddo
       endif
 

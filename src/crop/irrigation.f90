@@ -148,7 +148,11 @@
                wclo = wclos(layer(node))*dz(node);       if (node.eq.noddrz) wclo = wclo*frlow
                wcme = wcmes(layer(node))*dz(node);       if (node.eq.noddrz) wcme = wcme*frlow
                wchi = wchis(layer(node))*dz(node);       if (node.eq.noddrz) wchi = wchi*frlow
-               wcac = watcon(node,state%soilwater%h(node))*dz(node);     if (node.eq.noddrz) wcac = wcac*frlow  ! [SS-SWC S-2.12B]
+               wcac = watcon(state%soilwater%h(node), &
+                              state%soilwater%vg_params(node), &
+                              state%soilwater%iHWCKmodel(state%soilwater%layer(node)), &
+                              node, state%soilwater) * dz(node)    ! [SS-SWC S-2.12B] [SS-GR-UTILS Task 5]
+               if (node.eq.noddrz) wcac = wcac*frlow
                awlh = awlh+(wclo-wchi)
                awmh = awmh+(wcme-wchi)
                awah = awah+(wcac-wchi)

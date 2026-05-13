@@ -110,11 +110,11 @@ contains
 
 ! --- Calculate hydraulic conductivity corresponding with hAtm — [SS-SWC S-2.12B] read from state
       if (state%soilwater%hatm.lt.0.0d0) Then
-         TheAtm = watcon(1,dble(state%soilwater%hatm))                       ! [SS-SWC S-2.5]
+         TheAtm = watcon(dble(state%soilwater%hatm), &
+                         state%soilwater%vg_params(1), &
+                         state%soilwater%iHWCKmodel(state%soilwater%layer(1)), &
+                         1, state%soilwater)                                  ! [SS-SWC S-2.5] [SS-GR-UTILS Task 5]
          ksurf  = hconduc (1,dble(state%soilwater%hatm),TheAtm,state%heat%rfcp(1),state%heat%tsoil(1))  ! [SS-SWC S-2.5]
-         if(FlMacropore) then
-            ksurf = state%soilwater%FrArMtrx(1) * ksurf                      ! [SS-SWC S-2.5]
-         endif
       else
 
 ! --- This only occurs if RH is 100% in SWAPS, never used for SWAP
@@ -136,8 +136,7 @@ contains
 !     H I G H   A T M O S P H E R I C   D E M A N D
 !     flux through ground surface based on precipitation - evaporation 
 !     and remaining ponding of previous timestep
-      ArMpSs = 0.d0                                           !     set value of macropore area at soil surface
-      if (FlMacropore .and. Z_Tp.gt.-1.d-8) ArMpSs = ArMpTp   
+      ArMpSs = 0.d0                                           !     macropore retired (ADR 0040): always 0
       ! SS-ATM A-2.6: nraidt/melt retired — read from state%atmosphere
       q0 = (state%atmosphere%nraidt+nird+state%atmosphere%melt)*(1.0d0-ArMpSs) + state%soilwater%runon - state%soilwater%reva  ! [SS-SWC S-2.12B]
       q1 = - q0 - state%soilwater%pondm1/dt
@@ -199,7 +198,7 @@ contains
 ! ----------------------------------------------------------------------
       ! [SS-SWC S-2.12B] pond retired; read/written via state%soilwater%pond
       ! [SS-TC TC-14] dt, t1900 read via state%timecontrol (ADR 0041)
-      use variables, only: swdra,FlMacropore,disnod,H0max,k1max,pondmx,q0,rsro,rsroexp, &
+      use variables, only: swdra,disnod,H0max,k1max,pondmx,q0,rsro,rsroexp, &
                            swpondmx,pondmxtab  ! h,pondm1 dropped [SS-SWC S-2.5]
       use array_utils, only: afgen
       use surfacewater_utils, only: runoff
@@ -212,7 +211,6 @@ contains
 ! --- local variables
       INTEGER i
       real(8) h0,h0min,p1,p2
-      real(8) q0hlp
       real(8) :: dt, t1900   ! [SS-TC TC-14] local copies of state%timecontrol fields
 
 ! ----------------------------------------------------------------------
@@ -224,27 +222,6 @@ contains
          pondmx = afgen (pondmxtab,2*mairg,t1900+dt)
       endif
 
-! --- in case of Macropores: 
-      if (FlMacropore) then
-         if (state%soilwater%FlRunoff) then
-!   - h0max is reduced with overland flow into Macropores
-            q0hlp  = q0 - state%soilwater%QMpLatSs/dt
-            p1     = k1max/disnod(1) * dt
-            p2     = 1.0d0/(p1+1.0d0)
-            h0max  = p2 * ( state%soilwater%pondm1 + q0hlp*dt - k1max*dt + p1*state%soilwater%h(1) )  ! [SS-SWC S-2.5]
-            if (h0max.lt.-1.d-9) then
-               state%soilwater%QMpLatSs = state%soilwater%QMpLatSs + h0max
-               h0max = 0.d0
-            endif
-         else
-!   - inflow excess by direct precipitation into macropores is added to ponding
-            if (state%soilwater%QMpLatSs.lt.0.d0) then
-               state%soilwater%QMpLatSs = 0.d0
-            endif
-            return
-         endif
-      endif
-!
 ! --- check whether h0max, the max value of pond, yields a runoff
 
 !      if(swdra.ne.2 .and. h0max.le.pondmx)then

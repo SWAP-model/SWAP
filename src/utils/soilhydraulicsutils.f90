@@ -94,21 +94,26 @@ contains
    end function hcomean
    
    !> Calculate water content from pressure head
-   function watcon(node, head)
+   !! [SS-GR-UTILS Task 5] New signature: explicit vg record + model + soilwater
+   function watcon(head, vg, model, node, soilwater) result(theta)
+      use soilwater_state_mod,  only: soilwater_state_t
+      use hydraulic_params_mod, only: vanGenuchten_params_t
       implicit none
-      
-      ! Arguments
-      integer, intent(in) :: node
-      real(real64), intent(in) :: head
-      real(real64) :: watcon
-      
+
+      real(real64),                  intent(in) :: head
+      type(vanGenuchten_params_t),   intent(in) :: vg
+      integer,                       intent(in) :: model       ! iHWCKmodel value for this node's layer
+      integer,                       intent(in) :: node        ! for tabulated branch + functionvalue_04_11
+      type(soilwater_state_t),       intent(in) :: soilwater   ! for tabulated branch (swsophy/sptab/numtab)
+      real(real64) :: theta
+
       ! Local variables
       real(real64) :: h_enpr, help, m, n, s_enpr
       real(real64), parameter :: h_crit = -1.0d-2
       real(real64) :: h105, C105, a, b, dum, t105
-      real(real64) :: alfamg, thetar, thetas, moiscap
+      real(real64) :: alfamg, thetar, thetas, moiscap_loc
       real(real64) :: alfa_2, n_2, m_2, omega_1
-      
+
       ! sptab(1,node,i):    h
       ! sptab(2,node,i):    Theta
       ! sptab(3,node,i):    K
@@ -116,50 +121,50 @@ contains
       ! sptab(5,node,i):    dK / dh
 
       ! Use analytical expression. "hconduc" is calclated as a function of "watcon"
-      if (swsophy == 0) then
+      if (soilwater%swsophy == 0) then
 
-         thetar = cofgen(1,node)
-         thetas = cofgen(2,node)
-         alfamg = cofgen(4,node)
-         n = cofgen(6,node)
-         m = cofgen(7,node)
-         h_enpr = cofgen(9,node)
-         
-         if (iHWCKmodel(layer(node)) == 2) then
+         thetar = vg%thetar
+         thetas = vg%thetas
+         alfamg = vg%alpha
+         n = vg%npar
+         m = vg%mpar
+         h_enpr = vg%h_enpr
+
+         if (model == 2) then
             ! Exponential relationships; special for testing against analytical solutions
-            watcon = dmax1(1.0000001_real64*thetar, thetar + (thetas-thetar)*dexp(alfamg*head))
-            
-         else if (iHWCKmodel(layer(node)) == 3) then
+            theta = dmax1(1.0000001_real64*thetar, thetar + (thetas-thetar)*dexp(alfamg*head))
+
+         else if (model == 3) then
             ! Bi-modal MvG relationships; basic form without air-entry h_enpr or h_crit
-            alfa_2  = cofgen(13,node)
-            n_2     = cofgen(14,node)
-            m_2     = cofgen(15,node)
-            omega_1 = cofgen(16,node)
+            alfa_2  = vg%alpha_2
+            n_2     = vg%npar_2
+            m_2     = vg%mpar_2
+            omega_1 = vg%omega_1
             if (head < 0.0_real64) then
-               watcon = omega_1 / (1.0_real64 + (dabs(alfamg*head))**n)**m
-               watcon = watcon + (1.0_real64 - omega_1) / (1.0_real64 + (dabs(alfa_2*head))**n_2)**m_2
-               watcon = thetar + (thetas - thetar) * watcon
+               theta = omega_1 / (1.0_real64 + (dabs(alfamg*head))**n)**m
+               theta = theta + (1.0_real64 - omega_1) / (1.0_real64 + (dabs(alfa_2*head))**n_2)**m_2
+               theta = thetar + (thetas - thetar) * theta
             else
-               watcon = thetas
+               theta = thetas
             end if
 
-         else if (iHWCKmodel(layer(node)) > 3 .and. iHWCKmodel(layer(node)) < 12) then
-            watcon = functionvalue_04_11(1, node, head)
+         else if (model > 3 .and. model < 12) then
+            theta = functionvalue_04_11(1, node, head)
 
          else  ! Use default MvG
-         
+
             if (h_enpr > h_crit) then
 
                if (head >= 0.0_real64) then
                   ! Saturated moisture content
-                  watcon = thetas
+                  theta = thetas
                else if (head > h_crit) then
                   help = (dabs(alfamg*h_crit))** n
                   help = (1.0_real64 + help) ** m
-                  help = thetar + (thetas - thetar) / help    
-                  watcon = help + (thetas - help) / (-h_crit) * (head - h_crit) 
-                  watcon = min(watcon, thetas)  
-               else 
+                  help = thetar + (thetas - thetar) / help
+                  theta = help + (thetas - help) / (-h_crit) * (head - h_crit)
+                  theta = min(theta, thetas)
+               else
                   ! First compute |alpha * h| ** n
                   help = (dabs(alfamg*head)) ** n
 
@@ -167,7 +172,7 @@ contains
                   help = (1.0_real64 + help) ** m
 
                   ! Now compute theta
-                  watcon = thetar + (thetas - thetar) / help 
+                  theta = thetar + (thetas - thetar) / help
                end if
             else
 
@@ -184,9 +189,9 @@ contains
                   a = (t105 - thetas - C105*h105) / (C105*h105**2)
                   b = (t105**2 - 2*t105*thetas + thetas**2) / &
                        (t105 - thetas - C105*h105)
-                  watcon = thetas + b*a*head / (1.0_real64 + a*head)
+                  theta = thetas + b*a*head / (1.0_real64 + a*head)
 
-               else 
+               else
                   ! First compute |alpha * h| ** n
                   help = (dabs(alfamg*head)) ** n
 
@@ -194,28 +199,29 @@ contains
                   help = (1.0_real64 + help) ** m
 
                   ! For modified VanGenuchten model:
-                  ! - S_enpr: relative saturation at Entry Pressure h_enpr 
+                  ! - S_enpr: relative saturation at Entry Pressure h_enpr
                   s_enpr = (1.0_real64 + (dabs(alfamg*h_enpr)) ** n) ** m
 
                   ! Now compute theta
-                  watcon = thetar + (thetas - thetar) / help * s_enpr
+                  theta = thetar + (thetas - thetar) / help * s_enpr
                end if
             end if
          end if
 
       ! Use tabulated function
-      else if (swsophy == 1) then
+      else if (soilwater%swsophy == 1) then
          dum = head
          if (do_ln_trans .and. head < 0.0_real64) dum = -dlog(-head + 1.0_real64)
          if (head >= -1.0d-9) then
-            watcon = sptab(2,node,numtab(node))
-         else if (dum < sptab(1,node,1)) then
-            watcon = sptab(2,node,1)
+            theta = soilwater%sptab(2,node,soilwater%numtab(node))
+         else if (dum < soilwater%sptab(1,node,1)) then
+            theta = soilwater%sptab(2,node,1)
          else
-            call EvalTabulatedFunction(0, numtab(node), 1, 2, 4, node, sptab, ientrytab, head, watcon, moiscap, 1)
+            call EvalTabulatedFunction(0, soilwater%numtab(node), 1, 2, 4, node, &
+                                       soilwater%sptab, soilwater%ientrytab, head, theta, moiscap_loc, 1)
          end if
       end if
-      
+
    end function watcon
 
    !> Calculate differential moisture capacity (as a function of pressure head)
@@ -278,7 +284,9 @@ contains
 
                else if (head > h_crit) then
 
-                  term1 = watcon(node, h_crit)
+                  ! [SS-GR-UTILS Task 5] inlined: watcon at h_crit (swsophy==0, default MvG branch)
+                  term1 = (dabs(alfamg*h_crit)) ** n
+                  term1 = thetar + (thetas - thetar) / ((1.0_real64 + term1) ** m)
                   moiscap = (thetas - term1) / (-h_crit)
                else
 

@@ -377,8 +377,14 @@ contains
 
    do i = 1, numnod
 ! --- get theta at h=-100 cm and at h=-500 cm; for diffusion coef
-      theta100        = watcon(i,h100)
-      theta500        = watcon(i,h500)
+      theta100        = watcon(h100, &
+                                state%soilwater%vg_params(i), &
+                                state%soilwater%iHWCKmodel(state%soilwater%layer(i)), &
+                                i, state%soilwater)               ! [SS-GR-UTILS Task 5]
+      theta500        = watcon(h500, &
+                                state%soilwater%vg_params(i), &
+                                state%soilwater%iHWCKmodel(state%soilwater%layer(i)), &
+                                i, state%soilwater)               ! [SS-GR-UTILS Task 5]
       sat_water_cont  = state%soilwater%cofgen(2,i)                                                   ! [SS-SWC S-2.7]
       gfp100(i)       = sat_water_cont - theta100
       campbell_b      = (log10h500-log10h100) / (dlog10(theta100)-dlog10(theta500))

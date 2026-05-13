@@ -139,12 +139,24 @@ contains
       ThetaRef = 0.0d0
       do i = 1, nod10_cn
           if (wc_cor == 1) then
-            wc1 = watcon(i,H_FIELD_CAPACITY)
-            wc2 = watcon(i,H_WILTING_POINT)
+            wc1 = watcon(H_FIELD_CAPACITY, &
+                          state%soilwater%vg_params(i), &
+                          state%soilwater%iHWCKmodel(state%soilwater%layer(i)), &
+                          i, state%soilwater)                      ! [SS-GR-UTILS Task 5]
+            wc2 = watcon(H_WILTING_POINT, &
+                          state%soilwater%vg_params(i), &
+                          state%soilwater%iHWCKmodel(state%soilwater%layer(i)), &
+                          i, state%soilwater)                      ! [SS-GR-UTILS Task 5]
             ThetaRef = ThetaRef + (wc1+wc2)*0.5d0*dz(i)
           else if (wc_cor == 2) then
-            wc1 = watcon(i,0.0d0)
-            wc2 = watcon(i,H_WILTING_POINT)
+            wc1 = watcon(0.0d0, &
+                          state%soilwater%vg_params(i), &
+                          state%soilwater%iHWCKmodel(state%soilwater%layer(i)), &
+                          i, state%soilwater)                      ! [SS-GR-UTILS Task 5]
+            wc2 = watcon(H_WILTING_POINT, &
+                          state%soilwater%vg_params(i), &
+                          state%soilwater%iHWCKmodel(state%soilwater%layer(i)), &
+                          i, state%soilwater)                      ! [SS-GR-UTILS Task 5]
             ThetaRef = ThetaRef + (wc1+wc2)*0.5d0*dz(i)
           end if
       end do
