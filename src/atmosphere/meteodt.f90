@@ -55,7 +55,8 @@ contains
    subroutine MeteoDT(state)
       ! SS-TC TC-9: flYearStart,flrainintens,flmeteodt,fletsine removed from bare use variables;
       !             reads/writes via state%timecontrol.
-      use variables
+      ! [SS-GR-ATM B26] bare use variables dropped — all TC symbols via state%timecontrol associate;
+      !                  no variables.f90 symbols remain in this subroutine body.
       implicit none
 
       type(swap_state_t), intent(inout) :: state
