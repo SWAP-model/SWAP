@@ -30,7 +30,7 @@ module cropgrass_init_mod
 
 contains
 
-   subroutine cropgrass_init_from_config(cfg, icrop, tend_val, tstart_val)
+   subroutine cropgrass_init_from_config(cfg, icrop, tend_val, tstart_val, state)
       use variables, only: &
          ! ET-related
          swcf, albedo, rsw, rsc, cftb, chtb,                                &
@@ -77,12 +77,14 @@ contains
          schedule
       use array_utils,  only: afgen
       use error_mod,    only: fatalerr_collected
+      use swap_state_mod, only: swap_state_t
       implicit none
 
-      type(cropgrass_config_t), intent(in) :: cfg
-      integer,                  intent(in) :: icrop      ! rotation slot (reserved)
-      real(real64),             intent(in) :: tend_val   ! [SS-BMI2 Task 4] state%timecontrol%tend
-      real(real64),             intent(in) :: tstart_val ! [SS-BMI2 Task 4] state%timecontrol%tstart
+      type(cropgrass_config_t), intent(in)    :: cfg
+      integer,                  intent(in)    :: icrop      ! rotation slot (reserved)
+      real(real64),             intent(in)    :: tend_val   ! [SS-BMI2 Task 4] state%timecontrol%tend
+      real(real64),             intent(in)    :: tstart_val ! [SS-BMI2 Task 4] state%timecontrol%tstart
+      type(swap_state_t),       intent(inout) :: state      ! [SS-GR-ATM A5.1] runtime dual-write target
 
       integer      :: i
       real(real64) :: depth, sum_val
@@ -153,6 +155,7 @@ contains
       ! Part 1: crop factor / crop height (readgrass lines 3508-3557)
       ! Legacy: swcf=1 → cftb; swcf=2 → chtb; swcf=3 guarded above.
       swcf = cfg%swcf
+      state%crop%swcf = swcf   ! [SS-GR-ATM A5.1] runtime dual-write
       if (cfg%swcf == 1) then
          ! ETref standard defaults for albedo/rsc/rsw
          albedo = 0.23d0
@@ -170,7 +173,10 @@ contains
 
       ! Part 2: interception (readgrass lines 3560-3585)
       swinter = cfg%swinter
-      if (cfg%swinter == 1) cofab = cfg%cofab
+      if (cfg%swinter == 1) then
+         cofab = cfg%cofab
+         state%crop%cofab = cofab   ! [SS-GR-ATM A5.1] runtime dual-write
+      end if
 
       ! Part 3: initial crop state (readgrass lines 3604-3606)
       tdwi   = cfg%tdwi
@@ -190,6 +196,8 @@ contains
       ! Part 6: assimilation (readgrass lines 3623-3628)
       kdif = cfg%kdif
       kdir = cfg%kdir
+      state%crop%kdif = kdif   ! [SS-GR-ATM A5.1] runtime dual-write
+      state%crop%kdir = kdir   ! [SS-GR-ATM A5.1] runtime dual-write
       eff  = cfg%eff
       if (allocated(cfg%amaxtb))  call copy_table(cfg%amaxtb,  amaxtb)
       if (allocated(cfg%tmpftb))  call copy_table(cfg%tmpftb,  tmpftb)

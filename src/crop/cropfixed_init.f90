@@ -24,7 +24,7 @@ module cropfixed_init_mod
 
 contains
 
-   subroutine cropfixed_init_from_config(cfg, icrop, lcc)
+   subroutine cropfixed_init_from_config(cfg, icrop, lcc, state)
       use variables, only: idev, tsumea, tsumam, tbase,                  &
                             kdif, kdir, gctb, swgc,                       &
                             cftb, chtb, cfeictb, swcf, albedo, rsc, rsw,  &
@@ -39,9 +39,11 @@ contains
                             cumdens
       use array_utils,  only: afgen
       use error_mod,    only: fatalerr_collected
-      type(cropfixed_config_t), intent(in)  :: cfg
-      integer,                  intent(in)  :: icrop  ! reserved for swinco=3 inifil path (not yet ported)
-      integer,                  intent(out) :: lcc
+      use swap_state_mod, only: swap_state_t
+      type(cropfixed_config_t), intent(in)    :: cfg
+      integer,                  intent(in)    :: icrop  ! reserved for swinco=3 inifil path (not yet ported)
+      integer,                  intent(out)   :: lcc
+      type(swap_state_t),       intent(inout) :: state  ! [SS-GR-ATM A5.1] runtime dual-write target
 
       integer      :: i
       real(real64) :: depth, rootdis(202), sum
@@ -66,9 +68,12 @@ contains
 
       kdif = cfg%kdif
       kdir = cfg%kdir
+      state%crop%kdif = kdif   ! [SS-GR-ATM A5.1] runtime dual-write
+      state%crop%kdir = kdir   ! [SS-GR-ATM A5.1] runtime dual-write
 
       swgc = cfg%swgc
       swcf = cfg%swcf
+      state%crop%swcf = swcf   ! [SS-GR-ATM A5.1] runtime dual-write
       swrd = cfg%swrd
       swdmi2rd = cfg%swdmi2rd
       swrdc    = cfg%swrdc
@@ -102,6 +107,7 @@ contains
 
       swinter = cfg%swinter
       cofab   = cfg%cofab
+      state%crop%cofab = cofab   ! [SS-GR-ATM A5.1] runtime dual-write
 
       schedule = cfg%schedule_switch
 

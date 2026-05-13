@@ -3,9 +3,11 @@ subroutine test_cropgrass_init_writes_kdif()
    use funit
    use cropgrass_init_mod, only: cropgrass_init_from_config
    use cropgrass_config_mod, only: cropgrass_config_t
+   use swap_state_mod, only: swap_state_t
    use variables, only: kdif, kdir, swdrought, swoxygen, swcompensate, cumdens
    implicit none
    type(cropgrass_config_t) :: cfg
+   type(swap_state_t) :: state  ! [SS-GR-ATM A5.1] dual-write target
 
    ! Minimal setup to pass all guards and run without fatalerr.
    cfg%swoxygen    = 0
@@ -28,7 +30,7 @@ subroutine test_cropgrass_init_writes_kdif()
    cfg%kdif = 0.60d0
    cfg%kdir = 0.75d0
 
-   call cropgrass_init_from_config(cfg, 1, 0.0d0, 0.0d0)  ! [SS-BMI2 Task 4] tend_val, tstart_val
+   call cropgrass_init_from_config(cfg, 1, 0.0d0, 0.0d0, state)  ! [SS-BMI2 Task 4] [SS-GR-ATM A5.1]
 
    @assertEqual(0.60d0, kdif, 1.0d-12)
    @assertEqual(0.75d0, kdir, 1.0d-12)
@@ -44,9 +46,11 @@ subroutine test_cropgrass_init_cumdens_linear_decline()
    use funit
    use cropgrass_init_mod, only: cropgrass_init_from_config
    use cropgrass_config_mod, only: cropgrass_config_t
+   use swap_state_mod, only: swap_state_t
    use variables, only: cumdens
    implicit none
    type(cropgrass_config_t) :: cfg
+   type(swap_state_t) :: state  ! [SS-GR-ATM A5.1] dual-write target
 
    cfg%swoxygen    = 0
    cfg%swdrought   = 1
@@ -64,7 +68,7 @@ subroutine test_cropgrass_init_cumdens_linear_decline()
    allocate(cfg%rdctb(4))
    cfg%rdctb = [0.0d0, 1.0d0, 1.0d0, 0.0d0]
 
-   call cropgrass_init_from_config(cfg, 1, 0.0d0, 0.0d0)  ! [SS-BMI2 Task 4] tend_val, tstart_val
+   call cropgrass_init_from_config(cfg, 1, 0.0d0, 0.0d0, state)  ! [SS-BMI2 Task 4] [SS-GR-ATM A5.1]
 
    @assertEqual(0.0d0, cumdens(2),   1.0d-6)
    @assertEqual(1.0d0, cumdens(202), 1.0d-6)
@@ -75,9 +79,11 @@ subroutine test_cropgrass_init_swoxygen2_writes_srl()
    use funit
    use cropgrass_init_mod, only: cropgrass_init_from_config
    use cropgrass_config_mod, only: cropgrass_config_t
+   use swap_state_mod, only: swap_state_t
    use variables, only: srl
    implicit none
    type(cropgrass_config_t) :: cfg
+   type(swap_state_t) :: state  ! [SS-GR-ATM A5.1] dual-write target
 
    cfg%swoxygen      = 2
    cfg%swoxygentype  = 1
@@ -101,7 +107,7 @@ subroutine test_cropgrass_init_swoxygen2_writes_srl()
    allocate(cfg%rdctb(4))
    cfg%rdctb = [0.0d0, 1.0d0, 1.0d0, 0.0d0]
 
-   call cropgrass_init_from_config(cfg, 1, 0.0d0, 0.0d0)  ! [SS-BMI2 Task 4] tend_val, tstart_val
+   call cropgrass_init_from_config(cfg, 1, 0.0d0, 0.0d0, state)  ! [SS-BMI2 Task 4] [SS-GR-ATM A5.1]
 
    @assertEqual(383571.0d0, srl, 1.0d0)
 end subroutine test_cropgrass_init_swoxygen2_writes_srl
@@ -111,9 +117,11 @@ subroutine test_cropgrass_init_swcompensate1_writes_alphacrit()
    use funit
    use cropgrass_init_mod, only: cropgrass_init_from_config
    use cropgrass_config_mod, only: cropgrass_config_t
+   use swap_state_mod, only: swap_state_t
    use variables, only: alphacrit
    implicit none
    type(cropgrass_config_t) :: cfg
+   type(swap_state_t) :: state  ! [SS-GR-ATM A5.1] dual-write target
 
    cfg%swcompensate = 1
    cfg%alphacrit    = 0.7d0
@@ -133,7 +141,7 @@ subroutine test_cropgrass_init_swcompensate1_writes_alphacrit()
    allocate(cfg%rdctb(4))
    cfg%rdctb = [0.0d0, 1.0d0, 1.0d0, 0.0d0]
 
-   call cropgrass_init_from_config(cfg, 1, 0.0d0, 0.0d0)  ! [SS-BMI2 Task 4] tend_val, tstart_val
+   call cropgrass_init_from_config(cfg, 1, 0.0d0, 0.0d0, state)  ! [SS-BMI2 Task 4] [SS-GR-ATM A5.1]
 
    @assertEqual(0.7d0, alphacrit, 1.0d-12)
 end subroutine test_cropgrass_init_swcompensate1_writes_alphacrit
@@ -149,10 +157,12 @@ subroutine test_cropgrass_init_swharvest2_populates_dateharvest()
    use funit
    use cropgrass_init_mod, only: cropgrass_init_from_config
    use cropgrass_config_mod, only: cropgrass_config_t
+   use swap_state_mod, only: swap_state_t
    use variables, only: dateharvest
    use, intrinsic :: iso_fortran_env, only: real64
    implicit none
    type(cropgrass_config_t) :: cfg
+   type(swap_state_t) :: state  ! [SS-GR-ATM A5.1] dual-write target
    integer :: nmow_val
    real(real64) :: tend_val, tstart_val  ! [SS-BMI2 Task 4] formerly globals
 
@@ -182,7 +192,7 @@ subroutine test_cropgrass_init_swharvest2_populates_dateharvest()
    tstart_val = 36525.0d0                      ! [SS-BMI2 Task 4] formerly tstart global
    tend_val   = 36525.0d0 + 365.0d0            ! [SS-BMI2 Task 4] formerly tend global
 
-   call cropgrass_init_from_config(cfg, 1, tend_val, tstart_val)  ! [SS-BMI2 Task 4]
+   call cropgrass_init_from_config(cfg, 1, tend_val, tstart_val, state)  ! [SS-BMI2 Task 4] [SS-GR-ATM A5.1]
 
    ! Sentinel: dateharvest(nmow+1) = tend + 1.0
    @assertEqual(tend_val + 1.0d0, dateharvest(nmow_val + 1), 1.0d-6)

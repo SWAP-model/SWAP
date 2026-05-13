@@ -43,17 +43,17 @@
             use swap_state_mod, only: swap_state_t
             integer :: task
             real(8), intent(in) :: tsoil(:)
-            type(swap_state_t), intent(in), optional :: state
+            type(swap_state_t), intent(inout), optional :: state
          end subroutine grass
          subroutine cropfixed(task, state)
             use swap_state_mod, only: swap_state_t
             integer :: task
-            type(swap_state_t), intent(in), optional :: state
+            type(swap_state_t), intent(inout), optional :: state
          end subroutine cropfixed
          subroutine wofost(task, state)
             use swap_state_mod, only: swap_state_t
             integer :: task
-            type(swap_state_t), intent(in), optional :: state
+            type(swap_state_t), intent(inout), optional :: state
          end subroutine wofost
       end interface
 
@@ -530,6 +530,7 @@
 !     purpose            : simple crop growth routine for swap
 ! SS-CRP C-2.5: state added (optional, intent in) to read flWrtNonox.
 ! SS-TC TC-10: t1900 read via state%timecontrol tc_t1900 alias.
+! SS-GR-ATM A5.1: intent changed inout to allow dual-write in cropfixed_init_from_config.
 ! ----------------------------------------------------------------------
       use variables
       use soilhydraulics_utils, only: watcon
@@ -540,7 +541,7 @@
       use swap_state_mod, only: swap_state_t
       implicit none
 
-      type(swap_state_t), intent(in), optional :: state
+      type(swap_state_t), intent(inout), optional :: state
 
 ! --- local variables
       integer   i,task,lcc,swhydrlift
@@ -579,7 +580,8 @@
             end if
          end if
          if (use_cache) then
-            call cropfixed_init_from_config(crop_config_global%rotation_fixed(icrop), icrop, lcc)
+            call cropfixed_init_from_config(crop_config_global%rotation_fixed(icrop), icrop, lcc, state)
+            ! [SS-GR-ATM A5.1] state passed for dual-write of kdif/kdir/swcf/cofab
             ! swhydrlift is read by legacy readcropfixed only inside the
             ! swdrought=2 branch (stub-errored in Phase 1). Set to 0 here
             ! to mirror the default; Phase 2 (cropwofost) reuses this
@@ -1119,6 +1121,7 @@
 !     purpose            : detailed crop growth routine
 ! SS-CRP C-2.5: state added (optional, intent in) to read flWrtNonox.
 ! SS-TC TC-10: t1900,daynr,daycum,date read via state%timecontrol tc_* aliases.
+! SS-GR-ATM A5.1: intent changed inout to allow dual-write in cropwofost_init_from_config.
 ! ----------------------------------------------------------------------
       use variables
       use wofost_soil_interface
@@ -1130,7 +1133,7 @@
       use swap_state_mod, only: swap_state_t
       implicit none
 
-      type(swap_state_t), intent(in), optional :: state
+      type(swap_state_t), intent(inout), optional :: state
 
       integer   i1,task,swhydrlift,i
 
@@ -1238,7 +1241,8 @@
          end if
          if (use_cache) then
             call cropwofost_init_from_config(crop_config_global%rotation_wofost(icrop), &
-                                             icrop, FraDeceasedLvToSoil)
+                                             icrop, FraDeceasedLvToSoil, state)
+            ! [SS-GR-ATM A5.1] state passed for dual-write of kdif/kdir/swcf/cofab
             ! swhydrlift is read by legacy readwofost only inside swdrought=2
             ! branch (stub-errored in Phase 2). Set to 0 here to mirror the
             ! default.
@@ -2255,6 +2259,7 @@
 ! SS-CRP C-2.5: state added (optional, intent in) to read flWrtNonox.
 ! SS-TC TC-10: t1900,daynr read via state%timecontrol tc_* aliases;
 !   state threaded to sumttd for its own TC reads.
+! SS-GR-ATM A5.1: intent changed inout to allow dual-write in cropgrass_init_from_config.
 ! ----------------------------------------------------------------------
       use variables, dummy_tsoil_gr_ => tsoil
       !! Rename config-staging tsoil to avoid clash with dummy arg tsoil.
@@ -2268,7 +2273,7 @@
 
       implicit none
 
-      type(swap_state_t), intent(in), optional :: state
+      type(swap_state_t), intent(inout), optional :: state
 
       ! Explicit interface for non-module sumttd which now takes tsoil(:)
       ! TC-10: sumttd signature updated to include state for TC reads.
@@ -2386,7 +2391,7 @@
                tagprest       = cfg%tagprest
                swhydrlift     = 0       ! swdrought=2 stub-errored; mirror cropfixed/cropwofost default
                call cropgrass_init_from_config(cfg, icrop, &
-                  state%timecontrol%tend, state%timecontrol%tstart)  ! [SS-BMI2 Task 4]
+                  state%timecontrol%tend, state%timecontrol%tstart, state)  ! [SS-BMI2 Task 4] [SS-GR-ATM A5.1]
             end associate
          else
             ! ADR 0016 cache-miss: typed config required for type=3 rotations.

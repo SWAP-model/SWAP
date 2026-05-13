@@ -14,6 +14,7 @@ subroutine test_cropwofost_init_basic_globals()
    use iso_fortran_env, only: real64
    use cropwofost_config_mod, only: cropwofost_config_t
    use cropwofost_init_mod,   only: cropwofost_init_from_config
+   use swap_state_mod, only: swap_state_t
    use variables, only: swcf, albedo, rsc, rsw, &
                         swoxygen, hlim1, hlim2u, hlim2l, swWrtNonox, aeratecrit, &
                         swdrought, hlim3h, hlim3l, hlim4, adcrh, adcrl, &
@@ -22,6 +23,7 @@ subroutine test_cropwofost_init_basic_globals()
                         swrd, rdi, rri, rdc, swdmi2rd, &
                         relmf, swpotrelmf
    type(cropwofost_config_t) :: cfg
+   type(swap_state_t) :: state  ! [SS-GR-ATM A5.1] dual-write target
    real(real64) :: FraDeceasedLvToSoil
    integer, parameter :: ICROP = 1
 
@@ -67,7 +69,7 @@ subroutine test_cropwofost_init_basic_globals()
    cfg%root%rdctb(1,1) = 0.0_real64; cfg%root%rdctb(1,2) = 1.0_real64
    cfg%root%rdctb(2,1) = 1.0_real64; cfg%root%rdctb(2,2) = 0.0_real64
 
-   call cropwofost_init_from_config(cfg, ICROP, FraDeceasedLvToSoil)
+   call cropwofost_init_from_config(cfg, ICROP, FraDeceasedLvToSoil, state)  ! [SS-GR-ATM A5.1]
 
    ! -- Verify globals --
    @assertEqual(2,            swcf)
@@ -115,8 +117,10 @@ subroutine test_cropwofost_init_cumdens_linear_ramp()
    use iso_fortran_env, only: real64
    use cropwofost_config_mod, only: cropwofost_config_t
    use cropwofost_init_mod,   only: cropwofost_init_from_config
+   use swap_state_mod, only: swap_state_t
    use variables, only: cumdens, swdrought
    type(cropwofost_config_t) :: cfg
+   type(swap_state_t) :: state  ! [SS-GR-ATM A5.1] dual-write target
    real(real64) :: FraDeceasedLvToSoil
    integer, parameter :: ICROP = 1
 
@@ -150,7 +154,7 @@ subroutine test_cropwofost_init_cumdens_linear_ramp()
    cfg%root%rdctb(1,1) = 0.0_real64; cfg%root%rdctb(1,2) = 1.0_real64
    cfg%root%rdctb(2,1) = 1.0_real64; cfg%root%rdctb(2,2) = 0.0_real64
 
-   call cropwofost_init_from_config(cfg, ICROP, FraDeceasedLvToSoil)
+   call cropwofost_init_from_config(cfg, ICROP, FraDeceasedLvToSoil, state)  ! [SS-GR-ATM A5.1]
 
    @assertEqual(1, swdrought)
    ! cumdens(1)=depth at index 1 = 0.0; cumdens(2)=cumulative density at 0.0 = 0.0
@@ -172,8 +176,10 @@ subroutine test_flcropnut_true_propagates_to_global()
    use iso_fortran_env, only: real64
    use cropwofost_config_mod, only: cropwofost_config_t
    use cropwofost_init_mod,   only: cropwofost_init_from_config
+   use swap_state_mod, only: swap_state_t
    use variables, only: flCropNut
    type(cropwofost_config_t) :: cfg
+   type(swap_state_t) :: state  ! [SS-GR-ATM A5.1] dual-write target
    real(real64) :: FraDeceasedLvToSoil
    integer, parameter :: ICROP = 1
 
@@ -226,7 +232,7 @@ subroutine test_flcropnut_true_propagates_to_global()
    ! Pre-set the global to .false. to prove the assignment is doing the work.
    flCropNut = .false.
 
-   call cropwofost_init_from_config(cfg, ICROP, FraDeceasedLvToSoil)
+   call cropwofost_init_from_config(cfg, ICROP, FraDeceasedLvToSoil, state)  ! [SS-GR-ATM A5.1]
 
    @assertTrue(flCropNut)
 end subroutine test_flcropnut_true_propagates_to_global
@@ -241,8 +247,10 @@ subroutine test_flcropnut_false_resets_global()
    use iso_fortran_env, only: real64
    use cropwofost_config_mod, only: cropwofost_config_t
    use cropwofost_init_mod,   only: cropwofost_init_from_config
+   use swap_state_mod, only: swap_state_t
    use variables, only: flCropNut
    type(cropwofost_config_t) :: cfg
+   type(swap_state_t) :: state  ! [SS-GR-ATM A5.1] dual-write target
    real(real64) :: FraDeceasedLvToSoil
    integer, parameter :: ICROP = 1
 
@@ -290,7 +298,7 @@ subroutine test_flcropnut_false_resets_global()
    ! nutrients on. The current rotation must reset it.
    flCropNut = .true.
 
-   call cropwofost_init_from_config(cfg, ICROP, FraDeceasedLvToSoil)
+   call cropwofost_init_from_config(cfg, ICROP, FraDeceasedLvToSoil, state)  ! [SS-GR-ATM A5.1]
 
    @assertFalse(flCropNut)
 end subroutine test_flcropnut_false_resets_global

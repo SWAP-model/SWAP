@@ -3,11 +3,13 @@ subroutine test_cropfixed_init_writes_scalars()
    use funit
    use cropfixed_init_mod, only: cropfixed_init_from_config
    use cropfixed_config_mod, only: cropfixed_config_t
+   use swap_state_mod, only: swap_state_t
    use variables, only: idev, kdif, kdir, hlim3h, hlim3l, hlim4, &
                          adcrh, adcrl, cofab, swgc, swcf, swrd, swoxygen, &
                          swdrought, swsalinity, swcompensate, swinter, &
                          albedo, rsc, rsw
    type(cropfixed_config_t) :: cfg
+   type(swap_state_t) :: state  ! [SS-GR-ATM A5.1] dual-write target
    integer :: lcc_out
    ! Case 6 grass.crp values
    cfg%idev = 1
@@ -32,7 +34,7 @@ subroutine test_cropfixed_init_writes_scalars()
    allocate(cfg%rdctb(4))
    cfg%rdctb = [0.0d0, 1.0d0, 1.0d0, 1.0d0]
 
-   call cropfixed_init_from_config(cfg, 1, lcc_out)
+   call cropfixed_init_from_config(cfg, 1, lcc_out, state)  ! [SS-GR-ATM A5.1] state added
 
    @assertEqual(1,    idev)
    @assertEqual(366,  lcc_out)
@@ -64,8 +66,10 @@ subroutine test_cropfixed_init_cumdens_constant_density()
    use funit
    use cropfixed_init_mod, only: cropfixed_init_from_config
    use cropfixed_config_mod, only: cropfixed_config_t
+   use swap_state_mod, only: swap_state_t
    use variables, only: cumdens
    type(cropfixed_config_t) :: cfg
+   type(swap_state_t) :: state  ! [SS-GR-ATM A5.1] dual-write target
    integer :: lcc_out
    ! Same case-6 fixture: rdctb = [0.0, 1.0, 1.0, 1.0] is a constant
    ! density of 1.0 everywhere. After integration and normalization,
@@ -77,7 +81,7 @@ subroutine test_cropfixed_init_cumdens_constant_density()
    cfg%swdrought = 1
    allocate(cfg%rdctb(4))
    cfg%rdctb = [0.0d0, 1.0d0, 1.0d0, 1.0d0]
-   call cropfixed_init_from_config(cfg, 1, lcc_out)
+   call cropfixed_init_from_config(cfg, 1, lcc_out, state)  ! [SS-GR-ATM A5.1] state added
    ! cumdens(1) = 0.0 (depth at surface)
    @assertEqual(0.0d0,  cumdens(1),   1.0d-12)
    ! cumdens(2) = 0.0 (storage at surface, set explicitly)

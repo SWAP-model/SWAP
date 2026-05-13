@@ -38,7 +38,7 @@ module cropwofost_init_mod
 
 contains
 
-   subroutine cropwofost_init_from_config(cfg, icrop, FraDeceasedLvToSoil)
+   subroutine cropwofost_init_from_config(cfg, icrop, FraDeceasedLvToSoil, state)
       use variables, only: &
          swcf, cftb, chtb, albedo, rsc, rsw,                                &
          idsl, tsumea, tsumam, dlo, dlc, dtsmtb,                            &
@@ -63,11 +63,13 @@ contains
          dvs, tsum, daycrop, nofd, flCropNut
       use array_utils, only: afgen
       use error_mod,   only: fatalerr_collected
+      use swap_state_mod, only: swap_state_t
       implicit none
 
-      type(cropwofost_config_t), intent(in)  :: cfg
-      integer,                   intent(in)  :: icrop  ! rotation slot (reserved)
-      real(real64),              intent(out) :: FraDeceasedLvToSoil
+      type(cropwofost_config_t), intent(in)    :: cfg
+      integer,                   intent(in)    :: icrop  ! rotation slot (reserved)
+      real(real64),              intent(out)   :: FraDeceasedLvToSoil
+      type(swap_state_t),        intent(inout) :: state  ! [SS-GR-ATM A5.1] runtime dual-write target
 
       integer      :: i
       real(real64) :: depth, sum_dens
@@ -117,6 +119,7 @@ contains
 
       ! Part 1: crop factor / crop height (readwofost lines 2588-2637)
       swcf = cfg%crop_factor%swcf
+      state%crop%swcf = swcf   ! [SS-GR-ATM A5.1] runtime dual-write
       if (swcf == 1) then
          if (allocated(cfg%crop_factor%cftb)) then
             block
@@ -152,7 +155,10 @@ contains
 
       ! Part 14: interception (readwofost line 2640-2642)
       swinter = cfg%interception%swinter
-      if (swinter == 1) cofab = cfg%interception%cofab
+      if (swinter == 1) then
+         cofab = cfg%interception%cofab
+         state%crop%cofab = cofab   ! [SS-GR-ATM A5.1] runtime dual-write
+      end if
 
       ! Part 2: phenology (soybean=0 path; readwofost lines 2712-2721)
       idsl   = cfg%phenology%idsl
@@ -198,6 +204,8 @@ contains
       ! Part 5: assimilation (readwofost lines 2764-2769)
       kdif = cfg%assimilation%kdif
       kdir = cfg%assimilation%kdir
+      state%crop%kdif = kdif   ! [SS-GR-ATM A5.1] runtime dual-write
+      state%crop%kdir = kdir   ! [SS-GR-ATM A5.1] runtime dual-write
       eff  = cfg%assimilation%eff
       if (allocated(cfg%assimilation%amaxtb)) then
          block
