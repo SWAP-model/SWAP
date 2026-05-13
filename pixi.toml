@@ -50,6 +50,20 @@ regression = { cmd = "python tests/regression/test_output_regression.py", depend
 check-fast = { cmd = "python tests/regression/test_output_regression.py hupselbrook surfacewater salinitystress grassgrowth", depends-on = ["build-linux", "test-pfunit"] }
 check-full = { cmd = "python tests/regression/test_output_regression.py", depends-on = ["build-linux", "test-pfunit"] }
 
+#============================================================================
+# CFFI / BMI TEST TASKS — exercise the Python-callable C ABI.
+#
+# test-bmi      : SS-DRV Phase 1 hello-world — initialize / update / finalize
+#                  via cffi + a couple of get_value_double calls.
+# test-cffi-demo: SS-BMI2 Phase 2 end-to-end demo — in-memory TOML config,
+#                  headless mode, swap_view_array zero-copy, water-balance
+#                  struct readout. Hupselbrook case, ~30k update steps.
+# test-all      : convenience — pFUnit + bmi + cffi-demo + four-case regression.
+#============================================================================
+test-bmi       = { cmd = "meson test -C builddir --suite bmi --verbose", depends-on = ["build-linux"] }
+test-cffi-demo = { cmd = "meson test -C builddir --suite cffi-demo --verbose", depends-on = ["build-linux"] }
+test-all       = { cmd = "python tests/regression/test_output_regression.py hupselbrook surfacewater salinitystress grassgrowth", depends-on = ["build-linux", "test-pfunit", "test-bmi", "test-cffi-demo"] }
+
 # ---- Documentation Feature ----
 [feature.docs.dependencies]
 ford = ">=7.0"
