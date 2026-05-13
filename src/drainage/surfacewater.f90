@@ -190,7 +190,7 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
 ! === surface water balance ========================
 
       if (swsrf .eq. 3) then
-        wlp = afgen (wlptab,2*mawlp,tc_t1900-1.0d0+tc_dt)  ! [TC-8]
+        state%surfacewater%wlp = afgen (wlptab,2*mawlp,tc_t1900-1.0d0+tc_dt)  ! [TC-8]
       endif
       if (swsec.eq.2) then
 ! ---    water level of secondary system is simulated
@@ -511,7 +511,8 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
 
 ! --- interpolate QH table
               ! SS-SWST Phase 2 Task 11: pass imper explicitly (no longer a global).
-              discap = qhtab(sw_wlstar, imper)
+              ! GR-UTILS Task 12: pass state%surfacewater as first arg.
+              discap = qhtab(state%surfacewater, sw_wlstar, imper)
             endif
             if (discap .gt. wdis) then
               sw_wls = sw_wlstar
@@ -553,7 +554,8 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
               wdisi = alphaw(imper)*(wlsi-hbweir(imper))**betaw(imper)
             else
               ! SS-SWST Phase 2 Task 11: pass imper explicitly (no longer a global).
-              wdisi = qhtab(wlsi, imper)
+              ! GR-UTILS Task 12: pass state%surfacewater as first arg.
+              wdisi = qhtab(state%surfacewater, wlsi, imper)
             endif
             swstn = sw_swst + (state%drainage%qdrd + QRapDra - wdisi)*tc_dt + state%soilwater%runots  ! [TC-8]
             if (swstn .lt. swsti) then

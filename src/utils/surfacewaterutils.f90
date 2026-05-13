@@ -13,12 +13,12 @@ module surfacewater_utils
    ! SS-SWST Phase 2 Task 11: imper removed from globals; callers pass it explicitly.
    ! SS-SWC Phase 2 S-2.8: pond removed from use-list; read from state%soilwater%pond in runoff().
    ! SS-TC TC-12: dt retired from only-list; read via state%timecontrol in runoff().
-   use variables, only: hqhtab, qqhtab, swdra, pondmx, rsro, rsroexp
+   ! GR-UTILS Task 12: hqhtab, qqhtab, swdra, pondmx, rsro, rsroexp read from state%surfacewater.
    use swap_state_mod, only: swap_state_t
    ! swstlev_from_table is defined in surfacewater_state_mod to avoid a
    ! circular dependency (this module already pulls in swap_state_mod,
    ! which transitively depends on surfacewater_state_mod).
-   use surfacewater_state_mod, only: swstlev_from_table
+   use surfacewater_state_mod, only: surfacewater_state_t, swstlev_from_table
 
    implicit none
 
@@ -117,12 +117,14 @@ contains
    !! Different periods can have different level-discharge relationships.
    !!@endnote
    ! SS-SWST Phase 2 Task 11: imper_in passed explicitly (imper removed from globals).
-   function qhtab(wlev, imper_in)
+   ! GR-UTILS Task 12: state_sw arg added; hqhtab/qqhtab read from state_sw.
+   function qhtab(state_sw, wlev, imper_in)
       implicit none
 
       ! Arguments
-      real(real64), intent(in) :: wlev
-      integer,      intent(in) :: imper_in
+      type(surfacewater_state_t), intent(in) :: state_sw
+      real(real64),               intent(in) :: wlev
+      integer,                    intent(in) :: imper_in
       real(real64) :: qhtab
 
       ! Local variables
@@ -130,12 +132,12 @@ contains
       real(real64) :: dwl
 
       itab = 2
-      do while (wlev < hqhtab(imper_in,itab))
+      do while (wlev < state_sw%hqhtab(imper_in,itab))
          itab = itab + 1
       end do
 
-      dwl = (wlev - hqhtab(imper_in,itab)) / (hqhtab(imper_in,itab-1) - hqhtab(imper_in,itab))
-      qhtab = qqhtab(imper_in,itab) + dwl * (qqhtab(imper_in,itab-1) - qqhtab(imper_in,itab))
+      dwl = (wlev - state_sw%hqhtab(imper_in,itab)) / (state_sw%hqhtab(imper_in,itab-1) - state_sw%hqhtab(imper_in,itab))
+      qhtab = state_sw%qqhtab(imper_in,itab) + dwl * (state_sw%qqhtab(imper_in,itab-1) - state_sw%qqhtab(imper_in,itab))
 
    end function qhtab
 
@@ -182,27 +184,32 @@ contains
       real(real64) :: inun_max
 
       ! SS-TC TC-12: dt read via state%timecontrol tc_* alias.
-      associate(tc_dt   => state%timecontrol%dt,      &  ! TC-12
-                sw_wls  => state%surfacewater%wls,   &
-                sw_swst => state%surfacewater%swst,  &
+      ! GR-UTILS Task 12: swdra, pondmx, rsro, rsroexp read from state%surfacewater.
+      associate(tc_dt    => state%timecontrol%dt,              &  ! TC-12
+                sw_wls   => state%surfacewater%wls,            &
+                sw_swst  => state%surfacewater%swst,           &
+                sw_swdra => state%surfacewater%swdra,          &
+                sw_pondmx => state%surfacewater%pondmx,        &
+                sw_rsro  => state%surfacewater%rsro,           &
+                sw_rsroexp => state%surfacewater%rsroexp,      &
                 ! SS-SWC Phase 2 S-2.8: pond read from state%soilwater
-                pond    => state%soilwater%pond)
+                pond     => state%soilwater%pond)
 
       runoff = 0.0_real64
 
-      if (pond - pondmx > 0.0_real64 .and. swdra /= 2) then
-         if (rsro < 1.0d-3) then
-            runoff = pond - pondmx
+      if (pond - sw_pondmx > 0.0_real64 .and. sw_swdra /= 2) then
+         if (sw_rsro < 1.0d-3) then
+            runoff = pond - sw_pondmx
          else
-            runoff = tc_dt / rsro * (pond - pondmx)**rsroexp  ! TC-12
+            runoff = tc_dt / sw_rsro * (pond - sw_pondmx)**sw_rsroexp  ! TC-12
          end if
 
-      else if (swdra == 2) then
-         if (pond > pondmx .and. pond > sw_wls) then
-            runoff = tc_dt / rsro * (pond - max(pondmx, sw_wls))**rsroexp  ! TC-12
+      else if (sw_swdra == 2) then
+         if (pond > sw_pondmx .and. pond > sw_wls) then
+            runoff = tc_dt / sw_rsro * (pond - max(sw_pondmx, sw_wls))**sw_rsroexp  ! TC-12
          else if (pond < sw_wls) then
             inun_max = sw_swst - swstlev(state, pond)
-            runoff = -min(inun_max, sw_wls - max(pond, pondmx))
+            runoff = -min(inun_max, sw_wls - max(pond, sw_pondmx))
          end if
       end if
 
