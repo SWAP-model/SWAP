@@ -13,7 +13,8 @@
       implicit none
 
       integer task
-      type(swap_state_t), intent(in) :: state
+      ! [SS-BMI2] inout: init/cleanup of water_balance_row buffer
+      type(swap_state_t), intent(inout) :: state
 
       select case (task)
       case (1)
@@ -21,12 +22,16 @@
 ! === open output files ===============================
 ! ADR 0009 Phase 5+: outbal / outblc deleted (swbal=0, swblc=0).
 
+         ! [SS-BMI2] allocate water balance row buffer (builder always runs)
+         call init_water_balance_buffer(state)
+
          return
 
       case (2)
 
 ! ===    write actual data ===============================
 ! ADR 0009 Phase 5+: outbal / outblc deleted (swbal=0, swblc=0).
+! [SS-BMI2] build_water_balance_row is called from outinc(2) which owns the data.
 
       return
 
@@ -38,6 +43,9 @@
 ! ---    final message log file
          write(logf,'(/,a)') ' Swap simulation okay!'
          close (logf)
+
+         ! [SS-BMI2] deallocate water balance row buffer
+         call cleanup_water_balance_buffer(state)
 
       case default
          call fatalerr_collected ('SWAPoutput', 'Illegal value for Task')
@@ -119,7 +127,10 @@
 ! --     user-defined variables in CSV file
          if (swcsv_tz == 1) call csv_out_tz(3, state)        ! csv_write_tz(3)
 
-         close (inc)
+         ! [SS-BMI2] headless guard: .inc file was only opened when not headless
+         if (.not. state%timecontrol%headless) then
+            if (swinc.eq.1) close (inc)
+         end if
 
 ! --     special output for RUME project
          if (swrum == 1) call outrume (3, state)
@@ -143,6 +154,7 @@
       ! SS-ATM A-2.5: ssnow,snowinco removed from only-list; reads via state%atmosphere.
       ! SS-SWC S-2.11: gwl,pond,volact,volini,PondIni,iqbot,iqrot,igird,iintc,irunon,iruno,irunoCN removed; reads via state%soilwater.
       ! SS-TC TC-7: daynr,daycum,t1900,date,flheader,flprintshort removed from only-list; reads via state%timecontrol.
+      ! [SS-BMI2] inout: build_water_balance_row writes to state%water_balance_row
       use variables, only: inc,iQMpOutDrRap,outfil,pathwork,project
       use swap_state_mod, only: swap_state_t
       use file_io_mod, only: file_open
@@ -150,7 +162,7 @@
 
 ! --- global
       integer   task
-      type(swap_state_t), intent(in) :: state
+      type(swap_state_t), intent(inout) :: state
 
 ! --- local
       real(8)  baldev,dstor
@@ -170,18 +182,20 @@
 
       ! SS-TC TC-7: t1900 = t1900 no-op removed; t1900 now via state%timecontrol%t1900.
 
-! --- open output file once
-      filnam = trim(pathwork)//trim(outfil)//'.inc'
-      call file_open(inc,filnam,'replace','write')
-      filtext = 'water balance increments (cm/day)'
-      call writehead (inc,1,filnam,filtext,project)
+! --- open output file once (headless: skip file I/O, buffer already init by SwapOutput(1))
+      if (.not. state%timecontrol%headless) then
+         filnam = trim(pathwork)//trim(outfil)//'.inc'
+         call file_open(inc,filnam,'replace','write')
+         filtext = 'water balance increments (cm/day)'
+         call writehead (inc,1,filnam,filtext,project)
 
 ! --- write header of inc file
-      if (state%timecontrol%flprintshort) then  ! TC-7
-        write (inc,10)
-      else
-        write (inc,12)
-      endif
+         if (state%timecontrol%flprintshort) then  ! TC-7
+           write (inc,10)
+         else
+           write (inc,12)
+         endif
+      end if
   10  format('*',/,                                                     &
      & '      Date,    Time,Day,  Dcum,      Rain,     Snow,',          &
      & '      Irrig,    Interc,     Runon,    Runoff,      Tpot,',      &
@@ -236,38 +250,47 @@
         sw_iqrot  => state%soilwater%iqrot,  &
         sw_iqbot  => state%soilwater%iqbot   &
       )
-      if (tc_flheader) then
-        if (tc_flprintshort) then
-          write (inc,10)
-        else
-          write (inc,12)
-        endif
-      endif
 
-! --- determine date and date-time
-      call dtdpst ('year-month-day,hour:minute:seconds',tc_t1900,datexti)  ! TC-7
-
-! --- write output record .inc file
-      gwlout = "          "
-      if (sw_gwl.lt.998.0d0)  write(gwlout,'(f9.1)') sw_gwl
+! --- compute derived terms (always, for state buffer)
       dstor = (sw_volact + sw_pond + at_ssnow) - (VolOld + PondOld + SnowOld)
       baldev = (at_igrai+at_isnrai+at_igsnow+sw_igird+sw_irunon) - dstor -    &
      & (sw_iintc+sw_iruno+sw_irunoCN+sw_iqrot+at_ievap+at_isubl+iQMpOutDrRap+state%surfacewater%iqdra+(-1.0d0*sw_iqbot))
-      if (tc_flprintshort) then
-        write (inc,20) datexti,comma,tc_daynr,comma,tc_daycum,comma,     &
-     &    at_igrai+at_isnrai,comma,at_igsnow,comma,sw_igird,comma,sw_iintc, &
-     &    comma,sw_irunon,comma,sw_iruno+sw_irunoCN,comma,at_iptra,comma,sw_iqrot, &
-     &    comma,at_ipeva,comma,at_ievap,comma,                           &
-     &    (iQMpOutDrRap+state%surfacewater%iqdra),comma,sw_iqbot,&
-     &    comma,gwlout,comma,dstor,comma,baldev            !comma,storage
-      else
-        write (inc,22) tc_date,comma,tc_daynr,comma,tc_daycum,comma,     &
-     &    at_igrai+at_isnrai,comma,at_igsnow,comma,sw_igird,comma,sw_iintc, &
-     &    comma,sw_irunon,comma,sw_iruno+sw_irunoCN,comma,at_iptra,comma,sw_iqrot, &
-     &    comma,at_ipeva,comma,at_ievap,comma,                           &
-     &    (iQMpOutDrRap+state%surfacewater%iqdra),comma,sw_iqbot,&
-     &    comma,gwlout,comma,dstor,comma,baldev           !comma,storage
-      endif
+
+! --- [SS-BMI2] build water balance row into state buffer (always runs, headless-independent)
+      call build_water_balance_row(state, dstor, baldev)
+
+! --- write to .inc file (headless: skip)
+      if (.not. state%timecontrol%headless) then
+         if (tc_flheader) then
+           if (tc_flprintshort) then
+             write (inc,10)
+           else
+             write (inc,12)
+           endif
+         endif
+
+! --- determine date and date-time
+         call dtdpst ('year-month-day,hour:minute:seconds',tc_t1900,datexti)  ! TC-7
+
+! --- write output record .inc file
+         gwlout = "          "
+         if (sw_gwl.lt.998.0d0)  write(gwlout,'(f9.1)') sw_gwl
+         if (tc_flprintshort) then
+           write (inc,20) datexti,comma,tc_daynr,comma,tc_daycum,comma,     &
+     &       at_igrai+at_isnrai,comma,at_igsnow,comma,sw_igird,comma,sw_iintc, &
+     &       comma,sw_irunon,comma,sw_iruno+sw_irunoCN,comma,at_iptra,comma,sw_iqrot, &
+     &       comma,at_ipeva,comma,at_ievap,comma,                           &
+     &       (iQMpOutDrRap+state%surfacewater%iqdra),comma,sw_iqbot,&
+     &       comma,gwlout,comma,dstor,comma,baldev            !comma,storage
+         else
+           write (inc,22) tc_date,comma,tc_daynr,comma,tc_daycum,comma,     &
+     &       at_igrai+at_isnrai,comma,at_igsnow,comma,sw_igird,comma,sw_iintc, &
+     &       comma,sw_irunon,comma,sw_iruno+sw_irunoCN,comma,at_iptra,comma,sw_iqrot, &
+     &       comma,at_ipeva,comma,at_ievap,comma,                           &
+     &       (iQMpOutDrRap+state%surfacewater%iqdra),comma,sw_iqbot,&
+     &       comma,gwlout,comma,dstor,comma,baldev           !comma,storage
+         endif
+      end if
  20   format (a19,a1,i3,a1,i6,12(a1,f10.5),2a,2(a1,f10.5))     !,(a1,e12.5)
  22   format (a11,a1,i3,a1,i6,12(a1,f10.5),2a,2(a1,f10.5))     !,(a1,e12.5)
 
@@ -283,6 +306,101 @@
       return
       end
 
+
+! ----------------------------------------------------------------------
+! [SS-BMI2] Water balance buffer helpers (canonical output-sink pattern)
+! These four subroutines are the canonical template for Tasks 9-15.
+! ----------------------------------------------------------------------
+
+      subroutine init_water_balance_buffer(state)
+! ----------------------------------------------------------------------
+!     Allocate state%water_balance_row and set column names.
+!     Called from SwapOutput(1) — always runs, headless-independent.
+!     N_COLS = 18: t1900(date), daynr, daycum, rain, snow, irrig,
+!                  interc, runon, runoff, tpot, tact, epot, eact,
+!                  drainage, qbottom, gwl, dstorage, baldev
+! ----------------------------------------------------------------------
+      use swap_state_mod, only: swap_state_t
+      use iso_c_binding,  only: c_double
+      implicit none
+      type(swap_state_t), intent(inout) :: state
+      integer, parameter :: N = 18
+
+      state%water_balance_n_cols = N
+      if (.not. allocated(state%water_balance_row))     allocate(state%water_balance_row(N))
+      if (.not. allocated(state%water_balance_columns)) allocate(state%water_balance_columns(N))
+      state%water_balance_row     = 0.0_c_double
+      state%water_balance_columns(1)  = 'date'
+      state%water_balance_columns(2)  = 'day'
+      state%water_balance_columns(3)  = 'dcum'
+      state%water_balance_columns(4)  = 'rain'
+      state%water_balance_columns(5)  = 'snow'
+      state%water_balance_columns(6)  = 'irrig'
+      state%water_balance_columns(7)  = 'interc'
+      state%water_balance_columns(8)  = 'runon'
+      state%water_balance_columns(9)  = 'runoff'
+      state%water_balance_columns(10) = 'tpot'
+      state%water_balance_columns(11) = 'tact'
+      state%water_balance_columns(12) = 'epot'
+      state%water_balance_columns(13) = 'eact'
+      state%water_balance_columns(14) = 'drainage'
+      state%water_balance_columns(15) = 'qbottom'
+      state%water_balance_columns(16) = 'gwl'
+      state%water_balance_columns(17) = 'dstorage'
+      state%water_balance_columns(18) = 'baldev'
+      end subroutine init_water_balance_buffer
+
+
+      subroutine build_water_balance_row(state, dstor, baldev)
+! ----------------------------------------------------------------------
+!     Fill state%water_balance_row(:) with the daily water balance values.
+!     Called from outinc(2) — always runs, headless-independent.
+!     Column order matches init_water_balance_buffer column names exactly.
+! ----------------------------------------------------------------------
+      use swap_state_mod, only: swap_state_t
+      use variables,      only: iQMpOutDrRap
+      use iso_c_binding,  only: c_double
+      implicit none
+      type(swap_state_t), intent(inout) :: state
+      real(8), intent(in) :: dstor, baldev
+
+      state%water_balance_row(1)  = real(state%timecontrol%t1900,       c_double)  ! date (days since 1900-01-01)
+      state%water_balance_row(2)  = real(state%timecontrol%daynr,       c_double)  ! day of year
+      state%water_balance_row(3)  = real(state%timecontrol%daycum,      c_double)  ! cumulative day
+      state%water_balance_row(4)  = real(state%atmosphere%intr%igrai  + &
+                                         state%atmosphere%intr%isnrai, c_double)  ! rain (gross + snow rain)
+      state%water_balance_row(5)  = real(state%atmosphere%intr%igsnow,  c_double)  ! snow
+      state%water_balance_row(6)  = real(state%soilwater%igird,         c_double)  ! irrig
+      state%water_balance_row(7)  = real(state%soilwater%iintc,         c_double)  ! interc
+      state%water_balance_row(8)  = real(state%soilwater%irunon,        c_double)  ! runon
+      state%water_balance_row(9)  = real(state%soilwater%iruno        + &
+                                         state%soilwater%irunoCN,      c_double)  ! runoff
+      state%water_balance_row(10) = real(state%atmosphere%intr%iptra,   c_double)  ! tpot
+      state%water_balance_row(11) = real(state%soilwater%iqrot,         c_double)  ! tact
+      state%water_balance_row(12) = real(state%atmosphere%intr%ipeva,   c_double)  ! epot
+      state%water_balance_row(13) = real(state%atmosphere%intr%ievap,   c_double)  ! eact
+      state%water_balance_row(14) = real(iQMpOutDrRap                 + &
+                                         state%surfacewater%iqdra,     c_double)  ! drainage
+      state%water_balance_row(15) = real(state%soilwater%iqbot,         c_double)  ! qbottom
+      state%water_balance_row(16) = real(state%soilwater%gwl,           c_double)  ! gwl (999.0 when not simulated)
+      state%water_balance_row(17) = real(dstor,                          c_double)  ! dstorage
+      state%water_balance_row(18) = real(baldev,                         c_double)  ! baldev
+      end subroutine build_water_balance_row
+
+
+      subroutine cleanup_water_balance_buffer(state)
+! ----------------------------------------------------------------------
+!     Deallocate state%water_balance_row and reset counter.
+!     Called from SwapOutput(3) — always runs, headless-independent.
+! ----------------------------------------------------------------------
+      use swap_state_mod, only: swap_state_t
+      implicit none
+      type(swap_state_t), intent(inout) :: state
+
+      if (allocated(state%water_balance_row))     deallocate(state%water_balance_row)
+      if (allocated(state%water_balance_columns)) deallocate(state%water_balance_columns)
+      state%water_balance_n_cols = 0
+      end subroutine cleanup_water_balance_buffer
 
 
 ! ----------------------------------------------------------------------

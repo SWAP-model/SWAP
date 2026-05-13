@@ -8,14 +8,15 @@
 !! replacing the implicit shared state held in `variables.f90`.
 
 module swap_state_mod
-   use surfacewater_state_mod, only: surfacewater_state_t
-   use drainage_state_mod,     only: drainage_state_t
-   use solute_state_mod,       only: solute_state_t
-   use heat_state_mod,         only: heat_state_t
-   use soilwater_state_mod,    only: soilwater_state_t
-   use atmosphere_state_mod,   only: atmosphere_state_t
-   use tillage_state_mod,      only: tillage_state_t
-   use timecontrol_state_mod,  only: timecontrol_state_t
+   use iso_c_binding,           only: c_double
+   use surfacewater_state_mod,  only: surfacewater_state_t
+   use drainage_state_mod,      only: drainage_state_t
+   use solute_state_mod,        only: solute_state_t
+   use heat_state_mod,          only: heat_state_t
+   use soilwater_state_mod,     only: soilwater_state_t
+   use atmosphere_state_mod,    only: atmosphere_state_t
+   use tillage_state_mod,       only: tillage_state_t
+   use timecontrol_state_mod,   only: timecontrol_state_t
    implicit none
    private
    public :: swap_state_t
@@ -29,6 +30,11 @@ module swap_state_mod
       type(atmosphere_state_t)   :: atmosphere
       type(tillage_state_t)      :: tillage
       type(timecontrol_state_t)  :: timecontrol
+
+      ! [SS-BMI2] water balance output stream (was: written directly to .inc from outinc)
+      real(c_double),    allocatable :: water_balance_row(:)
+      character(len=32), allocatable :: water_balance_columns(:)
+      integer                        :: water_balance_n_cols = 0
    end type swap_state_t
 
 end module swap_state_mod
