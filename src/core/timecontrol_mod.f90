@@ -304,7 +304,6 @@ contains
                             flCropHarvest, flCropOutput, croptype, &
                             raintimearray, dtEventRain, dt_SSDI_event, flSSDI, &
                             numbit, MaxIt, icrop
-      use timestep_control_mod, only: fldecdt
       use irrigation_mod, only: SSDI_irrigation
       use error_mod, only: fatalerr_collected
       implicit none
