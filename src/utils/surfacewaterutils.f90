@@ -84,25 +84,13 @@ contains
    end function wlevst
 
 
-   !> Calculate surface water storage from surface water level
+   !> Calculate surface water storage from surface water level — thin wrapper
+   !! over [[swstlev_from_table]] that accepts a full `swap_state_t` and pulls
+   !! `state%surfacewater%sttab` from it. Canonical implementation lives in
+   !! `surfacewater_state_mod` (see `swstlev_from_table` for the table-lookup
+   !! algorithm, bounds-check semantics, and the inverse-of-[[wlevst]] note).
    !!
-   !! This function performs linear interpolation in the level-storage table (`sttab`)
-   !! to determine the storage amount corresponding to a given water level.
-   !!
-      !! Called from: surfacewater.f90, readswap.f90
-   !!### Algorithm
-   !!
-   !! 1. Check if level is within valid table range
-   !! 2. Search through table to find bounding entries
-   !! 3. Linear interpolation: \( st = st_i + \frac{wl - wl_i}{wl_{i+1} - wl_i} \cdot (st_{i+1} - st_i) \)
-   !!
-   !!@note
-   !! This is the inverse operation of [[wlevst]].
-   !!@endnote
-   !!
-   !!@warning
-   !! Function terminates with fatal error if water level is outside table bounds.
-   !!@endwarning
+   !! Called from: surfacewater.f90 (compute paths that already have full state).
    function swstlev(state, wlev) result(swstlev_r)
       implicit none
       type(swap_state_t), intent(in) :: state
