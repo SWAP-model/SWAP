@@ -59,7 +59,9 @@ contains
                             dz, z, disnod, ztopcp, zbotcp, layer, &
                             ksatexm, ksatfit, cofani, flksatexm, &
                             orgmat, psand, psilt, pclay, &
-                            swbotb
+                            swbotb, &
+                            nrlevs, swdivd, swnrsrf, swtopnrsrf, swdivdinf, FacDpthInf, &
+                            L, zbotdr, owltab, nowltab
       use soilwater_state_mod, only: soilwater_init
       use atmosphere_state_mod, only: atmosphere_init
       use tillage_state_mod, only: tillage_init
@@ -179,6 +181,19 @@ contains
 !  (dramet==2) without reading the now-deleted legacy global wetper.
 !  ADR 0031 Phase 2 Task 5: drainl/wetper/ztopdislay/qdrd globals deleted.
    call drainage_init(state, config)
+   ! [SS-GR-BH A9] dual-write: state%drainage geometry + switches
+   state%drainage%nrlevs     = nrlevs
+   state%drainage%swdivd     = swdivd
+   state%drainage%swnrsrf    = swnrsrf
+   state%drainage%swtopnrsrf = swtopnrsrf
+   state%drainage%swdivdinf  = swdivdinf
+   state%drainage%FacDpthInf = FacDpthInf
+   ! L and zbotdr: legacy arrays are Madr(=5)-sized, state arrays are nrlevs-sized (nrlevs <= Madr).
+   state%drainage%L(:)      = L(1:size(state%drainage%L))
+   state%drainage%zbotdr(:) = zbotdr(1:size(state%drainage%zbotdr))
+   ! owltab: legacy is (Madr, 2*maowl) 2D; state is 1D(nrlevs) stub.
+   ! Copy first time-value per level as a Phase A placeholder; full 2D migration deferred.
+   state%drainage%owltab(:) = owltab(1:size(state%drainage%owltab), 1)
    if (flSolute) call solute_init(state)   ! SS-SLST Phase 2 Task 7: seed state%solute from config-populated globals
 
 !  initialize SurfaceWater management variables
