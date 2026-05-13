@@ -204,17 +204,89 @@ contains
       ierr = 0
    end function swap_get_water_balance
 
+   !----------------------------------------------------------------------
+   ! Task 22: swap_get_output_row — 9-stream dispatch
+   !----------------------------------------------------------------------
+
    function swap_get_output_row(stream, row_ptr, names_ptr, n) result(ierr) &
             bind(C, name='swap_get_output_row')
       character(kind=c_char), intent(in)  :: stream(*)
       type(c_ptr),            intent(out) :: row_ptr, names_ptr
       integer(c_int),         intent(out) :: n
       integer(c_int)                      :: ierr
-      ! [SS-BMI2 Task 22]
-      ierr = 1
-      row_ptr = c_null_ptr
+      character(len=32) :: f_stream
+      call c_to_f_string(stream, f_stream)
+      ierr = 0
+      row_ptr   = c_null_ptr
       names_ptr = c_null_ptr
-      n = 0
+      n         = 0
+      select case (trim(f_stream))
+      case ('swap_balance')
+         if (.not. allocated(capi_state%water_balance_row)) then
+            ierr = 2; return
+         end if
+         row_ptr   = c_loc(capi_state%water_balance_row(1))
+         names_ptr = c_loc(capi_state%water_balance_columns(1))
+         n         = capi_state%water_balance_n_cols
+      case ('soilwater')
+         if (.not. allocated(capi_state%soilwater%output_row)) then
+            ierr = 2; return
+         end if
+         row_ptr   = c_loc(capi_state%soilwater%output_row(1))
+         names_ptr = c_loc(capi_state%soilwater%output_columns(1))
+         n         = capi_state%soilwater%output_n_cols
+      case ('temperature')
+         if (.not. allocated(capi_state%heat%output_row)) then
+            ierr = 2; return
+         end if
+         row_ptr   = c_loc(capi_state%heat%output_row(1))
+         names_ptr = c_loc(capi_state%heat%output_columns(1))
+         n         = capi_state%heat%output_n_cols
+      case ('solute')
+         if (.not. allocated(capi_state%solute%output_row)) then
+            ierr = 2; return
+         end if
+         row_ptr   = c_loc(capi_state%solute%output_row(1))
+         names_ptr = c_loc(capi_state%solute%output_columns(1))
+         n         = capi_state%solute%output_n_cols
+      case ('agetracer')
+         if (.not. allocated(capi_state%solute%agetracer_row)) then
+            ierr = 2; return
+         end if
+         row_ptr   = c_loc(capi_state%solute%agetracer_row(1))
+         names_ptr = c_loc(capi_state%solute%agetracer_columns(1))
+         n         = capi_state%solute%agetracer_n_cols
+      case ('snow')
+         if (.not. allocated(capi_state%atmosphere%snow_output_row)) then
+            ierr = 2; return
+         end if
+         row_ptr   = c_loc(capi_state%atmosphere%snow_output_row(1))
+         names_ptr = c_loc(capi_state%atmosphere%snow_output_columns(1))
+         n         = capi_state%atmosphere%snow_output_n_cols
+      case ('surfacewater')
+         if (.not. allocated(capi_state%surfacewater%output_row)) then
+            ierr = 2; return
+         end if
+         row_ptr   = c_loc(capi_state%surfacewater%output_row(1))
+         names_ptr = c_loc(capi_state%surfacewater%output_columns(1))
+         n         = capi_state%surfacewater%output_n_cols
+      case ('crop')
+         if (.not. allocated(capi_state%crop_output_row)) then
+            ierr = 2; return
+         end if
+         row_ptr   = c_loc(capi_state%crop_output_row(1))
+         names_ptr = c_loc(capi_state%crop_output_columns(1))
+         n         = capi_state%crop_output_n_cols
+      case ('tillage')
+         if (.not. allocated(capi_state%tillage%output_row)) then
+            ierr = 2; return
+         end if
+         row_ptr   = c_loc(capi_state%tillage%output_row(1))
+         names_ptr = c_loc(capi_state%tillage%output_columns(1))
+         n         = capi_state%tillage%output_n_cols
+      case default
+         ierr = 1
+      end select
    end function swap_get_output_row
 
 end module swap_capi_mod
