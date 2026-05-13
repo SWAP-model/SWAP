@@ -103,7 +103,7 @@ contains
          ! === snow pack rate and state variables ===============================
 
          ! --- reset intermediate snow states
-         if (flzerointr) then
+         if (state%timecontrol%flZeroIntr) then
             at_igsnow = 0.0_real64
             at_isubl  = 0.0_real64
             at_isnrai = 0.0_real64
@@ -111,7 +111,7 @@ contains
          end if
 
          ! --- reset cumulative snow states
-         if (flzerocumu) then
+         if (state%timecontrol%flZeroCumu) then
             at_cgsnow   = 0.0_real64
             at_csubl    = 0.0_real64
             at_csnrai   = 0.0_real64
