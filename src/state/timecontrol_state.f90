@@ -1,7 +1,7 @@
 !> @file timecontrol_state.f90
 !! Typed state record for the TimeControl subsystem (ADR 0041, Task TC-1).
 !!
-!! Holds 61 runtime-state fields owned by timecontrol.f90 and IterTime:
+!! Holds 63 runtime-state fields owned by timecontrol.f90 and IterTime:
 !!
 !!   Group C — 16 runtime clock + calendar scalars:
 !!     Real(8): t, t1900, tcum, timjan1
@@ -19,7 +19,7 @@
 !!              ioutdatint, rainrec, wrecord
 !!     Logical: flTnext
 !!
-!!   Group E — 26 runtime-evaluated boolean flags:
+!!   Group E — 28 runtime-evaluated boolean flags:
 !!     per-step / per-day: flDayStart, flDayEnd, flRunEnd, flYearStart,
 !!       floutputshort, floutput, flbaloutput, flheader, flheadirg,
 !!       flIrg1Start, flUpdMetDet, fldecdtmin, fldtmin, fldtreduce
@@ -27,6 +27,8 @@
 !!       flprintshort, flmetdetail, flmeteodt, flrainintens, fletsine,
 !!       flSnow, flDrain, flSurfaceWater, flTemperature, flSolute,
 !!       flIrrigate, flOpenFileDev
+!!     cross-subsystem reset gates (migrated from variables.f90):
+!!       flZeroIntr, flZeroCumu
 !!
 !! No timecontrol_init routine — init happens inline in TimeControl(case=1)
 !! (D4 from design doc). Type aggregated under swap_state_t as
@@ -125,7 +127,7 @@ module timecontrol_state_mod
       real(real64) :: outper = 0.0_real64  !! length of actual output interval (d)
 
       ! -----------------------------------------------------------------------
-      ! Group E — Runtime-evaluated boolean flags (26 fields)
+      ! Group E — Runtime-evaluated boolean flags (28 fields)
       ! -----------------------------------------------------------------------
 
       ! Per-step flags (flipped by TimeControl each step/day)
@@ -163,6 +165,14 @@ module timecontrol_state_mod
       logical :: flSolute       = .false.  !! solute module active
       logical :: flIrrigate     = .false.  !! fixed irrigation active (swirfix==1)
       logical :: flOpenFileDev  = .false.  !! developer output file open flag
+
+      ! [SS-TCM] cross-subsystem reset gates (migrated from variables.f90)
+      ! Owned by TimeControl; consumed by 8 physics readers. Reset
+      ! cadence: flZeroIntr clears intermediate accumulators; flZeroCumu
+      ! clears cumulative accumulators. See design spec
+      ! 2026-05-13-timecontrol-modernization-design.md.
+      logical :: flZeroIntr     = .false.  !! reset gate: intermediate accumulators
+      logical :: flZeroCumu     = .false.  !! reset gate: cumulative accumulators
 
    end type timecontrol_state_t
 
