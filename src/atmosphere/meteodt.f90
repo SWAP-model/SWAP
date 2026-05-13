@@ -359,7 +359,11 @@ contains
    subroutine ProcessMeteoTsteps(state)
       ! SS-TC TC-9: flrainintens,tcum,dt,flmetdetail,flUpdMetDet removed from bare use variables;
       !             reads/writes via state%timecontrol.
-      use variables
+      ! [SS-GR-ATM B28] bare use variables replaced with narrow only: list.
+      !   Migrated reads: tpot/epot/grain/nrain → state%atmosphere%X (pure reads, no dual-write needed).
+      !   DEFERRED: finterception, dtEventRain, rainfluxarray, raintimearray — not yet in state schema
+      !             (Arc 8 candidate).
+      use variables, only: finterception, dtEventRain, rainfluxarray, raintimearray
       use et_mod, only: reduceva
       implicit none
 
@@ -396,10 +400,10 @@ contains
             ! Per meteo time interval: update actual meteo record and set fluxes
             ! for current time of detailed meteo input
             wrecord = wrecord + 1
-            state%atmosphere%ptra = tpot(wrecord)
-            state%atmosphere%peva = epot(wrecord)
-            state%atmosphere%graidt  = grain(wrecord)
-            state%atmosphere%nraidt  = nrain(wrecord)
+            state%atmosphere%ptra = state%atmosphere%tpot(wrecord)   ! [SS-GR-ATM B28] tpot → state%atmosphere%tpot
+            state%atmosphere%peva = state%atmosphere%epot(wrecord)   ! [SS-GR-ATM B28] epot → state%atmosphere%epot
+            state%atmosphere%graidt  = state%atmosphere%grain(wrecord)   ! [SS-GR-ATM B28] grain → state%atmosphere%grain
+            state%atmosphere%nraidt  = state%atmosphere%nrain(wrecord)   ! [SS-GR-ATM B28] nrain → state%atmosphere%nrain
             state%atmosphere%aintcdt = state%atmosphere%graidt - state%atmosphere%nraidt
 
             tc_flUpdMetDet = .false.   ! [SS-TC TC-14] legacy flUpdMetDet write retired
@@ -457,7 +461,11 @@ contains
    subroutine ETSine(state)
       ! SS-TC TC-9: fldaystart,daynr,t1900,dt removed from bare use variables;
       !             reads via state%timecontrol.
-      use variables
+      ! [SS-GR-ATM B28] bare use variables replaced with narrow only: list.
+      !   DEFERRED: lat → config%meteo%lat (requires config arg, Arc 8 candidate);
+      !             rad, daylp, difpp, atmtr, dsinbe, tsunrise_atm, tsunset_atm —
+      !             not yet in state/config schema (Arc 8+).
+      use variables, only: lat, rad, daylp, difpp, atmtr, dsinbe, tsunrise_atm, tsunset_atm
       use et_mod, only: reduceva
       implicit none
 
