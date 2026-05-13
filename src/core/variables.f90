@@ -714,7 +714,7 @@
       ! integer   nodfrostbot        ! Node nr of deepest node with frost conditions
       ! [SS-SWC] retired 2026-05-12 — moved to state%soilwater%npegwl (ADR 0038)
       ! integer   npegwl             ! Node directly above perched groundwater level
-      integer   nrlevs             ! Number of drainage levels
+      ! [GR-BH Task 37] nrlevs retired — moved to state%drainage%nrlevs
       integer   nrstaring          ! Number of soil type [1..18] according to Staring series (Wosten et al., 2001)
       integer   nsublay            ! Number of sublayers in the soil profile
       integer   numbit             ! Iteration number for solving Richards equation
@@ -747,8 +747,8 @@
       integer   SwBotb3ResVert     ! Switch to suppress addition of vertical resistance between bottom of model and groundwater level
       integer   swcfbs             ! Switch for use of coefficient CFBS to convert potential ET into potential E: 0 = no; 1 = yes
       integer   swdiscrvert        ! Switch to convert vertical discretization for soil water quality models: 0 = no; 1 = yes
-      integer   swdivd             ! Switch to distribute drainage flux vertically according to transmissivity: 0 = no; 1 = yes
-      integer   swdivdinf          ! Switch to distribute infiltration flux vertically according to transmissivity, separatly from drainage fluxes: 0 = no; 1 = yes
+      ! [GR-BH Task 37] swdivd retired — moved to state%drainage%swdivd
+      ! [GR-BH Task 37] swdivdinf retired — moved to state%drainage%swdivdinf
       integer   swdislay           ! Switch to distribute drainage flux vertically with a given position of the top of the model discharge layers: 0 = no; 1 = yes
       integer   swtopdislay(madr)  ! Switch, for each drainage level, to distribute drainage flux vertically with a given position of the top of the model discharge layers: 0 = no; 1 = yes
       integer   swdra              ! Switch for simulation of lateral drainage: 0 = no drainage; 1 = use basic drainage routine; 
@@ -850,7 +850,7 @@
       real(8)   ew0                !  potential transpiration rate from a wet crop [mm/d]
       ! [SS-SWC] retired 2026-05-12 — moved to state%soilwater%evp (ADR 0038)
       ! real(8)   evp(macp)          ! Internal evaporation flux of top soil compartments (L/T)
-      real(8)   FacDpthInf         ! Factor to reduce Depth of Infiltration layer as fraction of max depth Discharge layer (-)
+      ! [GR-BH Task 37] FacDpthInf retired — moved to state%drainage%FacDpthInf
       real(8)   ftopdislay(madr)   ! Array with factor for function to determine depth of top of model discharge layer for each drain level, see also swtopdislay (L)
       real(8)   geofac             ! Geometry factor (-) for analytical drainage formula of Ernst
       ! [SS-SWC] retired 2026-05-12 — moved to state%soilwater%gwl (ADR 0038)
@@ -939,7 +939,7 @@
       real(8)   kstem              ! Conductance in the path from leaf to root xylem (/d)
       real(8)   kvbot              ! Vertical hydraulic conductivity of bottom layer (L/T)
       real(8)   kvtop              ! Vertical hydraulic conductivity of top layer (L/T)
-      real(8)   L(Madr)            ! Array with spacing between drains for each drainage level (L)
+      ! [GR-BH Task 37] L(Madr) retired — moved to state%drainage%L
       ! real(8) :: ldwet         ! Length of dry period (L) as used in Black's model — [SS-ATM] retired 2026-05-11
       ! [SS-CRP] retired 2026-05-11 — moved to state%soilwater%mfluxtable (ADR 0036)
       ! real(8)   mfluxtable(maho,801)  ! Reference table with matric flux potential of each soil layer (L2/T)
@@ -1083,7 +1083,7 @@
       ! real(8)   zfrostbot          ! Depth of bottom of frost layer (L)
       ! [SS-HEAT] retired 2026-05-10 — moved to state%heat%zfrosttop (ADR 0034)
       ! real(8)   zfrosttop          ! Depth of top of frost layer (L)
-      real(8)   zbotdr(Madr)       ! Array with depth of drain bottom for each drain level
+      ! [GR-BH Task 37] zbotdr(Madr) retired — moved to state%drainage%zbotdr
       real(8)   zi(macp)           ! Array with soil depths (L) used to specify initial soil water pressure heads
       real(8)   zintf              ! Depth (L) at which fine top layer ends and coarse sub layer starts
       ! real(8)   ztopdislay(Madr)   ! Moved to drainage_state_t%ztopdislay (ADR 0031)
@@ -1312,8 +1312,10 @@
       ! VlMpStDm1/2, dFdhMp is kept retired-zero, etc.).
 
 ! --- surface water variables
-      integer swswb,swdrf,swsrf,swallo(Madr),swdtyp(Madr),swnrsrf
-      integer swqhr,swsec,nrpri,nrsec,nmper,swman(mamp),SwTopnrsrf
+      integer swswb,swdrf,swsrf,swallo(Madr),swdtyp(Madr)
+      ! [GR-BH Task 37] swnrsrf retired — moved to state%drainage%swnrsrf
+      integer swqhr,swsec,nrpri,nrsec,nmper,swman(mamp)
+      ! [GR-BH Task 37] SwTopnrsrf retired — moved to state%drainage%swtopnrsrf
       ! SS-SWST Phase 2 Task 11 C2: numadj/imper removed — state%surfacewater owns them.
       integer nqh(mamp),drf,swb,nphase(mamp),nodhd(mamp)
       ! numadj removed (surfacewater_state_t%numadj)

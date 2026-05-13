@@ -298,9 +298,9 @@ contains
       swdra    = config%drain%swdra
       state%surfacewater%swdra = swdra   ! [SS-GR-UTILS Task 4] dual-write
       dramet   = config%drain%dramet
-      swdivd   = config%drain%swdivd
+      ! [GR-BH Task 37] swdivd global deleted — state%drainage%swdivd seeded in swap_mod.f90
       swdislay = config%drain%swdislay
-      nrlevs   = config%drain%nrlevs
+      ! [GR-BH Task 37] nrlevs global deleted — state%drainage%nrlevs seeded in swap_mod.f90
       basegw   = config%drain%basegw
       entres   = config%drain%entres
       ! Note: drainage%shape may collide with bottom_boundary%shape
@@ -319,8 +319,7 @@ contains
       ! zbotdr goes into the level-1 entry of the per-level array;
       ! ipos / khtop / khbot / kvtop / kvbot / zintf / geofac are scalar globals.
       if (config%drain%dramet == 2) then
-         L(1)      = 100.0d0 * config%drain%lm
-         zbotdr(1) = config%drain%zbotdr_basic
+         ! [GR-BH Task 37] L(1)/zbotdr(1) bare globals deleted — seeded from config in swap_mod.f90
          shape     = config%drain%shape
          ipos      = config%drain%ipos
          khtop     = config%drain%khtop
@@ -345,11 +344,7 @@ contains
             swdtyp(i) = config%drain%swdtyp(i)
          end do
       end if
-      if (allocated(config%drain%zbotdr)) then
-         do i = 1, size(config%drain%zbotdr)
-            zbotdr(i) = config%drain%zbotdr(i)
-         end do
-      end if
+      ! [GR-BH Task 37] zbotdr bare global deleted — seeded from config%drain in swap_mod.f90
       if (allocated(config%drain%drares)) then
          do i = 1, size(config%drain%drares)
             drares(i) = config%drain%drares(i)
@@ -360,13 +355,7 @@ contains
             infres(i) = config%drain%infres(i)
          end do
       end if
-      if (allocated(config%drain%L)) then
-         ! L(:) is already in cm: the TOML reader converts m->cm at parse time
-         ! (Phase 2 Task 9, spec D6). No further unit conversion needed here.
-         do i = 1, size(config%drain%L)
-            L(i) = config%drain%L(i)
-         end do
-      end if
+      ! [GR-BH Task 37] L bare global deleted — seeded from config%drain in swap_mod.f90
       if (allocated(config%drain%gwlinf)) then
          do i = 1, size(config%drain%gwlinf)
             gwlinf(i) = config%drain%gwlinf(i)
@@ -448,10 +437,8 @@ contains
       ! are arrays of size madr; copy element 1 of the (scalar) config
       ! field as a uniform value across drainage levels until a per-level
       ! schema lands in Phase 4f-extend.
-      swnrsrf      = config%drain%surface_runoff%swnrsrf
-      SwTopnrsrf   = config%drain%surface_runoff%swtopnrsrf
-      swdivdinf    = config%drain%surface_runoff%swdivdinf
-      FacDpthInf   = config%drain%surface_runoff%facdpthinf
+      ! [GR-BH Task 37] swnrsrf/SwTopnrsrf/swdivdinf/FacDpthInf bare globals deleted —
+      ! state%drainage%X seeded in swap_mod.f90
       cofintfl     = config%drain%surface_runoff%cofintfl
       expintfl     = config%drain%surface_runoff%expintfl
       ! ADR 0031: gate the surface_runoff geofac write to avoid overwriting

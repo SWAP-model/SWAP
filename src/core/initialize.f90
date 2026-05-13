@@ -178,8 +178,8 @@
       ! nodfrostbot        = 0
       ! [SS-SWC] npegwl retired — soilwater_init handles init via state%soilwater%npegwl
       ! npegwl             = 0
-      nrlevs             = 0 
-      nsublay            = 0 
+      ! [GR-BH Task 37] nrlevs retired to state%drainage%nrlevs
+      nsublay            = 0
       numbit             = 0 
       numlay             = 0 
       ! [GR-BH Task 35] numnod retired to state%mesh%numnod
@@ -204,9 +204,9 @@
       SwBotb3ResVert     = 0 
       swcfbs             = 0 
       swdiscrvert        = 0 
-      swdivd             = 0 
-      swdivdinf          = 0 
-      swdislay           = 0 
+      ! [GR-BH Task 37] swdivd retired to state%drainage%swdivd
+      ! [GR-BH Task 37] swdivdinf retired to state%drainage%swdivdinf
+      swdislay           = 0
       swtopdislay        = 0
       swdra              = 0 
       swfrost            = 0 
@@ -273,7 +273,7 @@
       ew0                = 0.0d0 
       ! [SS-SWC] evp retired — soilwater_init handles init via state%soilwater%evp
       ! evp                = 0.0d0
-      FacDpthInf         = 0.0d0 
+      ! [GR-BH Task 37] FacDpthInf retired to state%drainage%FacDpthInf
       ftopdislay         = 0.0d0
       geofac             = 0.0d0 
       ! [SS-SWC] gwl retired — soilwater_init handles init via state%soilwater%gwl
@@ -351,7 +351,7 @@
       ksatthr            = 0.0d0 
       kvbot              = 0.0d0 
       kvtop              = 0.0d0 
-      L                  = 0.0d0 
+      ! [GR-BH Task 37] L retired to state%drainage%L
       ! [SS-ATM A-2.6] ldwet retired to state%atmosphere%ldwet
       ! [SS-CRP C-2.5] mfluxtable retired — soilwater_init handles init via state%soilwater (ADR 0036)
       ! mfluxtable         = 0.0d0
@@ -433,8 +433,8 @@
       ! [SS-HEAT] Task 9: zfrostbot/zfrosttop retired to state%heat
       ! zfrostbot          = 0.0d0
       ! zfrosttop          = 0.0d0
-      zbotdr             = 0.0d0 
-      zi                 = 0.0d0 
+      ! [GR-BH Task 37] zbotdr retired to state%drainage%zbotdr
+      zi                 = 0.0d0
       zintf              = 0.0d0 
       ! ztopdislay         = 0.0d0   ! Moved to drainage_state_t — drainage_init handles (ADR 0031)
       ! [SS-TC] fldrain retired to state%timecontrol%flDrain (ADR 0041)
@@ -602,14 +602,14 @@
       swsrf                = 0
       swallo               = 0
       swdtyp               = 0
-      swnrsrf              = 0
+      ! [GR-BH Task 37] swnrsrf retired to state%drainage%swnrsrf
       swqhr                = 0
       swsec                = 0
       nrpri                = 0
       nrsec                = 0
       nmper                = 0
       swman                = 0
-      SwTopnrsrf           = 0
+      ! [GR-BH Task 37] SwTopnrsrf retired to state%drainage%swtopnrsrf
       nqh                  = 0
       drf                  = 0
       swb                  = 0

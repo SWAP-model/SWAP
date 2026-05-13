@@ -90,8 +90,8 @@ subroutine test_config_to_variables_drainage_basic()
    use swap_config_mod, only: swap_config_t
    use config_to_variables_mod, only: config_to_variables
    use swap_state_mod, only: swap_state_t
-   use variables, only: dramet, swdivd, swdislay, basegw, entres, &
-                        swdra, nrlevs
+   ! [GR-BH Task 37] swdivd/nrlevs globals deleted; verified via config fields only.
+   use variables, only: dramet, swdislay, basegw, entres, swdra
    implicit none
    type(swap_config_t) :: config
    type(swap_state_t)  :: state
@@ -108,9 +108,11 @@ subroutine test_config_to_variables_drainage_basic()
 
    @assertEqual(1,         swdra)
    @assertEqual(3,         dramet)
-   @assertEqual(1,         swdivd)
+   ! swdivd global retired (GR-BH Task 37) — state%drainage%swdivd seeded in swap_mod.f90
+   @assertEqual(1,         config%drain%swdivd)
    @assertEqual(1,         swdislay)
-   @assertEqual(4,         nrlevs)
+   ! nrlevs global retired (GR-BH Task 37) — state%drainage%nrlevs seeded in swap_mod.f90
+   @assertEqual(4,         config%drain%nrlevs)
    @assertEqual(-250.0d0,  basegw)
    @assertEqual(30.0d0,    entres)
 end subroutine test_config_to_variables_drainage_basic
