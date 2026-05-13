@@ -20,6 +20,7 @@ module load_swap_config_mod
    private
 
    public :: load_swap_config
+   public :: apply_section_readers
 
 contains
 
@@ -43,6 +44,18 @@ contains
       doc_ptr => doc
       base_dir = directory_of(trim(path))
 
+      call apply_section_readers(doc_ptr, base_dir, config, errors)
+   end subroutine load_swap_config
+
+   !> Shared post-parse pipeline: takes a parsed toml_table and calls
+   !! every section reader. Used by both file-based and string-based
+   !! load entry points.
+   subroutine apply_section_readers(doc_ptr, base_dir, config, errors)
+      type(toml_table), pointer,           intent(in)    :: doc_ptr
+      character(len=*),                    intent(in)    :: base_dir
+      type(swap_config_t),                 intent(inout) :: config
+      type(error_collection_t),            intent(inout) :: errors
+
       call read_general_toml    (doc_ptr, config%general,    errors)
       call read_simulation_toml (doc_ptr, config%simulation, errors)
       call read_meteorology_toml(doc_ptr, config%meteo,      errors)
@@ -56,6 +69,6 @@ contains
       call read_crop_toml       (doc_ptr, config%crop,       errors, base_path=base_dir)
       call read_output_csv_toml (doc_ptr, config%output_csv, errors)
       call read_nutrients_toml  (doc_ptr, config%nutrients,  errors)
-   end subroutine load_swap_config
+   end subroutine apply_section_readers
 
 end module load_swap_config_mod
