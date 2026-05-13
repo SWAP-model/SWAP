@@ -36,6 +36,7 @@
 
 module tillage_state_mod
    use, intrinsic :: iso_fortran_env, only: real64
+   use iso_c_binding, only: c_double
    implicit none
    private
    public :: tillage_state_t, tillage_init
@@ -61,6 +62,13 @@ module tillage_state_mod
       integer :: MaxNumSoilHo = 0  !! max number of soil horizons in tillage table
       integer :: MaxNumSoilCP = 0  !! max number of soil-consolidation-parameter rows
       integer :: iTill        = 0  !! event-table cursor (index into tillage event array)
+
+      !> [SS-BMI2] Tillage output row buffer (DoTillage task=3 stream).
+      !! N = 5: t1900, nraida, sumDWC, sumAvail1, sumAvail2.
+      !! Debug writes to units 222/226 are gated by headless.
+      real(c_double),    allocatable :: output_row(:)
+      character(len=32), allocatable :: output_columns(:)
+      integer                        :: output_n_cols = 0
 
    end type tillage_state_t
 

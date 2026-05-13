@@ -38,7 +38,8 @@ module tillage_mod
    subroutine DoTillage (iTask, state)
    ! global
    integer, intent(in)                          :: iTask                               ! Task
-   type(swap_state_t), intent(inout)            :: state                               ! [SS-ATM A-2.6] for retired nraida; [SS-SWC S-1.9] inout for soilwater dual-writes
+   ! [SS-ATM A-2.6] inout for nraida; [SS-SWC S-1.9] inout for soilwater; [SS-BMI2] inout for output_row
+   type(swap_state_t), intent(inout)            :: state
    ! local (not to be saved)
    integer                                   :: i
    character(len=20)                         :: STRNG
@@ -56,6 +57,9 @@ module tillage_mod
    select case (iTask)
    case (1)
       ! INITIALIZE
+
+      ! [SS-BMI2] allocate tillage output buffer (builder always runs when swtill=1)
+      call init_tillage_output_buffer(state)
 
       ! [SS-TIL T-5] legacy allocates dropped; state%tillage arrays already allocated in tillage_init (T-1/T-2)
 
@@ -170,19 +174,26 @@ module tillage_mod
 
    case (3)
       ! OUTPUT  [SS-TIL T-5] MaxNumSoilHo/sumDWC/sumAvail1/sumAvail2 reads via state%tillage
-      if (TEST) then
-         call DTDPST ("YEAR-MONTHST-DAY", state%timecontrol%t1900, STRNG)  ! TC-12
+
+      ! [SS-BMI2] build tillage output row buffer (always runs, headless-independent)
+      call build_tillage_output_row(state)
+
+      ! [SS-BMI2] headless guard: debug writes to units 222/224/226 gated
+      if (.not. state%timecontrol%headless) then
+         if (TEST) then
+            call DTDPST ("YEAR-MONTHST-DAY", state%timecontrol%t1900, STRNG)  ! TC-12
+            write (222,'(A,F15.5,10(I3,F15.5))') trim(state%timecontrol%date), state%atmosphere%nraida, (i, Bdens(i), i = 1, state%tillage%MaxNumSoilHo)
+            write (224,'(A,10F15.5)') trim(state%timecontrol%date), state%soilwater%theta(5), state%soilwater%theta(10), state%soilwater%theta(20), state%soilwater%theta(27), state%soilwater%theta(35), state%atmosphere%nraida, state%tillage%sumDWC, state%tillage%sumAvail1, state%tillage%sumAvail2  ! [SS-SWC S-2.6]
+            write (226,'(A,10F15.5)') trim(state%timecontrol%date), (state%soilwater%cofgen(i,1), i = 1, 10)  ! [SS-SWC S-2.6]
+         end if
          write (222,'(A,F15.5,10(I3,F15.5))') trim(state%timecontrol%date), state%atmosphere%nraida, (i, Bdens(i), i = 1, state%tillage%MaxNumSoilHo)
-         write (224,'(A,10F15.5)') trim(state%timecontrol%date), state%soilwater%theta(5), state%soilwater%theta(10), state%soilwater%theta(20), state%soilwater%theta(27), state%soilwater%theta(35), state%atmosphere%nraida, state%tillage%sumDWC, state%tillage%sumAvail1, state%tillage%sumAvail2  ! [SS-SWC S-2.6]
          write (226,'(A,10F15.5)') trim(state%timecontrol%date), (state%soilwater%cofgen(i,1), i = 1, 10)  ! [SS-SWC S-2.6]
       end if
-         write (222,'(A,F15.5,10(I3,F15.5))') trim(state%timecontrol%date), state%atmosphere%nraida, (i, Bdens(i), i = 1, state%tillage%MaxNumSoilHo)
-         write (226,'(A,10F15.5)') trim(state%timecontrol%date), (state%soilwater%cofgen(i,1), i = 1, 10)  ! [SS-SWC S-2.6]
-      continue
 
    case (4)
       ! CLOSURE
-      continue
+      ! [SS-BMI2] deallocate tillage output buffer
+      call cleanup_tillage_output_buffer(state)
       
    case default
       call fatalerr_collected ('DoTillage','Illegal value for iTask')
@@ -459,6 +470,68 @@ write(124,'(A,1P,12E12.5)') state%timecontrol%date, Bdens(1), ParamVG(2,layer(1)
    tl%Slope_match(1:nlay) = (ParamVG(6,1:nlay) - tl%N_match(1:nlay)) / (tl%Rho_cons(1:nlay) - tl%Rho_match(1:nlay))
    end associate
    end subroutine Change_Tillage_Info
+
+
+! ----------------------------------------------------------------------
+! [SS-BMI2] Tillage output buffer helpers (canonical output-sink pattern)
+! N = 5: t1900, nraida, sumDWC, sumAvail1, sumAvail2
+! Debug writes to units 222/224/226 are gated by headless in DoTillage(3).
+! Cleanup in DoTillage(4) (closure; not currently called in production).
+! ----------------------------------------------------------------------
+
+   subroutine init_tillage_output_buffer(state)
+! ----------------------------------------------------------------------
+!     Allocate state%tillage%output_row and set column names.
+!     Called from DoTillage(1) — always runs, headless-independent.
+!     N = 5: t1900, nraida, sumDWC, sumAvail1, sumAvail2
+! ----------------------------------------------------------------------
+   use iso_c_binding, only: c_double
+   implicit none
+   type(swap_state_t), intent(inout) :: state
+   integer, parameter :: N = 5
+
+   state%tillage%output_n_cols = N
+   if (.not. allocated(state%tillage%output_row))     allocate(state%tillage%output_row(N))
+   if (.not. allocated(state%tillage%output_columns)) allocate(state%tillage%output_columns(N))
+   state%tillage%output_row     = 0.0_c_double
+   state%tillage%output_columns(1) = 'date'
+   state%tillage%output_columns(2) = 'nraida'
+   state%tillage%output_columns(3) = 'sumDWC'
+   state%tillage%output_columns(4) = 'sumAvail1'
+   state%tillage%output_columns(5) = 'sumAvail2'
+   end subroutine init_tillage_output_buffer
+
+
+   subroutine build_tillage_output_row(state)
+! ----------------------------------------------------------------------
+!     Fill state%tillage%output_row(:) with the current tillage values.
+!     Called from DoTillage(3) — always runs, headless-independent.
+!     Column order: t1900, nraida, sumDWC, sumAvail1, sumAvail2.
+! ----------------------------------------------------------------------
+   use iso_c_binding, only: c_double
+   implicit none
+   type(swap_state_t), intent(inout) :: state
+
+   state%tillage%output_row(1) = real(state%timecontrol%t1900,       c_double)
+   state%tillage%output_row(2) = real(state%atmosphere%nraida,       c_double)
+   state%tillage%output_row(3) = real(state%tillage%sumDWC,          c_double)
+   state%tillage%output_row(4) = real(state%tillage%sumAvail1,       c_double)
+   state%tillage%output_row(5) = real(state%tillage%sumAvail2,       c_double)
+   end subroutine build_tillage_output_row
+
+
+   subroutine cleanup_tillage_output_buffer(state)
+! ----------------------------------------------------------------------
+!     Deallocate state%tillage%output_row and reset counter.
+!     Called from DoTillage(4) — closure; not currently called in production.
+! ----------------------------------------------------------------------
+   implicit none
+   type(swap_state_t), intent(inout) :: state
+
+   if (allocated(state%tillage%output_row))     deallocate(state%tillage%output_row)
+   if (allocated(state%tillage%output_columns)) deallocate(state%tillage%output_columns)
+   state%tillage%output_n_cols = 0
+   end subroutine cleanup_tillage_output_buffer
 
 end module tillage_mod
    
