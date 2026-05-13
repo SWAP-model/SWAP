@@ -845,18 +845,48 @@ contains
    end subroutine timecontrol_day_end
 
    subroutine itertime_init(state)
+      implicit none
       type(swap_state_t), intent(inout) :: state
-      ! Body filled in Task 9 (migrated from IterTime case (1)).
+      call cpu_time(state%timecontrol%tmptimestart)
    end subroutine itertime_init
 
    subroutine itertime_check(state)
+      use variables, only: MaxIterTime
+      use error_mod, only: fatalerr_collected
+      implicit none
       type(swap_state_t), intent(inout) :: state
-      ! Body filled in Task 9 (migrated from IterTime case (2)).
+      real(4) :: tmptimeinterrupt
+      integer :: timediff
+      character(len=400) :: messag
+
+      call cpu_time(tmptimeinterrupt)
+      timediff = int(tmptimeinterrupt) - MaxIterTime
+      if (timediff > 0) then
+         write(messag,'(a,i10,3a)') &
+            'The maximum cpu time of ', MaxIterTime, ' (secs)', &
+            ' was exceeded.  Therefore simulation was interrupted'
+         call fatalerr_collected('IterTime', messag)
+      end if
    end subroutine itertime_check
 
    subroutine itertime_close(state)
+      use variables, only: MaxIt, itnumb, logf
+      implicit none
       type(swap_state_t), intent(inout) :: state
-      ! Body filled in Task 9 (migrated from IterTime case (3)).
+      integer :: i, j
+
+      write(logf, '(/,a20)')      'Iteration statistics'
+      write(logf, '(/,a29,i4)')   'Maximum number of iterations:', MaxIt
+      write(logf, '(/,a35/,a35)') 'It Numb  No of Hits  Tot BTr cycles', &
+                                   '-------  ----------  --------------'
+      do i = 1, 100
+         if (itnumb(i,1) > 0) &
+            write(logf, '(i7,2x,i10,4x,i10)') i, (itnumb(i,j), j=1,2)
+      end do
+
+      call cpu_time(state%timecontrol%tmptimeend)
+      write(logf, '(/,a12,f12.2,a4)') &
+         ' Run-time: ', state%timecontrol%tmptimeend - state%timecontrol%tmptimestart, ' sec'
    end subroutine itertime_close
 
 end module timecontrol_mod
