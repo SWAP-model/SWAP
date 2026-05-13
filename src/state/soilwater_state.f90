@@ -189,6 +189,12 @@ module soilwater_state_mod
       real(real64) :: runon        = 0.0_real64   !< runon flux this step (cm/d)
       logical      :: fllowgwl     = .false.      !< flag: gwl is below the soil profile
 
+      ! [SS-GR-BH A5] runtime scalars formerly bare globals (boundtop/PONDRUNOFF/boundbottom)
+      real(real64) :: q0           = 0.0_real64   !! surface flux (precip + runon - reva) [cm/d]
+      real(real64) :: k1max        = 0.0_real64   !! max conductivity at z=0 [cm/d]
+      real(real64) :: H0max        = 0.0_real64   !! max ponding pre-runoff [cm]
+      integer      :: swbotb_runtime = 0          !! runtime-overridable bottom-boundary switch
+
       ! ===========================================================================
       ! INTERMEDIATE accumulators (reset_intermediate / gate: flzerointr)
       !   subsumes the per-day subset, which has its own reset under flDayStart.
@@ -420,6 +426,12 @@ contains
       allocate(sw%psand(nlay));          sw%psand        = 0.0_real64
       allocate(sw%psilt(nlay));          sw%psilt        = 0.0_real64
       allocate(sw%pclay(nlay));          sw%pclay        = 0.0_real64
+
+      ! [SS-GR-BH A5] Runtime scalars (seeded from config in Task 7)
+      sw%q0              = 0.0_real64
+      sw%k1max           = 0.0_real64
+      sw%H0max           = 0.0_real64
+      sw%swbotb_runtime  = 0
 
       ! ===========================================================================
       ! SOIL-WATER CORE — intermediate-period arrays (ADR 0038, S-1.2)
