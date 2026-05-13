@@ -56,7 +56,9 @@ contains
                             flharvestday, flcropoutput, swcrp, flirrigationoutput, swend, project, &
                             flTillage, flSSDI, &
                             numnod, numlay, &
-                            dz, z, disnod, ztopcp, zbotcp, layer
+                            dz, z, disnod, ztopcp, zbotcp, layer, &
+                            ksatexm, ksatfit, cofani, flksatexm, &
+                            orgmat, psand, psilt, pclay
       use soilwater_state_mod, only: soilwater_init
       use atmosphere_state_mod, only: atmosphere_init
       use tillage_state_mod, only: tillage_init
@@ -106,6 +108,17 @@ contains
    ! [SS-GR-BH A3] dual-write: populate state%mesh alongside legacy mesh globals
    call state%mesh%init(numnod, dz, z, disnod, ztopcp, zbotcp, layer)
    call soilwater_init(state%soilwater, numnod, numlay)   ! SS-CRP Phase 1 C-1.2: allocate per-node arrays + mfluxtable
+   ! [SS-GR-BH A6] dual-write: soilwater layer flats — placed here because soilwater_init
+   ! allocates the state arrays (nlay-sized) AFTER config_to_variables runs.
+   ! Legacy globals are fixed-size (maho); slice-copy maps only the active nlay entries.
+   state%soilwater%ksatexm(:)  = ksatexm(1:size(state%soilwater%ksatexm))
+   state%soilwater%ksatfit(:)  = ksatfit(1:size(state%soilwater%ksatfit))
+   state%soilwater%cofani(:)   = cofani(1:size(state%soilwater%cofani))
+   state%soilwater%flksatexm   = flksatexm
+   state%soilwater%orgmat(:)   = orgmat(1:size(state%soilwater%orgmat))
+   state%soilwater%psand(:)    = psand(1:size(state%soilwater%psand))
+   state%soilwater%psilt(:)    = psilt(1:size(state%soilwater%psilt))
+   state%soilwater%pclay(:)    = pclay(1:size(state%soilwater%pclay))
    ! [SS-SWC S-2.12B] seed state%soilwater from config buffers populated by config_to_variables.
    ! Retired globals: pondini, pond, h(1..nhead). state%soilwater%h is sized numnod and
    ! receives the swinco=3 initial-profile h values; SoilHydraulics(1) consumes the rest.
