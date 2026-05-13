@@ -149,7 +149,9 @@ contains
             end if
 
          else if (model > 3 .and. model < 12) then
-            theta = functionvalue_04_11(1, node, head)
+            theta = functionvalue_04_11(1, head, vg, model, &
+                        soilwater%BiModal(soilwater%layer(node)), &
+                        soilwater%NoVap(soilwater%layer(node)))
 
          else  ! Use default MvG
 
@@ -278,7 +280,9 @@ contains
             end if
 
          else if (model > 3 .and. model < 12) then
-            c = functionvalue_04_11(3, node, h)
+            c = functionvalue_04_11(3, h, vg, model, &
+                    soilwater%BiModal(soilwater%layer(node)), &
+                    soilwater%NoVap(soilwater%layer(node)))
 
          else  ! Use default MvG
 
@@ -512,7 +516,10 @@ contains
 
          else if (model > 3 .and. model < 12) then
             ! SS-HEAT Phase 2 Task 6: use tsoil_node (from state%heat)
-            k = functionvalue_04_11(2, node, h, wc=theta, temp=tsoil_node)
+            k = functionvalue_04_11(2, h, vg, model, &
+                    soilwater%BiModal(soilwater%layer(node)), &
+                    soilwater%NoVap(soilwater%layer(node)), &
+                    wc=theta, temp=tsoil_node)
 
          else  ! Use default MvG
 

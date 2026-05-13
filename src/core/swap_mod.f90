@@ -51,8 +51,8 @@ contains
    end subroutine swap_init
 
    subroutine swap_init_from_loaded_config(state, config)
-      use variables, only : flswapshared, flmacropore, flcropnut, flagetracer, swfrost, &
-                            swusecn, fldecmprat, flcropcalendar, &
+      use variables, only : flswapshared, flcropnut, flagetracer, swfrost, &
+                            swusecn, flcropcalendar, &
                             flharvestday, flcropoutput, swcrp, flirrigationoutput, swend, project, &
                             flTillage, flSSDI, &
                             numnod, numlay
@@ -70,7 +70,6 @@ contains
       use agetracer_mod, only: AgeTracer
       use soilgrid_mod, only: CalcGrid
       use soilhydraulics_mod, only: soilwater
-      use WC_K_models_04_11, only: bind_cofgen_target
       use soilhydraulics_utils, only: bind_state_targets, bind_tc_target
       use config_to_variables_mod, only: h_init_buf, pondini_init_buf, pond_init_buf, &
                                          tc_iyear_init_buf, tc_imonth_init_buf, tc_dt_init_buf, &
@@ -106,9 +105,8 @@ contains
    call CalcGrid()
    call soilwater_init(state%soilwater, numnod, numlay)   ! SS-CRP Phase 1 C-1.2: allocate per-node arrays + mfluxtable
    ! [SS-SWC S-2.12B] bind module-level pointers in utility modules to state%soilwater
-   ! so legacy `cofgen` / `fluseksatexm` reads in WC_K_models_04_11 + soilhydraulics_utils
+   ! so legacy `cofgen` / `fluseksatexm` reads in soilhydraulics_utils
    ! resolve to the canonical state%soilwater storage (ADR 0038).
-   call bind_cofgen_target(state%soilwater%cofgen)
    call bind_state_targets(state%soilwater%cofgen, state%soilwater%fluseksatexm)
    call bind_tc_target(state%timecontrol%dt)  ! SS-TC TC-12: wire tc_dt_ptr in moiscap()
    ! [SS-SWC S-2.12B] seed state%soilwater from config buffers populated by config_to_variables.
@@ -213,8 +211,8 @@ contains
    end subroutine swap_init_from_loaded_config
 
    subroutine swap_run_step(state, config)
-      use variables, only : flswapshared, flmacropore, flcropnut, flagetracer, swfrost, &
-                            fldecmprat, flcropcalendar, &
+      use variables, only : flswapshared, flcropnut, flagetracer, swfrost, &
+                            flcropcalendar, &
                             flharvestday, flcropoutput, swcrp, swend, &
                             flTillage, flSSDI
       use timestep_control_mod, only: fldecdt
@@ -330,7 +328,7 @@ contains
          if (request_smaller_dt) fldecdt = .true.
 
 !        update time variables and switches/flags
-         if (fldecdt .or. (flMacroPore .and. FlDecMpRat))then
+         if (fldecdt) then
             call SoilWaterStateVar(2, state)
             call timecontrol_reduce_dt(state)
             fldtreduce = .true.

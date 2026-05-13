@@ -2,12 +2,7 @@ module WC_K_models_04_11
    use error_mod, only: fatalerr_collected
    use iso_fortran_env, only: real64
 
-! [SS-SWC S-2.12B] cofgen retired from variables — bound via state%soilwater%cofgen
-use variables, only: iHWCKmodel, BiModal, NoVap, layer
 implicit none
-
-! [SS-SWC S-2.12B] module-level pointer; bound once by bind_cofgen_target(state)
-real(real64), pointer :: cofgen(:,:) => null()
 
 ! curve parameters
 real(8)  :: WCr, WCs, Alpha1, Npar1, Mpar1, Alpha2, Npar2, Mpar2, Lpar, Ksat
@@ -22,154 +17,151 @@ real(8) :: Kcap, Kfilm, Kvap
 
 logical :: L_BiModal, L_NoVap
 
-! all functions are private, except functionvalue_04_11 and bind_cofgen_target
+! functionvalue_04_11 is the sole public symbol
 private
-public    :: functionvalue_04_11, bind_cofgen_target
+public    :: functionvalue_04_11
 
 contains
 
-   !> [SS-SWC S-2.12B] Bind module-level cofgen pointer to state%soilwater%cofgen.
-   !! Must be called once after state%soilwater is allocated (e.g. in SoilHydraulics(1)
-   !! before any iHWCKmodel >3 path is exercised).
-   subroutine bind_cofgen_target(sw_cofgen_in)
-      real(real64), target, intent(in) :: sw_cofgen_in(:,:)
-      cofgen => sw_cofgen_in
-   end subroutine bind_cofgen_target
+function functionvalue_04_11(iType, h, vg, model, is_bimodal, no_vap, wc, temp) result(val)
+   use hydraulic_params_mod, only: vanGenuchten_params_t
+   implicit none
 
+   integer,                     intent(in)           :: iType
+   real(real64),                intent(in)           :: h
+   type(vanGenuchten_params_t), intent(in)           :: vg
+   integer,                     intent(in)           :: model       ! iHWCKmodel(layer(iNode))
+   logical,                     intent(in)           :: is_bimodal  ! BiModal(layer(iNode))
+   logical,                     intent(in)           :: no_vap      ! NoVap(layer(iNode))
+   real(real64),                intent(in), optional :: wc, temp
+   real(real64) :: val
 
-function functionvalue_04_11 (iType, iNode, h, wc, temp)
-integer, intent(in)             :: iType, iNode
-real(8), intent(in)             :: h
-real(8), intent(in), optional   :: wc, temp
-real(8)                         :: functionvalue_04_11
 ! local
-integer                         :: iModel
-real(8), parameter              :: dummy = 0.0d0
+real(8), parameter :: dummy = 0.0d0
 
 ! local information
-iModel    = iHWCKmodel(layer(iNode))
-L_BiModal = BiModal(layer(iNode))
-L_NoVap   = NoVap(layer(iNode))
+L_BiModal = is_bimodal
+L_NoVap   = no_vap
 
 ! for all cases
-WCr    = cofgen(1,iNode)
-WCs    = cofgen(2,iNode)
-Ksat   = cofgen(3,iNode)
-Alpha1 = cofgen(4,iNode)
-Lpar   = cofgen(5,iNode)
-Npar1  = cofgen(6,iNode)
-Mpar1  = cofgen(7,iNode)
+WCr    = vg%thetar
+WCs    = vg%thetas
+Ksat   = vg%ksat
+Alpha1 = vg%alpha
+Lpar   = vg%lpar
+Npar1  = vg%npar
+Mpar1  = vg%mpar
 
-select case (iModel)
+select case (model)
 
    case (4)
       ! no additional settings needed
       continue
 
    case (5)
-      h0 = cofgen(18,iNode)
+      h0 = vg%h0
 
    case (6)
-      Alpha2 = cofgen(13,iNode)
-      Npar2  = cofgen(14,iNode)
-      Mpar2  = cofgen(15,iNode)
-      Omega1 = cofgen(16,iNode)
-      Omega2 = cofgen(17,iNode)
+      Alpha2 = vg%alpha_2
+      Npar2  = vg%npar_2
+      Mpar2  = vg%mpar_2
+      Omega1 = vg%omega_1
+      Omega2 = vg%omega_2
 
    case (7)
-      Alpha2 = cofgen(13,iNode)
-      Npar2  = cofgen(14,iNode)
-      Mpar2  = cofgen(15,iNode)
-      Omega1 = cofgen(16,iNode)
-      Omega2 = cofgen(17,iNode)
-      h0     = cofgen(18,iNode)
+      Alpha2 = vg%alpha_2
+      Npar2  = vg%npar_2
+      Mpar2  = vg%mpar_2
+      Omega1 = vg%omega_1
+      Omega2 = vg%omega_2
+      h0     = vg%h0
 
    case (8,9)
-      h0      = cofgen(18,iNode)
-      ha      = cofgen(19,iNode)
-      Apar    = cofgen(20,iNode)
-      OmegaK  = cofgen(21,iNode)
+      h0     = vg%h0
+      ha     = vg%ha
+      Apar   = vg%apar
+      OmegaK = vg%omega_k
 
    case (10,11)
-      Alpha2 = cofgen(13,iNode)
-      Npar2  = cofgen(14,iNode)
-      Mpar2  = cofgen(15,iNode)
-      Omega1 = cofgen(16,iNode)
-      Omega2 = cofgen(17,iNode)
-      h0     = cofgen(18,iNode)
-      ha     = cofgen(19,iNode)
-      Apar   = cofgen(20,iNode)
-      OmegaK = cofgen(21,iNode)
+      Alpha2 = vg%alpha_2
+      Npar2  = vg%npar_2
+      Mpar2  = vg%mpar_2
+      Omega1 = vg%omega_1
+      Omega2 = vg%omega_2
+      h0     = vg%h0
+      ha     = vg%ha
+      Apar   = vg%apar
+      OmegaK = vg%omega_k
 
 end select
 
 select case (iType)
 case (1)
-   select case (iModel)
-      case (4);  functionvalue_04_11 = WC_MvG (h)
-      case (5);  functionvalue_04_11 = WC_MvG_s (h)
-      case (6);  functionvalue_04_11 = WC_MvG_2 (h)
-      case (7);  functionvalue_04_11 = WC_MvG_2_s (h)
-      case (8);  functionvalue_04_11 = WC_PDI (h)
-      case (9);  functionvalue_04_11 = WC_PDI_s (h)
-      case (10); functionvalue_04_11 = WC_PDI_2 (h)
-      case (11); functionvalue_04_11 = WC_PDI_2_s (h)
+   select case (model)
+      case (4);  val = WC_MvG (h)
+      case (5);  val = WC_MvG_s (h)
+      case (6);  val = WC_MvG_2 (h)
+      case (7);  val = WC_MvG_2_s (h)
+      case (8);  val = WC_PDI (h)
+      case (9);  val = WC_PDI_s (h)
+      case (10); val = WC_PDI_2 (h)
+      case (11); val = WC_PDI_2_s (h)
    end select
 
 case (2)
-   select case (iModel)
-      case (4);  functionvalue_04_11 = K_MvG (h)
-      case (5);  functionvalue_04_11 = K_MvG_s (h)
-      case (6);  functionvalue_04_11 = K_MvG_2 (h)
-      case (7);  functionvalue_04_11 = K_MvG_2_s (h)
+   select case (model)
+      case (4);  val = K_MvG (h)
+      case (5);  val = K_MvG_s (h)
+      case (6);  val = K_MvG_2 (h)
+      case (7);  val = K_MvG_2_s (h)
       case (8)
          if (L_NoVap) then
-            functionvalue_04_11 = K_PDI (h,dummy,dummy)
+            val = K_PDI (h,dummy,dummy)
          else
             ! both wc and temp must be present as input
             if (.not.present(wc) .or. .not.present(temp)) call fatalerr_collected ('functionvalue_04_11','For Kvap both WC and TEMP must be given as arguments')
-            functionvalue_04_11 = K_PDI (h,wc,temp)
+            val = K_PDI (h,wc,temp)
          end if
 
       case (9)
          if (L_NoVap) then
-            functionvalue_04_11 = K_PDI_s (h,dummy,dummy)
+            val = K_PDI_s (h,dummy,dummy)
          else
             ! both wc and temp must be present as input
             if (.not.present(wc) .or. .not.present(temp)) call fatalerr_collected ('functionvalue_04_11','For Kvap both WC and TEMP must be given as arguments')
-            functionvalue_04_11 = K_PDI_s (h,wc,temp)
+            val = K_PDI_s (h,wc,temp)
          end if
-      
+
       case (10)
          if (L_NoVap) then
-            functionvalue_04_11 = K_PDI_2 (h,dummy,dummy)
+            val = K_PDI_2 (h,dummy,dummy)
          else
             ! both wc and temp must be present as input
             if (.not.present(wc) .or. .not.present(temp)) call fatalerr_collected ('functionvalue_04_11','For Kvap both WC and TEMP must be given as arguments')
-            functionvalue_04_11 = K_PDI_2 (h,wc,temp)
+            val = K_PDI_2 (h,wc,temp)
          end if
-      
+
       case (11)
          if (L_NoVap) then
-            functionvalue_04_11 = K_PDI_2_s (h,dummy,dummy)
+            val = K_PDI_2_s (h,dummy,dummy)
          else
             ! both wc and temp must be present as input
             if (.not.present(wc) .or. .not.present(temp)) call fatalerr_collected ('functionvalue_04_11','For Kvap both WC and TEMP must be given as arguments')
-            functionvalue_04_11 = K_PDI_2_s (h,wc,temp)
+            val = K_PDI_2_s (h,wc,temp)
          end if
-            
+
    end select
 
 case (3)
-   select case (iModel)
-      case (4);  functionvalue_04_11 = C_MvG (h)
-      case (5);  functionvalue_04_11 = C_MvG_s (h)
-      case (6);  functionvalue_04_11 = C_MvG_2 (h)
-      case (7);  functionvalue_04_11 = C_MvG_2_s (h)
-      case (8);  functionvalue_04_11 = C_PDI (h)
-      case (9);  functionvalue_04_11 = C_PDI_s (h)
-      case (10); functionvalue_04_11 = C_PDI_2 (h)
-      case (11); functionvalue_04_11 = C_PDI_2_s (h)
+   select case (model)
+      case (4);  val = C_MvG (h)
+      case (5);  val = C_MvG_s (h)
+      case (6);  val = C_MvG_2 (h)
+      case (7);  val = C_MvG_2_s (h)
+      case (8);  val = C_PDI (h)
+      case (9);  val = C_PDI_s (h)
+      case (10); val = C_PDI_2 (h)
+      case (11); val = C_PDI_2_s (h)
    end select
 
 case default
