@@ -8,7 +8,7 @@ module tillage_mod
    ! SS-TC TC-12: t1900 retired from only-list; read via state%timecontrol%t1900 at each call site.
    ! [SS-TC TC-14] date retired — read via state%timecontrol%date
    use variables, only: swhyst, swsolu, swoxygen, flMacroPore, flksatexm, zbotcp, NumNod, Bdens, layer, ParamVG, &
-                        NumLay, dz, disnod, botcom, psilt, pclay, SwDiscrvert, tend, &  ! [SS-SWC S-2.6] CofGen/pond/theta/h retired to state%soilwater
+                        NumLay, dz, disnod, botcom, psilt, pclay, SwDiscrvert, &  ! [SS-BMI2 Task 5] tend removed — global retired
                         ! Tillage bridge variables with renaming (SAVE statements removed)
                         ! [SS-TIL T-5] Groups C/D/E retired from variables — reads via state%tillage
                         swtill => till_swtill, Ntill => till_Ntill, &

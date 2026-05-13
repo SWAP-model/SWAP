@@ -70,10 +70,12 @@ contains
    !> Copy every (C)-classified field from `config` into the corresponding
    !! `variables%` legacy global. Caller is responsible for having loaded,
    !! validated, and finalized `config` first.
-   subroutine config_to_variables(config)
+   subroutine config_to_variables(config, state)
       use variables   ! bare-use is intentional: many globals across sections
+      use swap_state_mod, only: swap_state_t
       use error_mod, only: fatalerr_collected
       type(swap_config_t), intent(in), target :: config
+      type(swap_state_t),  intent(inout)      :: state
 
       integer :: i, n
 
@@ -85,14 +87,16 @@ contains
       if (allocated(config%general%pathatm))   pathatm   = config%general%pathatm
       if (allocated(config%general%pathcrop))  pathcrop  = config%general%pathcrop
       if (allocated(config%general%pathdrain)) pathdrain = config%general%pathdrain
-      swscre  = config%general%swscre
+      state%timecontrol%swscre  = config%general%swscre
 
-      tstart    = config%simulation%tstart
-      tend      = config%simulation%tend
-      nprintday = config%simulation%nprintday
-      period    = config%simulation%period
-      swres     = config%simulation%swres
-      swodat    = config%simulation%swodat
+      state%timecontrol%tstart    = config%simulation%tstart
+      state%timecontrol%tend      = config%simulation%tend
+      state%timecontrol%nprintday = config%simulation%nprintday
+      state%timecontrol%period    = config%simulation%period
+      state%timecontrol%swres     = config%simulation%swres
+      state%timecontrol%swodat    = config%simulation%swodat
+      ! flprintdt not in config schema — default to .false.
+      state%timecontrol%flprintdt = .false.
 
       ! Derive iyear/imonth from tstart, matching legacy readswap.f90:126-128.
       ! TimeControl(1) reads these as state (not as inputs) so the adapter
@@ -102,7 +106,7 @@ contains
       block
          integer :: datea_init(6)
          real    :: fsec_init
-         call dtdpar(tstart + 0.1d0, datea_init, fsec_init)
+         call dtdpar(state%timecontrol%tstart + 0.1d0, datea_init, fsec_init)
          tc_iyear_init_buf  = datea_init(1)  ! [SS-TC TC-14] seeded into state%timecontrol in swap.f90
          tc_imonth_init_buf = datea_init(2)  ! [SS-TC TC-14] seeded into state%timecontrol in swap.f90
       end block
@@ -118,19 +122,23 @@ contains
       ! locals in readswap (readswap.f90:16), no module global exists.
       ! Must run AFTER iyear/imonth derivation above.
       if (config%simulation%swmonth == 1) then
-         call populate_outdatint_monthly()
-         period = 0
-         swres  = 0
-         swodat = 0
+         call populate_outdatint_monthly(state%timecontrol%tend)
+         state%timecontrol%period = 0
+         state%timecontrol%swres  = 0
+         state%timecontrol%swodat = 0
       end if
 
       ! ---------------------------------------------------------------
       ! Simulation.numerical (audit: 6 fields)
       ! ---------------------------------------------------------------
       tc_dt_init_buf = config%simulation%numerical%dt  ! [SS-TC TC-14] seeded into state%timecontrol in swap.f90
-      dtmin     = config%simulation%numerical%dtmin
-      dtmax     = config%simulation%numerical%dtmax
-      MaxIt     = config%simulation%numerical%MaxIt
+      state%timecontrol%dtmin = config%simulation%numerical%dtmin
+      state%timecontrol%dtmax = config%simulation%numerical%dtmax
+      state%timecontrol%MaxIt = config%simulation%numerical%MaxIt
+      ! MaxIterTime / flMaxIterTime not in config schema — default to 0 / .false.
+      state%timecontrol%MaxIterTime   = 0
+      state%timecontrol%flMaxIterTime = .false.
+      state%timecontrol%msteps        = config%simulation%numerical%msteps
       MaxBackTr = config%simulation%numerical%MaxBackTr
       taccur    = config%simulation%numerical%taccur
       gwlconv       = config%simulation%numerical%gwlconv
@@ -139,7 +147,6 @@ contains
       critdevponddt = config%simulation%numerical%critdevponddt
       SWkmean       = config%simulation%numerical%swkmean
       SwkImpl       = config%simulation%numerical%swkimpl
-      msteps        = config%simulation%numerical%msteps
 
       ! ---------------------------------------------------------------
       ! Meteorology (audit: 12 + evaporation + snow)
@@ -506,8 +513,10 @@ contains
       swssdi_irr  = config%irrigation%swssdi
       flTillage = (config%soil%swtill == 1)
       flSSDI    = (config%irrigation%swssdi == 1)
-      if (flTillage) call apply_soil_tillage(config%soil%tillage)
-      if (flSSDI)    call apply_irrigation_ssdi(config%irrigation%ssdi)
+      if (flTillage) call apply_soil_tillage(config%soil%tillage, state%timecontrol%tend)
+      if (flSSDI)    call apply_irrigation_ssdi(config%irrigation%ssdi, &
+                                               state%timecontrol%tstart, &
+                                               state%timecontrol%tend)
       call apply_nutrients(config%nutrients)
       gwli    = config%soil%gwli
       ! [SS-SWC S-2.12B] pondini/pond retired — buffered for swap.f90 to seed state%soilwater after soilwater_init
@@ -1257,7 +1266,7 @@ contains
       swirg           = 0
       swini           = 0
       swend           = 0
-      swheader        = 0
+      state%timecontrol%swheader = 0
       swcaprise       = .false.
       swcapriseoutput = .false.
       swrum           = 0
@@ -1295,8 +1304,9 @@ contains
    !! between `tstart` and `tend`. Mirrors `readswap.f90:181-204` (the
    !! `swmonth == 1` branch). Bare `use variables` for parity with the
    !! parent adapter.
-   subroutine populate_outdatint_monthly()
+   subroutine populate_outdatint_monthly(tend)
       use variables
+      real(8), intent(in) :: tend
       integer  :: datea_om(6), i_om
       real     :: fsec_om
       real(8)  :: outdate_om
@@ -1372,7 +1382,7 @@ contains
    !! parses event dates to days-since-1900, sets the Ntill+1 sentinel
    !! (tend + 1), computes Max_Z_tillage and the iTT1/iTT2 first/last-position
    !! indices. Replaces the deleted Read_Tillage subroutine (Task 5).
-   subroutine apply_soil_tillage(tillage)
+   subroutine apply_soil_tillage(tillage, tend)
       use, intrinsic :: iso_fortran_env, only: real64
       use soil_config_mod, only: soil_tillage_t
       use error_mod, only: fatalerr_collected
@@ -1393,8 +1403,9 @@ contains
                            TAB_N_match     => till_TAB_N_match, &
                            iTT1 => till_iTT1, &
                            iTT2 => till_iTT2, &
-                           NumNod, zbotcp, tend
+                           NumNod, zbotcp
       type(soil_tillage_t), intent(in) :: tillage
+      real(real64),         intent(in) :: tend
 
       integer :: i, j
 
@@ -1478,13 +1489,14 @@ contains
    !!
    !! Replaces SSDI_irrigation(1) and read_ssdi_input (deletion in
    !! Task 5).
-   subroutine apply_irrigation_ssdi(ssdi)
+   subroutine apply_irrigation_ssdi(ssdi, tstart, tend)
       use, intrinsic :: iso_fortran_env, only: real64
       use irrigation_config_mod, only: irrigation_ssdi_t
       use error_mod, only: fatalerr_collected
       use variables, only: NumNod, zbotcp,                                &
                            nod_ssdi_irr, qssdi, dt_SSDI_event
       type(irrigation_ssdi_t), intent(in) :: ssdi
+      real(real64),            intent(in) :: tstart, tend
 
       integer :: i, j, nod_top, nod_bot, ncomp
 
@@ -1512,7 +1524,7 @@ contains
 
       select case (ssdi%schedule)
       case (0)
-         call apply_ssdi_mode0(ssdi, ncomp)
+         call apply_ssdi_mode0(ssdi, ncomp, tstart, tend)
       case (1)
          call apply_ssdi_mode1(ssdi, ncomp)
       end select
@@ -1663,17 +1675,18 @@ contains
 
    !> Mode-0 (fixed-date): stage CSV; populate ssdi_*_f_irr; deferred
    !! date-window validation; initial nirri_ssdi_irr entry-point from tstart.
-   subroutine apply_ssdi_mode0(ssdi, ncomp)
+   subroutine apply_ssdi_mode0(ssdi, ncomp, tstart, tend)
       use, intrinsic :: iso_fortran_env, only: real64
       use csv_reader_mod, only: read_csv_table
       use error_mod, only: error_collection_t, fatalerr_collected
       use irrigation_config_mod, only: irrigation_ssdi_t
-      use variables, only: pathwork, mairg, tstart, tend,               &
+      use variables, only: pathwork, mairg,                              &
                            nirri_ssdi_irr,                               &
                            ssdi_date_irr, ssdi_rate_f_irr,              &
                            ssdi_amount_f_irr
       type(irrigation_ssdi_t), intent(in) :: ssdi
       integer,                 intent(in) :: ncomp
+      real(real64),            intent(in) :: tstart, tend
 
       real(real64), allocatable :: tbl(:,:)
       type(error_collection_t)  :: errs

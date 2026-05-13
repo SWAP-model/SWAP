@@ -8,22 +8,15 @@
       implicit none 
 
 ! --- time & control variables
-      flprintdt          = .false.
+      ! [SS-BMI2 Task 5] retired 2026-05-13 — all 15 TimeControl config fields moved to
+      ! state%timecontrol, populated by config_to_variables before timecontrol_init runs (ADR 0041)
+      ! flprintdt, nprintday, period, swheader, swodat, swres, swscre, dtmax, dtmin,
+      ! tend, tstart, MaxIt, MaxIterTime, msteps, flMaxIterTime — deleted.
       ! [SS-TC] retired 2026-05-12 — TimeControl runtime fields default to zero in state%timecontrol (ADR 0041)
-      nprintday          = 0
       logf               = 0
       ex_tlast            = 0.0d0
-      period             = 0
-      swheader           = 0
-      swodat             = 0
-      swres              = 0
-      swscre             = 0
-      dtmax              = 0.0d0
-      dtmin              = 0.0d0
       outdat             = 0.0d0
       outdatint          = 0.0d0
-      tend               = 0.0d0
-      tstart             = 0.0d0
       flSwapShared       = .false.
 
 ! --- crop variables (not crop specific, such as crop calendar)
@@ -138,8 +131,8 @@
       FlIrrigationOutput = .false. 
 
 ! --- soilwater variables
-      MaxBackTr          = 0 
-      MaxIt              = 0 
+      MaxBackTr          = 0
+      ! [SS-BMI2 Task 5] MaxIt retired 2026-05-13 — moved to state%timecontrol%MaxIt
       Itnumb             = 0 
       CritDevh1Cp        = 0.0d0 
       CritDevh2Cp        = 0.0d0 
@@ -172,8 +165,8 @@
       ! indeks             = 0
       ipos               = 0 
       isoillay           = 0 
-      layer              = 0 
-      msteps             = 0 
+      layer              = 0
+      ! [SS-BMI2 Task 5] msteps retired 2026-05-13 — moved to state%timecontrol%msteps
       ncomp              = 0 
       nhead              = 0 
       ! [SS-SWC] nodgwl retired — soilwater_init handles init via state%soilwater%nodgwl

@@ -41,9 +41,9 @@
       ! real(4)   tc_tmptimestart    ! moved to state%timecontrol%tmptimestart
       ! real(4)   tc_tmptimeend      ! moved to state%timecontrol%tmptimeend
       ! logical   FlOpenFileDev      ! moved to state%timecontrol%flOpenFileDev
-      integer   nprintday          ! Number of output times during one day
-      logical   flprintdt          ! Flag indicating output every dt
       ! [SS-TC] retired 2026-05-12 — moved to state%timecontrol%* (ADR 0041)
+      ! integer   nprintday          ! moved to state%timecontrol%nprintday
+      ! logical   flprintdt          ! moved to state%timecontrol%flprintdt
       ! logical   flprintshort       ! moved to state%timecontrol%flprintshort
       ! logical   floutputshort      ! moved to state%timecontrol%floutputshort
       ! integer   nprintcount        ! moved to state%timecontrol%nprintcount
@@ -83,15 +83,17 @@
       real(8)   o2_ctopnode        ! Top node O2 conc
       logical   o2_initialized     ! Initialization flag
       
-      integer   period             ! Length of prescribed output interval (T)
-      integer   swheader           ! Switch for printing of header in output files at each balance period: 0 = no; 1 = yes
-      integer   swodat             ! Switch for extra, specific output dates in the input file: 0 = no; 1 = yes
-      integer   swres              ! Switch for counter of output interval: 0 = no reset; 1 = reset at start of calendar year
-      integer   swscre             ! Switch of screen display: 0 = no display; 1 = summary water balance; 2 = daynumber
+      ! [SS-BMI2 Task 5] retired 2026-05-13 — moved to state%timecontrol (ADR 0041)
+      ! integer   period             ! moved to state%timecontrol%period
+      ! integer   swheader           ! moved to state%timecontrol%swheader
+      ! integer   swodat             ! moved to state%timecontrol%swodat
+      ! integer   swres              ! moved to state%timecontrol%swres
+      ! integer   swscre             ! moved to state%timecontrol%swscre
       ! [SS-TC] retired 2026-05-12 — moved to state%timecontrol%dt (ADR 0041)
       ! real(8)   dt                 ! moved to state%timecontrol%dt
-      real(8)   dtmax              ! Maximum time step (T)
-      real(8)   dtmin              ! Minimum time step (T)
+      ! [SS-BMI2 Task 5] retired 2026-05-13 — moved to state%timecontrol (ADR 0041)
+      ! real(8)   dtmax              ! moved to state%timecontrol%dtmax
+      ! real(8)   dtmin              ! moved to state%timecontrol%dtmin
       real(8)   outdat(maout)      ! Array with output dates for water and solute balances
       real(8)   outdatint(maout)   ! Array with intermediate output dates
       ! [SS-TC] retired 2026-05-12 — moved to state%timecontrol%* (ADR 0041)
@@ -99,8 +101,9 @@
       ! real(8)   t                  ! moved to state%timecontrol%t
       ! real(8)   t1900              ! moved to state%timecontrol%t1900
       ! real(8)   tcum               ! moved to state%timecontrol%tcum
-      real(8)   tend               ! End date of simulation run
-      real(8)   tstart             ! Start date of simulation run
+      ! [SS-BMI2 Task 5] retired 2026-05-13 — moved to state%timecontrol (ADR 0041)
+      ! real(8)   tend               ! moved to state%timecontrol%tend
+      ! real(8)   tstart             ! moved to state%timecontrol%tstart
       ! [SS-TC] retired 2026-05-12 — moved to state%timecontrol%* (ADR 0041)
       ! logical   flbaloutput        ! moved to state%timecontrol%flbaloutput
       ! logical   fldayend           ! moved to state%timecontrol%flDayEnd
@@ -653,9 +656,10 @@
       logical   BiModal(maho)      ! logical indicating whether chosen model is bi-modal or not
       logical   NoVap(maho)        ! logical indicating that NO vapour flow is to be considered in PDI K-model
       
-      integer   MaxIterTime        ! Maximum cputime (secs), introduced to be able to interrupt (near) endless iterations
+      ! [SS-BMI2 Task 5] retired 2026-05-13 — moved to state%timecontrol (ADR 0041)
+      ! integer   MaxIterTime        ! moved to state%timecontrol%MaxIterTime
+      ! integer   MaxIt              ! moved to state%timecontrol%MaxIt
       integer   MaxBackTr
-      integer   MaxIt
       integer   Itnumb(100,2)
       real(8)   CritDevh1Cp        ! Convergence criterium for Richards equation: relative difference in pressure heads (-)
       real(8)   CritDevh2Cp        ! Convergence criterium for Richards equation: absolute difference in pressure heads (L)
@@ -668,7 +672,8 @@
       logical   flksatexm          ! flag Ksatexm variable present in input file 
       ! [SS-SWC] retired 2026-05-12 — moved to state%soilwater%fluseksatexm (ADR 0038)
       ! logical   fluseksatexm(macp) ! flag per node: yes/no make use of Ksatexm (Ksat examined in lab or field) extension in h-range [-2,0]
-      logical   flMaxIterTime      ! flag to enable input of Maximum cputime
+      ! [SS-BMI2 Task 5] retired 2026-05-13 — moved to state%timecontrol (ADR 0041)
+      ! logical   flMaxIterTime      ! moved to state%timecontrol%flMaxIterTime
       ! [SS-BND] retired 2026-05-11 — boundary subsystem migrated to state%soilwater (ADR 0035)
       ! logical   FlRunoff
       logical   swcaprise          ! flag to minimize cap.rise to rootzone (for experts only)
@@ -696,7 +701,8 @@
       integer   ipos               ! Switch for position of drain (see *.DRA input file for overview)
       integer   isoillay(maho)     ! Number of soil layer, starting with 1 at the soil surface
       integer   layer(macp)        ! Array with soil layer number for each compartment
-      integer   msteps             ! Maximum number of iteration steps during a day to solve Richards equation
+      ! [SS-BMI2 Task 5] retired 2026-05-13 — moved to state%timecontrol%msteps (ADR 0041)
+      ! integer   msteps             ! moved to state%timecontrol%msteps
       integer   ncomp(macp)        ! Array with number of compartments in each sublayer
       integer   nhead              ! Number of initial soil water pressure heads as provided in the input
       ! [SS-SWC] retired 2026-05-12 — moved to state%soilwater%nodgwl (ADR 0038)

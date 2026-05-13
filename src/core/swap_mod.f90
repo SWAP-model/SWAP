@@ -77,7 +77,7 @@ contains
       call config%validate(errors)
       call config%finalize(errors)
       call errors%abort_if_fatal()
-      call config_to_variables(config)
+      call config_to_variables(config, state)
    end block
 
    ! [SS-TC TC-14] seed state%timecontrol from transient buffers before

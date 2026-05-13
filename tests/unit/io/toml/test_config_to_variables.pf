@@ -1,24 +1,24 @@
 ! pFUnit tests for the Phase 4f Task A1 config_to_variables adapter.
 !!
 !! Each test constructs a minimal swap_config_t, populates the relevant
-!! fields, calls config_to_variables(config), and asserts that the
-!! corresponding variables%-globals carry the expected values.
+!! fields, calls config_to_variables(config, state), and asserts that the
+!! corresponding globals carry the expected values.
 !!
-!! Tests are self-contained but share the global `variables` module —
-!! pFUnit launches each in the same process, so the adapter's writes
-!! across tests overlap. Each test resets its own legacy slots before
-!! asserting (Fortran zero-init covers the first invocation; explicit
-!! resets cover ordering between tests).
+!! [SS-BMI2 Task 5]: 15 TimeControl config fields (tstart, tend, dtmin,
+!! dtmax, period, nprintday, flprintdt, swheader, swodat, swres, swscre,
+!! MaxIt, MaxIterTime, msteps, flMaxIterTime) are now written to
+!! state%timecontrol directly instead of bare variables% globals.
 
 @test
 subroutine test_config_to_variables_general_section()
    use funit
    use swap_config_mod, only: swap_config_t
    use config_to_variables_mod, only: config_to_variables
-   use variables, only: project, pathwork, pathatm, pathcrop, pathdrain, &
-                        swscre, tstart, tend, nprintday, period, swres, swodat
+   use swap_state_mod, only: swap_state_t
+   use variables, only: project, pathwork, pathatm, pathcrop, pathdrain
    implicit none
    type(swap_config_t) :: config
+   type(swap_state_t)  :: state
 
    config%general%project   = "phase4f_unit"
    config%general%pathwork  = "./work/"
@@ -33,20 +33,21 @@ subroutine test_config_to_variables_general_section()
    config%simulation%swres     = 1
    config%simulation%swodat    = 1
 
-   call config_to_variables(config)
+   call config_to_variables(config, state)
 
    @assertEqual("phase4f_unit", trim(project))
    @assertEqual("./work/",      trim(pathwork))
    @assertEqual("./atm/",       trim(pathatm))
    @assertEqual("./crop/",      trim(pathcrop))
    @assertEqual("./drain/",     trim(pathdrain))
-   @assertEqual(2,              swscre)
-   @assertEqual(365.0d0,        tstart)
-   @assertEqual(730.0d0,        tend)
-   @assertEqual(4,              nprintday)
-   @assertEqual(7,              period)
-   @assertEqual(1,              swres)
-   @assertEqual(1,              swodat)
+   ! TimeControl config fields now go to state%timecontrol (SS-BMI2 Task 5)
+   @assertEqual(2,              state%timecontrol%swscre)
+   @assertEqual(365.0d0,        state%timecontrol%tstart)
+   @assertEqual(730.0d0,        state%timecontrol%tend)
+   @assertEqual(4,              state%timecontrol%nprintday)
+   @assertEqual(7,              state%timecontrol%period)
+   @assertEqual(1,              state%timecontrol%swres)
+   @assertEqual(1,              state%timecontrol%swodat)
 end subroutine test_config_to_variables_general_section
 
 
@@ -55,10 +56,13 @@ subroutine test_config_to_variables_simulation_numerical()
    use funit
    use swap_config_mod, only: swap_config_t
    use config_to_variables_mod, only: config_to_variables, tc_dt_init_buf
+   use swap_state_mod, only: swap_state_t
    ! [SS-TC TC-14] dt retired — buffered through tc_dt_init_buf for swap.f90 seeding
-   use variables, only: dtmin, dtmax, MaxIt, MaxBackTr, taccur
+   ! [SS-BMI2 Task 5] dtmin, dtmax, MaxIt, msteps moved to state%timecontrol
+   use variables, only: MaxBackTr, taccur
    implicit none
    type(swap_config_t) :: config
+   type(swap_state_t)  :: state
 
    config%simulation%numerical%dt        = 0.1d0
    config%simulation%numerical%dtmin     = 1.0d-5
@@ -67,13 +71,14 @@ subroutine test_config_to_variables_simulation_numerical()
    config%simulation%numerical%MaxBackTr = 5
    config%simulation%numerical%taccur    = 5.0d-4
 
-   call config_to_variables(config)
+   call config_to_variables(config, state)
 
    ! [SS-TC TC-14] dt staged through transient buffer
    @assertEqual(0.1d0,   tc_dt_init_buf)
-   @assertEqual(1.0d-5,  dtmin)
-   @assertEqual(0.5d0,   dtmax)
-   @assertEqual(50,      MaxIt)
+   ! [SS-BMI2 Task 5] numerical fields now in state%timecontrol
+   @assertEqual(1.0d-5,  state%timecontrol%dtmin)
+   @assertEqual(0.5d0,   state%timecontrol%dtmax)
+   @assertEqual(50,      state%timecontrol%MaxIt)
    @assertEqual(5,       MaxBackTr)
    @assertEqual(5.0d-4,  taccur)
 end subroutine test_config_to_variables_simulation_numerical
@@ -84,10 +89,12 @@ subroutine test_config_to_variables_drainage_basic()
    use funit
    use swap_config_mod, only: swap_config_t
    use config_to_variables_mod, only: config_to_variables
+   use swap_state_mod, only: swap_state_t
    use variables, only: dramet, swdivd, swdislay, basegw, entres, &
                         swdra, nrlevs
    implicit none
    type(swap_config_t) :: config
+   type(swap_state_t)  :: state
 
    config%drain%swdra    = 1
    config%drain%dramet   = 3
@@ -97,7 +104,7 @@ subroutine test_config_to_variables_drainage_basic()
    config%drain%basegw   = -250.0d0
    config%drain%entres   = 30.0d0
 
-   call config_to_variables(config)
+   call config_to_variables(config, state)
 
    @assertEqual(1,         swdra)
    @assertEqual(3,         dramet)
@@ -114,11 +121,13 @@ subroutine test_config_to_variables_soil_with_layer_arrays()
    use funit
    use swap_config_mod, only: swap_config_t
    use config_to_variables_mod, only: config_to_variables
+   use swap_state_mod, only: swap_state_t
    ! [SS-SWC S-2.12B] pondini/pond retired from variables — buffered in config_to_variables_mod
    use variables, only: swsophy, swhyst, swinco, gwli, pondmx, cofani
    use config_to_variables_mod, only: pondini_init_buf, pond_init_buf
    implicit none
    type(swap_config_t) :: config
+   type(swap_state_t)  :: state
 
    config%soil%swsophy = 1
    config%soil%swhyst  = 2
@@ -129,7 +138,7 @@ subroutine test_config_to_variables_soil_with_layer_arrays()
    allocate(config%soil%cofani(3))
    config%soil%cofani = [1.5d0, 2.0d0, 2.5d0]
 
-   call config_to_variables(config)
+   call config_to_variables(config, state)
 
    @assertEqual(1,        swsophy)
    @assertEqual(2,        swhyst)
@@ -150,10 +159,12 @@ subroutine test_config_to_variables_surface_water_with_management()
    use funit
    use swap_config_mod, only: swap_config_t
    use config_to_variables_mod, only: config_to_variables
+   use swap_state_mod, only: swap_state_t
    use variables, only: swsrf, swsec, swqhr, osswlm, nmper, &
                         impend, swman, wscap, wldip, intwl, hbweir
    implicit none
    type(swap_config_t) :: config
+   type(swap_state_t)  :: state
 
    config%surface_water%swsrf  = 2
    config%surface_water%swsec  = 2
@@ -173,7 +184,7 @@ subroutine test_config_to_variables_surface_water_with_management()
    config%surface_water%intwl  = [1, 7]
    config%surface_water%hbweir = [-50.0d0, -75.0d0]
 
-   call config_to_variables(config)
+   call config_to_variables(config, state)
 
    @assertEqual(2,        swsrf)
    @assertEqual(2,        swsec)
@@ -200,15 +211,18 @@ subroutine test_config_to_variables_zero_forces_retired_switches()
    use funit
    use swap_config_mod, only: swap_config_t
    use config_to_variables_mod, only: config_to_variables
+   use swap_state_mod, only: swap_state_t
    use variables, only: swafo, swaun, swvap, swbal, swwba, swsba, swblc, &
-                        swdrf, swstr, swirg, swini, swend, swheader, &
+                        swdrf, swstr, swirg, swini, swend, &
                         swrum, swswb, swoutputmodflow, &
                         swcaprise, swcapriseoutput
    implicit none
    type(swap_config_t) :: config
+   type(swap_state_t)  :: state
 
    ! Pre-set every retired switch to a non-zero / non-default value to
    ! prove the adapter explicitly forces them back to 0/.false. per ADR 0009.
+   ! [SS-BMI2 Task 5] swheader is now state%timecontrol%swheader (forced to 0 in adapter).
    swafo           = 99
    swaun           = 99
    swvap           = 99
@@ -221,14 +235,13 @@ subroutine test_config_to_variables_zero_forces_retired_switches()
    swirg           = 99
    swini           = 99
    swend           = 99
-   swheader        = 99
    swrum           = 99
    swswb           = 99
    swoutputmodflow = 99
    swcaprise       = .true.
    swcapriseoutput = .true.
 
-   call config_to_variables(config)
+   call config_to_variables(config, state)
 
    @assertEqual(0, swafo)
    @assertEqual(0, swaun)
@@ -242,7 +255,8 @@ subroutine test_config_to_variables_zero_forces_retired_switches()
    @assertEqual(0, swirg)
    @assertEqual(0, swini)
    @assertEqual(0, swend)
-   @assertEqual(0, swheader)
+   ! swheader now written to state%timecontrol%swheader — forced to 0 by ADR 0009 block
+   @assertEqual(0, state%timecontrol%swheader)
    @assertEqual(0, swrum)
    @assertEqual(0, swswb)
    @assertEqual(0, swoutputmodflow)

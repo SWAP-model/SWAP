@@ -21,17 +21,20 @@ subroutine test_apply_populates_per_event_globals()
                         Z_tillage     => till_Z_tillage, &
                         I_tillage     => till_I_tillage, &
                         Type_tillage  => till_Type_Tillage, &
-                        NumNod, zbotcp, tend
+                        NumNod, zbotcp
    use funit
+   use iso_fortran_env, only: real64
    implicit none
    type(soil_tillage_t) :: til
+   real(real64) :: tend_val
 
    ! Minimal grid for the deferred z-range check: zbotcp is a fixed-size
    ! array (MACP=5000); set the relevant slots by index.
    NumNod = 2
    zbotcp(1) = -50.0d0
    zbotcp(2) = -100.0d0
-   tend = 36898.0d0   ! 2004-12-31
+   ! [SS-BMI2 Task 5] tend retired from variables — passed as argument
+   tend_val = 36898.0d0   ! 2004-12-31
 
    allocate(til%events(2))
    til%events(1) = soil_tillage_event_t(date='2003-04-15', z=30.0d0, &
@@ -42,14 +45,14 @@ subroutine test_apply_populates_per_event_globals()
    til%types(1) = soil_tillage_type_t(id=1, rho_cons=1500.0d0, &
                                       rho_tillage=1100.0d0, k_R=0.05d0)
 
-   call apply_soil_tillage(til)
+   call apply_soil_tillage(til, tend_val)
 
    @assertEqual(2, Ntill)
    @assertEqual(30.0d0, Z_tillage(1), tolerance=1.0d-9)
    @assertEqual(1.0d0,  I_tillage(1), tolerance=1.0d-9)
    @assertEqual(1,      Type_tillage(1))
-   ! Sentinel slot: Date_tillage(Ntill+1) = tend + 1
-   @assertEqual(tend + 1.0d0, Date_tillage(Ntill+1), tolerance=1.0d-9)
+   ! Sentinel slot: Date_tillage(Ntill+1) = tend_val + 1
+   @assertEqual(tend_val + 1.0d0, Date_tillage(Ntill+1), tolerance=1.0d-9)
    @assertEqual(30.0d0, Max_Z_tillage, tolerance=1.0d-9)
 end subroutine
 
@@ -61,15 +64,17 @@ subroutine test_apply_populates_per_type_globals()
                         TAB_Rho_cons    => till_TAB_Rho_cons, &
                         TAB_Rho_tillage => till_TAB_Rho_tillage, &
                         TAB_K_R_cons    => till_TAB_K_R_cons, &
-                        NumNod, zbotcp, tend
+                        NumNod, zbotcp
    use funit
+   use iso_fortran_env, only: real64
    implicit none
    type(soil_tillage_t) :: til
+   real(real64) :: tend_val
 
    NumNod = 2
    zbotcp(1) = -50.0d0
    zbotcp(2) = -100.0d0
-   tend = 36898.0d0
+   tend_val = 36898.0d0
 
    allocate(til%events(1))
    til%events(1) = soil_tillage_event_t(date='2003-04-15', z=30.0d0, &
@@ -78,7 +83,7 @@ subroutine test_apply_populates_per_type_globals()
    til%types(1) = soil_tillage_type_t(id=1, rho_cons=1500.0d0, &
                                       rho_tillage=1100.0d0, k_R=0.05d0)
 
-   call apply_soil_tillage(til)
+   call apply_soil_tillage(til, tend_val)
 
    @assertEqual(1, iType_Tillage(1))
    @assertEqual(1500.0d0, TAB_Rho_cons(1),    tolerance=1.0d-9)
@@ -95,15 +100,17 @@ subroutine test_apply_iTT1_iTT2_indices_when_two_types()
    use config_to_variables_mod, only: apply_soil_tillage
    use variables, only: iTT1 => till_iTT1, &
                         iTT2 => till_iTT2, &
-                        NumNod, zbotcp, tend
+                        NumNod, zbotcp
    use funit
+   use iso_fortran_env, only: real64
    implicit none
    type(soil_tillage_t) :: til
+   real(real64) :: tend_val
 
    NumNod = 2
    zbotcp(1) = -50.0d0
    zbotcp(2) = -100.0d0
-   tend = 36898.0d0
+   tend_val = 36898.0d0
 
    allocate(til%events(2))
    til%events(1) = soil_tillage_event_t(date='2003-04-15', z=30.0d0, &
@@ -116,7 +123,7 @@ subroutine test_apply_iTT1_iTT2_indices_when_two_types()
    til%types(2) = soil_tillage_type_t(id=2, rho_cons=1400.0d0, &
                                       rho_tillage=1050.0d0, k_R=0.03d0)
 
-   call apply_soil_tillage(til)
+   call apply_soil_tillage(til, tend_val)
 
    ! iTT1/iTT2 arrays are size Ntill (=2).
    ! For j=1 (type 1): iType_Tillage(1)=1, so iTT1(1)=1, iTT2(1)=1.
@@ -133,15 +140,17 @@ subroutine test_apply_i_n_model_3_allocates_match_arrays()
    use config_to_variables_mod, only: apply_soil_tillage
    use variables, only: TAB_Rho_match => till_TAB_Rho_match, &
                         TAB_N_match   => till_TAB_N_match, &
-                        NumNod, zbotcp, tend
+                        NumNod, zbotcp
    use funit
+   use iso_fortran_env, only: real64
    implicit none
    type(soil_tillage_t) :: til
+   real(real64) :: tend_val
 
    NumNod = 2
    zbotcp(1) = -50.0d0
    zbotcp(2) = -100.0d0
-   tend = 36898.0d0
+   tend_val = 36898.0d0
 
    til%i_n_model = 3
 
@@ -153,7 +162,7 @@ subroutine test_apply_i_n_model_3_allocates_match_arrays()
                                       rho_tillage=1100.0d0, k_R=0.05d0, &
                                       rho_match=1200.0d0, N_match=2.0d0)
 
-   call apply_soil_tillage(til)
+   call apply_soil_tillage(til, tend_val)
 
    @assertTrue(allocated(TAB_Rho_match), 'TAB_Rho_match allocated for i_n_model=3')
    @assertTrue(allocated(TAB_N_match),   'TAB_N_match allocated for i_n_model=3')

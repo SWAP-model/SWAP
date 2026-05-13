@@ -19,15 +19,16 @@ subroutine test_apply_mode0_populates_globals_from_csv()
    use irrigation_config_mod, only: irrigation_ssdi_t
    use config_to_variables_mod, only: apply_irrigation_ssdi
    ! [SS-TC TC-14] t1900 retired from variables — apply_irrigation_ssdi does not read it
+   ! [SS-BMI2 Task 5] tstart, tend retired from variables — passed as arguments
    use variables, only: ssdi_date_irr, ssdi_rate_f_irr, ssdi_amount_f_irr, &
                         nod_ssdi_irr, nirri_ssdi_irr,                       &
-                        NumNod, zbotcp,                                     &
-                        tend, tstart, pathwork
+                        NumNod, zbotcp, pathwork
    use, intrinsic :: iso_fortran_env, only: real64
    use funit
    implicit none
    type(irrigation_ssdi_t) :: ssdi
    integer :: dy_apr15
+   real(real64) :: tstart_val, tend_val
 
    ! Minimal grid for ssdi_z resolution.
    NumNod = 4
@@ -37,8 +38,8 @@ subroutine test_apply_mode0_populates_globals_from_csv()
    zbotcp(4) = -60.0d0
 
    ! Simulation window covers the fixture dates (2003-04-15 .. 2003-06-10).
-   tstart = 37621.0_real64   ! 2003-01-01 (days since 1900)
-   tend   = 37985.0_real64   ! 2003-12-31
+   tstart_val = 37621.0_real64   ! 2003-01-01 (days since 1900)
+   tend_val   = 37985.0_real64   ! 2003-12-31
    pathwork = 'tests/unit/io/toml/fixtures/'
 
    ssdi%schedule = 0
@@ -46,7 +47,7 @@ subroutine test_apply_mode0_populates_globals_from_csv()
    allocate(character(len=20) :: ssdi%fixed%events_file)
    ssdi%fixed%events_file = 'ssdi_events_small.csv'
 
-   call apply_irrigation_ssdi(ssdi)
+   call apply_irrigation_ssdi(ssdi, tstart_val, tend_val)
 
    ! nod_ssdi(1) should point to the node whose zbotcp <= -25 (node 2)
    ! nod_ssdi(2) should point to the node whose zbotcp <= -40 (node 3)
@@ -81,12 +82,17 @@ subroutine test_apply_mode1_copies_scheduled_block()
    use funit
    implicit none
    type(irrigation_ssdi_t) :: ssdi
+   real(real64) :: tstart_val, tend_val
 
    NumNod = 4
    zbotcp(1) = -10.0d0
    zbotcp(2) = -25.0d0
    zbotcp(3) = -40.0d0
    zbotcp(4) = -60.0d0
+
+   ! [SS-BMI2 Task 5] tstart, tend passed as arguments (not bare globals)
+   tstart_val = 37621.0_real64
+   tend_val   = 37985.0_real64
 
    ssdi%schedule = 1
    ssdi%ssdi_z   = [-25.0d0, -40.0d0]
@@ -97,7 +103,7 @@ subroutine test_apply_mode1_copies_scheduled_block()
    ssdi%scheduled%sw_interval   = 0
    ssdi%scheduled%days_interval = 1
 
-   call apply_irrigation_ssdi(ssdi)
+   call apply_irrigation_ssdi(ssdi, tstart_val, tend_val)
 
    @assertEqual(2, nod_ssdi_irr(1))
    @assertEqual(3, nod_ssdi_irr(2))

@@ -16,15 +16,11 @@ module timecontrol_mod
 contains
 
    subroutine timecontrol_init(state)
-      use variables, only: dtmin, dtmax, period, swscre, &
-                            tend, tstart, &
-                            flprintdt, nprintday, logf, flCropCalendar, &
+      use variables, only: logf, flCropCalendar, &
                             swirfix, swsnow, swdra, &
                             swhea, swsolu, swetsine, swrain, swmetdetail, &
                             nmetdetail, nirri, swinco, icrop, &
-                            cropstart, croptype, project, &
-                            swheader, swodat, swres, &
-                            MaxIt, MaxIterTime, msteps, flMaxIterTime
+                            cropstart, croptype, project
       use timestep_control_mod, only: fldecdt
       use error_mod, only: fatalerr_collected
       implicit none
@@ -100,7 +96,22 @@ contains
            flSurfaceWater => state%timecontrol%flSurfaceWater, &
            flTemperature => state%timecontrol%flTemperature, &
            flSnow => state%timecontrol%flSnow, &
-           flSolute => state%timecontrol%flSolute )
+           flSolute => state%timecontrol%flSolute, &
+           tstart => state%timecontrol%tstart, &
+           tend => state%timecontrol%tend, &
+           dtmin => state%timecontrol%dtmin, &
+           dtmax => state%timecontrol%dtmax, &
+           period => state%timecontrol%period, &
+           nprintday => state%timecontrol%nprintday, &
+           flprintdt => state%timecontrol%flprintdt, &
+           swheader => state%timecontrol%swheader, &
+           swodat => state%timecontrol%swodat, &
+           swres => state%timecontrol%swres, &
+           swscre => state%timecontrol%swscre, &
+           MaxIt => state%timecontrol%MaxIt, &
+           MaxIterTime => state%timecontrol%MaxIterTime, &
+           msteps => state%timecontrol%msteps, &
+           flMaxIterTime => state%timecontrol%flMaxIterTime )
 
 ! === initialization ===================================================
 
@@ -124,24 +135,8 @@ contains
       flUpdMetDet = .true.
       flYearStart = .true.
 
-! [SS-BMI2] Seed state-side copies of time bounds, dt limits, output cadence,
-! and iteration control. Bare globals (still in variables.f90) keep working;
-! both writes happen until Task 4 migrates readers and Task 5 retires globals.
-      state%timecontrol%tstart        = tstart
-      state%timecontrol%tend          = tend
-      state%timecontrol%dtmin         = dtmin
-      state%timecontrol%dtmax         = dtmax
-      state%timecontrol%period        = period
-      state%timecontrol%nprintday     = nprintday
-      state%timecontrol%flprintdt     = flprintdt
-      state%timecontrol%swheader      = swheader
-      state%timecontrol%swodat        = swodat
-      state%timecontrol%swres         = swres
-      state%timecontrol%swscre        = swscre
-      state%timecontrol%MaxIt         = MaxIt
-      state%timecontrol%MaxIterTime   = MaxIterTime
-      state%timecontrol%msteps        = msteps
-      state%timecontrol%flMaxIterTime = flMaxIterTime
+! [SS-BMI2 Task 5] state%timecontrol fields populated by config_to_variables before
+! timecontrol_init runs. Transitional seed block removed.
 
       if (nprintday .gt. 1 .or. flprintdt) then
         flprintshort = .true.
@@ -315,13 +310,12 @@ contains
    end subroutine timecontrol_init
 
    subroutine timecontrol_advance(state)
-      use variables, only: dtmin, dtmax, period, outdat, outdatint, tend, tstart, &
-                            nprintday, swheader, swres, swscre, &
-                            flCropCalendar, msteps, &
-                            flprintdt, swrain, swmetdetail, &
+      use variables, only: outdat, outdatint, &
+                            flCropCalendar, &
+                            swrain, swmetdetail, &
                             flCropHarvest, flCropOutput, croptype, &
                             raintimearray, dtEventRain, dt_SSDI_event, flSSDI, &
-                            numbit, MaxIt, icrop
+                            numbit, icrop
       use irrigation_mod, only: SSDI_irrigation
       use error_mod, only: fatalerr_collected
       implicit none
@@ -395,7 +389,20 @@ contains
            flSurfaceWater => state%timecontrol%flSurfaceWater, &
            flTemperature => state%timecontrol%flTemperature, &
            flSnow => state%timecontrol%flSnow, &
-           flSolute => state%timecontrol%flSolute )
+           flSolute => state%timecontrol%flSolute, &
+           tstart => state%timecontrol%tstart, &
+           tend => state%timecontrol%tend, &
+           dtmin => state%timecontrol%dtmin, &
+           dtmax => state%timecontrol%dtmax, &
+           period => state%timecontrol%period, &
+           nprintday => state%timecontrol%nprintday, &
+           flprintdt => state%timecontrol%flprintdt, &
+           swheader => state%timecontrol%swheader, &
+           swodat => state%timecontrol%swodat, &
+           swres => state%timecontrol%swres, &
+           swscre => state%timecontrol%swscre, &
+           MaxIt => state%timecontrol%MaxIt, &
+           msteps => state%timecontrol%msteps )
 
 ! === next time step ===================================================
 
@@ -728,7 +735,7 @@ contains
    end subroutine timecontrol_advance
 
    subroutine timecontrol_reduce_dt(state)
-      use variables, only: dtmin, dtmax, flMacroPore, FlDecMpRat
+      use variables, only: flMacroPore, FlDecMpRat
       use timestep_control_mod, only: fldecdt
       implicit none
       type(swap_state_t), intent(inout) :: state
@@ -794,7 +801,9 @@ contains
            flSurfaceWater => state%timecontrol%flSurfaceWater, &
            flTemperature => state%timecontrol%flTemperature, &
            flSnow => state%timecontrol%flSnow, &
-           flSolute => state%timecontrol%flSolute )
+           flSolute => state%timecontrol%flSolute, &
+           dtmin => state%timecontrol%dtmin, &
+           dtmax => state%timecontrol%dtmax )
 
 ! === reduce time step ===================================================
 
@@ -859,7 +868,6 @@ contains
    end subroutine itertime_init
 
    subroutine itertime_check(state)
-      use variables, only: MaxIterTime
       use error_mod, only: fatalerr_collected
       implicit none
       type(swap_state_t), intent(inout) :: state
@@ -868,23 +876,23 @@ contains
       character(len=400) :: messag
 
       call cpu_time(tmptimeinterrupt)
-      timediff = int(tmptimeinterrupt) - MaxIterTime
+      timediff = int(tmptimeinterrupt) - state%timecontrol%MaxIterTime
       if (timediff > 0) then
          write(messag,'(a,i10,3a)') &
-            'The maximum cpu time of ', MaxIterTime, ' (secs)', &
+            'The maximum cpu time of ', state%timecontrol%MaxIterTime, ' (secs)', &
             ' was exceeded.  Therefore simulation was interrupted'
          call fatalerr_collected('IterTime', messag)
       end if
    end subroutine itertime_check
 
    subroutine itertime_close(state)
-      use variables, only: MaxIt, itnumb, logf
+      use variables, only: itnumb, logf
       implicit none
       type(swap_state_t), intent(inout) :: state
       integer :: i, j
 
       write(logf, '(/,a20)')      'Iteration statistics'
-      write(logf, '(/,a29,i4)')   'Maximum number of iterations:', MaxIt
+      write(logf, '(/,a29,i4)')   'Maximum number of iterations:', state%timecontrol%MaxIt
       write(logf, '(/,a35/,a35)') 'It Numb  No of Hits  Tot BTr cycles', &
                                    '-------  ----------  --------------'
       do i = 1, 100
