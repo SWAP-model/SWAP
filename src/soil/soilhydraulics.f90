@@ -122,9 +122,7 @@ contains
       end do
       source(1:numnod) = qssdi(1:numnod)
 
-      ! Set value of macropore area at soil surface
-      ArMpSs = 0.d0
-      if (FlMacropore .and. Z_Tp.gt.-1.d-8) ArMpSs = ArMpTp
+      ArMpSs = 0.d0                                            ! macropore retired (ADR 0040)
 
       ! Groundwater level specified — [SS-SWC S-2.12B] all legacy half-writes dropped
       if(swbotb.eq.1)then
@@ -136,8 +134,6 @@ contains
             q1 = - q0 + (state%soilwater%pond - sw_pondm1)/tc_dt + state%soilwater%runots / tc_dt  ! [SS-SWC S-2.12B] [TC-8]
             sw_theta(1) = watcon(1,state%soilwater%gwlinp)                  ! [SS-SWC S-1.4a/S-2.12B]
             sw_kmean(1) = hconduc(1,state%soilwater%gwlinp,sw_theta(1),state%heat%rfcp(1),state%heat%tsoil(1))  ! [SS-SWC S-1.4b/S-2.12B]
-            ! In case of static macropores FrArMtrx < 1
-            if(FlMacropore) sw_kmean(1) = sw_FrArMtrx(1) * sw_kmean(1)     ! [SS-SWC S-2.12B]
 
             qv(1) = q1
             do i=1,numnod
@@ -153,7 +149,6 @@ contains
             if(SwKimpl.eq.1)then
                do i=1,numnod
                   sw_k(i) = hconduc(i,sw_h(i),sw_theta(i),state%heat%rfcp(i),state%heat%tsoil(i))  ! [SS-SWC S-1.4b/S-2.12B]
-                  if(FlMacropore)  sw_k(i) = sw_FrArMtrx(i) * sw_k(i)        ! [SS-SWC S-2.12B]
                   if(i.gt.1)then
                      sw_kmean(i) = hcomean(swkmean,sw_k(i-1),sw_k(i),dz(i-1),dz(i))  ! [SS-SWC S-1.4b/S-2.12B]
                   end if
@@ -206,15 +201,11 @@ contains
                 sw_k(i) = 1.0D-10
             endif
          endif
-         if(FlMacropore)  sw_k(i) = sw_FrArMtrx(i) * sw_k(i)              ! [SS-SWC S-2.3]
-         sw_k(i) = sw_k(i)                                           ! [SS-SWC S-1.4b]
          if(i.gt.1)then
             sw_kmean(i) = hcomean(swkmean,sw_k(i-1),sw_k(i),dz(i-1),dz(i))
-            sw_kmean(i) = sw_kmean(i)                                 ! [SS-SWC S-1.4b]
          end if
       enddo
       sw_kmean(numnod+1) = sw_k(numnod)
-      sw_kmean(numnod+1) = sw_k(numnod)                               ! [SS-SWC S-1.4b]
 
       if(SwKimpl.eq.0)then
          do i=2,numnod
@@ -233,8 +224,7 @@ contains
 
       ! [MACRO-RETIRE 2026-05-12] MACROPORE(2,...) retired (ADR 0040).
 
-      if (state%soilwater%FlRunoff .or. (FlMacropore .and. Z_Tp.gt.-1.d-8))   &   ! Adaptation for GEM
-     &    call pondrunoff (state)
+      if (state%soilwater%FlRunoff) call pondrunoff (state)
 
       if(state%soilwater%ftoph)then
          hgrad(1) = (state%soilwater%hsurf-sw_h(1))/disnod(1) + 1.d0
@@ -261,15 +251,9 @@ contains
 
       if(swbotb.eq.1 .and. (.not.state%soilwater%fllowgwl))then
          sw_theta(NN)= watcon(NN,sw_h(NN))
-         sw_theta(NN) = sw_theta(NN)                               ! [SS-SWC S-1.4a]
          sw_k(NN)    = hconduc(NN,sw_h(NN),sw_theta(NN),state%heat%rfcp(NN),state%heat%tsoil(NN))
-         sw_k(NN) = sw_k(NN)                                       ! [SS-SWC S-1.4b]
-         ! In case of static macropores FrArMtrx < 1
-         if(FlMacropore) sw_k(NN) = sw_FrArMtrx(NN) * sw_k(NN)        ! [SS-SWC S-2.3]
-         if(FlMacropore) sw_k(NN) = sw_k(NN)                       ! [SS-SWC S-1.4b]
          sw_kmean(NN+1) = hcomean(swkmean,sw_k(NN),sw_cofgen(3,(NN+1)),       &  ! [SS-SWC S-2.3]
      &                        dz(NN),dz(NN+1))
-         sw_kmean(NN+1) = sw_kmean(NN+1)                           ! [SS-SWC S-1.4b]
          F(NN) = (sw_theta(NN) - sw_thetm1(NN))*sw_FrArMtrx(NN)*dz(NN)/tc_dt +      &  ! [SS-SWC S-2.3] [TC-8]
      &           sink(NN)-source(NN)+state%soilwater%qrot(NN)-sw_kmean(NN)*hgrad(NN) +sw_kmean(NN+1)*hgrad(NN+1)
       else
@@ -290,11 +274,6 @@ contains
             F(NN) = F(NN) + sw_kmean(NN+1) * hgrad(NN+1)
          else if(swbotb.eq.7 .or. swbotb .eq. -2)then ! free drainage option
             sw_kmean(numnod+1) = hconduc(numnod,sw_h(numnod),sw_theta(numnod),state%heat%rfcp(numnod),state%heat%tsoil(numnod))
-            sw_kmean(numnod+1) = sw_kmean(numnod+1)                ! [SS-SWC S-1.4b]
-            if(FlMacropore) then
-                sw_kmean(numnod+1) = sw_FrArMtrx(numnod) * sw_kmean(numnod+1)  ! [SS-SWC S-2.3]
-                sw_kmean(numnod+1) = sw_kmean(numnod+1)            ! [SS-SWC S-1.4b]
-            endif
             state%soilwater%qbot = -1.0d0 * sw_kmean(numnod+1)
             F(NN) = F(NN) - state%soilwater%qbot
          ! Lysimeter option
@@ -311,12 +290,6 @@ contains
          end if
 
       end if
-
-      if (FlMacropore) then
-         do i= 1, NN
-            F(i) = F(i) - QExcMpMtx(i)
-         enddo
-      endif
 
       ! Initial estimate of F inner product
       sumold    = 0.0d0
@@ -349,7 +322,6 @@ contains
          if(SwKimpl.eq.1)then
             do i = 1, NN
                dkdh(i)= dhconduc(i,sw_h(i),sw_theta(i),sw_dimoca(i),state%heat%rfcp(i))
-               if(FlMacropore) dkdh(i) = sw_FrArMtrx(i) * dkdh(i)  ! [SS-SWC S-2.3]
             enddo
             do i=2,NN
                dFdhU(i)   = - sw_kmean(i)  /disnod(i)
@@ -481,8 +453,6 @@ contains
                do i = 1,NN
                   sw_k(i) = hconduc(i,sw_h(i),sw_theta(i),state%heat%rfcp(i),state%heat%tsoil(i))
                   sw_k(i) = sw_k(i)                                  ! [SS-SWC S-1.4b]
-                  if(FlMacropore)  sw_k(i) = sw_FrArMtrx(i) * sw_k(i)  ! [SS-SWC S-2.3]
-                  if(FlMacropore)  sw_k(i) = sw_k(i)                 ! [SS-SWC S-1.4b]
                   if(i.gt.1)then
                      sw_kmean(i)=hcomean(swkmean,sw_k(i-1),sw_k(i),dz(i-1),dz(i))
                      sw_kmean(i) = sw_kmean(i)                        ! [SS-SWC S-1.4b]
@@ -523,8 +493,7 @@ contains
 
             ! [MACRO-RETIRE 2026-05-12] MACROPORE(2,...) retired (ADR 0040).
 
-            if (state%soilwater%FlRunoff .or. (FlMacropore .and. Z_Tp.gt.-1.d-8))   &   ! Adaptation for GEM
-     &         call pondrunoff (state)
+            if (state%soilwater%FlRunoff) call pondrunoff (state)
 
             if(state%soilwater%ftoph)then
                hgrad(1) = (state%soilwater%hsurf-sw_h(1))/disnod(1) + 1.d0
@@ -551,9 +520,6 @@ contains
                sw_theta(NN) = sw_theta(NN)                         ! [SS-SWC S-1.4a]
                sw_k(NN)     = hconduc(NN,sw_h(NN),sw_theta(NN),state%heat%rfcp(NN),state%heat%tsoil(NN))
                sw_k(NN) = sw_k(NN)                                 ! [SS-SWC S-1.4b]
-               ! In case of static macropores FrArMtrx < 1
-               if(FlMacropore)  sw_k(NN) = sw_FrArMtrx(NN) * sw_k(NN)  ! [SS-SWC S-2.3]
-               if(FlMacropore)  sw_k(NN) = sw_k(NN)               ! [SS-SWC S-1.4b]
                sw_kmean(NN+1) = hcomean(swkmean,sw_k(NN),sw_cofgen(3,(NN+1)) &  ! [SS-SWC S-2.3]
      &                       ,dz(NN),dz(NN+1))
                sw_kmean(NN+1) = sw_kmean(NN+1)                     ! [SS-SWC S-1.4b]
@@ -582,10 +548,6 @@ contains
                else if(swbotb.eq.7.or. swbotb .eq. -2)then ! free drainage option
                   sw_kmean(numnod+1) = hconduc(numnod,sw_h(numnod),sw_theta(numnod),state%heat%rfcp(numnod),state%heat%tsoil(numnod))
                   sw_kmean(numnod+1) = sw_kmean(numnod+1)          ! [SS-SWC S-1.4b]
-                  if(FlMacropore) then
-                     sw_kmean(numnod+1) = sw_FrArMtrx(numnod)*sw_kmean(numnod+1)  ! [SS-SWC S-2.3]
-                     sw_kmean(numnod+1) = sw_kmean(numnod+1)       ! [SS-SWC S-1.4b]
-                  endif
                   state%soilwater%qbot = -1.0d0 * sw_kmean(numnod+1)
                   F(NN) = F(NN) - state%soilwater%qbot
                ! Lysimeter option
@@ -602,12 +564,6 @@ contains
                end if
 
             end if
-
-            if (FlMacropore) then
-               do i= 1, nn
-                  F(i) = F(i) - QExcMpMtx(i)
-               enddo
-            endif
 
             ! Calculate maximum deviation per compartment and new inner product
             Fmax   = 0.0d0
@@ -672,7 +628,7 @@ contains
          ! Test for waterbalance of ponding layer
          if (state%soilwater%ftoph) then
             state%soilwater%qtop = -sw_kmean(1)*((state%soilwater%hsurf - sw_h(1))/disnod(1)+1.0d0)
-            if(.not.flnonconv .and. (.not.FlMacropore .or. IcTopMp.gt.1)) then
+            if(.not.flnonconv) then
                deviat = state%soilwater%pond - sw_pondm1 + state%soilwater%reva*tc_dt - (state%atmosphere%nraidt+nird+state%atmosphere%melt)*tc_dt &  ! [SS-SWC S-2.12B] [TC-8]
      &                - state%soilwater%runon*tc_dt  +  state%soilwater%runots  - state%soilwater%qtop * tc_dt  ! [TC-8]
                if( abs(deviat) .gt. CritDevPondDt) then
@@ -682,67 +638,12 @@ contains
             end if
          end if
 
-         if(FlMacropore)then
-            deviat = state%soilwater%pond - sw_pondm1 + state%soilwater%reva*tc_dt - (state%atmosphere%nraidt+nird+state%atmosphere%melt)*tc_dt  &  ! [SS-SWC S-2.12B] [TC-8]
-     &             - state%soilwater%runon*tc_dt  +  state%soilwater%runots  - state%soilwater%qtop * tc_dt  &  ! [TC-8]
-     &             + ArMpSs * (state%atmosphere%nraidt+nird+state%atmosphere%melt)*tc_dt + state%soilwater%QMpLatSs  ! [TC-8]
-            if( abs(deviat) .gt. CritDevPondDt) then
-               flnonconv3 = .true. ; flnonconv   = .true.
-               flnonconv3 = flnonconv3 ! for Forcheck
-            end if
-         end if
-
-         ! Implemented to improve iteration performance in case of macropores
-         if(tc_dt.lt. 0.01d0 .and. FlMacropore .and. .not.flnonconv3)then  ! [TC-8]
-            flok = .true.
-            if (tc_dt.gt.10.d0*dtmin) then  ! [TC-8] (dtmin = config constant, not TC-owned)
-               do i=1,sw_nodgwl                                  ! [SS-SWC S-2.3]
-                  if(sw_h(i).gt.0.0d0.and.flnonconv1(i).and.flnonconv2(i)) &
-     &            then
-                     flok = .false.
-                  end if
-               end do
-            else
-               continue
-            endif
-            if(flok)then
-               if(.not.flunsatok(1))then
-                  flunsatok(1) = .true.
-               else if(.not. flunsatok(2))then
-                  flunsatok(2) = .true.
-               else
-                  flunsatok(3) = .true.                 
-               end if
-            else
-               flunsatok(1) = .false.
-               flunsatok(2) = .false.
-               flunsatok(3) = .false.
-            end if
-         end if
-
          if(dabs(sum1).gt.CritDevBalTot) flnonconv   = .true.
 
          ! Save sum for next iteration
          sumold = sum
 
          if(.not.flnonconv )then !  convergence has been reached
-        !! Replaced the Nstep with the variable from the main variables.f90 file, the
-        !! build still works as before.
-            if (FlMacropore) then
-               
-               FlDecMpRat = .false.
-               if (IDecMpRat.gt.0) then
-                  if (nstep_hc.lt.10) then
-                     nstep_hc = nstep_hc + 1
-                  endif
-                  if (tc_dt.gt.tc_dtold .or. nstep_hc.gt.10) then  ! [TC-8]
-                     tc_dtold = tc_dt  ! [TC-8]
-                     nstep_hc = 0
-                     IDecMpRat = IDecMpRat - 1
-                  endif
-               endif
-            endif
-
             if(swbotb.eq.1 .and. (.not.state%soilwater%fllowgwl))then
                ! Derive vertical flux profile in order to find qbot as a
                ! lower boundary condition for the saturated part of the soil
@@ -801,17 +702,6 @@ contains
 
          ! Reset and continue iteration with smaller timestep!
          fldecdt = .true.
-
-         return
-
-         ! In case of macropores, retry with reduction of exchange fluxes with matrix
-      elseif (FlMacropore .and. IDecMpRat .lt. 3) then
-         ! Reset soil state variables
-         IDecMpRat  = IDecMpRat + 1
-         FlDecMpRat = .true.
-         tc_dtold = tc_dt  ! [TC-8]
-
-!         write(104,'(f10.6,i5)') t, IDecMpRat
 
          return
 
@@ -956,6 +846,10 @@ contains
           sw%cofgen(2,node) = sptab(2,node,numtab(node))  ! thetas
           sw%cofgen(3,node) = sptab(3,node,numtab(node))  ! ksat
           if (do_ln_trans) sw%cofgen(3,node) = dexp(sw%cofgen(3,node))
+          ! [SS-GR-UTILS] Mirror tabulated cofgen writes into typed vg_params
+          sw%vg_params(node)%thetar = sw%cofgen(1,node)
+          sw%vg_params(node)%thetas = sw%cofgen(2,node)
+          sw%vg_params(node)%ksat   = sw%cofgen(3,node)
         end do
         do lay = 1,numlay
           ksatfit(lay) = sw%cofgen(3,nod1lay(lay))        ! [SS-SWC S-2.3]
@@ -984,6 +878,28 @@ contains
               iHWCKmodel(lay) == 10 .OR. iHWCKmodel(lay) == 11) then
              sw%cofgen(18:21,node) = paramvg(18:21,lay)   ! [SS-SWC S-1.3/S-2.12B]
           end if
+          ! [SS-GR-UTILS] Mirror analytical cofgen writes into typed vg_params
+          sw%vg_params(node)%thetar          = sw%cofgen(1,node)
+          sw%vg_params(node)%thetas          = sw%cofgen(2,node)
+          sw%vg_params(node)%ksat            = sw%cofgen(3,node)
+          sw%vg_params(node)%alpha           = sw%cofgen(4,node)
+          sw%vg_params(node)%lpar            = sw%cofgen(5,node)
+          sw%vg_params(node)%npar            = sw%cofgen(6,node)
+          sw%vg_params(node)%mpar            = sw%cofgen(7,node)
+          sw%vg_params(node)%alphaw_sentinel = sw%cofgen(8,node)
+          sw%vg_params(node)%h_enpr          = sw%cofgen(9,node)
+          sw%vg_params(node)%ksatexm         = sw%cofgen(10,node)
+          sw%vg_params(node)%relsatthr       = sw%cofgen(11,node)
+          sw%vg_params(node)%ksatthr         = sw%cofgen(12,node)
+          sw%vg_params(node)%alpha_2         = sw%cofgen(13,node)
+          sw%vg_params(node)%npar_2          = sw%cofgen(14,node)
+          sw%vg_params(node)%mpar_2          = sw%cofgen(15,node)
+          sw%vg_params(node)%omega_1         = sw%cofgen(16,node)
+          sw%vg_params(node)%omega_2         = sw%cofgen(17,node)
+          sw%vg_params(node)%h0              = sw%cofgen(18,node)
+          sw%vg_params(node)%ha              = sw%cofgen(19,node)
+          sw%vg_params(node)%apar            = sw%cofgen(20,node)
+          sw%vg_params(node)%omega_k         = sw%cofgen(21,node)
         end do
         sw%thetsl = 0.0_real64                            ! [SS-SWC S-1.3/S-2.12B]
         do lay = 1, numlay
@@ -1007,18 +923,6 @@ contains
            sw%cofgen(4,node) = paramvg(4,lay)             ! [SS-SWC S-1.3/S-2.12B]
         endif
       end do
-
-      ! Additional Input checks
-      ! ThetCrMP should be less then CofGen(2,Lay): requires additional inputcheck
-      if (FlMacropore) then
-         do lay = 1, NumLay
-            if (SwSoilShr(lay).gt.0 .and.                               &
-     &          ThetCrMp(lay).gt.sw%cofgen(2,nod1lay(lay))) then  ! [SS-SWC S-2.3]
-               messag = ' ThetCrMP.gt.ThetSat'
-               call fatalerr_collected('MacroRead',messag)
-            endif
-         enddo
-      endif
 
       if (swinco.eq.1) then
          ! Pressure head profile is input
@@ -1098,21 +1002,18 @@ contains
 
         sw%FrArMtrx(node) = 1.0_real64                    ! [SS-SWC S-1.3/S-2.12B]
         sw%k(node) = hconduc (node,sw%h(node),sw%theta(node),state%heat%rfcp(node),state%heat%tsoil(node))  ! [SS-SWC S-1.3/S-2.12B]
-        if(FlMacropore)  sw%k(node) = sw%FrArMtrx(node) * sw%k(node)  ! [SS-SWC S-2.12B]
 
         if(node.gt.1) sw%kmean(node) = hcomean(swkmean,sw%k(node-1),sw%k(node),dz(node-1),dz(node))  ! [SS-SWC S-1.3/S-2.12B]
       end do
       sw%kmean(numnod+1) = sw%k(numnod)                   ! [SS-SWC S-1.3/S-2.12B]
 
       ! Initial soil water storage
-      if (.not.flMacroPore) then
-         do i = 1, NumNod
-            sw%FrArMtrx(i) = 1.0_real64                   ! [SS-SWC S-1.3/S-2.12B]
-         enddo
-         sw%volact = 0.0_real64                           ! [SS-SWC S-1.3/S-2.12B]
-         call watstor (state)                             ! [SS-SWC S-1.6] state arg added
-         sw%volini = sw%volact                            ! [SS-SWC S-1.3/S-2.12B]
-      endif
+      do i = 1, NumNod
+         sw%FrArMtrx(i) = 1.0_real64                      ! [SS-SWC S-1.3/S-2.12B]
+      enddo
+      sw%volact = 0.0_real64                              ! [SS-SWC S-1.3/S-2.12B]
+      call watstor (state)                                ! [SS-SWC S-1.6] state arg added
+      sw%volini = sw%volact                               ! [SS-SWC S-1.3/S-2.12B]
       sw%pondini = sw%pond                                ! [SS-SWC S-1.3/S-2.12B]
 
       ! Initial groundwater level
@@ -1172,7 +1073,6 @@ contains
          do i = 1,numnod
          state%soilwater%k(i) = hconduc(i,state%soilwater%h(i),state%soilwater%theta(i),  &  ! [SS-SWC S-1.4b/S-2.12B]
      &                  state%heat%rfcp(i),state%heat%tsoil(i))
-         if(FlMacropore)  state%soilwater%k(i) = state%soilwater%FrArMtrx(i) * state%soilwater%k(i)  ! [SS-SWC S-2.12B]
          if(i.gt.1)then
             state%soilwater%kmean(i) = hcomean(swkmean,state%soilwater%k(i-1),state%soilwater%k(i),dz(i-1),dz(i))  ! [SS-SWC S-1.4b/S-2.12B]
          end if
