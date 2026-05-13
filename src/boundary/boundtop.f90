@@ -17,10 +17,13 @@
 !!   $Id: boundtop.f90 368 2018-01-11 15:44:15Z heine003 $
 !! @endnote
 module boundtop_mod
-      use variables
-      use swap_log, only: log_debug, to_str
-      use surfacewater_utils, only: runoff
-      use swap_state_mod, only: swap_state_t
+      use swap_state_mod,        only: swap_state_t
+      use swap_log,              only: log_debug, to_str
+      use surfacewater_utils,    only: runoff
+      use variables,             only: nird,                &  ! [SS-GR-BH B10] DEFERRED to Arc 8 (irrigation cluster)
+                                       swkmean, swredu,    &  ! [SS-GR-BH B10] DEFERRED: config%simulation/meteo; cascade via headcalc
+                                       flrunon, runonarr,  &  ! [SS-GR-BH B10] DEFERRED: not yet in config
+                                       q0, k1max, H0max       ! [SS-GR-BH B10] dual-write: legacy globals kept until PONDRUNOFF migrated (Task 21)
       implicit none
 
       private
@@ -124,10 +127,10 @@ contains
 ! --- This only occurs if RH is 100% in SWAPS, never used for SWAP
          kSurf = state%soilwater%k(1)                                         ! [SS-SWC S-2.5]
       endif
-      k1Atm = hcomean(swkmean,kSurf,state%soilwater%k(1),dz(1),dz(1))        ! [SS-SWC S-2.5]
+      k1Atm = hcomean(swkmean,kSurf,state%soilwater%k(1),state%mesh%dz(1),state%mesh%dz(1))        ! [SS-SWC S-2.5] [SS-GR-BH B10]
 
 ! --- maximum evaporation rate according to Darcy
-      Emax = -k1Atm * ((state%soilwater%hatm-state%soilwater%h(1))/disnod(1)+1.0d0)  ! [SS-SWC S-2.5]
+      Emax = -k1Atm * ((state%soilwater%hatm-state%soilwater%h(1))/state%mesh%disnod(1)+1.0d0)  ! [SS-SWC S-2.5] [SS-GR-BH B10]
       
 ! --- determine reduced soil evaporation rate
       ! SS-ATM A-2.6: peva/empreva retired — read from state%atmosphere
@@ -140,10 +143,11 @@ contains
 !     H I G H   A T M O S P H E R I C   D E M A N D
 !     flux through ground surface based on precipitation - evaporation 
 !     and remaining ponding of previous timestep
-      ArMpSs = 0.d0                                           !     macropore retired (ADR 0040): always 0
+      ! [SS-GR-BH B10] ArMpSs assignment deleted (macropore retired ADR 0040 — factor *(1-0)=1 is identity, bit-equivalent)
       ! SS-ATM A-2.6: nraidt/melt retired — read from state%atmosphere
-      q0 = (state%atmosphere%nraidt+nird+state%atmosphere%melt)*(1.0d0-ArMpSs) + state%soilwater%runon - state%soilwater%reva  ! [SS-SWC S-2.12B]
-      q1 = - q0 - state%soilwater%pondm1/dt
+      state%soilwater%q0 = (state%atmosphere%nraidt+nird+state%atmosphere%melt) + state%soilwater%runon - state%soilwater%reva  ! [SS-GR-BH B10]
+      q0 = state%soilwater%q0    ! [SS-GR-BH B10] dual-write: keep legacy global in sync until PONDRUNOFF migrated (Task 21)
+      q1 = - state%soilwater%q0 - state%soilwater%pondm1/dt
 
 !     check whether the atmospheric demand condition applies
       if (q1 .ge. 0.0d0 .and. q1.gt.Emax) then
@@ -157,14 +161,15 @@ contains
 
 !     maximum conductivity assuming saturation at ground surface (z=0)
       if(state%soilwater%fluseksatexm(1))then                                 ! [SS-SWC S-2.5]
-         ks = state%heat%rfcp(1)*ksatexm(1) + (1.0d0-state%heat%rfcp(1))*hconode_vsmall
+         ks = state%heat%rfcp(1)*state%soilwater%ksatexm(state%mesh%layer(1)) + (1.0d0-state%heat%rfcp(1))*hconode_vsmall  ! [SS-GR-BH B10]
       else
-         ks = state%heat%rfcp(1)*ksatfit(1) + (1.0d0-state%heat%rfcp(1))*hconode_vsmall
+         ks = state%heat%rfcp(1)*state%soilwater%ksatfit(state%mesh%layer(1)) + (1.0d0-state%heat%rfcp(1))*hconode_vsmall  ! [SS-GR-BH B10]
       endif
-      k1max = hcomean(swkmean,ks,state%soilwater%k(1),dz(1),dz(1))           ! [SS-SWC S-2.5]
+      state%soilwater%k1max = hcomean(swkmean,ks,state%soilwater%k(1),state%mesh%dz(1),state%mesh%dz(1))  ! [SS-GR-BH B10]
+      k1max = state%soilwater%k1max   ! [SS-GR-BH B10] dual-write: keep legacy global in sync until PONDRUNOFF migrated (Task 21)
 !     check whether application of flux=q1 will yield a pressure head >0
 !     at ground surface. If not: flux boundary condition is valid
-      h0    = state%soilwater%h(1) - disnod(1)*(q1/k1max+1.0d0)             ! [SS-SWC S-2.5]
+      h0    = state%soilwater%h(1) - state%mesh%disnod(1)*(q1/state%soilwater%k1max+1.0d0)  ! [SS-SWC S-2.5] [SS-GR-BH B10]
       if (h0.le.1.0d-6) then
          state%soilwater%ftoph  = .false.
          state%soilwater%kmean(1) = 0.0d0                            ! [SS-SWC S-2.12B]
@@ -174,13 +179,14 @@ contains
          state%soilwater%qtop   = q1
       else                 ! ponding occurs
          state%soilwater%ftoph  = .true.
-         state%soilwater%kmean(1) = k1max                            ! [SS-SWC S-2.12B]
+         state%soilwater%kmean(1) = state%soilwater%k1max                  ! [SS-SWC S-2.12B] [SS-GR-BH B10]
          state%soilwater%FlRunoff = .true. ! runoff potential possible
 
 ! --- calculate max value of pond without runoff
-         p1     = k1max/disnod(1) * dt
+         p1     = state%soilwater%k1max/state%mesh%disnod(1) * dt           ! [SS-GR-BH B10]
          p2     = 1.0d0/(p1+1.0d0)
-         h0max  = p2 * ( state%soilwater%pondm1 + q0*dt - k1max*dt + p1*state%soilwater%h(1) )  ! [SS-SWC S-2.5]
+         state%soilwater%H0max  = p2 * ( state%soilwater%pondm1 + state%soilwater%q0*dt - state%soilwater%k1max*dt + p1*state%soilwater%h(1) )  ! [SS-GR-BH B10]
+         H0max = state%soilwater%H0max  ! [SS-GR-BH B10] dual-write: keep legacy global in sync until PONDRUNOFF migrated (Task 21)
 
 ! [MACRO-RETIRE 2026-05-12] macropore overland-flow branch deleted (ADR 0040).
 ! Legacy block ran only when FlMacropore=.true. — see legacy/swap-4.2.0.
@@ -203,7 +209,7 @@ contains
       ! [SS-SWC S-2.12B] pond retired; read/written via state%soilwater%pond
       ! [SS-TC TC-14] dt, t1900 read via state%timecontrol (ADR 0041)
       use variables, only: swdra,disnod,H0max,k1max,pondmx,q0,rsro,rsroexp, &
-                           swpondmx,pondmxtab  ! h,pondm1 dropped [SS-SWC S-2.5]
+                           swpondmx,pondmxtab,mairg  ! h,pondm1 dropped [SS-SWC S-2.5]; mairg added [SS-GR-BH B10]
       use array_utils, only: afgen
       use surfacewater_utils, only: runoff
       use swap_state_mod, only: swap_state_t
