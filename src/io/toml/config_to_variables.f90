@@ -683,13 +683,11 @@ contains
       ! per-array names (ores/osat/alfa/npar/lexp/alfaw) are *locals*
       ! in readswap — not module globals — so they only matter as input
       ! to paramvg(1..10, lay). We write paramvg directly here. The
-      ! globals we *do* need to set are bdens / ksatfit / ksatexm /
-      ! h_enpr (all real(8) :: ...(maho) in variables.f90), since
-      ! downstream code (soilhydraulics, solute, etc.) reads them.
+      ! globals we *do* need to set are bdens / h_enpr (real(8) :: ...(maho)
+      ! in variables.f90) since downstream code reads them. ksatfit/ksatexm
+      ! retired from adapter — state%soilwater reads directly from config [SS-GR-BH A6].
       if (allocated(config%soil%hydraulics%ores)) then
          do i = 1, size(config%soil%hydraulics%ores)
-            ksatfit(i) = config%soil%hydraulics%ksatfit(i)
-            ksatexm(i) = config%soil%hydraulics%ksatexm(i)
             h_enpr(i)  = config%soil%hydraulics%h_enpr(i)
             bdens(i)   = config%soil%hydraulics%bdens(i)
          end do
@@ -752,8 +750,9 @@ contains
       ! ---------------------------------------------------------------
       ! Bottom boundary (audit: 9 fields, conditional per swbotb)
       ! ---------------------------------------------------------------
-      swbotb = config%bottom_boundary%swbotb
-      select case (swbotb)
+      ! swbotb: legacy global write retired — state%soilwater%swbotb_runtime sourced directly
+      ! from config%bottom_boundary%swbotb in swap_mod.f90 [SS-GR-BH A7].
+      select case (config%bottom_boundary%swbotb)
       case (1)
          block
             use iso_fortran_env, only: real64
@@ -946,21 +945,8 @@ contains
       tfroststa = config%heat%tfroststa
       tfrostend = config%heat%tfrostend
 
-      if (allocated(config%heat%psand)) then
-         do i = 1, size(config%heat%psand)
-            psand(i) = config%heat%psand(i)
-         end do
-      end if
-      if (allocated(config%heat%psilt)) then
-         do i = 1, size(config%heat%psilt)
-            psilt(i) = config%heat%psilt(i)
-         end do
-      end if
-      if (allocated(config%heat%pclay)) then
-         do i = 1, size(config%heat%pclay)
-            pclay(i) = config%heat%pclay(i)
-         end do
-      end if
+      ! psand/psilt/pclay: legacy global writes retired — state%soilwater%psand/psilt/pclay
+      ! now sourced directly from config%heat in swap_mod.f90 [SS-GR-BH A6].
       if (allocated(config%heat%porg)) then
          ! [SS-HEAT] Task 9: forg global retired — temperature.f90 computes ht_forg from orgmat, not from global forg
          ! Also populate orgmat (per-layer array, oxygenstress.f90:202 Bartholomeus).

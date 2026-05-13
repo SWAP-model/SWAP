@@ -57,9 +57,8 @@ contains
                             flTillage, flSSDI, &
                             numnod, numlay, &
                             dz, z, disnod, ztopcp, zbotcp, layer, &
-                            ksatexm, ksatfit, cofani, flksatexm, &
-                            orgmat, psand, psilt, pclay, &
-                            swbotb, &
+                            cofani, &
+                            orgmat, &
                             nrlevs, swdivd, swnrsrf, swtopnrsrf, swdivdinf, FacDpthInf, &
                             L, zbotdr, owltab, nowltab
       use soilwater_state_mod, only: soilwater_init
@@ -111,19 +110,25 @@ contains
    ! [SS-GR-BH A3] dual-write: populate state%mesh alongside legacy mesh globals
    call state%mesh%init(numnod, dz, z, disnod, ztopcp, zbotcp, layer)
    call soilwater_init(state%soilwater, numnod, numlay)   ! SS-CRP Phase 1 C-1.2: allocate per-node arrays + mfluxtable
-   ! [SS-GR-BH A6] dual-write: soilwater layer flats — placed here because soilwater_init
+   ! [SS-GR-BH A6] soilwater layer flats — placed here because soilwater_init
    ! allocates the state arrays (nlay-sized) AFTER config_to_variables runs.
-   ! Legacy globals are fixed-size (maho); slice-copy maps only the active nlay entries.
-   state%soilwater%ksatexm(:)  = ksatexm(1:size(state%soilwater%ksatexm))
-   state%soilwater%ksatfit(:)  = ksatfit(1:size(state%soilwater%ksatfit))
+   ! ksatexm/ksatfit/psand/psilt/pclay sourced directly from config (legacy globals retired).
+   ! cofani/orgmat: multi-source precedence — still read from legacy globals (deferred Task 36).
+   if (allocated(config%soil%hydraulics%ksatexm)) &
+      state%soilwater%ksatexm(:) = config%soil%hydraulics%ksatexm(1:size(state%soilwater%ksatexm))
+   if (allocated(config%soil%hydraulics%ksatfit)) &
+      state%soilwater%ksatfit(:) = config%soil%hydraulics%ksatfit(1:size(state%soilwater%ksatfit))
    state%soilwater%cofani(:)   = cofani(1:size(state%soilwater%cofani))
-   state%soilwater%flksatexm   = flksatexm
+   state%soilwater%flksatexm   = .false.   ! never set in adapter; matches initialize.f90:145
    state%soilwater%orgmat(:)   = orgmat(1:size(state%soilwater%orgmat))
-   state%soilwater%psand(:)    = psand(1:size(state%soilwater%psand))
-   state%soilwater%psilt(:)    = psilt(1:size(state%soilwater%psilt))
-   state%soilwater%pclay(:)    = pclay(1:size(state%soilwater%pclay))
-   ! [SS-GR-BH A7] dual-write: seed soilwater runtime scalars
-   state%soilwater%swbotb_runtime = swbotb
+   if (allocated(config%heat%psand)) &
+      state%soilwater%psand(:) = config%heat%psand(1:size(state%soilwater%psand))
+   if (allocated(config%heat%psilt)) &
+      state%soilwater%psilt(:) = config%heat%psilt(1:size(state%soilwater%psilt))
+   if (allocated(config%heat%pclay)) &
+      state%soilwater%pclay(:) = config%heat%pclay(1:size(state%soilwater%pclay))
+   ! [SS-GR-BH A7] seed soilwater runtime scalars; swbotb_runtime sourced from config.
+   state%soilwater%swbotb_runtime = config%bottom_boundary%swbotb
    state%soilwater%q0    = 0.0d0
    state%soilwater%k1max = 0.0d0
    state%soilwater%H0max = 0.0d0
