@@ -1,6 +1,7 @@
 module SWAP_csv_output
 
    use error_mod, only: fatalerr_collected
+   use iso_c_binding, only: c_double
    ! SS-SLST Phase 1 Task 5: cml,cmsy,imsqprec,imsqirrig,imsqbot,imsqdra,imdectot,imrottot,sampro,solbal
    !   removed from module-level use variables (now via state%solute in set_values/fill_values).
    ! SS-HEAT Phase 1 Task 5: TeTop,TeBot,Tsoil,heacap,heacon removed from module-level use variables
@@ -354,8 +355,9 @@ module SWAP_csv_output
    implicit none
 
    ! global
-   integer,            intent(in) :: iTask
-   type(swap_state_t), intent(in) :: state
+   integer,               intent(in)    :: iTask
+   ! [SS-BMI2] inout: init/cleanup of soilwater output_row buffer
+   type(swap_state_t), intent(inout) :: state
 
    ! local
    integer              :: j, il, iuncsv
@@ -373,7 +375,7 @@ module SWAP_csv_output
       vars%value(1:Mnodes,1:M) = -999.9d0
       vars%Nnodes(1:M)         =    1
       vars%nodes(1:Mnodes,1:M) =    0
-      
+
       ! Set format for output
       call what_form(1)
 
@@ -386,12 +388,17 @@ module SWAP_csv_output
       call merge
       call det_which_vars
 
-      ! output file; write header
-      filcsv = trim(pathwork)//trim(outfil)//'_output.csv'
-      call file_open(iuncsv, filcsv, 'unknown', 'readwrite')
-      call makeheader(iuncsv, filcsv)
+      ! [SS-BMI2] allocate output buffer after det_which_vars() has set iyes/Nnodes
+      call init_soilwater_output_buffer(state)
 
-      ! store inital values
+      ! output file; write header (headless: skip file I/O)
+      if (.not. state%timecontrol%headless) then
+         filcsv = trim(pathwork)//trim(outfil)//'_output.csv'
+         call file_open(iuncsv, filcsv, 'unknown', 'readwrite')
+         call makeheader(iuncsv, filcsv)
+      end if
+
+      ! store inital values (always — needed for dstor computation in fill_values)
       ! SS-ATM A-2.5: ssnow read from state%atmosphere (atmosphere home).
       ! SS-SWC S-2.11: volact,pond read from state%soilwater.
       VolOld  = state%soilwater%volact
@@ -404,39 +411,49 @@ module SWAP_csv_output
       call fill_values(state)
       call set_values(state)
 
-      ! line contains results in comma-separated format; il is its length
-      ! time is first value
-      line = ""; il = 0
-      associate( &                                                    ! SS-TC TC-13
-         tc_flprintshort => state%timecontrol%flprintshort, &         ! SS-TC TC-13
-         tc_date         => state%timecontrol%date,         &         ! SS-TC TC-13
-         tc_t1900        => state%timecontrol%t1900          &        ! SS-TC TC-13
-      )
-      if (.not. tc_flprintshort) then                                 ! SS-TC TC-13
-         call addstr(line, il, trim(tc_date)); call addstr(line, il, ",")  ! SS-TC TC-13
-      else
-         ! determine date-time
-         call dtdpst ('year-month-day hour:minute:seconds', tc_t1900, datexti)  ! SS-TC TC-13
-         call addstr(line, il, trim(datexti)); call addstr(line, il, ",")
+      ! [SS-BMI2] build row buffer (always runs, headless-independent)
+      call build_soilwater_output_row(state)
+
+      ! write to CSV (headless: skip)
+      if (.not. state%timecontrol%headless) then
+         ! line contains results in comma-separated format; il is its length
+         ! time is first value
+         line = ""; il = 0
+         associate( &                                                    ! SS-TC TC-13
+            tc_flprintshort => state%timecontrol%flprintshort, &         ! SS-TC TC-13
+            tc_date         => state%timecontrol%date,         &         ! SS-TC TC-13
+            tc_t1900        => state%timecontrol%t1900          &        ! SS-TC TC-13
+         )
+         if (.not. tc_flprintshort) then                                 ! SS-TC TC-13
+            call addstr(line, il, trim(tc_date)); call addstr(line, il, ",")  ! SS-TC TC-13
+         else
+            ! determine date-time
+            call dtdpst ('year-month-day hour:minute:seconds', tc_t1900, datexti)  ! SS-TC TC-13
+            call addstr(line, il, trim(datexti)); call addstr(line, il, ",")
+         end if
+
+         ! next: add all desired values
+         do j = 1, M
+            if (vars%iyes(j) == 1) then
+               do i = 1, vars%Nnodes(j)
+                  call what_form(2, vars%value(i,j), form)
+                  write (myval, form) vars%value(i,j)
+                  line = line(1:il) // trim(adjustl(myval)); il = len_trim(line)
+               end do
+            end if
+         end do
+
+         ! write result (skip last character which is a comma)
+         write(iuncsv,'(A)') line(1:il-1)
+         end associate  ! SS-TC TC-13: tc_flprintshort, tc_date, tc_t1900
       end if
 
-      ! next: add all desired values
-      do j = 1, M
-         if (vars%iyes(j) == 1) then
-            do i = 1, vars%Nnodes(j)
-               call what_form(2, vars%value(i,j), form)
-               write (myval, form) vars%value(i,j)
-               line = line(1:il) // trim(adjustl(myval)); il = len_trim(line)
-            end do
-         end if
-      end do
-
-      ! write result (skip last character which is a comma)
-      write(iuncsv,'(A)') line(1:il-1)
-      end associate  ! SS-TC TC-13: tc_flprintshort, tc_date, tc_t1900
-
    case (3)
-      close (unit=iuncsv)
+      ! [SS-BMI2] headless guard: file was only opened when not headless
+      if (.not. state%timecontrol%headless) then
+         close (unit=iuncsv)
+      end if
+      call cleanup_soilwater_output_buffer(state)
 
    case default
       call fatalerr_collected("csv_out","Illegal iTask")
@@ -967,6 +984,86 @@ module SWAP_csv_output
    end if
 
    end function nodenumber
+
+
+! ----------------------------------------------------------------------
+! [SS-BMI2] Soilwater CSV output buffer helpers (canonical output-sink pattern)
+! Mirror of water_balance buffer helpers in swapoutput.f90 (Task 8).
+! ----------------------------------------------------------------------
+
+   subroutine init_soilwater_output_buffer(state)
+! ----------------------------------------------------------------------
+!     Allocate state%soilwater%output_row and set column names.
+!     Called from csv_out(1) AFTER det_which_vars() — always runs,
+!     headless-independent.
+!     N is dynamic: 1 (datetime) + sum of Nnodes(j) for active j.
+! ----------------------------------------------------------------------
+   use swap_state_mod, only: swap_state_t
+   implicit none
+   type(swap_state_t), intent(inout) :: state
+   integer :: j, k, idx, N
+
+   ! count total values (datetime + data columns)
+   N = 1  ! datetime slot
+   do j = 1, M
+      if (vars%iyes(j) == 1) N = N + vars%Nnodes(j)
+   end do
+
+   state%soilwater%output_n_cols = N
+   if (.not. allocated(state%soilwater%output_row))     allocate(state%soilwater%output_row(N))
+   if (.not. allocated(state%soilwater%output_columns)) allocate(state%soilwater%output_columns(N))
+   state%soilwater%output_row     = 0.0_c_double
+   state%soilwater%output_columns(1) = 'datetime'
+   idx = 1
+   do j = 1, M
+      if (vars%iyes(j) == 1) then
+         do k = 1, vars%Nnodes(j)
+            idx = idx + 1
+            state%soilwater%output_columns(idx) = vars%head(k,j)
+         end do
+      end if
+   end do
+   end subroutine init_soilwater_output_buffer
+
+
+   subroutine build_soilwater_output_row(state)
+! ----------------------------------------------------------------------
+!     Fill state%soilwater%output_row(:) with the current output values.
+!     Called from csv_out(2) — always runs, headless-independent.
+!     Column 1 = t1900 (days since 1900); remaining columns match
+!     vars%value(k,j) for active j in canonical order.
+! ----------------------------------------------------------------------
+   use swap_state_mod, only: swap_state_t
+   implicit none
+   type(swap_state_t), intent(inout) :: state
+   integer :: j, k, idx
+
+   state%soilwater%output_row(1) = real(state%timecontrol%t1900, c_double)
+   idx = 1
+   do j = 1, M
+      if (vars%iyes(j) == 1) then
+         do k = 1, vars%Nnodes(j)
+            idx = idx + 1
+            state%soilwater%output_row(idx) = real(vars%value(k,j), c_double)
+         end do
+      end if
+   end do
+   end subroutine build_soilwater_output_row
+
+
+   subroutine cleanup_soilwater_output_buffer(state)
+! ----------------------------------------------------------------------
+!     Deallocate state%soilwater%output_row and reset counter.
+!     Called from csv_out(3) — always runs, headless-independent.
+! ----------------------------------------------------------------------
+   use swap_state_mod, only: swap_state_t
+   implicit none
+   type(swap_state_t), intent(inout) :: state
+
+   if (allocated(state%soilwater%output_row))     deallocate(state%soilwater%output_row)
+   if (allocated(state%soilwater%output_columns)) deallocate(state%soilwater%output_columns)
+   state%soilwater%output_n_cols = 0
+   end subroutine cleanup_soilwater_output_buffer
 
 end module SWAP_csv_output
 
