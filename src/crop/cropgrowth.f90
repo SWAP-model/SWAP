@@ -113,21 +113,24 @@
           call InitializeCrop
           flCropReadFile  = .true.
           flCropEmergence = .true.
+          state%crop%flCropEmergence = flCropEmergence   ! [SS-GR-ATM A5.2] dual-write
           if (croptype(icrop) .le. 2) then
             flCropEmergence = .false.
+            state%crop%flCropEmergence = flCropEmergence   ! [SS-GR-ATM A5.2] dual-write
           endif
         endif
       endif
 
 ! --- Preparation, Sowing and Germination of arable crop growth ---------------
       if (flCropCalendar .and. .not. flCropHarvest .and. croptype(icrop) .le. 2) then
-        
+
         ! check crop preparation, sowing and germination (of previous day)
         if (.not. flCropEmergence) then
           if (flCropPrep .and. flCropSow .and. flCropGerm) then
             swinco          = -99
             flCropReadFile  = .true.
             flCropEmergence = .true.
+            state%crop%flCropEmergence = flCropEmergence   ! [SS-GR-ATM A5.2] dual-write
           endif
         endif
         
@@ -202,11 +205,13 @@
                         ! swgerm=0: germination and emergence are immediate.
                         flCropGerm      = .true.
                         flCropEmergence = .true.
+                        state%crop%flCropEmergence = flCropEmergence   ! [SS-GR-ATM A5.2] dual-write
                      else if (rot_type == 2) then
                         ! type=2 with swgerm=1 or 2: copy germ params from cfg,
                         ! mirror legacy readarablelandgerm:3322-3358.
                         flCropGerm      = .false.
                         flCropEmergence = .false.
+                        state%crop%flCropEmergence = flCropEmergence   ! [SS-GR-ATM A5.2] dual-write
                         tsumemeopt = gp%tsumemeopt
                         tbasem     = gp%tbasem
                         teffmx     = gp%teffmx
@@ -304,6 +309,7 @@
       ! set running average of minimum temperature (only for detailed crop growth)
       if (flCropEmergence .and. croptype(icrop).ge.2) then
         nofd = min(nofd+1, 7)
+        state%atmosphere%nofd = nofd   ! [SS-GR-ATM A5.2] runtime dual-write
         sumtmin = 0.0d0
         do i = nofd,2,-1
           atmin7(i) = atmin7(i-1)
@@ -315,6 +321,7 @@
         tmnr = sumtmin / nofd
       else
         nofd = 0
+        state%atmosphere%nofd = nofd   ! [SS-GR-ATM A5.2] runtime dual-write
       endif
 
       ! determine lowest compartment containing roots
@@ -492,6 +499,7 @@
       if (croptype(icrop).eq.1)then
         if (flHarvestDay) then
           flCropEmergence = .false.
+          state%crop%flCropEmergence = flCropEmergence   ! [SS-GR-ATM A5.2] dual-write
           flCropHarvest   = .true.
         endif
       endif
@@ -500,6 +508,7 @@
       if (croptype(icrop).eq.2)then
         if (flHarvestDay) then
           flCropEmergence = .false.
+          state%crop%flCropEmergence = flCropEmergence   ! [SS-GR-ATM A5.2] dual-write
           flCropHarvest   = .true.
         endif
       endif
@@ -508,6 +517,7 @@
       if (croptype(icrop).eq.3)then
         if (dabs(tc_t1900 - cropend(icrop) - 1.d0) .lt. 1.0d-3) then
           flCropEmergence = .false.
+          state%crop%flCropEmergence = flCropEmergence   ! [SS-GR-ATM A5.2] dual-write
           flCropHarvest   = .true.
         endif
       endif
@@ -625,6 +635,7 @@
         gc = lai
         lai = lai*3.0d0
       endif
+      if (present(state)) state%crop%lai = lai   ! [SS-GR-ATM A5.2] dual-write
 
 ! --- initial crop factor or crop height
       cf = afgen (cftb,(2*magrs),dvs)
@@ -636,6 +647,7 @@
 ! --- initial storage on canopy
       if (swinter.eq.3) then
         siccapact = siccaplai*lai
+        if (present(state)) state%atmosphere%siccapact = siccapact   ! [SS-GR-ATM A5.2] dual-write
       endif
 
 ! --- initial dry weight of roots at soil surface; oxygen module
@@ -698,12 +710,13 @@
       dvs = min(dvs+dvr,2.d0)
       tsum = tsum + dtsum
 
-! --- leaf area index or soil cover fraction    
+! --- leaf area index or soil cover fraction
       lai = afgen (gctb,(2*magrs),dvs)
       if (swgc.eq.2) then
         gc = lai
         lai = lai*3.0d0
       endif
+      if (present(state)) state%crop%lai = lai   ! [SS-GR-ATM A5.2] dual-write
 
 ! --- crop factor or crop height
       cf        = afgen (cftb,(2*magrs),dvs)
@@ -711,10 +724,11 @@
       if (swcf.eq.3) then
         cfeic     = afgen (cfeictb,(2*magrs),dvs)
       endif
-      
+
 ! --- update canopy storage capacity
       if (swinter.eq.3) then
         siccapact = siccaplai*lai
+        if (present(state)) state%atmosphere%siccapact = siccapact   ! [SS-GR-ATM A5.2] dual-write
       endif
 
 ! --- dry weight of roots at soil surface; oxygen module
@@ -1350,12 +1364,13 @@
         laimax = laiem
 ! --- only for bulb crops (tulips etc..)
         if(swbulb.eq.1) then
-            lai = lasum+ssa*(wst-wstem)+spa*wso 
+            lai = lasum+ssa*(wst-wstem)+spa*wso
             dwbl = 0.0d0
             dwblpot = 0.0d0
         else
-            lai = lasum+ssa*wst+spa*wso 
+            lai = lasum+ssa*wst+spa*wso
         endif
+        if (present(state)) state%crop%lai = lai   ! [SS-GR-ATM A5.2] dual-write
         laipot = lai 
         dwrt = 0.0d0
         dwrtpot = 0.0d0
@@ -1427,6 +1442,7 @@
 ! --- initial storage on canopy
       if (swinter.eq.3) then
         siccapact = siccaplai*lai
+        if (present(state)) state%atmosphere%siccapact = siccapact   ! [SS-GR-ATM A5.2] dual-write
       endif
 
 ! --- initialize matric flux potential (SS-CRP C-2.5: hroot/hleaf/mfluxtable
@@ -1984,6 +2000,7 @@
 
 ! --- leaf area index
       lai = lasum+ssa*wst+spa*wso
+      if (present(state)) state%crop%lai = lai   ! [SS-GR-ATM A5.2] dual-write
 ! --- determine maximum lai
       laimax = max (lai,laimax)
 ! --- determine minimum lai to prevent dying straight after 
@@ -2233,8 +2250,9 @@
 ! --- update canopy storage capacity
       if (swinter.eq.3) then
         siccapact = siccaplai*lai
+        if (present(state)) state%atmosphere%siccapact = siccapact   ! [SS-GR-ATM A5.2] dual-write
       endif
-      
+
 ! --- update states of dry matter organs
       wlvt0 = wlv
       wstt0 = wst
@@ -2459,6 +2477,7 @@
         laiexppot = laiem
         laimax = laiem
         lai = lasum+ssa*wst
+        if (present(state)) state%crop%lai = lai   ! [SS-GR-ATM A5.2] dual-write
         laipot = lai
         dwrt = 0.d0
         dwrtpot = dwrt
@@ -2522,8 +2541,9 @@
 ! --- initial storage on canopy
       if (swinter.eq.3) then
         siccapact = siccaplai*lai
+        if (present(state)) state%atmosphere%siccapact = siccapact   ! [SS-GR-ATM A5.2] dual-write
       endif
-      
+
 ! --- initialize matric flux potential (SS-CRP C-2.5: hroot/hleaf/mfluxtable
 !     init moved to CropGrowth dispatcher which has access to state).
       if (swdrought .eq. 2) then
@@ -3506,6 +3526,7 @@
 
 ! ---   leaf area index
         lai = lasum+ssa*wst
+        if (present(state)) state%crop%lai = lai   ! [SS-GR-ATM A5.2] dual-write
         laimax = max (lai,laimax)
 
 ! ---   update normalized cumulative root density based on root extraction or stress (cumdens)
@@ -3540,6 +3561,7 @@
 ! ---   update canopy storage capacity
         if (swinter.eq.3) then
           siccapact = siccaplai*lai
+          if (present(state)) state%atmosphere%siccapact = siccapact   ! [SS-GR-ATM A5.2] dual-write
         endif
 
       endif
