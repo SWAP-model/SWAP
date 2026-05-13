@@ -810,6 +810,7 @@
 ! ----------------------------------------------------------------------
 !     Date               : November 2004
 !     Purpose            : open and write solute output files
+! [SS-BMI2] inout: init/cleanup of solute output_row buffer
 ! ----------------------------------------------------------------------
 
       use Variables
@@ -817,7 +818,8 @@
       implicit none
 
       integer task
-      type(swap_state_t), intent(in) :: state
+      ! [SS-BMI2] inout: init/cleanup of solute output_row buffer
+      type(swap_state_t), intent(inout) :: state
 
       select case (task)
       case (1)
@@ -825,12 +827,16 @@
 ! === open output files and write headers ===============================
 ! ADR 0009 Phase 5+: outsba deleted (swsba=0).
 
+      ! [SS-BMI2] allocate solute output buffer (placeholder; outsba deleted)
+      call init_solute_output_buffer(state)
+
       return
 
       case (2)
 
 ! === write actual data ===============================
 ! ADR 0009 Phase 5+: outsba deleted (swsba=0).
+! [SS-BMI2] no build call needed; output body was deleted, buffer stays zeroed.
 
       return
 
@@ -838,6 +844,9 @@
 
 ! === close output files ===========================
 ! ADR 0009 Phase 5+: sba file unit no longer opened.
+
+      ! [SS-BMI2] deallocate solute output buffer
+      call cleanup_solute_output_buffer(state)
 
       case default
          call fatalerr_collected ('SoluteOutput', 'Illegal value for Task')
@@ -853,13 +862,15 @@
 ! ----------------------------------------------------------------------
 !     Date               : October 2010
 !     Purpose            : open and write Groundwater Ageing output files
+! [SS-BMI2] inout: init/cleanup of solute agetracer_row buffer
 ! ----------------------------------------------------------------------
       use swap_state_mod, only: swap_state_t
       implicit none
 
 ! --- global variables ------------------
       integer task
-      type(swap_state_t), intent(in) :: state
+      ! [SS-BMI2] inout: init/cleanup of solute agetracer_row buffer
+      type(swap_state_t), intent(inout) :: state
 ! --- local variables ------------------
       integer agep,agee,ageq
 
@@ -870,6 +881,9 @@
 
 ! === open output files and write headers ===============================
 
+      ! [SS-BMI2] allocate agetracer buffer (AgeTracer currently inert — ADR 0032)
+      call init_agetracer_output_buffer(state)
+
 ! --  age files
       call outage (1,agep,agee,ageq,state)
 
@@ -879,7 +893,7 @@
 
 ! === write actual data ===============================
 
-! --  age files
+! --  age files (outage gates on flAgeTracer; buffer build would go here when active)
       call outage (2,agep,agee,ageq,state)
 
       return
@@ -888,9 +902,12 @@
 
 ! === close output files ===========================
 
-! --- close sba file
+! --- close sba file (outage gates on flAgeTracer; only opened when active)
       close (agep)
       close (agee)
+
+      ! [SS-BMI2] deallocate agetracer buffer
+      call cleanup_agetracer_output_buffer(state)
 
       case default
          call fatalerr_collected ('AgeTracerOutput', 'Illegal value for Task')
@@ -1023,6 +1040,84 @@
 
       return
       end
+
+
+! ----------------------------------------------------------------------
+! [SS-BMI2] Solute + AgeTracer output buffer helpers (canonical output-sink pattern)
+! SoluteOutput body was deleted by ADR 0009 Phase 5+ (outsba, swsba=0).
+! AgeTracerOutput is currently inert (flAgeTracer always false, ADR 0032).
+! Buffers are placeholders; build step is a no-op until output is reinstated.
+! ----------------------------------------------------------------------
+
+      subroutine init_solute_output_buffer(state)
+! ----------------------------------------------------------------------
+!     Allocate state%solute%output_row (placeholder; outsba deleted ADR 0009).
+!     Called from SoluteOutput(1) — always runs, headless-independent.
+!     N = 1 (placeholder slot for future solute balance output).
+! ----------------------------------------------------------------------
+      use swap_state_mod, only: swap_state_t
+      use iso_c_binding,  only: c_double
+      implicit none
+      type(swap_state_t), intent(inout) :: state
+      integer, parameter :: N = 1
+
+      state%solute%output_n_cols = N
+      if (.not. allocated(state%solute%output_row))     allocate(state%solute%output_row(N))
+      if (.not. allocated(state%solute%output_columns)) allocate(state%solute%output_columns(N))
+      state%solute%output_row     = 0.0_c_double
+      state%solute%output_columns(1) = 'placeholder'
+      end subroutine init_solute_output_buffer
+
+
+      subroutine cleanup_solute_output_buffer(state)
+! ----------------------------------------------------------------------
+!     Deallocate state%solute%output_row and reset counter.
+!     Called from SoluteOutput(3) — always runs, headless-independent.
+! ----------------------------------------------------------------------
+      use swap_state_mod, only: swap_state_t
+      implicit none
+      type(swap_state_t), intent(inout) :: state
+
+      if (allocated(state%solute%output_row))     deallocate(state%solute%output_row)
+      if (allocated(state%solute%output_columns)) deallocate(state%solute%output_columns)
+      state%solute%output_n_cols = 0
+      end subroutine cleanup_solute_output_buffer
+
+
+      subroutine init_agetracer_output_buffer(state)
+! ----------------------------------------------------------------------
+!     Allocate state%solute%agetracer_row (AgeTracer inert — ADR 0032).
+!     Called from AgeTracerOutput(1) — always runs, headless-independent.
+!     N = 1 (placeholder slot for future AgeTracer output when activated).
+! ----------------------------------------------------------------------
+      use swap_state_mod, only: swap_state_t
+      use iso_c_binding,  only: c_double
+      implicit none
+      type(swap_state_t), intent(inout) :: state
+      integer, parameter :: N = 1
+
+      state%solute%agetracer_n_cols = N
+      if (.not. allocated(state%solute%agetracer_row))     allocate(state%solute%agetracer_row(N))
+      if (.not. allocated(state%solute%agetracer_columns)) allocate(state%solute%agetracer_columns(N))
+      state%solute%agetracer_row     = 0.0_c_double
+      state%solute%agetracer_columns(1) = 'placeholder'
+      end subroutine init_agetracer_output_buffer
+
+
+      subroutine cleanup_agetracer_output_buffer(state)
+! ----------------------------------------------------------------------
+!     Deallocate state%solute%agetracer_row and reset counter.
+!     Called from AgeTracerOutput(3) — always runs, headless-independent.
+! ----------------------------------------------------------------------
+      use swap_state_mod, only: swap_state_t
+      implicit none
+      type(swap_state_t), intent(inout) :: state
+
+      if (allocated(state%solute%agetracer_row))     deallocate(state%solute%agetracer_row)
+      if (allocated(state%solute%agetracer_columns)) deallocate(state%solute%agetracer_columns)
+      state%solute%agetracer_n_cols = 0
+      end subroutine cleanup_agetracer_output_buffer
+
 
 ! ----------------------------------------------------------------------
       subroutine TemperatureOutput(task, state)
