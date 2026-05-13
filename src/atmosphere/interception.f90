@@ -412,15 +412,15 @@ contains
   !> @note
   !> Last modified: February 2014
   !>
-  !> Input from variables module: isua, gird, grai, gsnow, snrai
-  !>
-  !> Output to variables module: nird, nraida
+  !> Input via state: state%atmosphere%isua/grai/gsnow/snrai, state%crop%gird
+  !> nird retained via narrow use-only (Arc 8 deferral). nraida → state%atmosphere%nraida.
   !> @endnote
   subroutine DivIntercep (aintc, state)
     ! [SS-GR-ATM B7] nird DEFERRED to Arc 8 (irrigation arc).
-    ! [SS-GR-ATM B11] isua → state%atmosphere%isua DEFERRED pending irrigation.f90 dual-write.
-    ! [SS-GR-ATM B11] gird → state%crop%gird DEFERRED pending irrigation.f90/cropgrowth dual-write.
-    use variables, only: isua,gird,nird
+    ! [SS-GR-ATM B11] isua → state%atmosphere%isua
+    ! [SS-GR-ATM B11] gird → state%crop%gird
+    ! Phase A.5 runtime dual-writes ensure state tracks legacy at runtime.
+    use variables, only: nird   ! [SS-GR-ATM B7] DEFERRED to Arc 8 (irrigation)
     implicit none
 
     ! Arguments
@@ -431,14 +431,14 @@ contains
     ! and calculate net rain and net sprinkling irrigation
     if (aintc.lt.0.001d0) then
       state%atmosphere%nraida = state%atmosphere%grai - state%atmosphere%gsnow - state%atmosphere%snrai
-      nird = gird
+      nird = state%crop%gird
     else
-      if (isua.eq.0) then
-        state%atmosphere%nraida = state%atmosphere%grai - aintc*(state%atmosphere%grai/(state%atmosphere%grai+gird))
-        nird = gird-aintc*(gird/(state%atmosphere%grai+gird))
+      if (state%atmosphere%isua .eq. 0) then
+        state%atmosphere%nraida = state%atmosphere%grai - aintc*(state%atmosphere%grai/(state%atmosphere%grai+state%crop%gird))
+        nird = state%crop%gird - aintc*(state%crop%gird/(state%atmosphere%grai+state%crop%gird))
       else
         state%atmosphere%nraida = state%atmosphere%grai - aintc
-        nird = gird
+        nird = state%crop%gird
       endif
     endif
 
