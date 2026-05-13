@@ -611,8 +611,12 @@ contains
       subroutine reduceva (task, nrai, state)
       ! [SS-SWC S-2.12B] pond retired — read via state%soilwater%pond
       ! SS-TC TC-11: dt, fldaystart read via state%timecontrol tc_* aliases.
-      use variables, only: swredu,cofred,    &
-     &               nird,rsigni
+      ! [SS-GR-ATM B2] DEFERRED — swredu/cofred/rsigni config paths verified
+      !   (config%meteo%evaporation%swredu, cofredbl/bo, rsigni) but caller chain
+      !   (ProcessMeteoDay, MeteoDT, ProcessMeteoTsteps, ReadMeteoYear) lacks config arg;
+      !   threading deferred to Tasks 22-29 (meteoday/meteodt migration).
+      ! [SS-GR-ATM B2] DEFERRED — nird: irrigation-owned global; deferred to irrigation arc.
+      use variables, only: swredu, cofred, nird, rsigni
       implicit none
 
         ! Arguments
