@@ -137,6 +137,9 @@ contains
   !! @endnote
    subroutine ProcessRainEvents(state)
       ! [SS-TC TC-14] yearmeteo,timjan1,rainrec read/written via state%timecontrol (ADR 0041)
+      ! [SS-GR-ATM B27] DEFERRED: swrain→config%meteo%swrain; arai/wet→state%atmosphere%X
+      !   requires config arg to be added to this routine (Arc 8 candidate).
+      !   raintab,nmrain,rainamount,rainfluxarray,raintimearray not yet in state schema (Arc 8+).
       use variables, only: swrain,raintab,wet,nmrain,rainamount,arai,rainfluxarray,raintimearray
       use array_utils, only: afgen
       use swap_array_dimensions, only: mrain
