@@ -158,6 +158,16 @@ module soilwater_state_mod
       real(real64), allocatable :: evp(:)          !< per-node evaporation (cm/d) — always zero; kept for legacy parity
       real(real64), allocatable :: thetsl(:)       !< saturated water content per layer (-); size numlay
 
+      ! [SS-GR-BH A4] layer-flat fields — maho-sized, one per soil layer
+      real(real64), allocatable :: ksatexm(:)    !! layer Ksat (examined extension)
+      real(real64), allocatable :: ksatfit(:)    !! layer fitted Ksat
+      real(real64), allocatable :: cofani(:)     !! layer anisotropy coefficient
+      logical                   :: flksatexm = .false.  !! global flag: Ksatexm present in input
+      real(real64), allocatable :: orgmat(:)     !! layer gravimetric organic matter
+      real(real64), allocatable :: psand(:)      !! layer sand fraction
+      real(real64), allocatable :: psilt(:)      !! layer silt fraction
+      real(real64), allocatable :: pclay(:)      !! layer clay fraction
+
       ! Flat instantaneous scalars + integers + logicals (13):
 
       real(real64) :: pond         = 0.0_real64   !< surface ponding depth (cm)
@@ -400,6 +410,16 @@ contains
       ! Per-layer array sized nlay (thetsl per soil layer, not per node):
       ! Legacy: thetsl(maho) where maho = max number of soil layers
       allocate(sw%thetsl(nlay));         sw%thetsl       = 0.0_real64
+
+      ! [SS-GR-BH A4] Layer-flat fields (maho-sized, one per soil layer):
+      allocate(sw%ksatexm(nlay));        sw%ksatexm      = 0.0_real64
+      allocate(sw%ksatfit(nlay));        sw%ksatfit      = 0.0_real64
+      allocate(sw%cofani(nlay));         sw%cofani       = 0.0_real64
+      sw%flksatexm = .false.
+      allocate(sw%orgmat(nlay));         sw%orgmat       = 0.0_real64
+      allocate(sw%psand(nlay));          sw%psand        = 0.0_real64
+      allocate(sw%psilt(nlay));          sw%psilt        = 0.0_real64
+      allocate(sw%pclay(nlay));          sw%pclay        = 0.0_real64
 
       ! ===========================================================================
       ! SOIL-WATER CORE — intermediate-period arrays (ADR 0038, S-1.2)
