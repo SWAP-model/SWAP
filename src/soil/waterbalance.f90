@@ -440,7 +440,7 @@ contains
       associate( tc_dt         => state%timecontrol%dt,        &  ! TC-6
                  tc_flDayStart => state%timecontrol%flDayStart )   ! TC-6
 
-      if (flzerointr) then
+      if (state%timecontrol%flZeroIntr) then
         ! SS-ATM Phase 2 Task A-2.2 (D6): igrai/inrai removed — canonical reset
         ! is state%atmosphere%intr%reset() invoked in meteoday's ResetMetFlx (A-2.1).
         ! [SS-SWC S-2.12B] iprec/igird/inird retired — state%soilwater%reset_intermediate() handles
