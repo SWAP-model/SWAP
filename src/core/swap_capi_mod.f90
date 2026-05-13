@@ -17,10 +17,12 @@ module swap_capi_mod
    implicit none
    private
 
-   ! Module-level singleton — shared with swap_bmi_mod's instance.
+   ! Shared singleton — swap_bmi_mod imports these via USE-rename so that
+   ! the BMI lifecycle methods (update/finalize) and the CAPI accessors
+   ! all operate on the same (state, config) pair.
    ! Multi-instance handles are Phase 3.
-   type(swap_state_t),          save, target :: capi_state
-   type(swap_config_t), target, save         :: capi_config
+   type(swap_state_t),          save, public, target :: capi_state
+   type(swap_config_t), target, save, public         :: capi_config
 
    type, bind(C), public :: swap_water_balance_t
       real(c_double) :: rain

@@ -10,12 +10,13 @@ module swap_bmi_mod
    use swap_mod,        only: swap_init, swap_run_step, swap_close
    use swap_state_mod,  only: swap_state_t
    use swap_config_mod, only: swap_config_t
+   ! Import the shared singleton from swap_capi_mod so that BMI lifecycle
+   ! methods (update/finalize) and the CAPI accessors all operate on the
+   ! same (state, config) pair.
+   use swap_capi_mod,   only: bmi_state => capi_state, bmi_config => capi_config
    use variables,       only: numnod, dz
    implicit none
    private
-
-   type(swap_state_t),          save :: bmi_state
-   type(swap_config_t), target, save :: bmi_config
 
 contains
 

@@ -29,7 +29,7 @@ contains
       end if
 
       doc_ptr => doc
-      call apply_section_readers(doc_ptr, ".", config, errors)
+      call apply_section_readers(doc_ptr, "./", config, errors)
    end subroutine load_swap_config_from_string
 
 end module load_swap_config_string_mod
