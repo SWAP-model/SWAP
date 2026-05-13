@@ -350,7 +350,7 @@ contains
          ! SS-SWST Phase 2: SurfaceWater sets request_smaller_dt; propagate to fldecdt here.
          if (.not.fldecdt .and. flSurfaceWater) call SurfaceWater(2, state, request_smaller_dt)
          if (request_smaller_dt) fldecdt = .true.
-         if (SwFrost.eq.1)                      call FrozenBounds(state)
+         if (SwFrost.eq.1)                      call FrozenBounds(state, config)
 
 !        calculate SoilWater, incl macropores (headcalc inside may also set fldecdt on non-convergence)
          if (.not.fldecdt) call SoilWater(2, state)
