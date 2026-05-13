@@ -415,7 +415,7 @@
       !   removed from only-list; reads via state%soilwater.
       ! SS-SWC S-2.11: theta,hm1,q,inq,inqrot removed from only-list; reads via state%soilwater.
       ! SS-TC TC-7: daynr,daycum,t1900,date,flprintshort removed from only-list; reads via state%timecontrol.
-      use variables, only: ztopcp, zbotcp,rot,noddrz,z,outfil,pathwork,project
+      use variables, only: rot,noddrz,outfil,pathwork,project
       use swap_state_mod, only: swap_state_t
       use file_io_mod, only: file_open
       implicit none
@@ -483,28 +483,28 @@
 ! ---   determine date and date-time
         call dtdpst ('year-month-day,hour:minute:seconds',tc_t1900,datexti)  ! TC-7
         do node = 1,noddrz
-           write (rot,300) datexti,comma,z(node),comma,state%soilwater%hleaf,comma,  &
+           write (rot,300) datexti,comma,state%mesh%z(node),comma,state%soilwater%hleaf,comma,  &
      &       state%soilwater%Hxylem,comma,                                            &
      &       state%soilwater%hroot(node),comma,state%soilwater%hm1(node),comma,state%soilwater%inqrot(node),comma, &
      &       state%soilwater%qrot(node),comma,state%soilwater%inq(node),comma,state%soilwater%q(node), &
      &       comma,state%soilwater%mroot(node),                                       &
      &       comma,state%soilwater%mflux(node),comma,state%soilwater%rootrho(node),  &
      &       comma,state%soilwater%rootphi(node),                                     &
-     &       comma,state%soilwater%theta(node),comma,ztopcp(node),comma,              &
-     &       zbotcp(node),comma,tc_daynr,comma,tc_daycum
+     &       comma,state%soilwater%theta(node),comma,state%mesh%ztopcp(node),comma,              &
+     &       state%mesh%zbotcp(node),comma,tc_daynr,comma,tc_daycum
         end do
 
       else
         do node = 1,noddrz
-           write (rot,310) tc_date,comma,z(node),comma,state%soilwater%hleaf,comma,  &
+           write (rot,310) tc_date,comma,state%mesh%z(node),comma,state%soilwater%hleaf,comma,  &
      &       state%soilwater%Hxylem,comma,                                            &
      &       state%soilwater%hroot(node),comma,state%soilwater%hm1(node),comma,state%soilwater%inqrot(node),comma, &
      &       state%soilwater%qrot(node),comma,state%soilwater%inq(node),comma,state%soilwater%q(node), &
      &       comma,state%soilwater%mroot(node),                                       &
      &       comma,state%soilwater%mflux(node),comma,state%soilwater%rootrho(node),  &
      &       comma,state%soilwater%rootphi(node),                                     &
-     &       comma,state%soilwater%theta(node),comma,ztopcp(node),comma,              &
-     &       zbotcp(node),comma,tc_daynr,comma,tc_daycum
+     &       comma,state%soilwater%theta(node),comma,state%mesh%ztopcp(node),comma,              &
+     &       state%mesh%zbotcp(node),comma,tc_daynr,comma,tc_daycum
         end do
 
       endif
@@ -928,7 +928,7 @@
       ! SS-SWST Phase 2 Task 11: inqdra removed (now via state%surfacewater%inqdra).
       ! SS-SLST Phase 1 Task 5: cml migrated to state%solute (body is gated by flAgeTracer guard).
       ! SS-TC TC-7: daynr,daycum,date,outper removed from only-list; reads via state%timecontrol.
-      use variables, only: project,nrlevs,outfil,pathwork,numnod,z,                                    &
+      use variables, only: project,outfil,pathwork,                                                       &
                            AgeGwl1m,icAgeBot,icAgeDra,icAgeRot,icAgeSur,flAgeTracer
       use swap_state_mod, only: swap_state_t
       use swap_array_dimensions, only: madr
@@ -956,7 +956,7 @@
 ! --- open output files -------------------------------------------------
 !     age of groundwater as profile
       filnam = trim(pathwork)//trim(outfil)//'.ageProfile.csv'
-      reclngth = 50 + 12*numnod
+      reclngth = 50 + 12*state%mesh%numnod
       open(newunit=agep,file=filnam,status='unknown',recl=reclngth)
       filtext = 'Groundwater age profiles (all age-values in days)'
       call writehead (agep,1,filnam,filtext,project)
@@ -972,11 +972,11 @@
       call writehead (ageq,1,filnam,filtext,project)
 
 ! --- write headers of files
-      write (agep,9) (z(node),node=1,numnod)
-      if (numnod.le.9) then
-         write (agep,10) (node,node=1,numnod)
+      write (agep,9) (state%mesh%z(node),node=1,state%mesh%numnod)
+      if (state%mesh%numnod.le.9) then
+         write (agep,10) (node,node=1,state%mesh%numnod)
       else
-         write (agep,11) (node,node=1,9), (node,node=10,numnod)
+         write (agep,11) (node,node=1,9), (node,node=10,state%mesh%numnod)
       endif
   9   format('*',t8,' NodeDepth (cm) =,,',18(',',f7.2) ,997(',',f8.2) )
  10   format('*',/, t8,'Date,Day,Daycum',   9(',Node',i3.3) )
@@ -1006,7 +1006,7 @@
 
 !     age of groundwater as profile
       write(agep,15) tc_date,comma,tc_daynr,comma,tc_daycum,             &
-     &               (comma,state%solute%cml(node),node=1,numnod)
+     &               (comma,state%solute%cml(node),node=1,state%mesh%numnod)
  15   format(a11,a1,i4,a1,i6,1p,1024(a1,e10.3))
 
 !     age of groundwater in effluents: drains, transpiration, leaching, runoff
@@ -1014,15 +1014,15 @@
       write(agee,16) tc_date,comma,tc_daynr,comma,tc_daycum,comma,AgeGwl1m,comma, &
      &               icAgeBot/tc_outper,comma,icAgeRot/tc_outper,comma,  &
      &               icAgeSur/tc_outper,                                  &
-     &               (comma,icAgeDra(level)/tc_outper,level=1,nrlevs)
+     &               (comma,icAgeDra(level)/tc_outper,level=1,state%drainage%nrlevs)
  16   format(a11,a1,i4,a1,i6,1p,9(a1,e10.3))
 
 !     qdrain discharge-effluent (without infiltration!)
       ! SS-SWST Phase 2 Task 11: inqdra global fallback removed; state is authoritative.
-      do level = 1,nrlevs
+      do level = 1,state%drainage%nrlevs
         iqdrainout(level) = 0.0d0
         if (allocated(state%surfacewater%inqdra)) then
-          do node = 1,numnod
+          do node = 1,state%mesh%numnod
             if (state%surfacewater%inqdra(level,node).gt.0.0d0) then
              iqdrainout(level) = iqdrainout(level) + state%surfacewater%inqdra(level,node)
             endif
@@ -1030,7 +1030,7 @@
         end if
       enddo
       write(ageq,16) tc_date,comma,tc_daynr,comma,tc_daycum,             &
-     &               (comma,iqdrainout(level),level=1,nrlevs)
+     &               (comma,iqdrainout(level),level=1,state%drainage%nrlevs)
 
       end associate  ! tc_date, tc_daynr, tc_daycum, tc_outper (TC-7)
 
@@ -1197,7 +1197,7 @@
 ! ---------------------------------------------------------------------
       ! SS-HEAT Phase 1 Task 5: tsoil, tebot, tetop migrated to state%heat.
       ! SS-TC TC-7: date,daynr,daycum,flheader removed from only-list; reads via state%timecontrol.
-      use variables, only: numnod,tem,tav,outfil,pathwork,project
+      use variables, only: tem,tav,outfil,pathwork,project
       use swap_state_mod, only: swap_state_t
       implicit none
 
@@ -1221,23 +1221,23 @@
       if (.not. state%timecontrol%headless) then
          filnam = trim(pathwork)//trim(outfil)//'.tem'
 !         reclngth = 36 + 7*numnod
-         reclngth = 50 + 7*numnod
+         reclngth = 50 + 7*state%mesh%numnod
          open(newunit=tem,file=filnam,status='unknown',recl=reclngth)
          filtext = 'soil temperature profiles (oC)'
          call writehead (tem,1,filnam,filtext,project)
 
 ! --- write header
-         if (numnod.le.9) then
-            write (tem,10) (i,i=1,numnod)
+         if (state%mesh%numnod.le.9) then
+            write (tem,10) (i,i=1,state%mesh%numnod)
          else
-            write (tem,11) (i,i=1,9), (i,i=10,numnod)
+            write (tem,11) (i,i=1,9), (i,i=10,state%mesh%numnod)
          endif
 
          ! SS-TC TC-7: daynr,daycum -> state%timecontrol (direct, case(1) only line).
          write (tem,'(a11,a1,i3,a1,i6,1024(a1,f6.1:))') '    Initial'      &
      &         ,comma,state%timecontrol%daynr,comma,state%timecontrol%daycum, &
      &         comma,tav,comma,state%heat%tetop,                              &
-     &         (comma,state%heat%tsoil(i),i=1,numnod),comma,state%heat%tebot
+     &         (comma,state%heat%tsoil(i),i=1,state%mesh%numnod),comma,state%heat%tebot
       end if
 
  10   format('*',/,                                                     &
@@ -1271,7 +1271,7 @@
 ! --- write soil temperature profile
          write (tem,'(a11,a1,i3,a1,i6,1024(a1,f6.1:))') tc_date             &
      &         ,comma,tc_daynr,comma,tc_daycum,comma,tav,comma,state%heat%tetop, &
-     &         (comma,state%heat%tsoil(i),i=1,numnod),comma,state%heat%tebot
+     &         (comma,state%heat%tsoil(i),i=1,state%mesh%numnod),comma,state%heat%tebot
          end associate  ! tc_flheader, tc_date, tc_daynr, tc_daycum (TC-7)
       end if
 
@@ -1296,14 +1296,13 @@
 !     N = numnod + 5: t1900(date), daynr, daycum, tav, tetop, T(1..numnod), tebot
 ! ----------------------------------------------------------------------
       use swap_state_mod, only: swap_state_t
-      use variables,      only: numnod
       use iso_c_binding,  only: c_double
       implicit none
       type(swap_state_t), intent(inout) :: state
       integer :: i, N
       character(len=32) :: colname
 
-      N = numnod + 5
+      N = state%mesh%numnod + 5
       state%heat%output_n_cols = N
       if (.not. allocated(state%heat%output_row))     allocate(state%heat%output_row(N))
       if (.not. allocated(state%heat%output_columns)) allocate(state%heat%output_columns(N))
@@ -1313,7 +1312,7 @@
       state%heat%output_columns(3) = 'daycum'
       state%heat%output_columns(4) = 'tav'
       state%heat%output_columns(5) = 'tetop'
-      do i = 1, numnod
+      do i = 1, state%mesh%numnod
          write(colname,'(a,i0)') 'T', i
          state%heat%output_columns(5 + i) = colname
       end do
@@ -1328,7 +1327,7 @@
 !     Column order: t1900, daynr, daycum, tav, tetop, T(1..numnod), tebot.
 ! ----------------------------------------------------------------------
       use swap_state_mod, only: swap_state_t
-      use variables,      only: numnod, tav
+      use variables,      only: tav
       use iso_c_binding,  only: c_double
       implicit none
       type(swap_state_t), intent(inout) :: state
@@ -1339,7 +1338,7 @@
       state%heat%output_row(3) = real(state%timecontrol%daycum, c_double)  ! cumulative day
       state%heat%output_row(4) = real(tav,                       c_double)  ! average temperature
       state%heat%output_row(5) = real(state%heat%tetop,          c_double)  ! top boundary temp
-      do i = 1, numnod
+      do i = 1, state%mesh%numnod
          state%heat%output_row(5 + i) = real(state%heat%tsoil(i), c_double)
       end do
       state%heat%output_row(state%heat%output_n_cols) = real(state%heat%tebot, c_double)
@@ -1746,23 +1745,25 @@
 
 
 ! ----------------------------------------------------------------------
-      subroutine checkDiscrVert()
+      subroutine checkDiscrVert(state)
       use error_mod, only: fatalerr_collected
 !     date               : 20081105
 !     purpose            : verify reduced vertical discretizationface,
 ! global   formal parameters  : (i = input, o = output)
-!     numnod       ! Number of nodes or compartments....................... i
-!     numnodnew    ! Number of desired nodes for soil water quality models..i
-!     dz(macp)     ! Compartment thickness (L) ............................ i
-!     dznew(macp)  ! Desired dz for soil water quality models (L) ......... i
+!     state%mesh%numnod    ! Number of nodes or compartments....................... i
+!     numnodnew            ! Number of desired nodes for soil water quality models..i
+!     state%mesh%dz(macp)  ! Compartment thickness (L) ............................ i
+!     dznew(macp)          ! Desired dz for soil water quality models (L) ......... i
 ! local
 ! ----------------------------------------------------------------------
-      use variables, only: numnod,dz,numnodnew,dznew
+      use variables, only: numnodnew,dznew
       use swap_array_dimensions, only: macp
-      
+      use swap_state_mod, only: swap_state_t
+
       implicit none
 
 ! global
+      type(swap_state_t), intent(in) :: state
 
 ! local
       integer   in,io,iotmp
@@ -1779,9 +1780,9 @@
       iotmp = 0
       do in = 1,numnodNew
         cumdzN(in) = 0.0d0
-        do io = 1,numnod
+        do io = 1,state%mesh%numnod
           if(io.gt.iotmp .and. cumdzN(in).lt.dzNew(in)) then
-             cumdzN(in) = cumdzN(in) + dz(io)
+             cumdzN(in) = cumdzN(in) + state%mesh%dz(io)
              iotmp = io
           endif
         enddo
@@ -1796,8 +1797,8 @@
 
 ! --  cumulative thickness
       cumdzOld = 0.0d0
-      do io = 1,numnod
-         cumdzOld = cumdzOld + dz(io)
+      do io = 1,state%mesh%numnod
+         cumdzOld = cumdzOld + state%mesh%dz(io)
       enddo
       cumdzNew = 0.0d0
       do in = 1,numnodNew
@@ -1820,7 +1821,6 @@ use error_mod, only: fatalerr_collected
 ! SS-ATM A-2.5: igrai removed from only-list; reads via state%atmosphere%intr.
 ! SS-SWC S-2.11: theta,thetas,iruno,pond,gwl removed from only-list; reads via state%soilwater.
 ! SS-TC TC-7: tcum,outper removed from only-list; reads via state%timecontrol.
-use variables, only: numnod,dz
 use swap_state_mod, only: swap_state_t
 implicit none
 
@@ -1852,15 +1852,15 @@ case (1)
    write (iunout2,'(A)') 'DayCum (d), Day (d),Tr (d),P (mm),Q (mm),Ia (mm),SS (mm),CN (-),S (mm),h0 (mm),GWL (cm),WCini (cm3/cm3)'
    ! simple
    sum = 0.0d0
-   do i = 1, numnod
-      sum = sum + dz(i)
+   do i = 1, state%mesh%numnod
+      sum = sum + state%mesh%dz(i)
       if (sum > LZ) exit
    end do
    LZnod = i
    ! simple
    sum = 0.0d0
-   do i = 1, numnod
-      sum = sum + dz(i)
+   do i = 1, state%mesh%numnod
+      sum = sum + state%mesh%dz(i)
       if (sum > LZ2) exit
    end do
    LZnod2 = i-1
@@ -1885,11 +1885,11 @@ case (2)
    )
    VT = 0.0d0
    do i = 1, LZnod
-      VT = VT + dz(i)*(state%soilwater%thetas(i)-state%soilwater%theta(i))
+      VT = VT + state%mesh%dz(i)*(state%soilwater%thetas(i)-state%soilwater%theta(i))
    end do
    WC = 0.0d0
    do i = 1, LZnod2
-      WC = WC + dz(i)*state%soilwater%theta(i)
+      WC = WC + state%mesh%dz(i)*state%soilwater%theta(i)
    end do
    WC = WC/LZ2
 

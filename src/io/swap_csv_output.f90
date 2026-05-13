@@ -16,8 +16,7 @@ module SWAP_csv_output
                         cwdmpot,cwdm,wsopot,wso,wlvpot,wlv,wstpot,wst,wrtpot,wrt,dwso,dwlv,dwlvpot,dwst,dwstpot,dwrt,dwrtpot,    &
                         ch,cf,laipot,lai,rdpot,rd,tagppot,tagp,tagptpot,tagpt,cuptgrazpot,cuptgraz,plossdm,lossdm,               &
                         wc10,Runoff_CN,iqinfmax,                                                                    &
-                        dz, numnod, zbotcp, ztopcp,                                                  &
-                        iqmpoutdrrap, c_top, nrlevs,                                                                             &
+                        iqmpoutdrrap, c_top,                                                                                     &
                         pathwork, outfil, project, InList_csv, macp, madr
    use swap_state_mod, only: swap_state_t
 
@@ -386,7 +385,7 @@ module SWAP_csv_output
       ! extract all individual vars from InList; remove double entries; merge same vars with [] in single var with []; determine which vars are require
       call make_userlist(InList)
       call merge
-      call det_which_vars
+      call det_which_vars(state)
 
       ! [SS-BMI2] allocate output buffer after det_which_vars() has set iyes/Nnodes
       call init_soilwater_output_buffer(state)
@@ -538,20 +537,20 @@ module SWAP_csv_output
 
    ! summed for all drainage levels
    if (lp_DRA%fldo) then
-      do i = 1, vars%Nnodes(lp_DRA%jpos); lp_DRA%vals(i) = sum(state%surfacewater%inqdra(1:nrlevs,i)); end do
+      do i = 1, vars%Nnodes(lp_DRA%jpos); lp_DRA%vals(i) = sum(state%surfacewater%inqdra(1:state%drainage%nrlevs,i)); end do
    end if
 
    ! handle subregions: WTOT, QTRANS, QTOP, QBOT, QDRA, lp_QTIN, lp_QTOU, lp_QBIN, lp_QBOU, lp_QDIN, lp_QDOU
    ! SS-SWC S-2.11: theta,FrArMtrx,inqrot,inq,iqdo,iqup read from state%soilwater.
    if (lp_WTOT%fldo) call fill_1(vars%Nnodes(lp_WTOT%jpos), lp_WTOT%jpos, vars%nodes, lp_WTOT%vals, 1, &
-                                  state%soilwater%theta, dz, state%soilwater%FrArMtrx)
+                                  state%soilwater%theta, state%mesh%dz, state%soilwater%FrArMtrx)
 
    ! summed sink-terms inside subregion
    if (lp_QTRA%fldo) call fill_1(vars%Nnodes(lp_QTRA%jpos), lp_QTRA%jpos, vars%nodes, lp_QTRA%vals, 0, &
                                   state%soilwater%inqrot)
-   if (lp_QDRA%fldo) call fill_2(vars%Nnodes(lp_QDRA%jpos), lp_QDRA%jpos, vars%nodes, lp_QDRA%vals, nrlevs, state%surfacewater%inqdra)
-   if (lp_QDIN%fldo) call fill_2(vars%Nnodes(lp_QDIN%jpos), lp_QDIN%jpos, vars%nodes, lp_QDIN%vals, nrlevs, state%surfacewater%inqdra_in)
-   if (lp_QDOU%fldo) call fill_2(vars%Nnodes(lp_QDOU%jpos), lp_QDOU%jpos, vars%nodes, lp_QDOU%vals, nrlevs, state%surfacewater%inqdra_out)
+   if (lp_QDRA%fldo) call fill_2(vars%Nnodes(lp_QDRA%jpos), lp_QDRA%jpos, vars%nodes, lp_QDRA%vals, state%drainage%nrlevs, state%surfacewater%inqdra)
+   if (lp_QDIN%fldo) call fill_2(vars%Nnodes(lp_QDIN%jpos), lp_QDIN%jpos, vars%nodes, lp_QDIN%vals, state%drainage%nrlevs, state%surfacewater%inqdra_in)
+   if (lp_QDOU%fldo) call fill_2(vars%Nnodes(lp_QDOU%jpos), lp_QDOU%jpos, vars%nodes, lp_QDOU%vals, state%drainage%nrlevs, state%surfacewater%inqdra_out)
 
    ! fluxes at top and bottom boudanries of subregions
    if (lp_QTOP%fldo) call fill_3(vars%Nnodes(lp_QTOP%jpos), lp_QTOP%jpos, 1, 0, vars%nodes, lp_QTOP%vals, -state%soilwater%inq)
@@ -642,9 +641,10 @@ module SWAP_csv_output
    write(iuncsv,'(A)') trim(header_names)
    end subroutine makeheader
 
-   subroutine det_which_vars()
+   subroutine det_which_vars(state)
    implicit none
    ! global
+   type(swap_state_t), intent(in) :: state
    ! local
    integer :: i, j, ipos1, ipos2
    vars%iyes = 0
@@ -660,17 +660,18 @@ module SWAP_csv_output
             if (userlist(i)(1:ipos1) == vars%name(j)) then
                vars%iyes(j) = 1
                ipos2 = index(userlist(i), "]")
-               call handle_sqr_brackets(i, j, ipos1, ipos2)
+               call handle_sqr_brackets(i, j, ipos1, ipos2, state)
             end if
          end if
       end do
    end do
    end subroutine det_which_vars
 
-   subroutine handle_sqr_brackets(i, j, ipos1, ipos2)
+   subroutine handle_sqr_brackets(i, j, ipos1, ipos2, state)
    implicit none
    ! global
    integer, intent(in)           :: i, j, ipos1, ipos2
+   type(swap_state_t), intent(in) :: state
    ! words
    integer, parameter            :: ilw = Mnodes
    integer, dimension(ilw)       :: iwbeg, iwend
@@ -722,7 +723,7 @@ module SWAP_csv_output
       vars%Nnodes(j) = ifnd
       do k = 1, ifnd
          call decrea (iwar, str(iwbeg(k):iwend(k)), rv)
-         if (rv <= 0.0d0) rv = real(nodenumber(rv, 1))
+         if (rv <= 0.0d0) rv = real(nodenumber(rv, 1, state))
          vars%nodes(k,j) = nint(rv)
          vars%head(k,j) = trim(name) // "[" // trim(str(iwbeg(k):iwend(k))) // "]"
       end do
@@ -738,11 +739,11 @@ module SWAP_csv_output
          call decrea (iwar, substr(1:(ipos3-1)), rv)
          ktel = ktel + 1
          ! to do: if rv < 0; then determine nodenumber at given depth
-         if (rv <= 0.0d0) rv = real(nodenumber(rv, 2))
+         if (rv <= 0.0d0) rv = real(nodenumber(rv, 2, state))
          vars%nodes(ktel,j) = nint(rv)
          call decrea (iwar, substr((ipos3+1):), rv)
          ktel = ktel + 1
-         if (rv <= 0.0d0) rv = real(nodenumber(rv, 1))
+         if (rv <= 0.0d0) rv = real(nodenumber(rv, 1, state))
          vars%nodes(ktel,j) = nint(rv)
          vars%head(k,j) = trim(name) // "[" // trim(substr) // "]"
       end do
@@ -957,28 +958,28 @@ module SWAP_csv_output
 
    end subroutine merge
 
-   function nodenumber(depth, iway)
-!   use variables, only : zbotcp, numnod
+   function nodenumber(depth, iway, state)
    implicit none
    ! global
-   real,    intent(in)  :: depth
-   integer, intent(in)  :: iway
+   real,               intent(in)  :: depth
+   integer,            intent(in)  :: iway
+   type(swap_state_t), intent(in)  :: state
    integer              :: nodenumber
    ! local
    integer              :: i
 
    if (iway == 1) then
       i = 1
-      do while (real(zbotcp(i)) .gt. (depth + 1.0d-5))
+      do while (real(state%mesh%zbotcp(i)) .gt. (depth + 1.0d-5))
          i = i + 1
-         if (i > numnod) call fatalerr_collected("nodenumber", "Depth > zbotcp(numnod)")
+         if (i > state%mesh%numnod) call fatalerr_collected("nodenumber", "Depth > zbotcp(numnod)")
       end do
       nodenumber = i
    else
       i = 1
-      do while (real(ztopcp(i)) .gt. (depth + 1.0d-5))
+      do while (real(state%mesh%ztopcp(i)) .gt. (depth + 1.0d-5))
          i = i + 1
-         if (i > numnod) call fatalerr_collected("nodenumber", "Depth > ztopcp(numnod)")
+         if (i > state%mesh%numnod) call fatalerr_collected("nodenumber", "Depth > ztopcp(numnod)")
       end do
       nodenumber = i
    end if
@@ -1085,7 +1086,7 @@ subroutine csv_out_tz (iTask, state)
 ! SS-HEAT Phase 1 Task 5: tsoil, HEACAP, HEACON removed (now via state%heat).
 ! SS-SWC S-2.11: h,theta,K,inqrot removed (now via state%soilwater).
 ! SS-TC TC-13: flprintshort, date, t1900 dropped (read via state%timecontrol ASSOCIATE in case(2)).
-use variables, only: pathwork, outfil, project, InList_csv_tz, tz_z1_z2, numnod, z, zbotcp, &
+use variables, only: pathwork, outfil, project, InList_csv_tz, tz_z1_z2, &
                      c_top
 use swap_state_mod, only: swap_state_t
 use file_io_mod, only: file_open
@@ -1169,17 +1170,17 @@ case (1)
    ! depth interval to consider
    if (tz_z1_z2(1) > 0.0d0) then
       nod_1 = 1
-      nod_2 = numnod
+      nod_2 = state%mesh%numnod
    else
       ! determine layer number of first z
       i = 1
-      do while (zbotcp(i) .gt. (tz_z1_z2(1) + 1.0d-5))
+      do while (state%mesh%zbotcp(i) .gt. (tz_z1_z2(1) + 1.0d-5))
          i = i + 1
       end do
       nod_1 = i
       ! determine layer number of second z
       i = 1
-      do while (zbotcp(i) .gt. (tz_z1_z2(2) + 1.0d-5))
+      do while (state%mesh%zbotcp(i) .gt. (tz_z1_z2(2) + 1.0d-5))
          i = i + 1
       end do
       nod_2 = i
@@ -1219,7 +1220,7 @@ case (2)
     end if
 
     ! depth
-    write (iuncsv,formZ,advance='no') comma, z(j)
+    write (iuncsv,formZ,advance='no') comma, state%mesh%z(j)
 
     ! all other variables
     ! programmer is responsible for correct correspondence between Names (and their position) in Allowed and
