@@ -142,6 +142,7 @@ if get_option('enable_pfunit')
         '../../src/state/tillage_state.f90',
         '../../src/state/timecontrol_state.f90',
         '../../src/state/mesh_state.f90',
+        '../../src/state/crop_state.f90',
         '../../src/state/swap_state.f90',
         '../../src/core/timestep_control_mod.f90',
         '../../src/core/initialize.f90',
