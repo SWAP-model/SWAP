@@ -925,8 +925,8 @@ contains
           end do
         end do
         do lay = 1,numlay
-          ksatfit(lay) = sw%cofgen(3,nod1lay(lay))        ! [SS-SWC S-2.3]
-          sw%thetsl(lay) = sw%cofgen(2,nod1lay(lay))      ! [SS-SWC S-1.3/S-2.12B]
+          ksatfit(lay) = sw%vg_params(nod1lay(lay))%ksat   ! [SS-SWC S-2.3]
+          sw%thetsl(lay) = sw%vg_params(nod1lay(lay))%thetas  ! [SS-SWC S-1.3/S-2.12B]
         end do
       else
          ! MvanG functions
@@ -937,7 +937,7 @@ contains
           end do
           ! Assign dummy value to alphaw
           sw%cofgen(8,node) = -9999.9d0                   ! [SS-SWC S-1.3/S-2.12B]
-          if (sw%cofgen(10,node) > 0.0d0) sw%fluseksatexm(node) = .true.  ! [SS-SWC S-2.12B]
+          if (sw%vg_params(node)%ksatexm > 0.0d0) sw%fluseksatexm(node) = .true.  ! [SS-SWC S-2.12B]
           sw%cofgen(11,node) = relsatthr(lay)             ! [SS-SWC S-1.3/S-2.12B]
           sw%cofgen(12,node) = ksatthr(lay)               ! [SS-SWC S-1.3/S-2.12B]
           if (iHWCKmodel(lay) ==  3 .OR. iHWCKmodel(lay) ==  6 .OR. iHWCKmodel(lay) ==  7 .OR. &
@@ -983,8 +983,8 @@ contains
 ! --- saturated and residual watercontent of each node; hysteresis parameters
       do node = 1,numnod
         lay = layer(node)
-        sw%thetar(node) = sw%cofgen(1,node)               ! [SS-SWC S-1.3/S-2.12B]
-        sw%thetas(node) = sw%cofgen(2,node)               ! [SS-SWC S-1.3/S-2.12B]
+        sw%thetar(node) = sw%vg_params(node)%thetar        ! [SS-SWC S-1.3/S-2.12B]
+        sw%thetas(node) = sw%vg_params(node)%thetas        ! [SS-SWC S-1.3/S-2.12B]
         !!! Kroes: disable combi of swsophy=1 and swhyst=1
         if (swhyst.eq.1) then
            ! Wetting curve
