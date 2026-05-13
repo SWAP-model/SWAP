@@ -100,6 +100,9 @@ contains
       if (.not. allocated(state%drainage%wetper))     allocate(state%drainage%wetper(nrlevs))
       if (.not. allocated(state%drainage%ztopdislay)) allocate(state%drainage%ztopdislay(nrlevs))
       if (.not. allocated(state%drainage%qdra))       allocate(state%drainage%qdra(nrlevs, numnod))
+      if (.not. allocated(state%drainage%L))          allocate(state%drainage%L(nrlevs))
+      if (.not. allocated(state%drainage%zbotdr))     allocate(state%drainage%zbotdr(nrlevs))
+      if (.not. allocated(state%drainage%owltab))     allocate(state%drainage%owltab(nrlevs))
 
       ! Geometry arrays: start at zero; seed state%drainage%wetper(1) from config when
       ! dramet==2 (Hooghoudt/Ernst) — the only config-sourced geometry

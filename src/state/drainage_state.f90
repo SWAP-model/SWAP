@@ -29,6 +29,17 @@ module drainage_state_mod
 
       ! Per-level / per-compartment array (Madr × macp)
       real(real64), allocatable :: qdra(:,:)       ! lateral drainage flux per level/compartment (cm/d)
+
+      ! [SS-GR-BH A8] drainage geometry + switches formerly in variables.f90
+      integer :: nrlevs      = 0
+      integer :: swdivd      = 0
+      integer :: swnrsrf     = 0
+      integer :: swtopnrsrf  = 0
+      integer :: swdivdinf   = 0
+      real(real64) :: FacDpthInf = 0.0_real64
+      real(real64), allocatable :: L(:)       !! drainage spacing per level [cm]
+      real(real64), allocatable :: zbotdr(:)  !! drainage depth per level [cm]
+      real(real64), allocatable :: owltab(:)  !! open-water level table
    end type drainage_state_t
 
 end module drainage_state_mod
