@@ -35,7 +35,7 @@ contains
 ! ----------------------------------------------------------------------
 
 ! --- global variables
-      use Variables, only: masme, flCropCalendar, dvs, rd                 ! [GR-CROP Phase B/12] narrow
+      use Variables, only: masme                                           ! [GR-CROP C9] flCropCalendar/dvs/rd → state%crop%common%X
       use Wofost_Soil_Declarations
       use Wofost_Soil_Interface
       use file_io_mod, only: file_open
@@ -209,7 +209,7 @@ contains
 ! Crop uptake
       FactNuptJuvenil = 0.0d0
       FlNuptJuvenil = .false.
-      if(flCropcalendar .and.dvs.lt. 1.0d0 .and. LaiCritNupt.gt.1.0d-02 &
+      if(state%crop%common%flCropCalendar .and.state%crop%common%dvs.lt. 1.0d0 .and. LaiCritNupt.gt.1.0d-02 &   ! [GR-CROP C9]
      &                                     .and. state%crop%lai.lt.LaiCritNupt)then  ! GR-ATM C7: lai→state%crop%lai
          FactNuptJuvenil = ( LaiCritNupt - state%crop%lai ) / LaiCritNupt   ! GR-ATM C7: lai→state%crop%lai
          FlNuptJuvenil = .true.
@@ -222,7 +222,7 @@ contains
      &                   (0.5*(WFrac_t+WFrac_t0)) *                     &
      &                   (1.0d0 - FactNuptJuvenil)
 !        limitation for rooting depth
-         TCSF      = TCSF * max(1.0d0, (0.01d0*rd/dz_WSN))
+         TCSF      = TCSF * max(1.0d0, (0.01d0*state%crop%common%rd/dz_WSN))
          call Wofost_SoilWaterN(dz_WSN, dt_WSN, WFrac_t, WFrac_t0,      &
      &                 Wflux_out, Wflux_transp,Wflux_inBot, Wflux_inTop,&
      &                 Wflux_inLat, TCSF, RateConNitrif, ProducPot,     &
@@ -235,7 +235,7 @@ contains
             ProducPot = ProdRate0 
             TCSF      = TCSF_N*(0.5*(WFrac_t+WFrac_t0) +DryBD*SorpCoef)/&
      &                   (0.5*(WFrac_t+WFrac_t0))
-            TCSF      = TCSF * max(1.0d0, (0.01d0*rd/dz_WSN))
+            TCSF      = TCSF * max(1.0d0, (0.01d0*state%crop%common%rd/dz_WSN))
             call Wofost_SoilWaterN(dz_WSN, dt_WSN, WFrac_t, WFrac_t0,   &
      &                 Wflux_out, Wflux_transp,Wflux_inBot, Wflux_inTop,&
      &                 Wflux_inLat, TCSF, RateConNitrif, ProducPot,     &
@@ -263,7 +263,7 @@ contains
          TCSF      = TCSF_N*(0.5*(WFrac_t+WFrac_t0) + DryBD*SorpCoef)/  &
      &                   (0.5*(WFrac_t+WFrac_t0))
 !     limitation for rooting depth
-         TCSF      = TCSF * max(1.0d0, (0.01d0*rd/dz_WSN))
+         TCSF      = TCSF * max(1.0d0, (0.01d0*state%crop%common%rd/dz_WSN))
          call Wofost_SoilWaterN(dz_WSN, dt_WSN, WFrac_t, WFrac_t0,      &
      &                 Wflux_out, Wflux_transp,Wflux_inBot, Wflux_inTop,&
      &                 Wflux_inLat, TCSF, RateConNitrif, ProducPot,     &
@@ -293,7 +293,7 @@ contains
      &                                                     NsupplyNH4N )
          TCSF      = TCSF_N * (1.0d0 - FactNuptJuvenil)
 !        limitation for rooting depth
-         TCSF      = TCSF * max(1.0d0, (0.01d0*rd/dz_WSN))
+         TCSF      = TCSF * max(1.0d0, (0.01d0*state%crop%common%rd/dz_WSN))
          call Wofost_SoilWaterN(dz_WSN, dt_WSN, WFrac_t, WFrac_t0,      &
      &                 Wflux_out, Wflux_transp,Wflux_inBot, Wflux_inTop,&
      &                 Wflux_inLat, TCSF, RateConDenitr, ProducPot,     &
@@ -305,7 +305,7 @@ contains
          else
             ProducPot = ProdRate0
             TCSF      = TCSF_N
-            TCSF      = TCSF * max(1.0d0, (0.01d0*rd/dz_WSN))
+            TCSF      = TCSF * max(1.0d0, (0.01d0*state%crop%common%rd/dz_WSN))
             call Wofost_SoilWaterN(dz_WSN, dt_WSN, WFrac_t, WFrac_t0,   &
      &                 Wflux_out, Wflux_transp,Wflux_inBot, Wflux_inTop,&
      &                 Wflux_inLat, TCSF, RateConDenitr, ProducPot,     &
@@ -332,7 +332,7 @@ contains
          ProducPot = ProdRate0
          TCSF      = TCSF_N
 !        limitation for rooting depth
-         TCSF      = TCSF * max(1.0d0, (0.01d0*rd/dz_WSN))
+         TCSF      = TCSF * max(1.0d0, (0.01d0*state%crop%common%rd/dz_WSN))
          call Wofost_SoilWaterN(dz_WSN, dt_WSN, WFrac_t, WFrac_t0,      &
      &                 Wflux_out, Wflux_transp,Wflux_inBot, Wflux_inTop,&
      &                 Wflux_inLat, TCSF, RateConDenitr, ProducPot,     &
