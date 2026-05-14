@@ -46,7 +46,8 @@
         flCropHarvest, flCropReadFile, flCropPrep, flCropSow, flCropGerm,   &
         swinco, croptype, daycrop, rd, rdpot, lai, laipot, cf, ch, tsum,   &
         dvs, cwdmpot, cwdm, wsopot, wso, wlvpot, wlv, wstpot, wst,        &
-        wrtpot, wrt, tmn, lat, rad, fco2amax, fco2eff,                     &
+        wrtpot, wrt, tmn, lat, rad, fco2amax, fco2eff, fco2tra,            &
+        albedo, rsc, cumdens,                                               &
         eff, amaxtb, tmpftb, tmnftb, kdif, swdrought, swcrp, dvsend,       &
         swharv, swbulb, plwt, remoc, pld, q10, pgasspot, pgass, relmf,     &
         swpotrelmf, flCropNut, nlue, anlv, anst, nmxlv, nmaxlv, nmaxst,   &
@@ -139,7 +140,12 @@
       enddo
       state%crop%common%icrop        = icrop           ! [SS-GR-CROP A5.1]
       state%crop%common%flCropCalendar = flCropCalendar  ! [SS-GR-CROP A5.1]
-      
+      ! [SS-GR-CROPRT A5] mirror current-crop window scalars
+      if (flCropCalendar) then
+        state%crop%common%cropstart = cropstart(icrop)
+        state%crop%common%cropend   = cropend(icrop)
+      end if
+
 ! --- bare soil condition  ----------------------------------------------------
       if (.not. flCropEmergence .or. flCropHarvest) then
         call nocrop ()
@@ -152,6 +158,8 @@
         state%crop%common%ch         = ch
         state%crop%common%tsum       = tsum
         state%crop%common%dvs        = dvs
+        state%crop%common%albedo     = albedo   ! [SS-GR-CROPRT A5]
+        state%crop%common%rsc        = rsc      ! [SS-GR-CROPRT A5]
         state%crop%wofost%cwdmpot    = cwdmpot
         state%crop%wofost%cwdm       = cwdm
         state%crop%wofost%wsopot     = wsopot
@@ -170,7 +178,19 @@
       if (flCropCalendar) then
         if (dabs(tc_t1900 - cropstart(icrop)) .lt. tiny) then
           call InitializeCrop
+          ! [SS-GR-CROPRT A5] mirror fields zeroed by InitializeCrop
+          state%crop%common%flCropPrep    = flCropPrep
+          state%crop%common%flCropSow     = flCropSow
+          state%crop%common%flCropGerm    = flCropGerm
+          state%crop%common%flCropHarvest = flCropHarvest
+          state%crop%common%PrepDelay     = PrepDelay
+          state%crop%common%SowDelay      = SowDelay
+          state%crop%common%noddrz        = noddrz
+          state%crop%common%albedo        = albedo
+          state%crop%common%rsc           = rsc
+          state%crop%common%cumdens       = cumdens
           flCropReadFile  = .true.
+          state%crop%common%flCropReadFile = flCropReadFile   ! [SS-GR-CROPRT A5]
           flCropEmergence = .true.
           state%crop%flCropEmergence = flCropEmergence   ! [SS-GR-ATM A5.2] dual-write
           if (croptype(icrop) .le. 2) then
@@ -188,6 +208,7 @@
           if (flCropPrep .and. flCropSow .and. flCropGerm) then
             swinco          = -99
             flCropReadFile  = .true.
+            state%crop%common%flCropReadFile = flCropReadFile   ! [SS-GR-CROPRT A5]
             flCropEmergence = .true.
             state%crop%flCropEmergence = flCropEmergence   ! [SS-GR-ATM A5.2] dual-write
           endif
@@ -260,15 +281,21 @@
                      flCropSow  = .true.
                      PrepDelay  = 0
                      SowDelay   = 0
+                     state%crop%common%flCropPrep = flCropPrep   ! [SS-GR-CROPRT A5]
+                     state%crop%common%flCropSow  = flCropSow    ! [SS-GR-CROPRT A5]
+                     state%crop%common%PrepDelay  = PrepDelay    ! [SS-GR-CROPRT A5]
+                     state%crop%common%SowDelay   = SowDelay     ! [SS-GR-CROPRT A5]
                      if (swgerm_cache == 0) then
                         ! swgerm=0: germination and emergence are immediate.
                         flCropGerm      = .true.
+                        state%crop%common%flCropGerm = flCropGerm   ! [SS-GR-CROPRT A5]
                         flCropEmergence = .true.
                         state%crop%flCropEmergence = flCropEmergence   ! [SS-GR-ATM A5.2] dual-write
                      else if (rot_type == 2) then
                         ! type=2 with swgerm=1 or 2: copy germ params from cfg,
                         ! mirror legacy readarablelandgerm:3322-3358.
                         flCropGerm      = .false.
+                        state%crop%common%flCropGerm = flCropGerm   ! [SS-GR-CROPRT A5]
                         flCropEmergence = .false.
                         state%crop%flCropEmergence = flCropEmergence   ! [SS-GR-ATM A5.2] dual-write
                         tsumemeopt = gp%tsumemeopt
@@ -351,6 +378,7 @@
           endif
 
           flCropReadFile = .false.
+          state%crop%common%flCropReadFile = flCropReadFile   ! [SS-GR-CROPRT A5]
 
         endif
 
@@ -363,6 +391,10 @@
 
         ! set correction of CO2 impact
         call FacCO2(state)
+        ! [SS-GR-CROPRT A5] mirror fco2 factors after FacCO2 sets them
+        state%crop%wofost%fco2amax = fco2amax
+        state%crop%wofost%fco2eff  = fco2eff
+        state%crop%wofost%fco2tra  = fco2tra
         
       endif
 
@@ -388,8 +420,9 @@
       do while (state%mesh%zbotcp(node) .gt. (-rd + 1.d-8))  ! [GR-BH C7]
         node = node + 1
       end do
-      noddrz = node        
-      
+      noddrz = node
+      state%crop%common%noddrz = noddrz   ! [SS-GR-CROPRT A5]
+
       ! calculate potential and actual assimilation
       if (flCropEmergence .and. croptype(icrop).ge.2) then
           
@@ -565,6 +598,7 @@
           flCropEmergence = .false.
           state%crop%flCropEmergence = flCropEmergence   ! [SS-GR-ATM A5.2] dual-write
           flCropHarvest   = .true.
+          state%crop%common%flCropHarvest = flCropHarvest   ! [SS-GR-CROPRT A5]
         endif
       endif
 
@@ -574,6 +608,7 @@
           flCropEmergence = .false.
           state%crop%flCropEmergence = flCropEmergence   ! [SS-GR-ATM A5.2] dual-write
           flCropHarvest   = .true.
+          state%crop%common%flCropHarvest = flCropHarvest   ! [SS-GR-CROPRT A5]
         endif
       endif
 
@@ -583,6 +618,7 @@
           flCropEmergence = .false.
           state%crop%flCropEmergence = flCropEmergence   ! [SS-GR-ATM A5.2] dual-write
           flCropHarvest   = .true.
+          state%crop%common%flCropHarvest = flCropHarvest   ! [SS-GR-CROPRT A5]
         endif
       endif
 
@@ -1100,10 +1136,13 @@
             PrepDelay  = PrepDelay + 1
           endif
         endif
+        state%crop%common%flCropPrep = flCropPrep   ! [SS-GR-CROPRT A5]
+        state%crop%common%PrepDelay  = PrepDelay    ! [SS-GR-CROPRT A5]
 
         SowDelay = PrepDelay
+        state%crop%common%SowDelay = SowDelay   ! [SS-GR-CROPRT A5]
 
-        return        
+        return
 
 ! === Sowing before crop growth ==========================================
       
@@ -1137,6 +1176,8 @@
             SowDelay  = SowDelay + 1
           endif
         endif
+        state%crop%common%flCropSow = flCropSow   ! [SS-GR-CROPRT A5]
+        state%crop%common%SowDelay  = SowDelay    ! [SS-GR-CROPRT A5]
 
         return        
         
@@ -1211,8 +1252,9 @@
         else
           dvs = 0.d0
         endif
-        state%crop%common%dvs = dvs   ! [SS-GR-CROP A5.1]
-        
+        state%crop%common%dvs      = dvs      ! [SS-GR-CROP A5.1]
+        state%crop%common%flCropGerm = flCropGerm   ! [SS-GR-CROPRT A5]
+
         return
         
       case default
@@ -4027,7 +4069,7 @@
       ! local
       implicit none
 
-      type(swap_state_t), intent(in) :: state  ! [SS-SWC S-2.12B]
+      type(swap_state_t), intent(inout) :: state  ! [SS-SWC S-2.12B] inout for cumdens dual-write [SS-GR-CROPRT A5]
 
       integer   node, i
       real(8)   top,bot
@@ -4101,6 +4143,7 @@
             sum = sum + wrtdis(i)
             cumdens(i) = sum / wrttot
           end do
+          state%crop%common%cumdens(4:202:2) = cumdens(4:202:2)   ! [SS-GR-CROPRT A5]
 
         end if
   
