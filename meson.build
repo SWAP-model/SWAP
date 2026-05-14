@@ -192,6 +192,7 @@ sources = [
     'src/state/timecontrol_state.f90',
     'src/state/mesh_state.f90',
     'src/state/crop_common_state.f90',
+    'src/state/crop_fixed_state.f90',
     'src/state/crop_state.f90',
     'src/state/swap_state.f90',
 

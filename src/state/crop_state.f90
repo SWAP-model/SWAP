@@ -6,6 +6,7 @@
 module crop_state_mod
    use, intrinsic :: iso_fortran_env, only: real64
    use crop_common_state_mod, only: crop_common_state_t
+   use crop_fixed_state_mod,  only: crop_fixed_state_t
    implicit none
    private
    public :: crop_state_t
@@ -25,6 +26,8 @@ module crop_state_mod
       real(real64) :: es0             = 0.0_real64    !! potential evap bare soil (cm/d)
       ! [SS-GR-CROP A2] sub-record for shared crop runtime fields
       type(crop_common_state_t) :: common
+      ! [SS-GR-CROP A3] sub-record for fixed-crop runtime fields
+      type(crop_fixed_state_t) :: fixed
    contains
       procedure :: init => crop_state_init
    end type crop_state_t
