@@ -8,7 +8,8 @@
 !     Purpose            : open and write general swap output files
 ! ----------------------------------------------------------------------
 
-      use Variables
+      ! [SS-GR-FINAL B3] DEFERRED — logf: log file unit, Arc 9 edge
+      use variables, only: logf
       use swap_state_mod, only: swap_state_t
       implicit none
 
@@ -62,7 +63,8 @@
 !     Purpose            : open and write soil water output files
 ! ----------------------------------------------------------------------
 
-      use Variables
+      ! [SS-GR-FINAL B3] DEFERRED — output-control switches + inc file unit, Arc 9 edge
+      use variables, only: swcsv,swcsv_tz,swinc,swdrought,swrum,inc
       use SWAP_csv_output
       use SWAP_csv_output_tz
       use swap_state_mod, only: swap_state_t
@@ -155,6 +157,7 @@
       ! SS-SWC S-2.11: gwl,pond,volact,volini,PondIni,iqbot,iqrot,igird,iintc,irunon,iruno,irunoCN removed; reads via state%soilwater.
       ! SS-TC TC-7: daynr,daycum,t1900,date,flheader,flprintshort removed from only-list; reads via state%timecontrol.
       ! [SS-BMI2] inout: build_water_balance_row writes to state%water_balance_row
+      ! [SS-GR-FINAL B3] DEFERRED — inc: file unit; outfil/pathwork/project: file-path globals; iQMpOutDrRap: legacy accumulator
       use variables, only: inc,iQMpOutDrRap,outfil,pathwork,project
       use swap_state_mod, only: swap_state_t
       use file_io_mod, only: file_open
@@ -358,6 +361,7 @@
 !     Column order matches init_water_balance_buffer column names exactly.
 ! ----------------------------------------------------------------------
       use swap_state_mod, only: swap_state_t
+      ! [SS-GR-FINAL B3] DEFERRED — iQMpOutDrRap: legacy drainage accumulator, no state home
       use variables,      only: iQMpOutDrRap
       use iso_c_binding,  only: c_double
       implicit none
@@ -415,6 +419,7 @@
       !   removed from only-list; reads via state%soilwater.
       ! SS-SWC S-2.11: theta,hm1,q,inq,inqrot removed from only-list; reads via state%soilwater.
       ! SS-TC TC-7: daynr,daycum,t1900,date,flprintshort removed from only-list; reads via state%timecontrol.
+      ! [SS-GR-FINAL B3] DEFERRED — rot: file unit; noddrz: no state home yet; outfil/pathwork/project: file-path globals
       use variables, only: rot,noddrz,outfil,pathwork,project
       use swap_state_mod, only: swap_state_t
       use file_io_mod, only: file_open
@@ -562,6 +567,7 @@
 ! [GR-CROP C2] daycrop/dvs/tsum/cf/rd/ch → state%crop%common%X
 ! ----------------------------------------------------------------------
       ! GR-ATM C2: lai → state%crop%lai.
+      ! [SS-GR-FINAL B3] DEFERRED — crp: crop output file unit, Arc 9 edge
       use variables, only: crp
       use swap_state_mod, only: swap_state_t
       implicit none
@@ -637,6 +643,7 @@
 !   → state%crop%common%X / state%crop%wofost%X
 ! ----------------------------------------------------------------------
       ! GR-ATM C2: lai → state%crop%lai.
+      ! [SS-GR-FINAL B3] DEFERRED — crp: crop output file unit, Arc 9 edge
       use variables, only: crp
       use swap_state_mod, only: swap_state_t
       implicit none
