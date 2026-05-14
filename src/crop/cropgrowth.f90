@@ -2631,32 +2631,26 @@
 ! SS-GR-ATM A5.1: intent changed inout to allow dual-write in cropgrass_init_from_config.
 ! [GR-CROP Phase B/7] narrow use variables
 ! ----------------------------------------------------------------------
-      ! [SS-GR-FINAL B5] DEFERRED — grass: all remaining variables globals:
+      ! [SS-GR-CROPRT B8] DEFERRED — grass: all remaining variables globals:
       !   magrs, macp: array dims (could → swap_array_dimensions, deferred with rest)
-      !   icrop, dvs, tsum, daycrop: runtime state (dual-write to state%crop%common%)
-      !   rid: root increase rate, no state home; tbase: config param
-      !   tdwi, swinco: config params, no state home
-      !   wlv/wst/wrt/wso pools + dwlv/dwst/dwrt deaths: WOFOST biomass state
+      !   icrop, dvs, tsum, daycrop: computed in grass loop; dual-write to state%crop%common%
+      !     but global canonical pending Phase C
+      !   rid, tbase, tdwi, swinco: config params, no state home
+      !   wlv/wst/wrt/wso pools + dwlv/dwst/dwrt: computed in grass loop (WOFOST biomass)
       !   wrtmax, wrtmin: root biomass bounds, no state home
-      !   cf, ch, cfeic, lai, laipot, laiem, laiexp/pot, laimax: LAI/CF state
-      !   cftb, chtb, cfeictb, rdtb, slatb, rgrlai, rlwtb, rfsetb, frtb, fltb, fstb,
-      !     rdrrtb, rdrstb, kdif: lookup tables; rd/rdpot/rdm/rdmax/rdi/rri/rdc: rooting
-      !   swrd, swrdc, swdmi2rd, swdrought, swcf, swgc, swinter: config switches
-      !   reltr, cvl, cvr, cvs, q10, rmr, rml, rms, span, ssa: physiology params
-      !   glaiex/glaiexpot, lv/lvpot/lvage/lvagepot, sla/slapot, ilvold/ilvoldpot: leaf arrays
-      !   twilt, wiltpoint, gwrt, siccapact, siccaplai: JvL + interception params
-      !   cropstartact/endact/pot, cropstart: grass growth calendar globals
-      !   idaysgraz/pot, idregr/idregrpot: grazing counters; flgrazing/pot, flharvest/pot: flags
-      !   flhrvendact/pot, flhydrlift: lifecycle flags; daygrowth/pot, grzdm, dewrest: grass state
-      !   cuptgraz/pot, tagp/pot, tagpt/pot: harvest accumulators (dual-write to state%crop)
-      !   seqgrazmow/pot, swtsum, iseqgm/pot, iharvest: grass schedule state
-      !   dmgrztb, dmmowtb, daysgrazingtab, uptgrazingtab, lossgrazingtab: grazing tables
-      !   lossgrztab, lossmowtab, delayregrowthtab, zgrz, zmow: more grazing config
-      !   mowdm, mowrest, lossdm, plossdm, pmowdm, pgrzdm: mowing/grazing scalars
-      !   pgass, pgasspot: assimilation rates (dual-write to state%crop%wofost%)
-      !   perdl, dateharvest, lsda: output + harvest tracking
+      !   cf, ch, cfeic, lai, laipot, laiem, laiexp/pot, laimax: computed in grass loop
+      !   cftb/chtb/cfeictb: state%crop%fixed homes (A5.2 dual-write) but grass has optional
+      !     state — same constraint as wofost B7 / cropfixed B2; deferred to Phase C
+      !   rdtb, slatb, rgrlai etc.: no state home; rd/rdpot etc.: computed in loop
+      !   config switches (swrd etc.), physiology params (reltr, cvl etc.): no state home
+      !   leaf arrays (lv/lvpot etc.), JvL params (twilt etc.): no state home
+      !   cropstartact/endact/pot: state%crop%grass homes (A5) but written here — Phase C
+      !   cuptgraz/pot, tagp/pot, tagpt/pot, seqgrazmow/pot, mowrest, dateharvest:
+      !     state%crop%grass/common homes (A5) but written in grass loop — Phase C
+      !   pgass/pgasspot: state%crop%wofost homes (A4 dual-write) but written here — Phase C
+      !   perdl, dateharvest, lsda: output + harvest tracking, no state home
       !   tsoil: config-staging buffer, renamed to avoid clash with dummy arg
-      use variables, only: &                                                ! [SS-GR-FINAL B5] DEFERRED
+      use variables, only: &                                                ! [SS-GR-CROPRT B8] DEFERRED
         magrs, macp, icrop, dvs, rid, tsum, tbase, daycrop, tdwi, swinco, &
         wlv, wlvpot, wst, wstpot, wrt, wrtpot, wrtmax, wrtmin,           &
         dwlv, dwlvpot, dwrt, dwrtpot, dwst, dwstpot,                     &
