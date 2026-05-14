@@ -646,7 +646,7 @@
 ! SS-TC TC-10: t1900 read via state%timecontrol tc_t1900 alias.
 ! SS-GR-ATM A5.1: intent changed inout to allow dual-write in cropfixed_init_from_config.
 ! [GR-CROP Phase B/6] narrow use variables
-! [SS-GR-FINAL B5] DEFERRED — cropfixed: all remaining variables globals:
+! [SS-GR-CROPRT B2] DEFERRED — cropfixed: all remaining variables globals:
 !   magrs: array dim (could → swap_array_dimensions, deferred with rest)
 !   icrop, dvs, idev, lai, tsum, cf, ch, rd, rdpot: runtime state (dual-write to state%crop%;
 !     global still needed pending Phase C global retirement)
@@ -655,10 +655,13 @@
 !   cropstart, tbase, tsumea, tsumam, rdmax, rdm: config params, no state home
 !   siccapact, siccaplai: state%atmosphere%siccapact migrated; siccaplai no home
 !   w_root_ss, wiltpoint, twilt, flhydrlift: JvL params, no state home
-!   gc, cfeic, gctb, cftb, chtb, cfeictb, rdtb, mrftb, wrtb: fixed-crop tables/scalars
+!   cftb/chtb/cfeictb: state%crop%fixed homes exist (A5.2 dual-write) but migration to
+!     state reads deferred — cropfixed takes optional state, substitution needs
+!     non-optional refactor or present() guards; deferred to Phase C cleanup
+!   gc, cfeic, gctb, rdtb, mrftb, wrtb: fixed-crop tables/scalars, no state home
 !   swinco, reltr: switches, no state home
 ! ----------------------------------------------------------------------
-      use variables, only: magrs, icrop, dvs, idev, lai, tsum, cf, ch, &  ! [SS-GR-FINAL B5] DEFERRED
+      use variables, only: magrs, icrop, dvs, idev, lai, tsum, cf, ch, &  ! [SS-GR-CROPRT B2] DEFERRED
                            rd, rdpot, max_resp_factor, swrd, rdi, rri,  &
                            rdc, swgc, swcf, swinter, swdrought, swdmi2rd, &
                            cropstart, tbase, tsumea, tsumam, rdmax, rdm, &
