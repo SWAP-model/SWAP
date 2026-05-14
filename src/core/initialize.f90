@@ -202,7 +202,7 @@
       swinco             = 0 
       swkmean            = 0 
       swkimpl            = 0 
-      swoutputmodflow    = 0 
+      ! [SS-GR-FINAL D5] swoutputmodflow zero-fill dropped — declaration retired
       swpondmx           = 0 
       swqhbot            = 0 
       swredu             = 0 

@@ -772,7 +772,7 @@
                                    !                                            5 = unweighted harmonic mean, 6 = weighted harmonic mean
       integer   swkimpl            ! Switch for implicit solution with hydraulic conductivity: 0 = explicit, 1 = implicit
       integer   swliminf           ! Switch for limit of infiltration head to the waterdepth in the channel: 0 = nolimit, 1 = limitation
-      integer   swoutputmodflow    ! Switch for extra output file with data for Modflow
+      ! [SS-GR-FINAL D5] swoutputmodflow retired — 0 consumers; MODFLOW output deleted
       integer   swoxygen           ! Switch oxygen stress: 1 = concept Feddes et al. (1978); 2 = concept Bartholomeus et al. (2008)
       integer   swoxygentype       ! Switch for method oxygen stress calculation: 1 = physical processes; 2 = repro functions
       integer   swpondmx           ! Switch for time dependent maximum amount of ponding (L) on soil surface before runoff starts
@@ -1184,7 +1184,7 @@
       integer   swbr               ! Switch to consider mixed reservoir for solute breakthrough in the saturated zone: 0 = no; 1 = yes
       integer   swbotbc            ! Switch for bottom boundary condition of solute-concentration (see *.SWP input file for overview)
       integer   swsolu             ! Switch for simulation of solute transport: 0 = no; 1 = yes
-      integer   swsp               ! Switch (in case of solute transport) for simulation of sorption  0 = no; 1 = yes
+      ! [SS-GR-FINAL D3] swsp retired — 0 consumers; sorption switch never read outside init/c2v
       real(8)   AgeGwl1m           ! Age (d) of groundwater in upper 1 meter of saturated zone
       real(8)   bexp               ! Exponent in decomposition reduction factor due to dryness (-)
       real(8)   cdrain             ! Mean solute concentration in aquifer or drainage system (M/L3 water)  [AgeTracer dead-code dep, keep until agetracer_state_t]
@@ -1347,7 +1347,7 @@
       ! SS-SWST Phase 2 Task 11 C2: wlstar removed — state%surfacewater%wlstar owns it.
       real(8) osswlm,wlp,alphaw(mamp),betaw(mamp)
       ! wlstar removed (surfacewater_state_t%wlstar)
-      real(8) wls1_init    ! TOML pipeline: initial wls1 = wlact - altcu; altcu=0 is enforced by drainage_config_validate
+      ! [SS-GR-FINAL D6] wls1_init retired — c2v write tombstoned in D4/C4; state%surfacewater owns it; 0 consumers
       real(8) dropr(mamp*mamte),hdepth(mamp*mamte)
       real(8) gwlcrit(mamp,mamte),hcrit(mamp,mamte),vcrit(mamp,mamte)
       real(8) hqhtab(mamp,mamte),qqhtab(mamp,mamte)
