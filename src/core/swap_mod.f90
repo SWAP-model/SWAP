@@ -288,16 +288,20 @@ contains
    state%soilwater%q0    = 0.0d0
    state%soilwater%k1max = 0.0d0
    state%soilwater%H0max = 0.0d0
-   ! [GR-FINAL C1] seed state%soilwater directly from config (transient buffers retired).
-   ! pondini/pond: swinco=3 with h_file uses config%soil%initial%pond; otherwise config%soil%pondini.
-   ! h profile: swinco=3 re-reads the CSV inline here after soilwater_init has allocated state%soilwater%h.
+   ! [GR-FINAL C1/C2] seed state%soilwater/atmosphere/timecontrol from config.
+   ! swinco=3 warm-restart: pond/pondini/dt/h-profile/atmosphere from soil.initial.
+   ! swinco<3: pondini/pond from soil.pondini; atmosphere inits to zero.
+   ! Both blocks consolidated here to eliminate the duplicate swinco==3 guard.
+   call state%atmosphere%init(config%meteo)               ! GR-ATM Task 14: type-bound init; zeroes all 22 flat scalars + cohort sub-records
    if (config%soil%swinco == 3 .and. &
        allocated(config%soil%initial%h_file) .and. &
        len_trim(config%soil%initial%h_file) > 0) then
+      ! soilwater init from warm-restart record
       state%soilwater%pondini = config%soil%initial%pond
       state%soilwater%pond    = config%soil%initial%pond
-      ! override dt from warm-restart (config%soil%initial%dt supersedes simulation%numerical%dt for swinco=3)
+      ! dt from warm-restart (soil.initial.dt supersedes simulation%numerical%dt for swinco=3)
       state%timecontrol%dt = config%soil%initial%dt
+      ! h profile: CSV re-read after soilwater_init has allocated state%soilwater%h
       block
          use csv_reader_mod, only: read_csv_table
          use error_mod,      only: error_collection_t
@@ -314,21 +318,15 @@ contains
             state%soilwater%h(ki) = tbl(ki, 2)
          end do
       end block
+      ! atmosphere warm-restart [SS-ATM A-2.6]: ssnow/ldwet/slw from soil.initial
+      ! spev/saev not in config; remain zero from atmosphere%init
+      state%atmosphere%ssnow = config%soil%initial%ssnow
+      state%atmosphere%ldwet = config%soil%initial%ldwet
+      state%atmosphere%slw   = config%soil%initial%slw
+      if (config%meteo%snow%swsnow /= 1) state%atmosphere%ssnow = 0.0d0
    else
       state%soilwater%pondini = config%soil%pondini
       state%soilwater%pond    = config%soil%pondini   ! legacy alias: pond <-> pondini for swinco<3
-   end if
-   call state%atmosphere%init(config%meteo)               ! GR-ATM Task 14: type-bound init; zeroes all 22 flat scalars + cohort sub-records
-   ! [SS-ATM A-2.6] swinco=3 warm-restart: seed state%atmosphere directly from config (legacy globals retired)
-   if (config%soil%swinco == 3) then
-      if (allocated(config%soil%initial%h_file) .and. &
-          len_trim(config%soil%initial%h_file) > 0) then
-         state%atmosphere%ssnow = config%soil%initial%ssnow
-         state%atmosphere%ldwet = config%soil%initial%ldwet
-         state%atmosphere%slw   = config%soil%initial%slw
-         ! spev/saev not in config; remain zero from atmosphere%init (evaporation counters reset on rain)
-         if (config%meteo%snow%swsnow /= 1) state%atmosphere%ssnow = 0.0d0
-      end if
    end if
 
    ! [SS-GR-ATM A10] dual-write Block 1 (daily meteo arrays) + Block 2 (sub-daily)
