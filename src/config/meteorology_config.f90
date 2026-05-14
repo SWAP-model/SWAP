@@ -49,6 +49,7 @@ module meteorology_config_mod
       integer      :: swmetdetail = 0
       integer      :: nmetdetail  = 0
       integer      :: swrain   = 0
+      real(real64) :: raintab(60) = 0.0_real64    !! rain intensity (cm/d) vs time (T) — swrain==1 input
       integer      :: swetsine = 0
       integer      :: swinter  = 0
       integer      :: swmetfilall = 0

@@ -164,6 +164,8 @@ contains
       swmetdetail = config%meteo%swmetdetail
       nmetdetail  = config%meteo%nmetdetail
       swrain      = config%meteo%swrain
+      ! [SS-GR-CROP A13] populate raintab from config
+      raintab     = config%meteo%raintab
       swetsine    = config%meteo%swetsine
       swinter     = config%meteo%swinter
       angstroma   = config%meteo%angstroma
