@@ -198,20 +198,17 @@
 !
 ! --- in case of swrain = 1 or 2 then store daily precipitation (rain) amount
 !     in rainamount and precipitation time in raintimearray
+!     [GR-CROP C11] write directly to state%atmosphere%X (legacy global writes dropped)
          if (swrain.eq.1 .or. swrain.eq.2) then
-            nmrain = 0
+            state%atmosphere%nmrain = 0
             do i = 1, ifnd
-               nmrain   = nmrain + 1
+               state%atmosphere%nmrain = state%atmosphere%nmrain + 1
                datea(2) = am(i)
                datea(3) = ad(i)
                call dtardp (datea,fsec,tmeteo)
-               raintimearray(i+1) = tmeteo
-               rainamount(i)      = arai(i)
+               state%atmosphere%raintimearray(i+1) = tmeteo
+               state%atmosphere%rainamount(i)      = arai(i)
             enddo
-            ! [GR-CROP Phase B] seed state%atmosphere rain timing before MeteoDT call below
-            state%atmosphere%nmrain = nmrain
-            state%atmosphere%rainamount(1:nmrain)      = rainamount(1:nmrain)
-            state%atmosphere%raintimearray(1:nmrain+1) = raintimearray(1:nmrain+1)
          endif
 ! --- end of reliability tests and initialization of daily meteo   
 
@@ -266,8 +263,8 @@
 !       O   - nmrain,rainamount,raintimearray
 ! ----------------------------------------------------------------------
       ! [SS-TC TC-14] yearmeteo retired — read via state%timecontrol
-      use variables, only: nmrain,rainamount,raintimearray, &
-                           raincsv_dat, nraincsv
+      ! [GR-CROP C11] nmrain/rainamount/raintimearray → write directly to state%atmosphere%X
+      use variables, only: raincsv_dat, nraincsv
 
       implicit none
       ! [SS-GR-CROP A5.5] changed to inout for rain timing dual-writes
@@ -292,13 +289,14 @@
       t_jan1  = real(jday(yearmeteo,  1,  1) - jd1900, 8)
       t_dec31 = real(jday(yearmeteo, 12, 31) - jd1900, 8) + 1.0d0
 
+      ! [GR-CROP C11] write directly to state%atmosphere%X (legacy global writes dropped)
       ifnd = 0
       do i = 1, nraincsv
          if (raincsv_dat(i,1) >= t_jan1 - 0.5d0 .and. &
      &       raincsv_dat(i,1) <  t_dec31 + 0.5d0) then
             ifnd = ifnd + 1
-            raintimearray(ifnd) = raincsv_dat(i,1)
-            rainamount(ifnd)    = raincsv_dat(i,2)
+            state%atmosphere%raintimearray(ifnd) = raincsv_dat(i,1)
+            state%atmosphere%rainamount(ifnd)    = raincsv_dat(i,2)
          end if
       end do
 
@@ -309,41 +307,36 @@
       end if
 
       ! Zero-prepend: if first event is not at midnight, insert t=0 record.
-      tfrac = raintimearray(1) - real(int(raintimearray(1)), 8)
+      tfrac = state%atmosphere%raintimearray(1) - real(int(state%atmosphere%raintimearray(1)), 8)
       if (tfrac > vsmall) then
          do i = ifnd, 1, -1
-            raintimearray(i+1) = raintimearray(i)
-            rainamount(i+1)    = rainamount(i)
+            state%atmosphere%raintimearray(i+1) = state%atmosphere%raintimearray(i)
+            state%atmosphere%rainamount(i+1)    = state%atmosphere%rainamount(i)
          end do
          ifnd = ifnd + 1
-         raintimearray(1) = real(int(raintimearray(2)), 8)
-         rainamount(1)    = 0.0d0
+         state%atmosphere%raintimearray(1) = real(int(state%atmosphere%raintimearray(2)), 8)
+         state%atmosphere%rainamount(1)    = 0.0d0
       end if
 
       ! Deduplication: drop midnight-crossover duplicates.
       ic = 1
       do i = 2, ifnd
-         if ((raintimearray(i) - raintimearray(ic)) > vsmall) then
+         if ((state%atmosphere%raintimearray(i) - state%atmosphere%raintimearray(ic)) > vsmall) then
             ic = ic + 1
-            raintimearray(ic) = raintimearray(i)
-            rainamount(ic)    = rainamount(i)
+            state%atmosphere%raintimearray(ic) = state%atmosphere%raintimearray(i)
+            state%atmosphere%rainamount(ic)    = state%atmosphere%rainamount(i)
          end if
       end do
-      nmrain = ic
+      state%atmosphere%nmrain = ic
 
       ! Ascending order check.
-      do i = 2, nmrain
-         if ((raintimearray(i) - raintimearray(i-1)) .lt. vsmall) then
+      do i = 2, state%atmosphere%nmrain
+         if ((state%atmosphere%raintimearray(i) - state%atmosphere%raintimearray(i-1)) .lt. vsmall) then
             messag = 'In rain events CSV file the time of a record ' //  &
      &         'is not greater than its predecessor. Adapt the file!'
             call fatalerr_collected('ReadRainEvents', messag)
          end if
       end do
-
-      ! [SS-GR-CROP A5.5] bulk-mirror rain timing arrays after all writes
-      state%atmosphere%nmrain = nmrain
-      state%atmosphere%rainamount(1:nmrain)    = rainamount(1:nmrain)
-      state%atmosphere%raintimearray(1:nmrain) = raintimearray(1:nmrain)
 
       return
       end subroutine ReadRainEvents

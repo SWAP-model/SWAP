@@ -78,11 +78,9 @@
       ! [SS-TC] metperiod retired to state%timecontrol%metperiod (ADR 0041)
       ! [SS-ATM A-2.6] nraida/nraidt/peva/pevaday/ptra/ptraday retired to state%atmosphere
       nrain              = 0.0d0
-      rad                = 0.0d0 
-      rainamount         = 0.0d0 
-      raintab            = 0.0d0 
-      rainfluxarray      = 0.0d0 
-      raintimearray      = 0.0d0 
+      rad                = 0.0d0
+      ! [GR-CROP C12] rainamount/rainfluxarray/raintimearray retired from variables — state%atmosphere%X
+      raintab            = 0.0d0
       ! [GR-ATM C8] rh retired — state%atmosphere%rh written by meteoday
       tadw               = 0.0d0
       tadwpot            = 0.0d0

@@ -131,7 +131,8 @@
       integer   detrecord(nmetfile) ! Record number of meteo file with detailed meteo data (-)
       integer   irectotal          ! Total record number with detailed meteo input for new weather file (-)
       integer   nmetdetail         ! Number of detailed records for ET and rainfall per day (-)
-      integer   nmrain             ! Number of rain event records (-)
+      ! [GR-CROP C12] retired 2026-05-14 — moved to state%atmosphere%nmrain (Arc 8)
+      ! integer   nmrain             ! Number of rain event records (-)
       integer   nofd               ! number of days for running average Tmin (-)
       ! [SS-TC] retired 2026-05-12 — moved to state%timecontrol%rainrec (ADR 0041)
       ! integer   rainrec            ! moved to state%timecontrol%rainrec
@@ -205,10 +206,13 @@
       ! real(8) :: ptra        ! Potential transpiration flux (L/T)
       ! real(8) :: ptraday     ! Potential transpiration of one day (L)
       real(8)   rad                ! Global solar radiation (J/m2/d)
-      real(8)   rainamount(mrain)  ! Array with short duration rainfall amounts (L)
+      ! [GR-CROP C12] retired 2026-05-14 — moved to state%atmosphere%rainamount (Arc 8)
+      ! real(8)   rainamount(mrain)  ! Array with short duration rainfall amounts (L)
       real(8)   raintab(60)        ! Array with mean rainfall intensity (L/T) as function of time (T)
-      real(8)   rainfluxarray(mrain) ! Array with short duration rainfall intensities (L/T)
-      real(8)   raintimearray(mrain) ! Array with times (T) at which rainfall intensity changes
+      ! [GR-CROP C12] retired 2026-05-14 — moved to state%atmosphere%rainfluxarray (Arc 8)
+      ! real(8)   rainfluxarray(mrain) ! Array with short duration rainfall intensities (L/T)
+      ! [GR-CROP C12] retired 2026-05-14 — moved to state%atmosphere%raintimearray (Arc 8)
+      ! real(8)   raintimearray(mrain) ! Array with times (T) at which rainfall intensity changes
       ! [GR-ATM C8] retired 2026-05-14 — moved to state%atmosphere%rh (GR-ATM arc)
       ! real(8)   rh                 ! Relative air humidity (-)
       real(8)   tav                ! Average air temperature of a day (oC)

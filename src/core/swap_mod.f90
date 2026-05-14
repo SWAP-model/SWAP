@@ -79,9 +79,9 @@ contains
                             seqgrazmow, seqgrazmowpot, dateharvest, mowrest, &
                             cropstartpot, cropstartact, cropendpot, cropendact, &
                             swpotrelmf, relmf, &
-                            cftb, chtb, cfeic, cfeictb, &
-                            ! [SS-GR-CROP A17] rain timing legacy globals
-                            nmrain, rainamount, rainfluxarray, raintimearray
+                            cftb, chtb, cfeic, cfeictb
+                            ! [GR-CROP C11] nmrain/rainamount/rainfluxarray/raintimearray retired from import:
+                            !   readmeteo now writes directly to state%atmosphere%X
       ! [SS-GR-CROP A16] nutrient legacy globals — in WSN modules, not variables.f90
       use Wofost_Soil_Declarations, only: FOM_t, Bio_t, Hum_t, FOM_t0, Bio_t0, Hum_t0, &
                                           cNH4_t, cNO3_t, cNH4_t0, cNO3_t0, cNH4_av, cNO3_av, &
@@ -365,11 +365,7 @@ contains
    state%atmosphere%CNtimTAB  = CNtimTAB
    state%atmosphere%CNrefTAB  = CNrefTAB
 
-   ! [SS-GR-CROP A17] dual-write rain timing
-   state%atmosphere%nmrain        = nmrain
-   state%atmosphere%rainamount    = rainamount
-   state%atmosphere%rainfluxarray = rainfluxarray
-   state%atmosphere%raintimearray = raintimearray
+   ! [GR-CROP C11] rain timing dual-write retired: readmeteo now writes directly to state%atmosphere%X
 
    ! [GR-ATM C8] out_tmn/tmx/hum/win/etr/wet/rad seeding dropped: legacy globals retired; state%atmosphere%X written by meteoday
 
