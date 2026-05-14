@@ -21,12 +21,32 @@
 !   tsoil retained: still threaded to ArableLandGerm / grass / sumttd.
 ! ----------------------------------------------------------------------
 
-      use variables, only: &                                                 ! [GR-CROP Phase B/5] narrow
+      ! [SS-GR-FINAL B5] DEFERRED — all remaining variables globals for CropGrowth:
+      !   icrop, flCropCalendar, cropstart, cropend, flCropEmergence, flCropHarvest,
+      !   flCropReadFile, flCropPrep, flCropSow, flCropGerm: crop calendar flags, no state home
+      !   swinco, croptype, swcrp, swdrought, swharv, swbulb: config switches, no state home
+      !   daycrop, rd, rdpot, lai, laipot, cf, ch, tsum, dvs: runtime crop state (dual-write
+      !     to state%crop%common%; global still needed pending Phase C global retirement)
+      !   cwdmpot, cwdm, wsopot, wso, wlvpot, wlv, wstpot, wst, wrtpot, wrt: WOFOST pools
+      !   tmn, lat, rad: meteo scalars, no state%atmosphere scalar home
+      !   fco2amax, fco2eff, eff, amaxtb, tmpftb, tmnftb, kdif: physiology params/outputs
+      !   swpotrelmf, relmf, plwt, remoc, pld, q10, pgasspot, pgass: physiology params
+      !   flCropNut, nlue, anlv, anst, nmxlv, nmaxlv, nmaxst, nmaxrt, lrnr, lsnr, nni,
+      !     rnflv, rnfst, frnx, fstr: nutrient state/params, no nutrient_state home
+      !   flHarvestDay: harvest flag (dual-write to state%crop%common%; global still needed)
+      !   noddrz, pathcrop, cropfil: no state home
+      !   bgerm, cgerm, agerm, hprep, dhPrep, zPrep, hSow, dhSow, zSow, zTempSow,
+      !     dtempSow, TempSow, MaxPrepDelay, MaxSowDelay, PrepDelay, SowDelay: germ params
+      !   tsumemeopt, tsumgerm, hdrygerm, hwetgerm, zgerm, TBASEM, TEFFMX: germ thresholds
+      !   atmtr, daylp, difpp, dsinbe: astro outputs used by both CropGrowth and wofost
+      !   dvsend: harvest DVS threshold, no state home
+      !   tsoil: config-staging buffer, renamed to avoid clash with dummy arg
+      use variables, only: &                                                 ! [SS-GR-FINAL B5] DEFERRED
         icrop, flCropCalendar, cropstart, cropend, flCropEmergence,         &
         flCropHarvest, flCropReadFile, flCropPrep, flCropSow, flCropGerm,   &
         swinco, croptype, daycrop, rd, rdpot, lai, laipot, cf, ch, tsum,   &
         dvs, cwdmpot, cwdm, wsopot, wso, wlvpot, wlv, wstpot, wst,        &
-        wrtpot, wrt, nofd, atmin7, tmn, tmnr, lat, rad, fco2amax, fco2eff, &
+        wrtpot, wrt, tmn, lat, rad, fco2amax, fco2eff,                     &
         eff, amaxtb, tmpftb, tmnftb, kdif, swdrought, swcrp, dvsend,       &
         swharv, swbulb, plwt, remoc, pld, q10, pgasspot, pgass, relmf,     &
         swpotrelmf, flCropNut, nlue, anlv, anst, nmxlv, nmaxlv, nmaxst,   &
@@ -80,6 +100,7 @@
       !! Full typed state record; state%soilwater%hleaf/hroot/mfluxtable written on task=1.
       integer i, node
       real(8) sumtmin
+      real(8) tmnr          ! running 7-day average of min temperature; local (not global) [SS-GR-FINAL B5]
       real(8) dummy_mf_   ! dummy outcome arg for MatricFlux(1) init call
 
       ! assimilation
@@ -346,21 +367,20 @@
       endif
 
       ! set running average of minimum temperature (only for detailed crop growth)
+      ! [SS-GR-FINAL B5] nofd/atmin7 read/written via state%atmosphere directly
       if (flCropEmergence .and. croptype(icrop).ge.2) then
-        nofd = min(nofd+1, 7)
-        state%atmosphere%nofd = nofd   ! [SS-GR-ATM A5.2] runtime dual-write
+        state%atmosphere%nofd = min(state%atmosphere%nofd+1, 7)
         sumtmin = 0.0d0
-        do i = nofd,2,-1
-          atmin7(i) = atmin7(i-1)
-          sumtmin = sumtmin + atmin7(i)
+        do i = state%atmosphere%nofd,2,-1
+          state%atmosphere%atmin7(i) = state%atmosphere%atmin7(i-1)
+          sumtmin = sumtmin + state%atmosphere%atmin7(i)
         end do
         i = 1
-        atmin7(i) = tmn
-        sumtmin = sumtmin + atmin7(i)
-        tmnr = sumtmin / nofd
+        state%atmosphere%atmin7(i) = tmn
+        sumtmin = sumtmin + state%atmosphere%atmin7(i)
+        tmnr = sumtmin / state%atmosphere%nofd
       else
-        nofd = 0
-        state%atmosphere%nofd = nofd   ! [SS-GR-ATM A5.2] runtime dual-write
+        state%atmosphere%nofd = 0
       endif
 
       ! determine lowest compartment containing roots
@@ -586,8 +606,19 @@
 ! SS-TC TC-10: t1900 read via state%timecontrol tc_t1900 alias.
 ! SS-GR-ATM A5.1: intent changed inout to allow dual-write in cropfixed_init_from_config.
 ! [GR-CROP Phase B/6] narrow use variables
+! [SS-GR-FINAL B5] DEFERRED — cropfixed: all remaining variables globals:
+!   magrs: array dim (could → swap_array_dimensions, deferred with rest)
+!   icrop, dvs, idev, lai, tsum, cf, ch, rd, rdpot: runtime state (dual-write to state%crop%;
+!     global still needed pending Phase C global retirement)
+!   max_resp_factor: config field (config%crop%fixed%), needs config threading
+!   swrd, rdi, rri, rdc, swgc, swcf, swinter, swdrought, swdmi2rd: switches, no state home
+!   cropstart, tbase, tsumea, tsumam, rdmax, rdm: config params, no state home
+!   siccapact, siccaplai: state%atmosphere%siccapact migrated; siccaplai no home
+!   w_root_ss, wiltpoint, twilt, flhydrlift: JvL params, no state home
+!   gc, cfeic, gctb, cftb, chtb, cfeictb, rdtb, mrftb, wrtb: fixed-crop tables/scalars
+!   swinco, reltr: switches, no state home
 ! ----------------------------------------------------------------------
-      use variables, only: magrs, icrop, dvs, idev, lai, tsum, cf, ch, &  ! [GR-CROP Phase B/6]
+      use variables, only: magrs, icrop, dvs, idev, lai, tsum, cf, ch, &  ! [SS-GR-FINAL B5] DEFERRED
                            rd, rdpot, max_resp_factor, swrd, rdi, rri,  &
                            rdc, swgc, swcf, swinter, swdrought, swdmi2rd, &
                            cropstart, tbase, tsumea, tsumam, rdmax, rdm, &
@@ -857,7 +888,10 @@
 ! [GR-CROP Phase B/5] narrow use variables
 ! ----------------------------------------------------------------------
 
-      use variables, only: flCropOpenFile, outfil, cropfil, pathwork,   & ! [GR-CROP Phase B/5]
+      ! [SS-GR-FINAL B5] DEFERRED — cropoutput: flCropOpenFile: crop flag, no state home;
+      !   outfil, pathwork, project: file-path globals; crp: crop file unit;
+      !   cropfil: config array, no state home; croptype, icrop: runtime state (dual-write)
+      use variables, only: flCropOpenFile, outfil, cropfil, pathwork,   & ! [SS-GR-FINAL B5] DEFERRED
                            project, crp, croptype, icrop
       use error_mod, only: fatalerr_collected
       use file_io_mod, only: file_open
@@ -964,7 +998,11 @@
       subroutine nocrop ()
 ! ----------------------------------------------------------------------
 
-      use variables, only: rd,rdpot,lai,laipot,cf,ch,albedo,rsc,tsum,dvs,               &
+      ! [SS-GR-FINAL B5] DEFERRED — nocrop: albedo/rsc: no state home;
+      !   rd/rdpot/lai/laipot/cf/ch/tsum/dvs: state%crop homes exist but nocrop takes no state arg
+      !   cwdmpot/cwdm/wsopot/wso/wlvpot/wlv/wstpot/wst/wrtpot/wrt: state%crop%wofost homes
+      !   Note: CropGrowth already mirrors all nocrop() zeroes to state after the call.
+      use variables, only: rd,rdpot,lai,laipot,cf,ch,albedo,rsc,tsum,dvs,               & ! [SS-GR-FINAL B5] DEFERRED
                            cwdmpot,cwdm,wsopot,wso,wlvpot,wlv,wstpot,wst,wrtpot,wrt
       implicit none
 
@@ -1003,7 +1041,16 @@
 ! SS-SWC S-2.7: state added (intent in) for soil-water-core h reader cutover.
 ! [GR-CROP Phase B/5] narrow use variables
 ! ----------------------------------------------------------------------
-      use variables, only: &                                                 ! [GR-CROP Phase B/5]
+      ! [SS-GR-FINAL B5] DEFERRED — ArableLandGerm: all symbols are germination/prep
+      !   runtime state or config params with no state home yet:
+      !   dvs: state%crop%common%dvs home exists but ArableLandGerm writes via global
+      !   flCropPrep, flCropSow, flCropGerm: crop lifecycle flags, no state home
+      !   dhPrep, hPrep, zPrep, dhSow, hSow, zSow, zTempSow, dtempSow, TempSow: prep/sow state
+      !   MaxPrepDelay, MaxSowDelay, PrepDelay, SowDelay: delay tracking, no state home
+      !   tsumemeopt, tsumgerm, hdrygerm, hwetgerm, zgerm, TBASEM, TEFFMX: germ thresholds
+      !   agerm, bgerm, cgerm: germination model coefficients, no state home
+      !   tsoil: config-staging buffer, renamed to avoid clash with dummy arg tsoil
+      use variables, only: &                                                 ! [SS-GR-FINAL B5] DEFERRED
         dvs, flCropPrep, flCropSow, flCropGerm, dhPrep, hPrep, zPrep,      &
         dhSow, hSow, zSow, zTempSow, dtempSow, TempSow,                    &
         MaxPrepDelay, MaxSowDelay, PrepDelay, SowDelay,                     &
@@ -1186,7 +1233,14 @@
 !   tc_iyear alias.
 ! [GR-CROP Phase B/5] narrow use variables
 ! ----------------------------------------------------------------------
-      use variables, only: fco2amax, fco2eff, fco2tra, flco2,           & ! [GR-CROP Phase B/5]
+      ! [SS-GR-FINAL B5] DEFERRED — FacCO2:
+      !   fco2amax, fco2eff, fco2tra: CO2 correction factors, written here and read by CropGrowth;
+      !     no state home — needs state%crop%wofost extension or argument passing
+      !   flco2: logical flag (maps to cropwofost_config co2%swco2); no state home
+      !   co2year, co2ppm: legacy CO2 table arrays, not yet in config; need migration
+      !   co2amaxtb, co2efftb, co2tratb: CO2 correction tables; in cropwofost_config co2% sub-record
+      !   mayrs: array dimension (could → swap_array_dimensions, deferred with rest)
+      use variables, only: fco2amax, fco2eff, fco2tra, flco2,           & ! [SS-GR-FINAL B5] DEFERRED
                            co2year, mayrs, co2ppm,                       &
                            co2amaxtb, co2efftb, co2tratb
       use array_utils, only: afgen
@@ -1232,8 +1286,31 @@
 ! SS-TC TC-10: t1900,daynr,daycum,date read via state%timecontrol tc_* aliases.
 ! SS-GR-ATM A5.1: intent changed inout to allow dual-write in cropwofost_init_from_config.
 ! [GR-CROP Phase B/6] narrow use variables
+! [SS-GR-FINAL B5] DEFERRED — wofost: all remaining variables globals:
+!   macp, magrs: array dims (could → swap_array_dimensions, deferred with rest)
+!   icrop, dvs, dvsend, rd, rdpot, rdm, rdmax, rdi, rri, rdc: runtime state (dual-write exists)
+!   swrd, swdmi2rd, swrdc, swdrought, swcf, swgc, swinter, swbulb, swinco: config switches
+!   lai, laipot, laiem, laiexp, laiexppot, laimax, cf, ch, cfeic, tsum: runtime crop state
+!   tsumea, tsumam, tbase: config thresholds; lat, daylp, kdif: meteo/physiology params
+!   siccapact, siccaplai, cropstart, cropend: interception/calendar, no state home
+!   wlv/wlvpot/wst/wstpot/wso/wsopot/wrt/wrtpot/wrtmax/wrtmin: WOFOST biomass pools
+!   cwdm/cwdmpot, pgass/pgasspot, reltr: assimilation/yield globals (dual-write to state%crop)
+!   lrnr, lsnr, nni, anlv, anst, nmxlv, nmaxlv, nmaxst, nmaxrt, nmaxso, nlai: nutrient params
+!   rnflv, rnfst, rnfrt, fstr, fntrt, npart, nfixf, nsla, cvl, cvo, cvr, cvs: more nutrient/C
+!   flCropHarvest, flCropNut, flHarvestDay, flhydrlift, flanthesis: lifecycle flags
+!   q10, rmr, rml, rms, rmo, rfsetb, frtb, fltb, fstb, fotb, fbltb: physiology tables
+!   fbl, drbl, drblpot, dwbl, dwblpot, wbl, wblpot: bulb crop pools
+!   cftb, chtb, cfeictb, rdtb, slatb, rgrlai, rlwtb, dtsmtb, rdrrtb, rdrstb: lookup tables
+!   dlc, dlo, span, spa, ssa, logf, plwt, plwti, tdwi: photoperiod/physiology params + logf
+!   lv, lvpot, lvage, lvagepot, sla, slapot, ilvold, ilvoldpot, idsl: leaf-age arrays
+!   dwlv/dwlvpot/dwrt/dwrtpot/dwso/dwst/dwstpot, dwlvcrop/dwlvsoil: death rates
+!   gasst/gasstpot, glaiex/glaiexpot, mrest/mrestpot: assimilation accumulators
+!   tadw/tadwpot, gwrt, harlosorm_tot, fraharlosorm_lv/so/st: harvest loss tracking
+!   rdrns, perdl, outfil, pathwork, project, dvsnlt, dvsnt: various params + output globals
+!   twilt, wiltpoint, tcnt, vernbase, verndvs, vernrtb, vernsat: JvL + vernalisation params
+!   daycrop: runtime state (dual-write to state%crop%common%daycrop)
 ! ----------------------------------------------------------------------
-      use variables, only: &                                                ! [GR-CROP Phase B/6]
+      use variables, only: &                                                ! [SS-GR-FINAL B5] DEFERRED
         macp, magrs, icrop, dvs, dvsend, rd, rdpot, rdm, rdmax, rdi, rri, &
         rdc, swrd, swdmi2rd, swrdc, swdrought, swcf, swgc, swinter,       &
         swbulb, swinco, lai, laipot, laiem, laiexp, laiexppot, laimax,    &
@@ -2493,7 +2570,32 @@
 ! SS-GR-ATM A5.1: intent changed inout to allow dual-write in cropgrass_init_from_config.
 ! [GR-CROP Phase B/7] narrow use variables
 ! ----------------------------------------------------------------------
-      use variables, only: &                                                ! [GR-CROP Phase B/7]
+      ! [SS-GR-FINAL B5] DEFERRED — grass: all remaining variables globals:
+      !   magrs, macp: array dims (could → swap_array_dimensions, deferred with rest)
+      !   icrop, dvs, tsum, daycrop: runtime state (dual-write to state%crop%common%)
+      !   rid: root increase rate, no state home; tbase: config param
+      !   tdwi, swinco: config params, no state home
+      !   wlv/wst/wrt/wso pools + dwlv/dwst/dwrt deaths: WOFOST biomass state
+      !   wrtmax, wrtmin: root biomass bounds, no state home
+      !   cf, ch, cfeic, lai, laipot, laiem, laiexp/pot, laimax: LAI/CF state
+      !   cftb, chtb, cfeictb, rdtb, slatb, rgrlai, rlwtb, rfsetb, frtb, fltb, fstb,
+      !     rdrrtb, rdrstb, kdif: lookup tables; rd/rdpot/rdm/rdmax/rdi/rri/rdc: rooting
+      !   swrd, swrdc, swdmi2rd, swdrought, swcf, swgc, swinter: config switches
+      !   reltr, cvl, cvr, cvs, q10, rmr, rml, rms, span, ssa: physiology params
+      !   glaiex/glaiexpot, lv/lvpot/lvage/lvagepot, sla/slapot, ilvold/ilvoldpot: leaf arrays
+      !   twilt, wiltpoint, gwrt, siccapact, siccaplai: JvL + interception params
+      !   cropstartact/endact/pot, cropstart: grass growth calendar globals
+      !   idaysgraz/pot, idregr/idregrpot: grazing counters; flgrazing/pot, flharvest/pot: flags
+      !   flhrvendact/pot, flhydrlift: lifecycle flags; daygrowth/pot, grzdm, dewrest: grass state
+      !   cuptgraz/pot, tagp/pot, tagpt/pot: harvest accumulators (dual-write to state%crop)
+      !   seqgrazmow/pot, swtsum, iseqgm/pot, iharvest: grass schedule state
+      !   dmgrztb, dmmowtb, daysgrazingtab, uptgrazingtab, lossgrazingtab: grazing tables
+      !   lossgrztab, lossmowtab, delayregrowthtab, zgrz, zmow: more grazing config
+      !   mowdm, mowrest, lossdm, plossdm, pmowdm, pgrzdm: mowing/grazing scalars
+      !   pgass, pgasspot: assimilation rates (dual-write to state%crop%wofost%)
+      !   perdl, dateharvest, lsda: output + harvest tracking
+      !   tsoil: config-staging buffer, renamed to avoid clash with dummy arg
+      use variables, only: &                                                ! [SS-GR-FINAL B5] DEFERRED
         magrs, macp, icrop, dvs, rid, tsum, tbase, daycrop, tdwi, swinco, &
         wlv, wlvpot, wst, wstpot, wrt, wrtpot, wrtmax, wrtmin,           &
         dwlv, dwlvpot, dwrt, dwrtpot, dwst, dwstpot,                     &
@@ -3916,8 +4018,11 @@
 
       ! [SS-SWC S-2.12B] qpotrot_day/qredtot_day retired — read via state%soilwater
       ! SS-TC TC-10: date read via state%timecontrol tc_date alias (removed from variables use).
+      ! [SS-GR-FINAL B5] DEFERRED — update_rootdistribution:
+      !   noddrz: lowest node with roots, no state home; cumdens: root density array, no state home
+      !   wrt, gwrt, wrtmin: WOFOST root biomass scalars, no state home in crop_wofost_state_t
       use variables, only: noddrz, cumdens,                   &
-                     wrt, gwrt, wrtmin  ! [GR-BH C7] zbotcp/ztopcp->state%mesh
+                     wrt, gwrt, wrtmin  ! [SS-GR-FINAL B5] DEFERRED
       use swap_state_mod, only: swap_state_t  ! [SS-SWC S-2.12B]
       ! local
       implicit none
@@ -5082,8 +5187,17 @@
 !   via grass's tsoil dummy arg. Global tsoil excluded via rename.
 ! SS-TC TC-10: state added (intent in); t1900,date read via state%timecontrol tc_* aliases.
 ! ----------------------------------------------------------------------
-      use Variables, dummy_tsoil_sumttd_ => tsoil
-      !! Rename global tsoil to avoid clash with dummy arg tsoil.
+      ! [SS-GR-FINAL B5] narrow blanket use Variables → minimal list.
+      ! Symbols actually used by sumttd body:
+      !   tsumdepth, tsumtemp, tsumtime: grass growth start thresholds; map to
+      !     crop_config_global%rotation_grass(icrop)%tsumdepth/tsumtemp/tsumtime.
+      !     Migration deferred: swtsum=2 path is stub-errored in cropgrass_config.f90
+      !     (line 290); these are unreachable until swtsum=2 is implemented.
+      !   pathwork, outfil, project: file-path globals; DEFERRED — Arc 9 edge.
+      !   tsoil: config-staging buffer, renamed to avoid clash with dummy arg.
+      use variables, only: tsumdepth, tsumtemp, tsumtime, &     ! [SS-GR-FINAL B5] DEFERRED — stub-path (swtsum=2)
+                           pathwork, outfil, project,     &     ! [SS-GR-FINAL B5] DEFERRED — file-path globals
+                           dummy_tsoil_sumttd_ => tsoil         ! config-staging buffer
       use file_io_mod, only: file_open
       use swap_state_mod, only: swap_state_t
       implicit none
