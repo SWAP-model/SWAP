@@ -209,9 +209,11 @@
       real(8)   raintab(60)        ! Array with mean rainfall intensity (L/T) as function of time (T)
       real(8)   rainfluxarray(mrain) ! Array with short duration rainfall intensities (L/T)
       real(8)   raintimearray(mrain) ! Array with times (T) at which rainfall intensity changes
-      real(8)   rh                 ! Relative air humidity (-)
+      ! [GR-ATM C8] retired 2026-05-14 — moved to state%atmosphere%rh (GR-ATM arc)
+      ! real(8)   rh                 ! Relative air humidity (-)
       real(8)   tav                ! Average air temperature of a day (oC)
-      real(8)   tavd               ! Average air temperature during day time (oC)
+      ! [GR-ATM C8] retired 2026-05-14 — moved to state%atmosphere%tavd (GR-ATM arc)
+      ! real(8)   tavd               ! Average air temperature during day time (oC)
       ! [SS-TC] retired 2026-05-12 — moved to state%timecontrol%timjan1 (ADR 0041)
       ! real(8)   timjan1            ! moved to state%timecontrol%timjan1
       real(8)   tmn                ! Minimum air temperature of current day (oC)
@@ -249,13 +251,20 @@
       integer   icn_atm            ! Current position in CN time table - from meteoday.f90 CNmethod
       real(8)   z10_cn             ! Depth to node 10 for CN method - from meteoday.f90 CNmethod
 !   - meteo output variables for PEARL
-      real(4)   out_etr            ! Reference evapotranspiration  of current day (m/d)
-      real(4)   out_hum            ! Air humidity  of current day (kPa)
-      real(4)   out_rad            ! Global solar radiation (KJ/m2)
-      real(4)   out_tmn            ! Minimum air temperature of current day (oC)
-      real(4)   out_tmx            ! Maximum air temperature of current day (oC)
-      real(4)   out_wet            ! Rainfall duration of current day (d)
-      real(4)   out_win            ! Average wind speed of current day (m/s)
+      ! [GR-ATM C8] retired 2026-05-14 — moved to state%atmosphere%out_etr (GR-ATM arc)
+      ! real(4)   out_etr            ! Reference evapotranspiration  of current day (m/d)
+      ! [GR-ATM C8] retired 2026-05-14 — moved to state%atmosphere%out_hum (GR-ATM arc)
+      ! real(4)   out_hum            ! Air humidity  of current day (kPa)
+      ! [GR-ATM C8] retired 2026-05-14 — moved to state%atmosphere%out_rad (GR-ATM arc)
+      ! real(4)   out_rad            ! Global solar radiation (KJ/m2)
+      ! [GR-ATM C8] retired 2026-05-14 — moved to state%atmosphere%out_tmn (GR-ATM arc)
+      ! real(4)   out_tmn            ! Minimum air temperature of current day (oC)
+      ! [GR-ATM C8] retired 2026-05-14 — moved to state%atmosphere%out_tmx (GR-ATM arc)
+      ! real(4)   out_tmx            ! Maximum air temperature of current day (oC)
+      ! [GR-ATM C8] retired 2026-05-14 — moved to state%atmosphere%out_wet (GR-ATM arc)
+      ! real(4)   out_wet            ! Rainfall duration of current day (d)
+      ! [GR-ATM C8] retired 2026-05-14 — moved to state%atmosphere%out_win (GR-ATM arc)
+      ! real(4)   out_win            ! Average wind speed of current day (m/s)
 
 ! --- irrigation variables
       integer   swirg              ! Switch for output file *.IRG with irrigation output: 0 = no; 1 = yes

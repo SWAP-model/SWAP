@@ -83,11 +83,11 @@
       raintab            = 0.0d0 
       rainfluxarray      = 0.0d0 
       raintimearray      = 0.0d0 
-      rh                 = 0.0d0 
-      tadw               = 0.0d0 
-      tadwpot            = 0.0d0 
-      tav                = 0.0d0 
-      tavd               = 0.0d0 
+      ! [GR-ATM C8] rh retired — state%atmosphere%rh written by meteoday
+      tadw               = 0.0d0
+      tadwpot            = 0.0d0
+      tav                = 0.0d0
+      ! [GR-ATM C8] tavd retired — state%atmosphere%tavd written by meteoday
       tmn                = 0.0d0 
       tmnr               = 0.0d0 
       tmx                = 0.0d0 

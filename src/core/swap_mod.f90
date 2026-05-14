@@ -59,10 +59,11 @@ contains
                             owltab, nowltab, &
                             arad, atmn, atmx, ahum, awin, arai, aetr, wet, &
                             atav, epot, tpot, grain, nrain, &
-                            tav, tavd, rh, daynrfirst, daynrlast, atmin7, nofd, teprrain, teprsnow, &
+                            ! [GR-ATM C8] tavd/rh retired from import (no legacy consumers; state written by meteoday)
+                            tav, daynrfirst, daynrlast, atmin7, nofd, teprrain, teprsnow, &
                             siccapact, fimin, isua, avevaptb, avprectb, pfreetb, pstemtb, scanopytb, &
                             CNref, CNdry, CNwet, ThetaRef, Runoff_CN, wc_cor, wc10, iCNtab, CNtimTAB, CNrefTAB, &
-                            out_tmn, out_tmx, out_hum, out_win, out_etr, out_wet, out_rad, &
+                            ! [GR-ATM C8] out_tmn/tmx/hum/win/etr/wet/rad retired from import (state written by meteoday)
                             lai, kdif, kdir, cofab, cfbs, swcf, swcfbs, gird, flCropEmergence, et0, ew0, es0
       use soilwater_state_mod, only: soilwater_init
       use tillage_state_mod, only: tillage_init
@@ -184,9 +185,8 @@ contains
    state%atmosphere%nrain = nrain
 
    ! [SS-GR-ATM A11] dual-write Block 3 (derived scalars) + Block 4 (interception) + Block 5 (CN)
+   ! [GR-ATM C8] tavd/rh seeding dropped: legacy globals retired; state%atmosphere%X written by meteoday
    state%atmosphere%Tav        = tav
-   state%atmosphere%tavd       = tavd
-   state%atmosphere%rh         = rh
    state%atmosphere%daynrfirst = daynrfirst
    state%atmosphere%daynrlast  = daynrlast
    state%atmosphere%atmin7     = atmin7
@@ -214,14 +214,7 @@ contains
    state%atmosphere%CNtimTAB  = CNtimTAB
    state%atmosphere%CNrefTAB  = CNrefTAB
 
-   ! [SS-GR-ATM A12] dual-write Block 6 (daily output scalars)
-   state%atmosphere%out_tmn = real(out_tmn, kind=8)
-   state%atmosphere%out_tmx = real(out_tmx, kind=8)
-   state%atmosphere%out_hum = real(out_hum, kind=8)
-   state%atmosphere%out_win = real(out_win, kind=8)
-   state%atmosphere%out_etr = real(out_etr, kind=8)
-   state%atmosphere%out_wet = real(out_wet, kind=8)
-   state%atmosphere%out_rad = real(out_rad, kind=8)
+   ! [GR-ATM C8] out_tmn/tmx/hum/win/etr/wet/rad seeding dropped: legacy globals retired; state%atmosphere%X written by meteoday
 
    ! [SS-GR-ATM A12] seed state%crop from legacy crop globals
    state%crop%lai             = lai
