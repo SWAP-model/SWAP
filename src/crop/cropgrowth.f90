@@ -76,7 +76,8 @@
       ! SS-TC TC-10: t1900, daynr read via state%timecontrol tc_* aliases.
       associate( &
         tc_t1900 => state%timecontrol%t1900,  &  ! TC-10
-        tc_daynr => state%timecontrol%daynr   &  ! TC-10
+        tc_daynr => state%timecontrol%daynr,  &  ! TC-10
+        at_tavd  => state%atmosphere%tavd     &  ! [SS-GR-ATM B.5] daytime-mean temp read from state
       )
 
       select case (task)
@@ -353,7 +354,7 @@
             ! decrease weight mother organ starts at emergence.
             ! decrease consists of respiration and remobilisation
             decrmo = plwt-(plwt*(2.71828d0**remoc))
-            respmo = 0.025d0*(q10**((tavd-25.0d0)/10.0d0))*plwt
+            respmo = 0.025d0*(q10**((at_tavd-25.0d0)/10.0d0))*plwt  ! [SS-GR-ATM B.5] tavd→state%atmosphere%tavd
             if(respmo.lt.decrmo) then
               remo = decrmo - respmo
             else
@@ -367,8 +368,8 @@
 
         ! daily gross assimilation
         effc = fco2eff * eff
-        if (croptype(icrop) .eq. 2) amax = fco2amax * afgen (amaxtb,30,dvs) * afgen (tmpftb,30,tavd)
-        if (croptype(icrop) .eq. 3) amax = fco2amax * afgen (amaxtb,30,dble(daycrop)) * afgen (tmpftb,30,tavd)
+        if (croptype(icrop) .eq. 2) amax = fco2amax * afgen (amaxtb,30,dvs) * afgen (tmpftb,30,at_tavd)  ! [SS-GR-ATM B.5]
+        if (croptype(icrop) .eq. 3) amax = fco2amax * afgen (amaxtb,30,dble(daycrop)) * afgen (tmpftb,30,at_tavd)  ! [SS-GR-ATM B.5]
 
 
         ! potential assimilation
@@ -567,8 +568,10 @@
 ! ----------------------------------------------------------------------
       ! TC-10: t1900 read via state%timecontrol tc_t1900 alias.
       ! [SS-BMI2 Task 4] tstart added to associate
+      ! [SS-GR-ATM B.5] at_tav alias for tav read migration
       associate( tc_t1900 => state%timecontrol%t1900, &  ! TC-10
-                 tstart   => state%timecontrol%tstart )   ! [SS-BMI2 Task 4]
+                 tstart   => state%timecontrol%tstart, &  ! [SS-BMI2 Task 4]
+                 at_tav   => state%atmosphere%Tav      )  ! [SS-GR-ATM B.5]
 
       select case (task)
       case (1)
@@ -686,7 +689,7 @@
 ! === calculate actual rate and state variables ======================
 
 ! --- increase in temperature sum
-      dtsum = max (0.0d0,tav-tbase)
+      dtsum = max (0.0d0,at_tav-tbase)  ! [SS-GR-ATM B.5] tav→state%atmosphere%Tav
 
 ! --- development rate
       if (idev.eq.1) then
@@ -1052,12 +1055,13 @@
         endif
         
         ! Update of tsumgerm, for the time step of 1 day
-        if (tav .gt. TBASEM)then
-          if( tav .lt. TEFFMX) then
+        ! [SS-GR-ATM B.5] tav reads migrated to state%atmosphere%Tav
+        if (state%atmosphere%Tav .gt. TBASEM)then
+          if( state%atmosphere%Tav .lt. TEFFMX) then
             if(tsumemesub.lt.0.1d0) then
-              tsumgerm = tsumgerm + (tav-TBASEM)
+              tsumgerm = tsumgerm + (state%atmosphere%Tav-TBASEM)
             else
-              tsumgerm = tsumgerm +(tsumemeopt/tsumemesub)*(tav-TBASEM)
+              tsumgerm = tsumgerm +(tsumemeopt/tsumemesub)*(state%atmosphere%Tav-TBASEM)
             endif
           else
             if(tsumemesub.lt.0.1d0) then
@@ -1224,6 +1228,7 @@
 ! ----------------------------------------------------------------------
       ! SS-TC TC-10: t1900,t,daynr,daycum,date read via state%timecontrol tc_* aliases.
       ! [SS-BMI2 Task 4] tstart, swscre added to associate
+      ! [SS-GR-ATM B.5] at_tav alias for tav read migration
       associate( &
         tc_t1900  => state%timecontrol%t1900,  &  ! TC-10
         tc_t      => state%timecontrol%t,      &  ! TC-10
@@ -1231,7 +1236,8 @@
         tc_daycum => state%timecontrol%daycum, &  ! TC-10
         tc_date   => state%timecontrol%date,   &  ! TC-10
         tstart    => state%timecontrol%tstart, &  ! [SS-BMI2 Task 4]
-        swscre    => state%timecontrol%swscre  &  ! [SS-BMI2 Task 4]
+        swscre    => state%timecontrol%swscre, &  ! [SS-BMI2 Task 4]
+        at_tav    => state%atmosphere%Tav      &  ! [SS-GR-ATM B.5]
       )
 
       select case (task)
@@ -1482,7 +1488,7 @@
 ! --- rates of change of the crop variables ----------------------------
 
 ! --- increase in temperature sum
-      dtsum = afgen (dtsmtb,30,tav)
+      dtsum = afgen (dtsmtb,30,at_tav)  ! [SS-GR-ATM B.5] tav→state%atmosphere%Tav
 
 ! --- phenological development rate for potential AND actual crops
       if (swsoybean.eq.0) then
@@ -1499,7 +1505,7 @@
 !            vernalisation rate,based on routines from pyWofost (Allard de Wit, 2015)
              if(.not.flvernalised) then
                 if(dvs.lt.verndvs) then
-                   vernrate = afgen (vernrtb,30,tav)
+                   vernrate = afgen (vernrtb,30,at_tav)  ! [SS-GR-ATM B.5]
                    r = (vern - vernbase) / (vernsat - vernbase)
                    vernfac = interpol(0.0d0,1.0d0,r)
                 else
@@ -1515,7 +1521,7 @@
 
       else if (swsoybean.eq.1) then
 ! ---   soybean
-        call mgtemprf(tav,toptdvr,tmindvr,tmaxdvr,rfmgtemp)
+        call mgtemprf(at_tav,toptdvr,tmindvr,tmaxdvr,rfmgtemp)  ! [SS-GR-ATM B.5]
         call mgphotoprf(mg,tc_daynr,lat,popt,pcrt,flphenodayl,rfmgphotop)
         if (dvs.lt.1.0d0) then 
 ! ---     vegetative phase
@@ -1549,7 +1555,7 @@
         rmrespot = (rmr*wrtpot+rml*wlvpot+rms*wstpot+rmo*wsopot)*       &
      &           afgen(rfsetb,30,dvs)
       endif
-      teff = q10**((tav-25.0d0)/10.0d0)
+      teff = q10**((at_tav-25.0d0)/10.0d0)  ! [SS-GR-ATM B.5]
       mrespot = dmin1(gasspot,rmrespot*teff)
       asrcpot = gasspot - mrespot
 
@@ -1636,7 +1642,7 @@
       drlvpot = dslvpot + dalvpot
 
 ! --- physiologic ageing of leaves per time step
-      fysdel = max (0.0d0,(tav-tbase)/(35.0d0-tbase))
+      fysdel = max (0.0d0,(at_tav-tbase)/(35.0d0-tbase))  ! [SS-GR-ATM B.5]
 
 ! --- specific leaf area valid for current timestep
       slatpot = afgen (slatb,30,dvs)
@@ -1644,7 +1650,7 @@
 ! --- calculation of specific leaf area in case of exponential growth:
 ! --- leaf area not to exceed exponential growth curve
       if (laiexppot.lt.6.0d0) then
-        dteff = max (0.0d0,tav-tbase)
+        dteff = max (0.0d0,at_tav-tbase)  ! [SS-GR-ATM B.5]
 ! ---   increase in leaf area during exponential growth
         glaiexpot = laiexppot*rgrlai*dteff
 ! ---   source-limited increase in leaf area
@@ -1927,7 +1933,7 @@
            Fstress = reltr * EXP(-NLAI* (1.0d0 - NNI))
          endif
       endif
-      call GLAI(Fstress,LAIEXP,GLAIEX,tav,TBASE,RGRLAI,GRLV,SLAT,GLA)
+      call GLAI(Fstress,LAIEXP,GLAIEX,at_tav,TBASE,RGRLAI,GRLV,SLAT,GLA)  ! [SS-GR-ATM B.5]
 
 
 ! ---- UPDATE STATES: integrals of the crop --------------------------------------------
@@ -2362,10 +2368,12 @@
 ! ----------------------------------------------------------------------
       ! SS-TC TC-10: t1900,daynr read via state%timecontrol tc_* aliases.
       ! [SS-BMI2 Task 4] tstart added to associate
+      ! [SS-GR-ATM B.5] at_tav alias for tav read migration
       associate( &
         tc_t1900 => state%timecontrol%t1900,  &  ! TC-10
         tc_daynr => state%timecontrol%daynr,  &  ! TC-10
-        tstart   => state%timecontrol%tstart  &  ! [SS-BMI2 Task 4]
+        tstart   => state%timecontrol%tstart, &  ! [SS-BMI2 Task 4]
+        at_tav   => state%atmosphere%Tav      &  ! [SS-GR-ATM B.5]
       )
 
       select case (task)
@@ -2622,7 +2630,7 @@
       flearlyhrvendpot = .false.
       
 ! --- grass growth initiated by tsum from 1st day of calendar year
-      tsum = tsum + max(0.0d0,tav)
+      tsum = tsum + max(0.0d0,at_tav)  ! [SS-GR-ATM B.5]
       if (.not. flGrassGrowth) then
         
         ! grass growth initiated by tsum
@@ -2657,7 +2665,7 @@
 ! ---   respiration and partitioning of carbohydrates between growth and
 ! ---   maintenance respiration
         rmrespot=(rmr*wrtpot+rml*wlvpot+rms*wstpot)*afgen(rfsetb,30,rid)
-        teff = q10**((tav-25.0d0)/10.0d0)
+        teff = q10**((at_tav-25.0d0)/10.0d0)  ! [SS-GR-ATM B.5]
         mrespot = min (gasspot,rmrespot*teff)
         asrcpot = gasspot-mrespot
 
@@ -2753,7 +2761,7 @@
 ! ---   leaf area not to exceed exponential growth curve
         slatpot = afgen (slatb,30,rid)
         if (laiexppot.lt.6.0d0) then
-          dteff = max (0.0d0,tav-tbase)
+          dteff = max (0.0d0,at_tav-tbase)  ! [SS-GR-ATM B.5]
           glaiexpot = laiexppot*rgrlai*dteff
 ! ---   source-limited increase in leaf area
           glasolpot = grlvpot*slatpot
@@ -3003,7 +3011,7 @@
         if (daycrop .ge. idregrpot) then
 
 ! ---     physiologic ageing of leaves per time step
-          fysdel = max (0.0d0,(tav-tbase)/(35.0d0-tbase))
+          fysdel = max (0.0d0,(at_tav-tbase)/(35.0d0-tbase))  ! [SS-GR-ATM B.5]
 
 ! ---     leaf death is imposed on array untill no more leaves have to die or all leaves are gone
 
@@ -3127,7 +3135,7 @@
 ! ---   respiration and partitioning of carbohydrates between growth and
 ! ---   maintenance respiration
         rmres = (rmr*wrt+rml*wlv+rms*wst)*afgen(rfsetb,30,rid)
-        teff = q10**((tav-25.0d0)/10.0d0)
+        teff = q10**((at_tav-25.0d0)/10.0d0)  ! [SS-GR-ATM B.5]
         mres = min (gass,rmres*teff)
         asrc = gass-mres
 
@@ -3212,7 +3220,7 @@
 
 ! ---   leaf area not to exceed exponential growth curve
         if (laiexp.lt.6.0d0) then
-          dteff = max (0.0d0,tav-tbase)
+          dteff = max (0.0d0,at_tav-tbase)  ! [SS-GR-ATM B.5]
           glaiex = laiexp*rgrlai*dteff
 ! ---     source-limited increase in leaf area
           glasol = grlv*slat
@@ -3463,7 +3471,7 @@
         if (daycrop .ge. idregr) then
 
 ! ---     physiologic ageing of leaves per time step
-          fysdel = max (0.0d0,(tav-tbase)/(35.0d0-tbase))
+          fysdel = max (0.0d0,(at_tav-tbase)/(35.0d0-tbase))  ! [SS-GR-ATM B.5]
 
 ! ---     leaf death is imposed on array untill no more leaves have to die or all leaves are gone
 

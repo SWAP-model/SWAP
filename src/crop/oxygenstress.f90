@@ -280,8 +280,8 @@ contains
 
 ! --- atmosphere oxygen concentration [kg/m3] according to general gas law
         if (node.eq.1) then
-! ---   atmospheric temperature [K]      
-          air_temp = tav + 273.0d0
+! ---   atmospheric temperature [K]
+          air_temp = state%atmosphere%Tav + 273.0d0  ! [SS-GR-ATM B.5] tav→state%atmosphere%Tav
           o2_atmosphere = (672.0d0) / (8.314472d0 * air_temp)
 ! ---   PLAATS O2_atmosphere IN DE VECTOR VOOR C_TOP 
           C_top(1) = o2_atmosphere
@@ -517,12 +517,15 @@ contains
 ! --- End of main module OxygenStress ---------------------------------------------------------------------------------------
       
       subroutine GET_MAX_RESP_FACTOR (max_resp_factor_gmrf)
+      ! [SS-GR-ATM B.5] DEFERRED: tav reads at ~line 549,592 remain bare globals.
+      ! GET_MAX_RESP_FACTOR has no state arg; migration requires signature change.
+      ! Deferred to Arc 8 (crop cluster): add state intent(in) + caller update.
       use Variables
       use array_utils, only: afgen
       implicit none
-! --- Procedure to derive max_resp_factor, 
+! --- Procedure to derive max_resp_factor,
 ! --- i.e. the ratio between total respiration and maintenance respiration [-]
-! --- This ratio is either given in the input file (for a static crop) 
+! --- This ratio is either given in the input file (for a static crop)
 ! --- or calculated from a series of equations taken from WOFOST (for a dynamic crop)
 
       real(8) rmres_gmrf,teff_gmrf,mres_gmrf,asrc_gmrf
