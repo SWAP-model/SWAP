@@ -161,14 +161,22 @@ contains
          albedo = 0.23d0
          rsc    = 70.0d0
          rsw    = 0.0d0
-         if (allocated(cfg%cftb)) call copy_table(cfg%cftb, cftb)
+         if (allocated(cfg%cftb)) then
+           call copy_table(cfg%cftb, cftb)
+           state%crop%fixed%cftb = cftb   ! [SS-GR-CROP A5.2]
+         endif
          chtb = -99.99d0
+         state%crop%fixed%chtb = chtb   ! [SS-GR-CROP A5.2]
       else if (cfg%swcf == 2) then
          albedo = cfg%albedo
          rsc    = cfg%rsc
          rsw    = cfg%rsw
-         if (allocated(cfg%chtb)) call copy_table(cfg%chtb, chtb)
+         if (allocated(cfg%chtb)) then
+           call copy_table(cfg%chtb, chtb)
+           state%crop%fixed%chtb = chtb   ! [SS-GR-CROP A5.2]
+         endif
          cftb = -99.99d0
+         state%crop%fixed%cftb = cftb   ! [SS-GR-CROP A5.2]
       end if
 
       ! Part 2: interception (readgrass lines 3560-3585)
@@ -288,6 +296,9 @@ contains
          rri      = cfg%rri
          rdc      = cfg%rdc
          swdmi2rd = cfg%swdmi2rd
+         state%crop%common%rdi = rdi   ! [SS-GR-CROP A5.2]
+         state%crop%common%rri = rri   ! [SS-GR-CROP A5.2]
+         state%crop%common%rdc = rdc   ! [SS-GR-CROP A5.2]
       else if (cfg%swrd == 3) then
          ! Legacy readgrass:3868-3874 reads rlwtb (22-element flat pair table)
          ! and wrtmax for biomass-driven root extension.
@@ -298,6 +309,8 @@ contains
       ! Part 16: management factors (readgrass lines 3876-3885)
       relmf      = cfg%relmf
       swpotrelmf = cfg%swpotrelmf
+      state%crop%grass%relmf      = relmf       ! [SS-GR-CROP A5.2]
+      state%crop%grass%swpotrelmf = swpotrelmf  ! [SS-GR-CROP A5.2]
 
       ! Part 17: sequence of mowing / grazing (readgrass lines 3891-3905)
       ! SeqGrazMow is a fixed-size integer array in variables (size 366).
@@ -306,12 +319,14 @@ contains
          do i = 1, cfg%nseqgrazmow
             seqgrazmow(i) = cfg%seqgrazmow(i)
          end do
+         state%crop%grass%seqgrazmow = seqgrazmow   ! [SS-GR-CROP A5.2]
       end if
 
       ! Part 18: mowing settings (readgrass lines 3985-4035)
       ! Only the mowing block is active (SeqGrazMow all-2; grazing block
       ! is entirely guarded). mowrest always set.
       mowrest = cfg%mowrest
+      state%crop%grass%mowrest = mowrest   ! [SS-GR-CROP A5.2]
 
       ! swharvest (mowing trigger) is a LOCAL in grass(); handled in Task 8.
       ! dmharvest, daylastharvest, dmlastharvest, swdmmow, maxdaymow
@@ -340,6 +355,7 @@ contains
          ! mapping to tstart (first simulation year), not yearmeteo, so the
          ! same full date sequence is reproduced correctly every time.
          call populate_dateharvest(cfg, tend_val, tstart_val)  ! [SS-BMI2 Task 4]
+         state%crop%grass%dateharvest = dateharvest   ! [SS-GR-CROP A5.2]
       end if
 
       ! Regrowth delay table (readgrass lines 4028-4035).

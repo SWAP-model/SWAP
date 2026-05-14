@@ -130,6 +130,8 @@ contains
                   cftb(j*2)   = cfg%crop_factor%cftb(j,2)
                end do
                chtb = -99.99d0
+               state%crop%fixed%cftb = cftb   ! [SS-GR-CROP A5.2]
+               state%crop%fixed%chtb = chtb   ! [SS-GR-CROP A5.2]
             end block
          end if
          ! ETref standard defaults for albedo/rsc/rsw
@@ -149,6 +151,8 @@ contains
                   chtb(j*2)   = cfg%crop_factor%chtb(j,2)
                end do
                cftb = -99.99d0
+               state%crop%fixed%chtb = chtb   ! [SS-GR-CROP A5.2]
+               state%crop%fixed%cftb = cftb   ! [SS-GR-CROP A5.2]
             end block
          end if
       end if
@@ -390,6 +394,9 @@ contains
          rri      = cfg%root%rri
          rdc      = cfg%root%rdc
          swdmi2rd = cfg%root%swdmi2rd
+         state%crop%common%rdi = rdi   ! [SS-GR-CROP A5.2]
+         state%crop%common%rri = rri   ! [SS-GR-CROP A5.2]
+         state%crop%common%rdc = rdc   ! [SS-GR-CROP A5.2]
       case (3)
          if (allocated(cfg%root%rlwtb)) then
             block
@@ -414,6 +421,8 @@ contains
       ! Management (readwofost lines 2979-2988)
       relmf      = cfg%management%relmf
       swpotrelmf = cfg%management%swpotrelmf
+      state%crop%grass%relmf      = relmf      ! [SS-GR-CROP A5.2]
+      state%crop%grass%swpotrelmf = swpotrelmf ! [SS-GR-CROP A5.2]
 
       ! FraDeceasedLvToSoil — local SAVE in wofost(), returned via intent(out)
       ! so the dispatch block can assign it.  (FraHarLosOrm_* are set by
@@ -465,12 +474,16 @@ contains
       tsum    = 0.0d0
       daycrop = 0
       nofd    = 0
+      state%crop%common%dvs     = dvs     ! [SS-GR-CROP A5.2]
+      state%crop%common%tsum    = tsum    ! [SS-GR-CROP A5.2]
+      state%crop%common%daycrop = daycrop ! [SS-GR-CROP A5.2]
 
       ! [nutrients] N3: drive the legacy global flCropNut from the
       ! per-rotation typed config. cropwofost_init_from_config runs at
       ! every rotation start, so a sequence of rotations with mixed
       ! flcropnut values toggles the gate correctly.
       flCropNut = cfg%nutrient%flcropnut
+      state%crop%common%flCropNut = flCropNut ! [SS-GR-CROP A5.2]
       if (flCropNut) call apply_cropwofost_nutrient(cfg%nutrient)
 
    end subroutine cropwofost_init_from_config

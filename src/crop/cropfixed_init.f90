@@ -80,6 +80,9 @@ contains
       rdi      = cfg%rdi
       rri      = cfg%rri
       rdc      = cfg%rdc
+      state%crop%common%rdi = rdi   ! [SS-GR-CROP A5.2]
+      state%crop%common%rri = rri   ! [SS-GR-CROP A5.2]
+      state%crop%common%rdc = rdc   ! [SS-GR-CROP A5.2]
 
       swoxygen   = cfg%swoxygen
       swWrtNonox = cfg%swwrtnonox
@@ -133,9 +136,18 @@ contains
       ! ---- Copy tables ------------------------------------------------
       ! gctb (size up to 2*magrs in legacy; we copy what was authored).
       if (allocated(cfg%gctb))  call copy_pair_table(cfg%gctb,  gctb)
-      if (allocated(cfg%cftb))  call copy_pair_table(cfg%cftb,  cftb)
-      if (allocated(cfg%chtb))  call copy_pair_table(cfg%chtb,  chtb)
-      if (allocated(cfg%cfeictb)) call copy_pair_table(cfg%cfeictb, cfeictb)
+      if (allocated(cfg%cftb))  then
+        call copy_pair_table(cfg%cftb,  cftb)
+        state%crop%fixed%cftb = cftb   ! [SS-GR-CROP A5.2]
+      endif
+      if (allocated(cfg%chtb))  then
+        call copy_pair_table(cfg%chtb,  chtb)
+        state%crop%fixed%chtb = chtb   ! [SS-GR-CROP A5.2]
+      endif
+      if (allocated(cfg%cfeictb)) then
+        call copy_pair_table(cfg%cfeictb, cfeictb)
+        state%crop%fixed%cfeictb = cfeictb   ! [SS-GR-CROP A5.2]
+      endif
       if (allocated(cfg%rdtb))  call copy_pair_table(cfg%rdtb,  rdtb)
 
       ! rdctb is sized 22 in legacy; we always copy.
