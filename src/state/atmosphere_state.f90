@@ -34,7 +34,7 @@
 module atmosphere_state_mod
    use, intrinsic :: iso_fortran_env, only: real64
    use iso_c_binding, only: c_double
-   use swap_array_dimensions, only: magrs, mayrs
+   use swap_array_dimensions, only: magrs, mayrs, mrain
    implicit none
    private
    public :: atmosphere_state_t
@@ -202,6 +202,12 @@ module atmosphere_state_mod
       real(real64) :: out_etr = 0.0_real64   !! reference ET of current day (m/d)
       real(real64) :: out_wet = 0.0_real64   !! rainfall duration of current day (d)
       real(real64) :: out_rad = 0.0_real64   !! global solar radiation (kJ/m2)
+
+      ! [SS-GR-CROP A12] rain timing — per-year reload runtime state
+      integer      :: nmrain                    = 0          !! Number of rain event records (-)
+      real(real64) :: rainamount(mrain)         = 0.0_real64 !! Array with short duration rainfall amounts (L)
+      real(real64) :: rainfluxarray(mrain)      = 0.0_real64 !! Array with short duration rainfall intensities (L/T)
+      real(real64) :: raintimearray(mrain)      = 0.0_real64 !! Array with times (T) at which rainfall intensity changes
 
    contains
       procedure :: init => atmosphere_state_init
