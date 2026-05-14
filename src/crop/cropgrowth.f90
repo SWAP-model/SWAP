@@ -4073,11 +4073,15 @@
 
       ! [SS-SWC S-2.12B] qpotrot_day/qredtot_day retired — read via state%soilwater
       ! SS-TC TC-10: date read via state%timecontrol tc_date alias (removed from variables use).
-      ! [SS-GR-FINAL B5] DEFERRED — update_rootdistribution:
-      !   noddrz: lowest node with roots, no state home; cumdens: root density array, no state home
-      !   wrt, gwrt, wrtmin: WOFOST root biomass scalars, no state home in crop_wofost_state_t
-      use variables, only: noddrz, cumdens,                   &
-                     wrt, gwrt, wrtmin  ! [SS-GR-FINAL B5] DEFERRED
+      ! [SS-GR-CROPRT B9] DEFERRED — update_rootdistribution:
+      !   gwrt: root growth rate (computed in wofost task=3), no state home
+      !   wrtmin: minimum root weight at relative depth, no state home
+      ! MIGRATED B9: noddrz → state%crop%common%noddrz (read-only loop bound)
+      ! MIGRATED B9: cumdens → state%crop%common%cumdens (full array in state after init;
+      !   odd/even indices all set at CropGrowth task=1 via full array copy line 195)
+      ! MIGRATED B9: wrt → state%crop%wofost%wrt (WOFOST root biomass; read prev-day value;
+      !   dual-write in wofost keeps state%crop%wofost%wrt current)
+      use variables, only: gwrt, wrtmin  ! [SS-GR-CROPRT B9] DEFERRED — no state home
       use swap_state_mod, only: swap_state_t  ! [SS-SWC S-2.12B]
       ! local
       implicit none
@@ -4092,11 +4096,15 @@
       logical   found
 
       ! SS-TC TC-10: date read via state%timecontrol tc_date alias.
-      associate( tc_date => state%timecontrol%date )  ! TC-10
+      associate( &
+        tc_date  => state%timecontrol%date,     &  ! TC-10
+        cumdens  => state%crop%common%cumdens,  &  ! [SS-GR-CROPRT B9] alias for cumdens state read/write
+        noddrz   => state%crop%common%noddrz    &  ! [SS-GR-CROPRT B9] alias for noddrz state read
+      )
 
 ! --- update normalized cumulative root density based on root extraction or stress (cumdens)
 !      if (swrdc .eq. 1) then
-          
+
         ! root extraction of each compartment since start of the day
         rel_qrot_day = 0.d0
         rel_qred_day = 0.d0
@@ -4104,18 +4112,18 @@
           rel_qrot_day = rel_qrot_day + 1 - state%soilwater%qredtot_day(node) / state%soilwater%qpotrot_day(node)
           rel_qred_day = rel_qred_day + state%soilwater%qredtot_day(node)
         enddo
-        
+
         if ((gwrt .gt. 0.d0 .and. rel_qrot_day .gt. 0.d0) .or. (gwrt .lt. 0.d0 .and. rel_qred_day .gt. 0.d0)) then
-        
+
           ! distribution roots and root extraction at relative depth
           ! root extraction and root weight based on previous day
           rd_noddrz = abs(state%mesh%zbotcp(noddrz))  ! [GR-BH C7]
           node = 1
           do i = 4,202,2
-            
+
             ! root distribution of previous day
-            wrtdis(i) = (cumdens(i) - cumdens(i-2)) * (wrt - gwrt)
-          
+            wrtdis(i) = (cumdens(i) - cumdens(i-2)) * (state%crop%wofost%wrt - gwrt)  ! [SS-GR-CROPRT B9] wrt via state
+
             ! determine optimal extraction and maximum reduction at relative depth
             found = .false.
             qrotdis(i) = 0.d0
@@ -4151,12 +4159,13 @@
           end if
           
           ! update normalized cumulative root density distribution
+          ! cumdens is now state%crop%common%cumdens via ASSOCIATE (B9)
           sum = 0.d0
           do i = 4,202,2
             sum = sum + wrtdis(i)
-            cumdens(i) = sum / wrttot
+            cumdens(i) = sum / wrttot  ! writes directly to state%crop%common%cumdens(i) [SS-GR-CROPRT B9]
           end do
-          state%crop%common%cumdens(4:202:2) = cumdens(4:202:2)   ! [SS-GR-CROPRT A5]
+          ! state%crop%common%cumdens(4:202:2) = cumdens(4:202:2) — removed: cumdens IS state [SS-GR-CROPRT B9]
 
         end if
   
@@ -4172,10 +4181,10 @@
 
 !      end if
 
-      end associate  ! tc_date => state%timecontrol [TC-10]
+      end associate  ! tc_date, cumdens (→state%crop%common%), noddrz (→state%crop%common%) [SS-GR-CROPRT B9]
       return
       end
-    
+
 ! ----------------------------------------------------------------------
       subroutine totass (dayl,amax,eff,lai,kdif,avrad,difpp,            &
      &                   dsinbe,sinld,cosld,dtga)
