@@ -96,7 +96,9 @@ contains
     !! before calling.
     !!@endwarning
 
-      use variables, only: nowltab
+      use variables, only: &   ! [SS-GR-FINAL B10] residuals — all DEFERRED
+         ! DEFERRED: nowltab(madr) — OWL table count per level; active drainage runtime state; Phase C3
+         nowltab
       use array_utils, only: afgen
       use swap_array_dimensions, only: macp, madr, maho, maowl
 

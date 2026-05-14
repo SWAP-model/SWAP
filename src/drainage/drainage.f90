@@ -94,7 +94,8 @@ contains
       ! [GR-BH Task 35] drainage_init is called AFTER CalcGrid (swap_mod.f90 line 108 vs 185),
       ! so state%mesh%numnod is already populated. numnod global deleted; use state%mesh%numnod.
       ! [GR-BH Task 37] nrlevs global deleted; use config%drain%nrlevs (authoritative single source).
-      use variables, only: MAOWL
+      ! [SS-GR-FINAL B10] MAOWL → swap_array_dimensions (dimension constant)
+      use swap_array_dimensions, only: MAOWL
       type(swap_state_t),  intent(inout) :: state
       type(swap_config_t), intent(in)    :: config
       integer :: nr
@@ -187,8 +188,21 @@ contains
       ! ADR 0031 Phase 2 Task 5: wetper removed from use-list; read from state%drainage%wetper(1).
       ! SS-SWC Phase 2 S-2.8: gwl removed from use-list; read from state%soilwater%gwl.
       ! GR-BH Task 28: zbotdr, l, nrlevs, swnrsrf, owltab migrated off variables → state%drainage%X.
-      use variables, only: dramet,basegw,ipos,khtop,khbot,kvtop,kvbot,entres,zintf,geofac,swdtyp,      &
-swallo,drares,infres,qdrtab,cofintfl,expintfl,shape,FlMacropore,NumLevRapDra,swliminf,nowltab
+      use variables, only: &   ! [SS-GR-FINAL B10] residuals — all DEFERRED
+         ! DEFERRED: dramet/swdtyp/swallo — drainage method/type/allow flags; config, Phase C3
+         dramet, swdtyp, swallo, &
+         ! DEFERRED: basegw/ipos/khtop/khbot/kvtop/kvbot/entres/zintf/geofac — drain geometry config; Phase C3
+         basegw, ipos, khtop, khbot, kvtop, kvbot, entres, zintf, geofac, &
+         ! DEFERRED: drares/infres/qdrtab/cofintfl/expintfl/shape — drain resistance/flow config; Phase C3
+         drares, infres, qdrtab, cofintfl, expintfl, shape, &
+         ! DEFERRED: FlMacropore — retired-zero macropore sentinel; Phase D
+         FlMacropore, &
+         ! DEFERRED: NumLevRapDra — rapid drainage level count; config%drainage%nrlevs; Phase C3
+         NumLevRapDra, &
+         ! DEFERRED: swliminf — infiltration limit switch; config; Phase C3
+         swliminf, &
+         ! DEFERRED: nowltab(madr) — OWL table count per level; active drainage runtime state; Phase C3
+         nowltab
       ! [SS-TC TC-14] t1900, dt read via state%timecontrol (ADR 0041)
       use array_utils, only: afgen
 
@@ -442,8 +456,17 @@ swallo,drares,infres,qdrtab,cofintfl,expintfl,shape,FlMacropore,NumLevRapDra,swl
                ! [SS-TC TC-14] t1900, dt read via state%timecontrol (ADR 0041)
                ! GR-BH Task 28: nrlevs/numnod/dz/layer/ksatfit/ksatexm/cofani/l/zbotdr/
                !   swdivd/Swdivdinf/Swnrsrf/SwTopnrsrf/FacDpthInf/owltab off variables → state.
-               use variables, only: dramet,swdtyp,NumLevRapDra,nowltab, &
-                  swdislay,swtopdislay,fTopDisLay,madr
+               ! [SS-GR-FINAL B10] madr → swap_array_dimensions (dimension constant)
+               use swap_array_dimensions, only: madr
+               use variables, only: &   ! [SS-GR-FINAL B10] residuals — all DEFERRED
+                  ! DEFERRED: dramet/swdtyp — drainage method/type flags; config; Phase C3
+                  dramet, swdtyp, &
+                  ! DEFERRED: NumLevRapDra — rapid drainage level count; config%drainage%nrlevs; Phase C3
+                  NumLevRapDra, &
+                  ! DEFERRED: nowltab(madr) — OWL table count per level; active drainage runtime state; Phase C3
+                  nowltab, &
+                  ! DEFERRED: swdislay/swtopdislay/fTopDisLay — distributed-layer drainage config; Phase C3
+                  swdislay, swtopdislay, fTopDisLay
                use array_utils, only: afgen
 
                type(swap_state_t), intent(inout) :: state
@@ -702,9 +725,27 @@ swallo,drares,infres,qdrtab,cofintfl,expintfl,shape,FlMacropore,NumLevRapDra,swl
   ! SS-SWC Phase 2 S-2.8: gwl and pond removed from use-list; read from state%soilwater.
   ! [SS-TC TC-14] t1900, dt read via state%timecontrol (ADR 0041)
   ! GR-BH Task 28: zbotdr, l, nrlevs, swnrsrf off variables → state%drainage%X.
-  use variables, only: swsec,swsrf,nrpri,taludr,widthr,pondmx,swdtyp,wlp,rdrain,rinfi,          &
-              rentry, rexit, gwlinf, impend, nmper, wscap, rsurfdeep, rsurfshallow, cofintfl,              &
-                                    expintfl, FlMacropore, NumLevRapdra
+  use variables, only: &   ! [SS-GR-FINAL B10] residuals — all DEFERRED
+     ! DEFERRED: swsec/swsrf — secondary/surface drainage switches; config; Phase C3
+     swsec, swsrf, &
+     ! DEFERRED: nrpri/nmper — primary drainage count / periods; config; Phase C3
+     nrpri, nmper, &
+     ! DEFERRED: taludr/widthr/rdrain — drain geometry; config; Phase C3
+     taludr, widthr, rdrain, &
+     ! DEFERRED: pondmx — maximum ponding depth; config; Phase C3
+     pondmx, &
+     ! DEFERRED: swdtyp — drainage type per level; config; Phase C3
+     swdtyp, &
+     ! DEFERRED: wlp/rinfi/rentry/rexit/gwlinf/impend/wscap — surface water config; Phase C3
+     wlp, rinfi, rentry, rexit, gwlinf, impend, wscap, &
+     ! DEFERRED: rsurfdeep/rsurfshallow — surface resistance config; Phase C3
+     rsurfdeep, rsurfshallow, &
+     ! DEFERRED: cofintfl/expintfl — infiltration coefficients; config; Phase C3
+     cofintfl, expintfl, &
+     ! DEFERRED: FlMacropore — retired-zero macropore sentinel; Phase D
+     FlMacropore, &
+     ! DEFERRED: NumLevRapdra — rapid drainage level count; config%drainage%nrlevs; Phase C3
+     NumLevRapdra
 
 ! --- global
                real(8) dh

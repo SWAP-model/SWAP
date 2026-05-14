@@ -33,7 +33,15 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
       !!
       !! The subroutine manages the partitioning of drainage fluxes over soil
       !! compartments and handles both primary and secondary drainage systems.
-      use Variables
+      ! [SS-GR-FINAL B10] blanket use Variables narrowed; madr/mawlp → swap_array_dimensions
+      use swap_array_dimensions, only: madr, mawlp
+      use variables, only: &   ! [SS-GR-FINAL B10] residuals — all DEFERRED
+         ! DEFERRED: swdislay/swtopdislay/fTopDisLay — distributed-layer drainage config; Phase C3
+         swdislay, swtopdislay, fTopDisLay, &
+         ! DEFERRED: swsrf/swsec — surface water / secondary drainage switches; config; Phase C3
+         swsrf, swsec, &
+         ! DEFERRED: wlptab — prescribed surface water level table; config; Phase C3
+         wlptab
       use array_utils, only: afgen
       use swap_state_mod, only: swap_state_t
       implicit none
@@ -306,9 +314,23 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
       ! SS-SWC Phase 2 S-2.8: gwl,pond,THETA,THETAS,H removed from use-list; read from state%soilwater.
       ! [SS-TC TC-14] T retired — read via state%timecontrol%t
       ! GR-BH Task 28: zbotdr/NUMNOD/DZ off variables → state%drainage/mesh aliases.
-      use variables, only: NRPRI,impend,nmper,swman,hbweir,wlsman,gwlcrit,nphase,dropr,wscap,   &
-                           QRapDra,alphaw,betaw,osswlm,VCRIT,NODHD,HCRIT, &
-                           SWQHR,QQHTAB,wldip,intwl,logf,rsro,pondmx  ! [TC-8: dropped tcum,dt,t1900,fldtmin]
+      use variables, only: &   ! [SS-GR-FINAL B10] residuals — all DEFERRED
+         ! DEFERRED: NRPRI/nmper — primary drain count / periods; config; Phase C3
+         NRPRI, nmper, &
+         ! DEFERRED: impend/wldip/intwl/osswlm/wscap/dropr — surface water management config; Phase C3
+         impend, wldip, intwl, osswlm, wscap, dropr, &
+         ! DEFERRED: swman/hbweir/wlsman/gwlcrit/nphase/VCRIT/NODHD/HCRIT — weir/management config; Phase C3
+         swman, hbweir, wlsman, gwlcrit, nphase, VCRIT, NODHD, HCRIT, &
+         ! DEFERRED: SWQHR/QQHTAB — discharge rating switch/table; config; Phase C3
+         SWQHR, QQHTAB, &
+         ! DEFERRED: alphaw/betaw — surface water geometry coefficients; config; Phase C3
+         alphaw, betaw, &
+         ! DEFERRED: rsro/pondmx — runoff / ponding config; Phase C3
+         rsro, pondmx, &
+         ! DEFERRED: logf — log file unit; runtime utility; Phase C3
+         logf, &
+         ! DEFERRED: QRapDra — rapid drainage flux runtime state; Phase C3
+         QRapDra  ! [TC-8: dropped tcum,dt,t1900,fldtmin]
       use swap_state_mod, only: swap_state_t
       use surfacewater_utils, only: wlevst, swstlev, qhtab
       IMPLICIT NONE
@@ -676,7 +698,11 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
       !!     Differences SWAP/SWAPS: None
       !!@endnote
       ! SS-BND Phase 2 Task B-2.4: runots removed from use clause; read via state%soilwater%runots.
-      use variables, only: wlstab,QRapDra  ! [TC-8: dropped dt,t1900]
+      use variables, only: &   ! [SS-GR-FINAL B10] residuals — all DEFERRED
+         ! DEFERRED: wlstab — prescribed surface water level table; config; Phase C3
+         wlstab, &
+         ! DEFERRED: QRapDra — rapid drainage flux runtime state; Phase C3
+         QRapDra  ! [TC-8: dropped dt,t1900]
       use swap_state_mod, only: swap_state_t
       use array_utils, only: afgen
       use surfacewater_utils, only: swstlev
