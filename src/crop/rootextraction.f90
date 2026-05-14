@@ -38,7 +38,15 @@ module rootextraction_mod
 !     purpose   : Calculate the root water extraction rate as function of soil
 !                 water pressure head and salinity concentration for each node
 ! ----------------------------------------------------------------------
-      use variables
+      use variables, only: macp, adcrh, adcrl, aeratecrit, alphacrit,    & ! [GR-CROP Phase B/9]
+                           botcom, criterhr, cumdens, dcritrtz, flhydrlift, &
+                           hlim1, hlim2l, hlim2u, hlim3h, hlim3l, hlim4,  &
+                           kroot, kstem, logf, noddrz, oxygenintercept,   &
+                           oxygenslope, rd, rdctb, rdm, rootcoefa, rooteff, &
+                           rootradius, rxylem, saltmax, saltslope, stephr, &
+                           swcompensate, swdrought, swfrost, swoxygen,    &
+                           swoxygentype, swsalinity, swstressor, swwrtnonox, &
+                           taccur, twilt, wiltpoint
       use array_utils, only: afgen
       use oxygenstress_mod, only: OxygenStress, OxygenReproFunction
       implicit none
@@ -338,8 +346,17 @@ module rootextraction_mod
 !     date      : August 2016
 !     purpose   : Calculate the root water extraction rate according to
 !                 De Jong van Lier et al. (2013)
+! [GR-CROP Phase B/9] narrow use variables
 ! ----------------------------------------------------------------------
-      use variables
+      use variables, only: macp, adcrh, adcrl, aeratecrit, alphacrit,    & ! [GR-CROP Phase B/9]
+                           botcom, criterhr, cumdens, dcritrtz, flhydrlift, &
+                           hlim1, hlim2l, hlim2u, hlim3h, hlim3l, hlim4,  &
+                           kroot, kstem, logf, noddrz, oxygenintercept,   &
+                           oxygenslope, rd, rdctb, rdm, rootcoefa, rooteff, &
+                           rootradius, rxylem, saltmax, saltslope, stephr, &
+                           swcompensate, swdrought, swfrost, swoxygen,    &
+                           swoxygentype, swsalinity, swstressor, swwrtnonox, &
+                           taccur, twilt, wiltpoint
       use array_utils, only: afgen
       implicit none
 
@@ -697,8 +714,17 @@ module rootextraction_mod
 ! ----------------------------------------------------------------------
 !     date      : August 2016
 !     purpose   : Calculate microscopic root water uptake using hleaf
+! [GR-CROP Phase B/9] narrow use variables
 ! ----------------------------------------------------------------------
-      use variables
+      use variables, only: macp, adcrh, adcrl, aeratecrit, alphacrit,    & ! [GR-CROP Phase B/9]
+                           botcom, criterhr, cumdens, dcritrtz, flhydrlift, &
+                           hlim1, hlim2l, hlim2u, hlim3h, hlim3l, hlim4,  &
+                           kroot, kstem, logf, noddrz, oxygenintercept,   &
+                           oxygenslope, rd, rdctb, rdm, rootcoefa, rooteff, &
+                           rootradius, rxylem, saltmax, saltslope, stephr, &
+                           swcompensate, swdrought, swfrost, swoxygen,    &
+                           swoxygentype, swsalinity, swstressor, swwrtnonox, &
+                           taccur, twilt, wiltpoint
       implicit none
 
       type(swap_state_t), intent(inout) :: state
