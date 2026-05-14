@@ -17,10 +17,20 @@ contains
 
    subroutine timecontrol_init(state)
       ! [GR-CROP C1] flCropCalendar/icrop: dual-write to both legacy global + state%crop%common%X
-      use variables, only: logf, flCropCalendar, &
+      ! [SS-GR-FINAL B8] DEFERRED: all symbols — init-path config/flags; no state home yet; Phase C3
+      use variables, only: &
+                            ! DEFERRED: logf — file unit; outfil/pathatm cluster; Phase C3
+                            logf, &
+                            ! DEFERRED: flCropCalendar — crop flag dual-write; Phase C3
+                            flCropCalendar, &
+                            ! DEFERRED: swirfix/swsnow/swdra/swhea/swsolu — model-feature switches; Phase C3
                             swirfix, swsnow, swdra, &
-                            swhea, swsolu, swetsine, swrain, swmetdetail, &
-                            nmetdetail, nirri, swinco, icrop, &
+                            swhea, swsolu, &
+                            ! DEFERRED: swetsine/swrain/swmetdetail/nmetdetail — meteo switches; Phase C3
+                            swetsine, swrain, swmetdetail, &
+                            nmetdetail, &
+                            ! DEFERRED: nirri/swinco/icrop/cropstart/croptype/project — crop/run config; Phase C3
+                            nirri, swinco, icrop, &
                             cropstart, croptype, project
       use timestep_control_mod, only: fldecdt
       use error_mod, only: fatalerr_collected
@@ -316,11 +326,22 @@ contains
    subroutine timecontrol_advance(state)
       ! [GR-CROP Phase B] raintimearray migrated → state%atmosphere%raintimearray via associate.
       ! [GR-CROP C1] flCropCalendar/flCropOutput/icrop: reads from state%crop%common%X; writes dual to state+legacy
-      use variables, only: outdat, outdatint, &
+      ! [SS-GR-FINAL B8] DEFERRED: all residual symbols; Phase C3
+      use variables, only: &
+                            ! DEFERRED: outdat/outdatint — output date arrays, still in variables; Phase C3
+                            outdat, outdatint, &
+                            ! DEFERRED: flCropCalendar/flCropOutput/flCropHarvest — crop flags dual-write; Phase C3
                             flCropCalendar, flCropOutput, &
+                            ! DEFERRED: swrain/swmetdetail — meteo switches; Phase C3
                             swrain, swmetdetail, &
-                            flCropHarvest, croptype, icrop, &
-                            dtEventRain, dt_SSDI_event, flSSDI, &  ! [GR-CROP Phase B] raintimearray retired from here
+                            flCropHarvest, &
+                            ! DEFERRED: croptype/icrop — crop schedule globals; Phase C3
+                            croptype, icrop, &
+                            ! DEFERRED: dtEventRain/dt_SSDI_event — rain/SSDI timing state; Phase C3
+                            dtEventRain, dt_SSDI_event, &
+                            ! DEFERRED: flSSDI — SSDI feature gate; Phase C3
+                            flSSDI, &  ! [GR-CROP Phase B] raintimearray retired from here
+                            ! DEFERRED: numbit — Richards iteration counter; Phase C3
                             numbit
       use irrigation_mod, only: SSDI_irrigation
       use error_mod, only: fatalerr_collected
@@ -744,6 +765,7 @@ contains
    end subroutine timecontrol_advance
 
    subroutine timecontrol_reduce_dt(state)
+      ! [SS-GR-FINAL B8] DEFERRED: flMacroPore/FlDecMpRat — retired-zero sentinels; guards dead macropore branch; Phase D
       use variables, only: flMacroPore, FlDecMpRat
       use timestep_control_mod, only: fldecdt
       implicit none
@@ -855,6 +877,7 @@ contains
    end subroutine timecontrol_reduce_dt
 
    subroutine timecontrol_day_end(state)
+      ! [SS-GR-FINAL B8] DEFERRED: dt_SSDI_event — SSDI timing runtime state; needs irrigation_state_t; Phase C3
       use variables, only: dt_SSDI_event
       implicit none
       type(swap_state_t), intent(inout) :: state
@@ -895,6 +918,7 @@ contains
    end subroutine itertime_check
 
    subroutine itertime_close(state)
+      ! [SS-GR-FINAL B8] DEFERRED: itnumb/logf — itnumb: Richards iteration counter (W category after Phase D); logf: file unit; Phase C3
       use variables, only: itnumb, logf
       implicit none
       type(swap_state_t), intent(inout) :: state
