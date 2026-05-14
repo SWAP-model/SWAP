@@ -21,7 +21,7 @@
 !   tsoil retained: still threaded to ArableLandGerm / grass / sumttd.
 ! ----------------------------------------------------------------------
 
-      ! [SS-GR-FINAL B5] DEFERRED — all remaining variables globals for CropGrowth:
+      ! [SS-GR-CROPRT B1] DEFERRED — all remaining variables globals for CropGrowth:
       !   icrop, flCropCalendar, cropstart, cropend, flCropEmergence, flCropHarvest,
       !   flCropReadFile, flCropPrep, flCropSow, flCropGerm: crop calendar flags, no state home
       !   swinco, croptype, swcrp, swdrought, swharv, swbulb: config switches, no state home
@@ -29,8 +29,10 @@
       !     to state%crop%common%; global still needed pending Phase C global retirement)
       !   cwdmpot, cwdm, wsopot, wso, wlvpot, wlv, wstpot, wst, wrtpot, wrt: WOFOST pools
       !   tmn, lat, rad: meteo scalars, no state%atmosphere scalar home
-      !   fco2amax, fco2eff, eff, amaxtb, tmpftb, tmnftb, kdif: physiology params/outputs
-      !   swpotrelmf, relmf, plwt, remoc, pld, q10, pgasspot, pgass: physiology params
+      !   fco2amax, fco2eff, fco2tra: written by FacCO2 → global read at lines 395-397 for
+      !     dual-write to state; global still needed until B6 migrates FacCO2 to write to state
+      !   eff, amaxtb, tmpftb, tmnftb, kdif: physiology params/tables, no state home
+      !   plwt, remoc, pld, q10, pgasspot, pgass: physiology params
       !   flCropNut, nlue, anlv, anst, nmxlv, nmaxlv, nmaxst, nmaxrt, lrnr, lsnr, nni,
       !     rnflv, rnfst, frnx, fstr: nutrient state/params, no nutrient_state home
       !   flHarvestDay: harvest flag (dual-write to state%crop%common%; global still needed)
@@ -41,7 +43,9 @@
       !   atmtr, daylp, difpp, dsinbe: astro outputs used by both CropGrowth and wofost
       !   dvsend: harvest DVS threshold, no state home
       !   tsoil: config-staging buffer, renamed to avoid clash with dummy arg
-      use variables, only: &                                                 ! [SS-GR-FINAL B5] DEFERRED
+      ! MIGRATED B1: relmf → state%crop%grass%relmf (read-only in CropGrowth)
+      ! MIGRATED B1: swpotrelmf → state%crop%grass%swpotrelmf (read-only in CropGrowth)
+      use variables, only: &                                                 ! [SS-GR-CROPRT B1] DEFERRED
         icrop, flCropCalendar, cropstart, cropend, flCropEmergence,         &
         flCropHarvest, flCropReadFile, flCropPrep, flCropSow, flCropGerm,   &
         swinco, croptype, daycrop, rd, rdpot, lai, laipot, cf, ch, tsum,   &
@@ -49,8 +53,8 @@
         wrtpot, wrt, tmn, lat, rad, fco2amax, fco2eff, fco2tra,            &
         albedo, rsc, cumdens,                                               &
         eff, amaxtb, tmpftb, tmnftb, kdif, swdrought, swcrp, dvsend,       &
-        swharv, swbulb, plwt, remoc, pld, q10, pgasspot, pgass, relmf,     &
-        swpotrelmf, flCropNut, nlue, anlv, anst, nmxlv, nmaxlv, nmaxst,   &
+        swharv, swbulb, plwt, remoc, pld, q10, pgasspot, pgass,            &
+        flCropNut, nlue, anlv, anst, nmxlv, nmaxlv, nmaxst,               &
         nmaxrt, lrnr, lsnr, nni, rnflv, rnfst, frnx, fstr, flHarvestDay,  &
         noddrz, pathcrop, cropfil, bgerm, cgerm,                           &
         agerm, hprep, dhPrep, zPrep, hSow, dhSow, zSow, zTempSow,         &
@@ -479,7 +483,7 @@
         endif
 
         ! reduction due to limited attainable maximum yield
-        if (swpotrelmf.eq.2) pgasspot = pgasspot * relmf
+        if (state%crop%grass%swpotrelmf.eq.2) pgasspot = pgasspot * state%crop%grass%relmf  ! [SS-GR-CROPRT B1]
         state%crop%wofost%pgasspot = pgasspot   ! [SS-GR-CROP A5.1]
 
 
@@ -500,7 +504,7 @@
         endif
 
         ! reduction due to limited attainable maximum yield
-        pgass = pgass * relmf
+        pgass = pgass * state%crop%grass%relmf  ! [SS-GR-CROPRT B1]
 
         ! nitrogen stress reduction of pgass
         if (flCropNut) then
