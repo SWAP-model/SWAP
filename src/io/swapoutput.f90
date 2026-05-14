@@ -559,9 +559,10 @@
 !     Purpose            : open and write fixed crop output files
 ! SS-TC TC-10: state added (intent in); date,t read via state%timecontrol
 !   tc_* aliases. daycrop remains crop-domain variable (not in TC).
+! [GR-CROP C2] daycrop/dvs/tsum/cf/rd/ch → state%crop%common%X
 ! ----------------------------------------------------------------------
       ! GR-ATM C2: lai → state%crop%lai.
-      use variables, only: daycrop,dvs,tsum,cf,rd,crp,ch
+      use variables, only: crp
       use swap_state_mod, only: swap_state_t
       implicit none
 
@@ -604,9 +605,9 @@
 ! --- write actual data ------------------------------------------------------
 
 ! --- write output record
-      write (crp,200) tc_date,comma,nint(tc_t),comma,daycrop,comma,dvs,comma, &
-     & tsum,comma,"       ",comma,state%crop%lai,comma,ch,comma,cf,    &
-     & comma,"       ",comma,nint(rd),                                  &
+      write (crp,200) tc_date,comma,nint(tc_t),comma,state%crop%common%daycrop,comma,state%crop%common%dvs,comma, &
+     & state%crop%common%tsum,comma,"       ",comma,state%crop%lai,comma,state%crop%common%ch,comma,state%crop%common%cf,    &
+     & comma,"       ",comma,nint(state%crop%common%rd),                  &
      & comma,comma,comma,comma,comma,comma,comma,comma,comma,comma,     &
      & comma,comma,comma,comma,comma,comma,                             &
      & comma,comma,comma,comma,comma,comma
@@ -631,10 +632,12 @@
 !     Purpose            : Write detailed crop growth output files
 ! SS-TC TC-10: state added (intent in); date,t read via state%timecontrol
 !   tc_* aliases. daycrop remains crop-domain variable (not in TC).
+! [GR-CROP C2] daycrop/dvs/tsum/laipot/rdpot/rd/ch/cf/cwdmpot/cwdm/wsopot/wso/wlvpot/wlv/
+!   wstpot/wst/wrtpot/wrt/dwlvCrop/dwlvSoil/dwst/dwrt/dwso/HarLosOrm_tot/swbulb/wblpot/wbl/dwblpot/dwbl/plwt
+!   → state%crop%common%X / state%crop%wofost%X
 ! ----------------------------------------------------------------------
       ! GR-ATM C2: lai → state%crop%lai.
-      use variables, only: daycrop,crp,dvs,tsum,laipot,rdpot,rd,ch,cf,cwdmpot,cwdm,wsopot,wso,wlvpot,wlv,wstpot,   &
-                           wst,wrtpot,wrt,dwlvCrop,dwlvSoil,dwst,dwrt,dwso,HarLosOrm_tot,swbulb,wblpot,wbl,dwblpot,dwbl,plwt
+      use variables, only: crp
       use swap_state_mod, only: swap_state_t
       implicit none
 
@@ -657,9 +660,9 @@
 
 ! --- write header of new crop ----------------------------------------------
 
-      if(swbulb.eq.0) then
+      if(.not. state%crop%wofost%swbulb) then
          write (crp,100)
-      else if(swbulb.eq.1) then
+      else
          write (crp,200)
       endif
  100  format ('*',/,                                                    &
@@ -695,25 +698,26 @@
 
 ! --- write actual data ------------------------------------------------------
 
-      if(swbulb.eq.0) then
-         write (crp,300) tc_date,comma,nint(tc_t),comma,daycrop,comma,dvs,       &
-     &    comma,tsum,comma,laipot,comma,state%crop%lai,comma,ch,comma,cf,comma,   &
-     &    nint(rdpot),comma,nint(rd),comma,nint(wlvpot),comma,nint(wlv),          &
-     &    comma,nint(wstpot),comma,nint(wst),comma,nint(wrtpot),                  &
-     &    comma,nint(wrt),comma,nint(cwdmpot),comma,nint(cwdm),comma,             &
-     &    nint(wsopot),comma,nint(wso),comma,comma,comma,comma,comma,             &
-     &    comma,comma,dwlvCrop,comma,dwlvSoil,comma,dwst,comma,dwrt,              &
-     &    comma,dwso,comma,HarLosOrm_tot
-      elseif(swbulb.eq.1) then
-         write (crp,400) tc_date,comma,nint(tc_t),comma,daycrop,comma,dvs,       &
-     &    comma,tsum,comma,laipot,comma,state%crop%lai,comma,ch,comma,cf,comma,   &
-     &    nint(rdpot),comma,nint(rd),comma,nint(wlvpot),comma,nint(wlv),&
-     &    comma,nint(wstpot),comma,nint(wst),comma,nint(wrtpot),        &
-     &    comma,nint(wrt),comma,nint(cwdmpot),comma,nint(cwdm),comma,   &
-     &    nint(wsopot),comma,nint(wso),comma,comma,comma,comma,comma,   &
-     &    comma,comma,dwlvCrop,comma,dwlvSoil,comma,dwst,comma,dwrt,    &
-     &    comma,dwso,comma,HarLosOrm_tot,comma,swbulb,comma,wblpot,     &
-     &    comma,wbl,comma,dwblpot,comma,dwbl,comma,plwt
+      if(.not. state%crop%wofost%swbulb) then
+         write (crp,300) tc_date,comma,nint(tc_t),comma,state%crop%common%daycrop,comma,state%crop%common%dvs,       &
+     &    comma,state%crop%common%tsum,comma,state%crop%common%laipot,comma,state%crop%lai,comma,state%crop%common%ch,comma,state%crop%common%cf,comma,   &
+     &    nint(state%crop%common%rdpot),comma,nint(state%crop%common%rd),comma,nint(state%crop%wofost%wlvpot),comma,nint(state%crop%wofost%wlv),          &
+     &    comma,nint(state%crop%wofost%wstpot),comma,nint(state%crop%wofost%wst),comma,nint(state%crop%wofost%wrtpot),                  &
+     &    comma,nint(state%crop%wofost%wrt),comma,nint(state%crop%wofost%cwdmpot),comma,nint(state%crop%wofost%cwdm),comma,             &
+     &    nint(state%crop%wofost%wsopot),comma,nint(state%crop%wofost%wso),comma,comma,comma,comma,comma,             &
+     &    comma,comma,state%crop%wofost%dwlvCrop,comma,state%crop%wofost%dwlvSoil,comma,state%crop%wofost%dwst,comma,state%crop%wofost%dwrt,              &
+     &    comma,state%crop%wofost%dwso,comma,state%crop%common%HarLosOrm_tot
+      else
+         write (crp,400) tc_date,comma,nint(tc_t),comma,state%crop%common%daycrop,comma,state%crop%common%dvs,       &
+     &    comma,state%crop%common%tsum,comma,state%crop%common%laipot,comma,state%crop%lai,comma,state%crop%common%ch,comma,state%crop%common%cf,comma,   &
+     &    nint(state%crop%common%rdpot),comma,nint(state%crop%common%rd),comma,nint(state%crop%wofost%wlvpot),comma,nint(state%crop%wofost%wlv),&
+     &    comma,nint(state%crop%wofost%wstpot),comma,nint(state%crop%wofost%wst),comma,nint(state%crop%wofost%wrtpot),        &
+     &    comma,nint(state%crop%wofost%wrt),comma,nint(state%crop%wofost%cwdmpot),comma,nint(state%crop%wofost%cwdm),comma,   &
+     &    nint(state%crop%wofost%wsopot),comma,nint(state%crop%wofost%wso),comma,comma,comma,comma,comma,   &
+     &    comma,comma,state%crop%wofost%dwlvCrop,comma,state%crop%wofost%dwlvSoil,comma,state%crop%wofost%dwst,comma,state%crop%wofost%dwrt,    &
+     &    comma,state%crop%wofost%dwso,comma,state%crop%common%HarLosOrm_tot, &
+     &    comma,merge(1,0,state%crop%wofost%swbulb),comma,state%crop%wofost%wblpot,     &
+     &    comma,state%crop%wofost%wbl,comma,state%crop%wofost%dwblpot,comma,state%crop%wofost%dwbl,comma,state%crop%wofost%plwt
       endif
  300  format (a11,a1,i5,a1,i7,a1,f6.2,a1,f6.0,3(a1,f7.2),(a1,f6.2),     &
      &        2(a1,i7),  10(a1,i8), 6(a1,'        ') ,                  &
@@ -739,10 +743,11 @@
 !     Purpose            : Write detailed grass simulation output files
 ! SS-TC TC-10: state added (intent in); date,t read via state%timecontrol
 !   tc_* aliases. daycrop remains crop-domain variable (not in TC).
+! [GR-CROP C2] daycrop/dvs/tsum/laipot/rdpot/rd/ch/cf/tagppot/tagp/tagptpot/tagpt/
+!   wlvpot/wlv/wstpot/wst/wrtpot/wrt/cuptgraz/cuptgrazpot → state%crop%common%X / state%crop%wofost%X
 ! ----------------------------------------------------------------------
       ! GR-ATM C2: lai → state%crop%lai.
-      use variables, only: daycrop,crp,dvs,tsum,laipot,rdpot,rd,ch,cf,tagppot,tagp,tagptpot,tagpt,          &
-                           wlvpot,wlv,wstpot,wst,wrtpot,wrt,cuptgraz,cuptgrazpot
+      use variables, only: crp
       use swap_state_mod, only: swap_state_t
       implicit none
 
@@ -786,14 +791,14 @@
 ! --- write actual data ------------------------------------------------------
 
 ! --- write output record
-      write (crp,200) tc_date,comma,nint(tc_t),comma,daycrop,comma,dvs,comma, &
-     & tsum,comma,laipot,comma,state%crop%lai,comma,ch,comma,cf,        &
-     & comma,nint(rdpot),comma,nint(rd),                                &
-     & comma,nint(wlvpot),comma,nint(wlv),comma,nint(wstpot),           &
-     & comma,nint(wst),comma,nint(wrtpot),comma,nint(wrt),              &
-     & comma,comma,comma,comma,comma,nint(tagppot),                     &
-     & comma,nint(tagp),comma,nint(tagptpot),comma,nint(tagpt),         &
-     & comma,nint(cuptgrazpot),comma,nint(cuptgraz),                    &
+      write (crp,200) tc_date,comma,nint(tc_t),comma,state%crop%common%daycrop,comma,state%crop%common%dvs,comma, &
+     & state%crop%common%tsum,comma,state%crop%common%laipot,comma,state%crop%lai,comma,state%crop%common%ch,comma,state%crop%common%cf,        &
+     & comma,nint(state%crop%common%rdpot),comma,nint(state%crop%common%rd),                                &
+     & comma,nint(state%crop%wofost%wlvpot),comma,nint(state%crop%wofost%wlv),comma,nint(state%crop%wofost%wstpot),           &
+     & comma,nint(state%crop%wofost%wst),comma,nint(state%crop%wofost%wrtpot),comma,nint(state%crop%wofost%wrt),              &
+     & comma,comma,comma,comma,comma,nint(state%crop%wofost%tagppot),                     &
+     & comma,nint(state%crop%wofost%tagp),comma,nint(state%crop%wofost%tagptpot),comma,nint(state%crop%wofost%tagpt),         &
+     & comma,nint(state%crop%common%cuptgrazpot),comma,nint(state%crop%common%cuptgraz),                    &
      & comma,comma,comma,comma,comma,comma
  200  format (a11,a1,i5,a1,i7,a1,f6.2,a1,f6.0,3(a1,f7.2),(a1,f6.2),     &
      &  2(a1,i7), 6(a1,i8), 4(a1,'        '), 6(a1,i8),                 &

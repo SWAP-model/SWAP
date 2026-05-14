@@ -16,6 +16,7 @@ module timecontrol_mod
 contains
 
    subroutine timecontrol_init(state)
+      ! [GR-CROP C1] flCropCalendar/icrop: dual-write to both legacy global + state%crop%common%X
       use variables, only: logf, flCropCalendar, &
                             swirfix, swsnow, swdra, &
                             swhea, swsolu, swetsine, swrain, swmetdetail, &
@@ -224,12 +225,14 @@ contains
 
 ! -   set crop number
       icrop = 1
+      state%crop%common%icrop = icrop   ! [GR-CROP C1] dual-write
       do while (.not. flCropCalendar)
 
         if (cropstart(icrop) .lt. 1.d0) exit
 
         if (abs(tstart - cropstart(icrop)) .lt. 1.d-3) then
           flCropCalendar = .true.
+          state%crop%common%flCropCalendar = flCropCalendar   ! [GR-CROP C1] dual-write
           if (flCropCalendar) then
             if (tstart - cropstart(icrop) .lt. -1.d-3 .and.             &
      &                                              swinco .ne. 3) then
@@ -240,6 +243,7 @@ contains
           end if
         else
           icrop = icrop + 1
+          state%crop%common%icrop = icrop   ! [GR-CROP C1] dual-write
         end if
       enddo
 
@@ -311,12 +315,13 @@ contains
 
    subroutine timecontrol_advance(state)
       ! [GR-CROP Phase B] raintimearray migrated → state%atmosphere%raintimearray via associate.
+      ! [GR-CROP C1] flCropCalendar/flCropOutput/icrop: reads from state%crop%common%X; writes dual to state+legacy
       use variables, only: outdat, outdatint, &
-                            flCropCalendar, &
+                            flCropCalendar, flCropOutput, &
                             swrain, swmetdetail, &
-                            flCropHarvest, flCropOutput, croptype, &
+                            flCropHarvest, croptype, icrop, &
                             dtEventRain, dt_SSDI_event, flSSDI, &  ! [GR-CROP Phase B] raintimearray retired from here
-                            numbit, icrop
+                            numbit
       use irrigation_mod, only: SSDI_irrigation
       use error_mod, only: fatalerr_collected
       implicit none
@@ -432,9 +437,11 @@ contains
 
 ! ---   set crop conditions
         if (flCropCalendar) then
-          flCropOutput = .true.
+          flCropOutput = .true.                               ! legacy global
+          state%crop%common%flCropOutput = .true.            ! [GR-CROP C1] state mirror
           if (flCropHarvest) then
-            flCropOutput = .false.
+            flCropOutput = .false.                           ! legacy global
+            state%crop%common%flCropOutput = .false.         ! [GR-CROP C1] state mirror
           endif
         endif
 

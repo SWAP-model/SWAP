@@ -12,11 +12,12 @@ module SWAP_csv_output
    !   H,theta,K,inq,inqrot,inqssdi,iqdo,iqup,FrArMtrx,irunon,iruno,iintc,igird,inird,irunoCN,iqtdo,iqtup
    !   removed from module-level use variables (now via state%soilwater in set_values/fill_values).
    ! SS-TC TC-13: flprintshort, date, t1900 dropped (read via state%timecontrol ASSOCIATE in csv_out case(2)).
-   use variables, only: tsum,dvs,pgasspot,pgass,                                                                                 &
-                        cwdmpot,cwdm,wsopot,wso,wlvpot,wlv,wstpot,wst,wrtpot,wrt,dwso,dwlv,dwlvpot,dwst,dwstpot,dwrt,dwrtpot,    &
-                        ! GR-ATM C2: lai/wc10/Runoff_CN → state%crop%lai/state%atmosphere%wc10/state%atmosphere%Runoff_CN
-                        ch,cf,laipot,rdpot,rd,tagppot,tagp,tagptpot,tagpt,cuptgrazpot,cuptgraz,plossdm,lossdm,               &
-                        iqinfmax,                                                                                    &
+   ! [GR-CROP C2] crop fields migrated: tsum/dvs/pgasspot/pgass/cwdmpot/cwdm/wsopot/wso/
+   !   wlvpot/wlv/wstpot/wst/wrtpot/wrt/dwso/dwlv/dwlvpot/dwst/dwstpot/dwrt/dwrtpot/
+   !   ch/cf/laipot/rdpot/rd/tagppot/tagp/tagptpot/tagpt/cuptgrazpot/cuptgraz/plossdm/lossdm
+   !   → state%crop%common%X / state%crop%wofost%X
+   ! GR-ATM C2: lai/wc10/Runoff_CN → state%crop%lai/state%atmosphere%wc10/state%atmosphere%Runoff_CN
+   use variables, only: iqinfmax,                                                                                    &
                         iqmpoutdrrap, c_top,                                                                                     &
                         pathwork, outfil, project, InList_csv, macp, madr
    use swap_state_mod, only: swap_state_t
@@ -267,41 +268,42 @@ module SWAP_csv_output
       if (vars%name(i) == 'SSNOW')       vars%value(1,i) = state%atmosphere%ssnow
       ! SS-SWC S-2.11: iqssdi read from state%soilwater.
       if (vars%name(i) == 'QSSDI')       vars%value(1,i) = state%soilwater%iqssdi
-      if (vars%name(i) == 'TSUM')        vars%value(1,i) = tsum
-      if (vars%name(i) == 'DVS')         vars%value(1,i) = dvs
-      if (vars%name(i) == 'PGASSPOT')    vars%value(1,i) = pgasspot
-      if (vars%name(i) == 'PGASS')       vars%value(1,i) = pgass
-      if (vars%name(i) == 'CPWDM')       vars%value(1,i) = cwdmpot
-      if (vars%name(i) == 'CWDM')        vars%value(1,i) = cwdm
-      if (vars%name(i) == 'CPWSO')       vars%value(1,i) = wsopot
-      if (vars%name(i) == 'CWSO')        vars%value(1,i) = wso
-      if (vars%name(i) == 'PWLV')        vars%value(1,i) = wlvpot
-      if (vars%name(i) == 'WLV')         vars%value(1,i) = wlv
-      if (vars%name(i) == 'PWST')        vars%value(1,i) = wstpot
-      if (vars%name(i) == 'WST')         vars%value(1,i) = wst
-      if (vars%name(i) == 'PWRT')        vars%value(1,i) = wrtpot
-      if (vars%name(i) == 'WRT')         vars%value(1,i) = wrt
-      if (vars%name(i) == 'DWSO')        vars%value(1,i) = dwso
-      if (vars%name(i) == 'DWLV')        vars%value(1,i) = dwlv
-      if (vars%name(i) == 'DWLVPOT')     vars%value(1,i) = dwlvpot
-      if (vars%name(i) == 'DWST')        vars%value(1,i) = dwst
-      if (vars%name(i) == 'DWSTPOT')     vars%value(1,i) = dwstpot
-      if (vars%name(i) == 'DWRT')        vars%value(1,i) = dwrt
-      if (vars%name(i) == 'DWRTPOT')     vars%value(1,i) = dwrtpot
-      if (vars%name(i) == 'HEIGHT')      vars%value(1,i) = ch
-      if (vars%name(i) == 'CRPFAC')      vars%value(1,i) = cf
-      if (vars%name(i) == 'LAIPOT')      vars%value(1,i) = laipot
+      ! [GR-CROP C2] crop fields → state%crop%common%X / state%crop%wofost%X
+      if (vars%name(i) == 'TSUM')        vars%value(1,i) = state%crop%common%tsum
+      if (vars%name(i) == 'DVS')         vars%value(1,i) = state%crop%common%dvs
+      if (vars%name(i) == 'PGASSPOT')    vars%value(1,i) = state%crop%wofost%pgasspot
+      if (vars%name(i) == 'PGASS')       vars%value(1,i) = state%crop%wofost%pgass
+      if (vars%name(i) == 'CPWDM')       vars%value(1,i) = state%crop%wofost%cwdmpot
+      if (vars%name(i) == 'CWDM')        vars%value(1,i) = state%crop%wofost%cwdm
+      if (vars%name(i) == 'CPWSO')       vars%value(1,i) = state%crop%wofost%wsopot
+      if (vars%name(i) == 'CWSO')        vars%value(1,i) = state%crop%wofost%wso
+      if (vars%name(i) == 'PWLV')        vars%value(1,i) = state%crop%wofost%wlvpot
+      if (vars%name(i) == 'WLV')         vars%value(1,i) = state%crop%wofost%wlv
+      if (vars%name(i) == 'PWST')        vars%value(1,i) = state%crop%wofost%wstpot
+      if (vars%name(i) == 'WST')         vars%value(1,i) = state%crop%wofost%wst
+      if (vars%name(i) == 'PWRT')        vars%value(1,i) = state%crop%wofost%wrtpot
+      if (vars%name(i) == 'WRT')         vars%value(1,i) = state%crop%wofost%wrt
+      if (vars%name(i) == 'DWSO')        vars%value(1,i) = state%crop%wofost%dwso
+      if (vars%name(i) == 'DWLV')        vars%value(1,i) = state%crop%wofost%dwlv
+      if (vars%name(i) == 'DWLVPOT')     vars%value(1,i) = state%crop%wofost%dwlvpot
+      if (vars%name(i) == 'DWST')        vars%value(1,i) = state%crop%wofost%dwst
+      if (vars%name(i) == 'DWSTPOT')     vars%value(1,i) = state%crop%wofost%dwstpot
+      if (vars%name(i) == 'DWRT')        vars%value(1,i) = state%crop%wofost%dwrt
+      if (vars%name(i) == 'DWRTPOT')     vars%value(1,i) = state%crop%wofost%dwrtpot
+      if (vars%name(i) == 'HEIGHT')      vars%value(1,i) = state%crop%common%ch
+      if (vars%name(i) == 'CRPFAC')      vars%value(1,i) = state%crop%common%cf
+      if (vars%name(i) == 'LAIPOT')      vars%value(1,i) = state%crop%common%laipot
       if (vars%name(i) == 'LAI')         vars%value(1,i) = state%crop%lai
-      if (vars%name(i) == 'RDPOT')       vars%value(1,i) = rdpot
-      if (vars%name(i) == 'RD')          vars%value(1,i) = rd
-      if (vars%name(i) == 'PGRASSDM')    vars%value(1,i) = tagppot
-      if (vars%name(i) == 'GRASSDM')     vars%value(1,i) = tagp
-      if (vars%name(i) == 'PMOWDM')      vars%value(1,i) = tagptpot
-      if (vars%name(i) == 'MOWDM')       vars%value(1,i) = tagpt
-      if (vars%name(i) == 'PGRAZDM')     vars%value(1,i) = cuptgrazpot
-      if (vars%name(i) == 'GRAZDM')      vars%value(1,i) = cuptgraz
-      if (vars%name(i) == 'PLOSSDM')     vars%value(1,i) = plossdm
-      if (vars%name(i) == 'LOSSDM')      vars%value(1,i) = lossdm
+      if (vars%name(i) == 'RDPOT')       vars%value(1,i) = state%crop%common%rdpot
+      if (vars%name(i) == 'RD')          vars%value(1,i) = state%crop%common%rd
+      if (vars%name(i) == 'PGRASSDM')    vars%value(1,i) = state%crop%wofost%tagppot
+      if (vars%name(i) == 'GRASSDM')     vars%value(1,i) = state%crop%wofost%tagp
+      if (vars%name(i) == 'PMOWDM')      vars%value(1,i) = state%crop%wofost%tagptpot
+      if (vars%name(i) == 'MOWDM')       vars%value(1,i) = state%crop%wofost%tagpt
+      if (vars%name(i) == 'PGRAZDM')     vars%value(1,i) = state%crop%common%cuptgrazpot
+      if (vars%name(i) == 'GRAZDM')      vars%value(1,i) = state%crop%common%cuptgraz
+      if (vars%name(i) == 'PLOSSDM')     vars%value(1,i) = state%crop%wofost%plossdm
+      if (vars%name(i) == 'LOSSDM')      vars%value(1,i) = state%crop%wofost%lossdm
       if (vars%name(i) == 'SQPREC')      vars%value(1,i) = state%solute%imsqprec
       if (vars%name(i) == 'SQIRRIG')     vars%value(1,i) = state%solute%imsqirrig
       if (vars%name(i) == 'SQBOT')       vars%value(1,i) = state%solute%imsqbot
