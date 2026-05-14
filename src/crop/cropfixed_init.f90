@@ -29,7 +29,7 @@ contains
                             kdif, kdir, gctb, swgc,                       &
                             cftb, chtb, cfeictb, swcf, albedo, rsc, rsw,  &
                             rdtb, rdctb, swrd, swdmi2rd, swrdc, rdi, rri, rdc, &
-                            swoxygen, swWrtNonox, aeratecrit,             &
+                            swoxygen, swWrtNonox, aeratecrit, max_resp_factor, &
                             hlim1, hlim2u, hlim2l,                        &
                             swdrought, hlim3h, hlim3l, hlim4, adcrh, adcrl, &
                             swsalinity, saltmax, saltslope, salthead,     &
@@ -87,6 +87,7 @@ contains
       swoxygen   = cfg%swoxygen
       swWrtNonox = cfg%swwrtnonox
       aeratecrit = cfg%aeratecrit
+      max_resp_factor = cfg%max_resp_factor
       hlim1      = cfg%hlim1
       hlim2u     = cfg%hlim2u
       hlim2l     = cfg%hlim2l

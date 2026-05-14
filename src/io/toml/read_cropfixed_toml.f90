@@ -131,6 +131,7 @@ contains
          call get_optional_int_with_default (ox, 'swoxygen',   config%swoxygen,   0, 'oxygen_stress.swoxygen',   errors)
          call get_optional_int_with_default (ox, 'swwrtnonox', config%swwrtnonox, 0, 'oxygen_stress.swwrtnonox', errors)
          call get_optional_real_with_default(ox, 'aeratecrit', config%aeratecrit, 1.0e-4_real64, 'oxygen_stress.aeratecrit', errors)
+         call get_optional_real_with_default(ox, 'max_resp_factor', config%max_resp_factor, 1.0_real64, 'oxygen_stress.max_resp_factor', errors)
          call get_optional_real_with_default(ox, 'hlim1',      config%hlim1,  0.0_real64, 'oxygen_stress.hlim1',  errors)
          call get_optional_real_with_default(ox, 'hlim2u',     config%hlim2u, 0.0_real64, 'oxygen_stress.hlim2u', errors)
          call get_optional_real_with_default(ox, 'hlim2l',     config%hlim2l, 0.0_real64, 'oxygen_stress.hlim2l', errors)

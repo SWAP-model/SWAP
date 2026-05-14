@@ -83,6 +83,7 @@ module cropfixed_config_mod
                                   !! NOTE: TOML default 0; legacy readcropfixed default was 1.
       integer :: swwrtnonox = 0   !! 0=no aerobic check, 1=check
       real(real64) :: aeratecrit = 1.0e-4_real64    !! Required when swwrtnonox=1
+      real(real64) :: max_resp_factor = 1.0_real64  !! Oxygen stress max respiration factor (ratio total/maintenance)
 
       ! Part 12 — drought stress
       integer :: swdrought = 1   !! 1=Feddes, 2=De Jong van Lier (stub-errored)
