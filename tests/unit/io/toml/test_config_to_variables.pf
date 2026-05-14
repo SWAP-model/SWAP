@@ -55,9 +55,9 @@ end subroutine test_config_to_variables_general_section
 subroutine test_config_to_variables_simulation_numerical()
    use funit
    use swap_config_mod, only: swap_config_t
-   use config_to_variables_mod, only: config_to_variables, tc_dt_init_buf
+   use config_to_variables_mod, only: config_to_variables
    use swap_state_mod, only: swap_state_t
-   ! [SS-TC TC-14] dt retired — buffered through tc_dt_init_buf for swap.f90 seeding
+   ! [GR-FINAL C1] dt written directly to state%timecontrol%dt (tc_dt_init_buf retired)
    ! [SS-BMI2 Task 5] dtmin, dtmax, MaxIt, msteps moved to state%timecontrol
    use variables, only: MaxBackTr, taccur
    implicit none
@@ -73,8 +73,8 @@ subroutine test_config_to_variables_simulation_numerical()
 
    call config_to_variables(config, state)
 
-   ! [SS-TC TC-14] dt staged through transient buffer
-   @assertEqual(0.1d0,   tc_dt_init_buf)
+   ! [GR-FINAL C1] dt written directly to state%timecontrol%dt
+   @assertEqual(0.1d0,   state%timecontrol%dt)
    ! [SS-BMI2 Task 5] numerical fields now in state%timecontrol
    @assertEqual(1.0d-5,  state%timecontrol%dtmin)
    @assertEqual(0.5d0,   state%timecontrol%dtmax)
@@ -124,10 +124,9 @@ subroutine test_config_to_variables_soil_with_layer_arrays()
    use swap_config_mod, only: swap_config_t
    use config_to_variables_mod, only: config_to_variables
    use swap_state_mod, only: swap_state_t
-   ! [SS-SWC S-2.12B] pondini/pond retired from variables — buffered in config_to_variables_mod
+   ! [GR-FINAL C1] pondini/pond seeded in swap_mod after soilwater_init (pondini_init_buf/pond_init_buf retired)
    ! [GR-BH Task 36] cofani global retired — seeded via state%soilwater%cofani in swap_mod.f90
    use variables, only: swsophy, swhyst, swinco, gwli, pondmx
-   use config_to_variables_mod, only: pondini_init_buf, pond_init_buf
    implicit none
    type(swap_config_t) :: config
    type(swap_state_t)  :: state
@@ -147,9 +146,9 @@ subroutine test_config_to_variables_soil_with_layer_arrays()
    @assertEqual(2,        swhyst)
    @assertEqual(2,        swinco)
    @assertEqual(-75.0d0,  gwli)
-   @assertEqual(0.5d0,    pondini_init_buf)
-   ! legacy alias: pond <-> pondini, buffered for swap.f90 to seed state
-   @assertEqual(0.5d0,    pond_init_buf)
+   ! [GR-FINAL C1] pondini/pond now seeded directly in swap_mod after soilwater_init;
+   ! verify config source value is preserved.
+   @assertEqual(0.5d0,    config%soil%pondini)
    @assertEqual(1.0d0,    pondmx)
    ! [GR-BH Task 36] cofani global retired: config_to_variables no longer writes to bare global.
    ! state%soilwater%cofani is seeded from config in swap_mod.f90 (swap_init_from_loaded_config).

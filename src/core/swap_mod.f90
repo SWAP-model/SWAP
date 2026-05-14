@@ -117,9 +117,7 @@ contains
       use agetracer_mod, only: AgeTracer
       use soilgrid_mod, only: CalcGrid
       use soilhydraulics_mod, only: soilwater
-      use config_to_variables_mod, only: h_init_buf, pondini_init_buf, pond_init_buf, &
-                                         tc_iyear_init_buf, tc_imonth_init_buf, tc_dt_init_buf, &
-                                         config_to_variables
+      use config_to_variables_mod, only: config_to_variables
       use irrigation_mod, only: SSDI_irrigation
       use timecontrol_mod, only: timecontrol_init, itertime_init
       type(swap_state_t),          intent(out)   :: state
@@ -135,11 +133,8 @@ contains
 !  config_to_variables seeds state%timecontrol from config (Task 5).
    call config_to_variables(config, state)
 
-   ! [SS-TC TC-14] seed state%timecontrol from transient buffers before
-   ! TimeControl(1) consumes them (iyear/imonth derived from tstart, dt from config).
-   state%timecontrol%iyear  = tc_iyear_init_buf
-   state%timecontrol%imonth = tc_imonth_init_buf
-   state%timecontrol%dt     = tc_dt_init_buf
+   ! [GR-FINAL C1] state%timecontrol%iyear/imonth/dt now written directly by
+   ! config_to_variables (tc_*_init_buf buffers retired).
 
 !  shared simulation
    if (flSwapShared) call SharedSimulation(1)
@@ -293,19 +288,35 @@ contains
    state%soilwater%q0    = 0.0d0
    state%soilwater%k1max = 0.0d0
    state%soilwater%H0max = 0.0d0
-   ! [SS-SWC S-2.12B] seed state%soilwater from config buffers populated by config_to_variables.
-   ! Retired globals: pondini, pond, h(1..nhead). state%soilwater%h is sized numnod and
-   ! receives the swinco=3 initial-profile h values; SoilHydraulics(1) consumes the rest.
-   state%soilwater%pondini = pondini_init_buf
-   state%soilwater%pond    = pond_init_buf
-   if (allocated(h_init_buf)) then
+   ! [GR-FINAL C1] seed state%soilwater directly from config (transient buffers retired).
+   ! pondini/pond: swinco=3 with h_file uses config%soil%initial%pond; otherwise config%soil%pondini.
+   ! h profile: swinco=3 re-reads the CSV inline here after soilwater_init has allocated state%soilwater%h.
+   if (config%soil%swinco == 3 .and. &
+       allocated(config%soil%initial%h_file) .and. &
+       len_trim(config%soil%initial%h_file) > 0) then
+      state%soilwater%pondini = config%soil%initial%pond
+      state%soilwater%pond    = config%soil%initial%pond
+      ! override dt from warm-restart (config%soil%initial%dt supersedes simulation%numerical%dt for swinco=3)
+      state%timecontrol%dt = config%soil%initial%dt
       block
-         integer :: ki
-         do ki = 1, min(size(h_init_buf), size(state%soilwater%h))
-            state%soilwater%h(ki) = h_init_buf(ki)
+         use csv_reader_mod, only: read_csv_table
+         use error_mod,      only: error_collection_t
+         real(8), allocatable     :: tbl(:,:)
+         type(error_collection_t) :: errs
+         character(len=2)         :: hdr(2)
+         integer :: nrows, ki
+         hdr(1) = 'z '
+         hdr(2) = 'h '
+         call read_csv_table(trim(config%soil%initial%h_file), hdr, tbl, errs)
+         call errs%abort_if_fatal()
+         nrows = size(tbl, 1)
+         do ki = 1, min(nrows, size(state%soilwater%h))
+            state%soilwater%h(ki) = tbl(ki, 2)
          end do
       end block
-      deallocate(h_init_buf)
+   else
+      state%soilwater%pondini = config%soil%pondini
+      state%soilwater%pond    = config%soil%pondini   ! legacy alias: pond <-> pondini for swinco<3
    end if
    call state%atmosphere%init(config%meteo)               ! GR-ATM Task 14: type-bound init; zeroes all 22 flat scalars + cohort sub-records
    ! [SS-ATM A-2.6] swinco=3 warm-restart: seed state%atmosphere directly from config (legacy globals retired)

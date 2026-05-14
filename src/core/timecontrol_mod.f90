@@ -126,9 +126,9 @@ contains
 
 ! === initialization ===================================================
 
-! [SS-TC TC-14] iyear/imonth/dt seeded into state%timecontrol from
-!   tc_iyear_init_buf / tc_imonth_init_buf / tc_dt_init_buf by swap.f90
-!   before calling TimeControl(1). No-op writes here removed.
+! [GR-FINAL C1] iyear/imonth written directly by config_to_variables into
+!   state%timecontrol; dt written by config_to_variables (numerical.dt) and
+!   overridden in swap_mod for swinco=3 (soil.initial.dt). tc_*_init_buf retired.
 
 ! --- initialize flags ----------------------------
       fldecdt = .false.

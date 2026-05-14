@@ -46,24 +46,6 @@ module config_to_variables_mod
    public :: apply_irrigation_ssdi
    public :: apply_nutrients
    public :: apply_nutrients_events
-   public :: h_init_buf, pondini_init_buf, pond_init_buf
-   public :: tc_iyear_init_buf, tc_imonth_init_buf, tc_dt_init_buf
-
-   ! [SS-SWC S-2.12B] transient buffers: swap.f90 copies these into state%soilwater
-   ! after soilwater_init runs, then deallocates h_init_buf. Bridge between config-
-   ! time loading and state-time consumption (state%soilwater%h not yet allocated
-   ! while config_to_variables runs).
-   real(real64), allocatable :: h_init_buf(:)    !! initial pressure-head profile values
-   real(real64) :: pondini_init_buf = 0.0_real64 !! pondini from soil.pondini
-   real(real64) :: pond_init_buf    = 0.0_real64 !! pond from soil.initial.pond (swinco=3)
-
-   ! [SS-TC TC-14] transient buffers: swap.f90 copies these into state%timecontrol
-   ! between config_to_variables and TimeControl(1). Bridge for the small set of
-   ! TimeControl fields that the legacy adapter populated as variables%* (now
-   ! retired) before TimeControl owns them in state. (ADR 0041)
-   integer       :: tc_iyear_init_buf  = 0
-   integer       :: tc_imonth_init_buf = 0
-   real(real64)  :: tc_dt_init_buf     = 0.0_real64
 
 contains
 
@@ -107,8 +89,8 @@ contains
          integer :: datea_init(6)
          real    :: fsec_init
          call dtdpar(state%timecontrol%tstart + 0.1d0, datea_init, fsec_init)
-         tc_iyear_init_buf  = datea_init(1)  ! [SS-TC TC-14] seeded into state%timecontrol in swap.f90
-         tc_imonth_init_buf = datea_init(2)  ! [SS-TC TC-14] seeded into state%timecontrol in swap.f90
+         state%timecontrol%iyear  = datea_init(1)  ! [GR-FINAL C1] written directly (tc_iyear_init_buf retired)
+         state%timecontrol%imonth = datea_init(2)  ! [GR-FINAL C1] written directly (tc_imonth_init_buf retired)
       end block
 
       ! Legacy finalize for swmonth=1 (mirrors readswap.f90:181-207):
@@ -122,7 +104,9 @@ contains
       ! locals in readswap (readswap.f90:16), no module global exists.
       ! Must run AFTER iyear/imonth derivation above.
       if (config%simulation%swmonth == 1) then
-         call populate_outdatint_monthly(state%timecontrol%tend)
+         call populate_outdatint_monthly(state%timecontrol%tend, &
+                                         state%timecontrol%iyear, &
+                                         state%timecontrol%imonth)
          state%timecontrol%period = 0
          state%timecontrol%swres  = 0
          state%timecontrol%swodat = 0
@@ -131,7 +115,7 @@ contains
       ! ---------------------------------------------------------------
       ! Simulation.numerical (audit: 6 fields)
       ! ---------------------------------------------------------------
-      tc_dt_init_buf = config%simulation%numerical%dt  ! [SS-TC TC-14] seeded into state%timecontrol in swap.f90
+      state%timecontrol%dt = config%simulation%numerical%dt  ! [GR-FINAL C1] written directly (tc_dt_init_buf retired)
       state%timecontrol%dtmin = config%simulation%numerical%dtmin
       state%timecontrol%dtmax = config%simulation%numerical%dtmax
       state%timecontrol%MaxIt = config%simulation%numerical%MaxIt
@@ -506,9 +490,8 @@ contains
                                                state%timecontrol%tend, state)
       call apply_nutrients(config%nutrients)
       gwli    = config%soil%gwli
-      ! [SS-SWC S-2.12B] pondini/pond retired — buffered for swap.f90 to seed state%soilwater after soilwater_init
-      pondini_init_buf = config%soil%pondini
-      pond_init_buf    = config%soil%pondini    ! legacy alias: pond <-> pondini for swinco<3
+      ! [GR-FINAL C1] pondini/pond: config%soil%pondini read directly by swap_mod after soilwater_init
+      ! (pondini_init_buf/pond_init_buf retired; swap_mod seeding replaced with direct config reads)
       pondmx  = config%soil%pondmx
       state%surfacewater%pondmx = pondmx     ! [SS-GR-UTILS Task 4] dual-write
       rsoil   = config%soil%rsoil
@@ -576,10 +559,8 @@ contains
          if (allocated(config%soil%initial%h_file) .and. &
              len_trim(config%soil%initial%h_file) > 0) then
             ! [SS-ATM A-2.6] ssnow/ldwet/slw retired to state%atmosphere; seeded in swap.f90 after atmosphere_init
-            ! [SS-SWC S-2.12B] pond/pondini retired; buffered for swap.f90 to seed state%soilwater after soilwater_init
-            pond_init_buf    = config%soil%initial%pond
-            pondini_init_buf = config%soil%initial%pond
-            tc_dt_init_buf = config%soil%initial%dt  ! [SS-TC TC-14] seeded into state%timecontrol in swap.f90
+            ! [GR-FINAL C1] pond/pondini/dt (swinco=3): read directly by swap_mod after soilwater_init
+            ! (pond_init_buf/pondini_init_buf/tc_dt_init_buf retired)
             atmin7(:) = config%soil%initial%atmin7(:)
             ! [SS-ATM A-2.6] Legacy zeroes ssnow when swsnow != 1: now handled in swap.f90 during state seeding
 
@@ -590,6 +571,8 @@ contains
             ! can both be authored without conflict; only pond wins here.
 
             ! Mandatory: initial pressure-head profile (z, h).
+            ! [GR-FINAL C1] zi(:) seeded here; h values read directly in swap_mod after soilwater_init
+            ! (h_init_buf retired; swap_mod now reads config%soil%initial%h_file inline).
             block
                use csv_reader_mod,  only: read_csv_table
                use error_mod,       only: error_collection_t
@@ -603,12 +586,8 @@ contains
                call errs%abort_if_fatal()
                nrows = size(tbl, 1)
                nhead = nrows
-               ! [SS-SWC S-2.12B] h(k) global retired; buffer for swap.f90 to seed state%soilwater%h after soilwater_init
-               if (allocated(h_init_buf)) deallocate(h_init_buf)
-               allocate(h_init_buf(nrows))
                do k = 1, nrows
-                  zi(k)            = tbl(k, 1)
-                  h_init_buf(k)    = tbl(k, 2)
+                  zi(k) = tbl(k, 1)
                end do
             end block
 
@@ -1264,16 +1243,18 @@ contains
    !! between `tstart` and `tend`. Mirrors `readswap.f90:181-204` (the
    !! `swmonth == 1` branch). Bare `use variables` for parity with the
    !! parent adapter.
-   subroutine populate_outdatint_monthly(tend)
+   subroutine populate_outdatint_monthly(tend, iyear, imonth)
       use variables
       real(8), intent(in) :: tend
+      integer, intent(in) :: iyear   !! start year (from state%timecontrol%iyear, [GR-FINAL C1])
+      integer, intent(in) :: imonth  !! start month (from state%timecontrol%imonth, [GR-FINAL C1])
       integer  :: datea_om(6), i_om
       real     :: fsec_om
       real(8)  :: outdate_om
 
       datea_om = 0
-      datea_om(1) = tc_iyear_init_buf   ! [SS-TC TC-14] read from same buffer that seeds state%timecontrol
-      datea_om(2) = tc_imonth_init_buf  ! [SS-TC TC-14]
+      datea_om(1) = iyear   ! [GR-FINAL C1] replaced tc_iyear_init_buf
+      datea_om(2) = imonth  ! [GR-FINAL C1] replaced tc_imonth_init_buf
       if (datea_om(2) < 12) then
          datea_om(2) = datea_om(2) + 1
       else
