@@ -53,7 +53,8 @@ contains
    subroutine swap_init_from_loaded_config(state, config)
       use variables, only : flswapshared, flcropnut, flagetracer, swfrost, &
                             swusecn, flcropcalendar, &
-                            flharvestday, flcropoutput, swcrp, flirrigationoutput, swend, project, &
+                            flharvestday, flcropoutput, swcrp, swend, project, &
+                            ! [GR-FINAL C3] flirrigationoutput dropped: W-global (0 consumers; ADR 0009 deleted IrrigationOutput)
                             flTillage, flSSDI, &
                             numlay, &
                             owltab, nowltab, &
@@ -571,7 +572,8 @@ contains
    subroutine swap_run_step(state, config)
       use variables, only : flswapshared, flcropnut, flagetracer, swfrost, &
                             flcropcalendar, &
-                            flharvestday, flcropoutput, swcrp, swend, &
+                            flharvestday, flcropoutput, swcrp, &
+                            ! [GR-FINAL C3] swend dropped: read via state%crop%common%swend (C category, inv. §C)
                             flTillage, flSSDI
       use timestep_control_mod, only: fldecdt
       use timecontrol_mod, only: timecontrol_advance, timecontrol_reduce_dt, &
@@ -768,7 +770,7 @@ contains
          end if
 !        ADR 0009 Phase 5+: IrrigationOutput deleted (swirg=0).
          if (tc_flDayEnd .and. flCropNut)    call SoilManagement(6, state)   ! SS-TC TC-13
-         if (swend.eq.2 .and. tc_flDayEnd)   call soilwateroutput(3, state)  ! SS-TC TC-13
+         if (state%crop%common%swend.eq.2 .and. tc_flDayEnd)   call soilwateroutput(3, state)  ! [GR-FINAL C3] swend via state
 
 !    shared simulation
      if (flSwapShared .and. tc_flDayEnd) call SharedSimulation(3)  ! SS-TC TC-13
@@ -778,7 +780,8 @@ contains
    end subroutine swap_run_step
 
    subroutine swap_close(state, config)
-      use variables, only : flswapshared, flcropnut, flagetracer, project, swcrp, swend
+      use variables, only : flswapshared, flcropnut, flagetracer, project, swcrp
+                            ! [GR-FINAL C3] swend dropped: read via state%crop%common%swend
       use swap_log,  only: log_info
       use management_soil_mod, only: SoilManagement
       use timecontrol_mod, only: itertime_close
@@ -791,7 +794,7 @@ contains
 !  close output files (always run; iCaller branch retired)
    if (flSwapShared) call SharedSimulation(4)
    call SwapOutput(3, state)
-   if (swend.eq.1) call SoilWaterOutput(3, state)
+   if (state%crop%common%swend.eq.1) call SoilWaterOutput(3, state)  ! [GR-FINAL C3] swend via state
    call SoilWaterOutput(4, state)
    if (swcrp.eq.1) call CropOutput(3, state)
    ! [SS-TC TC-14] flag reads via state%timecontrol
