@@ -20,9 +20,9 @@ module boundtop_mod
       use swap_state_mod,        only: swap_state_t
       use swap_log,              only: log_debug, to_str
       use surfacewater_utils,    only: runoff
-      use variables,             only: nird,                &  ! [SS-GR-BH B10] DEFERRED to Arc 8 (irrigation cluster)
-                                       swkmean, swredu,    &  ! [SS-GR-BH B10] DEFERRED: config%simulation/meteo; cascade via headcalc
-                                       flrunon, runonarr      ! [SS-GR-BH B10] DEFERRED: not yet in config
+      use variables,             only: nird,                &  ! [GR-ATM C3] DEFERRED to Arc 8 (irrigation cluster)
+                                       swkmean, swredu,    &  ! [GR-ATM C3] DEFERRED: config threading requires soilhydraulics→headcalc→boundtop (Arc 5 soil cluster)
+                                       flrunon, runonarr      ! [GR-ATM C3] DEFERRED: runonarr runtime time-series (not in config/state schema); Arc 7+ defer
       implicit none
 
       private
