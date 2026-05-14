@@ -132,6 +132,22 @@ The crop subsystem is the biggest and most coupled. May need internal decomposit
 - Remaining `variables.f90` entries — per Arc 9 `grep "use variables"` audit
 - `config_to_variables.f90` (~1802 lines), `initialize.f90` (~845 lines) — deletion when all consumers migrate
 
+**Inherited after GR-CROPRT (as of 2026-05-14):**
+- `cropgrowth.f90` write-site reader migrations remaining (intent change to `inout` required;
+  `cftb`/`chtb`/`cfeictb` in cropfixed/wofost, `fco2` in `FacCO2` done, etc.) — Phase B was
+  conservative (only 9 symbols, 14 substitution sites); write-sites in cropgrowth need full
+  inout threading before crop common/wofost/grass globals can retire
+- ETSine astronomical scratchpad (`rad`/`daylp`/`difpp`/`atmtr`/`dsinbe`/`lat`) — dedicated
+  mini-arc; consumers in et.f90/meteoday.f90
+- File path globals (`outfil`/`pathwork`/`project`/`cropfil`/`pathcrop`) + log unit (`logf`) +
+  file unit handles (`inc`/`rot`/`crp`/`tem`/`snw`) — state%io or config%paths decision
+- `swapoutput.f90` remaining 13 narrow sites — output schema extension
+- WOFOST/grass lookup tables not yet in state — `co2*tb`/`amaxtb`/`tmpftb` etc.
+- `variables.f90` + `config_to_variables.f90` + `initialize.f90` final deletion — pending
+  full reader migration completion (cropgrowth being the major outstanding file)
+- Phase C found only 1 globally retirable crop global (swend); all other crop fields still
+  actively read via legacy path in cropgrowth.f90/timecontrol_mod.f90/meteoday.f90/etc.
+
 Preconditions verified by grep:
 - `grep -rn "use variables" src/ --include="*.f90"` returns empty (every reader migrated).
 - `grep -rn "tc_iyear_init_buf\|h_init_buf\|pondini_init_buf\|pond_init_buf" src/` returns no live readers.
