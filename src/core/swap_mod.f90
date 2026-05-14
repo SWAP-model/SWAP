@@ -55,6 +55,7 @@ contains
                             ! [SS-GR-CROPRT A1] flagetracer dropped — retired (ADR 0032; always .false.)
                             swusecn, flcropcalendar, &
                             flharvestday, flcropoutput, swcrp, swend, project, &
+                            flCropHarvest, &   ! [SS-GR-CROPRT A5] initial zero mirror
                             ! [GR-FINAL C3] flirrigationoutput dropped: W-global (0 consumers; ADR 0009 deleted IrrigationOutput)
                             flTillage, flSSDI, &
                             numlay, &
@@ -128,6 +129,8 @@ contains
 
 !  Initialization of all variables in Module Variables
    call Initialize
+   ! [SS-GR-CROPRT A5] mirror flCropHarvest zero-init (Initialize has no state arg)
+   state%crop%common%flCropHarvest = flCropHarvest
 
 !  iteration and timing statistics
    call itertime_init(state)

@@ -1139,6 +1139,7 @@ contains
          flCropReadFile = .true.
          flCropOpenFile = .true.
       end if
+      state%crop%common%flCropReadFile = flCropReadFile   ! [SS-GR-CROPRT A5]
 
       rdmax = config%crop%rdmax
 
