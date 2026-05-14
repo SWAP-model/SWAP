@@ -29,8 +29,6 @@
       !     to state%crop%common%; global still needed pending Phase C global retirement)
       !   cwdmpot, cwdm, wsopot, wso, wlvpot, wlv, wstpot, wst, wrtpot, wrt: WOFOST pools
       !   tmn, lat, rad: meteo scalars, no state%atmosphere scalar home
-      !   fco2amax, fco2eff, fco2tra: written by FacCO2 → global read at lines 395-397 for
-      !     dual-write to state; global still needed until B6 migrates FacCO2 to write to state
       !   eff, amaxtb, tmpftb, tmnftb, kdif: physiology params/tables, no state home
       !   plwt, remoc, pld, q10, pgasspot, pgass: physiology params
       !   flCropNut, nlue, anlv, anst, nmxlv, nmaxlv, nmaxst, nmaxrt, lrnr, lsnr, nni,
@@ -45,12 +43,14 @@
       !   tsoil: config-staging buffer, renamed to avoid clash with dummy arg
       ! MIGRATED B1: relmf → state%crop%grass%relmf (read-only in CropGrowth)
       ! MIGRATED B1: swpotrelmf → state%crop%grass%swpotrelmf (read-only in CropGrowth)
-      use variables, only: &                                                 ! [SS-GR-CROPRT B1] DEFERRED
+      ! MIGRATED B6: fco2amax/fco2eff/fco2tra → state%crop%wofost%X (FacCO2 now writes to state;
+      !   body reads at lines 459-461 use state; redundant dual-writes at old-395-397 removed)
+      use variables, only: &                                                 ! [SS-GR-CROPRT B1/B6] DEFERRED
         icrop, flCropCalendar, cropstart, cropend, flCropEmergence,         &
         flCropHarvest, flCropReadFile, flCropPrep, flCropSow, flCropGerm,   &
         swinco, croptype, daycrop, rd, rdpot, lai, laipot, cf, ch, tsum,   &
         dvs, cwdmpot, cwdm, wsopot, wso, wlvpot, wlv, wstpot, wst,        &
-        wrtpot, wrt, tmn, lat, rad, fco2amax, fco2eff, fco2tra,            &
+        wrtpot, wrt, tmn, lat, rad,                                         &
         albedo, rsc, cumdens,                                               &
         eff, amaxtb, tmpftb, tmnftb, kdif, swdrought, swcrp, dvsend,       &
         swharv, swbulb, plwt, remoc, pld, q10, pgasspot, pgass,            &
@@ -393,12 +393,8 @@
         ! open crp-file
         if (swcrp.eq.1) call CropOutput(1, state)
 
-        ! set correction of CO2 impact
-        call FacCO2(state)
-        ! [SS-GR-CROPRT A5] mirror fco2 factors after FacCO2 sets them
-        state%crop%wofost%fco2amax = fco2amax
-        state%crop%wofost%fco2eff  = fco2eff
-        state%crop%wofost%fco2tra  = fco2tra
+        ! set correction of CO2 impact — FacCO2 now writes directly to state%crop%wofost%fco2*
+        call FacCO2(state)  ! [SS-GR-CROPRT B6] FacCO2 handles state write; redundant dual-write removed
         
       endif
 
@@ -460,9 +456,9 @@
         endif
 
         ! daily gross assimilation
-        effc = fco2eff * eff
-        if (croptype(icrop) .eq. 2) amax = fco2amax * afgen (amaxtb,30,dvs) * afgen (tmpftb,30,at_tavd)  ! [SS-GR-ATM B.5]
-        if (croptype(icrop) .eq. 3) amax = fco2amax * afgen (amaxtb,30,dble(daycrop)) * afgen (tmpftb,30,at_tavd)  ! [SS-GR-ATM B.5]
+        effc = state%crop%wofost%fco2eff * eff  ! [SS-GR-CROPRT B6] fco2eff via state
+        if (croptype(icrop) .eq. 2) amax = state%crop%wofost%fco2amax * afgen (amaxtb,30,dvs) * afgen (tmpftb,30,at_tavd)  ! [SS-GR-ATM B.5] [SS-GR-CROPRT B6]
+        if (croptype(icrop) .eq. 3) amax = state%crop%wofost%fco2amax * afgen (amaxtb,30,dble(daycrop)) * afgen (tmpftb,30,at_tavd)  ! [SS-GR-ATM B.5] [SS-GR-CROPRT B6]
 
 
         ! potential assimilation
@@ -1291,14 +1287,17 @@
 !   tc_iyear alias.
 ! [GR-CROP Phase B/5] narrow use variables
 ! ----------------------------------------------------------------------
-      ! [SS-GR-FINAL B5] DEFERRED — FacCO2:
-      !   fco2amax, fco2eff, fco2tra: CO2 correction factors, written here and read by CropGrowth;
-      !     no state home — needs state%crop%wofost extension or argument passing
+      ! [SS-GR-CROPRT B6] DEFERRED — FacCO2:
       !   flco2: logical flag (maps to cropwofost_config co2%swco2); no state home
       !   co2year, co2ppm: legacy CO2 table arrays, not yet in config; need migration
-      !   co2amaxtb, co2efftb, co2tratb: CO2 correction tables; in cropwofost_config co2% sub-record
+      !   co2amaxtb, co2efftb, co2tratb: CO2 correction tables in cropwofost_config co2%;
+      !     migration deferred — not yet threaded via state or config arg
       !   mayrs: array dimension (could → swap_array_dimensions, deferred with rest)
-      use variables, only: fco2amax, fco2eff, fco2tra, flco2,           & ! [SS-GR-FINAL B5] DEFERRED
+      ! MIGRATED B6: fco2amax/fco2eff/fco2tra → written directly to state%crop%wofost%X
+      !   (intent changed in→inout). Global write retained for backward compat; CropGrowth
+      !   redundant dual-write at lines 395-397 removed (B6 handles it). Reads in CropGrowth
+      !   body now use state%crop%wofost%X (removed from CropGrowth use variables).
+      use variables, only: fco2amax, fco2eff, fco2tra, flco2,           & ! [SS-GR-CROPRT B6] DEFERRED (global write retained)
                            co2year, mayrs, co2ppm,                       &
                            co2amaxtb, co2efftb, co2tratb
       use array_utils, only: afgen
@@ -1306,7 +1305,7 @@
       use swap_state_mod, only: swap_state_t
       implicit none
 
-      type(swap_state_t), intent(in) :: state
+      type(swap_state_t), intent(inout) :: state  ! [SS-GR-CROPRT B6] changed in→inout for fco2 state write
 
       integer   ifindi,indexyr
       real(8)   CO2
@@ -1316,6 +1315,9 @@
       fco2amax = 1.0d0 ! factor to correct AMAX for CO2
       fco2eff  = 1.0d0 ! factor to correct EFF for CO2
       fco2tra  = 1.0d0 ! factor to correct TRA for CO2
+      state%crop%wofost%fco2amax = fco2amax  ! [SS-GR-CROPRT B6] write to state directly
+      state%crop%wofost%fco2eff  = fco2eff   ! [SS-GR-CROPRT B6]
+      state%crop%wofost%fco2tra  = fco2tra   ! [SS-GR-CROPRT B6]
 
       ! correction of CO2 impact
       ! TC-10: iyear read via state%timecontrol%iyear directly (single site, no ASSOCIATE needed).
@@ -1329,6 +1331,9 @@
         fco2amax = afgen(CO2AMAXTB,30,CO2)
         fco2eff = afgen(CO2EFFTB,30,CO2)
         fco2tra = afgen(CO2TRATB,30,CO2)
+        state%crop%wofost%fco2amax = fco2amax  ! [SS-GR-CROPRT B6]
+        state%crop%wofost%fco2eff  = fco2eff   ! [SS-GR-CROPRT B6]
+        state%crop%wofost%fco2tra  = fco2tra   ! [SS-GR-CROPRT B6]
       endif
 
       return
