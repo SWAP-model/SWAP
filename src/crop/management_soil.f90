@@ -35,7 +35,7 @@ contains
 ! ----------------------------------------------------------------------
 
 ! --- global variables
-      use Variables
+      use Variables, only: masme, flCropCalendar, dvs, rd                 ! [GR-CROP Phase B/12] narrow
       use Wofost_Soil_Declarations
       use Wofost_Soil_Interface
       use file_io_mod, only: file_open
