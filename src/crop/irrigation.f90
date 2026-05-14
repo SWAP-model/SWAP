@@ -37,7 +37,15 @@
 !                             - some calculations only once during initialization
 ! ----------------------------------------------------------------------
 ! --  global variables
-      use variables
+      use variables, only: maho, &                                          ! [GR-CROP Phase B/10] narrow
+                            gird, irrigevent, schedule, swirfix,           &
+                            irdate, nirri, irdepth, irconc, irtype, cirr,  &
+                            isua, dvs, noddrz, rd, swsolu, swcirrthres,    &
+                            cirrthres, perirrsurp, raithreshold, dayfix,   &
+                            flCropCalendar, flCropHarvest, flIrrigationOutput, &
+                            tstairrig, tendirrig,                          &
+                            treltab, rawtab, tawtab, dwatab, hcritab, tcritab, &
+                            ditab, fidtab, cirrs, isuas
       use array_utils, only: afgen
       use soilhydraulics_utils, only: watcon
       implicit none
