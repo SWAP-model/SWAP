@@ -2491,8 +2491,33 @@
 ! SS-TC TC-10: t1900,daynr read via state%timecontrol tc_* aliases;
 !   state threaded to sumttd for its own TC reads.
 ! SS-GR-ATM A5.1: intent changed inout to allow dual-write in cropgrass_init_from_config.
+! [GR-CROP Phase B/7] narrow use variables
 ! ----------------------------------------------------------------------
-      use variables, dummy_tsoil_gr_ => tsoil
+      use variables, only: &                                                ! [GR-CROP Phase B/7]
+        magrs, macp, icrop, dvs, rid, tsum, tbase, daycrop, tdwi, swinco, &
+        wlv, wlvpot, wst, wstpot, wrt, wrtpot, wrtmax, wrtmin,           &
+        dwlv, dwlvpot, dwrt, dwrtpot, dwst, dwstpot,                     &
+        cf, ch, cfeic, lai, laipot, laiem, laiexp, laiexppot, laimax,    &
+        cftb, chtb, cfeictb, rdtb, slatb, rgrlai, rlwtb, rfsetb,        &
+        frtb, fltb, fstb, rdrrtb, rdrstb, kdif,                         &
+        rd, rdpot, rdm, rdmax, rdi, rri, rdc, swrd, swrdc, swdmi2rd,    &
+        swdrought, swcf, swgc, swinter, reltr,                           &
+        cvl, cvr, cvs, q10, rmr, rml, rms, span, ssa, glaiex, glaiexpot, &
+        lv, lvpot, lvage, lvagepot, sla, slapot, ilvold, ilvoldpot,     &
+        twilt, wiltpoint, gwrt, siccapact, siccaplai,                   &
+        cropstartact, cropendact, cropstartpot, cropendpot,             &
+        cropstart, idaysgraz, idaysgrazpot, idregr, idregrpot,          &
+        flgrazing, flgrazingpot, flharvest, flharvestpot,               &
+        flhrvendact, flhrvendpot, flhydrlift,                           &
+        daygrowth, daygrowthpot, grzdm, dewrest,                        &
+        cuptgraz, cuptgrazpot, tagp, tagppot, tagpt, tagptpot,          &
+        seqgrazmow, seqgrazmowpot, swtsum, iseqgm, iseqgmpot,           &
+        iharvest, dmgrztb, dmmowtb, daysgrazingtab, uptgrazingtab,      &
+        lossgrazingtab, lossgrztab, lossmowtab,                         &
+        delayregrowthtab, zgrz, zmow,                                   &
+        mowdm, mowrest, lossdm, plossdm, pmowdm, pgrzdm, pgass, pgasspot, &
+        perdl, dateharvest, lsda,                                        &
+        dummy_tsoil_gr_ => tsoil
       !! Rename config-staging tsoil to avoid clash with dummy arg tsoil.
       !! [SS-HEAT] Task 9: tsoil retained as config-staging buffer; global is not compute state.
       use array_utils, only: afgen
