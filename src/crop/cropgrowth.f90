@@ -1349,31 +1349,29 @@
 ! SS-TC TC-10: t1900,daynr,daycum,date read via state%timecontrol tc_* aliases.
 ! SS-GR-ATM A5.1: intent changed inout to allow dual-write in cropwofost_init_from_config.
 ! [GR-CROP Phase B/6] narrow use variables
-! [SS-GR-FINAL B5] DEFERRED — wofost: all remaining variables globals:
+! [SS-GR-CROPRT B7] DEFERRED — wofost: all remaining variables globals:
 !   macp, magrs: array dims (could → swap_array_dimensions, deferred with rest)
-!   icrop, dvs, dvsend, rd, rdpot, rdm, rdmax, rdi, rri, rdc: runtime state (dual-write exists)
-!   swrd, swdmi2rd, swrdc, swdrought, swcf, swgc, swinter, swbulb, swinco: config switches
-!   lai, laipot, laiem, laiexp, laiexppot, laimax, cf, ch, cfeic, tsum: runtime crop state
-!   tsumea, tsumam, tbase: config thresholds; lat, daylp, kdif: meteo/physiology params
+!   icrop, dvs, dvsend, rd, rdpot, rdm, rdmax, rdi, rri, rdc: runtime state; wofost is a
+!     complete simulation loop that computes these — dual-write to state%crop%, but global
+!     remains canonical until Phase C global retirement
+!   swrd, swdmi2rd, swrdc, swdrought, swcf, swgc, swinter, swbulb, swinco: config switches,
+!     no state home
+!   lai, laipot, laiem, laiexp, laiexppot, laimax, cf, ch, cfeic, tsum: computed in wofost
+!   tsumea, tsumam, tbase: config thresholds, no state home; lat, daylp, kdif: no state home
 !   siccapact, siccaplai, cropstart, cropend: interception/calendar, no state home
-!   wlv/wlvpot/wst/wstpot/wso/wsopot/wrt/wrtpot/wrtmax/wrtmin: WOFOST biomass pools
-!   cwdm/cwdmpot, pgass/pgasspot, reltr: assimilation/yield globals (dual-write to state%crop)
-!   lrnr, lsnr, nni, anlv, anst, nmxlv, nmaxlv, nmaxst, nmaxrt, nmaxso, nlai: nutrient params
-!   rnflv, rnfst, rnfrt, fstr, fntrt, npart, nfixf, nsla, cvl, cvo, cvr, cvs: more nutrient/C
-!   flCropHarvest, flCropNut, flHarvestDay, flhydrlift, flanthesis: lifecycle flags
-!   q10, rmr, rml, rms, rmo, rfsetb, frtb, fltb, fstb, fotb, fbltb: physiology tables
-!   fbl, drbl, drblpot, dwbl, dwblpot, wbl, wblpot: bulb crop pools
-!   cftb, chtb, cfeictb, rdtb, slatb, rgrlai, rlwtb, dtsmtb, rdrrtb, rdrstb: lookup tables
-!   dlc, dlo, span, spa, ssa, logf, plwt, plwti, tdwi: photoperiod/physiology params + logf
-!   lv, lvpot, lvage, lvagepot, sla, slapot, ilvold, ilvoldpot, idsl: leaf-age arrays
-!   dwlv/dwlvpot/dwrt/dwrtpot/dwso/dwst/dwstpot, dwlvcrop/dwlvsoil: death rates
-!   gasst/gasstpot, glaiex/glaiexpot, mrest/mrestpot: assimilation accumulators
-!   tadw/tadwpot, gwrt, harlosorm_tot, fraharlosorm_lv/so/st: harvest loss tracking
-!   rdrns, perdl, outfil, pathwork, project, dvsnlt, dvsnt: various params + output globals
-!   twilt, wiltpoint, tcnt, vernbase, verndvs, vernrtb, vernsat: JvL + vernalisation params
-!   daycrop: runtime state (dual-write to state%crop%common%daycrop)
+!   wlv/wlvpot/wst/wstpot/wso/wsopot/wrt/wrtpot/wrtmax/wrtmin: computed in wofost
+!   cwdm/cwdmpot, pgass/pgasspot: computed in wofost; reltr: no state home
+!   lrnr, lsnr, nni, anlv, anst, nmxlv–nmaxso, nlai, rnflv–nsla, cvl–cvs: nutrient, no home
+!   flCropHarvest, flCropNut, flHarvestDay, flhydrlift, flanthesis: lifecycle flags, no home
+!   physiology tables (q10, rmr etc.), bulb pools (fbl, wbl etc.): no state home
+!   cftb/chtb/cfeictb: state%crop%fixed homes (A5.2 dual-write) but wofost has optional state
+!     — same constraint as cropfixed B2; deferred to Phase C non-optional refactor
+!   rdtb–rdrstb, lv/lvpot–idsl arrays, dwlv–gasstpot, tadw–harlosorm: computed in wofost
+!   rdrns, perdl, outfil, pathwork, project, dvsnlt, dvsnt: output/path globals, no state home
+!   twilt, wiltpoint, tcnt, vernbase–vernsat: JvL + vernalisation, no state home
+!   daycrop: runtime (dual-write to state%crop%common%daycrop), computed in CropGrowth
 ! ----------------------------------------------------------------------
-      use variables, only: &                                                ! [SS-GR-FINAL B5] DEFERRED
+      use variables, only: &                                                ! [SS-GR-CROPRT B7] DEFERRED
         macp, magrs, icrop, dvs, dvsend, rd, rdpot, rdm, rdmax, rdi, rri, &
         rdc, swrd, swdmi2rd, swrdc, swdrought, swcf, swgc, swinter,       &
         swbulb, swinco, lai, laipot, laiem, laiexp, laiexppot, laimax,    &
