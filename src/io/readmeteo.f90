@@ -7,21 +7,29 @@
 
 ! SUBROUTINE 1.
 ! ----------------------------------------------------------------------
-      subroutine ReadMeteoYear(state)
+      subroutine ReadMeteoYear(state, config)
       use error_mod, only: fatalerr_collected
 ! ----------------------------------------------------------------------
 !     Last modified      : March 2014
 !     Purpose            : read meteorological data of one calendar year
 ! ----------------------------------------------------------------------
-      ! SS-TC TC-9: t1900,flYearStart removed from bare use variables; reads/writes via state%timecontrol.
-      use variables
+      ! [SS-GR-FINAL B1] bare use variables retired; switches → config%meteo/heat/soil;
+      ! remaining narrow imports cover symbols not yet in state/config:
+      !   pathatm, metfil  — filnam construction (error-message context only; ADR 0014 CSV-only path)
+      !   atmn, atmx, arai, wet, ad, am — per-day arrays (written by CSV subs, read here for validation)
+      !   irectotal        — sub-daily record counter, still in variables (deferred to sub-daily arc)
+      !   dettime          — sub-daily timestamps array, still in variables (deferred to sub-daily arc)
+      use variables, only: pathatm, metfil, atmn, atmx, arai, wet, ad, am, irectotal, dettime
       use meteodt_mod, only: MeteoDT
       use swap_state_mod, only: swap_state_t
+      use swap_config_mod, only: swap_config_t
       use meteo_buffer_mod, only: get_meteo_mode, METEO_MODE_EXTERNAL_BUFFER
       implicit none
 
       type(swap_state_t), intent(inout) :: state
         !! Simulation state (passed through to MeteoDT/reduceva for atmosphere dual-writes)
+      type(swap_config_t), intent(in) :: config
+        !! Simulation configuration (switches: swetr/swrain/swmetdetail/swsnow/swfrost/swcalt)
     
 ! --- global
 !   - general     
@@ -63,7 +71,7 @@
       etrmin = -1.0d5
       etrmax = 1.0d5
 ! --- no missing values allowed if penmon must be executed
-      if (swetr.eq.0) then
+      if (config%meteo%swetr.eq.0) then
         radmin = 0.0d0
         tmnmin = -50.0d0
         tmnmax = 35.0d0
@@ -75,20 +83,20 @@
         winmax = 150.0d0
       endif
 ! --- error in case etref missing
-      if (swetr.eq.1) then
+      if (config%meteo%swetr.eq.1) then
         etrmin = -0.00001d0
         etrmax = 1.0d2
-      endif  
+      endif
 ! --- no missing values for tmn and tmx allowed if crop development or
 ! ---   numerical soil temperatures must be simulated
-      if (swmeteo.eq.2 .or. swcalt.eq.2) then
+      if (swmeteo.eq.2 .or. config%heat%swcalt.eq.2) then
         tmnmin = -60.0d0
         tmnmax = 50.0d0
         tmxmin = -50.0d0
         tmxmax = 60.0d0
       endif
 ! --- no missing value for rad allowed in case the detailed crop model
-! ---   or the grass routine is active 
+! ---   or the grass routine is active
       if (swmeteo .eq. 2) then
         radmin = 0.0d0
         radmax = 5.0d6
@@ -106,11 +114,11 @@
 
 ! --- SS-BMI2: external buffer mode bypasses the CSV reader (daily path only).
 !     Sub-daily / detailed meteo always stays on CSV in Phase 2.
-      if (swmetdetail == 0 .and. get_meteo_mode() == METEO_MODE_EXTERNAL_BUFFER) then
+      if (config%meteo%swmetdetail == 0 .and. get_meteo_mode() == METEO_MODE_EXTERNAL_BUFFER) then
          call read_meteo_from_external_buffer_year(ifnd, state)
 ! --- CSV mode is the only supported path otherwise (ADR 0014).
 !     Daily mode → MeteoCSVYear. Sub-daily → MeteoCSVDetYear.
-      else if (swmetdetail == 0) then
+      else if (config%meteo%swmetdetail == 0) then
          call MeteoCSVYear(ifnd, state)
       else
          call MeteoCSVDetYear(ifnd, state)
@@ -119,9 +127,9 @@
 !========================= tests and initialization ====================
 
 ! --- perform some reliability tests and some initialization
-      if (swmetdetail.eq.0) then
+      if (config%meteo%swmetdetail.eq.0) then
 
-! --- determine first and last day numbers        
+! --- determine first and last day numbers
          datea(1) = yearmeteo
          datea(2) = 1
          datea(3) = 1
@@ -133,14 +141,12 @@
          datea(2) = am(1)
          datea(3) = ad(1)
          call dtardp (datea,fsec,tmeteo)
-         daynrfirst = nint ( tmeteo - timjan1 + 1.0d0 )
-         state%atmosphere%daynrfirst = daynrfirst   ! [SS-GR-ATM A5.6] runtime dual-write
+         state%atmosphere%daynrfirst = nint ( tmeteo - timjan1 + 1.0d0 )  ! [SS-GR-FINAL B1] write state directly
          datea(2) = am(ifnd)
          datea(3) = ad(ifnd)
 
          call dtardp (datea,fsec,tmeteo)
-         daynrlast = nint ( tmeteo - timjan1 + 1.0d0 )
-         state%atmosphere%daynrlast = daynrlast   ! [SS-GR-ATM A5.6] runtime dual-write
+         state%atmosphere%daynrlast = nint ( tmeteo - timjan1 + 1.0d0 )  ! [SS-GR-FINAL B1] write state directly
 
 ! --- check date 
          do i = 2, ifnd-1
@@ -148,7 +154,7 @@
             datea(3) = ad(i)
             call dtardp (datea,fsec,tmeteo)
             daynumber = nint ( tmeteo - timjan1 + 1.0d0 )
-            if (daynumber .ne. daynrfirst+i-1) then 
+            if (daynumber .ne. state%atmosphere%daynrfirst+i-1) then  ! [SS-GR-FINAL B1]
 !           wrong date after daynumber i-1
               datea(2) = am(i-1)
               datea(3) = ad(i-1)
@@ -162,8 +168,8 @@
          
 ! --- snow and frost calculation conditions require realistic air temperatures
          do i = 1, ifnd
-            if ( (swsnow.eq.1.or.swfrost.eq.1) .and.                    &
-     &         (atmn(i).lt.-98.9d0.or.atmx(i).lt.-98.9d0) ) then    
+            if ( (config%meteo%snow%swsnow.eq.1.or.config%soil%frost%swfrost.eq.1) .and. &
+     &         (atmn(i).lt.-98.9d0.or.atmx(i).lt.-98.9d0) ) then
              messag ='In meteo file '//trim(filnam)//' temperatures'//  &
      &       ' must be input to calculate snow conditions (SWSNOW=1)'// &
      &       ' and/or frost conditions (SWFROST=1)! adapt meteo file.'
@@ -183,7 +189,7 @@
 !      endif
 
 ! --- in case of swrain=2 then make sure that Rain and Wet correspond
-         if (swrain.eq.2) then
+         if (config%meteo%swrain.eq.2) then
             do i = 1, ifnd
               if ((arai(i).gt.1.d-10 .and. wet(i).lt.1.d-10) .or.       &
      &          (arai(i).lt.1.d-10 .and. wet(i).gt.1.d-10) ) then
@@ -199,7 +205,7 @@
 ! --- in case of swrain = 1 or 2 then store daily precipitation (rain) amount
 !     in rainamount and precipitation time in raintimearray
 !     [GR-CROP C11] write directly to state%atmosphere%X (legacy global writes dropped)
-         if (swrain.eq.1 .or. swrain.eq.2) then
+         if (config%meteo%swrain.eq.1 .or. config%meteo%swrain.eq.2) then
             state%atmosphere%nmrain = 0
             do i = 1, ifnd
                state%atmosphere%nmrain = state%atmosphere%nmrain + 1
@@ -212,16 +218,16 @@
          endif
 ! --- end of reliability tests and initialization of daily meteo   
 
-      elseif (swmetdetail.eq.1) then
+      elseif (config%meteo%swmetdetail.eq.1) then
 ! --- initialization of detailed meteo
 
 ! ---   initialize total record number for new weather file
-        irectotal = int(tc_t1900-dettime(1)+0.1d0)*nmetdetail
+        ! [SS-GR-FINAL B1] irectotal still in variables — deferred to sub-daily retirement arc
+        irectotal = int(tc_t1900-dettime(1)+0.1d0)*config%meteo%nmetdetail
 
 ! ---   initialize number of days for running average Tmin
-        nofd = 0
-        state%atmosphere%nofd = nofd   ! [SS-GR-ATM A5.6] runtime dual-write
-      
+        state%atmosphere%nofd = 0  ! [SS-GR-FINAL B1] write state directly (legacy nofd global dropped)
+
       endif
 ! --- end of initialization of detailed meteo   
       
@@ -232,14 +238,14 @@
 
 !========================= Read rain file =============================
 
-      if (swrain .eq. 3) then
+      if (config%meteo%swrain .eq. 3) then
 ! ---   rainfall events are specified
-        call ReadRainEvents(state)
+        call ReadRainEvents(state, config)
       endif
 ! --- end of reading rain file ****************************************
 
 ! --- reopen present year for processing rain intensity data at beginning MeteoDt
-      if (swrain .gt. 0) then
+      if (config%meteo%swrain .gt. 0) then
          tc_flYearStart = .true.   ! [SS-TC TC-14] legacy flYearStart write retired
          call MeteoDT(state)
       endif
@@ -252,9 +258,10 @@
 
 ! SUBROUTINE 2.
 ! ----------------------------------------------------------------------
-      subroutine ReadRainEvents(state)
+      subroutine ReadRainEvents(state, config)
       use error_mod, only: fatalerr_collected
       use swap_state_mod, only: swap_state_t
+      use swap_config_mod, only: swap_config_t
 ! ----------------------------------------------------------------------
 !     Last modified      : February 2014
 !     Purpose            : read rainfall data (events) of one calendar year
@@ -264,11 +271,13 @@
 ! ----------------------------------------------------------------------
       ! [SS-TC TC-14] yearmeteo retired — read via state%timecontrol
       ! [GR-CROP C11] nmrain/rainamount/raintimearray → write directly to state%atmosphere%X
+      ! [SS-GR-FINAL B1] raincsv_dat/nraincsv still in variables — data source cache, not output; deferred
       use variables, only: raincsv_dat, nraincsv
 
       implicit none
       ! [SS-GR-CROP A5.5] changed to inout for rain timing dual-writes
       type(swap_state_t), intent(inout) :: state
+      type(swap_config_t), intent(in) :: config  ! [SS-GR-FINAL B1] config threaded (reserved for future use)
       integer :: yearmeteo  ! [SS-TC TC-14] local copy
 
 ! --- local

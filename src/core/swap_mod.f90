@@ -618,7 +618,7 @@ contains
       fldtreduce     => state%timecontrol%fldtreduce )
 
 !     get Meteo data
-   if (tc_flYearStart) call ReadMeteoYear(state)  ! SS-TC TC-13
+   if (tc_flYearStart) call ReadMeteoYear(state, config)  ! SS-TC TC-13 / SS-GR-FINAL B1
 
       if (tc_flDayStart) then  ! SS-TC TC-13
 
