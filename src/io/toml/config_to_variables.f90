@@ -1192,7 +1192,7 @@ contains
       ! ---------------------------------------------------------------
       state%timecontrol%swheader = 0
       swcaprise       = .false.        ! active in soilhydraulics.f90 (R; always .false. — no config field yet)
-      swrum           = 0              ! R-category: read by swapoutput.f90; always 0 (no config field)
+      ! [SS-GR-CROPRT A3] swrum adapter write dropped — global retired (always 0; outrume calls dropped)
       swend           = 0              ! C-category: dual-write to state%crop%common%swend in swap_mod
       ! [GR-FINAL C4] dropped W-globals (all zero by init.f90 or Fortran default):
       !   swafo, swaun, swvap, swbal, swwba, swsba, swblc, swdrf, swstr, swirg,
@@ -1203,11 +1203,11 @@ contains
       ! CSV output — read from [output.csv] schema section.
       ! Defaults (enabled=1, enabled_tz=0, inlist=water-balance, inlist_tz=wc,h,conc)
       ! are applied by output_csv_config_finalize prior to this adapter.
-      swcsv = config%output_csv%enabled
+      ! [SS-GR-CROPRT A3] swcsv adapter write dropped — global retired; readers use config directly
       if (allocated(config%output_csv%inlist)) then
          InList_csv = config%output_csv%inlist
       end if
-      swcsv_tz = config%output_csv%enabled_tz
+      ! [SS-GR-CROPRT A3] swcsv_tz adapter write dropped — global retired; readers use config directly
       if (allocated(config%output_csv%inlist_tz)) then
          InList_csv_tz = config%output_csv%inlist_tz
       end if

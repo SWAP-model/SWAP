@@ -554,7 +554,7 @@ contains
 
 !  open Output files and write headers (always run; iCaller branch retired)
    call SwapOutput(1, state)
-   call SoilWaterOutput(1, state)
+   call SoilWaterOutput(1, state, config)   ! [SS-GR-CROPRT A3] config threaded for swcsv/swcsv_tz
 !  ADR 0009 Phase 5+: IrrigationOutput deleted (swirg=0).
    if (flTemperature)  call TemperatureOutput(1, state)
    if (flSolute)       call SoluteOutput(1, state)
@@ -748,7 +748,7 @@ contains
 !     output section
          if (flOutput) then
             call SwapOutput(2, state)
-            call SoilWaterOutput(2, state)
+            call SoilWaterOutput(2, state, config)   ! [SS-GR-CROPRT A3]
             if (flTillage) call DoTillage(3, state)
             if (flTemperature)   call TemperatureOutput(2, state)
             if (flSolute)        call SoluteOutput(2, state)
@@ -761,7 +761,7 @@ contains
                call SurfaceWaterOutput(2, state)
             end if
          else
-            if (flOutputShort)   call SoilWaterOutput(2, state)
+            if (flOutputShort)   call SoilWaterOutput(2, state, config)   ! [SS-GR-CROPRT A3]
          end if
          if (tc_flDayEnd .and. (flOutput .or. flHarvestDay)) then  ! SS-TC TC-13
             if (flCropCalendar .and. flCropOutput) then
@@ -795,8 +795,8 @@ contains
 !  close output files (always run; iCaller branch retired)
    if (flSwapShared) call SharedSimulation(4)
    call SwapOutput(3, state)
-   if (state%crop%common%swend.eq.1) call SoilWaterOutput(3, state)  ! [GR-FINAL C3] swend via state
-   call SoilWaterOutput(4, state)
+   if (state%crop%common%swend.eq.1) call SoilWaterOutput(3, state, config)  ! [SS-GR-CROPRT A3]
+   call SoilWaterOutput(4, state, config)   ! [SS-GR-CROPRT A3]
    if (swcrp.eq.1) call CropOutput(3, state)
    ! [SS-TC TC-14] flag reads via state%timecontrol
    if (state%timecontrol%flTemperature)  call TemperatureOutput(3, state)

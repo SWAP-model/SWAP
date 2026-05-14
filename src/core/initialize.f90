@@ -438,7 +438,7 @@
       swtopbhea          = 0 
       swcalt             = 0 
       swhea              = 0 
-      swtem              = 0 
+      ! [SS-GR-CROPRT A3] swtem zero-fill dropped — declaration retired
       tem                = 0 
       ddamp              = 0.0d0 
       ! [SS-HEAT] Task 9: fclay/forg/fquartz retired to state%heat

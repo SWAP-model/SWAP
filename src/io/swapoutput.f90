@@ -56,23 +56,27 @@
       end
 
 ! ----------------------------------------------------------------------
-      subroutine soilwateroutput(task, state)
+      subroutine soilwateroutput(task, state, config)
       use error_mod, only: fatalerr_collected
 ! ----------------------------------------------------------------------
 !     Date               : Aug 2004
 !     Purpose            : open and write soil water output files
 ! ----------------------------------------------------------------------
 
-      ! [SS-GR-FINAL B3] DEFERRED — output-control switches + inc file unit, Arc 9 edge
-      use variables, only: swcsv,swcsv_tz,swinc,swdrought,swrum,inc
+      ! [SS-GR-CROPRT A3] swcsv/swcsv_tz/swdrought/swrum/swinc migrated to config or retired
+      ! inc file unit retained: Arc 9.5 pragmatic edge (file handle, not output switch)
+      use variables, only: inc
       use SWAP_csv_output
       use SWAP_csv_output_tz
       use swap_state_mod, only: swap_state_t
+      use swap_config_mod, only: swap_config_t
       implicit none
 
       integer task
       ! B-2.7: inout for mini-sim writeback to state%soilwater%qbot / gwlinp
       type(swap_state_t), intent(inout) :: state
+      ! [SS-GR-CROPRT A3] config threaded to replace swcsv/swcsv_tz global reads
+      type(swap_config_t), intent(in)    :: config
 
       select case (task)
 
@@ -82,18 +86,13 @@
 ! OutputModflow/capriseoutput deleted (sw* switches forced to 0).
 
 ! --     user-defined variables in CSV file
-         if (swcsv == 1) call csv_out(1, state)              ! call csv_write(1)
+         if (config%output_csv%enabled == 1) call csv_out(1, state)              ! [SS-GR-CROPRT A3] swcsv → config
 ! --     user-defined variables in CSV file
-         if (swcsv_tz == 1) call csv_out_tz(1, state)        ! call csv_write_tz(1)
+         if (config%output_csv%enabled_tz == 1) call csv_out_tz(1, state)        ! [SS-GR-CROPRT A3] swcsv_tz → config
 
-! --     inc file
-         if (swinc.eq.1) call outinc (1, state)
-
-! --     rot file, only when drought stress according to De Jong van Lier
-         if (swdrought.eq.2) call outrot(1, state)
-
-! --     special output for RUME project
-         if (swrum == 1) call outrume (task, state)
+! --     inc file [SS-GR-CROPRT A3] swinc always 0 — outinc(1) dropped
+! --     rot file [SS-GR-CROPRT A3] swdrought.eq.2 always false (stub-errored) — outrot(1) dropped
+! --     special output for RUME project [SS-GR-CROPRT A3] swrum always 0 — outrume dropped
 
       case (2)
 ! ===    write actual data ===============================
@@ -101,19 +100,13 @@
 ! capriseoutput deleted (sw* switches forced to 0).
 
 ! --     user-defined variables in CSV file
-         if (swcsv == 1) call csv_out(2, state)              ! csv_write(2)
+         if (config%output_csv%enabled == 1) call csv_out(2, state)              ! [SS-GR-CROPRT A3] swcsv → config
 ! --     user-defined variables in CSV file
-         if (swcsv_tz == 1) call csv_out_tz(2, state)        ! csv_write_tz(2)
+         if (config%output_csv%enabled_tz == 1) call csv_out_tz(2, state)        ! [SS-GR-CROPRT A3] swcsv_tz → config
 
-! --     inc file
-         if (swinc.eq.1) call outinc (2, state)
-
-! --     rot file
-         ! SS-ATM A-2.5: ptra read from state%atmosphere (atmosphere home).
-         if (swdrought.eq.2 .and. state%atmosphere%ptra .gt. 1.0d-10) call outrot (2, state)
-
-! --     special output for RUME project
-         if (swrum == 1) call outrume (task, state)
+! --     inc file [SS-GR-CROPRT A3] swinc always 0 — outinc(2) dropped
+! --     rot file [SS-GR-CROPRT A3] swdrought.eq.2 always false (stub-errored) — outrot(2) dropped
+! --     special output for RUME project [SS-GR-CROPRT A3] swrum always 0 — outrume dropped
 
       case (3)
 ! ===    write final values end of a simulation day ===========================
@@ -125,17 +118,12 @@
 ! OutputModflow / capriseoutput close branches removed.
 
 ! --     user-defined variables in CSV file
-         if (swcsv == 1) call csv_out(3, state)              ! csv_write(3)
+         if (config%output_csv%enabled == 1) call csv_out(3, state)              ! [SS-GR-CROPRT A3] swcsv → config
 ! --     user-defined variables in CSV file
-         if (swcsv_tz == 1) call csv_out_tz(3, state)        ! csv_write_tz(3)
+         if (config%output_csv%enabled_tz == 1) call csv_out_tz(3, state)        ! [SS-GR-CROPRT A3] swcsv_tz → config
 
-         ! [SS-BMI2] headless guard: .inc file was only opened when not headless
-         if (.not. state%timecontrol%headless) then
-            if (swinc.eq.1) close (inc)
-         end if
-
-! --     special output for RUME project
-         if (swrum == 1) call outrume (3, state)
+         ! [SS-GR-CROPRT A3] swinc always 0 — inc close dropped (inc file never opened)
+         ! [SS-GR-CROPRT A3] swrum always 0 — outrume(3) dropped
 
       case default
          call fatalerr_collected ('SoilWaterOutput', 'Illegal value for Task')
@@ -1149,8 +1137,9 @@
 ! ----------------------------------------------------------------------
 
 ! --- global variables ------------------
-      ! [SS-GR-FINAL B4] DEFERRED — swtem: output-control switch; tem: file unit, Arc 9 edge
-      use variables, only: swtem,tem
+      ! [SS-GR-CROPRT A3] swtem retired (always 0; no config field); outtem calls dropped
+      ! tem: file unit retained — Arc 9.5 pragmatic edge
+      use variables, only: tem
       use swap_state_mod, only: swap_state_t
 
       implicit none
@@ -1169,8 +1158,7 @@
       ! [SS-BMI2] allocate heat output row buffer (builder always runs)
       call init_temperature_output_buffer(state)
 
-! --  tem file
-      if (swtem .eq. 1) call outtem (task, state)
+! --  tem file [SS-GR-CROPRT A3] swtem always 0 — outtem(1) dropped
 
       return
 
@@ -1178,8 +1166,7 @@
 
 ! === write actual data ===============================
 
-! --  tem file
-      if (swtem .eq. 1) call outtem (task, state)
+! --  tem file [SS-GR-CROPRT A3] swtem always 0 — outtem(2) dropped
 
       return
 
@@ -1187,11 +1174,7 @@
 
 ! === close output files ===========================
 
-! --- close tem file
-      if (swtem .eq. 1) then
-         ! [SS-BMI2] headless guard: .tem file was only opened when not headless
-         if (.not. state%timecontrol%headless) close (tem)
-      end if
+! --- close tem file [SS-GR-CROPRT A3] swtem always 0 — tem close dropped (file never opened)
 
       ! [SS-BMI2] deallocate heat output row buffer
       call cleanup_temperature_output_buffer(state)

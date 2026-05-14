@@ -708,7 +708,7 @@
       integer   dra                ! Internal number of drainage input file *.DRA
       integer   dramet             ! Switch for lateral drainage: 1 = table of flux - groundwater level; 2 = Hooghoudt or Ernst; 
                                    !                              3 = drainage/infiltration resistance
-      integer   swinc              ! Switch for output file *.INC with daily incremental water balance data: 0 = no; 1 = yes
+      ! [SS-GR-CROPRT A3] swinc retired — always 0; outinc calls dropped (no config field)
       integer   inc                ! Internal number of output file *.INC with incremental water balance data
       ! [SS-SWC] retired 2026-05-12 — moved to state%soilwater%indeks (ADR 0038)
       ! integer   indeks(macp)       ! Index denoting wetting or drying curve in case of hysteresis: 1 = wetting; -1 = drying
@@ -741,9 +741,9 @@
       integer   sw2                ! Switch for prescribed bottom flux: 1 = sine function; 2 = table
       integer   sw3                ! Switch for prescribed hydraulic head of deep aquifer: 1 = sine function; 2 = table
       integer   sw4                ! Switch for extra groundwater flux as function of time: 0 = no extra flux; 1 = include extra flux
-      integer   swcsv              ! Switch for special CSV output specified by user; default = 0 ;if 1, requires InList_csv
+      ! [SS-GR-CROPRT A3] swcsv retired — migrated to config%output_csv%enabled (readers use config now)
       character(len=1024) InList_csv   ! character string with comma-separated list of variables for CSV output
-      integer   swcsv_tz              ! Switch for special CSV output specified by user; default = 0 ;if 1, requires InList_csv
+      ! [SS-GR-CROPRT A3] swcsv_tz retired — migrated to config%output_csv%enabled_tz
       character(len=1024) InList_csv_tz   ! character string with comma-separated list of variables for CSV output
       real(8)   tz_z1_z2(2)        ! Depth range for time-depth CSV output (default: top soil profile, bottom soil profile)
       ! [SS-GR-FINAL D1] swafo retired — AFO output deleted; 0 consumers
@@ -786,7 +786,7 @@
 
       integer   swtopsub           ! Switch for topsoil or subsoil: 1 = topsoil, 2 = subsoil
       
-      integer   swrum              ! Switch for RUME output file: 0 = no; 1 = yes
+      ! [SS-GR-CROPRT A3] swrum retired — always 0 (no config field); outrume calls dropped
       ! [SS-GR-FINAL D1] swini retired — 0 consumers
       integer   swend              ! Switch for output file *.END with end conditions: 0 = no; 1 = end of simulation; 2 = each day
       ! [SS-GR-FINAL D1] swwba retired — WBA output deleted; 0 consumers
@@ -1114,7 +1114,7 @@
       integer   swtopbhea          ! Switch for top boundary condition: 1 = use air temperatures; 2 = read measured surface temperatures
       integer   swcalt             ! Switch for method of soil water heat flow simulation: 1 = analytical method; 2 = numerical method
       integer   swhea              ! Switch for simulation of soil heat flow: 0 = no; 1 = yes
-      integer   swtem              ! Switch for output file *.TEM with soil temperatures: 0 = no; 1 = yes
+      ! [SS-GR-CROPRT A3] swtem retired — always 0 (no config field); outtem calls dropped
       integer   tem                ! Internal number of output file *.TEM with soil temperatures
       real(8)   ddamp              ! Damping depth (L) of temperature wave in soil
       ! [SS-HEAT] retired 2026-05-10 — moved to state%heat%fclay (ADR 0034)
