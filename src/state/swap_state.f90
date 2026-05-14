@@ -19,6 +19,7 @@ module swap_state_mod
    use timecontrol_state_mod,   only: timecontrol_state_t
    use mesh_state_mod,          only: mesh_state_t
    use crop_state_mod,          only: crop_state_t
+   use nutrients_state_mod,     only: nutrients_state_t
    implicit none
    private
    public :: swap_state_t
@@ -34,6 +35,7 @@ module swap_state_mod
       type(timecontrol_state_t)  :: timecontrol
       type(mesh_state_t)         :: mesh
       type(crop_state_t)         :: crop
+      type(nutrients_state_t)    :: nutrients
 
       ! [SS-BMI2] water balance output stream (was: written directly to .inc from outinc)
       real(c_double),    allocatable :: water_balance_row(:)
