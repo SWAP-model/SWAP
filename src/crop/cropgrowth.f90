@@ -5252,16 +5252,15 @@
 !   via grass's tsoil dummy arg. Global tsoil excluded via rename.
 ! SS-TC TC-10: state added (intent in); t1900,date read via state%timecontrol tc_* aliases.
 ! ----------------------------------------------------------------------
-      ! [SS-GR-FINAL B5] narrow blanket use Variables → minimal list.
-      ! Symbols actually used by sumttd body:
-      !   tsumdepth, tsumtemp, tsumtime: grass growth start thresholds; map to
-      !     crop_config_global%rotation_grass(icrop)%tsumdepth/tsumtemp/tsumtime.
-      !     Migration deferred: swtsum=2 path is stub-errored in cropgrass_config.f90
-      !     (line 290); these are unreachable until swtsum=2 is implemented.
-      !   pathwork, outfil, project: file-path globals; DEFERRED — Arc 9 edge.
+      ! [SS-GR-CROPRT B10] DEFERRED — sumttd (stub-path: swtsum=2 is stub-errored):
+      !   tsumdepth, tsumtemp, tsumtime: grass growth start thresholds; config fields in
+      !     cropgrass_config%tsumdepth/tsumtemp/tsumtime; migration deferred because swtsum=2
+      !     path is stub-errored in cropgrass_config.f90 (line 290) — code is unreachable
+      !     until swtsum=2 is implemented; no state home needed until then
+      !   pathwork, outfil, project: file-path globals; [SS-GR-CROPRT B] DEFERRED file-path arc
       !   tsoil: config-staging buffer, renamed to avoid clash with dummy arg.
-      use variables, only: tsumdepth, tsumtemp, tsumtime, &     ! [SS-GR-FINAL B5] DEFERRED — stub-path (swtsum=2)
-                           pathwork, outfil, project,     &     ! [SS-GR-FINAL B5] DEFERRED — file-path globals
+      use variables, only: tsumdepth, tsumtemp, tsumtime, &     ! [SS-GR-CROPRT B10] DEFERRED — stub-path (swtsum=2)
+                           pathwork, outfil, project,     &     ! [SS-GR-CROPRT B10] DEFERRED — file-path globals
                            dummy_tsoil_sumttd_ => tsoil         ! config-staging buffer
       use file_io_mod, only: file_open
       use swap_state_mod, only: swap_state_t
