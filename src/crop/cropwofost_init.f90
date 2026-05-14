@@ -39,27 +39,46 @@ module cropwofost_init_mod
 contains
 
    subroutine cropwofost_init_from_config(cfg, icrop, FraDeceasedLvToSoil, state)
+      ! [SS-GR-FINAL B7] DEFERRED: all symbols are config→globals copy targets.
+      !   Retirement requires Phase C3 adapter rewrite (config_to_variables.f90 dual-writes).
       use variables, only: &
+         ! ET / crop factor — DEFERRED Phase C3
          swcf, cftb, chtb, albedo, rsc, rsw,                                &
+         ! Development — DEFERRED Phase C3
          idsl, tsumea, tsumam, dlo, dlc, dtsmtb,                            &
+         ! Vernalisation — DEFERRED Phase C3
          verndvs, vernsat, vernbase, vernrtb,                                &
+         ! Initial crop state — DEFERRED Phase C3
          tdwi, laiem, rgrlai,                                                &
+         ! Green area / assimilation — DEFERRED Phase C3
          slatb, spa, ssa, span, tbase,                                       &
          kdif, kdir, eff, amaxtb, tmpftb, tmnftb,                           &
+         ! Biomass conversion — DEFERRED Phase C3
          cvl, cvo, cvr, cvs,                                                 &
+         ! Maintenance respiration — DEFERRED Phase C3
          q10, rml, rmo, rmr, rms, rfsetb,                                   &
+         ! Partitioning / death rates — DEFERRED Phase C3
          frtb, fltb, fstb, fotb,                                             &
          perdl, rdrrtb, rdrstb,                                              &
+         ! Oxygen stress — DEFERRED Phase C3
          swoxygen, swWrtNonox, aeratecrit, hlim1, hlim2u, hlim2l,            &
+         ! Drought stress — DEFERRED Phase C3
          swdrought, hlim3h, hlim3l, hlim4, adcrh, adcrl,                    &
+         ! Salinity — DEFERRED Phase C3
          swsalinity, saltmax, saltslope, salthead,                           &
+         ! Compensation — DEFERRED Phase C3
          swcompensate, swstressor,                                            &
+         ! Interception — DEFERRED Phase C3
          swinter, cofab,                                                      &
+         ! Root depth — DEFERRED Phase C3
          swrd, rdi, rri, rdc, swdmi2rd, rdctb, rdtb, rlwtb, wrtmax,         &
          swrdc, cumdens,                                                      &
+         ! Harvest — DEFERRED Phase C3
          dvsend, swharv,                                                      &
          relmf, swpotrelmf,                                                   &
+         ! Irrigation schedule — DEFERRED Phase C3
          schedule,                                                             &
+         ! Active crop dynamics (written during init) — DEFERRED Phase C3
          dvs, tsum, daycrop, nofd, flCropNut
       use array_utils, only: afgen
       use error_mod,   only: fatalerr_collected
@@ -500,7 +519,10 @@ contains
    !! See ADR 0025 ([nutrients] N1).
    subroutine apply_cropwofost_nutrient(cfg)
       use cropwofost_config_mod, only: wofost_nutrient_t
-      use variables, only: lrnr, lsnr, nlue, rnflv, rnfst, frnx, nmxlv,            &
+      ! [SS-GR-FINAL B7] DEFERRED: nutrient config globals — config→globals copy; Phase C3
+      use variables, only: &
+                           ! DEFERRED: nutrient parameters; Phase C3 (nutrients_state_t migration)
+                           lrnr, lsnr, nlue, rnflv, rnfst, frnx, nmxlv,            &
                            nlai, nmaxso, npart, nfixf, nsla, rnfrt, tcnt,           &
                            dvsnlt, dvsnt, rdrns, fntrt, ilnmxl,                     &
                            fraharlosorm_lv, fraharlosorm_st, fraharlosorm_so

@@ -11,7 +11,7 @@
 !! only `BDENS`.
       Subroutine Wofost_SoilParameters
 !0    Declarations
-      use variables, only: BDENS
+      use variables, only: BDENS  ! [SS-GR-FINAL B7] DEFERRED — BDENS: soil bulk density array, soil config; Phase C3
       use Wofost_Soil_Declarations
 !0.3  intermediate local variables
       Integer :: fn

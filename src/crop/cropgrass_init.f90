@@ -31,49 +31,51 @@ module cropgrass_init_mod
 contains
 
    subroutine cropgrass_init_from_config(cfg, icrop, tend_val, tstart_val, state)
+      ! [SS-GR-FINAL B7] DEFERRED: all symbols are config→globals copy targets.
+      !   Retirement requires Phase C3 adapter rewrite (config_to_variables.f90 dual-writes).
       use variables, only: &
-         ! ET-related
+         ! ET-related — DEFERRED Phase C3
          swcf, albedo, rsw, rsc, cftb, chtb,                                &
-         ! Interception
+         ! Interception — DEFERRED Phase C3
          swinter, cofab,                                                      &
-         ! Crop state
+         ! Crop state — DEFERRED Phase C3
          tdwi, laiem, rgrlai,                                                 &
-         ! Start-of-growth trigger
+         ! Start-of-growth trigger — DEFERRED Phase C3
          swtsum, tsumtemp, tsumtime, tsumdepth,                               &
-         ! Green area
+         ! Green area — DEFERRED Phase C3
          slatb, ssa, span, tbase,                                             &
-         ! Assimilation
+         ! Assimilation — DEFERRED Phase C3
          kdif, kdir, eff, amaxtb, tmpftb, tmnftb,                            &
-         ! Biomass conversion
+         ! Biomass conversion — DEFERRED Phase C3
          cvl, cvr, cvs,                                                       &
-         ! Maintenance respiration
+         ! Maintenance respiration — DEFERRED Phase C3
          q10, rml, rmr, rms, rfsetb,                                         &
-         ! Partitioning
+         ! Partitioning — DEFERRED Phase C3
          frtb, fltb, fstb,                                                    &
-         ! Death rates
+         ! Death rates — DEFERRED Phase C3
          perdl, rdrrtb, rdrstb,                                               &
-         ! Root depth and density
+         ! Root depth and density — DEFERRED Phase C3
          swrd, swdmi2rd, swrdc, rdi, rri, rdc, rdctb, rdtb, rlwtb, wrtmax,  &
          cumdens,                                                             &
-         ! Oxygen stress
+         ! Oxygen stress — DEFERRED Phase C3
          swoxygen, swWrtNonox, aeratecrit,                                    &
          hlim1, hlim2u, hlim2l,                                              &
          q10_microbial, specific_resp_humus, srl, swrootradius,              &
          dry_mat_cont_roots, air_filled_root_por, spec_weight_root_tissue,   &
          var_a, root_radiusO2, swoxygentype,                                  &
-         ! Drought stress
+         ! Drought stress — DEFERRED Phase C3
          swdrought, hlim3h, hlim3l, hlim4, adcrh, adcrl,                    &
-         ! Salinity stress (guarded; set to 0 only)
+         ! Salinity stress (guarded; set to 0 only) — DEFERRED Phase C3
          swsalinity,                                                          &
-         ! Compensation
+         ! Compensation — DEFERRED Phase C3
          swcompensate, swstressor, alphacrit, dcritrtz,                      &
-         ! Management
+         ! Management — DEFERRED Phase C3
          mowrest, swpotrelmf, relmf, seqgrazmow,                             &
-         ! Mowing / harvest
+         ! Mowing / harvest — DEFERRED Phase C3
          dateharvest, dmmowtb, DelayRegrowthTab,                             &
-         ! CO2 (flCO2 only; swco2 is a local in readgrass, not a global)
+         ! CO2 (flCO2 only; swco2 is a local in readgrass, not a global) — DEFERRED Phase C3
          flCO2,                                                               &
-         ! Irrigation scheduling (set to 0; schedule=1 stub-errored)
+         ! Irrigation scheduling (set to 0; schedule=1 stub-errored) — DEFERRED Phase C3
          schedule
       use array_utils,  only: afgen
       use error_mod,    only: fatalerr_collected
@@ -430,7 +432,7 @@ contains
    ! Sentinel: dateharvest(nmow+1) = tend + 1.0  (legacy line 4023).
    ! ------------------------------------------------------------------
    subroutine populate_dateharvest(cfg, tend_val, tstart_val)
-      use variables, only: dateharvest
+      use variables, only: dateharvest  ! [SS-GR-FINAL B7] DEFERRED — dateharvest: grass harvest date array; Phase C3
       implicit none
       type(cropgrass_config_t), intent(in) :: cfg
       real(real64),             intent(in) :: tend_val

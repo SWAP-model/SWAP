@@ -25,17 +25,32 @@ module cropfixed_init_mod
 contains
 
    subroutine cropfixed_init_from_config(cfg, icrop, lcc, state)
-      use variables, only: idev, tsumea, tsumam, tbase,                  &
+      ! [SS-GR-FINAL B7] DEFERRED: all symbols are config→globals copy targets.
+      !   Retirement requires Phase C3 adapter rewrite (config_to_variables.f90 dual-writes).
+      use variables, only: &
+                            ! DEFERRED: idev/tsumea/tsumam/tbase — crop development config; Phase C3
+                            idev, tsumea, tsumam, tbase,                  &
+                            ! DEFERRED: kdif/kdir/gctb/swgc — radiation/crop factor config; Phase C3
                             kdif, kdir, gctb, swgc,                       &
+                            ! DEFERRED: cftb/chtb/cfeictb/swcf/albedo/rsc/rsw — crop factor config; Phase C3
                             cftb, chtb, cfeictb, swcf, albedo, rsc, rsw,  &
+                            ! DEFERRED: rdtb/rdctb/swrd/swdmi2rd/swrdc/rdi/rri/rdc — root config; Phase C3
                             rdtb, rdctb, swrd, swdmi2rd, swrdc, rdi, rri, rdc, &
+                            ! DEFERRED: swoxygen/swWrtNonox/aeratecrit/max_resp_factor — O2 stress config; Phase C3
                             swoxygen, swWrtNonox, aeratecrit, max_resp_factor, &
+                            ! DEFERRED: hlim1/hlim2u/hlim2l — drought stress limits; Phase C3
                             hlim1, hlim2u, hlim2l,                        &
+                            ! DEFERRED: swdrought/hlim3h/hlim3l/hlim4/adcrh/adcrl — drought config; Phase C3
                             swdrought, hlim3h, hlim3l, hlim4, adcrh, adcrl, &
+                            ! DEFERRED: swsalinity/saltmax/saltslope/salthead — salinity config; Phase C3
                             swsalinity, saltmax, saltslope, salthead,     &
+                            ! DEFERRED: swcompensate/swstressor/alphacrit/dcritrtz — compensation config; Phase C3
                             swcompensate, swstressor, alphacrit, dcritrtz, &
+                            ! DEFERRED: swinter/cofab — interception config; Phase C3
                             swinter, cofab,                               &
+                            ! DEFERRED: schedule/dvsend/swharv — harvest schedule config; Phase C3
                             schedule, dvsend, swharv,                     &
+                            ! DEFERRED: cumdens — root density cumulative; Phase C3
                             cumdens
       use array_utils,  only: afgen
       use error_mod,    only: fatalerr_collected
