@@ -37,7 +37,8 @@
             use swap_state_mod, only: swap_state_t
             integer, intent(in) :: task
             real(8), intent(in) :: tsoil(:)
-            type(swap_state_t), intent(in) :: state
+            type(swap_state_t), intent(inout) :: state
+            !! [SS-GR-CROP A5.1] inout to allow dvs dual-write
          end subroutine ArableLandGerm
          subroutine grass(task, tsoil, state)
             use swap_state_mod, only: swap_state_t
@@ -89,10 +90,10 @@
       ! find active crop
       icrop = 1
       flCropCalendar = .false.
-      do while (.not. flCropCalendar) 
-        
+      do while (.not. flCropCalendar)
+
         if (cropstart(icrop) .lt. 1.d0) exit
-        
+
         if (tc_t1900 - cropstart(icrop) .gt. -tiny                      &
      &                 .and. tc_t1900 - cropend(icrop) .lt. tiny) then
           flCropCalendar = .true.
@@ -100,13 +101,31 @@
           icrop = icrop + 1
         endif
       enddo
+      state%crop%common%icrop        = icrop           ! [SS-GR-CROP A5.1]
+      state%crop%common%flCropCalendar = flCropCalendar  ! [SS-GR-CROP A5.1]
       
 ! --- bare soil condition  ----------------------------------------------------
       if (.not. flCropEmergence .or. flCropHarvest) then
         call nocrop ()
-        state%crop%lai = lai   ! [SS-GR-ATM fix] nocrop zeroes lai; state%crop%lai must follow or
-                               ! ProcessMeteoDay (reads state%crop%lai) sees stale non-zero lai
-                               ! on fallow days, triggering wrong interception in VonHHBraden.
+        ! [SS-GR-CROP A5.1] nocrop() has no state arg; mirror all zeroed fields here
+        state%crop%lai               = lai       ! GR-ATM fix: ProcessMeteoDay reads this
+        state%crop%common%rd         = rd
+        state%crop%common%rdpot      = rdpot
+        state%crop%common%laipot     = laipot
+        state%crop%common%cf         = cf
+        state%crop%common%ch         = ch
+        state%crop%common%tsum       = tsum
+        state%crop%common%dvs        = dvs
+        state%crop%wofost%cwdmpot    = cwdmpot
+        state%crop%wofost%cwdm       = cwdm
+        state%crop%wofost%wsopot     = wsopot
+        state%crop%wofost%wso        = wso
+        state%crop%wofost%wlvpot     = wlvpot
+        state%crop%wofost%wlv        = wlv
+        state%crop%wofost%wstpot     = wstpot
+        state%crop%wofost%wst        = wst
+        state%crop%wofost%wrtpot     = wrtpot
+        state%crop%wofost%wrt        = wrt
       endif
 
 ! --- check crop emergence ----------------------------------------------------
@@ -301,7 +320,8 @@
 
         ! update crop daynumber
         daycrop = daycrop + 1
-        
+        state%crop%common%daycrop = daycrop   ! [SS-GR-CROP A5.1]
+
         ! open crp-file
         if (swcrp.eq.1) call CropOutput(1, state)
 
@@ -363,6 +383,7 @@
             end if
             ! weight motherbulb decreases by remobilisation and respiration
             plwt = plwt - remo - respmo
+            state%crop%wofost%plwt = plwt   ! [SS-GR-CROP A5.1]
           endif
         endif
 
@@ -380,7 +401,7 @@
 
         ! potential assimilation in kg ch2o per ha
         pgasspot = dtgapot * 30.0d0/44.0d0
-        
+
         ! only for bulb crops (tulips etc..)
         if(swbulb.eq.1) then
           ! assimilation is raised with remobilisation from motherbulb
@@ -388,11 +409,12 @@
           factblb  = 1.11d0
           pgasspot = pgasspot + remo*factblb
         endif
-        
+
         ! reduction due to limited attainable maximum yield
         if (swpotrelmf.eq.2) pgasspot = pgasspot * relmf
-        
-        
+        state%crop%wofost%pgasspot = pgasspot   ! [SS-GR-CROP A5.1]
+
+
         ! actual assimilation
         call totass (dayl,amax,effc,lai,kdif,rad,difpp,dsinbe,sinld,cosld,dtga)
 
@@ -408,16 +430,17 @@
           factblb = 1.11d0
           pgass   = pgass + remo*factblb
         endif
-      
+
         ! reduction due to limited attainable maximum yield
         pgass = pgass * relmf
-        
+
         ! nitrogen stress reduction of pgass
         if (flCropNut) then
           call NUTRIE (NLUE,WLV,WST,DVS,ANLV,ANST,NMXLV,NMAXLV,NMAXST,  &
      &      NMAXRT,LRNR,LSNR,NNI,RNFLV,RNFST,FRNX,FSTR)
           pgass = pgass * FSTR
         endif
+        state%crop%wofost%pgass = pgass   ! [SS-GR-CROP A5.1]
 
       endif  
 
@@ -479,10 +502,12 @@
         if (swharv.eq.0) then
           if (dabs(tc_t1900 - cropend(icrop) - 1.d0) .lt. 1.0d-3) then
             flHarvestDay = .true.
+            state%crop%common%flHarvestDay = flHarvestDay   ! [SS-GR-CROP A5.1]
           endif
         else
           if (dvs.ge.dvsend .or. dabs(tc_t1900 - cropend(icrop) - 1.d0) .lt. 1.0d-3) then
             flHarvestDay = .true.
+            state%crop%common%flHarvestDay = flHarvestDay   ! [SS-GR-CROP A5.1]
           endif
         endif
         
@@ -617,6 +642,7 @@
       else
         rdm = min(rdmax,rdc)
       endif
+      if (present(state)) state%crop%common%rdm = rdm   ! [SS-GR-CROP A5.1]
 
 ! --- skip next initialization if crop parameters are read from *.END file
       if (tc_t1900 - tstart .gt. tiny .or. swinco .ne. 3 .or.           &
@@ -632,6 +658,11 @@
           rd = min(rdi,rdm)
         endif
         rdpot = rd
+        if (present(state)) then
+          state%crop%common%dvs   = dvs    ! [SS-GR-CROP A5.1]
+          state%crop%common%rd    = rd     ! [SS-GR-CROP A5.1]
+          state%crop%common%rdpot = rdpot  ! [SS-GR-CROP A5.1]
+        endif
 
       endif
 
@@ -648,6 +679,11 @@
       ch = afgen (chtb,(2*magrs),dvs)
       if (swcf.eq.3) then
         cfeic = afgen (cfeictb,(2*magrs),dvs)
+      endif
+      if (present(state)) then
+        state%crop%common%cf = cf   ! [SS-GR-CROP A5.1]
+        state%crop%common%ch = ch   ! [SS-GR-CROP A5.1]
+        if (swcf.eq.3) state%crop%fixed%cfeic = cfeic   ! [SS-GR-CROP A5.1]
       endif
 
 ! --- initial storage on canopy
@@ -715,6 +751,10 @@
 ! --- phenological development stage
       dvs = min(dvs+dvr,2.d0)
       tsum = tsum + dtsum
+      if (present(state)) then
+        state%crop%common%dvs  = dvs    ! [SS-GR-CROP A5.1]
+        state%crop%common%tsum = tsum   ! [SS-GR-CROP A5.1]
+      endif
 
 ! --- leaf area index or soil cover fraction
       lai = afgen (gctb,(2*magrs),dvs)
@@ -729,6 +769,11 @@
       ch        = afgen (chtb,(2*magrs),dvs)
       if (swcf.eq.3) then
         cfeic     = afgen (cfeictb,(2*magrs),dvs)
+      endif
+      if (present(state)) then
+        state%crop%common%cf = cf   ! [SS-GR-CROP A5.1]
+        state%crop%common%ch = ch   ! [SS-GR-CROP A5.1]
+        if (swcf.eq.3) state%crop%fixed%cfeic = cfeic   ! [SS-GR-CROP A5.1]
       endif
 
 ! --- update canopy storage capacity
@@ -763,9 +808,13 @@
         if (swdmi2rd.eq.1 .and. state%atmosphere%ptra.ge.nihil) rr = rr * state%soilwater%tra/state%atmosphere%ptra  ! [SS-SWC S-2.7]
         rd = rd + rr
       endif
+      if (present(state)) then
+        state%crop%common%rdpot = rdpot   ! [SS-GR-CROP A5.1]
+        state%crop%common%rd    = rd      ! [SS-GR-CROP A5.1]
+      endif
 
       return
-      
+
       case default
          call fatalerr_collected ('CropFixed', 'Illegal value for TASK')
       end select
@@ -939,8 +988,9 @@
       integer  task,node
       real(8), intent(in) :: tsoil(:)
       !! Soil temperature array from state%heat%tsoil.
-      type(swap_state_t), intent(in) :: state
+      type(swap_state_t), intent(inout) :: state
       !! State record; state%soilwater%h used for pressure-head reads. [SS-SWC S-2.7]
+      !! [SS-GR-CROP A5.1] intent changed in→inout to allow dvs dual-write.
       real(8)  drz1,hrz1,pFz1
       real(8)  tsumemesub
       
@@ -966,13 +1016,14 @@
         if (dhPrep .gt. 0.d0) then
           if (PrepDelay .lt. MaxPrepDelay) then
             dvs        = -0.3d0
+            state%crop%common%dvs = dvs   ! [SS-GR-CROP A5.1]
             flCropPrep = .false.
             PrepDelay  = PrepDelay + 1
           endif
         endif
-        
+
         SowDelay = PrepDelay
-        
+
         return        
 
 ! === Sowing before crop growth ==========================================
@@ -1002,11 +1053,12 @@
         if (dtempSow .lt. 0.d0 .or. dhSow.gt.0.d0) then
           if (SowDelay .lt. MaxSowDelay) then
             dvs       = -0.2d0
+            state%crop%common%dvs = dvs   ! [SS-GR-CROP A5.1]
             flCropSow = .false.
             SowDelay  = SowDelay + 1
           endif
         endif
-        
+
         return        
         
 ! === Simulate germination ==============================================
@@ -1080,6 +1132,7 @@
         else
           dvs = 0.d0
         endif
+        state%crop%common%dvs = dvs   ! [SS-GR-CROP A5.1]
         
         return
         
@@ -1313,6 +1366,7 @@
         rdc = afgen (rlwtb,22,wrtmax)
         rdm = min(rdmax,rdc)
       endif
+      if (present(state)) state%crop%common%rdm = rdm   ! [SS-GR-CROP A5.1]
 
 ! --- skip next initialization if crop parameters are read from *.END file
       if (tc_t1900 - tstart .gt. tiny .or. swinco .ne. 3 .or.           &
@@ -1435,9 +1489,44 @@
         vern = 0.0d0             ! vernalisation state (d)
         flvernalised = .FALSE.   ! crop not vernalised (-)
 
+        ! [SS-GR-CROP A5.1] mirror wofost init-time state
+        if (present(state)) then
+          state%crop%common%dvs       = dvs
+          state%crop%common%tsum      = tsum
+          state%crop%common%rd        = rd
+          state%crop%common%rdpot     = rdpot
+          state%crop%common%laipot    = laipot
+          state%crop%wofost%swbulb    = (swbulb == 1)
+          state%crop%wofost%plwt      = plwt
+          state%crop%wofost%plwti     = plwti
+          state%crop%wofost%wrt       = wrt
+          state%crop%wofost%wrtpot    = wrtpot
+          state%crop%wofost%wst       = wst
+          state%crop%wofost%wstpot    = wstpot
+          state%crop%wofost%wso       = wso
+          state%crop%wofost%wsopot    = wsopot
+          state%crop%wofost%wlv       = wlv
+          state%crop%wofost%wlvpot    = wlvpot
+          state%crop%wofost%wbl       = wbl
+          state%crop%wofost%wblpot    = wblpot
+          state%crop%wofost%dwrt      = dwrt
+          state%crop%wofost%dwrtpot   = dwrtpot
+          state%crop%wofost%dwlv      = dwlv
+          state%crop%wofost%dwlvCrop  = dwlvCrop
+          state%crop%wofost%dwlvSoil  = dwlvSoil
+          state%crop%wofost%dwlvpot   = dwlvpot
+          state%crop%wofost%dwso      = dwso
+          state%crop%wofost%dwst      = dwst
+          state%crop%wofost%dwstpot   = dwstpot
+          state%crop%wofost%dwbl      = dwbl
+          state%crop%wofost%dwblpot   = dwblpot
+          state%crop%wofost%cwdm      = cwdm
+          state%crop%wofost%cwdmpot   = cwdmpot
+        endif
+
 ! --- end skip above initialization if crop parameters are read from *.END file
       endif
-      
+
 ! --- set crop height and cropfactor
       if (swcf.ne.3) then
         cf = afgen (cftb,(2*magrs),dvs)
@@ -1446,6 +1535,11 @@
         cf        = afgen (cftb,(2*magrs),lai)
         cfeic     = afgen (cfeictb,(2*magrs),lai)
         ch        = afgen(chtb,(2*magrs),lai)
+      endif
+      if (present(state)) then
+        state%crop%common%cf = cf   ! [SS-GR-CROP A5.1]
+        state%crop%common%ch = ch   ! [SS-GR-CROP A5.1]
+        if (swcf.eq.3) state%crop%fixed%cfeic = cfeic   ! [SS-GR-CROP A5.1]
       endif
       
 ! --- initial storage on canopy
@@ -1540,6 +1634,7 @@
       if (dvs.ge.1.d0 .and. (.not. flAnthesis)) then
         flAnthesis = .true.
         dvs = 1.0d0
+        if (present(state)) state%crop%common%dvs = dvs   ! [SS-GR-CROP A5.1]
       end if
       
 ! === daily dry matter production 
@@ -1794,6 +1889,22 @@
           endif
       endif
 
+      ! [SS-GR-CROP A5.1] mirror wofost case(2) potential state
+      if (present(state)) then
+        state%crop%wofost%wlvpot    = wlvpot
+        state%crop%wofost%wrtpot    = wrtpot
+        state%crop%wofost%wstpot    = wstpot
+        state%crop%wofost%wsopot    = wsopot
+        state%crop%wofost%wblpot    = wblpot
+        state%crop%wofost%dwrtpot   = dwrtpot
+        state%crop%wofost%dwlvpot   = dwlvpot
+        state%crop%wofost%dwstpot   = dwstpot
+        state%crop%wofost%dwblpot   = dwblpot
+        state%crop%wofost%cwdmpot   = cwdmpot
+        state%crop%wofost%pgasspot  = pgasspot
+        state%crop%common%laipot    = laipot
+      endif
+
       return
 
       case (3)
@@ -1941,6 +2052,10 @@
 ! --- phenological development stage
       dvs = min(dvs+dvr*delt,dvsend)
       tsum = tsum + dtsum*delt
+      if (present(state)) then
+        state%crop%common%dvs  = dvs    ! [SS-GR-CROP A5.1]
+        state%crop%common%tsum = tsum   ! [SS-GR-CROP A5.1]
+      endif
 
 ! --- leaf death (due to water stress or high lai) is imposed on array 
 ! --- untill no more leaves have to die or all leaves are gone
@@ -2021,7 +2136,7 @@
 
 !     Calling the subroutine for N losses of leaves, roots and stem storage
 !     organs (kg N ha-1 d-1)
-      if(flCropNut)then 
+      if(flCropNut)then
 
 !        Calling the subroutines for N demand of leaves, roots and stem storage
 !        organs (kg N ha-1 d-1)
@@ -2041,7 +2156,25 @@
          NdemandBioFix =  NFIXF * NDEMTO * NLIMIT
 
       end if
-         
+
+      ! [SS-GR-CROP A5.1] mirror wofost case(3) actual state
+      if (present(state)) then
+        state%crop%wofost%wlv       = wlv
+        state%crop%wofost%wst       = wst
+        state%crop%wofost%wso       = wso
+        state%crop%wofost%wrt       = wrt
+        state%crop%wofost%wbl       = wbl
+        state%crop%wofost%dwrt      = dwrt
+        state%crop%wofost%dwlv      = dwlv
+        state%crop%wofost%dwst      = dwst
+        state%crop%wofost%dwso      = dwso
+        state%crop%wofost%dwbl      = dwbl
+        state%crop%wofost%dwlvCrop  = dwlvCrop
+        state%crop%wofost%dwlvSoil  = dwlvSoil
+        state%crop%wofost%cwdm      = cwdm
+        state%crop%wofost%pgass     = pgass
+      endif
+
       return
 
       case (4)
@@ -2132,8 +2265,9 @@
             HarLosOrm_st   = FraHarLosOrm_st * wst + HarLosOrm_dwst
             HarLosOrm_dwso =  FraHarLosOrm_so * dwso
             HarLosOrm_so   = FraHarLosOrm_so * wso + HarLosOrm_dwso
-            HarLosOrm_tot = HarLosOrm_rt + FraHarLosOrm_lv * wlv +      & 
+            HarLosOrm_tot = HarLosOrm_rt + FraHarLosOrm_lv * wlv +      &
      &             FraHarLosOrm_st * wst + FraHarLosOrm_so * wso
+            if (present(state)) state%crop%common%HarLosOrm_tot = HarLosOrm_tot   ! [SS-GR-CROP A5.1]
 !ckro_sup_20170714 : suppressed because it will happen after harvest
 !            wrt = wrt - HarLosOrm_rt
 !            wlv = wlv - FraHarLosOrm_lv * wlv
@@ -2213,6 +2347,7 @@
           grlv  = 0.0d0
           NdemandSoil = 0.0d0
           HarLosOrm_tot = 0.0d0
+          if (present(state)) state%crop%common%HarLosOrm_tot = HarLosOrm_tot   ! [SS-GR-CROP A5.1]
         endif
       endif
 
@@ -2221,13 +2356,13 @@
       
 ! --- root extension
       if (swrd.eq.1) then
-      
+
         rdpot = afgen (rdtb,22,dvs)
         rdpot = min(rdpot,rdm)
         rd    = rdpot
-      
+
       elseif (swrd.eq.2) then
-        
+
         rrpot = min (rdm-rdpot,rri)
         if (fr.le.0.0d0 .or. pgasspot.lt.1.0d0) rrpot = 0.0d0
         rdpot = rdpot + rrpot
@@ -2245,6 +2380,10 @@
         rd = afgen (rlwtb,22,wrt)
         rd = min(rd,rdm)
       endif
+      if (present(state)) then
+        state%crop%common%rdpot = rdpot   ! [SS-GR-CROP A5.1]
+        state%crop%common%rd    = rd      ! [SS-GR-CROP A5.1]
+      endif
 
 ! --- crop factor or crop height
       if (swcf.ne.3) then
@@ -2254,6 +2393,11 @@
         cf        = afgen (cftb,72,lai)
         cfeic     = afgen (cfeictb,72,lai)
         ch        = afgen(chtb,72,lai)
+      endif
+      if (present(state)) then
+        state%crop%common%cf = cf   ! [SS-GR-CROP A5.1]
+        state%crop%common%ch = ch   ! [SS-GR-CROP A5.1]
+        if (swcf.eq.3) state%crop%fixed%cfeic = cfeic   ! [SS-GR-CROP A5.1]
       endif
 
 ! --- update canopy storage capacity
@@ -2432,9 +2576,11 @@
 
 ! --- sequence of harvest by mowing, dewooling and grazing
       seqgrazmowpot = seqgrazmow
+      if (present(state)) state%crop%grass%seqgrazmowpot = seqgrazmowpot   ! [SS-GR-CROP A5.1]
 
 ! --- development stage (not used by Grassland, instead Daynrs are used)
       dvs = -99.99d0
+      if (present(state)) state%crop%common%dvs = dvs   ! [SS-GR-CROP A5.1]
 
 ! --- maximum rooting depth
       if (swrd.eq.1) then
@@ -2445,6 +2591,7 @@
         rdc = afgen (rlwtb,22,wrtmax)
         rdm = min(rdmax,rdc)
       endif
+      if (present(state)) state%crop%common%rdm = rdm   ! [SS-GR-CROP A5.1]
 
 ! --- skip next initialization if crop parameters are read from *.END file
       if (tc_t1900 - tstart .gt. tiny .or. swinco .ne. 3 .or.          &
@@ -2525,6 +2672,33 @@
         cropstartact     = rid
         flhrvendpot      = .false.
         flearlyhrvendpot = .false.
+        ! [SS-GR-CROP A5.1] mirror grass init-time state
+        if (present(state)) then
+          state%crop%common%tsum        = tsum
+          state%crop%common%rd          = rd
+          state%crop%common%rdpot       = rdpot
+          state%crop%common%laipot      = laipot
+          state%crop%wofost%wrt         = wrt
+          state%crop%wofost%wrtpot      = wrtpot
+          state%crop%wofost%wst         = wst
+          state%crop%wofost%wstpot      = wstpot
+          state%crop%wofost%wlv         = wlv
+          state%crop%wofost%wlvpot      = wlvpot
+          state%crop%wofost%dwrt        = dwrt
+          state%crop%wofost%dwrtpot     = dwrtpot
+          state%crop%wofost%dwlv        = dwlv
+          state%crop%wofost%dwlvpot     = dwlvpot
+          state%crop%wofost%dwst        = dwst
+          state%crop%wofost%dwstpot     = dwstpot
+          state%crop%wofost%tagp        = tagp
+          state%crop%wofost%tagppot     = tagppot
+          state%crop%wofost%tagpt       = tagpt
+          state%crop%wofost%tagptpot    = tagptpot
+          state%crop%common%cuptgraz    = cuptgraz
+          state%crop%common%cuptgrazpot = cuptgrazpot
+          state%crop%grass%cropstartpot = cropstartpot
+          state%crop%grass%cropstartact = cropstartact
+        endif
         
         if (swtsum.eq.0) then
           flGrassGrowth = .true.
@@ -2547,6 +2721,11 @@
         cf        = afgen (cftb,(2*magrs),lai)
         cfeic     = afgen (cfeictb,(2*magrs),lai)
         ch        = afgen(chtb,(2*magrs),lai)
+      endif
+      if (present(state)) then
+        state%crop%common%cf = cf   ! [SS-GR-CROP A5.1]
+        state%crop%common%ch = ch   ! [SS-GR-CROP A5.1]
+        if (swcf.eq.3) state%crop%fixed%cfeic = cfeic   ! [SS-GR-CROP A5.1]
       endif
 
 ! --- initial storage on canopy
@@ -2625,12 +2804,17 @@
         pmowdm        = 0.d0
         pgrzdm        = 0.d0
         plossdm       = 0.d0
+        if (present(state)) then
+          state%crop%grass%cropstartpot = cropstartpot   ! [SS-GR-CROP A5.1]
+          state%crop%wofost%plossdm     = plossdm        ! [SS-GR-CROP A5.1]
+        endif
       endif
       flhrvendpot      = .false.
       flearlyhrvendpot = .false.
-      
+
 ! --- grass growth initiated by tsum from 1st day of calendar year
       tsum = tsum + max(0.0d0,at_tav)  ! [SS-GR-ATM B.5]
+      if (present(state)) state%crop%common%tsum = tsum   ! [SS-GR-CROP A5.1]
       if (.not. flGrassGrowth) then
         
         ! grass growth initiated by tsum
@@ -3092,8 +3276,27 @@
         elseif (swrd.eq.3) then
           rdpot = afgen (rlwtb,22,wrtpot)
           rdpot = min(rdpot,rdm)
-        endif          
+        endif
 
+      endif
+
+      ! [SS-GR-CROP A5.1] mirror grass case(2) potential state
+      if (present(state)) then
+        state%crop%wofost%wlvpot        = wlvpot
+        state%crop%wofost%wrtpot        = wrtpot
+        state%crop%wofost%wstpot        = wstpot
+        state%crop%wofost%dwrtpot       = dwrtpot
+        state%crop%wofost%dwlvpot       = dwlvpot
+        state%crop%wofost%dwstpot       = dwstpot
+        state%crop%wofost%tagppot       = tagppot
+        state%crop%common%laipot        = laipot
+        state%crop%common%rdpot         = rdpot
+        state%crop%wofost%pgasspot      = pgasspot
+        state%crop%wofost%plossdm       = plossdm
+        state%crop%common%cuptgrazpot   = cuptgrazpot
+        state%crop%wofost%tagptpot      = tagptpot
+        state%crop%grass%cropstartpot   = cropstartpot
+        state%crop%grass%cropendpot     = cropendpot
       endif
 
       return
@@ -3112,6 +3315,10 @@
         mowdm        = 0.d0
         grzdm        = 0.d0
         lossdm       = 0.d0
+        if (present(state)) then
+          state%crop%grass%cropstartact = cropstartact   ! [SS-GR-CROP A5.1]
+          state%crop%wofost%lossdm      = lossdm         ! [SS-GR-CROP A5.1]
+        endif
       endif
       flhrvendact      = .false.
       flearlyhrvendact = .false.
@@ -3557,7 +3764,8 @@
         elseif (swrd.eq.3) then
           rd = afgen (rlwtb,22,wrt)
           rd = min(rd,rdm)
-        endif            
+        endif
+        if (present(state)) state%crop%common%rd = rd   ! [SS-GR-CROP A5.1]
 
 ! ---   set crop height and cropfactor
         if (swcf.ne.3) then
@@ -3568,6 +3776,11 @@
           cfeic = afgen (cfeictb,(2*magrs),lai)
           ch = afgen(chtb,(2*magrs),lai)
         endif
+        if (present(state)) then
+          state%crop%common%cf = cf   ! [SS-GR-CROP A5.1]
+          state%crop%common%ch = ch   ! [SS-GR-CROP A5.1]
+          if (swcf.eq.3) state%crop%fixed%cfeic = cfeic   ! [SS-GR-CROP A5.1]
+        endif
 
 ! ---   update canopy storage capacity
         if (swinter.eq.3) then
@@ -3575,6 +3788,24 @@
           if (present(state)) state%atmosphere%siccapact = siccapact   ! [SS-GR-ATM A5.2] dual-write
         endif
 
+      endif
+
+      ! [SS-GR-CROP A5.1] mirror grass case(3) actual state
+      if (present(state)) then
+        state%crop%wofost%wlv         = wlv
+        state%crop%wofost%wrt         = wrt
+        state%crop%wofost%wst         = wst
+        state%crop%wofost%dwrt        = dwrt
+        state%crop%wofost%dwlv        = dwlv
+        state%crop%wofost%dwst        = dwst
+        state%crop%wofost%tagp        = tagp
+        state%crop%wofost%pgass       = pgass
+        state%crop%wofost%lossdm      = lossdm
+        state%crop%common%cuptgraz    = cuptgraz
+        state%crop%wofost%tagpt       = tagpt
+        state%crop%grass%cropstartact = cropstartact
+        state%crop%grass%cropendact   = cropendact
+        state%crop%common%tsum        = tsum
       endif
 
       return
