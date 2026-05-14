@@ -1185,7 +1185,7 @@
       integer   swbotbc            ! Switch for bottom boundary condition of solute-concentration (see *.SWP input file for overview)
       integer   swsolu             ! Switch for simulation of solute transport: 0 = no; 1 = yes
       ! [SS-GR-FINAL D3] swsp retired — 0 consumers; sorption switch never read outside init/c2v
-      real(8)   AgeGwl1m           ! Age (d) of groundwater in upper 1 meter of saturated zone
+      ! [SS-GR-CROPRT A1] AgeGwl1m retired — ADR 0032 (AgeTracer dead-code)
       real(8)   bexp               ! Exponent in decomposition reduction factor due to dryness (-)
       real(8)   cdrain             ! Mean solute concentration in aquifer or drainage system (M/L3 water)  [AgeTracer dead-code dep, keep until agetracer_state_t]
       real(8)   cirr               ! Solute concentration (M/L3) in irrigation water
@@ -1207,10 +1207,10 @@
       real(8)   fdepth(maho)       ! Array with reduction factor for decomposition (-) for each soil layer
       real(8)   frexp              ! Array with Freundlich exponent (-) for solute adsorption
       real(8)   gampar             ! Reduction factor for decomposition due to low temperatures (/C)
-      real(8)   icAgeBot           ! Incremental (over output interval) age (d) of groundwater leaving bottom comp.
-      real(8)   icAgeDra(madr)     ! Incremental (over output interval) age (d) of groundwater leaving bottom comp.
-      real(8)   icAgeRot           ! Incremental (over output interval) age (d) of groundwater leaving by root uptake
-      real(8)   icAgeSur           ! Incremental (over output interval) age (d) of groundwater leaving by surface runoff
+      ! [SS-GR-CROPRT A1] icAgeBot retired — ADR 0032 (AgeTracer dead-code)
+      ! [SS-GR-CROPRT A1] icAgeDra retired — ADR 0032 (AgeTracer dead-code)
+      ! [SS-GR-CROPRT A1] icAgeRot retired — ADR 0032 (AgeTracer dead-code)
+      ! [SS-GR-CROPRT A1] icAgeSur retired — ADR 0032 (AgeTracer dead-code)
       real(8)   isqbot             ! Solute flux at the bottom of the soil column (M/L2/T)  [AgeTracer dead-code dep, keep until agetracer_state_t]
       real(8)   isqtop             ! Solute flux through the soil top surface (M/L2/T)  [AgeTracer dead-code dep, keep until agetracer_state_t]
       real(8)   kf(maho)           ! Array with Freundlich coefficient (L3/M) for solute adsorption for each soil layer
@@ -1241,7 +1241,7 @@
       real(8)   zc(macp)           ! Array with soil depths (L) used to specify initial solute concentrations
       ! [SS-TC] retired 2026-05-12 — moved to state%timecontrol%flSolute (ADR 0041)
       ! logical   flsolute           ! moved to state%timecontrol%flSolute
-      logical   flAgeTracer        ! Flag indicating simulation of Ageing (groundwater age)
+      ! [SS-GR-CROPRT A1] flAgeTracer retired — ADR 0032 (AgeTracer dead-code; always .false.)
 
 ! --- age tracer state variables (moved from local SAVE in AgeTracer subroutine)
       real(8)   Ageirr             ! Age of irrigation water (d)

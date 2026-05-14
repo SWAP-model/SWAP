@@ -58,7 +58,7 @@ contains
       ! [SS-GR-FINAL B11] blanket use Variables narrowed; mabbc/macp → swap_array_dimensions
       ! Note: AgeTracer body is currently unreachable (ADR 0032 guard always fires).
       ! All variables globals here are DEFERRED pending agetracer reactivation.
-      use swap_array_dimensions, only: mabbc, macp
+      use swap_array_dimensions, only: mabbc, macp, madr
       use variables, only: &   ! [SS-GR-FINAL B11] residuals — all DEFERRED
          ! DEFERRED: swinco/nconc/zc/cml — solute config/initial concentrations; Phase C3
          swinco, nconc, zc, cml, &
@@ -66,10 +66,10 @@ contains
          cpre, cirr, cdrain, &
          ! DEFERRED: samini — initial solute mass; lives in state%solute; Phase C3
          samini, &
-         ! DEFERRED: Agepre/Ageirr/Agedrain/Agepond/Agepondm1/Agegwl1m — age tracer state; Phase C3
-         Agepre, Ageirr, Agedrain, Agepond, Agepondm1, Agegwl1m, &
-         ! DEFERRED: icAgesur/icAgetopdwn/icAgetopupw/icAgerot/icAgedra/icAgebot — age tracer cumulative state; Phase C3
-         icAgesur, icAgetopdwn, icAgetopupw, icAgerot, icAgedra, icAgebot, &
+         ! [SS-GR-CROPRT A1] Agepre/Ageirr/Agedrain/Agepond/Agepondm1/Agegwl1m dropped — body is dead-code (ADR 0032)
+         ! DEFERRED body refs: Agepre, Ageirr, Agedrain, Agepond, Agepondm1, Agegwl1m
+         ! [SS-GR-CROPRT A1] icAgesur/icAgetopdwn/icAgetopupw/icAgerot/icAgedra/icAgebot dropped — body dead-code (ADR 0032)
+         ! DEFERRED body refs: icAgesur, icAgetopdwn, icAgetopupw, icAgerot, icAgedra, icAgebot
          ! DEFERRED: FlMacropore/Z_Tp/ArMpTp — retired-zero macropore sentinels; Phase D
          FlMacropore, Z_Tp, ArMpTp, &
          ! DEFERRED: inpola/inpolb — soil compartment interpolation arrays; Phase C3
@@ -79,9 +79,8 @@ contains
          ! DEFERRED: dtsolu/isqbot/isqtop/sqdra/rottot — solute runtime state; state%solute; Phase C3
          dtsolu, isqbot, isqtop, sqdra, rottot, &
          ! DEFERRED: nird — net irrigation depth runtime; Phase C3
-         nird, &
-         ! DEFERRED: flAgeTracer — age tracer activation flag; config; Phase C3
-         flAgeTracer
+         nird
+         ! [SS-GR-CROPRT A1] flAgeTracer dropped from import — declaration retired (ADR 0032)
       use array_utils, only: afgen
       use swap_state_mod, only: swap_state_t
       implicit none
@@ -108,19 +107,20 @@ contains
       real(8) AgeProd
       real(8) sum0,sum1,deltaz,zzbot,zztop
 
-! Note: Ageirr, Agedrain, Agepre, Agepond, Agepondm1, icAgetopupw, icAgetopdwn, ArMpSs
-! are now module-level variables in variables.f90 (synced via state%solute)
-! This enables multi-instance execution
+! [SS-GR-CROPRT A1] AgeTracer SAVE state moved back to locals: globals retired (ADR 0032).
+! Body is dead-code (unconditional return guard above). Locals present for compile-only.
+      real(8) Agepre, Ageirr, Agedrain, Agepond, Agepondm1, Agegwl1m
+      real(8) icAgesur, icAgetopdwn, icAgetopupw, icAgerot, icAgebot
+      real(8) icAgedra(madr)
 
-      if (flAgeTracer) then
-         call fatalerr_collected('AgeTracer', &
-            'AgeTracer feature is currently inert. The runtime body '// &
-            'was preserved during ADR 0032 (solute migration) for '// &
-            'future reactivation. Before re-enabling, work through the '// &
-            'reactivation checklist in src/solute/agetracer.f90 (defines '// &
-            'agetracer_state_t, resolves cml dual-use, wires flAgeTracer).')
-         return
-      end if
+      ! [SS-GR-CROPRT A1] flAgeTracer retired (ADR 0032) — guard now unconditional stub-error.
+      ! AgeTracer callers dropped from swap_mod; this subroutine should never be reached.
+      call fatalerr_collected('AgeTracer', &
+         'AgeTracer feature is currently inert. The runtime body '// &
+         'was preserved during ADR 0032 (solute migration) for '// &
+         'future reactivation. Before re-enabling, work through the '// &
+         'reactivation checklist in src/solute/agetracer.f90.')
+      return
 
 ! [Original AgeTracer body from solute.f90:304-547 preserved verbatim
 !  below this line. Body is unreachable in current build because the

@@ -51,7 +51,8 @@ contains
    end subroutine swap_init
 
    subroutine swap_init_from_loaded_config(state, config)
-      use variables, only : flswapshared, flcropnut, flagetracer, swfrost, &
+      use variables, only : flswapshared, flcropnut, swfrost, &
+                            ! [SS-GR-CROPRT A1] flagetracer dropped — retired (ADR 0032; always .false.)
                             swusecn, flcropcalendar, &
                             flharvestday, flcropoutput, swcrp, swend, project, &
                             ! [GR-FINAL C3] flirrigationoutput dropped: W-global (0 consumers; ADR 0009 deleted IrrigationOutput)
@@ -544,8 +545,7 @@ contains
 !  initialize Solute rate/state variables
    if (flSolute) call Solute(1, state)
 
-!  initialize Ageing rate/state variables
-   if (flAgeTracer) call AgeTracer(1, state)
+!  [SS-GR-CROPRT A1] AgeTracer init dropped — flAgeTracer retired (ADR 0032; body always unreachable)
 
 !  Soil Management init: SoilManagement(1) was the legacy reader entry
 !  point and is now a no-op (SS-C step 3). flCropNut is now driven by
@@ -558,7 +558,7 @@ contains
 !  ADR 0009 Phase 5+: IrrigationOutput deleted (swirg=0).
    if (flTemperature)  call TemperatureOutput(1, state)
    if (flSolute)       call SoluteOutput(1, state)
-   if (flAgeTracer)    call AgeTracerOutput(1, state)
+   ! [SS-GR-CROPRT A1] AgeTracerOutput(1) dropped — flAgeTracer retired (ADR 0032)
    if (flSnow)         call SnowOutput(1, state)
    ! [MACRO-RETIRE 2026-05-12] MacroPoreOutput retired (ADR 0040).
    if (flSurfaceWater) call SurfaceWaterOutput(1, state)
@@ -570,7 +570,8 @@ contains
    end subroutine swap_init_from_loaded_config
 
    subroutine swap_run_step(state, config)
-      use variables, only : flswapshared, flcropnut, flagetracer, swfrost, &
+      use variables, only : flswapshared, flcropnut, swfrost, &
+                            ! [SS-GR-CROPRT A1] flagetracer dropped — retired (ADR 0032; always .false.)
                             flcropcalendar, &
                             flharvestday, flcropoutput, swcrp, &
                             ! [GR-FINAL C3] swend dropped: read via state%crop%common%swend (C category, inv. §C)
@@ -705,8 +706,7 @@ contains
 !     calculate Solute rate/state variables
       if (flSolute) call Solute(2, state)
 
-!     calculate Ageing rate/state variables
-      if (flAgeTracer) call AgeTracer(2, state)
+!     [SS-GR-CROPRT A1] AgeTracer(2) dropped — flAgeTracer retired (ADR 0032)
 
 !     update time variables and switches/flags
       call timecontrol_advance(state)
@@ -752,7 +752,7 @@ contains
             if (flTillage) call DoTillage(3, state)
             if (flTemperature)   call TemperatureOutput(2, state)
             if (flSolute)        call SoluteOutput(2, state)
-            if (flAgeTracer)     call AgeTracerOutput(2, state)
+            ! [SS-GR-CROPRT A1] AgeTracerOutput(2) dropped — flAgeTracer retired (ADR 0032)
             if (flSnow)          call SnowOutput(2, state)
             ! [MACRO-RETIRE 2026-05-12] MacroPoreOutput retired (ADR 0040).
             if (flSurfaceWater) then
@@ -780,7 +780,8 @@ contains
    end subroutine swap_run_step
 
    subroutine swap_close(state, config)
-      use variables, only : flswapshared, flcropnut, flagetracer, project, swcrp
+      use variables, only : flswapshared, flcropnut, project, swcrp
+                            ! [SS-GR-CROPRT A1] flagetracer dropped — retired (ADR 0032; always .false.)
                             ! [GR-FINAL C3] swend dropped: read via state%crop%common%swend
       use swap_log,  only: log_info
       use management_soil_mod, only: SoilManagement
@@ -800,7 +801,7 @@ contains
    ! [SS-TC TC-14] flag reads via state%timecontrol
    if (state%timecontrol%flTemperature)  call TemperatureOutput(3, state)
    if (state%timecontrol%flSolute)       call SoluteOutput(3, state)
-   if (flAgeTracer)                      call AgeTracerOutput(3, state)
+   ! [SS-GR-CROPRT A1] AgeTracerOutput(3) dropped — flAgeTracer retired (ADR 0032)
 !  ADR 0009 Phase 5+: IrrigationOutput deleted (swirg=0).
    if (state%timecontrol%flSnow)         call SnowOutput(3, state)
    ! [MACRO-RETIRE 2026-05-12] MacroPoreOutput retired (ADR 0040).

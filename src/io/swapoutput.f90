@@ -944,10 +944,9 @@
       ! SS-SWST Phase 2 Task 11: inqdra removed (now via state%surfacewater%inqdra).
       ! SS-SLST Phase 1 Task 5: cml migrated to state%solute (body is gated by flAgeTracer guard).
       ! SS-TC TC-7: daynr,daycum,date,outper removed from only-list; reads via state%timecontrol.
-      ! [SS-GR-FINAL B4] DEFERRED — project/outfil/pathwork: file-path globals;
-      !   AgeGwl1m/icAge*/flAgeTracer: AgeTracer-domain globals, no state home (ADR 0032 inert)
-      use variables, only: project,outfil,pathwork,                                                       &
-                           AgeGwl1m,icAgeBot,icAgeDra,icAgeRot,icAgeSur,flAgeTracer
+      ! [SS-GR-FINAL B4] DEFERRED — project/outfil/pathwork: file-path globals
+      ! [SS-GR-CROPRT A1] AgeGwl1m/icAge*/flAgeTracer dropped — declarations retired (ADR 0032)
+      use variables, only: project,outfil,pathwork
       use swap_state_mod, only: swap_state_t
       use swap_array_dimensions, only: madr
       use file_io_mod, only: file_open
@@ -964,7 +963,9 @@
       character(len=1)   comma
       real(8)   iqdrainout(madr)   ! Cumulative (over 1 output timestep) drainage flux (L) for each drainage level
 ! ----------------------------------------------------------------------
-      if (.not. flAgeTracer) return   ! AgeTracer is currently inert (ADR 0032); output gated
+      ! [SS-GR-CROPRT A1] flAgeTracer retired (ADR 0032); outage is a permanent stub.
+      ! AgeTracerOutput callers dropped from swap_mod; this guard is unconditional now.
+      return   ! AgeTracer dead-code (ADR 0032)
 
       comma = ','
 
@@ -1029,10 +1030,11 @@
 
 !     age of groundwater in effluents: drains, transpiration, leaching, runoff
 !     and age (d) of groundwater in upper 1 meter of saturated zone
-      write(agee,16) tc_date,comma,tc_daynr,comma,tc_daycum,comma,AgeGwl1m,comma, &
-     &               icAgeBot/tc_outper,comma,icAgeRot/tc_outper,comma,  &
-     &               icAgeSur/tc_outper,                                  &
-     &               (comma,icAgeDra(level)/tc_outper,level=1,state%drainage%nrlevs)
+!     [SS-GR-CROPRT A1] write(agee) referencing AgeGwl1m/icAge* retired — declarations dropped (ADR 0032)
+!      write(agee,16) tc_date,comma,tc_daynr,comma,tc_daycum,comma,AgeGwl1m,comma, &
+!     &               icAgeBot/tc_outper,comma,icAgeRot/tc_outper,comma,  &
+!     &               icAgeSur/tc_outper,                                  &
+!     &               (comma,icAgeDra(level)/tc_outper,level=1,state%drainage%nrlevs)
  16   format(a11,a1,i4,a1,i6,1p,9(a1,e10.3))
 
 !     qdrain discharge-effluent (without infiltration!)

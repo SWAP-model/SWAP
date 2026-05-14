@@ -481,7 +481,7 @@
       swbr               = 0 
       swsalinity         = 0
       swsolu             = 0 
-      AgeGwl1m           = 0.0d0 
+      ! [SS-GR-CROPRT A1] AgeGwl1m zero-fill dropped — declaration retired (ADR 0032)
       bexp               = 0.0d0 
       cdrain             = 0.0d0 
       cirr               = 0.0d0 
@@ -502,10 +502,7 @@
       fdepth             = 0.0d0 
       frexp              = 0.0d0 
       gampar             = 0.0d0 
-      icAgeBot           = 0.0d0 
-      icAgeDra           = 0.0d0 
-      icAgeRot           = 0.0d0 
-      icAgeSur           = 0.0d0 
+      ! [SS-GR-CROPRT A1] icAgeBot/icAgeDra/icAgeRot/icAgeSur zero-fills dropped — declarations retired (ADR 0032)
       isqbot             = 0.0d0 
       isqtop             = 0.0d0 
       kf                 = 0.0d0 
@@ -535,7 +532,7 @@
       tscf               = 0.0d0 
       zc                 = 0.0d0 
       ! [SS-TC] flsolute retired to state%timecontrol%flSolute (ADR 0041)
-      flAgeTracer        = .false. 
+      ! [SS-GR-CROPRT A1] flAgeTracer zero-fill dropped — declaration retired (ADR 0032)
 
 ! --- macropore retirement [MACRO-RETIRE 2026-05-12] — ADR 0040
 !     Only the retired-zero placeholders kept in variables.f90 are
