@@ -14,8 +14,9 @@ module SWAP_csv_output
    ! SS-TC TC-13: flprintshort, date, t1900 dropped (read via state%timecontrol ASSOCIATE in csv_out case(2)).
    use variables, only: tsum,dvs,pgasspot,pgass,                                                                                 &
                         cwdmpot,cwdm,wsopot,wso,wlvpot,wlv,wstpot,wst,wrtpot,wrt,dwso,dwlv,dwlvpot,dwst,dwstpot,dwrt,dwrtpot,    &
-                        ch,cf,laipot,lai,rdpot,rd,tagppot,tagp,tagptpot,tagpt,cuptgrazpot,cuptgraz,plossdm,lossdm,               &
-                        wc10,Runoff_CN,iqinfmax,                                                                    &
+                        ! GR-ATM C2: lai/wc10/Runoff_CN → state%crop%lai/state%atmosphere%wc10/state%atmosphere%Runoff_CN
+                        ch,cf,laipot,rdpot,rd,tagppot,tagp,tagptpot,tagpt,cuptgrazpot,cuptgraz,plossdm,lossdm,               &
+                        iqinfmax,                                                                                    &
                         iqmpoutdrrap, c_top,                                                                                     &
                         pathwork, outfil, project, InList_csv, macp, madr
    use swap_state_mod, only: swap_state_t
@@ -290,7 +291,7 @@ module SWAP_csv_output
       if (vars%name(i) == 'HEIGHT')      vars%value(1,i) = ch
       if (vars%name(i) == 'CRPFAC')      vars%value(1,i) = cf
       if (vars%name(i) == 'LAIPOT')      vars%value(1,i) = laipot
-      if (vars%name(i) == 'LAI')         vars%value(1,i) = lai
+      if (vars%name(i) == 'LAI')         vars%value(1,i) = state%crop%lai
       if (vars%name(i) == 'RDPOT')       vars%value(1,i) = rdpot
       if (vars%name(i) == 'RD')          vars%value(1,i) = rd
       if (vars%name(i) == 'PGRASSDM')    vars%value(1,i) = tagppot
@@ -309,8 +310,8 @@ module SWAP_csv_output
       if (vars%name(i) == 'ROTTOT')      vars%value(1,i) = state%solute%imrottot
       if (vars%name(i) == 'SAMPRO')      vars%value(1,i) = state%solute%sampro
       if (vars%name(i) == 'SOLBAL')      vars%value(1,i) = state%solute%solbal
-      if (vars%name(i) == 'WC10')        vars%value(1,i) = wc10
-      if (vars%name(i) == 'RUNOFFCN')    vars%value(1,i) = Runoff_CN
+      if (vars%name(i) == 'WC10')        vars%value(1,i) = state%atmosphere%wc10
+      if (vars%name(i) == 'RUNOFFCN')    vars%value(1,i) = state%atmosphere%Runoff_CN
       ! SS-SWC S-2.11: iqtdo,iqtup read from state%soilwater.
       if (vars%name(i) == 'QTOPIN')      vars%value(1,i) = state%soilwater%iqtdo
       if (vars%name(i) == 'QTOPOUT')     vars%value(1,i) = state%soilwater%iqtup

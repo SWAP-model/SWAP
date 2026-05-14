@@ -560,7 +560,8 @@
 ! SS-TC TC-10: state added (intent in); date,t read via state%timecontrol
 !   tc_* aliases. daycrop remains crop-domain variable (not in TC).
 ! ----------------------------------------------------------------------
-      use variables, only: daycrop,dvs,tsum,lai,cf,rd,crp,ch
+      ! GR-ATM C2: lai → state%crop%lai.
+      use variables, only: daycrop,dvs,tsum,cf,rd,crp,ch
       use swap_state_mod, only: swap_state_t
       implicit none
 
@@ -604,7 +605,7 @@
 
 ! --- write output record
       write (crp,200) tc_date,comma,nint(tc_t),comma,daycrop,comma,dvs,comma, &
-     & tsum,comma,"       ",comma,lai,comma,ch,comma,cf,                &
+     & tsum,comma,"       ",comma,state%crop%lai,comma,ch,comma,cf,    &
      & comma,"       ",comma,nint(rd),                                  &
      & comma,comma,comma,comma,comma,comma,comma,comma,comma,comma,     &
      & comma,comma,comma,comma,comma,comma,                             &
@@ -631,7 +632,8 @@
 ! SS-TC TC-10: state added (intent in); date,t read via state%timecontrol
 !   tc_* aliases. daycrop remains crop-domain variable (not in TC).
 ! ----------------------------------------------------------------------
-      use variables, only: daycrop,crp,dvs,tsum,laipot,lai,rdpot,rd,ch,cf,cwdmpot,cwdm,wsopot,wso,wlvpot,wlv,wstpot,   &
+      ! GR-ATM C2: lai → state%crop%lai.
+      use variables, only: daycrop,crp,dvs,tsum,laipot,rdpot,rd,ch,cf,cwdmpot,cwdm,wsopot,wso,wlvpot,wlv,wstpot,   &
                            wst,wrtpot,wrt,dwlvCrop,dwlvSoil,dwst,dwrt,dwso,HarLosOrm_tot,swbulb,wblpot,wbl,dwblpot,dwbl,plwt
       use swap_state_mod, only: swap_state_t
       implicit none
@@ -694,17 +696,17 @@
 ! --- write actual data ------------------------------------------------------
 
       if(swbulb.eq.0) then
-         write (crp,300) tc_date,comma,nint(tc_t),comma,daycrop,comma,dvs,    &
-     &    comma,tsum,comma,laipot,comma,lai,comma,ch,comma,cf,comma,    &
-     &    nint(rdpot),comma,nint(rd),comma,nint(wlvpot),comma,nint(wlv),&
-     &    comma,nint(wstpot),comma,nint(wst),comma,nint(wrtpot),        &
-     &    comma,nint(wrt),comma,nint(cwdmpot),comma,nint(cwdm),comma,   &
-     &    nint(wsopot),comma,nint(wso),comma,comma,comma,comma,comma,   &
-     &    comma,comma,dwlvCrop,comma,dwlvSoil,comma,dwst,comma,dwrt,    &
+         write (crp,300) tc_date,comma,nint(tc_t),comma,daycrop,comma,dvs,       &
+     &    comma,tsum,comma,laipot,comma,state%crop%lai,comma,ch,comma,cf,comma,   &
+     &    nint(rdpot),comma,nint(rd),comma,nint(wlvpot),comma,nint(wlv),          &
+     &    comma,nint(wstpot),comma,nint(wst),comma,nint(wrtpot),                  &
+     &    comma,nint(wrt),comma,nint(cwdmpot),comma,nint(cwdm),comma,             &
+     &    nint(wsopot),comma,nint(wso),comma,comma,comma,comma,comma,             &
+     &    comma,comma,dwlvCrop,comma,dwlvSoil,comma,dwst,comma,dwrt,              &
      &    comma,dwso,comma,HarLosOrm_tot
       elseif(swbulb.eq.1) then
-         write (crp,400) tc_date,comma,nint(tc_t),comma,daycrop,comma,dvs,    &
-     &    comma,tsum,comma,laipot,comma,lai,comma,ch,comma,cf,comma,    &
+         write (crp,400) tc_date,comma,nint(tc_t),comma,daycrop,comma,dvs,       &
+     &    comma,tsum,comma,laipot,comma,state%crop%lai,comma,ch,comma,cf,comma,   &
      &    nint(rdpot),comma,nint(rd),comma,nint(wlvpot),comma,nint(wlv),&
      &    comma,nint(wstpot),comma,nint(wst),comma,nint(wrtpot),        &
      &    comma,nint(wrt),comma,nint(cwdmpot),comma,nint(cwdm),comma,   &
@@ -738,7 +740,8 @@
 ! SS-TC TC-10: state added (intent in); date,t read via state%timecontrol
 !   tc_* aliases. daycrop remains crop-domain variable (not in TC).
 ! ----------------------------------------------------------------------
-      use variables, only: daycrop,crp,dvs,tsum,laipot,lai,rdpot,rd,ch,cf,tagppot,tagp,tagptpot,tagpt,          &
+      ! GR-ATM C2: lai → state%crop%lai.
+      use variables, only: daycrop,crp,dvs,tsum,laipot,rdpot,rd,ch,cf,tagppot,tagp,tagptpot,tagpt,          &
                            wlvpot,wlv,wstpot,wst,wrtpot,wrt,cuptgraz,cuptgrazpot
       use swap_state_mod, only: swap_state_t
       implicit none
@@ -784,7 +787,7 @@
 
 ! --- write output record
       write (crp,200) tc_date,comma,nint(tc_t),comma,daycrop,comma,dvs,comma, &
-     & tsum,comma,laipot,comma,lai,comma,ch,comma,cf,                   &
+     & tsum,comma,laipot,comma,state%crop%lai,comma,ch,comma,cf,        &
      & comma,nint(rdpot),comma,nint(rd),                                &
      & comma,nint(wlvpot),comma,nint(wlv),comma,nint(wstpot),           &
      & comma,nint(wst),comma,nint(wrtpot),comma,nint(wrt),              &
@@ -1197,7 +1200,8 @@
 ! ---------------------------------------------------------------------
       ! SS-HEAT Phase 1 Task 5: tsoil, tebot, tetop migrated to state%heat.
       ! SS-TC TC-7: date,daynr,daycum,flheader removed from only-list; reads via state%timecontrol.
-      use variables, only: tem,tav,outfil,pathwork,project
+      ! GR-ATM C2: tav removed; read via state%atmosphere%Tav.
+      use variables, only: tem,outfil,pathwork,project
       use swap_state_mod, only: swap_state_t
       implicit none
 
@@ -1236,7 +1240,7 @@
          ! SS-TC TC-7: daynr,daycum -> state%timecontrol (direct, case(1) only line).
          write (tem,'(a11,a1,i3,a1,i6,1024(a1,f6.1:))') '    Initial'      &
      &         ,comma,state%timecontrol%daynr,comma,state%timecontrol%daycum, &
-     &         comma,tav,comma,state%heat%tetop,                              &
+     &         comma,state%atmosphere%Tav,comma,state%heat%tetop,             &
      &         (comma,state%heat%tsoil(i),i=1,state%mesh%numnod),comma,state%heat%tebot
       end if
 
@@ -1270,7 +1274,7 @@
 
 ! --- write soil temperature profile
          write (tem,'(a11,a1,i3,a1,i6,1024(a1,f6.1:))') tc_date             &
-     &         ,comma,tc_daynr,comma,tc_daycum,comma,tav,comma,state%heat%tetop, &
+     &         ,comma,tc_daynr,comma,tc_daycum,comma,state%atmosphere%Tav,comma,state%heat%tetop, &
      &         (comma,state%heat%tsoil(i),i=1,state%mesh%numnod),comma,state%heat%tebot
          end associate  ! tc_flheader, tc_date, tc_daynr, tc_daycum (TC-7)
       end if
@@ -1326,8 +1330,8 @@
 !     Called from outtem(2) — always runs, headless-independent.
 !     Column order: t1900, daynr, daycum, tav, tetop, T(1..numnod), tebot.
 ! ----------------------------------------------------------------------
+      ! GR-ATM C2: tav → state%atmosphere%Tav; use variables dropped.
       use swap_state_mod, only: swap_state_t
-      use variables,      only: tav
       use iso_c_binding,  only: c_double
       implicit none
       type(swap_state_t), intent(inout) :: state
@@ -1336,7 +1340,7 @@
       state%heat%output_row(1) = real(state%timecontrol%t1900,  c_double)  ! date
       state%heat%output_row(2) = real(state%timecontrol%daynr,  c_double)  ! day of year
       state%heat%output_row(3) = real(state%timecontrol%daycum, c_double)  ! cumulative day
-      state%heat%output_row(4) = real(tav,                       c_double)  ! average temperature
+      state%heat%output_row(4) = real(state%atmosphere%Tav,     c_double)  ! average temperature
       state%heat%output_row(5) = real(state%heat%tetop,          c_double)  ! top boundary temp
       do i = 1, state%mesh%numnod
          state%heat%output_row(5 + i) = real(state%heat%tsoil(i), c_double)
