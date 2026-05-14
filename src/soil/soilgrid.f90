@@ -23,6 +23,10 @@ contains
       !! to state%mesh%X. Legacy globals numlay/botcom/inpola/inpolb/nod1lay kept.
       subroutine calcgrid(state)
 
+      ! [SS-GR-FINAL B9] DEFERRED: all symbols — soil discretisation config; Phase C3
+      !   nsublay/hcomp/hsublay/ncomp/isoillay — soil layer subdivision; Phase C3
+      !   numlay/botcom — layer count / bottom compartment; Phase C3
+      !   inpola/inpolb/nod1lay — interpolation / first-node tables; Phase C3
       use variables, only: nsublay, hcomp, hsublay, ncomp, isoillay, &
                            numlay, botcom, inpola, inpolb, nod1lay
       use swap_state_mod, only: swap_state_t
@@ -208,9 +212,14 @@ contains
       ! [SS-SWC S-2.12B] h/theta/inq/inqrot/IThetaBeg/cofgen/FrArMtrx retired — read via state%soilwater
       ! [GR-BH C4] numnod/dz migrated to state%mesh
       ! [GR-BH Audit 31] nrlevs retired from use-list; read via state%drainage%nrlevs
-      use variables, only: SwDiscrvert,numlay,botcom,                                                                &
-                           numnodNew,dzNew,DiPoCp,IAvFrMpWlWtDm1,IAvFrMpWlWtDm2,                                    &
-                           IQExcMtxDm1Cp,IQExcMtxDm2Cp,IQOutDrRapCp,VlMpStDm1,VlMpStDm2
+      ! [SS-GR-FINAL B9] DEFERRED: all symbols — soil regrid + macropore state; Phase C3/D
+      !   SwDiscrvert/numlay/botcom — soil discretisation config; Phase C3
+      !   numnodNew/dzNew — regridding temporaries; Phase C3
+      !   DiPoCp — domain-based pore connectivity array; Phase C3
+      !   IAvFrMpWlWtDm1/2/IQExcMtxDm1/2Cp/IQOutDrRapCp/VlMpStDm1/2 — macropore retired-zero arrays; Phase D
+      use variables, only: SwDiscrvert, numlay, botcom,                                                               &
+                           numnodNew, dzNew, DiPoCp, IAvFrMpWlWtDm1, IAvFrMpWlWtDm2,                                &
+                           IQExcMtxDm1Cp, IQExcMtxDm2Cp, IQOutDrRapCp, VlMpStDm1, VlMpStDm2
       use soilhydraulics_utils, only: prhead
       use swap_array_dimensions, only: macp, maho, madr
       use swap_state_mod, only: swap_state_t

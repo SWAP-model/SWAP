@@ -40,7 +40,11 @@ contains
       ! [SS-SWC S-2.12B] retired globals removed from use clause; all reads/writes via state%soilwater
       ! [GR-BH C4] numnod/z/disnod migrated to state%mesh
       ! [GR-BH Audit 31] swbotb removed from use-list; read via state%soilwater%swbotb_runtime
-      use variables, only: logf,flmacropore,CritUndSatVol
+      ! [SS-GR-FINAL B9] DEFERRED: logf/flmacropore/CritUndSatVol
+      !   logf: file unit; Phase C3
+      !   flmacropore: retired-zero sentinel guarding dead macropore branches; Phase D
+      !   CritUndSatVol: passed as arg to watertable(); defined in variables; Phase C3
+      use variables, only: logf, flmacropore, CritUndSatVol
       ! [SS-TC TC-6] t1900 read cut over to state%timecontrol%t1900
       use swap_log, only: log_debug, to_str
       implicit none
@@ -383,7 +387,9 @@ contains
       ! [SS-SWC S-2.12B] q, inq, thetm1, theta, volact, volm1, FrArMtrx, fllowgwl retired from variables
       ! [GR-BH C4] numnod/dz migrated to state%mesh
       ! [GR-BH Audit 31] swbotb/nrlevs removed from use-list; read via state%
-      use variables, only: qimmob,QExcMpMtx,QMaPo,qssdi, qssdisum
+      ! [SS-GR-FINAL B9] DEFERRED: qimmob/QExcMpMtx/QMaPo — soil immobile water / macropore fluxes; Phase C3/D
+      !   qssdi/qssdisum — SSDI source term arrays; needs irrigation_state_t; Phase C3
+      use variables, only: qimmob, QExcMpMtx, QMaPo, qssdi, qssdisum
       ! [SS-TC TC-6] dt read cut over to state%timecontrol%dt
       use swap_state_mod, only: swap_state_t
       implicit none
@@ -701,9 +707,17 @@ contains
       subroutine checkmassbal (flopenfiledev,inqdranew,iqexcmtxdm1cpnew,iqexcmtxdm2cpnew,inqnew,iqoutdrrapcpnew,inqrotnew,ithetabegnew,thetanew,state)
       ! [SS-SWC S-2.12B] igird/inird/IPondBeg/iruno/irunon/pond retired — read from state%soilwater
       ! [GR-BH Audit 31] nrlevs removed from use-list; read via state%drainage%nrlevs
-      use variables, only: NumNodNew,IcTopMp,FlMacropore,outfil,pathwork,DZNew,    &
-                           CritDevMasBal,IQInTopVrtDm1,IQInTopLatDm1,IQInTopVrtDm2, &
-                           IQInTopLatDm2,ISsnowBeg,IWaSrDm1Beg,IWaSrDm2Beg,WaSrDm1,WaSrDm2, &
+      ! [SS-GR-FINAL B9] DEFERRED: all checkmassbal globals; Phase C3/D
+      !   NumNodNew/DZNew — regridding temporaries; Phase C3
+      !   IcTopMp/FlMacropore — macropore retired-zero sentinels; Phase D
+      !   outfil/pathwork — output file path globals; Phase C3
+      !   CritDevMasBal — mass balance criterion; Phase C3
+      !   IQInTopVrtDm1/IQInTopLatDm1/IQInTopVrtDm2/IQInTopLatDm2 — macropore retired-zero; Phase D
+      !   ISsnowBeg/IWaSrDm1Beg/IWaSrDm2Beg/WaSrDm1/WaSrDm2 — macropore/snow integrals; Phase D
+      !   dev_cmb — mass balance device file handle; Phase C3
+      use variables, only: NumNodNew, IcTopMp, FlMacropore, outfil, pathwork, DZNew,    &
+                           CritDevMasBal, IQInTopVrtDm1, IQInTopLatDm1, IQInTopVrtDm2, &
+                           IQInTopLatDm2, ISsnowBeg, IWaSrDm1Beg, IWaSrDm2Beg, WaSrDm1, WaSrDm2, &
                            dev_cmb
       ! [SS-TC TC-6] DayCum read cut over to state%timecontrol%daycum
       use swap_state_mod, only: swap_state_t

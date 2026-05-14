@@ -23,7 +23,40 @@ contains
    !! @endnote
    !!
    subroutine headcalc(state)
-      use variables
+      ! [SS-GR-FINAL B9] blanket use variables → explicit only-list; all symbols DEFERRED
+      ! macp/mabbc → swap_array_dimensions (dimension constants); noddrz: crop root depth node
+      use swap_array_dimensions, only: macp, mabbc
+      use variables, only: &
+         ! DEFERRED: qssdi/nird — SSDI/irrigation source terms; needs irrigation_state_t; Phase C3
+         qssdi, nird, &
+         ! DEFERRED: swkmean/SwKimpl — hydraulic conductivity averaging switches; Phase C3
+         swkmean, SwKimpl, &
+         ! DEFERRED: swcaprise — capillary rise prevention switch; Phase C3
+         swcaprise, &
+         ! DEFERRED: MaxBackTr — max Newton-Raphson backtrack iterations; Phase C3
+         MaxBackTr, &
+         ! DEFERRED: fldumpconvcrit — debug convergence dump flag; Phase C3
+         fldumpconvcrit, &
+         ! DEFERRED: numbit/itnumb — Richards iteration counter/stats; Phase C3/D
+         numbit, itnumb, &
+         ! DEFERRED: rimlay — drainage resistance (Cauchy BC); Phase C3
+         rimlay, &
+         ! DEFERRED: sw4/qbotab — bottom BC type 4 / flux table; Phase C3
+         sw4, qbotab, &
+         ! DEFERRED: gwlconv — groundwater level convergence criterion; Phase C3
+         gwlconv, &
+         ! DEFERRED: hplate — lysimeter tensiometer plate head; Phase C3
+         hplate, &
+         ! DEFERRED: SwBotb3ResVert/swbotb3Impl — Cauchy BC options; Phase C3
+         SwBotb3ResVert, swbotb3Impl, &
+         ! DEFERRED: CritDevh1Cp/CritDevh2Cp/CritDevPondDt — convergence criteria; Phase C3
+         CritDevh1Cp, CritDevh2Cp, CritDevPondDt, &
+         ! DEFERRED: flwarn_hc/iwarn_hc — non-convergence warning state; Phase C3
+         flwarn_hc, iwarn_hc, &
+         ! DEFERRED: logf — log file unit; Phase C3
+         logf, &
+         ! DEFERRED: noddrz — node index at root zone bottom; Phase C3
+         noddrz
       use timestep_control_mod, only: fldecdt
       use boundbottom_mod, only: BoundBottom
       use boundtop_mod, only: boundtop, PONDRUNOFF
@@ -834,8 +867,45 @@ contains
    !! @endnote
    !!
    subroutine soilwater(task, state)
-     use doln
-      use Variables
+     use doln  ! provides do_ln_trans (parameter)
+      ! [SS-GR-FINAL B9] blanket use Variables → explicit only-list; all symbols DEFERRED
+      ! macp/mabbc/matabentries → swap_array_dimensions (dimension constants)
+      use swap_array_dimensions, only: macp, mabbc, matabentries
+      use variables, only: &
+         ! DEFERRED: nird — net irrigation depth (irrigation source); Phase C3
+         nird, &
+         ! DEFERRED: swsophy — soil hydraulic property switch; Phase C3
+         swsophy, &
+         ! DEFERRED: swhyst — hysteresis switch; Phase C3
+         swhyst, &
+         ! DEFERRED: swinco — initial conditions switch; Phase C3
+         swinco, &
+         ! DEFERRED: swkmean — mean K averaging method; Phase C3
+         swkmean, &
+         ! DEFERRED: paramvg(21,maho) — VanGenuchten parameters table; Phase C3
+         paramvg, &
+         ! DEFERRED: relsatthr/ksatthr(maho) — threshold saturations; Phase C3
+         relsatthr, ksatthr, &
+         ! DEFERRED: iHWCKmodel(maho) — hydraulic conductivity model switch per layer; Phase C3
+         iHWCKmodel, &
+         ! DEFERRED: numtab/numtablay — number of table entries per node/layer; Phase C3
+         numtab, numtablay, &
+         ! DEFERRED: ientrytab/ientrytablay — table entry indices; Phase C3
+         ientrytab, ientrytablay, &
+         ! DEFERRED: sptab/sptablay — soil property tables; Phase C3
+         sptab, sptablay, &
+         ! DEFERRED: nod1lay(maho) — first node of each soil layer; Phase C3
+         nod1lay, &
+         ! DEFERRED: numlay — number of soil layers; Phase C3
+         numlay, &
+         ! DEFERRED: gwltab/gwli — groundwater level table/initial; Phase C3
+         gwltab, gwli, &
+         ! DEFERRED: zi/nhead — initial head table entries; Phase C3
+         zi, nhead, &
+         ! DEFERRED: h_enpr — air entry pressure; Phase C3
+         h_enpr, &
+         ! DEFERRED: cQMpLatSs — macropore lateral flux (retired-zero); Phase D
+         cQMpLatSs
       use swap_log, only: log_info, to_str
       use array_utils, only: afgen
       use soilhydraulics_utils, only: watcon, hconduc, moiscap, hcomean
@@ -1207,7 +1277,7 @@ contains
    subroutine SoilWaterStateVar(task, state)
 
 ! --- global variables
-      use Variables
+      ! [SS-GR-FINAL B9] blanket use Variables removed — SoilWaterStateVar reads/writes only state%; no variables globals used
       use swap_state_mod, only: swap_state_t
       use, intrinsic :: iso_fortran_env, only: real64
       implicit none
@@ -1268,7 +1338,8 @@ contains
    subroutine hysteresis (state)
       ! [SS-SWC S-2.12B] h/hm1/indeks/cofgen/dimoca/theta retired — read via state%soilwater
       ! [GR-BH C4] numnod/layer/disnod migrated to state%mesh
-      use variables, only: tau,paramvg
+      ! [SS-GR-FINAL B9] DEFERRED: tau/paramvg — soil hydraulic params; Phase C3
+      use variables, only: tau, paramvg
       use soilhydraulics_utils, only: moiscap, prhead
       use swap_array_dimensions, only: macp
       use swap_state_mod, only: swap_state_t
