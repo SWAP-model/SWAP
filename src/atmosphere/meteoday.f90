@@ -289,12 +289,13 @@ contains
       ! [SS-GR-ATM B23] DEFERRED symbols (not yet in state):
       use variables, only: &
           rad, tmn, tmx,                                  &  ! B23 DEFERRED — daily scalars
-          tav, tavd, rh,                                  &  ! B23 DEFERRED — dual-write (consumed by CropGrowth/swap_mod A12)
-          out_rad, out_tmn, out_tmx, out_hum,             &  ! B23 DEFERRED — dual-write (consumed by downstream output)
-          out_win, out_etr, out_wet,                      &  ! B23 DEFERRED — dual-write (consumed by downstream output)
+          tav,                                            &  ! B23 DEFERRED — dual-write (consumed by snow.f90/swapoutput.f90; tavd/rh dropped B.5)
           pathatm, metfil,                                &  ! B23 DEFERRED — filename strings
           detrecord, dettime, detrad, dethum, dettav,     &  ! B23 DEFERRED — detail arrays
           detrain, detwind, irectotal                        ! B23 DEFERRED — detail arrays + counter
+      ! [SS-GR-ATM B.5] tavd retired from import: no legacy consumers remain after cropgrowth migration
+      ! [SS-GR-ATM B.5] rh retired from import: no legacy consumers outside init seed (swap_mod A12)
+      ! [SS-GR-ATM B.5] out_rad/tmn/tmx/hum/win/etr/wet retired from import: no consumers outside swap_mod init seed
       use MeteoVars
       use precipitation_mod, only: PartitionPrecipitation
       implicit none
@@ -350,10 +351,10 @@ contains
 
       ! Calculate 24h average temperature
       state%atmosphere%Tav = (tmx+tmn)*0.5d0
-      tav = state%atmosphere%Tav   ! [SS-GR-ATM B23] dual-write — legacy tav consumed by CropGrowth/swap_mod
+      tav = state%atmosphere%Tav   ! [SS-GR-ATM B23] dual-write — legacy tav consumed by snow.f90/swapoutput.f90
       ! Calculate average day temperature
       state%atmosphere%tavd = (tmx+state%atmosphere%Tav)*0.5d0   ! [SS-GR-ATM B23] direct state write
-      tavd = state%atmosphere%tavd   ! [SS-GR-ATM B23] dual-write — legacy tavd consumed by CropGrowth/swap_mod
+      ! [SS-GR-ATM B.5] tavd dual-write to legacy global RETIRED: no crop consumers remain
 
       if (state%atmosphere%rh.ge.-98.0d0) then
         ! Calculate saturated vapour pressure [kpa]
@@ -362,7 +363,7 @@ contains
         ! Calculate relative humidity [fraction]
         state%atmosphere%rh = min(hum/svp,1.0d0)   ! [SS-GR-ATM B23] direct state write
       endif
-      rh = state%atmosphere%rh   ! [SS-GR-ATM B23] dual-write — legacy rh consumed by swap_mod A12
+      ! [SS-GR-ATM B.5] rh dual-write to legacy global RETIRED: no crop consumers remain
 
       ! CFO file for PEARL: save meteo variables of today for output
       state%atmosphere%out_rad = real(rad, kind=8)          ! [SS-GR-ATM B23] direct state write
@@ -376,14 +377,8 @@ contains
       else
         state%atmosphere%out_wet = -1.0d0
       endif
-      ! [SS-GR-ATM B23] dual-writes — legacy out_* consumed by downstream output code
-      out_rad = real(state%atmosphere%out_rad, kind=4)
-      out_tmn = real(state%atmosphere%out_tmn, kind=4)
-      out_tmx = real(state%atmosphere%out_tmx, kind=4)
-      out_hum = real(state%atmosphere%out_hum, kind=4)
-      out_win = real(state%atmosphere%out_win, kind=4)
-      out_etr = real(state%atmosphere%out_etr, kind=4)
-      out_wet = real(state%atmosphere%out_wet, kind=4)
+      ! [SS-GR-ATM B.5] out_rad/tmn/tmx/hum/win/etr/wet legacy dual-writes RETIRED.
+      ! state%atmosphere%out_* are now the sole write targets; legacy globals have no consumers.
 
     ! end 1 Daily Meteo 00000000000000000000000000000000000000000000000000000 Daily Meteo
 
@@ -577,7 +572,7 @@ contains
         siccaptb,                                          &  ! B24 DEFERRED — interception table
         swusecn,                                           &  ! B24 DEFERRED — config switch (CN)
         finterception,                                     &  ! B24 DEFERRED — not yet in state
-        tav, tavd, rh                                         ! B24 DEFERRED — dual-write (swmetdetail=1 path; consumed by CropGrowth/swap_mod)
+        tav                                                   ! B24 DEFERRED — dual-write (consumed by snow.f90/swapoutput.f90; tavd/rh dropped B.5)
      ! [SS-SWC S-2.12B] pond retired — read via state%soilwater%pond
     use swap_array_dimensions, only: magrs
     use MeteoVars
@@ -947,7 +942,7 @@ contains
         sumtav = sumtav + state%atmosphere%atav(i)
       enddo
       state%atmosphere%Tav = sumtav * metperiod
-      tav = state%atmosphere%Tav   ! [SS-GR-ATM B24] dual-write — legacy tav consumed by CropGrowth/swap_mod
+      tav = state%atmosphere%Tav   ! [SS-GR-ATM B24] dual-write — legacy tav consumed by snow.f90/swapoutput.f90
 
       ! Minimum and maximum temperature of today
       tmx = -50.d0
@@ -962,7 +957,7 @@ contains
                       dexp(17.27d0*tmx/(tmx+237.3d0)))
       ! Calculate relative humidity [fraction]
       state%atmosphere%rh = min(hum/svp,1.0d0)   ! [SS-GR-ATM B24] direct state write
-      rh = state%atmosphere%rh   ! [SS-GR-ATM B24] dual-write — legacy rh consumed by swap_mod A12
+      ! [SS-GR-ATM B.5] rh dual-write to legacy global RETIRED: no crop consumers remain
 
       ! Average temperature between 6 and 18 hour
       sumtav = 0.d0
@@ -974,7 +969,7 @@ contains
         count = count + 1
       enddo
       state%atmosphere%tavd = sumtav / count   ! [SS-GR-ATM B24] direct state write
-      tavd = state%atmosphere%tavd   ! [SS-GR-ATM B24] dual-write — legacy tavd consumed by CropGrowth/swap_mod
+      ! [SS-GR-ATM B.5] tavd dual-write to legacy global RETIRED: no crop consumers remain
 
       ! Daily radiation (J/m2/d) and atmospheric demand (cm/d)
       rad = 0.d0
