@@ -143,11 +143,12 @@ contains
          else
 
             ! --- amount of snowmelt [cm swe] negative values of smelt: see 'melt = '
-            smelt = snowcoef*(tav - ts)
+            ! GR-ATM C5: tav → state%atmosphere%Tav
+            smelt = snowcoef*(state%atmosphere%Tav - ts)
 
             ! --- extra snowmelt when there falls rain on the snowpack [cm swe]
             if (state%atmosphere%snrai .gt. 0.0d0) then
-               smeltr = state%atmosphere%snrai*cwat*(tav - ts)/lm
+               smeltr = state%atmosphere%snrai*cwat*(state%atmosphere%Tav - ts)/lm
             else
                smeltr = 0.0d0
             end if

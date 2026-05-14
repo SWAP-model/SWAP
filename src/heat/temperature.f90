@@ -80,7 +80,7 @@ contains
   !! Purpose: Calculate soil temperatures
   !! @endnote
   subroutine temperature(task, state, config)
-      use variables, only: Tav, atav
+      ! GR-ATM C4: Tav/atav → state%atmosphere; use variables dropped.
       use swap_state_mod,        only: swap_state_t
       use swap_config_mod,       only: swap_config_t
       use array_utils,           only: afgen
@@ -192,15 +192,15 @@ contains
           if (ht_heacon(1).lt.1.d-10) ht_heacon(1) = 100.0d0
           apar = (0.5d0*heaconsnw*state%mesh%dz(1)) / (ht_heacon(1)*dzsnw)
           if (state%timecontrol%flmetdetail) then
-            ht_tetop = (ht_tsoil(1) + apar*atav(state%timecontrol%wrecord)) / (1.d0+apar)
+            ht_tetop = (ht_tsoil(1) + apar*state%atmosphere%atav(state%timecontrol%wrecord)) / (1.d0+apar)
           else
-            ht_tetop = (ht_tsoil(1) + apar*Tav) / (1.d0+apar)
+            ht_tetop = (ht_tsoil(1) + apar*state%atmosphere%Tav) / (1.d0+apar)
           endif
         else
           if (state%timecontrol%flmetdetail) then
-            ht_tetop = atav(state%timecontrol%wrecord)
+            ht_tetop = state%atmosphere%atav(state%timecontrol%wrecord)
           else
-            ht_tetop = Tav
+            ht_tetop = state%atmosphere%Tav
           endif
         endif
 
