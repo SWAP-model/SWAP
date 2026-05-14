@@ -213,54 +213,27 @@ subroutine test_config_to_variables_zero_forces_retired_switches()
    use swap_config_mod, only: swap_config_t
    use config_to_variables_mod, only: config_to_variables
    use swap_state_mod, only: swap_state_t
-   use variables, only: swafo, swaun, swvap, swbal, swwba, swsba, swblc, &
-                        swdrf, swstr, swirg, swini, swend, &
-                        swrum, swswb, swoutputmodflow, &
-                        swcaprise, swcapriseoutput
+   use variables, only: swend, swrum, swcaprise
    implicit none
    type(swap_config_t) :: config
    type(swap_state_t)  :: state
 
-   ! Pre-set every retired switch to a non-zero / non-default value to
-   ! prove the adapter explicitly forces them back to 0/.false. per ADR 0009.
-   ! [SS-BMI2 Task 5] swheader is now state%timecontrol%swheader (forced to 0 in adapter).
-   swafo           = 99
-   swaun           = 99
-   swvap           = 99
-   swbal           = 99
-   swwba           = 99
-   swsba           = 99
-   swblc           = 99
-   swdrf           = 99
-   swstr           = 99
-   swirg           = 99
-   swini           = 99
-   swend           = 99
-   swrum           = 99
-   swswb           = 99
-   swoutputmodflow = 99
-   swcaprise       = .true.
-   swcapriseoutput = .true.
+   ! [GR-FINAL C4] W-globals (swafo/swaun/swvap/swbal/swwba/swsba/swblc/swdrf/
+   ! swstr/swirg/swini/swswb/swoutputmodflow/swcapriseoutput) no longer
+   ! explicitly zeroed by config_to_variables — they rely on Fortran module
+   ! default (=0/.false.) or initialize.f90. Only the functional/C-category
+   ! fields still explicitly forced are tested below.
+   !
+   ! Pre-set to non-default to prove the adapter still writes these explicitly.
+   swend   = 99      ! C-category: forced to 0 pending Phase D global deletion
+   swrum   = 99      ! R-category: read by swapoutput.f90; forced 0 (no config field)
+   swcaprise = .true. ! active in soilhydraulics.f90; forced .false. (no config field yet)
 
    call config_to_variables(config, state)
 
-   @assertEqual(0, swafo)
-   @assertEqual(0, swaun)
-   @assertEqual(0, swvap)
-   @assertEqual(0, swbal)
-   @assertEqual(0, swwba)
-   @assertEqual(0, swsba)
-   @assertEqual(0, swblc)
-   @assertEqual(0, swdrf)
-   @assertEqual(0, swstr)
-   @assertEqual(0, swirg)
-   @assertEqual(0, swini)
    @assertEqual(0, swend)
    ! swheader now written to state%timecontrol%swheader — forced to 0 by ADR 0009 block
    @assertEqual(0, state%timecontrol%swheader)
    @assertEqual(0, swrum)
-   @assertEqual(0, swswb)
-   @assertEqual(0, swoutputmodflow)
    @assertFalse(swcaprise)
-   @assertFalse(swcapriseoutput)
 end subroutine test_config_to_variables_zero_forces_retired_switches

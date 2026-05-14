@@ -919,7 +919,7 @@ contains
       ! does not by itself close the year-1 GWL gap.)
       if (allocated(config%heat%tsoil_init)) then
          n = size(config%heat%tsoil_init, 1)
-         nheat = n
+         ! [GR-FINAL C4] nheat write dropped (W-global; 0 consumers in temperature.f90 code)
          do i = 1, min(n, size(tsoil))
             zh(i)    = config%heat%tsoil_init(i, 1)
             tsoil(i) = config%heat%tsoil_init(i, 2)
@@ -1078,7 +1078,7 @@ contains
       ! we do the same here so surfacewater_init can read it from a
       ! module global. drainage.altcu /= 0 is rejected upstream (Task 7),
       ! so this simplifies to wlact.
-      wls1_init = config%surface_water%wlact - config%drain%altcu
+      ! [GR-FINAL C4] wls1_init write dropped: W-global (0 consumers; state%surfacewater seeded in swap_mod)
       osswlm    = config%surface_water%osswlm
       nmper  = config%surface_water%nmper
       swqhr  = config%surface_water%swqhr
@@ -1132,15 +1132,14 @@ contains
       ! per-rotation type-specific fields go into legacy globals during
       ! cropgrowth.f90's per-rotation init (Phase 4g territory).
       ! ---------------------------------------------------------------
-      swCrop = config%crop%swcrop
-
+      ! [GR-FINAL C4] swCrop write dropped (W-global; 0 external consumers).
       ! Mirror readswap.f90:479-480 — when crop simulation is enabled,
       ! arm the per-rotation reader gates so cropgrowth.f90's per-crop
       ! init (ArableLandGerm/CropFixed/Wofost/Grass at lines 91 / 121)
       ! actually fires. Without this, flCropReadFile stays .false. (the
       ! Initialize() default) and every rotation is treated as bare soil:
       ! LAI/cf/rd remain 0, TPOT/TACT collapse, and EACT/DRAINAGE balloon.
-      if (swCrop == 1) then
+      if (config%crop%swcrop == 1) then
          flCropReadFile = .true.
          flCropOpenFile = .true.
       end if
@@ -1190,27 +1189,18 @@ contains
       end block
 
       ! ---------------------------------------------------------------
-      ! Per ADR 0009: zero-force the 18 RETIRED legacy output switches
-      ! so any residual code that checks them does the right thing.
+      ! ADR 0009 retired output switches — W-globals zeroed by initialize.f90
+      ! or Fortran module default; zero-force lines dropped (GR-FINAL C4).
+      ! Remaining: functional switch (swcaprise), state field (swheader),
+      ! R-category (swrum, still read by swapoutput.f90), and C-category (swend).
       ! ---------------------------------------------------------------
-      swafo           = 0
-      swaun           = 0
-      swvap           = 0
-      swbal           = 0
-      swwba           = 0
-      swsba           = 0
-      swblc           = 0
-      swdrf           = 0
-      swstr           = 0
-      swirg           = 0
-      swini           = 0
-      swend           = 0
       state%timecontrol%swheader = 0
-      swcaprise       = .false.
-      swcapriseoutput = .false.
-      swrum           = 0
-      swswb           = 0
-      swoutputmodflow = 0
+      swcaprise       = .false.        ! active in soilhydraulics.f90 (R; always .false. — no config field yet)
+      swrum           = 0              ! R-category: read by swapoutput.f90; always 0 (no config field)
+      swend           = 0              ! C-category: dual-write to state%crop%common%swend in swap_mod
+      ! [GR-FINAL C4] dropped W-globals (all zero by init.f90 or Fortran default):
+      !   swafo, swaun, swvap, swbal, swwba, swsba, swblc, swdrf, swstr, swirg,
+      !   swini, swcapriseoutput, swswb, swoutputmodflow
 
       if (allocated(config%general%outfil)) outfil = config%general%outfil
 
