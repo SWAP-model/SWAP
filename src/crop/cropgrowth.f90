@@ -931,11 +931,15 @@
 ! [GR-CROP Phase B/5] narrow use variables
 ! ----------------------------------------------------------------------
 
-      ! [SS-GR-FINAL B5] DEFERRED — cropoutput: flCropOpenFile: crop flag, no state home;
-      !   outfil, pathwork, project: file-path globals; crp: crop file unit;
-      !   cropfil: config array, no state home; croptype, icrop: runtime state (dual-write)
-      use variables, only: flCropOpenFile, outfil, cropfil, pathwork,   & ! [SS-GR-FINAL B5] DEFERRED
-                           project, crp, croptype, icrop
+      ! [SS-GR-CROPRT B3] DEFERRED — cropoutput:
+      !   flCropOpenFile: crop open-file flag, no state home
+      !   outfil, pathwork, project: file-path globals; [SS-GR-CROPRT B] DEFERRED file-path arc
+      !   crp: file unit number, no state home
+      !   cropfil: config array of input crop file names, no state home
+      !   croptype: per-rotation type array, no state home
+      ! MIGRATED B3: icrop → state%crop%common%icrop (read-only in cropoutput)
+      use variables, only: flCropOpenFile, outfil, cropfil, pathwork,   & ! [SS-GR-CROPRT B3] DEFERRED
+                           project, crp, croptype
       use error_mod, only: fatalerr_collected
       use file_io_mod, only: file_open
       use swap_state_mod, only: swap_state_t
@@ -973,13 +977,13 @@
             call writehead (crp,1,filnam,filtext,project)
 
 ! ---   write header fixed crop growth
-            if (croptype(icrop) .eq. 1) call OutCropFixed(1, state)
+            if (croptype(state%crop%common%icrop) .eq. 1) call OutCropFixed(1, state)  ! [SS-GR-CROPRT B3]
 
 ! ---   write header detailed crop growth
-            if (croptype(icrop) .eq. 2) call OutWofost(1, state)
+            if (croptype(state%crop%common%icrop) .eq. 2) call OutWofost(1, state)  ! [SS-GR-CROPRT B3]
 
 ! ---   write header detailed grass growth
-            if (croptype(icrop) .eq. 3) call OutGrass(1, state)
+            if (croptype(state%crop%common%icrop) .eq. 3) call OutGrass(1, state)  ! [SS-GR-CROPRT B3]
          end if
 
          flCropOpenFile = .false.
@@ -989,13 +993,13 @@
          if (.not. state%timecontrol%headless) then
 ! ---   header for second and subsequent crops
 ! ---   write header fixed crop growth
-            if (croptype(icrop).eq.1 .and. state%timecontrol%swheader.eq.1) call OutCropFixed(1, state)  ! [SS-BMI2 Task 4]
+            if (croptype(state%crop%common%icrop).eq.1 .and. state%timecontrol%swheader.eq.1) call OutCropFixed(1, state)  ! [SS-BMI2 Task 4] [SS-GR-CROPRT B3]
 
 ! ---   write header detailed crop growth
-            if (croptype(icrop).eq.2 .and. state%timecontrol%swheader.eq.1) call OutWofost(1, state)  ! [SS-BMI2 Task 4]
+            if (croptype(state%crop%common%icrop).eq.2 .and. state%timecontrol%swheader.eq.1) call OutWofost(1, state)  ! [SS-BMI2 Task 4] [SS-GR-CROPRT B3]
 
 ! ---   write header detailed grass growth
-            if (croptype(icrop).eq.3 .and. state%timecontrol%swheader.eq.1) call OutGrass(1, state)  ! [SS-BMI2 Task 4]
+            if (croptype(state%crop%common%icrop).eq.3 .and. state%timecontrol%swheader.eq.1) call OutGrass(1, state)  ! [SS-BMI2 Task 4] [SS-GR-CROPRT B3]
          end if
 
       endif
@@ -1010,13 +1014,13 @@
 
       if (.not. state%timecontrol%headless) then
 ! --- fixed crop file
-         if (croptype(icrop) .eq. 1) call OutCropFixed(2, state)
+         if (croptype(state%crop%common%icrop) .eq. 1) call OutCropFixed(2, state)  ! [SS-GR-CROPRT B3]
 
 ! --- detailed crop growth
-         if (croptype(icrop) .eq. 2) call OutWofost(2, state)
+         if (croptype(state%crop%common%icrop) .eq. 2) call OutWofost(2, state)  ! [SS-GR-CROPRT B3]
 
 ! --- detailed grass growth
-         if (croptype(icrop) .eq. 3) call OutGrass(2, state)
+         if (croptype(state%crop%common%icrop) .eq. 3) call OutGrass(2, state)  ! [SS-GR-CROPRT B3]
       end if
 
       return
