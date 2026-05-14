@@ -35,7 +35,8 @@ contains
 ! ----------------------------------------------------------------------
 
 ! --- global variables
-      use Variables, only: masme                                           ! [GR-CROP C9] flCropCalendar/dvs/rd → state%crop%common%X
+      ! [SS-GR-FINAL B6] masme → swap_array_dimensions (dimension constant)
+      use swap_array_dimensions, only: masme
       use Wofost_Soil_Declarations
       use Wofost_Soil_Interface
       use file_io_mod, only: file_open

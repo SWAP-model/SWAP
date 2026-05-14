@@ -64,7 +64,8 @@ module O2_pars
    ! ## MH: O2_pars module provides access to oxygen stress variables
    ! Phase 1 scaffolding: variables now stored in variables module with o2_ prefix
    ! This module provides the original names as aliases for backward compatibility
-   use variables, only: c_mroot,f_senes,max_resp_factor,q10_root,q10_microbial,shape_factor_rootr,specific_resp_humus, &  ! [GR-BH C7] ztopcp->state%mesh%ztopcp
+   ! [SS-GR-FINAL B6] DEFERRED: O2_pars module aliases — all o2_* SAVE-state needs oxygenstress_state_t; Phase C3
+   use variables, only: c_mroot,f_senes,max_resp_factor,q10_root,q10_microbial,shape_factor_rootr,specific_resp_humus, &  ! [GR-BH C7] ztopcp->state%mesh%ztopcp; DEFERRED: o2_* SAVE state
                         ! Oxygen stress persistent state aliases (original_name => module_name)
                         w_root => o2_w_root, w_root_z0 => o2_w_root_z0, &
                         soil_temp => o2_soil_temp, sat_water_cont => o2_sat_water_cont, &
@@ -95,15 +96,24 @@ contains
 !     Last modified      : January 2014
 !     Purpose            : calculates oxygen stress according to Bartholomeus et al. (2008)
 ! ----------------------------------------------------------------------
-      use variables, only: macp, matab, &                                 ! [GR-CROP Phase B/8] narrow
+      ! [SS-GR-FINAL B6] macp/matab → swap_array_dimensions (dimension constants)
+      use swap_array_dimensions, only: macp, matab
+      use variables, only: &                                               ! [SS-GR-FINAL B6] residuals — all DEFERRED
+                           ! DEFERRED: croptype/icrop — active crop schedule globals; Phase C3
                            croptype, icrop, max_resp_factor, &
+                           ! DEFERRED: bdens/swsophy/numtablay/sptab/iHWCKmodel/c_top — soil config, no state home yet
                            bdens, swsophy, numtablay, sptab, iHWCKmodel, c_top, &
+                           ! DEFERRED: SRL/swrootradius/dry_mat_cont_roots/air_filled_root_por/spec_weight_root_tissue/var_a/root_radiusO2 — crop config; Phase C3
                            SRL, swrootradius, dry_mat_cont_roots, &
                            air_filled_root_por, spec_weight_root_tissue, var_a, root_radiusO2, &
+                           ! DEFERRED: q10/rmr/rfsetb/dvs/rid/rd/wrt/rdctb/w_root_ss/cumdens — active crop state; Phase C3
                            q10, rmr, rfsetb, dvs, rid, rd, wrt, rdctb, w_root_ss, cumdens, &
+                           ! DEFERRED: tsoil — heat staging buffer; tsoil migration pending
                            tsoil, &
+                           ! DEFERRED: c_mroot/f_senes/q10_root/q10_microbial/shape_factor_rootr/specific_resp_humus — O2 config; Phase C3
                            c_mroot, f_senes, q10_root, q10_microbial, &
                            shape_factor_rootr, specific_resp_humus, &
+                           ! DEFERRED: o2_ini_stress/o2_d_soil_term1/o2_d_soil_term2/o2_gfp100/o2_capac_term/o2_nmin1/o2_mplus1 — O2 SAVE state; needs oxygenstress_state_t
                            o2_ini_stress, o2_d_soil_term1, o2_d_soil_term2, &
                            o2_gfp100, o2_capac_term, o2_nmin1, o2_mplus1
       use O2_pars, only: w_root,w_root_z0, soil_temp, sat_water_cont,gas_filled_porosity, d_o2inwater,d_root,        &
@@ -528,10 +538,16 @@ contains
       
       subroutine GET_MAX_RESP_FACTOR (max_resp_factor_gmrf, state)
       ! [GR-CROP Phase B/8] state arg added; tav → state%atmosphere%Tav (closes GR-ATM B.5 deferral).
-      use variables, only: croptype, icrop, max_resp_factor, &  ! [GR-CROP Phase B/8] narrowed from blanket
+      use variables, only: &                                               ! [SS-GR-FINAL B6] residuals — all DEFERRED
+                           ! DEFERRED: croptype/icrop — active crop schedule globals; Phase C3
+                           croptype, icrop, max_resp_factor, &
+                           ! DEFERRED: q10/rmr/rml/rms/rmo — crop respiration config; Phase C3
                            q10, rmr, rml, rms, rmo, &
+                           ! DEFERRED: wrt/wlv/wst/wso/rfsetb/pgass — active crop state; Phase C3
                            wrt, wlv, wst, wso, rfsetb, pgass, &
+                           ! DEFERRED: frtb/fltb/fstb/fotb/cvl/cvs/cvo/cvr — crop partitioning tables; Phase C3
                            frtb, fltb, fstb, fotb, cvl, cvs, cvo, cvr, &
+                           ! DEFERRED: dvs/rid/idregr/daycrop — active crop dynamics; Phase C3
                            dvs, rid, idregr, daycrop
       use array_utils, only: afgen
       use swap_state_mod, only: swap_state_t
@@ -813,7 +829,9 @@ contains
      &      alpha,gen_n,surface_tension_water,glit,                     &
      &         soilphystab,diff_water_cap_actual,numrec_tab)
 ! --- calculate water film thickness. method according to simojoki 2000
-      use variables, only: swsophy, matab                               ! [GR-CROP Phase B/8] narrow from blanket
+      ! [SS-GR-FINAL B6] matab → swap_array_dimensions; swsophy DEFERRED (soil config, no state threading yet)
+      use swap_array_dimensions, only: matab
+      use variables, only: swsophy  ! [SS-GR-FINAL B6] DEFERRED — swsophy: soil hydraulic switch, no state home yet
       use doln
       implicit none
       

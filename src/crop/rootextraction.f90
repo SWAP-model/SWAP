@@ -38,14 +38,26 @@ module rootextraction_mod
 !     purpose   : Calculate the root water extraction rate as function of soil
 !                 water pressure head and salinity concentration for each node
 ! ----------------------------------------------------------------------
-      use variables, only: macp, adcrh, adcrl, aeratecrit, alphacrit,    & ! [GR-CROP Phase B/9]
+      ! [SS-GR-FINAL B6] macp → swap_array_dimensions; remainder DEFERRED
+      use swap_array_dimensions, only: macp
+      use variables, only: &                                               ! [SS-GR-FINAL B6] residuals — all DEFERRED
+                           ! DEFERRED: adcrh/adcrl/aeratecrit/alphacrit — O2/drought config; Phase C3
+                           adcrh, adcrl, aeratecrit, alphacrit,    &
+                           ! DEFERRED: botcom/criterhr/cumdens/dcritrtz/flhydrlift — soil/crop config; Phase C3
                            botcom, criterhr, cumdens, dcritrtz, flhydrlift, &
+                           ! DEFERRED: hlim1/hlim2l/hlim2u/hlim3h/hlim3l/hlim4 — drought stress limits; Phase C3
                            hlim1, hlim2l, hlim2u, hlim3h, hlim3l, hlim4,  &
+                           ! DEFERRED: kroot/kstem/logf/noddrz/oxygenintercept — crop/log globals; Phase C3
                            kroot, kstem, logf, noddrz, oxygenintercept,   &
+                           ! DEFERRED: oxygenslope/rd/rdctb/rdm/rootcoefa/rooteff — active crop state; Phase C3
                            oxygenslope, rd, rdctb, rdm, rootcoefa, rooteff, &
+                           ! DEFERRED: rootradius/rxylem/saltmax/saltslope/stephr — crop/solute config; Phase C3
                            rootradius, rxylem, saltmax, saltslope, stephr, &
+                           ! DEFERRED: swcompensate/swdrought/swfrost/swoxygen — crop stress switches; Phase C3
                            swcompensate, swdrought, swfrost, swoxygen,    &
+                           ! DEFERRED: swoxygentype/swsalinity/swstressor/swwrtnonox — crop stress switches; Phase C3
                            swoxygentype, swsalinity, swstressor, swwrtnonox, &
+                           ! DEFERRED: taccur/twilt/wiltpoint — soil convergence/stress params; Phase C3
                            taccur, twilt, wiltpoint
       use array_utils, only: afgen
       use oxygenstress_mod, only: OxygenStress, OxygenReproFunction
@@ -348,15 +360,18 @@ module rootextraction_mod
 !                 De Jong van Lier et al. (2013)
 ! [GR-CROP Phase B/9] narrow use variables
 ! ----------------------------------------------------------------------
-      use variables, only: macp, adcrh, adcrl, aeratecrit, alphacrit,    & ! [GR-CROP Phase B/9]
-                           botcom, criterhr, cumdens, dcritrtz, flhydrlift, &
-                           hlim1, hlim2l, hlim2u, hlim3h, hlim3l, hlim4,  &
-                           kroot, kstem, logf, noddrz, oxygenintercept,   &
-                           oxygenslope, rd, rdctb, rdm, rootcoefa, rooteff, &
-                           rootradius, rxylem, saltmax, saltslope, stephr, &
-                           swcompensate, swdrought, swfrost, swoxygen,    &
-                           swoxygentype, swsalinity, swstressor, swwrtnonox, &
-                           taccur, twilt, wiltpoint
+      ! [SS-GR-FINAL B6] macp → swap_array_dimensions; remainder DEFERRED (same as RootExtraction)
+      use swap_array_dimensions, only: macp
+      use variables, only: &                                               ! [SS-GR-FINAL B6] residuals — all DEFERRED
+                           adcrh, adcrl, aeratecrit, alphacrit,    &  ! DEFERRED: crop stress config; Phase C3
+                           botcom, criterhr, cumdens, dcritrtz, flhydrlift, &  ! DEFERRED: soil/crop config
+                           hlim1, hlim2l, hlim2u, hlim3h, hlim3l, hlim4,  &  ! DEFERRED: drought limits
+                           kroot, kstem, logf, noddrz, oxygenintercept,   &  ! DEFERRED: crop/log globals
+                           oxygenslope, rd, rdctb, rdm, rootcoefa, rooteff, &  ! DEFERRED: active crop state
+                           rootradius, rxylem, saltmax, saltslope, stephr, &  ! DEFERRED: crop/solute config
+                           swcompensate, swdrought, swfrost, swoxygen,    &  ! DEFERRED: stress switches
+                           swoxygentype, swsalinity, swstressor, swwrtnonox, &  ! DEFERRED: stress switches
+                           taccur, twilt, wiltpoint                          ! DEFERRED: convergence/stress params
       use array_utils, only: afgen
       implicit none
 
@@ -716,15 +731,18 @@ module rootextraction_mod
 !     purpose   : Calculate microscopic root water uptake using hleaf
 ! [GR-CROP Phase B/9] narrow use variables
 ! ----------------------------------------------------------------------
-      use variables, only: macp, adcrh, adcrl, aeratecrit, alphacrit,    & ! [GR-CROP Phase B/9]
-                           botcom, criterhr, cumdens, dcritrtz, flhydrlift, &
-                           hlim1, hlim2l, hlim2u, hlim3h, hlim3l, hlim4,  &
-                           kroot, kstem, logf, noddrz, oxygenintercept,   &
-                           oxygenslope, rd, rdctb, rdm, rootcoefa, rooteff, &
-                           rootradius, rxylem, saltmax, saltslope, stephr, &
-                           swcompensate, swdrought, swfrost, swoxygen,    &
-                           swoxygentype, swsalinity, swstressor, swwrtnonox, &
-                           taccur, twilt, wiltpoint
+      ! [SS-GR-FINAL B6] macp → swap_array_dimensions; remainder DEFERRED (same as RootExtraction)
+      use swap_array_dimensions, only: macp
+      use variables, only: &                                               ! [SS-GR-FINAL B6] residuals — all DEFERRED
+                           adcrh, adcrl, aeratecrit, alphacrit,    &  ! DEFERRED: crop stress config; Phase C3
+                           botcom, criterhr, cumdens, dcritrtz, flhydrlift, &  ! DEFERRED: soil/crop config
+                           hlim1, hlim2l, hlim2u, hlim3h, hlim3l, hlim4,  &  ! DEFERRED: drought limits
+                           kroot, kstem, logf, noddrz, oxygenintercept,   &  ! DEFERRED: crop/log globals
+                           oxygenslope, rd, rdctb, rdm, rootcoefa, rooteff, &  ! DEFERRED: active crop state
+                           rootradius, rxylem, saltmax, saltslope, stephr, &  ! DEFERRED: crop/solute config
+                           swcompensate, swdrought, swfrost, swoxygen,    &  ! DEFERRED: stress switches
+                           swoxygentype, swsalinity, swstressor, swwrtnonox, &  ! DEFERRED: stress switches
+                           taccur, twilt, wiltpoint                          ! DEFERRED: convergence/stress params
       implicit none
 
       type(swap_state_t), intent(inout) :: state

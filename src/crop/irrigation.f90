@@ -37,14 +37,24 @@
 !                             - some calculations only once during initialization
 ! ----------------------------------------------------------------------
 ! --  global variables
-      use variables, only: maho, &                                          ! [GR-CROP Phase B/10] narrow
+      ! [SS-GR-FINAL B6] maho → swap_array_dimensions; remainder DEFERRED
+      use swap_array_dimensions, only: maho
+      use variables, only: &                                               ! [SS-GR-FINAL B6] residuals — all DEFERRED
+                            ! DEFERRED: gird/irrigevent/schedule/swirfix — irrigation schedule state; Phase C3
                             gird, irrigevent, schedule, swirfix,           &
+                            ! DEFERRED: irdate/nirri/irdepth/irconc/irtype/cirr — irrigation event arrays; Phase C3
                             irdate, nirri, irdepth, irconc, irtype, cirr,  &
+                            ! DEFERRED: isua/dvs/noddrz/rd/swsolu/swcirrthres — crop/soil state; Phase C3
                             isua, dvs, noddrz, rd, swsolu, swcirrthres,    &
+                            ! DEFERRED: cirrthres/perirrsurp/raithreshold/dayfix — irrigation config; Phase C3
                             cirrthres, perirrsurp, raithreshold, dayfix,   &
+                            ! DEFERRED: flCropCalendar/flCropHarvest/flIrrigationOutput — crop flags; Phase C3
                             flCropCalendar, flCropHarvest, flIrrigationOutput, &
+                            ! DEFERRED: tstairrig/tendirrig — irrigation timing; Phase C3
                             tstairrig, tendirrig,                          &
+                            ! DEFERRED: treltab/rawtab/tawtab/dwatab/hcritab/tcritab — scheduling tables; Phase C3
                             treltab, rawtab, tawtab, dwatab, hcritab, tcritab, &
+                            ! DEFERRED: ditab/fidtab/cirrs/isuas — scheduling tables; Phase C3
                             ditab, fidtab, cirrs, isuas
       use array_utils, only: afgen
       use soilhydraulics_utils, only: watcon
@@ -317,10 +327,18 @@ subroutine SSDI_irrigation(iTask, state)
 
 ! [SS-SWC S-2.12B] h/theta/iptra_day/iqreddry_day/iqredsol_day retired — read via state%soilwater
 ! SS-TC TC-12: t1900 retired from only-list; read via state%timecontrol.
-use variables, only: mairg, irrigevent, qssdi, qssdisum, dt_SSDI_event,   &  ! [GR-BH C7] numnod->state%mesh%numnod; zbotcp unused dropped
+! [SS-GR-FINAL B6] mairg → swap_array_dimensions; remainder DEFERRED
+use swap_array_dimensions, only: mairg
+use variables, only: &      ! [SS-GR-FINAL B6] DEFERRED — SSDI persistent state needs irrigation_state_t; Phase C3
+                     ! DEFERRED: irrigevent/qssdi/qssdisum/dt_SSDI_event — SSDI runtime state; no state home yet
+                     irrigevent, qssdi, qssdisum, dt_SSDI_event,           &
+                     ! DEFERRED: swssdi_irr/nod_ssdi_irr/ssdi_schedule_irr/ssdi_sched_type_irr — SSDI config; Phase C3
                      swssdi_irr, nod_ssdi_irr, ssdi_schedule_irr, ssdi_sched_type_irr, &
+                     ! DEFERRED: nod_ssdi_sensor_irr/ssdi_threshold_irr/ssdi_threshold_z_irr — SSDI config; Phase C3
                      nod_ssdi_sensor_irr, ssdi_threshold_irr, ssdi_threshold_z_irr, &
+                     ! DEFERRED: ssdi_amount_irr/ssdi_appl_rate_irr/sw_interval_irr/days_interval_irr — SSDI config; Phase C3
                      ssdi_amount_irr, ssdi_appl_rate_irr, sw_interval_irr, days_interval_irr, &
+                     ! DEFERRED: days_counter_irr/nirri_ssdi_irr/ssdi_date_irr/ssdi_rate_f_irr/ssdi_amount_f_irr — SSDI runtime; Phase C3
                      days_counter_irr, nirri_ssdi_irr, ssdi_date_irr, ssdi_rate_f_irr, ssdi_amount_f_irr
 use swap_state_mod, only: swap_state_t
 

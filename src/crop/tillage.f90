@@ -7,7 +7,14 @@ module tillage_mod
 
    ! SS-TC TC-12: t1900 retired from only-list; read via state%timecontrol%t1900 at each call site.
    ! [SS-TC TC-14] date retired — read via state%timecontrol%date
-   use variables, only: swhyst, swsolu, swoxygen, Bdens, ParamVG, &
+   ! [SS-GR-FINAL B6] all remaining symbols DEFERRED: swhyst/swsolu/swoxygen/Bdens/ParamVG/NumLay/botcom/SwDiscrvert
+   !   — soil/crop config globals; no state home yet; Phase C3
+   use variables, only: &
+                        ! DEFERRED: swhyst/swsolu/swoxygen — soil/crop switches; Phase C3
+                        swhyst, swsolu, swoxygen, &
+                        ! DEFERRED: Bdens/ParamVG — soil hydraulic config; Phase C3
+                        Bdens, ParamVG, &
+                        ! DEFERRED: NumLay/botcom/SwDiscrvert — soil discretisation; Phase C3
                         NumLay, botcom, SwDiscrvert, &  ! [GR-BH C7] flksatexm/zbotcp/NumNod/layer/dz/disnod/psilt/pclay->state%mesh/soilwater; [SS-BMI2 Task 5] tend removed — global retired
                         ! Tillage bridge variables with renaming (SAVE statements removed)
                         ! [SS-TIL T-5] Groups C/D/E retired from variables — reads via state%tillage
