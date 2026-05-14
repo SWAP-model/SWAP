@@ -585,8 +585,16 @@
 ! SS-CRP C-2.5: state added (optional, intent in) to read flWrtNonox.
 ! SS-TC TC-10: t1900 read via state%timecontrol tc_t1900 alias.
 ! SS-GR-ATM A5.1: intent changed inout to allow dual-write in cropfixed_init_from_config.
+! [GR-CROP Phase B/6] narrow use variables
 ! ----------------------------------------------------------------------
-      use variables
+      use variables, only: magrs, icrop, dvs, idev, lai, tsum, cf, ch, &  ! [GR-CROP Phase B/6]
+                           rd, rdpot, max_resp_factor, swrd, rdi, rri,  &
+                           rdc, swgc, swcf, swinter, swdrought, swdmi2rd, &
+                           cropstart, tbase, tsumea, tsumam, rdmax, rdm, &
+                           siccapact, siccaplai, w_root_ss, wiltpoint,   &
+                           twilt, flhydrlift, gc, cfeic,                 &
+                           gctb, cftb, chtb, cfeictb, rdtb, mrftb, wrtb, &
+                           swinco, reltr
       use soilhydraulics_utils, only: watcon
       use array_utils, only: afgen
       use rootextraction_mod, only: MatricFlux
@@ -1223,8 +1231,33 @@
 ! SS-CRP C-2.5: state added (optional, intent in) to read flWrtNonox.
 ! SS-TC TC-10: t1900,daynr,daycum,date read via state%timecontrol tc_* aliases.
 ! SS-GR-ATM A5.1: intent changed inout to allow dual-write in cropwofost_init_from_config.
+! [GR-CROP Phase B/6] narrow use variables
 ! ----------------------------------------------------------------------
-      use variables
+      use variables, only: &                                                ! [GR-CROP Phase B/6]
+        macp, magrs, icrop, dvs, dvsend, rd, rdpot, rdm, rdmax, rdi, rri, &
+        rdc, swrd, swdmi2rd, swrdc, swdrought, swcf, swgc, swinter,       &
+        swbulb, swinco, lai, laipot, laiem, laiexp, laiexppot, laimax,    &
+        cf, ch, cfeic, tsum, tsumea, tsumam, tbase, daycrop, lat, daylp,  &
+        kdif, siccapact, siccaplai, cropstart, cropend,                    &
+        wlv, wlvpot, wst, wstpot, wso, wsopot, wrt, wrtpot, wrtmax, wrtmin, &
+        cwdm, cwdmpot, pgass, pgasspot, reltr, lrnr, lsnr, nni,           &
+        anlv, anst, nmxlv, nmaxlv, nmaxst, nmaxrt, nmaxso, nlai,          &
+        rnflv, rnfst, rnfrt, fstr, fntrt, npart, nfixf, nsla,             &
+        cvl, cvo, cvr, cvs,                                                &
+        flCropHarvest, flCropNut, flHarvestDay, flhydrlift, flanthesis,    &
+        q10, rmr, rml, rms, rmo, rfsetb, frtb, fltb, fstb, fotb, fbltb,  &
+        fbl, drbl, drblpot, dwbl, dwblpot, wbl, wblpot,                   &
+        cftb, chtb, cfeictb, rdtb, slatb, rgrlai, rlwtb, dtsmtb, rdrrtb, rdrstb, &
+        dlc, dlo, span, spa, ssa, logf, plwt, plwti, tdwi,                &
+        lv, lvpot, lvage, lvagepot, sla, slapot,                          &
+        ilvold, ilvoldpot, idsl,                                           &
+        dwlv, dwlvpot, dwrt, dwrtpot, dwso, dwst, dwstpot,                &
+        dwlvcrop, dwlvsoil, gasst, gasstpot,                              &
+        glaiex, glaiexpot, mrest, mrestpot,                               &
+        tadw, tadwpot, gwrt, harlosorm_tot, fraharlosorm_lv, fraharlosorm_so, &
+        fraharlosorm_st,                                                   &
+        rdrns, perdl, outfil, pathwork, project, dvsnlt, dvsnt,           &
+        twilt, wiltpoint, tcnt, vernbase, verndvs, vernrtb, vernsat
       use wofost_soil_interface
       use array_utils, only: interpol, afgen, insw
       use soilhydraulics_utils, only: watcon
