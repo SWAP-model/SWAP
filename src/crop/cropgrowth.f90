@@ -1045,11 +1045,14 @@
       subroutine nocrop ()
 ! ----------------------------------------------------------------------
 
-      ! [SS-GR-FINAL B5] DEFERRED — nocrop: albedo/rsc: no state home;
-      !   rd/rdpot/lai/laipot/cf/ch/tsum/dvs: state%crop homes exist but nocrop takes no state arg
-      !   cwdmpot/cwdm/wsopot/wso/wlvpot/wlv/wstpot/wst/wrtpot/wrt: state%crop%wofost homes
-      !   Note: CropGrowth already mirrors all nocrop() zeroes to state after the call.
-      use variables, only: rd,rdpot,lai,laipot,cf,ch,albedo,rsc,tsum,dvs,               & ! [SS-GR-FINAL B5] DEFERRED
+      ! [SS-GR-CROPRT B4] DEFERRED — nocrop: pure write site (sets globals to zero defaults).
+      !   All written symbols have state homes but nocrop takes no state arg — adding state arg
+      !   would be the Phase C cleanup. CropGrowth already mirrors all nocrop() zeroes to state
+      !   immediately after the call (lines 153-172 in CropGrowth body), so state stays consistent.
+      !   albedo/rsc: state%crop%common homes (A4); rd/rdpot/lai/laipot/cf/ch/tsum/dvs: state%crop
+      !     homes (A5.1); cwdmpot/cwdm/wso/wsopot/wlv/wlvpot/wst/wstpot/wrt/wrtpot:
+      !     state%crop%wofost homes. Deferred until Phase C adds state arg to nocrop.
+      use variables, only: rd,rdpot,lai,laipot,cf,ch,albedo,rsc,tsum,dvs,               & ! [SS-GR-CROPRT B4] DEFERRED
                            cwdmpot,cwdm,wsopot,wso,wlvpot,wlv,wstpot,wst,wrtpot,wrt
       implicit none
 
