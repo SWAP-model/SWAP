@@ -203,8 +203,8 @@ contains
       FactNuptJuvenil = 0.0d0
       FlNuptJuvenil = .false.
       if(flCropcalendar .and.dvs.lt. 1.0d0 .and. LaiCritNupt.gt.1.0d-02 &
-     &                                     .and. lai.lt.LaiCritNupt)then
-         FactNuptJuvenil = ( LaiCritNupt - lai ) / LaiCritNupt
+     &                                     .and. state%crop%lai.lt.LaiCritNupt)then  ! GR-ATM C7: lai→state%crop%lai
+         FactNuptJuvenil = ( LaiCritNupt - state%crop%lai ) / LaiCritNupt   ! GR-ATM C7: lai→state%crop%lai
          FlNuptJuvenil = .true.
       end if
 
