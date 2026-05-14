@@ -214,7 +214,8 @@ subroutine test_config_to_variables_zero_forces_retired_switches()
    use config_to_variables_mod, only: config_to_variables
    use swap_state_mod, only: swap_state_t
    ! [SS-GR-CROPRT A3] swrum dropped from import — global retired (always 0; outrume calls dropped)
-   use variables, only: swend, swcaprise
+   ! [SS-GR-CROPRT C1] swend dropped from import — global + state field retired (ADR 0009: always 0)
+   use variables, only: swcaprise
    implicit none
    type(swap_config_t) :: config
    type(swap_state_t)  :: state
@@ -226,13 +227,13 @@ subroutine test_config_to_variables_zero_forces_retired_switches()
    ! fields still explicitly forced are tested below.
    !
    ! Pre-set to non-default to prove the adapter still writes these explicitly.
-   swend   = 99      ! C-category: forced to 0 pending Phase D global deletion
+   ! [SS-GR-CROPRT C1] swend = 99 test dropped — global + state field retired
    ! [SS-GR-CROPRT A3] swrum = 99 test dropped — global retired
    swcaprise = .true. ! active in soilhydraulics.f90; forced .false. (no config field yet)
 
    call config_to_variables(config, state)
 
-   @assertEqual(0, swend)
+   ! [SS-GR-CROPRT C1] assertEqual(0, swend) dropped — global retired
    ! swheader now written to state%timecontrol%swheader — forced to 0 by ADR 0009 block
    @assertEqual(0, state%timecontrol%swheader)
    ! [SS-GR-CROPRT A3] swrum assertion dropped — global retired

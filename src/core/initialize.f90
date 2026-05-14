@@ -206,9 +206,9 @@
       swpondmx           = 0 
       swqhbot            = 0 
       swredu             = 0 
-      swsophy            = 0 
-      swend              = 0
-      ! [SS-GR-FINAL D1] swvap/vap/wba zero-fills dropped — declarations retired 
+      swsophy            = 0
+      ! [SS-GR-CROPRT C1] swend zero-fill dropped — global + state field retired (ADR 0009: always 0)
+      ! [SS-GR-FINAL D1] swvap/vap/wba zero-fills dropped — declarations retired
       aqamp              = 0.0d0 
       aqave              = 0.0d0 
       aqper              = 0.0d0 

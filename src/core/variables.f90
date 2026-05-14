@@ -788,7 +788,7 @@
       
       ! [SS-GR-CROPRT A3] swrum retired — always 0 (no config field); outrume calls dropped
       ! [SS-GR-FINAL D1] swini retired — 0 consumers
-      integer   swend              ! Switch for output file *.END with end conditions: 0 = no; 1 = end of simulation; 2 = each day
+      ! [SS-GR-CROPRT D1] swend retired — end-state dump switch; ADR 0009 zeroed permanently; state field deleted
       ! [SS-GR-FINAL D1] swwba retired — WBA output deleted; 0 consumers
       ! [SS-GR-FINAL D1] swvap retired — VAP output deleted; 0 consumers
       ! [SS-GR-FINAL D1] vap retired — VAP file handle; 0 consumers

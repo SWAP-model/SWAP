@@ -1189,12 +1189,12 @@ contains
       ! ADR 0009 retired output switches — W-globals zeroed by initialize.f90
       ! or Fortran module default; zero-force lines dropped (GR-FINAL C4).
       ! Remaining: functional switch (swcaprise), state field (swheader),
-      ! R-category (swrum, still read by swapoutput.f90), and C-category (swend).
+      ! R-category (swrum, still read by swapoutput.f90).
+      ! [SS-GR-CROPRT C1] swend (C-category) write dropped — global + state field retired (ADR 0009: always 0)
       ! ---------------------------------------------------------------
       state%timecontrol%swheader = 0
       swcaprise       = .false.        ! active in soilhydraulics.f90 (R; always .false. — no config field yet)
       ! [SS-GR-CROPRT A3] swrum adapter write dropped — global retired (always 0; outrume calls dropped)
-      swend           = 0              ! C-category: dual-write to state%crop%common%swend in swap_mod
       ! [GR-FINAL C4] dropped W-globals (all zero by init.f90 or Fortran default):
       !   swafo, swaun, swvap, swbal, swwba, swsba, swblc, swdrf, swstr, swirg,
       !   swini, swcapriseoutput, swswb, swoutputmodflow

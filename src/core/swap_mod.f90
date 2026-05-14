@@ -54,7 +54,8 @@ contains
       use variables, only : flswapshared, flcropnut, swfrost, &
                             ! [SS-GR-CROPRT A1] flagetracer dropped — retired (ADR 0032; always .false.)
                             swusecn, flcropcalendar, &
-                            flharvestday, flcropoutput, swcrp, swend, project, &
+                            flharvestday, flcropoutput, swcrp, project, &
+                            ! [SS-GR-CROPRT C1] swend dropped — global + state field retired (ADR 0009; always 0)
                             flCropHarvest, &   ! [SS-GR-CROPRT A5] initial zero mirror
                             ! [GR-FINAL C3] flirrigationoutput dropped: W-global (0 consumers; ADR 0009 deleted IrrigationOutput)
                             flTillage, flSSDI, &
@@ -407,7 +408,7 @@ contains
    state%crop%common%flCropOutput   = flCropOutput
    state%crop%common%flCropNut      = flCropNut
    state%crop%common%flHarvestDay   = flHarvestDay
-   state%crop%common%swend          = swend
+   ! [SS-GR-CROPRT C1] swend dual-write dropped — state%crop%common%swend retired; ADR 0009: always 0
    state%crop%common%rd             = rd
    state%crop%common%rdpot          = rdpot
    state%crop%common%rdm            = rdm
@@ -773,7 +774,7 @@ contains
          end if
 !        ADR 0009 Phase 5+: IrrigationOutput deleted (swirg=0).
          if (tc_flDayEnd .and. flCropNut)    call SoilManagement(6, state)   ! SS-TC TC-13
-         if (state%crop%common%swend.eq.2 .and. tc_flDayEnd)   call soilwateroutput(3, state)  ! [GR-FINAL C3] swend via state
+         ! [SS-GR-CROPRT C1] swend.eq.2 daily-dump branch dropped — ADR 0009: swend always 0
 
 !    shared simulation
      if (flSwapShared .and. tc_flDayEnd) call SharedSimulation(3)  ! SS-TC TC-13
@@ -785,7 +786,7 @@ contains
    subroutine swap_close(state, config)
       use variables, only : flswapshared, flcropnut, project, swcrp
                             ! [SS-GR-CROPRT A1] flagetracer dropped — retired (ADR 0032; always .false.)
-                            ! [GR-FINAL C3] swend dropped: read via state%crop%common%swend
+                            ! [SS-GR-CROPRT C1] swend dropped — global + state field retired (ADR 0009)
       use swap_log,  only: log_info
       use management_soil_mod, only: SoilManagement
       use timecontrol_mod, only: itertime_close
@@ -798,7 +799,7 @@ contains
 !  close output files (always run; iCaller branch retired)
    if (flSwapShared) call SharedSimulation(4)
    call SwapOutput(3, state)
-   if (state%crop%common%swend.eq.1) call SoilWaterOutput(3, state, config)  ! [SS-GR-CROPRT A3]
+   ! [SS-GR-CROPRT C1] swend.eq.1 end-sim-dump branch dropped — ADR 0009: swend always 0
    call SoilWaterOutput(4, state, config)   ! [SS-GR-CROPRT A3]
    if (swcrp.eq.1) call CropOutput(3, state)
    ! [SS-TC TC-14] flag reads via state%timecontrol

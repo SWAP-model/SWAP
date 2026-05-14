@@ -20,8 +20,7 @@ module crop_common_state_mod
       logical      :: flCropNut      = .false.        !! simulate crop nutrient stress
       logical      :: flHarvestDay   = .false.        !! current day is harvest day
 
-      ! End-of-simulation control (integer switch in legacy: 0/1/2)
-      integer      :: swend          = 0
+      ! [SS-GR-CROPRT D1] swend state field retired — ADR 0009 zeroed permanently; swap_mod branches dropped
 
       ! Root depth
       real(real64) :: rd             = 0.0_real64     !! actual rooting depth (L)
