@@ -21,7 +21,22 @@
 !   tsoil retained: still threaded to ArableLandGerm / grass / sumttd.
 ! ----------------------------------------------------------------------
 
-      use variables, dummy_tsoil_cg_ => tsoil
+      use variables, only: &                                                 ! [GR-CROP Phase B/5] narrow
+        icrop, flCropCalendar, cropstart, cropend, flCropEmergence,         &
+        flCropHarvest, flCropReadFile, flCropPrep, flCropSow, flCropGerm,   &
+        swinco, croptype, daycrop, rd, rdpot, lai, laipot, cf, ch, tsum,   &
+        dvs, cwdmpot, cwdm, wsopot, wso, wlvpot, wlv, wstpot, wst,        &
+        wrtpot, wrt, nofd, atmin7, tmn, tmnr, lat, rad, fco2amax, fco2eff, &
+        eff, amaxtb, tmpftb, tmnftb, kdif, swdrought, swcrp, dvsend,       &
+        swharv, swbulb, plwt, remoc, pld, q10, pgasspot, pgass, relmf,     &
+        swpotrelmf, flCropNut, nlue, anlv, anst, nmxlv, nmaxlv, nmaxst,   &
+        nmaxrt, lrnr, lsnr, nni, rnflv, rnfst, frnx, fstr, flHarvestDay,  &
+        noddrz, pathcrop, cropfil, bgerm, cgerm,                           &
+        agerm, hprep, dhPrep, zPrep, hSow, dhSow, zSow, zTempSow,         &
+        dtempSow, TempSow, MaxPrepDelay, MaxSowDelay, PrepDelay, SowDelay, &
+        tsumemeopt, tsumgerm, hdrygerm, hwetgerm, zgerm, TBASEM, TEFFMX,  &
+        atmtr, daylp, difpp, dsinbe,                                       &
+        dummy_tsoil_cg_ => tsoil
       !! Rename config-staging tsoil to avoid clash with dummy arg tsoil.
       !! [SS-HEAT] Task 9: tsoil retained as config-staging buffer; global is not compute state.
       use array_utils, only: afgen
@@ -831,9 +846,11 @@
 ! SS-TC TC-10: state added (intent in); threaded to OutCropFixed /
 !   OutWofost / OutGrass so they can read date,t via state%timecontrol.
 ! [SS-BMI2] inout: init/cleanup of crop_output_row buffer at top-level state.
+! [GR-CROP Phase B/5] narrow use variables
 ! ----------------------------------------------------------------------
 
-      use variables
+      use variables, only: flCropOpenFile, outfil, cropfil, pathwork,   & ! [GR-CROP Phase B/5]
+                           project, crp, croptype, icrop
       use error_mod, only: fatalerr_collected
       use file_io_mod, only: file_open
       use swap_state_mod, only: swap_state_t
@@ -976,8 +993,15 @@
 ! SS-HEAT pre-Task-8: tsoil(:) non-optional dummy arg; callers pass
 !   state%heat%tsoil. Global tsoil excluded via rename.
 ! SS-SWC S-2.7: state added (intent in) for soil-water-core h reader cutover.
+! [GR-CROP Phase B/5] narrow use variables
 ! ----------------------------------------------------------------------
-      use variables, dummy_tsoil_alg_ => tsoil
+      use variables, only: &                                                 ! [GR-CROP Phase B/5]
+        dvs, flCropPrep, flCropSow, flCropGerm, dhPrep, hPrep, zPrep,      &
+        dhSow, hSow, zSow, zTempSow, dtempSow, TempSow,                    &
+        MaxPrepDelay, MaxSowDelay, PrepDelay, SowDelay,                     &
+        tsumemeopt, tsumgerm, hdrygerm, hwetgerm, zgerm, TBASEM, TEFFMX,  &
+        agerm, bgerm, cgerm,                                               &
+        dummy_tsoil_alg_ => tsoil
       !! Rename config-staging tsoil to avoid clash with dummy arg tsoil.
       !! [SS-HEAT] Task 9: tsoil retained as config-staging buffer; global is not compute state.
       use swap_constants, only: small
@@ -1152,8 +1176,11 @@
 !                          atmosphere (Lintul4) added by Iwan Supit
 ! SS-TC TC-10: state added (intent in); iyear read via state%timecontrol
 !   tc_iyear alias.
+! [GR-CROP Phase B/5] narrow use variables
 ! ----------------------------------------------------------------------
-      use variables
+      use variables, only: fco2amax, fco2eff, fco2tra, flco2,           & ! [GR-CROP Phase B/5]
+                           co2year, mayrs, co2ppm,                       &
+                           co2amaxtb, co2efftb, co2tratb
       use array_utils, only: afgen
       use error_mod, only: fatalerr_collected
       use swap_state_mod, only: swap_state_t
