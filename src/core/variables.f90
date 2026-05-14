@@ -58,8 +58,7 @@
       ! integer   iyearm1            ! moved to state%timecontrol%iyearm1
       integer   logf               ! Internal number of logbook output file *.LOG
 
-      ! Exchange/DLL persistent state (formerly local SAVE in swap.f90 handle_exchange)
-      real(8)   ex_tlast           ! [SS-DRV Task 6] dead — handle_exchange retired; only initialize.f90 zeros it. Retirement candidate.
+      ! [SS-GR-FINAL D1] ex_tlast retired — handle_exchange dead; 0 consumers
       
       ! Oxygen stress persistent state (moved from O2_pars module and OxygenStress subroutine)
       real(8)   o2_w_root          ! Dry weight per root length (kg/m)
@@ -81,7 +80,7 @@
       real(8)   o2_c_min_micro     ! Min O2 for microbial resp
       real(8)   o2_c_macro         ! Macropore O2 conc
       real(8)   o2_ctopnode        ! Top node O2 conc
-      logical   o2_initialized     ! Initialization flag
+      ! [SS-GR-FINAL D1] o2_initialized retired — 0 consumers (o2_ini_stress is the one with consumers)
       
       ! [SS-BMI2 Task 5] retired 2026-05-13 — moved to state%timecontrol (ADR 0041)
       ! integer   period             ! moved to state%timecontrol%period
@@ -271,14 +270,14 @@
       ! real(4)   out_win            ! Average wind speed of current day (m/s)
 
 ! --- irrigation variables
-      integer   swirg              ! Switch for output file *.IRG with irrigation output: 0 = no; 1 = yes
-      integer   irg                ! Internal number of irrigation output file *.IRG
+      ! [SS-GR-FINAL D1] swirg retired — IRG output deleted; 0 consumers
+      ! [SS-GR-FINAL D1] irg retired — IRG file handle, never opened; 0 consumers
       integer   irrigevent         ! Switch: 0 = no irrigation; 1 = fixed irrigation event; 2 = scheduled irrigation event
       integer   irtype(mairg)      ! Type of fixed irrigation: 0 = sprinkling irrigation; 1 = surface irrigation
       integer   isua               ! Switch for type of irrigation: 0 = sprinkling irrigation, 1 = surface irrigation
       integer   isuas              ! Switch for type of scheduled irrigation: 0 = sprinkling irrigation, 1 = surface irrigation
       integer   nirri              ! Number of irrigation event
-      integer   phormc             ! Swith for 5th irrigation criterion: 0 = use pressure head; 1 = use water content
+      ! [SS-GR-FINAL D1] phormc retired — 0 consumers
       integer   schedule           ! Switch for simulation of irrigation scheduling: 0 = no, 1 = yes
       integer   swirfix            ! Switch for fixed irrigation: 0 = no applications prescribed; 1 = applications are prescribed
       integer   swcirrthres        ! Switch to allow over irrigation when a conc-threshold is exceeded: 0 = no; 1 = yes/allowed
@@ -309,7 +308,7 @@
       ! logical   flheadirg          ! moved to state%timecontrol%flheadirg
       ! logical   flirrigate         ! moved to state%timecontrol%flIrrigate
       ! logical   flIrg1Start        ! moved to state%timecontrol%flIrg1Start
-      logical   FlIrrigationOutput ! Flag indication irrigation output
+      ! [SS-GR-FINAL D1] FlIrrigationOutput retired — 0 consumers
       integer   dayfix             ! days since last irrigation event
 
 ! --- start of growth grass      
@@ -319,7 +318,7 @@
       real(8)   tsumdepth          ! depth at which temp above tsumtemp for grass growth [0.0..100.0 cm below soil surface, R]
       
 ! --- crop variables
-      integer   swCrop             ! Switch for simulating crop: 0 = No; 1 = Yes
+      ! [SS-GR-FINAL D1] swCrop retired — all callers use state%crop; 0 consumers
       logical   flCropCalendar     ! Flag indicating that crop season is active (but currently might be bare or cropped)
       logical   flCropEmergence    ! Flag indicating period from crop emergence until harvest
       logical   flCropHarvest      ! Flag indicating period from crop harvest until the end of crop season
@@ -352,7 +351,7 @@
       integer   swcf               ! Switch for simple crop: 1 = crop factor is input; 2 = crop height is input
       integer   swdrought          ! Switch for drought stress (1 = Feddes et al., 1978; 2 = De Jong van Lier et al., 2008)
       integer   swgc               ! Switch for simple crop: 1 = leaf area index is input; 2 = soil cover fraction is input
-      integer   swjarvis           ! Switch for compensation of root water uptake stress according to Jarvis (1989) (deprecated from 4.1.73; replaced by swcompensate)
+      ! [SS-GR-FINAL D1] swjarvis retired — deprecated switch; 0 consumers
       integer   swcompensate       ! Switch for method of compensation of root water uptake stress
       real(8)   alphacrit          ! Critical stress index for compensation of root water uptake (-)
       real(8)   dcritrtz           ! Threshold for rootzone to start compensation of root water uptake; Walsum (cm)
@@ -621,7 +620,7 @@
       integer   ilnmxl
       real(8)   fraharlosorm_lv, fraharlosorm_st, fraharlosorm_so
       real(8)   fstr
-      real(8)   amFERT             ! amount of applied Fertilizer (kg/ha/d N)
+      ! [SS-GR-FINAL D1] amFERT retired — 0 consumers
 
 ! --- tillage variables (bridge for tillage module)
       integer   till_swtill                       ! Switch: 0=no tillage, 1=tillage
@@ -673,14 +672,14 @@
       ! integer   MaxIterTime        ! moved to state%timecontrol%MaxIterTime
       ! integer   MaxIt              ! moved to state%timecontrol%MaxIt
       integer   MaxBackTr
-      integer   Itnumb(100,2)
+      integer   Itnumb(100,2)      ! Iteration number statistics [soilhydraulics.f90, timecontrol_mod.f90]
       real(8)   CritDevh1Cp        ! Convergence criterium for Richards equation: relative difference in pressure heads (-)
       real(8)   CritDevh2Cp        ! Convergence criterium for Richards equation: absolute difference in pressure heads (L)
       real(8)   CritDevPondDt
       logical   fldumpconvcrit     ! flag to generate additional output about convergence-warnings from subr Headcalc
       logical   flwarn_hc          ! Headcalc warning flag (previously SAVE variable)
       integer   iwarn_hc           ! Headcalc warning counter (previously SAVE variable)
-      integer   nstep_hc           ! Headcalc step counter (previously SAVE variable)
+      ! [SS-GR-FINAL D1] nstep_hc retired — 0 consumers
       integer   dev_cmb            ! Mass balance deviation file unit (previously SAVE in checkmassbal)
       ! [GR-BH Task 36] retired 2026-05-13 — moved to state%soilwater%flksatexm (GR-BH arc)
       ! logical   flksatexm          ! flag Ksatexm variable present in input file
@@ -691,18 +690,18 @@
       ! [SS-BND] retired 2026-05-11 — boundary subsystem migrated to state%soilwater (ADR 0035)
       ! logical   FlRunoff
       logical   swcaprise          ! flag to minimize cap.rise to rootzone (for experts only)
-      logical   swcapriseoutput    ! flag to generate an output file with cap.rise to/form rootzone (for experts only)
+      ! [SS-GR-FINAL D1] swcapriseoutput retired — 0 consumers
 
       ! [GR-BH Task 36] retired 2026-05-13 — moved to state%soilwater%H0max/k1max/q0 (GR-BH arc)
       ! real(8)   h0max
       ! real(8)   k1max
       ! real(8)   q0
 
-      integer   afo                ! Internal number of output file *.AFO with formatted hydrologic data for soil water quality models
-      integer   aun                ! Internal number of output file *.AUN with unformatted hydrologic data for soil water quality models
-      integer   bal                ! Internal number of output file *.BAL with overview of water balance
-      integer   blc                ! Internal number of output file *.BLC with all water balance components in detail
-      integer   bma                ! Internal number of output file *.BMA with detailed yearly water balance in case of macropores
+      ! [SS-GR-FINAL D1] afo retired — AFO output deleted; 0 consumers
+      ! [SS-GR-FINAL D1] aun retired — AUN output deleted; 0 consumers
+      ! [SS-GR-FINAL D1] bal retired — BAL output deleted; 0 consumers
+      ! [SS-GR-FINAL D1] blc retired — BLC output deleted; 0 consumers
+      ! [SS-GR-FINAL D1] bma retired — BMA macropore balance never opened; 0 consumers
       ! [SS-SWC] retired 2026-05-12 — moved to state%soilwater%bpegwl (ADR 0038)
       ! integer   bpegwl             ! Node at bottom of perched groundwater
       integer   botcom(maho)       ! Array with number of bottom compartments in each soil layer
@@ -737,8 +736,8 @@
       integer   numtab(macp)       ! Number of table entries of soil physical values for each model compartment
       integer   numtablay(maho)    ! Number of table entries of soil physical values for each soil layer
       integer   rot                ! Internal number of output file *.ROT with microscopic root water extraction data 
-      integer   swstr              ! Switch for output file *.STR with daily stress factors output: 0 = no; 1 = yes
-      integer   str                ! Internal number of output file *.STR with stress factors for transpiration
+      ! [SS-GR-FINAL D1] swstr retired — STR output deleted; 0 consumers
+      ! [SS-GR-FINAL D1] str retired — STR file handle; 0 consumers (swap_csv_output str is a local char var)
       integer   sw2                ! Switch for prescribed bottom flux: 1 = sine function; 2 = table
       integer   sw3                ! Switch for prescribed hydraulic head of deep aquifer: 1 = sine function; 2 = table
       integer   sw4                ! Switch for extra groundwater flux as function of time: 0 = no extra flux; 1 = include extra flux
@@ -747,13 +746,11 @@
       integer   swcsv_tz              ! Switch for special CSV output specified by user; default = 0 ;if 1, requires InList_csv
       character(len=1024) InList_csv_tz   ! character string with comma-separated list of variables for CSV output
       real(8)   tz_z1_z2(2)        ! Depth range for time-depth CSV output (default: top soil profile, bottom soil profile)
-      integer   swafo              ! Switch for extra output file with formatted data for water quality models: 
-                                   !       0 = no output; 1 = output to file *.AFO; 2 = output to file *.BFO
-      integer   swaun              ! Switch for extra output file with unformatted data for water quality models: 
-                                   !       0 = no output; 1 = output to file *.AUN; 2 = output to file *.BUN
-      integer   swbal              ! Switch for output file with yearly water balance *.BAL: 0 = no; 1 = yes
-      integer   swblc              ! Switch for output file with detailed yearly water balance *.BLC: 0 = no
-      integer   swsba              ! Switch for output file with daily solute balance *.SBA: 0 = no; 1 = yes; 1 = yes
+      ! [SS-GR-FINAL D1] swafo retired — AFO output deleted; 0 consumers
+      ! [SS-GR-FINAL D1] swaun retired — AUN output deleted; 0 consumers
+      ! [SS-GR-FINAL D1] swbal retired — BAL output deleted; 0 consumers
+      ! [SS-GR-FINAL D1] swblc retired — BLC output deleted; 0 consumers
+      ! [SS-GR-FINAL D1] swsba retired — SBA output deleted; 0 consumers
       ! [GR-BH Task 36] retired 2026-05-13 — moved to state%soilwater%swbotb_runtime (GR-BH arc)
       ! integer   swbotb             ! Switch for bottom boundary condition (see *.SWP input file for overview)
       integer   swbotb3Impl        ! Switch for implicit solution with lower boundary option 3 (Cauchy): 0 = explicit, 1 = implicit
@@ -790,18 +787,17 @@
       integer   swtopsub           ! Switch for topsoil or subsoil: 1 = topsoil, 2 = subsoil
       
       integer   swrum              ! Switch for RUME output file: 0 = no; 1 = yes
-      integer   swini              ! Switch for output files SoilPhysParam.csv and HeatParam.csv: 0 = no; 1 = yes
+      ! [SS-GR-FINAL D1] swini retired — 0 consumers
       integer   swend              ! Switch for output file *.END with end conditions: 0 = no; 1 = end of simulation; 2 = each day
-      integer   swwba              ! Switch for output file *.WBA with daily water balance: 0 = no; 1 = yes
-      integer   swvap              ! Switch for output file *.VAP with soil profile data (water content, pressure head, 
-                                   !        solute concentration, temperature): 0 = no; 1 = yes
-      integer   vap                ! Internal number of output file *.VAP with soil profile data 
-      integer   wba                ! Internal number of output file *.WBA with cumulative water balance data
+      ! [SS-GR-FINAL D1] swwba retired — WBA output deleted; 0 consumers
+      ! [SS-GR-FINAL D1] swvap retired — VAP output deleted; 0 consumers
+      ! [SS-GR-FINAL D1] vap retired — VAP file handle; 0 consumers
+      ! [SS-GR-FINAL D1] wba retired — WBA file handle; 0 consumers
       real(8)   aqamp              ! Amplitude of prescribed sine wave of hydraulic head in deep aquifer (T)
       real(8)   aqave              ! Average hydraulic head in deep aquifer (L)
       real(8)   aqper              ! Period of prescribed sine wave of hydraulic head in deep aquifer (T)
       real(8)   aqtmax             ! Time with maximum hydraulic head in deep aquifer (T)
-      real(8)   atop(18,6)         ! Parameters of reprofunctions for oxygen stress
+      ! [SS-GR-FINAL D1] atop retired — reprofunctions array never read; 0 consumers
       real(8)   basegw             ! Depth of impervious layer (L) for drainage according to Hooghoudt or Ernst
       real(8)   bdens(maho)        ! Array with dry bulk density for each soil layer (M/L3)
       real(8)   c_top(macp)        ! Oxygen concentration at top of compartment(kg/m3)
@@ -921,8 +917,9 @@
       ! real(8)   ipondbeg           ! Ponding water layer (L) on soil surface at start of current intermediate period
       ! real(8)   iprec              ! Intermediate amount of gross precipitation + gross irrigation (L)
       ! real(8)   iqbot              ! Intermediate amount of water flow through bottom of simulated soil column (L)
-      ! [SS-SWC] iqtdo/iqtup retired — iqinfmax/qinfmax stay legacy (out of scope)
-      real(8)   iqinfmax, qinfmax
+      ! [SS-SWC] iqtdo/iqtup retired — iqinfmax stays (used in swap_csv_output); qinfmax retired
+      real(8)   iqinfmax
+      ! [SS-GR-FINAL D1] qinfmax retired — 0 consumers
       ! real(8)   iqdo(macp+1), iqup(macp+1)
       ! SS-SWST Phase 2 Task 11 C2: iqdra removed — state%surfacewater%iqdra owns it.
       ! real(8)   iqdra              ! Moved to surfacewater_state_t%iqdra
@@ -935,7 +932,7 @@
       ! real(8)   iqredfrs           ! Intermediate amount of reduced root water extraction due to frost conditions (L)
       ! real(8)   iruno              ! Intermediate amount of runoff (L)
       ! real(8)   irunon             ! Intermediate amount of runon (L)
-      real(8)   issnowbeg          ! Amount of snow in soil water equivalent (L) at start of current intermediate period
+      real(8)   issnowbeg          ! Amount of snow in soil water equivalent (L) at start of current intermediate period [snow.f90, waterbalance.f90]
       ! [SS-SWC] retired 2026-05-12 — moved to state%soilwater%IThetaBeg (ADR 0038)
       ! real(8)   ithetabeg(macp)    ! Array with volumetric soil water contents (-) for each compartment at start of intermediate period
       ! [SS-SWC] retired 2026-05-12 — moved to state%soilwater%k (ADR 0038)
@@ -1031,7 +1028,7 @@
       ! [SS-BND] retired 2026-05-11 — boundary subsystem migrated to state%soilwater (ADR 0035)
       ! real(8)   qtop               ! Water flux through soil surface (L/T)
       real(8)   relsatthr(maho)    ! Array with relative saturation (-) for each soil layer: to interpolate VG and Ksatexm
-      real(8)   ResultsOxygenStress(19,macp) ! array with results for OxygenStress; for output only 
+      ! [SS-GR-FINAL D1] ResultsOxygenStress retired — 0 consumers 
       ! [SS-BND] retired 2026-05-11 — boundary subsystem migrated to state%soilwater (ADR 0035)
       ! real(8)   reva               ! Actual soil evaporation rate (L/T)
       ! [SS-HEAT] retired 2026-05-10 — moved to state%heat%rfcp (ADR 0034)
@@ -1112,7 +1109,7 @@
       character(len=80) pathdrain  ! Path to folder with drainage input files
 
 ! --- heat variables
-      integer   nheat              ! Number of initial soil temperatures as provided in the input
+      ! [SS-GR-FINAL D1] nheat retired — heat_state.f90 declares its own nheat; 0 consumers here
       integer   swbotbhea          ! Switch for bottom boundary condition: 1 = heat flux is zero; 2 = prescribed temperature
       integer   swtopbhea          ! Switch for top boundary condition: 1 = use air temperatures; 2 = read measured surface temperatures
       integer   swcalt             ! Switch for method of soil water heat flow simulation: 1 = analytical method; 2 = numerical method
@@ -1183,7 +1180,7 @@
 
 ! --- solute variables
       integer   nconc              ! Number of initial solute concentrations as provided in the input
-      integer   sba                ! Internal number of output file *.SBA with cumulative solute balance components
+      ! [SS-GR-FINAL D1] sba retired — SBA output deleted; 0 consumers
       integer   swbr               ! Switch to consider mixed reservoir for solute breakthrough in the saturated zone: 0 = no; 1 = yes
       integer   swbotbc            ! Switch for bottom boundary condition of solute-concentration (see *.SWP input file for overview)
       integer   swsolu             ! Switch for simulation of solute transport: 0 = no; 1 = yes
@@ -1263,28 +1260,28 @@
       ! real(8)   ArMpSs             ! Area fraction of macropores at soil surface (-)  [retired-zero]
 
 ! --- macropore Input parameters (all retired-zero — see [MACRO-RETIRE 2026-05-12])
-      integer SwSoilShr(MaHo)      ! [retired-zero] kept: soilhydraulics shrinkage branch
-      real(8) ThetCrMp(MaHo)       ! [retired-zero] kept: soilhydraulics shrinkage branch
+      ! [SS-GR-FINAL D1] SwSoilShr retired — macropore shrinkage; 0 consumers
+      ! [SS-GR-FINAL D1] ThetCrMp retired — macropore shrinkage; 0 consumers
       real(8) Z_Tp                 ! [retired-zero] kept: ArMpTp/ArMpSs gating
       real(8) CritUndSatVol        ! [retired-zero] kept: waterbalance watertable() arg
 ! --- macropore variables (selected — most retired by deletion)
       real(8) ArMpTp               ! [retired-zero] kept: ArMpSs assignment
       real(8) cQMpLatSs            ! [retired-zero] kept: soilhydraulics zero-write
       real(8) cQMpOutDrRap         ! [retired-zero] kept: waterbalance wbalance term
-      real(8) dFdhMp(MaCp)         ! [retired-zero] kept: soilhydraulics dFdhM term (always 0)
+      ! [SS-GR-FINAL D1] dFdhMp retired — always 0; 0 consumers
       ! [SS-TC] retired 2026-05-12 — moved to state%timecontrol%dtold (ADR 0041)
       ! real(8) dtold                ! moved to state%timecontrol%dtold
       real(8) DiPoCp(MaCp)         ! [retired-zero] kept: soilgrid refinement
       real(8) iQMpOutDrRap         ! [retired-zero] kept: swap_csv/swapoutput DRAINAGE accumulator
-      real(8) iQInTopLatDm1        ! [retired-zero] kept: waterbalance .BMA writer
-      real(8) iQInTopLatDm2        ! [retired-zero] kept: waterbalance .BMA writer
-      real(8) iQInTopVrtDm1        ! [retired-zero] kept: waterbalance .BMA writer
-      real(8) iQInTopVrtDm2        ! [retired-zero] kept: waterbalance .BMA writer
+      real(8) iQInTopLatDm1        ! [retired-zero] kept: waterbalance.f90 macropore BMA writer
+      real(8) iQInTopLatDm2        ! [retired-zero] kept: waterbalance.f90 macropore BMA writer
+      real(8) iQInTopVrtDm1        ! [retired-zero] kept: waterbalance.f90 macropore BMA writer
+      real(8) iQInTopVrtDm2        ! [retired-zero] kept: waterbalance.f90 macropore BMA writer
       real(8) IAvFrMpWlWtDm1(MaCp) ! [retired-zero] kept: soilgrid refinement
       real(8) IAvFrMpWlWtDm2(MaCp) ! [retired-zero] kept: soilgrid refinement
-      real(8) iQExcMtxDm1Cp(MaCp)  ! [retired-zero] kept: soilgrid refinement
-      real(8) iQExcMtxDm2Cp(MaCp)  ! [retired-zero] kept: soilgrid refinement
-      real(8) iQOutDrRapCp(MaCp)   ! [retired-zero] kept: soilgrid refinement
+      real(8) iQExcMtxDm1Cp(MaCp)  ! [retired-zero] kept: soilgrid.f90 macropore redistribution
+      real(8) iQExcMtxDm2Cp(MaCp)  ! [retired-zero] kept: soilgrid.f90 macropore redistribution
+      real(8) iQOutDrRapCp(MaCp)   ! [retired-zero] kept: soilgrid.f90 macropore redistribution
       real(8) IWaSrDm1Beg          ! [retired-zero] kept: waterbalance .BMA writer
       real(8) IWaSrDm2Beg          ! [retired-zero] kept: waterbalance .BMA writer
       real(8) WaSrDm1              ! [retired-zero] kept: waterbalance .BMA writer
@@ -1293,8 +1290,8 @@
       real(8) WaSrDm2Ini           ! [retired-zero] kept: waterbalance wbalance term
       real(8) VlMpStDm1(MaCp)      ! [retired-zero] kept: soilgrid refinement
       real(8) VlMpStDm2(MaCp)      ! [retired-zero] kept: soilgrid refinement
-      integer IcTopMP              ! [retired-zero] kept: cross-subsystem ref
-      integer IDecMpRat            ! [retired-zero] kept: soilhydraulics convergence counter
+      integer IcTopMP              ! [retired-zero] kept: waterbalance.f90 macropore branch
+      ! [SS-GR-FINAL D1] IDecMpRat retired — 0 consumers
       real(8) QExcMpMtx(MaCp)      ! [retired-zero] kept: waterbalance use clause
       real(8) QMaPo                ! [retired-zero] kept: waterbalance qbot term
       real(8) QRapDra              ! [retired-zero] kept: surfacewater drainage terms
@@ -1302,8 +1299,8 @@
       ! belong to the drainage subsystem (set by drainage_config), NOT
       ! macropore — they were grouped here legacy-style. Keep them.
       integer NumLevRapDra         ! Number of drainage levels for rapid drainage (drainage feature)
-      real(8) RapDraReaExp         ! Reaction coefficient for rapid drainage (drainage feature)
-      real(8) RapDraResRef(Madr)   ! Reference rapid drainage resistance (drainage feature)
+      ! [SS-GR-FINAL D1] RapDraReaExp retired — only c2v writes; 0 consumers
+      ! [SS-GR-FINAL D1] RapDraResRef retired — only c2v writes; 0 consumers
       logical FlDecMpRat           ! [retired-zero] kept: soilhydraulics convergence sentinel
       logical flmacropore          ! [retired-zero] forced .false. in init — guards dead branches
       ! [SS-BND] retired 2026-05-11 — boundary subsystem migrated to state%soilwater (ADR 0035)
@@ -1325,12 +1322,19 @@
       ! VlMpStDm1/2, dFdhMp is kept retired-zero, etc.).
 
 ! --- surface water variables
-      integer swswb,swdrf,swsrf,swallo(Madr),swdtyp(Madr)
+      ! [SS-GR-FINAL D1] swswb retired — 0 consumers
+      ! [SS-GR-FINAL D1] swdrf retired — 0 consumers
+      integer swsrf,swallo(Madr),swdtyp(Madr)
       ! [GR-BH Task 37] swnrsrf retired — moved to state%drainage%swnrsrf
-      integer swqhr,swsec,nrpri,nrsec,nmper,swman(mamp)
+      integer swqhr,swsec,nrpri
+      ! [SS-GR-FINAL D1] nrsec retired — 0 consumers
+      integer nmper,swman(mamp)
       ! [GR-BH Task 37] SwTopnrsrf retired — moved to state%drainage%swtopnrsrf
       ! SS-SWST Phase 2 Task 11 C2: numadj/imper removed — state%surfacewater owns them.
-      integer nqh(mamp),drf,swb,nphase(mamp),nodhd(mamp)
+      ! [SS-GR-FINAL D1] nqh retired — 0 consumers
+      ! [SS-GR-FINAL D1] drf retired — 0 consumers
+      ! [SS-GR-FINAL D1] swb retired — 0 consumers
+      integer nphase(mamp),nodhd(mamp)
       ! numadj removed (surfacewater_state_t%numadj)
       integer intwl(mamp)
       ! imper removed (surfacewater_state_t%imper)
@@ -1393,12 +1397,12 @@
       ! Germination before crop growth
       logical   flCropGerm         ! Flag indicating if germination has been realized
       real(8)   zgerm              ! z-level for monitoring temperature for germination
-      integer   DayGerm            ! Daynumber of germiniation
+      ! [SS-GR-FINAL D1] DayGerm retired — 0 consumers
 
       ! Harvest of crop growth
       integer   swharv             ! switch for timing of harvest (0=cropend, 1=maturity)
-      real(8)   hmow               ! maximum pressure head during mowing
-      real(8)   hgrz               ! maximum pressure head during grazing
+      ! [SS-GR-FINAL D1] hmow retired — 0 consumers
+      ! [SS-GR-FINAL D1] hgrz retired — 0 consumers
       real(8)   zmow               ! z-level for monitoring wkability for the crop during mowing
       real(8)   zgrz               ! z-level for monitoring wkability for the crop during start of grazing
 

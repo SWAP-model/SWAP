@@ -446,7 +446,7 @@ contains
       ! cases if the warning ever becomes load-bearing.
       rsurfdeep    = config%drain%surface_runoff%rsurfdeep
       rsurfshallow = config%drain%surface_runoff%rsurfshallow
-      RapDraReaExp = config%drain%surface_runoff%rapdrareaexp
+      ! [SS-GR-FINAL D1] RapDraReaExp write dropped — global retired
       NumLevRapDra = config%drain%surface_runoff%numlevrapdra
       ! swtopdislay(madr) and ftopdislay(madr): broadcast scalar config
       ! field to all levels (currently no per-level schema slot).
@@ -460,11 +460,7 @@ contains
             ftopdislay(i) = config%drain%surface_runoff%ftopdislay
          end do
       end if
-      if (size(RapDraResRef) >= 1) then
-         do i = 1, size(RapDraResRef)
-            RapDraResRef(i) = config%drain%surface_runoff%rapdraresref
-         end do
-      end if
+      ! [SS-GR-FINAL D1] RapDraResRef write dropped — global retired
 
       ! ---------------------------------------------------------------
       ! Soil (audit: 15 + discretization + frost)

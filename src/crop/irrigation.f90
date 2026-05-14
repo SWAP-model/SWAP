@@ -48,8 +48,9 @@
                             isua, dvs, noddrz, rd, swsolu, swcirrthres,    &
                             ! DEFERRED: cirrthres/perirrsurp/raithreshold/dayfix — irrigation config; Phase C3
                             cirrthres, perirrsurp, raithreshold, dayfix,   &
-                            ! DEFERRED: flCropCalendar/flCropHarvest/flIrrigationOutput — crop flags; Phase C3
-                            flCropCalendar, flCropHarvest, flIrrigationOutput, &
+                            ! DEFERRED: flCropCalendar/flCropHarvest — crop flags; Phase C3
+                            ! [SS-GR-FINAL D1] flIrrigationOutput dropped from use clause — W-global retired
+                            flCropCalendar, flCropHarvest, &
                             ! DEFERRED: tstairrig/tendirrig — irrigation timing; Phase C3
                             tstairrig, tendirrig,                          &
                             ! DEFERRED: treltab/rawtab/tawtab/dwatab/hcritab/tcritab — scheduling tables; Phase C3
@@ -306,7 +307,7 @@
 
          end if
 
-         if (irrigevent .ne. 0) flIrrigationOutput = .true.
+         ! [SS-GR-FINAL D1] flIrrigationOutput write dropped — W-global retired (nothing reads it)
 
       end associate  ! tc_t1900, tc_t (SS-TC TC-12)
 

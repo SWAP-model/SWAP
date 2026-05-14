@@ -14,7 +14,7 @@
       ! tend, tstart, MaxIt, MaxIterTime, msteps, flMaxIterTime — deleted.
       ! [SS-TC] retired 2026-05-12 — TimeControl runtime fields default to zero in state%timecontrol (ADR 0041)
       logf               = 0
-      ex_tlast            = 0.0d0
+      ! [SS-GR-FINAL D1] ex_tlast zero-fill dropped — declaration retired
       outdat             = 0.0d0
       outdatint          = 0.0d0
       flSwapShared       = .false.
@@ -95,13 +95,13 @@
       ! [SS-TC] fletsine/flmeteodt/flmetdetail/flrainintens retired to state%timecontrol (ADR 0041)
 
 ! --- irrigation variables
-      irg                = 0 
-      irrigevent         = 0 
-      irtype             = 0 
-      isua               = 0 
-      isuas              = 0 
-      nirri              = 0 
-      phormc             = 0 
+      ! [SS-GR-FINAL D1] irg zero-fill dropped — declaration retired
+      irrigevent         = 0
+      irtype             = 0
+      isua               = 0
+      isuas              = 0
+      nirri              = 0
+      ! [SS-GR-FINAL D1] phormc zero-fill dropped — declaration retired 
       schedule           = 0 
       swirfix            = 0 
       cirrs              = 0.0d0 
@@ -126,19 +126,19 @@
       tendirrig          = 0.0d0 
       treltab            = 0.0d0 
       ! [SS-TC] flheadirg/flirrigate/flIrg1Start retired to state%timecontrol (ADR 0041)
-      FlIrrigationOutput = .false. 
+      ! [SS-GR-FINAL D1] FlIrrigationOutput zero-fill dropped — declaration retired 
 
 ! --- soilwater variables
       MaxBackTr          = 0
       ! [SS-BMI2 Task 5] MaxIt retired 2026-05-13 — moved to state%timecontrol%MaxIt
-      Itnumb             = 0 
-      CritDevh1Cp        = 0.0d0 
-      CritDevh2Cp        = 0.0d0 
-      CritDevPondDt      = 0.0d0 
+      Itnumb             = 0
+      CritDevh1Cp        = 0.0d0
+      CritDevh2Cp        = 0.0d0
+      CritDevPondDt      = 0.0d0
       fldumpconvcrit     = .false.
       flwarn_hc          = .true.     ! Initialize headcalc warning flag (previously SAVE variable)
       iwarn_hc           = 0          ! Initialize headcalc warning counter (previously SAVE variable)
-      nstep_hc           = 0          ! Initialize headcalc step counter (previously SAVE variable) 
+      ! [SS-GR-FINAL D1] nstep_hc zero-fill dropped — declaration retired 
       dev_cmb            = 0          ! Initialize mass balance deviation file unit (previously SAVE in checkmassbal)
       ! [GR-BH Task 36] flksatexm retired — seeded via state%soilwater%flksatexm in soilwater_init
       ! flksatexm          = .false.
@@ -150,11 +150,7 @@
       ! h0max              = 0.0d0
       ! k1max              = 0.0d0
       ! q0                 = 0.0d0
-      afo                = 0 
-      aun                = 0 
-      bal                = 0 
-      blc                = 0 
-      bma                = 0 
+      ! [SS-GR-FINAL D1] afo/aun/bal/blc/bma zero-fills dropped — declarations retired 
       ! [SS-SWC] bpegwl retired — soilwater_init handles init via state%soilwater%bpegwl
       ! bpegwl             = 0
       botcom             = 0 
@@ -184,17 +180,11 @@
       numnodnew          = 0 
       numtab             = 0 
       numtablay          = 0 
-      str                = 0 
-      sw2                = 0 
-      sw3                = 0 
-      sw4                = 0 
-      swafo              = 0 
-      swaun              = 0 
-      swini              = 0
-      swbal              = 0
-      swblc              = 0 
-      swwba              = 0
-      swsba              = 0
+      ! [SS-GR-FINAL D1] str zero-fill dropped — declaration retired
+      sw2                = 0
+      sw3                = 0
+      sw4                = 0
+      ! [SS-GR-FINAL D1] swafo/swaun/swini/swbal/swblc/swwba/swsba zero-fills dropped — declarations retired
       ! [GR-BH Task 36] swbotb retired — seeded via state%soilwater%swbotb_runtime in swap_mod.f90
       ! swbotb             = 0
       swbotbc            = 0 
@@ -218,9 +208,7 @@
       swredu             = 0 
       swsophy            = 0 
       swend              = 0
-      swvap              = 0 
-      vap                = 0 
-      wba                = 0 
+      ! [SS-GR-FINAL D1] swvap/vap/wba zero-fills dropped — declarations retired 
       aqamp              = 0.0d0 
       aqave              = 0.0d0 
       aqper              = 0.0d0 
@@ -445,7 +433,7 @@
 !      pathdrain          = 80*' '
 
 ! --- heat variables
-      nheat              = 0 
+      ! [SS-GR-FINAL D1] nheat zero-fill dropped — declaration retired 
       swbotbhea          = 0 
       swtopbhea          = 0 
       swcalt             = 0 
@@ -488,8 +476,8 @@
       ! [SS-TC] flsnow retired to state%timecontrol%flSnow (ADR 0041)
 
 ! --- solute variables
-      nconc              = 0 
-      sba                = 0 
+      nconc              = 0
+      ! [SS-GR-FINAL D1] sba zero-fill dropped — declaration retired 
       swbr               = 0 
       swsalinity         = 0
       swsolu             = 0 
@@ -553,8 +541,8 @@
 !     Only the retired-zero placeholders kept in variables.f90 are
 !     initialized here. See legacy/swap-4.2.0 for the original
 !     macropore initialization that populated ~80 macropore globals.
-      SwSoilShr            = 0
-      ThetCrMp             = 0.0d0
+      ! [SS-GR-FINAL D1] SwSoilShr zero-fill dropped — declaration retired
+      ! [SS-GR-FINAL D1] ThetCrMp zero-fill dropped — declaration retired
       Z_Tp                 = 0.0d0
       CritUndSatVol        = 0.0d0
       ! [GR-BH Task 36] ArMpSs retired — made local in soilhydraulics/solute/agetracer (ADR 0040 complete)
@@ -562,7 +550,7 @@
       ArMpTp               = 0.0d0
       cQMpLatSs            = 0.0d0
       cQMpOutDrRap         = 0.0d0
-      dFdhMp               = 0.0d0
+      ! [SS-GR-FINAL D1] dFdhMp zero-fill dropped — declaration retired
       iQMpOutDrRap         = 0.0d0
       iQInTopLatDm1        = 0.0d0
       iQInTopLatDm2        = 0.0d0
@@ -583,20 +571,18 @@
       VlMpStDm1            = 0.0d0
       VlMpStDm2            = 0.0d0
       IcTopMP              = 0
-      IDecMpRat            = 0
+      ! [SS-GR-FINAL D1] IDecMpRat zero-fill dropped — declaration retired
       QExcMpMtx            = 0.0d0
       QMaPo                = 0.0d0
       QRapDra              = 0.0d0
       ! Drainage globals (NOT macropore — kept here next to retired set)
       NumLevRapDra         = 0
-      RapDraReaExp         = 0.0d0
-      RapDraResRef         = 0.0d0
+      ! [SS-GR-FINAL D1] RapDraReaExp/RapDraResRef zero-fills dropped — declarations retired
       FlDecMpRat           = .false.
       flmacropore          = .false.
 
 ! --- surface water variables
-      swswb                = 0
-      swdrf                = 0
+      ! [SS-GR-FINAL D1] swswb/swdrf zero-fills dropped — declarations retired
       swsrf                = 0
       swallo               = 0
       swdtyp               = 0
@@ -604,13 +590,11 @@
       swqhr                = 0
       swsec                = 0
       nrpri                = 0
-      nrsec                = 0
+      ! [SS-GR-FINAL D1] nrsec zero-fill dropped — declaration retired
       nmper                = 0
       swman                = 0
       ! [GR-BH Task 37] SwTopnrsrf retired to state%drainage%swtopnrsrf
-      nqh                  = 0
-      drf                  = 0
-      swb                  = 0
+      ! [SS-GR-FINAL D1] nqh/drf/swb zero-fills dropped — declarations retired
       nphase               = 0
       nodhd                = 0
       ! SS-SWST Phase 2 Task 11 C3: numadj/imper removed (state%surfacewater owns them).
@@ -841,10 +825,10 @@
       lossmowtab         = 0.0d0
       lossgrztab         = 0.0d0
       
-      flanthesis         = .false. 
-      flgrazing          = .false. 
-      flgrazingpot       = .false. 
-      flharvest          = .false. 
+      flanthesis         = .false.
+      flgrazing          = .false.
+      flgrazingpot       = .false.
+      flharvest          = .false.
       flharvestpot       = .false. 
 
       return
