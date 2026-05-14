@@ -196,7 +196,7 @@
             enddo
          endif
 !
-! --- in case of swrain = 1 or 2 then store daily precipitation (rain) amount 
+! --- in case of swrain = 1 or 2 then store daily precipitation (rain) amount
 !     in rainamount and precipitation time in raintimearray
          if (swrain.eq.1 .or. swrain.eq.2) then
             nmrain = 0
@@ -208,6 +208,10 @@
                raintimearray(i+1) = tmeteo
                rainamount(i)      = arai(i)
             enddo
+            ! [GR-CROP Phase B] seed state%atmosphere rain timing before MeteoDT call below
+            state%atmosphere%nmrain = nmrain
+            state%atmosphere%rainamount(1:nmrain)      = rainamount(1:nmrain)
+            state%atmosphere%raintimearray(1:nmrain+1) = raintimearray(1:nmrain+1)
          endif
 ! --- end of reliability tests and initialization of daily meteo   
 

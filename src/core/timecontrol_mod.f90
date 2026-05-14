@@ -310,11 +310,12 @@ contains
    end subroutine timecontrol_init
 
    subroutine timecontrol_advance(state)
+      ! [GR-CROP Phase B] raintimearray migrated → state%atmosphere%raintimearray via associate.
       use variables, only: outdat, outdatint, &
                             flCropCalendar, &
                             swrain, swmetdetail, &
                             flCropHarvest, flCropOutput, croptype, &
-                            raintimearray, dtEventRain, dt_SSDI_event, flSSDI, &
+                            dtEventRain, dt_SSDI_event, flSSDI, &  ! [GR-CROP Phase B] raintimearray retired from here
                             numbit, icrop
       use irrigation_mod, only: SSDI_irrigation
       use error_mod, only: fatalerr_collected
@@ -402,7 +403,8 @@ contains
            swres => state%timecontrol%swres, &
            swscre => state%timecontrol%swscre, &
            MaxIt => state%timecontrol%MaxIt, &
-           msteps => state%timecontrol%msteps )
+           msteps => state%timecontrol%msteps, &
+           raintimearray => state%atmosphere%raintimearray )  ! [GR-CROP Phase B]
 
 ! === next time step ===================================================
 

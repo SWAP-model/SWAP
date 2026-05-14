@@ -138,9 +138,10 @@ contains
    subroutine ProcessRainEvents(state)
       ! [SS-TC TC-14] yearmeteo,timjan1,rainrec read/written via state%timecontrol (ADR 0041)
       ! GR-ATM C7: wet(i) migrated → state%atmosphere%wet(i).
-      ! Remaining: swrain→config (Arc 8); arai local write-back; raintab/nmrain/rainamount/
-      !   rainfluxarray/raintimearray not yet in state schema (Arc 8+).
-      use variables, only: swrain,raintab,nmrain,rainamount,arai,rainfluxarray,raintimearray
+      ! [GR-CROP Phase B] nmrain/rainamount/rainfluxarray/raintimearray/arai migrated →
+      !   state%atmosphere%X via associate aliases.  swrain/raintab remain narrow
+      !   use variables until config arg is threaded (Arc 8).
+      use variables, only: swrain, raintab   ! [GR-CROP Phase B] narrow deferral: swrain/raintab→config
       use array_utils, only: afgen
       use swap_array_dimensions, only: mrain
       implicit none
@@ -156,13 +157,19 @@ contains
 
       ! [SS-TC TC-14] alias TC fields directly so bare names below resolve to state%timecontrol
       ! [SS-BMI2 Task 4] tstart, tend, dtmin added to associate — retire globals in Task 5
+      ! [GR-CROP Phase B] rain timing arrays aliased to state%atmosphere%X
       associate( tc_tcum => state%timecontrol%tcum, &
                  yearmeteo => state%timecontrol%yearmeteo, &
                  timjan1 => state%timecontrol%timjan1, &
                  rainrec => state%timecontrol%rainrec, &
                  tstart  => state%timecontrol%tstart, &
                  tend    => state%timecontrol%tend, &
-                 dtmin   => state%timecontrol%dtmin )
+                 dtmin   => state%timecontrol%dtmin, &
+                 nmrain        => state%atmosphere%nmrain,        &  ! [GR-CROP Phase B]
+                 rainamount    => state%atmosphere%rainamount,    &  ! [GR-CROP Phase B]
+                 rainfluxarray => state%atmosphere%rainfluxarray, &  ! [GR-CROP Phase B]
+                 raintimearray => state%atmosphere%raintimearray, &  ! [GR-CROP Phase B]
+                 arai          => state%atmosphere%arai           )  ! [GR-CROP Phase B]
 
       ! === Process rain events on yearly basis ===
 
@@ -323,13 +330,10 @@ contains
       ! For swrain = 1-3: determine start rain record
       rainrec = 1
 
-      ! [SS-GR-CROP A5.5] bulk-mirror rain timing arrays after all writes
-      state%atmosphere%nmrain = nmrain
-      state%atmosphere%rainamount(1:nmrain)     = rainamount(1:nmrain)
-      state%atmosphere%rainfluxarray(1:nmrain+1) = rainfluxarray(1:nmrain+1)
-      state%atmosphere%raintimearray(1:nmrain+1) = raintimearray(1:nmrain+1)
+      ! [GR-CROP Phase B] rain timing arrays written directly via state%atmosphere aliases —
+      ! no bulk mirror needed (state IS the target).
 
-      end associate  ! tc_tcum => state%timecontrol [TC-9]
+      end associate  ! tc_tcum => state%timecontrol [TC-9] + state%atmosphere rain timing [GR-CROP Phase B]
 
       return
    end subroutine ProcessRainEvents
@@ -367,9 +371,9 @@ contains
       !             reads/writes via state%timecontrol.
       ! [SS-GR-ATM B28] bare use variables replaced with narrow only: list.
       !   Migrated reads: tpot/epot/grain/nrain → state%atmosphere%X (pure reads, no dual-write needed).
-      !   DEFERRED: finterception, dtEventRain, rainfluxarray, raintimearray — not yet in state schema
-      !             (Arc 8 candidate).
-      use variables, only: finterception, dtEventRain, rainfluxarray, raintimearray
+      ! [GR-CROP Phase B] rainfluxarray/raintimearray migrated → state%atmosphere%X.
+      !   DEFERRED: finterception, dtEventRain — not yet in state schema (Arc 8).
+      use variables, only: finterception, dtEventRain   ! [GR-CROP Phase B] narrowed: rainfluxarray/raintimearray retired
       use et_mod, only: reduceva
       implicit none
 
@@ -377,6 +381,7 @@ contains
         !! Simulation state (passed through to reduceva for atmosphere dual-writes)
 
       ! [SS-TC TC-14] alias TC fields directly so bare names below resolve to state%timecontrol
+      ! [GR-CROP Phase B] rainfluxarray, raintimearray aliased to state%atmosphere%X
       associate( &
         tc_flrainintens => state%timecontrol%flrainintens,  &
         tc_tcum         => state%timecontrol%tcum,          &
@@ -384,7 +389,9 @@ contains
         tc_flmetdetail  => state%timecontrol%flmetdetail,   &
         tc_flUpdMetDet  => state%timecontrol%flUpdMetDet,   &
         rainrec         => state%timecontrol%rainrec,       &
-        wrecord         => state%timecontrol%wrecord )
+        wrecord         => state%timecontrol%wrecord,       &
+        rainfluxarray   => state%atmosphere%rainfluxarray,  &  ! [GR-CROP Phase B]
+        raintimearray   => state%atmosphere%raintimearray   )  ! [GR-CROP Phase B]
 
       ! === Precipitation intensities ===
 
@@ -420,7 +427,7 @@ contains
 
       end if
 
-      end associate  ! tc_flrainintens, tc_tcum, tc_dt, tc_flmetdetail, tc_flUpdMetDet => state%timecontrol [TC-9]
+      end associate  ! tc_flrainintens,...,raintimearray,rainfluxarray => state%timecontrol/atmosphere [TC-9, GR-CROP Phase B]
 
       return
    end subroutine ProcessMeteoTsteps
