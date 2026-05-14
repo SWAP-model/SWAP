@@ -41,6 +41,29 @@ module crop_common_state_mod
       real(real64) :: cuptgrazpot    = 0.0_real64     !! cumul. dry weight grazed potential (kg/ha)
       real(real64) :: HarLosOrm_tot  = 0.0_real64     !! harvest losses to soil at harvest (kg/ha DM)
 
+      ! [SS-GR-CROPRT A4] lifecycle flags
+      logical      :: flCropReadFile = .false.        !! reading of input .crp file occurred
+      logical      :: flCropPrep     = .false.        !! ploughing opportunity realized
+      logical      :: flCropSow      = .false.        !! sowing opportunity realized
+      logical      :: flCropGerm     = .false.        !! germination realized
+      logical      :: flCropHarvest  = .false.        !! harvest event day flag
+
+      ! [SS-GR-CROPRT A4] crop window dates (current crop's start/end, days since 1900)
+      real(real64) :: cropstart      = 0.0_real64     !! current crop season start (d)
+      real(real64) :: cropend        = 0.0_real64     !! current crop season end (d)
+
+      ! [SS-GR-CROPRT A4] germination delay scratch
+      integer      :: PrepDelay      = 0              !! delay of preparation (d)
+      integer      :: SowDelay       = 0              !! delay of sowing (d)
+
+      ! [SS-GR-CROPRT A4] runtime root zone
+      integer      :: noddrz         = 0              !! compartment number at bottom root zone (-)
+      real(real64) :: cumdens(202)   = 0.0_real64     !! cumul. root density as fn of rel. soil depth (-)
+
+      ! [SS-GR-CROPRT A4] surface params
+      real(real64) :: albedo         = 0.0_real64     !! crop reflection coefficient (-)
+      real(real64) :: rsc            = 0.0_real64     !! minimum canopy resistance dry crop (T/L)
+
    contains
       procedure :: init => crop_common_state_init
    end type crop_common_state_t
@@ -49,6 +72,7 @@ contains
 
    subroutine crop_common_state_init(self)
       class(crop_common_state_t), intent(inout) :: self
+      self%cumdens = 0.0_real64
    end subroutine
 
 end module crop_common_state_mod

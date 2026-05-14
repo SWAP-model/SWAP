@@ -55,6 +55,11 @@ module crop_wofost_state_mod
       real(real64) :: dwbl    = 0.0_real64   !! dry weight dead flowers (actual, kg/ha)
       real(real64) :: dwblpot = 0.0_real64   !! dry weight dead flowers (potential, kg/ha)
 
+      ! [SS-GR-CROPRT A4] FCO2 derived correction factors (default 1.0 = no CO2 correction)
+      real(real64) :: fco2amax = 1.0_real64  !! CO2 correction factor for AMAX (-)
+      real(real64) :: fco2eff  = 1.0_real64  !! CO2 correction factor for EFF (-)
+      real(real64) :: fco2tra  = 1.0_real64  !! CO2 correction factor for TRA (-)
+
    contains
       procedure :: init => crop_wofost_state_init
    end type crop_wofost_state_t
