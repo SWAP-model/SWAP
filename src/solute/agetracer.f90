@@ -55,7 +55,33 @@ contains
 !     guard fires first. Before re-enabling, work through the
 !     reactivation checklist in the file header above.
 ! ---
-      use Variables
+      ! [SS-GR-FINAL B11] blanket use Variables narrowed; mabbc/macp → swap_array_dimensions
+      ! Note: AgeTracer body is currently unreachable (ADR 0032 guard always fires).
+      ! All variables globals here are DEFERRED pending agetracer reactivation.
+      use swap_array_dimensions, only: mabbc, macp
+      use variables, only: &   ! [SS-GR-FINAL B11] residuals — all DEFERRED
+         ! DEFERRED: swinco/nconc/zc/cml — solute config/initial concentrations; Phase C3
+         swinco, nconc, zc, cml, &
+         ! DEFERRED: cpre/cirr/cdrain — boundary solute concentrations; Phase C3
+         cpre, cirr, cdrain, &
+         ! DEFERRED: samini — initial solute mass; lives in state%solute; Phase C3
+         samini, &
+         ! DEFERRED: Agepre/Ageirr/Agedrain/Agepond/Agepondm1/Agegwl1m — age tracer state; Phase C3
+         Agepre, Ageirr, Agedrain, Agepond, Agepondm1, Agegwl1m, &
+         ! DEFERRED: icAgesur/icAgetopdwn/icAgetopupw/icAgerot/icAgedra/icAgebot — age tracer cumulative state; Phase C3
+         icAgesur, icAgetopdwn, icAgetopupw, icAgerot, icAgedra, icAgebot, &
+         ! DEFERRED: FlMacropore/Z_Tp/ArMpTp — retired-zero macropore sentinels; Phase D
+         FlMacropore, Z_Tp, ArMpTp, &
+         ! DEFERRED: inpola/inpolb — soil compartment interpolation arrays; Phase C3
+         inpola, inpolb, &
+         ! DEFERRED: ddif/ldis — solute diffusion/dispersion config; Phase C3
+         ddif, ldis, &
+         ! DEFERRED: dtsolu/isqbot/isqtop/sqdra/rottot — solute runtime state; state%solute; Phase C3
+         dtsolu, isqbot, isqtop, sqdra, rottot, &
+         ! DEFERRED: nird — net irrigation depth runtime; Phase C3
+         nird, &
+         ! DEFERRED: flAgeTracer — age tracer activation flag; config; Phase C3
+         flAgeTracer
       use array_utils, only: afgen
       use swap_state_mod, only: swap_state_t
       implicit none

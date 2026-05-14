@@ -286,7 +286,7 @@ contains
       ! [SS-GR-ATM B23] use variables dropped; symbols → state%atmosphere/config%meteo
       ! SS-TC TC-9: date,t1900 removed from only-list; reads/writes via state%timecontrol.
       ! [SS-TC TC-14] yearmeteo, daymeteo retired — read via state%timecontrol
-      ! [SS-GR-ATM B23] DEFERRED symbols (not yet in state):
+      ! [SS-GR-ATM B23] DEFERRED symbols (not yet in state); [SS-GR-FINAL B11] reviewed
       use variables, only: &
           rad, tmn, tmx,                                  &  ! B23 DEFERRED — daily scalars
           tav,                                            &  ! B23 DEFERRED — dual-write (consumed by snow.f90/swapoutput.f90; tavd/rh dropped B.5)
@@ -557,7 +557,7 @@ contains
     ! [SS-GR-ATM B24] use variables partially retired; symbols → state%atmosphere/state%crop/config%meteo
     ! SS-TC TC-9: daynr,t,dt,flmetdetail,fletsine removed from only-list; reads via state%timecontrol.
     ! [SS-TC TC-14] metperiod retired — read via state%timecontrol
-    ! [SS-GR-ATM B24] DEFERRED symbols (not yet in state/config):
+    ! [SS-GR-ATM B24] DEFERRED symbols (not yet in state/config); [SS-GR-FINAL B11] reviewed
     use variables, only: &
         cf, cfeic,                                         &  ! B24 DEFERRED — crop factor scalars
         rad,                                               &  ! B24 DEFERRED — daily radiation scalar

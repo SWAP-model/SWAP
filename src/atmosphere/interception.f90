@@ -179,7 +179,9 @@ contains
     ! [SS-GR-ATM B10] fimin → state%atmosphere%fimin
     ! [SS-GR-ATM B10] ew0 → state%crop%ew0
     ! Phase A.5 runtime dual-writes ensure state tracks legacy at runtime.
-    use variables, only: logf   ! [SS-GR-ATM B6] DEFERRED to Arc 9
+    use variables, only: &   ! [SS-GR-FINAL B11] DEFERRED
+       ! DEFERRED: logf — log file unit; runtime utility; Phase C3
+       logf  ! [SS-GR-ATM B6]
     implicit none
 
     ! Arguments
@@ -420,7 +422,9 @@ contains
     ! [SS-GR-ATM B11] isua → state%atmosphere%isua
     ! [SS-GR-ATM B11] gird → state%crop%gird
     ! Phase A.5 runtime dual-writes ensure state tracks legacy at runtime.
-    use variables, only: nird   ! [SS-GR-ATM B7] DEFERRED to Arc 8 (irrigation)
+    use variables, only: &   ! [SS-GR-FINAL B11] DEFERRED
+       ! DEFERRED: nird — net irrigation depth runtime; irrigation cluster; Phase C3
+       nird  ! [SS-GR-ATM B7]
     implicit none
 
     ! Arguments

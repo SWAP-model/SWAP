@@ -15,7 +15,29 @@ contains
 !     date               : december 2007; code update: June, 2019
 !     purpose            : calculation of solute concentrations
 ! ----------------------------------------------------------------------
-      use Variables
+      ! [SS-GR-FINAL B11] blanket use Variables narrowed; mabbc/macp → swap_array_dimensions
+      use swap_array_dimensions, only: mabbc, macp
+      use variables, only: &   ! [SS-GR-FINAL B11] residuals — all DEFERRED
+         ! DEFERRED: swinco/nconc/zc — solute initial condition config; Phase C3
+         swinco, nconc, zc, &
+         ! DEFERRED: bdens/kf/cref/kfsat/poros/frexp/ddif/decpot/fdepth — solute soil config; Phase C3
+         bdens, kf, cref, kfsat, poros, frexp, ddif, decpot, fdepth, &
+         ! DEFERRED: ldis — longitudinal dispersion length; soil config; Phase C3
+         ldis, &
+         ! DEFERRED: FlMacropore/Z_Tp/ArMpTp — retired-zero macropore sentinels; Phase D
+         FlMacropore, Z_Tp, ArMpTp, &
+         ! DEFERRED: swbotbc/cseeptab — bottom boundary solute config; Phase C3
+         swbotbc, cseeptab, &
+         ! DEFERRED: inpola/inpolb — soil compartment interpolation arrays; Phase C3
+         inpola, inpolb, &
+         ! DEFERRED: gampar/bexp/rtheta — temperature/moisture correction config; Phase C3
+         gampar, bexp, rtheta, &
+         ! DEFERRED: tscf — solute uptake factor; config; Phase C3
+         tscf, &
+         ! DEFERRED: swbr/daquif/decsat — aquifer breakthrough curve config; Phase C3
+         swbr, daquif, decsat, &
+         ! DEFERRED: nird/cirr/cpre — irrigation/precipitation solute concentrations; Phase C3
+         nird, cirr, cpre
       use array_utils, only: afgen
       use swap_state_mod, only: swap_state_t
       use, intrinsic :: iso_fortran_env, only: real64
@@ -385,7 +407,9 @@ subroutine solute_init(state)
    use, intrinsic :: iso_fortran_env, only: real64
    use swap_state_mod, only: swap_state_t
    ! [GR-BH Audit 31] numnod removed from use-list; read via state%mesh%numnod
-   use Variables, only: cml, cmsy
+   use variables, only: &   ! [SS-GR-FINAL B11] residuals — all DEFERRED
+      ! DEFERRED: cml/cmsy — solute concentration arrays; seeded from legacy at init; Phase C3
+      cml, cmsy
    implicit none
    type(swap_state_t), intent(inout) :: state
 

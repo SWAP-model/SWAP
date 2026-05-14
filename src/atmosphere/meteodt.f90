@@ -141,7 +141,9 @@ contains
       ! [GR-CROP Phase B] nmrain/rainamount/rainfluxarray/raintimearray/arai migrated →
       !   state%atmosphere%X via associate aliases.  swrain/raintab remain narrow
       !   use variables until config arg is threaded (Arc 8).
-      use variables, only: swrain, raintab   ! [GR-CROP Phase B] narrow deferral: swrain/raintab→config
+      use variables, only: &   ! [SS-GR-FINAL B11] DEFERRED
+         ! DEFERRED: swrain/raintab — rain input switch/table; config; Phase C3
+         swrain, raintab  ! [GR-CROP Phase B]
       use array_utils, only: afgen
       use swap_array_dimensions, only: mrain
       implicit none
@@ -373,7 +375,11 @@ contains
       !   Migrated reads: tpot/epot/grain/nrain → state%atmosphere%X (pure reads, no dual-write needed).
       ! [GR-CROP Phase B] rainfluxarray/raintimearray migrated → state%atmosphere%X.
       !   DEFERRED: finterception, dtEventRain — not yet in state schema (Arc 8).
-      use variables, only: finterception, dtEventRain   ! [GR-CROP Phase B] narrowed: rainfluxarray/raintimearray retired
+      use variables, only: &   ! [SS-GR-FINAL B11] DEFERRED
+         ! DEFERRED: finterception — fraction interception config; Phase C3
+         finterception, &
+         ! DEFERRED: dtEventRain — rain event timestep runtime state; Phase C3
+         dtEventRain  ! [GR-CROP Phase B]
       use et_mod, only: reduceva
       implicit none
 
@@ -478,7 +484,11 @@ contains
       !   DEFERRED: lat → config%meteo%lat (requires config arg, Arc 8 candidate);
       !             rad, daylp, difpp, atmtr, dsinbe, tsunrise_atm, tsunset_atm —
       !             not yet in state/config schema (Arc 8+).
-      use variables, only: lat, rad, daylp, difpp, atmtr, dsinbe, tsunrise_atm, tsunset_atm
+      use variables, only: &   ! [SS-GR-FINAL B11] DEFERRED
+         ! DEFERRED: lat — site latitude; config%meteo%lat; Phase C3
+         lat, &
+         ! DEFERRED: rad/daylp/difpp/atmtr/dsinbe/tsunrise_atm/tsunset_atm — meteo derived scalars; Phase C3
+         rad, daylp, difpp, atmtr, dsinbe, tsunrise_atm, tsunset_atm
       use et_mod, only: reduceva
       implicit none
 

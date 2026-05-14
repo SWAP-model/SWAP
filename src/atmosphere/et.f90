@@ -616,7 +616,13 @@ contains
       !   (ProcessMeteoDay, MeteoDT, ProcessMeteoTsteps, ReadMeteoYear) lacks config arg;
       !   threading deferred to Tasks 22-29 (meteoday/meteodt migration).
       ! [SS-GR-ATM B2] DEFERRED — nird: irrigation-owned global; deferred to irrigation arc.
-      use variables, only: swredu, cofred, nird, rsigni
+      use variables, only: &   ! [SS-GR-FINAL B11] residuals — all DEFERRED
+         ! DEFERRED: swredu/cofred — ET reduction switch/coefficient; config%meteo%evaporation; Phase C3
+         swredu, cofred, &
+         ! DEFERRED: nird — net irrigation depth runtime; irrigation cluster; Phase C3
+         nird, &
+         ! DEFERRED: rsigni — significant radiation threshold; config; Phase C3
+         rsigni
       implicit none
 
         ! Arguments

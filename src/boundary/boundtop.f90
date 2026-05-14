@@ -20,9 +20,13 @@ module boundtop_mod
       use swap_state_mod,        only: swap_state_t
       use swap_log,              only: log_debug, to_str
       use surfacewater_utils,    only: runoff
-      use variables,             only: nird,                &  ! [GR-ATM C3] DEFERRED to Arc 8 (irrigation cluster)
-                                       swkmean, swredu,    &  ! [GR-ATM C3] DEFERRED: config threading requires soilhydraulics→headcalc→boundtop (Arc 5 soil cluster)
-                                       flrunon, runonarr      ! [GR-ATM C3] DEFERRED: runonarr runtime time-series (not in config/state schema); Arc 7+ defer
+      use variables,             only: &   ! [SS-GR-FINAL B11] all DEFERRED
+         ! DEFERRED: nird — net irrigation depth runtime; irrigation cluster; Phase C3
+         nird, &
+         ! DEFERRED: swkmean/swredu — soil hydraulics/ET reduction switches; config; Phase C3
+         swkmean, swredu, &
+         ! DEFERRED: flrunon/runonarr — runon switch/timeseries; not in schema yet; Phase C3
+         flrunon, runonarr
       implicit none
 
       private
@@ -204,7 +208,11 @@ contains
 ! ----------------------------------------------------------------------
       ! [SS-SWC S-2.12B] pond retired; read/written via state%soilwater%pond
       ! [SS-TC TC-14] dt, t1900 read via state%timecontrol (ADR 0041)
-      use variables,             only: swpondmx, pondmxtab, mairg  ! [SS-GR-BH B11] DEFERRED: swpondmx/pondmxtab not yet in config
+      ! [SS-GR-FINAL B11] mairg → swap_array_dimensions (dimension constant)
+      use swap_array_dimensions, only: mairg
+      use variables,             only: &   ! [SS-GR-FINAL B11] residuals — all DEFERRED
+         ! DEFERRED: swpondmx/pondmxtab — dynamic ponding max switch/table; not yet in config; Phase C3
+         swpondmx, pondmxtab
       use array_utils,           only: afgen
       use surfacewater_utils,    only: runoff
       use swap_state_mod,        only: swap_state_t

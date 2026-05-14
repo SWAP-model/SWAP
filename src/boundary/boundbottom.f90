@@ -13,8 +13,13 @@ module boundbottom_mod
     use swap_config_mod,       only: swap_config_t
     use swap_log,              only: log_debug, to_str
     use swap_array_dimensions, only: mabbc
-    use variables,             only: logf, SwBotb3ResVert, &  ! [SS-GR-BH B8] DEFERRED to Arc 9
-                                     gwltab, qbotab, haqtab, hbotab  ! [SS-GR-BH B8] DEFERRED arrays — still legacy globals
+    use variables,             only: &   ! [SS-GR-FINAL B11] all DEFERRED
+       ! DEFERRED: logf — log file unit; runtime utility; Phase C3
+       logf, &
+       ! DEFERRED: SwBotb3ResVert — bottom boundary resistance switch; config; Phase C3
+       SwBotb3ResVert, &
+       ! DEFERRED: gwltab/qbotab/haqtab/hbotab — groundwater boundary tables; config; Phase C3
+       gwltab, qbotab, haqtab, hbotab  ! [SS-GR-BH B8] narrowed
     implicit none
 
     private
