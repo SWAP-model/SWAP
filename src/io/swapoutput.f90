@@ -754,6 +754,7 @@
 !   wlvpot/wlv/wstpot/wst/wrtpot/wrt/cuptgraz/cuptgrazpot → state%crop%common%X / state%crop%wofost%X
 ! ----------------------------------------------------------------------
       ! GR-ATM C2: lai → state%crop%lai.
+      ! [SS-GR-FINAL B4] DEFERRED — crp: crop output file unit, Arc 9 edge
       use variables, only: crp
       use swap_state_mod, only: swap_state_t
       implicit none
@@ -827,8 +828,8 @@
 !     Purpose            : open and write solute output files
 ! [SS-BMI2] inout: init/cleanup of solute output_row buffer
 ! ----------------------------------------------------------------------
+      ! [SS-GR-FINAL B4] use Variables removed: SoluteOutput body is stub (ADR 0009 Phase 5+), no symbols needed
 
-      use Variables
       use swap_state_mod, only: swap_state_t
       implicit none
 
@@ -943,6 +944,8 @@
       ! SS-SWST Phase 2 Task 11: inqdra removed (now via state%surfacewater%inqdra).
       ! SS-SLST Phase 1 Task 5: cml migrated to state%solute (body is gated by flAgeTracer guard).
       ! SS-TC TC-7: daynr,daycum,date,outper removed from only-list; reads via state%timecontrol.
+      ! [SS-GR-FINAL B4] DEFERRED — project/outfil/pathwork: file-path globals;
+      !   AgeGwl1m/icAge*/flAgeTracer: AgeTracer-domain globals, no state home (ADR 0032 inert)
       use variables, only: project,outfil,pathwork,                                                       &
                            AgeGwl1m,icAgeBot,icAgeDra,icAgeRot,icAgeSur,flAgeTracer
       use swap_state_mod, only: swap_state_t
@@ -1144,7 +1147,8 @@
 ! ----------------------------------------------------------------------
 
 ! --- global variables ------------------
-      use Variables
+      ! [SS-GR-FINAL B4] DEFERRED — swtem: output-control switch; tem: file unit, Arc 9 edge
+      use variables, only: swtem,tem
       use swap_state_mod, only: swap_state_t
 
       implicit none
@@ -1213,6 +1217,7 @@
       ! SS-HEAT Phase 1 Task 5: tsoil, tebot, tetop migrated to state%heat.
       ! SS-TC TC-7: date,daynr,daycum,flheader removed from only-list; reads via state%timecontrol.
       ! GR-ATM C2: tav removed; read via state%atmosphere%Tav.
+      ! [SS-GR-FINAL B4] DEFERRED — tem: file unit; outfil/pathwork/project: file-path globals
       use variables, only: tem,outfil,pathwork,project
       use swap_state_mod, only: swap_state_t
       implicit none
@@ -1386,7 +1391,7 @@
 ! ----------------------------------------------------------------------
       ! SS-ATM A-2.5: snrai,gsnow,ssnow,melt,subl reads migrated to state%atmosphere.
       ! SS-TC TC-7: date,daycum,flheader removed; reads via state%timecontrol.
-
+      ! [SS-GR-FINAL B4] DEFERRED — pathwork/outfil/project: file-path globals; snw: file unit
       use variables, only: pathwork,outfil,project,snw
       use swap_state_mod, only: swap_state_t
       use file_io_mod, only: file_open
@@ -1567,8 +1572,8 @@
 !     Purpose            : open and write surface water output files
 ! [SS-BMI2] inout: init/cleanup of surfacewater output_row buffer
 ! ----------------------------------------------------------------------
+      ! [SS-GR-FINAL B4] use variables removed: SurfaceWaterOutput body is stub (ADR 0009 Phase 5+), no symbols needed
 
-      use variables
       use swap_state_mod, only: swap_state_t
       implicit none
 
@@ -1772,6 +1777,7 @@
 !     dznew(macp)          ! Desired dz for soil water quality models (L) ......... i
 ! local
 ! ----------------------------------------------------------------------
+      ! [SS-GR-FINAL B4] DEFERRED — numnodnew/dznew: soil-quality model discretization, no state home
       use variables, only: numnodnew,dznew
       use swap_array_dimensions, only: macp
       use swap_state_mod, only: swap_state_t
