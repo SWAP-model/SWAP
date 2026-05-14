@@ -98,6 +98,14 @@ The crop subsystem is the biggest and most coupled. May need internal decomposit
 
 **Note:** there is no `crop_state_t` today — crop runtime fields live partly in `state%soilwater`, partly as bare globals in `variables.f90`. A `crop_state_t` may need to be designed here (or an "amenities" arc precedes it). This is the only arc that introduces a brand-new state subrecord.
 
+**Fast-forwarded by GR-ATM Phase B.5 (2026-05-14):**
+- `crop_state_t` introduced (12 fields: lai/kdif/kdir/cofab/cfbs/swcf/swcfbs/gird/flCropEmergence/et0/ew0/es0)
+- Runtime dual-writes added at every legacy mutation site (~80 sites across 8 files, Phase A.5)
+- `cropgrowth.f90`: 14 bare-global reads of `tav`/`tavd` migrated to `state%atmosphere%Tav`/`state%atmosphere%tavd` across CropGrowth, cropfixed, ArableLandGerm, wofost, grass subroutines
+- `oxygenstress.f90`: OxygenStress node==1 `tav` read migrated; GET_MAX_RESP_FACTOR `tav` reads deferred (no state arg)
+- `meteoday.f90`: `tavd`/`rh`/`out_rad,tmn,tmx,hum,win,etr,wet` legacy dual-writes retired (no remaining crop consumers)
+- Arc 8 now picks up: remaining crop-runtime symbols (crop-only globals not exercised by atmosphere code), expansion of `crop_state_t` as needed, and crop-specific reader migration for crop-only globals. Remaining bare `tav` consumers (snow.f90/swapoutput.f90/GET_MAX_RESP_FACTOR) block further tav dual-write retirement — see Arc 4/9 cleanup.
+
 ### Arc 9 — Final retirement (the payoff)
 **Files:** `src/io/toml/config_to_variables.f90` (delete, ~1802 lines), `src/core/variables.f90` (delete, ~1391 lines), `src/core/initialize.f90` (delete, ~845 lines), `src/core/swap_mod.f90` (drop transient-buffer reads + bind_*_target calls + swinco=3 inline block), `meson.build` (drop deleted files). **Estimated effort: 1–2 days.**
 
