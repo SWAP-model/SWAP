@@ -266,7 +266,8 @@
                            raincsv_dat, nraincsv
 
       implicit none
-      type(swap_state_t), intent(in) :: state
+      ! [SS-GR-CROP A5.5] changed to inout for rain timing dual-writes
+      type(swap_state_t), intent(inout) :: state
       integer :: yearmeteo  ! [SS-TC TC-14] local copy
 
 ! --- local
@@ -334,6 +335,11 @@
             call fatalerr_collected('ReadRainEvents', messag)
          end if
       end do
+
+      ! [SS-GR-CROP A5.5] bulk-mirror rain timing arrays after all writes
+      state%atmosphere%nmrain = nmrain
+      state%atmosphere%rainamount(1:nmrain)    = rainamount(1:nmrain)
+      state%atmosphere%raintimearray(1:nmrain) = raintimearray(1:nmrain)
 
       return
       end subroutine ReadRainEvents

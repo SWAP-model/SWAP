@@ -323,6 +323,12 @@ contains
       ! For swrain = 1-3: determine start rain record
       rainrec = 1
 
+      ! [SS-GR-CROP A5.5] bulk-mirror rain timing arrays after all writes
+      state%atmosphere%nmrain = nmrain
+      state%atmosphere%rainamount(1:nmrain)     = rainamount(1:nmrain)
+      state%atmosphere%rainfluxarray(1:nmrain+1) = rainfluxarray(1:nmrain+1)
+      state%atmosphere%raintimearray(1:nmrain+1) = raintimearray(1:nmrain+1)
+
       end associate  ! tc_tcum => state%timecontrol [TC-9]
 
       return
