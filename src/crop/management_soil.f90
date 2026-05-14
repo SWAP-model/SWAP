@@ -44,7 +44,8 @@ contains
       implicit none
 
       ! SS-SWST Phase 2 Task 5: read inqdra from state%surfacewater.
-      type(swap_state_t), intent(in) :: state
+      ! [SS-GR-CROP A5.4] changed to inout for nutrient state dual-writes.
+      type(swap_state_t), intent(inout) :: state
 
 ! --- local variables
       character(len=300) filnam
@@ -107,6 +108,12 @@ contains
       cNO3_t0 = cNO3_t
       WFrac_t0 = WFrac_t
       t1900Soil = state%timecontrol%t1900  ! TC-12
+      ! [SS-GR-CROP A5.4] mirror start-of-timestep saves
+      state%nutrients%fom_t0   = FOM_t0(1:size(state%nutrients%fom_t0))
+      state%nutrients%bio_t0   = Bio_t0
+      state%nutrients%hum_t0   = Hum_t0
+      state%nutrients%cnh4_t0  = cNH4_t0
+      state%nutrients%cno3_t0  = cNO3_t0
 
       return
 
@@ -353,6 +360,33 @@ contains
 
       NsupplySoil = 1.0d+04 * Nsupply                                         ! kg/ha
 
+      ! [SS-GR-CROP A5.4] mirror end-of-case(4) nutrient state
+      state%nutrients%fom_t(1:size(state%nutrients%fom_t))  = FOM_t(1:size(state%nutrients%fom_t))
+      state%nutrients%bio_t   = Bio_t
+      state%nutrients%hum_t   = Hum_t
+      state%nutrients%cnh4_t  = cNH4_t
+      state%nutrients%cnh4_av = cNH4_av
+      state%nutrients%cno3_t  = cNO3_t
+      state%nutrients%cno3_av = cNO3_av
+      state%nutrients%nminer  = Nminer
+      state%nutrients%cdissi  = Cdissi
+      state%nutrients%nsupplynh4n = NsupplyNH4N
+      state%nutrients%nsupplyno3n = NsupplyNO3N
+      state%nutrients%nsupply     = Nsupply
+      state%nutrients%ndemand     = Ndemand
+      state%nutrients%nsupplysoil = NsupplySoil
+      state%nutrients%ndemandsoil = NdemandSoil
+      ! Balance-check fields written by Wofost_SoilBalanceCheck above
+      state%nutrients%fom_old = FOM_old
+      state%nutrients%fom_end = FOM_end
+      state%nutrients%bio_old = Bio_old
+      state%nutrients%bio_end = Bio_end
+      state%nutrients%hum_old = Hum_old
+      state%nutrients%hum_end = Hum_end
+      state%nutrients%nh4_old = NH4_old
+      state%nutrients%nh4_end = NH4_end
+      state%nutrients%no3_old = NO3_old
+      state%nutrients%no3_end = NO3_end
 
       return
 
@@ -599,6 +633,28 @@ contains
          Ncresbott  = 0.0d0
          Pcresbott  = 0.0d0
       end if
+      ! [SS-GR-CROP A5.4] mirror end-of-case(6) ANIMO accumulator state
+      state%nutrients%ntotuptake = Ntotuptake
+      state%nutrients%ptotuptake = Ptotuptake
+      state%nutrients%dmcressur  = DMcressur
+      state%nutrients%ncressurf  = Ncressurf
+      state%nutrients%pcressurf  = Pcressurf
+      state%nutrients%dmcresbott = DMcresbott
+      state%nutrients%ncresbott  = Ncresbott
+      state%nutrients%pcresbott  = Pcresbott
+      state%nutrients%idwrt_1    = idwrt_1
+      state%nutrients%idwlv_1    = idwlv_1
+      state%nutrients%idwst_1    = idwst_1
+      state%nutrients%idwso_1    = idwso_1
+      state%nutrients%inlossl_1  = iNLOSSL_1
+      state%nutrients%inlossr_1  = iNLOSSR_1
+      state%nutrients%inlosss_1  = iNLOSSS_1
+      state%nutrients%inlosso_1  = iNLOSSO_1
+      state%nutrients%nh4n_amend = NH4N_amend
+      state%nutrients%no3n_amend = NO3N_amend
+      state%nutrients%nh4n_cres  = NH4N_cres
+      state%nutrients%no3n_cres  = NO3N_cres
+      state%nutrients%nh4n_volat = NH4N_volat
 
       return
 
