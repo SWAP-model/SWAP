@@ -112,6 +112,7 @@ contains
    ! [GR-BH Task 35] CalcGrid now writes directly to state%mesh%X; state%mesh%init bridge retired
    call CalcGrid(state)
    call soilwater_init(state%soilwater, state%mesh%numnod, numlay)   ! SS-CRP Phase 1 C-1.2: allocate per-node arrays + mfluxtable
+   call state%nutrients%init(numlay)                                ! [SS-GR-CROP A11] zero nutrients state
    ! [SS-GR-BH A6] soilwater layer flats — placed here because soilwater_init
    ! allocates the state arrays (nlay-sized) AFTER config_to_variables runs.
    ! All layer flats sourced directly from config (legacy globals retired Task 36).
