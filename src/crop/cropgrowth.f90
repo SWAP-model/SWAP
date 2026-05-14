@@ -1091,16 +1091,18 @@
 ! SS-SWC S-2.7: state added (intent in) for soil-water-core h reader cutover.
 ! [GR-CROP Phase B/5] narrow use variables
 ! ----------------------------------------------------------------------
-      ! [SS-GR-FINAL B5] DEFERRED — ArableLandGerm: all symbols are germination/prep
-      !   runtime state or config params with no state home yet:
-      !   dvs: state%crop%common%dvs home exists but ArableLandGerm writes via global
-      !   flCropPrep, flCropSow, flCropGerm: crop lifecycle flags, no state home
-      !   dhPrep, hPrep, zPrep, dhSow, hSow, zSow, zTempSow, dtempSow, TempSow: prep/sow state
-      !   MaxPrepDelay, MaxSowDelay, PrepDelay, SowDelay: delay tracking, no state home
-      !   tsumemeopt, tsumgerm, hdrygerm, hwetgerm, zgerm, TBASEM, TEFFMX: germ thresholds
+      ! [SS-GR-CROPRT B5] DEFERRED — ArableLandGerm: all symbols are germination/prep
+      !   runtime state or config params with no clean read-cutover path:
+      !   dvs: state%crop%common%dvs home exists; ArableLandGerm writes via global; deferred
+      !   flCropPrep/flCropSow/flCropGerm: state%crop%common homes (A4) but these are WRITE
+      !     sites (subroutine sets flags); state dual-write is done in CropGrowth after ALG call
+      !   dhPrep, hPrep, zPrep, dhSow, hSow, zSow, zTempSow, dtempSow, TempSow: no state home
+      !   MaxPrepDelay, MaxSowDelay, PrepDelay, SowDelay: state%crop%common homes (A4) but written
+      !   tsumemeopt, tsumgerm, hdrygerm, hwetgerm, zgerm, TBASEM, TEFFMX: config thresholds,
+      !     no state home (come from crop .crp file or TOML germ block)
       !   agerm, bgerm, cgerm: germination model coefficients, no state home
       !   tsoil: config-staging buffer, renamed to avoid clash with dummy arg tsoil
-      use variables, only: &                                                 ! [SS-GR-FINAL B5] DEFERRED
+      use variables, only: &                                                 ! [SS-GR-CROPRT B5] DEFERRED
         dvs, flCropPrep, flCropSow, flCropGerm, dhPrep, hPrep, zPrep,      &
         dhSow, hSow, zSow, zTempSow, dtempSow, TempSow,                    &
         MaxPrepDelay, MaxSowDelay, PrepDelay, SowDelay,                     &
