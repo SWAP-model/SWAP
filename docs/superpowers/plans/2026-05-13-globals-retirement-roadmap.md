@@ -121,6 +121,17 @@ The crop subsystem is the biggest and most coupled. May need internal decomposit
 ### Arc 9 — Final retirement (the payoff)
 **Files:** `src/io/toml/config_to_variables.f90` (delete, ~1802 lines), `src/core/variables.f90` (delete, ~1391 lines), `src/core/initialize.f90` (delete, ~845 lines), `src/core/swap_mod.f90` (drop transient-buffer reads + bind_*_target calls + swinco=3 inline block), `meson.build` (drop deleted files). **Estimated effort: 1–2 days.**
 
+**Inherited from GR-CROP (as of 2026-05-14):**
+- ETSine astronomical scratchpad (`rad/daylp/difpp/atmtr/dsinbe/tsunrise_atm/tsunset_atm/lat`) — schema decision per-symbol; deferred from B24/C3
+- `boundtop.f90` `swkmean/swredu/flrunon/runonarr` — config threading through soilhydraulics→headcalc (Arc 5 territory)
+- `swap_mod.f90` `swinco=3` inline block + transient `*_init_buf` reads — strangler-fig leftovers
+- Crop config parameters (`idev/tsumea/tbase/lrnr/lsnr/nlue/rnflv/rnfst/frnx/nmxlv/c_mroot/f_senes/max_resp_factor/q10_root/q10_microbial/shape_factor_rootr/specific_resp_humus` etc.) still narrow-imported from variables — requires config threading through crop init+runtime subroutines (substantial scope)
+- Atmosphere array globals (`arad/atmn/atmx/ahum/awin/arai/aetr/wet/atav`) still in variables.f90 — readmeteo.f90 uses blanket `use variables`; requires readmeteo narrowing before these can be tombstoned (C13 deferred)
+- `tav` dual-write in meteoday.f90 lines 354/946 — no remaining consumers but kept for safety until Arc 9 audit confirms all consumers migrated
+- Crop runtime internals (cropgrowth.f90, cropfixed_init.f90, cropgrass_init.f90, cropwofost_init.f90) still use all crop common/WOFOST/grass bare globals internally — requires full cropgrowth migration (~4800 lines) to complete retirement
+- Remaining `variables.f90` entries — per Arc 9 `grep "use variables"` audit
+- `config_to_variables.f90` (~1802 lines), `initialize.f90` (~845 lines) — deletion when all consumers migrate
+
 Preconditions verified by grep:
 - `grep -rn "use variables" src/ --include="*.f90"` returns empty (every reader migrated).
 - `grep -rn "tc_iyear_init_buf\|h_init_buf\|pondini_init_buf\|pond_init_buf" src/` returns no live readers.
