@@ -92,10 +92,20 @@ contains
 ! ## MH      subroutine OxygenStress(node,rwu_factor,ResultsOxStr)
       subroutine OxygenStress(node,rwu_factor,state)
 ! ----------------------------------------------------------------------
-!     Last modified      : January 2014              
+!     Last modified      : January 2014
 !     Purpose            : calculates oxygen stress according to Bartholomeus et al. (2008)
 ! ----------------------------------------------------------------------
-      use variables
+      use variables, only: macp, matab, &                                 ! [GR-CROP Phase B/8] narrow
+                           croptype, icrop, max_resp_factor, &
+                           bdens, swsophy, numtablay, sptab, iHWCKmodel, c_top, &
+                           SRL, swrootradius, dry_mat_cont_roots, &
+                           air_filled_root_por, spec_weight_root_tissue, var_a, root_radiusO2, &
+                           q10, rmr, rfsetb, dvs, rid, rd, wrt, rdctb, w_root_ss, cumdens, &
+                           tsoil, &
+                           c_mroot, f_senes, q10_root, q10_microbial, &
+                           shape_factor_rootr, specific_resp_humus, &
+                           o2_ini_stress, o2_d_soil_term1, o2_d_soil_term2, &
+                           o2_gfp100, o2_capac_term, o2_nmin1, o2_mplus1
       use O2_pars, only: w_root,w_root_z0, soil_temp, sat_water_cont,gas_filled_porosity, d_o2inwater,d_root,        &
                          perc_org_mat,soil_density,depth, shape_factor_microbialr,root_radius, waterfilm_thickness,  &
                          bunsencoeff, c_min_micro, c_macro,ctopnode,r_microbial_z0, d_soil
@@ -158,7 +168,7 @@ contains
 !## MH: end
 
 ! --- Get max_resp_factor, i.e. the ratio between total respiration and maintenance respiration
-      if (node.eq.1) call GET_MAX_RESP_FACTOR(max_resp_factor)
+      if (node.eq.1) call GET_MAX_RESP_FACTOR(max_resp_factor, state)  ! [GR-CROP Phase B/8] state arg added
 
 ! --- initialize
       c_min_micro = 0.1d0
@@ -516,13 +526,17 @@ contains
 
 ! --- End of main module OxygenStress ---------------------------------------------------------------------------------------
       
-      subroutine GET_MAX_RESP_FACTOR (max_resp_factor_gmrf)
-      ! [SS-GR-ATM B.5] DEFERRED: tav reads at ~line 549,592 remain bare globals.
-      ! GET_MAX_RESP_FACTOR has no state arg; migration requires signature change.
-      ! Deferred to Arc 8 (crop cluster): add state intent(in) + caller update.
-      use Variables
+      subroutine GET_MAX_RESP_FACTOR (max_resp_factor_gmrf, state)
+      ! [GR-CROP Phase B/8] state arg added; tav → state%atmosphere%Tav (closes GR-ATM B.5 deferral).
+      use variables, only: croptype, icrop, max_resp_factor, &  ! [GR-CROP Phase B/8] narrowed from blanket
+                           q10, rmr, rml, rms, rmo, &
+                           wrt, wlv, wst, wso, rfsetb, pgass, &
+                           frtb, fltb, fstb, fotb, cvl, cvs, cvo, cvr, &
+                           dvs, rid, idregr, daycrop
       use array_utils, only: afgen
+      use swap_state_mod, only: swap_state_t
       implicit none
+      type(swap_state_t), intent(in) :: state   ! [GR-CROP Phase B/8]
 ! --- Procedure to derive max_resp_factor,
 ! --- i.e. the ratio between total respiration and maintenance respiration [-]
 ! --- This ratio is either given in the input file (for a static crop)
@@ -549,7 +563,7 @@ contains
         rmres_gmrf = (rmr*wrt+rml*wlv+rms*wst+rmo*wso)*                 &
      &            afgen(rfsetb,30,dvs)
         !teff_gmrf = q10**((tsoil(10)-25.0d0)/10.0d0) !TEMPORARY!!!! ONLY TO CHECK EFFECT OF USING TSOIL INSTEAD OF TAV; ## MH: /10 = 0.1*
-        teff_gmrf = q10**(0.1d0*(tav-25.0d0))      
+        teff_gmrf = q10**(0.1d0*(state%atmosphere%Tav-25.0d0))  ! [GR-CROP Phase B/8] tav → state%atmosphere%Tav
 
         mres_gmrf = min(pgass,rmres_gmrf*teff_gmrf)  ! ## MM 2018-05-07
         asrc_gmrf = pgass - mres_gmrf                ! ## MM 2018-05-07
@@ -592,7 +606,7 @@ contains
 ! --- maintenance respiration, based on actual plant state variables
           rmres_gmrf = (rmr*wrt+rml*wlv+rms*wst)*afgen(rfsetb,30,rid) 
 !        teff_gmrf = q10**((tsoil(10)-25.0d0)/10.0d0) !TEMPORARY!!!! ONLY TO CHECK EFFECT OF USING TSOIL INSTEAD OF TAV; ## MH: /10=*0.1
-          teff_gmrf = q10**(0.1d0*(tav-25.0d0))
+          teff_gmrf = q10**(0.1d0*(state%atmosphere%Tav-25.0d0))  ! [GR-CROP Phase B/8] tav → state%atmosphere%Tav
 
           mres_gmrf = min(pgass,rmres_gmrf*teff_gmrf)  ! ## MM 2018-05-07
           asrc_gmrf = pgass - mres_gmrf                ! ## MM 2018-05-07
@@ -799,7 +813,7 @@ contains
      &      alpha,gen_n,surface_tension_water,glit,                     &
      &         soilphystab,diff_water_cap_actual,numrec_tab)
 ! --- calculate water film thickness. method according to simojoki 2000
-      use Variables
+      use variables, only: swsophy, matab                               ! [GR-CROP Phase B/8] narrow from blanket
       use doln
       implicit none
       
