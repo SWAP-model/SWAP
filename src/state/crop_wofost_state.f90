@@ -46,8 +46,10 @@ module crop_wofost_state_mod
       real(real64) :: plossdm = 0.0_real64   !! total loss potential harvest (insufficient h)
       real(real64) :: lossdm  = 0.0_real64   !! total loss actual harvest (insufficient h)
 
-      ! Bulb-crop fields
+      ! Bulb-crop fields (swbulb=1: tulips etc.)
       logical      :: swbulb  = .false.      !! enable bulb crop simulation
+      real(real64) :: plwt    = 0.0_real64   !! dry weight mother bulb (kg/ha)
+      real(real64) :: plwti   = 0.0_real64   !! initial dry weight mother bulb (kg/ha)
       real(real64) :: wbl     = 0.0_real64   !! dry weight living flowers (actual, kg/ha)
       real(real64) :: wblpot  = 0.0_real64   !! dry weight living flowers (potential, kg/ha)
       real(real64) :: dwbl    = 0.0_real64   !! dry weight dead flowers (actual, kg/ha)
