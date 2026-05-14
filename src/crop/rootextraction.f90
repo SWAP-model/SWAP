@@ -874,7 +874,7 @@ module rootextraction_mod
 !   task=2 reads state%soilwater%mfluxtable (state required).
 ! ----------------------------------------------------------------------
 
-      use Variables
+      use Variables, only: numlay, nod1lay, wiltpoint, swsalinity, salthead  ! [GR-CROP Phase B/9b] narrow
       use soilhydraulics_utils, only: watcon, hconduc
       implicit none
 
