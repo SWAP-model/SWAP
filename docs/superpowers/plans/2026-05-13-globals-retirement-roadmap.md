@@ -106,6 +106,18 @@ The crop subsystem is the biggest and most coupled. May need internal decomposit
 - `meteoday.f90`: `tavd`/`rh`/`out_rad,tmn,tmx,hum,win,etr,wet` legacy dual-writes retired (no remaining crop consumers)
 - Arc 8 now picks up: remaining crop-runtime symbols (crop-only globals not exercised by atmosphere code), expansion of `crop_state_t` as needed, and crop-specific reader migration for crop-only globals. Remaining bare `tav` consumers (snow.f90/swapoutput.f90/GET_MAX_RESP_FACTOR) block further tav dual-write retirement — see Arc 4/9 cleanup.
 
+**Remaining work fast-forwarded from GR-ATM Phase C (as of 2026-05-14):**
+- Rain timing arrays (`nmrain`/`rainamount`/`raintimearray`/`rainfluxarray`/`raintab`) — per-year reloaded; schema-add to `state%atmosphere` or `config%meteo` deferred to Arc 7/8
+- ETSine astronomical scratchpad (`rad`/`daylp`/`difpp`/`atmtr`/`dsinbe`/`tsunrise_atm`/`tsunset_atm`/`lat`) — schema decision per-symbol (Arc 4)
+- `swredu`/`cofred`/`nird`/`rsigni` in `et.f90` `reduceva` — caller chain config threading (`irrigation+meteoday→reduceva`); Arc 4/8
+- `boundtop.f90` `swkmean`/`swredu`/`flrunon`/`runonarr` — config threading requires `soilhydraulics→headcalc→boundtop` chain (Arc 5 soil cluster)
+- `GET_MAX_RESP_FACTOR` `tav` reads in `oxygenstress.f90` — state arg threading needed; Arc 8 crop cluster
+- `swap_mod.f90` A12 init-time seeding (`tav` and remaining crop/atmosphere symbols) — can drop once all consumers of legacy globals migrate
+- `variables.f90` cleanup: `arad`/`atmn`/`atmx`/`ahum`/`awin`/`arai`/`aetr`/`wet`/`atav`/`tav` and crop fields (`lai`/`gird`/`kdif`/`kdir`/`cofab`/`swcf`/`swcfbs`/`cfbs`/`flCropEmergence`/`et0`/`ew0`/`es0`) — deletion blocked pending Arc 7/8 reader sweep
+- `meteodt.f90` `swrain` → `config%meteo%swrain`; `arai` write-back pattern; rain array schema (Arc 7)
+- `management_soil.f90` still uses blanket `use Variables` (nutrients subsystem; Arc 8)
+- `irrigation.f90` `gird`/`isua` dual-write write-sites (Arc 8; sources not reads)
+
 ### Arc 9 — Final retirement (the payoff)
 **Files:** `src/io/toml/config_to_variables.f90` (delete, ~1802 lines), `src/core/variables.f90` (delete, ~1391 lines), `src/core/initialize.f90` (delete, ~845 lines), `src/core/swap_mod.f90` (drop transient-buffer reads + bind_*_target calls + swinco=3 inline block), `meson.build` (drop deleted files). **Estimated effort: 1–2 days.**
 
