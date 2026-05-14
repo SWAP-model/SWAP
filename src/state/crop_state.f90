@@ -6,7 +6,8 @@
 module crop_state_mod
    use, intrinsic :: iso_fortran_env, only: real64
    use crop_common_state_mod, only: crop_common_state_t
-   use crop_fixed_state_mod,  only: crop_fixed_state_t
+   use crop_fixed_state_mod,   only: crop_fixed_state_t
+   use crop_wofost_state_mod,  only: crop_wofost_state_t
    implicit none
    private
    public :: crop_state_t
@@ -28,6 +29,8 @@ module crop_state_mod
       type(crop_common_state_t) :: common
       ! [SS-GR-CROP A3] sub-record for fixed-crop runtime fields
       type(crop_fixed_state_t) :: fixed
+      ! [SS-GR-CROP A4] sub-record for WOFOST biomass pools + flows
+      type(crop_wofost_state_t) :: wofost
    contains
       procedure :: init => crop_state_init
    end type crop_state_t

@@ -144,6 +144,7 @@ if get_option('enable_pfunit')
         '../../src/state/mesh_state.f90',
         '../../src/state/crop_common_state.f90',
         '../../src/state/crop_fixed_state.f90',
+        '../../src/state/crop_wofost_state.f90',
         '../../src/state/crop_state.f90',
         '../../src/state/swap_state.f90',
         '../../src/core/timestep_control_mod.f90',
