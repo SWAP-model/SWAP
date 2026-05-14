@@ -64,7 +64,46 @@ contains
                             siccapact, fimin, isua, avevaptb, avprectb, pfreetb, pstemtb, scanopytb, &
                             CNref, CNdry, CNwet, ThetaRef, Runoff_CN, wc_cor, wc10, iCNtab, CNtimTAB, CNrefTAB, &
                             ! [GR-ATM C8] out_tmn/tmx/hum/win/etr/wet/rad retired from import (state written by meteoday)
-                            lai, kdif, kdir, cofab, cfbs, swcf, swcfbs, gird, flCropEmergence, et0, ew0, es0
+                            lai, kdif, kdir, cofab, cfbs, swcf, swcfbs, gird, flCropEmergence, et0, ew0, es0, &
+                            ! [SS-GR-CROP A14] crop_common legacy globals
+                            daycrop, dvs, tsum, icrop, &
+                            rd, rdpot, rdm, rri, rdi, rdc, ch, cf, laipot, &
+                            cuptgraz, cuptgrazpot, HarLosOrm_tot, &
+                            ! [SS-GR-CROP A15] crop_wofost/grass/fixed legacy globals
+                            wlv, wlvpot, wst, wstpot, wrt, wrtpot, wso, wsopot, &
+                            tagp, tagppot, tagpt, tagptpot, cwdm, cwdmpot, &
+                            pgass, pgasspot, &
+                            dwlv, dwlvpot, dwst, dwstpot, dwrt, dwrtpot, dwso, &
+                            dwlvCrop, dwlvSoil, plossdm, lossdm, &
+                            swbulb, wbl, wblpot, dwbl, dwblpot, plwt, plwti, &
+                            seqgrazmow, seqgrazmowpot, dateharvest, mowrest, &
+                            cropstartpot, cropstartact, cropendpot, cropendact, &
+                            swpotrelmf, relmf, &
+                            cftb, chtb, cfeic, cfeictb, &
+                            ! [SS-GR-CROP A17] rain timing legacy globals
+                            nmrain, rainamount, rainfluxarray, raintimearray
+      ! [SS-GR-CROP A16] nutrient legacy globals — in WSN modules, not variables.f90
+      use Wofost_Soil_Declarations, only: FOM_t, Bio_t, Hum_t, FOM_t0, Bio_t0, Hum_t0, &
+                                          cNH4_t, cNO3_t, cNH4_t0, cNO3_t0, cNH4_av, cNO3_av, &
+                                          Nminer, Cdissi, NsupplyNH4N, NsupplyNO3N, &
+                                          FOM_old, Bio_old, Hum_old, NFOM_old, NBio_old, NHum_old, &
+                                          NH4_old, NO3_old, &
+                                          FOM_end, Bio_end, Hum_end, NFOM_end, NBio_end, NHum_end, &
+                                          NH4_end, NO3_end, &
+                                          FOM_add, NFOM_add, Hum_add, NHum_add, &
+                                          FOM_cres, NFOM_cres, Hum_cres, NHum_cres, &
+                                          NH4_intop, NH4_inlat, NH4_inbot, NH4_upt, NH4_out, NH4_nitrif, NH4_miner, &
+                                          NO3_intop, NO3_inlat, NO3_inbot, NO3_upt, NO3_out, NO3_denitr, &
+                                          FOM2Bio, NFOM2Bio, FOM2Hum, NFOM2Hum, FOM_dis, NFOM_min, &
+                                          Bio2Bio, NBio2Bio, Bio2Hum, NBio2Hum, Bio_dis, NBio_min, &
+                                          Hum2Bio, NHum2Bio, Hum2Hum, NHum2Hum, Hum_dis, NHum_min, &
+                                          NH4N_amend, NO3N_amend, NH4N_cres, NO3N_cres, NH4N_volat, &
+                                          iNLOSSL_1, iNLOSSR_1, iNLOSSS_1, iNLOSSO_1, &
+                                          idwrt_1, idwlv_1, idwst_1, idwso_1, &
+                                          Ntotuptake, Ptotuptake, &
+                                          DMcressur, Ncressurf, Pcressurf, &
+                                          DMcresbott, Ncresbott, Pcresbott
+      use Wofost_Soil_Interface,    only: NdemandSoil, NsupplySoil, Ndemand, Nsupply, LaiCritNupt
       use soilwater_state_mod, only: soilwater_init
       use tillage_state_mod, only: tillage_init
       use drainage_mod, only: drainage_init
@@ -113,6 +152,117 @@ contains
    call CalcGrid(state)
    call soilwater_init(state%soilwater, state%mesh%numnod, numlay)   ! SS-CRP Phase 1 C-1.2: allocate per-node arrays + mfluxtable
    call state%nutrients%init(numlay)                                ! [SS-GR-CROP A11] zero nutrients state
+
+   ! [SS-GR-CROP A16] dual-write nutrients — WSN organic matter pools + N coupling
+   ! Primary state pools (scalar or maxfn=8 array)
+   state%nutrients%fom_t   = FOM_t
+   state%nutrients%bio_t   = Bio_t
+   state%nutrients%hum_t   = Hum_t
+   state%nutrients%fom_t0  = FOM_t0
+   state%nutrients%bio_t0  = Bio_t0
+   state%nutrients%hum_t0  = Hum_t0
+   ! Mineral N concentrations
+   state%nutrients%cnh4_t  = cNH4_t
+   state%nutrients%cnh4_t0 = cNH4_t0
+   state%nutrients%cnh4_av = cNH4_av
+   state%nutrients%cno3_t  = cNO3_t
+   state%nutrients%cno3_t0 = cNO3_t0
+   state%nutrients%cno3_av = cNO3_av
+   ! Per-timestep rates / scratchpads
+   state%nutrients%nminer      = Nminer
+   state%nutrients%cdissi      = Cdissi
+   state%nutrients%nsupplynh4n = NsupplyNH4N
+   state%nutrients%nsupplyno3n = NsupplyNO3N
+   ! Crop–soil N coupling (from Wofost_Soil_Interface)
+   state%nutrients%ndemandsoil  = NdemandSoil
+   state%nutrients%nsupplysoil  = NsupplySoil
+   state%nutrients%ndemand      = Ndemand
+   state%nutrients%nsupply      = Nsupply
+   state%nutrients%laicritnupt  = LaiCritNupt
+   ! Balance-check state: OM
+   state%nutrients%fom_old  = FOM_old
+   state%nutrients%bio_old  = Bio_old
+   state%nutrients%hum_old  = Hum_old
+   state%nutrients%fom_end  = FOM_end
+   state%nutrients%bio_end  = Bio_end
+   state%nutrients%hum_end  = Hum_end
+   state%nutrients%fom_add  = FOM_add
+   state%nutrients%fom_cres = FOM_cres
+   state%nutrients%fom2bio  = FOM2Bio
+   state%nutrients%fom2hum  = FOM2Hum
+   state%nutrients%fom_dis  = FOM_dis
+   state%nutrients%bio2bio  = Bio2Bio
+   state%nutrients%bio2hum  = Bio2Hum
+   state%nutrients%bio_dis  = Bio_dis
+   state%nutrients%hum_add  = Hum_add
+   state%nutrients%hum_cres = Hum_cres
+   state%nutrients%hum2bio  = Hum2Bio
+   state%nutrients%hum2hum  = Hum2Hum
+   state%nutrients%hum_dis  = Hum_dis
+   ! Balance-check state: organic N
+   state%nutrients%nfom_old  = NFOM_old
+   state%nutrients%nbio_old  = NBio_old
+   state%nutrients%nhum_old  = NHum_old
+   state%nutrients%nfom_end  = NFOM_end
+   state%nutrients%nbio_end  = NBio_end
+   state%nutrients%nhum_end  = NHum_end
+   state%nutrients%nfom_add  = NFOM_add
+   state%nutrients%nfom_cres = NFOM_cres
+   state%nutrients%nfom2bio  = NFOM2Bio
+   state%nutrients%nfom2hum  = NFOM2Hum
+   state%nutrients%nfom_min  = NFOM_min
+   state%nutrients%nbio2bio  = NBio2Bio
+   state%nutrients%nbio2hum  = NBio2Hum
+   state%nutrients%nbio_min  = NBio_min
+   state%nutrients%nhum_add  = NHum_add
+   state%nutrients%nhum_cres = NHum_cres
+   state%nutrients%nhum2bio  = NHum2Bio
+   state%nutrients%nhum2hum  = NHum2Hum
+   state%nutrients%nhum_min  = NHum_min
+   ! Balance-check state: NH4
+   state%nutrients%nh4_old    = NH4_old
+   state%nutrients%nh4_end    = NH4_end
+   state%nutrients%nh4_miner  = NH4_miner
+   state%nutrients%nh4_intop  = NH4_intop
+   state%nutrients%nh4_inlat  = NH4_inlat
+   state%nutrients%nh4_inbot  = NH4_inbot
+   state%nutrients%nh4_upt    = NH4_upt
+   state%nutrients%nh4_out    = NH4_out
+   state%nutrients%nh4_nitrif = NH4_nitrif
+   ! Balance-check state: NO3
+   state%nutrients%no3_old    = NO3_old
+   state%nutrients%no3_end    = NO3_end
+   state%nutrients%no3_intop  = NO3_intop
+   state%nutrients%no3_inlat  = NO3_inlat
+   state%nutrients%no3_inbot  = NO3_inbot
+   state%nutrients%no3_upt    = NO3_upt
+   state%nutrients%no3_out    = NO3_out
+   state%nutrients%no3_denitr = NO3_denitr
+   ! Amendment / residue N tracking
+   state%nutrients%nh4n_amend = NH4N_amend
+   state%nutrients%no3n_amend = NO3N_amend
+   state%nutrients%nh4n_cres  = NH4N_cres
+   state%nutrients%no3n_cres  = NO3N_cres
+   state%nutrients%nh4n_volat = NH4N_volat
+   ! Previous-period crop residue DM and N losses
+   state%nutrients%idwrt_1   = idwrt_1
+   state%nutrients%idwlv_1   = idwlv_1
+   state%nutrients%idwst_1   = idwst_1
+   state%nutrients%idwso_1   = idwso_1
+   state%nutrients%inlossl_1 = iNLOSSL_1
+   state%nutrients%inlossr_1 = iNLOSSR_1
+   state%nutrients%inlosss_1 = iNLOSSS_1
+   state%nutrients%inlosso_1 = iNLOSSO_1
+   ! ANIMO cropext accumulators
+   state%nutrients%ntotuptake = Ntotuptake
+   state%nutrients%ptotuptake = Ptotuptake
+   state%nutrients%dmcressur  = DMcressur
+   state%nutrients%ncressurf  = Ncressurf
+   state%nutrients%pcressurf  = Pcressurf
+   state%nutrients%dmcresbott = DMcresbott
+   state%nutrients%ncresbott  = Ncresbott
+   state%nutrients%pcresbott  = Pcresbott
+
    ! [SS-GR-BH A6] soilwater layer flats — placed here because soilwater_init
    ! allocates the state arrays (nlay-sized) AFTER config_to_variables runs.
    ! All layer flats sourced directly from config (legacy globals retired Task 36).
@@ -215,6 +365,12 @@ contains
    state%atmosphere%CNtimTAB  = CNtimTAB
    state%atmosphere%CNrefTAB  = CNrefTAB
 
+   ! [SS-GR-CROP A17] dual-write rain timing
+   state%atmosphere%nmrain        = nmrain
+   state%atmosphere%rainamount    = rainamount
+   state%atmosphere%rainfluxarray = rainfluxarray
+   state%atmosphere%raintimearray = raintimearray
+
    ! [GR-ATM C8] out_tmn/tmx/hum/win/etr/wet/rad seeding dropped: legacy globals retired; state%atmosphere%X written by meteoday
 
    ! [SS-GR-ATM A12] seed state%crop from legacy crop globals
@@ -230,6 +386,84 @@ contains
    state%crop%et0             = et0
    state%crop%ew0             = ew0
    state%crop%es0             = es0
+
+   ! [SS-GR-CROP A14] dual-write crop_common
+   state%crop%common%daycrop        = daycrop
+   state%crop%common%dvs            = dvs
+   state%crop%common%tsum           = tsum
+   state%crop%common%swcrp          = swcrp
+   state%crop%common%icrop          = icrop
+   state%crop%common%flCropCalendar = flCropCalendar
+   state%crop%common%flCropOutput   = flCropOutput
+   state%crop%common%flCropNut      = flCropNut
+   state%crop%common%flHarvestDay   = flHarvestDay
+   state%crop%common%swend          = swend
+   state%crop%common%rd             = rd
+   state%crop%common%rdpot          = rdpot
+   state%crop%common%rdm            = rdm
+   state%crop%common%rri            = rri
+   state%crop%common%rdi            = rdi
+   state%crop%common%rdc            = rdc
+   state%crop%common%ch             = ch
+   state%crop%common%cf             = cf
+   state%crop%common%laipot         = laipot
+   state%crop%common%cuptgraz       = cuptgraz
+   state%crop%common%cuptgrazpot    = cuptgrazpot
+   state%crop%common%HarLosOrm_tot  = HarLosOrm_tot
+
+   ! [SS-GR-CROP A15] dual-write crop_wofost
+   state%crop%wofost%wlv      = wlv
+   state%crop%wofost%wlvpot   = wlvpot
+   state%crop%wofost%wst      = wst
+   state%crop%wofost%wstpot   = wstpot
+   state%crop%wofost%wrt      = wrt
+   state%crop%wofost%wrtpot   = wrtpot
+   state%crop%wofost%wso      = wso
+   state%crop%wofost%wsopot   = wsopot
+   state%crop%wofost%tagp     = tagp
+   state%crop%wofost%tagppot  = tagppot
+   state%crop%wofost%tagpt    = tagpt
+   state%crop%wofost%tagptpot = tagptpot
+   state%crop%wofost%cwdm     = cwdm
+   state%crop%wofost%cwdmpot  = cwdmpot
+   state%crop%wofost%pgass    = pgass
+   state%crop%wofost%pgasspot = pgasspot
+   state%crop%wofost%dwlv     = dwlv
+   state%crop%wofost%dwlvpot  = dwlvpot
+   state%crop%wofost%dwst     = dwst
+   state%crop%wofost%dwstpot  = dwstpot
+   state%crop%wofost%dwrt     = dwrt
+   state%crop%wofost%dwrtpot  = dwrtpot
+   state%crop%wofost%dwso     = dwso
+   state%crop%wofost%dwlvCrop = dwlvCrop
+   state%crop%wofost%dwlvSoil = dwlvSoil
+   state%crop%wofost%plossdm  = plossdm
+   state%crop%wofost%lossdm   = lossdm
+   state%crop%wofost%swbulb   = (swbulb == 1)   ! integer→logical conversion
+   state%crop%wofost%wbl      = wbl
+   state%crop%wofost%wblpot   = wblpot
+   state%crop%wofost%dwbl     = dwbl
+   state%crop%wofost%dwblpot  = dwblpot
+   state%crop%wofost%plwt     = plwt
+   state%crop%wofost%plwti    = plwti
+
+   ! [SS-GR-CROP A15] dual-write crop_grass
+   state%crop%grass%seqgrazmow    = seqgrazmow
+   state%crop%grass%seqgrazmowpot = seqgrazmowpot
+   state%crop%grass%dateharvest   = dateharvest
+   state%crop%grass%mowrest       = mowrest
+   state%crop%grass%cropstartpot  = cropstartpot
+   state%crop%grass%cropstartact  = cropstartact
+   state%crop%grass%cropendpot    = cropendpot
+   state%crop%grass%cropendact    = cropendact
+   state%crop%grass%swpotrelmf    = swpotrelmf
+   state%crop%grass%relmf         = relmf
+
+   ! [SS-GR-CROP A15] dual-write crop_fixed
+   state%crop%fixed%cftb    = cftb
+   state%crop%fixed%chtb    = chtb
+   state%crop%fixed%cfeic   = cfeic
+   state%crop%fixed%cfeictb = cfeictb
 
    ! [SS-TC TC-14] alias TC fields used in init block
    block
