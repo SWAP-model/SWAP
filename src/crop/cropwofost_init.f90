@@ -175,6 +175,8 @@ contains
             end block
          end if
       end if
+      state%crop%common%albedo = albedo   ! [SS-GR-CROPRT A5]
+      state%crop%common%rsc    = rsc      ! [SS-GR-CROPRT A5]
 
       ! Part 14: interception (readwofost line 2640-2642)
       swinter = cfg%interception%swinter
@@ -480,6 +482,7 @@ contains
                cumdens(i) = cumdens(i) / sum_dens
             end do
          end if
+         state%crop%common%cumdens = cumdens   ! [SS-GR-CROPRT A5]
       end if
 
       ! ----------------------------------------------------------------

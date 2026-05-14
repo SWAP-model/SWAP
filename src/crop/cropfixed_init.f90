@@ -148,6 +148,8 @@ contains
          rsc    = cfg%rsc
          rsw    = cfg%rsw
       end if
+      state%crop%common%albedo = albedo   ! [SS-GR-CROPRT A5]
+      state%crop%common%rsc    = rsc      ! [SS-GR-CROPRT A5]
 
       ! ---- Copy tables ------------------------------------------------
       ! gctb (size up to 2*magrs in legacy; we copy what was authored).
@@ -193,6 +195,7 @@ contains
          do i = 2, 202, 2
             cumdens(i) = cumdens(i) / sum
          end do
+         state%crop%common%cumdens = cumdens   ! [SS-GR-CROPRT A5]
       end if
    end subroutine cropfixed_init_from_config
 

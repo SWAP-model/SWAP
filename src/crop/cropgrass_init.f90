@@ -180,6 +180,8 @@ contains
          cftb = -99.99d0
          state%crop%fixed%cftb = cftb   ! [SS-GR-CROP A5.2]
       end if
+      state%crop%common%albedo = albedo   ! [SS-GR-CROPRT A5]
+      state%crop%common%rsc    = rsc      ! [SS-GR-CROPRT A5]
 
       ! Part 2: interception (readgrass lines 3560-3585)
       swinter = cfg%swinter
@@ -407,6 +409,7 @@ contains
                cumdens(i) = cumdens(i) / sum_val
             end do
          end if
+         state%crop%common%cumdens = cumdens   ! [SS-GR-CROPRT A5]
       end if
 
    end subroutine cropgrass_init_from_config
