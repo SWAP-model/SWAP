@@ -549,16 +549,8 @@
       cQMpOutDrRap         = 0.0d0
       ! [SS-GR-FINAL D1] dFdhMp zero-fill dropped — declaration retired
       iQMpOutDrRap         = 0.0d0
-      iQInTopLatDm1        = 0.0d0
-      iQInTopLatDm2        = 0.0d0
-      iQInTopVrtDm1        = 0.0d0
-      iQInTopVrtDm2        = 0.0d0
-      IWaSrDm1Beg          = 0.0d0
-      IWaSrDm2Beg          = 0.0d0
-      WaSrDm1              = 0.0d0
-      WaSrDm2              = 0.0d0
-      WaSrDm1Ini           = 0.0d0
-      WaSrDm2Ini           = 0.0d0
+      ! [SS-GR-CROPRT A2] iQInTopLatDm1/2/iQInTopVrtDm1/2 zero-fills dropped — declarations retired (ADR 0040)
+      ! [SS-GR-CROPRT A2] IWaSrDm1/2Beg/WaSrDm1/2/WaSrDm1/2Ini zero-fills dropped — declarations retired (ADR 0040)
       DiPoCp               = 0.0d0
       IAvFrMpWlWtDm1       = 0.0d0
       IAvFrMpWlWtDm2       = 0.0d0
@@ -567,7 +559,7 @@
       iQOutDrRapCp         = 0.0d0
       VlMpStDm1            = 0.0d0
       VlMpStDm2            = 0.0d0
-      IcTopMP              = 0
+      ! [SS-GR-CROPRT A2] IcTopMP zero-fill dropped — declaration retired (ADR 0040)
       ! [SS-GR-FINAL D1] IDecMpRat zero-fill dropped — declaration retired
       QExcMpMtx            = 0.0d0
       QMaPo                = 0.0d0
@@ -576,7 +568,7 @@
       NumLevRapDra         = 0
       ! [SS-GR-FINAL D1] RapDraReaExp/RapDraResRef zero-fills dropped — declarations retired
       FlDecMpRat           = .false.
-      flmacropore          = .false.
+      ! [SS-GR-CROPRT A2] flmacropore zero-fill dropped — declaration retired (ADR 0040)
 
 ! --- surface water variables
       ! [SS-GR-FINAL D1] swswb/swdrf zero-fills dropped — declarations retired

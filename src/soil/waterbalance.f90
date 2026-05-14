@@ -40,11 +40,11 @@ contains
       ! [SS-SWC S-2.12B] retired globals removed from use clause; all reads/writes via state%soilwater
       ! [GR-BH C4] numnod/z/disnod migrated to state%mesh
       ! [GR-BH Audit 31] swbotb removed from use-list; read via state%soilwater%swbotb_runtime
-      ! [SS-GR-FINAL B9] DEFERRED: logf/flmacropore/CritUndSatVol
+      ! [SS-GR-FINAL B9] DEFERRED: logf/CritUndSatVol
       !   logf: file unit; Phase C3
-      !   flmacropore: retired-zero sentinel guarding dead macropore branches; Phase D
       !   CritUndSatVol: passed as arg to watertable(); defined in variables; Phase C3
-      use variables, only: logf, flmacropore, CritUndSatVol
+      ! [SS-GR-CROPRT A2] flmacropore dropped from import — retired (ADR 0040)
+      use variables, only: logf, CritUndSatVol
       ! [SS-TC TC-6] t1900 read cut over to state%timecontrol%t1900
       use swap_log, only: log_debug, to_str
       implicit none
@@ -99,19 +99,10 @@ contains
             if (sw_h(node) .lt. 1.0d0 .and. nodheq1.eq.numnod) nodheq1 = node  ! S-2.4
 
             if (sw_h(node) .lt. 0.0d0) then                  ! S-2.4 read cutover
-               if (.not.flmacropore) then
-                  flsat  = .false.
-                  state%soilwater%nodgwl = node                ! S-1.6/S-2.12B
-                  sw_gwl    = level (state,1,node,nodheq1)     ! S-2.4/S-2.12B
-               elseif (flmacropore) then
-                  if (sw_gwl.gt.990.0d0) then
-                     state%soilwater%nodgwl = node             ! S-1.6/S-2.12B
-                     sw_gwl    = level (state,2,node,nodheq1)  ! S-2.4/S-2.12B
-                  endif
-                  call watertable (state,node,nodgwlflcpzo_loc,nodhlp,nodheq1,0.0d0,flsat,gwlflcpzo_loc)  ! S-2.4
-                  state%soilwater%nodgwlflcpzo = nodgwlflcpzo_loc  ! S-1.6/S-2.12B (watertable out-arg)
-                  state%soilwater%gwlflcpzo    = gwlflcpzo_loc     ! S-1.6/S-2.12B (watertable out-arg)
-               endif
+               ! [SS-GR-CROPRT A2] flmacropore branch removed (ADR 0040; always .false.)
+               flsat  = .false.
+               state%soilwater%nodgwl = node                ! S-1.6/S-2.12B
+               sw_gwl    = level (state,1,node,nodheq1)     ! S-2.4/S-2.12B
             endif
          endif
       end do
@@ -128,10 +119,7 @@ contains
             sw_gwl = 0.0d0
          end if
          state%soilwater%nodgwl = 1                           ! S-1.6/S-2.12B
-         if (flmacropore) then
-            state%soilwater%nodgwlflcpzo = 1                  ! S-1.6/S-2.12B
-            state%soilwater%gwlflcpzo    = sw_gwl             ! S-1.6/S-2.12B
-         endif
+         ! [SS-GR-CROPRT A2] if (flmacropore) block dropped (ADR 0040; always .false.)
       endif
 
       ! search for perched groundwater table
@@ -157,14 +145,10 @@ contains
             if (sw_h(node) .lt. 1.0d0 .and. nodheq1.eq.state%soilwater%bpegwl) nodheq1 = node  ! S-2.4
 
             if (sw_h(node) .lt. 0.0d0) then                  ! S-2.4 read cutover
-               if (.not.flmacropore) then
-                  flsat = .false.
-                  state%soilwater%npegwl = node                ! S-1.6/S-2.12B
-                  state%soilwater%pegwl  = level (state,1,node,nodheq1)  ! S-2.4/S-2.12B
-               elseif (flmacropore) then
-                  ! [SS-SWC S-2.12B] use local out args for watertable interface
-                  call watertable (state,node,state%soilwater%npegwl,nodhlp,nodheq1,CritUndSatVol,flsat,state%soilwater%pegwl)  ! S-2.4
-               endif
+               ! [SS-GR-CROPRT A2] flmacropore branch removed (ADR 0040; always .false.)
+               flsat = .false.
+               state%soilwater%npegwl = node                ! S-1.6/S-2.12B
+               state%soilwater%pegwl  = level (state,1,node,nodheq1)  ! S-2.4/S-2.12B
             endif
          end do
 
@@ -665,8 +649,7 @@ contains
      &        - state%soilwater%pond + state%soilwater%cqssdi
       endif
 
-      if (FlMacropore) state%soilwater%wbalance = state%soilwater%wbalance - cQMpOutDrRap -            &
-     &                  (WaSrDm1 + WaSrDm2 - WaSrDm1Ini - WaSrDm2Ini)
+      ! [SS-GR-CROPRT A2] if (FlMacropore) wbalance block dropped (ADR 0040; always .false.)
 
       end associate  ! tc_dt, tc_flDayStart (TC-6); numnod [GR-BH C4]; nrlevs [GR-BH Audit 31]
 
@@ -709,16 +692,13 @@ contains
       ! [GR-BH Audit 31] nrlevs removed from use-list; read via state%drainage%nrlevs
       ! [SS-GR-FINAL B9] DEFERRED: all checkmassbal globals; Phase C3/D
       !   NumNodNew/DZNew — regridding temporaries; Phase C3
-      !   IcTopMp/FlMacropore — macropore retired-zero sentinels; Phase D
       !   outfil/pathwork — output file path globals; Phase C3
       !   CritDevMasBal — mass balance criterion; Phase C3
-      !   IQInTopVrtDm1/IQInTopLatDm1/IQInTopVrtDm2/IQInTopLatDm2 — macropore retired-zero; Phase D
-      !   ISsnowBeg/IWaSrDm1Beg/IWaSrDm2Beg/WaSrDm1/WaSrDm2 — macropore/snow integrals; Phase D
+      !   ISsnowBeg — snow integral; Phase C3
       !   dev_cmb — mass balance device file handle; Phase C3
-      use variables, only: NumNodNew, IcTopMp, FlMacropore, outfil, pathwork, DZNew,    &
-                           CritDevMasBal, IQInTopVrtDm1, IQInTopLatDm1, IQInTopVrtDm2, &
-                           IQInTopLatDm2, ISsnowBeg, IWaSrDm1Beg, IWaSrDm2Beg, WaSrDm1, WaSrDm2, &
-                           dev_cmb
+      ! [SS-GR-CROPRT A2] IcTopMp/FlMacropore/IQInTopVrt*/IQInTop*/IWaSrDm*/WaSrDm* dropped — retired (ADR 0040)
+      use variables, only: NumNodNew, outfil, pathwork, DZNew,    &
+                           CritDevMasBal, ISsnowBeg, dev_cmb
       ! [SS-TC TC-6] DayCum read cut over to state%timecontrol%daycum
       use swap_state_mod, only: swap_state_t
       use swap_array_dimensions, only: macp, madr
@@ -760,10 +740,7 @@ contains
       SrDif = state%soilwater%IPondBeg-state%soilwater%pond + ISsnowBeg-state%atmosphere%ssnow
       IQInTopPreDm= 0.d0
       IQInTopLatDm= 0.d0
-      if (FlMacropore .and. IcTopMp.eq.1) then
-         IQInTopPreDm= IQInTopVrtDm1 + IQInTopVrtDm2
-         IQInTopLatDm= IQInTopLatDm1 + IQInTopLatDm2
-      endif
+      ! [SS-GR-CROPRT A2] if (FlMacropore) IQInTopPreDm/IQInTopLatDm block dropped (ADR 0040)
 
       ! Deviation mass balance Ponding layer in cm
       ! [SS-SWC S-2.12B] igird/inird/iruno/irunon -> state%soilwater
@@ -791,10 +768,7 @@ contains
          do level=1,state%drainage%nrlevs   ! [GR-BH Audit 31]
             QdraPrf = QdraPrf + InqdraNew(level,ic)
          enddo
-         if (FlMacropore) then
-            IQExcMtxDm1= IQExcMtxDm1 + IQExcMtxDm1CpNew(ic)
-            IQExcMtxDm2= IQExcMtxDm2 + IQExcMtxDm2CpNew(ic)
-         endif
+         ! [SS-GR-CROPRT A2] if (FlMacropore) IQExcMtxDm1/2 accumulation dropped (ADR 0040)
       enddo
       SrDif= WaSrPrfBeg - WaSrPrf
 
@@ -822,8 +796,7 @@ contains
          ! Deviation mass balance Soil Compartments in cm
          DevMasBalCmp(ic) = inqNew(ic+1) + SrDif &
      &                    - (inqNew(ic) + inqrotNew(ic) + Qdra(ic))
-         if (FlMacropore)  DevMasBalCmp(ic) = DevMasBalCmp(ic) + &
-     &                     IQExcMtxDm1CpNew(ic) + IQExcMtxDm2CpNew(ic)
+         ! [SS-GR-CROPRT A2] if (FlMacropore) DevMasBalCmp IQExc adjustment dropped (ADR 0040)
 
          ! Check mass balance against criteria
          if (abs(DevMasBalCmp(ic)).gt.CritDevMasBal) then
@@ -832,32 +805,7 @@ contains
          endif
  100  continue
 
-      ! 4) Macropore domains Dm1 and Dm2
-      if (FlMacropore) then
-         IQOutDrRap= 0.d0
-         do ic = 1, numnodnew
-            IQOutDrRap= IQOutDrRap + IQOutDrRapCpNew(ic)
-         enddo
-
-         ! Deviation mass balance Macropore Domains in cm
-         SrDif = IWaSrDm1Beg - WaSrDm1
-         DevMasBalDm1= IQInTopLatDm1 + SrDif - (IQExcMtxDm1  + IQOutDrRap)
-         if (IcTopMp.eq.1) DevMasBalDm1= DevMasBalDm1 + IQInTopVrtDm1
-
-         SrDif = IWaSrDm2Beg - WaSrDm2
-         DevMasBalDm2= IQInTopLatDm2 + SrDif - IQExcMtxDm2
-         if (IcTopMp.eq.1) DevMasBalDm2= DevMasBalDm2 + IQInTopVrtDm2
-
-         ! Check mass balance against criteria
-         if (abs(DevMasBalDm1).gt.CritDevMasBal) then
-            FlWriteDev = .true.
-            FlWriteDevDm1 = .true.
-         endif
-         if (abs(DevMasBalDm2).gt.CritDevMasBal) then
-            FlWriteDev = .true.
-            FlWriteDevDm2 = .true.
-         endif
-      endif
+      ! [SS-GR-CROPRT A2] Section 4 Macropore domains Dm1/Dm2 dropped (ADR 0040; FlMacropore always .false.)
 
       ! In case of deviations of mass balance open file 'xxxxx.dwb.csv'
 
@@ -865,7 +813,7 @@ contains
          filnam = trim(pathwork)//trim(outfil)//'.dwb'
          call file_open(dev_cmb, filnam, 'replace', 'write')
          write(dev_cmb,1)
-         if (FlMacropore) write(dev_cmb,2)
+         ! [SS-GR-CROPRT A2] if (FlMacropore) write(dev_cmb,2) dropped (ADR 0040)
          FlOpenFileDev = .true.
       endif
 
@@ -890,13 +838,7 @@ contains
      &      WaSrBeg(ic), IQExcMtxDm1CpNew(ic), IQExcMtxDm2CpNew(ic)
       enddo
 
-      ! Write deviations of water balance Macropore Domains
-      if (FlWriteDevDm1) write(dev_cmb,6) state%timecontrol%daycum, DevMasBalDm1, &  ! TC-6
-     &   IQInTopVrtDm1, IQInTopLatDm1, IQExcMtxDm1, WaSrDm1, &
-     &   IWaSrDm1Beg, IQOutDrRap
-      if (FlWriteDevDm2) write(dev_cmb,7) state%timecontrol%daycum, DevMasBalDm2, &  ! TC-6
-     &   IQInTopVrtDm2, IQInTopLatDm2, IQExcMtxDm2, WaSrDm2, &
-     &   IWaSrDm2Beg
+      ! [SS-GR-CROPRT A2] Macropore Domain Dm1/Dm2 write statements dropped (ADR 0040; FlMacropore always .false.)
     1 format(' DEVIATIONS WATERBALANCE for different subsystems: 1. Pon'&
      &'d.layer; 2. Whole profile; 3. Compartment; (optional: Macrop.Dom'&
      &'.: 4. Dom1; 5. Dom2)',/,                                         &

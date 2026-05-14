@@ -24,8 +24,8 @@ contains
          bdens, kf, cref, kfsat, poros, frexp, ddif, decpot, fdepth, &
          ! DEFERRED: ldis — longitudinal dispersion length; soil config; Phase C3
          ldis, &
-         ! DEFERRED: FlMacropore/Z_Tp/ArMpTp — retired-zero macropore sentinels; Phase D
-         FlMacropore, Z_Tp, ArMpTp, &
+         ! [SS-GR-CROPRT A2] FlMacropore dropped — retired (ADR 0040); Z_Tp/ArMpTp kept (ArMpSs gating)
+         Z_Tp, ArMpTp, &
          ! DEFERRED: swbotbc/cseeptab — bottom boundary solute config; Phase C3
          swbotbc, cseeptab, &
          ! DEFERRED: inpola/inpolb — soil compartment interpolation arrays; Phase C3
@@ -177,7 +177,7 @@ contains
 
 !     set value of macropore area at soil surface
       ArMpSs = 0.d0                                           !     set value of macropore area at soil surface
-      if (FlMacropore .and. Z_Tp.gt.-1.d-8) ArMpSs = ArMpTp
+      ! [SS-GR-CROPRT A2] if (FlMacropore) ArMpSs = ArMpTp dropped (ADR 0040; FlMacropore always .false.)
 
 ! --- boundary concentrations
       if (swbotbc .eq. 2) then

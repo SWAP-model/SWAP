@@ -70,8 +70,8 @@ contains
          ! DEFERRED body refs: Agepre, Ageirr, Agedrain, Agepond, Agepondm1, Agegwl1m
          ! [SS-GR-CROPRT A1] icAgesur/icAgetopdwn/icAgetopupw/icAgerot/icAgedra/icAgebot dropped — body dead-code (ADR 0032)
          ! DEFERRED body refs: icAgesur, icAgetopdwn, icAgetopupw, icAgerot, icAgedra, icAgebot
-         ! DEFERRED: FlMacropore/Z_Tp/ArMpTp — retired-zero macropore sentinels; Phase D
-         FlMacropore, Z_Tp, ArMpTp, &
+         ! [SS-GR-CROPRT A2] FlMacropore dropped — retired (ADR 0040); Z_Tp/ArMpTp kept (body dead-code anyway)
+         Z_Tp, ArMpTp, &
          ! DEFERRED: inpola/inpolb — soil compartment interpolation arrays; Phase C3
          inpola, inpolb, &
          ! DEFERRED: ddif/ldis — solute diffusion/dispersion config; Phase C3
@@ -212,7 +212,7 @@ contains
 
 !     set value of macropore area at soil surface
       ArMpSs = 0.d0                                           !     set value of macropore area at soil surface
-      if (FlMacropore .and. Z_Tp.gt.-1.d-8) ArMpSs = ArMpTp
+      ! [SS-GR-CROPRT A2] if (FlMacropore) ArMpSs = ArMpTp dropped (ADR 0040; FlMacropore always .false., body dead-code)
 
 ! --- determine maximum timestep
       dtsolu = tc_dt  ! TC-12

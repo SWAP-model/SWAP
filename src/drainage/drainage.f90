@@ -195,8 +195,7 @@ contains
          basegw, ipos, khtop, khbot, kvtop, kvbot, entres, zintf, geofac, &
          ! DEFERRED: drares/infres/qdrtab/cofintfl/expintfl/shape — drain resistance/flow config; Phase C3
          drares, infres, qdrtab, cofintfl, expintfl, shape, &
-         ! DEFERRED: FlMacropore — retired-zero macropore sentinel; Phase D
-         FlMacropore, &
+         ! [SS-GR-CROPRT A2] FlMacropore dropped — retired (ADR 0040)
          ! DEFERRED: NumLevRapDra — rapid drainage level count; config%drainage%nrlevs; Phase C3
          NumLevRapDra, &
          ! DEFERRED: swliminf — infiltration limit switch; config; Phase C3
@@ -345,10 +344,7 @@ contains
                   end if
                   dh = gwldra - x
                   if (fldry) dh = gwldra - zbotdr(lev)
-                  ! ---     drainage basis for rapid drainage through macropores
-                  if (FlMacropore .and. lev .eq. NumLevRapdra .and. swdtyp(lev) .eq. 2) then
-                     ZDraBas = dmax1(x, zbotdr(NumLevRapDra))
-                  end if
+                  ! [SS-GR-CROPRT A2] rapid drainage macropore block dropped (ADR 0040; FlMacropore always .false.)
 
                   ! ---     drainage
                   if (dh .ge. 0.0d0) then
@@ -742,8 +738,7 @@ contains
      rsurfdeep, rsurfshallow, &
      ! DEFERRED: cofintfl/expintfl — infiltration coefficients; config; Phase C3
      cofintfl, expintfl, &
-     ! DEFERRED: FlMacropore — retired-zero macropore sentinel; Phase D
-     FlMacropore, &
+     ! [SS-GR-CROPRT A2] FlMacropore dropped — retired (ADR 0040)
      ! DEFERRED: NumLevRapdra — rapid drainage level count; config%drainage%nrlevs; Phase C3
      NumLevRapdra
 
@@ -885,12 +880,7 @@ contains
 
 500               continue
 
-!   - drainage basis for rapid drainage through macropores
-                  if (FlMacropore) then
-                     if (swdtyp(NumLevRapDra) .ne. 1) then
-                        ZDraBas = state%drainage%drainl(NumLevRapDra)
-                     end if
-                  end if
+!   [SS-GR-CROPRT A2] rapid drainage macropore basis block dropped (ADR 0040; FlMacropore always .false.)
 
 ! ----------------------------------------------------------------------
 ! --- check for system falling dry (only for swsec = 2):

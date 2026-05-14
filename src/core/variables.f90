@@ -1273,24 +1273,24 @@
       ! real(8) dtold                ! moved to state%timecontrol%dtold
       real(8) DiPoCp(MaCp)         ! [retired-zero] kept: soilgrid refinement
       real(8) iQMpOutDrRap         ! [retired-zero] kept: swap_csv/swapoutput DRAINAGE accumulator
-      real(8) iQInTopLatDm1        ! [retired-zero] kept: waterbalance.f90 macropore BMA writer
-      real(8) iQInTopLatDm2        ! [retired-zero] kept: waterbalance.f90 macropore BMA writer
-      real(8) iQInTopVrtDm1        ! [retired-zero] kept: waterbalance.f90 macropore BMA writer
-      real(8) iQInTopVrtDm2        ! [retired-zero] kept: waterbalance.f90 macropore BMA writer
+      ! [SS-GR-CROPRT A2] iQInTopLatDm1 retired — ADR 0040 (0 consumers; macropore BMA dead)
+      ! [SS-GR-CROPRT A2] iQInTopLatDm2 retired — ADR 0040 (0 consumers; macropore BMA dead)
+      ! [SS-GR-CROPRT A2] iQInTopVrtDm1 retired — ADR 0040 (0 consumers; macropore BMA dead)
+      ! [SS-GR-CROPRT A2] iQInTopVrtDm2 retired — ADR 0040 (0 consumers; macropore BMA dead)
       real(8) IAvFrMpWlWtDm1(MaCp) ! [retired-zero] kept: soilgrid refinement
       real(8) IAvFrMpWlWtDm2(MaCp) ! [retired-zero] kept: soilgrid refinement
       real(8) iQExcMtxDm1Cp(MaCp)  ! [retired-zero] kept: soilgrid.f90 macropore redistribution
       real(8) iQExcMtxDm2Cp(MaCp)  ! [retired-zero] kept: soilgrid.f90 macropore redistribution
       real(8) iQOutDrRapCp(MaCp)   ! [retired-zero] kept: soilgrid.f90 macropore redistribution
-      real(8) IWaSrDm1Beg          ! [retired-zero] kept: waterbalance .BMA writer
-      real(8) IWaSrDm2Beg          ! [retired-zero] kept: waterbalance .BMA writer
-      real(8) WaSrDm1              ! [retired-zero] kept: waterbalance .BMA writer
-      real(8) WaSrDm2              ! [retired-zero] kept: waterbalance .BMA writer
-      real(8) WaSrDm1Ini           ! [retired-zero] kept: waterbalance wbalance term
-      real(8) WaSrDm2Ini           ! [retired-zero] kept: waterbalance wbalance term
+      ! [SS-GR-CROPRT A2] IWaSrDm1Beg retired — ADR 0040 (macropore BMA writer; checkmassbal branch dropped)
+      ! [SS-GR-CROPRT A2] IWaSrDm2Beg retired — ADR 0040 (macropore BMA writer; checkmassbal branch dropped)
+      ! [SS-GR-CROPRT A2] WaSrDm1 retired — ADR 0040 (macropore BMA writer; checkmassbal branch dropped)
+      ! [SS-GR-CROPRT A2] WaSrDm2 retired — ADR 0040 (macropore BMA writer; checkmassbal branch dropped)
+      ! [SS-GR-CROPRT A2] WaSrDm1Ini retired — ADR 0040 (macropore wbalance term; branch dropped)
+      ! [SS-GR-CROPRT A2] WaSrDm2Ini retired — ADR 0040 (macropore wbalance term; branch dropped)
       real(8) VlMpStDm1(MaCp)      ! [retired-zero] kept: soilgrid refinement
       real(8) VlMpStDm2(MaCp)      ! [retired-zero] kept: soilgrid refinement
-      integer IcTopMP              ! [retired-zero] kept: waterbalance.f90 macropore branch
+      ! [SS-GR-CROPRT A2] IcTopMP retired — ADR 0040 (waterbalance macropore branch dropped)
       ! [SS-GR-FINAL D1] IDecMpRat retired — 0 consumers
       real(8) QExcMpMtx(MaCp)      ! [retired-zero] kept: waterbalance use clause
       real(8) QMaPo                ! [retired-zero] kept: waterbalance qbot term
@@ -1302,7 +1302,7 @@
       ! [SS-GR-FINAL D1] RapDraReaExp retired — only c2v writes; 0 consumers
       ! [SS-GR-FINAL D1] RapDraResRef retired — only c2v writes; 0 consumers
       logical FlDecMpRat           ! [retired-zero] kept: soilhydraulics convergence sentinel
-      logical flmacropore          ! [retired-zero] forced .false. in init — guards dead branches
+      ! [SS-GR-CROPRT A2] flmacropore retired — ADR 0040 (always .false.; all guarded branches dropped)
       ! [SS-BND] retired 2026-05-11 — boundary subsystem migrated to state%soilwater (ADR 0035)
       ! [MACRO-RETIRE 2026-05-12] All other macropore globals retired.
       ! See ADR 0040 and legacy/swap-4.2.0 for the original SWAP 4.2.0

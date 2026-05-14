@@ -765,8 +765,9 @@ contains
    end subroutine timecontrol_advance
 
    subroutine timecontrol_reduce_dt(state)
-      ! [SS-GR-FINAL B8] DEFERRED: flMacroPore/FlDecMpRat — retired-zero sentinels; guards dead macropore branch; Phase D
-      use variables, only: flMacroPore, FlDecMpRat
+      ! [SS-GR-FINAL B8] FlDecMpRat — retired-zero sentinel; soilhydraulics convergence; Phase D
+      ! [SS-GR-CROPRT A2] flMacroPore dropped from import — retired (ADR 0040)
+      use variables, only: FlDecMpRat
       use timestep_control_mod, only: fldecdt
       implicit none
       type(swap_state_t), intent(inout) :: state
@@ -866,12 +867,8 @@ contains
         return
       endif
 
-! --- decrease in case of Macropores
-      if (flMacroPore .and. FlDecMpRat) then
-        dt = dsqrt(dtmin*dtmax)
-        dtprevious = dt
-        return
-      endif
+! --- [SS-GR-CROPRT A2] macropore dt-decrease block dropped (ADR 0040; flMacroPore always .false.)
+      ! FlDecMpRat still used as convergence sentinel by soilhydraulics; kept for now
 
       end associate
    end subroutine timecontrol_reduce_dt
