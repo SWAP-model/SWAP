@@ -580,6 +580,7 @@ contains
                             flharvestday, flcropoutput, swcrp, &
                             ! [GR-FINAL C3] swend dropped: read via state%crop%common%swend (C category, inv. §C)
                             flTillage, flSSDI
+      use cropgrowth_helpers_mod, only: CropOutput  ! GR-CROPWS Phase 0
       use timestep_control_mod, only: fldecdt
       use timecontrol_mod, only: timecontrol_advance, timecontrol_reduce_dt, &
                                   timecontrol_day_end, itertime_check
@@ -790,6 +791,7 @@ contains
       use swap_log,  only: log_info
       use management_soil_mod, only: SoilManagement
       use timecontrol_mod, only: itertime_close
+      use cropgrowth_helpers_mod, only: CropOutput  ! GR-CROPWS Phase 0
       type(swap_state_t),  intent(inout) :: state
       type(swap_config_t), intent(in)    :: config  ! unused: kept for parallel signature with swap_init/swap_run_step
 

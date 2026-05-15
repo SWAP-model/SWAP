@@ -178,6 +178,7 @@ sources = [
     'src/crop/irrigation.f90',
     'src/crop/tillage.f90',
     'src/crop/management_soil.f90',
+    'src/crop/cropgrowth_helpers.f90',
     'src/crop/cropgrowth.f90',
 
     # State

@@ -182,6 +182,7 @@ if get_option('enable_pfunit')
         '../../src/crop/rootextraction.f90',
         '../../src/crop/tillage.f90',
         '../../src/crop/management_soil.f90',
+        '../../src/crop/cropgrowth_helpers.f90',
         '../../src/crop/cropgrowth.f90',
         '../../src/utils/sharedsimulation.f90',
         '../../src/utils/numericalsolvers.f90',
