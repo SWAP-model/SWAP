@@ -1,5 +1,7 @@
 ! File VersionID:
 !   $Id: oxygenstress.f90 378 2018-05-08 13:50:52Z heine003 $
+! [SS-GR-CROPWS A6]: Phase A audit — zero write sites for any tracked crop symbol.
+!   No optional/present guards. No changes required.
 !
 ! ----------------------------------------------------------------------
 

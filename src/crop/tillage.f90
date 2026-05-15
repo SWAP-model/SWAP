@@ -1,5 +1,7 @@
 ! to do: default MvG parameters that are read: do they refer to BDENS or Rho_cons; or should BDENS and RhoCons be equal?
 ! to do: check if Rho_match differs from BDENS or Rho_cons (if not: division by zero possible)
+! [SS-GR-CROPWS A6]: Phase A audit — zero write sites for any tracked crop symbol.
+!   No optional/present guards. No changes required.
 
 module tillage_mod
    use error_mod, only: fatalerr_collected

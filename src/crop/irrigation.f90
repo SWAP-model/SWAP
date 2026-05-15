@@ -1,5 +1,7 @@
 ! File VersionID:
 !   $Id: irrigation.f90 372 2018-03-13 10:01:20Z heine003 $
+! [SS-GR-CROPWS A6]: Phase A audit — gird already has inline dual-writes (SS-GR-ATM A5.3);
+!   state already intent(inout); no optional/present guards. No changes required.
 ! ----------------------------------------------------------------------
 !> Irrigation routines for scheduled and subsurface drip irrigation.
 !!
