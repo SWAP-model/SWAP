@@ -185,6 +185,7 @@ if get_option('enable_pfunit')
         '../../src/crop/cropgrowth_helpers.f90',
         '../../src/crop/cropwofost_runtime.f90',
         '../../src/crop/cropgrass_runtime.f90',
+        '../../src/crop/cropfixed_runtime.f90',
         '../../src/crop/cropgrowth.f90',
         '../../src/utils/sharedsimulation.f90',
         '../../src/utils/numericalsolvers.f90',
