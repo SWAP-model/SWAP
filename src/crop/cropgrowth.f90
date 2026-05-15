@@ -10,6 +10,12 @@
 ! [SS-GR-CROPWS A1]: cropgrowth.f90 audit — state already intent(inout) non-optional;
 !   all tracked write sites carry dual-writes from prior arcs; no optional/present guards.
 !   No file changes required for Phase A.
+! [GR-CROPWS B3]: reads migrated — croptype(state%crop%common%icrop), icrop (block section),
+!   cropstart (post-mirror), cropend (task 4), rd (root loop), dvs (task 4, post-task-3 mirror),
+!   swbulb→state%crop%wofost%swbulb, plwt→state%crop%wofost%plwt, kdif→state%crop%kdif.
+!   daycrop NOT migrated: InitializeCrop zeroes legacy global but does not mirror to state,
+!     so state%crop%common%daycrop would be stale on first crop day.
+!   lai/laipot NOT migrated (ordering not confirmed safe for all crop types).
 ! ----------------------------------------------------------------------
       subroutine CropGrowth(task, tsoil, state)
 ! ----------------------------------------------------------------------
@@ -27,13 +33,14 @@
       ! [SS-GR-CROPRT B1] DEFERRED — all remaining variables globals for CropGrowth:
       !   icrop, flCropCalendar, cropstart, cropend, flCropEmergence, flCropHarvest,
       !   flCropReadFile, flCropPrep, flCropSow, flCropGerm: crop calendar flags, no state home
-      !   swinco, croptype, swcrp, swdrought, swharv, swbulb: config switches, no state home
-      !   daycrop, rd, rdpot, lai, laipot, cf, ch, tsum, dvs: runtime crop state (dual-write
+      !   swinco, croptype, swcrp, swdrought, swharv: config switches, no state home [swbulb→state B3]
+      !   daycrop, rdpot, lai, laipot, cf, ch, tsum, dvs: runtime crop state (dual-write
       !     to state%crop%common%; global still needed pending Phase C global retirement)
+      !   [daycrop: NOT migrated — InitializeCrop zeroes global but not state mirror]
       !   cwdmpot, cwdm, wsopot, wso, wlvpot, wlv, wstpot, wst, wrtpot, wrt: WOFOST pools
       !   tmn, lat, rad: meteo scalars, no state%atmosphere scalar home
-      !   eff, amaxtb, tmpftb, tmnftb, kdif: physiology params/tables, no state home
-      !   plwt, remoc, pld, q10, pgasspot, pgass: physiology params
+      !   eff, amaxtb, tmpftb, tmnftb: physiology params/tables, no state home [kdif→state B3]
+      !   remoc, pld, q10, pgasspot, pgass: physiology params [plwt→state B3; swbulb→state B3]
       !   flCropNut, nlue, anlv, anst, nmxlv, nmaxlv, nmaxst, nmaxrt, lrnr, lsnr, nni,
       !     rnflv, rnfst, frnx, fstr: nutrient state/params, no nutrient_state home
       !   flHarvestDay: harvest flag (dual-write to state%crop%common%; global still needed)
@@ -48,15 +55,15 @@
       ! MIGRATED B1: swpotrelmf → state%crop%grass%swpotrelmf (read-only in CropGrowth)
       ! MIGRATED B6: fco2amax/fco2eff/fco2tra → state%crop%wofost%X (FacCO2 now writes to state;
       !   body reads at lines 459-461 use state; redundant dual-writes at old-395-397 removed)
-      use variables, only: &                                                 ! [SS-GR-CROPRT B1/B6] DEFERRED
+      use variables, only: &                                             ! [SS-GR-CROPRT B1/B6] [GR-CROPWS B3]
         icrop, flCropCalendar, cropstart, cropend, flCropEmergence,         &
         flCropHarvest, flCropReadFile, flCropPrep, flCropSow, flCropGerm,   &
         swinco, croptype, daycrop, rd, rdpot, lai, laipot, cf, ch, tsum,   &
         dvs, cwdmpot, cwdm, wsopot, wso, wlvpot, wlv, wstpot, wst,        &
         wrtpot, wrt, tmn, lat, rad,                                         &
         albedo, rsc, cumdens,                                               &
-        eff, amaxtb, tmpftb, tmnftb, kdif, swdrought, swcrp, dvsend,       &
-        swharv, swbulb, plwt, remoc, pld, q10, pgasspot, pgass,            &
+        eff, amaxtb, tmpftb, tmnftb, swdrought, swcrp, dvsend,             &  ! [GR-CROPWS B3] kdif removed (→state%crop%kdif)
+        swharv, plwt, remoc, pld, q10, pgasspot, pgass,                    &  ! [GR-CROPWS B3] swbulb removed (→state%crop%wofost%swbulb)
         flCropNut, nlue, anlv, anst, nmxlv, nmaxlv, nmaxst,               &
         nmaxrt, lrnr, lsnr, nni, rnflv, rnfst, frnx, fstr, flHarvestDay,  &
         noddrz, pathcrop, cropfil, bgerm, cgerm,                           &
@@ -171,7 +178,7 @@
 
       ! reset if new crop
       if (flCropCalendar) then
-        if (dabs(tc_t1900 - cropstart(icrop)) .lt. tiny) then
+        if (dabs(tc_t1900 - state%crop%common%cropstart) .lt. tiny) then  ! [GR-CROPWS B3]
           call InitializeCrop
           ! [SS-GR-CROPRT A5] mirror fields zeroed by InitializeCrop
           state%crop%common%flCropPrep    = flCropPrep
@@ -188,7 +195,7 @@
           state%crop%common%flCropReadFile = flCropReadFile   ! [SS-GR-CROPRT A5]
           flCropEmergence = .true.
           state%crop%flCropEmergence = flCropEmergence   ! [SS-GR-ATM A5.2] dual-write
-          if (croptype(icrop) .le. 2) then
+          if (croptype(state%crop%common%icrop) .le. 2) then
             flCropEmergence = .false.
             state%crop%flCropEmergence = flCropEmergence   ! [SS-GR-ATM A5.2] dual-write
           endif
@@ -196,7 +203,7 @@
       endif
 
 ! --- Preparation, Sowing and Germination of arable crop growth ---------------
-      if (flCropCalendar .and. .not. flCropHarvest .and. croptype(icrop) .le. 2) then
+      if (flCropCalendar .and. .not. flCropHarvest .and. croptype(state%crop%common%icrop) .le. 2) then
 
         ! check crop preparation, sowing and germination (of previous day)
         if (.not. flCropEmergence) then
@@ -236,28 +243,28 @@
                if (associated(crop_config_global)) then
                   if (allocated(crop_config_global%rotation_loaded) .and. &
                       allocated(crop_config_global%rotation_type)) then
-                     if (icrop >= 1 .and. icrop <= size(crop_config_global%rotation_loaded)) then
-                        if (crop_config_global%rotation_loaded(icrop)) then
-                           rot_type = crop_config_global%rotation_type(icrop)
+                     if (state%crop%common%icrop >= 1 .and. state%crop%common%icrop <= size(crop_config_global%rotation_loaded)) then  ! [GR-CROPWS B3]
+                        if (crop_config_global%rotation_loaded(state%crop%common%icrop)) then  ! [GR-CROPWS B3]
+                           rot_type = crop_config_global%rotation_type(state%crop%common%icrop)  ! [GR-CROPWS B3]
                            select case (rot_type)
                            case (1)
                               ! type=1 cropfixed
                               if (allocated(crop_config_global%rotation_fixed)) then
                                  use_cache    = .true.
-                                 swprep_cache = crop_config_global%rotation_fixed(icrop)%swprep
-                                 swsow_cache  = crop_config_global%rotation_fixed(icrop)%swsow
-                                 swgerm_cache = crop_config_global%rotation_fixed(icrop)%swgerm
+                                 swprep_cache = crop_config_global%rotation_fixed(state%crop%common%icrop)%swprep   ! [GR-CROPWS B3]
+                                 swsow_cache  = crop_config_global%rotation_fixed(state%crop%common%icrop)%swsow    ! [GR-CROPWS B3]
+                                 swgerm_cache = crop_config_global%rotation_fixed(state%crop%common%icrop)%swgerm   ! [GR-CROPWS B3]
                               end if
                            case (2)
                               ! type=2 wofost: cache-hit when swprep=0 AND swsow=0.
                               ! swgerm=0/1/2 are all handled in the cache body below.
                               if (allocated(crop_config_global%rotation_wofost)) then
-                                 swprep_cache = crop_config_global%rotation_wofost(icrop)%preparation%swprep
-                                 swsow_cache  = crop_config_global%rotation_wofost(icrop)%sowing%swsow
-                                 swgerm_cache = crop_config_global%rotation_wofost(icrop)%germination%swgerm
+                                 swprep_cache = crop_config_global%rotation_wofost(state%crop%common%icrop)%preparation%swprep  ! [GR-CROPWS B3]
+                                 swsow_cache  = crop_config_global%rotation_wofost(state%crop%common%icrop)%sowing%swsow         ! [GR-CROPWS B3]
+                                 swgerm_cache = crop_config_global%rotation_wofost(state%crop%common%icrop)%germination%swgerm   ! [GR-CROPWS B3]
                                  if (swprep_cache == 0 .and. swsow_cache == 0) then
                                     use_cache = .true.
-                                    gp => crop_config_global%rotation_wofost(icrop)%germination
+                                    gp => crop_config_global%rotation_wofost(state%crop%common%icrop)%germination   ! [GR-CROPWS B3]
                                  end if
                               end if
                            end select
@@ -355,13 +362,13 @@
         if (flCropReadFile) then
           
           ! fixed crop development
-          if (croptype(icrop) .eq. 1 .and. flCropEmergence) call CropFixed(1, state)
+          if (croptype(state%crop%common%icrop) .eq. 1 .and. flCropEmergence) call CropFixed(1, state)
 
           ! detailed crop growth
-          if (croptype(icrop) .eq. 2 .and. flCropEmergence) call Wofost(1, state)
+          if (croptype(state%crop%common%icrop) .eq. 2 .and. flCropEmergence) call Wofost(1, state)
 
           ! detailed grass growth
-          if (croptype(icrop) .eq. 3) call Grass(1, tsoil, state)
+          if (croptype(state%crop%common%icrop) .eq. 3) call Grass(1, tsoil, state)
 
           ! SS-CRP Phase 2 C-2.5: init JvL state directly (legacy globals retired).
           ! CropFixed/Wofost/Grass(1) set flhydrlift and twilt; hroot/hleaf/mfluxtable
@@ -391,7 +398,7 @@
 
       ! set running average of minimum temperature (only for detailed crop growth)
       ! [SS-GR-FINAL B5] nofd/atmin7 read/written via state%atmosphere directly
-      if (flCropEmergence .and. croptype(icrop).ge.2) then
+      if (flCropEmergence .and. croptype(state%crop%common%icrop).ge.2) then
         state%atmosphere%nofd = min(state%atmosphere%nofd+1, 7)
         sumtmin = 0.0d0
         do i = state%atmosphere%nofd,2,-1
@@ -408,14 +415,14 @@
 
       ! determine lowest compartment containing roots
       node = 1
-      do while (state%mesh%zbotcp(node) .gt. (-rd + 1.d-8))  ! [GR-BH C7]
+      do while (state%mesh%zbotcp(node) .gt. (-state%crop%common%rd + 1.d-8))  ! [GR-BH C7] [GR-CROPWS B3]
         node = node + 1
       end do
       noddrz = node
       state%crop%common%noddrz = noddrz   ! [SS-GR-CROPRT A5]
 
       ! calculate potential and actual assimilation
-      if (flCropEmergence .and. croptype(icrop).ge.2) then
+      if (flCropEmergence .and. croptype(state%crop%common%icrop).ge.2) then
           
 ! check DAYNR during the day!!!!!!          
           
@@ -423,17 +430,17 @@
         call astro (tc_daynr+1,lat,rad,dayl,daylp,sinld,cosld,difpp,atmtr,dsinbe)
 
         ! only for bulb crops (tulips etc..)
-        if(swbulb.eq.1) then
+        if(state%crop%wofost%swbulb) then                                     ! [GR-CROPWS B3] swbulb → state%crop%wofost%swbulb
           ! remobilisation of carbohydrates from planted material
-          if (plwt.le.(0.0002d0*pld)) then
+          if (state%crop%wofost%plwt.le.(0.0002d0*pld)) then                  ! [GR-CROPWS B3] plwt → state%crop%wofost%plwt
             ! no remobilisation at minimum weight motherbulb
             respmo = 0.0d0
             remo = 0.0d0
           else
             ! decrease weight mother organ starts at emergence.
             ! decrease consists of respiration and remobilisation
-            decrmo = plwt-(plwt*(2.71828d0**remoc))
-            respmo = 0.025d0*(q10**((at_tavd-25.0d0)/10.0d0))*plwt  ! [SS-GR-ATM B.5] tavd→state%atmosphere%tavd
+            decrmo = state%crop%wofost%plwt-(state%crop%wofost%plwt*(2.71828d0**remoc))  ! [GR-CROPWS B3]
+            respmo = 0.025d0*(q10**((at_tavd-25.0d0)/10.0d0))*state%crop%wofost%plwt    ! [SS-GR-ATM B.5] [GR-CROPWS B3]
             if(respmo.lt.decrmo) then
               remo = decrmo - respmo
             else
@@ -441,19 +448,19 @@
               respmo = decrmo
             end if
             ! weight motherbulb decreases by remobilisation and respiration
-            plwt = plwt - remo - respmo
+            plwt = state%crop%wofost%plwt - remo - respmo                     ! [GR-CROPWS B3] RHS plwt → state%crop%wofost%plwt
             state%crop%wofost%plwt = plwt   ! [SS-GR-CROP A5.1]
           endif
         endif
 
         ! daily gross assimilation
         effc = state%crop%wofost%fco2eff * eff  ! [SS-GR-CROPRT B6] fco2eff via state
-        if (croptype(icrop) .eq. 2) amax = state%crop%wofost%fco2amax * afgen (amaxtb,30,dvs) * afgen (tmpftb,30,at_tavd)  ! [SS-GR-ATM B.5] [SS-GR-CROPRT B6]
-        if (croptype(icrop) .eq. 3) amax = state%crop%wofost%fco2amax * afgen (amaxtb,30,dble(daycrop)) * afgen (tmpftb,30,at_tavd)  ! [SS-GR-ATM B.5] [SS-GR-CROPRT B6]
+        if (croptype(state%crop%common%icrop) .eq. 2) amax = state%crop%wofost%fco2amax * afgen (amaxtb,30,dvs) * afgen (tmpftb,30,at_tavd)  ! [SS-GR-ATM B.5] [SS-GR-CROPRT B6]
+        if (croptype(state%crop%common%icrop) .eq. 3) amax = state%crop%wofost%fco2amax * afgen (amaxtb,30,dble(daycrop)) * afgen (tmpftb,30,at_tavd)  ! [SS-GR-ATM B.5] [SS-GR-CROPRT B6]
 
 
         ! potential assimilation
-        call totass (dayl,amax,effc,laipot,kdif,rad,difpp,dsinbe,sinld,cosld,dtgapot)
+        call totass (dayl,amax,effc,laipot,state%crop%kdif,rad,difpp,dsinbe,sinld,cosld,dtgapot)  ! [GR-CROPWS B3] kdif → state%crop%kdif
 
         ! correction for low minimum temperature
         dtgapot = dtgapot * afgen (tmnftb,30,tmnr)
@@ -462,11 +469,11 @@
         pgasspot = dtgapot * 30.0d0/44.0d0
 
         ! only for bulb crops (tulips etc..)
-        if(swbulb.eq.1) then
+        if(state%crop%wofost%swbulb) then                                     ! [GR-CROPWS B3]
           ! assimilation is raised with remobilisation from motherbulb
           ! using a factor of 1.11 given by De Ruijter et al.(1993)
           factblb  = 1.11d0
-          pgasspot = pgasspot + remo*factblb
+          pgasspot = pgasspot + remo*factblb   ! RHS pgasspot is local (just computed)
         endif
 
         ! reduction due to limited attainable maximum yield
@@ -475,7 +482,7 @@
 
 
         ! actual assimilation
-        call totass (dayl,amax,effc,lai,kdif,rad,difpp,dsinbe,sinld,cosld,dtga)
+        call totass (dayl,amax,effc,lai,state%crop%kdif,rad,difpp,dsinbe,sinld,cosld,dtga)  ! [GR-CROPWS B3] kdif → state%crop%kdif; lai=legacy
 
         ! correction for low minimum temperature
         dtga = dtga * afgen (tmnftb,30,tmnr)
@@ -483,11 +490,11 @@
         ! actual assimilation in kg ch2o per ha
         pgass = dtga * 30.0d0/44.0d0
         ! only for bulb crops (tulips etc..)
-        if(swbulb.eq.1) then
+        if(state%crop%wofost%swbulb) then                                     ! [GR-CROPWS B3]
           ! assimilation is raised with remobilisation from motherbulb
           ! using a factor of 1.11 given by De Ruijter et al.(1993)
           factblb = 1.11d0
-          pgass   = pgass + remo*factblb
+          pgass   = pgass + remo*factblb   ! RHS pgass is local (just computed)
         endif
 
         ! reduction due to limited attainable maximum yield
@@ -512,13 +519,13 @@
       if (flCropHarvest) return
 
 ! --- detailed crop growth -------------------------------------------------
-      if (croptype(icrop) .eq. 2) then
+      if (croptype(state%crop%common%icrop) .eq. 2) then
         if (flCropEmergence) then
           call Wofost(2, state)
         endif
       endif
 ! --- detailed grass growth  -----------------------------------------------
-      if (croptype(icrop) .eq. 3) then
+      if (croptype(state%crop%common%icrop) .eq. 3) then
         call Grass(2, tsoil, state)
       endif
 
@@ -531,19 +538,19 @@
       if (flCropHarvest) return
 
 ! --- fixed crop development -----------------------------------------------
-      if (croptype(icrop).eq.1) then
+      if (croptype(state%crop%common%icrop).eq.1) then
         if(flCropEmergence) then
           call CropFixed(3, state)
         endif
       endif
 ! --- detailed crop growth -------------------------------------------------
-      if (croptype(icrop).eq.2) then
+      if (croptype(state%crop%common%icrop).eq.2) then
         if (flCropEmergence) then
           call Wofost(3, state)
          endif
       endif
 ! --- detailed grass growth  -----------------------------------------------
-      if (croptype(icrop).eq.3) then
+      if (croptype(state%crop%common%icrop).eq.3) then
         call Grass(3, tsoil, state)
       endif
 
@@ -555,26 +562,26 @@
       
       if (flCropHarvest) return
      
-      if (croptype(icrop).le.2 .and. flCropEmergence)then
+      if (croptype(state%crop%common%icrop).le.2 .and. flCropEmergence)then
 
         ! Check flHarvestDay
         if (swharv.eq.0) then
-          if (dabs(tc_t1900 - cropend(icrop) - 1.d0) .lt. 1.0d-3) then
+          if (dabs(tc_t1900 - cropend(state%crop%common%icrop) - 1.d0) .lt. 1.0d-3) then  ! [GR-CROPWS B3] icrop → state%crop%common%icrop
             flHarvestDay = .true.
             state%crop%common%flHarvestDay = flHarvestDay   ! [SS-GR-CROP A5.1]
           endif
         else
-          if (dvs.ge.dvsend .or. dabs(tc_t1900 - cropend(icrop) - 1.d0) .lt. 1.0d-3) then
+          if (state%crop%common%dvs.ge.dvsend .or. dabs(tc_t1900 - cropend(state%crop%common%icrop) - 1.d0) .lt. 1.0d-3) then  ! [GR-CROPWS B3] dvs→state (task 4: synced after task 3); icrop→state
             flHarvestDay = .true.
             state%crop%common%flHarvestDay = flHarvestDay   ! [SS-GR-CROP A5.1]
           endif
         endif
         
         if (flCropEmergence .or. flHarvestDay) then
-          if (croptype(icrop).eq.1) then
+          if (croptype(state%crop%common%icrop).eq.1) then
             call CropFixed(4, state)
           endif
-          if (croptype(icrop).eq.2) then
+          if (croptype(state%crop%common%icrop).eq.2) then
             call Wofost(4, state)
           endif
         endif
@@ -584,7 +591,7 @@
 ! --- check timing of harvest
       
 ! --- fixed crop development -----------------------------------------------
-      if (croptype(icrop).eq.1)then
+      if (croptype(state%crop%common%icrop).eq.1)then
         if (flHarvestDay) then
           flCropEmergence = .false.
           state%crop%flCropEmergence = flCropEmergence   ! [SS-GR-ATM A5.2] dual-write
@@ -594,7 +601,7 @@
       endif
 
 ! --- detailed crop growth -------------------------------------------------
-      if (croptype(icrop).eq.2)then
+      if (croptype(state%crop%common%icrop).eq.2)then
         if (flHarvestDay) then
           flCropEmergence = .false.
           state%crop%flCropEmergence = flCropEmergence   ! [SS-GR-ATM A5.2] dual-write
@@ -604,8 +611,8 @@
       endif
 
 ! --- detailed grass growth ------------------------------------------------
-      if (croptype(icrop).eq.3)then
-        if (dabs(tc_t1900 - cropend(icrop) - 1.d0) .lt. 1.0d-3) then
+      if (croptype(state%crop%common%icrop).eq.3)then
+        if (dabs(tc_t1900 - cropend(state%crop%common%icrop) - 1.d0) .lt. 1.0d-3) then  ! [GR-CROPWS B3] icrop → state%crop%common%icrop
           flCropEmergence = .false.
           state%crop%flCropEmergence = flCropEmergence   ! [SS-GR-ATM A5.2] dual-write
           flCropHarvest   = .true.
