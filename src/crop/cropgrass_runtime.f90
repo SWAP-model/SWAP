@@ -1,6 +1,10 @@
 ! cropgrass_runtime.f90
 ! GR-CROPWS Phase 0 Commit 0.3: grass extracted from cropgrowth.f90.
 ! Pure relocation — no behavior change.
+! [GR-CROPWS B4]: icrop reads → state%crop%common%icrop (task-1 block, 5 sites);
+!   cropstart(icrop) at swinco=3 skip check → state%crop%common%cropstart.
+!   icrop and cropstart removed from use variables.
+!   daycrop NOT migrated (InitializeCrop zeroes global, state not mirrored there).
 ! ----------------------------------------------------------------------
       module cropgrass_runtime_mod
       implicit none
@@ -43,8 +47,8 @@
       !   pgass/pgasspot: state%crop%wofost homes (A4 dual-write) but written here — Phase C
       !   perdl, dateharvest, lsda: output + harvest tracking, no state home
       !   tsoil: config-staging buffer, renamed to avoid clash with dummy arg
-      use variables, only: &                                                ! [SS-GR-CROPRT B8] DEFERRED
-        magrs, macp, icrop, dvs, rid, tsum, tbase, daycrop, tdwi, swinco, &
+      use variables, only: &                                            ! [SS-GR-CROPRT B8] [GR-CROPWS B4]
+        magrs, macp, dvs, rid, tsum, tbase, daycrop, tdwi, swinco, &  ! [GR-CROPWS B4] icrop removed (→state%crop%common%icrop)
         wlv, wlvpot, wst, wstpot, wrt, wrtpot, wrtmax, wrtmin,           &
         dwlv, dwlvpot, dwrt, dwrtpot, dwst, dwstpot,                     &
         cf, ch, cfeic, lai, laipot, laiem, laiexp, laiexppot, laimax,    &
@@ -56,7 +60,7 @@
         lv, lvpot, lvage, lvagepot, sla, slapot, ilvold, ilvoldpot,     &
         twilt, wiltpoint, gwrt, siccapact, siccaplai,                   &
         cropstartact, cropendact, cropstartpot, cropendpot,             &
-        cropstart, idaysgraz, idaysgrazpot, idregr, idregrpot,          &
+        idaysgraz, idaysgrazpot, idregr, idregrpot,                      &  ! [GR-CROPWS B4] cropstart removed (→state%crop%common%cropstart)
         flgrazing, flgrazingpot, flharvest, flharvestpot,               &
         flhrvendact, flhrvendpot, flhydrlift,                           &
         daygrowth, daygrowthpot, grzdm, dewrest,                        &
@@ -160,19 +164,19 @@
          use_cache = .false.
          if (associated(crop_config_global)) then
             if (allocated(crop_config_global%rotation_loaded)) then
-               if (icrop >= 1 .and. icrop <= size(crop_config_global%rotation_loaded)) then
-                  if (crop_config_global%rotation_loaded(icrop)) then
+               if (state%crop%common%icrop >= 1 .and. state%crop%common%icrop <= size(crop_config_global%rotation_loaded)) then  ! [GR-CROPWS B4] icrop → state%crop%common%icrop
+                  if (crop_config_global%rotation_loaded(state%crop%common%icrop)) then  ! [GR-CROPWS B4]
                      ! Defense-in-depth: only dispatch to cache when the schema
                      ! is fully authored (case 4 + case 2 have amaxtb; the
                      ! hupselbrook skeleton does not — Phase 4 will fill it).
-                     if (allocated(crop_config_global%rotation_grass(icrop)%amaxtb)) &
+                     if (allocated(crop_config_global%rotation_grass(state%crop%common%icrop)%amaxtb)) &  ! [GR-CROPWS B4]
                         use_cache = .true.
                   end if
                end if
             end if
          end if
          if (use_cache) then
-            associate(cfg => crop_config_global%rotation_grass(icrop))
+            associate(cfg => crop_config_global%rotation_grass(state%crop%common%icrop))  ! [GR-CROPWS B4] icrop → state%crop%common%icrop
                swharvest      = cfg%swharv
                dmharvest      = cfg%dmharvest
                daylastharvest = int(cfg%daylastharvest)
@@ -187,7 +191,7 @@
                LSDb           = 0.0d0   ! grazing stub-guarded; populated via daysgrazingtab/uptgrazingtab/lossgrazingtab by init
                tagprest       = cfg%tagprest
                swhydrlift     = 0       ! swdrought=2 stub-errored; mirror cropfixed/cropwofost default
-               call cropgrass_init_from_config(cfg, icrop, &
+               call cropgrass_init_from_config(cfg, state%crop%common%icrop, &  ! [GR-CROPWS B4] icrop → state%crop%common%icrop
                   state%timecontrol%tend, state%timecontrol%tstart, state)  ! [SS-BMI2 Task 4] [SS-GR-ATM A5.1]
             end associate
          else
@@ -219,7 +223,7 @@
 
 ! --- skip next initialization if crop parameters are read from *.END file
       if (tc_t1900 - tstart .gt. tiny .or. swinco .ne. 3 .or.          &
-     &   dabs(tc_t1900 - cropstart(icrop)) .lt. tiny) then
+     &   dabs(tc_t1900 - state%crop%common%cropstart) .lt. tiny) then   ! [GR-CROPWS B4] cropstart(icrop) → state%crop%common%cropstart
 
         iseqgm = 1
         iseqgmpot = iseqgm
