@@ -4,6 +4,9 @@
 !              sumttd, init_crop_output_buffer, build_crop_output_row,
 !              cleanup_crop_output_buffer
 ! Pure relocation — no behavior change.
+! [SS-GR-CROPWS A5]: Phase A audit — ArableLandGerm already intent(inout) with inline
+!   writes; FacCO2 already writes state directly (B6); nocrop() has no state arg
+!   (DEFERRED). No optional/present guards. No changes required.
 ! ----------------------------------------------------------------------
       module cropgrowth_helpers_mod
       implicit none
