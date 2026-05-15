@@ -19,6 +19,7 @@
 ! SS-CRP C-2.5: state added (optional, intent in) to read flWrtNonox.
 ! SS-TC TC-10: t1900 read via state%timecontrol tc_t1900 alias.
 ! SS-GR-ATM A5.1: intent changed inout to allow dual-write in cropfixed_init_from_config.
+! [SS-GR-CROPWS A2]: state optional removed — all callers pass state; all if(present(state)) guards dropped.
 ! [GR-CROP Phase B/6] narrow use variables
 ! [SS-GR-CROPRT B2] DEFERRED — cropfixed: all remaining variables globals:
 !   magrs: array dim (could → swap_array_dimensions, deferred with rest)
@@ -51,7 +52,7 @@
       use swap_state_mod, only: swap_state_t
       implicit none
 
-      type(swap_state_t), intent(inout), optional :: state
+      type(swap_state_t), intent(inout) :: state   ! [SS-GR-CROPWS A2] removed optional — all callers pass state
 
 ! --- local variables
       integer   i,task,lcc,swhydrlift
@@ -113,7 +114,7 @@
       else
         rdm = min(rdmax,rdc)
       endif
-      if (present(state)) state%crop%common%rdm = rdm   ! [SS-GR-CROP A5.1]
+      state%crop%common%rdm = rdm   ! [SS-GR-CROP A5.1]
 
 ! --- skip next initialization if crop parameters are read from *.END file
       if (tc_t1900 - tstart .gt. tiny .or. swinco .ne. 3 .or.           &
@@ -129,11 +130,9 @@
           rd = min(rdi,rdm)
         endif
         rdpot = rd
-        if (present(state)) then
-          state%crop%common%dvs   = dvs    ! [SS-GR-CROP A5.1]
-          state%crop%common%rd    = rd     ! [SS-GR-CROP A5.1]
-          state%crop%common%rdpot = rdpot  ! [SS-GR-CROP A5.1]
-        endif
+        state%crop%common%dvs   = dvs    ! [SS-GR-CROP A5.1]
+        state%crop%common%rd    = rd     ! [SS-GR-CROP A5.1]
+        state%crop%common%rdpot = rdpot  ! [SS-GR-CROP A5.1]
 
       endif
 
@@ -143,7 +142,7 @@
         gc = lai
         lai = lai*3.0d0
       endif
-      if (present(state)) state%crop%lai = lai   ! [SS-GR-ATM A5.2] dual-write
+      state%crop%lai = lai   ! [SS-GR-ATM A5.2] dual-write
 
 ! --- initial crop factor or crop height
       cf = afgen (cftb,(2*magrs),dvs)
@@ -151,16 +150,14 @@
       if (swcf.eq.3) then
         cfeic = afgen (cfeictb,(2*magrs),dvs)
       endif
-      if (present(state)) then
-        state%crop%common%cf = cf   ! [SS-GR-CROP A5.1]
-        state%crop%common%ch = ch   ! [SS-GR-CROP A5.1]
-        if (swcf.eq.3) state%crop%fixed%cfeic = cfeic   ! [SS-GR-CROP A5.1]
-      endif
+      state%crop%common%cf = cf   ! [SS-GR-CROP A5.1]
+      state%crop%common%ch = ch   ! [SS-GR-CROP A5.1]
+      if (swcf.eq.3) state%crop%fixed%cfeic = cfeic   ! [SS-GR-CROP A5.1]
 
 ! --- initial storage on canopy
       if (swinter.eq.3) then
         siccapact = siccaplai*lai
-        if (present(state)) state%atmosphere%siccapact = siccapact   ! [SS-GR-ATM A5.2] dual-write
+        state%atmosphere%siccapact = siccapact   ! [SS-GR-ATM A5.2] dual-write
       endif
 
 ! --- initial dry weight of roots at soil surface; oxygen module
@@ -222,10 +219,8 @@
 ! --- phenological development stage
       dvs = min(dvs+dvr,2.d0)
       tsum = tsum + dtsum
-      if (present(state)) then
-        state%crop%common%dvs  = dvs    ! [SS-GR-CROP A5.1]
-        state%crop%common%tsum = tsum   ! [SS-GR-CROP A5.1]
-      endif
+      state%crop%common%dvs  = dvs    ! [SS-GR-CROP A5.1]
+      state%crop%common%tsum = tsum   ! [SS-GR-CROP A5.1]
 
 ! --- leaf area index or soil cover fraction
       lai = afgen (gctb,(2*magrs),dvs)
@@ -233,7 +228,7 @@
         gc = lai
         lai = lai*3.0d0
       endif
-      if (present(state)) state%crop%lai = lai   ! [SS-GR-ATM A5.2] dual-write
+      state%crop%lai = lai   ! [SS-GR-ATM A5.2] dual-write
 
 ! --- crop factor or crop height
       cf        = afgen (cftb,(2*magrs),dvs)
@@ -241,16 +236,14 @@
       if (swcf.eq.3) then
         cfeic     = afgen (cfeictb,(2*magrs),dvs)
       endif
-      if (present(state)) then
-        state%crop%common%cf = cf   ! [SS-GR-CROP A5.1]
-        state%crop%common%ch = ch   ! [SS-GR-CROP A5.1]
-        if (swcf.eq.3) state%crop%fixed%cfeic = cfeic   ! [SS-GR-CROP A5.1]
-      endif
+      state%crop%common%cf = cf   ! [SS-GR-CROP A5.1]
+      state%crop%common%ch = ch   ! [SS-GR-CROP A5.1]
+      if (swcf.eq.3) state%crop%fixed%cfeic = cfeic   ! [SS-GR-CROP A5.1]
 
 ! --- update canopy storage capacity
       if (swinter.eq.3) then
         siccapact = siccaplai*lai
-        if (present(state)) state%atmosphere%siccapact = siccapact   ! [SS-GR-ATM A5.2] dual-write
+        state%atmosphere%siccapact = siccapact   ! [SS-GR-ATM A5.2] dual-write
       endif
 
 ! --- dry weight of roots at soil surface; oxygen module
@@ -274,15 +267,12 @@
 
         rr = min (rdm-rd,rri)
         if (state%atmosphere%ptra.lt.nihil .or.             &
-     &      (present(state) .and.                           &
-     &       state%soilwater%flWrtNonox)) rr = 0.0d0
+     &      state%soilwater%flWrtNonox) rr = 0.0d0   ! [SS-GR-CROPWS A2] present(state) guard removed
         if (swdmi2rd.eq.1 .and. state%atmosphere%ptra.ge.nihil) rr = rr * state%soilwater%tra/state%atmosphere%ptra  ! [SS-SWC S-2.7]
         rd = rd + rr
       endif
-      if (present(state)) then
-        state%crop%common%rdpot = rdpot   ! [SS-GR-CROP A5.1]
-        state%crop%common%rd    = rd      ! [SS-GR-CROP A5.1]
-      endif
+      state%crop%common%rdpot = rdpot   ! [SS-GR-CROP A5.1]
+      state%crop%common%rd    = rd      ! [SS-GR-CROP A5.1]
 
       return
 
