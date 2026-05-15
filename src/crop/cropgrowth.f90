@@ -7,6 +7,9 @@
 ! The crop sub-readers (readwofost, readcropfixed, readgrass) live in
 ! src/io/readswap.f90 — none of them are here. Phase 4e Task A4/A5
 ! replaces all of this file's calls via fatalerr_collected (singleton).
+! [SS-GR-CROPWS A1]: cropgrowth.f90 audit — state already intent(inout) non-optional;
+!   all tracked write sites carry dual-writes from prior arcs; no optional/present guards.
+!   No file changes required for Phase A.
 ! ----------------------------------------------------------------------
       subroutine CropGrowth(task, tsoil, state)
 ! ----------------------------------------------------------------------
