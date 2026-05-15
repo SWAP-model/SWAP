@@ -1,6 +1,12 @@
 ! cropwofost_runtime.f90
 ! GR-CROPWS Phase 0 Commit 0.2: wofost extracted from cropgrowth.f90.
 ! Pure relocation — no behavior change.
+! [GR-CROPWS B5]: icrop reads (task-1 block, task-2/3 harvest checks) → state%crop%common%icrop;
+!   cropstart(icrop) at swinco=3 skip → state%crop%common%cropstart;
+!   cropend(icrop) in tasks 3/4 harvest checks → cropend(state%crop%common%icrop).
+!   icrop and cropstart removed from use variables. cropend retained (array index still used).
+!   swbulb reads NOT migrated (task-1 reads precede the state mirror at line 369;
+!   task-2/3 reads could be migrated but swbulb changes are niche; left for Phase C).
 ! ----------------------------------------------------------------------
       module cropwofost_runtime_mod
       implicit none
@@ -42,12 +48,12 @@
 !   twilt, wiltpoint, tcnt, vernbase–vernsat: JvL + vernalisation, no state home
 !   daycrop: runtime (dual-write to state%crop%common%daycrop), computed in CropGrowth
 ! ----------------------------------------------------------------------
-      use variables, only: &                                                ! [SS-GR-CROPRT B7] DEFERRED
-        macp, magrs, icrop, dvs, dvsend, rd, rdpot, rdm, rdmax, rdi, rri, &
+      use variables, only: &                                            ! [SS-GR-CROPRT B7] [GR-CROPWS B5]
+        macp, magrs, dvs, dvsend, rd, rdpot, rdm, rdmax, rdi, rri, &  ! [GR-CROPWS B5] icrop removed (→state%crop%common%icrop)
         rdc, swrd, swdmi2rd, swrdc, swdrought, swcf, swgc, swinter,       &
         swbulb, swinco, lai, laipot, laiem, laiexp, laiexppot, laimax,    &
         cf, ch, cfeic, tsum, tsumea, tsumam, tbase, daycrop, lat, daylp,  &
-        kdif, siccapact, siccaplai, cropstart, cropend,                    &
+        kdif, siccapact, siccaplai, cropend,                               &  ! [GR-CROPWS B5] cropstart removed (→state%crop%common%cropstart)
         wlv, wlvpot, wst, wstpot, wso, wsopot, wrt, wrtpot, wrtmax, wrtmin, &
         cwdm, cwdmpot, pgass, pgasspot, reltr, lrnr, lsnr, nni,           &
         anlv, anst, nmxlv, nmaxlv, nmaxst, nmaxrt, nmaxso, nlai,          &
@@ -181,14 +187,14 @@
          use_cache = .false.
          if (associated(crop_config_global)) then
             if (allocated(crop_config_global%rotation_loaded)) then
-               if (icrop >= 1 .and. icrop <= size(crop_config_global%rotation_loaded)) then
-                  if (crop_config_global%rotation_loaded(icrop)) use_cache = .true.
+               if (state%crop%common%icrop >= 1 .and. state%crop%common%icrop <= size(crop_config_global%rotation_loaded)) then  ! [GR-CROPWS B5] icrop → state%crop%common%icrop
+                  if (crop_config_global%rotation_loaded(state%crop%common%icrop)) use_cache = .true.  ! [GR-CROPWS B5]
                end if
             end if
          end if
          if (use_cache) then
-            call cropwofost_init_from_config(crop_config_global%rotation_wofost(icrop), &
-                                             icrop, FraDeceasedLvToSoil, state)
+            call cropwofost_init_from_config(crop_config_global%rotation_wofost(state%crop%common%icrop), &  ! [GR-CROPWS B5]
+                                             state%crop%common%icrop, FraDeceasedLvToSoil, state)  ! [GR-CROPWS B5]
             ! [SS-GR-ATM A5.1] state passed for dual-write of kdif/kdir/swcf/cofab
             ! swhydrlift is read by legacy readwofost only inside swdrought=2
             ! branch (stub-errored in Phase 2). Set to 0 here to mirror the
@@ -216,7 +222,7 @@
 !        on the active rotation (ADR 0025 N1, ADR 0028 N3).
 
 !        open output files and write header
-         if (icrop.eq.1) then
+         if (state%crop%common%icrop.eq.1) then  ! [GR-CROPWS B5] icrop → state%crop%common%icrop
             call outbalcropOM1(1,pathwork,outfil,project,tc_date,daycrop,  &
      &         tc_t,dvs,tsum,gass,mres,fr,fl,fs,fo,dmi,cvf,ccheck)
             call outbalcropOM2(1,pathwork,outfil,project,tc_date,daycrop,  &
@@ -241,7 +247,7 @@
 
 ! --- skip next initialization if crop parameters are read from *.END file
       if (tc_t1900 - tstart .gt. tiny .or. swinco .ne. 3 .or.           &
-     &   dabs(tc_t1900 - cropstart(icrop)) .lt. tiny) then
+     &   dabs(tc_t1900 - state%crop%common%cropstart) .lt. tiny) then  ! [GR-CROPWS B5] cropstart(icrop) → state%crop%common%cropstart
 
         dvs = 0.0d0
         flAnthesis = .false.
@@ -1117,7 +1123,7 @@
 !        during the last day of the crop period: add the weight of living roots 
 !        to the dead roots and reset living weight to zero
          if (flHarvestDay .or. (dvs.ge.dvsend) .or.                     &
-     &                 dabs(tc_t1900-1.0d0-cropend(icrop)).lt.1.0d-3 ) then
+     &                 dabs(tc_t1900-1.0d0-cropend(state%crop%common%icrop)).lt.1.0d-3 ) then  ! [GR-CROPWS B5] icrop → state%crop%common%icrop
             HarLosOrm_rt = wrt
             HarLosOrm_dwlv =  FraHarLosOrm_lv * dwlv
             HarLosOrm_lv   = FraHarLosOrm_lv * wlv + HarLosOrm_dwlv
@@ -1200,7 +1206,7 @@
         endif
  
         if (flHarvestDay .or. (dvs.ge.dvsend) .or.                      &
-     &                 dabs(tc_t1900-1.0d0-cropend(icrop)).lt.1.0d-3 ) then
+     &                 dabs(tc_t1900-1.0d0-cropend(state%crop%common%icrop)).lt.1.0d-3 ) then  ! [GR-CROPWS B5] icrop → state%crop%common%icrop
           gwst  = 0.0d0
           gwrt  = 0.0d0
           gwso  = 0.0d0
