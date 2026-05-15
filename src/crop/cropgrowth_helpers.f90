@@ -7,6 +7,9 @@
 ! [SS-GR-CROPWS A5]: Phase A audit — ArableLandGerm already intent(inout) with inline
 !   writes; FacCO2 already writes state directly (B6); nocrop() has no state arg
 !   (DEFERRED). No optional/present guards. No changes required.
+! [GR-CROPWS B2]: reads migrated — PrepDelay + SowDelay compound reads in ArableLandGerm.
+!   All other read sites in this file were already migrated (B3/B6/B9) or are mirror-line
+!   RHS reads (stays). icrop already via state%crop%common%icrop.
 ! ----------------------------------------------------------------------
       module cropgrowth_helpers_mod
       implicit none
@@ -246,17 +249,17 @@
 
         flCropPrep = .true.
         if (dhPrep .gt. 0.d0) then
-          if (PrepDelay .lt. MaxPrepDelay) then
+          if (state%crop%common%PrepDelay .lt. MaxPrepDelay) then      ! [GR-CROPWS B2] PrepDelay → state%crop%common%PrepDelay
             dvs        = -0.3d0
             state%crop%common%dvs = dvs   ! [SS-GR-CROP A5.1]
             flCropPrep = .false.
-            PrepDelay  = PrepDelay + 1
+            PrepDelay  = state%crop%common%PrepDelay + 1               ! [GR-CROPWS B2] RHS PrepDelay → state%crop%common%PrepDelay
           endif
         endif
         state%crop%common%flCropPrep = flCropPrep   ! [SS-GR-CROPRT A5]
         state%crop%common%PrepDelay  = PrepDelay    ! [SS-GR-CROPRT A5]
 
-        SowDelay = PrepDelay
+        SowDelay = state%crop%common%PrepDelay                         ! [GR-CROPWS B2] PrepDelay → state%crop%common%PrepDelay
         state%crop%common%SowDelay = SowDelay   ! [SS-GR-CROPRT A5]
 
         return
@@ -286,11 +289,11 @@
 
         flCropSow = .true.
         if (dtempSow .lt. 0.d0 .or. dhSow.gt.0.d0) then
-          if (SowDelay .lt. MaxSowDelay) then
+          if (state%crop%common%SowDelay .lt. MaxSowDelay) then        ! [GR-CROPWS B2] SowDelay → state%crop%common%SowDelay
             dvs       = -0.2d0
             state%crop%common%dvs = dvs   ! [SS-GR-CROP A5.1]
             flCropSow = .false.
-            SowDelay  = SowDelay + 1
+            SowDelay  = state%crop%common%SowDelay + 1                 ! [GR-CROPWS B2] RHS SowDelay → state%crop%common%SowDelay
           endif
         endif
         state%crop%common%flCropSow = flCropSow   ! [SS-GR-CROPRT A5]
