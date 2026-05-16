@@ -59,7 +59,7 @@
         icrop, flCropCalendar, cropstart, cropend, flCropEmergence,         &
         flCropHarvest, flCropReadFile, flCropPrep, flCropSow, flCropGerm,   &
         swinco, croptype, daycrop, rd, rdpot, lai, laipot, cf, ch, tsum,   &
-        dvs, cwdmpot, cwdm, wsopot, wso, wlvpot, wlv, wstpot, wst,        &
+        cwdmpot, cwdm, wsopot, wso, wlvpot, wlv, wstpot, wst,        &
         wrtpot, wrt, tmn, lat, rad,                                         &
         albedo, rsc, cumdens,                                               &
         eff, amaxtb, tmpftb, tmnftb, swdrought, swcrp, dvsend,             &  ! [GR-CROPWS B3] kdif removed (→state%crop%kdif)
@@ -150,8 +150,8 @@
 
 ! --- bare soil condition  ----------------------------------------------------
       if (.not. flCropEmergence .or. flCropHarvest) then
-        call nocrop ()
-        ! [SS-GR-CROP A5.1] nocrop() has no state arg; mirror all zeroed fields here
+        call nocrop (state)
+        ! [SS-GR-CROP A5.1] nocrop writes state%crop%common%dvs directly; mirror remaining legacy zeros
         state%crop%lai               = lai       ! GR-ATM fix: ProcessMeteoDay reads this
         state%crop%common%rd         = rd
         state%crop%common%rdpot      = rdpot
@@ -159,7 +159,6 @@
         state%crop%common%cf         = cf
         state%crop%common%ch         = ch
         state%crop%common%tsum       = tsum
-        state%crop%common%dvs        = dvs
         state%crop%common%albedo     = albedo   ! [SS-GR-CROPRT A5]
         state%crop%common%rsc        = rsc      ! [SS-GR-CROPRT A5]
         state%crop%wofost%cwdmpot    = cwdmpot
@@ -455,7 +454,7 @@
 
         ! daily gross assimilation
         effc = state%crop%wofost%fco2eff * eff  ! [SS-GR-CROPRT B6] fco2eff via state
-        if (croptype(state%crop%common%icrop) .eq. 2) amax = state%crop%wofost%fco2amax * afgen (amaxtb,30,dvs) * afgen (tmpftb,30,at_tavd)  ! [SS-GR-ATM B.5] [SS-GR-CROPRT B6]
+        if (croptype(state%crop%common%icrop) .eq. 2) amax = state%crop%wofost%fco2amax * afgen (amaxtb,30,state%crop%common%dvs) * afgen (tmpftb,30,at_tavd)  ! [SS-GR-ATM B.5] [SS-GR-CROPRT B6]
         if (croptype(state%crop%common%icrop) .eq. 3) amax = state%crop%wofost%fco2amax * afgen (amaxtb,30,dble(daycrop)) * afgen (tmpftb,30,at_tavd)  ! [SS-GR-ATM B.5] [SS-GR-CROPRT B6]
 
 
@@ -502,7 +501,7 @@
 
         ! nitrogen stress reduction of pgass
         if (flCropNut) then
-          call NUTRIE (NLUE,WLV,WST,DVS,ANLV,ANST,NMXLV,NMAXLV,NMAXST,  &
+          call NUTRIE (NLUE,WLV,WST,state%crop%common%dvs,ANLV,ANST,NMXLV,NMAXLV,NMAXST,  &
      &      NMAXRT,LRNR,LSNR,NNI,RNFLV,RNFST,FRNX,FSTR)
           pgass = pgass * FSTR
         endif

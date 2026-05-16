@@ -108,8 +108,8 @@ contains
                            ! DEFERRED: SRL/swrootradius/dry_mat_cont_roots/air_filled_root_por/spec_weight_root_tissue/var_a/root_radiusO2 — crop config; Phase C3
                            SRL, swrootradius, dry_mat_cont_roots, &
                            air_filled_root_por, spec_weight_root_tissue, var_a, root_radiusO2, &
-                           ! DEFERRED: q10/rmr/rfsetb/dvs/rid/rd/wrt/rdctb/w_root_ss/cumdens — active crop state; Phase C3
-                           q10, rmr, rfsetb, dvs, rid, rd, wrt, rdctb, w_root_ss, cumdens, &
+                           ! DEFERRED: q10/rmr/rfsetb/rid/rd/wrt/rdctb/w_root_ss/cumdens — active crop state; Phase C3; dvs retired
+                           q10, rmr, rfsetb, rid, rd, wrt, rdctb, w_root_ss, cumdens, &
                            ! DEFERRED: tsoil — heat staging buffer; tsoil migration pending
                            tsoil, &
                            ! DEFERRED: c_mroot/f_senes/q10_root/q10_microbial/shape_factor_rootr/specific_resp_humus — O2 config; Phase C3
@@ -208,7 +208,7 @@ contains
           c_mroot = rmr*Fac3230 !CH2O --> O2
       endif
       if (croptype(icrop) .eq. 2) then
-          f_senes=afgen(rfsetb,30,dvs)    
+          f_senes=afgen(rfsetb,30,state%crop%common%dvs)
       endif
       if (croptype(icrop) .eq. 3) then
           f_senes=afgen(rfsetb,30,rid)    
@@ -549,8 +549,8 @@ contains
                            wrt, wlv, wst, wso, rfsetb, pgass, &
                            ! DEFERRED: frtb/fltb/fstb/fotb/cvl/cvs/cvo/cvr — crop partitioning tables; Phase C3
                            frtb, fltb, fstb, fotb, cvl, cvs, cvo, cvr, &
-                           ! DEFERRED: dvs/rid/idregr/daycrop — active crop dynamics; Phase C3
-                           dvs, rid, idregr, daycrop
+                           ! DEFERRED: rid/idregr/daycrop — active crop dynamics; Phase C3; dvs retired
+                           rid, idregr, daycrop
       use array_utils, only: afgen
       use swap_state_mod, only: swap_state_t
       implicit none
@@ -579,17 +579,17 @@ contains
 ! --- respiration and partitioning of carbohydrates between growth and
 ! --- maintenance respiration, based on actual plant state variables
         rmres_gmrf = (rmr*wrt+rml*wlv+rms*wst+rmo*wso)*                 &
-     &            afgen(rfsetb,30,dvs)
+     &            afgen(rfsetb,30,state%crop%common%dvs)
         !teff_gmrf = q10**((tsoil(10)-25.0d0)/10.0d0) !TEMPORARY!!!! ONLY TO CHECK EFFECT OF USING TSOIL INSTEAD OF TAV; ## MH: /10 = 0.1*
         teff_gmrf = q10**(0.1d0*(state%atmosphere%Tav-25.0d0))  ! [GR-CROP Phase B/8] tav → state%atmosphere%Tav
 
         mres_gmrf = min(pgass,rmres_gmrf*teff_gmrf)  ! ## MM 2018-05-07
         asrc_gmrf = pgass - mres_gmrf                ! ## MM 2018-05-07
 ! --- partitioning factors
-        fr_gmrf = afgen(frtb,30,dvs) !rid for grass, dvs for wofost
-        fl_gmrf = afgen(fltb,30,dvs)
-        fs_gmrf = afgen(fstb,30,dvs)
-        fo_gmrf = afgen(fotb,30,dvs)
+        fr_gmrf = afgen(frtb,30,state%crop%common%dvs) !rid for grass, dvs for wofost
+        fl_gmrf = afgen(fltb,30,state%crop%common%dvs)
+        fs_gmrf = afgen(fstb,30,state%crop%common%dvs)
+        fo_gmrf = afgen(fotb,30,state%crop%common%dvs)
 ! --- dry matter increase, only part in which cvf is calculated
         cvf_gmrf = 1.0d0/((fl_gmrf /cvl+fs_gmrf /cvs+fo_gmrf/cvo)*      &
      &  (1.0d0-fr_gmrf)+fr_gmrf/cvr)
@@ -604,7 +604,7 @@ contains
         Rg_roots = Froots*(1.0d0-cvf_gmrf)*asrc_gmrf
 ! --- Rm_roots: maintenance respiration roots        
         Rm_roots = min(Froots*(1.0d0-cvf_gmrf)*pgass,                   &
-     &      rmr*wrt*afgen(rfsetb,30,dvs)*teff_gmrf)
+     &      rmr*wrt*afgen(rfsetb,30,state%crop%common%dvs)*teff_gmrf)
 ! --- Max_resp_factor: ratio total respiration / maintenance respiration        
         if (Rm_roots.gt.0.0d0) then
             Max_resp_factor_gmrf = (Rg_roots+Rm_roots)/Rm_roots

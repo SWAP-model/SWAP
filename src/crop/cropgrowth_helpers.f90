@@ -146,19 +146,17 @@
       end subroutine cropoutput
 
 ! ----------------------------------------------------------------------
-      subroutine nocrop ()
+      subroutine nocrop (state)
 ! ----------------------------------------------------------------------
 
       ! [SS-GR-CROPRT B4] DEFERRED — nocrop: pure write site (sets globals to zero defaults).
-      !   All written symbols have state homes but nocrop takes no state arg — adding state arg
-      !   would be the Phase C cleanup. CropGrowth already mirrors all nocrop() zeroes to state
-      !   immediately after the call (lines 153-172 in CropGrowth body), so state stays consistent.
-      !   albedo/rsc: state%crop%common homes (A4); rd/rdpot/lai/laipot/cf/ch/tsum/dvs: state%crop
-      !     homes (A5.1); cwdmpot/cwdm/wso/wsopot/wlv/wlvpot/wst/wstpot/wrt/wrtpot:
-      !     state%crop%wofost homes. Deferred until Phase C adds state arg to nocrop.
-      use variables, only: rd,rdpot,lai,laipot,cf,ch,albedo,rsc,tsum,dvs,               & ! [SS-GR-CROPRT B4] DEFERRED
+      !   dvs now writes directly to state%crop%common%dvs (legacy global retired in dvs pilot).
+      !   Other symbols still legacy; CropGrowth mirrors them to state immediately after the call.
+      use variables, only: rd,rdpot,lai,laipot,cf,ch,albedo,rsc,tsum,                   & ! [SS-GR-CROPRT B4] DEFERRED
                            cwdmpot,cwdm,wsopot,wso,wlvpot,wlv,wstpot,wst,wrtpot,wrt
+      use swap_state_mod, only: swap_state_t
       implicit none
+      type(swap_state_t), intent(inout) :: state
 
       rd      = 0.0d0
       rdpot   = 0.0d0
@@ -169,7 +167,7 @@
       albedo  = 0.23d0
       rsc     = 70.d0
       tsum    = 0.d0
-      dvs     = 0.d0
+      state%crop%common%dvs = 0.d0
       cwdmpot = 0.d0
       cwdm    = 0.d0
       wsopot  = 0.d0
@@ -206,8 +204,8 @@
       !     no state home (come from crop .crp file or TOML germ block)
       !   agerm, bgerm, cgerm: germination model coefficients, no state home
       !   tsoil: config-staging buffer, renamed to avoid clash with dummy arg tsoil
-      use variables, only: &                                                 ! [SS-GR-CROPRT B5] DEFERRED
-        dvs, flCropPrep, flCropSow, flCropGerm, dhPrep, hPrep, zPrep,      &
+      use variables, only: &                                                 ! [SS-GR-CROPRT B5] DEFERRED; dvs retired
+        flCropPrep, flCropSow, flCropGerm, dhPrep, hPrep, zPrep,            &
         dhSow, hSow, zSow, zTempSow, dtempSow, TempSow,                    &
         MaxPrepDelay, MaxSowDelay, PrepDelay, SowDelay,                     &
         tsumemeopt, tsumgerm, hdrygerm, hwetgerm, zgerm, TBASEM, TEFFMX,  &
@@ -250,8 +248,7 @@
         flCropPrep = .true.
         if (dhPrep .gt. 0.d0) then
           if (state%crop%common%PrepDelay .lt. MaxPrepDelay) then      ! [GR-CROPWS B2] PrepDelay → state%crop%common%PrepDelay
-            dvs        = -0.3d0
-            state%crop%common%dvs = dvs   ! [SS-GR-CROP A5.1]
+            state%crop%common%dvs = -0.3d0
             flCropPrep = .false.
             PrepDelay  = state%crop%common%PrepDelay + 1               ! [GR-CROPWS B2] RHS PrepDelay → state%crop%common%PrepDelay
           endif
@@ -290,8 +287,7 @@
         flCropSow = .true.
         if (dtempSow .lt. 0.d0 .or. dhSow.gt.0.d0) then
           if (state%crop%common%SowDelay .lt. MaxSowDelay) then        ! [GR-CROPWS B2] SowDelay → state%crop%common%SowDelay
-            dvs       = -0.2d0
-            state%crop%common%dvs = dvs   ! [SS-GR-CROP A5.1]
+            state%crop%common%dvs = -0.2d0
             flCropSow = .false.
             SowDelay  = state%crop%common%SowDelay + 1                 ! [GR-CROPWS B2] RHS SowDelay → state%crop%common%SowDelay
           endif
@@ -367,12 +363,11 @@
         ! Delay growth until tsumgerm is reached
         flCropGerm = .true.
         if (tsumgerm .lt. tsumemeopt) then
-          dvs = -0.1d0 * max(1.d0 - (tsumgerm / tsumemeopt), 0.d0)
+          state%crop%common%dvs = -0.1d0 * max(1.d0 - (tsumgerm / tsumemeopt), 0.d0)
           flCropGerm = .false.
         else
-          dvs = 0.d0
+          state%crop%common%dvs = 0.d0
         endif
-        state%crop%common%dvs      = dvs      ! [SS-GR-CROP A5.1]
         state%crop%common%flCropGerm = flCropGerm   ! [SS-GR-CROPRT A5]
 
         return

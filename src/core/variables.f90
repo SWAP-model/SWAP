@@ -401,7 +401,7 @@
       real(8)   dry_mat_cont_roots ! Dry matter content of roots [0..1.0 -, R]
       real(8)   dsinbe             ! Daily total of effective solar height (s)
       real(8)   dtsmtb(30)         ! Increase of temperature sum (oC) as function of daily average temperature (oC)
-      real(8)   dvs                ! Crop development stage (-)
+      ! [GR-CROP-DVS] dvs retired — see state%crop%common%dvs
       real(8)   dvsend             ! Crop development stage at harvest
       real(8)   dwlv               ! Dry weight of plant leafs of actual crop (kg/ha)
       real(8)   dwlvCrop           ! Dry weight of deceased leafs that remain attached to plant (kg/ha)

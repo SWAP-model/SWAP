@@ -48,7 +48,7 @@
       !   perdl, dateharvest, lsda: output + harvest tracking, no state home
       !   tsoil: config-staging buffer, renamed to avoid clash with dummy arg
       use variables, only: &                                            ! [SS-GR-CROPRT B8] [GR-CROPWS B4]
-        magrs, macp, dvs, rid, tsum, tbase, daycrop, tdwi, swinco, &  ! [GR-CROPWS B4] icrop removed (→state%crop%common%icrop)
+        magrs, macp, rid, tsum, tbase, daycrop, tdwi, swinco, &  ! [GR-CROPWS B4] icrop removed (→state%crop%common%icrop); dvs retired
         wlv, wlvpot, wst, wstpot, wrt, wrtpot, wrtmax, wrtmin,           &
         dwlv, dwlvpot, dwrt, dwrtpot, dwst, dwstpot,                     &
         cf, ch, cfeic, lai, laipot, laiem, laiexp, laiexppot, laimax,    &
@@ -207,8 +207,7 @@
       state%crop%grass%seqgrazmowpot = seqgrazmowpot   ! [SS-GR-CROP A5.1]
 
 ! --- development stage (not used by Grassland, instead Daynrs are used)
-      dvs = -99.99d0
-      state%crop%common%dvs = dvs   ! [SS-GR-CROP A5.1]
+      state%crop%common%dvs = -99.99d0
 
 ! --- maximum rooting depth
       if (swrd.eq.1) then

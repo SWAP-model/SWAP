@@ -691,9 +691,8 @@
       cwdmpot            = 0.0d0 
       dlc                = 0.0d0 
       dlo                = 0.0d0 
-      dtsmtb             = 0.0d0 
-      dvs                = 0.0d0 
-      dvsend             = 0.0d0 
+      dtsmtb             = 0.0d0
+      dvsend             = 0.0d0
       eff                = 0.0d0 
       fbl                = 0.0d0 
       fbltb              = 0.0d0 

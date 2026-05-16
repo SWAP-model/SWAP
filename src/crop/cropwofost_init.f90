@@ -78,8 +78,8 @@ contains
          relmf, swpotrelmf,                                                   &
          ! Irrigation schedule — DEFERRED Phase C3
          schedule,                                                             &
-         ! Active crop dynamics (written during init) — DEFERRED Phase C3
-         dvs, tsum, daycrop, nofd, flCropNut
+         ! Active crop dynamics (written during init) — DEFERRED Phase C3; dvs retired
+         tsum, daycrop, nofd, flCropNut
       use array_utils, only: afgen
       use error_mod,   only: fatalerr_collected
       use swap_state_mod, only: swap_state_t
@@ -492,11 +492,10 @@ contains
       ! .END-file restart (swinco=3) is NOT reproduced; stub-errored by
       ! the validator for Phase 2.
       ! ----------------------------------------------------------------
-      dvs     = 0.0d0
+      state%crop%common%dvs     = 0.0d0
       tsum    = 0.0d0
       daycrop = 0
       nofd    = 0
-      state%crop%common%dvs     = dvs     ! [SS-GR-CROP A5.2]
       state%crop%common%tsum    = tsum    ! [SS-GR-CROP A5.2]
       state%crop%common%daycrop = daycrop ! [SS-GR-CROP A5.2]
 

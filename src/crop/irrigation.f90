@@ -46,8 +46,8 @@
                             gird, irrigevent, schedule, swirfix,           &
                             ! DEFERRED: irdate/nirri/irdepth/irconc/irtype/cirr — irrigation event arrays; Phase C3
                             irdate, nirri, irdepth, irconc, irtype, cirr,  &
-                            ! DEFERRED: isua/dvs/noddrz/rd/swsolu/swcirrthres — crop/soil state; Phase C3
-                            isua, dvs, noddrz, rd, swsolu, swcirrthres,    &
+                            ! DEFERRED: isua/noddrz/rd/swsolu/swcirrthres — crop/soil state; Phase C3; dvs retired
+                            isua, noddrz, rd, swsolu, swcirrthres,    &
                             ! DEFERRED: cirrthres/perirrsurp/raithreshold/dayfix — irrigation config; Phase C3
                             cirrthres, perirrsurp, raithreshold, dayfix,   &
                             ! DEFERRED: flCropCalendar/flCropHarvest — crop flags; Phase C3
@@ -186,7 +186,7 @@
 
 ! -1-       timing - allowable daily stress - only under dry stress circumstances
             if (tcs.eq.1) then
-               tps1 = afgen(treltab,14,dvs)
+               tps1 = afgen(treltab,14,state%crop%common%dvs)
 ! ---          transpiration fraction due to drought and salinity stress
                ! [SS-SWC S-2.12B] iptra_day/iqreddry_day/iqredsol_day -> state%soilwater
                if (state%soilwater%iptra_day .gt. 1.d-10) then
@@ -200,7 +200,7 @@
 ! -2-       timing - depletion of readily available water (fraction)
             if (tcs.eq.2) then
 ! ---          compare readily available water and actual available water
-               tps2 = afgen(rawtab,14,dvs)
+               tps2 = afgen(rawtab,14,state%crop%common%dvs)
                depl = tps2*(awlh-awmh)
                if (depl.gt.awlh) depl=awlh 
                if (awah .lt. (awlh-depl)) irrigevent = 2
@@ -209,7 +209,7 @@
 ! -3-       timing - depletion of totally available water (fraction)
             if (tcs.eq.3) then
 ! ---          compare totally available water and actual available water
-               tps3 = afgen(tawtab,14,dvs)
+               tps3 = afgen(tawtab,14,state%crop%common%dvs)
                depl = tps3*awlh
                if (awah.lt.(awlh-depl)) irrigevent = 2
             end if
@@ -217,7 +217,7 @@
 ! -4-       timing - allowable amount of depletion
             if (tcs.eq.4) then
 ! ---          check if depletion amount has been exceeded                
-               tps4 = afgen(dwatab,14,dvs)
+               tps4 = afgen(dwatab,14,state%crop%common%dvs)
                if ((awlh-awah).gt.(tps4*0.1d0)) irrigevent = 2
             end if
 
@@ -241,7 +241,7 @@
 ! -7-       timing - critical pressure head at dcrit (node=nodsen) exceeded
             if (tcs.eq.7) then
 ! ---          calculation of critical pressure head
-               tps5 = afgen(hcritab,14,dvs)
+               tps5 = afgen(hcritab,14,state%crop%common%dvs)
 ! PG/JK start  15-feb-2010
 ! originally not intended to simulate paddy rice fields,
 ! but made applicable for paddy by changing the statement:
@@ -253,7 +253,7 @@
 
 ! -8-       timing - critical watercontent at dcrit (node=nodsen) exceeded
             if (tcs.eq.8) then
-               tps5 = afgen(tcritab,14,dvs)
+               tps5 = afgen(tcritab,14,state%crop%common%dvs)
 ! ---          compare critical water content and actual water content
                if (state%soilwater%theta(nodsen).le.tps5) irrigevent = 2  ! [SS-SWC S-2.12B]
                !phcrit = prhead(nodsen,disnod(nodsen),tps5,cofgen,h)
@@ -273,7 +273,7 @@
 ! ---       depth - back to field capacity [cm]
             if ((irrigevent.eq.2).and.(dcs.eq.1)) then
 ! ---       correct for over- or under irrigation
-               dps1 = afgen(ditab,14,dvs)
+               dps1 = afgen(ditab,14,state%crop%common%dvs)
 ! PG/JK start  15-feb-2010
 ! option to reduce irrigation on rainy (> raithreshold) day
 ! raithreshold =     ! threshold (cm/d) to define rainy days;  used to reduce irrigation
@@ -287,7 +287,7 @@
 
 ! ---       depth - fixed depth [cm]
             if ((irrigevent.eq.2).and.(dcs.eq.2)) then
-               dps2 = afgen(fidtab,14,dvs)
+               dps2 = afgen(fidtab,14,state%crop%common%dvs)
                gird = dps2*0.1d0
                state%crop%gird = gird   ! [SS-GR-ATM A5.3] runtime dual-write
             end if

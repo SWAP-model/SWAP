@@ -69,8 +69,8 @@ contains
                             CNref, CNdry, CNwet, ThetaRef, Runoff_CN, wc_cor, wc10, iCNtab, CNtimTAB, CNrefTAB, &
                             ! [GR-ATM C8] out_tmn/tmx/hum/win/etr/wet/rad retired from import (state written by meteoday)
                             lai, kdif, kdir, cofab, cfbs, swcf, swcfbs, gird, flCropEmergence, et0, ew0, es0, &
-                            ! [SS-GR-CROP A14] crop_common legacy globals
-                            daycrop, dvs, tsum, icrop, &
+                            ! [SS-GR-CROP A14] crop_common legacy globals; dvs retired (→state%crop%common%dvs)
+                            daycrop, tsum, icrop, &
                             rd, rdpot, rdm, rri, rdi, rdc, ch, cf, laipot, &
                             cuptgraz, cuptgrazpot, HarLosOrm_tot, &
                             ! [SS-GR-CROP A15] crop_wofost/grass/fixed legacy globals
@@ -398,9 +398,8 @@ contains
    state%crop%ew0             = ew0
    state%crop%es0             = es0
 
-   ! [SS-GR-CROP A14] dual-write crop_common
+   ! [SS-GR-CROP A14] dual-write crop_common; dvs retired (writes target state directly)
    state%crop%common%daycrop        = daycrop
-   state%crop%common%dvs            = dvs
    state%crop%common%tsum           = tsum
    state%crop%common%swcrp          = swcrp
    state%crop%common%icrop          = icrop

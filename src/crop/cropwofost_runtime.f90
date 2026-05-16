@@ -49,7 +49,7 @@
 !   daycrop: runtime (dual-write to state%crop%common%daycrop), computed in CropGrowth
 ! ----------------------------------------------------------------------
       use variables, only: &                                            ! [SS-GR-CROPRT B7] [GR-CROPWS B5]
-        macp, magrs, dvs, dvsend, rd, rdpot, rdm, rdmax, rdi, rri, &  ! [GR-CROPWS B5] icrop removed (→state%crop%common%icrop)
+        macp, magrs, dvsend, rd, rdpot, rdm, rdmax, rdi, rri, &  ! [GR-CROPWS B5] icrop removed (→state%crop%common%icrop); dvs retired (→state%crop%common%dvs)
         rdc, swrd, swdmi2rd, swrdc, swdrought, swcf, swgc, swinter,       &
         swbulb, swinco, lai, laipot, laiem, laiexp, laiexppot, laimax,    &
         cf, ch, cfeic, tsum, tsumea, tsumam, tbase, daycrop, lat, daylp,  &
@@ -224,12 +224,12 @@
 !        open output files and write header
          if (state%crop%common%icrop.eq.1) then  ! [GR-CROPWS B5] icrop → state%crop%common%icrop
             call outbalcropOM1(1,pathwork,outfil,project,tc_date,daycrop,  &
-     &         tc_t,dvs,tsum,gass,mres,fr,fl,fs,fo,dmi,cvf,ccheck)
+     &         tc_t,state%crop%common%dvs,tsum,gass,mres,fr,fl,fs,fo,dmi,cvf,ccheck)
             call outbalcropOM2(1,pathwork,outfil,project,tc_date,daycrop,  &
-     &         tc_t,dvs,tsum,storagediff,wlv,wst,wso,wrt,delt,         &
+     &         tc_t,state%crop%common%dvs,tsum,storagediff,wlv,wst,wso,wrt,delt,         &
      &         grlv,grst,grso,grrt,drlv,drst,drso,drrt,ombalan)
             call outbalcropN(1,pathwork,outfil,project,tc_date,daycrop, &
-     &         tc_t,dvs,tsum,nuptt,nfixtt,anlvi,ansti,anrti,ansoi,anlv,&
+     &         tc_t,state%crop%common%dvs,tsum,nuptt,nfixtt,anlvi,ansti,anrti,ansoi,anlv,&
      &         anst,anrt,anso,nlossl,nlossr,nlosss,nbalan,nni)
          endif
       endif
@@ -249,22 +249,22 @@
       if (tc_t1900 - tstart .gt. tiny .or. swinco .ne. 3 .or.           &
      &   dabs(tc_t1900 - state%crop%common%cropstart) .lt. tiny) then  ! [GR-CROPWS B5] cropstart(icrop) → state%crop%common%cropstart
 
-        dvs = 0.0d0
+        state%crop%common%dvs = 0.0d0
         flAnthesis = .false.
         tsum = 0.0d0
-        fr = afgen (frtb,30,dvs)
-        fl = afgen (fltb,30,dvs)
-        fs = afgen (fstb,30,dvs)
-        fo = afgen (fotb,30,dvs)
+        fr = afgen (frtb,30,state%crop%common%dvs)
+        fl = afgen (fltb,30,state%crop%common%dvs)
+        fs = afgen (fstb,30,state%crop%common%dvs)
+        fo = afgen (fotb,30,state%crop%common%dvs)
 ! --- only for bulb crops (tulips etc..)
         if(swbulb.eq.1) then
-           fbl = afgen (fbltb,30,dvs)
+           fbl = afgen (fbltb,30,state%crop%common%dvs)
            plwt = plwti
         endif
-        sla(1) = afgen (slatb,30,dvs)
+        sla(1) = afgen (slatb,30,state%crop%common%dvs)
         lvage(1) = 0.0d0
         ilvold = 1
-        slapot(1) = afgen (slatb,30,dvs)
+        slapot(1) = afgen (slatb,30,state%crop%common%dvs)
         lvagepot(1) = 0.0d0
         ilvoldpot = 1
 
@@ -340,12 +340,12 @@
 !         per kg biomass [kg N kg-1 dry biomass] at emergence added IS
 !******************************************************************
           call nutremrg(nmxlv,lsnr,lrnr,wlv,wst,wrt,                    &
-     &      anlv,anst,anrt,anso,anlvi,ansti,anrti,ansoi,dvs)
+     &      anlv,anst,anrt,anso,anlvi,ansti,anrti,ansoi,state%crop%common%dvs)
         endif
 
 ! --- actual rooting depth
         if (swrd.eq.1) then
-          rd = afgen (rdtb,22,dvs)
+          rd = afgen (rdtb,22,state%crop%common%dvs)
           rd = min(rd,rdm)
         elseif (swrd.eq.2) then
           rd = min(rdi,rdm)
@@ -367,7 +367,6 @@
         flvernalised = .FALSE.   ! crop not vernalised (-)
 
         ! [SS-GR-CROP A5.1] mirror wofost init-time state
-        state%crop%common%dvs       = dvs
         state%crop%common%tsum      = tsum
         state%crop%common%rd        = rd
         state%crop%common%rdpot     = rdpot
@@ -404,8 +403,8 @@
 
 ! --- set crop height and cropfactor
       if (swcf.ne.3) then
-        cf = afgen (cftb,(2*magrs),dvs)
-        ch = afgen (chtb,(2*magrs),dvs)
+        cf = afgen (cftb,(2*magrs),state%crop%common%dvs)
+        ch = afgen (chtb,(2*magrs),state%crop%common%dvs)
       else
         cf        = afgen (cftb,(2*magrs),lai)
         cfeic     = afgen (cfeictb,(2*magrs),lai)
@@ -460,7 +459,7 @@
 ! --- phenological development rate for potential AND actual crops
       if (swsoybean.eq.0) then
 ! ---   standard crops
-        if (dvs.lt.1.0d0) then     
+        if (state%crop%common%dvs.lt.1.0d0) then     
 ! ---     vegetative phase
           dvred = 1.0d0
           vernfac = 1.0d0
@@ -471,7 +470,7 @@
           if (idsl.eq.2) then
 !            vernalisation rate,based on routines from pyWofost (Allard de Wit, 2015)
              if(.not.flvernalised) then
-                if(dvs.lt.verndvs) then
+                if(state%crop%common%dvs.lt.verndvs) then
                    vernrate = afgen (vernrtb,30,at_tav)  ! [SS-GR-ATM B.5]
                    r = (vern - vernbase) / (vernsat - vernbase)
                    vernfac = interpol(0.0d0,1.0d0,r)
@@ -490,7 +489,7 @@
 ! ---   soybean
         call mgtemprf(at_tav,toptdvr,tmindvr,tmaxdvr,rfmgtemp)  ! [SS-GR-ATM B.5]
         call mgphotoprf(mg,tc_daynr,lat,popt,pcrt,flphenodayl,rfmgphotop)
-        if (dvs.lt.1.0d0) then 
+        if (state%crop%common%dvs.lt.1.0d0) then 
 ! ---     vegetative phase
           if(flrfphotoveg) then
              dvr = dvrmax1 * rfmgphotop * rfmgtemp
@@ -504,10 +503,9 @@
       endif
 
 !     adjust development stage for realistic TSUM
-      if (dvs.ge.1.d0 .and. (.not. flAnthesis)) then
+      if (state%crop%common%dvs.ge.1.d0 .and. (.not. flAnthesis)) then
         flAnthesis = .true.
-        dvs = 1.0d0
-        state%crop%common%dvs = dvs   ! [SS-GR-CROP A5.1]
+        state%crop%common%dvs = 1.0d0
       end if
       
 ! === daily dry matter production 
@@ -518,26 +516,26 @@
 ! --- maintenance respiration
       if(swbulb.eq.1) then
         rmrespot = (rmr*wrtpot+rml*wlvpot+rms*wstpot+rms*wblpot+        &
-     &           rmo*wsopot)* afgen(rfsetb,30,dvs)
+     &           rmo*wsopot)* afgen(rfsetb,30,state%crop%common%dvs)
       else
         rmrespot = (rmr*wrtpot+rml*wlvpot+rms*wstpot+rmo*wsopot)*       &
-     &           afgen(rfsetb,30,dvs)
+     &           afgen(rfsetb,30,state%crop%common%dvs)
       endif
       teff = q10**((at_tav-25.0d0)/10.0d0)  ! [SS-GR-ATM B.5]
       mrespot = dmin1(gasspot,rmrespot*teff)
       asrcpot = gasspot - mrespot
 
 ! --- partitioning factors
-      fr = afgen(frtb,30,dvs)
-      fl = afgen(fltb,30,dvs)
-      fs = afgen(fstb,30,dvs)
-      fo = afgen(fotb,30,dvs)
+      fr = afgen(frtb,30,state%crop%common%dvs)
+      fl = afgen(fltb,30,state%crop%common%dvs)
+      fs = afgen(fstb,30,state%crop%common%dvs)
+      fo = afgen(fotb,30,state%crop%common%dvs)
 ! --- only for bulb crops (tulips etc..)
       if(swbulb.eq.1) then
-         fbl = afgen(fbltb,30,dvs)
+         fbl = afgen(fbltb,30,state%crop%common%dvs)
       endif
 ! --- check on partitioning
-      call chckprt(dvs,fr,fl,fs,fo,fbl)    
+      call chckprt(state%crop%common%dvs,fr,fl,fs,fo,fbl)    
 
 ! --- conversion factor 
       if(swbulb.eq.1) then
@@ -548,7 +546,7 @@
       endif
       dmipot = cvf*asrcpot
 ! --- check on carbon balance
-      call chckcbl(dvs,cvf,dmipot,fr,fl,fs,fbl,fo,gasspot,mrespot,      &
+      call chckcbl(state%crop%common%dvs,cvf,dmipot,fr,fl,fs,fbl,fo,gasspot,mrespot,      &
      &             ccheck)
 
 ! == = growth rate by plant organ
@@ -560,9 +558,9 @@
       ! growth of the roots is balanced by the death of root tissue
       if (swrd.eq.3 .and. wrtpot.gt.wrtmax) then
         drrtpot = grrtpot
-        drrtpot = max(drrtpot,wrtpot*afgen (rdrrtb,30,dvs))
+        drrtpot = max(drrtpot,wrtpot*afgen (rdrrtb,30,state%crop%common%dvs))
       else  
-        drrtpot = wrtpot*afgen (rdrrtb,30,dvs)
+        drrtpot = wrtpot*afgen (rdrrtb,30,state%crop%common%dvs)
       endif  
       gwrtpot = grrtpot - drrtpot
 
@@ -613,7 +611,7 @@
       fysdel = max (0.0d0,(at_tav-tbase)/(35.0d0-tbase))  ! [SS-GR-ATM B.5]
 
 ! --- specific leaf area valid for current timestep
-      slatpot = afgen (slatb,30,dvs)
+      slatpot = afgen (slatb,30,state%crop%common%dvs)
 
 ! --- calculation of specific leaf area in case of exponential growth:
 ! --- leaf area not to exceed exponential growth curve
@@ -632,7 +630,7 @@
 ! --- growth rate stems
       grstpot = fs*admipot
 ! --- death rate stems
-      drstpot = afgen (rdrstb,30,dvs)*wstpot
+      drstpot = afgen (rdrstb,30,state%crop%common%dvs)*wstpot
 ! --- net growth rate stems
       gwstpot = grstpot - drstpot
 
@@ -640,7 +638,7 @@
       if(swbulb.eq.1) then
 ! --    growth rate flowers
         grblpot = fbl*admipot
-        if(dvs.ge.1.0d0) then
+        if(state%crop%common%dvs.ge.1.0d0) then
           grblpot = 0.0d0
           drblpot = wblpot/delt
         endif
@@ -805,25 +803,25 @@
 ! --  only for bulb crops (tulips etc..)
       if(swbulb.eq.1) then
         rmres = (rmr*wrt+rml*wlv+rms*wst+rms*wbl+rmo*wso)*              &
-     &           afgen(rfsetb,30,dvs)
+     &           afgen(rfsetb,30,state%crop%common%dvs)
       else
-        rmres = (rmr*wrt+rml*wlv+rms*wst+rmo*wso)*afgen(rfsetb,30,dvs)
+        rmres = (rmr*wrt+rml*wlv+rms*wst+rmo*wso)*afgen(rfsetb,30,state%crop%common%dvs)
       endif
       
       mres = dmin1(gass,rmres*teff)
       asrc = gass-mres
 
 ! --- partitioning factors
-      fr = afgen(frtb,30,dvs)
-      fl = afgen(fltb,30,dvs)
-      fs = afgen(fstb,30,dvs)
-      fo = afgen(fotb,30,dvs)
+      fr = afgen(frtb,30,state%crop%common%dvs)
+      fl = afgen(fltb,30,state%crop%common%dvs)
+      fs = afgen(fstb,30,state%crop%common%dvs)
+      fo = afgen(fotb,30,state%crop%common%dvs)
 ! --- only for bulb crops (tulips etc..)
       if(swbulb.eq.1) then
-         fbl = afgen(fbltb,30,dvs)
+         fbl = afgen(fbltb,30,state%crop%common%dvs)
       endif
 ! --- check on partitioning
-      call chckprt(dvs,fr,fl,fs,fo,fbl)    
+      call chckprt(state%crop%common%dvs,fr,fl,fs,fo,fbl)    
 
       if( flCropNut) then
 !********************************************************************         
@@ -845,7 +843,7 @@
 ! --- dry matter increase
       dmi = cvf*asrc
 ! --- check on carbon balance
-      call chckcbl(dvs,cvf,dmi,fr,fl,fs,fbl,fo,gass,mres,ccheck)
+      call chckcbl(state%crop%common%dvs,cvf,dmi,fr,fl,fs,fbl,fo,gass,mres,ccheck)
 
 ! --- growth rate by plant organ
 
@@ -864,16 +862,16 @@
       drlv = dslv+dalv
 
 ! --- death rate stems
-      drst = wst * afgen (rdrstb,30,dvs)
+      drst = wst * afgen (rdrstb,30,state%crop%common%dvs)
 
 ! --- death rate roots
       ! in case of SWRD = 3: after reaching maximum live weight of wrtmax, the
       ! growth of the roots is balanced by the death of root tissue
       if (swrd.eq.3 .and. wrt.gt.wrtmax) then
         drrt = grrt
-        drrt = max(drrt,wrt*afgen (rdrrtb,30,dvs))
+        drrt = max(drrt,wrt*afgen (rdrrtb,30,state%crop%common%dvs))
       else  
-        drrt = wrt*afgen (rdrrtb,30,dvs)
+        drrt = wrt*afgen (rdrrtb,30,state%crop%common%dvs)
       endif  
 
 ! --- net growth rate stems, roots, storage organs
@@ -886,7 +884,7 @@
       if(swbulb.eq.1) then
 ! --    growth rate flowers
         grbl = fbl*admi
-        if(dvs.ge.1.0d0) then
+        if(state%crop%common%dvs.ge.1.0d0) then
           grbl = 0.0d0
           drbl = wbl/delt
         endif
@@ -896,9 +894,9 @@
 ! --- specific leaf area valid for current timestep
       if(flCropNut) then
 !       nutrient and water stress
-        slat = afgen (slatb,30,dvs)*EXP(-NSLA * (1.0d0-NNI))
+        slat = afgen (slatb,30,state%crop%common%dvs)*EXP(-NSLA * (1.0d0-NNI))
       else
-        slat = afgen (slatb,30,dvs)
+        slat = afgen (slatb,30,state%crop%common%dvs)
       endif
 !
 !     Do not allow slat higher than slatpot; slatpot can be limited by exponential growth
@@ -910,7 +908,7 @@
       Fstress = reltr
       if (flcropnut) then
          Fstress = FSTR
-         if ((DVS .LT. 0.2d0).AND.(LAI .LT. 0.75d0)) then
+         if ((state%crop%common%dvs .LT. 0.2d0).AND.(LAI .LT. 0.75d0)) then
            Fstress = reltr * EXP(-NLAI* (1.0d0 - NNI))
          endif
       endif
@@ -920,9 +918,8 @@
 ! ---- UPDATE STATES: integrals of the crop --------------------------------------------
 
 ! --- phenological development stage
-      dvs = min(dvs+dvr*delt,dvsend)
+      state%crop%common%dvs = min(state%crop%common%dvs+dvr*delt,dvsend)
       tsum = tsum + dtsum*delt
-      state%crop%common%dvs  = dvs    ! [SS-GR-CROP A5.1]
       state%crop%common%tsum = tsum   ! [SS-GR-CROP A5.1]
 
 ! --- leaf death (due to water stress or high lai) is imposed on array 
@@ -1019,7 +1016,7 @@
 !        Nutrient uptake limiting factor (-) at low moisture conditions in the
 !        rooted soil layer before anthesis. After anthesis/DVSNLT there is no
 !        nutrient uptake from the soil
-         NLIMIT = INSW(DVS-DVSNLT,INSW(reltr-0.01d0,0.0d0,1.0d0),0.d0)
+         NLIMIT = INSW(state%crop%common%dvs-DVSNLT,INSW(reltr-0.01d0,0.0d0,1.0d0),0.d0)
          NdemandSoil = (1.d0-NFIXF) * NDEMTO * NLIMIT
          NdemandBioFix =  NFIXF * NDEMTO * NLIMIT
 
@@ -1057,7 +1054,7 @@
      &                  FNTRT,ATNLV,ATNST,ATNRT,ATN)
 
 !        N supply to the storage organs (kg N ha-1 d-1)      
-         NSUPSO = INSW (DVS-DVSNT,0.0d0,ATN/TCNT)
+         NSUPSO = INSW (state%crop%common%dvs-DVSNT,0.0d0,ATN/TCNT)
 
 !        Rate of N uptake in grains (kg N ha-1 d-1)
          RNSO =  MIN (NDEMSO,NSUPSO)
@@ -1122,7 +1119,7 @@
          HarLosNit_dwst = 0.0d0; HarLosNit_dwso = 0.0d0; HarLosNit_dwlv = 0.0d0 
 !        during the last day of the crop period: add the weight of living roots 
 !        to the dead roots and reset living weight to zero
-         if (flHarvestDay .or. (dvs.ge.dvsend) .or.                     &
+         if (flHarvestDay .or. (state%crop%common%dvs.ge.dvsend) .or.                     &
      &                 dabs(tc_t1900-1.0d0-cropend(state%crop%common%icrop)).lt.1.0d-3 ) then  ! [GR-CROPWS B5] icrop → state%crop%common%icrop
             HarLosOrm_rt = wrt
             HarLosOrm_dwlv =  FraHarLosOrm_lv * dwlv
@@ -1164,7 +1161,7 @@
 
 !       output of OM balance1: from air to partitioning (kg/ha DM CH2O)
         call outbalcropOM1(2,pathwork,outfil,project,tc_date,daycrop,   &
-     &       tc_t,dvs,tsum,gass,mres,fr,fl,fs,fo,dmi,cvf,ccheck)
+     &       tc_t,state%crop%common%dvs,tsum,gass,mres,fr,fl,fs,fo,dmi,cvf,ccheck)
 
 ! -     OM balance2: storage difference(kg/ha DM CH2O)
         storagediff = (wlv+wst+wso+wrt) - (wlvt0+wstt0+wsot0+wrtt0)
@@ -1183,7 +1180,7 @@
         endif
 !       output of OM balance2
         call outbalcropom2(2,pathwork,outfil,project,tc_date,daycrop,   &
-     &         tc_t,dvs,tsum,storagediff,wlv,wst,wso,wrt,delt,         &
+     &         tc_t,state%crop%common%dvs,tsum,storagediff,wlv,wst,wso,wrt,delt,         &
      &         grlv,grst,grso,grrt,drlv,drst,drso,drrt,ombalan)
 
 ! ----- CHECK and WRITE MASS BALANCE: nitrogen of crop
@@ -1196,7 +1193,7 @@
 
 !       output of N balance
         call outbalcropN(2,pathwork,outfil,project,tc_date,daycrop,     &
-     &         tc_t,dvs,tsum,NUPTT,NFIXTT,ANLVI,ANSTI,ANRTI,ANSOI,ANLV,&
+     &         tc_t,state%crop%common%dvs,tsum,NUPTT,NFIXTT,ANLVI,ANSTI,ANRTI,ANSOI,ANLV,&
      &         ANST,ANRT,ANSO,NLOSSL,NLOSSR,NLOSSS,NBALAN,nni)
         IF (dabs(NBALAN) .GE. 1.0d-03) then
            write(messag,'(1a,i6,a,f8.3)') ' Nitrogen balance not 0,'//  &
@@ -1205,7 +1202,7 @@
            call warn ('CropGrowth_Wofost',messag,logf,swscre)
         endif
  
-        if (flHarvestDay .or. (dvs.ge.dvsend) .or.                      &
+        if (flHarvestDay .or. (state%crop%common%dvs.ge.dvsend) .or.                      &
      &                 dabs(tc_t1900-1.0d0-cropend(state%crop%common%icrop)).lt.1.0d-3 ) then  ! [GR-CROPWS B5] icrop → state%crop%common%icrop
           gwst  = 0.0d0
           gwrt  = 0.0d0
@@ -1223,7 +1220,7 @@
 ! --- root extension
       if (swrd.eq.1) then
 
-        rdpot = afgen (rdtb,22,dvs)
+        rdpot = afgen (rdtb,22,state%crop%common%dvs)
         rdpot = min(rdpot,rdm)
         rd    = rdpot
 
@@ -1250,8 +1247,8 @@
 
 ! --- crop factor or crop height
       if (swcf.ne.3) then
-        cf = afgen (cftb,(2*magrs),dvs)
-        ch = afgen (chtb,(2*magrs),dvs)
+        cf = afgen (cftb,(2*magrs),state%crop%common%dvs)
+        ch = afgen (chtb,(2*magrs),state%crop%common%dvs)
       else
         cf        = afgen (cftb,72,lai)
         cfeic     = afgen (cfeictb,72,lai)

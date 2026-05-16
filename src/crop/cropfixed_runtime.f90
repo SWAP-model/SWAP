@@ -28,7 +28,7 @@
 !   siccapact, siccaplai, W_root_ss, wiltpoint, twilt, flhydrlift, gc, cfeic (write),
 !   gctb, rdtb, mrftb, wrtb, swinco, reltr.
 ! ----------------------------------------------------------------------
-      use variables, only: magrs, idev, dvs, tsum, lai, cf, ch, &         ! [GR-CROPWS B1] reads→state; writes remain legacy
+      use variables, only: magrs, idev, tsum, lai, cf, ch, &         ! [GR-CROPWS B1] reads→state; writes remain legacy; dvs retired
                            rd, rdpot, rdm, max_resp_factor, swrd,         &
                            swgc, swcf, swinter, swdrought, swdmi2rd,     &
                            tbase, tsumea, tsumam, rdmax,                  &
@@ -112,17 +112,16 @@
       if (tc_t1900 - tstart .gt. tiny .or. swinco .ne. 3 .or.           &
      &  dabs(tc_t1900 - state%crop%common%cropstart) .lt. tiny) then   ! [GR-CROPWS B1] cropstart(icrop) → state%crop%common%cropstart
 
-        dvs = 0.0d0
+        state%crop%common%dvs = 0.0d0
 
 ! --- actual rooting depth
         if (swrd.eq.1) then
-          rd = afgen (rdtb,22,dvs)                                      ! dvs is 0.0 here (just assigned), no state read needed
+          rd = afgen (rdtb,22,state%crop%common%dvs)                    ! dvs is 0.0 here (just assigned), no separate read needed
           rd = min(rd,state%crop%common%rdm)                            ! [GR-CROPWS B1] rdm → state%crop%common%rdm
         else
           rd = min(state%crop%common%rdi,state%crop%common%rdm)         ! [GR-CROPWS B1] rdi, rdm → state%crop%common%X
         endif
         rdpot = rd
-        state%crop%common%dvs   = dvs    ! [SS-GR-CROP A5.1]
         state%crop%common%rd    = rd     ! [SS-GR-CROP A5.1]
         state%crop%common%rdpot = rdpot  ! [SS-GR-CROP A5.1]
 
@@ -209,9 +208,8 @@
 ! ----integrals of the crop --------------------------------------------
 
 ! --- phenological development stage
-      dvs = min(state%crop%common%dvs+dvr,2.d0)                       ! [GR-CROPWS B1] RHS dvs → state%crop%common%dvs
+      state%crop%common%dvs = min(state%crop%common%dvs+dvr,2.d0)      ! [GR-CROPWS B1] RHS dvs → state%crop%common%dvs
       tsum = state%crop%common%tsum + dtsum                            ! [GR-CROPWS B1] RHS tsum → state%crop%common%tsum
-      state%crop%common%dvs  = dvs    ! [SS-GR-CROP A5.1]
       state%crop%common%tsum = tsum   ! [SS-GR-CROP A5.1]
 
 ! --- leaf area index or soil cover fraction
