@@ -51,7 +51,7 @@
       use variables, only: &                                            ! [SS-GR-CROPRT B7] [GR-CROPWS B5]
         macp, magrs, dvsend, rdpot, rdm, rdmax, rdi, rri, &  ! [GR-CROPWS B5] icrop/dvs/rd retired
         rdc, swrd, swdmi2rd, swrdc, swdrought, swcf, swgc, swinter,       &
-        swbulb, swinco, lai, laipot, laiem, laiexp, laiexppot, laimax,    &
+        swbulb, swinco, laipot, laiem, laiexp, laiexppot, laimax,    &  ! lai retired
         cf, ch, cfeic, tsumea, tsumam, tbase, daycrop, lat, daylp,  &  ! tsum retired (→state%crop%common%tsum)
         kdif, siccapact, siccaplai, cropend,                               &  ! [GR-CROPWS B5] cropstart removed (→state%crop%common%cropstart)
         wlvpot, wstpot, wsopot, wrtpot, wrtmax, wrtmin, &  ! wso/wst/wlv/wrt retired
@@ -304,14 +304,13 @@
         laimax = laiem
 ! --- only for bulb crops (tulips etc..)
         if(swbulb.eq.1) then
-            lai = lasum+ssa*(state%crop%wofost%wst-wstem)+spa*state%crop%wofost%wso
+            state%crop%lai = lasum+ssa*(state%crop%wofost%wst-wstem)+spa*state%crop%wofost%wso
             dwbl = 0.0d0
             dwblpot = 0.0d0
         else
-            lai = lasum+ssa*state%crop%wofost%wst+spa*state%crop%wofost%wso
+            state%crop%lai = lasum+ssa*state%crop%wofost%wst+spa*state%crop%wofost%wso
         endif
-        state%crop%lai = lai   ! [SS-GR-ATM A5.2] dual-write
-        laipot = lai
+        laipot = state%crop%lai
         dwrt = 0.0d0
         dwrtpot = 0.0d0
         dwlv = 0.0d0
@@ -400,9 +399,9 @@
         cf = afgen (cftb,(2*magrs),state%crop%common%dvs)
         ch = afgen (chtb,(2*magrs),state%crop%common%dvs)
       else
-        cf        = afgen (cftb,(2*magrs),lai)
-        cfeic     = afgen (cfeictb,(2*magrs),lai)
-        ch        = afgen(chtb,(2*magrs),lai)
+        cf        = afgen (cftb,(2*magrs),state%crop%lai)
+        cfeic     = afgen (cfeictb,(2*magrs),state%crop%lai)
+        ch        = afgen(chtb,(2*magrs),state%crop%lai)
       endif
       state%crop%common%cf = cf   ! [SS-GR-CROP A5.1]
       state%crop%common%ch = ch   ! [SS-GR-CROP A5.1]
@@ -410,7 +409,7 @@
 
 ! --- initial storage on canopy
       if (swinter.eq.3) then
-        siccapact = siccaplai*lai
+        siccapact = siccaplai*state%crop%lai
         state%atmosphere%siccapact = siccapact   ! [SS-GR-ATM A5.2] dual-write
       endif
 
@@ -846,7 +845,7 @@
       if (swrd.eq.3 .and. state%soilwater%flWrtNonox) grrt = 0.d0   ! [SS-GR-CROPWS A3] present(state) guard removed
 
 ! --- death of leaves due to water stress or high lai or nitrogen stress
-      call deaths(flcropnut,state%crop%wofost%wlv,kdif,lai,NNI,perdl,rdrns,reltr,dslv)
+      call deaths(flcropnut,state%crop%wofost%wlv,kdif,state%crop%lai,NNI,perdl,rdrns,reltr,dslv)
 
 ! --- death of leaves due to exceeding life span:
       call deatha(dslv,delt,ilvold,lv,lvage,span,i1,dalv)
@@ -902,7 +901,7 @@
       Fstress = reltr
       if (flcropnut) then
          Fstress = FSTR
-         if ((state%crop%common%dvs .LT. 0.2d0).AND.(LAI .LT. 0.75d0)) then
+         if ((state%crop%common%dvs .LT. 0.2d0).AND.(state%crop%lai .LT. 0.75d0)) then
            Fstress = reltr * EXP(-NLAI* (1.0d0 - NNI))
          endif
       endif
@@ -981,10 +980,9 @@
       mrest = mres + mrest
 
 ! --- leaf area index
-      lai = lasum+ssa*state%crop%wofost%wst+spa*state%crop%wofost%wso
-      state%crop%lai = lai   ! [SS-GR-ATM A5.2] dual-write
+      state%crop%lai = lasum+ssa*state%crop%wofost%wst+spa*state%crop%wofost%wso
 ! --- determine maximum lai
-      laimax = max (lai,laimax)
+      laimax = max (state%crop%lai,laimax)
 ! --- determine minimum lai to prevent dying straight after 
 !       emergence when growth is slowed down due to low temperature
 !     KRO-BOO-20160403: suppressed because deviates from Wofost
@@ -1238,9 +1236,9 @@
         cf = afgen (cftb,(2*magrs),state%crop%common%dvs)
         ch = afgen (chtb,(2*magrs),state%crop%common%dvs)
       else
-        cf        = afgen (cftb,72,lai)
-        cfeic     = afgen (cfeictb,72,lai)
-        ch        = afgen(chtb,72,lai)
+        cf        = afgen (cftb,72,state%crop%lai)
+        cfeic     = afgen (cfeictb,72,state%crop%lai)
+        ch        = afgen(chtb,72,state%crop%lai)
       endif
       state%crop%common%cf = cf   ! [SS-GR-CROP A5.1]
       state%crop%common%ch = ch   ! [SS-GR-CROP A5.1]
@@ -1248,7 +1246,7 @@
 
 ! --- update canopy storage capacity
       if (swinter.eq.3) then
-        siccapact = siccaplai*lai
+        siccapact = siccaplai*state%crop%lai
         state%atmosphere%siccapact = siccapact   ! [SS-GR-ATM A5.2] dual-write
       endif
 

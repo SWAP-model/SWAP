@@ -68,7 +68,7 @@ contains
                             siccapact, fimin, isua, avevaptb, avprectb, pfreetb, pstemtb, scanopytb, &
                             CNref, CNdry, CNwet, ThetaRef, Runoff_CN, wc_cor, wc10, iCNtab, CNtimTAB, CNrefTAB, &
                             ! [GR-ATM C8] out_tmn/tmx/hum/win/etr/wet/rad retired from import (state written by meteoday)
-                            lai, kdif, kdir, cofab, cfbs, swcf, swcfbs, gird, flCropEmergence, et0, ew0, es0, &
+                            kdif, kdir, cofab, cfbs, swcf, swcfbs, gird, flCropEmergence, et0, ew0, es0, &  ! lai retired
                             ! [SS-GR-CROP A14] crop_common legacy globals; dvs/tsum retired
                             daycrop, icrop, &
                             rdpot, rdm, rri, rdi, rdc, ch, cf, laipot, &  ! rd retired
@@ -384,8 +384,7 @@ contains
 
    ! [GR-ATM C8] out_tmn/tmx/hum/win/etr/wet/rad seeding dropped: legacy globals retired; state%atmosphere%X written by meteoday
 
-   ! [SS-GR-ATM A12] seed state%crop from legacy crop globals
-   state%crop%lai             = lai
+   ! [SS-GR-ATM A12] seed state%crop from legacy crop globals; lai retired
    state%crop%kdif            = kdif
    state%crop%kdir            = kdir
    state%crop%cofab           = cofab

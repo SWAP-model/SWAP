@@ -432,7 +432,7 @@
       real(8)   hlim4              ! Wilting point, no root water uptake at lower soil water pressure heads (L)
       real(8)   kdif               ! Extinction coefficient for diffuse visible light (-)
       real(8)   kdir               ! Extinction coefficient for direct visible light (-)
-      real(8)   lai                ! Leaf area index
+      ! [GR-CROP-DVS] lai retired — see state%crop%lai
       real(8)   laiem              ! Leaf area index (-) at crop emergence
       real(8)   laiexp             ! Leaf area index (-) in exponential growth stage of actual crop
       real(8)   laiexppot          ! Leaf area index (-) in exponential growth stage of potential crop

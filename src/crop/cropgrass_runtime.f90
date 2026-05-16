@@ -51,7 +51,7 @@
         magrs, macp, rid, tbase, daycrop, tdwi, swinco, &  ! [GR-CROPWS B4] icrop/dvs/state%crop%common%tsum retired
         wlvpot, wstpot, wrtpot, wrtmax, wrtmin,           &  ! wst/wlv/wrt retired
         dwlv, dwlvpot, dwrt, dwrtpot, dwst, dwstpot,                     &
-        cf, ch, cfeic, lai, laipot, laiem, laiexp, laiexppot, laimax,    &
+        cf, ch, cfeic, laipot, laiem, laiexp, laiexppot, laimax,    &  ! lai retired
         cftb, chtb, cfeictb, rdtb, slatb, rgrlai, rlwtb, rfsetb,        &
         frtb, fltb, fstb, rdrrtb, rdrstb, kdif,                         &
         rdpot, rdm, rdmax, rdi, rri, rdc, swrd, swrdc, swdmi2rd,    &  ! rd retired
@@ -261,9 +261,8 @@
         laiexp = laiem
         laiexppot = laiem
         laimax = laiem
-        lai = lasum+ssa*state%crop%wofost%wst
-        state%crop%lai = lai   ! [SS-GR-ATM A5.2] dual-write
-        laipot = lai
+        state%crop%lai = lasum+ssa*state%crop%wofost%wst
+        laipot = state%crop%lai
         dwrt = 0.d0
         dwrtpot = dwrt
         dwlv = 0.d0
@@ -337,9 +336,9 @@
         cf = afgen (cftb,(2*magrs),rid)
         ch = afgen (chtb,(2*magrs),rid)
       else
-        cf        = afgen (cftb,(2*magrs),lai)
-        cfeic     = afgen (cfeictb,(2*magrs),lai)
-        ch        = afgen(chtb,(2*magrs),lai)
+        cf        = afgen (cftb,(2*magrs),state%crop%lai)
+        cfeic     = afgen (cfeictb,(2*magrs),state%crop%lai)
+        ch        = afgen(chtb,(2*magrs),state%crop%lai)
       endif
       state%crop%common%cf = cf   ! [SS-GR-CROP A5.1]
       state%crop%common%ch = ch   ! [SS-GR-CROP A5.1]
@@ -347,7 +346,7 @@
 
 ! --- initial storage on canopy
       if (swinter.eq.3) then
-        siccapact = siccaplai*lai
+        siccapact = siccaplai*state%crop%lai
         state%atmosphere%siccapact = siccapact   ! [SS-GR-ATM A5.2] dual-write
       endif
 
@@ -996,7 +995,7 @@
 ! ---   death of leaves due to water stress or high lai
         dslv1 = state%crop%wofost%wlv*(1.0d0-reltr)*perdl
         laicr = 3.2d0/kdif
-        dslv2 = state%crop%wofost%wlv*max(0.0d0,min(0.03d0,0.03d0*(lai-laicr)/laicr))
+        dslv2 = state%crop%wofost%wlv*max(0.0d0,min(0.03d0,0.03d0*(state%crop%lai-laicr)/laicr))
         dslv = max (dslv1,dslv2) 
 
 ! ---   death of leaves due to exceeding life span;
@@ -1352,9 +1351,8 @@
         state%crop%wofost%tagp = twlv+twst
 
 ! ---   leaf area index
-        lai = lasum+ssa*state%crop%wofost%wst
-        state%crop%lai = lai   ! [SS-GR-ATM A5.2] dual-write
-        laimax = max (lai,laimax)
+        state%crop%lai = lasum+ssa*state%crop%wofost%wst
+        laimax = max (state%crop%lai,laimax)
 
 ! ---   update normalized cumulative root density based on root extraction or stress (cumdens)
         if (swrdc .eq. 1) call update_rootdistribution(state)
@@ -1379,9 +1377,9 @@
           cf = afgen (cftb,(2*magrs),rid)
           ch = afgen (chtb,(2*magrs),rid)
         else
-          cf = afgen (cftb,(2*magrs),lai)
-          cfeic = afgen (cfeictb,(2*magrs),lai)
-          ch = afgen(chtb,(2*magrs),lai)
+          cf = afgen (cftb,(2*magrs),state%crop%lai)
+          cfeic = afgen (cfeictb,(2*magrs),state%crop%lai)
+          ch = afgen(chtb,(2*magrs),state%crop%lai)
         endif
         state%crop%common%cf = cf   ! [SS-GR-CROP A5.1]
         state%crop%common%ch = ch   ! [SS-GR-CROP A5.1]
@@ -1389,7 +1387,7 @@
 
 ! ---   update canopy storage capacity
         if (swinter.eq.3) then
-          siccapact = siccaplai*lai
+          siccapact = siccaplai*state%crop%lai
           state%atmosphere%siccapact = siccapact   ! [SS-GR-ATM A5.2] dual-write
         endif
 

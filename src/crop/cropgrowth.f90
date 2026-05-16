@@ -58,7 +58,7 @@
       use variables, only: &                                             ! [SS-GR-CROPRT B1/B6] [GR-CROPWS B3]
         icrop, flCropCalendar, cropstart, cropend, flCropEmergence,         &
         flCropHarvest, flCropReadFile, flCropPrep, flCropSow, flCropGerm,   &
-        swinco, croptype, daycrop, rdpot, lai, laipot, cf, ch,         &  ! tsum/rd retired
+        swinco, croptype, daycrop, rdpot, laipot, cf, ch,         &  ! tsum/rd/lai retired
         cwdmpot, cwdm, wsopot, wlvpot, wstpot,                       &  ! wso/wst/wlv retired
         wrtpot, tmn, lat, rad,                                         &  ! wrt retired
         albedo, rsc, cumdens,                                               &
@@ -152,7 +152,6 @@
       if (.not. flCropEmergence .or. flCropHarvest) then
         call nocrop (state)
         ! [SS-GR-CROP A5.1] nocrop writes state%crop%common%dvs directly; mirror remaining legacy zeros
-        state%crop%lai               = lai       ! GR-ATM fix: ProcessMeteoDay reads this
         state%crop%common%rdpot      = rdpot
         state%crop%common%laipot     = laipot
         state%crop%common%cf         = cf
@@ -475,7 +474,7 @@
 
 
         ! actual assimilation
-        call totass (dayl,amax,effc,lai,state%crop%kdif,rad,difpp,dsinbe,sinld,cosld,dtga)  ! [GR-CROPWS B3] kdif → state%crop%kdif; lai=legacy
+        call totass (dayl,amax,effc,state%crop%lai,state%crop%kdif,rad,difpp,dsinbe,sinld,cosld,dtga)  ! [GR-CROPWS B3] kdif → state%crop%kdif; state%crop%lai=legacy
 
         ! correction for low minimum temperature
         dtga = dtga * afgen (tmnftb,30,tmnr)

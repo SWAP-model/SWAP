@@ -708,9 +708,8 @@
       hlim3l             = 0.0d0 
       hlim4              = 0.0d0 
       kdif               = 0.0d0 
-      kdir               = 0.0d0 
-      lai                = 0.0d0 
-      laiem              = 0.0d0 
+      kdir               = 0.0d0
+      laiem              = 0.0d0
       laipot             = 0.0d0 
       lv                 = 0.0d0
       lvage              = 0.0d0
