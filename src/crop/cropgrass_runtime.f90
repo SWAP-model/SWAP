@@ -49,7 +49,7 @@
       !   tsoil: config-staging buffer, renamed to avoid clash with dummy arg
       use variables, only: &                                            ! [SS-GR-CROPRT B8] [GR-CROPWS B4]
         magrs, macp, rid, tbase, daycrop, tdwi, swinco, &  ! [GR-CROPWS B4] icrop/dvs/state%crop%common%tsum retired
-        wlv, wlvpot, wstpot, wrt, wrtpot, wrtmax, wrtmin,           &  ! wst retired
+        wlvpot, wstpot, wrt, wrtpot, wrtmax, wrtmin,           &  ! wst/wlv retired
         dwlv, dwlvpot, dwrt, dwrtpot, dwst, dwstpot,                     &
         cf, ch, cfeic, lai, laipot, laiem, laiexp, laiexppot, laimax,    &
         cftb, chtb, cfeictb, rdtb, slatb, rgrlai, rlwtb, rfsetb,        &
@@ -247,12 +247,12 @@
         wrtpot = wrt
         state%crop%wofost%wst = fs*(1.0d0-fr)*tdwi
         wstpot = state%crop%wofost%wst
-        wlv = laiem/sla(1)
-        wlvpot = wlv
+        state%crop%wofost%wlv = laiem/sla(1)
+        wlvpot = state%crop%wofost%wlv
         
 !     KRO-BOO-20160403: intro because comparison with Wofost
-        laiem = wlv*sla(1)  ! is not input !
-        lv(1) = wlv
+        laiem = state%crop%wofost%wlv*sla(1)  ! is not input !
+        lv(1) = state%crop%wofost%wlv
         lvpot(1) = lv(1)
         lasum = laiem
         lasumpot = lasum     
@@ -287,7 +287,7 @@
         rdpot = rd
         
 ! ---   initial summation variables of the crop
-        state%crop%wofost%tagp = wlv+state%crop%wofost%wst
+        state%crop%wofost%tagp = state%crop%wofost%wlv+state%crop%wofost%wst
         tagppot = state%crop%wofost%tagp
         tagpt = 0.0d0
         tagptpot = 0.0d0
@@ -306,7 +306,6 @@
         state%crop%wofost%wrt         = wrt
         state%crop%wofost%wrtpot      = wrtpot
         state%crop%wofost%wstpot      = wstpot
-        state%crop%wofost%wlv         = wlv
         state%crop%wofost%wlvpot      = wlvpot
         state%crop%wofost%dwrt        = dwrt
         state%crop%wofost%dwrtpot     = dwrtpot
@@ -954,7 +953,7 @@
 
 ! ---   respiration and partitioning of carbohydrates between growth and
 ! ---   maintenance respiration
-        rmres = (rmr*wrt+rml*wlv+rms*state%crop%wofost%wst)*afgen(rfsetb,30,rid)
+        rmres = (rmr*wrt+rml*state%crop%wofost%wlv+rms*state%crop%wofost%wst)*afgen(rfsetb,30,rid)
         teff = q10**((at_tav-25.0d0)/10.0d0)  ! [SS-GR-ATM B.5]
         mres = min (gass,rmres*teff)
         asrc = gass-mres
@@ -997,9 +996,9 @@
         grlv = fl*admi
 
 ! ---   death of leaves due to water stress or high lai
-        dslv1 = wlv*(1.0d0-reltr)*perdl
+        dslv1 = state%crop%wofost%wlv*(1.0d0-reltr)*perdl
         laicr = 3.2d0/kdif
-        dslv2 = wlv*max(0.0d0,min(0.03d0,0.03d0*(lai-laicr)/laicr))
+        dslv2 = state%crop%wofost%wlv*max(0.0d0,min(0.03d0,0.03d0*(lai-laicr)/laicr))
         dslv = max (dslv1,dslv2) 
 
 ! ---   death of leaves due to exceeding life span;
@@ -1100,15 +1099,15 @@
           sla(1) = afgen (slatb,30,rid)
           fl = afgen (fltb,30,rid)
           fs = afgen (fstb,30,rid)
-          wlv = mowrest / (1.d0 + (fs/fl))
-          state%crop%wofost%wst = fs/fl*wlv
+          state%crop%wofost%wlv = mowrest / (1.d0 + (fs/fl))
+          state%crop%wofost%wst = fs/fl*state%crop%wofost%wlv
           dwlv = 0.0d0
           dwst = 0.0d0
           lvage(1) = 0.0d0
           ilvold = 1
-          lasum = wlv * sla(1)
+          lasum = state%crop%wofost%wlv * sla(1)
           laiexp = lasum
-          lv(1) = wlv
+          lv(1) = state%crop%wofost%wlv
 
           gwst = 0.0d0
           gwrt = 0.0d0
@@ -1125,7 +1124,7 @@
           end if
           
 !         harvest
-          tagps = max (0.0d0,(state%crop%wofost%tagp-(wlv+dwlv+state%crop%wofost%wst+dwst)))
+          tagps = max (0.0d0,(state%crop%wofost%tagp-(state%crop%wofost%wlv+dwlv+state%crop%wofost%wst+dwst)))
           tagpt = tagpt + tagps * (1.d0 - fralossmow)
 
           cropendact  = rid
@@ -1207,7 +1206,7 @@
               state%crop%wofost%wst  = state%crop%wofost%wst  -  (uptgraz+lossgraz) * state%crop%wofost%wst  / state%crop%wofost%tagp
               dwst = dwst -  (uptgraz+lossgraz) * dwst / state%crop%wofost%tagp
               dwlv = dwlv -  (uptgraz+lossgraz) * dwlv / state%crop%wofost%tagp
-              grazlivinglv = (uptgraz+lossgraz) * wlv  / state%crop%wofost%tagp
+              grazlivinglv = (uptgraz+lossgraz) * state%crop%wofost%wlv  / state%crop%wofost%tagp
           
 !             reduce leave weights
               i1 = ilvold
@@ -1262,15 +1261,15 @@
               sla(1) = afgen (slatb,30,rid)
               fl = afgen (fltb,30,rid)
               fs = afgen (fstb,30,rid)
-              wlv = dewrest / (1.d0 + (fs/fl))
-              state%crop%wofost%wst = fs/fl*wlv
+              state%crop%wofost%wlv = dewrest / (1.d0 + (fs/fl))
+              state%crop%wofost%wst = fs/fl*state%crop%wofost%wlv
               dwlv = 0.0d0
               dwst = 0.0d0
               lvage(1) = 0.0d0
               ilvold = 1
-              lasum = wlv * sla(1)
+              lasum = state%crop%wofost%wlv * sla(1)
               laiexp = lasum
-              lv(1) = wlv
+              lv(1) = state%crop%wofost%wlv
     
               gwst = 0.0d0
               gwrt = 0.0d0
@@ -1330,10 +1329,10 @@
 
 ! ---     calculation of new leaf area and weight
           lasum = 0.d0
-          wlv = 0.d0
+          state%crop%wofost%wlv = 0.d0
           do i1 = 1,ilvold
             lasum = lasum+lv(i1)*sla(i1)
-            wlv = wlv+lv(i1)
+            state%crop%wofost%wlv = state%crop%wofost%wlv+lv(i1)
           enddo
 
           laiexp = laiexp+glaiex*delt
@@ -1350,7 +1349,7 @@
         dwst = dwst+drst*delt
 
 ! ---   dry weight of dead and living plant organs
-        twlv = wlv+dwlv
+        twlv = state%crop%wofost%wlv+dwlv
         twst = state%crop%wofost%wst+dwst
         state%crop%wofost%tagp = twlv+twst
 
@@ -1400,7 +1399,6 @@
       endif
 
       ! [SS-GR-CROP A5.1] mirror grass case(3) actual state
-      state%crop%wofost%wlv         = wlv
       state%crop%wofost%wrt         = wrt
       state%crop%wofost%dwrt        = dwrt
       state%crop%wofost%dwlv        = dwlv

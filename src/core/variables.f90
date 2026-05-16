@@ -510,7 +510,7 @@
       real(8)   w_root_ss          ! Dry weight of roots at soil surface [0.0..10.0 kg/m3, R]
       real(8)   wiltpoint          ! Minimum pressure head at interface soil-root (cm)
 
-      real(8)   wlv                ! Dry weight of plant leaves (kg/ha)
+      ! [GR-CROP-DVS] wlv retired — see state%crop%wofost%wlv
       real(8)   wlvpot             ! Dry weight of plant leaves for potential growth (kg/ha)
       real(8)   wrtb(2*magrs)      ! Array with dry weight of root at soil surface as function of DVS (kg/m3)
       real(8)   wrt                ! Dry weight of plant root (kg/ha)

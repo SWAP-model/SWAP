@@ -768,7 +768,6 @@
       wrtb               = 0.0d0
       zsow               = 0.0d0
 
-      wlv                = 0.0d0
       wlvpot             = 0.0d0
       wstpot             = 0.0d0
       wrt                = 0.0d0
