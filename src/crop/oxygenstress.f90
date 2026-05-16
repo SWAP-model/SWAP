@@ -108,8 +108,8 @@ contains
                            ! DEFERRED: SRL/swrootradius/dry_mat_cont_roots/air_filled_root_por/spec_weight_root_tissue/var_a/root_radiusO2 — crop config; Phase C3
                            SRL, swrootradius, dry_mat_cont_roots, &
                            air_filled_root_por, spec_weight_root_tissue, var_a, root_radiusO2, &
-                           ! DEFERRED: q10/rmr/rfsetb/rid/rd/rdctb/w_root_ss/cumdens — active crop state; Phase C3; dvs/wrt retired
-                           q10, rmr, rfsetb, rid, rd, rdctb, w_root_ss, cumdens, &
+                           ! DEFERRED: q10/rmr/rfsetb/rid/rdctb/w_root_ss/cumdens — active crop state; Phase C3; dvs/wrt/rd retired
+                           q10, rmr, rfsetb, rid, rdctb, w_root_ss, cumdens, &
                            ! DEFERRED: tsoil — heat staging buffer; tsoil migration pending
                            tsoil, &
                            ! DEFERRED: c_mroot/f_senes/q10_root/q10_microbial/shape_factor_rootr/specific_resp_humus — O2 config; Phase C3
@@ -249,21 +249,21 @@ contains
 !new:  
 ! --- static crop. w_root_z0 relative to value of top layer              
       if (croptype(icrop) .eq. 1) then
-            rdepth_top = -state%mesh%ztopcp(1)/rd ! (-z(1)-0.5d0*dz(1))/rd  [GR-BH C7]
+            rdepth_top = -state%mesh%ztopcp(1)/state%crop%common%rd ! (-z(1)-0.5d0*dz(1))/state%crop%common%rd  [GR-BH C7]
             rdens_top  = afgen(rdctb,22,rdepth_top)
-            rdepth     = -state%mesh%ztopcp(node)/rd ! (-z(node)-0.5d0*dz(node))/rd  [GR-BH C7]
+            rdepth     = -state%mesh%ztopcp(node)/state%crop%common%rd ! (-z(node)-0.5d0*dz(node))/state%crop%common%rd  [GR-BH C7]
             rdens      = afgen(rdctb,22,rdepth) 
             w_root_z0  = w_root_ss * rdens/rdens_top !static crop
       endif
 ! --- calculate wrootz0 [kg/m3] at top of the compartments !adj RB 20171201
 ! --- dynamic crop. wrt [kg/ha] = 10-4 kg/m2; 
       if ((croptype(icrop) .eq. 2) .or. (croptype(icrop) .eq. 3)) then
-        top1 = dabs(state%mesh%ztopcp(node) / rd) ! relative depth top  [GR-BH C7]
+        top1 = dabs(state%mesh%ztopcp(node) / state%crop%common%rd) ! relative depth top  [GR-BH C7]
         top2 = top1 + 1.0d-6 ! define 'infinite' thin layer; fraction
         
         w_root_z0 = 1.0d6*                                   & ! rescale fraction to 1 (top 2)
      &   (afgen(cumdens,202,top2)-afgen(cumdens,202,top1)) * & ! fraction
-     &            (state%crop%wofost%wrt*0.0001d0*(1.0d0/(0.01d0*rd)))           ! wrt kg/ha --> kg/m2; rd cm -> m
+     &            (state%crop%wofost%wrt*0.0001d0*(1.0d0/(0.01d0*state%crop%common%rd)))           ! wrt kg/ha --> kg/m2; state%crop%common%rd cm -> m
       endif
 
 !JKRO20171114_temp output for testing only

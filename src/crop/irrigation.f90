@@ -46,8 +46,8 @@
                             gird, irrigevent, schedule, swirfix,           &
                             ! DEFERRED: irdate/nirri/irdepth/irconc/irtype/cirr — irrigation event arrays; Phase C3
                             irdate, nirri, irdepth, irconc, irtype, cirr,  &
-                            ! DEFERRED: isua/noddrz/rd/swsolu/swcirrthres — crop/soil state; Phase C3; dvs retired
-                            isua, noddrz, rd, swsolu, swcirrthres,    &
+                            ! DEFERRED: isua/noddrz/swsolu/swcirrthres — crop/soil state; Phase C3; dvs/rd retired
+                            isua, noddrz, swsolu, swcirrthres,    &
                             ! DEFERRED: cirrthres/perirrsurp/raithreshold/dayfix — irrigation config; Phase C3
                             cirrthres, perirrsurp, raithreshold, dayfix,   &
                             ! DEFERRED: flCropCalendar/flCropHarvest — crop flags; Phase C3
@@ -167,7 +167,7 @@
 
 ! ---       determine water holding capacity, readily available water, 
 ! ---       actual available water and water deficit
-            frlow = (state%mesh%ztopcp(noddrz) + rd) / state%mesh%dz(noddrz)  ! [GR-BH C7]
+            frlow = (state%mesh%ztopcp(noddrz) + state%crop%common%rd) / state%mesh%dz(noddrz)  ! [GR-BH C7]
             awlh = 0.0d0; awmh = 0.0d0; awah = 0.0d0; cdef = 0.0d0
             do node = 1,noddrz
                wclo = wclos(state%mesh%layer(node))*state%mesh%dz(node);       if (node.eq.noddrz) wclo = wclo*frlow  ! [GR-BH C7]

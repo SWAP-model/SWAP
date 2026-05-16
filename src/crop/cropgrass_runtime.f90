@@ -54,7 +54,7 @@
         cf, ch, cfeic, lai, laipot, laiem, laiexp, laiexppot, laimax,    &
         cftb, chtb, cfeictb, rdtb, slatb, rgrlai, rlwtb, rfsetb,        &
         frtb, fltb, fstb, rdrrtb, rdrstb, kdif,                         &
-        rd, rdpot, rdm, rdmax, rdi, rri, rdc, swrd, swrdc, swdmi2rd,    &
+        rdpot, rdm, rdmax, rdi, rri, rdc, swrd, swrdc, swdmi2rd,    &  ! rd retired
         swdrought, swcf, swgc, swinter, reltr,                           &
         cvl, cvr, cvs, q10, rmr, rml, rms, span, ssa, glaiex, glaiexpot, &
         lv, lvpot, lvage, lvagepot, sla, slapot, ilvold, ilvoldpot,     &
@@ -276,15 +276,15 @@
 
 ! ---   actual rooting depth
         if (swrd.eq.1) then
-          rd = afgen (rdtb,22,rid)
-          rd = min(rd,rdm)
+          state%crop%common%rd = afgen (rdtb,22,rid)
+          state%crop%common%rd = min(state%crop%common%rd,rdm)
         elseif (swrd.eq.2) then
-          rd = min(rdi,rdm)
+          state%crop%common%rd = min(rdi,rdm)
         elseif (swrd.eq.3) then
           rdi = afgen (rlwtb,22,state%crop%wofost%wrt)
-          rd = min(rdi,rdm)
+          state%crop%common%rd = min(rdi,rdm)
         endif
-        rdpot = rd
+        rdpot = state%crop%common%rd
         
 ! ---   initial summation variables of the crop
         state%crop%wofost%tagp = state%crop%wofost%wlv+state%crop%wofost%wst
@@ -300,7 +300,6 @@
         flhrvendpot      = .false.
         flearlyhrvendpot = .false.
         ! [SS-GR-CROP A5.1] mirror grass init-time state
-        state%crop%common%rd          = rd
         state%crop%common%rdpot       = rdpot
         state%crop%common%laipot      = laipot
         state%crop%wofost%wrtpot      = wrtpot
@@ -1362,19 +1361,18 @@
         
         ! root extension
         if (swrd.eq.1) then
-          rd = afgen (rdtb,22,rid)
-          rd = min(rd,rdm)
+          state%crop%common%rd = afgen (rdtb,22,rid)
+          state%crop%common%rd = min(state%crop%common%rd,rdm)
         elseif (swrd.eq.2) then
-          rr = min (rdm-rd,rri)
+          rr = min (rdm-state%crop%common%rd,rri)
           if (fr.le.0.0d0 .or. pgass.lt.1.0d0 .or.                    &
      &        state%soilwater%flWrtNonox) rr = 0.0d0   ! [SS-GR-CROPWS A4] present(state) guard removed
           if (swdmi2rd.eq.1 .and. pgass.ge.1.0d0)              rr = rr * gass/pgass
-          rd = rd + rr
+          state%crop%common%rd = state%crop%common%rd + rr
         elseif (swrd.eq.3) then
-          rd = afgen (rlwtb,22,state%crop%wofost%wrt)
-          rd = min(rd,rdm)
+          state%crop%common%rd = afgen (rlwtb,22,state%crop%wofost%wrt)
+          state%crop%common%rd = min(state%crop%common%rd,rdm)
         endif
-        state%crop%common%rd = rd   ! [SS-GR-CROP A5.1]
 
 ! ---   set crop height and cropfactor
         if (swcf.ne.3) then

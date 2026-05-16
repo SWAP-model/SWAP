@@ -792,8 +792,7 @@
       rri                = 0.0d0       
       rdc                = 0.0d0 
       wrtmax             = 0.0d0
-      rd                 = 0.0d0
-      rdpot              = 0.0d0 
+      rdpot              = 0.0d0
       
 ! --- harvest grassland
       dateharvest        = 0.0d0

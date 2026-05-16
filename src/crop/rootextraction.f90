@@ -50,7 +50,7 @@ module rootextraction_mod
                            ! DEFERRED: kroot/kstem/logf/noddrz/oxygenintercept — crop/log globals; Phase C3
                            kroot, kstem, logf, noddrz, oxygenintercept,   &
                            ! DEFERRED: oxygenslope/rd/rdctb/rdm/rootcoefa/rooteff — active crop state; Phase C3
-                           oxygenslope, rd, rdctb, rdm, rootcoefa, rooteff, &
+                           oxygenslope, rdctb, rdm, rootcoefa, rooteff, &  ! rd retired
                            ! DEFERRED: rootradius/rxylem/saltmax/saltslope/stephr — crop/solute config; Phase C3
                            rootradius, rxylem, saltmax, saltslope, stephr, &
                            ! DEFERRED: swcompensate/swdrought/swfrost/swoxygen — crop stress switches; Phase C3
@@ -87,7 +87,7 @@ module rootextraction_mod
 !      if (.not.flcropEmergence) return
 
 ! --- skip routine if there are no roots
-      if (rd .lt. vsmall) return
+      if (state%crop%common%rd .lt. vsmall) return
 
 ! --- skip routine if transpiration rate is zero
       ! SS-ATM Phase 2 Task A-2.3: ptra read from state%atmosphere (atmosphere home).
@@ -367,7 +367,7 @@ module rootextraction_mod
                            botcom, criterhr, cumdens, dcritrtz, flhydrlift, &  ! DEFERRED: soil/crop config
                            hlim1, hlim2l, hlim2u, hlim3h, hlim3l, hlim4,  &  ! DEFERRED: drought limits
                            kroot, kstem, logf, noddrz, oxygenintercept,   &  ! DEFERRED: crop/log globals
-                           oxygenslope, rd, rdctb, rdm, rootcoefa, rooteff, &  ! DEFERRED: active crop state
+                           oxygenslope, rdctb, rdm, rootcoefa, rooteff, &  ! rd retired  ! DEFERRED: active crop state
                            rootradius, rxylem, saltmax, saltslope, stephr, &  ! DEFERRED: crop/solute config
                            swcompensate, swdrought, swfrost, swoxygen,    &  ! DEFERRED: stress switches
                            swoxygentype, swsalinity, swstressor, swwrtnonox, &  ! DEFERRED: stress switches
@@ -434,7 +434,7 @@ module rootextraction_mod
 
 ! --- initialization of rootrho and rootphi
       do node = 1,noddrz-1
-        reldepth = -state%mesh%z(node)/rd  ! [GR-BH C7]
+        reldepth = -state%mesh%z(node)/state%crop%common%rd  ! [GR-BH C7]
         rdensity = afgen(rdctb,22,reldepth)
         cw_rmax(node) = 1.d0/dsqrt(phi*rdensity)
         cw_rootrho(node) = 4.d0/(rootradius*rootradius-rootcoefa*cw_rmax(node)&
@@ -445,8 +445,8 @@ module rootextraction_mod
       enddo
 ! --- last node, partly filled with roots
       node = noddrz
-      meandepth = (state%mesh%ztopcp(node)-rd)*0.5d0  ! [GR-BH C7]
-      reldepth = meandepth/(-rd)
+      meandepth = (state%mesh%ztopcp(node)-state%crop%common%rd)*0.5d0  ! [GR-BH C7]
+      reldepth = meandepth/(-state%crop%common%rd)
       rdensity = afgen(rdctb,22,reldepth)
       cw_rmax(node) = 1.d0/dsqrt(phi*rdensity)
       cw_rootrho(node) = 4.d0/(rootradius*rootradius-rootcoefa*cw_rmax(node)  &
@@ -738,7 +738,7 @@ module rootextraction_mod
                            botcom, criterhr, cumdens, dcritrtz, flhydrlift, &  ! DEFERRED: soil/crop config
                            hlim1, hlim2l, hlim2u, hlim3h, hlim3l, hlim4,  &  ! DEFERRED: drought limits
                            kroot, kstem, logf, noddrz, oxygenintercept,   &  ! DEFERRED: crop/log globals
-                           oxygenslope, rd, rdctb, rdm, rootcoefa, rooteff, &  ! DEFERRED: active crop state
+                           oxygenslope, rdctb, rdm, rootcoefa, rooteff, &  ! rd retired  ! DEFERRED: active crop state
                            rootradius, rxylem, saltmax, saltslope, stephr, &  ! DEFERRED: crop/solute config
                            swcompensate, swdrought, swfrost, swoxygen,    &  ! DEFERRED: stress switches
                            swoxygentype, swsalinity, swstressor, swwrtnonox, &  ! DEFERRED: stress switches
@@ -842,7 +842,7 @@ module rootextraction_mod
           endif
         else
 ! ---     last node, partly filled with roots
-          depth = state%mesh%ztopcp(node) + rd  ! [GR-BH C7]
+          depth = state%mesh%ztopcp(node) + state%crop%common%rd  ! [GR-BH C7]
           cw_qrot(node) = rooteff * cw_rootrho(node) *                        &
      &                 (cw_mflux(node)-cw_mroot(node)) * depth
           if (cw_mflux(node) .gt. cw_mroot(node) ) then

@@ -58,7 +58,7 @@
       use variables, only: &                                             ! [SS-GR-CROPRT B1/B6] [GR-CROPWS B3]
         icrop, flCropCalendar, cropstart, cropend, flCropEmergence,         &
         flCropHarvest, flCropReadFile, flCropPrep, flCropSow, flCropGerm,   &
-        swinco, croptype, daycrop, rd, rdpot, lai, laipot, cf, ch,         &  ! tsum retired
+        swinco, croptype, daycrop, rdpot, lai, laipot, cf, ch,         &  ! tsum/rd retired
         cwdmpot, cwdm, wsopot, wlvpot, wstpot,                       &  ! wso/wst/wlv retired
         wrtpot, tmn, lat, rad,                                         &  ! wrt retired
         albedo, rsc, cumdens,                                               &
@@ -153,7 +153,6 @@
         call nocrop (state)
         ! [SS-GR-CROP A5.1] nocrop writes state%crop%common%dvs directly; mirror remaining legacy zeros
         state%crop%lai               = lai       ! GR-ATM fix: ProcessMeteoDay reads this
-        state%crop%common%rd         = rd
         state%crop%common%rdpot      = rdpot
         state%crop%common%laipot     = laipot
         state%crop%common%cf         = cf

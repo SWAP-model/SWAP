@@ -49,7 +49,7 @@
 !   daycrop: runtime (dual-write to state%crop%common%daycrop), computed in CropGrowth
 ! ----------------------------------------------------------------------
       use variables, only: &                                            ! [SS-GR-CROPRT B7] [GR-CROPWS B5]
-        macp, magrs, dvsend, rd, rdpot, rdm, rdmax, rdi, rri, &  ! [GR-CROPWS B5] icrop removed (→state%crop%common%icrop); dvs retired (→state%crop%common%dvs)
+        macp, magrs, dvsend, rdpot, rdm, rdmax, rdi, rri, &  ! [GR-CROPWS B5] icrop/dvs/rd retired
         rdc, swrd, swdmi2rd, swrdc, swdrought, swcf, swgc, swinter,       &
         swbulb, swinco, lai, laipot, laiem, laiexp, laiexppot, laimax,    &
         cf, ch, cfeic, tsumea, tsumam, tbase, daycrop, lat, daylp,  &  ! tsum retired (→state%crop%common%tsum)
@@ -345,15 +345,15 @@
 
 ! --- actual rooting depth
         if (swrd.eq.1) then
-          rd = afgen (rdtb,22,state%crop%common%dvs)
-          rd = min(rd,rdm)
+          state%crop%common%rd = afgen (rdtb,22,state%crop%common%dvs)
+          state%crop%common%rd = min(state%crop%common%rd,rdm)
         elseif (swrd.eq.2) then
-          rd = min(rdi,rdm)
+          state%crop%common%rd = min(rdi,rdm)
         elseif (swrd.eq.3) then
           rdi = afgen (rlwtb,22,state%crop%wofost%wrt)
-          rd = min(rdi,rdm)
+          state%crop%common%rd = min(rdi,rdm)
         endif
-        rdpot = rd
+        rdpot = state%crop%common%rd
         
 ! --- initial summation variables of the crop
         gasst = 0.0d0
@@ -367,7 +367,6 @@
         flvernalised = .FALSE.   ! crop not vernalised (-)
 
         ! [SS-GR-CROP A5.1] mirror wofost init-time state
-        state%crop%common%rd        = rd
         state%crop%common%rdpot     = rdpot
         state%crop%common%laipot    = laipot
         state%crop%wofost%swbulb    = (swbulb == 1)
@@ -1212,7 +1211,7 @@
 
         rdpot = afgen (rdtb,22,state%crop%common%dvs)
         rdpot = min(rdpot,rdm)
-        rd    = rdpot
+        state%crop%common%rd    = rdpot
 
       elseif (swrd.eq.2) then
 
@@ -1220,20 +1219,19 @@
         if (fr.le.0.0d0 .or. pgasspot.lt.1.0d0) rrpot = 0.0d0
         rdpot = rdpot + rrpot
 
-        rr = min (rdm-rd,rri)
+        rr = min (rdm-state%crop%common%rd,rri)
         if (fr.le.0.0d0 .or. pgass.lt.1.0d0 .or.                      &
      &      state%soilwater%flWrtNonox) rr = 0.0d0   ! [SS-GR-CROPWS A3] present(state) guard removed
         if (swdmi2rd.eq.1 .and. pgass.ge.1.0d0)              rr = rr * gass/pgass
-        rd = rd + rr
+        state%crop%common%rd = state%crop%common%rd + rr
 
       elseif (swrd.eq.3) then
         rdpot = afgen (rlwtb,22,wrtpot)
         rdpot = min(rdpot,rdm)
-        rd = afgen (rlwtb,22,state%crop%wofost%wrt)
-        rd = min(rd,rdm)
+        state%crop%common%rd = afgen (rlwtb,22,state%crop%wofost%wrt)
+        state%crop%common%rd = min(state%crop%common%rd,rdm)
       endif
       state%crop%common%rdpot = rdpot   ! [SS-GR-CROP A5.1]
-      state%crop%common%rd    = rd      ! [SS-GR-CROP A5.1]
 
 ! --- crop factor or crop height
       if (swcf.ne.3) then
