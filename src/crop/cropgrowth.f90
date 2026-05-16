@@ -59,7 +59,7 @@
         icrop, flCropCalendar, cropstart, cropend, flCropEmergence,         &
         flCropHarvest, flCropReadFile, flCropPrep, flCropSow, flCropGerm,   &
         swinco, croptype, daycrop, rd, rdpot, lai, laipot, cf, ch,         &  ! tsum retired
-        cwdmpot, cwdm, wsopot, wlvpot, wlv, wstpot, wst,             &  ! wso retired
+        cwdmpot, cwdm, wsopot, wlvpot, wlv, wstpot,                  &  ! wso/wst retired
         wrtpot, wrt, tmn, lat, rad,                                         &
         albedo, rsc, cumdens,                                               &
         eff, amaxtb, tmpftb, tmnftb, swdrought, swcrp, dvsend,             &  ! [GR-CROPWS B3] kdif removed (→state%crop%kdif)
@@ -166,7 +166,6 @@
         state%crop%wofost%wlvpot     = wlvpot
         state%crop%wofost%wlv        = wlv
         state%crop%wofost%wstpot     = wstpot
-        state%crop%wofost%wst        = wst
         state%crop%wofost%wrtpot     = wrtpot
         state%crop%wofost%wrt        = wrt
       endif
@@ -499,7 +498,7 @@
 
         ! nitrogen stress reduction of pgass
         if (flCropNut) then
-          call NUTRIE (NLUE,WLV,WST,state%crop%common%dvs,ANLV,ANST,NMXLV,NMAXLV,NMAXST,  &
+          call NUTRIE (NLUE,WLV,state%crop%wofost%wst,state%crop%common%dvs,ANLV,ANST,NMXLV,NMAXLV,NMAXST,  &
      &      NMAXRT,LRNR,LSNR,NNI,RNFLV,RNFST,FRNX,FSTR)
           pgass = pgass * FSTR
         endif

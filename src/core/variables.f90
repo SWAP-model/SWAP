@@ -519,7 +519,7 @@
       real(8)   gwrt               ! Growth of dry weight of plant root (kg/ha)
       ! [GR-CROP-DVS] wso retired — see state%crop%wofost%wso
       real(8)   wsopot             ! Dry weight of storage organ for potential growth (kg/ha)
-      real(8)   wst                ! Dry weight of plant stem (kg/ha)
+      ! [GR-CROP-DVS] wst retired — see state%crop%wofost%wst
       real(8)   wstpot                ! Dry weight of plant stem for potential growth (kg/ha)
       logical   flanthesis         ! Flag indicating anthesis stage of a crop
       logical   flHarvest           ! Flag indicating that grass should be harvested, actual crop

@@ -49,7 +49,7 @@
       !   tsoil: config-staging buffer, renamed to avoid clash with dummy arg
       use variables, only: &                                            ! [SS-GR-CROPRT B8] [GR-CROPWS B4]
         magrs, macp, rid, tbase, daycrop, tdwi, swinco, &  ! [GR-CROPWS B4] icrop/dvs/state%crop%common%tsum retired
-        wlv, wlvpot, wst, wstpot, wrt, wrtpot, wrtmax, wrtmin,           &
+        wlv, wlvpot, wstpot, wrt, wrtpot, wrtmax, wrtmin,           &  ! wst retired
         dwlv, dwlvpot, dwrt, dwrtpot, dwst, dwstpot,                     &
         cf, ch, cfeic, lai, laipot, laiem, laiexp, laiexppot, laimax,    &
         cftb, chtb, cfeictb, rdtb, slatb, rgrlai, rlwtb, rfsetb,        &
@@ -245,8 +245,8 @@
         wrt = fr*tdwi
         wrtmin = wrt / 10000 ! minimum root weigth at relative depth is set to 1% of the initial value
         wrtpot = wrt
-        wst = fs*(1.0d0-fr)*tdwi
-        wstpot = wst
+        state%crop%wofost%wst = fs*(1.0d0-fr)*tdwi
+        wstpot = state%crop%wofost%wst
         wlv = laiem/sla(1)
         wlvpot = wlv
         
@@ -261,7 +261,7 @@
         laiexp = laiem
         laiexppot = laiem
         laimax = laiem
-        lai = lasum+ssa*wst
+        lai = lasum+ssa*state%crop%wofost%wst
         state%crop%lai = lai   ! [SS-GR-ATM A5.2] dual-write
         laipot = lai
         dwrt = 0.d0
@@ -287,7 +287,7 @@
         rdpot = rd
         
 ! ---   initial summation variables of the crop
-        state%crop%wofost%tagp = wlv+wst
+        state%crop%wofost%tagp = wlv+state%crop%wofost%wst
         tagppot = state%crop%wofost%tagp
         tagpt = 0.0d0
         tagptpot = 0.0d0
@@ -305,7 +305,6 @@
         state%crop%common%laipot      = laipot
         state%crop%wofost%wrt         = wrt
         state%crop%wofost%wrtpot      = wrtpot
-        state%crop%wofost%wst         = wst
         state%crop%wofost%wstpot      = wstpot
         state%crop%wofost%wlv         = wlv
         state%crop%wofost%wlvpot      = wlvpot
@@ -955,7 +954,7 @@
 
 ! ---   respiration and partitioning of carbohydrates between growth and
 ! ---   maintenance respiration
-        rmres = (rmr*wrt+rml*wlv+rms*wst)*afgen(rfsetb,30,rid)
+        rmres = (rmr*wrt+rml*wlv+rms*state%crop%wofost%wst)*afgen(rfsetb,30,rid)
         teff = q10**((at_tav-25.0d0)/10.0d0)  ! [SS-GR-ATM B.5]
         mres = min (gass,rmres*teff)
         asrc = gass-mres
@@ -1052,9 +1051,9 @@
 ! ---   growth rate stems
         grst = fs*admi
 ! ---   death of stems due to water stress
-        drst1 = wst*(1.0d0-reltr)*perdl
+        drst1 = state%crop%wofost%wst*(1.0d0-reltr)*perdl
 ! ---   death of stems due to ageing
-        drst2 = afgen (rdrstb,30,rid)*wst
+        drst2 = afgen (rdrstb,30,rid)*state%crop%wofost%wst
         drst = (drst1+drst2)/delt 
         gwst = grst-drst
 
@@ -1102,7 +1101,7 @@
           fl = afgen (fltb,30,rid)
           fs = afgen (fstb,30,rid)
           wlv = mowrest / (1.d0 + (fs/fl))
-          wst = fs/fl*wlv
+          state%crop%wofost%wst = fs/fl*wlv
           dwlv = 0.0d0
           dwst = 0.0d0
           lvage(1) = 0.0d0
@@ -1126,7 +1125,7 @@
           end if
           
 !         harvest
-          tagps = max (0.0d0,(state%crop%wofost%tagp-(wlv+dwlv+wst+dwst)))
+          tagps = max (0.0d0,(state%crop%wofost%tagp-(wlv+dwlv+state%crop%wofost%wst+dwst)))
           tagpt = tagpt + tagps * (1.d0 - fralossmow)
 
           cropendact  = rid
@@ -1205,7 +1204,7 @@
               cuptgraz  = cuptgraz + uptgraz
 
 !             distribute grazing over stems and leaves (living and dead parts)
-              wst  = wst  -  (uptgraz+lossgraz) * wst  / state%crop%wofost%tagp
+              state%crop%wofost%wst  = state%crop%wofost%wst  -  (uptgraz+lossgraz) * state%crop%wofost%wst  / state%crop%wofost%tagp
               dwst = dwst -  (uptgraz+lossgraz) * dwst / state%crop%wofost%tagp
               dwlv = dwlv -  (uptgraz+lossgraz) * dwlv / state%crop%wofost%tagp
               grazlivinglv = (uptgraz+lossgraz) * wlv  / state%crop%wofost%tagp
@@ -1264,7 +1263,7 @@
               fl = afgen (fltb,30,rid)
               fs = afgen (fstb,30,rid)
               wlv = dewrest / (1.d0 + (fs/fl))
-              wst = fs/fl*wlv
+              state%crop%wofost%wst = fs/fl*wlv
               dwlv = 0.0d0
               dwst = 0.0d0
               lvage(1) = 0.0d0
@@ -1343,7 +1342,7 @@
 
 ! ---   dry weight of living plant organs
         wrt = wrt+gwrt*delt
-        wst = wst+gwst*delt
+        state%crop%wofost%wst = state%crop%wofost%wst+gwst*delt
 
 ! ---   dry weight of dead plant organs (roots,leaves & stems)
         dwrt = dwrt+drrt*delt
@@ -1352,11 +1351,11 @@
 
 ! ---   dry weight of dead and living plant organs
         twlv = wlv+dwlv
-        twst = wst+dwst
+        twst = state%crop%wofost%wst+dwst
         state%crop%wofost%tagp = twlv+twst
 
 ! ---   leaf area index
-        lai = lasum+ssa*wst
+        lai = lasum+ssa*state%crop%wofost%wst
         state%crop%lai = lai   ! [SS-GR-ATM A5.2] dual-write
         laimax = max (lai,laimax)
 
@@ -1403,7 +1402,6 @@
       ! [SS-GR-CROP A5.1] mirror grass case(3) actual state
       state%crop%wofost%wlv         = wlv
       state%crop%wofost%wrt         = wrt
-      state%crop%wofost%wst         = wst
       state%crop%wofost%dwrt        = dwrt
       state%crop%wofost%dwlv        = dwlv
       state%crop%wofost%dwst        = dwst

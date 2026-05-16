@@ -770,7 +770,6 @@
 
       wlv                = 0.0d0
       wlvpot             = 0.0d0
-      wst                = 0.0d0
       wstpot             = 0.0d0
       wrt                = 0.0d0
       wrtpot             = 0.0d0

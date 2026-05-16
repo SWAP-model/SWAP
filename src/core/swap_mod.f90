@@ -74,7 +74,7 @@ contains
                             rd, rdpot, rdm, rri, rdi, rdc, ch, cf, laipot, &
                             cuptgraz, cuptgrazpot, HarLosOrm_tot, &
                             ! [SS-GR-CROP A15] crop_wofost/grass/fixed legacy globals
-                            wlv, wlvpot, wst, wstpot, wrt, wrtpot, wsopot, &  ! wso retired
+                            wlv, wlvpot, wstpot, wrt, wrtpot, wsopot, &  ! wso/wst retired
                             tagppot, tagpt, tagptpot, cwdm, cwdmpot, &  ! tagp retired
                             pgass, pgasspot, &
                             dwlv, dwlvpot, dwst, dwstpot, dwrt, dwrtpot, dwso, &
@@ -423,7 +423,6 @@ contains
    ! [SS-GR-CROP A15] dual-write crop_wofost
    state%crop%wofost%wlv      = wlv
    state%crop%wofost%wlvpot   = wlvpot
-   state%crop%wofost%wst      = wst
    state%crop%wofost%wstpot   = wstpot
    state%crop%wofost%wrt      = wrt
    state%crop%wofost%wrtpot   = wrtpot
