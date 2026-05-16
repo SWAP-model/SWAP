@@ -513,7 +513,7 @@
       ! [GR-CROP-DVS] wlv retired — see state%crop%wofost%wlv
       real(8)   wlvpot             ! Dry weight of plant leaves for potential growth (kg/ha)
       real(8)   wrtb(2*magrs)      ! Array with dry weight of root at soil surface as function of DVS (kg/m3)
-      real(8)   wrt                ! Dry weight of plant root (kg/ha)
+      ! [GR-CROP-DVS] wrt retired — see state%crop%wofost%wrt
       real(8)   wrtpot             ! Dry weight of plant root for potential growth (kg/ha)
       real(8)   wrtmin             ! Minimum dry weight of plant root at relative depth (1% of the initial value)
       real(8)   gwrt               ! Growth of dry weight of plant root (kg/ha)

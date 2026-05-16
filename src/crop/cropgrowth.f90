@@ -60,7 +60,7 @@
         flCropHarvest, flCropReadFile, flCropPrep, flCropSow, flCropGerm,   &
         swinco, croptype, daycrop, rd, rdpot, lai, laipot, cf, ch,         &  ! tsum retired
         cwdmpot, cwdm, wsopot, wlvpot, wstpot,                       &  ! wso/wst/wlv retired
-        wrtpot, wrt, tmn, lat, rad,                                         &
+        wrtpot, tmn, lat, rad,                                         &  ! wrt retired
         albedo, rsc, cumdens,                                               &
         eff, amaxtb, tmpftb, tmnftb, swdrought, swcrp, dvsend,             &  ! [GR-CROPWS B3] kdif removed (→state%crop%kdif)
         swharv, plwt, remoc, pld, q10, pgasspot, pgass,                    &  ! [GR-CROPWS B3] swbulb removed (→state%crop%wofost%swbulb)
@@ -166,7 +166,6 @@
         state%crop%wofost%wlvpot     = wlvpot
         state%crop%wofost%wstpot     = wstpot
         state%crop%wofost%wrtpot     = wrtpot
-        state%crop%wofost%wrt        = wrt
       endif
 
 ! --- check crop emergence ----------------------------------------------------

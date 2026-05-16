@@ -54,7 +54,7 @@
         swbulb, swinco, lai, laipot, laiem, laiexp, laiexppot, laimax,    &
         cf, ch, cfeic, tsumea, tsumam, tbase, daycrop, lat, daylp,  &  ! tsum retired (→state%crop%common%tsum)
         kdif, siccapact, siccaplai, cropend,                               &  ! [GR-CROPWS B5] cropstart removed (→state%crop%common%cropstart)
-        wlvpot, wstpot, wsopot, wrt, wrtpot, wrtmax, wrtmin, &  ! wso/wst/wlv retired
+        wlvpot, wstpot, wsopot, wrtpot, wrtmax, wrtmin, &  ! wso/wst/wlv/wrt retired
         cwdm, cwdmpot, pgass, pgasspot, reltr, lrnr, lsnr, nni,           &
         anlv, anst, nmxlv, nmaxlv, nmaxst, nmaxrt, nmaxso, nlai,          &
         rnflv, rnfst, rnfrt, fstr, fntrt, npart, nfixf, nsla,             &
@@ -226,7 +226,7 @@
             call outbalcropOM1(1,pathwork,outfil,project,tc_date,daycrop,  &
      &         tc_t,state%crop%common%dvs,state%crop%common%tsum,gass,mres,fr,fl,fs,fo,dmi,cvf,ccheck)
             call outbalcropOM2(1,pathwork,outfil,project,tc_date,daycrop,  &
-     &         tc_t,state%crop%common%dvs,state%crop%common%tsum,storagediff,state%crop%wofost%wlv,state%crop%wofost%wst,state%crop%wofost%wso,wrt,delt,         &
+     &         tc_t,state%crop%common%dvs,state%crop%common%tsum,storagediff,state%crop%wofost%wlv,state%crop%wofost%wst,state%crop%wofost%wso,state%crop%wofost%wrt,delt,         &
      &         grlv,grst,grso,grrt,drlv,drst,drso,drrt,ombalan)
             call outbalcropN(1,pathwork,outfil,project,tc_date,daycrop, &
      &         tc_t,state%crop%common%dvs,state%crop%common%tsum,nuptt,nfixtt,anlvi,ansti,anrti,ansoi,anlv,&
@@ -269,9 +269,9 @@
         ilvoldpot = 1
 
 ! ---   initial state variables of the crop
-        wrt = fr*tdwi
-        wrtmin = wrt / 10000 ! minimum root weigth at relative depth is set to 1% of the initial value
-        wrtpot = wrt
+        state%crop%wofost%wrt = fr*tdwi
+        wrtmin = state%crop%wofost%wrt / 10000 ! minimum root weigth at relative depth is set to 1% of the initial value
+        wrtpot = state%crop%wofost%wrt
         tadw = (1.0d0-fr)*tdwi
         tadwpot = tadw
         state%crop%wofost%wst = fs*tadw
@@ -325,7 +325,7 @@
           WLVt0 = state%crop%wofost%wlv
           WSTt0 = state%crop%wofost%wst
           WSOt0 = state%crop%wofost%wso
-          WRTt0 = wrt
+          WRTt0 = state%crop%wofost%wrt
         endif
         
 ! ---   n-p-k 
@@ -339,7 +339,7 @@
 !         initial maximum nutrient concentrations in plant organs 
 !         per kg biomass [kg N kg-1 dry biomass] at emergence added IS
 !******************************************************************
-          call nutremrg(nmxlv,lsnr,lrnr,state%crop%wofost%wlv,state%crop%wofost%wst,wrt,                    &
+          call nutremrg(nmxlv,lsnr,lrnr,state%crop%wofost%wlv,state%crop%wofost%wst,state%crop%wofost%wrt,                    &
      &      anlv,anst,anrt,anso,anlvi,ansti,anrti,ansoi,state%crop%common%dvs)
         endif
 
@@ -350,7 +350,7 @@
         elseif (swrd.eq.2) then
           rd = min(rdi,rdm)
         elseif (swrd.eq.3) then
-          rdi = afgen (rlwtb,22,wrt)
+          rdi = afgen (rlwtb,22,state%crop%wofost%wrt)
           rd = min(rdi,rdm)
         endif
         rdpot = rd
@@ -373,7 +373,6 @@
         state%crop%wofost%swbulb    = (swbulb == 1)
         state%crop%wofost%plwt      = plwt
         state%crop%wofost%plwti     = plwti
-        state%crop%wofost%wrt       = wrt
         state%crop%wofost%wrtpot    = wrtpot
         state%crop%wofost%wstpot    = wstpot
         state%crop%wofost%wsopot    = wsopot
@@ -798,10 +797,10 @@
 ! --- maintenance respiration
 ! --  only for bulb crops (tulips etc..)
       if(swbulb.eq.1) then
-        rmres = (rmr*wrt+rml*state%crop%wofost%wlv+rms*state%crop%wofost%wst+rms*wbl+rmo*state%crop%wofost%wso)*              &
+        rmres = (rmr*state%crop%wofost%wrt+rml*state%crop%wofost%wlv+rms*state%crop%wofost%wst+rms*wbl+rmo*state%crop%wofost%wso)*              &
      &           afgen(rfsetb,30,state%crop%common%dvs)
       else
-        rmres = (rmr*wrt+rml*state%crop%wofost%wlv+rms*state%crop%wofost%wst+rmo*state%crop%wofost%wso)*afgen(rfsetb,30,state%crop%common%dvs)
+        rmres = (rmr*state%crop%wofost%wrt+rml*state%crop%wofost%wlv+rms*state%crop%wofost%wst+rmo*state%crop%wofost%wso)*afgen(rfsetb,30,state%crop%common%dvs)
       endif
       
       mres = dmin1(gass,rmres*teff)
@@ -863,11 +862,11 @@
 ! --- death rate roots
       ! in case of SWRD = 3: after reaching maximum live weight of wrtmax, the
       ! growth of the roots is balanced by the death of root tissue
-      if (swrd.eq.3 .and. wrt.gt.wrtmax) then
+      if (swrd.eq.3 .and. state%crop%wofost%wrt.gt.wrtmax) then
         drrt = grrt
-        drrt = max(drrt,wrt*afgen (rdrrtb,30,state%crop%common%dvs))
+        drrt = max(drrt,state%crop%wofost%wrt*afgen (rdrrtb,30,state%crop%common%dvs))
       else  
-        drrt = wrt*afgen (rdrrtb,30,state%crop%common%dvs)
+        drrt = state%crop%wofost%wrt*afgen (rdrrtb,30,state%crop%common%dvs)
       endif  
 
 ! --- net growth rate stems, roots, storage organs
@@ -936,7 +935,7 @@
       laiexp = laiexp+glaiex*delt
       
 ! --- dry weight of living plant organs
-      wrt = wrt+gwrt*delt
+      state%crop%wofost%wrt = state%crop%wofost%wrt+gwrt*delt
       state%crop%wofost%wst = state%crop%wofost%wst+gwst*delt
       state%crop%wofost%wso = state%crop%wofost%wso+gwso*delt
 ! --- only for bulb crops (tulips etc..)
@@ -1000,7 +999,7 @@
 
 !        Calling the subroutines for N demand of leaves, roots and stem storage
 !        organs (kg N ha-1 d-1)
-         CALL NDEMND(state%crop%wofost%wlv,state%crop%wofost%wst,WRT,state%crop%wofost%wso,NMAXLV,NMAXST,                     &
+         CALL NDEMND(state%crop%wofost%wlv,state%crop%wofost%wst,state%crop%wofost%wrt,state%crop%wofost%wso,NMAXLV,NMAXST,                     &
      &                               NMAXRT,NMAXSO,ANLV,ANST,ANRT,ANSO, &
      &                               TCNT,NDEML,NDEMS,NDEMR,NDEMSO)
 
@@ -1018,7 +1017,6 @@
       end if
 
       ! [SS-GR-CROP A5.1] mirror wofost case(3) actual state
-      state%crop%wofost%wrt       = wrt
       state%crop%wofost%wbl       = wbl
       state%crop%wofost%dwrt      = dwrt
       state%crop%wofost%dwlv      = dwlv
@@ -1042,7 +1040,7 @@
 
 !        Calling the subroutine to estimate the translocatable nutrients in leaves, stem, roots and
 !        storage organs (kg N ha-1)
-         CALL NTRLOC(ANLV,ANST,ANRT,state%crop%wofost%wlv,state%crop%wofost%wst,WRT,RNFLV,RNFST,RNFRT,      &
+         CALL NTRLOC(ANLV,ANST,ANRT,state%crop%wofost%wlv,state%crop%wofost%wst,state%crop%wofost%wrt,RNFLV,RNFST,RNFRT,      &
      &                  FNTRT,ATNLV,ATNST,ATNRT,ATN)
 
 !        N supply to the storage organs (kg N ha-1 d-1)      
@@ -1113,7 +1111,7 @@
 !        to the dead roots and reset living weight to zero
          if (flHarvestDay .or. (state%crop%common%dvs.ge.dvsend) .or.                     &
      &                 dabs(tc_t1900-1.0d0-cropend(state%crop%common%icrop)).lt.1.0d-3 ) then  ! [GR-CROPWS B5] icrop → state%crop%common%icrop
-            HarLosOrm_rt = wrt
+            HarLosOrm_rt = state%crop%wofost%wrt
             HarLosOrm_dwlv =  FraHarLosOrm_lv * dwlv
             HarLosOrm_lv   = FraHarLosOrm_lv * state%crop%wofost%wlv + HarLosOrm_dwlv
             HarLosOrm_dwst =  FraHarLosOrm_st * dwst
@@ -1156,7 +1154,7 @@
      &       tc_t,state%crop%common%dvs,state%crop%common%tsum,gass,mres,fr,fl,fs,fo,dmi,cvf,ccheck)
 
 ! -     OM balance2: storage difference(kg/ha DM CH2O)
-        storagediff = (state%crop%wofost%wlv+state%crop%wofost%wst+state%crop%wofost%wso+wrt) - (wlvt0+wstt0+wsot0+wrtt0)
+        storagediff = (state%crop%wofost%wlv+state%crop%wofost%wst+state%crop%wofost%wso+state%crop%wofost%wrt) - (wlvt0+wstt0+wsot0+wrtt0)
         ombalan = storagediff - ( (grlv+grst+grso+grrt)*delt -          &
      &            (drlv+drst+drso+drrt)*delt )
 !ckro_20171002 harvest losses happen after harvest and should not be
@@ -1172,7 +1170,7 @@
         endif
 !       output of OM balance2
         call outbalcropom2(2,pathwork,outfil,project,tc_date,daycrop,   &
-     &         tc_t,state%crop%common%dvs,state%crop%common%tsum,storagediff,state%crop%wofost%wlv,state%crop%wofost%wst,state%crop%wofost%wso,wrt,delt,         &
+     &         tc_t,state%crop%common%dvs,state%crop%common%tsum,storagediff,state%crop%wofost%wlv,state%crop%wofost%wst,state%crop%wofost%wso,state%crop%wofost%wrt,delt,         &
      &         grlv,grst,grso,grrt,drlv,drst,drso,drrt,ombalan)
 
 ! ----- CHECK and WRITE MASS BALANCE: nitrogen of crop
@@ -1231,7 +1229,7 @@
       elseif (swrd.eq.3) then
         rdpot = afgen (rlwtb,22,wrtpot)
         rdpot = min(rdpot,rdm)
-        rd = afgen (rlwtb,22,wrt)
+        rd = afgen (rlwtb,22,state%crop%wofost%wrt)
         rd = min(rd,rdm)
       endif
       state%crop%common%rdpot = rdpot   ! [SS-GR-CROP A5.1]
@@ -1260,7 +1258,7 @@
       wlvt0 = state%crop%wofost%wlv
       wstt0 = state%crop%wofost%wst
       wsot0 = state%crop%wofost%wso
-      wrtt0 = wrt
+      wrtt0 = state%crop%wofost%wrt
 
       case default
          call fatalerr_collected ('Wofost', 'Illegal value for TASK')

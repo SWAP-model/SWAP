@@ -108,8 +108,8 @@ contains
                            ! DEFERRED: SRL/swrootradius/dry_mat_cont_roots/air_filled_root_por/spec_weight_root_tissue/var_a/root_radiusO2 — crop config; Phase C3
                            SRL, swrootradius, dry_mat_cont_roots, &
                            air_filled_root_por, spec_weight_root_tissue, var_a, root_radiusO2, &
-                           ! DEFERRED: q10/rmr/rfsetb/rid/rd/wrt/rdctb/w_root_ss/cumdens — active crop state; Phase C3; dvs retired
-                           q10, rmr, rfsetb, rid, rd, wrt, rdctb, w_root_ss, cumdens, &
+                           ! DEFERRED: q10/rmr/rfsetb/rid/rd/rdctb/w_root_ss/cumdens — active crop state; Phase C3; dvs/wrt retired
+                           q10, rmr, rfsetb, rid, rd, rdctb, w_root_ss, cumdens, &
                            ! DEFERRED: tsoil — heat staging buffer; tsoil migration pending
                            tsoil, &
                            ! DEFERRED: c_mroot/f_senes/q10_root/q10_microbial/shape_factor_rootr/specific_resp_humus — O2 config; Phase C3
@@ -263,7 +263,7 @@ contains
         
         w_root_z0 = 1.0d6*                                   & ! rescale fraction to 1 (top 2)
      &   (afgen(cumdens,202,top2)-afgen(cumdens,202,top1)) * & ! fraction
-     &            (wrt*0.0001d0*(1.0d0/(0.01d0*rd)))           ! wrt kg/ha --> kg/m2; rd cm -> m 
+     &            (state%crop%wofost%wrt*0.0001d0*(1.0d0/(0.01d0*rd)))           ! wrt kg/ha --> kg/m2; rd cm -> m
       endif
 
 !JKRO20171114_temp output for testing only
@@ -545,8 +545,8 @@ contains
                            croptype, icrop, max_resp_factor, &
                            ! DEFERRED: q10/rmr/rml/rms/rmo — crop respiration config; Phase C3
                            q10, rmr, rml, rms, rmo, &
-                           ! DEFERRED: wrt/rfsetb/pgass — active crop state; Phase C3; wso/wst/wlv retired
-                           wrt, rfsetb, pgass, &
+                           ! DEFERRED: rfsetb/pgass — active crop state; Phase C3; wso/wst/wlv/wrt retired
+                           rfsetb, pgass, &
                            ! DEFERRED: frtb/fltb/fstb/fotb/cvl/cvs/cvo/cvr — crop partitioning tables; Phase C3
                            frtb, fltb, fstb, fotb, cvl, cvs, cvo, cvr, &
                            ! DEFERRED: rid/idregr/daycrop — active crop dynamics; Phase C3; dvs retired
@@ -578,7 +578,7 @@ contains
 
 ! --- respiration and partitioning of carbohydrates between growth and
 ! --- maintenance respiration, based on actual plant state variables
-        rmres_gmrf = (rmr*wrt+rml*state%crop%wofost%wlv+rms*state%crop%wofost%wst+rmo*state%crop%wofost%wso)*                 &
+        rmres_gmrf = (rmr*state%crop%wofost%wrt+rml*state%crop%wofost%wlv+rms*state%crop%wofost%wst+rmo*state%crop%wofost%wso)*                 &
      &            afgen(rfsetb,30,state%crop%common%dvs)
         !teff_gmrf = q10**((tsoil(10)-25.0d0)/10.0d0) !TEMPORARY!!!! ONLY TO CHECK EFFECT OF USING TSOIL INSTEAD OF TAV; ## MH: /10 = 0.1*
         teff_gmrf = q10**(0.1d0*(state%atmosphere%Tav-25.0d0))  ! [GR-CROP Phase B/8] tav → state%atmosphere%Tav
@@ -604,7 +604,7 @@ contains
         Rg_roots = Froots*(1.0d0-cvf_gmrf)*asrc_gmrf
 ! --- Rm_roots: maintenance respiration roots        
         Rm_roots = min(Froots*(1.0d0-cvf_gmrf)*pgass,                   &
-     &      rmr*wrt*afgen(rfsetb,30,state%crop%common%dvs)*teff_gmrf)
+     &      rmr*state%crop%wofost%wrt*afgen(rfsetb,30,state%crop%common%dvs)*teff_gmrf)
 ! --- Max_resp_factor: ratio total respiration / maintenance respiration        
         if (Rm_roots.gt.0.0d0) then
             Max_resp_factor_gmrf = (Rg_roots+Rm_roots)/Rm_roots
@@ -622,7 +622,7 @@ contains
 
 ! --- respiration and partitioning of carbohydrates between growth and
 ! --- maintenance respiration, based on actual plant state variables
-          rmres_gmrf = (rmr*wrt+rml*state%crop%wofost%wlv+rms*state%crop%wofost%wst)*afgen(rfsetb,30,rid)
+          rmres_gmrf = (rmr*state%crop%wofost%wrt+rml*state%crop%wofost%wlv+rms*state%crop%wofost%wst)*afgen(rfsetb,30,rid)
 !        teff_gmrf = q10**((tsoil(10)-25.0d0)/10.0d0) !TEMPORARY!!!! ONLY TO CHECK EFFECT OF USING TSOIL INSTEAD OF TAV; ## MH: /10=*0.1
           teff_gmrf = q10**(0.1d0*(state%atmosphere%Tav-25.0d0))  ! [GR-CROP Phase B/8] tav → state%atmosphere%Tav
 
@@ -645,7 +645,7 @@ contains
           Rg_roots = Froots*(1.0d0-cvf_gmrf)*asrc_gmrf
 ! --- Rm_roots: maintenance respiration roots     
           Rm_roots = min(Froots*(1.0d0-cvf_gmrf)*pgass,                &
-     &        rmr*wrt*afgen(rfsetb,30,rid)*teff_gmrf)
+     &        rmr*state%crop%wofost%wrt*afgen(rfsetb,30,rid)*teff_gmrf)
 ! --- Max_resp_factor: ratio total respiration / maintenance respiration        
           if (Rm_roots.gt.0.d0) then
               Max_resp_factor_gmrf = (Rg_roots+Rm_roots)/Rm_roots

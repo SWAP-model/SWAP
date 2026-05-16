@@ -49,7 +49,7 @@
       !   tsoil: config-staging buffer, renamed to avoid clash with dummy arg
       use variables, only: &                                            ! [SS-GR-CROPRT B8] [GR-CROPWS B4]
         magrs, macp, rid, tbase, daycrop, tdwi, swinco, &  ! [GR-CROPWS B4] icrop/dvs/state%crop%common%tsum retired
-        wlvpot, wstpot, wrt, wrtpot, wrtmax, wrtmin,           &  ! wst/wlv retired
+        wlvpot, wstpot, wrtpot, wrtmax, wrtmin,           &  ! wst/wlv/wrt retired
         dwlv, dwlvpot, dwrt, dwrtpot, dwst, dwstpot,                     &
         cf, ch, cfeic, lai, laipot, laiem, laiexp, laiexppot, laimax,    &
         cftb, chtb, cfeictb, rdtb, slatb, rgrlai, rlwtb, rfsetb,        &
@@ -242,9 +242,9 @@
         idregrpot = 0
 
 ! ---   initial state variables of the crop
-        wrt = fr*tdwi
-        wrtmin = wrt / 10000 ! minimum root weigth at relative depth is set to 1% of the initial value
-        wrtpot = wrt
+        state%crop%wofost%wrt = fr*tdwi
+        wrtmin = state%crop%wofost%wrt / 10000 ! minimum root weigth at relative depth is set to 1% of the initial value
+        wrtpot = state%crop%wofost%wrt
         state%crop%wofost%wst = fs*(1.0d0-fr)*tdwi
         wstpot = state%crop%wofost%wst
         state%crop%wofost%wlv = laiem/sla(1)
@@ -281,7 +281,7 @@
         elseif (swrd.eq.2) then
           rd = min(rdi,rdm)
         elseif (swrd.eq.3) then
-          rdi = afgen (rlwtb,22,wrt)
+          rdi = afgen (rlwtb,22,state%crop%wofost%wrt)
           rd = min(rdi,rdm)
         endif
         rdpot = rd
@@ -303,7 +303,6 @@
         state%crop%common%rd          = rd
         state%crop%common%rdpot       = rdpot
         state%crop%common%laipot      = laipot
-        state%crop%wofost%wrt         = wrt
         state%crop%wofost%wrtpot      = wrtpot
         state%crop%wofost%wstpot      = wstpot
         state%crop%wofost%wlvpot      = wlvpot
@@ -953,7 +952,7 @@
 
 ! ---   respiration and partitioning of carbohydrates between growth and
 ! ---   maintenance respiration
-        rmres = (rmr*wrt+rml*state%crop%wofost%wlv+rms*state%crop%wofost%wst)*afgen(rfsetb,30,rid)
+        rmres = (rmr*state%crop%wofost%wrt+rml*state%crop%wofost%wlv+rms*state%crop%wofost%wst)*afgen(rfsetb,30,rid)
         teff = q10**((at_tav-25.0d0)/10.0d0)  ! [SS-GR-ATM B.5]
         mres = min (gass,rmres*teff)
         asrc = gass-mres
@@ -981,11 +980,11 @@
         ! growth of the roots is balanced by the death of root tissue
         grrt = fr*dmi
         if (swrd.eq.3 .and. state%soilwater%flWrtNonox) grrt = 0.d0   ! [SS-GR-CROPWS A4] present(state) guard removed
-        if (swrd.eq.3 .and. wrt.gt.wrtmax) then
+        if (swrd.eq.3 .and. state%crop%wofost%wrt.gt.wrtmax) then
           drrt = grrt
-          drrt = max(drrt,wrt*afgen (rdrrtb,30,rid))
+          drrt = max(drrt,state%crop%wofost%wrt*afgen (rdrrtb,30,rid))
         else  
-          drrt = wrt*afgen (rdrrtb,30,rid)
+          drrt = state%crop%wofost%wrt*afgen (rdrrtb,30,rid)
         endif  
         gwrt = grrt-drrt
 
@@ -1340,7 +1339,7 @@
         endif
 
 ! ---   dry weight of living plant organs
-        wrt = wrt+gwrt*delt
+        state%crop%wofost%wrt = state%crop%wofost%wrt+gwrt*delt
         state%crop%wofost%wst = state%crop%wofost%wst+gwst*delt
 
 ! ---   dry weight of dead plant organs (roots,leaves & stems)
@@ -1372,7 +1371,7 @@
           if (swdmi2rd.eq.1 .and. pgass.ge.1.0d0)              rr = rr * gass/pgass
           rd = rd + rr
         elseif (swrd.eq.3) then
-          rd = afgen (rlwtb,22,wrt)
+          rd = afgen (rlwtb,22,state%crop%wofost%wrt)
           rd = min(rd,rdm)
         endif
         state%crop%common%rd = rd   ! [SS-GR-CROP A5.1]
@@ -1399,7 +1398,6 @@
       endif
 
       ! [SS-GR-CROP A5.1] mirror grass case(3) actual state
-      state%crop%wofost%wrt         = wrt
       state%crop%wofost%dwrt        = dwrt
       state%crop%wofost%dwlv        = dwlv
       state%crop%wofost%dwst        = dwst
