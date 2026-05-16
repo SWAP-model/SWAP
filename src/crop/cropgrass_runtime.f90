@@ -64,7 +64,7 @@
         flgrazing, flgrazingpot, flharvest, flharvestpot,               &
         flhrvendact, flhrvendpot, flhydrlift,                           &
         daygrowth, daygrowthpot, grzdm, dewrest,                        &
-        cuptgraz, cuptgrazpot, tagp, tagppot, tagpt, tagptpot,          &
+        cuptgraz, cuptgrazpot, tagppot, tagpt, tagptpot,          &  ! tagp retired (→state%crop%wofost%tagp)
         seqgrazmow, seqgrazmowpot, swtsum, iseqgm, iseqgmpot,           &
         iharvest, dmgrztb, dmmowtb, daysgrazingtab, uptgrazingtab,      &
         lossgrazingtab, lossgrztab, lossmowtab,                         &
@@ -287,8 +287,8 @@
         rdpot = rd
         
 ! ---   initial summation variables of the crop
-        tagp = wlv+wst
-        tagppot = tagp
+        state%crop%wofost%tagp = wlv+wst
+        tagppot = state%crop%wofost%tagp
         tagpt = 0.0d0
         tagptpot = 0.0d0
         cuptgraz = 0.0d0
@@ -316,7 +316,6 @@
         state%crop%wofost%dwlvpot     = dwlvpot
         state%crop%wofost%dwst        = dwst
         state%crop%wofost%dwstpot     = dwstpot
-        state%crop%wofost%tagp        = tagp
         state%crop%wofost%tagppot     = tagppot
         state%crop%wofost%tagpt       = tagpt
         state%crop%wofost%tagptpot    = tagptpot
@@ -1076,15 +1075,15 @@
       
             ! use of fixed threshold
             if (swdmmow .eq. 1) then
-              if (tagp .gt. dmharvest .or. (tc_daynr .gt. daylastharvest  &
-     &          .and. tagp .gt. dmlastharvest)) then
+              if (state%crop%wofost%tagp .gt. dmharvest .or. (tc_daynr .gt. daylastharvest  &
+     &          .and. state%crop%wofost%tagp .gt. dmlastharvest)) then
                 flharvest = .true.
               endif
 
             ! use of flexible threshold
             elseif (swdmmow .eq. 2) then
               dmharvest = afgen(dmmowtb,20,rid)
-              if (tagp .gt. dmharvest .or.                           &
+              if (state%crop%wofost%tagp .gt. dmharvest .or.                           &
      &                 (daygrowth .gt. maxdaymow .and. iseqgm .gt. 1)) then
                 flharvest = .true.
               endif
@@ -1129,7 +1128,7 @@
           end if
           
 !         harvest
-          tagps = max (0.0d0,(tagp-(wlv+dwlv+wst+dwst)))
+          tagps = max (0.0d0,(state%crop%wofost%tagp-(wlv+dwlv+wst+dwst)))
           tagpt = tagpt + tagps * (1.d0 - fralossmow)
 
           cropendact  = rid
@@ -1155,14 +1154,14 @@
             
               ! use of fixed threshold
               if (swdmgrz .eq. 1) then   
-                if (tagp .gt. dmgrazing) then
+                if (state%crop%wofost%tagp .gt. dmgrazing) then
                   flharvest = .true.
                 endif
               
               ! use of flexible threshold
               elseif (swdmgrz .eq. 2) then 
                 dmgrazing = afgen(dmgrztb,20,rid)
-                if (tagp .gt. dmgrazing .or.                           &
+                if (state%crop%wofost%tagp .gt. dmgrazing .or.                           &
      &            (daygrowth .gt. maxdaygrz .and. iseqgm .gt. 1)) then
                   flharvest = .true.
                 endif
@@ -1192,7 +1191,7 @@
             if (swlossgrz.eq.1) then
               fralossgrz = afgen(lossgrztab,200,state%soilwater%h(nodgrz))  ! [SS-SWC S-2.7]
             end if
-            lossgraz = lossgraz + tagp * fralossgrz
+            lossgraz = lossgraz + state%crop%wofost%tagp * fralossgrz
 
 !           Initialise Count nr of days with grazing
             if(.not. flgrazing) then
@@ -1202,16 +1201,16 @@
             endif
             
 !           verify if uptake is possible: tagprest should remain after grazing
-            if ((tagp - uptgraz - lossgraz) .gt. tagprest) then
+            if ((state%crop%wofost%tagp - uptgraz - lossgraz) .gt. tagprest) then
               
               flgrazing = .true.
               cuptgraz  = cuptgraz + uptgraz
 
 !             distribute grazing over stems and leaves (living and dead parts)
-              wst  = wst  -  (uptgraz+lossgraz) * wst  / tagp
-              dwst = dwst -  (uptgraz+lossgraz) * dwst / tagp
-              dwlv = dwlv -  (uptgraz+lossgraz) * dwlv / tagp
-              grazlivinglv = (uptgraz+lossgraz) * wlv  / tagp
+              wst  = wst  -  (uptgraz+lossgraz) * wst  / state%crop%wofost%tagp
+              dwst = dwst -  (uptgraz+lossgraz) * dwst / state%crop%wofost%tagp
+              dwlv = dwlv -  (uptgraz+lossgraz) * dwlv / state%crop%wofost%tagp
+              grazlivinglv = (uptgraz+lossgraz) * wlv  / state%crop%wofost%tagp
           
 !             reduce leave weights
               i1 = ilvold
@@ -1229,7 +1228,7 @@
 !             harvest during total grazing event
               cropendact = rid
               grzdm      = grzdm + uptgraz
-              lossdm     = tagp * fralossgrz
+              lossdm     = state%crop%wofost%tagp * fralossgrz
               
 !             Check number of days with grazing
               daysgraz  = int(afgen(daysgrazingtab,200,lsda(iseqgm)))
@@ -1249,7 +1248,7 @@
               flgrazing        = .false.
               flhrvendact      = .true.
               flearlyhrvendact = .true.
-              if (seqgrazmow(iseqgm) .eq. 3 .and. tagp .gt. dewrest) then
+              if (seqgrazmow(iseqgm) .eq. 3 .and. state%crop%wofost%tagp .gt. dewrest) then
                 flDewooling      = .true.
                 flearlyhrvendact = .false.
               endif
@@ -1356,7 +1355,7 @@
 ! ---   dry weight of dead and living plant organs
         twlv = wlv+dwlv
         twst = wst+dwst
-        tagp = twlv+twst
+        state%crop%wofost%tagp = twlv+twst
 
 ! ---   leaf area index
         lai = lasum+ssa*wst
@@ -1410,7 +1409,7 @@
       state%crop%wofost%dwrt        = dwrt
       state%crop%wofost%dwlv        = dwlv
       state%crop%wofost%dwst        = dwst
-      state%crop%wofost%tagp        = tagp
+      state%crop%wofost%tagp        = state%crop%wofost%tagp
       state%crop%wofost%pgass       = pgass
       state%crop%wofost%lossdm      = lossdm
       state%crop%common%cuptgraz    = cuptgraz
