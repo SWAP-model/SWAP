@@ -498,7 +498,7 @@
       real(8)   tdwi               ! Initial total crop dry weight (kg/ha)
       real(8)   tmnftb(30)         ! Reduction factor for maximum assimilation rate (-) as function of minimum day temperature (oC)
       real(8)   tmpftb(30)         ! Reduction factor for maximum assimilation rate (-) as function of average day temperature (oC)
-      real(8)   tsum               ! Temperature sum from cropstart to cropend (oC)
+      ! [GR-CROP-DVS] tsum retired — see state%crop%common%tsum
       real(8)   tsumam             ! Temperature sum from anthesis to maturity (oC)
       real(8)   tsumea             ! Temperature sum from emergence to anthesis (oC)
       real(8)   tsumemeopt         ! Temperature sum for crop emergence under optimal conditions

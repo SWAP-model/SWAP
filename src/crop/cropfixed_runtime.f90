@@ -28,7 +28,7 @@
 !   siccapact, siccaplai, W_root_ss, wiltpoint, twilt, flhydrlift, gc, cfeic (write),
 !   gctb, rdtb, mrftb, wrtb, swinco, reltr.
 ! ----------------------------------------------------------------------
-      use variables, only: magrs, idev, tsum, lai, cf, ch, &         ! [GR-CROPWS B1] reads→state; writes remain legacy; dvs retired
+      use variables, only: magrs, idev, lai, cf, ch, &         ! [GR-CROPWS B1] reads→state; writes remain legacy; dvs/tsum retired
                            rd, rdpot, rdm, max_resp_factor, swrd,         &
                            swgc, swcf, swinter, swdrought, swdmi2rd,     &
                            tbase, tsumea, tsumam, rdmax,                  &
@@ -209,8 +209,7 @@
 
 ! --- phenological development stage
       state%crop%common%dvs = min(state%crop%common%dvs+dvr,2.d0)      ! [GR-CROPWS B1] RHS dvs → state%crop%common%dvs
-      tsum = state%crop%common%tsum + dtsum                            ! [GR-CROPWS B1] RHS tsum → state%crop%common%tsum
-      state%crop%common%tsum = tsum   ! [SS-GR-CROP A5.1]
+      state%crop%common%tsum = state%crop%common%tsum + dtsum          ! [GR-CROPWS B1]
 
 ! --- leaf area index or soil cover fraction
       lai = afgen (gctb,(2*magrs),state%crop%common%dvs)               ! [GR-CROPWS B1]

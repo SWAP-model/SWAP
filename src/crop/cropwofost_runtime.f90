@@ -52,7 +52,7 @@
         macp, magrs, dvsend, rd, rdpot, rdm, rdmax, rdi, rri, &  ! [GR-CROPWS B5] icrop removed (→state%crop%common%icrop); dvs retired (→state%crop%common%dvs)
         rdc, swrd, swdmi2rd, swrdc, swdrought, swcf, swgc, swinter,       &
         swbulb, swinco, lai, laipot, laiem, laiexp, laiexppot, laimax,    &
-        cf, ch, cfeic, tsum, tsumea, tsumam, tbase, daycrop, lat, daylp,  &
+        cf, ch, cfeic, tsumea, tsumam, tbase, daycrop, lat, daylp,  &  ! tsum retired (→state%crop%common%tsum)
         kdif, siccapact, siccaplai, cropend,                               &  ! [GR-CROPWS B5] cropstart removed (→state%crop%common%cropstart)
         wlv, wlvpot, wst, wstpot, wso, wsopot, wrt, wrtpot, wrtmax, wrtmin, &
         cwdm, cwdmpot, pgass, pgasspot, reltr, lrnr, lsnr, nni,           &
@@ -224,12 +224,12 @@
 !        open output files and write header
          if (state%crop%common%icrop.eq.1) then  ! [GR-CROPWS B5] icrop → state%crop%common%icrop
             call outbalcropOM1(1,pathwork,outfil,project,tc_date,daycrop,  &
-     &         tc_t,state%crop%common%dvs,tsum,gass,mres,fr,fl,fs,fo,dmi,cvf,ccheck)
+     &         tc_t,state%crop%common%dvs,state%crop%common%tsum,gass,mres,fr,fl,fs,fo,dmi,cvf,ccheck)
             call outbalcropOM2(1,pathwork,outfil,project,tc_date,daycrop,  &
-     &         tc_t,state%crop%common%dvs,tsum,storagediff,wlv,wst,wso,wrt,delt,         &
+     &         tc_t,state%crop%common%dvs,state%crop%common%tsum,storagediff,wlv,wst,wso,wrt,delt,         &
      &         grlv,grst,grso,grrt,drlv,drst,drso,drrt,ombalan)
             call outbalcropN(1,pathwork,outfil,project,tc_date,daycrop, &
-     &         tc_t,state%crop%common%dvs,tsum,nuptt,nfixtt,anlvi,ansti,anrti,ansoi,anlv,&
+     &         tc_t,state%crop%common%dvs,state%crop%common%tsum,nuptt,nfixtt,anlvi,ansti,anrti,ansoi,anlv,&
      &         anst,anrt,anso,nlossl,nlossr,nlosss,nbalan,nni)
          endif
       endif
@@ -251,7 +251,7 @@
 
         state%crop%common%dvs = 0.0d0
         flAnthesis = .false.
-        tsum = 0.0d0
+        state%crop%common%tsum = 0.0d0
         fr = afgen (frtb,30,state%crop%common%dvs)
         fl = afgen (fltb,30,state%crop%common%dvs)
         fs = afgen (fstb,30,state%crop%common%dvs)
@@ -367,7 +367,6 @@
         flvernalised = .FALSE.   ! crop not vernalised (-)
 
         ! [SS-GR-CROP A5.1] mirror wofost init-time state
-        state%crop%common%tsum      = tsum
         state%crop%common%rd        = rd
         state%crop%common%rdpot     = rdpot
         state%crop%common%laipot    = laipot
@@ -919,8 +918,7 @@
 
 ! --- phenological development stage
       state%crop%common%dvs = min(state%crop%common%dvs+dvr*delt,dvsend)
-      tsum = tsum + dtsum*delt
-      state%crop%common%tsum = tsum   ! [SS-GR-CROP A5.1]
+      state%crop%common%tsum = state%crop%common%tsum + dtsum*delt
 
 ! --- leaf death (due to water stress or high lai) is imposed on array 
 ! --- untill no more leaves have to die or all leaves are gone
@@ -1161,7 +1159,7 @@
 
 !       output of OM balance1: from air to partitioning (kg/ha DM CH2O)
         call outbalcropOM1(2,pathwork,outfil,project,tc_date,daycrop,   &
-     &       tc_t,state%crop%common%dvs,tsum,gass,mres,fr,fl,fs,fo,dmi,cvf,ccheck)
+     &       tc_t,state%crop%common%dvs,state%crop%common%tsum,gass,mres,fr,fl,fs,fo,dmi,cvf,ccheck)
 
 ! -     OM balance2: storage difference(kg/ha DM CH2O)
         storagediff = (wlv+wst+wso+wrt) - (wlvt0+wstt0+wsot0+wrtt0)
@@ -1180,7 +1178,7 @@
         endif
 !       output of OM balance2
         call outbalcropom2(2,pathwork,outfil,project,tc_date,daycrop,   &
-     &         tc_t,state%crop%common%dvs,tsum,storagediff,wlv,wst,wso,wrt,delt,         &
+     &         tc_t,state%crop%common%dvs,state%crop%common%tsum,storagediff,wlv,wst,wso,wrt,delt,         &
      &         grlv,grst,grso,grrt,drlv,drst,drso,drrt,ombalan)
 
 ! ----- CHECK and WRITE MASS BALANCE: nitrogen of crop
@@ -1193,7 +1191,7 @@
 
 !       output of N balance
         call outbalcropN(2,pathwork,outfil,project,tc_date,daycrop,     &
-     &         tc_t,state%crop%common%dvs,tsum,NUPTT,NFIXTT,ANLVI,ANSTI,ANRTI,ANSOI,ANLV,&
+     &         tc_t,state%crop%common%dvs,state%crop%common%tsum,NUPTT,NFIXTT,ANLVI,ANSTI,ANRTI,ANSOI,ANLV,&
      &         ANST,ANRT,ANSO,NLOSSL,NLOSSR,NLOSSS,NBALAN,nni)
         IF (dabs(NBALAN) .GE. 1.0d-03) then
            write(messag,'(1a,i6,a,f8.3)') ' Nitrogen balance not 0,'//  &

@@ -58,7 +58,7 @@
       use variables, only: &                                             ! [SS-GR-CROPRT B1/B6] [GR-CROPWS B3]
         icrop, flCropCalendar, cropstart, cropend, flCropEmergence,         &
         flCropHarvest, flCropReadFile, flCropPrep, flCropSow, flCropGerm,   &
-        swinco, croptype, daycrop, rd, rdpot, lai, laipot, cf, ch, tsum,   &
+        swinco, croptype, daycrop, rd, rdpot, lai, laipot, cf, ch,         &  ! tsum retired
         cwdmpot, cwdm, wsopot, wso, wlvpot, wlv, wstpot, wst,        &
         wrtpot, wrt, tmn, lat, rad,                                         &
         albedo, rsc, cumdens,                                               &
@@ -158,7 +158,6 @@
         state%crop%common%laipot     = laipot
         state%crop%common%cf         = cf
         state%crop%common%ch         = ch
-        state%crop%common%tsum       = tsum
         state%crop%common%albedo     = albedo   ! [SS-GR-CROPRT A5]
         state%crop%common%rsc        = rsc      ! [SS-GR-CROPRT A5]
         state%crop%wofost%cwdmpot    = cwdmpot

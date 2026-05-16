@@ -48,7 +48,7 @@
       !   perdl, dateharvest, lsda: output + harvest tracking, no state home
       !   tsoil: config-staging buffer, renamed to avoid clash with dummy arg
       use variables, only: &                                            ! [SS-GR-CROPRT B8] [GR-CROPWS B4]
-        magrs, macp, rid, tsum, tbase, daycrop, tdwi, swinco, &  ! [GR-CROPWS B4] icrop removed (→state%crop%common%icrop); dvs retired
+        magrs, macp, rid, tbase, daycrop, tdwi, swinco, &  ! [GR-CROPWS B4] icrop/dvs/state%crop%common%tsum retired
         wlv, wlvpot, wst, wstpot, wrt, wrtpot, wrtmax, wrtmin,           &
         dwlv, dwlvpot, dwrt, dwrtpot, dwst, dwstpot,                     &
         cf, ch, cfeic, lai, laipot, laiem, laiexp, laiexppot, laimax,    &
@@ -293,14 +293,13 @@
         tagptpot = 0.0d0
         cuptgraz = 0.0d0
         cuptgrazpot = 0.0d0
-        tsum = 0.0d0
+        state%crop%common%tsum = 0.0d0
         
         cropstartpot     = rid
         cropstartact     = rid
         flhrvendpot      = .false.
         flearlyhrvendpot = .false.
         ! [SS-GR-CROP A5.1] mirror grass init-time state
-        state%crop%common%tsum        = tsum
         state%crop%common%rd          = rd
         state%crop%common%rdpot       = rdpot
         state%crop%common%laipot      = laipot
@@ -433,13 +432,12 @@
       flearlyhrvendpot = .false.
 
 ! --- grass growth initiated by tsum from 1st day of calendar year
-      tsum = tsum + max(0.0d0,at_tav)  ! [SS-GR-ATM B.5]
-      state%crop%common%tsum = tsum   ! [SS-GR-CROP A5.1]
+      state%crop%common%tsum = state%crop%common%tsum + max(0.0d0,at_tav)  ! [SS-GR-ATM B.5]
       if (.not. flGrassGrowth) then
         
         ! grass growth initiated by tsum
         if (swtsum.eq.1) then
-          if (tsum.ge.200.d0) then
+          if (state%crop%common%tsum.ge.200.d0) then
             flGrassGrowth = .true.
           endif
         endif
@@ -1416,7 +1414,6 @@
       state%crop%wofost%tagpt       = tagpt
       state%crop%grass%cropstartact = cropstartact
       state%crop%grass%cropendact   = cropendact
-      state%crop%common%tsum        = tsum
 
       return
 

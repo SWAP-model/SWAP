@@ -648,7 +648,6 @@
       PrepDelay          =  0
       SowDelay           =  0
 
-      tsum               =  0.d0
       tsumgerm           =  0.d0
 
       flCropHarvest      = .false.
