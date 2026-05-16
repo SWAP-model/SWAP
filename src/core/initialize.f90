@@ -774,7 +774,6 @@
       wstpot             = 0.0d0
       wrt                = 0.0d0
       wrtpot             = 0.0d0
-      wso                = 0.0d0
       wsopot             = 0.0d0
       
       dwst               = 0.0d0

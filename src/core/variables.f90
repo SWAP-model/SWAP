@@ -517,7 +517,7 @@
       real(8)   wrtpot             ! Dry weight of plant root for potential growth (kg/ha)
       real(8)   wrtmin             ! Minimum dry weight of plant root at relative depth (1% of the initial value)
       real(8)   gwrt               ! Growth of dry weight of plant root (kg/ha)
-      real(8)   wso                ! Dry weight of storage organ (kg/ha)
+      ! [GR-CROP-DVS] wso retired — see state%crop%wofost%wso
       real(8)   wsopot             ! Dry weight of storage organ for potential growth (kg/ha)
       real(8)   wst                ! Dry weight of plant stem (kg/ha)
       real(8)   wstpot                ! Dry weight of plant stem for potential growth (kg/ha)

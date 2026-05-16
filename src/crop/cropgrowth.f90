@@ -59,7 +59,7 @@
         icrop, flCropCalendar, cropstart, cropend, flCropEmergence,         &
         flCropHarvest, flCropReadFile, flCropPrep, flCropSow, flCropGerm,   &
         swinco, croptype, daycrop, rd, rdpot, lai, laipot, cf, ch,         &  ! tsum retired
-        cwdmpot, cwdm, wsopot, wso, wlvpot, wlv, wstpot, wst,        &
+        cwdmpot, cwdm, wsopot, wlvpot, wlv, wstpot, wst,             &  ! wso retired
         wrtpot, wrt, tmn, lat, rad,                                         &
         albedo, rsc, cumdens,                                               &
         eff, amaxtb, tmpftb, tmnftb, swdrought, swcrp, dvsend,             &  ! [GR-CROPWS B3] kdif removed (→state%crop%kdif)
@@ -163,7 +163,6 @@
         state%crop%wofost%cwdmpot    = cwdmpot
         state%crop%wofost%cwdm       = cwdm
         state%crop%wofost%wsopot     = wsopot
-        state%crop%wofost%wso        = wso
         state%crop%wofost%wlvpot     = wlvpot
         state%crop%wofost%wlv        = wlv
         state%crop%wofost%wstpot     = wstpot

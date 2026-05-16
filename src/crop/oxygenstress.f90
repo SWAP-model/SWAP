@@ -545,8 +545,8 @@ contains
                            croptype, icrop, max_resp_factor, &
                            ! DEFERRED: q10/rmr/rml/rms/rmo — crop respiration config; Phase C3
                            q10, rmr, rml, rms, rmo, &
-                           ! DEFERRED: wrt/wlv/wst/wso/rfsetb/pgass — active crop state; Phase C3
-                           wrt, wlv, wst, wso, rfsetb, pgass, &
+                           ! DEFERRED: wrt/wlv/wst/rfsetb/pgass — active crop state; Phase C3; wso retired
+                           wrt, wlv, wst, rfsetb, pgass, &
                            ! DEFERRED: frtb/fltb/fstb/fotb/cvl/cvs/cvo/cvr — crop partitioning tables; Phase C3
                            frtb, fltb, fstb, fotb, cvl, cvs, cvo, cvr, &
                            ! DEFERRED: rid/idregr/daycrop — active crop dynamics; Phase C3; dvs retired
@@ -578,7 +578,7 @@ contains
 
 ! --- respiration and partitioning of carbohydrates between growth and
 ! --- maintenance respiration, based on actual plant state variables
-        rmres_gmrf = (rmr*wrt+rml*wlv+rms*wst+rmo*wso)*                 &
+        rmres_gmrf = (rmr*wrt+rml*wlv+rms*wst+rmo*state%crop%wofost%wso)*                 &
      &            afgen(rfsetb,30,state%crop%common%dvs)
         !teff_gmrf = q10**((tsoil(10)-25.0d0)/10.0d0) !TEMPORARY!!!! ONLY TO CHECK EFFECT OF USING TSOIL INSTEAD OF TAV; ## MH: /10 = 0.1*
         teff_gmrf = q10**(0.1d0*(state%atmosphere%Tav-25.0d0))  ! [GR-CROP Phase B/8] tav → state%atmosphere%Tav
