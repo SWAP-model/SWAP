@@ -518,7 +518,7 @@
       real(8)   wrtmin             ! Minimum dry weight of plant root at relative depth (1% of the initial value)
       real(8)   gwrt               ! Growth of dry weight of plant root (kg/ha)
       ! [GR-CROP-DVS] wso retired — see state%crop%wofost%wso
-      real(8)   wsopot             ! Dry weight of storage organ for potential growth (kg/ha)
+      ! [GR-CROP-DVS] wsopot retired — see state%crop%wofost%wsopot
       ! [GR-CROP-DVS] wst retired — see state%crop%wofost%wst
       ! [GR-CROP-DVS] wstpot retired — see state%crop%wofost%wstpot
       logical   flanthesis         ! Flag indicating anthesis stage of a crop

@@ -54,7 +54,7 @@
         swbulb, swinco, laiem, laiexp, laiexppot, laimax,    &  ! lai/laipot retired
         cf, ch, cfeic, tsumea, tsumam, tbase, daycrop, lat, daylp,  &  ! tsum retired (→state%crop%common%tsum)
         kdif, siccapact, siccaplai, cropend,                               &  ! [GR-CROPWS B5] cropstart removed (→state%crop%common%cropstart)
-        wsopot, wrtpot, wrtmax, wrtmin, &  ! wso/wst/wlv/wrt retired
+        wrtpot, wrtmax, wrtmin, &  ! wso/wst/wlv/wrt retired
         cwdm, cwdmpot, pgass, pgasspot, reltr, lrnr, lsnr, nni,           &
         anlv, anst, nmxlv, nmaxlv, nmaxst, nmaxrt, nmaxso, nlai,          &
         rnflv, rnfst, rnfrt, fstr, fntrt, npart, nfixf, nsla,             &
@@ -277,7 +277,7 @@
         state%crop%wofost%wst = fs*tadw
         state%crop%wofost%wstpot = state%crop%wofost%wst
         state%crop%wofost%wso = fo*tadw
-        wsopot = state%crop%wofost%wso
+        state%crop%wofost%wsopot = state%crop%wofost%wso
         state%crop%wofost%wlv = fl*tadw
         state%crop%wofost%wlvpot = state%crop%wofost%wlv
 ! --- only for bulb crops (tulips etc..)
@@ -370,7 +370,6 @@
         state%crop%wofost%plwt      = plwt
         state%crop%wofost%plwti     = plwti
         state%crop%wofost%wrtpot    = wrtpot
-        state%crop%wofost%wsopot    = wsopot
         state%crop%wofost%wbl       = wbl
         state%crop%wofost%wblpot    = wblpot
         state%crop%wofost%dwrt      = dwrt
@@ -505,9 +504,9 @@
 ! --- maintenance respiration
       if(swbulb.eq.1) then
         rmrespot = (rmr*wrtpot+rml*state%crop%wofost%wlvpot+rms*state%crop%wofost%wstpot+rms*wblpot+        &
-     &           rmo*wsopot)* afgen(rfsetb,30,state%crop%common%dvs)
+     &           rmo*state%crop%wofost%wsopot)* afgen(rfsetb,30,state%crop%common%dvs)
       else
-        rmrespot = (rmr*wrtpot+rml*state%crop%wofost%wlvpot+rms*state%crop%wofost%wstpot+rmo*wsopot)*       &
+        rmrespot = (rmr*wrtpot+rml*state%crop%wofost%wlvpot+rms*state%crop%wofost%wstpot+rmo*state%crop%wofost%wsopot)*       &
      &           afgen(rfsetb,30,state%crop%common%dvs)
       endif
       teff = q10**((at_tav-25.0d0)/10.0d0)  ! [SS-GR-ATM B.5]
@@ -691,14 +690,14 @@
 ! --- dry weight of living plant organs
       wrtpot = wrtpot + gwrtpot*delt
       state%crop%wofost%wstpot = state%crop%wofost%wstpot + gwstpot*delt
-      wsopot = wsopot + gwsopot*delt
+      state%crop%wofost%wsopot = state%crop%wofost%wsopot + gwsopot*delt
 ! --- only for bulb crops (tulips etc..)
       if(swbulb.eq.1) then
         wblpot = wblpot + gwblpot*delt
       endif
 
 ! --- total above ground biomass
-      tadwpot = state%crop%wofost%wlvpot + state%crop%wofost%wstpot + wsopot
+      tadwpot = state%crop%wofost%wlvpot + state%crop%wofost%wstpot + state%crop%wofost%wsopot
 ! --- only for bulb crops (tulips etc..)
       if(swbulb.eq.1) then
          tadwpot = tadwpot + wblpot
@@ -716,7 +715,7 @@
 ! --- dry weight of dead and living plant organs
       twlvpot = state%crop%wofost%wlvpot + dwlvpot
       twstpot = state%crop%wofost%wstpot + dwstpot
-      cwdmpot = twlvpot + twstpot + wsopot
+      cwdmpot = twlvpot + twstpot + state%crop%wofost%wsopot
 ! --- only for bulb crops (tulips etc..)
       if(swbulb.eq.1) then
         twblpot = wblpot + dwblpot
@@ -728,7 +727,7 @@
       mrestpot = mrespot + mrestpot
 
 ! --- leaf area index
-      state%crop%common%laipot = lasumpot + ssa*state%crop%wofost%wstpot + spa*wsopot
+      state%crop%common%laipot = lasumpot + ssa*state%crop%wofost%wstpot + spa*state%crop%wofost%wsopot
 !     prevent immediate lai reduction at emergence
 !     KRO-BOO-20160403: suppressed because deviates from Wofost
 !      laipot = max(laipot, laiem)
@@ -751,7 +750,6 @@
 
       ! [SS-GR-CROP A5.1] mirror wofost case(2) potential state
       state%crop%wofost%wrtpot    = wrtpot
-      state%crop%wofost%wsopot    = wsopot
       state%crop%wofost%wblpot    = wblpot
       state%crop%wofost%dwrtpot   = dwrtpot
       state%crop%wofost%dwlvpot   = dwlvpot

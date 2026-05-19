@@ -153,7 +153,7 @@
       !   dvs now writes directly to state%crop%common%dvs (legacy global retired in dvs pilot).
       !   Other symbols still legacy; CropGrowth mirrors them to state immediately after the call.
       use variables, only: cf,ch,albedo,rsc,                       & ! [SS-GR-CROPRT B4] DEFERRED; tsum/rd/lai/rdpot retired
-                           cwdmpot,cwdm,wsopot,wrtpot  ! wso/wst/wlv/wrt retired
+                           cwdmpot,cwdm,wrtpot  ! wso/wst/wlv/wrt retired
       use swap_state_mod, only: swap_state_t
       implicit none
       type(swap_state_t), intent(inout) :: state
@@ -170,7 +170,7 @@
       state%crop%common%dvs = 0.d0
       cwdmpot = 0.d0
       cwdm    = 0.d0
-      wsopot  = 0.d0
+      state%crop%wofost%wsopot  = 0.d0
       state%crop%wofost%wso = 0.d0
       state%crop%wofost%wlvpot  = 0.d0
       state%crop%wofost%wlv = 0.d0

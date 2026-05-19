@@ -766,8 +766,6 @@
       wrtb               = 0.0d0
       zsow               = 0.0d0
       wrtpot             = 0.0d0
-      wsopot             = 0.0d0
-      
       dwst               = 0.0d0
       dwrt               = 0.0d0
       dwso               = 0.0d0
