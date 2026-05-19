@@ -61,12 +61,12 @@ contains
                             flTillage, flSSDI, &
                             numlay, &
                             owltab, nowltab, &
-                            arad, atmn, atmx, ahum, awin, arai, aetr, wet, &
-                            atav, epot, tpot, grain, nrain, &
-                            ! [GR-ATM C8] tavd/rh retired from import (no legacy consumers; state written by meteoday)
-                            tav, daynrfirst, daynrlast, atmin7, nofd, &  ! teprrain/teprsnow retired
-                            isua, avevaptb, avprectb, pfreetb, pstemtb, scanopytb, &
-                            CNdry, CNwet, ThetaRef, Runoff_CN, wc_cor, wc10, iCNtab, CNtimTAB, CNrefTAB, &
+                            ! [GR-CROP-DVS] meteo arrays/scalars + CN runoff tables retired
+                            !   (arad,atmn,atmx,ahum,awin,arai,aetr,wet,atav,epot,tpot,grain,nrain,
+                            !    tav,daynrfirst,daynrlast,atmin7,nofd,isua,avevaptb,avprectb,
+                            !    pfreetb,pstemtb,scanopytb,CNdry,CNwet,ThetaRef,Runoff_CN,
+                            !    wc_cor,wc10,iCNtab,CNtimTAB,CNrefTAB) → state%atmosphere
+
                             ! [GR-ATM C8] out_tmn/tmx/hum/win/etr/wet/rad retired from import (state written by meteoday)
                             swcf, swcfbs, flCropEmergence, &  ! lai retired
                             ! [SS-GR-CROP A14] crop_common legacy globals; dvs/tsum retired
@@ -328,43 +328,11 @@ contains
       state%soilwater%pond    = config%soil%pondini   ! legacy alias: pond <-> pondini for swinco<3
    end if
 
-   ! [SS-GR-ATM A10] dual-write Block 1 (daily meteo arrays) + Block 2 (sub-daily)
-   state%atmosphere%arad  = arad
-   state%atmosphere%atmn  = atmn
-   state%atmosphere%atmx  = atmx
-   state%atmosphere%ahum  = ahum
-   state%atmosphere%awin  = awin
-   state%atmosphere%arai  = arai
-   state%atmosphere%aetr  = aetr
-   state%atmosphere%wet   = wet
-   state%atmosphere%atav  = atav
-   state%atmosphere%epot  = epot
-   state%atmosphere%tpot  = tpot
-   state%atmosphere%grain = grain
-   state%atmosphere%nrain = nrain
-
-   ! [SS-GR-ATM A11] dual-write Block 3 (derived scalars) + Block 4 (interception) + Block 5 (CN)
-   ! [GR-ATM C8] tavd/rh seeding dropped: legacy globals retired; state%atmosphere%X written by meteoday
-   state%atmosphere%Tav        = tav
-   state%atmosphere%daynrfirst = daynrfirst
-   state%atmosphere%daynrlast  = daynrlast
-   state%atmosphere%atmin7     = atmin7
-   state%atmosphere%nofd       = nofd
-   state%atmosphere%isua      = isua
-   state%atmosphere%avevaptb  = avevaptb
-   state%atmosphere%avprectb  = avprectb
-   state%atmosphere%pfreetb   = pfreetb
-   state%atmosphere%pstemtb   = pstemtb
-   state%atmosphere%scanopytb = scanopytb
-   state%atmosphere%CNdry     = CNdry
-   state%atmosphere%CNwet     = CNwet
-   state%atmosphere%ThetaRef  = ThetaRef
-   state%atmosphere%Runoff_CN = Runoff_CN
-   state%atmosphere%wc_cor    = wc_cor
-   state%atmosphere%wc10      = wc10
-   state%atmosphere%iCNtab    = iCNtab
-   state%atmosphere%CNtimTAB  = CNtimTAB
-   state%atmosphere%CNrefTAB  = CNrefTAB
+   ! [GR-CROP-DVS] atmosphere meteo + runoff CN seeds retired:
+   ! all legacy globals (arad/atmn/atmx/ahum/awin/arai/aetr/wet/atav/epot/tpot/grain/nrain/
+   ! tav/daynrfirst/daynrlast/atmin7/nofd/isua/avevaptb/avprectb/pfreetb/pstemtb/scanopytb/
+   ! CNdry/CNwet/ThetaRef/Runoff_CN/wc_cor/wc10/iCNtab/CNtimTAB/CNrefTAB) were zero at init;
+   ! state fields default-init to zero; readmeteo writes state directly at runtime.
 
    ! [GR-CROP C11] rain timing dual-write retired: readmeteo now writes directly to state%atmosphere%X
 
