@@ -129,20 +129,20 @@
       integer   daynrlast          ! Last calendar day number for which meteorological data is available in current year
       integer   detrecord(nmetfile) ! Record number of meteo file with detailed meteo data (-)
       integer   irectotal          ! Total record number with detailed meteo input for new weather file (-)
-      integer   nmetdetail         ! Number of detailed records for ET and rainfall per day (-)
+      ! [GR-CROP-DVS] nmetdetail retired — see state%cfg%meteo%nmetdetail
       ! [GR-CROP C12] retired 2026-05-14 — moved to state%atmosphere%nmrain (Arc 8)
       ! integer   nmrain             ! Number of rain event records (-)
       integer   nofd               ! number of days for running average Tmin (-)
       ! [SS-TC] retired 2026-05-12 — moved to state%timecontrol%rainrec (ADR 0041)
       ! integer   rainrec            ! moved to state%timecontrol%rainrec
-      integer   swdivide           ! Switch on division ET into E and T: 0 = according to the SWAP traditional way; 1 = according to PMdirect
+      ! [GR-CROP-DVS] swdivide retired — see state%cfg%meteo%swdivide
       ! [GR-CROP-DVS] swetr retired — see state%cfg%meteo%swetr
       integer   swetsine           ! Switch: 0 = Tp and Ep uniform during a day; 1 = Tp and Ep are distributed as sine waves during a day
       integer   swinter            ! Switch for interception method: 0 = no interception; 1 = agricultural crops; 2 = trees and forests
-      integer   swmetdetail        ! Switch: 0 = daily meteorological records; 1 = detailed records for both ET and rainfall
+      ! [GR-CROP-DVS] swmetdetail retired — see state%cfg%meteo%swmetdetail
       ! [SS-TC] retired 2026-05-12 — moved to state%timecontrol%swmeteo (ADR 0041)
       ! integer   swmeteo            ! moved to state%timecontrol%swmeteo
-      integer   swrain             ! Switch: 0 = use daily rain amounts; 1 = use daily amounts + mean intensity; 
+      ! [GR-CROP-DVS] swrain retired — see state%cfg%meteo%swrain
                                    !         2 = use daily amounts + duration; 3 = use detailed rainfall data from separate file
       ! [SS-TC] retired 2026-05-12 — moved to state%timecontrol%* (ADR 0041)
       ! integer   wrecord            ! moved to state%timecontrol%wrecord
@@ -207,7 +207,7 @@
       real(8)   rad                ! Global solar radiation (J/m2/d)
       ! [GR-CROP C12] retired 2026-05-14 — moved to state%atmosphere%rainamount (Arc 8)
       ! real(8)   rainamount(mrain)  ! Array with short duration rainfall amounts (L)
-      real(8)   raintab(60)        ! Array with mean rainfall intensity (L/T) as function of time (T)
+      ! [GR-CROP-DVS] raintab retired — see state%cfg%meteo%raintab
       ! [GR-CROP C12] retired 2026-05-14 — moved to state%atmosphere%rainfluxarray (Arc 8)
       ! real(8)   rainfluxarray(mrain) ! Array with short duration rainfall intensities (L/T)
       ! [GR-CROP C12] retired 2026-05-14 — moved to state%atmosphere%raintimearray (Arc 8)

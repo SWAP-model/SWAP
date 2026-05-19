@@ -141,9 +141,6 @@ contains
       ! [GR-CROP Phase B] nmrain/rainamount/rainfluxarray/raintimearray/arai migrated →
       !   state%atmosphere%X via associate aliases.  swrain/raintab remain narrow
       !   use variables until config arg is threaded (Arc 8).
-      use variables, only: &   ! [SS-GR-FINAL B11] DEFERRED
-         ! DEFERRED: swrain/raintab — rain input switch/table; config; Phase C3
-         swrain, raintab  ! [GR-CROP Phase B]
       use array_utils, only: afgen
       use swap_array_dimensions, only: mrain
       implicit none
@@ -177,7 +174,7 @@ contains
 
       ! For rain options 1 and 2: convert daily rain quantities and intensities or durations
       ! into rain events by creating raintime and rainflux arrays conform rain option 3
-      if (swrain .eq. 1 .or. swrain .eq. 2) then
+      if (state%cfg%meteo%swrain .eq. 1 .or. state%cfg%meteo%swrain .eq. 2) then
          rainrec = 1
          do i = 1, nmrain
             if (raintimearray(i + 1) .gt. tstart - vsmall) then
@@ -199,12 +196,12 @@ contains
          rainrec = 0
          do i = 2, nmrain
             if (rainam(i) .gt. vsmall) then
-               if (swrain .eq. 1) then
+               if (state%cfg%meteo%swrain .eq. 1) then
                   ! Mean rainfall intensities are specified
-                  rainflux = afgen(raintab, 60, day(i))
+                  rainflux = afgen(state%cfg%meteo%raintab, 60, day(i))
                   raintime = dmin1(0.99d0, rainam(i)/rainflux)
 
-               elseif (swrain .eq. 2) then
+               elseif (state%cfg%meteo%swrain .eq. 2) then
                   ! Rainfall durations are specified
                   raintime = wwet(i)
                end if
@@ -231,7 +228,7 @@ contains
          rainfluxarray(rainrec + 2) = 0.d0
 
          ! In case of rain events: 1) calculate daily values, 2) fill raintimearray and rainfluxarray
-      elseif (swrain .eq. 3) then
+      elseif (state%cfg%meteo%swrain .eq. 3) then
 
          ! Total amount of rain per meteo day arai
          ! Initialize array with sum of rain

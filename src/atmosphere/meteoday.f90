@@ -566,7 +566,6 @@ contains
         daylp, tmn, tmx, rsw, difpp,                       &  ! B24 DEFERRED — ET calculation params; albedo/rsc retired
         dsinbe, atmtr, rsoil,                              &  ! B24 DEFERRED — ET calculation params
         swinter,                                           &  ! B24 DEFERRED — overwritten by crop init (not pure config%meteo)
-        swdivide,                                          &  ! B24 DEFERRED — config switch
         croptype, swgc, gc,                                &  ! B24 DEFERRED — crop/config fields
         ! [GR-CROP C3] icrop/flCropCalendar → state%crop%common%X
         flCropHarvest, cfevappond, flco2,                  &  ! B24 DEFERRED; fco2tra retired
@@ -689,7 +688,7 @@ contains
                      state%crop%swcf,state%crop%common%ch, &
                      state%crop%flCropEmergence,daylp,tc_flmetdetail,irecord, &
                      config%meteo%nmetdetail,state%crop%common%albedo,tmn,tmx,rsw,difpp,dsinbe,atmtr, &
-                     Edirect,Tdirect,Tdirectwet,rsoil,swdivide, &
+                     Edirect,Tdirect,Tdirectwet,rsoil,state%cfg%meteo%swdivide, &
                      state%crop%kdif,state%crop%kdir, &
                      state%crop%lai,Edirectpond)
 
@@ -779,7 +778,7 @@ contains
             wfrac = 0.0d0
           else
             if (swinter .ne. 3) then
-              if (swdivide .eq. 0) then
+              if (state%cfg%meteo%swdivide .eq. 0) then
                 wfrac = max(min(aintc*10.0d0/state%crop%ew0,1.0d0),0.0d0)
               else
                 if(tdirectwet.gt.nihil) then
@@ -846,7 +845,7 @@ contains
       endif
 
       ! Potential soil evaporation [cm/d] according to PMdirect
-      if (swdivide .eq. 1) then
+      if (state%cfg%meteo%swdivide .eq. 1) then
         if (state%soilwater%pond .gt. 1.0d-10) then  ! [SS-SWC S-2.12B]
           at_peva = Edirectpond*0.1d0
         else
@@ -863,7 +862,7 @@ contains
       at_ptra = max(at_ptra,(1.01d0*nihil))
 
       ! Potential transpiration [cm/d] according to PMdirect
-      if (swdivide .eq. 1) then
+      if (state%cfg%meteo%swdivide .eq. 1) then
         at_ptra = (1.0d0-wfrac) * Tdirect * 0.1d0
         at_ptra = max(at_ptra,(1.01d0*nihil))
       endif

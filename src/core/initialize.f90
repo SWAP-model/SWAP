@@ -41,12 +41,8 @@
       ilvoldpot          = 0
       iseqgm             = 0
       iseqgmpot          = 0
-      nmetdetail         = 0
-      swdivide           = 0
       swetsine           = 0
       swinter            = 0
-      swmetdetail        = 0
-      swrain             = 0
       ! [SS-ATM A-2.6] aintcdt/atmdem/caintc/cevap/cgrai/cnrai/cpeva/cptra retired to state%atmosphere
       daylp              = 0.0d0
 
@@ -64,7 +60,6 @@
       nrain              = 0.0d0
       rad                = 0.0d0
       ! [GR-CROP C12] rainamount/rainfluxarray/raintimearray retired from variables — state%atmosphere%X
-      raintab            = 0.0d0
       ! [GR-ATM C8] rh retired — state%atmosphere%rh written by meteoday
       tadw               = 0.0d0
       tadwpot            = 0.0d0

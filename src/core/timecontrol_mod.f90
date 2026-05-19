@@ -27,8 +27,7 @@ contains
                             swirfix, swsnow, &
                             swhea, swsolu, &
                             ! DEFERRED: swetsine/swrain/swmetdetail/nmetdetail — meteo switches; Phase C3
-                            swetsine, swrain, swmetdetail, &
-                            nmetdetail, &
+                            swetsine, &
                             ! DEFERRED: nirri/swinco/icrop/cropstart/croptype/project — crop/run config; Phase C3
                             nirri, swinco, icrop, &
                             cropstart, croptype, project
@@ -155,14 +154,14 @@ contains
       else
         flprintshort = .false.
       endif
-      if (swmetdetail .eq. 1) then
+      if (state%cfg%meteo%swmetdetail .eq. 1) then
         flmetdetail = .true.
-        metperiod = 1.0d0 / dble(nmetdetail)
+        metperiod = 1.0d0 / dble(state%cfg%meteo%nmetdetail)
         wrecord = 0
       else
         flmetdetail = .false.
       endif
-      if (swrain.gt.0) then
+      if (state%cfg%meteo%swrain.gt.0) then
          flrainintens = .true.
       else
          flrainintens = .false.
@@ -278,7 +277,7 @@ contains
       endif
 
 ! --- intial timestep for rainfall intensities
-      if (swmetdetail.eq.0 .and. swrain.gt.0) then
+      if (state%cfg%meteo%swmetdetail.eq.0 .and. state%cfg%meteo%swrain.gt.0) then
          dtEvent = min(dtEvent, dtmin)
       endif
 
@@ -333,7 +332,6 @@ contains
                             ! DEFERRED: flCropCalendar/flCropOutput/flCropHarvest — crop flags dual-write; Phase C3
                             flCropCalendar, flCropOutput, &
                             ! DEFERRED: swrain/swmetdetail — meteo switches; Phase C3
-                            swrain, swmetdetail, &
                             flCropHarvest, &
                             ! DEFERRED: croptype/icrop — crop schedule globals; Phase C3
                             croptype, icrop, &
@@ -562,7 +560,7 @@ contains
          end if
 
 ! 2.7.4  precipitation event may limit timestep
-         if (swmetdetail.eq.0 .and. swrain.gt.0) then
+         if (state%cfg%meteo%swmetdetail.eq.0 .and. state%cfg%meteo%swrain.gt.0) then
 
 !        next rainevent! Set new values
            if (raintimearray(rainrec).lt.tcum+dtCrit) then

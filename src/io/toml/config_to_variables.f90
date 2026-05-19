@@ -130,12 +130,6 @@ contains
       ! `config%meteo%rainfile` is no longer copied into a global because
       ! the only consumer (the `.YYY` per-year rain reader in readmeteo.f90)
       ! has been deleted; CSV rain events use `config%meteo%rain_events_file`.
-      swdivide    = config%meteo%swdivide
-      swmetdetail = config%meteo%swmetdetail
-      nmetdetail  = config%meteo%nmetdetail
-      swrain      = config%meteo%swrain
-      ! [SS-GR-CROP A13] populate raintab from config
-      raintab     = config%meteo%raintab
       swetsine    = config%meteo%swetsine
       swinter     = config%meteo%swinter
       angstroma   = config%meteo%angstroma
@@ -182,7 +176,7 @@ contains
       ! 0014). The detail_file required-when-swmetdetail=1 check moved
       ! to meteorology_config_validate (SS-5 follow-up M2); the
       ! allocation guard below is defense-in-depth only.
-      if (swmetdetail == 1) then
+      if (config%meteo%swmetdetail == 1) then
          if (allocated(config%meteo%detail_file) .and. &
              len_trim(config%meteo%detail_file) > 0) then
             block
@@ -214,7 +208,7 @@ contains
       end if
 
       ! Rain events CSV pre-load (swrain=3, events_file set).
-      if (swrain == 3 .and. allocated(config%meteo%rain_events_file)) then
+      if (config%meteo%swrain == 3 .and. allocated(config%meteo%rain_events_file)) then
          if (len_trim(config%meteo%rain_events_file) > 0) then
             block
                use csv_reader_mod,  only: read_csv_table
