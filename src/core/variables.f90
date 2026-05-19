@@ -1045,10 +1045,7 @@
       ! [GR-CROP-DVS] rsro retired — see state%surfacewater%rsro
       ! [GR-CROP-DVS] rsroexp retired — see state%surfacewater%rsroexp
       integer   swuseCN            ! Switch for usage of Curve Number method for runoff [0 (default),1]
-      integer   wc_cor
-      ! [GR-CROP-DVS] CNref retired — see state%atmosphere%CNref
-      real(8)   CNrefTAB(mayrs*5), CNtimTAB(mayrs*5)
-      integer   iCNtab
+      ! [GR-CROP-DVS] wc_cor/CNrefTAB/CNtimTAB/iCNtab retired — see state%atmosphere
       ! [SS-SWC] retired 2026-05-12 — crunoffCN/irunoCN moved to state%soilwater (ADR 0038)
       real(8)   CNdry, CNwet, ThetaRef, wc10, Runoff_CN  ! crunoffCN, irunoCN now in state%soilwater
       real(8)   Rxylem             ! Mean radius of xylem tube inside roots (L)
