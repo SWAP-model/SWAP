@@ -55,7 +55,7 @@
         cf, ch, cfeic, tsumea, tsumam, tbase, daycrop, lat, daylp,  &  ! tsum retired (→state%crop%common%tsum)
         kdif, siccapact, siccaplai, cropend,                               &  ! [GR-CROPWS B5] cropstart removed (→state%crop%common%cropstart)
         wrtmax, wrtmin, &  ! wso/wst/wlv/wrt retired
-        cwdm, cwdmpot, pgass, pgasspot, reltr, lrnr, lsnr, nni,           &
+        cwdm, pgass, pgasspot, reltr, lrnr, lsnr, nni,           &
         anlv, anst, nmxlv, nmaxlv, nmaxst, nmaxrt, nmaxso, nlai,          &
         rnflv, rnfst, rnfrt, fstr, fntrt, npart, nfixf, nsla,             &
         cvl, cvo, cvr, cvs,                                                &
@@ -360,7 +360,7 @@
         mrest = 0.0d0 
         mrestpot = 0.0d0 
         cwdm = 0.0d0
-        cwdmpot = 0.0d0
+        state%crop%wofost%cwdmpot = 0.0d0
 ! --- only for vernalisation
         vern = 0.0d0             ! vernalisation state (d)
         flvernalised = .FALSE.   ! crop not vernalised (-)
@@ -383,7 +383,6 @@
         state%crop%wofost%dwbl      = dwbl
         state%crop%wofost%dwblpot   = dwblpot
         state%crop%wofost%cwdm      = cwdm
-        state%crop%wofost%cwdmpot   = cwdmpot
 
 ! --- end skip above initialization if crop parameters are read from *.END file
       endif
@@ -714,11 +713,11 @@
 ! --- dry weight of dead and living plant organs
       twlvpot = state%crop%wofost%wlvpot + dwlvpot
       twstpot = state%crop%wofost%wstpot + dwstpot
-      cwdmpot = twlvpot + twstpot + state%crop%wofost%wsopot
+      state%crop%wofost%cwdmpot = twlvpot + twstpot + state%crop%wofost%wsopot
 ! --- only for bulb crops (tulips etc..)
       if(swbulb.eq.1) then
         twblpot = wblpot + dwblpot
-        cwdmpot = cwdmpot + twblpot
+        state%crop%wofost%cwdmpot = state%crop%wofost%cwdmpot + twblpot
       endif
 
 ! --- total gross assimilation and maintenance respiration
@@ -753,7 +752,6 @@
       state%crop%wofost%dwlvpot   = dwlvpot
       state%crop%wofost%dwstpot   = dwstpot
       state%crop%wofost%dwblpot   = dwblpot
-      state%crop%wofost%cwdmpot   = cwdmpot
       state%crop%wofost%pgasspot  = pgasspot
 
       return
