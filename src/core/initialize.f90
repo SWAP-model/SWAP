@@ -183,8 +183,7 @@
       ! [GR-BH Task 37] swdivdinf retired to state%drainage%swdivdinf
       swdislay           = 0
       swtopdislay        = 0
-      swdra              = 0 
-      swfrost            = 0 
+      swfrost            = 0
       swhyst             = 0 
       swinco             = 0 
       swkmean            = 0 
@@ -193,7 +192,6 @@
       swpondmx           = 0 
       swqhbot            = 0 
       swredu             = 0 
-      swsophy            = 0
       ! [SS-GR-CROPRT C1] swend zero-fill dropped — global + state field retired (ADR 0009: always 0)
       ! [SS-GR-FINAL D1] swvap/vap/wba zero-fills dropped — declarations retired
       aqamp              = 0.0d0 
@@ -332,8 +330,7 @@
       ! pond               = 0.0d0
       ! pondini            = 0.0d0
       ! pondm1             = 0.0d0
-      pondmx             = 0.0d0 
-      pondmxtab          = 0.0d0 
+      pondmxtab          = 0.0d0
       ! [SS-SWC] q retired — soilwater_init handles init via state%soilwater%q
       ! q                  = 0.0d0
       ! [SS-BND B-2.7] qbot, qbot_nonfrozen retired — soilwater_init handles init via state%soilwater
@@ -367,9 +364,7 @@
       ! rfcp               = 0.0d0
       rimlay             = 0.0d0 
       rsigni             = 0.0d0 
-      rsoil              = 0.0d0 
-      rsro               = 0.0d0 
-      rsroexp            = 0.0d0
+      rsoil              = 0.0d0
       Runoff_CN          = 0.0d0
       ! [SS-SWC] runon retired — soilwater_init handles init via state%soilwater%runon
       ! runon              = 0.0d0

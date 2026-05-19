@@ -325,8 +325,8 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
          SWQHR, QQHTAB, &
          ! DEFERRED: alphaw/betaw — surface water geometry coefficients; config; Phase C3
          alphaw, betaw, &
-         ! DEFERRED: rsro/pondmx — runoff / ponding config; Phase C3
-         rsro, pondmx, &
+         ! rsro/pondmx retired (→state%surfacewater%X)
+
          ! DEFERRED: logf — log file unit; runtime utility; Phase C3
          logf, &
          ! DEFERRED: QRapDra — rapid drainage flux runtime state; Phase C3
@@ -623,8 +623,8 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
 !        ponding in case of extended drainage may limit timestep
 
       ! SS-SWC Phase 2 S-2.8: pond read from state%soilwater
-      if (sw_wls.gt.pondmx .or. state%soilwater%pond.gt.pondmx) then
-        if(tc_dt .gt. 0.02*rsro) then  ! [TC-8]
+      if (sw_wls.gt.state%surfacewater%pondmx .or. state%soilwater%pond.gt.state%surfacewater%pondmx) then
+        if(tc_dt .gt. 0.02*state%surfacewater%rsro) then  ! [TC-8]
           request_smaller_dt = .true.
         end if
         fl_early_return = .true.

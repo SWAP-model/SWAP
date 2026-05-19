@@ -281,8 +281,7 @@ contains
       ! ---------------------------------------------------------------
       ! Drainage (audit: 20 fields + surface_runoff sub-section)
       ! ---------------------------------------------------------------
-      swdra    = config%drain%swdra
-      state%surfacewater%swdra = swdra   ! [SS-GR-UTILS Task 4] dual-write
+      state%surfacewater%swdra = config%drain%swdra
       dramet   = config%drain%dramet
       ! [GR-BH Task 37] swdivd global deleted — state%drainage%swdivd seeded in swap_mod.f90
       swdislay = config%drain%swdislay
@@ -465,8 +464,7 @@ contains
       ! ---------------------------------------------------------------
       ! Soil (audit: 15 + discretization + frost)
       ! ---------------------------------------------------------------
-      swsophy = config%soil%swsophy
-      state%soilwater%swsophy = swsophy   ! [SS-GR-UTILS Task 4] dual-write
+      state%soilwater%swsophy = config%soil%swsophy
       swhyst  = config%soil%swhyst
       swinco  = config%soil%swinco
       ! [MACRO-RETIRE 2026-05-12] swmacro global retired (ADR 0040).
@@ -488,13 +486,10 @@ contains
       gwli    = config%soil%gwli
       ! [GR-FINAL C1] pondini/pond: config%soil%pondini read directly by swap_mod after soilwater_init
       ! (pondini_init_buf/pond_init_buf retired; swap_mod seeding replaced with direct config reads)
-      pondmx  = config%soil%pondmx
-      state%surfacewater%pondmx = pondmx     ! [SS-GR-UTILS Task 4] dual-write
+      state%surfacewater%pondmx = config%soil%pondmx
       rsoil   = config%soil%rsoil
-      rsro    = config%soil%rsro
-      state%surfacewater%rsro = rsro         ! [SS-GR-UTILS Task 4] dual-write
-      rsroexp = config%soil%rsroexp
-      state%surfacewater%rsroexp = rsroexp   ! [SS-GR-UTILS Task 4] dual-write
+      state%surfacewater%rsro = config%soil%rsro
+      state%surfacewater%rsroexp = config%soil%rsroexp
       ! Legacy parses .swp `SWRUNON` into a local int; the persistent
       ! global is the boolean `flrunon`. Mirror that mapping here.
       flrunon = (config%soil%swrunon == 1)

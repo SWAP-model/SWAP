@@ -874,8 +874,8 @@ contains
       use variables, only: &
          ! DEFERRED: nird — net irrigation depth (irrigation source); Phase C3
          nird, &
-         ! DEFERRED: swsophy — soil hydraulic property switch; Phase C3
-         swsophy, &
+         ! swsophy retired (→state%soilwater%swsophy)
+
          ! DEFERRED: swhyst — hysteresis switch; Phase C3
          swhyst, &
          ! DEFERRED: swinco — initial conditions switch; Phase C3
@@ -975,7 +975,7 @@ contains
       end do
       ! BiModal/NoVap: only set via legacy readswap (not TOML path); stay .false.
 
-      if(swsophy.eq.1) then
+      if(state%soilwater%swsophy.eq.1) then
          ! Tabulated functions (h,theta,k,dthetadh,dkdtheta) tabulated
          do node = 1,numnod
           numtab(node) = numtablay(layer(node))

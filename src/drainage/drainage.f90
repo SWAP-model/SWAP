@@ -728,8 +728,8 @@ contains
      nrpri, nmper, &
      ! DEFERRED: taludr/widthr/rdrain — drain geometry; config; Phase C3
      taludr, widthr, rdrain, &
-     ! DEFERRED: pondmx — maximum ponding depth; config; Phase C3
-     pondmx, &
+     ! pondmx retired (→state%surfacewater%pondmx)
+
      ! DEFERRED: swdtyp — drainage type per level; config; Phase C3
      swdtyp, &
      ! DEFERRED: wlp/rinfi/rentry/rexit/gwlinf/impend/wscap — surface water config; Phase C3
@@ -795,7 +795,7 @@ contains
 ! --- drainage fluxes are set to zero if both groundwater level and surface
 !     water level are above ponding sill (so the nonzero drainage flux
 !     is only computed if either the gwl or the wl is below pondmx)
-                  if (wl .lt. pondmx .or. gwl .lt. pondmx) then
+                  if (wl .lt. state%surfacewater%pondmx .or. gwl .lt. state%surfacewater%pondmx) then
 
 ! --- channel is active medium if either groundwater or surface water
 !     level is above channel bottom

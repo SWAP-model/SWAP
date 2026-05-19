@@ -761,7 +761,7 @@
       ! [GR-BH Task 37] swdivdinf retired — moved to state%drainage%swdivdinf
       integer   swdislay           ! Switch to distribute drainage flux vertically with a given position of the top of the model discharge layers: 0 = no; 1 = yes
       integer   swtopdislay(madr)  ! Switch, for each drainage level, to distribute drainage flux vertically with a given position of the top of the model discharge layers: 0 = no; 1 = yes
-      integer   swdra              ! Switch for simulation of lateral drainage: 0 = no drainage; 1 = use basic drainage routine; 
+      ! [GR-CROP-DVS] swdra retired — see state%surfacewater%swdra
                                    !                                            2 = simulate drainage and surface water
       integer   swfrost            ! Switch for reduction of hydraulic conductivity in case of frost: 0 = no; 1 = yes
       integer   swhyst             ! Switch for hysteresis of soil moisture retention function: 0 = no; 1 = yes
@@ -780,7 +780,7 @@
       integer   swcofqhc           ! Switch for additional flux added to exponential flux-groundwater level relationship: 0 = no, 1 = yes
       integer   swredu             ! Switch for reduction of soil evaporation: 0 = no empirical function; 1 = use function of Black; 
                                    !                                           2 = use function of Boesten/Stroosnijder
-      integer   swsophy            ! Switch for input of soil hydraulica properties as function parameters (0) or as table (1)
+      ! [GR-CROP-DVS] swsophy retired — see state%soilwater%swsophy
       integer   ientrytab(macp,0:matabentries)    ! Soil Physical functions (h,theta,k,dthetadh,dkdtheta) tabulated for each model compartment
       integer   ientrytablay(maho,0:matabentries) ! Soil Physical functions (h,theta,k,dthetadh,dkdtheta) tabulated for each soil layer
 
@@ -965,7 +965,7 @@
       ! real(8)   pond               ! Height of ponding layer (L)
       ! real(8)   pondini            ! Ponding water layer (L) on soil surface at start of current water balance period
       ! real(8)   pondm1             ! Ponding water layer (L) on soil surface at former time level
-      real(8)   pondmx             ! Maximum amount of ponding (L) on soil surface before runoff starts
+      ! [GR-CROP-DVS] pondmx retired — see state%surfacewater%pondmx
       real(8)   pondmxtab(2*mairg) ! Table with time-dependent input (date,value) for maximum amount of ponding (L) on soil surface before runoff starts
       ! [SS-SWC] retired 2026-05-12 — moved to state%soilwater%q (ADR 0038)
       ! real(8)   q(macp+1)          ! Soil water flux between current compartment and upper compartment (L/T)
@@ -1042,8 +1042,8 @@
       ! real(8)   RootRho(macp)      ! Factor Rho of a compartment used in drought reduction of De Jong van Lier et al. (/L2)
       real(8)   rsigni             ! Minimum amount of rainfall (L) which resets the empirical soil evaporation reduction models
       real(8)   rsoil              ! Soil resistance of wet soil of PMdirect (T/L)
-      real(8)   rsro               ! Drainage resistance for surface runoff (T)
-      real(8)   rsroexp            ! Exponent to calculate surface runoff (T)
+      ! [GR-CROP-DVS] rsro retired — see state%surfacewater%rsro
+      ! [GR-CROP-DVS] rsroexp retired — see state%surfacewater%rsroexp
       integer   swuseCN            ! Switch for usage of Curve Number method for runoff [0 (default),1]
       integer   wc_cor
       ! [GR-CROP-DVS] CNref retired — see state%atmosphere%CNref

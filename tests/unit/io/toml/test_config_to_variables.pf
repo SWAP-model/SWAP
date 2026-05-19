@@ -91,7 +91,7 @@ subroutine test_config_to_variables_drainage_basic()
    use config_to_variables_mod, only: config_to_variables
    use swap_state_mod, only: swap_state_t
    ! [GR-BH Task 37] swdivd/nrlevs globals deleted; verified via config fields only.
-   use variables, only: dramet, swdislay, basegw, entres, swdra
+   use variables, only: dramet, swdislay, basegw, entres  ! swdra retired
    implicit none
    type(swap_config_t) :: config
    type(swap_state_t)  :: state
@@ -106,7 +106,7 @@ subroutine test_config_to_variables_drainage_basic()
 
    call config_to_variables(config, state)
 
-   @assertEqual(1,         swdra)
+   @assertEqual(1,         state%surfacewater%swdra)
    @assertEqual(3,         dramet)
    ! swdivd global retired (GR-BH Task 37) — state%drainage%swdivd seeded in swap_mod.f90
    @assertEqual(1,         config%drain%swdivd)
@@ -126,7 +126,7 @@ subroutine test_config_to_variables_soil_with_layer_arrays()
    use swap_state_mod, only: swap_state_t
    ! [GR-FINAL C1] pondini/pond seeded in swap_mod after soilwater_init (pondini_init_buf/pond_init_buf retired)
    ! [GR-BH Task 36] cofani global retired — seeded via state%soilwater%cofani in swap_mod.f90
-   use variables, only: swsophy, swhyst, swinco, gwli, pondmx
+   use variables, only: swhyst, swinco, gwli  ! swsophy/pondmx retired
    implicit none
    type(swap_config_t) :: config
    type(swap_state_t)  :: state
@@ -142,14 +142,14 @@ subroutine test_config_to_variables_soil_with_layer_arrays()
 
    call config_to_variables(config, state)
 
-   @assertEqual(1,        swsophy)
+   @assertEqual(1,        state%soilwater%swsophy)
    @assertEqual(2,        swhyst)
    @assertEqual(2,        swinco)
    @assertEqual(-75.0d0,  gwli)
    ! [GR-FINAL C1] pondini/pond now seeded directly in swap_mod after soilwater_init;
    ! verify config source value is preserved.
    @assertEqual(0.5d0,    config%soil%pondini)
-   @assertEqual(1.0d0,    pondmx)
+   @assertEqual(1.0d0,    state%surfacewater%pondmx)
    ! [GR-BH Task 36] cofani global retired: config_to_variables no longer writes to bare global.
    ! state%soilwater%cofani is seeded from config in swap_mod.f90 (swap_init_from_loaded_config).
 end subroutine test_config_to_variables_soil_with_layer_arrays

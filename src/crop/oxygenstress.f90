@@ -103,8 +103,8 @@ contains
       use variables, only: &                                               ! [SS-GR-FINAL B6] residuals — all DEFERRED
                            ! DEFERRED: croptype/icrop — active crop schedule globals; Phase C3
                            croptype, icrop, max_resp_factor, &
-                           ! DEFERRED: bdens/swsophy/numtablay/sptab/iHWCKmodel/c_top — soil config, no state home yet
-                           bdens, swsophy, numtablay, sptab, iHWCKmodel, c_top, &
+                           ! DEFERRED: bdens/numtablay/sptab/iHWCKmodel/c_top — soil config, no state home yet; swsophy retired
+                           bdens, numtablay, sptab, iHWCKmodel, c_top, &
                            ! DEFERRED: SRL/swrootradius/dry_mat_cont_roots/air_filled_root_por/spec_weight_root_tissue/var_a/root_radiusO2 — crop config; Phase C3
                            SRL, swrootradius, dry_mat_cont_roots, &
                            air_filled_root_por, spec_weight_root_tissue, var_a, root_radiusO2, &
@@ -288,7 +288,7 @@ contains
       else   ! (if (gas_filled_porosity .lt. 1.0d-6)) 
         
 ! --- In case of tabular soil hydraulic functions
-        if(swsophy.eq.1) then
+        if(state%soilwater%swsophy.eq.1) then
 ! --- Get tabular soil hydraulic function for node
           do i = 1, 7
             do j = 1, numtablay(lay)  !check this
@@ -323,7 +323,7 @@ contains
         call waterfilmthickness (waterfilm_thickness,                   &
      &    matric_potential,Capac_term(node),Nmin1(node),Mplus1(node),   &
      &       alpha,gen_n,surface_tension_water,glit,                    &
-     &          soilphystab,diff_water_cap_actual,numrec_tab)
+     &          soilphystab,diff_water_cap_actual,numrec_tab,state%soilwater%swsophy)
 
 ! --- Calculate microbial respiration rate
         call microbial_resp (r_microbial_z0,soil_temp,perc_org_mat,     &
@@ -829,13 +829,12 @@ contains
       subroutine waterfilmthickness (waterfilm_thickness,               &
      &   matric_potential,Capac_term, Nmin1, Mplus1,                    &
      &      alpha,gen_n,surface_tension_water,glit,                     &
-     &         soilphystab,diff_water_cap_actual,numrec_tab)
+     &         soilphystab,diff_water_cap_actual,numrec_tab,swsophy_arg)
 ! --- calculate water film thickness. method according to simojoki 2000
-      ! [SS-GR-FINAL B6] matab → swap_array_dimensions; swsophy DEFERRED (soil config, no state threading yet)
       use swap_array_dimensions, only: matab
-      use variables, only: swsophy  ! [SS-GR-FINAL B6] DEFERRED — swsophy: soil hydraulic switch, no state home yet
       use doln
       implicit none
+      integer, intent(in) :: swsophy_arg
       
       real(8) waterfilm_thickness, matric_potential
       real(8) alpha,gen_n,surface_tension_water,Capac_term, Nmin1, Mplus1
@@ -862,7 +861,7 @@ contains
          return
       end if
       
-      if (swsophy.eq.0) then
+      if (swsophy_arg.eq.0) then
 ! --- calculate length density air filled (gas) pores. [number per m2]
 ! --- subroutine trapdz is used to solve the integral defined in
 ! --- function 'func'.
@@ -897,7 +896,7 @@ contains
      &   - 2.0d0 * surface_tension_water / matric_potential )
       endif
       !!!!sptab(1,node,ii) = soilphystab(1,ii)
-      if(swsophy.eq.1) then
+      if(swsophy_arg.eq.1) then
           ii = numrec_tab !34  !run over points in soil hydraulic table
 ! --- lower value of matric potential for integration interval
          lowlim = 0.000001d0 !-100*soilphystab(1,ii) !initial value should be zero !RB20140725, very close to zero, otherwise/0 in functab

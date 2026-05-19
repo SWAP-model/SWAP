@@ -23,8 +23,8 @@ contains
                             logf, &
                             ! DEFERRED: flCropCalendar — crop flag dual-write; Phase C3
                             flCropCalendar, &
-                            ! DEFERRED: swirfix/swsnow/swdra/swhea/swsolu — model-feature switches; Phase C3
-                            swirfix, swsnow, swdra, &
+                            ! DEFERRED: swirfix/swsnow/swhea/swsolu — model-feature switches; Phase C3; swdra retired
+                            swirfix, swsnow, &
                             swhea, swsolu, &
                             ! DEFERRED: swetsine/swrain/swmetdetail/nmetdetail — meteo switches; Phase C3
                             swetsine, swrain, swmetdetail, &
@@ -176,9 +176,9 @@ contains
       if (swetsine .eq. 1) fletsine = .true.
       if (swirfix.eq.1) flIrrigate = .true.
       flDrain = .false.
-      if (swdra .eq. 1) flDrain = .true.
+      if (state%surfacewater%swdra .eq. 1) flDrain = .true.
       flSurfaceWater = .false.
-      if (swdra .eq. 2) flSurfaceWater = .true.
+      if (state%surfacewater%swdra .eq. 2) flSurfaceWater = .true.
       flTemperature = .false.
       if (swhea .eq. 1) flTemperature = .true.
       flSnow = .false.
