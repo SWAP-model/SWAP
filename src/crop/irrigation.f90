@@ -43,7 +43,7 @@
       use swap_array_dimensions, only: maho
       use variables, only: &                                               ! [SS-GR-FINAL B6] residuals — all DEFERRED
                             ! DEFERRED: gird/irrigevent/schedule/swirfix — irrigation schedule state; Phase C3
-                            gird, irrigevent, schedule, swirfix,           &
+                            irrigevent, schedule, swirfix,           &  ! gird retired
                             ! DEFERRED: irdate/nirri/irdepth/irconc/irtype/cirr — irrigation event arrays; Phase C3
                             irdate, nirri, irdepth, irconc, irtype, cirr,  &
                             ! DEFERRED: isua/noddrz/swsolu/swcirrthres — crop/soil state; Phase C3; dvs/rd retired
@@ -114,15 +114,13 @@
          ! igird/inird/cgird/cnird zeroed via state%soilwater%reset_intermediate() in SoilWater(2)
          ! and state%soilwater%reset_cumulative() in same path.
 
-         gird = 0.0d0
-         state%crop%gird = gird   ! [SS-GR-ATM A5.3] runtime dual-write
+         state%crop%gird = 0.0d0
          irrigevent = 0
 
 ! ---    fixed irrigations events
          if (swirfix .eq. 1) then
             if (abs(irdate(nirri) - tc_t1900) .lt. 1.d-3) then  ! TC-12
-               gird = irdepth(nirri)
-               state%crop%gird = gird   ! [SS-GR-ATM A5.3] runtime dual-write
+               state%crop%gird = irdepth(nirri)
                cirr = irconc(nirri)
                isua = irtype(nirri)
                state%atmosphere%isua = isua   ! [SS-GR-ATM A5.3] runtime dual-write
@@ -280,30 +278,26 @@
                grai_red = 0.0d0
                ! SS-ATM A-2.6: grai retired — read from state%atmosphere%grai
                if (state%atmosphere%grai .gt. raithreshold) grai_red = state%atmosphere%grai
-               gird = max (0.0d0,cdef+dps1*0.1d0-grai_red)
-               state%crop%gird = gird   ! [SS-GR-ATM A5.3] runtime dual-write
+               state%crop%gird = max (0.0d0,cdef+dps1*0.1d0-grai_red)
 ! PG/JK start  15-feb-2010
             end if
 
 ! ---       depth - fixed depth [cm]
             if ((irrigevent.eq.2).and.(dcs.eq.2)) then
                dps2 = afgen(fidtab,14,state%crop%common%dvs)
-               gird = dps2*0.1d0
-               state%crop%gird = gird   ! [SS-GR-ATM A5.3] runtime dual-write
+               state%crop%gird = dps2*0.1d0
             end if
 
 ! ---       depth - limited depth [cm]
             if ((irrigevent.eq.2).and.(dcslim.eq.1)) then
-               gird = max(gird,irgdepmin*0.1d0)
-               gird = min(gird,irgdepmax*0.1d0)
-               state%crop%gird = gird   ! [SS-GR-ATM A5.3] runtime dual-write
+               state%crop%gird = max(state%crop%gird,irgdepmin*0.1d0)
+               state%crop%gird = min(state%crop%gird,irgdepmax*0.1d0)
             end if
 
 ! ---       in case of solutes: allow overirrigation when conc exceeds concthreshold
             if (swsolu.eq.1 .and.irrigevent.eq.2 .and.swcirrthres.eq.1) then
                if (state%solute%cml(nodsen).gt.cirrthres) then
-                  gird = gird + 0.01d0*perirrsurp*gird
-                  state%crop%gird = gird   ! [SS-GR-ATM A5.3] runtime dual-write
+                  state%crop%gird = state%crop%gird + 0.01d0*perirrsurp*state%crop%gird
                end if
             end if
 

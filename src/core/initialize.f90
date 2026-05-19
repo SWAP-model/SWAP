@@ -101,7 +101,6 @@
       ditab              = 0.0d0 
       dwatab             = 0.0d0 
       fidtab             = 0.0d0 
-      gird               = 0.0d0 
       hcritab            = 0.0d0 
       ! [SS-SWC] igird/inird retired — soilwater_init handles init via state%soilwater
       ! igird              = 0.0d0
@@ -662,10 +661,8 @@
       atmin7             = 0.0d0
       avevaptb           = 0.0d0 
       avprectb           = 0.0d0 
-      cf                 = 0.0d0 
       cfeictb            = 0.0d0 
       cftb               = 0.0d0 
-      ch                 = 0.0d0 
       chtb               = 0.0d0 
       gctb               = 0.0d0 
       cumdens            = 0.0d0 
@@ -741,8 +738,6 @@
       wblpot             = 0.0d0
       dwbl               = 0.0d0
       dwblpot            = 0.0d0
-      plwt               = 0.0d0
-      
       wiltpoint          = 0.0d0 
       wrtb               = 0.0d0
       zsow               = 0.0d0

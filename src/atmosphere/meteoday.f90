@@ -559,11 +559,11 @@ contains
     ! [SS-TC TC-14] metperiod retired — read via state%timecontrol
     ! [SS-GR-ATM B24] DEFERRED symbols (not yet in state/config); [SS-GR-FINAL B11] reviewed
     use variables, only: &
-        cf, cfeic,                                         &  ! B24 DEFERRED — crop factor scalars
+        cfeic,                                             &  ! B24 DEFERRED — crop factor scalar; cf/ch retired
         rad,                                               &  ! B24 DEFERRED — daily radiation scalar
         logf,                                              &  ! B24 DEFERRED — Arc 9 (logging)
         lat, alt, altw, angstroma, angstromb,              &  ! B24 DEFERRED — config ET params
-        ch, daylp, tmn, tmx, rsw, difpp,     &  ! B24 DEFERRED — ET calculation params; albedo/rsc retired
+        daylp, tmn, tmx, rsw, difpp,                       &  ! B24 DEFERRED — ET calculation params; albedo/rsc retired
         dsinbe, atmtr, rsoil,                              &  ! B24 DEFERRED — ET calculation params
         swinter,                                           &  ! B24 DEFERRED — overwritten by crop init (not pure config%meteo)
         swdivide,                                          &  ! B24 DEFERRED — config switch
@@ -659,9 +659,9 @@ contains
         else
           ! crop is present
           if (state%crop%swcf.eq.1 .or. state%crop%swcf.eq.3) then
-            state%crop%et0 = cf*etr
+            state%crop%et0 = state%crop%common%cf*etr
             if (state%crop%swcf .eq. 1) then
-              state%crop%ew0 = cf*etr
+              state%crop%ew0 = state%crop%common%cf*etr
             else
               state%crop%ew0 = cfeic*etr
             endif
@@ -686,7 +686,7 @@ contains
         call PenMon (logf,swscre,tc_daynr,lat,alt,Altw,angstroma, &
                      angstromb,rcs,rad,state%atmosphere%Tav,hum,win,state%crop%common%rsc, &
                      state%crop%es0,state%crop%et0,state%crop%ew0, &
-                     state%crop%swcf,ch, &
+                     state%crop%swcf,state%crop%common%ch, &
                      state%crop%flCropEmergence,daylp,tc_flmetdetail,irecord, &
                      config%meteo%nmetdetail,state%crop%common%albedo,tmn,tmx,rsw,difpp,dsinbe,atmtr, &
                      Edirect,Tdirect,Tdirectwet,rsoil,swdivide, &
@@ -705,7 +705,7 @@ contains
           state%crop%et0 = 0.0d0
           if (config%meteo%swmetdetail.eq.1 .and. (state%crop%swcf.eq.1 .or. state%crop%swcf.eq.3)) then
             if (state%crop%swcf.eq.1) then
-              state%crop%ew0 = cf*state%crop%ew0
+              state%crop%ew0 = state%crop%common%cf*state%crop%ew0
             else
               state%crop%ew0 = cfeic*state%crop%ew0
             endif
@@ -720,9 +720,9 @@ contains
             endif
           endif
           if (state%crop%swcf.eq.1 .or. state%crop%swcf.eq.3) then
-            state%crop%et0 = cf*state%crop%et0
+            state%crop%et0 = state%crop%common%cf*state%crop%et0
             if (state%crop%swcf.eq.1) then
-              state%crop%ew0 = cf*state%crop%ew0
+              state%crop%ew0 = state%crop%common%cf*state%crop%ew0
             else
               state%crop%ew0 = cfeic*state%crop%ew0
             endif

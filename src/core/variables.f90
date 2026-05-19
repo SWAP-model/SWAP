@@ -287,7 +287,7 @@
       real(8)   ditab(14)          ! Array with amount of under- or over-irrigation (L) as function of crop development stage
       real(8)   dwatab(14)         ! Array with maximum amounts of water depleted as function of crop development stage
       real(8)   fidtab(14)         ! Array with prescribed fixed irrigation depth (L) as function of crop development stage
-      real(8)   gird               ! Gross irrigation depth (L)
+      ! [GR-CROP-DVS] gird retired — see state%crop%gird
       real(8)   hcritab(14)        ! Array with minimum soil water pressure heads (L) as function of crop development stage
       ! [SS-SWC] retired 2026-05-12 — moved to state%soilwater (ADR 0038)
       ! real(8)   igird              ! Intermediate depth of gross irrigation (L)
@@ -375,12 +375,12 @@
       real(8)   relmf              ! Management factor (attainable yield)
       real(8)   avevaptb(2*magrs)  ! Gash interception model: average evaporation intensity during shower (-) as function of time (T)
       real(8)   avprectb(2*magrs)  ! Gash interception model: average rainfall intensity (-) as function of time (T)
-      real(8)   cf                 ! Crop factor (-)
+      ! [GR-CROP-DVS] cf retired — see state%crop%common%cf
       real(8)   cfeic              ! Crop factor wet (-)
       real(8)   gctb(2*magrs)      ! Array with either LAI (m2/m2) or Soil Cover Fraction (m2/m2) 
       real(8)   cftb(2*magrs)      ! Array with either crop factors (-) or crop height (L) as function of development stage
       real(8)   cfeictb(2*magrs)   ! Array with crop factors, wet (-) 
-      real(8)   ch                 ! Crop height (cm)
+      ! [GR-CROP-DVS] ch retired — see state%crop%common%ch
       real(8)   chtb(2*magrs)      ! Array with crop heights (cm) as function of development stage
       real(8)   c_mroot            ! Maintenance coefficient of root [0.0..1.0 kg O2/kg/d, R]
       ! [GR-CROP-DVS] cofab retired — see state%crop%cofab
@@ -455,7 +455,7 @@
       real(8)   pstemtb(2*magrs)   ! Gash interception model: stem flow coefficient (-) as function of time (T)
       real(8)   siccaptb(2*magrs)  ! NHI interception model: interception capacity as a function of time (T)
       real(8)   fimin              ! start-up saturation fraction for relative interception evaporation (-)
-      real(8)   siccapact          ! interceprion storage capacity of canopy (cm)
+      ! [GR-CROP-DVS] siccapact retired — see state%atmosphere%siccapact
       ! real(8) :: sicact        ! amount of water stored on canopy (cm) — [SS-ATM] retired 2026-05-11
       real(8)   siccaplai          ! interception storage per unit of LAI (cm/LAI)
       real(8)   q10                ! Relative increase of respiration rate with temperature (/10 oC)
@@ -598,8 +598,8 @@
       real(8)   fbltb(30)          ! Dry weight fractions partitioned to flowers (-)
       real(8)   pld
       real(8)   remoc
-      real(8)   plwt               ! Dry weight of mother bulb (kg/ha)
-      real(8)   plwti              ! Initial dry weight of mother bulb (kg/ha)
+      ! [GR-CROP-DVS] plwt retired — see state%crop%wofost%plwt
+      ! [GR-CROP-DVS] plwti retired — see state%crop%wofost%plwti
       real(8)   wbl                ! Dry weight of living flowers (kg/ha)
       real(8)   wblpot             ! Dry weight of living flowers for potential growth (kg/ha)
 

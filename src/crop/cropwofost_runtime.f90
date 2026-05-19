@@ -52,8 +52,8 @@
         macp, magrs, dvsend, rdm, rdmax, rdi, rri, &  ! icrop/dvs/rd/rdpot retired
         rdc, swrd, swdmi2rd, swrdc, swdrought, swcf, swgc, swinter,       &
         swbulb, swinco, laiem, laiexp, laiexppot, laimax,    &  ! lai/laipot retired
-        cf, ch, cfeic, tsumea, tsumam, tbase, daycrop, lat, daylp,  &  ! tsum retired (→state%crop%common%tsum)
-        siccapact, siccaplai, cropend,                               &  ! [GR-CROPWS B5] cropstart removed (→state%crop%common%cropstart)
+        cfeic, tsumea, tsumam, tbase, daycrop, lat, daylp,  &  ! tsum retired (→state%crop%common%tsum)
+        siccaplai, cropend,                               &  ! [GR-CROPWS B5] cropstart removed (→state%crop%common%cropstart)
         wrtmax, wrtmin, &  ! wso/wst/wlv/wrt retired
         reltr, lrnr, lsnr, nni,           &
         anlv, anst, nmxlv, nmaxlv, nmaxst, nmaxrt, nmaxso, nlai,          &
@@ -63,7 +63,7 @@
         q10, rmr, rml, rms, rmo, rfsetb, frtb, fltb, fstb, fotb, fbltb,  &
         fbl, drbl, drblpot, dwbl, dwblpot, wbl, wblpot,                   &
         cftb, chtb, cfeictb, rdtb, slatb, rgrlai, rlwtb, dtsmtb, rdrrtb, rdrstb, &
-        dlc, dlo, span, spa, ssa, logf, plwt, plwti, tdwi,                &
+        dlc, dlo, span, spa, ssa, logf, tdwi,                &
         lv, lvpot, lvage, lvagepot, sla, slapot,                          &
         ilvold, ilvoldpot, idsl,                                           &
         dwlvcrop, dwlvsoil, gasst, gasstpot,                              &  ! dw* retired
@@ -258,7 +258,7 @@
 ! --- only for bulb crops (tulips etc..)
         if(swbulb.eq.1) then
            fbl = afgen (fbltb,30,state%crop%common%dvs)
-           plwt = plwti
+           state%crop%wofost%plwt = state%crop%wofost%plwti
         endif
         sla(1) = afgen (slatb,30,state%crop%common%dvs)
         lvage(1) = 0.0d0
@@ -366,8 +366,6 @@
 
         ! [SS-GR-CROP A5.1] mirror wofost init-time state
         state%crop%wofost%swbulb    = (swbulb == 1)
-        state%crop%wofost%plwt      = plwt
-        state%crop%wofost%plwti     = plwti
         state%crop%wofost%wbl       = wbl
         state%crop%wofost%wblpot    = wblpot
         state%crop%wofost%dwlvCrop  = dwlvCrop
@@ -380,21 +378,18 @@
 
 ! --- set crop height and cropfactor
       if (swcf.ne.3) then
-        cf = afgen (cftb,(2*magrs),state%crop%common%dvs)
-        ch = afgen (chtb,(2*magrs),state%crop%common%dvs)
+        state%crop%common%cf = afgen (cftb,(2*magrs),state%crop%common%dvs)
+        state%crop%common%ch = afgen (chtb,(2*magrs),state%crop%common%dvs)
       else
-        cf        = afgen (cftb,(2*magrs),state%crop%lai)
+        state%crop%common%cf        = afgen (cftb,(2*magrs),state%crop%lai)
         cfeic     = afgen (cfeictb,(2*magrs),state%crop%lai)
-        ch        = afgen(chtb,(2*magrs),state%crop%lai)
+        state%crop%common%ch        = afgen(chtb,(2*magrs),state%crop%lai)
       endif
-      state%crop%common%cf = cf   ! [SS-GR-CROP A5.1]
-      state%crop%common%ch = ch   ! [SS-GR-CROP A5.1]
       if (swcf.eq.3) state%crop%fixed%cfeic = cfeic   ! [SS-GR-CROP A5.1]
 
 ! --- initial storage on canopy
       if (swinter.eq.3) then
-        siccapact = siccaplai*state%crop%lai
-        state%atmosphere%siccapact = siccapact   ! [SS-GR-ATM A5.2] dual-write
+        state%atmosphere%siccapact = siccaplai*state%crop%lai
       endif
 
 ! --- initialize matric flux potential (SS-CRP C-2.5: hroot/hleaf/mfluxtable
@@ -1200,21 +1195,18 @@
 
 ! --- crop factor or crop height
       if (swcf.ne.3) then
-        cf = afgen (cftb,(2*magrs),state%crop%common%dvs)
-        ch = afgen (chtb,(2*magrs),state%crop%common%dvs)
+        state%crop%common%cf = afgen (cftb,(2*magrs),state%crop%common%dvs)
+        state%crop%common%ch = afgen (chtb,(2*magrs),state%crop%common%dvs)
       else
-        cf        = afgen (cftb,72,state%crop%lai)
+        state%crop%common%cf        = afgen (cftb,72,state%crop%lai)
         cfeic     = afgen (cfeictb,72,state%crop%lai)
-        ch        = afgen(chtb,72,state%crop%lai)
+        state%crop%common%ch        = afgen(chtb,72,state%crop%lai)
       endif
-      state%crop%common%cf = cf   ! [SS-GR-CROP A5.1]
-      state%crop%common%ch = ch   ! [SS-GR-CROP A5.1]
       if (swcf.eq.3) state%crop%fixed%cfeic = cfeic   ! [SS-GR-CROP A5.1]
 
 ! --- update canopy storage capacity
       if (swinter.eq.3) then
-        siccapact = siccaplai*state%crop%lai
-        state%atmosphere%siccapact = siccapact   ! [SS-GR-ATM A5.2] dual-write
+        state%atmosphere%siccapact = siccaplai*state%crop%lai
       endif
 
 ! --- update states of dry matter organs
@@ -1247,7 +1239,7 @@
       character(len=11) date
       character(len=*) outfil,pathwork,project
       integer task,daycrop
-      real(8) t,dvs,tsum   !,state%crop%common%laipot,lai,cf,rdpot,rd,ch,crt0,crt1
+      real(8) t,dvs,tsum   !,state%crop%common%laipot,lai,state%crop%common%cf,rdpot,rd,state%crop%common%ch,crt0,crt1
 !      real(8) cwdmpot,cwdm,wsopot,wso,wstpot,wst,wlvpot,wlv,wrtpot,wrt
       real(8) NUPTT,NFIXTT,ANLVI,ANSTI,ANRTI,ANSOI,ANLV
       real(8) ANST,ANRT,ANSO,NLOSSL,NLOSSR,NLOSSS,NBALAN,NNI

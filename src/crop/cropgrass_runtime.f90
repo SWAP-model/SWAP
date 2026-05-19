@@ -50,14 +50,14 @@
       use variables, only: &                                            ! [SS-GR-CROPRT B8] [GR-CROPWS B4]
         magrs, macp, rid, tbase, daycrop, tdwi, swinco, &  ! [GR-CROPWS B4] icrop/dvs/tsum/wst/wlv/wrt/dw* retired
         wrtmax, wrtmin,           &
-        cf, ch, cfeic, laiem, laiexp, laiexppot, laimax,    &  ! lai/laipot retired
+        cfeic, laiem, laiexp, laiexppot, laimax,    &  ! lai/laipot retired
         cftb, chtb, cfeictb, rdtb, slatb, rgrlai, rlwtb, rfsetb,        &
         frtb, fltb, fstb, rdrrtb, rdrstb,                         &
         rdm, rdmax, rdi, rri, rdc, swrd, swrdc, swdmi2rd,    &  ! rd/rdpot retired
         swdrought, swcf, swgc, swinter, reltr,                           &
         cvl, cvr, cvs, q10, rmr, rml, rms, span, ssa, glaiex, glaiexpot, &
         lv, lvpot, lvage, lvagepot, sla, slapot, ilvold, ilvoldpot,     &
-        twilt, wiltpoint, gwrt, siccapact, siccaplai,                   &
+        twilt, wiltpoint, gwrt, siccaplai,                   &
         cropstartact, cropendact, cropstartpot, cropendpot,             &
         idaysgraz, idaysgrazpot, idregr, idregrpot,                      &  ! [GR-CROPWS B4] cropstart removed (→state%crop%common%cropstart)
         flgrazing, flgrazingpot, flharvest, flharvestpot,               &
@@ -318,21 +318,18 @@
       endif
 
       if (swcf.ne.3) then
-        cf = afgen (cftb,(2*magrs),rid)
-        ch = afgen (chtb,(2*magrs),rid)
+        state%crop%common%cf = afgen (cftb,(2*magrs),rid)
+        state%crop%common%ch = afgen (chtb,(2*magrs),rid)
       else
-        cf        = afgen (cftb,(2*magrs),state%crop%lai)
+        state%crop%common%cf        = afgen (cftb,(2*magrs),state%crop%lai)
         cfeic     = afgen (cfeictb,(2*magrs),state%crop%lai)
-        ch        = afgen(chtb,(2*magrs),state%crop%lai)
+        state%crop%common%ch        = afgen(chtb,(2*magrs),state%crop%lai)
       endif
-      state%crop%common%cf = cf   ! [SS-GR-CROP A5.1]
-      state%crop%common%ch = ch   ! [SS-GR-CROP A5.1]
       if (swcf.eq.3) state%crop%fixed%cfeic = cfeic   ! [SS-GR-CROP A5.1]
 
 ! --- initial storage on canopy
       if (swinter.eq.3) then
-        siccapact = siccaplai*state%crop%lai
-        state%atmosphere%siccapact = siccapact   ! [SS-GR-ATM A5.2] dual-write
+        state%atmosphere%siccapact = siccaplai*state%crop%lai
       endif
 
 ! --- initialize matric flux potential (SS-CRP C-2.5: hroot/hleaf/mfluxtable
@@ -1348,21 +1345,18 @@
 
 ! ---   set crop height and cropfactor
         if (swcf.ne.3) then
-          cf = afgen (cftb,(2*magrs),rid)
-          ch = afgen (chtb,(2*magrs),rid)
+          state%crop%common%cf = afgen (cftb,(2*magrs),rid)
+          state%crop%common%ch = afgen (chtb,(2*magrs),rid)
         else
-          cf = afgen (cftb,(2*magrs),state%crop%lai)
+          state%crop%common%cf = afgen (cftb,(2*magrs),state%crop%lai)
           cfeic = afgen (cfeictb,(2*magrs),state%crop%lai)
-          ch = afgen(chtb,(2*magrs),state%crop%lai)
+          state%crop%common%ch = afgen(chtb,(2*magrs),state%crop%lai)
         endif
-        state%crop%common%cf = cf   ! [SS-GR-CROP A5.1]
-        state%crop%common%ch = ch   ! [SS-GR-CROP A5.1]
         if (swcf.eq.3) state%crop%fixed%cfeic = cfeic   ! [SS-GR-CROP A5.1]
 
 ! ---   update canopy storage capacity
         if (swinter.eq.3) then
-          siccapact = siccaplai*state%crop%lai
-          state%atmosphere%siccapact = siccapact   ! [SS-GR-ATM A5.2] dual-write
+          state%atmosphere%siccapact = siccaplai*state%crop%lai
         endif
 
       endif

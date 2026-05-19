@@ -28,11 +28,11 @@
 !   siccapact, siccaplai, W_root_ss, wiltpoint, twilt, flhydrlift, gc, cfeic (write),
 !   gctb, rdtb, mrftb, wrtb, swinco, reltr.
 ! ----------------------------------------------------------------------
-      use variables, only: magrs, idev, cf, ch, &         ! [GR-CROPWS B1] reads→state; writes remain legacy; dvs/tsum/lai retired
+      use variables, only: magrs, idev, &         ! [GR-CROPWS B1] reads→state; writes remain legacy; dvs/tsum/lai retired
                            rdm, max_resp_factor, swrd,         &  ! rd/rdpot retired
                            swgc, swcf, swinter, swdrought, swdmi2rd,     &
                            tbase, tsumea, tsumam, rdmax,                  &
-                           siccapact, siccaplai, w_root_ss, wiltpoint,   &
+                           siccaplai, w_root_ss, wiltpoint,   &
                            twilt, flhydrlift, gc, cfeic,                 &
                            gctb, rdtb, mrftb, wrtb,                      &
                            swinco, reltr
@@ -133,19 +133,16 @@
       endif
 
 ! --- initial crop factor or crop height
-      cf = afgen (state%crop%fixed%cftb,(2*magrs),state%crop%common%dvs)    ! [GR-CROPWS B1]
-      ch = afgen (state%crop%fixed%chtb,(2*magrs),state%crop%common%dvs)    ! [GR-CROPWS B1]
+      state%crop%common%cf = afgen (state%crop%fixed%cftb,(2*magrs),state%crop%common%dvs)    ! [GR-CROPWS B1]
+      state%crop%common%ch = afgen (state%crop%fixed%chtb,(2*magrs),state%crop%common%dvs)    ! [GR-CROPWS B1]
       if (state%crop%swcf.eq.3) then                                        ! [GR-CROPWS B1] swcf → state%crop%swcf
         cfeic = afgen (state%crop%fixed%cfeictb,(2*magrs),state%crop%common%dvs)  ! [GR-CROPWS B1]
       endif
-      state%crop%common%cf = cf   ! [SS-GR-CROP A5.1]
-      state%crop%common%ch = ch   ! [SS-GR-CROP A5.1]
       if (state%crop%swcf.eq.3) state%crop%fixed%cfeic = cfeic   ! [SS-GR-CROP A5.1] [GR-CROPWS B1]
 
 ! --- initial storage on canopy
       if (swinter.eq.3) then
-        siccapact = siccaplai*state%crop%lai                                      ! state%crop%lai local (just computed above)
-        state%atmosphere%siccapact = siccapact   ! [SS-GR-ATM A5.2] dual-write
+        state%atmosphere%siccapact = siccaplai*state%crop%lai                                      ! state%crop%lai local (just computed above)
       endif
 
 ! --- initial dry weight of roots at soil surface; oxygen module
@@ -216,19 +213,16 @@
       endif
 
 ! --- crop factor or crop height
-      cf        = afgen (state%crop%fixed%cftb,(2*magrs),state%crop%common%dvs)    ! [GR-CROPWS B1]
-      ch        = afgen (state%crop%fixed%chtb,(2*magrs),state%crop%common%dvs)    ! [GR-CROPWS B1]
+      state%crop%common%cf        = afgen (state%crop%fixed%cftb,(2*magrs),state%crop%common%dvs)    ! [GR-CROPWS B1]
+      state%crop%common%ch        = afgen (state%crop%fixed%chtb,(2*magrs),state%crop%common%dvs)    ! [GR-CROPWS B1]
       if (state%crop%swcf.eq.3) then                                              ! [GR-CROPWS B1]
         cfeic     = afgen (state%crop%fixed%cfeictb,(2*magrs),state%crop%common%dvs)  ! [GR-CROPWS B1]
       endif
-      state%crop%common%cf = cf   ! [SS-GR-CROP A5.1]
-      state%crop%common%ch = ch   ! [SS-GR-CROP A5.1]
       if (state%crop%swcf.eq.3) state%crop%fixed%cfeic = cfeic   ! [SS-GR-CROP A5.1] [GR-CROPWS B1]
 
 ! --- update canopy storage capacity
       if (swinter.eq.3) then
-        siccapact = siccaplai*state%crop%lai                                      ! state%crop%lai local (just computed above)
-        state%atmosphere%siccapact = siccapact   ! [SS-GR-ATM A5.2] dual-write
+        state%atmosphere%siccapact = siccaplai*state%crop%lai                                      ! state%crop%lai local (just computed above)
       endif
 
 ! --- dry weight of roots at soil surface; oxygen module

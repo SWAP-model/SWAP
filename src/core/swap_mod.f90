@@ -65,17 +65,17 @@ contains
                             atav, epot, tpot, grain, nrain, &
                             ! [GR-ATM C8] tavd/rh retired from import (no legacy consumers; state written by meteoday)
                             tav, daynrfirst, daynrlast, atmin7, nofd, teprrain, teprsnow, &
-                            siccapact, fimin, isua, avevaptb, avprectb, pfreetb, pstemtb, scanopytb, &
+                            fimin, isua, avevaptb, avprectb, pfreetb, pstemtb, scanopytb, &
                             CNref, CNdry, CNwet, ThetaRef, Runoff_CN, wc_cor, wc10, iCNtab, CNtimTAB, CNrefTAB, &
                             ! [GR-ATM C8] out_tmn/tmx/hum/win/etr/wet/rad retired from import (state written by meteoday)
-                            swcf, swcfbs, gird, flCropEmergence, et0, ew0, es0, &  ! lai retired
+                            swcf, swcfbs, flCropEmergence, et0, ew0, es0, &  ! lai retired
                             ! [SS-GR-CROP A14] crop_common legacy globals; dvs/tsum retired
                             daycrop, icrop, &
-                            rdm, rri, rdi, rdc, ch, cf, &  ! rd/rdpot retired
+                            rdm, rri, rdi, rdc, &  ! rd/rdpot retired
                             cuptgraz, cuptgrazpot, HarLosOrm_tot, &
                             ! [SS-GR-CROP A15] crop_wofost/grass/fixed legacy globals; biomass+dw* retired
                             dwlvCrop, dwlvSoil, plossdm, lossdm, &
-                            swbulb, wbl, wblpot, dwbl, dwblpot, plwt, plwti, &
+                            swbulb, wbl, wblpot, dwbl, dwblpot, &
                             seqgrazmow, seqgrazmowpot, dateharvest, mowrest, &
                             cropstartpot, cropstartact, cropendpot, cropendact, &
                             swpotrelmf, relmf, &
@@ -355,8 +355,6 @@ contains
    state%atmosphere%nofd       = nofd
    state%atmosphere%teprrain   = teprrain
    state%atmosphere%teprsnow   = teprsnow
-
-   state%atmosphere%siccapact = siccapact
    state%atmosphere%fimin     = fimin
    state%atmosphere%isua      = isua
    state%atmosphere%avevaptb  = avevaptb
@@ -383,7 +381,6 @@ contains
    ! [SS-GR-ATM A12] seed state%crop from legacy crop globals; lai retired
    state%crop%swcf            = swcf
    state%crop%swcfbs          = swcfbs
-   state%crop%gird            = gird
    state%crop%flCropEmergence = flCropEmergence
    state%crop%et0             = et0
    state%crop%ew0             = ew0
@@ -402,8 +399,6 @@ contains
    state%crop%common%rri            = rri
    state%crop%common%rdi            = rdi
    state%crop%common%rdc            = rdc
-   state%crop%common%ch             = ch
-   state%crop%common%cf             = cf
    state%crop%common%cuptgraz       = cuptgraz
    state%crop%common%cuptgrazpot    = cuptgrazpot
    state%crop%common%HarLosOrm_tot  = HarLosOrm_tot
@@ -418,9 +413,6 @@ contains
    state%crop%wofost%wblpot   = wblpot
    state%crop%wofost%dwbl     = dwbl
    state%crop%wofost%dwblpot  = dwblpot
-   state%crop%wofost%plwt     = plwt
-   state%crop%wofost%plwti    = plwti
-
    ! [SS-GR-CROP A15] dual-write crop_grass
    state%crop%grass%seqgrazmow    = seqgrazmow
    state%crop%grass%seqgrazmowpot = seqgrazmowpot

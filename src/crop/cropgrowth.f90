@@ -58,11 +58,11 @@
       use variables, only: &                                             ! [SS-GR-CROPRT B1/B6] [GR-CROPWS B3]
         icrop, flCropCalendar, cropstart, cropend, flCropEmergence,         &
         flCropHarvest, flCropReadFile, flCropPrep, flCropSow, flCropGerm,   &
-        swinco, croptype, daycrop, cf, ch,         &  ! tsum/rd/lai/rdpot/wso/wst/wlv/cwdmpot/cwdm retired
+        swinco, croptype, daycrop,         &  ! tsum/rd/lai/rdpot/wso/wst/wlv/cwdmpot/cwdm retired
         tmn, lat, rad,                                         &  ! wrt retired
         cumdens,                                               &
         eff, amaxtb, tmpftb, tmnftb, swdrought, swcrp, dvsend,             &  ! [GR-CROPWS B3]  removed (→)
-        swharv, plwt, remoc, pld, q10,                    &  ! [GR-CROPWS B3] swbulb removed (→state%crop%wofost%swbulb)
+        swharv, remoc, pld, q10,                    &  ! [GR-CROPWS B3] swbulb removed (→state%crop%wofost%swbulb)
         flCropNut, nlue, anlv, anst, nmxlv, nmaxlv, nmaxst,               &
         nmaxrt, lrnr, lsnr, nni, rnflv, rnfst, frnx, fstr, flHarvestDay,  &
         noddrz, pathcrop, cropfil, bgerm, cgerm,                           &
@@ -151,8 +151,6 @@
       if (.not. flCropEmergence .or. flCropHarvest) then
         call nocrop (state)
         ! [SS-GR-CROP A5.1] nocrop writes state%crop%common%dvs/rd directly; mirror remaining legacy zeros
-        state%crop%common%cf         = cf
-        state%crop%common%ch         = ch
       endif
 
 ! --- check crop emergence ----------------------------------------------------
@@ -411,7 +409,7 @@
         ! only for bulb crops (tulips etc..)
         if(state%crop%wofost%swbulb) then                                     ! [GR-CROPWS B3] swbulb → state%crop%wofost%swbulb
           ! remobilisation of carbohydrates from planted material
-          if (state%crop%wofost%plwt.le.(0.0002d0*pld)) then                  ! [GR-CROPWS B3] plwt → state%crop%wofost%plwt
+          if (state%crop%wofost%plwt.le.(0.0002d0*pld)) then                  ! [GR-CROPWS B3] state%crop%wofost%plwt → state%crop%wofost%plwt
             ! no remobilisation at minimum weight motherbulb
             respmo = 0.0d0
             remo = 0.0d0
@@ -427,8 +425,7 @@
               respmo = decrmo
             end if
             ! weight motherbulb decreases by remobilisation and respiration
-            plwt = state%crop%wofost%plwt - remo - respmo                     ! [GR-CROPWS B3] RHS plwt → state%crop%wofost%plwt
-            state%crop%wofost%plwt = plwt   ! [SS-GR-CROP A5.1]
+            state%crop%wofost%plwt = state%crop%wofost%plwt - remo - respmo                     ! [GR-CROPWS B3] RHS state%crop%wofost%plwt → state%crop%wofost%plwt
           endif
         endif
 
