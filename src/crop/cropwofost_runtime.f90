@@ -50,7 +50,7 @@
 ! ----------------------------------------------------------------------
       use variables, only: &                                            ! [SS-GR-CROPRT B7] [GR-CROPWS B5]
         macp, magrs, dvsend, rdmax, &  ! icrop/dvs/rd/rdpot retired
-        swrd, swdmi2rd, swrdc, swdrought, swcf, swgc, swinter,       &
+        swdrought, swcf, swgc, swinter,       &  ! swrd/swdmi2rd/swrdc retired
         swbulb, swinco, laiem, laiexp, laiexppot, laimax,    &  ! lai/laipot retired
         cfeic, tsumea, tsumam, tbase, daycrop, daylp,  &  ! tsum retired (→state%crop%common%tsum)
         siccaplai, cropend,                               &  ! [GR-CROPWS B5] cropstart removed (→state%crop%common%cropstart)
@@ -234,11 +234,11 @@
       endif
 
 ! --- maximum rooting depth
-      if (swrd.eq.1) then
+      if (state%crop%common%swrd.eq.1) then
         state%crop%common%rdm = rdmax
-      elseif (swrd.eq.2) then
+      elseif (state%crop%common%swrd.eq.2) then
         state%crop%common%rdm = min(rdmax,state%crop%common%rdc)
-      elseif (swrd.eq.3) then
+      elseif (state%crop%common%swrd.eq.3) then
         state%crop%common%rdc = afgen (rlwtb,22,wrtmax)
         state%crop%common%rdm = min(rdmax,state%crop%common%rdc)
       endif
@@ -341,12 +341,12 @@
         endif
 
 ! --- actual rooting depth
-        if (swrd.eq.1) then
+        if (state%crop%common%swrd.eq.1) then
           state%crop%common%rd = afgen (rdtb,22,state%crop%common%dvs)
           state%crop%common%rd = min(state%crop%common%rd,state%crop%common%rdm)
-        elseif (swrd.eq.2) then
+        elseif (state%crop%common%swrd.eq.2) then
           state%crop%common%rd = min(state%crop%common%rdi,state%crop%common%rdm)
-        elseif (swrd.eq.3) then
+        elseif (state%crop%common%swrd.eq.3) then
           state%crop%common%rdi = afgen (rlwtb,22,state%crop%wofost%wrt)
           state%crop%common%rd = min(state%crop%common%rdi,state%crop%common%rdm)
         endif
@@ -521,7 +521,7 @@
       grrtpot = fr*dmipot
       ! in case of SWRD = 3: after reaching maximum live weight of wrtmax, the
       ! growth of the roots is balanced by the death of root tissue
-      if (swrd.eq.3 .and. state%crop%wofost%wrtpot.gt.wrtmax) then
+      if (state%crop%common%swrd.eq.3 .and. state%crop%wofost%wrtpot.gt.wrtmax) then
         drrtpot = grrtpot
         drrtpot = max(drrtpot,state%crop%wofost%wrtpot*afgen (rdrrtb,30,state%crop%common%dvs))
       else  
@@ -802,7 +802,7 @@
 
 ! --- growth rate roots and aerial parts
       call relgrwt(dmi,fr,fl,fs,fo,grrt,grlv,grst,grso,admi)
-      if (swrd.eq.3 .and. state%soilwater%flWrtNonox) grrt = 0.d0   ! [SS-GR-CROPWS A3] present(state) guard removed
+      if (state%crop%common%swrd.eq.3 .and. state%soilwater%flWrtNonox) grrt = 0.d0   ! [SS-GR-CROPWS A3] present(state) guard removed
 
 ! --- death of leaves due to water stress or high lai or nitrogen stress
       call deaths(flcropnut,state%crop%wofost%wlv,state%crop%kdif,state%crop%lai,NNI,perdl,rdrns,reltr,dslv)
@@ -820,7 +820,7 @@
 ! --- death rate roots
       ! in case of SWRD = 3: after reaching maximum live weight of wrtmax, the
       ! growth of the roots is balanced by the death of root tissue
-      if (swrd.eq.3 .and. state%crop%wofost%wrt.gt.wrtmax) then
+      if (state%crop%common%swrd.eq.3 .and. state%crop%wofost%wrt.gt.wrtmax) then
         drrt = grrt
         drrt = max(drrt,state%crop%wofost%wrt*afgen (rdrrtb,30,state%crop%common%dvs))
       else  
@@ -1150,16 +1150,16 @@
       endif
 
 ! --- update normalized cumulative root density based on root extraction or stress (cumdens)
-      if (swrdc.eq.1) call update_rootdistribution(state)
+      if (state%crop%common%swrdc.eq.1) call update_rootdistribution(state)
       
 ! --- root extension
-      if (swrd.eq.1) then
+      if (state%crop%common%swrd.eq.1) then
 
         state%crop%common%rdpot = afgen (rdtb,22,state%crop%common%dvs)
         state%crop%common%rdpot = min(state%crop%common%rdpot,state%crop%common%rdm)
         state%crop%common%rd    = state%crop%common%rdpot
 
-      elseif (swrd.eq.2) then
+      elseif (state%crop%common%swrd.eq.2) then
 
         rrpot = min (state%crop%common%rdm-state%crop%common%rdpot,state%crop%common%rri)
         if (fr.le.0.0d0 .or. state%crop%wofost%pgasspot.lt.1.0d0) rrpot = 0.0d0
@@ -1168,10 +1168,10 @@
         rr = min (state%crop%common%rdm-state%crop%common%rd,state%crop%common%rri)
         if (fr.le.0.0d0 .or. state%crop%wofost%pgass.lt.1.0d0 .or.                      &
      &      state%soilwater%flWrtNonox) rr = 0.0d0   ! [SS-GR-CROPWS A3] present(state) guard removed
-        if (swdmi2rd.eq.1 .and. state%crop%wofost%pgass.ge.1.0d0)              rr = rr * gass/state%crop%wofost%pgass
+        if (state%crop%common%swdmi2rd.eq.1 .and. state%crop%wofost%pgass.ge.1.0d0)              rr = rr * gass/state%crop%wofost%pgass
         state%crop%common%rd = state%crop%common%rd + rr
 
-      elseif (swrd.eq.3) then
+      elseif (state%crop%common%swrd.eq.3) then
         state%crop%common%rdpot = afgen (rlwtb,22,state%crop%wofost%wrtpot)
         state%crop%common%rdpot = min(state%crop%common%rdpot,state%crop%common%rdm)
         state%crop%common%rd = afgen (rlwtb,22,state%crop%wofost%wrt)

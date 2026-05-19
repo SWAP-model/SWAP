@@ -63,6 +63,11 @@ module crop_common_state_mod
       real(real64) :: albedo         = 0.0_real64     !! crop reflection coefficient (-)
       real(real64) :: rsc            = 0.0_real64     !! minimum canopy resistance dry crop (T/L)
 
+      ! [Sweep 2] per-rotation switches mirrored from active rotation's cfg
+      integer      :: swrd           = 0              !! root depth method (1=table,2=daily,3=biomass)
+      integer      :: swdmi2rd       = 0              !! transpiration limit on root depth (0/1)
+      integer      :: swrdc          = 0              !! root density input (0/1)
+
    contains
       procedure :: init => crop_common_state_init
    end type crop_common_state_t

@@ -71,8 +71,8 @@ contains
          ! Interception — DEFERRED Phase C3
          swinter,                                                             &  ! cofab retired
          ! Root depth — DEFERRED Phase C3
-         swrd, swdmi2rd, rdctb, rdtb, rlwtb, wrtmax,         &  ! rdi/rri/rdc retired
-         swrdc, cumdens,                                                      &
+         rdctb, rdtb, rlwtb, wrtmax,                                          &  ! swrd/swdmi2rd/swrdc retired
+         cumdens,                                                             &
          ! Harvest — DEFERRED Phase C3
          dvsend, swharv,                                                      &
          swpotrelmf,                                                          &  ! relmf retired
@@ -381,7 +381,7 @@ contains
       if (swcompensate > 0) swstressor = cfg%compensate%swstressor
 
       ! Part 10: root depth and density (readwofost lines 2993-3031)
-      swrdc = cfg%root%swrdc
+      state%crop%common%swrdc = cfg%root%swrdc
       if (allocated(cfg%root%rdctb)) then
          block
             integer :: nr, j
@@ -392,8 +392,8 @@ contains
             end do
          end block
       end if
-      swrd = cfg%root%swrd
-      select case (swrd)
+      state%crop%common%swrd = cfg%root%swrd
+      select case (state%crop%common%swrd)
       case (1)
          if (allocated(cfg%root%rdtb)) then
             block
@@ -409,7 +409,7 @@ contains
          state%crop%common%rdi = cfg%root%rdi
          state%crop%common%rri = cfg%root%rri
          state%crop%common%rdc = cfg%root%rdc
-         swdmi2rd = cfg%root%swdmi2rd
+         state%crop%common%swdmi2rd = cfg%root%swdmi2rd
       case (3)
          if (allocated(cfg%root%rlwtb)) then
             block

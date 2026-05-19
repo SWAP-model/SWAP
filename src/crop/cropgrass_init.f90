@@ -54,8 +54,8 @@ contains
          frtb, fltb, fstb,                                                    &
          ! Death rates — DEFERRED Phase C3
          perdl, rdrrtb, rdrstb,                                               &
-         ! Root depth and density — DEFERRED Phase C3
-         swrd, swdmi2rd, swrdc, rdctb, rdtb, rlwtb, wrtmax,  &  ! rdi/rri/rdc retired
+         ! Root depth and density — DEFERRED Phase C3; swrd/swdmi2rd/swrdc/rdi/rri/rdc retired
+         rdctb, rdtb, rlwtb, wrtmax,                         &
          cumdens,                                                             &
          ! Oxygen stress — DEFERRED Phase C3
          swoxygen, swWrtNonox, aeratecrit,                                    &
@@ -286,15 +286,15 @@ contains
       ! swcompensate=2 (Walsum dcritrtz) is stub-guarded above.
 
       ! Part 15: rooting (readgrass lines 3835-3873)
-      swrdc = cfg%swrdc
+      state%crop%common%swrdc = cfg%swrdc
       if (allocated(cfg%rdctb)) call copy_table(cfg%rdctb, rdctb)
-      swrd = cfg%swrd
+      state%crop%common%swrd = cfg%swrd
       ! swrd=1 is still stub-guarded above; swrd=2 and swrd=3 are both active.
       if (cfg%swrd == 2) then
          state%crop%common%rdi = cfg%rdi
          state%crop%common%rri = cfg%rri
          state%crop%common%rdc = cfg%rdc
-         swdmi2rd = cfg%swdmi2rd
+         state%crop%common%swdmi2rd = cfg%swdmi2rd
       else if (cfg%swrd == 3) then
          ! Legacy readgrass:3868-3874 reads rlwtb (22-element flat pair table)
          ! and wrtmax for biomass-driven root extension.

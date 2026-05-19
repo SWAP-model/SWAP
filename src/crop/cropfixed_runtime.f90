@@ -29,8 +29,8 @@
 !   gctb, rdtb, mrftb, wrtb, swinco, reltr.
 ! ----------------------------------------------------------------------
       use variables, only: magrs, idev, &         ! [GR-CROPWS B1] reads→state; writes remain legacy; dvs/tsum/lai retired
-                           max_resp_factor, swrd,         &  ! rd/rdpot retired
-                           swgc, swcf, swinter, swdrought, swdmi2rd,     &
+                           max_resp_factor,                        &  ! rd/rdpot/swrd retired
+                           swgc, swcf, swinter, swdrought,         &  ! swdmi2rd retired
                            tbase, tsumea, tsumam, rdmax,                  &
                            siccaplai, w_root_ss, wiltpoint,   &
                            twilt, flhydrlift, gc, cfeic,                 &
@@ -101,7 +101,7 @@
       end block
 
 ! --- maximum rooting depth
-      if (swrd.eq.1) then
+      if (state%crop%common%swrd.eq.1) then
         state%crop%common%rdm = rdmax
       else
         state%crop%common%rdm = min(rdmax,state%crop%common%rdc)   ! [GR-CROPWS B1] state%crop%common%rdc → state%crop%common%rdc
@@ -114,7 +114,7 @@
         state%crop%common%dvs = 0.0d0
 
 ! --- actual rooting depth
-        if (swrd.eq.1) then
+        if (state%crop%common%swrd.eq.1) then
           state%crop%common%rd = afgen (rdtb,22,state%crop%common%dvs)                    ! dvs is 0.0 here (just assigned), no separate read needed
           state%crop%common%rd = min(state%crop%common%rd,state%crop%common%rdm)                            ! [GR-CROPWS B1] state%crop%common%rdm → state%crop%common%rdm
         else
@@ -233,7 +233,7 @@
       case (4)
           
 ! --- root extension
-      if (swrd.eq.1) then
+      if (state%crop%common%swrd.eq.1) then
         state%crop%common%rdpot = afgen (rdtb,22,state%crop%common%dvs)                  ! [GR-CROPWS B1]
         state%crop%common%rdpot = min(state%crop%common%rdpot,state%crop%common%rdm)                       ! [GR-CROPWS B1]
         state%crop%common%rd    = state%crop%common%rdpot
@@ -246,7 +246,7 @@
         rr = min (state%crop%common%rdm-state%crop%common%rd,state%crop%common%rri)  ! [GR-CROPWS B1]
         if (state%atmosphere%ptra.lt.nihil .or.             &
      &      state%soilwater%flWrtNonox) rr = 0.0d0   ! [SS-GR-CROPWS A2] present(state) guard removed
-        if (swdmi2rd.eq.1 .and. state%atmosphere%ptra.ge.nihil) rr = rr * state%soilwater%tra/state%atmosphere%ptra  ! [SS-SWC S-2.7]
+        if (state%crop%common%swdmi2rd.eq.1 .and. state%atmosphere%ptra.ge.nihil) rr = rr * state%soilwater%tra/state%atmosphere%ptra  ! [SS-SWC S-2.7]
         state%crop%common%rd = state%crop%common%rd + rr                                 ! [GR-CROPWS B1]
       endif
 
