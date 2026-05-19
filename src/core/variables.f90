@@ -529,7 +529,7 @@
       logical   flGrazingpot        ! Flag indicating that cattle grazes the grass, potential run
       character(len=40) cropfil(macrop)   ! Array with names of crop files
       character(len=80) pathcrop          ! Path to folder with crop input files
-      character(len=200) inifil           ! Name of file with output data of previous day which is used for initialization
+      ! [GR-CROP-DVS] inifil retired — dead (no readers, no writers)
 
 !     Harvest Grass
       real(8)   dmmowtb(20)             ! Array with threshold of mowing event as function of above ground dry matter
@@ -1267,7 +1267,7 @@
 ! --- macropore variables (selected — most retired by deletion)
       real(8) ArMpTp               ! [retired-zero] kept: ArMpSs assignment
       real(8) cQMpLatSs            ! [retired-zero] kept: soilhydraulics zero-write
-      real(8) cQMpOutDrRap         ! [retired-zero] kept: waterbalance wbalance term
+      ! [GR-CROP-DVS] cQMpOutDrRap retired — dead
       ! [SS-GR-FINAL D1] dFdhMp retired — always 0; 0 consumers
       ! [SS-TC] retired 2026-05-12 — moved to state%timecontrol%dtold (ADR 0041)
       ! real(8) dtold                ! moved to state%timecontrol%dtold

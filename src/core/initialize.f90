@@ -527,7 +527,6 @@
       ! ArMpSs               = 0.0d0
       ArMpTp               = 0.0d0
       cQMpLatSs            = 0.0d0
-      cQMpOutDrRap         = 0.0d0
       ! [SS-GR-FINAL D1] dFdhMp zero-fill dropped — declaration retired
       iQMpOutDrRap         = 0.0d0
       ! [SS-GR-CROPRT A2] iQInTopLatDm1/2/iQInTopVrtDm1/2 zero-fills dropped — declarations retired (ADR 0040)
