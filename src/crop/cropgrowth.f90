@@ -58,8 +58,7 @@
       use variables, only: &                                             ! [SS-GR-CROPRT B1/B6] [GR-CROPWS B3]
         icrop, flCropCalendar, cropstart, cropend, flCropEmergence,         &
         flCropHarvest, flCropReadFile, flCropPrep, flCropSow, flCropGerm,   &
-        swinco, croptype, daycrop, cf, ch,         &  ! tsum/rd/lai/rdpot retired
-        cwdm,                       &  ! wso/wst/wlv retired
+        swinco, croptype, daycrop, cf, ch,         &  ! tsum/rd/lai/rdpot/wso/wst/wlv/cwdmpot/cwdm retired
         tmn, lat, rad,                                         &  ! wrt retired
         albedo, rsc, cumdens,                                               &
         eff, amaxtb, tmpftb, tmnftb, swdrought, swcrp, dvsend,             &  ! [GR-CROPWS B3] kdif removed (→state%crop%kdif)
@@ -156,7 +155,6 @@
         state%crop%common%ch         = ch
         state%crop%common%albedo     = albedo   ! [SS-GR-CROPRT A5]
         state%crop%common%rsc        = rsc      ! [SS-GR-CROPRT A5]
-        state%crop%wofost%cwdm       = cwdm
       endif
 
 ! --- check crop emergence ----------------------------------------------------

@@ -393,7 +393,7 @@
       real(8)   cvo                ! Efficiency of assimilate conversion into storage organs (kg/kg)
       real(8)   cvr                ! Efficiency of assimilate conversion into roots (kg/kg)
       real(8)   cvs                ! Efficiency of assimilate conversion into stems (kg/kg)
-      real(8)   cwdm               ! Dry weight of dead and living plant organs (kg/ha)
+      ! [GR-CROP-DVS] cwdm retired — see state%crop%wofost%cwdm
       ! [GR-CROP-DVS] cwdmpot retired — see state%crop%wofost%cwdmpot
       real(8)   difpp              ! Diffuse irradiation perpendicular to direction of light (J/m2/s)
       real(8)   dlc                ! Shortest day length (T) for any crop development

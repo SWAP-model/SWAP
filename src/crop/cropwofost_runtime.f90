@@ -55,7 +55,7 @@
         cf, ch, cfeic, tsumea, tsumam, tbase, daycrop, lat, daylp,  &  ! tsum retired (→state%crop%common%tsum)
         kdif, siccapact, siccaplai, cropend,                               &  ! [GR-CROPWS B5] cropstart removed (→state%crop%common%cropstart)
         wrtmax, wrtmin, &  ! wso/wst/wlv/wrt retired
-        cwdm, pgass, pgasspot, reltr, lrnr, lsnr, nni,           &
+        pgass, pgasspot, reltr, lrnr, lsnr, nni,           &
         anlv, anst, nmxlv, nmaxlv, nmaxst, nmaxrt, nmaxso, nlai,          &
         rnflv, rnfst, rnfrt, fstr, fntrt, npart, nfixf, nsla,             &
         cvl, cvo, cvr, cvs,                                                &
@@ -359,7 +359,7 @@
         gasstpot = 0.0d0
         mrest = 0.0d0 
         mrestpot = 0.0d0 
-        cwdm = 0.0d0
+        state%crop%wofost%cwdm = 0.0d0
         state%crop%wofost%cwdmpot = 0.0d0
 ! --- only for vernalisation
         vern = 0.0d0             ! vernalisation state (d)
@@ -382,7 +382,6 @@
         state%crop%wofost%dwstpot   = dwstpot
         state%crop%wofost%dwbl      = dwbl
         state%crop%wofost%dwblpot   = dwblpot
-        state%crop%wofost%cwdm      = cwdm
 
 ! --- end skip above initialization if crop parameters are read from *.END file
       endif
@@ -955,11 +954,11 @@
 !     twrt = wrt+dwrt
       twlv = state%crop%wofost%wlv+dwlv
       twst = state%crop%wofost%wst+dwst
-      cwdm = twlv+twst+state%crop%wofost%wso
+      state%crop%wofost%cwdm = twlv+twst+state%crop%wofost%wso
 ! --- only for bulb crops (tulips etc..)
       if(swbulb.eq.1) then
         twbl = wbl + dwbl
-        cwdm = cwdm + twbl
+        state%crop%wofost%cwdm = state%crop%wofost%cwdm + twbl
       endif
 
 ! --- total gross assimilation and maintenance respiration
@@ -1009,7 +1008,6 @@
       state%crop%wofost%dwbl      = dwbl
       state%crop%wofost%dwlvCrop  = dwlvCrop
       state%crop%wofost%dwlvSoil  = dwlvSoil
-      state%crop%wofost%cwdm      = cwdm
       state%crop%wofost%pgass     = pgass
 
       return

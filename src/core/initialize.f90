@@ -686,7 +686,6 @@
       cvo                = 0.0d0 
       cvr                = 0.0d0 
       cvs                = 0.0d0 
-      cwdm               = 0.0d0 
       dlc                = 0.0d0 
       dlo                = 0.0d0 
       dtsmtb             = 0.0d0
