@@ -383,7 +383,7 @@
       real(8)   ch                 ! Crop height (cm)
       real(8)   chtb(2*magrs)      ! Array with crop heights (cm) as function of development stage
       real(8)   c_mroot            ! Maintenance coefficient of root [0.0..1.0 kg O2/kg/d, R]
-      real(8)   cofab              ! Interception coefficient Von Hoyningen-Hune and Braden (L)
+      ! [GR-CROP-DVS] cofab retired — see state%crop%cofab
       real(8)   cropend(macrop)    ! Array with crop end dates
       real(8)   cropstart(macrop)  ! Array with crop start dates
       real(8)   cumdens(202)       ! Cumulative root density as function of relative soil depth (-)
@@ -430,8 +430,8 @@
       real(8)   hlim3h             ! Pressure head below which water uptake reduction starts at high Tpot (L)
       real(8)   hlim3l             ! Pressure head below which water uptake reduction starts at low Tpot (L)
       real(8)   hlim4              ! Wilting point, no root water uptake at lower soil water pressure heads (L)
-      real(8)   kdif               ! Extinction coefficient for diffuse visible light (-)
-      real(8)   kdir               ! Extinction coefficient for direct visible light (-)
+      ! [GR-CROP-DVS] kdif retired — see state%crop%kdif
+      ! [GR-CROP-DVS] kdir retired — see state%crop%kdir
       ! [GR-CROP-DVS] lai retired — see state%crop%lai
       real(8)   laiem              ! Leaf area index (-) at crop emergence
       real(8)   laiexp             ! Leaf area index (-) in exponential growth stage of actual crop
@@ -811,7 +811,7 @@
       real(8)   o2_mplus1(macp)           ! M+1 per node for VG equation
       logical   o2_ini_stress             ! O2 stress initialization flag (initialized to .true. via data statement)
       
-      real(8)   cfbs               ! Coefficient (-) to convert potential evapotranspiration into potential evaporation
+      ! [GR-CROP-DVS] cfbs retired — see state%crop%cfbs
       ! [SS-SWC] retired 2026-05-12 — moved to state%soilwater (ADR 0038)
       ! real(8)   cgird              ! Cumulative amount of gross irrigation (L)
       ! real(8)   cinund             ! Cumulative amount of inundation (L)

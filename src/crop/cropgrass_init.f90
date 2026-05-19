@@ -37,7 +37,7 @@ contains
          ! ET-related — DEFERRED Phase C3
          swcf, albedo, rsw, rsc, cftb, chtb,                                &
          ! Interception — DEFERRED Phase C3
-         swinter, cofab,                                                      &
+         swinter,                                                             &  ! cofab retired
          ! Crop state — DEFERRED Phase C3
          tdwi, laiem, rgrlai,                                                 &
          ! Start-of-growth trigger — DEFERRED Phase C3
@@ -45,7 +45,7 @@ contains
          ! Green area — DEFERRED Phase C3
          slatb, ssa, span, tbase,                                             &
          ! Assimilation — DEFERRED Phase C3
-         kdif, kdir, eff, amaxtb, tmpftb, tmnftb,                            &
+         eff, amaxtb, tmpftb, tmnftb,                            &  ! kdif/kdir retired
          ! Biomass conversion — DEFERRED Phase C3
          cvl, cvr, cvs,                                                       &
          ! Maintenance respiration — DEFERRED Phase C3
@@ -186,8 +186,7 @@ contains
       ! Part 2: interception (readgrass lines 3560-3585)
       swinter = cfg%swinter
       if (cfg%swinter == 1) then
-         cofab = cfg%cofab
-         state%crop%cofab = cofab   ! [SS-GR-ATM A5.1] runtime dual-write
+         state%crop%cofab = cfg%cofab
       end if
 
       ! Part 3: initial crop state (readgrass lines 3604-3606)
@@ -206,10 +205,8 @@ contains
       tbase = cfg%tbase
 
       ! Part 6: assimilation (readgrass lines 3623-3628)
-      kdif = cfg%kdif
-      kdir = cfg%kdir
-      state%crop%kdif = kdif   ! [SS-GR-ATM A5.1] runtime dual-write
-      state%crop%kdir = kdir   ! [SS-GR-ATM A5.1] runtime dual-write
+      state%crop%kdif = cfg%kdif
+      state%crop%kdir = cfg%kdir
       eff  = cfg%eff
       if (allocated(cfg%amaxtb))  call copy_table(cfg%amaxtb,  amaxtb)
       if (allocated(cfg%tmpftb))  call copy_table(cfg%tmpftb,  tmpftb)

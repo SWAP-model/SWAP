@@ -255,7 +255,7 @@ contains
 
       ! Evaporation sub-section
       swcfbs = config%meteo%evaporation%swcfbs
-      cfbs   = config%meteo%evaporation%cfbs
+      state%crop%cfbs = config%meteo%evaporation%cfbs
       ! Per Discovery #1 in configuration-schema.md, both legacy keys
       ! (cofredbl=Black, cofredbo=Boesten/Stroosnijder) target the same
       ! legacy global `cofred`; the schema separates them but only one

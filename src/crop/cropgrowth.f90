@@ -61,7 +61,7 @@
         swinco, croptype, daycrop, cf, ch,         &  ! tsum/rd/lai/rdpot/wso/wst/wlv/cwdmpot/cwdm retired
         tmn, lat, rad,                                         &  ! wrt retired
         albedo, rsc, cumdens,                                               &
-        eff, amaxtb, tmpftb, tmnftb, swdrought, swcrp, dvsend,             &  ! [GR-CROPWS B3] kdif removed (→state%crop%kdif)
+        eff, amaxtb, tmpftb, tmnftb, swdrought, swcrp, dvsend,             &  ! [GR-CROPWS B3]  removed (→)
         swharv, plwt, remoc, pld, q10,                    &  ! [GR-CROPWS B3] swbulb removed (→state%crop%wofost%swbulb)
         flCropNut, nlue, anlv, anst, nmxlv, nmaxlv, nmaxst,               &
         nmaxrt, lrnr, lsnr, nni, rnflv, rnfst, frnx, fstr, flHarvestDay,  &
@@ -443,7 +443,7 @@
 
 
         ! potential assimilation
-        call totass (dayl,amax,effc,state%crop%common%laipot,state%crop%kdif,rad,difpp,dsinbe,sinld,cosld,dtgapot)  ! [GR-CROPWS B3] kdif → state%crop%kdif
+        call totass (dayl,amax,effc,state%crop%common%laipot,state%crop%kdif,rad,difpp,dsinbe,sinld,cosld,dtgapot)  ! [GR-CROPWS B3] state%crop%kdif → state%crop%kdif
 
         ! correction for low minimum temperature
         dtgapot = dtgapot * afgen (tmnftb,30,tmnr)
@@ -464,7 +464,7 @@
 
 
         ! actual assimilation
-        call totass (dayl,amax,effc,state%crop%lai,state%crop%kdif,rad,difpp,dsinbe,sinld,cosld,dtga)  ! [GR-CROPWS B3] kdif → state%crop%kdif; state%crop%lai=legacy
+        call totass (dayl,amax,effc,state%crop%lai,state%crop%kdif,rad,difpp,dsinbe,sinld,cosld,dtga)  ! [GR-CROPWS B3] state%crop%kdif → state%crop%kdif; state%crop%lai=legacy
 
         ! correction for low minimum temperature
         dtga = dtga * afgen (tmnftb,30,tmnr)

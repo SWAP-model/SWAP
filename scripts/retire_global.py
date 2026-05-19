@@ -29,7 +29,7 @@ RANGES = {
     'src/crop/cropwofost_runtime.f90': (19, 1282),
     'src/crop/cropgrass_runtime.f90': (18, 1430),
     'src/crop/cropfixed_runtime.f90': (15, 274),
-    'src/crop/cropgrowth.f90': (20, 627),
+    'src/crop/cropgrowth.f90': (20, 610),
     'src/crop/cropgrowth_helpers.f90': (28, 380),
     'src/crop/rootextraction.f90': (31, 1008),
     'src/crop/oxygenstress.f90': (96, 660),

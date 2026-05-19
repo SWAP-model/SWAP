@@ -53,7 +53,7 @@
         rdc, swrd, swdmi2rd, swrdc, swdrought, swcf, swgc, swinter,       &
         swbulb, swinco, laiem, laiexp, laiexppot, laimax,    &  ! lai/laipot retired
         cf, ch, cfeic, tsumea, tsumam, tbase, daycrop, lat, daylp,  &  ! tsum retired (→state%crop%common%tsum)
-        kdif, siccapact, siccaplai, cropend,                               &  ! [GR-CROPWS B5] cropstart removed (→state%crop%common%cropstart)
+        siccapact, siccaplai, cropend,                               &  ! [GR-CROPWS B5] cropstart removed (→state%crop%common%cropstart)
         wrtmax, wrtmin, &  ! wso/wst/wlv/wrt retired
         reltr, lrnr, lsnr, nni,           &
         anlv, anst, nmxlv, nmaxlv, nmaxst, nmaxrt, nmaxso, nlai,          &
@@ -545,7 +545,7 @@
       grlvpot = fl*admipot
 
 ! --- death of leaves due to water stress or high lai
-      laicr = 3.2d0/kdif
+      laicr = 3.2d0/state%crop%kdif
       dslvpot = state%crop%wofost%wlvpot*max(0.0d0,min(0.03d0,0.03d0*                     &
      &           (state%crop%common%laipot-laicr)/laicr))
 
@@ -819,7 +819,7 @@
       if (swrd.eq.3 .and. state%soilwater%flWrtNonox) grrt = 0.d0   ! [SS-GR-CROPWS A3] present(state) guard removed
 
 ! --- death of leaves due to water stress or high lai or nitrogen stress
-      call deaths(flcropnut,state%crop%wofost%wlv,kdif,state%crop%lai,NNI,perdl,rdrns,reltr,dslv)
+      call deaths(flcropnut,state%crop%wofost%wlv,state%crop%kdif,state%crop%lai,NNI,perdl,rdrns,reltr,dslv)
 
 ! --- death of leaves due to exceeding life span:
       call deatha(dslv,delt,ilvold,lv,lvage,span,i1,dalv)

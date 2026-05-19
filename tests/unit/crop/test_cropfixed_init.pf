@@ -4,10 +4,10 @@ subroutine test_cropfixed_init_writes_scalars()
    use cropfixed_init_mod, only: cropfixed_init_from_config
    use cropfixed_config_mod, only: cropfixed_config_t
    use swap_state_mod, only: swap_state_t
-   use variables, only: idev, kdif, kdir, hlim3h, hlim3l, hlim4, &
-                         adcrh, adcrl, cofab, swgc, swcf, swrd, swoxygen, &
+   use variables, only: idev, hlim3h, hlim3l, hlim4, &
+                         adcrh, adcrl, swgc, swcf, swrd, swoxygen, &
                          swdrought, swsalinity, swcompensate, swinter, &
-                         albedo, rsc, rsw
+                         albedo, rsc, rsw  ! kdif/kdir/cofab retired (→state%crop%X)
    type(cropfixed_config_t) :: cfg
    type(swap_state_t) :: state  ! [SS-GR-ATM A5.1] dual-write target
    integer :: lcc_out
@@ -38,8 +38,8 @@ subroutine test_cropfixed_init_writes_scalars()
 
    @assertEqual(1,    idev)
    @assertEqual(366,  lcc_out)
-   @assertEqual(0.75d0, kdif, 1.0d-12)
-   @assertEqual(0.75d0, kdir, 1.0d-12)
+   @assertEqual(0.75d0, state%crop%kdif, 1.0d-12)
+   @assertEqual(0.75d0, state%crop%kdir, 1.0d-12)
    @assertEqual(1,    swgc)
    @assertEqual(1,    swcf)
    @assertEqual(1,    swrd)
@@ -53,7 +53,7 @@ subroutine test_cropfixed_init_writes_scalars()
    @assertEqual(-8000.0d0, hlim4,  1.0d-12)
    @assertEqual(0.5d0,     adcrh,  1.0d-12)
    @assertEqual(0.1d0,     adcrl,  1.0d-12)
-   @assertEqual(0.25d0,    cofab,  1.0d-12)
+   @assertEqual(0.25d0,    state%crop%cofab,  1.0d-12)
 
    ! ETref defaults are reset for swcf=1 path
    @assertEqual(0.23d0, albedo, 1.0d-12)

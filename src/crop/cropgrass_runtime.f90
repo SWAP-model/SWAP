@@ -52,7 +52,7 @@
         wrtmax, wrtmin,           &
         cf, ch, cfeic, laiem, laiexp, laiexppot, laimax,    &  ! lai/laipot retired
         cftb, chtb, cfeictb, rdtb, slatb, rgrlai, rlwtb, rfsetb,        &
-        frtb, fltb, fstb, rdrrtb, rdrstb, kdif,                         &
+        frtb, fltb, fstb, rdrrtb, rdrstb,                         &
         rdm, rdmax, rdi, rri, rdc, swrd, swrdc, swdmi2rd,    &  ! rd/rdpot retired
         swdrought, swcf, swgc, swinter, reltr,                           &
         cvl, cvr, cvs, q10, rmr, rml, rms, span, ssa, glaiex, glaiexpot, &
@@ -502,7 +502,7 @@
 
 ! ---   death of leaves due to water stress or high lai
         dslv1pot = 0.0d0
-        laicr = 3.2d0/kdif
+        laicr = 3.2d0/state%crop%kdif
         dslv2pot=state%crop%wofost%wlvpot*max(0.0d0,                                      &
      &                  min(0.03d0,0.03d0*(state%crop%common%laipot-laicr)/laicr))
         dslvpot = max (dslv1pot,dslv2pot) 
@@ -968,7 +968,7 @@
 
 ! ---   death of leaves due to water stress or high lai
         dslv1 = state%crop%wofost%wlv*(1.0d0-reltr)*perdl
-        laicr = 3.2d0/kdif
+        laicr = 3.2d0/state%crop%kdif
         dslv2 = state%crop%wofost%wlv*max(0.0d0,min(0.03d0,0.03d0*(state%crop%lai-laicr)/laicr))
         dslv = max (dslv1,dslv2) 
 

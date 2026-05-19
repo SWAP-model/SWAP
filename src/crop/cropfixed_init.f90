@@ -31,7 +31,7 @@ contains
                             ! DEFERRED: idev/tsumea/tsumam/tbase — crop development config; Phase C3
                             idev, tsumea, tsumam, tbase,                  &
                             ! DEFERRED: kdif/kdir/gctb/swgc — radiation/crop factor config; Phase C3
-                            kdif, kdir, gctb, swgc,                       &
+                            gctb, swgc,                       &  ! kdif/kdir retired
                             ! DEFERRED: cftb/chtb/cfeictb/swcf/albedo/rsc/rsw — crop factor config; Phase C3
                             cftb, chtb, cfeictb, swcf, albedo, rsc, rsw,  &
                             ! DEFERRED: rdtb/rdctb/swrd/swdmi2rd/swrdc/rdi/rri/rdc — root config; Phase C3
@@ -47,7 +47,7 @@ contains
                             ! DEFERRED: swcompensate/swstressor/alphacrit/dcritrtz — compensation config; Phase C3
                             swcompensate, swstressor, alphacrit, dcritrtz, &
                             ! DEFERRED: swinter/cofab — interception config; Phase C3
-                            swinter, cofab,                               &
+                            swinter,                                      &  ! cofab retired
                             ! DEFERRED: schedule/dvsend/swharv — harvest schedule config; Phase C3
                             schedule, dvsend, swharv,                     &
                             ! DEFERRED: cumdens — root density cumulative; Phase C3
@@ -81,10 +81,8 @@ contains
       tsumam = cfg%tsumam
       tbase  = cfg%tbase
 
-      kdif = cfg%kdif
-      kdir = cfg%kdir
-      state%crop%kdif = kdif   ! [SS-GR-ATM A5.1] runtime dual-write
-      state%crop%kdir = kdir   ! [SS-GR-ATM A5.1] runtime dual-write
+      state%crop%kdif = cfg%kdif
+      state%crop%kdir = cfg%kdir
 
       swgc = cfg%swgc
       swcf = cfg%swcf
@@ -125,8 +123,7 @@ contains
       dcritrtz     = cfg%dcritrtz
 
       swinter = cfg%swinter
-      cofab   = cfg%cofab
-      state%crop%cofab = cofab   ! [SS-GR-ATM A5.1] runtime dual-write
+      state%crop%cofab = cfg%cofab
 
       schedule = cfg%schedule_switch
 

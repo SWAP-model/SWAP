@@ -52,7 +52,7 @@ contains
          tdwi, laiem, rgrlai,                                                &
          ! Green area / assimilation — DEFERRED Phase C3
          slatb, spa, ssa, span, tbase,                                       &
-         kdif, kdir, eff, amaxtb, tmpftb, tmnftb,                           &
+         eff, amaxtb, tmpftb, tmnftb,                           &  ! kdif/kdir retired
          ! Biomass conversion — DEFERRED Phase C3
          cvl, cvo, cvr, cvs,                                                 &
          ! Maintenance respiration — DEFERRED Phase C3
@@ -69,7 +69,7 @@ contains
          ! Compensation — DEFERRED Phase C3
          swcompensate, swstressor,                                            &
          ! Interception — DEFERRED Phase C3
-         swinter, cofab,                                                      &
+         swinter,                                                             &  ! cofab retired
          ! Root depth — DEFERRED Phase C3
          swrd, rdi, rri, rdc, swdmi2rd, rdctb, rdtb, rlwtb, wrtmax,         &
          swrdc, cumdens,                                                      &
@@ -181,8 +181,7 @@ contains
       ! Part 14: interception (readwofost line 2640-2642)
       swinter = cfg%interception%swinter
       if (swinter == 1) then
-         cofab = cfg%interception%cofab
-         state%crop%cofab = cofab   ! [SS-GR-ATM A5.1] runtime dual-write
+         state%crop%cofab = cfg%interception%cofab
       end if
 
       ! Part 2: phenology (soybean=0 path; readwofost lines 2712-2721)
@@ -227,10 +226,8 @@ contains
       tbase = cfg%green_area%tbase
 
       ! Part 5: assimilation (readwofost lines 2764-2769)
-      kdif = cfg%assimilation%kdif
-      kdir = cfg%assimilation%kdir
-      state%crop%kdif = kdif   ! [SS-GR-ATM A5.1] runtime dual-write
-      state%crop%kdir = kdir   ! [SS-GR-ATM A5.1] runtime dual-write
+      state%crop%kdif = cfg%assimilation%kdif
+      state%crop%kdir = cfg%assimilation%kdir
       eff  = cfg%assimilation%eff
       if (allocated(cfg%assimilation%amaxtb)) then
          block

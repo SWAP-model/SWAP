@@ -207,7 +207,6 @@
       aqtmax             = 0.0d0 
       basegw             = 0.0d0 
       bdens              = 0.0d0 
-      cfbs               = 0.0d0 
       ! [SS-SWC] cgird/cinund/cnird retired — soilwater_init handles init via state%soilwater
       ! cgird              = 0.0d0
       ! cinund             = 0.0d0
@@ -670,7 +669,6 @@
       ch                 = 0.0d0 
       chtb               = 0.0d0 
       gctb               = 0.0d0 
-      cofab              = 0.0d0 
       cumdens            = 0.0d0 
       cuptgraz           = 0.0d0 
       cuptgrazpot        = 0.0d0 
@@ -697,8 +695,6 @@
       hlim3h             = 0.0d0 
       hlim3l             = 0.0d0 
       hlim4              = 0.0d0 
-      kdif               = 0.0d0 
-      kdir               = 0.0d0
       laiem              = 0.0d0
       lv                 = 0.0d0
       lvage              = 0.0d0
