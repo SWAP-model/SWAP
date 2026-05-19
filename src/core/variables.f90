@@ -492,7 +492,7 @@
       real(8)   tadwpot            ! Dry weight of plant minus roots of potential growth (kg/ha)
       ! [GR-CROP-DVS] tagp retired — see state%crop%wofost%tagp
       ! [GR-CROP-DVS] tagppot retired — see state%crop%wofost%tagppot
-      real(8)   tagpt              ! Dry weight of harvested grass (kg/ha)
+      ! [GR-CROP-DVS] tagpt retired — see state%crop%wofost%tagpt
       real(8)   tagptpot           ! Dry weight of harvested grass for potential run (kg/ha)
       real(8)   tbase              ! Lower threshold temperature for ageing of leaves (oC)
       real(8)   tdwi               ! Initial total crop dry weight (kg/ha)

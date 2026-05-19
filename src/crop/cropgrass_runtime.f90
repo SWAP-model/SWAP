@@ -64,7 +64,7 @@
         flgrazing, flgrazingpot, flharvest, flharvestpot,               &
         flhrvendact, flhrvendpot, flhydrlift,                           &
         daygrowth, daygrowthpot, grzdm, dewrest,                        &
-        cuptgraz, cuptgrazpot, tagpt, tagptpot,          &  ! tagp retired (→state%crop%wofost%tagp)
+        cuptgraz, cuptgrazpot, tagptpot,          &  ! tagp retired (→state%crop%wofost%tagp)
         seqgrazmow, seqgrazmowpot, swtsum, iseqgm, iseqgmpot,           &
         iharvest, dmgrztb, dmmowtb, daysgrazingtab, uptgrazingtab,      &
         lossgrazingtab, lossgrztab, lossmowtab,                         &
@@ -288,7 +288,7 @@
 ! ---   initial summation variables of the crop
         state%crop%wofost%tagp = state%crop%wofost%wlv+state%crop%wofost%wst
         state%crop%wofost%tagppot = state%crop%wofost%tagp
-        tagpt = 0.0d0
+        state%crop%wofost%tagpt = 0.0d0
         tagptpot = 0.0d0
         cuptgraz = 0.0d0
         cuptgrazpot = 0.0d0
@@ -305,7 +305,6 @@
         state%crop%wofost%dwlvpot     = dwlvpot
         state%crop%wofost%dwst        = dwst
         state%crop%wofost%dwstpot     = dwstpot
-        state%crop%wofost%tagpt       = tagpt
         state%crop%wofost%tagptpot    = tagptpot
         state%crop%common%cuptgraz    = cuptgraz
         state%crop%common%cuptgrazpot = cuptgrazpot
@@ -1109,7 +1108,7 @@
           
 !         harvest
           tagps = max (0.0d0,(state%crop%wofost%tagp-(state%crop%wofost%wlv+dwlv+state%crop%wofost%wst+dwst)))
-          tagpt = tagpt + tagps * (1.d0 - fralossmow)
+          state%crop%wofost%tagpt = state%crop%wofost%tagpt + tagps * (1.d0 - fralossmow)
 
           cropendact  = rid
           flhrvendact = .true.
@@ -1387,7 +1386,6 @@
       state%crop%wofost%tagp        = state%crop%wofost%tagp
       state%crop%wofost%lossdm      = lossdm
       state%crop%common%cuptgraz    = cuptgraz
-      state%crop%wofost%tagpt       = tagpt
       state%crop%grass%cropstartact = cropstartact
       state%crop%grass%cropendact   = cropendact
 
