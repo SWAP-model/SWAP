@@ -520,7 +520,7 @@
       ! [GR-CROP-DVS] wso retired — see state%crop%wofost%wso
       real(8)   wsopot             ! Dry weight of storage organ for potential growth (kg/ha)
       ! [GR-CROP-DVS] wst retired — see state%crop%wofost%wst
-      real(8)   wstpot                ! Dry weight of plant stem for potential growth (kg/ha)
+      ! [GR-CROP-DVS] wstpot retired — see state%crop%wofost%wstpot
       logical   flanthesis         ! Flag indicating anthesis stage of a crop
       logical   flHarvest           ! Flag indicating that grass should be harvested, actual crop
       logical   flHarvestDay        ! Flag indicating that current day is harvest day

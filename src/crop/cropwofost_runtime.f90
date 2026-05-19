@@ -54,7 +54,7 @@
         swbulb, swinco, laiem, laiexp, laiexppot, laimax,    &  ! lai/laipot retired
         cf, ch, cfeic, tsumea, tsumam, tbase, daycrop, lat, daylp,  &  ! tsum retired (→state%crop%common%tsum)
         kdif, siccapact, siccaplai, cropend,                               &  ! [GR-CROPWS B5] cropstart removed (→state%crop%common%cropstart)
-        wstpot, wsopot, wrtpot, wrtmax, wrtmin, &  ! wso/wst/wlv/wrt retired
+        wsopot, wrtpot, wrtmax, wrtmin, &  ! wso/wst/wlv/wrt retired
         cwdm, cwdmpot, pgass, pgasspot, reltr, lrnr, lsnr, nni,           &
         anlv, anst, nmxlv, nmaxlv, nmaxst, nmaxrt, nmaxso, nlai,          &
         rnflv, rnfst, rnfrt, fstr, fntrt, npart, nfixf, nsla,             &
@@ -275,7 +275,7 @@
         tadw = (1.0d0-fr)*tdwi
         tadwpot = tadw
         state%crop%wofost%wst = fs*tadw
-        wstpot = state%crop%wofost%wst
+        state%crop%wofost%wstpot = state%crop%wofost%wst
         state%crop%wofost%wso = fo*tadw
         wsopot = state%crop%wofost%wso
         state%crop%wofost%wlv = fl*tadw
@@ -370,7 +370,6 @@
         state%crop%wofost%plwt      = plwt
         state%crop%wofost%plwti     = plwti
         state%crop%wofost%wrtpot    = wrtpot
-        state%crop%wofost%wstpot    = wstpot
         state%crop%wofost%wsopot    = wsopot
         state%crop%wofost%wbl       = wbl
         state%crop%wofost%wblpot    = wblpot
@@ -505,10 +504,10 @@
 ! --- respiration and partitioning of carbohydrates between growth and
 ! --- maintenance respiration
       if(swbulb.eq.1) then
-        rmrespot = (rmr*wrtpot+rml*state%crop%wofost%wlvpot+rms*wstpot+rms*wblpot+        &
+        rmrespot = (rmr*wrtpot+rml*state%crop%wofost%wlvpot+rms*state%crop%wofost%wstpot+rms*wblpot+        &
      &           rmo*wsopot)* afgen(rfsetb,30,state%crop%common%dvs)
       else
-        rmrespot = (rmr*wrtpot+rml*state%crop%wofost%wlvpot+rms*wstpot+rmo*wsopot)*       &
+        rmrespot = (rmr*wrtpot+rml*state%crop%wofost%wlvpot+rms*state%crop%wofost%wstpot+rmo*wsopot)*       &
      &           afgen(rfsetb,30,state%crop%common%dvs)
       endif
       teff = q10**((at_tav-25.0d0)/10.0d0)  ! [SS-GR-ATM B.5]
@@ -620,7 +619,7 @@
 ! --- growth rate stems
       grstpot = fs*admipot
 ! --- death rate stems
-      drstpot = afgen (rdrstb,30,state%crop%common%dvs)*wstpot
+      drstpot = afgen (rdrstb,30,state%crop%common%dvs)*state%crop%wofost%wstpot
 ! --- net growth rate stems
       gwstpot = grstpot - drstpot
 
@@ -691,7 +690,7 @@
 
 ! --- dry weight of living plant organs
       wrtpot = wrtpot + gwrtpot*delt
-      wstpot = wstpot + gwstpot*delt
+      state%crop%wofost%wstpot = state%crop%wofost%wstpot + gwstpot*delt
       wsopot = wsopot + gwsopot*delt
 ! --- only for bulb crops (tulips etc..)
       if(swbulb.eq.1) then
@@ -699,7 +698,7 @@
       endif
 
 ! --- total above ground biomass
-      tadwpot = state%crop%wofost%wlvpot + wstpot + wsopot
+      tadwpot = state%crop%wofost%wlvpot + state%crop%wofost%wstpot + wsopot
 ! --- only for bulb crops (tulips etc..)
       if(swbulb.eq.1) then
          tadwpot = tadwpot + wblpot
@@ -716,7 +715,7 @@
 
 ! --- dry weight of dead and living plant organs
       twlvpot = state%crop%wofost%wlvpot + dwlvpot
-      twstpot = wstpot + dwstpot
+      twstpot = state%crop%wofost%wstpot + dwstpot
       cwdmpot = twlvpot + twstpot + wsopot
 ! --- only for bulb crops (tulips etc..)
       if(swbulb.eq.1) then
@@ -729,7 +728,7 @@
       mrestpot = mrespot + mrestpot
 
 ! --- leaf area index
-      state%crop%common%laipot = lasumpot + ssa*wstpot + spa*wsopot
+      state%crop%common%laipot = lasumpot + ssa*state%crop%wofost%wstpot + spa*wsopot
 !     prevent immediate lai reduction at emergence
 !     KRO-BOO-20160403: suppressed because deviates from Wofost
 !      laipot = max(laipot, laiem)
@@ -752,7 +751,6 @@
 
       ! [SS-GR-CROP A5.1] mirror wofost case(2) potential state
       state%crop%wofost%wrtpot    = wrtpot
-      state%crop%wofost%wstpot    = wstpot
       state%crop%wofost%wsopot    = wsopot
       state%crop%wofost%wblpot    = wblpot
       state%crop%wofost%dwrtpot   = dwrtpot
