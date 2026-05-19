@@ -517,9 +517,9 @@ contains
       state%soilwater%iqredsol_day = state%soilwater%iqredsol_day + state%soilwater%qredsolsum*tc_dt  ! S-2.12B, TC-6
       state%soilwater%iqredfrs_day = state%soilwater%iqredfrs_day + state%soilwater%qredfrssum*tc_dt  ! S-2.12B, TC-6
       state%soilwater%iptra_day = state%soilwater%iptra_day + state%atmosphere%ptra * tc_dt           ! S-2.12B, TC-6
-      state%soilwater%ies0 = state%soilwater%ies0 + 0.1d0*es0*tc_dt                                   ! S-2.12B, TC-6
-      state%soilwater%iet0 = state%soilwater%iet0 + 0.1d0*et0*tc_dt                                   ! S-2.12B, TC-6
-      state%soilwater%iew0 = state%soilwater%iew0 + 0.1d0*ew0*tc_dt                                   ! S-2.12B, TC-6
+      state%soilwater%ies0 = state%soilwater%ies0 + 0.1d0*state%crop%es0*tc_dt                                   ! S-2.12B, TC-6
+      state%soilwater%iet0 = state%soilwater%iet0 + 0.1d0*state%crop%et0*tc_dt                                   ! S-2.12B, TC-6
+      state%soilwater%iew0 = state%soilwater%iew0 + 0.1d0*state%crop%ew0*tc_dt                                   ! S-2.12B, TC-6
 
       ! SS-SWST Phase 2 Task 7: iqdra/inqdra* accumulated directly into state; global dropped.
       ! ADR 0031 Phase 2 Task 5: qdra global deleted; read from state%drainage%qdra.

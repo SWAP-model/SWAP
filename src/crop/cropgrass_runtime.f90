@@ -57,9 +57,8 @@
         swdrought, swcf, swgc, swinter, reltr,                           &
         cvl, cvr, cvs, q10, rmr, rml, rms, span, ssa, glaiex, glaiexpot, &
         lv, lvpot, lvage, lvagepot, sla, slapot, ilvold, ilvoldpot,     &
-        twilt, wiltpoint, gwrt, siccaplai,                   &
-        cropstartact, cropendact, cropstartpot, cropendpot,             &
-        idaysgraz, idaysgrazpot, idregr, idregrpot,                      &  ! [GR-CROPWS B4] cropstart removed (→state%crop%common%cropstart)
+        twilt, wiltpoint, gwrt, siccaplai,                   &  ! cropstartact/endact/startpot/endpot retired
+        idaysgraz, idaysgrazpot, idregr, idregrpot,                      &
         flgrazing, flgrazingpot, flharvest, flharvestpot,               &
         flhrvendact, flhrvendpot, flhydrlift,                           &
         daygrowth, daygrowthpot, grzdm, dewrest,                        &
@@ -68,7 +67,7 @@
         iharvest, dmgrztb, dmmowtb, daysgrazingtab, uptgrazingtab,      &
         lossgrazingtab, lossgrztab, lossmowtab,                         &
         delayregrowthtab, zgrz, zmow,                                   &
-        mowdm, mowrest, lossdm, plossdm, pmowdm, pgrzdm, &
+        mowdm, pmowdm, pgrzdm, &
         perdl, dateharvest, lsda,                                        &
         dummy_tsoil_gr_ => tsoil
       !! Rename config-staging tsoil to avoid clash with dummy arg tsoil.
@@ -292,15 +291,13 @@
         cuptgrazpot = 0.0d0
         state%crop%common%tsum = 0.0d0
         
-        cropstartpot     = rid
-        cropstartact     = rid
+        state%crop%grass%cropstartpot     = rid
+        state%crop%grass%cropstartact     = rid
         flhrvendpot      = .false.
         flearlyhrvendpot = .false.
         ! [SS-GR-CROP A5.1] mirror grass init-time state
         state%crop%common%cuptgraz    = cuptgraz
         state%crop%common%cuptgrazpot = cuptgrazpot
-        state%crop%grass%cropstartpot = cropstartpot
-        state%crop%grass%cropstartact = cropstartact
         
         if (swtsum.eq.0) then
           flGrassGrowth = .true.
@@ -394,15 +391,13 @@
 ! --- check end of harvest
       if (flhrvendpot) then
         if (flearlyhrvendpot) then
-          cropstartpot  = rid - 1.d0
+          state%crop%grass%cropstartpot  = rid - 1.d0
         else
-          cropstartpot  = rid
+          state%crop%grass%cropstartpot  = rid
         endif
         pmowdm        = 0.d0
         pgrzdm        = 0.d0
-        plossdm       = 0.d0
-        state%crop%grass%cropstartpot = cropstartpot   ! [SS-GR-CROP A5.1]
-        state%crop%wofost%plossdm     = plossdm        ! [SS-GR-CROP A5.1]
+        state%crop%wofost%plossdm       = 0.d0
       endif
       flhrvendpot      = .false.
       flearlyhrvendpot = .false.
@@ -427,8 +422,8 @@
       
         ! check if grass growth has started
         if (flGrassGrowth) then
-          cropstartpot = rid
-          cropstartact = rid
+          state%crop%grass%cropstartpot = rid
+          state%crop%grass%cropstartact = rid
         endif
 
       endif
@@ -599,7 +594,7 @@
             slapot(1) = afgen (slatb,30,rid)
             fl = afgen (fltb,30,rid)
             fs = afgen (fstb,30,rid)
-            state%crop%wofost%wlvpot = mowrest / (1.d0 + (fs/fl))
+            state%crop%wofost%wlvpot = state%crop%grass%mowrest / (1.d0 + (fs/fl))
             state%crop%wofost%wstpot = fs/fl*state%crop%wofost%wlvpot
             state%crop%wofost%dwlvpot = 0.0d0
             state%crop%wofost%dwstpot = 0.0d0
@@ -627,10 +622,10 @@
             tagpspot = max(0.0d0,(state%crop%wofost%tagppot-(state%crop%wofost%wlvpot+state%crop%wofost%dwlvpot+state%crop%wofost%wstpot+state%crop%wofost%dwstpot)))
             state%crop%wofost%tagptpot = state%crop%wofost%tagptpot + tagpspot * (1.d0 - FraLossMow)
 
-            cropendpot  = rid
+            state%crop%grass%cropendpot  = rid
             flhrvendpot = .true.
             pmowdm      = tagpspot * (1.d0 - FraLossMow)
-            plossdm     = tagpspot * FraLossMow
+            state%crop%wofost%plossdm     = tagpspot * FraLossMow
             
 !           set regrowth delay
             idelaypot = int(afgen(DelayRegrowthTab,200,tagpspot))
@@ -722,9 +717,9 @@
               enddo
           
 !             harvest during total grazing event
-              cropendpot = rid
+              state%crop%grass%cropendpot = rid
               pgrzdm     = pgrzdm + uptgrazpot
-              plossdm    = state%crop%wofost%tagppot * fralossgrz
+              state%crop%wofost%plossdm    = state%crop%wofost%tagppot * fralossgrz
               
 !             Check number of days with grazing
               daysgrazpot  = int(afgen(daysgrazingtab,200,lsda(iseqgmpot)))
@@ -875,10 +870,7 @@
       endif
 
       ! [SS-GR-CROP A5.1] mirror grass case(2) potential state
-      state%crop%wofost%plossdm       = plossdm
       state%crop%common%cuptgrazpot   = cuptgrazpot
-      state%crop%grass%cropstartpot   = cropstartpot
-      state%crop%grass%cropendpot     = cropendpot
 
       return
 
@@ -889,15 +881,13 @@
 ! --- check end of harvest
       if (flhrvendact) then
         if (flearlyhrvendact) then
-          cropstartact  = rid - 1.d0
+          state%crop%grass%cropstartact  = rid - 1.d0
         else
-          cropstartact  = rid
+          state%crop%grass%cropstartact  = rid
         endif
         mowdm        = 0.d0
         grzdm        = 0.d0
-        lossdm       = 0.d0
-        state%crop%grass%cropstartact = cropstartact   ! [SS-GR-CROP A5.1]
-        state%crop%wofost%lossdm      = lossdm         ! [SS-GR-CROP A5.1]
+        state%crop%wofost%lossdm       = 0.d0
       endif
       flhrvendact      = .false.
       flearlyhrvendact = .false.
@@ -1066,7 +1056,7 @@
           sla(1) = afgen (slatb,30,rid)
           fl = afgen (fltb,30,rid)
           fs = afgen (fstb,30,rid)
-          state%crop%wofost%wlv = mowrest / (1.d0 + (fs/fl))
+          state%crop%wofost%wlv = state%crop%grass%mowrest / (1.d0 + (fs/fl))
           state%crop%wofost%wst = fs/fl*state%crop%wofost%wlv
           state%crop%wofost%dwlv = 0.0d0
           state%crop%wofost%dwst = 0.0d0
@@ -1094,10 +1084,10 @@
           tagps = max (0.0d0,(state%crop%wofost%tagp-(state%crop%wofost%wlv+state%crop%wofost%dwlv+state%crop%wofost%wst+state%crop%wofost%dwst)))
           state%crop%wofost%tagpt = state%crop%wofost%tagpt + tagps * (1.d0 - fralossmow)
 
-          cropendact  = rid
+          state%crop%grass%cropendact  = rid
           flhrvendact = .true.
           mowdm   = tagps * (1.d0 - FraLossMow)
-          lossdm  = tagps * FraLossMow
+          state%crop%wofost%lossdm  = tagps * FraLossMow
           
 ! ---     set regrowth delay
           idelay = int(afgen(DelayRegrowthTab,200,tagps))
@@ -1189,9 +1179,9 @@
               enddo
           
 !             harvest during total grazing event
-              cropendact = rid
+              state%crop%grass%cropendact = rid
               grzdm      = grzdm + uptgraz
-              lossdm     = state%crop%wofost%tagp * fralossgrz
+              state%crop%wofost%lossdm     = state%crop%wofost%tagp * fralossgrz
               
 !             Check number of days with grazing
               daysgraz  = int(afgen(daysgrazingtab,200,lsda(iseqgm)))
@@ -1362,10 +1352,7 @@
 
       ! [SS-GR-CROP A5.1] mirror grass case(3) actual state
       state%crop%wofost%tagp        = state%crop%wofost%tagp
-      state%crop%wofost%lossdm      = lossdm
       state%crop%common%cuptgraz    = cuptgraz
-      state%crop%grass%cropstartact = cropstartact
-      state%crop%grass%cropendact   = cropendact
 
       return
 

@@ -70,7 +70,7 @@ contains
          ! Compensation — DEFERRED Phase C3
          swcompensate, swstressor, alphacrit, dcritrtz,                      &
          ! Management — DEFERRED Phase C3
-         mowrest, swpotrelmf, seqgrazmow,                             &  ! relmf retired
+         swpotrelmf, seqgrazmow,                                      &  ! relmf/mowrest retired
          ! Mowing / harvest — DEFERRED Phase C3
          dateharvest, dmmowtb, DelayRegrowthTab,                             &
          ! CO2 (flCO2 only; swco2 is a local in readgrass, not a global) — DEFERRED Phase C3
@@ -320,8 +320,7 @@ contains
       ! Part 18: mowing settings (readgrass lines 3985-4035)
       ! Only the mowing block is active (SeqGrazMow all-2; grazing block
       ! is entirely guarded). mowrest always set.
-      mowrest = cfg%mowrest
-      state%crop%grass%mowrest = mowrest   ! [SS-GR-CROP A5.2]
+      state%crop%grass%mowrest = cfg%mowrest
 
       ! swharvest (mowing trigger) is a LOCAL in grass(); handled in Task 8.
       ! dmharvest, daylastharvest, dmlastharvest, swdmmow, maxdaymow

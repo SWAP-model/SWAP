@@ -252,7 +252,7 @@
       real(8)   tsunset_atm        ! Time of sunset (fraction of day) - from meteodt.f90 ETSine  
       integer   nod10_cn           ! Node at -10cm for CN runoff method - from meteoday.f90 CNmethod
       integer   icn_atm            ! Current position in CN time table - from meteoday.f90 CNmethod
-      real(8)   z10_cn             ! Depth to node 10 for CN method - from meteoday.f90 CNmethod
+      ! [GR-CROP-DVS] z10_cn retired — see state%atmosphere%z10_cn
 !   - meteo output variables for PEARL
       ! [GR-ATM C8] retired 2026-05-14 — moved to state%atmosphere%out_etr (GR-ATM arc)
       ! real(4)   out_etr            ! Reference evapotranspiration  of current day (m/d)
@@ -445,7 +445,7 @@
       real(8)   lvage(366)         ! Array with leaf age (d) as function of crop day number of actual crop
       real(8)   lvagepot(366)      ! Array with leaf age (d) as function of crop day number of potential crop
       real(8)   max_resp_factor    ! Ratio root total respiration / maintenance respiration [1..5.0 -, R]
-      real(8)   mowrest            ! Dry weight of above ground grass (leaves + stems) after mowing (kg/ha)
+      ! [GR-CROP-DVS] mowrest retired — see state%crop%grass%mowrest
       real(8)   dewrest            ! Dry weight of above ground grass (leaves + stems) after dewooling (kg/ha)
       real(8)   mrest              ! Total maintenance respiration for actual crop (kg/ha)
       real(8)   mrestpot           ! Total maintenance respiration for potential crop (kg/ha)
@@ -543,18 +543,18 @@
       real(8)   lossmowtab(2*100)       ! Array with extra dry matter losses during mowing event as function of pressure head
       real(8)   lossgrztab(2*100)       ! Array with extra dry matter losses during grazing event as function of pressure head
       
-      real(8)   cropstartpot            ! Start of potential grass growth (reset after mowing or grazing event)
-      real(8)   cropendpot              ! End of potential grass growth (reset after mowing or grazing event)
-      real(8)   cropstartact            ! Start of actual grass growth (reset after mowing or grazing event)
-      real(8)   cropendact              ! End of actual grass growth (reset after mowing or grazing event)
+      ! [GR-CROP-DVS] cropstartpot retired — see state%crop%grass%cropstartpot
+      ! [GR-CROP-DVS] cropendpot retired — see state%crop%grass%cropendpot
+      ! [GR-CROP-DVS] cropstartact retired — see state%crop%grass%cropstartact
+      ! [GR-CROP-DVS] cropendact retired — see state%crop%grass%cropendact
       logical   flhrvendpot             ! Flag indicating end of harvest event (potential)
       logical   flhrvendact             ! Flag indicating end of harvest event (actual)
       real(8)   pmowdm                  ! Total potential harvest by mowing at end of harvest event (kg/ha)
       real(8)   mowdm                   ! Total actual harvest by mowing at end of harvest event (kg/ha)
       real(8)   pgrzdm                  ! Total potential harvest by grazing at end of harvest event (kg/ha)
       real(8)   grzdm                   ! Total actual harvest by grazing at end of harvest event (kg/ha)
-      real(8)   plossdm                 ! Total loss of potential harvest due to insufficient pressure head (kg/ha)
-      real(8)   lossdm                  ! Total loss of actual harvest due to insufficient pressure head (kg/ha)
+      ! [GR-CROP-DVS] plossdm retired — see state%crop%wofost%plossdm
+      ! [GR-CROP-DVS] lossdm retired — see state%crop%wofost%lossdm
       
 ! --- rooting      
       integer   swrdc              ! Switch for calculation of root density (0: static; 1: dynamic)
@@ -854,9 +854,9 @@
       ! [GR-BH Task 35] dz(macp) retired — moved to state%mesh%dz
       real(8)   dznew(macp)        ! Desired thickness of compartments for soil water quality models (L)
       real(8)   entres             ! Drain entry resistance (T)
-      real(8)   es0                !  potential evaporation rate from a wet bare soil [mm/d]
-      real(8)   et0                !  potential transpiration rate from a dry crop [mm/d]
-      real(8)   ew0                !  potential transpiration rate from a wet crop [mm/d]
+      ! [GR-CROP-DVS] es0 retired — see state%crop%es0
+      ! [GR-CROP-DVS] et0 retired — see state%crop%et0
+      ! [GR-CROP-DVS] ew0 retired — see state%crop%ew0
       ! [SS-SWC] retired 2026-05-12 — moved to state%soilwater%evp (ADR 0038)
       ! real(8)   evp(macp)          ! Internal evaporation flux of top soil compartments (L/T)
       ! [GR-BH Task 37] FacDpthInf retired — moved to state%drainage%FacDpthInf
@@ -1046,7 +1046,7 @@
       real(8)   rsroexp            ! Exponent to calculate surface runoff (T)
       integer   swuseCN            ! Switch for usage of Curve Number method for runoff [0 (default),1]
       integer   wc_cor
-      real(8)   CNref              ! Input value for Curve Number (CN) [0.01,100]
+      ! [GR-CROP-DVS] CNref retired — see state%atmosphere%CNref
       real(8)   CNrefTAB(mayrs*5), CNtimTAB(mayrs*5)
       integer   iCNtab
       ! [SS-SWC] retired 2026-05-12 — crunoffCN/irunoCN moved to state%soilwater (ADR 0038)

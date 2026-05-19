@@ -66,18 +66,16 @@ contains
                             ! [GR-ATM C8] tavd/rh retired from import (no legacy consumers; state written by meteoday)
                             tav, daynrfirst, daynrlast, atmin7, nofd, teprrain, teprsnow, &
                             isua, avevaptb, avprectb, pfreetb, pstemtb, scanopytb, &
-                            CNref, CNdry, CNwet, ThetaRef, Runoff_CN, wc_cor, wc10, iCNtab, CNtimTAB, CNrefTAB, &
+                            CNdry, CNwet, ThetaRef, Runoff_CN, wc_cor, wc10, iCNtab, CNtimTAB, CNrefTAB, &
                             ! [GR-ATM C8] out_tmn/tmx/hum/win/etr/wet/rad retired from import (state written by meteoday)
-                            swcf, swcfbs, flCropEmergence, et0, ew0, es0, &  ! lai retired
+                            swcf, swcfbs, flCropEmergence, &  ! lai retired
                             ! [SS-GR-CROP A14] crop_common legacy globals; dvs/tsum retired
                             daycrop, icrop, &
                             cuptgraz, cuptgrazpot, &  ! rd/rdpot/rdm/rdi/rri/rdc/HarLosOrm_tot retired
-                            ! [SS-GR-CROP A15] crop_wofost/grass/fixed legacy globals; biomass+dw* retired
-                            plossdm, lossdm, &
+                            ! [SS-GR-CROP A15] crop_wofost/grass/fixed legacy globals; biomass+dw*+plossdm/lossdm retired
                             swbulb, &
-                            seqgrazmow, seqgrazmowpot, dateharvest, mowrest, &
-                            cropstartpot, cropstartact, cropendpot, cropendact, &
-                            swpotrelmf, &
+                            seqgrazmow, seqgrazmowpot, dateharvest, &  ! mowrest retired
+                            swpotrelmf, &  ! cropstart/end act/pot retired
                             cftb, chtb, cfeic, cfeictb
                             ! [GR-CROP C11] nmrain/rainamount/rainfluxarray/raintimearray retired from import:
                             !   readmeteo now writes directly to state%atmosphere%X
@@ -360,8 +358,6 @@ contains
    state%atmosphere%pfreetb   = pfreetb
    state%atmosphere%pstemtb   = pstemtb
    state%atmosphere%scanopytb = scanopytb
-
-   state%atmosphere%CNref     = CNref
    state%atmosphere%CNdry     = CNdry
    state%atmosphere%CNwet     = CNwet
    state%atmosphere%ThetaRef  = ThetaRef
@@ -380,10 +376,6 @@ contains
    state%crop%swcf            = swcf
    state%crop%swcfbs          = swcfbs
    state%crop%flCropEmergence = flCropEmergence
-   state%crop%et0             = et0
-   state%crop%ew0             = ew0
-   state%crop%es0             = es0
-
    ! [SS-GR-CROP A14] dual-write crop_common; dvs/tsum retired (writes target state directly)
    state%crop%common%daycrop        = daycrop
    state%crop%common%swcrp          = swcrp
@@ -396,18 +388,11 @@ contains
    state%crop%common%cuptgraz       = cuptgraz
    state%crop%common%cuptgrazpot    = cuptgrazpot
    ! [SS-GR-CROP A15] dual-write crop_wofost
-   state%crop%wofost%plossdm  = plossdm
-   state%crop%wofost%lossdm   = lossdm
    state%crop%wofost%swbulb   = (swbulb == 1)   ! integer→logical conversion
    ! [SS-GR-CROP A15] dual-write crop_grass
    state%crop%grass%seqgrazmow    = seqgrazmow
    state%crop%grass%seqgrazmowpot = seqgrazmowpot
    state%crop%grass%dateharvest   = dateharvest
-   state%crop%grass%mowrest       = mowrest
-   state%crop%grass%cropstartpot  = cropstartpot
-   state%crop%grass%cropstartact  = cropstartact
-   state%crop%grass%cropendpot    = cropendpot
-   state%crop%grass%cropendact    = cropendact
    state%crop%grass%swpotrelmf    = swpotrelmf
    ! [SS-GR-CROP A15] dual-write crop_fixed
    state%crop%fixed%cftb    = cftb

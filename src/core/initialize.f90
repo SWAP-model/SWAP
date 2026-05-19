@@ -240,9 +240,6 @@
       ! [GR-BH Task 35] dz retired to state%mesh%dz
       dznew              = 0.0d0 
       entres             = 0.0d0 
-      es0                = 0.0d0 
-      et0                = 0.0d0 
-      ew0                = 0.0d0 
       ! [SS-SWC] evp retired — soilwater_init handles init via state%soilwater%evp
       ! evp                = 0.0d0
       ! [GR-BH Task 37] FacDpthInf retired to state%drainage%FacDpthInf
