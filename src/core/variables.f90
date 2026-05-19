@@ -369,7 +369,7 @@
       ! [SS-CRP] retired 2026-05-11 — moved to state%soilwater%alpJvLier (ADR 0036)
       ! real(8)   alpJvLier          ! Uniform drought reduction factor based on concept Jong van Lier (-)
       real(8)   amaxtb(30)         ! Maximum CO2 assimilation rate (kg/ha/hr) as function of development stage (-)
-      real(8)   pgasspot           ! Assimilation rate after nitrogen stress and maximum attainable yield, potential crop growth
+      ! [GR-CROP-DVS] pgasspot retired — see state%crop%wofost%pgasspot
       real(8)   pgass              ! Assimilation rate after nitrogen stress and maximum attainable yield, actual crop growth
       integer   swpotrelmf         ! Calculation of potential yield
       real(8)   relmf              ! Management factor (attainable yield)

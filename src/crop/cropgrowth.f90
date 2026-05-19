@@ -62,7 +62,7 @@
         tmn, lat, rad,                                         &  ! wrt retired
         albedo, rsc, cumdens,                                               &
         eff, amaxtb, tmpftb, tmnftb, swdrought, swcrp, dvsend,             &  ! [GR-CROPWS B3] kdif removed (→state%crop%kdif)
-        swharv, plwt, remoc, pld, q10, pgasspot, pgass,                    &  ! [GR-CROPWS B3] swbulb removed (→state%crop%wofost%swbulb)
+        swharv, plwt, remoc, pld, q10, pgass,                    &  ! [GR-CROPWS B3] swbulb removed (→state%crop%wofost%swbulb)
         flCropNut, nlue, anlv, anst, nmxlv, nmaxlv, nmaxst,               &
         nmaxrt, lrnr, lsnr, nni, rnflv, rnfst, frnx, fstr, flHarvestDay,  &
         noddrz, pathcrop, cropfil, bgerm, cgerm,                           &
@@ -449,19 +449,18 @@
         dtgapot = dtgapot * afgen (tmnftb,30,tmnr)
 
         ! potential assimilation in kg ch2o per ha
-        pgasspot = dtgapot * 30.0d0/44.0d0
+        state%crop%wofost%pgasspot = dtgapot * 30.0d0/44.0d0
 
         ! only for bulb crops (tulips etc..)
         if(state%crop%wofost%swbulb) then                                     ! [GR-CROPWS B3]
           ! assimilation is raised with remobilisation from motherbulb
           ! using a factor of 1.11 given by De Ruijter et al.(1993)
           factblb  = 1.11d0
-          pgasspot = pgasspot + remo*factblb   ! RHS pgasspot is local (just computed)
+          state%crop%wofost%pgasspot = state%crop%wofost%pgasspot + remo*factblb   ! RHS state%crop%wofost%pgasspot is local (just computed)
         endif
 
         ! reduction due to limited attainable maximum yield
-        if (state%crop%grass%swpotrelmf.eq.2) pgasspot = pgasspot * state%crop%grass%relmf  ! [SS-GR-CROPRT B1]
-        state%crop%wofost%pgasspot = pgasspot   ! [SS-GR-CROP A5.1]
+        if (state%crop%grass%swpotrelmf.eq.2) state%crop%wofost%pgasspot = state%crop%wofost%pgasspot * state%crop%grass%relmf  ! [SS-GR-CROPRT B1]
 
 
         ! actual assimilation

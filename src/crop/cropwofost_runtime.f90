@@ -55,7 +55,7 @@
         cf, ch, cfeic, tsumea, tsumam, tbase, daycrop, lat, daylp,  &  ! tsum retired (→state%crop%common%tsum)
         kdif, siccapact, siccaplai, cropend,                               &  ! [GR-CROPWS B5] cropstart removed (→state%crop%common%cropstart)
         wrtmax, wrtmin, &  ! wso/wst/wlv/wrt retired
-        pgass, pgasspot, reltr, lrnr, lsnr, nni,           &
+        pgass, reltr, lrnr, lsnr, nni,           &
         anlv, anst, nmxlv, nmaxlv, nmaxst, nmaxrt, nmaxso, nlai,          &
         rnflv, rnfst, rnfrt, fstr, fntrt, npart, nfixf, nsla,             &
         cvl, cvo, cvr, cvs,                                                &
@@ -495,7 +495,7 @@
       
 ! === daily dry matter production 
 
-      gasspot = pgasspot
+      gasspot = state%crop%wofost%pgasspot
 
 ! --- respiration and partitioning of carbohydrates between growth and
 ! --- maintenance respiration
@@ -751,7 +751,6 @@
       state%crop%wofost%dwlvpot   = dwlvpot
       state%crop%wofost%dwstpot   = dwstpot
       state%crop%wofost%dwblpot   = dwblpot
-      state%crop%wofost%pgasspot  = pgasspot
 
       return
 
@@ -1199,7 +1198,7 @@
       elseif (swrd.eq.2) then
 
         rrpot = min (rdm-state%crop%common%rdpot,rri)
-        if (fr.le.0.0d0 .or. pgasspot.lt.1.0d0) rrpot = 0.0d0
+        if (fr.le.0.0d0 .or. state%crop%wofost%pgasspot.lt.1.0d0) rrpot = 0.0d0
         state%crop%common%rdpot = state%crop%common%rdpot + rrpot
 
         rr = min (rdm-state%crop%common%rd,rri)

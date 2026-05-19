@@ -69,7 +69,7 @@
         iharvest, dmgrztb, dmmowtb, daysgrazingtab, uptgrazingtab,      &
         lossgrazingtab, lossgrztab, lossmowtab,                         &
         delayregrowthtab, zgrz, zmow,                                   &
-        mowdm, mowrest, lossdm, plossdm, pmowdm, pgrzdm, pgass, pgasspot, &
+        mowdm, mowrest, lossdm, plossdm, pmowdm, pgrzdm, pgass, &
         perdl, dateharvest, lsda,                                        &
         dummy_tsoil_gr_ => tsoil
       !! Rename config-staging tsoil to avoid clash with dummy arg tsoil.
@@ -451,7 +451,7 @@
 
 ! ===   daily dry matter production ===
 
-        gasspot = pgasspot
+        gasspot = state%crop%wofost%pgasspot
 
 ! ---   respiration and partitioning of carbohydrates between growth and
 ! ---   maintenance respiration
@@ -878,7 +878,7 @@
           state%crop%common%rdpot = min(state%crop%common%rdpot,rdm)
         elseif (swrd.eq.2) then
           rrpot = min (rdm-state%crop%common%rdpot,rri)
-          if (fr.le.0.0d0 .or. pgasspot.lt.1.0d0) rrpot = 0.0d0
+          if (fr.le.0.0d0 .or. state%crop%wofost%pgasspot.lt.1.0d0) rrpot = 0.0d0
           state%crop%common%rdpot = state%crop%common%rdpot + rrpot
         elseif (swrd.eq.3) then
           state%crop%common%rdpot = afgen (rlwtb,22,state%crop%wofost%wrtpot)
@@ -891,7 +891,6 @@
       state%crop%wofost%dwrtpot       = dwrtpot
       state%crop%wofost%dwlvpot       = dwlvpot
       state%crop%wofost%dwstpot       = dwstpot
-      state%crop%wofost%pgasspot      = pgasspot
       state%crop%wofost%plossdm       = plossdm
       state%crop%common%cuptgrazpot   = cuptgrazpot
       state%crop%wofost%tagptpot      = tagptpot
