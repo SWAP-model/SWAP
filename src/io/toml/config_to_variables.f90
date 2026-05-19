@@ -140,7 +140,6 @@ contains
       ! `config%meteo%rainfile` is no longer copied into a global because
       ! the only consumer (the `.YYY` per-year rain reader in readmeteo.f90)
       ! has been deleted; CSV rain events use `config%meteo%rain_events_file`.
-      lat         = config%meteo%lat
       alt         = config%meteo%alt
       altw        = config%meteo%altw
       swetr       = config%meteo%swetr

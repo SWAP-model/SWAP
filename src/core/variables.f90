@@ -194,7 +194,7 @@
       ! real(8) :: inrai       ! Intermediate amount of net precipitation (L)
       ! real(8) :: ipeva       ! Intermediate amount of potential soil evaporation (L)
       ! real(8) :: iptra       ! Intermediate amount of potential transpiration (L)
-      real(8)   lat                ! Latitude of meteorological station (degrees)
+      ! [GR-CROP-DVS] lat retired — see state%cfg%meteo%lat
       ! [SS-TC] retired 2026-05-12 — moved to state%timecontrol%metperiod (ADR 0041)
       ! real(8)   metperiod          ! moved to state%timecontrol%metperiod
       ! real(8) :: nraida      ! Daily average net precipitation flux (L/T)

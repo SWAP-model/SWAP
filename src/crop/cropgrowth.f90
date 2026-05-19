@@ -59,7 +59,7 @@
         icrop, flCropCalendar, cropstart, cropend, flCropEmergence,         &
         flCropHarvest, flCropReadFile, flCropPrep, flCropSow, flCropGerm,   &
         swinco, croptype, daycrop,         &  ! tsum/rd/lai/rdpot/wso/wst/wlv/cwdmpot/cwdm retired
-        tmn, lat, rad,                                         &  ! wrt retired
+        tmn, rad,                                         &  ! wrt retired
         cumdens,                                               &
         eff, amaxtb, tmpftb, tmnftb, swdrought, swcrp, dvsend,             &  ! [GR-CROPWS B3]  removed (→)
         swharv, remoc, pld, q10,                    &  ! [GR-CROPWS B3] swbulb removed (→state%crop%wofost%swbulb)
@@ -404,7 +404,7 @@
 ! check DAYNR during the day!!!!!!          
           
         ! phenological development rate 
-        call astro (tc_daynr+1,lat,rad,dayl,daylp,sinld,cosld,difpp,atmtr,dsinbe)
+        call astro (tc_daynr+1,state%cfg%meteo%lat,rad,dayl,daylp,sinld,cosld,difpp,atmtr,dsinbe)
 
         ! only for bulb crops (tulips etc..)
         if(state%crop%wofost%swbulb) then                                     ! [GR-CROPWS B3] swbulb → state%crop%wofost%swbulb

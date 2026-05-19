@@ -486,7 +486,6 @@ contains
       !             not yet in state/config schema (Arc 8+).
       use variables, only: &   ! [SS-GR-FINAL B11] DEFERRED
          ! DEFERRED: lat — site latitude; config%meteo%lat; Phase C3
-         lat, &
          ! DEFERRED: rad/daylp/difpp/atmtr/dsinbe/tsunrise_atm/tsunset_atm — meteo derived scalars; Phase C3
          rad, daylp, difpp, atmtr, dsinbe, tsunrise_atm, tsunset_atm
       use et_mod, only: reduceva
@@ -508,7 +507,7 @@ contains
 
       if (tc_fldaystart) then
          ! Determine duration photoperiodic daylight in hours
-         call astro(tc_daynr, lat, rad, dayl, daylp, sinld, cosld, difpp, atmtr, dsinbe)
+         call astro(tc_daynr, state%cfg%meteo%lat, rad, dayl, daylp, sinld, cosld, difpp, atmtr, dsinbe)
          ! Determine tsunrise_atm, tsunset_atm and daytime
          tsunrise_atm = 0.5d0 - daylp/48.d0
          tsunset_atm = 0.5d0 + daylp/48.d0

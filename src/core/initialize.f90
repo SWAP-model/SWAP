@@ -62,7 +62,6 @@
       laiexp             = 0.0d0 
       laiexppot          = 0.0d0 
       laimax             = 0.0d0 
-      lat                = 0.0d0 
       ! [SS-TC] metperiod retired to state%timecontrol%metperiod (ADR 0041)
       ! [SS-ATM A-2.6] nraida/nraidt/peva/pevaday/ptra/ptraday retired to state%atmosphere
       nrain              = 0.0d0

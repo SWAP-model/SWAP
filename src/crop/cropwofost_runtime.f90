@@ -52,7 +52,7 @@
         macp, magrs, dvsend, rdmax, &  ! icrop/dvs/rd/rdpot retired
         swrd, swdmi2rd, swrdc, swdrought, swcf, swgc, swinter,       &
         swbulb, swinco, laiem, laiexp, laiexppot, laimax,    &  ! lai/laipot retired
-        cfeic, tsumea, tsumam, tbase, daycrop, lat, daylp,  &  ! tsum retired (→state%crop%common%tsum)
+        cfeic, tsumea, tsumam, tbase, daycrop, daylp,  &  ! tsum retired (→state%crop%common%tsum)
         siccaplai, cropend,                               &  ! [GR-CROPWS B5] cropstart removed (→state%crop%common%cropstart)
         wrtmax, wrtmin, &  ! wso/wst/wlv/wrt retired
         reltr, lrnr, lsnr, nni,           &
@@ -453,7 +453,7 @@
       else if (swsoybean.eq.1) then
 ! ---   soybean
         call mgtemprf(at_tav,toptdvr,tmindvr,tmaxdvr,rfmgtemp)  ! [SS-GR-ATM B.5]
-        call mgphotoprf(mg,tc_daynr,lat,popt,pcrt,flphenodayl,rfmgphotop)
+        call mgphotoprf(mg,tc_daynr,state%cfg%meteo%lat,popt,pcrt,flphenodayl,rfmgphotop)
         if (state%crop%common%dvs.lt.1.0d0) then 
 ! ---     vegetative phase
           if(flrfphotoveg) then
