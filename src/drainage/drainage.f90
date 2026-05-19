@@ -722,8 +722,7 @@ contains
   ! [SS-TC TC-14] t1900, dt read via state%timecontrol (ADR 0041)
   ! GR-BH Task 28: zbotdr, l, nrlevs, swnrsrf off variables → state%drainage%X.
   use variables, only: &   ! [SS-GR-FINAL B10] residuals — all DEFERRED
-     ! DEFERRED: swsec/swsrf — secondary/surface drainage switches; config; Phase C3
-     swsec, swsrf, &
+     ! swsec/swsrf retired (→state%cfg%surface_water%X); pilot
      ! DEFERRED: nrpri/nmper — primary drainage count / periods; config; Phase C3
      nrpri, nmper, &
      ! DEFERRED: taludr/widthr/rdrain — drain geometry; config; Phase C3
@@ -784,7 +783,7 @@ contains
                do 500 level = 1, nrlevs
 
 ! --- surface water level
-                  if (swsrf .ge. 2) then
+                  if (state%cfg%surface_water%swsrf .ge. 2) then
                      if (level .gt. nrpri) then
                         wl = wls
                      else
@@ -801,7 +800,7 @@ contains
 !     level is above channel bottom
                      if (gwl .gt. (zbotdr(level) + 0.001d0) .or.                       &
                 &        wl .gt. (zbotdr(level) + 0.001d0)) then
-                        if (wl .le. (zbotdr(level) + 0.001d0) .or. swsrf .eq. 1) then
+                        if (wl .le. (zbotdr(level) + 0.001d0) .or. state%cfg%surface_water%swsrf .eq. 1) then
 
 ! --- only groundw. level above channel bottom; bottom is dr. base
                            state%drainage%drainl(level) = zbotdr(level)
@@ -872,7 +871,7 @@ contains
 
                   end if
 !
-                  if (swsrf .ge. 2 .and. level .gt. nrpri) then
+                  if (state%cfg%surface_water%swsrf .ge. 2 .and. level .gt. nrpri) then
 
 ! --- qdrd is total flux to or from secondary system
                      state%drainage%qdrd = state%drainage%qdrd + qdrain(level)
@@ -883,15 +882,15 @@ contains
 !   [SS-GR-CROPRT A2] rapid drainage macropore basis block dropped (ADR 0040; FlMacropore always .false.)
 
 ! ----------------------------------------------------------------------
-! --- check for system falling dry (only for swsec = 2):
-                  if (swsec .eq. 1) return
-                  if (swsrf .eq. 1) then
+! --- check for system falling dry (only for state%cfg%surface_water%swsec = 2):
+                  if (state%cfg%surface_water%swsec .eq. 1) return
+                  if (state%cfg%surface_water%swsrf .eq. 1) then
                      do 10 level = 1, nrlevs
                         if (qdrain(level) .lt. 0.0d0) then
                            qdrain(level) = 0.0d0
                         end if
 10                      continue
-                        elseif (swsrf .ge. 2) then
+                        elseif (state%cfg%surface_water%swsrf .ge. 2) then
 
 ! --- determine which management period the model is in:
                         imper = 0

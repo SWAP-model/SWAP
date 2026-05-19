@@ -20,11 +20,18 @@ module swap_state_mod
    use mesh_state_mod,          only: mesh_state_t
    use crop_state_mod,          only: crop_state_t
    use nutrients_state_mod,     only: nutrients_state_t
+   use swap_config_mod,         only: swap_config_t
    implicit none
    private
    public :: swap_state_t
 
    type :: swap_state_t
+      ! Non-owning pointer to the loaded config. Set once at swap_init.
+      ! Lifetime: config and state are created/destroyed together.
+      ! Use case: top-level compute routines read switches via state%cfg%X%Y
+      ! without needing a separate config arg. Helpers stay pure (specific args).
+      type(swap_config_t), pointer :: cfg => null()
+
       type(surfacewater_state_t) :: surfacewater
       type(drainage_state_t)     :: drainage
       type(solute_state_t)       :: solute

@@ -126,6 +126,11 @@ contains
    ! [SS-GR-CROPRT A5] mirror flCropHarvest zero-init (Initialize has no state arg)
    state%crop%common%flCropHarvest = flCropHarvest
 
+   ! [GR-CROP-DVS] non-owning config pointer; lifetime matches state's.
+   ! Top-level compute routines can now read switches via state%cfg%X%Y
+   ! without needing a separate config arg.
+   state%cfg => config
+
 !  iteration and timing statistics
    call itertime_init(state)
 

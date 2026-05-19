@@ -1321,9 +1321,11 @@
 ! --- surface water variables
       ! [SS-GR-FINAL D1] swswb retired — 0 consumers
       ! [SS-GR-FINAL D1] swdrf retired — 0 consumers
-      integer swsrf,swallo(Madr),swdtyp(Madr)
+      ! [GR-CROP-DVS] swsrf retired — see state%cfg%surface_water%swsrf
+      integer swallo(Madr),swdtyp(Madr)
       ! [GR-BH Task 37] swnrsrf retired — moved to state%drainage%swnrsrf
-      integer swqhr,swsec,nrpri
+      ! [GR-CROP-DVS] swsec retired — see state%cfg%surface_water%swsec
+      integer swqhr,nrpri
       ! [SS-GR-FINAL D1] nrsec retired — 0 consumers
       integer nmper,swman(mamp)
       ! [GR-BH Task 37] SwTopnrsrf retired — moved to state%drainage%swtopnrsrf

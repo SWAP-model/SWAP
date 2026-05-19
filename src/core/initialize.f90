@@ -547,12 +547,10 @@
 
 ! --- surface water variables
       ! [SS-GR-FINAL D1] swswb/swdrf zero-fills dropped — declarations retired
-      swsrf                = 0
       swallo               = 0
       swdtyp               = 0
       ! [GR-BH Task 37] swnrsrf retired to state%drainage%swnrsrf
       swqhr                = 0
-      swsec                = 0
       nrpri                = 0
       ! [SS-GR-FINAL D1] nrsec zero-fill dropped — declaration retired
       nmper                = 0

@@ -38,8 +38,7 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
       use variables, only: &   ! [SS-GR-FINAL B10] residuals — all DEFERRED
          ! DEFERRED: swdislay/swtopdislay/fTopDisLay — distributed-layer drainage config; Phase C3
          swdislay, swtopdislay, fTopDisLay, &
-         ! DEFERRED: swsrf/swsec — surface water / secondary drainage switches; config; Phase C3
-         swsrf, swsec, &
+         ! state%cfg%surface_water%swsrf/state%cfg%surface_water%swsec retired (→state%cfg%surface_water%X); pilot
          ! DEFERRED: wlptab — prescribed surface water level table; config; Phase C3
          wlptab
       use array_utils, only: afgen
@@ -213,13 +212,13 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
 
 ! === surface water balance ========================
 
-      if (swsrf .eq. 3) then
+      if (state%cfg%surface_water%swsrf .eq. 3) then
         state%surfacewater%wlp = afgen (wlptab,2*mawlp,tc_t1900-1.0d0+tc_dt)  ! [TC-8]
       endif
-      if (swsec.eq.2) then
+      if (state%cfg%surface_water%swsec.eq.2) then
 ! ---    water level of secondary system is simulated
          call wlevbal (state, request_smaller_dt)
-      elseif (swsec.eq.1) then
+      elseif (state%cfg%surface_water%swsec.eq.1) then
 ! ---    water level of secondary system is input
          call wballev (state)
       endif

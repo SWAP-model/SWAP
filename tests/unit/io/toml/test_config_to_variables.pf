@@ -161,7 +161,7 @@ subroutine test_config_to_variables_surface_water_with_management()
    use swap_config_mod, only: swap_config_t
    use config_to_variables_mod, only: config_to_variables
    use swap_state_mod, only: swap_state_t
-   use variables, only: swsrf, swsec, swqhr, osswlm, nmper, &
+   use variables, only: swqhr, osswlm, nmper, &  ! swsrf/swsec retired
                         impend, swman, wscap, wldip, intwl, hbweir
    implicit none
    type(swap_config_t) :: config
@@ -187,8 +187,8 @@ subroutine test_config_to_variables_surface_water_with_management()
 
    call config_to_variables(config, state)
 
-   @assertEqual(2,        swsrf)
-   @assertEqual(2,        swsec)
+   @assertEqual(2,        config%surface_water%swsrf)
+   @assertEqual(2,        config%surface_water%swsec)
    @assertEqual(1,        swqhr)
    @assertEqual(0.05d0,   osswlm)
    @assertEqual(2,        nmper)

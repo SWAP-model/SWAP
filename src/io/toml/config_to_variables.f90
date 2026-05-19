@@ -1062,8 +1062,7 @@ contains
       ! ---------------------------------------------------------------
       ! Surface water (audit: 12 + per-period management arrays)
       ! ---------------------------------------------------------------
-      swsrf = config%surface_water%swsrf
-      swsec = config%surface_water%swsec
+      ! [GR-CROP-DVS] swsrf/swsec retired — consumers read state%cfg%surface_water%X
       ! TOML pipeline: pre-compute the initial water level wls1.
       ! Legacy rddre computes wls1 = wlact - altcu inside the routine;
       ! we do the same here so surfacewater_init can read it from a
