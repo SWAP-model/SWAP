@@ -43,7 +43,7 @@ contains
       !   Retirement requires Phase C3 adapter rewrite (config_to_variables.f90 dual-writes).
       use variables, only: &
          ! ET / crop factor — DEFERRED Phase C3
-         swcf, cftb, chtb, albedo, rsc, rsw,                                &
+         swcf, cftb, chtb, rsw,                                &  ! albedo/rsc retired
          ! Development — DEFERRED Phase C3
          idsl, tsumea, tsumam, dlo, dlc, dtsmtb,                            &
          ! Vernalisation — DEFERRED Phase C3
@@ -154,12 +154,12 @@ contains
             end block
          end if
          ! ETref standard defaults for albedo/rsc/rsw
-         albedo = 0.23_real64
-         rsc    = 70.0_real64
+         state%crop%common%albedo = 0.23_real64
+         state%crop%common%rsc    = 70.0_real64
          rsw    = 0.0_real64
       else if (swcf == 2) then
-         albedo = cfg%crop_factor%albedo
-         rsc    = cfg%crop_factor%rsc
+         state%crop%common%albedo = cfg%crop_factor%albedo
+         state%crop%common%rsc    = cfg%crop_factor%rsc
          rsw    = cfg%crop_factor%rsw
          if (allocated(cfg%crop_factor%chtb)) then
             block
@@ -175,8 +175,6 @@ contains
             end block
          end if
       end if
-      state%crop%common%albedo = albedo   ! [SS-GR-CROPRT A5]
-      state%crop%common%rsc    = rsc      ! [SS-GR-CROPRT A5]
 
       ! Part 14: interception (readwofost line 2640-2642)
       swinter = cfg%interception%swinter

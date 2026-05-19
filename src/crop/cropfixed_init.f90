@@ -33,7 +33,7 @@ contains
                             ! DEFERRED: kdif/kdir/gctb/swgc — radiation/crop factor config; Phase C3
                             gctb, swgc,                       &  ! kdif/kdir retired
                             ! DEFERRED: cftb/chtb/cfeictb/swcf/albedo/rsc/rsw — crop factor config; Phase C3
-                            cftb, chtb, cfeictb, swcf, albedo, rsc, rsw,  &
+                            cftb, chtb, cfeictb, swcf, rsw,  &  ! albedo/rsc retired
                             ! DEFERRED: rdtb/rdctb/swrd/swdmi2rd/swrdc/rdi/rri/rdc — root config; Phase C3
                             rdtb, rdctb, swrd, swdmi2rd, swrdc, rdi, rri, rdc, &
                             ! DEFERRED: swoxygen/swWrtNonox/aeratecrit/max_resp_factor — O2 stress config; Phase C3
@@ -137,16 +137,14 @@ contains
       !   swcf=2 (crop height): user-authored values from .crp
       ! swcf=3 is stub-errored upstream so it never reaches here.
       if (cfg%swcf == 1) then
-         albedo = 0.23_real64
-         rsc    = 70.0_real64
+         state%crop%common%albedo = 0.23_real64
+         state%crop%common%rsc    = 70.0_real64
          rsw    = 0.0_real64
       else if (cfg%swcf == 2) then
-         albedo = cfg%albedo
-         rsc    = cfg%rsc
+         state%crop%common%albedo = cfg%albedo
+         state%crop%common%rsc    = cfg%rsc
          rsw    = cfg%rsw
       end if
-      state%crop%common%albedo = albedo   ! [SS-GR-CROPRT A5]
-      state%crop%common%rsc    = rsc      ! [SS-GR-CROPRT A5]
 
       ! ---- Copy tables ------------------------------------------------
       ! gctb (size up to 2*magrs in legacy; we copy what was authored).

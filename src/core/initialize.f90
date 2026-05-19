@@ -657,7 +657,6 @@
       swoxygen           = 0 
       adcrh              = 0.0d0 
       adcrl              = 0.0d0 
-      albedo             = 0.0d0 
       alphacrit          = 0.0d0 
       amaxtb             = 0.0d0 
       atmin7             = 0.0d0
@@ -719,7 +718,6 @@
       rootradius         = 0.0d0 
       ! [SS-CRP C-2.5] rootrho retired — soilwater_init handles init via state%soilwater (ADR 0036)
       ! rootrho            = 0.0d0
-      rsc                = 0.0d0
       rsw                = 0.0d0 
 
       scanopytb          = 0.0d0 

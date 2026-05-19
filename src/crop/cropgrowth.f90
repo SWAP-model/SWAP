@@ -60,7 +60,7 @@
         flCropHarvest, flCropReadFile, flCropPrep, flCropSow, flCropGerm,   &
         swinco, croptype, daycrop, cf, ch,         &  ! tsum/rd/lai/rdpot/wso/wst/wlv/cwdmpot/cwdm retired
         tmn, lat, rad,                                         &  ! wrt retired
-        albedo, rsc, cumdens,                                               &
+        cumdens,                                               &
         eff, amaxtb, tmpftb, tmnftb, swdrought, swcrp, dvsend,             &  ! [GR-CROPWS B3]  removed (→)
         swharv, plwt, remoc, pld, q10,                    &  ! [GR-CROPWS B3] swbulb removed (→state%crop%wofost%swbulb)
         flCropNut, nlue, anlv, anst, nmxlv, nmaxlv, nmaxst,               &
@@ -153,8 +153,6 @@
         ! [SS-GR-CROP A5.1] nocrop writes state%crop%common%dvs/rd directly; mirror remaining legacy zeros
         state%crop%common%cf         = cf
         state%crop%common%ch         = ch
-        state%crop%common%albedo     = albedo   ! [SS-GR-CROPRT A5]
-        state%crop%common%rsc        = rsc      ! [SS-GR-CROPRT A5]
       endif
 
 ! --- check crop emergence ----------------------------------------------------
@@ -171,8 +169,6 @@
           state%crop%common%PrepDelay     = PrepDelay
           state%crop%common%SowDelay      = SowDelay
           state%crop%common%noddrz        = noddrz
-          state%crop%common%albedo        = albedo
-          state%crop%common%rsc           = rsc
           state%crop%common%cumdens       = cumdens
           flCropReadFile  = .true.
           state%crop%common%flCropReadFile = flCropReadFile   ! [SS-GR-CROPRT A5]

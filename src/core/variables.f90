@@ -365,7 +365,7 @@
       real(8)   adcrh              ! Level of high atmospheric demand (L/T)
       real(8)   adcrl              ! Level of low atmospheric demand (L/T)
       real(8)   air_filled_root_por ! Air filled root porosity [0..1.0 -, R]
-      real(8)   albedo             ! Crop reflection coefficient (-)
+      ! [GR-CROP-DVS] albedo retired — see state%crop%common%albedo
       ! [SS-CRP] retired 2026-05-11 — moved to state%soilwater%alpJvLier (ADR 0036)
       ! real(8)   alpJvLier          ! Uniform drought reduction factor based on concept Jong van Lier (-)
       real(8)   amaxtb(30)         ! Maximum CO2 assimilation rate (kg/ha/hr) as function of development stage (-)
@@ -475,7 +475,7 @@
       real(8)   rooteff            ! Root system efficiency factor [0..1.0 -, R]
       real(8)   rootradius         ! Root radius drought stress (cm)
       real(8)   root_radiusO2      ! Root radius oxygen stress (m)
-      real(8)   rsc                ! Minimum canopy resistance of dry crop (T/L)
+      ! [GR-CROP-DVS] rsc retired — see state%crop%common%rsc
       real(8)   rsw                ! Canopy resistance of intercepted water (T/L)
       real(8)   scanopytb(2*magrs) ! Gash interception model: storage capacity of canopy (-) as function of time (T)
       real(8)   shape_factor_rootr ! Shape factor for exponential decrease of root respiration rate with depth [0..1.0 -, R]

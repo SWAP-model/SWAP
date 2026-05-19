@@ -7,7 +7,7 @@ subroutine test_cropfixed_init_writes_scalars()
    use variables, only: idev, hlim3h, hlim3l, hlim4, &
                          adcrh, adcrl, swgc, swcf, swrd, swoxygen, &
                          swdrought, swsalinity, swcompensate, swinter, &
-                         albedo, rsc, rsw  ! kdif/kdir/cofab retired (→state%crop%X)
+                         rsw  ! kdif/kdir/cofab/albedo/rsc retired
    type(cropfixed_config_t) :: cfg
    type(swap_state_t) :: state  ! [SS-GR-ATM A5.1] dual-write target
    integer :: lcc_out
@@ -56,8 +56,8 @@ subroutine test_cropfixed_init_writes_scalars()
    @assertEqual(0.25d0,    state%crop%cofab,  1.0d-12)
 
    ! ETref defaults are reset for swcf=1 path
-   @assertEqual(0.23d0, albedo, 1.0d-12)
-   @assertEqual(70.0d0, rsc,    1.0d-12)
+   @assertEqual(0.23d0, state%crop%common%albedo, 1.0d-12)
+   @assertEqual(70.0d0, state%crop%common%rsc,    1.0d-12)
    @assertEqual(0.0d0,  rsw,    1.0d-12)
 end subroutine
 

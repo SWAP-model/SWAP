@@ -152,7 +152,7 @@
       ! [SS-GR-CROPRT B4] DEFERRED — nocrop: pure write site (sets globals to zero defaults).
       !   dvs now writes directly to state%crop%common%dvs (legacy global retired in dvs pilot).
       !   Other symbols still legacy; CropGrowth mirrors them to state immediately after the call.
-      use variables, only: cf,ch,albedo,rsc  ! [SS-GR-CROPRT B4] DEFERRED; tsum/rd/lai/rdpot/wso/wst/wlv/wrt/cwdm/cwdmpot retired
+      use variables, only: cf,ch  ! [SS-GR-CROPRT B4] DEFERRED; tsum/rd/lai/rdpot/wso/wst/wlv/wrt/cwdm/cwdmpot/albedo/rsc retired
       use swap_state_mod, only: swap_state_t
       implicit none
       type(swap_state_t), intent(inout) :: state
@@ -163,8 +163,8 @@
       state%crop%common%laipot  = 0.d0
       cf      = 0.0d0
       ch      = 0.0d0
-      albedo  = 0.23d0
-      rsc     = 70.d0
+      state%crop%common%albedo  = 0.23d0
+      state%crop%common%rsc     = 70.d0
       state%crop%common%tsum = 0.d0
       state%crop%common%dvs = 0.d0
       state%crop%wofost%cwdmpot = 0.d0

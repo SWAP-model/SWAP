@@ -35,7 +35,7 @@ contains
       !   Retirement requires Phase C3 adapter rewrite (config_to_variables.f90 dual-writes).
       use variables, only: &
          ! ET-related — DEFERRED Phase C3
-         swcf, albedo, rsw, rsc, cftb, chtb,                                &
+         swcf, rsw, cftb, chtb,                                &  ! albedo/rsc retired
          ! Interception — DEFERRED Phase C3
          swinter,                                                             &  ! cofab retired
          ! Crop state — DEFERRED Phase C3
@@ -160,8 +160,8 @@ contains
       state%crop%swcf = swcf   ! [SS-GR-ATM A5.1] runtime dual-write
       if (cfg%swcf == 1) then
          ! ETref standard defaults for albedo/rsc/rsw
-         albedo = 0.23d0
-         rsc    = 70.0d0
+         state%crop%common%albedo = 0.23d0
+         state%crop%common%rsc    = 70.0d0
          rsw    = 0.0d0
          if (allocated(cfg%cftb)) then
            call copy_table(cfg%cftb, cftb)
@@ -170,8 +170,8 @@ contains
          chtb = -99.99d0
          state%crop%fixed%chtb = chtb   ! [SS-GR-CROP A5.2]
       else if (cfg%swcf == 2) then
-         albedo = cfg%albedo
-         rsc    = cfg%rsc
+         state%crop%common%albedo = cfg%albedo
+         state%crop%common%rsc    = cfg%rsc
          rsw    = cfg%rsw
          if (allocated(cfg%chtb)) then
            call copy_table(cfg%chtb, chtb)
@@ -180,8 +180,6 @@ contains
          cftb = -99.99d0
          state%crop%fixed%cftb = cftb   ! [SS-GR-CROP A5.2]
       end if
-      state%crop%common%albedo = albedo   ! [SS-GR-CROPRT A5]
-      state%crop%common%rsc    = rsc      ! [SS-GR-CROPRT A5]
 
       ! Part 2: interception (readgrass lines 3560-3585)
       swinter = cfg%swinter
