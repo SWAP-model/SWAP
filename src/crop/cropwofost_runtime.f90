@@ -54,7 +54,7 @@
         swbulb, swinco, laiem, laiexp, laiexppot, laimax,    &  ! lai/laipot retired
         cf, ch, cfeic, tsumea, tsumam, tbase, daycrop, lat, daylp,  &  ! tsum retired (→state%crop%common%tsum)
         kdif, siccapact, siccaplai, cropend,                               &  ! [GR-CROPWS B5] cropstart removed (→state%crop%common%cropstart)
-        wrtpot, wrtmax, wrtmin, &  ! wso/wst/wlv/wrt retired
+        wrtmax, wrtmin, &  ! wso/wst/wlv/wrt retired
         cwdm, cwdmpot, pgass, pgasspot, reltr, lrnr, lsnr, nni,           &
         anlv, anst, nmxlv, nmaxlv, nmaxst, nmaxrt, nmaxso, nlai,          &
         rnflv, rnfst, rnfrt, fstr, fntrt, npart, nfixf, nsla,             &
@@ -271,7 +271,7 @@
 ! ---   initial state variables of the crop
         state%crop%wofost%wrt = fr*tdwi
         wrtmin = state%crop%wofost%wrt / 10000 ! minimum root weigth at relative depth is set to 1% of the initial value
-        wrtpot = state%crop%wofost%wrt
+        state%crop%wofost%wrtpot = state%crop%wofost%wrt
         tadw = (1.0d0-fr)*tdwi
         tadwpot = tadw
         state%crop%wofost%wst = fs*tadw
@@ -369,7 +369,6 @@
         state%crop%wofost%swbulb    = (swbulb == 1)
         state%crop%wofost%plwt      = plwt
         state%crop%wofost%plwti     = plwti
-        state%crop%wofost%wrtpot    = wrtpot
         state%crop%wofost%wbl       = wbl
         state%crop%wofost%wblpot    = wblpot
         state%crop%wofost%dwrt      = dwrt
@@ -503,10 +502,10 @@
 ! --- respiration and partitioning of carbohydrates between growth and
 ! --- maintenance respiration
       if(swbulb.eq.1) then
-        rmrespot = (rmr*wrtpot+rml*state%crop%wofost%wlvpot+rms*state%crop%wofost%wstpot+rms*wblpot+        &
+        rmrespot = (rmr*state%crop%wofost%wrtpot+rml*state%crop%wofost%wlvpot+rms*state%crop%wofost%wstpot+rms*wblpot+        &
      &           rmo*state%crop%wofost%wsopot)* afgen(rfsetb,30,state%crop%common%dvs)
       else
-        rmrespot = (rmr*wrtpot+rml*state%crop%wofost%wlvpot+rms*state%crop%wofost%wstpot+rmo*state%crop%wofost%wsopot)*       &
+        rmrespot = (rmr*state%crop%wofost%wrtpot+rml*state%crop%wofost%wlvpot+rms*state%crop%wofost%wstpot+rmo*state%crop%wofost%wsopot)*       &
      &           afgen(rfsetb,30,state%crop%common%dvs)
       endif
       teff = q10**((at_tav-25.0d0)/10.0d0)  ! [SS-GR-ATM B.5]
@@ -544,11 +543,11 @@
       grrtpot = fr*dmipot
       ! in case of SWRD = 3: after reaching maximum live weight of wrtmax, the
       ! growth of the roots is balanced by the death of root tissue
-      if (swrd.eq.3 .and. wrtpot.gt.wrtmax) then
+      if (swrd.eq.3 .and. state%crop%wofost%wrtpot.gt.wrtmax) then
         drrtpot = grrtpot
-        drrtpot = max(drrtpot,wrtpot*afgen (rdrrtb,30,state%crop%common%dvs))
+        drrtpot = max(drrtpot,state%crop%wofost%wrtpot*afgen (rdrrtb,30,state%crop%common%dvs))
       else  
-        drrtpot = wrtpot*afgen (rdrrtb,30,state%crop%common%dvs)
+        drrtpot = state%crop%wofost%wrtpot*afgen (rdrrtb,30,state%crop%common%dvs)
       endif  
       gwrtpot = grrtpot - drrtpot
 
@@ -688,7 +687,7 @@
       laiexppot = laiexppot+glaiexpot*delt
 
 ! --- dry weight of living plant organs
-      wrtpot = wrtpot + gwrtpot*delt
+      state%crop%wofost%wrtpot = state%crop%wofost%wrtpot + gwrtpot*delt
       state%crop%wofost%wstpot = state%crop%wofost%wstpot + gwstpot*delt
       state%crop%wofost%wsopot = state%crop%wofost%wsopot + gwsopot*delt
 ! --- only for bulb crops (tulips etc..)
@@ -749,7 +748,6 @@
       endif
 
       ! [SS-GR-CROP A5.1] mirror wofost case(2) potential state
-      state%crop%wofost%wrtpot    = wrtpot
       state%crop%wofost%wblpot    = wblpot
       state%crop%wofost%dwrtpot   = dwrtpot
       state%crop%wofost%dwlvpot   = dwlvpot
@@ -1215,7 +1213,7 @@
         state%crop%common%rd = state%crop%common%rd + rr
 
       elseif (swrd.eq.3) then
-        state%crop%common%rdpot = afgen (rlwtb,22,wrtpot)
+        state%crop%common%rdpot = afgen (rlwtb,22,state%crop%wofost%wrtpot)
         state%crop%common%rdpot = min(state%crop%common%rdpot,rdm)
         state%crop%common%rd = afgen (rlwtb,22,state%crop%wofost%wrt)
         state%crop%common%rd = min(state%crop%common%rd,rdm)

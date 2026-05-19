@@ -49,7 +49,7 @@
       !   tsoil: config-staging buffer, renamed to avoid clash with dummy arg
       use variables, only: &                                            ! [SS-GR-CROPRT B8] [GR-CROPWS B4]
         magrs, macp, rid, tbase, daycrop, tdwi, swinco, &  ! [GR-CROPWS B4] icrop/dvs/state%crop%common%tsum retired
-        wrtpot, wrtmax, wrtmin,           &  ! wst/wlv/wrt retired
+        wrtmax, wrtmin,           &  ! wst/wlv/wrt retired
         dwlv, dwlvpot, dwrt, dwrtpot, dwst, dwstpot,                     &
         cf, ch, cfeic, laiem, laiexp, laiexppot, laimax,    &  ! lai/laipot retired
         cftb, chtb, cfeictb, rdtb, slatb, rgrlai, rlwtb, rfsetb,        &
@@ -244,7 +244,7 @@
 ! ---   initial state variables of the crop
         state%crop%wofost%wrt = fr*tdwi
         wrtmin = state%crop%wofost%wrt / 10000 ! minimum root weigth at relative depth is set to 1% of the initial value
-        wrtpot = state%crop%wofost%wrt
+        state%crop%wofost%wrtpot = state%crop%wofost%wrt
         state%crop%wofost%wst = fs*(1.0d0-fr)*tdwi
         state%crop%wofost%wstpot = state%crop%wofost%wst
         state%crop%wofost%wlv = laiem/sla(1)
@@ -299,7 +299,6 @@
         flhrvendpot      = .false.
         flearlyhrvendpot = .false.
         ! [SS-GR-CROP A5.1] mirror grass init-time state
-        state%crop%wofost%wrtpot      = wrtpot
         state%crop%wofost%dwrt        = dwrt
         state%crop%wofost%dwrtpot     = dwrtpot
         state%crop%wofost%dwlv        = dwlv
@@ -457,7 +456,7 @@
 
 ! ---   respiration and partitioning of carbohydrates between growth and
 ! ---   maintenance respiration
-        rmrespot=(rmr*wrtpot+rml*state%crop%wofost%wlvpot+rms*state%crop%wofost%wstpot)*afgen(rfsetb,30,rid)
+        rmrespot=(rmr*state%crop%wofost%wrtpot+rml*state%crop%wofost%wlvpot+rms*state%crop%wofost%wstpot)*afgen(rfsetb,30,rid)
         teff = q10**((at_tav-25.0d0)/10.0d0)  ! [SS-GR-ATM B.5]
         mrespot = min (gasspot,rmrespot*teff)
         asrcpot = gasspot-mrespot
@@ -497,11 +496,11 @@
         grrtpot = fr*dmipot
         ! in case of SWRD = 3: after reaching maximum live weight of wrtmax, the
         ! growth of the roots is balanced by the death of root tissue
-        if (swrd.eq.3 .and. wrtpot.gt.wrtmax) then
+        if (swrd.eq.3 .and. state%crop%wofost%wrtpot.gt.wrtmax) then
           drrtpot = grrtpot
-          drrtpot = max(drrtpot,wrtpot*afgen (rdrrtb,30,rid))
+          drrtpot = max(drrtpot,state%crop%wofost%wrtpot*afgen (rdrrtb,30,rid))
         else  
-          drrtpot = wrtpot*afgen (rdrrtb,30,rid)
+          drrtpot = state%crop%wofost%wrtpot*afgen (rdrrtb,30,rid)
         endif  
         gwrtpot = grrtpot - drrtpot
 
@@ -855,7 +854,7 @@
         endif
 
 ! ---   dry weight of living plant organs
-        wrtpot = wrtpot+gwrtpot*delt
+        state%crop%wofost%wrtpot = state%crop%wofost%wrtpot+gwrtpot*delt
         state%crop%wofost%wstpot = state%crop%wofost%wstpot+gwstpot*delt
 
 ! ---   dry weight of dead plant organs (roots,leaves & stems)
@@ -883,14 +882,13 @@
           if (fr.le.0.0d0 .or. pgasspot.lt.1.0d0) rrpot = 0.0d0
           state%crop%common%rdpot = state%crop%common%rdpot + rrpot
         elseif (swrd.eq.3) then
-          state%crop%common%rdpot = afgen (rlwtb,22,wrtpot)
+          state%crop%common%rdpot = afgen (rlwtb,22,state%crop%wofost%wrtpot)
           state%crop%common%rdpot = min(state%crop%common%rdpot,rdm)
         endif
 
       endif
 
       ! [SS-GR-CROP A5.1] mirror grass case(2) potential state
-      state%crop%wofost%wrtpot        = wrtpot
       state%crop%wofost%dwrtpot       = dwrtpot
       state%crop%wofost%dwlvpot       = dwlvpot
       state%crop%wofost%dwstpot       = dwstpot
