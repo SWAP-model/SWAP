@@ -22,4 +22,4 @@ reruns.log
 swap.swp
 *.zip
 api/
-api/src/
+api/src/scripts/__pycache__/
