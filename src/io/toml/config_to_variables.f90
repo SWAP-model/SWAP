@@ -275,8 +275,8 @@ contains
       ! Snow sub-section
       swsnow   = config%meteo%snow%swsnow
       snowcoef = config%meteo%snow%snowcoef
-      teprrain = config%meteo%snow%teprrain
-      teprsnow = config%meteo%snow%teprsnow
+      state%atmosphere%TePrRain = config%meteo%snow%teprrain
+      state%atmosphere%TePrSnow = config%meteo%snow%teprsnow
 
       ! ---------------------------------------------------------------
       ! Drainage (audit: 20 fields + surface_runoff sub-section)

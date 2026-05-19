@@ -1173,8 +1173,8 @@
       ! real(8) :: snrai     ! Net rain rate on snow pack (L/T)
       ! real(8) :: ssnow     ! Amount of snow (L water)
       ! real(8) :: subl      ! Sublimation rate (L/T)
-      real(8)   TePrRain           ! Temperature above which all precipitation is rain,[ 0.0...5.0 oC, R]
-      real(8)   TePrSnow           ! Temperature below which all precipitation is snow,[-5.0...0.0 oC, R]
+      ! [GR-CROP-DVS] TePrRain retired — see state%atmosphere%TePrRain
+      ! [GR-CROP-DVS] TePrSnow retired — see state%atmosphere%TePrSnow
       ! [SS-TC] retired 2026-05-12 — moved to state%timecontrol%flSnow (ADR 0041)
       ! logical   flsnow             ! moved to state%timecontrol%flSnow
 

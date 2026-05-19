@@ -34,6 +34,16 @@ RANGES = {
     'src/crop/rootextraction.f90': (31, 1008),
     'src/crop/oxygenstress.f90': (96, 660),
     'src/crop/irrigation.f90': (33, 488),
+    'src/atmosphere/meteoday.f90': (1, 9999),
+    'src/atmosphere/interception.f90': (1, 9999),
+    'src/soil/waterbalance.f90': (1, 9999),
+    'src/solute/agetracer.f90': (1, 9999),
+    'src/solute/solute.f90': (1, 9999),
+    'src/drainage/drainage.f90': (1, 9999),
+    'src/drainage/surfacewater.f90': (1, 9999),
+    'src/atmosphere/snow.f90': (1, 9999),
+    'src/heat/temperature.f90': (1, 9999),
+    'src/heat/frozencond.f90': (1, 9999),
 }
 
 

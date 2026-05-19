@@ -454,8 +454,6 @@
       ! [SS-ATM A-2.6] cgsnow/cmelt/csnrai/csubl/gsnow/igsnow/isnrai/isubl/melt/
       !                snowinco/snrai/ssnow/slw/subl retired to state%atmosphere (cumu/intr/flat scalars)
       snowcoef           = 0.0d0
-      TePrRain           = 0.0d0 
-      TePrSnow           = 0.0d0 
       ! [SS-TC] flsnow retired to state%timecontrol%flSnow (ADR 0041)
 
 ! --- solute variables

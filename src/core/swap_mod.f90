@@ -64,7 +64,7 @@ contains
                             arad, atmn, atmx, ahum, awin, arai, aetr, wet, &
                             atav, epot, tpot, grain, nrain, &
                             ! [GR-ATM C8] tavd/rh retired from import (no legacy consumers; state written by meteoday)
-                            tav, daynrfirst, daynrlast, atmin7, nofd, teprrain, teprsnow, &
+                            tav, daynrfirst, daynrlast, atmin7, nofd, &  ! teprrain/teprsnow retired
                             isua, avevaptb, avprectb, pfreetb, pstemtb, scanopytb, &
                             CNdry, CNwet, ThetaRef, Runoff_CN, wc_cor, wc10, iCNtab, CNtimTAB, CNrefTAB, &
                             ! [GR-ATM C8] out_tmn/tmx/hum/win/etr/wet/rad retired from import (state written by meteoday)
@@ -350,8 +350,6 @@ contains
    state%atmosphere%daynrlast  = daynrlast
    state%atmosphere%atmin7     = atmin7
    state%atmosphere%nofd       = nofd
-   state%atmosphere%teprrain   = teprrain
-   state%atmosphere%teprsnow   = teprsnow
    state%atmosphere%isua      = isua
    state%atmosphere%avevaptb  = avevaptb
    state%atmosphere%avprectb  = avprectb
