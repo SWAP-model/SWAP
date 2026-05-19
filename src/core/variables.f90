@@ -493,7 +493,7 @@
       ! [GR-CROP-DVS] tagp retired — see state%crop%wofost%tagp
       ! [GR-CROP-DVS] tagppot retired — see state%crop%wofost%tagppot
       ! [GR-CROP-DVS] tagpt retired — see state%crop%wofost%tagpt
-      real(8)   tagptpot           ! Dry weight of harvested grass for potential run (kg/ha)
+      ! [GR-CROP-DVS] tagptpot retired — see state%crop%wofost%tagptpot
       real(8)   tbase              ! Lower threshold temperature for ageing of leaves (oC)
       real(8)   tdwi               ! Initial total crop dry weight (kg/ha)
       real(8)   tmnftb(30)         ! Reduction factor for maximum assimilation rate (-) as function of minimum day temperature (oC)
