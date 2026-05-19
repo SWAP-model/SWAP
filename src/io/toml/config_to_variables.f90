@@ -125,7 +125,6 @@ contains
       state%timecontrol%msteps        = config%simulation%numerical%msteps
       MaxBackTr = config%simulation%numerical%MaxBackTr
       taccur    = config%simulation%numerical%taccur
-      gwlconv       = config%simulation%numerical%gwlconv
       critdevh1cp   = config%simulation%numerical%critdevh1cp
       critdevh2cp   = config%simulation%numerical%critdevh2cp
       critdevponddt = config%simulation%numerical%critdevponddt

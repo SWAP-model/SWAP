@@ -244,7 +244,6 @@
       geofac             = 0.0d0 
       ! [SS-SWC] gwl retired — soilwater_init handles init via state%soilwater%gwl
       ! gwl                = 0.0d0
-      gwlconv            = 0.0d0 
       gwli               = 0.0d0 
       ! [SS-BND B-2.7] gwlinp retired — soilwater_init handles init via state%soilwater
       ! gwlinp             = 0.0d0

@@ -44,7 +44,6 @@ contains
          ! DEFERRED: sw4/qbotab — bottom BC type 4 / flux table; Phase C3
          sw4, qbotab, &
          ! DEFERRED: gwlconv — groundwater level convergence criterion; Phase C3
-         gwlconv, &
          ! DEFERRED: hplate — lysimeter tensiometer plate head; Phase C3
          hplate, &
          ! DEFERRED: SwBotb3ResVert/swbotb3Impl — Cauchy BC options; Phase C3
@@ -762,7 +761,7 @@ contains
             ! Calculate new groundwater level
             call calcgwl (state)
 
-            if(swbotb.ne.1.and.abs(state%soilwater%gwl-sw_gwlm1).ge.gwlconv .AND.          &  ! [SS-SWC S-2.12B]
+            if(swbotb.ne.1.and.abs(state%soilwater%gwl-sw_gwlm1).ge.state%cfg%simulation%numerical%gwlconv .AND.          &  ! [SS-SWC S-2.12B]
      &         abs(state%soilwater%gwl-999d0).gt.1.d0.and.abs(sw_gwlm1-999d0).gt.1.d0) then  ! [SS-SWC S-2.12B]
                call dtdpst ('year-month-day',tc_t1900+1.001d0,datetmp)  ! [TC-8]
                  messag = ' Change of groundwater level exceeds'//      &

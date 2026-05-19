@@ -864,7 +864,7 @@
       real(8)   geofac             ! Geometry factor (-) for analytical drainage formula of Ernst
       ! [SS-SWC] retired 2026-05-12 — moved to state%soilwater%gwl (ADR 0038)
       ! real(8)   gwl                ! Groundwater level (L)
-      real(8)   gwlconv            ! Maximum difference of groundwater levels between iterations to solve Richards equation
+      ! [GR-CROP-DVS] gwlconv retired — see state%cfg%simulation%numerical%gwlconv
       real(8)   gwli               ! Groundwater level (L) at start of simulation
       ! [SS-BND] retired 2026-05-11 — boundary subsystem migrated to state%soilwater (ADR 0035)
       ! real(8)   gwlinp             ! Prescribed groundwater level (L) for current time

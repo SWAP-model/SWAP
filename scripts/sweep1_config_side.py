@@ -178,7 +178,6 @@ def find_importing_subs(text_lf: str, sym: str):
             sub_end = (next_starts[0] - 1) if next_starts else n - 1
 
             # Within [sub_start, sub_end], look for use variables clauses that contain sym
-            # First find the `use variables` block(s) in this sub
             k = sub_start
             in_use = False
             use_text = []
@@ -191,11 +190,12 @@ def find_importing_subs(text_lf: str, sym: str):
                 if in_use:
                     use_text.append(line)
                     code = line.split("!", 1)[0].rstrip()
+                    # Skip comment-only lines (empty code)
+                    if code == "":
+                        k += 1
+                        continue
                     if not code.endswith("&"):
-                        # End of this use block
-                        # Check if it contains sym
                         joined = " ".join(use_text)
-                        # Look for sym between word boundaries
                         if word_pat.search(joined):
                             uses_sym = True
                             break
@@ -257,23 +257,56 @@ def fix_use_clause_artifacts(text_lf: str) -> str:
     - "only: ," → "only:"
     - " ,  ," → " , "
     - Lines whose entire code is just `&` (orphan continuations) → delete
+    - Empty `use variables, only:` clauses → delete the whole clause
     """
     text_lf = re.sub(r"only\s*:\s*,\s*", "only: ", text_lf, flags=re.IGNORECASE)
     text_lf = re.sub(r",\s*,", ",", text_lf)
-    # Drop lines whose entire code part is just `&` (with optional trailing comment).
-    # These appear when sym was the only entry on a continuation line.
+    # Drop orphan `&` lines
     new_lines = []
     for line in text_lf.split("\n"):
         code, sep, comment = line.partition("!")
         if code.strip() == "&":
-            # If there's a comment, keep just the comment without `&`
-            if comment:
-                # Drop the line entirely — the comment lives orphan, easier to skip
-                continue
-            else:
-                continue
+            continue
         new_lines.append(line)
-    return "\n".join(new_lines)
+    text_lf = "\n".join(new_lines)
+
+    # Drop empty `use variables, only:` clauses.
+    # The clause might span multiple lines (continuations); detect by scanning
+    # forward until non-continuation, non-comment, non-empty line. If the entire
+    # clause body has no symbols, delete all lines making up the clause.
+    lines = text_lf.split("\n")
+    out = []
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        stripped = line.lstrip()
+        m = re.match(r"use\s+variables\b\s*(,\s*only\s*:)?(.*)", stripped, re.IGNORECASE)
+        if m:
+            # Collect clause lines
+            clause_idxs = [i]
+            j = i
+            code = line.split("!", 1)[0].rstrip()
+            while code.endswith("&") and j + 1 < len(lines):
+                j += 1
+                clause_idxs.append(j)
+                code_next = lines[j].split("!", 1)[0].rstrip()
+                # Continue if this line is comment-only OR ends with &
+                if code_next == "":
+                    code = "&"  # treat as continuation
+                else:
+                    code = code_next
+            # Check if any code symbol present in clause (besides `use variables, only:` and `&`)
+            joined = " ".join(lines[k].split("!", 1)[0] for k in clause_idxs)
+            # Strip `use variables, only:` and `&` and whitespace/commas
+            content = re.sub(r"use\s+variables\b\s*(?:,\s*only\s*:)?", "", joined, flags=re.IGNORECASE)
+            content = content.replace("&", "").replace(",", "").strip()
+            if not content:
+                # Empty clause — skip all these lines
+                i = j + 1
+                continue
+        out.append(line)
+        i += 1
+    return "\n".join(out)
 
 
 def migrate_symbol(sym: str, config_path: str, dry_run: bool = False):
