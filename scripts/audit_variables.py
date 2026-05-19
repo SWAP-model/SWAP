@@ -100,6 +100,83 @@ def init_writes():
     return syms
 
 
+def find_readers(sym: str):
+    """grep for any non-comment reference to <sym> outside skip patterns.
+    Returns list of (file, line) tuples.
+    """
+    pat = rf"\b{re.escape(sym)}\b"
+    cmd = ["grep", "-rnEi", pat, "--include=*.f90", "src/"]
+    refs = []
+    try:
+        r = subprocess.run(cmd, capture_output=True, text=True, cwd=REPO, check=False)
+    except Exception:
+        return refs
+    for line in r.stdout.splitlines():
+        # filename:line:content
+        parts = line.split(":", 2)
+        if len(parts) < 3:
+            continue
+        fpath, lineno, content = parts[0], parts[1], parts[2]
+        if "swap_legacy" in fpath:
+            continue
+        if "/state/" in fpath:
+            continue
+        if "/config/" in fpath:
+            continue
+        if "variables.f90" in fpath:
+            continue
+        # Skip pure comment lines
+        code = content.split("!", 1)[0]
+        if not code.strip():
+            continue
+        # Skip the declaration in init pattern (cfg%X assignments are config-side,
+        # not real consumers)
+        refs.append((fpath, lineno))
+    return refs
+
+
+def reader_subroutines(sym: str):
+    """Approximate: count distinct subroutines that reference the symbol by
+    scanning back from each ref to the nearest `subroutine NAME` line."""
+    pat = rf"\b{re.escape(sym)}\b"
+    cmd = ["grep", "-rnEi", pat, "--include=*.f90", "src/"]
+    subs = set()
+    try:
+        r = subprocess.run(cmd, capture_output=True, text=True, cwd=REPO, check=False)
+    except Exception:
+        return subs
+    file_lines = {}
+    for line in r.stdout.splitlines():
+        parts = line.split(":", 2)
+        if len(parts) < 3:
+            continue
+        fpath, lineno, content = parts[0], int(parts[1]), parts[2]
+        if "swap_legacy" in fpath or "/state/" in fpath or "/config/" in fpath:
+            continue
+        if "variables.f90" in fpath or "initialize.f90" in fpath:
+            continue
+        # comment-only skip
+        code = content.split("!", 1)[0]
+        if not code.strip():
+            continue
+        if fpath not in file_lines:
+            try:
+                file_lines[fpath] = (REPO / fpath).read_text().splitlines()
+            except Exception:
+                continue
+        lines = file_lines[fpath]
+        # Walk back to find enclosing subroutine
+        for j in range(min(lineno - 1, len(lines) - 1), -1, -1):
+            m = re.match(r"\s*(subroutine|function)\s+(\w+)", lines[j], re.IGNORECASE)
+            if m:
+                subs.add(f"{fpath}:{m.group(2).lower()}")
+                break
+            # Stop at end of previous subroutine (we'd go too far)
+            if re.match(r"\s*end\s+(subroutine|function)", lines[j], re.IGNORECASE) and j < lineno - 1:
+                break
+    return subs
+
+
 def find_writers(sym: str):
     """grep for any write to <sym>; return list of (file, kind).
     Kinds: assign, read-stmt, copy-table-dst, output-arg.
@@ -225,7 +302,50 @@ def classify(sym: str, homes: dict, adapter: set, init: set):
     return "dead-no-readers"
 
 
+def reader_files(sym: str):
+    """Return set of files where sym appears in non-comment code (excluding
+    skip patterns: legacy, state, config, variables.f90, initialize.f90)."""
+    pat = rf"\b{re.escape(sym)}\b"
+    cmd = ["grep", "-rlEi", pat, "--include=*.f90", "src/"]
+    files = set()
+    try:
+        r = subprocess.run(cmd, capture_output=True, text=True, cwd=REPO, check=False)
+    except Exception:
+        return files
+    for fpath in r.stdout.splitlines():
+        if "swap_legacy" in fpath: continue
+        if "/state/" in fpath: continue
+        if "/config/" in fpath: continue
+        if "variables.f90" in fpath: continue
+        if "initialize.f90" in fpath: continue
+        if "config_to_variables" in fpath: continue
+        files.add(fpath)
+    return files
+
+
+def writer_files(sym: str):
+    files = set()
+    for w in find_writers(sym):
+        parts = w.split(":", 1)
+        if not parts: continue
+        fpath = parts[0]
+        if "swap_legacy" in fpath: continue
+        if "/state/" in fpath: continue
+        if "/config/" in fpath: continue
+        if "variables.f90" in fpath: continue
+        if "initialize.f90" in fpath: continue
+        if "config_to_variables" in fpath: continue
+        files.add(fpath)
+    return files
+
+
 def main():
+    import argparse
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--locality", action="store_true",
+                    help="Include reader-file-count, writer-file-count, sub-count columns")
+    args = ap.parse_args()
+
     actives = list_active_symbols()
     homes = state_homes()
     adapter = adapter_writes()
@@ -235,7 +355,17 @@ def main():
     for t, sym in actives:
         cat = classify(sym, homes, adapter, init)
         home = homes.get(sym.lower(), "")
-        rows.append((sym, t, cat, home))
+        extra = {}
+        if args.locality:
+            rfiles = reader_files(sym)
+            wfiles = writer_files(sym)
+            subs = reader_subroutines(sym)
+            extra["nread_files"] = len(rfiles)
+            extra["nwrite_files"] = len(wfiles)
+            extra["nsubs"] = len(subs)
+            extra["rfiles"] = sorted(rfiles)
+            extra["subs"] = sorted(subs)
+        rows.append((sym, t, cat, home, extra))
 
     # Print summary
     from collections import Counter
@@ -247,12 +377,35 @@ def main():
     for cat, n in sorted(counts.items(), key=lambda x: -x[1]):
         print(f"- **{cat}**: {n}")
     print()
+
+    if args.locality:
+        # Single-sub candidate count
+        single_sub = [r for r in rows if r[4].get("nsubs", 999) == 1
+                       and r[4].get("nread_files", 999) == 1
+                       and r[4].get("nwrite_files", 999) <= 1]
+        print(f"## Locality candidates")
+        print(f"Symbols touched by exactly 1 subroutine in 1 file: {len(single_sub)}")
+        print()
+        print("| Symbol | Type | Category | Sub | File |")
+        print("|---|---|---|---|---|")
+        for sym, t, cat, home, extra in sorted(single_sub, key=lambda r: r[0].lower()):
+            subs = list(extra.get("subs", []))
+            files = list(extra.get("rfiles", []))
+            print(f"| `{sym}` | {t} | {cat} | {subs[0] if subs else ''} | {files[0] if files else ''} |")
+        print()
+
     print("## Per-symbol table")
     print()
-    print("| Symbol | Type | Category | State home |")
-    print("|---|---|---|---|")
-    for sym, t, cat, home in sorted(rows, key=lambda r: (r[2], r[0].lower())):
-        print(f"| `{sym}` | {t} | {cat} | {home} |")
+    if args.locality:
+        print("| Symbol | Type | Category | State home | NReadFiles | NWriteFiles | NSubs |")
+        print("|---|---|---|---|---|---|---|")
+        for sym, t, cat, home, extra in sorted(rows, key=lambda r: (r[2], r[0].lower())):
+            print(f"| `{sym}` | {t} | {cat} | {home} | {extra.get('nread_files','')} | {extra.get('nwrite_files','')} | {extra.get('nsubs','')} |")
+    else:
+        print("| Symbol | Type | Category | State home |")
+        print("|---|---|---|---|")
+        for sym, t, cat, home, _ in sorted(rows, key=lambda r: (r[2], r[0].lower())):
+            print(f"| `{sym}` | {t} | {cat} | {home} |")
 
 
 if __name__ == "__main__":
