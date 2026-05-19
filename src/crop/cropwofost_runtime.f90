@@ -66,8 +66,7 @@
         dlc, dlo, span, spa, ssa, logf, plwt, plwti, tdwi,                &
         lv, lvpot, lvage, lvagepot, sla, slapot,                          &
         ilvold, ilvoldpot, idsl,                                           &
-        dwlv, dwlvpot, dwrt, dwrtpot, dwso, dwst, dwstpot,                &
-        dwlvcrop, dwlvsoil, gasst, gasstpot,                              &
+        dwlvcrop, dwlvsoil, gasst, gasstpot,                              &  ! dw* retired
         glaiex, glaiexpot, mrest, mrestpot,                               &
         tadw, tadwpot, gwrt, harlosorm_tot, fraharlosorm_lv, fraharlosorm_so, &
         fraharlosorm_st,                                                   &
@@ -311,15 +310,15 @@
             state%crop%lai = lasum+ssa*state%crop%wofost%wst+spa*state%crop%wofost%wso
         endif
         state%crop%common%laipot = state%crop%lai
-        dwrt = 0.0d0
-        dwrtpot = 0.0d0
-        dwlv = 0.0d0
+        state%crop%wofost%dwrt = 0.0d0
+        state%crop%wofost%dwrtpot = 0.0d0
+        state%crop%wofost%dwlv = 0.0d0
         dwlvCrop = 0.0d0
         dwlvSoil = 0.0d0
-        dwlvpot = 0.0d0
-        dwso = 0.0d0
-        dwst = 0.0d0
-        dwstpot = 0.0d0
+        state%crop%wofost%dwlvpot = 0.0d0
+        state%crop%wofost%dwso = 0.0d0
+        state%crop%wofost%dwst = 0.0d0
+        state%crop%wofost%dwstpot = 0.0d0
         if(flCropNut) then
           WLVt0 = state%crop%wofost%wlv
           WSTt0 = state%crop%wofost%wst
@@ -371,15 +370,8 @@
         state%crop%wofost%plwti     = plwti
         state%crop%wofost%wbl       = wbl
         state%crop%wofost%wblpot    = wblpot
-        state%crop%wofost%dwrt      = dwrt
-        state%crop%wofost%dwrtpot   = dwrtpot
-        state%crop%wofost%dwlv      = dwlv
         state%crop%wofost%dwlvCrop  = dwlvCrop
         state%crop%wofost%dwlvSoil  = dwlvSoil
-        state%crop%wofost%dwlvpot   = dwlvpot
-        state%crop%wofost%dwso      = dwso
-        state%crop%wofost%dwst      = dwst
-        state%crop%wofost%dwstpot   = dwstpot
         state%crop%wofost%dwbl      = dwbl
         state%crop%wofost%dwblpot   = dwblpot
 
@@ -701,17 +693,17 @@
       endif
 
 ! --- dry weight of dead plant organs (roots,leaves & stems)
-      dwrtpot = dwrtpot + drrtpot*delt
-      dwlvpot = dwlvpot + drlvpot*delt
-      dwstpot = dwstpot + drstpot*delt
+      state%crop%wofost%dwrtpot = state%crop%wofost%dwrtpot + drrtpot*delt
+      state%crop%wofost%dwlvpot = state%crop%wofost%dwlvpot + drlvpot*delt
+      state%crop%wofost%dwstpot = state%crop%wofost%dwstpot + drstpot*delt
 ! --- only for bulb crops (tulips etc..)
       if(swbulb.eq.1) then
         dwblpot = dwblpot + drblpot*delt
       endif
 
 ! --- dry weight of dead and living plant organs
-      twlvpot = state%crop%wofost%wlvpot + dwlvpot
-      twstpot = state%crop%wofost%wstpot + dwstpot
+      twlvpot = state%crop%wofost%wlvpot + state%crop%wofost%dwlvpot
+      twstpot = state%crop%wofost%wstpot + state%crop%wofost%dwstpot
       state%crop%wofost%cwdmpot = twlvpot + twstpot + state%crop%wofost%wsopot
 ! --- only for bulb crops (tulips etc..)
       if(swbulb.eq.1) then
@@ -747,9 +739,6 @@
 
       ! [SS-GR-CROP A5.1] mirror wofost case(2) potential state
       state%crop%wofost%wblpot    = wblpot
-      state%crop%wofost%dwrtpot   = dwrtpot
-      state%crop%wofost%dwlvpot   = dwlvpot
-      state%crop%wofost%dwstpot   = dwstpot
       state%crop%wofost%dwblpot   = dwblpot
 
       return
@@ -934,10 +923,10 @@
       endif
 
 ! --- dry weight of dead plant organs (roots,leaves & stems)
-      dwrt = dwrt + drrt*delt
-      dwlv = dwlv + drlv*delt
-      dwst = dwst + drst*delt
-      dwso = dwso + drso*delt   ! dummy, because drso is assumed to be 0
+      state%crop%wofost%dwrt = state%crop%wofost%dwrt + drrt*delt
+      state%crop%wofost%dwlv = state%crop%wofost%dwlv + drlv*delt
+      state%crop%wofost%dwst = state%crop%wofost%dwst + drst*delt
+      state%crop%wofost%dwso = state%crop%wofost%dwso + drso*delt   ! dummy, because drso is assumed to be 0
 ! --- only for bulb crops (tulips etc..)
       if(swbulb.eq.1) then
         dwbl = dwbl + drbl*delt
@@ -951,8 +940,8 @@
       
 ! --- dry weight of dead and living plant organs
 !     twrt = wrt+dwrt
-      twlv = state%crop%wofost%wlv+dwlv
-      twst = state%crop%wofost%wst+dwst
+      twlv = state%crop%wofost%wlv+state%crop%wofost%dwlv
+      twst = state%crop%wofost%wst+state%crop%wofost%dwst
       state%crop%wofost%cwdm = twlv+twst+state%crop%wofost%wso
 ! --- only for bulb crops (tulips etc..)
       if(swbulb.eq.1) then
@@ -1000,10 +989,6 @@
 
       ! [SS-GR-CROP A5.1] mirror wofost case(3) actual state
       state%crop%wofost%wbl       = wbl
-      state%crop%wofost%dwrt      = dwrt
-      state%crop%wofost%dwlv      = dwlv
-      state%crop%wofost%dwst      = dwst
-      state%crop%wofost%dwso      = dwso
       state%crop%wofost%dwbl      = dwbl
       state%crop%wofost%dwlvCrop  = dwlvCrop
       state%crop%wofost%dwlvSoil  = dwlvSoil
@@ -1092,11 +1077,11 @@
          if (flHarvestDay .or. (state%crop%common%dvs.ge.dvsend) .or.                     &
      &                 dabs(tc_t1900-1.0d0-cropend(state%crop%common%icrop)).lt.1.0d-3 ) then  ! [GR-CROPWS B5] icrop → state%crop%common%icrop
             HarLosOrm_rt = state%crop%wofost%wrt
-            HarLosOrm_dwlv =  FraHarLosOrm_lv * dwlv
+            HarLosOrm_dwlv =  FraHarLosOrm_lv * state%crop%wofost%dwlv
             HarLosOrm_lv   = FraHarLosOrm_lv * state%crop%wofost%wlv + HarLosOrm_dwlv
-            HarLosOrm_dwst =  FraHarLosOrm_st * dwst
+            HarLosOrm_dwst =  FraHarLosOrm_st * state%crop%wofost%dwst
             HarLosOrm_st   = FraHarLosOrm_st * state%crop%wofost%wst + HarLosOrm_dwst
-            HarLosOrm_dwso =  FraHarLosOrm_so * dwso
+            HarLosOrm_dwso =  FraHarLosOrm_so * state%crop%wofost%dwso
             HarLosOrm_so   = FraHarLosOrm_so * state%crop%wofost%wso + HarLosOrm_dwso
             HarLosOrm_tot = HarLosOrm_rt + FraHarLosOrm_lv * state%crop%wofost%wlv +      &
      &             FraHarLosOrm_st * state%crop%wofost%wst + FraHarLosOrm_so * state%crop%wofost%wso

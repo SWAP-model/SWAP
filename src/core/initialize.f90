@@ -56,16 +56,8 @@
 ! --- only for bulb crops (tulips etc..)
       dwbl             = 0.0d0
       dwblpot          = 0.0d0
-      dwso             = 0.0d0
-      
-      dwlv               = 0.0d0 
       dwlvCrop           = 0.0d0 
       dwlvSoil           = 0.0d0 
-      dwlvpot            = 0.0d0 
-      dwrt               = 0.0d0 
-      dwrtpot            = 0.0d0 
-      dwst               = 0.0d0 
-      dwstpot            = 0.0d0 
       ! [SS-ATM A-2.6] empreva/fprecnosnow/grai/graidt/ievap/inrai/ipeva/iptra retired to state%atmosphere
       epot               = 0.0d0
       cfevappond         = 0.0d0
@@ -760,10 +752,6 @@
       wiltpoint          = 0.0d0 
       wrtb               = 0.0d0
       zsow               = 0.0d0
-      dwst               = 0.0d0
-      dwrt               = 0.0d0
-      dwso               = 0.0d0
-      
       dwlvCrop           = 0.0d0
       dwlvSoil           = 0.0d0
       HarLosOrm_tot      = 0.0d0

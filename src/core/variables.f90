@@ -403,15 +403,15 @@
       real(8)   dtsmtb(30)         ! Increase of temperature sum (oC) as function of daily average temperature (oC)
       ! [GR-CROP-DVS] dvs retired — see state%crop%common%dvs
       real(8)   dvsend             ! Crop development stage at harvest
-      real(8)   dwlv               ! Dry weight of plant leafs of actual crop (kg/ha)
+      ! [GR-CROP-DVS] dwlv retired — see state%crop%wofost%dwlv
       real(8)   dwlvCrop           ! Dry weight of deceased leafs that remain attached to plant (kg/ha)
       real(8)   dwlvSoil           ! Dry weight of deceased leafs allocated to soil (kg/ha)
-      real(8)   dwlvpot            ! Dry weight of plant leafs of potential crop (kg/ha)
-      real(8)   dwrt               ! Dry weight of plant roots of actual crop (kg/ha)
-      real(8)   dwrtpot            ! Dry weight of plant roots of potential crop (kg/ha)
-      real(8)   dwso               ! Dry weight of plant storage organs of actual crop (kg/ha)
-      real(8)   dwst               ! Dry weight of plant stem of actual crop (kg/ha)
-      real(8)   dwstpot            ! Dry weight of plant stem of potential crop (kg/ha)
+      ! [GR-CROP-DVS] dwlvpot retired — see state%crop%wofost%dwlvpot
+      ! [GR-CROP-DVS] dwrt retired — see state%crop%wofost%dwrt
+      ! [GR-CROP-DVS] dwrtpot retired — see state%crop%wofost%dwrtpot
+      ! [GR-CROP-DVS] dwso retired — see state%crop%wofost%dwso
+      ! [GR-CROP-DVS] dwst retired — see state%crop%wofost%dwst
+      ! [GR-CROP-DVS] dwstpot retired — see state%crop%wofost%dwstpot
       real(8)   eff                ! Light use efficiency of a leaf (kg CO2 / J adsorbed)
       real(8)   f_senes            ! Reduction factor for senescence, used for maintenance respiration [0..1.0 -, R]
       real(8)   fltb(30)           ! Fraction of total dry matter increase partitioned to the leaves (-) as function of dvs
