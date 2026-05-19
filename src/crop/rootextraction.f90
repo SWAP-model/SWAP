@@ -58,7 +58,7 @@ module rootextraction_mod
                            ! DEFERRED: swoxygentype/swsalinity/swstressor/swwrtnonox — crop stress switches; Phase C3
                            swoxygentype, swsalinity, swstressor, swwrtnonox, &
                            ! DEFERRED: taccur/twilt/wiltpoint — soil convergence/stress params; Phase C3
-                           taccur, twilt, wiltpoint
+                           twilt, wiltpoint
       use array_utils, only: afgen
       use oxygenstress_mod, only: OxygenStress, OxygenReproFunction
       implicit none
@@ -371,7 +371,7 @@ module rootextraction_mod
                            rootradius, rxylem, saltmax, saltslope, stephr, &  ! DEFERRED: crop/solute config
                            swcompensate, swdrought, swfrost, swoxygen,    &  ! DEFERRED: stress switches
                            swoxygentype, swsalinity, swstressor, swwrtnonox, &  ! DEFERRED: stress switches
-                           taccur, twilt, wiltpoint                          ! DEFERRED: convergence/stress params
+                           twilt, wiltpoint                          ! DEFERRED: convergence/stress params
       use array_utils, only: afgen
       implicit none
 
@@ -498,7 +498,7 @@ module rootextraction_mod
       call JongvanLierLoop(state)
 
 ! --- check convergence
-      if (abs(cw_qrosum-at_ptra) .lt. taccur) flconverg = .true.
+      if (abs(cw_qrosum-at_ptra) .lt. state%cfg%simulation%numerical%taccur) flconverg = .true.
 
 ! --- set initial values y3 and Fy3
       y3 = cw_hleaf
@@ -562,7 +562,7 @@ module rootextraction_mod
       Fy3 = at_ptra - cw_qrosum
 
 ! --- check convergence
-      if (abs(cw_qrosum-at_ptra) .lt. taccur .or.                             &
+      if (abs(cw_qrosum-at_ptra) .lt. state%cfg%simulation%numerical%taccur .or.                             &
      &       abs(y3-y1) .lt. 1.0d0) flconverg = .true.
 
 ! --- fatal error if too many iterations
@@ -610,7 +610,7 @@ module rootextraction_mod
       call JongvanLierLoop(state)
 
 ! --- check convergence
-      if (abs(state%soilwater%Tactual - cw_qrosum) .lt. taccur) flconverg = .true.
+      if (abs(state%soilwater%Tactual - cw_qrosum) .lt. state%cfg%simulation%numerical%taccur) flconverg = .true.
 
 ! --- set initial values y3 and Fy3
       y3 = state%soilwater%Tactual
@@ -660,7 +660,7 @@ module rootextraction_mod
       Fy3 = state%soilwater%Tactual - cw_qrosum
 
 ! --- check convergence
-      if (abs(state%soilwater%Tactual - cw_qrosum) .lt. taccur) flconverg = .true.
+      if (abs(state%soilwater%Tactual - cw_qrosum) .lt. state%cfg%simulation%numerical%taccur) flconverg = .true.
 
 ! --- fatal error if too many iterations
       counter = counter + 1
@@ -696,7 +696,7 @@ module rootextraction_mod
         cw_qrosum = cw_qrot(node) + cw_qrosum
       enddo
 
-      if ( (at_ptra - cw_qrosum) .lt. taccur) then
+      if ( (at_ptra - cw_qrosum) .lt. state%cfg%simulation%numerical%taccur) then
 ! ---   compensate convergence error
         ratio = at_ptra / cw_qrosum
         do node = 1,noddrz
@@ -742,7 +742,7 @@ module rootextraction_mod
                            rootradius, rxylem, saltmax, saltslope, stephr, &  ! DEFERRED: crop/solute config
                            swcompensate, swdrought, swfrost, swoxygen,    &  ! DEFERRED: stress switches
                            swoxygentype, swsalinity, swstressor, swwrtnonox, &  ! DEFERRED: stress switches
-                           taccur, twilt, wiltpoint                          ! DEFERRED: convergence/stress params
+                           twilt, wiltpoint                          ! DEFERRED: convergence/stress params
       implicit none
 
       type(swap_state_t), intent(inout) :: state

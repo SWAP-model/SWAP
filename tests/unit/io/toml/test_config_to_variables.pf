@@ -59,7 +59,6 @@ subroutine test_config_to_variables_simulation_numerical()
    use swap_state_mod, only: swap_state_t
    ! [GR-FINAL C1] dt written directly to state%timecontrol%dt (tc_dt_init_buf retired)
    ! [SS-BMI2 Task 5] dtmin, dtmax, MaxIt, msteps moved to state%timecontrol
-   use variables, only: MaxBackTr, taccur
    implicit none
    type(swap_config_t) :: config
    type(swap_state_t)  :: state
@@ -79,8 +78,8 @@ subroutine test_config_to_variables_simulation_numerical()
    @assertEqual(1.0d-5,  state%timecontrol%dtmin)
    @assertEqual(0.5d0,   state%timecontrol%dtmax)
    @assertEqual(50,      state%timecontrol%MaxIt)
-   @assertEqual(5,       MaxBackTr)
-   @assertEqual(5.0d-4,  taccur)
+   @assertEqual(5,       config%simulation%numerical%MaxBackTr)
+   @assertEqual(5.0d-4,  config%simulation%numerical%taccur)
 end subroutine test_config_to_variables_simulation_numerical
 
 

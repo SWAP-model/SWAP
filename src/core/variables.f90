@@ -136,7 +136,7 @@
       ! [SS-TC] retired 2026-05-12 — moved to state%timecontrol%rainrec (ADR 0041)
       ! integer   rainrec            ! moved to state%timecontrol%rainrec
       integer   swdivide           ! Switch on division ET into E and T: 0 = according to the SWAP traditional way; 1 = according to PMdirect
-      integer   swetr              ! Switch: 0 = use daily meteorological basic data; 1 = use daily Etref values
+      ! [GR-CROP-DVS] swetr retired — see state%cfg%meteo%swetr
       integer   swetsine           ! Switch: 0 = Tp and Ep uniform during a day; 1 = Tp and Ep are distributed as sine waves during a day
       integer   swinter            ! Switch for interception method: 0 = no interception; 1 = agricultural crops; 2 = trees and forests
       integer   swmetdetail        ! Switch: 0 = daily meteorological records; 1 = detailed records for both ET and rainfall
@@ -156,8 +156,8 @@
       !   See: ADR 0037 (A-2.7)
       ! ========================================================================
       ! real(8) :: aintcdt   ! Interception flux of ONLY Rain during iteration timesteps (L/T)
-      real(8)   alt                ! Altitude of meteorological station (L)
-      real(8)   altw               ! Height of wind speed measurement (L)
+      ! [GR-CROP-DVS] alt retired — see state%cfg%meteo%alt
+      ! [GR-CROP-DVS] altw retired — see state%cfg%meteo%altw
       real(8)   angstroma          ! first  angstrom coefficient [-]
       real(8)   angstromb          ! second angstrom coefficient [-]
       real(8)   arad(366)          ! Array with daily radiation input data (M/T2)
@@ -671,11 +671,11 @@
       ! [SS-BMI2 Task 5] retired 2026-05-13 — moved to state%timecontrol (ADR 0041)
       ! integer   MaxIterTime        ! moved to state%timecontrol%MaxIterTime
       ! integer   MaxIt              ! moved to state%timecontrol%MaxIt
-      integer   MaxBackTr
+      ! [GR-CROP-DVS] MaxBackTr retired — see state%cfg%simulation%numerical%MaxBackTr
       integer   Itnumb(100,2)      ! Iteration number statistics [soilhydraulics.f90, timecontrol_mod.f90]
-      real(8)   CritDevh1Cp        ! Convergence criterium for Richards equation: relative difference in pressure heads (-)
-      real(8)   CritDevh2Cp        ! Convergence criterium for Richards equation: absolute difference in pressure heads (L)
-      real(8)   CritDevPondDt
+      ! [GR-CROP-DVS] critdevh1cp retired — see state%cfg%simulation%numerical%critdevh1cp
+      ! [GR-CROP-DVS] critdevh2cp retired — see state%cfg%simulation%numerical%critdevh2cp
+      ! [GR-CROP-DVS] critdevponddt retired — see state%cfg%simulation%numerical%critdevponddt
       logical   fldumpconvcrit     ! flag to generate additional output about convergence-warnings from subr Headcalc
       logical   flwarn_hc          ! Headcalc warning flag (previously SAVE variable)
       integer   iwarn_hc           ! Headcalc warning counter (previously SAVE variable)
@@ -767,10 +767,10 @@
       integer   swhyst             ! Switch for hysteresis of soil moisture retention function: 0 = no; 1 = yes
       integer   swinco             ! Switch for initial soil moisture condition: 1 = pressure heads; 2 = hydrostatic equilibrium; 
                                    !                                             3 = final pressure heads from previous simulation
-      integer   swkmean            ! Switch for mean of hydraulic conductivity: 1 = unweighted arithmic mean, 2 = weighted arithmic mean
+      ! [GR-CROP-DVS] SWkmean retired — see state%cfg%simulation%numerical%swkmean
                                    !                                            3 = unweighted geometric mean,4 = weighted geometric mean
                                    !                                            5 = unweighted harmonic mean, 6 = weighted harmonic mean
-      integer   swkimpl            ! Switch for implicit solution with hydraulic conductivity: 0 = explicit, 1 = implicit
+      ! [GR-CROP-DVS] SwkImpl retired — see state%cfg%simulation%numerical%swkimpl
       integer   swliminf           ! Switch for limit of infiltration head to the waterdepth in the channel: 0 = nolimit, 1 = limitation
       ! [SS-GR-FINAL D5] swoutputmodflow retired — 0 consumers; MODFLOW output deleted
       integer   swoxygen           ! Switch oxygen stress: 1 = concept Feddes et al. (1978); 2 = concept Bartholomeus et al. (2008)
@@ -1063,7 +1063,7 @@
       real(8)   sptab(7,macp,matab)    ! Soil Physical functions (h,theta,k,dthetadh,dkdtheta) tabulated for each model compartment
       real(8)   sptablay(7,maho,matab) ! Soil Physical functions (h,theta,k,dthetadh,dkdtheta) tabulated for each soil layer
       real(8)   StepHr             ! Maximum difference of Hroot and Hxylem between iterations; convergence criterium  (L)
-      real(8)   taccur             ! Maximum absolute difference between simulated and calculated potential transpiration rate (cm/d)
+      ! [GR-CROP-DVS] taccur retired — see state%cfg%simulation%numerical%taccur
       ! [SS-CRP] retired 2026-05-11 — moved to state%soilwater%Tactual (ADR 0036)
       ! real(8)   Tactual            ! Actual transpiration at former iteration in JongvanLier (cm/d)
       real(8)   tau                ! Minimum pressure head difference (L) to change from wetting to drying in case of hysteresis

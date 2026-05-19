@@ -123,15 +123,6 @@ contains
       state%timecontrol%MaxIterTime   = 0
       state%timecontrol%flMaxIterTime = .false.
       state%timecontrol%msteps        = config%simulation%numerical%msteps
-      MaxBackTr = config%simulation%numerical%MaxBackTr
-      taccur    = config%simulation%numerical%taccur
-      critdevh1cp   = config%simulation%numerical%critdevh1cp
-      critdevh2cp   = config%simulation%numerical%critdevh2cp
-      critdevponddt = config%simulation%numerical%critdevponddt
-      SWkmean       = config%simulation%numerical%swkmean
-      SwkImpl       = config%simulation%numerical%swkimpl
-
-      ! ---------------------------------------------------------------
       ! Meteorology (audit: 12 + evaporation + snow)
       ! ---------------------------------------------------------------
       if (allocated(config%meteo%metfile))  metfil  = config%meteo%metfile
@@ -139,9 +130,6 @@ contains
       ! `config%meteo%rainfile` is no longer copied into a global because
       ! the only consumer (the `.YYY` per-year rain reader in readmeteo.f90)
       ! has been deleted; CSV rain events use `config%meteo%rain_events_file`.
-      alt         = config%meteo%alt
-      altw        = config%meteo%altw
-      swetr       = config%meteo%swetr
       swdivide    = config%meteo%swdivide
       swmetdetail = config%meteo%swmetdetail
       nmetdetail  = config%meteo%nmetdetail

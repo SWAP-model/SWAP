@@ -30,11 +30,9 @@ contains
          ! DEFERRED: qssdi/nird — SSDI/irrigation source terms; needs irrigation_state_t; Phase C3
          qssdi, nird, &
          ! DEFERRED: swkmean/SwKimpl — hydraulic conductivity averaging switches; Phase C3
-         swkmean, SwKimpl, &
          ! DEFERRED: swcaprise — capillary rise prevention switch; Phase C3
          swcaprise, &
          ! DEFERRED: MaxBackTr — max Newton-Raphson backtrack iterations; Phase C3
-         MaxBackTr, &
          ! DEFERRED: fldumpconvcrit — debug convergence dump flag; Phase C3
          fldumpconvcrit, &
          ! DEFERRED: numbit/itnumb — Richards iteration counter/stats; Phase C3/D
@@ -49,7 +47,6 @@ contains
          ! DEFERRED: SwBotb3ResVert/swbotb3Impl — Cauchy BC options; Phase C3
          SwBotb3ResVert, swbotb3Impl, &
          ! DEFERRED: CritDevh1Cp/CritDevh2Cp/CritDevPondDt — convergence criteria; Phase C3
-         CritDevh1Cp, CritDevh2Cp, CritDevPondDt, &
          ! DEFERRED: flwarn_hc/iwarn_hc — non-convergence warning state; Phase C3
          flwarn_hc, iwarn_hc, &
          ! DEFERRED: logf — log file unit; Phase C3
@@ -194,7 +191,7 @@ contains
                sw_h(i) = sw_h(i-1) + disnod(i)*(qv(i)/sw_kmean(i)+1.0d0)    ! [SS-SWC S-1.4a/S-2.12B]
             end do
 
-            if(SwKimpl.eq.1)then
+            if(state%cfg%simulation%numerical%swkimpl.eq.1)then
                do i=1,numnod
                   sw_k(i) = hconduc(sw_h(i),sw_theta(i),state%heat%rfcp(i),state%heat%tsoil(i), &
                                     state%soilwater%vg_params(i), &
@@ -202,7 +199,7 @@ contains
                                     state%soilwater%fluseksatexm(i), &
                                     i, state%soilwater)                        ! [SS-SWC S-1.4b/S-2.12B] [SS-GR-UTILS Task 6]
                   if(i.gt.1)then
-                     sw_kmean(i) = hcomean(swkmean,sw_k(i-1),sw_k(i),dz(i-1),dz(i))  ! [SS-SWC S-1.4b/S-2.12B]
+                     sw_kmean(i) = hcomean(state%cfg%simulation%numerical%swkmean,sw_k(i-1),sw_k(i),dz(i-1),dz(i))  ! [SS-SWC S-1.4b/S-2.12B]
                   end if
                end do
                sw_kmean(numnod+1) = sw_k(numnod)                              ! [SS-SWC S-1.4b/S-2.12B]
@@ -258,12 +255,12 @@ contains
             endif
          endif
          if(i.gt.1)then
-            sw_kmean(i) = hcomean(swkmean,sw_k(i-1),sw_k(i),dz(i-1),dz(i))
+            sw_kmean(i) = hcomean(state%cfg%simulation%numerical%swkmean,sw_k(i-1),sw_k(i),dz(i-1),dz(i))
          end if
       enddo
       sw_kmean(numnod+1) = sw_k(numnod)
 
-      if(SwKimpl.eq.0)then
+      if(state%cfg%simulation%numerical%swkimpl.eq.0)then
          do i=2,numnod
             dFdhU(i)   = - sw_kmean(i)  /disnod(i)
             dFdhL(i-1) = dFdhU(i)
@@ -315,7 +312,7 @@ contains
                               state%soilwater%iHWCKmodel(state%soilwater%layer(NN)), &
                               state%soilwater%fluseksatexm(NN), &
                               NN, state%soilwater)                             ! [SS-GR-UTILS Task 6]
-         sw_kmean(NN+1) = hcomean(swkmean,sw_k(NN),state%soilwater%vg_params(NN+1)%ksat, &  ! [SS-GR-UTILS Task 15]
+         sw_kmean(NN+1) = hcomean(state%cfg%simulation%numerical%swkmean,sw_k(NN),state%soilwater%vg_params(NN+1)%ksat, &  ! [SS-GR-UTILS Task 15]
      &                        dz(NN),dz(NN+1))
          F(NN) = (sw_theta(NN) - sw_thetm1(NN))*sw_FrArMtrx(NN)*dz(NN)/tc_dt +      &  ! [SS-SWC S-2.3] [TC-8]
      &           sink(NN)-source(NN)+state%soilwater%qrot(NN)-sw_kmean(NN)*hgrad(NN) +sw_kmean(NN+1)*hgrad(NN+1)
@@ -390,7 +387,7 @@ contains
 
          enddo
 
-         if(SwKimpl.eq.1)then
+         if(state%cfg%simulation%numerical%swkimpl.eq.1)then
             do i = 1, NN
                dkdh(i) = dhconduc(sw_h(i),sw_theta(i),sw_dimoca(i),state%heat%rfcp(i), &
                                    state%soilwater%vg_params(i), &
@@ -436,26 +433,26 @@ contains
             dFdhM(NN) = dFdhM(NN) + sw_kmean(NN+1)/disnod(NN+1)
          end if
 
-         if(SwKimpl.eq.1)then
+         if(state%cfg%simulation%numerical%swkimpl.eq.1)then
             dFdhM(1) = dFdhM(1) + dkdh(1) * hgrad(2) *                  &
-     &                 dkmean(swkmean,sw_k(1),sw_k(2),dz(1),dz(2))
+     &                 dkmean(state%cfg%simulation%numerical%swkmean,sw_k(1),sw_k(2),dz(1),dz(2))
             if(state%soilwater%ftoph) dFdhM(1) = dFdhM(1) - dkdh(1) * hgrad(1) * 0.5d0
             dFdhL(1) = dFdhL(1) + dkdh(2) * hgrad(2) *                  &
-     &                 dkmean(swkmean,sw_k(2),sw_k(1),dz(2),dz(1)) 
+     &                 dkmean(state%cfg%simulation%numerical%swkmean,sw_k(2),sw_k(1),dz(2),dz(1)) 
             do i=2,NN-1
                dFdhU(i) = dFdhU(i) - dkdh(i-1) * hgrad(i) *             &
-     &                    dkmean(swkmean,sw_k(i-1),sw_k(i),dz(i-1),dz(i)) 
+     &                    dkmean(state%cfg%simulation%numerical%swkmean,sw_k(i-1),sw_k(i),dz(i-1),dz(i)) 
                dFdhM(i) = dFdhM(i) - dkdh(i) * hgrad(i) *               &
-     &                    dkmean(swkmean,sw_k(i),sw_k(i-1),dz(i),dz(i-1))     &
+     &                    dkmean(state%cfg%simulation%numerical%swkmean,sw_k(i),sw_k(i-1),dz(i),dz(i-1))     &
      &                             + dkdh(i) * hgrad(i+1) *             &
-     &                    dkmean(swkmean,sw_k(i),sw_k(i+1),dz(i),dz(i+1))
+     &                    dkmean(state%cfg%simulation%numerical%swkmean,sw_k(i),sw_k(i+1),dz(i),dz(i+1))
                dFdhL(i) = dFdhL(i) + dkdh(i+1) * hgrad(i+1) *           &
-     &                    dkmean(swkmean,sw_k(i+1),sw_k(i),dz(i+1),dz(i)) 
+     &                    dkmean(state%cfg%simulation%numerical%swkmean,sw_k(i+1),sw_k(i),dz(i+1),dz(i)) 
             end do
             dFdhU(NN) = dFdhU(NN) - dkdh(NN-1) * hgrad(NN) *            &
-     &                  dkmean(swkmean,sw_k(NN-1),sw_k(NN),dz(NN-1),dz(NN)) 
+     &                  dkmean(state%cfg%simulation%numerical%swkmean,sw_k(NN-1),sw_k(NN),dz(NN-1),dz(NN)) 
             dFdhM(NN) = dFdhM(NN) - dkdh(NN) * hgrad(NN) *              &
-     &                  dkmean(swkmean,sw_k(NN),sw_k(NN-1),dz(NN),dz(NN-1))
+     &                  dkmean(state%cfg%simulation%numerical%swkmean,sw_k(NN),sw_k(NN-1),dz(NN),dz(NN-1))
 
             if(swbotb.eq.1 .or. swbotb.eq.5 .or. swbotb.eq.8            &
      &         .and. flboth)then
@@ -490,7 +487,7 @@ contains
          end if
 
          factor  = 1.0d0
-         do itry = 1,MaxBackTr
+         do itry = 1,state%cfg%simulation%numerical%MaxBackTr
             iBackTr = iBackTr + 1
             ! Factor reduces the change of h (difh) calculated as a full
             ! Newton Raphson step
@@ -525,7 +522,7 @@ contains
             end do
 
 
-            if(SwKimpl.eq.1)then
+            if(state%cfg%simulation%numerical%swkimpl.eq.1)then
                call Rootextraction(state)
                do i = 1,NN
                   sw_k(i) = hconduc(sw_h(i),sw_theta(i),state%heat%rfcp(i),state%heat%tsoil(i), &
@@ -535,7 +532,7 @@ contains
                                     i, state%soilwater)                        ! [SS-GR-UTILS Task 6]
                   sw_k(i) = sw_k(i)                                  ! [SS-SWC S-1.4b]
                   if(i.gt.1)then
-                     sw_kmean(i)=hcomean(swkmean,sw_k(i-1),sw_k(i),dz(i-1),dz(i))
+                     sw_kmean(i)=hcomean(state%cfg%simulation%numerical%swkmean,sw_k(i-1),sw_k(i),dz(i-1),dz(i))
                      sw_kmean(i) = sw_kmean(i)                        ! [SS-SWC S-1.4b]
                   end if
                end do
@@ -555,9 +552,9 @@ contains
                  sw_k(i+1) = 1.0D-10
                endif
                if(i.gt.1)then
-                 sw_kmean(i)=hcomean(swkmean,sw_k(i-1),sw_k(i),dz(i-1),dz(i))
+                 sw_kmean(i)=hcomean(state%cfg%simulation%numerical%swkmean,sw_k(i-1),sw_k(i),dz(i-1),dz(i))
                  sw_kmean(i) = sw_kmean(i)                            ! [SS-SWC S-1.4b]
-                 sw_kmean(i+1)=hcomean(swkmean,sw_k(i),sw_k(i+1),dz(i),dz(i+1))
+                 sw_kmean(i+1)=hcomean(state%cfg%simulation%numerical%swkmean,sw_k(i),sw_k(i+1),dz(i),dz(i+1))
                  sw_kmean(i+1) = sw_kmean(i+1)                        ! [SS-SWC S-1.4b]
                end if
                sw_k(i) = sw_k(i)                                      ! [SS-SWC S-1.4b] sw_k(nodncr)
@@ -608,7 +605,7 @@ contains
                                       state%soilwater%fluseksatexm(NN), &
                                       NN, state%soilwater)                     ! [SS-GR-UTILS Task 6]
                sw_k(NN) = sw_k(NN)                                 ! [SS-SWC S-1.4b]
-               sw_kmean(NN+1) = hcomean(swkmean,sw_k(NN),state%soilwater%vg_params(NN+1)%ksat &  ! [SS-GR-UTILS Task 15]
+               sw_kmean(NN+1) = hcomean(state%cfg%simulation%numerical%swkmean,sw_k(NN),state%soilwater%vg_params(NN+1)%ksat &  ! [SS-GR-UTILS Task 15]
      &                       ,dz(NN),dz(NN+1))
                sw_kmean(NN+1) = sw_kmean(NN+1)                     ! [SS-SWC S-1.4b]
                F(NN) = (sw_theta(NN) - sw_thetm1(NN))*sw_FrArMtrx(NN)*dz(NN)/tc_dt  &  ! [SS-SWC S-2.3] [TC-8]
@@ -704,12 +701,12 @@ contains
             end if
             ! Test for change of pressure head
             if( dabs(hold(i)) .lt. 1.0d0)then
-               if(abs( sw_h(i)-hold(i) ) .gt. CritDevh2Cp)then
+               if(abs( sw_h(i)-hold(i) ) .gt. state%cfg%simulation%numerical%critdevh2cp)then
                   flnonconv2(i) = .true. ; flnonconv   = .true.
                endif
             else
                if(abs( sw_h(i)-hold(i) )/abs(hold(i)) .gt.                 &
-     &                CritDevh1Cp)then
+     &                state%cfg%simulation%numerical%critdevh1cp)then
                   flnonconv2(i) = .true. ; flnonconv   = .true.
                endif
             end if
@@ -723,7 +720,7 @@ contains
             if(.not.flnonconv) then
                deviat = state%soilwater%pond - sw_pondm1 + state%soilwater%reva*tc_dt - (state%atmosphere%nraidt+nird+state%atmosphere%melt)*tc_dt &  ! [SS-SWC S-2.12B] [TC-8]
      &                - state%soilwater%runon*tc_dt  +  state%soilwater%runots  - state%soilwater%qtop * tc_dt  ! [TC-8]
-               if( abs(deviat) .gt. CritDevPondDt) then
+               if( abs(deviat) .gt. state%cfg%simulation%numerical%critdevponddt) then
                   flnonconv3 = .true. ; flnonconv   = .true.
                   flnonconv3 = flnonconv3 ! for Forcheck
                end if
@@ -821,8 +818,8 @@ contains
            write(logf,'(a,f10.6)') 'CritDevBalCp  = ', CritDevBalCp
            write(logf,'(a,f10.6)') 'CritDevBalTot = ', CritDevBalTot
            write(logf,'(a,f10.6)') 'CritDz        = ', CritDz
-           write(logf,'(a,f10.6)') 'CritDevh1Cp   = ', CritDevh1Cp
-           write(logf,'(a,f10.6)') 'CritDevh2Cp   = ', CritDevh2Cp
+           write(logf,'(a,f10.6)') 'state%cfg%simulation%numerical%critdevh1cp   = ', state%cfg%simulation%numerical%critdevh1cp
+           write(logf,'(a,f10.6)') 'state%cfg%simulation%numerical%critdevh2cp   = ', state%cfg%simulation%numerical%critdevh2cp
            write(logf,'(a,i3)') 'flnonconv  = ', flnonconv
            write(logf,'(a,i3)') 'flnonconv3 = ', flnonconv3
            write(logf,'(a,i3)') 'flunsatok(1) = ', flunsatok(1)
@@ -880,7 +877,6 @@ contains
          ! DEFERRED: swinco — initial conditions switch; Phase C3
          swinco, &
          ! DEFERRED: swkmean — mean K averaging method; Phase C3
-         swkmean, &
          ! DEFERRED: paramvg(21,maho) — VanGenuchten parameters table; Phase C3
          paramvg, &
          ! DEFERRED: relsatthr/ksatthr(maho) — threshold saturations; Phase C3
@@ -1158,7 +1154,7 @@ contains
                              sw%fluseksatexm(node), &
                              node, state%soilwater)                            ! [SS-SWC S-1.3/S-2.12B] [SS-GR-UTILS Task 6]
 
-        if(node.gt.1) sw%kmean(node) = hcomean(swkmean,sw%k(node-1),sw%k(node),dz(node-1),dz(node))  ! [SS-SWC S-1.3/S-2.12B]
+        if(node.gt.1) sw%kmean(node) = hcomean(state%cfg%simulation%numerical%swkmean,sw%k(node-1),sw%k(node),dz(node-1),dz(node))  ! [SS-SWC S-1.3/S-2.12B]
       end do
       sw%kmean(numnod+1) = sw%k(numnod)                   ! [SS-SWC S-1.3/S-2.12B]
 
@@ -1233,7 +1229,7 @@ contains
                                         state%soilwater%fluseksatexm(i), &
                                         i, state%soilwater)                    ! [SS-SWC S-1.4b/S-2.12B] [SS-GR-UTILS Task 6]
          if(i.gt.1)then
-            state%soilwater%kmean(i) = hcomean(swkmean,state%soilwater%k(i-1),state%soilwater%k(i),dz(i-1),dz(i))  ! [SS-SWC S-1.4b/S-2.12B]
+            state%soilwater%kmean(i) = hcomean(state%cfg%simulation%numerical%swkmean,state%soilwater%k(i-1),state%soilwater%k(i),dz(i-1),dz(i))  ! [SS-SWC S-1.4b/S-2.12B]
          end if
       enddo
       state%soilwater%kmean(numnod+1) = state%soilwater%k(numnod)  ! [SS-SWC S-1.4b/S-2.12B]

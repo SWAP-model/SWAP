@@ -24,7 +24,7 @@ module boundtop_mod
          ! DEFERRED: nird — net irrigation depth runtime; irrigation cluster; Phase C3
          nird, &
          ! DEFERRED: swkmean/swredu — soil hydraulics/ET reduction switches; config; Phase C3
-         swkmean, swredu, &
+         swredu, &
          ! DEFERRED: flrunon/runonarr — runon switch/timeseries; not in schema yet; Phase C3
          flrunon, runonarr
       implicit none
@@ -130,7 +130,7 @@ contains
 ! --- This only occurs if RH is 100% in SWAPS, never used for SWAP
          kSurf = state%soilwater%k(1)                                         ! [SS-SWC S-2.5]
       endif
-      k1Atm = hcomean(swkmean,kSurf,state%soilwater%k(1),state%mesh%dz(1),state%mesh%dz(1))        ! [SS-SWC S-2.5] [SS-GR-BH B10]
+      k1Atm = hcomean(state%cfg%simulation%numerical%swkmean,kSurf,state%soilwater%k(1),state%mesh%dz(1),state%mesh%dz(1))        ! [SS-SWC S-2.5] [SS-GR-BH B10]
 
 ! --- maximum evaporation rate according to Darcy
       Emax = -k1Atm * ((state%soilwater%hatm-state%soilwater%h(1))/state%mesh%disnod(1)+1.0d0)  ! [SS-SWC S-2.5] [SS-GR-BH B10]
@@ -167,7 +167,7 @@ contains
       else
          ks = state%heat%rfcp(1)*state%soilwater%ksatfit(state%mesh%layer(1)) + (1.0d0-state%heat%rfcp(1))*hconode_vsmall  ! [SS-GR-BH B10]
       endif
-      state%soilwater%k1max = hcomean(swkmean,ks,state%soilwater%k(1),state%mesh%dz(1),state%mesh%dz(1))  ! [SS-GR-BH B10]
+      state%soilwater%k1max = hcomean(state%cfg%simulation%numerical%swkmean,ks,state%soilwater%k(1),state%mesh%dz(1),state%mesh%dz(1))  ! [SS-GR-BH B10]
 !     check whether application of flux=q1 will yield a pressure head >0
 !     at ground surface. If not: flux boundary condition is valid
       h0    = state%soilwater%h(1) - state%mesh%disnod(1)*(q1/state%soilwater%k1max+1.0d0)  ! [SS-SWC S-2.5] [SS-GR-BH B10]

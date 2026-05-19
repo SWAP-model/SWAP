@@ -562,7 +562,7 @@ contains
         cfeic,                                             &  ! B24 DEFERRED — crop factor scalar; cf/ch retired
         rad,                                               &  ! B24 DEFERRED — daily radiation scalar
         logf,                                              &  ! B24 DEFERRED — Arc 9 (logging)
-        alt, altw, angstroma, angstromb,              &  ! B24 DEFERRED — config ET params
+        angstroma, angstromb,              &  ! B24 DEFERRED — config ET params
         daylp, tmn, tmx, rsw, difpp,                       &  ! B24 DEFERRED — ET calculation params; albedo/rsc retired
         dsinbe, atmtr, rsoil,                              &  ! B24 DEFERRED — ET calculation params
         swinter,                                           &  ! B24 DEFERRED — overwritten by crop init (not pure config%meteo)
@@ -683,7 +683,7 @@ contains
 
         ! Calculate evapotranspiration using Penman-Monteith: et0, ew0, es0 (mm/d)
         ! in case of daily meteo (swmetdetail = 0) irecord is always 1
-        call PenMon (logf,swscre,tc_daynr,state%cfg%meteo%lat,alt,Altw,angstroma, &
+        call PenMon (logf,swscre,tc_daynr,state%cfg%meteo%lat,state%cfg%meteo%alt,state%cfg%meteo%altw,angstroma, &
                      angstromb,rcs,rad,state%atmosphere%Tav,hum,win,state%crop%common%rsc, &
                      state%crop%es0,state%crop%et0,state%crop%ew0, &
                      state%crop%swcf,state%crop%common%ch, &

@@ -43,14 +43,11 @@
       iseqgmpot          = 0
       nmetdetail         = 0
       swdivide           = 0
-      swetr              = 0
       swetsine           = 0
       swinter            = 0
       swmetdetail        = 0
       swrain             = 0
       ! [SS-ATM A-2.6] aintcdt/atmdem/caintc/cevap/cgrai/cnrai/cpeva/cptra retired to state%atmosphere
-      alt                = 0.0d0
-      altw               = 0.0d0
       daylp              = 0.0d0
 
 ! --- only for bulb crops (tulips etc..)
@@ -115,12 +112,8 @@
       ! [SS-GR-FINAL D1] FlIrrigationOutput zero-fill dropped — declaration retired 
 
 ! --- soilwater variables
-      MaxBackTr          = 0
       ! [SS-BMI2 Task 5] MaxIt retired 2026-05-13 — moved to state%timecontrol%MaxIt
       Itnumb             = 0
-      CritDevh1Cp        = 0.0d0
-      CritDevh2Cp        = 0.0d0
-      CritDevPondDt      = 0.0d0
       fldumpconvcrit     = .false.
       flwarn_hc          = .true.     ! Initialize headcalc warning flag (previously SAVE variable)
       iwarn_hc           = 0          ! Initialize headcalc warning counter (previously SAVE variable)
@@ -185,8 +178,6 @@
       swfrost            = 0
       swhyst             = 0 
       swinco             = 0 
-      swkmean            = 0 
-      swkimpl            = 0 
       ! [SS-GR-FINAL D5] swoutputmodflow zero-fill dropped — declaration retired
       swpondmx           = 0 
       swqhbot            = 0 

@@ -148,9 +148,29 @@ def strip_from_use_clause(text_lf: str, sym: str) -> str:
     return "\n".join(out)
 
 
+def _clause_contains_sym(lines, start_idx, word_pat):
+    """Starting at start_idx (a `use variables` line), collect the multi-line
+    clause and return (uses_sym, last_idx)."""
+    n = len(lines)
+    use_text = [lines[start_idx]]
+    code = lines[start_idx].split("!", 1)[0].rstrip()
+    k = start_idx
+    while code.endswith("&") and k + 1 < n:
+        k += 1
+        use_text.append(lines[k])
+        next_code = lines[k].split("!", 1)[0].rstrip()
+        if next_code == "":
+            code = "&"  # comment-only; treat as continuation
+        else:
+            code = next_code
+    joined = " ".join(use_text)
+    return bool(word_pat.search(joined)), k
+
+
 def find_importing_subs(text_lf: str, sym: str):
     """Return list of (start_line, end_line) for subroutines that import sym
-    via a `use variables, only: ... sym ...` clause in their body."""
+    via a `use variables, only: ... sym ...` clause — either at module scope
+    (applies to all subs in the module) or in the sub's body."""
     lines = text_lf.split("\n")
     n = len(lines)
     out = []
@@ -163,6 +183,22 @@ def find_importing_subs(text_lf: str, sym: str):
         if re.match(r"\s*(pure\s+)?(elemental\s+)?(recursive\s+)?(subroutine|function)\s+\w+\s*\(",
                     line, re.IGNORECASE):
             sub_starts.append(idx)
+
+    # Check for MODULE-level use clauses (between `module X` and first `contains`/sub).
+    # If found and they import sym, treat all subs as importing.
+    module_imports_sym = False
+    first_sub = sub_starts[0] if sub_starts else n
+    for idx in range(first_sub):
+        stripped = lines[idx].lstrip()
+        if re.match(r"use\s+variables\s*(?:$|!)", stripped, re.IGNORECASE):
+            # Blanket use Variables (module scope) — imports everything
+            module_imports_sym = True
+            break
+        if re.match(r"use\s+variables\b", stripped, re.IGNORECASE):
+            uses, _ = _clause_contains_sym(lines, idx, word_pat)
+            if uses:
+                module_imports_sym = True
+                break
 
     # Walk through subroutines.
     i = 0
@@ -177,6 +213,12 @@ def find_importing_subs(text_lf: str, sym: str):
             next_starts = [s for s in sub_starts if s > i]
             sub_end = (next_starts[0] - 1) if next_starts else n - 1
 
+            # Module-level import wins: mark every sub as importing
+            if module_imports_sym:
+                out.append((sub_start, sub_end))
+                i = sub_end + 1
+                continue
+
             # Within [sub_start, sub_end], look for use variables clauses that contain sym
             k = sub_start
             in_use = False
@@ -185,12 +227,16 @@ def find_importing_subs(text_lf: str, sym: str):
             while k <= sub_end:
                 line = lines[k]
                 stripped = line.lstrip()
+                # Blanket `use variables` (no only:) imports everything
+                m_blanket = re.match(r"use\s+variables\s*(?:$|!)", stripped, re.IGNORECASE)
+                if m_blanket:
+                    uses_sym = True
+                    break
                 if re.match(r"use\s+variables\b", stripped, re.IGNORECASE):
                     in_use = True
                 if in_use:
                     use_text.append(line)
                     code = line.split("!", 1)[0].rstrip()
-                    # Skip comment-only lines (empty code)
                     if code == "":
                         k += 1
                         continue
@@ -280,28 +326,34 @@ def fix_use_clause_artifacts(text_lf: str) -> str:
     while i < len(lines):
         line = lines[i]
         stripped = line.lstrip()
-        m = re.match(r"use\s+variables\b\s*(,\s*only\s*:)?(.*)", stripped, re.IGNORECASE)
+        # Only handle `use variables, only:` form — never delete blanket `use variables`.
+        m = re.match(r"use\s+variables\b\s*,\s*only\s*:", stripped, re.IGNORECASE)
         if m:
-            # Collect clause lines
+            # Build clause by collecting lines while previous code link is open.
             clause_idxs = [i]
             j = i
-            code = line.split("!", 1)[0].rstrip()
-            while code.endswith("&") and j + 1 < len(lines):
-                j += 1
-                clause_idxs.append(j)
-                code_next = lines[j].split("!", 1)[0].rstrip()
-                # Continue if this line is comment-only OR ends with &
+            code_at_j = lines[i].split("!", 1)[0].rstrip()
+            chain_open = code_at_j.endswith("&")
+            while chain_open and j + 1 < len(lines):
+                code_next = lines[j + 1].split("!", 1)[0].rstrip()
                 if code_next == "":
-                    code = "&"  # treat as continuation
+                    # Comment-only line — part of clause (& chain not broken)
+                    j += 1
+                    clause_idxs.append(j)
+                    continue
+                # Real code line: include only if it's still part of the chain
+                # (chain was open from previous code line).
+                if chain_open:
+                    j += 1
+                    clause_idxs.append(j)
+                    chain_open = code_next.endswith("&")
                 else:
-                    code = code_next
-            # Check if any code symbol present in clause (besides `use variables, only:` and `&`)
+                    break
             joined = " ".join(lines[k].split("!", 1)[0] for k in clause_idxs)
-            # Strip `use variables, only:` and `&` and whitespace/commas
-            content = re.sub(r"use\s+variables\b\s*(?:,\s*only\s*:)?", "", joined, flags=re.IGNORECASE)
+            content = re.sub(r"use\s+variables\b\s*,\s*only\s*:", "", joined, flags=re.IGNORECASE)
             content = content.replace("&", "").replace(",", "").strip()
             if not content:
-                # Empty clause — skip all these lines
+                # Empty clause — delete all clause lines
                 i = j + 1
                 continue
         out.append(line)
