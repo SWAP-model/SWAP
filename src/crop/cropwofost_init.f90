@@ -71,11 +71,11 @@ contains
          ! Interception — DEFERRED Phase C3
          swinter,                                                             &  ! cofab retired
          ! Root depth — DEFERRED Phase C3
-         swrd, rdi, rri, rdc, swdmi2rd, rdctb, rdtb, rlwtb, wrtmax,         &
+         swrd, swdmi2rd, rdctb, rdtb, rlwtb, wrtmax,         &  ! rdi/rri/rdc retired
          swrdc, cumdens,                                                      &
          ! Harvest — DEFERRED Phase C3
          dvsend, swharv,                                                      &
-         relmf, swpotrelmf,                                                   &
+         swpotrelmf,                                                          &  ! relmf retired
          ! Irrigation schedule — DEFERRED Phase C3
          schedule,                                                             &
          ! Active crop dynamics (written during init) — DEFERRED Phase C3; dvs/tsum retired
@@ -406,13 +406,10 @@ contains
             end block
          end if
       case (2)
-         rdi      = cfg%root%rdi
-         rri      = cfg%root%rri
-         rdc      = cfg%root%rdc
+         state%crop%common%rdi = cfg%root%rdi
+         state%crop%common%rri = cfg%root%rri
+         state%crop%common%rdc = cfg%root%rdc
          swdmi2rd = cfg%root%swdmi2rd
-         state%crop%common%rdi = rdi   ! [SS-GR-CROP A5.2]
-         state%crop%common%rri = rri   ! [SS-GR-CROP A5.2]
-         state%crop%common%rdc = rdc   ! [SS-GR-CROP A5.2]
       case (3)
          if (allocated(cfg%root%rlwtb)) then
             block
@@ -435,9 +432,8 @@ contains
       schedule = cfg%schedule%schedule
 
       ! Management (readwofost lines 2979-2988)
-      relmf      = cfg%management%relmf
+      state%crop%grass%relmf      = cfg%management%relmf
       swpotrelmf = cfg%management%swpotrelmf
-      state%crop%grass%relmf      = relmf      ! [SS-GR-CROP A5.2]
       state%crop%grass%swpotrelmf = swpotrelmf ! [SS-GR-CROP A5.2]
 
       ! FraDeceasedLvToSoil — local SAVE in wofost(), returned via intent(out)

@@ -569,7 +569,7 @@ contains
         swdivide,                                          &  ! B24 DEFERRED — config switch
         croptype, swgc, gc,                                &  ! B24 DEFERRED — crop/config fields
         ! [GR-CROP C3] icrop/flCropCalendar → state%crop%common%X
-        flCropHarvest, cfevappond, flco2, fco2tra,         &  ! B24 DEFERRED — crop/config fields
+        flCropHarvest, cfevappond, flco2,                  &  ! B24 DEFERRED; fco2tra retired
         siccaptb,                                          &  ! B24 DEFERRED — interception table
         swusecn,                                           &  ! B24 DEFERRED — config switch (CN)
         finterception,                                     &  ! B24 DEFERRED — not yet in state
@@ -870,7 +870,7 @@ contains
 
       ! Correction of potential transpiration as a function of atmospheric CO2 concentration
       if (flCO2 .and. state%crop%flCropEmergence) then
-        at_ptra = fco2tra * at_ptra
+        at_ptra = state%crop%wofost%fco2tra * at_ptra
       endif
 
       ! === Section 8: Results for detailed weather records ===

@@ -55,7 +55,7 @@ contains
          ! Death rates — DEFERRED Phase C3
          perdl, rdrrtb, rdrstb,                                               &
          ! Root depth and density — DEFERRED Phase C3
-         swrd, swdmi2rd, swrdc, rdi, rri, rdc, rdctb, rdtb, rlwtb, wrtmax,  &
+         swrd, swdmi2rd, swrdc, rdctb, rdtb, rlwtb, wrtmax,  &  ! rdi/rri/rdc retired
          cumdens,                                                             &
          ! Oxygen stress — DEFERRED Phase C3
          swoxygen, swWrtNonox, aeratecrit,                                    &
@@ -70,7 +70,7 @@ contains
          ! Compensation — DEFERRED Phase C3
          swcompensate, swstressor, alphacrit, dcritrtz,                      &
          ! Management — DEFERRED Phase C3
-         mowrest, swpotrelmf, relmf, seqgrazmow,                             &
+         mowrest, swpotrelmf, seqgrazmow,                             &  ! relmf retired
          ! Mowing / harvest — DEFERRED Phase C3
          dateharvest, dmmowtb, DelayRegrowthTab,                             &
          ! CO2 (flCO2 only; swco2 is a local in readgrass, not a global) — DEFERRED Phase C3
@@ -291,13 +291,10 @@ contains
       swrd = cfg%swrd
       ! swrd=1 is still stub-guarded above; swrd=2 and swrd=3 are both active.
       if (cfg%swrd == 2) then
-         rdi      = cfg%rdi
-         rri      = cfg%rri
-         rdc      = cfg%rdc
+         state%crop%common%rdi = cfg%rdi
+         state%crop%common%rri = cfg%rri
+         state%crop%common%rdc = cfg%rdc
          swdmi2rd = cfg%swdmi2rd
-         state%crop%common%rdi = rdi   ! [SS-GR-CROP A5.2]
-         state%crop%common%rri = rri   ! [SS-GR-CROP A5.2]
-         state%crop%common%rdc = rdc   ! [SS-GR-CROP A5.2]
       else if (cfg%swrd == 3) then
          ! Legacy readgrass:3868-3874 reads rlwtb (22-element flat pair table)
          ! and wrtmax for biomass-driven root extension.
@@ -306,9 +303,8 @@ contains
       end if
 
       ! Part 16: management factors (readgrass lines 3876-3885)
-      relmf      = cfg%relmf
+      state%crop%grass%relmf      = cfg%relmf
       swpotrelmf = cfg%swpotrelmf
-      state%crop%grass%relmf      = relmf       ! [SS-GR-CROP A5.2]
       state%crop%grass%swpotrelmf = swpotrelmf  ! [SS-GR-CROP A5.2]
 
       ! Part 17: sequence of mowing / grazing (readgrass lines 3891-3905)

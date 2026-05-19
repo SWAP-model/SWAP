@@ -430,7 +430,7 @@
         endif
 
         ! daily gross assimilation
-        effc = state%crop%wofost%fco2eff * eff  ! [SS-GR-CROPRT B6] fco2eff via state
+        effc = state%crop%wofost%fco2eff * eff  ! [SS-GR-CROPRT B6] state%crop%wofost%fco2eff via state
         if (croptype(state%crop%common%icrop) .eq. 2) amax = state%crop%wofost%fco2amax * afgen (amaxtb,30,state%crop%common%dvs) * afgen (tmpftb,30,at_tavd)  ! [SS-GR-ATM B.5] [SS-GR-CROPRT B6]
         if (croptype(state%crop%common%icrop) .eq. 3) amax = state%crop%wofost%fco2amax * afgen (amaxtb,30,dble(daycrop)) * afgen (tmpftb,30,at_tavd)  ! [SS-GR-ATM B.5] [SS-GR-CROPRT B6]
 

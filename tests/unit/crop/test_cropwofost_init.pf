@@ -20,8 +20,8 @@ subroutine test_cropwofost_init_basic_globals()
                         swdrought, hlim3h, hlim3l, hlim4, adcrh, adcrl, &
                         swsalinity, saltmax, saltslope, &
                         swcompensate, swinter, &  ! cofab retired
-                        swrd, rdi, rri, rdc, swdmi2rd, &
-                        relmf, swpotrelmf
+                        swrd, swdmi2rd, &  ! rdi/rri/rdc/relmf retired
+                        swpotrelmf
    type(cropwofost_config_t) :: cfg
    type(swap_state_t) :: state  ! [SS-GR-ATM A5.1] dual-write target
    real(real64) :: FraDeceasedLvToSoil
@@ -95,12 +95,12 @@ subroutine test_cropwofost_init_basic_globals()
    @assertEqual(1,            swinter)
    @assertEqual(0.25_real64,  state%crop%cofab,  1.0e-12_real64)
    @assertEqual(2,            swrd)
-   @assertEqual(10.0_real64,  rdi, 1.0e-12_real64)
-   @assertEqual(1.2_real64,   rri, 1.0e-12_real64)
-   @assertEqual(50.0_real64,  rdc, 1.0e-12_real64)
+   @assertEqual(10.0_real64,  state%crop%common%rdi, 1.0e-12_real64)
+   @assertEqual(1.2_real64,   state%crop%common%rri, 1.0e-12_real64)
+   @assertEqual(50.0_real64,  state%crop%common%rdc, 1.0e-12_real64)
    @assertEqual(1,            swdmi2rd)
    @assertEqual(2,            swpotrelmf)
-   @assertEqual(0.8_real64,   relmf, 1.0e-12_real64)
+   @assertEqual(0.8_real64,   state%crop%grass%relmf, 1.0e-12_real64)
    @assertEqual(0.35_real64,  FraDeceasedLvToSoil, 1.0e-12_real64)
 end subroutine
 

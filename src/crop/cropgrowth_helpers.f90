@@ -399,7 +399,7 @@
       !   (intent changed in→inout). Global write retained for backward compat; CropGrowth
       !   redundant dual-write at lines 395-397 removed (B6 handles it). Reads in CropGrowth
       !   body now use state%crop%wofost%X (removed from CropGrowth use variables).
-      use variables, only: fco2amax, fco2eff, fco2tra, flco2,           & ! [SS-GR-CROPRT B6] DEFERRED (global write retained)
+      use variables, only: flco2,                                       & ! [SS-GR-CROPRT B6] DEFERRED; fco2amax/eff/tra retired
                            co2year, mayrs, co2ppm,                       &
                            co2amaxtb, co2efftb, co2tratb
       use array_utils, only: afgen
@@ -414,12 +414,9 @@
       character(len=200) messag
 
       ! initialize CO2 impact
-      fco2amax = 1.0d0 ! factor to correct AMAX for CO2
-      fco2eff  = 1.0d0 ! factor to correct EFF for CO2
-      fco2tra  = 1.0d0 ! factor to correct TRA for CO2
-      state%crop%wofost%fco2amax = fco2amax  ! [SS-GR-CROPRT B6] write to state directly
-      state%crop%wofost%fco2eff  = fco2eff   ! [SS-GR-CROPRT B6]
-      state%crop%wofost%fco2tra  = fco2tra   ! [SS-GR-CROPRT B6]
+      state%crop%wofost%fco2amax = 1.0d0  ! factor to correct AMAX for CO2
+      state%crop%wofost%fco2eff  = 1.0d0  ! factor to correct EFF for CO2
+      state%crop%wofost%fco2tra  = 1.0d0  ! factor to correct TRA for CO2
 
       ! correction of CO2 impact
       ! TC-10: iyear read via state%timecontrol%iyear directly (single site, no ASSOCIATE needed).
@@ -430,12 +427,9 @@
           call fatalerr_collected ('wofost',messag)
         endif
         CO2 = CO2ppm(indexyr)
-        fco2amax = afgen(CO2AMAXTB,30,CO2)
-        fco2eff = afgen(CO2EFFTB,30,CO2)
-        fco2tra = afgen(CO2TRATB,30,CO2)
-        state%crop%wofost%fco2amax = fco2amax  ! [SS-GR-CROPRT B6]
-        state%crop%wofost%fco2eff  = fco2eff   ! [SS-GR-CROPRT B6]
-        state%crop%wofost%fco2tra  = fco2tra   ! [SS-GR-CROPRT B6]
+        state%crop%wofost%fco2amax = afgen(CO2AMAXTB,30,CO2)
+        state%crop%wofost%fco2eff  = afgen(CO2EFFTB,30,CO2)
+        state%crop%wofost%fco2tra  = afgen(CO2TRATB,30,CO2)
       endif
 
       return

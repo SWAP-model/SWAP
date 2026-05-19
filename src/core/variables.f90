@@ -372,7 +372,7 @@
       ! [GR-CROP-DVS] pgasspot retired — see state%crop%wofost%pgasspot
       ! [GR-CROP-DVS] pgass retired — see state%crop%wofost%pgass
       integer   swpotrelmf         ! Calculation of potential yield
-      real(8)   relmf              ! Management factor (attainable yield)
+      ! [GR-CROP-DVS] relmf retired — see state%crop%grass%relmf
       real(8)   avevaptb(2*magrs)  ! Gash interception model: average evaporation intensity during shower (-) as function of time (T)
       real(8)   avprectb(2*magrs)  ! Gash interception model: average rainfall intensity (-) as function of time (T)
       ! [GR-CROP-DVS] cf retired — see state%crop%common%cf
@@ -404,8 +404,8 @@
       ! [GR-CROP-DVS] dvs retired — see state%crop%common%dvs
       real(8)   dvsend             ! Crop development stage at harvest
       ! [GR-CROP-DVS] dwlv retired — see state%crop%wofost%dwlv
-      real(8)   dwlvCrop           ! Dry weight of deceased leafs that remain attached to plant (kg/ha)
-      real(8)   dwlvSoil           ! Dry weight of deceased leafs allocated to soil (kg/ha)
+      ! [GR-CROP-DVS] dwlvCrop retired — see state%crop%wofost%dwlvCrop
+      ! [GR-CROP-DVS] dwlvSoil retired — see state%crop%wofost%dwlvSoil
       ! [GR-CROP-DVS] dwlvpot retired — see state%crop%wofost%dwlvpot
       ! [GR-CROP-DVS] dwrt retired — see state%crop%wofost%dwrt
       ! [GR-CROP-DVS] dwrtpot retired — see state%crop%wofost%dwrtpot
@@ -421,7 +421,7 @@
       real(8)   gasst              ! Total gross assimilation for actual crop (kg/ha)
       real(8)   gasstpot           ! Total gross assimilation for potential crop (kg/ha)
       real(8)   gc                 ! Ground cover in case of a crop
-      real(8)   HarLosOrm_tot      ! Harvest losses added to the soil (roots+fr_shoots_fr_stems+fr_stor.organs) at harvest (kg/ha DM) 
+      ! [GR-CROP-DVS] HarLosOrm_tot retired — see state%crop%common%HarLosOrm_tot
       real(8)   hdrygerm           ! Criterium Hdry of germination
       real(8)   hwetgerm           ! Criterium Hwet of germination
       real(8)   hlim1              ! Pressure head above which root water uptake stops (L)
@@ -454,7 +454,7 @@
       real(8)   pfreetb(2*magrs)   ! Gash interception model: free throughfall coefficient (-) as function of time (T)
       real(8)   pstemtb(2*magrs)   ! Gash interception model: stem flow coefficient (-) as function of time (T)
       real(8)   siccaptb(2*magrs)  ! NHI interception model: interception capacity as a function of time (T)
-      real(8)   fimin              ! start-up saturation fraction for relative interception evaporation (-)
+      ! [GR-CROP-DVS] fimin retired — see state%atmosphere%fimin
       ! [GR-CROP-DVS] siccapact retired — see state%atmosphere%siccapact
       ! real(8) :: sicact        ! amount of water stored on canopy (cm) — [SS-ATM] retired 2026-05-11
       real(8)   siccaplai          ! interception storage per unit of LAI (cm/LAI)
@@ -564,19 +564,19 @@
       real(8)   rlwtb(22)          ! root depth as function of root biomass
       real(8)   wrtmax             ! maximum root weight
       integer   swdmi2rd           ! rooting depth limitation by relative dry matter increase (dmi/dmipot)
-      real(8)   rdi                ! Initial rooting depth (L)
-      real(8)   rri                ! Maximum daily increase of rooting depth (L/T)
-      real(8)   rdc                ! Maximum rooting depth of particular crop (L)
+      ! [GR-CROP-DVS] rdi retired — see state%crop%common%rdi
+      ! [GR-CROP-DVS] rri retired — see state%crop%common%rri
+      ! [GR-CROP-DVS] rdc retired — see state%crop%common%rdc
       real(8)   rdmax              ! Maximum rooting depth in soil profile (L)
       ! [GR-CROP-DVS] rd retired — see state%crop%common%rd
       ! [GR-CROP-DVS] rdpot retired — see state%crop%common%rdpot
-      real(8)   rdm                ! Maximum rooting depth (minimum of soil profile and particular crop) (L)
+      ! [GR-CROP-DVS] rdm retired — see state%crop%common%rdm
 
 ! --- CO2
       logical   flCO2              ! Flag indicating correction of CO2
-      real(8)   fco2amax           ! factor to correct AMAX for CO2
-      real(8)   fco2eff            ! factor to correct EFF for CO2
-      real(8)   fco2tra            ! factor to correct TRA for CO2
+      ! [GR-CROP-DVS] fco2amax retired — see state%crop%wofost%fco2amax
+      ! [GR-CROP-DVS] fco2eff retired — see state%crop%wofost%fco2eff
+      ! [GR-CROP-DVS] fco2tra retired — see state%crop%wofost%fco2tra
       real(8)   co2amaxtb(30)      ! table with factors to correct AMAX for CO2
       real(8)   co2efftb(30)       ! table with factors to correct EFF for CO2
       real(8)   co2tratb(30)       ! table with factors to correct TRA for CO2
@@ -592,16 +592,16 @@
       integer   swbulb             ! switch to enable simulation of bulb crops (-)
       real(8)   drbl               ! Death rate of actual bulb (kg/ha)
       real(8)   drblpot            ! Death rate of potential bulb (kg/ha)
-      real(8)   dwbl               ! Dry weight of dead flowers (kg/ha)
-      real(8)   dwblpot            ! Dry weight of dead flowers for potential growth (kg/ha)
+      ! [GR-CROP-DVS] dwbl retired — see state%crop%wofost%dwbl
+      ! [GR-CROP-DVS] dwblpot retired — see state%crop%wofost%dwblpot
       real(8)   fbl                ! Dry weight fraction partitioned to flowers (-)
       real(8)   fbltb(30)          ! Dry weight fractions partitioned to flowers (-)
       real(8)   pld
       real(8)   remoc
       ! [GR-CROP-DVS] plwt retired — see state%crop%wofost%plwt
       ! [GR-CROP-DVS] plwti retired — see state%crop%wofost%plwti
-      real(8)   wbl                ! Dry weight of living flowers (kg/ha)
-      real(8)   wblpot             ! Dry weight of living flowers for potential growth (kg/ha)
+      ! [GR-CROP-DVS] wbl retired — see state%crop%wofost%wbl
+      ! [GR-CROP-DVS] wblpot retired — see state%crop%wofost%wblpot
 
 ! --- Nitrogen: crop and soil management
       logical   flCropNut          ! Flag indicating simulation of crop nutrient stress

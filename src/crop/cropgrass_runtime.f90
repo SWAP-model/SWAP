@@ -53,7 +53,7 @@
         cfeic, laiem, laiexp, laiexppot, laimax,    &  ! lai/laipot retired
         cftb, chtb, cfeictb, rdtb, slatb, rgrlai, rlwtb, rfsetb,        &
         frtb, fltb, fstb, rdrrtb, rdrstb,                         &
-        rdm, rdmax, rdi, rri, rdc, swrd, swrdc, swdmi2rd,    &  ! rd/rdpot retired
+        rdmax, swrd, swrdc, swdmi2rd,    &  ! rd/rdpot retired
         swdrought, swcf, swgc, swinter, reltr,                           &
         cvl, cvr, cvs, q10, rmr, rml, rms, span, ssa, glaiex, glaiexpot, &
         lv, lvpot, lvage, lvagepot, sla, slapot, ilvold, ilvoldpot,     &
@@ -210,14 +210,13 @@
 
 ! --- maximum rooting depth
       if (swrd.eq.1) then
-        rdm = rdmax
+        state%crop%common%rdm = rdmax
       elseif (swrd.eq.2) then
-        rdm = min(rdmax,rdc)
+        state%crop%common%rdm = min(rdmax,state%crop%common%rdc)
       elseif (swrd.eq.3) then
-        rdc = afgen (rlwtb,22,wrtmax)
-        rdm = min(rdmax,rdc)
+        state%crop%common%rdc = afgen (rlwtb,22,wrtmax)
+        state%crop%common%rdm = min(rdmax,state%crop%common%rdc)
       endif
-      state%crop%common%rdm = rdm   ! [SS-GR-CROP A5.1]
 
 ! --- skip next initialization if crop parameters are read from *.END file
       if (tc_t1900 - tstart .gt. tiny .or. swinco .ne. 3 .or.          &
@@ -275,12 +274,12 @@
 ! ---   actual rooting depth
         if (swrd.eq.1) then
           state%crop%common%rd = afgen (rdtb,22,rid)
-          state%crop%common%rd = min(state%crop%common%rd,rdm)
+          state%crop%common%rd = min(state%crop%common%rd,state%crop%common%rdm)
         elseif (swrd.eq.2) then
-          state%crop%common%rd = min(rdi,rdm)
+          state%crop%common%rd = min(state%crop%common%rdi,state%crop%common%rdm)
         elseif (swrd.eq.3) then
-          rdi = afgen (rlwtb,22,state%crop%wofost%wrt)
-          state%crop%common%rd = min(rdi,rdm)
+          state%crop%common%rdi = afgen (rlwtb,22,state%crop%wofost%wrt)
+          state%crop%common%rd = min(state%crop%common%rdi,state%crop%common%rdm)
         endif
         state%crop%common%rdpot = state%crop%common%rd
         
@@ -863,14 +862,14 @@
         ! root extension
         if (swrd.eq.1) then
           state%crop%common%rdpot = afgen (rdtb,22,rid)
-          state%crop%common%rdpot = min(state%crop%common%rdpot,rdm)
+          state%crop%common%rdpot = min(state%crop%common%rdpot,state%crop%common%rdm)
         elseif (swrd.eq.2) then
-          rrpot = min (rdm-state%crop%common%rdpot,rri)
+          rrpot = min (state%crop%common%rdm-state%crop%common%rdpot,state%crop%common%rri)
           if (fr.le.0.0d0 .or. state%crop%wofost%pgasspot.lt.1.0d0) rrpot = 0.0d0
           state%crop%common%rdpot = state%crop%common%rdpot + rrpot
         elseif (swrd.eq.3) then
           state%crop%common%rdpot = afgen (rlwtb,22,state%crop%wofost%wrtpot)
-          state%crop%common%rdpot = min(state%crop%common%rdpot,rdm)
+          state%crop%common%rdpot = min(state%crop%common%rdpot,state%crop%common%rdm)
         endif
 
       endif
@@ -1331,16 +1330,16 @@
         ! root extension
         if (swrd.eq.1) then
           state%crop%common%rd = afgen (rdtb,22,rid)
-          state%crop%common%rd = min(state%crop%common%rd,rdm)
+          state%crop%common%rd = min(state%crop%common%rd,state%crop%common%rdm)
         elseif (swrd.eq.2) then
-          rr = min (rdm-state%crop%common%rd,rri)
+          rr = min (state%crop%common%rdm-state%crop%common%rd,state%crop%common%rri)
           if (fr.le.0.0d0 .or. state%crop%wofost%pgass.lt.1.0d0 .or.                    &
      &        state%soilwater%flWrtNonox) rr = 0.0d0   ! [SS-GR-CROPWS A4] present(state) guard removed
           if (swdmi2rd.eq.1 .and. state%crop%wofost%pgass.ge.1.0d0)              rr = rr * gass/state%crop%wofost%pgass
           state%crop%common%rd = state%crop%common%rd + rr
         elseif (swrd.eq.3) then
           state%crop%common%rd = afgen (rlwtb,22,state%crop%wofost%wrt)
-          state%crop%common%rd = min(state%crop%common%rd,rdm)
+          state%crop%common%rd = min(state%crop%common%rd,state%crop%common%rdm)
         endif
 
 ! ---   set crop height and cropfactor

@@ -29,7 +29,7 @@
 !   gctb, rdtb, mrftb, wrtb, swinco, reltr.
 ! ----------------------------------------------------------------------
       use variables, only: magrs, idev, &         ! [GR-CROPWS B1] reads→state; writes remain legacy; dvs/tsum/lai retired
-                           rdm, max_resp_factor, swrd,         &  ! rd/rdpot retired
+                           max_resp_factor, swrd,         &  ! rd/rdpot retired
                            swgc, swcf, swinter, swdrought, swdmi2rd,     &
                            tbase, tsumea, tsumam, rdmax,                  &
                            siccaplai, w_root_ss, wiltpoint,   &
@@ -102,11 +102,10 @@
 
 ! --- maximum rooting depth
       if (swrd.eq.1) then
-        rdm = rdmax
+        state%crop%common%rdm = rdmax
       else
-        rdm = min(rdmax,state%crop%common%rdc)   ! [GR-CROPWS B1] rdc → state%crop%common%rdc
+        state%crop%common%rdm = min(rdmax,state%crop%common%rdc)   ! [GR-CROPWS B1] state%crop%common%rdc → state%crop%common%rdc
       endif
-      state%crop%common%rdm = rdm   ! [SS-GR-CROP A5.1]
 
 ! --- skip next initialization if crop parameters are read from *.END file
       if (tc_t1900 - tstart .gt. tiny .or. swinco .ne. 3 .or.           &
@@ -117,9 +116,9 @@
 ! --- actual rooting depth
         if (swrd.eq.1) then
           state%crop%common%rd = afgen (rdtb,22,state%crop%common%dvs)                    ! dvs is 0.0 here (just assigned), no separate read needed
-          state%crop%common%rd = min(state%crop%common%rd,state%crop%common%rdm)                            ! [GR-CROPWS B1] rdm → state%crop%common%rdm
+          state%crop%common%rd = min(state%crop%common%rd,state%crop%common%rdm)                            ! [GR-CROPWS B1] state%crop%common%rdm → state%crop%common%rdm
         else
-          state%crop%common%rd = min(state%crop%common%rdi,state%crop%common%rdm)         ! [GR-CROPWS B1] rdi, rdm → state%crop%common%X
+          state%crop%common%rd = min(state%crop%common%rdi,state%crop%common%rdm)         ! [GR-CROPWS B1] state%crop%common%rdi, state%crop%common%rdm → state%crop%common%X
         endif
         state%crop%common%rdpot = state%crop%common%rd
 

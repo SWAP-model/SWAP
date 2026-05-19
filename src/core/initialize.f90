@@ -54,10 +54,6 @@
       daylp              = 0.0d0
 
 ! --- only for bulb crops (tulips etc..)
-      dwbl             = 0.0d0
-      dwblpot          = 0.0d0
-      dwlvCrop           = 0.0d0 
-      dwlvSoil           = 0.0d0 
       ! [SS-ATM A-2.6] empreva/fprecnosnow/grai/graidt/ievap/inrai/ipeva/iptra retired to state%atmosphere
       epot               = 0.0d0
       cfevappond         = 0.0d0
@@ -734,17 +730,9 @@
       vernrtb            = 0.0d0 
 
 ! --- only for bulb crops (tulips etc..)
-      wbl                = 0.0d0 
-      wblpot             = 0.0d0
-      dwbl               = 0.0d0
-      dwblpot            = 0.0d0
       wiltpoint          = 0.0d0 
       wrtb               = 0.0d0
       zsow               = 0.0d0
-      dwlvCrop           = 0.0d0
-      dwlvSoil           = 0.0d0
-      HarLosOrm_tot      = 0.0d0
-      
 ! --- interception
       ! [SS-ATM A-2.6] sicact retired to state%atmosphere%sicact
       
@@ -752,9 +740,6 @@
       rdctb              = 0.0d0 
       rdtb               = 0.0d0
       rlwtb              = 0.0d0
-      rdi                = 0.0d0 
-      rri                = 0.0d0       
-      rdc                = 0.0d0 
       wrtmax             = 0.0d0
 
 ! --- harvest grassland

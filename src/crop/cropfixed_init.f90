@@ -35,7 +35,7 @@ contains
                             ! DEFERRED: cftb/chtb/cfeictb/swcf/albedo/rsc/rsw — crop factor config; Phase C3
                             cftb, chtb, cfeictb, swcf, rsw,  &  ! albedo/rsc retired
                             ! DEFERRED: rdtb/rdctb/swrd/swdmi2rd/swrdc/rdi/rri/rdc — root config; Phase C3
-                            rdtb, rdctb, swrd, swdmi2rd, swrdc, rdi, rri, rdc, &
+                            rdtb, rdctb, swrd, swdmi2rd, swrdc,         &  ! rdi/rri/rdc retired
                             ! DEFERRED: swoxygen/swWrtNonox/aeratecrit/max_resp_factor — O2 stress config; Phase C3
                             swoxygen, swWrtNonox, aeratecrit, max_resp_factor, &
                             ! DEFERRED: hlim1/hlim2u/hlim2l — drought stress limits; Phase C3
@@ -90,12 +90,9 @@ contains
       swrd = cfg%swrd
       swdmi2rd = cfg%swdmi2rd
       swrdc    = cfg%swrdc
-      rdi      = cfg%rdi
-      rri      = cfg%rri
-      rdc      = cfg%rdc
-      state%crop%common%rdi = rdi   ! [SS-GR-CROP A5.2]
-      state%crop%common%rri = rri   ! [SS-GR-CROP A5.2]
-      state%crop%common%rdc = rdc   ! [SS-GR-CROP A5.2]
+      state%crop%common%rdi = cfg%rdi
+      state%crop%common%rri = cfg%rri
+      state%crop%common%rdc = cfg%rdc
 
       swoxygen   = cfg%swoxygen
       swWrtNonox = cfg%swwrtnonox

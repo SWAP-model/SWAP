@@ -49,8 +49,8 @@ module rootextraction_mod
                            hlim1, hlim2l, hlim2u, hlim3h, hlim3l, hlim4,  &
                            ! DEFERRED: kroot/kstem/logf/noddrz/oxygenintercept — crop/log globals; Phase C3
                            kroot, kstem, logf, noddrz, oxygenintercept,   &
-                           ! DEFERRED: oxygenslope/rd/rdctb/rdm/rootcoefa/rooteff — active crop state; Phase C3
-                           oxygenslope, rdctb, rdm, rootcoefa, rooteff, &  ! rd retired
+                           ! DEFERRED: oxygenslope/rdctb/rootcoefa/rooteff — active crop state; Phase C3; rd/rdm retired
+                           oxygenslope, rdctb, rootcoefa, rooteff, &
                            ! DEFERRED: rootradius/rxylem/saltmax/saltslope/stephr — crop/solute config; Phase C3
                            rootradius, rxylem, saltmax, saltslope, stephr, &
                            ! DEFERRED: swcompensate/swdrought/swfrost/swoxygen — crop stress switches; Phase C3
@@ -278,7 +278,7 @@ module rootextraction_mod
 
         ! compensated root water uptake according to Walsum
         if (swcompensate .eq. 2) then
-            alphacrit = min((dcritrtz + rdm - rd_noddrz) / rdm, 1.0d0)
+            alphacrit = min((dcritrtz + state%crop%common%rdm - rd_noddrz) / state%crop%common%rdm, 1.0d0)
         end if
 
         alptot = cw_qrosum / at_ptra
@@ -367,7 +367,7 @@ module rootextraction_mod
                            botcom, criterhr, cumdens, dcritrtz, flhydrlift, &  ! DEFERRED: soil/crop config
                            hlim1, hlim2l, hlim2u, hlim3h, hlim3l, hlim4,  &  ! DEFERRED: drought limits
                            kroot, kstem, logf, noddrz, oxygenintercept,   &  ! DEFERRED: crop/log globals
-                           oxygenslope, rdctb, rdm, rootcoefa, rooteff, &  ! rd retired  ! DEFERRED: active crop state
+                           oxygenslope, rdctb, rootcoefa, rooteff, &  ! rd retired  ! DEFERRED: active crop state
                            rootradius, rxylem, saltmax, saltslope, stephr, &  ! DEFERRED: crop/solute config
                            swcompensate, swdrought, swfrost, swoxygen,    &  ! DEFERRED: stress switches
                            swoxygentype, swsalinity, swstressor, swwrtnonox, &  ! DEFERRED: stress switches
@@ -738,7 +738,7 @@ module rootextraction_mod
                            botcom, criterhr, cumdens, dcritrtz, flhydrlift, &  ! DEFERRED: soil/crop config
                            hlim1, hlim2l, hlim2u, hlim3h, hlim3l, hlim4,  &  ! DEFERRED: drought limits
                            kroot, kstem, logf, noddrz, oxygenintercept,   &  ! DEFERRED: crop/log globals
-                           oxygenslope, rdctb, rdm, rootcoefa, rooteff, &  ! rd retired  ! DEFERRED: active crop state
+                           oxygenslope, rdctb, rootcoefa, rooteff, &  ! rd retired  ! DEFERRED: active crop state
                            rootradius, rxylem, saltmax, saltslope, stephr, &  ! DEFERRED: crop/solute config
                            swcompensate, swdrought, swfrost, swoxygen,    &  ! DEFERRED: stress switches
                            swoxygentype, swsalinity, swstressor, swwrtnonox, &  ! DEFERRED: stress switches
