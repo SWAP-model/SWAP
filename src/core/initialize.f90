@@ -744,7 +744,6 @@
       spa                = 0.0d0 
       span               = 0.0d0 
       ssa                = 0.0d0
-      tagppot            = 0.0d0
       tagpt              = 0.0d0 
       tagptpot           = 0.0d0 
       tbase              = 0.0d0 

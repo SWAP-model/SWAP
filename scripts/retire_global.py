@@ -37,6 +37,18 @@ RANGES = {
 }
 
 
+def _read_lines(path: Path):
+    """Read file preserving line endings. Returns (lines, eol) where eol is '\r\n' or '\n'."""
+    data = path.read_bytes().decode('utf-8')
+    if '\r\n' in data:
+        return data.split('\r\n'), '\r\n'
+    return data.split('\n'), '\n'
+
+
+def _write_lines(path: Path, lines, eol):
+    path.write_bytes(eol.join(lines).encode('utf-8'))
+
+
 def sed_migrate(symbol: str, state_path: str, has_t_suffix: bool):
     excl = '[^a-zA-Z0-9_t]' if has_t_suffix else '[^a-zA-Z0-9_]'
     for rel, (lo, hi) in RANGES.items():
@@ -70,29 +82,37 @@ def fix_use_clauses(symbol: str, state_path: str):
         new = re.sub(r',\s*,', ',', new)
         return new
 
-    for rel in RANGES:
+    files_to_check = list(RANGES.keys()) + ['src/core/swap_mod.f90']
+    for rel in files_to_check:
         path = REPO / rel
         if not path.exists():
             continue
-        text = path.read_text()
-        lines = text.split('\n')
+        lines, eol = _read_lines(path)
         in_use = False
         out_lines = []
         for line in lines:
             stripped = line.lstrip()
-            if stripped.startswith('use variables'):
+            if stripped.startswith('use variables') or stripped.startswith('use Variables'):
                 in_use = True
             if in_use and state_path in line:
                 line = strip_state_path(line)
-            # Determine continuation: ignore comment after !
-            code_part = line.split('!', 1)[0].rstrip()
-            ends_continuation = code_part.endswith('&')
+            code_part = line.split('!', 1)[0]
+            code_stripped = code_part.rstrip()
+            ends_amp = code_stripped.endswith('&')
             out_lines.append(line)
-            if in_use and not ends_continuation:
+            if in_use and not ends_amp:
                 in_use = False
-        new_text = '\n'.join(out_lines)
-        if new_text != text:
-            path.write_text(new_text)
+        # NOTE: trailing-comma cleanup left to manual fix-up after build error.
+        # Auto-fixing is brittle (comments, multi-line patterns).
+        text = eol.join(out_lines)
+        # Final pass: fix trailing commas right before a continuation that has no symbols
+        # Pattern: ",\s*&\s*(![^\n]*)?\n\s*&" → "  &" then on a body line that ends with ", &" but the
+        # following continuation is empty.
+        # Simpler heuristic: drop bare "," that immediately precedes "&" at end of code on a line
+        # whose own list has had all entries stripped.
+        original = path.read_bytes().decode('utf-8')
+        if text != original:
+            path.write_bytes(text.encode('utf-8'))
 
 
 def delete_self_assignments(state_path: str):
@@ -110,46 +130,47 @@ def delete_self_assignments(state_path: str):
         path = REPO / rel
         if not path.exists():
             continue
-        text = path.read_text()
+        lines, eol = _read_lines(path)
         out_lines = []
-        for line in text.split('\n'):
-            if pat.match(line):
+        for line in lines:
+            if pat.match(line.rstrip('\r')):
                 continue  # drop
             out_lines.append(line)
-        new_text = '\n'.join(out_lines)
-        if new_text != text:
-            path.write_text(new_text)
+        new_text = eol.join(out_lines)
+        original = path.read_bytes().decode('utf-8')
+        if new_text != original:
+            path.write_bytes(new_text.encode('utf-8'))
 
 
 def patch_variables_decl(symbol: str, state_path: str):
     """Replace real(8) <symbol> ... line with a tombstone comment."""
     path = REPO / 'src/core/variables.f90'
-    text = path.read_text()
+    text = path.read_bytes().decode('utf-8')
     new_text = re.sub(
         r'^(\s*)real\(8\)\s+' + re.escape(symbol) + r'\s+!\s*([^\n]*)$',
         rf'\1! [GR-CROP-DVS] {symbol} retired — see {state_path}',
         text, flags=re.MULTILINE
     )
     if new_text != text:
-        path.write_text(new_text)
+        path.write_bytes(new_text.encode('utf-8'))
 
 
 def patch_initialize_zero(symbol: str):
     """Drop the '<symbol> = 0.0d0' line in initialize.f90."""
     path = REPO / 'src/core/initialize.f90'
-    text = path.read_text()
+    text = path.read_bytes().decode('utf-8')
     new_text = re.sub(
         r'^\s*' + re.escape(symbol) + r'\s*=\s*0\.0?d0\s*\n',
         '', text, flags=re.MULTILINE
     )
     if new_text != text:
-        path.write_text(new_text)
+        path.write_bytes(new_text.encode('utf-8'))
 
 
 def patch_swap_mod_dual_write(symbol: str, state_path: str):
     """Drop 'state%X = symbol' dual-write in swap_mod and drop from its use clause."""
     path = REPO / 'src/core/swap_mod.f90'
-    text = path.read_text()
+    text = path.read_bytes().decode('utf-8')
     # Drop dual-write assignment
     text = re.sub(
         r'^\s*' + re.escape(state_path) + r'\s*=\s*' + re.escape(symbol) + r'\s*\n',
@@ -158,7 +179,7 @@ def patch_swap_mod_dual_write(symbol: str, state_path: str):
     # Drop from use clause (handle both ', sym,' and 'sym,')
     text = re.sub(r',\s*' + re.escape(symbol) + r'\b', '', text)
     text = re.sub(r'\b' + re.escape(symbol) + r'\s*,\s*', '', text)
-    path.write_text(text)
+    path.write_bytes(text.encode('utf-8'))
 
 
 def main():
