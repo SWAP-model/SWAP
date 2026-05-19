@@ -54,7 +54,7 @@
         swbulb, swinco, laiem, laiexp, laiexppot, laimax,    &  ! lai/laipot retired
         cf, ch, cfeic, tsumea, tsumam, tbase, daycrop, lat, daylp,  &  ! tsum retired (→state%crop%common%tsum)
         kdif, siccapact, siccaplai, cropend,                               &  ! [GR-CROPWS B5] cropstart removed (→state%crop%common%cropstart)
-        wlvpot, wstpot, wsopot, wrtpot, wrtmax, wrtmin, &  ! wso/wst/wlv/wrt retired
+        wstpot, wsopot, wrtpot, wrtmax, wrtmin, &  ! wso/wst/wlv/wrt retired
         cwdm, cwdmpot, pgass, pgasspot, reltr, lrnr, lsnr, nni,           &
         anlv, anst, nmxlv, nmaxlv, nmaxst, nmaxrt, nmaxso, nlai,          &
         rnflv, rnfst, rnfrt, fstr, fntrt, npart, nfixf, nsla,             &
@@ -279,7 +279,7 @@
         state%crop%wofost%wso = fo*tadw
         wsopot = state%crop%wofost%wso
         state%crop%wofost%wlv = fl*tadw
-        wlvpot = state%crop%wofost%wlv
+        state%crop%wofost%wlvpot = state%crop%wofost%wlv
 ! --- only for bulb crops (tulips etc..)
         if(swbulb.eq.1) then
 !          blad bij opkomst is ondergronds: lai vanuit ingelezen laiem,
@@ -372,7 +372,6 @@
         state%crop%wofost%wrtpot    = wrtpot
         state%crop%wofost%wstpot    = wstpot
         state%crop%wofost%wsopot    = wsopot
-        state%crop%wofost%wlvpot    = wlvpot
         state%crop%wofost%wbl       = wbl
         state%crop%wofost%wblpot    = wblpot
         state%crop%wofost%dwrt      = dwrt
@@ -506,10 +505,10 @@
 ! --- respiration and partitioning of carbohydrates between growth and
 ! --- maintenance respiration
       if(swbulb.eq.1) then
-        rmrespot = (rmr*wrtpot+rml*wlvpot+rms*wstpot+rms*wblpot+        &
+        rmrespot = (rmr*wrtpot+rml*state%crop%wofost%wlvpot+rms*wstpot+rms*wblpot+        &
      &           rmo*wsopot)* afgen(rfsetb,30,state%crop%common%dvs)
       else
-        rmrespot = (rmr*wrtpot+rml*wlvpot+rms*wstpot+rmo*wsopot)*       &
+        rmrespot = (rmr*wrtpot+rml*state%crop%wofost%wlvpot+rms*wstpot+rmo*wsopot)*       &
      &           afgen(rfsetb,30,state%crop%common%dvs)
       endif
       teff = q10**((at_tav-25.0d0)/10.0d0)  ! [SS-GR-ATM B.5]
@@ -560,7 +559,7 @@
 
 ! --- death of leaves due to water stress or high lai
       laicr = 3.2d0/kdif
-      dslvpot = wlvpot*max(0.0d0,min(0.03d0,0.03d0*                     &
+      dslvpot = state%crop%wofost%wlvpot*max(0.0d0,min(0.03d0,0.03d0*                     &
      &           (state%crop%common%laipot-laicr)/laicr))
 
 ! --- death of leaves due to exceeding life span:
@@ -681,10 +680,10 @@
 
 ! --- calculation of new leaf area and weight
       lasumpot = 0.0d0
-      wlvpot = 0.0d0
+      state%crop%wofost%wlvpot = 0.0d0
       do i1 = 1,ilvoldpot
         lasumpot = lasumpot + lvpot(i1)*slapot(i1)
-        wlvpot = wlvpot + lvpot(i1)
+        state%crop%wofost%wlvpot = state%crop%wofost%wlvpot + lvpot(i1)
       enddo
 
 ! --- leaf area index in case of exponential growth
@@ -700,7 +699,7 @@
       endif
 
 ! --- total above ground biomass
-      tadwpot = wlvpot + wstpot + wsopot
+      tadwpot = state%crop%wofost%wlvpot + wstpot + wsopot
 ! --- only for bulb crops (tulips etc..)
       if(swbulb.eq.1) then
          tadwpot = tadwpot + wblpot
@@ -716,7 +715,7 @@
       endif
 
 ! --- dry weight of dead and living plant organs
-      twlvpot = wlvpot + dwlvpot
+      twlvpot = state%crop%wofost%wlvpot + dwlvpot
       twstpot = wstpot + dwstpot
       cwdmpot = twlvpot + twstpot + wsopot
 ! --- only for bulb crops (tulips etc..)
@@ -752,7 +751,6 @@
       endif
 
       ! [SS-GR-CROP A5.1] mirror wofost case(2) potential state
-      state%crop%wofost%wlvpot    = wlvpot
       state%crop%wofost%wrtpot    = wrtpot
       state%crop%wofost%wstpot    = wstpot
       state%crop%wofost%wsopot    = wsopot

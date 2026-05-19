@@ -511,7 +511,7 @@
       real(8)   wiltpoint          ! Minimum pressure head at interface soil-root (cm)
 
       ! [GR-CROP-DVS] wlv retired — see state%crop%wofost%wlv
-      real(8)   wlvpot             ! Dry weight of plant leaves for potential growth (kg/ha)
+      ! [GR-CROP-DVS] wlvpot retired — see state%crop%wofost%wlvpot
       real(8)   wrtb(2*magrs)      ! Array with dry weight of root at soil surface as function of DVS (kg/m3)
       ! [GR-CROP-DVS] wrt retired — see state%crop%wofost%wrt
       real(8)   wrtpot             ! Dry weight of plant root for potential growth (kg/ha)

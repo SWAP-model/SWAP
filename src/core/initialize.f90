@@ -765,8 +765,6 @@
       wiltpoint          = 0.0d0 
       wrtb               = 0.0d0
       zsow               = 0.0d0
-
-      wlvpot             = 0.0d0
       wstpot             = 0.0d0
       wrtpot             = 0.0d0
       wsopot             = 0.0d0

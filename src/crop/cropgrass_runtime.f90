@@ -49,7 +49,7 @@
       !   tsoil: config-staging buffer, renamed to avoid clash with dummy arg
       use variables, only: &                                            ! [SS-GR-CROPRT B8] [GR-CROPWS B4]
         magrs, macp, rid, tbase, daycrop, tdwi, swinco, &  ! [GR-CROPWS B4] icrop/dvs/state%crop%common%tsum retired
-        wlvpot, wstpot, wrtpot, wrtmax, wrtmin,           &  ! wst/wlv/wrt retired
+        wstpot, wrtpot, wrtmax, wrtmin,           &  ! wst/wlv/wrt retired
         dwlv, dwlvpot, dwrt, dwrtpot, dwst, dwstpot,                     &
         cf, ch, cfeic, laiem, laiexp, laiexppot, laimax,    &  ! lai/laipot retired
         cftb, chtb, cfeictb, rdtb, slatb, rgrlai, rlwtb, rfsetb,        &
@@ -248,7 +248,7 @@
         state%crop%wofost%wst = fs*(1.0d0-fr)*tdwi
         wstpot = state%crop%wofost%wst
         state%crop%wofost%wlv = laiem/sla(1)
-        wlvpot = state%crop%wofost%wlv
+        state%crop%wofost%wlvpot = state%crop%wofost%wlv
         
 !     KRO-BOO-20160403: intro because comparison with Wofost
         laiem = state%crop%wofost%wlv*sla(1)  ! is not input !
@@ -301,7 +301,6 @@
         ! [SS-GR-CROP A5.1] mirror grass init-time state
         state%crop%wofost%wrtpot      = wrtpot
         state%crop%wofost%wstpot      = wstpot
-        state%crop%wofost%wlvpot      = wlvpot
         state%crop%wofost%dwrt        = dwrt
         state%crop%wofost%dwrtpot     = dwrtpot
         state%crop%wofost%dwlv        = dwlv
@@ -459,7 +458,7 @@
 
 ! ---   respiration and partitioning of carbohydrates between growth and
 ! ---   maintenance respiration
-        rmrespot=(rmr*wrtpot+rml*wlvpot+rms*wstpot)*afgen(rfsetb,30,rid)
+        rmrespot=(rmr*wrtpot+rml*state%crop%wofost%wlvpot+rms*wstpot)*afgen(rfsetb,30,rid)
         teff = q10**((at_tav-25.0d0)/10.0d0)  ! [SS-GR-ATM B.5]
         mrespot = min (gasspot,rmrespot*teff)
         asrcpot = gasspot-mrespot
@@ -516,7 +515,7 @@
 ! ---   death of leaves due to water stress or high lai
         dslv1pot = 0.0d0
         laicr = 3.2d0/kdif
-        dslv2pot=wlvpot*max(0.0d0,                                      &
+        dslv2pot=state%crop%wofost%wlvpot*max(0.0d0,                                      &
      &                  min(0.03d0,0.03d0*(state%crop%common%laipot-laicr)/laicr))
         dslvpot = max (dslv1pot,dslv2pot) 
 
@@ -616,15 +615,15 @@
             slapot(1) = afgen (slatb,30,rid)
             fl = afgen (fltb,30,rid)
             fs = afgen (fstb,30,rid)
-            wlvpot = mowrest / (1.d0 + (fs/fl))
-            wstpot = fs/fl*wlvpot
+            state%crop%wofost%wlvpot = mowrest / (1.d0 + (fs/fl))
+            wstpot = fs/fl*state%crop%wofost%wlvpot
             dwlvpot = 0.0d0
             dwstpot = 0.0d0
             lvagepot(1) = 0.0d0
             ilvoldpot = 1
-            lasumpot = wlvpot * slapot(1)
+            lasumpot = state%crop%wofost%wlvpot * slapot(1)
             laiexppot = lasumpot
-            lvpot(1) = wlvpot
+            lvpot(1) = state%crop%wofost%wlvpot
             
             gwstpot = 0.0d0
             gwrtpot = 0.0d0
@@ -641,7 +640,7 @@
             end if
 
 !           harvest
-            tagpspot = max(0.0d0,(tagppot-(wlvpot+dwlvpot+wstpot+dwstpot)))
+            tagpspot = max(0.0d0,(tagppot-(state%crop%wofost%wlvpot+dwlvpot+wstpot+dwstpot)))
             tagptpot = tagptpot + tagpspot * (1.d0 - FraLossMow)
 
             cropendpot  = rid
@@ -723,7 +722,7 @@
               wstpot  = wstpot  - (uptgrazpot+lossgrazpot) * wstpot  / tagppot
               dwstpot = dwstpot - (uptgrazpot+lossgrazpot) * dwstpot / tagppot
               dwlvpot = dwlvpot - (uptgrazpot+lossgrazpot) * dwlvpot / tagppot
-              grazlivinglvpot =   (uptgrazpot+lossgrazpot) * wlvpot  / tagppot
+              grazlivinglvpot =   (uptgrazpot+lossgrazpot) * state%crop%wofost%wlvpot  / tagppot
           
 !             reduce leave weights
               i1 = ilvoldpot
@@ -778,15 +777,15 @@
               slapot(1) = afgen (slatb,30,rid)
               fl = afgen (fltb,30,rid)
               fs = afgen (fstb,30,rid)
-              wlvpot = dewrest / (1.d0 + (fs/fl))
-              wstpot = fs/fl*wlvpot
+              state%crop%wofost%wlvpot = dewrest / (1.d0 + (fs/fl))
+              wstpot = fs/fl*state%crop%wofost%wlvpot
               dwlvpot = 0.0d0
               dwstpot = 0.0d0
               lvagepot(1) = 0.0d0
               ilvoldpot = 1
-              lasumpot = wlvpot * slapot(1)
+              lasumpot = state%crop%wofost%wlvpot * slapot(1)
               laiexppot = lasumpot
-              lvpot(1) = wlvpot
+              lvpot(1) = state%crop%wofost%wlvpot
               
               gwstpot = 0.0d0
               gwrtpot = 0.0d0
@@ -846,10 +845,10 @@
 
 ! ---     calculation of new leaf area and weight
           lasumpot = 0.d0
-          wlvpot = 0.d0
+          state%crop%wofost%wlvpot = 0.d0
           do i1 = 1,ilvoldpot
             lasumpot = lasumpot+lvpot(i1)*slapot(i1)
-            wlvpot = wlvpot+lvpot(i1)
+            state%crop%wofost%wlvpot = state%crop%wofost%wlvpot+lvpot(i1)
           enddo
 
           laiexppot = laiexppot+glaiexpot*delt
@@ -866,7 +865,7 @@
         dwstpot = dwstpot+drstpot*delt
 
 ! ---   dry weight of dead and living plant organs
-        twlvpot = wlvpot+dwlvpot
+        twlvpot = state%crop%wofost%wlvpot+dwlvpot
         twstpot = wstpot+dwstpot
         tagppot = twlvpot+twstpot
 
@@ -892,7 +891,6 @@
       endif
 
       ! [SS-GR-CROP A5.1] mirror grass case(2) potential state
-      state%crop%wofost%wlvpot        = wlvpot
       state%crop%wofost%wrtpot        = wrtpot
       state%crop%wofost%wstpot        = wstpot
       state%crop%wofost%dwrtpot       = dwrtpot
