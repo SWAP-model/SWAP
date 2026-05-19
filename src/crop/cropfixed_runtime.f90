@@ -29,7 +29,7 @@
 !   gctb, rdtb, mrftb, wrtb, swinco, reltr.
 ! ----------------------------------------------------------------------
       use variables, only: magrs, idev, cf, ch, &         ! [GR-CROPWS B1] reads→state; writes remain legacy; dvs/tsum/lai retired
-                           rdpot, rdm, max_resp_factor, swrd,         &  ! rd retired
+                           rdm, max_resp_factor, swrd,         &  ! rd/rdpot retired
                            swgc, swcf, swinter, swdrought, swdmi2rd,     &
                            tbase, tsumea, tsumam, rdmax,                  &
                            siccapact, siccaplai, w_root_ss, wiltpoint,   &
@@ -121,8 +121,7 @@
         else
           state%crop%common%rd = min(state%crop%common%rdi,state%crop%common%rdm)         ! [GR-CROPWS B1] rdi, rdm → state%crop%common%X
         endif
-        rdpot = state%crop%common%rd
-        state%crop%common%rdpot = rdpot  ! [SS-GR-CROP A5.1]
+        state%crop%common%rdpot = state%crop%common%rd
 
       endif
 
@@ -242,22 +241,21 @@
           
 ! --- root extension
       if (swrd.eq.1) then
-        rdpot = afgen (rdtb,22,state%crop%common%dvs)                  ! [GR-CROPWS B1]
-        rdpot = min(rdpot,state%crop%common%rdm)                       ! [GR-CROPWS B1]
-        state%crop%common%rd    = rdpot
+        state%crop%common%rdpot = afgen (rdtb,22,state%crop%common%dvs)                  ! [GR-CROPWS B1]
+        state%crop%common%rdpot = min(state%crop%common%rdpot,state%crop%common%rdm)                       ! [GR-CROPWS B1]
+        state%crop%common%rd    = state%crop%common%rdpot
       else
         rrpot = min (state%crop%common%rdm-state%crop%common%rdpot,state%crop%common%rri)  ! [GR-CROPWS B1]
         ! SS-ATM Phase 2 Task A-2.3: ptra read from state%atmosphere (atmosphere home).
         if (state%atmosphere%ptra.lt.nihil) rrpot = 0.0d0
-        rdpot = state%crop%common%rdpot + rrpot                        ! [GR-CROPWS B1] RHS rdpot → state%crop%common%rdpot
+        state%crop%common%rdpot = state%crop%common%rdpot + rrpot                        ! [GR-CROPWS B1] RHS state%crop%common%rdpot → state%crop%common%rdpot
 
         rr = min (state%crop%common%rdm-state%crop%common%rd,state%crop%common%rri)  ! [GR-CROPWS B1]
         if (state%atmosphere%ptra.lt.nihil .or.             &
      &      state%soilwater%flWrtNonox) rr = 0.0d0   ! [SS-GR-CROPWS A2] present(state) guard removed
         if (swdmi2rd.eq.1 .and. state%atmosphere%ptra.ge.nihil) rr = rr * state%soilwater%tra/state%atmosphere%ptra  ! [SS-SWC S-2.7]
-        state%crop%common%rd = state%crop%common%rd + rr                                 ! [GR-CROPWS B1] RHS state%crop%common%rd → state%crop%common%rd
+        state%crop%common%rd = state%crop%common%rd + rr                                 ! [GR-CROPWS B1]
       endif
-      state%crop%common%rdpot = rdpot   ! [SS-GR-CROP A5.1]
 
       return
 

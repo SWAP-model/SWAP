@@ -569,7 +569,7 @@
       real(8)   rdc                ! Maximum rooting depth of particular crop (L)
       real(8)   rdmax              ! Maximum rooting depth in soil profile (L)
       ! [GR-CROP-DVS] rd retired — see state%crop%common%rd
-      real(8)   rdpot              ! Rooting depth for potential run (L)
+      ! [GR-CROP-DVS] rdpot retired — see state%crop%common%rdpot
       real(8)   rdm                ! Maximum rooting depth (minimum of soil profile and particular crop) (L)
 
 ! --- CO2

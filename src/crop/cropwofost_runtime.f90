@@ -49,7 +49,7 @@
 !   daycrop: runtime (dual-write to state%crop%common%daycrop), computed in CropGrowth
 ! ----------------------------------------------------------------------
       use variables, only: &                                            ! [SS-GR-CROPRT B7] [GR-CROPWS B5]
-        macp, magrs, dvsend, rdpot, rdm, rdmax, rdi, rri, &  ! [GR-CROPWS B5] icrop/dvs/rd retired
+        macp, magrs, dvsend, rdm, rdmax, rdi, rri, &  ! icrop/dvs/rd/rdpot retired
         rdc, swrd, swdmi2rd, swrdc, swdrought, swcf, swgc, swinter,       &
         swbulb, swinco, laipot, laiem, laiexp, laiexppot, laimax,    &  ! lai retired
         cf, ch, cfeic, tsumea, tsumam, tbase, daycrop, lat, daylp,  &  ! tsum retired (→state%crop%common%tsum)
@@ -352,7 +352,7 @@
           rdi = afgen (rlwtb,22,state%crop%wofost%wrt)
           state%crop%common%rd = min(rdi,rdm)
         endif
-        rdpot = state%crop%common%rd
+        state%crop%common%rdpot = state%crop%common%rd
         
 ! --- initial summation variables of the crop
         gasst = 0.0d0
@@ -366,7 +366,6 @@
         flvernalised = .FALSE.   ! crop not vernalised (-)
 
         ! [SS-GR-CROP A5.1] mirror wofost init-time state
-        state%crop%common%rdpot     = rdpot
         state%crop%common%laipot    = laipot
         state%crop%wofost%swbulb    = (swbulb == 1)
         state%crop%wofost%plwt      = plwt
@@ -1207,15 +1206,15 @@
 ! --- root extension
       if (swrd.eq.1) then
 
-        rdpot = afgen (rdtb,22,state%crop%common%dvs)
-        rdpot = min(rdpot,rdm)
-        state%crop%common%rd    = rdpot
+        state%crop%common%rdpot = afgen (rdtb,22,state%crop%common%dvs)
+        state%crop%common%rdpot = min(state%crop%common%rdpot,rdm)
+        state%crop%common%rd    = state%crop%common%rdpot
 
       elseif (swrd.eq.2) then
 
-        rrpot = min (rdm-rdpot,rri)
+        rrpot = min (rdm-state%crop%common%rdpot,rri)
         if (fr.le.0.0d0 .or. pgasspot.lt.1.0d0) rrpot = 0.0d0
-        rdpot = rdpot + rrpot
+        state%crop%common%rdpot = state%crop%common%rdpot + rrpot
 
         rr = min (rdm-state%crop%common%rd,rri)
         if (fr.le.0.0d0 .or. pgass.lt.1.0d0 .or.                      &
@@ -1224,12 +1223,11 @@
         state%crop%common%rd = state%crop%common%rd + rr
 
       elseif (swrd.eq.3) then
-        rdpot = afgen (rlwtb,22,wrtpot)
-        rdpot = min(rdpot,rdm)
+        state%crop%common%rdpot = afgen (rlwtb,22,wrtpot)
+        state%crop%common%rdpot = min(state%crop%common%rdpot,rdm)
         state%crop%common%rd = afgen (rlwtb,22,state%crop%wofost%wrt)
         state%crop%common%rd = min(state%crop%common%rd,rdm)
       endif
-      state%crop%common%rdpot = rdpot   ! [SS-GR-CROP A5.1]
 
 ! --- crop factor or crop height
       if (swcf.ne.3) then

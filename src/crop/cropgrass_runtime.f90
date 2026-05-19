@@ -54,7 +54,7 @@
         cf, ch, cfeic, laipot, laiem, laiexp, laiexppot, laimax,    &  ! lai retired
         cftb, chtb, cfeictb, rdtb, slatb, rgrlai, rlwtb, rfsetb,        &
         frtb, fltb, fstb, rdrrtb, rdrstb, kdif,                         &
-        rdpot, rdm, rdmax, rdi, rri, rdc, swrd, swrdc, swdmi2rd,    &  ! rd retired
+        rdm, rdmax, rdi, rri, rdc, swrd, swrdc, swdmi2rd,    &  ! rd/rdpot retired
         swdrought, swcf, swgc, swinter, reltr,                           &
         cvl, cvr, cvs, q10, rmr, rml, rms, span, ssa, glaiex, glaiexpot, &
         lv, lvpot, lvage, lvagepot, sla, slapot, ilvold, ilvoldpot,     &
@@ -283,7 +283,7 @@
           rdi = afgen (rlwtb,22,state%crop%wofost%wrt)
           state%crop%common%rd = min(rdi,rdm)
         endif
-        rdpot = state%crop%common%rd
+        state%crop%common%rdpot = state%crop%common%rd
         
 ! ---   initial summation variables of the crop
         state%crop%wofost%tagp = state%crop%wofost%wlv+state%crop%wofost%wst
@@ -299,7 +299,6 @@
         flhrvendpot      = .false.
         flearlyhrvendpot = .false.
         ! [SS-GR-CROP A5.1] mirror grass init-time state
-        state%crop%common%rdpot       = rdpot
         state%crop%common%laipot      = laipot
         state%crop%wofost%wrtpot      = wrtpot
         state%crop%wofost%wstpot      = wstpot
@@ -880,15 +879,15 @@
 
         ! root extension
         if (swrd.eq.1) then
-          rdpot = afgen (rdtb,22,rid)
-          rdpot = min(rdpot,rdm)
+          state%crop%common%rdpot = afgen (rdtb,22,rid)
+          state%crop%common%rdpot = min(state%crop%common%rdpot,rdm)
         elseif (swrd.eq.2) then
-          rrpot = min (rdm-rdpot,rri)
+          rrpot = min (rdm-state%crop%common%rdpot,rri)
           if (fr.le.0.0d0 .or. pgasspot.lt.1.0d0) rrpot = 0.0d0
-          rdpot = rdpot + rrpot
+          state%crop%common%rdpot = state%crop%common%rdpot + rrpot
         elseif (swrd.eq.3) then
-          rdpot = afgen (rlwtb,22,wrtpot)
-          rdpot = min(rdpot,rdm)
+          state%crop%common%rdpot = afgen (rlwtb,22,wrtpot)
+          state%crop%common%rdpot = min(state%crop%common%rdpot,rdm)
         endif
 
       endif
@@ -902,7 +901,6 @@
       state%crop%wofost%dwstpot       = dwstpot
       state%crop%wofost%tagppot       = tagppot
       state%crop%common%laipot        = laipot
-      state%crop%common%rdpot         = rdpot
       state%crop%wofost%pgasspot      = pgasspot
       state%crop%wofost%plossdm       = plossdm
       state%crop%common%cuptgrazpot   = cuptgrazpot

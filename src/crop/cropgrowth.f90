@@ -58,7 +58,7 @@
       use variables, only: &                                             ! [SS-GR-CROPRT B1/B6] [GR-CROPWS B3]
         icrop, flCropCalendar, cropstart, cropend, flCropEmergence,         &
         flCropHarvest, flCropReadFile, flCropPrep, flCropSow, flCropGerm,   &
-        swinco, croptype, daycrop, rdpot, laipot, cf, ch,         &  ! tsum/rd/lai retired
+        swinco, croptype, daycrop, laipot, cf, ch,         &  ! tsum/rd/lai/rdpot retired
         cwdmpot, cwdm, wsopot, wlvpot, wstpot,                       &  ! wso/wst/wlv retired
         wrtpot, tmn, lat, rad,                                         &  ! wrt retired
         albedo, rsc, cumdens,                                               &
@@ -151,8 +151,7 @@
 ! --- bare soil condition  ----------------------------------------------------
       if (.not. flCropEmergence .or. flCropHarvest) then
         call nocrop (state)
-        ! [SS-GR-CROP A5.1] nocrop writes state%crop%common%dvs directly; mirror remaining legacy zeros
-        state%crop%common%rdpot      = rdpot
+        ! [SS-GR-CROP A5.1] nocrop writes state%crop%common%dvs/rd directly; mirror remaining legacy zeros
         state%crop%common%laipot     = laipot
         state%crop%common%cf         = cf
         state%crop%common%ch         = ch
