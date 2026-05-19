@@ -51,7 +51,7 @@
         magrs, macp, rid, tbase, daycrop, tdwi, swinco, &  ! [GR-CROPWS B4] icrop/dvs/state%crop%common%tsum retired
         wlvpot, wstpot, wrtpot, wrtmax, wrtmin,           &  ! wst/wlv/wrt retired
         dwlv, dwlvpot, dwrt, dwrtpot, dwst, dwstpot,                     &
-        cf, ch, cfeic, laipot, laiem, laiexp, laiexppot, laimax,    &  ! lai retired
+        cf, ch, cfeic, laiem, laiexp, laiexppot, laimax,    &  ! lai/laipot retired
         cftb, chtb, cfeictb, rdtb, slatb, rgrlai, rlwtb, rfsetb,        &
         frtb, fltb, fstb, rdrrtb, rdrstb, kdif,                         &
         rdm, rdmax, rdi, rri, rdc, swrd, swrdc, swdmi2rd,    &  ! rd/rdpot retired
@@ -262,7 +262,7 @@
         laiexppot = laiem
         laimax = laiem
         state%crop%lai = lasum+ssa*state%crop%wofost%wst
-        laipot = state%crop%lai
+        state%crop%common%laipot = state%crop%lai
         dwrt = 0.d0
         dwrtpot = dwrt
         dwlv = 0.d0
@@ -299,7 +299,6 @@
         flhrvendpot      = .false.
         flearlyhrvendpot = .false.
         ! [SS-GR-CROP A5.1] mirror grass init-time state
-        state%crop%common%laipot      = laipot
         state%crop%wofost%wrtpot      = wrtpot
         state%crop%wofost%wstpot      = wstpot
         state%crop%wofost%wlvpot      = wlvpot
@@ -518,7 +517,7 @@
         dslv1pot = 0.0d0
         laicr = 3.2d0/kdif
         dslv2pot=wlvpot*max(0.0d0,                                      &
-     &                  min(0.03d0,0.03d0*(laipot-laicr)/laicr))
+     &                  min(0.03d0,0.03d0*(state%crop%common%laipot-laicr)/laicr))
         dslvpot = max (dslv1pot,dslv2pot) 
 
 ! ---   death of leaves due to exceeding life span;
@@ -872,7 +871,7 @@
         tagppot = twlvpot+twstpot
 
 ! ---   leaf area index
-        laipot = lasumpot+ssa*wstpot
+        state%crop%common%laipot = lasumpot+ssa*wstpot
 !       prevent immediate lai reduction at emergence
 !       KRO-BOO-20160403: suppressed because deviates from Wofost
 !       laipot = max(laipot, laiem)
@@ -900,7 +899,6 @@
       state%crop%wofost%dwlvpot       = dwlvpot
       state%crop%wofost%dwstpot       = dwstpot
       state%crop%wofost%tagppot       = tagppot
-      state%crop%common%laipot        = laipot
       state%crop%wofost%pgasspot      = pgasspot
       state%crop%wofost%plossdm       = plossdm
       state%crop%common%cuptgrazpot   = cuptgrazpot

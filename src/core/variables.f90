@@ -439,7 +439,7 @@
       real(8)   glaiex             ! increase in leaf area during exponential growth of actual crop
       real(8)   glaiexpot          ! increase in leaf area during exponential growth of potential crop
       real(8)   laimax             ! Maximum leaf area index reached during growth of actual grass crop (-)
-      real(8)   laipot             ! Leaf area index for potential run (-)
+      ! [GR-CROP-DVS] laipot retired — see state%crop%common%laipot
       real(8)   lv(366)            ! Array with leaf weight (kg/ha) as function of crop day number of actual crop
       real(8)   lvpot(366)         ! Array with leaf weight (kg/ha) as function of crop day number of potential crop
       real(8)   lvage(366)         ! Array with leaf age (d) as function of crop day number of actual crop

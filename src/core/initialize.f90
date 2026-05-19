@@ -710,7 +710,6 @@
       kdif               = 0.0d0 
       kdir               = 0.0d0
       laiem              = 0.0d0
-      laipot             = 0.0d0 
       lv                 = 0.0d0
       lvage              = 0.0d0
       lvagepot           = 0.0d0

@@ -71,7 +71,7 @@ contains
                             kdif, kdir, cofab, cfbs, swcf, swcfbs, gird, flCropEmergence, et0, ew0, es0, &  ! lai retired
                             ! [SS-GR-CROP A14] crop_common legacy globals; dvs/tsum retired
                             daycrop, icrop, &
-                            rdm, rri, rdi, rdc, ch, cf, laipot, &  ! rd/rdpot retired
+                            rdm, rri, rdi, rdc, ch, cf, &  ! rd/rdpot retired
                             cuptgraz, cuptgrazpot, HarLosOrm_tot, &
                             ! [SS-GR-CROP A15] crop_wofost/grass/fixed legacy globals
                             wlvpot, wstpot, wrtpot, wsopot, &  ! wso/wst/wlv/wrt retired
@@ -412,7 +412,6 @@ contains
    state%crop%common%rdc            = rdc
    state%crop%common%ch             = ch
    state%crop%common%cf             = cf
-   state%crop%common%laipot         = laipot
    state%crop%common%cuptgraz       = cuptgraz
    state%crop%common%cuptgrazpot    = cuptgrazpot
    state%crop%common%HarLosOrm_tot  = HarLosOrm_tot

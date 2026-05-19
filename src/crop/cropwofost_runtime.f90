@@ -51,7 +51,7 @@
       use variables, only: &                                            ! [SS-GR-CROPRT B7] [GR-CROPWS B5]
         macp, magrs, dvsend, rdm, rdmax, rdi, rri, &  ! icrop/dvs/rd/rdpot retired
         rdc, swrd, swdmi2rd, swrdc, swdrought, swcf, swgc, swinter,       &
-        swbulb, swinco, laipot, laiem, laiexp, laiexppot, laimax,    &  ! lai retired
+        swbulb, swinco, laiem, laiexp, laiexppot, laimax,    &  ! lai/laipot retired
         cf, ch, cfeic, tsumea, tsumam, tbase, daycrop, lat, daylp,  &  ! tsum retired (→state%crop%common%tsum)
         kdif, siccapact, siccaplai, cropend,                               &  ! [GR-CROPWS B5] cropstart removed (→state%crop%common%cropstart)
         wlvpot, wstpot, wsopot, wrtpot, wrtmax, wrtmin, &  ! wso/wst/wlv/wrt retired
@@ -310,7 +310,7 @@
         else
             state%crop%lai = lasum+ssa*state%crop%wofost%wst+spa*state%crop%wofost%wso
         endif
-        laipot = state%crop%lai
+        state%crop%common%laipot = state%crop%lai
         dwrt = 0.0d0
         dwrtpot = 0.0d0
         dwlv = 0.0d0
@@ -366,7 +366,6 @@
         flvernalised = .FALSE.   ! crop not vernalised (-)
 
         ! [SS-GR-CROP A5.1] mirror wofost init-time state
-        state%crop%common%laipot    = laipot
         state%crop%wofost%swbulb    = (swbulb == 1)
         state%crop%wofost%plwt      = plwt
         state%crop%wofost%plwti     = plwti
@@ -562,7 +561,7 @@
 ! --- death of leaves due to water stress or high lai
       laicr = 3.2d0/kdif
       dslvpot = wlvpot*max(0.0d0,min(0.03d0,0.03d0*                     &
-     &           (laipot-laicr)/laicr))
+     &           (state%crop%common%laipot-laicr)/laicr))
 
 ! --- death of leaves due to exceeding life span:
 
@@ -731,7 +730,7 @@
       mrestpot = mrespot + mrestpot
 
 ! --- leaf area index
-      laipot = lasumpot + ssa*wstpot + spa*wsopot
+      state%crop%common%laipot = lasumpot + ssa*wstpot + spa*wsopot
 !     prevent immediate lai reduction at emergence
 !     KRO-BOO-20160403: suppressed because deviates from Wofost
 !      laipot = max(laipot, laiem)
@@ -764,7 +763,6 @@
       state%crop%wofost%dwblpot   = dwblpot
       state%crop%wofost%cwdmpot   = cwdmpot
       state%crop%wofost%pgasspot  = pgasspot
-      state%crop%common%laipot    = laipot
 
       return
 
@@ -1278,7 +1276,7 @@
       character(len=11) date
       character(len=*) outfil,pathwork,project
       integer task,daycrop
-      real(8) t,dvs,tsum   !,laipot,lai,cf,rdpot,rd,ch,crt0,crt1
+      real(8) t,dvs,tsum   !,state%crop%common%laipot,lai,cf,rdpot,rd,ch,crt0,crt1
 !      real(8) cwdmpot,cwdm,wsopot,wso,wstpot,wst,wlvpot,wlv,wrtpot,wrt
       real(8) NUPTT,NFIXTT,ANLVI,ANSTI,ANRTI,ANSOI,ANLV
       real(8) ANST,ANRT,ANSO,NLOSSL,NLOSSR,NLOSSS,NBALAN,NNI
