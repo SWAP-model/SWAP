@@ -69,7 +69,7 @@
         iharvest, dmgrztb, dmmowtb, daysgrazingtab, uptgrazingtab,      &
         lossgrazingtab, lossgrztab, lossmowtab,                         &
         delayregrowthtab, zgrz, zmow,                                   &
-        mowdm, mowrest, lossdm, plossdm, pmowdm, pgrzdm, pgass, &
+        mowdm, mowrest, lossdm, plossdm, pmowdm, pgrzdm, &
         perdl, dateharvest, lsda,                                        &
         dummy_tsoil_gr_ => tsoil
       !! Rename config-staging tsoil to avoid clash with dummy arg tsoil.
@@ -933,7 +933,7 @@
         else
           reltr = max(0.0d0,min(1.0d0,state%soilwater%tra/state%atmosphere%ptra))  ! [SS-SWC S-2.7]
         endif
-        gass = pgass * reltr
+        gass = state%crop%wofost%pgass * reltr
 
 ! ---   respiration and partitioning of carbohydrates between growth and
 ! ---   maintenance respiration
@@ -1350,9 +1350,9 @@
           state%crop%common%rd = min(state%crop%common%rd,rdm)
         elseif (swrd.eq.2) then
           rr = min (rdm-state%crop%common%rd,rri)
-          if (fr.le.0.0d0 .or. pgass.lt.1.0d0 .or.                    &
+          if (fr.le.0.0d0 .or. state%crop%wofost%pgass.lt.1.0d0 .or.                    &
      &        state%soilwater%flWrtNonox) rr = 0.0d0   ! [SS-GR-CROPWS A4] present(state) guard removed
-          if (swdmi2rd.eq.1 .and. pgass.ge.1.0d0)              rr = rr * gass/pgass
+          if (swdmi2rd.eq.1 .and. state%crop%wofost%pgass.ge.1.0d0)              rr = rr * gass/state%crop%wofost%pgass
           state%crop%common%rd = state%crop%common%rd + rr
         elseif (swrd.eq.3) then
           state%crop%common%rd = afgen (rlwtb,22,state%crop%wofost%wrt)
@@ -1385,7 +1385,6 @@
       state%crop%wofost%dwlv        = dwlv
       state%crop%wofost%dwst        = dwst
       state%crop%wofost%tagp        = state%crop%wofost%tagp
-      state%crop%wofost%pgass       = pgass
       state%crop%wofost%lossdm      = lossdm
       state%crop%common%cuptgraz    = cuptgraz
       state%crop%wofost%tagpt       = tagpt

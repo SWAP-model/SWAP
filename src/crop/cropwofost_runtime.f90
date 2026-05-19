@@ -55,7 +55,7 @@
         cf, ch, cfeic, tsumea, tsumam, tbase, daycrop, lat, daylp,  &  ! tsum retired (→state%crop%common%tsum)
         kdif, siccapact, siccaplai, cropend,                               &  ! [GR-CROPWS B5] cropstart removed (→state%crop%common%cropstart)
         wrtmax, wrtmin, &  ! wso/wst/wlv/wrt retired
-        pgass, reltr, lrnr, lsnr, nni,           &
+        reltr, lrnr, lsnr, nni,           &
         anlv, anst, nmxlv, nmaxlv, nmaxst, nmaxrt, nmaxso, nlai,          &
         rnflv, rnfst, rnfrt, fstr, fntrt, npart, nfixf, nsla,             &
         cvl, cvo, cvr, cvs,                                                &
@@ -774,7 +774,7 @@
         reltr = min(reltr,fstr)
         fstr  = reltr
       end if
-      gass = pgass * reltr
+      gass = state%crop%wofost%pgass * reltr
 
 ! --- respiration and partitioning of carbohydrates between growth and
 ! --- maintenance respiration
@@ -1007,7 +1007,6 @@
       state%crop%wofost%dwbl      = dwbl
       state%crop%wofost%dwlvCrop  = dwlvCrop
       state%crop%wofost%dwlvSoil  = dwlvSoil
-      state%crop%wofost%pgass     = pgass
 
       return
 
@@ -1202,9 +1201,9 @@
         state%crop%common%rdpot = state%crop%common%rdpot + rrpot
 
         rr = min (rdm-state%crop%common%rd,rri)
-        if (fr.le.0.0d0 .or. pgass.lt.1.0d0 .or.                      &
+        if (fr.le.0.0d0 .or. state%crop%wofost%pgass.lt.1.0d0 .or.                      &
      &      state%soilwater%flWrtNonox) rr = 0.0d0   ! [SS-GR-CROPWS A3] present(state) guard removed
-        if (swdmi2rd.eq.1 .and. pgass.ge.1.0d0)              rr = rr * gass/pgass
+        if (swdmi2rd.eq.1 .and. state%crop%wofost%pgass.ge.1.0d0)              rr = rr * gass/state%crop%wofost%pgass
         state%crop%common%rd = state%crop%common%rd + rr
 
       elseif (swrd.eq.3) then

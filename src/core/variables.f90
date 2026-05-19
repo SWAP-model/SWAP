@@ -370,7 +370,7 @@
       ! real(8)   alpJvLier          ! Uniform drought reduction factor based on concept Jong van Lier (-)
       real(8)   amaxtb(30)         ! Maximum CO2 assimilation rate (kg/ha/hr) as function of development stage (-)
       ! [GR-CROP-DVS] pgasspot retired — see state%crop%wofost%pgasspot
-      real(8)   pgass              ! Assimilation rate after nitrogen stress and maximum attainable yield, actual crop growth
+      ! [GR-CROP-DVS] pgass retired — see state%crop%wofost%pgass
       integer   swpotrelmf         ! Calculation of potential yield
       real(8)   relmf              ! Management factor (attainable yield)
       real(8)   avevaptb(2*magrs)  ! Gash interception model: average evaporation intensity during shower (-) as function of time (T)

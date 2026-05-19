@@ -62,7 +62,7 @@
         tmn, lat, rad,                                         &  ! wrt retired
         albedo, rsc, cumdens,                                               &
         eff, amaxtb, tmpftb, tmnftb, swdrought, swcrp, dvsend,             &  ! [GR-CROPWS B3] kdif removed (→state%crop%kdif)
-        swharv, plwt, remoc, pld, q10, pgass,                    &  ! [GR-CROPWS B3] swbulb removed (→state%crop%wofost%swbulb)
+        swharv, plwt, remoc, pld, q10,                    &  ! [GR-CROPWS B3] swbulb removed (→state%crop%wofost%swbulb)
         flCropNut, nlue, anlv, anst, nmxlv, nmaxlv, nmaxst,               &
         nmaxrt, lrnr, lsnr, nni, rnflv, rnfst, frnx, fstr, flHarvestDay,  &
         noddrz, pathcrop, cropfil, bgerm, cgerm,                           &
@@ -470,25 +470,24 @@
         dtga = dtga * afgen (tmnftb,30,tmnr)
 
         ! actual assimilation in kg ch2o per ha
-        pgass = dtga * 30.0d0/44.0d0
+        state%crop%wofost%pgass = dtga * 30.0d0/44.0d0
         ! only for bulb crops (tulips etc..)
         if(state%crop%wofost%swbulb) then                                     ! [GR-CROPWS B3]
           ! assimilation is raised with remobilisation from motherbulb
           ! using a factor of 1.11 given by De Ruijter et al.(1993)
           factblb = 1.11d0
-          pgass   = pgass + remo*factblb   ! RHS pgass is local (just computed)
+          state%crop%wofost%pgass   = state%crop%wofost%pgass + remo*factblb   ! RHS state%crop%wofost%pgass is local (just computed)
         endif
 
         ! reduction due to limited attainable maximum yield
-        pgass = pgass * state%crop%grass%relmf  ! [SS-GR-CROPRT B1]
+        state%crop%wofost%pgass = state%crop%wofost%pgass * state%crop%grass%relmf  ! [SS-GR-CROPRT B1]
 
         ! nitrogen stress reduction of pgass
         if (flCropNut) then
           call NUTRIE (NLUE,state%crop%wofost%wlv,state%crop%wofost%wst,state%crop%common%dvs,ANLV,ANST,NMXLV,NMAXLV,NMAXST,  &
      &      NMAXRT,LRNR,LSNR,NNI,RNFLV,RNFST,FRNX,FSTR)
-          pgass = pgass * FSTR
+          state%crop%wofost%pgass = state%crop%wofost%pgass * FSTR
         endif
-        state%crop%wofost%pgass = pgass   ! [SS-GR-CROP A5.1]
 
       endif  
 

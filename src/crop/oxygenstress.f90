@@ -545,8 +545,8 @@ contains
                            croptype, icrop, max_resp_factor, &
                            ! DEFERRED: q10/rmr/rml/rms/rmo — crop respiration config; Phase C3
                            q10, rmr, rml, rms, rmo, &
-                           ! DEFERRED: rfsetb/pgass — active crop state; Phase C3; wso/wst/wlv/wrt retired
-                           rfsetb, pgass, &
+                           ! DEFERRED: rfsetb — active crop state; Phase C3; wso/wst/wlv/wrt/pgass retired
+                           rfsetb, &
                            ! DEFERRED: frtb/fltb/fstb/fotb/cvl/cvs/cvo/cvr — crop partitioning tables; Phase C3
                            frtb, fltb, fstb, fotb, cvl, cvs, cvo, cvr, &
                            ! DEFERRED: rid/idregr/daycrop — active crop dynamics; Phase C3; dvs retired
@@ -583,8 +583,8 @@ contains
         !teff_gmrf = q10**((tsoil(10)-25.0d0)/10.0d0) !TEMPORARY!!!! ONLY TO CHECK EFFECT OF USING TSOIL INSTEAD OF TAV; ## MH: /10 = 0.1*
         teff_gmrf = q10**(0.1d0*(state%atmosphere%Tav-25.0d0))  ! [GR-CROP Phase B/8] tav → state%atmosphere%Tav
 
-        mres_gmrf = min(pgass,rmres_gmrf*teff_gmrf)  ! ## MM 2018-05-07
-        asrc_gmrf = pgass - mres_gmrf                ! ## MM 2018-05-07
+        mres_gmrf = min(state%crop%wofost%pgass,rmres_gmrf*teff_gmrf)  ! ## MM 2018-05-07
+        asrc_gmrf = state%crop%wofost%pgass - mres_gmrf                ! ## MM 2018-05-07
 ! --- partitioning factors
         fr_gmrf = afgen(frtb,30,state%crop%common%dvs) !rid for grass, dvs for wofost
         fl_gmrf = afgen(fltb,30,state%crop%common%dvs)
@@ -603,7 +603,7 @@ contains
 ! --- Rg_roots: growth respiration roots        
         Rg_roots = Froots*(1.0d0-cvf_gmrf)*asrc_gmrf
 ! --- Rm_roots: maintenance respiration roots        
-        Rm_roots = min(Froots*(1.0d0-cvf_gmrf)*pgass,                   &
+        Rm_roots = min(Froots*(1.0d0-cvf_gmrf)*state%crop%wofost%pgass,                   &
      &      rmr*state%crop%wofost%wrt*afgen(rfsetb,30,state%crop%common%dvs)*teff_gmrf)
 ! --- Max_resp_factor: ratio total respiration / maintenance respiration        
         if (Rm_roots.gt.0.0d0) then
@@ -626,8 +626,8 @@ contains
 !        teff_gmrf = q10**((tsoil(10)-25.0d0)/10.0d0) !TEMPORARY!!!! ONLY TO CHECK EFFECT OF USING TSOIL INSTEAD OF TAV; ## MH: /10=*0.1
           teff_gmrf = q10**(0.1d0*(state%atmosphere%Tav-25.0d0))  ! [GR-CROP Phase B/8] tav → state%atmosphere%Tav
 
-          mres_gmrf = min(pgass,rmres_gmrf*teff_gmrf)  ! ## MM 2018-05-07
-          asrc_gmrf = pgass - mres_gmrf                ! ## MM 2018-05-07
+          mres_gmrf = min(state%crop%wofost%pgass,rmres_gmrf*teff_gmrf)  ! ## MM 2018-05-07
+          asrc_gmrf = state%crop%wofost%pgass - mres_gmrf                ! ## MM 2018-05-07
 ! --- partitioning factors
           fr_gmrf = afgen(frtb,30,rid) !rid for grass, dvs for wofost
           fl_gmrf = afgen(fltb,30,rid)
@@ -644,7 +644,7 @@ contains
 ! --- Rg_roots: growth respiration roots            
           Rg_roots = Froots*(1.0d0-cvf_gmrf)*asrc_gmrf
 ! --- Rm_roots: maintenance respiration roots     
-          Rm_roots = min(Froots*(1.0d0-cvf_gmrf)*pgass,                &
+          Rm_roots = min(Froots*(1.0d0-cvf_gmrf)*state%crop%wofost%pgass,                &
      &        rmr*state%crop%wofost%wrt*afgen(rfsetb,30,rid)*teff_gmrf)
 ! --- Max_resp_factor: ratio total respiration / maintenance respiration        
           if (Rm_roots.gt.0.d0) then
