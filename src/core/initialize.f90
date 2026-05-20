@@ -613,7 +613,6 @@
       idsl               = 0 
       noddrz             = 0 
       swcf               = 0 
-      alphacrit          = 0.0d0 
       amaxtb             = 0.0d0 
       atmin7             = 0.0d0
       avevaptb           = 0.0d0 

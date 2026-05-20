@@ -118,7 +118,7 @@ subroutine test_cropgrass_init_swcompensate1_writes_alphacrit()
    use cropgrass_init_mod, only: cropgrass_init_from_config
    use cropgrass_config_mod, only: cropgrass_config_t
    use swap_state_mod, only: swap_state_t
-   use variables, only: alphacrit
+   ! alphacrit retired — read via state%crop%common%alphacrit
    implicit none
    type(cropgrass_config_t) :: cfg
    type(swap_state_t) :: state  ! [SS-GR-ATM A5.1] dual-write target
@@ -143,7 +143,7 @@ subroutine test_cropgrass_init_swcompensate1_writes_alphacrit()
 
    call cropgrass_init_from_config(cfg, 1, 0.0d0, 0.0d0, state)  ! [SS-BMI2 Task 4] [SS-GR-ATM A5.1]
 
-   @assertEqual(0.7d0, alphacrit, 1.0d-12)
+   @assertEqual(0.7d0, state%crop%common%alphacrit, 1.0d-12)
 end subroutine test_cropgrass_init_swcompensate1_writes_alphacrit
 
 @test

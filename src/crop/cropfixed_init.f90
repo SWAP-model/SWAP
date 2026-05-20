@@ -43,7 +43,7 @@ contains
                             ! hlim3h/hlim3l/hlim4/adcrh/adcrl/swdrought retired
                             ! saltmax/saltslope/salthead/swsalinity retired — state%crop%common
                             ! DEFERRED: swcompensate/swstressor/alphacrit/dcritrtz — compensation config; Phase C3
-                            swstressor, alphacrit, dcritrtz,              &  ! swcompensate retired
+                            ! swcompensate/swstressor/alphacrit/dcritrtz retired
                             ! DEFERRED: swinter/cofab — interception config; Phase C3
                             ! swinter/cofab retired
                             ! DEFERRED: schedule — harvest schedule config; Phase C3; dvsend/swharv retired
@@ -113,9 +113,9 @@ contains
       state%crop%common%salthead  = cfg%salthead
 
       state%crop%common%swcompensate = cfg%swcompensate
-      swstressor   = cfg%swstressor
-      alphacrit    = cfg%alphacrit
-      dcritrtz     = cfg%dcritrtz
+      state%crop%common%swstressor = cfg%swstressor
+      state%crop%common%alphacrit  = cfg%alphacrit
+      state%crop%common%dcritrtz   = cfg%dcritrtz
 
       state%crop%common%swinter = cfg%swinter
       state%crop%cofab = cfg%cofab

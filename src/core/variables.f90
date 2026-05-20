@@ -353,9 +353,9 @@
       ! [GR-CROPWS] swgc retired — see state%crop%common%swgc
       ! [SS-GR-FINAL D1] swjarvis retired — deprecated switch; 0 consumers
       ! [GR-CROPWS] swcompensate retired — see state%crop%common%swcompensate
-      real(8)   alphacrit          ! Critical stress index for compensation of root water uptake (-)
-      real(8)   dcritrtz           ! Threshold for rootzone to start compensation of root water uptake; Walsum (cm)
-      integer   swstressor         ! Switch for stressor to compensate (1 = all stressors (default); 2 = drought stress, 3 = oxygen stress, 4 = salinity stress; 5 = frost stress)
+      ! [GR-CROPWS] alphacrit retired — see state%crop%common%alphacrit
+      ! [GR-CROPWS] dcritrtz retired — see state%crop%common%dcritrtz
+      ! [GR-CROPWS] swstressor retired — see state%crop%common%swstressor
       integer   swrootradius       ! Switch for root radius to calculate Oxygen stress: 1 = calculate, 2 = input
       ! [GR-CROPWS] swsalinity retired — see state%crop%common%swsalinity
       real(8)   atmtr              ! Daily atmospheric transmission (-)

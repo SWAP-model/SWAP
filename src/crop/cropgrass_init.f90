@@ -66,7 +66,7 @@ contains
          ! hlim3h/hlim3l/hlim4/adcrh/adcrl/swdrought retired
          ! Salinity stress (guarded; set to 0 only) — DEFERRED Phase C3; swsalinity retired
          ! Compensation — DEFERRED Phase C3
-         swstressor, alphacrit, dcritrtz,                                    &  ! swcompensate retired
+         ! swcompensate/swstressor/alphacrit/dcritrtz retired
          ! Management — DEFERRED Phase C3
          swpotrelmf, seqgrazmow,                                      &  ! relmf/mowrest retired
          ! Mowing / harvest — DEFERRED Phase C3
@@ -276,10 +276,10 @@ contains
       state%crop%common%swcompensate = cfg%swcompensate
       if (cfg%swcompensate > 0) then
          ! swstressor defaults to 1 per legacy; only set when enabled.
-         swstressor = cfg%swstressor
+         state%crop%common%swstressor = cfg%swstressor
       end if
       if (cfg%swcompensate == 1) then
-         alphacrit = cfg%alphacrit
+         state%crop%common%alphacrit = cfg%alphacrit
       end if
       ! swcompensate=2 (Walsum dcritrtz) is stub-guarded above.
 

@@ -42,9 +42,9 @@ module rootextraction_mod
       use swap_array_dimensions, only: macp
       use variables, only: &                                               ! [SS-GR-FINAL B6] residuals — all DEFERRED
                            ! DEFERRED: adcrh/adcrl/aeratecrit/alphacrit — O2/drought config; Phase C3
-                           alphacrit,                              &  ! adcrh/adcrl/aeratecrit retired
+                           ! adcrh/adcrl/aeratecrit/alphacrit retired
                            ! DEFERRED: botcom/criterhr/cumdens/dcritrtz/flhydrlift — soil/crop config; Phase C3
-                           botcom, criterhr, cumdens, dcritrtz, flhydrlift, &
+                           botcom, criterhr, cumdens, flhydrlift,           &  ! dcritrtz retired
                            ! DEFERRED: hlim1/hlim2l/hlim2u/hlim3h/hlim3l/hlim4 — drought stress limits; Phase C3
                            ! hlim1/hlim2l/hlim2u/hlim3h/hlim3l/hlim4 retired
                            ! DEFERRED: kroot/kstem/logf/noddrz/oxygenintercept — crop/log globals; Phase C3
@@ -56,7 +56,7 @@ module rootextraction_mod
                            ! DEFERRED: swcompensate/swdrought/swfrost/swoxygen — crop stress switches; Phase C3
                            swfrost,                                       &  ! swcompensate/swoxygen/swdrought retired
                            ! DEFERRED: swoxygentype/swsalinity/swstressor/swwrtnonox — crop stress switches; Phase C3
-                           swoxygentype, swstressor, &  ! swsalinity/swwrtnonox retired
+                           swoxygentype, &  ! swsalinity/swwrtnonox/swstressor retired
                            ! DEFERRED: taccur/twilt/wiltpoint — soil convergence/stress params; Phase C3
                            twilt, wiltpoint
       use array_utils, only: afgen
@@ -278,12 +278,12 @@ module rootextraction_mod
 
         ! compensated root water uptake according to Walsum
         if (state%crop%common%swcompensate .eq. 2) then
-            alphacrit = min((dcritrtz + state%crop%common%rdm - rd_noddrz) / state%crop%common%rdm, 1.0d0)
+            state%crop%common%alphacrit = min((state%crop%common%dcritrtz + state%crop%common%rdm - rd_noddrz) / state%crop%common%rdm, 1.0d0)
         end if
 
         alptot = cw_qrosum / at_ptra
         qred = at_ptra - cw_qrosum
-        if (abs(alphacrit - 1.0d0) .ge. vsmall .and. qred .gt. vsmall .and. alptot .ge. 0.05d0) then
+        if (abs(state%crop%common%alphacrit - 1.0d0) .ge. vsmall .and. qred .gt. vsmall .and. alptot .ge. 0.05d0) then
           ! Only compensation when rootextraction and transpiration reduction is greater than vsmall
           ! and when alptot > 0.05, i.e. when there is less than 95% stress reduction. This minimum is
           ! also important for the approximation of alp... in the next 4 lines.
@@ -292,8 +292,8 @@ module rootextraction_mod
           alpsol = alptot**(cw_qredsolsum/qred)
           alpfrs = alptot**(cw_qredfrssum/qred)
 
-          if (swstressor .eq. 1) then
-            alptotcom = min(alptot / alphacrit, 1.d0)
+          if (state%crop%common%swstressor .eq. 1) then
+            alptotcom = min(alptot / state%crop%common%alphacrit, 1.d0)
             alpdrycom = alpdry
             alpwetcom = alpwet
             alpsolcom = alpsol
@@ -303,14 +303,14 @@ module rootextraction_mod
             alpwetcom = alpwet
             alpsolcom = alpsol
             alpfrscom = alpfrs
-            if (swstressor .eq. 2) then
-              alpdrycom = min(alpdry / alphacrit, 1.d0)
-            elseif (swstressor .eq. 3) then
-              alpwetcom = min(alpwet / alphacrit, 1.d0)
-            elseif (swstressor .eq. 4) then
-              alpsolcom = min(alpsol / alphacrit, 1.d0)
-            elseif (swstressor .eq. 5) then
-              alpfrscom = min(alpfrs / alphacrit, 1.d0)
+            if (state%crop%common%swstressor .eq. 2) then
+              alpdrycom = min(alpdry / state%crop%common%alphacrit, 1.d0)
+            elseif (state%crop%common%swstressor .eq. 3) then
+              alpwetcom = min(alpwet / state%crop%common%alphacrit, 1.d0)
+            elseif (state%crop%common%swstressor .eq. 4) then
+              alpsolcom = min(alpsol / state%crop%common%alphacrit, 1.d0)
+            elseif (state%crop%common%swstressor .eq. 5) then
+              alpfrscom = min(alpfrs / state%crop%common%alphacrit, 1.d0)
             endif
             alptotcom = alpwetcom * alpdrycom * alpsolcom * alpfrscom
           endif
@@ -363,14 +363,14 @@ module rootextraction_mod
       ! [SS-GR-FINAL B6] macp → swap_array_dimensions; remainder DEFERRED (same as RootExtraction)
       use swap_array_dimensions, only: macp
       use variables, only: &                                               ! [SS-GR-FINAL B6] residuals — all DEFERRED
-                           alphacrit,                              &  ! adcrh/adcrl/aeratecrit retired  ! DEFERRED: crop stress config; Phase C3
-                           botcom, criterhr, cumdens, dcritrtz, flhydrlift, &  ! DEFERRED: soil/crop config
+                           ! adcrh/adcrl/aeratecrit/alphacrit retired  ! DEFERRED: crop stress config; Phase C3
+                           botcom, criterhr, cumdens, flhydrlift,           &  ! dcritrtz retired  ! DEFERRED: soil/crop config
                            ! hlim1/hlim2l/hlim2u/hlim3h/hlim3l/hlim4 retired  ! DEFERRED: drought limits
                            kroot, kstem, logf, noddrz, oxygenintercept,   &  ! DEFERRED: crop/log globals
                            oxygenslope, rdctb, rootcoefa, rooteff, &  ! rd retired  ! DEFERRED: active crop state
                            rootradius, rxylem, stephr,                    &  ! saltmax/saltslope retired  ! DEFERRED: crop/solute config
                            swfrost,                                       &  ! swcompensate/swoxygen/swdrought retired  ! DEFERRED: stress switches
-                           swoxygentype, swstressor, &  ! swsalinity/swwrtnonox retired  ! DEFERRED: stress switches
+                           swoxygentype, &  ! swsalinity/swwrtnonox/swstressor retired  ! DEFERRED: stress switches
                            twilt, wiltpoint                          ! DEFERRED: convergence/stress params
       use array_utils, only: afgen
       implicit none
@@ -734,14 +734,14 @@ module rootextraction_mod
       ! [SS-GR-FINAL B6] macp → swap_array_dimensions; remainder DEFERRED (same as RootExtraction)
       use swap_array_dimensions, only: macp
       use variables, only: &                                               ! [SS-GR-FINAL B6] residuals — all DEFERRED
-                           alphacrit,                              &  ! adcrh/adcrl/aeratecrit retired  ! DEFERRED: crop stress config; Phase C3
-                           botcom, criterhr, cumdens, dcritrtz, flhydrlift, &  ! DEFERRED: soil/crop config
+                           ! adcrh/adcrl/aeratecrit/alphacrit retired  ! DEFERRED: crop stress config; Phase C3
+                           botcom, criterhr, cumdens, flhydrlift,           &  ! dcritrtz retired  ! DEFERRED: soil/crop config
                            ! hlim1/hlim2l/hlim2u/hlim3h/hlim3l/hlim4 retired  ! DEFERRED: drought limits
                            kroot, kstem, logf, noddrz, oxygenintercept,   &  ! DEFERRED: crop/log globals
                            oxygenslope, rdctb, rootcoefa, rooteff, &  ! rd retired  ! DEFERRED: active crop state
                            rootradius, rxylem, stephr,                    &  ! saltmax/saltslope retired  ! DEFERRED: crop/solute config
                            swfrost,                                       &  ! swcompensate/swoxygen/swdrought retired  ! DEFERRED: stress switches
-                           swoxygentype, swstressor, &  ! swsalinity/swwrtnonox retired  ! DEFERRED: stress switches
+                           swoxygentype, &  ! swsalinity/swwrtnonox/swstressor retired  ! DEFERRED: stress switches
                            twilt, wiltpoint                          ! DEFERRED: convergence/stress params
       implicit none
 
