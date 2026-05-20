@@ -62,7 +62,7 @@
         flCropHarvest, flCropNut, flHarvestDay, flhydrlift, flanthesis,    &
         q10, rmr, rml, rms, rmo, rfsetb, frtb, fltb, fstb, fotb, fbltb,  &
         fbl, drbl, drblpot,                   &
-        cftb, chtb, cfeictb, rdtb, slatb, rgrlai, rlwtb, dtsmtb, rdrrtb, rdrstb, &
+        rdtb, slatb, rgrlai, rlwtb, dtsmtb, rdrrtb, rdrstb, &  ! cftb/chtb/cfeictb retired
         dlc, dlo, span, spa, ssa, logf, tdwi,                &
         lv, lvpot, lvage, lvagepot, sla, slapot,                          &
         ilvold, ilvoldpot, idsl,                                           &
@@ -371,12 +371,12 @@
 
 ! --- set crop height and cropfactor
       if (state%crop%swcf.ne.3) then
-        state%crop%common%cf = afgen (cftb,(2*magrs),state%crop%common%dvs)
-        state%crop%common%ch = afgen (chtb,(2*magrs),state%crop%common%dvs)
+        state%crop%common%cf = afgen (state%crop%fixed%cftb,(2*magrs),state%crop%common%dvs)
+        state%crop%common%ch = afgen (state%crop%fixed%chtb,(2*magrs),state%crop%common%dvs)
       else
-        state%crop%common%cf        = afgen (cftb,(2*magrs),state%crop%lai)
-        cfeic     = afgen (cfeictb,(2*magrs),state%crop%lai)
-        state%crop%common%ch        = afgen(chtb,(2*magrs),state%crop%lai)
+        state%crop%common%cf        = afgen (state%crop%fixed%cftb,(2*magrs),state%crop%lai)
+        cfeic     = afgen (state%crop%fixed%cfeictb,(2*magrs),state%crop%lai)
+        state%crop%common%ch        = afgen(state%crop%fixed%chtb,(2*magrs),state%crop%lai)
       endif
       if (state%crop%swcf.eq.3) state%crop%fixed%cfeic = cfeic   ! [SS-GR-CROP A5.1]
 
@@ -1180,12 +1180,12 @@
 
 ! --- crop factor or crop height
       if (state%crop%swcf.ne.3) then
-        state%crop%common%cf = afgen (cftb,(2*magrs),state%crop%common%dvs)
-        state%crop%common%ch = afgen (chtb,(2*magrs),state%crop%common%dvs)
+        state%crop%common%cf = afgen (state%crop%fixed%cftb,(2*magrs),state%crop%common%dvs)
+        state%crop%common%ch = afgen (state%crop%fixed%chtb,(2*magrs),state%crop%common%dvs)
       else
-        state%crop%common%cf        = afgen (cftb,72,state%crop%lai)
-        cfeic     = afgen (cfeictb,72,state%crop%lai)
-        state%crop%common%ch        = afgen(chtb,72,state%crop%lai)
+        state%crop%common%cf        = afgen (state%crop%fixed%cftb,72,state%crop%lai)
+        cfeic     = afgen (state%crop%fixed%cfeictb,72,state%crop%lai)
+        state%crop%common%ch        = afgen(state%crop%fixed%chtb,72,state%crop%lai)
       endif
       if (state%crop%swcf.eq.3) state%crop%fixed%cfeic = cfeic   ! [SS-GR-CROP A5.1]
 

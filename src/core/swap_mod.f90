@@ -76,7 +76,7 @@ contains
                             swbulb, &
                             seqgrazmow, seqgrazmowpot, dateharvest, &  ! mowrest retired
                             swpotrelmf, &  ! cropstart/end act/pot retired
-                            cftb, chtb, cfeic, cfeictb
+                            cfeic  ! cftb/chtb/cfeictb retired
                             ! [GR-CROP C11] nmrain/rainamount/rainfluxarray/raintimearray retired from import:
                             !   readmeteo now writes directly to state%atmosphere%X
       ! [SS-GR-CROP A16] nutrient legacy globals — in WSN modules, not variables.f90
@@ -364,11 +364,8 @@ contains
    state%crop%grass%seqgrazmowpot = seqgrazmowpot
    state%crop%grass%dateharvest   = dateharvest
    state%crop%grass%swpotrelmf    = swpotrelmf
-   ! [SS-GR-CROP A15] dual-write crop_fixed
-   state%crop%fixed%cftb    = cftb
-   state%crop%fixed%chtb    = chtb
+   ! [SS-GR-CROP A15] dual-write crop_fixed; cftb/chtb/cfeictb retired
    state%crop%fixed%cfeic   = cfeic
-   state%crop%fixed%cfeictb = cfeictb
 
    ! [SS-TC TC-14] alias TC fields used in init block
    block

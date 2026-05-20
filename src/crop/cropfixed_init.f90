@@ -32,7 +32,7 @@ contains
                             ! DEFERRED: kdif/kdir/gctb/swgc — radiation/crop factor config; Phase C3
                             gctb,                             &  ! kdif/kdir/swgc retired
                             ! DEFERRED: cftb/chtb/cfeictb/swcf/albedo/rsc/rsw — crop factor config; Phase C3
-                            cftb, chtb, cfeictb,             &  ! albedo/rsc/rsw/swcf retired
+                            ! cftb/chtb/cfeictb/albedo/rsc/rsw/swcf retired
                             ! DEFERRED: rdtb/rdctb — root config; Phase C3; swrd/swdmi2rd/swrdc/rdi/rri/rdc retired
                             rdtb, rdctb,                                &
                             ! DEFERRED: swoxygen/swWrtNonox/aeratecrit/max_resp_factor — O2 stress config; Phase C3
@@ -142,18 +142,9 @@ contains
       ! ---- Copy tables ------------------------------------------------
       ! gctb (size up to 2*magrs in legacy; we copy what was authored).
       if (allocated(cfg%gctb))  call copy_pair_table(cfg%gctb,  gctb)
-      if (allocated(cfg%cftb))  then
-        call copy_pair_table(cfg%cftb,  cftb)
-        state%crop%fixed%cftb = cftb   ! [SS-GR-CROP A5.2]
-      endif
-      if (allocated(cfg%chtb))  then
-        call copy_pair_table(cfg%chtb,  chtb)
-        state%crop%fixed%chtb = chtb   ! [SS-GR-CROP A5.2]
-      endif
-      if (allocated(cfg%cfeictb)) then
-        call copy_pair_table(cfg%cfeictb, cfeictb)
-        state%crop%fixed%cfeictb = cfeictb   ! [SS-GR-CROP A5.2]
-      endif
+      if (allocated(cfg%cftb))    call copy_pair_table(cfg%cftb,    state%crop%fixed%cftb)
+      if (allocated(cfg%chtb))    call copy_pair_table(cfg%chtb,    state%crop%fixed%chtb)
+      if (allocated(cfg%cfeictb)) call copy_pair_table(cfg%cfeictb, state%crop%fixed%cfeictb)
       if (allocated(cfg%rdtb))  call copy_pair_table(cfg%rdtb,  rdtb)
 
       ! rdctb is sized 22 in legacy; we always copy.

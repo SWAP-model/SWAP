@@ -378,10 +378,10 @@
       ! [GR-CROP-DVS] cf retired — see state%crop%common%cf
       real(8)   cfeic              ! Crop factor wet (-)
       real(8)   gctb(2*magrs)      ! Array with either LAI (m2/m2) or Soil Cover Fraction (m2/m2) 
-      real(8)   cftb(2*magrs)      ! Array with either crop factors (-) or crop height (L) as function of development stage
-      real(8)   cfeictb(2*magrs)   ! Array with crop factors, wet (-) 
+      ! [GR-CROPWS] cftb retired — see state%crop%fixed%cftb
+      ! [GR-CROPWS] cfeictb retired — see state%crop%fixed%cfeictb
       ! [GR-CROP-DVS] ch retired — see state%crop%common%ch
-      real(8)   chtb(2*magrs)      ! Array with crop heights (cm) as function of development stage
+      ! [GR-CROPWS] chtb retired — see state%crop%fixed%chtb
       real(8)   c_mroot            ! Maintenance coefficient of root [0.0..1.0 kg O2/kg/d, R]
       ! [GR-CROP-DVS] cofab retired — see state%crop%cofab
       real(8)   cropend(macrop)    ! Array with crop end dates

@@ -615,9 +615,6 @@
       atmin7             = 0.0d0
       avevaptb           = 0.0d0 
       avprectb           = 0.0d0 
-      cfeictb            = 0.0d0 
-      cftb               = 0.0d0 
-      chtb               = 0.0d0 
       gctb               = 0.0d0 
       cumdens            = 0.0d0 
       cuptgraz           = 0.0d0 

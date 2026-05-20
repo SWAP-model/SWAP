@@ -35,7 +35,7 @@ contains
       !   Retirement requires Phase C3 adapter rewrite (config_to_variables.f90 dual-writes).
       use variables, only: &
          ! ET-related — DEFERRED Phase C3
-         cftb, chtb,                                           &  ! albedo/rsc/rsw/swcf retired
+         ! cftb/chtb/albedo/rsc/rsw/swcf retired
          ! Interception — DEFERRED Phase C3; swinter/cofab retired
          ! Crop state — DEFERRED Phase C3
          tdwi, laiem, rgrlai,                                                 &
@@ -158,22 +158,14 @@ contains
          state%crop%common%albedo = 0.23d0
          state%crop%common%rsc    = 70.0d0
          state%crop%common%rsw    = 0.0d0
-         if (allocated(cfg%cftb)) then
-           call copy_table(cfg%cftb, cftb)
-           state%crop%fixed%cftb = cftb   ! [SS-GR-CROP A5.2]
-         endif
-         chtb = -99.99d0
-         state%crop%fixed%chtb = chtb   ! [SS-GR-CROP A5.2]
+         if (allocated(cfg%cftb)) call copy_table(cfg%cftb, state%crop%fixed%cftb)
+         state%crop%fixed%chtb = -99.99d0
       else if (cfg%swcf == 2) then
          state%crop%common%albedo = cfg%albedo
          state%crop%common%rsc    = cfg%rsc
          state%crop%common%rsw    = cfg%rsw
-         if (allocated(cfg%chtb)) then
-           call copy_table(cfg%chtb, chtb)
-           state%crop%fixed%chtb = chtb   ! [SS-GR-CROP A5.2]
-         endif
-         cftb = -99.99d0
-         state%crop%fixed%cftb = cftb   ! [SS-GR-CROP A5.2]
+         if (allocated(cfg%chtb)) call copy_table(cfg%chtb, state%crop%fixed%chtb)
+         state%crop%fixed%cftb = -99.99d0
       end if
 
       ! Part 2: interception (readgrass lines 3560-3585)

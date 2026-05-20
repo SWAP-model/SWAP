@@ -43,7 +43,7 @@ contains
       !   Retirement requires Phase C3 adapter rewrite (config_to_variables.f90 dual-writes).
       use variables, only: &
          ! ET / crop factor — DEFERRED Phase C3
-         cftb, chtb,                                           &  ! albedo/rsc/rsw/swcf retired
+         ! cftb/chtb/albedo/rsc/rsw/swcf retired
          ! Development — DEFERRED Phase C3; tsumea/tsumam retired
          idsl, dlo, dlc, dtsmtb,                                            &
          ! Vernalisation — DEFERRED Phase C3
@@ -142,12 +142,10 @@ contains
                integer :: nr, j
                nr = size(cfg%crop_factor%cftb, 1)
                do j = 1, nr
-                  cftb(j*2-1) = cfg%crop_factor%cftb(j,1)
-                  cftb(j*2)   = cfg%crop_factor%cftb(j,2)
+                  state%crop%fixed%cftb(j*2-1) = cfg%crop_factor%cftb(j,1)
+                  state%crop%fixed%cftb(j*2)   = cfg%crop_factor%cftb(j,2)
                end do
-               chtb = -99.99d0
-               state%crop%fixed%cftb = cftb   ! [SS-GR-CROP A5.2]
-               state%crop%fixed%chtb = chtb   ! [SS-GR-CROP A5.2]
+               state%crop%fixed%chtb = -99.99d0
             end block
          end if
          ! ETref standard defaults for albedo/rsc/rsw
@@ -163,12 +161,10 @@ contains
                integer :: nr, j
                nr = size(cfg%crop_factor%chtb, 1)
                do j = 1, nr
-                  chtb(j*2-1) = cfg%crop_factor%chtb(j,1)
-                  chtb(j*2)   = cfg%crop_factor%chtb(j,2)
+                  state%crop%fixed%chtb(j*2-1) = cfg%crop_factor%chtb(j,1)
+                  state%crop%fixed%chtb(j*2)   = cfg%crop_factor%chtb(j,2)
                end do
-               cftb = -99.99d0
-               state%crop%fixed%chtb = chtb   ! [SS-GR-CROP A5.2]
-               state%crop%fixed%cftb = cftb   ! [SS-GR-CROP A5.2]
+               state%crop%fixed%cftb = -99.99d0
             end block
          end if
       end if

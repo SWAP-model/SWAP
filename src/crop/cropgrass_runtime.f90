@@ -51,7 +51,7 @@
         magrs, macp, rid, daycrop, tdwi, swinco, &  ! [GR-CROPWS B4] icrop/dvs/tsum/wst/wlv/wrt/dw*/tbase retired
         wrtmax, wrtmin,           &
         cfeic, laiem, laiexp, laiexppot, laimax,    &  ! lai/laipot retired
-        cftb, chtb, cfeictb, rdtb, slatb, rgrlai, rlwtb, rfsetb,        &
+        rdtb, slatb, rgrlai, rlwtb, rfsetb,                             &  ! cftb/chtb/cfeictb retired
         frtb, fltb, fstb, rdrrtb, rdrstb,                         &
         rdmax,                           &  ! rd/rdpot/swrd/swrdc/swdmi2rd retired
         reltr,                                                           &  ! swgc/swdrought/swinter/swcf retired
@@ -314,12 +314,12 @@
       endif
 
       if (state%crop%swcf.ne.3) then
-        state%crop%common%cf = afgen (cftb,(2*magrs),rid)
-        state%crop%common%ch = afgen (chtb,(2*magrs),rid)
+        state%crop%common%cf = afgen (state%crop%fixed%cftb,(2*magrs),rid)
+        state%crop%common%ch = afgen (state%crop%fixed%chtb,(2*magrs),rid)
       else
-        state%crop%common%cf        = afgen (cftb,(2*magrs),state%crop%lai)
-        cfeic     = afgen (cfeictb,(2*magrs),state%crop%lai)
-        state%crop%common%ch        = afgen(chtb,(2*magrs),state%crop%lai)
+        state%crop%common%cf        = afgen (state%crop%fixed%cftb,(2*magrs),state%crop%lai)
+        cfeic     = afgen (state%crop%fixed%cfeictb,(2*magrs),state%crop%lai)
+        state%crop%common%ch        = afgen(state%crop%fixed%chtb,(2*magrs),state%crop%lai)
       endif
       if (state%crop%swcf.eq.3) state%crop%fixed%cfeic = cfeic   ! [SS-GR-CROP A5.1]
 
@@ -1334,12 +1334,12 @@
 
 ! ---   set crop height and cropfactor
         if (state%crop%swcf.ne.3) then
-          state%crop%common%cf = afgen (cftb,(2*magrs),rid)
-          state%crop%common%ch = afgen (chtb,(2*magrs),rid)
+          state%crop%common%cf = afgen (state%crop%fixed%cftb,(2*magrs),rid)
+          state%crop%common%ch = afgen (state%crop%fixed%chtb,(2*magrs),rid)
         else
-          state%crop%common%cf = afgen (cftb,(2*magrs),state%crop%lai)
-          cfeic = afgen (cfeictb,(2*magrs),state%crop%lai)
-          state%crop%common%ch = afgen(chtb,(2*magrs),state%crop%lai)
+          state%crop%common%cf = afgen (state%crop%fixed%cftb,(2*magrs),state%crop%lai)
+          cfeic = afgen (state%crop%fixed%cfeictb,(2*magrs),state%crop%lai)
+          state%crop%common%ch = afgen(state%crop%fixed%chtb,(2*magrs),state%crop%lai)
         endif
         if (state%crop%swcf.eq.3) state%crop%fixed%cfeic = cfeic   ! [SS-GR-CROP A5.1]
 
