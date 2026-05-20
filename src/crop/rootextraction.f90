@@ -46,7 +46,7 @@ module rootextraction_mod
                            ! DEFERRED: botcom/criterhr/cumdens/dcritrtz/flhydrlift — soil/crop config; Phase C3
                            botcom, criterhr, cumdens, dcritrtz, flhydrlift, &
                            ! DEFERRED: hlim1/hlim2l/hlim2u/hlim3h/hlim3l/hlim4 — drought stress limits; Phase C3
-                           hlim1, hlim2l, hlim2u,                  &  ! hlim3h/hlim3l/hlim4 retired
+                           ! hlim1/hlim2l/hlim2u/hlim3h/hlim3l/hlim4 retired
                            ! DEFERRED: kroot/kstem/logf/noddrz/oxygenintercept — crop/log globals; Phase C3
                            kroot, kstem, logf, noddrz, oxygenintercept,   &
                            ! DEFERRED: oxygenslope/rdctb/rootcoefa/rooteff — active crop state; Phase C3; rd/rdm retired
@@ -160,14 +160,14 @@ module rootextraction_mod
           if (state%crop%common%swoxygen .eq. 1) then
 
             if (node.gt.botcom(1)) then
-              hlim2 = hlim2l
+              hlim2 = state%crop%common%hlim2l
             else
-              hlim2 = hlim2u
+              hlim2 = state%crop%common%hlim2u
             endif
-            if (sw_h(node).le.hlim1.and.sw_h(node).gt.hlim2) then   ! [SS-SWC S-2.7]
-              alpwet = (hlim1-sw_h(node))/(hlim1-hlim2)               ! [SS-SWC S-2.7]
+            if (sw_h(node).le.state%crop%common%hlim1.and.sw_h(node).gt.hlim2) then   ! [SS-SWC S-2.7]
+              alpwet = (state%crop%common%hlim1-sw_h(node))/(state%crop%common%hlim1-hlim2)   ! [SS-SWC S-2.7]
             endif
-            if (sw_h(node).gt.hlim1) then                             ! [SS-SWC S-2.7]
+            if (sw_h(node).gt.state%crop%common%hlim1) then           ! [SS-SWC S-2.7]
               alpwet = 0.0d0
             endif
 
@@ -365,7 +365,7 @@ module rootextraction_mod
       use variables, only: &                                               ! [SS-GR-FINAL B6] residuals — all DEFERRED
                            aeratecrit, alphacrit,                  &  ! adcrh/adcrl retired  ! DEFERRED: crop stress config; Phase C3
                            botcom, criterhr, cumdens, dcritrtz, flhydrlift, &  ! DEFERRED: soil/crop config
-                           hlim1, hlim2l, hlim2u,                  &  ! hlim3h/hlim3l/hlim4 retired  ! DEFERRED: drought limits
+                           ! hlim1/hlim2l/hlim2u/hlim3h/hlim3l/hlim4 retired  ! DEFERRED: drought limits
                            kroot, kstem, logf, noddrz, oxygenintercept,   &  ! DEFERRED: crop/log globals
                            oxygenslope, rdctb, rootcoefa, rooteff, &  ! rd retired  ! DEFERRED: active crop state
                            rootradius, rxylem, stephr,                    &  ! saltmax/saltslope retired  ! DEFERRED: crop/solute config
@@ -736,7 +736,7 @@ module rootextraction_mod
       use variables, only: &                                               ! [SS-GR-FINAL B6] residuals — all DEFERRED
                            aeratecrit, alphacrit,                  &  ! adcrh/adcrl retired  ! DEFERRED: crop stress config; Phase C3
                            botcom, criterhr, cumdens, dcritrtz, flhydrlift, &  ! DEFERRED: soil/crop config
-                           hlim1, hlim2l, hlim2u,                  &  ! hlim3h/hlim3l/hlim4 retired  ! DEFERRED: drought limits
+                           ! hlim1/hlim2l/hlim2u/hlim3h/hlim3l/hlim4 retired  ! DEFERRED: drought limits
                            kroot, kstem, logf, noddrz, oxygenintercept,   &  ! DEFERRED: crop/log globals
                            oxygenslope, rdctb, rootcoefa, rooteff, &  ! rd retired  ! DEFERRED: active crop state
                            rootradius, rxylem, stephr,                    &  ! saltmax/saltslope retired  ! DEFERRED: crop/solute config

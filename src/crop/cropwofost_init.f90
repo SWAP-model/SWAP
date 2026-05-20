@@ -61,7 +61,7 @@ contains
          frtb, fltb, fstb, fotb,                                             &
          perdl, rdrrtb, rdrstb,                                              &
          ! Oxygen stress — DEFERRED Phase C3; swoxygen retired
-         swWrtNonox, aeratecrit, hlim1, hlim2u, hlim2l,                      &
+         swWrtNonox, aeratecrit,                                             &  ! hlim1/hlim2u/hlim2l retired
          ! Drought stress — DEFERRED Phase C3
          ! hlim3h/hlim3l/hlim4/adcrh/adcrl/swdrought retired
          ! Salinity — DEFERRED Phase C3; swsalinity retired
@@ -349,9 +349,9 @@ contains
       swWrtNonox = cfg%oxygen_stress%swwrtnonox
       aeratecrit = cfg%oxygen_stress%aeratecrit
       if (state%crop%common%swoxygen == 1) then
-         hlim1  = cfg%oxygen_stress%hlim1
-         hlim2u = cfg%oxygen_stress%hlim2u
-         hlim2l = cfg%oxygen_stress%hlim2l
+         state%crop%common%hlim1  = cfg%oxygen_stress%hlim1
+         state%crop%common%hlim2u = cfg%oxygen_stress%hlim2u
+         state%crop%common%hlim2l = cfg%oxygen_stress%hlim2l
       end if
 
       ! Part 12: drought stress (readwofost lines 2870-2881)

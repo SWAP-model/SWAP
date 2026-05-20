@@ -87,6 +87,9 @@ module crop_common_state_mod
       real(real64) :: hlim4          = 0.0_real64     !! wilting point pressure head (cm, Feddes)
       real(real64) :: adcrh          = 0.0_real64     !! high atmospheric demand threshold (cm/d)
       real(real64) :: adcrl          = 0.0_real64     !! low atmospheric demand threshold (cm/d)
+      real(real64) :: hlim1          = 0.0_real64     !! pressure head above which uptake stops (cm, anaerobic)
+      real(real64) :: hlim2u         = 0.0_real64     !! pressure head — optimum uptake starts, top layer (cm)
+      real(real64) :: hlim2l         = 0.0_real64     !! pressure head — optimum uptake starts, sub layer (cm)
 
    contains
       procedure :: init => crop_common_state_init

@@ -424,9 +424,9 @@
       ! [GR-CROP-DVS] HarLosOrm_tot retired — see state%crop%common%HarLosOrm_tot
       real(8)   hdrygerm           ! Criterium Hdry of germination
       real(8)   hwetgerm           ! Criterium Hwet of germination
-      real(8)   hlim1              ! Pressure head above which root water uptake stops (L)
-      real(8)   hlim2l             ! Pressure head below which optimum water uptake starts for sub layer (L)
-      real(8)   hlim2u             ! Pressure head below which optimum water uptake starts for top layer (L)
+      ! [GR-CROPWS] hlim1 retired — see state%crop%common%hlim1
+      ! [GR-CROPWS] hlim2l retired — see state%crop%common%hlim2l
+      ! [GR-CROPWS] hlim2u retired — see state%crop%common%hlim2u
       ! [GR-CROPWS] hlim3h retired — see state%crop%common%hlim3h
       ! [GR-CROPWS] hlim3l retired — see state%crop%common%hlim3l
       ! [GR-CROPWS] hlim4 retired — see state%crop%common%hlim4

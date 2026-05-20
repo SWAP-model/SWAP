@@ -38,7 +38,7 @@ contains
                             ! DEFERRED: swoxygen/swWrtNonox/aeratecrit/max_resp_factor — O2 stress config; Phase C3
                             swWrtNonox, aeratecrit, max_resp_factor,      &  ! swoxygen retired
                             ! DEFERRED: hlim1/hlim2u/hlim2l — drought stress limits; Phase C3
-                            hlim1, hlim2u, hlim2l,                        &
+                            ! hlim1/hlim2u/hlim2l retired
                             ! DEFERRED: swdrought/hlim3h/hlim3l/hlim4/adcrh/adcrl — drought config; Phase C3
                             ! hlim3h/hlim3l/hlim4/adcrh/adcrl/swdrought retired
                             ! saltmax/saltslope/salthead/swsalinity retired — state%crop%common
@@ -96,9 +96,9 @@ contains
       swWrtNonox = cfg%swwrtnonox
       aeratecrit = cfg%aeratecrit
       max_resp_factor = cfg%max_resp_factor
-      hlim1      = cfg%hlim1
-      hlim2u     = cfg%hlim2u
-      hlim2l     = cfg%hlim2l
+      state%crop%common%hlim1  = cfg%hlim1
+      state%crop%common%hlim2u = cfg%hlim2u
+      state%crop%common%hlim2l = cfg%hlim2l
 
       state%crop%common%swdrought = cfg%swdrought
       state%crop%common%hlim3h = cfg%hlim3h

@@ -58,7 +58,7 @@ contains
          cumdens,                                                             &
          ! Oxygen stress — DEFERRED Phase C3; swoxygen retired
          swWrtNonox, aeratecrit,                                              &
-         hlim1, hlim2u, hlim2l,                                              &
+         ! hlim1/hlim2u/hlim2l retired
          q10_microbial, specific_resp_humus, srl, swrootradius,              &
          dry_mat_cont_roots, air_filled_root_por, spec_weight_root_tissue,   &
          var_a, root_radiusO2, swoxygentype,                                  &
@@ -234,9 +234,9 @@ contains
       ! Legacy default: swoxygen = 1 (readgrass line 3653)
       state%crop%common%swoxygen = cfg%swoxygen
       if (cfg%swoxygen == 1) then
-         hlim1  = cfg%hlim1
-         hlim2u = cfg%hlim2u
-         hlim2l = cfg%hlim2l
+         state%crop%common%hlim1  = cfg%hlim1
+         state%crop%common%hlim2u = cfg%hlim2u
+         state%crop%common%hlim2l = cfg%hlim2l
       else if (cfg%swoxygen == 2) then
          ! swoxygentype=1 physical path (swoxygentype=2 stub-guarded above)
          swoxygentype        = cfg%swoxygentype

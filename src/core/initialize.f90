@@ -641,9 +641,6 @@
       fstb               = 0.0d0 
       gasstpot           = 0.0d0 
       gc                 = 0.0d0 
-      hlim1              = 0.0d0 
-      hlim2l             = 0.0d0 
-      hlim2u             = 0.0d0 
       laiem              = 0.0d0
       lv                 = 0.0d0
       lvage              = 0.0d0
