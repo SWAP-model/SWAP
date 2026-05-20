@@ -48,7 +48,7 @@
       !   perdl, dateharvest, lsda: output + harvest tracking, no state home
       !   tsoil: config-staging buffer, renamed to avoid clash with dummy arg
       use variables, only: &                                            ! [SS-GR-CROPRT B8] [GR-CROPWS B4]
-        magrs, macp, rid, tbase, daycrop, tdwi, swinco, &  ! [GR-CROPWS B4] icrop/dvs/tsum/wst/wlv/wrt/dw* retired
+        magrs, macp, rid, daycrop, tdwi, swinco, &  ! [GR-CROPWS B4] icrop/dvs/tsum/wst/wlv/wrt/dw*/tbase retired
         wrtmax, wrtmin,           &
         cfeic, laiem, laiexp, laiexppot, laimax,    &  ! lai/laipot retired
         cftb, chtb, cfeictb, rdtb, slatb, rgrlai, rlwtb, rfsetb,        &
@@ -534,7 +534,7 @@
 ! ---   leaf area not to exceed exponential growth curve
         slatpot = afgen (slatb,30,rid)
         if (laiexppot.lt.6.0d0) then
-          dteff = max (0.0d0,at_tav-tbase)  ! [SS-GR-ATM B.5]
+          dteff = max (0.0d0,at_tav-state%crop%common%tbase)  ! [SS-GR-ATM B.5]
           glaiexpot = laiexppot*rgrlai*dteff
 ! ---   source-limited increase in leaf area
           glasolpot = grlvpot*slatpot
@@ -784,7 +784,7 @@
         if (daycrop .ge. idregrpot) then
 
 ! ---     physiologic ageing of leaves per time step
-          fysdel = max (0.0d0,(at_tav-tbase)/(35.0d0-tbase))  ! [SS-GR-ATM B.5]
+          fysdel = max (0.0d0,(at_tav-state%crop%common%tbase)/(35.0d0-state%crop%common%tbase))  ! [SS-GR-ATM B.5]
 
 ! ---     leaf death is imposed on array untill no more leaves have to die or all leaves are gone
 
@@ -995,7 +995,7 @@
 
 ! ---   leaf area not to exceed exponential growth curve
         if (laiexp.lt.6.0d0) then
-          dteff = max (0.0d0,at_tav-tbase)  ! [SS-GR-ATM B.5]
+          dteff = max (0.0d0,at_tav-state%crop%common%tbase)  ! [SS-GR-ATM B.5]
           glaiex = laiexp*rgrlai*dteff
 ! ---     source-limited increase in leaf area
           glasol = grlv*slat
@@ -1246,7 +1246,7 @@
         if (daycrop .ge. idregr) then
 
 ! ---     physiologic ageing of leaves per time step
-          fysdel = max (0.0d0,(at_tav-tbase)/(35.0d0-tbase))  ! [SS-GR-ATM B.5]
+          fysdel = max (0.0d0,(at_tav-state%crop%common%tbase)/(35.0d0-state%crop%common%tbase))  ! [SS-GR-ATM B.5]
 
 ! ---     leaf death is imposed on array untill no more leaves have to die or all leaves are gone
 

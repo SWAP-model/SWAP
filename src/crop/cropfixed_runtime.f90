@@ -31,7 +31,7 @@
       use variables, only: magrs, idev, &         ! [GR-CROPWS B1] reads→state; writes remain legacy; dvs/tsum/lai retired
                            max_resp_factor,                        &  ! rd/rdpot/swrd retired
                            swgc, swcf, swinter, swdrought,         &  ! swdmi2rd retired
-                           tbase, tsumea, tsumam, rdmax,                  &
+                           tsumea, tsumam, rdmax,                         &  ! tbase retired
                            siccaplai, w_root_ss, wiltpoint,   &
                            twilt, flhydrlift, gc, cfeic,                 &
                            gctb, rdtb, mrftb, wrtb,                      &
@@ -177,7 +177,7 @@
 ! === calculate actual rate and state variables ======================
 
 ! --- increase in temperature sum
-      dtsum = max (0.0d0,at_tav-tbase)  ! [SS-GR-ATM B.5] tav→state%atmosphere%Tav
+      dtsum = max (0.0d0,at_tav-state%crop%common%tbase)  ! [SS-GR-ATM B.5] tav→state%atmosphere%Tav
 
 ! --- development rate
       if (idev.eq.1) then

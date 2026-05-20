@@ -692,7 +692,6 @@
       spa                = 0.0d0 
       span               = 0.0d0 
       ssa                = 0.0d0
-      tbase              = 0.0d0 
       tdwi               = 0.0d0 
       tmnftb             = 0.0d0 
       tmpftb             = 0.0d0 

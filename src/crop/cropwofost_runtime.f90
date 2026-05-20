@@ -52,7 +52,7 @@
         macp, magrs, dvsend, rdmax, &  ! icrop/dvs/rd/rdpot retired
         swdrought, swcf, swgc, swinter,       &  ! swrd/swdmi2rd/swrdc retired
         swbulb, swinco, laiem, laiexp, laiexppot, laimax,    &  ! lai/laipot retired
-        cfeic, tsumea, tsumam, tbase, daycrop, daylp,  &  ! tsum retired (→state%crop%common%tsum)
+        cfeic, tsumea, tsumam, daycrop, daylp,  &  ! tsum/tbase retired
         siccaplai, cropend,                               &  ! [GR-CROPWS B5] cropstart removed (→state%crop%common%cropstart)
         wrtmax, wrtmin, &  ! wso/wst/wlv/wrt retired
         reltr, lrnr, lsnr, nni,           &
@@ -573,7 +573,7 @@
       drlvpot = dslvpot + dalvpot
 
 ! --- physiologic ageing of leaves per time step
-      fysdel = max (0.0d0,(at_tav-tbase)/(35.0d0-tbase))  ! [SS-GR-ATM B.5]
+      fysdel = max (0.0d0,(at_tav-state%crop%common%tbase)/(35.0d0-state%crop%common%tbase))  ! [SS-GR-ATM B.5]
 
 ! --- specific leaf area valid for current timestep
       slatpot = afgen (slatb,30,state%crop%common%dvs)
@@ -581,7 +581,7 @@
 ! --- calculation of specific leaf area in case of exponential growth:
 ! --- leaf area not to exceed exponential growth curve
       if (laiexppot.lt.6.0d0) then
-        dteff = max (0.0d0,at_tav-tbase)  ! [SS-GR-ATM B.5]
+        dteff = max (0.0d0,at_tav-state%crop%common%tbase)  ! [SS-GR-ATM B.5]
 ! ---   increase in leaf area during exponential growth
         glaiexpot = laiexppot*rgrlai*dteff
 ! ---   source-limited increase in leaf area
@@ -865,7 +865,7 @@
            Fstress = reltr * EXP(-NLAI* (1.0d0 - NNI))
          endif
       endif
-      call GLAI(Fstress,LAIEXP,GLAIEX,at_tav,TBASE,RGRLAI,GRLV,SLAT,GLA)  ! [SS-GR-ATM B.5]
+      call GLAI(Fstress,LAIEXP,GLAIEX,at_tav,state%crop%common%tbase,RGRLAI,GRLV,SLAT,GLA)  ! [SS-GR-ATM B.5]
 
 
 ! ---- UPDATE STATES: integrals of the crop --------------------------------------------

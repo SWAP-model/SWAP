@@ -42,8 +42,8 @@ contains
          tdwi, laiem, rgrlai,                                                 &
          ! Start-of-growth trigger — DEFERRED Phase C3
          swtsum, tsumtemp, tsumtime, tsumdepth,                               &
-         ! Green area — DEFERRED Phase C3
-         slatb, ssa, span, tbase,                                             &
+         ! Green area — DEFERRED Phase C3; tbase retired
+         slatb, ssa, span,                                                    &
          ! Assimilation — DEFERRED Phase C3
          eff, amaxtb, tmpftb, tmnftb,                            &  ! kdif/kdir retired
          ! Biomass conversion — DEFERRED Phase C3
@@ -200,7 +200,7 @@ contains
       if (allocated(cfg%slatb)) call copy_table(cfg%slatb, slatb)
       ssa   = cfg%ssa
       span  = cfg%span
-      tbase = cfg%tbase
+      state%crop%common%tbase = cfg%tbase
 
       ! Part 6: assimilation (readgrass lines 3623-3628)
       state%crop%kdif = cfg%kdif

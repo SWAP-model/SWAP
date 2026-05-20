@@ -50,8 +50,8 @@ contains
          verndvs, vernsat, vernbase, vernrtb,                                &
          ! Initial crop state — DEFERRED Phase C3
          tdwi, laiem, rgrlai,                                                &
-         ! Green area / assimilation — DEFERRED Phase C3
-         slatb, spa, ssa, span, tbase,                                       &
+         ! Green area / assimilation — DEFERRED Phase C3; tbase retired
+         slatb, spa, ssa, span,                                              &
          eff, amaxtb, tmpftb, tmnftb,                           &  ! kdif/kdir retired
          ! Biomass conversion — DEFERRED Phase C3
          cvl, cvo, cvr, cvs,                                                 &
@@ -221,7 +221,7 @@ contains
       spa   = cfg%green_area%spa
       ssa   = cfg%green_area%ssa
       span  = cfg%green_area%span
-      tbase = cfg%green_area%tbase
+      state%crop%common%tbase = cfg%green_area%tbase
 
       ! Part 5: assimilation (readwofost lines 2764-2769)
       state%crop%kdif = cfg%assimilation%kdif

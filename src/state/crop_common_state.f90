@@ -67,6 +67,7 @@ module crop_common_state_mod
       integer      :: swrd           = 0              !! root depth method (1=table,2=daily,3=biomass)
       integer      :: swdmi2rd       = 0              !! transpiration limit on root depth (0/1)
       integer      :: swrdc          = 0              !! root density input (0/1)
+      real(real64) :: tbase          = 0.0_real64     !! base temperature for ageing of leaves (°C)
 
    contains
       procedure :: init => crop_common_state_init

@@ -494,7 +494,7 @@
       ! [GR-CROP-DVS] tagppot retired — see state%crop%wofost%tagppot
       ! [GR-CROP-DVS] tagpt retired — see state%crop%wofost%tagpt
       ! [GR-CROP-DVS] tagptpot retired — see state%crop%wofost%tagptpot
-      real(8)   tbase              ! Lower threshold temperature for ageing of leaves (oC)
+      ! [GR-CROPWS] tbase retired — see state%crop%common%tbase
       real(8)   tdwi               ! Initial total crop dry weight (kg/ha)
       real(8)   tmnftb(30)         ! Reduction factor for maximum assimilation rate (-) as function of minimum day temperature (oC)
       real(8)   tmpftb(30)         ! Reduction factor for maximum assimilation rate (-) as function of average day temperature (oC)

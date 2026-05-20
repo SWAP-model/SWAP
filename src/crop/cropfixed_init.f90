@@ -28,8 +28,8 @@ contains
       ! [SS-GR-FINAL B7] DEFERRED: all symbols are config→globals copy targets.
       !   Retirement requires Phase C3 adapter rewrite (config_to_variables.f90 dual-writes).
       use variables, only: &
-                            ! DEFERRED: idev/tsumea/tsumam/tbase — crop development config; Phase C3
-                            idev, tsumea, tsumam, tbase,                  &
+                            ! DEFERRED: idev/tsumea/tsumam — crop development config; Phase C3; tbase retired
+                            idev, tsumea, tsumam,                         &
                             ! DEFERRED: kdif/kdir/gctb/swgc — radiation/crop factor config; Phase C3
                             gctb, swgc,                       &  ! kdif/kdir retired
                             ! DEFERRED: cftb/chtb/cfeictb/swcf/albedo/rsc/rsw — crop factor config; Phase C3
@@ -79,7 +79,7 @@ contains
       lcc    = cfg%lcc
       tsumea = cfg%tsumea
       tsumam = cfg%tsumam
-      tbase  = cfg%tbase
+      state%crop%common%tbase = cfg%tbase
 
       state%crop%kdif = cfg%kdif
       state%crop%kdir = cfg%kdir
