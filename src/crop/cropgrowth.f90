@@ -61,7 +61,7 @@
         swinco, croptype, daycrop,         &  ! tsum/rd/lai/rdpot/wso/wst/wlv/cwdmpot/cwdm retired
         tmn, rad,                                         &  ! wrt retired
         cumdens,                                               &
-        eff, amaxtb, tmpftb, tmnftb, swdrought, swcrp, dvsend,             &  ! [GR-CROPWS B3]  removed (→)
+        eff, amaxtb, tmpftb, tmnftb, swdrought, swcrp,                     &  ! dvsend retired
         swharv, remoc, pld, q10,                    &  ! [GR-CROPWS B3] swbulb removed (→state%crop%wofost%swbulb)
         flCropNut, nlue, anlv, anst, nmxlv, nmaxlv, nmaxst,               &
         nmaxrt, lrnr, lsnr, nni, rnflv, rnfst, frnx, fstr, flHarvestDay,  &
@@ -545,7 +545,7 @@
             state%crop%common%flHarvestDay = flHarvestDay   ! [SS-GR-CROP A5.1]
           endif
         else
-          if (state%crop%common%dvs.ge.dvsend .or. dabs(tc_t1900 - cropend(state%crop%common%icrop) - 1.d0) .lt. 1.0d-3) then  ! [GR-CROPWS B3] dvs→state (task 4: synced after task 3); icrop→state
+          if (state%crop%common%dvs.ge.state%crop%common%dvsend .or. dabs(tc_t1900 - cropend(state%crop%common%icrop) - 1.d0) .lt. 1.0d-3) then  ! [GR-CROPWS B3] dvs/dvsend/icrop → state
             flHarvestDay = .true.
             state%crop%common%flHarvestDay = flHarvestDay   ! [SS-GR-CROP A5.1]
           endif

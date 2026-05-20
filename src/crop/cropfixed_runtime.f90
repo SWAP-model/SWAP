@@ -28,10 +28,10 @@
 !   siccapact, siccaplai, W_root_ss, wiltpoint, twilt, flhydrlift, gc, cfeic (write),
 !   gctb, rdtb, mrftb, wrtb, swinco, reltr.
 ! ----------------------------------------------------------------------
-      use variables, only: magrs, idev, &         ! [GR-CROPWS B1] reads→state; writes remain legacy; dvs/tsum/lai retired
+      use variables, only: magrs, &               ! idev retired
                            max_resp_factor,                        &  ! rd/rdpot/swrd retired
                            swgc, swcf, swinter, swdrought,         &  ! swdmi2rd retired
-                           tsumea, tsumam, rdmax,                         &  ! tbase retired
+                           rdmax,                                  &  ! tbase/tsumea/tsumam retired
                            siccaplai, w_root_ss, wiltpoint,   &
                            twilt, flhydrlift, gc, cfeic,                 &
                            gctb, rdtb, mrftb, wrtb,                      &
@@ -180,13 +180,13 @@
       dtsum = max (0.0d0,at_tav-state%crop%common%tbase)  ! [SS-GR-ATM B.5] tav→state%atmosphere%Tav
 
 ! --- development rate
-      if (idev.eq.1) then
+      if (state%crop%common%idev.eq.1) then
         dvr = 2.0/lcc
-      elseif (idev.eq.2) then
+      elseif (state%crop%common%idev.eq.2) then
         if (state%crop%common%dvs.lt.1.0d0) then                       ! [GR-CROPWS B1] dvs → state%crop%common%dvs
-          dvr = dtsum/tsumea
+          dvr = dtsum/state%crop%common%tsumea
         else
-          dvr = dtsum/tsumam
+          dvr = dtsum/state%crop%common%tsumam
         endif
       endif
 

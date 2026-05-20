@@ -615,7 +615,6 @@
       daycrop            = 0 
       daygrowth          = 0
       daygrowthpot       = 0
-      idev               = 0 
       idsl               = 0 
       noddrz             = 0 
       swcf               = 0 
@@ -642,7 +641,6 @@
       dlc                = 0.0d0 
       dlo                = 0.0d0 
       dtsmtb             = 0.0d0
-      dvsend             = 0.0d0
       eff                = 0.0d0 
       fbl                = 0.0d0 
       fbltb              = 0.0d0 
@@ -695,8 +693,6 @@
       tdwi               = 0.0d0 
       tmnftb             = 0.0d0 
       tmpftb             = 0.0d0 
-      tsumam             = 0.0d0 
-      tsumea             = 0.0d0 
       vernrtb            = 0.0d0 
 
 ! --- only for bulb crops (tulips etc..)

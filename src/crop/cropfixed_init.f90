@@ -28,8 +28,7 @@ contains
       ! [SS-GR-FINAL B7] DEFERRED: all symbols are config→globals copy targets.
       !   Retirement requires Phase C3 adapter rewrite (config_to_variables.f90 dual-writes).
       use variables, only: &
-                            ! DEFERRED: idev/tsumea/tsumam — crop development config; Phase C3; tbase retired
-                            idev, tsumea, tsumam,                         &
+                            ! idev/tsumea/tsumam/tbase retired — state%crop%common
                             ! DEFERRED: kdif/kdir/gctb/swgc — radiation/crop factor config; Phase C3
                             gctb, swgc,                       &  ! kdif/kdir retired
                             ! DEFERRED: cftb/chtb/cfeictb/swcf/albedo/rsc/rsw — crop factor config; Phase C3
@@ -48,8 +47,8 @@ contains
                             swcompensate, swstressor, alphacrit, dcritrtz, &
                             ! DEFERRED: swinter/cofab — interception config; Phase C3
                             swinter,                                      &  ! cofab retired
-                            ! DEFERRED: schedule/dvsend/swharv — harvest schedule config; Phase C3
-                            schedule, dvsend, swharv,                     &
+                            ! DEFERRED: schedule/swharv — harvest schedule config; Phase C3; dvsend retired
+                            schedule, swharv,                             &
                             ! DEFERRED: cumdens — root density cumulative; Phase C3
                             cumdens
       use array_utils,  only: afgen
@@ -75,11 +74,11 @@ contains
       end if
 
       ! ---- Copy scalars / switches to globals ------------------------
-      idev   = cfg%idev
+      state%crop%common%idev   = cfg%idev
       lcc    = cfg%lcc
-      tsumea = cfg%tsumea
-      tsumam = cfg%tsumam
-      state%crop%common%tbase = cfg%tbase
+      state%crop%common%tsumea = cfg%tsumea
+      state%crop%common%tsumam = cfg%tsumam
+      state%crop%common%tbase  = cfg%tbase
 
       state%crop%kdif = cfg%kdif
       state%crop%kdir = cfg%kdir
@@ -124,7 +123,7 @@ contains
 
       schedule = cfg%schedule_switch
 
-      dvsend = cfg%dvsend
+      state%crop%common%dvsend = cfg%dvsend
       swharv = cfg%swharv
 
       ! ---- Reflection coefficients / crop resistance (legacy:2150-2160)

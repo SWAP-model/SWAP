@@ -44,8 +44,8 @@ contains
       use variables, only: &
          ! ET / crop factor — DEFERRED Phase C3
          swcf, cftb, chtb, rsw,                                &  ! albedo/rsc retired
-         ! Development — DEFERRED Phase C3
-         idsl, tsumea, tsumam, dlo, dlc, dtsmtb,                            &
+         ! Development — DEFERRED Phase C3; tsumea/tsumam retired
+         idsl, dlo, dlc, dtsmtb,                                            &
          ! Vernalisation — DEFERRED Phase C3
          verndvs, vernsat, vernbase, vernrtb,                                &
          ! Initial crop state — DEFERRED Phase C3
@@ -73,8 +73,8 @@ contains
          ! Root depth — DEFERRED Phase C3
          rdctb, rdtb, rlwtb, wrtmax,                                          &  ! swrd/swdmi2rd/swrdc retired
          cumdens,                                                             &
-         ! Harvest — DEFERRED Phase C3
-         dvsend, swharv,                                                      &
+         ! Harvest — DEFERRED Phase C3; dvsend retired
+         swharv,                                                              &
          swpotrelmf,                                                          &  ! relmf retired
          ! Irrigation schedule — DEFERRED Phase C3
          schedule,                                                             &
@@ -184,8 +184,8 @@ contains
 
       ! Part 2: phenology (soybean=0 path; readwofost lines 2712-2721)
       idsl   = cfg%phenology%idsl
-      tsumea = cfg%phenology%tsumea
-      tsumam = cfg%phenology%tsumam
+      state%crop%common%tsumea = cfg%phenology%tsumea
+      state%crop%common%tsumam = cfg%phenology%tsumam
       if (idsl == 1 .or. idsl == 2) then
          dlo = cfg%phenology%dlo
          dlc = cfg%phenology%dlc
@@ -425,7 +425,7 @@ contains
       end select
 
       ! Harvest (readwofost lines 2745-2748)
-      dvsend = cfg%harvest%dvsend
+      state%crop%common%dvsend = cfg%harvest%dvsend
       swharv = cfg%harvest%swharv
 
       ! Schedule (schedule=0 only on TOML path; stub-guarded above)

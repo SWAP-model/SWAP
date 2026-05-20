@@ -335,7 +335,7 @@
       integer   daygrowthpot       ! Number of days that grass is growing after management event or emergence, potential run (d)
       integer   idaysgraz          ! Day number of grass grazing, actual run (d)
       integer   idaysgrazpot       ! Day number of grass grazing, potential run (d)
-      integer   idev               ! Switch for length of growth period in case of simple crop: 1 = fixed; 2 = depends on temperature sum
+      ! [GR-CROPWS] idev retired — see state%crop%common%idev
       integer   idregr             ! Number of days for regrowth of grassland, actual growth
       integer   idregrpot          ! Number of days for regrowth of grassland, potential growth
       integer   idsl               ! Switch for crop development before anthesis: 0 = depends on temperature; 
@@ -402,7 +402,7 @@
       real(8)   dsinbe             ! Daily total of effective solar height (s)
       real(8)   dtsmtb(30)         ! Increase of temperature sum (oC) as function of daily average temperature (oC)
       ! [GR-CROP-DVS] dvs retired — see state%crop%common%dvs
-      real(8)   dvsend             ! Crop development stage at harvest
+      ! [GR-CROPWS] dvsend retired — see state%crop%common%dvsend
       ! [GR-CROP-DVS] dwlv retired — see state%crop%wofost%dwlv
       ! [GR-CROP-DVS] dwlvCrop retired — see state%crop%wofost%dwlvCrop
       ! [GR-CROP-DVS] dwlvSoil retired — see state%crop%wofost%dwlvSoil
@@ -499,8 +499,8 @@
       real(8)   tmnftb(30)         ! Reduction factor for maximum assimilation rate (-) as function of minimum day temperature (oC)
       real(8)   tmpftb(30)         ! Reduction factor for maximum assimilation rate (-) as function of average day temperature (oC)
       ! [GR-CROP-DVS] tsum retired — see state%crop%common%tsum
-      real(8)   tsumam             ! Temperature sum from anthesis to maturity (oC)
-      real(8)   tsumea             ! Temperature sum from emergence to anthesis (oC)
+      ! [GR-CROPWS] tsumam retired — see state%crop%common%tsumam
+      ! [GR-CROPWS] tsumea retired — see state%crop%common%tsumea
       real(8)   tsumemeopt         ! Temperature sum for crop emergence under optimal conditions
       real(8)   tsumgerm           ! Temperature sum during germination
       real(8)   TBASEM             ! Lower threshold temp. for emergence (C)

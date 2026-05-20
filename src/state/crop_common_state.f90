@@ -68,6 +68,10 @@ module crop_common_state_mod
       integer      :: swdmi2rd       = 0              !! transpiration limit on root depth (0/1)
       integer      :: swrdc          = 0              !! root density input (0/1)
       real(real64) :: tbase          = 0.0_real64     !! base temperature for ageing of leaves (°C)
+      integer      :: idev           = 0              !! length-of-growth-period switch: 1=fixed, 2=tsum
+      real(real64) :: tsumea         = 0.0_real64     !! temperature sum emergence→anthesis (°C·d)
+      real(real64) :: tsumam         = 0.0_real64     !! temperature sum anthesis→maturity (°C·d)
+      real(real64) :: dvsend         = 0.0_real64     !! crop development stage at harvest (-)
 
    contains
       procedure :: init => crop_common_state_init

@@ -49,10 +49,10 @@
 !   daycrop: runtime (dual-write to state%crop%common%daycrop), computed in CropGrowth
 ! ----------------------------------------------------------------------
       use variables, only: &                                            ! [SS-GR-CROPRT B7] [GR-CROPWS B5]
-        macp, magrs, dvsend, rdmax, &  ! icrop/dvs/rd/rdpot retired
+        macp, magrs, rdmax, &  ! icrop/dvs/rd/rdpot/dvsend retired
         swdrought, swcf, swgc, swinter,       &  ! swrd/swdmi2rd/swrdc retired
         swbulb, swinco, laiem, laiexp, laiexppot, laimax,    &  ! lai/laipot retired
-        cfeic, tsumea, tsumam, daycrop, daylp,  &  ! tsum/tbase retired
+        cfeic, daycrop, daylp,  &  ! tsum/tbase/tsumea/tsumam retired
         siccaplai, cropend,                               &  ! [GR-CROPWS B5] cropstart removed (→state%crop%common%cropstart)
         wrtmax, wrtmin, &  ! wso/wst/wlv/wrt retired
         reltr, lrnr, lsnr, nni,           &
@@ -444,10 +444,10 @@
                 endif
              endif
           endif
-          dvr = vernfac * dvred*dtsum/tsumea
+          dvr = vernfac * dvred*dtsum/state%crop%common%tsumea
         else
 ! ---     generative phase
-          dvr = dtsum/tsumam
+          dvr = dtsum/state%crop%common%tsumam
         endif    
 
       else if (swsoybean.eq.1) then
@@ -871,7 +871,7 @@
 ! ---- UPDATE STATES: integrals of the crop --------------------------------------------
 
 ! --- phenological development stage
-      state%crop%common%dvs = min(state%crop%common%dvs+dvr*delt,dvsend)
+      state%crop%common%dvs = min(state%crop%common%dvs+dvr*delt,state%crop%common%dvsend)
       state%crop%common%tsum = state%crop%common%tsum + dtsum*delt
 
 ! --- leaf death (due to water stress or high lai) is imposed on array 
@@ -1056,7 +1056,7 @@
          HarLosNit_dwst = 0.0d0; HarLosNit_dwso = 0.0d0; HarLosNit_dwlv = 0.0d0 
 !        during the last day of the crop period: add the weight of living roots 
 !        to the dead roots and reset living weight to zero
-         if (flHarvestDay .or. (state%crop%common%dvs.ge.dvsend) .or.                     &
+         if (flHarvestDay .or. (state%crop%common%dvs.ge.state%crop%common%dvsend) .or. &
      &                 dabs(tc_t1900-1.0d0-cropend(state%crop%common%icrop)).lt.1.0d-3 ) then  ! [GR-CROPWS B5] icrop → state%crop%common%icrop
             HarLosOrm_rt = state%crop%wofost%wrt
             HarLosOrm_dwlv =  FraHarLosOrm_lv * state%crop%wofost%dwlv
@@ -1138,7 +1138,7 @@
            call warn ('CropGrowth_Wofost',messag,logf,swscre)
         endif
  
-        if (flHarvestDay .or. (state%crop%common%dvs.ge.dvsend) .or.                      &
+        if (flHarvestDay .or. (state%crop%common%dvs.ge.state%crop%common%dvsend) .or. &
      &                 dabs(tc_t1900-1.0d0-cropend(state%crop%common%icrop)).lt.1.0d-3 ) then  ! [GR-CROPWS B5] icrop → state%crop%common%icrop
           gwst  = 0.0d0
           gwrt  = 0.0d0
