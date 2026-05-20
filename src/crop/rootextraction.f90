@@ -42,7 +42,7 @@ module rootextraction_mod
       use swap_array_dimensions, only: macp
       use variables, only: &                                               ! [SS-GR-FINAL B6] residuals — all DEFERRED
                            ! DEFERRED: adcrh/adcrl/aeratecrit/alphacrit — O2/drought config; Phase C3
-                           aeratecrit, alphacrit,                  &  ! adcrh/adcrl retired
+                           alphacrit,                              &  ! adcrh/adcrl/aeratecrit retired
                            ! DEFERRED: botcom/criterhr/cumdens/dcritrtz/flhydrlift — soil/crop config; Phase C3
                            botcom, criterhr, cumdens, dcritrtz, flhydrlift, &
                            ! DEFERRED: hlim1/hlim2l/hlim2u/hlim3h/hlim3l/hlim4 — drought stress limits; Phase C3
@@ -56,7 +56,7 @@ module rootextraction_mod
                            ! DEFERRED: swcompensate/swdrought/swfrost/swoxygen — crop stress switches; Phase C3
                            swfrost,                                       &  ! swcompensate/swoxygen/swdrought retired
                            ! DEFERRED: swoxygentype/swsalinity/swstressor/swwrtnonox — crop stress switches; Phase C3
-                           swoxygentype, swstressor, swwrtnonox, &  ! swsalinity retired
+                           swoxygentype, swstressor, &  ! swsalinity/swwrtnonox retired
                            ! DEFERRED: taccur/twilt/wiltpoint — soil convergence/stress params; Phase C3
                            twilt, wiltpoint
       use array_utils, only: afgen
@@ -192,8 +192,8 @@ module rootextraction_mod
 !         WOFOST: root zone remain the aim, but biomass is increasing
 !         GRASS : stop root development
           cw_flWrtNonox = .false.
-          if (swWrtNonox .eq. 1 .and. node .eq. noddrz) then
-            if (alpwet .lt. aeratecrit) then
+          if (state%crop%common%swWrtNonox .eq. 1 .and. node .eq. noddrz) then
+            if (alpwet .lt. state%crop%common%aeratecrit) then
               cw_flWrtNonox = .true.
             end if
           endif
@@ -363,14 +363,14 @@ module rootextraction_mod
       ! [SS-GR-FINAL B6] macp → swap_array_dimensions; remainder DEFERRED (same as RootExtraction)
       use swap_array_dimensions, only: macp
       use variables, only: &                                               ! [SS-GR-FINAL B6] residuals — all DEFERRED
-                           aeratecrit, alphacrit,                  &  ! adcrh/adcrl retired  ! DEFERRED: crop stress config; Phase C3
+                           alphacrit,                              &  ! adcrh/adcrl/aeratecrit retired  ! DEFERRED: crop stress config; Phase C3
                            botcom, criterhr, cumdens, dcritrtz, flhydrlift, &  ! DEFERRED: soil/crop config
                            ! hlim1/hlim2l/hlim2u/hlim3h/hlim3l/hlim4 retired  ! DEFERRED: drought limits
                            kroot, kstem, logf, noddrz, oxygenintercept,   &  ! DEFERRED: crop/log globals
                            oxygenslope, rdctb, rootcoefa, rooteff, &  ! rd retired  ! DEFERRED: active crop state
                            rootradius, rxylem, stephr,                    &  ! saltmax/saltslope retired  ! DEFERRED: crop/solute config
                            swfrost,                                       &  ! swcompensate/swoxygen/swdrought retired  ! DEFERRED: stress switches
-                           swoxygentype, swstressor, swwrtnonox, &  ! swsalinity retired  ! DEFERRED: stress switches
+                           swoxygentype, swstressor, &  ! swsalinity/swwrtnonox retired  ! DEFERRED: stress switches
                            twilt, wiltpoint                          ! DEFERRED: convergence/stress params
       use array_utils, only: afgen
       implicit none
@@ -734,14 +734,14 @@ module rootextraction_mod
       ! [SS-GR-FINAL B6] macp → swap_array_dimensions; remainder DEFERRED (same as RootExtraction)
       use swap_array_dimensions, only: macp
       use variables, only: &                                               ! [SS-GR-FINAL B6] residuals — all DEFERRED
-                           aeratecrit, alphacrit,                  &  ! adcrh/adcrl retired  ! DEFERRED: crop stress config; Phase C3
+                           alphacrit,                              &  ! adcrh/adcrl/aeratecrit retired  ! DEFERRED: crop stress config; Phase C3
                            botcom, criterhr, cumdens, dcritrtz, flhydrlift, &  ! DEFERRED: soil/crop config
                            ! hlim1/hlim2l/hlim2u/hlim3h/hlim3l/hlim4 retired  ! DEFERRED: drought limits
                            kroot, kstem, logf, noddrz, oxygenintercept,   &  ! DEFERRED: crop/log globals
                            oxygenslope, rdctb, rootcoefa, rooteff, &  ! rd retired  ! DEFERRED: active crop state
                            rootradius, rxylem, stephr,                    &  ! saltmax/saltslope retired  ! DEFERRED: crop/solute config
                            swfrost,                                       &  ! swcompensate/swoxygen/swdrought retired  ! DEFERRED: stress switches
-                           swoxygentype, swstressor, swwrtnonox, &  ! swsalinity retired  ! DEFERRED: stress switches
+                           swoxygentype, swstressor, &  ! swsalinity/swwrtnonox retired  ! DEFERRED: stress switches
                            twilt, wiltpoint                          ! DEFERRED: convergence/stress params
       implicit none
 

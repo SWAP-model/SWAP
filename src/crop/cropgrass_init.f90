@@ -57,7 +57,7 @@ contains
          rdctb, rdtb, rlwtb, wrtmax,                         &
          cumdens,                                                             &
          ! Oxygen stress — DEFERRED Phase C3; swoxygen retired
-         swWrtNonox, aeratecrit,                                              &
+         ! swWrtNonox/aeratecrit retired
          ! hlim1/hlim2u/hlim2l retired
          q10_microbial, specific_resp_humus, srl, swrootradius,              &
          dry_mat_cont_roots, air_filled_root_por, spec_weight_root_tissue,   &
@@ -254,8 +254,8 @@ contains
          end if
       end if
       ! Growth of roots during oxygen stress (readgrass lines 3715-3723)
-      swWrtNonox = cfg%swwrtnonox
-      aeratecrit = cfg%aeratecrit
+      state%crop%common%swWrtNonox = cfg%swwrtnonox
+      state%crop%common%aeratecrit = cfg%aeratecrit
 
       ! Part 12: drought stress (readgrass lines 3726-3754)
       ! swdrought=2 is stub-guarded above.

@@ -1406,10 +1406,10 @@
       real(8)   zgrz               ! z-level for monitoring wkability for the crop during start of grazing
 
 ! --- root development of dynamic crop growth and oxygen stress
-      integer   swWrtNonox         ! switch for checking oxygen stress of root zone development
+      ! [GR-CROPWS] swWrtNonox retired — see state%crop%common%swWrtNonox
       ! [SS-CRP] retired 2026-05-11 — moved to state%soilwater%flWrtNonox (ADR 0036)
       ! logical   flWrtNonox         ! Flag indicating whether root development is retatarded by oxygen stress 
-      real(8)   aeratecrit         ! threshold to stop root zone development in case of oxygenstress; 0.0 minimum oxygen stress, 1.0 maximum oxygenstress [0.0001..1.0 -, R]
+      ! [GR-CROPWS] aeratecrit retired — see state%crop%common%aeratecrit
 
       ! Initialize o2_ini_stress to .true. (needed for first call to OxygenStress)
       data o2_ini_stress /.true./

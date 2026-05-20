@@ -90,6 +90,8 @@ module crop_common_state_mod
       real(real64) :: hlim1          = 0.0_real64     !! pressure head above which uptake stops (cm, anaerobic)
       real(real64) :: hlim2u         = 0.0_real64     !! pressure head — optimum uptake starts, top layer (cm)
       real(real64) :: hlim2l         = 0.0_real64     !! pressure head — optimum uptake starts, sub layer (cm)
+      integer      :: swWrtNonox     = 0              !! switch for crop survival under non-aerated conditions
+      real(real64) :: aeratecrit     = 0.0_real64     !! critical aeration level for crop survival
 
    contains
       procedure :: init => crop_common_state_init
