@@ -348,7 +348,7 @@
       integer   noddrz             ! Compartment number at bottom root zone (-)
       integer   seqgrazmow(366)    ! Sequence of grass grazing and mowing, actual crop
       integer   seqgrazmowpot(366) ! Sequence of grass grazing and mowing, potential crop
-      integer   swcf               ! Switch for simple crop: 1 = crop factor is input; 2 = crop height is input
+      ! [GR-CROPWS] swcf retired — see state%crop%swcf
       ! [GR-CROPWS] swdrought retired — see state%crop%common%swdrought
       ! [GR-CROPWS] swgc retired — see state%crop%common%swgc
       ! [SS-GR-FINAL D1] swjarvis retired — deprecated switch; 0 consumers

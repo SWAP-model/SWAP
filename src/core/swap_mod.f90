@@ -68,7 +68,7 @@ contains
                             !    wc_cor,wc10,iCNtab,CNtimTAB,CNrefTAB) → state%atmosphere
 
                             ! [GR-ATM C8] out_tmn/tmx/hum/win/etr/wet/rad retired from import (state written by meteoday)
-                            swcf, swcfbs, flCropEmergence, &  ! lai retired
+                            swcfbs, flCropEmergence, &  ! lai/swcf retired
                             ! [SS-GR-CROP A14] crop_common legacy globals; dvs/tsum retired
                             daycrop, icrop, &
                             cuptgraz, cuptgrazpot, &  ! rd/rdpot/rdm/rdi/rri/rdc/HarLosOrm_tot retired
@@ -344,7 +344,6 @@ contains
    ! [GR-ATM C8] out_tmn/tmx/hum/win/etr/wet/rad seeding dropped: legacy globals retired; state%atmosphere%X written by meteoday
 
    ! [SS-GR-ATM A12] seed state%crop from legacy crop globals; lai retired
-   state%crop%swcf            = swcf
    state%crop%swcfbs          = swcfbs
    state%crop%flCropEmergence = flCropEmergence
    ! [SS-GR-CROP A14] dual-write crop_common; dvs/tsum retired (writes target state directly)

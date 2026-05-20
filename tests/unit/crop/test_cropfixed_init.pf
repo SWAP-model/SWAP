@@ -4,7 +4,7 @@ subroutine test_cropfixed_init_writes_scalars()
    use cropfixed_init_mod, only: cropfixed_init_from_config
    use cropfixed_config_mod, only: cropfixed_config_t
    use swap_state_mod, only: swap_state_t
-   use variables, only: swcf  ! many globals retired — see state%crop%common
+   ! variables-only-list emptied — all globals retired
    type(cropfixed_config_t) :: cfg
    type(swap_state_t) :: state  ! [SS-GR-ATM A5.1] dual-write target
    integer :: lcc_out
@@ -38,7 +38,7 @@ subroutine test_cropfixed_init_writes_scalars()
    @assertEqual(0.75d0, state%crop%kdif, 1.0d-12)
    @assertEqual(0.75d0, state%crop%kdir, 1.0d-12)
    @assertEqual(1,    state%crop%common%swgc)
-   @assertEqual(1,    swcf)
+   @assertEqual(1,    state%crop%swcf)
    @assertEqual(1,    state%crop%common%swrd)
    @assertEqual(0,    state%crop%common%swoxygen)
    @assertEqual(1,    state%crop%common%swdrought)

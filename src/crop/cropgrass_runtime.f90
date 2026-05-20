@@ -54,7 +54,7 @@
         cftb, chtb, cfeictb, rdtb, slatb, rgrlai, rlwtb, rfsetb,        &
         frtb, fltb, fstb, rdrrtb, rdrstb,                         &
         rdmax,                           &  ! rd/rdpot/swrd/swrdc/swdmi2rd retired
-        swcf, reltr,                                                     &  ! swgc/swdrought/swinter retired
+        reltr,                                                           &  ! swgc/swdrought/swinter/swcf retired
         cvl, cvr, cvs, q10, rmr, rml, rms, span, ssa, glaiex, glaiexpot, &
         lv, lvpot, lvage, lvagepot, sla, slapot, ilvold, ilvoldpot,     &
         twilt, wiltpoint, gwrt, siccaplai,                   &  ! cropstartact/endact/startpot/endpot retired
@@ -313,7 +313,7 @@
 ! --- end skip above initialization if crop parameters are read from *.END file
       endif
 
-      if (swcf.ne.3) then
+      if (state%crop%swcf.ne.3) then
         state%crop%common%cf = afgen (cftb,(2*magrs),rid)
         state%crop%common%ch = afgen (chtb,(2*magrs),rid)
       else
@@ -321,7 +321,7 @@
         cfeic     = afgen (cfeictb,(2*magrs),state%crop%lai)
         state%crop%common%ch        = afgen(chtb,(2*magrs),state%crop%lai)
       endif
-      if (swcf.eq.3) state%crop%fixed%cfeic = cfeic   ! [SS-GR-CROP A5.1]
+      if (state%crop%swcf.eq.3) state%crop%fixed%cfeic = cfeic   ! [SS-GR-CROP A5.1]
 
 ! --- initial storage on canopy
       if (state%crop%common%swinter.eq.3) then
@@ -1333,7 +1333,7 @@
         endif
 
 ! ---   set crop height and cropfactor
-        if (swcf.ne.3) then
+        if (state%crop%swcf.ne.3) then
           state%crop%common%cf = afgen (cftb,(2*magrs),rid)
           state%crop%common%ch = afgen (chtb,(2*magrs),rid)
         else
@@ -1341,7 +1341,7 @@
           cfeic = afgen (cfeictb,(2*magrs),state%crop%lai)
           state%crop%common%ch = afgen(chtb,(2*magrs),state%crop%lai)
         endif
-        if (swcf.eq.3) state%crop%fixed%cfeic = cfeic   ! [SS-GR-CROP A5.1]
+        if (state%crop%swcf.eq.3) state%crop%fixed%cfeic = cfeic   ! [SS-GR-CROP A5.1]
 
 ! ---   update canopy storage capacity
         if (state%crop%common%swinter.eq.3) then

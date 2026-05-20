@@ -32,7 +32,7 @@ contains
                             ! DEFERRED: kdif/kdir/gctb/swgc — radiation/crop factor config; Phase C3
                             gctb,                             &  ! kdif/kdir/swgc retired
                             ! DEFERRED: cftb/chtb/cfeictb/swcf/albedo/rsc/rsw — crop factor config; Phase C3
-                            cftb, chtb, cfeictb, swcf,       &  ! albedo/rsc/rsw retired
+                            cftb, chtb, cfeictb,             &  ! albedo/rsc/rsw/swcf retired
                             ! DEFERRED: rdtb/rdctb — root config; Phase C3; swrd/swdmi2rd/swrdc/rdi/rri/rdc retired
                             rdtb, rdctb,                                &
                             ! DEFERRED: swoxygen/swWrtNonox/aeratecrit/max_resp_factor — O2 stress config; Phase C3
@@ -82,8 +82,7 @@ contains
       state%crop%kdir = cfg%kdir
 
       state%crop%common%swgc = cfg%swgc
-      swcf = cfg%swcf
-      state%crop%swcf = swcf   ! [SS-GR-ATM A5.1] runtime dual-write
+      state%crop%swcf = cfg%swcf
       state%crop%common%swrd     = cfg%swrd
       state%crop%common%swdmi2rd = cfg%swdmi2rd
       state%crop%common%swrdc    = cfg%swrdc

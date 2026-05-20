@@ -15,12 +15,7 @@ subroutine test_cropwofost_init_basic_globals()
    use cropwofost_config_mod, only: cropwofost_config_t
    use cropwofost_init_mod,   only: cropwofost_init_from_config
    use swap_state_mod, only: swap_state_t
-   use variables, only: swcf, &  ! albedo/rsc/rsw retired
-                        ! swoxygen/hlim1/hlim2u/hlim2l/swWrtNonox/aeratecrit retired
-                        ! swdrought/hlim3h/hlim3l/hlim4/adcrh/adcrl retired
-                        ! swsalinity/saltmax/saltslope retired
-                        ! cofab/swrd/swdmi2rd/rdi/rri/rdc/relmf/swcompensate/swinter retired
-                        swpotrelmf
+   use variables, only: swpotrelmf  ! many globals retired
    type(cropwofost_config_t) :: cfg
    type(swap_state_t) :: state  ! [SS-GR-ATM A5.1] dual-write target
    real(real64) :: FraDeceasedLvToSoil
@@ -71,7 +66,7 @@ subroutine test_cropwofost_init_basic_globals()
    call cropwofost_init_from_config(cfg, ICROP, FraDeceasedLvToSoil, state)  ! [SS-GR-ATM A5.1]
 
    ! -- Verify globals --
-   @assertEqual(2,            swcf)
+   @assertEqual(2,            state%crop%swcf)
    @assertEqual(0.19_real64,  state%crop%common%albedo,  1.0e-12_real64)
    @assertEqual(207.0_real64, state%crop%common%rsc,     1.0e-12_real64)
    @assertEqual(0.0_real64,   state%crop%common%rsw,     1.0e-12_real64)

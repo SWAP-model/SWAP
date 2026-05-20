@@ -43,7 +43,7 @@ contains
       !   Retirement requires Phase C3 adapter rewrite (config_to_variables.f90 dual-writes).
       use variables, only: &
          ! ET / crop factor — DEFERRED Phase C3
-         swcf, cftb, chtb,                                     &  ! albedo/rsc/rsw retired
+         cftb, chtb,                                           &  ! albedo/rsc/rsw/swcf retired
          ! Development — DEFERRED Phase C3; tsumea/tsumam retired
          idsl, dlo, dlc, dtsmtb,                                            &
          ! Vernalisation — DEFERRED Phase C3
@@ -135,9 +135,8 @@ contains
       ! ----------------------------------------------------------------
 
       ! Part 1: crop factor / crop height (readwofost lines 2588-2637)
-      swcf = cfg%crop_factor%swcf
-      state%crop%swcf = swcf   ! [SS-GR-ATM A5.1] runtime dual-write
-      if (swcf == 1) then
+      state%crop%swcf = cfg%crop_factor%swcf
+      if (state%crop%swcf == 1) then
          if (allocated(cfg%crop_factor%cftb)) then
             block
                integer :: nr, j
@@ -155,7 +154,7 @@ contains
          state%crop%common%albedo = 0.23_real64
          state%crop%common%rsc    = 70.0_real64
          state%crop%common%rsw    = 0.0_real64
-      else if (swcf == 2) then
+      else if (state%crop%swcf == 2) then
          state%crop%common%albedo = cfg%crop_factor%albedo
          state%crop%common%rsc    = cfg%crop_factor%rsc
          state%crop%common%rsw    = cfg%crop_factor%rsw

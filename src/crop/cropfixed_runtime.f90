@@ -30,7 +30,7 @@
 ! ----------------------------------------------------------------------
       use variables, only: magrs, &               ! idev retired
                            max_resp_factor,                        &  ! rd/rdpot/swrd retired
-                           swcf,                                   &  ! swdmi2rd/swgc/swdrought/swinter retired
+                           ! swdmi2rd/swgc/swdrought/swinter/swcf retired
                            rdmax,                                  &  ! tbase/tsumea/tsumam retired
                            siccaplai, w_root_ss, wiltpoint,   &
                            twilt, flhydrlift, gc, cfeic,                 &

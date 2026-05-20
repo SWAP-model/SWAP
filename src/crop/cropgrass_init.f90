@@ -35,7 +35,7 @@ contains
       !   Retirement requires Phase C3 adapter rewrite (config_to_variables.f90 dual-writes).
       use variables, only: &
          ! ET-related — DEFERRED Phase C3
-         swcf, cftb, chtb,                                     &  ! albedo/rsc/rsw retired
+         cftb, chtb,                                           &  ! albedo/rsc/rsw/swcf retired
          ! Interception — DEFERRED Phase C3; swinter/cofab retired
          ! Crop state — DEFERRED Phase C3
          tdwi, laiem, rgrlai,                                                 &
@@ -152,8 +152,7 @@ contains
 
       ! Part 1: crop factor / crop height (readgrass lines 3508-3557)
       ! Legacy: swcf=1 → cftb; swcf=2 → chtb; swcf=3 guarded above.
-      swcf = cfg%swcf
-      state%crop%swcf = swcf   ! [SS-GR-ATM A5.1] runtime dual-write
+      state%crop%swcf = cfg%swcf
       if (cfg%swcf == 1) then
          ! ETref standard defaults for albedo/rsc/rsw
          state%crop%common%albedo = 0.23d0
