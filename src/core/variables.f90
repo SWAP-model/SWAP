@@ -350,7 +350,7 @@
       integer   seqgrazmowpot(366) ! Sequence of grass grazing and mowing, potential crop
       integer   swcf               ! Switch for simple crop: 1 = crop factor is input; 2 = crop height is input
       integer   swdrought          ! Switch for drought stress (1 = Feddes et al., 1978; 2 = De Jong van Lier et al., 2008)
-      integer   swgc               ! Switch for simple crop: 1 = leaf area index is input; 2 = soil cover fraction is input
+      ! [GR-CROPWS] swgc retired — see state%crop%common%swgc
       ! [SS-GR-FINAL D1] swjarvis retired — deprecated switch; 0 consumers
       integer   swcompensate       ! Switch for method of compensation of root water uptake stress
       real(8)   alphacrit          ! Critical stress index for compensation of root water uptake (-)

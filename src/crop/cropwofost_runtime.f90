@@ -50,7 +50,7 @@
 ! ----------------------------------------------------------------------
       use variables, only: &                                            ! [SS-GR-CROPRT B7] [GR-CROPWS B5]
         macp, magrs, rdmax, &  ! icrop/dvs/rd/rdpot/dvsend retired
-        swdrought, swcf, swgc, swinter,       &  ! swrd/swdmi2rd/swrdc retired
+        swdrought, swcf, swinter,             &  ! swrd/swdmi2rd/swrdc/swgc retired
         swbulb, swinco, laiem, laiexp, laiexppot, laimax,    &  ! lai/laipot retired
         cfeic, daycrop, daylp,  &  ! tsum/tbase/tsumea/tsumam retired
         siccaplai, cropend,                               &  ! [GR-CROPWS B5] cropstart removed (→state%crop%common%cropstart)

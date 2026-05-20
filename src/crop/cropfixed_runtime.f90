@@ -30,7 +30,7 @@
 ! ----------------------------------------------------------------------
       use variables, only: magrs, &               ! idev retired
                            max_resp_factor,                        &  ! rd/rdpot/swrd retired
-                           swgc, swcf, swinter, swdrought,         &  ! swdmi2rd retired
+                           swcf, swinter, swdrought,               &  ! swdmi2rd/swgc retired
                            rdmax,                                  &  ! tbase/tsumea/tsumam retired
                            siccaplai, w_root_ss, wiltpoint,   &
                            twilt, flhydrlift, gc, cfeic,                 &
@@ -126,7 +126,7 @@
 
 ! --- initial lai or sc
       state%crop%lai = afgen (gctb,(2*magrs),state%crop%common%dvs)               ! [GR-CROPWS B1] dvs → state%crop%common%dvs
-      if (swgc.eq.2) then
+      if (state%crop%common%swgc.eq.2) then
         gc  = state%crop%lai
         state%crop%lai = state%crop%lai*3.0d0
       endif
@@ -206,7 +206,7 @@
 
 ! --- leaf area index or soil cover fraction
       state%crop%lai = afgen (gctb,(2*magrs),state%crop%common%dvs)               ! [GR-CROPWS B1]
-      if (swgc.eq.2) then
+      if (state%crop%common%swgc.eq.2) then
         gc  = state%crop%lai
         state%crop%lai = state%crop%lai*3.0d0
       endif

@@ -54,7 +54,7 @@
         cftb, chtb, cfeictb, rdtb, slatb, rgrlai, rlwtb, rfsetb,        &
         frtb, fltb, fstb, rdrrtb, rdrstb,                         &
         rdmax,                           &  ! rd/rdpot/swrd/swrdc/swdmi2rd retired
-        swdrought, swcf, swgc, swinter, reltr,                           &
+        swdrought, swcf, swinter, reltr,                                 &  ! swgc retired (not read)
         cvl, cvr, cvs, q10, rmr, rml, rms, span, ssa, glaiex, glaiexpot, &
         lv, lvpot, lvage, lvagepot, sla, slapot, ilvold, ilvoldpot,     &
         twilt, wiltpoint, gwrt, siccaplai,                   &  ! cropstartact/endact/startpot/endpot retired

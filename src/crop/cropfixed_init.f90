@@ -30,7 +30,7 @@ contains
       use variables, only: &
                             ! idev/tsumea/tsumam/tbase retired — state%crop%common
                             ! DEFERRED: kdif/kdir/gctb/swgc — radiation/crop factor config; Phase C3
-                            gctb, swgc,                       &  ! kdif/kdir retired
+                            gctb,                             &  ! kdif/kdir/swgc retired
                             ! DEFERRED: cftb/chtb/cfeictb/swcf/albedo/rsc/rsw — crop factor config; Phase C3
                             cftb, chtb, cfeictb, swcf, rsw,  &  ! albedo/rsc retired
                             ! DEFERRED: rdtb/rdctb — root config; Phase C3; swrd/swdmi2rd/swrdc/rdi/rri/rdc retired
@@ -83,7 +83,7 @@ contains
       state%crop%kdif = cfg%kdif
       state%crop%kdir = cfg%kdir
 
-      swgc = cfg%swgc
+      state%crop%common%swgc = cfg%swgc
       swcf = cfg%swcf
       state%crop%swcf = swcf   ! [SS-GR-ATM A5.1] runtime dual-write
       state%crop%common%swrd     = cfg%swrd

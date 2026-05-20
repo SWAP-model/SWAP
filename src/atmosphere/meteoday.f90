@@ -566,7 +566,7 @@ contains
         daylp, tmn, tmx, rsw, difpp,                       &  ! B24 DEFERRED — ET calculation params; albedo/rsc retired
         dsinbe, atmtr, rsoil,                              &  ! B24 DEFERRED — ET calculation params
         swinter,                                           &  ! B24 DEFERRED — overwritten by crop init (not pure config%meteo)
-        croptype, swgc, gc,                                &  ! B24 DEFERRED — crop/config fields
+        croptype, gc,                                      &  ! B24 DEFERRED — crop/config fields; swgc retired
         ! [GR-CROP C3] icrop/flCropCalendar → state%crop%common%X
         flCropHarvest, cfevappond, flco2,                  &  ! B24 DEFERRED; fco2tra retired
         siccaptb,                                          &  ! B24 DEFERRED — interception table
@@ -736,7 +736,7 @@ contains
       if (swinter .eq. 3) then
         ! Set parameter values
         if (config%meteo%swmetdetail.eq.0) then  ! if swmetdetail = 0, siccapact is set in cropgrowth module
-          if (croptype(state%crop%common%icrop).eq.1 .and. swgc.eq.2) then   ! [GR-CROP C3]
+          if (croptype(state%crop%common%icrop).eq.1 .and. state%crop%common%swgc.eq.2) then   ! [GR-CROP C3]
             gctp  = gc
           else
             gctp  = 1.0d0 - dexp(-1.0d0*state%crop%kdir*state%crop%kdif*state%crop%lai)
@@ -747,9 +747,9 @@ contains
           dttp = 1.0d0  ! value of 1 d required for the daily meteo option
         elseif (config%meteo%swmetdetail.eq.1) then
           state%atmosphere%siccapact = afgen(siccaptb,(2*magrs),tc_t)   ! [SS-GR-ATM B24] direct state write
-          if (croptype(state%crop%common%icrop).eq.1 .and. swgc.eq.2) then
+          if (croptype(state%crop%common%icrop).eq.1 .and. state%crop%common%swgc.eq.2) then
             gctp  = gc
-          elseif (croptype(state%crop%common%icrop).eq.1 .and. swgc.eq.1) then
+          elseif (croptype(state%crop%common%icrop).eq.1 .and. state%crop%common%swgc.eq.1) then
             gctp  = 1.0d0 - dexp(-1.0d0*state%crop%kdir*state%crop%kdif*state%crop%lai)
           endif
           if (gctp .lt. 1.0d-5) then
@@ -823,7 +823,7 @@ contains
 
       ! Alternative for peva (simple model, soil cover fraction specified)
       if (state%crop%common%flCropCalendar .and. .not.flCropHarvest) then   ! [GR-CROP C3]
-        if (croptype(state%crop%common%icrop).eq.1 .and. swgc.eq.2) then
+        if (croptype(state%crop%common%icrop).eq.1 .and. state%crop%common%swgc.eq.2) then
           at_peva = (1.0d0-gc)*state%crop%es0*0.1d0
           if (state%crop%swcf.ne.3 .or. (config%meteo%swmetdetail.eq.0 .and. swinter.ne.3)) then
             at_peva = (1.0d0-wfrac)*at_peva
