@@ -112,7 +112,7 @@ subroutine test_cropwofost_init_cumdens_linear_ramp()
    use cropwofost_config_mod, only: cropwofost_config_t
    use cropwofost_init_mod,   only: cropwofost_init_from_config
    use swap_state_mod, only: swap_state_t
-   use variables, only: cumdens  ! swdrought retired
+   ! cumdens/swdrought retired — read via state%crop%common
    type(cropwofost_config_t) :: cfg
    type(swap_state_t) :: state  ! [SS-GR-ATM A5.1] dual-write target
    real(real64) :: FraDeceasedLvToSoil
@@ -152,14 +152,14 @@ subroutine test_cropwofost_init_cumdens_linear_ramp()
 
    @assertEqual(1, state%crop%common%swdrought)
    ! cumdens(1)=depth at index 1 = 0.0; cumdens(2)=cumulative density at 0.0 = 0.0
-   @assertEqual(0.0_real64, cumdens(1), 1.0e-10_real64)
-   @assertEqual(0.0_real64, cumdens(2), 1.0e-10_real64)
+   @assertEqual(0.0_real64, state%crop%common%cumdens(1), 1.0e-10_real64)
+   @assertEqual(0.0_real64, state%crop%common%cumdens(2), 1.0e-10_real64)
    ! cumdens(201)=depth at index 101 = 1.0; cumdens(202)=normalized density = 1.0
-   @assertEqual(1.0_real64, cumdens(201), 1.0e-10_real64)
-   @assertEqual(1.0_real64, cumdens(202), 1.0e-10_real64)
+   @assertEqual(1.0_real64, state%crop%common%cumdens(201), 1.0e-10_real64)
+   @assertEqual(1.0_real64, state%crop%common%cumdens(202), 1.0e-10_real64)
    ! cumdens at depth=0.5 (index 51): depth stored at cumdens(101), normalized at cumdens(102)
-   @assertEqual(0.5_real64, cumdens(101), 1.0e-10_real64)
-   @assertEqual(0.75_real64, cumdens(102), 1.0e-6_real64)
+   @assertEqual(0.5_real64, state%crop%common%cumdens(101), 1.0e-10_real64)
+   @assertEqual(0.75_real64, state%crop%common%cumdens(102), 1.0e-6_real64)
 end subroutine
 
 @test

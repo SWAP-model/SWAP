@@ -64,7 +64,7 @@ subroutine test_cropfixed_init_cumdens_constant_density()
    use cropfixed_init_mod, only: cropfixed_init_from_config
    use cropfixed_config_mod, only: cropfixed_config_t
    use swap_state_mod, only: swap_state_t
-   use variables, only: cumdens
+   ! cumdens retired — read via state%crop%common%cumdens
    type(cropfixed_config_t) :: cfg
    type(swap_state_t) :: state  ! [SS-GR-ATM A5.1] dual-write target
    integer :: lcc_out
@@ -80,11 +80,11 @@ subroutine test_cropfixed_init_cumdens_constant_density()
    cfg%rdctb = [0.0d0, 1.0d0, 1.0d0, 1.0d0]
    call cropfixed_init_from_config(cfg, 1, lcc_out, state)  ! [SS-GR-ATM A5.1] state added
    ! cumdens(1) = 0.0 (depth at surface)
-   @assertEqual(0.0d0,  cumdens(1),   1.0d-12)
+   @assertEqual(0.0d0,  state%crop%common%cumdens(1),   1.0d-12)
    ! cumdens(2) = 0.0 (storage at surface, set explicitly)
-   @assertEqual(0.0d0,  cumdens(2),   1.0d-12)
+   @assertEqual(0.0d0,  state%crop%common%cumdens(2),   1.0d-12)
    ! cumdens(202) = 1.0 (normalized total)
-   @assertEqual(1.0d0,  cumdens(202), 1.0d-12)
+   @assertEqual(1.0d0,  state%crop%common%cumdens(202), 1.0d-12)
    ! Mid-point (i=102, depth=0.5) should be ~0.5 by symmetry of constant density.
-   @assertEqual(0.5d0,  cumdens(102), 1.0d-2)
+   @assertEqual(0.5d0,  state%crop%common%cumdens(102), 1.0d-2)
 end subroutine

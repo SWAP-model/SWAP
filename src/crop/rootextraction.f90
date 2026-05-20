@@ -44,7 +44,7 @@ module rootextraction_mod
                            ! DEFERRED: adcrh/adcrl/aeratecrit/alphacrit — O2/drought config; Phase C3
                            ! adcrh/adcrl/aeratecrit/alphacrit retired
                            ! DEFERRED: botcom/criterhr/cumdens/dcritrtz/flhydrlift — soil/crop config; Phase C3
-                           botcom, criterhr, cumdens, flhydrlift,           &  ! dcritrtz retired
+                           botcom, criterhr, flhydrlift,                   &  ! dcritrtz/cumdens retired
                            ! DEFERRED: hlim1/hlim2l/hlim2u/hlim3h/hlim3l/hlim4 — drought stress limits; Phase C3
                            ! hlim1/hlim2l/hlim2u/hlim3h/hlim3l/hlim4 retired
                            ! DEFERRED: kroot/kstem/logf/noddrz/oxygenintercept — crop/log globals; Phase C3
@@ -125,7 +125,7 @@ module rootextraction_mod
         do node = 1,noddrz
           top = abs(state%mesh%ztopcp(node) / rd_noddrz)  ! [GR-BH C7]
           bot = abs(state%mesh%zbotcp(node) / rd_noddrz)  ! [GR-BH C7]
-          cw_qrot(node) = (afgen(cumdens,202,bot)-afgen(cumdens,202,top))* at_ptra
+          cw_qrot(node) = (afgen(state%crop%common%cumdens,202,bot)-afgen(state%crop%common%cumdens,202,top))* at_ptra
         enddo
 
 ! --- calculating critical point hlim3 according to feddes
@@ -364,7 +364,7 @@ module rootextraction_mod
       use swap_array_dimensions, only: macp
       use variables, only: &                                               ! [SS-GR-FINAL B6] residuals — all DEFERRED
                            ! adcrh/adcrl/aeratecrit/alphacrit retired  ! DEFERRED: crop stress config; Phase C3
-                           botcom, criterhr, cumdens, flhydrlift,           &  ! dcritrtz retired  ! DEFERRED: soil/crop config
+                           botcom, criterhr, flhydrlift,                   &  ! dcritrtz/cumdens retired  ! DEFERRED: soil/crop config
                            ! hlim1/hlim2l/hlim2u/hlim3h/hlim3l/hlim4 retired  ! DEFERRED: drought limits
                            kroot, kstem, logf, noddrz, oxygenintercept,   &  ! DEFERRED: crop/log globals
                            oxygenslope, rdctb, rootcoefa, rooteff, &  ! rd retired  ! DEFERRED: active crop state
@@ -735,7 +735,7 @@ module rootextraction_mod
       use swap_array_dimensions, only: macp
       use variables, only: &                                               ! [SS-GR-FINAL B6] residuals — all DEFERRED
                            ! adcrh/adcrl/aeratecrit/alphacrit retired  ! DEFERRED: crop stress config; Phase C3
-                           botcom, criterhr, cumdens, flhydrlift,           &  ! dcritrtz retired  ! DEFERRED: soil/crop config
+                           botcom, criterhr, flhydrlift,                   &  ! dcritrtz/cumdens retired  ! DEFERRED: soil/crop config
                            ! hlim1/hlim2l/hlim2u/hlim3h/hlim3l/hlim4 retired  ! DEFERRED: drought limits
                            kroot, kstem, logf, noddrz, oxygenintercept,   &  ! DEFERRED: crop/log globals
                            oxygenslope, rdctb, rootcoefa, rooteff, &  ! rd retired  ! DEFERRED: active crop state

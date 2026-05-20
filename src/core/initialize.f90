@@ -616,7 +616,6 @@
       avevaptb           = 0.0d0 
       avprectb           = 0.0d0 
       gctb               = 0.0d0 
-      cumdens            = 0.0d0 
       cuptgraz           = 0.0d0 
       cuptgrazpot        = 0.0d0 
       cvl                = 0.0d0 

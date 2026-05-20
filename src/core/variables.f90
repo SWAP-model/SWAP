@@ -386,7 +386,7 @@
       ! [GR-CROP-DVS] cofab retired — see state%crop%cofab
       real(8)   cropend(macrop)    ! Array with crop end dates
       real(8)   cropstart(macrop)  ! Array with crop start dates
-      real(8)   cumdens(202)       ! Cumulative root density as function of relative soil depth (-)
+      ! [GR-CROPWS] cumdens retired — see state%crop%common%cumdens
       real(8)   cuptgraz           ! Cumulative dry weight of grass consumed with animal grazing for actual run (kg/ha)
       real(8)   cuptgrazpot        ! Cumulative dry weight of grass consumed with animal grazing for potential run (kg/ha)
       real(8)   cvl                ! Efficiency of assimilate conversion into leaves (kg/kg)

@@ -54,8 +54,7 @@ contains
          ! Death rates — DEFERRED Phase C3
          perdl, rdrrtb, rdrstb,                                               &
          ! Root depth and density — DEFERRED Phase C3; swrd/swdmi2rd/swrdc/rdi/rri/rdc retired
-         rdctb, rdtb, rlwtb, wrtmax,                         &
-         cumdens,                                                             &
+         rdctb, rdtb, rlwtb, wrtmax,                         &  ! cumdens retired
          ! Oxygen stress — DEFERRED Phase C3; swoxygen retired
          ! swWrtNonox/aeratecrit retired
          ! hlim1/hlim2u/hlim2l retired
@@ -368,25 +367,24 @@ contains
 
          ! Copy depths to odd cumdens indices
          do i = 1, 202, 2
-            cumdens(i) = rootdis(i)
+            state%crop%common%cumdens(i) = rootdis(i)
          end do
 
          ! Trapezoidal cumulative integration
          sum_val    = 0.0d0
-         cumdens(2) = 0.0d0
+         state%crop%common%cumdens(2) = 0.0d0
          do i = 4, 202, 2
-            sum_val    = sum_val + (rootdis(i-2) + rootdis(i)) * 0.5d0 &
-                                 * (cumdens(i-1) - cumdens(i-3))
-            cumdens(i) = sum_val
+            sum_val = sum_val + (rootdis(i-2) + rootdis(i)) * 0.5d0 &
+                              * (state%crop%common%cumdens(i-1) - state%crop%common%cumdens(i-3))
+            state%crop%common%cumdens(i) = sum_val
          end do
 
          ! Normalize to 1
          if (sum_val > 0.0d0) then
             do i = 2, 202, 2
-               cumdens(i) = cumdens(i) / sum_val
+               state%crop%common%cumdens(i) = state%crop%common%cumdens(i) / sum_val
             end do
          end if
-         state%crop%common%cumdens = cumdens   ! [SS-GR-CROPRT A5]
       end if
 
    end subroutine cropgrass_init_from_config

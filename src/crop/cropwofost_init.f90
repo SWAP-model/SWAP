@@ -70,8 +70,7 @@ contains
          ! swcompensate/swstressor retired
          ! Interception — DEFERRED Phase C3; swinter/cofab retired
          ! Root depth — DEFERRED Phase C3
-         rdctb, rdtb, rlwtb, wrtmax,                                          &  ! swrd/swdmi2rd/swrdc retired
-         cumdens,                                                             &
+         rdctb, rdtb, rlwtb, wrtmax,                                          &  ! swrd/swdmi2rd/swrdc/cumdens retired
          ! Harvest — DEFERRED Phase C3; dvsend/swharv retired
          swpotrelmf,                                                          &  ! relmf retired
          ! Irrigation schedule — DEFERRED Phase C3
@@ -448,25 +447,24 @@ contains
 
          ! Copy depths to odd cumdens indices
          do i = 1, 202, 2
-            cumdens(i) = rootdis(i)
+            state%crop%common%cumdens(i) = rootdis(i)
          end do
 
          ! Trapezoidal cumulative integration into even indices
          sum_dens   = 0.0d0
-         cumdens(2) = 0.0d0
+         state%crop%common%cumdens(2) = 0.0d0
          do i = 4, 202, 2
             sum_dens = sum_dens + (rootdis(i-2) + rootdis(i)) * 0.5d0 &
-                                * (cumdens(i-1) - cumdens(i-3))
-            cumdens(i) = sum_dens
+                                * (state%crop%common%cumdens(i-1) - state%crop%common%cumdens(i-3))
+            state%crop%common%cumdens(i) = sum_dens
          end do
 
          ! Normalize to 1
          if (sum_dens > 0.0d0) then
             do i = 2, 202, 2
-               cumdens(i) = cumdens(i) / sum_dens
+               state%crop%common%cumdens(i) = state%crop%common%cumdens(i) / sum_dens
             end do
          end if
-         state%crop%common%cumdens = cumdens   ! [SS-GR-CROPRT A5]
       end if
 
       ! ----------------------------------------------------------------

@@ -59,8 +59,7 @@
         icrop, flCropCalendar, cropstart, cropend, flCropEmergence,         &
         flCropHarvest, flCropReadFile, flCropPrep, flCropSow, flCropGerm,   &
         swinco, croptype, daycrop,         &  ! tsum/rd/lai/rdpot/wso/wst/wlv/cwdmpot/cwdm retired
-        tmn, rad,                                         &  ! wrt retired
-        cumdens,                                               &
+        tmn, rad,                                         &  ! wrt/cumdens retired
         eff, amaxtb, tmpftb, tmnftb, swcrp,                                &  ! dvsend/swdrought retired
         remoc, pld, q10,                    &  ! swharv retired; swbulb removed (→state%crop%wofost%swbulb)
         flCropNut, nlue, anlv, anst, nmxlv, nmaxlv, nmaxst,               &
@@ -167,7 +166,6 @@
           state%crop%common%PrepDelay     = PrepDelay
           state%crop%common%SowDelay      = SowDelay
           state%crop%common%noddrz        = noddrz
-          state%crop%common%cumdens       = cumdens
           flCropReadFile  = .true.
           state%crop%common%flCropReadFile = flCropReadFile   ! [SS-GR-CROPRT A5]
           flCropEmergence = .true.

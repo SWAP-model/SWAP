@@ -4,7 +4,7 @@ subroutine test_cropgrass_init_writes_kdif()
    use cropgrass_init_mod, only: cropgrass_init_from_config
    use cropgrass_config_mod, only: cropgrass_config_t
    use swap_state_mod, only: swap_state_t
-   use variables, only: cumdens  ! kdif/kdir/swcompensate/swoxygen/swdrought retired
+   ! cumdens/kdif/kdir/swcompensate/swoxygen/swdrought retired
    implicit none
    type(cropgrass_config_t) :: cfg
    type(swap_state_t) :: state  ! [SS-GR-ATM A5.1] dual-write target
@@ -47,7 +47,7 @@ subroutine test_cropgrass_init_cumdens_linear_decline()
    use cropgrass_init_mod, only: cropgrass_init_from_config
    use cropgrass_config_mod, only: cropgrass_config_t
    use swap_state_mod, only: swap_state_t
-   use variables, only: cumdens
+   ! cumdens retired — read via state%crop%common%cumdens
    implicit none
    type(cropgrass_config_t) :: cfg
    type(swap_state_t) :: state  ! [SS-GR-ATM A5.1] dual-write target
@@ -70,8 +70,8 @@ subroutine test_cropgrass_init_cumdens_linear_decline()
 
    call cropgrass_init_from_config(cfg, 1, 0.0d0, 0.0d0, state)  ! [SS-BMI2 Task 4] [SS-GR-ATM A5.1]
 
-   @assertEqual(0.0d0, cumdens(2),   1.0d-6)
-   @assertEqual(1.0d0, cumdens(202), 1.0d-6)
+   @assertEqual(0.0d0, state%crop%common%cumdens(2),   1.0d-6)
+   @assertEqual(1.0d0, state%crop%common%cumdens(202), 1.0d-6)
 end subroutine test_cropgrass_init_cumdens_linear_decline
 
 @test

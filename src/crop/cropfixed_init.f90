@@ -36,19 +36,7 @@ contains
                             ! DEFERRED: rdtb/rdctb — root config; Phase C3; swrd/swdmi2rd/swrdc/rdi/rri/rdc retired
                             rdtb, rdctb,                                &
                             ! DEFERRED: swoxygen/swWrtNonox/aeratecrit/max_resp_factor — O2 stress config; Phase C3
-                            max_resp_factor,                              &  ! swoxygen/swWrtNonox/aeratecrit retired
-                            ! DEFERRED: hlim1/hlim2u/hlim2l — drought stress limits; Phase C3
-                            ! hlim1/hlim2u/hlim2l retired
-                            ! DEFERRED: swdrought/hlim3h/hlim3l/hlim4/adcrh/adcrl — drought config; Phase C3
-                            ! hlim3h/hlim3l/hlim4/adcrh/adcrl/swdrought retired
-                            ! saltmax/saltslope/salthead/swsalinity retired — state%crop%common
-                            ! DEFERRED: swcompensate/swstressor/alphacrit/dcritrtz — compensation config; Phase C3
-                            ! swcompensate/swstressor/alphacrit/dcritrtz retired
-                            ! DEFERRED: swinter/cofab — interception config; Phase C3
-                            ! swinter/cofab retired
-                            ! dvsend/swharv/schedule retired
-                            ! DEFERRED: cumdens — root density cumulative; Phase C3
-                            cumdens
+                            max_resp_factor    ! many globals retired — swoxygen/swWrtNonox/aeratecrit/hlim*/adcr*/saltmax/saltslope/salthead/swcompensate/swstressor/alphacrit/dcritrtz/swsalinity/swinter/cofab/dvsend/swharv/schedule/cumdens
       use array_utils,  only: afgen
       use error_mod,    only: fatalerr_collected
       use swap_state_mod, only: swap_state_t
@@ -162,19 +150,18 @@ contains
             rootdis(i*2 + 2) = afgen(rdctb, 22, depth)
          end do
          do i = 1, 202, 2
-            cumdens(i) = rootdis(i)
+            state%crop%common%cumdens(i) = rootdis(i)
          end do
          sum = 0.0_real64
-         cumdens(2) = 0.0_real64
+         state%crop%common%cumdens(2) = 0.0_real64
          do i = 4, 202, 2
             sum = sum + (rootdis(i-2) + rootdis(i)) * 0.5_real64 &
-                      * (cumdens(i-1) - cumdens(i-3))
-            cumdens(i) = sum
+                      * (state%crop%common%cumdens(i-1) - state%crop%common%cumdens(i-3))
+            state%crop%common%cumdens(i) = sum
          end do
          do i = 2, 202, 2
-            cumdens(i) = cumdens(i) / sum
+            state%crop%common%cumdens(i) = state%crop%common%cumdens(i) / sum
          end do
-         state%crop%common%cumdens = cumdens   ! [SS-GR-CROPRT A5]
       end if
    end subroutine cropfixed_init_from_config
 

@@ -108,8 +108,8 @@ contains
                            ! DEFERRED: SRL/swrootradius/dry_mat_cont_roots/air_filled_root_por/spec_weight_root_tissue/var_a/root_radiusO2 — crop config; Phase C3
                            SRL, swrootradius, dry_mat_cont_roots, &
                            air_filled_root_por, spec_weight_root_tissue, var_a, root_radiusO2, &
-                           ! DEFERRED: q10/rmr/rfsetb/rid/rdctb/w_root_ss/cumdens — active crop state; Phase C3; dvs/wrt/rd retired
-                           q10, rmr, rfsetb, rid, rdctb, w_root_ss, cumdens, &
+                           ! DEFERRED: q10/rmr/rfsetb/rid/rdctb/w_root_ss — active crop state; Phase C3; dvs/wrt/rd/cumdens retired
+                           q10, rmr, rfsetb, rid, rdctb, w_root_ss, &
                            ! DEFERRED: tsoil — heat staging buffer; tsoil migration pending
                            tsoil, &
                            ! DEFERRED: c_mroot/f_senes/q10_root/q10_microbial/shape_factor_rootr/specific_resp_humus — O2 config; Phase C3
@@ -262,7 +262,7 @@ contains
         top2 = top1 + 1.0d-6 ! define 'infinite' thin layer; fraction
         
         w_root_z0 = 1.0d6*                                   & ! rescale fraction to 1 (top 2)
-     &   (afgen(cumdens,202,top2)-afgen(cumdens,202,top1)) * & ! fraction
+     &   (afgen(state%crop%common%cumdens,202,top2)-afgen(state%crop%common%cumdens,202,top1)) * & ! fraction
      &            (state%crop%wofost%wrt*0.0001d0*(1.0d0/(0.01d0*state%crop%common%rd)))           ! wrt kg/ha --> kg/m2; state%crop%common%rd cm -> m
       endif
 
