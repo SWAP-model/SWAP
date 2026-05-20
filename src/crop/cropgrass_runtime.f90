@@ -54,7 +54,7 @@
         cftb, chtb, cfeictb, rdtb, slatb, rgrlai, rlwtb, rfsetb,        &
         frtb, fltb, fstb, rdrrtb, rdrstb,                         &
         rdmax,                           &  ! rd/rdpot/swrd/swrdc/swdmi2rd retired
-        swdrought, swcf, swinter, reltr,                                 &  ! swgc retired (not read)
+        swcf, swinter, reltr,                                            &  ! swgc/swdrought retired
         cvl, cvr, cvs, q10, rmr, rml, rms, span, ssa, glaiex, glaiexpot, &
         lv, lvpot, lvage, lvagepot, sla, slapot, ilvold, ilvoldpot,     &
         twilt, wiltpoint, gwrt, siccaplai,                   &  ! cropstartact/endact/startpot/endpot retired
@@ -330,7 +330,7 @@
 
 ! --- initialize matric flux potential (SS-CRP C-2.5: hroot/hleaf/mfluxtable
 !     init moved to CropGrowth dispatcher which has access to state).
-      if (swdrought .eq. 2) then
+      if (state%crop%common%swdrought .eq. 2) then
         if (swhydrlift .eq. 1) then
           flhydrlift = .true.
         else

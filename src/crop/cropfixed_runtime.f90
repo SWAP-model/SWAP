@@ -30,7 +30,7 @@
 ! ----------------------------------------------------------------------
       use variables, only: magrs, &               ! idev retired
                            max_resp_factor,                        &  ! rd/rdpot/swrd retired
-                           swcf, swinter, swdrought,               &  ! swdmi2rd/swgc retired
+                           swcf, swinter,                          &  ! swdmi2rd/swgc/swdrought retired
                            rdmax,                                  &  ! tbase/tsumea/tsumam retired
                            siccaplai, w_root_ss, wiltpoint,   &
                            twilt, flhydrlift, gc, cfeic,                 &
@@ -152,7 +152,7 @@
 
 ! --- initialize matric flux potential (SS-CRP C-2.5: hroot/hleaf/mfluxtable
 !     init moved to CropGrowth dispatcher which has access to state).
-      if (swdrought .eq. 2) then
+      if (state%crop%common%swdrought .eq. 2) then
         if (swhydrlift .eq. 1) then
           flhydrlift = .true.
         else

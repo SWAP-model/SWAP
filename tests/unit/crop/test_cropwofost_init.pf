@@ -17,7 +17,7 @@ subroutine test_cropwofost_init_basic_globals()
    use swap_state_mod, only: swap_state_t
    use variables, only: swcf, rsw, &  ! albedo/rsc retired
                         hlim1, hlim2u, hlim2l, swWrtNonox, aeratecrit, &  ! swoxygen retired
-                        swdrought, hlim3h, hlim3l, hlim4, adcrh, adcrl, &
+                        hlim3h, hlim3l, hlim4, adcrh, adcrl, &  ! swdrought retired
                         saltmax, saltslope, &  ! swsalinity retired
                         swinter, &  ! cofab/swrd/swdmi2rd/rdi/rri/rdc/relmf/swcompensate retired
                         swpotrelmf
@@ -81,7 +81,7 @@ subroutine test_cropwofost_init_basic_globals()
    @assertEqual(-25.0_real64, hlim2l,  1.0e-12_real64)
    @assertEqual(1,            swWrtNonox)
    @assertEqual(0.5_real64,   aeratecrit, 1.0e-12_real64)
-   @assertEqual(1,            swdrought)
+   @assertEqual(1,            state%crop%common%swdrought)
    @assertEqual(-300.0_real64,  hlim3h, 1.0e-12_real64)
    @assertEqual(-500.0_real64,  hlim3l, 1.0e-12_real64)
    @assertEqual(-10000.0_real64,hlim4,  1.0e-12_real64)
@@ -117,7 +117,7 @@ subroutine test_cropwofost_init_cumdens_linear_ramp()
    use cropwofost_config_mod, only: cropwofost_config_t
    use cropwofost_init_mod,   only: cropwofost_init_from_config
    use swap_state_mod, only: swap_state_t
-   use variables, only: cumdens, swdrought
+   use variables, only: cumdens  ! swdrought retired
    type(cropwofost_config_t) :: cfg
    type(swap_state_t) :: state  ! [SS-GR-ATM A5.1] dual-write target
    real(real64) :: FraDeceasedLvToSoil
@@ -155,7 +155,7 @@ subroutine test_cropwofost_init_cumdens_linear_ramp()
 
    call cropwofost_init_from_config(cfg, ICROP, FraDeceasedLvToSoil, state)  ! [SS-GR-ATM A5.1]
 
-   @assertEqual(1, swdrought)
+   @assertEqual(1, state%crop%common%swdrought)
    ! cumdens(1)=depth at index 1 = 0.0; cumdens(2)=cumulative density at 0.0 = 0.0
    @assertEqual(0.0_real64, cumdens(1), 1.0e-10_real64)
    @assertEqual(0.0_real64, cumdens(2), 1.0e-10_real64)

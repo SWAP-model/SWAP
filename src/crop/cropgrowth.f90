@@ -61,7 +61,7 @@
         swinco, croptype, daycrop,         &  ! tsum/rd/lai/rdpot/wso/wst/wlv/cwdmpot/cwdm retired
         tmn, rad,                                         &  ! wrt retired
         cumdens,                                               &
-        eff, amaxtb, tmpftb, tmnftb, swdrought, swcrp,                     &  ! dvsend retired
+        eff, amaxtb, tmpftb, tmnftb, swcrp,                                &  ! dvsend/swdrought retired
         remoc, pld, q10,                    &  ! swharv retired; swbulb removed (→state%crop%wofost%swbulb)
         flCropNut, nlue, anlv, anst, nmxlv, nmaxlv, nmaxst,               &
         nmaxrt, lrnr, lsnr, nni, rnflv, rnfst, frnx, fstr, flHarvestDay,  &
@@ -350,7 +350,7 @@
           ! SS-CRP Phase 2 C-2.5: init JvL state directly (legacy globals retired).
           ! CropFixed/Wofost/Grass(1) set flhydrlift and twilt; hroot/hleaf/mfluxtable
           ! are written to state here since those subs lack state access.
-          if (swdrought .eq. 2) then
+          if (state%crop%common%swdrought .eq. 2) then
             state%soilwater%hleaf = -2000.d0
             state%soilwater%hroot(1:state%mesh%numnod) = state%soilwater%h(1:state%mesh%numnod)  ! [SS-SWC S-2.7] [GR-BH Task 35]
             call MatricFlux(1, state%soilwater%h(1), 1, dummy_mf_, state)  ! [SS-SWC S-2.7]

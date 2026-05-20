@@ -349,7 +349,7 @@
       integer   seqgrazmow(366)    ! Sequence of grass grazing and mowing, actual crop
       integer   seqgrazmowpot(366) ! Sequence of grass grazing and mowing, potential crop
       integer   swcf               ! Switch for simple crop: 1 = crop factor is input; 2 = crop height is input
-      integer   swdrought          ! Switch for drought stress (1 = Feddes et al., 1978; 2 = De Jong van Lier et al., 2008)
+      ! [GR-CROPWS] swdrought retired — see state%crop%common%swdrought
       ! [GR-CROPWS] swgc retired — see state%crop%common%swgc
       ! [SS-GR-FINAL D1] swjarvis retired — deprecated switch; 0 consumers
       ! [GR-CROPWS] swcompensate retired — see state%crop%common%swcompensate

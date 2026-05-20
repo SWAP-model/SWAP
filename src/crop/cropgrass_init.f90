@@ -64,7 +64,7 @@ contains
          dry_mat_cont_roots, air_filled_root_por, spec_weight_root_tissue,   &
          var_a, root_radiusO2, swoxygentype,                                  &
          ! Drought stress — DEFERRED Phase C3
-         swdrought, hlim3h, hlim3l, hlim4, adcrh, adcrl,                    &
+         hlim3h, hlim3l, hlim4, adcrh, adcrl,                                &  ! swdrought retired
          ! Salinity stress (guarded; set to 0 only) — DEFERRED Phase C3; swsalinity retired
          ! Compensation — DEFERRED Phase C3
          swstressor, alphacrit, dcritrtz,                                    &  ! swcompensate retired
@@ -260,7 +260,7 @@ contains
 
       ! Part 12: drought stress (readgrass lines 3726-3754)
       ! swdrought=2 is stub-guarded above.
-      swdrought = cfg%swdrought
+      state%crop%common%swdrought = cfg%swdrought
       if (cfg%swdrought == 1) then
          hlim3h = cfg%hlim3h
          hlim3l = cfg%hlim3l

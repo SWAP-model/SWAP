@@ -63,7 +63,7 @@ contains
          ! Oxygen stress — DEFERRED Phase C3; swoxygen retired
          swWrtNonox, aeratecrit, hlim1, hlim2u, hlim2l,                      &
          ! Drought stress — DEFERRED Phase C3
-         swdrought, hlim3h, hlim3l, hlim4, adcrh, adcrl,                    &
+         hlim3h, hlim3l, hlim4, adcrh, adcrl,                                &  ! swdrought retired
          ! Salinity — DEFERRED Phase C3; swsalinity retired
          saltmax, saltslope, salthead,                                       &
          ! Compensation — DEFERRED Phase C3
@@ -356,8 +356,8 @@ contains
       end if
 
       ! Part 12: drought stress (readwofost lines 2870-2881)
-      swdrought = cfg%drought_stress%swdrought
-      if (swdrought == 1) then
+      state%crop%common%swdrought = cfg%drought_stress%swdrought
+      if (state%crop%common%swdrought == 1) then
          hlim3h = cfg%drought_stress%hlim3h
          hlim3l = cfg%drought_stress%hlim3l
          hlim4  = cfg%drought_stress%hlim4
@@ -444,7 +444,7 @@ contains
       ! Runtime init math — cumdens computation (readwofost lines 3094-3121)
       ! Only when swdrought=1 (Feddes). Identical algorithm to readwofost.
       ! ----------------------------------------------------------------
-      if (swdrought == 1) then
+      if (state%crop%common%swdrought == 1) then
          ! Build rootdis array: 101 points from 0.0 to 1.0
          do i = 0, 100
             depth = 0.01d0 * dble(i)

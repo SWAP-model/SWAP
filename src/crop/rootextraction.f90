@@ -54,7 +54,7 @@ module rootextraction_mod
                            ! DEFERRED: rootradius/rxylem/saltmax/saltslope/stephr — crop/solute config; Phase C3
                            rootradius, rxylem, saltmax, saltslope, stephr, &
                            ! DEFERRED: swcompensate/swdrought/swfrost/swoxygen — crop stress switches; Phase C3
-                           swdrought, swfrost,                            &  ! swcompensate/swoxygen retired
+                           swfrost,                                       &  ! swcompensate/swoxygen/swdrought retired
                            ! DEFERRED: swoxygentype/swsalinity/swstressor/swwrtnonox — crop stress switches; Phase C3
                            swoxygentype, swstressor, swwrtnonox, &  ! swsalinity retired
                            ! DEFERRED: taccur/twilt/wiltpoint — soil convergence/stress params; Phase C3
@@ -116,7 +116,7 @@ module rootextraction_mod
       )
 
 ! --- DROUGHT REDUCTION ACCORDING TO FEDDES ET AL. (1978)
-      if (swdrought .eq. 1) then
+      if (state%crop%common%swdrought .eq. 1) then
 
 ! --- calculate potential root extraction of the compartments
         ! 22-10-2018: bug repair signalled by Paul van Walsum: division not by rd but by depth bottom of last compartment where roots are present
@@ -139,7 +139,7 @@ module rootextraction_mod
       endif
 
 ! --- DROUGHT REDUCTION ACCORDING TO DE JONG VAN LIER ET AL. (2012)
-      if (swdrought .eq. 2) then
+      if (state%crop%common%swdrought .eq. 2) then
         call JongvanLier(state)
       endif
 
@@ -203,7 +203,7 @@ module rootextraction_mod
 ! ---   reduction due to drought stress
 
         ! Feddes linear reduction based on pressure head
-        if (swdrought .eq. 1) then
+        if (state%crop%common%swdrought .eq. 1) then
           if (sw_h(node) .lt. hlim4) then                           ! [SS-SWC S-2.7]
             alpdry = 0.0d0
           elseif (sw_h(node).le.hlim3) then                         ! [SS-SWC S-2.7]
@@ -212,7 +212,7 @@ module rootextraction_mod
         endif
 
         ! JongvanLier microscopic concept for drought
-        if (swdrought .eq. 2) then
+        if (state%crop%common%swdrought .eq. 2) then
           alpdry = state%soilwater%alpJvLier
         endif
 
@@ -369,7 +369,7 @@ module rootextraction_mod
                            kroot, kstem, logf, noddrz, oxygenintercept,   &  ! DEFERRED: crop/log globals
                            oxygenslope, rdctb, rootcoefa, rooteff, &  ! rd retired  ! DEFERRED: active crop state
                            rootradius, rxylem, saltmax, saltslope, stephr, &  ! DEFERRED: crop/solute config
-                           swdrought, swfrost,                            &  ! swcompensate/swoxygen retired  ! DEFERRED: stress switches
+                           swfrost,                                       &  ! swcompensate/swoxygen/swdrought retired  ! DEFERRED: stress switches
                            swoxygentype, swstressor, swwrtnonox, &  ! swsalinity retired  ! DEFERRED: stress switches
                            twilt, wiltpoint                          ! DEFERRED: convergence/stress params
       use array_utils, only: afgen
@@ -740,7 +740,7 @@ module rootextraction_mod
                            kroot, kstem, logf, noddrz, oxygenintercept,   &  ! DEFERRED: crop/log globals
                            oxygenslope, rdctb, rootcoefa, rooteff, &  ! rd retired  ! DEFERRED: active crop state
                            rootradius, rxylem, saltmax, saltslope, stephr, &  ! DEFERRED: crop/solute config
-                           swdrought, swfrost,                            &  ! swcompensate/swoxygen retired  ! DEFERRED: stress switches
+                           swfrost,                                       &  ! swcompensate/swoxygen/swdrought retired  ! DEFERRED: stress switches
                            swoxygentype, swstressor, swwrtnonox, &  ! swsalinity retired  ! DEFERRED: stress switches
                            twilt, wiltpoint                          ! DEFERRED: convergence/stress params
       implicit none

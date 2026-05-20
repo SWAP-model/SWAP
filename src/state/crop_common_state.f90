@@ -77,6 +77,7 @@ module crop_common_state_mod
       integer      :: swsalinity     = 0              !! salinity stress switch (0=none, 1=Maas-Hoffman, 2=osmotic)
       integer      :: swcompensate   = 0              !! root water uptake compensation method switch
       integer      :: swoxygen       = 0              !! oxygen stress switch (1=Feddes, 2=Bartholomeus)
+      integer      :: swdrought      = 0              !! drought stress switch (1=Feddes, 2=De Jong van Lier)
 
    contains
       procedure :: init => crop_common_state_init
