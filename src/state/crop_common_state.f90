@@ -78,6 +78,7 @@ module crop_common_state_mod
       integer      :: swcompensate   = 0              !! root water uptake compensation method switch
       integer      :: swoxygen       = 0              !! oxygen stress switch (1=Feddes, 2=Bartholomeus)
       integer      :: swdrought      = 0              !! drought stress switch (1=Feddes, 2=De Jong van Lier)
+      integer      :: swinter        = 0              !! interception switch (0=none, 1=ag crops, 2=trees, 3=Gash)
 
    contains
       procedure :: init => crop_common_state_init

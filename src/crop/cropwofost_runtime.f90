@@ -50,7 +50,7 @@
 ! ----------------------------------------------------------------------
       use variables, only: &                                            ! [SS-GR-CROPRT B7] [GR-CROPWS B5]
         macp, magrs, rdmax, &  ! icrop/dvs/rd/rdpot/dvsend retired
-        swcf, swinter,                        &  ! swrd/swdmi2rd/swrdc/swgc/swdrought retired
+        swcf,                                 &  ! swrd/swdmi2rd/swrdc/swgc/swdrought/swinter retired
         swbulb, swinco, laiem, laiexp, laiexppot, laimax,    &  ! lai/laipot retired
         cfeic, daycrop, daylp,  &  ! tsum/tbase/tsumea/tsumam retired
         siccaplai, cropend,                               &  ! [GR-CROPWS B5] cropstart removed (→state%crop%common%cropstart)
@@ -381,7 +381,7 @@
       if (swcf.eq.3) state%crop%fixed%cfeic = cfeic   ! [SS-GR-CROP A5.1]
 
 ! --- initial storage on canopy
-      if (swinter.eq.3) then
+      if (state%crop%common%swinter.eq.3) then
         state%atmosphere%siccapact = siccaplai*state%crop%lai
       endif
 
@@ -1190,7 +1190,7 @@
       if (swcf.eq.3) state%crop%fixed%cfeic = cfeic   ! [SS-GR-CROP A5.1]
 
 ! --- update canopy storage capacity
-      if (swinter.eq.3) then
+      if (state%crop%common%swinter.eq.3) then
         state%atmosphere%siccapact = siccaplai*state%crop%lai
       endif
 

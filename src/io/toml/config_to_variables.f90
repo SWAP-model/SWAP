@@ -131,7 +131,6 @@ contains
       ! the only consumer (the `.YYY` per-year rain reader in readmeteo.f90)
       ! has been deleted; CSV rain events use `config%meteo%rain_events_file`.
       swetsine    = config%meteo%swetsine
-      swinter     = config%meteo%swinter
       angstroma   = config%meteo%angstroma
       angstromb   = config%meteo%angstromb
 

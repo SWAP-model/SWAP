@@ -42,7 +42,6 @@
       iseqgm             = 0
       iseqgmpot          = 0
       swetsine           = 0
-      swinter            = 0
       ! [SS-ATM A-2.6] aintcdt/atmdem/caintc/cevap/cgrai/cnrai/cpeva/cptra retired to state%atmosphere
       daylp              = 0.0d0
 

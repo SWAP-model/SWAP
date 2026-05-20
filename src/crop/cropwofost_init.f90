@@ -68,8 +68,7 @@ contains
          saltmax, saltslope, salthead,                                       &
          ! Compensation — DEFERRED Phase C3
          swstressor,                                                          &  ! swcompensate retired
-         ! Interception — DEFERRED Phase C3
-         swinter,                                                             &  ! cofab retired
+         ! Interception — DEFERRED Phase C3; swinter/cofab retired
          ! Root depth — DEFERRED Phase C3
          rdctb, rdtb, rlwtb, wrtmax,                                          &  ! swrd/swdmi2rd/swrdc retired
          cumdens,                                                             &
@@ -176,8 +175,8 @@ contains
       end if
 
       ! Part 14: interception (readwofost line 2640-2642)
-      swinter = cfg%interception%swinter
-      if (swinter == 1) then
+      state%crop%common%swinter = cfg%interception%swinter
+      if (state%crop%common%swinter == 1) then
          state%crop%cofab = cfg%interception%cofab
       end if
 

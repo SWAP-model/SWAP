@@ -565,7 +565,7 @@ contains
         angstroma, angstromb,              &  ! B24 DEFERRED — config ET params
         daylp, tmn, tmx, rsw, difpp,                       &  ! B24 DEFERRED — ET calculation params; albedo/rsc retired
         dsinbe, atmtr, rsoil,                              &  ! B24 DEFERRED — ET calculation params
-        swinter,                                           &  ! B24 DEFERRED — overwritten by crop init (not pure config%meteo)
+        ! swinter retired — see state%crop%common%swinter
         croptype, gc,                                      &  ! B24 DEFERRED — crop/config fields; swgc retired
         ! [GR-CROP C3] icrop/flCropCalendar → state%crop%common%X
         flCropHarvest, cfevappond, flco2,                  &  ! B24 DEFERRED; fco2tra retired
@@ -612,17 +612,17 @@ contains
 
     ! Calculation of interception and net rain & net irrigation depth [cm]
     if ((state%crop%lai .lt. 1.d-3) .or. (state%atmosphere%grai+state%crop%gird .lt. 1.d-5) .or. &
-        (swinter.eq.0) .or. (state%atmosphere%gsnow.gt.0.0d0) .or.(state%atmosphere%ssnow.gt.0.0d0)) then
+        (state%crop%common%swinter.eq.0) .or. (state%atmosphere%gsnow.gt.0.0d0) .or.(state%atmosphere%ssnow.gt.0.0d0)) then
 
       ! No vegetation, rainfall/irrigation or interception calculation
       aintc = 0.d0
 
-    else if (swinter .eq. 1) then
+    else if (state%crop%common%swinter .eq. 1) then
       ! Calculate interception, method Von Hoyningen-Hune and Braden
       ! SS-ATM A-2.6: grai retired — pass state%atmosphere%grai explicitly
       ! SS-GR-ATM B8: state added for crop/atmosphere fields
       call VonHHBraden (aintc, state%atmosphere%grai, state)
-    else if (swinter .eq. 2) then
+    else if (state%crop%common%swinter .eq. 2) then
       ! Calculate interception, method Gash (1995)
       ! SS-ATM A-2.6: grai retired — pass state%atmosphere%grai explicitly
       ! SS-TC TC-11: state added for t via state%timecontrol%t
@@ -631,7 +631,7 @@ contains
 
     ! Divide interception into rain part and irrigation part and
     ! calculate net rain (nraida) and net sprinkling irrigation (nird)
-    if (swinter.ne.3) &
+    if (state%crop%common%swinter.ne.3) &
       call DivIntercep (aintc, state)
 
     ! === LOOP over dayparts ===
@@ -733,7 +733,7 @@ contains
 
       ! === Section 5: Interception option NHI (adapted Rutter model) ===
 
-      if (swinter .eq. 3) then
+      if (state%crop%common%swinter .eq. 3) then
         ! Set parameter values
         if (config%meteo%swmetdetail.eq.0) then  ! if swmetdetail = 0, siccapact is set in cropgrowth module
           if (croptype(state%crop%common%icrop).eq.1 .and. state%crop%common%swgc.eq.2) then   ! [GR-CROP C3]
@@ -777,7 +777,7 @@ contains
           if (state%crop%ew0.lt.0.0001d0) then
             wfrac = 0.0d0
           else
-            if (swinter .ne. 3) then
+            if (state%crop%common%swinter .ne. 3) then
               if (state%cfg%meteo%swdivide .eq. 0) then
                 wfrac = max(min(aintc*10.0d0/state%crop%ew0,1.0d0),0.0d0)
               else
@@ -817,7 +817,7 @@ contains
 
       ! Potential soil evaporation (peva) [cm/d]
       at_peva = max(0.0d0, (state%crop%es0*dexp(-1.0d0*state%crop%kdir*state%crop%kdif*state%crop%lai)*0.1d0))
-      if (state%crop%swcf.ne.3 .or. (config%meteo%swmetdetail.eq.0 .and. swinter.ne.3)) then
+      if (state%crop%swcf.ne.3 .or. (config%meteo%swmetdetail.eq.0 .and. state%crop%common%swinter.ne.3)) then
         at_peva = max(0.0d0,(1.0d0-wfrac)*at_peva)
       end if
 
@@ -825,7 +825,7 @@ contains
       if (state%crop%common%flCropCalendar .and. .not.flCropHarvest) then   ! [GR-CROP C3]
         if (croptype(state%crop%common%icrop).eq.1 .and. state%crop%common%swgc.eq.2) then
           at_peva = (1.0d0-gc)*state%crop%es0*0.1d0
-          if (state%crop%swcf.ne.3 .or. (config%meteo%swmetdetail.eq.0 .and. swinter.ne.3)) then
+          if (state%crop%swcf.ne.3 .or. (config%meteo%swmetdetail.eq.0 .and. state%crop%common%swinter.ne.3)) then
             at_peva = (1.0d0-wfrac)*at_peva
           end if
         endif

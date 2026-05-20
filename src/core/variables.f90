@@ -138,7 +138,7 @@
       ! [GR-CROP-DVS] swdivide retired — see state%cfg%meteo%swdivide
       ! [GR-CROP-DVS] swetr retired — see state%cfg%meteo%swetr
       integer   swetsine           ! Switch: 0 = Tp and Ep uniform during a day; 1 = Tp and Ep are distributed as sine waves during a day
-      integer   swinter            ! Switch for interception method: 0 = no interception; 1 = agricultural crops; 2 = trees and forests
+      ! [GR-CROPWS] swinter retired — see state%crop%common%swinter
       ! [GR-CROP-DVS] swmetdetail retired — see state%cfg%meteo%swmetdetail
       ! [SS-TC] retired 2026-05-12 — moved to state%timecontrol%swmeteo (ADR 0041)
       ! integer   swmeteo            ! moved to state%timecontrol%swmeteo

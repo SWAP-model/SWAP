@@ -46,7 +46,7 @@ contains
                             ! DEFERRED: swcompensate/swstressor/alphacrit/dcritrtz — compensation config; Phase C3
                             swstressor, alphacrit, dcritrtz,              &  ! swcompensate retired
                             ! DEFERRED: swinter/cofab — interception config; Phase C3
-                            swinter,                                      &  ! cofab retired
+                            ! swinter/cofab retired
                             ! DEFERRED: schedule — harvest schedule config; Phase C3; dvsend/swharv retired
                             schedule,                                     &
                             ! DEFERRED: cumdens — root density cumulative; Phase C3
@@ -118,7 +118,7 @@ contains
       alphacrit    = cfg%alphacrit
       dcritrtz     = cfg%dcritrtz
 
-      swinter = cfg%swinter
+      state%crop%common%swinter = cfg%swinter
       state%crop%cofab = cfg%cofab
 
       schedule = cfg%schedule_switch

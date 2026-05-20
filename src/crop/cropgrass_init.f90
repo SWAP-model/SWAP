@@ -36,8 +36,7 @@ contains
       use variables, only: &
          ! ET-related — DEFERRED Phase C3
          swcf, rsw, cftb, chtb,                                &  ! albedo/rsc retired
-         ! Interception — DEFERRED Phase C3
-         swinter,                                                             &  ! cofab retired
+         ! Interception — DEFERRED Phase C3; swinter/cofab retired
          ! Crop state — DEFERRED Phase C3
          tdwi, laiem, rgrlai,                                                 &
          ! Start-of-growth trigger — DEFERRED Phase C3
@@ -181,7 +180,7 @@ contains
       end if
 
       ! Part 2: interception (readgrass lines 3560-3585)
-      swinter = cfg%swinter
+      state%crop%common%swinter = cfg%swinter
       if (cfg%swinter == 1) then
          state%crop%cofab = cfg%cofab
       end if

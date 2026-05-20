@@ -30,7 +30,7 @@
 ! ----------------------------------------------------------------------
       use variables, only: magrs, &               ! idev retired
                            max_resp_factor,                        &  ! rd/rdpot/swrd retired
-                           swcf, swinter,                          &  ! swdmi2rd/swgc/swdrought retired
+                           swcf,                                   &  ! swdmi2rd/swgc/swdrought/swinter retired
                            rdmax,                                  &  ! tbase/tsumea/tsumam retired
                            siccaplai, w_root_ss, wiltpoint,   &
                            twilt, flhydrlift, gc, cfeic,                 &
@@ -140,7 +140,7 @@
       if (state%crop%swcf.eq.3) state%crop%fixed%cfeic = cfeic   ! [SS-GR-CROP A5.1] [GR-CROPWS B1]
 
 ! --- initial storage on canopy
-      if (swinter.eq.3) then
+      if (state%crop%common%swinter.eq.3) then
         state%atmosphere%siccapact = siccaplai*state%crop%lai                                      ! state%crop%lai local (just computed above)
       endif
 
@@ -220,7 +220,7 @@
       if (state%crop%swcf.eq.3) state%crop%fixed%cfeic = cfeic   ! [SS-GR-CROP A5.1] [GR-CROPWS B1]
 
 ! --- update canopy storage capacity
-      if (swinter.eq.3) then
+      if (state%crop%common%swinter.eq.3) then
         state%atmosphere%siccapact = siccaplai*state%crop%lai                                      ! state%crop%lai local (just computed above)
       endif
 
