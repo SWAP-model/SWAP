@@ -76,6 +76,7 @@ module crop_common_state_mod
       integer      :: swgc           = 0              !! green-canopy switch (1=LAI input, 2=soil cover fraction)
       integer      :: swsalinity     = 0              !! salinity stress switch (0=none, 1=Maas-Hoffman, 2=osmotic)
       integer      :: swcompensate   = 0              !! root water uptake compensation method switch
+      integer      :: swoxygen       = 0              !! oxygen stress switch (1=Feddes, 2=Bartholomeus)
 
    contains
       procedure :: init => crop_common_state_init

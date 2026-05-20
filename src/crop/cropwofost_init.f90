@@ -60,8 +60,8 @@ contains
          ! Partitioning / death rates — DEFERRED Phase C3
          frtb, fltb, fstb, fotb,                                             &
          perdl, rdrrtb, rdrstb,                                              &
-         ! Oxygen stress — DEFERRED Phase C3
-         swoxygen, swWrtNonox, aeratecrit, hlim1, hlim2u, hlim2l,            &
+         ! Oxygen stress — DEFERRED Phase C3; swoxygen retired
+         swWrtNonox, aeratecrit, hlim1, hlim2u, hlim2l,                      &
          ! Drought stress — DEFERRED Phase C3
          swdrought, hlim3h, hlim3l, hlim4, adcrh, adcrl,                    &
          ! Salinity — DEFERRED Phase C3; swsalinity retired
@@ -346,10 +346,10 @@ contains
       end if
 
       ! Part 11: oxygen stress (readwofost lines 2797-2867)
-      swoxygen   = cfg%oxygen_stress%swoxygen
+      state%crop%common%swoxygen = cfg%oxygen_stress%swoxygen
       swWrtNonox = cfg%oxygen_stress%swwrtnonox
       aeratecrit = cfg%oxygen_stress%aeratecrit
-      if (swoxygen == 1) then
+      if (state%crop%common%swoxygen == 1) then
          hlim1  = cfg%oxygen_stress%hlim1
          hlim2u = cfg%oxygen_stress%hlim2u
          hlim2l = cfg%oxygen_stress%hlim2l

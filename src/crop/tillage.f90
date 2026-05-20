@@ -12,8 +12,8 @@ module tillage_mod
    ! [SS-GR-FINAL B6] all remaining symbols DEFERRED: swhyst/swsolu/swoxygen/Bdens/ParamVG/NumLay/botcom/SwDiscrvert
    !   — soil/crop config globals; no state home yet; Phase C3
    use variables, only: &
-                        ! DEFERRED: swhyst/swsolu/swoxygen — soil/crop switches; Phase C3
-                        swhyst, swsolu, swoxygen, &
+                        ! DEFERRED: swhyst/swsolu — soil switches; Phase C3; swoxygen retired
+                        swhyst, swsolu, &
                         ! DEFERRED: Bdens/ParamVG — soil hydraulic config; Phase C3
                         Bdens, ParamVG, &
                         ! DEFERRED: NumLay/botcom/SwDiscrvert — soil discretisation; Phase C3
@@ -76,7 +76,7 @@ module tillage_mod
       if (swtill == 1) then
          if (swhyst == 1)      call fatalerr_collected ('DoTillage', 'swhyst = 1 not allowed')
          if (swsolu == 1)      call fatalerr_collected ('DoTillage', 'swsolu = 1 not (yet) allowed')
-         if (swoxygen == 2)    call fatalerr_collected ('DoTillage', 'swoxygen = 2 not (yet) allowed')
+         if (state%crop%common%swoxygen == 2)    call fatalerr_collected ('DoTillage', 'swoxygen = 2 not (yet) allowed')
          if (state%soilwater%flksatexm) call fatalerr_collected ('DoTillage', 'flksatexm not (yet) allowed')  ! [GR-BH C7]
          if (SwDiscrvert == 1) call fatalerr_collected ('DoTillage', 'SwDiscrvert = 1 not (yet) allowed')
       end if

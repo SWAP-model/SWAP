@@ -54,7 +54,7 @@ module rootextraction_mod
                            ! DEFERRED: rootradius/rxylem/saltmax/saltslope/stephr — crop/solute config; Phase C3
                            rootradius, rxylem, saltmax, saltslope, stephr, &
                            ! DEFERRED: swcompensate/swdrought/swfrost/swoxygen — crop stress switches; Phase C3
-                           swdrought, swfrost, swoxygen,                  &  ! swcompensate retired
+                           swdrought, swfrost,                            &  ! swcompensate/swoxygen retired
                            ! DEFERRED: swoxygentype/swsalinity/swstressor/swwrtnonox — crop stress switches; Phase C3
                            swoxygentype, swstressor, swwrtnonox, &  ! swsalinity retired
                            ! DEFERRED: taccur/twilt/wiltpoint — soil convergence/stress params; Phase C3
@@ -154,10 +154,10 @@ module rootextraction_mod
         alpfrs = 1.0d0
 
 ! ---   reduction due to oxygen stress
-        if (swoxygen .ne. 0) then
+        if (state%crop%common%swoxygen .ne. 0) then
 
           ! Feddes linear reduction based on pressure head
-          if (swoxygen .eq. 1) then
+          if (state%crop%common%swoxygen .eq. 1) then
 
             if (node.gt.botcom(1)) then
               hlim2 = hlim2l
@@ -172,7 +172,7 @@ module rootextraction_mod
             endif
 
           ! Bartholomeus non-linear reduction based on gas filled porosity
-          elseif (swoxygen .eq. 2) then
+          elseif (state%crop%common%swoxygen .eq. 2) then
 
             ! use physical processes
             if (swoxygentype .eq. 1) then
@@ -369,7 +369,7 @@ module rootextraction_mod
                            kroot, kstem, logf, noddrz, oxygenintercept,   &  ! DEFERRED: crop/log globals
                            oxygenslope, rdctb, rootcoefa, rooteff, &  ! rd retired  ! DEFERRED: active crop state
                            rootradius, rxylem, saltmax, saltslope, stephr, &  ! DEFERRED: crop/solute config
-                           swdrought, swfrost, swoxygen,                  &  ! swcompensate retired  ! DEFERRED: stress switches
+                           swdrought, swfrost,                            &  ! swcompensate/swoxygen retired  ! DEFERRED: stress switches
                            swoxygentype, swstressor, swwrtnonox, &  ! swsalinity retired  ! DEFERRED: stress switches
                            twilt, wiltpoint                          ! DEFERRED: convergence/stress params
       use array_utils, only: afgen
@@ -740,7 +740,7 @@ module rootextraction_mod
                            kroot, kstem, logf, noddrz, oxygenintercept,   &  ! DEFERRED: crop/log globals
                            oxygenslope, rdctb, rootcoefa, rooteff, &  ! rd retired  ! DEFERRED: active crop state
                            rootradius, rxylem, saltmax, saltslope, stephr, &  ! DEFERRED: crop/solute config
-                           swdrought, swfrost, swoxygen,                  &  ! swcompensate retired  ! DEFERRED: stress switches
+                           swdrought, swfrost,                            &  ! swcompensate/swoxygen retired  ! DEFERRED: stress switches
                            swoxygentype, swstressor, swwrtnonox, &  ! swsalinity retired  ! DEFERRED: stress switches
                            twilt, wiltpoint                          ! DEFERRED: convergence/stress params
       implicit none

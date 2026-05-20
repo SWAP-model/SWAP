@@ -773,7 +773,7 @@
       ! [GR-CROP-DVS] SwkImpl retired — see state%cfg%simulation%numerical%swkimpl
       integer   swliminf           ! Switch for limit of infiltration head to the waterdepth in the channel: 0 = nolimit, 1 = limitation
       ! [SS-GR-FINAL D5] swoutputmodflow retired — 0 consumers; MODFLOW output deleted
-      integer   swoxygen           ! Switch oxygen stress: 1 = concept Feddes et al. (1978); 2 = concept Bartholomeus et al. (2008)
+      ! [GR-CROPWS] swoxygen retired — see state%crop%common%swoxygen
       integer   swoxygentype       ! Switch for method oxygen stress calculation: 1 = physical processes; 2 = repro functions
       integer   swpondmx           ! Switch for time dependent maximum amount of ponding (L) on soil surface before runoff starts
       integer   swqhbot            ! Switch for flux-groundwater level relationship: 1 = exponential function; 2 = tabular function

@@ -16,7 +16,7 @@ subroutine test_cropwofost_init_basic_globals()
    use cropwofost_init_mod,   only: cropwofost_init_from_config
    use swap_state_mod, only: swap_state_t
    use variables, only: swcf, rsw, &  ! albedo/rsc retired
-                        swoxygen, hlim1, hlim2u, hlim2l, swWrtNonox, aeratecrit, &
+                        hlim1, hlim2u, hlim2l, swWrtNonox, aeratecrit, &  ! swoxygen retired
                         swdrought, hlim3h, hlim3l, hlim4, adcrh, adcrl, &
                         saltmax, saltslope, &  ! swsalinity retired
                         swinter, &  ! cofab/swrd/swdmi2rd/rdi/rri/rdc/relmf/swcompensate retired
@@ -75,7 +75,7 @@ subroutine test_cropwofost_init_basic_globals()
    @assertEqual(0.19_real64,  state%crop%common%albedo,  1.0e-12_real64)
    @assertEqual(207.0_real64, state%crop%common%rsc,     1.0e-12_real64)
    @assertEqual(0.0_real64,   rsw,     1.0e-12_real64)
-   @assertEqual(1,            swoxygen)
+   @assertEqual(1,            state%crop%common%swoxygen)
    @assertEqual(-10.0_real64, hlim1,   1.0e-12_real64)
    @assertEqual(-25.0_real64, hlim2u,  1.0e-12_real64)
    @assertEqual(-25.0_real64, hlim2l,  1.0e-12_real64)

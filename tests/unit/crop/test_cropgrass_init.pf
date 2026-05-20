@@ -4,7 +4,7 @@ subroutine test_cropgrass_init_writes_kdif()
    use cropgrass_init_mod, only: cropgrass_init_from_config
    use cropgrass_config_mod, only: cropgrass_config_t
    use swap_state_mod, only: swap_state_t
-   use variables, only: swdrought, swoxygen, cumdens  ! kdif/kdir/swcompensate retired
+   use variables, only: swdrought, cumdens  ! kdif/kdir/swcompensate/swoxygen retired
    implicit none
    type(cropgrass_config_t) :: cfg
    type(swap_state_t) :: state  ! [SS-GR-ATM A5.1] dual-write target

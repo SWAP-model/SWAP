@@ -57,8 +57,8 @@ contains
          ! Root depth and density — DEFERRED Phase C3; swrd/swdmi2rd/swrdc/rdi/rri/rdc retired
          rdctb, rdtb, rlwtb, wrtmax,                         &
          cumdens,                                                             &
-         ! Oxygen stress — DEFERRED Phase C3
-         swoxygen, swWrtNonox, aeratecrit,                                    &
+         ! Oxygen stress — DEFERRED Phase C3; swoxygen retired
+         swWrtNonox, aeratecrit,                                              &
          hlim1, hlim2u, hlim2l,                                              &
          q10_microbial, specific_resp_humus, srl, swrootradius,              &
          dry_mat_cont_roots, air_filled_root_por, spec_weight_root_tissue,   &
@@ -233,7 +233,7 @@ contains
 
       ! Part 11: oxygen stress (readgrass lines 3653-3723)
       ! Legacy default: swoxygen = 1 (readgrass line 3653)
-      swoxygen = cfg%swoxygen
+      state%crop%common%swoxygen = cfg%swoxygen
       if (cfg%swoxygen == 1) then
          hlim1  = cfg%hlim1
          hlim2u = cfg%hlim2u

@@ -36,7 +36,7 @@ contains
                             ! DEFERRED: rdtb/rdctb — root config; Phase C3; swrd/swdmi2rd/swrdc/rdi/rri/rdc retired
                             rdtb, rdctb,                                &
                             ! DEFERRED: swoxygen/swWrtNonox/aeratecrit/max_resp_factor — O2 stress config; Phase C3
-                            swoxygen, swWrtNonox, aeratecrit, max_resp_factor, &
+                            swWrtNonox, aeratecrit, max_resp_factor,      &  ! swoxygen retired
                             ! DEFERRED: hlim1/hlim2u/hlim2l — drought stress limits; Phase C3
                             hlim1, hlim2u, hlim2l,                        &
                             ! DEFERRED: swdrought/hlim3h/hlim3l/hlim4/adcrh/adcrl — drought config; Phase C3
@@ -93,7 +93,7 @@ contains
       state%crop%common%rri = cfg%rri
       state%crop%common%rdc = cfg%rdc
 
-      swoxygen   = cfg%swoxygen
+      state%crop%common%swoxygen = cfg%swoxygen
       swWrtNonox = cfg%swwrtnonox
       aeratecrit = cfg%aeratecrit
       max_resp_factor = cfg%max_resp_factor

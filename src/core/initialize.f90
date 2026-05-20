@@ -617,7 +617,6 @@
       idsl               = 0 
       noddrz             = 0 
       swcf               = 0 
-      swoxygen           = 0 
       adcrh              = 0.0d0 
       adcrl              = 0.0d0 
       alphacrit          = 0.0d0 

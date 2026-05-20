@@ -5,7 +5,7 @@ subroutine test_cropfixed_init_writes_scalars()
    use cropfixed_config_mod, only: cropfixed_config_t
    use swap_state_mod, only: swap_state_t
    use variables, only: hlim3h, hlim3l, hlim4, &  ! idev retired
-                         adcrh, adcrl, swcf, swoxygen, &  ! swrd/swgc retired
+                         adcrh, adcrl, swcf, &  ! swrd/swgc/swoxygen retired
                          swdrought, swinter, &  ! swsalinity/swcompensate retired
                          rsw  ! kdif/kdir/cofab/albedo/rsc retired
    type(cropfixed_config_t) :: cfg
@@ -43,7 +43,7 @@ subroutine test_cropfixed_init_writes_scalars()
    @assertEqual(1,    state%crop%common%swgc)
    @assertEqual(1,    swcf)
    @assertEqual(1,    state%crop%common%swrd)
-   @assertEqual(0,    swoxygen)
+   @assertEqual(0,    state%crop%common%swoxygen)
    @assertEqual(1,    swdrought)
    @assertEqual(0,    state%crop%common%swsalinity)
    @assertEqual(0,    state%crop%common%swcompensate)
