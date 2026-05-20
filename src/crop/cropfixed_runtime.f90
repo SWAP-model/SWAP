@@ -33,7 +33,7 @@
                            ! swdmi2rd/swgc/swdrought/swinter/swcf retired
                            rdmax,                                  &  ! tbase/tsumea/tsumam retired
                            siccaplai, w_root_ss, wiltpoint,   &
-                           twilt, flhydrlift, gc, cfeic,                 &
+                           twilt, flhydrlift, gc,                       &  ! cfeic retired
                            gctb, rdtb, mrftb, wrtb,                      &
                            swinco, reltr
       use soilhydraulics_utils, only: watcon
@@ -135,9 +135,9 @@
       state%crop%common%cf = afgen (state%crop%fixed%cftb,(2*magrs),state%crop%common%dvs)    ! [GR-CROPWS B1]
       state%crop%common%ch = afgen (state%crop%fixed%chtb,(2*magrs),state%crop%common%dvs)    ! [GR-CROPWS B1]
       if (state%crop%swcf.eq.3) then                                        ! [GR-CROPWS B1] swcf → state%crop%swcf
-        cfeic = afgen (state%crop%fixed%cfeictb,(2*magrs),state%crop%common%dvs)  ! [GR-CROPWS B1]
+        state%crop%fixed%cfeic = afgen (state%crop%fixed%cfeictb,(2*magrs),state%crop%common%dvs)  ! [GR-CROPWS B1]
       endif
-      if (state%crop%swcf.eq.3) state%crop%fixed%cfeic = cfeic   ! [SS-GR-CROP A5.1] [GR-CROPWS B1]
+      ! cfeic write retired (was: state%crop%fixed%cfeic = cfeic)
 
 ! --- initial storage on canopy
       if (state%crop%common%swinter.eq.3) then
@@ -215,9 +215,9 @@
       state%crop%common%cf        = afgen (state%crop%fixed%cftb,(2*magrs),state%crop%common%dvs)    ! [GR-CROPWS B1]
       state%crop%common%ch        = afgen (state%crop%fixed%chtb,(2*magrs),state%crop%common%dvs)    ! [GR-CROPWS B1]
       if (state%crop%swcf.eq.3) then                                              ! [GR-CROPWS B1]
-        cfeic     = afgen (state%crop%fixed%cfeictb,(2*magrs),state%crop%common%dvs)  ! [GR-CROPWS B1]
+        state%crop%fixed%cfeic = afgen (state%crop%fixed%cfeictb,(2*magrs),state%crop%common%dvs)  ! [GR-CROPWS B1]
       endif
-      if (state%crop%swcf.eq.3) state%crop%fixed%cfeic = cfeic   ! [SS-GR-CROP A5.1] [GR-CROPWS B1]
+      ! cfeic write retired (was: state%crop%fixed%cfeic = cfeic)
 
 ! --- update canopy storage capacity
       if (state%crop%common%swinter.eq.3) then

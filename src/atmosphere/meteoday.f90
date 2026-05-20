@@ -559,7 +559,7 @@ contains
     ! [SS-TC TC-14] metperiod retired — read via state%timecontrol
     ! [SS-GR-ATM B24] DEFERRED symbols (not yet in state/config); [SS-GR-FINAL B11] reviewed
     use variables, only: &
-        cfeic,                                             &  ! B24 DEFERRED — crop factor scalar; cf/ch retired
+        ! B24 DEFERRED — crop factor scalar; cf/ch/cfeic retired
         rad,                                               &  ! B24 DEFERRED — daily radiation scalar
         logf,                                              &  ! B24 DEFERRED — Arc 9 (logging)
         angstroma, angstromb,              &  ! B24 DEFERRED — config ET params
@@ -662,7 +662,7 @@ contains
             if (state%crop%swcf .eq. 1) then
               state%crop%ew0 = state%crop%common%cf*etr
             else
-              state%crop%ew0 = cfeic*etr
+              state%crop%ew0 = state%crop%fixed%cfeic*etr
             endif
           endif
           state%crop%es0 = etr
@@ -706,7 +706,7 @@ contains
             if (state%crop%swcf.eq.1) then
               state%crop%ew0 = state%crop%common%cf*state%crop%ew0
             else
-              state%crop%ew0 = cfeic*state%crop%ew0
+              state%crop%ew0 = state%crop%fixed%cfeic*state%crop%ew0
             endif
           endif
         else
@@ -723,7 +723,7 @@ contains
             if (state%crop%swcf.eq.1) then
               state%crop%ew0 = state%crop%common%cf*state%crop%ew0
             else
-              state%crop%ew0 = cfeic*state%crop%ew0
+              state%crop%ew0 = state%crop%fixed%cfeic*state%crop%ew0
             endif
           endif
         endif

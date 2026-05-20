@@ -376,7 +376,7 @@
       real(8)   avevaptb(2*magrs)  ! Gash interception model: average evaporation intensity during shower (-) as function of time (T)
       real(8)   avprectb(2*magrs)  ! Gash interception model: average rainfall intensity (-) as function of time (T)
       ! [GR-CROP-DVS] cf retired — see state%crop%common%cf
-      real(8)   cfeic              ! Crop factor wet (-)
+      ! [GR-CROPWS] cfeic retired — see state%crop%fixed%cfeic
       real(8)   gctb(2*magrs)      ! Array with either LAI (m2/m2) or Soil Cover Fraction (m2/m2) 
       ! [GR-CROPWS] cftb retired — see state%crop%fixed%cftb
       ! [GR-CROPWS] cfeictb retired — see state%crop%fixed%cfeictb

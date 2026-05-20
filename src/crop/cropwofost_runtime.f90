@@ -52,7 +52,7 @@
         macp, magrs, rdmax, &  ! icrop/dvs/rd/rdpot/dvsend retired
         ! swrd/swdmi2rd/swrdc/swgc/swdrought/swinter/swcf retired
         swbulb, swinco, laiem, laiexp, laiexppot, laimax,    &  ! lai/laipot retired
-        cfeic, daycrop, daylp,  &  ! tsum/tbase/tsumea/tsumam retired
+        daycrop, daylp,         &  ! tsum/tbase/tsumea/tsumam/cfeic retired
         siccaplai, cropend,                               &  ! [GR-CROPWS B5] cropstart removed (→state%crop%common%cropstart)
         wrtmax, wrtmin, &  ! wso/wst/wlv/wrt retired
         reltr, lrnr, lsnr, nni,           &
@@ -375,10 +375,10 @@
         state%crop%common%ch = afgen (state%crop%fixed%chtb,(2*magrs),state%crop%common%dvs)
       else
         state%crop%common%cf        = afgen (state%crop%fixed%cftb,(2*magrs),state%crop%lai)
-        cfeic     = afgen (state%crop%fixed%cfeictb,(2*magrs),state%crop%lai)
+        state%crop%fixed%cfeic = afgen (state%crop%fixed%cfeictb,(2*magrs),state%crop%lai)
         state%crop%common%ch        = afgen(state%crop%fixed%chtb,(2*magrs),state%crop%lai)
       endif
-      if (state%crop%swcf.eq.3) state%crop%fixed%cfeic = cfeic   ! [SS-GR-CROP A5.1]
+      ! cfeic write retired (was: state%crop%fixed%cfeic = cfeic)
 
 ! --- initial storage on canopy
       if (state%crop%common%swinter.eq.3) then
@@ -1184,10 +1184,10 @@
         state%crop%common%ch = afgen (state%crop%fixed%chtb,(2*magrs),state%crop%common%dvs)
       else
         state%crop%common%cf        = afgen (state%crop%fixed%cftb,72,state%crop%lai)
-        cfeic     = afgen (state%crop%fixed%cfeictb,72,state%crop%lai)
+        state%crop%fixed%cfeic = afgen (state%crop%fixed%cfeictb,72,state%crop%lai)
         state%crop%common%ch        = afgen(state%crop%fixed%chtb,72,state%crop%lai)
       endif
-      if (state%crop%swcf.eq.3) state%crop%fixed%cfeic = cfeic   ! [SS-GR-CROP A5.1]
+      ! cfeic write retired (was: state%crop%fixed%cfeic = cfeic)
 
 ! --- update canopy storage capacity
       if (state%crop%common%swinter.eq.3) then
