@@ -563,7 +563,7 @@ contains
         rad,                                               &  ! B24 DEFERRED — daily radiation scalar
         logf,                                              &  ! B24 DEFERRED — Arc 9 (logging)
         angstroma, angstromb,              &  ! B24 DEFERRED — config ET params
-        daylp, tmn, tmx, rsw, difpp,                       &  ! B24 DEFERRED — ET calculation params; albedo/rsc retired
+        daylp, tmn, tmx, difpp,                            &  ! B24 DEFERRED — ET calculation params; albedo/rsc/rsw retired
         dsinbe, atmtr, rsoil,                              &  ! B24 DEFERRED — ET calculation params
         ! swinter retired — see state%crop%common%swinter
         croptype, gc,                                      &  ! B24 DEFERRED — crop/config fields; swgc retired
@@ -687,7 +687,7 @@ contains
                      state%crop%es0,state%crop%et0,state%crop%ew0, &
                      state%crop%swcf,state%crop%common%ch, &
                      state%crop%flCropEmergence,daylp,tc_flmetdetail,irecord, &
-                     config%meteo%nmetdetail,state%crop%common%albedo,tmn,tmx,rsw,difpp,dsinbe,atmtr, &
+                     config%meteo%nmetdetail,state%crop%common%albedo,tmn,tmx,state%crop%common%rsw,difpp,dsinbe,atmtr, &
                      Edirect,Tdirect,Tdirectwet,rsoil,state%cfg%meteo%swdivide, &
                      state%crop%kdif,state%crop%kdir, &
                      state%crop%lai,Edirectpond)

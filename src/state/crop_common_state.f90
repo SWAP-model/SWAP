@@ -96,6 +96,7 @@ module crop_common_state_mod
       real(real64) :: alphacrit      = 0.0_real64     !! critical stress index for compensation (mutated at runtime when swcompensate==2)
       real(real64) :: dcritrtz       = 0.0_real64     !! root-zone depth threshold for Walsum compensation (cm)
       integer      :: schedule       = 0              !! per-crop irrigation scheduling switch (0=fixed, 1=scheduled)
+      real(real64) :: rsw            = 0.0_real64     !! canopy resistance to intercepted water (s/m)
 
    contains
       procedure :: init => crop_common_state_init

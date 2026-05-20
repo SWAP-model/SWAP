@@ -35,7 +35,7 @@ contains
       !   Retirement requires Phase C3 adapter rewrite (config_to_variables.f90 dual-writes).
       use variables, only: &
          ! ET-related — DEFERRED Phase C3
-         swcf, rsw, cftb, chtb,                                &  ! albedo/rsc retired
+         swcf, cftb, chtb,                                     &  ! albedo/rsc/rsw retired
          ! Interception — DEFERRED Phase C3; swinter/cofab retired
          ! Crop state — DEFERRED Phase C3
          tdwi, laiem, rgrlai,                                                 &
@@ -158,7 +158,7 @@ contains
          ! ETref standard defaults for albedo/rsc/rsw
          state%crop%common%albedo = 0.23d0
          state%crop%common%rsc    = 70.0d0
-         rsw    = 0.0d0
+         state%crop%common%rsw    = 0.0d0
          if (allocated(cfg%cftb)) then
            call copy_table(cfg%cftb, cftb)
            state%crop%fixed%cftb = cftb   ! [SS-GR-CROP A5.2]
@@ -168,7 +168,7 @@ contains
       else if (cfg%swcf == 2) then
          state%crop%common%albedo = cfg%albedo
          state%crop%common%rsc    = cfg%rsc
-         rsw    = cfg%rsw
+         state%crop%common%rsw    = cfg%rsw
          if (allocated(cfg%chtb)) then
            call copy_table(cfg%chtb, chtb)
            state%crop%fixed%chtb = chtb   ! [SS-GR-CROP A5.2]

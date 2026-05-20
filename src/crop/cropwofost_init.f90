@@ -43,7 +43,7 @@ contains
       !   Retirement requires Phase C3 adapter rewrite (config_to_variables.f90 dual-writes).
       use variables, only: &
          ! ET / crop factor — DEFERRED Phase C3
-         swcf, cftb, chtb, rsw,                                &  ! albedo/rsc retired
+         swcf, cftb, chtb,                                     &  ! albedo/rsc/rsw retired
          ! Development — DEFERRED Phase C3; tsumea/tsumam retired
          idsl, dlo, dlc, dtsmtb,                                            &
          ! Vernalisation — DEFERRED Phase C3
@@ -154,11 +154,11 @@ contains
          ! ETref standard defaults for albedo/rsc/rsw
          state%crop%common%albedo = 0.23_real64
          state%crop%common%rsc    = 70.0_real64
-         rsw    = 0.0_real64
+         state%crop%common%rsw    = 0.0_real64
       else if (swcf == 2) then
          state%crop%common%albedo = cfg%crop_factor%albedo
          state%crop%common%rsc    = cfg%crop_factor%rsc
-         rsw    = cfg%crop_factor%rsw
+         state%crop%common%rsw    = cfg%crop_factor%rsw
          if (allocated(cfg%crop_factor%chtb)) then
             block
                integer :: nr, j

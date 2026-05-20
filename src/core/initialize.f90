@@ -663,7 +663,6 @@
       rootradius         = 0.0d0 
       ! [SS-CRP C-2.5] rootrho retired — soilwater_init handles init via state%soilwater (ADR 0036)
       ! rootrho            = 0.0d0
-      rsw                = 0.0d0 
 
       scanopytb          = 0.0d0 
       siccaptb           = 0.0d0 

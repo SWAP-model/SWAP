@@ -476,7 +476,7 @@
       real(8)   rootradius         ! Root radius drought stress (cm)
       real(8)   root_radiusO2      ! Root radius oxygen stress (m)
       ! [GR-CROP-DVS] rsc retired — see state%crop%common%rsc
-      real(8)   rsw                ! Canopy resistance of intercepted water (T/L)
+      ! [GR-CROPWS] rsw retired — see state%crop%common%rsw
       real(8)   scanopytb(2*magrs) ! Gash interception model: storage capacity of canopy (-) as function of time (T)
       real(8)   shape_factor_rootr ! Shape factor for exponential decrease of root respiration rate with depth [0..1.0 -, R]
       real(8)   sla(366)           ! Array with specific leaf area (ha/kg) as function of crop day number of actual crop

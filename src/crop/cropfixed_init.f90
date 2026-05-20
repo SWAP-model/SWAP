@@ -32,7 +32,7 @@ contains
                             ! DEFERRED: kdif/kdir/gctb/swgc — radiation/crop factor config; Phase C3
                             gctb,                             &  ! kdif/kdir/swgc retired
                             ! DEFERRED: cftb/chtb/cfeictb/swcf/albedo/rsc/rsw — crop factor config; Phase C3
-                            cftb, chtb, cfeictb, swcf, rsw,  &  ! albedo/rsc retired
+                            cftb, chtb, cfeictb, swcf,       &  ! albedo/rsc/rsw retired
                             ! DEFERRED: rdtb/rdctb — root config; Phase C3; swrd/swdmi2rd/swrdc/rdi/rri/rdc retired
                             rdtb, rdctb,                                &
                             ! DEFERRED: swoxygen/swWrtNonox/aeratecrit/max_resp_factor — O2 stress config; Phase C3
@@ -133,11 +133,11 @@ contains
       if (cfg%swcf == 1) then
          state%crop%common%albedo = 0.23_real64
          state%crop%common%rsc    = 70.0_real64
-         rsw    = 0.0_real64
+         state%crop%common%rsw    = 0.0_real64
       else if (cfg%swcf == 2) then
          state%crop%common%albedo = cfg%albedo
          state%crop%common%rsc    = cfg%rsc
-         rsw    = cfg%rsw
+         state%crop%common%rsw    = cfg%rsw
       end if
 
       ! ---- Copy tables ------------------------------------------------

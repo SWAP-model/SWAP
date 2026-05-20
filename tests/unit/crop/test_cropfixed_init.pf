@@ -4,9 +4,7 @@ subroutine test_cropfixed_init_writes_scalars()
    use cropfixed_init_mod, only: cropfixed_init_from_config
    use cropfixed_config_mod, only: cropfixed_config_t
    use swap_state_mod, only: swap_state_t
-   use variables, only: swcf, &  ! idev/hlim3*/hlim4/adcr*/swrd/swgc/swoxygen retired
-                         ! swsalinity/swcompensate/swdrought/swinter retired
-                         rsw  ! kdif/kdir/cofab/albedo/rsc retired
+   use variables, only: swcf  ! many globals retired — see state%crop%common
    type(cropfixed_config_t) :: cfg
    type(swap_state_t) :: state  ! [SS-GR-ATM A5.1] dual-write target
    integer :: lcc_out
@@ -57,7 +55,7 @@ subroutine test_cropfixed_init_writes_scalars()
    ! ETref defaults are reset for swcf=1 path
    @assertEqual(0.23d0, state%crop%common%albedo, 1.0d-12)
    @assertEqual(70.0d0, state%crop%common%rsc,    1.0d-12)
-   @assertEqual(0.0d0,  rsw,    1.0d-12)
+   @assertEqual(0.0d0,  state%crop%common%rsw,    1.0d-12)
 end subroutine
 
 @test
