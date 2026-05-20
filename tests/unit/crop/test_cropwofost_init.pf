@@ -18,7 +18,7 @@ subroutine test_cropwofost_init_basic_globals()
    use variables, only: swcf, rsw, &  ! albedo/rsc retired
                         swoxygen, hlim1, hlim2u, hlim2l, swWrtNonox, aeratecrit, &
                         swdrought, hlim3h, hlim3l, hlim4, adcrh, adcrl, &
-                        swsalinity, saltmax, saltslope, &
+                        saltmax, saltslope, &  ! swsalinity retired
                         swcompensate, swinter, &  ! cofab/swrd/swdmi2rd/rdi/rri/rdc/relmf retired
                         swpotrelmf
    type(cropwofost_config_t) :: cfg
@@ -87,7 +87,7 @@ subroutine test_cropwofost_init_basic_globals()
    @assertEqual(-10000.0_real64,hlim4,  1.0e-12_real64)
    @assertEqual(0.5_real64,   adcrh,  1.0e-12_real64)
    @assertEqual(0.1_real64,   adcrl,  1.0e-12_real64)
-   @assertEqual(1,            swsalinity)
+   @assertEqual(1,            state%crop%common%swsalinity)
    @assertEqual(0.732_real64,  saltmax,   1.0e-12_real64)
    @assertEqual(0.0868_real64, saltslope, 1.0e-12_real64)
    @assertEqual(0,            swcompensate)

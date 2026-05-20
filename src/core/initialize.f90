@@ -439,7 +439,6 @@
       nconc              = 0
       ! [SS-GR-FINAL D1] sba zero-fill dropped — declaration retired 
       swbr               = 0 
-      swsalinity         = 0
       swsolu             = 0 
       ! [SS-GR-CROPRT A1] AgeGwl1m zero-fill dropped — declaration retired (ADR 0032)
       bexp               = 0.0d0 

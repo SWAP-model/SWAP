@@ -6,7 +6,7 @@ subroutine test_cropfixed_init_writes_scalars()
    use swap_state_mod, only: swap_state_t
    use variables, only: hlim3h, hlim3l, hlim4, &  ! idev retired
                          adcrh, adcrl, swcf, swoxygen, &  ! swrd/swgc retired
-                         swdrought, swsalinity, swcompensate, swinter, &
+                         swdrought, swcompensate, swinter, &  ! swsalinity retired
                          rsw  ! kdif/kdir/cofab/albedo/rsc retired
    type(cropfixed_config_t) :: cfg
    type(swap_state_t) :: state  ! [SS-GR-ATM A5.1] dual-write target
@@ -45,7 +45,7 @@ subroutine test_cropfixed_init_writes_scalars()
    @assertEqual(1,    state%crop%common%swrd)
    @assertEqual(0,    swoxygen)
    @assertEqual(1,    swdrought)
-   @assertEqual(0,    swsalinity)
+   @assertEqual(0,    state%crop%common%swsalinity)
    @assertEqual(0,    swcompensate)
    @assertEqual(1,    swinter)
    @assertEqual(-200.0d0,  hlim3h, 1.0d-12)

@@ -65,8 +65,7 @@ contains
          var_a, root_radiusO2, swoxygentype,                                  &
          ! Drought stress — DEFERRED Phase C3
          swdrought, hlim3h, hlim3l, hlim4, adcrh, adcrl,                    &
-         ! Salinity stress (guarded; set to 0 only) — DEFERRED Phase C3
-         swsalinity,                                                          &
+         ! Salinity stress (guarded; set to 0 only) — DEFERRED Phase C3; swsalinity retired
          ! Compensation — DEFERRED Phase C3
          swcompensate, swstressor, alphacrit, dcritrtz,                      &
          ! Management — DEFERRED Phase C3
@@ -272,7 +271,7 @@ contains
 
       ! Part 13: salt stress (readgrass lines 3757-3778)
       ! swsalinity /= 0 is stub-guarded above; always 0 on TOML path.
-      swsalinity = cfg%swsalinity
+      state%crop%common%swsalinity = cfg%swsalinity
 
       ! Part 14: compensation (readgrass lines 3781-3830)
       swcompensate = cfg%swcompensate

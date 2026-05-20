@@ -56,7 +56,7 @@ module rootextraction_mod
                            ! DEFERRED: swcompensate/swdrought/swfrost/swoxygen — crop stress switches; Phase C3
                            swcompensate, swdrought, swfrost, swoxygen,    &
                            ! DEFERRED: swoxygentype/swsalinity/swstressor/swwrtnonox — crop stress switches; Phase C3
-                           swoxygentype, swsalinity, swstressor, swwrtnonox, &
+                           swoxygentype, swstressor, swwrtnonox, &  ! swsalinity retired
                            ! DEFERRED: taccur/twilt/wiltpoint — soil convergence/stress params; Phase C3
                            twilt, wiltpoint
       use array_utils, only: afgen
@@ -219,7 +219,7 @@ module rootextraction_mod
 ! ---   reduction due to salt stress
 
         ! reduction according to Maas and Hoffman linear reduction function
-        if (swsalinity .eq. 1) then
+        if (state%crop%common%swsalinity .eq. 1) then
           if (state%solute%cml(node) .gt. saltmax) then
             alpsol = 1.0d0 - (state%solute%cml(node) - saltmax) * saltslope
             alpsol = max(0.0d0,alpsol)
@@ -370,7 +370,7 @@ module rootextraction_mod
                            oxygenslope, rdctb, rootcoefa, rooteff, &  ! rd retired  ! DEFERRED: active crop state
                            rootradius, rxylem, saltmax, saltslope, stephr, &  ! DEFERRED: crop/solute config
                            swcompensate, swdrought, swfrost, swoxygen,    &  ! DEFERRED: stress switches
-                           swoxygentype, swsalinity, swstressor, swwrtnonox, &  ! DEFERRED: stress switches
+                           swoxygentype, swstressor, swwrtnonox, &  ! swsalinity retired  ! DEFERRED: stress switches
                            twilt, wiltpoint                          ! DEFERRED: convergence/stress params
       use array_utils, only: afgen
       implicit none
@@ -741,7 +741,7 @@ module rootextraction_mod
                            oxygenslope, rdctb, rootcoefa, rooteff, &  ! rd retired  ! DEFERRED: active crop state
                            rootradius, rxylem, saltmax, saltslope, stephr, &  ! DEFERRED: crop/solute config
                            swcompensate, swdrought, swfrost, swoxygen,    &  ! DEFERRED: stress switches
-                           swoxygentype, swsalinity, swstressor, swwrtnonox, &  ! DEFERRED: stress switches
+                           swoxygentype, swstressor, swwrtnonox, &  ! swsalinity retired  ! DEFERRED: stress switches
                            twilt, wiltpoint                          ! DEFERRED: convergence/stress params
       implicit none
 
@@ -892,7 +892,7 @@ module rootextraction_mod
 !   task=2 reads state%soilwater%mfluxtable (state required).
 ! ----------------------------------------------------------------------
 
-      use Variables, only: numlay, nod1lay, wiltpoint, swsalinity, salthead  ! [GR-CROP Phase B/9b] narrow
+      use Variables, only: numlay, nod1lay, wiltpoint, salthead  ! [GR-CROP Phase B/9b] narrow; swsalinity retired
       use soilhydraulics_utils, only: watcon, hconduc
       implicit none
 
@@ -976,7 +976,7 @@ module rootextraction_mod
         endif
 
 ! --- correction matric flux potential for osmotic head due to salinity
-      if (swsalinity .eq. 2) then
+      if (state%crop%common%swsalinity .eq. 2) then
           lay = state%mesh%layer(node)  ! [GR-BH C7]
 !         osmotic head in cm
           hosm = salthead * state%solute%cml(node)

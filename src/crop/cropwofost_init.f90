@@ -64,8 +64,8 @@ contains
          swoxygen, swWrtNonox, aeratecrit, hlim1, hlim2u, hlim2l,            &
          ! Drought stress — DEFERRED Phase C3
          swdrought, hlim3h, hlim3l, hlim4, adcrh, adcrl,                    &
-         ! Salinity — DEFERRED Phase C3
-         swsalinity, saltmax, saltslope, salthead,                           &
+         ! Salinity — DEFERRED Phase C3; swsalinity retired
+         saltmax, saltslope, salthead,                                       &
          ! Compensation — DEFERRED Phase C3
          swcompensate, swstressor,                                            &
          ! Interception — DEFERRED Phase C3
@@ -367,8 +367,8 @@ contains
 
       ! Part 13: salinity stress (readwofost lines 2900-2924; gated on flsolute
       ! at runtime — here we always copy what was validated)
-      swsalinity = cfg%salinity%swsalinity
-      if (swsalinity == 1) then
+      state%crop%common%swsalinity = cfg%salinity%swsalinity
+      if (state%crop%common%swsalinity == 1) then
          saltmax   = cfg%salinity%saltmax
          saltslope = cfg%salinity%saltslope
       end if

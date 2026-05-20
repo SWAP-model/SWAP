@@ -42,7 +42,7 @@ contains
                             ! DEFERRED: swdrought/hlim3h/hlim3l/hlim4/adcrh/adcrl — drought config; Phase C3
                             swdrought, hlim3h, hlim3l, hlim4, adcrh, adcrl, &
                             ! DEFERRED: swsalinity/saltmax/saltslope/salthead — salinity config; Phase C3
-                            swsalinity, saltmax, saltslope, salthead,     &
+                            saltmax, saltslope, salthead,                 &  ! swsalinity retired
                             ! DEFERRED: swcompensate/swstressor/alphacrit/dcritrtz — compensation config; Phase C3
                             swcompensate, swstressor, alphacrit, dcritrtz, &
                             ! DEFERRED: swinter/cofab — interception config; Phase C3
@@ -108,7 +108,7 @@ contains
       adcrh     = cfg%adcrh
       adcrl     = cfg%adcrl
 
-      swsalinity = cfg%swsalinity
+      state%crop%common%swsalinity = cfg%swsalinity
       saltmax    = cfg%saltmax
       saltslope  = cfg%saltslope
       salthead   = cfg%salthead

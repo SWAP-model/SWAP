@@ -357,7 +357,7 @@
       real(8)   dcritrtz           ! Threshold for rootzone to start compensation of root water uptake; Walsum (cm)
       integer   swstressor         ! Switch for stressor to compensate (1 = all stressors (default); 2 = drought stress, 3 = oxygen stress, 4 = salinity stress; 5 = frost stress)
       integer   swrootradius       ! Switch for root radius to calculate Oxygen stress: 1 = calculate, 2 = input
-      integer   swsalinity         ! Switch for salinity stress: 0 = no stress; 1 = Maas and Hoffman (1977); 2 = Osmotic head
+      ! [GR-CROPWS] swsalinity retired — see state%crop%common%swsalinity
       real(8)   atmtr              ! Daily atmospheric transmission (-)
       real(8)   agerm              ! Coefficient a  of germination
       real(8)   cgerm              ! Coefficient c  of germination

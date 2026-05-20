@@ -74,6 +74,7 @@ module crop_common_state_mod
       real(real64) :: dvsend         = 0.0_real64     !! crop development stage at harvest (-)
       integer      :: swharv         = 0              !! harvest timing switch (0=cropend, 1=maturity)
       integer      :: swgc           = 0              !! green-canopy switch (1=LAI input, 2=soil cover fraction)
+      integer      :: swsalinity     = 0              !! salinity stress switch (0=none, 1=Maas-Hoffman, 2=osmotic)
 
    contains
       procedure :: init => crop_common_state_init
