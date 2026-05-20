@@ -65,7 +65,7 @@ contains
          ! Drought stress — DEFERRED Phase C3
          hlim3h, hlim3l, hlim4, adcrh, adcrl,                                &  ! swdrought retired
          ! Salinity — DEFERRED Phase C3; swsalinity retired
-         saltmax, saltslope, salthead,                                       &
+         ! saltmax/saltslope/salthead retired — state%crop%common
          ! Compensation — DEFERRED Phase C3
          swstressor,                                                          &  ! swcompensate retired
          ! Interception — DEFERRED Phase C3; swinter/cofab retired
@@ -368,8 +368,8 @@ contains
       ! at runtime — here we always copy what was validated)
       state%crop%common%swsalinity = cfg%salinity%swsalinity
       if (state%crop%common%swsalinity == 1) then
-         saltmax   = cfg%salinity%saltmax
-         saltslope = cfg%salinity%saltslope
+         state%crop%common%saltmax   = cfg%salinity%saltmax
+         state%crop%common%saltslope = cfg%salinity%saltslope
       end if
 
       ! Part xx: compensation (readwofost lines 2927-2976)

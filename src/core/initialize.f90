@@ -470,9 +470,6 @@
       rottot             = 0.0d0 
 !     imrottot           = 0.0d0   ! moved to solute_state_t (ADR 0032)
       rtheta             = 0.0d0 
-      salthead           = 0.0d0 
-      saltmax            = 0.0d0 
-      saltslope          = 0.0d0 
 !     samcra             = 0.0d0   ! moved to solute_state_t (ADR 0032)
       samini             = 0.0d0
 !     sampro             = 0.0d0   ! moved to solute_state_t (ADR 0032)

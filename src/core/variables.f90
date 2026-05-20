@@ -1217,9 +1217,9 @@
       real(8)   rottot             ! Cumulative amount of solutes (M/L2) extracted by plant roots  [AgeTracer dead-code dep, keep until agetracer_state_t]
 ! real(8)   imrottot           ! Moved to solute_state_t%imrottot (ADR 0032)
       real(8)   rtheta             ! Minimum volumetric water content (-) for potential decomposition
-      real(8)   salthead           ! Conversion salt concentration (mg/cm3) into osmotic head (cm) [0..1000.0 cm/(mg/cm3), R]
-      real(8)   saltmax            ! Threshold salt concentration in soil water  [0..100 mg/cm3, R]
-      real(8)   saltslope          ! Decline of rootwater uptake above threshold [0..1.0 cm3/mg, R]
+      ! [GR-CROPWS] salthead retired — see state%crop%common%salthead
+      ! [GR-CROPWS] saltmax retired — see state%crop%common%saltmax
+      ! [GR-CROPWS] saltslope retired — see state%crop%common%saltslope
 ! real(8)   samcra             ! Moved to solute_state_t%samcra (ADR 0032)
       real(8)   samini             ! Total amount of solutes (M/L2) in soil profile at start of current balance period  [AgeTracer dead-code dep, keep until agetracer_state_t]
 ! real(8)   sampro             ! Moved to solute_state_t%sampro (ADR 0032)

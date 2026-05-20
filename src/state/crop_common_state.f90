@@ -79,6 +79,9 @@ module crop_common_state_mod
       integer      :: swoxygen       = 0              !! oxygen stress switch (1=Feddes, 2=Bartholomeus)
       integer      :: swdrought      = 0              !! drought stress switch (1=Feddes, 2=De Jong van Lier)
       integer      :: swinter        = 0              !! interception switch (0=none, 1=ag crops, 2=trees, 3=Gash)
+      real(real64) :: saltmax        = 0.0_real64     !! threshold conc above which yield reduces (Maas-Hoffman)
+      real(real64) :: saltslope      = 0.0_real64     !! slope of yield reduction vs concentration (Maas-Hoffman)
+      real(real64) :: salthead       = 0.0_real64     !! osmotic head per concentration unit
 
    contains
       procedure :: init => crop_common_state_init

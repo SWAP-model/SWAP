@@ -52,7 +52,7 @@ module rootextraction_mod
                            ! DEFERRED: oxygenslope/rdctb/rootcoefa/rooteff — active crop state; Phase C3; rd/rdm retired
                            oxygenslope, rdctb, rootcoefa, rooteff, &
                            ! DEFERRED: rootradius/rxylem/saltmax/saltslope/stephr — crop/solute config; Phase C3
-                           rootradius, rxylem, saltmax, saltslope, stephr, &
+                           rootradius, rxylem, stephr,                    &  ! saltmax/saltslope retired
                            ! DEFERRED: swcompensate/swdrought/swfrost/swoxygen — crop stress switches; Phase C3
                            swfrost,                                       &  ! swcompensate/swoxygen/swdrought retired
                            ! DEFERRED: swoxygentype/swsalinity/swstressor/swwrtnonox — crop stress switches; Phase C3
@@ -220,8 +220,8 @@ module rootextraction_mod
 
         ! reduction according to Maas and Hoffman linear reduction function
         if (state%crop%common%swsalinity .eq. 1) then
-          if (state%solute%cml(node) .gt. saltmax) then
-            alpsol = 1.0d0 - (state%solute%cml(node) - saltmax) * saltslope
+          if (state%solute%cml(node) .gt. state%crop%common%saltmax) then
+            alpsol = 1.0d0 - (state%solute%cml(node) - state%crop%common%saltmax) * state%crop%common%saltslope
             alpsol = max(0.0d0,alpsol)
           endif
         endif
@@ -368,7 +368,7 @@ module rootextraction_mod
                            hlim1, hlim2l, hlim2u, hlim3h, hlim3l, hlim4,  &  ! DEFERRED: drought limits
                            kroot, kstem, logf, noddrz, oxygenintercept,   &  ! DEFERRED: crop/log globals
                            oxygenslope, rdctb, rootcoefa, rooteff, &  ! rd retired  ! DEFERRED: active crop state
-                           rootradius, rxylem, saltmax, saltslope, stephr, &  ! DEFERRED: crop/solute config
+                           rootradius, rxylem, stephr,                    &  ! saltmax/saltslope retired  ! DEFERRED: crop/solute config
                            swfrost,                                       &  ! swcompensate/swoxygen/swdrought retired  ! DEFERRED: stress switches
                            swoxygentype, swstressor, swwrtnonox, &  ! swsalinity retired  ! DEFERRED: stress switches
                            twilt, wiltpoint                          ! DEFERRED: convergence/stress params
@@ -739,7 +739,7 @@ module rootextraction_mod
                            hlim1, hlim2l, hlim2u, hlim3h, hlim3l, hlim4,  &  ! DEFERRED: drought limits
                            kroot, kstem, logf, noddrz, oxygenintercept,   &  ! DEFERRED: crop/log globals
                            oxygenslope, rdctb, rootcoefa, rooteff, &  ! rd retired  ! DEFERRED: active crop state
-                           rootradius, rxylem, saltmax, saltslope, stephr, &  ! DEFERRED: crop/solute config
+                           rootradius, rxylem, stephr,                    &  ! saltmax/saltslope retired  ! DEFERRED: crop/solute config
                            swfrost,                                       &  ! swcompensate/swoxygen/swdrought retired  ! DEFERRED: stress switches
                            swoxygentype, swstressor, swwrtnonox, &  ! swsalinity retired  ! DEFERRED: stress switches
                            twilt, wiltpoint                          ! DEFERRED: convergence/stress params
@@ -892,7 +892,7 @@ module rootextraction_mod
 !   task=2 reads state%soilwater%mfluxtable (state required).
 ! ----------------------------------------------------------------------
 
-      use Variables, only: numlay, nod1lay, wiltpoint, salthead  ! [GR-CROP Phase B/9b] narrow; swsalinity retired
+      use Variables, only: numlay, nod1lay, wiltpoint  ! [GR-CROP Phase B/9b] narrow; swsalinity/salthead retired
       use soilhydraulics_utils, only: watcon, hconduc
       implicit none
 
@@ -979,7 +979,7 @@ module rootextraction_mod
       if (state%crop%common%swsalinity .eq. 2) then
           lay = state%mesh%layer(node)  ! [GR-BH C7]
 !         osmotic head in cm
-          hosm = salthead * state%solute%cml(node)
+          hosm = state%crop%common%salthead * state%solute%cml(node)
           hsalt = wiltpoint + hosm
           if (hosm .lt. 1.d-3) then
 ! ---       very dry range
