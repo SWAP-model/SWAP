@@ -377,7 +377,7 @@
       real(8)   avprectb(2*magrs)  ! Gash interception model: average rainfall intensity (-) as function of time (T)
       ! [GR-CROP-DVS] cf retired — see state%crop%common%cf
       ! [GR-CROPWS] cfeic retired — see state%crop%fixed%cfeic
-      real(8)   gctb(2*magrs)      ! Array with either LAI (m2/m2) or Soil Cover Fraction (m2/m2) 
+      ! [GR-CROPWS] gctb retired — see state%crop%fixed%gctb
       ! [GR-CROPWS] cftb retired — see state%crop%fixed%cftb
       ! [GR-CROPWS] cfeictb retired — see state%crop%fixed%cfeictb
       ! [GR-CROP-DVS] ch retired — see state%crop%common%ch

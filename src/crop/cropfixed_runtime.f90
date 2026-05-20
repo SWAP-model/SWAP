@@ -34,7 +34,7 @@
                            rdmax,                                  &  ! tbase/tsumea/tsumam retired
                            siccaplai, w_root_ss, wiltpoint,   &
                            twilt, flhydrlift, gc,                       &  ! cfeic retired
-                           gctb, rdtb, mrftb, wrtb,                      &
+                           rdtb, mrftb, wrtb,                            &  ! gctb retired
                            swinco, reltr
       use soilhydraulics_utils, only: watcon
       use array_utils, only: afgen
@@ -125,7 +125,7 @@
       endif
 
 ! --- initial lai or sc
-      state%crop%lai = afgen (gctb,(2*magrs),state%crop%common%dvs)               ! [GR-CROPWS B1] dvs → state%crop%common%dvs
+      state%crop%lai = afgen (state%crop%fixed%gctb,(2*magrs),state%crop%common%dvs)               ! [GR-CROPWS B1] dvs → state%crop%common%dvs
       if (state%crop%common%swgc.eq.2) then
         gc  = state%crop%lai
         state%crop%lai = state%crop%lai*3.0d0
@@ -205,7 +205,7 @@
       state%crop%common%tsum = state%crop%common%tsum + dtsum          ! [GR-CROPWS B1]
 
 ! --- leaf area index or soil cover fraction
-      state%crop%lai = afgen (gctb,(2*magrs),state%crop%common%dvs)               ! [GR-CROPWS B1]
+      state%crop%lai = afgen (state%crop%fixed%gctb,(2*magrs),state%crop%common%dvs)               ! [GR-CROPWS B1]
       if (state%crop%common%swgc.eq.2) then
         gc  = state%crop%lai
         state%crop%lai = state%crop%lai*3.0d0

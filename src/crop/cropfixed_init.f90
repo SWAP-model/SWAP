@@ -30,7 +30,7 @@ contains
       use variables, only: &
                             ! idev/tsumea/tsumam/tbase retired — state%crop%common
                             ! DEFERRED: kdif/kdir/gctb/swgc — radiation/crop factor config; Phase C3
-                            gctb,                             &  ! kdif/kdir/swgc retired
+                            ! kdif/kdir/swgc/gctb retired
                             ! DEFERRED: cftb/chtb/cfeictb/swcf/albedo/rsc/rsw — crop factor config; Phase C3
                             ! cftb/chtb/cfeictb/albedo/rsc/rsw/swcf retired
                             ! DEFERRED: rdtb/rdctb — root config; Phase C3; swrd/swdmi2rd/swrdc/rdi/rri/rdc retired
@@ -129,7 +129,7 @@ contains
 
       ! ---- Copy tables ------------------------------------------------
       ! gctb (size up to 2*magrs in legacy; we copy what was authored).
-      if (allocated(cfg%gctb))  call copy_pair_table(cfg%gctb,  gctb)
+      if (allocated(cfg%gctb))  call copy_pair_table(cfg%gctb, state%crop%fixed%gctb)
       if (allocated(cfg%cftb))    call copy_pair_table(cfg%cftb,    state%crop%fixed%cftb)
       if (allocated(cfg%chtb))    call copy_pair_table(cfg%chtb,    state%crop%fixed%chtb)
       if (allocated(cfg%cfeictb)) call copy_pair_table(cfg%cfeictb, state%crop%fixed%cfeictb)
