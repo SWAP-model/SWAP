@@ -46,8 +46,7 @@ contains
                             ! swcompensate/swstressor/alphacrit/dcritrtz retired
                             ! DEFERRED: swinter/cofab — interception config; Phase C3
                             ! swinter/cofab retired
-                            ! DEFERRED: schedule — harvest schedule config; Phase C3; dvsend/swharv retired
-                            schedule,                                     &
+                            ! dvsend/swharv/schedule retired
                             ! DEFERRED: cumdens — root density cumulative; Phase C3
                             cumdens
       use array_utils,  only: afgen
@@ -120,7 +119,7 @@ contains
       state%crop%common%swinter = cfg%swinter
       state%crop%cofab = cfg%cofab
 
-      schedule = cfg%schedule_switch
+      state%crop%common%schedule = cfg%schedule_switch
 
       state%crop%common%dvsend = cfg%dvsend
       state%crop%common%swharv = cfg%swharv

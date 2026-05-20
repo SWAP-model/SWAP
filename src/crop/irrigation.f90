@@ -43,7 +43,7 @@
       use swap_array_dimensions, only: maho
       use variables, only: &                                               ! [SS-GR-FINAL B6] residuals — all DEFERRED
                             ! DEFERRED: gird/irrigevent/schedule/swirfix — irrigation schedule state; Phase C3
-                            irrigevent, schedule, swirfix,           &  ! gird retired
+                            irrigevent, swirfix,                     &  ! gird/schedule retired
                             ! DEFERRED: irdate/nirri/irdepth/irconc/irtype/cirr — irrigation event arrays; Phase C3
                             irdate, nirri, irdepth, irconc, irtype, cirr,  &
                             ! DEFERRED: isua/noddrz/swsolu/swcirrthres — crop/soil state; Phase C3; dvs/rd retired
@@ -132,7 +132,7 @@
 ! ---    scheduling mode - current timing and depth criterion
 
 !        scheduled timing within desired period ?
-         if (schedule.eq.1) then
+         if (state%crop%common%schedule.eq.1) then
             !call dtdpar (cropstart(icrop),datea,fsec)
             !yearstacrp = datea(1)
             !call dtdpar (cropend(icrop),datea,fsec)
@@ -158,7 +158,7 @@
             end if
          end if
 
-         if (schedule.eq.1 .and. irrigevent.eq.0 .and. flCropCalendar .and. .not. flCropHarvest .and. flIrriTime) then
+         if (state%crop%common%schedule.eq.1 .and. irrigevent.eq.0 .and. flCropCalendar .and. .not. flCropHarvest .and. flIrriTime) then
             cirr = cirrs
             isua = isuas
             state%atmosphere%isua = isua   ! [SS-GR-ATM A5.3] runtime dual-write

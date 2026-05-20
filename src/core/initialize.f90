@@ -80,7 +80,6 @@
       isuas              = 0
       nirri              = 0
       ! [SS-GR-FINAL D1] phormc zero-fill dropped — declaration retired 
-      schedule           = 0 
       swirfix            = 0 
       cirrs              = 0.0d0 
       dcrit              = 0.0d0 

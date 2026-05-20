@@ -95,6 +95,7 @@ module crop_common_state_mod
       integer      :: swstressor     = 0              !! compensation stressor switch (1=all, 2=drought, 3=oxy, 4=salt, 5=frost)
       real(real64) :: alphacrit      = 0.0_real64     !! critical stress index for compensation (mutated at runtime when swcompensate==2)
       real(real64) :: dcritrtz       = 0.0_real64     !! root-zone depth threshold for Walsum compensation (cm)
+      integer      :: schedule       = 0              !! per-crop irrigation scheduling switch (0=fixed, 1=scheduled)
 
    contains
       procedure :: init => crop_common_state_init

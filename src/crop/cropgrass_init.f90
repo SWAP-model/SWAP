@@ -72,9 +72,7 @@ contains
          ! Mowing / harvest — DEFERRED Phase C3
          dateharvest, dmmowtb, DelayRegrowthTab,                             &
          ! CO2 (flCO2 only; swco2 is a local in readgrass, not a global) — DEFERRED Phase C3
-         flCO2,                                                               &
-         ! Irrigation scheduling (set to 0; schedule=1 stub-errored) — DEFERRED Phase C3
-         schedule
+         flCO2  ! schedule retired
       use array_utils,  only: afgen
       use error_mod,    only: fatalerr_collected
       use swap_state_mod, only: swap_state_t
@@ -358,7 +356,7 @@ contains
 
       ! Part 19: irrigation scheduling (readgrass line 4040)
       ! schedule=1 is stub-guarded above; always 0.
-      schedule = cfg%schedule%schedule
+      state%crop%common%schedule = cfg%schedule%schedule
 
       ! Part 20: CO2 correction (readgrass lines 4050-4083)
       ! swco2=1 is stub-guarded above; flCO2 is always .false.

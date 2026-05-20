@@ -278,7 +278,7 @@
       integer   isuas              ! Switch for type of scheduled irrigation: 0 = sprinkling irrigation, 1 = surface irrigation
       integer   nirri              ! Number of irrigation event
       ! [SS-GR-FINAL D1] phormc retired — 0 consumers
-      integer   schedule           ! Switch for simulation of irrigation scheduling: 0 = no, 1 = yes
+      ! [GR-CROPWS] schedule retired — see state%crop%common%schedule
       integer   swirfix            ! Switch for fixed irrigation: 0 = no applications prescribed; 1 = applications are prescribed
       integer   swcirrthres        ! Switch to allow over irrigation when a conc-threshold is exceeded: 0 = no; 1 = yes/allowed
       real(8)   cirrs              ! Solute concentration of irrigation water (M/L3)

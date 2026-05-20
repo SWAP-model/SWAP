@@ -75,7 +75,7 @@ contains
          ! Harvest — DEFERRED Phase C3; dvsend/swharv retired
          swpotrelmf,                                                          &  ! relmf retired
          ! Irrigation schedule — DEFERRED Phase C3
-         schedule,                                                             &
+         ! schedule retired
          ! Active crop dynamics (written during init) — DEFERRED Phase C3; dvs/tsum retired
          daycrop, nofd, flCropNut
       use array_utils, only: afgen
@@ -427,7 +427,7 @@ contains
       state%crop%common%swharv = cfg%harvest%swharv
 
       ! Schedule (schedule=0 only on TOML path; stub-guarded above)
-      schedule = cfg%schedule%schedule
+      state%crop%common%schedule = cfg%schedule%schedule
 
       ! Management (readwofost lines 2979-2988)
       state%crop%grass%relmf      = cfg%management%relmf
