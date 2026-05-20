@@ -73,8 +73,7 @@ contains
          ! Root depth — DEFERRED Phase C3
          rdctb, rdtb, rlwtb, wrtmax,                                          &  ! swrd/swdmi2rd/swrdc retired
          cumdens,                                                             &
-         ! Harvest — DEFERRED Phase C3; dvsend retired
-         swharv,                                                              &
+         ! Harvest — DEFERRED Phase C3; dvsend/swharv retired
          swpotrelmf,                                                          &  ! relmf retired
          ! Irrigation schedule — DEFERRED Phase C3
          schedule,                                                             &
@@ -426,7 +425,7 @@ contains
 
       ! Harvest (readwofost lines 2745-2748)
       state%crop%common%dvsend = cfg%harvest%dvsend
-      swharv = cfg%harvest%swharv
+      state%crop%common%swharv = cfg%harvest%swharv
 
       ! Schedule (schedule=0 only on TOML path; stub-guarded above)
       schedule = cfg%schedule%schedule

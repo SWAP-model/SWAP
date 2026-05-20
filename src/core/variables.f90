@@ -1399,7 +1399,7 @@
       ! [SS-GR-FINAL D1] DayGerm retired — 0 consumers
 
       ! Harvest of crop growth
-      integer   swharv             ! switch for timing of harvest (0=cropend, 1=maturity)
+      ! [GR-CROPWS] swharv retired — see state%crop%common%swharv
       ! [SS-GR-FINAL D1] hmow retired — 0 consumers
       ! [SS-GR-FINAL D1] hgrz retired — 0 consumers
       real(8)   zmow               ! z-level for monitoring wkability for the crop during mowing

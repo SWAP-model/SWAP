@@ -62,7 +62,7 @@
         tmn, rad,                                         &  ! wrt retired
         cumdens,                                               &
         eff, amaxtb, tmpftb, tmnftb, swdrought, swcrp,                     &  ! dvsend retired
-        swharv, remoc, pld, q10,                    &  ! [GR-CROPWS B3] swbulb removed (→state%crop%wofost%swbulb)
+        remoc, pld, q10,                    &  ! swharv retired; swbulb removed (→state%crop%wofost%swbulb)
         flCropNut, nlue, anlv, anst, nmxlv, nmaxlv, nmaxst,               &
         nmaxrt, lrnr, lsnr, nni, rnflv, rnfst, frnx, fstr, flHarvestDay,  &
         noddrz, pathcrop, cropfil, bgerm, cgerm,                           &
@@ -539,7 +539,7 @@
       if (croptype(state%crop%common%icrop).le.2 .and. flCropEmergence)then
 
         ! Check flHarvestDay
-        if (swharv.eq.0) then
+        if (state%crop%common%swharv.eq.0) then
           if (dabs(tc_t1900 - cropend(state%crop%common%icrop) - 1.d0) .lt. 1.0d-3) then  ! [GR-CROPWS B3] icrop → state%crop%common%icrop
             flHarvestDay = .true.
             state%crop%common%flHarvestDay = flHarvestDay   ! [SS-GR-CROP A5.1]
