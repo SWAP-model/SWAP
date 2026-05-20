@@ -19,7 +19,7 @@ subroutine test_cropwofost_init_basic_globals()
                         swoxygen, hlim1, hlim2u, hlim2l, swWrtNonox, aeratecrit, &
                         swdrought, hlim3h, hlim3l, hlim4, adcrh, adcrl, &
                         saltmax, saltslope, &  ! swsalinity retired
-                        swcompensate, swinter, &  ! cofab/swrd/swdmi2rd/rdi/rri/rdc/relmf retired
+                        swinter, &  ! cofab/swrd/swdmi2rd/rdi/rri/rdc/relmf/swcompensate retired
                         swpotrelmf
    type(cropwofost_config_t) :: cfg
    type(swap_state_t) :: state  ! [SS-GR-ATM A5.1] dual-write target
@@ -90,7 +90,7 @@ subroutine test_cropwofost_init_basic_globals()
    @assertEqual(1,            state%crop%common%swsalinity)
    @assertEqual(0.732_real64,  saltmax,   1.0e-12_real64)
    @assertEqual(0.0868_real64, saltslope, 1.0e-12_real64)
-   @assertEqual(0,            swcompensate)
+   @assertEqual(0,            state%crop%common%swcompensate)
    @assertEqual(1,            swinter)
    @assertEqual(0.25_real64,  state%crop%cofab,  1.0e-12_real64)
    @assertEqual(2,            state%crop%common%swrd)

@@ -67,7 +67,7 @@ contains
          ! Salinity — DEFERRED Phase C3; swsalinity retired
          saltmax, saltslope, salthead,                                       &
          ! Compensation — DEFERRED Phase C3
-         swcompensate, swstressor,                                            &
+         swstressor,                                                          &  ! swcompensate retired
          ! Interception — DEFERRED Phase C3
          swinter,                                                             &  ! cofab retired
          ! Root depth — DEFERRED Phase C3
@@ -374,10 +374,10 @@ contains
       end if
 
       ! Part xx: compensation (readwofost lines 2927-2976)
-      swcompensate = cfg%compensate%swcompensate
+      state%crop%common%swcompensate = cfg%compensate%swcompensate
       ! swstressor is only meaningful when swcompensate > 0; default=1 from variables
       ! module init. Only set when enabled to avoid clobbering with 0 default.
-      if (swcompensate > 0) swstressor = cfg%compensate%swstressor
+      if (state%crop%common%swcompensate > 0) swstressor = cfg%compensate%swstressor
 
       ! Part 10: root depth and density (readwofost lines 2993-3031)
       state%crop%common%swrdc = cfg%root%swrdc

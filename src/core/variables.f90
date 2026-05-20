@@ -352,7 +352,7 @@
       integer   swdrought          ! Switch for drought stress (1 = Feddes et al., 1978; 2 = De Jong van Lier et al., 2008)
       ! [GR-CROPWS] swgc retired — see state%crop%common%swgc
       ! [SS-GR-FINAL D1] swjarvis retired — deprecated switch; 0 consumers
-      integer   swcompensate       ! Switch for method of compensation of root water uptake stress
+      ! [GR-CROPWS] swcompensate retired — see state%crop%common%swcompensate
       real(8)   alphacrit          ! Critical stress index for compensation of root water uptake (-)
       real(8)   dcritrtz           ! Threshold for rootzone to start compensation of root water uptake; Walsum (cm)
       integer   swstressor         ! Switch for stressor to compensate (1 = all stressors (default); 2 = drought stress, 3 = oxygen stress, 4 = salinity stress; 5 = frost stress)

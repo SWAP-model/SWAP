@@ -67,7 +67,7 @@ contains
          swdrought, hlim3h, hlim3l, hlim4, adcrh, adcrl,                    &
          ! Salinity stress (guarded; set to 0 only) — DEFERRED Phase C3; swsalinity retired
          ! Compensation — DEFERRED Phase C3
-         swcompensate, swstressor, alphacrit, dcritrtz,                      &
+         swstressor, alphacrit, dcritrtz,                                    &  ! swcompensate retired
          ! Management — DEFERRED Phase C3
          swpotrelmf, seqgrazmow,                                      &  ! relmf/mowrest retired
          ! Mowing / harvest — DEFERRED Phase C3
@@ -274,7 +274,7 @@ contains
       state%crop%common%swsalinity = cfg%swsalinity
 
       ! Part 14: compensation (readgrass lines 3781-3830)
-      swcompensate = cfg%swcompensate
+      state%crop%common%swcompensate = cfg%swcompensate
       if (cfg%swcompensate > 0) then
          ! swstressor defaults to 1 per legacy; only set when enabled.
          swstressor = cfg%swstressor

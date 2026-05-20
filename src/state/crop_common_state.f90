@@ -75,6 +75,7 @@ module crop_common_state_mod
       integer      :: swharv         = 0              !! harvest timing switch (0=cropend, 1=maturity)
       integer      :: swgc           = 0              !! green-canopy switch (1=LAI input, 2=soil cover fraction)
       integer      :: swsalinity     = 0              !! salinity stress switch (0=none, 1=Maas-Hoffman, 2=osmotic)
+      integer      :: swcompensate   = 0              !! root water uptake compensation method switch
 
    contains
       procedure :: init => crop_common_state_init
