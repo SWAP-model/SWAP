@@ -362,8 +362,8 @@
       real(8)   agerm              ! Coefficient a  of germination
       real(8)   cgerm              ! Coefficient c  of germination
       real(8)   bgerm              ! Coefficient b  of germination
-      real(8)   adcrh              ! Level of high atmospheric demand (L/T)
-      real(8)   adcrl              ! Level of low atmospheric demand (L/T)
+      ! [GR-CROPWS] adcrh retired — see state%crop%common%adcrh
+      ! [GR-CROPWS] adcrl retired — see state%crop%common%adcrl
       real(8)   air_filled_root_por ! Air filled root porosity [0..1.0 -, R]
       ! [GR-CROP-DVS] albedo retired — see state%crop%common%albedo
       ! [SS-CRP] retired 2026-05-11 — moved to state%soilwater%alpJvLier (ADR 0036)
@@ -427,9 +427,9 @@
       real(8)   hlim1              ! Pressure head above which root water uptake stops (L)
       real(8)   hlim2l             ! Pressure head below which optimum water uptake starts for sub layer (L)
       real(8)   hlim2u             ! Pressure head below which optimum water uptake starts for top layer (L)
-      real(8)   hlim3h             ! Pressure head below which water uptake reduction starts at high Tpot (L)
-      real(8)   hlim3l             ! Pressure head below which water uptake reduction starts at low Tpot (L)
-      real(8)   hlim4              ! Wilting point, no root water uptake at lower soil water pressure heads (L)
+      ! [GR-CROPWS] hlim3h retired — see state%crop%common%hlim3h
+      ! [GR-CROPWS] hlim3l retired — see state%crop%common%hlim3l
+      ! [GR-CROPWS] hlim4 retired — see state%crop%common%hlim4
       ! [GR-CROP-DVS] kdif retired — see state%crop%kdif
       ! [GR-CROP-DVS] kdir retired — see state%crop%kdir
       ! [GR-CROP-DVS] lai retired — see state%crop%lai

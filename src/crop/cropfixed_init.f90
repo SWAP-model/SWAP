@@ -40,7 +40,7 @@ contains
                             ! DEFERRED: hlim1/hlim2u/hlim2l — drought stress limits; Phase C3
                             hlim1, hlim2u, hlim2l,                        &
                             ! DEFERRED: swdrought/hlim3h/hlim3l/hlim4/adcrh/adcrl — drought config; Phase C3
-                            hlim3h, hlim3l, hlim4, adcrh, adcrl,           &  ! swdrought retired
+                            ! hlim3h/hlim3l/hlim4/adcrh/adcrl/swdrought retired
                             ! saltmax/saltslope/salthead/swsalinity retired — state%crop%common
                             ! DEFERRED: swcompensate/swstressor/alphacrit/dcritrtz — compensation config; Phase C3
                             swstressor, alphacrit, dcritrtz,              &  ! swcompensate retired
@@ -101,11 +101,11 @@ contains
       hlim2l     = cfg%hlim2l
 
       state%crop%common%swdrought = cfg%swdrought
-      hlim3h    = cfg%hlim3h
-      hlim3l    = cfg%hlim3l
-      hlim4     = cfg%hlim4
-      adcrh     = cfg%adcrh
-      adcrl     = cfg%adcrl
+      state%crop%common%hlim3h = cfg%hlim3h
+      state%crop%common%hlim3l = cfg%hlim3l
+      state%crop%common%hlim4  = cfg%hlim4
+      state%crop%common%adcrh  = cfg%adcrh
+      state%crop%common%adcrl  = cfg%adcrl
 
       state%crop%common%swsalinity = cfg%swsalinity
       state%crop%common%saltmax   = cfg%saltmax

@@ -17,7 +17,7 @@ subroutine test_cropwofost_init_basic_globals()
    use swap_state_mod, only: swap_state_t
    use variables, only: swcf, rsw, &  ! albedo/rsc retired
                         hlim1, hlim2u, hlim2l, swWrtNonox, aeratecrit, &  ! swoxygen retired
-                        hlim3h, hlim3l, hlim4, adcrh, adcrl, &  ! swdrought retired
+                        ! swdrought/hlim3h/hlim3l/hlim4/adcrh/adcrl retired
                         ! swsalinity/saltmax/saltslope retired
                         ! cofab/swrd/swdmi2rd/rdi/rri/rdc/relmf/swcompensate/swinter retired
                         swpotrelmf
@@ -82,11 +82,11 @@ subroutine test_cropwofost_init_basic_globals()
    @assertEqual(1,            swWrtNonox)
    @assertEqual(0.5_real64,   aeratecrit, 1.0e-12_real64)
    @assertEqual(1,            state%crop%common%swdrought)
-   @assertEqual(-300.0_real64,  hlim3h, 1.0e-12_real64)
-   @assertEqual(-500.0_real64,  hlim3l, 1.0e-12_real64)
-   @assertEqual(-10000.0_real64,hlim4,  1.0e-12_real64)
-   @assertEqual(0.5_real64,   adcrh,  1.0e-12_real64)
-   @assertEqual(0.1_real64,   adcrl,  1.0e-12_real64)
+   @assertEqual(-300.0_real64,  state%crop%common%hlim3h, 1.0e-12_real64)
+   @assertEqual(-500.0_real64,  state%crop%common%hlim3l, 1.0e-12_real64)
+   @assertEqual(-10000.0_real64,state%crop%common%hlim4,  1.0e-12_real64)
+   @assertEqual(0.5_real64,   state%crop%common%adcrh,  1.0e-12_real64)
+   @assertEqual(0.1_real64,   state%crop%common%adcrl,  1.0e-12_real64)
    @assertEqual(1,            state%crop%common%swsalinity)
    @assertEqual(0.732_real64,  state%crop%common%saltmax,   1.0e-12_real64)
    @assertEqual(0.0868_real64, state%crop%common%saltslope, 1.0e-12_real64)

@@ -4,8 +4,7 @@ subroutine test_cropfixed_init_writes_scalars()
    use cropfixed_init_mod, only: cropfixed_init_from_config
    use cropfixed_config_mod, only: cropfixed_config_t
    use swap_state_mod, only: swap_state_t
-   use variables, only: hlim3h, hlim3l, hlim4, &  ! idev retired
-                         adcrh, adcrl, swcf, &  ! swrd/swgc/swoxygen retired
+   use variables, only: swcf, &  ! idev/hlim3*/hlim4/adcr*/swrd/swgc/swoxygen retired
                          ! swsalinity/swcompensate/swdrought/swinter retired
                          rsw  ! kdif/kdir/cofab/albedo/rsc retired
    type(cropfixed_config_t) :: cfg
@@ -48,11 +47,11 @@ subroutine test_cropfixed_init_writes_scalars()
    @assertEqual(0,    state%crop%common%swsalinity)
    @assertEqual(0,    state%crop%common%swcompensate)
    @assertEqual(1,    state%crop%common%swinter)
-   @assertEqual(-200.0d0,  hlim3h, 1.0d-12)
-   @assertEqual(-800.0d0,  hlim3l, 1.0d-12)
-   @assertEqual(-8000.0d0, hlim4,  1.0d-12)
-   @assertEqual(0.5d0,     adcrh,  1.0d-12)
-   @assertEqual(0.1d0,     adcrl,  1.0d-12)
+   @assertEqual(-200.0d0,  state%crop%common%hlim3h, 1.0d-12)
+   @assertEqual(-800.0d0,  state%crop%common%hlim3l, 1.0d-12)
+   @assertEqual(-8000.0d0, state%crop%common%hlim4,  1.0d-12)
+   @assertEqual(0.5d0,     state%crop%common%adcrh,  1.0d-12)
+   @assertEqual(0.1d0,     state%crop%common%adcrl,  1.0d-12)
    @assertEqual(0.25d0,    state%crop%cofab,  1.0d-12)
 
    ! ETref defaults are reset for swcf=1 path

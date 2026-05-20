@@ -42,11 +42,11 @@ module rootextraction_mod
       use swap_array_dimensions, only: macp
       use variables, only: &                                               ! [SS-GR-FINAL B6] residuals — all DEFERRED
                            ! DEFERRED: adcrh/adcrl/aeratecrit/alphacrit — O2/drought config; Phase C3
-                           adcrh, adcrl, aeratecrit, alphacrit,    &
+                           aeratecrit, alphacrit,                  &  ! adcrh/adcrl retired
                            ! DEFERRED: botcom/criterhr/cumdens/dcritrtz/flhydrlift — soil/crop config; Phase C3
                            botcom, criterhr, cumdens, dcritrtz, flhydrlift, &
                            ! DEFERRED: hlim1/hlim2l/hlim2u/hlim3h/hlim3l/hlim4 — drought stress limits; Phase C3
-                           hlim1, hlim2l, hlim2u, hlim3h, hlim3l, hlim4,  &
+                           hlim1, hlim2l, hlim2u,                  &  ! hlim3h/hlim3l/hlim4 retired
                            ! DEFERRED: kroot/kstem/logf/noddrz/oxygenintercept — crop/log globals; Phase C3
                            kroot, kstem, logf, noddrz, oxygenintercept,   &
                            ! DEFERRED: oxygenslope/rdctb/rootcoefa/rooteff — active crop state; Phase C3; rd/rdm retired
@@ -129,12 +129,12 @@ module rootextraction_mod
         enddo
 
 ! --- calculating critical point hlim3 according to feddes
-        if (at_atmdem .lt. adcrl) then
-          hlim3 = hlim3l
-        elseif (at_atmdem .le. adcrh) then
-          hlim3 = hlim3h + ((adcrh - at_atmdem) / (adcrh - adcrl)) * (hlim3l - hlim3h)
+        if (at_atmdem .lt. state%crop%common%adcrl) then
+          hlim3 = state%crop%common%hlim3l
+        elseif (at_atmdem .le. state%crop%common%adcrh) then
+          hlim3 = state%crop%common%hlim3h + ((state%crop%common%adcrh - at_atmdem) / (state%crop%common%adcrh - state%crop%common%adcrl)) * (state%crop%common%hlim3l - state%crop%common%hlim3h)
         else
-          hlim3 = hlim3h
+          hlim3 = state%crop%common%hlim3h
         endif
       endif
 
@@ -204,10 +204,10 @@ module rootextraction_mod
 
         ! Feddes linear reduction based on pressure head
         if (state%crop%common%swdrought .eq. 1) then
-          if (sw_h(node) .lt. hlim4) then                           ! [SS-SWC S-2.7]
+          if (sw_h(node) .lt. state%crop%common%hlim4) then         ! [SS-SWC S-2.7]
             alpdry = 0.0d0
           elseif (sw_h(node).le.hlim3) then                         ! [SS-SWC S-2.7]
-            alpdry = (hlim4-sw_h(node))/(hlim4-hlim3)               ! [SS-SWC S-2.7]
+            alpdry = (state%crop%common%hlim4-sw_h(node))/(state%crop%common%hlim4-hlim3)  ! [SS-SWC S-2.7]
           endif
         endif
 
@@ -363,9 +363,9 @@ module rootextraction_mod
       ! [SS-GR-FINAL B6] macp → swap_array_dimensions; remainder DEFERRED (same as RootExtraction)
       use swap_array_dimensions, only: macp
       use variables, only: &                                               ! [SS-GR-FINAL B6] residuals — all DEFERRED
-                           adcrh, adcrl, aeratecrit, alphacrit,    &  ! DEFERRED: crop stress config; Phase C3
+                           aeratecrit, alphacrit,                  &  ! adcrh/adcrl retired  ! DEFERRED: crop stress config; Phase C3
                            botcom, criterhr, cumdens, dcritrtz, flhydrlift, &  ! DEFERRED: soil/crop config
-                           hlim1, hlim2l, hlim2u, hlim3h, hlim3l, hlim4,  &  ! DEFERRED: drought limits
+                           hlim1, hlim2l, hlim2u,                  &  ! hlim3h/hlim3l/hlim4 retired  ! DEFERRED: drought limits
                            kroot, kstem, logf, noddrz, oxygenintercept,   &  ! DEFERRED: crop/log globals
                            oxygenslope, rdctb, rootcoefa, rooteff, &  ! rd retired  ! DEFERRED: active crop state
                            rootradius, rxylem, stephr,                    &  ! saltmax/saltslope retired  ! DEFERRED: crop/solute config
@@ -734,9 +734,9 @@ module rootextraction_mod
       ! [SS-GR-FINAL B6] macp → swap_array_dimensions; remainder DEFERRED (same as RootExtraction)
       use swap_array_dimensions, only: macp
       use variables, only: &                                               ! [SS-GR-FINAL B6] residuals — all DEFERRED
-                           adcrh, adcrl, aeratecrit, alphacrit,    &  ! DEFERRED: crop stress config; Phase C3
+                           aeratecrit, alphacrit,                  &  ! adcrh/adcrl retired  ! DEFERRED: crop stress config; Phase C3
                            botcom, criterhr, cumdens, dcritrtz, flhydrlift, &  ! DEFERRED: soil/crop config
-                           hlim1, hlim2l, hlim2u, hlim3h, hlim3l, hlim4,  &  ! DEFERRED: drought limits
+                           hlim1, hlim2l, hlim2u,                  &  ! hlim3h/hlim3l/hlim4 retired  ! DEFERRED: drought limits
                            kroot, kstem, logf, noddrz, oxygenintercept,   &  ! DEFERRED: crop/log globals
                            oxygenslope, rdctb, rootcoefa, rooteff, &  ! rd retired  ! DEFERRED: active crop state
                            rootradius, rxylem, stephr,                    &  ! saltmax/saltslope retired  ! DEFERRED: crop/solute config

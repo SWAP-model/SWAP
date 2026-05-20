@@ -63,7 +63,7 @@ contains
          ! Oxygen stress — DEFERRED Phase C3; swoxygen retired
          swWrtNonox, aeratecrit, hlim1, hlim2u, hlim2l,                      &
          ! Drought stress — DEFERRED Phase C3
-         hlim3h, hlim3l, hlim4, adcrh, adcrl,                                &  ! swdrought retired
+         ! hlim3h/hlim3l/hlim4/adcrh/adcrl/swdrought retired
          ! Salinity — DEFERRED Phase C3; swsalinity retired
          ! saltmax/saltslope/salthead retired — state%crop%common
          ! Compensation — DEFERRED Phase C3
@@ -357,11 +357,11 @@ contains
       ! Part 12: drought stress (readwofost lines 2870-2881)
       state%crop%common%swdrought = cfg%drought_stress%swdrought
       if (state%crop%common%swdrought == 1) then
-         hlim3h = cfg%drought_stress%hlim3h
-         hlim3l = cfg%drought_stress%hlim3l
-         hlim4  = cfg%drought_stress%hlim4
-         adcrh  = cfg%drought_stress%adcrh
-         adcrl  = cfg%drought_stress%adcrl
+         state%crop%common%hlim3h = cfg%drought_stress%hlim3h
+         state%crop%common%hlim3l = cfg%drought_stress%hlim3l
+         state%crop%common%hlim4  = cfg%drought_stress%hlim4
+         state%crop%common%adcrh  = cfg%drought_stress%adcrh
+         state%crop%common%adcrl  = cfg%drought_stress%adcrl
       end if
 
       ! Part 13: salinity stress (readwofost lines 2900-2924; gated on flsolute

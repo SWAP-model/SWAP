@@ -82,6 +82,11 @@ module crop_common_state_mod
       real(real64) :: saltmax        = 0.0_real64     !! threshold conc above which yield reduces (Maas-Hoffman)
       real(real64) :: saltslope      = 0.0_real64     !! slope of yield reduction vs concentration (Maas-Hoffman)
       real(real64) :: salthead       = 0.0_real64     !! osmotic head per concentration unit
+      real(real64) :: hlim3h         = 0.0_real64     !! pressure head at low atmospheric demand (cm, Feddes)
+      real(real64) :: hlim3l         = 0.0_real64     !! pressure head at high atmospheric demand (cm, Feddes)
+      real(real64) :: hlim4          = 0.0_real64     !! wilting point pressure head (cm, Feddes)
+      real(real64) :: adcrh          = 0.0_real64     !! high atmospheric demand threshold (cm/d)
+      real(real64) :: adcrl          = 0.0_real64     !! low atmospheric demand threshold (cm/d)
 
    contains
       procedure :: init => crop_common_state_init

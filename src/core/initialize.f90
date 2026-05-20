@@ -613,8 +613,6 @@
       idsl               = 0 
       noddrz             = 0 
       swcf               = 0 
-      adcrh              = 0.0d0 
-      adcrl              = 0.0d0 
       alphacrit          = 0.0d0 
       amaxtb             = 0.0d0 
       atmin7             = 0.0d0
@@ -646,9 +644,6 @@
       hlim1              = 0.0d0 
       hlim2l             = 0.0d0 
       hlim2u             = 0.0d0 
-      hlim3h             = 0.0d0 
-      hlim3l             = 0.0d0 
-      hlim4              = 0.0d0 
       laiem              = 0.0d0
       lv                 = 0.0d0
       lvage              = 0.0d0
