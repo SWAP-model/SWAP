@@ -58,9 +58,7 @@ contains
          ! Oxygen stress — DEFERRED Phase C3; swoxygen retired
          ! swWrtNonox/aeratecrit retired
          ! hlim1/hlim2u/hlim2l retired
-         q10_microbial, specific_resp_humus, srl, swrootradius,              &
-         dry_mat_cont_roots, air_filled_root_por, spec_weight_root_tissue,   &
-         var_a, root_radiusO2, swoxygentype,                                  &
+         q10_microbial, specific_resp_humus,                                  &  ! srl/swrootradius/dry_mat_cont_roots/air_filled_root_por/spec_weight_root_tissue/var_a/root_radiusO2/swoxygentype retired
          ! Drought stress — DEFERRED Phase C3
          ! hlim3h/hlim3l/hlim4/adcrh/adcrl/swdrought retired
          ! Salinity stress (guarded; set to 0 only) — DEFERRED Phase C3; swsalinity retired
@@ -227,18 +225,18 @@ contains
          state%crop%common%hlim2l = cfg%hlim2l
       else if (cfg%swoxygen == 2) then
          ! swoxygentype=1 physical path (swoxygentype=2 stub-guarded above)
-         swoxygentype        = cfg%swoxygentype
+         state%crop%common%swoxygentype = cfg%swoxygentype
          q10_microbial       = cfg%q10_microbial
          specific_resp_humus = cfg%specific_resp_humus
-         srl                 = cfg%srl
-         swrootradius        = cfg%swrootradius
+         state%crop%common%srl                 = cfg%srl
+         state%crop%common%swrootradius        = cfg%swrootradius
          if (cfg%swrootradius == 1) then
-            dry_mat_cont_roots     = cfg%dry_mat_cont_roots
-            air_filled_root_por    = cfg%air_filled_root_por
-            spec_weight_root_tissue = cfg%spec_weight_root_tissue
-            var_a                  = cfg%var_a
+            state%crop%common%dry_mat_cont_roots     = cfg%dry_mat_cont_roots
+            state%crop%common%air_filled_root_por    = cfg%air_filled_root_por
+            state%crop%common%spec_weight_root_tissue = cfg%spec_weight_root_tissue
+            state%crop%common%var_a                  = cfg%var_a
          else
-            root_radiusO2 = cfg%root_radiusO2
+            state%crop%common%root_radiusO2 = cfg%root_radiusO2
          end if
       end if
       ! Growth of roots during oxygen stress (readgrass lines 3715-3723)

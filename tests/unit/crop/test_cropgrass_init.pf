@@ -80,7 +80,7 @@ subroutine test_cropgrass_init_swoxygen2_writes_srl()
    use cropgrass_init_mod, only: cropgrass_init_from_config
    use cropgrass_config_mod, only: cropgrass_config_t
    use swap_state_mod, only: swap_state_t
-   use variables, only: srl
+   ! srl retired — read via state%crop%common%srl
    implicit none
    type(cropgrass_config_t) :: cfg
    type(swap_state_t) :: state  ! [SS-GR-ATM A5.1] dual-write target
@@ -109,7 +109,7 @@ subroutine test_cropgrass_init_swoxygen2_writes_srl()
 
    call cropgrass_init_from_config(cfg, 1, 0.0d0, 0.0d0, state)  ! [SS-BMI2 Task 4] [SS-GR-ATM A5.1]
 
-   @assertEqual(383571.0d0, srl, 1.0d0)
+   @assertEqual(383571.0d0, state%crop%common%srl, 1.0d0)
 end subroutine test_cropgrass_init_swoxygen2_writes_srl
 
 @test

@@ -56,7 +56,7 @@ module rootextraction_mod
                            ! DEFERRED: swcompensate/swdrought/swfrost/swoxygen — crop stress switches; Phase C3
                            swfrost,                                       &  ! swcompensate/swoxygen/swdrought retired
                            ! DEFERRED: swoxygentype/swsalinity/swstressor/swwrtnonox — crop stress switches; Phase C3
-                           swoxygentype, &  ! swsalinity/swwrtnonox/swstressor retired
+                           ! swsalinity/swwrtnonox/swstressor/swoxygentype retired
                            ! DEFERRED: taccur/twilt/wiltpoint — soil convergence/stress params; Phase C3
                            twilt, wiltpoint
       use array_utils, only: afgen
@@ -175,7 +175,7 @@ module rootextraction_mod
           elseif (state%crop%common%swoxygen .eq. 2) then
 
             ! use physical processes
-            if (swoxygentype .eq. 1) then
+            if (state%crop%common%swoxygentype .eq. 1) then
 !##MH         call OxygenStress(node,alpwet,ResultsOxygenStress)
               ! SS-HEAT Phase 2 Task 6: pass state so OxygenStress reads tsoil from state%heat
               call OxygenStress(node,alpwet,state)
@@ -370,7 +370,7 @@ module rootextraction_mod
                            oxygenslope, rootcoefa, rooteff, &  ! rdctb retired  ! rd retired  ! DEFERRED: active crop state
                            rootradius, rxylem, stephr,                    &  ! saltmax/saltslope retired  ! DEFERRED: crop/solute config
                            swfrost,                                       &  ! swcompensate/swoxygen/swdrought retired  ! DEFERRED: stress switches
-                           swoxygentype, &  ! swsalinity/swwrtnonox/swstressor retired  ! DEFERRED: stress switches
+                           ! swsalinity/swwrtnonox/swstressor/swoxygentype retired  ! DEFERRED: stress switches
                            twilt, wiltpoint                          ! DEFERRED: convergence/stress params
       use array_utils, only: afgen
       implicit none
@@ -741,7 +741,7 @@ module rootextraction_mod
                            oxygenslope, rootcoefa, rooteff, &  ! rdctb retired  ! rd retired  ! DEFERRED: active crop state
                            rootradius, rxylem, stephr,                    &  ! saltmax/saltslope retired  ! DEFERRED: crop/solute config
                            swfrost,                                       &  ! swcompensate/swoxygen/swdrought retired  ! DEFERRED: stress switches
-                           swoxygentype, &  ! swsalinity/swwrtnonox/swstressor retired  ! DEFERRED: stress switches
+                           ! swsalinity/swwrtnonox/swstressor/swoxygentype retired  ! DEFERRED: stress switches
                            twilt, wiltpoint                          ! DEFERRED: convergence/stress params
       implicit none
 

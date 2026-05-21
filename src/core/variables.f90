@@ -356,7 +356,7 @@
       ! [GR-CROPWS] alphacrit retired — see state%crop%common%alphacrit
       ! [GR-CROPWS] dcritrtz retired — see state%crop%common%dcritrtz
       ! [GR-CROPWS] swstressor retired — see state%crop%common%swstressor
-      integer   swrootradius       ! Switch for root radius to calculate Oxygen stress: 1 = calculate, 2 = input
+      ! [GR-CROPWS] swrootradius retired — see state%crop%common%swrootradius
       ! [GR-CROPWS] swsalinity retired — see state%crop%common%swsalinity
       real(8)   atmtr              ! Daily atmospheric transmission (-)
       real(8)   agerm              ! Coefficient a  of germination
@@ -364,7 +364,7 @@
       real(8)   bgerm              ! Coefficient b  of germination
       ! [GR-CROPWS] adcrh retired — see state%crop%common%adcrh
       ! [GR-CROPWS] adcrl retired — see state%crop%common%adcrl
-      real(8)   air_filled_root_por ! Air filled root porosity [0..1.0 -, R]
+      ! [GR-CROPWS] air_filled_root_por retired — see state%crop%common%air_filled_root_por
       ! [GR-CROP-DVS] albedo retired — see state%crop%common%albedo
       ! [SS-CRP] retired 2026-05-11 — moved to state%soilwater%alpJvLier (ADR 0036)
       ! real(8)   alpJvLier          ! Uniform drought reduction factor based on concept Jong van Lier (-)
@@ -398,7 +398,7 @@
       real(8)   difpp              ! Diffuse irradiation perpendicular to direction of light (J/m2/s)
       real(8)   dlc                ! Shortest day length (T) for any crop development
       real(8)   dlo                ! Minimum day length (T) for optimal crop development
-      real(8)   dry_mat_cont_roots ! Dry matter content of roots [0..1.0 -, R]
+      ! [GR-CROPWS] dry_mat_cont_roots retired — see state%crop%common%dry_mat_cont_roots
       real(8)   dsinbe             ! Daily total of effective solar height (s)
       ! [GR-CROPWS] dtsmtb retired — see state%crop%common%dtsmtb
       ! [GR-CROP-DVS] dvs retired — see state%crop%common%dvs
@@ -474,7 +474,7 @@
       real(8)   rootcoefa          ! Defines relative distance at which mean soil water content occurs between roots
       real(8)   rooteff            ! Root system efficiency factor [0..1.0 -, R]
       real(8)   rootradius         ! Root radius drought stress (cm)
-      real(8)   root_radiusO2      ! Root radius oxygen stress (m)
+      ! [GR-CROPWS] root_radiusO2 retired — see state%crop%common%root_radiusO2
       ! [GR-CROP-DVS] rsc retired — see state%crop%common%rsc
       ! [GR-CROPWS] rsw retired — see state%crop%common%rsw
       real(8)   scanopytb(2*magrs) ! Gash interception model: storage capacity of canopy (-) as function of time (T)
@@ -484,9 +484,9 @@
       ! [GR-CROPWS] slatb retired — see state%crop%common%slatb
       ! [GR-CROPWS] spa retired — see state%crop%common%spa
       ! [GR-CROPWS] span retired — see state%crop%common%span
-      real(8)   spec_weight_root_tissue ! Specific weight of non-airfilled root tissue [0.d0..1.d5 kg root/m3 root, R]
+      ! [GR-CROPWS] spec_weight_root_tissue retired — see state%crop%common%spec_weight_root_tissue
       real(8)   specific_resp_humus ! Respiration rate of humus at 25 �C [0.0..1.0 kg O2/kg C/d, R] 
-      real(8)   srl                ! Specific root length [0.d0..1.d10 m root/kg root, R]      
+      ! [GR-CROPWS] srl retired — see state%crop%common%srl
       ! [GR-CROPWS] ssa retired — see state%crop%common%ssa
       real(8)   tadw               ! Dry weight of plant minus roots of actual growth (kg/ha)
       real(8)   tadwpot            ! Dry weight of plant minus roots of potential growth (kg/ha)
@@ -506,7 +506,7 @@
       real(8)   TBASEM             ! Lower threshold temp. for emergence (C)
       real(8)   TEFFMX             ! max. eff. temp. for emergence (C)
 
-      real(8)   var_a              ! Variance of root radius [0.d0..1.d0 -, R]
+      ! [GR-CROPWS] var_a retired — see state%crop%common%var_a
       real(8)   w_root_ss          ! Dry weight of roots at soil surface [0.0..10.0 kg/m3, R]
       real(8)   wiltpoint          ! Minimum pressure head at interface soil-root (cm)
 
@@ -774,7 +774,7 @@
       integer   swliminf           ! Switch for limit of infiltration head to the waterdepth in the channel: 0 = nolimit, 1 = limitation
       ! [SS-GR-FINAL D5] swoutputmodflow retired — 0 consumers; MODFLOW output deleted
       ! [GR-CROPWS] swoxygen retired — see state%crop%common%swoxygen
-      integer   swoxygentype       ! Switch for method oxygen stress calculation: 1 = physical processes; 2 = repro functions
+      ! [GR-CROPWS] swoxygentype retired — see state%crop%common%swoxygentype
       integer   swpondmx           ! Switch for time dependent maximum amount of ponding (L) on soil surface before runoff starts
       integer   swqhbot            ! Switch for flux-groundwater level relationship: 1 = exponential function; 2 = tabular function
       integer   swcofqhc           ! Switch for additional flux added to exponential flux-groundwater level relationship: 0 = no, 1 = yes

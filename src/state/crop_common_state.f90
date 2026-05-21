@@ -141,6 +141,16 @@ module crop_common_state_mod
       real(real64) :: span           = 0.0_real64     !! life span of leaves at optimum (d)
       real(real64) :: perdl          = 0.0_real64     !! max relative leaf death rate due to water stress (1/d)
 
+      ! Bartholomeus oxygen-stress physical-model config (per rotation)
+      integer      :: swoxygentype          = 0          !! 1=physical, 2=reproduction functions
+      integer      :: swrootradius          = 0          !! 1=calculated, 2=given
+      real(real64) :: srl                   = 0.0_real64 !! specific root length (cm/g)
+      real(real64) :: dry_mat_cont_roots    = 0.0_real64 !! dry matter content of roots
+      real(real64) :: air_filled_root_por   = 0.0_real64 !! air-filled root porosity
+      real(real64) :: spec_weight_root_tissue = 0.0_real64 !! specific weight root tissue
+      real(real64) :: var_a                 = 0.0_real64 !! Carsel-Parrish variability constant
+      real(real64) :: root_radiusO2         = 0.0_real64 !! given root radius (m)
+
    contains
       procedure :: init => crop_common_state_init
    end type crop_common_state_t

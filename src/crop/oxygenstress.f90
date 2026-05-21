@@ -105,9 +105,7 @@ contains
                            croptype, icrop, max_resp_factor, &
                            ! DEFERRED: bdens/numtablay/sptab/iHWCKmodel/c_top — soil config, no state home yet; swsophy retired
                            bdens, numtablay, sptab, iHWCKmodel, c_top, &
-                           ! DEFERRED: SRL/swrootradius/dry_mat_cont_roots/air_filled_root_por/spec_weight_root_tissue/var_a/root_radiusO2 — crop config; Phase C3
-                           SRL, swrootradius, dry_mat_cont_roots, &
-                           air_filled_root_por, spec_weight_root_tissue, var_a, root_radiusO2, &
+                           ! SRL/swrootradius/dry_mat_cont_roots/air_filled_root_por/spec_weight_root_tissue/var_a/root_radiusO2 retired
                            ! DEFERRED: q10/rmr/rfsetb/rid/rdctb/w_root_ss — active crop state; Phase C3; dvs/wrt/rd/cumdens retired
                            rid, w_root_ss, &  ! q10/rmr/rfsetb/rdctb retired
                            ! DEFERRED: tsoil — heat staging buffer; tsoil migration pending
@@ -191,15 +189,15 @@ contains
       lay = state%mesh%layer(node)  ! [GR-BH C7]
 
 ! --- dry weight of root per unit length of root [kg/m]
-      w_root = 1.0d0/SRL
+      w_root = 1.0d0/state%crop%common%srl
 ! --- root radius [m]                  ## MH: ()**0.5 replaced by dsqrt()
-      if (swrootradius .eq. 1) then
-        root_radius = dsqrt((w_root/(pi*dry_mat_cont_roots*             &
-     &              (1-air_filled_root_por)*spec_weight_root_tissue))-  &
-     &              (var_a))
+      if (state%crop%common%swrootradius .eq. 1) then
+        root_radius = dsqrt((w_root/(pi*state%crop%common%dry_mat_cont_roots* &
+     &              (1-state%crop%common%air_filled_root_por)*state%crop%common%spec_weight_root_tissue))- &
+     &              (state%crop%common%var_a))
       endif
-      if (swrootradius .eq. 2) then
-        root_radius = root_radiusO2
+      if (state%crop%common%swrootradius .eq. 2) then
+        root_radius = state%crop%common%root_radiusO2
       endif
 
 ! --- RB20140117 get wofost parameters
