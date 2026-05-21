@@ -51,7 +51,7 @@
       use variables, only: &                                            ! [SS-GR-CROPRT B7] [GR-CROPWS B5]
         macp, magrs, rdmax, &  ! icrop/dvs/rd/rdpot/dvsend retired
         ! swrd/swdmi2rd/swrdc/swgc/swdrought/swinter/swcf retired
-        swbulb, swinco, laiem, laiexp, laiexppot, laimax,    &  ! lai/laipot retired
+        swbulb, swinco,                                      &  ! laiem/laiexp/laiexppot/laimax/lai/laipot retired
         daycrop, daylp,         &  ! tsum/tbase/tsumea/tsumam/cfeic retired
         siccaplai, cropend,                               &  ! [GR-CROPWS B5] cropstart removed (→state%crop%common%cropstart)
         wrtmin, &  ! wso/wst/wlv/wrt/wrtmax retired
@@ -63,11 +63,11 @@
         ! q10/rmr/rml/rms/rmo/rfsetb/frtb/fltb/fstb/fotb/fbltb retired
         fbl, drbl, drblpot,                   &
         ! cftb/chtb/cfeictb/rdtb/rlwtb/slatb/rgrlai/dtsmtb/rdrrtb/rdrstb retired
-        dlc, dlo, logf, tdwi,                                &  ! span/spa/ssa retired
+        dlc, dlo, logf,                                      &  ! tdwi/span/spa/ssa retired
         lv, lvpot, lvage, lvagepot, sla, slapot,                          &
         ilvold, ilvoldpot, idsl,                                           &
         gasst, gasstpot,                              &  ! dw* retired
-        glaiex, glaiexpot, mrest, mrestpot,                               &
+        mrest, mrestpot,                                                  &  ! glaiex/glaiexpot retired
         tadw, tadwpot, gwrt, fraharlosorm_lv, fraharlosorm_so, &
         fraharlosorm_st,                                                   &
         rdrns, outfil, pathwork, project, dvsnlt, dvsnt,                  &  ! perdl retired
@@ -267,10 +267,10 @@
         ilvoldpot = 1
 
 ! ---   initial state variables of the crop
-        state%crop%wofost%wrt = fr*tdwi
+        state%crop%wofost%wrt = fr*state%crop%common%tdwi
         wrtmin = state%crop%wofost%wrt / 10000 ! minimum root weigth at relative depth is set to 1% of the initial value
         state%crop%wofost%wrtpot = state%crop%wofost%wrt
-        tadw = (1.0d0-fr)*tdwi
+        tadw = (1.0d0-fr)*state%crop%common%tdwi
         tadwpot = tadw
         state%crop%wofost%wst = fs*tadw
         state%crop%wofost%wstpot = state%crop%wofost%wst
@@ -283,23 +283,23 @@
 !          blad bij opkomst is ondergronds: lai vanuit ingelezen laiem,
 !          sla(l) aangepast aan initieel bladgewicht en laiem,
 !          stengelgewicht bij opkomst niet meegenomen bij lai-berekening
-           sla(1) = laiem / state%crop%wofost%wlv
+           sla(1) = state%crop%common%laiem / state%crop%wofost%wlv
            wstem = state%crop%wofost%wst
            state%crop%wofost%wbl = fbl*tadw
            state%crop%wofost%wblpot = state%crop%wofost%wbl
         else
 !          KRO-BOO-20160403: intro because comparison with Wofost
-           laiem = state%crop%wofost%wlv*sla(1)
+           state%crop%common%laiem = state%crop%wofost%wlv*sla(1)
         endif
         lv(1) = state%crop%wofost%wlv
         lvpot(1) = state%crop%wofost%wlv
-        lasum = laiem     
-        lasumpot = laiem     
-        laiexp = laiem
-        laiexppot = laiem
-        glaiex = 0.0d0
-        glaiexpot = 0.0d0
-        laimax = laiem
+        lasum = state%crop%common%laiem
+        lasumpot = state%crop%common%laiem
+        state%crop%common%laiexp = state%crop%common%laiem
+        state%crop%common%laiexppot = state%crop%common%laiem
+        state%crop%common%glaiex = 0.0d0
+        state%crop%common%glaiexpot = 0.0d0
+        state%crop%common%laimax = state%crop%common%laiem
 ! --- only for bulb crops (tulips etc..)
         if(swbulb.eq.1) then
             state%crop%lai = lasum+state%crop%common%ssa*(state%crop%wofost%wst-wstem)+state%crop%common%spa*state%crop%wofost%wso
@@ -580,14 +580,14 @@
 
 ! --- calculation of specific leaf area in case of exponential growth:
 ! --- leaf area not to exceed exponential growth curve
-      if (laiexppot.lt.6.0d0) then
+      if (state%crop%common%laiexppot.lt.6.0d0) then
         dteff = max (0.0d0,at_tav-state%crop%common%tbase)  ! [SS-GR-ATM B.5]
 ! ---   increase in leaf area during exponential growth
-        glaiexpot = laiexppot*state%crop%common%rgrlai*dteff
+        state%crop%common%glaiexpot = state%crop%common%laiexppot*state%crop%common%rgrlai*dteff
 ! ---   source-limited increase in leaf area
         glasolpot = grlvpot*slatpot
 ! ---   actual increase is determined by lowest value
-        glapot = min (glaiexpot,glasolpot)
+        glapot = min (state%crop%common%glaiexpot,glasolpot)
 ! ---   slat will be modified in case gla equals glaiex
         if (grlvpot.gt.0.0d0) slatpot = glapot/grlvpot
       endif  
@@ -662,7 +662,7 @@
       enddo
 
 ! --- leaf area index in case of exponential growth
-      laiexppot = laiexppot+glaiexpot*delt
+      state%crop%common%laiexppot = state%crop%common%laiexppot+state%crop%common%glaiexpot*delt
 
 ! --- dry weight of living plant organs
       state%crop%wofost%wrtpot = state%crop%wofost%wrtpot + gwrtpot*delt
@@ -865,7 +865,7 @@
            Fstress = reltr * EXP(-NLAI* (1.0d0 - NNI))
          endif
       endif
-      call GLAI(Fstress,LAIEXP,GLAIEX,at_tav,state%crop%common%tbase,state%crop%common%rgrlai,GRLV,SLAT,GLA)  ! [SS-GR-ATM B.5]
+      call GLAI(Fstress,state%crop%common%LAIEXP,state%crop%common%GLAIEX,at_tav,state%crop%common%tbase,state%crop%common%rgrlai,GRLV,SLAT,GLA)  ! [SS-GR-ATM B.5]
 
 
 ! ---- UPDATE STATES: integrals of the crop --------------------------------------------
@@ -890,7 +890,7 @@
       call lvwgli(ilvold,lv,sla,lasum,state%crop%wofost%wlv)
 
 ! --- leaf area index in case of exponential growth
-      laiexp = laiexp+glaiex*delt
+      state%crop%common%laiexp = state%crop%common%laiexp+state%crop%common%glaiex*delt
       
 ! --- dry weight of living plant organs
       state%crop%wofost%wrt = state%crop%wofost%wrt+gwrt*delt
@@ -942,7 +942,7 @@
 ! --- leaf area index
       state%crop%lai = lasum+state%crop%common%ssa*state%crop%wofost%wst+state%crop%common%spa*state%crop%wofost%wso
 ! --- determine maximum lai
-      laimax = max (state%crop%lai,laimax)
+      state%crop%common%laimax = max (state%crop%lai,state%crop%common%laimax)
 ! --- determine minimum lai to prevent dying straight after 
 !       emergence when growth is slowed down due to low temperature
 !     KRO-BOO-20160403: suppressed because deviates from Wofost

@@ -48,14 +48,14 @@
       !   perdl, dateharvest, lsda: output + harvest tracking, no state home
       !   tsoil: config-staging buffer, renamed to avoid clash with dummy arg
       use variables, only: &                                            ! [SS-GR-CROPRT B8] [GR-CROPWS B4]
-        magrs, macp, rid, daycrop, tdwi, swinco, &  ! [GR-CROPWS B4] icrop/dvs/tsum/wst/wlv/wrt/dw*/tbase retired
+        magrs, macp, rid, daycrop, swinco,       &  ! tdwi/[GR-CROPWS B4] icrop/dvs/tsum/wst/wlv/wrt/dw*/tbase retired
         wrtmin,                  &  ! wrtmax retired
-        laiem, laiexp, laiexppot, laimax,           &  ! lai/laipot/cfeic retired
+        ! laiem/laiexp/laiexppot/laimax/lai/laipot/cfeic retired
         ! cftb/chtb/cfeictb/rdtb/rlwtb/slatb/rgrlai/rfsetb retired
         ! frtb/fltb/fstb/rdrrtb/rdrstb retired
         rdmax,                           &  ! rd/rdpot/swrd/swrdc/swdmi2rd retired
         reltr,                                                           &  ! swgc/swdrought/swinter/swcf retired
-        glaiex, glaiexpot, &  ! cvl/cvr/cvs/q10/rmr/rml/rms/span/ssa retired
+        ! glaiex/glaiexpot/cvl/cvr/cvs/q10/rmr/rml/rms/span/ssa retired
         lv, lvpot, lvage, lvagepot, sla, slapot, ilvold, ilvoldpot,     &
         twilt, wiltpoint, gwrt, siccaplai,                   &  ! cropstartact/endact/startpot/endpot retired
         idaysgraz, idaysgrazpot, idregr, idregrpot,                      &
@@ -239,25 +239,25 @@
         idregrpot = 0
 
 ! ---   initial state variables of the crop
-        state%crop%wofost%wrt = fr*tdwi
+        state%crop%wofost%wrt = fr*state%crop%common%tdwi
         wrtmin = state%crop%wofost%wrt / 10000 ! minimum root weigth at relative depth is set to 1% of the initial value
         state%crop%wofost%wrtpot = state%crop%wofost%wrt
-        state%crop%wofost%wst = fs*(1.0d0-fr)*tdwi
+        state%crop%wofost%wst = fs*(1.0d0-fr)*state%crop%common%tdwi
         state%crop%wofost%wstpot = state%crop%wofost%wst
-        state%crop%wofost%wlv = laiem/sla(1)
+        state%crop%wofost%wlv = state%crop%common%laiem/sla(1)
         state%crop%wofost%wlvpot = state%crop%wofost%wlv
         
 !     KRO-BOO-20160403: intro because comparison with Wofost
-        laiem = state%crop%wofost%wlv*sla(1)  ! is not input !
+        state%crop%common%laiem = state%crop%wofost%wlv*sla(1)  ! is not input !
         lv(1) = state%crop%wofost%wlv
         lvpot(1) = lv(1)
-        lasum = laiem
+        lasum = state%crop%common%laiem
         lasumpot = lasum     
-        glaiex = 0.0d0
-        glaiexpot = 0.0d0
-        laiexp = laiem
-        laiexppot = laiem
-        laimax = laiem
+        state%crop%common%glaiex = 0.0d0
+        state%crop%common%glaiexpot = 0.0d0
+        state%crop%common%laiexp = state%crop%common%laiem
+        state%crop%common%laiexppot = state%crop%common%laiem
+        state%crop%common%laimax = state%crop%common%laiem
         state%crop%lai = lasum+state%crop%common%ssa*state%crop%wofost%wst
         state%crop%common%laipot = state%crop%lai
         state%crop%wofost%dwrt = 0.d0
@@ -533,12 +533,12 @@
 
 ! ---   leaf area not to exceed exponential growth curve
         slatpot = afgen (state%crop%common%slatb,30,rid)
-        if (laiexppot.lt.6.0d0) then
+        if (state%crop%common%laiexppot.lt.6.0d0) then
           dteff = max (0.0d0,at_tav-state%crop%common%tbase)  ! [SS-GR-ATM B.5]
-          glaiexpot = laiexppot*state%crop%common%rgrlai*dteff
+          state%crop%common%glaiexpot = state%crop%common%laiexppot*state%crop%common%rgrlai*dteff
 ! ---   source-limited increase in leaf area
           glasolpot = grlvpot*slatpot
-          glapot = min (glaiexpot,glasolpot)
+          glapot = min (state%crop%common%glaiexpot,glasolpot)
 ! ---   adjustment of specific leaf area of youngest leaf class
           if (grlvpot.gt.0.0d0) slatpot = glapot/grlvpot
         endif  
@@ -601,7 +601,7 @@
             lvagepot(1) = 0.0d0
             ilvoldpot = 1
             lasumpot = state%crop%wofost%wlvpot * slapot(1)
-            laiexppot = lasumpot
+            state%crop%common%laiexppot = lasumpot
             lvpot(1) = state%crop%wofost%wlvpot
             
             gwstpot = 0.0d0
@@ -763,7 +763,7 @@
               lvagepot(1) = 0.0d0
               ilvoldpot = 1
               lasumpot = state%crop%wofost%wlvpot * slapot(1)
-              laiexppot = lasumpot
+              state%crop%common%laiexppot = lasumpot
               lvpot(1) = state%crop%wofost%wlvpot
               
               gwstpot = 0.0d0
@@ -830,7 +830,7 @@
             state%crop%wofost%wlvpot = state%crop%wofost%wlvpot+lvpot(i1)
           enddo
 
-          laiexppot = laiexppot+glaiexpot*delt
+          state%crop%common%laiexppot = state%crop%common%laiexppot+state%crop%common%glaiexpot*delt
 
         endif
 
@@ -994,12 +994,12 @@
         slat = afgen (state%crop%common%slatb,30,rid)
 
 ! ---   leaf area not to exceed exponential growth curve
-        if (laiexp.lt.6.0d0) then
+        if (state%crop%common%laiexp.lt.6.0d0) then
           dteff = max (0.0d0,at_tav-state%crop%common%tbase)  ! [SS-GR-ATM B.5]
-          glaiex = laiexp*state%crop%common%rgrlai*dteff
+          state%crop%common%glaiex = state%crop%common%laiexp*state%crop%common%rgrlai*dteff
 ! ---     source-limited increase in leaf area
           glasol = grlv*slat
-          gla = min (glaiex,glasol)
+          gla = min (state%crop%common%glaiex,glasol)
 ! ---     adjustment of specific leaf area of youngest leaf class
           if (grlv.gt.0.0d0) slat = gla/grlv
         endif  
@@ -1063,7 +1063,7 @@
           lvage(1) = 0.0d0
           ilvold = 1
           lasum = state%crop%wofost%wlv * sla(1)
-          laiexp = lasum
+          state%crop%common%laiexp = lasum
           lv(1) = state%crop%wofost%wlv
 
           gwst = 0.0d0
@@ -1225,7 +1225,7 @@
               lvage(1) = 0.0d0
               ilvold = 1
               lasum = state%crop%wofost%wlv * sla(1)
-              laiexp = lasum
+              state%crop%common%laiexp = lasum
               lv(1) = state%crop%wofost%wlv
     
               gwst = 0.0d0
@@ -1292,7 +1292,7 @@
             state%crop%wofost%wlv = state%crop%wofost%wlv+lv(i1)
           enddo
 
-          laiexp = laiexp+glaiex*delt
+          state%crop%common%laiexp = state%crop%common%laiexp+state%crop%common%glaiex*delt
 
         endif
 
@@ -1312,7 +1312,7 @@
 
 ! ---   leaf area index
         state%crop%lai = lasum+state%crop%common%ssa*state%crop%wofost%wst
-        laimax = max (state%crop%lai,laimax)
+        state%crop%common%laimax = max (state%crop%lai,state%crop%common%laimax)
 
 ! ---   update normalized cumulative root density based on root extraction or stress (cumdens)
         if (state%crop%common%swrdc .eq. 1) call update_rootdistribution(state)

@@ -38,7 +38,7 @@ contains
          ! cftb/chtb/albedo/rsc/rsw/swcf retired
          ! Interception — DEFERRED Phase C3; swinter/cofab retired
          ! Crop state — DEFERRED Phase C3
-         tdwi, laiem,                                                         &  ! rgrlai retired
+         ! tdwi/laiem/rgrlai retired
          ! Start-of-growth trigger — DEFERRED Phase C3
          swtsum, tsumtemp, tsumtime, tsumdepth,                               &
          ! Green area — DEFERRED Phase C3; tbase retired
@@ -172,8 +172,8 @@ contains
       end if
 
       ! Part 3: initial crop state (readgrass lines 3604-3606)
-      tdwi   = cfg%tdwi
-      laiem  = cfg%laiem
+      state%crop%common%tdwi  = cfg%tdwi
+      state%crop%common%laiem = cfg%laiem
       state%crop%common%rgrlai = cfg%rgrlai
 
       ! Part 4: start-of-growth trigger (readgrass lines 3609-3614)

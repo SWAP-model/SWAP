@@ -51,9 +51,6 @@
       cfevappond         = 0.0d0
       finterception      = 0.0d0
       grain              = 0.0d0
-      laiexp             = 0.0d0 
-      laiexppot          = 0.0d0 
-      laimax             = 0.0d0 
       ! [SS-TC] metperiod retired to state%timecontrol%metperiod (ADR 0041)
       ! [SS-ATM A-2.6] nraida/nraidt/peva/pevaday/ptra/ptraday retired to state%atmosphere
       nrain              = 0.0d0
@@ -621,7 +618,6 @@
       fbl                = 0.0d0 
       gasstpot           = 0.0d0 
       gc                 = 0.0d0 
-      laiem              = 0.0d0
       lv                 = 0.0d0
       lvage              = 0.0d0
       lvagepot           = 0.0d0
@@ -640,7 +636,6 @@
       siccaptb           = 0.0d0 
       sla                = 0.0d0
       slapot             = 0.0d0
-      tdwi               = 0.0d0 
       vernrtb            = 0.0d0 
 
 ! --- only for bulb crops (tulips etc..)

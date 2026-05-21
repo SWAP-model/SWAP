@@ -49,7 +49,7 @@ contains
          ! Vernalisation — DEFERRED Phase C3
          verndvs, vernsat, vernbase, vernrtb,                                &
          ! Initial crop state — DEFERRED Phase C3
-         tdwi, laiem,                                                        &  ! rgrlai retired
+         ! tdwi/laiem/rgrlai retired
          ! Green area / assimilation — DEFERRED Phase C3; tbase retired
          ! slatb/spa/ssa/span retired
          ! kdif/kdir/eff/amaxtb/tmpftb/tmnftb retired
@@ -195,8 +195,8 @@ contains
       ! vernalization (idsl=2) stub-guarded above — safe defaults already in module
 
       ! Part 3: initial crop state (readwofost lines 2752-2754)
-      tdwi   = cfg%initial%tdwi
-      laiem  = cfg%initial%laiem
+      state%crop%common%tdwi  = cfg%initial%tdwi
+      state%crop%common%laiem = cfg%initial%laiem
       state%crop%common%rgrlai = cfg%initial%rgrlai
 
       ! Part 4: green area (readwofost lines 2757-2761)

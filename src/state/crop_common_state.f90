@@ -151,6 +151,15 @@ module crop_common_state_mod
       real(real64) :: var_a                 = 0.0_real64 !! Carsel-Parrish variability constant
       real(real64) :: root_radiusO2         = 0.0_real64 !! given root radius (m)
 
+      ! Leaf-area initial + runtime scalars (per-rotation; runtime-mutated)
+      real(real64) :: tdwi          = 0.0_real64       !! initial total dry weight (kg/ha)
+      real(real64) :: laiem         = 0.0_real64       !! LAI at emergence (m2/m2)
+      real(real64) :: laiexp        = 0.0_real64       !! current exponential-phase LAI (actual)
+      real(real64) :: laiexppot     = 0.0_real64       !! current exponential-phase LAI (potential)
+      real(real64) :: laimax        = 0.0_real64       !! max LAI achieved (m2/m2)
+      real(real64) :: glaiex        = 0.0_real64       !! daily LAI increase, exponential (actual)
+      real(real64) :: glaiexpot     = 0.0_real64       !! daily LAI increase, exponential (potential)
+
    contains
       procedure :: init => crop_common_state_init
    end type crop_common_state_t

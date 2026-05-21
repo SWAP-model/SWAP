@@ -433,12 +433,12 @@
       ! [GR-CROP-DVS] kdif retired — see state%crop%kdif
       ! [GR-CROP-DVS] kdir retired — see state%crop%kdir
       ! [GR-CROP-DVS] lai retired — see state%crop%lai
-      real(8)   laiem              ! Leaf area index (-) at crop emergence
-      real(8)   laiexp             ! Leaf area index (-) in exponential growth stage of actual crop
-      real(8)   laiexppot          ! Leaf area index (-) in exponential growth stage of potential crop
-      real(8)   glaiex             ! increase in leaf area during exponential growth of actual crop
-      real(8)   glaiexpot          ! increase in leaf area during exponential growth of potential crop
-      real(8)   laimax             ! Maximum leaf area index reached during growth of actual grass crop (-)
+      ! [GR-CROPWS] laiem retired — see state%crop%common%laiem
+      ! [GR-CROPWS] laiexp retired — see state%crop%common%laiexp
+      ! [GR-CROPWS] laiexppot retired — see state%crop%common%laiexppot
+      ! [GR-CROPWS] glaiex retired — see state%crop%common%glaiex
+      ! [GR-CROPWS] glaiexpot retired — see state%crop%common%glaiexpot
+      ! [GR-CROPWS] laimax retired — see state%crop%common%laimax
       ! [GR-CROP-DVS] laipot retired — see state%crop%common%laipot
       real(8)   lv(366)            ! Array with leaf weight (kg/ha) as function of crop day number of actual crop
       real(8)   lvpot(366)         ! Array with leaf weight (kg/ha) as function of crop day number of potential crop
@@ -495,7 +495,7 @@
       ! [GR-CROP-DVS] tagpt retired — see state%crop%wofost%tagpt
       ! [GR-CROP-DVS] tagptpot retired — see state%crop%wofost%tagptpot
       ! [GR-CROPWS] tbase retired — see state%crop%common%tbase
-      real(8)   tdwi               ! Initial total crop dry weight (kg/ha)
+      ! [GR-CROPWS] tdwi retired — see state%crop%common%tdwi
       ! [GR-CROPWS] tmnftb retired — see state%crop%common%tmnftb
       ! [GR-CROPWS] tmpftb retired — see state%crop%common%tmpftb
       ! [GR-CROP-DVS] tsum retired — see state%crop%common%tsum
