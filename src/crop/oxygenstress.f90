@@ -109,7 +109,7 @@ contains
                            SRL, swrootradius, dry_mat_cont_roots, &
                            air_filled_root_por, spec_weight_root_tissue, var_a, root_radiusO2, &
                            ! DEFERRED: q10/rmr/rfsetb/rid/rdctb/w_root_ss — active crop state; Phase C3; dvs/wrt/rd/cumdens retired
-                           q10, rmr, rfsetb, rid, rdctb, w_root_ss, &
+                           q10, rmr, rfsetb, rid, w_root_ss, &  ! rdctb retired
                            ! DEFERRED: tsoil — heat staging buffer; tsoil migration pending
                            tsoil, &
                            ! DEFERRED: c_mroot/f_senes/q10_root/q10_microbial/shape_factor_rootr/specific_resp_humus — O2 config; Phase C3
@@ -250,9 +250,9 @@ contains
 ! --- static crop. w_root_z0 relative to value of top layer              
       if (croptype(icrop) .eq. 1) then
             rdepth_top = -state%mesh%ztopcp(1)/state%crop%common%rd ! (-z(1)-0.5d0*dz(1))/state%crop%common%rd  [GR-BH C7]
-            rdens_top  = afgen(rdctb,22,rdepth_top)
+            rdens_top  = afgen(state%crop%common%rdctb,22,rdepth_top)
             rdepth     = -state%mesh%ztopcp(node)/state%crop%common%rd ! (-z(node)-0.5d0*dz(node))/state%crop%common%rd  [GR-BH C7]
-            rdens      = afgen(rdctb,22,rdepth) 
+            rdens      = afgen(state%crop%common%rdctb,22,rdepth)
             w_root_z0  = w_root_ss * rdens/rdens_top !static crop
       endif
 ! --- calculate wrootz0 [kg/m3] at top of the compartments !adj RB 20171201

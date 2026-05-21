@@ -70,7 +70,7 @@ contains
          ! swcompensate/swstressor retired
          ! Interception — DEFERRED Phase C3; swinter/cofab retired
          ! Root depth — DEFERRED Phase C3
-         rdctb, rdtb, rlwtb, wrtmax,                                          &  ! swrd/swdmi2rd/swrdc/cumdens retired
+         ! rdctb/rdtb/rlwtb/wrtmax/swrd/swdmi2rd/swrdc/cumdens retired
          ! Harvest — DEFERRED Phase C3; dvsend/swharv retired
          swpotrelmf,                                                          &  ! relmf retired
          ! Irrigation schedule — DEFERRED Phase C3
@@ -379,8 +379,8 @@ contains
             integer :: nr, j
             nr = size(cfg%root%rdctb, 1)
             do j = 1, nr
-               rdctb(j*2-1) = cfg%root%rdctb(j,1)
-               rdctb(j*2)   = cfg%root%rdctb(j,2)
+               state%crop%common%rdctb(j*2-1) = cfg%root%rdctb(j,1)
+               state%crop%common%rdctb(j*2)   = cfg%root%rdctb(j,2)
             end do
          end block
       end if
@@ -392,8 +392,8 @@ contains
                integer :: nr, j
                nr = size(cfg%root%rdtb, 1)
                do j = 1, nr
-                  rdtb(j*2-1) = cfg%root%rdtb(j,1)
-                  rdtb(j*2)   = cfg%root%rdtb(j,2)
+                  state%crop%common%rdtb(j*2-1) = cfg%root%rdtb(j,1)
+                  state%crop%common%rdtb(j*2)   = cfg%root%rdtb(j,2)
                end do
             end block
          end if
@@ -408,12 +408,12 @@ contains
                integer :: nr, j
                nr = size(cfg%root%rlwtb, 1)
                do j = 1, nr
-                  rlwtb(j*2-1) = cfg%root%rlwtb(j,1)
-                  rlwtb(j*2)   = cfg%root%rlwtb(j,2)
+                  state%crop%common%rlwtb(j*2-1) = cfg%root%rlwtb(j,1)
+                  state%crop%common%rlwtb(j*2)   = cfg%root%rlwtb(j,2)
                end do
             end block
          end if
-         wrtmax = cfg%root%wrtmax
+         state%crop%common%wrtmax = cfg%root%wrtmax
       end select
 
       ! Harvest (readwofost lines 2745-2748)
@@ -442,7 +442,7 @@ contains
          do i = 0, 100
             depth = 0.01d0 * dble(i)
             rootdis(i*2+1) = depth
-            rootdis(i*2+2) = afgen(rdctb, 22, depth)
+            rootdis(i*2+2) = afgen(state%crop%common%rdctb, 22, depth)
          end do
 
          ! Copy depths to odd cumdens indices

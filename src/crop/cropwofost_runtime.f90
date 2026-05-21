@@ -54,7 +54,7 @@
         swbulb, swinco, laiem, laiexp, laiexppot, laimax,    &  ! lai/laipot retired
         daycrop, daylp,         &  ! tsum/tbase/tsumea/tsumam/cfeic retired
         siccaplai, cropend,                               &  ! [GR-CROPWS B5] cropstart removed (→state%crop%common%cropstart)
-        wrtmax, wrtmin, &  ! wso/wst/wlv/wrt retired
+        wrtmin, &  ! wso/wst/wlv/wrt/wrtmax retired
         reltr, lrnr, lsnr, nni,           &
         anlv, anst, nmxlv, nmaxlv, nmaxst, nmaxrt, nmaxso, nlai,          &
         rnflv, rnfst, rnfrt, fstr, fntrt, npart, nfixf, nsla,             &
@@ -62,7 +62,7 @@
         flCropHarvest, flCropNut, flHarvestDay, flhydrlift, flanthesis,    &
         q10, rmr, rml, rms, rmo, rfsetb, frtb, fltb, fstb, fotb, fbltb,  &
         fbl, drbl, drblpot,                   &
-        rdtb, slatb, rgrlai, rlwtb, dtsmtb, rdrrtb, rdrstb, &  ! cftb/chtb/cfeictb retired
+        slatb, rgrlai, dtsmtb, rdrrtb, rdrstb, &  ! cftb/chtb/cfeictb/rdtb/rlwtb retired
         dlc, dlo, span, spa, ssa, logf, tdwi,                &
         lv, lvpot, lvage, lvagepot, sla, slapot,                          &
         ilvold, ilvoldpot, idsl,                                           &
@@ -239,7 +239,7 @@
       elseif (state%crop%common%swrd.eq.2) then
         state%crop%common%rdm = min(rdmax,state%crop%common%rdc)
       elseif (state%crop%common%swrd.eq.3) then
-        state%crop%common%rdc = afgen (rlwtb,22,wrtmax)
+        state%crop%common%rdc = afgen (state%crop%common%rlwtb,22,state%crop%common%wrtmax)
         state%crop%common%rdm = min(rdmax,state%crop%common%rdc)
       endif
 
@@ -342,12 +342,12 @@
 
 ! --- actual rooting depth
         if (state%crop%common%swrd.eq.1) then
-          state%crop%common%rd = afgen (rdtb,22,state%crop%common%dvs)
+          state%crop%common%rd = afgen (state%crop%common%rdtb,22,state%crop%common%dvs)
           state%crop%common%rd = min(state%crop%common%rd,state%crop%common%rdm)
         elseif (state%crop%common%swrd.eq.2) then
           state%crop%common%rd = min(state%crop%common%rdi,state%crop%common%rdm)
         elseif (state%crop%common%swrd.eq.3) then
-          state%crop%common%rdi = afgen (rlwtb,22,state%crop%wofost%wrt)
+          state%crop%common%rdi = afgen (state%crop%common%rlwtb,22,state%crop%wofost%wrt)
           state%crop%common%rd = min(state%crop%common%rdi,state%crop%common%rdm)
         endif
         state%crop%common%rdpot = state%crop%common%rd
@@ -521,7 +521,7 @@
       grrtpot = fr*dmipot
       ! in case of SWRD = 3: after reaching maximum live weight of wrtmax, the
       ! growth of the roots is balanced by the death of root tissue
-      if (state%crop%common%swrd.eq.3 .and. state%crop%wofost%wrtpot.gt.wrtmax) then
+      if (state%crop%common%swrd.eq.3 .and. state%crop%wofost%wrtpot.gt.state%crop%common%wrtmax) then
         drrtpot = grrtpot
         drrtpot = max(drrtpot,state%crop%wofost%wrtpot*afgen (rdrrtb,30,state%crop%common%dvs))
       else  
@@ -820,7 +820,7 @@
 ! --- death rate roots
       ! in case of SWRD = 3: after reaching maximum live weight of wrtmax, the
       ! growth of the roots is balanced by the death of root tissue
-      if (state%crop%common%swrd.eq.3 .and. state%crop%wofost%wrt.gt.wrtmax) then
+      if (state%crop%common%swrd.eq.3 .and. state%crop%wofost%wrt.gt.state%crop%common%wrtmax) then
         drrt = grrt
         drrt = max(drrt,state%crop%wofost%wrt*afgen (rdrrtb,30,state%crop%common%dvs))
       else  
@@ -1155,7 +1155,7 @@
 ! --- root extension
       if (state%crop%common%swrd.eq.1) then
 
-        state%crop%common%rdpot = afgen (rdtb,22,state%crop%common%dvs)
+        state%crop%common%rdpot = afgen (state%crop%common%rdtb,22,state%crop%common%dvs)
         state%crop%common%rdpot = min(state%crop%common%rdpot,state%crop%common%rdm)
         state%crop%common%rd    = state%crop%common%rdpot
 
@@ -1172,9 +1172,9 @@
         state%crop%common%rd = state%crop%common%rd + rr
 
       elseif (state%crop%common%swrd.eq.3) then
-        state%crop%common%rdpot = afgen (rlwtb,22,state%crop%wofost%wrtpot)
+        state%crop%common%rdpot = afgen (state%crop%common%rlwtb,22,state%crop%wofost%wrtpot)
         state%crop%common%rdpot = min(state%crop%common%rdpot,state%crop%common%rdm)
-        state%crop%common%rd = afgen (rlwtb,22,state%crop%wofost%wrt)
+        state%crop%common%rd = afgen (state%crop%common%rlwtb,22,state%crop%wofost%wrt)
         state%crop%common%rd = min(state%crop%common%rd,state%crop%common%rdm)
       endif
 

@@ -54,7 +54,7 @@ contains
          ! Death rates — DEFERRED Phase C3
          perdl, rdrrtb, rdrstb,                                               &
          ! Root depth and density — DEFERRED Phase C3; swrd/swdmi2rd/swrdc/rdi/rri/rdc retired
-         rdctb, rdtb, rlwtb, wrtmax,                         &  ! cumdens retired
+         ! rdctb/rdtb/rlwtb/wrtmax/cumdens retired
          ! Oxygen stress — DEFERRED Phase C3; swoxygen retired
          ! swWrtNonox/aeratecrit retired
          ! hlim1/hlim2u/hlim2l retired
@@ -273,7 +273,7 @@ contains
 
       ! Part 15: rooting (readgrass lines 3835-3873)
       state%crop%common%swrdc = cfg%swrdc
-      if (allocated(cfg%rdctb)) call copy_table(cfg%rdctb, rdctb)
+      if (allocated(cfg%rdctb)) call copy_table(cfg%rdctb, state%crop%common%rdctb)
       state%crop%common%swrd = cfg%swrd
       ! swrd=1 is still stub-guarded above; swrd=2 and swrd=3 are both active.
       if (cfg%swrd == 2) then
@@ -284,8 +284,8 @@ contains
       else if (cfg%swrd == 3) then
          ! Legacy readgrass:3868-3874 reads rlwtb (22-element flat pair table)
          ! and wrtmax for biomass-driven root extension.
-         if (allocated(cfg%rlwtb)) call copy_table(cfg%rlwtb, rlwtb)
-         wrtmax = cfg%wrtmax
+         if (allocated(cfg%rlwtb)) call copy_table(cfg%rlwtb, state%crop%common%rlwtb)
+         state%crop%common%wrtmax = cfg%wrtmax
       end if
 
       ! Part 16: management factors (readgrass lines 3876-3885)
@@ -362,7 +362,7 @@ contains
          do i = 0, 100
             depth          = 0.01d0 * dble(i)
             rootdis(i*2+1) = depth
-            rootdis(i*2+2) = afgen(rdctb, 22, depth)
+            rootdis(i*2+2) = afgen(state%crop%common%rdctb, 22, depth)
          end do
 
          ! Copy depths to odd cumdens indices

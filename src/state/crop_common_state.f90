@@ -3,6 +3,7 @@
 !! Fields populated in Task A6 via audit of cropgrowth.f90 and init files.
 module crop_common_state_mod
    use, intrinsic :: iso_fortran_env, only: real64
+   use swap_array_dimensions, only: MAGRS
    implicit none
    private
    public :: crop_common_state_t
@@ -97,6 +98,12 @@ module crop_common_state_mod
       real(real64) :: dcritrtz       = 0.0_real64     !! root-zone depth threshold for Walsum compensation (cm)
       integer      :: schedule       = 0              !! per-crop irrigation scheduling switch (0=fixed, 1=scheduled)
       real(real64) :: rsw            = 0.0_real64     !! canopy resistance to intercepted water (s/m)
+
+      ! Root tables (per-rotation config copied at init)
+      real(real64) :: rdtb(2*MAGRS)  = 0.0_real64     !! root depth vs DVS table (pair, 2*MAGRS)
+      real(real64) :: rdctb(22)      = 0.0_real64     !! relative root density vs relative depth (22-elem)
+      real(real64) :: rlwtb(22)      = 0.0_real64     !! root depth vs root biomass (22-elem pair)
+      real(real64) :: wrtmax         = 0.0_real64     !! maximum root weight (kg/ha)
 
    contains
       procedure :: init => crop_common_state_init

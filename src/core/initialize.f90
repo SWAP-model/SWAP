@@ -679,10 +679,6 @@
       ! [SS-ATM A-2.6] sicact retired to state%atmosphere%sicact
       
 ! --- rooting
-      rdctb              = 0.0d0 
-      rdtb               = 0.0d0
-      rlwtb              = 0.0d0
-      wrtmax             = 0.0d0
 
 ! --- harvest grassland
       dateharvest        = 0.0d0

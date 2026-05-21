@@ -558,11 +558,11 @@
       
 ! --- rooting      
       ! [GR-CROP-DVS] swrdc retired — see state%crop%common%swrdc
-      real(8)   rdctb(22)          ! Array with relative root density (-) as function of relative root depth (-)
+      ! [GR-CROPWS] rdctb retired — see state%crop%common%rdctb
       ! [GR-CROP-DVS] swrd retired — see state%crop%common%swrd
-      real(8)   rdtb(2*magrs)      ! root depth as function of development stage
-      real(8)   rlwtb(22)          ! root depth as function of root biomass
-      real(8)   wrtmax             ! maximum root weight
+      ! [GR-CROPWS] rdtb retired — see state%crop%common%rdtb
+      ! [GR-CROPWS] rlwtb retired — see state%crop%common%rlwtb
+      ! [GR-CROPWS] wrtmax retired — see state%crop%common%wrtmax
       ! [GR-CROP-DVS] swdmi2rd retired — see state%crop%common%swdmi2rd
       ! [GR-CROP-DVS] rdi retired — see state%crop%common%rdi
       ! [GR-CROP-DVS] rri retired — see state%crop%common%rri

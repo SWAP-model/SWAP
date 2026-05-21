@@ -34,7 +34,7 @@
                            rdmax,                                  &  ! tbase/tsumea/tsumam retired
                            siccaplai, w_root_ss, wiltpoint,   &
                            twilt, flhydrlift, gc,                       &  ! cfeic retired
-                           rdtb, mrftb, wrtb,                            &  ! gctb retired
+                           mrftb, wrtb,                                  &  ! gctb/rdtb retired
                            swinco, reltr
       use soilhydraulics_utils, only: watcon
       use array_utils, only: afgen
@@ -115,7 +115,7 @@
 
 ! --- actual rooting depth
         if (state%crop%common%swrd.eq.1) then
-          state%crop%common%rd = afgen (rdtb,22,state%crop%common%dvs)                    ! dvs is 0.0 here (just assigned), no separate read needed
+          state%crop%common%rd = afgen (state%crop%common%rdtb,22,state%crop%common%dvs)                    ! dvs is 0.0 here (just assigned), no separate read needed
           state%crop%common%rd = min(state%crop%common%rd,state%crop%common%rdm)                            ! [GR-CROPWS B1] state%crop%common%rdm → state%crop%common%rdm
         else
           state%crop%common%rd = min(state%crop%common%rdi,state%crop%common%rdm)         ! [GR-CROPWS B1] state%crop%common%rdi, state%crop%common%rdm → state%crop%common%X
@@ -234,7 +234,7 @@
           
 ! --- root extension
       if (state%crop%common%swrd.eq.1) then
-        state%crop%common%rdpot = afgen (rdtb,22,state%crop%common%dvs)                  ! [GR-CROPWS B1]
+        state%crop%common%rdpot = afgen (state%crop%common%rdtb,22,state%crop%common%dvs)                  ! [GR-CROPWS B1]
         state%crop%common%rdpot = min(state%crop%common%rdpot,state%crop%common%rdm)                       ! [GR-CROPWS B1]
         state%crop%common%rd    = state%crop%common%rdpot
       else

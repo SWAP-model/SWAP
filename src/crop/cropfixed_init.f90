@@ -34,7 +34,7 @@ contains
                             ! DEFERRED: cftb/chtb/cfeictb/swcf/albedo/rsc/rsw — crop factor config; Phase C3
                             ! cftb/chtb/cfeictb/albedo/rsc/rsw/swcf retired
                             ! DEFERRED: rdtb/rdctb — root config; Phase C3; swrd/swdmi2rd/swrdc/rdi/rri/rdc retired
-                            rdtb, rdctb,                                &
+                            ! rdtb/rdctb retired
                             ! DEFERRED: swoxygen/swWrtNonox/aeratecrit/max_resp_factor — O2 stress config; Phase C3
                             max_resp_factor    ! many globals retired — swoxygen/swWrtNonox/aeratecrit/hlim*/adcr*/saltmax/saltslope/salthead/swcompensate/swstressor/alphacrit/dcritrtz/swsalinity/swinter/cofab/dvsend/swharv/schedule/cumdens
       use array_utils,  only: afgen
@@ -133,12 +133,12 @@ contains
       if (allocated(cfg%cftb))    call copy_pair_table(cfg%cftb,    state%crop%fixed%cftb)
       if (allocated(cfg%chtb))    call copy_pair_table(cfg%chtb,    state%crop%fixed%chtb)
       if (allocated(cfg%cfeictb)) call copy_pair_table(cfg%cfeictb, state%crop%fixed%cfeictb)
-      if (allocated(cfg%rdtb))  call copy_pair_table(cfg%rdtb,  rdtb)
+      if (allocated(cfg%rdtb))  call copy_pair_table(cfg%rdtb, state%crop%common%rdtb)
 
       ! rdctb is sized 22 in legacy; we always copy.
       if (allocated(cfg%rdctb)) then
-         do i = 1, min(size(cfg%rdctb), size(rdctb))
-            rdctb(i) = cfg%rdctb(i)
+         do i = 1, min(size(cfg%rdctb), size(state%crop%common%rdctb))
+            state%crop%common%rdctb(i) = cfg%rdctb(i)
          end do
       end if
 
@@ -147,7 +147,7 @@ contains
          do i = 0, 100
             depth = 0.01_real64 * real(i, real64)
             rootdis(i*2 + 1) = depth
-            rootdis(i*2 + 2) = afgen(rdctb, 22, depth)
+            rootdis(i*2 + 2) = afgen(state%crop%common%rdctb, 22, depth)
          end do
          do i = 1, 202, 2
             state%crop%common%cumdens(i) = rootdis(i)
