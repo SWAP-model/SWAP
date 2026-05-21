@@ -46,9 +46,9 @@ contains
          ! Assimilation — DEFERRED Phase C3
          ! kdif/kdir/eff/amaxtb/tmpftb/tmnftb retired
          ! Biomass conversion — DEFERRED Phase C3
-         cvl, cvr, cvs,                                                       &
+         ! cvl/cvr/cvs retired
          ! Maintenance respiration — DEFERRED Phase C3
-         q10, rml, rmr, rms, rfsetb,                                         &
+         ! q10/rml/rmr/rms/rfsetb retired
          ! Partitioning — DEFERRED Phase C3
          frtb, fltb, fstb,                                                    &
          ! Death rates — DEFERRED Phase C3
@@ -197,16 +197,16 @@ contains
       if (allocated(cfg%tmnftb))  call copy_table(cfg%tmnftb,  state%crop%common%tmnftb)
 
       ! Part 7: conversion of assimilates (readgrass lines 3631-3633)
-      cvl = cfg%cvl
-      cvr = cfg%cvr
-      cvs = cfg%cvs
+      state%crop%common%cvl = cfg%cvl
+      state%crop%common%cvr = cfg%cvr
+      state%crop%common%cvs = cfg%cvs
 
       ! Part 8: maintenance respiration (readgrass lines 3636-3640)
-      q10 = cfg%q10
-      rml = cfg%rml
-      rmr = cfg%rmr
-      rms = cfg%rms
-      if (allocated(cfg%rfsetb))  call copy_table(cfg%rfsetb,  rfsetb)
+      state%crop%common%q10 = cfg%q10
+      state%crop%common%rml = cfg%rml
+      state%crop%common%rmr = cfg%rmr
+      state%crop%common%rms = cfg%rms
+      if (allocated(cfg%rfsetb))  call copy_table(cfg%rfsetb, state%crop%common%rfsetb)
 
       ! Part 9: partitioning (readgrass lines 3643-3645)
       if (allocated(cfg%frtb))    call copy_table(cfg%frtb,    frtb)

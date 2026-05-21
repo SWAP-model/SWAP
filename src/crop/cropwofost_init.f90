@@ -54,9 +54,9 @@ contains
          spa, ssa, span,                                                     &  ! slatb retired
          ! kdif/kdir/eff/amaxtb/tmpftb/tmnftb retired
          ! Biomass conversion — DEFERRED Phase C3
-         cvl, cvo, cvr, cvs,                                                 &
+         ! cvl/cvo/cvr/cvs retired
          ! Maintenance respiration — DEFERRED Phase C3
-         q10, rml, rmo, rmr, rms, rfsetb,                                   &
+         ! q10/rml/rmo/rmr/rms/rfsetb retired
          ! Partitioning / death rates — DEFERRED Phase C3
          frtb, fltb, fstb, fotb,                                             &
          perdl, rdrrtb, rdrstb,                                              &
@@ -251,24 +251,24 @@ contains
       end if
 
       ! Part 6: conversion (readwofost lines 2772-2775)
-      cvl = cfg%conversion%cvl
-      cvo = cfg%conversion%cvo
-      cvr = cfg%conversion%cvr
-      cvs = cfg%conversion%cvs
+      state%crop%common%cvl = cfg%conversion%cvl
+      state%crop%common%cvo = cfg%conversion%cvo
+      state%crop%common%cvr = cfg%conversion%cvr
+      state%crop%common%cvs = cfg%conversion%cvs
 
       ! Part 7: respiration (readwofost lines 2778-2783)
-      q10 = cfg%respiration%q10
-      rml = cfg%respiration%rml
-      rmo = cfg%respiration%rmo
-      rmr = cfg%respiration%rmr
-      rms = cfg%respiration%rms
+      state%crop%common%q10 = cfg%respiration%q10
+      state%crop%common%rml = cfg%respiration%rml
+      state%crop%common%rmo = cfg%respiration%rmo
+      state%crop%common%rmr = cfg%respiration%rmr
+      state%crop%common%rms = cfg%respiration%rms
       if (allocated(cfg%respiration%rfsetb)) then
          block
             integer :: nr, j
             nr = size(cfg%respiration%rfsetb, 1)
             do j = 1, nr
-               rfsetb(j*2-1) = cfg%respiration%rfsetb(j,1)
-               rfsetb(j*2)   = cfg%respiration%rfsetb(j,2)
+               state%crop%common%rfsetb(j*2-1) = cfg%respiration%rfsetb(j,1)
+               state%crop%common%rfsetb(j*2)   = cfg%respiration%rfsetb(j,2)
             end do
          end block
       end if

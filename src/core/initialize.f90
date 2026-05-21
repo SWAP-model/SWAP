@@ -616,10 +616,6 @@
       avprectb           = 0.0d0 
       cuptgraz           = 0.0d0 
       cuptgrazpot        = 0.0d0 
-      cvl                = 0.0d0 
-      cvo                = 0.0d0 
-      cvr                = 0.0d0 
-      cvs                = 0.0d0 
       dlc                = 0.0d0 
       dlo                = 0.0d0 
       dtsmtb             = 0.0d0
@@ -641,15 +637,9 @@
       perdl              = 0.0d0 
       pfreetb            = 0.0d0 
       pstemtb            = 0.0d0 
-      q10                = 0.0d0 
       rdrrtb             = 0.0d0 
       rdrstb             = 0.0d0 
       reltr              = 0.0d0 
-      rfsetb             = 0.0d0 
-      rml                = 0.0d0 
-      rmo                = 0.0d0 
-      rmr                = 0.0d0 
-      rms                = 0.0d0 
       rootcoefa          = 0.0d0 
       rootradius         = 0.0d0 
       ! [SS-CRP C-2.5] rootrho retired — soilwater_init handles init via state%soilwater (ADR 0036)

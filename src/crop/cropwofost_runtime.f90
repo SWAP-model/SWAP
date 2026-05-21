@@ -58,9 +58,9 @@
         reltr, lrnr, lsnr, nni,           &
         anlv, anst, nmxlv, nmaxlv, nmaxst, nmaxrt, nmaxso, nlai,          &
         rnflv, rnfst, rnfrt, fstr, fntrt, npart, nfixf, nsla,             &
-        cvl, cvo, cvr, cvs,                                                &
+        ! cvl/cvo/cvr/cvs retired
         flCropHarvest, flCropNut, flHarvestDay, flhydrlift, flanthesis,    &
-        q10, rmr, rml, rms, rmo, rfsetb, frtb, fltb, fstb, fotb, fbltb,  &
+        frtb, fltb, fstb, fotb, fbltb,  &  ! q10/rmr/rml/rms/rmo/rfsetb retired
         fbl, drbl, drblpot,                   &
         dtsmtb, rdrrtb, rdrstb, &  ! cftb/chtb/cfeictb/rdtb/rlwtb/slatb/rgrlai retired
         dlc, dlo, span, spa, ssa, logf, tdwi,                &
@@ -480,13 +480,13 @@
 ! --- respiration and partitioning of carbohydrates between growth and
 ! --- maintenance respiration
       if(swbulb.eq.1) then
-        rmrespot = (rmr*state%crop%wofost%wrtpot+rml*state%crop%wofost%wlvpot+rms*state%crop%wofost%wstpot+rms*state%crop%wofost%wblpot+        &
-     &           rmo*state%crop%wofost%wsopot)* afgen(rfsetb,30,state%crop%common%dvs)
+        rmrespot = (state%crop%common%rmr*state%crop%wofost%wrtpot+state%crop%common%rml*state%crop%wofost%wlvpot+state%crop%common%rms*state%crop%wofost%wstpot+state%crop%common%rms*state%crop%wofost%wblpot+ &
+     &           state%crop%common%rmo*state%crop%wofost%wsopot)* afgen(state%crop%common%rfsetb,30,state%crop%common%dvs)
       else
-        rmrespot = (rmr*state%crop%wofost%wrtpot+rml*state%crop%wofost%wlvpot+rms*state%crop%wofost%wstpot+rmo*state%crop%wofost%wsopot)*       &
-     &           afgen(rfsetb,30,state%crop%common%dvs)
+        rmrespot = (state%crop%common%rmr*state%crop%wofost%wrtpot+state%crop%common%rml*state%crop%wofost%wlvpot+state%crop%common%rms*state%crop%wofost%wstpot+state%crop%common%rmo*state%crop%wofost%wsopot)* &
+     &           afgen(state%crop%common%rfsetb,30,state%crop%common%dvs)
       endif
-      teff = q10**((at_tav-25.0d0)/10.0d0)  ! [SS-GR-ATM B.5]
+      teff = state%crop%common%q10**((at_tav-25.0d0)/10.0d0)  ! [SS-GR-ATM B.5]
       mrespot = dmin1(gasspot,rmrespot*teff)
       asrcpot = gasspot - mrespot
 
@@ -505,9 +505,9 @@
 ! --- conversion factor 
       if(swbulb.eq.1) then
 !       only for bulb crops (tulips etc..)
-        cvf = 1.0d0/((fl/cvl+fs/cvs+fbl/cvs+fo/cvo)*(1.0d0-fr)+fr/cvr)
+        cvf = 1.0d0/((fl/state%crop%common%cvl+fs/state%crop%common%cvs+fbl/state%crop%common%cvs+fo/state%crop%common%cvo)*(1.0d0-fr)+fr/state%crop%common%cvr)
       else
-        cvf = 1.0d0/((fl/cvl+fs/cvs+fo/cvo)*(1.0d0-fr)+fr/cvr)
+        cvf = 1.0d0/((fl/state%crop%common%cvl+fs/state%crop%common%cvs+fo/state%crop%common%cvo)*(1.0d0-fr)+fr/state%crop%common%cvr)
       endif
       dmipot = cvf*asrcpot
 ! --- check on carbon balance
@@ -755,10 +755,10 @@
 ! --- maintenance respiration
 ! --  only for bulb crops (tulips etc..)
       if(swbulb.eq.1) then
-        rmres = (rmr*state%crop%wofost%wrt+rml*state%crop%wofost%wlv+rms*state%crop%wofost%wst+rms*state%crop%wofost%wbl+rmo*state%crop%wofost%wso)*              &
-     &           afgen(rfsetb,30,state%crop%common%dvs)
+        rmres = (state%crop%common%rmr*state%crop%wofost%wrt+state%crop%common%rml*state%crop%wofost%wlv+state%crop%common%rms*state%crop%wofost%wst+state%crop%common%rms*state%crop%wofost%wbl+state%crop%common%rmo*state%crop%wofost%wso)* &
+     &           afgen(state%crop%common%rfsetb,30,state%crop%common%dvs)
       else
-        rmres = (rmr*state%crop%wofost%wrt+rml*state%crop%wofost%wlv+rms*state%crop%wofost%wst+rmo*state%crop%wofost%wso)*afgen(rfsetb,30,state%crop%common%dvs)
+        rmres = (state%crop%common%rmr*state%crop%wofost%wrt+state%crop%common%rml*state%crop%wofost%wlv+state%crop%common%rms*state%crop%wofost%wst+state%crop%common%rmo*state%crop%wofost%wso)*afgen(state%crop%common%rfsetb,30,state%crop%common%dvs)
       endif
       
       mres = dmin1(gass,rmres*teff)
@@ -789,9 +789,9 @@
 ! --- conversion factor 
       if(swbulb.eq.1) then
 !       only for bulb crops (tulips etc..)
-        cvf = 1.0d0/((fl/cvl+fs/cvs+fbl/cvs+fo/cvo)*(1.0d0-fr)+fr/cvr)
+        cvf = 1.0d0/((fl/state%crop%common%cvl+fs/state%crop%common%cvs+fbl/state%crop%common%cvs+fo/state%crop%common%cvo)*(1.0d0-fr)+fr/state%crop%common%cvr)
       else
-        cvf = 1.0d0/((fl/cvl+fs/cvs+fo/cvo)*(1.0d0-fr)+fr/cvr)
+        cvf = 1.0d0/((fl/state%crop%common%cvl+fs/state%crop%common%cvs+fo/state%crop%common%cvo)*(1.0d0-fr)+fr/state%crop%common%cvr)
       endif
 ! --- dry matter increase
       dmi = cvf*asrc

@@ -389,10 +389,10 @@
       ! [GR-CROPWS] cumdens retired — see state%crop%common%cumdens
       real(8)   cuptgraz           ! Cumulative dry weight of grass consumed with animal grazing for actual run (kg/ha)
       real(8)   cuptgrazpot        ! Cumulative dry weight of grass consumed with animal grazing for potential run (kg/ha)
-      real(8)   cvl                ! Efficiency of assimilate conversion into leaves (kg/kg)
-      real(8)   cvo                ! Efficiency of assimilate conversion into storage organs (kg/kg)
-      real(8)   cvr                ! Efficiency of assimilate conversion into roots (kg/kg)
-      real(8)   cvs                ! Efficiency of assimilate conversion into stems (kg/kg)
+      ! [GR-CROPWS] cvl retired — see state%crop%common%cvl
+      ! [GR-CROPWS] cvo retired — see state%crop%common%cvo
+      ! [GR-CROPWS] cvr retired — see state%crop%common%cvr
+      ! [GR-CROPWS] cvs retired — see state%crop%common%cvs
       ! [GR-CROP-DVS] cwdm retired — see state%crop%wofost%cwdm
       ! [GR-CROP-DVS] cwdmpot retired — see state%crop%wofost%cwdmpot
       real(8)   difpp              ! Diffuse irradiation perpendicular to direction of light (J/m2/s)
@@ -458,19 +458,19 @@
       ! [GR-CROP-DVS] siccapact retired — see state%atmosphere%siccapact
       ! real(8) :: sicact        ! amount of water stored on canopy (cm) — [SS-ATM] retired 2026-05-11
       real(8)   siccaplai          ! interception storage per unit of LAI (cm/LAI)
-      real(8)   q10                ! Relative increase of respiration rate with temperature (/10 oC)
+      ! [GR-CROPWS] q10 retired — see state%crop%common%q10
       real(8)   q10_microbial      ! Relative increase in microbial respiration at temperature increase of 10 �C [1.0..4.0 -, R]
       real(8)   q10_root           ! Relative increase in root respiration at temperature increase of 10 �C [1.0..4.0 -, R]
       real(8)   rdrrtb(30)         ! Array with relative death rates of roots (kg/kg/d) as function of development stage (-)
       real(8)   rdrstb(30)         ! Array with relative death rates of stems (kg/kg/d) as function of development stage (-)
       real(8)   reltr              ! relative transpiration factor that reduces crop growth (-)
-      real(8)   rfsetb(30)         ! Reduction factor for senescence (-) as function of development stage (-)
+      ! [GR-CROPWS] rfsetb retired — see state%crop%common%rfsetb
       ! [GR-CROPWS] rgrlai retired — see state%crop%common%rgrlai
       real(8)   rid                ! Real day number of detailed grass crop (d)
-      real(8)   rml                ! Relative maintenance respiration rate of leaves (kg CH2O)/kg/d)
-      real(8)   rmo                ! Relative maintenance respiration rate of storage organs (kg CH2O)/kg/d)
-      real(8)   rmr                ! Relative maintenance respiration rate of roots (kg CH2O)/kg/d)
-      real(8)   rms                ! Relative maintenance respiration rate of stems (kg CH2O)/kg/d)
+      ! [GR-CROPWS] rml retired — see state%crop%common%rml
+      ! [GR-CROPWS] rmo retired — see state%crop%common%rmo
+      ! [GR-CROPWS] rmr retired — see state%crop%common%rmr
+      ! [GR-CROPWS] rms retired — see state%crop%common%rms
       real(8)   rootcoefa          ! Defines relative distance at which mean soil water content occurs between roots
       real(8)   rooteff            ! Root system efficiency factor [0..1.0 -, R]
       real(8)   rootradius         ! Root radius drought stress (cm)

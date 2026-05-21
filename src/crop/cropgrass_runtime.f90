@@ -51,11 +51,11 @@
         magrs, macp, rid, daycrop, tdwi, swinco, &  ! [GR-CROPWS B4] icrop/dvs/tsum/wst/wlv/wrt/dw*/tbase retired
         wrtmin,                  &  ! wrtmax retired
         laiem, laiexp, laiexppot, laimax,           &  ! lai/laipot/cfeic retired
-        rfsetb,                                                         &  ! cftb/chtb/cfeictb/rdtb/rlwtb/slatb/rgrlai retired
+        ! cftb/chtb/cfeictb/rdtb/rlwtb/slatb/rgrlai/rfsetb retired
         frtb, fltb, fstb, rdrrtb, rdrstb,                         &
         rdmax,                           &  ! rd/rdpot/swrd/swrdc/swdmi2rd retired
         reltr,                                                           &  ! swgc/swdrought/swinter/swcf retired
-        cvl, cvr, cvs, q10, rmr, rml, rms, span, ssa, glaiex, glaiexpot, &
+        span, ssa, glaiex, glaiexpot, &  ! cvl/cvr/cvs/q10/rmr/rml/rms retired
         lv, lvpot, lvage, lvagepot, sla, slapot, ilvold, ilvoldpot,     &
         twilt, wiltpoint, gwrt, siccaplai,                   &  ! cropstartact/endact/startpot/endpot retired
         idaysgraz, idaysgrazpot, idregr, idregrpot,                      &
@@ -437,8 +437,8 @@
 
 ! ---   respiration and partitioning of carbohydrates between growth and
 ! ---   maintenance respiration
-        rmrespot=(rmr*state%crop%wofost%wrtpot+rml*state%crop%wofost%wlvpot+rms*state%crop%wofost%wstpot)*afgen(rfsetb,30,rid)
-        teff = q10**((at_tav-25.0d0)/10.0d0)  ! [SS-GR-ATM B.5]
+        rmrespot=(state%crop%common%rmr*state%crop%wofost%wrtpot+state%crop%common%rml*state%crop%wofost%wlvpot+state%crop%common%rms*state%crop%wofost%wstpot)*afgen(state%crop%common%rfsetb,30,rid)
+        teff = state%crop%common%q10**((at_tav-25.0d0)/10.0d0)  ! [SS-GR-ATM B.5]
         mrespot = min (gasspot,rmrespot*teff)
         asrcpot = gasspot-mrespot
 
@@ -458,7 +458,7 @@
         endif
 
 ! ---   dry matter increase
-        cvf = 1.0d0/((fl/cvl+fs/cvs)*(1.0d0-fr)+fr/cvr)
+        cvf = 1.0d0/((fl/state%crop%common%cvl+fs/state%crop%common%cvs)*(1.0d0-fr)+fr/state%crop%common%cvr)
         dmipot = cvf*asrcpot
 
 ! ---   check on carbon balance
@@ -910,8 +910,8 @@
 
 ! ---   respiration and partitioning of carbohydrates between growth and
 ! ---   maintenance respiration
-        rmres = (rmr*state%crop%wofost%wrt+rml*state%crop%wofost%wlv+rms*state%crop%wofost%wst)*afgen(rfsetb,30,rid)
-        teff = q10**((at_tav-25.0d0)/10.0d0)  ! [SS-GR-ATM B.5]
+        rmres = (state%crop%common%rmr*state%crop%wofost%wrt+state%crop%common%rml*state%crop%wofost%wlv+state%crop%common%rms*state%crop%wofost%wst)*afgen(state%crop%common%rfsetb,30,rid)
+        teff = state%crop%common%q10**((at_tav-25.0d0)/10.0d0)  ! [SS-GR-ATM B.5]
         mres = min (gass,rmres*teff)
         asrc = gass-mres
 
@@ -921,7 +921,7 @@
         fs = afgen(fstb,30,rid)
 
 ! ---   dry matter increase
-        cvf = 1.0d0/((fl/cvl+fs/cvs)*(1.0d0-fr)+fr/cvr)
+        cvf = 1.0d0/((fl/state%crop%common%cvl+fs/state%crop%common%cvs)*(1.0d0-fr)+fr/state%crop%common%cvr)
         dmi = cvf*asrc
 ! ---   check on carbon balance
         ccheck = (gass-mres-(fr+(fl+fs)*(1.0d0-fr))*dmi/cvf)            &

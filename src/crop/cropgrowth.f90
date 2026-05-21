@@ -61,7 +61,7 @@
         swinco, croptype, daycrop,         &  ! tsum/rd/lai/rdpot/wso/wst/wlv/cwdmpot/cwdm retired
         tmn, rad,                                         &  ! wrt/cumdens retired
         swcrp,                                                             &  ! dvsend/swdrought/eff/amaxtb/tmpftb/tmnftb retired
-        remoc, pld, q10,                    &  ! swharv retired; swbulb removed (→state%crop%wofost%swbulb)
+        remoc, pld,                         &  ! swharv/q10 retired; swbulb removed (→state%crop%wofost%swbulb)
         flCropNut, nlue, anlv, anst, nmxlv, nmaxlv, nmaxst,               &
         nmaxrt, lrnr, lsnr, nni, rnflv, rnfst, frnx, fstr, flHarvestDay,  &
         noddrz, pathcrop, cropfil, bgerm, cgerm,                           &
@@ -415,7 +415,7 @@
             ! decrease weight mother organ starts at emergence.
             ! decrease consists of respiration and remobilisation
             decrmo = state%crop%wofost%plwt-(state%crop%wofost%plwt*(2.71828d0**remoc))  ! [GR-CROPWS B3]
-            respmo = 0.025d0*(q10**((at_tavd-25.0d0)/10.0d0))*state%crop%wofost%plwt    ! [SS-GR-ATM B.5] [GR-CROPWS B3]
+            respmo = 0.025d0*(state%crop%common%q10**((at_tavd-25.0d0)/10.0d0))*state%crop%wofost%plwt    ! [SS-GR-ATM B.5] [GR-CROPWS B3]
             if(respmo.lt.decrmo) then
               remo = decrmo - respmo
             else

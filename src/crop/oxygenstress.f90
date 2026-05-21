@@ -109,7 +109,7 @@ contains
                            SRL, swrootradius, dry_mat_cont_roots, &
                            air_filled_root_por, spec_weight_root_tissue, var_a, root_radiusO2, &
                            ! DEFERRED: q10/rmr/rfsetb/rid/rdctb/w_root_ss — active crop state; Phase C3; dvs/wrt/rd/cumdens retired
-                           q10, rmr, rfsetb, rid, w_root_ss, &  ! rdctb retired
+                           rid, w_root_ss, &  ! q10/rmr/rfsetb/rdctb retired
                            ! DEFERRED: tsoil — heat staging buffer; tsoil migration pending
                            tsoil, &
                            ! DEFERRED: c_mroot/f_senes/q10_root/q10_microbial/shape_factor_rootr/specific_resp_humus — O2 config; Phase C3
@@ -204,14 +204,14 @@ contains
 
 ! --- RB20140117 get wofost parameters
       if ((croptype(icrop) .eq. 2).or.(croptype(icrop) .eq. 3)) then
-          q10_root = q10
-          c_mroot = rmr*Fac3230 !CH2O --> O2
+          q10_root = state%crop%common%q10
+          c_mroot = state%crop%common%rmr*Fac3230 !CH2O --> O2
       endif
       if (croptype(icrop) .eq. 2) then
-          f_senes=afgen(rfsetb,30,state%crop%common%dvs)
+          f_senes=afgen(state%crop%common%rfsetb,30,state%crop%common%dvs)
       endif
       if (croptype(icrop) .eq. 3) then
-          f_senes=afgen(rfsetb,30,rid)    
+          f_senes=afgen(state%crop%common%rfsetb,30,rid)
       endif
    
 ! --- extract a number of variables from Swap for local use in module OxygenStress
@@ -543,12 +543,9 @@ contains
       use variables, only: &                                               ! [SS-GR-FINAL B6] residuals — all DEFERRED
                            ! DEFERRED: croptype/icrop — active crop schedule globals; Phase C3
                            croptype, icrop, max_resp_factor, &
-                           ! DEFERRED: q10/rmr/rml/rms/rmo — crop respiration config; Phase C3
-                           q10, rmr, rml, rms, rmo, &
-                           ! DEFERRED: rfsetb — active crop state; Phase C3; wso/wst/wlv/wrt/pgass retired
-                           rfsetb, &
-                           ! DEFERRED: frtb/fltb/fstb/fotb/cvl/cvs/cvo/cvr — crop partitioning tables; Phase C3
-                           frtb, fltb, fstb, fotb, cvl, cvs, cvo, cvr, &
+                           ! q10/rmr/rml/rms/rmo/rfsetb/cvl/cvs/cvo/cvr retired — state%crop%common
+                           ! DEFERRED: frtb/fltb/fstb/fotb — crop partitioning tables; Phase C3
+                           frtb, fltb, fstb, fotb, &
                            ! DEFERRED: rid/idregr/daycrop — active crop dynamics; Phase C3; dvs retired
                            rid, idregr, daycrop
       use array_utils, only: afgen
@@ -578,10 +575,10 @@ contains
 
 ! --- respiration and partitioning of carbohydrates between growth and
 ! --- maintenance respiration, based on actual plant state variables
-        rmres_gmrf = (rmr*state%crop%wofost%wrt+rml*state%crop%wofost%wlv+rms*state%crop%wofost%wst+rmo*state%crop%wofost%wso)*                 &
-     &            afgen(rfsetb,30,state%crop%common%dvs)
+        rmres_gmrf = (state%crop%common%rmr*state%crop%wofost%wrt+state%crop%common%rml*state%crop%wofost%wlv+state%crop%common%rms*state%crop%wofost%wst+state%crop%common%rmo*state%crop%wofost%wso)* &
+     &            afgen(state%crop%common%rfsetb,30,state%crop%common%dvs)
         !teff_gmrf = q10**((tsoil(10)-25.0d0)/10.0d0) !TEMPORARY!!!! ONLY TO CHECK EFFECT OF USING TSOIL INSTEAD OF TAV; ## MH: /10 = 0.1*
-        teff_gmrf = q10**(0.1d0*(state%atmosphere%Tav-25.0d0))  ! [GR-CROP Phase B/8] tav → state%atmosphere%Tav
+        teff_gmrf = state%crop%common%q10**(0.1d0*(state%atmosphere%Tav-25.0d0))  ! [GR-CROP Phase B/8] tav → state%atmosphere%Tav
 
         mres_gmrf = min(state%crop%wofost%pgass,rmres_gmrf*teff_gmrf)  ! ## MM 2018-05-07
         asrc_gmrf = state%crop%wofost%pgass - mres_gmrf                ! ## MM 2018-05-07
@@ -591,20 +588,20 @@ contains
         fs_gmrf = afgen(fstb,30,state%crop%common%dvs)
         fo_gmrf = afgen(fotb,30,state%crop%common%dvs)
 ! --- dry matter increase, only part in which cvf is calculated
-        cvf_gmrf = 1.0d0/((fl_gmrf /cvl+fs_gmrf /cvs+fo_gmrf/cvo)*      &
-     &  (1.0d0-fr_gmrf)+fr_gmrf/cvr)
+        cvf_gmrf = 1.0d0/((fl_gmrf /state%crop%common%cvl+fs_gmrf /state%crop%common%cvs+fo_gmrf/state%crop%common%cvo)* &
+     &  (1.0d0-fr_gmrf)+fr_gmrf/state%crop%common%cvr)
         
 ! --- cvf: factor used in wofost to calculate the increase in biomass (dmi) from the
 ! ---  net assimilation of the whole plant (asrc); dmi = cvf*asrc. 
 ! ---  What is left is the growth respiration (i.e. asrc = dmi + growth respiration). 
 ! ---  Therefore, growth respiration of the whole plant = asrc*(1-cvf)
 ! --- Froots: contribution of the roots to cvf
-        Froots = (fr_gmrf/cvr)*cvf_gmrf
+        Froots = (fr_gmrf/state%crop%common%cvr)*cvf_gmrf
 ! --- Rg_roots: growth respiration roots        
         Rg_roots = Froots*(1.0d0-cvf_gmrf)*asrc_gmrf
 ! --- Rm_roots: maintenance respiration roots        
         Rm_roots = min(Froots*(1.0d0-cvf_gmrf)*state%crop%wofost%pgass,                   &
-     &      rmr*state%crop%wofost%wrt*afgen(rfsetb,30,state%crop%common%dvs)*teff_gmrf)
+     &      state%crop%common%rmr*state%crop%wofost%wrt*afgen(state%crop%common%rfsetb,30,state%crop%common%dvs)*teff_gmrf)
 ! --- Max_resp_factor: ratio total respiration / maintenance respiration        
         if (Rm_roots.gt.0.0d0) then
             Max_resp_factor_gmrf = (Rg_roots+Rm_roots)/Rm_roots
@@ -622,9 +619,9 @@ contains
 
 ! --- respiration and partitioning of carbohydrates between growth and
 ! --- maintenance respiration, based on actual plant state variables
-          rmres_gmrf = (rmr*state%crop%wofost%wrt+rml*state%crop%wofost%wlv+rms*state%crop%wofost%wst)*afgen(rfsetb,30,rid)
+          rmres_gmrf = (state%crop%common%rmr*state%crop%wofost%wrt+state%crop%common%rml*state%crop%wofost%wlv+state%crop%common%rms*state%crop%wofost%wst)*afgen(state%crop%common%rfsetb,30,rid)
 !        teff_gmrf = q10**((tsoil(10)-25.0d0)/10.0d0) !TEMPORARY!!!! ONLY TO CHECK EFFECT OF USING TSOIL INSTEAD OF TAV; ## MH: /10=*0.1
-          teff_gmrf = q10**(0.1d0*(state%atmosphere%Tav-25.0d0))  ! [GR-CROP Phase B/8] tav → state%atmosphere%Tav
+          teff_gmrf = state%crop%common%q10**(0.1d0*(state%atmosphere%Tav-25.0d0))  ! [GR-CROP Phase B/8] tav → state%atmosphere%Tav
 
           mres_gmrf = min(state%crop%wofost%pgass,rmres_gmrf*teff_gmrf)  ! ## MM 2018-05-07
           asrc_gmrf = state%crop%wofost%pgass - mres_gmrf                ! ## MM 2018-05-07
@@ -633,19 +630,19 @@ contains
           fl_gmrf = afgen(fltb,30,rid)
           fs_gmrf = afgen(fstb,30,rid)
 ! --- dry matter increase, only part in which cvf is calculated
-          cvf_gmrf = 1.0d0/((fl_gmrf /cvl+fs_gmrf /cvs)*                &
-     &        (1.0d0-fr_gmrf)+fr_gmrf/cvr)
+          cvf_gmrf = 1.0d0/((fl_gmrf /state%crop%common%cvl+fs_gmrf /state%crop%common%cvs)* &
+     &        (1.0d0-fr_gmrf)+fr_gmrf/state%crop%common%cvr)
 ! --- cvf: factor used in wofost to calculate the increase in biomass (dmi) from the
 ! ---  net assimilation of the whole plant (asrc); dmi = cvf*asrc. 
 ! ---  What is left is the growth respiration (i.e. asrc = dmi + growth respiration). 
 ! ---  Therefore, growth respiration of the whole plant = asrc*(1-cvf)
 ! --- Froots: contribution of the roots to cvf
-          Froots = (fr_gmrf/cvr)*cvf_gmrf
+          Froots = (fr_gmrf/state%crop%common%cvr)*cvf_gmrf
 ! --- Rg_roots: growth respiration roots            
           Rg_roots = Froots*(1.0d0-cvf_gmrf)*asrc_gmrf
 ! --- Rm_roots: maintenance respiration roots     
           Rm_roots = min(Froots*(1.0d0-cvf_gmrf)*state%crop%wofost%pgass,                &
-     &        rmr*state%crop%wofost%wrt*afgen(rfsetb,30,rid)*teff_gmrf)
+     &        state%crop%common%rmr*state%crop%wofost%wrt*afgen(state%crop%common%rfsetb,30,rid)*teff_gmrf)
 ! --- Max_resp_factor: ratio total respiration / maintenance respiration        
           if (Rm_roots.gt.0.d0) then
               Max_resp_factor_gmrf = (Rg_roots+Rm_roots)/Rm_roots

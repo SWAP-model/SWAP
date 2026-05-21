@@ -113,6 +113,18 @@ module crop_common_state_mod
       real(real64) :: eff            = 0.0_real64     !! light use efficiency of a leaf (kg CO2 / J adsorbed)
       real(real64) :: rgrlai         = 0.0_real64     !! max relative increase in LAI (1/d)
 
+      ! Biomass conversion and maintenance respiration (scalars + table)
+      real(real64) :: cvl            = 0.0_real64     !! efficiency assimilates→leaves (kg/kg)
+      real(real64) :: cvr            = 0.0_real64     !! efficiency assimilates→roots (kg/kg)
+      real(real64) :: cvs            = 0.0_real64     !! efficiency assimilates→stems (kg/kg)
+      real(real64) :: cvo            = 0.0_real64     !! efficiency assimilates→storage organs (kg/kg)
+      real(real64) :: q10            = 0.0_real64     !! Q10 temperature factor for respiration
+      real(real64) :: rmr            = 0.0_real64     !! rel. maint. respiration rate, roots (kg/kg/d)
+      real(real64) :: rml            = 0.0_real64     !! rel. maint. respiration rate, leaves
+      real(real64) :: rms            = 0.0_real64     !! rel. maint. respiration rate, stems
+      real(real64) :: rmo            = 0.0_real64     !! rel. maint. respiration rate, storage organs
+      real(real64) :: rfsetb(30)     = 0.0_real64     !! senescence-effect factor vs DVS (30-elem)
+
    contains
       procedure :: init => crop_common_state_init
    end type crop_common_state_t
