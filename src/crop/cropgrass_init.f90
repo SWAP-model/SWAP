@@ -38,13 +38,13 @@ contains
          ! cftb/chtb/albedo/rsc/rsw/swcf retired
          ! Interception — DEFERRED Phase C3; swinter/cofab retired
          ! Crop state — DEFERRED Phase C3
-         tdwi, laiem, rgrlai,                                                 &
+         tdwi, laiem,                                                         &  ! rgrlai retired
          ! Start-of-growth trigger — DEFERRED Phase C3
          swtsum, tsumtemp, tsumtime, tsumdepth,                               &
          ! Green area — DEFERRED Phase C3; tbase retired
-         slatb, ssa, span,                                                    &
+         ssa, span,                                                           &  ! slatb retired
          ! Assimilation — DEFERRED Phase C3
-         eff, amaxtb, tmpftb, tmnftb,                            &  ! kdif/kdir retired
+         ! kdif/kdir/eff/amaxtb/tmpftb/tmnftb retired
          ! Biomass conversion — DEFERRED Phase C3
          cvl, cvr, cvs,                                                       &
          ! Maintenance respiration — DEFERRED Phase C3
@@ -176,14 +176,14 @@ contains
       ! Part 3: initial crop state (readgrass lines 3604-3606)
       tdwi   = cfg%tdwi
       laiem  = cfg%laiem
-      rgrlai = cfg%rgrlai
+      state%crop%common%rgrlai = cfg%rgrlai
 
       ! Part 4: start-of-growth trigger (readgrass lines 3609-3614)
       swtsum = cfg%swtsum
       ! swtsum=2 is stub-guarded above; swtsum=0,1 need no extra fields.
 
       ! Part 5: green area (readgrass lines 3617-3620)
-      if (allocated(cfg%slatb)) call copy_table(cfg%slatb, slatb)
+      if (allocated(cfg%slatb)) call copy_table(cfg%slatb, state%crop%common%slatb)
       ssa   = cfg%ssa
       span  = cfg%span
       state%crop%common%tbase = cfg%tbase
@@ -191,10 +191,10 @@ contains
       ! Part 6: assimilation (readgrass lines 3623-3628)
       state%crop%kdif = cfg%kdif
       state%crop%kdir = cfg%kdir
-      eff  = cfg%eff
-      if (allocated(cfg%amaxtb))  call copy_table(cfg%amaxtb,  amaxtb)
-      if (allocated(cfg%tmpftb))  call copy_table(cfg%tmpftb,  tmpftb)
-      if (allocated(cfg%tmnftb))  call copy_table(cfg%tmnftb,  tmnftb)
+      state%crop%common%eff = cfg%eff
+      if (allocated(cfg%amaxtb))  call copy_table(cfg%amaxtb,  state%crop%common%amaxtb)
+      if (allocated(cfg%tmpftb))  call copy_table(cfg%tmpftb,  state%crop%common%tmpftb)
+      if (allocated(cfg%tmnftb))  call copy_table(cfg%tmnftb,  state%crop%common%tmnftb)
 
       ! Part 7: conversion of assimilates (readgrass lines 3631-3633)
       cvl = cfg%cvl

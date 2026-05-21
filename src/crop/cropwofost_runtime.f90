@@ -62,7 +62,7 @@
         flCropHarvest, flCropNut, flHarvestDay, flhydrlift, flanthesis,    &
         q10, rmr, rml, rms, rmo, rfsetb, frtb, fltb, fstb, fotb, fbltb,  &
         fbl, drbl, drblpot,                   &
-        slatb, rgrlai, dtsmtb, rdrrtb, rdrstb, &  ! cftb/chtb/cfeictb/rdtb/rlwtb retired
+        dtsmtb, rdrrtb, rdrstb, &  ! cftb/chtb/cfeictb/rdtb/rlwtb/slatb/rgrlai retired
         dlc, dlo, span, spa, ssa, logf, tdwi,                &
         lv, lvpot, lvage, lvagepot, sla, slapot,                          &
         ilvold, ilvoldpot, idsl,                                           &
@@ -259,10 +259,10 @@
            fbl = afgen (fbltb,30,state%crop%common%dvs)
            state%crop%wofost%plwt = state%crop%wofost%plwti
         endif
-        sla(1) = afgen (slatb,30,state%crop%common%dvs)
+        sla(1) = afgen (state%crop%common%slatb,30,state%crop%common%dvs)
         lvage(1) = 0.0d0
         ilvold = 1
-        slapot(1) = afgen (slatb,30,state%crop%common%dvs)
+        slapot(1) = afgen (state%crop%common%slatb,30,state%crop%common%dvs)
         lvagepot(1) = 0.0d0
         ilvoldpot = 1
 
@@ -576,14 +576,14 @@
       fysdel = max (0.0d0,(at_tav-state%crop%common%tbase)/(35.0d0-state%crop%common%tbase))  ! [SS-GR-ATM B.5]
 
 ! --- specific leaf area valid for current timestep
-      slatpot = afgen (slatb,30,state%crop%common%dvs)
+      slatpot = afgen (state%crop%common%slatb,30,state%crop%common%dvs)
 
 ! --- calculation of specific leaf area in case of exponential growth:
 ! --- leaf area not to exceed exponential growth curve
       if (laiexppot.lt.6.0d0) then
         dteff = max (0.0d0,at_tav-state%crop%common%tbase)  ! [SS-GR-ATM B.5]
 ! ---   increase in leaf area during exponential growth
-        glaiexpot = laiexppot*rgrlai*dteff
+        glaiexpot = laiexppot*state%crop%common%rgrlai*dteff
 ! ---   source-limited increase in leaf area
         glasolpot = grlvpot*slatpot
 ! ---   actual increase is determined by lowest value
@@ -847,9 +847,9 @@
 ! --- specific leaf area valid for current timestep
       if(flCropNut) then
 !       nutrient and water stress
-        slat = afgen (slatb,30,state%crop%common%dvs)*EXP(-NSLA * (1.0d0-NNI))
+        slat = afgen (state%crop%common%slatb,30,state%crop%common%dvs)*EXP(-NSLA * (1.0d0-NNI))
       else
-        slat = afgen (slatb,30,state%crop%common%dvs)
+        slat = afgen (state%crop%common%slatb,30,state%crop%common%dvs)
       endif
 !
 !     Do not allow slat higher than slatpot; slatpot can be limited by exponential growth
@@ -865,7 +865,7 @@
            Fstress = reltr * EXP(-NLAI* (1.0d0 - NNI))
          endif
       endif
-      call GLAI(Fstress,LAIEXP,GLAIEX,at_tav,state%crop%common%tbase,RGRLAI,GRLV,SLAT,GLA)  ! [SS-GR-ATM B.5]
+      call GLAI(Fstress,LAIEXP,GLAIEX,at_tav,state%crop%common%tbase,state%crop%common%rgrlai,GRLV,SLAT,GLA)  ! [SS-GR-ATM B.5]
 
 
 ! ---- UPDATE STATES: integrals of the crop --------------------------------------------

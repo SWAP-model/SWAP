@@ -368,7 +368,7 @@
       ! [GR-CROP-DVS] albedo retired — see state%crop%common%albedo
       ! [SS-CRP] retired 2026-05-11 — moved to state%soilwater%alpJvLier (ADR 0036)
       ! real(8)   alpJvLier          ! Uniform drought reduction factor based on concept Jong van Lier (-)
-      real(8)   amaxtb(30)         ! Maximum CO2 assimilation rate (kg/ha/hr) as function of development stage (-)
+      ! [GR-CROPWS] amaxtb retired — see state%crop%common%amaxtb
       ! [GR-CROP-DVS] pgasspot retired — see state%crop%wofost%pgasspot
       ! [GR-CROP-DVS] pgass retired — see state%crop%wofost%pgass
       integer   swpotrelmf         ! Calculation of potential yield
@@ -412,7 +412,7 @@
       ! [GR-CROP-DVS] dwso retired — see state%crop%wofost%dwso
       ! [GR-CROP-DVS] dwst retired — see state%crop%wofost%dwst
       ! [GR-CROP-DVS] dwstpot retired — see state%crop%wofost%dwstpot
-      real(8)   eff                ! Light use efficiency of a leaf (kg CO2 / J adsorbed)
+      ! [GR-CROPWS] eff retired — see state%crop%common%eff
       real(8)   f_senes            ! Reduction factor for senescence, used for maintenance respiration [0..1.0 -, R]
       real(8)   fltb(30)           ! Fraction of total dry matter increase partitioned to the leaves (-) as function of dvs
       real(8)   fotb(30)           ! Fraction of total dry matter increase partitioned to the storage organs (-) as function of dvs
@@ -465,7 +465,7 @@
       real(8)   rdrstb(30)         ! Array with relative death rates of stems (kg/kg/d) as function of development stage (-)
       real(8)   reltr              ! relative transpiration factor that reduces crop growth (-)
       real(8)   rfsetb(30)         ! Reduction factor for senescence (-) as function of development stage (-)
-      real(8)   rgrlai             ! Maximum relative increase in leaf area index (/T)
+      ! [GR-CROPWS] rgrlai retired — see state%crop%common%rgrlai
       real(8)   rid                ! Real day number of detailed grass crop (d)
       real(8)   rml                ! Relative maintenance respiration rate of leaves (kg CH2O)/kg/d)
       real(8)   rmo                ! Relative maintenance respiration rate of storage organs (kg CH2O)/kg/d)
@@ -481,7 +481,7 @@
       real(8)   shape_factor_rootr ! Shape factor for exponential decrease of root respiration rate with depth [0..1.0 -, R]
       real(8)   sla(366)           ! Array with specific leaf area (ha/kg) as function of crop day number of actual crop
       real(8)   slapot(366)        ! Array with specific leaf area (ha/kg) as function of crop day number of potential crop
-      real(8)   slatb(30)          ! Array with specific leaf area (ha/kg) as function of development stage
+      ! [GR-CROPWS] slatb retired — see state%crop%common%slatb
       real(8)   spa                ! Specific pod area (ha/kg)
       real(8)   span               ! Life span of leaves at optimum conditions (T)
       real(8)   spec_weight_root_tissue ! Specific weight of non-airfilled root tissue [0.d0..1.d5 kg root/m3 root, R]
@@ -496,8 +496,8 @@
       ! [GR-CROP-DVS] tagptpot retired — see state%crop%wofost%tagptpot
       ! [GR-CROPWS] tbase retired — see state%crop%common%tbase
       real(8)   tdwi               ! Initial total crop dry weight (kg/ha)
-      real(8)   tmnftb(30)         ! Reduction factor for maximum assimilation rate (-) as function of minimum day temperature (oC)
-      real(8)   tmpftb(30)         ! Reduction factor for maximum assimilation rate (-) as function of average day temperature (oC)
+      ! [GR-CROPWS] tmnftb retired — see state%crop%common%tmnftb
+      ! [GR-CROPWS] tmpftb retired — see state%crop%common%tmpftb
       ! [GR-CROP-DVS] tsum retired — see state%crop%common%tsum
       ! [GR-CROPWS] tsumam retired — see state%crop%common%tsumam
       ! [GR-CROPWS] tsumea retired — see state%crop%common%tsumea

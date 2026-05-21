@@ -49,10 +49,10 @@ contains
          ! Vernalisation — DEFERRED Phase C3
          verndvs, vernsat, vernbase, vernrtb,                                &
          ! Initial crop state — DEFERRED Phase C3
-         tdwi, laiem, rgrlai,                                                &
+         tdwi, laiem,                                                        &  ! rgrlai retired
          ! Green area / assimilation — DEFERRED Phase C3; tbase retired
-         slatb, spa, ssa, span,                                              &
-         eff, amaxtb, tmpftb, tmnftb,                           &  ! kdif/kdir retired
+         spa, ssa, span,                                                     &  ! slatb retired
+         ! kdif/kdir/eff/amaxtb/tmpftb/tmnftb retired
          ! Biomass conversion — DEFERRED Phase C3
          cvl, cvo, cvr, cvs,                                                 &
          ! Maintenance respiration — DEFERRED Phase C3
@@ -197,7 +197,7 @@ contains
       ! Part 3: initial crop state (readwofost lines 2752-2754)
       tdwi   = cfg%initial%tdwi
       laiem  = cfg%initial%laiem
-      rgrlai = cfg%initial%rgrlai
+      state%crop%common%rgrlai = cfg%initial%rgrlai
 
       ! Part 4: green area (readwofost lines 2757-2761)
       if (allocated(cfg%green_area%slatb)) then
@@ -205,8 +205,8 @@ contains
             integer :: nr, j
             nr = size(cfg%green_area%slatb, 1)
             do j = 1, nr
-               slatb(j*2-1) = cfg%green_area%slatb(j,1)
-               slatb(j*2)   = cfg%green_area%slatb(j,2)
+               state%crop%common%slatb(j*2-1) = cfg%green_area%slatb(j,1)
+               state%crop%common%slatb(j*2)   = cfg%green_area%slatb(j,2)
             end do
          end block
       end if
@@ -218,14 +218,14 @@ contains
       ! Part 5: assimilation (readwofost lines 2764-2769)
       state%crop%kdif = cfg%assimilation%kdif
       state%crop%kdir = cfg%assimilation%kdir
-      eff  = cfg%assimilation%eff
+      state%crop%common%eff = cfg%assimilation%eff
       if (allocated(cfg%assimilation%amaxtb)) then
          block
             integer :: nr, j
             nr = size(cfg%assimilation%amaxtb, 1)
             do j = 1, nr
-               amaxtb(j*2-1) = cfg%assimilation%amaxtb(j,1)
-               amaxtb(j*2)   = cfg%assimilation%amaxtb(j,2)
+               state%crop%common%amaxtb(j*2-1) = cfg%assimilation%amaxtb(j,1)
+               state%crop%common%amaxtb(j*2)   = cfg%assimilation%amaxtb(j,2)
             end do
          end block
       end if
@@ -234,8 +234,8 @@ contains
             integer :: nr, j
             nr = size(cfg%assimilation%tmpftb, 1)
             do j = 1, nr
-               tmpftb(j*2-1) = cfg%assimilation%tmpftb(j,1)
-               tmpftb(j*2)   = cfg%assimilation%tmpftb(j,2)
+               state%crop%common%tmpftb(j*2-1) = cfg%assimilation%tmpftb(j,1)
+               state%crop%common%tmpftb(j*2)   = cfg%assimilation%tmpftb(j,2)
             end do
          end block
       end if
@@ -244,8 +244,8 @@ contains
             integer :: nr, j
             nr = size(cfg%assimilation%tmnftb, 1)
             do j = 1, nr
-               tmnftb(j*2-1) = cfg%assimilation%tmnftb(j,1)
-               tmnftb(j*2)   = cfg%assimilation%tmnftb(j,2)
+               state%crop%common%tmnftb(j*2-1) = cfg%assimilation%tmnftb(j,1)
+               state%crop%common%tmnftb(j*2)   = cfg%assimilation%tmnftb(j,2)
             end do
          end block
       end if

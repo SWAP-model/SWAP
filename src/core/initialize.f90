@@ -611,7 +611,6 @@
       daygrowthpot       = 0
       idsl               = 0 
       noddrz             = 0 
-      amaxtb             = 0.0d0 
       atmin7             = 0.0d0
       avevaptb           = 0.0d0 
       avprectb           = 0.0d0 
@@ -624,7 +623,6 @@
       dlc                = 0.0d0 
       dlo                = 0.0d0 
       dtsmtb             = 0.0d0
-      eff                = 0.0d0 
       fbl                = 0.0d0 
       fbltb              = 0.0d0 
       fltb               = 0.0d0 
@@ -648,7 +646,6 @@
       rdrstb             = 0.0d0 
       reltr              = 0.0d0 
       rfsetb             = 0.0d0 
-      rgrlai             = 0.0d0 
       rml                = 0.0d0 
       rmo                = 0.0d0 
       rmr                = 0.0d0 
@@ -662,13 +659,10 @@
       siccaptb           = 0.0d0 
       sla                = 0.0d0
       slapot             = 0.0d0
-      slatb              = 0.0d0 
       spa                = 0.0d0 
       span               = 0.0d0 
       ssa                = 0.0d0
       tdwi               = 0.0d0 
-      tmnftb             = 0.0d0 
-      tmpftb             = 0.0d0 
       vernrtb            = 0.0d0 
 
 ! --- only for bulb crops (tulips etc..)

@@ -51,7 +51,7 @@
         magrs, macp, rid, daycrop, tdwi, swinco, &  ! [GR-CROPWS B4] icrop/dvs/tsum/wst/wlv/wrt/dw*/tbase retired
         wrtmin,                  &  ! wrtmax retired
         laiem, laiexp, laiexppot, laimax,           &  ! lai/laipot/cfeic retired
-        slatb, rgrlai, rfsetb,                                          &  ! cftb/chtb/cfeictb/rdtb/rlwtb retired
+        rfsetb,                                                         &  ! cftb/chtb/cfeictb/rdtb/rlwtb/slatb/rgrlai retired
         frtb, fltb, fstb, rdrrtb, rdrstb,                         &
         rdmax,                           &  ! rd/rdpot/swrd/swrdc/swdmi2rd retired
         reltr,                                                           &  ! swgc/swdrought/swinter/swcf retired
@@ -229,11 +229,11 @@
         fr = afgen (frtb,30,rid)
         fl = afgen (fltb,30,rid)
         fs = afgen (fstb,30,rid)
-        sla(1) = afgen (slatb,30,rid)
+        sla(1) = afgen (state%crop%common%slatb,30,rid)
         lvage(1) = 0.d0
         ilvold = 1
         idregr = 0
-        slapot(1) = afgen (slatb,30,rid)
+        slapot(1) = afgen (state%crop%common%slatb,30,rid)
         lvagepot(1) = 0.d0
         ilvoldpot = 1
         idregrpot = 0
@@ -532,10 +532,10 @@
         drlvpot   = dslvpot+dalvpot
 
 ! ---   leaf area not to exceed exponential growth curve
-        slatpot = afgen (slatb,30,rid)
+        slatpot = afgen (state%crop%common%slatb,30,rid)
         if (laiexppot.lt.6.0d0) then
           dteff = max (0.0d0,at_tav-state%crop%common%tbase)  ! [SS-GR-ATM B.5]
-          glaiexpot = laiexppot*rgrlai*dteff
+          glaiexpot = laiexppot*state%crop%common%rgrlai*dteff
 ! ---   source-limited increase in leaf area
           glasolpot = grlvpot*slatpot
           glapot = min (glaiexpot,glasolpot)
@@ -591,7 +591,7 @@
 !         In case mowing is triggered: Growth is initialized again and the weight of the sward is stored
           if (flharvestpot) then
             iseqgmpot = iseqgmpot + 1
-            slapot(1) = afgen (slatb,30,rid)
+            slapot(1) = afgen (state%crop%common%slatb,30,rid)
             fl = afgen (fltb,30,rid)
             fs = afgen (fstb,30,rid)
             state%crop%wofost%wlvpot = state%crop%grass%mowrest / (1.d0 + (fs/fl))
@@ -753,7 +753,7 @@
 !           Dewooling after grazing event            
             if (flDewoolingpot) then
 
-              slapot(1) = afgen (slatb,30,rid)
+              slapot(1) = afgen (state%crop%common%slatb,30,rid)
               fl = afgen (fltb,30,rid)
               fs = afgen (fstb,30,rid)
               state%crop%wofost%wlvpot = dewrest / (1.d0 + (fs/fl))
@@ -991,12 +991,12 @@
         drlv   = dslv+dalv
 
 ! ---   physiologic ageing of leaves per time step
-        slat = afgen (slatb,30,rid)
+        slat = afgen (state%crop%common%slatb,30,rid)
 
 ! ---   leaf area not to exceed exponential growth curve
         if (laiexp.lt.6.0d0) then
           dteff = max (0.0d0,at_tav-state%crop%common%tbase)  ! [SS-GR-ATM B.5]
-          glaiex = laiexp*rgrlai*dteff
+          glaiex = laiexp*state%crop%common%rgrlai*dteff
 ! ---     source-limited increase in leaf area
           glasol = grlv*slat
           gla = min (glaiex,glasol)
@@ -1053,7 +1053,7 @@
 !       In case mowing is triggered: Growth is initialized again and the weight of the sward is stored
         if (flharvest) then
           iseqgm = iseqgm + 1
-          sla(1) = afgen (slatb,30,rid)
+          sla(1) = afgen (state%crop%common%slatb,30,rid)
           fl = afgen (fltb,30,rid)
           fs = afgen (fstb,30,rid)
           state%crop%wofost%wlv = state%crop%grass%mowrest / (1.d0 + (fs/fl))
@@ -1215,7 +1215,7 @@
 !           Dewooling after grazing event            
             if (flDewooling) then
 
-              sla(1) = afgen (slatb,30,rid)
+              sla(1) = afgen (state%crop%common%slatb,30,rid)
               fl = afgen (fltb,30,rid)
               fs = afgen (fstb,30,rid)
               state%crop%wofost%wlv = dewrest / (1.d0 + (fs/fl))

@@ -105,6 +105,14 @@ module crop_common_state_mod
       real(real64) :: rlwtb(22)      = 0.0_real64     !! root depth vs root biomass (22-elem pair)
       real(real64) :: wrtmax         = 0.0_real64     !! maximum root weight (kg/ha)
 
+      ! Physiology lookup tables (30-elem) + light use efficiency scalars
+      real(real64) :: slatb(30)      = 0.0_real64     !! specific leaf area vs DVS (ha/kg)
+      real(real64) :: amaxtb(30)     = 0.0_real64     !! max CO2 assimilation rate vs DVS (kg/ha/hr)
+      real(real64) :: tmpftb(30)     = 0.0_real64     !! reduction factor vs daily-mean temp
+      real(real64) :: tmnftb(30)     = 0.0_real64     !! reduction factor vs min daily temp
+      real(real64) :: eff            = 0.0_real64     !! light use efficiency of a leaf (kg CO2 / J adsorbed)
+      real(real64) :: rgrlai         = 0.0_real64     !! max relative increase in LAI (1/d)
+
    contains
       procedure :: init => crop_common_state_init
    end type crop_common_state_t

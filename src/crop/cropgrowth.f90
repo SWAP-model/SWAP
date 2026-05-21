@@ -60,7 +60,7 @@
         flCropHarvest, flCropReadFile, flCropPrep, flCropSow, flCropGerm,   &
         swinco, croptype, daycrop,         &  ! tsum/rd/lai/rdpot/wso/wst/wlv/cwdmpot/cwdm retired
         tmn, rad,                                         &  ! wrt/cumdens retired
-        eff, amaxtb, tmpftb, tmnftb, swcrp,                                &  ! dvsend/swdrought retired
+        swcrp,                                                             &  ! dvsend/swdrought/eff/amaxtb/tmpftb/tmnftb retired
         remoc, pld, q10,                    &  ! swharv retired; swbulb removed (→state%crop%wofost%swbulb)
         flCropNut, nlue, anlv, anst, nmxlv, nmaxlv, nmaxst,               &
         nmaxrt, lrnr, lsnr, nni, rnflv, rnfst, frnx, fstr, flHarvestDay,  &
@@ -428,16 +428,16 @@
         endif
 
         ! daily gross assimilation
-        effc = state%crop%wofost%fco2eff * eff  ! [SS-GR-CROPRT B6] state%crop%wofost%fco2eff via state
-        if (croptype(state%crop%common%icrop) .eq. 2) amax = state%crop%wofost%fco2amax * afgen (amaxtb,30,state%crop%common%dvs) * afgen (tmpftb,30,at_tavd)  ! [SS-GR-ATM B.5] [SS-GR-CROPRT B6]
-        if (croptype(state%crop%common%icrop) .eq. 3) amax = state%crop%wofost%fco2amax * afgen (amaxtb,30,dble(daycrop)) * afgen (tmpftb,30,at_tavd)  ! [SS-GR-ATM B.5] [SS-GR-CROPRT B6]
+        effc = state%crop%wofost%fco2eff * state%crop%common%eff  ! [SS-GR-CROPRT B6] state%crop%wofost%fco2eff via state
+        if (croptype(state%crop%common%icrop) .eq. 2) amax = state%crop%wofost%fco2amax * afgen (state%crop%common%amaxtb,30,state%crop%common%dvs) * afgen (state%crop%common%tmpftb,30,at_tavd)  ! [SS-GR-ATM B.5] [SS-GR-CROPRT B6]
+        if (croptype(state%crop%common%icrop) .eq. 3) amax = state%crop%wofost%fco2amax * afgen (state%crop%common%amaxtb,30,dble(daycrop)) * afgen (state%crop%common%tmpftb,30,at_tavd)  ! [SS-GR-ATM B.5] [SS-GR-CROPRT B6]
 
 
         ! potential assimilation
         call totass (dayl,amax,effc,state%crop%common%laipot,state%crop%kdif,rad,difpp,dsinbe,sinld,cosld,dtgapot)  ! [GR-CROPWS B3] state%crop%kdif → state%crop%kdif
 
         ! correction for low minimum temperature
-        dtgapot = dtgapot * afgen (tmnftb,30,tmnr)
+        dtgapot = dtgapot * afgen (state%crop%common%tmnftb,30,tmnr)
 
         ! potential assimilation in kg ch2o per ha
         state%crop%wofost%pgasspot = dtgapot * 30.0d0/44.0d0
@@ -458,7 +458,7 @@
         call totass (dayl,amax,effc,state%crop%lai,state%crop%kdif,rad,difpp,dsinbe,sinld,cosld,dtga)  ! [GR-CROPWS B3] state%crop%kdif → state%crop%kdif; state%crop%lai=legacy
 
         ! correction for low minimum temperature
-        dtga = dtga * afgen (tmnftb,30,tmnr)
+        dtga = dtga * afgen (state%crop%common%tmnftb,30,tmnr)
 
         ! actual assimilation in kg ch2o per ha
         state%crop%wofost%pgass = dtga * 30.0d0/44.0d0
