@@ -125,6 +125,16 @@ module crop_common_state_mod
       real(real64) :: rmo            = 0.0_real64     !! rel. maint. respiration rate, storage organs
       real(real64) :: rfsetb(30)     = 0.0_real64     !! senescence-effect factor vs DVS (30-elem)
 
+      ! Partitioning + development + leaf-death tables (30-elem each)
+      real(real64) :: frtb(30)       = 0.0_real64     !! root fraction vs DVS
+      real(real64) :: fltb(30)       = 0.0_real64     !! leaf fraction vs DVS
+      real(real64) :: fstb(30)       = 0.0_real64     !! stem fraction vs DVS
+      real(real64) :: fotb(30)       = 0.0_real64     !! storage-organ fraction vs DVS
+      real(real64) :: fbltb(30)      = 0.0_real64     !! bulb fraction vs DVS (swbulb=1 only)
+      real(real64) :: dtsmtb(30)     = 0.0_real64     !! daily temp-sum increment vs Tavg
+      real(real64) :: rdrrtb(30)     = 0.0_real64     !! relative death rate of roots vs DVS
+      real(real64) :: rdrstb(30)     = 0.0_real64     !! relative death rate of stems vs DVS
+
    contains
       procedure :: init => crop_common_state_init
    end type crop_common_state_t

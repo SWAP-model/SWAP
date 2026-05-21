@@ -45,7 +45,7 @@ contains
          ! ET / crop factor — DEFERRED Phase C3
          ! cftb/chtb/albedo/rsc/rsw/swcf retired
          ! Development — DEFERRED Phase C3; tsumea/tsumam retired
-         idsl, dlo, dlc, dtsmtb,                                            &
+         idsl, dlo, dlc,                                                    &  ! dtsmtb retired
          ! Vernalisation — DEFERRED Phase C3
          verndvs, vernsat, vernbase, vernrtb,                                &
          ! Initial crop state — DEFERRED Phase C3
@@ -58,8 +58,8 @@ contains
          ! Maintenance respiration — DEFERRED Phase C3
          ! q10/rml/rmo/rmr/rms/rfsetb retired
          ! Partitioning / death rates — DEFERRED Phase C3
-         frtb, fltb, fstb, fotb,                                             &
-         perdl, rdrrtb, rdrstb,                                              &
+         ! frtb/fltb/fstb/fotb retired
+         perdl,                                                              &  ! rdrrtb/rdrstb retired
          ! Oxygen stress — DEFERRED Phase C3; swoxygen retired
          ! hlim1/hlim2u/hlim2l/swWrtNonox/aeratecrit retired
          ! Drought stress — DEFERRED Phase C3
@@ -187,8 +187,8 @@ contains
             integer :: nr, j
             nr = size(cfg%phenology%dtsmtb, 1)
             do j = 1, nr
-               dtsmtb(j*2-1) = cfg%phenology%dtsmtb(j,1)
-               dtsmtb(j*2)   = cfg%phenology%dtsmtb(j,2)
+               state%crop%common%dtsmtb(j*2-1) = cfg%phenology%dtsmtb(j,1)
+               state%crop%common%dtsmtb(j*2)   = cfg%phenology%dtsmtb(j,2)
             end do
          end block
       end if
@@ -279,8 +279,8 @@ contains
             integer :: nr, j
             nr = size(cfg%partitioning%frtb, 1)
             do j = 1, nr
-               frtb(j*2-1) = cfg%partitioning%frtb(j,1)
-               frtb(j*2)   = cfg%partitioning%frtb(j,2)
+               state%crop%common%frtb(j*2-1) = cfg%partitioning%frtb(j,1)
+               state%crop%common%frtb(j*2)   = cfg%partitioning%frtb(j,2)
             end do
          end block
       end if
@@ -289,8 +289,8 @@ contains
             integer :: nr, j
             nr = size(cfg%partitioning%fltb, 1)
             do j = 1, nr
-               fltb(j*2-1) = cfg%partitioning%fltb(j,1)
-               fltb(j*2)   = cfg%partitioning%fltb(j,2)
+               state%crop%common%fltb(j*2-1) = cfg%partitioning%fltb(j,1)
+               state%crop%common%fltb(j*2)   = cfg%partitioning%fltb(j,2)
             end do
          end block
       end if
@@ -299,8 +299,8 @@ contains
             integer :: nr, j
             nr = size(cfg%partitioning%fstb, 1)
             do j = 1, nr
-               fstb(j*2-1) = cfg%partitioning%fstb(j,1)
-               fstb(j*2)   = cfg%partitioning%fstb(j,2)
+               state%crop%common%fstb(j*2-1) = cfg%partitioning%fstb(j,1)
+               state%crop%common%fstb(j*2)   = cfg%partitioning%fstb(j,2)
             end do
          end block
       end if
@@ -309,8 +309,8 @@ contains
             integer :: nr, j
             nr = size(cfg%partitioning%fotb, 1)
             do j = 1, nr
-               fotb(j*2-1) = cfg%partitioning%fotb(j,1)
-               fotb(j*2)   = cfg%partitioning%fotb(j,2)
+               state%crop%common%fotb(j*2-1) = cfg%partitioning%fotb(j,1)
+               state%crop%common%fotb(j*2)   = cfg%partitioning%fotb(j,2)
             end do
          end block
       end if
@@ -322,8 +322,8 @@ contains
             integer :: nr, j
             nr = size(cfg%death%rdrrtb, 1)
             do j = 1, nr
-               rdrrtb(j*2-1) = cfg%death%rdrrtb(j,1)
-               rdrrtb(j*2)   = cfg%death%rdrrtb(j,2)
+               state%crop%common%rdrrtb(j*2-1) = cfg%death%rdrrtb(j,1)
+               state%crop%common%rdrrtb(j*2)   = cfg%death%rdrrtb(j,2)
             end do
          end block
       end if
@@ -332,8 +332,8 @@ contains
             integer :: nr, j
             nr = size(cfg%death%rdrstb, 1)
             do j = 1, nr
-               rdrstb(j*2-1) = cfg%death%rdrstb(j,1)
-               rdrstb(j*2)   = cfg%death%rdrstb(j,2)
+               state%crop%common%rdrstb(j*2-1) = cfg%death%rdrstb(j,1)
+               state%crop%common%rdrstb(j*2)   = cfg%death%rdrstb(j,2)
             end do
          end block
       end if

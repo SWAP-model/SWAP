@@ -52,7 +52,7 @@
         wrtmin,                  &  ! wrtmax retired
         laiem, laiexp, laiexppot, laimax,           &  ! lai/laipot/cfeic retired
         ! cftb/chtb/cfeictb/rdtb/rlwtb/slatb/rgrlai/rfsetb retired
-        frtb, fltb, fstb, rdrrtb, rdrstb,                         &
+        ! frtb/fltb/fstb/rdrrtb/rdrstb retired
         rdmax,                           &  ! rd/rdpot/swrd/swrdc/swdmi2rd retired
         reltr,                                                           &  ! swgc/swdrought/swinter/swcf retired
         span, ssa, glaiex, glaiexpot, &  ! cvl/cvr/cvs/q10/rmr/rml/rms retired
@@ -226,9 +226,9 @@
 
 ! ---   initial values of crop parameters
         rid = dble(daycrop)
-        fr = afgen (frtb,30,rid)
-        fl = afgen (fltb,30,rid)
-        fs = afgen (fstb,30,rid)
+        fr = afgen (state%crop%common%frtb,30,rid)
+        fl = afgen (state%crop%common%fltb,30,rid)
+        fs = afgen (state%crop%common%fstb,30,rid)
         sla(1) = afgen (state%crop%common%slatb,30,rid)
         lvage(1) = 0.d0
         ilvold = 1
@@ -443,9 +443,9 @@
         asrcpot = gasspot-mrespot
 
 ! ---   partitioning factors
-        fr = afgen(frtb,30,rid)
-        fl = afgen(fltb,30,rid)
-        fs = afgen(fstb,30,rid)
+        fr = afgen(state%crop%common%frtb,30,rid)
+        fl = afgen(state%crop%common%fltb,30,rid)
+        fs = afgen(state%crop%common%fstb,30,rid)
 ! ---   check on partitioning
         fcheck = fr+(fl+fs)*(1.0d0-fr) - 1.0d0
         if (dabs(fcheck).gt.0.0001d0) then
@@ -479,9 +479,9 @@
         ! growth of the roots is balanced by the death of root tissue
         if (state%crop%common%swrd.eq.3 .and. state%crop%wofost%wrtpot.gt.state%crop%common%wrtmax) then
           drrtpot = grrtpot
-          drrtpot = max(drrtpot,state%crop%wofost%wrtpot*afgen (rdrrtb,30,rid))
+          drrtpot = max(drrtpot,state%crop%wofost%wrtpot*afgen (state%crop%common%rdrrtb,30,rid))
         else  
-          drrtpot = state%crop%wofost%wrtpot*afgen (rdrrtb,30,rid)
+          drrtpot = state%crop%wofost%wrtpot*afgen (state%crop%common%rdrrtb,30,rid)
         endif  
         gwrtpot = grrtpot - drrtpot
 
@@ -548,7 +548,7 @@
 ! ---   death of stems due to water stress is zero in case of potential growth
         drst1pot = 0.0d0
 ! ---   death of stems due to ageing
-        drst2pot = afgen (rdrstb,30,rid)*state%crop%wofost%wstpot
+        drst2pot = afgen (state%crop%common%rdrstb,30,rid)*state%crop%wofost%wstpot
         drstpot = (drst1pot+drst2pot)/delt 
         gwstpot = grstpot-drstpot
 
@@ -592,8 +592,8 @@
           if (flharvestpot) then
             iseqgmpot = iseqgmpot + 1
             slapot(1) = afgen (state%crop%common%slatb,30,rid)
-            fl = afgen (fltb,30,rid)
-            fs = afgen (fstb,30,rid)
+            fl = afgen (state%crop%common%fltb,30,rid)
+            fs = afgen (state%crop%common%fstb,30,rid)
             state%crop%wofost%wlvpot = state%crop%grass%mowrest / (1.d0 + (fs/fl))
             state%crop%wofost%wstpot = fs/fl*state%crop%wofost%wlvpot
             state%crop%wofost%dwlvpot = 0.0d0
@@ -754,8 +754,8 @@
             if (flDewoolingpot) then
 
               slapot(1) = afgen (state%crop%common%slatb,30,rid)
-              fl = afgen (fltb,30,rid)
-              fs = afgen (fstb,30,rid)
+              fl = afgen (state%crop%common%fltb,30,rid)
+              fs = afgen (state%crop%common%fstb,30,rid)
               state%crop%wofost%wlvpot = dewrest / (1.d0 + (fs/fl))
               state%crop%wofost%wstpot = fs/fl*state%crop%wofost%wlvpot
               state%crop%wofost%dwlvpot = 0.0d0
@@ -916,9 +916,9 @@
         asrc = gass-mres
 
 ! ---   partitioning factors (relevant for restart)
-        fr = afgen(frtb,30,rid)
-        fl = afgen(fltb,30,rid)
-        fs = afgen(fstb,30,rid)
+        fr = afgen(state%crop%common%frtb,30,rid)
+        fl = afgen(state%crop%common%fltb,30,rid)
+        fs = afgen(state%crop%common%fstb,30,rid)
 
 ! ---   dry matter increase
         cvf = 1.0d0/((fl/state%crop%common%cvl+fs/state%crop%common%cvs)*(1.0d0-fr)+fr/state%crop%common%cvr)
@@ -940,9 +940,9 @@
         if (state%crop%common%swrd.eq.3 .and. state%soilwater%flWrtNonox) grrt = 0.d0   ! [SS-GR-CROPWS A4] present(state) guard removed
         if (state%crop%common%swrd.eq.3 .and. state%crop%wofost%wrt.gt.state%crop%common%wrtmax) then
           drrt = grrt
-          drrt = max(drrt,state%crop%wofost%wrt*afgen (rdrrtb,30,rid))
+          drrt = max(drrt,state%crop%wofost%wrt*afgen (state%crop%common%rdrrtb,30,rid))
         else  
-          drrt = state%crop%wofost%wrt*afgen (rdrrtb,30,rid)
+          drrt = state%crop%wofost%wrt*afgen (state%crop%common%rdrrtb,30,rid)
         endif  
         gwrt = grrt-drrt
 
@@ -1009,7 +1009,7 @@
 ! ---   death of stems due to water stress
         drst1 = state%crop%wofost%wst*(1.0d0-reltr)*perdl
 ! ---   death of stems due to ageing
-        drst2 = afgen (rdrstb,30,rid)*state%crop%wofost%wst
+        drst2 = afgen (state%crop%common%rdrstb,30,rid)*state%crop%wofost%wst
         drst = (drst1+drst2)/delt 
         gwst = grst-drst
 
@@ -1054,8 +1054,8 @@
         if (flharvest) then
           iseqgm = iseqgm + 1
           sla(1) = afgen (state%crop%common%slatb,30,rid)
-          fl = afgen (fltb,30,rid)
-          fs = afgen (fstb,30,rid)
+          fl = afgen (state%crop%common%fltb,30,rid)
+          fs = afgen (state%crop%common%fstb,30,rid)
           state%crop%wofost%wlv = state%crop%grass%mowrest / (1.d0 + (fs/fl))
           state%crop%wofost%wst = fs/fl*state%crop%wofost%wlv
           state%crop%wofost%dwlv = 0.0d0
@@ -1216,8 +1216,8 @@
             if (flDewooling) then
 
               sla(1) = afgen (state%crop%common%slatb,30,rid)
-              fl = afgen (fltb,30,rid)
-              fs = afgen (fstb,30,rid)
+              fl = afgen (state%crop%common%fltb,30,rid)
+              fs = afgen (state%crop%common%fstb,30,rid)
               state%crop%wofost%wlv = dewrest / (1.d0 + (fs/fl))
               state%crop%wofost%wst = fs/fl*state%crop%wofost%wlv
               state%crop%wofost%dwlv = 0.0d0

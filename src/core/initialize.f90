@@ -618,13 +618,7 @@
       cuptgrazpot        = 0.0d0 
       dlc                = 0.0d0 
       dlo                = 0.0d0 
-      dtsmtb             = 0.0d0
       fbl                = 0.0d0 
-      fbltb              = 0.0d0 
-      fltb               = 0.0d0 
-      fotb               = 0.0d0 
-      frtb               = 0.0d0 
-      fstb               = 0.0d0 
       gasstpot           = 0.0d0 
       gc                 = 0.0d0 
       laiem              = 0.0d0
@@ -637,8 +631,6 @@
       perdl              = 0.0d0 
       pfreetb            = 0.0d0 
       pstemtb            = 0.0d0 
-      rdrrtb             = 0.0d0 
-      rdrstb             = 0.0d0 
       reltr              = 0.0d0 
       rootcoefa          = 0.0d0 
       rootradius         = 0.0d0 

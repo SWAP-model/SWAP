@@ -50,9 +50,9 @@ contains
          ! Maintenance respiration — DEFERRED Phase C3
          ! q10/rml/rmr/rms/rfsetb retired
          ! Partitioning — DEFERRED Phase C3
-         frtb, fltb, fstb,                                                    &
+         ! frtb/fltb/fstb retired
          ! Death rates — DEFERRED Phase C3
-         perdl, rdrrtb, rdrstb,                                               &
+         perdl,                                                               &  ! rdrrtb/rdrstb retired
          ! Root depth and density — DEFERRED Phase C3; swrd/swdmi2rd/swrdc/rdi/rri/rdc retired
          ! rdctb/rdtb/rlwtb/wrtmax/cumdens retired
          ! Oxygen stress — DEFERRED Phase C3; swoxygen retired
@@ -209,14 +209,14 @@ contains
       if (allocated(cfg%rfsetb))  call copy_table(cfg%rfsetb, state%crop%common%rfsetb)
 
       ! Part 9: partitioning (readgrass lines 3643-3645)
-      if (allocated(cfg%frtb))    call copy_table(cfg%frtb,    frtb)
-      if (allocated(cfg%fltb))    call copy_table(cfg%fltb,    fltb)
-      if (allocated(cfg%fstb))    call copy_table(cfg%fstb,    fstb)
+      if (allocated(cfg%frtb))    call copy_table(cfg%frtb,    state%crop%common%frtb)
+      if (allocated(cfg%fltb))    call copy_table(cfg%fltb,    state%crop%common%fltb)
+      if (allocated(cfg%fstb))    call copy_table(cfg%fstb,    state%crop%common%fstb)
 
       ! Part 10: death rates (readgrass lines 3648-3650)
       perdl = cfg%perdl
-      if (allocated(cfg%rdrrtb))  call copy_table(cfg%rdrrtb,  rdrrtb)
-      if (allocated(cfg%rdrstb))  call copy_table(cfg%rdrstb,  rdrstb)
+      if (allocated(cfg%rdrrtb))  call copy_table(cfg%rdrrtb,  state%crop%common%rdrrtb)
+      if (allocated(cfg%rdrstb))  call copy_table(cfg%rdrstb,  state%crop%common%rdrstb)
 
       ! Part 11: oxygen stress (readgrass lines 3653-3723)
       ! Legacy default: swoxygen = 1 (readgrass line 3653)

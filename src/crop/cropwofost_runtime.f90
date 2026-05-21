@@ -60,9 +60,9 @@
         rnflv, rnfst, rnfrt, fstr, fntrt, npart, nfixf, nsla,             &
         ! cvl/cvo/cvr/cvs retired
         flCropHarvest, flCropNut, flHarvestDay, flhydrlift, flanthesis,    &
-        frtb, fltb, fstb, fotb, fbltb,  &  ! q10/rmr/rml/rms/rmo/rfsetb retired
+        ! q10/rmr/rml/rms/rmo/rfsetb/frtb/fltb/fstb/fotb/fbltb retired
         fbl, drbl, drblpot,                   &
-        dtsmtb, rdrrtb, rdrstb, &  ! cftb/chtb/cfeictb/rdtb/rlwtb/slatb/rgrlai retired
+        ! cftb/chtb/cfeictb/rdtb/rlwtb/slatb/rgrlai/dtsmtb/rdrrtb/rdrstb retired
         dlc, dlo, span, spa, ssa, logf, tdwi,                &
         lv, lvpot, lvage, lvagepot, sla, slapot,                          &
         ilvold, ilvoldpot, idsl,                                           &
@@ -250,13 +250,13 @@
         state%crop%common%dvs = 0.0d0
         flAnthesis = .false.
         state%crop%common%tsum = 0.0d0
-        fr = afgen (frtb,30,state%crop%common%dvs)
-        fl = afgen (fltb,30,state%crop%common%dvs)
-        fs = afgen (fstb,30,state%crop%common%dvs)
-        fo = afgen (fotb,30,state%crop%common%dvs)
+        fr = afgen (state%crop%common%frtb,30,state%crop%common%dvs)
+        fl = afgen (state%crop%common%fltb,30,state%crop%common%dvs)
+        fs = afgen (state%crop%common%fstb,30,state%crop%common%dvs)
+        fo = afgen (state%crop%common%fotb,30,state%crop%common%dvs)
 ! --- only for bulb crops (tulips etc..)
         if(swbulb.eq.1) then
-           fbl = afgen (fbltb,30,state%crop%common%dvs)
+           fbl = afgen (state%crop%common%fbltb,30,state%crop%common%dvs)
            state%crop%wofost%plwt = state%crop%wofost%plwti
         endif
         sla(1) = afgen (state%crop%common%slatb,30,state%crop%common%dvs)
@@ -419,7 +419,7 @@
 ! --- rates of change of the crop variables ----------------------------
 
 ! --- increase in temperature sum
-      dtsum = afgen (dtsmtb,30,at_tav)  ! [SS-GR-ATM B.5] tav→state%atmosphere%Tav
+      dtsum = afgen (state%crop%common%dtsmtb,30,at_tav)  ! [SS-GR-ATM B.5] tav→state%atmosphere%Tav
 
 ! --- phenological development rate for potential AND actual crops
       if (swsoybean.eq.0) then
@@ -491,13 +491,13 @@
       asrcpot = gasspot - mrespot
 
 ! --- partitioning factors
-      fr = afgen(frtb,30,state%crop%common%dvs)
-      fl = afgen(fltb,30,state%crop%common%dvs)
-      fs = afgen(fstb,30,state%crop%common%dvs)
-      fo = afgen(fotb,30,state%crop%common%dvs)
+      fr = afgen(state%crop%common%frtb,30,state%crop%common%dvs)
+      fl = afgen(state%crop%common%fltb,30,state%crop%common%dvs)
+      fs = afgen(state%crop%common%fstb,30,state%crop%common%dvs)
+      fo = afgen(state%crop%common%fotb,30,state%crop%common%dvs)
 ! --- only for bulb crops (tulips etc..)
       if(swbulb.eq.1) then
-         fbl = afgen(fbltb,30,state%crop%common%dvs)
+         fbl = afgen(state%crop%common%fbltb,30,state%crop%common%dvs)
       endif
 ! --- check on partitioning
       call chckprt(state%crop%common%dvs,fr,fl,fs,fo,fbl)    
@@ -523,9 +523,9 @@
       ! growth of the roots is balanced by the death of root tissue
       if (state%crop%common%swrd.eq.3 .and. state%crop%wofost%wrtpot.gt.state%crop%common%wrtmax) then
         drrtpot = grrtpot
-        drrtpot = max(drrtpot,state%crop%wofost%wrtpot*afgen (rdrrtb,30,state%crop%common%dvs))
+        drrtpot = max(drrtpot,state%crop%wofost%wrtpot*afgen (state%crop%common%rdrrtb,30,state%crop%common%dvs))
       else  
-        drrtpot = state%crop%wofost%wrtpot*afgen (rdrrtb,30,state%crop%common%dvs)
+        drrtpot = state%crop%wofost%wrtpot*afgen (state%crop%common%rdrrtb,30,state%crop%common%dvs)
       endif  
       gwrtpot = grrtpot - drrtpot
 
@@ -595,7 +595,7 @@
 ! --- growth rate stems
       grstpot = fs*admipot
 ! --- death rate stems
-      drstpot = afgen (rdrstb,30,state%crop%common%dvs)*state%crop%wofost%wstpot
+      drstpot = afgen (state%crop%common%rdrstb,30,state%crop%common%dvs)*state%crop%wofost%wstpot
 ! --- net growth rate stems
       gwstpot = grstpot - drstpot
 
@@ -765,13 +765,13 @@
       asrc = gass-mres
 
 ! --- partitioning factors
-      fr = afgen(frtb,30,state%crop%common%dvs)
-      fl = afgen(fltb,30,state%crop%common%dvs)
-      fs = afgen(fstb,30,state%crop%common%dvs)
-      fo = afgen(fotb,30,state%crop%common%dvs)
+      fr = afgen(state%crop%common%frtb,30,state%crop%common%dvs)
+      fl = afgen(state%crop%common%fltb,30,state%crop%common%dvs)
+      fs = afgen(state%crop%common%fstb,30,state%crop%common%dvs)
+      fo = afgen(state%crop%common%fotb,30,state%crop%common%dvs)
 ! --- only for bulb crops (tulips etc..)
       if(swbulb.eq.1) then
-         fbl = afgen(fbltb,30,state%crop%common%dvs)
+         fbl = afgen(state%crop%common%fbltb,30,state%crop%common%dvs)
       endif
 ! --- check on partitioning
       call chckprt(state%crop%common%dvs,fr,fl,fs,fo,fbl)    
@@ -815,16 +815,16 @@
       drlv = dslv+dalv
 
 ! --- death rate stems
-      drst = state%crop%wofost%wst * afgen (rdrstb,30,state%crop%common%dvs)
+      drst = state%crop%wofost%wst * afgen (state%crop%common%rdrstb,30,state%crop%common%dvs)
 
 ! --- death rate roots
       ! in case of SWRD = 3: after reaching maximum live weight of wrtmax, the
       ! growth of the roots is balanced by the death of root tissue
       if (state%crop%common%swrd.eq.3 .and. state%crop%wofost%wrt.gt.state%crop%common%wrtmax) then
         drrt = grrt
-        drrt = max(drrt,state%crop%wofost%wrt*afgen (rdrrtb,30,state%crop%common%dvs))
+        drrt = max(drrt,state%crop%wofost%wrt*afgen (state%crop%common%rdrrtb,30,state%crop%common%dvs))
       else  
-        drrt = state%crop%wofost%wrt*afgen (rdrrtb,30,state%crop%common%dvs)
+        drrt = state%crop%wofost%wrt*afgen (state%crop%common%rdrrtb,30,state%crop%common%dvs)
       endif  
 
 ! --- net growth rate stems, roots, storage organs

@@ -400,7 +400,7 @@
       real(8)   dlo                ! Minimum day length (T) for optimal crop development
       real(8)   dry_mat_cont_roots ! Dry matter content of roots [0..1.0 -, R]
       real(8)   dsinbe             ! Daily total of effective solar height (s)
-      real(8)   dtsmtb(30)         ! Increase of temperature sum (oC) as function of daily average temperature (oC)
+      ! [GR-CROPWS] dtsmtb retired — see state%crop%common%dtsmtb
       ! [GR-CROP-DVS] dvs retired — see state%crop%common%dvs
       ! [GR-CROPWS] dvsend retired — see state%crop%common%dvsend
       ! [GR-CROP-DVS] dwlv retired — see state%crop%wofost%dwlv
@@ -414,10 +414,10 @@
       ! [GR-CROP-DVS] dwstpot retired — see state%crop%wofost%dwstpot
       ! [GR-CROPWS] eff retired — see state%crop%common%eff
       real(8)   f_senes            ! Reduction factor for senescence, used for maintenance respiration [0..1.0 -, R]
-      real(8)   fltb(30)           ! Fraction of total dry matter increase partitioned to the leaves (-) as function of dvs
-      real(8)   fotb(30)           ! Fraction of total dry matter increase partitioned to the storage organs (-) as function of dvs
-      real(8)   frtb(30)           ! Fraction of total dry matter increase partitioned to the roots (-) as function of dvs
-      real(8)   fstb(30)           ! Fraction of total dry matter increase partitioned to the stems (-) as function of dvs
+      ! [GR-CROPWS] fltb retired — see state%crop%common%fltb
+      ! [GR-CROPWS] fotb retired — see state%crop%common%fotb
+      ! [GR-CROPWS] frtb retired — see state%crop%common%frtb
+      ! [GR-CROPWS] fstb retired — see state%crop%common%fstb
       real(8)   gasst              ! Total gross assimilation for actual crop (kg/ha)
       real(8)   gasstpot           ! Total gross assimilation for potential crop (kg/ha)
       real(8)   gc                 ! Ground cover in case of a crop
@@ -461,8 +461,8 @@
       ! [GR-CROPWS] q10 retired — see state%crop%common%q10
       real(8)   q10_microbial      ! Relative increase in microbial respiration at temperature increase of 10 �C [1.0..4.0 -, R]
       real(8)   q10_root           ! Relative increase in root respiration at temperature increase of 10 �C [1.0..4.0 -, R]
-      real(8)   rdrrtb(30)         ! Array with relative death rates of roots (kg/kg/d) as function of development stage (-)
-      real(8)   rdrstb(30)         ! Array with relative death rates of stems (kg/kg/d) as function of development stage (-)
+      ! [GR-CROPWS] rdrrtb retired — see state%crop%common%rdrrtb
+      ! [GR-CROPWS] rdrstb retired — see state%crop%common%rdrstb
       real(8)   reltr              ! relative transpiration factor that reduces crop growth (-)
       ! [GR-CROPWS] rfsetb retired — see state%crop%common%rfsetb
       ! [GR-CROPWS] rgrlai retired — see state%crop%common%rgrlai
@@ -595,7 +595,7 @@
       ! [GR-CROP-DVS] dwbl retired — see state%crop%wofost%dwbl
       ! [GR-CROP-DVS] dwblpot retired — see state%crop%wofost%dwblpot
       real(8)   fbl                ! Dry weight fraction partitioned to flowers (-)
-      real(8)   fbltb(30)          ! Dry weight fractions partitioned to flowers (-)
+      ! [GR-CROPWS] fbltb retired — see state%crop%common%fbltb
       real(8)   pld
       real(8)   remoc
       ! [GR-CROP-DVS] plwt retired — see state%crop%wofost%plwt

@@ -543,9 +543,7 @@ contains
       use variables, only: &                                               ! [SS-GR-FINAL B6] residuals — all DEFERRED
                            ! DEFERRED: croptype/icrop — active crop schedule globals; Phase C3
                            croptype, icrop, max_resp_factor, &
-                           ! q10/rmr/rml/rms/rmo/rfsetb/cvl/cvs/cvo/cvr retired — state%crop%common
-                           ! DEFERRED: frtb/fltb/fstb/fotb — crop partitioning tables; Phase C3
-                           frtb, fltb, fstb, fotb, &
+                           ! q10/rmr/rml/rms/rmo/rfsetb/cvl/cvs/cvo/cvr/frtb/fltb/fstb/fotb retired
                            ! DEFERRED: rid/idregr/daycrop — active crop dynamics; Phase C3; dvs retired
                            rid, idregr, daycrop
       use array_utils, only: afgen
@@ -583,10 +581,10 @@ contains
         mres_gmrf = min(state%crop%wofost%pgass,rmres_gmrf*teff_gmrf)  ! ## MM 2018-05-07
         asrc_gmrf = state%crop%wofost%pgass - mres_gmrf                ! ## MM 2018-05-07
 ! --- partitioning factors
-        fr_gmrf = afgen(frtb,30,state%crop%common%dvs) !rid for grass, dvs for wofost
-        fl_gmrf = afgen(fltb,30,state%crop%common%dvs)
-        fs_gmrf = afgen(fstb,30,state%crop%common%dvs)
-        fo_gmrf = afgen(fotb,30,state%crop%common%dvs)
+        fr_gmrf = afgen(state%crop%common%frtb,30,state%crop%common%dvs) !rid for grass, dvs for wofost
+        fl_gmrf = afgen(state%crop%common%fltb,30,state%crop%common%dvs)
+        fs_gmrf = afgen(state%crop%common%fstb,30,state%crop%common%dvs)
+        fo_gmrf = afgen(state%crop%common%fotb,30,state%crop%common%dvs)
 ! --- dry matter increase, only part in which cvf is calculated
         cvf_gmrf = 1.0d0/((fl_gmrf /state%crop%common%cvl+fs_gmrf /state%crop%common%cvs+fo_gmrf/state%crop%common%cvo)* &
      &  (1.0d0-fr_gmrf)+fr_gmrf/state%crop%common%cvr)
@@ -626,9 +624,9 @@ contains
           mres_gmrf = min(state%crop%wofost%pgass,rmres_gmrf*teff_gmrf)  ! ## MM 2018-05-07
           asrc_gmrf = state%crop%wofost%pgass - mres_gmrf                ! ## MM 2018-05-07
 ! --- partitioning factors
-          fr_gmrf = afgen(frtb,30,rid) !rid for grass, dvs for wofost
-          fl_gmrf = afgen(fltb,30,rid)
-          fs_gmrf = afgen(fstb,30,rid)
+          fr_gmrf = afgen(state%crop%common%frtb,30,rid) !rid for grass, dvs for wofost
+          fl_gmrf = afgen(state%crop%common%fltb,30,rid)
+          fs_gmrf = afgen(state%crop%common%fstb,30,rid)
 ! --- dry matter increase, only part in which cvf is calculated
           cvf_gmrf = 1.0d0/((fl_gmrf /state%crop%common%cvl+fs_gmrf /state%crop%common%cvs)* &
      &        (1.0d0-fr_gmrf)+fr_gmrf/state%crop%common%cvr)
