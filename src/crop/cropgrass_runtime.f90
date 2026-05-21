@@ -55,7 +55,7 @@
         ! frtb/fltb/fstb/rdrrtb/rdrstb retired
         rdmax,                           &  ! rd/rdpot/swrd/swrdc/swdmi2rd retired
         reltr,                                                           &  ! swgc/swdrought/swinter/swcf retired
-        span, ssa, glaiex, glaiexpot, &  ! cvl/cvr/cvs/q10/rmr/rml/rms retired
+        glaiex, glaiexpot, &  ! cvl/cvr/cvs/q10/rmr/rml/rms/span/ssa retired
         lv, lvpot, lvage, lvagepot, sla, slapot, ilvold, ilvoldpot,     &
         twilt, wiltpoint, gwrt, siccaplai,                   &  ! cropstartact/endact/startpot/endpot retired
         idaysgraz, idaysgrazpot, idregr, idregrpot,                      &
@@ -68,7 +68,7 @@
         lossgrazingtab, lossgrztab, lossmowtab,                         &
         delayregrowthtab, zgrz, zmow,                                   &
         mowdm, pmowdm, pgrzdm, &
-        perdl, dateharvest, lsda,                                        &
+        dateharvest, lsda,                                               &  ! perdl retired
         dummy_tsoil_gr_ => tsoil
       !! Rename config-staging tsoil to avoid clash with dummy arg tsoil.
       !! [SS-HEAT] Task 9: tsoil retained as config-staging buffer; global is not compute state.
@@ -258,7 +258,7 @@
         laiexp = laiem
         laiexppot = laiem
         laimax = laiem
-        state%crop%lai = lasum+ssa*state%crop%wofost%wst
+        state%crop%lai = lasum+state%crop%common%ssa*state%crop%wofost%wst
         state%crop%common%laipot = state%crop%lai
         state%crop%wofost%dwrt = 0.d0
         state%crop%wofost%dwrtpot = state%crop%wofost%dwrt
@@ -514,14 +514,14 @@
 ! ---   sum their weights
 
         dalvpot = 0.0d0
-        if (lvagepot(max(i1,1)).gt.span.and.restpot.gt.0.and.           &
+        if (lvagepot(max(i1,1)).gt.state%crop%common%span.and.restpot.gt.0.and.           &
      &                          i1.ge.1) then
           dalvpot = lvpot(i1)-restpot
           restpot = 0.0d0
           i1 = i1-1
         endif
 
-        do while (i1.ge.1.and.lvagepot(max(i1,1)).gt.span)
+        do while (i1.ge.1.and.lvagepot(max(i1,1)).gt.state%crop%common%span)
           dalvpot = dalvpot+lvpot(i1)
           i1 = i1-1
         enddo
@@ -802,7 +802,7 @@
           enddo
 
           if(i1.gt.0) then
-            do while (lvagepot(max(i1,1)) .gt. span .and. i1 .ge. 1)
+            do while (lvagepot(max(i1,1)) .gt. state%crop%common%span .and. i1 .ge. 1)
               lvpot(i1) = 0.0d0
               i1 = i1-1
             enddo
@@ -849,7 +849,7 @@
         state%crop%wofost%tagppot = twlvpot+twstpot
 
 ! ---   leaf area index
-        state%crop%common%laipot = lasumpot+ssa*state%crop%wofost%wstpot
+        state%crop%common%laipot = lasumpot+state%crop%common%ssa*state%crop%wofost%wstpot
 !       prevent immediate lai reduction at emergence
 !       KRO-BOO-20160403: suppressed because deviates from Wofost
 !       laipot = max(laipot, laiem)
@@ -953,7 +953,7 @@
         grlv = fl*admi
 
 ! ---   death of leaves due to water stress or high lai
-        dslv1 = state%crop%wofost%wlv*(1.0d0-reltr)*perdl
+        dslv1 = state%crop%wofost%wlv*(1.0d0-reltr)*state%crop%common%perdl
         laicr = 3.2d0/state%crop%kdif
         dslv2 = state%crop%wofost%wlv*max(0.0d0,min(0.03d0,0.03d0*(state%crop%lai-laicr)/laicr))
         dslv = max (dslv1,dslv2) 
@@ -974,13 +974,13 @@
 ! ---   sum their weights
 
         dalv = 0.0d0
-        if (lvage(max(i1,1)).gt.span.and.rest.gt.0.and.i1.ge.1) then
+        if (lvage(max(i1,1)).gt.state%crop%common%span.and.rest.gt.0.and.i1.ge.1) then
           dalv = lv(i1)-rest
           rest = 0.0d0
           i1 = i1-1
         endif
 
-        do while (i1.ge.1.and.lvage(max(i1,1)).gt.span)
+        do while (i1.ge.1.and.lvage(max(i1,1)).gt.state%crop%common%span)
           dalv = dalv+lv(i1)
           i1 = i1-1
         enddo
@@ -1007,7 +1007,7 @@
 ! ---   growth rate stems
         grst = fs*admi
 ! ---   death of stems due to water stress
-        drst1 = state%crop%wofost%wst*(1.0d0-reltr)*perdl
+        drst1 = state%crop%wofost%wst*(1.0d0-reltr)*state%crop%common%perdl
 ! ---   death of stems due to ageing
         drst2 = afgen (state%crop%common%rdrstb,30,rid)*state%crop%wofost%wst
         drst = (drst1+drst2)/delt 
@@ -1264,7 +1264,7 @@
           enddo
 
           if(i1.gt.0) then
-            do while (lvage(max(i1,1)).gt.span.and.i1.ge.1)
+            do while (lvage(max(i1,1)).gt.state%crop%common%span.and.i1.ge.1)
               lv(i1) = 0.0d0
               i1 = i1-1
             enddo
@@ -1311,7 +1311,7 @@
         state%crop%wofost%tagp = twlv+twst
 
 ! ---   leaf area index
-        state%crop%lai = lasum+ssa*state%crop%wofost%wst
+        state%crop%lai = lasum+state%crop%common%ssa*state%crop%wofost%wst
         laimax = max (state%crop%lai,laimax)
 
 ! ---   update normalized cumulative root density based on root extraction or stress (cumdens)

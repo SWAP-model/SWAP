@@ -42,7 +42,7 @@ contains
          ! Start-of-growth trigger — DEFERRED Phase C3
          swtsum, tsumtemp, tsumtime, tsumdepth,                               &
          ! Green area — DEFERRED Phase C3; tbase retired
-         ssa, span,                                                           &  ! slatb retired
+         ! slatb/ssa/span retired
          ! Assimilation — DEFERRED Phase C3
          ! kdif/kdir/eff/amaxtb/tmpftb/tmnftb retired
          ! Biomass conversion — DEFERRED Phase C3
@@ -52,7 +52,7 @@ contains
          ! Partitioning — DEFERRED Phase C3
          ! frtb/fltb/fstb retired
          ! Death rates — DEFERRED Phase C3
-         perdl,                                                               &  ! rdrrtb/rdrstb retired
+         ! rdrrtb/rdrstb/perdl retired
          ! Root depth and density — DEFERRED Phase C3; swrd/swdmi2rd/swrdc/rdi/rri/rdc retired
          ! rdctb/rdtb/rlwtb/wrtmax/cumdens retired
          ! Oxygen stress — DEFERRED Phase C3; swoxygen retired
@@ -184,8 +184,8 @@ contains
 
       ! Part 5: green area (readgrass lines 3617-3620)
       if (allocated(cfg%slatb)) call copy_table(cfg%slatb, state%crop%common%slatb)
-      ssa   = cfg%ssa
-      span  = cfg%span
+      state%crop%common%ssa  = cfg%ssa
+      state%crop%common%span = cfg%span
       state%crop%common%tbase = cfg%tbase
 
       ! Part 6: assimilation (readgrass lines 3623-3628)
@@ -214,7 +214,7 @@ contains
       if (allocated(cfg%fstb))    call copy_table(cfg%fstb,    state%crop%common%fstb)
 
       ! Part 10: death rates (readgrass lines 3648-3650)
-      perdl = cfg%perdl
+      state%crop%common%perdl = cfg%perdl
       if (allocated(cfg%rdrrtb))  call copy_table(cfg%rdrrtb,  state%crop%common%rdrrtb)
       if (allocated(cfg%rdrstb))  call copy_table(cfg%rdrstb,  state%crop%common%rdrstb)
 

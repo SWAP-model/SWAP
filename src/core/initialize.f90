@@ -628,7 +628,6 @@
       lvpot              = 0.0d0
       mrestpot           = 0.0d0 
       mrftb              = 0.0d0
-      perdl              = 0.0d0 
       pfreetb            = 0.0d0 
       pstemtb            = 0.0d0 
       reltr              = 0.0d0 
@@ -641,9 +640,6 @@
       siccaptb           = 0.0d0 
       sla                = 0.0d0
       slapot             = 0.0d0
-      spa                = 0.0d0 
-      span               = 0.0d0 
-      ssa                = 0.0d0
       tdwi               = 0.0d0 
       vernrtb            = 0.0d0 
 

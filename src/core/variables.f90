@@ -450,7 +450,7 @@
       real(8)   mrest              ! Total maintenance respiration for actual crop (kg/ha)
       real(8)   mrestpot           ! Total maintenance respiration for potential crop (kg/ha)
       real(8)   mrftb(2*magrs)     ! Array with ratio root total respiration / maintenance respiration as function of DVS (kg/m3)
-      real(8)   perdl              ! Maximum relative death rate of leaves due to water stress (/T)
+      ! [GR-CROPWS] perdl retired — see state%crop%common%perdl
       real(8)   pfreetb(2*magrs)   ! Gash interception model: free throughfall coefficient (-) as function of time (T)
       real(8)   pstemtb(2*magrs)   ! Gash interception model: stem flow coefficient (-) as function of time (T)
       real(8)   siccaptb(2*magrs)  ! NHI interception model: interception capacity as a function of time (T)
@@ -482,12 +482,12 @@
       real(8)   sla(366)           ! Array with specific leaf area (ha/kg) as function of crop day number of actual crop
       real(8)   slapot(366)        ! Array with specific leaf area (ha/kg) as function of crop day number of potential crop
       ! [GR-CROPWS] slatb retired — see state%crop%common%slatb
-      real(8)   spa                ! Specific pod area (ha/kg)
-      real(8)   span               ! Life span of leaves at optimum conditions (T)
+      ! [GR-CROPWS] spa retired — see state%crop%common%spa
+      ! [GR-CROPWS] span retired — see state%crop%common%span
       real(8)   spec_weight_root_tissue ! Specific weight of non-airfilled root tissue [0.d0..1.d5 kg root/m3 root, R]
       real(8)   specific_resp_humus ! Respiration rate of humus at 25 �C [0.0..1.0 kg O2/kg C/d, R] 
       real(8)   srl                ! Specific root length [0.d0..1.d10 m root/kg root, R]      
-      real(8)   ssa                ! Specific stem area (ha/kg)
+      ! [GR-CROPWS] ssa retired — see state%crop%common%ssa
       real(8)   tadw               ! Dry weight of plant minus roots of actual growth (kg/ha)
       real(8)   tadwpot            ! Dry weight of plant minus roots of potential growth (kg/ha)
       ! [GR-CROP-DVS] tagp retired — see state%crop%wofost%tagp

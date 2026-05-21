@@ -135,6 +135,12 @@ module crop_common_state_mod
       real(real64) :: rdrrtb(30)     = 0.0_real64     !! relative death rate of roots vs DVS
       real(real64) :: rdrstb(30)     = 0.0_real64     !! relative death rate of stems vs DVS
 
+      ! Leaf/stem/pod area + senescence scalars
+      real(real64) :: ssa            = 0.0_real64     !! specific stem area (ha/kg)
+      real(real64) :: spa            = 0.0_real64     !! specific pod area (ha/kg)
+      real(real64) :: span           = 0.0_real64     !! life span of leaves at optimum (d)
+      real(real64) :: perdl          = 0.0_real64     !! max relative leaf death rate due to water stress (1/d)
+
    contains
       procedure :: init => crop_common_state_init
    end type crop_common_state_t

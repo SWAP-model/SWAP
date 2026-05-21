@@ -63,14 +63,14 @@
         ! q10/rmr/rml/rms/rmo/rfsetb/frtb/fltb/fstb/fotb/fbltb retired
         fbl, drbl, drblpot,                   &
         ! cftb/chtb/cfeictb/rdtb/rlwtb/slatb/rgrlai/dtsmtb/rdrrtb/rdrstb retired
-        dlc, dlo, span, spa, ssa, logf, tdwi,                &
+        dlc, dlo, logf, tdwi,                                &  ! span/spa/ssa retired
         lv, lvpot, lvage, lvagepot, sla, slapot,                          &
         ilvold, ilvoldpot, idsl,                                           &
         gasst, gasstpot,                              &  ! dw* retired
         glaiex, glaiexpot, mrest, mrestpot,                               &
         tadw, tadwpot, gwrt, fraharlosorm_lv, fraharlosorm_so, &
         fraharlosorm_st,                                                   &
-        rdrns, perdl, outfil, pathwork, project, dvsnlt, dvsnt,           &
+        rdrns, outfil, pathwork, project, dvsnlt, dvsnt,                  &  ! perdl retired
         twilt, wiltpoint, tcnt, vernbase, verndvs, vernrtb, vernsat
       use wofost_soil_interface
       use array_utils, only: interpol, afgen, insw
@@ -302,11 +302,11 @@
         laimax = laiem
 ! --- only for bulb crops (tulips etc..)
         if(swbulb.eq.1) then
-            state%crop%lai = lasum+ssa*(state%crop%wofost%wst-wstem)+spa*state%crop%wofost%wso
+            state%crop%lai = lasum+state%crop%common%ssa*(state%crop%wofost%wst-wstem)+state%crop%common%spa*state%crop%wofost%wso
             state%crop%wofost%dwbl = 0.0d0
             state%crop%wofost%dwblpot = 0.0d0
         else
-            state%crop%lai = lasum+ssa*state%crop%wofost%wst+spa*state%crop%wofost%wso
+            state%crop%lai = lasum+state%crop%common%ssa*state%crop%wofost%wst+state%crop%common%spa*state%crop%wofost%wso
         endif
         state%crop%common%laipot = state%crop%lai
         state%crop%wofost%dwrt = 0.0d0
@@ -555,14 +555,14 @@
 ! ---       sum their weights
 
       dalvpot = 0.0d0
-      if (lvagepot(max(i1,1)).gt.span .and. restpot.gt.0.0d0            &
+      if (lvagepot(max(i1,1)).gt.state%crop%common%span .and. restpot.gt.0.0d0            &
      &                   .and.i1.ge.1) then
         dalvpot = lvpot(i1) - restpot
         restpot = 0.0d0
         i1 = i1-1
       endif
 
-      do while (i1.ge.1.and.lvagepot(max(i1,1)).gt.span)
+      do while (i1.ge.1.and.lvagepot(max(i1,1)).gt.state%crop%common%span)
         dalvpot = dalvpot+lvpot(i1)
         i1 = i1-1
       enddo
@@ -632,7 +632,7 @@
       enddo
 
 ! --- leaves older than span die
-      do while (lvagepot(max(i1,1)).gt.span.and.i1.ge.1)
+      do while (lvagepot(max(i1,1)).gt.state%crop%common%span.and.i1.ge.1)
         lvpot(i1) = 0.0d0
         i1 = i1-1
       enddo
@@ -704,7 +704,7 @@
       mrestpot = mrespot + mrestpot
 
 ! --- leaf area index
-      state%crop%common%laipot = lasumpot + ssa*state%crop%wofost%wstpot + spa*state%crop%wofost%wsopot
+      state%crop%common%laipot = lasumpot + state%crop%common%ssa*state%crop%wofost%wstpot + state%crop%common%spa*state%crop%wofost%wsopot
 !     prevent immediate lai reduction at emergence
 !     KRO-BOO-20160403: suppressed because deviates from Wofost
 !      laipot = max(laipot, laiem)
@@ -805,10 +805,10 @@
       if (state%crop%common%swrd.eq.3 .and. state%soilwater%flWrtNonox) grrt = 0.d0   ! [SS-GR-CROPWS A3] present(state) guard removed
 
 ! --- death of leaves due to water stress or high lai or nitrogen stress
-      call deaths(flcropnut,state%crop%wofost%wlv,state%crop%kdif,state%crop%lai,NNI,perdl,rdrns,reltr,dslv)
+      call deaths(flcropnut,state%crop%wofost%wlv,state%crop%kdif,state%crop%lai,NNI,state%crop%common%perdl,rdrns,reltr,dslv)
 
 ! --- death of leaves due to exceeding life span:
-      call deatha(dslv,delt,ilvold,lv,lvage,span,i1,dalv)
+      call deatha(dslv,delt,ilvold,lv,lvage,state%crop%common%span,i1,dalv)
 
 ! --- death rate leaves as result of death due to water stress or high lai and 
 !                                    death due to exceeding life span
@@ -876,7 +876,7 @@
 
 ! --- leaf death (due to water stress or high lai) is imposed on array 
 ! --- untill no more leaves have to die or all leaves are gone
-      call lvdth(delt,dslv,span,ilvold,lvage,lv,i1)
+      call lvdth(delt,dslv,state%crop%common%span,ilvold,lvage,lv,i1)
 
 ! --- oldest class with leaves
       ilvold = i1
@@ -940,7 +940,7 @@
       mrest = mres + mrest
 
 ! --- leaf area index
-      state%crop%lai = lasum+ssa*state%crop%wofost%wst+spa*state%crop%wofost%wso
+      state%crop%lai = lasum+state%crop%common%ssa*state%crop%wofost%wst+state%crop%common%spa*state%crop%wofost%wso
 ! --- determine maximum lai
       laimax = max (state%crop%lai,laimax)
 ! --- determine minimum lai to prevent dying straight after 

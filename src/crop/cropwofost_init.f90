@@ -51,7 +51,7 @@ contains
          ! Initial crop state — DEFERRED Phase C3
          tdwi, laiem,                                                        &  ! rgrlai retired
          ! Green area / assimilation — DEFERRED Phase C3; tbase retired
-         spa, ssa, span,                                                     &  ! slatb retired
+         ! slatb/spa/ssa/span retired
          ! kdif/kdir/eff/amaxtb/tmpftb/tmnftb retired
          ! Biomass conversion — DEFERRED Phase C3
          ! cvl/cvo/cvr/cvs retired
@@ -59,7 +59,7 @@ contains
          ! q10/rml/rmo/rmr/rms/rfsetb retired
          ! Partitioning / death rates — DEFERRED Phase C3
          ! frtb/fltb/fstb/fotb retired
-         perdl,                                                              &  ! rdrrtb/rdrstb retired
+         ! rdrrtb/rdrstb/perdl retired
          ! Oxygen stress — DEFERRED Phase C3; swoxygen retired
          ! hlim1/hlim2u/hlim2l/swWrtNonox/aeratecrit retired
          ! Drought stress — DEFERRED Phase C3
@@ -210,9 +210,9 @@ contains
             end do
          end block
       end if
-      spa   = cfg%green_area%spa
-      ssa   = cfg%green_area%ssa
-      span  = cfg%green_area%span
+      state%crop%common%spa  = cfg%green_area%spa
+      state%crop%common%ssa  = cfg%green_area%ssa
+      state%crop%common%span = cfg%green_area%span
       state%crop%common%tbase = cfg%green_area%tbase
 
       ! Part 5: assimilation (readwofost lines 2764-2769)
@@ -316,7 +316,7 @@ contains
       end if
 
       ! Part 9: death rates (readwofost lines 2792-2794)
-      perdl = cfg%death%perdl
+      state%crop%common%perdl = cfg%death%perdl
       if (allocated(cfg%death%rdrrtb)) then
          block
             integer :: nr, j
