@@ -43,7 +43,7 @@
 !   physiology tables (q10, rmr etc.), bulb pools (fbl, wbl etc.): no state home
 !   cftb/chtb/cfeictb: state%crop%fixed homes (A5.2 dual-write) but wofost has optional state
 !     — same constraint as cropfixed B2; deferred to Phase C non-optional refactor
-!   rdtb–rdrstb, lv/lvpot–idsl arrays, dwlv–gasstpot, tadw–harlosorm: computed in wofost
+!   rdtb–rdrstb, state%crop%common%lv/state%crop%common%lvpot–idsl arrays, dwlv–gasstpot, tadw–harlosorm: computed in wofost
 !   rdrns, perdl, outfil, pathwork, project, dvsnlt, dvsnt: output/path globals, no state home
 !   twilt, wiltpoint, tcnt, vernbase–vernsat: JvL + vernalisation, no state home
 !   daycrop: runtime (dual-write to state%crop%common%daycrop), computed in CropGrowth
@@ -64,8 +64,7 @@
         fbl, drbl, drblpot,                   &
         ! cftb/chtb/cfeictb/rdtb/rlwtb/slatb/rgrlai/dtsmtb/rdrrtb/rdrstb retired
         dlc, dlo, logf,                                      &  ! tdwi/span/spa/ssa retired
-        lv, lvpot, lvage, lvagepot, sla, slapot,                          &
-        ilvold, ilvoldpot, idsl,                                           &
+        idsl,                                                              &  ! lv/lvpot/lvage/lvagepot/sla/slapot/ilvold/ilvoldpot retired
         gasst, gasstpot,                              &  ! dw* retired
         mrest, mrestpot,                                                  &  ! glaiex/glaiexpot retired
         tadw, tadwpot, gwrt, fraharlosorm_lv, fraharlosorm_so, &
@@ -259,12 +258,12 @@
            fbl = afgen (state%crop%common%fbltb,30,state%crop%common%dvs)
            state%crop%wofost%plwt = state%crop%wofost%plwti
         endif
-        sla(1) = afgen (state%crop%common%slatb,30,state%crop%common%dvs)
-        lvage(1) = 0.0d0
-        ilvold = 1
-        slapot(1) = afgen (state%crop%common%slatb,30,state%crop%common%dvs)
-        lvagepot(1) = 0.0d0
-        ilvoldpot = 1
+        state%crop%common%sla(1) = afgen (state%crop%common%slatb,30,state%crop%common%dvs)
+        state%crop%common%lvage(1) = 0.0d0
+        state%crop%common%ilvold = 1
+        state%crop%common%slapot(1) = afgen (state%crop%common%slatb,30,state%crop%common%dvs)
+        state%crop%common%lvagepot(1) = 0.0d0
+        state%crop%common%ilvoldpot = 1
 
 ! ---   initial state variables of the crop
         state%crop%wofost%wrt = fr*state%crop%common%tdwi
@@ -281,18 +280,18 @@
 ! --- only for bulb crops (tulips etc..)
         if(swbulb.eq.1) then
 !          blad bij opkomst is ondergronds: lai vanuit ingelezen laiem,
-!          sla(l) aangepast aan initieel bladgewicht en laiem,
+!          state%crop%common%sla(l) aangepast aan initieel bladgewicht en laiem,
 !          stengelgewicht bij opkomst niet meegenomen bij lai-berekening
-           sla(1) = state%crop%common%laiem / state%crop%wofost%wlv
+           state%crop%common%sla(1) = state%crop%common%laiem / state%crop%wofost%wlv
            wstem = state%crop%wofost%wst
            state%crop%wofost%wbl = fbl*tadw
            state%crop%wofost%wblpot = state%crop%wofost%wbl
         else
 !          KRO-BOO-20160403: intro because comparison with Wofost
-           state%crop%common%laiem = state%crop%wofost%wlv*sla(1)
+           state%crop%common%laiem = state%crop%wofost%wlv*state%crop%common%sla(1)
         endif
-        lv(1) = state%crop%wofost%wlv
-        lvpot(1) = state%crop%wofost%wlv
+        state%crop%common%lv(1) = state%crop%wofost%wlv
+        state%crop%common%lvpot(1) = state%crop%wofost%wlv
         lasum = state%crop%common%laiem
         lasumpot = state%crop%common%laiem
         state%crop%common%laiexp = state%crop%common%laiem
@@ -544,10 +543,10 @@
 ! ---        are gone
 
       restpot = dslvpot*delt
-      i1 = ilvoldpot
+      i1 = state%crop%common%ilvoldpot
 
-      do while (restpot.gt.lvpot(max(i1,1)).and.i1.ge.1)
-        restpot = restpot - lvpot(i1) 
+      do while (restpot.gt.state%crop%common%lvpot(max(i1,1)).and.i1.ge.1)
+        restpot = restpot - state%crop%common%lvpot(i1) 
         i1 = i1-1
       enddo
 
@@ -555,15 +554,15 @@
 ! ---       sum their weights
 
       dalvpot = 0.0d0
-      if (lvagepot(max(i1,1)).gt.state%crop%common%span .and. restpot.gt.0.0d0            &
+      if (state%crop%common%lvagepot(max(i1,1)).gt.state%crop%common%span .and. restpot.gt.0.0d0            &
      &                   .and.i1.ge.1) then
-        dalvpot = lvpot(i1) - restpot
+        dalvpot = state%crop%common%lvpot(i1) - restpot
         restpot = 0.0d0
         i1 = i1-1
       endif
 
-      do while (i1.ge.1.and.lvagepot(max(i1,1)).gt.state%crop%common%span)
-        dalvpot = dalvpot+lvpot(i1)
+      do while (i1.ge.1.and.state%crop%common%lvagepot(max(i1,1)).gt.state%crop%common%span)
+        dalvpot = dalvpot+state%crop%common%lvpot(i1)
         i1 = i1-1
       enddo
 
@@ -619,46 +618,46 @@
 ! --- untill no more leaves have to die or all leaves are gone
 
       dslvtpot = dslvpot*delt
-      i1 = ilvoldpot
+      i1 = state%crop%common%ilvoldpot
       do while (dslvtpot.gt.0.and.i1.ge.1)
-        if (dslvtpot.ge.lvpot(i1)) then
-          dslvtpot = dslvtpot-lvpot(i1)
-          lvpot(i1) = 0.0d0
+        if (dslvtpot.ge.state%crop%common%lvpot(i1)) then
+          dslvtpot = dslvtpot-state%crop%common%lvpot(i1)
+          state%crop%common%lvpot(i1) = 0.0d0
           i1 = i1-1
         else
-          lvpot(i1) = lvpot(i1)-dslvtpot
+          state%crop%common%lvpot(i1) = state%crop%common%lvpot(i1)-dslvtpot
           dslvtpot = 0.0d0
         endif
       enddo
 
 ! --- leaves older than span die
-      do while (lvagepot(max(i1,1)).gt.state%crop%common%span.and.i1.ge.1)
-        lvpot(i1) = 0.0d0
+      do while (state%crop%common%lvagepot(max(i1,1)).gt.state%crop%common%span.and.i1.ge.1)
+        state%crop%common%lvpot(i1) = 0.0d0
         i1 = i1-1
       enddo
 
 ! --- oldest class with leaves
-      ilvoldpot = i1
+      state%crop%common%ilvoldpot = i1
 
 ! --- shifting of contents, updating of physiological age
-      do i1 = ilvoldpot,1,-1
-        lvpot(i1+1) = lvpot(i1)
-        slapot(i1+1) = slapot(i1)
-        lvagepot(i1+1) = lvagepot(i1)+fysdel*delt
+      do i1 = state%crop%common%ilvoldpot,1,-1
+        state%crop%common%lvpot(i1+1) = state%crop%common%lvpot(i1)
+        state%crop%common%slapot(i1+1) = state%crop%common%slapot(i1)
+        state%crop%common%lvagepot(i1+1) = state%crop%common%lvagepot(i1)+fysdel*delt
       enddo
-      ilvoldpot = ilvoldpot + 1
+      state%crop%common%ilvoldpot = state%crop%common%ilvoldpot + 1
 
 ! --- new leaves in class 1
-      lvpot(1) = grlvpot*delt
-      slapot(1) = slatpot
-      lvagepot(1) = 0.0d0 
+      state%crop%common%lvpot(1) = grlvpot*delt
+      state%crop%common%slapot(1) = slatpot
+      state%crop%common%lvagepot(1) = 0.0d0 
 
 ! --- calculation of new leaf area and weight
       lasumpot = 0.0d0
       state%crop%wofost%wlvpot = 0.0d0
-      do i1 = 1,ilvoldpot
-        lasumpot = lasumpot + lvpot(i1)*slapot(i1)
-        state%crop%wofost%wlvpot = state%crop%wofost%wlvpot + lvpot(i1)
+      do i1 = 1,state%crop%common%ilvoldpot
+        lasumpot = lasumpot + state%crop%common%lvpot(i1)*state%crop%common%slapot(i1)
+        state%crop%wofost%wlvpot = state%crop%wofost%wlvpot + state%crop%common%lvpot(i1)
       enddo
 
 ! --- leaf area index in case of exponential growth
@@ -808,7 +807,7 @@
       call deaths(flcropnut,state%crop%wofost%wlv,state%crop%kdif,state%crop%lai,NNI,state%crop%common%perdl,rdrns,reltr,dslv)
 
 ! --- death of leaves due to exceeding life span:
-      call deatha(dslv,delt,ilvold,lv,lvage,state%crop%common%span,i1,dalv)
+      call deatha(dslv,delt,state%crop%common%ilvold,state%crop%common%lv,state%crop%common%lvage,state%crop%common%span,i1,dalv)
 
 ! --- death rate leaves as result of death due to water stress or high lai and 
 !                                    death due to exceeding life span
@@ -876,18 +875,18 @@
 
 ! --- leaf death (due to water stress or high lai) is imposed on array 
 ! --- untill no more leaves have to die or all leaves are gone
-      call lvdth(delt,dslv,state%crop%common%span,ilvold,lvage,lv,i1)
+      call lvdth(delt,dslv,state%crop%common%span,state%crop%common%ilvold,state%crop%common%lvage,state%crop%common%lv,i1)
 
 ! --- oldest class with leaves
-      ilvold = i1
+      state%crop%common%ilvold = i1
 
 ! --- shifting of contents, updating of physiological age
-      call lvshft(delt,fysdel,ilvold,grlv,slat,lv,lvage,sla)
+      call lvshft(delt,fysdel,state%crop%common%ilvold,grlv,slat,state%crop%common%lv,state%crop%common%lvage,state%crop%common%sla)
 
-      ilvold = ilvold+1
+      state%crop%common%ilvold = state%crop%common%ilvold+1
 
 ! --- calculation of new leaf area and weight
-      call lvwgli(ilvold,lv,sla,lasum,state%crop%wofost%wlv)
+      call lvwgli(state%crop%common%ilvold,state%crop%common%lv,state%crop%common%sla,lasum,state%crop%wofost%wlv)
 
 ! --- leaf area index in case of exponential growth
       state%crop%common%laiexp = state%crop%common%laiexp+state%crop%common%glaiex*delt

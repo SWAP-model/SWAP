@@ -40,7 +40,7 @@
       !     state — same constraint as wofost B7 / cropfixed B2; deferred to Phase C
       !   rdtb, slatb, rgrlai etc.: no state home; rd/rdpot etc.: computed in loop
       !   config switches (swrd etc.), physiology params (reltr, cvl etc.): no state home
-      !   leaf arrays (lv/lvpot etc.), JvL params (twilt etc.): no state home
+      !   leaf arrays (state%crop%common%lv/state%crop%common%lvpot etc.), JvL params (twilt etc.): no state home
       !   cropstartact/endact/pot: state%crop%grass homes (A5) but written here — Phase C
       !   state%crop%common%cuptgraz/pot, tagp/pot, tagpt/pot, seqgrazmow/pot, mowrest, dateharvest:
       !     state%crop%grass/common homes (A5) but written in grass loop — Phase C
@@ -56,7 +56,7 @@
         rdmax,                           &  ! rd/rdpot/swrd/swrdc/swdmi2rd retired
         reltr,                                                           &  ! swgc/swdrought/swinter/swcf retired
         ! glaiex/glaiexpot/cvl/cvr/cvs/q10/rmr/rml/rms/span/ssa retired
-        lv, lvpot, lvage, lvagepot, sla, slapot, ilvold, ilvoldpot,     &
+        ! lv/lvpot/lvage/lvagepot/sla/slapot/ilvold/ilvoldpot retired
         twilt, wiltpoint, gwrt, siccaplai,                   &  ! cropstartact/endact/startpot/endpot retired
         flhydrlift,                                                      &  ! state%crop%grass%idaysgraz*/state%crop%grass%idregr*/state%crop%grass%flGrazing*/state%crop%grass%flHarvest*/flhrvend*/state%crop%grass%daygrowth*/state%crop%grass%grzdm/state%crop%grass%dewrest/state%crop%grass%swtsum/state%crop%grass%iseqgm*/state%crop%grass%iharvest/state%crop%grass%mowdm*/state%crop%grass%pgrzdm/state%crop%grass%pmowdm/state%crop%grass%lsda/state%crop%common%cuptgraz* retired
         dummy_tsoil_gr_ => tsoil
@@ -218,13 +218,13 @@
         fr = afgen (state%crop%common%frtb,30,rid)
         fl = afgen (state%crop%common%fltb,30,rid)
         fs = afgen (state%crop%common%fstb,30,rid)
-        sla(1) = afgen (state%crop%common%slatb,30,rid)
-        lvage(1) = 0.d0
-        ilvold = 1
+        state%crop%common%sla(1) = afgen (state%crop%common%slatb,30,rid)
+        state%crop%common%lvage(1) = 0.d0
+        state%crop%common%ilvold = 1
         state%crop%grass%idregr = 0
-        slapot(1) = afgen (state%crop%common%slatb,30,rid)
-        lvagepot(1) = 0.d0
-        ilvoldpot = 1
+        state%crop%common%slapot(1) = afgen (state%crop%common%slatb,30,rid)
+        state%crop%common%lvagepot(1) = 0.d0
+        state%crop%common%ilvoldpot = 1
         state%crop%grass%idregrpot = 0
 
 ! ---   initial state variables of the crop
@@ -233,13 +233,13 @@
         state%crop%wofost%wrtpot = state%crop%wofost%wrt
         state%crop%wofost%wst = fs*(1.0d0-fr)*state%crop%common%tdwi
         state%crop%wofost%wstpot = state%crop%wofost%wst
-        state%crop%wofost%wlv = state%crop%common%laiem/sla(1)
+        state%crop%wofost%wlv = state%crop%common%laiem/state%crop%common%sla(1)
         state%crop%wofost%wlvpot = state%crop%wofost%wlv
         
 !     KRO-BOO-20160403: intro because comparison with Wofost
-        state%crop%common%laiem = state%crop%wofost%wlv*sla(1)  ! is not input !
-        lv(1) = state%crop%wofost%wlv
-        lvpot(1) = lv(1)
+        state%crop%common%laiem = state%crop%wofost%wlv*state%crop%common%sla(1)  ! is not input !
+        state%crop%common%lv(1) = state%crop%wofost%wlv
+        state%crop%common%lvpot(1) = state%crop%common%lv(1)
         lasum = state%crop%common%laiem
         lasumpot = lasum     
         state%crop%common%glaiex = 0.0d0
@@ -492,10 +492,10 @@
 ! ---   to die or all leaves are gone
 
         restpot = dslvpot*delt
-        i1 = ilvoldpot
+        i1 = state%crop%common%ilvoldpot
 
-        do while (restpot.gt.lvpot(max(i1,1)).and.i1.ge.1)
-          restpot = restpot-lvpot(i1) 
+        do while (restpot.gt.state%crop%common%lvpot(max(i1,1)).and.i1.ge.1)
+          restpot = restpot-state%crop%common%lvpot(i1) 
           i1 = i1-1
         enddo
 
@@ -503,15 +503,15 @@
 ! ---   sum their weights
 
         dalvpot = 0.0d0
-        if (lvagepot(max(i1,1)).gt.state%crop%common%span.and.restpot.gt.0.and.           &
+        if (state%crop%common%lvagepot(max(i1,1)).gt.state%crop%common%span.and.restpot.gt.0.and.           &
      &                          i1.ge.1) then
-          dalvpot = lvpot(i1)-restpot
+          dalvpot = state%crop%common%lvpot(i1)-restpot
           restpot = 0.0d0
           i1 = i1-1
         endif
 
-        do while (i1.ge.1.and.lvagepot(max(i1,1)).gt.state%crop%common%span)
-          dalvpot = dalvpot+lvpot(i1)
+        do while (i1.ge.1.and.state%crop%common%lvagepot(max(i1,1)).gt.state%crop%common%span)
+          dalvpot = dalvpot+state%crop%common%lvpot(i1)
           i1 = i1-1
         enddo
 
@@ -580,18 +580,18 @@
 !         In case mowing is triggered: Growth is initialized again and the weight of the sward is stored
           if (state%crop%grass%flHarvestpot) then
             state%crop%grass%iseqgmpot = state%crop%grass%iseqgmpot + 1
-            slapot(1) = afgen (state%crop%common%slatb,30,rid)
+            state%crop%common%slapot(1) = afgen (state%crop%common%slatb,30,rid)
             fl = afgen (state%crop%common%fltb,30,rid)
             fs = afgen (state%crop%common%fstb,30,rid)
             state%crop%wofost%wlvpot = state%crop%grass%mowrest / (1.d0 + (fs/fl))
             state%crop%wofost%wstpot = fs/fl*state%crop%wofost%wlvpot
             state%crop%wofost%dwlvpot = 0.0d0
             state%crop%wofost%dwstpot = 0.0d0
-            lvagepot(1) = 0.0d0
-            ilvoldpot = 1
-            lasumpot = state%crop%wofost%wlvpot * slapot(1)
+            state%crop%common%lvagepot(1) = 0.0d0
+            state%crop%common%ilvoldpot = 1
+            lasumpot = state%crop%wofost%wlvpot * state%crop%common%slapot(1)
             state%crop%common%laiexppot = lasumpot
-            lvpot(1) = state%crop%wofost%wlvpot
+            state%crop%common%lvpot(1) = state%crop%wofost%wlvpot
             
             gwstpot = 0.0d0
             gwrtpot = 0.0d0
@@ -693,14 +693,14 @@
               grazlivinglvpot =   (uptgrazpot+lossgrazpot) * state%crop%wofost%wlvpot  / state%crop%wofost%tagppot
           
 !             reduce leave weights
-              i1 = ilvoldpot
+              i1 = state%crop%common%ilvoldpot
               do while (grazlivinglvpot .gt. 0 .and. i1 .ge. 1)
-                if (grazlivinglvpot .ge. lvpot(i1)) then
-                  grazlivinglvpot = grazlivinglvpot - lvpot(i1)
-                  lvpot(i1) = 0.0d0
+                if (grazlivinglvpot .ge. state%crop%common%lvpot(i1)) then
+                  grazlivinglvpot = grazlivinglvpot - state%crop%common%lvpot(i1)
+                  state%crop%common%lvpot(i1) = 0.0d0
                   i1 = i1 - 1
                 else
-                  lvpot(i1) = lvpot(i1) - grazlivinglvpot
+                  state%crop%common%lvpot(i1) = state%crop%common%lvpot(i1) - grazlivinglvpot
                   grazlivinglvpot = 0.d0
                 endif
               enddo
@@ -742,18 +742,18 @@
 !           Dewooling after grazing event            
             if (flDewoolingpot) then
 
-              slapot(1) = afgen (state%crop%common%slatb,30,rid)
+              state%crop%common%slapot(1) = afgen (state%crop%common%slatb,30,rid)
               fl = afgen (state%crop%common%fltb,30,rid)
               fs = afgen (state%crop%common%fstb,30,rid)
               state%crop%wofost%wlvpot = state%crop%grass%dewrest / (1.d0 + (fs/fl))
               state%crop%wofost%wstpot = fs/fl*state%crop%wofost%wlvpot
               state%crop%wofost%dwlvpot = 0.0d0
               state%crop%wofost%dwstpot = 0.0d0
-              lvagepot(1) = 0.0d0
-              ilvoldpot = 1
-              lasumpot = state%crop%wofost%wlvpot * slapot(1)
+              state%crop%common%lvagepot(1) = 0.0d0
+              state%crop%common%ilvoldpot = 1
+              lasumpot = state%crop%wofost%wlvpot * state%crop%common%slapot(1)
               state%crop%common%laiexppot = lasumpot
-              lvpot(1) = state%crop%wofost%wlvpot
+              state%crop%common%lvpot(1) = state%crop%wofost%wlvpot
               
               gwstpot = 0.0d0
               gwrtpot = 0.0d0
@@ -778,45 +778,45 @@
 ! ---     leaf death is imposed on array untill no more leaves have to die or all leaves are gone
 
           dslvtpot = dslvpot*delt
-          i1 = ilvoldpot
+          i1 = state%crop%common%ilvoldpot
            do while (dslvtpot.gt.0.and.i1.ge.1)
-            if (dslvtpot.ge.lvpot(i1)) then
-              dslvtpot = dslvtpot-lvpot(i1)
-              lvpot(i1) = 0.0d0
+            if (dslvtpot.ge.state%crop%common%lvpot(i1)) then
+              dslvtpot = dslvtpot-state%crop%common%lvpot(i1)
+              state%crop%common%lvpot(i1) = 0.0d0
               i1 = i1-1
             else
-              lvpot(i1) = lvpot(i1)-dslvtpot
+              state%crop%common%lvpot(i1) = state%crop%common%lvpot(i1)-dslvtpot
               dslvtpot = 0.0d0
             endif
           enddo
 
           if(i1.gt.0) then
-            do while (lvagepot(max(i1,1)) .gt. state%crop%common%span .and. i1 .ge. 1)
-              lvpot(i1) = 0.0d0
+            do while (state%crop%common%lvagepot(max(i1,1)) .gt. state%crop%common%span .and. i1 .ge. 1)
+              state%crop%common%lvpot(i1) = 0.0d0
               i1 = i1-1
             enddo
           endif
-          ilvoldpot = i1
+          state%crop%common%ilvoldpot = i1
 
 ! ---     shifting of contents, integration of physiological age
-          do i1 = ilvoldpot,1,-1
-            lvpot(i1+1) = lvpot(i1)
-            slapot(i1+1) = slapot(i1)
-            lvagepot(i1+1) = lvagepot(i1)+fysdel*delt
+          do i1 = state%crop%common%ilvoldpot,1,-1
+            state%crop%common%lvpot(i1+1) = state%crop%common%lvpot(i1)
+            state%crop%common%slapot(i1+1) = state%crop%common%slapot(i1)
+            state%crop%common%lvagepot(i1+1) = state%crop%common%lvagepot(i1)+fysdel*delt
           enddo
-          ilvoldpot = ilvoldpot+1
+          state%crop%common%ilvoldpot = state%crop%common%ilvoldpot+1
 
 ! ---     new leaves in class 1
-          lvpot(1) = grlvpot*delt
-          slapot(1) = slatpot
-          lvagepot(1) = 0.d0
+          state%crop%common%lvpot(1) = grlvpot*delt
+          state%crop%common%slapot(1) = slatpot
+          state%crop%common%lvagepot(1) = 0.d0
 
 ! ---     calculation of new leaf area and weight
           lasumpot = 0.d0
           state%crop%wofost%wlvpot = 0.d0
-          do i1 = 1,ilvoldpot
-            lasumpot = lasumpot+lvpot(i1)*slapot(i1)
-            state%crop%wofost%wlvpot = state%crop%wofost%wlvpot+lvpot(i1)
+          do i1 = 1,state%crop%common%ilvoldpot
+            lasumpot = lasumpot+state%crop%common%lvpot(i1)*state%crop%common%slapot(i1)
+            state%crop%wofost%wlvpot = state%crop%wofost%wlvpot+state%crop%common%lvpot(i1)
           enddo
 
           state%crop%common%laiexppot = state%crop%common%laiexppot+state%crop%common%glaiexpot*delt
@@ -952,10 +952,10 @@
 ! ---   to die or all leaves are gone
 
         rest = dslv*delt
-        i1 = ilvold
+        i1 = state%crop%common%ilvold
 
-        do while (rest.gt.lv(max(i1,1)).and.i1.ge.1)
-          rest = rest-lv(i1) 
+        do while (rest.gt.state%crop%common%lv(max(i1,1)).and.i1.ge.1)
+          rest = rest-state%crop%common%lv(i1) 
           i1 = i1-1
         enddo
 
@@ -963,14 +963,14 @@
 ! ---   sum their weights
 
         dalv = 0.0d0
-        if (lvage(max(i1,1)).gt.state%crop%common%span.and.rest.gt.0.and.i1.ge.1) then
-          dalv = lv(i1)-rest
+        if (state%crop%common%lvage(max(i1,1)).gt.state%crop%common%span.and.rest.gt.0.and.i1.ge.1) then
+          dalv = state%crop%common%lv(i1)-rest
           rest = 0.0d0
           i1 = i1-1
         endif
 
-        do while (i1.ge.1.and.lvage(max(i1,1)).gt.state%crop%common%span)
-          dalv = dalv+lv(i1)
+        do while (i1.ge.1.and.state%crop%common%lvage(max(i1,1)).gt.state%crop%common%span)
+          dalv = dalv+state%crop%common%lv(i1)
           i1 = i1-1
         enddo
 
@@ -1042,18 +1042,18 @@
 !       In case mowing is triggered: Growth is initialized again and the weight of the sward is stored
         if (state%crop%grass%flHarvest) then
           state%crop%grass%iseqgm = state%crop%grass%iseqgm + 1
-          sla(1) = afgen (state%crop%common%slatb,30,rid)
+          state%crop%common%sla(1) = afgen (state%crop%common%slatb,30,rid)
           fl = afgen (state%crop%common%fltb,30,rid)
           fs = afgen (state%crop%common%fstb,30,rid)
           state%crop%wofost%wlv = state%crop%grass%mowrest / (1.d0 + (fs/fl))
           state%crop%wofost%wst = fs/fl*state%crop%wofost%wlv
           state%crop%wofost%dwlv = 0.0d0
           state%crop%wofost%dwst = 0.0d0
-          lvage(1) = 0.0d0
-          ilvold = 1
-          lasum = state%crop%wofost%wlv * sla(1)
+          state%crop%common%lvage(1) = 0.0d0
+          state%crop%common%ilvold = 1
+          lasum = state%crop%wofost%wlv * state%crop%common%sla(1)
           state%crop%common%laiexp = lasum
-          lv(1) = state%crop%wofost%wlv
+          state%crop%common%lv(1) = state%crop%wofost%wlv
 
           gwst = 0.0d0
           gwrt = 0.0d0
@@ -1155,14 +1155,14 @@
               grazlivinglv = (uptgraz+lossgraz) * state%crop%wofost%wlv  / state%crop%wofost%tagp
           
 !             reduce leave weights
-              i1 = ilvold
+              i1 = state%crop%common%ilvold
               do while (grazlivinglv .gt. 0 .and. i1 .ge. 1)
-                if (grazlivinglv .ge. lv(i1)) then
-                  grazlivinglv = grazlivinglv - lv(i1)
-                  lv(i1) = 0.0d0
+                if (grazlivinglv .ge. state%crop%common%lv(i1)) then
+                  grazlivinglv = grazlivinglv - state%crop%common%lv(i1)
+                  state%crop%common%lv(i1) = 0.0d0
                   i1 = i1 - 1
                 else
-                  lv(i1) = lv(i1) - grazlivinglv
+                  state%crop%common%lv(i1) = state%crop%common%lv(i1) - grazlivinglv
                   grazlivinglv = 0.d0
                 endif
               enddo
@@ -1204,18 +1204,18 @@
 !           Dewooling after grazing event            
             if (flDewooling) then
 
-              sla(1) = afgen (state%crop%common%slatb,30,rid)
+              state%crop%common%sla(1) = afgen (state%crop%common%slatb,30,rid)
               fl = afgen (state%crop%common%fltb,30,rid)
               fs = afgen (state%crop%common%fstb,30,rid)
               state%crop%wofost%wlv = state%crop%grass%dewrest / (1.d0 + (fs/fl))
               state%crop%wofost%wst = fs/fl*state%crop%wofost%wlv
               state%crop%wofost%dwlv = 0.0d0
               state%crop%wofost%dwst = 0.0d0
-              lvage(1) = 0.0d0
-              ilvold = 1
-              lasum = state%crop%wofost%wlv * sla(1)
+              state%crop%common%lvage(1) = 0.0d0
+              state%crop%common%ilvold = 1
+              lasum = state%crop%wofost%wlv * state%crop%common%sla(1)
               state%crop%common%laiexp = lasum
-              lv(1) = state%crop%wofost%wlv
+              state%crop%common%lv(1) = state%crop%wofost%wlv
     
               gwst = 0.0d0
               gwrt = 0.0d0
@@ -1240,45 +1240,45 @@
 ! ---     leaf death is imposed on array untill no more leaves have to die or all leaves are gone
 
           dslvt = dslv*delt
-          i1 = ilvold
+          i1 = state%crop%common%ilvold
           do while (dslvt.gt.0.and.i1.ge.1)
-            if (dslvt.ge.lv(i1)) then
-              dslvt = dslvt-lv(i1)
-              lv(i1) = 0.0d0
+            if (dslvt.ge.state%crop%common%lv(i1)) then
+              dslvt = dslvt-state%crop%common%lv(i1)
+              state%crop%common%lv(i1) = 0.0d0
               i1 = i1-1
             else
-              lv(i1) = lv(i1)-dslvt
+              state%crop%common%lv(i1) = state%crop%common%lv(i1)-dslvt
               dslvt = 0.0d0
             endif
           enddo
 
           if(i1.gt.0) then
-            do while (lvage(max(i1,1)).gt.state%crop%common%span.and.i1.ge.1)
-              lv(i1) = 0.0d0
+            do while (state%crop%common%lvage(max(i1,1)).gt.state%crop%common%span.and.i1.ge.1)
+              state%crop%common%lv(i1) = 0.0d0
               i1 = i1-1
             enddo
           endif
-          ilvold = i1
+          state%crop%common%ilvold = i1
 
 ! ---     shifting of contents, integration of physiological age
-          do i1 = ilvold,1,-1
-            lv(i1+1) = lv(i1)
-            sla(i1+1) = sla(i1)
-            lvage(i1+1) = lvage(i1)+fysdel*delt
+          do i1 = state%crop%common%ilvold,1,-1
+            state%crop%common%lv(i1+1) = state%crop%common%lv(i1)
+            state%crop%common%sla(i1+1) = state%crop%common%sla(i1)
+            state%crop%common%lvage(i1+1) = state%crop%common%lvage(i1)+fysdel*delt
           enddo
-          ilvold = ilvold+1
+          state%crop%common%ilvold = state%crop%common%ilvold+1
 
 ! ---     new leaves in class 1
-          lv(1) = grlv*delt
-          sla(1) = slat
-          lvage(1) = 0.d0 
+          state%crop%common%lv(1) = grlv*delt
+          state%crop%common%sla(1) = slat
+          state%crop%common%lvage(1) = 0.d0 
 
 ! ---     calculation of new leaf area and weight
           lasum = 0.d0
           state%crop%wofost%wlv = 0.d0
-          do i1 = 1,ilvold
-            lasum = lasum+lv(i1)*sla(i1)
-            state%crop%wofost%wlv = state%crop%wofost%wlv+lv(i1)
+          do i1 = 1,state%crop%common%ilvold
+            lasum = lasum+state%crop%common%lv(i1)*state%crop%common%sla(i1)
+            state%crop%wofost%wlv = state%crop%wofost%wlv+state%crop%common%lv(i1)
           enddo
 
           state%crop%common%laiexp = state%crop%common%laiexp+state%crop%common%glaiex*delt

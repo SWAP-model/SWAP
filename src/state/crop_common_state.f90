@@ -160,6 +160,16 @@ module crop_common_state_mod
       real(real64) :: glaiex        = 0.0_real64       !! daily LAI increase, exponential (actual)
       real(real64) :: glaiexpot     = 0.0_real64       !! daily LAI increase, exponential (potential)
 
+      ! Leaf cohort arrays (per crop day; 366 entries each, runtime-mutated)
+      real(real64) :: lv(366)       = 0.0_real64       !! leaf weight by cohort day (actual, kg/ha)
+      real(real64) :: lvpot(366)    = 0.0_real64       !! leaf weight by cohort day (potential, kg/ha)
+      real(real64) :: lvage(366)    = 0.0_real64       !! leaf age by cohort day (actual, d)
+      real(real64) :: lvagepot(366) = 0.0_real64       !! leaf age by cohort day (potential, d)
+      real(real64) :: sla(366)      = 0.0_real64       !! specific leaf area by cohort day (actual)
+      real(real64) :: slapot(366)   = 0.0_real64       !! specific leaf area by cohort day (potential)
+      integer      :: ilvold        = 0                !! oldest-leaf day index (actual)
+      integer      :: ilvoldpot     = 0                !! oldest-leaf day index (potential)
+
    contains
       procedure :: init => crop_common_state_init
    end type crop_common_state_t

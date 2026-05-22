@@ -35,8 +35,6 @@
       
 ! --- meteo variables
       ! [SS-TC] daymeteo/rainrec/swmeteo/wrecord/yearmeteo retired to state%timecontrol (ADR 0041)
-      ilvold             = 0
-      ilvoldpot          = 0
       swetsine           = 0
       ! [SS-ATM A-2.6] aintcdt/atmdem/caintc/cevap/cgrai/cnrai/cpeva/cptra retired to state%atmosphere
       daylp              = 0.0d0
@@ -610,10 +608,6 @@
       fbl                = 0.0d0 
       gasstpot           = 0.0d0 
       gc                 = 0.0d0 
-      lv                 = 0.0d0
-      lvage              = 0.0d0
-      lvagepot           = 0.0d0
-      lvpot              = 0.0d0
       mrestpot           = 0.0d0 
       mrftb              = 0.0d0
       pfreetb            = 0.0d0 
@@ -626,8 +620,6 @@
 
       scanopytb          = 0.0d0 
       siccaptb           = 0.0d0 
-      sla                = 0.0d0
-      slapot             = 0.0d0
       vernrtb            = 0.0d0 
 
 ! --- only for bulb crops (tulips etc..)

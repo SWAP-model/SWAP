@@ -341,8 +341,8 @@
       integer   idsl               ! Switch for crop development before anthesis: 0 = depends on temperature; 
                                    !   1 = depends on temperature and day length; 2 = depends on temperature, day length and vernalisation factor
       ! [GR-CROPWS] iharvest retired — see state%crop%grass%iharvest
-      integer   ilvold             ! Age of oldest leaf (d) of actual crop
-      integer   ilvoldpot          ! Age of oldest leaf (d) of potential crop
+      ! [GR-CROPWS] ilvold retired — see state%crop%common%ilvold
+      ! [GR-CROPWS] ilvoldpot retired — see state%crop%common%ilvoldpot
       ! [GR-CROPWS] iseqgm retired — see state%crop%grass%iseqgm
       ! [GR-CROPWS] iseqgmpot retired — see state%crop%grass%iseqgmpot
       integer   noddrz             ! Compartment number at bottom root zone (-)
@@ -440,10 +440,10 @@
       ! [GR-CROPWS] glaiexpot retired — see state%crop%common%glaiexpot
       ! [GR-CROPWS] laimax retired — see state%crop%common%laimax
       ! [GR-CROP-DVS] laipot retired — see state%crop%common%laipot
-      real(8)   lv(366)            ! Array with leaf weight (kg/ha) as function of crop day number of actual crop
-      real(8)   lvpot(366)         ! Array with leaf weight (kg/ha) as function of crop day number of potential crop
-      real(8)   lvage(366)         ! Array with leaf age (d) as function of crop day number of actual crop
-      real(8)   lvagepot(366)      ! Array with leaf age (d) as function of crop day number of potential crop
+      ! [GR-CROPWS] lv retired — see state%crop%common%lv
+      ! [GR-CROPWS] lvpot retired — see state%crop%common%lvpot
+      ! [GR-CROPWS] lvage retired — see state%crop%common%lvage
+      ! [GR-CROPWS] lvagepot retired — see state%crop%common%lvagepot
       real(8)   max_resp_factor    ! Ratio root total respiration / maintenance respiration [1..5.0 -, R]
       ! [GR-CROP-DVS] mowrest retired — see state%crop%grass%mowrest
       ! [GR-CROPWS] dewrest retired — see state%crop%grass%dewrest
@@ -479,8 +479,8 @@
       ! [GR-CROPWS] rsw retired — see state%crop%common%rsw
       real(8)   scanopytb(2*magrs) ! Gash interception model: storage capacity of canopy (-) as function of time (T)
       real(8)   shape_factor_rootr ! Shape factor for exponential decrease of root respiration rate with depth [0..1.0 -, R]
-      real(8)   sla(366)           ! Array with specific leaf area (ha/kg) as function of crop day number of actual crop
-      real(8)   slapot(366)        ! Array with specific leaf area (ha/kg) as function of crop day number of potential crop
+      ! [GR-CROPWS] sla retired — see state%crop%common%sla
+      ! [GR-CROPWS] slapot retired — see state%crop%common%slapot
       ! [GR-CROPWS] slatb retired — see state%crop%common%slatb
       ! [GR-CROPWS] spa retired — see state%crop%common%spa
       ! [GR-CROPWS] span retired — see state%crop%common%span
