@@ -10,12 +10,69 @@
 !! - reduceva: Soil evaporation reduction (Black/Boesten-Stroosnijder)
 !! @endnote
 module et_mod
+   use, intrinsic :: iso_fortran_env, only: real64
    use error_mod, only: fatalerr_collected
    use swap_state_mod, only: swap_state_t
     implicit none
     private
 
   public :: PenMon, PenMon_calc, reduceva
+  public :: pm_inputs_t, pm_outputs_t
+
+  type :: pm_inputs_t
+      ! Time / control
+      integer :: daynr           = 0
+      integer :: irecord         = 1
+      integer :: nmetdetail      = 1
+      logical :: flmetdetail     = .false.
+      logical :: flCropEmergence = .false.
+      integer :: swcf            = 1
+      integer :: swdivide        = 0
+
+      ! Site
+      real(real64) :: lat  = 0.0_real64
+      real(real64) :: alt  = 0.0_real64
+      real(real64) :: altw = 0.0_real64
+      real(real64) :: a    = 0.0_real64
+      real(real64) :: b    = 0.0_real64
+      real(real64) :: rcs  = 0.0_real64
+
+      ! Atmospheric forcing
+      real(real64) :: rad    = 0.0_real64
+      real(real64) :: tav    = 0.0_real64
+      real(real64) :: tmn    = 0.0_real64
+      real(real64) :: tmx    = 0.0_real64
+      real(real64) :: hum    = 0.0_real64
+      real(real64) :: win    = 0.0_real64
+      real(real64) :: atmtr  = 0.0_real64
+      real(real64) :: difpp  = 0.0_real64
+      real(real64) :: dsinbe = 0.0_real64
+      real(real64) :: daylp  = 0.0_real64
+
+      ! Crop / canopy
+      real(real64) :: rsc    = 0.0_real64
+      real(real64) :: rsw    = 0.0_real64
+      real(real64) :: ch     = 0.0_real64
+      real(real64) :: albedo = 0.0_real64
+      real(real64) :: kdif   = 0.0_real64
+      real(real64) :: kdir   = 0.0_real64
+      real(real64) :: lai    = 0.0_real64
+
+      ! PMdirect-only
+      real(real64) :: rsoil  = 0.0_real64
+  end type pm_inputs_t
+
+  type :: pm_outputs_t
+      real(real64) :: es0         = 0.0_real64
+      real(real64) :: et0         = 0.0_real64
+      real(real64) :: ew0         = 0.0_real64
+      real(real64) :: Edirect     = 0.0_real64
+      real(real64) :: Tdirect     = 0.0_real64
+      real(real64) :: Tdirectwet  = 0.0_real64
+      real(real64) :: Edirectpond = 0.0_real64
+      integer      :: warning_code = 0   ! 0=ok, 1=polar 0hrs, 2=polar 24hrs
+  end type pm_outputs_t
+
 contains
   !> Pure Penman-Monteith calculation (no I/O, fully deterministic)
   !!
