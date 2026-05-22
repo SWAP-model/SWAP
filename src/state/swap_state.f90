@@ -20,6 +20,7 @@ module swap_state_mod
    use mesh_state_mod,          only: mesh_state_t
    use crop_state_mod,          only: crop_state_t
    use nutrients_state_mod,     only: nutrients_state_t
+   use legacy_state_mod,        only: legacy_state_t
    use swap_config_mod,         only: swap_config_t
    implicit none
    private
@@ -43,6 +44,7 @@ module swap_state_mod
       type(mesh_state_t)         :: mesh
       type(crop_state_t)         :: crop
       type(nutrients_state_t)    :: nutrients
+      type(legacy_state_t)       :: legacy   !! [Sweep 3] transitional bag for remaining variables.f90 globals
 
       ! [SS-BMI2] water balance output stream (was: written directly to .inc from outinc)
       real(c_double),    allocatable :: water_balance_row(:)
