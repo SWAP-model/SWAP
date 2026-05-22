@@ -346,8 +346,8 @@
       integer   iseqgm             ! Counter in sequence of grass grazing and mowing, actual crop
       integer   iseqgmpot          ! Counter in sequence of grass grazing and mowing, potential crop
       integer   noddrz             ! Compartment number at bottom root zone (-)
-      integer   seqgrazmow(366)    ! Sequence of grass grazing and mowing, actual crop
-      integer   seqgrazmowpot(366) ! Sequence of grass grazing and mowing, potential crop
+      ! [GR-CROPWS] seqgrazmow retired — see state%crop%grass%seqgrazmow
+      ! [GR-CROPWS] seqgrazmowpot retired — see state%crop%grass%seqgrazmowpot
       ! [GR-CROPWS] swcf retired — see state%crop%swcf
       ! [GR-CROPWS] swdrought retired — see state%crop%common%swdrought
       ! [GR-CROPWS] swgc retired — see state%crop%common%swgc
@@ -532,16 +532,16 @@
       ! [GR-CROP-DVS] inifil retired — dead (no readers, no writers)
 
 !     Harvest Grass
-      real(8)   dmmowtb(20)             ! Array with threshold of mowing event as function of above ground dry matter
-      real(8)   dmgrztb(20)             ! Array with threshold of grazing event as function of above ground dry matter
-      real(8)   dateharvest(999)        ! Array with dates of mowing/grazing event
-      real(8)   DelayRegrowthTab(2*100) ! Array with delay of regrowth as function of dry matter harvest
+      ! [GR-CROPWS] dmmowtb retired — see state%crop%grass%dmmowtb
+      ! [GR-CROPWS] dmgrztb retired — see state%crop%grass%dmgrztb
+      ! [GR-CROPWS] dateharvest retired — see state%crop%grass%dateharvest
+      ! [GR-CROPWS] DelayRegrowthTab retired — see state%crop%grass%DelayRegrowthTab
       real(8)   lsda(366)               ! Array with Lifestock density at grazing event
-      real(8)   DaysGrazingtab(2*100)   ! Array with days of grazing as function lifestock density
-      real(8)   UptGrazingtab(2*100)    ! Array with grazing uptake as function lifestock density
-      real(8)   LossGrazingtab(2*100)   ! Array with grazing losses as function lifestock density
-      real(8)   lossmowtab(2*100)       ! Array with extra dry matter losses during mowing event as function of pressure head
-      real(8)   lossgrztab(2*100)       ! Array with extra dry matter losses during grazing event as function of pressure head
+      ! [GR-CROPWS] DaysGrazingtab retired — see state%crop%grass%daysgrazingtab
+      ! [GR-CROPWS] UptGrazingtab retired — see state%crop%grass%uptgrazingtab
+      ! [GR-CROPWS] LossGrazingtab retired — see state%crop%grass%lossgrazingtab
+      ! [GR-CROPWS] lossmowtab retired — unused
+      ! [GR-CROPWS] lossgrztab retired — unused
       
       ! [GR-CROP-DVS] cropstartpot retired — see state%crop%grass%cropstartpot
       ! [GR-CROP-DVS] cropendpot retired — see state%crop%grass%cropendpot
@@ -1402,8 +1402,8 @@
       ! [GR-CROPWS] swharv retired — see state%crop%common%swharv
       ! [SS-GR-FINAL D1] hmow retired — 0 consumers
       ! [SS-GR-FINAL D1] hgrz retired — 0 consumers
-      real(8)   zmow               ! z-level for monitoring wkability for the crop during mowing
-      real(8)   zgrz               ! z-level for monitoring wkability for the crop during start of grazing
+      ! [GR-CROPWS] zmow retired — unused
+      ! [GR-CROPWS] zgrz retired — unused
 
 ! --- root development of dynamic crop growth and oxygen stress
       ! [GR-CROPWS] swWrtNonox retired — see state%crop%common%swWrtNonox

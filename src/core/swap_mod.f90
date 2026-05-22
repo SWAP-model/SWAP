@@ -74,7 +74,7 @@ contains
                             cuptgraz, cuptgrazpot, &  ! rd/rdpot/rdm/rdi/rri/rdc/HarLosOrm_tot retired
                             ! [SS-GR-CROP A15] crop_wofost/grass/fixed legacy globals; biomass+dw*+plossdm/lossdm retired
                             swbulb, &
-                            seqgrazmow, seqgrazmowpot, dateharvest, &  ! mowrest retired
+                            ! mowrest/seqgrazmow/seqgrazmowpot/dateharvest retired
                             swpotrelmf  ! cropstart/end act/pot retired; cftb/chtb/cfeic/cfeictb retired
                             ! [GR-CROP C11] nmrain/rainamount/rainfluxarray/raintimearray retired from import:
                             !   readmeteo now writes directly to state%atmosphere%X
@@ -359,9 +359,7 @@ contains
    ! [SS-GR-CROP A15] dual-write crop_wofost
    state%crop%wofost%swbulb   = (swbulb == 1)   ! integer→logical conversion
    ! [SS-GR-CROP A15] dual-write crop_grass
-   state%crop%grass%seqgrazmow    = seqgrazmow
-   state%crop%grass%seqgrazmowpot = seqgrazmowpot
-   state%crop%grass%dateharvest   = dateharvest
+   ! seqgrazmow/seqgrazmowpot/dateharvest dual-writes retired — see state%crop%grass
    state%crop%grass%swpotrelmf    = swpotrelmf
    ! [SS-GR-CROP A15] dual-write crop_fixed retired — see state%crop%fixed%X
 

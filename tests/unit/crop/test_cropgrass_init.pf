@@ -158,7 +158,7 @@ subroutine test_cropgrass_init_swharvest2_populates_dateharvest()
    use cropgrass_init_mod, only: cropgrass_init_from_config
    use cropgrass_config_mod, only: cropgrass_config_t
    use swap_state_mod, only: swap_state_t
-   use variables, only: dateharvest
+   ! dateharvest retired — read via state%crop%grass%dateharvest
    use, intrinsic :: iso_fortran_env, only: real64
    implicit none
    type(cropgrass_config_t) :: cfg
@@ -195,9 +195,9 @@ subroutine test_cropgrass_init_swharvest2_populates_dateharvest()
    call cropgrass_init_from_config(cfg, 1, tend_val, tstart_val, state)  ! [SS-BMI2 Task 4] [SS-GR-ATM A5.1]
 
    ! Sentinel: dateharvest(nmow+1) = tend + 1.0
-   @assertEqual(tend_val + 1.0d0, dateharvest(nmow_val + 1), 1.0d-6)
+   @assertEqual(tend_val + 1.0d0, state%crop%grass%dateharvest(nmow_val + 1), 1.0d-6)
    ! DOYs in same year (127, 149, 176) anchored to 2000-01-01.
-   @assertEqual(36525.0d0 + 127.0d0 - 1.0d0, dateharvest(1), 1.0d-12)
-   @assertEqual(36525.0d0 + 149.0d0 - 1.0d0, dateharvest(2), 1.0d-12)
-   @assertEqual(36525.0d0 + 176.0d0 - 1.0d0, dateharvest(3), 1.0d-12)
+   @assertEqual(36525.0d0 + 127.0d0 - 1.0d0, state%crop%grass%dateharvest(1), 1.0d-12)
+   @assertEqual(36525.0d0 + 149.0d0 - 1.0d0, state%crop%grass%dateharvest(2), 1.0d-12)
+   @assertEqual(36525.0d0 + 176.0d0 - 1.0d0, state%crop%grass%dateharvest(3), 1.0d-12)
 end subroutine test_cropgrass_init_swharvest2_populates_dateharvest

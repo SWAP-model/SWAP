@@ -65,9 +65,9 @@ contains
          ! Compensation — DEFERRED Phase C3
          ! swcompensate/swstressor/alphacrit/dcritrtz retired
          ! Management — DEFERRED Phase C3
-         swpotrelmf, seqgrazmow,                                      &  ! relmf/mowrest retired
+         swpotrelmf,                                                  &  ! relmf/mowrest/seqgrazmow retired
          ! Mowing / harvest — DEFERRED Phase C3
-         dateharvest, dmmowtb, DelayRegrowthTab,                             &
+         ! dateharvest/dmmowtb/DelayRegrowthTab retired
          ! CO2 (flCO2 only; swco2 is a local in readgrass, not a global) — DEFERRED Phase C3
          flCO2  ! schedule retired
       use array_utils,  only: afgen
@@ -296,9 +296,8 @@ contains
       ! seqgrazmow(i) /= 2 is stub-guarded above.
       if (allocated(cfg%seqgrazmow)) then
          do i = 1, cfg%nseqgrazmow
-            seqgrazmow(i) = cfg%seqgrazmow(i)
+            state%crop%grass%seqgrazmow(i) = cfg%seqgrazmow(i)
          end do
-         state%crop%grass%seqgrazmow = seqgrazmow   ! [SS-GR-CROP A5.2]
       end if
 
       ! Part 18: mowing settings (readgrass lines 3985-4035)
@@ -318,7 +317,7 @@ contains
          !   dmlastharvest are grass() locals; set in Task 8).
          ! swdmmow=2: flexible DM threshold → dmmowtb global.
          if (cfg%swdmmow == 2) then
-            if (allocated(cfg%dmmowtb)) call copy_table(cfg%dmmowtb, dmmowtb)
+            if (allocated(cfg%dmmowtb)) call copy_table(cfg%dmmowtb, state%crop%grass%dmmowtb)
          end if
       else if (cfg%swharv == 2) then
          ! Populate dateharvest from cfg%mowing_dates (DOY floats).
@@ -332,15 +331,14 @@ contains
          ! of each crop period.  populate_dateharvest anchors the DOY→t1900
          ! mapping to tstart (first simulation year), not yearmeteo, so the
          ! same full date sequence is reproduced correctly every time.
-         call populate_dateharvest(cfg, tend_val, tstart_val)  ! [SS-BMI2 Task 4]
-         state%crop%grass%dateharvest = dateharvest   ! [SS-GR-CROP A5.2]
+         call populate_dateharvest(cfg, tend_val, tstart_val, state)  ! [SS-BMI2 Task 4]
       end if
 
       ! Regrowth delay table (readgrass lines 4028-4035).
       ! DelayRegrowthTab is a global (variables.f90 line 501).
       ! daydelay is a readgrass local; pack via the interleaved pattern.
       ! Config has dmmowdelay as flat pairs (already interleaved).
-      if (allocated(cfg%dmmowdelay)) call copy_table(cfg%dmmowdelay, DelayRegrowthTab)
+      if (allocated(cfg%dmmowdelay)) call copy_table(cfg%dmmowdelay, state%crop%grass%DelayRegrowthTab)
 
       ! Part 19: irrigation scheduling (readgrass line 4040)
       ! schedule=1 is stub-guarded above; always 0.
@@ -407,12 +405,13 @@ contains
    !
    ! Sentinel: dateharvest(nmow+1) = tend + 1.0  (legacy line 4023).
    ! ------------------------------------------------------------------
-   subroutine populate_dateharvest(cfg, tend_val, tstart_val)
-      use variables, only: dateharvest  ! [SS-GR-FINAL B7] DEFERRED — dateharvest: grass harvest date array; Phase C3
+   subroutine populate_dateharvest(cfg, tend_val, tstart_val, state)
+      use swap_state_mod, only: swap_state_t
       implicit none
-      type(cropgrass_config_t), intent(in) :: cfg
-      real(real64),             intent(in) :: tend_val
-      real(real64),             intent(in) :: tstart_val  ! [SS-BMI2 Task 4]
+      type(cropgrass_config_t), intent(in)    :: cfg
+      real(real64),             intent(in)    :: tend_val
+      real(real64),             intent(in)    :: tstart_val  ! [SS-BMI2 Task 4]
+      type(swap_state_t),       intent(inout) :: state       ! [GR-CROPWS] dateharvest moved to state%crop%grass
 
       integer      :: i, cur_year, start_year
       real(real64) :: t_jan1
@@ -436,11 +435,11 @@ contains
                t_jan1   = real(t1900_from_year(cur_year), real64)
             end if
          end if
-         dateharvest(i) = t_jan1 + cfg%mowing_dates(i) - 1.0d0
+         state%crop%grass%dateharvest(i) = t_jan1 + cfg%mowing_dates(i) - 1.0d0
       end do
 
       ! Sentinel past the last mowing date (legacy readgrass line 4023).
-      dateharvest(cfg%nmow + 1) = tend_val + 1.0d0
+      state%crop%grass%dateharvest(cfg%nmow + 1) = tend_val + 1.0d0
 
    end subroutine populate_dateharvest
 

@@ -648,16 +648,7 @@
 ! --- rooting
 
 ! --- harvest grassland
-      dateharvest        = 0.0d0
-      dmmowtb            = 0.0d0
-      dmgrztb            = 0.0d0
       lsda               = 0.0d0
-      DelayRegrowthTab   = 0.0d0
-      DaysGrazingTab     = 0.0d0
-      UptGrazingTab      = 0.0d0
-      LossGrazingTab     = 0.0d0
-      lossmowtab         = 0.0d0
-      lossgrztab         = 0.0d0
       
       flanthesis         = .false.
       flgrazing          = .false.
