@@ -107,7 +107,7 @@ contains
       use tillage_mod,   only : DoTillage
       use swap_log, only: log_info
       use runoff_mod, only: CNmethod
-      use snow_mod, only: snow
+      use snow_mod, only: snow_init
       use temperature_mod, only: Temperature
       use solute_mod, only: solute, solute_init
       use agetracer_mod, only: AgeTracer
@@ -429,7 +429,7 @@ contains
 
 !  initialize Snow rate/state variables
    ! SS-HEAT Phase 2 Task 6: pass state so Snow reads tsoil from state%heat
-   if (flSnow) call Snow(1, state)
+   if (flSnow) call snow_init(state)
 
 !  initialize Solute rate/state variables
    if (flSolute) call Solute(1, state)
@@ -474,7 +474,7 @@ contains
       use boundbottom_mod, only: BoundBottom
       use meteo_mod, only: ProcessMeteoDay
       use meteo_process_mod, only: ReadMeteoDay
-      use snow_mod, only: snow
+      use snow_mod, only: snow_step
       use meteodt_mod, only: MeteoDT
       use rootextraction_mod, only: RootExtraction
       use frozencond_mod, only: FrozenCond, FrozenBounds
@@ -547,7 +547,7 @@ contains
 
 !     calculate Snow: MH+MM - probably to be moved within IF-block above, prior to call ProcessMeteoDay ...
       ! SS-HEAT Phase 2 Task 6: pass state so Snow reads tsoil from state%heat
-      if (flSnow .and. tc_flDayStart) call Snow(2, state)  ! SS-TC TC-13
+      if (flSnow .and. tc_flDayStart) call snow_step(state)  ! SS-TC TC-13
 
 !     calculate reduction for conductivities for frozen conditions
       if (SwFrost.eq.1) then
