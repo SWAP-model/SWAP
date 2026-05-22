@@ -138,30 +138,7 @@ contains
     endif
 
     ! === Section 3: Interception calculations ===
-
-    ! Calculation of interception and net rain & net irrigation depth [cm]
-    if ((state%crop%lai .lt. 1.d-3) .or. (state%atmosphere%grai+state%crop%gird .lt. 1.d-5) .or. &
-        (state%crop%common%swinter.eq.0) .or. (state%atmosphere%gsnow.gt.0.0d0) .or.(state%atmosphere%ssnow.gt.0.0d0)) then
-
-      ! No vegetation, rainfall/irrigation or interception calculation
-      aintc = 0.d0
-
-    else if (state%crop%common%swinter .eq. 1) then
-      ! Calculate interception, method Von Hoyningen-Hune and Braden
-      ! SS-ATM A-2.6: grai retired — pass state%atmosphere%grai explicitly
-      ! SS-GR-ATM B8: state added for crop/atmosphere fields
-      call VonHHBraden (aintc, state%atmosphere%grai, state)
-    else if (state%crop%common%swinter .eq. 2) then
-      ! Calculate interception, method Gash (1995)
-      ! SS-ATM A-2.6: grai retired — pass state%atmosphere%grai explicitly
-      ! SS-TC TC-11: state added for t via state%timecontrol%t
-      call Gash (aintc, state%atmosphere%grai, state)
-    end if
-
-    ! Divide interception into rain part and irrigation part and
-    ! calculate net rain (nraida) and net sprinkling irrigation (nird)
-    if (state%crop%common%swinter.ne.3) &
-      call DivIntercep (aintc, state)
+    call apply_interception_step(state, config, aintc)
 
     ! === LOOP over dayparts ===
 
@@ -558,6 +535,40 @@ contains
     end associate  ! at_peva/at_ptra/at_atmdem/at_pevaday/at_ptraday + tc_daynr/tc_t/tc_dt/tc_flmetdetail/tc_fletsine/tc_daymeteo
 
   end subroutine ProcessMeteoDay
+
+  !> Private helper: Section 3 interception calculation (VonHHBraden / Gash + DivIntercep).
+  !! Returns aintc and updates state%atmosphere%nraida via DivIntercep.
+  subroutine apply_interception_step(state, config, aintc)
+    type(swap_state_t),  intent(inout) :: state
+    type(swap_config_t), intent(in)    :: config
+
+    real(8), intent(out) :: aintc
+
+    ! Calculation of interception and net rain & net irrigation depth [cm]
+    if ((state%crop%lai .lt. 1.d-3) .or. (state%atmosphere%grai+state%crop%gird .lt. 1.d-5) .or. &
+        (state%crop%common%swinter.eq.0) .or. (state%atmosphere%gsnow.gt.0.0d0) .or.(state%atmosphere%ssnow.gt.0.0d0)) then
+
+      ! No vegetation, rainfall/irrigation or interception calculation
+      aintc = 0.d0
+
+    else if (state%crop%common%swinter .eq. 1) then
+      ! Calculate interception, method Von Hoyningen-Hune and Braden
+      ! SS-ATM A-2.6: grai retired — pass state%atmosphere%grai explicitly
+      ! SS-GR-ATM B8: state added for crop/atmosphere fields
+      call VonHHBraden (aintc, state%atmosphere%grai, state)
+    else if (state%crop%common%swinter .eq. 2) then
+      ! Calculate interception, method Gash (1995)
+      ! SS-ATM A-2.6: grai retired — pass state%atmosphere%grai explicitly
+      ! SS-TC TC-11: state added for t via state%timecontrol%t
+      call Gash (aintc, state%atmosphere%grai, state)
+    end if
+
+    ! Divide interception into rain part and irrigation part and
+    ! calculate net rain (nraida) and net sprinkling irrigation (nird)
+    if (state%crop%common%swinter.ne.3) &
+      call DivIntercep (aintc, state)
+
+  end subroutine apply_interception_step
 
 end module meteo_mod
 
