@@ -142,6 +142,7 @@ sources = [
     'src/io/swapoutput.f90',
 
     # Atmosphere & Heat
+    'src/atmosphere/atmosphere_constants.f90',
     'src/atmosphere/interception.f90',
     'src/atmosphere/et.f90',
     'src/atmosphere/precipitation.f90',
