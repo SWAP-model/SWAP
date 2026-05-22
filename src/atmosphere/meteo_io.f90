@@ -77,7 +77,6 @@ contains
       ! [SS-GR-ATM B.5] tavd retired from import: no legacy consumers remain after cropgrowth migration
       ! [SS-GR-ATM B.5] rh retired from import: no legacy consumers outside init seed (swap_mod A12)
       ! [SS-GR-ATM B.5] out_rad/tmn/tmx/hum/win/etr/wet retired from import: no consumers outside swap_mod init seed
-      use MeteoVars
       use precipitation_mod, only: PartitionPrecipitation
       implicit none
 
@@ -88,6 +87,10 @@ contains
     ! [SS-ATM A-2.6] grai/gsnow/snrai/ssnow/fprecnosnow are transitional locals fed to
     ! PartitionPrecipitation; state%atmosphere%X is the canonical write target.
     real(8) :: grai, gsnow, snrai, ssnow, fprecnosnow
+    ! [GR-ATM-CLEAN Phase D.2] formerly module MeteoVars members
+    integer :: i               ! sub-daily record loop counter
+    real(8) :: hum, win, etr   ! within-call scratch (daily branch)
+    real(8) :: svp             ! within-call saturated vapor pressure
     character(len=11)  detdate
     character(len=3)   ext
     character(len=200) filnam
@@ -192,8 +195,8 @@ contains
         state%atmosphere%arad(i)  = detrad(irectotal)
         state%atmosphere%ahum(i)  = dethum(irectotal)
         state%atmosphere%atav(i)  = dettav(irectotal)
-        awind(i) = detwind(irectotal)
-        arain(i) = detrain(irectotal) * 0.1d0 ! convert from mm to cm
+        state%atmosphere%awind_subdaily(i) = detwind(irectotal)
+        state%atmosphere%arain_subdaily(i) = detrain(irectotal) * 0.1d0 ! convert from mm to cm
       enddo
     endif
 
@@ -207,8 +210,9 @@ contains
     call PartitionPrecipitation(config%meteo%swmetdetail, config%meteo%snow%swsnow, &
                                 state%atmosphere%Tav, state%atmosphere%teprrain, &
                                 state%atmosphere%teprsnow, &
-                                ssnow, config%meteo%nmetdetail, arain, grai, gsnow, snrai, &
-                                fprecnosnow, restint, state)
+                                ssnow, config%meteo%nmetdetail, state%atmosphere%arain_subdaily, &
+                                grai, gsnow, snrai, &
+                                fprecnosnow, state%atmosphere%restint, state)
 
     end associate  ! tc_t1900, tc_date => state%timecontrol [TC-9]
 

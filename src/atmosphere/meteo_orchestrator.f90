@@ -60,7 +60,7 @@ contains
   !! **Original documentation:**
   !! Last modified: February 2014
   !! Supports both daily (swmetdetail=0) and detailed (swmetdetail=1) meteorology
-  !! Uses module variables from Variables and MeteoVars
+  !! Uses module variables from Variables (MeteoVars retired in GR-ATM-CLEAN Phase D)
   !! @endnote
   subroutine ProcessMeteoDay(state, config)
     ! [SS-GR-ATM B24] use variables partially retired; symbols → state%atmosphere/state%crop/config%meteo
@@ -84,7 +84,6 @@ contains
         tav                                                   ! B24 DEFERRED — dual-write (consumed by snow.f90/swapoutput.f90; tavd/rh dropped B.5)
      ! [SS-SWC S-2.12B] pond retired — read via state%soilwater%pond
     use swap_array_dimensions, only: magrs
-    use MeteoVars
     use array_utils, only: afgen
     use runoff_mod, only: cn_step
     use interception_mod, only: VonHHBraden, Gash, ruttervw, msw1eic, DivIntercep
@@ -103,6 +102,14 @@ contains
     type(pm_inputs_t)  :: pmi
     type(pm_outputs_t) :: pmo
 
+    ! [GR-ATM-CLEAN Phase D.2] formerly module MeteoVars members — now locals
+    ! Loop counters / index controls
+    integer :: i, irecord, ndayparts, count, first, last
+    ! Within-call scratch scalars
+    real(8) :: aintc, interc, eintc, dttp, gctp, etr, hum, win, svp
+    real(8) :: wfrac, netrainflux, rainflux, sumtav
+    real(8) :: Edirect, Tdirect, Tdirectwet, Edirectpond
+
     ! SS-ATM Phase 1 Task A-1.8: ASSOCIATE aliases for atmosphere flat-scalar dual-writes
     ! SS-TC TC-9: tc_* aliases for daynr, t, dt, flmetdetail added.
     associate( &
@@ -117,8 +124,18 @@ contains
        tc_dt          => state%timecontrol%dt,          &  ! TC-9
        tc_flmetdetail => state%timecontrol%flmetdetail, &  ! TC-9
        tc_fletsine    => state%timecontrol%fletsine,    &  ! TC-9
+       tc_daymeteo    => state%timecontrol%daymeteo,    &  ! [GR-ATM-CLEAN D.2] for daily hum/win/etr read
        metperiod      => state%timecontrol%metperiod,   &  ! [SS-TC TC-14]
        swscre         => state%timecontrol%swscre       )  ! [SS-BMI2 Task 4]
+
+    ! [GR-ATM-CLEAN D.2] Daily-mode meteo scratch values were previously
+    ! supplied via module-level MeteoVars from ReadMeteoDay. Now read
+    ! directly from state%atmosphere arrays — same index as meteo_io.f90.
+    if (config%meteo%swmetdetail.eq.0) then
+      hum = state%atmosphere%ahum(tc_daymeteo+1-state%atmosphere%daynrfirst)
+      win = state%atmosphere%awin(tc_daymeteo+1-state%atmosphere%daynrfirst)
+      etr = state%atmosphere%aetr(tc_daymeteo+1-state%atmosphere%daynrfirst)
+    endif
 
     ! === Section 3: Interception calculations ===
 
@@ -189,7 +206,7 @@ contains
           rad = state%atmosphere%arad(irecord) / metperiod     ! from j/m2/period to j/m2/d
           state%atmosphere%Tav = state%atmosphere%atav(irecord)
           hum = state%atmosphere%ahum(irecord)
-          win = awind(irecord)
+          win = state%atmosphere%awind_subdaily(irecord)
         endif
 
         ! Calculate evapotranspiration using Penman-Monteith: et0, ew0, es0 (mm/d)
@@ -348,7 +365,7 @@ contains
           interc = 0.0d0
           wfrac  = 0.0d0
         else
-          interc = restint + aintc * arain(irecord) / state%atmosphere%grai
+          interc = state%atmosphere%restint + aintc * state%atmosphere%arain_subdaily(irecord) / state%atmosphere%grai
           if (state%crop%ew0.lt.0.0001d0) then
             wfrac = 0.0d0
           else
@@ -360,7 +377,7 @@ contains
           endif
         endif
         ! Remaining amount of interception for swmetdetail = 1
-        restint = max(interc - wfrac * metperiod * state%crop%ew0 * 0.1d0, 0.d0)
+        state%atmosphere%restint = max(interc - wfrac * metperiod * state%crop%ew0 * 0.1d0, 0.d0)
       endif
 
       ! === Section 7: Potential soil evaporation & transpiration ===
@@ -432,8 +449,8 @@ contains
           state%atmosphere%grain(irecord) = 0.0d0
           state%atmosphere%nrain(irecord) = 0.0d0
         else
-          state%atmosphere%grain(irecord) = arain(irecord) / metperiod
-          state%atmosphere%nrain(irecord) = arain(irecord) / metperiod * state%atmosphere%nraida / state%atmosphere%grai
+          state%atmosphere%grain(irecord) = state%atmosphere%arain_subdaily(irecord) / metperiod
+          state%atmosphere%nrain(irecord) = state%atmosphere%arain_subdaily(irecord) / metperiod * state%atmosphere%nraida / state%atmosphere%grai
         endif
       endif
 
@@ -538,7 +555,7 @@ contains
 
     endif
 
-    end associate  ! at_peva/at_ptra/at_atmdem/at_pevaday/at_ptraday + tc_daynr/tc_t/tc_dt/tc_flmetdetail/tc_fletsine [TC-9]
+    end associate  ! at_peva/at_ptra/at_atmdem/at_pevaday/at_ptraday + tc_daynr/tc_t/tc_dt/tc_flmetdetail/tc_fletsine/tc_daymeteo
 
   end subroutine ProcessMeteoDay
 

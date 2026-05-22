@@ -146,7 +146,6 @@ sources = [
     'src/atmosphere/interception.f90',
     'src/atmosphere/et.f90',
     'src/atmosphere/precipitation.f90',
-    'src/atmosphere/meteo_vars.f90',
     'src/atmosphere/runoff.f90',
     'src/atmosphere/meteo_io.f90',
     'src/atmosphere/meteo_orchestrator.f90',
