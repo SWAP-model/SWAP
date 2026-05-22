@@ -146,6 +146,7 @@ sources = [
     'src/atmosphere/et.f90',
     'src/atmosphere/precipitation.f90',
     'src/atmosphere/meteo_vars.f90',
+    'src/atmosphere/runoff.f90',
     'src/atmosphere/meteoday.f90',
     'src/atmosphere/meteodt.f90',
     'src/atmosphere/snow.f90',
