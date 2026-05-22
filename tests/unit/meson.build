@@ -71,6 +71,7 @@ if get_option('enable_pfunit')
     # Additional sources beyond test_base_sources required by surviving
     # .pf files. Empty at baseline; grows as Phase 4 re-adds suites.
     pfunit_extra_sources = [
+        '../../src/atmosphere/atmosphere_constants.f90',
         '../../src/atmosphere/precipitation.f90',
         '../../src/core/variables.f90',
         '../../src/crop/wofost_soil_declarations.f90',

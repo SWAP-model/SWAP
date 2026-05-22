@@ -17,16 +17,12 @@ module runoff_mod
    use error_mod, only: fatalerr_collected
    use soilhydraulics_utils, only: watcon
    use swap_state_mod, only: swap_state_t  ! [SS-ATM A-2.6] nraidt/melt retired to state%atmosphere
+   use atmosphere_constants_mod, only: DEPTH_10CM_CM, H_FIELD_CAPACITY_CM, &
+                                       H_WILTING_POINT_CM, INITIAL_ABSTRACTION_RATIO
    implicit none
    private
-   
-   public :: CNmethod
 
-   ! Physical constants
-   real(8), parameter :: DEPTH_10CM = 10.0d0           !! Reference depth for moisture correction (cm)
-   real(8), parameter :: H_FIELD_CAPACITY = -100.0d0   !! Pressure head at field capacity (cm)
-   real(8), parameter :: H_WILTING_POINT = -16000.0d0  !! Pressure head at wilting point (cm)
-   real(8), parameter :: IA_RATIO = 0.2d0              !! Initial abstraction ratio (dimensionless)
+   public :: CNmethod
 
 contains
 
@@ -82,7 +78,7 @@ contains
 
     !  to be replaced by average for layer 0-10 cm
       do i = 1, state%mesh%numnod
-          if (state%mesh%zbotcp(i) < -DEPTH_10CM) then
+          if (state%mesh%zbotcp(i) < -DEPTH_10CM_CM) then
             state%atmosphere%nod10_cn = i-1
             state%atmosphere%z10_cn = -state%mesh%zbotcp(state%atmosphere%nod10_cn)
             exit
@@ -91,11 +87,11 @@ contains
       state%atmosphere%ThetaRef = 0.0d0
       do i = 1, state%atmosphere%nod10_cn
           if (state%atmosphere%wc_cor == 1) then
-            wc1 = watcon(H_FIELD_CAPACITY, &
+            wc1 = watcon(H_FIELD_CAPACITY_CM, &
                           state%soilwater%vg_params(i), &
                           state%soilwater%iHWCKmodel(state%soilwater%layer(i)), &
                           i, state%soilwater)                      ! [SS-GR-UTILS Task 5]
-            wc2 = watcon(H_WILTING_POINT, &
+            wc2 = watcon(H_WILTING_POINT_CM, &
                           state%soilwater%vg_params(i), &
                           state%soilwater%iHWCKmodel(state%soilwater%layer(i)), &
                           i, state%soilwater)                      ! [SS-GR-UTILS Task 5]
@@ -105,7 +101,7 @@ contains
                           state%soilwater%vg_params(i), &
                           state%soilwater%iHWCKmodel(state%soilwater%layer(i)), &
                           i, state%soilwater)                      ! [SS-GR-UTILS Task 5]
-            wc2 = watcon(H_WILTING_POINT, &
+            wc2 = watcon(H_WILTING_POINT_CM, &
                           state%soilwater%vg_params(i), &
                           state%soilwater%iHWCKmodel(state%soilwater%layer(i)), &
                           i, state%soilwater)                      ! [SS-GR-UTILS Task 5]
@@ -143,7 +139,7 @@ contains
           end if
       end if
       S = 2540d0/CN-25.4d0    ! in cm
-      Ia = 0.2d0*S
+      Ia = INITIAL_ABSTRACTION_RATIO*S
     !   Ia = 0.3d0*S
       ! SS-ATM A-2.6: nraidt/melt retired — read from state%atmosphere
       if (state%atmosphere%nraidt+state%atmosphere%melt > Ia) then

@@ -9,6 +9,9 @@
 module snow_mod
    use error_mod, only: fatalerr_collected
    use swap_state_mod, only: swap_state_t
+   use atmosphere_constants_mod, only: SPECIFIC_HEAT_WATER, LATENT_HEAT_MELTING, &
+                                       SNOW_TEMPERATURE_C, SNOW_LIQUID_WATER_FRACTION, &
+                                       SOIL_SURFACE_FREEZE_THRESHOLD_C
 
    implicit none
 
@@ -53,13 +56,10 @@ contains
       real(8) :: tsoil_surf
     !! Surface soil temperature [deg C], read from state%heat or global tsoil(1)
 
-      ! Constants
-      real(8), parameter :: cwat = 4180.0d0
-    !! Specific heat of water [J/kg/K]
-      real(8), parameter :: lm = 333580d0
-    !! Latent heat of melting [J/kg]
-      real(8), parameter :: ts = 0.0d0
-    !! Snow temperature [°C]
+      ! Constants now sourced from atmosphere_constants_mod:
+      !   cwat -> SPECIFIC_HEAT_WATER     [J/kg/K]
+      !   lm   -> LATENT_HEAT_MELTING     [J/kg]
+      !   ts   -> SNOW_TEMPERATURE_C      [deg C]
       real(8) :: slw_max
     !! Maximum storage of liquid water in snow [cm/d]
       real(8) :: qlw
@@ -136,7 +136,7 @@ contains
          ! --- no accumulation of fresh snow.
          ! SS-ATM Phase 1 Task A-1.3: state is now mandatory — read tsoil(1) directly
          tsoil_surf = state%heat%tsoil(1)
-         if (tsoil_surf .gt. 0.5d0 .and. at_ssnow .lt. 1.0d-6 .and. state%atmosphere%gsnow .gt. 0.0d0) then
+         if (tsoil_surf .gt. SOIL_SURFACE_FREEZE_THRESHOLD_C .and. at_ssnow .lt. 1.0d-6 .and. state%atmosphere%gsnow .gt. 0.0d0) then
             at_ssnow = 0.0_real64
             at_melt  = state%atmosphere%gsnow
             at_subl  = 0.0_real64
@@ -144,11 +144,11 @@ contains
 
             ! --- amount of snowmelt [cm swe] negative values of smelt: see 'melt = '
             ! GR-ATM C5: tav → state%atmosphere%Tav
-            smelt = snowcoef*(state%atmosphere%Tav - ts)
+            smelt = snowcoef*(state%atmosphere%Tav - SNOW_TEMPERATURE_C)
 
             ! --- extra snowmelt when there falls rain on the snowpack [cm swe]
             if (state%atmosphere%snrai .gt. 0.0d0) then
-               smeltr = state%atmosphere%snrai*cwat*(state%atmosphere%Tav - ts)/lm
+               smeltr = state%atmosphere%snrai*SPECIFIC_HEAT_WATER*(state%atmosphere%Tav - SNOW_TEMPERATURE_C)/LATENT_HEAT_MELTING
             else
                smeltr = 0.0d0
             end if
@@ -163,7 +163,7 @@ contains
             at_slw = at_slw + state%atmosphere%snrai
 
             ! --- maximum retention of liquid water in snow is fraction 0.07 of total water storage
-            slw_max = 0.07*(at_slw + at_ssnow)
+            slw_max = SNOW_LIQUID_WATER_FRACTION*(at_slw + at_ssnow)
 
             ! --- drainage of liquid water from snow
             qlw = max(0.0d0, at_slw - slw_max)

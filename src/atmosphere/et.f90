@@ -13,6 +13,7 @@ module et_mod
    use, intrinsic :: iso_fortran_env, only: real64
    use error_mod, only: fatalerr_collected
    use swap_state_mod, only: swap_state_t
+   use atmosphere_constants_mod, only: POND_THRESHOLD_CM
     implicit none
     private
 
@@ -593,7 +594,6 @@ contains
 
         ! Local variables
         real(8) :: timestep
-        real(8), parameter :: POND_THRESHOLD = 1.0d-10  ! Minimum ponding depth [cm]
 
         ! Validate task
         if (task /= 1 .and. task /= 2) then
@@ -617,7 +617,7 @@ contains
         end if
 
         ! Check for ponding (no reduction needed)
-        if (state%soilwater%pond > POND_THRESHOLD) then  ! [SS-SWC S-2.12B]
+        if (state%soilwater%pond > POND_THRESHOLD_CM) then  ! [SS-SWC S-2.12B]
             at_empreva = state%atmosphere%peva
             at_ldwet   = 0.0d0
             at_spev    = 0.0d0
