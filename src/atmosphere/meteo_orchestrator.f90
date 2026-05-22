@@ -195,110 +195,10 @@ contains
       endif
 
       ! === Section 6: Fraction of the day or period the crop is wet ===
-
-      ! Calculate fraction of the day or period the crop is wet
-      if (config%meteo%swmetdetail.eq.0) then
-        ! Fraction of the day the crop is wet
-        if (state%crop%ew0.lt.0.0001d0) then
-          wfrac = 0.0d0
-        else
-          if (state%crop%ew0.lt.0.0001d0) then
-            wfrac = 0.0d0
-          else
-            if (state%crop%common%swinter .ne. 3) then
-              if (state%cfg%meteo%swdivide .eq. 0) then
-                wfrac = max(min(aintc*10.0d0/state%crop%ew0,1.0d0),0.0d0)
-              else
-                if(tdirectwet.gt.nihil) then
-                  wfrac = max(min(aintc*10.0d0/tdirectwet,1.0d0),0.0d0)
-                else
-                  wfrac = 0.0d0
-                endif
-              endif
-            else
-              wfrac = max(min(eintc*10.0d0/state%crop%ew0,1.0d0),0.0d0)
-            endif
-          endif
-        endif
-      ! Fraction of the period the crop is wet
-      elseif (config%meteo%swmetdetail.eq.1) then
-        if (state%atmosphere%grai .lt. 1.0d-12) then
-          interc = 0.0d0
-          wfrac  = 0.0d0
-        else
-          interc = state%atmosphere%restint + aintc * state%atmosphere%arain_subdaily(irecord) / state%atmosphere%grai
-          if (state%crop%ew0.lt.0.0001d0) then
-            wfrac = 0.0d0
-          else
-            if (state%crop%swcf.ne.3) then
-              wfrac = max(min(interc*10.0d0/state%crop%ew0/metperiod,1.d0),0.d0)
-            else
-              wfrac = max(min(eintc/state%crop%ew0,1.0d0),0.0d0)
-            endif
-          endif
-        endif
-        ! Remaining amount of interception for swmetdetail = 1
-        state%atmosphere%restint = max(interc - wfrac * metperiod * state%crop%ew0 * 0.1d0, 0.d0)
-      endif
+      call compute_wet_fraction(state, config, aintc, eintc, Tdirectwet, interc, irecord, wfrac)
 
       ! === Section 7: Potential soil evaporation & transpiration ===
-
-      ! Potential soil evaporation (peva) [cm/d]
-      at_peva = max(0.0d0, (state%crop%es0*dexp(-1.0d0*state%crop%kdir*state%crop%kdif*state%crop%lai)*0.1d0))
-      if (state%crop%swcf.ne.3 .or. (config%meteo%swmetdetail.eq.0 .and. state%crop%common%swinter.ne.3)) then
-        at_peva = max(0.0d0,(1.0d0-wfrac)*at_peva)
-      end if
-
-      ! Alternative for peva (simple model, soil cover fraction specified)
-      if (state%crop%common%flCropCalendar .and. .not.flCropHarvest) then   ! [GR-CROP C3]
-        if (croptype(state%crop%common%icrop).eq.1 .and. state%crop%common%swgc.eq.2) then
-          at_peva = (1.0d0-gc)*state%crop%es0*0.1d0
-          if (state%crop%swcf.ne.3 .or. (config%meteo%swmetdetail.eq.0 .and. state%crop%common%swinter.ne.3)) then
-            at_peva = (1.0d0-wfrac)*at_peva
-          end if
-        endif
-      endif
-
-      ! Adapt peva in case of ponding — [SS-SWC S-2.12B] state%soilwater%pond
-      if (state%soilwater%pond .gt. 1.0d-10) then
-        if (config%meteo%swetr.eq.0 .and. state%crop%es0.gt.1.0d-8) then
-          at_peva = state%crop%ew0/state%crop%es0 * at_peva
-        elseif (state%crop%es0.gt.1.0d-8) then
-          if (state%crop%swcfbs .eq. 1 .and. state%crop%cfbs .gt. small) then
-            at_peva = cfevappond * at_peva / state%crop%cfbs
-          else
-            at_peva = cfevappond * at_peva
-          endif
-        endif
-      endif
-
-      ! Potential soil evaporation [cm/d] according to PMdirect
-      if (state%cfg%meteo%swdivide .eq. 1) then
-        if (state%soilwater%pond .gt. 1.0d-10) then  ! [SS-SWC S-2.12B]
-          at_peva = Edirectpond*0.1d0
-        else
-          at_peva = Edirect*0.1d0
-        endif
-      endif
-
-      ! Potential transpiration (ptra) [cm/d]
-      if (state%crop%swcf .ne. 3) then
-        at_ptra = ((1.0d0-wfrac)*state%crop%et0-at_peva*10.0d0)*0.1d0
-      else
-        at_ptra = (1.0d0-wfrac)*state%crop%et0*0.1d0
-      endif
-      at_ptra = max(at_ptra,(1.01d0*nihil))
-
-      ! Potential transpiration [cm/d] according to PMdirect
-      if (state%cfg%meteo%swdivide .eq. 1) then
-        at_ptra = (1.0d0-wfrac) * Tdirect * 0.1d0
-        at_ptra = max(at_ptra,(1.01d0*nihil))
-      endif
-
-      ! Correction of potential transpiration as a function of atmospheric CO2 concentration
-      if (flCO2 .and. state%crop%flCropEmergence) then
-        at_ptra = state%crop%wofost%fco2tra * at_ptra
-      endif
+      call partition_peva_ptra(state, config, wfrac, Edirect, Tdirect, Edirectpond)
 
       ! === Section 8: Results for detailed weather records ===
 
@@ -601,6 +501,145 @@ contains
     end associate
 
   end subroutine compute_reference_et
+
+  !> Private helper: Section 6 wet-fraction calculation.
+  !! For swmetdetail==0: simple ratio based on aintc/eintc and ew0.
+  !! For swmetdetail==1: accumulates interc across sub-daily records and
+  !! updates state%atmosphere%restint at end of each call.
+  subroutine compute_wet_fraction(state, config, aintc, eintc, Tdirectwet, interc, irecord, wfrac)
+    use swap_constants, only: nihil
+    type(swap_state_t),  intent(inout) :: state
+    type(swap_config_t), intent(in)    :: config
+    real(8), intent(in)    :: aintc, eintc, Tdirectwet
+    real(8), intent(inout) :: interc
+    integer, intent(in)    :: irecord
+    real(8), intent(out)   :: wfrac
+
+    associate( metperiod => state%timecontrol%metperiod )
+
+    ! Calculate fraction of the day or period the crop is wet
+    if (config%meteo%swmetdetail.eq.0) then
+      ! Fraction of the day the crop is wet
+      if (state%crop%ew0.lt.0.0001d0) then
+        wfrac = 0.0d0
+      else
+        if (state%crop%ew0.lt.0.0001d0) then
+          wfrac = 0.0d0
+        else
+          if (state%crop%common%swinter .ne. 3) then
+            if (state%cfg%meteo%swdivide .eq. 0) then
+              wfrac = max(min(aintc*10.0d0/state%crop%ew0,1.0d0),0.0d0)
+            else
+              if(tdirectwet.gt.nihil) then
+                wfrac = max(min(aintc*10.0d0/tdirectwet,1.0d0),0.0d0)
+              else
+                wfrac = 0.0d0
+              endif
+            endif
+          else
+            wfrac = max(min(eintc*10.0d0/state%crop%ew0,1.0d0),0.0d0)
+          endif
+        endif
+      endif
+    ! Fraction of the period the crop is wet
+    elseif (config%meteo%swmetdetail.eq.1) then
+      if (state%atmosphere%grai .lt. 1.0d-12) then
+        interc = 0.0d0
+        wfrac  = 0.0d0
+      else
+        interc = state%atmosphere%restint + aintc * state%atmosphere%arain_subdaily(irecord) / state%atmosphere%grai
+        if (state%crop%ew0.lt.0.0001d0) then
+          wfrac = 0.0d0
+        else
+          if (state%crop%swcf.ne.3) then
+            wfrac = max(min(interc*10.0d0/state%crop%ew0/metperiod,1.d0),0.d0)
+          else
+            wfrac = max(min(eintc/state%crop%ew0,1.0d0),0.0d0)
+          endif
+        endif
+      endif
+      ! Remaining amount of interception for swmetdetail = 1
+      state%atmosphere%restint = max(interc - wfrac * metperiod * state%crop%ew0 * 0.1d0, 0.d0)
+    endif
+
+    end associate
+
+  end subroutine compute_wet_fraction
+
+  !> Private helper: Section 7 partition into peva/ptra.
+  !! Applies cover-fraction correction, ponding correction, PMdirect override,
+  !! and CO2 correction. Writes state%atmosphere%peva and state%atmosphere%ptra.
+  subroutine partition_peva_ptra(state, config, wfrac, Edirect, Tdirect, Edirectpond)
+    use swap_constants, only: nihil, small
+    use variables, only: cfevappond, flco2, croptype, flCropHarvest, gc
+    type(swap_state_t),  intent(inout) :: state
+    type(swap_config_t), intent(in)    :: config
+    real(8), intent(in) :: wfrac, Edirect, Tdirect, Edirectpond
+
+    associate( &
+       at_peva => state%atmosphere%peva, &
+       at_ptra => state%atmosphere%ptra )
+
+    ! Potential soil evaporation (peva) [cm/d]
+    at_peva = max(0.0d0, (state%crop%es0*dexp(-1.0d0*state%crop%kdir*state%crop%kdif*state%crop%lai)*0.1d0))
+    if (state%crop%swcf.ne.3 .or. (config%meteo%swmetdetail.eq.0 .and. state%crop%common%swinter.ne.3)) then
+      at_peva = max(0.0d0,(1.0d0-wfrac)*at_peva)
+    end if
+
+    ! Alternative for peva (simple model, soil cover fraction specified)
+    if (state%crop%common%flCropCalendar .and. .not.flCropHarvest) then   ! [GR-CROP C3]
+      if (croptype(state%crop%common%icrop).eq.1 .and. state%crop%common%swgc.eq.2) then
+        at_peva = (1.0d0-gc)*state%crop%es0*0.1d0
+        if (state%crop%swcf.ne.3 .or. (config%meteo%swmetdetail.eq.0 .and. state%crop%common%swinter.ne.3)) then
+          at_peva = (1.0d0-wfrac)*at_peva
+        end if
+      endif
+    endif
+
+    ! Adapt peva in case of ponding — [SS-SWC S-2.12B] state%soilwater%pond
+    if (state%soilwater%pond .gt. 1.0d-10) then
+      if (config%meteo%swetr.eq.0 .and. state%crop%es0.gt.1.0d-8) then
+        at_peva = state%crop%ew0/state%crop%es0 * at_peva
+      elseif (state%crop%es0.gt.1.0d-8) then
+        if (state%crop%swcfbs .eq. 1 .and. state%crop%cfbs .gt. small) then
+          at_peva = cfevappond * at_peva / state%crop%cfbs
+        else
+          at_peva = cfevappond * at_peva
+        endif
+      endif
+    endif
+
+    ! Potential soil evaporation [cm/d] according to PMdirect
+    if (state%cfg%meteo%swdivide .eq. 1) then
+      if (state%soilwater%pond .gt. 1.0d-10) then  ! [SS-SWC S-2.12B]
+        at_peva = Edirectpond*0.1d0
+      else
+        at_peva = Edirect*0.1d0
+      endif
+    endif
+
+    ! Potential transpiration (ptra) [cm/d]
+    if (state%crop%swcf .ne. 3) then
+      at_ptra = ((1.0d0-wfrac)*state%crop%et0-at_peva*10.0d0)*0.1d0
+    else
+      at_ptra = (1.0d0-wfrac)*state%crop%et0*0.1d0
+    endif
+    at_ptra = max(at_ptra,(1.01d0*nihil))
+
+    ! Potential transpiration [cm/d] according to PMdirect
+    if (state%cfg%meteo%swdivide .eq. 1) then
+      at_ptra = (1.0d0-wfrac) * Tdirect * 0.1d0
+      at_ptra = max(at_ptra,(1.01d0*nihil))
+    endif
+
+    ! Correction of potential transpiration as a function of atmospheric CO2 concentration
+    if (flCO2 .and. state%crop%flCropEmergence) then
+      at_ptra = state%crop%wofost%fco2tra * at_ptra
+    endif
+
+    end associate
+
+  end subroutine partition_peva_ptra
 
 end module meteo_mod
 
