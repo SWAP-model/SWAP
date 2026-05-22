@@ -312,7 +312,7 @@
       integer   dayfix             ! days since last irrigation event
 
 ! --- start of growth grass      
-      integer   swtsum             ! start of growth grass,1=TSUM200;2=TSOIL
+      ! [GR-CROPWS] swtsum retired — see state%crop%grass%swtsum
       integer   tsumtime           ! time (nrs of sequential days) with temp above tsumtemp for grass growth [1..20 days, I]
       real(8)   tsumtemp           ! temperature limit to initiate grass growth  [0.0..20.0 grC, R]
       real(8)   tsumdepth          ! depth at which temp above tsumtemp for grass growth [0.0..100.0 cm below soil surface, R]
@@ -331,20 +331,20 @@
       integer   crp                ! Internal number of crop output file *.CRP
       integer   daycrop            ! Number of days that a crop exists
       integer   icrop              ! Current crop number
-      integer   daygrowth          ! Number of days that grass is growing after management event or emergence, actual run (d)
-      integer   daygrowthpot       ! Number of days that grass is growing after management event or emergence, potential run (d)
-      integer   idaysgraz          ! Day number of grass grazing, actual run (d)
-      integer   idaysgrazpot       ! Day number of grass grazing, potential run (d)
+      ! [GR-CROPWS] daygrowth retired — see state%crop%grass%daygrowth
+      ! [GR-CROPWS] daygrowthpot retired — see state%crop%grass%daygrowthpot
+      ! [GR-CROPWS] idaysgraz retired — see state%crop%grass%idaysgraz
+      ! [GR-CROPWS] idaysgrazpot retired — see state%crop%grass%idaysgrazpot
       ! [GR-CROPWS] idev retired — see state%crop%common%idev
-      integer   idregr             ! Number of days for regrowth of grassland, actual growth
-      integer   idregrpot          ! Number of days for regrowth of grassland, potential growth
+      ! [GR-CROPWS] idregr retired — see state%crop%grass%idregr
+      ! [GR-CROPWS] idregrpot retired — see state%crop%grass%idregrpot
       integer   idsl               ! Switch for crop development before anthesis: 0 = depends on temperature; 
                                    !   1 = depends on temperature and day length; 2 = depends on temperature, day length and vernalisation factor
-      integer   iharvest           ! Grass harvest number of grass crop when harvest dates are fixed
+      ! [GR-CROPWS] iharvest retired — see state%crop%grass%iharvest
       integer   ilvold             ! Age of oldest leaf (d) of actual crop
       integer   ilvoldpot          ! Age of oldest leaf (d) of potential crop
-      integer   iseqgm             ! Counter in sequence of grass grazing and mowing, actual crop
-      integer   iseqgmpot          ! Counter in sequence of grass grazing and mowing, potential crop
+      ! [GR-CROPWS] iseqgm retired — see state%crop%grass%iseqgm
+      ! [GR-CROPWS] iseqgmpot retired — see state%crop%grass%iseqgmpot
       integer   noddrz             ! Compartment number at bottom root zone (-)
       ! [GR-CROPWS] seqgrazmow retired — see state%crop%grass%seqgrazmow
       ! [GR-CROPWS] seqgrazmowpot retired — see state%crop%grass%seqgrazmowpot
@@ -387,8 +387,8 @@
       real(8)   cropend(macrop)    ! Array with crop end dates
       real(8)   cropstart(macrop)  ! Array with crop start dates
       ! [GR-CROPWS] cumdens retired — see state%crop%common%cumdens
-      real(8)   cuptgraz           ! Cumulative dry weight of grass consumed with animal grazing for actual run (kg/ha)
-      real(8)   cuptgrazpot        ! Cumulative dry weight of grass consumed with animal grazing for potential run (kg/ha)
+      ! [GR-CROPWS] cuptgraz retired — see state%crop%common%cuptgraz
+      ! [GR-CROPWS] cuptgrazpot retired — see state%crop%common%cuptgrazpot
       ! [GR-CROPWS] cvl retired — see state%crop%common%cvl
       ! [GR-CROPWS] cvo retired — see state%crop%common%cvo
       ! [GR-CROPWS] cvr retired — see state%crop%common%cvr
@@ -446,7 +446,7 @@
       real(8)   lvagepot(366)      ! Array with leaf age (d) as function of crop day number of potential crop
       real(8)   max_resp_factor    ! Ratio root total respiration / maintenance respiration [1..5.0 -, R]
       ! [GR-CROP-DVS] mowrest retired — see state%crop%grass%mowrest
-      real(8)   dewrest            ! Dry weight of above ground grass (leaves + stems) after dewooling (kg/ha)
+      ! [GR-CROPWS] dewrest retired — see state%crop%grass%dewrest
       real(8)   mrest              ! Total maintenance respiration for actual crop (kg/ha)
       real(8)   mrestpot           ! Total maintenance respiration for potential crop (kg/ha)
       real(8)   mrftb(2*magrs)     ! Array with ratio root total respiration / maintenance respiration as function of DVS (kg/m3)
@@ -522,11 +522,11 @@
       ! [GR-CROP-DVS] wst retired — see state%crop%wofost%wst
       ! [GR-CROP-DVS] wstpot retired — see state%crop%wofost%wstpot
       logical   flanthesis         ! Flag indicating anthesis stage of a crop
-      logical   flHarvest           ! Flag indicating that grass should be harvested, actual crop
+      ! [GR-CROPWS] flHarvest retired — see state%crop%grass%flHarvest
       logical   flHarvestDay        ! Flag indicating that current day is harvest day
-      logical   flHarvestpot        ! Flag indicating that grass should be harvested, potential crop
-      logical   flGrazing           ! Flag indicating that cattle grazes the grass, actual run
-      logical   flGrazingpot        ! Flag indicating that cattle grazes the grass, potential run
+      ! [GR-CROPWS] flHarvestpot retired — see state%crop%grass%flHarvestpot
+      ! [GR-CROPWS] flGrazing retired — see state%crop%grass%flGrazing
+      ! [GR-CROPWS] flGrazingpot retired — see state%crop%grass%flGrazingpot
       character(len=40) cropfil(macrop)   ! Array with names of crop files
       character(len=80) pathcrop          ! Path to folder with crop input files
       ! [GR-CROP-DVS] inifil retired — dead (no readers, no writers)
@@ -536,7 +536,7 @@
       ! [GR-CROPWS] dmgrztb retired — see state%crop%grass%dmgrztb
       ! [GR-CROPWS] dateharvest retired — see state%crop%grass%dateharvest
       ! [GR-CROPWS] DelayRegrowthTab retired — see state%crop%grass%DelayRegrowthTab
-      real(8)   lsda(366)               ! Array with Lifestock density at grazing event
+      ! [GR-CROPWS] lsda retired — see state%crop%grass%lsda
       ! [GR-CROPWS] DaysGrazingtab retired — see state%crop%grass%daysgrazingtab
       ! [GR-CROPWS] UptGrazingtab retired — see state%crop%grass%uptgrazingtab
       ! [GR-CROPWS] LossGrazingtab retired — see state%crop%grass%lossgrazingtab
@@ -547,12 +547,12 @@
       ! [GR-CROP-DVS] cropendpot retired — see state%crop%grass%cropendpot
       ! [GR-CROP-DVS] cropstartact retired — see state%crop%grass%cropstartact
       ! [GR-CROP-DVS] cropendact retired — see state%crop%grass%cropendact
-      logical   flhrvendpot             ! Flag indicating end of harvest event (potential)
-      logical   flhrvendact             ! Flag indicating end of harvest event (actual)
-      real(8)   pmowdm                  ! Total potential harvest by mowing at end of harvest event (kg/ha)
-      real(8)   mowdm                   ! Total actual harvest by mowing at end of harvest event (kg/ha)
-      real(8)   pgrzdm                  ! Total potential harvest by grazing at end of harvest event (kg/ha)
-      real(8)   grzdm                   ! Total actual harvest by grazing at end of harvest event (kg/ha)
+      ! [GR-CROPWS] flhrvendpot retired — see state%crop%grass%flhrvendpot
+      ! [GR-CROPWS] flhrvendact retired — see state%crop%grass%flhrvendact
+      ! [GR-CROPWS] pmowdm retired — see state%crop%grass%pmowdm
+      ! [GR-CROPWS] mowdm retired — see state%crop%grass%mowdm
+      ! [GR-CROPWS] pgrzdm retired — see state%crop%grass%pgrzdm
+      ! [GR-CROPWS] grzdm retired — see state%crop%grass%grzdm
       ! [GR-CROP-DVS] plossdm retired — see state%crop%wofost%plossdm
       ! [GR-CROP-DVS] lossdm retired — see state%crop%wofost%lossdm
       

@@ -27,6 +27,30 @@ module crop_grass_state_mod
       real(real64) :: zmow                  = 0.0_real64   !! z-level for mowing workability monitor
       real(real64) :: zgrz                  = 0.0_real64   !! z-level for grazing workability monitor
 
+      ! Grass lifecycle/scratch (runtime-mutated; reset per rotation)
+      integer      :: daygrowth         = 0           !! days growing after mgmt event (actual)
+      integer      :: daygrowthpot      = 0           !! days growing after mgmt event (potential)
+      integer      :: idaysgraz         = 0           !! day of grass grazing (actual)
+      integer      :: idaysgrazpot      = 0           !! day of grass grazing (potential)
+      integer      :: idregr            = 0           !! days for regrowth (actual)
+      integer      :: idregrpot         = 0           !! days for regrowth (potential)
+      integer      :: iharvest          = 0           !! current harvest number (fixed-date mowing)
+      integer      :: iseqgm            = 0           !! counter in mow/graze sequence (actual)
+      integer      :: iseqgmpot         = 0           !! counter in mow/graze sequence (potential)
+      integer      :: swtsum            = 0           !! start-of-growth method (1=TSUM200, 2=TSOIL)
+      logical      :: flHarvest         = .false.     !! harvest triggered (actual)
+      logical      :: flHarvestpot      = .false.     !! harvest triggered (potential)
+      logical      :: flGrazing         = .false.     !! grazing active (actual)
+      logical      :: flGrazingpot      = .false.     !! grazing active (potential)
+      logical      :: flhrvendact       = .false.     !! end-of-harvest flag (actual)
+      logical      :: flhrvendpot       = .false.     !! end-of-harvest flag (potential)
+      real(real64) :: dewrest           = 0.0_real64  !! above-ground DM after dewooling (kg/ha)
+      real(real64) :: mowdm             = 0.0_real64  !! actual mowing harvest at end-of-event (kg/ha)
+      real(real64) :: pmowdm            = 0.0_real64  !! potential mowing harvest at end-of-event (kg/ha)
+      real(real64) :: grzdm             = 0.0_real64  !! actual grazing harvest at end-of-event (kg/ha)
+      real(real64) :: pgrzdm            = 0.0_real64  !! potential grazing harvest at end-of-event (kg/ha)
+      real(real64) :: lsda(366)         = 0.0_real64  !! livestock density at grazing event
+
       ! Sub-period start/end tracking (reset after each mowing/grazing event)
       real(real64) :: cropstartpot       = 0.0_real64 !! start of potential grass growth (t1900)
       real(real64) :: cropendpot         = 0.0_real64 !! end of potential grass growth (t1900)

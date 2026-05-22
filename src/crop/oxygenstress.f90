@@ -543,7 +543,7 @@ contains
                            croptype, icrop, max_resp_factor, &
                            ! q10/rmr/rml/rms/rmo/rfsetb/cvl/cvs/cvo/cvr/frtb/fltb/fstb/fotb retired
                            ! DEFERRED: rid/idregr/daycrop — active crop dynamics; Phase C3; dvs retired
-                           rid, idregr, daycrop
+                           rid, daycrop  ! idregr retired
       use array_utils, only: afgen
       use swap_state_mod, only: swap_state_t
       implicit none
@@ -611,7 +611,7 @@ contains
         Max_resp_factor_gmrf = 1.0d0  !RB20140317
 ! --- skip in case of regrowth, equal to wofost detailed grass
 ! --- note: daycrop.ge.idregrpot (wofost) --> daycrop.gt.idregrpot, because idregrpot is result of wofost of previous day
-        if (daycrop.eq.0 .or.daycrop.gt.idregr) then           
+        if (daycrop.eq.0 .or.daycrop.gt.state%crop%grass%idregr) then
 
 ! --- respiration and partitioning of carbohydrates between growth and
 ! --- maintenance respiration, based on actual plant state variables

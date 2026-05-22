@@ -71,7 +71,7 @@ contains
                             swcfbs, flCropEmergence, &  ! lai/swcf retired
                             ! [SS-GR-CROP A14] crop_common legacy globals; dvs/tsum retired
                             daycrop, icrop, &
-                            cuptgraz, cuptgrazpot, &  ! rd/rdpot/rdm/rdi/rri/rdc/HarLosOrm_tot retired
+                            ! rd/rdpot/rdm/rdi/rri/rdc/HarLosOrm_tot/cuptgraz/cuptgrazpot retired
                             ! [SS-GR-CROP A15] crop_wofost/grass/fixed legacy globals; biomass+dw*+plossdm/lossdm retired
                             swbulb, &
                             ! mowrest/seqgrazmow/seqgrazmowpot/dateharvest retired
@@ -354,8 +354,6 @@ contains
    state%crop%common%flCropNut      = flCropNut
    state%crop%common%flHarvestDay   = flHarvestDay
    ! [SS-GR-CROPRT C1] swend dual-write dropped — state%crop%common%swend retired; ADR 0009: always 0
-   state%crop%common%cuptgraz       = cuptgraz
-   state%crop%common%cuptgrazpot    = cuptgrazpot
    ! [SS-GR-CROP A15] dual-write crop_wofost
    state%crop%wofost%swbulb   = (swbulb == 1)   ! integer→logical conversion
    ! [SS-GR-CROP A15] dual-write crop_grass

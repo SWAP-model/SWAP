@@ -42,10 +42,10 @@
       !   config switches (swrd etc.), physiology params (reltr, cvl etc.): no state home
       !   leaf arrays (lv/lvpot etc.), JvL params (twilt etc.): no state home
       !   cropstartact/endact/pot: state%crop%grass homes (A5) but written here — Phase C
-      !   cuptgraz/pot, tagp/pot, tagpt/pot, seqgrazmow/pot, mowrest, dateharvest:
+      !   state%crop%common%cuptgraz/pot, tagp/pot, tagpt/pot, seqgrazmow/pot, mowrest, dateharvest:
       !     state%crop%grass/common homes (A5) but written in grass loop — Phase C
       !   pgass/pgasspot: state%crop%wofost homes (A4 dual-write) but written here — Phase C
-      !   perdl, dateharvest, lsda: output + harvest tracking, no state home
+      !   perdl, dateharvest, state%crop%grass%lsda: output + harvest tracking, no state home
       !   tsoil: config-staging buffer, renamed to avoid clash with dummy arg
       use variables, only: &                                            ! [SS-GR-CROPRT B8] [GR-CROPWS B4]
         magrs, macp, rid, daycrop, swinco,       &  ! tdwi/[GR-CROPWS B4] icrop/dvs/tsum/wst/wlv/wrt/dw*/tbase retired
@@ -58,14 +58,7 @@
         ! glaiex/glaiexpot/cvl/cvr/cvs/q10/rmr/rml/rms/span/ssa retired
         lv, lvpot, lvage, lvagepot, sla, slapot, ilvold, ilvoldpot,     &
         twilt, wiltpoint, gwrt, siccaplai,                   &  ! cropstartact/endact/startpot/endpot retired
-        idaysgraz, idaysgrazpot, idregr, idregrpot,                      &
-        flgrazing, flgrazingpot, flharvest, flharvestpot,               &
-        flhrvendact, flhrvendpot, flhydrlift,                           &
-        daygrowth, daygrowthpot, grzdm, dewrest,                        &
-        cuptgraz, cuptgrazpot,          &  ! tagp retired (→state%crop%wofost%tagp)
-        swtsum, iseqgm, iseqgmpot,                                       &  ! seqgrazmow/seqgrazmowpot retired
-        iharvest,                                                        &  ! dmgrztb/dmmowtb/daysgrazingtab/uptgrazingtab/lossgrazingtab/lossgrztab/lossmowtab/zgrz/zmow/DelayRegrowthTab retired
-        mowdm, pmowdm, pgrzdm, lsda,                                     &  ! perdl/dateharvest retired
+        flhydrlift,                                                      &  ! state%crop%grass%idaysgraz*/state%crop%grass%idregr*/state%crop%grass%flGrazing*/state%crop%grass%flHarvest*/flhrvend*/state%crop%grass%daygrowth*/state%crop%grass%grzdm/state%crop%grass%dewrest/state%crop%grass%swtsum/state%crop%grass%iseqgm*/state%crop%grass%iharvest/state%crop%grass%mowdm*/state%crop%grass%pgrzdm/state%crop%grass%pmowdm/state%crop%grass%lsda/state%crop%common%cuptgraz* retired
         dummy_tsoil_gr_ => tsoil
       !! Rename config-staging tsoil to avoid clash with dummy arg tsoil.
       !! [SS-HEAT] Task 9: tsoil retained as config-staging buffer; global is not compute state.
@@ -217,8 +210,8 @@
       if (tc_t1900 - tstart .gt. tiny .or. swinco .ne. 3 .or.          &
      &   dabs(tc_t1900 - state%crop%common%cropstart) .lt. tiny) then   ! [GR-CROPWS B4] cropstart(icrop) → state%crop%common%cropstart
 
-        iseqgm = 1
-        iseqgmpot = iseqgm
+        state%crop%grass%iseqgm = 1
+        state%crop%grass%iseqgmpot = state%crop%grass%iseqgm
 
 ! ---   initial values of crop parameters
         rid = dble(daycrop)
@@ -228,11 +221,11 @@
         sla(1) = afgen (state%crop%common%slatb,30,rid)
         lvage(1) = 0.d0
         ilvold = 1
-        idregr = 0
+        state%crop%grass%idregr = 0
         slapot(1) = afgen (state%crop%common%slatb,30,rid)
         lvagepot(1) = 0.d0
         ilvoldpot = 1
-        idregrpot = 0
+        state%crop%grass%idregrpot = 0
 
 ! ---   initial state variables of the crop
         state%crop%wofost%wrt = fr*state%crop%common%tdwi
@@ -263,8 +256,8 @@
         state%crop%wofost%dwst = 0.d0
         state%crop%wofost%dwstpot = state%crop%wofost%dwst
 
-        daygrowth    = 0
-        daygrowthpot = 0
+        state%crop%grass%daygrowth    = 0
+        state%crop%grass%daygrowthpot = 0
 
 ! ---   actual rooting depth
         if (state%crop%common%swrd.eq.1) then
@@ -283,24 +276,24 @@
         state%crop%wofost%tagppot = state%crop%wofost%tagp
         state%crop%wofost%tagpt = 0.0d0
         state%crop%wofost%tagptpot = 0.0d0
-        cuptgraz = 0.0d0
-        cuptgrazpot = 0.0d0
+        state%crop%common%cuptgraz = 0.0d0
+        state%crop%common%cuptgrazpot = 0.0d0
         state%crop%common%tsum = 0.0d0
         
         state%crop%grass%cropstartpot     = rid
         state%crop%grass%cropstartact     = rid
-        flhrvendpot      = .false.
+        state%crop%grass%flhrvendpot      = .false.
         flearlyhrvendpot = .false.
         ! [SS-GR-CROP A5.1] mirror grass init-time state
-        state%crop%common%cuptgraz    = cuptgraz
-        state%crop%common%cuptgrazpot = cuptgrazpot
+        state%crop%common%cuptgraz    = state%crop%common%cuptgraz
+        state%crop%common%cuptgrazpot = state%crop%common%cuptgrazpot
         
-        if (swtsum.eq.0) then
+        if (state%crop%grass%swtsum.eq.0) then
           flGrassGrowth = .true.
         else
           flGrassGrowth = .false.  
         endif
-        if (swtsum.eq.2) then
+        if (state%crop%grass%swtsum.eq.2) then
           ! SS-HEAT pre-Task-8: pass tsoil from state%heat%tsoil (via dummy arg) to sumttd.
           ! SS-TC TC-10: pass state so sumttd can read t1900,date via state%timecontrol.
           call sumttd('initial',flGrassGrowth,dateGrassGrowth,tsoil,state)
@@ -343,9 +336,9 @@
 ! --- harvest
 !     initialise 
       if (swharvest.eq.2) then
-        iharvest = 1
-        do while (tc_t1900 .gt. state%crop%grass%dateharvest(iharvest))
-          iharvest = iharvest + 1
+        state%crop%grass%iharvest = 1
+        do while (tc_t1900 .gt. state%crop%grass%dateharvest(state%crop%grass%iharvest))
+          state%crop%grass%iharvest = state%crop%grass%iharvest + 1
         enddo
       endif      
       
@@ -385,17 +378,17 @@
       rid = dble(daycrop)
       
 ! --- check end of harvest
-      if (flhrvendpot) then
+      if (state%crop%grass%flhrvendpot) then
         if (flearlyhrvendpot) then
           state%crop%grass%cropstartpot  = rid - 1.d0
         else
           state%crop%grass%cropstartpot  = rid
         endif
-        pmowdm        = 0.d0
-        pgrzdm        = 0.d0
+        state%crop%grass%pmowdm        = 0.d0
+        state%crop%grass%pgrzdm        = 0.d0
         state%crop%wofost%plossdm       = 0.d0
       endif
-      flhrvendpot      = .false.
+      state%crop%grass%flhrvendpot      = .false.
       flearlyhrvendpot = .false.
 
 ! --- grass growth initiated by tsum from 1st day of calendar year
@@ -403,14 +396,14 @@
       if (.not. flGrassGrowth) then
         
         ! grass growth initiated by tsum
-        if (swtsum.eq.1) then
+        if (state%crop%grass%swtsum.eq.1) then
           if (state%crop%common%tsum.ge.200.d0) then
             flGrassGrowth = .true.
           endif
         endif
         
         ! grass growth initiated by temperature, time and depth
-        if (swtsum.eq.2) then
+        if (state%crop%grass%swtsum.eq.2) then
           ! SS-HEAT pre-Task-8: pass tsoil from state%heat%tsoil (via dummy arg) to sumttd.
           ! SS-TC TC-10: pass state so sumttd can read t1900,date via state%timecontrol.
           if (dateGrassGrowth.eq.'undefined') call sumttd('dynamic',flGrassGrowth,dateGrassGrowth,tsoil,state)
@@ -425,7 +418,7 @@
       endif
       
 ! --- skip in case of: tsum<tsum200, or 3 criteria (tsummttd), or regrowth
-      if (flGrassGrowth .and. daycrop.ge.idregrpot) then
+      if (flGrassGrowth .and. daycrop.ge.state%crop%grass%idregrpot) then
 
 ! ===   daily dry matter production ===
 
@@ -551,12 +544,12 @@
 ! ----  integrals of the crop --------------------------------------------
 
 !       set growing period after previous harvest        
-        daygrowthpot = daygrowthpot + 1
+        state%crop%grass%daygrowthpot = state%crop%grass%daygrowthpot + 1
 
 !       Check trigger to start mowing event
-        if (state%crop%grass%seqgrazmowpot(iseqgmpot) .eq. 2) then
+        if (state%crop%grass%seqgrazmowpot(state%crop%grass%iseqgmpot) .eq. 2) then
 
-          flharvestpot = .false.
+          state%crop%grass%flHarvestpot = .false.
             
           ! use dry matter threshold
           if (swharvest .eq. 1) then 
@@ -565,28 +558,28 @@
             if (swdmmow .eq. 1) then
               if (state%crop%wofost%tagppot .gt. dmharvest .or. (tc_daynr .gt. daylastharvest  &
      &          .and. state%crop%wofost%tagppot .gt. dmlastharvest)) then
-                flharvestpot = .true.
+                state%crop%grass%flHarvestpot = .true.
               endif
 
             ! use of flexible threshold
             elseif (swdmmow .eq. 2) then
               dmharvest = afgen(state%crop%grass%dmmowtb,20,rid)
               if (state%crop%wofost%tagppot .gt. dmharvest .or.                           &
-     &                 (daygrowthpot .gt. maxdaymow .and. iseqgmpot .gt. 1)) then
-                flharvestpot = .true.
+     &                 (state%crop%grass%daygrowthpot .gt. maxdaymow .and. state%crop%grass%iseqgmpot .gt. 1)) then
+                state%crop%grass%flHarvestpot = .true.
               endif
             endif
 
           ! use fixed dates
           elseif (swharvest .eq. 2) then
-            if(tc_t1900 .gt. state%crop%grass%dateharvest(iharvest)) then
-              flharvestpot = .true.
+            if(tc_t1900 .gt. state%crop%grass%dateharvest(state%crop%grass%iharvest)) then
+              state%crop%grass%flHarvestpot = .true.
             endif
           endif
 
 !         In case mowing is triggered: Growth is initialized again and the weight of the sward is stored
-          if (flharvestpot) then
-            iseqgmpot = iseqgmpot + 1
+          if (state%crop%grass%flHarvestpot) then
+            state%crop%grass%iseqgmpot = state%crop%grass%iseqgmpot + 1
             slapot(1) = afgen (state%crop%common%slatb,30,rid)
             fl = afgen (state%crop%common%fltb,30,rid)
             fs = afgen (state%crop%common%fstb,30,rid)
@@ -606,7 +599,7 @@
             drstpot = 0.0d0
             drrtpot = 0.0d0
             
-            daygrowthpot = 0
+            state%crop%grass%daygrowthpot = 0
             
 !           losses due to treading
             fralossmow = 0.d0
@@ -619,22 +612,22 @@
             state%crop%wofost%tagptpot = state%crop%wofost%tagptpot + tagpspot * (1.d0 - FraLossMow)
 
             state%crop%grass%cropendpot  = rid
-            flhrvendpot = .true.
-            pmowdm      = tagpspot * (1.d0 - FraLossMow)
+            state%crop%grass%flhrvendpot = .true.
+            state%crop%grass%pmowdm      = tagpspot * (1.d0 - FraLossMow)
             state%crop%wofost%plossdm     = tagpspot * FraLossMow
             
 !           set regrowth delay
             idelaypot = int(afgen(state%crop%grass%DelayRegrowthTab,200,tagpspot))
-            idregrpot = daycrop + idelaypot
+            state%crop%grass%idregrpot = daycrop + idelaypot
 
           endif          
           
 !       Check trigger to start grazing event          
-        else if (state%crop%grass%seqgrazmowpot(iseqgmpot) .eq. 1 .or. state%crop%grass%seqgrazmowpot(iseqgmpot) .eq. 3) then
+        else if (state%crop%grass%seqgrazmowpot(state%crop%grass%iseqgmpot) .eq. 1 .or. state%crop%grass%seqgrazmowpot(state%crop%grass%iseqgmpot) .eq. 3) then
 
-          flharvestpot = .false.
+          state%crop%grass%flHarvestpot = .false.
           
-          if (.not. flgrazingpot) then
+          if (.not. state%crop%grass%flGrazingpot) then
               
             ! use dry matter threshold
             if (swharvest .eq. 1) then 
@@ -642,36 +635,36 @@
               ! use of fixed threshold
               if (swdmgrz .eq. 1) then   
                 if (state%crop%wofost%tagppot .gt. dmgrazing) then
-                  flharvestpot = .true.
+                  state%crop%grass%flHarvestpot = .true.
                 endif
               
               ! use of flexible threshold
               elseif (swdmgrz .eq. 2) then 
                 dmgrazing = afgen(state%crop%grass%dmgrztb,20,rid)
                 if (state%crop%wofost%tagppot .gt. dmgrazing .or.                           &
-     &                 (daygrowthpot .gt. maxdaygrz .and. iseqgmpot .gt. 1)) then
-                  flharvestpot = .true.
+     &                 (state%crop%grass%daygrowthpot .gt. maxdaygrz .and. state%crop%grass%iseqgmpot .gt. 1)) then
+                  state%crop%grass%flHarvestpot = .true.
                 endif
               endif
               
             ! use fixed dates
             elseif (swharvest .eq. 2) then
-              if(tc_t1900 .gt. state%crop%grass%dateharvest(iharvest)) then
-                flharvestpot = .true.
+              if(tc_t1900 .gt. state%crop%grass%dateharvest(state%crop%grass%iharvest)) then
+                state%crop%grass%flHarvestpot = .true.
               endif
             endif
           endif
 
 !         In case grazing is triggered (or still occurs):
-          if (flharvestpot .or. flgrazingpot) then
+          if (state%crop%grass%flHarvestpot .or. state%crop%grass%flGrazingpot) then
           
 !           Amount of grazing kg/ha DM based on livestock density (Handboek Melkveehouderij 2013)
-            uptgrazpot = lsda(iseqgmpot) *                                 &
-     &                         afgen(state%crop%grass%uptgrazingtab,200,lsda(iseqgmpot))
+            uptgrazpot = state%crop%grass%lsda(state%crop%grass%iseqgmpot) *                                 &
+     &                         afgen(state%crop%grass%uptgrazingtab,200,state%crop%grass%lsda(state%crop%grass%iseqgmpot))
 
 !           Amount of shoots lost (kg/ha DM) due to droppings and treading during grazing  
-            lossgrazpot = lsda(iseqgmpot) *                                &
-     &                         afgen(state%crop%grass%lossgrazingtab,200,lsda(iseqgmpot))
+            lossgrazpot = state%crop%grass%lsda(state%crop%grass%iseqgmpot) *                                &
+     &                         afgen(state%crop%grass%lossgrazingtab,200,state%crop%grass%lsda(state%crop%grass%iseqgmpot))
 
 !           Extra losses due to treading in case pressure head is insufficient
             fralossgrz = 0.d0
@@ -681,17 +674,17 @@
             lossgrazpot = lossgrazpot + state%crop%wofost%tagppot * fralossgrz
 
 !           Initialise Count nr of days with grazing
-            if(.not. flgrazingpot) then
-              daygrowthpot   = 0
-              idaysgrazpot   = 0
+            if(.not. state%crop%grass%flGrazingpot) then
+              state%crop%grass%daygrowthpot   = 0
+              state%crop%grass%idaysgrazpot   = 0
               flDewoolingpot = .false.
             endif
             
 !           verify if uptake is possible: tagprest should remain after grazing
             if ((state%crop%wofost%tagppot - uptgrazpot - lossgrazpot) .gt. tagprest) then
               
-              flgrazingpot = .true.
-              cuptgrazpot  = cuptgrazpot + uptgrazpot
+              state%crop%grass%flGrazingpot = .true.
+              state%crop%common%cuptgrazpot  = state%crop%common%cuptgrazpot + uptgrazpot
           
 !             distribute grazing over stems and leaves (living and dead parts)
               state%crop%wofost%wstpot  = state%crop%wofost%wstpot  - (uptgrazpot+lossgrazpot) * state%crop%wofost%wstpot  / state%crop%wofost%tagppot
@@ -714,37 +707,37 @@
           
 !             harvest during total grazing event
               state%crop%grass%cropendpot = rid
-              pgrzdm     = pgrzdm + uptgrazpot
+              state%crop%grass%pgrzdm     = state%crop%grass%pgrzdm + uptgrazpot
               state%crop%wofost%plossdm    = state%crop%wofost%tagppot * fralossgrz
               
 !             Check number of days with grazing
-              daysgrazpot  = int(afgen(state%crop%grass%daysgrazingtab,200,lsda(iseqgmpot)))
-              idaysgrazpot = idaysgrazpot + 1
-              if(idaysgrazpot .eq. daysgrazpot) then
-                flgrazingpot = .false.
-                flhrvendpot  = .true.
-                if (state%crop%grass%seqgrazmowpot(iseqgmpot) .eq. 3) then
+              daysgrazpot  = int(afgen(state%crop%grass%daysgrazingtab,200,state%crop%grass%lsda(state%crop%grass%iseqgmpot)))
+              state%crop%grass%idaysgrazpot = state%crop%grass%idaysgrazpot + 1
+              if(state%crop%grass%idaysgrazpot .eq. daysgrazpot) then
+                state%crop%grass%flGrazingpot = .false.
+                state%crop%grass%flhrvendpot  = .true.
+                if (state%crop%grass%seqgrazmowpot(state%crop%grass%iseqgmpot) .eq. 3) then
                   flDewoolingpot  = .true.
                 endif
-                daygrowthpot = 0
-                iseqgmpot = iseqgmpot + 1
+                state%crop%grass%daygrowthpot = 0
+                state%crop%grass%iseqgmpot = state%crop%grass%iseqgmpot + 1
               endif
 
 !           Also end grazing when not enough grass remains on the field
-            elseif (flgrazingpot .or. swharvest .eq. 2) then
-              flgrazingpot     = .false.
-              flhrvendpot      = .true.
+            elseif (state%crop%grass%flGrazingpot .or. swharvest .eq. 2) then
+              state%crop%grass%flGrazingpot     = .false.
+              state%crop%grass%flhrvendpot      = .true.
               flearlyhrvendpot = .true.
-              if (state%crop%grass%seqgrazmowpot(iseqgmpot) .eq. 3 .and. state%crop%wofost%tagppot .gt. dewrest) then
+              if (state%crop%grass%seqgrazmowpot(state%crop%grass%iseqgmpot) .eq. 3 .and. state%crop%wofost%tagppot .gt. state%crop%grass%dewrest) then
                 flDewoolingpot   = .true.
                 flearlyhrvendpot = .false.
               endif
-              daygrowthpot = 0
-              iseqgmpot = iseqgmpot + 1
+              state%crop%grass%daygrowthpot = 0
+              state%crop%grass%iseqgmpot = state%crop%grass%iseqgmpot + 1
             endif
 
 !           Assumption: no delay in regrowth during and after grazing (without dewooling)
-            idregrpot = daycrop
+            state%crop%grass%idregrpot = daycrop
 
 !           Dewooling after grazing event            
             if (flDewoolingpot) then
@@ -752,7 +745,7 @@
               slapot(1) = afgen (state%crop%common%slatb,30,rid)
               fl = afgen (state%crop%common%fltb,30,rid)
               fs = afgen (state%crop%common%fstb,30,rid)
-              state%crop%wofost%wlvpot = dewrest / (1.d0 + (fs/fl))
+              state%crop%wofost%wlvpot = state%crop%grass%dewrest / (1.d0 + (fs/fl))
               state%crop%wofost%wstpot = fs/fl*state%crop%wofost%wlvpot
               state%crop%wofost%dwlvpot = 0.0d0
               state%crop%wofost%dwstpot = 0.0d0
@@ -769,7 +762,7 @@
               drrtpot = 0.0d0
               
 !             Assumption: one day delay in regrowth after grazing
-              idregrpot = daycrop + 1
+              state%crop%grass%idregrpot = daycrop + 1
               
             endif
             
@@ -777,7 +770,7 @@
           
         endif
         
-        if (daycrop .ge. idregrpot) then
+        if (daycrop .ge. state%crop%grass%idregrpot) then
 
 ! ---     physiologic ageing of leaves per time step
           fysdel = max (0.0d0,(at_tav-state%crop%common%tbase)/(35.0d0-state%crop%common%tbase))  ! [SS-GR-ATM B.5]
@@ -866,7 +859,7 @@
       endif
 
       ! [SS-GR-CROP A5.1] mirror grass case(2) potential state
-      state%crop%common%cuptgrazpot   = cuptgrazpot
+      state%crop%common%cuptgrazpot   = state%crop%common%cuptgrazpot
 
       return
 
@@ -875,23 +868,23 @@
 ! === calculate actual rate and state variables ======================================
 
 ! --- check end of harvest
-      if (flhrvendact) then
+      if (state%crop%grass%flhrvendact) then
         if (flearlyhrvendact) then
           state%crop%grass%cropstartact  = rid - 1.d0
         else
           state%crop%grass%cropstartact  = rid
         endif
-        mowdm        = 0.d0
-        grzdm        = 0.d0
+        state%crop%grass%mowdm        = 0.d0
+        state%crop%grass%grzdm        = 0.d0
         state%crop%wofost%lossdm       = 0.d0
       endif
-      flhrvendact      = .false.
+      state%crop%grass%flhrvendact      = .false.
       flearlyhrvendact = .false.
 
 ! --- rates of change of the crop variables ---------------------------------------------
       
 ! --- skip in case of: tsum<tsum200, or 3 criteria (tsummttd), or regrowth
-      if (flGrassGrowth .and. daycrop .ge. idregr) then
+      if (flGrassGrowth .and. daycrop .ge. state%crop%grass%idregr) then
 
 ! ===   daily dry matter production ===
 
@@ -1012,12 +1005,12 @@
 ! ----  integrals of the crop --------------------------------------------
 
 !       set growing period after previous harvest        
-        daygrowth = daygrowth + 1
+        state%crop%grass%daygrowth = state%crop%grass%daygrowth + 1
 
 !       Check trigger to start mowing event
-        if (state%crop%grass%seqgrazmow(iseqgm) .eq. 2) then
+        if (state%crop%grass%seqgrazmow(state%crop%grass%iseqgm) .eq. 2) then
           
-          flharvest = .false.   
+          state%crop%grass%flHarvest = .false.   
             
           ! use dry matter threshold
           if (swharvest .eq. 1) then 
@@ -1026,29 +1019,29 @@
             if (swdmmow .eq. 1) then
               if (state%crop%wofost%tagp .gt. dmharvest .or. (tc_daynr .gt. daylastharvest  &
      &          .and. state%crop%wofost%tagp .gt. dmlastharvest)) then
-                flharvest = .true.
+                state%crop%grass%flHarvest = .true.
               endif
 
             ! use of flexible threshold
             elseif (swdmmow .eq. 2) then
               dmharvest = afgen(state%crop%grass%dmmowtb,20,rid)
               if (state%crop%wofost%tagp .gt. dmharvest .or.                           &
-     &                 (daygrowth .gt. maxdaymow .and. iseqgm .gt. 1)) then
-                flharvest = .true.
+     &                 (state%crop%grass%daygrowth .gt. maxdaymow .and. state%crop%grass%iseqgm .gt. 1)) then
+                state%crop%grass%flHarvest = .true.
               endif
             endif
           
           ! use fixed dates
           elseif (swharvest .eq. 2) then
-            if(tc_t1900 .gt. state%crop%grass%dateharvest(iharvest)) then
-              iharvest = iharvest + 1
-              flharvest = .true.
+            if(tc_t1900 .gt. state%crop%grass%dateharvest(state%crop%grass%iharvest)) then
+              state%crop%grass%iharvest = state%crop%grass%iharvest + 1
+              state%crop%grass%flHarvest = .true.
             endif
           endif
           
 !       In case mowing is triggered: Growth is initialized again and the weight of the sward is stored
-        if (flharvest) then
-          iseqgm = iseqgm + 1
+        if (state%crop%grass%flHarvest) then
+          state%crop%grass%iseqgm = state%crop%grass%iseqgm + 1
           sla(1) = afgen (state%crop%common%slatb,30,rid)
           fl = afgen (state%crop%common%fltb,30,rid)
           fs = afgen (state%crop%common%fstb,30,rid)
@@ -1068,7 +1061,7 @@
           drst = 0.0d0
           drrt = 0.0d0
 
-          daygrowth = 0
+          state%crop%grass%daygrowth = 0
 
 !         losses due to treading
           FraLossMow = 0.d0
@@ -1081,22 +1074,22 @@
           state%crop%wofost%tagpt = state%crop%wofost%tagpt + tagps * (1.d0 - fralossmow)
 
           state%crop%grass%cropendact  = rid
-          flhrvendact = .true.
-          mowdm   = tagps * (1.d0 - FraLossMow)
+          state%crop%grass%flhrvendact = .true.
+          state%crop%grass%mowdm   = tagps * (1.d0 - FraLossMow)
           state%crop%wofost%lossdm  = tagps * FraLossMow
           
 ! ---     set regrowth delay
           idelay = int(afgen(state%crop%grass%DelayRegrowthTab,200,tagps))
-          idregr = daycrop + idelay
+          state%crop%grass%idregr = daycrop + idelay
 
         endif
           
 !       Check trigger to start grazing event          
-        else if (state%crop%grass%seqgrazmow(iseqgm) .eq. 1 .or. state%crop%grass%seqgrazmow(iseqgm) .eq. 3) then
+        else if (state%crop%grass%seqgrazmow(state%crop%grass%iseqgm) .eq. 1 .or. state%crop%grass%seqgrazmow(state%crop%grass%iseqgm) .eq. 3) then
 
-          flharvest = .false.
+          state%crop%grass%flHarvest = .false.
             
-          if (.not. flgrazing) then
+          if (.not. state%crop%grass%flGrazing) then
             
             ! use dry matter threshold
             if (swharvest .eq. 1) then 
@@ -1104,36 +1097,36 @@
               ! use of fixed threshold
               if (swdmgrz .eq. 1) then   
                 if (state%crop%wofost%tagp .gt. dmgrazing) then
-                  flharvest = .true.
+                  state%crop%grass%flHarvest = .true.
                 endif
               
               ! use of flexible threshold
               elseif (swdmgrz .eq. 2) then 
                 dmgrazing = afgen(state%crop%grass%dmgrztb,20,rid)
                 if (state%crop%wofost%tagp .gt. dmgrazing .or.                           &
-     &            (daygrowth .gt. maxdaygrz .and. iseqgm .gt. 1)) then
-                  flharvest = .true.
+     &            (state%crop%grass%daygrowth .gt. maxdaygrz .and. state%crop%grass%iseqgm .gt. 1)) then
+                  state%crop%grass%flHarvest = .true.
                 endif
               endif
             
             ! use fixed dates
             elseif (swharvest .eq. 2) then
-              if(tc_t1900 .gt. state%crop%grass%dateharvest(iharvest)) then
-                iharvest = iharvest + 1
-                flharvest = .true.
+              if(tc_t1900 .gt. state%crop%grass%dateharvest(state%crop%grass%iharvest)) then
+                state%crop%grass%iharvest = state%crop%grass%iharvest + 1
+                state%crop%grass%flHarvest = .true.
               endif
             endif
           endif
 
 !         In case grazing is triggered (or still occurs):
-          if (flharvest .or. flgrazing) then
+          if (state%crop%grass%flHarvest .or. state%crop%grass%flGrazing) then
           
 !           Amount of grazing kg/ha DM based on livestock density (Handboek Melkveehouderij 2013)
-            uptgraz = lsda(iseqgm)*afgen(state%crop%grass%uptgrazingtab,200,lsda(iseqgm))            
+            uptgraz = state%crop%grass%lsda(state%crop%grass%iseqgm)*afgen(state%crop%grass%uptgrazingtab,200,state%crop%grass%lsda(state%crop%grass%iseqgm))            
 
 !           Amount of shoots lost (kg/ha DM) due to droppings and treading during grazing  
-            lossgraz = lsda(iseqgm) *                                &
-     &                         afgen(state%crop%grass%lossgrazingtab,200,lsda(iseqgm))
+            lossgraz = state%crop%grass%lsda(state%crop%grass%iseqgm) *                                &
+     &                         afgen(state%crop%grass%lossgrazingtab,200,state%crop%grass%lsda(state%crop%grass%iseqgm))
 
 !           Extra losses due to treading in case pressure head is insufficient
             fralossgrz = 0.d0
@@ -1143,17 +1136,17 @@
             lossgraz = lossgraz + state%crop%wofost%tagp * fralossgrz
 
 !           Initialise Count nr of days with grazing
-            if(.not. flgrazing) then
-              daygrowth   = 0
-              idaysgraz   = 0
+            if(.not. state%crop%grass%flGrazing) then
+              state%crop%grass%daygrowth   = 0
+              state%crop%grass%idaysgraz   = 0
               flDewooling = .false.
             endif
             
 !           verify if uptake is possible: tagprest should remain after grazing
             if ((state%crop%wofost%tagp - uptgraz - lossgraz) .gt. tagprest) then
               
-              flgrazing = .true.
-              cuptgraz  = cuptgraz + uptgraz
+              state%crop%grass%flGrazing = .true.
+              state%crop%common%cuptgraz  = state%crop%common%cuptgraz + uptgraz
 
 !             distribute grazing over stems and leaves (living and dead parts)
               state%crop%wofost%wst  = state%crop%wofost%wst  -  (uptgraz+lossgraz) * state%crop%wofost%wst  / state%crop%wofost%tagp
@@ -1176,37 +1169,37 @@
           
 !             harvest during total grazing event
               state%crop%grass%cropendact = rid
-              grzdm      = grzdm + uptgraz
+              state%crop%grass%grzdm      = state%crop%grass%grzdm + uptgraz
               state%crop%wofost%lossdm     = state%crop%wofost%tagp * fralossgrz
               
 !             Check number of days with grazing
-              daysgraz  = int(afgen(state%crop%grass%daysgrazingtab,200,lsda(iseqgm)))
-              idaysgraz = idaysgraz + 1
-              if(idaysgraz .eq. daysgraz) then
-                flgrazing   = .false.
-                flhrvendact = .true.
-                if (state%crop%grass%seqgrazmow(iseqgm) .eq. 3) then
+              daysgraz  = int(afgen(state%crop%grass%daysgrazingtab,200,state%crop%grass%lsda(state%crop%grass%iseqgm)))
+              state%crop%grass%idaysgraz = state%crop%grass%idaysgraz + 1
+              if(state%crop%grass%idaysgraz .eq. daysgraz) then
+                state%crop%grass%flGrazing   = .false.
+                state%crop%grass%flhrvendact = .true.
+                if (state%crop%grass%seqgrazmow(state%crop%grass%iseqgm) .eq. 3) then
                   flDewooling  = .true.
                 endif
-                daygrowth = 0
-                iseqgm = iseqgm + 1
+                state%crop%grass%daygrowth = 0
+                state%crop%grass%iseqgm = state%crop%grass%iseqgm + 1
               endif
 
 !           Also end grazing when not enough grass remains on the field
-            elseif (flgrazing .or. swharvest .eq. 2) then
-              flgrazing        = .false.
-              flhrvendact      = .true.
+            elseif (state%crop%grass%flGrazing .or. swharvest .eq. 2) then
+              state%crop%grass%flGrazing        = .false.
+              state%crop%grass%flhrvendact      = .true.
               flearlyhrvendact = .true.
-              if (state%crop%grass%seqgrazmow(iseqgm) .eq. 3 .and. state%crop%wofost%tagp .gt. dewrest) then
+              if (state%crop%grass%seqgrazmow(state%crop%grass%iseqgm) .eq. 3 .and. state%crop%wofost%tagp .gt. state%crop%grass%dewrest) then
                 flDewooling      = .true.
                 flearlyhrvendact = .false.
               endif
-              daygrowth = 0
-              iseqgm = iseqgm + 1
+              state%crop%grass%daygrowth = 0
+              state%crop%grass%iseqgm = state%crop%grass%iseqgm + 1
             endif
 
 !           Assumption: no delay in regrowth during and after grazing (without dewooling)
-            idregr = daycrop
+            state%crop%grass%idregr = daycrop
 
 !           Dewooling after grazing event            
             if (flDewooling) then
@@ -1214,7 +1207,7 @@
               sla(1) = afgen (state%crop%common%slatb,30,rid)
               fl = afgen (state%crop%common%fltb,30,rid)
               fs = afgen (state%crop%common%fstb,30,rid)
-              state%crop%wofost%wlv = dewrest / (1.d0 + (fs/fl))
+              state%crop%wofost%wlv = state%crop%grass%dewrest / (1.d0 + (fs/fl))
               state%crop%wofost%wst = fs/fl*state%crop%wofost%wlv
               state%crop%wofost%dwlv = 0.0d0
               state%crop%wofost%dwst = 0.0d0
@@ -1231,7 +1224,7 @@
               drrt = 0.0d0
     
 !             Assumption: one day delay in regrowth after grazing
-              idregr = daycrop + 1
+              state%crop%grass%idregr = daycrop + 1
 
             endif
             
@@ -1239,7 +1232,7 @@
           
         endif
 
-        if (daycrop .ge. idregr) then
+        if (daycrop .ge. state%crop%grass%idregr) then
 
 ! ---     physiologic ageing of leaves per time step
           fysdel = max (0.0d0,(at_tav-state%crop%common%tbase)/(35.0d0-state%crop%common%tbase))  ! [SS-GR-ATM B.5]
@@ -1348,7 +1341,7 @@
 
       ! [SS-GR-CROP A5.1] mirror grass case(3) actual state
       state%crop%wofost%tagp        = state%crop%wofost%tagp
-      state%crop%common%cuptgraz    = cuptgraz
+      state%crop%common%cuptgraz    = state%crop%common%cuptgraz
 
       return
 

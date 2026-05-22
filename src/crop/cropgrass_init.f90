@@ -40,7 +40,7 @@ contains
          ! Crop state — DEFERRED Phase C3
          ! tdwi/laiem/rgrlai retired
          ! Start-of-growth trigger — DEFERRED Phase C3
-         swtsum, tsumtemp, tsumtime, tsumdepth,                               &
+         tsumtemp, tsumtime, tsumdepth,                                       &  ! swtsum retired
          ! Green area — DEFERRED Phase C3; tbase retired
          ! slatb/ssa/span retired
          ! Assimilation — DEFERRED Phase C3
@@ -177,7 +177,7 @@ contains
       state%crop%common%rgrlai = cfg%rgrlai
 
       ! Part 4: start-of-growth trigger (readgrass lines 3609-3614)
-      swtsum = cfg%swtsum
+      state%crop%grass%swtsum = cfg%swtsum
       ! swtsum=2 is stub-guarded above; swtsum=0,1 need no extra fields.
 
       ! Part 5: green area (readgrass lines 3617-3620)

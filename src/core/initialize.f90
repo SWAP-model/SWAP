@@ -35,12 +35,8 @@
       
 ! --- meteo variables
       ! [SS-TC] daymeteo/rainrec/swmeteo/wrecord/yearmeteo retired to state%timecontrol (ADR 0041)
-      idregr             = 0
-      iharvest           = 1
       ilvold             = 0
       ilvoldpot          = 0
-      iseqgm             = 0
-      iseqgmpot          = 0
       swetsine           = 0
       ! [SS-ATM A-2.6] aintcdt/atmdem/caintc/cevap/cgrai/cnrai/cpeva/cptra retired to state%atmosphere
       daylp              = 0.0d0
@@ -604,15 +600,11 @@
       ! flWrtNonox         = .false.
 
       daycrop            = 0 
-      daygrowth          = 0
-      daygrowthpot       = 0
       idsl               = 0 
       noddrz             = 0 
       atmin7             = 0.0d0
       avevaptb           = 0.0d0 
       avprectb           = 0.0d0 
-      cuptgraz           = 0.0d0 
-      cuptgrazpot        = 0.0d0 
       dlc                = 0.0d0 
       dlo                = 0.0d0 
       fbl                = 0.0d0 
@@ -648,13 +640,8 @@
 ! --- rooting
 
 ! --- harvest grassland
-      lsda               = 0.0d0
       
       flanthesis         = .false.
-      flgrazing          = .false.
-      flgrazingpot       = .false.
-      flharvest          = .false.
-      flharvestpot       = .false. 
 
       return
       end subroutine
