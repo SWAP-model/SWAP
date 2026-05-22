@@ -155,6 +155,18 @@ module atmosphere_state_mod
       real(real64) :: grain(96) = 0.0_real64    !! sub-daily gross rain
       real(real64) :: nrain(96) = 0.0_real64    !! sub-daily net rain
 
+      ! [GR-ATM-CLEAN Phase D] migrated from module MeteoVars (meteo_vars.f90).
+      !> Remaining interception storage at start of timestep (cm).
+      !> Persists across iterations of the sub-daily dayparts loop and across days.
+      real(real64) :: restint = 0.0_real64
+
+      !> Sub-daily precipitation per record (cm). Populated by ReadMeteoDay,
+      !> consumed by ProcessMeteoDay's sub-daily branch. Allocation size = nmetdetail (<= 96).
+      real(real64) :: arain_subdaily(96) = 0.0_real64
+
+      !> Sub-daily wind speed per record (m/s). Same lifetime as arain_subdaily.
+      real(real64) :: awind_subdaily(96) = 0.0_real64
+
       ! [SS-GR-ATM A5] Block 3: derived meteo scalars
       real(real64) :: Tav        = 0.0_real64    !! daily mean air temp
       real(real64) :: tavd       = 0.0_real64    !! daytime mean air temp
