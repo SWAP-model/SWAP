@@ -26,7 +26,7 @@ module meteo_mod
   use meteo_process_mod, only: ReadMeteoDay, ResetMetFlx
   use interception_mod, only: VonHHBraden, Gash, ruttervw, DivIntercep
   use et_mod, only: PenMon, reduceva, pm_inputs_t, pm_outputs_t
-  use runoff_mod, only: CNmethod
+  use runoff_mod, only: cn_step
   use swap_state_mod, only: swap_state_t
   use swap_config_mod, only: swap_config_t   ! [SS-GR-ATM B24] config added for meteo switches
 
@@ -86,7 +86,7 @@ contains
     use swap_array_dimensions, only: magrs
     use MeteoVars
     use array_utils, only: afgen
-    use runoff_mod, only: CNmethod
+    use runoff_mod, only: cn_step
     use interception_mod, only: VonHHBraden, Gash, ruttervw, msw1eic, DivIntercep
     use swap_constants, only: nihil, small
     use, intrinsic :: iso_fortran_env, only: real64
@@ -463,7 +463,7 @@ contains
         state%atmosphere%nraidt  = netrainflux
         if (swuseCN == 1) then
           ! SS-ATM A-2.6: state added — CNmethod needs nraidt/melt from state%atmosphere
-          call CNmethod(2, state)
+          call cn_step(state)
           state%atmosphere%nraidt = state%atmosphere%nraidt - state%atmosphere%Runoff_CN   ! [SS-GR-ATM B24]
         end if
         state%atmosphere%aintcdt = rainflux - state%atmosphere%nraidt  ! aintcdt involves ONLY interception of RAIN

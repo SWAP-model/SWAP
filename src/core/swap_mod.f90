@@ -106,7 +106,7 @@ contains
       use surfacewater_mod, only: SurfaceWater
       use tillage_mod,   only : DoTillage
       use swap_log, only: log_info
-      use runoff_mod, only: CNmethod
+      use runoff_mod, only: cn_init
       use snow_mod, only: snow_init
       use temperature_mod, only: Temperature
       use solute_mod, only: solute, solute_init
@@ -381,7 +381,7 @@ contains
 !  initialize SoilWater rate/state variables
    call SoilWater(1, state)
    ! SS-ATM A-2.6: state added — CNmethod signature updated for retired nraidt/melt
-   if (swuseCN == 1) call CNmethod(1, state)
+   if (swuseCN == 1) call cn_init(state)
 
 !  Allocate and initialise drainage state arrays.  Config is passed so
 !  drainage_init can seed state%drainage%wetper(1) from config%drain%wetper

@@ -22,49 +22,29 @@ module runoff_mod
    implicit none
    private
 
-   public :: CNmethod
+   public :: cn_init, cn_step
 
 contains
 
-  subroutine CNmethod(Itask, state)
-    !> Calculate surface runoff using the SCS Curve Number method
-    !!
-    !! This subroutine operates in two modes controlled by the Itask parameter:
-    !! - Itask=1: Initialization - validates time series, identifies top soil layer (0-10 cm),
-    !!            and calculates reference water content for moisture corrections
-    !! - Itask=2: Dynamic calculation - computes runoff for the current timestep using
-    !!            moisture-adjusted CN values
-    !!
-    !! ## Moisture Correction Options (wc_cor)
-    !! - 0: No moisture correction (CN = CNref)
-    !! - 1: Field capacity based (\(h = -100\) cm and \(h = -16000\) cm)
-    !! - 2: Saturation based (\(h = 0\) cm and \(h = -16000\) cm)
-    !!
-    !! ## References
-    !! USDA-NRCS National Engineering Handbook, Part 630 Hydrology
-    !!
-    !! @warning CNref values > 170 will cause numerical issues in CNdry calculation
+  !> Initialize the SCS Curve Number runoff method (formerly CNmethod(Itask=1, ...))
+  !!
+  !! Validates the CNtimTAB time series ordering, identifies the top soil layer
+  !! (0-10 cm), and computes a reference water content for moisture corrections.
+  subroutine cn_init(state)
     ! [SS-ATM A-2.6] nraidt/melt retired from variables; state added to read from state%atmosphere
     ! [SS-SWC S-2.12B] theta retired — read via state%soilwater%theta
     ! SS-TC TC-9: t1900 removed from only-list; read via state%timecontrol.
     ! [SS-GR-ATM B22] CN symbols → state%atmosphere%X (nod10_cn/icn_atm/z10_cn added to atmosphere_state)
     ! GR-BH: numnod, zbotcp, dz migrated to state%mesh%X
-    use soilhydraulics_utils, only: watcon
     implicit none
     ! global
-    integer, intent(in)  :: Itask
     type(swap_state_t), intent(inout) :: state  ! [SS-ATM A-2.6] for retired nraidt/melt
     ! local
     integer              :: i
-    real(8)              :: wc1, wc2, CN, S, Ia
-    ! Note: nod10_cn/icn_atm/z10_cn migrated to state%atmosphere (B22)
+    real(8)              :: wc1, wc2
 
     ! SS-TC TC-9: t1900 read via state%timecontrol (tc_* alias).
     associate( tc_t1900 => state%timecontrol%t1900 )  ! TC-9
-
-    select case (Itask)
-    ! initialization; calculate and store some constants
-    case (1)
 
       state%atmosphere%icn_atm = 0
       ! check if times in CNtimeTAB are in ascending order
@@ -109,12 +89,28 @@ contains
           end if
       end do
       state%atmosphere%ThetaRef = state%atmosphere%ThetaRef/state%atmosphere%z10_cn
-      
+
       !!!t1900_old = int(t1900) - 1 ! for testing intermediate output
-      
-    ! dynamic part: calculate runoff   
-    case (2)
-      
+
+    end associate  ! tc_t1900 => state%timecontrol [TC-9]
+
+  end subroutine cn_init
+
+
+  !> Compute runoff using the SCS Curve Number method (formerly CNmethod(Itask=2, ...))
+  !!
+  !! Updates the CN time-series index, computes moisture-adjusted CN values
+  !! (per wc_cor mode), and writes Runoff_CN into state%atmosphere.
+  subroutine cn_step(state)
+    implicit none
+    ! global
+    type(swap_state_t), intent(inout) :: state
+    ! local
+    integer              :: i
+    real(8)              :: CN, S, Ia
+
+    associate( tc_t1900 => state%timecontrol%t1900 )  ! TC-9
+
       ! see if t1900 has moved ahead in CNtimTAB; icn_atm can never exceed last entry
       !  if (icn_atm < iCNtab .and. t1900 >= CNtimTAB(icn_atm+1)) icn_atm = icn_atm + 1
       ! Update position in CN time series if time has advanced (do while is more efficient if time steps are large and CN time series is long)
@@ -148,19 +144,15 @@ contains
       else
           state%atmosphere%Runoff_CN = 0.0d0
       end if
-      
+
       ! for testing intermediate output
       !!!if (int(t1900) > t1900_old) then
       !!!   write (123, '(7F20.6)') t1900, nraidt, runoff_cn, cn, wc10, thetaref, melt
       !!!   t1900_old = int(t1900)
       !!!end if
-      
-    case default
-      call fatalerr_collected ('CNmethod', 'Illegal Itask option')
-    end select
 
     end associate  ! tc_t1900 => state%timecontrol [TC-9]
 
-  end subroutine CNmethod
+  end subroutine cn_step
 
 end module runoff_mod
