@@ -516,7 +516,7 @@ module meteo_mod
 
   use meteo_process_mod, only: ReadMeteoDay, ResetMetFlx
   use interception_mod, only: VonHHBraden, Gash, ruttervw, DivIntercep
-  use et_mod, only: PenMon, reduceva
+  use et_mod, only: PenMon, reduceva, pm_inputs_t, pm_outputs_t
   use runoff_mod, only: CNmethod
   use swap_state_mod, only: swap_state_t
   use swap_config_mod, only: swap_config_t   ! [SS-GR-ATM B24] config added for meteo switches
@@ -590,6 +590,9 @@ contains
 
     real(8)  rcs
     data     rcs/0.15d0/
+
+    type(pm_inputs_t)  :: pmi
+    type(pm_outputs_t) :: pmo
 
     ! SS-ATM Phase 1 Task A-1.8: ASSOCIATE aliases for atmosphere flat-scalar dual-writes
     ! SS-TC TC-9: tc_* aliases for daynr, t, dt, flmetdetail added.
@@ -682,15 +685,53 @@ contains
 
         ! Calculate evapotranspiration using Penman-Monteith: et0, ew0, es0 (mm/d)
         ! in case of daily meteo (swmetdetail = 0) irecord is always 1
-        call PenMon (logf,swscre,tc_daynr,state%cfg%meteo%lat,state%cfg%meteo%alt,state%cfg%meteo%altw,angstroma, &
-                     angstromb,rcs,rad,state%atmosphere%Tav,hum,win,state%crop%common%rsc, &
-                     state%crop%es0,state%crop%et0,state%crop%ew0, &
-                     state%crop%swcf,state%crop%common%ch, &
-                     state%crop%flCropEmergence,daylp,tc_flmetdetail,irecord, &
-                     config%meteo%nmetdetail,state%crop%common%albedo,tmn,tmx,state%crop%common%rsw,difpp,dsinbe,atmtr, &
-                     Edirect,Tdirect,Tdirectwet,rsoil,state%cfg%meteo%swdivide, &
-                     state%crop%kdif,state%crop%kdir, &
-                     state%crop%lai,Edirectpond)
+        ! Pack PM inputs.
+        pmi%daynr           = tc_daynr
+        pmi%irecord         = irecord
+        pmi%nmetdetail      = config%meteo%nmetdetail
+        pmi%flmetdetail     = tc_flmetdetail
+        pmi%flCropEmergence = state%crop%flCropEmergence
+        pmi%swcf            = state%crop%swcf
+        pmi%swdivide        = state%cfg%meteo%swdivide
+
+        pmi%lat  = state%cfg%meteo%lat
+        pmi%alt  = state%cfg%meteo%alt
+        pmi%altw = state%cfg%meteo%altw
+        pmi%a    = angstroma
+        pmi%b    = angstromb
+        pmi%rcs  = rcs
+
+        pmi%rad    = rad
+        pmi%tav    = state%atmosphere%Tav
+        pmi%tmn    = tmn
+        pmi%tmx    = tmx
+        pmi%hum    = hum
+        pmi%win    = win
+        pmi%atmtr  = atmtr
+        pmi%difpp  = difpp
+        pmi%dsinbe = dsinbe
+        pmi%daylp  = daylp
+
+        pmi%rsc    = state%crop%common%rsc
+        pmi%rsw    = state%crop%common%rsw
+        pmi%ch     = state%crop%common%ch
+        pmi%albedo = state%crop%common%albedo
+        pmi%kdif   = state%crop%kdif
+        pmi%kdir   = state%crop%kdir
+        pmi%lai    = state%crop%lai
+
+        pmi%rsoil  = rsoil
+
+        call PenMon(pmi, pmo, logf, swscre)
+
+        ! Unpack PM outputs to existing state / locals.
+        state%crop%es0 = pmo%es0
+        state%crop%et0 = pmo%et0
+        state%crop%ew0 = pmo%ew0
+        Edirect        = pmo%Edirect
+        Tdirect        = pmo%Tdirect
+        Tdirectwet     = pmo%Tdirectwet
+        Edirectpond    = pmo%Edirectpond
 
         if (.not. state%crop%flCropEmergence) then
           ! no crop
