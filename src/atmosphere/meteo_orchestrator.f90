@@ -153,127 +153,11 @@ contains
     do 1000 irecord = 1, ndayparts
 
       ! === Section 4: Calculate evapotranspiration (et0, ew0, es0) ===
-      ! Reference evapotranspiration has been specified
-      if (config%meteo%swmetdetail.eq.0 .and. config%meteo%swetr.eq.1) then
-        if (.not. state%crop%flCropEmergence) then
-          ! no crop
-          state%crop%et0 = 0.0d0
-          state%crop%ew0 = 0.0d0
-          state%crop%es0 = etr
-          if (state%crop%swcfbs.eq.1) state%crop%es0 = state%crop%cfbs*etr
-        else
-          ! crop is present
-          if (state%crop%swcf.eq.1 .or. state%crop%swcf.eq.3) then
-            state%crop%et0 = state%crop%common%cf*etr
-            if (state%crop%swcf .eq. 1) then
-              state%crop%ew0 = state%crop%common%cf*etr
-            else
-              state%crop%ew0 = state%crop%fixed%cfeic*etr
-            endif
-          endif
-          state%crop%es0 = etr
-          if (state%crop%swcfbs.eq.1) state%crop%es0 = state%crop%cfbs*etr
-        endif
-
-      ! Reference evapotranspiration must be calculated
-      elseif (config%meteo%swmetdetail.eq.1 .or. config%meteo%swetr.eq.0) then
-
-        if (config%meteo%swmetdetail.eq.1) then
-          ! Define weather variables of current record
-          rad = state%atmosphere%arad(irecord) / metperiod     ! from j/m2/period to j/m2/d
-          state%atmosphere%Tav = state%atmosphere%atav(irecord)
-          hum = state%atmosphere%ahum(irecord)
-          win = state%atmosphere%awind_subdaily(irecord)
-        endif
-
-        ! Calculate evapotranspiration using Penman-Monteith: et0, ew0, es0 (mm/d)
-        ! in case of daily meteo (swmetdetail = 0) irecord is always 1
-        ! Pack PM inputs.
-        pmi%daynr           = tc_daynr
-        pmi%irecord         = irecord
-        pmi%nmetdetail      = config%meteo%nmetdetail
-        pmi%flmetdetail     = tc_flmetdetail
-        pmi%flCropEmergence = state%crop%flCropEmergence
-        pmi%swcf            = state%crop%swcf
-        pmi%swdivide        = state%cfg%meteo%swdivide
-
-        pmi%lat  = state%cfg%meteo%lat
-        pmi%alt  = state%cfg%meteo%alt
-        pmi%altw = state%cfg%meteo%altw
-        pmi%a    = angstroma
-        pmi%b    = angstromb
-        pmi%rcs  = rcs
-
-        pmi%rad    = rad
-        pmi%tav    = state%atmosphere%Tav
-        pmi%tmn    = tmn
-        pmi%tmx    = tmx
-        pmi%hum    = hum
-        pmi%win    = win
-        pmi%atmtr  = atmtr
-        pmi%difpp  = difpp
-        pmi%dsinbe = dsinbe
-        pmi%daylp  = daylp
-
-        pmi%rsc    = state%crop%common%rsc
-        pmi%rsw    = state%crop%common%rsw
-        pmi%ch     = state%crop%common%ch
-        pmi%albedo = state%crop%common%albedo
-        pmi%kdif   = state%crop%kdif
-        pmi%kdir   = state%crop%kdir
-        pmi%lai    = state%crop%lai
-
-        pmi%rsoil  = rsoil
-
-        call PenMon(pmi, pmo, logf, swscre)
-
-        ! Unpack PM outputs to existing state / locals.
-        state%crop%es0 = pmo%es0
-        state%crop%et0 = pmo%et0
-        state%crop%ew0 = pmo%ew0
-        Edirect        = pmo%Edirect
-        Tdirect        = pmo%Tdirect
-        Tdirectwet     = pmo%Tdirectwet
-        Edirectpond    = pmo%Edirectpond
-
-        if (.not. state%crop%flCropEmergence) then
-          ! no crop
-          if (state%crop%swcfbs .eq. 1) then
-            if (state%crop%swcf .eq. 1) then
-              state%crop%es0 = state%crop%cfbs*state%crop%et0
-            else
-              state%crop%es0 = state%crop%cfbs*state%crop%es0
-            endif
-          endif
-          state%crop%et0 = 0.0d0
-          if (config%meteo%swmetdetail.eq.1 .and. (state%crop%swcf.eq.1 .or. state%crop%swcf.eq.3)) then
-            if (state%crop%swcf.eq.1) then
-              state%crop%ew0 = state%crop%common%cf*state%crop%ew0
-            else
-              state%crop%ew0 = state%crop%fixed%cfeic*state%crop%ew0
-            endif
-          endif
-        else
-          ! crop is present
-          if (state%crop%swcfbs .eq. 1) then
-            if (state%crop%swcf .eq. 1) then
-              state%crop%es0 = state%crop%cfbs*state%crop%et0
-            else
-              state%crop%es0 = state%crop%cfbs*state%crop%es0
-            endif
-          endif
-          if (state%crop%swcf.eq.1 .or. state%crop%swcf.eq.3) then
-            state%crop%et0 = state%crop%common%cf*state%crop%et0
-            if (state%crop%swcf.eq.1) then
-              state%crop%ew0 = state%crop%common%cf*state%crop%ew0
-            else
-              state%crop%ew0 = state%crop%fixed%cfeic*state%crop%ew0
-            endif
-          endif
-        endif
-
-      endif
-      ! [SS-GR-ATM B24] et0/ew0/es0 written directly to state%crop above
+      call compute_reference_et(state, config, irecord, etr, hum, win, rcs, pmo)
+      Edirect     = pmo%Edirect
+      Tdirect     = pmo%Tdirect
+      Tdirectwet  = pmo%Tdirectwet
+      Edirectpond = pmo%Edirectpond
 
       ! === Section 5: Interception option NHI (adapted Rutter model) ===
 
@@ -569,6 +453,154 @@ contains
       call DivIntercep (aintc, state)
 
   end subroutine apply_interception_step
+
+  !> Private helper: Section 4 reference ET (etr-direct or PenMon + crop-factor adjustments).
+  !! For swmetdetail==0 .and. swetr==1: uses supplied etr directly.
+  !! Otherwise: PenMon pack/call/unpack + post-call swcf/swcfbs adjustments.
+  !! Writes state%crop%es0/et0/ew0 and returns pmo for caller to unpack
+  !! Edirect/Tdirect/Tdirectwet/Edirectpond.
+  subroutine compute_reference_et(state, config, irecord, etr, hum_in, win_in, rcs, pmo)
+    use variables, only: rad, logf, angstroma, angstromb, daylp, tmn, tmx, difpp, &
+                         dsinbe, atmtr, rsoil
+    type(swap_state_t),  intent(inout) :: state
+    type(swap_config_t), intent(in)    :: config
+    integer, intent(in) :: irecord
+    real(8), intent(in) :: etr, hum_in, win_in, rcs
+    type(pm_outputs_t), intent(out) :: pmo
+
+    type(pm_inputs_t) :: pmi
+    real(8) :: rad_loc, hum_loc, win_loc
+
+    associate( &
+       tc_daynr       => state%timecontrol%daynr,       &
+       tc_flmetdetail => state%timecontrol%flmetdetail, &
+       metperiod      => state%timecontrol%metperiod,   &
+       swscre         => state%timecontrol%swscre       )
+
+    ! Reference evapotranspiration has been specified
+    if (config%meteo%swmetdetail.eq.0 .and. config%meteo%swetr.eq.1) then
+      if (.not. state%crop%flCropEmergence) then
+        ! no crop
+        state%crop%et0 = 0.0d0
+        state%crop%ew0 = 0.0d0
+        state%crop%es0 = etr
+        if (state%crop%swcfbs.eq.1) state%crop%es0 = state%crop%cfbs*etr
+      else
+        ! crop is present
+        if (state%crop%swcf.eq.1 .or. state%crop%swcf.eq.3) then
+          state%crop%et0 = state%crop%common%cf*etr
+          if (state%crop%swcf .eq. 1) then
+            state%crop%ew0 = state%crop%common%cf*etr
+          else
+            state%crop%ew0 = state%crop%fixed%cfeic*etr
+          endif
+        endif
+        state%crop%es0 = etr
+        if (state%crop%swcfbs.eq.1) state%crop%es0 = state%crop%cfbs*etr
+      endif
+
+    ! Reference evapotranspiration must be calculated
+    elseif (config%meteo%swmetdetail.eq.1 .or. config%meteo%swetr.eq.0) then
+
+      if (config%meteo%swmetdetail.eq.1) then
+        ! Define weather variables of current record
+        rad_loc = state%atmosphere%arad(irecord) / metperiod     ! from j/m2/period to j/m2/d
+        state%atmosphere%Tav = state%atmosphere%atav(irecord)
+        hum_loc = state%atmosphere%ahum(irecord)
+        win_loc = state%atmosphere%awind_subdaily(irecord)
+      else
+        rad_loc = rad
+        hum_loc = hum_in
+        win_loc = win_in
+      endif
+
+      ! Calculate evapotranspiration using Penman-Monteith: et0, ew0, es0 (mm/d)
+      ! in case of daily meteo (swmetdetail = 0) irecord is always 1
+      ! Pack PM inputs.
+      pmi%daynr           = tc_daynr
+      pmi%irecord         = irecord
+      pmi%nmetdetail      = config%meteo%nmetdetail
+      pmi%flmetdetail     = tc_flmetdetail
+      pmi%flCropEmergence = state%crop%flCropEmergence
+      pmi%swcf            = state%crop%swcf
+      pmi%swdivide        = state%cfg%meteo%swdivide
+
+      pmi%lat  = state%cfg%meteo%lat
+      pmi%alt  = state%cfg%meteo%alt
+      pmi%altw = state%cfg%meteo%altw
+      pmi%a    = angstroma
+      pmi%b    = angstromb
+      pmi%rcs  = rcs
+
+      pmi%rad    = rad_loc
+      pmi%tav    = state%atmosphere%Tav
+      pmi%tmn    = tmn
+      pmi%tmx    = tmx
+      pmi%hum    = hum_loc
+      pmi%win    = win_loc
+      pmi%atmtr  = atmtr
+      pmi%difpp  = difpp
+      pmi%dsinbe = dsinbe
+      pmi%daylp  = daylp
+
+      pmi%rsc    = state%crop%common%rsc
+      pmi%rsw    = state%crop%common%rsw
+      pmi%ch     = state%crop%common%ch
+      pmi%albedo = state%crop%common%albedo
+      pmi%kdif   = state%crop%kdif
+      pmi%kdir   = state%crop%kdir
+      pmi%lai    = state%crop%lai
+
+      pmi%rsoil  = rsoil
+
+      call PenMon(pmi, pmo, logf, swscre)
+
+      ! Unpack PM outputs to existing state.
+      state%crop%es0 = pmo%es0
+      state%crop%et0 = pmo%et0
+      state%crop%ew0 = pmo%ew0
+
+      if (.not. state%crop%flCropEmergence) then
+        ! no crop
+        if (state%crop%swcfbs .eq. 1) then
+          if (state%crop%swcf .eq. 1) then
+            state%crop%es0 = state%crop%cfbs*state%crop%et0
+          else
+            state%crop%es0 = state%crop%cfbs*state%crop%es0
+          endif
+        endif
+        state%crop%et0 = 0.0d0
+        if (config%meteo%swmetdetail.eq.1 .and. (state%crop%swcf.eq.1 .or. state%crop%swcf.eq.3)) then
+          if (state%crop%swcf.eq.1) then
+            state%crop%ew0 = state%crop%common%cf*state%crop%ew0
+          else
+            state%crop%ew0 = state%crop%fixed%cfeic*state%crop%ew0
+          endif
+        endif
+      else
+        ! crop is present
+        if (state%crop%swcfbs .eq. 1) then
+          if (state%crop%swcf .eq. 1) then
+            state%crop%es0 = state%crop%cfbs*state%crop%et0
+          else
+            state%crop%es0 = state%crop%cfbs*state%crop%es0
+          endif
+        endif
+        if (state%crop%swcf.eq.1 .or. state%crop%swcf.eq.3) then
+          state%crop%et0 = state%crop%common%cf*state%crop%et0
+          if (state%crop%swcf.eq.1) then
+            state%crop%ew0 = state%crop%common%cf*state%crop%ew0
+          else
+            state%crop%ew0 = state%crop%fixed%cfeic*state%crop%ew0
+          endif
+        endif
+      endif
+
+    endif
+
+    end associate
+
+  end subroutine compute_reference_et
 
 end module meteo_mod
 
