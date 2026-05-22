@@ -56,7 +56,7 @@ contains
     if (state%atmosphere%isua .eq. 0) rpd = (grai_in + state%crop%gird)*10.0d0
 
     ! Exponential relation between soil cover and lai
-    cofbb = 1.0d0 - dexp(-1.0d0*state%crop%kdif*state%crop%kdir*state%crop%lai)
+    cofbb = 1.0d0 - exp(-1.0d0*state%crop%kdif*state%crop%kdir*state%crop%lai)
     cofbb = min(cofbb,1.0d0)
 
     ! Interception: evaporation of intercepted precipitation in cm
@@ -132,7 +132,7 @@ contains
     ! Amount of rainfall to saturate canopy
     if ( (1.0d0 - avevap/avprec) .gt. 1.0d-4) then
       psatcan = -avprec*scanopy/avevap * &
-                dlog(1.0d0 - avevap/avprec)
+                log(1.0d0 - avevap/avprec)
     else
       psatcan = avprec*scanopy/avevap
     endif

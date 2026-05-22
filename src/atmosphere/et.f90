@@ -242,7 +242,7 @@ contains
           ! Sub-daily: calculate astronomical parameters
           radial = PI / 180.0d0
           dec = -asin(sin(23.45d0*radial) * &
-                      cos(2.0d0*PI*dble(inputs%daynr+10) / 365.0d0))
+                      cos(2.0d0*PI*real(inputs%daynr+10, real64) / 365.0d0))
 
           sinld = sin(radial*inputs%lat) * sin(dec)
           cosld = cos(radial*inputs%lat) * cos(dec)
@@ -261,8 +261,8 @@ contains
 
           sunrise = 0.5d0 - dayl / 48.0d0
           sunset = 0.5d0 + dayl / 48.0d0
-          startrec = dble(real(inputs%irecord-1) / real(inputs%nmetdetail))
-          endrec = dble(real(inputs%irecord) / real(inputs%nmetdetail))
+          startrec = real(real(inputs%irecord-1) / real(inputs%nmetdetail), real64)
+          endrec = real(real(inputs%irecord) / real(inputs%nmetdetail), real64)
       else
           ! Daily: use provided parameters
           ! Note: sinld, cosld would come from astro() call in wrapper

@@ -21,6 +21,7 @@
 !! 4. [[ETSine]] - distributes potential transpiration & evaporation according to sine wave; called in MeteoDT (optional)
 module meteodt_mod
 
+   use, intrinsic :: iso_fortran_env, only: real64
    use swap_state_mod, only: swap_state_t
    implicit none
    private
@@ -199,7 +200,7 @@ contains
                if (state%cfg%meteo%swrain .eq. 1) then
                   ! Mean rainfall intensities are specified
                   rainflux = afgen(state%cfg%meteo%raintab, 60, day(i))
-                  raintime = dmin1(0.99d0, rainam(i)/rainflux)
+                  raintime = min(0.99d0, rainam(i)/rainflux)
 
                elseif (state%cfg%meteo%swrain .eq. 2) then
                   ! Rainfall durations are specified
@@ -211,11 +212,11 @@ contains
                else
                   ! First raintime of a day: closure of last period of former day with rain = 0
                   rainrec = rainrec + 2
-                  raintimearray(rainrec) = dble(i - 2) + tc_tcum
+                  raintimearray(rainrec) = real(i - 2, real64) + tc_tcum
                   rainfluxarray(rainrec) = 0.d0
                end if
                ! Second raintime of a day: closure of first period of the day, rain = rainam
-               raintimearray(rainrec + 1) = dble(i - 2) + tc_tcum + raintime
+               raintimearray(rainrec + 1) = real(i - 2, real64) + tc_tcum + raintime
                rainfluxarray(rainrec + 1) = rainam(i)/raintime
 
             end if
@@ -256,7 +257,7 @@ contains
                   araihlp(j) = 0.d0
                end do
                ! In case of rain event exceeding current day, calculate weights for assigning parts to current and next day
-               wght = (1.d0 - (raintimearray(i - 1) - dble(int(raintimearray(i - 1)))))/ &
+               wght = (1.d0 - (raintimearray(i - 1) - real(int(raintimearray(i - 1)), real64)))/ &
                       (raintimearray(i) - raintimearray(i - 1))
                araihlp(j) = araihlp(j) + rainamount(i)*wght
                rdayold = rday

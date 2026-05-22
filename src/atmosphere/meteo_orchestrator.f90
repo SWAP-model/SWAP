@@ -124,7 +124,7 @@ contains
       if (croptype(state%crop%common%icrop).eq.1 .and. state%crop%common%swgc.eq.2) then   ! [GR-CROP C3]
         gctp  = gc
       else
-        gctp  = 1.0d0 - dexp(-1.0d0*state%crop%kdir*state%crop%kdif*state%crop%lai)
+        gctp  = 1.0d0 - exp(-1.0d0*state%crop%kdir*state%crop%kdif*state%crop%lai)
         if (gctp .lt. 1.0d-5) then
           state%atmosphere%siccapact = 0.0d0   ! [SS-GR-ATM B24] direct state write
         endif
@@ -244,7 +244,7 @@ contains
         if (croptype(state%crop%common%icrop).eq.1 .and. state%crop%common%swgc.eq.2) then
           gctp  = gc
         elseif (croptype(state%crop%common%icrop).eq.1 .and. state%crop%common%swgc.eq.1) then
-          gctp  = 1.0d0 - dexp(-1.0d0*state%crop%kdir*state%crop%kdif*state%crop%lai)
+          gctp  = 1.0d0 - exp(-1.0d0*state%crop%kdir*state%crop%kdif*state%crop%lai)
         endif
         if (gctp .lt. 1.0d-5) then
           state%atmosphere%siccapact = 0.0d0   ! [SS-GR-ATM B24] direct state write
@@ -296,8 +296,8 @@ contains
     enddo
 
     ! Calculate saturated vapour pressure [kpa]
-    svp = 0.3055d0*(dexp(17.27d0*tmn/(tmn+237.3d0)) + &
-                    dexp(17.27d0*tmx/(tmx+237.3d0)))
+    svp = 0.3055d0*(exp(17.27d0*tmn/(tmn+237.3d0)) + &
+                    exp(17.27d0*tmx/(tmx+237.3d0)))
     ! Calculate relative humidity [fraction]
     state%atmosphere%rh = min(hum/svp,1.0d0)   ! [SS-GR-ATM B24] direct state write
     ! [SS-GR-ATM B.5] rh dual-write to legacy global RETIRED: no crop consumers remain
@@ -594,7 +594,7 @@ contains
        at_ptra => state%atmosphere%ptra )
 
     ! Potential soil evaporation (peva) [cm/d]
-    at_peva = max(0.0d0, (state%crop%es0*dexp(-1.0d0*state%crop%kdir*state%crop%kdif*state%crop%lai)*0.1d0))
+    at_peva = max(0.0d0, (state%crop%es0*exp(-1.0d0*state%crop%kdir*state%crop%kdif*state%crop%lai)*0.1d0))
     if (state%crop%swcf.ne.3 .or. (config%meteo%swmetdetail.eq.0 .and. state%crop%common%swinter.ne.3)) then
       at_peva = max(0.0d0,(1.0d0-wfrac)*at_peva)
     end if

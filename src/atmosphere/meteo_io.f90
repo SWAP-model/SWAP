@@ -142,8 +142,8 @@ contains
 
       if (state%atmosphere%rh.ge.-98.0d0) then
         ! Calculate saturated vapour pressure [kpa]
-        svp = 0.3055d0*(dexp(17.27d0*tmn/(tmn+237.3d0)) + &
-                        dexp(17.27d0*tmx/(tmx+237.3d0)))
+        svp = 0.3055d0*(exp(17.27d0*tmn/(tmn+237.3d0)) + &
+                        exp(17.27d0*tmx/(tmx+237.3d0)))
         ! Calculate relative humidity [fraction]
         state%atmosphere%rh = min(hum/svp,1.0d0)   ! [SS-GR-ATM B23] direct state write
       endif
