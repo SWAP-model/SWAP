@@ -17,7 +17,7 @@ module et_mod
     implicit none
     private
 
-  public :: PenMon, PenMon_calc, reduceva
+  public :: PenMon, PenMon_calc, reduceva_daily, reduceva_dt
   public :: pm_inputs_t, pm_outputs_t
 
   type :: pm_inputs_t
@@ -567,7 +567,28 @@ contains
       !! - rsigni: threshold rainfall amount
       !! - spev, saev: state variables for Boesten-Stroosnijder method
       !! @endnote
-      subroutine reduceva (task, nrai, state)
+      !> Daily-basis soil evaporation reduction (formerly reduceva(task=1, ...))
+      subroutine reduceva_daily(nrai, state)
+        implicit none
+        real(8),            intent(in)    :: nrai
+        type(swap_state_t), intent(inout) :: state
+        call reduceva_apply(1, nrai, state, daily=.true.)
+      end subroutine reduceva_daily
+
+      !> Sub-daily soil evaporation reduction (formerly reduceva(task=2, ...))
+      subroutine reduceva_dt(nrai, state)
+        implicit none
+        real(8),            intent(in)    :: nrai
+        type(swap_state_t), intent(inout) :: state
+        call reduceva_apply(2, nrai, state, daily=.false.)
+      end subroutine reduceva_dt
+
+      !> Shared body for reduceva_daily / reduceva_dt (private helper).
+      !!
+      !! task_flag is forwarded to black_reduction (which still uses it to
+      !! gate daily-vs-dt formulas internally). The daily logical flag
+      !! selects the timestep value (1.0 d vs tc_dt).
+      subroutine reduceva_apply(task_flag, nrai, state, daily)
       ! [SS-SWC S-2.12B] pond retired — read via state%soilwater%pond
       ! SS-TC TC-11: dt, fldaystart read via state%timecontrol tc_* aliases.
       ! [SS-GR-ATM B2] DEFERRED — swredu/cofred/rsigni config paths verified
@@ -585,20 +606,17 @@ contains
       implicit none
 
         ! Arguments
-        integer, intent(in) :: task
-          !! Task selector: 1 = daily basis, 2 = timestep basis
+        integer, intent(in) :: task_flag
+          !! Forwarded to black_reduction: 1 = daily, 2 = sub-daily
         real(8), intent(in) :: nrai
           !! Rainfall amount [mm]
         type(swap_state_t), intent(inout) :: state
           !! Simulation state (atmosphere fields dual-written here)
+        logical, intent(in) :: daily
+          !! .true. selects daily timestep (1 d); .false. uses tc_dt
 
         ! Local variables
         real(8) :: timestep
-
-        ! Validate task
-        if (task /= 1 .and. task /= 2) then
-            call fatalerr_collected('reduceva', 'Illegal value for TASK')
-        end if
 
         ! SS-TC TC-11: dt, flDayStart read via state%timecontrol tc_* aliases.
         associate( &
@@ -610,7 +628,7 @@ contains
             at_saev    => state%atmosphere%saev      &
         )
 
-        if (task == 1) then
+        if (daily) then
             timestep = 1.0d0  ! Daily
         else
             timestep = tc_dt  ! Sub-daily  ! TC-11
@@ -630,7 +648,7 @@ contains
         case (1)
             ! Black model
             call black_reduction(nrai, nird, state%atmosphere%peva, cofred, rsigni, &
-                                at_ldwet, at_empreva, timestep, tc_flDayStart, task)  ! TC-11
+                                at_ldwet, at_empreva, timestep, tc_flDayStart, task_flag)  ! TC-11
         case (2)
             ! Boesten-Stroosnijder model
             call boesten_stroosnijder_reduction(nrai, nird, state%atmosphere%peva, cofred, &
@@ -640,5 +658,5 @@ contains
         end select
 
         end associate
-      end subroutine reduceva
+      end subroutine reduceva_apply
 end module et_mod

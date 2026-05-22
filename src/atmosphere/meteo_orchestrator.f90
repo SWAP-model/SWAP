@@ -25,7 +25,7 @@ module meteo_mod
 
   use meteo_process_mod, only: ReadMeteoDay, ResetMetFlx
   use interception_mod, only: VonHHBraden, Gash, ruttervw, DivIntercep
-  use et_mod, only: PenMon, reduceva, pm_inputs_t, pm_outputs_t
+  use et_mod, only: PenMon, reduceva_daily, pm_inputs_t, pm_outputs_t
   use runoff_mod, only: cn_step
   use swap_state_mod, only: swap_state_t
   use swap_config_mod, only: swap_config_t   ! [SS-GR-ATM B24] config added for meteo switches
@@ -471,7 +471,7 @@ contains
 
       ! Soil evaporation rate of today
       if (.not. tc_fletsine) then
-        call reduceva (1, state%atmosphere%nraida, state)
+        call reduceva_daily(state%atmosphere%nraida, state)
       endif
 
       ! Save daily potential values for use in ETSine

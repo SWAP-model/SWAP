@@ -377,7 +377,7 @@ contains
          finterception, &
          ! DEFERRED: dtEventRain — rain event timestep runtime state; Phase C3
          dtEventRain  ! [GR-CROP Phase B]
-      use et_mod, only: reduceva
+      use et_mod, only: reduceva_dt
       implicit none
 
       type(swap_state_t), intent(inout) :: state
@@ -426,7 +426,7 @@ contains
          end if
 
          ! Per time step: calculate soil evaporation rate of current time step
-         call reduceva(2, state%atmosphere%nraida, state)
+         call reduceva_dt(state%atmosphere%nraida, state)
 
       end if
 
@@ -485,7 +485,7 @@ contains
          ! DEFERRED: lat — site latitude; config%meteo%lat; Phase C3
          ! DEFERRED: rad/daylp/difpp/atmtr/dsinbe/tsunrise_atm/tsunset_atm — meteo derived scalars; Phase C3
          rad, daylp, difpp, atmtr, dsinbe, tsunrise_atm, tsunset_atm
-      use et_mod, only: reduceva
+      use et_mod, only: reduceva_dt
       implicit none
 
       type(swap_state_t), intent(inout) :: state
@@ -538,7 +538,7 @@ contains
 
       ! Actual soil evaporation rate of current moment
       ! SS-ATM A-2.6: nraida retired — read from state%atmosphere%nraida
-      call reduceva(2, state%atmosphere%nraida, state)
+      call reduceva_dt(state%atmosphere%nraida, state)
 
       end associate  ! tc_fldaystart, tc_daynr, tc_t1900, tc_dt => state%timecontrol [TC-9]
 
