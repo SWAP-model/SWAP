@@ -101,8 +101,8 @@ contains
       ! [SS-GR-FINAL B6] macp/matab → swap_array_dimensions (dimension constants)
       use swap_array_dimensions, only: macp, matab
       use variables, only: &                                               ! [SS-GR-FINAL B6] residuals — all DEFERRED
-                           ! DEFERRED: croptype/icrop — active crop schedule globals; Phase C3
-                           croptype, icrop, max_resp_factor, &
+                           ! DEFERRED: icrop — active crop schedule global; Phase C3
+                           icrop, max_resp_factor, &   ! croptype → state%crop%common
                            ! DEFERRED: bdens/numtablay/sptab/iHWCKmodel/c_top — soil config, no state home yet; swsophy retired
                            bdens, numtablay, sptab, iHWCKmodel, c_top, &
                            ! SRL/swrootradius/dry_mat_cont_roots/air_filled_root_por/spec_weight_root_tissue/var_a/root_radiusO2 retired
@@ -201,14 +201,14 @@ contains
       endif
 
 ! --- RB20140117 get wofost parameters
-      if ((croptype(icrop) .eq. 2).or.(croptype(icrop) .eq. 3)) then
+      if ((state%crop%common%croptype(icrop) .eq. 2).or.(state%crop%common%croptype(icrop) .eq. 3)) then
           q10_root = state%crop%common%q10
           c_mroot = state%crop%common%rmr*Fac3230 !CH2O --> O2
       endif
-      if (croptype(icrop) .eq. 2) then
+      if (state%crop%common%croptype(icrop) .eq. 2) then
           f_senes=afgen(state%crop%common%rfsetb,30,state%crop%common%dvs)
       endif
-      if (croptype(icrop) .eq. 3) then
+      if (state%crop%common%croptype(icrop) .eq. 3) then
           f_senes=afgen(state%crop%common%rfsetb,30,rid)
       endif
    
@@ -246,7 +246,7 @@ contains
 !previous:  w_root_z0 = w_root_ss * exp(0.01*z(node)/shape_factor_rootr)  
 !new:  
 ! --- static crop. w_root_z0 relative to value of top layer              
-      if (croptype(icrop) .eq. 1) then
+      if (state%crop%common%croptype(icrop) .eq. 1) then
             rdepth_top = -state%mesh%ztopcp(1)/state%crop%common%rd ! (-z(1)-0.5d0*dz(1))/state%crop%common%rd  [GR-BH C7]
             rdens_top  = afgen(state%crop%common%rdctb,22,rdepth_top)
             rdepth     = -state%mesh%ztopcp(node)/state%crop%common%rd ! (-z(node)-0.5d0*dz(node))/state%crop%common%rd  [GR-BH C7]
@@ -255,7 +255,7 @@ contains
       endif
 ! --- calculate wrootz0 [kg/m3] at top of the compartments !adj RB 20171201
 ! --- dynamic crop. wrt [kg/ha] = 10-4 kg/m2; 
-      if ((croptype(icrop) .eq. 2) .or. (croptype(icrop) .eq. 3)) then
+      if ((state%crop%common%croptype(icrop) .eq. 2) .or. (state%crop%common%croptype(icrop) .eq. 3)) then
         top1 = dabs(state%mesh%ztopcp(node) / state%crop%common%rd) ! relative depth top  [GR-BH C7]
         top2 = top1 + 1.0d-6 ! define 'infinite' thin layer; fraction
         
@@ -526,7 +526,7 @@ contains
 !!!!!! --- Max resp factor RB20140115
 !!!!!      ResultsOxStr(18,node)=max_resp_factor    
 !!!!!! --- wrt from wofost RBf20140120
-!!!!!      if ((croptype(icrop) .eq. 2).or.(croptype(icrop) .eq. 3)) then
+!!!!!      if ((state%crop%common%croptype(icrop) .eq. 2).or.(state%crop%common%croptype(icrop) .eq. 3)) then
 !!!!!        ResultsOxStr(19,node)=wrt    
 !!!!!      endif
    return
@@ -539,8 +539,8 @@ contains
       subroutine GET_MAX_RESP_FACTOR (max_resp_factor_gmrf, state)
       ! [GR-CROP Phase B/8] state arg added; tav → state%atmosphere%Tav (closes GR-ATM B.5 deferral).
       use variables, only: &                                               ! [SS-GR-FINAL B6] residuals — all DEFERRED
-                           ! DEFERRED: croptype/icrop — active crop schedule globals; Phase C3
-                           croptype, icrop, max_resp_factor, &
+                           ! DEFERRED: icrop — active crop schedule global; Phase C3
+                           icrop, max_resp_factor, &   ! croptype → state%crop%common
                            ! q10/rmr/rml/rms/rmo/rfsetb/cvl/cvs/cvo/cvr/frtb/fltb/fstb/fotb retired
                            ! DEFERRED: rid/idregr/daycrop — active crop dynamics; Phase C3; dvs retired
                            rid, daycrop  ! idregr retired
@@ -559,15 +559,15 @@ contains
       real(8) Froots, Rg_roots,Rm_roots,Max_resp_factor_gmrf        
 ! --- static crop        
 ! --- static crop: max_resp_factor is given in the input file
-      if (croptype(icrop) .eq. 1) then
+      if (state%crop%common%croptype(icrop) .eq. 1) then
         max_resp_factor_gmrf = max_resp_factor
-      endif !if (croptype(icrop) .eq. 1)
+      endif !if (state%crop%common%croptype(icrop) .eq. 1)
 
 ! --- dynamic crop: max_resp_factor is calculated following the procedure
 ! --- for the calculation of root maintenance respiration and root growth respiration as 
 ! --- used in WOFOST.
 ! --- dynamic crop, not grass 
-      if (croptype(icrop) .eq. 2) then
+      if (state%crop%common%croptype(icrop) .eq. 2) then
 
 ! --- respiration and partitioning of carbohydrates between growth and
 ! --- maintenance respiration, based on actual plant state variables
@@ -604,10 +604,10 @@ contains
         else 
             Max_resp_factor_gmrf = 1.0d0  
         endif         
-      endif !if (croptype(icrop) .eq. 2)
+      endif !if (state%crop%common%croptype(icrop) .eq. 2)
         
 ! --- dynamic crop, grass 
-      if (croptype(icrop) .eq. 3) then        
+      if (state%crop%common%croptype(icrop) .eq. 3) then        
         Max_resp_factor_gmrf = 1.0d0  !RB20140317
 ! --- skip in case of regrowth, equal to wofost detailed grass
 ! --- note: daycrop.ge.idregrpot (wofost) --> daycrop.gt.idregrpot, because idregrpot is result of wofost of previous day
@@ -646,7 +646,7 @@ contains
               Max_resp_factor_gmrf = 1.0d0  
           endif                  
         endif !RB20140317 #skip in case of regrowth                   
-      endif !if (croptype(icrop) .eq. 3)
+      endif !if (state%crop%common%croptype(icrop) .eq. 3)
 
       return
       end

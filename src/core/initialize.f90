@@ -22,7 +22,7 @@
 ! --- crop variables (not crop specific, such as crop calendar)
       crp                = 0 
       icrop              = 0 
-      croptype           = 0 
+      ! [GR-ATM 2026-05-23] croptype retired — see state%crop%common%croptype
       cropend            = 0.0d0 
       cropstart          = 0.0d0 
       rdmax              = 0.0d0 
@@ -607,7 +607,7 @@
       dlo                = 0.0d0 
       fbl                = 0.0d0 
       gasstpot           = 0.0d0 
-      gc                 = 0.0d0 
+      ! [GR-ATM 2026-05-23] gc retired — see state%crop%common%gc
       mrestpot           = 0.0d0 
       mrftb              = 0.0d0
       pfreetb            = 0.0d0 
@@ -619,7 +619,7 @@
       ! rootrho            = 0.0d0
 
       scanopytb          = 0.0d0 
-      siccaptb           = 0.0d0 
+      ! [GR-ATM 2026-05-23] siccaptb retired — see state%crop%common%siccaptb
       vernrtb            = 0.0d0 
 
 ! --- only for bulb crops (tulips etc..)

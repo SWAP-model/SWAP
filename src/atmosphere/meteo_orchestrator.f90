@@ -78,7 +78,7 @@ contains
   !! Single ET record per day. Body is the daily-only slice of the former
   !! ProcessMeteoDay: Sections 3, 4, 5(daily branch), 6, 7, 9.
   subroutine process_meteo_day_daily(state, config)
-    use variables, only: croptype, gc
+    ! [GR-ATM 2026-05-23] use variables retired — crop scalars via state%crop%common
     use swap_constants, only: nihil, small
     type(swap_state_t),  intent(inout) :: state
     type(swap_config_t), intent(in)    :: config
@@ -121,8 +121,8 @@ contains
     ! === Section 5: Interception option NHI (adapted Rutter model) ===
     ! Daily branch only — siccapact is set in cropgrowth module for daily mode.
     if (state%crop%common%swinter .eq. 3) then
-      if (croptype(state%crop%common%icrop).eq.1 .and. state%crop%common%swgc.eq.2) then   ! [GR-CROP C3]
-        gctp  = gc
+      if (state%crop%common%croptype(state%crop%common%icrop).eq.1 .and. state%crop%common%swgc.eq.2) then   ! [GR-CROP C3]
+        gctp  = state%crop%common%gc
       else
         gctp  = 1.0d0 - exp(-1.0d0*state%crop%kdir*state%crop%kdif*state%crop%lai)
         if (gctp .lt. 1.0d-5) then
@@ -195,7 +195,7 @@ contains
   !! ProcessMeteoDay: Section 3 (once); per-record Sections 4, 5(subdaily branch),
   !! 6, 7, 8; then Section 10 (daily totals).
   subroutine process_meteo_day_subdaily(state, config)
-    use variables, only: croptype, gc, siccaptb
+    ! gc + siccaptb migrated to state%crop%common
     use swap_array_dimensions, only: magrs
     use array_utils, only: afgen
     use swap_constants, only: nihil
@@ -242,10 +242,10 @@ contains
       ! === Section 5: Interception option NHI (adapted Rutter model) ===
       ! Sub-daily branch only.
       if (state%crop%common%swinter .eq. 3) then
-        state%atmosphere%siccapact = afgen(siccaptb,(2*magrs),tc_t)   ! [SS-GR-ATM B24] direct state write
-        if (croptype(state%crop%common%icrop).eq.1 .and. state%crop%common%swgc.eq.2) then
-          gctp  = gc
-        elseif (croptype(state%crop%common%icrop).eq.1 .and. state%crop%common%swgc.eq.1) then
+        state%atmosphere%siccapact = afgen(state%crop%common%siccaptb, (2*magrs), tc_t)
+        if (state%crop%common%croptype(state%crop%common%icrop).eq.1 .and. state%crop%common%swgc.eq.2) then
+          gctp  = state%crop%common%gc
+        elseif (state%crop%common%croptype(state%crop%common%icrop).eq.1 .and. state%crop%common%swgc.eq.1) then
           gctp  = 1.0d0 - exp(-1.0d0*state%crop%kdir*state%crop%kdif*state%crop%lai)
         endif
         if (gctp .lt. 1.0d-5) then
@@ -593,7 +593,7 @@ contains
   !! and CO2 correction. Writes state%atmosphere%peva and state%atmosphere%ptra.
   subroutine partition_peva_ptra(state, config, wfrac, Edirect, Tdirect, Edirectpond)
     use swap_constants, only: nihil, small
-    use variables, only: croptype, gc
+    ! [GR-ATM 2026-05-23] use variables retired — crop scalars via state%crop%common
     type(swap_state_t),  intent(inout) :: state
     type(swap_config_t), intent(in)    :: config
     real(8), intent(in) :: wfrac, Edirect, Tdirect, Edirectpond
@@ -610,8 +610,8 @@ contains
 
     ! Alternative for peva (simple model, soil cover fraction specified)
     if (state%crop%common%flCropCalendar .and. .not. state%crop%common%flCropHarvest) then
-      if (croptype(state%crop%common%icrop).eq.1 .and. state%crop%common%swgc.eq.2) then
-        at_peva = (1.0d0-gc)*state%crop%es0*0.1d0
+      if (state%crop%common%croptype(state%crop%common%icrop).eq.1 .and. state%crop%common%swgc.eq.2) then
+        at_peva = (1.0d0 - state%crop%common%gc)*state%crop%es0*0.1d0
         if (state%crop%swcf.ne.3 .or. (config%meteo%swmetdetail.eq.0 .and. state%crop%common%swinter.ne.3)) then
           at_peva = (1.0d0-wfrac)*at_peva
         end if

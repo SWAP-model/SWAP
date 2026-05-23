@@ -106,7 +106,7 @@ module legacy_state_mod
       logical :: flCropReadFile  !! Flag indicating reading of input.crp
       logical :: flCropOpenFile  !! Flag indicating to create output.crp
       logical :: flCropOutput  !! Flag indicating writing of output.crp
-      integer, allocatable :: croptype(:)  !! Switch for type of crop model: 1 = simple; 2 = general detailed model; 3 = detailed for grass
+      ! [GR-ATM 2026-05-23] croptype retired — see state%crop%common%croptype
       integer :: swcrp  !! Switch for output file *.CRP with daily crop output: 0 = no; 1 = yes
       integer :: crp  !! Internal number of crop output file *.CRP
       integer :: daycrop  !! Number of days that a crop exists
@@ -130,7 +130,7 @@ module legacy_state_mod
       real(real64) :: f_senes  !! Reduction factor for senescence, used for maintenance respiration [0..1.0 -, R]
       real(real64) :: gasst  !! Total gross assimilation for actual crop (kg/ha)
       real(real64) :: gasstpot  !! Total gross assimilation for potential crop (kg/ha)
-      real(real64) :: gc  !! Ground cover in case of a crop
+      ! [GR-ATM 2026-05-23] gc retired — see state%crop%common%gc
       real(real64) :: hdrygerm  !! Criterium Hdry of germination
       real(real64) :: hwetgerm  !! Criterium Hwet of germination
       real(real64) :: max_resp_factor  !! Ratio root total respiration / maintenance respiration [1..5.0 -, R]
@@ -139,7 +139,7 @@ module legacy_state_mod
       real(real64), allocatable :: mrftb(:)  !! Array with ratio root total respiration / maintenance respiration as function of DVS (kg/m3)
       real(real64), allocatable :: pfreetb(:)  !! Gash interception model: free throughfall coefficient (-) as function of time (T)
       real(real64), allocatable :: pstemtb(:)  !! Gash interception model: stem flow coefficient (-) as function of time (T)
-      real(real64), allocatable :: siccaptb(:)  !! NHI interception model: interception capacity as a function of time (T)
+      ! [GR-ATM 2026-05-23] siccaptb retired — see state%crop%common%siccaptb
       real(real64) :: siccaplai  !! interception storage per unit of LAI (cm/LAI)
       real(real64) :: q10_microbial  !! Relative increase in microbial respiration at temperature increase of 10 �C [1.0..4.0 -, R]
       real(real64) :: q10_root  !! Relative increase in root respiration at temperature increase of 10 �C [1.0..4.0 -, R]

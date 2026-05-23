@@ -318,7 +318,7 @@
       logical   flCropOpenFile     ! Flag indicating to create output.crp
       logical   flCropOutput       ! Flag indicating writing of output.crp
 
-      integer   croptype(macrop)   ! Switch for type of crop model: 1 = simple; 2 = general detailed model; 3 = detailed for grass
+      ! [GR-ATM 2026-05-23] croptype retired — see state%crop%common%croptype
       integer   swcrp              ! Switch for output file *.CRP with daily crop output: 0 = no; 1 = yes
       integer   crp                ! Internal number of crop output file *.CRP
       integer   daycrop            ! Number of days that a crop exists
@@ -412,7 +412,7 @@
       ! [GR-CROPWS] fstb retired — see state%crop%common%fstb
       real(8)   gasst              ! Total gross assimilation for actual crop (kg/ha)
       real(8)   gasstpot           ! Total gross assimilation for potential crop (kg/ha)
-      real(8)   gc                 ! Ground cover in case of a crop
+      ! [GR-ATM 2026-05-23] gc retired — see state%crop%common%gc
       ! [GR-CROP-DVS] HarLosOrm_tot retired — see state%crop%common%HarLosOrm_tot
       real(8)   hdrygerm           ! Criterium Hdry of germination
       real(8)   hwetgerm           ! Criterium Hwet of germination
@@ -445,7 +445,7 @@
       ! [GR-CROPWS] perdl retired — see state%crop%common%perdl
       real(8)   pfreetb(2*magrs)   ! Gash interception model: free throughfall coefficient (-) as function of time (T)
       real(8)   pstemtb(2*magrs)   ! Gash interception model: stem flow coefficient (-) as function of time (T)
-      real(8)   siccaptb(2*magrs)  ! NHI interception model: interception capacity as a function of time (T)
+      ! [GR-ATM 2026-05-23] siccaptb retired — see state%crop%common%siccaptb
       ! [GR-CROP-DVS] fimin retired — see state%atmosphere%fimin
       ! [GR-CROP-DVS] siccapact retired — see state%atmosphere%siccapact
       ! real(8) :: sicact        ! amount of water stored on canopy (cm) — [SS-ATM] retired 2026-05-11

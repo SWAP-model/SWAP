@@ -10,7 +10,7 @@
 ! [SS-GR-CROPWS A1]: cropgrowth.f90 audit — state already intent(inout) non-optional;
 !   all tracked write sites carry dual-writes from prior arcs; no optional/present guards.
 !   No file changes required for Phase A.
-! [GR-CROPWS B3]: reads migrated — croptype(state%crop%common%icrop), icrop (block section),
+! [GR-CROPWS B3]: reads migrated — state%crop%common%croptype(state%crop%common%icrop), icrop (block section),
 !   cropstart (post-mirror), cropend (task 4), rd (root loop), dvs (task 4, post-task-3 mirror),
 !   swbulb→state%crop%wofost%swbulb, plwt→state%crop%wofost%plwt, kdif→state%crop%kdif.
 !   daycrop NOT migrated: InitializeCrop zeroes legacy global but does not mirror to state,
@@ -58,7 +58,7 @@
       use variables, only: &                                             ! [SS-GR-CROPRT B1/B6] [GR-CROPWS B3]
         icrop, flCropCalendar, cropstart, cropend, flCropEmergence,         &
         flCropHarvest, flCropReadFile, flCropPrep, flCropSow, flCropGerm,   &
-        swinco, croptype, daycrop,         &  ! tsum/rd/lai/rdpot/wso/wst/wlv/cwdmpot/cwdm retired
+        swinco, daycrop,         &  ! tsum/rd/lai/rdpot/wso/wst/wlv/cwdmpot/cwdm retired; croptype → state%crop%common
         swcrp,                                                             &  ! dvsend/swdrought/eff/amaxtb/tmpftb/tmnftb retired
         remoc, pld,                         &  ! swharv/q10 retired; swbulb removed (→state%crop%wofost%swbulb)
         flCropNut, nlue, anlv, anst, nmxlv, nmaxlv, nmaxst,               &
@@ -172,7 +172,7 @@
           state%crop%common%flCropReadFile = flCropReadFile   ! [SS-GR-CROPRT A5]
           flCropEmergence = .true.
           state%crop%flCropEmergence = flCropEmergence   ! [SS-GR-ATM A5.2] dual-write
-          if (croptype(state%crop%common%icrop) .le. 2) then
+          if (state%crop%common%croptype(state%crop%common%icrop) .le. 2) then
             flCropEmergence = .false.
             state%crop%flCropEmergence = flCropEmergence   ! [SS-GR-ATM A5.2] dual-write
           endif
@@ -180,7 +180,7 @@
       endif
 
 ! --- Preparation, Sowing and Germination of arable crop growth ---------------
-      if (flCropCalendar .and. .not. flCropHarvest .and. croptype(state%crop%common%icrop) .le. 2) then
+      if (flCropCalendar .and. .not. flCropHarvest .and. state%crop%common%croptype(state%crop%common%icrop) .le. 2) then
 
         ! check crop preparation, sowing and germination (of previous day)
         if (.not. flCropEmergence) then
@@ -339,13 +339,13 @@
         if (flCropReadFile) then
           
           ! fixed crop development
-          if (croptype(state%crop%common%icrop) .eq. 1 .and. flCropEmergence) call CropFixed(1, state)
+          if (state%crop%common%croptype(state%crop%common%icrop) .eq. 1 .and. flCropEmergence) call CropFixed(1, state)
 
           ! detailed crop growth
-          if (croptype(state%crop%common%icrop) .eq. 2 .and. flCropEmergence) call Wofost(1, state)
+          if (state%crop%common%croptype(state%crop%common%icrop) .eq. 2 .and. flCropEmergence) call Wofost(1, state)
 
           ! detailed grass growth
-          if (croptype(state%crop%common%icrop) .eq. 3) call Grass(1, tsoil, state)
+          if (state%crop%common%croptype(state%crop%common%icrop) .eq. 3) call Grass(1, tsoil, state)
 
           ! SS-CRP Phase 2 C-2.5: init JvL state directly (legacy globals retired).
           ! CropFixed/Wofost/Grass(1) set flhydrlift and twilt; hroot/hleaf/mfluxtable
@@ -375,7 +375,7 @@
 
       ! set running average of minimum temperature (only for detailed crop growth)
       ! [SS-GR-FINAL B5] nofd/atmin7 read/written via state%atmosphere directly
-      if (flCropEmergence .and. croptype(state%crop%common%icrop).ge.2) then
+      if (flCropEmergence .and. state%crop%common%croptype(state%crop%common%icrop).ge.2) then
         state%atmosphere%nofd = min(state%atmosphere%nofd+1, 7)
         sumtmin = 0.0d0
         do i = state%atmosphere%nofd,2,-1
@@ -399,7 +399,7 @@
       state%crop%common%noddrz = noddrz   ! [SS-GR-CROPRT A5]
 
       ! calculate potential and actual assimilation
-      if (flCropEmergence .and. croptype(state%crop%common%icrop).ge.2) then
+      if (flCropEmergence .and. state%crop%common%croptype(state%crop%common%icrop).ge.2) then
           
 ! check DAYNR during the day!!!!!!          
           
@@ -431,8 +431,8 @@
 
         ! daily gross assimilation
         effc = state%crop%wofost%fco2eff * state%crop%common%eff  ! [SS-GR-CROPRT B6] state%crop%wofost%fco2eff via state
-        if (croptype(state%crop%common%icrop) .eq. 2) amax = state%crop%wofost%fco2amax * afgen (state%crop%common%amaxtb,30,state%crop%common%dvs) * afgen (state%crop%common%tmpftb,30,at_tavd)  ! [SS-GR-ATM B.5] [SS-GR-CROPRT B6]
-        if (croptype(state%crop%common%icrop) .eq. 3) amax = state%crop%wofost%fco2amax * afgen (state%crop%common%amaxtb,30,dble(daycrop)) * afgen (state%crop%common%tmpftb,30,at_tavd)  ! [SS-GR-ATM B.5] [SS-GR-CROPRT B6]
+        if (state%crop%common%croptype(state%crop%common%icrop) .eq. 2) amax = state%crop%wofost%fco2amax * afgen (state%crop%common%amaxtb,30,state%crop%common%dvs) * afgen (state%crop%common%tmpftb,30,at_tavd)  ! [SS-GR-ATM B.5] [SS-GR-CROPRT B6]
+        if (state%crop%common%croptype(state%crop%common%icrop) .eq. 3) amax = state%crop%wofost%fco2amax * afgen (state%crop%common%amaxtb,30,dble(daycrop)) * afgen (state%crop%common%tmpftb,30,at_tavd)  ! [SS-GR-ATM B.5] [SS-GR-CROPRT B6]
 
 
         ! potential assimilation
@@ -493,13 +493,13 @@
       if (flCropHarvest) return
 
 ! --- detailed crop growth -------------------------------------------------
-      if (croptype(state%crop%common%icrop) .eq. 2) then
+      if (state%crop%common%croptype(state%crop%common%icrop) .eq. 2) then
         if (flCropEmergence) then
           call Wofost(2, state)
         endif
       endif
 ! --- detailed grass growth  -----------------------------------------------
-      if (croptype(state%crop%common%icrop) .eq. 3) then
+      if (state%crop%common%croptype(state%crop%common%icrop) .eq. 3) then
         call Grass(2, tsoil, state)
       endif
 
@@ -512,19 +512,19 @@
       if (flCropHarvest) return
 
 ! --- fixed crop development -----------------------------------------------
-      if (croptype(state%crop%common%icrop).eq.1) then
+      if (state%crop%common%croptype(state%crop%common%icrop).eq.1) then
         if(flCropEmergence) then
           call CropFixed(3, state)
         endif
       endif
 ! --- detailed crop growth -------------------------------------------------
-      if (croptype(state%crop%common%icrop).eq.2) then
+      if (state%crop%common%croptype(state%crop%common%icrop).eq.2) then
         if (flCropEmergence) then
           call Wofost(3, state)
          endif
       endif
 ! --- detailed grass growth  -----------------------------------------------
-      if (croptype(state%crop%common%icrop).eq.3) then
+      if (state%crop%common%croptype(state%crop%common%icrop).eq.3) then
         call Grass(3, tsoil, state)
       endif
 
@@ -536,7 +536,7 @@
       
       if (flCropHarvest) return
      
-      if (croptype(state%crop%common%icrop).le.2 .and. flCropEmergence)then
+      if (state%crop%common%croptype(state%crop%common%icrop).le.2 .and. flCropEmergence)then
 
         ! Check flHarvestDay
         if (state%crop%common%swharv.eq.0) then
@@ -552,10 +552,10 @@
         endif
         
         if (flCropEmergence .or. flHarvestDay) then
-          if (croptype(state%crop%common%icrop).eq.1) then
+          if (state%crop%common%croptype(state%crop%common%icrop).eq.1) then
             call CropFixed(4, state)
           endif
-          if (croptype(state%crop%common%icrop).eq.2) then
+          if (state%crop%common%croptype(state%crop%common%icrop).eq.2) then
             call Wofost(4, state)
           endif
         endif
@@ -565,7 +565,7 @@
 ! --- check timing of harvest
       
 ! --- fixed crop development -----------------------------------------------
-      if (croptype(state%crop%common%icrop).eq.1)then
+      if (state%crop%common%croptype(state%crop%common%icrop).eq.1)then
         if (flHarvestDay) then
           flCropEmergence = .false.
           state%crop%flCropEmergence = flCropEmergence   ! [SS-GR-ATM A5.2] dual-write
@@ -575,7 +575,7 @@
       endif
 
 ! --- detailed crop growth -------------------------------------------------
-      if (croptype(state%crop%common%icrop).eq.2)then
+      if (state%crop%common%croptype(state%crop%common%icrop).eq.2)then
         if (flHarvestDay) then
           flCropEmergence = .false.
           state%crop%flCropEmergence = flCropEmergence   ! [SS-GR-ATM A5.2] dual-write
@@ -585,7 +585,7 @@
       endif
 
 ! --- detailed grass growth ------------------------------------------------
-      if (croptype(state%crop%common%icrop).eq.3)then
+      if (state%crop%common%croptype(state%crop%common%icrop).eq.3)then
         if (dabs(tc_t1900 - cropend(state%crop%common%icrop) - 1.d0) .lt. 1.0d-3) then  ! [GR-CROPWS B3] icrop → state%crop%common%icrop
           flCropEmergence = .false.
           state%crop%flCropEmergence = flCropEmergence   ! [SS-GR-ATM A5.2] dual-write

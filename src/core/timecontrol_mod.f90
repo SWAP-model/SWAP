@@ -29,7 +29,7 @@ contains
                             swetsine, &
                             ! DEFERRED: nirri/swinco/icrop/cropstart/croptype/project — crop/run config; Phase C3
                             nirri, swinco, icrop, &
-                            cropstart, croptype, project
+                            cropstart, project   ! croptype → state%crop%common
       use timestep_control_mod, only: fldecdt
       use error_mod, only: fatalerr_collected
       implicit none
@@ -259,7 +259,7 @@ contains
       swmeteo = 1
       if (flCropCalendar) then
         if (icrop .gt. 0) then
-          if(croptype(icrop).ge.2) then
+          if(state%crop%common%croptype(icrop).ge.2) then
              swmeteo = 2
           endif
         endif
@@ -333,7 +333,7 @@ contains
                             ! DEFERRED: swrain/swmetdetail — meteo switches; Phase C3
                             flCropHarvest, &
                             ! DEFERRED: croptype/icrop — crop schedule globals; Phase C3
-                            croptype, icrop, &
+                            icrop, &   ! croptype → state%crop%common
                             ! DEFERRED: dt_SSDI_event — SSDI timing state; Phase C3
                             dt_SSDI_event, &
                             ! DEFERRED: flSSDI — SSDI feature gate; Phase C3
@@ -747,7 +747,7 @@ contains
           swmeteo = 1
           if (flCropCalendar) then
             if (icrop .gt. 0) then
-              if (croptype(icrop).ge.2) then
+              if (state%crop%common%croptype(icrop).ge.2) then
                 swmeteo = 2
               endif
             endif

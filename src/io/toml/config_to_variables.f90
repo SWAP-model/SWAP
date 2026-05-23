@@ -1105,9 +1105,9 @@ contains
 
       if (allocated(config%crop%rotation_type)) then
          n = size(config%crop%rotation_type)
-         do i = 1, min(n, size(croptype))
-            croptype(i) = config%crop%rotation_type(i)
-         end do
+         ! [GR-ATM 2026-05-23] allocate + populate state%crop%common%croptype
+         allocate(state%crop%common%croptype(n))
+         state%crop%common%croptype = config%crop%rotation_type
       end if
       if (allocated(config%crop%rotation_start)) then
          n = size(config%crop%rotation_start)

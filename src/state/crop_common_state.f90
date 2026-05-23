@@ -170,6 +170,11 @@ module crop_common_state_mod
       integer      :: ilvold        = 0                !! oldest-leaf day index (actual)
       integer      :: ilvoldpot     = 0                !! oldest-leaf day index (potential)
 
+      ! [GR-ATM 2026-05-23] migrated from bare-global cluster (croptype/gc/siccaptb)
+      integer, allocatable :: croptype(:)              !! per-rotation crop model: 1=fixed, 2=wofost, 3=grass
+      real(real64) :: gc           = 0.0_real64        !! ground cover (-) — fixed-crop runtime
+      real(real64) :: siccaptb(2*MAGRS) = 0.0_real64   !! NHI interception capacity table (cm) vs time
+
    contains
       procedure :: init => crop_common_state_init
    end type crop_common_state_t
