@@ -34,38 +34,36 @@ contains
   !> Uses exponential relation between soil cover and LAI.
   !>
   !> Input via state: state%crop%gird/kdif/kdir/cofab/lai, state%atmosphere%isua
-  !> [SS-ATM A-2.6] grai retired from variables — now passed as explicit argument
   !> @endnote
-  subroutine VonHHBraden (aintc, grai_in, state)
-    ! [SS-GR-ATM B8] gird/kdif/kdir/cofab/lai → state%crop%X
-    ! isua → state%atmosphere%isua
-    ! Phase A.5 runtime dual-writes ensure state tracks legacy at runtime.
+  pure subroutine VonHHBraden (aintc, grai_in, state)
     implicit none
 
-    ! Arguments
-    real(8), intent(out) :: aintc   ! Amount of rainfall interception during current day [cm/d]
-    real(8), intent(in)  :: grai_in ! Gross daily rain flux (L/T) — [SS-ATM A-2.6] from state%atmosphere%grai
-    type(swap_state_t), intent(in) :: state  ! Simulation state
+    real(8),            intent(out) :: aintc    ! Rainfall interception this day [cm/d]
+    real(8),            intent(in)  :: grai_in  ! Gross daily rain flux [cm/d]
+    type(swap_state_t), intent(in)  :: state
 
-    ! Local variables
-    real(8) :: rpd                 ! Intercepted precipitation (rain+irrig) [mm]
-    real(8) :: cofbb               ! Interception coefficient b Von Hoyningen-Hune and Braden [-]
+    real(8) :: rpd    ! Intercepted precipitation (rain+irrig) [mm]
+    real(8) :: cofbb  ! Interception coefficient b [-]
 
-    ! Intercepted precipitation (rain+irrig) in mm
-    rpd = grai_in*10.0d0
-    if (state%atmosphere%isua .eq. 0) rpd = (grai_in + state%crop%gird)*10.0d0
+    associate (atmo => state%atmosphere, crop => state%crop)
 
-    ! Exponential relation between soil cover and lai
-    cofbb = 1.0d0 - exp(-1.0d0*state%crop%kdif*state%crop%kdir*state%crop%lai)
-    cofbb = min(cofbb,1.0d0)
+      ! Intercepted precipitation (rain+irrig) in mm
+      rpd = grai_in*10.0d0
+      if (atmo%isua .eq. 0) rpd = (grai_in + crop%gird)*10.0d0
 
-    ! Interception: evaporation of intercepted precipitation in cm
-    if (state%crop%cofab .gt. 0.000001d0) then
-      aintc = (state%crop%cofab*state%crop%lai*(1.0d0-(1/(1.0d0+rpd*cofbb/ &
-                                  (state%crop%cofab*state%crop%lai)))))*0.1d0
-    else
-      aintc = 0.0d0
-    endif
+      ! Exponential relation between soil cover and lai
+      cofbb = 1.0d0 - exp(-1.0d0*crop%kdif*crop%kdir*crop%lai)
+      cofbb = min(cofbb, 1.0d0)
+
+      ! Interception: evaporation of intercepted precipitation in cm
+      if (crop%cofab .gt. 0.000001d0) then
+        aintc = (crop%cofab*crop%lai*(1.0d0 - (1/(1.0d0 + rpd*cofbb / &
+                                    (crop%cofab*crop%lai)))))*0.1d0
+      else
+        aintc = 0.0d0
+      endif
+
+    end associate
 
   end subroutine VonHHBraden
 
@@ -83,69 +81,58 @@ contains
   !> Reference: Gash, J.H.C. (1995). An analytical framework for estimating
   !> evaporation using rainfall and forest data.
   !>
-  !> Input via state: state%crop%gird, state%atmosphere%avevaptb/avprectb/pfreetb/pstemtb/scanopytb/isua
-  !> [SS-ATM A-2.6] grai retired from variables — now passed as explicit argument
-  !> [SS-TC TC-11] t read via state%timecontrol%t (tc_t alias)
+  !> Input via state: state%crop%gird, state%atmosphere%avevaptb/avprectb/pfreetb/pstemtb/scanopytb/isua, state%timecontrol%t
   !> @endnote
   subroutine Gash (aintc, grai_in, state)
-    ! [SS-GR-ATM B9] gird → state%crop%gird.
-    ! avevaptb/avprectb/pfreetb/pstemtb/scanopytb → state%atmosphere%X.
-    ! isua → state%atmosphere%isua.
-    ! Phase A.5 runtime dual-writes ensure state tracks legacy at runtime.
     use array_utils, only: afgen
     use swap_array_dimensions, only: magrs
     implicit none
 
-    ! Arguments
-    real(8), intent(out) :: aintc   ! Amount of rainfall interception during current day [cm/d]
-    real(8), intent(in)  :: grai_in ! Gross daily rain flux (L/T) — [SS-ATM A-2.6] from state%atmosphere%grai
-    type(swap_state_t), intent(in) :: state  ! SS-TC TC-11: for t via state%timecontrol%t; SS-GR-ATM B9: crop/atmosphere fields
+    real(8),            intent(out) :: aintc    ! Rainfall interception this day [cm/d]
+    real(8),            intent(in)  :: grai_in  ! Gross daily rain flux [cm/d]
+    type(swap_state_t), intent(in)  :: state
 
-    ! Local variables
-    real(8) :: avevap              ! Average evaporation intensity during shower [-]
-    real(8) :: avprec              ! Average rainfall intensity [-]
-    real(8) :: cGash               ! Slope of dPi/dPgross before saturation of canopy [-]
-    real(8) :: pfree               ! Free throughfall coefficient [-]
-    real(8) :: pstem               ! Stem flow coefficient [-]
-    real(8) :: psatcan             ! Amount of rainfall to saturate canopy [cm]
-    real(8) :: rpd                 ! Intercepted precipitation (rain+irrig) [cm]
-    real(8) :: scanopy             ! Storage capacity of canopy [cm]
+    real(8) :: avevap   ! Average evaporation intensity during shower [-]
+    real(8) :: avprec   ! Average rainfall intensity [-]
+    real(8) :: cGash    ! Slope of dPi/dPgross before saturation of canopy [-]
+    real(8) :: pfree    ! Free throughfall coefficient [-]
+    real(8) :: pstem    ! Stem flow coefficient [-]
+    real(8) :: psatcan  ! Amount of rainfall to saturate canopy [cm]
+    real(8) :: rpd      ! Intercepted precipitation (rain+irrig) [cm]
+    real(8) :: scanopy  ! Storage capacity of canopy [cm]
 
-    ! Intercepted precipitation (rain+irrig) in cm
-    ! SS-ATM A-2.6: grai_in replaces retired global grai
-    if (state%atmosphere%isua .eq. 0) then
-      rpd = grai_in + state%crop%gird
-    else
-      rpd = grai_in
-    endif
+    associate (atmo => state%atmosphere, crop => state%crop, time => state%timecontrol)
 
-    ! Calculate interception for forests according to Gash (1995)
-    ! SS-TC TC-11: t read via state%timecontrol%t (tc_t alias).
-    associate( tc_t => state%timecontrol%t )  ! TC-11
-    pfree = afgen(state%atmosphere%pfreetb,(2*magrs),tc_t)
-    pstem = afgen(state%atmosphere%pstemtb,(2*magrs),tc_t)
-    cGash = 1.d0-pfree-pstem
-    scanopy = afgen(state%atmosphere%scanopytb,(2*magrs),tc_t) / cGash
-    avprec = afgen(state%atmosphere%avprectb,(2*magrs),tc_t)
-    avevap = afgen(state%atmosphere%avevaptb,(2*magrs),tc_t) / cGash
+      ! Intercepted precipitation (rain+irrig) in cm
+      if (atmo%isua .eq. 0) then
+        rpd = grai_in + crop%gird
+      else
+        rpd = grai_in
+      endif
 
-    ! Amount of rainfall to saturate canopy
-    if ( (1.0d0 - avevap/avprec) .gt. 1.0d-4) then
-      psatcan = -avprec*scanopy/avevap * &
-                log(1.0d0 - avevap/avprec)
-    else
-      psatcan = avprec*scanopy/avevap
-    endif
+      ! Calculate interception for forests according to Gash (1995)
+      pfree   = afgen(atmo%pfreetb,   (2*magrs), time%t)
+      pstem   = afgen(atmo%pstemtb,   (2*magrs), time%t)
+      cGash   = 1.d0 - pfree - pstem
+      scanopy = afgen(atmo%scanopytb, (2*magrs), time%t) / cGash
+      avprec  = afgen(atmo%avprectb,  (2*magrs), time%t)
+      avevap  = afgen(atmo%avevaptb,  (2*magrs), time%t) / cGash
 
-    ! Interception: evaporation of intercepted precipitation in cm
-    if (grai_in .lt. psatcan) then
-      aintc = cGash * rpd
-    else
-      aintc = cGash * ( psatcan + &
-                avevap*cGash / avprec * (rpd - psatcan) )
-    endif
+      ! Amount of rainfall to saturate canopy
+      if ((1.0d0 - avevap/avprec) .gt. 1.0d-4) then
+        psatcan = -avprec*scanopy/avevap * log(1.0d0 - avevap/avprec)
+      else
+        psatcan = avprec*scanopy/avevap
+      endif
 
-    end associate  ! tc_t => state%timecontrol [TC-11]
+      ! Interception: evaporation of intercepted precipitation in cm
+      if (grai_in .lt. psatcan) then
+        aintc = cGash * rpd
+      else
+        aintc = cGash * (psatcan + avevap*cGash / avprec * (rpd - psatcan))
+      endif
+
+    end associate
 
   end subroutine Gash
 
@@ -415,28 +402,32 @@ contains
   !> Last modified: February 2014
   !>
   !> Input via state: state%atmosphere%isua/grai/gsnow/snrai, state%crop%gird
-  !> nird retained via narrow use-only (Arc 8 deferral). nraida → state%atmosphere%nraida.
+  !> Writes: state%atmosphere%nraida, state%atmosphere%nird
   !> @endnote
-  subroutine DivIntercep (aintc, state)
+  pure subroutine DivIntercep (aintc, state)
     implicit none
 
     real(8),            intent(in)    :: aintc   ! Total interception [cm/d]
     type(swap_state_t), intent(inout) :: state
 
-    ! Divide interception into rain and irrigation parts;
-    ! compute net rain (nraida) and net sprinkling irrigation (nird).
-    if (aintc .lt. 0.001d0) then
-      state%atmosphere%nraida = state%atmosphere%grai - state%atmosphere%gsnow - state%atmosphere%snrai
-      state%atmosphere%nird   = state%crop%gird
-    else
-      if (state%atmosphere%isua .eq. 0) then
-        state%atmosphere%nraida = state%atmosphere%grai - aintc*(state%atmosphere%grai/(state%atmosphere%grai+state%crop%gird))
-        state%atmosphere%nird   = state%crop%gird - aintc*(state%crop%gird/(state%atmosphere%grai+state%crop%gird))
+    associate (atmo => state%atmosphere, crop => state%crop)
+
+      ! Divide interception into rain and irrigation parts;
+      ! compute net rain (nraida) and net sprinkling irrigation (nird).
+      if (aintc .lt. 0.001d0) then
+        atmo%nraida = atmo%grai - atmo%gsnow - atmo%snrai
+        atmo%nird   = crop%gird
       else
-        state%atmosphere%nraida = state%atmosphere%grai - aintc
-        state%atmosphere%nird   = state%crop%gird
+        if (atmo%isua .eq. 0) then
+          atmo%nraida = atmo%grai - aintc*(atmo%grai/(atmo%grai+crop%gird))
+          atmo%nird   = crop%gird - aintc*(crop%gird/(atmo%grai+crop%gird))
+        else
+          atmo%nraida = atmo%grai - aintc
+          atmo%nird   = crop%gird
+        endif
       endif
-    endif
+
+    end associate
 
   end subroutine DivIntercep
 
