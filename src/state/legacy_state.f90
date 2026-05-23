@@ -235,7 +235,7 @@ module legacy_state_mod
       integer :: swhyst  !! Switch for hysteresis of soil moisture retention function: 0 = no; 1 = yes
       integer :: swinco  !! Switch for initial soil moisture condition: 1 = pressure heads; 2 = hydrostatic equilibrium;
       integer :: swliminf  !! Switch for limit of infiltration head to the waterdepth in the channel: 0 = nolimit, 1 = limitation
-      integer :: swpondmx  !! Switch for time dependent maximum amount of ponding (L) on soil surface before runoff starts
+      ! [GR-BND 2026-05-23] swpondmx retired — see state%surfacewater%swpondmx
       integer :: swqhbot  !! Switch for flux-groundwater level relationship: 1 = exponential function; 2 = tabular function
       integer :: swcofqhc  !! Switch for additional flux added to exponential flux-groundwater level relationship: 0 = no, 1 = yes
       ! [GR-ATM 2026-05-23] swredu retired — see state%atmosphere%swredu
@@ -291,7 +291,7 @@ module legacy_state_mod
       real(real64), allocatable :: OxygenIntercept(:)  !! Parameters of reproduction function for oxygen stress according to Bartholomeus
       real(real64), allocatable :: OxygenSlope(:)  !! Parameters of reproduction function for oxygen stress according to Bartholomeus
       real(real64), allocatable :: paramvg(:,:)  !! Array with input values of soil hydraulic parameters according to Mualem - van Genuchten for each soil layer
-      real(real64), allocatable :: pondmxtab(:)  !! Table with time-dependent input (date,value) for maximum amount of ponding (L) on soil surface before runoff starts
+      ! [GR-BND 2026-05-23] pondmxtab retired — see state%surfacewater%pondmxtab
       real(real64), allocatable :: qbotab(:)  !! Array with specified bottom flux (L/T) as function of time (T)
       real(real64), allocatable :: qdraincomp(:)  !! Total lateral drainage flux (L/T) for each compartment
       real(real64), allocatable :: qdrtab(:)  !! Array with lateral drainage flux (L/T) as function of groundwater level (L)

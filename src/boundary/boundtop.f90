@@ -206,9 +206,6 @@ contains
       ! [SS-TC TC-14] dt, t1900 read via state%timecontrol (ADR 0041)
       ! [SS-GR-FINAL B11] mairg → swap_array_dimensions (dimension constant)
       use swap_array_dimensions, only: mairg
-      use variables,             only: &   ! [SS-GR-FINAL B11] residuals — all DEFERRED
-         ! DEFERRED: swpondmx/pondmxtab — dynamic ponding max switch/table; not yet in config; Phase C3
-         swpondmx, pondmxtab
       use array_utils,           only: afgen
       use surfacewater_utils,    only: runoff
       use swap_state_mod,        only: swap_state_t
@@ -227,8 +224,8 @@ contains
       t1900 = state%timecontrol%t1900
 
 ! --  in case of time dependent ponding: determine pondmx
-      if (swpondmx.eq.1) then
-         state%surfacewater%pondmx = afgen (pondmxtab,2*mairg,t1900+dt)      ! [SS-GR-BH B11]
+      if (state%surfacewater%swpondmx.eq.1) then
+         state%surfacewater%pondmx = afgen (state%surfacewater%pondmxtab, 2*mairg, t1900+dt)
       endif
 
 ! --- check whether h0max, the max value of pond, yields a runoff

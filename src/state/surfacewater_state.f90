@@ -10,6 +10,7 @@ module surfacewater_state_mod
    use surface_water_config_mod, only: surface_water_config_t
    use drainage_config_mod,      only: drainage_config_t
    use error_mod,                only: fatalerr_collected
+   use swap_array_dimensions,    only: MAIRG
    implicit none
    private
    public :: surfacewater_state_t
@@ -72,6 +73,12 @@ module surfacewater_state_mod
       real(real64)                  :: rsro       = 0.0_real64  !< runoff resistance (d)
       real(real64)                  :: rsroexp    = 0.0_real64  !< runoff exponent (-)
 
+      ! Time-dependent max-ponding feature (dormant — no TOML writer).
+      ! When swpondmx=1, boundtop reads pondmxtab via afgen each step;
+      ! currently always swpondmx=0 in the TOML pipeline.
+      integer                       :: swpondmx   = 0
+      real(real64), allocatable     :: pondmxtab(:)             !< (2*MAIRG) date/value pairs
+
       !> [SS-BMI2] Surface water output row buffer (SurfaceWaterOutput stream).
       !! Currently placeholder only — SurfaceWaterOutput body was deleted by ADR 0009 Phase 5+
       !! (outdrf/outswb deleted, swdrf=0, swswb=0).
@@ -121,6 +128,11 @@ contains
       ! Zero-initialised; populated by config_to_variables dual-write.
       allocate(self%hqhtab(3660, 25)); self%hqhtab = 0.0_real64
       allocate(self%qqhtab(3660, 25)); self%qqhtab = 0.0_real64
+
+      ! pondmxtab: dormant time-dependent max-ponding table (no TOML writer).
+      ! Sized to match the legacy fixed-size global pondmxtab(2*mairg).
+      allocate(self%pondmxtab(2*MAIRG)); self%pondmxtab = 0.0_real64
+      self%swpondmx = 0
 
       ! ---- L1: zero defaults ----
       self%numadj = 0

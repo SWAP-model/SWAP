@@ -163,7 +163,7 @@
       swhyst             = 0 
       swinco             = 0 
       ! [SS-GR-FINAL D5] swoutputmodflow zero-fill dropped — declaration retired
-      swpondmx           = 0 
+      ! [GR-BND 2026-05-23] swpondmx retired — see state%surfacewater%swpondmx
       swqhbot            = 0 
       ! [GR-ATM 2026-05-23] swredu retired — see state%atmosphere%swredu
       ! [SS-GR-CROPRT C1] swend zero-fill dropped — global + state field retired (ADR 0009: always 0)
@@ -303,7 +303,7 @@
       ! pond               = 0.0d0
       ! pondini            = 0.0d0
       ! pondm1             = 0.0d0
-      pondmxtab          = 0.0d0
+      ! [GR-BND 2026-05-23] pondmxtab retired — surfacewater_state_init zeros state%surfacewater%pondmxtab
       ! [SS-SWC] q retired — soilwater_init handles init via state%soilwater%q
       ! q                  = 0.0d0
       ! [SS-BND B-2.7] qbot, qbot_nonfrozen retired — soilwater_init handles init via state%soilwater

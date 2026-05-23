@@ -767,7 +767,7 @@
       ! [SS-GR-FINAL D5] swoutputmodflow retired — 0 consumers; MODFLOW output deleted
       ! [GR-CROPWS] swoxygen retired — see state%crop%common%swoxygen
       ! [GR-CROPWS] swoxygentype retired — see state%crop%common%swoxygentype
-      integer   swpondmx           ! Switch for time dependent maximum amount of ponding (L) on soil surface before runoff starts
+      ! [GR-BND 2026-05-23] swpondmx retired — see state%surfacewater%swpondmx
       integer   swqhbot            ! Switch for flux-groundwater level relationship: 1 = exponential function; 2 = tabular function
       integer   swcofqhc           ! Switch for additional flux added to exponential flux-groundwater level relationship: 0 = no, 1 = yes
       ! [GR-ATM 2026-05-23] swredu retired — see state%atmosphere%swredu
@@ -958,7 +958,7 @@
       ! real(8)   pondini            ! Ponding water layer (L) on soil surface at start of current water balance period
       ! real(8)   pondm1             ! Ponding water layer (L) on soil surface at former time level
       ! [GR-CROP-DVS] pondmx retired — see state%surfacewater%pondmx
-      real(8)   pondmxtab(2*mairg) ! Table with time-dependent input (date,value) for maximum amount of ponding (L) on soil surface before runoff starts
+      ! [GR-BND 2026-05-23] pondmxtab retired — see state%surfacewater%pondmxtab
       ! [SS-SWC] retired 2026-05-12 — moved to state%soilwater%q (ADR 0038)
       ! real(8)   q(macp+1)          ! Soil water flux between current compartment and upper compartment (L/T)
       ! [SS-BND] retired 2026-05-11 — boundary subsystem migrated to state%soilwater (ADR 0035)
