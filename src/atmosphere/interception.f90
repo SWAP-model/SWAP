@@ -33,39 +33,39 @@ contains
   !>
   !> Uses exponential relation between soil cover and LAI.
   !>
-  !> Input via state: state%crop%gird/kdif/kdir/cofab/lai, state%atmosphere%isua
+  !> Pure function — explicit args, no state dependency.
   !> @endnote
-  pure subroutine VonHHBraden (aintc, grai_in, state)
+  pure function VonHHBraden(grai, gird, isua, kdif, kdir, lai, cofab) result(aintc)
     implicit none
 
-    real(8),            intent(out) :: aintc    ! Rainfall interception this day [cm/d]
-    real(8),            intent(in)  :: grai_in  ! Gross daily rain flux [cm/d]
-    type(swap_state_t), intent(in)  :: state
+    real(8), intent(in) :: grai   ! Gross daily rain flux [cm/d]
+    real(8), intent(in) :: gird   ! Gross daily irrigation flux [cm/d]
+    integer, intent(in) :: isua   ! Sprinkler switch: 0 = above canopy, /=0 = below
+    real(8), intent(in) :: kdif   ! Diffuse-light extinction coefficient [-]
+    real(8), intent(in) :: kdir   ! Direct-light extinction coefficient [-]
+    real(8), intent(in) :: lai    ! Leaf area index [m2/m2]
+    real(8), intent(in) :: cofab  ! Von Hoyningen-Hune & Braden interception coefficient [cm/d]
+    real(8)             :: aintc  ! Rainfall interception this day [cm/d]
 
     real(8) :: rpd    ! Intercepted precipitation (rain+irrig) [mm]
     real(8) :: cofbb  ! Interception coefficient b [-]
 
-    associate (atmo => state%atmosphere, crop => state%crop)
+    ! Intercepted precipitation (rain+irrig) in mm
+    rpd = grai*10.0d0
+    if (isua .eq. 0) rpd = (grai + gird)*10.0d0
 
-      ! Intercepted precipitation (rain+irrig) in mm
-      rpd = grai_in*10.0d0
-      if (atmo%isua .eq. 0) rpd = (grai_in + crop%gird)*10.0d0
+    ! Exponential relation between soil cover and lai
+    cofbb = 1.0d0 - exp(-1.0d0*kdif*kdir*lai)
+    cofbb = min(cofbb, 1.0d0)
 
-      ! Exponential relation between soil cover and lai
-      cofbb = 1.0d0 - exp(-1.0d0*crop%kdif*crop%kdir*crop%lai)
-      cofbb = min(cofbb, 1.0d0)
+    ! Interception: evaporation of intercepted precipitation in cm
+    if (cofab .gt. 0.000001d0) then
+      aintc = (cofab*lai*(1.0d0 - (1/(1.0d0 + rpd*cofbb / (cofab*lai)))))*0.1d0
+    else
+      aintc = 0.0d0
+    endif
 
-      ! Interception: evaporation of intercepted precipitation in cm
-      if (crop%cofab .gt. 0.000001d0) then
-        aintc = (crop%cofab*crop%lai*(1.0d0 - (1/(1.0d0 + rpd*cofbb / &
-                                    (crop%cofab*crop%lai)))))*0.1d0
-      else
-        aintc = 0.0d0
-      endif
-
-    end associate
-
-  end subroutine VonHHBraden
+  end function VonHHBraden
 
   !> @brief Calculate interception for forests according to Gash (1995)
   !>

@@ -350,9 +350,9 @@ contains
 
     else if (state%crop%common%swinter .eq. 1) then
       ! Calculate interception, method Von Hoyningen-Hune and Braden
-      ! SS-ATM A-2.6: grai retired — pass state%atmosphere%grai explicitly
-      ! SS-GR-ATM B8: state added for crop/atmosphere fields
-      call VonHHBraden (aintc, state%atmosphere%grai, state)
+      aintc = VonHHBraden(state%atmosphere%grai, state%crop%gird, &
+                          state%atmosphere%isua, state%crop%kdif, &
+                          state%crop%kdir, state%crop%lai, state%crop%cofab)
     else if (state%crop%common%swinter .eq. 2) then
       ! Calculate interception, method Gash (1995)
       ! SS-ATM A-2.6: grai retired — pass state%atmosphere%grai explicitly
