@@ -54,44 +54,25 @@ contains
   !! (detailed meteo input)
   !! @endnote
    subroutine MeteoDT(state)
-      ! SS-TC TC-9: flYearStart,flrainintens,flmeteodt,fletsine removed from bare use variables;
-      !             reads/writes via state%timecontrol.
-      ! [SS-GR-ATM B26] bare use variables dropped — all TC symbols via state%timecontrol associate;
-      !                  no variables.f90 symbols remain in this subroutine body.
       implicit none
 
       type(swap_state_t), intent(inout) :: state
-        !! Simulation state (passed through to reduceva for atmosphere dual-writes)
 
-      ! SS-TC TC-9: flYearStart,flrainintens,flmeteodt,fletsine read via state%timecontrol (tc_* aliases).
-      associate( &
-        tc_flYearStart  => state%timecontrol%flYearStart,   &  ! TC-9
-        tc_flrainintens => state%timecontrol%flrainintens,  &  ! TC-9
-        tc_flmeteodt    => state%timecontrol%flmeteodt,     &  ! TC-9
-        tc_fletsine     => state%timecontrol%fletsine       )  ! TC-9
-
-      ! --- meteo input handling on yearly and daily basis ---
+      associate (time => state%timecontrol)
 
       ! Beginning of year: process rain events
-      if (tc_flYearStart .and. tc_flrainintens) then
+      if (time%flYearStart .and. time%flrainintens) then
          call ProcessRainEvents(state)
-         tc_flYearStart = .false.   ! [SS-TC TC-14] legacy flYearStart write retired
+         time%flYearStart = .false.
       end if
 
-      ! --- calculations of meteo variables on time step basis ---
-
-      ! Update actual rain record and set precipitation fluxes per time step
-      ! or update actual meteo record and set meteo fluxes per time step
-      if (tc_flmeteodt) then
-         call ProcessMeteoTsteps(state)
-      end if
+      ! Per timestep: update rain or meteo fluxes
+      if (time%flmeteodt) call ProcessMeteoTsteps(state)
 
       ! Distribute potential transpiration and evaporation according to sine wave
-      if (tc_fletsine) then
-         call ETSine(state)
-      end if
+      if (time%fletsine) call ETSine(state)
 
-      end associate  ! tc_flYearStart, tc_flrainintens, tc_flmeteodt, tc_fletsine => state%timecontrol [TC-9]
+      end associate
 
    end subroutine MeteoDT
 
