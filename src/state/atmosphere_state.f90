@@ -113,6 +113,10 @@ module atmosphere_state_mod
       real(real64) :: aintcdt  = 0.0_real64  !< actual interception this timestep (cm)
       real(real64) :: nird     = 0.0_real64  !< net irrigation depth after interception (cm) — peer of nraida; may re-home to state%irrigation%nird in future arc
 
+      ! Cross-routine rain/interception runtime state (atmosphere writes, downstream reads)
+      real(real64) :: finterception = 1.0_real64  !< net/gross rain ratio after interception (-); written by meteo_orchestrator per day, read in meteodt per timestep
+      real(real64) :: dtEventRain   = 0.0_real64  !< time-step length until next precipitation event (d); written/read in meteodt
+
       ! -----------------------------------------------------------------------
       ! Per-day scalars (9) — updated once per day in ProcessMeteoDay
       ! -----------------------------------------------------------------------

@@ -181,11 +181,11 @@
       real(8)   dettav(nmetfile)   ! Array with detailed temperature input data (  )
       real(8)   dettime(nmetfile)  ! Array with dates of detailed meteo input data
       real(8)   detwind(nmetfile)  ! Array with detailed wind speed input data (L/T)   
-      real(8)   dtEventRain        ! Time step length for next precipitation event (T)
+      ! [GR-ATM 2026-05-23] dtEventRain retired — see state%atmosphere%dtEventRain
       ! real(8) :: empreva   ! Reduced soil evaporation flux according to empirical functions (L/T)
       real(8)   epot(96)           ! In case of detailed weather input, calculated Epot of each weather record (L/T)
       real(8)   cfevappond         ! Parameter equal to the ratio ponding layer evaporation / ETref (-)
-      real(8)   finterception      ! Ratio net / gross rain flux in case of detailed rainfall data (-)
+      ! [GR-ATM 2026-05-23] finterception retired — see state%atmosphere%finterception
       ! real(8) :: fprecnosnow  ! Ratio rain (excl. snow and rain on snow) / gross rain flux (-)
       ! real(8) :: grai        ! Daily gross rain flux (L/T), without rain on snow
       ! real(8) :: graidt      ! Gross precipitation flux during iteration timesteps (L/T)

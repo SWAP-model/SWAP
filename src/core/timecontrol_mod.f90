@@ -334,8 +334,8 @@ contains
                             flCropHarvest, &
                             ! DEFERRED: croptype/icrop — crop schedule globals; Phase C3
                             croptype, icrop, &
-                            ! DEFERRED: dtEventRain/dt_SSDI_event — rain/SSDI timing state; Phase C3
-                            dtEventRain, dt_SSDI_event, &
+                            ! DEFERRED: dt_SSDI_event — SSDI timing state; Phase C3
+                            dt_SSDI_event, &
                             ! DEFERRED: flSSDI — SSDI feature gate; Phase C3
                             flSSDI, &  ! [GR-CROP Phase B] raintimearray retired from here
                             ! DEFERRED: numbit — Richards iteration counter; Phase C3
@@ -567,7 +567,7 @@ contains
              rainrec = rainrec + 1
            endif
 
-           dtEvent = min(dtevent,dtEventRain)
+           dtEvent = min(dtevent, state%atmosphere%dtEventRain)
            dtEvent = max(dtEvent,dtmin)
          endif
 

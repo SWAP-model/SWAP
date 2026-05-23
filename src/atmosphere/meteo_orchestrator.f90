@@ -78,7 +78,7 @@ contains
   !! Single ET record per day. Body is the daily-only slice of the former
   !! ProcessMeteoDay: Sections 3, 4, 5(daily branch), 6, 7, 9.
   subroutine process_meteo_day_daily(state, config)
-    use variables, only: rad, croptype, gc, flCropHarvest, finterception, swusecn
+    use variables, only: rad, croptype, gc, flCropHarvest, swusecn
     use swap_constants, only: nihil, small
     type(swap_state_t),  intent(inout) :: state
     type(swap_config_t), intent(in)    :: config
@@ -153,17 +153,17 @@ contains
     if (state%atmosphere%grai.gt.1.d-5) then
       ! finterception is exclusively meant for dividing rain flux into interception part
       ! and net rain part; not for sprinkler irrigation!
-      finterception = state%atmosphere%nraida / state%atmosphere%grai
-      if (aintc.lt.1.0d-5) finterception = 1.0d0
+      state%atmosphere%finterception = state%atmosphere%nraida / state%atmosphere%grai
+      if (aintc.lt.1.0d-5) state%atmosphere%finterception = 1.0d0
     else
-      finterception = 1.0d0
+      state%atmosphere%finterception = 1.0d0
     endif
 
     ! In case of daily precipitation sum: set actual gross and net rainflux,
     ! and interception on TIMESTEP basis
     if (config%meteo%swrain.eq.0) then
       rainflux    = state%atmosphere%fprecnosnow * state%atmosphere%grai
-      netrainflux = finterception * rainflux
+      netrainflux = state%atmosphere%finterception * rainflux
       state%atmosphere%graidt  = rainflux
       state%atmosphere%nraidt  = netrainflux
       if (swuseCN == 1) then

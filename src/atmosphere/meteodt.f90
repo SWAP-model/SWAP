@@ -336,73 +336,43 @@ contains
   !! (in case of precipitation intensities [swrain 1-3] or detailed meteo input)
   !! @endnote
    subroutine ProcessMeteoTsteps(state)
-      ! SS-TC TC-9: flrainintens,tcum,dt,flmetdetail,flUpdMetDet removed from bare use variables;
-      !             reads/writes via state%timecontrol.
-      ! [SS-GR-ATM B28] bare use variables replaced with narrow only: list.
-      !   Migrated reads: tpot/epot/grain/nrain → state%atmosphere%X (pure reads, no dual-write needed).
-      ! [GR-CROP Phase B] rainfluxarray/raintimearray migrated → state%atmosphere%X.
-      !   DEFERRED: finterception, dtEventRain — not yet in state schema (Arc 8).
-      use variables, only: &   ! [SS-GR-FINAL B11] DEFERRED
-         ! DEFERRED: finterception — fraction interception config; Phase C3
-         finterception, &
-         ! DEFERRED: dtEventRain — rain event timestep runtime state; Phase C3
-         dtEventRain  ! [GR-CROP Phase B]
       use et_mod, only: reduceva_dt
       implicit none
 
       type(swap_state_t), intent(inout) :: state
-        !! Simulation state (passed through to reduceva for atmosphere dual-writes)
 
-      ! [SS-TC TC-14] alias TC fields directly so bare names below resolve to state%timecontrol
-      ! [GR-CROP Phase B] rainfluxarray, raintimearray aliased to state%atmosphere%X
-      associate( &
-        tc_flrainintens => state%timecontrol%flrainintens,  &
-        tc_tcum         => state%timecontrol%tcum,          &
-        tc_dt           => state%timecontrol%dt,            &
-        tc_flmetdetail  => state%timecontrol%flmetdetail,   &
-        tc_flUpdMetDet  => state%timecontrol%flUpdMetDet,   &
-        rainrec         => state%timecontrol%rainrec,       &
-        wrecord         => state%timecontrol%wrecord,       &
-        rainfluxarray   => state%atmosphere%rainfluxarray,  &  ! [GR-CROP Phase B]
-        raintimearray   => state%atmosphere%raintimearray   )  ! [GR-CROP Phase B]
+      associate (atmo => state%atmosphere, time => state%timecontrol)
 
-      ! === Precipitation intensities ===
+      if (time%flrainintens) then
+         ! Per timestep: set precipitation fluxes from the rain-event array
+         atmo%graidt  = atmo%fprecnosnow * atmo%rainfluxarray(time%rainrec)
+         atmo%nraidt  = atmo%finterception * atmo%graidt
+         atmo%aintcdt = (1.0d0 - atmo%finterception) * atmo%graidt
 
-      if (tc_flrainintens) then
-         ! Per time step: set precipitation fluxes for current time step
-         state%atmosphere%graidt  = state%atmosphere%fprecnosnow*rainfluxarray(rainrec)
-         state%atmosphere%nraidt  = finterception*state%atmosphere%graidt
-         state%atmosphere%aintcdt = (1.d0 - finterception)*state%atmosphere%graidt
-
-         ! Calculate minimum time step length for occurrence of next rain event
+         ! Minimum time step length until next rain event
          ! (tcum + dt = time at end of current timestep)
-         dtEventRain = raintimearray(rainrec) - (tc_tcum + tc_dt)
+         atmo%dtEventRain = atmo%raintimearray(time%rainrec) - (time%tcum + time%dt)
 
-         ! === Detailed meteo ===
+      else if (time%flmetdetail) then
 
-      elseif (tc_flmetdetail) then
-
-         if (tc_flUpdMetDet) then
+         if (time%flUpdMetDet) then
             ! Per meteo time interval: update actual meteo record and set fluxes
-            ! for current time of detailed meteo input
-            wrecord = wrecord + 1
-            state%atmosphere%ptra = state%atmosphere%tpot(wrecord)   ! [SS-GR-ATM B28] tpot → state%atmosphere%tpot
-            state%atmosphere%peva = state%atmosphere%epot(wrecord)   ! [SS-GR-ATM B28] epot → state%atmosphere%epot
-            state%atmosphere%graidt  = state%atmosphere%grain(wrecord)   ! [SS-GR-ATM B28] grain → state%atmosphere%grain
-            state%atmosphere%nraidt  = state%atmosphere%nrain(wrecord)   ! [SS-GR-ATM B28] nrain → state%atmosphere%nrain
-            state%atmosphere%aintcdt = state%atmosphere%graidt - state%atmosphere%nraidt
+            time%wrecord  = time%wrecord + 1
+            atmo%ptra     = atmo%tpot(time%wrecord)
+            atmo%peva     = atmo%epot(time%wrecord)
+            atmo%graidt   = atmo%grain(time%wrecord)
+            atmo%nraidt   = atmo%nrain(time%wrecord)
+            atmo%aintcdt  = atmo%graidt - atmo%nraidt
 
-            tc_flUpdMetDet = .false.   ! [SS-TC TC-14] legacy flUpdMetDet write retired
+            time%flUpdMetDet = .false.
          end if
 
-         ! Per time step: calculate soil evaporation rate of current time step
-         call reduceva_dt(state%atmosphere%nraida, state)
+         ! Per timestep: actual soil-evaporation rate
+         call reduceva_dt(atmo%nraida, state)
 
       end if
 
-      end associate  ! tc_flrainintens,...,raintimearray,rainfluxarray => state%timecontrol/atmosphere [TC-9, GR-CROP Phase B]
-
-      return
+      end associate
    end subroutine ProcessMeteoTsteps
 
    !> Distribute potential evapotranspiration according to diurnal sine wave

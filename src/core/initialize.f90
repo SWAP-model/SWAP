@@ -43,7 +43,7 @@
       ! [SS-ATM A-2.6] empreva/fprecnosnow/grai/graidt/ievap/inrai/ipeva/iptra retired to state%atmosphere
       epot               = 0.0d0
       cfevappond         = 0.0d0
-      finterception      = 0.0d0
+      ! [GR-ATM 2026-05-23] finterception retired — see state%atmosphere%finterception
       grain              = 0.0d0
       ! [SS-TC] metperiod retired to state%timecontrol%metperiod (ADR 0041)
       ! [SS-ATM A-2.6] nraida/nraidt/peva/pevaday/ptra/ptraday retired to state%atmosphere

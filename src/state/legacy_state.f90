@@ -61,10 +61,10 @@ module legacy_state_mod
       real(real64), allocatable :: dettav(:)  !! Array with detailed temperature input data (  )
       real(real64), allocatable :: dettime(:)  !! Array with dates of detailed meteo input data
       real(real64), allocatable :: detwind(:)  !! Array with detailed wind speed input data (L/T)
-      real(real64) :: dtEventRain  !! Time step length for next precipitation event (T)
+      ! [GR-ATM 2026-05-23] dtEventRain retired — see state%atmosphere%dtEventRain
       real(real64), allocatable :: epot(:)  !! In case of detailed weather input, calculated Epot of each weather record (L/T)
       real(real64) :: cfevappond  !! Parameter equal to the ratio ponding layer evaporation / ETref (-)
-      real(real64) :: finterception  !! Ratio net / gross rain flux in case of detailed rainfall data (-)
+      ! [GR-ATM 2026-05-23] finterception retired — see state%atmosphere%finterception
       real(real64), allocatable :: grain(:)  !! In case of detailed weather input, gross rain flux of each weather record (L/T)
       real(real64), allocatable :: nrain(:)  !! In case of detailed weather input, calculated netto rain of each weather record (L/T)
       real(real64) :: rad  !! Global solar radiation (J/m2/d)
