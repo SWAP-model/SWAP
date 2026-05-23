@@ -411,7 +411,7 @@ module legacy_state_mod
       real(real64), allocatable :: QExcMpMtx(:)  !! [retired-zero] kept: waterbalance use clause
       real(real64) :: QMaPo  !! [retired-zero] kept: waterbalance qbot term
       real(real64) :: QRapDra  !! [retired-zero] kept: surfacewater drainage terms
-      integer :: NumLevRapDra  !! Number of drainage levels for rapid drainage (drainage feature)
+      ! [GR-DRA 2026-05-23] NumLevRapDra retired — see state%drainage%NumLevRapDra
       logical :: FlDecMpRat  !! [retired-zero] kept: soilhydraulics convergence sentinel
       integer, allocatable :: intwl(:)  !! imper removed (surfacewater_state_t%imper)
       integer, allocatable :: nowltab(:)

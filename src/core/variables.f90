@@ -1287,7 +1287,7 @@
       ! [MACRO-RETIRE 2026-05-12] note: NumLevRapDra/RapDraReaExp/RapDraResRef
       ! belong to the drainage subsystem (set by drainage_config), NOT
       ! macropore — they were grouped here legacy-style. Keep them.
-      integer NumLevRapDra         ! Number of drainage levels for rapid drainage (drainage feature)
+      ! [GR-DRA 2026-05-23] NumLevRapDra retired — see state%drainage%NumLevRapDra
       ! [SS-GR-FINAL D1] RapDraReaExp retired — only c2v writes; 0 consumers
       ! [SS-GR-FINAL D1] RapDraResRef retired — only c2v writes; 0 consumers
       logical FlDecMpRat           ! [retired-zero] kept: soilhydraulics convergence sentinel
@@ -1351,7 +1351,7 @@
       ! real(8) swst      ! Moved to surfacewater_state_t%swst
       ! real(8) wlsbak(4) ! Moved to surfacewater_state_t%wlsbak
       ! SS-SWST Phase 2 Task 11 C2: cqdrd/cwsupp/cwout/wls removed — state%surfacewater owns them.
-      real(8) cofintfl,expintfl
+      ! [GR-DRA 2026-05-23] cofintfl/expintfl retired — see state%drainage%{cofintfl,expintfl}
       ! cqdrd removed (surfacewater_state_t%cqdrd)
       ! cwsupp removed (surfacewater_state_t%cwsupp)
       ! cwout removed  (surfacewater_state_t%cwout)

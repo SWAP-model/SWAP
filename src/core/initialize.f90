@@ -509,7 +509,7 @@
       QMaPo                = 0.0d0
       QRapDra              = 0.0d0
       ! Drainage globals (NOT macropore — kept here next to retired set)
-      NumLevRapDra         = 0
+      ! [GR-DRA 2026-05-23] NumLevRapDra retired — see state%drainage%NumLevRapDra
       ! [SS-GR-FINAL D1] RapDraReaExp/RapDraResRef zero-fills dropped — declarations retired
       FlDecMpRat           = .false.
       ! [SS-GR-CROPRT A2] flmacropore zero-fill dropped — declaration retired (ADR 0040)
@@ -562,8 +562,7 @@
       wlstab                = 0.0d0
       ! SS-SWST Phase 2 Task 11 C3: sttab/swstini/swst/wlsbak removed (state%surfacewater owns them).
       ! sttab=0, swstini=0, swst=0, wlsbak=0 are set by surfacewater_state_t defaults.
-      cofintfl              = 0.0d0
-      expintfl              = 0.0d0
+      ! [GR-DRA 2026-05-23] cofintfl/expintfl retired — see state%drainage%{cofintfl,expintfl}
       ! SS-SWST Phase 2 Task 11 C3: cqdrd/cwsupp/cwout/wls removed (state%surfacewater owns them).
       ! All default to 0 in surfacewater_state_t.
       owltab                = 0.0d0

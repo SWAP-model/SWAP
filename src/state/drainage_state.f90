@@ -54,6 +54,12 @@ module drainage_state_mod
       real(real64) :: kvtop  = 0.0_real64  !! [cm/d] vertical K top layer (ipos>=4)
       real(real64) :: kvbot  = 0.0_real64  !! [cm/d] vertical K bottom layer (ipos>=4)
       real(real64) :: zintf  = 0.0_real64  !! [cm] fine/coarse interface depth (ipos>=3)
+
+      ! Drainage surface-runoff config (snapshotted from
+      ! config%drain%surface_runoff at config_to_variables).
+      real(real64) :: cofintfl     = 0.0_real64  !! interflow coefficient
+      real(real64) :: expintfl     = 0.0_real64  !! interflow exponent
+      integer      :: NumLevRapDra = 0           !! rapid drainage drain-level index
    end type drainage_state_t
 
 end module drainage_state_mod

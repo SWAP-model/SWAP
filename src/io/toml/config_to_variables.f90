@@ -390,8 +390,8 @@ contains
       ! schema lands in Phase 4f-extend.
       ! [GR-BH Task 37] swnrsrf/SwTopnrsrf/swdivdinf/FacDpthInf bare globals deleted —
       ! state%drainage%X seeded in swap_mod.f90
-      cofintfl     = config%drain%surface_runoff%cofintfl
-      expintfl     = config%drain%surface_runoff%expintfl
+      state%drainage%cofintfl = config%drain%surface_runoff%cofintfl
+      state%drainage%expintfl = config%drain%surface_runoff%expintfl
       ! ADR 0031: gate the surface_runoff geofac write to avoid overwriting
       ! the ipos==5 (Ernst geometry factor) write at line 306. Two distinct
       ! TOML fields map to one legacy global; the gate preserves both
@@ -412,7 +412,7 @@ contains
       rsurfdeep    = config%drain%surface_runoff%rsurfdeep
       rsurfshallow = config%drain%surface_runoff%rsurfshallow
       ! [SS-GR-FINAL D1] RapDraReaExp write dropped — global retired
-      NumLevRapDra = config%drain%surface_runoff%numlevrapdra
+      state%drainage%NumLevRapDra = config%drain%surface_runoff%numlevrapdra
       ! swtopdislay(madr) and ftopdislay(madr): broadcast scalar config
       ! field to all levels (currently no per-level schema slot).
       if (size(swtopdislay) >= 1) then

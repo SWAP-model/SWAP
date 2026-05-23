@@ -193,11 +193,10 @@ contains
          dramet, swdtyp, swallo, &
          ! [GR-BND 2026-05-23] geometry cluster (basegw/ipos/khtop/khbot/kvtop/kvbot/
          ! entres/zintf/geofac) retired — aliased from state%drainage in the associate below.
-         ! DEFERRED: drares/infres/qdrtab/cofintfl/expintfl/shape — drain resistance/flow config; Phase C3
-         drares, infres, qdrtab, cofintfl, expintfl, shape, &
+         ! DEFERRED: drares/infres/qdrtab/shape — drain resistance config; Phase C3
+         drares, infres, qdrtab, shape, &
          ! [SS-GR-CROPRT A2] FlMacropore dropped — retired (ADR 0040)
-         ! DEFERRED: NumLevRapDra — rapid drainage level count; config%drainage%nrlevs; Phase C3
-         NumLevRapDra, &
+         ! [GR-DRA 2026-05-23] cofintfl/expintfl/NumLevRapDra retired — aliased from state%drainage below.
          ! DEFERRED: swliminf — infiltration limit switch; config; Phase C3
          swliminf, &
          ! DEFERRED: nowltab(madr) — OWL table count per level; active drainage runtime state; Phase C3
@@ -240,7 +239,10 @@ contains
                 khbot    => state%drainage%khbot,        &
                 kvtop    => state%drainage%kvtop,        &
                 kvbot    => state%drainage%kvbot,        &
-                zintf    => state%drainage%zintf         )
+                zintf    => state%drainage%zintf,        &
+                cofintfl => state%drainage%cofintfl,     &  ! [GR-DRA 2026-05-23]
+                expintfl => state%drainage%expintfl,     &  ! [GR-DRA 2026-05-23]
+                NumLevRapDra => state%drainage%NumLevRapDra )
 
       ! SS-SWC Phase 2 S-2.8: gwl read from state%soilwater
       gwldra = state%soilwater%gwl
@@ -466,8 +468,7 @@ contains
                use variables, only: &   ! [SS-GR-FINAL B10] residuals — all DEFERRED
                   ! DEFERRED: dramet/swdtyp — drainage method/type flags; config; Phase C3
                   dramet, swdtyp, &
-                  ! DEFERRED: NumLevRapDra — rapid drainage level count; config%drainage%nrlevs; Phase C3
-                  NumLevRapDra, &
+                  ! [GR-DRA 2026-05-23] NumLevRapDra retired — aliased from state%drainage below.
                   ! DEFERRED: nowltab(madr) — OWL table count per level; active drainage runtime state; Phase C3
                   nowltab, &
                   ! DEFERRED: swdislay/swtopdislay/fTopDisLay — distributed-layer drainage config; Phase C3
@@ -498,7 +499,8 @@ contains
                   dr_owltab   => state%drainage%owltab,         &  ! GR-BH Task 28
                   sw_ksatfit  => state%soilwater%ksatfit,       &  ! GR-BH Task 28
                   sw_ksatexm  => state%soilwater%ksatexm,       &  ! GR-BH Task 28
-                  sw_cofani   => state%soilwater%cofani          )  ! GR-BH Task 28
+                  sw_cofani   => state%soilwater%cofani,        &  ! GR-BH Task 28
+                  NumLevRapDra => state%drainage%NumLevRapDra   )  ! [GR-DRA 2026-05-23]
 
                ! Allocate per-level state arrays if not yet done (guard for
                ! fldrain path where surfacewater_init may not have been called).
@@ -743,12 +745,10 @@ contains
      ! DEFERRED: wlp/rinfi/rentry/rexit/gwlinf/impend/wscap — surface water config; Phase C3
      wlp, rinfi, rentry, rexit, gwlinf, impend, wscap, &
      ! DEFERRED: rsurfdeep/rsurfshallow — surface resistance config; Phase C3
-     rsurfdeep, rsurfshallow, &
-     ! DEFERRED: cofintfl/expintfl — infiltration coefficients; config; Phase C3
-     cofintfl, expintfl, &
+     rsurfdeep, rsurfshallow
+     ! [GR-DRA 2026-05-23] cofintfl/expintfl/NumLevRapdra retired — aliased from state%drainage below.
      ! [SS-GR-CROPRT A2] FlMacropore dropped — retired (ADR 0040)
-     ! DEFERRED: NumLevRapdra — rapid drainage level count; config%drainage%nrlevs; Phase C3
-     NumLevRapdra
+
 
 ! --- global
                real(8) dh
@@ -774,7 +774,9 @@ contains
                   nrlevs  => state%drainage%nrlevs,     &  ! GR-BH Task 28
                   swnrsrf => state%drainage%swnrsrf,    &  ! GR-BH Task 28
                   gwl     => state%soilwater%gwl,       &
-                  pond    => state%soilwater%pond)
+                  pond    => state%soilwater%pond,      &
+                  cofintfl => state%drainage%cofintfl,  &  ! [GR-DRA 2026-05-23]
+                  expintfl => state%drainage%expintfl   )  ! [GR-DRA 2026-05-23]
 
 ! --- Spec D7: zero drainage when groundwater is dry.
 !     Was in SurfaceWater(2) in legacy code; relocated here per ADR 0030
