@@ -51,6 +51,7 @@ module swap_log
     public :: log_error
     public :: log_set_level
     public :: log_message
+    public :: log_unit_handle
     public :: to_str
     
     ! Generic interface for to_str
@@ -128,6 +129,15 @@ contains
         log_initialized = .false.
     end subroutine log_close
     
+    function log_unit_handle() result(unit)
+        !> Return the raw file unit number swap_log uses for the log file.
+        !! Use only when interop with legacy code that calls write(unit, ...)
+        !! directly is unavoidable (e.g. msw1eic's quarantined error path).
+        !! Prefer log_debug/info/warn/error for new code.
+        integer :: unit
+        unit = log_unit
+    end function log_unit_handle
+
     subroutine log_set_level(level)
         !> Change the current log level
         integer, intent(in) :: level

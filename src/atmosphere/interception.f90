@@ -166,9 +166,7 @@ contains
     ! [SS-GR-ATM B10] fimin → state%atmosphere%fimin
     ! [SS-GR-ATM B10] ew0 → state%crop%ew0
     ! Phase A.5 runtime dual-writes ensure state tracks legacy at runtime.
-    use variables, only: &   ! [SS-GR-FINAL B11] DEFERRED
-       ! DEFERRED: logf — log file unit; runtime utility; Phase C3
-       logf  ! [SS-GR-ATM B6]
+    use swap_log, only: log_unit_handle
     implicit none
 
     ! Arguments
@@ -187,7 +185,7 @@ contains
     ! Convert arguments to keep msw1eic routine compatible with metaswap
     nuk_i4       = 1
     ibd_i4(1)    = 1
-    ib_i4        = logf
+    ib_i4        = log_unit_handle()  ! quarantined msw1eic still expects a unit number
     dc_r4        = 1.0e-4
     dtsw_r4      = REAL(state%timecontrol%dt)  ! TC-11
     csk_r4(1)    = REAL(gctp)
