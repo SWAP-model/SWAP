@@ -1047,7 +1047,7 @@
       integer   swuseCN            ! Switch for usage of Curve Number method for runoff [0 (default),1]
       ! [GR-CROP-DVS] wc_cor/CNrefTAB/CNtimTAB/iCNtab retired — see state%atmosphere
       ! [SS-SWC] retired 2026-05-12 — crunoffCN/irunoCN moved to state%soilwater (ADR 0038)
-      real(8)   CNdry, CNwet, ThetaRef, wc10, Runoff_CN  ! crunoffCN, irunoCN now in state%soilwater
+      ! [GR-ATM] retired 2026-05-23 — CNdry/CNwet/ThetaRef/wc10/Runoff_CN moved to state%atmosphere
       real(8)   Rxylem             ! Mean radius of xylem tube inside roots (L)
       ! [SS-SWC] retired 2026-05-12 — moved to state%soilwater%runon (ADR 0038)
       ! real(8)   runon              ! Water runon flux (L/T)

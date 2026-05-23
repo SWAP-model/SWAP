@@ -338,7 +338,7 @@
       rimlay             = 0.0d0 
       rsigni             = 0.0d0 
       rsoil              = 0.0d0
-      Runoff_CN          = 0.0d0
+      ! [GR-ATM 2026-05-23] Runoff_CN retired — see state%atmosphere%Runoff_CN
       ! [SS-SWC] runon retired — soilwater_init handles init via state%soilwater%runon
       ! runon              = 0.0d0
       runonarr           = 0.0d0 
