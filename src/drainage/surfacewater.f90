@@ -35,11 +35,9 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
       !! compartments and handles both primary and secondary drainage systems.
       ! [SS-GR-FINAL B10] blanket use Variables narrowed; madr/mawlp → swap_array_dimensions
       use swap_array_dimensions, only: madr, mawlp
-      use variables, only: &   ! [SS-GR-FINAL B10] residuals — all DEFERRED
-         ! [GR-DRA 2026-05-23] swdislay/swtopdislay/fTopDisLay retired — aliased from state%drainage below.
-         ! state%cfg%surface_water%swsrf/state%cfg%surface_water%swsec retired (→state%cfg%surface_water%X); pilot
-         ! DEFERRED: wlptab — prescribed surface water level table; config; Phase C3
-         wlptab
+      ! [GR-DRA 2026-05-23] swdislay/swtopdislay/fTopDisLay retired — aliased from state%drainage below.
+      ! [GR-DRA 2026-05-23] wlptab retired — read via state%surfacewater%wlptab.
+      ! state%cfg%surface_water%swsrf/state%cfg%surface_water%swsec retired (→state%cfg%surface_water%X); pilot
       use array_utils, only: afgen
       use swap_state_mod, only: swap_state_t
       implicit none
@@ -215,7 +213,7 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
 ! === surface water balance ========================
 
       if (state%cfg%surface_water%swsrf .eq. 3) then
-        state%surfacewater%wlp = afgen (wlptab,2*mawlp,tc_t1900-1.0d0+tc_dt)  ! [TC-8]
+        state%surfacewater%wlp = afgen (state%surfacewater%wlptab,2*mawlp,tc_t1900-1.0d0+tc_dt)  ! [TC-8]
       endif
       if (state%cfg%surface_water%swsec.eq.2) then
 ! ---    water level of secondary system is simulated
@@ -322,8 +320,9 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
          impend, wldip, intwl, osswlm, wscap, dropr, &
          ! DEFERRED: swman/hbweir/wlsman/gwlcrit/nphase/VCRIT/NODHD/HCRIT — weir/management config; Phase C3
          swman, hbweir, wlsman, gwlcrit, nphase, VCRIT, NODHD, HCRIT, &
-         ! DEFERRED: SWQHR/QQHTAB — discharge rating switch/table; config; Phase C3
-         SWQHR, QQHTAB, &
+         ! DEFERRED: SWQHR — discharge rating switch; config; Phase C3
+         ! [GR-DRA 2026-05-23] QQHTAB retired — read via state%surfacewater%qqhtab.
+         SWQHR, &
          ! DEFERRED: alphaw/betaw — surface water geometry coefficients; config; Phase C3
          alphaw, betaw, &
          ! rsro/pondmx retired (→state%surfacewater%X)
@@ -574,7 +573,7 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
               wover = state%surfacewater%sttab(1,1) - hbweir(imper)
               discap = alphaw(imper) * (wover**betaw(imper))
             elseif (SWQHR.eq.2) then
-              discap = QQHTAB(imper,1)
+              discap = state%surfacewater%qqhtab(imper,1)
             endif
 
 ! ---       error handling
@@ -698,9 +697,8 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
       !!     Differences SWAP/SWAPS: None
       !!@endnote
       ! SS-BND Phase 2 Task B-2.4: runots removed from use clause; read via state%soilwater%runots.
+      ! [GR-DRA 2026-05-23] wlstab retired — read via state%surfacewater%wlstab.
       use variables, only: &   ! [SS-GR-FINAL B10] residuals — all DEFERRED
-         ! DEFERRED: wlstab — prescribed surface water level table; config; Phase C3
-         wlstab, &
          ! DEFERRED: QRapDra — rapid drainage flux runtime state; Phase C3
          QRapDra  ! [TC-8: dropped dt,t1900]
       use swap_state_mod, only: swap_state_t
@@ -731,7 +729,7 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
       sw_wlsold = sw_wls
 
 ! --- fetch new level from input series
-      sw_wls = AFGEN (WLSTAB,2*MAWLS,tc_t1900-1.d0+tc_dt)  ! [TC-8]
+      sw_wls = AFGEN (state%surfacewater%wlstab,2*MAWLS,tc_t1900-1.d0+tc_dt)  ! [TC-8]
 
 ! --- determine surface water storage for level(t-dt) and level(t)
       swstold = swstlev(state, sw_wlsold)

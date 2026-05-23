@@ -539,7 +539,7 @@
       rentry                = 0.0d0
       rexit                 = 0.0d0
       gwlinf                = 0.0d0
-      wlptab                = 0.0d0
+      ! [GR-DRA 2026-05-23] wlptab retired — see state%surfacewater%wlptab
       impend                = 0.0d0
       wldip                 = 0.0d0
       wscap                 = 0.0d0
@@ -555,9 +555,9 @@
       hcrit                 = 0.0d0
       vcrit                 = 0.0d0
       hqhtab                = 0.0d0
-      qqhtab                = 0.0d0
+      ! [GR-DRA 2026-05-23] qqhtab retired — see state%surfacewater%qqhtab
       wlsman                = 0.0d0
-      wlstab                = 0.0d0
+      ! [GR-DRA 2026-05-23] wlstab retired — see state%surfacewater%wlstab
       ! SS-SWST Phase 2 Task 11 C3: sttab/swstini/swst/wlsbak removed (state%surfacewater owns them).
       ! sttab=0, swstini=0, swst=0, wlsbak=0 are set by surfacewater_state_t defaults.
       ! [GR-DRA 2026-05-23] cofintfl/expintfl retired — see state%drainage%{cofintfl,expintfl}

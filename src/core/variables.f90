@@ -1332,7 +1332,8 @@
       integer nowltab(madr)
       real(8) widthr(Madr),taludr(Madr),rdrain(Madr),rsurfdeep
       real(8) rsurfshallow,rinfi(Madr),rentry(Madr),rexit(Madr)
-      real(8) gwlinf(Madr),wlptab(2*mawlp)
+      real(8) gwlinf(Madr)
+      ! [GR-DRA 2026-05-23] wlptab retired — see state%surfacewater%wlptab
       real(8) impend(mamp)
       real(8) wldip(mamp),wscap(mamp),hbweir(mamp)
       ! SS-SWST Phase 2 Task 11 C2: wlstar removed — state%surfacewater%wlstar owns it.
@@ -1341,10 +1342,11 @@
       ! [SS-GR-FINAL D6] wls1_init retired — c2v write tombstoned in D4/C4; state%surfacewater owns it; 0 consumers
       real(8) dropr(mamp*mamte),hdepth(mamp*mamte)
       real(8) gwlcrit(mamp,mamte),hcrit(mamp,mamte),vcrit(mamp,mamte)
-      real(8) hqhtab(mamp,mamte),qqhtab(mamp,mamte)
+      real(8) hqhtab(mamp,mamte)
+      ! [GR-DRA 2026-05-23] qqhtab retired — see state%surfacewater%qqhtab
       real(8) wlsman(mamp,mamte)
       ! SS-SWST Phase 2 Task 11 C2: sttab removed — state%surfacewater%sttab owns it.
-      real(8) wlstab(2*mawls)
+      ! [GR-DRA 2026-05-23] wlstab retired — see state%surfacewater%wlstab
       ! sttab(22,2) removed (surfacewater_state_t%sttab)
       ! SS-SWST Phase 2 Task 11 C2: swstini/swst/wlsbak removed — state%surfacewater owns them.
       ! real(8) swstini   ! Moved to surfacewater_state_t%swstini

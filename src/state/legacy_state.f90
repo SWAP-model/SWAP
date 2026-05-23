@@ -416,7 +416,7 @@ module legacy_state_mod
       integer, allocatable :: nowltab(:)
       real(real64), allocatable :: impend(:)
       real(real64), allocatable :: wlsman(:,:)  !! SS-SWST Phase 2 Task 11 C2: sttab removed — state%surfacewater%sttab owns it.
-      real(real64), allocatable :: wlstab(:)  !! sttab(22,2) removed (surfacewater_state_t%sttab)
+      ! [GR-DRA 2026-05-23] wlstab retired — see state%surfacewater%wlstab
       real(real64), allocatable :: owltab(:,:)  !! real(8) qdrd                  !! Moved to drainage_state_t%qdrd (ADR 0031)
       logical :: flCropPrep  !! Flag indicating if ploughing opportunity has been realized
       real(real64) :: zPrep  !! z-level for monitoring work-ability for the crop

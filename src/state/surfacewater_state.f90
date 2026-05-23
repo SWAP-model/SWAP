@@ -10,7 +10,7 @@ module surfacewater_state_mod
    use surface_water_config_mod, only: surface_water_config_t
    use drainage_config_mod,      only: drainage_config_t
    use error_mod,                only: fatalerr_collected
-   use swap_array_dimensions,    only: MAIRG
+   use swap_array_dimensions,    only: MAIRG, MAWLP, MAWLS
    implicit none
    private
    public :: surfacewater_state_t
@@ -79,6 +79,12 @@ module surfacewater_state_mod
       integer                       :: swpondmx   = 0
       real(real64), allocatable     :: pondmxtab(:)             !< (2*MAIRG) date/value pairs
 
+      ! Prescribed surface-water-level CSV tables. Dormant — no TOML
+      ! writer; surfacewater task=2/3 reads via afgen when swsrf=2/3.
+      ! Sized 2*MAWLP / 2*MAWLS to match legacy fixed-size globals.
+      real(real64), allocatable :: wlptab(:)  !! primary SW level table (2*MAWLP)
+      real(real64), allocatable :: wlstab(:)  !! secondary SW level table (2*MAWLS)
+
       !> [SS-BMI2] Surface water output row buffer (SurfaceWaterOutput stream).
       !! Currently placeholder only — SurfaceWaterOutput body was deleted by ADR 0009 Phase 5+
       !! (outdrf/outswb deleted, swdrf=0, swswb=0).
@@ -133,6 +139,10 @@ contains
       ! Sized to match the legacy fixed-size global pondmxtab(2*mairg).
       allocate(self%pondmxtab(2*MAIRG)); self%pondmxtab = 0.0_real64
       self%swpondmx = 0
+
+      ! Surface-water level tables (dormant — no TOML writer yet).
+      allocate(self%wlptab(2*MAWLP)); self%wlptab = 0.0_real64
+      allocate(self%wlstab(2*MAWLS)); self%wlstab = 0.0_real64
 
       ! ---- L1: zero defaults ----
       self%numadj = 0
