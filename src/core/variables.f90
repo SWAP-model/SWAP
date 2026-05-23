@@ -698,7 +698,7 @@
       ! integer   bpegwl             ! Node at bottom of perched groundwater
       integer   botcom(maho)       ! Array with number of bottom compartments in each soil layer
       integer   dra                ! Internal number of drainage input file *.DRA
-      integer   dramet             ! Switch for lateral drainage: 1 = table of flux - groundwater level; 2 = Hooghoudt or Ernst; 
+      ! [GR-DRA 2026-05-23] dramet retired — see state%drainage%dramet
                                    !                              3 = drainage/infiltration resistance
       ! [SS-GR-CROPRT A3] swinc retired — always 0; outinc calls dropped (no config field)
       integer   inc                ! Internal number of output file *.INC with incremental water balance data
@@ -751,8 +751,8 @@
       integer   swdiscrvert        ! Switch to convert vertical discretization for soil water quality models: 0 = no; 1 = yes
       ! [GR-BH Task 37] swdivd retired — moved to state%drainage%swdivd
       ! [GR-BH Task 37] swdivdinf retired — moved to state%drainage%swdivdinf
-      integer   swdislay           ! Switch to distribute drainage flux vertically with a given position of the top of the model discharge layers: 0 = no; 1 = yes
-      integer   swtopdislay(madr)  ! Switch, for each drainage level, to distribute drainage flux vertically with a given position of the top of the model discharge layers: 0 = no; 1 = yes
+      ! [GR-DRA 2026-05-23] swdislay retired — see state%drainage%swdislay
+      ! [GR-DRA 2026-05-23] swtopdislay retired — see state%drainage%swtopdislay
       ! [GR-CROP-DVS] swdra retired — see state%surfacewater%swdra
                                    !                                            2 = simulate drainage and surface water
       integer   swfrost            ! Switch for reduction of hydraulic conductivity in case of frost: 0 = no; 1 = yes
@@ -763,7 +763,7 @@
                                    !                                            3 = unweighted geometric mean,4 = weighted geometric mean
                                    !                                            5 = unweighted harmonic mean, 6 = weighted harmonic mean
       ! [GR-CROP-DVS] SwkImpl retired — see state%cfg%simulation%numerical%swkimpl
-      integer   swliminf           ! Switch for limit of infiltration head to the waterdepth in the channel: 0 = nolimit, 1 = limitation
+      ! [GR-DRA 2026-05-23] swliminf retired — see state%drainage%swliminf
       ! [SS-GR-FINAL D5] swoutputmodflow retired — 0 consumers; MODFLOW output deleted
       ! [GR-CROPWS] swoxygen retired — see state%crop%common%swoxygen
       ! [GR-CROPWS] swoxygentype retired — see state%crop%common%swoxygentype
@@ -852,7 +852,7 @@
       ! [SS-SWC] retired 2026-05-12 — moved to state%soilwater%evp (ADR 0038)
       ! real(8)   evp(macp)          ! Internal evaporation flux of top soil compartments (L/T)
       ! [GR-BH Task 37] FacDpthInf retired — moved to state%drainage%FacDpthInf
-      real(8)   ftopdislay(madr)   ! Array with factor for function to determine depth of top of model discharge layer for each drain level, see also swtopdislay (L)
+      ! [GR-DRA 2026-05-23] ftopdislay retired — see state%drainage%ftopdislay
       ! [GR-DRA 2026-05-23] geofac retired — see state%drainage%geofac
       ! [SS-SWC] retired 2026-05-12 — moved to state%soilwater%gwl (ADR 0038)
       ! real(8)   gwl                ! Groundwater level (L)
@@ -1314,7 +1314,7 @@
       ! [SS-GR-FINAL D1] swswb retired — 0 consumers
       ! [SS-GR-FINAL D1] swdrf retired — 0 consumers
       ! [GR-CROP-DVS] swsrf retired — see state%cfg%surface_water%swsrf
-      integer swallo(Madr),swdtyp(Madr)
+      ! [GR-DRA 2026-05-23] swallo/swdtyp retired — see state%drainage%{swallo,swdtyp}
       ! [GR-BH Task 37] swnrsrf retired — moved to state%drainage%swnrsrf
       ! [GR-CROP-DVS] swsec retired — see state%cfg%surface_water%swsec
       integer swqhr,nrpri

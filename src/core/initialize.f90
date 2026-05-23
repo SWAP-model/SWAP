@@ -118,7 +118,7 @@
       ! bpegwl             = 0
       botcom             = 0 
       dra                = 0 
-      dramet             = 0 
+      ! [GR-DRA 2026-05-23] dramet retired — see state%drainage%dramet
       inc                = 0 
       ! [SS-SWC] indeks retired — soilwater_init handles init via state%soilwater%indeks
       ! indeks             = 0
@@ -157,8 +157,7 @@
       swdiscrvert        = 0 
       ! [GR-BH Task 37] swdivd retired to state%drainage%swdivd
       ! [GR-BH Task 37] swdivdinf retired to state%drainage%swdivdinf
-      swdislay           = 0
-      swtopdislay        = 0
+      ! [GR-DRA 2026-05-23] swdislay/swtopdislay retired — see state%drainage%X
       swfrost            = 0
       swhyst             = 0 
       swinco             = 0 
@@ -215,7 +214,7 @@
       ! [SS-SWC] evp retired — soilwater_init handles init via state%soilwater%evp
       ! evp                = 0.0d0
       ! [GR-BH Task 37] FacDpthInf retired to state%drainage%FacDpthInf
-      ftopdislay         = 0.0d0
+      ! [GR-DRA 2026-05-23] ftopdislay retired — see state%drainage%ftopdislay
       ! [GR-DRA 2026-05-23] geofac retired — see state%drainage%geofac
       ! [SS-SWC] gwl retired — soilwater_init handles init via state%soilwater%gwl
       ! gwl                = 0.0d0
@@ -516,8 +515,7 @@
 
 ! --- surface water variables
       ! [SS-GR-FINAL D1] swswb/swdrf zero-fills dropped — declarations retired
-      swallo               = 0
-      swdtyp               = 0
+      ! [GR-DRA 2026-05-23] swallo/swdtyp retired — see state%drainage%{swallo,swdtyp}
       ! [GR-BH Task 37] swnrsrf retired to state%drainage%swnrsrf
       swqhr                = 0
       nrpri                = 0

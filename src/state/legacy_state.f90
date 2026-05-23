@@ -204,7 +204,7 @@ module legacy_state_mod
       logical :: swcaprise  !! flag to minimize cap.rise to rootzone (for experts only)
       integer, allocatable :: botcom(:)  !! Array with number of bottom compartments in each soil layer
       integer :: dra  !! Internal number of drainage input file *.DRA
-      integer :: dramet  !! Switch for lateral drainage: 1 = table of flux - groundwater level; 2 = Hooghoudt or Ernst;
+      ! [GR-DRA 2026-05-23] dramet retired — see state%drainage%dramet
       integer :: inc  !! Internal number of output file *.INC with incremental water balance data
       ! [GR-DRA 2026-05-23] ipos retired — see state%drainage%ipos
       integer, allocatable :: isoillay(:)  !! Number of soil layer, starting with 1 at the soil surface
@@ -229,12 +229,11 @@ module legacy_state_mod
       ! [GR-BND 2026-05-23] SwBotb3ResVert retired — see state%soilwater%swbotb3resvert
       integer :: swcfbs  !! Switch for use of coefficient CFBS to convert potential ET into potential E: 0 = no; 1 = yes
       integer :: swdiscrvert  !! Switch to convert vertical discretization for soil water quality models: 0 = no; 1 = yes
-      integer :: swdislay  !! Switch to distribute drainage flux vertically with a given position of the top of the model discharge layers: 0 = no; 1 = yes
-      integer, allocatable :: swtopdislay(:)  !! Switch, for each drainage level, to distribute drainage flux vertically with a given position of the top of the model discharge layers: 0 = no; 1 = yes
+      ! [GR-DRA 2026-05-23] swdislay/swtopdislay retired — see state%drainage%X
       integer :: swfrost  !! Switch for reduction of hydraulic conductivity in case of frost: 0 = no; 1 = yes
       integer :: swhyst  !! Switch for hysteresis of soil moisture retention function: 0 = no; 1 = yes
       integer :: swinco  !! Switch for initial soil moisture condition: 1 = pressure heads; 2 = hydrostatic equilibrium;
-      integer :: swliminf  !! Switch for limit of infiltration head to the waterdepth in the channel: 0 = nolimit, 1 = limitation
+      ! [GR-DRA 2026-05-23] swliminf retired — see state%drainage%swliminf
       ! [GR-BND 2026-05-23] swpondmx retired — see state%surfacewater%swpondmx
       integer :: swqhbot  !! Switch for flux-groundwater level relationship: 1 = exponential function; 2 = tabular function
       integer :: swcofqhc  !! Switch for additional flux added to exponential flux-groundwater level relationship: 0 = no, 1 = yes
@@ -265,7 +264,7 @@ module legacy_state_mod
       real(real64), allocatable :: drares(:)  !! Array with drainage resistance (T) for each drainage level
       real(real64), allocatable :: dznew(:)  !! Desired thickness of compartments for soil water quality models (L)
       ! [GR-DRA 2026-05-23] entres retired — see state%drainage%entres
-      real(real64), allocatable :: ftopdislay(:)  !! Array with factor for function to determine depth of top of model discharge layer for each drain level, see also swtopdislay (L)
+      ! [GR-DRA 2026-05-23] ftopdislay retired — see state%drainage%ftopdislay
       ! [GR-DRA 2026-05-23] geofac retired — see state%drainage%geofac
       real(real64) :: gwli  !! Groundwater level (L) at start of simulation
       ! [GR-BND 2026-05-23] gwltab retired — see state%soilwater%gwltab

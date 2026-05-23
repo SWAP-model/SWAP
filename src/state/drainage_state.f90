@@ -13,6 +13,7 @@
 
 module drainage_state_mod
    use, intrinsic :: iso_fortran_env, only: real64
+   use swap_array_dimensions, only: MADR
    implicit none
    private
    public :: drainage_state_t
@@ -60,6 +61,18 @@ module drainage_state_mod
       real(real64) :: cofintfl     = 0.0_real64  !! interflow coefficient
       real(real64) :: expintfl     = 0.0_real64  !! interflow exponent
       integer      :: NumLevRapDra = 0           !! rapid drainage drain-level index
+
+      ! Drainage method/level config switches (snapshotted at config_to_variables).
+      integer :: dramet    = 0   !! drainage method (1=table, 2=Hooghoudt/Ernst, 3=ext.drainage)
+      integer :: swliminf  = 0   !! limit infiltration head to channel water depth (0/1)
+      integer :: swdislay  = 0   !! distributed-layer drainage flag (0/1/2)
+
+      ! Per-drain-level config arrays (sized MADR, broadcast or copied
+      ! from config). Guarded-alloc — config_to_variables runs first.
+      integer,      allocatable :: swdtyp(:)       !! drain type per level (0=open, 1=closed, 2=q-h)
+      integer,      allocatable :: swallo(:)       !! allow-drainage flag per level (1/2/3)
+      integer,      allocatable :: swtopdislay(:)  !! top-discharge-layer switch per level (0/1)
+      real(real64), allocatable :: ftopdislay(:)   !! top-discharge-layer factor per level [0..1]
    end type drainage_state_t
 
 end module drainage_state_mod

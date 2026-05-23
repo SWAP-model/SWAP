@@ -36,8 +36,7 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
       ! [SS-GR-FINAL B10] blanket use Variables narrowed; madr/mawlp → swap_array_dimensions
       use swap_array_dimensions, only: madr, mawlp
       use variables, only: &   ! [SS-GR-FINAL B10] residuals — all DEFERRED
-         ! DEFERRED: swdislay/swtopdislay/fTopDisLay — distributed-layer drainage config; Phase C3
-         swdislay, swtopdislay, fTopDisLay, &
+         ! [GR-DRA 2026-05-23] swdislay/swtopdislay/fTopDisLay retired — aliased from state%drainage below.
          ! state%cfg%surface_water%swsrf/state%cfg%surface_water%swsec retired (→state%cfg%surface_water%X); pilot
          ! DEFERRED: wlptab — prescribed surface water level table; config; Phase C3
          wlptab
@@ -74,7 +73,10 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
          dr_owltab    => state%drainage%owltab,         &  ! GR-BH Task 28
          sw_ksatfit   => state%soilwater%ksatfit,       &  ! GR-BH Task 28
          sw_ksatexm   => state%soilwater%ksatexm,       &  ! GR-BH Task 28
-         sw_cofani    => state%soilwater%cofani          )  ! GR-BH Task 28
+         sw_cofani    => state%soilwater%cofani,        &  ! GR-BH Task 28
+         swdislay     => state%drainage%swdislay,       &  ! [GR-DRA 2026-05-23]
+         swtopdislay  => state%drainage%swtopdislay,    &
+         ftopdislay   => state%drainage%ftopdislay      )
 
 ! ----------------------------------------------------------------------
       select case (task)

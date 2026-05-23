@@ -248,9 +248,9 @@ contains
       ! Drainage (audit: 20 fields + surface_runoff sub-section)
       ! ---------------------------------------------------------------
       state%surfacewater%swdra = config%drain%swdra
-      dramet   = config%drain%dramet
+      state%drainage%dramet    = config%drain%dramet
       ! [GR-BH Task 37] swdivd global deleted — state%drainage%swdivd seeded in swap_mod.f90
-      swdislay = config%drain%swdislay
+      state%drainage%swdislay  = config%drain%swdislay
       ! [GR-BH Task 37] nrlevs global deleted — state%drainage%nrlevs seeded in swap_mod.f90
       state%drainage%basegw = config%drain%basegw
       state%drainage%entres = config%drain%entres
@@ -291,8 +291,12 @@ contains
       ! config%drain%cofani is consumed directly by swap_mod seeding block.
 
       if (allocated(config%drain%swdtyp)) then
+         if (.not. allocated(state%drainage%swdtyp)) then
+            allocate(state%drainage%swdtyp(size(config%drain%swdtyp)))
+            state%drainage%swdtyp = 0
+         end if
          do i = 1, size(config%drain%swdtyp)
-            swdtyp(i) = config%drain%swdtyp(i)
+            state%drainage%swdtyp(i) = config%drain%swdtyp(i)
          end do
       end if
       ! [GR-BH Task 37] zbotdr bare global deleted — seeded from config%drain in swap_mod.f90
@@ -343,8 +347,12 @@ contains
          end do
       end if
       if (allocated(config%drain%swallo)) then
+         if (.not. allocated(state%drainage%swallo)) then
+            allocate(state%drainage%swallo(size(config%drain%swallo)))
+            state%drainage%swallo = 0
+         end if
          do i = 1, size(config%drain%swallo)
-            swallo(i) = config%drain%swallo(i)
+            state%drainage%swallo(i) = config%drain%swallo(i)
          end do
       end if
 
@@ -381,7 +389,7 @@ contains
          end block
       end if
 
-      swliminf = config%drain%swliminf
+      state%drainage%swliminf = config%drain%swliminf
 
       ! Drainage.surface_runoff sub-section: scalar switches + per-level
       ! arrays. Legacy globals `swtopdislay`, `ftopdislay`, `RapDraResRef`
@@ -413,18 +421,23 @@ contains
       rsurfshallow = config%drain%surface_runoff%rsurfshallow
       ! [SS-GR-FINAL D1] RapDraReaExp write dropped — global retired
       state%drainage%NumLevRapDra = config%drain%surface_runoff%numlevrapdra
-      ! swtopdislay(madr) and ftopdislay(madr): broadcast scalar config
-      ! field to all levels (currently no per-level schema slot).
-      if (size(swtopdislay) >= 1) then
-         do i = 1, size(swtopdislay)
-            swtopdislay(i) = config%drain%surface_runoff%swtopdislay
-         end do
+      ! swtopdislay(MADR) and ftopdislay(MADR): broadcast scalar config
+      ! field to all drain levels (currently no per-level schema slot).
+      ! Allocate to MADR to match legacy fixed-size globals.
+      if (.not. allocated(state%drainage%swtopdislay)) then
+         allocate(state%drainage%swtopdislay(madr))
+         state%drainage%swtopdislay = 0
       end if
-      if (size(ftopdislay) >= 1) then
-         do i = 1, size(ftopdislay)
-            ftopdislay(i) = config%drain%surface_runoff%ftopdislay
-         end do
+      if (.not. allocated(state%drainage%ftopdislay)) then
+         allocate(state%drainage%ftopdislay(madr))
+         state%drainage%ftopdislay = 0.0d0
       end if
+      do i = 1, size(state%drainage%swtopdislay)
+         state%drainage%swtopdislay(i) = config%drain%surface_runoff%swtopdislay
+      end do
+      do i = 1, size(state%drainage%ftopdislay)
+         state%drainage%ftopdislay(i) = config%drain%surface_runoff%ftopdislay
+      end do
       ! [SS-GR-FINAL D1] RapDraResRef write dropped — global retired
 
       ! ---------------------------------------------------------------
