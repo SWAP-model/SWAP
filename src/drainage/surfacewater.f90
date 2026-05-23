@@ -313,14 +313,11 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
       ! SS-SWC Phase 2 S-2.8: gwl,pond,THETA,THETAS,H removed from use-list; read from state%soilwater.
       ! [SS-TC TC-14] T retired — read via state%timecontrol%t
       ! GR-BH Task 28: zbotdr/NUMNOD/DZ off variables → state%drainage/mesh aliases.
+      ! [GR-DRA 2026-05-23] NRPRI/nmper/impend/wldip/intwl/osswlm/wscap/dropr
+      ! retired — aliased from state%surfacewater below.
+      ! [GR-DRA 2026-05-23] swman/hbweir/wlsman/gwlcrit/nphase/VCRIT/NODHD/HCRIT/SWQHR/QQHTAB
+      ! retired — aliased from state%surfacewater below.
       use variables, only: &   ! [SS-GR-FINAL B10] residuals — all DEFERRED
-         ! [GR-DRA 2026-05-23] NRPRI/nmper/impend/wldip/intwl/osswlm/wscap/dropr
-         ! retired — aliased from state%surfacewater below.
-         ! DEFERRED: swman/hbweir/wlsman/gwlcrit/nphase/VCRIT/NODHD/HCRIT — weir/management config; Phase C3
-         swman, hbweir, wlsman, gwlcrit, nphase, VCRIT, NODHD, HCRIT, &
-         ! DEFERRED: SWQHR — discharge rating switch; config; Phase C3
-         ! [GR-DRA 2026-05-23] QQHTAB retired — read via state%surfacewater%qqhtab.
-         SWQHR, &
          ! DEFERRED: alphaw/betaw — surface water geometry coefficients; config; Phase C3
          alphaw, betaw, &
          ! rsro/pondmx retired (→state%surfacewater%X)
@@ -377,7 +374,16 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
          intwl  => state%surfacewater%intwl,        &
          osswlm => state%surfacewater%osswlm,       &
          wscap  => state%surfacewater%wscap,        &
-         dropr  => state%surfacewater%dropr         )
+         dropr  => state%surfacewater%dropr,        &
+         swqhr   => state%surfacewater%swqhr,       &  ! [GR-DRA 2026-05-23] weir cluster
+         swman   => state%surfacewater%swman,       &
+         hbweir  => state%surfacewater%hbweir,      &
+         wlsman  => state%surfacewater%wlsman,      &
+         gwlcrit => state%surfacewater%gwlcrit,     &
+         nphase  => state%surfacewater%nphase,      &
+         vcrit   => state%surfacewater%vcrit,       &
+         nodhd   => state%surfacewater%nodhd,       &
+         hcrit   => state%surfacewater%hcrit        )
 
 ! --- resetting of flag for overflowing of automatic weir
       ! overfl global write dropped: only sw_overfl (state alias) used henceforth.

@@ -415,7 +415,7 @@ module legacy_state_mod
       ! [GR-DRA 2026-05-23] intwl retired — see state%surfacewater%intwl
       integer, allocatable :: nowltab(:)
       ! [GR-DRA 2026-05-23] impend retired — see state%surfacewater%impend
-      real(real64), allocatable :: wlsman(:,:)  !! SS-SWST Phase 2 Task 11 C2: sttab removed — state%surfacewater%sttab owns it.
+      ! [GR-DRA 2026-05-23] wlsman retired — see state%surfacewater%wlsman
       ! [GR-DRA 2026-05-23] wlstab retired — see state%surfacewater%wlstab
       real(real64), allocatable :: owltab(:,:)  !! real(8) qdrd                  !! Moved to drainage_state_t%qdrd (ADR 0031)
       logical :: flCropPrep  !! Flag indicating if ploughing opportunity has been realized

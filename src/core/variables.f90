@@ -1317,17 +1317,17 @@
       ! [GR-DRA 2026-05-23] swallo/swdtyp retired — see state%drainage%{swallo,swdtyp}
       ! [GR-BH Task 37] swnrsrf retired — moved to state%drainage%swnrsrf
       ! [GR-CROP-DVS] swsec retired — see state%cfg%surface_water%swsec
-      integer swqhr
+      ! [GR-DRA 2026-05-23] swqhr retired — see state%surfacewater%swqhr
       ! [GR-DRA 2026-05-23] nrpri retired — see state%surfacewater%nrpri
       ! [SS-GR-FINAL D1] nrsec retired — 0 consumers
       ! [GR-DRA 2026-05-23] nmper retired — see state%surfacewater%nmper
-      integer swman(mamp)
+      ! [GR-DRA 2026-05-23] swman retired — see state%surfacewater%swman
       ! [GR-BH Task 37] SwTopnrsrf retired — moved to state%drainage%swtopnrsrf
       ! SS-SWST Phase 2 Task 11 C2: numadj/imper removed — state%surfacewater owns them.
       ! [SS-GR-FINAL D1] nqh retired — 0 consumers
       ! [SS-GR-FINAL D1] drf retired — 0 consumers
       ! [SS-GR-FINAL D1] swb retired — 0 consumers
-      integer nphase(mamp),nodhd(mamp)
+      ! [GR-DRA 2026-05-23] nphase/nodhd retired — see state%surfacewater%{nphase,nodhd}
       ! numadj removed (surfacewater_state_t%numadj)
       ! [GR-DRA 2026-05-23] intwl retired — see state%surfacewater%intwl
       ! imper removed (surfacewater_state_t%imper)
@@ -1338,7 +1338,7 @@
       ! [GR-DRA 2026-05-23] wlptab retired — see state%surfacewater%wlptab
       ! [GR-DRA 2026-05-23] impend retired — see state%surfacewater%impend
       ! [GR-DRA 2026-05-23] wldip/wscap retired — see state%surfacewater%{wldip,wscap}
-      real(8) hbweir(mamp)
+      ! [GR-DRA 2026-05-23] hbweir retired — see state%surfacewater%hbweir
       ! SS-SWST Phase 2 Task 11 C2: wlstar removed — state%surfacewater%wlstar owns it.
       ! [GR-DRA 2026-05-23] osswlm retired — see state%surfacewater%osswlm
       real(8) wlp,alphaw(mamp),betaw(mamp)
@@ -1346,10 +1346,10 @@
       ! [SS-GR-FINAL D6] wls1_init retired — c2v write tombstoned in D4/C4; state%surfacewater owns it; 0 consumers
       ! [GR-DRA 2026-05-23] dropr retired — see state%surfacewater%dropr
       real(8) hdepth(mamp*mamte)
-      real(8) gwlcrit(mamp,mamte),hcrit(mamp,mamte),vcrit(mamp,mamte)
+      ! [GR-DRA 2026-05-23] gwlcrit/hcrit/vcrit retired — see state%surfacewater%X
       real(8) hqhtab(mamp,mamte)
       ! [GR-DRA 2026-05-23] qqhtab retired — see state%surfacewater%qqhtab
-      real(8) wlsman(mamp,mamte)
+      ! [GR-DRA 2026-05-23] wlsman retired — see state%surfacewater%wlsman
       ! SS-SWST Phase 2 Task 11 C2: sttab removed — state%surfacewater%sttab owns it.
       ! [GR-DRA 2026-05-23] wlstab retired — see state%surfacewater%wlstab
       ! sttab(22,2) removed (surfacewater_state_t%sttab)

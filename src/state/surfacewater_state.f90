@@ -97,6 +97,18 @@ module surfacewater_state_mod
       real(real64), allocatable :: wscap(:)   !! water-supply capacity per period (MAMP)
       real(real64), allocatable :: dropr(:)   !! water-level drop rate per period (MAMP*MAMTE)
 
+      ! Surface-water weir/management config (swman/swqhr path, dormant in
+      ! current TOML pipeline). Pattern 9 guarded alloc for arrays.
+      integer :: swqhr = 0   !! Q-h rating switch (1=table, 2=parametric)
+      integer,      allocatable :: swman(:)        !! weir-management type per period (MAMP)
+      integer,      allocatable :: nphase(:)       !! weir phase count per period (MAMP)
+      integer,      allocatable :: nodhd(:)        !! node-discharge-head count per period (MAMP)
+      real(real64), allocatable :: hbweir(:)       !! weir crest height per period (MAMP)
+      real(real64), allocatable :: wlsman(:,:)     !! managed water level (MAMP, MAMTE)
+      real(real64), allocatable :: gwlcrit(:,:)    !! critical groundwater level (MAMP, MAMTE)
+      real(real64), allocatable :: hcrit(:,:)      !! critical pressure head (MAMP, MAMTE)
+      real(real64), allocatable :: vcrit(:,:)      !! critical drainage volume (MAMP, MAMTE)
+
       !> [SS-BMI2] Surface water output row buffer (SurfaceWaterOutput stream).
       !! Currently placeholder only — SurfaceWaterOutput body was deleted by ADR 0009 Phase 5+
       !! (outdrf/outswb deleted, swdrf=0, swswb=0).
@@ -173,6 +185,32 @@ contains
       end if
       if (.not. allocated(self%dropr)) then
          allocate(self%dropr(MAMP*MAMTE));  self%dropr  = 0.0_real64
+      end if
+
+      ! SW weir/management config (Pattern 9 guarded alloc).
+      if (.not. allocated(self%swman)) then
+         allocate(self%swman(MAMP));         self%swman  = 0
+      end if
+      if (.not. allocated(self%nphase)) then
+         allocate(self%nphase(MAMP));        self%nphase = 0
+      end if
+      if (.not. allocated(self%nodhd)) then
+         allocate(self%nodhd(MAMP));         self%nodhd  = 0
+      end if
+      if (.not. allocated(self%hbweir)) then
+         allocate(self%hbweir(MAMP));        self%hbweir = 0.0_real64
+      end if
+      if (.not. allocated(self%wlsman)) then
+         allocate(self%wlsman(MAMP, MAMTE)); self%wlsman = 0.0_real64
+      end if
+      if (.not. allocated(self%gwlcrit)) then
+         allocate(self%gwlcrit(MAMP, MAMTE)); self%gwlcrit = 0.0_real64
+      end if
+      if (.not. allocated(self%hcrit)) then
+         allocate(self%hcrit(MAMP, MAMTE));  self%hcrit = 0.0_real64
+      end if
+      if (.not. allocated(self%vcrit)) then
+         allocate(self%vcrit(MAMP, MAMTE));  self%vcrit = 0.0_real64
       end if
 
       ! ---- L1: zero defaults ----

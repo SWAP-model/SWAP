@@ -517,15 +517,14 @@
       ! [SS-GR-FINAL D1] swswb/swdrf zero-fills dropped — declarations retired
       ! [GR-DRA 2026-05-23] swallo/swdtyp retired — see state%drainage%{swallo,swdtyp}
       ! [GR-BH Task 37] swnrsrf retired to state%drainage%swnrsrf
-      swqhr                = 0
+      ! [GR-DRA 2026-05-23] swqhr retired — see state%surfacewater%swqhr
       ! [GR-DRA 2026-05-23] nrpri retired — see state%surfacewater%nrpri
       ! [SS-GR-FINAL D1] nrsec zero-fill dropped — declaration retired
       ! [GR-DRA 2026-05-23] nmper retired — see state%surfacewater%nmper
-      swman                = 0
+      ! [GR-DRA 2026-05-23] swman retired — see state%surfacewater%swman
       ! [GR-BH Task 37] SwTopnrsrf retired to state%drainage%swtopnrsrf
       ! [SS-GR-FINAL D1] nqh/drf/swb zero-fills dropped — declarations retired
-      nphase               = 0
-      nodhd                = 0
+      ! [GR-DRA 2026-05-23] nphase/nodhd retired — see state%surfacewater%{nphase,nodhd}
       ! SS-SWST Phase 2 Task 11 C3: numadj/imper removed (state%surfacewater owns them).
       ! [GR-DRA 2026-05-23] intwl retired — see state%surfacewater%intwl
       ! numadj=0, imper=1 set by surfacewater_state_t defaults.
@@ -541,7 +540,7 @@
       gwlinf                = 0.0d0
       ! [GR-DRA 2026-05-23] wlptab retired — see state%surfacewater%wlptab
       ! [GR-DRA 2026-05-23] impend/wldip/wscap retired — see state%surfacewater%X
-      hbweir                = 0.0d0
+      ! [GR-DRA 2026-05-23] hbweir retired — see state%surfacewater%hbweir
       ! [GR-DRA 2026-05-23] osswlm retired — see state%surfacewater%osswlm
       ! SS-SWST Phase 2 Task 11 C3: wlstar removed (state%surfacewater%wlstar, default=0).
       wlp                   = 0.0d0
@@ -549,12 +548,10 @@
       betaw                 = 0.0d0
       ! [GR-DRA 2026-05-23] dropr retired — see state%surfacewater%dropr
       hdepth                = 0.0d0
-      gwlcrit               = 0.0d0
-      hcrit                 = 0.0d0
-      vcrit                 = 0.0d0
+      ! [GR-DRA 2026-05-23] gwlcrit/hcrit/vcrit retired — see state%surfacewater%X
       hqhtab                = 0.0d0
       ! [GR-DRA 2026-05-23] qqhtab retired — see state%surfacewater%qqhtab
-      wlsman                = 0.0d0
+      ! [GR-DRA 2026-05-23] wlsman retired — see state%surfacewater%wlsman
       ! [GR-DRA 2026-05-23] wlstab retired — see state%surfacewater%wlstab
       ! SS-SWST Phase 2 Task 11 C3: sttab/swstini/swst/wlsbak removed (state%surfacewater owns them).
       ! sttab=0, swstini=0, swst=0, wlsbak=0 are set by surfacewater_state_t defaults.

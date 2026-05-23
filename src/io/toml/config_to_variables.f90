@@ -1074,7 +1074,7 @@ contains
       ! [GR-FINAL C4] wls1_init write dropped: W-global (0 consumers; state%surfacewater seeded in swap_mod)
       state%surfacewater%osswlm = config%surface_water%osswlm
       state%surfacewater%nmper  = config%surface_water%nmper
-      swqhr  = config%surface_water%swqhr
+      state%surfacewater%swqhr  = config%surface_water%swqhr
 
       if (allocated(config%surface_water%impend)) then
          if (.not. allocated(state%surfacewater%impend)) then
@@ -1086,8 +1086,12 @@ contains
          end do
       end if
       if (allocated(config%surface_water%swman)) then
-         do i = 1, min(size(config%surface_water%swman), size(swman))
-            swman(i) = config%surface_water%swman(i)
+         if (.not. allocated(state%surfacewater%swman)) then
+            allocate(state%surfacewater%swman(mamp))
+            state%surfacewater%swman = 0
+         end if
+         do i = 1, min(size(config%surface_water%swman), size(state%surfacewater%swman))
+            state%surfacewater%swman(i) = config%surface_water%swman(i)
          end do
       end if
       if (allocated(config%surface_water%wscap)) then
@@ -1120,8 +1124,12 @@ contains
       ! Note: alphaw arrays carry the post-finalize-normalized values
       ! per Phase 4f-prep Task D2 — the adapter copies them as-is.
       if (allocated(config%surface_water%hbweir)) then
-         do i = 1, min(size(config%surface_water%hbweir), size(hbweir))
-            hbweir(i) = config%surface_water%hbweir(i)
+         if (.not. allocated(state%surfacewater%hbweir)) then
+            allocate(state%surfacewater%hbweir(mamp))
+            state%surfacewater%hbweir = 0.0d0
+         end if
+         do i = 1, min(size(config%surface_water%hbweir), size(state%surfacewater%hbweir))
+            state%surfacewater%hbweir(i) = config%surface_water%hbweir(i)
          end do
       end if
       if (allocated(config%surface_water%alphaw)) then
