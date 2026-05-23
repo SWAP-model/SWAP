@@ -1043,7 +1043,7 @@
       real(8)   Rxylem             ! Mean radius of xylem tube inside roots (L)
       ! [SS-SWC] retired 2026-05-12 — moved to state%soilwater%runon (ADR 0038)
       ! real(8)   runon              ! Water runon flux (L/T)
-      real(8)   runonarr(maday)    ! Array with runon (L) data for each day
+      ! [GR-BND 2026-05-23] runonarr retired — see state%soilwater%runonarr
       ! [SS-BND] retired 2026-05-11 — boundary subsystem migrated to state%soilwater (ADR 0035)
       ! real(8)   runots             ! Amount of runoff during a time step (L)
       ! real(8) :: saev          ! Cumulative actual evaporation (L) Boesten/Stroosnijder — [SS-ATM] retired 2026-05-11
@@ -1091,7 +1091,7 @@
       logical   FlHydrLift         ! Flag indicating release of water from root to soil is allowed
       ! [SS-SWC] retired 2026-05-12 — moved to state%soilwater%fllowgwl (ADR 0038)
       ! logical   fllowgwl           ! Flag indicating precribed groundwater level below bottom soil column
-      logical   flrunon            ! Flag indicating the existance of runon
+      ! [GR-BND 2026-05-23] flrunon retired — see state%soilwater%flrunon
       ! [SS-BND] retired 2026-05-11 — boundary subsystem migrated to state%soilwater (ADR 0035)
       ! logical   ftoph              ! Flag indicating that the pressure head is prescribed at the soil surface
       character(len=16) drfil      ! Name of drainage input file

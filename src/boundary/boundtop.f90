@@ -20,9 +20,6 @@ module boundtop_mod
       use swap_state_mod,        only: swap_state_t
       use swap_log,              only: log_debug, to_str
       use surfacewater_utils,    only: runoff
-      use variables,             only: &   ! [SS-GR-FINAL B11] all DEFERRED
-         ! DEFERRED: flrunon/runonarr — runon switch/timeseries; not in schema yet; Phase C3
-         flrunon, runonarr
       implicit none
 
       private
@@ -102,7 +99,8 @@ contains
 ! --- runon of present day
       ! [SS-SWC S-2.12B] legacy runon retired — write directly to state%soilwater%runon
       ! [SS-TC TC-14] flDayStart/daycum read via state%timecontrol
-      if (state%timecontrol%flDayStart .and. flrunon) state%soilwater%runon = runonarr(state%timecontrol%daycum+1)
+      if (state%timecontrol%flDayStart .and. state%soilwater%flrunon) &
+         state%soilwater%runon = state%soilwater%runonarr(state%timecontrol%daycum+1)
 
       state%soilwater%FlRunoff = .false.
       state%soilwater%QMpLatSs = 0.0d0

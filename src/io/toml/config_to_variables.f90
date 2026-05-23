@@ -456,9 +456,9 @@ contains
       ! [GR-ATM 2026-05-23] rsoil retired — snapshotted in atmosphere_state%init
       state%surfacewater%rsro = config%soil%rsro
       state%surfacewater%rsroexp = config%soil%rsroexp
-      ! Legacy parses .swp `SWRUNON` into a local int; the persistent
-      ! global is the boolean `flrunon`. Mirror that mapping here.
-      flrunon = (config%soil%swrunon == 1)
+      ! Legacy parses .swp `SWRUNON` into a local int; we mirror that mapping
+      ! into state%soilwater%flrunon (runonarr remains dormant — no TOML writer).
+      state%soilwater%flrunon = (config%soil%swrunon == 1)
       nrstaring = config%soil%nrstaring
 
       ! sublay (legacy 'isublay') is a local in readswap, not a module

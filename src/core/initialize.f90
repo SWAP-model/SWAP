@@ -341,7 +341,7 @@
       ! [GR-ATM 2026-05-23] Runoff_CN retired — see state%atmosphere%Runoff_CN
       ! [SS-SWC] runon retired — soilwater_init handles init via state%soilwater%runon
       ! runon              = 0.0d0
-      runonarr           = 0.0d0 
+      ! [GR-BND 2026-05-23] runonarr retired — soilwater_init zeros state%soilwater%runonarr
       ! [SS-BND B-2.7] runots retired — soilwater_init handles init via state%soilwater
       ! runots             = 0.0d0
       ! [SS-ATM A-2.6] saev retired to state%atmosphere%saev
@@ -377,7 +377,7 @@
       ! [SS-TC] fldrain retired to state%timecontrol%flDrain (ADR 0041)
       ! [SS-SWC] fllowgwl retired — soilwater_init handles init via state%soilwater%fllowgwl
       ! fllowgwl           = .false.
-      flrunon            = .false. 
+      ! [GR-BND 2026-05-23] flrunon retired — see state%soilwater%flrunon
       ! [SS-BND B-2.7] ftoph retired — soilwater_init handles init via state%soilwater
       ! ftoph              = .false.
 !      drfil              = 16*' ' 

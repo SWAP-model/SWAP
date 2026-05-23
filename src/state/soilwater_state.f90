@@ -47,6 +47,7 @@ module soilwater_state_mod
    use, intrinsic :: iso_fortran_env, only: real64
    use iso_c_binding, only: c_double
    use hydraulic_params_mod, only: vanGenuchten_params_t
+   use swap_array_dimensions, only: MADAY
    implicit none
    private
    public :: soilwater_state_t, soilwater_init
@@ -188,6 +189,13 @@ module soilwater_state_mod
       real(real64) :: wbalance     = 0.0_real64   !< cumulative water balance error (cm)
       real(real64) :: runon        = 0.0_real64   !< runon flux this step (cm/d)
       logical      :: fllowgwl     = .false.      !< flag: gwl is below the soil profile
+
+      ! Runon feature (config-rooted switch + day-indexed time series).
+      ! flrunon is set from config%soil%swrunon by config_to_variables;
+      ! runonarr is currently dormant (no TOML wiring) — boundtop reads
+      ! runonarr(daycum+1) when flrunon is true. Allocated to MADAY at init.
+      logical                   :: flrunon  = .false.
+      real(real64), allocatable :: runonarr(:)
 
       ! [SS-GR-BH A5] runtime scalars formerly bare globals (boundtop/PONDRUNOFF/boundbottom)
       real(real64) :: q0           = 0.0_real64   !! surface flux (precip + runon - reva) [cm/d]
@@ -461,6 +469,11 @@ contains
       ! sets hatm = -2.75d+05 at SoilWater(1) task 1 init.  We mirror that here
       ! so sw%hatm is consistent from the moment soilwater_init returns.
       sw%hatm = -2.75e5_real64
+
+      ! Runon time-series (dormant — no TOML writer yet). Sized to MADAY to
+      ! match the legacy fixed-size global runonarr(maday).
+      allocate(sw%runonarr(MADAY)); sw%runonarr = 0.0_real64
+      sw%flrunon = .false.
 
    end subroutine soilwater_init
 

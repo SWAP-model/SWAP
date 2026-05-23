@@ -321,7 +321,7 @@ module legacy_state_mod
       ! [GR-ATM 2026-05-23] rsoil retired — see state%atmosphere%rsoil
       ! [GR-ATM 2026-05-23] swuseCN retired — see state%atmosphere%swusecn
       real(real64) :: Rxylem  !! Mean radius of xylem tube inside roots (L)
-      real(real64), allocatable :: runonarr(:)  !! Array with runon (L) data for each day
+      ! [GR-BND 2026-05-23] runonarr retired — see state%soilwater%runonarr
       real(real64) :: shape  !! Shape factor: ratio between the mean and the maximum groundwater level elevation above the drainage base (-)
       real(real64) :: sinamp  !! Amplitude of prescribed bottom flux (L/T) in case of sine function
       real(real64) :: sinave  !! Average value of prescribed bottom flux (L/T) in case of sine function
@@ -334,7 +334,7 @@ module legacy_state_mod
       real(real64), allocatable :: zi(:)  !! Array with soil depths (L) used to specify initial soil water pressure heads
       real(real64) :: zintf  !! Depth (L) at which fine top layer ends and coarse sub layer starts
       logical :: FlHydrLift  !! Flag indicating release of water from root to soil is allowed
-      logical :: flrunon  !! Flag indicating the existance of runon
+      ! [GR-BND 2026-05-23] flrunon retired — see state%soilwater%flrunon
       character(len=16) :: drfil  !! Name of drainage input file
       character(len=80) :: pathdrain  !! Path to folder with drainage input files
       integer :: swbotbhea  !! Switch for bottom boundary condition: 1 = heat flux is zero; 2 = prescribed temperature
