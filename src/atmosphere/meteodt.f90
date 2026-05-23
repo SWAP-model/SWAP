@@ -132,86 +132,72 @@ contains
       associate (atmo  => state%atmosphere,    &
                  time  => state%timecontrol,   &
                  meteo => state%cfg%meteo)
-      associate (nmrain        => atmo%nmrain,        &
-                 rainamount    => atmo%rainamount,    &
-                 rainfluxarray => atmo%rainfluxarray, &
-                 raintimearray => atmo%raintimearray, &
-                 arai          => atmo%arai,          &
-                 yearmeteo     => time%yearmeteo,     &
-                 timjan1       => time%timjan1,       &
-                 rainrec       => time%rainrec,       &
-                 tstart        => time%tstart,        &
-                 tend          => time%tend,          &
-                 dtmin         => time%dtmin)
 
       ! === Process rain events on yearly basis ===
 
       ! For rain options 1 and 2: convert daily rain quantities and intensities or durations
       ! into rain events by creating raintime and rainflux arrays conform rain option 3
       if (meteo%swrain .eq. 1 .or. meteo%swrain .eq. 2) then
-         rainrec = 1
-         do i = 1, nmrain
-            if (raintimearray(i + 1) .gt. tstart - vsmall) then
-               rainrec = rainrec + 1
+         time%rainrec = 1
+         do i = 1, atmo%nmrain
+            if (atmo%raintimearray(i + 1) .gt. time%tstart - vsmall) then
+               time%rainrec = time%rainrec + 1
                ! Beginning (00:00) of days of current year within simulation period
-               day(rainrec) = raintimearray(i + 1) - timjan1 + 1.d0
-               rainam(rainrec) = 0.1d0*rainamount(i)  ! convert from mm to cm
-               wwet(rainrec) = atmo%wet(i)
+               day(time%rainrec)    = atmo%raintimearray(i + 1) - time%timjan1 + 1.d0
+               rainam(time%rainrec) = 0.1d0 * atmo%rainamount(i)   ! mm → cm
+               wwet(time%rainrec)   = atmo%wet(i)
             end if
          end do
 
          ! Set first record of raintime and rainflux (= 0)
-         raintimearray(1) = time%tcum + dtmin
-         rainam(1) = 0.d0
-         rainfluxarray(1) = 0.d0
+         atmo%raintimearray(1) = time%tcum + time%dtmin
+         rainam(1)             = 0.d0
+         atmo%rainfluxarray(1) = 0.d0
 
          ! Set rest of records of raintime and rainflux (only when rainam[ount] > 0)
-         nmrain = rainrec + 1
-         rainrec = 0
-         do i = 2, nmrain
+         atmo%nmrain  = time%rainrec + 1
+         time%rainrec = 0
+         do i = 2, atmo%nmrain
             if (rainam(i) .gt. vsmall) then
                if (meteo%swrain .eq. 1) then
                   ! Mean rainfall intensities are specified
                   rainflux = afgen(meteo%raintab, 60, day(i))
                   raintime = min(0.99d0, rainam(i)/rainflux)
-
                elseif (meteo%swrain .eq. 2) then
                   ! Rainfall durations are specified
                   raintime = wwet(i)
                end if
 
                if (i .eq. 2) then
-                  rainrec = rainrec + 1
+                  time%rainrec = time%rainrec + 1
                else
                   ! First raintime of a day: closure of last period of former day with rain = 0
-                  rainrec = rainrec + 2
-                  raintimearray(rainrec) = real(i - 2, real64) + time%tcum
-                  rainfluxarray(rainrec) = 0.d0
+                  time%rainrec = time%rainrec + 2
+                  atmo%raintimearray(time%rainrec) = real(i - 2, real64) + time%tcum
+                  atmo%rainfluxarray(time%rainrec) = 0.d0
                end if
                ! Second raintime of a day: closure of first period of the day, rain = rainam
-               raintimearray(rainrec + 1) = real(i - 2, real64) + time%tcum + raintime
-               rainfluxarray(rainrec + 1) = rainam(i)/raintime
-
+               atmo%raintimearray(time%rainrec + 1) = real(i - 2, real64) + time%tcum + raintime
+               atmo%rainfluxarray(time%rainrec + 1) = rainam(i)/raintime
             end if
          end do
 
          ! Extend array with records at end of current year
          tendyear = 365.d0
-         if (mod(yearmeteo, 4) .eq. 0) tendyear = 366.d0
-         raintimearray(rainrec + 2) = time%tcum + tendyear + dtmin
-         rainfluxarray(rainrec + 2) = 0.d0
+         if (mod(time%yearmeteo, 4) .eq. 0) tendyear = 366.d0
+         atmo%raintimearray(time%rainrec + 2) = time%tcum + tendyear + time%dtmin
+         atmo%rainfluxarray(time%rainrec + 2) = 0.d0
 
-         ! In case of rain events: 1) calculate daily values, 2) fill raintimearray and rainfluxarray
       elseif (meteo%swrain .eq. 3) then
+         ! Rain events: 1) calculate daily values, 2) fill raintimearray and rainfluxarray
 
-         ! Total amount of rain per meteo day arai
-         ! Initialize array with sum of rain
+         ! Total amount of rain per meteo day arai — init array with sum of rain
          do i = 1, 366
             araihlp(i) = 0.d0
          end do
 
          ! Less rain days than meteo days? Fill gap with dummies
-         rdayold = int(raintimearray(1) - timjan1) + 1  ! first day with rain record of the year
+         rdayold = int(atmo%raintimearray(1) - time%timjan1) + 1
          nlack = rdayold - 1
          do j = 1, nlack
             rdaya(j) = j
@@ -221,32 +207,30 @@ contains
          araihlp(j) = 0.d0
 
          ! Fill array of daily sums of rain with real values
-         do i = 1, nmrain
-            rday = int(raintimearray(i) - timjan1) + 1
+         do i = 1, atmo%nmrain
+            rday = int(atmo%raintimearray(i) - time%timjan1) + 1
             if (rday .gt. rdayold) then
                do l = 1, rday - rdayold - 1
                   j = j + 1
                   rdaya(j) = rdaya(j - 1) + 1
                   araihlp(j) = 0.d0
                end do
-               ! In case of rain event exceeding current day, calculate weights for assigning parts to current and next day
-               wght = (1.d0 - (raintimearray(i - 1) - real(int(raintimearray(i - 1)), real64)))/ &
-                      (raintimearray(i) - raintimearray(i - 1))
-               araihlp(j) = araihlp(j) + rainamount(i)*wght
+               ! For an event exceeding current day, weight parts between days
+               wght = (1.d0 - (atmo%raintimearray(i - 1) - real(int(atmo%raintimearray(i - 1)), real64))) / &
+                      (atmo%raintimearray(i) - atmo%raintimearray(i - 1))
+               araihlp(j) = araihlp(j) + atmo%rainamount(i)*wght
                rdayold = rday
                j = j + 1
                rdaya(j) = rday
-               araihlp(j) = araihlp(j) + rainamount(i)*(1.d0 - wght)
+               araihlp(j) = araihlp(j) + atmo%rainamount(i)*(1.d0 - wght)
             else
-               if (i .gt. 1) then
-                  araihlp(j) = araihlp(j) + rainamount(i)
-               end if
+               if (i .gt. 1) araihlp(j) = araihlp(j) + atmo%rainamount(i)
             end if
          end do
 
          ! Rain days missing at the end of the year? Fill gap with dummies
          iendyear = 365
-         if (mod(yearmeteo, 4) .eq. 0) iendyear = 366
+         if (mod(time%yearmeteo, 4) .eq. 0) iendyear = 366
          nlack = iendyear - j
          do i = 1, nlack
             rdaya(j + i) = j + i
@@ -255,55 +239,53 @@ contains
 
          ! Save help array araihlp into arai
          do i = 1, 366
-            arai(i) = araihlp(i)
+            atmo%arai(i) = araihlp(i)
          end do
 
-         ! Assign values to raintimearray and rainam array for calculating rainfluxarray
+         ! Build raintimearray and rainam for calculating rainfluxarray
          ! Find time gap without rain events at the beginning of the year
-         rainrec = 1
-         ratimar(1) = raintimearray(1) - tstart
+         time%rainrec = 1
+         ratimar(1) = atmo%raintimearray(1) - time%tstart
          i = 1
          do while (ratimar(i) .lt. vsmall)
             i = i + 1
-            ratimar(i) = raintimearray(i) - tstart
+            ratimar(i) = atmo%raintimearray(i) - time%tstart
          end do
-         do while (rainamount(i) .lt. vsmall .and. rainamount(i + 1) .lt. vsmall)
+         do while (atmo%rainamount(i) .lt. vsmall .and. atmo%rainamount(i + 1) .lt. vsmall)
             i = i + 1
-            ratimar(i) = raintimearray(i) - tstart
+            ratimar(i) = atmo%raintimearray(i) - time%tstart
          end do
 
          ! Fill arrays with real values of rain events
          nn = i
-         do i = nn, nmrain
-            ratimar(i + 1) = raintimearray(i + 1) - tstart
-            rainrec = rainrec + 1
-            raintimearray(rainrec) = ratimar(i)
-            rainam(rainrec) = 0.1d0*rainamount(i)  ! convert from mm to cm
+         do i = nn, atmo%nmrain
+            ratimar(i + 1) = atmo%raintimearray(i + 1) - time%tstart
+            time%rainrec = time%rainrec + 1
+            atmo%raintimearray(time%rainrec) = ratimar(i)
+            rainam(time%rainrec)             = 0.1d0 * atmo%rainamount(i)   ! mm → cm
          end do
-         nmrain = rainrec
+         atmo%nmrain = time%rainrec
 
          ! Set first record of arrays
-         raintimearray(1) = time%tcum + dtmin
-         rainfluxarray(1) = 0.0d0
+         atmo%raintimearray(1) = time%tcum + time%dtmin
+         atmo%rainfluxarray(1) = 0.0d0
 
-         ! Calculate rainfluxes (cm/d) and fill rainfluxarray
-         ! Flx(t1) = P(t1) / (T(t1)-T(t0))  = counts for time interval T(t0) -> T(t1)
-         ! Flx = flux, P = quantity of rain, T = time
-         do i = 2, nmrain
-            rainfluxarray(i) = rainam(i)/(raintimearray(i) - raintimearray(i - 1))
+         ! rainfluxes (cm/d): Flx(t1) = P(t1) / (T(t1)−T(t0)) over interval T(t0)→T(t1)
+         do i = 2, atmo%nmrain
+            atmo%rainfluxarray(i) = rainam(i) / (atmo%raintimearray(i) - atmo%raintimearray(i - 1))
          end do
 
          ! Set final values of raintimearray and corresponding rainfluxarray
-         raintimearray(nmrain + 1) = dmax1(tend + 1.1d0 - tstart, raintimearray(nmrain) + 1.d0)
-         rainfluxarray(nmrain + 1) = 0.d0
-         nmrain = nmrain + 1
+         atmo%raintimearray(atmo%nmrain + 1) = max(time%tend + 1.1d0 - time%tstart, &
+                                                   atmo%raintimearray(atmo%nmrain) + 1.d0)
+         atmo%rainfluxarray(atmo%nmrain + 1) = 0.d0
+         atmo%nmrain = atmo%nmrain + 1
 
       end if
 
       ! For swrain = 1-3: determine start rain record
-      rainrec = 1
+      time%rainrec = 1
 
-      end associate
       end associate
    end subroutine ProcessRainEvents
 
