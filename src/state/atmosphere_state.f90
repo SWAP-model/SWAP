@@ -99,6 +99,7 @@ module atmosphere_state_mod
       real(real64) :: slw      = 0.0_real64  !< liquid water in snowpack (cm)
       real(real64) :: ssnow    = 0.0_real64  !< snow storage (cm water equivalent)
       real(real64) :: snowinco = 0.0_real64  !< snow-in-canopy snapshot (cm w.e.)
+      real(real64) :: ISsnowBeg = 0.0_real64 !< snow w.e. at start of current intermediate period (cm); peer to state%soilwater%IPondBeg
       real(real64) :: graidt   = 0.0_real64  !< gross rainfall this timestep (cm)
       real(real64) :: nraidt   = 0.0_real64  !< net rainfall this timestep (cm)
       real(real64) :: aintcdt  = 0.0_real64  !< actual interception this timestep (cm)

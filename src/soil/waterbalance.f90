@@ -694,11 +694,10 @@ contains
       !   NumNodNew/DZNew — regridding temporaries; Phase C3
       !   outfil/pathwork — output file path globals; Phase C3
       !   CritDevMasBal — mass balance criterion; Phase C3
-      !   ISsnowBeg — snow integral; Phase C3
       !   dev_cmb — mass balance device file handle; Phase C3
       ! [SS-GR-CROPRT A2] IcTopMp/FlMacropore/IQInTopVrt*/IQInTop*/IWaSrDm*/WaSrDm* dropped — retired (ADR 0040)
       use variables, only: NumNodNew, outfil, pathwork, DZNew,    &
-                           CritDevMasBal, ISsnowBeg, dev_cmb
+                           CritDevMasBal, dev_cmb
       ! [SS-TC TC-6] DayCum read cut over to state%timecontrol%daycum
       use swap_state_mod, only: swap_state_t
       use swap_array_dimensions, only: macp, madr
@@ -737,7 +736,7 @@ contains
       ! 1) Ponding layer
       ! SS-ATM A-2.6: Ssnow retired — read from state%atmosphere%ssnow
       ! [SS-SWC S-2.12B] IPondBeg/pond -> state%soilwater
-      SrDif = state%soilwater%IPondBeg-state%soilwater%pond + ISsnowBeg-state%atmosphere%ssnow
+      SrDif = state%soilwater%IPondBeg-state%soilwater%pond + state%atmosphere%ISsnowBeg-state%atmosphere%ssnow
       IQInTopPreDm= 0.d0
       IQInTopLatDm= 0.d0
       ! [SS-GR-CROPRT A2] if (FlMacropore) IQInTopPreDm/IQInTopLatDm block dropped (ADR 0040)
@@ -824,7 +823,7 @@ contains
      &    state%atmosphere%intr%igrai, state%atmosphere%intr%igsnow, state%soilwater%igird, state%soilwater%irunon, state%atmosphere%intr%isnrai, &
      &    state%atmosphere%intr%igrai-state%atmosphere%intr%inrai, state%soilwater%igird-state%soilwater%inird, &
      &    state%atmosphere%intr%isubl, state%atmosphere%intr%ievap, state%soilwater%iruno, inqNew(1), state%soilwater%pond, state%soilwater%IPondBeg, state%atmosphere%ssnow, &
-     &    ISsnowBeg,IQInTopPreDm, IQInTopLatDm
+     &    state%atmosphere%ISsnowBeg,IQInTopPreDm, IQInTopLatDm
 
       ! Write deviations of water balance whole Profile
       if (FlWriteDevPrf) write(dev_cmb,4) state%timecontrol%daycum, DevMasBalPrf, &  ! TC-6

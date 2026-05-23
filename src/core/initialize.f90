@@ -277,7 +277,7 @@
       ! iruno              = 0.0d0
       ! irunoCN            = 0.0d0
       ! irunon             = 0.0d0
-      issnowbeg          = 0.0d0 
+      ! [GR-ATM 2026-05-23] issnowbeg retired — see state%atmosphere%ISsnowBeg
       ! [SS-SWC] ithetabeg/k retired — soilwater_init handles init via state%soilwater
       ! ithetabeg          = 0.0d0
       ! k                  = 0.0d0

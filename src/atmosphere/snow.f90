@@ -55,7 +55,6 @@ contains
 !!
    subroutine snow_step(state)
 
-      use Variables, only: ISsnowBeg   ! still a bare global; state-home migration pending
       use, intrinsic :: iso_fortran_env, only: real64
       implicit none
 
@@ -80,7 +79,7 @@ contains
          intr%igsnow = 0.0_real64
          intr%isubl  = 0.0_real64
          intr%isnrai = 0.0_real64
-         ISsnowBeg   = atmo%ssnow
+         atmo%ISsnowBeg = atmo%ssnow
       end if
 
       ! --- reset cumulative snow states

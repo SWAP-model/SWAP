@@ -932,7 +932,7 @@
       ! real(8)   iqredfrs           ! Intermediate amount of reduced root water extraction due to frost conditions (L)
       ! real(8)   iruno              ! Intermediate amount of runoff (L)
       ! real(8)   irunon             ! Intermediate amount of runon (L)
-      real(8)   issnowbeg          ! Amount of snow in soil water equivalent (L) at start of current intermediate period [snow.f90, waterbalance.f90]
+      ! [GR-ATM 2026-05-23] ISsnowBeg retired — see state%atmosphere%ISsnowBeg
       ! [SS-SWC] retired 2026-05-12 — moved to state%soilwater%IThetaBeg (ADR 0038)
       ! real(8)   ithetabeg(macp)    ! Array with volumetric soil water contents (-) for each compartment at start of intermediate period
       ! [SS-SWC] retired 2026-05-12 — moved to state%soilwater%k (ADR 0038)
