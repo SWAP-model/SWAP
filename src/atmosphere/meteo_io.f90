@@ -13,9 +13,9 @@
 !! @author Original SWAP development team
 !! @date Last modified March 2014, refactored February 2026
 module meteo_process_mod
-   use error_mod, only: fatalerr_collected
-   use swap_state_mod, only: swap_state_t
-   use swap_config_mod, only: swap_config_t   ! [SS-GR-ATM B23] config added for meteo switches
+   use error_mod,       only: fatalerr_collected
+   use swap_state_mod,  only: swap_state_t
+   use swap_config_mod, only: swap_config_t
    implicit none
    private
 
@@ -64,148 +64,114 @@ contains
   !! (detailed meteo input)
   !! @endnote
   subroutine ReadMeteoDay(state, config)
-      ! [SS-GR-ATM B23] use variables dropped; symbols → state%atmosphere/config%meteo
-      ! SS-TC TC-9: date,t1900 removed from only-list; reads/writes via state%timecontrol.
-      ! [SS-TC TC-14] yearmeteo, daymeteo retired — read via state%timecontrol
-      ! [SS-GR-ATM B23] DEFERRED symbols (not yet in state); [SS-GR-FINAL B11] reviewed
-      use variables, only: &
-          rad, tmn, tmx,                                  &  ! B23 DEFERRED — daily scalars
-          tav,                                            &  ! B23 DEFERRED — dual-write (consumed by snow.f90/swapoutput.f90; tavd/rh dropped B.5)
-          pathatm, metfil,                                &  ! B23 DEFERRED — filename strings
-          detrecord, dettime, detrad, dethum, dettav,     &  ! B23 DEFERRED — detail arrays
-          detrain, detwind, irectotal                        ! B23 DEFERRED — detail arrays + counter
-      ! [SS-GR-ATM B.5] tavd retired from import: no legacy consumers remain after cropgrowth migration
-      ! [SS-GR-ATM B.5] rh retired from import: no legacy consumers outside init seed (swap_mod A12)
-      ! [SS-GR-ATM B.5] out_rad/tmn/tmx/hum/win/etr/wet retired from import: no consumers outside swap_mod init seed
+      ! DEFERRED — rad/tmn/tmx/tav (daily meteo scalars) dual-written to bare
+      ! globals because downstream consumers (meteo_orchestrator, cropgrowth)
+      ! still read them. Migration to state%atmosphere is a coordinated
+      ! multi-file commit; pathatm/metfil/det* arrays + irectotal stay too.
+      use variables, only: rad, tmn, tmx, tav,                  &
+                           pathatm, metfil,                      &
+                           detrecord, dettime, detrad, dethum,   &
+                           dettav, detrain, detwind, irectotal
       use precipitation_mod, only: PartitionPrecipitation
       implicit none
 
-      type(swap_state_t),   intent(inout) :: state   !! [SS-ATM] threaded for atmosphere dual-writes
-      type(swap_config_t),  intent(in)    :: config  !! [SS-GR-ATM B23] for meteo config switches
+      type(swap_state_t),  intent(inout) :: state
+      type(swap_config_t), intent(in)    :: config
 
-    ! --- local
-    ! [GR-ATM-CLEAN Phase D.2] formerly module MeteoVars members
-    integer :: i               ! sub-daily record loop counter
-    real(8) :: hum, win, etr   ! within-call scratch (daily branch)
-    real(8) :: svp             ! within-call saturated vapor pressure
-    character(len=11)  detdate
-    character(len=3)   ext
-    character(len=200) filnam
-    character(len=300) messag
+      integer :: i, today_idx
+      real(8) :: hum, win, etr, svp
+      character(len=11)  :: detdate
+      character(len=3)   :: ext
+      character(len=200) :: filnam
+      character(len=300) :: messag
 
-    ! ----------------------------------------------------------------------
+      associate (atmo => state%atmosphere, time => state%timecontrol)
 
-    ! [SS-TC TC-14] alias TC fields directly so bare names resolve to state%timecontrol
-    associate( &
-      tc_t1900 => state%timecontrol%t1900, &
-      tc_date  => state%timecontrol%date,  &
-      yearmeteo => state%timecontrol%yearmeteo, &
-      daymeteo  => state%timecontrol%daymeteo )
+      call ResetMetFlx(state)
 
-    call ResetMetFlx (state)
+      ! ===== Daily meteo =====
+      if (config%meteo%swmetdetail .eq. 0) then
 
-    ! 1: Check whether meteo data are available of today; pass on weather of today
-    ! 1.0 Daily Meteo 0000000000000000000000000000000000000000000000000000000 Daily Meteo
+         ! Check availability of meteo data of today
+         if (time%daymeteo .lt. atmo%daynrfirst .or. time%daymeteo .gt. atmo%daynrlast) then
+            messag = 'In meteo file no meteo data are available for ' &
+                     // time%date // '. First adapt meteo file!'
+            call fatalerr_collected('meteo', messag)
+         end if
 
-    if (config%meteo%swmetdetail.eq.0) then
+         ! Pass on weather values of today
+         today_idx = time%daymeteo + 1 - atmo%daynrfirst
+         rad  = atmo%arad(today_idx)
+         tmn  = atmo%atmn(today_idx)
+         tmx  = atmo%atmx(today_idx)
+         hum  = atmo%ahum(today_idx)
+         win  = atmo%awin(today_idx)
+         etr  = atmo%aetr(today_idx)
 
-      ! Check availability of meteo data of today
-      if (daymeteo.lt.state%atmosphere%daynrfirst .or. daymeteo.gt.state%atmosphere%daynrlast) then
-        messag ='In meteo file no meteo data are'// &
-                ' available for '//tc_date//'. First adapt meteo file!'
-        call fatalerr_collected ('meteo',messag)
-      end if
+         ! If hum is missing or tav cannot be calculated: set rh at -99.0
+         atmo%rh = 1.0d0
+         if (hum .lt. -98.0d0 .or. tmn .lt. -98.0d0 .or. tmx .lt. -98.0d0) atmo%rh = -99.0d0
 
-      ! Pass on weather values of today
-      rad  = state%atmosphere%arad(daymeteo+1-state%atmosphere%daynrfirst)
-      tmn  = state%atmosphere%atmn(daymeteo+1-state%atmosphere%daynrfirst)
-      tmx  = state%atmosphere%atmx(daymeteo+1-state%atmosphere%daynrfirst)
-      hum  = state%atmosphere%ahum(daymeteo+1-state%atmosphere%daynrfirst)
-      win  = state%atmosphere%awin(daymeteo+1-state%atmosphere%daynrfirst)
-      etr  = state%atmosphere%aetr(daymeteo+1-state%atmosphere%daynrfirst)
+         ! 24h average + day temperature
+         atmo%Tav  = (tmx + tmn) * 0.5d0
+         tav       = atmo%Tav   ! dual-write — bare 'tav' still consumed in meteo_orchestrator subdaily
+         atmo%tavd = (tmx + atmo%Tav) * 0.5d0
 
-      ! If hum is missing or tav cannot be calculated: set rh at -99.0
-      state%atmosphere%rh = 1.0d0
-      if (hum.lt.-98.0d0 .or. tmn.lt.-98.0d0 .or. tmx.lt.-98.0d0) &
-        state%atmosphere%rh=-99.0d0
+         if (atmo%rh .ge. -98.0d0) then
+            ! Saturated vapour pressure [kPa]
+            svp = 0.3055d0 * (exp(17.27d0*tmn/(tmn+237.3d0)) + exp(17.27d0*tmx/(tmx+237.3d0)))
+            atmo%rh = min(hum/svp, 1.0d0)
+         endif
 
-      ! Calculate 24h average temperature
-      state%atmosphere%Tav = (tmx+tmn)*0.5d0
-      tav = state%atmosphere%Tav   ! [SS-GR-ATM B23] dual-write — legacy tav consumed by snow.f90/swapoutput.f90
-      ! Calculate average day temperature
-      state%atmosphere%tavd = (tmx+state%atmosphere%Tav)*0.5d0   ! [SS-GR-ATM B23] direct state write
-      ! [SS-GR-ATM B.5] tavd dual-write to legacy global RETIRED: no crop consumers remain
+         ! CFO output snapshot (PEARL coupling) — sole writers to atmo%out_*
+         atmo%out_rad = real(rad, kind=8)
+         atmo%out_tmn = real(tmn, kind=8)
+         atmo%out_tmx = real(tmx, kind=8)
+         atmo%out_hum = real(hum, kind=8)
+         atmo%out_win = real(win, kind=8)
+         atmo%out_etr = real(etr, kind=8) * 0.001d0
+         if (config%meteo%swrain .eq. 2) then
+            atmo%out_wet = real(atmo%wet(today_idx), kind=8)
+         else
+            atmo%out_wet = -1.0d0
+         endif
 
-      if (state%atmosphere%rh.ge.-98.0d0) then
-        ! Calculate saturated vapour pressure [kpa]
-        svp = 0.3055d0*(exp(17.27d0*tmn/(tmn+237.3d0)) + &
-                        exp(17.27d0*tmx/(tmx+237.3d0)))
-        ! Calculate relative humidity [fraction]
-        state%atmosphere%rh = min(hum/svp,1.0d0)   ! [SS-GR-ATM B23] direct state write
+      ! ===== Detailed meteo =====
+      elseif (config%meteo%swmetdetail .eq. 1) then
+
+         ! Compose filename meteorological file for use in warnings
+         write (ext, '(i3.3)') mod(time%yearmeteo, 1000)
+         filnam = trim(pathatm) // trim(metfil) // '.' // trim(ext)
+
+         do i = 1, config%meteo%nmetdetail
+            irectotal = irectotal + 1
+            if (i .ne. detrecord(irectotal)) then
+               messag = 'In meteo file '// trim(filnam) // ' record number(s)' &
+                        // ' are not correct at ' // time%date // '. First adapt meteo file!'
+               call fatalerr_collected('meteo', messag)
+            end if
+            call dtdpst('year-month-day', dettime(irectotal) + 0.1d0, detdate)
+            call dtdpst('year-month-day', time%t1900       + 0.1d0, time%date)
+            if (detdate .ne. time%date) then
+               messag = 'In meteo file ' // trim(filnam) // ' the amount of ' &
+                        // 'records deviate near ' // time%date // '. First adapt meteo file!'
+               call fatalerr_collected('meteo', messag)
+            end if
+
+            ! Pass on weather records of today
+            atmo%arad(i)           = detrad(irectotal)
+            atmo%ahum(i)           = dethum(irectotal)
+            atmo%atav(i)           = dettav(irectotal)
+            atmo%awind_subdaily(i) = detwind(irectotal)
+            atmo%arain_subdaily(i) = detrain(irectotal) * 0.1d0   ! mm → cm
+         enddo
       endif
-      ! [SS-GR-ATM B.5] rh dual-write to legacy global RETIRED: no crop consumers remain
 
-      ! CFO file for PEARL: save meteo variables of today for output
-      state%atmosphere%out_rad = real(rad, kind=8)          ! [SS-GR-ATM B23] direct state write
-      state%atmosphere%out_tmn = real(tmn, kind=8)          ! [SS-GR-ATM B23] direct state write
-      state%atmosphere%out_tmx = real(tmx, kind=8)          ! [SS-GR-ATM B23] direct state write
-      state%atmosphere%out_hum = real(hum, kind=8)          ! [SS-GR-ATM B23] direct state write
-      state%atmosphere%out_win = real(win, kind=8)          ! [SS-GR-ATM B23] direct state write
-      state%atmosphere%out_etr = real(etr, kind=8)*0.001d0  ! [SS-GR-ATM B23] direct state write
-      if (config%meteo%swrain.eq.2) then
-        state%atmosphere%out_wet = real(state%atmosphere%wet(daymeteo+1-state%atmosphere%daynrfirst), kind=8)  ! [SS-GR-ATM B23]
-      else
-        state%atmosphere%out_wet = -1.0d0
-      endif
-      ! [SS-GR-ATM B.5] out_rad/tmn/tmx/hum/win/etr/wet legacy dual-writes RETIRED.
-      ! state%atmosphere%out_* are now the sole write targets; legacy globals have no consumers.
+      ! Partition today's precipitation (reads + writes via state%atmosphere).
+      call PartitionPrecipitation(state, config)
 
-    ! end 1 Daily Meteo 00000000000000000000000000000000000000000000000000000 Daily Meteo
-
-    ! 1.1 Detailed Meteo 1111111111111111111111111111111111111111111111111111 Detailed Meteo
-
-    elseif (config%meteo%swmetdetail.eq.1) then
-
-      ! Check availability of meteo data of today
-      ! Compose filename meteorological file for use in warnings
-      write (ext,'(i3.3)') mod(yearmeteo,1000)
-      filnam = trim(pathatm)//trim(metfil)//'.'//trim(ext)
-
-      do i = 1, config%meteo%nmetdetail
-        irectotal = irectotal + 1
-        if (i .ne. detrecord(irectotal)) then
-          messag='In meteo file '//trim(filnam)//' record number(s)'// &
-                 ' are not correct at '//tc_date//'. First adapt meteo file!'
-          call fatalerr_collected ('meteo',messag)
-        end if
-        call dtdpst('year-month-day', &
-                    dettime(irectotal)+0.1d0,detdate)
-        call dtdpst('year-month-day',tc_t1900+0.1d0,tc_date)
-        if (detdate .ne. tc_date) then
-          messag ='In meteo file '//trim(filnam)//' the amount of '// &
-                  'records deviate near '//tc_date//'. First adapt meteo file!'
-          call fatalerr_collected ('meteo',messag)
-        end if
-
-        ! Pass on weather records of today
-        state%atmosphere%arad(i)  = detrad(irectotal)
-        state%atmosphere%ahum(i)  = dethum(irectotal)
-        state%atmosphere%atav(i)  = dettav(irectotal)
-        state%atmosphere%awind_subdaily(i) = detwind(irectotal)
-        state%atmosphere%arain_subdaily(i) = detrain(irectotal) * 0.1d0 ! convert from mm to cm
-      enddo
-    endif
-
-    ! end 1 Detailed Meteo 11111111111111111111111111111111111111111111111111 Detailed Meteo
-    ! end 1.
-
-    ! Partition today's precipitation (reads + writes via state%atmosphere).
-    call PartitionPrecipitation(state, config)
-
-    end associate  ! tc_t1900, tc_date => state%timecontrol [TC-9]
-
-    return
-  end subroutine ReadMeteoDay
+      end associate
+   end subroutine ReadMeteoDay
 
 
   !> Reset intermediate and cumulative meteorological flux counters
@@ -237,28 +203,27 @@ contains
   !! Interface: I - flzerointr, flzerocumu, caintc, cgrai, cnrai, igrai, inrai, iprec
   !!            O - caintc, cgrai, cnrai, igrai, inrai, iprec
   !! @endnote
-  subroutine ResetMetFlx (state)
-      ! [SS-SWC S-2.12B] iprec retired — state%soilwater%reset_intermediate() handles it
+  subroutine ResetMetFlx(state)
       implicit none
 
-      type(swap_state_t), intent(inout) :: state  !! [SS-ATM A-2.1] cohort reset() dispatch
+      type(swap_state_t), intent(inout) :: state
 
-    ! --- local
+      associate (atmo => state%atmosphere, time => state%timecontrol)
 
-    ! Reset intermediate fluxes + snapshot intermediate-period baseline.
-    ! Mirrors the soilwater coordinator pattern (soilhydraulics.f90:1190-1196).
-    if (state%timecontrol%flZeroIntr) then
-      call state%atmosphere%intr%reset()
-      state%atmosphere%ISsnowBeg = state%atmosphere%ssnow
-    endif
+      ! Reset intermediate fluxes + snapshot intermediate-period baseline.
+      ! Mirrors the soilwater coordinator pattern (soilhydraulics.f90:1190-1196).
+      if (time%flZeroIntr) then
+         call atmo%intr%reset()
+         atmo%ISsnowBeg = atmo%ssnow
+      endif
 
-    ! Reset cumulative fluxes + snapshot cumulative-period baseline.
-    if (state%timecontrol%flZeroCumu) then
-      call state%atmosphere%cumu%reset()
-      state%atmosphere%snowinco = state%atmosphere%ssnow
-    endif
+      ! Reset cumulative fluxes + snapshot cumulative-period baseline.
+      if (time%flZeroCumu) then
+         call atmo%cumu%reset()
+         atmo%snowinco = atmo%ssnow
+      endif
 
-    return
-  end subroutine ResetMetFlx
+      end associate
+   end subroutine ResetMetFlx
 
 end module meteo_process_mod
