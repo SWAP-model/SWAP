@@ -18,9 +18,8 @@ contains
    subroutine timecontrol_init(state)
       ! [GR-CROP C1] flCropCalendar/icrop: dual-write to both legacy global + state%crop%common%X
       ! [SS-GR-FINAL B8] DEFERRED: all symbols — init-path config/flags; no state home yet; Phase C3
+      use swap_log, only: log_warn
       use variables, only: &
-                            ! DEFERRED: logf — file unit; outfil/pathatm cluster; Phase C3
-                            logf, &
                             ! DEFERRED: flCropCalendar — crop flag dual-write; Phase C3
                             flCropCalendar, &
                             ! DEFERRED: swirfix/swsnow/swhea/swsolu — model-feature switches; Phase C3; swdra retired
@@ -294,7 +293,7 @@ contains
         if (dt.lt.dtmin) then
           messag = 'Initial dt read from file (SWINCO=3)'//             &
      &    ' if absent, then default is assumed'
-          call warn ('soilwater',messag,logf,swscre)
+          call log_warn('soilwater', messag)
           dt = dsqrt(dtmin*dtmax)
         endif
       else

@@ -46,7 +46,7 @@ contains
       ! [SS-GR-CROPRT A2] flmacropore dropped from import — retired (ADR 0040)
       use variables, only: logf, CritUndSatVol
       ! [SS-TC TC-6] t1900 read cut over to state%timecontrol%t1900
-      use swap_log, only: log_debug, to_str
+      use swap_log, only: log_debug, log_warn, to_str
       implicit none
       ! SS-BND B-2.7: state added to read state%soilwater%gwlinp (gwlinp global retired)
       ! SS-SWC S-1.6: intent(in) -> intent(inout) to allow gwl/nodgwl/pegwl/bpegwl/npegwl/gwlflcpzo/nodgwlflcpzo dual-writes
@@ -191,7 +191,7 @@ contains
      &         'compartment ( ', datexti,  ' ). ',                      &
      &         'This is caused by inconsistency between ',              &
      &         'given gwl and soil physical parameters '
-         call warn ('Calcgwl',messag,logf,state%timecontrol%swscre)  ! [SS-BMI2 Task 4]
+         call log_warn('Calcgwl', messag)
       endif
 
       return

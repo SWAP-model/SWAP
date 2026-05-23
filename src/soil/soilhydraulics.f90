@@ -49,11 +49,12 @@ contains
          ! DEFERRED: CritDevh1Cp/CritDevh2Cp/CritDevPondDt — convergence criteria; Phase C3
          ! DEFERRED: flwarn_hc/iwarn_hc — non-convergence warning state; Phase C3
          flwarn_hc, iwarn_hc, &
-         ! DEFERRED: logf — log file unit; Phase C3
+         ! DEFERRED: logf — log file unit; retired in commit 2 of logf arc
          logf, &
          ! DEFERRED: noddrz — node index at root zone bottom; Phase C3
          noddrz
       use timestep_control_mod, only: fldecdt
+      use swap_log, only: log_warn, log_debug, to_str
       use boundbottom_mod, only: BoundBottom
       use boundtop_mod, only: boundtop, PONDRUNOFF
       use rootextraction_mod, only: RootExtraction
@@ -470,7 +471,7 @@ contains
             messag = ' Tri-band matrix in HeadCalc appeared to be'//    &
      &               ' singular at '//datetmp//                            &
      &               '   Alternative SOLVER chosen'
-            call warn ('Headcalc',messag,logf,swscre)
+            call log_warn('Headcalc', messag)
             do i=1,NN
                a(i,1) = dFdhU(i)
                a(i,2) = dFdhM(i)
@@ -763,7 +764,7 @@ contains
                call dtdpst ('year-month-day',tc_t1900+1.001d0,datetmp)  ! [TC-8]
                  messag = ' Change of groundwater level exceeds'//      &
      &           ' criterion at '//datetmp//'. Consider reduction of dtMin'
-               call warn ('Headcalc',messag,logf,swscre)
+               call log_warn('Headcalc', messag)
             endif
 
             ! Recording of number of iteration steps needed
@@ -803,7 +804,7 @@ contains
             messag = ' No convergence was reached of Richards'//        &
      &        ' equation at '//datetime//                               &
      &        ' no more than 4 warnings per date - SWAP did continue !'
-            call warn ('Headcalc',messag,logf,swscre)
+            call log_warn('Headcalc', messag)
             if (iwarn_hc.gt.4) then
               flwarn_hc = .false.  
             endif

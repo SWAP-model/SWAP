@@ -40,6 +40,7 @@ module rootextraction_mod
 ! ----------------------------------------------------------------------
       ! [SS-GR-FINAL B6] macp → swap_array_dimensions; remainder DEFERRED
       use swap_array_dimensions, only: macp
+      use swap_log, only: log_warn
       use variables, only: &                                               ! [SS-GR-FINAL B6] residuals — all DEFERRED
                            ! DEFERRED: adcrh/adcrl/aeratecrit/alphacrit — O2/drought config; Phase C3
                            ! adcrh/adcrl/aeratecrit/alphacrit retired
@@ -47,8 +48,8 @@ module rootextraction_mod
                            botcom, criterhr, flhydrlift,                   &  ! dcritrtz/cumdens retired
                            ! DEFERRED: hlim1/hlim2l/hlim2u/hlim3h/hlim3l/hlim4 — drought stress limits; Phase C3
                            ! hlim1/hlim2l/hlim2u/hlim3h/hlim3l/hlim4 retired
-                           ! DEFERRED: kroot/kstem/logf/noddrz/oxygenintercept — crop/log globals; Phase C3
-                           kroot, kstem, logf, noddrz, oxygenintercept,   &
+                           ! DEFERRED: kroot/kstem/noddrz/oxygenintercept — crop/log globals; Phase C3
+                           kroot, kstem, noddrz, oxygenintercept,   &
                            ! DEFERRED: oxygenslope/rdctb/rootcoefa/rooteff — active crop state; Phase C3; rd/rdm retired
                            oxygenslope, rootcoefa, rooteff, &  ! rdctb retired
                            ! DEFERRED: rootradius/rxylem/saltmax/saltslope/stephr — crop/solute config; Phase C3
@@ -362,11 +363,12 @@ module rootextraction_mod
 ! ----------------------------------------------------------------------
       ! [SS-GR-FINAL B6] macp → swap_array_dimensions; remainder DEFERRED (same as RootExtraction)
       use swap_array_dimensions, only: macp
+      use swap_log, only: log_warn
       use variables, only: &                                               ! [SS-GR-FINAL B6] residuals — all DEFERRED
                            ! adcrh/adcrl/aeratecrit/alphacrit retired  ! DEFERRED: crop stress config; Phase C3
                            botcom, criterhr, flhydrlift,                   &  ! dcritrtz/cumdens retired  ! DEFERRED: soil/crop config
                            ! hlim1/hlim2l/hlim2u/hlim3h/hlim3l/hlim4 retired  ! DEFERRED: drought limits
-                           kroot, kstem, logf, noddrz, oxygenintercept,   &  ! DEFERRED: crop/log globals
+                           kroot, kstem, noddrz, oxygenintercept,   &  ! DEFERRED: crop/log globals
                            oxygenslope, rootcoefa, rooteff, &  ! rdctb retired  ! rd retired  ! DEFERRED: active crop state
                            rootradius, rxylem, stephr,                    &  ! saltmax/saltslope retired  ! DEFERRED: crop/solute config
                            swfrost,                                       &  ! swcompensate/swoxygen/swdrought retired  ! DEFERRED: stress switches
@@ -570,7 +572,7 @@ module rootextraction_mod
       if (counter .gt. 1000) then
          messag = '4 Too many iterations for microscopic root'          &
      &             //' water uptake. Please adapt input!'
-         call warn ('rootextraction',messag,logf,swscre)
+         call log_warn('rootextraction', messag)
          call fatalerr_collected ('rootextraction',messag)
       endif
 
@@ -667,7 +669,7 @@ module rootextraction_mod
       if (counter .gt. 1000) then
          messag = '5 Too many iterations for microscopic root'          &
      &             //' water uptake. Please adapt input!'
-         call warn ('rootextraction',messag,logf,swscre)
+         call log_warn('rootextraction', messag)
          call fatalerr_collected ('rootextraction',messag)
       endif
 
@@ -733,11 +735,12 @@ module rootextraction_mod
 ! ----------------------------------------------------------------------
       ! [SS-GR-FINAL B6] macp → swap_array_dimensions; remainder DEFERRED (same as RootExtraction)
       use swap_array_dimensions, only: macp
+      use swap_log, only: log_warn
       use variables, only: &                                               ! [SS-GR-FINAL B6] residuals — all DEFERRED
                            ! adcrh/adcrl/aeratecrit/alphacrit retired  ! DEFERRED: crop stress config; Phase C3
                            botcom, criterhr, flhydrlift,                   &  ! dcritrtz/cumdens retired  ! DEFERRED: soil/crop config
                            ! hlim1/hlim2l/hlim2u/hlim3h/hlim3l/hlim4 retired  ! DEFERRED: drought limits
-                           kroot, kstem, logf, noddrz, oxygenintercept,   &  ! DEFERRED: crop/log globals
+                           kroot, kstem, noddrz, oxygenintercept,   &  ! DEFERRED: crop/log globals
                            oxygenslope, rootcoefa, rooteff, &  ! rdctb retired  ! rd retired  ! DEFERRED: active crop state
                            rootradius, rxylem, stephr,                    &  ! saltmax/saltslope retired  ! DEFERRED: crop/solute config
                            swfrost,                                       &  ! swcompensate/swoxygen/swdrought retired  ! DEFERRED: stress switches
@@ -810,7 +813,7 @@ module rootextraction_mod
             if (counter .gt. 50) then
               messag = '1 Too many iterations for microscopic root'    &
      &               //' water uptake. Please adapt input!'
-              call warn ('rootextraction',messag,logf,swscre)
+              call log_warn('rootextraction', messag)
               call fatalerr_collected ('rootextraction',messag)
             endif
           enddo

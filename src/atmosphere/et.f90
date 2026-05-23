@@ -14,6 +14,7 @@ module et_mod
    use error_mod, only: fatalerr_collected
    use swap_state_mod, only: swap_state_t
    use atmosphere_constants_mod, only: POND_THRESHOLD_CM
+   use swap_log, only: log_warn
     implicit none
     private
 
@@ -415,10 +416,10 @@ contains
       ! Handle warnings
       if (outputs%warning_code == 1) then
           messag = 'Warning: latitude above polar circle, daylength = 0hrs'
-          call warn('Astro', messag, logf, swscre)
+          call log_warn('Astro', messag)
       else if (outputs%warning_code == 2) then
           messag = 'Warning: latitude within polar circle, daylength = 24hrs'
-          call warn('Astro', messag, logf, swscre)
+          call log_warn('Astro', messag)
       endif
 
   end subroutine PenMon

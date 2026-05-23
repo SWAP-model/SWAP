@@ -326,12 +326,11 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
          alphaw, betaw, &
          ! rsro/pondmx retired (→state%surfacewater%X)
 
-         ! DEFERRED: logf — log file unit; runtime utility; Phase C3
-         logf, &
          ! DEFERRED: QRapDra — rapid drainage flux runtime state; Phase C3
          QRapDra  ! [TC-8: dropped tcum,dt,t1900,fldtmin]
       use swap_state_mod, only: swap_state_t
       use surfacewater_utils, only: wlevst, swstlev, qhtab
+      use swap_log, only: log_warn
       IMPLICIT NONE
 
       type(swap_state_t), intent(inout) :: state
@@ -649,7 +648,7 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
      &        ('year-month-day,hour:minute:seconds',tc_t1900,datetime)  ! [TC-8]
               messag = ' sw-level oscillation at '//datetime//          &
      &        '       advise: reduction of dtmax !'
-              call warn ('Wlevbal',messag,logf,swscre)
+              call log_warn('Wlevbal', messag)
               call fatalerr_collected ('Wlevbal',messag)
            endif
         endif

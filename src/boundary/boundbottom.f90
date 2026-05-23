@@ -11,11 +11,9 @@ module boundbottom_mod
 ! ----------------------------------------------------------------------
     use swap_state_mod,        only: swap_state_t
     use swap_config_mod,       only: swap_config_t
-    use swap_log,              only: log_debug, to_str
+    use swap_log,              only: log_debug, log_warn, to_str
     use swap_array_dimensions, only: mabbc
     use variables,             only: &   ! [SS-GR-FINAL B11] all DEFERRED
-       ! DEFERRED: logf — log file unit; runtime utility; Phase C3
-       logf, &
        ! DEFERRED: SwBotb3ResVert — bottom boundary resistance switch; config; Phase C3
        SwBotb3ResVert, &
        ! DEFERRED: gwltab/qbotab/haqtab/hbotab — groundwater boundary tables; config; Phase C3
@@ -107,7 +105,7 @@ contains
                     write (messag, '(a)') 'free drainage at date '
                     write (messag, *)
                     write (messag, '(a11)') date
-                    call warn('BoundBottom', messag, logf, 0)
+                    call log_warn('BoundBottom', messag)
                 end if
                 state%soilwater%swbotb_runtime = -2  ! [SS-GR-BH Task 18] runtime mutation: swbotb=-2
             else

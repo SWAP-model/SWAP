@@ -48,6 +48,7 @@
 !   twilt, wiltpoint, tcnt, vernbase–vernsat: JvL + vernalisation, no state home
 !   daycrop: runtime (dual-write to state%crop%common%daycrop), computed in CropGrowth
 ! ----------------------------------------------------------------------
+      use swap_log, only: log_warn
       use variables, only: &                                            ! [SS-GR-CROPRT B7] [GR-CROPWS B5]
         macp, magrs, rdmax, &  ! icrop/dvs/rd/rdpot/dvsend retired
         ! swrd/swdmi2rd/swrdc/swgc/swdrought/swinter/swcf retired
@@ -719,7 +720,7 @@
      &           ' for vernalised reached, day = ', tc_daycum,          &
      &           ' but vernalisation requirements not yet fulfilled ',  &
      &           ' forcing vernalization now'
-                 call warn ('wofost',messag,logf,swscre)
+                 call log_warn('wofost', messag)
               endif
           endif
       endif
@@ -1109,7 +1110,7 @@
         if (dabs(ombalan) .ge. 1.0d0) then
            write(messag,'(a,f8.3)')                                     &
      &      ' Warning Wofost: OM balance2 not 0, OMBAL = ',ombalan
-           call warn ('wofost',messag,logf,swscre)
+           call log_warn('wofost', messag)
 !     &     ' OM balance2 not 0, simulation stopped OMBAL=',ombalan
 !           call fatalerr ('wofost',messag)
         endif
@@ -1134,7 +1135,7 @@
            write(messag,'(1a,i6,a,f8.3)') ' Nitrogen balance not 0,'//  &
      &     ' simulation stopped, day = ', tc_daycum,' NBAL=',NBALAN
 !*           call fatalerr ('wofost',messag)
-           call warn ('CropGrowth_Wofost',messag,logf,swscre)
+           call log_warn('CropGrowth_Wofost', messag)
         endif
  
         if (flHarvestDay .or. (state%crop%common%dvs.ge.state%crop%common%dvsend) .or. &
