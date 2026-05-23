@@ -354,10 +354,21 @@ contains
                           state%atmosphere%isua, state%crop%kdif, &
                           state%crop%kdir, state%crop%lai, state%crop%cofab)
     else if (state%crop%common%swinter .eq. 2) then
-      ! Calculate interception, method Gash (1995)
-      ! SS-ATM A-2.6: grai retired — pass state%atmosphere%grai explicitly
-      ! SS-TC TC-11: state added for t via state%timecontrol%t
-      call Gash (aintc, state%atmosphere%grai, state)
+      ! Calculate interception, method Gash (1995). Evaluate the 5 AFGEN
+      ! tables at the current time and pass the raw scalars to the pure
+      ! Gash function.
+      block
+        use array_utils, only: afgen
+        use swap_array_dimensions, only: magrs
+        real(8) :: pfree, pstem, scanopy_raw, avprec_raw, avevap_raw
+        pfree       = afgen(state%atmosphere%pfreetb,   (2*magrs), state%timecontrol%t)
+        pstem       = afgen(state%atmosphere%pstemtb,   (2*magrs), state%timecontrol%t)
+        scanopy_raw = afgen(state%atmosphere%scanopytb, (2*magrs), state%timecontrol%t)
+        avprec_raw  = afgen(state%atmosphere%avprectb,  (2*magrs), state%timecontrol%t)
+        avevap_raw  = afgen(state%atmosphere%avevaptb,  (2*magrs), state%timecontrol%t)
+        aintc = Gash(state%atmosphere%grai, state%crop%gird, state%atmosphere%isua, &
+                     pfree, pstem, scanopy_raw, avprec_raw, avevap_raw)
+      end block
     end if
 
     ! Divide interception into rain part and irrigation part and

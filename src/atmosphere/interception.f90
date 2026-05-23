@@ -81,60 +81,56 @@ contains
   !> Reference: Gash, J.H.C. (1995). An analytical framework for estimating
   !> evaporation using rainfall and forest data.
   !>
-  !> Input via state: state%crop%gird, state%atmosphere%avevaptb/avprectb/pfreetb/pstemtb/scanopytb/isua, state%timecontrol%t
+  !> Pure function — explicit args, no state dependency. The 5 AFGEN
+  !> table lookups (pfree/pstem/scanopy/avprec/avevap raw values) are
+  !> performed by the caller and passed in as scalars.
   !> @endnote
-  subroutine Gash (aintc, grai_in, state)
-    use array_utils, only: afgen
-    use swap_array_dimensions, only: magrs
+  pure function Gash(grai, gird, isua, pfree, pstem, scanopy_raw, avprec_raw, avevap_raw) result(aintc)
     implicit none
 
-    real(8),            intent(out) :: aintc    ! Rainfall interception this day [cm/d]
-    real(8),            intent(in)  :: grai_in  ! Gross daily rain flux [cm/d]
-    type(swap_state_t), intent(in)  :: state
+    real(8), intent(in) :: grai         ! Gross daily rain flux [cm/d]
+    real(8), intent(in) :: gird         ! Gross daily irrigation flux [cm/d]
+    integer, intent(in) :: isua         ! Sprinkler switch: 0 = above canopy, /=0 = below
+    real(8), intent(in) :: pfree        ! Free throughfall coefficient [-] — AFGEN(pfreetb, t)
+    real(8), intent(in) :: pstem        ! Stem flow coefficient [-]        — AFGEN(pstemtb, t)
+    real(8), intent(in) :: scanopy_raw  ! Canopy storage capacity [cm]     — AFGEN(scanopytb, t), pre-divide
+    real(8), intent(in) :: avprec_raw   ! Average rainfall intensity [cm/d] — AFGEN(avprectb, t)
+    real(8), intent(in) :: avevap_raw   ! Average evaporation intensity [cm/d] — AFGEN(avevaptb, t), pre-divide
+    real(8)             :: aintc        ! Rainfall interception this day [cm/d]
 
-    real(8) :: avevap   ! Average evaporation intensity during shower [-]
-    real(8) :: avprec   ! Average rainfall intensity [-]
+    real(8) :: avevap   ! Average evaporation intensity, /cGash [-]
     real(8) :: cGash    ! Slope of dPi/dPgross before saturation of canopy [-]
-    real(8) :: pfree    ! Free throughfall coefficient [-]
-    real(8) :: pstem    ! Stem flow coefficient [-]
     real(8) :: psatcan  ! Amount of rainfall to saturate canopy [cm]
     real(8) :: rpd      ! Intercepted precipitation (rain+irrig) [cm]
-    real(8) :: scanopy  ! Storage capacity of canopy [cm]
+    real(8) :: scanopy  ! Storage capacity of canopy, /cGash [cm]
 
-    associate (atmo => state%atmosphere, crop => state%crop, time => state%timecontrol)
+    ! Intercepted precipitation (rain+irrig) in cm
+    if (isua .eq. 0) then
+      rpd = grai + gird
+    else
+      rpd = grai
+    endif
 
-      ! Intercepted precipitation (rain+irrig) in cm
-      if (atmo%isua .eq. 0) then
-        rpd = grai_in + crop%gird
-      else
-        rpd = grai_in
-      endif
+    ! Sparse-Gash sparse-canopy scaling: covered-fraction inverse.
+    cGash   = 1.d0 - pfree - pstem
+    scanopy = scanopy_raw / cGash
+    avevap  = avevap_raw  / cGash
 
-      ! Calculate interception for forests according to Gash (1995)
-      pfree   = afgen(atmo%pfreetb,   (2*magrs), time%t)
-      pstem   = afgen(atmo%pstemtb,   (2*magrs), time%t)
-      cGash   = 1.d0 - pfree - pstem
-      scanopy = afgen(atmo%scanopytb, (2*magrs), time%t) / cGash
-      avprec  = afgen(atmo%avprectb,  (2*magrs), time%t)
-      avevap  = afgen(atmo%avevaptb,  (2*magrs), time%t) / cGash
+    ! Amount of rainfall to saturate canopy
+    if ((1.0d0 - avevap/avprec_raw) .gt. 1.0d-4) then
+      psatcan = -avprec_raw*scanopy/avevap * log(1.0d0 - avevap/avprec_raw)
+    else
+      psatcan = avprec_raw*scanopy/avevap
+    endif
 
-      ! Amount of rainfall to saturate canopy
-      if ((1.0d0 - avevap/avprec) .gt. 1.0d-4) then
-        psatcan = -avprec*scanopy/avevap * log(1.0d0 - avevap/avprec)
-      else
-        psatcan = avprec*scanopy/avevap
-      endif
+    ! Interception: evaporation of intercepted precipitation in cm
+    if (grai .lt. psatcan) then
+      aintc = cGash * rpd
+    else
+      aintc = cGash * (psatcan + avevap*cGash / avprec_raw * (rpd - psatcan))
+    endif
 
-      ! Interception: evaporation of intercepted precipitation in cm
-      if (grai_in .lt. psatcan) then
-        aintc = cGash * rpd
-      else
-        aintc = cGash * (psatcan + avevap*cGash / avprec * (rpd - psatcan))
-      endif
-
-    end associate
-
-  end subroutine Gash
+  end function Gash
 
   !> @brief Simulate interception using adapted Rutter method (wrapper for msw1eic)
   !>
