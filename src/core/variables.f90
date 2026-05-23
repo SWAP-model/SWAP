@@ -778,7 +778,7 @@
       integer   swpondmx           ! Switch for time dependent maximum amount of ponding (L) on soil surface before runoff starts
       integer   swqhbot            ! Switch for flux-groundwater level relationship: 1 = exponential function; 2 = tabular function
       integer   swcofqhc           ! Switch for additional flux added to exponential flux-groundwater level relationship: 0 = no, 1 = yes
-      integer   swredu             ! Switch for reduction of soil evaporation: 0 = no empirical function; 1 = use function of Black; 
+      ! [GR-ATM 2026-05-23] swredu retired — see state%atmosphere%swredu
                                    !                                           2 = use function of Boesten/Stroosnijder
       ! [GR-CROP-DVS] swsophy retired — see state%soilwater%swsophy
       integer   ientrytab(macp,0:matabentries)    ! Soil Physical functions (h,theta,k,dthetadh,dkdtheta) tabulated for each model compartment
@@ -823,7 +823,7 @@
       real(8)   cofqha             ! Coefficient A in exponential relationship between drainage flux and groundwater level (L/T)
       real(8)   cofqhb             ! Coefficient B in exponential relationship between drainage flux and groundwater level (/T)
       real(8)   cofqhc             ! Coefficient C (flux) in exponential relationship between drainage flux and groundwater level (L/T)
-      real(8)   cofred             ! Soil evaporation coefficient of Black or Boesten/Stroosnijder
+      ! [GR-ATM 2026-05-23] cofred retired — see state%atmosphere%cofred
       ! [SS-SWC] retired 2026-05-12 — moved to state%soilwater (ADR 0038)
       ! real(8)   cqbot              ! Cumulative amount of water flow through bottom of simulated soil column (L)
       ! real(8)   cqbotdo            ! Cumulative amount of water (L) passed through the soil column bottom in downward direction
@@ -1040,7 +1040,7 @@
       ! real(8)   RootPhi(macp)      ! Factor Phi of a compartment used in drought reduction of De Jong van Lier et al. (T/L)
       ! [SS-CRP] retired 2026-05-11 — moved to state%soilwater%rootrho (ADR 0036)
       ! real(8)   RootRho(macp)      ! Factor Rho of a compartment used in drought reduction of De Jong van Lier et al. (/L2)
-      real(8)   rsigni             ! Minimum amount of rainfall (L) which resets the empirical soil evaporation reduction models
+      ! [GR-ATM 2026-05-23] rsigni retired — see state%atmosphere%rsigni
       real(8)   rsoil              ! Soil resistance of wet soil of PMdirect (T/L)
       ! [GR-CROP-DVS] rsro retired — see state%surfacewater%rsro
       ! [GR-CROP-DVS] rsroexp retired — see state%surfacewater%rsroexp

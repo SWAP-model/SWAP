@@ -248,7 +248,7 @@ module legacy_state_mod
       integer :: swpondmx  !! Switch for time dependent maximum amount of ponding (L) on soil surface before runoff starts
       integer :: swqhbot  !! Switch for flux-groundwater level relationship: 1 = exponential function; 2 = tabular function
       integer :: swcofqhc  !! Switch for additional flux added to exponential flux-groundwater level relationship: 0 = no, 1 = yes
-      integer :: swredu  !! Switch for reduction of soil evaporation: 0 = no empirical function; 1 = use function of Black;
+      ! [GR-ATM 2026-05-23] swredu retired — see state%atmosphere%swredu
       integer, allocatable :: ientrytab(:,:)  !! Soil Physical functions (h,theta,k,dthetadh,dkdtheta) tabulated for each model compartment
       integer, allocatable :: ientrytablay(:,:)  !! Soil Physical functions (h,theta,k,dthetadh,dkdtheta) tabulated for each soil layer
       integer :: swtopsub  !! Switch for topsoil or subsoil: 1 = topsoil, 2 = subsoil
@@ -269,7 +269,7 @@ module legacy_state_mod
       real(real64) :: cofqha  !! Coefficient A in exponential relationship between drainage flux and groundwater level (L/T)
       real(real64) :: cofqhb  !! Coefficient B in exponential relationship between drainage flux and groundwater level (/T)
       real(real64) :: cofqhc  !! Coefficient C (flux) in exponential relationship between drainage flux and groundwater level (L/T)
-      real(real64) :: cofred  !! Soil evaporation coefficient of Black or Boesten/Stroosnijder
+      ! [GR-ATM 2026-05-23] cofred retired — see state%atmosphere%cofred
       real(real64) :: CritDevMasBal  !! Maximum error in water balance (L)
       real(real64) :: CriterHr  !! Maximum difference of Hroot between iterations; convergence criterium  (L)
       real(real64), allocatable :: drares(:)  !! Array with drainage resistance (T) for each drainage level
@@ -327,7 +327,7 @@ module legacy_state_mod
       real(real64), allocatable :: ssdi_amount_f_irr(:)  !! Fixed irrigation amounts (cm)
       real(real64), allocatable :: relsatthr(:)  !! Array with relative saturation (-) for each soil layer: to interpolate VG and Ksatexm
       real(real64) :: rimlay  !! Vertical resistance of aquitard (T)
-      real(real64) :: rsigni  !! Minimum amount of rainfall (L) which resets the empirical soil evaporation reduction models
+      ! [GR-ATM 2026-05-23] rsigni retired — see state%atmosphere%rsigni
       real(real64) :: rsoil  !! Soil resistance of wet soil of PMdirect (T/L)
       integer :: swuseCN  !! Switch for usage of Curve Number method for runoff [0 (default),1]
       real(real64) :: Rxylem  !! Mean radius of xylem tube inside roots (L)

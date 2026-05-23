@@ -235,20 +235,9 @@ contains
       ! Evaporation sub-section
       swcfbs = config%meteo%evaporation%swcfbs
       state%crop%cfbs = config%meteo%evaporation%cfbs
-      ! Per Discovery #1 in configuration-schema.md, both legacy keys
-      ! (cofredbl=Black, cofredbo=Boesten/Stroosnijder) target the same
-      ! legacy global `cofred`; the schema separates them but only one
-      ! is meaningful at a time. Pick the one the user set: prefer the
-      ! non-default one, falling back to cofredbl when neither was set.
-      if (config%meteo%evaporation%cofredbo /= 0.35d0) then
-         cofred = config%meteo%evaporation%cofredbo
-      else
-         cofred = config%meteo%evaporation%cofredbl
-      end if
-
-      swredu = config%meteo%evaporation%swredu
-
-      rsigni     = config%meteo%evaporation%rsigni
+      ! [GR-ATM 2026-05-23] swredu/cofred/rsigni retired — snapshotted into
+      ! state%atmosphere by atmosphere_state%init(config); compute reads
+      ! from state, never from these legacy globals.
       cfevappond = config%meteo%evaporation%cfevappond
 
       ! Snow sub-section

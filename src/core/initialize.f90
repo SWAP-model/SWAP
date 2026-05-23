@@ -165,7 +165,7 @@
       ! [SS-GR-FINAL D5] swoutputmodflow zero-fill dropped — declaration retired
       swpondmx           = 0 
       swqhbot            = 0 
-      swredu             = 0 
+      ! [GR-ATM 2026-05-23] swredu retired — see state%atmosphere%swredu
       ! [SS-GR-CROPRT C1] swend zero-fill dropped — global + state field retired (ADR 0009: always 0)
       ! [SS-GR-FINAL D1] swvap/vap/wba zero-fills dropped — declarations retired
       aqamp              = 0.0d0 
@@ -184,7 +184,7 @@
       ! cofgen             = 0.0d0
       cofqha             = 0.0d0 
       cofqhb             = 0.0d0 
-      cofred             = 0.0d0 
+      ! [GR-ATM 2026-05-23] cofred retired — see state%atmosphere%cofred
       ! [SS-SWC] cqbot/cqbotdo/cqbotup retired — soilwater_init handles init via state%soilwater
       ! cqbot              = 0.0d0
       ! cqbotdo            = 0.0d0
@@ -336,7 +336,7 @@
       ! [SS-HEAT] Task 9: rfcp retired to state%heat%rfcp
       ! rfcp               = 0.0d0
       rimlay             = 0.0d0 
-      rsigni             = 0.0d0 
+      ! [GR-ATM 2026-05-23] rsigni retired — see state%atmosphere%rsigni
       rsoil              = 0.0d0
       ! [GR-ATM 2026-05-23] Runoff_CN retired — see state%atmosphere%Runoff_CN
       ! [SS-SWC] runon retired — soilwater_init handles init via state%soilwater%runon

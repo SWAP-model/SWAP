@@ -21,8 +21,6 @@ module boundtop_mod
       use swap_log,              only: log_debug, to_str
       use surfacewater_utils,    only: runoff
       use variables,             only: &   ! [SS-GR-FINAL B11] all DEFERRED
-         ! DEFERRED: swkmean/swredu — soil hydraulics/ET reduction switches; config; Phase C3
-         swredu, &
          ! DEFERRED: flrunon/runonarr — runon switch/timeseries; not in schema yet; Phase C3
          flrunon, runonarr
       implicit none
@@ -135,10 +133,12 @@ contains
       
 ! --- determine reduced soil evaporation rate
       ! SS-ATM A-2.6: peva/empreva retired — read from state%atmosphere
-      if (swredu .eq. 0) then
-        state%soilwater%reva = min(state%atmosphere%peva,max(0.0d0,Emax))
+      ! Config validation enforces swredu ∈ {1, 2}; the legacy "no reduction"
+      ! branch (swredu==0) is unreachable in TOML-configured runs.
+      if (state%atmosphere%swredu .eq. 0) then
+        state%soilwater%reva = min(state%atmosphere%peva, max(0.0d0, Emax))
       else
-        state%soilwater%reva = min(state%atmosphere%empreva,max(0.0d0,Emax))
+        state%soilwater%reva = min(state%atmosphere%empreva, max(0.0d0, Emax))
       endif
 
 !     H I G H   A T M O S P H E R I C   D E M A N D

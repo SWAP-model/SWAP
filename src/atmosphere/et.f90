@@ -586,7 +586,6 @@ contains
       !! gate daily-vs-dt formulas internally). The daily logical flag
       !! selects the timestep value (1.0 d vs state%timecontrol%dt).
       subroutine reduceva_apply(task_flag, nrai, state, daily)
-        use variables, only: swredu, cofred, rsigni   ! DEFERRED — see et.f90 commit 3
         implicit none
 
         integer,            intent(in)    :: task_flag  !! 1 = daily, 2 = sub-daily (passed to black_reduction)
@@ -614,12 +613,12 @@ contains
         end if
 
         ! Apply selected reduction model
-        select case (swredu)
+        select case (atmo%swredu)
         case (1)
-            call black_reduction(nrai, atmo%nird, atmo%peva, cofred, rsigni, &
+            call black_reduction(nrai, atmo%nird, atmo%peva, atmo%cofred, atmo%rsigni, &
                                  atmo%ldwet, atmo%empreva, timestep, time%flDayStart, task_flag)
         case (2)
-            call boesten_stroosnijder_reduction(nrai, atmo%nird, atmo%peva, cofred, &
+            call boesten_stroosnijder_reduction(nrai, atmo%nird, atmo%peva, atmo%cofred, &
                                                 atmo%spev, atmo%saev, atmo%empreva, timestep)
         case default
             call fatalerr_collected('reduceva_apply', 'Unknown reduction method SWREDU')

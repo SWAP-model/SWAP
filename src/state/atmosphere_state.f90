@@ -105,6 +105,9 @@ module atmosphere_state_mod
       real(real64) :: snowcoef = 0.0_real64  !< snow-melt temperature coefficient (cm/d/degC)
       integer      :: swsublim = 0           !< suppress sublimation of snow (1) or compute it (0)
       integer      :: swetsine = 0           !< Tp/Ep distribution: 0=uniform, 1=sine-wave during day
+      integer      :: swredu   = 1           !< ET reduction method: 1=Black, 2=Boesten-Stroosnijder
+      real(real64) :: cofred   = 0.35_real64 !< ET reduction coefficient β (Black: cofredbl, B-S: cofredbo)
+      real(real64) :: rsigni   = 0.5_real64  !< Significant rainfall threshold resetting Black dry counter (cm/d)
       real(real64) :: graidt   = 0.0_real64  !< gross rainfall this timestep (cm)
       real(real64) :: nraidt   = 0.0_real64  !< net rainfall this timestep (cm)
       real(real64) :: aintcdt  = 0.0_real64  !< actual interception this timestep (cm)
@@ -278,6 +281,15 @@ contains
       self%snowcoef = config%meteo%snow%snowcoef
       self%swsublim = config%soil%frost%swsublim
       self%swetsine = config%meteo%swetsine
+      self%swredu   = config%meteo%evaporation%swredu
+      self%rsigni   = config%meteo%evaporation%rsigni
+      ! cofredbl (Black) vs cofredbo (Boesten-Stroosnijder): pick by swredu.
+      ! Config validation enforces that swredu=2 has a non-default cofredbo.
+      if (config%meteo%evaporation%swredu == 2) then
+         self%cofred = config%meteo%evaporation%cofredbo
+      else
+         self%cofred = config%meteo%evaporation%cofredbl
+      end if
 
    end subroutine atmosphere_state_init
 
