@@ -64,11 +64,10 @@ contains
   !! (detailed meteo input)
   !! @endnote
   subroutine ReadMeteoDay(state, config)
-      ! DEFERRED — pathatm/metfil (file path strings) + det* sub-daily detail
-      ! arrays + irectotal counter remain bare globals (year-long scratch from
-      ! meteo readers, not in state schema yet).
-      use variables, only: pathatm, metfil,                      &
-                           detrecord, dettime, detrad, dethum,   &
+      ! DEFERRED — det* sub-daily detail arrays + irectotal counter remain
+      ! bare globals (year-long scratch from meteo readers, not in state
+      ! schema yet). pathatm/metfil read directly from config below.
+      use variables, only: detrecord, dettime, detrad, dethum,   &
                            dettav, detrain, detwind, irectotal
       use precipitation_mod, only: PartitionPrecipitation
       implicit none
@@ -137,9 +136,9 @@ contains
       ! ===== Detailed meteo =====
       elseif (config%meteo%swmetdetail .eq. 1) then
 
-         ! Compose filename meteorological file for use in warnings
+         ! Compose filename of detail meteo file for use in error messages
          write (ext, '(i3.3)') mod(time%yearmeteo, 1000)
-         filnam = trim(pathatm) // trim(metfil) // '.' // trim(ext)
+         filnam = trim(config%general%pathatm) // trim(config%meteo%metfile) // '.' // trim(ext)
 
          do i = 1, config%meteo%nmetdetail
             irectotal = irectotal + 1
