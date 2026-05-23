@@ -84,9 +84,6 @@ contains
       type(swap_config_t),  intent(in)    :: config  !! [SS-GR-ATM B23] for meteo config switches
 
     ! --- local
-    ! [SS-ATM A-2.6] grai/gsnow/snrai/ssnow/fprecnosnow are transitional locals fed to
-    ! PartitionPrecipitation; state%atmosphere%X is the canonical write target.
-    real(8) :: grai, gsnow, snrai, ssnow, fprecnosnow
     ! [GR-ATM-CLEAN Phase D.2] formerly module MeteoVars members
     integer :: i               ! sub-daily record loop counter
     real(8) :: hum, win, etr   ! within-call scratch (daily branch)
@@ -125,7 +122,6 @@ contains
       tmx  = state%atmosphere%atmx(daymeteo+1-state%atmosphere%daynrfirst)
       hum  = state%atmosphere%ahum(daymeteo+1-state%atmosphere%daynrfirst)
       win  = state%atmosphere%awin(daymeteo+1-state%atmosphere%daynrfirst)
-      grai = state%atmosphere%arai(daymeteo+1-state%atmosphere%daynrfirst)  ! [SS-ATM A-2.6] local; PartitionPrecipitation converts mm->cm and writes state
       etr  = state%atmosphere%aetr(daymeteo+1-state%atmosphere%daynrfirst)
 
       ! If hum is missing or tav cannot be calculated: set rh at -99.0
@@ -203,16 +199,8 @@ contains
     ! end 1 Detailed Meteo 11111111111111111111111111111111111111111111111111 Detailed Meteo
     ! end 1.
 
-    ! Call precipitation partitioning module
-    ! [SS-ATM A-2.6] ssnow seeded from state (intent inout for read in swmetdetail==0 path);
-    ! state%atmosphere%ssnow is written directly by PartitionPrecipitation in swmetdetail==1.
-    ssnow = state%atmosphere%ssnow
-    call PartitionPrecipitation(config%meteo%swmetdetail, config%meteo%snow%swsnow, &
-                                state%atmosphere%Tav, state%atmosphere%teprrain, &
-                                state%atmosphere%teprsnow, &
-                                ssnow, config%meteo%nmetdetail, state%atmosphere%arain_subdaily, &
-                                grai, gsnow, snrai, &
-                                fprecnosnow, state%atmosphere%restint, state)
+    ! Partition today's precipitation (reads + writes via state%atmosphere).
+    call PartitionPrecipitation(state, config)
 
     end associate  ! tc_t1900, tc_date => state%timecontrol [TC-9]
 
