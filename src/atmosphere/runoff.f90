@@ -43,56 +43,46 @@ contains
     integer              :: i
     real(8)              :: wc1, wc2
 
-    ! SS-TC TC-9: t1900 read via state%timecontrol (tc_* alias).
-    associate( tc_t1900 => state%timecontrol%t1900 )  ! TC-9
+    associate (atmo => state%atmosphere, mesh => state%mesh, &
+               soil => state%soilwater, time => state%timecontrol)
 
-      state%atmosphere%icn_atm = 0
+      atmo%icn_atm = 0
       ! check if times in CNtimeTAB are in ascending order
       ! set initial position in CNtimTAB
-      do i = 2, state%atmosphere%iCNtab
-          if (state%atmosphere%CNtimTAB(i) < state%atmosphere%CNtimTAB(i-1)) call fatalerr_collected ('cn_init', 'CNtimTAB not in ascending order')
-          if (tc_t1900 >= state%atmosphere%CNtimTAB(i-1) .and. tc_t1900 < state%atmosphere%CNtimTAB(i)) state%atmosphere%icn_atm = i-1
+      do i = 2, atmo%iCNtab
+          if (atmo%CNtimTAB(i) < atmo%CNtimTAB(i-1)) call fatalerr_collected('cn_init', 'CNtimTAB not in ascending order')
+          if (time%t1900 >= atmo%CNtimTAB(i-1) .and. time%t1900 < atmo%CNtimTAB(i)) atmo%icn_atm = i-1
       end do
       ! error if start time t1900 not in CNtimTAB
-      if (state%atmosphere%icn_atm == 0) call fatalerr_collected ('cn_init', 'Start time of simulation not present in CNtimTAB')
+      if (atmo%icn_atm == 0) call fatalerr_collected('cn_init', 'Start time of simulation not present in CNtimTAB')
 
     !  to be replaced by average for layer 0-10 cm
-      do i = 1, state%mesh%numnod
-          if (state%mesh%zbotcp(i) < -DEPTH_10CM_CM) then
-            state%atmosphere%nod10_cn = i-1
-            state%atmosphere%z10_cn = -state%mesh%zbotcp(state%atmosphere%nod10_cn)
+      do i = 1, mesh%numnod
+          if (mesh%zbotcp(i) < -DEPTH_10CM_CM) then
+            atmo%nod10_cn = i-1
+            atmo%z10_cn = -mesh%zbotcp(atmo%nod10_cn)
             exit
           end if
       end do
-      state%atmosphere%ThetaRef = 0.0d0
-      do i = 1, state%atmosphere%nod10_cn
-          if (state%atmosphere%wc_cor == 1) then
-            wc1 = watcon(H_FIELD_CAPACITY_CM, &
-                          state%soilwater%vg_params(i), &
-                          state%soilwater%iHWCKmodel(state%soilwater%layer(i)), &
-                          i, state%soilwater)                      ! [SS-GR-UTILS Task 5]
-            wc2 = watcon(H_WILTING_POINT_CM, &
-                          state%soilwater%vg_params(i), &
-                          state%soilwater%iHWCKmodel(state%soilwater%layer(i)), &
-                          i, state%soilwater)                      ! [SS-GR-UTILS Task 5]
-            state%atmosphere%ThetaRef = state%atmosphere%ThetaRef + (wc1+wc2)*0.5d0*state%mesh%dz(i)
-          else if (state%atmosphere%wc_cor == 2) then
-            wc1 = watcon(0.0d0, &
-                          state%soilwater%vg_params(i), &
-                          state%soilwater%iHWCKmodel(state%soilwater%layer(i)), &
-                          i, state%soilwater)                      ! [SS-GR-UTILS Task 5]
-            wc2 = watcon(H_WILTING_POINT_CM, &
-                          state%soilwater%vg_params(i), &
-                          state%soilwater%iHWCKmodel(state%soilwater%layer(i)), &
-                          i, state%soilwater)                      ! [SS-GR-UTILS Task 5]
-            state%atmosphere%ThetaRef = state%atmosphere%ThetaRef + (wc1+wc2)*0.5d0*state%mesh%dz(i)
+      atmo%ThetaRef = 0.0d0
+      do i = 1, atmo%nod10_cn
+          if (atmo%wc_cor == 1) then
+            wc1 = watcon(H_FIELD_CAPACITY_CM, soil%vg_params(i), &
+                         soil%iHWCKmodel(soil%layer(i)), i, soil)
+            wc2 = watcon(H_WILTING_POINT_CM, soil%vg_params(i), &
+                         soil%iHWCKmodel(soil%layer(i)), i, soil)
+            atmo%ThetaRef = atmo%ThetaRef + (wc1+wc2)*0.5d0*mesh%dz(i)
+          else if (atmo%wc_cor == 2) then
+            wc1 = watcon(0.0d0, soil%vg_params(i), &
+                         soil%iHWCKmodel(soil%layer(i)), i, soil)
+            wc2 = watcon(H_WILTING_POINT_CM, soil%vg_params(i), &
+                         soil%iHWCKmodel(soil%layer(i)), i, soil)
+            atmo%ThetaRef = atmo%ThetaRef + (wc1+wc2)*0.5d0*mesh%dz(i)
           end if
       end do
-      state%atmosphere%ThetaRef = state%atmosphere%ThetaRef/state%atmosphere%z10_cn
+      atmo%ThetaRef = atmo%ThetaRef/atmo%z10_cn
 
-      !!!t1900_old = int(t1900) - 1 ! for testing intermediate output
-
-    end associate  ! tc_t1900 => state%timecontrol [TC-9]
+    end associate
 
   end subroutine cn_init
 
@@ -109,49 +99,41 @@ contains
     integer              :: i
     real(8)              :: CN, S, Ia
 
-    associate( tc_t1900 => state%timecontrol%t1900 )  ! TC-9
+    associate (atmo => state%atmosphere, mesh => state%mesh, &
+               soil => state%soilwater, time => state%timecontrol)
 
-      ! see if t1900 has moved ahead in CNtimTAB; icn_atm can never exceed last entry
-      !  if (icn_atm < iCNtab .and. t1900 >= CNtimTAB(icn_atm+1)) icn_atm = icn_atm + 1
-      ! Update position in CN time series if time has advanced (do while is more efficient if time steps are large and CN time series is long)
-      do while (state%atmosphere%icn_atm < state%atmosphere%iCNtab .and. tc_t1900 >= state%atmosphere%CNtimTAB(state%atmosphere%icn_atm + 1))
-        state%atmosphere%icn_atm = state%atmosphere%icn_atm + 1
+      ! Advance icn_atm if t1900 has moved past the next entry in CNtimTAB.
+      do while (atmo%icn_atm < atmo%iCNtab .and. &
+                time%t1900 >= atmo%CNtimTAB(atmo%icn_atm + 1))
+        atmo%icn_atm = atmo%icn_atm + 1
       end do
-      state%atmosphere%CNref = state%atmosphere%CNrefTAB(state%atmosphere%icn_atm)
-      CN    = state%atmosphere%CNref
-      state%atmosphere%CNdry =  4.2d0*state%atmosphere%CNref/(10.0d0-0.058d0*state%atmosphere%CNref)
-      state%atmosphere%CNwet = 23.0d0*state%atmosphere%CNref/(10.0d0+0.13d0*state%atmosphere%CNref)
+      atmo%CNref = atmo%CNrefTAB(atmo%icn_atm)
+      CN    = atmo%CNref
+      atmo%CNdry =  4.2d0*atmo%CNref/(10.0d0-0.058d0*atmo%CNref)
+      atmo%CNwet = 23.0d0*atmo%CNref/(10.0d0+0.13d0*atmo%CNref)
 
-      if (state%atmosphere%wc_cor > 0) then
-          state%atmosphere%wc10 = 0.0d0
-          do i = 1, state%atmosphere%nod10_cn
-            state%atmosphere%wc10 = state%atmosphere%wc10 + state%soilwater%theta(i)*state%mesh%dz(i)  ! [SS-SWC S-2.12B]
+      if (atmo%wc_cor > 0) then
+          atmo%wc10 = 0.0d0
+          do i = 1, atmo%nod10_cn
+            atmo%wc10 = atmo%wc10 + soil%theta(i)*mesh%dz(i)
           end do
-          state%atmosphere%wc10 = state%atmosphere%wc10/state%atmosphere%z10_cn
-          if (state%atmosphere%wc10 < state%atmosphere%ThetaRef) then
-            CN = state%atmosphere%CNdry + state%atmosphere%wc10/state%atmosphere%ThetaRef*(state%atmosphere%CNref-state%atmosphere%CNdry)
+          atmo%wc10 = atmo%wc10/atmo%z10_cn
+          if (atmo%wc10 < atmo%ThetaRef) then
+            CN = atmo%CNdry + atmo%wc10/atmo%ThetaRef*(atmo%CNref-atmo%CNdry)
           else
-            CN = state%atmosphere%CNref + (state%atmosphere%wc10-state%atmosphere%ThetaRef)/state%atmosphere%ThetaRef*(state%atmosphere%CNwet-state%atmosphere%CNref)
+            CN = atmo%CNref + (atmo%wc10-atmo%ThetaRef)/atmo%ThetaRef*(atmo%CNwet-atmo%CNref)
           end if
       end if
-      S = 2540d0/CN-25.4d0    ! in cm
+      S  = 2540d0/CN - 25.4d0    ! in cm
       Ia = INITIAL_ABSTRACTION_RATIO*S
-    !   Ia = 0.3d0*S
-      ! SS-ATM A-2.6: nraidt/melt retired — read from state%atmosphere
-      if (state%atmosphere%nraidt+state%atmosphere%melt > Ia) then
-          state%atmosphere%Runoff_CN = (state%atmosphere%nraidt+state%atmosphere%melt-Ia)**2/ &
-                      (state%atmosphere%nraidt+state%atmosphere%melt-Ia+S)
+      if (atmo%nraidt+atmo%melt > Ia) then
+          atmo%Runoff_CN = (atmo%nraidt+atmo%melt-Ia)**2 / &
+                           (atmo%nraidt+atmo%melt-Ia+S)
       else
-          state%atmosphere%Runoff_CN = 0.0d0
+          atmo%Runoff_CN = 0.0d0
       end if
 
-      ! for testing intermediate output
-      !!!if (int(t1900) > t1900_old) then
-      !!!   write (123, '(7F20.6)') t1900, nraidt, runoff_cn, cn, wc10, thetaref, melt
-      !!!   t1900_old = int(t1900)
-      !!!end if
-
-    end associate  ! tc_t1900 => state%timecontrol [TC-9]
+    end associate
 
   end subroutine cn_step
 
