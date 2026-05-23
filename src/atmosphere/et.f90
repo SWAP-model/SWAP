@@ -425,8 +425,8 @@ contains
     !! Reduces soil evaporation based on square root of time since last rainfall.
     !! Formulation: E = β(√t - √(t-Δt)) / Δt
     !!
-    subroutine black_reduction(nrai, nird, peva, cofred, rsigni, &
-                               ldwet, empreva, dt, fldaystart, task)
+    pure subroutine black_reduction(nrai, nird, peva, cofred, rsigni, &
+                                    ldwet, empreva, dt, fldaystart, task)
         real(8), intent(in)    :: nrai
           !! Net rainfall [cm]
         real(8), intent(in)    :: nird
@@ -481,8 +481,8 @@ contains
     !! - Stage 1 (spev < β²): Actual evaporation = potential evaporation deficit
     !! - Stage 2 (spev ≥ β²): Actual evaporation = β√(deficit)
     !!
-    subroutine boesten_stroosnijder_reduction(nrai, nird, peva, cofred, &
-                                              spev, saev, empreva, dt)
+    pure subroutine boesten_stroosnijder_reduction(nrai, nird, peva, cofred, &
+                                                   spev, saev, empreva, dt)
         real(8), intent(in)    :: nrai
           !! Net rainfall [cm]
         real(8), intent(in)    :: nird
