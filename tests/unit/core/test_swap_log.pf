@@ -1,0 +1,259 @@
+! Tests for the swap_log module — verify the public logging API behaves
+! as expected before we migrate ~50 legacy `write(logf,...)` / `call warn(...)`
+! sites to it (logf-retirement arc, 2026-05-23).
+!
+! Coverage:
+!   1. Init/close lifecycle
+!   2. File output is created and contains the expected lines
+!   3. Each log_<level> writes with the correct level prefix
+!   4. Level threshold filters lower-level messages
+!   5. log_set_level changes the threshold mid-run
+!   6. to_str overloads produce expected strings (int/real/real8/logical)
+!   7. Context appears in the formatted message
+!
+! Tests disable timestamps + stdout so output is deterministic and the
+! suite stays quiet.
+
+! =============================================================================
+! Test 1: log_init creates the file and the init banner appears
+! =============================================================================
+@test
+subroutine test_swap_log_init_creates_file_with_banner()
+   use funit
+   use swap_log,    only: log_init, log_close, LOGLEVEL_INFO
+   use file_io_mod, only: file_open, file_delete, file_exists
+   implicit none
+   integer :: u, ios
+   character(len=256) :: line
+
+   call file_delete('test_swap_log_banner.tmp')
+
+   call log_init(log_level=LOGLEVEL_INFO, log_file='test_swap_log_banner.tmp', &
+                 to_stdout=.false., timestamps=.false.)
+   call log_close()
+
+   @assertTrue(file_exists('test_swap_log_banner.tmp'), 'log file should exist after init')
+
+   call file_open(u, 'test_swap_log_banner.tmp', 'old', 'read', iostat=ios)
+   @assertEqual(0, ios)
+   read(u, '(a)') line
+   close(u)
+   @assertEqual('INFO  log: Logging initialized at level INFO ', trim(line))
+
+   call file_delete('test_swap_log_banner.tmp')
+end subroutine
+
+! =============================================================================
+! Test 2: log_warn writes a line with the WARN prefix and context
+! =============================================================================
+@test
+subroutine test_swap_log_warn_writes_with_prefix_and_context()
+   use funit
+   use swap_log,    only: log_init, log_close, log_warn, LOGLEVEL_DEBUG
+   use file_io_mod, only: file_open, file_delete
+   implicit none
+   integer :: u, ios
+   character(len=256) :: line
+
+   call file_delete('test_swap_log_warn.tmp')
+
+   call log_init(log_level=LOGLEVEL_DEBUG, log_file='test_swap_log_warn.tmp', &
+                 to_stdout=.false., timestamps=.false.)
+   call log_warn('Astro', 'sunrise computation diverged')
+   call log_close()
+
+   call file_open(u, 'test_swap_log_warn.tmp', 'old', 'read', iostat=ios)
+   @assertEqual(0, ios)
+   read(u, '(a)') line  ! banner
+   read(u, '(a)') line  ! the warn line
+   close(u)
+   @assertEqual('WARN  Astro: sunrise computation diverged', trim(line))
+
+   call file_delete('test_swap_log_warn.tmp')
+end subroutine
+
+! =============================================================================
+! Test 3: each level prefix is distinct (DEBUG/INFO/WARN/ERROR)
+! =============================================================================
+@test
+subroutine test_swap_log_all_level_prefixes()
+   use funit
+   use swap_log,    only: log_init, log_close, &
+                          log_debug, log_info, log_warn, log_error, LOGLEVEL_DEBUG
+   use file_io_mod, only: file_open, file_delete
+   implicit none
+   integer :: u, ios
+   character(len=256) :: l1, l2, l3, l4, l5
+
+   call file_delete('test_swap_log_levels.tmp')
+
+   call log_init(log_level=LOGLEVEL_DEBUG, log_file='test_swap_log_levels.tmp', &
+                 to_stdout=.false., timestamps=.false.)
+   call log_debug('ctx', 'd')
+   call log_info('ctx',  'i')
+   call log_warn('ctx',  'w')
+   call log_error('ctx', 'e')
+   call log_close()
+
+   call file_open(u, 'test_swap_log_levels.tmp', 'old', 'read', iostat=ios)
+   @assertEqual(0, ios)
+   read(u, '(a)') l1  ! banner (INFO)
+   read(u, '(a)') l2  ! debug
+   read(u, '(a)') l3  ! info
+   read(u, '(a)') l4  ! warn
+   read(u, '(a)') l5  ! error
+   close(u)
+   @assertEqual('DEBUG ctx: d', trim(l2))
+   @assertEqual('INFO  ctx: i', trim(l3))
+   @assertEqual('WARN  ctx: w', trim(l4))
+   @assertEqual('ERROR ctx: e', trim(l5))
+
+   call file_delete('test_swap_log_levels.tmp')
+end subroutine
+
+! =============================================================================
+! Test 4: threshold filters lower-level messages
+! =============================================================================
+@test
+subroutine test_swap_log_threshold_filters_lower_levels()
+   use funit
+   use swap_log,    only: log_init, log_close, &
+                          log_debug, log_info, log_warn, LOGLEVEL_WARN
+   use file_io_mod, only: file_open, file_delete
+   implicit none
+   integer :: u, ios, nlines
+   character(len=256) :: line
+
+   call file_delete('test_swap_log_threshold.tmp')
+
+   ! Init at WARN — debug/info must be filtered out
+   call log_init(log_level=LOGLEVEL_WARN, log_file='test_swap_log_threshold.tmp', &
+                 to_stdout=.false., timestamps=.false.)
+   call log_debug('ctx', 'this should not appear')
+   call log_info('ctx',  'this should not appear either')
+   call log_warn('ctx',  'this should appear')
+   call log_close()
+
+   call file_open(u, 'test_swap_log_threshold.tmp', 'old', 'read', iostat=ios)
+   @assertEqual(0, ios)
+   nlines = 0
+   do
+      read(u, '(a)', iostat=ios) line
+      if (ios /= 0) exit
+      nlines = nlines + 1
+   end do
+   close(u)
+
+   ! Expect exactly 2 lines: init banner (INFO — but log_init writes its banner
+   ! via log_info which respects current level... let's just count) + the warn line
+   ! Actually log_init's banner is also subject to the threshold, so at WARN
+   ! threshold only the warn line itself survives.
+   @assertEqual(1, nlines, 'only the explicit log_warn line should survive at WARN threshold')
+
+   call file_delete('test_swap_log_threshold.tmp')
+end subroutine
+
+! =============================================================================
+! Test 5: log_set_level changes threshold mid-run
+! =============================================================================
+@test
+subroutine test_swap_log_set_level_changes_threshold()
+   use funit
+   use swap_log,    only: log_init, log_close, log_set_level, &
+                          log_debug, log_info, LOGLEVEL_DEBUG, LOGLEVEL_WARN
+   use file_io_mod, only: file_open, file_delete
+   implicit none
+   integer :: u, ios, nlines
+   character(len=256) :: line
+
+   call file_delete('test_swap_log_setlevel.tmp')
+
+   call log_init(log_level=LOGLEVEL_DEBUG, log_file='test_swap_log_setlevel.tmp', &
+                 to_stdout=.false., timestamps=.false.)
+   call log_debug('ctx', 'visible at DEBUG')   ! visible
+   call log_set_level(LOGLEVEL_WARN)
+   call log_debug('ctx', 'hidden at WARN')     ! hidden
+   call log_info('ctx',  'also hidden')        ! hidden
+   call log_close()
+
+   call file_open(u, 'test_swap_log_setlevel.tmp', 'old', 'read', iostat=ios)
+   @assertEqual(0, ios)
+   nlines = 0
+   do
+      read(u, '(a)', iostat=ios) line
+      if (ios /= 0) exit
+      nlines = nlines + 1
+   end do
+   close(u)
+
+   ! Expected: init banner (INFO, above DEBUG threshold) + the first debug line = 2
+   @assertEqual(2, nlines, 'after raising threshold only DEBUG-era messages should remain')
+
+   call file_delete('test_swap_log_setlevel.tmp')
+end subroutine
+
+! =============================================================================
+! Test 6: to_str overloads (int / real / real8 / logical)
+! =============================================================================
+@test
+subroutine test_swap_log_to_str_overloads()
+   use funit
+   use iso_fortran_env, only: real64
+   use swap_log,        only: to_str
+   implicit none
+
+   @assertEqual('42',    trim(to_str(42)))
+   @assertEqual('-7',    trim(to_str(-7)))
+   @assertEqual('0',     trim(to_str(0)))
+   @assertEqual('true',  trim(to_str(.true.)))
+   @assertEqual('false', trim(to_str(.false.)))
+   ! real / real8 formatting is compiler-flag-dependent — just sanity-check
+   ! it produces SOMETHING non-empty with the expected digit substring.
+   @assertTrue(len_trim(to_str(1.5_real64)) > 0)
+   @assertTrue(index(to_str(1.5_real64), '1.5') > 0)
+end subroutine
+
+! =============================================================================
+! Test 7: messages survive log_close + re-init cycle
+! =============================================================================
+@test
+subroutine test_swap_log_close_then_reinit_writes_to_new_file()
+   use funit
+   use swap_log,    only: log_init, log_close, log_warn, LOGLEVEL_DEBUG
+   use file_io_mod, only: file_open, file_delete
+   implicit none
+   integer :: u, ios
+   character(len=256) :: line
+
+   call file_delete('test_swap_log_reinit_a.tmp')
+   call file_delete('test_swap_log_reinit_b.tmp')
+
+   call log_init(log_level=LOGLEVEL_DEBUG, log_file='test_swap_log_reinit_a.tmp', &
+                 to_stdout=.false., timestamps=.false.)
+   call log_warn('ctx', 'in file A')
+   call log_close()
+
+   call log_init(log_level=LOGLEVEL_DEBUG, log_file='test_swap_log_reinit_b.tmp', &
+                 to_stdout=.false., timestamps=.false.)
+   call log_warn('ctx', 'in file B')
+   call log_close()
+
+   ! File A: banner + warn line A
+   call file_open(u, 'test_swap_log_reinit_a.tmp', 'old', 'read', iostat=ios)
+   @assertEqual(0, ios)
+   read(u, '(a)') line   ! banner
+   read(u, '(a)') line   ! warn
+   close(u)
+   @assertEqual('WARN  ctx: in file A', trim(line))
+
+   ! File B: banner + warn line B
+   call file_open(u, 'test_swap_log_reinit_b.tmp', 'old', 'read', iostat=ios)
+   @assertEqual(0, ios)
+   read(u, '(a)') line
+   read(u, '(a)') line
+   close(u)
+   @assertEqual('WARN  ctx: in file B', trim(line))
+
+   call file_delete('test_swap_log_reinit_a.tmp')
+   call file_delete('test_swap_log_reinit_b.tmp')
+end subroutine

@@ -119,7 +119,7 @@ contains
     
     subroutine log_close()
         !> Close the logging system and flush buffers
-        if (log_to_file .and. log_unit > 0) then
+        if (log_to_file .and. log_unit /= -1) then
             call log_info('log', 'Logging closed')
             close(log_unit)
             log_unit = -1
@@ -198,7 +198,7 @@ contains
         end if
         
         ! Output to file
-        if (log_to_file .and. log_unit > 0) then
+        if (log_to_file .and. log_unit /= -1) then
             write(log_unit,'(A)') trim(formatted_msg)
             flush(log_unit)  ! Ensure immediate write for debugging
         end if

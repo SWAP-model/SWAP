@@ -202,6 +202,7 @@ if get_option('enable_pfunit')
     pfunit_base_sources = test_base_sources + pfunit_extra_sources
 
     pf_files = [
+        'core/test_swap_log.pf',
         'utils/test_arrayutils.pf',
         'atmosphere/test_precipitation.pf',
         'atmosphere/test_et.pf',
