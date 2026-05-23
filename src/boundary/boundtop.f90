@@ -1,294 +1,243 @@
-!> Module for soil profile top boundary conditions
-!! 
-!! This module determines the top (surface) boundary condition for the SWAP
-!! hydrological model. It handles atmospheric demand, soil evaporation,
-!! precipitation infiltration, surface ponding, runoff generation, and
-!! interactions with macropore flow at the soil surface.
+!> Module for soil profile top boundary conditions.
 !!
-!! The module implements a switching boundary condition that can alternate
-!! between pressure head (ponding) and flux (atmospheric demand) boundary
-!! types depending on soil saturation and infiltration capacity.
+!! Determines the top (surface) boundary condition for the SWAP
+!! hydrological model: atmospheric demand, soil evaporation,
+!! precipitation infiltration, surface ponding, and runoff generation.
 !!
-!! @author Original SWAP team
-!! @date August 2004 - June 2012
-!! @date Modified February 2026 (modularization)
-!! @note
-!! File VersionID:
-!!   $Id: boundtop.f90 368 2018-01-11 15:44:15Z heine003 $
-!! @endnote
+!! The boundary alternates between pressure-head (ponding) and flux
+!! (atmospheric demand) types depending on soil saturation and
+!! infiltration capacity.
 module boundtop_mod
-      use swap_state_mod,        only: swap_state_t
-      use swap_log,              only: log_debug, to_str
-      use surfacewater_utils,    only: runoff
-      implicit none
+   use swap_state_mod,        only: swap_state_t
+   use swap_log,              only: log_debug, to_str
+   use surfacewater_utils,    only: runoff
+   implicit none
 
-      private
-      public :: boundtop, PONDRUNOFF
+   private
+   public :: boundtop, PONDRUNOFF
 
 contains
 
-   ! ----------------------------------------------------------------------
-   !> Determine soil profile top boundary condition
+   !> Determine soil-profile top boundary condition.
    !!
-   !! This subroutine calculates the surface boundary condition by evaluating
-   !! atmospheric demand (precipitation, evaporation) against soil hydraulic
-   !! properties to determine whether flux or pressure head conditions apply.
+   !! Algorithm:
+   !!   1. Compute soil evaporation from hydraulic conductivity and
+   !!      atmospheric demand (limited by Darcy's law).
+   !!   2. Form net surface flux (precipitation + runon - evaporation).
+   !!   3. If soil can accept the flux, set a flux boundary (ftoph=.false.).
+   !!   4. Otherwise switch to a pressure-head boundary (ponding).
    !!
-   !! ## Algorithm Overview
-   !!
-   !! 1. Calculate soil evaporation based on hydraulic conductivity and
-   !!    atmospheric demand (limited by Darcy's law)
-   !! 2. Compute net surface flux (precipitation + runon - evaporation)
-   !! 3. Check if atmospheric demand condition applies (flux boundary)
-   !! 4. If soil cannot accept the flux, switch to ponding (pressure boundary)
-   !! 5. Calculate potential macropore infiltration if applicable
-   !!
-   !! ## Boundary Condition Types
-   !!
-   !! The subroutine sets either:
-   !! - **Flux boundary** (`ftoph = .false.`): When soil can accept atmospheric flux
-   !! - **Pressure head boundary** (`ftoph = .true.`): When ponding occurs
-   !!
-   !! ## Global Variables Modified
-   !!
-   !! - `ftoph`: Boundary type flag (flux=.false., pressure=.true.)
-   !! - `hsurf`: Pressure head at surface [cm]
-   !! - `qtop`: Surface flux [cm/d]
-   !! - `pond`: Ponding height [cm]
-   !! - `runots`: Surface runoff [cm/d]
-   !! - `reva`: Actual soil evaporation [cm/d]
-   !! - `kmean(1)`: Mean hydraulic conductivity at top boundary [cm/d]
-   !! - `QMpLatSs`: Lateral overland flow into macropores at surface [cm/d]
-   !!
-   !! @note This subroutine operates on global state from the `variables`
-   !!       module including atmospheric inputs, soil properties, and
-   !!       hydraulic state variables.
-   !!
-   !! @warning The subroutine may return early if atmospheric demand
-   !!          condition applies, leaving `qtop` undefined for ponding cases.
-   !! @note
-   !! ----------------------------------------------------------------------
-   !! ----------------------------------------------------------------------
-   !!     date               : August 2004 - June 2012
-   !!     purpose            : determine soil profile top boundary condition      
-   !! ----------------------------------------------------------------------
-   !! @endnote
+   !! Outputs (all on state%soilwater): ftoph, hsurf, qtop, pond, runots,
+   !! reva, kmean(1), QMpLatSs, q0, k1max, H0max, FlRunoff.
    subroutine boundtop(state)
-   ! [SS-HEAT] Task 9: state added to access state%heat%rfcp (rfcp global retired)
-   ! [SS-BND B-2.7] writes only state%soilwater (legacy global writes dropped)
-   use soilhydraulics_utils, only: watcon, hconduc, hcomean
-   implicit none
-
-   type(swap_state_t), intent(inout) :: state
-
-! --- local variables
-      real(8) emax,ks,theatm,ksurf
-
-! ----------------------------------------------------------------------
-! --- local variables
-      real(8) h0,k1Atm,p1,p2,p2Mp,q1,RsRoMp
-      real(8) :: dt   ! [SS-TC TC-14] local copy of state%timecontrol%dt
-
-      ! Hydraulic conductivity for complete frozen soils (constant)
-      real(8), parameter :: hconode_vsmall = 1.0d-10
-
-! ----------------------------------------------------------------------
-! --- Initialisation
-      dt = state%timecontrol%dt   ! [SS-TC TC-14]
-
-! --- runon of present day
-      ! [SS-SWC S-2.12B] legacy runon retired — write directly to state%soilwater%runon
-      ! [SS-TC TC-14] flDayStart/daycum read via state%timecontrol
-      if (state%timecontrol%flDayStart .and. state%soilwater%flrunon) &
-         state%soilwater%runon = state%soilwater%runonarr(state%timecontrol%daycum+1)
-
-      state%soilwater%FlRunoff = .false.
-      state%soilwater%QMpLatSs = 0.0d0
-
-
-!     S O I L   E V A P O R A T I O N
-
-! --- Calculate hydraulic conductivity corresponding with hAtm — [SS-SWC S-2.12B] read from state
-      if (state%soilwater%hatm.lt.0.0d0) Then
-         TheAtm = watcon(dble(state%soilwater%hatm), &
-                         state%soilwater%vg_params(1), &
-                         state%soilwater%iHWCKmodel(state%soilwater%layer(1)), &
-                         1, state%soilwater)                                  ! [SS-SWC S-2.5] [SS-GR-UTILS Task 5]
-         ksurf  = hconduc(dble(state%soilwater%hatm),TheAtm,state%heat%rfcp(1),state%heat%tsoil(1), &
-                          state%soilwater%vg_params(1), &
-                          state%soilwater%iHWCKmodel(state%soilwater%layer(1)), &
-                          state%soilwater%fluseksatexm(1), &
-                          1, state%soilwater)                                  ! [SS-SWC S-2.5] [SS-GR-UTILS Task 6]
-      else
-
-! --- This only occurs if RH is 100% in SWAPS, never used for SWAP
-         kSurf = state%soilwater%k(1)                                         ! [SS-SWC S-2.5]
-      endif
-      k1Atm = hcomean(state%cfg%simulation%numerical%swkmean,kSurf,state%soilwater%k(1),state%mesh%dz(1),state%mesh%dz(1))        ! [SS-SWC S-2.5] [SS-GR-BH B10]
-
-! --- maximum evaporation rate according to Darcy
-      Emax = -k1Atm * ((state%soilwater%hatm-state%soilwater%h(1))/state%mesh%disnod(1)+1.0d0)  ! [SS-SWC S-2.5] [SS-GR-BH B10]
-      
-! --- determine reduced soil evaporation rate
-      ! SS-ATM A-2.6: peva/empreva retired — read from state%atmosphere
-      ! Config validation enforces swredu ∈ {1, 2}; the legacy "no reduction"
-      ! branch (swredu==0) is unreachable in TOML-configured runs.
-      if (state%atmosphere%swredu .eq. 0) then
-        state%soilwater%reva = min(state%atmosphere%peva, max(0.0d0, Emax))
-      else
-        state%soilwater%reva = min(state%atmosphere%empreva, max(0.0d0, Emax))
-      endif
-
-!     H I G H   A T M O S P H E R I C   D E M A N D
-!     flux through ground surface based on precipitation - evaporation 
-!     and remaining ponding of previous timestep
-      ! [SS-GR-BH B10] ArMpSs assignment deleted (macropore retired ADR 0040 — factor *(1-0)=1 is identity, bit-equivalent)
-      ! SS-ATM A-2.6: nraidt/melt retired — read from state%atmosphere
-      state%soilwater%q0 = (state%atmosphere%nraidt+state%atmosphere%nird+state%atmosphere%melt) + state%soilwater%runon - state%soilwater%reva  ! [SS-GR-BH B10]
-      q1 = - state%soilwater%q0 - state%soilwater%pondm1/dt
-
-!     check whether the atmospheric demand condition applies
-      if (q1 .ge. 0.0d0 .and. q1.gt.Emax) then
-         state%soilwater%ftoph  = .true.
-         state%soilwater%hsurf  = state%soilwater%hatm                       ! [SS-SWC S-2.12B]
-         state%soilwater%kmean(1) = k1Atm                            ! [SS-SWC S-2.12B]
-         state%soilwater%pond = 0.0d0                                ! [SS-SWC S-2.12B]
-         state%soilwater%runots = 0.0d0
-         return
-      endif
-
-!     maximum conductivity assuming saturation at ground surface (z=0)
-      if(state%soilwater%fluseksatexm(1))then                                 ! [SS-SWC S-2.5]
-         ks = state%heat%rfcp(1)*state%soilwater%ksatexm(state%mesh%layer(1)) + (1.0d0-state%heat%rfcp(1))*hconode_vsmall  ! [SS-GR-BH B10]
-      else
-         ks = state%heat%rfcp(1)*state%soilwater%ksatfit(state%mesh%layer(1)) + (1.0d0-state%heat%rfcp(1))*hconode_vsmall  ! [SS-GR-BH B10]
-      endif
-      state%soilwater%k1max = hcomean(state%cfg%simulation%numerical%swkmean,ks,state%soilwater%k(1),state%mesh%dz(1),state%mesh%dz(1))  ! [SS-GR-BH B10]
-!     check whether application of flux=q1 will yield a pressure head >0
-!     at ground surface. If not: flux boundary condition is valid
-      h0    = state%soilwater%h(1) - state%mesh%disnod(1)*(q1/state%soilwater%k1max+1.0d0)  ! [SS-SWC S-2.5] [SS-GR-BH B10]
-      if (h0.le.1.0d-6) then
-         state%soilwater%ftoph  = .false.
-         state%soilwater%kmean(1) = 0.0d0                            ! [SS-SWC S-2.12B]
-         state%soilwater%hsurf  = 0.0d0
-         state%soilwater%pond   = 0.0d0                              ! [SS-SWC S-2.12B]
-         state%soilwater%runots = 0.0d0
-         state%soilwater%qtop   = q1
-      else                 ! ponding occurs
-         state%soilwater%ftoph  = .true.
-         state%soilwater%kmean(1) = state%soilwater%k1max                  ! [SS-SWC S-2.12B] [SS-GR-BH B10]
-         state%soilwater%FlRunoff = .true. ! runoff potential possible
-
-! --- calculate max value of pond without runoff
-         p1     = state%soilwater%k1max/state%mesh%disnod(1) * dt           ! [SS-GR-BH B10]
-         p2     = 1.0d0/(p1+1.0d0)
-         state%soilwater%H0max  = p2 * ( state%soilwater%pondm1 + state%soilwater%q0*dt - state%soilwater%k1max*dt + p1*state%soilwater%h(1) )  ! [SS-GR-BH B10]
-
-! [MACRO-RETIRE 2026-05-12] macropore overland-flow branch deleted (ADR 0040).
-! Legacy block ran only when FlMacropore=.true. — see legacy/swap-4.2.0.
-      endif
-!
-      return
-      end subroutine boundtop
-
-
-! ----------------------------------------------------------------------
-      SUBROUTINE PONDRUNOFF (state)
-! ----------------------------------------------------------------------
-!     Date               : 4/5/2005
-!     Purpose            : determines ponding height and calculates runoff
-!     Formal parameters  : state — typed surface-water state (read-only)
-!     Subroutines called : -
-!     Functions called   : runoff
-!     File usage         : -
-! ----------------------------------------------------------------------
-      ! [SS-SWC S-2.12B] pond retired; read/written via state%soilwater%pond
-      ! [SS-TC TC-14] dt, t1900 read via state%timecontrol (ADR 0041)
-      ! [SS-GR-FINAL B11] mairg → swap_array_dimensions (dimension constant)
-      use swap_array_dimensions, only: mairg
-      use array_utils,           only: afgen
-      use surfacewater_utils,    only: runoff
-      use swap_state_mod,        only: swap_state_t
+      use soilhydraulics_utils, only: watcon, hconduc, hcomean
       implicit none
 
-! --- arguments
       type(swap_state_t), intent(inout) :: state
 
-! --- local variables
-      INTEGER i
-      real(8) h0,h0min,p1,p2
-      real(8) :: dt, t1900   ! [SS-TC TC-14] local copies of state%timecontrol fields
+      real(8) :: emax, ks, theatm, ksurf
+      real(8) :: h0, k1Atm, p1, p2, q1
+      real(8) :: dt
 
-! ----------------------------------------------------------------------
-      dt    = state%timecontrol%dt
-      t1900 = state%timecontrol%t1900
+      ! Hydraulic conductivity for completely frozen soils (constant)
+      real(8), parameter :: hconode_vsmall = 1.0d-10
 
-! --  in case of time dependent ponding: determine pondmx
-      if (state%surfacewater%swpondmx.eq.1) then
-         state%surfacewater%pondmx = afgen (state%surfacewater%pondmxtab, 2*mairg, t1900+dt)
-      endif
+      associate (soil => state%soilwater,    &
+                 atmo => state%atmosphere,   &
+                 mesh => state%mesh,         &
+                 heat => state%heat,         &
+                 time => state%timecontrol)
 
-! --- check whether h0max, the max value of pond, yields a runoff
+         dt = time%dt
 
-!      if(swdra.ne.2 .and. h0max.le.pondmx)then
+         ! Runon of present day (runonarr is currently dormant — always 0).
+         if (time%flDayStart .and. soil%flrunon) &
+            soil%runon = soil%runonarr(time%daycum + 1)
 
-      if(state%soilwater%H0max.le.state%surfacewater%pondmx)then             ! [SS-GR-BH B11]
-         state%soilwater%runots = 0.0d0
-         state%soilwater%pond  = state%soilwater%H0max                       ! [SS-SWC S-2.12B] [SS-GR-BH B11]
-         state%soilwater%hsurf = state%soilwater%pond
-         return
-      end if
+         soil%FlRunoff = .false.
+         soil%QMpLatSs = 0.0d0
 
-      state%soilwater%runots = runoff(state)
-      if(dabs(state%soilwater%runots).lt.1.0d-6)then
-!        if no runoff occurs: first estimation of pond is OK
-         state%soilwater%pond  = state%soilwater%H0max                       ! [SS-SWC S-2.12B] [SS-GR-BH B11]
-         state%soilwater%hsurf = state%soilwater%pond
-         return
-      else if(dabs(state%soilwater%runots).ge.1.0d-6 .and. state%surfacewater%swdra.ne.2 .and.             &
-     &                                dabs(state%surfacewater%rsroexp-1.0d0).lt.1.0d-6)then  ! [SS-GR-BH B11]
-         p1 = state%soilwater%k1max/state%mesh%disnod(1) * dt                ! [SS-GR-BH B11]
-         p2 = 1.0d0 / (p1 + 1.0d0 + dt/state%surfacewater%rsro)             ! [SS-GR-BH B11]
+         ! ---- Soil evaporation -----------------------------------------------
 
-         state%soilwater%pond     = p2 * ( state%soilwater%pondm1 + state%soilwater%q0*dt - state%soilwater%k1max*dt + p1*state%soilwater%h(1) +  &  ! [SS-SWC S-2.12B] [SS-GR-BH B11]
-     &                     dt/state%surfacewater%rsro * state%surfacewater%pondmx )  ! [SS-GR-BH B11]
-         state%soilwater%runots = runoff(state)
-         state%soilwater%hsurf  = state%soilwater%pond
-         return
-      else
+         ! Hydraulic conductivity corresponding with hAtm
+         if (soil%hatm .lt. 0.0d0) then
+            TheAtm = watcon(dble(soil%hatm),                &
+                            soil%vg_params(1),              &
+                            soil%iHWCKmodel(soil%layer(1)), &
+                            1, soil)
+            ksurf  = hconduc(dble(soil%hatm), TheAtm,       &
+                             heat%rfcp(1), heat%tsoil(1),   &
+                             soil%vg_params(1),             &
+                             soil%iHWCKmodel(soil%layer(1)),&
+                             soil%fluseksatexm(1),          &
+                             1, soil)
+         else
+            ! Only reached if RH is 100% in SWAPS; never used for SWAP.
+            kSurf = soil%k(1)
+         endif
+         k1Atm = hcomean(state%cfg%simulation%numerical%swkmean, &
+                         kSurf, soil%k(1), mesh%dz(1), mesh%dz(1))
 
-!        if runoff occurs: find values for pond and runots iteratively
+         ! Maximum evaporation rate according to Darcy
+         Emax = -k1Atm * ((soil%hatm - soil%h(1)) / mesh%disnod(1) + 1.0d0)
 
-         p1 = state%soilwater%k1max/state%mesh%disnod(1) * dt                ! [SS-GR-BH B11]
-         p2 = 1.0d0/(p1+1.0d0)
+         ! Reduced soil evaporation rate. Config validation enforces
+         ! swredu ∈ {1, 2}; the legacy swredu==0 "no reduction" branch is
+         ! unreachable in TOML-configured runs.
+         if (atmo%swredu .eq. 0) then
+            soil%reva = min(atmo%peva,    max(0.0d0, Emax))
+         else
+            soil%reva = min(atmo%empreva, max(0.0d0, Emax))
+         endif
 
-!        estimation of maximum ponding: ignore runoff
-         state%soilwater%H0max = p2 * ( state%soilwater%pondm1 + state%soilwater%q0*dt - state%soilwater%k1max*dt + p1*state%soilwater%h(1) )  ! [SS-SWC S-2.5] [SS-GR-BH B11]
-         h0min = 0.0d0
-         do i=1,30
-            state%soilwater%pond   = 0.5d0 * (state%soilwater%H0max + h0min)  ! [SS-SWC S-2.12B] [SS-GR-BH B11]
-            state%soilwater%runots = runoff(state)
-            h0     = p2 * ( state%soilwater%pondm1 +state%soilwater%q0*dt -state%soilwater%k1max*dt +p1*state%soilwater%h(1) -state%soilwater%runots)  ! [SS-GR-BH B11]
+         ! ---- High atmospheric demand ---------------------------------------
+         ! Net surface flux: precipitation + runon - evaporation, plus
+         ! the residual ponding from the previous timestep.
+         soil%q0 = (atmo%nraidt + atmo%nird + atmo%melt) + soil%runon - soil%reva
+         q1 = -soil%q0 - soil%pondm1 / dt
 
-            if(dabs(state%soilwater%pond-h0).lt.1.0d-6)then
-               state%soilwater%hsurf = state%soilwater%pond
-               return
-            else
-               if(h0.gt.state%soilwater%pond)then
-                  h0min = state%soilwater%pond
-               else
-                  state%soilwater%H0max = state%soilwater%pond               ! [SS-GR-BH B11]
-               end if
-            end if
-         end do
-      end if
+         ! Atmospheric-demand condition (flux boundary at the atmosphere)
+         if (q1 .ge. 0.0d0 .and. q1 .gt. Emax) then
+            soil%ftoph    = .true.
+            soil%hsurf    = soil%hatm
+            soil%kmean(1) = k1Atm
+            soil%pond     = 0.0d0
+            soil%runots   = 0.0d0
+            return
+         endif
 
-!     if convergence has not been reached: proceed with final value
-      state%soilwater%pond   = 0.5d0 * (state%soilwater%H0max + h0min)       ! [SS-SWC S-2.12B] [SS-GR-BH B11]
-      state%soilwater%runots = runoff(state)
-      state%soilwater%hsurf  = state%soilwater%pond
+         ! Maximum conductivity assuming saturation at ground surface (z=0)
+         if (soil%fluseksatexm(1)) then
+            ks = heat%rfcp(1) * soil%ksatexm(mesh%layer(1)) &
+                 + (1.0d0 - heat%rfcp(1)) * hconode_vsmall
+         else
+            ks = heat%rfcp(1) * soil%ksatfit(mesh%layer(1)) &
+                 + (1.0d0 - heat%rfcp(1)) * hconode_vsmall
+         endif
+         soil%k1max = hcomean(state%cfg%simulation%numerical%swkmean, &
+                              ks, soil%k(1), mesh%dz(1), mesh%dz(1))
+
+         ! Will applying flux=q1 yield a pressure head >0 at the surface?
+         ! If not, the flux boundary is valid.
+         h0 = soil%h(1) - mesh%disnod(1) * (q1 / soil%k1max + 1.0d0)
+         if (h0 .le. 1.0d-6) then
+            soil%ftoph    = .false.
+            soil%kmean(1) = 0.0d0
+            soil%hsurf    = 0.0d0
+            soil%pond     = 0.0d0
+            soil%runots   = 0.0d0
+            soil%qtop     = q1
+         else
+            ! Ponding occurs
+            soil%ftoph    = .true.
+            soil%kmean(1) = soil%k1max
+            soil%FlRunoff = .true.
+
+            ! Maximum value of pond without runoff
+            p1 = soil%k1max / mesh%disnod(1) * dt
+            p2 = 1.0d0 / (p1 + 1.0d0)
+            soil%H0max = p2 * (soil%pondm1 + soil%q0 * dt        &
+                               - soil%k1max * dt + p1 * soil%h(1))
+            ! Macropore overland-flow branch deleted per ADR 0040 — see
+            ! legacy/swap-4.2.0 for the FlMacropore=.true. block.
+         endif
+
+      end associate
 
       return
-      end subroutine pondrunoff
+   end subroutine boundtop
+
+
+   !> Determine ponding height and calculate runoff.
+   !!
+   !! Inputs:  state%soilwater%H0max (preliminary pond), q0, k1max, pondm1, h(1);
+   !!          state%surfacewater%pondmx, rsro, rsroexp, swdra; state%mesh%disnod(1);
+   !!          state%timecontrol%dt, t1900.
+   !! Outputs: state%soilwater%pond, runots, hsurf, H0max.
+   subroutine PONDRUNOFF(state)
+      use swap_array_dimensions, only: MAIRG
+      use array_utils,           only: afgen
+      implicit none
+
+      type(swap_state_t), intent(inout) :: state
+
+      integer :: i
+      real(8) :: h0, h0min, p1, p2
+      real(8) :: dt, t1900
+
+      associate (soil => state%soilwater,    &
+                 surf => state%surfacewater, &
+                 mesh => state%mesh,         &
+                 time => state%timecontrol)
+
+         dt    = time%dt
+         t1900 = time%t1900
+
+         ! Time-dependent ponding (dormant — swpondmx is always 0 in TOML).
+         if (surf%swpondmx .eq. 1) then
+            surf%pondmx = afgen(surf%pondmxtab, 2 * MAIRG, t1900 + dt)
+         endif
+
+         ! H0max ≤ pondmx ⇒ no runoff
+         if (soil%H0max .le. surf%pondmx) then
+            soil%runots = 0.0d0
+            soil%pond   = soil%H0max
+            soil%hsurf  = soil%pond
+            return
+         end if
+
+         soil%runots = runoff(state)
+         if (dabs(soil%runots) .lt. 1.0d-6) then
+            ! No runoff: the first estimation of pond is OK
+            soil%pond  = soil%H0max
+            soil%hsurf = soil%pond
+            return
+         else if (dabs(soil%runots) .ge. 1.0d-6 .and. surf%swdra .ne. 2 .and. &
+                  dabs(surf%rsroexp - 1.0d0) .lt. 1.0d-6) then
+            p1 = soil%k1max / mesh%disnod(1) * dt
+            p2 = 1.0d0 / (p1 + 1.0d0 + dt / surf%rsro)
+
+            soil%pond   = p2 * (soil%pondm1 + soil%q0 * dt - soil%k1max * dt   &
+                                + p1 * soil%h(1) + dt / surf%rsro * surf%pondmx)
+            soil%runots = runoff(state)
+            soil%hsurf  = soil%pond
+            return
+         else
+            ! Runoff occurs: iterate to find consistent pond and runots
+            p1 = soil%k1max / mesh%disnod(1) * dt
+            p2 = 1.0d0 / (p1 + 1.0d0)
+
+            ! Initial estimate of maximum ponding (ignores runoff)
+            soil%H0max = p2 * (soil%pondm1 + soil%q0 * dt - soil%k1max * dt &
+                               + p1 * soil%h(1))
+            h0min = 0.0d0
+            do i = 1, 30
+               soil%pond   = 0.5d0 * (soil%H0max + h0min)
+               soil%runots = runoff(state)
+               h0          = p2 * (soil%pondm1 + soil%q0 * dt - soil%k1max * dt &
+                                   + p1 * soil%h(1) - soil%runots)
+
+               if (dabs(soil%pond - h0) .lt. 1.0d-6) then
+                  soil%hsurf = soil%pond
+                  return
+               else
+                  if (h0 .gt. soil%pond) then
+                     h0min = soil%pond
+                  else
+                     soil%H0max = soil%pond
+                  end if
+               end if
+            end do
+         end if
+
+         ! Convergence not reached: proceed with the bisection midpoint
+         soil%pond   = 0.5d0 * (soil%H0max + h0min)
+         soil%runots = runoff(state)
+         soil%hsurf  = soil%pond
+
+      end associate
+
+      return
+   end subroutine PONDRUNOFF
 
 end module boundtop_mod
