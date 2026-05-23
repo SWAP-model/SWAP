@@ -205,8 +205,10 @@ module soilwater_state_mod
       ! Bottom-boundary CSV-driven tables (date/value interleaved pairs,
       ! sized 2*MABBC to match legacy fixed-size globals). Populated by
       ! config_to_variables from the bottom_boundary CSV inputs:
+      !   gwltab — prescribed groundwater level, swbotb=1
       !   haqtab — deep-aquifer head, swbotb=3 with sw3=2
       !   hbotab — bottom pressure head, swbotb=5
+      real(real64), allocatable :: gwltab(:)
       real(real64), allocatable :: haqtab(:)
       real(real64), allocatable :: hbotab(:)
 
@@ -492,6 +494,9 @@ contains
       ! Allocation is guarded because config_to_variables (which runs
       ! BEFORE soilwater_init) may have already allocated and populated
       ! these arrays from the swbotb CSV inputs.
+      if (.not. allocated(sw%gwltab)) then
+         allocate(sw%gwltab(2*MABBC)); sw%gwltab = 0.0_real64
+      end if
       if (.not. allocated(sw%haqtab)) then
          allocate(sw%haqtab(2*MABBC)); sw%haqtab = 0.0_real64
       end if

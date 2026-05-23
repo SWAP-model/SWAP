@@ -862,7 +862,7 @@
       ! real(8)   gwlinp             ! Prescribed groundwater level (L) for current time
       ! [SS-SWC] retired 2026-05-12 — moved to state%soilwater%gwlm1 (ADR 0038)
       ! real(8)   gwlm1              ! Groundwater level (L) at former time level
-      real(8)   gwltab(mabbc*2)    ! Array with prescribed groundwater level (L) as function of time (T)
+      ! [GR-BND 2026-05-23] gwltab retired — see state%soilwater%gwltab
       ! [SS-SWC] retired 2026-05-12 — moved to state%soilwater%h (ADR 0038)
       ! real(8)   h(macp)            ! Soil water pressure head (L)
       real(8)   h_enpr(macp)       ! Soil water Entry Pressure head for Modified MualemVanGenuchten curve (L)

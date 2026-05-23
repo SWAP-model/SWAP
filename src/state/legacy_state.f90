@@ -268,7 +268,7 @@ module legacy_state_mod
       real(real64), allocatable :: ftopdislay(:)  !! Array with factor for function to determine depth of top of model discharge layer for each drain level, see also swtopdislay (L)
       real(real64) :: geofac  !! Geometry factor (-) for analytical drainage formula of Ernst
       real(real64) :: gwli  !! Groundwater level (L) at start of simulation
-      real(real64), allocatable :: gwltab(:)  !! Array with prescribed groundwater level (L) as function of time (T)
+      ! [GR-BND 2026-05-23] gwltab retired — see state%soilwater%gwltab
       real(real64), allocatable :: h_enpr(:)  !! Soil water Entry Pressure head for Modified MualemVanGenuchten curve (L)
       ! [GR-BND 2026-05-23] haqtab retired — see state%soilwater%haqtab
       ! [GR-BND 2026-05-23] hbotab retired — see state%soilwater%hbotab

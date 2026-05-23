@@ -14,8 +14,8 @@ module boundbottom_mod
     use swap_log,              only: log_debug, log_warn, to_str
     use swap_array_dimensions, only: mabbc
     use variables,             only: &   ! [SS-GR-FINAL B11] all DEFERRED
-       ! DEFERRED: gwltab/qbotab — groundwater level / bottom flux tables; config; Phase C3
-       gwltab, qbotab  ! [SS-GR-BH B8] narrowed
+       ! DEFERRED: qbotab — bottom flux table; config; Phase C3
+       qbotab  ! [SS-GR-BH B8] narrowed
     implicit none
 
     private
@@ -85,7 +85,7 @@ contains
         ! ----------------------------------------------------------------------
         ! --- interpolation between daily values of given groundwaterlevel
         if (state%soilwater%swbotb_runtime .eq. 1) then
-            state%soilwater%gwlinp = afgen(gwltab, mabbc*2, t1900 + dt)
+            state%soilwater%gwlinp = afgen(state%soilwater%gwltab, mabbc*2, t1900 + dt)
         end if
 
         ! --- regional bottom flux is given

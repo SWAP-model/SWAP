@@ -888,8 +888,8 @@ contains
          nod1lay, &
          ! DEFERRED: numlay — number of soil layers; Phase C3
          numlay, &
-         ! DEFERRED: gwltab/gwli — groundwater level table/initial; Phase C3
-         gwltab, gwli, &
+         ! DEFERRED: gwli — initial groundwater level; Phase C3
+         gwli, &
          ! DEFERRED: zi/nhead — initial head table entries; Phase C3
          zi, nhead, &
          ! DEFERRED: h_enpr — air entry pressure; Phase C3
@@ -1104,7 +1104,7 @@ contains
       else
          ! Pressure head profile is calculated from groundwater level
          if (swbotb.eq.1) then
-          sw%gwl = afgen (gwltab,mabbc*2,state%timecontrol%t1900+state%timecontrol%dt-1.d0)   ! [SS-SWC S-1.3/S-2.12B] [TC-8]
+          sw%gwl = afgen (state%soilwater%gwltab,mabbc*2,state%timecontrol%t1900+state%timecontrol%dt-1.d0)   ! [SS-SWC S-1.3/S-2.12B] [TC-8]
 
           if(abs(sw%gwl-(z(numnod)-0.5d0*dz(numnod))) .lt.1.0d-4) then
           messag = 'Groundwaterlevel as bottom boundary (SWBOTB=1) is'//&

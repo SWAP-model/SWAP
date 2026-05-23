@@ -224,7 +224,7 @@
       ! gwlinp             = 0.0d0
       ! [SS-SWC] gwlm1 retired — soilwater_init handles init via state%soilwater%gwlm1
       ! gwlm1              = 0.0d0
-      gwltab             = 0.0d0 
+      ! [GR-BND 2026-05-23] gwltab retired — soilwater_init zeros state%soilwater%gwltab
       ! [SS-SWC] h retired — soilwater_init handles init via state%soilwater%h
       ! h                  = 0.0d0
       h_enpr             = 0.0d0 

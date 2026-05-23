@@ -684,10 +684,14 @@ contains
                hdr, csv_table, csv_errs)
             call csv_errs%abort_if_fatal()
             if (allocated(csv_table)) then
+               if (.not. allocated(state%soilwater%gwltab)) then
+                  allocate(state%soilwater%gwltab(2*mabbc))
+                  state%soilwater%gwltab = 0.0d0
+               end if
                nrows = size(csv_table, 1)
                do k = 1, nrows
-                  gwltab(k*2 - 1) = csv_table(k, 1)
-                  gwltab(k*2)     = csv_table(k, 2)
+                  state%soilwater%gwltab(k*2 - 1) = csv_table(k, 1)
+                  state%soilwater%gwltab(k*2)     = csv_table(k, 2)
                end do
             end if
          end block
