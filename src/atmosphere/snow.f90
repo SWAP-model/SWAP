@@ -45,18 +45,13 @@ contains
       real(8) :: slw_max     !! Maximum storage of liquid water in snow [cm/d]
       real(8) :: qlw         !! Drainage flux from snow pack [cm/d]
 
+      ! Boundary management (cohort resets + ISsnowBeg/snowinco snapshots)
+      ! is owned by ResetMetFlx in meteo_io.f90, which runs earlier in the
+      ! same tc_flDayStart tick. snow_step is pure physics from here on.
       associate (atmo => state%atmosphere,      &
                  intr => state%atmosphere%intr, &
                  cumu => state%atmosphere%cumu, &
-                 heat => state%heat,            &
-                 time => state%timecontrol)
-
-      ! --- snapshot snow at the start of each accumulation period.
-      ! Zeroing of intr%i{gsnow,subl,snrai} and cumu%c{gsnow,subl,snrai,melt}
-      ! is owned by ResetMetFlx (meteo_io.f90), which runs earlier in the
-      ! same tc_flDayStart tick. Only the snapshots stay here.
-      if (time%flZeroIntr) atmo%ISsnowBeg = atmo%ssnow
-      if (time%flZeroCumu) atmo%snowinco  = atmo%ssnow
+                 heat => state%heat)
 
       ! --- when there is snowpack calculate the amount of sublimation
       atmo%subl = 0.0_real64

@@ -257,16 +257,17 @@ contains
 
     ! --- local
 
-    ! Reset cumulative intermediate fluxes
+    ! Reset intermediate fluxes + snapshot intermediate-period baseline.
+    ! Mirrors the soilwater coordinator pattern (soilhydraulics.f90:1190-1196).
     if (state%timecontrol%flZeroIntr) then
-      ! [SS-ATM A-2.6] canonical reset for all 8 intr fields; legacy igrai/inrai retired
       call state%atmosphere%intr%reset()
+      state%atmosphere%ISsnowBeg = state%atmosphere%ssnow
     endif
 
-    ! Reset cumulative meteorological fluxes
+    ! Reset cumulative fluxes + snapshot cumulative-period baseline.
     if (state%timecontrol%flZeroCumu) then
-      ! [SS-ATM A-2.6] canonical reset for all 10 cumu fields; legacy cgrai/cnrai/caintc retired
       call state%atmosphere%cumu%reset()
+      state%atmosphere%snowinco = state%atmosphere%ssnow
     endif
 
     return
