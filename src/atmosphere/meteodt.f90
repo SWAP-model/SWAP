@@ -118,45 +118,37 @@ contains
   !! - O: arai, rainfluxarray, raintimearray
   !! @endnote
    subroutine ProcessRainEvents(state)
-      ! [SS-TC TC-14] yearmeteo,timjan1,rainrec read/written via state%timecontrol (ADR 0041)
-      ! GR-ATM C7: wet(i) migrated → state%atmosphere%wet(i).
-      ! [GR-CROP Phase B] nmrain/rainamount/rainfluxarray/raintimearray/arai migrated →
-      !   state%atmosphere%X via associate aliases.  swrain/raintab remain narrow
-      !   use variables until config arg is threaded (Arc 8).
-      use array_utils, only: afgen
+      use array_utils,           only: afgen
       use swap_array_dimensions, only: mrain
       implicit none
 
       type(swap_state_t), intent(inout) :: state
-        !! Simulation state (for TC reader cutover — tcum via state%timecontrol)
 
-      ! --- local
-      integer i, iendyear, j, l, nlack, nn, rday, rdaya(367), rdayold
-      real(8) araihlp(367), day(mrain), rainam(mrain), rainflux
-      real(8) raintime, ratimar(mrain), tendyear, vsmall, wght, wwet(368)
+      integer :: i, iendyear, j, l, nlack, nn, rday, rdaya(367), rdayold
+      real(8) :: araihlp(367), day(mrain), rainam(mrain), rainflux
+      real(8) :: raintime, ratimar(mrain), tendyear, vsmall, wght, wwet(368)
       vsmall = 1.0d-8
 
-      ! [SS-TC TC-14] alias TC fields directly so bare names below resolve to state%timecontrol
-      ! [SS-BMI2 Task 4] tstart, tend, dtmin added to associate — retire globals in Task 5
-      ! [GR-CROP Phase B] rain timing arrays aliased to state%atmosphere%X
-      associate( tc_tcum => state%timecontrol%tcum, &
-                 yearmeteo => state%timecontrol%yearmeteo, &
-                 timjan1 => state%timecontrol%timjan1, &
-                 rainrec => state%timecontrol%rainrec, &
-                 tstart  => state%timecontrol%tstart, &
-                 tend    => state%timecontrol%tend, &
-                 dtmin   => state%timecontrol%dtmin, &
-                 nmrain        => state%atmosphere%nmrain,        &  ! [GR-CROP Phase B]
-                 rainamount    => state%atmosphere%rainamount,    &  ! [GR-CROP Phase B]
-                 rainfluxarray => state%atmosphere%rainfluxarray, &  ! [GR-CROP Phase B]
-                 raintimearray => state%atmosphere%raintimearray, &  ! [GR-CROP Phase B]
-                 arai          => state%atmosphere%arai           )  ! [GR-CROP Phase B]
+      associate (atmo  => state%atmosphere,    &
+                 time  => state%timecontrol,   &
+                 meteo => state%cfg%meteo)
+      associate (nmrain        => atmo%nmrain,        &
+                 rainamount    => atmo%rainamount,    &
+                 rainfluxarray => atmo%rainfluxarray, &
+                 raintimearray => atmo%raintimearray, &
+                 arai          => atmo%arai,          &
+                 yearmeteo     => time%yearmeteo,     &
+                 timjan1       => time%timjan1,       &
+                 rainrec       => time%rainrec,       &
+                 tstart        => time%tstart,        &
+                 tend          => time%tend,          &
+                 dtmin         => time%dtmin)
 
       ! === Process rain events on yearly basis ===
 
       ! For rain options 1 and 2: convert daily rain quantities and intensities or durations
       ! into rain events by creating raintime and rainflux arrays conform rain option 3
-      if (state%cfg%meteo%swrain .eq. 1 .or. state%cfg%meteo%swrain .eq. 2) then
+      if (meteo%swrain .eq. 1 .or. meteo%swrain .eq. 2) then
          rainrec = 1
          do i = 1, nmrain
             if (raintimearray(i + 1) .gt. tstart - vsmall) then
@@ -164,12 +156,12 @@ contains
                ! Beginning (00:00) of days of current year within simulation period
                day(rainrec) = raintimearray(i + 1) - timjan1 + 1.d0
                rainam(rainrec) = 0.1d0*rainamount(i)  ! convert from mm to cm
-               wwet(rainrec) = state%atmosphere%wet(i)   ! GR-ATM C7: wet→state%atmosphere%wet
+               wwet(rainrec) = atmo%wet(i)
             end if
          end do
 
          ! Set first record of raintime and rainflux (= 0)
-         raintimearray(1) = tc_tcum + dtmin
+         raintimearray(1) = time%tcum + dtmin
          rainam(1) = 0.d0
          rainfluxarray(1) = 0.d0
 
@@ -178,12 +170,12 @@ contains
          rainrec = 0
          do i = 2, nmrain
             if (rainam(i) .gt. vsmall) then
-               if (state%cfg%meteo%swrain .eq. 1) then
+               if (meteo%swrain .eq. 1) then
                   ! Mean rainfall intensities are specified
-                  rainflux = afgen(state%cfg%meteo%raintab, 60, day(i))
+                  rainflux = afgen(meteo%raintab, 60, day(i))
                   raintime = min(0.99d0, rainam(i)/rainflux)
 
-               elseif (state%cfg%meteo%swrain .eq. 2) then
+               elseif (meteo%swrain .eq. 2) then
                   ! Rainfall durations are specified
                   raintime = wwet(i)
                end if
@@ -193,11 +185,11 @@ contains
                else
                   ! First raintime of a day: closure of last period of former day with rain = 0
                   rainrec = rainrec + 2
-                  raintimearray(rainrec) = real(i - 2, real64) + tc_tcum
+                  raintimearray(rainrec) = real(i - 2, real64) + time%tcum
                   rainfluxarray(rainrec) = 0.d0
                end if
                ! Second raintime of a day: closure of first period of the day, rain = rainam
-               raintimearray(rainrec + 1) = real(i - 2, real64) + tc_tcum + raintime
+               raintimearray(rainrec + 1) = real(i - 2, real64) + time%tcum + raintime
                rainfluxarray(rainrec + 1) = rainam(i)/raintime
 
             end if
@@ -206,11 +198,11 @@ contains
          ! Extend array with records at end of current year
          tendyear = 365.d0
          if (mod(yearmeteo, 4) .eq. 0) tendyear = 366.d0
-         raintimearray(rainrec + 2) = tc_tcum + tendyear + dtmin
+         raintimearray(rainrec + 2) = time%tcum + tendyear + dtmin
          rainfluxarray(rainrec + 2) = 0.d0
 
          ! In case of rain events: 1) calculate daily values, 2) fill raintimearray and rainfluxarray
-      elseif (state%cfg%meteo%swrain .eq. 3) then
+      elseif (meteo%swrain .eq. 3) then
 
          ! Total amount of rain per meteo day arai
          ! Initialize array with sum of rain
@@ -291,7 +283,7 @@ contains
          nmrain = rainrec
 
          ! Set first record of arrays
-         raintimearray(1) = tc_tcum + dtmin
+         raintimearray(1) = time%tcum + dtmin
          rainfluxarray(1) = 0.0d0
 
          ! Calculate rainfluxes (cm/d) and fill rainfluxarray
@@ -311,12 +303,8 @@ contains
       ! For swrain = 1-3: determine start rain record
       rainrec = 1
 
-      ! [GR-CROP Phase B] rain timing arrays written directly via state%atmosphere aliases —
-      ! no bulk mirror needed (state IS the target).
-
-      end associate  ! tc_tcum => state%timecontrol [TC-9] + state%atmosphere rain timing [GR-CROP Phase B]
-
-      return
+      end associate
+      end associate
    end subroutine ProcessRainEvents
 
    !> Update meteorological fluxes for current time step
