@@ -189,9 +189,7 @@ module atmosphere_state_mod
       real(real64) :: scanopytb(2*magrs) = 0.0_real64  !! canopy storage table
 
       ! [SS-GR-ATM A7] Block 5: Runoff-CN method state + tables
-      real(real64) :: CNref             = 0.0_real64
-      real(real64) :: CNdry             = 0.0_real64
-      real(real64) :: CNwet             = 0.0_real64
+      ! CNref/CNdry/CNwet retired: pure within-call intermediates of cn_step (locals).
       real(real64) :: ThetaRef          = 0.0_real64
       real(real64) :: Runoff_CN         = 0.0_real64
       integer      :: wc_cor            = 0

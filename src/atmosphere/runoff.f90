@@ -98,6 +98,7 @@ contains
     ! local
     integer              :: i
     real(8)              :: CN, S, Ia
+    real(8)              :: CNref, CNdry, CNwet
 
     associate (atmo => state%atmosphere, mesh => state%mesh, &
                soil => state%soilwater, time => state%timecontrol)
@@ -107,10 +108,10 @@ contains
                 time%t1900 >= atmo%CNtimTAB(atmo%icn_atm + 1))
         atmo%icn_atm = atmo%icn_atm + 1
       end do
-      atmo%CNref = atmo%CNrefTAB(atmo%icn_atm)
-      CN    = atmo%CNref
-      atmo%CNdry =  4.2d0*atmo%CNref/(10.0d0-0.058d0*atmo%CNref)
-      atmo%CNwet = 23.0d0*atmo%CNref/(10.0d0+0.13d0*atmo%CNref)
+      CNref = atmo%CNrefTAB(atmo%icn_atm)
+      CN    = CNref
+      CNdry =  4.2d0*CNref/(10.0d0-0.058d0*CNref)
+      CNwet = 23.0d0*CNref/(10.0d0+0.13d0*CNref)
 
       if (atmo%wc_cor > 0) then
           atmo%wc10 = 0.0d0
@@ -119,9 +120,9 @@ contains
           end do
           atmo%wc10 = atmo%wc10/atmo%z10_cn
           if (atmo%wc10 < atmo%ThetaRef) then
-            CN = atmo%CNdry + atmo%wc10/atmo%ThetaRef*(atmo%CNref-atmo%CNdry)
+            CN = CNdry + atmo%wc10/atmo%ThetaRef*(CNref-CNdry)
           else
-            CN = atmo%CNref + (atmo%wc10-atmo%ThetaRef)/atmo%ThetaRef*(atmo%CNwet-atmo%CNref)
+            CN = CNref + (atmo%wc10-atmo%ThetaRef)/atmo%ThetaRef*(CNwet-CNref)
           end if
       end if
       S  = 2540d0/CN - 25.4d0    ! in cm
