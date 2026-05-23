@@ -293,7 +293,7 @@ module legacy_state_mod
       ! [GR-BND 2026-05-23] pondmxtab retired — see state%surfacewater%pondmxtab
       ! [GR-BND 2026-05-23] qbotab retired — see state%soilwater%qbotab
       real(real64), allocatable :: qdraincomp(:)  !! Total lateral drainage flux (L/T) for each compartment
-      real(real64), allocatable :: qdrtab(:)  !! Array with lateral drainage flux (L/T) as function of groundwater level (L)
+      ! [GR-DRA 2026-05-23] qdrtab retired — see state%drainage%qdrtab
       real(real64), allocatable :: qimmob(:)  !! Soil water flux between mobile and immobile fraction in case of fingered flow (L/T)
       real(real64) :: qssdisum  !! Total subsurface irrigation flux (L/T)
       real(real64), allocatable :: qssdi(:)  !! Array with water input via subsurface drip irrigation for each compartment (L/T)

@@ -73,6 +73,10 @@ module drainage_state_mod
       integer,      allocatable :: swallo(:)       !! allow-drainage flag per level (1/2/3)
       integer,      allocatable :: swtopdislay(:)  !! top-discharge-layer switch per level (0/1)
       real(real64), allocatable :: ftopdislay(:)   !! top-discharge-layer factor per level [0..1]
+
+      ! Drainage-flux-vs-groundwater-level table (dramet=1 branch).
+      ! Dormant — no TOML writer; reader at drainage.f90:389 (afgen, 50 pairs).
+      real(real64) :: qdrtab(50) = 0.0_real64
    end type drainage_state_t
 
 end module drainage_state_mod

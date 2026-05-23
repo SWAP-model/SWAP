@@ -969,7 +969,7 @@
       ! real(8)   qdra(Madr,macp)    ! Moved to drainage_state_t%qdra (ADR 0031)
       ! real(8)   qdrain(Madr)       ! Moved to drainage_state_t%qdrain (ADR 0031)
       real(8)   qdraincomp(macp)   ! Total lateral drainage flux (L/T) for each compartment
-      real(8)   qdrtab(50)         ! Array with lateral drainage flux (L/T) as function of groundwater level (L)
+      ! [GR-DRA 2026-05-23] qdrtab retired — see state%drainage%qdrtab
       ! SS-SWST Phase 2 Task 11 C2: qdrtot removed — state%surfacewater%qdrtot owns it.
       ! real(8)   qdrtot             ! Moved to surfacewater_state_t%qdrtot
       real(8)   qimmob(macp)       ! Soil water flux between mobile and immobile fraction in case of fingered flow (L/T)

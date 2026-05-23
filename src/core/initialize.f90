@@ -312,7 +312,7 @@
       ! qdra               = 0.0d0   ! Moved to drainage_state_t — drainage_init handles (ADR 0031)
       ! qdrain             = 0.0d0   ! Moved to drainage_state_t — drainage_init handles (ADR 0031)
       qdraincomp         = 0.0d0 
-      qdrtab             = 0.0d0 
+      ! [GR-DRA 2026-05-23] qdrtab retired — see state%drainage%qdrtab
       ! SS-SWST Phase 2 Task 11 C3: qdrtot removed (state%surfacewater%qdrtot initialized in surfacewater_state_t).
       qimmob             = 0.0d0 
       ! [SS-CRP C-2.5] qrosum/qred*sum/qrot retired — soilwater_init handles init via state%soilwater (ADR 0036)

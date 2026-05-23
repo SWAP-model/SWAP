@@ -192,8 +192,9 @@ contains
          ! [GR-DRA 2026-05-23] dramet/swdtyp/swallo retired — aliased from state%drainage below.
          ! [GR-BND 2026-05-23] geometry cluster (basegw/ipos/khtop/khbot/kvtop/kvbot/
          ! entres/zintf/geofac) retired — aliased from state%drainage in the associate below.
-         ! DEFERRED: drares/infres/qdrtab/shape — drain resistance config; Phase C3
-         drares, infres, qdrtab, shape, &
+         ! DEFERRED: drares/infres/shape — drain resistance config; Phase C3
+         ! [GR-DRA 2026-05-23] qdrtab retired — aliased from state%drainage below.
+         drares, infres, shape, &
          ! [SS-GR-CROPRT A2] FlMacropore dropped — retired (ADR 0040)
          ! [GR-DRA 2026-05-23] cofintfl/expintfl/NumLevRapDra/swliminf retired — aliased below.
          ! DEFERRED: nowltab(madr) — OWL table count per level; active drainage runtime state; Phase C3
@@ -386,7 +387,7 @@ contains
 
                ! --- drainage flux from table with gwlevel - flux data pairs
             elseif (dramet .eq. 1) then
-               qdrain(1) = afgen(qdrtab, 50, abs(gwldra))
+               qdrain(1) = afgen(state%drainage%qdrtab, 50, abs(gwldra))
             end if
 
             end associate
