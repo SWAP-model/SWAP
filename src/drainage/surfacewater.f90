@@ -318,8 +318,7 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
       ! [GR-DRA 2026-05-23] swman/hbweir/wlsman/gwlcrit/nphase/VCRIT/NODHD/HCRIT/SWQHR/QQHTAB
       ! retired — aliased from state%surfacewater below.
       use variables, only: &   ! [SS-GR-FINAL B10] residuals — all DEFERRED
-         ! DEFERRED: alphaw/betaw — surface water geometry coefficients; config; Phase C3
-         alphaw, betaw, &
+         ! [GR-DRA 2026-05-23] alphaw/betaw retired — aliased from state%surfacewater below.
          ! rsro/pondmx retired (→state%surfacewater%X)
 
          ! DEFERRED: QRapDra — rapid drainage flux runtime state; Phase C3
@@ -383,7 +382,9 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
          nphase  => state%surfacewater%nphase,      &
          vcrit   => state%surfacewater%vcrit,       &
          nodhd   => state%surfacewater%nodhd,       &
-         hcrit   => state%surfacewater%hcrit        )
+         hcrit   => state%surfacewater%hcrit,       &
+         alphaw  => state%surfacewater%alphaw,      &
+         betaw   => state%surfacewater%betaw        )
 
 ! --- resetting of flag for overflowing of automatic weir
       ! overfl global write dropped: only sw_overfl (state alias) used henceforth.

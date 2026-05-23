@@ -1341,7 +1341,8 @@
       ! [GR-DRA 2026-05-23] hbweir retired — see state%surfacewater%hbweir
       ! SS-SWST Phase 2 Task 11 C2: wlstar removed — state%surfacewater%wlstar owns it.
       ! [GR-DRA 2026-05-23] osswlm retired — see state%surfacewater%osswlm
-      real(8) wlp,alphaw(mamp),betaw(mamp)
+      ! [GR-DRA 2026-05-23] alphaw/betaw retired — see state%surfacewater%{alphaw,betaw}
+      real(8) wlp
       ! wlstar removed (surfacewater_state_t%wlstar)
       ! [SS-GR-FINAL D6] wls1_init retired — c2v write tombstoned in D4/C4; state%surfacewater owns it; 0 consumers
       ! [GR-DRA 2026-05-23] dropr retired — see state%surfacewater%dropr

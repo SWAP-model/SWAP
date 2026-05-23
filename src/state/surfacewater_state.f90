@@ -109,6 +109,10 @@ module surfacewater_state_mod
       real(real64), allocatable :: hcrit(:,:)      !! critical pressure head (MAMP, MAMTE)
       real(real64), allocatable :: vcrit(:,:)      !! critical drainage volume (MAMP, MAMTE)
 
+      ! Surface-water geometry (Q-h rating power-law coefficients per period).
+      real(real64), allocatable :: alphaw(:)  !! discharge coefficient (MAMP)
+      real(real64), allocatable :: betaw(:)   !! discharge exponent (MAMP)
+
       !> [SS-BMI2] Surface water output row buffer (SurfaceWaterOutput stream).
       !! Currently placeholder only — SurfaceWaterOutput body was deleted by ADR 0009 Phase 5+
       !! (outdrf/outswb deleted, swdrf=0, swswb=0).
@@ -211,6 +215,12 @@ contains
       end if
       if (.not. allocated(self%vcrit)) then
          allocate(self%vcrit(MAMP, MAMTE));  self%vcrit = 0.0_real64
+      end if
+      if (.not. allocated(self%alphaw)) then
+         allocate(self%alphaw(MAMP));        self%alphaw = 0.0_real64
+      end if
+      if (.not. allocated(self%betaw)) then
+         allocate(self%betaw(MAMP));         self%betaw = 0.0_real64
       end if
 
       ! ---- L1: zero defaults ----

@@ -544,8 +544,7 @@
       ! [GR-DRA 2026-05-23] osswlm retired — see state%surfacewater%osswlm
       ! SS-SWST Phase 2 Task 11 C3: wlstar removed (state%surfacewater%wlstar, default=0).
       wlp                   = 0.0d0
-      alphaw                = 0.0d0
-      betaw                 = 0.0d0
+      ! [GR-DRA 2026-05-23] alphaw/betaw retired — see state%surfacewater%{alphaw,betaw}
       ! [GR-DRA 2026-05-23] dropr retired — see state%surfacewater%dropr
       hdepth                = 0.0d0
       ! [GR-DRA 2026-05-23] gwlcrit/hcrit/vcrit retired — see state%surfacewater%X

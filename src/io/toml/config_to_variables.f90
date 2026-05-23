@@ -1133,13 +1133,21 @@ contains
          end do
       end if
       if (allocated(config%surface_water%alphaw)) then
-         do i = 1, min(size(config%surface_water%alphaw), size(alphaw))
-            alphaw(i) = config%surface_water%alphaw(i)
+         if (.not. allocated(state%surfacewater%alphaw)) then
+            allocate(state%surfacewater%alphaw(mamp))
+            state%surfacewater%alphaw = 0.0d0
+         end if
+         do i = 1, min(size(config%surface_water%alphaw), size(state%surfacewater%alphaw))
+            state%surfacewater%alphaw(i) = config%surface_water%alphaw(i)
          end do
       end if
       if (allocated(config%surface_water%betaw)) then
-         do i = 1, min(size(config%surface_water%betaw), size(betaw))
-            betaw(i) = config%surface_water%betaw(i)
+         if (.not. allocated(state%surfacewater%betaw)) then
+            allocate(state%surfacewater%betaw(mamp))
+            state%surfacewater%betaw = 0.0d0
+         end if
+         do i = 1, min(size(config%surface_water%betaw), size(state%surfacewater%betaw))
+            state%surfacewater%betaw(i) = config%surface_water%betaw(i)
          end do
       end if
 
