@@ -382,7 +382,7 @@ contains
     type(pm_outputs_t), intent(out) :: pmo
 
     type(pm_inputs_t) :: pmi
-    real(8) :: rad_loc, hum_loc, win_loc
+    real(8) :: rad_loc
 
     associate( &
        tc_daynr       => state%timecontrol%daynr,       &
@@ -416,15 +416,13 @@ contains
     elseif (config%meteo%swmetdetail.eq.1 .or. config%meteo%swetr.eq.0) then
 
       if (config%meteo%swmetdetail.eq.1) then
-        ! Define weather variables of current record
+        ! Define weather variables of current record. hum/win come from the
+        ! caller (sub-daily orchestrator already indexed by irecord); rad and
+        ! Tav are refreshed here because they are written into state.
         rad_loc = state%atmosphere%arad(irecord) / metperiod     ! from j/m2/period to j/m2/d
         state%atmosphere%Tav = state%atmosphere%atav(irecord)
-        hum_loc = state%atmosphere%ahum(irecord)
-        win_loc = state%atmosphere%awind_subdaily(irecord)
       else
         rad_loc = rad
-        hum_loc = hum_in
-        win_loc = win_in
       endif
 
       ! Calculate evapotranspiration using Penman-Monteith: et0, ew0, es0 (mm/d)
@@ -449,8 +447,8 @@ contains
       pmi%tav    = state%atmosphere%Tav
       pmi%tmn    = tmn
       pmi%tmx    = tmx
-      pmi%hum    = hum_loc
-      pmi%win    = win_loc
+      pmi%hum    = hum_in
+      pmi%win    = win_in
       pmi%atmtr  = atmtr
       pmi%difpp  = difpp
       pmi%dsinbe = dsinbe

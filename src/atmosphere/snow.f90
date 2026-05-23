@@ -72,11 +72,6 @@ contains
     !! Total snow loss (melt + sublimation)
       real(8) :: tsoil_surf
     !! Surface soil temperature [deg C], read from state%heat or global tsoil(1)
-
-      ! Constants now sourced from atmosphere_constants_mod:
-      !   cwat -> SPECIFIC_HEAT_WATER     [J/kg/K]
-      !   lm   -> LATENT_HEAT_MELTING     [J/kg]
-      !   ts   -> SNOW_TEMPERATURE_C      [deg C]
       real(8) :: slw_max
     !! Maximum storage of liquid water in snow [cm/d]
       real(8) :: qlw

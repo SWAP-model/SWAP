@@ -50,11 +50,11 @@ contains
       ! check if times in CNtimeTAB are in ascending order
       ! set initial position in CNtimTAB
       do i = 2, state%atmosphere%iCNtab
-          if (state%atmosphere%CNtimTAB(i) < state%atmosphere%CNtimTAB(i-1)) call fatalerr_collected ('CNmethod', 'CNtimTAB not in ascending order')
+          if (state%atmosphere%CNtimTAB(i) < state%atmosphere%CNtimTAB(i-1)) call fatalerr_collected ('cn_init', 'CNtimTAB not in ascending order')
           if (tc_t1900 >= state%atmosphere%CNtimTAB(i-1) .and. tc_t1900 < state%atmosphere%CNtimTAB(i)) state%atmosphere%icn_atm = i-1
       end do
       ! error if start time t1900 not in CNtimTAB
-      if (state%atmosphere%icn_atm == 0) call fatalerr_collected ('CNmethod', 'Start time of simulation not present in CNtimTAB')
+      if (state%atmosphere%icn_atm == 0) call fatalerr_collected ('cn_init', 'Start time of simulation not present in CNtimTAB')
 
     !  to be replaced by average for layer 0-10 cm
       do i = 1, state%mesh%numnod
