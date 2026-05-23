@@ -132,7 +132,9 @@ contains
       dttp = 1.0d0  ! value of 1 d required for the daily meteo option
 
       ! Calculate interception, method Rutter
-      call ruttervw (gctp,aintc,eintc,state)
+      call ruttervw(gctp, state%timecontrol%dt, state%atmosphere%siccapact, &
+                    state%atmosphere%fimin, state%crop%ew0, state%atmosphere%grai, &
+                    state%atmosphere%sicact, aintc, eintc)
 
       ! Divide interception into rain part and irrigation part and
       ! calculate net rain (nraida) and net sprinkling irrigation (nird)
@@ -252,7 +254,9 @@ contains
         dttp = tc_dt
 
         ! Calculate interception, method Rutter
-        call ruttervw (gctp,aintc,eintc,state)
+        call ruttervw(gctp, state%timecontrol%dt, state%atmosphere%siccapact, &
+                      state%atmosphere%fimin, state%crop%ew0, state%atmosphere%grai, &
+                      state%atmosphere%sicact, aintc, eintc)
 
         ! Divide interception into rain part and irrigation part and
         ! calculate net rain (nraida) and net sprinkling irrigation (nird)

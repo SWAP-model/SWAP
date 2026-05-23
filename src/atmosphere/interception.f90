@@ -149,55 +149,50 @@ contains
   !>
   !> Adapted Rutter method of Van Walsum & Supit (2012).
   !>
-  !> Input via state: state%atmosphere%siccapact/fimin/grai/sicact, state%crop%ew0, state%timecontrol%dt
-  !> logf retained via narrow use-only (Arc 9 deferral).
-  !>
-  !> sicact (storage on vegetation canopy [cm]) is both input and output via
-  !> state%atmosphere%sicact
+  !> Explicit-args subroutine — no state dependency. Not pure: msw1eic
+  !> (item #4 quarantine) does `write(unit) + stop` on its single error
+  !> path. Wrapping pack-from-state happens at the call site.
   !> @endnote
-  subroutine ruttervw (gctp,aintc,eintc,state)
-    ! SS-TC TC-11: dt read via state%timecontrol%dt (tc_dt alias).
-    ! [SS-GR-ATM B6] logf DEFERRED to Arc 9 (log-file migration).
-    ! [SS-GR-ATM B10] siccapact → state%atmosphere%siccapact
-    ! [SS-GR-ATM B10] fimin → state%atmosphere%fimin
-    ! [SS-GR-ATM B10] ew0 → state%crop%ew0
-    ! Phase A.5 runtime dual-writes ensure state tracks legacy at runtime.
+  subroutine ruttervw(gctp, dt, siccapact, fimin, ew0, grai, sicact, aintc, eintc)
     use swap_log, only: log_unit_handle
     implicit none
 
-    ! Arguments
-    real(8), intent(in)  :: gctp   ! Soil cover [-]
-    real(8), intent(out) :: aintc  ! Intercepted rainfall [cm/d]
-    real(8), intent(out) :: eintc  ! Interception evaporation [cm/d]
-    type(swap_state_t), intent(inout) :: state  ! Simulation state for dual-write
+    real(8), intent(in)    :: gctp       ! Soil cover [-]
+    real(8), intent(in)    :: dt         ! Time step [d]
+    real(8), intent(in)    :: siccapact  ! Active canopy storage capacity [cm]
+    real(8), intent(in)    :: fimin      ! Minimum relative canopy evaporation factor [-]
+    real(8), intent(in)    :: ew0        ! Reference wet-canopy evaporation rate [mm/d]
+    real(8), intent(in)    :: grai       ! Gross daily rain flux [cm/d]
+    real(8), intent(inout) :: sicact     ! Canopy storage [cm] — read on entry, updated on exit
+    real(8), intent(out)   :: aintc      ! Intercepted rainfall [cm/d]
+    real(8), intent(out)   :: eintc      ! Interception evaporation [cm/d]
 
-    ! Local variables
+    ! Local conversion buffers for the (real(4), metaswap-compatible) msw1eic
     integer(4) :: nuk_i4, ibd_i4(1), ib_i4
     real(4)    :: dc_r4, dtsw_r4, csk_r4(1), vxick_r4(1), fecmnk_r4(1)
     real(4)    :: ETw0_r4(1), Pgdtsw_r4(1), Sic_r4(1), Sicolddtsw_r4(1)
     real(4)    :: Picdtsw_r4(1), Eicdtsw_r4(1), tcap_r4(1), beta_r4(1)
     real(4)    :: zeta_r4(1), fricdtsw_r4(1)
 
-    ! Convert arguments to keep msw1eic routine compatible with metaswap
     nuk_i4       = 1
     ibd_i4(1)    = 1
     ib_i4        = log_unit_handle()  ! quarantined msw1eic still expects a unit number
     dc_r4        = 1.0e-4
-    dtsw_r4      = REAL(state%timecontrol%dt)  ! TC-11
-    csk_r4(1)    = REAL(gctp)
-    vxick_r4(1)  = REAL(state%atmosphere%siccapact)
-    fecmnk_r4(1) = REAL(state%atmosphere%fimin)
-    ETw0_r4(1)   = REAL(state%crop%ew0*0.1d0)
-    Pgdtsw_r4(1) = REAL(state%atmosphere%grai)
-    Sic_r4(1)    = REAL(state%atmosphere%sicact)
+    dtsw_r4      = real(dt)
+    csk_r4(1)    = real(gctp)
+    vxick_r4(1)  = real(siccapact)
+    fecmnk_r4(1) = real(fimin)
+    ETw0_r4(1)   = real(ew0*0.1d0)
+    Pgdtsw_r4(1) = real(grai)
+    Sic_r4(1)    = real(sicact)
 
-    call msw1eic(nuk_i4,ibd_i4,dc_r4,dtsw_r4,csk_r4,vxick_r4, &
-                 fecmnk_r4,ETw0_r4,Pgdtsw_r4,Sic_r4,Sicolddtsw_r4,Picdtsw_r4, &
-                 Eicdtsw_r4,tcap_r4,beta_r4,zeta_r4,fricdtsw_r4,ib_i4)
+    call msw1eic(nuk_i4, ibd_i4, dc_r4, dtsw_r4, csk_r4, vxick_r4, &
+                 fecmnk_r4, ETw0_r4, Pgdtsw_r4, Sic_r4, Sicolddtsw_r4, Picdtsw_r4, &
+                 Eicdtsw_r4, tcap_r4, beta_r4, zeta_r4, fricdtsw_r4, ib_i4)
 
-    state%atmosphere%sicact = DBLE(Sic_r4(1))   ! [SS-ATM] retired legacy sicact global
-    aintc  = DBLE(Picdtsw_r4(1))
-    eintc  = DBLE(Eicdtsw_r4(1))
+    sicact = dble(Sic_r4(1))
+    aintc  = dble(Picdtsw_r4(1))
+    eintc  = dble(Eicdtsw_r4(1))
 
   end subroutine ruttervw
 
