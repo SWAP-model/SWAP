@@ -1,222 +1,187 @@
+!> Module for soil-profile bottom boundary conditions.
+!!
+!! Determines the bottom boundary condition for the SWAP hydrological
+!! model: prescribed groundwater level, regional flux, Cauchy seepage
+!! to/from deep aquifer, q(h) curves, prescribed pressure head, zero
+!! flux, free drainage, or lysimeter.
 module boundbottom_mod
-!> Module for soil profile bottom boundary conditions
-!!
-!! This module determines the bottom boundary condition for the SWAP
-!! hydrological model based on various options including groundwater levels,
-!! regional fluxes, seepage, and drainage conditions.
-!!
-!! @author Original SWAP team
-!! @date August 2004 / September 2005
-!! @date Modified February 2026 (modularization)
-! ----------------------------------------------------------------------
-    use swap_state_mod,        only: swap_state_t
-    use swap_config_mod,       only: swap_config_t
-    use swap_log,              only: log_debug, log_warn, to_str
-    use swap_array_dimensions, only: mabbc
-    ! [GR-BND 2026-05-23] All boundbottom bare-globals retired — see state%soilwater.
-    implicit none
+   use swap_state_mod,        only: swap_state_t
+   use swap_config_mod,       only: swap_config_t
+   use swap_log,              only: log_debug, log_warn, to_str
+   use swap_array_dimensions, only: mabbc
+   implicit none
 
-    private
-    public :: BoundBottom
+   private
+   public :: BoundBottom
 
 contains
 
-    !> Determine soil profile bottom boundary conditions
-    !!
-    !! This subroutine calculates the bottom boundary condition for the soil
-    !! profile based on the selected boundary type (`swbotb`). It handles:
-    !!
-    !! - Given groundwater levels (swbotb=1)
-    !! - Regional bottom flux, prescribed or free drainage (swbotb=±2)
-    !! - Seepage/infiltration from deep groundwater (swbotb=3)
-    !! - Flux as function of pressure head (swbotb=4)
-    !! - Given pressure head at bottom (swbotb=5)
-    !! - Zero flux (swbotb=6)
-    !! - Free drainage (swbotb=7)
-    !! - Lysimeter with free drainage (swbotb=8)
-    !!
-    !! The subroutine updates global variables `qbot` (bottom flux) and
-    !! `qbot_nonfrozen`, and may modify `kmean(numnod+1)` for pressure
-    !! head boundaries.
-    !!
-    !! @note This subroutine operates on global state from the `variables`
-    !!       module including `swbotb`, `h`, `numnod`, `qbot`, etc.
-    !!
-    !! @warning If oven-dry conditions (h < -1.0E7) occur at the bottom node
-    !!          with swbotb=2, the boundary automatically switches to free
-    !!          drainage (swbotb=-2) and a warning is issued.
-    !! @note
-    !! File VersionID:
-    !!   $Id: boundbottom.f90 362 2018-01-08 13:08:33Z kroes006 $
-    !! ----------------------------------------------------------------------
-    !! ----------------------------------------------------------------------
-    !!     date               : August 2004 / Sept 2005
-    !!     purpose            : determine soil profile bottom boundary conditions
-    !! ----------------------------------------------------------------------
-    !! @endnote
-    subroutine BoundBottom(state, config)
-        ! [SS-HEAT] Task 9: state added to access state%heat%rfcp (rfcp global retired)
-        ! [SS-GR-BH Task 18]: config added for bottom_boundary switches/scalars
-        use array_utils, only: afgen
-        use soilhydraulics_utils, only: watcon, hconduc
-        implicit none
+   !> Determine soil-profile bottom boundary condition.
+   !!
+   !! Branches on `state%soilwater%swbotb_runtime`:
+   !!   1    Given groundwater level (interpolated from gwltab)
+   !!  ±2    Regional bottom flux (sine or table) — auto-switches to
+   !!        free drainage (-2) under oven-dry h(numnod) < -1.0e7
+   !!   3    Cauchy seepage/infiltration from deep groundwater
+   !!   4    Flux as a function of pressure head (q(h))
+   !!   5    Given pressure head at bottom (interpolated from hbotab)
+   !!   6    Zero flux
+   !!   7    Free drainage
+   !!   8    Lysimeter with free drainage
+   !!
+   !! Outputs (all on state%soilwater): qbot, qbot_nonfrozen, gwlinp,
+   !! deepgw, hbot, kmean(numnod+1) (swbotb=5 only).
+   subroutine BoundBottom(state, config)
+      use array_utils,           only: afgen
+      use soilhydraulics_utils,  only: watcon, hconduc
+      implicit none
 
-        ! [SS-BND B-2.7] writes only state%soilwater (legacy global writes dropped)
-        type(swap_state_t),  intent(inout) :: state
-        type(swap_config_t), intent(in)    :: config
+      type(swap_state_t),  intent(inout) :: state
+      type(swap_config_t), intent(in)    :: config
 
-        ! --- local variables
-    integer node, nodnumgwl
+      integer :: node, nodnumgwl
+      real(8) :: cvalprof, gwlmean, thetabot, twopi, freq
+      real(8) :: satnodgwl
+      character(len=300) :: messag
 
-        real(8) cvalprof, gwlmean, thetabot, twopi, freq
-        real(8) satnodgwl
-        character(len=300) messag
+      associate (soil => state%soilwater,    &
+                 mesh => state%mesh,         &
+                 heat => state%heat,         &
+                 time => state%timecontrol,  &
+                 bb   => config%bottom_boundary)
 
-        ! ----------------------------------------------------------------------
-        ! [SS-TC TC-14] alias TC fields for bare reads below
-        associate( t1900 => state%timecontrol%t1900, &
-                   dt    => state%timecontrol%dt,    &
-                   t     => state%timecontrol%t,     &
-                   date  => state%timecontrol%date )
-        twopi = 8.0d0*datan(1.0d0)
-        freq = twopi/365.0d0
-        ! ----------------------------------------------------------------------
-        ! --- interpolation between daily values of given groundwaterlevel
-        if (state%soilwater%swbotb_runtime .eq. 1) then
-            state%soilwater%gwlinp = afgen(state%soilwater%gwltab, mabbc*2, t1900 + dt)
-        end if
+         twopi = 8.0d0 * datan(1.0d0)
+         freq  = twopi / 365.0d0
 
-        ! --- regional bottom flux is given
-        if (abs(state%soilwater%swbotb_runtime) .eq. 2) then
+         ! ---- swbotb=1: interpolated daily groundwater level ----------------
+         if (soil%swbotb_runtime .eq. 1) then
+            soil%gwlinp = afgen(soil%gwltab, mabbc*2, time%t1900 + time%dt)
+         end if
 
-            ! Comment PietG (8-1-08):
-            ! ---   if the moisture content in the soil profile is depleted by
-            !       a combination of inconsistent boundary conditions, and
-            !       the pressure head at the bottom tends to very low values,
-            !       then the choice for swbotb=2 is not appropriate.
-            if (state%soilwater%h(state%mesh%numnod) .lt. -1.0d+7) then ! oven dry conditions at bottom  ! [SS-SWC S-2.5]
-                if (state%soilwater%swbotb_runtime .eq. 2) then
-                    write (messag, '(a)') 'Oven dry conditions in lowest'
-                    write (messag, '(a)') 'compartment therefore switched to'
-                    write (messag, '(a)') 'free drainage at date '
-                    write (messag, *)
-                    write (messag, '(a11)') date
-                    call log_warn('BoundBottom', messag)
-                end if
-                state%soilwater%swbotb_runtime = -2  ! [SS-GR-BH Task 18] runtime mutation: swbotb=-2
+         ! ---- |swbotb|=2: regional bottom flux ------------------------------
+         if (abs(soil%swbotb_runtime) .eq. 2) then
+
+            ! PietG (8-1-08): if the moisture content in the profile is
+            ! depleted by inconsistent boundary conditions and the bottom
+            ! pressure head tends to very low values, swbotb=2 is not
+            ! appropriate — fall back to free drainage.
+            if (soil%h(mesh%numnod) .lt. -1.0d+7) then
+               if (soil%swbotb_runtime .eq. 2) then
+                  write (messag, '(a)') 'Oven dry conditions in lowest'
+                  write (messag, '(a)') 'compartment therefore switched to'
+                  write (messag, '(a)') 'free drainage at date '
+                  write (messag, *)
+                  write (messag, '(a11)') time%date
+                  call log_warn('BoundBottom', messag)
+               end if
+               soil%swbotb_runtime = -2
             else
-                state%soilwater%swbotb_runtime = 2
+               soil%swbotb_runtime = 2
             end if
 
-            if (state%soilwater%swbotb_runtime .eq. 2) then
-                if (config%bottom_boundary%sw2 .eq. 1) then
-                    ! ---     sine function is used
-                    state%soilwater%qbot = config%bottom_boundary%sinave + &
-                                           config%bottom_boundary%sinamp * &
-                                           dcos(freq*(t - config%bottom_boundary%sinmax))
-                else
-                    ! ---     table is used
-                    state%soilwater%qbot = afgen(state%soilwater%qbotab, mabbc*2, t1900 + dt)
-                end if
+            if (soil%swbotb_runtime .eq. 2) then
+               if (bb%sw2 .eq. 1) then
+                  ! Sine wave
+                  soil%qbot = bb%sinave + bb%sinamp * dcos(freq * (time%t - bb%sinmax))
+               else
+                  ! Table
+                  soil%qbot = afgen(soil%qbotab, mabbc*2, time%t1900 + time%dt)
+               end if
             end if
 
-            ! ---   free drainage assumed in case of h(numnod) < -1.0E7
-            if (state%soilwater%swbotb_runtime .eq. -2) then
-                state%soilwater%qbot = -1.0d0*state%soilwater%kmean(state%mesh%numnod + 1)  ! [SS-SWC S-2.5]
+            ! Free drainage triggered by h(numnod) < -1.0e7
+            if (soil%swbotb_runtime .eq. -2) then
+               soil%qbot = -1.0d0 * soil%kmean(mesh%numnod + 1)
             end if
 
-        end if
+         end if
 
-        ! --- seepage or infiltration from/to deep groundwater
-        if (state%soilwater%swbotb_runtime .eq. 3) then
-            gwlmean = config%bottom_boundary%hdrain + &
-                      config%bottom_boundary%shape * (state%soilwater%gwl - config%bottom_boundary%hdrain)  ! [SS-SWC S-2.5]
-            ! ---   determine hydraulic head of deep aquifer
-            if (config%bottom_boundary%sw3 .eq. 1) then
-                state%soilwater%deepgw = config%bottom_boundary%aqave + &
-                                         config%bottom_boundary%aqamp * &
-                                         dcos(twopi/config%bottom_boundary%aqper * &
-                                              (t - config%bottom_boundary%aqtmax))
+         ! ---- swbotb=3: seepage / infiltration from/to deep groundwater -----
+         if (soil%swbotb_runtime .eq. 3) then
+            gwlmean = bb%hdrain + bb%shape * (soil%gwl - bb%hdrain)
+
+            ! Hydraulic head of the deep aquifer
+            if (bb%sw3 .eq. 1) then
+               soil%deepgw = bb%aqave + bb%aqamp * &
+                             dcos(twopi / bb%aqper * (time%t - bb%aqtmax))
             else
-                state%soilwater%deepgw = afgen(state%soilwater%haqtab, mabbc*2, t1900 + dt)
+               soil%deepgw = afgen(soil%haqtab, mabbc*2, time%t1900 + time%dt)
             end if
 
-            ! ---   determine C-value (vertical resistance) in saturated part of modelled profile
-            if (state%soilwater%swbotb3resvert .eq. 0) then
-                !     -   find number node with groundwater level
-                node = state%mesh%numnod
-                do while (gwlmean .gt. state%mesh%ztopcp(node) .and. node .gt. 1)
-                    node = node - 1
-                end do
-                nodnumgwl = node
-                satnodgwl = gwlmean - state%mesh%zbotcp(nodnumgwl)
-                cvalprof = satnodgwl/state%soilwater%vg_params(nodnumgwl)%ksat     ! [SS-GR-UTILS Task 15]
-                do node = nodnumgwl + 1, state%mesh%numnod
-                    cvalprof = cvalprof + state%mesh%dz(node)/state%soilwater%vg_params(node)%ksat  ! [SS-GR-UTILS Task 15]
-                end do
-            elseif (state%soilwater%swbotb3resvert .eq. 1) then
-                cvalprof = 0.0d0
+            ! C-value (vertical resistance) in saturated part of the profile
+            if (soil%swbotb3resvert .eq. 0) then
+               ! Find the node containing the groundwater level
+               node = mesh%numnod
+               do while (gwlmean .gt. mesh%ztopcp(node) .and. node .gt. 1)
+                  node = node - 1
+               end do
+               nodnumgwl = node
+               satnodgwl = gwlmean - mesh%zbotcp(nodnumgwl)
+               cvalprof  = satnodgwl / soil%vg_params(nodnumgwl)%ksat
+               do node = nodnumgwl + 1, mesh%numnod
+                  cvalprof = cvalprof + mesh%dz(node) / soil%vg_params(node)%ksat
+               end do
+            elseif (soil%swbotb3resvert .eq. 1) then
+               cvalprof = 0.0d0
             end if
-!
-            state%soilwater%qbot = (state%soilwater%deepgw - gwlmean) / &
-                                   (config%bottom_boundary%rimlay + cvalprof)
 
-! ---   extra groundwater flux might be added
-            if (config%bottom_boundary%sw4 .eq. 1) then
-                state%soilwater%qbot = state%soilwater%qbot + afgen(state%soilwater%qbotab, mabbc*2, t1900 + dt)
+            soil%qbot = (soil%deepgw - gwlmean) / (bb%rimlay + cvalprof)
+
+            ! Optional extra groundwater flux from a CSV
+            if (bb%sw4 .eq. 1) then
+               soil%qbot = soil%qbot + afgen(soil%qbotab, mabbc*2, time%t1900 + time%dt)
             end if
-        end if
+         end if
 
-! --- flux calculated as function of h
-        if (state%soilwater%swbotb_runtime .eq. 4) then
-            if (config%bottom_boundary%swqhbot .eq. 1) then
-                state%soilwater%qbot = config%bottom_boundary%cofqha * &
-                                       dexp(config%bottom_boundary%cofqhb * &
-                                            dabs(state%soilwater%gwl))  ! [SS-SWC S-2.5]
-                if (config%bottom_boundary%swcofqhc .eq. 1) then
-                    state%soilwater%qbot = state%soilwater%qbot + config%bottom_boundary%cofqhc
-                end if
-            else if (config%bottom_boundary%swqhbot .eq. 2) then
-                state%soilwater%qbot = afgen(state%soilwater%qbotab, mabbc*2, dabs(state%soilwater%gwl))  ! [SS-SWC S-2.5]
+         ! ---- swbotb=4: flux as a function of pressure head -----------------
+         if (soil%swbotb_runtime .eq. 4) then
+            if (bb%swqhbot .eq. 1) then
+               soil%qbot = bb%cofqha * dexp(bb%cofqhb * dabs(soil%gwl))
+               if (bb%swcofqhc .eq. 1) then
+                  soil%qbot = soil%qbot + bb%cofqhc
+               end if
+            else if (bb%swqhbot .eq. 2) then
+               soil%qbot = afgen(soil%qbotab, mabbc*2, dabs(soil%gwl))
             end if
-        end if
+         end if
 
-! --- interpolation between daily values of given pressurehead
-        if (state%soilwater%swbotb_runtime .eq. 5) then
-            state%soilwater%hbot = afgen(state%soilwater%hbotab, mabbc*2, t1900 + dt)
-            thetabot = watcon(state%soilwater%hbot, &
-                               state%soilwater%vg_params(state%mesh%numnod), &
-                               state%soilwater%iHWCKmodel(state%soilwater%layer(state%mesh%numnod)), &
-                               state%mesh%numnod, state%soilwater)            ! [SS-GR-UTILS Task 5]
+         ! ---- swbotb=5: interpolated daily bottom pressure head -------------
+         if (soil%swbotb_runtime .eq. 5) then
+            soil%hbot = afgen(soil%hbotab, mabbc*2, time%t1900 + time%dt)
+            thetabot  = watcon(soil%hbot,                          &
+                               soil%vg_params(mesh%numnod),        &
+                               soil%iHWCKmodel(soil%layer(mesh%numnod)), &
+                               mesh%numnod, soil)
 
-            ! [SS-SWC S-2.12B] legacy kmean half-write dropped — write directly to state
-            state%soilwater%kmean(state%mesh%numnod + 1) = hconduc(state%soilwater%hbot, thetabot, &
-                                                        state%heat%rfcp(state%mesh%numnod), state%heat%tsoil(state%mesh%numnod), &
-                                                        state%soilwater%vg_params(state%mesh%numnod), &
-                                                        state%soilwater%iHWCKmodel(state%soilwater%layer(state%mesh%numnod)), &
-                                                        state%soilwater%fluseksatexm(state%mesh%numnod), &
-                                                        state%mesh%numnod, state%soilwater)  ! [SS-GR-UTILS Task 6]
-        end if
+            soil%kmean(mesh%numnod + 1) =                          &
+               hconduc(soil%hbot, thetabot,                        &
+                       heat%rfcp(mesh%numnod), heat%tsoil(mesh%numnod), &
+                       soil%vg_params(mesh%numnod),                &
+                       soil%iHWCKmodel(soil%layer(mesh%numnod)),   &
+                       soil%fluseksatexm(mesh%numnod),             &
+                       mesh%numnod, soil)
+         end if
 
-! --- zero flux at the bottom
-        if (state%soilwater%swbotb_runtime .eq. 6) then
-            state%soilwater%qbot = 0.0d0
-        end if
+         ! ---- swbotb=6: zero flux -------------------------------------------
+         if (soil%swbotb_runtime .eq. 6) then
+            soil%qbot = 0.0d0
+         end if
 
-! --- free drainage
-        if (state%soilwater%swbotb_runtime .eq. 7) then
-            state%soilwater%qbot = -1.0d0*state%soilwater%kmean(state%mesh%numnod + 1)  ! [SS-SWC S-2.5]
-        end if
+         ! ---- swbotb=7: free drainage ---------------------------------------
+         if (soil%swbotb_runtime .eq. 7) then
+            soil%qbot = -1.0d0 * soil%kmean(mesh%numnod + 1)
+         end if
 
-! --- lysimeter with free drainage
-        if (state%soilwater%swbotb_runtime .eq. 8) then
-            state%soilwater%qbot = 0.0d0
-        end if
+         ! ---- swbotb=8: lysimeter with free drainage ------------------------
+         if (soil%swbotb_runtime .eq. 8) then
+            soil%qbot = 0.0d0
+         end if
 
-        state%soilwater%qbot_nonfrozen = state%soilwater%qbot
+         soil%qbot_nonfrozen = soil%qbot
 
-        end associate  ! [SS-TC TC-14] t1900/dt/t/date => state%timecontrol
-        return
-    end subroutine BoundBottom
+      end associate
+
+      return
+   end subroutine BoundBottom
 
 end module boundbottom_mod
