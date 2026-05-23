@@ -107,7 +107,6 @@ contains
       use tillage_mod,   only : DoTillage
       use swap_log, only: log_info
       use runoff_mod, only: cn_init
-      use snow_mod, only: snow_init
       use temperature_mod, only: Temperature
       use solute_mod, only: solute, solute_init
       use agetracer_mod, only: AgeTracer
@@ -295,7 +294,7 @@ contains
    ! swinco=3 warm-restart: pond/pondini/dt/h-profile/atmosphere from soil.initial.
    ! swinco<3: pondini/pond from soil.pondini; atmosphere inits to zero.
    ! Both blocks consolidated here to eliminate the duplicate swinco==3 guard.
-   call state%atmosphere%init(config%meteo)               ! GR-ATM Task 14: type-bound init; zeroes all 22 flat scalars + cohort sub-records
+   call state%atmosphere%init(config)                     ! GR-ATM: zero flat scalars + cohorts + snapshot config-derived params (snowcoef/swsublim/swetsine)
    if (config%soil%swinco == 3 .and. &
        allocated(config%soil%initial%h_file) .and. &
        len_trim(config%soil%initial%h_file) > 0) then
@@ -427,9 +426,14 @@ contains
 !  initialize SoilTemperature rate/state variables
    if (flTemperature) call Temperature(1, state, config)
 
-!  initialize Snow rate/state variables
-   ! SS-HEAT Phase 2 Task 6: pass state so Snow reads tsoil from state%heat
-   if (flSnow) call snow_init(state)
+!  initialize Snow: handshake snowinco<->ssnow based on swinco (formerly snow_init)
+   if (flSnow) then
+      if (config%soil%swinco == 3) then
+         state%atmosphere%snowinco = state%atmosphere%ssnow
+      else
+         state%atmosphere%ssnow = state%atmosphere%snowinco
+      end if
+   end if
 
 !  initialize Solute rate/state variables
    if (flSolute) call Solute(1, state)

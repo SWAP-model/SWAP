@@ -94,9 +94,9 @@ subroutine test_atmosphere_init_zeroes_flat_scalars()
    use funit
    use iso_fortran_env, only: real64
    use atmosphere_state_mod, only: atmosphere_state_t
-   use meteorology_config_mod, only: meteorology_config_t
-   type(atmosphere_state_t)   :: atm
-   type(meteorology_config_t) :: meteo_cfg   ! default-initialised; arg reserved for future seed migration
+   use swap_config_mod,      only: swap_config_t
+   type(atmosphere_state_t) :: atm
+   type(swap_config_t)      :: cfg   ! default-initialised; init copies snowcoef/swsublim/swetsine = 0
 
    ! Pre-load with non-zero values
    atm%peva     = 5.0_real64
@@ -123,7 +123,7 @@ subroutine test_atmosphere_init_zeroes_flat_scalars()
    atm%spev  = 0.8_real64
    atm%saev  = 0.6_real64
 
-   call atm%init(meteo_cfg)
+   call atm%init(cfg)
 
    ! Instantaneous must be zero
    @assertEqual(0.0_real64, atm%peva,     1.0e-12_real64)

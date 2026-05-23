@@ -17,7 +17,7 @@
 !!   + type(atmosphere_cumulative_t)   :: cumu
 !!   = 40 total fields, all scalars (no per-node arrays).
 !!
-!! state%atmosphere%init(config%meteo) zeroes all 22 flat scalars explicitly. Cohort
+!! state%atmosphere%init(config) zeroes flat scalars + cohorts and copies config-derived params. Cohort
 !! sub-records are already zero-defaulted at declaration; init re-zeroes
 !! them explicitly for forward-compat with future arcs that might add
 !! allocatable arrays.
@@ -100,6 +100,11 @@ module atmosphere_state_mod
       real(real64) :: ssnow    = 0.0_real64  !< snow storage (cm water equivalent)
       real(real64) :: snowinco = 0.0_real64  !< snow-in-canopy snapshot (cm w.e.)
       real(real64) :: ISsnowBeg = 0.0_real64 !< snow w.e. at start of current intermediate period (cm); peer to state%soilwater%IPondBeg
+
+      ! Config-derived parameters/switches (copied from config at init; compute reads from state only)
+      real(real64) :: snowcoef = 0.0_real64  !< snow-melt temperature coefficient (cm/d/degC)
+      integer      :: swsublim = 0           !< suppress sublimation of snow (1) or compute it (0)
+      integer      :: swetsine = 0           !< Tp/Ep distribution: 0=uniform, 1=sine-wave during day
       real(real64) :: graidt   = 0.0_real64  !< gross rainfall this timestep (cm)
       real(real64) :: nraidt   = 0.0_real64  !< net rainfall this timestep (cm)
       real(real64) :: aintcdt  = 0.0_real64  !< actual interception this timestep (cm)
@@ -226,15 +231,14 @@ module atmosphere_state_mod
 
 contains
 
-   !> Zero all 22 flat scalars and both cohort sub-records.
-   !! Type-bound init — call as state%atmosphere%init(config%meteo).
-   !! meteo_cfg arg reserved for future config-driven seed migration;
-   !! all seeding currently done by the dual-write block in swap_mod.f90.
-   !! Mirrors heat_state%init (GR-BH Task 11).
-   subroutine atmosphere_state_init(self, meteo_cfg)
-      use meteorology_config_mod, only: meteorology_config_t
-      class(atmosphere_state_t),  intent(inout) :: self
-      type(meteorology_config_t), intent(in)    :: meteo_cfg
+   !> Zero all flat scalars + cohort sub-records, then copy config-derived
+   !! parameters into the state. Compute routines read these via state%X,
+   !! never via state%cfg — the config→state boundary lives here.
+   !! Type-bound init — call as state%atmosphere%init(config).
+   subroutine atmosphere_state_init(self, config)
+      use swap_config_mod, only: swap_config_t
+      class(atmosphere_state_t), intent(inout) :: self
+      type(swap_config_t),       intent(in)    :: config
 
       ! Instantaneous (11)
       self%peva     = 0.0_real64
@@ -268,6 +272,11 @@ contains
       ! Cohort sub-records
       call self%intr%reset()
       call self%cumu%reset()
+
+      ! Config-derived snapshot — compute routines read these via state, not state%cfg.
+      self%snowcoef = config%meteo%snow%snowcoef
+      self%swsublim = config%soil%frost%swsublim
+      self%swetsine = config%meteo%swetsine
 
    end subroutine atmosphere_state_init
 

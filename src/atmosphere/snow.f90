@@ -15,32 +15,9 @@ module snow_mod
    implicit none
 
    private
-   public :: snow_init, snow_step
+   public :: snow_step
 
 contains
-!> Initialize snow pack state (formerly snow(task=1, ...))
-!!
-!! Seeds state%atmosphere%snowinco or state%atmosphere%ssnow based on
-!! the initial-conditions switch swinco.
-!!
-   subroutine snow_init(state)
-
-      implicit none
-
-      type(swap_state_t), intent(inout) :: state
-
-      associate (atmo => state%atmosphere)
-
-         if (state%cfg%soil%swinco .eq. 3) then
-            atmo%snowinco = atmo%ssnow
-         else
-            atmo%ssnow = atmo%snowinco
-         end if
-
-      end associate
-
-   end subroutine snow_init
-
 !> Simulate snow accumulation and melt processes (formerly snow(task=2, ...))
 !!
 !! This subroutine handles snow pack dynamics including:
@@ -93,10 +70,10 @@ contains
 
       ! --- when there is snowpack calculate the amount of sublimation
       atmo%subl = 0.0_real64
-      if (state%cfg%soil%frost%swsublim .eq. 0) then
+      if (atmo%swsublim .eq. 0) then
          if (atmo%ssnow .gt. 0.0d0) then
             atmo%subl = atmo%peva
-            if (state%cfg%meteo%swetsine .eq. 1) then
+            if (atmo%swetsine .eq. 1) then
                atmo%subl = atmo%pevaday
             end if
             atmo%empreva = 0.0_real64
@@ -115,7 +92,7 @@ contains
       else
 
          ! --- amount of snowmelt [cm swe]; negative values can partly compensate smeltr
-         smelt = state%cfg%meteo%snow%snowcoef*(atmo%Tav - SNOW_TEMPERATURE_C)
+         smelt = atmo%snowcoef*(atmo%Tav - SNOW_TEMPERATURE_C)
 
          ! --- extra snowmelt when rain falls on the snowpack [cm swe]
          if (atmo%snrai .gt. 0.0d0) then
