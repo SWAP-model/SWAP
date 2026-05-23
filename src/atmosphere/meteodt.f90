@@ -415,74 +415,55 @@ contains
   !! Note: tsunrise_atm and tsunset_atm are now module-level in variables.f90
   !! @endnote
    subroutine ETSine(state)
-      ! SS-TC TC-9: fldaystart,daynr,t1900,dt removed from bare use variables;
-      !             reads via state%timecontrol.
-      ! [SS-GR-ATM B28] bare use variables replaced with narrow only: list.
-      !   DEFERRED: lat → config%meteo%lat (requires config arg, Arc 8 candidate);
-      !             rad, daylp, difpp, atmtr, dsinbe, tsunrise_atm, tsunset_atm —
-      !             not yet in state/config schema (Arc 8+).
-      use variables, only: &   ! [SS-GR-FINAL B11] DEFERRED
-         ! DEFERRED: lat — site latitude; config%meteo%lat; Phase C3
-         ! DEFERRED: rad/daylp/difpp/atmtr/dsinbe/tsunrise_atm/tsunset_atm — meteo derived scalars; Phase C3
-         rad, daylp, difpp, atmtr, dsinbe, tsunrise_atm, tsunset_atm
-      use et_mod, only: reduceva_dt
+      ! DEFERRED — astro-derived scalars (rad, daylp, difpp, atmtr, dsinbe)
+      ! plus tsunrise_atm/tsunset_atm remain bare globals. Migration belongs
+      ! with the astro-caching arc when/if it's prioritized; per-day perf
+      ! impact is negligible.
+      use variables, only: rad, daylp, difpp, atmtr, dsinbe, tsunrise_atm, tsunset_atm
+      use et_mod,    only: reduceva_dt
       implicit none
 
       type(swap_state_t), intent(inout) :: state
-        !! Simulation state (passed through to reduceva for atmosphere dual-writes)
 
-      ! --- local
-      real(8) daytime, pi, dayl, sinld, cosld, fraction
-      data pi/3.14159265d0/    ! number pi [-]
+      real(8) :: daytime, dayl, sinld, cosld, fraction
+      real(8), parameter :: pi = 3.14159265d0
 
-      ! SS-TC TC-9: tc_* aliases for fldaystart, daynr, t1900, dt.
-      associate( &
-        tc_fldaystart => state%timecontrol%flDayStart,  &  ! TC-9
-        tc_daynr      => state%timecontrol%daynr,       &  ! TC-9
-        tc_t1900      => state%timecontrol%t1900,       &  ! TC-9
-        tc_dt         => state%timecontrol%dt           )  ! TC-9
+      associate (atmo => state%atmosphere, time => state%timecontrol)
 
-      if (tc_fldaystart) then
-         ! Determine duration photoperiodic daylight in hours
-         call astro(tc_daynr, state%cfg%meteo%lat, rad, dayl, daylp, sinld, cosld, difpp, atmtr, dsinbe)
-         ! Determine tsunrise_atm, tsunset_atm and daytime
+      if (time%flDayStart) then
+         ! Photoperiodic daylength + sunrise/sunset (computed once/day)
+         call astro(time%daynr, state%cfg%meteo%lat, rad, dayl, daylp, sinld, cosld, difpp, atmtr, dsinbe)
          tsunrise_atm = 0.5d0 - daylp/48.d0
-         tsunset_atm = 0.5d0 + daylp/48.d0
+         tsunset_atm  = 0.5d0 + daylp/48.d0
       end if
 
-      ! Set time as fraction of the day
-      daytime = tc_t1900 + tc_dt - int(tc_t1900)
+      ! Time as fraction of the day
+      daytime = time%t1900 + time%dt - int(time%t1900)
 
-      ! Determine fraction of fluxes according to sine wave during this time step
+      ! Fraction of daily ET in this timestep (sine-wave over the photoperiod)
       if (daytime .lt. tsunrise_atm) then
          fraction = 0.d0
-      elseif (daytime .gt. tsunrise_atm .and. (daytime - tc_dt) .lt. tsunrise_atm) then
-         fraction = 0.5d0*(dcos(pi/2.d0 + (tsunrise_atm - 0.5d0)/ &
-                                (tsunset_atm - tsunrise_atm)*pi) - dcos(pi/2.d0 + (daytime - 0.5d0)/ &
-                                                                        (tsunset_atm - tsunrise_atm)*pi))
-      elseif ((daytime - tc_dt) .gt. tsunrise_atm .and. (daytime) .lt. tsunset_atm) then
-         fraction = 0.5d0*(dcos(pi/2.d0 + (daytime - tc_dt - 0.5d0)/ &
-                                (tsunset_atm - tsunrise_atm)*pi) - dcos(pi/2.d0 + (daytime - 0.5d0)/ &
-                                                                        (tsunset_atm - tsunrise_atm)*pi))
-      elseif (daytime .gt. tsunset_atm .and. (daytime - tc_dt) .lt. tsunset_atm) then
-         fraction = 0.5d0*(dcos(pi/2.d0 + (daytime - tc_dt - 0.5d0)/ &
-                                (tsunset_atm - tsunrise_atm)*pi) - dcos(pi/2.d0 + (tsunset_atm - 0.5d0)/ &
-                                                                        (tsunset_atm - tsunrise_atm)*pi))
+      elseif (daytime .gt. tsunrise_atm .and. (daytime - time%dt) .lt. tsunrise_atm) then
+         fraction = 0.5d0*(cos(pi/2.d0 + (tsunrise_atm - 0.5d0)/(tsunset_atm - tsunrise_atm)*pi) &
+                         - cos(pi/2.d0 + (daytime      - 0.5d0)/(tsunset_atm - tsunrise_atm)*pi))
+      elseif ((daytime - time%dt) .gt. tsunrise_atm .and. daytime .lt. tsunset_atm) then
+         fraction = 0.5d0*(cos(pi/2.d0 + (daytime - time%dt - 0.5d0)/(tsunset_atm - tsunrise_atm)*pi) &
+                         - cos(pi/2.d0 + (daytime           - 0.5d0)/(tsunset_atm - tsunrise_atm)*pi))
+      elseif (daytime .gt. tsunset_atm .and. (daytime - time%dt) .lt. tsunset_atm) then
+         fraction = 0.5d0*(cos(pi/2.d0 + (daytime - time%dt - 0.5d0)/(tsunset_atm - tsunrise_atm)*pi) &
+                         - cos(pi/2.d0 + (tsunset_atm       - 0.5d0)/(tsunset_atm - tsunrise_atm)*pi))
       else
          fraction = 0.d0
       end if
 
       ! Set E and T fluxes
-      state%atmosphere%peva = state%atmosphere%pevaday*fraction/tc_dt
-      state%atmosphere%ptra = state%atmosphere%ptraday*fraction/tc_dt
+      atmo%peva = atmo%pevaday * fraction / time%dt
+      atmo%ptra = atmo%ptraday * fraction / time%dt
 
-      ! Actual soil evaporation rate of current moment
-      ! SS-ATM A-2.6: nraida retired — read from state%atmosphere%nraida
-      call reduceva_dt(state%atmosphere%nraida, state)
+      ! Actual soil-evaporation rate of current moment
+      call reduceva_dt(atmo%nraida, state)
 
-      end associate  ! tc_fldaystart, tc_daynr, tc_t1900, tc_dt => state%timecontrol [TC-9]
-
-      return
+      end associate
    end subroutine ETSine
 
 end module meteodt_mod
