@@ -59,7 +59,6 @@
         icrop, flCropCalendar, cropstart, cropend, flCropEmergence,         &
         flCropHarvest, flCropReadFile, flCropPrep, flCropSow, flCropGerm,   &
         swinco, croptype, daycrop,         &  ! tsum/rd/lai/rdpot/wso/wst/wlv/cwdmpot/cwdm retired
-        tmn, rad,                                         &  ! wrt/cumdens retired
         swcrp,                                                             &  ! dvsend/swdrought/eff/amaxtb/tmpftb/tmnftb retired
         remoc, pld,                         &  ! swharv/q10 retired; swbulb removed (→state%crop%wofost%swbulb)
         flCropNut, nlue, anlv, anst, nmxlv, nmaxlv, nmaxst,               &
@@ -381,7 +380,7 @@
           sumtmin = sumtmin + state%atmosphere%atmin7(i)
         end do
         i = 1
-        state%atmosphere%atmin7(i) = tmn
+        state%atmosphere%atmin7(i) = state%atmosphere%tmn
         sumtmin = sumtmin + state%atmosphere%atmin7(i)
         tmnr = sumtmin / state%atmosphere%nofd
       else
@@ -402,7 +401,7 @@
 ! check DAYNR during the day!!!!!!          
           
         ! phenological development rate 
-        call astro (tc_daynr+1,state%cfg%meteo%lat,rad,dayl,daylp,sinld,cosld,difpp,atmtr,dsinbe)
+        call astro (tc_daynr+1,state%cfg%meteo%lat,state%atmosphere%rad,dayl,daylp,sinld,cosld,difpp,atmtr,dsinbe)
 
         ! only for bulb crops (tulips etc..)
         if(state%crop%wofost%swbulb) then                                     ! [GR-CROPWS B3] swbulb → state%crop%wofost%swbulb
@@ -434,7 +433,7 @@
 
 
         ! potential assimilation
-        call totass (dayl,amax,effc,state%crop%common%laipot,state%crop%kdif,rad,difpp,dsinbe,sinld,cosld,dtgapot)  ! [GR-CROPWS B3] state%crop%kdif → state%crop%kdif
+        call totass (dayl,amax,effc,state%crop%common%laipot,state%crop%kdif,state%atmosphere%rad,difpp,dsinbe,sinld,cosld,dtgapot)  ! [GR-CROPWS B3]
 
         ! correction for low minimum temperature
         dtgapot = dtgapot * afgen (state%crop%common%tmnftb,30,tmnr)
@@ -455,7 +454,7 @@
 
 
         ! actual assimilation
-        call totass (dayl,amax,effc,state%crop%lai,state%crop%kdif,rad,difpp,dsinbe,sinld,cosld,dtga)  ! [GR-CROPWS B3] state%crop%kdif → state%crop%kdif; state%crop%lai=legacy
+        call totass (dayl,amax,effc,state%crop%lai,state%crop%kdif,state%atmosphere%rad,difpp,dsinbe,sinld,cosld,dtga)  ! [GR-CROPWS B3]
 
         ! correction for low minimum temperature
         dtga = dtga * afgen (state%crop%common%tmnftb,30,tmnr)

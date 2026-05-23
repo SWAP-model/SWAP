@@ -401,7 +401,7 @@ contains
       ! plus tsunrise_atm/tsunset_atm remain bare globals. Migration belongs
       ! with the astro-caching arc when/if it's prioritized; per-day perf
       ! impact is negligible.
-      use variables, only: rad, daylp, difpp, atmtr, dsinbe, tsunrise_atm, tsunset_atm
+      use variables, only: daylp, difpp, atmtr, dsinbe, tsunrise_atm, tsunset_atm
       use et_mod,    only: reduceva_dt
       implicit none
 
@@ -414,7 +414,7 @@ contains
 
       if (time%flDayStart) then
          ! Photoperiodic daylength + sunrise/sunset (computed once/day)
-         call astro(time%daynr, state%cfg%meteo%lat, rad, dayl, daylp, sinld, cosld, difpp, atmtr, dsinbe)
+         call astro(time%daynr, state%cfg%meteo%lat, atmo%rad, dayl, daylp, sinld, cosld, difpp, atmtr, dsinbe)
          tsunrise_atm = 0.5d0 - daylp/48.d0
          tsunset_atm  = 0.5d0 + daylp/48.d0
       end if

@@ -67,11 +67,9 @@ module legacy_state_mod
       ! [GR-ATM 2026-05-23] finterception retired — see state%atmosphere%finterception
       real(real64), allocatable :: grain(:)  !! In case of detailed weather input, gross rain flux of each weather record (L/T)
       real(real64), allocatable :: nrain(:)  !! In case of detailed weather input, calculated netto rain of each weather record (L/T)
-      real(real64) :: rad  !! Global solar radiation (J/m2/d)
-      real(real64) :: tav  !! Average air temperature of a day (oC)
-      real(real64) :: tmn  !! Minimum air temperature of current day (oC)
+      ! [GR-ATM 2026-05-23] rad/tav/tmn retired — see state%atmosphere%{rad,Tav,tmn}
       real(real64) :: tmnr  !! Average of minimum air temperature during past 7 days (oC)
-      real(real64) :: tmx  !! Maximum air temperature of current day (oC)
+      ! [GR-ATM 2026-05-23] tmx retired — see state%atmosphere%tmx
       real(real64), allocatable :: tpot(:)  !! In case of detailed weather input, calculated Tpot of each weather record (L/T)
       real(real64), allocatable :: wet(:)  !! Fraction of each day the crop is wet (L)
       character(len=200) :: metfil  !! Name of meteorological input file

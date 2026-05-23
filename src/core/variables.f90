@@ -204,7 +204,7 @@
       ! real(8) :: pevaday     ! Potential soil evaporation of one day (L)
       ! real(8) :: ptra        ! Potential transpiration flux (L/T)
       ! real(8) :: ptraday     ! Potential transpiration of one day (L)
-      real(8)   rad                ! Global solar radiation (J/m2/d)
+      ! [GR-ATM 2026-05-23] rad retired — see state%atmosphere%rad
       ! [GR-CROP C12] retired 2026-05-14 — moved to state%atmosphere%rainamount (Arc 8)
       ! real(8)   rainamount(mrain)  ! Array with short duration rainfall amounts (L)
       ! [GR-CROP-DVS] raintab retired — see state%cfg%meteo%raintab
@@ -214,14 +214,14 @@
       ! real(8)   raintimearray(mrain) ! Array with times (T) at which rainfall intensity changes
       ! [GR-ATM C8] retired 2026-05-14 — moved to state%atmosphere%rh (GR-ATM arc)
       ! real(8)   rh                 ! Relative air humidity (-)
-      real(8)   tav                ! Average air temperature of a day (oC)
+      ! [GR-ATM 2026-05-23] tav retired — see state%atmosphere%Tav
       ! [GR-ATM C8] retired 2026-05-14 — moved to state%atmosphere%tavd (GR-ATM arc)
       ! real(8)   tavd               ! Average air temperature during day time (oC)
       ! [SS-TC] retired 2026-05-12 — moved to state%timecontrol%timjan1 (ADR 0041)
       ! real(8)   timjan1            ! moved to state%timecontrol%timjan1
-      real(8)   tmn                ! Minimum air temperature of current day (oC)
+      ! [GR-ATM 2026-05-23] tmn retired — see state%atmosphere%tmn
       real(8)   tmnr               ! Average of minimum air temperature during past 7 days (oC)
-      real(8)   tmx                ! Maximum air temperature of current day (oC)
+      ! [GR-ATM 2026-05-23] tmx retired — see state%atmosphere%tmx
       real(8)   tpot(96)           ! In case of detailed weather input, calculated Tpot of each weather record (L/T)
       ! [SS-SWC] retired 2026-05-12 — moved to state%soilwater%tra (ADR 0038)
       ! real(8)   tra                ! Actual transpiration flux (L/T)

@@ -117,6 +117,11 @@ module atmosphere_state_mod
       real(real64) :: finterception = 1.0_real64  !< net/gross rain ratio after interception (-); written by meteo_orchestrator per day, read in meteodt per timestep
       real(real64) :: dtEventRain   = 0.0_real64  !< time-step length until next precipitation event (d); written/read in meteodt
 
+      ! Today's daily-meteo scalars (set by ReadMeteoDay or sub-daily aggregator)
+      real(real64) :: rad = 0.0_real64  !< today's daily-total radiation (J/m2/d)
+      real(real64) :: tmn = 0.0_real64  !< today's minimum air temperature (°C)
+      real(real64) :: tmx = 0.0_real64  !< today's maximum air temperature (°C)
+
       ! -----------------------------------------------------------------------
       ! Per-day scalars (9) — updated once per day in ProcessMeteoDay
       ! -----------------------------------------------------------------------

@@ -64,12 +64,10 @@ contains
   !! (detailed meteo input)
   !! @endnote
   subroutine ReadMeteoDay(state, config)
-      ! DEFERRED — rad/tmn/tmx/tav (daily meteo scalars) dual-written to bare
-      ! globals because downstream consumers (meteo_orchestrator, cropgrowth)
-      ! still read them. Migration to state%atmosphere is a coordinated
-      ! multi-file commit; pathatm/metfil/det* arrays + irectotal stay too.
-      use variables, only: rad, tmn, tmx, tav,                  &
-                           pathatm, metfil,                      &
+      ! DEFERRED — pathatm/metfil (file path strings) + det* sub-daily detail
+      ! arrays + irectotal counter remain bare globals (year-long scratch from
+      ! meteo readers, not in state schema yet).
+      use variables, only: pathatm, metfil,                      &
                            detrecord, dettime, detrad, dethum,   &
                            dettav, detrain, detwind, irectotal
       use precipitation_mod, only: PartitionPrecipitation
@@ -101,32 +99,32 @@ contains
 
          ! Pass on weather values of today
          today_idx = time%daymeteo + 1 - atmo%daynrfirst
-         rad  = atmo%arad(today_idx)
-         tmn  = atmo%atmn(today_idx)
-         tmx  = atmo%atmx(today_idx)
+         atmo%rad = atmo%arad(today_idx)
+         atmo%tmn = atmo%atmn(today_idx)
+         atmo%tmx = atmo%atmx(today_idx)
          hum  = atmo%ahum(today_idx)
          win  = atmo%awin(today_idx)
          etr  = atmo%aetr(today_idx)
 
          ! If hum is missing or tav cannot be calculated: set rh at -99.0
          atmo%rh = 1.0d0
-         if (hum .lt. -98.0d0 .or. tmn .lt. -98.0d0 .or. tmx .lt. -98.0d0) atmo%rh = -99.0d0
+         if (hum .lt. -98.0d0 .or. atmo%tmn .lt. -98.0d0 .or. atmo%tmx .lt. -98.0d0) atmo%rh = -99.0d0
 
          ! 24h average + day temperature
-         atmo%Tav  = (tmx + tmn) * 0.5d0
-         tav       = atmo%Tav   ! dual-write — bare 'tav' still consumed in meteo_orchestrator subdaily
-         atmo%tavd = (tmx + atmo%Tav) * 0.5d0
+         atmo%Tav  = (atmo%tmx + atmo%tmn) * 0.5d0
+         atmo%tavd = (atmo%tmx + atmo%Tav) * 0.5d0
 
          if (atmo%rh .ge. -98.0d0) then
             ! Saturated vapour pressure [kPa]
-            svp = 0.3055d0 * (exp(17.27d0*tmn/(tmn+237.3d0)) + exp(17.27d0*tmx/(tmx+237.3d0)))
+            svp = 0.3055d0 * (exp(17.27d0*atmo%tmn/(atmo%tmn+237.3d0)) &
+                            + exp(17.27d0*atmo%tmx/(atmo%tmx+237.3d0)))
             atmo%rh = min(hum/svp, 1.0d0)
          endif
 
          ! CFO output snapshot (PEARL coupling) — sole writers to atmo%out_*
-         atmo%out_rad = real(rad, kind=8)
-         atmo%out_tmn = real(tmn, kind=8)
-         atmo%out_tmx = real(tmx, kind=8)
+         atmo%out_rad = atmo%rad
+         atmo%out_tmn = atmo%tmn
+         atmo%out_tmx = atmo%tmx
          atmo%out_hum = real(hum, kind=8)
          atmo%out_win = real(win, kind=8)
          atmo%out_etr = real(etr, kind=8) * 0.001d0

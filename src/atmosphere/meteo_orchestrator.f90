@@ -78,7 +78,7 @@ contains
   !! Single ET record per day. Body is the daily-only slice of the former
   !! ProcessMeteoDay: Sections 3, 4, 5(daily branch), 6, 7, 9.
   subroutine process_meteo_day_daily(state, config)
-    use variables, only: rad, croptype, gc, flCropHarvest, swusecn
+    use variables, only: croptype, gc, flCropHarvest, swusecn
     use swap_constants, only: nihil, small
     type(swap_state_t),  intent(inout) :: state
     type(swap_config_t), intent(in)    :: config
@@ -195,7 +195,7 @@ contains
   !! ProcessMeteoDay: Section 3 (once); per-record Sections 4, 5(subdaily branch),
   !! 6, 7, 8; then Section 10 (daily totals).
   subroutine process_meteo_day_subdaily(state, config)
-    use variables, only: rad, tmn, tmx, croptype, gc, siccaptb, tav
+    use variables, only: croptype, gc, siccaptb
     use swap_array_dimensions, only: magrs
     use array_utils, only: afgen
     use swap_constants, only: nihil
@@ -289,22 +289,20 @@ contains
       sumtav = sumtav + state%atmosphere%atav(i)
     enddo
     state%atmosphere%Tav = sumtav * metperiod
-    tav = state%atmosphere%Tav   ! [SS-GR-ATM B24] dual-write — legacy tav consumed by snow.f90/swapoutput.f90
 
     ! Minimum and maximum temperature of today
-    tmx = -50.d0
-    tmn = 99.d0
+    state%atmosphere%tmx = -50.d0
+    state%atmosphere%tmn = 99.d0
     do i = 1, config%meteo%nmetdetail
-      tmx = max(tmx,state%atmosphere%atav(i))
-      tmn = min(tmn,state%atmosphere%atav(i))
+      state%atmosphere%tmx = max(state%atmosphere%tmx, state%atmosphere%atav(i))
+      state%atmosphere%tmn = min(state%atmosphere%tmn, state%atmosphere%atav(i))
     enddo
 
     ! Calculate saturated vapour pressure [kpa]
-    svp = 0.3055d0*(exp(17.27d0*tmn/(tmn+237.3d0)) + &
-                    exp(17.27d0*tmx/(tmx+237.3d0)))
+    svp = 0.3055d0*(exp(17.27d0*state%atmosphere%tmn/(state%atmosphere%tmn+237.3d0)) + &
+                    exp(17.27d0*state%atmosphere%tmx/(state%atmosphere%tmx+237.3d0)))
     ! Calculate relative humidity [fraction]
-    state%atmosphere%rh = min(hum/svp,1.0d0)   ! [SS-GR-ATM B24] direct state write
-    ! [SS-GR-ATM B.5] rh dual-write to legacy global RETIRED: no crop consumers remain
+    state%atmosphere%rh = min(hum/svp, 1.0d0)
 
     ! Average temperature between 6 and 18 hour
     sumtav = 0.d0
@@ -315,15 +313,14 @@ contains
       sumtav = sumtav + state%atmosphere%atav(i)
       count = count + 1
     enddo
-    state%atmosphere%tavd = sumtav / count   ! [SS-GR-ATM B24] direct state write
-    ! [SS-GR-ATM B.5] tavd dual-write to legacy global RETIRED: no crop consumers remain
+    state%atmosphere%tavd = sumtav / count
 
     ! Daily radiation (J/m2/d) and atmospheric demand (cm/d)
-    rad = 0.d0
+    state%atmosphere%rad = 0.d0
     at_atmdem = 0.d0
-    do i = 1,config%meteo%nmetdetail
-      rad = rad + state%atmosphere%arad(i)
-      at_atmdem = at_atmdem + state%atmosphere%tpot(i)
+    do i = 1, config%meteo%nmetdetail
+      state%atmosphere%rad = state%atmosphere%rad + state%atmosphere%arad(i)
+      at_atmdem            = at_atmdem            + state%atmosphere%tpot(i)
     enddo
 
     ! Fluxes of current time step (start of the day)
@@ -388,7 +385,7 @@ contains
   !! Writes state%crop%es0/et0/ew0 and returns pmo for caller to unpack
   !! Edirect/Tdirect/Tdirectwet/Edirectpond.
   subroutine compute_reference_et(state, config, irecord, etr, hum_in, win_in, rcs, pmo)
-    use variables, only: rad, angstroma, angstromb, daylp, tmn, tmx, difpp, &
+    use variables, only: angstroma, angstromb, daylp, difpp, &
                          dsinbe, atmtr, rsoil
     type(swap_state_t),  intent(inout) :: state
     type(swap_config_t), intent(in)    :: config
@@ -436,7 +433,7 @@ contains
         rad_loc = state%atmosphere%arad(irecord) / metperiod     ! from j/m2/period to j/m2/d
         state%atmosphere%Tav = state%atmosphere%atav(irecord)
       else
-        rad_loc = rad
+        rad_loc = state%atmosphere%rad
       endif
 
       ! Calculate evapotranspiration using Penman-Monteith: et0, ew0, es0 (mm/d)
@@ -459,8 +456,8 @@ contains
 
       pmi%rad    = rad_loc
       pmi%tav    = state%atmosphere%Tav
-      pmi%tmn    = tmn
-      pmi%tmx    = tmx
+      pmi%tmn    = state%atmosphere%tmn
+      pmi%tmx    = state%atmosphere%tmx
       pmi%hum    = hum_in
       pmi%win    = win_in
       pmi%atmtr  = atmtr
