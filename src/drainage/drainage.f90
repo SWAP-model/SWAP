@@ -94,7 +94,6 @@ contains
       ! [GR-BH Task 35] drainage_init is called AFTER CalcGrid (swap_mod.f90 line 108 vs 185),
       ! so state%mesh%numnod is already populated. numnod global deleted; use state%mesh%numnod.
       ! [GR-BH Task 37] nrlevs global deleted; use config%drain%nrlevs (authoritative single source).
-      ! [SS-GR-FINAL B10] MAOWL → swap_array_dimensions (dimension constant)
       use swap_array_dimensions, only: MAOWL
       type(swap_state_t),  intent(inout) :: state
       type(swap_config_t), intent(in)    :: config
@@ -197,7 +196,6 @@ contains
       use variables, only: &   ! [SS-GR-FINAL B10] residuals — all DEFERRED
          ! DEFERRED: drares/infres/shape — drain resistance config; Phase C3
          drares, infres, shape
-      ! [SS-TC TC-14] t1900, dt read via state%timecontrol (ADR 0041)
       use array_utils, only: afgen
 
       ! --- global
@@ -460,11 +458,6 @@ contains
                ! SS-DRST Phase 2 Task 4: qdrain dropped — bocodrb writes state%drainage%qdrain directly.
                ! ADR 0031 Phase 2 Task 5: zTopDisLay removed from use-list; declared local below.
                ! SS-SWC Phase 2 S-2.8: gwl removed from use-list; read from state%soilwater%gwl.
-               ! [SS-SWC S-2.12B] fluseksatexm retired from variables — read via state%soilwater
-               ! [SS-TC TC-14] t1900, dt read via state%timecontrol (ADR 0041)
-               ! GR-BH Task 28: nrlevs/numnod/dz/layer/ksatfit/ksatexm/cofani/l/zbotdr/
-               !   swdivd/Swdivdinf/Swnrsrf/SwTopnrsrf/FacDpthInf/owltab off variables → state.
-               ! [SS-GR-FINAL B10] madr → swap_array_dimensions (dimension constant)
                use swap_array_dimensions, only: madr
                ! [GR-DRA 2026-05-23] dramet/swdtyp/NumLevRapDra/swdislay/swtopdislay/
                ! ftopdislay/nowltab retired — aliased from state%drainage below.
