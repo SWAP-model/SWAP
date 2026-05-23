@@ -160,8 +160,8 @@ subroutine test_config_to_variables_surface_water_with_management()
    use swap_config_mod, only: swap_config_t
    use config_to_variables_mod, only: config_to_variables
    use swap_state_mod, only: swap_state_t
-   use variables, only: swqhr, osswlm, nmper, &  ! swsrf/swsec retired
-                        impend, swman, wscap, wldip, intwl, hbweir
+   ! [GR-DRA 2026-05-23] osswlm/nmper/impend/wscap/wldip/intwl retired — read via state%surfacewater%
+   use variables, only: swqhr, swman, hbweir
    implicit none
    type(swap_config_t) :: config
    type(swap_state_t)  :: state
@@ -189,18 +189,18 @@ subroutine test_config_to_variables_surface_water_with_management()
    @assertEqual(2,        config%surface_water%swsrf)
    @assertEqual(2,        config%surface_water%swsec)
    @assertEqual(1,        swqhr)
-   @assertEqual(0.05d0,   osswlm)
-   @assertEqual(2,        nmper)
-   @assertEqual(365.0d0,  impend(1))
-   @assertEqual(730.0d0,  impend(2))
+   @assertEqual(0.05d0,   state%surfacewater%osswlm)
+   @assertEqual(2,        state%surfacewater%nmper)
+   @assertEqual(365.0d0,  state%surfacewater%impend(1))
+   @assertEqual(730.0d0,  state%surfacewater%impend(2))
    @assertEqual(1,        swman(1))
    @assertEqual(2,        swman(2))
-   @assertEqual(0.0d0,    wscap(1))
-   @assertEqual(0.5d0,    wscap(2))
-   @assertEqual(10.0d0,   wldip(1))
-   @assertEqual(15.0d0,   wldip(2))
-   @assertEqual(1,        intwl(1))
-   @assertEqual(7,        intwl(2))
+   @assertEqual(0.0d0,    state%surfacewater%wscap(1))
+   @assertEqual(0.5d0,    state%surfacewater%wscap(2))
+   @assertEqual(10.0d0,   state%surfacewater%wldip(1))
+   @assertEqual(15.0d0,   state%surfacewater%wldip(2))
+   @assertEqual(1,        state%surfacewater%intwl(1))
+   @assertEqual(7,        state%surfacewater%intwl(2))
    @assertEqual(-50.0d0,  hbweir(1))
    @assertEqual(-75.0d0,  hbweir(2))
 end subroutine test_config_to_variables_surface_water_with_management

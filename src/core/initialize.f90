@@ -518,16 +518,16 @@
       ! [GR-DRA 2026-05-23] swallo/swdtyp retired — see state%drainage%{swallo,swdtyp}
       ! [GR-BH Task 37] swnrsrf retired to state%drainage%swnrsrf
       swqhr                = 0
-      nrpri                = 0
+      ! [GR-DRA 2026-05-23] nrpri retired — see state%surfacewater%nrpri
       ! [SS-GR-FINAL D1] nrsec zero-fill dropped — declaration retired
-      nmper                = 0
+      ! [GR-DRA 2026-05-23] nmper retired — see state%surfacewater%nmper
       swman                = 0
       ! [GR-BH Task 37] SwTopnrsrf retired to state%drainage%swtopnrsrf
       ! [SS-GR-FINAL D1] nqh/drf/swb zero-fills dropped — declarations retired
       nphase               = 0
       nodhd                = 0
       ! SS-SWST Phase 2 Task 11 C3: numadj/imper removed (state%surfacewater owns them).
-      intwl                = 0
+      ! [GR-DRA 2026-05-23] intwl retired — see state%surfacewater%intwl
       ! numadj=0, imper=1 set by surfacewater_state_t defaults.
       nowltab              = 0
       widthr                = 0.0d0
@@ -540,16 +540,14 @@
       rexit                 = 0.0d0
       gwlinf                = 0.0d0
       ! [GR-DRA 2026-05-23] wlptab retired — see state%surfacewater%wlptab
-      impend                = 0.0d0
-      wldip                 = 0.0d0
-      wscap                 = 0.0d0
+      ! [GR-DRA 2026-05-23] impend/wldip/wscap retired — see state%surfacewater%X
       hbweir                = 0.0d0
-      osswlm                = 0.0d0
+      ! [GR-DRA 2026-05-23] osswlm retired — see state%surfacewater%osswlm
       ! SS-SWST Phase 2 Task 11 C3: wlstar removed (state%surfacewater%wlstar, default=0).
       wlp                   = 0.0d0
       alphaw                = 0.0d0
       betaw                 = 0.0d0
-      dropr                 = 0.0d0
+      ! [GR-DRA 2026-05-23] dropr retired — see state%surfacewater%dropr
       hdepth                = 0.0d0
       gwlcrit               = 0.0d0
       hcrit                 = 0.0d0

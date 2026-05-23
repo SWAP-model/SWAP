@@ -314,10 +314,8 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
       ! [SS-TC TC-14] T retired — read via state%timecontrol%t
       ! GR-BH Task 28: zbotdr/NUMNOD/DZ off variables → state%drainage/mesh aliases.
       use variables, only: &   ! [SS-GR-FINAL B10] residuals — all DEFERRED
-         ! DEFERRED: NRPRI/nmper — primary drain count / periods; config; Phase C3
-         NRPRI, nmper, &
-         ! DEFERRED: impend/wldip/intwl/osswlm/wscap/dropr — surface water management config; Phase C3
-         impend, wldip, intwl, osswlm, wscap, dropr, &
+         ! [GR-DRA 2026-05-23] NRPRI/nmper/impend/wldip/intwl/osswlm/wscap/dropr
+         ! retired — aliased from state%surfacewater below.
          ! DEFERRED: swman/hbweir/wlsman/gwlcrit/nphase/VCRIT/NODHD/HCRIT — weir/management config; Phase C3
          swman, hbweir, wlsman, gwlcrit, nphase, VCRIT, NODHD, HCRIT, &
          ! DEFERRED: SWQHR — discharge rating switch; config; Phase C3
@@ -371,7 +369,15 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
          swscre      => state%timecontrol%swscre,   &  ! [SS-BMI2 Task 4]
          dr_zbotdr   => state%drainage%zbotdr,      &  ! GR-BH Task 28
          ms_numnod   => state%mesh%numnod,          &  ! GR-BH Task 28
-         ms_dz       => state%mesh%dz               )  ! GR-BH Task 28
+         ms_dz       => state%mesh%dz,              &  ! GR-BH Task 28
+         nrpri  => state%surfacewater%nrpri,        &  ! [GR-DRA 2026-05-23]
+         nmper  => state%surfacewater%nmper,        &
+         impend => state%surfacewater%impend,       &
+         wldip  => state%surfacewater%wldip,        &
+         intwl  => state%surfacewater%intwl,        &
+         osswlm => state%surfacewater%osswlm,       &
+         wscap  => state%surfacewater%wscap,        &
+         dropr  => state%surfacewater%dropr         )
 
 ! --- resetting of flag for overflowing of automatic weir
       ! overfl global write dropped: only sw_overfl (state alias) used henceforth.

@@ -738,15 +738,14 @@ contains
   ! GR-BH Task 28: zbotdr, l, nrlevs, swnrsrf off variables → state%drainage%X.
   use variables, only: &   ! [SS-GR-FINAL B10] residuals — all DEFERRED
      ! swsec/swsrf retired (→state%cfg%surface_water%X); pilot
-     ! DEFERRED: nrpri/nmper — primary drainage count / periods; config; Phase C3
-     nrpri, nmper, &
+     ! [GR-DRA 2026-05-23] nrpri/nmper/impend/wscap retired — aliased from state%surfacewater below.
      ! DEFERRED: taludr/widthr/rdrain — drain geometry; config; Phase C3
      taludr, widthr, rdrain, &
      ! pondmx retired (→state%surfacewater%pondmx)
 
      ! [GR-DRA 2026-05-23] swdtyp retired — aliased from state%drainage below.
-     ! DEFERRED: wlp/rinfi/rentry/rexit/gwlinf/impend/wscap — surface water config; Phase C3
-     wlp, rinfi, rentry, rexit, gwlinf, impend, wscap, &
+     ! DEFERRED: wlp/rinfi/rentry/rexit/gwlinf — surface water config; Phase C3
+     wlp, rinfi, rentry, rexit, gwlinf, &
      ! DEFERRED: rsurfdeep/rsurfshallow — surface resistance config; Phase C3
      rsurfdeep, rsurfshallow
      ! [GR-DRA 2026-05-23] cofintfl/expintfl/NumLevRapdra retired — aliased from state%drainage below.
@@ -780,7 +779,11 @@ contains
                   pond    => state%soilwater%pond,      &
                   cofintfl => state%drainage%cofintfl,  &  ! [GR-DRA 2026-05-23]
                   expintfl => state%drainage%expintfl,  &  ! [GR-DRA 2026-05-23]
-                  swdtyp   => state%drainage%swdtyp     )  ! [GR-DRA 2026-05-23]
+                  swdtyp   => state%drainage%swdtyp,    &  ! [GR-DRA 2026-05-23]
+                  nrpri  => state%surfacewater%nrpri,   &
+                  nmper  => state%surfacewater%nmper,   &
+                  impend => state%surfacewater%impend,  &
+                  wscap  => state%surfacewater%wscap    )
 
 ! --- Spec D7: zero drainage when groundwater is dry.
 !     Was in SurfaceWater(2) in legacy code; relocated here per ADR 0030

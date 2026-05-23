@@ -1317,9 +1317,11 @@
       ! [GR-DRA 2026-05-23] swallo/swdtyp retired — see state%drainage%{swallo,swdtyp}
       ! [GR-BH Task 37] swnrsrf retired — moved to state%drainage%swnrsrf
       ! [GR-CROP-DVS] swsec retired — see state%cfg%surface_water%swsec
-      integer swqhr,nrpri
+      integer swqhr
+      ! [GR-DRA 2026-05-23] nrpri retired — see state%surfacewater%nrpri
       ! [SS-GR-FINAL D1] nrsec retired — 0 consumers
-      integer nmper,swman(mamp)
+      ! [GR-DRA 2026-05-23] nmper retired — see state%surfacewater%nmper
+      integer swman(mamp)
       ! [GR-BH Task 37] SwTopnrsrf retired — moved to state%drainage%swtopnrsrf
       ! SS-SWST Phase 2 Task 11 C2: numadj/imper removed — state%surfacewater owns them.
       ! [SS-GR-FINAL D1] nqh retired — 0 consumers
@@ -1327,20 +1329,23 @@
       ! [SS-GR-FINAL D1] swb retired — 0 consumers
       integer nphase(mamp),nodhd(mamp)
       ! numadj removed (surfacewater_state_t%numadj)
-      integer intwl(mamp)
+      ! [GR-DRA 2026-05-23] intwl retired — see state%surfacewater%intwl
       ! imper removed (surfacewater_state_t%imper)
       integer nowltab(madr)
       real(8) widthr(Madr),taludr(Madr),rdrain(Madr),rsurfdeep
       real(8) rsurfshallow,rinfi(Madr),rentry(Madr),rexit(Madr)
       real(8) gwlinf(Madr)
       ! [GR-DRA 2026-05-23] wlptab retired — see state%surfacewater%wlptab
-      real(8) impend(mamp)
-      real(8) wldip(mamp),wscap(mamp),hbweir(mamp)
+      ! [GR-DRA 2026-05-23] impend retired — see state%surfacewater%impend
+      ! [GR-DRA 2026-05-23] wldip/wscap retired — see state%surfacewater%{wldip,wscap}
+      real(8) hbweir(mamp)
       ! SS-SWST Phase 2 Task 11 C2: wlstar removed — state%surfacewater%wlstar owns it.
-      real(8) osswlm,wlp,alphaw(mamp),betaw(mamp)
+      ! [GR-DRA 2026-05-23] osswlm retired — see state%surfacewater%osswlm
+      real(8) wlp,alphaw(mamp),betaw(mamp)
       ! wlstar removed (surfacewater_state_t%wlstar)
       ! [SS-GR-FINAL D6] wls1_init retired — c2v write tombstoned in D4/C4; state%surfacewater owns it; 0 consumers
-      real(8) dropr(mamp*mamte),hdepth(mamp*mamte)
+      ! [GR-DRA 2026-05-23] dropr retired — see state%surfacewater%dropr
+      real(8) hdepth(mamp*mamte)
       real(8) gwlcrit(mamp,mamte),hcrit(mamp,mamte),vcrit(mamp,mamte)
       real(8) hqhtab(mamp,mamte)
       ! [GR-DRA 2026-05-23] qqhtab retired — see state%surfacewater%qqhtab

@@ -1072,13 +1072,17 @@ contains
       ! module global. drainage.altcu /= 0 is rejected upstream (Task 7),
       ! so this simplifies to wlact.
       ! [GR-FINAL C4] wls1_init write dropped: W-global (0 consumers; state%surfacewater seeded in swap_mod)
-      osswlm    = config%surface_water%osswlm
-      nmper  = config%surface_water%nmper
+      state%surfacewater%osswlm = config%surface_water%osswlm
+      state%surfacewater%nmper  = config%surface_water%nmper
       swqhr  = config%surface_water%swqhr
 
       if (allocated(config%surface_water%impend)) then
-         do i = 1, min(size(config%surface_water%impend), size(impend))
-            impend(i) = config%surface_water%impend(i)
+         if (.not. allocated(state%surfacewater%impend)) then
+            allocate(state%surfacewater%impend(mamp))
+            state%surfacewater%impend = 0.0d0
+         end if
+         do i = 1, min(size(config%surface_water%impend), size(state%surfacewater%impend))
+            state%surfacewater%impend(i) = config%surface_water%impend(i)
          end do
       end if
       if (allocated(config%surface_water%swman)) then
@@ -1087,18 +1091,30 @@ contains
          end do
       end if
       if (allocated(config%surface_water%wscap)) then
-         do i = 1, min(size(config%surface_water%wscap), size(wscap))
-            wscap(i) = config%surface_water%wscap(i)
+         if (.not. allocated(state%surfacewater%wscap)) then
+            allocate(state%surfacewater%wscap(mamp))
+            state%surfacewater%wscap = 0.0d0
+         end if
+         do i = 1, min(size(config%surface_water%wscap), size(state%surfacewater%wscap))
+            state%surfacewater%wscap(i) = config%surface_water%wscap(i)
          end do
       end if
       if (allocated(config%surface_water%wldip)) then
-         do i = 1, min(size(config%surface_water%wldip), size(wldip))
-            wldip(i) = config%surface_water%wldip(i)
+         if (.not. allocated(state%surfacewater%wldip)) then
+            allocate(state%surfacewater%wldip(mamp))
+            state%surfacewater%wldip = 0.0d0
+         end if
+         do i = 1, min(size(config%surface_water%wldip), size(state%surfacewater%wldip))
+            state%surfacewater%wldip(i) = config%surface_water%wldip(i)
          end do
       end if
       if (allocated(config%surface_water%intwl)) then
-         do i = 1, min(size(config%surface_water%intwl), size(intwl))
-            intwl(i) = config%surface_water%intwl(i)
+         if (.not. allocated(state%surfacewater%intwl)) then
+            allocate(state%surfacewater%intwl(mamp))
+            state%surfacewater%intwl = 0
+         end if
+         do i = 1, min(size(config%surface_water%intwl), size(state%surfacewater%intwl))
+            state%surfacewater%intwl(i) = config%surface_water%intwl(i)
          end do
       end if
       ! Note: alphaw arrays carry the post-finalize-normalized values

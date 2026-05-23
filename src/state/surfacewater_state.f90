@@ -10,7 +10,7 @@ module surfacewater_state_mod
    use surface_water_config_mod, only: surface_water_config_t
    use drainage_config_mod,      only: drainage_config_t
    use error_mod,                only: fatalerr_collected
-   use swap_array_dimensions,    only: MAIRG, MAWLP, MAWLS
+   use swap_array_dimensions,    only: MAIRG, MAWLP, MAWLS, MAMP, MAMTE
    implicit none
    private
    public :: surfacewater_state_t
@@ -85,6 +85,18 @@ module surfacewater_state_mod
       real(real64), allocatable :: wlptab(:)  !! primary SW level table (2*MAWLP)
       real(real64), allocatable :: wlstab(:)  !! secondary SW level table (2*MAWLS)
 
+      ! Surface-water management config (swsrf=3/swman path, dormant in
+      ! current TOML pipeline — surfacewater_state%init rejects swsrf=3).
+      ! Sized to MAMP / MAMP*MAMTE per legacy. No TOML writer yet.
+      integer :: nrpri = 0    !! number of primary SW management periods
+      integer :: nmper = 0    !! number of SW management periods
+      real(real64) :: osswlm = 0.0_real64   !! oscillation magnitude threshold (cm)
+      integer,      allocatable :: intwl(:)   !! interval per period (MAMP)
+      real(real64), allocatable :: impend(:)  !! period end-time (MAMP)
+      real(real64), allocatable :: wldip(:)   !! water-level dip per period (MAMP)
+      real(real64), allocatable :: wscap(:)   !! water-supply capacity per period (MAMP)
+      real(real64), allocatable :: dropr(:)   !! water-level drop rate per period (MAMP*MAMTE)
+
       !> [SS-BMI2] Surface water output row buffer (SurfaceWaterOutput stream).
       !! Currently placeholder only — SurfaceWaterOutput body was deleted by ADR 0009 Phase 5+
       !! (outdrf/outswb deleted, swdrf=0, swswb=0).
@@ -143,6 +155,25 @@ contains
       ! Surface-water level tables (dormant — no TOML writer yet).
       allocate(self%wlptab(2*MAWLP)); self%wlptab = 0.0_real64
       allocate(self%wlstab(2*MAWLS)); self%wlstab = 0.0_real64
+
+      ! Surface-water management period config (Pattern 9 — config_to_variables
+      ! may have already allocated and populated these arrays before surfacewater
+      ! init runs; allocate only when not yet allocated).
+      if (.not. allocated(self%intwl)) then
+         allocate(self%intwl(MAMP));        self%intwl  = 0
+      end if
+      if (.not. allocated(self%impend)) then
+         allocate(self%impend(MAMP));       self%impend = 0.0_real64
+      end if
+      if (.not. allocated(self%wldip)) then
+         allocate(self%wldip(MAMP));        self%wldip  = 0.0_real64
+      end if
+      if (.not. allocated(self%wscap)) then
+         allocate(self%wscap(MAMP));        self%wscap  = 0.0_real64
+      end if
+      if (.not. allocated(self%dropr)) then
+         allocate(self%dropr(MAMP*MAMTE));  self%dropr  = 0.0_real64
+      end if
 
       ! ---- L1: zero defaults ----
       self%numadj = 0
