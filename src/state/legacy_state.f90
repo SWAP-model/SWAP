@@ -52,7 +52,7 @@ module legacy_state_mod
       real(real64), allocatable :: atmn(:)  !! Array with daily minimum temperature input data (  )
       real(real64), allocatable :: atmx(:)  !! Array with daily maximum temperature input data (  )
       real(real64), allocatable :: awin(:)  !! Array with daily wind speed input data (L/T)
-      real(real64) :: daylp  !! Photoperiodic daylength in hours (T)
+      ! [GR-ATM 2026-05-23] daylp retired — see state%atmosphere%daylp
       ! [GR-ATM 2026-05-23] dethum/detrad/detrain/dettav/dettime/detwind retired — see state%atmosphere%det*
       ! [GR-ATM 2026-05-23] dtEventRain retired — see state%atmosphere%dtEventRain
       real(real64), allocatable :: epot(:)  !! In case of detailed weather input, calculated Epot of each weather record (L/T)
@@ -67,8 +67,7 @@ module legacy_state_mod
       real(real64), allocatable :: wet(:)  !! Fraction of each day the crop is wet (L)
       character(len=200) :: metfil  !! Name of meteorological input file
       character(len=80) :: pathatm  !! Path to folder with meteorological input files
-      real(real64) :: tsunrise_atm  !! Time of sunrise (fraction of day) - from meteodt.f90 ETSine
-      real(real64) :: tsunset_atm  !! Time of sunset (fraction of day) - from meteodt.f90 ETSine
+      ! [GR-ATM 2026-05-23] tsunrise_atm/tsunset_atm retired — see state%atmosphere%tsun{rise,set}_atm
       integer :: nod10_cn  !! Node at -10cm for CN runoff method - from meteoday.f90 CNmethod
       integer :: icn_atm  !! Current position in CN time table - from meteoday.f90 CNmethod
       integer :: irrigevent  !! Switch: 0 = no irrigation; 1 = fixed irrigation event; 2 = scheduled irrigation event
@@ -114,7 +113,7 @@ module legacy_state_mod
       integer :: icrop  !! Current crop number
       integer :: idsl  !! Switch for crop development before anthesis: 0 = depends on temperature;
       integer :: noddrz  !! Compartment number at bottom root zone (-)
-      real(real64) :: atmtr  !! Daily atmospheric transmission (-)
+      ! [GR-ATM 2026-05-23] atmtr retired — see state%atmosphere%atmtr
       real(real64) :: agerm  !! Coefficient a  of germination
       real(real64) :: cgerm  !! Coefficient c  of germination
       real(real64) :: bgerm  !! Coefficient b  of germination
@@ -124,10 +123,10 @@ module legacy_state_mod
       real(real64) :: c_mroot  !! Maintenance coefficient of root [0.0..1.0 kg O2/kg/d, R]
       real(real64), allocatable :: cropend(:)  !! Array with crop end dates
       real(real64), allocatable :: cropstart(:)  !! Array with crop start dates
-      real(real64) :: difpp  !! Diffuse irradiation perpendicular to direction of light (J/m2/s)
+      ! [GR-ATM 2026-05-23] difpp retired — see state%atmosphere%difpp
       real(real64) :: dlc  !! Shortest day length (T) for any crop development
       real(real64) :: dlo  !! Minimum day length (T) for optimal crop development
-      real(real64) :: dsinbe  !! Daily total of effective solar height (s)
+      ! [GR-ATM 2026-05-23] dsinbe retired — see state%atmosphere%dsinbe
       real(real64) :: f_senes  !! Reduction factor for senescence, used for maintenance respiration [0..1.0 -, R]
       real(real64) :: gasst  !! Total gross assimilation for actual crop (kg/ha)
       real(real64) :: gasstpot  !! Total gross assimilation for potential crop (kg/ha)

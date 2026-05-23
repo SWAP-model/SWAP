@@ -397,43 +397,34 @@ contains
   !! Note: tsunrise_atm and tsunset_atm are now module-level in variables.f90
   !! @endnote
    subroutine ETSine(state)
-      ! DEFERRED — astro-derived scalars (rad, daylp, difpp, atmtr, dsinbe)
-      ! plus tsunrise_atm/tsunset_atm remain bare globals. Migration belongs
-      ! with the astro-caching arc when/if it's prioritized; per-day perf
-      ! impact is negligible.
-      use variables, only: daylp, difpp, atmtr, dsinbe, tsunrise_atm, tsunset_atm
-      use et_mod,    only: reduceva_dt
+      use et_mod, only: reduceva_dt
       implicit none
 
       type(swap_state_t), intent(inout) :: state
 
-      real(8) :: daytime, dayl, sinld, cosld, fraction
+      real(8) :: daytime, fraction
       real(8), parameter :: pi = 3.14159265d0
 
       associate (atmo => state%atmosphere, time => state%timecontrol)
 
-      if (time%flDayStart) then
-         ! Photoperiodic daylength + sunrise/sunset (computed once/day)
-         call astro(time%daynr, state%cfg%meteo%lat, atmo%rad, dayl, daylp, sinld, cosld, difpp, atmtr, dsinbe)
-         tsunrise_atm = 0.5d0 - daylp/48.d0
-         tsunset_atm  = 0.5d0 + daylp/48.d0
-      end if
+      ! Astro-derived scalars (daylp, tsunrise_atm, tsunset_atm) are cached
+      ! once per day by ReadMeteoDay; we just read state%atmosphere here.
 
       ! Time as fraction of the day
       daytime = time%t1900 + time%dt - int(time%t1900)
 
       ! Fraction of daily ET in this timestep (sine-wave over the photoperiod)
-      if (daytime .lt. tsunrise_atm) then
+      if (daytime .lt. atmo%tsunrise_atm) then
          fraction = 0.d0
-      elseif (daytime .gt. tsunrise_atm .and. (daytime - time%dt) .lt. tsunrise_atm) then
-         fraction = 0.5d0*(cos(pi/2.d0 + (tsunrise_atm - 0.5d0)/(tsunset_atm - tsunrise_atm)*pi) &
-                         - cos(pi/2.d0 + (daytime      - 0.5d0)/(tsunset_atm - tsunrise_atm)*pi))
-      elseif ((daytime - time%dt) .gt. tsunrise_atm .and. daytime .lt. tsunset_atm) then
-         fraction = 0.5d0*(cos(pi/2.d0 + (daytime - time%dt - 0.5d0)/(tsunset_atm - tsunrise_atm)*pi) &
-                         - cos(pi/2.d0 + (daytime           - 0.5d0)/(tsunset_atm - tsunrise_atm)*pi))
-      elseif (daytime .gt. tsunset_atm .and. (daytime - time%dt) .lt. tsunset_atm) then
-         fraction = 0.5d0*(cos(pi/2.d0 + (daytime - time%dt - 0.5d0)/(tsunset_atm - tsunrise_atm)*pi) &
-                         - cos(pi/2.d0 + (tsunset_atm       - 0.5d0)/(tsunset_atm - tsunrise_atm)*pi))
+      elseif (daytime .gt. atmo%tsunrise_atm .and. (daytime - time%dt) .lt. atmo%tsunrise_atm) then
+         fraction = 0.5d0*(cos(pi/2.d0 + (atmo%tsunrise_atm - 0.5d0)/(atmo%tsunset_atm - atmo%tsunrise_atm)*pi) &
+                         - cos(pi/2.d0 + (daytime           - 0.5d0)/(atmo%tsunset_atm - atmo%tsunrise_atm)*pi))
+      elseif ((daytime - time%dt) .gt. atmo%tsunrise_atm .and. daytime .lt. atmo%tsunset_atm) then
+         fraction = 0.5d0*(cos(pi/2.d0 + (daytime - time%dt - 0.5d0)/(atmo%tsunset_atm - atmo%tsunrise_atm)*pi) &
+                         - cos(pi/2.d0 + (daytime           - 0.5d0)/(atmo%tsunset_atm - atmo%tsunrise_atm)*pi))
+      elseif (daytime .gt. atmo%tsunset_atm .and. (daytime - time%dt) .lt. atmo%tsunset_atm) then
+         fraction = 0.5d0*(cos(pi/2.d0 + (daytime - time%dt - 0.5d0)/(atmo%tsunset_atm - atmo%tsunrise_atm)*pi) &
+                         - cos(pi/2.d0 + (atmo%tsunset_atm  - 0.5d0)/(atmo%tsunset_atm - atmo%tsunrise_atm)*pi))
       else
          fraction = 0.d0
       end if

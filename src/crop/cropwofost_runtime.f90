@@ -53,7 +53,7 @@
         macp, magrs, rdmax, &  ! icrop/dvs/rd/rdpot/dvsend retired
         ! swrd/swdmi2rd/swrdc/swgc/swdrought/swinter/swcf retired
         swbulb, swinco,                                      &  ! laiem/laiexp/laiexppot/laimax/lai/laipot retired
-        daycrop, daylp,         &  ! tsum/tbase/tsumea/tsumam/cfeic retired
+        daycrop,                &  ! tsum/tbase/tsumea/tsumam/cfeic retired; daylp via state%atmosphere
         siccaplai, cropend,                               &  ! [GR-CROPWS B5] cropstart removed (→state%crop%common%cropstart)
         wrtmin, &  ! wso/wst/wlv/wrt/wrtmax retired
         reltr, lrnr, lsnr, nni,           &
@@ -430,7 +430,7 @@
           vernfac = 1.0d0
           vernrate = 0.0d0
           if (idsl.ge.1) then
-             dvred = max(0.0d0,min(1.0d0,(daylp-dlc)/(dlo-dlc)))
+             dvred = max(0.0d0, min(1.0d0, (state%atmosphere%daylp - dlc) / (dlo - dlc)))
           endif
           if (idsl.eq.2) then
 !            vernalisation rate,based on routines from pyWofost (Allard de Wit, 2015)

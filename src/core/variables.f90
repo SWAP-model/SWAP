@@ -172,7 +172,7 @@
       ! real(8) :: cnrai     ! Cumulative amount of net precipitation (L)
       ! real(8) :: cpeva     ! Cumulative amount of potential soil evaporation (L)
       ! real(8) :: cptra     ! Cumulative amount of potential transpiration (L)
-      real(8)   daylp              ! Photoperiodic daylength in hours (T)
+      ! [GR-ATM 2026-05-23] daylp retired — see state%atmosphere%daylp
       ! [GR-ATM 2026-05-23] dethum/detrad/detrain/dettav/dettime/detwind retired — see state%atmosphere%det*   
       ! [GR-ATM 2026-05-23] dtEventRain retired — see state%atmosphere%dtEventRain
       ! real(8) :: empreva   ! Reduced soil evaporation flux according to empirical functions (L/T)
@@ -241,8 +241,7 @@
       integer :: nraincsv = 0
       real(8), dimension(:,:), allocatable :: raincsv_dat
 !   - atmosphere SAVE variable state (refactored from local SAVE)
-      real(8)   tsunrise_atm       ! Time of sunrise (fraction of day) - from meteodt.f90 ETSine
-      real(8)   tsunset_atm        ! Time of sunset (fraction of day) - from meteodt.f90 ETSine  
+      ! [GR-ATM 2026-05-23] tsunrise_atm/tsunset_atm retired — see state%atmosphere%tsun{rise,set}_atm  
       integer   nod10_cn           ! Node at -10cm for CN runoff method - from meteoday.f90 CNmethod
       integer   icn_atm            ! Current position in CN time table - from meteoday.f90 CNmethod
       ! [GR-CROP-DVS] z10_cn retired — see state%atmosphere%z10_cn
@@ -351,7 +350,7 @@
       ! [GR-CROPWS] swstressor retired — see state%crop%common%swstressor
       ! [GR-CROPWS] swrootradius retired — see state%crop%common%swrootradius
       ! [GR-CROPWS] swsalinity retired — see state%crop%common%swsalinity
-      real(8)   atmtr              ! Daily atmospheric transmission (-)
+      ! [GR-ATM 2026-05-23] atmtr retired — see state%atmosphere%atmtr
       real(8)   agerm              ! Coefficient a  of germination
       real(8)   cgerm              ! Coefficient c  of germination
       real(8)   bgerm              ! Coefficient b  of germination
@@ -388,11 +387,11 @@
       ! [GR-CROPWS] cvs retired — see state%crop%common%cvs
       ! [GR-CROP-DVS] cwdm retired — see state%crop%wofost%cwdm
       ! [GR-CROP-DVS] cwdmpot retired — see state%crop%wofost%cwdmpot
-      real(8)   difpp              ! Diffuse irradiation perpendicular to direction of light (J/m2/s)
+      ! [GR-ATM 2026-05-23] difpp retired — see state%atmosphere%difpp
       real(8)   dlc                ! Shortest day length (T) for any crop development
       real(8)   dlo                ! Minimum day length (T) for optimal crop development
       ! [GR-CROPWS] dry_mat_cont_roots retired — see state%crop%common%dry_mat_cont_roots
-      real(8)   dsinbe             ! Daily total of effective solar height (s)
+      ! [GR-ATM 2026-05-23] dsinbe retired — see state%atmosphere%dsinbe
       ! [GR-CROPWS] dtsmtb retired — see state%crop%common%dtsmtb
       ! [GR-CROP-DVS] dvs retired — see state%crop%common%dvs
       ! [GR-CROPWS] dvsend retired — see state%crop%common%dvsend

@@ -385,7 +385,8 @@ contains
   !! Writes state%crop%es0/et0/ew0 and returns pmo for caller to unpack
   !! Edirect/Tdirect/Tdirectwet/Edirectpond.
   subroutine compute_reference_et(state, config, irecord, etr, hum_in, win_in, rcs, pmo)
-    use variables, only: daylp, difpp, dsinbe, atmtr
+    ! Astro outputs (daylp, difpp, atmtr, dsinbe) cached in state%atmosphere
+    ! by ReadMeteoDay — read directly via atmo%X in the pmi pack below.
     type(swap_state_t),  intent(inout) :: state
     type(swap_config_t), intent(in)    :: config
     integer, intent(in) :: irecord
@@ -459,10 +460,10 @@ contains
       pmi%tmx    = state%atmosphere%tmx
       pmi%hum    = hum_in
       pmi%win    = win_in
-      pmi%atmtr  = atmtr
-      pmi%difpp  = difpp
-      pmi%dsinbe = dsinbe
-      pmi%daylp  = daylp
+      pmi%atmtr  = state%atmosphere%atmtr
+      pmi%difpp  = state%atmosphere%difpp
+      pmi%dsinbe = state%atmosphere%dsinbe
+      pmi%daylp  = state%atmosphere%daylp
 
       pmi%rsc    = state%crop%common%rsc
       pmi%rsw    = state%crop%common%rsw

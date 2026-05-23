@@ -67,7 +67,6 @@
         agerm, hprep, dhPrep, zPrep, hSow, dhSow, zSow, zTempSow,         &
         dtempSow, TempSow, MaxPrepDelay, MaxSowDelay, PrepDelay, SowDelay, &
         tsumemeopt, tsumgerm, hdrygerm, hwetgerm, zgerm, TBASEM, TEFFMX,  &
-        atmtr, daylp, difpp, dsinbe,                                       &
         dummy_tsoil_cg_ => tsoil
       !! Rename config-staging tsoil to avoid clash with dummy arg tsoil.
       !! [SS-HEAT] Task 9: tsoil retained as config-staging buffer; global is not compute state.
@@ -104,7 +103,11 @@
       real(8) dummy_mf_   ! dummy outcome arg for MatricFlux(1) init call
 
       ! assimilation
-      real(8) dayl,cosld,sinld
+      real(8) dayl, cosld, sinld
+      ! [GR-ATM 2026-05-23] daylp/difpp/atmtr/dsinbe demoted from bare globals to locals;
+      ! astro() at line ~404 populates them for TOMORROW (tc_daynr+1), consumed by
+      ! totass() calls below. Today's values live in state%atmosphere%X (cached by ReadMeteoDay).
+      real(8) daylp, difpp, atmtr, dsinbe
       real(8) effc,amax
       real(8) dtgapot,dtga
       ! only for bulb crops (tulips etc..)

@@ -115,6 +115,17 @@ contains
             atmo%rh = min(hum/svp, 1.0d0)
          endif
 
+         ! Cache today's astro outputs once per day — consumers (PenMon
+         ! input pack, ETSine sunrise/sunset, compute_reference_et) read
+         ! from state%atmosphere instead of recomputing each call.
+         block
+            real(8) :: dayl, sinld, cosld
+            call astro(time%daynr, config%meteo%lat, atmo%rad, &
+                       dayl, atmo%daylp, sinld, cosld, atmo%difpp, atmo%atmtr, atmo%dsinbe)
+            atmo%tsunrise_atm = 0.5d0 - atmo%daylp/48.d0
+            atmo%tsunset_atm  = 0.5d0 + atmo%daylp/48.d0
+         end block
+
          ! CFO output snapshot (PEARL coupling) — sole writers to atmo%out_*
          atmo%out_rad = atmo%rad
          atmo%out_tmn = atmo%tmn

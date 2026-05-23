@@ -37,7 +37,7 @@
       ! [SS-TC] daymeteo/rainrec/swmeteo/wrecord/yearmeteo retired to state%timecontrol (ADR 0041)
       swetsine           = 0
       ! [SS-ATM A-2.6] aintcdt/atmdem/caintc/cevap/cgrai/cnrai/cpeva/cptra retired to state%atmosphere
-      daylp              = 0.0d0
+      ! [GR-ATM 2026-05-23] daylp retired — see state%atmosphere%daylp
 
 ! --- only for bulb crops (tulips etc..)
       ! [SS-ATM A-2.6] empreva/fprecnosnow/grai/graidt/ievap/inrai/ipeva/iptra retired to state%atmosphere

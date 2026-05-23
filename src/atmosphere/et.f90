@@ -381,35 +381,20 @@ contains
 
   !> Penman-Monteith evapotranspiration calculation (wrapper with I/O)
   !!
-  !! Thin wrapper around PenMon_calc that calls astro() for the daily
-  !! branch and forwards outputs%warning_code to log_warn().
+  !! Thin wrapper around PenMon_calc forwarding outputs%warning_code to
+  !! log_warn. All astro-derived inputs (daylp/difpp/atmtr/dsinbe) are
+  !! cached in state%atmosphere by ReadMeteoDay and packed into inputs
+  !! by compute_reference_et; PenMon no longer recomputes them.
   subroutine PenMon(inputs, outputs)
       implicit none
 
       type(pm_inputs_t),  intent(in)    :: inputs
       type(pm_outputs_t), intent(inout) :: outputs
 
-      ! Local variables
-      real(8) :: dayl, sinld, cosld
       character(len=200) :: messag
-      type(pm_inputs_t)  :: inputs_local
 
-      ! Make a mutable working copy so astro() can backfill the
-      ! daily-branch astronomical fields (dayl/sinld/cosld are local;
-      ! daylp/difpp/atmtr/dsinbe land in inputs_local).
-      inputs_local = inputs
+      call PenMon_calc(inputs, outputs)
 
-      ! Call astro() for daily radiation if needed
-      if (.not. inputs_local%flmetdetail) then
-          call astro(inputs_local%daynr, inputs_local%lat, inputs_local%rad, &
-                     dayl, inputs_local%daylp, sinld, cosld, &
-                     inputs_local%difpp, inputs_local%atmtr, inputs_local%dsinbe)
-      endif
-
-      ! Call pure calculation core
-      call PenMon_calc(inputs_local, outputs)
-
-      ! Handle warnings
       if (outputs%warning_code == 1) then
           messag = 'Warning: latitude above polar circle, daylength = 0hrs'
           call log_warn('Astro', messag)
