@@ -1283,7 +1283,7 @@
       ! [SS-GR-FINAL D1] IDecMpRat retired — 0 consumers
       real(8) QExcMpMtx(MaCp)      ! [retired-zero] kept: waterbalance use clause
       real(8) QMaPo                ! [retired-zero] kept: waterbalance qbot term
-      real(8) QRapDra              ! [retired-zero] kept: surfacewater drainage terms
+      ! [GR-DRA 2026-05-23] QRapDra retired — see state%drainage%QRapDra
       ! [MACRO-RETIRE 2026-05-12] note: NumLevRapDra/RapDraReaExp/RapDraResRef
       ! belong to the drainage subsystem (set by drainage_config), NOT
       ! macropore — they were grouped here legacy-style. Keep them.

@@ -409,7 +409,7 @@ module legacy_state_mod
       real(real64), allocatable :: VlMpStDm2(:)  !! [retired-zero] kept: soilgrid refinement
       real(real64), allocatable :: QExcMpMtx(:)  !! [retired-zero] kept: waterbalance use clause
       real(real64) :: QMaPo  !! [retired-zero] kept: waterbalance qbot term
-      real(real64) :: QRapDra  !! [retired-zero] kept: surfacewater drainage terms
+      ! [GR-DRA 2026-05-23] QRapDra retired — see state%drainage%QRapDra
       ! [GR-DRA 2026-05-23] NumLevRapDra retired — see state%drainage%NumLevRapDra
       logical :: FlDecMpRat  !! [retired-zero] kept: soilhydraulics convergence sentinel
       ! [GR-DRA 2026-05-23] intwl retired — see state%surfacewater%intwl

@@ -523,7 +523,7 @@ contains
 
       ! SS-SWST Phase 2 Task 7: iqdra/inqdra* accumulated directly into state; global dropped.
       ! ADR 0031 Phase 2 Task 5: qdra global deleted; read from state%drainage%qdra.
-      state%surfacewater%iqdra = state%surfacewater%iqdra + qdrats + QRapDra*tc_dt  ! TC-6
+      state%surfacewater%iqdra = state%surfacewater%iqdra + qdrats + state%drainage%QRapDra*tc_dt  ! TC-6
       do node = 1,numnod
         qdraincomp(node) = 0.d0
         do level = 1,nrlevs

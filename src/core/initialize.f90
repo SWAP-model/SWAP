@@ -506,7 +506,7 @@
       ! [SS-GR-FINAL D1] IDecMpRat zero-fill dropped — declaration retired
       QExcMpMtx            = 0.0d0
       QMaPo                = 0.0d0
-      QRapDra              = 0.0d0
+      ! [GR-DRA 2026-05-23] QRapDra retired — see state%drainage%QRapDra
       ! Drainage globals (NOT macropore — kept here next to retired set)
       ! [GR-DRA 2026-05-23] NumLevRapDra retired — see state%drainage%NumLevRapDra
       ! [SS-GR-FINAL D1] RapDraReaExp/RapDraResRef zero-fills dropped — declarations retired

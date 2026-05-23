@@ -82,6 +82,10 @@ module drainage_state_mod
       ! Written by config_to_variables when an owltab CSV is supplied; consumed by
       ! divdra + drainage for afgen extents.
       integer :: nowltab(MADR) = 0
+
+      ! Rapid drainage flux (cm/d). Dormant — kept at zero in current pipeline
+      ! (legacy [retired-zero] tag). Consumed by surfacewater task=2/3 and waterbalance.
+      real(real64) :: QRapDra = 0.0_real64
    end type drainage_state_t
 
 end module drainage_state_mod

@@ -317,12 +317,9 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
       ! retired — aliased from state%surfacewater below.
       ! [GR-DRA 2026-05-23] swman/hbweir/wlsman/gwlcrit/nphase/VCRIT/NODHD/HCRIT/SWQHR/QQHTAB
       ! retired — aliased from state%surfacewater below.
-      use variables, only: &   ! [SS-GR-FINAL B10] residuals — all DEFERRED
-         ! [GR-DRA 2026-05-23] alphaw/betaw retired — aliased from state%surfacewater below.
-         ! rsro/pondmx retired (→state%surfacewater%X)
-
-         ! DEFERRED: QRapDra — rapid drainage flux runtime state; Phase C3
-         QRapDra  ! [TC-8: dropped tcum,dt,t1900,fldtmin]
+      ! [GR-DRA 2026-05-23] alphaw/betaw retired — aliased from state%surfacewater below.
+      ! [GR-DRA 2026-05-23] QRapDra retired — read via state%drainage%QRapDra.
+      ! rsro/pondmx retired (→state%surfacewater%X)
       use swap_state_mod, only: swap_state_t
       use surfacewater_utils, only: wlevst, swstlev, qhtab
       use swap_log, only: log_warn
@@ -494,7 +491,7 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
 
 ! --- determine whether the system will become full (target level or
 ! --- level of weir crest):
-      dvmax = (state%drainage%qdrd + QRapDra + wsmax) * tc_dt + state%soilwater%runots  ! [TC-8]
+      dvmax = (state%drainage%qdrd + state%drainage%QRapDra + wsmax) * tc_dt + state%soilwater%runots  ! [TC-8]
       swstmax = sw_swst + dvmax
 
       if (swstmax .lt. 1.0d-7) then
@@ -523,13 +520,13 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
 
 ! --- determine how system will become full: with or without needing
 !     surface water supply; try first without any supply:
-        dvmax = (state%drainage%qdrd + QRapDra) * tc_dt + state%soilwater%runots  ! [TC-8]
+        dvmax = (state%drainage%qdrd + state%drainage%QRapDra) * tc_dt + state%soilwater%runots  ! [TC-8]
         swstmax = sw_swst + dvmax
         if (swstmax .le. swsttara) then
 
 ! --- apparently supply is needed for reaching target level, system
 !     is made full up to level wlstara, because supply is controllable:
-          wsupp = (swsttara - sw_swst - (state%drainage%qdrd+QRapDra)*tc_dt-state%soilwater%runots)/tc_dt  ! [TC-8]
+          wsupp = (swsttara - sw_swst - (state%drainage%qdrd+state%drainage%QRapDra)*tc_dt-state%soilwater%runots)/tc_dt  ! [TC-8]
           wdis = 0.0d0
           sw_swst = swsttara
           sw_wls = wlstara
@@ -554,7 +551,7 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
 ! --- the outflow equals the drainage flux, plus the storage
 !     excess (or deficit !) in the target situation compared to
 !     the actual situation:
-            wdis = (sw_swst-swsttar + (state%drainage%qdrd+QRapDra)*tc_dt + state%soilwater%runots )/tc_dt  ! [TC-8]
+            wdis = (sw_swst-swsttar + (state%drainage%qdrd+state%drainage%QRapDra)*tc_dt + state%soilwater%runots )/tc_dt  ! [TC-8]
 
 ! --- now check whether the weir has enough discharge capacity
 !     at this water level
@@ -590,7 +587,7 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
             endif
 
 ! ---       error handling
-            swstn = sw_swst + (state%drainage%qdrd + QRapDra - discap)*tc_dt + state%soilwater%runots  ! [TC-8]
+            swstn = sw_swst + (state%drainage%qdrd + state%drainage%QRapDra - discap)*tc_dt + state%soilwater%runots  ! [TC-8]
             if ( swstn .gt. state%surfacewater%sttab(1,2) ) then
               messag = 'surface water system has overflowed!'
               call fatalerr_collected ('Wlevbal',messag)
@@ -611,7 +608,7 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
               ! GR-UTILS Task 12: pass state%surfacewater as first arg.
               wdisi = qhtab(state%surfacewater, wlsi, imper)
             endif
-            swstn = sw_swst + (state%drainage%qdrd + QRapDra - wdisi)*tc_dt + state%soilwater%runots  ! [TC-8]
+            swstn = sw_swst + (state%drainage%qdrd + state%drainage%QRapDra - wdisi)*tc_dt + state%soilwater%runots  ! [TC-8]
             if (swstn .lt. swsti) then
               wlsu = wlsi
             else
@@ -711,9 +708,7 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
       !!@endnote
       ! SS-BND Phase 2 Task B-2.4: runots removed from use clause; read via state%soilwater%runots.
       ! [GR-DRA 2026-05-23] wlstab retired — read via state%surfacewater%wlstab.
-      use variables, only: &   ! [SS-GR-FINAL B10] residuals — all DEFERRED
-         ! DEFERRED: QRapDra — rapid drainage flux runtime state; Phase C3
-         QRapDra  ! [TC-8: dropped dt,t1900]
+      ! [GR-DRA 2026-05-23] QRapDra retired — read via state%drainage%QRapDra.
       use swap_state_mod, only: swap_state_t
       use array_utils, only: afgen
       use surfacewater_utils, only: swstlev
@@ -751,7 +746,7 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
 ! --- determine from the surface water storages and the qdrain whether
 ! --- supply has taken place during period (t)-(t+dt) or water has
 ! --- been discharged
-      swstrest = swstold + (state%drainage%qdrd + QRapDra)*tc_dt + state%soilwater%runots - sw_swst  ! [TC-8]
+      swstrest = swstold + (state%drainage%qdrd + state%drainage%QRapDra)*tc_dt + state%soilwater%runots - sw_swst  ! [TC-8]
 
 ! --- if supply was needed, set discharge to zero
       if (swstrest.le.0.0d0) then
