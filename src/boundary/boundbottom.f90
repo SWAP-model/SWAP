@@ -14,8 +14,6 @@ module boundbottom_mod
     use swap_log,              only: log_debug, log_warn, to_str
     use swap_array_dimensions, only: mabbc
     use variables,             only: &   ! [SS-GR-FINAL B11] all DEFERRED
-       ! DEFERRED: SwBotb3ResVert — bottom boundary resistance switch; config; Phase C3
-       SwBotb3ResVert, &
        ! DEFERRED: gwltab/qbotab/haqtab/hbotab — groundwater boundary tables; config; Phase C3
        gwltab, qbotab, haqtab, hbotab  ! [SS-GR-BH B8] narrowed
     implicit none
@@ -146,7 +144,7 @@ contains
             end if
 
             ! ---   determine C-value (vertical resistance) in saturated part of modelled profile
-            if (SwBotb3ResVert .eq. 0) then
+            if (state%soilwater%swbotb3resvert .eq. 0) then
                 !     -   find number node with groundwater level
                 node = state%mesh%numnod
                 do while (gwlmean .gt. state%mesh%ztopcp(node) .and. node .gt. 1)
@@ -158,7 +156,7 @@ contains
                 do node = nodnumgwl + 1, state%mesh%numnod
                     cvalprof = cvalprof + state%mesh%dz(node)/state%soilwater%vg_params(node)%ksat  ! [SS-GR-UTILS Task 15]
                 end do
-            elseif (SwBotb3ResVert .eq. 1) then
+            elseif (state%soilwater%swbotb3resvert .eq. 1) then
                 cvalprof = 0.0d0
             end if
 !

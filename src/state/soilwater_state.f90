@@ -197,6 +197,11 @@ module soilwater_state_mod
       logical                   :: flrunon  = .false.
       real(real64), allocatable :: runonarr(:)
 
+      ! Cauchy bottom-boundary (swbotb=3) vertical-resistance switch.
+      ! Dormant — no TOML writer; always 0 in the TOML pipeline.
+      ! 0 = add the (modelled-profile) vertical resistance to rimlay; 1 = use rimlay alone.
+      integer :: swbotb3resvert = 0
+
       ! [SS-GR-BH A5] runtime scalars formerly bare globals (boundtop/PONDRUNOFF/boundbottom)
       real(real64) :: q0           = 0.0_real64   !! surface flux (precip + runon - reva) [cm/d]
       real(real64) :: k1max        = 0.0_real64   !! max conductivity at z=0 [cm/d]

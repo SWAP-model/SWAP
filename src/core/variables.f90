@@ -746,7 +746,7 @@
       ! [GR-BH Task 36] retired 2026-05-13 — moved to state%soilwater%swbotb_runtime (GR-BH arc)
       ! integer   swbotb             ! Switch for bottom boundary condition (see *.SWP input file for overview)
       integer   swbotb3Impl        ! Switch for implicit solution with lower boundary option 3 (Cauchy): 0 = explicit, 1 = implicit
-      integer   SwBotb3ResVert     ! Switch to suppress addition of vertical resistance between bottom of model and groundwater level
+      ! [GR-BND 2026-05-23] SwBotb3ResVert retired — see state%soilwater%swbotb3resvert
       integer   swcfbs             ! Switch for use of coefficient CFBS to convert potential ET into potential E: 0 = no; 1 = yes
       integer   swdiscrvert        ! Switch to convert vertical discretization for soil water quality models: 0 = no; 1 = yes
       ! [GR-BH Task 37] swdivd retired — moved to state%drainage%swdivd

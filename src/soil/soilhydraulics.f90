@@ -44,8 +44,8 @@ contains
          ! DEFERRED: gwlconv — groundwater level convergence criterion; Phase C3
          ! DEFERRED: hplate — lysimeter tensiometer plate head; Phase C3
          hplate, &
-         ! DEFERRED: SwBotb3ResVert/swbotb3Impl — Cauchy BC options; Phase C3
-         SwBotb3ResVert, swbotb3Impl, &
+         ! DEFERRED: swbotb3Impl — Cauchy BC option; Phase C3
+         swbotb3Impl, &
          ! DEFERRED: CritDevh1Cp/CritDevh2Cp/CritDevPondDt — convergence criteria; Phase C3
          ! DEFERRED: flwarn_hc/iwarn_hc — non-convergence warning state; Phase C3
          flwarn_hc, iwarn_hc, &
@@ -321,9 +321,9 @@ contains
      &         - sw_kmean(NN) * hgrad(NN) + sink(NN) - source(NN) + state%soilwater%qrot(NN)
 
          if(swbotb.eq.3.and.swbotb3Impl.eq.1)then ! Cauchy-relation, implemented as head boundary
-            if (SwBotb3ResVert.eq.0) then
+            if (state%soilwater%swbotb3resvert.eq.0) then
                state%soilwater%qbot = - (sw_h(NN)+z(NN)-state%soilwater%deepgw) / (disnod(NN+1)/sw_kmean(NN+1)+rimlay)
-            elseif (SwBotb3ResVert.eq.1) then
+            elseif (state%soilwater%swbotb3resvert.eq.1) then
                state%soilwater%qbot = - (sw_h(NN)+z(NN)-state%soilwater%deepgw) / rimlay
             endif
 ! ---       extra groundwater flux might be added
@@ -418,10 +418,10 @@ contains
          if(swbotb.eq.1 .and. (.not.state%soilwater%fllowgwl))then
             dFdhM(NN) = dFdhM(NN) + sw_kmean(NN+1)/(z(NN)-state%soilwater%gwlinp)
          else if(swbotb.eq.3.and.swbotb3Impl.eq.1)then ! Cauchy
-            if (SwBotb3ResVert.eq.0) then
+            if (state%soilwater%swbotb3resvert.eq.0) then
                dFdhM(NN) = dFdhM(NN) + 1.0d0 /                          &
      &                              (disnod(NN+1)/sw_kmean(NN+1)+rimlay)   
-            elseif (SwBotb3ResVert.eq.1) then
+            elseif (state%soilwater%swbotb3resvert.eq.1) then
                dFdhM(NN) = dFdhM(NN) + 1.0d0 / rimlay
             endif
          else if(swbotb.eq.5 .or. (swbotb.eq.1 .and. state%soilwater%fllowgwl))then
@@ -615,10 +615,10 @@ contains
      &               - sw_kmean(NN) * hgrad(NN)                            &
      &               + sink(NN) - source(NN) + state%soilwater%qrot(NN)
                if(swbotb.eq.3.and.swbotb3Impl.eq.1)then ! Cauchy
-                  if (SwBotb3ResVert.eq.0) then
+                  if (state%soilwater%swbotb3resvert.eq.0) then
                      state%soilwater%qbot = - (sw_h(NN)+z(NN)-state%soilwater%deepgw) /       &
      &                                 (disnod(NN+1)/sw_kmean(NN+1)+rimlay)
-                  elseif (SwBotb3ResVert.eq.1) then
+                  elseif (state%soilwater%swbotb3resvert.eq.1) then
                      state%soilwater%qbot = - (sw_h(NN)+z(NN)-state%soilwater%deepgw) / rimlay
                   endif
                   ! Extra groundwater flux might be added

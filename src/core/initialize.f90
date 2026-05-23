@@ -152,7 +152,7 @@
       ! swbotb             = 0
       swbotbc            = 0 
       swbotb3Impl        = 0 
-      SwBotb3ResVert     = 0 
+      ! [GR-BND 2026-05-23] SwBotb3ResVert retired — see state%soilwater%swbotb3resvert
       swcfbs             = 0 
       swdiscrvert        = 0 
       ! [GR-BH Task 37] swdivd retired to state%drainage%swdivd
