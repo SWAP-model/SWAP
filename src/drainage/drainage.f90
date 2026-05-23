@@ -188,17 +188,15 @@ contains
       ! ADR 0031 Phase 2 Task 5: wetper removed from use-list; read from state%drainage%wetper(1).
       ! SS-SWC Phase 2 S-2.8: gwl removed from use-list; read from state%soilwater%gwl.
       ! GR-BH Task 28: zbotdr, l, nrlevs, swnrsrf, owltab migrated off variables → state%drainage%X.
+      ! [GR-DRA 2026-05-23] dramet/swdtyp/swallo retired — aliased from state%drainage below.
+      ! [GR-BND 2026-05-23] geometry cluster (basegw/ipos/khtop/khbot/kvtop/kvbot/
+      ! entres/zintf/geofac) retired — aliased from state%drainage in the associate below.
+      ! [GR-DRA 2026-05-23] qdrtab retired — aliased from state%drainage below.
+      ! [SS-GR-CROPRT A2] FlMacropore dropped — retired (ADR 0040)
+      ! [GR-DRA 2026-05-23] cofintfl/expintfl/NumLevRapDra/swliminf/nowltab retired — aliased below.
       use variables, only: &   ! [SS-GR-FINAL B10] residuals — all DEFERRED
-         ! [GR-DRA 2026-05-23] dramet/swdtyp/swallo retired — aliased from state%drainage below.
-         ! [GR-BND 2026-05-23] geometry cluster (basegw/ipos/khtop/khbot/kvtop/kvbot/
-         ! entres/zintf/geofac) retired — aliased from state%drainage in the associate below.
          ! DEFERRED: drares/infres/shape — drain resistance config; Phase C3
-         ! [GR-DRA 2026-05-23] qdrtab retired — aliased from state%drainage below.
-         drares, infres, shape, &
-         ! [SS-GR-CROPRT A2] FlMacropore dropped — retired (ADR 0040)
-         ! [GR-DRA 2026-05-23] cofintfl/expintfl/NumLevRapDra/swliminf retired — aliased below.
-         ! DEFERRED: nowltab(madr) — OWL table count per level; active drainage runtime state; Phase C3
-         nowltab
+         drares, infres, shape
       ! [SS-TC TC-14] t1900, dt read via state%timecontrol (ADR 0041)
       use array_utils, only: afgen
 
@@ -244,7 +242,8 @@ contains
                 dramet   => state%drainage%dramet,       &  ! [GR-DRA 2026-05-23] switches cluster
                 swdtyp   => state%drainage%swdtyp,       &
                 swallo   => state%drainage%swallo,       &
-                swliminf => state%drainage%swliminf      )
+                swliminf => state%drainage%swliminf,      &
+                nowltab  => state%drainage%nowltab        )  ! [GR-DRA 2026-05-23]
 
       ! SS-SWC Phase 2 S-2.8: gwl read from state%soilwater
       gwldra = state%soilwater%gwl
@@ -467,11 +466,8 @@ contains
                !   swdivd/Swdivdinf/Swnrsrf/SwTopnrsrf/FacDpthInf/owltab off variables → state.
                ! [SS-GR-FINAL B10] madr → swap_array_dimensions (dimension constant)
                use swap_array_dimensions, only: madr
-               use variables, only: &   ! [SS-GR-FINAL B10] residuals — all DEFERRED
-                  ! [GR-DRA 2026-05-23] dramet/swdtyp/NumLevRapDra/swdislay/swtopdislay/
-                  ! ftopdislay retired — aliased from state%drainage below.
-                  ! DEFERRED: nowltab(madr) — OWL table count per level; active drainage runtime state; Phase C3
-                  nowltab
+               ! [GR-DRA 2026-05-23] dramet/swdtyp/NumLevRapDra/swdislay/swtopdislay/
+               ! ftopdislay/nowltab retired — aliased from state%drainage below.
                use array_utils, only: afgen
 
                type(swap_state_t), intent(inout) :: state
@@ -504,7 +500,8 @@ contains
                   swdtyp      => state%drainage%swdtyp,         &
                   swdislay    => state%drainage%swdislay,       &
                   swtopdislay => state%drainage%swtopdislay,    &
-                  ftopdislay  => state%drainage%ftopdislay      )
+                  ftopdislay  => state%drainage%ftopdislay,     &
+                  nowltab     => state%drainage%nowltab         )  ! [GR-DRA 2026-05-23]
 
                ! Allocate per-level state arrays if not yet done (guard for
                ! fldrain path where surfacewater_init may not have been called).
@@ -589,7 +586,7 @@ contains
                   ! SS-SWC Phase 2 S-2.8: gwl read from state%soilwater
                   call divdra(ms_numnod, dr_nrlevs, ms_dz, sw_ksatfit, sw_ksatexm, state%soilwater%fluseksatexm,    &  ! [SS-SWC S-2.12B]
               &      ms_layer, sw_cofani, state%soilwater%gwl, dr_L, state%drainage%qdrain, state%drainage%qdra, &
-              &      dr_swdivdinf, dr_swnrsrf, dr_swtopnrsrf, dr_zbotdr, state%timecontrol%dt, dr_FacDpthInf, dr_owltab, state%timecontrol%t1900)  !  Divdra, infiltration
+              &      dr_swdivdinf, dr_swnrsrf, dr_swtopnrsrf, dr_zbotdr, state%timecontrol%dt, dr_FacDpthInf, dr_owltab, nowltab, state%timecontrol%t1900)  ! [GR-DRA 2026-05-23]
                   !       redistribute qdrain with new top boundary for discharge layers
                   if (swdislay .eq. 2) then
                      do level = 1, dr_nrlevs

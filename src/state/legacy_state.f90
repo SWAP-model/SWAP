@@ -413,7 +413,7 @@ module legacy_state_mod
       ! [GR-DRA 2026-05-23] NumLevRapDra retired — see state%drainage%NumLevRapDra
       logical :: FlDecMpRat  !! [retired-zero] kept: soilhydraulics convergence sentinel
       ! [GR-DRA 2026-05-23] intwl retired — see state%surfacewater%intwl
-      integer, allocatable :: nowltab(:)
+      ! [GR-DRA 2026-05-23] nowltab retired — see state%drainage%nowltab
       ! [GR-DRA 2026-05-23] impend retired — see state%surfacewater%impend
       ! [GR-DRA 2026-05-23] wlsman retired — see state%surfacewater%wlsman
       ! [GR-DRA 2026-05-23] wlstab retired — see state%surfacewater%wlstab

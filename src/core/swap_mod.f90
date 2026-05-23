@@ -60,7 +60,7 @@ contains
                             ! [GR-FINAL C3] flirrigationoutput dropped: W-global (0 consumers; ADR 0009 deleted IrrigationOutput)
                             flTillage, flSSDI, &
                             numlay, &
-                            owltab, nowltab, &
+                            owltab, &  ! [GR-DRA 2026-05-23] nowltab retired
                             ! [GR-CROP-DVS] meteo arrays/scalars + CN runoff tables retired
                             !   (arad,atmn,atmx,ahum,awin,arai,aetr,wet,atav,epot,tpot,grain,nrain,
                             !    tav,daynrfirst,daynrlast,atmin7,nofd,isua,avevaptb,avprectb,
@@ -407,8 +407,8 @@ contains
    else if (allocated(config%drain%zbotdr)) then
       state%drainage%zbotdr(1:size(config%drain%zbotdr)) = config%drain%zbotdr
    end if
-   ! owltab: populated via CSV loop in config_to_variables.f90 — still uses bare global.
-   ! Deferred: blocked by nowltab which is not yet in state (runtime reads nowltab from variables module).
+   ! owltab: populated via CSV loop in config_to_variables.f90 (still uses bare global
+   ! as a staging buffer). nowltab now lives in state%drainage%nowltab.
    state%drainage%owltab(:,:) = owltab(1:size(state%drainage%owltab,1), &
                                        1:size(state%drainage%owltab,2))
    if (flSolute) call solute_init(state)   ! SS-SLST Phase 2 Task 7: seed state%solute from config-populated globals

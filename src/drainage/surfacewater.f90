@@ -128,7 +128,7 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
          ! SS-SWC Phase 2 S-2.8: gwl read from state%soilwater
          call divdra (ms_numnod,dr_nrlevs,ms_dz,sw_ksatfit,sw_ksatexm,state%soilwater%fluseksatexm,    &  ! [SS-SWC S-2.12B]
             ms_layer,sw_cofani,state%soilwater%gwl,dr_L,state%drainage%qdrain,state%drainage%qdra,dr_swdivdinf,dr_swnrsrf, &
-     &      dr_swtopnrsrf,dr_zbotdr,tc_dt,dr_FacDpthInf,dr_owltab,tc_t1900)  ! [TC-8, GR-BH Task 28]
+     &      dr_swtopnrsrf,dr_zbotdr,tc_dt,dr_FacDpthInf,dr_owltab,state%drainage%nowltab,tc_t1900)  ! [GR-DRA 2026-05-23]
 
 !        redistribute qdrain with new top boundary for discharge layers
          if(swdislay.eq.2) then

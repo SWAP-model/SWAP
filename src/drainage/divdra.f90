@@ -63,7 +63,7 @@ contains
         &                   fluseksatexm, layer,                            &
         &                   cofani, gwlev, DistDrain, FluxDr, FluxDrComp,   &
         &                   Swdivdinf, Swnrsrf, SwTopnrsrf, Zbotdr,           &  !  Divdra, infiltration
-        &                   dt, FacDpthInf, owltab, t1900)                       !  Divdra, infiltration
+        &                   dt, FacDpthInf, owltab, nowltab, t1900)              !  Divdra, infiltration
     !! Distribute drainage and infiltration fluxes over soil compartments
     !!
     !! This is the main workhorse subroutine that distributes lateral drainage and
@@ -96,9 +96,7 @@ contains
     !! before calling.
     !!@endwarning
 
-      use variables, only: &   ! [SS-GR-FINAL B10] residuals — all DEFERRED
-         ! DEFERRED: nowltab(madr) — OWL table count per level; active drainage runtime state; Phase C3
-         nowltab
+      ! [GR-DRA 2026-05-23] nowltab retired — now passed in as a parameter (state%drainage%nowltab).
       use array_utils, only: afgen
       use swap_array_dimensions, only: macp, madr, maho, maowl
 
@@ -128,6 +126,7 @@ contains
 
 !   - Declarations Divdra Infiltration
       real(8) dt, FacDpthInf, owltab(Madr, 2*maowl), t1900
+      integer nowltab(Madr)
 
       integer NumComDpthInf, NumComSrfLev
       real(8) CumKD, DpthInflay, FDisInf(Madr), FDisInfmin

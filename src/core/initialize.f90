@@ -528,7 +528,7 @@
       ! SS-SWST Phase 2 Task 11 C3: numadj/imper removed (state%surfacewater owns them).
       ! [GR-DRA 2026-05-23] intwl retired — see state%surfacewater%intwl
       ! numadj=0, imper=1 set by surfacewater_state_t defaults.
-      nowltab              = 0
+      ! [GR-DRA 2026-05-23] nowltab retired — see state%drainage%nowltab
       widthr                = 0.0d0
       taludr                = 0.0d0
       rdrain                = 0.0d0

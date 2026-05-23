@@ -77,6 +77,11 @@ module drainage_state_mod
       ! Drainage-flux-vs-groundwater-level table (dramet=1 branch).
       ! Dormant — no TOML writer; reader at drainage.f90:389 (afgen, 50 pairs).
       real(real64) :: qdrtab(50) = 0.0_real64
+
+      ! Per-drain-level count of open-water-level table entries (owltab(:,1:2*nowltab(lev))).
+      ! Written by config_to_variables when an owltab CSV is supplied; consumed by
+      ! divdra + drainage for afgen extents.
+      integer :: nowltab(MADR) = 0
    end type drainage_state_t
 
 end module drainage_state_mod

@@ -379,7 +379,7 @@ contains
                call csv_errs%abort_if_fatal()
                if (csv_errs%count() == 0) then
                   nrows = size(csv_table, 1)
-                  nowltab(lev) = nrows
+                  state%drainage%nowltab(lev) = nrows
                   do k = 1, nrows
                      owltab(lev, 2*k-1) = csv_table(k, 1)  ! date (days since 1900)
                      owltab(lev, 2*k)   = csv_table(k, 2)  ! channel water level (cm)

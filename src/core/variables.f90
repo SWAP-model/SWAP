@@ -1331,7 +1331,7 @@
       ! numadj removed (surfacewater_state_t%numadj)
       ! [GR-DRA 2026-05-23] intwl retired — see state%surfacewater%intwl
       ! imper removed (surfacewater_state_t%imper)
-      integer nowltab(madr)
+      ! [GR-DRA 2026-05-23] nowltab retired — see state%drainage%nowltab
       real(8) widthr(Madr),taludr(Madr),rdrain(Madr),rsurfdeep
       real(8) rsurfshallow,rinfi(Madr),rentry(Madr),rexit(Madr)
       real(8) gwlinf(Madr)

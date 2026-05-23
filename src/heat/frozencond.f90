@@ -328,7 +328,7 @@ contains
           call divdra (ms_numnod, dr_nrlevs, ms_dz, ksatcp, ksatcp, sw_fluseksatexm, & ! GR-BH Task 13
                        layercp, cofanicp, ztop, dr_L, qdrain, qdra, &
                        dr_swdivdinf, dr_swnrsrf, dr_swtopnrsrf, dr_zbotdr, &
-                       tc_dt, dr_facdpthinf, dr_owltab, tc_t1900)  ! TC-11
+                       tc_dt, dr_facdpthinf, dr_owltab, state%drainage%nowltab, tc_t1900)  ! [GR-DRA 2026-05-23]
         endif
       else
 
