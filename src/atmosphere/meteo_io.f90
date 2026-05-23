@@ -64,11 +64,6 @@ contains
   !! (detailed meteo input)
   !! @endnote
   subroutine ReadMeteoDay(state, config)
-      ! DEFERRED — det* sub-daily detail arrays + irectotal counter remain
-      ! bare globals (year-long scratch from meteo readers, not in state
-      ! schema yet). pathatm/metfil read directly from config below.
-      use variables, only: detrecord, dettime, detrad, dethum,   &
-                           dettav, detrain, detwind, irectotal
       use precipitation_mod, only: PartitionPrecipitation
       implicit none
 
@@ -141,14 +136,14 @@ contains
          filnam = trim(config%general%pathatm) // trim(config%meteo%metfile) // '.' // trim(ext)
 
          do i = 1, config%meteo%nmetdetail
-            irectotal = irectotal + 1
-            if (i .ne. detrecord(irectotal)) then
+            atmo%irectotal = atmo%irectotal + 1
+            if (i .ne. atmo%detrecord(atmo%irectotal)) then
                messag = 'In meteo file '// trim(filnam) // ' record number(s)' &
                         // ' are not correct at ' // time%date // '. First adapt meteo file!'
                call fatalerr_collected('meteo', messag)
             end if
-            call dtdpst('year-month-day', dettime(irectotal) + 0.1d0, detdate)
-            call dtdpst('year-month-day', time%t1900       + 0.1d0, time%date)
+            call dtdpst('year-month-day', atmo%dettime(atmo%irectotal) + 0.1d0, detdate)
+            call dtdpst('year-month-day', time%t1900                   + 0.1d0, time%date)
             if (detdate .ne. time%date) then
                messag = 'In meteo file ' // trim(filnam) // ' the amount of ' &
                         // 'records deviate near ' // time%date // '. First adapt meteo file!'
@@ -156,11 +151,11 @@ contains
             end if
 
             ! Pass on weather records of today
-            atmo%arad(i)           = detrad(irectotal)
-            atmo%ahum(i)           = dethum(irectotal)
-            atmo%atav(i)           = dettav(irectotal)
-            atmo%awind_subdaily(i) = detwind(irectotal)
-            atmo%arain_subdaily(i) = detrain(irectotal) * 0.1d0   ! mm → cm
+            atmo%arad(i)           = atmo%detrad(atmo%irectotal)
+            atmo%ahum(i)           = atmo%dethum(atmo%irectotal)
+            atmo%atav(i)           = atmo%dettav(atmo%irectotal)
+            atmo%awind_subdaily(i) = atmo%detwind(atmo%irectotal)
+            atmo%arain_subdaily(i) = atmo%detrain(atmo%irectotal) * 0.1d0   ! mm → cm
          enddo
       endif
 

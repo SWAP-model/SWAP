@@ -127,8 +127,7 @@
       ! integer   daymeteo           ! moved to state%timecontrol%daymeteo
       integer   daynrfirst         ! First calendar day number for which meteorological data is available in current year
       integer   daynrlast          ! Last calendar day number for which meteorological data is available in current year
-      integer   detrecord(nmetfile) ! Record number of meteo file with detailed meteo data (-)
-      integer   irectotal          ! Total record number with detailed meteo input for new weather file (-)
+      ! [GR-ATM 2026-05-23] detrecord/irectotal retired — see state%atmosphere%{detrecord,irectotal}
       ! [GR-CROP-DVS] nmetdetail retired — see state%cfg%meteo%nmetdetail
       ! [GR-CROP C12] retired 2026-05-14 — moved to state%atmosphere%nmrain (Arc 8)
       ! integer   nmrain             ! Number of rain event records (-)
@@ -175,12 +174,7 @@
       ! real(8) :: cpeva     ! Cumulative amount of potential soil evaporation (L)
       ! real(8) :: cptra     ! Cumulative amount of potential transpiration (L)
       real(8)   daylp              ! Photoperiodic daylength in hours (T)
-      real(8)   dethum(nmetfile)   ! Array with detailed humidity input data (M/L/T2) 
-      real(8)   detrad(nmetfile)   ! Array with detailed radiation input data (M/T2
-      real(8)   detrain(nmetfile)  ! Array with detailed precipitation sum input data (L/T)
-      real(8)   dettav(nmetfile)   ! Array with detailed temperature input data (  )
-      real(8)   dettime(nmetfile)  ! Array with dates of detailed meteo input data
-      real(8)   detwind(nmetfile)  ! Array with detailed wind speed input data (L/T)   
+      ! [GR-ATM 2026-05-23] dethum/detrad/detrain/dettav/dettime/detwind retired — see state%atmosphere%det*   
       ! [GR-ATM 2026-05-23] dtEventRain retired — see state%atmosphere%dtEventRain
       ! real(8) :: empreva   ! Reduced soil evaporation flux according to empirical functions (L/T)
       real(8)   epot(96)           ! In case of detailed weather input, calculated Epot of each weather record (L/T)

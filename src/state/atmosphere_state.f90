@@ -174,6 +174,17 @@ module atmosphere_state_mod
       real(real64) :: grain(96) = 0.0_real64    !! sub-daily gross rain
       real(real64) :: nrain(96) = 0.0_real64    !! sub-daily net rain
 
+      ! Per-year detail-meteo input arrays (allocated when swmetdetail==1).
+      ! Populated by MeteoCSVDetYear (readmeteo.f90), consumed by ReadMeteoDay.
+      integer,      allocatable :: detrecord(:)  !! record number per sub-daily entry
+      real(real64), allocatable :: dethum(:)     !! humidity per sub-daily entry
+      real(real64), allocatable :: detrad(:)     !! radiation per sub-daily entry (J/m2)
+      real(real64), allocatable :: detrain(:)    !! precipitation per sub-daily entry (mm)
+      real(real64), allocatable :: dettav(:)     !! temperature per sub-daily entry (°C)
+      real(real64), allocatable :: dettime(:)    !! timestamp per sub-daily entry
+      real(real64), allocatable :: detwind(:)    !! wind speed per sub-daily entry
+      integer :: irectotal = 0                   !! cumulative sub-daily record counter
+
       ! [GR-ATM-CLEAN Phase D] migrated from module MeteoVars (meteo_vars.f90).
       !> Remaining interception storage at start of timestep (cm).
       !> Persists across iterations of the sub-daily dayparts loop and across days.

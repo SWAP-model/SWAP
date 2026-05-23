@@ -19,9 +19,7 @@
       !   pathatm, metfil  — filnam construction (error-message context only; ADR 0014 CSV-only path)
       !   ad, am           — per-day date arrays (written by CSV subs to variables; read here for
       !                      raintimearray init and date validation loops — deferred to body cutover)
-      !   irectotal        — sub-daily record counter, still in variables (deferred to sub-daily arc)
-      !   dettime          — sub-daily timestamps array, still in variables (deferred to sub-daily arc)
-      use variables, only: pathatm, metfil, ad, am, irectotal, dettime
+      use variables, only: pathatm, metfil, ad, am
       use meteodt_mod, only: MeteoDT
       use swap_state_mod, only: swap_state_t
       use swap_config_mod, only: swap_config_t
@@ -224,8 +222,7 @@
 ! --- initialization of detailed meteo
 
 ! ---   initialize total record number for new weather file
-        ! [SS-GR-FINAL B1] irectotal still in variables — deferred to sub-daily retirement arc
-        irectotal = int(tc_t1900-dettime(1)+0.1d0)*config%meteo%nmetdetail
+        state%atmosphere%irectotal = int(tc_t1900 - state%atmosphere%dettime(1) + 0.1d0) * config%meteo%nmetdetail
 
 ! ---   initialize number of days for running average Tmin
         state%atmosphere%nofd = 0  ! [SS-GR-FINAL B1] write state directly (legacy nofd global dropped)
@@ -546,13 +543,11 @@ end subroutine MeteoCSVYear
 subroutine MeteoCSVDetYear(ifnd, state)
 use error_mod, only: fatalerr_collected
 use swap_state_mod, only: swap_state_t
-! [SS-TC TC-14] yearmeteo retired — read via state%timecontrol
-use variables, only: metcsv_det, nmetcsv_det, &
-                     dettime, detrecord, detrad, dettav, dethum, detwind, detrain
+use variables, only: metcsv_det, nmetcsv_det
 use swap_array_dimensions, only: NMETFILE
 implicit none
 integer, intent(out) :: ifnd
-type(swap_state_t), intent(in) :: state
+type(swap_state_t), intent(inout) :: state   ! detail-meteo arrays written into state%atmosphere
 integer :: yearmeteo  ! [SS-TC TC-14] local copy
 
 integer, parameter :: jd1900 = 2415020
@@ -597,15 +592,27 @@ if (n > NMETFILE) then
 end if
 ifnd = n
 
+! Allocate state-side detail arrays on first use (NMETFILE-sized for parity
+! with the retired bare globals).
+if (.not. allocated(state%atmosphere%dettime)) then
+   allocate(state%atmosphere%dettime(NMETFILE))
+   allocate(state%atmosphere%detrecord(NMETFILE))
+   allocate(state%atmosphere%detrad(NMETFILE))
+   allocate(state%atmosphere%dettav(NMETFILE))
+   allocate(state%atmosphere%dethum(NMETFILE))
+   allocate(state%atmosphere%detwind(NMETFILE))
+   allocate(state%atmosphere%detrain(NMETFILE))
+end if
+
 ! Populate per-slot arrays.
 ! metcsv_det columns: 1=datetime, 2=record, 3=rad(kJ), 4=temp, 5=hum, 6=wind, 7=rain
-dettime(1:n)   = metcsv_det(i1:i2, 1)
-detrecord(1:n) = nint(metcsv_det(i1:i2, 2))
-detrad(1:n)    = metcsv_det(i1:i2, 3) * 1000.0d0   ! kJ/m2 → J/m2
-dettav(1:n)    = metcsv_det(i1:i2, 4)
-dethum(1:n)    = metcsv_det(i1:i2, 5)
-detwind(1:n)   = metcsv_det(i1:i2, 6)
-detrain(1:n)   = metcsv_det(i1:i2, 7)
+state%atmosphere%dettime(1:n)   = metcsv_det(i1:i2, 1)
+state%atmosphere%detrecord(1:n) = nint(metcsv_det(i1:i2, 2))
+state%atmosphere%detrad(1:n)    = metcsv_det(i1:i2, 3) * 1000.0d0   ! kJ/m2 → J/m2
+state%atmosphere%dettav(1:n)    = metcsv_det(i1:i2, 4)
+state%atmosphere%dethum(1:n)    = metcsv_det(i1:i2, 5)
+state%atmosphere%detwind(1:n)   = metcsv_det(i1:i2, 6)
+state%atmosphere%detrain(1:n)   = metcsv_det(i1:i2, 7)
 
 end subroutine MeteoCSVDetYear
 

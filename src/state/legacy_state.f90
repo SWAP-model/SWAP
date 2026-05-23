@@ -37,8 +37,7 @@ module legacy_state_mod
       character(len=80) :: project  !! Name of project
       integer :: daynrfirst  !! First calendar day number for which meteorological data is available in current year
       integer :: daynrlast  !! Last calendar day number for which meteorological data is available in current year
-      integer, allocatable :: detrecord(:)  !! Record number of meteo file with detailed meteo data (-)
-      integer :: irectotal  !! Total record number with detailed meteo input for new weather file (-)
+      ! [GR-ATM 2026-05-23] detrecord/irectotal retired — see state%atmosphere%{detrecord,irectotal}
       integer :: nofd  !! number of days for running average Tmin (-)
       integer :: swetsine  !! Switch: 0 = Tp and Ep uniform during a day; 1 = Tp and Ep are distributed as sine waves during a day
       integer, allocatable :: ad(:)  !! Array with day numbers in meteo file
@@ -55,12 +54,7 @@ module legacy_state_mod
       real(real64), allocatable :: atmx(:)  !! Array with daily maximum temperature input data (  )
       real(real64), allocatable :: awin(:)  !! Array with daily wind speed input data (L/T)
       real(real64) :: daylp  !! Photoperiodic daylength in hours (T)
-      real(real64), allocatable :: dethum(:)  !! Array with detailed humidity input data (M/L/T2)
-      real(real64), allocatable :: detrad(:)  !! Array with detailed radiation input data (M/T2
-      real(real64), allocatable :: detrain(:)  !! Array with detailed precipitation sum input data (L/T)
-      real(real64), allocatable :: dettav(:)  !! Array with detailed temperature input data (  )
-      real(real64), allocatable :: dettime(:)  !! Array with dates of detailed meteo input data
-      real(real64), allocatable :: detwind(:)  !! Array with detailed wind speed input data (L/T)
+      ! [GR-ATM 2026-05-23] dethum/detrad/detrain/dettav/dettime/detwind retired — see state%atmosphere%det*
       ! [GR-ATM 2026-05-23] dtEventRain retired — see state%atmosphere%dtEventRain
       real(real64), allocatable :: epot(:)  !! In case of detailed weather input, calculated Epot of each weather record (L/T)
       real(real64) :: cfevappond  !! Parameter equal to the ratio ponding layer evaporation / ETref (-)
