@@ -341,8 +341,19 @@ def fix_use_clause_artifacts(text_lf: str) -> str:
                     j += 1
                     clause_idxs.append(j)
                     continue
-                # Real code line: include only if it's still part of the chain
-                # (chain was open from previous code line).
+                # Real code line. If it starts a NEW statement (use/implicit/
+                # type-declaration), the clause was actually broken upstream —
+                # don't include this line in the clause.
+                stripped_next = code_next.lstrip()
+                if re.match(
+                    r"(use|implicit|integer|real|logical|character|type|select|"
+                    r"if|else|endif|end\s|do|module|subroutine|function|"
+                    r"return|call|associate)\b",
+                    stripped_next,
+                    re.IGNORECASE,
+                ):
+                    break
+                # Real code line: include only if chain still open
                 if chain_open:
                     j += 1
                     clause_idxs.append(j)
@@ -410,6 +421,17 @@ def migrate_symbol(sym: str, config_path: str, dry_run: bool = False):
         flags=re.MULTILINE | re.IGNORECASE,
     )
     new = pat.sub("", text_lf)
+    # Also replace bare reads of `sym` in the adapter's own conditional logic
+    # with `config_path`. The adapter has config in scope.
+    sp = re.escape(sym)
+    bare_pat = re.compile(rf"(?<![%a-zA-Z0-9_]){sp}(?![a-zA-Z0-9_%])", flags=re.IGNORECASE)
+    new_lines = []
+    for line in new.split("\n"):
+        code, sep, comment = line.partition("!")
+        if "::" not in code:
+            code = bare_pat.sub(config_path, code)
+        new_lines.append(code + sep + comment)
+    new = "\n".join(new_lines)
     if new != text_lf:
         if not dry_run:
             write_lf(ADAPTER, new, eol)

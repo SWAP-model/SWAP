@@ -704,7 +704,7 @@
       integer   inc                ! Internal number of output file *.INC with incremental water balance data
       ! [SS-SWC] retired 2026-05-12 — moved to state%soilwater%indeks (ADR 0038)
       ! integer   indeks(macp)       ! Index denoting wetting or drying curve in case of hysteresis: 1 = wetting; -1 = drying
-      integer   ipos               ! Switch for position of drain (see *.DRA input file for overview)
+      ! [GR-DRA 2026-05-23] ipos retired — see state%drainage%ipos
       integer   isoillay(maho)     ! Number of soil layer, starting with 1 at the soil surface
       ! [GR-BH Task 35] layer(macp) retired — moved to state%mesh%layer
       ! [SS-BMI2 Task 5] retired 2026-05-13 — moved to state%timecontrol%msteps (ADR 0041)
@@ -790,7 +790,7 @@
       real(8)   aqper              ! Period of prescribed sine wave of hydraulic head in deep aquifer (T)
       real(8)   aqtmax             ! Time with maximum hydraulic head in deep aquifer (T)
       ! [SS-GR-FINAL D1] atop retired — reprofunctions array never read; 0 consumers
-      real(8)   basegw             ! Depth of impervious layer (L) for drainage according to Hooghoudt or Ernst
+      ! [GR-DRA 2026-05-23] basegw retired — see state%drainage%basegw
       real(8)   bdens(maho)        ! Array with dry bulk density for each soil layer (M/L3)
       real(8)   c_top(macp)        ! Oxygen concentration at top of compartment(kg/m3)
       
@@ -845,7 +845,7 @@
       real(8)   drares(Madr)       ! Array with drainage resistance (T) for each drainage level
       ! [GR-BH Task 35] dz(macp) retired — moved to state%mesh%dz
       real(8)   dznew(macp)        ! Desired thickness of compartments for soil water quality models (L)
-      real(8)   entres             ! Drain entry resistance (T)
+      ! [GR-DRA 2026-05-23] entres retired — see state%drainage%entres
       ! [GR-CROP-DVS] es0 retired — see state%crop%es0
       ! [GR-CROP-DVS] et0 retired — see state%crop%et0
       ! [GR-CROP-DVS] ew0 retired — see state%crop%ew0
@@ -853,7 +853,7 @@
       ! real(8)   evp(macp)          ! Internal evaporation flux of top soil compartments (L/T)
       ! [GR-BH Task 37] FacDpthInf retired — moved to state%drainage%FacDpthInf
       real(8)   ftopdislay(madr)   ! Array with factor for function to determine depth of top of model discharge layer for each drain level, see also swtopdislay (L)
-      real(8)   geofac             ! Geometry factor (-) for analytical drainage formula of Ernst
+      ! [GR-DRA 2026-05-23] geofac retired — see state%drainage%geofac
       ! [SS-SWC] retired 2026-05-12 — moved to state%soilwater%gwl (ADR 0038)
       ! real(8)   gwl                ! Groundwater level (L)
       ! [GR-CROP-DVS] gwlconv retired — see state%cfg%simulation%numerical%gwlconv
@@ -929,8 +929,8 @@
       ! real(8)   ithetabeg(macp)    ! Array with volumetric soil water contents (-) for each compartment at start of intermediate period
       ! [SS-SWC] retired 2026-05-12 — moved to state%soilwater%k (ADR 0038)
       ! real(8)   k(macp+1)          ! Array with soil hydraulic conductivity (L/T) for each numerical compartment
-      real(8)   khbot              ! Horizontal hydraulic conductivity of bottom layer (L/T)
-      real(8)   khtop              ! Horizontal hydraulic conductivity of top layer (L/T)
+      ! [GR-DRA 2026-05-23] khbot retired — see state%drainage%khbot
+      ! [GR-DRA 2026-05-23] khtop retired — see state%drainage%khtop
       ! [SS-SWC] retired 2026-05-12 — moved to state%soilwater%kmean (ADR 0038)
       ! real(8)   kmean(macp+1)      ! Array with mean soil hydraulic conductivity (L/T) at the interface of current and upper compartment
       real(8)   Kroot              ! Hydraulic, radial conductivity of root tissue (L/T)
@@ -939,8 +939,8 @@
       ! real(8)   ksatexm(maho)      ! Array with saturated hydraulic conductivity (L/T) for each soil layer: examined in lab or field
       real(8)   ksatthr(maho)      ! Array with saturated hydraulic conductivity (L/T) for each soil layer: to interpolate VG and Ksatexm
       real(8)   kstem              ! Conductance in the path from leaf to root xylem (/d)
-      real(8)   kvbot              ! Vertical hydraulic conductivity of bottom layer (L/T)
-      real(8)   kvtop              ! Vertical hydraulic conductivity of top layer (L/T)
+      ! [GR-DRA 2026-05-23] kvbot retired — see state%drainage%kvbot
+      ! [GR-DRA 2026-05-23] kvtop retired — see state%drainage%kvtop
       ! [GR-BH Task 37] L(Madr) retired — moved to state%drainage%L
       ! real(8) :: ldwet         ! Length of dry period (L) as used in Black's model — [SS-ATM] retired 2026-05-11
       ! [SS-CRP] retired 2026-05-11 — moved to state%soilwater%mfluxtable (ADR 0036)
@@ -1084,7 +1084,7 @@
       ! real(8)   zfrosttop          ! Depth of top of frost layer (L)
       ! [GR-BH Task 37] zbotdr(Madr) retired — moved to state%drainage%zbotdr
       real(8)   zi(macp)           ! Array with soil depths (L) used to specify initial soil water pressure heads
-      real(8)   zintf              ! Depth (L) at which fine top layer ends and coarse sub layer starts
+      ! [GR-DRA 2026-05-23] zintf retired — see state%drainage%zintf
       ! real(8)   ztopdislay(Madr)   ! Moved to drainage_state_t%ztopdislay (ADR 0031)
       ! [SS-TC] retired 2026-05-12 — moved to state%timecontrol%flDrain (ADR 0041)
       ! logical   fldrain            ! moved to state%timecontrol%flDrain

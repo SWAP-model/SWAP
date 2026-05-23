@@ -191,8 +191,8 @@ contains
       use variables, only: &   ! [SS-GR-FINAL B10] residuals — all DEFERRED
          ! DEFERRED: dramet/swdtyp/swallo — drainage method/type/allow flags; config, Phase C3
          dramet, swdtyp, swallo, &
-         ! DEFERRED: basegw/ipos/khtop/khbot/kvtop/kvbot/entres/zintf/geofac — drain geometry config; Phase C3
-         basegw, ipos, khtop, khbot, kvtop, kvbot, entres, zintf, geofac, &
+         ! [GR-BND 2026-05-23] geometry cluster (basegw/ipos/khtop/khbot/kvtop/kvbot/
+         ! entres/zintf/geofac) retired — aliased from state%drainage in the associate below.
          ! DEFERRED: drares/infres/qdrtab/cofintfl/expintfl/shape — drain resistance/flow config; Phase C3
          drares, infres, qdrtab, cofintfl, expintfl, shape, &
          ! [SS-GR-CROPRT A2] FlMacropore dropped — retired (ADR 0040)
@@ -231,7 +231,16 @@ contains
                 l        => state%drainage%L,            &  ! GR-BH Task 28
                 nrlevs   => state%drainage%nrlevs,       &  ! GR-BH Task 28
                 swnrsrf  => state%drainage%swnrsrf,      &  ! GR-BH Task 28
-                owltab   => state%drainage%owltab        )  ! GR-BH Task 28
+                owltab   => state%drainage%owltab,       &  ! GR-BH Task 28
+                basegw   => state%drainage%basegw,       &  ! [GR-BND 2026-05-23] geometry cluster
+                entres   => state%drainage%entres,       &
+                geofac   => state%drainage%geofac,       &
+                ipos     => state%drainage%ipos,         &
+                khtop    => state%drainage%khtop,        &
+                khbot    => state%drainage%khbot,        &
+                kvtop    => state%drainage%kvtop,        &
+                kvbot    => state%drainage%kvbot,        &
+                zintf    => state%drainage%zintf         )
 
       ! SS-SWC Phase 2 S-2.8: gwl read from state%soilwater
       gwldra = state%soilwater%gwl

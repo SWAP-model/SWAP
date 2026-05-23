@@ -122,7 +122,7 @@
       inc                = 0 
       ! [SS-SWC] indeks retired — soilwater_init handles init via state%soilwater%indeks
       ! indeks             = 0
-      ipos               = 0 
+      ! [GR-DRA 2026-05-23] ipos retired — see state%drainage%ipos
       isoillay           = 0 
       ! [GR-BH Task 35] layer retired to state%mesh%layer
       ! [SS-BMI2 Task 5] msteps retired 2026-05-13 — moved to state%timecontrol%msteps
@@ -172,7 +172,7 @@
       aqave              = 0.0d0 
       aqper              = 0.0d0 
       aqtmax             = 0.0d0 
-      basegw             = 0.0d0 
+      ! [GR-DRA 2026-05-23] basegw retired — see state%drainage%basegw
       bdens              = 0.0d0 
       ! [SS-SWC] cgird/cinund/cnird retired — soilwater_init handles init via state%soilwater
       ! cgird              = 0.0d0
@@ -211,12 +211,12 @@
       drares             = 0.0d0 
       ! [GR-BH Task 35] dz retired to state%mesh%dz
       dznew              = 0.0d0 
-      entres             = 0.0d0 
+      ! [GR-DRA 2026-05-23] entres retired — see state%drainage%entres
       ! [SS-SWC] evp retired — soilwater_init handles init via state%soilwater%evp
       ! evp                = 0.0d0
       ! [GR-BH Task 37] FacDpthInf retired to state%drainage%FacDpthInf
       ftopdislay         = 0.0d0
-      geofac             = 0.0d0 
+      ! [GR-DRA 2026-05-23] geofac retired — see state%drainage%geofac
       ! [SS-SWC] gwl retired — soilwater_init handles init via state%soilwater%gwl
       ! gwl                = 0.0d0
       gwli               = 0.0d0 
@@ -281,16 +281,16 @@
       ! [SS-SWC] ithetabeg/k retired — soilwater_init handles init via state%soilwater
       ! ithetabeg          = 0.0d0
       ! k                  = 0.0d0
-      khbot              = 0.0d0 
-      khtop              = 0.0d0 
+      ! [GR-DRA 2026-05-23] khbot retired — see state%drainage%khbot
+      ! [GR-DRA 2026-05-23] khtop retired — see state%drainage%khtop
       ! [SS-SWC] kmean retired — soilwater_init handles init via state%soilwater%kmean
       ! kmean              = 0.0d0
       ! [GR-BH Task 36] ksatfit/ksatexm retired — seeded via state%soilwater in swap_mod.f90
       ! ksatfit            = 0.0d0
       ! ksatexm            = 0.0d0
       ksatthr            = 0.0d0 
-      kvbot              = 0.0d0 
-      kvtop              = 0.0d0 
+      ! [GR-DRA 2026-05-23] kvbot retired — see state%drainage%kvbot
+      ! [GR-DRA 2026-05-23] kvtop retired — see state%drainage%kvtop
       ! [GR-BH Task 37] L retired to state%drainage%L
       ! [SS-ATM A-2.6] ldwet retired to state%atmosphere%ldwet
       ! [SS-CRP C-2.5] mfluxtable retired — soilwater_init handles init via state%soilwater (ADR 0036)
@@ -372,7 +372,7 @@
       ! zfrosttop          = 0.0d0
       ! [GR-BH Task 37] zbotdr retired to state%drainage%zbotdr
       zi                 = 0.0d0
-      zintf              = 0.0d0 
+      ! [GR-DRA 2026-05-23] zintf retired — see state%drainage%zintf 
       ! ztopdislay         = 0.0d0   ! Moved to drainage_state_t — drainage_init handles (ADR 0031)
       ! [SS-TC] fldrain retired to state%timecontrol%flDrain (ADR 0041)
       ! [SS-SWC] fllowgwl retired — soilwater_init handles init via state%soilwater%fllowgwl

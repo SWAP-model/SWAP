@@ -206,7 +206,7 @@ module legacy_state_mod
       integer :: dra  !! Internal number of drainage input file *.DRA
       integer :: dramet  !! Switch for lateral drainage: 1 = table of flux - groundwater level; 2 = Hooghoudt or Ernst;
       integer :: inc  !! Internal number of output file *.INC with incremental water balance data
-      integer :: ipos  !! Switch for position of drain (see *.DRA input file for overview)
+      ! [GR-DRA 2026-05-23] ipos retired — see state%drainage%ipos
       integer, allocatable :: isoillay(:)  !! Number of soil layer, starting with 1 at the soil surface
       integer, allocatable :: ncomp(:)  !! Array with number of compartments in each sublayer
       integer :: nhead  !! Number of initial soil water pressure heads as provided in the input
@@ -246,7 +246,7 @@ module legacy_state_mod
       real(real64) :: aqave  !! Average hydraulic head in deep aquifer (L)
       real(real64) :: aqper  !! Period of prescribed sine wave of hydraulic head in deep aquifer (T)
       real(real64) :: aqtmax  !! Time with maximum hydraulic head in deep aquifer (T)
-      real(real64) :: basegw  !! Depth of impervious layer (L) for drainage according to Hooghoudt or Ernst
+      ! [GR-DRA 2026-05-23] basegw retired — see state%drainage%basegw
       real(real64), allocatable :: bdens(:)  !! Array with dry bulk density for each soil layer (M/L3)
       real(real64), allocatable :: c_top(:)  !! Oxygen concentration at top of compartment(kg/m3)
       real(real64), allocatable :: o2_d_soil_term1(:)  !! Pre-calculated soil diffusion term1 per node
@@ -264,9 +264,9 @@ module legacy_state_mod
       real(real64) :: CriterHr  !! Maximum difference of Hroot between iterations; convergence criterium  (L)
       real(real64), allocatable :: drares(:)  !! Array with drainage resistance (T) for each drainage level
       real(real64), allocatable :: dznew(:)  !! Desired thickness of compartments for soil water quality models (L)
-      real(real64) :: entres  !! Drain entry resistance (T)
+      ! [GR-DRA 2026-05-23] entres retired — see state%drainage%entres
       real(real64), allocatable :: ftopdislay(:)  !! Array with factor for function to determine depth of top of model discharge layer for each drain level, see also swtopdislay (L)
-      real(real64) :: geofac  !! Geometry factor (-) for analytical drainage formula of Ernst
+      ! [GR-DRA 2026-05-23] geofac retired — see state%drainage%geofac
       real(real64) :: gwli  !! Groundwater level (L) at start of simulation
       ! [GR-BND 2026-05-23] gwltab retired — see state%soilwater%gwltab
       real(real64), allocatable :: h_enpr(:)  !! Soil water Entry Pressure head for Modified MualemVanGenuchten curve (L)
@@ -281,13 +281,13 @@ module legacy_state_mod
       real(real64), allocatable :: inpolb(:)  !! Weight for interpolation between current node and lower node
       real(real64) :: iqinfmax  !! [SS-GR-FINAL D1] qinfmax retired — 0 consumers
       real(real64) :: issnowbeg  !! Amount of snow in soil water equivalent (L) at start of current intermediate period [snow.f90, waterbalance.f90]
-      real(real64) :: khbot  !! Horizontal hydraulic conductivity of bottom layer (L/T)
-      real(real64) :: khtop  !! Horizontal hydraulic conductivity of top layer (L/T)
+      ! [GR-DRA 2026-05-23] khbot retired — see state%drainage%khbot
+      ! [GR-DRA 2026-05-23] khtop retired — see state%drainage%khtop
       real(real64) :: Kroot  !! Hydraulic, radial conductivity of root tissue (L/T)
       real(real64), allocatable :: ksatthr(:)  !! Array with saturated hydraulic conductivity (L/T) for each soil layer: to interpolate VG and Ksatexm
       real(real64) :: kstem  !! Conductance in the path from leaf to root xylem (/d)
-      real(real64) :: kvbot  !! Vertical hydraulic conductivity of bottom layer (L/T)
-      real(real64) :: kvtop  !! Vertical hydraulic conductivity of top layer (L/T)
+      ! [GR-DRA 2026-05-23] kvbot retired — see state%drainage%kvbot
+      ! [GR-DRA 2026-05-23] kvtop retired — see state%drainage%kvtop
       real(real64), allocatable :: OxygenIntercept(:)  !! Parameters of reproduction function for oxygen stress according to Bartholomeus
       real(real64), allocatable :: OxygenSlope(:)  !! Parameters of reproduction function for oxygen stress according to Bartholomeus
       real(real64), allocatable :: paramvg(:,:)  !! Array with input values of soil hydraulic parameters according to Mualem - van Genuchten for each soil layer
@@ -332,7 +332,7 @@ module legacy_state_mod
       real(real64) :: tau  !! Minimum pressure head difference (L) to change from wetting to drying in case of hysteresis
       real(real64), allocatable :: twilt(:)  !! Pressure head of a compartment at wilting point (L)
       real(real64), allocatable :: zi(:)  !! Array with soil depths (L) used to specify initial soil water pressure heads
-      real(real64) :: zintf  !! Depth (L) at which fine top layer ends and coarse sub layer starts
+      ! [GR-DRA 2026-05-23] zintf retired — see state%drainage%zintf
       logical :: FlHydrLift  !! Flag indicating release of water from root to soil is allowed
       ! [GR-BND 2026-05-23] flrunon retired — see state%soilwater%flrunon
       character(len=16) :: drfil  !! Name of drainage input file

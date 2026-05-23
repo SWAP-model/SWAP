@@ -252,8 +252,8 @@ contains
       ! [GR-BH Task 37] swdivd global deleted — state%drainage%swdivd seeded in swap_mod.f90
       swdislay = config%drain%swdislay
       ! [GR-BH Task 37] nrlevs global deleted — state%drainage%nrlevs seeded in swap_mod.f90
-      basegw   = config%drain%basegw
-      entres   = config%drain%entres
+      state%drainage%basegw = config%drain%basegw
+      state%drainage%entres = config%drain%entres
       ! Note: drainage%shape may collide with bottom_boundary%shape
       ! at the legacy global `shape`. Bottom boundary is wired below
       ! and overwrites for swbotb=3 cases (the documented audit alias).
@@ -271,19 +271,19 @@ contains
       ! ipos / khtop / khbot / kvtop / kvbot / zintf / geofac are scalar globals.
       if (config%drain%dramet == 2) then
          ! [GR-BH Task 37] L(1)/zbotdr(1) bare globals deleted — seeded from config in swap_mod.f90
-         shape     = config%drain%shape
-         ipos      = config%drain%ipos
-         khtop     = config%drain%khtop
+         shape                  = config%drain%shape
+         state%drainage%ipos    = config%drain%ipos
+         state%drainage%khtop   = config%drain%khtop
          if (config%drain%ipos >= 3) then
-            khbot = config%drain%khbot
-            zintf = config%drain%zintf
+            state%drainage%khbot = config%drain%khbot
+            state%drainage%zintf = config%drain%zintf
          end if
          if (config%drain%ipos >= 4) then
-            kvtop = config%drain%kvtop
-            kvbot = config%drain%kvbot
+            state%drainage%kvtop = config%drain%kvtop
+            state%drainage%kvbot = config%drain%kvbot
          end if
          if (config%drain%ipos == 5) then
-            geofac = config%drain%geofac
+            state%drainage%geofac = config%drain%geofac
          end if
       end if
 
@@ -397,7 +397,7 @@ contains
       ! TOML fields map to one legacy global; the gate preserves both
       ! intended behaviors. Schema-level reconciliation deferred.
       if (config%drain%ipos /= 5) then
-         geofac = config%drain%surface_runoff%geofac
+         state%drainage%geofac = config%drain%surface_runoff%geofac
       end if
       ! NOTE: do NOT write gwlconv from drainage.surface_runoff. Legacy
       ! reads gwlconv exactly once (readswap.f90:960, in the .swp Part 13
