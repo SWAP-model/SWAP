@@ -51,22 +51,12 @@ contains
                  heat => state%heat,            &
                  time => state%timecontrol)
 
-      ! --- reset intermediate snow states
-      if (time%flZeroIntr) then
-         intr%igsnow = 0.0_real64
-         intr%isubl  = 0.0_real64
-         intr%isnrai = 0.0_real64
-         atmo%ISsnowBeg = atmo%ssnow
-      end if
-
-      ! --- reset cumulative snow states
-      if (time%flZeroCumu) then
-         cumu%cgsnow   = 0.0_real64
-         cumu%csubl    = 0.0_real64
-         cumu%csnrai   = 0.0_real64
-         cumu%cmelt    = 0.0_real64
-         atmo%snowinco = atmo%ssnow
-      end if
+      ! --- snapshot snow at the start of each accumulation period.
+      ! Zeroing of intr%i{gsnow,subl,snrai} and cumu%c{gsnow,subl,snrai,melt}
+      ! is owned by ResetMetFlx (meteo_io.f90), which runs earlier in the
+      ! same tc_flDayStart tick. Only the snapshots stay here.
+      if (time%flZeroIntr) atmo%ISsnowBeg = atmo%ssnow
+      if (time%flZeroCumu) atmo%snowinco  = atmo%ssnow
 
       ! --- when there is snowpack calculate the amount of sublimation
       atmo%subl = 0.0_real64
