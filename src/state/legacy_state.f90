@@ -167,7 +167,7 @@ module legacy_state_mod
       character(len=40), allocatable :: cropfil(:)  !! Array with names of crop files
       character(len=80) :: pathcrop  !! Path to folder with crop input files
       real(real64) :: rdmax  !! Maximum rooting depth in soil profile (L)
-      logical :: flCO2  !! Flag indicating correction of CO2
+      ! [GR-ATM 2026-05-23] flCO2 retired — see state%atmosphere%flco2
       real(real64), allocatable :: co2amaxtb(:)  !! table with factors to correct AMAX for CO2
       real(real64), allocatable :: co2efftb(:)  !! table with factors to correct EFF for CO2
       real(real64), allocatable :: co2tratb(:)  !! table with factors to correct TRA for CO2
@@ -319,7 +319,7 @@ module legacy_state_mod
       real(real64) :: rimlay  !! Vertical resistance of aquitard (T)
       ! [GR-ATM 2026-05-23] rsigni retired — see state%atmosphere%rsigni
       ! [GR-ATM 2026-05-23] rsoil retired — see state%atmosphere%rsoil
-      integer :: swuseCN  !! Switch for usage of Curve Number method for runoff [0 (default),1]
+      ! [GR-ATM 2026-05-23] swuseCN retired — see state%atmosphere%swusecn
       real(real64) :: Rxylem  !! Mean radius of xylem tube inside roots (L)
       real(real64), allocatable :: runonarr(:)  !! Array with runon (L) data for each day
       real(real64) :: shape  !! Shape factor: ratio between the mean and the maximum groundwater level elevation above the drainage base (-)

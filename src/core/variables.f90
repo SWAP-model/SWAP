@@ -565,7 +565,7 @@
       ! [GR-CROP-DVS] rdm retired — see state%crop%common%rdm
 
 ! --- CO2
-      logical   flCO2              ! Flag indicating correction of CO2
+      ! [GR-ATM 2026-05-23] flCO2 retired — see state%atmosphere%flco2 (dormant, no TOML wiring yet)
       ! [GR-CROP-DVS] fco2amax retired — see state%crop%wofost%fco2amax
       ! [GR-CROP-DVS] fco2eff retired — see state%crop%wofost%fco2eff
       ! [GR-CROP-DVS] fco2tra retired — see state%crop%wofost%fco2tra
@@ -1036,7 +1036,7 @@
       ! [GR-ATM 2026-05-23] rsoil retired — see state%atmosphere%rsoil
       ! [GR-CROP-DVS] rsro retired — see state%surfacewater%rsro
       ! [GR-CROP-DVS] rsroexp retired — see state%surfacewater%rsroexp
-      integer   swuseCN            ! Switch for usage of Curve Number method for runoff [0 (default),1]
+      ! [GR-ATM 2026-05-23] swuseCN retired — see state%atmosphere%swusecn (dormant, no TOML wiring yet)
       ! [GR-CROP-DVS] wc_cor/CNrefTAB/CNtimTAB/iCNtab retired — see state%atmosphere
       ! [SS-SWC] retired 2026-05-12 — crunoffCN/irunoCN moved to state%soilwater (ADR 0038)
       ! [GR-ATM] retired 2026-05-23 — CNdry/CNwet/ThetaRef/wc10/Runoff_CN moved to state%atmosphere

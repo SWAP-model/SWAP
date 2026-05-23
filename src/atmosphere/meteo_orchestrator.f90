@@ -78,7 +78,7 @@ contains
   !! Single ET record per day. Body is the daily-only slice of the former
   !! ProcessMeteoDay: Sections 3, 4, 5(daily branch), 6, 7, 9.
   subroutine process_meteo_day_daily(state, config)
-    use variables, only: croptype, gc, swusecn
+    use variables, only: croptype, gc
     use swap_constants, only: nihil, small
     type(swap_state_t),  intent(inout) :: state
     type(swap_config_t), intent(in)    :: config
@@ -166,7 +166,7 @@ contains
       netrainflux = state%atmosphere%finterception * rainflux
       state%atmosphere%graidt  = rainflux
       state%atmosphere%nraidt  = netrainflux
-      if (swuseCN == 1) then
+      if (state%atmosphere%swusecn == 1) then
         ! SS-ATM A-2.6: state added — CNmethod needs nraidt/melt from state%atmosphere
         call cn_step(state)
         state%atmosphere%nraidt = state%atmosphere%nraidt - state%atmosphere%Runoff_CN   ! [SS-GR-ATM B24]
@@ -593,7 +593,7 @@ contains
   !! and CO2 correction. Writes state%atmosphere%peva and state%atmosphere%ptra.
   subroutine partition_peva_ptra(state, config, wfrac, Edirect, Tdirect, Edirectpond)
     use swap_constants, only: nihil, small
-    use variables, only: flco2, croptype, gc
+    use variables, only: croptype, gc
     type(swap_state_t),  intent(inout) :: state
     type(swap_config_t), intent(in)    :: config
     real(8), intent(in) :: wfrac, Edirect, Tdirect, Edirectpond
@@ -655,7 +655,7 @@ contains
     endif
 
     ! Correction of potential transpiration as a function of atmospheric CO2 concentration
-    if (flCO2 .and. state%crop%flCropEmergence) then
+    if (state%atmosphere%flco2 .and. state%crop%flCropEmergence) then
       at_ptra = state%crop%wofost%fco2tra * at_ptra
     endif
 

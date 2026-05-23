@@ -399,7 +399,7 @@
       !   (intent changed in→inout). Global write retained for backward compat; CropGrowth
       !   redundant dual-write at lines 395-397 removed (B6 handles it). Reads in CropGrowth
       !   body now use state%crop%wofost%X (removed from CropGrowth use variables).
-      use variables, only: flco2,                                       & ! [SS-GR-CROPRT B6] DEFERRED; fco2amax/eff/tra retired
+      use variables, only:                                              & ! [SS-GR-CROPRT B6] flco2 retired (→ state%atmosphere%flco2)
                            co2year, mayrs, co2ppm,                       &
                            co2amaxtb, co2efftb, co2tratb
       use array_utils, only: afgen
@@ -420,7 +420,7 @@
 
       ! correction of CO2 impact
       ! TC-10: iyear read via state%timecontrol%iyear directly (single site, no ASSOCIATE needed).
-      if(flco2) then
+      if (state%atmosphere%flco2) then
         indexyr = ifindi (CO2year, mayrs, 1, mayrs, state%timecontrol%iyear)  ! TC-10
         if (indexyr.lt.1 .or. indexyr.gt.mayrs) then
           Messag ='Input if CO2year or CO2ppm inconsistent, correct'

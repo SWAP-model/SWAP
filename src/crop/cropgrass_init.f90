@@ -65,11 +65,7 @@ contains
          ! Compensation — DEFERRED Phase C3
          ! swcompensate/swstressor/alphacrit/dcritrtz retired
          ! Management — DEFERRED Phase C3
-         swpotrelmf,                                                  &  ! relmf/mowrest/seqgrazmow retired
-         ! Mowing / harvest — DEFERRED Phase C3
-         ! dateharvest/dmmowtb/DelayRegrowthTab retired
-         ! CO2 (flCO2 only; swco2 is a local in readgrass, not a global) — DEFERRED Phase C3
-         flCO2  ! schedule retired
+         swpotrelmf  ! relmf/mowrest/seqgrazmow retired; dateharvest/dmmowtb/DelayRegrowthTab/flCO2 retired
       use array_utils,  only: afgen
       use error_mod,    only: fatalerr_collected
       use swap_state_mod, only: swap_state_t
@@ -345,8 +341,8 @@ contains
       state%crop%common%schedule = cfg%schedule%schedule
 
       ! Part 20: CO2 correction (readgrass lines 4050-4083)
-      ! swco2=1 is stub-guarded above; flCO2 is always .false.
-      flCO2 = .false.
+      ! swco2=1 is stub-guarded above; flco2 is always .false. (state default).
+      ! [GR-ATM 2026-05-23] flCO2 bare-global write retired — state%atmosphere%flco2 default is .false.
 
       ! ================================================================
       ! Runtime init math — cumdens (readgrass lines 4091-4121)

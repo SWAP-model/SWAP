@@ -53,7 +53,7 @@ contains
    subroutine swap_init_from_loaded_config(state, config)
       use variables, only : flswapshared, flcropnut, swfrost, &
                             ! [SS-GR-CROPRT A1] flagetracer dropped — retired (ADR 0032; always .false.)
-                            swusecn, flcropcalendar, &
+                            flcropcalendar, &
                             flharvestday, flcropoutput, swcrp, project, &
                             ! [SS-GR-CROPRT C1] swend dropped — global + state field retired (ADR 0009; always 0)
                             flCropHarvest, &   ! [SS-GR-CROPRT A5] initial zero mirror
@@ -380,7 +380,7 @@ contains
 !  initialize SoilWater rate/state variables
    call SoilWater(1, state)
    ! SS-ATM A-2.6: state added — CNmethod signature updated for retired nraidt/melt
-   if (swuseCN == 1) call cn_init(state)
+   if (state%atmosphere%swusecn == 1) call cn_init(state)
 
 !  Allocate and initialise drainage state arrays.  Config is passed so
 !  drainage_init can seed state%drainage%wetper(1) from config%drain%wetper

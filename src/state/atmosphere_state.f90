@@ -120,6 +120,12 @@ module atmosphere_state_mod
       real(real64) :: dsinbe       = 0.0_real64   !< daily total of effective solar height (s)
       real(real64) :: tsunrise_atm = 0.0_real64   !< time of sunrise (fraction of day)
       real(real64) :: tsunset_atm  = 1.0_real64   !< time of sunset (fraction of day)
+
+      ! Dormant feature flags (no writers in current TOML pipeline; gated branches are dead).
+      ! Kept in state to preserve compute-routine signatures; retire fully when the
+      ! relevant features (CN runoff, CO2 effects) get wired into config.
+      integer :: swusecn = 0  !< Curve-Number runoff method: 0=off, 1=on (no TOML wiring yet)
+      logical :: flco2   = .false.  !< CO2 effects toggle (no TOML wiring yet)
       real(real64) :: graidt   = 0.0_real64  !< gross rainfall this timestep (cm)
       real(real64) :: nraidt   = 0.0_real64  !< net rainfall this timestep (cm)
       real(real64) :: aintcdt  = 0.0_real64  !< actual interception this timestep (cm)
