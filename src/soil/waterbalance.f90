@@ -584,8 +584,8 @@ contains
       else if (state%soilwater%runots.gt.0.0d0) then
         state%soilwater%crunoff = state%soilwater%crunoff + state%soilwater%runots            ! S-2.12B
       endif
-      state%soilwater%irunoCN = state%soilwater%irunoCN + Runoff_CN*tc_dt                         ! S-2.12B, TC-6
-      state%soilwater%crunoffCN = state%soilwater%crunoffCN + Runoff_CN*tc_dt                     ! S-2.12B, TC-6
+      state%soilwater%irunoCN   = state%soilwater%irunoCN   + state%atmosphere%Runoff_CN*tc_dt
+      state%soilwater%crunoffCN = state%soilwater%crunoffCN + state%atmosphere%Runoff_CN*tc_dt
 
       ! SS-ATM Phase 2 Task A-2.2: aintcdt/graidt/nraidt read from state%atmosphere (atmosphere home).
       state%atmosphere%cumu%caintc = state%atmosphere%cumu%caintc + (state%atmosphere%aintcdt+state%crop%gird-nird)*tc_dt  ! TC-6
