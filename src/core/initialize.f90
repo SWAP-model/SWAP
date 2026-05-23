@@ -228,12 +228,12 @@
       ! [SS-SWC] h retired — soilwater_init handles init via state%soilwater%h
       ! h                  = 0.0d0
       h_enpr             = 0.0d0 
-      haqtab             = 0.0d0 
+      ! [GR-BND 2026-05-23] haqtab retired — soilwater_init zeros state%soilwater%haqtab
       ! [SS-SWC] hatm retired — soilwater_init handles init via state%soilwater%hatm
       ! hatm               = 0.0d0
       ! [SS-BND B-2.7] hbot retired — soilwater_init handles init via state%soilwater
       ! hbot               = 0.0d0
-      hbotab             = 0.0d0 
+      ! [GR-BND 2026-05-23] hbotab retired — soilwater_init zeros state%soilwater%hbotab
       hcomp              = 0.0d0 
       hdrain             = 0.0d0 
       ! [SS-SWC] hm1 retired — soilwater_init handles init via state%soilwater%hm1

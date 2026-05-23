@@ -866,12 +866,12 @@
       ! [SS-SWC] retired 2026-05-12 — moved to state%soilwater%h (ADR 0038)
       ! real(8)   h(macp)            ! Soil water pressure head (L)
       real(8)   h_enpr(macp)       ! Soil water Entry Pressure head for Modified MualemVanGenuchten curve (L)
-      real(8)   haqtab(mabbc*2)    ! Array with specified hydraulic head in deep aquifer (L) as function of time (T)
+      ! [GR-BND 2026-05-23] haqtab retired — see state%soilwater%haqtab
       ! [SS-SWC] retired 2026-05-12 — moved to state%soilwater%hatm (ADR 0038)
       ! real(8)   hatm               ! Pressure head of air (L) near the soil surface
       ! [SS-BND] retired 2026-05-11 — boundary subsystem migrated to state%soilwater (ADR 0035)
       ! real(8)   hbot               ! Soil water pressure head (L) at bottom of soil column
-      real(8)   hbotab(mabbc*2)    ! Array with specified pressure head of lowest compartment (L) as function of time (T)
+      ! [GR-BND 2026-05-23] hbotab retired — see state%soilwater%hbotab
       real(8)   hcomp(macp)        ! Array with prescribed height of numerical compartments (L) for each sublayer
       real(8)   hdrain             ! Mean drainage level (L) to derive regional average groundwater level for bottom boundary condition
       ! [SS-CRP] retired 2026-05-11 — moved to state%soilwater%hleaf (ADR 0036)

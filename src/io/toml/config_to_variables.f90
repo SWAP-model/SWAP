@@ -749,10 +749,14 @@ contains
                   hdr, csv_table, csv_errs)
                call csv_errs%abort_if_fatal()
                if (allocated(csv_table)) then
+                  if (.not. allocated(state%soilwater%haqtab)) then
+                     allocate(state%soilwater%haqtab(2*mabbc))
+                     state%soilwater%haqtab = 0.0d0
+                  end if
                   nrows = size(csv_table, 1)
                   do k = 1, nrows
-                     haqtab(k*2 - 1) = csv_table(k, 1)
-                     haqtab(k*2)     = csv_table(k, 2)
+                     state%soilwater%haqtab(k*2 - 1) = csv_table(k, 1)
+                     state%soilwater%haqtab(k*2)     = csv_table(k, 2)
                   end do
                end if
             end block
@@ -836,10 +840,14 @@ contains
                hdr, csv_table, csv_errs)
             call csv_errs%abort_if_fatal()
             if (allocated(csv_table)) then
+               if (.not. allocated(state%soilwater%hbotab)) then
+                  allocate(state%soilwater%hbotab(2*mabbc))
+                  state%soilwater%hbotab = 0.0d0
+               end if
                nrows = size(csv_table, 1)
                do k = 1, nrows
-                  hbotab(k*2 - 1) = csv_table(k, 1)
-                  hbotab(k*2)     = csv_table(k, 2)
+                  state%soilwater%hbotab(k*2 - 1) = csv_table(k, 1)
+                  state%soilwater%hbotab(k*2)     = csv_table(k, 2)
                end do
             end if
          end block

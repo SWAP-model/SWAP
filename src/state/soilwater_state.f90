@@ -47,7 +47,7 @@ module soilwater_state_mod
    use, intrinsic :: iso_fortran_env, only: real64
    use iso_c_binding, only: c_double
    use hydraulic_params_mod, only: vanGenuchten_params_t
-   use swap_array_dimensions, only: MADAY
+   use swap_array_dimensions, only: MADAY, MABBC
    implicit none
    private
    public :: soilwater_state_t, soilwater_init
@@ -201,6 +201,14 @@ module soilwater_state_mod
       ! Dormant — no TOML writer; always 0 in the TOML pipeline.
       ! 0 = add the (modelled-profile) vertical resistance to rimlay; 1 = use rimlay alone.
       integer :: swbotb3resvert = 0
+
+      ! Bottom-boundary CSV-driven tables (date/value interleaved pairs,
+      ! sized 2*MABBC to match legacy fixed-size globals). Populated by
+      ! config_to_variables from the bottom_boundary CSV inputs:
+      !   haqtab — deep-aquifer head, swbotb=3 with sw3=2
+      !   hbotab — bottom pressure head, swbotb=5
+      real(real64), allocatable :: haqtab(:)
+      real(real64), allocatable :: hbotab(:)
 
       ! [SS-GR-BH A5] runtime scalars formerly bare globals (boundtop/PONDRUNOFF/boundbottom)
       real(real64) :: q0           = 0.0_real64   !! surface flux (precip + runon - reva) [cm/d]
@@ -479,6 +487,17 @@ contains
       ! match the legacy fixed-size global runonarr(maday).
       allocate(sw%runonarr(MADAY)); sw%runonarr = 0.0_real64
       sw%flrunon = .false.
+
+      ! Bottom-boundary CSV tables: sized 2*MABBC to match legacy globals.
+      ! Allocation is guarded because config_to_variables (which runs
+      ! BEFORE soilwater_init) may have already allocated and populated
+      ! these arrays from the swbotb CSV inputs.
+      if (.not. allocated(sw%haqtab)) then
+         allocate(sw%haqtab(2*MABBC)); sw%haqtab = 0.0_real64
+      end if
+      if (.not. allocated(sw%hbotab)) then
+         allocate(sw%hbotab(2*MABBC)); sw%hbotab = 0.0_real64
+      end if
 
    end subroutine soilwater_init
 

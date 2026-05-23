@@ -14,8 +14,8 @@ module boundbottom_mod
     use swap_log,              only: log_debug, log_warn, to_str
     use swap_array_dimensions, only: mabbc
     use variables,             only: &   ! [SS-GR-FINAL B11] all DEFERRED
-       ! DEFERRED: gwltab/qbotab/haqtab/hbotab — groundwater boundary tables; config; Phase C3
-       gwltab, qbotab, haqtab, hbotab  ! [SS-GR-BH B8] narrowed
+       ! DEFERRED: gwltab/qbotab — groundwater level / bottom flux tables; config; Phase C3
+       gwltab, qbotab  ! [SS-GR-BH B8] narrowed
     implicit none
 
     private
@@ -140,7 +140,7 @@ contains
                                          dcos(twopi/config%bottom_boundary%aqper * &
                                               (t - config%bottom_boundary%aqtmax))
             else
-                state%soilwater%deepgw = afgen(haqtab, mabbc*2, t1900 + dt)
+                state%soilwater%deepgw = afgen(state%soilwater%haqtab, mabbc*2, t1900 + dt)
             end if
 
             ! ---   determine C-value (vertical resistance) in saturated part of modelled profile
@@ -185,7 +185,7 @@ contains
 
 ! --- interpolation between daily values of given pressurehead
         if (state%soilwater%swbotb_runtime .eq. 5) then
-            state%soilwater%hbot = afgen(hbotab, mabbc*2, t1900 + dt)
+            state%soilwater%hbot = afgen(state%soilwater%hbotab, mabbc*2, t1900 + dt)
             thetabot = watcon(state%soilwater%hbot, &
                                state%soilwater%vg_params(state%mesh%numnod), &
                                state%soilwater%iHWCKmodel(state%soilwater%layer(state%mesh%numnod)), &

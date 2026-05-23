@@ -270,8 +270,8 @@ module legacy_state_mod
       real(real64) :: gwli  !! Groundwater level (L) at start of simulation
       real(real64), allocatable :: gwltab(:)  !! Array with prescribed groundwater level (L) as function of time (T)
       real(real64), allocatable :: h_enpr(:)  !! Soil water Entry Pressure head for Modified MualemVanGenuchten curve (L)
-      real(real64), allocatable :: haqtab(:)  !! Array with specified hydraulic head in deep aquifer (L) as function of time (T)
-      real(real64), allocatable :: hbotab(:)  !! Array with specified pressure head of lowest compartment (L) as function of time (T)
+      ! [GR-BND 2026-05-23] haqtab retired — see state%soilwater%haqtab
+      ! [GR-BND 2026-05-23] hbotab retired — see state%soilwater%hbotab
       real(real64), allocatable :: hcomp(:)  !! Array with prescribed height of numerical compartments (L) for each sublayer
       real(real64) :: hdrain  !! Mean drainage level (L) to derive regional average groundwater level for bottom boundary condition
       real(real64) :: hplate  !! Pressure head of ceramic plate below lysimeter
