@@ -373,7 +373,7 @@ contains
   !! Writes state%crop%es0/et0/ew0 and returns pmo for caller to unpack
   !! Edirect/Tdirect/Tdirectwet/Edirectpond.
   subroutine compute_reference_et(state, config, irecord, etr, hum_in, win_in, rcs, pmo)
-    use variables, only: rad, logf, angstroma, angstromb, daylp, tmn, tmx, difpp, &
+    use variables, only: rad, angstroma, angstromb, daylp, tmn, tmx, difpp, &
                          dsinbe, atmtr, rsoil
     type(swap_state_t),  intent(inout) :: state
     type(swap_config_t), intent(in)    :: config
@@ -387,8 +387,7 @@ contains
     associate( &
        tc_daynr       => state%timecontrol%daynr,       &
        tc_flmetdetail => state%timecontrol%flmetdetail, &
-       metperiod      => state%timecontrol%metperiod,   &
-       swscre         => state%timecontrol%swscre       )
+       metperiod      => state%timecontrol%metperiod    )
 
     ! Reference evapotranspiration has been specified
     if (config%meteo%swmetdetail.eq.0 .and. config%meteo%swetr.eq.1) then
@@ -464,7 +463,7 @@ contains
 
       pmi%rsoil  = rsoil
 
-      call PenMon(pmi, pmo, logf, swscre)
+      call PenMon(pmi, pmo)
 
       ! Unpack PM outputs to existing state.
       state%crop%es0 = pmo%es0

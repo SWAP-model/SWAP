@@ -382,16 +382,12 @@ contains
   !> Penman-Monteith evapotranspiration calculation (wrapper with I/O)
   !!
   !! Thin wrapper around PenMon_calc that calls astro() for the daily
-  !! branch and forwards outputs%warning_code to warn().
-  subroutine PenMon(inputs, outputs, logf, swscre)
+  !! branch and forwards outputs%warning_code to log_warn().
+  subroutine PenMon(inputs, outputs)
       implicit none
 
       type(pm_inputs_t),  intent(in)    :: inputs
       type(pm_outputs_t), intent(inout) :: outputs
-      integer,            intent(in)    :: logf
-        !! Internal number of logbook output file
-      integer,            intent(in)    :: swscre
-        !! Switch of screen display: 0=none, 1=summary, 2=daynumber
 
       ! Local variables
       real(8) :: dayl, sinld, cosld
