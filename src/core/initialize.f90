@@ -42,7 +42,7 @@
 ! --- only for bulb crops (tulips etc..)
       ! [SS-ATM A-2.6] empreva/fprecnosnow/grai/graidt/ievap/inrai/ipeva/iptra retired to state%atmosphere
       epot               = 0.0d0
-      cfevappond         = 0.0d0
+      ! [GR-ATM 2026-05-23] cfevappond retired — see state%atmosphere%cfevappond
       ! [GR-ATM 2026-05-23] finterception retired — see state%atmosphere%finterception
       grain              = 0.0d0
       ! [SS-TC] metperiod retired to state%timecontrol%metperiod (ADR 0041)
@@ -337,7 +337,7 @@
       ! rfcp               = 0.0d0
       rimlay             = 0.0d0 
       ! [GR-ATM 2026-05-23] rsigni retired — see state%atmosphere%rsigni
-      rsoil              = 0.0d0
+      ! [GR-ATM 2026-05-23] rsoil retired — see state%atmosphere%rsoil
       ! [GR-ATM 2026-05-23] Runoff_CN retired — see state%atmosphere%Runoff_CN
       ! [SS-SWC] runon retired — soilwater_init handles init via state%soilwater%runon
       ! runon              = 0.0d0

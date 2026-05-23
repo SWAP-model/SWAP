@@ -157,8 +157,7 @@
       ! real(8) :: aintcdt   ! Interception flux of ONLY Rain during iteration timesteps (L/T)
       ! [GR-CROP-DVS] alt retired — see state%cfg%meteo%alt
       ! [GR-CROP-DVS] altw retired — see state%cfg%meteo%altw
-      real(8)   angstroma          ! first  angstrom coefficient [-]
-      real(8)   angstromb          ! second angstrom coefficient [-]
+      ! [GR-ATM 2026-05-23] angstroma/b retired — see state%atmosphere%angstrom{a,b}
       real(8)   arad(366)          ! Array with daily radiation input data (M/T2)
       real(8)   arai(366)          ! Array with daily precipitation sum input data (L/T)
       real(8)   atav(96)           ! In case of detailed weather input, air temperature of each weather record (L/T)
@@ -178,7 +177,7 @@
       ! [GR-ATM 2026-05-23] dtEventRain retired — see state%atmosphere%dtEventRain
       ! real(8) :: empreva   ! Reduced soil evaporation flux according to empirical functions (L/T)
       real(8)   epot(96)           ! In case of detailed weather input, calculated Epot of each weather record (L/T)
-      real(8)   cfevappond         ! Parameter equal to the ratio ponding layer evaporation / ETref (-)
+      ! [GR-ATM 2026-05-23] cfevappond retired — see state%atmosphere%cfevappond
       ! [GR-ATM 2026-05-23] finterception retired — see state%atmosphere%finterception
       ! real(8) :: fprecnosnow  ! Ratio rain (excl. snow and rain on snow) / gross rain flux (-)
       ! real(8) :: grai        ! Daily gross rain flux (L/T), without rain on snow
@@ -1035,7 +1034,7 @@
       ! [SS-CRP] retired 2026-05-11 — moved to state%soilwater%rootrho (ADR 0036)
       ! real(8)   RootRho(macp)      ! Factor Rho of a compartment used in drought reduction of De Jong van Lier et al. (/L2)
       ! [GR-ATM 2026-05-23] rsigni retired — see state%atmosphere%rsigni
-      real(8)   rsoil              ! Soil resistance of wet soil of PMdirect (T/L)
+      ! [GR-ATM 2026-05-23] rsoil retired — see state%atmosphere%rsoil
       ! [GR-CROP-DVS] rsro retired — see state%surfacewater%rsro
       ! [GR-CROP-DVS] rsroexp retired — see state%surfacewater%rsroexp
       integer   swuseCN            ! Switch for usage of Curve Number method for runoff [0 (default),1]

@@ -131,8 +131,7 @@ contains
       ! the only consumer (the `.YYY` per-year rain reader in readmeteo.f90)
       ! has been deleted; CSV rain events use `config%meteo%rain_events_file`.
       swetsine    = config%meteo%swetsine
-      angstroma   = config%meteo%angstroma
-      angstromb   = config%meteo%angstromb
+      ! [GR-ATM 2026-05-23] angstroma/b retired — snapshotted in atmosphere_state%init
 
       ! All metfile extensions other than .csv are rejected by
       ! meteorology_config_validate (ADR 0014). The `.csv` guard below
@@ -235,10 +234,9 @@ contains
       ! Evaporation sub-section
       swcfbs = config%meteo%evaporation%swcfbs
       state%crop%cfbs = config%meteo%evaporation%cfbs
-      ! [GR-ATM 2026-05-23] swredu/cofred/rsigni retired — snapshotted into
-      ! state%atmosphere by atmosphere_state%init(config); compute reads
-      ! from state, never from these legacy globals.
-      cfevappond = config%meteo%evaporation%cfevappond
+      ! [GR-ATM 2026-05-23] swredu/cofred/rsigni/cfevappond retired —
+      ! snapshotted into state%atmosphere by atmosphere_state%init(config);
+      ! compute reads from state, never from these legacy globals.
 
       ! Snow sub-section
       swsnow   = config%meteo%snow%swsnow
@@ -455,7 +453,7 @@ contains
       ! [GR-FINAL C1] pondini/pond: config%soil%pondini read directly by swap_mod after soilwater_init
       ! (pondini_init_buf/pond_init_buf retired; swap_mod seeding replaced with direct config reads)
       state%surfacewater%pondmx = config%soil%pondmx
-      rsoil   = config%soil%rsoil
+      ! [GR-ATM 2026-05-23] rsoil retired — snapshotted in atmosphere_state%init
       state%surfacewater%rsro = config%soil%rsro
       state%surfacewater%rsroexp = config%soil%rsroexp
       ! Legacy parses .swp `SWRUNON` into a local int; the persistent

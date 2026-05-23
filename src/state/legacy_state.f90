@@ -44,8 +44,7 @@ module legacy_state_mod
       integer, allocatable :: am(:)  !! Array with month numbers in meteo file
       real(real64), allocatable :: aetr(:)  !! Array with daily ETref input data (L/T)
       real(real64), allocatable :: ahum(:)  !! Array with daily humidity input data (M/L/T2)
-      real(real64) :: angstroma  !! first  angstrom coefficient [-]
-      real(real64) :: angstromb  !! second angstrom coefficient [-]
+      ! [GR-ATM 2026-05-23] angstroma/b retired — see state%atmosphere%angstrom{a,b}
       real(real64), allocatable :: arad(:)  !! Array with daily radiation input data (M/T2)
       real(real64), allocatable :: arai(:)  !! Array with daily precipitation sum input data (L/T)
       real(real64), allocatable :: atav(:)  !! In case of detailed weather input, air temperature of each weather record (L/T)
@@ -57,7 +56,7 @@ module legacy_state_mod
       ! [GR-ATM 2026-05-23] dethum/detrad/detrain/dettav/dettime/detwind retired — see state%atmosphere%det*
       ! [GR-ATM 2026-05-23] dtEventRain retired — see state%atmosphere%dtEventRain
       real(real64), allocatable :: epot(:)  !! In case of detailed weather input, calculated Epot of each weather record (L/T)
-      real(real64) :: cfevappond  !! Parameter equal to the ratio ponding layer evaporation / ETref (-)
+      ! [GR-ATM 2026-05-23] cfevappond retired — see state%atmosphere%cfevappond
       ! [GR-ATM 2026-05-23] finterception retired — see state%atmosphere%finterception
       real(real64), allocatable :: grain(:)  !! In case of detailed weather input, gross rain flux of each weather record (L/T)
       real(real64), allocatable :: nrain(:)  !! In case of detailed weather input, calculated netto rain of each weather record (L/T)
@@ -320,7 +319,7 @@ module legacy_state_mod
       real(real64), allocatable :: relsatthr(:)  !! Array with relative saturation (-) for each soil layer: to interpolate VG and Ksatexm
       real(real64) :: rimlay  !! Vertical resistance of aquitard (T)
       ! [GR-ATM 2026-05-23] rsigni retired — see state%atmosphere%rsigni
-      real(real64) :: rsoil  !! Soil resistance of wet soil of PMdirect (T/L)
+      ! [GR-ATM 2026-05-23] rsoil retired — see state%atmosphere%rsoil
       integer :: swuseCN  !! Switch for usage of Curve Number method for runoff [0 (default),1]
       real(real64) :: Rxylem  !! Mean radius of xylem tube inside roots (L)
       real(real64), allocatable :: runonarr(:)  !! Array with runon (L) data for each day

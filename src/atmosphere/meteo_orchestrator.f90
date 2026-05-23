@@ -385,8 +385,7 @@ contains
   !! Writes state%crop%es0/et0/ew0 and returns pmo for caller to unpack
   !! Edirect/Tdirect/Tdirectwet/Edirectpond.
   subroutine compute_reference_et(state, config, irecord, etr, hum_in, win_in, rcs, pmo)
-    use variables, only: angstroma, angstromb, daylp, difpp, &
-                         dsinbe, atmtr, rsoil
+    use variables, only: daylp, difpp, dsinbe, atmtr
     type(swap_state_t),  intent(inout) :: state
     type(swap_config_t), intent(in)    :: config
     integer, intent(in) :: irecord
@@ -450,8 +449,8 @@ contains
       pmi%lat  = state%cfg%meteo%lat
       pmi%alt  = state%cfg%meteo%alt
       pmi%altw = state%cfg%meteo%altw
-      pmi%a    = angstroma
-      pmi%b    = angstromb
+      pmi%a    = state%atmosphere%angstroma
+      pmi%b    = state%atmosphere%angstromb
       pmi%rcs  = rcs
 
       pmi%rad    = rad_loc
@@ -473,7 +472,7 @@ contains
       pmi%kdir   = state%crop%kdir
       pmi%lai    = state%crop%lai
 
-      pmi%rsoil  = rsoil
+      pmi%rsoil  = state%atmosphere%rsoil
 
       call PenMon(pmi, pmo)
 
@@ -593,7 +592,7 @@ contains
   !! and CO2 correction. Writes state%atmosphere%peva and state%atmosphere%ptra.
   subroutine partition_peva_ptra(state, config, wfrac, Edirect, Tdirect, Edirectpond)
     use swap_constants, only: nihil, small
-    use variables, only: cfevappond, flco2, croptype, flCropHarvest, gc
+    use variables, only: flco2, croptype, flCropHarvest, gc
     type(swap_state_t),  intent(inout) :: state
     type(swap_config_t), intent(in)    :: config
     real(8), intent(in) :: wfrac, Edirect, Tdirect, Edirectpond
@@ -624,9 +623,9 @@ contains
         at_peva = state%crop%ew0/state%crop%es0 * at_peva
       elseif (state%crop%es0.gt.1.0d-8) then
         if (state%crop%swcfbs .eq. 1 .and. state%crop%cfbs .gt. small) then
-          at_peva = cfevappond * at_peva / state%crop%cfbs
+          at_peva = state%atmosphere%cfevappond * at_peva / state%crop%cfbs
         else
-          at_peva = cfevappond * at_peva
+          at_peva = state%atmosphere%cfevappond * at_peva
         endif
       endif
     endif

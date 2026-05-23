@@ -105,9 +105,13 @@ module atmosphere_state_mod
       real(real64) :: snowcoef = 0.0_real64  !< snow-melt temperature coefficient (cm/d/degC)
       integer      :: swsublim = 0           !< suppress sublimation of snow (1) or compute it (0)
       integer      :: swetsine = 0           !< Tp/Ep distribution: 0=uniform, 1=sine-wave during day
-      integer      :: swredu   = 1           !< ET reduction method: 1=Black, 2=Boesten-Stroosnijder
-      real(real64) :: cofred   = 0.35_real64 !< ET reduction coefficient β (Black: cofredbl, B-S: cofredbo)
-      real(real64) :: rsigni   = 0.5_real64  !< Significant rainfall threshold resetting Black dry counter (cm/d)
+      integer      :: swredu     = 1           !< ET reduction method: 1=Black, 2=Boesten-Stroosnijder
+      real(real64) :: cofred     = 0.35_real64 !< ET reduction coefficient β (Black: cofredbl, B-S: cofredbo)
+      real(real64) :: rsigni     = 0.5_real64  !< Significant rainfall threshold resetting Black dry counter (cm/d)
+      real(real64) :: angstroma  = 0.25_real64 !< Ångström a coefficient (-) for atmospheric transmission
+      real(real64) :: angstromb  = 0.50_real64 !< Ångström b coefficient (-)
+      real(real64) :: cfevappond = 1.25_real64 !< pond-evap / ETref ratio (-)
+      real(real64) :: rsoil      = 0.0_real64  !< soil resistance of wet soil for PMdirect (s/m)
       real(real64) :: graidt   = 0.0_real64  !< gross rainfall this timestep (cm)
       real(real64) :: nraidt   = 0.0_real64  !< net rainfall this timestep (cm)
       real(real64) :: aintcdt  = 0.0_real64  !< actual interception this timestep (cm)
@@ -310,6 +314,10 @@ contains
       else
          self%cofred = config%meteo%evaporation%cofredbl
       end if
+      self%angstroma  = config%meteo%angstroma
+      self%angstromb  = config%meteo%angstromb
+      self%cfevappond = config%meteo%evaporation%cfevappond
+      self%rsoil      = config%soil%rsoil
 
    end subroutine atmosphere_state_init
 
