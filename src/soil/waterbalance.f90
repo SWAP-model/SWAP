@@ -44,7 +44,7 @@ contains
       !   logf: file unit; Phase C3
       !   CritUndSatVol: passed as arg to watertable(); defined in variables; Phase C3
       ! [SS-GR-CROPRT A2] flmacropore dropped from import — retired (ADR 0040)
-      use variables, only: logf, CritUndSatVol
+      use variables, only: CritUndSatVol
       ! [SS-TC TC-6] t1900 read cut over to state%timecontrol%t1900
       use swap_log, only: log_debug, log_warn, to_str
       implicit none

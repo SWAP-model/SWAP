@@ -1640,25 +1640,7 @@
 
 
 
-! ----------------------------------------------------------------------
-      subroutine warn (modul,messag,logf,swscre)
-      implicit none
-! ----------------------------------------------------------------------
-! --- global
-      integer       logf,swscre
-      character(len=*) modul,messag
-
-! --- local
-      character(len=400)  messages
-! ----------------------------------------------------------------------
-
-      messages = 'Warning from module '//modul//' : '//trim(messag)
-
-      write (logf,'(a)') trim(messages)
-      if (swscre .gt. 0) write (*,'(2x,a)') trim(messages)
-
-      return
-      end
+! [GR-ATM 2026-05-23] warn() subroutine retired — use swap_log's log_warn instead.
 
       subroutine writehead(outf,ftype,filnam,filtext,project)
 !-----------------------------------------------------------------------

@@ -56,7 +56,7 @@
       ! integer   isteps             ! moved to state%timecontrol%isteps
       ! integer   iyear              ! moved to state%timecontrol%iyear
       ! integer   iyearm1            ! moved to state%timecontrol%iyearm1
-      integer   logf               ! Internal number of logbook output file *.LOG
+      ! [GR-ATM 2026-05-23] logf retired — swap_log owns the log-file unit
 
       ! [SS-GR-FINAL D1] ex_tlast retired — handle_exchange dead; 0 consumers
       

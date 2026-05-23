@@ -1186,16 +1186,8 @@ contains
          InList_csv_tz = config%output_csv%inlist_tz
       end if
 
-      ! `logf` is opened here because ~90 production code sites write
-      ! log lines via `write(logf, ...)`.
-      block
-         use variables,   only: logf
-         use file_io_mod, only: file_open, file_delete
-         if (logf == 0) then
-            call file_delete('swap_swap.log')
-            call file_open(logf, 'swap_swap.log', 'replace', 'write')
-         end if
-      end block
+      ! [GR-ATM 2026-05-23] logf bare-global retired; swap_log opens
+      ! 'swap_swap.log' via log_init() in swap_main.
 
    end subroutine config_to_variables
 

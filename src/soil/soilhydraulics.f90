@@ -49,8 +49,6 @@ contains
          ! DEFERRED: CritDevh1Cp/CritDevh2Cp/CritDevPondDt — convergence criteria; Phase C3
          ! DEFERRED: flwarn_hc/iwarn_hc — non-convergence warning state; Phase C3
          flwarn_hc, iwarn_hc, &
-         ! DEFERRED: logf — log file unit; retired in commit 2 of logf arc
-         logf, &
          ! DEFERRED: noddrz — node index at root zone bottom; Phase C3
          noddrz
       use timestep_control_mod, only: fldecdt

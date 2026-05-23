@@ -13,7 +13,7 @@ program swap_main
    type(swap_state_t)           :: state
    type(swap_config_t), target  :: config  ! target: crop_config_global pointer set inside swap_init
 
-   call log_init(log_level=LOGLEVEL_INFO, log_file='swap_debug.log')
+   call log_init(log_level=LOGLEVEL_INFO, log_file='swap_swap.log')
 
    call swap_init('swap.toml', state, config)
    do while (.not. state%timecontrol%flRunEnd)

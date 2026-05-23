@@ -13,7 +13,7 @@
       ! flprintdt, nprintday, period, swheader, swodat, swres, swscre, dtmax, dtmin,
       ! tend, tstart, MaxIt, MaxIterTime, msteps, flMaxIterTime — deleted.
       ! [SS-TC] retired 2026-05-12 — TimeControl runtime fields default to zero in state%timecontrol (ADR 0041)
-      logf               = 0
+      ! [GR-ATM 2026-05-23] logf retired — swap_log owns the log-file unit
       ! [SS-GR-FINAL D1] ex_tlast zero-fill dropped — declaration retired
       outdat             = 0.0d0
       outdatint          = 0.0d0

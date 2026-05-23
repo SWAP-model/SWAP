@@ -64,7 +64,7 @@
         ! q10/rmr/rml/rms/rmo/rfsetb/frtb/fltb/fstb/fotb/fbltb retired
         fbl, drbl, drblpot,                   &
         ! cftb/chtb/cfeictb/rdtb/rlwtb/slatb/rgrlai/dtsmtb/rdrrtb/rdrstb retired
-        dlc, dlo, logf,                                      &  ! tdwi/span/spa/ssa retired
+        dlc, dlo,                                            &  ! tdwi/span/spa/ssa retired
         idsl,                                                              &  ! lv/lvpot/lvage/lvagepot/sla/slapot/ilvold/ilvoldpot retired
         gasst, gasstpot,                              &  ! dw* retired
         mrest, mrestpot,                                                  &  ! glaiex/glaiexpot retired

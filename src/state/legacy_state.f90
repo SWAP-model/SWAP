@@ -9,7 +9,7 @@ module legacy_state_mod
    public :: legacy_state_t
 
    type :: legacy_state_t
-      integer :: logf  !! Internal number of logbook output file *.LOG
+      ! [GR-ATM 2026-05-23] logf retired — swap_log owns the log-file unit
       real(real64) :: o2_w_root  !! Dry weight per root length (kg/m)
       real(real64) :: o2_w_root_z0  !! Root weight at depth
       real(real64) :: o2_soil_temp  !! Soil temperature (K)

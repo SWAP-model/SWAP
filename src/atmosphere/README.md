@@ -221,9 +221,9 @@ Evapotranspiration and soil-evaporation reduction.
   `Edirectpond`. Returns `warning_code` (0=ok, 1=polar 0 hrs,
   2=polar 24 hrs).
 
-- **`PenMon(inputs, outputs, logf, swscre)`** — non-pure wrapper around
-  `PenMon_calc` that calls `astro` for the daily branch and forwards
-  `warning_code` to `warn` for screen / log output.
+- **`PenMon(inputs, outputs)`** — non-pure wrapper around `PenMon_calc`
+  that calls `astro` for the daily branch and forwards `warning_code`
+  to `swap_log`'s `log_warn` for screen / log output.
 
 - **`reduceva_daily(nrai, state)`** — daily branch of soil-evaporation
   reduction (post-Phase-C; replaces `reduceva(1, …)`).
