@@ -912,24 +912,24 @@ contains
    end subroutine itertime_check
 
    subroutine itertime_close(state)
-      ! [SS-GR-FINAL B8] DEFERRED: itnumb/logf — itnumb: Richards iteration counter (W category after Phase D); logf: file unit; Phase C3
-      use variables, only: itnumb, logf
+      ! [SS-GR-FINAL B8] DEFERRED: itnumb — Richards iteration counter (W category after Phase D)
+      use variables, only: itnumb
+      use swap_log,  only: log_info, to_str
       implicit none
       type(swap_state_t), intent(inout) :: state
       integer :: i, j
 
-      write(logf, '(/,a20)')      'Iteration statistics'
-      write(logf, '(/,a29,i4)')   'Maximum number of iterations:', state%timecontrol%MaxIt
-      write(logf, '(/,a35/,a35)') 'It Numb  No of Hits  Tot BTr cycles', &
-                                   '-------  ----------  --------------'
+      call log_info('itertime', 'Iteration statistics')
+      call log_info('itertime', 'Maximum number of iterations: ' // to_str(state%timecontrol%MaxIt))
+      call log_info('itertime', 'It Numb  No of Hits  Tot BTr cycles')
       do i = 1, 100
          if (itnumb(i,1) > 0) &
-            write(logf, '(i7,2x,i10,4x,i10)') i, (itnumb(i,j), j=1,2)
+            call log_info('itertime', to_str(i) // '  ' // to_str(itnumb(i,1)) // '  ' // to_str(itnumb(i,2)))
       end do
 
       call cpu_time(state%timecontrol%tmptimeend)
-      write(logf, '(/,a12,f12.2,a4)') &
-         ' Run-time: ', state%timecontrol%tmptimeend - state%timecontrol%tmptimestart, ' sec'
+      call log_info('itertime', 'Run-time: ' // &
+                    to_str(state%timecontrol%tmptimeend - state%timecontrol%tmptimestart) // ' sec')
    end subroutine itertime_close
 
 end module timecontrol_mod

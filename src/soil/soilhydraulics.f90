@@ -811,35 +811,33 @@ contains
          endif
 
          if(fldumpconvcrit) then
-           write(logf,'(a,a19)')   'Datetime = ',datetime
-           write(logf,'(a,f14.6)') 't1900    = ', tc_t1900  ! [TC-8]
-           write(logf,'(a,f10.6)') 'dtmin = ', dtmin  ! [SS-BMI2 Task 4] via state%timecontrol alias
-           write(logf,'(a,f10.6)') 'dt    = ', tc_dt  ! [TC-8]
-           write(logf,'(a,i3)')    'ftoph  = ', state%soilwater%ftoph
-           write(logf,'(a,f10.6)') 'CritDevBalCp  = ', CritDevBalCp
-           write(logf,'(a,f10.6)') 'CritDevBalTot = ', CritDevBalTot
-           write(logf,'(a,f10.6)') 'CritDz        = ', CritDz
-           write(logf,'(a,f10.6)') 'state%cfg%simulation%numerical%critdevh1cp   = ', state%cfg%simulation%numerical%critdevh1cp
-           write(logf,'(a,f10.6)') 'state%cfg%simulation%numerical%critdevh2cp   = ', state%cfg%simulation%numerical%critdevh2cp
-           write(logf,'(a,i3)') 'flnonconv  = ', flnonconv
-           write(logf,'(a,i3)') 'flnonconv3 = ', flnonconv3
-           write(logf,'(a,i3)') 'flunsatok(1) = ', flunsatok(1)
-           write(logf,'(a,i3)') 'flunsatok(2) = ', flunsatok(2)
-           write(logf,'(a,i3)') 'flunsatok(3) = ', flunsatok(3)
-
-           write(logf,'(a,f10.6)') 'pondm1 = ', sw_pondm1             ! [SS-SWC S-2.3]
-           write(logf,'(a,f10.6)') 'pond   = ', state%soilwater%pond    ! [SS-SWC S-2.12B]
-           write(logf,'(a,f10.6)') 'gwlm1 = ', sw_gwlm1              ! [SS-SWC S-2.3]
-           write(logf,'(a,f10.6)') 'gwl   = ', state%soilwater%gwl     ! [SS-SWC S-2.12B]
-           write(logf,'(a)')                                            &
-     &      'node,flnonconv1_F, F, flnonconv2_h, hm1,     h,'//         &
-     &      '    thetm1,    theta'
-           do j = 1,numnod
-              write(logf,'(2(i4,a),f10.6,a,i3,5(a,f10.6))')             &
-     &            j,',',flnonconv1(j),',',F(j),',',flnonconv2(j),',',   &
-     &            sw_h(j),',',sw_hm1(j),',', sw_theta(j),',',sw_thetm1(j)  ! [SS-SWC S-2.3]
+           call log_debug('Headcalc', 'Datetime = ' // datetime)
+           call log_debug('Headcalc', 't1900    = ' // to_str(tc_t1900))
+           call log_debug('Headcalc', 'dtmin = ' // to_str(dtmin))
+           call log_debug('Headcalc', 'dt    = ' // to_str(tc_dt))
+           call log_debug('Headcalc', 'ftoph  = ' // to_str(state%soilwater%ftoph))
+           call log_debug('Headcalc', 'CritDevBalCp  = ' // to_str(CritDevBalCp))
+           call log_debug('Headcalc', 'CritDevBalTot = ' // to_str(CritDevBalTot))
+           call log_debug('Headcalc', 'CritDz        = ' // to_str(CritDz))
+           call log_debug('Headcalc', 'critdevh1cp   = ' // to_str(state%cfg%simulation%numerical%critdevh1cp))
+           call log_debug('Headcalc', 'critdevh2cp   = ' // to_str(state%cfg%simulation%numerical%critdevh2cp))
+           call log_debug('Headcalc', 'flnonconv  = ' // to_str(flnonconv))
+           call log_debug('Headcalc', 'flnonconv3 = ' // to_str(flnonconv3))
+           call log_debug('Headcalc', 'flunsatok(1) = ' // to_str(flunsatok(1)))
+           call log_debug('Headcalc', 'flunsatok(2) = ' // to_str(flunsatok(2)))
+           call log_debug('Headcalc', 'flunsatok(3) = ' // to_str(flunsatok(3)))
+           call log_debug('Headcalc', 'pondm1 = ' // to_str(sw_pondm1))
+           call log_debug('Headcalc', 'pond   = ' // to_str(state%soilwater%pond))
+           call log_debug('Headcalc', 'gwlm1 = ' // to_str(sw_gwlm1))
+           call log_debug('Headcalc', 'gwl   = ' // to_str(state%soilwater%gwl))
+           call log_debug('Headcalc', 'node,flnonconv1_F, F, flnonconv2_h, hm1, h, thetm1, theta')
+           do j = 1, numnod
+              call log_debug('Headcalc', &
+                  to_str(j) // ',' // to_str(flnonconv1(j)) // ',' // to_str(F(j)) // &
+                  ',' // to_str(flnonconv2(j)) // ',' // to_str(sw_h(j)) // &
+                  ',' // to_str(sw_hm1(j)) // ',' // to_str(sw_theta(j)) // &
+                  ',' // to_str(sw_thetm1(j)))
            enddo
-
          endif
 
          ! Continue without convergence !!!

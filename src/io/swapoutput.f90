@@ -8,9 +8,8 @@
 !     Purpose            : open and write general swap output files
 ! ----------------------------------------------------------------------
 
-      ! [SS-GR-FINAL B3] DEFERRED — logf: log file unit, Arc 9 edge
-      use variables, only: logf
       use swap_state_mod, only: swap_state_t
+      use swap_log,       only: log_info
       implicit none
 
       integer task
@@ -42,8 +41,7 @@
 ! ADR 0009 Phase 5+: bal / blc file units no longer opened.
 
 ! ---    final message log file
-         write(logf,'(/,a)') ' Swap simulation okay!'
-         close (logf)
+         call log_info('swap', 'Swap simulation okay!')
 
          ! [SS-BMI2] deallocate water balance row buffer
          call cleanup_water_balance_buffer(state)
