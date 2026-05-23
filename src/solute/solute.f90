@@ -36,8 +36,8 @@ contains
          tscf, &
          ! DEFERRED: swbr/daquif/decsat — aquifer breakthrough curve config; Phase C3
          swbr, daquif, decsat, &
-         ! DEFERRED: nird/cirr/cpre — irrigation/precipitation solute concentrations; Phase C3
-         nird, cirr, cpre
+         ! DEFERRED: cirr/cpre — irrigation/precipitation solute concentrations; Phase C3
+         cirr, cpre
       use array_utils, only: afgen
       use swap_state_mod, only: swap_state_t
       use, intrinsic :: iso_fortran_env, only: real64
@@ -219,7 +219,7 @@ contains
 
 ! --- solute flux at soil surface
          ! SS-ATM Phase 2 Task A-2.4: nraidt read from state%atmosphere (atmosphere home).
-         csurf = (nird*cirr + state%atmosphere%nraidt*cpre)*dtsolu + csurf   ! gr cm-2
+         csurf = (state%atmosphere%nird*cirr + state%atmosphere%nraidt*cpre)*dtsolu + csurf   ! gr cm-2
          ! SS-BND Phase 2 Task B-2.3: qtop read from state%soilwater (boundary home).
          ! SS-SWC Phase 2 S-2.8: pond read from state%soilwater
          if (state%soilwater%qtop.lt.-1.d-6) then
@@ -379,8 +379,8 @@ contains
       ! SS-ATM Phase 2 Task A-2.4: nraidt read from state%atmosphere (atmosphere home).
       sqprec = sqprec + state%atmosphere%nraidt * cpre * tc_dt      ! TC-12
       imsqprec = imsqprec + state%atmosphere%nraidt * cpre * tc_dt  ! TC-12
-      sqirrig = sqirrig + nird * cirr * tc_dt                        ! TC-12
-      imsqirrig = imsqirrig + nird * cirr * tc_dt                    ! TC-12
+      sqirrig = sqirrig + state%atmosphere%nird * cirr * tc_dt                        ! TC-12
+      imsqirrig = imsqirrig + state%atmosphere%nird * cirr * tc_dt                    ! TC-12
 
 ! --- cumulative solute balance
       solbal = sampro - sqprec - sqirrig - sqbot + sqdra + dectot + rottot - samini

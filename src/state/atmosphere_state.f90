@@ -108,6 +108,7 @@ module atmosphere_state_mod
       real(real64) :: graidt   = 0.0_real64  !< gross rainfall this timestep (cm)
       real(real64) :: nraidt   = 0.0_real64  !< net rainfall this timestep (cm)
       real(real64) :: aintcdt  = 0.0_real64  !< actual interception this timestep (cm)
+      real(real64) :: nird     = 0.0_real64  !< net irrigation depth after interception (cm) — peer of nraida; may re-home to state%irrigation%nird in future arc
 
       ! -----------------------------------------------------------------------
       ! Per-day scalars (9) — updated once per day in ProcessMeteoDay

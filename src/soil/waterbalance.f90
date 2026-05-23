@@ -543,7 +543,7 @@ contains
 
       ! [SS-SWC S-2.12B] all legacy half-writes dropped — state%soilwater is canonical
       ! SS-ATM Phase 2 Task A-2.2: aintcdt read from state%atmosphere (atmosphere home).
-      state%soilwater%iintc = state%soilwater%iintc + (state%atmosphere%aintcdt+state%crop%gird-nird)*tc_dt  ! S-2.12B, TC-6
+      state%soilwater%iintc = state%soilwater%iintc + (state%atmosphere%aintcdt+state%crop%gird-state%atmosphere%nird)*tc_dt  ! S-2.12B, TC-6
 
       state%atmosphere%intr%iptra = state%atmosphere%intr%iptra + ptrats
       state%atmosphere%intr%ipeva = state%atmosphere%intr%ipeva + pevats
@@ -556,7 +556,7 @@ contains
       state%atmosphere%intr%igrai = state%atmosphere%intr%igrai + state%atmosphere%graidt*tc_dt             ! TC-6
       state%soilwater%igird = state%soilwater%igird + state%crop%gird*tc_dt                                  ! S-2.12B, TC-6
       state%atmosphere%intr%inrai = state%atmosphere%intr%inrai + state%atmosphere%nraidt*tc_dt             ! TC-6
-      state%soilwater%inird = state%soilwater%inird + nird*tc_dt                                  ! S-2.12B, TC-6
+      state%soilwater%inird = state%soilwater%inird + state%atmosphere%nird*tc_dt                                  ! S-2.12B, TC-6
       state%soilwater%iqbot = state%soilwater%iqbot + qbotts                                   ! S-2.12B
       if (state%soilwater%q(1) < 0.0d0) then
          state%soilwater%iqtdo = state%soilwater%iqtdo - state%soilwater%q(1)*tc_dt              ! S-2.12B, TC-6
@@ -588,13 +588,13 @@ contains
       state%soilwater%crunoffCN = state%soilwater%crunoffCN + state%atmosphere%Runoff_CN*tc_dt
 
       ! SS-ATM Phase 2 Task A-2.2: aintcdt/graidt/nraidt read from state%atmosphere (atmosphere home).
-      state%atmosphere%cumu%caintc = state%atmosphere%cumu%caintc + (state%atmosphere%aintcdt+state%crop%gird-nird)*tc_dt  ! TC-6
+      state%atmosphere%cumu%caintc = state%atmosphere%cumu%caintc + (state%atmosphere%aintcdt+state%crop%gird-state%atmosphere%nird)*tc_dt  ! TC-6
 
       state%atmosphere%cumu%cgrai = state%atmosphere%cumu%cgrai + state%atmosphere%graidt*tc_dt             ! TC-6
       state%atmosphere%cumu%cnrai = state%atmosphere%cumu%cnrai + state%atmosphere%nraidt*tc_dt             ! TC-6
 !      cnrai = cgrai - caintc
       state%soilwater%cgird = state%soilwater%cgird + state%crop%gird*tc_dt                                  ! S-2.12B, TC-6
-      state%soilwater%cnird = state%soilwater%cnird + nird*tc_dt                                  ! S-2.12B, TC-6
+      state%soilwater%cnird = state%soilwater%cnird + state%atmosphere%nird*tc_dt                                  ! S-2.12B, TC-6
 
       if (qbotts.lt.0.0d0) then
         state%soilwater%cqbotdo = state%soilwater%cqbotdo - qbotts                            ! S-2.12B

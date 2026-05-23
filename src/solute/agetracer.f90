@@ -77,9 +77,7 @@ contains
          ! DEFERRED: ddif/ldis — solute diffusion/dispersion config; Phase C3
          ddif, ldis, &
          ! DEFERRED: dtsolu/isqbot/isqtop/sqdra/rottot — solute runtime state; state%solute; Phase C3
-         dtsolu, isqbot, isqtop, sqdra, rottot, &
-         ! DEFERRED: nird — net irrigation depth runtime; Phase C3
-         nird
+         dtsolu, isqbot, isqtop, sqdra, rottot
          ! [SS-GR-CROPRT A1] flAgeTracer dropped from import — declaration retired (ADR 0032)
       use array_utils, only: afgen
       use swap_state_mod, only: swap_state_t
@@ -240,7 +238,7 @@ contains
 
 ! --- solute flux at soil surface
          ! SS-ATM Phase 2 Task A-2.4: nraidt read from state%atmosphere (atmosphere home).
-         Agesurf = (nird*Ageirr + state%atmosphere%nraidt*Agepre)*dtsolu +               &
+         Agesurf = (state%atmosphere%nird*Ageirr + state%atmosphere%nraidt*Agepre)*dtsolu +               &
      &                                       state%soilwater%pondm1*Agepondm1              ! [SS-SWC S-2.12B] gr cm-2
          ! SS-BND Phase 2 Task B-2.3: qtop/runots read from state%soilwater (boundary home).
          ! SS-SWC Phase 2 S-2.8: pond read from state%soilwater

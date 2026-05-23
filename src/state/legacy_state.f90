@@ -97,7 +97,7 @@ module legacy_state_mod
       real(real64), allocatable :: irconc(:)  !! Array with irrigation concentrations (M/L3) in case of fixed irrigation
       real(real64), allocatable :: irdate(:)  !! Array with fixed irrigation dates
       real(real64), allocatable :: irdepth(:)  !! Array with fixed irrigation depths (L)
-      real(real64) :: nird  !! Net irrigation depth (L)
+      ! [GR-ATM 2026-05-23] nird retired — see state%atmosphere%nird
       real(real64) :: perirrsurp  !! percentage (-) of the scheduled irrigation depths that may be over irrigated
       real(real64) :: raithreshold  !! Threshold value (L) indicating the amount of rainfall which is substracted from scheduled irrigation depths
       real(real64), allocatable :: rawtab(:)  !! Array with minimum of readily available water as function of crop development stage

@@ -595,12 +595,9 @@ contains
       !   (config%meteo%evaporation%swredu, cofredbl/bo, rsigni) but caller chain
       !   (ProcessMeteoDay, MeteoDT, ProcessMeteoTsteps, ReadMeteoYear) lacks config arg;
       !   threading deferred to Tasks 22-29 (meteoday/meteodt migration).
-      ! [SS-GR-ATM B2] DEFERRED — nird: irrigation-owned global; deferred to irrigation arc.
       use variables, only: &   ! [SS-GR-FINAL B11] residuals — all DEFERRED
          ! DEFERRED: swredu/cofred — ET reduction switch/coefficient; config%meteo%evaporation; Phase C3
          swredu, cofred, &
-         ! DEFERRED: nird — net irrigation depth runtime; irrigation cluster; Phase C3
-         nird, &
          ! DEFERRED: rsigni — significant radiation threshold; config; Phase C3
          rsigni
       implicit none
@@ -647,11 +644,11 @@ contains
         select case (swredu)
         case (1)
             ! Black model
-            call black_reduction(nrai, nird, state%atmosphere%peva, cofred, rsigni, &
+            call black_reduction(nrai, state%atmosphere%nird, state%atmosphere%peva, cofred, rsigni, &
                                 at_ldwet, at_empreva, timestep, tc_flDayStart, task_flag)  ! TC-11
         case (2)
             ! Boesten-Stroosnijder model
-            call boesten_stroosnijder_reduction(nrai, nird, state%atmosphere%peva, cofred, &
+            call boesten_stroosnijder_reduction(nrai, state%atmosphere%nird, state%atmosphere%peva, cofred, &
                                               at_spev, at_saev, at_empreva, timestep)
         case default
             call fatalerr_collected('reduceva_apply', 'Unknown reduction method SWREDU')

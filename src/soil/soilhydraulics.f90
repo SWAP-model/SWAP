@@ -27,8 +27,8 @@ contains
       ! macp/mabbc → swap_array_dimensions (dimension constants); noddrz: crop root depth node
       use swap_array_dimensions, only: macp, mabbc
       use variables, only: &
-         ! DEFERRED: qssdi/nird — SSDI/irrigation source terms; needs irrigation_state_t; Phase C3
-         qssdi, nird, &
+         ! DEFERRED: qssdi — SSDI source term; needs irrigation_state_t; Phase C3
+         qssdi, &
          ! DEFERRED: swkmean/SwKimpl — hydraulic conductivity averaging switches; Phase C3
          ! DEFERRED: swcaprise — capillary rise prevention switch; Phase C3
          swcaprise, &
@@ -167,7 +167,7 @@ contains
          state%soilwater%fllowgwl = .false.               ! [SS-SWC S-1.6/S-2.12B]
          if(state%soilwater%gwlinp.ge.z(1)-1.0d-4)then
 
-            q0 = (state%atmosphere%nraidt+nird+state%atmosphere%melt)*(1.0d0-ArMpSs) + state%soilwater%runon - state%soilwater%reva  ! [SS-ATM/SS-SWC S-2.12B]
+            q0 = (state%atmosphere%nraidt+state%atmosphere%nird+state%atmosphere%melt)*(1.0d0-ArMpSs) + state%soilwater%runon - state%soilwater%reva  ! [SS-ATM/SS-SWC S-2.12B]
             call pondrunoff (state)
             q1 = - q0 + (state%soilwater%pond - sw_pondm1)/tc_dt + state%soilwater%runots / tc_dt  ! [SS-SWC S-2.12B] [TC-8]
             sw_theta(1) = watcon(state%soilwater%gwlinp, &
@@ -718,7 +718,7 @@ contains
          if (state%soilwater%ftoph) then
             state%soilwater%qtop = -sw_kmean(1)*((state%soilwater%hsurf - sw_h(1))/disnod(1)+1.0d0)
             if(.not.flnonconv) then
-               deviat = state%soilwater%pond - sw_pondm1 + state%soilwater%reva*tc_dt - (state%atmosphere%nraidt+nird+state%atmosphere%melt)*tc_dt &  ! [SS-SWC S-2.12B] [TC-8]
+               deviat = state%soilwater%pond - sw_pondm1 + state%soilwater%reva*tc_dt - (state%atmosphere%nraidt+state%atmosphere%nird+state%atmosphere%melt)*tc_dt &  ! [SS-SWC S-2.12B] [TC-8]
      &                - state%soilwater%runon*tc_dt  +  state%soilwater%runots  - state%soilwater%qtop * tc_dt  ! [TC-8]
                if( abs(deviat) .gt. state%cfg%simulation%numerical%critdevponddt) then
                   flnonconv3 = .true. ; flnonconv   = .true.
@@ -868,8 +868,6 @@ contains
       ! macp/mabbc/matabentries → swap_array_dimensions (dimension constants)
       use swap_array_dimensions, only: macp, mabbc, matabentries
       use variables, only: &
-         ! DEFERRED: nird — net irrigation depth (irrigation source); Phase C3
-         nird, &
          ! swsophy retired (→state%soilwater%swsophy)
 
          ! DEFERRED: swhyst — hysteresis switch; Phase C3
@@ -941,7 +939,7 @@ contains
          ! [SS-SWC S-2.12B] legacy half-writes dropped — state%soilwater is canonical
          sw%hatm = -2.75e5_real64                           ! [SS-SWC S-1.3/S-2.12B]
       state%atmosphere%nraidt = 0.0_real64
-      nird = 0.0d0
+      state%atmosphere%nird   = 0.0_real64
       if (swinco.ne.3) then
         state%atmosphere%ldwet = 0.0_real64
         state%atmosphere%spev  = 0.0_real64

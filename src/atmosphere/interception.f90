@@ -418,31 +418,23 @@ contains
   !> nird retained via narrow use-only (Arc 8 deferral). nraida → state%atmosphere%nraida.
   !> @endnote
   subroutine DivIntercep (aintc, state)
-    ! [SS-GR-ATM B7] nird DEFERRED to Arc 8 (irrigation arc).
-    ! [SS-GR-ATM B11] isua → state%atmosphere%isua
-    ! [SS-GR-ATM B11] gird → state%crop%gird
-    ! Phase A.5 runtime dual-writes ensure state tracks legacy at runtime.
-    use variables, only: &   ! [SS-GR-FINAL B11] DEFERRED
-       ! DEFERRED: nird — net irrigation depth runtime; irrigation cluster; Phase C3
-       nird  ! [SS-GR-ATM B7]
     implicit none
 
-    ! Arguments
-    real(8), intent(in) :: aintc   ! Total interception [cm/d]
-    type(swap_state_t), intent(inout) :: state  ! Simulation state for dual-write
+    real(8),            intent(in)    :: aintc   ! Total interception [cm/d]
+    type(swap_state_t), intent(inout) :: state
 
-    ! Divide interception into rain and irrigation parts
-    ! and calculate net rain and net sprinkling irrigation
-    if (aintc.lt.0.001d0) then
+    ! Divide interception into rain and irrigation parts;
+    ! compute net rain (nraida) and net sprinkling irrigation (nird).
+    if (aintc .lt. 0.001d0) then
       state%atmosphere%nraida = state%atmosphere%grai - state%atmosphere%gsnow - state%atmosphere%snrai
-      nird = state%crop%gird
+      state%atmosphere%nird   = state%crop%gird
     else
       if (state%atmosphere%isua .eq. 0) then
         state%atmosphere%nraida = state%atmosphere%grai - aintc*(state%atmosphere%grai/(state%atmosphere%grai+state%crop%gird))
-        nird = state%crop%gird - aintc*(state%crop%gird/(state%atmosphere%grai+state%crop%gird))
+        state%atmosphere%nird   = state%crop%gird - aintc*(state%crop%gird/(state%atmosphere%grai+state%crop%gird))
       else
         state%atmosphere%nraida = state%atmosphere%grai - aintc
-        nird = state%crop%gird
+        state%atmosphere%nird   = state%crop%gird
       endif
     endif
 

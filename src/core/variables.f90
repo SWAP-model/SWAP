@@ -295,7 +295,7 @@
       real(8)   irconc(mairg)      ! Array with irrigation concentrations (M/L3) in case of fixed irrigation
       real(8)   irdate(mairg)      ! Array with fixed irrigation dates
       real(8)   irdepth(mairg)     ! Array with fixed irrigation depths (L)
-      real(8)   nird               ! Net irrigation depth (L)
+      ! [GR-ATM 2026-05-23] nird retired — see state%atmosphere%nird
       real(8)   perirrsurp         ! percentage (-) of the scheduled irrigation depths that may be over irrigated
       real(8)   raithreshold       ! Threshold value (L) indicating the amount of rainfall which is substracted from scheduled irrigation depths
       real(8)   rawtab(14)         ! Array with minimum of readily available water as function of crop development stage

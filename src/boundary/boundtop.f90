@@ -21,8 +21,6 @@ module boundtop_mod
       use swap_log,              only: log_debug, to_str
       use surfacewater_utils,    only: runoff
       use variables,             only: &   ! [SS-GR-FINAL B11] all DEFERRED
-         ! DEFERRED: nird — net irrigation depth runtime; irrigation cluster; Phase C3
-         nird, &
          ! DEFERRED: swkmean/swredu — soil hydraulics/ET reduction switches; config; Phase C3
          swredu, &
          ! DEFERRED: flrunon/runonarr — runon switch/timeseries; not in schema yet; Phase C3
@@ -148,7 +146,7 @@ contains
 !     and remaining ponding of previous timestep
       ! [SS-GR-BH B10] ArMpSs assignment deleted (macropore retired ADR 0040 — factor *(1-0)=1 is identity, bit-equivalent)
       ! SS-ATM A-2.6: nraidt/melt retired — read from state%atmosphere
-      state%soilwater%q0 = (state%atmosphere%nraidt+nird+state%atmosphere%melt) + state%soilwater%runon - state%soilwater%reva  ! [SS-GR-BH B10]
+      state%soilwater%q0 = (state%atmosphere%nraidt+state%atmosphere%nird+state%atmosphere%melt) + state%soilwater%runon - state%soilwater%reva  ! [SS-GR-BH B10]
       q1 = - state%soilwater%q0 - state%soilwater%pondm1/dt
 
 !     check whether the atmospheric demand condition applies

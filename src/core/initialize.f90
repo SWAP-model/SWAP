@@ -84,7 +84,7 @@
       irconc             = 0.0d0 
       irdate             = 0.0d0 
       irdepth            = 0.0d0 
-      nird               = 0.0d0 
+      ! [GR-ATM 2026-05-23] nird retired — see state%atmosphere%nird
       raithreshold       = 0.0d0 
       rawtab             = 0.0d0 
       tawtab             = 0.0d0 
