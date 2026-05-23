@@ -78,7 +78,7 @@ contains
   !! Single ET record per day. Body is the daily-only slice of the former
   !! ProcessMeteoDay: Sections 3, 4, 5(daily branch), 6, 7, 9.
   subroutine process_meteo_day_daily(state, config)
-    use variables, only: croptype, gc, flCropHarvest, swusecn
+    use variables, only: croptype, gc, swusecn
     use swap_constants, only: nihil, small
     type(swap_state_t),  intent(inout) :: state
     type(swap_config_t), intent(in)    :: config
@@ -592,7 +592,7 @@ contains
   !! and CO2 correction. Writes state%atmosphere%peva and state%atmosphere%ptra.
   subroutine partition_peva_ptra(state, config, wfrac, Edirect, Tdirect, Edirectpond)
     use swap_constants, only: nihil, small
-    use variables, only: flco2, croptype, flCropHarvest, gc
+    use variables, only: flco2, croptype, gc
     type(swap_state_t),  intent(inout) :: state
     type(swap_config_t), intent(in)    :: config
     real(8), intent(in) :: wfrac, Edirect, Tdirect, Edirectpond
@@ -608,7 +608,7 @@ contains
     end if
 
     ! Alternative for peva (simple model, soil cover fraction specified)
-    if (state%crop%common%flCropCalendar .and. .not.flCropHarvest) then   ! [GR-CROP C3]
+    if (state%crop%common%flCropCalendar .and. .not. state%crop%common%flCropHarvest) then
       if (croptype(state%crop%common%icrop).eq.1 .and. state%crop%common%swgc.eq.2) then
         at_peva = (1.0d0-gc)*state%crop%es0*0.1d0
         if (state%crop%swcf.ne.3 .or. (config%meteo%swmetdetail.eq.0 .and. state%crop%common%swinter.ne.3)) then
