@@ -39,8 +39,8 @@ contains
          numbit, itnumb, &
          ! DEFERRED: rimlay — drainage resistance (Cauchy BC); Phase C3
          rimlay, &
-         ! DEFERRED: sw4/qbotab — bottom BC type 4 / flux table; Phase C3
-         sw4, qbotab, &
+         ! DEFERRED: sw4 — extra-flux switch for swbotb=3; Phase C3
+         sw4, &
          ! DEFERRED: gwlconv — groundwater level convergence criterion; Phase C3
          ! DEFERRED: hplate — lysimeter tensiometer plate head; Phase C3
          hplate, &
@@ -327,7 +327,7 @@ contains
                state%soilwater%qbot = - (sw_h(NN)+z(NN)-state%soilwater%deepgw) / rimlay
             endif
 ! ---       extra groundwater flux might be added
-            if (sw4 .eq. 1) state%soilwater%qbot = state%soilwater%qbot + afgen(qbotab,mabbc*2,tc_t1900+tc_dt)  ! [TC-8]
+            if (sw4 .eq. 1) state%soilwater%qbot = state%soilwater%qbot + afgen(state%soilwater%qbotab,mabbc*2,tc_t1900+tc_dt)  ! [TC-8]
             F(NN) = F(NN) - state%soilwater%qbot
          else if(swbotb.eq.5 .or. (swbotb.eq.1 .and. state%soilwater%fllowgwl))then ! pressure head at lower boundary specified
             F(NN) = F(NN) + sw_kmean(NN+1) * hgrad(NN+1)
@@ -623,7 +623,7 @@ contains
                   endif
                   ! Extra groundwater flux might be added
                   if (sw4 .eq. 1) then
-                     state%soilwater%qbot = state%soilwater%qbot + afgen(qbotab,mabbc*2,tc_t1900+tc_dt)  ! [TC-8]
+                     state%soilwater%qbot = state%soilwater%qbot + afgen(state%soilwater%qbotab,mabbc*2,tc_t1900+tc_dt)  ! [TC-8]
                   end if
                   F(NN) = F(NN) - state%soilwater%qbot
                else if(swbotb.eq.5 .or.(swbotb.eq.1 .and. state%soilwater%fllowgwl))then

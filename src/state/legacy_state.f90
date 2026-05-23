@@ -292,7 +292,7 @@ module legacy_state_mod
       real(real64), allocatable :: OxygenSlope(:)  !! Parameters of reproduction function for oxygen stress according to Bartholomeus
       real(real64), allocatable :: paramvg(:,:)  !! Array with input values of soil hydraulic parameters according to Mualem - van Genuchten for each soil layer
       ! [GR-BND 2026-05-23] pondmxtab retired — see state%surfacewater%pondmxtab
-      real(real64), allocatable :: qbotab(:)  !! Array with specified bottom flux (L/T) as function of time (T)
+      ! [GR-BND 2026-05-23] qbotab retired — see state%soilwater%qbotab
       real(real64), allocatable :: qdraincomp(:)  !! Total lateral drainage flux (L/T) for each compartment
       real(real64), allocatable :: qdrtab(:)  !! Array with lateral drainage flux (L/T) as function of groundwater level (L)
       real(real64), allocatable :: qimmob(:)  !! Soil water flux between mobile and immobile fraction in case of fingered flow (L/T)

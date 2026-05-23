@@ -963,7 +963,7 @@
       ! real(8)   q(macp+1)          ! Soil water flux between current compartment and upper compartment (L/T)
       ! [SS-BND] retired 2026-05-11 — boundary subsystem migrated to state%soilwater (ADR 0035)
       ! real(8)   qbot               ! Water flux through bottom of simulated soil column (L/T)
-      real(8)   qbotab(mabbc*2)    ! Array with specified bottom flux (L/T) as function of time (T)
+      ! [GR-BND 2026-05-23] qbotab retired — see state%soilwater%qbotab
       ! [SS-BND] retired 2026-05-11 — boundary subsystem migrated to state%soilwater (ADR 0035)
       ! real(8)   qbot_nonfrozen     ! Water flux through bottom of non-frozen soil column (L/T)
       ! real(8)   qdra(Madr,macp)    ! Moved to drainage_state_t%qdra (ADR 0031)

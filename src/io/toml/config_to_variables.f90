@@ -718,10 +718,14 @@ contains
                   hdr, csv_table, csv_errs)
                call csv_errs%abort_if_fatal()
                if (allocated(csv_table)) then
+                  if (.not. allocated(state%soilwater%qbotab)) then
+                     allocate(state%soilwater%qbotab(2*mabbc))
+                     state%soilwater%qbotab = 0.0d0
+                  end if
                   nrows = size(csv_table, 1)
                   do k = 1, nrows
-                     qbotab(k*2 - 1) = csv_table(k, 1)
-                     qbotab(k*2)     = csv_table(k, 2)
+                     state%soilwater%qbotab(k*2 - 1) = csv_table(k, 1)
+                     state%soilwater%qbotab(k*2)     = csv_table(k, 2)
                   end do
                end if
             end block
@@ -781,10 +785,14 @@ contains
                   hdr, csv_table, csv_errs)
                call csv_errs%abort_if_fatal()
                if (allocated(csv_table)) then
+                  if (.not. allocated(state%soilwater%qbotab)) then
+                     allocate(state%soilwater%qbotab(2*mabbc))
+                     state%soilwater%qbotab = 0.0d0
+                  end if
                   nrows = size(csv_table, 1)
                   do k = 1, nrows
-                     qbotab(k*2 - 1) = csv_table(k, 1)
-                     qbotab(k*2)     = csv_table(k, 2)
+                     state%soilwater%qbotab(k*2 - 1) = csv_table(k, 1)
+                     state%soilwater%qbotab(k*2)     = csv_table(k, 2)
                   end do
                end if
             end block
@@ -815,10 +823,14 @@ contains
                ! Legacy unpack pattern from readswap.f90:1418-1419 — for the
                ! q(h) curve, qbotab(odd) = abs(htab) and qbotab(even) = qtab.
                if (allocated(csv_table)) then
+                  if (.not. allocated(state%soilwater%qbotab)) then
+                     allocate(state%soilwater%qbotab(2*mabbc))
+                     state%soilwater%qbotab = 0.0d0
+                  end if
                   nrows = size(csv_table, 1)
                   do k = 1, nrows
-                     qbotab(k*2 - 1) = abs(csv_table(k, 1))
-                     qbotab(k*2)     = csv_table(k, 2)
+                     state%soilwater%qbotab(k*2 - 1) = abs(csv_table(k, 1))
+                     state%soilwater%qbotab(k*2)     = csv_table(k, 2)
                   end do
                end if
             end block

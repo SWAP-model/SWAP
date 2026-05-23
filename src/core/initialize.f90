@@ -308,7 +308,7 @@
       ! q                  = 0.0d0
       ! [SS-BND B-2.7] qbot, qbot_nonfrozen retired — soilwater_init handles init via state%soilwater
       ! qbot               = 0.0d0
-      qbotab             = 0.0d0
+      ! [GR-BND 2026-05-23] qbotab retired — soilwater_init zeros state%soilwater%qbotab
       ! qbot_nonfrozen     = 0.0d0
       ! qdra               = 0.0d0   ! Moved to drainage_state_t — drainage_init handles (ADR 0031)
       ! qdrain             = 0.0d0   ! Moved to drainage_state_t — drainage_init handles (ADR 0031)

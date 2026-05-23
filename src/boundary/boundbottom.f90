@@ -13,9 +13,7 @@ module boundbottom_mod
     use swap_config_mod,       only: swap_config_t
     use swap_log,              only: log_debug, log_warn, to_str
     use swap_array_dimensions, only: mabbc
-    use variables,             only: &   ! [SS-GR-FINAL B11] all DEFERRED
-       ! DEFERRED: qbotab — bottom flux table; config; Phase C3
-       qbotab  ! [SS-GR-BH B8] narrowed
+    ! [GR-BND 2026-05-23] All boundbottom bare-globals retired — see state%soilwater.
     implicit none
 
     private
@@ -118,7 +116,7 @@ contains
                                            dcos(freq*(t - config%bottom_boundary%sinmax))
                 else
                     ! ---     table is used
-                    state%soilwater%qbot = afgen(qbotab, mabbc*2, t1900 + dt)
+                    state%soilwater%qbot = afgen(state%soilwater%qbotab, mabbc*2, t1900 + dt)
                 end if
             end if
 
@@ -165,7 +163,7 @@ contains
 
 ! ---   extra groundwater flux might be added
             if (config%bottom_boundary%sw4 .eq. 1) then
-                state%soilwater%qbot = state%soilwater%qbot + afgen(qbotab, mabbc*2, t1900 + dt)
+                state%soilwater%qbot = state%soilwater%qbot + afgen(state%soilwater%qbotab, mabbc*2, t1900 + dt)
             end if
         end if
 
@@ -179,7 +177,7 @@ contains
                     state%soilwater%qbot = state%soilwater%qbot + config%bottom_boundary%cofqhc
                 end if
             else if (config%bottom_boundary%swqhbot .eq. 2) then
-                state%soilwater%qbot = afgen(qbotab, mabbc*2, dabs(state%soilwater%gwl))  ! [SS-SWC S-2.5]
+                state%soilwater%qbot = afgen(state%soilwater%qbotab, mabbc*2, dabs(state%soilwater%gwl))  ! [SS-SWC S-2.5]
             end if
         end if
 
