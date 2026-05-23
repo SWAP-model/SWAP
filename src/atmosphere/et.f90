@@ -584,69 +584,43 @@ contains
       !!
       !! task_flag is forwarded to black_reduction (which still uses it to
       !! gate daily-vs-dt formulas internally). The daily logical flag
-      !! selects the timestep value (1.0 d vs tc_dt).
+      !! selects the timestep value (1.0 d vs state%timecontrol%dt).
       subroutine reduceva_apply(task_flag, nrai, state, daily)
-      ! [SS-SWC S-2.12B] pond retired — read via state%soilwater%pond
-      ! SS-TC TC-11: dt, fldaystart read via state%timecontrol tc_* aliases.
-      ! [SS-GR-ATM B2] DEFERRED — swredu/cofred/rsigni config paths verified
-      !   (config%meteo%evaporation%swredu, cofredbl/bo, rsigni) but caller chain
-      !   (ProcessMeteoDay, MeteoDT, ProcessMeteoTsteps, ReadMeteoYear) lacks config arg;
-      !   threading deferred to Tasks 22-29 (meteoday/meteodt migration).
-      use variables, only: &   ! [SS-GR-FINAL B11] residuals — all DEFERRED
-         ! DEFERRED: swredu/cofred — ET reduction switch/coefficient; config%meteo%evaporation; Phase C3
-         swredu, cofred, &
-         ! DEFERRED: rsigni — significant radiation threshold; config; Phase C3
-         rsigni
-      implicit none
+        use variables, only: swredu, cofred, rsigni   ! DEFERRED — see et.f90 commit 3
+        implicit none
 
-        ! Arguments
-        integer, intent(in) :: task_flag
-          !! Forwarded to black_reduction: 1 = daily, 2 = sub-daily
-        real(8), intent(in) :: nrai
-          !! Rainfall amount [mm]
+        integer,            intent(in)    :: task_flag  !! 1 = daily, 2 = sub-daily (passed to black_reduction)
+        real(8),            intent(in)    :: nrai       !! Rainfall amount [cm]
         type(swap_state_t), intent(inout) :: state
-          !! Simulation state (atmosphere fields dual-written here)
-        logical, intent(in) :: daily
-          !! .true. selects daily timestep (1 d); .false. uses tc_dt
+        logical,            intent(in)    :: daily      !! .true. selects 1.0 d timestep; .false. uses dt
 
-        ! Local variables
         real(8) :: timestep
 
-        ! SS-TC TC-11: dt, flDayStart read via state%timecontrol tc_* aliases.
-        associate( &
-            tc_dt        => state%timecontrol%dt,         &  ! TC-11
-            tc_flDayStart => state%timecontrol%flDayStart, &  ! TC-11
-            at_empreva => state%atmosphere%empreva, &
-            at_ldwet   => state%atmosphere%ldwet,   &
-            at_spev    => state%atmosphere%spev,     &
-            at_saev    => state%atmosphere%saev      &
-        )
+        associate (atmo => state%atmosphere, time => state%timecontrol)
 
         if (daily) then
-            timestep = 1.0d0  ! Daily
+            timestep = 1.0d0
         else
-            timestep = tc_dt  ! Sub-daily  ! TC-11
+            timestep = time%dt
         end if
 
-        ! Check for ponding (no reduction needed)
-        if (state%soilwater%pond > POND_THRESHOLD_CM) then  ! [SS-SWC S-2.12B]
-            at_empreva = state%atmosphere%peva
-            at_ldwet   = 0.0d0
-            at_spev    = 0.0d0
-            at_saev    = 0.0d0
+        ! Check for ponding — no reduction needed
+        if (state%soilwater%pond > POND_THRESHOLD_CM) then
+            atmo%empreva = atmo%peva
+            atmo%ldwet   = 0.0d0
+            atmo%spev    = 0.0d0
+            atmo%saev    = 0.0d0
             return
         end if
 
         ! Apply selected reduction model
         select case (swredu)
         case (1)
-            ! Black model
-            call black_reduction(nrai, state%atmosphere%nird, state%atmosphere%peva, cofred, rsigni, &
-                                at_ldwet, at_empreva, timestep, tc_flDayStart, task_flag)  ! TC-11
+            call black_reduction(nrai, atmo%nird, atmo%peva, cofred, rsigni, &
+                                 atmo%ldwet, atmo%empreva, timestep, time%flDayStart, task_flag)
         case (2)
-            ! Boesten-Stroosnijder model
-            call boesten_stroosnijder_reduction(nrai, state%atmosphere%nird, state%atmosphere%peva, cofred, &
-                                              at_spev, at_saev, at_empreva, timestep)
+            call boesten_stroosnijder_reduction(nrai, atmo%nird, atmo%peva, cofred, &
+                                                atmo%spev, atmo%saev, atmo%empreva, timestep)
         case default
             call fatalerr_collected('reduceva_apply', 'Unknown reduction method SWREDU')
         end select
