@@ -146,7 +146,7 @@
       ! [SS-GR-FINAL D1] str zero-fill dropped — declaration retired
       sw2                = 0
       sw3                = 0
-      sw4                = 0
+      ! [GR-SOIL 2026-05-24] sw4 retired — read via state%cfg%bottom_boundary%sw4.
       ! [SS-GR-FINAL D1] swafo/swaun/swini/swbal/swblc/swwba/swsba zero-fills dropped — declarations retired
       ! [GR-BH Task 36] swbotb retired — seeded via state%soilwater%swbotb_runtime in swap_mod.f90
       ! swbotb             = 0
@@ -333,7 +333,7 @@
       ! reva               = 0.0d0
       ! [SS-HEAT] Task 9: rfcp retired to state%heat%rfcp
       ! rfcp               = 0.0d0
-      rimlay             = 0.0d0 
+      ! [GR-SOIL 2026-05-24] rimlay retired — read via state%cfg%bottom_boundary%rimlay.
       ! [GR-ATM 2026-05-23] rsigni retired — see state%atmosphere%rsigni
       ! [GR-ATM 2026-05-23] rsoil retired — see state%atmosphere%rsoil
       ! [GR-ATM 2026-05-23] Runoff_CN retired — see state%atmosphere%Runoff_CN

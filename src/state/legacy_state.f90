@@ -221,7 +221,7 @@ module legacy_state_mod
       integer :: rot  !! Internal number of output file *.ROT with microscopic root water extraction data
       integer :: sw2  !! Switch for prescribed bottom flux: 1 = sine function; 2 = table
       integer :: sw3  !! Switch for prescribed hydraulic head of deep aquifer: 1 = sine function; 2 = table
-      integer :: sw4  !! Switch for extra groundwater flux as function of time: 0 = no extra flux; 1 = include extra flux
+      ! [GR-SOIL 2026-05-24] sw4 retired — orphan stub; read via state%cfg%bottom_boundary%sw4.
       character(len=1024) :: InList_csv  !! character string with comma-separated list of variables for CSV output
       character(len=1024) :: InList_csv_tz  !! character string with comma-separated list of variables for CSV output
       real(real64), allocatable :: tz_z1_z2(:)  !! Depth range for time-depth CSV output (default: top soil profile, bottom soil profile)
@@ -273,7 +273,7 @@ module legacy_state_mod
       ! [GR-BND 2026-05-23] hbotab retired — see state%soilwater%hbotab
       ! [GR-SOIL 2026-05-24] hcomp retired — derived inline from config%soil%hsublay/ncomp
       real(real64) :: hdrain  !! Mean drainage level (L) to derive regional average groundwater level for bottom boundary condition
-      real(real64) :: hplate  !! Pressure head of ceramic plate below lysimeter
+      ! [GR-SOIL 2026-05-24] hplate retired — orphan stub; read via state%cfg%bottom_boundary%hplate.
       ! [GR-SOIL 2026-05-24] hsublay retired — read inline from config%soil%hsublay
       real(real64), allocatable :: infres(:)  !! Array with infiltration resistance (T) for each drainage level
       ! [GR-SOL 2026-05-24] inpola/inpolb retired — see state%mesh%{inpola,inpolb}
@@ -313,7 +313,7 @@ module legacy_state_mod
       real(real64), allocatable :: ssdi_rate_f_irr(:)  !! Fixed irrigation rates (cm/d)
       real(real64), allocatable :: ssdi_amount_f_irr(:)  !! Fixed irrigation amounts (cm)
       real(real64), allocatable :: relsatthr(:)  !! Array with relative saturation (-) for each soil layer: to interpolate VG and Ksatexm
-      real(real64) :: rimlay  !! Vertical resistance of aquitard (T)
+      ! [GR-SOIL 2026-05-24] rimlay retired — orphan stub; read via state%cfg%bottom_boundary%rimlay.
       ! [GR-ATM 2026-05-23] rsigni retired — see state%atmosphere%rsigni
       ! [GR-ATM 2026-05-23] rsoil retired — see state%atmosphere%rsoil
       ! [GR-ATM 2026-05-23] swuseCN retired — see state%atmosphere%swusecn

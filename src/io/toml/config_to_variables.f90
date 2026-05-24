@@ -730,14 +730,14 @@ contains
       case (3)
          shape       = config%bottom_boundary%shape
          hdrain      = config%bottom_boundary%hdrain
-         rimlay      = config%bottom_boundary%rimlay
+         ! [GR-SOIL 2026-05-24] rimlay legacy mirror dropped — direct config read.
          aqave       = config%bottom_boundary%aqave
          aqamp       = config%bottom_boundary%aqamp
          aqper       = config%bottom_boundary%aqper
          aqtmax      = config%bottom_boundary%aqtmax
          swbotb3impl = config%bottom_boundary%swbotb3impl
          sw3         = config%bottom_boundary%sw3
-         sw4         = config%bottom_boundary%sw4
+         ! [GR-SOIL 2026-05-24] sw4 legacy mirror dropped — direct config read.
          if (config%bottom_boundary%sw3 == 2) then
             block
                use iso_fortran_env, only: real64
@@ -867,8 +867,7 @@ contains
       case (6, 7)
          ! No parameters to populate for modes 6 and 7.
       case (8)
-         ! Phase 0 B-0.3: lysimeter path — populate hplate legacy global.
-         hplate = config%bottom_boundary%hplate
+         ! [GR-SOIL 2026-05-24] hplate legacy mirror dropped — direct config read.
       end select
 
       ! ---------------------------------------------------------------

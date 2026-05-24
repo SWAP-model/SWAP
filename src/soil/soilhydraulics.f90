@@ -28,6 +28,7 @@ contains
       use swap_array_dimensions, only: macp, mabbc
       use variables, only: &
          ! [GR-SOIL 2026-05-24] qssdi migrated to state%soilwater — read via soil%qssdi
+         ! [GR-SOIL 2026-05-24] cfg_bb%hplate/cfg_bb%rimlay/sw4 read directly from state%cfg%bottom_boundary
          ! DEFERRED: swkmean/SwKimpl — hydraulic conductivity averaging switches; Phase C3
          ! DEFERRED: swcaprise — capillary rise prevention switch; Phase C3
          swcaprise, &
@@ -36,13 +37,6 @@ contains
          fldumpconvcrit, &
          ! DEFERRED: numbit/itnumb — Richards iteration counter/stats; Phase C3/D
          numbit, itnumb, &
-         ! DEFERRED: rimlay — drainage resistance (Cauchy BC); Phase C3
-         rimlay, &
-         ! DEFERRED: sw4 — extra-flux switch for swbotb=3; Phase C3
-         sw4, &
-         ! DEFERRED: gwlconv — groundwater level convergence criterion; Phase C3
-         ! DEFERRED: hplate — lysimeter tensiometer plate head; Phase C3
-         hplate, &
          ! DEFERRED: swbotb3Impl — Cauchy BC option; Phase C3
          swbotb3Impl, &
          ! DEFERRED: CritDevh1Cp/CritDevh2Cp/CritDevPondDt — convergence criteria; Phase C3
@@ -110,6 +104,7 @@ contains
                  heat => state%heat,         &
                  atmo => state%atmosphere,   &
                  time => state%timecontrol,  &
+                 cfg_bb => state%cfg%bottom_boundary,  &  ! [GR-SOIL 2026-05-24] cfg_bb%hplate/cfg_bb%rimlay/sw4 direct config read
                  swbotb => state%soilwater%swbotb_runtime)
 
       if (time%flDayStart) then  ! [TC-8]
@@ -270,8 +265,8 @@ contains
          hgrad(NN+1) = soil%h(NN)/(mesh%z(nn)-soil%gwlinp) + 1.0d0
       else if(swbotb.eq.5 .or. (swbotb.eq.1 .and. soil%fllowgwl))then
          hgrad(NN+1) = (soil%h(NN) - soil%hbot) / mesh%disnod(NN+1)  + 1.0d0
-      else if(swbotb.eq.8 .and. soil%h(NN).gt. Critdz - mesh%disnod(NN+1) + hplate) then
-         hgrad(NN+1) = (soil%h(NN) - hplate) / mesh%disnod(NN+1)  + 1.0d0
+      else if(swbotb.eq.8 .and. soil%h(NN).gt. Critdz - mesh%disnod(NN+1) + cfg_bb%hplate) then
+         hgrad(NN+1) = (soil%h(NN) - cfg_bb%hplate) / mesh%disnod(NN+1)  + 1.0d0
          flboth = .true.
       else
          flboth = .false.
@@ -298,12 +293,12 @@ contains
 
          if(swbotb.eq.3.and.swbotb3Impl.eq.1)then ! Cauchy-relation, implemented as head boundary
             if (soil%swbotb3resvert.eq.0) then
-               soil%qbot = - (soil%h(NN)+mesh%z(NN)-soil%deepgw) / (mesh%disnod(NN+1)/soil%kmean(NN+1)+rimlay)
+               soil%qbot = - (soil%h(NN)+mesh%z(NN)-soil%deepgw) / (mesh%disnod(NN+1)/soil%kmean(NN+1)+cfg_bb%rimlay)
             elseif (soil%swbotb3resvert.eq.1) then
-               soil%qbot = - (soil%h(NN)+mesh%z(NN)-soil%deepgw) / rimlay
+               soil%qbot = - (soil%h(NN)+mesh%z(NN)-soil%deepgw) / cfg_bb%rimlay
             endif
 ! ---       extra groundwater flux might be added
-            if (sw4 .eq. 1) soil%qbot = soil%qbot + afgen(soil%qbotab,mabbc*2,time%t1900+time%dt)  ! [TC-8]
+            if (cfg_bb%sw4 .eq. 1) soil%qbot = soil%qbot + afgen(soil%qbotab,mabbc*2,time%t1900+time%dt)  ! [TC-8]
             F(NN) = F(NN) - soil%qbot
          else if(swbotb.eq.5 .or. (swbotb.eq.1 .and. soil%fllowgwl))then ! pressure head at lower boundary specified
             F(NN) = F(NN) + soil%kmean(NN+1) * hgrad(NN+1)
@@ -318,7 +313,7 @@ contains
          ! Lysimeter option
          else if(swbotb.eq.8)then
             if (flboth) then
-               soil%hbot = hplate
+               soil%hbot = cfg_bb%hplate
                F(NN) = F(NN) + soil%kmean(NN+1) * hgrad(NN+1)
             else
                soil%qbot = 0.0d0
@@ -396,9 +391,9 @@ contains
          else if(swbotb.eq.3.and.swbotb3Impl.eq.1)then ! Cauchy
             if (soil%swbotb3resvert.eq.0) then
                dFdhM(NN) = dFdhM(NN) + 1.0d0 /                          &
-     &                              (mesh%disnod(NN+1)/soil%kmean(NN+1)+rimlay)   
+     &                              (mesh%disnod(NN+1)/soil%kmean(NN+1)+cfg_bb%rimlay)   
             elseif (soil%swbotb3resvert.eq.1) then
-               dFdhM(NN) = dFdhM(NN) + 1.0d0 / rimlay
+               dFdhM(NN) = dFdhM(NN) + 1.0d0 / cfg_bb%rimlay
             endif
          else if(swbotb.eq.5 .or. (swbotb.eq.1 .and. soil%fllowgwl))then
             dFdhM(NN) = dFdhM(NN) + soil%kmean(NN+1)/mesh%disnod(NN+1)         
@@ -565,7 +560,7 @@ contains
            else if(swbotb.eq.5 .or. (swbotb.eq.1 .and. soil%fllowgwl))then
                hgrad(NN+1) = (soil%h(NN) - soil%hbot) / mesh%disnod(NN+1)  + 1.0d0
             else if(swbotb.eq.8 .and. flboth)then
-               hgrad(NN+1) = (soil%h(NN) - hplate) / mesh%disnod(NN+1)  + 1.0d0
+               hgrad(NN+1) = (soil%h(NN) - cfg_bb%hplate) / mesh%disnod(NN+1)  + 1.0d0
             end if
 
             if(swbotb.eq.1 .and. (.not.soil%fllowgwl))then
@@ -593,12 +588,12 @@ contains
                if(swbotb.eq.3.and.swbotb3Impl.eq.1)then ! Cauchy
                   if (soil%swbotb3resvert.eq.0) then
                      soil%qbot = - (soil%h(NN)+mesh%z(NN)-soil%deepgw) /       &
-     &                                 (mesh%disnod(NN+1)/soil%kmean(NN+1)+rimlay)
+     &                                 (mesh%disnod(NN+1)/soil%kmean(NN+1)+cfg_bb%rimlay)
                   elseif (soil%swbotb3resvert.eq.1) then
-                     soil%qbot = - (soil%h(NN)+mesh%z(NN)-soil%deepgw) / rimlay
+                     soil%qbot = - (soil%h(NN)+mesh%z(NN)-soil%deepgw) / cfg_bb%rimlay
                   endif
                   ! Extra groundwater flux might be added
-                  if (sw4 .eq. 1) then
+                  if (cfg_bb%sw4 .eq. 1) then
                      soil%qbot = soil%qbot + afgen(soil%qbotab,mabbc*2,time%t1900+time%dt)  ! [TC-8]
                   end if
                   F(NN) = F(NN) - soil%qbot
@@ -617,7 +612,7 @@ contains
                ! Lysimeter option
                else if(swbotb.eq.8)then
                   if (flboth) then
-                     soil%hbot = hplate
+                     soil%hbot = cfg_bb%hplate
                      F(NN) = F(NN) + soil%kmean(NN+1) * hgrad(NN+1)
                   else
                      soil%qbot = 0.0d0

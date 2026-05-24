@@ -732,7 +732,7 @@
       ! [SS-GR-FINAL D1] str retired — STR file handle; 0 consumers (swap_csv_output str is a local char var)
       integer   sw2                ! Switch for prescribed bottom flux: 1 = sine function; 2 = table
       integer   sw3                ! Switch for prescribed hydraulic head of deep aquifer: 1 = sine function; 2 = table
-      integer   sw4                ! Switch for extra groundwater flux as function of time: 0 = no extra flux; 1 = include extra flux
+      ! [GR-SOIL 2026-05-24] sw4 retired — read directly via state%cfg%bottom_boundary%sw4.
       ! [SS-GR-CROPRT A3] swcsv retired — migrated to config%output_csv%enabled (readers use config now)
       character(len=1024) InList_csv   ! character string with comma-separated list of variables for CSV output
       ! [SS-GR-CROPRT A3] swcsv_tz retired — migrated to config%output_csv%enabled_tz
@@ -878,7 +878,7 @@
       ! real(8)   hleaf              ! Pressure head inside leaves (cm)
       ! [SS-SWC] retired 2026-05-12 — moved to state%soilwater%hm1 (ADR 0038)
       ! real(8)   hm1(macp)          ! Soil water pressure head (L) at former time level
-      real(8)   hplate             ! Pressure head of ceramic plate below lysimeter
+      ! [GR-SOIL 2026-05-24] hplate retired — read directly via state%cfg%bottom_boundary%hplate.
       ! [SS-CRP] retired 2026-05-11 — moved to state%soilwater%hroot (ADR 0036)
       ! real(8)   hroot(macp)        ! Pressure head of a compartment at the root-soil interface (L)
       ! [GR-SOIL 2026-05-24] hsublay retired — read inline from config%soil%hsublay
@@ -1024,7 +1024,7 @@
       ! real(8)   reva               ! Actual soil evaporation rate (L/T)
       ! [SS-HEAT] retired 2026-05-10 — moved to state%heat%rfcp (ADR 0034)
       ! real(8)   rfcp(macp)         ! Reduction factor for frozen conditions in each model compartment (-)
-      real(8)   rimlay             ! Vertical resistance of aquitard (T)
+      ! [GR-SOIL 2026-05-24] rimlay retired — read directly via state%cfg%bottom_boundary%rimlay.
       ! [SS-CRP] retired 2026-05-11 — moved to state%soilwater%rmax (ADR 0036)
       ! real(8)   rmax(macp)         ! Radius around roots in which water is extracted (L)
       ! [SS-CRP] retired 2026-05-11 — moved to state%soilwater%rootphi (ADR 0036)
