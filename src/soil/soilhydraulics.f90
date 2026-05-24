@@ -1264,53 +1264,42 @@ contains
    !! @endnote
    !!
    subroutine SoilWaterStateVar(task, state)
-
-! --- global variables
-      ! [SS-GR-FINAL B9] blanket use Variables removed — SoilWaterStateVar reads/writes only state%; no variables globals used
       use swap_state_mod, only: swap_state_t
       use, intrinsic :: iso_fortran_env, only: real64
       implicit none
 
-      ! Arguments
-      integer task
+      integer,            intent(in)    :: task
       type(swap_state_t), intent(inout) :: state
 
-      ! Local variables
-      integer i
+      integer :: i
 
-      ! [SS-SWC S-2.12B] legacy h/hm1/theta/thetm1/gwl/gwlm1/pond/pondm1/k/kmean half-writes dropped
-      ! [GR-BH C4] numnod aliased via state%mesh
-      associate( numnod => state%mesh%numnod )  ! [GR-BH C4]
+      associate (mesh => state%mesh, soil => state%soilwater)
 
-      select case (task)
-      case (1)
+         select case (task)
+         case (1)
+            ! Save state variables at time = t.
+            do i = 1, mesh%numnod
+               soil%hm1(i)    = soil%h(i)
+               soil%thetm1(i) = soil%theta(i)
+            end do
+            soil%gwlm1  = soil%gwl
+            soil%pondm1 = soil%pond
 
-         ! Save state variables of time = t
-         do i = 1,numnod
-        state%soilwater%hm1(i)    = state%soilwater%h(i)
-        state%soilwater%thetm1(i) = state%soilwater%theta(i)
-      enddo
-      state%soilwater%gwlm1  = state%soilwater%gwl
-      state%soilwater%pondm1 = state%soilwater%pond
+         case (2)
+            ! Reset soil state variables.
+            do i = 1, mesh%numnod
+               soil%h(i)     = soil%hm1(i)
+               soil%theta(i) = soil%thetm1(i)
+            end do
+            soil%kmean(mesh%numnod + 1) = soil%k(mesh%numnod)
+            soil%gwl  = soil%gwlm1
+            soil%pond = soil%pondm1
 
-      return
+         case default
+            call fatalerr_collected('SoilWaterStateVar', 'Illegal value for TASK')
+         end select
 
-      case (2)
-
-         ! Reset soil state variables
-         do i = 1,numnod
-        state%soilwater%h(i)     = state%soilwater%hm1(i)
-        state%soilwater%theta(i) = state%soilwater%thetm1(i)
-      enddo
-      state%soilwater%kmean(numnod+1) = state%soilwater%k(numnod)
-      state%soilwater%gwl  = state%soilwater%gwlm1
-      state%soilwater%pond = state%soilwater%pondm1
-
-      case default
-         call fatalerr_collected ('SoilWaterStateVar', 'Illegal value for TASK')
-      end select
-
-      end associate  ! numnod [GR-BH C4]
+      end associate
 
       return
       end subroutine SoilWaterStateVar
@@ -1324,133 +1313,105 @@ contains
    !! Date: 23/10/2000
    !! @endnote
    !!
-   subroutine hysteresis (state)
-      ! [SS-SWC S-2.12B] h/hm1/indeks/cofgen/dimoca/theta retired — read via state%soilwater
-      ! [GR-BH C4] numnod/layer/disnod migrated to state%mesh
-      ! [SS-GR-FINAL B9] DEFERRED: tau/paramvg — soil hydraulic params; Phase C3
-      use variables, only: tau, paramvg
-      use soilhydraulics_utils, only: moiscap, prhead
+   subroutine hysteresis(state)
+      ! Stragglers still bare-global: tau (scalar) + paramvg (per-layer VG table).
+      use variables,             only: tau, paramvg
+      use soilhydraulics_utils,  only: moiscap, prhead
       use swap_array_dimensions, only: macp
-      use swap_state_mod, only: swap_state_t
-      use hydraulic_params_mod, only: vanGenuchten_params_t
-
+      use swap_state_mod,        only: swap_state_t
+      use hydraulic_params_mod,  only: vanGenuchten_params_t
       implicit none
 
-      ! Arguments
       type(swap_state_t), intent(inout) :: state
 
-      ! Local variables
-      integer node,lay,indtem(macp)
-      real(8) delp,sew,sed,fvalue
-      real(8) thetar(macp),thetas(macp),alfamg(macp)
+      integer :: node, lay, indtem(macp)
+      real(8) :: delp, sew, sed, fvalue
+      real(8) :: thetar(macp), thetas(macp), alfamg(macp)
       type(vanGenuchten_params_t) :: vg_hys
 
-      ! [SS-SWC S-2.3] reader cutover: read h/hm1/theta/indeks/dimoca from state
-      ! [GR-BH C4] mesh globals aliased via state%mesh
-      associate( &
-         sw_h      => state%soilwater%h,       &
-         sw_hm1    => state%soilwater%hm1,     &
-         sw_theta  => state%soilwater%theta,   &
-         sw_indeks => state%soilwater%indeks,  &
-         sw_dimoca => state%soilwater%dimoca,  &
-         numnod    => state%mesh%numnod,        &  ! [GR-BH C4]
-         layer     => state%mesh%layer,         &  ! [GR-BH C4]
-         disnod    => state%mesh%disnod          )  ! [GR-BH C4]
+      associate (mesh => state%mesh, soil => state%soilwater, time => state%timecontrol)
 
-      ! Check for reversal
-      do node = 1,numnod
-        delp = sw_hm1(node)-sw_h(node)                          ! [SS-SWC S-2.3]
-        if (delp/float(sw_indeks(node)).gt.tau.and.              &  ! [SS-SWC S-2.3]
-     &     sw_h(node).lt.-10.0d0 .and. sw_h(node).gt.-1.0d3) then  ! [SS-SWC S-2.3]
-          indtem(node) = -sw_indeks(node)                       ! [SS-SWC S-2.3]
-        else
-          indtem(node) = sw_indeks(node)                        ! [SS-SWC S-2.3]
-        endif
-      end do
+         ! Check for hysteretic reversal.
+         do node = 1, mesh%numnod
+            delp = soil%hm1(node) - soil%h(node)
+            if (delp/float(soil%indeks(node)) .gt. tau .and.          &
+         &      soil%h(node) .lt. -10.0d0 .and. soil%h(node) .gt. -1.0d3) then
+               indtem(node) = -soil%indeks(node)
+            else
+               indtem(node) =  soil%indeks(node)
+            end if
+         end do
 
-      ! Change parameters scanning curves
-      do 100 node = 1,numnod
-        lay = layer(node)
+         ! Adapt parameters along scanning curves.
+         do 100 node = 1, mesh%numnod
+            lay = mesh%layer(node)
 
-         ! No change
-         if (indtem(node).eq.sw_indeks(node) .or.               &  ! [SS-SWC S-2.3]
-     &     abs(paramvg(4,lay)-paramvg(8,lay)) .lt. 1.d-4) goto 100
+            ! No change.
+            if (indtem(node) .eq. soil%indeks(node) .or.              &
+         &       abs(paramvg(4, lay) - paramvg(8, lay)) .lt. 1.d-4) goto 100
 
-         ! Relative saturation
-         sew = (1.0d0+(paramvg(8,lay)*(-sw_h(node)))**paramvg(6,lay))   &  ! [SS-SWC S-2.3]
-     &        **(-paramvg(7,lay))
-        sed = (1.0d0+(paramvg(4,lay)*(-sw_h(node)))**paramvg(6,lay))   &  ! [SS-SWC S-2.3]
-     &        **(-paramvg(7,lay))
+            ! Relative saturation.
+            sew = (1.0d0 + (paramvg(8, lay)*(-soil%h(node)))**paramvg(6, lay))**(-paramvg(7, lay))
+            sed = (1.0d0 + (paramvg(4, lay)*(-soil%h(node)))**paramvg(6, lay))**(-paramvg(7, lay))
 
-         ! Change index
-         ! [SS-SWC S-2.12B] legacy half-write dropped
-         state%soilwater%indeks(node) = -1*sw_indeks(node)      ! [SS-SWC S-1.4a/S-2.12B]
+            ! Flip the scanning index.
+            soil%indeks(node) = -1*soil%indeks(node)
 
-         ! Update alfa, thetar and thetas — [SS-SWC S-2.12B] sw_indeks now points to fresh state value
-         if (state%soilwater%indeks(node).eq.1) then
-            ! Wetting branch
-            alfamg(node) = paramvg(8,lay)
-          thetas(node) = paramvg(2,lay)
-          thetar(node) = (sw_theta(node)-thetas(node)*sew)/(1.0d0-sew)  ! [SS-SWC S-2.3]
+            if (soil%indeks(node) .eq. 1) then
+               ! Wetting branch.
+               alfamg(node) = paramvg(8, lay)
+               thetas(node) = paramvg(2, lay)
+               thetar(node) = (soil%theta(node) - thetas(node)*sew)/(1.0d0 - sew)
 
-            ! Check on thetar(node) value, if needed correction of h
-            fvalue = thetar(node)
-          if(thetar(node).lt.paramvg(1,lay)) thetar(node)=paramvg(1,lay)
-          if(thetar(node).gt.paramvg(2,lay)) thetar(node)=paramvg(2,lay)
-          ! [SS-GR-UTILS Task 15] write directly to vg_params (cofgen retired)
-          state%soilwater%vg_params(node)%alpha  = alfamg(node)
-          state%soilwater%vg_params(node)%thetar = thetar(node)
-          state%soilwater%thetar(node)           = thetar(node) ! [SS-SWC S-1.4a]
-          state%soilwater%vg_params(node)%thetas = thetas(node)
-          state%soilwater%thetas(node)           = thetas(node) ! [SS-SWC S-1.4a]
-          if (abs(fvalue-thetar(node)) .gt. 1.d-10) then
-             ! Build vg with locally modified thetar/thetas/alpha for wetting branch  [SS-GR-UTILS Task 8]
-             vg_hys         = state%soilwater%vg_params(node)
-             vg_hys%thetar  = thetar(node)
-             vg_hys%thetas  = thetas(node)
-             vg_hys%alpha   = alfamg(node)
-             state%soilwater%h(node) = prhead(disnod(node), sw_theta(node), sw_h, &
-                                              state%soilwater%iHWCKmodel(state%soilwater%layer(node)), &
-                                              node, state%soilwater, vg_in=vg_hys)  ! [SS-SWC S-2.12B] [SS-GR-UTILS Task 8]
-          endif
-        else
-           ! Drying branch
-           alfamg(node) = paramvg(4,lay)
-          thetar(node) = paramvg(1,lay)
-          thetas(node) = thetar(node)+(sw_theta(node)-thetar(node))/sed  ! [SS-SWC S-2.3]
+               fvalue = thetar(node)
+               if (thetar(node) .lt. paramvg(1, lay)) thetar(node) = paramvg(1, lay)
+               if (thetar(node) .gt. paramvg(2, lay)) thetar(node) = paramvg(2, lay)
+               soil%vg_params(node)%alpha  = alfamg(node)
+               soil%vg_params(node)%thetar = thetar(node)
+               soil%thetar(node)           = thetar(node)
+               soil%vg_params(node)%thetas = thetas(node)
+               soil%thetas(node)           = thetas(node)
+               if (abs(fvalue - thetar(node)) .gt. 1.d-10) then
+                  vg_hys         = soil%vg_params(node)
+                  vg_hys%thetar  = thetar(node)
+                  vg_hys%thetas  = thetas(node)
+                  vg_hys%alpha   = alfamg(node)
+                  soil%h(node) = prhead(mesh%disnod(node), soil%theta(node), soil%h, &
+                                        soil%iHWCKmodel(soil%layer(node)),           &
+                                        node, soil, vg_in=vg_hys)
+               end if
+            else
+               ! Drying branch.
+               alfamg(node) = paramvg(4, lay)
+               thetar(node) = paramvg(1, lay)
+               thetas(node) = thetar(node) + (soil%theta(node) - thetar(node))/sed
 
-            ! Check on thetas(node) value, if needed correction of h
-            fvalue = thetas(node)
-          if(thetas(node).lt.paramvg(1,lay)) thetas(node)=paramvg(1,lay)
-          if(thetas(node).gt.paramvg(2,lay)) thetas(node)=paramvg(2,lay)
-          ! [SS-GR-UTILS Task 15] write directly to vg_params (cofgen retired)
-          state%soilwater%vg_params(node)%alpha  = alfamg(node)
-          state%soilwater%vg_params(node)%thetar = thetar(node)
-          state%soilwater%thetar(node)           = thetar(node) ! [SS-SWC S-1.4a]
-          state%soilwater%vg_params(node)%thetas = thetas(node)
-          state%soilwater%thetas(node)           = thetas(node) ! [SS-SWC S-1.4a]
-          if (abs(fvalue-thetas(node)) .gt. 1.d-10) then
-             ! Build vg with locally modified thetar/thetas/alpha for drying branch  [SS-GR-UTILS Task 8]
-             vg_hys         = state%soilwater%vg_params(node)
-             vg_hys%thetar  = thetar(node)
-             vg_hys%thetas  = thetas(node)
-             vg_hys%alpha   = alfamg(node)
-             state%soilwater%h(node) = prhead(disnod(node), sw_theta(node), sw_h, &
-                                              state%soilwater%iHWCKmodel(state%soilwater%layer(node)), &
-                                              node, state%soilwater, vg_in=vg_hys)  ! [SS-SWC S-2.12B] [SS-GR-UTILS Task 8]
-          endif
-        endif
+               fvalue = thetas(node)
+               if (thetas(node) .lt. paramvg(1, lay)) thetas(node) = paramvg(1, lay)
+               if (thetas(node) .gt. paramvg(2, lay)) thetas(node) = paramvg(2, lay)
+               soil%vg_params(node)%alpha  = alfamg(node)
+               soil%vg_params(node)%thetar = thetar(node)
+               soil%thetar(node)           = thetar(node)
+               soil%vg_params(node)%thetas = thetas(node)
+               soil%thetas(node)           = thetas(node)
+               if (abs(fvalue - thetas(node)) .gt. 1.d-10) then
+                  vg_hys         = soil%vg_params(node)
+                  vg_hys%thetar  = thetar(node)
+                  vg_hys%thetas  = thetas(node)
+                  vg_hys%alpha   = alfamg(node)
+                  soil%h(node) = prhead(mesh%disnod(node), soil%theta(node), soil%h, &
+                                        soil%iHWCKmodel(soil%layer(node)),           &
+                                        node, soil, vg_in=vg_hys)
+               end if
+            end if
 
-         ! Update capacity
-         ! [SS-SWC S-2.12B] legacy dimoca half-write dropped
-         state%soilwater%dimoca(node) = moiscap(sw_h(node), &
-                                              state%soilwater%vg_params(node), &
-                                              state%soilwater%iHWCKmodel(state%soilwater%layer(node)), &
-                                              state%timecontrol%dt, &
-                                              node, state%soilwater)  ! [SS-SWC S-1.4b/S-2.12B] [SS-GR-UTILS Task 7]
- 100  continue
+            ! Update moisture capacity.
+            soil%dimoca(node) = moiscap(soil%h(node), soil%vg_params(node),     &
+                                        soil%iHWCKmodel(soil%layer(node)),      &
+                                        time%dt, node, soil)
+ 100     continue
 
-      end associate  ! sw_h/.../sw_dimoca => state%soilwater [SS-SWC S-2.3]; numnod/layer/disnod [GR-BH C4]
+      end associate
 
       return
       end subroutine hysteresis
