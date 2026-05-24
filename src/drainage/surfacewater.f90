@@ -537,68 +537,51 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
       !!     File usage         :
       !!     Differences SWAP/SWAPS: None
       !!@endnote
-      ! SS-BND Phase 2 Task B-2.4: runots removed from use clause; read via state%soilwater%runots.
-      ! [GR-DRA 2026-05-23] wlstab retired — read via state%surfacewater%wlstab.
-      ! [GR-DRA 2026-05-23] QRapDra retired — read via state%drainage%QRapDra.
-      use swap_state_mod, only: swap_state_t
-      use array_utils, only: afgen
-      use surfacewater_utils, only: swstlev
+      use swap_state_mod,        only: swap_state_t
+      use array_utils,           only: afgen
+      use surfacewater_utils,    only: swstlev
       use swap_array_dimensions, only: mawls
-      IMPLICIT NONE
+      implicit none
 
       type(swap_state_t), intent(inout) :: state
 
-! --- local
-      real(8) swstold,swstrest,wdis,wsupp
+      real(8) :: swstold, swstrest, wdis, wsupp
 
-! ----------------------------------------------------------------------
+      associate (drai => state%drainage,    &
+                 soil => state%soilwater,   &
+                 surf => state%surfacewater, &
+                 time => state%timecontrol)
 
-      associate( &
-         sw_wls    => state%surfacewater%wls,    &
-         sw_wlsold => state%surfacewater%wlsold, &
-         sw_swst   => state%surfacewater%swst,   &
-         sw_cqdrd  => state%surfacewater%cqdrd,  &
-         sw_cwsupp => state%surfacewater%cwsupp, &
-         sw_cwout  => state%surfacewater%cwout,  &
-         tc_dt    => state%timecontrol%dt,    &  ! TC-8: WBALLEV TC reader cutover
-         tc_t1900 => state%timecontrol%t1900  )  ! TC-8
+         ! Memorise the previous-step water level.
+         surf%wlsold = surf%wls
 
-! --- wlsold gets w-level of previous time step
-      ! wlsold global write dropped; sw_wlsold (state alias) is the signal.
-      sw_wlsold = sw_wls
+         ! Fetch new level from the input series.
+         surf%wls = afgen(surf%wlstab, 2*MAWLS, time%t1900 - 1.d0 + time%dt)
 
-! --- fetch new level from input series
-      sw_wls = AFGEN (state%surfacewater%wlstab,2*MAWLS,tc_t1900-1.d0+tc_dt)
+         ! Storage for level(t-dt) and level(t).
+         swstold  = swstlev(state, surf%wlsold)
+         surf%swst = swstlev(state, surf%wls)
 
-! --- determine surface water storage for level(t-dt) and level(t)
-      swstold = swstlev(state, sw_wlsold)
-      sw_swst = swstlev(state, sw_wls)
+         ! Decide whether supply or discharge took place over the timestep.
+         swstrest = swstold + (drai%qdrd + drai%QRapDra)*time%dt + soil%runots - surf%swst
 
-! --- determine from the surface water storages and the qdrain whether
-! --- supply has taken place during period (t)-(t+dt) or water has
-! --- been discharged
-      swstrest = swstold + (state%drainage%qdrd + state%drainage%QRapDra)*tc_dt + state%soilwater%runots - sw_swst
+         if (swstrest .le. 0.0d0) then
+            wdis  = 0.0d0
+            wsupp = -swstrest/time%dt
+         else
+            wdis  = swstrest/time%dt
+            wsupp = 0.0d0
+         end if
 
-! --- if supply was needed, set discharge to zero
-      if (swstrest.le.0.0d0) then
-        wdis = 0.0d0
-        wsupp = -swstrest/tc_dt
-
-! --- if discharge has taken place, set supply to zero
-      else
-        wdis = swstrest/tc_dt
-        wsupp = 0.0d0
-      endif
-
-! --- cumulation of water balance terms (global accumulations dropped; state aliases authoritative):
-      sw_cqdrd  = sw_cqdrd  + state%drainage%qdrd*tc_dt
-      sw_cwsupp = sw_cwsupp + wsupp*tc_dt
-      sw_cwout  = sw_cwout  + wdis*tc_dt
+         ! Cumulative balance terms.
+         surf%cqdrd  = surf%cqdrd  + drai%qdrd*time%dt
+         surf%cwsupp = surf%cwsupp + wsupp*time%dt
+         surf%cwout  = surf%cwout  + wdis*time%dt
 
       end associate
 
       return
-      end
+      end subroutine WBALLEV
 
 
 !> Year-boundary reset for surface-water cumulative state.
