@@ -228,6 +228,12 @@ module soilwater_state_mod
       real(real64) :: H0max        = 0.0_real64   !! max ponding pre-runoff [cm]
       integer      :: swbotb_runtime = 0          !! runtime-overridable bottom-boundary switch
 
+      ! [GR-SOIL 2026-05-24] Richards non-convergence warning state (formerly bare globals
+      ! that were "previously SAVE variables" — pinned at module scope to persist across
+      ! headcalc calls). Reset to defaults each flDayStart at the top of headcalc.
+      logical :: flwarn_hc = .true.   !! emit Richards non-convergence warning this day
+      integer :: iwarn_hc  = 0        !! count of warnings emitted today (cap at 4)
+
       ! ===========================================================================
       ! INTERMEDIATE accumulators (reset_intermediate / gate: flzerointr)
       !   subsumes the per-day subset, which has its own reset under flDayStart.

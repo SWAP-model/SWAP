@@ -31,10 +31,9 @@ contains
          ! [GR-SOIL 2026-05-24] hplate/rimlay/sw4/swbotb3impl → state%cfg%bottom_boundary
          ! [GR-SOIL 2026-05-24] swcaprise/dump_convergence_diagnostics → state%cfg%simulation%numerical
          ! [GR-SOIL 2026-05-24] noddrz → state%crop%common%noddrz (already canonical state field)
+         ! [GR-SOIL 2026-05-24] soil%flwarn_hc/soil%iwarn_hc → state%soilwater (runtime warning state)
          ! DEFERRED: numbit/itnumb — Richards iteration counter/stats; Phase C3/D
-         numbit, itnumb, &
-         ! DEFERRED: flwarn_hc/iwarn_hc — non-convergence warning state; Phase C3
-         flwarn_hc, iwarn_hc
+         numbit, itnumb
       use timestep_control_mod, only: fldecdt
       use swap_log, only: log_warn, log_debug, to_str
       use boundbottom_mod, only: BoundBottom
@@ -86,7 +85,7 @@ contains
       real(8) ArMpSs   ! macropore area fraction at soil surface (local; always 0.d0, ADR 0040)
       logical flok
 
-      ! Note: flwarn_hc, iwarn_hc, nstep_hc moved to variables.f90 module
+      ! Note: soil%flwarn_hc, soil%iwarn_hc, nstep_hc moved to variables.f90 module
       ! (previously local SAVE variables - now global for multi-instance support)
 
       associate (mesh => state%mesh,         &
@@ -100,8 +99,8 @@ contains
                  swbotb => state%soilwater%swbotb_runtime)
 
       if (time%flDayStart) then  ! [TC-8]
-         flwarn_hc = .true.
-         iwarn_hc = 0
+         soil%flwarn_hc = .true.
+         soil%iwarn_hc = 0
       endif
       call dtdpst                                                       &
      &        ('year-month-day,hour:minute:seconds',time%t1900,datetime)  ! [TC-8]
@@ -758,16 +757,16 @@ contains
 
       else
          ! Write warning to screen and log file
-         if (flwarn_hc .and. iwarn_hc.lt.5) then
-            iwarn_hc = iwarn_hc + 1
+         if (soil%flwarn_hc .and. soil%iwarn_hc.lt.5) then
+            soil%iwarn_hc = soil%iwarn_hc + 1
             call dtdpst                                                 &
      &        ('year-month-day,hour:minute:seconds',time%t1900,datetime)  ! [TC-8]
             messag = ' No convergence was reached of Richards'//        &
      &        ' equation at '//datetime//                               &
      &        ' no more than 4 warnings per date - SWAP did continue !'
             call log_warn('Headcalc', messag)
-            if (iwarn_hc.gt.4) then
-              flwarn_hc = .false.  
+            if (soil%iwarn_hc.gt.4) then
+              soil%flwarn_hc = .false.  
             endif
          endif
 

@@ -669,8 +669,7 @@
       ! [GR-CROP-DVS] critdevh2cp retired — see state%cfg%simulation%numerical%critdevh2cp
       ! [GR-CROP-DVS] critdevponddt retired — see state%cfg%simulation%numerical%critdevponddt
       ! [GR-SOIL 2026-05-24] fldumpconvcrit retired — now state%cfg%simulation%numerical%dump_convergence_diagnostics.
-      logical   flwarn_hc          ! Headcalc warning flag (previously SAVE variable)
-      integer   iwarn_hc           ! Headcalc warning counter (previously SAVE variable)
+      ! [GR-SOIL 2026-05-24] flwarn_hc + iwarn_hc retired — now state%soilwater (runtime warning state).
       ! [SS-GR-FINAL D1] nstep_hc retired — 0 consumers
       integer   dev_cmb            ! Mass balance deviation file unit (previously SAVE in checkmassbal)
       ! [GR-BH Task 36] retired 2026-05-13 — moved to state%soilwater%flksatexm (GR-BH arc)

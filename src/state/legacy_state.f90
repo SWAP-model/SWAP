@@ -198,8 +198,7 @@ module legacy_state_mod
       logical, allocatable :: NoVap(:)  !! logical indicating that NO vapour flow is to be considered in PDI K-model
       integer, allocatable :: Itnumb(:,:)  !! Iteration number statistics [soilhydraulics.f90, timecontrol_mod.f90]
       ! [GR-SOIL 2026-05-24] fldumpconvcrit retired — orphan stub; now state%cfg%simulation%numerical%dump_convergence_diagnostics.
-      logical :: flwarn_hc  !! Headcalc warning flag (previously SAVE variable)
-      integer :: iwarn_hc  !! Headcalc warning counter (previously SAVE variable)
+      ! [GR-SOIL 2026-05-24] flwarn_hc + iwarn_hc retired — orphan stubs; now state%soilwater.
       integer :: dev_cmb  !! Mass balance deviation file unit (previously SAVE in checkmassbal)
       ! [GR-SOIL 2026-05-24] swcaprise retired — orphan stub; now state%cfg%simulation%numerical%swcaprise.
       ! [GR-SOIL 2026-05-24] botcom retired — see state%mesh%botcom

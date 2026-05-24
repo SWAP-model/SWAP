@@ -99,8 +99,7 @@
       ! [SS-BMI2 Task 5] MaxIt retired 2026-05-13 — moved to state%timecontrol%MaxIt
       Itnumb             = 0
       ! [GR-SOIL 2026-05-24] fldumpconvcrit retired — now state%cfg%simulation%numerical%dump_convergence_diagnostics.
-      flwarn_hc          = .true.     ! Initialize headcalc warning flag (previously SAVE variable)
-      iwarn_hc           = 0          ! Initialize headcalc warning counter (previously SAVE variable)
+      ! [GR-SOIL 2026-05-24] flwarn_hc/iwarn_hc init handled by state%soilwater defaults.
       ! [SS-GR-FINAL D1] nstep_hc zero-fill dropped — declaration retired 
       dev_cmb            = 0          ! Initialize mass balance deviation file unit (previously SAVE in checkmassbal)
       ! [GR-BH Task 36] flksatexm retired — seeded via state%soilwater%flksatexm in soilwater_init
