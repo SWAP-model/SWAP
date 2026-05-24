@@ -105,194 +105,177 @@ contains
     real(8) apar, dzsnw, heaconsnw, Rosnw
     character(len=200) messag
 
-    ! SS-TC TC-11: daynr, t1900, dt read via state%timecontrol tc_* aliases.
-    associate( &
-        tc_daynr         => state%timecontrol%daynr,    &  ! TC-11
-        tc_t1900         => state%timecontrol%t1900,    &  ! TC-11
-        tc_dt            => state%timecontrol%dt,       &  ! TC-11
-        ht_tsoil         => state%heat%tsoil,           &
-        ht_heacap        => state%heat%heacap,          &
-        ht_heacon        => state%heat%heacon,          &
-        ht_fquartz       => state%heat%fquartz,         &
-        ht_fclay         => state%heat%fclay,           &
-        ht_forg          => state%heat%forg,            &
-        ht_tetop         => state%heat%tetop,           &
-        ht_tebot         => state%heat%tebot,           &
-        sw_theta         => state%soilwater%theta,      &  ! [SS-SWC S-2.10]
-        sw_thetm1        => state%soilwater%thetm1,     &  ! [SS-SWC S-2.10]
-        sw_thetas        => state%soilwater%thetas)        ! [SS-SWC S-2.10]
+    associate (heat => state%heat,           &
+               mesh => state%mesh,           &
+               soil => state%soilwater,     &
+               atmo => state%atmosphere,    &
+               time => state%timecontrol,   &
+               cfg_heat => config%heat)
 
-    select case (task)
-    case (1)
+      select case (task)
+      case (1)
+         ! === Initialization ===
 
-      ! === Initialization ===
-
-      ! Determine initial temperature profile
-
-      if (config%heat%swcalt.eq.1) then
-        ! Analytical solution
-        do i = 1,state%mesh%numnod
-          ht_tsoil(i) = config%heat%tmean+config%heat%tampli*(dsin(0.0172d0*(tc_daynr-config%heat%timref+91.0d0)+ &  ! TC-11
-                        state%mesh%z(i)/config%heat%ddamp)) / dexp(-state%mesh%z(i)/config%heat%ddamp)
-        enddo
-      else
-        ! Numerical solution, use specified soil temperatures
-        if (config%soil%swinco.ne.3 .and. allocated(config%heat%tsoil_init)) then
-          nheat_loc = size(config%heat%tsoil_init, 1)
-          do i = 1, nheat_loc
-            tab(i*2)   = config%heat%tsoil_init(i, 2)   ! temp — col 2
-            tab(i*2-1) = dabs(config%heat%tsoil_init(i, 1))  ! depth — col 1
-          end do
-          do i = 1, state%mesh%numnod
-            ht_tsoil(i) = afgen(tab,macp*2,dabs(state%mesh%z(i)))
-          end do
-        end if
-      endif
-
-      if (config%heat%swcalt.eq.2) then
-        ! Initialize dry bulk density and volume fractions sand, clay and organic matter
-        do i = 1, state%mesh%numnod
-          lay = state%mesh%layer(i)
-          dummy = state%soilwater%orgmat(lay)/(1.0d0 - state%soilwater%orgmat(lay))
-          gmineral = (1.0d0 - sw_thetas(i)) / (0.370d0 + 0.714d0*dummy)   ! [SS-SWC S-2.10]
-          ht_fquartz(i) = (state%soilwater%psand(lay) + state%soilwater%psilt(lay))*gmineral/2.7d0
-          ht_fclay(i)   = state%soilwater%pclay(lay)*gmineral/2.7d0
-          ht_forg(i)    = dummy*gmineral/1.4d0
-        end do
-      endif
-
-      return
-
-    case (2)
-
-      ! === Soil temperature rate and state variables ===
-
-      if (config%heat%swcalt .eq. 2) then
-        ! Numerical solution
-
-        ! Set top boundary condition
-        if (config%heat%swtopbhea .eq. 2) then
-          ! Use specified soil surface temperatures as top boundary condition
-          ! Build local 1D interleaved array for afgen from 2D config table
-          ttab = 0.0d0
-          if (allocated(config%heat%temtoptab)) then
-            do i = 1, min(size(config%heat%temtoptab, 1), mabbc)
-              ttab(2*i - 1) = config%heat%temtoptab(i, 1)
-              ttab(2*i)     = config%heat%temtoptab(i, 2)
+         ! Initial temperature profile.
+         if (cfg_heat%swcalt .eq. 1) then
+            ! Analytical solution.
+            do i = 1, mesh%numnod
+               heat%tsoil(i) = cfg_heat%tmean + cfg_heat%tampli *                       &
+                               (dsin(0.0172d0*(time%daynr - cfg_heat%timref + 91.0d0) + &
+                                     mesh%z(i)/cfg_heat%ddamp))                         &
+                               / dexp(-mesh%z(i)/cfg_heat%ddamp)
             end do
-          end if
-          ht_tetop = afgen (ttab,2*mabbc,tc_t1900+tc_dt)  ! TC-11
-        ! SS-ATM A-2.6: ssnow retired — read from state%atmosphere%ssnow
-        elseif (dabs(state%atmosphere%ssnow).gt.1.0d-10) then
-          ! Air temperature cannot be used with a snow layer,
-          ! calculate temperature on soil-snow interface
-          Rosnw = 170.0d0
-          heaconsnw = 2.86d-6 * 864.0d0 * Rosnw**2.d0
-          dzsnw = state%atmosphere%ssnow / 0.170d0
-          if (ht_heacon(1).lt.1.d-10) ht_heacon(1) = 100.0d0
-          apar = (0.5d0*heaconsnw*state%mesh%dz(1)) / (ht_heacon(1)*dzsnw)
-          if (state%timecontrol%flmetdetail) then
-            ht_tetop = (ht_tsoil(1) + apar*state%atmosphere%atav(state%timecontrol%wrecord)) / (1.d0+apar)
-          else
-            ht_tetop = (ht_tsoil(1) + apar*state%atmosphere%Tav) / (1.d0+apar)
-          endif
-        else
-          if (state%timecontrol%flmetdetail) then
-            ht_tetop = state%atmosphere%atav(state%timecontrol%wrecord)
-          else
-            ht_tetop = state%atmosphere%Tav
-          endif
-        endif
+         else
+            ! Numerical solution: use specified initial soil temperatures.
+            if (config%soil%swinco .ne. 3 .and. allocated(cfg_heat%tsoil_init)) then
+               nheat_loc = size(cfg_heat%tsoil_init, 1)
+               do i = 1, nheat_loc
+                  tab(i*2)     = cfg_heat%tsoil_init(i, 2)         ! temp — col 2
+                  tab(i*2 - 1) = dabs(cfg_heat%tsoil_init(i, 1))   ! depth — col 1
+               end do
+               do i = 1, mesh%numnod
+                  heat%tsoil(i) = afgen(tab, macp*2, dabs(mesh%z(i)))
+               end do
+            end if
+         end if
 
-        ! Set bottom boundary condition
-        if (config%heat%swbotbhea.eq.1) then
-          ! No heat flow through bottom of profile assumed
-          ht_tebot = ht_tsoil(state%mesh%numnod)
-        elseif (config%heat%swbotbhea.eq.2) then
-          ! Bottom temperature is prescribed
-          ! Build local 1D interleaved array for afgen from 2D config table
-          btab = 0.0d0
-          if (allocated(config%heat%tembtab)) then
-            do i = 1, min(size(config%heat%tembtab, 1), mabbc)
-              btab(2*i - 1) = config%heat%tembtab(i, 1)
-              btab(2*i)     = config%heat%tembtab(i, 2)
+         if (cfg_heat%swcalt .eq. 2) then
+            ! Initialise dry bulk density and volume fractions (sand, clay, OM).
+            do i = 1, mesh%numnod
+               lay      = mesh%layer(i)
+               dummy    = soil%orgmat(lay)/(1.0d0 - soil%orgmat(lay))
+               gmineral = (1.0d0 - soil%thetas(i)) / (0.370d0 + 0.714d0*dummy)
+               heat%fquartz(i) = (soil%psand(lay) + soil%psilt(lay))*gmineral/2.7d0
+               heat%fclay(i)   = soil%pclay(lay)*gmineral/2.7d0
+               heat%forg(i)    = dummy*gmineral/1.4d0
             end do
-          end if
-          ht_tebot = afgen (btab,2*mabbc,tc_t1900+tc_dt)  ! TC-11
-        endif
+         end if
 
-        ! Save old temperature profile
-        do i = 1,state%mesh%numnod
-          tmpold(i) = ht_tsoil(i)
-        enddo
+         return
 
-        ! Compute heat conductivity and capacity
-        do i = 1,state%mesh%numnod
-          theave(i) = 0.5d0 * (sw_theta(i) + sw_thetm1(i))   ! [SS-SWC S-2.10]
-        enddo
+      case (2)
+         ! === Soil temperature rate and state variables ===
 
-        ! Calculate nodal heat capacity and thermal conductivity
-        ! heacap_loc is a local workspace (macp-sized) so devries explicit-shape args are satisfied
-        call devries(state%mesh%numnod,theave,heacap_loc,heacnd,ht_fquartz,ht_fclay,ht_forg,sw_thetas)  ! [SS-SWC S-2.10]
-        ht_heacon(1) = heacnd(1)
-        do i = 2,state%mesh%numnod
-          ht_heacon(i) = 0.5d0 * (heacnd(i) + heacnd(i-1))
-        enddo
-        ht_heacap(1:state%mesh%numnod) = heacap_loc(1:state%mesh%numnod)
+         if (cfg_heat%swcalt .eq. 2) then
+            ! Numerical solution.
 
-        ! Calculate new temperature profile using tridiagonal solver
+            ! Top boundary condition.
+            if (cfg_heat%swtopbhea .eq. 2) then
+               ! Use prescribed soil-surface temperatures.
+               ttab = 0.0d0
+               if (allocated(cfg_heat%temtoptab)) then
+                  do i = 1, min(size(cfg_heat%temtoptab, 1), mabbc)
+                     ttab(2*i - 1) = cfg_heat%temtoptab(i, 1)
+                     ttab(2*i)     = cfg_heat%temtoptab(i, 2)
+                  end do
+               end if
+               heat%tetop = afgen(ttab, 2*mabbc, time%t1900 + time%dt)
+            elseif (dabs(atmo%ssnow) .gt. 1.0d-10) then
+               ! Snow layer present — air temperature can't be used directly;
+               ! calculate the temperature at the soil/snow interface.
+               Rosnw     = 170.0d0
+               heaconsnw = 2.86d-6 * 864.0d0 * Rosnw**2.d0
+               dzsnw     = atmo%ssnow / 0.170d0
+               if (heat%heacon(1) .lt. 1.d-10) heat%heacon(1) = 100.0d0
+               apar = (0.5d0*heaconsnw*mesh%dz(1)) / (heat%heacon(1)*dzsnw)
+               if (time%flmetdetail) then
+                  heat%tetop = (heat%tsoil(1) + apar*atmo%atav(time%wrecord)) / (1.d0 + apar)
+               else
+                  heat%tetop = (heat%tsoil(1) + apar*atmo%Tav) / (1.d0 + apar)
+               end if
+            else
+               if (time%flmetdetail) then
+                  heat%tetop = atmo%atav(time%wrecord)
+               else
+                  heat%tetop = atmo%Tav
+               end if
+            end if
 
-        ! Calculation of coefficients for node = 1 (temperature fixed at soil surface)
-        i = 1
-        thoma(i) = - tc_dt * ht_heacon(i) / (state%mesh%dz(i) * state%mesh%disnod(i))    ! TC-11
-        thomc(i) = - tc_dt * ht_heacon(i+1) / (state%mesh%dz(i) * state%mesh%disnod(i+1)) ! TC-11
-        thomb(i) = ht_heacap(i) - thoma(i) - thomc(i)
-        thomf(i) = ht_heacap(i) * tmpold(i) - thoma(i) * ht_tetop
+            ! Bottom boundary condition.
+            if (cfg_heat%swbotbhea .eq. 1) then
+               ! Zero heat flow through profile bottom.
+               heat%tebot = heat%tsoil(mesh%numnod)
+            elseif (cfg_heat%swbotbhea .eq. 2) then
+               ! Prescribed bottom temperature.
+               btab = 0.0d0
+               if (allocated(cfg_heat%tembtab)) then
+                  do i = 1, min(size(cfg_heat%tembtab, 1), mabbc)
+                     btab(2*i - 1) = cfg_heat%tembtab(i, 1)
+                     btab(2*i)     = cfg_heat%tembtab(i, 2)
+                  end do
+               end if
+               heat%tebot = afgen(btab, 2*mabbc, time%t1900 + time%dt)
+            end if
 
-        ! Calculation of coefficients for 2 < node < numnod
-        do i = 2,state%mesh%numnod-1
-          thoma(i) = - tc_dt * ht_heacon(i) / (state%mesh%dz(i) * state%mesh%disnod(i))    ! TC-11
-          thomc(i) = - tc_dt * ht_heacon(i+1) / (state%mesh%dz(i) * state%mesh%disnod(i+1)) ! TC-11
-          thomb(i) = ht_heacap(i) - thoma(i) - thomc(i)
-          thomf(i) = ht_heacap(i) * tmpold(i)
-        enddo
+            ! Save old temperature profile.
+            do i = 1, mesh%numnod
+               tmpold(i) = heat%tsoil(i)
+            end do
 
-        ! Calculation of coefficients for node = numnod
-        i = state%mesh%numnod
-        if (config%heat%swbotbhea.eq.1) then
-          ! No heat flow through bottom of profile assumed
-          qhbot = 0.0d0
-          thoma(i) = - tc_dt * ht_heacon(i) / (state%mesh%dz(i) * state%mesh%disnod(i))    ! TC-11
-          thomb(i) = ht_heacap(i) - thoma(i)
-          thomf(i) = ht_heacap(i) * tmpold(i) - (qhbot * tc_dt)/state%mesh%dz(i)  ! TC-11
-        elseif (config%heat%swbotbhea.eq.2) then
-          ! Bottom temperature is prescribed
-          heaconBot = heacnd(i)
-          thoma(i)  = - tc_dt * ht_heacon(i) / (state%mesh%dz(i) * state%mesh%disnod(i))    ! TC-11
-          thomc(i)  = - tc_dt * heaconBot / (state%mesh%dz(i) * 0.5d0 * state%mesh%dz(i))   ! TC-11
-          thomb(i)  = ht_heacap(i) - thoma(i) - thomc(i)
-          thomf(i)  = ht_heacap(i) * tmpold(i) - thomc(i) * ht_tebot
-        endif
+            ! Heat conductivity and capacity.
+            do i = 1, mesh%numnod
+               theave(i) = 0.5d0 * (soil%theta(i) + soil%thetm1(i))
+            end do
+            ! heacap_loc is a local workspace (macp-sized) so devries' explicit-shape args fit.
+            call devries(mesh%numnod, theave, heacap_loc, heacnd, &
+                         heat%fquartz, heat%fclay, heat%forg, soil%thetas)
+            heat%heacon(1) = heacnd(1)
+            do i = 2, mesh%numnod
+               heat%heacon(i) = 0.5d0 * (heacnd(i) + heacnd(i - 1))
+            end do
+            heat%heacap(1:mesh%numnod) = heacap_loc(1:mesh%numnod)
 
-        ! Solve for temperature profile; result written directly to state
-        call tridag (state%mesh%numnod, thoma, thomb, thomc, thomf, ht_tsoil,ierror)
-        if(ierror.ne.0)then
-          messag = 'During a call from Temperature an error occured in TriDag'
-          call fatalerr_collected ('Temperature',messag)
-        end if
-      else
+            ! Build tridiagonal coefficients (node 1: surface-fixed temperature).
+            i = 1
+            thoma(i) = -time%dt * heat%heacon(i)     / (mesh%dz(i) * mesh%disnod(i))
+            thomc(i) = -time%dt * heat%heacon(i + 1) / (mesh%dz(i) * mesh%disnod(i + 1))
+            thomb(i) = heat%heacap(i) - thoma(i) - thomc(i)
+            thomf(i) = heat%heacap(i) * tmpold(i) - thoma(i) * heat%tetop
 
-        ! Analytical solution temperature profile
-        do i = 1,state%mesh%numnod
-          ht_tsoil(i) = config%heat%tmean+config%heat%tampli*(dsin(0.0172d0*(tc_daynr-config%heat%timref+91.0d0)+ &  ! TC-11
-                        state%mesh%z(i)/config%heat%ddamp)) / dexp(-state%mesh%z(i)/config%heat%ddamp)
-        enddo
+            ! 2 < node < numnod.
+            do i = 2, mesh%numnod - 1
+               thoma(i) = -time%dt * heat%heacon(i)     / (mesh%dz(i) * mesh%disnod(i))
+               thomc(i) = -time%dt * heat%heacon(i + 1) / (mesh%dz(i) * mesh%disnod(i + 1))
+               thomb(i) = heat%heacap(i) - thoma(i) - thomc(i)
+               thomf(i) = heat%heacap(i) * tmpold(i)
+            end do
 
-      endif
+            ! node = numnod.
+            i = mesh%numnod
+            if (cfg_heat%swbotbhea .eq. 1) then
+               ! Zero heat flux through bottom.
+               qhbot    = 0.0d0
+               thoma(i) = -time%dt * heat%heacon(i) / (mesh%dz(i) * mesh%disnod(i))
+               thomb(i) = heat%heacap(i) - thoma(i)
+               thomf(i) = heat%heacap(i) * tmpold(i) - (qhbot * time%dt)/mesh%dz(i)
+            elseif (cfg_heat%swbotbhea .eq. 2) then
+               ! Prescribed bottom temperature.
+               heaconBot = heacnd(i)
+               thoma(i)  = -time%dt * heat%heacon(i) / (mesh%dz(i) * mesh%disnod(i))
+               thomc(i)  = -time%dt * heaconBot      / (mesh%dz(i) * 0.5d0 * mesh%dz(i))
+               thomb(i)  = heat%heacap(i) - thoma(i) - thomc(i)
+               thomf(i)  = heat%heacap(i) * tmpold(i) - thomc(i) * heat%tebot
+            end if
 
-    case default
-      call fatalerr_collected ('Temperature', 'Illegal value for TASK')
-    end select
+            ! Solve for the new temperature profile.
+            call tridag(mesh%numnod, thoma, thomb, thomc, thomf, heat%tsoil, ierror)
+            if (ierror .ne. 0) then
+               messag = 'During a call from Temperature an error occured in TriDag'
+               call fatalerr_collected('Temperature', messag)
+            end if
+         else
+            ! Analytical solution profile.
+            do i = 1, mesh%numnod
+               heat%tsoil(i) = cfg_heat%tmean + cfg_heat%tampli *                       &
+                               (dsin(0.0172d0*(time%daynr - cfg_heat%timref + 91.0d0) + &
+                                     mesh%z(i)/cfg_heat%ddamp))                         &
+                               / dexp(-mesh%z(i)/cfg_heat%ddamp)
+            end do
+         end if
+
+      case default
+         call fatalerr_collected('Temperature', 'Illegal value for TASK')
+      end select
 
     end associate
 
