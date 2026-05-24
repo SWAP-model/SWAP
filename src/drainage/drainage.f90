@@ -184,210 +184,152 @@ contains
     !! bidirectional flow is allowed based on resistance values.
     !!@endnote
     !!
-      ! ADR 0031 Phase 2 Task 5: wetper removed from use-list; read from state%drainage%wetper(1).
-      ! SS-SWC Phase 2 S-2.8: gwl removed from use-list; read from state%soilwater%gwl.
-      ! GR-BH Task 28: zbotdr, l, nrlevs, swnrsrf, owltab migrated off variables → state%drainage%X.
-      ! [GR-DRA 2026-05-23] dramet/swdtyp/swallo retired — aliased from state%drainage below.
-      ! [GR-BND 2026-05-23] geometry cluster (basegw/ipos/khtop/khbot/kvtop/kvbot/
-      ! entres/zintf/geofac) retired — aliased from state%drainage in the associate below.
-      ! [GR-DRA 2026-05-23] qdrtab retired — aliased from state%drainage below.
-      ! [SS-GR-CROPRT A2] FlMacropore dropped — retired (ADR 0040)
-      ! [GR-DRA 2026-05-23] cofintfl/expintfl/NumLevRapDra/swliminf/nowltab retired — aliased below.
-      use variables, only: &   ! [SS-GR-FINAL B10] residuals — all DEFERRED
-         ! DEFERRED: drares/infres/shape — drain resistance config; Phase C3
-         drares, infres, shape
+      ! Residual `use variables`: drares/infres/shape are still bare globals; the rest of
+      ! the symbols used in this routine come through the sub-record associate below.
+      use variables, only: drares, infres, shape
       use array_utils, only: afgen
 
-      ! --- global
       real(8) dh
       type(swap_state_t), intent(inout) :: state
 
-      ! ----------------------------------------------------------------------
-      ! --- local
-      integer i, lev
-
-      real(8) zimp, dbot, pi, totres, x, fx, eqd, rver, rhor, rrad
-      real(8) gwldra   !, temptab(2*maowl)
-
-      logical fldry
+      integer :: i, lev
+      real(8) :: zimp, dbot, pi, totres, x, fx, eqd, rver, rhor, rrad
+      real(8) :: gwldra
+      logical :: fldry
+      character(len=200) :: messag
 
       parameter(pi=3.14159d0)
 
-      character(len=200) messag
-      ! ----------------------------------------------------------------------
+      associate (drai => state%drainage,    &
+                 soil => state%soilwater,   &
+                 time => state%timecontrol)
 
-      ! SS-DRST Phase 2 Task 4: qdrain alias points directly to state; no legacy global written.
-      ! GR-BH Task 28: zbotdr/l/nrlevs/swnrsrf/owltab aliased from state%drainage.
-      associate(ZDraBas  => state%surfacewater%ZDraBas,  &
-                qdrain   => state%drainage%qdrain,       &
-                zbotdr   => state%drainage%zbotdr,       &  ! GR-BH Task 28
-                l        => state%drainage%L,            &  ! GR-BH Task 28
-                nrlevs   => state%drainage%nrlevs,       &  ! GR-BH Task 28
-                swnrsrf  => state%drainage%swnrsrf,      &  ! GR-BH Task 28
-                owltab   => state%drainage%owltab,       &  ! GR-BH Task 28
-                basegw   => state%drainage%basegw,       &  ! [GR-BND 2026-05-23] geometry cluster
-                entres   => state%drainage%entres,       &
-                geofac   => state%drainage%geofac,       &
-                ipos     => state%drainage%ipos,         &
-                khtop    => state%drainage%khtop,        &
-                khbot    => state%drainage%khbot,        &
-                kvtop    => state%drainage%kvtop,        &
-                kvbot    => state%drainage%kvbot,        &
-                zintf    => state%drainage%zintf,        &
-                cofintfl => state%drainage%cofintfl,     &  ! [GR-DRA 2026-05-23]
-                expintfl => state%drainage%expintfl,     &  ! [GR-DRA 2026-05-23]
-                NumLevRapDra => state%drainage%NumLevRapDra, &
-                dramet   => state%drainage%dramet,       &  ! [GR-DRA 2026-05-23] switches cluster
-                swdtyp   => state%drainage%swdtyp,       &
-                swallo   => state%drainage%swallo,       &
-                swliminf => state%drainage%swliminf,      &
-                nowltab  => state%drainage%nowltab        )  ! [GR-DRA 2026-05-23]
+         gwldra = soil%gwl
 
-      ! SS-SWC Phase 2 S-2.8: gwl read from state%soilwater
-      gwldra = state%soilwater%gwl
+         ! --- drainage flux according to hooghoudt or ernst
+         if (drai%dramet .eq. 2) then
+            if (shape .gt. small) dh = (gwldra - drai%zbotdr(1))/shape
 
-      ! --- drainage flux calculated according to hooghoudt or ernst
-      if (dramet .eq. 2) then
-         if (shape .gt. small) dh = (gwldra - zbotdr(1))/shape
+            ! --- contributing layer below drains limited to 1/4 l
+            zimp = max(drai%basegw, drai%zbotdr(1) - 0.25*drai%l(1))
+            dbot = (drai%zbotdr(1) - zimp)
+            if (dbot .lt. 0.0d0) then
+               messag = 'At the drainage section, the level of the'          &
+          &       //' impervious layer is higher than the level of the'      &
+          &       //' drain bottom. Adapt drain input!'
+               call fatalerr_collected('Bocodrb', messag)
+            end if
 
-         ! --- contributing layer below drains limited to 1/4 l
-         zimp = max(basegw, zbotdr(1) - 0.25*l(1))
-         dbot = (zbotdr(1) - zimp)
-         if (dbot .lt. 0.0d0) then
-            messag = 'At the drainage section, the level of the'          &
-       &       //' impervious layer is higher than the level of the'      &
-       &       //' drain bottom. Adapt drain input!'
-            call fatalerr_collected('Bocodrb', messag)
-         end if
+            ! --- no infiltration allowed
+            if (dh .lt. 1.0d-10) then
+               drai%qdrain(1) = 0.0d0
+               return
+            end if
 
-         ! --- no infiltration allowed
-         if (dh .lt. 1.0d-10) then
-            qdrain(1) = 0.0d0
-            return
-         end if
-
-         ! --- case 1: homogeneous, on top of impervious layer
-         if (ipos .eq. 1) then
-
-            ! --- calculation of drainage resistance and drainage flux
-            totres = l(1)*l(1)/(4*khtop*abs(dh)) + entres
-            qdrain(1) = dh/totres
+            ! --- case 1: homogeneous, on top of impervious layer
+            if (drai%ipos .eq. 1) then
+               totres = drai%l(1)*drai%l(1)/(4*drai%khtop*abs(dh)) + drai%entres
+               drai%qdrain(1) = dh/totres
 
             ! --- case 2,3: in homogeneous profile or at interface of 2 layers
-         elseif (ipos .eq. 2 .or. ipos .eq. 3) then
+            elseif (drai%ipos .eq. 2 .or. drai%ipos .eq. 3) then
 
-            ! --- calculation of equivalent depth
-            x = 2*pi*dbot/l(1)
-            if (x .gt. 0.5d0) then
-               fx = 0.0d0
-               do 10 i = 1, 5, 2
-                  fx = fx + (4*exp(-2*i*x))/(i*(1.0d0 - exp(-2*i*x)))
+               ! --- equivalent depth
+               x = 2*pi*dbot/drai%l(1)
+               if (x .gt. 0.5d0) then
+                  fx = 0.0d0
+                  do 10 i = 1, 5, 2
+                     fx = fx + (4*exp(-2*i*x))/(i*(1.0d0 - exp(-2*i*x)))
 10                continue
-                  eqd = pi*l(1)/8/(log(l(1)/state%drainage%wetper(1)) + fx)
-                  else
+                  eqd = pi*drai%l(1)/8/(log(drai%l(1)/drai%wetper(1)) + fx)
+               else
                   if (x .lt. 1.0d-6) then
                      eqd = dbot
                   else
                      fx = pi**2/(4*x) + log(x/(2*pi))
-                     eqd = pi*l(1)/8/(log(l(1)/state%drainage%wetper(1)) + fx)
+                     eqd = pi*drai%l(1)/8/(log(drai%l(1)/drai%wetper(1)) + fx)
                   end if
-                  end if
-                  if (eqd .gt. dbot) eqd = dbot
-
-                  ! --- calculation of drainage resistance & drainage flux
-                  if (ipos .eq. 2) then
-                     totres = l(1)*l(1)/(8*khtop*eqd + 4*khtop*abs(dh)) + entres
-                  elseif (ipos .eq. 3) then
-                     totres = l(1)*l(1)/(8*khbot*eqd + 4*khtop*abs(dh)) + entres
-                  end if
-                  qdrain(1) = dh/totres
-
-                  ! --- case 4: drain in bottom layer
-               elseif (ipos .eq. 4) then
-                  if (zbotdr(1) .gt. zintf) then
-                     messag = 'At the drainage section, the level of the'        &
-              &         //' impervious layer is higher than the level of the'    &
-              &         //' drain bottom. Adapt drain input!'
-                     call fatalerr_collected('bocodrb', messag)
-                  end if
-                  rver = max(gwldra - zintf, 0.0d0)/kvtop +                   &
-           &                (min(zintf, gwldra) - zbotdr(1))/kvbot
-                  rhor = l(1)*l(1)/(8*khbot*dbot)
-                  rrad = l(1)/(pi*dsqrt(khbot*kvbot))*log(dbot/state%drainage%wetper(1))
-                  totres = rver + rhor + rrad + entres
-                  qdrain(1) = dh/totres
-
-                  ! --- case 5 : drain in top layer
-               elseif (ipos .eq. 5) then
-                  if (zbotdr(1) .lt. zintf) then
-                     messag = 'At the drainage section, the level of the'        &
-              &         //' impervious layer is higher than the level of the'    &
-              &         //' drain bottom. Adapt drain input!'
-                     call fatalerr_collected('bocodrb', messag)
-                  end if
-                  rver = (gwldra - zbotdr(1))/kvtop
-                  rhor = l(1)*l(1)/(8*khtop*(zbotdr(1) - zintf) +               &
-             &                             8*khbot*(zintf - zimp))
-                  rrad = l(1)/(pi*dsqrt(khtop*kvtop))*log((geofac*               &
-             &                (zbotdr(1) - zintf))/state%drainage%wetper(1))
-                  totres = rver + rhor + rrad + entres
-                  qdrain(1) = dh/totres
                end if
+               if (eqd .gt. dbot) eqd = dbot
 
-               ! --- drainage flux calc. using given drainage/infiltration resistance
-            elseif (dramet .eq. 3) then
+               if (drai%ipos .eq. 2) then
+                  totres = drai%l(1)*drai%l(1)/(8*drai%khtop*eqd + 4*drai%khtop*abs(dh)) + drai%entres
+               elseif (drai%ipos .eq. 3) then
+                  totres = drai%l(1)*drai%l(1)/(8*drai%khbot*eqd + 4*drai%khtop*abs(dh)) + drai%entres
+               end if
+               drai%qdrain(1) = dh/totres
 
-               do lev = 1, nrlevs
-                  fldry = .false.
+            ! --- case 4: drain in bottom layer
+            elseif (drai%ipos .eq. 4) then
+               if (drai%zbotdr(1) .gt. drai%zintf) then
+                  messag = 'At the drainage section, the level of the'        &
+           &         //' impervious layer is higher than the level of the'    &
+           &         //' drain bottom. Adapt drain input!'
+                  call fatalerr_collected('bocodrb', messag)
+               end if
+               rver = max(gwldra - drai%zintf, 0.0d0)/drai%kvtop +                   &
+        &             (min(drai%zintf, gwldra) - drai%zbotdr(1))/drai%kvbot
+               rhor = drai%l(1)*drai%l(1)/(8*drai%khbot*dbot)
+               rrad = drai%l(1)/(pi*dsqrt(drai%khbot*drai%kvbot))*log(dbot/drai%wetper(1))
+               totres = rver + rhor + rrad + drai%entres
+               drai%qdrain(1) = dh/totres
 
-                  ! ---     first copy to 1-dimensional table temptab
-                  !          do i = 1,2*nowltab(lev)
-                  !          do i = 1,2*maowl
-                  !            temptab(i) = owltab(lev,i)
-                  !          end do
-                  !          x = afgen(temptab,2*nowltab(lev),t1900+dt-1.d0)
-                  !          x = afgen(temptab,2*maowl,t1900+dt-1.d0)
-                  x = afgen(owltab(lev, 1:2*nowltab(lev)), 2*nowltab(lev), state%timecontrol%t1900 + state%timecontrol%dt - 1.d0)
-                  !          x = afgen(owltab(lev,1:2*maowl),2*maowl,t1900+dt-1.d0)
-                  if ((x - zbotdr(lev)) .lt. 1.0d-3) then
-                     fldry = .true.
-                  end if
-                  dh = gwldra - x
-                  if (fldry) dh = gwldra - zbotdr(lev)
-                  ! [SS-GR-CROPRT A2] rapid drainage macropore block dropped (ADR 0040; FlMacropore always .false.)
-
-                  ! ---     drainage
-                  if (dh .ge. 0.0d0) then
-
-                     ! ---       interflow flux calculated by a power function
-                     if ((lev .eq. nrlevs) .and. (swnrsrf .eq. 1)) then
-                        qdrain(lev) = cofintfl*dh**expintfl
-                     else
-                        qdrain(lev) = dh/drares(lev)
-                        if (swallo(lev) .eq. 2) qdrain(lev) = 0.0d0
-                     end if
-
-                     ! ---     infiltration
-                  else
-                     ! Pvw_begin , implemented by KRO_20170907
-                     !           Limit the infiltration head (-dh, dh<0. here) to the waterdepth in the channel
-                     if (swdtyp(lev) .eq. 2) then
-                        if (swliminf .eq. 1) then
-                           dh = max(dh, (zbotdr(lev) - x))
-                        end if
-                     end if
-                     ! Pvw_end   , implemented by KRO_20170907
-                     qdrain(lev) = dh/infres(lev)
-                     if (swallo(lev) .eq. 3 .or. fldry) qdrain(lev) = 0.0d0
-                  end if
-               end do
-
-               ! --- drainage flux from table with gwlevel - flux data pairs
-            elseif (dramet .eq. 1) then
-               qdrain(1) = afgen(state%drainage%qdrtab, 50, abs(gwldra))
+            ! --- case 5: drain in top layer
+            elseif (drai%ipos .eq. 5) then
+               if (drai%zbotdr(1) .lt. drai%zintf) then
+                  messag = 'At the drainage section, the level of the'        &
+           &         //' impervious layer is higher than the level of the'    &
+           &         //' drain bottom. Adapt drain input!'
+                  call fatalerr_collected('bocodrb', messag)
+               end if
+               rver = (gwldra - drai%zbotdr(1))/drai%kvtop
+               rhor = drai%l(1)*drai%l(1)/(8*drai%khtop*(drai%zbotdr(1) - drai%zintf) +    &
+        &                                  8*drai%khbot*(drai%zintf - zimp))
+               rrad = drai%l(1)/(pi*dsqrt(drai%khtop*drai%kvtop))*log((drai%geofac*        &
+        &              (drai%zbotdr(1) - drai%zintf))/drai%wetper(1))
+               totres = rver + rhor + rrad + drai%entres
+               drai%qdrain(1) = dh/totres
             end if
 
-            end associate
+         ! --- drainage flux from drain/infiltration resistance (per level)
+         elseif (drai%dramet .eq. 3) then
+            do lev = 1, drai%nrlevs
+               fldry = .false.
+
+               x = afgen(drai%owltab(lev, 1:2*drai%nowltab(lev)), 2*drai%nowltab(lev), &
+                         time%t1900 + time%dt - 1.d0)
+               if ((x - drai%zbotdr(lev)) .lt. 1.0d-3) fldry = .true.
+               dh = gwldra - x
+               if (fldry) dh = gwldra - drai%zbotdr(lev)
+               ! Macropore rapid-drainage block deleted (ADR 0040).
+
+               ! --- drainage
+               if (dh .ge. 0.0d0) then
+                  ! interflow as power function
+                  if ((lev .eq. drai%nrlevs) .and. (drai%swnrsrf .eq. 1)) then
+                     drai%qdrain(lev) = drai%cofintfl*dh**drai%expintfl
+                  else
+                     drai%qdrain(lev) = dh/drares(lev)
+                     if (drai%swallo(lev) .eq. 2) drai%qdrain(lev) = 0.0d0
+                  end if
+
+               ! --- infiltration
+               else
+                  ! Limit infiltration head (-dh) to channel waterdepth (KRO 2017-09-07)
+                  if (drai%swdtyp(lev) .eq. 2) then
+                     if (drai%swliminf .eq. 1) dh = max(dh, (drai%zbotdr(lev) - x))
+                  end if
+                  drai%qdrain(lev) = dh/infres(lev)
+                  if (drai%swallo(lev) .eq. 3 .or. fldry) drai%qdrain(lev) = 0.0d0
+               end if
+            end do
+
+         ! --- drainage flux from gwlevel-flux table
+         elseif (drai%dramet .eq. 1) then
+            drai%qdrain(1) = afgen(drai%qdrtab, 50, abs(gwldra))
+         end if
+
+      end associate
     end subroutine bocodrb
 
     subroutine drainage(state)
