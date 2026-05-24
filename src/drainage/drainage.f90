@@ -613,220 +613,165 @@ contains
     !!     File usage         : -  Error handling
     !! ----------------------------------------------------------------------
     !!@endnote
-  ! SS-DRST Phase 2 Task 4: qdrain removed from use-variables; written via state%drainage%qdrain.
-  ! SS-SWC Phase 2 S-2.8: gwl and pond removed from use-list; read from state%soilwater.
-  ! [SS-TC TC-14] t1900, dt read via state%timecontrol (ADR 0041)
-  ! GR-BH Task 28: zbotdr, l, nrlevs, swnrsrf off variables → state%drainage%X.
-  use variables, only: &   ! [SS-GR-FINAL B10] residuals — all DEFERRED
-     ! swsec/swsrf retired (→state%cfg%surface_water%X); pilot
-     ! [GR-DRA 2026-05-23] nrpri/nmper/impend/wscap retired — aliased from state%surfacewater below.
-     ! DEFERRED: taludr/widthr/rdrain — drain geometry; config; Phase C3
-     taludr, widthr, rdrain, &
-     ! pondmx retired (→state%surfacewater%pondmx)
+      ! Residual `use variables`: drain geometry/resistance still bare globals;
+      ! everything else is reached via the sub-record associate below.
+      use variables, only: taludr, widthr, rdrain, wlp, rinfi, rentry, rexit, &
+                           gwlinf, rsurfdeep, rsurfshallow
 
-     ! [GR-DRA 2026-05-23] swdtyp retired — aliased from state%drainage below.
-     ! DEFERRED: wlp/rinfi/rentry/rexit/gwlinf — surface water config; Phase C3
-     wlp, rinfi, rentry, rexit, gwlinf, &
-     ! DEFERRED: rsurfdeep/rsurfshallow — surface resistance config; Phase C3
-     rsurfdeep, rsurfshallow
-     ! [GR-DRA 2026-05-23] cofintfl/expintfl/NumLevRapdra retired — aliased from state%drainage below.
-     ! [SS-GR-CROPRT A2] FlMacropore dropped — retired (ADR 0040)
+      real(8) :: dh
+      type(swap_state_t), intent(inout) :: state
 
+      integer :: level, imper
+      real(8) :: qdrdm, qdratio, swdepth, swexbrd, dvmax, swstmax, wl, rd, re
+      character(len=200) :: messag
 
-! --- global
-               real(8) dh
-               type(swap_state_t), intent(inout) :: state
+      associate (drai => state%drainage,    &
+                 soil => state%soilwater,   &
+                 surf => state%surfacewater, &
+                 time => state%timecontrol, &
+                 sw_cfg => state%cfg%surface_water)
 
-! --- local
-               integer level, imper
-               real(8) qdrdm, qdratio, swdepth, swexbrd, dvmax, swstmax, wl, rd, re
-               character(len=200) messag
-! Removed save statement for imper to avoid issues in parallel runs
-! ----------------------------------------------------------------------
+         ! Spec D7: zero drainage when groundwater is dry (relocated from
+         ! legacy SurfaceWater(2) — qdrain is drainage-owned, ADR 0030).
+         if (soil%gwl .gt. 998.0d0) then
+            do level = 1, drai%nrlevs
+               drai%qdrain(level) = 0.0d0
+            end do
+            return
+         end if
 
-               ! SS-DRST Phase 2 Task 4: qdrain alias points directly to state; no legacy global written.
-               ! SS-SWC Phase 2 S-2.8: gwl/pond read from state%soilwater via ASSOCIATE aliases.
-               ! GR-BH Task 28: zbotdr/l/nrlevs/swnrsrf aliased from state%drainage.
-               associate( &
-                  wls     => state%surfacewater%wls,    &
-                  swst    => state%surfacewater%swst,   &
-                  ZDraBas => state%surfacewater%ZDraBas, &
-                  qdrain  => state%drainage%qdrain,     &
-                  zbotdr  => state%drainage%zbotdr,     &  ! GR-BH Task 28
-                  l       => state%drainage%L,          &  ! GR-BH Task 28
-                  nrlevs  => state%drainage%nrlevs,     &  ! GR-BH Task 28
-                  swnrsrf => state%drainage%swnrsrf,    &  ! GR-BH Task 28
-                  gwl     => state%soilwater%gwl,       &
-                  pond    => state%soilwater%pond,      &
-                  cofintfl => state%drainage%cofintfl,  &  ! [GR-DRA 2026-05-23]
-                  expintfl => state%drainage%expintfl,  &  ! [GR-DRA 2026-05-23]
-                  swdtyp   => state%drainage%swdtyp,    &  ! [GR-DRA 2026-05-23]
-                  nrpri  => state%surfacewater%nrpri,   &
-                  nmper  => state%surfacewater%nmper,   &
-                  impend => state%surfacewater%impend,  &
-                  wscap  => state%surfacewater%wscap    )
+         ! Summate fluxes for swballev / swlevbal.
+         drai%qdrd = 0.0d0
 
-! --- Spec D7: zero drainage when groundwater is dry.
-!     Was in SurfaceWater(2) in legacy code; relocated here per ADR 0030
-!     since qdrain is drainage-owned.
-               if (gwl .gt. 998.0d0) then
-                  do level = 1, nrlevs
-                     qdrain(level) = 0.0d0
-                  end do
-                  return
+         do 500 level = 1, drai%nrlevs
+
+            ! Surface-water level for this drainage level.
+            if (sw_cfg%swsrf .ge. 2) then
+               if (level .gt. surf%nrpri) then
+                  wl = surf%wls
+               else
+                  wl = wlp
+               end if
+            end if
+
+            ! Drainage fluxes set to zero if both gwl and surface water level are
+            ! above the ponding sill (compute non-zero flux only when at least one
+            ! is below pondmx).
+            if (wl .lt. surf%pondmx .or. soil%gwl .lt. surf%pondmx) then
+
+               ! Channel is active if either gwl or surface water is above bottom.
+               if (soil%gwl .gt. (drai%zbotdr(level) + 0.001d0) .or.        &
+           &       wl       .gt. (drai%zbotdr(level) + 0.001d0)) then
+                  if (wl .le. (drai%zbotdr(level) + 0.001d0) .or. sw_cfg%swsrf .eq. 1) then
+
+                     ! Only groundwater above channel bottom: bottom is drainage base.
+                     drai%drainl(level) = drai%zbotdr(level)
+                     if (drai%swdtyp(level) .eq. 0) then
+                        drai%wetper(level) = widthr(level)
+                     end if
+                  else
+                     ! Surface-water level above channel bottom.
+                     drai%drainl(level) = wl
+                     if (drai%swdtyp(level) .eq. 0) then
+                        swdepth = wl - drai%zbotdr(level)
+                        swexbrd = (wl - drai%zbotdr(level))/taludr(level)
+                        drai%wetper(level) = widthr(level) +           &
+                                             2*dsqrt(swdepth**2 + swexbrd**2)
+                     end if
+                  end if
+
+                  ! Drainage flux (cm/d): head difference.
+                  dh = soil%gwl - drai%drainl(level)
+                  if (soil%gwl .gt. -0.1d0) dh = dh + soil%pond
+                  if (dh .lt. 0.0d0 .and. soil%gwl .lt. gwlinf(level)) then
+                     dh = gwlinf(level) - drai%drainl(level)
+                  end if
+                  ! Interflow as power function.
+                  if ((level .eq. drai%nrlevs) .and. (drai%swnrsrf .eq. 2)) then
+                     drai%qdrain(level) = drai%cofintfl*dh**drai%expintfl
+                  else
+                     if (dh .gt. 0.0d0) then
+                        rd = rdrain(level)
+                        re = rentry(level)
+                        ! Surface drainage (vacuum cleaner).
+                        if ((level .eq. drai%nrlevs) .and. (drai%swnrsrf .eq. 1)) then
+                           rd = rsurfdeep - dh
+                           rd = max(rd, rsurfshallow)
+                        end if
+                     else
+                        rd = rinfi(level)
+                        re = rexit(level)
+                     end if
+                     if (drai%swdtyp(level) .eq. 0) then
+                        drai%qdrain(level) = dh/((rd + re*drai%L(level)/drai%wetper(level)))
+                     else
+                        drai%qdrain(level) = dh/rd
+                     end if
+                  end if
+               else
+                  if (drai%swdtyp(level) .eq. 0) drai%wetper(level) = 0.0d0
+                  dh = 0.0d0
+                  drai%qdrain(level) = 0.0d0
+                  ! Drainage basis for rapid drainage through macropores.
+                  drai%drainl(level) = drai%zbotdr(level)
+               end if
+            else
+               drai%qdrain(level) = 0.0d0
+               ! Drainage basis for rapid drainage through macropores.
+               drai%drainl(level) = wl
+            end if
+
+            ! qdrd: total flux to/from secondary system.
+            if (sw_cfg%swsrf .ge. 2 .and. level .gt. surf%nrpri) then
+               drai%qdrd = drai%qdrd + drai%qdrain(level)
+            end if
+
+500      continue
+
+         ! Macropore rapid-drainage basis block deleted (ADR 0040).
+
+         ! ----------------------------------------------------------------
+         ! Check for system falling dry (only for swsec = 2):
+         if (sw_cfg%swsec .eq. 1) return
+         if (sw_cfg%swsrf .eq. 1) then
+            do 10 level = 1, drai%nrlevs
+               if (drai%qdrain(level) .lt. 0.0d0) drai%qdrain(level) = 0.0d0
+10          continue
+         elseif (sw_cfg%swsrf .ge. 2) then
+
+            ! Determine which management period the model is in.
+            imper = 0
+800         imper = imper + 1
+
+            if (imper .gt. surf%nmper) then
+               messag = 'sw-management periods(IMPER), more than defined'
+               call fatalerr_collected('Bocodre', messag)
+            end if
+            if (time%t1900 - 1.d0 + 0.1d-10 .gt. surf%impend(imper)) goto 800
+
+            ! Will the system become empty?
+            dvmax   = (drai%qdrd + surf%wscap(imper))*time%dt
+            swstmax = surf%swst + dvmax
+
+            if (swstmax .lt. 0.0d0) then
+               ! Storage would drop below zero: rescale infiltration to
+               ! exactly match available (swst + wscap).
+               qdrdm   = -(surf%swst + surf%wscap(imper)*time%dt)/time%dt
+               qdratio = qdrdm/drai%qdrd
+
+               if (qdratio .gt. 1.0d0 .or. qdratio .lt. 0.0d0) then
+                  messag = 'sw-management error with storage (qdratio)'
+                  call fatalerr_collected('Bocodre', messag)
                end if
 
-! --- summate fluxes for use by swballev and swlevbal
-               state%drainage%qdrd = 0.0d0
+               do 820 level = 1 + surf%nrpri, drai%nrlevs
+                  drai%qdrain(level) = drai%qdrain(level)*qdratio
+820            continue
+               drai%qdrd = qdrdm
+            end if
+         end if
 
-               do 500 level = 1, nrlevs
+      end associate
+    end subroutine bocodre
 
-! --- surface water level
-                  if (state%cfg%surface_water%swsrf .ge. 2) then
-                     if (level .gt. nrpri) then
-                        wl = wls
-                     else
-                        wl = wlp
-                     end if
-                  end if
-
-! --- drainage fluxes are set to zero if both groundwater level and surface
-!     water level are above ponding sill (so the nonzero drainage flux
-!     is only computed if either the gwl or the wl is below pondmx)
-                  if (wl .lt. state%surfacewater%pondmx .or. gwl .lt. state%surfacewater%pondmx) then
-
-! --- channel is active medium if either groundwater or surface water
-!     level is above channel bottom
-                     if (gwl .gt. (zbotdr(level) + 0.001d0) .or.                       &
-                &        wl .gt. (zbotdr(level) + 0.001d0)) then
-                        if (wl .le. (zbotdr(level) + 0.001d0) .or. state%cfg%surface_water%swsrf .eq. 1) then
-
-! --- only groundw. level above channel bottom; bottom is dr. base
-                           state%drainage%drainl(level) = zbotdr(level)
-
-! --- wetted perimeter only computed for open channels
-!     (for drains it is input)
-                           if (swdtyp(level) .eq. 0) then
-                              state%drainage%wetper(level) = widthr(level)
-                           end if
-                        else
-
-! --- surface water level above channel bottom
-                           state%drainage%drainl(level) = wl
-                           if (swdtyp(level) .eq. 0) then
-                              swdepth = wl - zbotdr(level)
-                              swexbrd = (wl - zbotdr(level))/taludr(level)
-                              state%drainage%wetper(level) = widthr(level) +           &
-                   &            2*dsqrt(swdepth**2 + swexbrd**2)
-                           end if
-                        end if
-
-! --- drainage flux (cm/d)
-                        ! calculate head difference
-                        dh = gwl - state%drainage%drainl(level)
-                        if (gwl .gt. -0.1d0) dh = dh + pond
-                        if (dh .lt. 0.0d0 .and. gwl .lt. gwlinf(level)) then
-                           dh = gwlinf(level) - state%drainage%drainl(level)
-                        end if
-                        ! interflow flux calculated by a power function,
-                        if ((level .eq. nrlevs) .and. (swnrsrf .eq. 2)) then
-                           qdrain(level) = cofintfl*dh**expintfl
-                        else
-                           if (dh .gt. 0.0d0) then
-                              rd = rdrain(level)
-                              re = rentry(level)
-! ---           surface drainage (vaccuum cleaner)
-                              if ((level .eq. nrlevs) .and. (swnrsrf .eq. 1)) then
-                                 rd = rsurfdeep - dh
-                                 rd = max(rd, rsurfshallow)
-                              end if
-                           else
-                              rd = rinfi(level)
-                              re = rexit(level)
-                           end if
-                           if (swdtyp(level) .eq. 0) then
-                              qdrain(level) = dh/((rd + re*l(level)/state%drainage%wetper(level)))
-                           else
-                              qdrain(level) = dh/rd
-                           end if
-                        end if
-                     else
-                        if (swdtyp(level) .eq. 0) then
-                           state%drainage%wetper(level) = 0.0d0
-                        end if
-                        dh = 0.0d0
-                        qdrain(level) = 0.0d0
-
-!   - for determining drainage basis for rapid drainage through macropores
-                        state%drainage%drainl(level) = zbotdr(level)
-
-                     end if
-!
-                  else
-                     qdrain(level) = 0.0d0
-
-!   - for determining drainage basis for rapid drainage through macropores
-                     state%drainage%drainl(level) = wl
-
-                  end if
-!
-                  if (state%cfg%surface_water%swsrf .ge. 2 .and. level .gt. nrpri) then
-
-! --- qdrd is total flux to or from secondary system
-                     state%drainage%qdrd = state%drainage%qdrd + qdrain(level)
-                  end if
-
-500               continue
-
-!   [SS-GR-CROPRT A2] rapid drainage macropore basis block dropped (ADR 0040; FlMacropore always .false.)
-
-! ----------------------------------------------------------------------
-! --- check for system falling dry (only for state%cfg%surface_water%swsec = 2):
-                  if (state%cfg%surface_water%swsec .eq. 1) return
-                  if (state%cfg%surface_water%swsrf .eq. 1) then
-                     do 10 level = 1, nrlevs
-                        if (qdrain(level) .lt. 0.0d0) then
-                           qdrain(level) = 0.0d0
-                        end if
-10                      continue
-                        elseif (state%cfg%surface_water%swsrf .ge. 2) then
-
-! --- determine which management period the model is in:
-                        imper = 0
-800                     imper = imper + 1
-
-! ---   Error handling
-                        if (imper .gt. nmper) then
-                           messag = 'sw-management periods(IMPER), more than defined'
-                           call fatalerr_collected('Bocodre', messag)
-                        end if
-                        if (state%timecontrol%t1900 - 1.d0 + 0.1d-10 .gt. impend(imper)) goto 800
-
-! ---   determine whether the system will become empty
-                        dvmax = (state%drainage%qdrd + wscap(imper))*state%timecontrol%dt
-                        swstmax = swst + dvmax
-
-                        if (swstmax .lt. 0.0d0) then
-! ---     storage decreases to below zero, then the surface water system
-!         falls dry; make the total infiltration exactly equal to the
-!         available amount:
-                           qdrdm = -(swst + wscap(imper)*state%timecontrol%dt)/state%timecontrol%dt
-                           qdratio = qdrdm/state%drainage%qdrd
-
-! ---     Error handling
-                           if (qdratio .gt. 1.0d0 .or. qdratio .lt. 0.0d0) then
-                              messag = 'sw-management error with storage (qdratio)'
-                              call fatalerr_collected('Bocodre', messag)
-                           end if
-
-                           do 820 level = 1 + NRPRI, nrlevs
-                              qdrain(level) = qdrain(level)*qdratio
-820                           continue
-                              state%drainage%qdrd = qdrdm
-                              end if
-                           end if
-
-                           end associate
-                           end subroutine bocodre
-
-                           end module drainage_mod
+end module drainage_mod
