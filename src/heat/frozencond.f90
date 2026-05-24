@@ -80,75 +80,71 @@ contains
     integer node
     logical flthaw
 
-    associate( &
-        ht_tsoil       => state%heat%tsoil,       &
-        ht_tetop       => state%heat%tetop,        &
-        ht_rfcp        => state%heat%rfcp,         &
-        ht_nodfrostbot => state%heat%nodfrostbot,  &
-        ht_zfrostbot   => state%heat%zfrostbot,    &
-        ht_zfrosttop   => state%heat%zfrosttop)
+    associate (heat => state%heat,         &
+               mesh => state%mesh,         &
+               cfg_heat => config%heat)
 
-    ! Calculate reduction factor for each node
-    do node=1,state%mesh%numnod
-      ht_rfcp(node) = 1.0d0
-      if (config%soil%frost%swfrost.eq.1)then
-        if(ht_tsoil(node).ge.config%heat%tfroststa)then
-          ht_rfcp(node) = 1.0d0
-        else if(ht_tsoil(node).le.config%heat%tfrostend) then
-          ht_rfcp(node) = 0.0d0
-        else if(ht_tsoil(node).lt.config%heat%tfroststa .and. &
-                ht_tsoil(node).gt.config%heat%tfrostend) then
-          ht_rfcp(node) = (ht_tsoil(node)-config%heat%tfrostend)/ &
-                          (config%heat%tfroststa-config%heat%tfrostend)
-        endif
-      endif
-    end do
-
-    ! Determine frozen depth (z) and frozen node number
-    flthaw              = .true.
-    ht_nodfrostbot      = -1
-    ht_zfrostbot        = 0.0d0
-    ht_zfrosttop        = 0.0d0
-
-    ! Search from bottom upward for frozen zone
-    node = state%mesh%numnod
-    do while (flthaw .and. node.gt.1)
-      node = node - 1
-      if(ht_tsoil(node) .le. config%heat%tfrostend+1.0d-6)then
-        ht_zfrostbot = state%mesh%z(node+1) + state%mesh%disnod(node+1) * &
-                       (config%heat%tfrostend-ht_tsoil(node+1)) / &
-                       (ht_tsoil(node)-ht_tsoil(node+1))
-        flthaw           = .false.
-        ht_nodfrostbot   = node
-      endif
-    end do
-
-    ! If frozen zone found, search from top downward for upper boundary
-    if(.not.flthaw)then
-      flthaw  = .true.
-      node = 0
-      do while (flthaw .and. node.lt.ht_nodfrostbot)
-        node = node + 1
-        if(ht_tsoil(node) .le. config%heat%tfrostend+1.0d-6)then
-          if(node.eq.1) then
-            if(ht_tetop.le.config%heat%tfrostend) then
-              ht_zfrosttop = 0.0d0
-            else
-              ht_zfrosttop = state%mesh%z(node) - &
-                             (state%mesh%z(node) - 0.0d0) * &
-                             (ht_tsoil(node)-config%heat%tfrostend) / &
-                             (ht_tsoil(node)-ht_tetop)
-            endif
-          else
-            ht_zfrosttop = state%mesh%z(node) + state%mesh%disnod(node) * &
-                           (ht_tsoil(node)-config%heat%tfrostend) / &
-                           (ht_tsoil(node)-ht_tsoil(node-1))
-          endif
-          ht_zfrosttop = min(0.0d0,ht_zfrosttop)
-          flthaw       = .false.
-        endif
+      ! Calculate reduction factor for each node.
+      do node = 1, mesh%numnod
+         heat%rfcp(node) = 1.0d0
+         if (config%soil%frost%swfrost .eq. 1) then
+            if (heat%tsoil(node) .ge. cfg_heat%tfroststa) then
+               heat%rfcp(node) = 1.0d0
+            else if (heat%tsoil(node) .le. cfg_heat%tfrostend) then
+               heat%rfcp(node) = 0.0d0
+            else if (heat%tsoil(node) .lt. cfg_heat%tfroststa .and. &
+                     heat%tsoil(node) .gt. cfg_heat%tfrostend) then
+               heat%rfcp(node) = (heat%tsoil(node) - cfg_heat%tfrostend) / &
+                                 (cfg_heat%tfroststa - cfg_heat%tfrostend)
+            end if
+         end if
       end do
-    end if
+
+      ! Determine frozen depth (z) and frozen node number.
+      flthaw            = .true.
+      heat%nodfrostbot  = -1
+      heat%zfrostbot    = 0.0d0
+      heat%zfrosttop    = 0.0d0
+
+      ! Search bottom-up for the frozen zone.
+      node = mesh%numnod
+      do while (flthaw .and. node .gt. 1)
+         node = node - 1
+         if (heat%tsoil(node) .le. cfg_heat%tfrostend + 1.0d-6) then
+            heat%zfrostbot = mesh%z(node + 1) + mesh%disnod(node + 1) * &
+                             (cfg_heat%tfrostend - heat%tsoil(node + 1)) / &
+                             (heat%tsoil(node) - heat%tsoil(node + 1))
+            flthaw            = .false.
+            heat%nodfrostbot  = node
+         end if
+      end do
+
+      ! If a frozen zone is found, search top-down for the upper boundary.
+      if (.not. flthaw) then
+         flthaw = .true.
+         node   = 0
+         do while (flthaw .and. node .lt. heat%nodfrostbot)
+            node = node + 1
+            if (heat%tsoil(node) .le. cfg_heat%tfrostend + 1.0d-6) then
+               if (node .eq. 1) then
+                  if (heat%tetop .le. cfg_heat%tfrostend) then
+                     heat%zfrosttop = 0.0d0
+                  else
+                     heat%zfrosttop = mesh%z(node) -                        &
+                                      (mesh%z(node) - 0.0d0) *              &
+                                      (heat%tsoil(node) - cfg_heat%tfrostend) / &
+                                      (heat%tsoil(node) - heat%tetop)
+                  end if
+               else
+                  heat%zfrosttop = mesh%z(node) + mesh%disnod(node) *       &
+                                   (heat%tsoil(node) - cfg_heat%tfrostend) / &
+                                   (heat%tsoil(node) - heat%tsoil(node - 1))
+               end if
+               heat%zfrosttop = min(0.0d0, heat%zfrosttop)
+               flthaw         = .false.
+            end if
+         end do
+      end if
 
     end associate
 
@@ -198,158 +194,119 @@ contains
     use swap_array_dimensions, only: macp
     implicit none
 
-    ! SS-DRST Task 3: FrozenBounds modifies qdra/qdrtot after
-    ! SurfaceWater has computed them.  Receive state intent(inout) so we can
-    ! both read and write state%drainage%qdra / state%surfacewater%qdrtot
-    ! (dual-write pattern preserved until drainage Task 7 drops legacy globals).
-    ! SS-HEAT Task 8: rfcp/nodfrostbot/zfrostbot read from state%heat (legacy globals dropped).
-    ! GR-BH Task 13: use variables dropped; bare globals replaced with state%* refs.
     type(swap_state_t),  intent(inout) :: state
     type(swap_config_t), intent(in)    :: config
 
-    ! Local variables
-    integer node,level,layercp(macp),leveldeepest
-    real(8) volair,ksatcp(macp),cofanicp(macp),qdratot
-    real(8) zdeepest,ztop
-    logical frozencomp
+    integer :: node, level, layercp(macp), leveldeepest
+    real(8) :: volair, ksatcp(macp), cofanicp(macp), qdratot
+    real(8) :: zdeepest, ztop
+    logical :: frozencomp
 
-    ! Hydraulic conductivity for completely frozen soils (constant)
+    ! Hydraulic conductivity for completely frozen soils.
     real(8), parameter :: hconode_vsmall = 1.0d-10
 
-    ! Initialize qbot from non-frozen value (SS-BND B-2.7: writes only state%soilwater)
+    ! Initialise qbot from the non-frozen value.
     state%soilwater%qbot = state%soilwater%qbot_nonfrozen
 
-    ! SS-TC TC-11: dt, t1900 read via state%timecontrol tc_* aliases.
-    associate( &
-        tc_dt            => state%timecontrol%dt,       &  ! TC-11
-        tc_t1900         => state%timecontrol%t1900,    &  ! TC-11
-        ht_rfcp          => state%heat%rfcp,            &
-        ht_nodfrostbot   => state%heat%nodfrostbot,     &
-        ht_zfrostbot     => state%heat%zfrostbot,       &
-        sw_theta         => state%soilwater%theta,      &  ! [SS-SWC S-2.10]
-        sw_thetas        => state%soilwater%thetas,     &  ! [SS-SWC S-2.10]
-        sw_fluseksatexm  => state%soilwater%fluseksatexm, & ! [SS-SWC S-2.10]
-        sw_gwl           => state%soilwater%gwl,          & ! [SS-SWC S-2.10]
-        ms_numnod        => state%mesh%numnod,             & ! GR-BH Task 13
-        ms_dz            => state%mesh%dz,                 & ! GR-BH Task 13
-        ms_layer         => state%mesh%layer,              & ! GR-BH Task 13
-        sw_swdra         => state%surfacewater%swdra,      & ! GR-BH Task 13
-        sw_ksatexm       => state%soilwater%ksatexm,       & ! GR-BH Task 13
-        sw_ksatfit       => state%soilwater%ksatfit,       & ! GR-BH Task 13
-        sw_cofani        => state%soilwater%cofani,        & ! GR-BH Task 13
-        dr_nrlevs        => state%drainage%nrlevs,         & ! GR-BH Task 13
-        dr_zbotdr        => state%drainage%zbotdr,         & ! GR-BH Task 13
-        dr_swdivd        => state%drainage%swdivd,         & ! GR-BH Task 13
-        dr_swdivdinf     => state%drainage%swdivdinf,      & ! GR-BH Task 13
-        dr_swnrsrf       => state%drainage%swnrsrf,        & ! GR-BH Task 13
-        dr_swtopnrsrf    => state%drainage%swtopnrsrf,     & ! GR-BH Task 13
-        dr_facdpthinf    => state%drainage%facdpthinf,     & ! GR-BH Task 13
-        dr_owltab        => state%drainage%owltab,         & ! GR-BH Task 13
-        dr_L             => state%drainage%L)                ! GR-BH Task 13
+    associate (heat => state%heat,         &
+               mesh => state%mesh,         &
+               soil => state%soilwater,    &
+               surf => state%surfacewater, &
+               drai => state%drainage,     &
+               time => state%timecontrol)
 
-    ! Verify available air volume in frozen zone
-    node = ms_numnod
-    volair = 0.0d0
-    frozencomp = .true.
-    do while (frozencomp)
-      volair = volair + (sw_thetas(node)-sw_theta(node))*ms_dz(node)  ! [SS-SWC S-2.10]
-      node = node - 1
-      if(node.eq.0)then
-        frozencomp = .false.
-      else
-        if(ht_rfcp(node) .le. 0.01d0)then
-          frozencomp = .false.
-        end if
-      end if
-    end do
-
-    ! Consider reduction when volair is very low
-    ! Reduction of drainage only when systems are present
-    if(sw_swdra.eq.0) then
-      if(ht_nodfrostbot.gt.1 .and. volair.lt.0.01d0)then
-        state%soilwater%qbot = 0.0d0
-      endif
-    else
-      ! SS-DRST Phase 2 Task 1: alias state drainage fields; all reads/writes
-      ! go directly to state — legacy globals are no longer touched here.
-      associate(qdrain => state%drainage%qdrain, qdra => state%drainage%qdra)
-
-      if(ht_nodfrostbot.gt.1 .and. volair.lt.0.01d0)then
-
-        leveldeepest = 0
-        zdeepest     = 0.0d0
-        do level=1,dr_nrlevs
-          if(dr_zbotdr(level).lt.zdeepest) then
-            leveldeepest = level
-            zdeepest     = dr_zbotdr(level)
-          endif
-        enddo
-
-        do node=1,ms_numnod
-          if(sw_fluseksatexm(node))then                             ! [SS-SWC S-2.10]
-            ksatcp(node)  = sw_ksatexm(ms_layer(node))*ht_rfcp(node) + &
-                            (1.0d0-ht_rfcp(node))*hconode_vsmall
-          else
-            ksatcp(node)  = sw_ksatfit(ms_layer(node))*ht_rfcp(node) + &
-                            (1.0d0-ht_rfcp(node))*hconode_vsmall
-          endif
-
-          cofanicp(node) = sw_cofani(ms_layer(node))
-          layercp(node) = node
-          do level=1,dr_nrlevs
-            if(ht_zfrostbot.lt.dr_zbotdr(level)) then
-              qdra(level,node) = 0.0d0
-              qdrain(level) = 0.0d0
-            endif
-          enddo
-        enddo
-
-        qdratot = 0.0d0
-        do level = 1,dr_nrlevs
-          qdratot = qdratot + qdrain(level)
-        end do
-
-        if(abs(qdratot).lt.1.0d-6) then
-          if(ht_zfrostbot.lt.dr_zbotdr(leveldeepest)) then
-            state%soilwater%qbot = 0.0d0
-          else
-            ! SS-BND Phase 2 Task B-2.5: read qbot from state (dual-write keeps state current).
-            qdrain(leveldeepest) = state%soilwater%qbot
-          endif
-        else
-          do level = 1,dr_nrlevs
-            ! SS-BND Phase 2 Task B-2.5: read qbot from state.
-            qdrain(level) = qdrain(level) * (1.0d0 + state%soilwater%qbot/qdratot)
-          end do
-        end if
-
-        if (dr_swdivd.eq.1) then
-          ztop = min(sw_gwl,ht_zfrostbot)                          ! [SS-SWC S-2.10]
-          call divdra (ms_numnod, dr_nrlevs, ms_dz, ksatcp, ksatcp, sw_fluseksatexm, & ! GR-BH Task 13
-                       layercp, cofanicp, ztop, dr_L, qdrain, qdra, &
-                       dr_swdivdinf, dr_swnrsrf, dr_swtopnrsrf, dr_zbotdr, &
-                       tc_dt, dr_facdpthinf, dr_owltab, state%drainage%nowltab, tc_t1900)  ! [GR-DRA 2026-05-23]
-        endif
-      else
-
-        do level = 1,dr_nrlevs
-          qdrain(level) = 0.0d0
-          do node = 1,ms_numnod
-            qdra(level,node) = qdra(level,node)*ht_rfcp(node)
-            qdrain(level) = qdrain(level) + qdra(level,node)
-          end do
-        end do
-
-      endif
-
-      ! SS-SWST Phase 2 Task 11: qdrtot global write dropped; only state written.
-      state%surfacewater%qdrtot = 0.0d0
-      do level=1,dr_nrlevs
-        state%surfacewater%qdrtot = state%surfacewater%qdrtot + qdrain(level)
+      ! Available air volume in the frozen zone.
+      node       = mesh%numnod
+      volair     = 0.0d0
+      frozencomp = .true.
+      do while (frozencomp)
+         volair = volair + (soil%thetas(node) - soil%theta(node))*mesh%dz(node)
+         node   = node - 1
+         if (node .eq. 0) then
+            frozencomp = .false.
+         else
+            if (heat%rfcp(node) .le. 0.01d0) frozencomp = .false.
+         end if
       end do
 
-      end associate
-    endif
+      ! Apply reduction when air volume is very low. Drainage reduction only
+      ! when drainage systems are present.
+      if (surf%swdra .eq. 0) then
+         if (heat%nodfrostbot .gt. 1 .and. volair .lt. 0.01d0) then
+            soil%qbot = 0.0d0
+         end if
+      else
+
+         if (heat%nodfrostbot .gt. 1 .and. volair .lt. 0.01d0) then
+
+            leveldeepest = 0
+            zdeepest     = 0.0d0
+            do level = 1, drai%nrlevs
+               if (drai%zbotdr(level) .lt. zdeepest) then
+                  leveldeepest = level
+                  zdeepest     = drai%zbotdr(level)
+               end if
+            end do
+
+            do node = 1, mesh%numnod
+               if (soil%fluseksatexm(node)) then
+                  ksatcp(node) = soil%ksatexm(mesh%layer(node))*heat%rfcp(node) + &
+                                 (1.0d0 - heat%rfcp(node))*hconode_vsmall
+               else
+                  ksatcp(node) = soil%ksatfit(mesh%layer(node))*heat%rfcp(node) + &
+                                 (1.0d0 - heat%rfcp(node))*hconode_vsmall
+               end if
+
+               cofanicp(node) = soil%cofani(mesh%layer(node))
+               layercp(node)  = node
+               do level = 1, drai%nrlevs
+                  if (heat%zfrostbot .lt. drai%zbotdr(level)) then
+                     drai%qdra(level, node) = 0.0d0
+                     drai%qdrain(level)     = 0.0d0
+                  end if
+               end do
+            end do
+
+            qdratot = 0.0d0
+            do level = 1, drai%nrlevs
+               qdratot = qdratot + drai%qdrain(level)
+            end do
+
+            if (abs(qdratot) .lt. 1.0d-6) then
+               if (heat%zfrostbot .lt. drai%zbotdr(leveldeepest)) then
+                  soil%qbot = 0.0d0
+               else
+                  drai%qdrain(leveldeepest) = soil%qbot
+               end if
+            else
+               do level = 1, drai%nrlevs
+                  drai%qdrain(level) = drai%qdrain(level) * (1.0d0 + soil%qbot/qdratot)
+               end do
+            end if
+
+            if (drai%swdivd .eq. 1) then
+               ztop = min(soil%gwl, heat%zfrostbot)
+               call divdra(mesh%numnod, drai%nrlevs, mesh%dz, ksatcp, ksatcp, soil%fluseksatexm, &
+                           layercp, cofanicp, ztop, drai%L, drai%qdrain, drai%qdra,              &
+                           drai%swdivdinf, drai%swnrsrf, drai%swtopnrsrf, drai%zbotdr,           &
+                           time%dt, drai%facdpthinf, drai%owltab, drai%nowltab, time%t1900)
+            end if
+         else
+            do level = 1, drai%nrlevs
+               drai%qdrain(level) = 0.0d0
+               do node = 1, mesh%numnod
+                  drai%qdra(level, node) = drai%qdra(level, node)*heat%rfcp(node)
+                  drai%qdrain(level)     = drai%qdrain(level) + drai%qdra(level, node)
+               end do
+            end do
+         end if
+
+         surf%qdrtot = 0.0d0
+         do level = 1, drai%nrlevs
+            surf%qdrtot = surf%qdrtot + drai%qdrain(level)
+         end do
+
+      end if
 
     end associate
 
