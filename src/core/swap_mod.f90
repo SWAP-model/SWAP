@@ -109,7 +109,8 @@ contains
       use runoff_mod, only: cn_init
       use temperature_mod, only: Temperature
       use solute_mod, only: solute, solute_init
-      use agetracer_mod, only: AgeTracer
+      ! [GR-SOLUTE 2026-05-24] agetracer_mod dropped — module retired to
+      ! src/solute/dormant/agetracer.f90 (dormant; no callers since ADR 0032).
       use soilgrid_mod, only: CalcGrid
       use soilhydraulics_mod, only: soilwater
       use config_to_variables_mod, only: config_to_variables
@@ -484,7 +485,8 @@ contains
       use frozencond_mod, only: FrozenCond, FrozenBounds
       use temperature_mod, only: Temperature
       use solute_mod, only: solute
-      use agetracer_mod, only: AgeTracer
+      ! [GR-SOLUTE 2026-05-24] agetracer_mod dropped — see header note above and
+      ! src/solute/dormant/agetracer.f90 for reactivation checklist.
       use soilhydraulics_mod, only: soilwater, SoilWaterStateVar
       use irrigation_mod, only: irrigation, SSDI_irrigation
       use management_soil_mod, only: SoilManagement

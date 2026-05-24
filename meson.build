@@ -163,7 +163,7 @@ sources = [
 
     # Solute
     'src/solute/solute.f90',
-    'src/solute/agetracer.f90',
+    # [GR-SOLUTE 2026-05-24] agetracer dropped — body moved to src/solute/dormant/agetracer.f90 (not compiled)
 
     # Crop
     'src/crop/wofost_soil_declarations.f90',
