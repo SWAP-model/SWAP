@@ -1,6 +1,4 @@
-! File VersionID:
-!   $Id: solute.f90 341 2017-09-29 18:12:25Z kroes006 $
-! ----------------------------------------------------------------------
+!> Solute transport (mobile concentration + decay + uptake + drainage).
 module solute_mod
    use error_mod, only: fatalerr_collected
    implicit none
@@ -10,418 +8,297 @@ module solute_mod
 
 contains
 
-      subroutine solute (task, state)
-! ----------------------------------------------------------------------
-!     date               : december 2007; code update: June, 2019
-!     purpose            : calculation of solute concentrations
-! ----------------------------------------------------------------------
-      ! [SS-GR-FINAL B11] blanket use Variables narrowed; mabbc/macp → swap_array_dimensions
+   subroutine solute(task, state)
       use swap_array_dimensions, only: mabbc, macp
-      use variables, only: &   ! [SS-GR-FINAL B11] residuals — all DEFERRED
-         ! DEFERRED: swinco/nconc/zc — solute initial condition config; Phase C3
-         swinco, nconc, zc, &
-         ! DEFERRED: bdens/kf/cref/kfsat/poros/frexp/ddif/decpot/fdepth — solute soil config; Phase C3
-         bdens, kf, cref, kfsat, poros, frexp, ddif, decpot, fdepth, &
-         ! DEFERRED: ldis — longitudinal dispersion length; soil config; Phase C3
-         ldis, &
-         ! [SS-GR-CROPRT A2] FlMacropore dropped — retired (ADR 0040); Z_Tp/ArMpTp kept (ArMpSs gating)
-         Z_Tp, ArMpTp, &
-         ! DEFERRED: swbotbc/cseeptab — bottom boundary solute config; Phase C3
-         swbotbc, cseeptab, &
-         ! DEFERRED: inpola/inpolb — soil compartment interpolation arrays; Phase C3
-         inpola, inpolb, &
-         ! DEFERRED: gampar/bexp/rtheta — temperature/moisture correction config; Phase C3
-         gampar, bexp, rtheta, &
-         ! DEFERRED: tscf — solute uptake factor; config; Phase C3
-         tscf, &
-         ! DEFERRED: swbr/daquif/decsat — aquifer breakthrough curve config; Phase C3
-         swbr, daquif, decsat, &
-         ! DEFERRED: cirr/cpre — irrigation/precipitation solute concentrations; Phase C3
-         cirr, cpre
-      use array_utils, only: afgen
-      use swap_state_mod, only: swap_state_t
+      use array_utils,           only: afgen
+      use swap_state_mod,        only: swap_state_t
       use, intrinsic :: iso_fortran_env, only: real64
+      ! Stragglers still bare-global; out of scope for this arc:
+      !   bdens         — soil-side per-layer dry bulk density
+      !   inpola/inpolb — numerical-grid interpolation arrays
+      !   swinco        — soil-side initial-condition switch
+      !   cml/zc        — solute initial-condition table (task=1 input only)
+      !   Z_Tp/ArMpTp   — macropore retired-zero (kept for ArMpSs guard symmetry)
+      use variables, only: bdens, inpola, inpolb, swinco, cml, zc, Z_Tp, ArMpTp
       implicit none
 
-!     SS-SWST Phase 2 Task 5: read qdra / qdrtot from state%surfacewater.
-!     SS-SLST Phase 2 Task 8: solute writes ONLY to typed state (dual-write dropped).
+      integer,            intent(in)    :: task
       type(swap_state_t), intent(inout) :: state
 
-!     local variables
-      integer level,i,task
-      real(8) cmlav,ftemp,ftheta,decact,cfluxt,cfluxb
-      real(8) cdrtot,ctrans,crot,dispr,old,dummy,vpore
-      real(8) isqdra,tab(mabbc*2)
-      real(8) tcumsol
-      ! [GR-BH Task 36] ArMpSs retired from variables.f90 — local (always 0.d0, ADR 0040 complete)
-      real(8) ArMpSs
-      logical differ
-!     work arrays for intermediate calculations (recomputed each timestep)
-      real(8), dimension(macp) :: thetav, diffus, dispr1, vpore2, ddiffwcs, bdenskf, bdenskfcref, bdenskfsatporos, decpotfdepth
+      integer :: level, i
+      real(8) :: cmlav, ftemp, ftheta, decact, cfluxt, cfluxb
+      real(8) :: cdrtot, ctrans, crot, dispr, old, dummy, vpore
+      real(8) :: isqdra, tab(mabbc*2)
+      real(8) :: tcumsol
+      real(8) :: ArMpSs   ! macropore-retired (always 0; ADR 0040)
+      logical :: differ
+      real(8), dimension(macp) :: thetav, diffus, dispr1, vpore2, ddiffwcs, &
+                                  bdenskf, bdenskfcref, bdenskfsatporos, decpotfdepth
 
-      ! Small constants for numerical stability
-      real(8), parameter :: rer = 1.0d-3
+      real(8), parameter :: rer    = 1.0d-3
       real(8), parameter :: vsmall = 1.0d-15
 
-! ----------------------------------------------------------------------
+      associate (sol  => state%solute,        &
+                 soil => state%soilwater,     &
+                 mesh => state%mesh,          &
+                 time => state%timecontrol,   &
+                 drai => state%drainage,      &
+                 surf => state%surfacewater,  &
+                 atmo => state%atmosphere,    &
+                 heat => state%heat)
 
+         select case (task)
+         case (1)
+            ! === Initialise solute rate/state variables ============================
 
-      select case (task)
-      case (1)
-
-! === initialize Solute rate/state variables ===========================
-
-      ! [GR-BH Audit 31] numnod/dz/z aliased via state%mesh
-      ! [GR-BH Task 35] layer added to associate (global deleted)
-      associate( &
-         cml    => state%solute%cml,                      &
-         cmsy   => state%solute%cmsy,                     &
-         samini => state%solute%samini,         &
-         sampro => state%solute%sampro,                    &
-         ! SS-SWC Phase 2 S-2.8: theta/thetsl read from state%soilwater
-         sw_theta  => state%soilwater%theta,               &
-         sw_thetsl => state%soilwater%thetsl,              &
-         numnod    => state%mesh%numnod,                   &  ! [GR-BH Audit 31]
-         dz        => state%mesh%dz,                       &  ! [GR-BH Audit 31]
-         z         => state%mesh%z,                        &  ! [GR-BH Audit 31]
-         layer     => state%mesh%layer                     &  ! [GR-BH Task 35]
-      )
-
-! --- determine initial solute profile from input concentrations
-      if (swinco.ne.3) then
-        do i = 1, nconc
-          tab(i*2) = cml(i)
-          tab(i*2-1) = abs(zc(i))
-        end do
-        do i = 1, numnod
-          cml(i) = afgen(tab,macp*2,abs(z(i)))
-        end do
-      endif
-
-! --- determine derived solute concentrations
-      samini = 0.0d0
-!      samaq = 0.0d0
-      do i = 1, numnod
-         bdenskf(i)         = bdens(layer(i))*kf(layer(i))
-         bdenskfcref(i)     = bdenskf(i)*cref
-         bdenskfsatporos(i) = bdens(layer(i))*kfsat + poros
-         cmsy(i) = (sw_theta(i)*cml(i) + bdenskfcref(i)*(cml(i)/cref)**frexp)
-         samini = samini + cmsy(i) * dz(i)
-         ddiffwcs(i) = ddif / (sw_thetsl(layer(i))**2)
-         decpotfdepth(i) = decpot(layer(i))*fdepth(layer(i))
-      end do
-      sampro = samini
-
-      end associate  ! cml, cmsy, samini, sampro, sw_theta, sw_thetsl (case 1); numnod/dz/z [GR-BH Audit 31]
-
-      case (2)
-
-! === calculate Solute rate variables ========================
-
-      ! SS-TC TC-12: t1900, dt read via state%timecontrol tc_* aliases.
-      ! [GR-BH Audit 31] numnod/dz/disnod/nrlevs aliased via state%
-      associate( &
-         tc_t1900 => state%timecontrol%t1900,                 &  ! TC-12
-         tc_dt    => state%timecontrol%dt,                    &  ! TC-12
-         cml      => state%solute%cml,                        &
-         cmsy     => state%solute%cmsy,                       &
-         csurf    => state%solute%csurf,           &
-         cpond    => state%solute%cpond,                      &
-         cdrain   => state%solute%cdrain,                     &
-         cseep    => state%solute%cseep,                      &
-         dtsolu   => state%solute%dtsolu,                     &
-         isqbot   => state%solute%isqbot,                     &
-         isqtop   => state%solute%isqtop,                     &
-         samini   => state%solute%samini,          &
-         sampro   => state%solute%sampro,                     &
-         solbal   => state%solute%solbal,                     &
-         dectot   => state%solute%dectot,          &
-         imdectot => state%solute%imdectot,      &
-         rottot   => state%solute%rottot,          &
-         imrottot => state%solute%imrottot,      &
-         sqprec   => state%solute%sqprec,          &
-         imsqprec => state%solute%imsqprec,      &
-         sqirrig  => state%solute%sqirrig,         &
-         imsqirrig=> state%solute%imsqirrig,     &
-         sqbot    => state%solute%sqbot,           &
-         imsqbot  => state%solute%imsqbot,       &
-         sqdra    => state%solute%sqdra,           &
-         imsqdra  => state%solute%imsqdra,       &
-         sqsur    => state%solute%sqsur,           &
-         ! SS-SWC Phase 2 S-2.8: theta/thetsl/q read from state%soilwater
-         sw_theta  => state%soilwater%theta,                  &
-         sw_thetsl => state%soilwater%thetsl,                 &
-         sw_q      => state%soilwater%q,                      &
-         numnod    => state%mesh%numnod,                      &  ! [GR-BH Audit 31]
-         dz        => state%mesh%dz,                          &  ! [GR-BH Audit 31]
-         disnod    => state%mesh%disnod,                      &  ! [GR-BH Audit 31]
-         nrlevs    => state%drainage%nrlevs,                  &  ! [GR-BH Audit 31]
-         layer     => state%mesh%layer                        &  ! [GR-BH Task 35]
-      )
-
-! --- reset cumulative solute fluxes
-      ! SS-CRR Phase B Task B4: cohort-owned reset; see solute_state_mod.
-      if (state%timecontrol%flZeroIntr) call state%solute%reset_intermediate()
-      if (state%timecontrol%flZeroCumu) then
-         call state%solute%reset_cumulative()
-         ! Rebase mass-balance baseline. samini is in the cumulative cohort
-         ! and was zeroed by reset(); physics requires anchoring it to
-         ! current profile mass (sampro) for the next balance period. See
-         ! the solbal equation later in case(2).
-         samini = sampro
-      end if
-
-      isqbot = 0.0d0
-      isqtop = 0.0d0
-      isqdra = 0.0d0
-
-!     set value of macropore area at soil surface
-      ArMpSs = 0.d0                                           !     set value of macropore area at soil surface
-      ! [SS-GR-CROPRT A2] if (FlMacropore) ArMpSs = ArMpTp dropped (ADR 0040; FlMacropore always .false.)
-
-! --- boundary concentrations
-      if (swbotbc .eq. 2) then
-        cseep = afgen (cseeptab,mabbc*2,tc_t1900+tc_dt)  ! TC-12
-      endif
-
-! --- determine maximum timestep
-      dtsolu = tc_dt  ! TC-12
-      do i = 1,numnod
-        ! SS-SWC Phase 2 S-2.8: theta/q read from state%soilwater
-        thetav(i) = inpola(i+1)*sw_theta(i)+inpolb(i)*sw_theta(i+1)
-        diffus(i) = ddiffwcs(i) * thetav(i)**2.33d0
-        if (i < numnod) then
-            vpore     = abs(sw_q(i+1))/thetav(i)
-            dispr1(i) = diffus(i) + ldis(layer(i)) * vpore
-            vpore2(i) = vpore*vpore
-         end if
-
-        dispr = diffus(i)+ldis(layer(i))*abs(sw_q(i))/sw_theta(i)
-        if (dispr.lt.1.0d-8) dispr = 1.0d-8
-        !dummy = dz(i)*dz(i)*theta(i)/(2.0d0*dispr)
-        dummy = dz(i)*dz(i)/(2.0d0*dispr)
-        !dummy = 1.2d0*dz(i)*dz(i)/(2.0d0*dispr)
-        dtsolu = min(dtsolu,dummy)
-      enddo
-
-      tcumsol = 0.0d0
-      ! SS-DRST Task 3: qdra read from state%drainage; qdrtot remains in state%surfacewater
-      ! [SS-BMI2 Task 4] dtmin aliased from state%timecontrol
-      associate(qdra   => state%drainage%qdra,   &
-                qdrtot => state%surfacewater%qdrtot, &
-                dtmin  => state%timecontrol%dtmin )
-      do while ((tc_dt-tcumsol).gt.1.0d-8)  ! TC-12
-
-! ---    time step and cumulative time
-         dtsolu  = min(dtsolu,(tc_dt-tcumsol))  ! TC-12
-         dtsolu  = max(dtsolu,dtmin)
-         tcumsol = tcumsol + dtsolu
-
-! --- solute flux at soil surface
-         ! SS-ATM Phase 2 Task A-2.4: nraidt read from state%atmosphere (atmosphere home).
-         csurf = (state%atmosphere%nird*cirr + state%atmosphere%nraidt*cpre)*dtsolu + csurf   ! gr cm-2
-         ! SS-BND Phase 2 Task B-2.3: qtop read from state%soilwater (boundary home).
-         ! SS-SWC Phase 2 S-2.8: pond read from state%soilwater
-         if (state%soilwater%qtop.lt.-1.d-6) then
-            cpond  = csurf / (state%soilwater%pond-state%soilwater%qtop*dtsolu)  ! gr cm-3
-            cfluxt = state%soilwater%qtop*(1.0d0-ArMpSs)*cpond*dtsolu       ! gr cm-2
-            csurf  = csurf + cfluxt                                          ! gr cm-2
-            isqtop = state%soilwater%qtop*(1.0d0-ArMpSs)*cpond              ! gr cm-2 d-1
-         else
-            cpond  = 0.0d0
-            cfluxt = 0.0d0
-         endif
-
-! --- calculate mass balance for each compartment
-
-         do i = 1,numnod
-
-! --- convective and dispersive fluxes
-            if (i .lt. numnod) then
-               cmlav = inpola(i+1) * cml(i) + inpolb(i) * cml(i+1)
-               !thetav = inpola(i+1)*theta(i)+inpolb(i)*theta(i+1)
-               !vpore = abs(q(i+1))/thetav
-               !diffus = ddif*(thetav**2.33d0)/(thetsl(layer(i))**2)
-               !dispr = diffus + ldis(layer(i)) * vpore + 0.5d0 * dtsolu*vpore*vpore
-               dispr = dispr1(i) + 0.5d0 * dtsolu*vpore2(i)
-               cfluxb = (sw_q(i+1)*cmlav + thetav(i) * dispr * (cml(i+1)-cml(i))/disnod(i+1))*dtsolu
-            else
-               ! SS-SWC Phase 2 S-2.8: q(numnod+1) read from state%soilwater
-               if (sw_q(i+1).gt.0.0d0) then
-                  cfluxb = sw_q(i+1)*cseep*dtsolu
-               else
-                  cfluxb = sw_q(i+1)*cml(i)*dtsolu
-               endif
-            endif
-
-! --- solute decomposition
-            if (state%timecontrol%flTemperature) then
-               ! SS-HEAT Phase 2 Task 6: read tsoil from state%heat
-               if (state%heat%tsoil(i) .lt. 35.0d0) then
-                  ftemp = exp(gampar*(state%heat%tsoil(i)-20.0d0))
-               else
-                  ftemp = exp(gampar*15.0d0)
-               endif
-            else
-              ftemp = 0.0d0
-            endif
-            ! SS-SWC Phase 2 S-2.8: theta read from state%soilwater
-            ftheta = min(1.0d0,(sw_theta(i)/rtheta)**bexp)
-            decact = decpotfdepth(i) * ftemp * ftheta
-            ctrans = decact*sw_theta(i)*cml(i) + decact*bdenskfcref(i)*((cml(i)/cref)**frexp)
-            dectot = dectot + ctrans*dtsolu*dz(i)
-            imdectot = imdectot + ctrans*dtsolu*dz(i)
-
-! --- solute uptake by plant roots
-            ! SS-CRP Phase 2 C-2.3: qrot read from state%soilwater
-            crot   = tscf*state%soilwater%qrot(i)*cml(i)/dz(i)
-            rottot = rottot + tscf*state%soilwater%qrot(i)*cml(i)*dtsolu
-            imrottot = imrottot + tscf*state%soilwater%qrot(i)*cml(i)*dtsolu
-
-! --- lateral drainage
-            ! SS-SWST Phase 2 Task 11: qdra read from state (global dropped).
-            cdrtot = 0.0d0
-            if (allocated(state%drainage%qdra)) then
-            do level = 1,nrlevs
-               if (state%drainage%qdra(level,i) .gt. 0.0d0) then
-                  cdrtot = cdrtot+state%drainage%qdra(level,i)*cml(i)/dz(i)
-               else
-                  cdrtot = cdrtot+state%drainage%qdra(level,i)*cdrain/dz(i)
-               endif
-            enddo
+            ! Determine initial solute profile from input concentrations.
+            if (swinco .ne. 3) then
+               do i = 1, sol%nconc
+                  tab(i*2)     = cml(i)
+                  tab(i*2 - 1) = abs(zc(i))
+               end do
+               do i = 1, mesh%numnod
+                  sol%cml(i) = afgen(tab, macp*2, abs(mesh%z(i)))
+               end do
             end if
 
-! --- cumulative amount of solutes to lateral drainage
-            isqdra = isqdra + cdrtot*dz(i)*dtsolu
-            sqdra  = sqdra + cdrtot*dz(i)*dtsolu
-            imsqdra  = imsqdra + cdrtot*dz(i)*dtsolu
+            ! Derived solute concentrations.
+            sol%samini = 0.0d0
+            do i = 1, mesh%numnod
+               bdenskf(i)         = bdens(mesh%layer(i))*sol%kf(mesh%layer(i))
+               bdenskfcref(i)     = bdenskf(i)*sol%cref
+               bdenskfsatporos(i) = bdens(mesh%layer(i))*sol%kfsat + sol%poros
+               sol%cmsy(i)        = soil%theta(i)*sol%cml(i) +                          &
+                                    bdenskfcref(i)*(sol%cml(i)/sol%cref)**sol%frexp
+               sol%samini         = sol%samini + sol%cmsy(i) * mesh%dz(i)
+               ddiffwcs(i)        = sol%ddif / (soil%thetsl(mesh%layer(i))**2)
+               decpotfdepth(i)    = sol%decpot(mesh%layer(i))*sol%fdepth(mesh%layer(i))
+            end do
+            sol%sampro = sol%samini
 
-! --- conservation equation for the substance
-            cmsy(i) = cmsy(i) + (cfluxb-cfluxt) / dz(i) + (-ctrans-crot-cdrtot) * dtsolu
+         case (2)
+            ! === Solute rate variables =============================================
 
-! --- iteration procedure for calculation of cml
-            differ = .true.
-            if (cmsy(i).lt.vsmall) then
-               cmsy(i) = 0.0d0
-               cml(i)  = 0.0d0
-            else
-               if (abs(frexp-1.0d0).lt.0.001d0) then
-                  ! SS-SWC Phase 2 S-2.8: theta read from state%soilwater
-                  cml(i) = cmsy(i) / (sw_theta(i) + bdenskf(i))
+            ! Cohort resets (ADR 0033).
+            if (time%flZeroIntr) call sol%reset_intermediate()
+            if (time%flZeroCumu) then
+               call sol%reset_cumulative()
+               ! Mass-balance baseline rebase: samini is zeroed by reset_cumulative
+               ! (cumulative cohort); physics requires anchoring it to the current
+               ! profile mass (sampro) for the next balance period.
+               sol%samini = sol%sampro
+            end if
+
+            sol%isqbot = 0.0d0
+            sol%isqtop = 0.0d0
+            isqdra     = 0.0d0
+
+            ! Macropore-area at the surface (ADR 0040: always 0).
+            ArMpSs = 0.d0
+
+            ! Boundary concentration (afgen table).
+            if (sol%swbotbc .eq. 2) then
+               sol%cseep = afgen(sol%cseeptab, mabbc*2, time%t1900 + time%dt)
+            end if
+
+            ! Maximum solute time step.
+            sol%dtsolu = time%dt
+            do i = 1, mesh%numnod
+               thetav(i) = inpola(i + 1)*soil%theta(i) + inpolb(i)*soil%theta(i + 1)
+               diffus(i) = ddiffwcs(i) * thetav(i)**2.33d0
+               if (i .lt. mesh%numnod) then
+                  vpore     = abs(soil%q(i + 1))/thetav(i)
+                  dispr1(i) = diffus(i) + sol%ldis(mesh%layer(i)) * vpore
+                  vpore2(i) = vpore*vpore
+               end if
+
+               dispr = diffus(i) + sol%ldis(mesh%layer(i))*abs(soil%q(i))/soil%theta(i)
+               if (dispr .lt. 1.0d-8) dispr = 1.0d-8
+               dummy      = mesh%dz(i)*mesh%dz(i)/(2.0d0*dispr)
+               sol%dtsolu = min(sol%dtsolu, dummy)
+            end do
+
+            tcumsol = 0.0d0
+            do while ((time%dt - tcumsol) .gt. 1.0d-8)
+
+               sol%dtsolu = min(sol%dtsolu, (time%dt - tcumsol))
+               sol%dtsolu = max(sol%dtsolu, time%dtmin)
+               tcumsol    = tcumsol + sol%dtsolu
+
+               ! Solute flux at the soil surface.
+               sol%csurf = (atmo%nird*sol%cirr + atmo%nraidt*sol%cpre)*sol%dtsolu + sol%csurf
+               if (soil%qtop .lt. -1.d-6) then
+                  sol%cpond  = sol%csurf / (soil%pond - soil%qtop*sol%dtsolu)
+                  cfluxt     = soil%qtop*(1.0d0 - ArMpSs)*sol%cpond*sol%dtsolu
+                  sol%csurf  = sol%csurf + cfluxt
+                  sol%isqtop = soil%qtop*(1.0d0 - ArMpSs)*sol%cpond
                else
-                  if (cml(i).lt.vsmall) cml(i) = vsmall
-                  do while (differ)
-                     old    = cml(i)
-                     dummy  = bdenskf(i)*(cml(i)/cref)**(frexp-1.0d0)
-                     cml(i) = cmsy(i)/(sw_theta(i)+dummy)
-                     if (abs(cml(i)-old).lt.rer*cml(i)) differ = .false.
-                  enddo
-               endif
-            endif
+                  sol%cpond = 0.0d0
+                  cfluxt    = 0.0d0
+               end if
 
-!           make top flux next compartment equal to current bottom flux
-            cfluxt = cfluxb
+               ! Per-compartment mass balance.
+               do i = 1, mesh%numnod
 
-! ---    next compartment
-         enddo
+                  ! Convective + dispersive fluxes.
+                  if (i .lt. mesh%numnod) then
+                     cmlav  = inpola(i + 1) * sol%cml(i) + inpolb(i) * sol%cml(i + 1)
+                     dispr  = dispr1(i) + 0.5d0 * sol%dtsolu*vpore2(i)
+                     cfluxb = (soil%q(i + 1)*cmlav +                                    &
+                               thetav(i) * dispr * (sol%cml(i + 1) - sol%cml(i))/mesh%disnod(i + 1)) &
+                              * sol%dtsolu
+                  else
+                     if (soil%q(i + 1) .gt. 0.0d0) then
+                        cfluxb = soil%q(i + 1)*sol%cseep*sol%dtsolu
+                     else
+                        cfluxb = soil%q(i + 1)*sol%cml(i)*sol%dtsolu
+                     end if
+                  end if
 
-! ---    solute balance in aquifer for breakthrough curve
-         ! SS-SWST Phase 2 Task 11: qdrtot read from state (global dropped).
-         if (swbr .eq. 1) then
-            if (state%surfacewater%qdrtot .gt. 0.0d0) then
-               cdrain = cdrain + dtsolu/bdenskfsatporos(i) *         &
-     &         ( (isqdra - state%surfacewater%qdrtot*cdrain)/daquif - decsat*cdrain*bdenskfsatporos(i) )
+                  ! Solute decomposition.
+                  if (time%flTemperature) then
+                     if (heat%tsoil(i) .lt. 35.0d0) then
+                        ftemp = exp(sol%gampar*(heat%tsoil(i) - 20.0d0))
+                     else
+                        ftemp = exp(sol%gampar*15.0d0)
+                     end if
+                  else
+                     ftemp = 0.0d0
+                  end if
+                  ftheta = min(1.0d0, (soil%theta(i)/sol%rtheta)**sol%bexp)
+                  decact = decpotfdepth(i) * ftemp * ftheta
+                  ctrans = decact*soil%theta(i)*sol%cml(i) +                            &
+                           decact*bdenskfcref(i)*((sol%cml(i)/sol%cref)**sol%frexp)
+                  sol%dectot   = sol%dectot   + ctrans*sol%dtsolu*mesh%dz(i)
+                  sol%imdectot = sol%imdectot + ctrans*sol%dtsolu*mesh%dz(i)
+
+                  ! Solute uptake by plant roots.
+                  crot         = sol%tscf*soil%qrot(i)*sol%cml(i)/mesh%dz(i)
+                  sol%rottot   = sol%rottot   + sol%tscf*soil%qrot(i)*sol%cml(i)*sol%dtsolu
+                  sol%imrottot = sol%imrottot + sol%tscf*soil%qrot(i)*sol%cml(i)*sol%dtsolu
+
+                  ! Lateral drainage.
+                  cdrtot = 0.0d0
+                  if (allocated(drai%qdra)) then
+                     do level = 1, drai%nrlevs
+                        if (drai%qdra(level, i) .gt. 0.0d0) then
+                           cdrtot = cdrtot + drai%qdra(level, i)*sol%cml(i)/mesh%dz(i)
+                        else
+                           cdrtot = cdrtot + drai%qdra(level, i)*sol%cdrain/mesh%dz(i)
+                        end if
+                     end do
+                  end if
+
+                  ! Cumulative solute to lateral drainage.
+                  isqdra      = isqdra      + cdrtot*mesh%dz(i)*sol%dtsolu
+                  sol%sqdra   = sol%sqdra   + cdrtot*mesh%dz(i)*sol%dtsolu
+                  sol%imsqdra = sol%imsqdra + cdrtot*mesh%dz(i)*sol%dtsolu
+
+                  ! Conservation equation for the substance.
+                  sol%cmsy(i) = sol%cmsy(i) + (cfluxb - cfluxt) / mesh%dz(i) +          &
+                                (-ctrans - crot - cdrtot) * sol%dtsolu
+
+                  ! Iterate to recover cml from cmsy with the Freundlich isotherm.
+                  differ = .true.
+                  if (sol%cmsy(i) .lt. vsmall) then
+                     sol%cmsy(i) = 0.0d0
+                     sol%cml(i)  = 0.0d0
+                  else
+                     if (abs(sol%frexp - 1.0d0) .lt. 0.001d0) then
+                        sol%cml(i) = sol%cmsy(i) / (soil%theta(i) + bdenskf(i))
+                     else
+                        if (sol%cml(i) .lt. vsmall) sol%cml(i) = vsmall
+                        do while (differ)
+                           old        = sol%cml(i)
+                           dummy      = bdenskf(i)*(sol%cml(i)/sol%cref)**(sol%frexp - 1.0d0)
+                           sol%cml(i) = sol%cmsy(i)/(soil%theta(i) + dummy)
+                           if (abs(sol%cml(i) - old) .lt. rer*sol%cml(i)) differ = .false.
+                        end do
+                     end if
+                  end if
+
+                  cfluxt = cfluxb
+               end do
+
+               ! Aquifer breakthrough.
+               if (sol%swbr .eq. 1) then
+                  if (surf%qdrtot .gt. 0.0d0) then
+                     sol%cdrain = sol%cdrain + sol%dtsolu/bdenskfsatporos(i) *          &
+                                  ((isqdra - surf%qdrtot*sol%cdrain)/sol%daquif -       &
+                                   sol%decsat*sol%cdrain*bdenskfsatporos(i))
+                  else
+                     sol%cdrain = sol%cdrain + sol%dtsolu/bdenskfsatporos(i) *          &
+                                  (isqdra/sol%daquif - sol%decsat*sol%cdrain*bdenskfsatporos(i))
+                  end if
+                  sol%cseep = sol%cdrain
+               end if
+
+               ! Flux to surface water from the aquifer.
+               if (sol%swbr .eq. 1) then
+                  sol%sqsur = sol%sqsur + surf%qdrtot*sol%cdrain*sol%dtsolu
+               end if
+
+               ! Flux through bottom of soil profile.
+               if (soil%qbot .gt. 0.0d0) then
+                  sol%sqbot   = sol%sqbot   + soil%qbot*sol%cseep*sol%dtsolu
+                  sol%imsqbot = sol%imsqbot + soil%qbot*sol%cseep*sol%dtsolu
+               else
+                  sol%sqbot   = sol%sqbot   + soil%qbot*sol%cml(mesh%numnod)*sol%dtsolu
+                  sol%imsqbot = sol%imsqbot + soil%qbot*sol%cml(mesh%numnod)*sol%dtsolu
+               end if
+
+            end do
+
+            ! Current solute flux at bottom of soil column.
+            if (soil%q(mesh%numnod + 1) .gt. 0.0d0) then
+               sol%isqbot = soil%q(mesh%numnod + 1) * sol%cseep
             else
-               cdrain = cdrain + dtsolu/bdenskfsatporos(i) *         &
-     &                           ( isqdra/daquif - decsat*cdrain*bdenskfsatporos(i) )
-            endif
-            cseep = cdrain
-         endif
+               sol%isqbot = soil%q(mesh%numnod + 1) * sol%cml(mesh%numnod)
+            end if
 
-! --- flux to surface water from aquifer
-         if (swbr .eq. 1) then
-            sqsur = sqsur + state%surfacewater%qdrtot*cdrain*dtsolu
-         endif
+            ! Solute balance components.
+            sol%sampro = 0.0d0
+            do i = 1, mesh%numnod
+               sol%sampro = sol%sampro + sol%cmsy(i) * mesh%dz(i)
+            end do
+            sol%sampro = sol%sampro + sol%csurf
 
-! --- flux through bottom of soil profile
-         ! SS-BND Phase 2 Task B-2.3: qbot read from state%soilwater (boundary home).
-         if (state%soilwater%qbot .gt. 0.0d0) then
-            sqbot = sqbot + state%soilwater%qbot*cseep*dtsolu
-            imsqbot = imsqbot + state%soilwater%qbot*cseep*dtsolu
-         else
-            sqbot = sqbot + state%soilwater%qbot*cml(numnod)*dtsolu
-            imsqbot = imsqbot + state%soilwater%qbot*cml(numnod)*dtsolu
-         endif
+            sol%sqprec    = sol%sqprec    + atmo%nraidt * sol%cpre * time%dt
+            sol%imsqprec  = sol%imsqprec  + atmo%nraidt * sol%cpre * time%dt
+            sol%sqirrig   = sol%sqirrig   + atmo%nird   * sol%cirr * time%dt
+            sol%imsqirrig = sol%imsqirrig + atmo%nird   * sol%cirr * time%dt
 
-! --- continue with next solute time step
-      end do
-      end associate  ! qdra, qdrtot from state%surfacewater
+            sol%solbal = sol%sampro - sol%sqprec - sol%sqirrig - sol%sqbot +            &
+                         sol%sqdra + sol%dectot + sol%rottot - sol%samini
 
-! --- current solute flux at bottom of soil column
-      ! SS-SWC Phase 2 S-2.8: q(numnod+1) read from state%soilwater
-      if (sw_q(numnod+1) .gt. 0.0d0) then
-        isqbot = sw_q(numnod+1) * cseep
-      else
-        isqbot = sw_q(numnod+1) * cml(numnod)
-      endif
+         case default
+            call fatalerr_collected('Solute', 'Illegal value for TASK')
+         end select
 
-! === calculate solute balance components ========================
-
-! --- total amount in soil profile
-      sampro = 0.0d0
-      do i = 1,numnod
-        sampro = sampro + cmsy(i) * dz(i)
-      enddo
-      sampro = sampro + csurf
-!      if (swbr .eq. 1) samaq = cdrain*poros*daquif
-
-! --- add time step fluxes to total cumulative values
-      ! SS-ATM Phase 2 Task A-2.4: nraidt read from state%atmosphere (atmosphere home).
-      sqprec = sqprec + state%atmosphere%nraidt * cpre * tc_dt      ! TC-12
-      imsqprec = imsqprec + state%atmosphere%nraidt * cpre * tc_dt  ! TC-12
-      sqirrig = sqirrig + state%atmosphere%nird * cirr * tc_dt                        ! TC-12
-      imsqirrig = imsqirrig + state%atmosphere%nird * cirr * tc_dt                    ! TC-12
-
-! --- cumulative solute balance
-      solbal = sampro - sqprec - sqirrig - sqbot + sqdra + dectot + rottot - samini
-
-      end associate  ! cml, cmsy, csurf, cpond, ..., sqsur (case 2); numnod/dz/disnod/nrlevs [GR-BH Audit 31]
-
-      case default
-         call fatalerr_collected ('Solute', 'Illegal value for TASK')
-      end select
+      end associate
 
       return
-      end subroutine solute
+   end subroutine solute
 
-!> Lifecycle init for solute typed state. Allocates per-node arrays
-!! from numnod and seeds them from the config-time-populated legacy
-!! globals. Called from swap_main once per simulation, after
-!! config_to_variables has populated the legacy globals.
-!!
-!! Mirrors drainage_init's pattern (ADR 0031). The two-stage cml
-!! seeding (discovery hazard #7) is preserved: config-time seed in
-!! the legacy global persists; this routine copies it into the typed
-!! state at run init.
-subroutine solute_init(state)
-   use, intrinsic :: iso_fortran_env, only: real64
-   use swap_state_mod, only: swap_state_t
-   ! [GR-BH Audit 31] numnod removed from use-list; read via state%mesh%numnod
-   use variables, only: &   ! [SS-GR-FINAL B11] residuals — all DEFERRED
-      ! DEFERRED: cml/cmsy — solute concentration arrays; seeded from legacy at init; Phase C3
-      cml, cmsy
-   implicit none
-   type(swap_state_t), intent(inout) :: state
+   !> Lifecycle init for the solute typed state.
+   !!
+   !! Allocates per-node arrays from numnod and seeds them from the
+   !! config-time-populated legacy globals (cml/cmsy). The two-stage cml
+   !! seeding is preserved: config-time seed in the legacy global persists;
+   !! this routine copies it into typed state at run init. Solute task=1
+   !! overwrites state%solute%cml from the (zc, cml_init) table.
+   subroutine solute_init(state)
+      use, intrinsic :: iso_fortran_env, only: real64
+      use swap_state_mod, only: swap_state_t
+      use variables,      only: cml, cmsy    ! transitional init buffers (config-side)
+      implicit none
+      type(swap_state_t), intent(inout) :: state
 
-   if (.not. allocated(state%solute%cml)) then
-      allocate(state%solute%cml(state%mesh%numnod))   ! [GR-BH Audit 31]
-   end if
-   if (.not. allocated(state%solute%cmsy)) then
-      allocate(state%solute%cmsy(state%mesh%numnod))  ! [GR-BH Audit 31]
-   end if
+      if (.not. allocated(state%solute%cml))  allocate(state%solute%cml(state%mesh%numnod))
+      if (.not. allocated(state%solute%cmsy)) allocate(state%solute%cmsy(state%mesh%numnod))
 
-   state%solute%cml(:)  = cml(1:state%mesh%numnod)   ! [GR-BH Audit 31]
-   state%solute%cmsy(:) = cmsy(1:state%mesh%numnod)  ! [GR-BH Audit 31]
-end subroutine solute_init
+      state%solute%cml(:)  = cml(1:state%mesh%numnod)
+      state%solute%cmsy(:) = cmsy(1:state%mesh%numnod)
+   end subroutine solute_init
 
 end module solute_mod

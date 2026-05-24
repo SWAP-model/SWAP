@@ -596,7 +596,6 @@ contains
                   call read_csv_table(trim(config%soil%initial%cml_file), hdr, tbl, errs)
                   call errs%abort_if_fatal()
                   nrows = size(tbl, 1)
-                  nconc = nrows
                   state%solute%nconc = nrows
                   do k = 1, nrows
                      zc(k)  = tbl(k, 1)
@@ -1006,13 +1005,12 @@ contains
       ! Solute (audit: 8 fields + 14 Phase 0 promoted fields)
       ! ---------------------------------------------------------------
       swsolu  = config%solute%swsolu
-      swbotbc              = config%solute%swbotbc
       state%solute%swbotbc = config%solute%swbotbc
-      cdrain  = config%solute%cdrain
+      state%solute%cdrain = config%solute%cdrain
 !     cseep   = config%solute%cseep   ! global cseep removed (ADR 0032); state%solute%cseep written by solute task=2 via afgen(cseeptab)
-      tscf    = config%solute%tscf;    state%solute%tscf    = config%solute%tscf
-      rtheta  = config%solute%rtheta;  state%solute%rtheta  = config%solute%rtheta
-      bexp    = config%solute%bexp;    state%solute%bexp    = config%solute%bexp
+      state%solute%tscf    = config%solute%tscf
+      state%solute%rtheta  = config%solute%rtheta
+      state%solute%bexp    = config%solute%bexp
       ! Phase 4f Task B5: per-layer dispersion length. Mirrors
       ! readswap.f90:1139-1143 — when the case authors `ldis` as an
       ! array, copy element-wise; otherwise broadcast the scalar to
@@ -1023,27 +1021,22 @@ contains
       end if
       if (allocated(config%solute%ldis_array)) then
          do i = 1, size(config%solute%ldis_array)
-            ldis(i)              = config%solute%ldis_array(i)
             state%solute%ldis(i) = config%solute%ldis_array(i)
          end do
       else if (config%solute%ldis > 0.0d0) then
-         ldis(1)              = config%solute%ldis
          state%solute%ldis(1) = config%solute%ldis
       end if
 
-      ! Phase 0 (ADR 0032) — dual-write to legacy global + state%solute (state
-      ! is the canonical read site; legacy globals retire when solute.f90's
-      ! Pattern 1 refactor lands).
-      cref   = config%solute%cref;   state%solute%cref   = config%solute%cref
-      cpre   = config%solute%cpre;   state%solute%cpre   = config%solute%cpre
-      ddif   = config%solute%ddif;   state%solute%ddif   = config%solute%ddif
-      frexp  = config%solute%frexp;  state%solute%frexp  = config%solute%frexp
-      gampar = config%solute%gampar; state%solute%gampar = config%solute%gampar
-      daquif = config%solute%daquif; state%solute%daquif = config%solute%daquif
-      kfsat  = config%solute%kfsat;  state%solute%kfsat  = config%solute%kfsat
-      decsat = config%solute%decsat; state%solute%decsat = config%solute%decsat
-      poros  = config%solute%poros;  state%solute%poros  = config%solute%poros
-      swbr   = config%solute%swbr;   state%solute%swbr   = config%solute%swbr
+      state%solute%cref   = config%solute%cref
+      state%solute%cpre   = config%solute%cpre
+      state%solute%ddif   = config%solute%ddif
+      state%solute%frexp  = config%solute%frexp
+      state%solute%gampar = config%solute%gampar
+      state%solute%daquif = config%solute%daquif
+      state%solute%kfsat  = config%solute%kfsat
+      state%solute%decsat = config%solute%decsat
+      state%solute%poros  = config%solute%poros
+      state%solute%swbr   = config%solute%swbr
 
       if (.not. allocated(state%solute%kf)) then
          allocate(state%solute%kf(maho));     state%solute%kf     = 0.0d0
@@ -1055,20 +1048,17 @@ contains
          allocate(state%solute%fdepth(maho)); state%solute%fdepth = 0.0d0
       end if
       if (allocated(config%solute%kf)) then
-         do i = 1, min(size(config%solute%kf), size(kf))
-            kf(i)              = config%solute%kf(i)
+         do i = 1, min(size(config%solute%kf), size(state%solute%kf))
             state%solute%kf(i) = config%solute%kf(i)
          end do
       end if
       if (allocated(config%solute%decpot)) then
-         do i = 1, min(size(config%solute%decpot), size(decpot))
-            decpot(i)              = config%solute%decpot(i)
+         do i = 1, min(size(config%solute%decpot), size(state%solute%decpot))
             state%solute%decpot(i) = config%solute%decpot(i)
          end do
       end if
       if (allocated(config%solute%fdepth)) then
-         do i = 1, min(size(config%solute%fdepth), size(fdepth))
-            fdepth(i)              = config%solute%fdepth(i)
+         do i = 1, min(size(config%solute%fdepth), size(state%solute%fdepth))
             state%solute%fdepth(i) = config%solute%fdepth(i)
          end do
       end if
@@ -1080,11 +1070,9 @@ contains
          allocate(state%solute%cseeptab(2*mabbc)); state%solute%cseeptab = 0.0d0
       end if
       if (allocated(config%solute%cseeptab)) then
-         do i = 1, min(size(config%solute%cseeptab, 1), size(cseeptab)/2)
-            cseeptab(2*i - 1)              = config%solute%cseeptab(i, 1)   ! time
-            cseeptab(2*i)                  = config%solute%cseeptab(i, 2)
-            state%solute%cseeptab(2*i - 1) = config%solute%cseeptab(i, 1)
-            state%solute%cseeptab(2*i)     = config%solute%cseeptab(i, 2)
+         do i = 1, min(size(config%solute%cseeptab, 1), size(state%solute%cseeptab)/2)
+            state%solute%cseeptab(2*i - 1) = config%solute%cseeptab(i, 1)   ! time
+            state%solute%cseeptab(2*i)     = config%solute%cseeptab(i, 2)   ! concentration
          end do
       end if
 

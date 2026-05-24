@@ -150,7 +150,7 @@
       ! [SS-GR-FINAL D1] swafo/swaun/swini/swbal/swblc/swwba/swsba zero-fills dropped — declarations retired
       ! [GR-BH Task 36] swbotb retired — seeded via state%soilwater%swbotb_runtime in swap_mod.f90
       ! swbotb             = 0
-      swbotbc            = 0 
+      ! [GR-SOL 2026-05-24] swbotbc retired — see state%solute%swbotbc
       swbotb3Impl        = 0 
       ! [GR-BND 2026-05-23] SwBotb3ResVert retired — see state%soilwater%swbotb3resvert
       swcfbs             = 0 
@@ -200,7 +200,7 @@
       ! crunoff            = 0.0d0
       ! crunoffCN          = 0.0d0
       ! crunon             = 0.0d0
-      cseeptab           = 0.0d0
+      ! [GR-SOL 2026-05-24] cseeptab retired — see state%solute%cseeptab
       ! [SS-BND B-2.7] deepgw retired — soilwater_init handles init via state%soilwater
       ! deepgw             = 0.0d0
       ! [SS-SWC] dimoca retired — soilwater_init handles init via state%soilwater%dimoca
@@ -424,48 +424,48 @@
       ! [SS-TC] flsnow retired to state%timecontrol%flSnow (ADR 0041)
 
 ! --- solute variables
-      nconc              = 0
+      ! [GR-SOL 2026-05-24] nconc retired — see state%solute%nconc
       ! [SS-GR-FINAL D1] sba zero-fill dropped — declaration retired 
-      swbr               = 0 
+      ! [GR-SOL 2026-05-24] swbr retired — see state%solute%swbr
       swsolu             = 0 
       ! [SS-GR-CROPRT A1] AgeGwl1m zero-fill dropped — declaration retired (ADR 0032)
-      bexp               = 0.0d0 
-      cdrain             = 0.0d0 
-      cirr               = 0.0d0 
+      ! [GR-SOL 2026-05-24] bexp retired — see state%solute%bexp
+      ! [GR-SOL 2026-05-24] cdrain retired — see state%solute%cdrain
+      ! [GR-SOL 2026-05-24] cirr retired — see state%solute%cirr
       cml                = 0.0d0 
       cmsy               = 0.0d0 
 !     cpond              = 0.0d0   ! moved to solute_state_t (ADR 0032)
-      cpre               = 0.0d0
-      cref               = 0.0d0
+      ! [GR-SOL 2026-05-24] cpre retired — see state%solute%cpre
+      ! [GR-SOL 2026-05-24] cref retired — see state%solute%cref
 !     cseep              = 0.0d0   ! moved to solute_state_t (ADR 0032)
 !     csurf              = 0.0d0   ! moved to solute_state_t (ADR 0032)
-      daquif             = 0.0d0 
-      ddif               = 0.0d0 
-      decpot             = 0.0d0 
-      decsat             = 0.0d0 
+      ! [GR-SOL 2026-05-24] daquif retired — see state%solute%daquif
+      ! [GR-SOL 2026-05-24] ddif retired — see state%solute%ddif
+      ! [GR-SOL 2026-05-24] decpot retired — see state%solute%decpot
+      ! [GR-SOL 2026-05-24] decsat retired — see state%solute%decsat
 !     dectot             = 0.0d0   ! moved to solute_state_t (ADR 0032)
 !     imdectot           = 0.0d0   ! moved to solute_state_t (ADR 0032)
-      dtsolu             = 0.0d0 
-      fdepth             = 0.0d0 
-      frexp              = 0.0d0 
-      gampar             = 0.0d0 
+      ! [GR-SOL 2026-05-24] dtsolu retired — see state%solute%dtsolu
+      ! [GR-SOL 2026-05-24] fdepth retired — see state%solute%fdepth
+      ! [GR-SOL 2026-05-24] frexp retired — see state%solute%frexp
+      ! [GR-SOL 2026-05-24] gampar retired — see state%solute%gampar
       ! [SS-GR-CROPRT A1] icAgeBot/icAgeDra/icAgeRot/icAgeSur zero-fills dropped — declarations retired (ADR 0032)
-      isqbot             = 0.0d0 
-      isqtop             = 0.0d0 
-      kf                 = 0.0d0 
-      kfsat              = 0.0d0 
-      ldis               = 0.0d0 
-      poros              = 0.0d0 
-      rottot             = 0.0d0 
+      ! [GR-SOL 2026-05-24] isqbot retired — see state%solute%isqbot
+      ! [GR-SOL 2026-05-24] isqtop retired — see state%solute%isqtop
+      ! [GR-SOL 2026-05-24] kf retired — see state%solute%kf
+      ! [GR-SOL 2026-05-24] kfsat retired — see state%solute%kfsat
+      ! [GR-SOL 2026-05-24] ldis retired — see state%solute%ldis
+      ! [GR-SOL 2026-05-24] poros retired — see state%solute%poros
+      ! [GR-SOL 2026-05-24] rottot retired — see state%solute%rottot
 !     imrottot           = 0.0d0   ! moved to solute_state_t (ADR 0032)
-      rtheta             = 0.0d0 
+      ! [GR-SOL 2026-05-24] rtheta retired — see state%solute%rtheta
 !     samcra             = 0.0d0   ! moved to solute_state_t (ADR 0032)
-      samini             = 0.0d0
+      ! [GR-SOL 2026-05-24] samini retired — see state%solute%samini
 !     sampro             = 0.0d0   ! moved to solute_state_t (ADR 0032)
 !     solbal             = 0.0d0   ! moved to solute_state_t (ADR 0032)
 !     sqbot              = 0.0d0   ! moved to solute_state_t (ADR 0032)
 !     imsqbot            = 0.0d0   ! moved to solute_state_t (ADR 0032)
-      sqdra              = 0.0d0
+      ! [GR-SOL 2026-05-24] sqdra retired — see state%solute%sqdra
 !     imsqdra            = 0.0d0   ! moved to solute_state_t (ADR 0032)
 !     sqirrig            = 0.0d0   ! moved to solute_state_t (ADR 0032)
 !     imsqirrig          = 0.0d0   ! moved to solute_state_t (ADR 0032)
@@ -473,7 +473,7 @@
 !     imsqprec           = 0.0d0   ! moved to solute_state_t (ADR 0032)
 !     sqrap              = 0.0d0   ! moved to solute_state_t (ADR 0032)
 !     sqsur              = 0.0d0   ! moved to solute_state_t (ADR 0032)
-      tscf               = 0.0d0 
+      ! [GR-SOL 2026-05-24] tscf retired — see state%solute%tscf
       zc                 = 0.0d0 
       ! [SS-TC] flsolute retired to state%timecontrol%flSolute (ADR 0041)
       ! [SS-GR-CROPRT A1] flAgeTracer zero-fill dropped — declaration retired (ADR 0032)

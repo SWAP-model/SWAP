@@ -44,8 +44,9 @@
       use variables, only: &                                               ! [SS-GR-FINAL B6] residuals — all DEFERRED
                             ! DEFERRED: gird/irrigevent/schedule/swirfix — irrigation schedule state; Phase C3
                             irrigevent, swirfix,                     &  ! gird/schedule retired
-                            ! DEFERRED: irdate/nirri/irdepth/irconc/irtype/cirr — irrigation event arrays; Phase C3
-                            irdate, nirri, irdepth, irconc, irtype, cirr,  &
+                            ! DEFERRED: irdate/nirri/irdepth/irconc/irtype — irrigation event arrays; Phase C3
+                            ! [GR-SOL 2026-05-24] cirr retired — see state%solute%cirr
+                            irdate, nirri, irdepth, irconc, irtype,        &
                             ! DEFERRED: isua/noddrz/swsolu/swcirrthres — crop/soil state; Phase C3; dvs/rd retired
                             isua, noddrz, swsolu, swcirrthres,    &
                             ! DEFERRED: cirrthres/perirrsurp/raithreshold/dayfix — irrigation config; Phase C3
@@ -121,7 +122,7 @@
          if (swirfix .eq. 1) then
             if (abs(irdate(nirri) - tc_t1900) .lt. 1.d-3) then  ! TC-12
                state%crop%gird = irdepth(nirri)
-               cirr = irconc(nirri); state%solute%cirr = cirr
+               state%solute%cirr = irconc(nirri)
                isua = irtype(nirri)
                state%atmosphere%isua = isua   ! [SS-GR-ATM A5.3] runtime dual-write
                nirri = nirri + 1
@@ -159,7 +160,7 @@
          end if
 
          if (state%crop%common%schedule.eq.1 .and. irrigevent.eq.0 .and. flCropCalendar .and. .not. flCropHarvest .and. flIrriTime) then
-            cirr = cirrs; state%solute%cirr = cirr
+            state%solute%cirr = cirrs
             isua = isuas
             state%atmosphere%isua = isua   ! [SS-GR-ATM A5.3] runtime dual-write
 

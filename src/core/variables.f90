@@ -1168,57 +1168,57 @@
       ! logical   flsnow             ! moved to state%timecontrol%flSnow
 
 ! --- solute variables
-      integer   nconc              ! Number of initial solute concentrations as provided in the input
+      ! [GR-SOL 2026-05-24] nconc retired — see state%solute%nconc
       ! [SS-GR-FINAL D1] sba retired — SBA output deleted; 0 consumers
-      integer   swbr               ! Switch to consider mixed reservoir for solute breakthrough in the saturated zone: 0 = no; 1 = yes
-      integer   swbotbc            ! Switch for bottom boundary condition of solute-concentration (see *.SWP input file for overview)
+      ! [GR-SOL 2026-05-24] swbr retired — see state%solute%swbr
+      ! [GR-SOL 2026-05-24] swbotbc retired — see state%solute%swbotbc
       integer   swsolu             ! Switch for simulation of solute transport: 0 = no; 1 = yes
       ! [SS-GR-FINAL D3] swsp retired — 0 consumers; sorption switch never read outside init/c2v
       ! [SS-GR-CROPRT A1] AgeGwl1m retired — ADR 0032 (AgeTracer dead-code)
-      real(8)   bexp               ! Exponent in decomposition reduction factor due to dryness (-)
-      real(8)   cdrain             ! Mean solute concentration in aquifer or drainage system (M/L3 water)  [AgeTracer dead-code dep, keep until agetracer_state_t]
-      real(8)   cirr               ! Solute concentration (M/L3) in irrigation water
+      ! [GR-SOL 2026-05-24] bexp retired — see state%solute%bexp
+      ! [GR-SOL 2026-05-24] cdrain retired — see state%solute%cdrain (AgeTracer dead-body deleted)
+      ! [GR-SOL 2026-05-24] cirr retired — see state%solute%cirr
       real(8)   cml(macp)          ! Array with solute concentration (M/L3 water) in mobile region
       real(8)   cmsy(macp)         ! Array with dissolved + adsorbed solute concentration (M/L3 soil volume) in mobile region
 ! real(8)   cpond              ! Moved to solute_state_t%cpond (ADR 0032)
-      real(8)   cpre               ! Solute concentration (M/L3) in precipitation
-      real(8)   cref               ! Reference solute concentration (M/L3) for Freundlich adsorption
+      ! [GR-SOL 2026-05-24] cpre retired — see state%solute%cpre
+      ! [GR-SOL 2026-05-24] cref retired — see state%solute%cref
 ! real(8)   cseep              ! Moved to solute_state_t%cseep (ADR 0032)
-      real(8)   cseeptab(mabbc*2)  ! Array with Mean solute concentration in upward seepage water at bottom of profile (M/L3 water) as function of time (T)
+      ! [GR-SOL 2026-05-24] cseeptab retired — see state%solute%cseeptab
 ! real(8)   csurf              ! Moved to solute_state_t%csurf (ADR 0032)
-      real(8)   daquif             ! Thickness of saturated aquifer (L) to calculate solute breakthrough to surface water
-      real(8)   ddif               ! Molecular diffusion coefficient (L2/T)
-      real(8)   decpot(maho)       ! Array with Potential decomposition rate (/T) for each soil layer
-      real(8)   decsat             ! Decomposition rate in aquifer (/T)
+      ! [GR-SOL 2026-05-24] daquif retired — see state%solute%daquif
+      ! [GR-SOL 2026-05-24] ddif retired — see state%solute%ddif
+      ! [GR-SOL 2026-05-24] decpot retired — see state%solute%decpot
+      ! [GR-SOL 2026-05-24] decsat retired — see state%solute%decsat
 ! real(8)   dectot             ! Moved to solute_state_t%dectot (ADR 0032)
 ! real(8)   imdectot           ! Moved to solute_state_t%imdectot (ADR 0032)
-      real(8)   dtsolu             ! Maximum time step (T) for accurate numerical solution of solute transport equation  [AgeTracer dead-code dep, keep until agetracer_state_t]
-      real(8)   fdepth(maho)       ! Array with reduction factor for decomposition (-) for each soil layer
-      real(8)   frexp              ! Array with Freundlich exponent (-) for solute adsorption
-      real(8)   gampar             ! Reduction factor for decomposition due to low temperatures (/C)
+      ! [GR-SOL 2026-05-24] dtsolu retired — see state%solute%dtsolu (AgeTracer dead-body deleted)
+      ! [GR-SOL 2026-05-24] fdepth retired — see state%solute%fdepth
+      ! [GR-SOL 2026-05-24] frexp retired — see state%solute%frexp
+      ! [GR-SOL 2026-05-24] gampar retired — see state%solute%gampar
       ! [SS-GR-CROPRT A1] icAgeBot retired — ADR 0032 (AgeTracer dead-code)
       ! [SS-GR-CROPRT A1] icAgeDra retired — ADR 0032 (AgeTracer dead-code)
       ! [SS-GR-CROPRT A1] icAgeRot retired — ADR 0032 (AgeTracer dead-code)
       ! [SS-GR-CROPRT A1] icAgeSur retired — ADR 0032 (AgeTracer dead-code)
-      real(8)   isqbot             ! Solute flux at the bottom of the soil column (M/L2/T)  [AgeTracer dead-code dep, keep until agetracer_state_t]
-      real(8)   isqtop             ! Solute flux through the soil top surface (M/L2/T)  [AgeTracer dead-code dep, keep until agetracer_state_t]
-      real(8)   kf(maho)           ! Array with Freundlich coefficient (L3/M) for solute adsorption for each soil layer
-      real(8)   kfsat              ! Linear adsorption coefficient in aquifer (L3/M)
-      real(8)   ldis(maho)         ! Array with Solute dispersion length (L) for each soil layer
-      real(8)   poros              ! Porosity of aquifer (-) to calculate solute breakthrough
-      real(8)   rottot             ! Cumulative amount of solutes (M/L2) extracted by plant roots  [AgeTracer dead-code dep, keep until agetracer_state_t]
+      ! [GR-SOL 2026-05-24] isqbot retired — see state%solute%isqbot (AgeTracer dead-body deleted)
+      ! [GR-SOL 2026-05-24] isqtop retired — see state%solute%isqtop (AgeTracer dead-body deleted)
+      ! [GR-SOL 2026-05-24] kf retired — see state%solute%kf
+      ! [GR-SOL 2026-05-24] kfsat retired — see state%solute%kfsat
+      ! [GR-SOL 2026-05-24] ldis retired — see state%solute%ldis
+      ! [GR-SOL 2026-05-24] poros retired — see state%solute%poros
+      ! [GR-SOL 2026-05-24] rottot retired — see state%solute%rottot (AgeTracer dead-body deleted)
 ! real(8)   imrottot           ! Moved to solute_state_t%imrottot (ADR 0032)
-      real(8)   rtheta             ! Minimum volumetric water content (-) for potential decomposition
+      ! [GR-SOL 2026-05-24] rtheta retired — see state%solute%rtheta
       ! [GR-CROPWS] salthead retired — see state%crop%common%salthead
       ! [GR-CROPWS] saltmax retired — see state%crop%common%saltmax
       ! [GR-CROPWS] saltslope retired — see state%crop%common%saltslope
 ! real(8)   samcra             ! Moved to solute_state_t%samcra (ADR 0032)
-      real(8)   samini             ! Total amount of solutes (M/L2) in soil profile at start of current balance period  [AgeTracer dead-code dep, keep until agetracer_state_t]
+      ! [GR-SOL 2026-05-24] samini retired — see state%solute%samini (AgeTracer dead-body deleted)
 ! real(8)   sampro             ! Moved to solute_state_t%sampro (ADR 0032)
 ! real(8)   solbal             ! Moved to solute_state_t%solbal (ADR 0032)
 ! real(8)   sqbot              ! Moved to solute_state_t%sqbot (ADR 0032)
 ! real(8)   imsqbot            ! Moved to solute_state_t%imsqbot (ADR 0032)
-      real(8)   sqdra              ! Total amount of solutes (M/L2) transported to drainage canals  [AgeTracer dead-code dep, keep until agetracer_state_t]
+      ! [GR-SOL 2026-05-24] sqdra retired — see state%solute%sqdra (AgeTracer dead-body deleted)
 ! real(8)   imsqdra            ! Moved to solute_state_t%imsqdra (ADR 0032)
 ! real(8)   sqirrig            ! Moved to solute_state_t%sqirrig (ADR 0032)
 ! real(8)   imsqirrig          ! Moved to solute_state_t%imsqirrig (ADR 0032)
@@ -1226,7 +1226,7 @@
 ! real(8)   imsqprec           ! Moved to solute_state_t%imsqprec (ADR 0032)
 ! real(8)   sqrap              ! Moved to solute_state_t%sqrap (ADR 0032)
 ! real(8)   sqsur              ! Moved to solute_state_t%sqsur (ADR 0032)
-      real(8)   tscf               ! Relative uptake of solutes by roots (-)
+      ! [GR-SOL 2026-05-24] tscf retired — see state%solute%tscf
       real(8)   zc(macp)           ! Array with soil depths (L) used to specify initial solute concentrations
       ! [SS-TC] retired 2026-05-12 — moved to state%timecontrol%flSolute (ADR 0041)
       ! logical   flsolute           ! moved to state%timecontrol%flSolute
