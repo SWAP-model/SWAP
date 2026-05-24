@@ -36,6 +36,7 @@ contains
 
       call get_optional_int_with_default(sec, 'swsophy', config%swsophy, 0, 'soil.swsophy', errors)
       call get_optional_int_with_default(sec, 'swhyst',  config%swhyst,  0, 'soil.swhyst',  errors)
+      call get_optional_real_with_default(sec, 'tau', config%tau, 0.0_real64, 'soil.tau', errors)
       call get_optional_int_with_default(sec, 'swinco',  config%swinco,  1, 'soil.swinco',  errors)
       call get_optional_int_with_default(sec, 'swmacro', config%swmacro, 0, 'soil.swmacro', errors)
       call get_optional_int_with_default(sec, 'swscal',  config%swscal,  0, 'soil.swscal',  errors)

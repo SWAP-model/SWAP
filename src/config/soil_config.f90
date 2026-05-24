@@ -110,6 +110,10 @@ module soil_config_mod
    type :: soil_config_t
       integer :: swsophy = 0
       integer :: swhyst  = 0
+      ! Minimum pressure-head difference (cm) to flip wetting↔drying branch
+      ! in the hysteresis routine. Only consumed when swhyst /= 0. Default 0
+      ! retains legacy parity (legacy globals were also zero-initialised).
+      real(real64) :: tau = 0.0_real64
       integer :: swinco  = 1
       integer :: swmacro = 0
       integer :: swscal  = 0

@@ -325,7 +325,7 @@ module legacy_state_mod
       real(real64), allocatable :: sptab(:,:,:)  !! Soil Physical functions (h,theta,k,dthetadh,dkdtheta) tabulated for each model compartment
       real(real64), allocatable :: sptablay(:,:,:)  !! Soil Physical functions (h,theta,k,dthetadh,dkdtheta) tabulated for each soil layer
       real(real64) :: StepHr  !! Maximum difference of Hroot and Hxylem between iterations; convergence criterium  (L)
-      real(real64) :: tau  !! Minimum pressure head difference (L) to change from wetting to drying in case of hysteresis
+      ! [GR-SOIL 2026-05-24] tau retired — orphan stub; read via state%cfg%soil%tau.
       real(real64), allocatable :: twilt(:)  !! Pressure head of a compartment at wilting point (L)
       real(real64), allocatable :: zi(:)  !! Array with soil depths (L) used to specify initial soil water pressure heads
       ! [GR-DRA 2026-05-23] zintf retired — see state%drainage%zintf

@@ -349,7 +349,7 @@
       ! [SS-ATM A-2.6] spev retired to state%atmosphere%spev
       sptab              = 0.0d0  
       sptablay           = 0.0d0 
-      tau                = 0.0d0 
+      ! [GR-SOIL 2026-05-24] tau retired — read via state%cfg%soil%tau.
       ! [SS-SWC] theta/thetar/thetas/thetm1/thetsl/volact/volini/volm1 retired — soilwater_init handles init via state%soilwater
       ! theta              = 0.0d0
       ! thetar             = 0.0d0

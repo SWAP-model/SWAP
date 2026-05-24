@@ -1056,7 +1056,7 @@
       ! [GR-CROP-DVS] taccur retired — see state%cfg%simulation%numerical%taccur
       ! [SS-CRP] retired 2026-05-11 — moved to state%soilwater%Tactual (ADR 0036)
       ! real(8)   Tactual            ! Actual transpiration at former iteration in JongvanLier (cm/d)
-      real(8)   tau                ! Minimum pressure head difference (L) to change from wetting to drying in case of hysteresis
+      ! [GR-SOIL 2026-05-24] tau retired — read via state%cfg%soil%tau (hysteresis-only).
       ! [SS-SWC] retired 2026-05-12 — moved to state%soilwater (ADR 0038)
       ! real(8)   theta(macp)        ! Volumic soil water content (-)
       ! real(8)   thetar(macp)       ! Residual volumic soil water content (-) for each numerical compartment

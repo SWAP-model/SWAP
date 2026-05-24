@@ -1261,8 +1261,9 @@ contains
    !! @endnote
    !!
    subroutine hysteresis(state)
-      ! Stragglers still bare-global: tau (scalar) + paramvg (per-layer VG table).
-      use variables,             only: tau, paramvg
+      ! [GR-SOIL 2026-05-24] tau → state%cfg%soil%tau (direct config read).
+      ! [GR-SOIL 2026-05-24] paramvg → state%cfg%soil%hydraulics (direct read; the
+      !   8 layer-keyed VG fields used here have config homes).
       use soilhydraulics_utils,  only: moiscap, prhead
       use swap_array_dimensions, only: macp
       use swap_state_mod,        only: swap_state_t
@@ -1274,9 +1275,12 @@ contains
       integer :: node, lay, indtem(macp)
       real(8) :: delp, sew, sed, fvalue
       real(8) :: thetar(macp), thetas(macp), alfamg(macp)
+      real(8) :: pvg_thetar, pvg_thetas, pvg_alfa, pvg_npar, pvg_npar_m, pvg_alfa_wet
       type(vanGenuchten_params_t) :: vg_hys
 
-      associate (mesh => state%mesh, soil => state%soilwater, time => state%timecontrol)
+      associate (mesh => state%mesh, soil => state%soilwater, time => state%timecontrol, &
+                 hyd => state%cfg%soil%hydraulics, &
+                 tau => state%cfg%soil%tau)
 
          ! Check for hysteretic reversal.
          do node = 1, mesh%numnod
@@ -1293,26 +1297,34 @@ contains
          do 100 node = 1, mesh%numnod
             lay = mesh%layer(node)
 
+            ! [GR-SOIL 2026-05-24] Layer-keyed VG params read directly from config.
+            pvg_thetar   = hyd%ores(lay)            ! paramvg(1, lay)
+            pvg_thetas   = hyd%osat(lay)            ! paramvg(2, lay)
+            pvg_alfa     = hyd%alfa(lay)            ! paramvg(4, lay)  drying alpha
+            pvg_npar     = hyd%npar(lay)            ! paramvg(6, lay)
+            pvg_npar_m   = 1.0d0 - 1.0d0/pvg_npar   ! paramvg(7, lay)
+            pvg_alfa_wet = hyd%alfaw(lay)           ! paramvg(8, lay) when swhyst /= 0
+
             ! No change.
             if (indtem(node) .eq. soil%indeks(node) .or.              &
-         &       abs(paramvg(4, lay) - paramvg(8, lay)) .lt. 1.d-4) goto 100
+         &       abs(pvg_alfa - pvg_alfa_wet) .lt. 1.d-4) goto 100
 
             ! Relative saturation.
-            sew = (1.0d0 + (paramvg(8, lay)*(-soil%h(node)))**paramvg(6, lay))**(-paramvg(7, lay))
-            sed = (1.0d0 + (paramvg(4, lay)*(-soil%h(node)))**paramvg(6, lay))**(-paramvg(7, lay))
+            sew = (1.0d0 + (pvg_alfa_wet*(-soil%h(node)))**pvg_npar)**(-pvg_npar_m)
+            sed = (1.0d0 + (pvg_alfa*(-soil%h(node)))**pvg_npar)**(-pvg_npar_m)
 
             ! Flip the scanning index.
             soil%indeks(node) = -1*soil%indeks(node)
 
             if (soil%indeks(node) .eq. 1) then
                ! Wetting branch.
-               alfamg(node) = paramvg(8, lay)
-               thetas(node) = paramvg(2, lay)
+               alfamg(node) = pvg_alfa_wet
+               thetas(node) = pvg_thetas
                thetar(node) = (soil%theta(node) - thetas(node)*sew)/(1.0d0 - sew)
 
                fvalue = thetar(node)
-               if (thetar(node) .lt. paramvg(1, lay)) thetar(node) = paramvg(1, lay)
-               if (thetar(node) .gt. paramvg(2, lay)) thetar(node) = paramvg(2, lay)
+               if (thetar(node) .lt. pvg_thetar) thetar(node) = pvg_thetar
+               if (thetar(node) .gt. pvg_thetas) thetar(node) = pvg_thetas
                soil%vg_params(node)%alpha  = alfamg(node)
                soil%vg_params(node)%thetar = thetar(node)
                soil%thetar(node)           = thetar(node)
@@ -1329,13 +1341,13 @@ contains
                end if
             else
                ! Drying branch.
-               alfamg(node) = paramvg(4, lay)
-               thetar(node) = paramvg(1, lay)
+               alfamg(node) = pvg_alfa
+               thetar(node) = pvg_thetar
                thetas(node) = thetar(node) + (soil%theta(node) - thetar(node))/sed
 
                fvalue = thetas(node)
-               if (thetas(node) .lt. paramvg(1, lay)) thetas(node) = paramvg(1, lay)
-               if (thetas(node) .gt. paramvg(2, lay)) thetas(node) = paramvg(2, lay)
+               if (thetas(node) .lt. pvg_thetar) thetas(node) = pvg_thetar
+               if (thetas(node) .gt. pvg_thetas) thetas(node) = pvg_thetas
                soil%vg_params(node)%alpha  = alfamg(node)
                soil%vg_params(node)%thetar = thetar(node)
                soil%thetar(node)           = thetar(node)
