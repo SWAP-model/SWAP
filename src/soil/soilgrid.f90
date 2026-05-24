@@ -22,114 +22,111 @@ contains
       !! [GR-BH Task 35] signature gained state arg; mesh globals written directly
       !! to state%mesh%X. Legacy globals numlay/botcom/inpola/inpolb/nod1lay kept.
       subroutine calcgrid(state)
-
-      ! [SS-GR-FINAL B9] DEFERRED: all symbols — soil discretisation config; Phase C3
-      !   nsublay/hcomp/hsublay/ncomp/isoillay — soil layer subdivision; Phase C3
-      !   numlay/botcom — layer count / bottom compartment; Phase C3
-      ! [GR-SOL 2026-05-24] inpola/inpolb retired — written to state%mesh
-      !   nod1lay — first-node tables; Phase C3
+      ! Soil discretisation config (per-sublayer arrays); still bare globals.
       use variables, only: nsublay, hcomp, hsublay, ncomp, isoillay, &
                            numlay, botcom, nod1lay
-      use swap_state_mod, only: swap_state_t
+      use swap_state_mod,        only: swap_state_t
       use swap_array_dimensions, only: macp
       implicit none
 
       type(swap_state_t), intent(inout) :: state
 
-      integer i,j,lay,node,layold
-      character(len=200) messag
-      character(len=11) tmp
+      integer :: i, j, lay, node, layold
+      character(len=200) :: messag
+      character(len=11)  :: tmp
 
-      ! check correct input of number and height of soil compartments
-      do i = 1,nsublay
-        if (abs(ncomp(i)*hcomp(i) - hsublay(i)) .gt. 1.d-5) then
-          ! error in input data
-          write(tmp,'(i11)') i
-          tmp = adjustl(tmp)
-          messag ='At the soil water section, part 4, at layer '//      &
-     &   trim(tmp)//' the height of this soil layer hsublay corresponds'&
-     &    //' not to the product of height and number of compartments'
-          call fatalerr_collected ('calcgrid',messag)
-        endif
-      end do
+      associate (mesh => state%mesh)
 
-      ! Allocate state%mesh arrays sized for macp (upper bound; trimmed below).
-      if (allocated(state%mesh%dz))     deallocate(state%mesh%dz)
-      if (allocated(state%mesh%z))      deallocate(state%mesh%z)
-      if (allocated(state%mesh%disnod)) deallocate(state%mesh%disnod)
-      if (allocated(state%mesh%ztopcp)) deallocate(state%mesh%ztopcp)
-      if (allocated(state%mesh%zbotcp)) deallocate(state%mesh%zbotcp)
-      if (allocated(state%mesh%layer))  deallocate(state%mesh%layer)
-      if (allocated(state%mesh%inpola)) deallocate(state%mesh%inpola)
-      if (allocated(state%mesh%inpolb)) deallocate(state%mesh%inpolb)
-      allocate(state%mesh%dz(macp))
-      allocate(state%mesh%z(macp))
-      allocate(state%mesh%disnod(macp+1))
-      allocate(state%mesh%ztopcp(macp))
-      allocate(state%mesh%zbotcp(macp))
-      allocate(state%mesh%layer(macp))
-      allocate(state%mesh%inpola(macp));   state%mesh%inpola = 0.0d0
-      allocate(state%mesh%inpolb(macp));   state%mesh%inpolb = 0.0d0
+         ! Check correct input of number and height of soil compartments.
+         do i = 1, nsublay
+            if (abs(ncomp(i)*hcomp(i) - hsublay(i)) .gt. 1.d-5) then
+               write(tmp, '(i11)') i
+               tmp = adjustl(tmp)
+               messag = 'At the soil water section, part 4, at layer '//   &
+            &           trim(tmp)//' the height of this soil layer hsublay corresponds'// &
+            &           ' not to the product of height and number of compartments'
+               call fatalerr_collected('calcgrid', messag)
+            end if
+         end do
 
-      ! position of nodal points and distances between them; also layer of each node
-      node = 0
-      do i = 1,nsublay
-        do j = 1,ncomp(i)
-          node = node + 1
-          state%mesh%dz(node) = hcomp(i)
-          if (node .eq. 1) then
-            state%mesh%z(node)      = - 0.5d0 * state%mesh%dz(node)
-            state%mesh%disnod(node) = - state%mesh%z(node)
-            state%mesh%layer(node)  = isoillay(i)
-          else
-            state%mesh%z(node)      = state%mesh%z(node-1) - 0.5d0*(state%mesh%dz(node-1)+state%mesh%dz(node))
-            state%mesh%disnod(node) = state%mesh%z(node-1) - state%mesh%z(node)
-            state%mesh%layer(node)  = isoillay(i)
-          endif
-        end do
-      end do
-      state%mesh%numnod = node
-      state%mesh%disnod(state%mesh%numnod+1) = 0.5d0 * state%mesh%dz(state%mesh%numnod)
+         ! Allocate mesh arrays sized for macp (upper bound; trimmed below).
+         if (allocated(mesh%dz))     deallocate(mesh%dz)
+         if (allocated(mesh%z))      deallocate(mesh%z)
+         if (allocated(mesh%disnod)) deallocate(mesh%disnod)
+         if (allocated(mesh%ztopcp)) deallocate(mesh%ztopcp)
+         if (allocated(mesh%zbotcp)) deallocate(mesh%zbotcp)
+         if (allocated(mesh%layer))  deallocate(mesh%layer)
+         if (allocated(mesh%inpola)) deallocate(mesh%inpola)
+         if (allocated(mesh%inpolb)) deallocate(mesh%inpolb)
+         allocate(mesh%dz(macp))
+         allocate(mesh%z(macp))
+         allocate(mesh%disnod(macp+1))
+         allocate(mesh%ztopcp(macp))
+         allocate(mesh%zbotcp(macp))
+         allocate(mesh%layer(macp))
+         allocate(mesh%inpola(macp));   mesh%inpola = 0.0d0
+         allocate(mesh%inpolb(macp));   mesh%inpolb = 0.0d0
 
-      ! store top and bottom depths of each compartment (2019-05-17, MH)
-      do i = 1, state%mesh%numnod
-         if (i == 1) then
-            state%mesh%ztopcp(i) = 0.0d0
-            state%mesh%zbotcp(i) = -state%mesh%dz(i)
-         else
-            state%mesh%ztopcp(i) = state%mesh%zbotcp(i-1)
-            state%mesh%zbotcp(i) = state%mesh%zbotcp(i-1) - state%mesh%dz(i)
-         end if
-      end do
+         ! Nodal positions and inter-node distances; layer of each node.
+         node = 0
+         do i = 1, nsublay
+            do j = 1, ncomp(i)
+               node = node + 1
+               mesh%dz(node) = hcomp(i)
+               if (node .eq. 1) then
+                  mesh%z(node)      = -0.5d0 * mesh%dz(node)
+                  mesh%disnod(node) = -mesh%z(node)
+                  mesh%layer(node)  = isoillay(i)
+               else
+                  mesh%z(node)      = mesh%z(node-1) - 0.5d0*(mesh%dz(node-1) + mesh%dz(node))
+                  mesh%disnod(node) = mesh%z(node-1) - mesh%z(node)
+                  mesh%layer(node)  = isoillay(i)
+               end if
+            end do
+         end do
+         mesh%numnod = node
+         mesh%disnod(mesh%numnod + 1) = 0.5d0 * mesh%dz(mesh%numnod)
 
-      ! determine bottom compartment of each soil layer
-      layold = 1
-      do node = 1, state%mesh%numnod
-        if (state%mesh%layer(node) .gt. layold) then
-          botcom(layold) = node - 1
-          layold = layold + 1
-        endif
-      end do
-      numlay = layold
-      botcom(numlay) = state%mesh%numnod
+         ! Top/bottom depths per compartment.
+         do i = 1, mesh%numnod
+            if (i == 1) then
+               mesh%ztopcp(i) = 0.0d0
+               mesh%zbotcp(i) = -mesh%dz(i)
+            else
+               mesh%ztopcp(i) = mesh%zbotcp(i-1)
+               mesh%zbotcp(i) = mesh%zbotcp(i-1) - mesh%dz(i)
+            end if
+         end do
 
-      ! linear interpolation values between nodes (mesh-derived weights)
-      state%mesh%inpolb(1) = 0.5d0*state%mesh%dz(1)/state%mesh%disnod(2)
-      do node = 2, state%mesh%numnod-1
-        state%mesh%inpola(node) = 0.5d0*state%mesh%dz(node)/state%mesh%disnod(node)
-        state%mesh%inpolb(node) = 0.5d0*state%mesh%dz(node)/state%mesh%disnod(node+1)
-      end do
-      state%mesh%inpola(state%mesh%numnod) = 0.5d0*state%mesh%dz(state%mesh%numnod)/state%mesh%disnod(state%mesh%numnod)
+         ! Bottom compartment of each soil layer.
+         layold = 1
+         do node = 1, mesh%numnod
+            if (mesh%layer(node) .gt. layold) then
+               botcom(layold) = node - 1
+               layold = layold + 1
+            end if
+         end do
+         numlay = layold
+         botcom(numlay) = mesh%numnod
 
-      ! find first Node of the Layer
-      do lay = 1,numlay
-        Node = 1
-        do while(state%mesh%layer(Node).ne.lay)
-           Node = Node + 1
-        enddo
-        nod1lay(lay) = node
-      enddo
+         ! Linear-interpolation weights between nodes (mesh-derived).
+         mesh%inpolb(1) = 0.5d0*mesh%dz(1)/mesh%disnod(2)
+         do node = 2, mesh%numnod - 1
+            mesh%inpola(node) = 0.5d0*mesh%dz(node)/mesh%disnod(node)
+            mesh%inpolb(node) = 0.5d0*mesh%dz(node)/mesh%disnod(node+1)
+         end do
+         mesh%inpola(mesh%numnod) = 0.5d0*mesh%dz(mesh%numnod)/mesh%disnod(mesh%numnod)
 
+         ! First node of each soil layer.
+         do lay = 1, numlay
+            Node = 1
+            do while (mesh%layer(Node) .ne. lay)
+               Node = Node + 1
+            end do
+            nod1lay(lay) = node
+         end do
+
+      end associate
 
       return
       end subroutine calcgrid
@@ -212,57 +209,37 @@ contains
                                   iqexcmtxdm1cpnew,iqexcmtxdm2cpnew,iqoutdrrapcpnew,   &
                                   vlmpstdm1new,vlmpstdm2new,state)
 
-      !---- Declarations
-      ! SS-SWST Phase 2 Task 5: inqdra read from state%surfacewater; dropped from use variables.
-      ! [SS-SWC S-2.12B] h/theta/inq/inqrot/IThetaBeg/cofgen/FrArMtrx retired — read via state%soilwater
-      ! [GR-BH C4] numnod/dz migrated to state%mesh
-      ! [GR-BH Audit 31] nrlevs retired from use-list; read via state%drainage%nrlevs
-      ! [SS-GR-FINAL B9] DEFERRED: all symbols — soil regrid + macropore state; Phase C3/D
-      !   SwDiscrvert/numlay/botcom — soil discretisation config; Phase C3
-      !   numnodNew/dzNew — regridding temporaries; Phase C3
-      !   DiPoCp — domain-based pore connectivity array; Phase C3
-      !   IAvFrMpWlWtDm1/2/IQExcMtxDm1/2Cp/IQOutDrRapCp/VlMpStDm1/2 — macropore retired-zero arrays; Phase D
-      use variables, only: SwDiscrvert, numlay, botcom,                                                               &
-                           numnodNew, dzNew, DiPoCp, IAvFrMpWlWtDm1, IAvFrMpWlWtDm2,                                &
+      use variables, only: SwDiscrvert, numlay, botcom,                              &
+                           numnodNew, dzNew, DiPoCp, IAvFrMpWlWtDm1, IAvFrMpWlWtDm2, &
                            IQExcMtxDm1Cp, IQExcMtxDm2Cp, IQOutDrRapCp, VlMpStDm1, VlMpStDm2
-      use soilhydraulics_utils, only: prhead
+      use soilhydraulics_utils,  only: prhead
       use swap_array_dimensions, only: macp, maho, madr
-      use swap_state_mod, only: swap_state_t
-      use hydraulic_params_mod, only: vanGenuchten_params_t
-      IMPLICIT NONE
+      use swap_state_mod,        only: swap_state_t
+      use hydraulic_params_mod,  only: vanGenuchten_params_t
+      implicit none
 
       type(swap_state_t), intent(in) :: state
 
-      ! global variables
-      integer   part,Swop
-      integer   botcomNew(maho)
-      real(8)   hNew(macp),thetaNew(macp),inqrotNew(macp),inqNew(macp+1),inqdraNew(Madr,macp),Tsoil(0:macp),TsoilNew(0:macp)
-      real(8)   IThetaBegNew(MaCp)
-      real(8)   DiPoCpNew(macp), IAvFrMpWlWtDm1New(macp) 
-      real(8)   IAvFrMpWlWtDm2New(macp), IQExcMtxDm1CpNew(macp)
-      real(8)   IQExcMtxDm2CpNew(macp), IQOutDrRapCpNew(macp)
-      real(8)   VlMpStDm1New(macp), VlMpStDm2New(macp)
+      integer :: part, Swop
+      integer :: botcomNew(maho)
+      real(8) :: hNew(macp), thetaNew(macp), inqrotNew(macp), inqNew(macp+1)
+      real(8) :: inqdraNew(Madr, macp), Tsoil(0:macp), TsoilNew(0:macp)
+      real(8) :: IThetaBegNew(MaCp)
+      real(8) :: DiPoCpNew(macp),       IAvFrMpWlWtDm1New(macp)
+      real(8) :: IAvFrMpWlWtDm2New(macp), IQExcMtxDm1CpNew(macp)
+      real(8) :: IQExcMtxDm2CpNew(macp), IQOutDrRapCpNew(macp)
+      real(8) :: VlMpStDm1New(macp),     VlMpStDm2New(macp)
 
-      ! local variables
-      integer   lay,node,nodeN,nodeNew(macp,2),i,level
-      real(8)   disnodNew(macp+1),total,zNew(macp)
+      integer :: lay, node, nodeN, nodeNew(macp, 2), i, level
+      real(8) :: disnodNew(macp+1), total, zNew(macp)
       type(vanGenuchten_params_t) :: vg_tentative
-      character(len=80) Message
+      character(len=80) :: Message
       character(len=*), parameter :: ModuleName = 'ConvertDiscrVert'
 
-      ! SAVE statement removed - local variables are temporary work arrays
-      ! ModuleName converted to parameter for proper initialization
-
-      ! [SS-SWC S-2.12B] read soil-water arrays via state%soilwater (associate)
-      ! [GR-BH C4] mesh globals aliased via state%mesh
-      associate( sw_h         => state%soilwater%h,                    &
-                 sw_theta     => state%soilwater%theta,                &
-                 sw_inq       => state%soilwater%inq,             &
-                 sw_inqrot    => state%soilwater%inqrot,          &
-                 sw_IThetaBeg => state%soilwater%IThetaBeg,       &
-                 sw_FrArMtrx  => state%soilwater%FrArMtrx,        &
-                 numnod       => state%mesh%numnod,                &  ! [GR-BH C4]
-                 dz           => state%mesh%dz                     )  ! [GR-BH C4]
+      associate (mesh => state%mesh,         &
+                 soil => state%soilwater,    &
+                 drai => state%drainage,     &
+                 surf => state%surfacewater)
 
       ! error in call of part
       if (part.lt.1 .or. part.gt.2) then
@@ -274,19 +251,19 @@ contains
 
       if(SwDiscrVert.eq.0) then
         ! Simply copy
-        numnodNew = numnod
+        numnodNew = mesh%numnod
         do lay = 1,numlay
           botcomNew(lay) = botcom(lay)
         enddo
         do node = 1,numnodNew
-          dzNew(node) = dz(node)
-          hNew(node) = sw_h(node)
-          thetaNew(node) = sw_theta(node)
-          IThetaBegNew(node) = sw_IThetaBeg(node)
-          inqNew(node) = sw_inq(node)
-          inqrotNew(node) = sw_inqrot(node)
-          do level=1,state%drainage%nrlevs   ! [GR-BH Audit 31]
-            inqdraNew(level,node) = state%surfacewater%inqdra(level,node)
+          dzNew(node) = mesh%dz(node)
+          hNew(node) = soil%h(node)
+          thetaNew(node) = soil%theta(node)
+          IThetaBegNew(node) = soil%IThetaBeg(node)
+          inqNew(node) = soil%inq(node)
+          inqrotNew(node) = soil%inqrot(node)
+          do level=1,drai%nrlevs   ! [GR-BH Audit 31]
+            inqdraNew(level,node) = surf%inqdra(level,node)
           enddo
 
           if (swop.eq.2) then
@@ -299,14 +276,14 @@ contains
              IQExcMtxDm2CpNew(node) = IQExcMtxDm2Cp(node)
              IAvFrMpWlWtDm2New(node)= IAvFrMpWlWtDm2(node)
 
-             ThetaNew(node)         = sw_FrArMtrx(node)*sw_theta(node)
-             IThetaBegNew(node)     = sw_FrArMtrx(node)*sw_IThetaBeg(node)
+             ThetaNew(node)         = soil%FrArMtrx(node)*soil%theta(node)
+             IThetaBegNew(node)     = soil%FrArMtrx(node)*soil%IThetaBeg(node)
           endif
         enddo
         do node = 0,numnodNew
            TsoilNew(node) = Tsoil(node)
         enddo
-        inqNew(numnodNew+1) = sw_inq(numnod+1)
+        inqNew(numnodNew+1) = soil%inq(mesh%numnod+1)
 
       else if(SwDiscrVert.eq.1) then
         ! initial part (part 1)
@@ -323,8 +300,8 @@ contains
           NodeN = 1
           Node = 1
           Total = 0.0d0
-          do while (node.le.numnod) 
-            Total = Total + dz(node) 
+          do while (node.le.mesh%numnod) 
+            Total = Total + mesh%dz(node) 
             If (ABS(zNew(NodeN)-Total).LT.1.0D-6) then
               NodeNew(NodeN,2) = Node
               NodeN = NodeN+1
@@ -361,20 +338,20 @@ contains
         Do node = 1,NumNodNew
           Total = 0.0d0
           Do i = NodeNew(node,1),NodeNew(node,2)   
-            Total = Total+dz(i)
+            Total = Total+mesh%dz(i)
           Enddo
           thetaNew(node) = 0.0d0
           IThetaBegNew(node) = 0.d0
           Do i = NodeNew(node,1),NodeNew(node,2)
             if (Swop.ne.2) then
-               thetaNew(node) = thetaNew(node)+sw_theta(i)*dz(i)/Total
-               IThetaBegNew(node) = IThetaBegNew(node)+sw_IThetaBeg(i)* &
-     &                              dz(i)/Total
+               thetaNew(node) = thetaNew(node)+soil%theta(i)*mesh%dz(i)/Total
+               IThetaBegNew(node) = IThetaBegNew(node)+soil%IThetaBeg(i)* &
+     &                              mesh%dz(i)/Total
             else
-               thetaNew(node) = thetaNew(node)+sw_FrArMtrx(i)*sw_theta(i)* &
-     &                          dz(i)/Total
-               IThetaBegNew(node) = IThetaBegNew(node)+sw_FrArMtrx(i)*  &
-     &                              sw_IThetaBeg(i)*dz(i)/Total
+               thetaNew(node) = thetaNew(node)+soil%FrArMtrx(i)*soil%theta(i)* &
+     &                          mesh%dz(i)/Total
+               IThetaBegNew(node) = IThetaBegNew(node)+soil%FrArMtrx(i)*  &
+     &                              soil%IThetaBeg(i)*mesh%dz(i)/Total
             endif
           Enddo
         Enddo
@@ -383,11 +360,11 @@ contains
         Do node = 1,NumNodNew
           Total = 0.0d0
           Do i = NodeNew(node,1),NodeNew(node,2)   
-            Total = Total+dz(i)
+            Total = Total+mesh%dz(i)
           Enddo
           TsoilNew(node) = 0.0d0
           Do i = NodeNew(node,1),NodeNew(node,2)
-            TsoilNew(node) = TsoilNew(node)+Tsoil(i)*dz(i)/Total
+            TsoilNew(node) = TsoilNew(node)+Tsoil(i)*mesh%dz(i)/Total
           Enddo               
         Enddo
 
@@ -406,11 +383,11 @@ contains
            Do node = 1,NumNodNew
              Total = 0.0d0
              Do i = NodeNew(node,1),NodeNew(node,2)   
-               Total = Total+dz(i)
+               Total = Total+mesh%dz(i)
              Enddo
              DiPoCpNew(node) = 0.0d0
              Do i = NodeNew(node,1),NodeNew(node,2)
-               DiPoCpNew(node) = DiPoCpNew(node)+DiPoCp(i)*dz(i)/Total
+               DiPoCpNew(node) = DiPoCpNew(node)+DiPoCp(i)*mesh%dz(i)/Total
              Enddo               
            Enddo
         endif
@@ -422,33 +399,33 @@ contains
           do node = 1,numnodNew
 
              ! Build tentative vg from the source (bottom old) node's typed params  [SS-GR-UTILS Task 8]
-             vg_tentative = state%soilwater%vg_params(NodeNew(node,2))
+             vg_tentative = soil%vg_params(NodeNew(node,2))
              hNew(node) = prhead(disnodNew(node), thetaNew(node), hNew, &
-                                 state%soilwater%iHWCKmodel(state%soilwater%layer(node)), &
-                                 node, state%soilwater, vg_in=vg_tentative)
+                                 soil%iHWCKmodel(soil%layer(node)), &
+                                 node, soil, vg_in=vg_tentative)
           enddo
 
           ! convert inqrot to inqrotNew based on integration
           Do node = 1,NumNodNew
             inqrotNew(node) = 0.0d0
             Do i = NodeNew(node,1),NodeNew(node,2)
-              inqrotNew(node) = inqrotNew(node)+sw_inqrot(i)
+              inqrotNew(node) = inqrotNew(node)+soil%inqrot(i)
             Enddo
           Enddo
 
           ! convert inq to inqNew
           Do node = 1,NumNodNew
-            inqNew(node) = sw_inq(NodeNew(node,1))
+            inqNew(node) = soil%inq(NodeNew(node,1))
           Enddo
-          inqNew(NumNodNew+1) = sw_inq(numnod+1)
+          inqNew(NumNodNew+1) = soil%inq(mesh%numnod+1)
 
           ! convert inqdra to inqdraNew based on integration
-          Do level = 1,state%drainage%nrlevs   ! [GR-BH Audit 31]
+          Do level = 1,drai%nrlevs   ! [GR-BH Audit 31]
             Do node = 1,NumNodNew
               inqdraNew(level,node) = 0.0d0
               Do i = NodeNew(node,1),NodeNew(node,2)
                 inqdraNew(level,node) = inqdraNew(level,node) +         &
-     &                                 state%surfacewater%inqdra(level,i)
+     &                                 surf%inqdra(level,i)
               Enddo
             Enddo
           Enddo
@@ -460,7 +437,7 @@ contains
           Do node = 1,NumNodNew
             Total = 0.0d0
             Do i = NodeNew(node,1),NodeNew(node,2)   
-              Total = Total+dz(i)
+              Total = Total+mesh%dz(i)
             Enddo
             IQExcMtxDm1CpNew(node) = 0.0d0
             IQExcMtxDm2CpNew(node) = 0.0d0
@@ -475,9 +452,9 @@ contains
               IQOutDrRapCpNew(node) =                                   &
      &           IQOutDrRapCpNew(node)  + IQOutDrRapCp(i) 
               IAvFrMpWlWtDm1New(node) =                                 &
-     &           IAvFrMpWlWtDm1New(node) + IAvFrMpWlWtDm1(i)*dz(i)/Total
+     &           IAvFrMpWlWtDm1New(node) + IAvFrMpWlWtDm1(i)*mesh%dz(i)/Total
               IAvFrMpWlWtDm2New(node) =                                 &
-     &           IAvFrMpWlWtDm2New(node) + IAvFrMpWlWtDm2(i)*dz(i)/Total
+     &           IAvFrMpWlWtDm2New(node) + IAvFrMpWlWtDm2(i)*mesh%dz(i)/Total
             Enddo               
           Enddo
         endif
@@ -487,7 +464,7 @@ contains
         call fatalerr_collected(ModuleName,message)
       endif
 
-      end associate  ! [SS-SWC S-2.12B] sw_h/.../sw_FrArMtrx; [GR-BH C4] numnod/dz
+      end associate  ! [SS-SWC S-2.12B] soil%h/.../soil%FrArMtrx; [GR-BH C4] mesh%numnod/mesh%dz
       return
       end subroutine ConvertDiscrVert
 
