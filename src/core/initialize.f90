@@ -126,7 +126,7 @@
       ! [GR-BH Task 35] layer retired to state%mesh%layer
       ! [SS-BMI2 Task 5] msteps retired 2026-05-13 — moved to state%timecontrol%msteps
       ! [GR-SOIL 2026-05-24] ncomp retired — read inline from config%soil%ncomp
-      nhead              = 0 
+      ! [GR-SOIL 2026-05-24] nhead retired.
       ! [SS-SWC] nodgwl retired — soilwater_init handles init via state%soilwater%nodgwl
       ! nodgwl             = 0
       ! [GR-SOIL 2026-05-24] nod1lay retired — see state%mesh%nod1lay
@@ -366,7 +366,7 @@
       ! zfrostbot          = 0.0d0
       ! zfrosttop          = 0.0d0
       ! [GR-BH Task 37] zbotdr retired to state%drainage%zbotdr
-      zi                 = 0.0d0
+      ! [GR-SOIL 2026-05-24] zi retired.
       ! [GR-DRA 2026-05-23] zintf retired — see state%drainage%zintf 
       ! ztopdislay         = 0.0d0   ! Moved to drainage_state_t — drainage_init handles (ADR 0031)
       ! [SS-TC] fldrain retired to state%timecontrol%flDrain (ADR 0041)
