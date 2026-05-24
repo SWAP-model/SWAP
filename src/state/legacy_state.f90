@@ -187,12 +187,9 @@ module legacy_state_mod
       real(real64), allocatable :: nmxlv(:)
       integer :: ilnmxl
       real(real64) :: fstr  !! [SS-GR-FINAL D1] amFERT retired — 0 consumers
-      integer :: till_swtill  !! Switch: 0=no tillage, 1=tillage
-      integer :: till_i_n_model  !! Switch for n-parameter treatment (1-3)
-      integer :: till_iRedist  !! Redistribution type after MvG change
-      integer :: till_Ntill  !! Number of tabulated tillage events
-      integer :: till_Ntypes  !! Number of tillage types
-      real(real64) :: till_Max_Z_tillage  !! Max possible depth of tillage (cm)
+      ! [GR-CROP 2026-05-25] till_* Group AB stubs retired — migrated to
+      !   state%tillage (Ntill/Ntypes/i_n_model/iRedist/Max_Z_tillage/...).
+      !   swtill canonical home is state%cfg%soil%swtill.
       ! [GR-SOIL 2026-05-24] iHWCKmodel retired — orphan stub; state%soilwater%iHWCKmodel.
       logical, allocatable :: BiModal(:)  !! logical indicating whether chosen model is bi-modal or not
       logical, allocatable :: NoVap(:)  !! logical indicating that NO vapour flow is to be considered in PDI K-model

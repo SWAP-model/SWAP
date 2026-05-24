@@ -1,7 +1,7 @@
 !> @file tillage_state.f90
 !! Typed state record for the tillage subsystem (ADR 0039, Task T-1).
 !!
-!! Holds 13 runtime-state fields owned by tillage.f90:
+!! Holds runtime-state fields owned by tillage.f90:
 !!
 !!   Group C — 7 per-layer allocatables (sized numlay):
 !!     Rho_tillage, Rho_cons, Rho_last, K_R_cons,
@@ -13,13 +13,19 @@
 !!   Group E — 3 init-once geometry/cursor integers:
 !!     MaxNumSoilHo, MaxNumSoilCP, iTill
 !!
+!!   Group AB — init-once derived from config%soil%tillage by
+!!     apply_soil_tillage (config_to_variables); read-only at runtime.
+!!     [GR-CROP 2026-05-25] migrated from variables.f90 till_* SAVE-state.
+!!     Ntill, Ntypes, i_n_model, iRedist, Max_Z_tillage, (swtill via state%cfg%soil%swtill)
+!!     Date_tillage(:), Z_tillage(:), I_tillage(:), Type_Tillage(:),
+!!     iType_Tillage(:), iTT1(:), iTT2(:),
+!!     TAB_Rho_tillage(:), TAB_Rho_cons(:), TAB_K_R_cons(:),
+!!     TAB_Rho_match(:), TAB_N_match(:)
+!!
 !! tillage_init(tl, numlay) allocates the Group C arrays and zeroes all
 !! fields. Called between atmosphere_init and DoTillage(1) at swap startup
-!! (T-2 handles the call-site wiring).
-!!
-!! Excluded (config, not runtime state):
-!!   - Groups A+B (18 config-constant till_* fields already in typed
-!!     soil_tillage_t) — deferred to future config-consolidation arc (D5).
+!! (T-2 handles the call-site wiring). Group AB arrays are allocated by
+!! apply_soil_tillage (config_to_variables) before tillage_init runs.
 !!
 !! Note: field names drop the legacy till_ prefix; the type name
 !! tillage_state_t provides the namespace. Legacy name mappings:
@@ -62,6 +68,33 @@ module tillage_state_mod
       integer :: MaxNumSoilHo = 0  !! max number of soil horizons in tillage table
       integer :: MaxNumSoilCP = 0  !! max number of soil-consolidation-parameter rows
       integer :: iTill        = 0  !! event-table cursor (index into tillage event array)
+
+      ! Group AB — init-once derived from state%cfg%soil%tillage by
+      ! apply_soil_tillage. Read-only at runtime.
+      ! [GR-CROP 2026-05-25] migrated from variables.f90 till_* legacy globals.
+      ! Note: the swtill switch lives on state%cfg%soil%swtill (canonical),
+      ! not duplicated here.
+      integer :: i_n_model     = 2       !! n-parameter treatment switch (1..3)
+      integer :: iRedist       = 2       !! Redistribution type after MvG change
+      integer :: Ntill         = 0       !! Number of tabulated tillage events
+      integer :: Ntypes        = 0       !! Number of tillage types
+      real(real64) :: Max_Z_tillage = 0.0_real64  !! Max possible depth of tillage (cm)
+
+      ! Per-event arrays (size Ntill, or Ntill+1 for Date_tillage with sentinel):
+      real(real64), allocatable :: Date_tillage(:)  !! Tillage dates (days-since-1900); Date_tillage(Ntill+1) is tend+1 sentinel
+      real(real64), allocatable :: Z_tillage(:)     !! Tillage depths (cm)
+      real(real64), allocatable :: I_tillage(:)     !! Tillage intensity (0-1)
+      integer,      allocatable :: Type_Tillage(:)  !! Tillage type index (refers to types(:))
+      integer,      allocatable :: iTT1(:)          !! First position per type in iType_Tillage
+      integer,      allocatable :: iTT2(:)          !! Last position per type in iType_Tillage
+
+      ! Per-type arrays (size Ntypes):
+      integer,      allocatable :: iType_Tillage(:)    !! Tillage type identifier (sequential index)
+      real(real64), allocatable :: TAB_Rho_tillage(:)  !! Bulk density after tillage per type
+      real(real64), allocatable :: TAB_Rho_cons(:)     !! Consolidated bulk density per type
+      real(real64), allocatable :: TAB_K_R_cons(:)     !! Consolidation rate constant per type
+      real(real64), allocatable :: TAB_Rho_match(:)    !! Matching-point density per type (i_n_model=3 only)
+      real(real64), allocatable :: TAB_N_match(:)      !! Matching-point n per type (i_n_model=3 only)
 
       !> [SS-BMI2] Tillage output row buffer (DoTillage task=3 stream).
       !! N = 5: t1900, nraida, sumDWC, sumAvail1, sumAvail2.
@@ -107,6 +140,11 @@ contains
       tl%MaxNumSoilHo = 0
       tl%MaxNumSoilCP = 0
       tl%iTill        = 0
+
+      ! Group AB scalars — defaults are set on type declaration; Group AB
+      ! arrays are allocated/populated separately by apply_soil_tillage
+      ! (config_to_variables) before tillage_init runs in swap_mod, so we
+      ! don't touch them here.
 
    end subroutine tillage_init
 

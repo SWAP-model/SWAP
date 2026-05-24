@@ -614,33 +614,18 @@
       real(8)   fstr
       ! [SS-GR-FINAL D1] amFERT retired — 0 consumers
 
-! --- tillage variables (bridge for tillage module)
-      integer   till_swtill                       ! Switch: 0=no tillage, 1=tillage
-      integer   till_i_n_model                    ! Switch for n-parameter treatment (1-3)
-      integer   till_iRedist                      ! Redistribution type after MvG change
-      integer   till_Ntill                        ! Number of tabulated tillage events
+! --- tillage variables: legacy bridge retired
 ! ========================================================================
-! [SS-TIL T-5] retired 2026-05-12 — tillage runtime-state globals moved to state%tillage
+! [GR-CROP 2026-05-25] till_* Group AB globals retired — migrated to
+!   state%tillage (per-event/per-type config-derived runtime fields).
+!   Populated by apply_soil_tillage (config_to_variables) and read by
+!   src/crop/tillage.f90 only. swtill itself lives on
+!   state%cfg%soil%swtill (canonical config home).
+! [SS-TIL T-5] retired 2026-05-12 — tillage runtime-state globals moved
+!   to state%tillage (Group C/D/E).
 !   See: docs/superpowers/specs/2026-05-12-state-migration-tillage-design.md
 !        ADR 0039 (Task T-6)
 ! ========================================================================
-!     integer   till_iTill                        ! Current tillage event index
-      integer   till_Ntypes                       ! Number of tillage types
-!     integer   till_MaxNumSoilHo                 ! Max soil horizons in tillage zone
-!     integer   till_MaxNumSoilCP                 ! Max soil compartments in tillage zone
-      real(8)   till_Max_Z_tillage                ! Max possible depth of tillage (cm)
-      real(8), dimension(:), allocatable :: till_Date_tillage   ! Tillage dates
-      real(8), dimension(:), allocatable :: till_Z_tillage      ! Tillage depths (cm)
-      real(8), dimension(:), allocatable :: till_I_tillage      ! Tillage intensity (0-1)
-      integer, dimension(:), allocatable :: till_Type_Tillage   ! Tillage type index
-      integer, dimension(:), allocatable :: till_iType_Tillage  ! Tillage type identifier
-      integer, dimension(:), allocatable :: till_iTT1           ! First position in type table
-      integer, dimension(:), allocatable :: till_iTT2           ! Last position in type table
-      real(8), dimension(:), allocatable :: till_TAB_Rho_tillage ! Bulk density after tillage
-      real(8), dimension(:), allocatable :: till_TAB_Rho_cons   ! Consolidated bulk density
-      real(8), dimension(:), allocatable :: till_TAB_K_R_cons   ! Consolidation rate constant
-      real(8), dimension(:), allocatable :: till_TAB_Rho_match  ! Matching point density
-      real(8), dimension(:), allocatable :: till_TAB_N_match    ! Matching point n-value
 !     real(8), dimension(:), allocatable :: till_Rho_tillage    ! Post-tillage bulk density per layer
 !     real(8), dimension(:), allocatable :: till_Rho_cons       ! Consolidated density per layer
 !     real(8), dimension(:), allocatable :: till_Rho_last       ! Previous density per layer

@@ -42,15 +42,9 @@ end subroutine
 
 @test
 subroutine test_apply_populates_per_event_globals()
+   ! [GR-CROP 2026-05-25] till_* legacy globals retired — read state%tillage.
    use soil_config_mod, only: soil_tillage_t, soil_tillage_event_t, soil_tillage_type_t
    use config_to_variables_mod, only: apply_soil_tillage
-   ! [GR-BH Task 35] NumNod/zbotcp globals deleted — supplied via state%mesh
-   use variables, only: Ntill         => till_Ntill, &
-                        Max_Z_tillage => till_Max_Z_tillage, &
-                        Date_tillage  => till_Date_tillage, &
-                        Z_tillage     => till_Z_tillage, &
-                        I_tillage     => till_I_tillage, &
-                        Type_tillage  => till_Type_Tillage
    use swap_state_mod, only: swap_state_t
    use funit
    use iso_fortran_env, only: real64
@@ -60,7 +54,6 @@ subroutine test_apply_populates_per_event_globals()
    real(real64) :: tend_val
 
    ! Minimal grid for the deferred z-range check via state%mesh.
-   ! [SS-BMI2 Task 5] tend retired from variables — passed as argument
    call build_tillage_test_mesh(state)
    tend_val = 36898.0d0   ! 2004-12-31
 
@@ -75,24 +68,20 @@ subroutine test_apply_populates_per_event_globals()
 
    call apply_soil_tillage(til, tend_val, state)
 
-   @assertEqual(2, Ntill)
-   @assertEqual(30.0d0, Z_tillage(1), tolerance=1.0d-9)
-   @assertEqual(1.0d0,  I_tillage(1), tolerance=1.0d-9)
-   @assertEqual(1,      Type_tillage(1))
+   @assertEqual(2, state%tillage%Ntill)
+   @assertEqual(30.0d0, state%tillage%Z_tillage(1), tolerance=1.0d-9)
+   @assertEqual(1.0d0,  state%tillage%I_tillage(1), tolerance=1.0d-9)
+   @assertEqual(1,      state%tillage%Type_Tillage(1))
    ! Sentinel slot: Date_tillage(Ntill+1) = tend_val + 1
-   @assertEqual(tend_val + 1.0d0, Date_tillage(Ntill+1), tolerance=1.0d-9)
-   @assertEqual(30.0d0, Max_Z_tillage, tolerance=1.0d-9)
+   @assertEqual(tend_val + 1.0d0, state%tillage%Date_tillage(state%tillage%Ntill+1), tolerance=1.0d-9)
+   @assertEqual(30.0d0, state%tillage%Max_Z_tillage, tolerance=1.0d-9)
 end subroutine
 
 @test
 subroutine test_apply_populates_per_type_globals()
+   ! [GR-CROP 2026-05-25] till_* legacy globals retired — read state%tillage.
    use soil_config_mod, only: soil_tillage_t, soil_tillage_event_t, soil_tillage_type_t
    use config_to_variables_mod, only: apply_soil_tillage
-   ! [GR-BH Task 35] NumNod/zbotcp globals deleted — supplied via state%mesh
-   use variables, only: iType_Tillage   => till_iType_Tillage, &
-                        TAB_Rho_cons    => till_TAB_Rho_cons, &
-                        TAB_Rho_tillage => till_TAB_Rho_tillage, &
-                        TAB_K_R_cons    => till_TAB_K_R_cons
    use swap_state_mod, only: swap_state_t
    use funit
    use iso_fortran_env, only: real64
@@ -113,22 +102,20 @@ subroutine test_apply_populates_per_type_globals()
 
    call apply_soil_tillage(til, tend_val, state)
 
-   @assertEqual(1, iType_Tillage(1))
-   @assertEqual(1500.0d0, TAB_Rho_cons(1),    tolerance=1.0d-9)
-   @assertEqual(1100.0d0, TAB_Rho_tillage(1), tolerance=1.0d-9)
-   @assertEqual(0.05d0,   TAB_K_R_cons(1),    tolerance=1.0d-9)
+   @assertEqual(1, state%tillage%iType_Tillage(1))
+   @assertEqual(1500.0d0, state%tillage%TAB_Rho_cons(1),    tolerance=1.0d-9)
+   @assertEqual(1100.0d0, state%tillage%TAB_Rho_tillage(1), tolerance=1.0d-9)
+   @assertEqual(0.05d0,   state%tillage%TAB_K_R_cons(1),    tolerance=1.0d-9)
 end subroutine
 
 @test
 subroutine test_apply_iTT1_iTT2_indices_when_two_types()
+   ! [GR-CROP 2026-05-25] till_* legacy globals retired — read state%tillage.
    ! Two events: event 1 is type 1, event 2 is type 2.
    ! Two type-table entries: iType_Tillage = [1, 2].
    ! After the iTT1/iTT2 loop: iTT1(1)=1, iTT2(1)=1, iTT1(2)=2, iTT2(2)=2.
    use soil_config_mod, only: soil_tillage_t, soil_tillage_event_t, soil_tillage_type_t
    use config_to_variables_mod, only: apply_soil_tillage
-   ! [GR-BH Task 35] NumNod/zbotcp globals deleted — supplied via state%mesh
-   use variables, only: iTT1 => till_iTT1, &
-                        iTT2 => till_iTT2
    use swap_state_mod, only: swap_state_t
    use funit
    use iso_fortran_env, only: real64
@@ -156,19 +143,17 @@ subroutine test_apply_iTT1_iTT2_indices_when_two_types()
    ! iTT1/iTT2 arrays are size Ntill (=2).
    ! For j=1 (type 1): iType_Tillage(1)=1, so iTT1(1)=1, iTT2(1)=1.
    ! For j=2 (type 2): iType_Tillage(2)=2, so iTT1(2)=2, iTT2(2)=2.
-   @assertEqual(1, iTT1(1))
-   @assertEqual(1, iTT2(1))
-   @assertEqual(2, iTT1(2))
-   @assertEqual(2, iTT2(2))
+   @assertEqual(1, state%tillage%iTT1(1))
+   @assertEqual(1, state%tillage%iTT2(1))
+   @assertEqual(2, state%tillage%iTT1(2))
+   @assertEqual(2, state%tillage%iTT2(2))
 end subroutine
 
 @test
 subroutine test_apply_i_n_model_3_allocates_match_arrays()
+   ! [GR-CROP 2026-05-25] till_* legacy globals retired — read state%tillage.
    use soil_config_mod, only: soil_tillage_t, soil_tillage_event_t, soil_tillage_type_t
    use config_to_variables_mod, only: apply_soil_tillage
-   ! [GR-BH Task 35] NumNod/zbotcp globals deleted — supplied via state%mesh
-   use variables, only: TAB_Rho_match => till_TAB_Rho_match, &
-                        TAB_N_match   => till_TAB_N_match
    use swap_state_mod, only: swap_state_t
    use funit
    use iso_fortran_env, only: real64
@@ -192,8 +177,8 @@ subroutine test_apply_i_n_model_3_allocates_match_arrays()
 
    call apply_soil_tillage(til, tend_val, state)
 
-   @assertTrue(allocated(TAB_Rho_match), 'TAB_Rho_match allocated for i_n_model=3')
-   @assertTrue(allocated(TAB_N_match),   'TAB_N_match allocated for i_n_model=3')
-   @assertEqual(1200.0d0, TAB_Rho_match(1), tolerance=1.0d-9)
-   @assertEqual(2.0d0,    TAB_N_match(1),   tolerance=1.0d-9)
+   @assertTrue(allocated(state%tillage%TAB_Rho_match), 'TAB_Rho_match allocated for i_n_model=3')
+   @assertTrue(allocated(state%tillage%TAB_N_match),   'TAB_N_match allocated for i_n_model=3')
+   @assertEqual(1200.0d0, state%tillage%TAB_Rho_match(1), tolerance=1.0d-9)
+   @assertEqual(2.0d0,    state%tillage%TAB_N_match(1),   tolerance=1.0d-9)
 end subroutine

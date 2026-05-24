@@ -448,12 +448,12 @@ contains
       state%soilwater%swinco = config%soil%swinco
       ! [MACRO-RETIRE 2026-05-12] swmacro global retired (ADR 0040).
       ! soil.swmacro=1 is still rejected by soil_config validator stub.
-      ! SS-B / ADR 0020: legacy globals use prefixed names (variables
-      ! module); set both the legacy switch globals and the call-site
-      ! gating flags. When flTillage / flSSDI are false (default for
-      ! every regression case), the call sites in swap.f90 /
-      ! timecontrol.f90 short-circuit and the subsystems never run.
-      till_swtill = config%soil%swtill
+      ! SS-B / ADR 0020: set the call-site gating flags. When flTillage /
+      ! flSSDI are false (default for every regression case), the call
+      ! sites in swap.f90 / timecontrol.f90 short-circuit and the
+      ! subsystems never run.
+      ! [GR-CROP 2026-05-25] till_swtill mirror retired — tillage reads
+      ! state%cfg%soil%swtill directly.
       swssdi_irr  = config%irrigation%swssdi
       flTillage = (config%soil%swtill == 1)
       flSSDI    = (config%irrigation%swssdi == 1)
@@ -1321,65 +1321,49 @@ contains
    !! (tend + 1), computes Max_Z_tillage and the iTT1/iTT2 first/last-position
    !! indices. Replaces the deleted Read_Tillage subroutine (Task 5).
    subroutine apply_soil_tillage(tillage, tend, state)
+      ! [GR-CROP 2026-05-25] writes redirected from variables.f90 till_* legacy
+      ! globals to state%tillage Group AB fields. The till_* declarations are
+      ! retired in this commit; this subroutine is the only writer.
       use, intrinsic :: iso_fortran_env, only: real64
       use soil_config_mod, only: soil_tillage_t
       use error_mod, only: fatalerr_collected
       use swap_state_mod, only: swap_state_t
-      use variables, only: Ntill         => till_Ntill, &
-                           Ntypes        => till_Ntypes, &
-                           i_n_model     => till_i_n_model, &
-                           iRedist       => till_iRedist, &
-                           Max_Z_tillage => till_Max_Z_tillage, &
-                           Date_tillage  => till_Date_tillage, &
-                           Z_tillage     => till_Z_tillage, &
-                           I_tillage     => till_I_tillage, &
-                           Type_tillage  => till_Type_Tillage, &
-                           iType_Tillage => till_iType_Tillage, &
-                           TAB_Rho_cons    => till_TAB_Rho_cons, &
-                           TAB_Rho_tillage => till_TAB_Rho_tillage, &
-                           TAB_K_R_cons    => till_TAB_K_R_cons, &
-                           TAB_Rho_match   => till_TAB_Rho_match, &
-                           TAB_N_match     => till_TAB_N_match, &
-                           iTT1 => till_iTT1, &
-                           iTT2 => till_iTT2
       type(soil_tillage_t), intent(in)    :: tillage
       real(real64),         intent(in)    :: tend
       type(swap_state_t),   intent(inout) :: state   ! [GR-BH Task 35] replaces NumNod/zbotcp globals
 
       integer :: i, j
 
-      i_n_model = tillage%i_n_model
-      iRedist   = tillage%iRedist
+      associate(tl => state%tillage)
 
-      Ntill  = size(tillage%events)
-      Ntypes = size(tillage%types)
+      tl%i_n_model = tillage%i_n_model
+      tl%iRedist   = tillage%iRedist
+
+      tl%Ntill  = size(tillage%events)
+      tl%Ntypes = size(tillage%types)
 
       ! Per-event arrays (sentinel: Date_tillage(Ntill+1) = tend + 1).
-      if (allocated(Date_tillage)) deallocate(Date_tillage); allocate(Date_tillage(Ntill+1))
-      if (allocated(Z_tillage))    deallocate(Z_tillage);    allocate(Z_tillage(Ntill))
-      if (allocated(I_tillage))    deallocate(I_tillage);    allocate(I_tillage(Ntill))
-      if (allocated(Type_tillage)) deallocate(Type_tillage); allocate(Type_tillage(Ntill))
+      if (allocated(tl%Date_tillage)) deallocate(tl%Date_tillage); allocate(tl%Date_tillage(tl%Ntill+1))
+      if (allocated(tl%Z_tillage))    deallocate(tl%Z_tillage);    allocate(tl%Z_tillage(tl%Ntill))
+      if (allocated(tl%I_tillage))    deallocate(tl%I_tillage);    allocate(tl%I_tillage(tl%Ntill))
+      if (allocated(tl%Type_Tillage)) deallocate(tl%Type_Tillage); allocate(tl%Type_Tillage(tl%Ntill))
 
-      do i = 1, Ntill
-         Z_tillage(i)    = tillage%events(i)%z
-         I_tillage(i)    = tillage%events(i)%intensity
-         Type_tillage(i) = tillage%events(i)%type_id
-         Date_tillage(i) = parse_iso_date_to_days1900(tillage%events(i)%date)
+      do i = 1, tl%Ntill
+         tl%Z_tillage(i)    = tillage%events(i)%z
+         tl%I_tillage(i)    = tillage%events(i)%intensity
+         tl%Type_Tillage(i) = tillage%events(i)%type_id
+         tl%Date_tillage(i) = parse_iso_date_to_days1900(tillage%events(i)%date)
       end do
-      Date_tillage(Ntill + 1) = tend + 1.0_real64
+      tl%Date_tillage(tl%Ntill + 1) = tend + 1.0_real64
 
       ! Deferred z-range check (validator can't see numnod / zbotcp).
-      ! TODO: route this error through whatever error-collection mechanism
-      ! config_to_variables uses; for now, fatalerr_collected on violation.
-      ! The test test_apply_z_outside_grid_raises_error is deferred because
-      ! catching a STOP in pFUnit is awkward — verified manually for now.
       ! [GR-BH Task 35] NumNod/zbotcp globals replaced by state%mesh fields.
       ! Guard: mesh is not yet populated when called from config_to_variables
       ! (CalcGrid runs after); skip z-range check until mesh is built.
       if (state%mesh%numnod > 0 .and. allocated(state%mesh%zbotcp)) then
-         do i = 1, Ntill
-            if (Z_tillage(i) < 0.0_real64 .or. &
-                Z_tillage(i) > abs(state%mesh%zbotcp(state%mesh%numnod))) then
+         do i = 1, tl%Ntill
+            if (tl%Z_tillage(i) < 0.0_real64 .or. &
+                tl%Z_tillage(i) > abs(state%mesh%zbotcp(state%mesh%numnod))) then
                call fatalerr_collected('apply_soil_tillage', &
                   'Z_tillage value is outside the model grid depth range')
             end if
@@ -1387,39 +1371,41 @@ contains
       end if
 
       ! Per-type arrays.
-      if (allocated(iType_Tillage))   deallocate(iType_Tillage);   allocate(iType_Tillage(Ntypes))
-      if (allocated(TAB_Rho_cons))    deallocate(TAB_Rho_cons);    allocate(TAB_Rho_cons(Ntypes))
-      if (allocated(TAB_Rho_tillage)) deallocate(TAB_Rho_tillage); allocate(TAB_Rho_tillage(Ntypes))
-      if (allocated(TAB_K_R_cons))    deallocate(TAB_K_R_cons);    allocate(TAB_K_R_cons(Ntypes))
+      if (allocated(tl%iType_Tillage))   deallocate(tl%iType_Tillage);   allocate(tl%iType_Tillage(tl%Ntypes))
+      if (allocated(tl%TAB_Rho_cons))    deallocate(tl%TAB_Rho_cons);    allocate(tl%TAB_Rho_cons(tl%Ntypes))
+      if (allocated(tl%TAB_Rho_tillage)) deallocate(tl%TAB_Rho_tillage); allocate(tl%TAB_Rho_tillage(tl%Ntypes))
+      if (allocated(tl%TAB_K_R_cons))    deallocate(tl%TAB_K_R_cons);    allocate(tl%TAB_K_R_cons(tl%Ntypes))
 
-      do i = 1, Ntypes
-         iType_Tillage(i)   = tillage%types(i)%id
-         TAB_Rho_cons(i)    = tillage%types(i)%rho_cons
-         TAB_Rho_tillage(i) = tillage%types(i)%rho_tillage
-         TAB_K_R_cons(i)    = tillage%types(i)%k_R
+      do i = 1, tl%Ntypes
+         tl%iType_Tillage(i)   = tillage%types(i)%id
+         tl%TAB_Rho_cons(i)    = tillage%types(i)%rho_cons
+         tl%TAB_Rho_tillage(i) = tillage%types(i)%rho_tillage
+         tl%TAB_K_R_cons(i)    = tillage%types(i)%k_R
       end do
 
-      if (i_n_model == 3) then
-         if (allocated(TAB_Rho_match)) deallocate(TAB_Rho_match); allocate(TAB_Rho_match(Ntypes))
-         if (allocated(TAB_N_match))   deallocate(TAB_N_match);   allocate(TAB_N_match(Ntypes))
-         do i = 1, Ntypes
-            TAB_Rho_match(i) = tillage%types(i)%rho_match
-            TAB_N_match(i)   = tillage%types(i)%N_match
+      if (tl%i_n_model == 3) then
+         if (allocated(tl%TAB_Rho_match)) deallocate(tl%TAB_Rho_match); allocate(tl%TAB_Rho_match(tl%Ntypes))
+         if (allocated(tl%TAB_N_match))   deallocate(tl%TAB_N_match);   allocate(tl%TAB_N_match(tl%Ntypes))
+         do i = 1, tl%Ntypes
+            tl%TAB_Rho_match(i) = tillage%types(i)%rho_match
+            tl%TAB_N_match(i)   = tillage%types(i)%N_match
          end do
       end if
 
-      Max_Z_tillage = maxval(Z_tillage(1:Ntill))
+      tl%Max_Z_tillage = maxval(tl%Z_tillage(1:tl%Ntill))
 
       ! iTT1 / iTT2: first/last position per tillage type in iType_Tillage.
       ! Replicates the loop from the legacy Read_Tillage subroutine verbatim.
-      if (allocated(iTT1)) deallocate(iTT1); allocate(iTT1(Ntill)); iTT1 = 0
-      if (allocated(iTT2)) deallocate(iTT2); allocate(iTT2(Ntill)); iTT2 = 0
-      do j = 1, Ntill
-         do i = 1, Ntypes
-            if (iTT1(j) == 0 .and. iType_Tillage(i) == j) iTT1(j) = i
-            if (iTT1(j) >  0 .and. iType_Tillage(i) == j) iTT2(j) = i
+      if (allocated(tl%iTT1)) deallocate(tl%iTT1); allocate(tl%iTT1(tl%Ntill)); tl%iTT1 = 0
+      if (allocated(tl%iTT2)) deallocate(tl%iTT2); allocate(tl%iTT2(tl%Ntill)); tl%iTT2 = 0
+      do j = 1, tl%Ntill
+         do i = 1, tl%Ntypes
+            if (tl%iTT1(j) == 0 .and. tl%iType_Tillage(i) == j) tl%iTT1(j) = i
+            if (tl%iTT1(j) >  0 .and. tl%iType_Tillage(i) == j) tl%iTT2(j) = i
          end do
       end do
+
+      end associate
    end subroutine apply_soil_tillage
 
 
