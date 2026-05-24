@@ -668,7 +668,7 @@
       ! [GR-CROP-DVS] critdevh1cp retired — see state%cfg%simulation%numerical%critdevh1cp
       ! [GR-CROP-DVS] critdevh2cp retired — see state%cfg%simulation%numerical%critdevh2cp
       ! [GR-CROP-DVS] critdevponddt retired — see state%cfg%simulation%numerical%critdevponddt
-      logical   fldumpconvcrit     ! flag to generate additional output about convergence-warnings from subr Headcalc
+      ! [GR-SOIL 2026-05-24] fldumpconvcrit retired — now state%cfg%simulation%numerical%dump_convergence_diagnostics.
       logical   flwarn_hc          ! Headcalc warning flag (previously SAVE variable)
       integer   iwarn_hc           ! Headcalc warning counter (previously SAVE variable)
       ! [SS-GR-FINAL D1] nstep_hc retired — 0 consumers
@@ -681,7 +681,7 @@
       ! logical   flMaxIterTime      ! moved to state%timecontrol%flMaxIterTime
       ! [SS-BND] retired 2026-05-11 — boundary subsystem migrated to state%soilwater (ADR 0035)
       ! logical   FlRunoff
-      logical   swcaprise          ! flag to minimize cap.rise to rootzone (for experts only)
+      ! [GR-SOIL 2026-05-24] swcaprise retired — now state%cfg%simulation%numerical%swcaprise.
       ! [SS-GR-FINAL D1] swcapriseoutput retired — 0 consumers
 
       ! [GR-BH Task 36] retired 2026-05-13 — moved to state%soilwater%H0max/k1max/q0 (GR-BH arc)

@@ -27,17 +27,11 @@ contains
       ! macp/mabbc → swap_array_dimensions (dimension constants); noddrz: crop root depth node
       use swap_array_dimensions, only: macp, mabbc
       use variables, only: &
-         ! [GR-SOIL 2026-05-24] qssdi migrated to state%soilwater — read via soil%qssdi
-         ! [GR-SOIL 2026-05-24] cfg_bb%hplate/cfg_bb%rimlay/sw4 read directly from state%cfg%bottom_boundary
-         ! DEFERRED: swkmean/SwKimpl — hydraulic conductivity averaging switches; Phase C3
-         ! DEFERRED: swcaprise — capillary rise prevention switch; Phase C3
-         swcaprise, &
-         ! DEFERRED: MaxBackTr — max Newton-Raphson backtrack iterations; Phase C3
-         ! DEFERRED: fldumpconvcrit — debug convergence dump flag; Phase C3
-         fldumpconvcrit, &
+         ! [GR-SOIL 2026-05-24] qssdi → state%soilwater
+         ! [GR-SOIL 2026-05-24] hplate/rimlay/sw4/swbotb3impl → state%cfg%bottom_boundary
+         ! [GR-SOIL 2026-05-24] swcaprise/dump_convergence_diagnostics → state%cfg%simulation%numerical
          ! DEFERRED: numbit/itnumb — Richards iteration counter/stats; Phase C3/D
          numbit, itnumb, &
-         ! DEFERRED: CritDevh1Cp/CritDevh2Cp/CritDevPondDt — convergence criteria; Phase C3
          ! DEFERRED: flwarn_hc/iwarn_hc — non-convergence warning state; Phase C3
          flwarn_hc, iwarn_hc, &
          ! DEFERRED: noddrz — node index at root zone bottom; Phase C3
@@ -102,7 +96,8 @@ contains
                  heat => state%heat,         &
                  atmo => state%atmosphere,   &
                  time => state%timecontrol,  &
-                 cfg_bb => state%cfg%bottom_boundary,  &  ! [GR-SOIL 2026-05-24] cfg_bb%hplate/cfg_bb%rimlay/sw4 direct config read
+                 cfg_bb => state%cfg%bottom_boundary,  &  ! [GR-SOIL 2026-05-24] hplate/rimlay/sw4/swbotb3impl direct config read
+                 cfg_num => state%cfg%simulation%numerical, &  ! [GR-SOIL 2026-05-24] swcaprise/dump_convergence_diagnostics
                  swbotb => state%soilwater%swbotb_runtime)
 
       if (time%flDayStart) then  ! [TC-8]
@@ -199,7 +194,7 @@ contains
       ! Reset conductivities to time level t
 
       ! Node nr of compartment with minimized flux of capillary rise
-      if (swcaprise) then
+      if (cfg_num%swcaprise) then
          nodncr    = max(5,noddrz)
          flcaprise = .false.
       endif
@@ -210,7 +205,7 @@ contains
                            soil%fluseksatexm(i), &
                            i, soil)                                 ! [SS-GR-UTILS Task 6]
 
-         if (swcaprise) then
+         if (cfg_num%swcaprise) then
             ! Prevent capillary rise into the root zone !! special for experts only
             if (i .eq. nodncr) then
                if ((soil%h(i) + mesh%z(i)) .lt. (soil%h(i+1) + mesh%z(i+1))) then  ! negative potential gradient upwards
@@ -368,7 +363,7 @@ contains
             end do
          end if
 
-         if (swcaprise .and. flcaprise) then
+         if (cfg_num%swcaprise .and. flcaprise) then
            dkdh(nodncr+1) = 1.0D-30
          endif
 
@@ -509,7 +504,7 @@ contains
             end if
 
             ! Prevent capillary rise into the root zone !! special for experts
-            if (swcaprise) then
+            if (cfg_num%swcaprise) then
                flcaprise = .false.
                i = nodncr
                if ((soil%h(i) + mesh%z(i)) .lt. (soil%h(i+1) + mesh%z(i+1))) then  ! negative potential gradient upwards
@@ -777,7 +772,7 @@ contains
             endif
          endif
 
-         if(fldumpconvcrit) then
+         if (cfg_num%dump_convergence_diagnostics) then
            call log_debug('Headcalc', 'Datetime = ' // datetime)
            call log_debug('Headcalc', 't1900    = ' // to_str(time%t1900))
            call log_debug('Headcalc', 'time%dtmin = ' // to_str(time%dtmin))

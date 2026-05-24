@@ -34,6 +34,9 @@ module simulation_config_mod
       ! unlimited); we mirror that. The runtime aborts if a single day's
       ! iteration count exceeds this — the cap exists only as a circuit-breaker.
       integer      :: msteps        = 100000000
+      ! Expert-only Richards switches (default off):
+      logical      :: swcaprise           = .false.   !! Pin K at the deepest root node and below to 1e-10 to suppress capillary rise into the root zone (for experts).
+      logical      :: dump_convergence_diagnostics = .false.   !! Emit per-step log_debug entries with the Richards convergence diagnostics (debug feature).
    contains
       procedure :: validate => simulation_numerical_validate
    end type simulation_numerical_t

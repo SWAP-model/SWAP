@@ -197,11 +197,11 @@ module legacy_state_mod
       logical, allocatable :: BiModal(:)  !! logical indicating whether chosen model is bi-modal or not
       logical, allocatable :: NoVap(:)  !! logical indicating that NO vapour flow is to be considered in PDI K-model
       integer, allocatable :: Itnumb(:,:)  !! Iteration number statistics [soilhydraulics.f90, timecontrol_mod.f90]
-      logical :: fldumpconvcrit  !! flag to generate additional output about convergence-warnings from subr Headcalc
+      ! [GR-SOIL 2026-05-24] fldumpconvcrit retired — orphan stub; now state%cfg%simulation%numerical%dump_convergence_diagnostics.
       logical :: flwarn_hc  !! Headcalc warning flag (previously SAVE variable)
       integer :: iwarn_hc  !! Headcalc warning counter (previously SAVE variable)
       integer :: dev_cmb  !! Mass balance deviation file unit (previously SAVE in checkmassbal)
-      logical :: swcaprise  !! flag to minimize cap.rise to rootzone (for experts only)
+      ! [GR-SOIL 2026-05-24] swcaprise retired — orphan stub; now state%cfg%simulation%numerical%swcaprise.
       ! [GR-SOIL 2026-05-24] botcom retired — see state%mesh%botcom
       integer :: dra  !! Internal number of drainage input file *.DRA
       ! [GR-DRA 2026-05-23] dramet retired — see state%drainage%dramet

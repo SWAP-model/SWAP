@@ -5,6 +5,7 @@ module read_simulation_toml_mod
    use toml_field_helpers_mod, only: get_table, &
                                      get_optional_int_with_default, &
                                      get_optional_real_with_default, &
+                                     get_optional_logical_with_default, &
                                      parse_date_to_days1900
    use error_mod, only: error_collection_t, ERR_PARSE_MISSING_REQUIRED, ERR_PARSE_TYPE_MISMATCH
    implicit none
@@ -83,6 +84,10 @@ contains
                                             config%numerical%swkimpl, 'simulation.numerical.swkimpl', errors)
          call get_optional_int_with_default(num, 'msteps', config%numerical%msteps, &
                                             config%numerical%msteps, 'simulation.numerical.msteps', errors)
+         call get_optional_logical_with_default(num, 'swcaprise', config%numerical%swcaprise, &
+                                                config%numerical%swcaprise, 'simulation.numerical.swcaprise', errors)
+         call get_optional_logical_with_default(num, 'dump_convergence_diagnostics', config%numerical%dump_convergence_diagnostics, &
+                                                config%numerical%dump_convergence_diagnostics, 'simulation.numerical.dump_convergence_diagnostics', errors)
       end if
    end subroutine read_simulation_toml
 
