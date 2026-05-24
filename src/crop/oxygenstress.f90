@@ -103,9 +103,11 @@ contains
       use variables, only: &                                               ! [SS-GR-FINAL B6] residuals — all DEFERRED
                            ! DEFERRED: icrop — active crop schedule global; Phase C3
                            icrop, max_resp_factor, &   ! croptype → state%crop%common
-                           ! DEFERRED: numtablay/sptab/iHWCKmodel/c_top — soil config, no state home yet; swsophy retired
+                           ! [GR-SOIL 2026-05-24] numtablay/sptab retired — swsophy=1 branches dormant;
+                           !   see src/soil/dormant/sptabulated.f90.
+                           ! [GR-SOIL 2026-05-24] iHWCKmodel → state%soilwater%iHWCKmodel.
                            ! [GR-SOL 2026-05-24] bdens retired — read via state%soilwater%bdens
-                           numtablay, sptab, iHWCKmodel, c_top, &
+                           c_top, &
                            ! SRL/swrootradius/dry_mat_cont_roots/air_filled_root_por/spec_weight_root_tissue/var_a/root_radiusO2 retired
                            ! DEFERRED: q10/rmr/rfsetb/rid/rdctb/w_root_ss — active crop state; Phase C3; dvs/wrt/rd/cumdens retired
                            rid, w_root_ss, &  ! q10/rmr/rfsetb/rdctb retired
@@ -155,7 +157,7 @@ contains
 
 !## MH : some initial calculations      
       if (o2_ini_stress) then
-         if (iHWCKmodel(state%mesh%layer(node)) == 3) then  ! [GR-BH C7]
+         if (state%soilwater%iHWCKmodel(state%mesh%layer(node)) == 3) then  ! [GR-SOIL 2026-05-24]
             call fatalerr_collected ('OxygenStress', 'Combination of OxygenStress and bi-modal MvG (iHWCKmodel=3) is not (yet) possible!')
          end if
          call calc_ini_pars (state%mesh%numnod)  ! [GR-BH C7]
@@ -286,18 +288,13 @@ contains
       
       else   ! (if (gas_filled_porosity .lt. 1.0d-6)) 
         
-! --- In case of tabular soil hydraulic functions
-        if(state%soilwater%swsophy.eq.1) then
-! --- Get tabular soil hydraulic function for node
-          do i = 1, 7
-            do j = 1, numtablay(lay)  !check this
-              soilphystab(i,j) = sptab(i,node,j)
-            end do
-          end do
-! --- Get differential water capacity at actual node, (/L --> /Pa)
-          diff_water_cap_actual = 0.01d0*state%soilwater%dimoca(node)  ! [SS-SWC S-2.7]
-          numrec_tab = j-1
-        endif
+! --- [GR-SOIL 2026-05-24] In case of tabular soil hydraulic functions: dormant.
+!     See src/soil/dormant/sptabulated.f90 for the original tabular load logic;
+!     reactivation requires numtablay/sptab config wiring + restoring state fields.
+        if (state%soilwater%swsophy.eq.1) then
+           call fatalerr_collected('OxygenStress', &
+              'swsophy=1 (tabulated soil hydraulics) is dormant — see src/soil/dormant/sptabulated.f90')
+        end if
 
 ! --- atmosphere oxygen concentration [kg/m3] according to general gas law
         if (node.eq.1) then
@@ -889,68 +886,16 @@ contains
      &   ( ( dsqrt( 1.0d0 / ( pi * length_density_gas_pores ) ) )       &  ! ## MH: replaced ()**0.5 by dsqrt()
      &   - 2.0d0 * surface_tension_water / matric_potential )
       endif
-      !!!!sptab(1,node,ii) = soilphystab(1,ii)
-      if(swsophy_arg.eq.1) then
-          ii = numrec_tab !34  !run over points in soil hydraulic table
-! --- lower value of matric potential for integration interval
-         lowlim = 0.000001d0 !-100*soilphystab(1,ii) !initial value should be zero !RB20140725, very close to zero, otherwise/0 in functab
-! --- upper value of matric potential for integration interval
-         if (do_ln_trans) then
-            upplim = -100.d0*0.5d0*(-(dexp(-soilphystab(1,ii))-1.0d0) - (dexp(-soilphystab(1,ii-1))-1.0d0)) !middle of points 1 and 2
-         else
-            upplim = -100.d0*0.5d0*(soilphystab(1,ii)+soilphystab(1,ii-1)) !middle of points 1 and 2
-         end if
-         upplim = MIN(upplim, matric_potential) !upplim can be higher than matpot          
-! --- initialize length density gas filled pores
-         length_density_gas_pores = 0.0d0 !initial value
-! --- start loop, i.e. run over full integration interval;
-! --- in each loop, the length density of gas filled pores of that interval is calculated;
-! --- The sum of all loops gives the total length density.
-! --- The integration interval runs from 0 to the matric potential at the actual node
-         do while ((upplim.lt.matric_potential) .and. (ii.gt.2)) !adjusted RB20150714 ii.gt.2 added
-            if (do_ln_trans) then
-               htab = -(dexp(-soilphystab(1,ii))-1.0d0)
-               diff_water_cap = 0.01d0*soilphystab(4,ii)/(-htab+1.0d0) !at matric potential centre of lowlim and upplim, except for first point
-            else
-               diff_water_cap = 0.01d0*soilphystab(4,ii) !at matric potential centre of lowlim and upplim, except for first point
-            end if
-            if (flUseQromb) then
-               call QROMBDtab(lowlim,upplim,s,diff_water_cap,           & !n=1 as integral is over a linear function, i.e. convergence is reached after one step
-     &                        surface_tension_water,glit)
-            else
-               call TRAPZDtab(lowlim,upplim,s,1,diff_water_cap,         & !n=1 as integral is over a linear function, i.e. convergence is reached after one step
-     &                        surface_tension_water,glit)
-            end if
-            length_density_gas_pores_sub = s
-            length_density_gas_pores = length_density_gas_pores +       &
-     &                                 length_density_gas_pores_sub
-            ii = ii - 1
-            lowlim = upplim
-!##MH            upplim=-100.d0*0.5d0*(soilphystab(1,ii)+soilphystab(1,ii-1))
-            if (do_ln_trans) then
-               upplim = -100.d0*0.5d0*(-(dexp(-soilphystab(1,ii))-1.0d0) - (dexp(-soilphystab(1,ii-1))-1.0d0)) !middle of points 1 and 2
-            else
-               upplim = -100.d0*0.5d0*(soilphystab(1,ii)+soilphystab(1,ii-1)) !middle of points 1 and 2
-            end if
-          enddo
-! --- in the last step (upplim >= matric_potential), always use the differential water capacity corresponding to the actual matric_potential of the node
-          diff_water_cap = diff_water_cap_actual 
-          upplim = MIN(upplim, matric_potential)
-          if (flUseQromb) then
-            call QROMBDtab(lowlim,upplim,s,diff_water_cap,              & !n=1 as integral is over a linear function, i.e. convergence is reached after one step
-     &                     surface_tension_water,glit)
-          else
-            call TRAPZDtab(lowlim,upplim,s,1,diff_water_cap,            &  ! n=1 as integral is over a linear function, i.e. convergence is reached after one step
-     &                     surface_tension_water,glit)
-          end if
-          length_density_gas_pores_sub = s
-          length_density_gas_pores = length_density_gas_pores +         &
-     &                               length_density_gas_pores_sub
-! --- calculated water film thickness [m]
-          waterfilm_thickness = 2.0d0 *                                 &
-     &     ( ( dsqrt( 1.d0 / ( pi * length_density_gas_pores ) ) )      &  ! ## MH: replaced ()**0.5 by dsqrt()
-     &       - 2.d0 * surface_tension_water / matric_potential )
-      endif
+      ! [GR-SOIL 2026-05-24] swsophy=1 dormant — see src/soil/dormant/sptabulated.f90.
+      ! The original tabular-integration loop (~60 lines) read `soilphystab` (the
+      ! per-node copy of the legacy `sptab` array). The OxygenStress caller (line
+      ! 290) already fatal-errors on swsophy=1, so this branch is unreachable in
+      ! the TOML pipeline. Body preserved in git history; reactivation requires
+      ! the whole sptabulated/swsophy=1 plumbing.
+      if (swsophy_arg.eq.1) then
+         call fatalerr_collected('waterfilmthickness', &
+            'swsophy=1 (tabulated soil hydraulics) is dormant — see src/soil/dormant/sptabulated.f90')
+      end if
       !ResultsOxStr(7,node) = waterfilm_thickness !RB20140115
       return
       end

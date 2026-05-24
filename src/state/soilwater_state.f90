@@ -145,10 +145,9 @@ module soilwater_state_mod
       ! [SS-GR-UTILS] Soil hydraulic property metadata (migrated from variables.f90).
       ! Populated by SoilHydraulics(1) / config_to_variables as transitional
       ! dual-writes; bare globals retire in Arc 9.
-      integer                       :: swsophy    = 0   !< soil-hydraulic-property switch (0=MvG, 1=table)
-      integer,         allocatable  :: numtab(:)        !< per-node table entry count
-      real(real64),    allocatable  :: sptab(:,:,:)     !< soil property table (7 × numnod × matab)
-      integer,         allocatable  :: ientrytab(:,:)   !< entry indices (numnod × 0:matabentries)
+      integer                       :: swsophy    = 0   !< soil-hydraulic-property switch (0=MvG, 1=table — 1 is dormant)
+      ! [GR-SOIL 2026-05-24] numtab/sptab/ientrytab retired — swsophy=1 (tabulated) path
+      !   dormant; see src/soil/dormant/sptabulated.f90 for reactivation prerequisites.
       integer,         allocatable  :: iHWCKmodel(:)    !< per-layer hydraulic-K model selector
       integer,         allocatable  :: layer(:)         !< per-node soil-layer index
       integer                       :: swfrost    = 0   !< frost-reduction switch (0=no, 1=yes)
@@ -448,21 +447,13 @@ contains
       allocate(sw%vg_params(numnod))    ! [SS-GR-UTILS] components default-init from type
 
       ! [SS-GR-UTILS] Soil hydraulic property metadata (Task 4)
-      ! Shapes mirror the legacy fixed-size globals in variables.f90:
-      !   numtab(macp), sptab(7,macp,matab), ientrytab(macp,0:matabentries)
-      !   iHWCKmodel(maho), layer(macp), BiModal(maho), NoVap(maho)
-      ! sptab/numtab/ientrytab only allocated when swsophy=1 (tabulated path).
-      ! matab=1000, matabentries=50005 — static upper bounds, runtime numnod/nlay.
       ! iHWCKmodel/layer/BiModal/NoVap allocated unconditionally (small, per-layer/node).
+      ! [GR-SOIL 2026-05-24] numtab/sptab/ientrytab allocations retired — swsophy=1
+      !   tabulated path is dormant; see src/soil/dormant/sptabulated.f90.
       allocate(sw%iHWCKmodel(nlay));             sw%iHWCKmodel = 0
       allocate(sw%layer(numnod));                sw%layer      = 0
       allocate(sw%BiModal(nlay));                sw%BiModal    = .false.
       allocate(sw%NoVap(nlay));                  sw%NoVap      = .false.
-      if (sw%swsophy == 1) then
-         allocate(sw%numtab(numnod));            sw%numtab     = 0
-         allocate(sw%sptab(7, numnod, 1000));    sw%sptab      = 0.0_real64
-         allocate(sw%ientrytab(numnod, 0:50005));sw%ientrytab  = 0
-      end if
 
       ! Per-layer array sized nlay (thetsl per soil layer, not per node):
       ! Legacy: thetsl(maho) where maho = max number of soil layers

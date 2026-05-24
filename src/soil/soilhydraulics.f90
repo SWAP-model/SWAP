@@ -835,12 +835,8 @@ contains
          relsatthr, ksatthr, &
          ! DEFERRED: iHWCKmodel(maho) — hydraulic conductivity model switch per mesh%layer; Phase C3
          iHWCKmodel, &
-         ! DEFERRED: numtab/numtablay — number of table entries per node/mesh%layer; Phase C3
-         numtab, numtablay, &
-         ! DEFERRED: ientrytab/ientrytablay — table entry indices; Phase C3
-         ientrytab, ientrytablay, &
-         ! DEFERRED: sptab/sptablay — soil property tables; Phase C3
-         sptab, sptablay, &
+         ! [GR-SOIL 2026-05-24] numtab/numtablay/ientrytab/ientrytablay/sptab/sptablay
+         !   retired with swsophy=1 → src/soil/dormant/sptabulated.f90
          ! DEFERRED: zi/nhead — initial head table entries; Phase C3
          zi, nhead
       use swap_log, only: log_info, to_str
@@ -912,42 +908,17 @@ contains
       end do
       ! BiModal/NoVap: only set via legacy readswap (not TOML path); stay .false.
 
-      if(soil%swsophy.eq.1) then
-         ! Tabulated functions (h,theta,k,dthetadh,dkdtheta) tabulated
-         do node = 1,mesh%numnod
-          numtab(node) = numtablay(mesh%layer(node))
-          do i=0,matabentries
-             ientrytab(node,i) = ientrytablay(mesh%layer(node),i)
-          end do
-        end do
-        do node = 1,mesh%numnod
-          do i = 1,7
-            do j = 1, numtab(node)
-              sptab(i,node,j) = sptablay(i,mesh%layer(node),j)
-            end do
-          end do
-          ! Populate vg_params directly — [SS-GR-UTILS Task 15] cofgen removed
-          soil%vg_params(node)%thetar = 0.0_real64
-          soil%vg_params(node)%thetas = sptab(2, node, numtab(node))
-          soil%vg_params(node)%ksat   = sptab(3, node, numtab(node))
-          if (do_ln_trans) soil%vg_params(node)%ksat = dexp(soil%vg_params(node)%ksat)
-          ! [SS-GR-UTILS Task 4] Mirror numtab/ientrytab/sptab into state (swsophy=1 only).
-          soil%numtab(node) = numtab(node)
-          do i = 0, matabentries
-             soil%ientrytab(node,i) = ientrytab(node,i)
-          end do
-          do i = 1, 7
-             do j = 1, numtab(node)
-                soil%sptab(i,node,j) = sptab(i,node,j)
-             end do
-          end do
-        end do
-        do lay = 1,mesh%numlay
-          soil%ksatfit(lay) = soil%vg_params(mesh%nod1lay(lay))%ksat   ! [SS-SWC S-2.3] [GR-BH Task 36] ksatfit global retired
-          soil%thetsl(lay) = soil%vg_params(mesh%nod1lay(lay))%thetas  ! [SS-SWC S-1.3/S-2.12B]
-        end do
-      else
-         ! MvanG functions
+      ! [GR-SOIL 2026-05-24] swsophy=1 init block retired (TSPACK + tabulated dispatch dormant).
+      ! See src/soil/dormant/sptabulated.f90 for the original layer→node + sptab/numtab/
+      ! ientrytab population logic. Reactivation requires: layer-keyed `numtablay`/
+      ! `ientrytablay`/`sptablay` config wiring, restoring the state fields
+      ! `state%soilwater%{numtab,ientrytab,sptab}` + their allocations, and removing
+      ! the gate below.
+      if (soil%swsophy.eq.1) then
+         call fatalerr_collected('SoilHydraulics', &
+            'swsophy=1 (tabulated soil hydraulics) is dormant — see src/soil/dormant/sptabulated.f90')
+      end if
+      ! MvanG functions (formerly the `else` branch of the swsophy=0/1 split)
          do node = 1,mesh%numnod
           lay = mesh%layer(node)
           ! Populate vg_params directly — [SS-GR-UTILS Task 15] cofgen removed
@@ -987,7 +958,6 @@ contains
         do lay = 1, mesh%numlay
           soil%thetsl(lay) = paramvg(2,lay)                 ! [SS-SWC S-1.3/S-2.12B]
         end do
-      endif
 
 ! --- saturated and residual watercontent of each node; hysteresis parameters
       do node = 1,mesh%numnod

@@ -215,8 +215,7 @@ module legacy_state_mod
       ! [GR-SOIL 2026-05-24] numbit retired — orphan stub; now state%soilwater%numbit.
       ! [GR-SOIL 2026-05-24] numlay retired — see state%mesh%numlay
       integer :: numnodnew  !! Number of desired nodes for soil water quality models
-      integer, allocatable :: numtab(:)  !! Number of table entries of soil physical values for each model compartment
-      integer, allocatable :: numtablay(:)  !! Number of table entries of soil physical values for each soil layer
+      ! [GR-SOIL 2026-05-24] numtab/numtablay retired — orphan stubs; swsophy=1 dormant.
       integer :: rot  !! Internal number of output file *.ROT with microscopic root water extraction data
       integer :: sw2  !! Switch for prescribed bottom flux: 1 = sine function; 2 = table
       integer :: sw3  !! Switch for prescribed hydraulic head of deep aquifer: 1 = sine function; 2 = table
@@ -237,8 +236,7 @@ module legacy_state_mod
       integer :: swqhbot  !! Switch for flux-groundwater level relationship: 1 = exponential function; 2 = tabular function
       integer :: swcofqhc  !! Switch for additional flux added to exponential flux-groundwater level relationship: 0 = no, 1 = yes
       ! [GR-ATM 2026-05-23] swredu retired — see state%atmosphere%swredu
-      integer, allocatable :: ientrytab(:,:)  !! Soil Physical functions (h,theta,k,dthetadh,dkdtheta) tabulated for each model compartment
-      integer, allocatable :: ientrytablay(:,:)  !! Soil Physical functions (h,theta,k,dthetadh,dkdtheta) tabulated for each soil layer
+      ! [GR-SOIL 2026-05-24] ientrytab/ientrytablay retired — orphan stubs; swsophy=1 dormant.
       integer :: swtopsub  !! Switch for topsoil or subsoil: 1 = topsoil, 2 = subsoil
       real(real64) :: aqamp  !! Amplitude of prescribed sine wave of hydraulic head in deep aquifer (T)
       real(real64) :: aqave  !! Average hydraulic head in deep aquifer (L)
@@ -322,8 +320,7 @@ module legacy_state_mod
       real(real64) :: sinamp  !! Amplitude of prescribed bottom flux (L/T) in case of sine function
       real(real64) :: sinave  !! Average value of prescribed bottom flux (L/T) in case of sine function
       real(real64) :: sinmax  !! Time of the year with maximum bottom flux in case of prescribed sine function
-      real(real64), allocatable :: sptab(:,:,:)  !! Soil Physical functions (h,theta,k,dthetadh,dkdtheta) tabulated for each model compartment
-      real(real64), allocatable :: sptablay(:,:,:)  !! Soil Physical functions (h,theta,k,dthetadh,dkdtheta) tabulated for each soil layer
+      ! [GR-SOIL 2026-05-24] sptab/sptablay retired — orphan stubs; swsophy=1 dormant.
       real(real64) :: StepHr  !! Maximum difference of Hroot and Hxylem between iterations; convergence criterium  (L)
       ! [GR-SOIL 2026-05-24] tau retired — orphan stub; read via state%cfg%soil%tau.
       real(real64), allocatable :: twilt(:)  !! Pressure head of a compartment at wilting point (L)

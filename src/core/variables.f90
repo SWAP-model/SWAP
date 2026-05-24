@@ -724,8 +724,7 @@
       ! [GR-SOIL 2026-05-24] numlay retired — see state%mesh%numlay
       ! [GR-BH Task 35] numnod retired — moved to state%mesh%numnod
       integer   numnodnew          ! Number of desired nodes for soil water quality models
-      integer   numtab(macp)       ! Number of table entries of soil physical values for each model compartment
-      integer   numtablay(maho)    ! Number of table entries of soil physical values for each soil layer
+      ! [GR-SOIL 2026-05-24] numtab/numtablay retired — swsophy=1 dormant (see src/soil/dormant/sptabulated.f90).
       integer   rot                ! Internal number of output file *.ROT with microscopic root water extraction data 
       ! [SS-GR-FINAL D1] swstr retired — STR output deleted; 0 consumers
       ! [SS-GR-FINAL D1] str retired — STR file handle; 0 consumers (swap_csv_output str is a local char var)
@@ -772,8 +771,7 @@
       ! [GR-ATM 2026-05-23] swredu retired — see state%atmosphere%swredu
                                    !                                           2 = use function of Boesten/Stroosnijder
       ! [GR-CROP-DVS] swsophy retired — see state%soilwater%swsophy
-      integer   ientrytab(macp,0:matabentries)    ! Soil Physical functions (h,theta,k,dthetadh,dkdtheta) tabulated for each model compartment
-      integer   ientrytablay(maho,0:matabentries) ! Soil Physical functions (h,theta,k,dthetadh,dkdtheta) tabulated for each soil layer
+      ! [GR-SOIL 2026-05-24] ientrytab/ientrytablay retired — swsophy=1 dormant.
 
       integer   swtopsub           ! Switch for topsoil or subsoil: 1 = topsoil, 2 = subsoil
       
@@ -1050,8 +1048,7 @@
       real(8)   sinave             ! Average value of prescribed bottom flux (L/T) in case of sine function
       real(8)   sinmax             ! Time of the year with maximum bottom flux in case of prescribed sine function
       ! real(8) :: spev          ! Cumulative potential evaporation (L) Boesten/Stroosnijder — [SS-ATM] retired 2026-05-11
-      real(8)   sptab(7,macp,matab)    ! Soil Physical functions (h,theta,k,dthetadh,dkdtheta) tabulated for each model compartment
-      real(8)   sptablay(7,maho,matab) ! Soil Physical functions (h,theta,k,dthetadh,dkdtheta) tabulated for each soil layer
+      ! [GR-SOIL 2026-05-24] sptab/sptablay retired — swsophy=1 dormant.
       real(8)   StepHr             ! Maximum difference of Hroot and Hxylem between iterations; convergence criterium  (L)
       ! [GR-CROP-DVS] taccur retired — see state%cfg%simulation%numerical%taccur
       ! [SS-CRP] retired 2026-05-11 — moved to state%soilwater%Tactual (ADR 0036)

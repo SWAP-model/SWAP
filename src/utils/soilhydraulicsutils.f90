@@ -180,21 +180,13 @@ contains
             end if
          end if
 
-      ! Use tabulated function
+      ! [GR-SOIL 2026-05-24] swsophy=1 tabulated path dormant.
+      ! See src/soil/dormant/sptabulated.f90 for the TSPACK body +
+      ! reactivation checklist (config wiring for numtablay/ientrytablay/
+      ! sptablay, dispatch site restoration, state-field allocation).
       else if (soilwater%swsophy == 1) then
-         dum = head
-         if (do_ln_trans .and. head < 0.0_real64) dum = -dlog(-head + 1.0_real64)
-         if (head >= -1.0d-9) then
-            theta = soilwater%sptab(2,node,soilwater%numtab(node))
-         else if (dum < soilwater%sptab(1,node,1)) then
-            theta = soilwater%sptab(2,node,1)
-         else
-            ! [GR-SOIL 2026-05-24] swsophy=1 tabulated path dormant — see src/soil/dormant/sptabulated.f90.
-            !   call EvalTabulatedFunction(0, soilwater%numtab(node), 1, 2, 4, node, &
-            !                              soilwater%sptab, soilwater%ientrytab, head, theta, moiscap_loc, 1)
-            call fatalerr_collected('watcon', &
-               'swsophy=1 (tabulated soil hydraulics) is dormant — see src/soil/dormant/sptabulated.f90')
-         end if
+         call fatalerr_collected('watcon', &
+            'swsophy=1 (tabulated soil hydraulics) is dormant — see src/soil/dormant/sptabulated.f90')
       end if
 
    end function watcon
@@ -329,21 +321,10 @@ contains
 
          if (h > -1.0_real64 .and. c < (dt * 1.0d-7)) c = dt * 1.0d-7  ! TC-12
 
-      ! Use tabulated function
+      ! [GR-SOIL 2026-05-24] swsophy=1 dormant — see src/soil/dormant/sptabulated.f90.
       else if (soilwater%swsophy == 1) then
-         dum = h
-         if (do_ln_trans .and. h < 0.0_real64) dum = -dlog(-h + 1.0_real64)
-         if (h >= -1.0d-9) then
-            c = dt*1.0d-7  ! TC-12
-         else if (dum < soilwater%sptab(1,node,1)) then
-            c = 0.0_real64
-         else
-            ! [GR-SOIL 2026-05-24] swsophy=1 tabulated path dormant — see src/soil/dormant/sptabulated.f90.
-            !   call EvalTabulatedFunction(0, soilwater%numtab(node), 1, 2, 4, node, &
-            !                              soilwater%sptab, soilwater%ientrytab, h, dummy, c, 3)
-            call fatalerr_collected('moiscap', &
-               'swsophy=1 (tabulated soil hydraulics) is dormant — see src/soil/dormant/sptabulated.f90')
-         end if
+         call fatalerr_collected('moiscap', &
+            'swsophy=1 (tabulated soil hydraulics) is dormant — see src/soil/dormant/sptabulated.f90')
       end if
 
    end function moiscap
@@ -415,17 +396,10 @@ contains
             end if
          end if
 
-      ! Use tabulated function. "dhconduc" is calclated as a function of "head"
+      ! [GR-SOIL 2026-05-24] swsophy=1 dormant — see src/soil/dormant/sptabulated.f90.
       else if (soilwater%swsophy == 1) then
-         if (theta >= soilwater%sptab(2,node,soilwater%numtab(node)) - 1.0d-9) then
-            dkdh = 1.0d+08
-         else
-            ! [GR-SOIL 2026-05-24] swsophy=1 tabulated path dormant — see src/soil/dormant/sptabulated.f90.
-            !   call EvalTabulatedFunction(0, soilwater%numtab(node), 1, 3, 5, node, &
-            !                              soilwater%sptab, soilwater%ientrytab, h, dummy, dkdh, 4)
-            call fatalerr_collected('dhconduc', &
-               'swsophy=1 (tabulated soil hydraulics) is dormant — see src/soil/dormant/sptabulated.f90')
-         end if
+         call fatalerr_collected('dhconduc', &
+            'swsophy=1 (tabulated soil hydraulics) is dormant — see src/soil/dormant/sptabulated.f90')
       end if
 
       ! In case of frost conditions
@@ -552,21 +526,10 @@ contains
             end if
          end if
 
-      ! Use tabulated function. "hconduc" is calclated as a function of "head"
+      ! [GR-SOIL 2026-05-24] swsophy=1 dormant — see src/soil/dormant/sptabulated.f90.
       else if (soilwater%swsophy == 1) then
-         if (theta >= soilwater%sptab(2,node,soilwater%numtab(node)) - 1.0d-9) then
-            k = soilwater%sptab(3,node,soilwater%numtab(node))
-            if (do_ln_trans) k = dexp(k)
-         else if (theta <= soilwater%sptab(2,node,1) + 1.0d-9) then
-            k = soilwater%sptab(3,node,1)
-            if (do_ln_trans) k = dexp(k)
-         else
-            ! [GR-SOIL 2026-05-24] swsophy=1 tabulated path dormant — see src/soil/dormant/sptabulated.f90.
-            !   call EvalTabulatedFunction(0, soilwater%numtab(node), 1, 3, 5, node, &
-            !                              soilwater%sptab, soilwater%ientrytab, h, k, dummy, 2)
-            call fatalerr_collected('hconduc', &
-               'swsophy=1 (tabulated soil hydraulics) is dormant — see src/soil/dormant/sptabulated.f90')
-         end if
+         call fatalerr_collected('hconduc', &
+            'swsophy=1 (tabulated soil hydraulics) is dormant — see src/soil/dormant/sptabulated.f90')
       end if
 
       ! In case of frost conditions
@@ -656,25 +619,10 @@ contains
             end if
          end if
 
+      ! [GR-SOIL 2026-05-24] swsophy=1 dormant — see src/soil/dormant/sptabulated.f90.
       else if (soilwater%swsophy == 1) then
-         if (soilwater%sptab(2,node,soilwater%numtab(node)) - wcon < 1.0d-6) then
-
-            ! Saturated pressure head
-            if (node == 1) then
-               h_out = disnod
-            else
-               h_out = h_in(node-1) + disnod
-            end if
-            h_out = dmax1(h_out, 0.0_real64)
-         else
-
-            ! [GR-SOIL 2026-05-24] swsophy=1 tabulated path dormant — see src/soil/dormant/sptabulated.f90.
-            !   call EvalTabulatedFunction(1, soilwater%numtab(node), 1, 2, 4, node, &
-            !                              soilwater%sptab, soilwater%ientrytab, prh, wcon, dummy, 1)
-            !   h_out = prh
-            call fatalerr_collected('prhead', &
-               'swsophy=1 (tabulated soil hydraulics) is dormant — see src/soil/dormant/sptabulated.f90')
-         end if
+         call fatalerr_collected('prhead', &
+            'swsophy=1 (tabulated soil hydraulics) is dormant — see src/soil/dormant/sptabulated.f90')
       end if
 
    end function prhead
