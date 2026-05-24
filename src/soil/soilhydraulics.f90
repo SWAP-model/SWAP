@@ -823,20 +823,17 @@ contains
       ! [SS-GR-FINAL B9] blanket use Variables → explicit only-list; all symbols DEFERRED
       ! macp/mabbc/matabentries → swap_array_dimensions (dimension constants)
       use swap_array_dimensions, only: macp, mabbc, matabentries
-      use variables, only: &
-         ! [GR-SOIL 2026-05-24] cQMpLatSs retired (ADR 0040)
-         ! [GR-SOIL 2026-05-24] swhyst/gwli → state%cfg%soil (direct read via cfg_soil)
-         ! [GR-SOIL 2026-05-24] paramvg → state%cfg%soil%hydraulics (direct read via hyd)
-         ! [GR-SOIL 2026-05-24] relsatthr/ksatthr retired — readswap threshold-Ksat
-         !   path not ported; state defaults to 0.
-         ! [GR-SOIL 2026-05-24] h_enpr removed — was an unused import.
-         ! [GR-SOIL 2026-05-24] numtab/numtablay/ientrytab/ientrytablay/sptab/sptablay
-         !   retired with swsophy=1 → src/soil/dormant/sptabulated.f90
-         ! DEFERRED: iHWCKmodel(maho) — still the source for the legacy→state mirror
-         !   below; config_to_variables sets it before soilwater_init allocates state.
-         iHWCKmodel, &
-         ! DEFERRED: zi/nhead — initial head table entries; Phase C3
-         zi, nhead
+      ! [GR-SOIL 2026-05-24] soilwater() is now `use variables`-free. All consumers
+      !   moved to state/config:
+      !     cQMpLatSs retired (ADR 0040)
+      !     swhyst/gwli → state%cfg%soil
+      !     paramvg → state%cfg%soil%hydraulics (hyd alias)
+      !     h_enpr was an unused import
+      !     numtab/numtablay/ientrytab/ientrytablay/sptab/sptablay retired with
+      !       swsophy=1 → src/soil/dormant/sptabulated.f90
+      !     zi/nhead → state%cfg%soil%initial%z_init
+      !     relsatthr/ksatthr retired (threshold-Ksat path not ported; state defaults 0)
+      !     iHWCKmodel → state%soilwater%iHWCKmodel (default 1 via soilwater_init)
       use swap_log, only: log_info, to_str
       use array_utils, only: afgen
       use soilhydraulics_utils, only: watcon, hconduc, moiscap, hcomean
@@ -896,17 +893,11 @@ contains
       ! [GR-SOIL 2026-05-24] cQMpLatSs retired-zero write dropped (ADR 0040 macropore).
 
       ! Soil physics: tabulated or MualemVanGenuchten functions
-      ! [SS-GR-UTILS Task 4] Mirror mesh%layer + iHWCKmodel into state (both branches).
-      ! mesh%layer(:) set by CalcGrid; iHWCKmodel(:) set by config_to_variables.
-      ! State fields allocated by soilwater_init which ran before SoilHydraulics(1).
+      ! [SS-GR-UTILS Task 4] Mirror mesh%layer into state.
+      ! [GR-SOIL 2026-05-24] iHWCKmodel mirror loop retired — soilwater_init seeds
+      !   `sw%iHWCKmodel = 1` (HACK Phase 4f-extend: TOML pipeline forces uni-modal MvG).
       do node = 1, mesh%numnod
          soil%layer(node) = mesh%layer(node)
-      end do
-      ! [GR-SOIL 2026-05-24] iHWCKmodel is seeded directly into state%soilwater%iHWCKmodel
-      ! by config_to_variables (`apply_iHWCKmodel`/equivalent). The mirror loop here is
-      ! redundant; soilwater_init already zeroed the array and config sets it.
-      do lay = 1, mesh%numlay
-         soil%iHWCKmodel(lay) = iHWCKmodel(lay)
       end do
       ! BiModal/NoVap: only set via legacy readswap (not TOML path); stay .false.
 
@@ -987,14 +978,17 @@ contains
 
       if (soil%swinco.eq.1) then
          ! Pressure head profile is input
-         ! [SS-SWC S-2.12B] legacy h(:) reads/writes retargeted to soil%h
-         do i = 1, nhead
-          tab(i*2) = soil%h(i)
-          tab(i*2-1) = abs(zi(i))
-        end do
-        do i = 1, mesh%numnod
-          soil%h(i) = afgen(tab,macp*2,abs(mesh%z(i)))            ! [SS-SWC S-1.3/S-2.12B]
-        end do
+         ! [GR-SOIL 2026-05-24] z_init from state%cfg%soil%initial; h values already in soil%h
+         !   (seeded by swap_mod after soilwater_init reads h_file directly).
+         if (allocated(state%cfg%soil%initial%z_init)) then
+            do i = 1, size(state%cfg%soil%initial%z_init)
+              tab(i*2)   = soil%h(i)
+              tab(i*2-1) = abs(state%cfg%soil%initial%z_init(i))
+            end do
+            do i = 1, mesh%numnod
+              soil%h(i) = afgen(tab,macp*2,abs(mesh%z(i)))            ! [SS-SWC S-1.3/S-2.12B]
+            end do
+         end if
       endif
       if (soil%swinco.eq.2 .and. swbotb.ne.8) then
         if (abs(cfg_soil%gwli-(mesh%z(mesh%numnod)-0.5d0*mesh%dz(mesh%numnod))) .lt.1.0d-4) then
@@ -1005,11 +999,14 @@ contains
         endif
       endif
       if (soil%swinco.eq.3) then
-        if (nhead.ne.mesh%numnod) then
-          messag = 'Initial data are read from file (SWINCO=3) and '//  &
-     &    'number of nodes/compartments is not consistent with NUMNOD'//&
-     &    'must be corrected!'
-          call fatalerr_collected ('soilwater',messag)
+        ! [GR-SOIL 2026-05-24] consistency gate uses size(z_init) via config.
+        if (allocated(state%cfg%soil%initial%z_init)) then
+           if (size(state%cfg%soil%initial%z_init).ne.mesh%numnod) then
+             messag = 'Initial data are read from file (SWINCO=3) and '//  &
+       &      'number of nodes/compartments is not consistent with NUMNOD'//&
+       &      'must be corrected!'
+             call fatalerr_collected ('soilwater',messag)
+           endif
         endif
       endif
       if (soil%swinco.eq.1.or.soil%swinco.eq.3) then

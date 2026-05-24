@@ -653,7 +653,7 @@
 !     real(8)   till_sumAvail2                    ! Available water
 
 ! --- soilwater variables
-      integer   iHWCKmodel(maho)   ! indicator what type of water retention and hydraulic conductivity model is used (per soil layer)
+      ! [GR-SOIL 2026-05-24] iHWCKmodel retired — read via state%soilwater%iHWCKmodel (default 1 in soilwater_init).
                                    ! 1 = MvG (default), 2 = exponential, 3 = MvG bi-modal
                                    ! 4-11: 8 versions of PDI model
                                    ! other types may be added in the future
@@ -709,7 +709,7 @@
       ! [SS-BMI2 Task 5] retired 2026-05-13 — moved to state%timecontrol%msteps (ADR 0041)
       ! integer   msteps             ! moved to state%timecontrol%msteps
       ! [GR-SOIL 2026-05-24] ncomp retired — read inline from config%soil%ncomp
-      integer   nhead              ! Number of initial soil water pressure heads as provided in the input
+      ! [GR-SOIL 2026-05-24] nhead retired — read via state%cfg%soil%initial%z_init size.
       ! [SS-SWC] retired 2026-05-12 — moved to state%soilwater%nodgwl (ADR 0038)
       ! integer   nodgwl             ! Node directly above groundwater level
       ! [GR-SOIL 2026-05-24] nod1lay retired — see state%mesh%nod1lay
@@ -1081,7 +1081,7 @@
       ! [SS-HEAT] retired 2026-05-10 — moved to state%heat%zfrosttop (ADR 0034)
       ! real(8)   zfrosttop          ! Depth of top of frost layer (L)
       ! [GR-BH Task 37] zbotdr(Madr) retired — moved to state%drainage%zbotdr
-      real(8)   zi(macp)           ! Array with soil depths (L) used to specify initial soil water pressure heads
+      ! [GR-SOIL 2026-05-24] zi retired — read via state%cfg%soil%initial%z_init.
       ! [GR-DRA 2026-05-23] zintf retired — see state%drainage%zintf
       ! real(8)   ztopdislay(Madr)   ! Moved to drainage_state_t%ztopdislay (ADR 0031)
       ! [SS-TC] retired 2026-05-12 — moved to state%timecontrol%flDrain (ADR 0041)

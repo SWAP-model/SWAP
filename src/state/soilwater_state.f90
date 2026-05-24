@@ -450,7 +450,10 @@ contains
       ! iHWCKmodel/layer/BiModal/NoVap allocated unconditionally (small, per-layer/node).
       ! [GR-SOIL 2026-05-24] numtab/sptab/ientrytab allocations retired — swsophy=1
       !   tabulated path is dormant; see src/soil/dormant/sptabulated.f90.
-      allocate(sw%iHWCKmodel(nlay));             sw%iHWCKmodel = 0
+      ! [GR-SOIL 2026-05-24] iHWCKmodel default 1 (uni-modal MvG) — matches
+      !   HACK Phase 4f-extend constraint (config_to_variables:612 forced =1).
+      !   When the TOML schema exposes per-layer iHWCKmodel, set it here from config.
+      allocate(sw%iHWCKmodel(nlay));             sw%iHWCKmodel = 1
       allocate(sw%layer(numnod));                sw%layer      = 0
       allocate(sw%BiModal(nlay));                sw%BiModal    = .false.
       allocate(sw%NoVap(nlay));                  sw%NoVap      = .false.

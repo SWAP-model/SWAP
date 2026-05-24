@@ -77,6 +77,12 @@ module soil_config_mod
       character(len=:), allocatable :: h_file      !! header z,h
       character(len=:), allocatable :: tsoil_file  !! header z,tsoil
       character(len=:), allocatable :: cml_file    !! header z,cml
+      ! [GR-SOIL 2026-05-24] swinco=1 initial-head table z-axis (depths, cm).
+      ! Populated from `h_file` (z,h CSV) by config_to_variables. The h column
+      ! is consumed separately by swap_mod after soilwater_init; this `z_init(:)`
+      ! is the depth axis used to interpolate the initial pressure-head profile
+      ! across the actual mesh in soilhydraulics.f90 soilwater() task=1.
+      real(real64), allocatable :: z_init(:)
    contains
       procedure :: validate => soil_initial_validate
    end type soil_initial_t

@@ -56,8 +56,8 @@ contains
       use variables   ! bare-use is intentional: many globals across sections
       use swap_state_mod, only: swap_state_t
       use error_mod, only: fatalerr_collected
-      type(swap_config_t), intent(in), target :: config
-      type(swap_state_t),  intent(inout)      :: state
+      type(swap_config_t), intent(inout), target :: config  ! [GR-SOIL 2026-05-24] inout: populates config%soil%initial%z_init from h_file CSV
+      type(swap_state_t),  intent(inout)         :: state
 
       integer :: i, n
 
@@ -530,9 +530,11 @@ contains
                call read_csv_table(trim(config%soil%initial%h_file), hdr, tbl, errs)
                call errs%abort_if_fatal()
                nrows = size(tbl, 1)
-               nhead = nrows
+               ! [GR-SOIL 2026-05-24] z_init in config; legacy zi/nhead mirror retained for compat.
+               if (allocated(config%soil%initial%z_init)) deallocate(config%soil%initial%z_init)
+               allocate(config%soil%initial%z_init(nrows))
                do k = 1, nrows
-                  zi(k) = tbl(k, 1)
+                  config%soil%initial%z_init(k) = tbl(k, 1)
                end do
             end block
 
@@ -604,12 +606,10 @@ contains
             state%soilwater%bdens(i) = config%soil%hydraulics%bdens(i)
          end do
 
-         ! Default analytical MvG model for every soil-physical layer.
-         ! HACK Phase 4f-extend: iHWCKmodel(:) is fixed to 1 (uni-modal
-         ! MvG). The legacy reader at readswap.f90:651-657 lets cases
-         ! override per layer (1..11) but no schema slot covers it yet.
-         ! None of the regression cases set it; this matches.
-         iHWCKmodel(1:size(config%soil%hydraulics%ores)) = 1
+         ! [GR-SOIL 2026-05-24] iHWCKmodel legacy write retired — soilwater_init
+         !   seeds `sw%iHWCKmodel = 1` directly (HACK Phase 4f-extend constraint).
+         !   The legacy reader at readswap.f90:651-657 supported per-layer override
+         !   (1..11) but no TOML schema slot covers it yet.
 
          ! [GR-SOIL 2026-05-24] paramvg mirror retained — tillage.f90 still consumes
          ! the layer-keyed mutable VG params. soilhydraulics + hysteresis read

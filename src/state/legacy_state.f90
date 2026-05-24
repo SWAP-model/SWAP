@@ -193,7 +193,7 @@ module legacy_state_mod
       integer :: till_Ntill  !! Number of tabulated tillage events
       integer :: till_Ntypes  !! Number of tillage types
       real(real64) :: till_Max_Z_tillage  !! Max possible depth of tillage (cm)
-      integer, allocatable :: iHWCKmodel(:)  !! indicator what type of water retention and hydraulic conductivity model is used (per soil layer)
+      ! [GR-SOIL 2026-05-24] iHWCKmodel retired — orphan stub; state%soilwater%iHWCKmodel.
       logical, allocatable :: BiModal(:)  !! logical indicating whether chosen model is bi-modal or not
       logical, allocatable :: NoVap(:)  !! logical indicating that NO vapour flow is to be considered in PDI K-model
       ! [GR-SOIL 2026-05-24] Itnumb retired — orphan stub; now state%soilwater%Itnumb.
@@ -208,7 +208,7 @@ module legacy_state_mod
       ! [GR-DRA 2026-05-23] ipos retired — see state%drainage%ipos
       ! [GR-SOIL 2026-05-24] isoillay retired — read inline from config%soil%isoillay
       ! [GR-SOIL 2026-05-24] ncomp retired — read inline from config%soil%ncomp
-      integer :: nhead  !! Number of initial soil water pressure heads as provided in the input
+      ! [GR-SOIL 2026-05-24] nhead retired — read via state%cfg%soil%initial%z_init size.
       ! [GR-SOIL 2026-05-24] nod1lay retired — see state%mesh%nod1lay
       integer :: nrstaring  !! Number of soil type [1..18] according to Staring series (Wosten et al., 2001)
       ! [GR-SOIL 2026-05-24] nsublay retired — derived inline from config%soil%sublay
@@ -325,7 +325,7 @@ module legacy_state_mod
       real(real64) :: StepHr  !! Maximum difference of Hroot and Hxylem between iterations; convergence criterium  (L)
       ! [GR-SOIL 2026-05-24] tau retired — orphan stub; read via state%cfg%soil%tau.
       real(real64), allocatable :: twilt(:)  !! Pressure head of a compartment at wilting point (L)
-      real(real64), allocatable :: zi(:)  !! Array with soil depths (L) used to specify initial soil water pressure heads
+      ! [GR-SOIL 2026-05-24] zi retired — orphan stub; read via state%cfg%soil%initial%z_init.
       ! [GR-DRA 2026-05-23] zintf retired — see state%drainage%zintf
       logical :: FlHydrLift  !! Flag indicating release of water from root to soil is allowed
       ! [GR-BND 2026-05-23] flrunon retired — see state%soilwater%flrunon
