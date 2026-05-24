@@ -380,7 +380,7 @@ contains
 
       ! add time step fluxes to intermediate totals
       soil%iqrot = soil%iqrot + qrotts      ! S-1.5/S-2.12B
-      do node = 1,noddrz
+      do node = 1, crop%common%noddrz  ! [GR-SOIL 2026-05-24] via crop alias
         soil%inqrot(node) = soil%inqrot(node) + soil%qrot(node) * time%dt  ! S-2.12B, TC-6
         soil%qpotrot_day(node) = soil%qpotrot_day(node) + soil%qpotrot(node) * time%dt  ! S-2.12B, TC-6
         soil%qredtot_day(node) = soil%qredtot_day(node) + (soil%qredwet(node) + soil%qreddry(node) + soil%qredsol(node) + soil%qredfrs(node)) * time%dt  ! S-2.12B, TC-6

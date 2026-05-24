@@ -30,12 +30,11 @@ contains
          ! [GR-SOIL 2026-05-24] qssdi → state%soilwater
          ! [GR-SOIL 2026-05-24] hplate/rimlay/sw4/swbotb3impl → state%cfg%bottom_boundary
          ! [GR-SOIL 2026-05-24] swcaprise/dump_convergence_diagnostics → state%cfg%simulation%numerical
+         ! [GR-SOIL 2026-05-24] noddrz → state%crop%common%noddrz (already canonical state field)
          ! DEFERRED: numbit/itnumb — Richards iteration counter/stats; Phase C3/D
          numbit, itnumb, &
          ! DEFERRED: flwarn_hc/iwarn_hc — non-convergence warning state; Phase C3
-         flwarn_hc, iwarn_hc, &
-         ! DEFERRED: noddrz — node index at root zone bottom; Phase C3
-         noddrz
+         flwarn_hc, iwarn_hc
       use timestep_control_mod, only: fldecdt
       use swap_log, only: log_warn, log_debug, to_str
       use boundbottom_mod, only: BoundBottom
@@ -195,7 +194,7 @@ contains
 
       ! Node nr of compartment with minimized flux of capillary rise
       if (cfg_num%swcaprise) then
-         nodncr    = max(5,noddrz)
+         nodncr    = max(5, state%crop%common%noddrz)  ! [GR-SOIL 2026-05-24]
          flcaprise = .false.
       endif
       do i = 1,mesh%numnod
