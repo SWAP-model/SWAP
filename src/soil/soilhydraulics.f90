@@ -824,11 +824,10 @@ contains
       ! macp/mabbc/matabentries → swap_array_dimensions (dimension constants)
       use swap_array_dimensions, only: macp, mabbc, matabentries
       use variables, only: &
-         ! swsophy retired (→soil%swsophy)
-
-         ! DEFERRED: swhyst — hysteresis switch; Phase C3
-         swhyst, &
-         ! [GR-SOL 2026-05-24] swinco retired — read via soil%swinco
+         ! [GR-SOIL 2026-05-24] cQMpLatSs retired (ADR 0040)
+         ! [GR-SOIL 2026-05-24] cfg_soil%swhyst/cfg_soil%gwli → state%cfg%soil (direct read)
+         ! [GR-SOIL 2026-05-24] h_enpr removed — was an unused import (shadowed by
+         !   the same-named struct field on soil%vg_params)
          ! DEFERRED: swkmean — mean K averaging method; Phase C3
          ! DEFERRED: paramvg(21,maho) — VanGenuchten parameters table; Phase C3
          paramvg, &
@@ -842,15 +841,8 @@ contains
          ientrytab, ientrytablay, &
          ! DEFERRED: sptab/sptablay — soil property tables; Phase C3
          sptab, sptablay, &
-         ! [GR-SOIL 2026-05-24] nod1lay/numlay retired — read via state%mesh%{nod1lay,numlay}
-         ! DEFERRED: gwli — initial groundwater level; Phase C3
-         gwli, &
          ! DEFERRED: zi/nhead — initial head table entries; Phase C3
-         zi, nhead, &
-         ! DEFERRED: h_enpr — air entry pressure; Phase C3
-         h_enpr, &
-         ! DEFERRED: cQMpLatSs — macropore lateral flux (retired-zero); Phase D
-         cQMpLatSs
+         zi, nhead
       use swap_log, only: log_info, to_str
       use array_utils, only: afgen
       use soilhydraulics_utils, only: watcon, hconduc, moiscap, hcomean
@@ -878,6 +870,7 @@ contains
                  heat => state%heat,         &
                  atmo => state%atmosphere,   &
                  time => state%timecontrol,  &
+                 cfg_soil => state%cfg%soil, &  ! [GR-SOIL 2026-05-24] cfg_soil%swhyst/cfg_soil%gwli direct config read
                  swbotb => state%soilwater%swbotb_runtime)
 
       select case (task)
@@ -905,7 +898,7 @@ contains
       ! [SS-HEAT] Task 9: legacy rfcp global retired; heat%rfcp is authoritative
       if (allocated(heat%rfcp)) heat%rfcp = 1.0d0
       state%surfacewater%vtair = 0.0d0
-      cQMpLatSs = 0.0d0
+      ! [GR-SOIL 2026-05-24] cQMpLatSs retired-zero write dropped (ADR 0040 macropore).
 
       ! Soil physics: tabulated or MualemVanGenuchten functions
       ! [SS-GR-UTILS Task 4] Mirror mesh%layer + iHWCKmodel into state (both branches).
@@ -1001,12 +994,12 @@ contains
         lay = mesh%layer(node)
         soil%thetar(node) = soil%vg_params(node)%thetar        ! [SS-SWC S-1.3/S-2.12B]
         soil%thetas(node) = soil%vg_params(node)%thetas        ! [SS-SWC S-1.3/S-2.12B]
-        !!! Kroes: disable combi of swsophy=1 and swhyst=1
-        if (swhyst.eq.1) then
+        !!! Kroes: disable combi of swsophy=1 and cfg_soil%swhyst=1
+        if (cfg_soil%swhyst.eq.1) then
            ! Wetting curve
            soil%indeks(node) = 1                            ! [SS-SWC S-1.3/S-2.12B]
            soil%vg_params(node)%alpha = paramvg(8,lay)      ! [SS-GR-UTILS Task 15] hysteresis: wetting alpha
-        elseif (swhyst.eq.0.or.swhyst.eq.2) then
+        elseif (cfg_soil%swhyst.eq.0.or.cfg_soil%swhyst.eq.2) then
            ! Drying branch or simulation without hysteresis
            soil%indeks(node) = -1                           ! [SS-SWC S-1.3/S-2.12B]
            soil%vg_params(node)%alpha = paramvg(4,lay)      ! [SS-GR-UTILS Task 15] hysteresis: drying alpha
@@ -1025,7 +1018,7 @@ contains
         end do
       endif
       if (soil%swinco.eq.2 .and. swbotb.ne.8) then
-        if (abs(gwli-(mesh%z(mesh%numnod)-0.5d0*mesh%dz(mesh%numnod))) .lt.1.0d-4) then
+        if (abs(cfg_soil%gwli-(mesh%z(mesh%numnod)-0.5d0*mesh%dz(mesh%numnod))) .lt.1.0d-4) then
           messag = 'Initial groundwaterlevel (SWINCO=2) is '//          &
      &    'too close to bottom of soil profile'//                       &
      &    ' must be corrected!'
@@ -1067,7 +1060,7 @@ contains
             call fatalerr_collected ('soilwater',messag)
           endif
         else
-          soil%gwl = gwli                                   ! [SS-SWC S-1.3/S-2.12B]
+          soil%gwl = cfg_soil%gwli                                   ! [SS-SWC S-1.3/S-2.12B]
         endif
         if (soil%gwl.gt.0.0d0) then
           soil%pond = soil%gwl                                ! [SS-SWC S-1.3/S-2.12B]
@@ -1195,7 +1188,7 @@ contains
       call integral (state)
 
       ! Update parameters for soil water hystereses
-      if (swhyst.ne.0) call hysteresis (state)
+      if (cfg_soil%swhyst.ne.0) call hysteresis (state)
 
       case default
          call fatalerr_collected ('SoilWater', 'Illegal value for TASK')

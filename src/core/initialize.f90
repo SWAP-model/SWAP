@@ -158,7 +158,7 @@
       ! [GR-BH Task 37] swdivdinf retired to state%drainage%swdivdinf
       ! [GR-DRA 2026-05-23] swdislay/swtopdislay retired — see state%drainage%X
       swfrost            = 0
-      swhyst             = 0 
+      ! [GR-SOIL 2026-05-24] swhyst retired — read via state%cfg%soil%swhyst.
       ! [GR-SOL 2026-05-24] swinco retired — see state%soilwater%swinco
       ! [SS-GR-FINAL D5] swoutputmodflow zero-fill dropped — declaration retired
       ! [GR-BND 2026-05-23] swpondmx retired — see state%surfacewater%swpondmx
@@ -217,7 +217,7 @@
       ! [GR-DRA 2026-05-23] geofac retired — see state%drainage%geofac
       ! [SS-SWC] gwl retired — soilwater_init handles init via state%soilwater%gwl
       ! gwl                = 0.0d0
-      gwli               = 0.0d0 
+      ! [GR-SOIL 2026-05-24] gwli retired — read via state%cfg%soil%gwli.
       ! [SS-BND B-2.7] gwlinp retired — soilwater_init handles init via state%soilwater
       ! gwlinp             = 0.0d0
       ! [SS-SWC] gwlm1 retired — soilwater_init handles init via state%soilwater%gwlm1
@@ -225,7 +225,7 @@
       ! [GR-BND 2026-05-23] gwltab retired — soilwater_init zeros state%soilwater%gwltab
       ! [SS-SWC] h retired — soilwater_init handles init via state%soilwater%h
       ! h                  = 0.0d0
-      h_enpr             = 0.0d0 
+      ! [GR-SOIL 2026-05-24] h_enpr retired — orphan global; lives on vg_params/config.
       ! [GR-BND 2026-05-23] haqtab retired — soilwater_init zeros state%soilwater%haqtab
       ! [SS-SWC] hatm retired — soilwater_init handles init via state%soilwater%hatm
       ! hatm               = 0.0d0
@@ -487,7 +487,7 @@
       ! [GR-BH Task 36] ArMpSs retired — made local in soilhydraulics/solute/agetracer (ADR 0040 complete)
       ! ArMpSs               = 0.0d0
       ArMpTp               = 0.0d0
-      cQMpLatSs            = 0.0d0
+      ! [GR-SOIL 2026-05-24] cQMpLatSs retired — ADR 0040 macropore.
       ! [SS-GR-FINAL D1] dFdhMp zero-fill dropped — declaration retired
       iQMpOutDrRap         = 0.0d0
       ! [SS-GR-CROPRT A2] iQInTopLatDm1/2/iQInTopVrtDm1/2 zero-fills dropped — declarations retired (ADR 0040)

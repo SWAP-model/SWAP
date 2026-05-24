@@ -755,7 +755,7 @@
       ! [GR-CROP-DVS] swdra retired — see state%surfacewater%swdra
                                    !                                            2 = simulate drainage and surface water
       integer   swfrost            ! Switch for reduction of hydraulic conductivity in case of frost: 0 = no; 1 = yes
-      integer   swhyst             ! Switch for hysteresis of soil moisture retention function: 0 = no; 1 = yes
+      ! [GR-SOIL 2026-05-24] swhyst retired — read via state%cfg%soil%swhyst.
       ! [GR-SOL 2026-05-24] swinco retired — see state%soilwater%swinco
                                    !                                             3 = final pressure heads from previous simulation
       ! [GR-CROP-DVS] SWkmean retired — see state%cfg%simulation%numerical%swkmean
@@ -856,7 +856,7 @@
       ! [SS-SWC] retired 2026-05-12 — moved to state%soilwater%gwl (ADR 0038)
       ! real(8)   gwl                ! Groundwater level (L)
       ! [GR-CROP-DVS] gwlconv retired — see state%cfg%simulation%numerical%gwlconv
-      real(8)   gwli               ! Groundwater level (L) at start of simulation
+      ! [GR-SOIL 2026-05-24] gwli retired — read via state%cfg%soil%gwli.
       ! [SS-BND] retired 2026-05-11 — boundary subsystem migrated to state%soilwater (ADR 0035)
       ! real(8)   gwlinp             ! Prescribed groundwater level (L) for current time
       ! [SS-SWC] retired 2026-05-12 — moved to state%soilwater%gwlm1 (ADR 0038)
@@ -864,7 +864,7 @@
       ! [GR-BND 2026-05-23] gwltab retired — see state%soilwater%gwltab
       ! [SS-SWC] retired 2026-05-12 — moved to state%soilwater%h (ADR 0038)
       ! real(8)   h(macp)            ! Soil water pressure head (L)
-      real(8)   h_enpr(macp)       ! Soil water Entry Pressure head for Modified MualemVanGenuchten curve (L)
+      ! [GR-SOIL 2026-05-24] h_enpr retired — orphan global; lives on state%soilwater%vg_params(:)%h_enpr and config%soil%hydraulics%h_enpr(:).
       ! [GR-BND 2026-05-23] haqtab retired — see state%soilwater%haqtab
       ! [SS-SWC] retired 2026-05-12 — moved to state%soilwater%hatm (ADR 0038)
       ! real(8)   hatm               ! Pressure head of air (L) near the soil surface
@@ -1253,7 +1253,7 @@
       real(8) CritUndSatVol        ! [retired-zero] kept: waterbalance watertable() arg
 ! --- macropore variables (selected — most retired by deletion)
       real(8) ArMpTp               ! [retired-zero] kept: ArMpSs assignment
-      real(8) cQMpLatSs            ! [retired-zero] kept: soilhydraulics zero-write
+      ! [GR-SOIL 2026-05-24] cQMpLatSs retired — ADR 0040 macropore, no consumer.
       ! [GR-CROP-DVS] cQMpOutDrRap retired — dead
       ! [SS-GR-FINAL D1] dFdhMp retired — always 0; 0 consumers
       ! [SS-TC] retired 2026-05-12 — moved to state%timecontrol%dtold (ADR 0041)

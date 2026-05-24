@@ -230,7 +230,7 @@ module legacy_state_mod
       integer :: swdiscrvert  !! Switch to convert vertical discretization for soil water quality models: 0 = no; 1 = yes
       ! [GR-DRA 2026-05-23] swdislay/swtopdislay retired — see state%drainage%X
       integer :: swfrost  !! Switch for reduction of hydraulic conductivity in case of frost: 0 = no; 1 = yes
-      integer :: swhyst  !! Switch for hysteresis of soil moisture retention function: 0 = no; 1 = yes
+      ! [GR-SOIL 2026-05-24] swhyst retired — orphan stub; read via state%cfg%soil%swhyst.
       ! [GR-SOL 2026-05-24] swinco retired — see state%soilwater%swinco
       ! [GR-DRA 2026-05-23] swliminf retired — see state%drainage%swliminf
       ! [GR-BND 2026-05-23] swpondmx retired — see state%surfacewater%swpondmx
@@ -265,9 +265,9 @@ module legacy_state_mod
       ! [GR-DRA 2026-05-23] entres retired — see state%drainage%entres
       ! [GR-DRA 2026-05-23] ftopdislay retired — see state%drainage%ftopdislay
       ! [GR-DRA 2026-05-23] geofac retired — see state%drainage%geofac
-      real(real64) :: gwli  !! Groundwater level (L) at start of simulation
+      ! [GR-SOIL 2026-05-24] gwli retired — orphan stub; read via state%cfg%soil%gwli.
       ! [GR-BND 2026-05-23] gwltab retired — see state%soilwater%gwltab
-      real(real64), allocatable :: h_enpr(:)  !! Soil water Entry Pressure head for Modified MualemVanGenuchten curve (L)
+      ! [GR-SOIL 2026-05-24] h_enpr retired — orphan stub; lives on state%soilwater%vg_params(:)%h_enpr and config%soil%hydraulics%h_enpr(:).
       ! [GR-BND 2026-05-23] haqtab retired — see state%soilwater%haqtab
       ! [GR-BND 2026-05-23] hbotab retired — see state%soilwater%hbotab
       ! [GR-SOIL 2026-05-24] hcomp retired — derived inline from config%soil%hsublay/ncomp
@@ -394,7 +394,7 @@ module legacy_state_mod
       real(real64) :: Z_Tp  !! [retired-zero] kept: ArMpTp/ArMpSs gating
       real(real64) :: CritUndSatVol  !! [retired-zero] kept: waterbalance watertable() arg
       real(real64) :: ArMpTp  !! [retired-zero] kept: ArMpSs assignment
-      real(real64) :: cQMpLatSs  !! [retired-zero] kept: soilhydraulics zero-write
+      ! [GR-SOIL 2026-05-24] cQMpLatSs retired — orphan stub, ADR 0040 macropore.
       real(real64), allocatable :: DiPoCp(:)  !! [retired-zero] kept: soilgrid refinement
       real(real64) :: iQMpOutDrRap  !! [retired-zero] kept: swap_csv/swapoutput DRAINAGE accumulator
       real(real64), allocatable :: IAvFrMpWlWtDm1(:)  !! [retired-zero] kept: soilgrid refinement

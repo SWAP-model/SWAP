@@ -444,7 +444,7 @@ contains
       ! Soil (audit: 15 + discretization + frost)
       ! ---------------------------------------------------------------
       state%soilwater%swsophy = config%soil%swsophy
-      swhyst  = config%soil%swhyst
+      ! [GR-SOIL 2026-05-24] swhyst legacy mirror dropped — direct config read.
       state%soilwater%swinco = config%soil%swinco
       ! [MACRO-RETIRE 2026-05-12] swmacro global retired (ADR 0040).
       ! soil.swmacro=1 is still rejected by soil_config validator stub.
@@ -462,7 +462,7 @@ contains
                                                state%timecontrol%tstart, &
                                                state%timecontrol%tend, state)
       call apply_nutrients(config%nutrients)
-      gwli    = config%soil%gwli
+      ! [GR-SOIL 2026-05-24] gwli legacy mirror dropped — direct config read.
       ! [GR-FINAL C1] pondini/pond: config%soil%pondini read directly by swap_mod after soilwater_init
       ! (pondini_init_buf/pond_init_buf retired; swap_mod seeding replaced with direct config reads)
       state%surfacewater%pondmx = config%soil%pondmx
@@ -599,8 +599,8 @@ contains
          if (.not. allocated(state%soilwater%bdens)) then
             allocate(state%soilwater%bdens(maho)); state%soilwater%bdens = 0.0d0
          end if
+         ! [GR-SOIL 2026-05-24] h_enpr legacy mirror dropped — vg_params carries the typed value.
          do i = 1, size(config%soil%hydraulics%ores)
-            h_enpr(i)                = config%soil%hydraulics%h_enpr(i)
             state%soilwater%bdens(i) = config%soil%hydraulics%bdens(i)
          end do
 
@@ -626,7 +626,7 @@ contains
             paramvg(5, i)  = config%soil%hydraulics%lexp(i)
             paramvg(6, i)  = config%soil%hydraulics%npar(i)
             paramvg(7, i)  = 1.0d0 - (1.0d0 / paramvg(6, i))
-            if (swhyst == 0) then
+            if (config%soil%swhyst == 0) then
                paramvg(8, i) = config%soil%hydraulics%alfa(i)
             else
                paramvg(8, i) = config%soil%hydraulics%alfaw(i)
