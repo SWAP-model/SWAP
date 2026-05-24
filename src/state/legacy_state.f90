@@ -282,8 +282,7 @@ module legacy_state_mod
       ! [GR-DRA 2026-05-23] kvtop retired — see state%drainage%kvtop
       real(real64), allocatable :: OxygenIntercept(:)  !! Parameters of reproduction function for oxygen stress according to Bartholomeus
       real(real64), allocatable :: OxygenSlope(:)  !! Parameters of reproduction function for oxygen stress according to Bartholomeus
-      ! [GR-SOIL 2026-05-24] paramvg retained — tillage still mutates the layer-keyed VG params.
-      real(real64), allocatable :: paramvg(:,:)  !! Orphan stub paralleling variables.f90 (paramvg(21,maho)); kept for symmetry.
+      ! [GR-CROP 2026-05-25] paramvg retired — tillage now mutates state%soilwater%vg_params_layer(:).
       ! [GR-BND 2026-05-23] pondmxtab retired — see state%surfacewater%pondmxtab
       ! [GR-BND 2026-05-23] qbotab retired — see state%soilwater%qbotab
       ! [GR-SOIL 2026-05-24] qdraincomp retired — orphan stub.

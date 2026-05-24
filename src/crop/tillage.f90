@@ -5,14 +5,17 @@ module tillage_mod
    use error_mod, only: fatalerr_collected
    use swap_state_mod, only: swap_state_t
 
-   ! [GR-CROP 2026-05-25] swsolu/SwDiscrvert reads cut over to direct
-   ! config reads via cfg_soil/cfg_solute aliases. Declarations remain
-   ! alive in variables.f90 because other consumers exist:
-   !   swsolu — still consumed by src/crop/irrigation.f90,
-   !             src/core/timecontrol_mod.f90
-   !   SwDiscrvert — still consumed by src/soil/dormant/regrid.f90
-   ! ParamVG is the last bare global; retired in the next commit.
-   use variables, only: ParamVG
+   ! [GR-CROP 2026-05-25] tillage_mod is `use variables`-free.
+   ! - till_* Group AB → state%tillage (apply_soil_tillage writer).
+   ! - swtill → state%cfg%soil%swtill (config-direct).
+   ! - swsolu → state%cfg%solute%swsolu (declaration retained — still
+   !   consumed by src/crop/irrigation.f90 and src/core/timecontrol_mod.f90).
+   ! - SwDiscrvert → state%cfg%soil%discretization%swdiscrvert (declaration
+   !   retained — still consumed by src/soil/dormant/regrid.f90).
+   ! - ParamVG → state%soilwater%vg_params_layer(:) (typed per-layer VG
+   !   store). Tillage mutates the layer-keyed store and rebuilds per-node
+   !   vg_params(:) from it after each event. Legacy paramvg(21, maho)
+   !   retired (this file was its last consumer).
 
    implicit none
 
@@ -142,14 +145,8 @@ module tillage_mod
 
          call DTDPST ("YEAR-MONTHST-DAY", time%t1900, STRNG)
          if (trim(STRNG) == "2005-Apr-05") then
-            !ParamVG(5,1) = -2.0d0
-            !ParamVG(5,1) = -1.5d0
-            !ParamVG(5,1) = -1.0d0
-            !ParamVG(5,1) = 0.0d0
-            !ParamVG(5,1) = 1.0d0
-            !ParamVG(5,1) = 2.5d0
-            !ParamVG(5,1) = 5.0d0
-            !ParamVG(5,1) = 10.0d0
+            ! Historical scratch block for manual lpar overrides (legacy
+            ! ParamVG(5,1) = N) — now write soil%vg_params_layer(1)%lpar = N.
          end if
 
          Call Adapt_WC_H (TEST, state)
@@ -211,56 +208,63 @@ module tillage_mod
       mesh => state%mesh,         &
       soil => state%soilwater,    &
       tl   => state%tillage)
+   ! [GR-CROP 2026-05-25] mutate the per-layer VG store
+   ! (soil%vg_params_layer) instead of the legacy paramvg(21, maho) global.
+   ! Index correspondence (legacy → typed field):
+   !   paramvg(1,lay)  → thetar           paramvg(7,lay)  → mpar
+   !   paramvg(2,lay)  → thetas           paramvg(8,lay)  → alphaw_sentinel (not mutated)
+   !   paramvg(3,lay)  → ksat             paramvg(9,lay)  → h_enpr          (not mutated)
+   !   paramvg(4,lay)  → alpha            paramvg(10,lay) → ksatexm         (not mutated)
+   !   paramvg(5,lay)  → lpar             (not mutated by tillage)
+   !   paramvg(6,lay)  → npar
    do i = 1 , tl%MaxNumSoilHo
-      wcs_last = ParamVG(2,i)       ! help
+      wcs_last = soil%vg_params_layer(i)%thetas       ! help
 
-      ! First, fill PARAMVG
-      ! wcr
-      ParamVG(1,i) = ParamVG(1,i) * soil%bdens(i)/tl%Rho_last(i)
-      ! wcs
-      ParamVG(2,i) = ParamVG(2,i) * (Rho_s - soil%bdens(i))/(Rho_s - tl%Rho_last(i))
-      ! ks,fit
-      ParamVG(3,i) = ParamVG(3,i) * (ParamVG(2,i)/wcs_last)**3 * (soil%bdens(i)/tl%Rho_last(i))**DeltaMin7
+      ! First, mutate per-layer VG params
+      ! thetar (wcr)
+      soil%vg_params_layer(i)%thetar = soil%vg_params_layer(i)%thetar * soil%bdens(i)/tl%Rho_last(i)
+      ! thetas (wcs)
+      soil%vg_params_layer(i)%thetas = soil%vg_params_layer(i)%thetas * (Rho_s - soil%bdens(i))/(Rho_s - tl%Rho_last(i))
+      ! ksat (ks,fit)
+      soil%vg_params_layer(i)%ksat   = soil%vg_params_layer(i)%ksat   * (soil%vg_params_layer(i)%thetas/wcs_last)**3 * &
+                                       (soil%bdens(i)/tl%Rho_last(i))**DeltaMin7
       ! alpha
-      ParamVG(4,i) = ParamVG(4,i) * (soil%bdens(i)/tl%Rho_last(i))**Omega
-      ! lambda: do not change
-      !ParamVG(5,i) = ParamVG(5,i)
-      ! n
+      soil%vg_params_layer(i)%alpha  = soil%vg_params_layer(i)%alpha  * (soil%bdens(i)/tl%Rho_last(i))**Omega
+      ! lambda (lpar): do not change
+      ! n (npar)
       select case (tl%i_n_model)
       case (1)
-         !ParamVG(6,i) = ParamVG(6,i)
+         ! npar: do not change
          continue
       case(2)
          Epsilon = -0.97d0 + 1.28d0 * soil%psilt(i) / soil%pclay(i)
-         ParamVG(6,i) = 1.0d0 + (ParamVG(6,i) - 1.0d0) * (soil%bdens(i)/tl%Rho_last(i))**Epsilon
+         soil%vg_params_layer(i)%npar = 1.0d0 + (soil%vg_params_layer(i)%npar - 1.0d0) * &
+                                        (soil%bdens(i)/tl%Rho_last(i))**Epsilon
       case(3)
-         ParamVG(6,i) = dmax1(1.001d0, ParamVG(6,i) + (soil%bdens(i) - tl%Rho_last(i)) * tl%Slope_match(i))
+         soil%vg_params_layer(i)%npar = dmax1(1.001d0, soil%vg_params_layer(i)%npar + &
+                                              (soil%bdens(i) - tl%Rho_last(i)) * tl%Slope_match(i))
       end select
 
       ! m = 1-1/n
-      ParamVG(7,i) = 1.0d0 - 1.0d0/ParamVG(6,i)
-      ! alpha_w: not used; do not change
-      !ParamVG(8,i) = ParamVG(8,i)
-      ! h_enpr: do not change
-      !ParamVG(9,i) = ParamVG(9,i)
-      ! ksatexm: not used; do not change
-      !ParamVG(10,i) = ParamVG(10,i)
+      soil%vg_params_layer(i)%mpar = 1.0d0 - 1.0d0/soil%vg_params_layer(i)%npar
+      ! alpha_w / h_enpr / ksatexm: not modified by tillage
    end do
 
-   ! Second: update vg_params (first 10 fields, indices 1-10; index 8 is sentinel, not a real paramvg slot)
+   ! Second: rebuild per-node vg_params(:) from the per-layer store after mutation.
+   ! Indices 1-10 are mirrored; relsatthr (11) and ksatthr (12) are not touched
+   ! by tillage (legacy paramvg path was the same — they remain at their init values).
    do node = 1, tl%MaxNumSoilCP
       lay = mesh%layer(node)
-      soil%vg_params(node)%thetar          = ParamVG(1, lay)
-      soil%vg_params(node)%thetas          = ParamVG(2, lay)
-      soil%vg_params(node)%ksat            = ParamVG(3, lay)
-      soil%vg_params(node)%alpha           = ParamVG(4, lay)
-      soil%vg_params(node)%lpar            = ParamVG(5, lay)
-      soil%vg_params(node)%npar            = ParamVG(6, lay)
-      soil%vg_params(node)%mpar            = ParamVG(7, lay)
-      ! ParamVG(8) is alphaw_sentinel — keep existing sentinel value, not re-read from paramvg
-      soil%vg_params(node)%h_enpr          = ParamVG(9, lay)
-      soil%vg_params(node)%ksatexm         = ParamVG(10, lay)
-      ! relsatthr (index 11) and ksatthr (index 12) are not changed by tillage
+      soil%vg_params(node)%thetar          = soil%vg_params_layer(lay)%thetar
+      soil%vg_params(node)%thetas          = soil%vg_params_layer(lay)%thetas
+      soil%vg_params(node)%ksat            = soil%vg_params_layer(lay)%ksat
+      soil%vg_params(node)%alpha           = soil%vg_params_layer(lay)%alpha
+      soil%vg_params(node)%lpar            = soil%vg_params_layer(lay)%lpar
+      soil%vg_params(node)%npar            = soil%vg_params_layer(lay)%npar
+      soil%vg_params(node)%mpar            = soil%vg_params_layer(lay)%mpar
+      ! alphaw_sentinel: per-node sentinel kept (not driven from per-layer store).
+      soil%vg_params(node)%h_enpr          = soil%vg_params_layer(lay)%h_enpr
+      soil%vg_params(node)%ksatexm         = soil%vg_params_layer(lay)%ksatexm
    end do
    end associate
 
@@ -298,7 +302,7 @@ module tillage_mod
       ! keep current wc values (wc_new = wc_old) and only change h; exception: when wc_old > wcs_new: alternative redistribution required
       summ = 0.0d0
       do i = 1, tl%MaxNumSoilCP
-         wcs = ParamVG(2,mesh%layer(i))
+         wcs = soil%vg_params_layer(mesh%layer(i))%thetas
          if (soil%theta(i) < wcs) then
             soil%h(i) = prhead(mesh%disnod(i), soil%theta(i), soil%h, &
                                           soil%iHWCKmodel(soil%layer(i)), &
@@ -311,7 +315,7 @@ module tillage_mod
       end do
       if (summ > 0.0d0) then
          do i = tl%MaxNumSoilCP, 1, -1
-            wcs = ParamVG(2,mesh%layer(i))
+            wcs = soil%vg_params_layer(mesh%layer(i))%thetas
             dif = wcs - soil%theta(i)
             if (dif > 0.0d0) then
                if (dif < summ) then
@@ -346,11 +350,11 @@ module tillage_mod
       if (sumWCt < sumWCtmin1) then
          ! water to be added; same as sumDWC > 0.0
          do i = 1, tl%MaxNumSoilCP
-            wcs = ParamVG(2,mesh%layer(i))
+            wcs = soil%vg_params_layer(mesh%layer(i))%thetas
             tl%sumAvail1 = tl%sumAvail1 + (wcs - wc(i))*mesh%dz(i)
          end do
          do i = 1, tl%MaxNumSoilCP
-            wcs = ParamVG(2,mesh%layer(i))
+            wcs = soil%vg_params_layer(mesh%layer(i))%thetas
             if (tl%sumAvail1 > 0.0d0) then
                wc(i) = wc(i) + (wcs - wc(i)) * tl%sumDWC / tl%sumAvail1
                if (wc(i) > wcs) then
@@ -367,11 +371,11 @@ module tillage_mod
       else if (sumWCt > sumWCtmin1) then
          ! water to be removed; same as sumDWC < 0.0
          do i = 1, tl%MaxNumSoilCP
-            wcr = ParamVG(1,mesh%layer(i))
+            wcr = soil%vg_params_layer(mesh%layer(i))%thetar
             tl%sumAvail2 = tl%sumAvail2 + (wc(i) - wcr) * mesh%dz(i)
          end do
          do i = 1, tl%MaxNumSoilCP
-            wcr = ParamVG(1,mesh%layer(i))
+            wcr = soil%vg_params_layer(mesh%layer(i))%thetar
             wc(i) = wc(i) + (wc(i) - wcr) * tl%sumDWC / tl%sumAvail2
             soil%h(i)     = prhead(mesh%disnod(i), wc(i), soil%h, &
                                                soil%iHWCKmodel(soil%layer(i)), &
@@ -385,22 +389,22 @@ module tillage_mod
 
    if (TEST) then
       do i = 1, tl%MaxNumSoilCP
-         wcs = ParamVG(2,mesh%layer(i))
+         wcs = soil%vg_params_layer(mesh%layer(i))%thetas
          write (444,'(I5,8(A1,F12.6))') i, ',', hold(i), ',', wcold(i), ',', soil%h(i), ',', soil%theta(i), &
                                         ',', tl%sumDWC, ',', tl%sumAvail1, ',', tl%sumAvail2, &
                                         ',', soil%theta(i)/wcs
       end do
    end if
-write(124,'(A,1P,12E12.5)') time%date, soil%bdens(1), ParamVG(2,mesh%layer(1)), soil%theta(1), soil%h(1), &
+write(124,'(A,1P,12E12.5)') time%date, soil%bdens(1), soil%vg_params_layer(mesh%layer(1))%thetas, soil%theta(1), soil%h(1), &
    hconduc(soil%h(1),soil%theta(1),1.0d0,heat%tsoil(1), &
            soil%vg_params(1), &
            soil%iHWCKmodel(soil%layer(1)), &
-           soil%fluseksatexm(1), 1, soil), ParamVG(3,mesh%layer(1)),          &
-   soil%bdens(2), ParamVG(2,mesh%layer(2)), soil%theta(2), soil%h(2),                           &
+           soil%fluseksatexm(1), 1, soil), soil%vg_params_layer(mesh%layer(1))%ksat,    &
+   soil%bdens(2), soil%vg_params_layer(mesh%layer(2))%thetas, soil%theta(2), soil%h(2), &
    hconduc(soil%h(2),soil%theta(2),1.0d0,heat%tsoil(2), &
            soil%vg_params(2), &
            soil%iHWCKmodel(soil%layer(2)), &
-           soil%fluseksatexm(2), 2, soil), ParamVG(3,mesh%layer(2))
+           soil%fluseksatexm(2), 2, soil), soil%vg_params_layer(mesh%layer(2))%ksat
 
    end associate
    end subroutine Adapt_WC_H
@@ -488,9 +492,11 @@ write(124,'(A,1P,12E12.5)') time%date, soil%bdens(1), ParamVG(2,mesh%layer(1)), 
    integer, intent(in) :: iTill_in
    type(swap_state_t), intent(inout) :: state
    ! local
-   integer :: itype, nlay
+   integer :: itype, nlay, k
 
-   associate(tl => state%tillage)
+   associate( &
+      soil => state%soilwater,    &
+      tl   => state%tillage)
    itype                  = tl%Type_Tillage(iTill_in)
    nlay                   = tl%iTT2(itype) - tl%iTT1(itype) + 1
    tl%Rho_tillage(1:nlay) = tl%TAB_Rho_tillage(tl%iTT1(itype):tl%iTT2(itype))
@@ -498,7 +504,9 @@ write(124,'(A,1P,12E12.5)') time%date, soil%bdens(1), ParamVG(2,mesh%layer(1)), 
    tl%K_R_cons(1:nlay)    = tl%TAB_K_R_cons(tl%iTT1(itype):tl%iTT2(itype))
    tl%Rho_match(1:nlay)   = tl%TAB_Rho_match(tl%iTT1(itype):tl%iTT2(itype))
    tl%N_match(1:nlay)     = tl%TAB_N_match(tl%iTT1(itype):tl%iTT2(itype))
-   tl%Slope_match(1:nlay) = (ParamVG(6,1:nlay) - tl%N_match(1:nlay)) / (tl%Rho_cons(1:nlay) - tl%Rho_match(1:nlay))
+   do k = 1, nlay
+      tl%Slope_match(k) = (soil%vg_params_layer(k)%npar - tl%N_match(k)) / (tl%Rho_cons(k) - tl%Rho_match(k))
+   end do
    end associate
    end subroutine Change_Tillage_Info
 

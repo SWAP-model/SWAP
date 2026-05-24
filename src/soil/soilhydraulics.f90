@@ -917,6 +917,21 @@ contains
       !   (7)=1-1/npar, (8)=alfaw (read by hysteresis only), (9)=h_enpr,
       !   (10)=ksatexm sentinel, (11)=relsatthr (always 0 in TOML), (12)=ksatthr (always 0),
       !   (13..21)=bi-modal/extended params (iHWCKmodel != 1 in TOML never fires).
+      ! [GR-CROP 2026-05-25] populate the per-layer VG store (soil%vg_params_layer)
+      !   first. This is the canonical layer-keyed source used both by the per-node
+      !   init below and by the tillage mutator (tillage.f90 Change_MvGpars).
+      do lay = 1, mesh%numlay
+         soil%vg_params_layer(lay)%thetar          = hyd%ores(lay)
+         soil%vg_params_layer(lay)%thetas          = hyd%osat(lay)
+         soil%vg_params_layer(lay)%ksat            = hyd%ksatfit(lay)
+         soil%vg_params_layer(lay)%alpha           = hyd%alfa(lay)
+         soil%vg_params_layer(lay)%lpar            = hyd%lexp(lay)
+         soil%vg_params_layer(lay)%npar            = hyd%npar(lay)
+         soil%vg_params_layer(lay)%mpar            = 1.0_real64 - 1.0_real64/hyd%npar(lay)
+         soil%vg_params_layer(lay)%alphaw_sentinel = -9999.9_real64
+         soil%vg_params_layer(lay)%h_enpr          = hyd%h_enpr(lay)
+         soil%vg_params_layer(lay)%ksatexm         = -999.0_real64
+      end do
       do node = 1, mesh%numnod
          lay = mesh%layer(node)
          soil%vg_params(node)%thetar           = hyd%ores(lay)

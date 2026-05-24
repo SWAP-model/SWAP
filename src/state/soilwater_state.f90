@@ -140,7 +140,13 @@ module soilwater_state_mod
       real(real64), allocatable :: k(:)            !< hydraulic conductivity per node (cm/d)
       real(real64), allocatable :: kmean(:)        !< mean K at node interface (cm/d)
       real(real64), allocatable :: dimoca(:)       !< differential moisture capacity per node (1/cm)
-      type(vanGenuchten_params_t), allocatable :: vg_params(:)   !< [SS-GR-UTILS] typed VG parameters, one per node
+      type(vanGenuchten_params_t), allocatable :: vg_params(:)        !< [SS-GR-UTILS] typed VG parameters, one per node
+      !> [GR-CROP 2026-05-25] mutable per-layer VG parameter store.
+      !! Populated by SoilHydraulics(1) from state%cfg%soil%hydraulics;
+      !! mutated by tillage events (tillage.f90 Change_MvGpars); per-node
+      !! vg_params(:) is then rebuilt from this layer-keyed store after
+      !! each event. Replaces the legacy paramvg(21, maho) global.
+      type(vanGenuchten_params_t), allocatable :: vg_params_layer(:)  !< per-layer VG parameter store (one per soil layer)
 
       ! [SS-GR-UTILS] Soil hydraulic property metadata (migrated from variables.f90).
       ! Populated by SoilHydraulics(1) / config_to_variables as transitional
@@ -445,6 +451,8 @@ contains
       allocate(sw%kmean(numnod+1));      sw%kmean        = 0.0_real64
 
       allocate(sw%vg_params(numnod))    ! [SS-GR-UTILS] components default-init from type
+      ! [GR-CROP 2026-05-25] per-layer VG store for tillage mutator (replaces paramvg(21, maho))
+      allocate(sw%vg_params_layer(nlay))
 
       ! [SS-GR-UTILS] Soil hydraulic property metadata (Task 4)
       ! iHWCKmodel/layer/BiModal/NoVap allocated unconditionally (small, per-layer/node).

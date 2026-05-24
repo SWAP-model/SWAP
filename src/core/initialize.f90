@@ -293,7 +293,7 @@
       ! mfluxtable         = 0.0d0
       ! [SS-CRP C-2.5] mflux retired — soilwater_init handles init via state%soilwater (ADR 0036)
       ! mflux              = 0.0d0
-      paramvg            = 0.0d0   ! [GR-SOIL 2026-05-24] retained for tillage.f90 mutator
+      ! [GR-CROP 2026-05-25] paramvg retired — tillage uses state%soilwater%vg_params_layer.
       ! [SS-SWC] pegwl/pond/pondini/pondm1 retired — soilwater_init handles init via state%soilwater
       ! pegwl              = 0.0d0
       ! pond               = 0.0d0

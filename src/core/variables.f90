@@ -932,10 +932,9 @@
       ! real(8)   mroot(macp)        ! Matrix flux head of a compartment at the root-soil interface (L2/T)
       real(8)   OxygenIntercept(6) ! Parameters of reproduction function for oxygen stress according to Bartholomeus
       real(8)   OxygenSlope(6)     ! Parameters of reproduction function for oxygen stress according to Bartholomeus
-      ! [GR-SOIL 2026-05-24] paramvg retained for tillage.f90 — tillage MUTATES per-layer VG params
-      !   on each tillage event (lines 242-264) before re-copying to vg_params(node). Other readers
-      !   (soilhydraulics, hysteresis) cut over to direct config reads via state%cfg%soil%hydraulics.
-      real(8)   paramvg(21,maho)   ! Mutable layer-keyed VG params; only tillage writes to it now.
+      ! [GR-CROP 2026-05-25] paramvg retired — tillage.f90 now mutates the typed
+      !   per-layer store state%soilwater%vg_params_layer(:) (vanGenuchten_params_t)
+      !   directly and rebuilds per-node vg_params(:) from it after each event.
       ! [SS-SWC] retired 2026-05-12 — moved to state%soilwater (ADR 0038)
       ! real(8)   pegwl              ! Perched groundwater level (L)
       ! real(8)   pond               ! Height of ponding layer (L)

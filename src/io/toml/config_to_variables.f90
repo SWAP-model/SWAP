@@ -611,28 +611,9 @@ contains
          !   The legacy reader at readswap.f90:651-657 supported per-layer override
          !   (1..11) but no TOML schema slot covers it yet.
 
-         ! [GR-SOIL 2026-05-24] paramvg mirror retained — tillage.f90 still consumes
-         ! the layer-keyed mutable VG params. soilhydraulics + hysteresis read
-         ! directly from `state%cfg%soil%hydraulics`; this mirror exists only for
-         ! tillage events. ksatexm threshold-Ksat path remains unported
-         ! (vg_params%ksatexm gets -999 sentinel in soilhydraulics).
-         paramvg = 0.0d0
-         do i = 1, size(config%soil%hydraulics%ores)
-            paramvg(1, i)  = config%soil%hydraulics%ores(i)
-            paramvg(2, i)  = config%soil%hydraulics%osat(i)
-            paramvg(3, i)  = config%soil%hydraulics%ksatfit(i)
-            paramvg(4, i)  = config%soil%hydraulics%alfa(i)
-            paramvg(5, i)  = config%soil%hydraulics%lexp(i)
-            paramvg(6, i)  = config%soil%hydraulics%npar(i)
-            paramvg(7, i)  = 1.0d0 - (1.0d0 / paramvg(6, i))
-            if (config%soil%swhyst == 0) then
-               paramvg(8, i) = config%soil%hydraulics%alfa(i)
-            else
-               paramvg(8, i) = config%soil%hydraulics%alfaw(i)
-            end if
-            paramvg(9, i)  = config%soil%hydraulics%h_enpr(i)
-            paramvg(10, i) = -999.0d0
-         end do
+         ! [GR-CROP 2026-05-25] paramvg legacy mirror retired — tillage.f90 now
+         !   mutates the typed per-layer store state%soilwater%vg_params_layer(:),
+         !   populated by SoilHydraulics(1) from state%cfg%soil%hydraulics directly.
       end if
 
       ! Soil.discretization
