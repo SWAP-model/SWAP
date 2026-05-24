@@ -249,375 +249,265 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
       !!     Functions called   : swstlev
       !!     File usage         :
       !!@endnote
-      ! SS-SWST Phase 2 Task 11: wlstar global removed; use sw_wlstar (state alias) throughout.
-      ! SS-BND Phase 2 Task B-2.4: runots removed from use clause; read via state%soilwater%runots.
-      ! SS-SWC Phase 2 S-2.8: gwl,pond,THETA,THETAS,H removed from use-list; read from state%soilwater.
-      ! [SS-TC TC-14] T retired — read via state%timecontrol%t
-      ! GR-BH Task 28: zbotdr/NUMNOD/DZ off variables → state%drainage/mesh aliases.
-      ! [GR-DRA 2026-05-23] NRPRI/nmper/impend/wldip/intwl/osswlm/wscap/dropr
-      ! retired — aliased from state%surfacewater below.
-      ! [GR-DRA 2026-05-23] swman/hbweir/wlsman/gwlcrit/nphase/VCRIT/NODHD/HCRIT/SWQHR/QQHTAB
-      ! retired — aliased from state%surfacewater below.
-      ! [GR-DRA 2026-05-23] alphaw/betaw retired — aliased from state%surfacewater below.
-      ! [GR-DRA 2026-05-23] QRapDra retired — read via state%drainage%QRapDra.
-      ! rsro/pondmx retired (→state%surfacewater%X)
-      use swap_state_mod, only: swap_state_t
-      use surfacewater_utils, only: wlevst, swstlev, qhtab
-      use swap_log, only: log_warn
-      IMPLICIT NONE
+      use swap_state_mod,      only: swap_state_t
+      use surfacewater_utils,  only: wlevst, swstlev, qhtab
+      use swap_log,            only: log_warn
+      implicit none
 
       type(swap_state_t), intent(inout) :: state
       logical,            intent(inout) :: request_smaller_dt
 
-! --- local
-      INTEGER iphase,NODE,Intday,imper
-      real(8) wlstx,swsttar,dvmax,swstmax,wsupp,wdis,wlstarb
-      real(8) wover,discap,wlsl,wlsu,wlsi,swsti,wdisi,swstn
-      real(8) wprod1,wprod2,oscil,wlstara
-      real(8) swsttara,rday,wsmax
-      character(len=200) messag
-      character(len=19)  datetime
+      integer :: iphase, node, intday, imper
+      real(8) :: wlstx, swsttar, dvmax, swstmax, wsupp, wdis, wlstarb
+      real(8) :: wover, discap, wlsl, wlsu, wlsi, swsti, wdisi, swstn
+      real(8) :: wprod1, wprod2, oscil, wlstara
+      real(8) :: swsttara, rday, wsmax
+      character(len=200) :: messag
+      character(len=19)  :: datetime
       logical :: fl_early_return
-! removed the blanket save statement to avoid issues in parallel runs
-!-----------------------------------------------------------------------
 
       fl_early_return = .false.
 
-      associate( &
-         sw_wls    => state%surfacewater%wls,    &
-         sw_wlstar => state%surfacewater%wlstar, &
-         sw_swst   => state%surfacewater%swst,   &
-         sw_wlsbak => state%surfacewater%wlsbak, &
-         sw_overfl => state%surfacewater%overfl, &
-         sw_numadj => state%surfacewater%numadj, &
-         sw_hwlman => state%surfacewater%hwlman, &
-         sw_vtair  => state%surfacewater%vtair,  &
-         sw_imper  => state%surfacewater%imper,  &
-         sw_cqdrd  => state%surfacewater%cqdrd,  &
-         sw_cwsupp => state%surfacewater%cwsupp, &
-         sw_cwout  => state%surfacewater%cwout,  &
-         tc_dt      => state%timecontrol%dt,     &  ! TC-8: WLEVBAL TC reader cutover
-         tc_t1900   => state%timecontrol%t1900,  &  ! TC-8
-         tc_tcum    => state%timecontrol%tcum,   &  ! TC-8
-         tc_fldtmin  => state%timecontrol%fldtmin,  &  ! TC-8
-         swscre      => state%timecontrol%swscre,   &  ! [SS-BMI2 Task 4]
-         dr_zbotdr   => state%drainage%zbotdr,      &  ! GR-BH Task 28
-         ms_numnod   => state%mesh%numnod,          &  ! GR-BH Task 28
-         ms_dz       => state%mesh%dz,              &  ! GR-BH Task 28
-         nrpri  => state%surfacewater%nrpri,        &  ! [GR-DRA 2026-05-23]
-         nmper  => state%surfacewater%nmper,        &
-         impend => state%surfacewater%impend,       &
-         wldip  => state%surfacewater%wldip,        &
-         intwl  => state%surfacewater%intwl,        &
-         osswlm => state%surfacewater%osswlm,       &
-         wscap  => state%surfacewater%wscap,        &
-         dropr  => state%surfacewater%dropr,        &
-         swqhr   => state%surfacewater%swqhr,       &  ! [GR-DRA 2026-05-23] weir cluster
-         swman   => state%surfacewater%swman,       &
-         hbweir  => state%surfacewater%hbweir,      &
-         wlsman  => state%surfacewater%wlsman,      &
-         gwlcrit => state%surfacewater%gwlcrit,     &
-         nphase  => state%surfacewater%nphase,      &
-         vcrit   => state%surfacewater%vcrit,       &
-         nodhd   => state%surfacewater%nodhd,       &
-         hcrit   => state%surfacewater%hcrit,       &
-         alphaw  => state%surfacewater%alphaw,      &
-         betaw   => state%surfacewater%betaw        )
+      associate (mesh => state%mesh,         &
+                 drai => state%drainage,     &
+                 soil => state%soilwater,    &
+                 surf => state%surfacewater, &
+                 time => state%timecontrol)
 
-! --- resetting of flag for overflowing of automatic weir
-      ! overfl global write dropped: only sw_overfl (state alias) used henceforth.
-      sw_overfl = .false.
+         surf%overfl = .false.
 
-! --- memorizing previous target level
-      ! SS-SWST Phase 2 Task 11: wlstar global removed; sw_wlstar (state alias) is authoritative.
-      wlstarb = sw_wlstar
+         ! Remember the previous target level.
+         wlstarb = surf%wlstar
 
-! --- determine which management period the model is in:
-      imper = 0
-      sw_imper = 0
- 100  imper = imper + 1
-      sw_imper = imper
+         ! Determine the management period the model is in.
+         imper = 0
+         surf%imper = 0
+100      imper = imper + 1
+         surf%imper = imper
 
-! --- error handling
-      if (imper .gt. nmper) then
-        messag = ' sw-level oscillation at '//datetime//                &
-     &        '       advise: reduction of dtmax !'
-        messag = 'error sw-management periods(IMPER), more than defined'
-        call fatalerr_collected ('Wlevbal',messag)
-      endif
+         if (imper .gt. surf%nmper) then
+            messag = ' sw-level oscillation at '//datetime//                &
+       &           '       advise: reduction of dtmax !'
+            messag = 'error sw-management periods(IMPER), more than defined'
+            call fatalerr_collected('Wlevbal', messag)
+         end if
 
-      if (tc_t1900-1.d0+0.1d-10 .gt. impend(imper)) goto 100
+         if (time%t1900 - 1.d0 + 0.1d-10 .gt. surf%impend(imper)) goto 100
 
-! --- determine the target sw-level:
-      if (swman(imper) .eq. 1) then
+         ! Determine the target surface-water level.
+         if (surf%swman(imper) .eq. 1) then
+            ! Fixed weir: target = weir crest (used downstream to decide outflow).
+            surf%wlstar = surf%hbweir(imper)
+         else
+            ! Automatic weir: target depends on groundwater state.
+            ! Adjust only when a new subperiod (length intwl) has started
+            ! (or on the very first call).
+            rday   = (time%t + 1.0d0)/surf%intwl(imper)
+            intday = int(rday)
 
-! --- In the case of a fixed weir the 'target level' is set to the
-! --- weir crest, for later use in calculations to determine whether
-! --- there is any outflow at all (see below):
-        sw_wlstar = hbweir(imper)
-      else
+            if (abs(rday - 1.0*intday) .lt. 0.00001d0 .or. time%tcum .lt. 1.0d-10) then
 
-! ---  For automatic weir, determine the target level of the surface
-! ---  water, dependent on groundwater level:
+               iphase = surf%nphase(imper)
+               do while (soil%gwl .gt. surf%gwlcrit(imper, iphase) .and. iphase .gt. 1)
+                  iphase = iphase - 1
+               end do
 
-! ---   only adjust it if new subperiod, with length intwl(imper) has
-!       started  (or if it is is the first call)
-        rday = (state%timecontrol%t+1.0D0)/intwl(imper)
-        intday = int(rday)
+               ! Compare total air volume with VCRIT, adapt iphase.
+               surf%vtair = 0.0d0
+               do node = 1, mesh%numnod
+                  surf%vtair = surf%vtair + (soil%thetas(node) - soil%theta(node)) &
+       &                       *abs(mesh%dz(node))
+               end do
+               do while (surf%vtair .lt. surf%vcrit(imper, iphase) .and. iphase .gt. 1)
+                  iphase = iphase - 1
+               end do
 
-        if (abs(rday-1.0*intday).lt.0.00001d0 .or. tc_tcum.lt.1.0d-10) then
+               ! Compare H(nodhd(imper)) with HCRIT, adapt iphase.
+               do while (soil%h(surf%nodhd(imper)) .gt. surf%hcrit(imper, iphase) &
+       &                  .and. iphase .gt. 1)
+                  iphase = iphase - 1
+               end do
+               surf%hwlman = soil%h(surf%nodhd(imper))
 
-          iphase = nphase(imper)
-          ! SS-SWC Phase 2 S-2.8: gwl read from state%soilwater
-          do while(state%soilwater%gwl.gt.gwlcrit(imper,iphase).and.iphase.gt.1)
-            iphase = iphase-1
-          enddo
-
-! --- compare total air volume with VCRIT, adapt iphase
-          ! VTAIR global write dropped; sw_vtair (state alias) used as accumulator.
-          ! SS-SWC Phase 2 S-2.8: THETAS/THETA read from state%soilwater
-          sw_vtair = 0.0d0
-          do NODE = 1,ms_numnod
-            sw_vtair = sw_vtair + (state%soilwater%thetas(NODE)-state%soilwater%theta(NODE)) &
-     &              *abs(ms_dz(NODE))
-          enddo
-          do while (sw_vtair.lt.VCRIT(imper,iphase).AND.IPHASE.gt.1)
-            iphase = iphase - 1
-          enddo
-
-! --- compare H(nodhd(imper)) with HCRIT, adapt iphase
-          ! SS-SWC Phase 2 S-2.8: H read from state%soilwater
-          do while (state%soilwater%h(nodhd(imper)).gt.hcrit(imper,iphase) &
-     &                            .and.iphase.gt.1)
-            iphase = iphase - 1
-          enddo
-          ! hwlman global write dropped; sw_hwlman (state alias) set directly.
-          sw_hwlman = state%soilwater%h(nodhd(imper))
-
-          wlstx = wlsman(imper,iphase)
-        else
-
-! --- use old level
-          wlstx = wlstarb
-        endif
-
-! ---   if the level must drop, then do not let it drop at more than
-! ---   the specified rate:
-        if (wlstx .lt. sw_wlstar .and. dropr(imper) .gt. 0.001d0) then
-          sw_wlstar = sw_wlstar - dropr(imper)*tc_dt
-          if (sw_wlstar .lt. wlstx) sw_wlstar = wlstx
-        else
-          sw_wlstar = wlstx
-        endif
-      endif
-
-! --- counter of adjustments
-      if (abs(sw_wlstar-wlstarb) .gt. 0.00001d0) then
-         ! numadj global write dropped; sw_numadj (state alias) accumulates directly.
-         sw_numadj = sw_numadj + 1
-      endif
-
-! --- storage for the 'target level'
-      swsttar = swstlev(state, sw_wlstar)
-
-! --- level and storage for "max. level for supply"
-      wlstara = sw_wlstar - wldip(imper)
-      if (wlstara .gt. (dr_zbotdr(1+nrpri)+1.d-4)) then
-         swsttara = swstlev(state, wlstara)
-         wsmax = wscap(imper)
-      else
-         swsttara = 0.0d0
-         wsmax = 0.0d0
-      endif
-
-! --- determine whether the system will become full (target level or
-! --- level of weir crest):
-      dvmax = (state%drainage%qdrd + state%drainage%QRapDra + wsmax) * tc_dt + state%soilwater%runots
-      swstmax = sw_swst + dvmax
-
-      if (swstmax .lt. 1.0d-7) then
-! ---   storage decreases to zero, then the surface water system
-! ---   falls dry; set surface water supply to maximum:
-
-        if (swstmax .lt. -0.1d0) then
-          messag = 'error algorithm for sw falling dry'
-          call fatalerr_collected ('Wlevbal',messag)
-        endif
-
-        wsupp = wsmax
-        wdis = 0.0d0
-        sw_swst = 0.0d0
-        sw_wls = dr_zbotdr(nrpri+1)
-
-      elseif (swstmax .ge. 0.0d0 .and. swstmax .lt. swsttara) then
-! --- system will not become full - set supply to max. capacity
-        wsupp = wsmax
-        wdis = 0.0d0
-        sw_swst = swstmax
-
-! --- calculate new level from storage
-        sw_wls = wlevst(state, sw_swst)
-      else
-
-! --- determine how system will become full: with or without needing
-!     surface water supply; try first without any supply:
-        dvmax = (state%drainage%qdrd + state%drainage%QRapDra) * tc_dt + state%soilwater%runots
-        swstmax = sw_swst + dvmax
-        if (swstmax .le. swsttara) then
-
-! --- apparently supply is needed for reaching target level, system
-!     is made full up to level wlstara, because supply is controllable:
-          wsupp = (swsttara - sw_swst - (state%drainage%qdrd+state%drainage%QRapDra)*tc_dt-state%soilwater%runots)/tc_dt
-          wdis = 0.0d0
-          sw_swst = swsttara
-          sw_wls = wlstara
-        elseif (swstmax .le. swsttar) then
-
-! --- apparently drainage is more than sufficient for filling system
-!     to a level above the target level FOR SUPPLY, but not enough
-!     for generating discharge; so calculate level from storage:
-          wsupp = 0.0d0
-          wdis = 0.0d0
-          sw_swst = swstmax
-          sw_wls = wlevst(state, sw_swst)
-        else
-
-! --- drainage water is more than sufficient for reaching target
-!     level;  now see whether there are automatic weirs for keeping
-!     the level at target value, or that the discharge relationship
-!     determines new level:
-          wsupp = 0.
-          if (swman(imper) .eq. 2) then
-
-! --- the outflow equals the drainage flux, plus the storage
-!     excess (or deficit !) in the target situation compared to
-!     the actual situation:
-            wdis = (sw_swst-swsttar + (state%drainage%qdrd+state%drainage%QRapDra)*tc_dt + state%soilwater%runots )/tc_dt
-
-! --- now check whether the weir has enough discharge capacity
-!     at this water level
-            if (SWQHR.eq.1) then
-              wover = sw_wls - hbweir(imper)
-              discap = alphaw(imper) * (wover**betaw(imper))
-            elseif (SWQHR.eq.2) then
-
-! --- interpolate QH table
-              ! SS-SWST Phase 2 Task 11: pass imper explicitly (no longer a global).
-              ! GR-UTILS Task 12: pass state%surfacewater as first arg.
-              discap = qhtab(state%surfacewater, sw_wlstar, imper)
-            endif
-            if (discap .gt. wdis) then
-              sw_wls = sw_wlstar
-              sw_swst = swsttar
-              ! overfl global drops dropped; sw_overfl (state alias) is the signal.
-              sw_overfl = .false.
+               wlstx = surf%wlsman(imper, iphase)
             else
-              sw_overfl = .true.
-            endif
-          endif
-          if (swman(imper) .eq. 1 .or. sw_overfl) then
+               wlstx = wlstarb
+            end if
 
-! --- determine level from q-h relationship, and also account
-!     for change in storage (see below)
-!     check first that the system does not overflow
-            if (SWQHR.eq.1) then
-              wover = state%surfacewater%sttab(1,1) - hbweir(imper)
-              discap = alphaw(imper) * (wover**betaw(imper))
-            elseif (SWQHR.eq.2) then
-              discap = state%surfacewater%qqhtab(imper,1)
-            endif
-
-! ---       error handling
-            swstn = sw_swst + (state%drainage%qdrd + state%drainage%QRapDra - discap)*tc_dt + state%soilwater%runots
-            if ( swstn .gt. state%surfacewater%sttab(1,2) ) then
-              messag = 'surface water system has overflowed!'
-              call fatalerr_collected ('Wlevbal',messag)
-            endif
-
-! --- iteration procedure for determining new level, storage,
-!     and discharge
-            wlsl = hbweir(imper)
-            wlsu = state%surfacewater%sttab(1,1)
-
-! --- find storage and discharge for intermediate point
- 700        wlsi = (wlsl + wlsu) * 0.5
-            swsti = swstlev(state, wlsi)
-            if (SWQHR.eq.1) then
-              wdisi = alphaw(imper)*(wlsi-hbweir(imper))**betaw(imper)
+            ! If the level must drop, don't let it drop faster than dropr.
+            if (wlstx .lt. surf%wlstar .and. surf%dropr(imper) .gt. 0.001d0) then
+               surf%wlstar = surf%wlstar - surf%dropr(imper)*time%dt
+               if (surf%wlstar .lt. wlstx) surf%wlstar = wlstx
             else
-              ! SS-SWST Phase 2 Task 11: pass imper explicitly (no longer a global).
-              ! GR-UTILS Task 12: pass state%surfacewater as first arg.
-              wdisi = qhtab(state%surfacewater, wlsi, imper)
-            endif
-            swstn = sw_swst + (state%drainage%qdrd + state%drainage%QRapDra - wdisi)*tc_dt + state%soilwater%runots
-            if (swstn .lt. swsti) then
-              wlsu = wlsi
+               surf%wlstar = wlstx
+            end if
+         end if
+
+         ! Counter of target-level adjustments.
+         if (abs(surf%wlstar - wlstarb) .gt. 0.00001d0) surf%numadj = surf%numadj + 1
+
+         ! Storage at the target level.
+         swsttar = swstlev(state, surf%wlstar)
+
+         ! Level and storage for "max. level for supply".
+         wlstara = surf%wlstar - surf%wldip(imper)
+         if (wlstara .gt. (drai%zbotdr(1 + surf%nrpri) + 1.d-4)) then
+            swsttara = swstlev(state, wlstara)
+            wsmax    = surf%wscap(imper)
+         else
+            swsttara = 0.0d0
+            wsmax    = 0.0d0
+         end if
+
+         ! Determine whether the system becomes full (target / weir crest).
+         dvmax   = (drai%qdrd + drai%QRapDra + wsmax)*time%dt + soil%runots
+         swstmax = surf%swst + dvmax
+
+         if (swstmax .lt. 1.0d-7) then
+            ! Storage decreases to zero — system falls dry; set supply to max.
+            if (swstmax .lt. -0.1d0) then
+               messag = 'error algorithm for sw falling dry'
+               call fatalerr_collected('Wlevbal', messag)
+            end if
+            wsupp    = wsmax
+            wdis     = 0.0d0
+            surf%swst = 0.0d0
+            surf%wls  = drai%zbotdr(surf%nrpri + 1)
+
+         elseif (swstmax .ge. 0.0d0 .and. swstmax .lt. swsttara) then
+            ! System won't become full — supply at max capacity.
+            wsupp    = wsmax
+            wdis     = 0.0d0
+            surf%swst = swstmax
+            surf%wls  = wlevst(state, surf%swst)
+         else
+            ! Determine whether supply is needed; try first without any supply.
+            dvmax   = (drai%qdrd + drai%QRapDra)*time%dt + soil%runots
+            swstmax = surf%swst + dvmax
+            if (swstmax .le. swsttara) then
+               ! Supply is needed; fill up to wlstara (supply is controllable).
+               wsupp = (swsttara - surf%swst - (drai%qdrd + drai%QRapDra)*time%dt - soil%runots)/time%dt
+               wdis  = 0.0d0
+               surf%swst = swsttara
+               surf%wls  = wlstara
+            elseif (swstmax .le. swsttar) then
+               ! Drainage is enough to fill above the supply target but not enough
+               ! for discharge — calculate level from storage.
+               wsupp    = 0.0d0
+               wdis     = 0.0d0
+               surf%swst = swstmax
+               surf%wls  = wlevst(state, surf%swst)
             else
-              wlsl = wlsi
-            endif
-            if ((wlsu - wlsl) .gt. 0.001d0) then
+               ! Drainage is sufficient to reach the target level; check whether
+               ! an automatic weir keeps the level at target, or the discharge
+               ! relation determines the new level.
+               wsupp = 0.
+               if (surf%swman(imper) .eq. 2) then
+                  ! Outflow = drainage flux + (target − actual) storage difference.
+                  wdis = (surf%swst - swsttar + (drai%qdrd + drai%QRapDra)*time%dt + soil%runots)/time%dt
 
-! --- continue iteration procedure:
-              goto 700
-            else
+                  ! Does the weir have enough discharge capacity at this water level?
+                  if (surf%swqhr .eq. 1) then
+                     wover  = surf%wls - surf%hbweir(imper)
+                     discap = surf%alphaw(imper) * (wover**surf%betaw(imper))
+                  elseif (surf%swqhr .eq. 2) then
+                     discap = qhtab(surf, surf%wlstar, imper)
+                  end if
+                  if (discap .gt. wdis) then
+                     surf%wls    = surf%wlstar
+                     surf%swst   = swsttar
+                     surf%overfl = .false.
+                  else
+                     surf%overfl = .true.
+                  end if
+               end if
+               if (surf%swman(imper) .eq. 1 .or. surf%overfl) then
+                  ! Determine the level from the q-h relationship and account
+                  ! for the change in storage. First check the system doesn't overflow.
+                  if (surf%swqhr .eq. 1) then
+                     wover  = surf%sttab(1, 1) - surf%hbweir(imper)
+                     discap = surf%alphaw(imper) * (wover**surf%betaw(imper))
+                  elseif (surf%swqhr .eq. 2) then
+                     discap = surf%qqhtab(imper, 1)
+                  end if
 
-! --- updating of sw-parameters:
-              sw_wls = wlsi
-              sw_swst = swstn
-              wdis = wdisi
-            endif
-          endif
-        endif
-      endif
+                  swstn = surf%swst + (drai%qdrd + drai%QRapDra - discap)*time%dt + soil%runots
+                  if (swstn .gt. surf%sttab(1, 2)) then
+                     messag = 'surface water system has overflowed!'
+                     call fatalerr_collected('Wlevbal', messag)
+                  end if
 
-!        ponding in case of extended drainage may limit timestep
+                  ! Bisection iteration for new level, storage and discharge.
+                  wlsl = surf%hbweir(imper)
+                  wlsu = surf%sttab(1, 1)
 
-      ! SS-SWC Phase 2 S-2.8: pond read from state%soilwater
-      if (sw_wls.gt.state%surfacewater%pondmx .or. state%soilwater%pond.gt.state%surfacewater%pondmx) then
-        if(tc_dt .gt. 0.02*state%surfacewater%rsro) then
-          request_smaller_dt = .true.
-        end if
-        fl_early_return = .true.
-      endif
+700               wlsi  = (wlsl + wlsu) * 0.5
+                  swsti = swstlev(state, wlsi)
+                  if (surf%swqhr .eq. 1) then
+                     wdisi = surf%alphaw(imper)*(wlsi - surf%hbweir(imper))**surf%betaw(imper)
+                  else
+                     wdisi = qhtab(surf, wlsi, imper)
+                  end if
+                  swstn = surf%swst + (drai%qdrd + drai%QRapDra - wdisi)*time%dt + soil%runots
+                  if (swstn .lt. swsti) then
+                     wlsu = wlsi
+                  else
+                     wlsl = wlsi
+                  end if
+                  if ((wlsu - wlsl) .gt. 0.001d0) then
+                     goto 700
+                  else
+                     surf%wls  = wlsi
+                     surf%swst = swstn
+                     wdis      = wdisi
+                  end if
+               end if
+            end if
+         end if
 
-      if (.not. fl_early_return) then
-! --- updating registration of last four levels, for noting oscillation
-      ! wlsbak global writes dropped; sw_wlsbak (state alias) is the ring buffer.
-      sw_wlsbak(1) = sw_wlsbak(2)
-      sw_wlsbak(2) = sw_wlsbak(3)
-      sw_wlsbak(3) = sw_wlsbak(4)
-      sw_wlsbak(4) = sw_wls
-      wprod1 = (sw_wlsbak(2)-sw_wlsbak(1))*(sw_wlsbak(3)-sw_wlsbak(2))
-      wprod2 = (sw_wlsbak(3)-sw_wlsbak(2))*(sw_wlsbak(4)-sw_wlsbak(3))
-      if (wprod1.lt.0.0d0 .and. wprod2.lt.0.0d0) then
-        oscil = abs(sw_wlsbak(3)-sw_wlsbak(2))
-        if (oscil .gt. osswlm) then
-           if (.not.tc_fldtmin ) then
-              request_smaller_dt = .true.
-              fl_early_return = .true.
-           else
-              call dtdpst                                               &
-     &        ('year-month-day,hour:minute:seconds',tc_t1900,datetime)
-              messag = ' sw-level oscillation at '//datetime//          &
-     &        '       advise: reduction of dtmax !'
-              call log_warn('Wlevbal', messag)
-              call fatalerr_collected ('Wlevbal',messag)
-           endif
-        endif
-      endif
-      endif  ! .not. fl_early_return
+         ! Ponding in extended drainage may limit the timestep.
+         if (surf%wls .gt. surf%pondmx .or. soil%pond .gt. surf%pondmx) then
+            if (time%dt .gt. 0.02*surf%rsro) request_smaller_dt = .true.
+            fl_early_return = .true.
+         end if
 
-      if (.not. fl_early_return) then
-! --- cumulative terms (global accumulations dropped; state aliases are authoritative):
-      sw_cqdrd  = sw_cqdrd  + state%drainage%qdrd*tc_dt
-      sw_cwsupp = sw_cwsupp + wsupp*tc_dt
-      sw_cwout  = sw_cwout  + wdis*tc_dt
-      endif  ! .not. fl_early_return
+         if (.not. fl_early_return) then
+            ! Update last-four-levels ring buffer to detect oscillation.
+            surf%wlsbak(1) = surf%wlsbak(2)
+            surf%wlsbak(2) = surf%wlsbak(3)
+            surf%wlsbak(3) = surf%wlsbak(4)
+            surf%wlsbak(4) = surf%wls
+            wprod1 = (surf%wlsbak(2) - surf%wlsbak(1))*(surf%wlsbak(3) - surf%wlsbak(2))
+            wprod2 = (surf%wlsbak(3) - surf%wlsbak(2))*(surf%wlsbak(4) - surf%wlsbak(3))
+            if (wprod1 .lt. 0.0d0 .and. wprod2 .lt. 0.0d0) then
+               oscil = abs(surf%wlsbak(3) - surf%wlsbak(2))
+               if (oscil .gt. surf%osswlm) then
+                  if (.not. time%fldtmin) then
+                     request_smaller_dt = .true.
+                     fl_early_return    = .true.
+                  else
+                     call dtdpst                                            &
+       &                ('year-month-day,hour:minute:seconds', time%t1900, datetime)
+                     messag = ' sw-level oscillation at '//datetime//       &
+       &                      '       advise: reduction of dtmax !'
+                     call log_warn('Wlevbal', messag)
+                     call fatalerr_collected('Wlevbal', messag)
+                  end if
+               end if
+            end if
+         end if
+
+         if (.not. fl_early_return) then
+            ! Cumulative terms.
+            surf%cqdrd  = surf%cqdrd  + drai%qdrd*time%dt
+            surf%cwsupp = surf%cwsupp + wsupp*time%dt
+            surf%cwout  = surf%cwout  + wdis*time%dt
+         end if
 
       end associate
 
       return
-      end
+      end subroutine WLEVBAL
 
 ! ----------------------------------------------------------------------
       subroutine WBALLEV (state)
