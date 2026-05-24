@@ -39,26 +39,19 @@
 !                             - some calculations only once during initialization
 ! ----------------------------------------------------------------------
 ! --  global variables
-      ! [SS-GR-FINAL B6] maho → swap_array_dimensions; remainder DEFERRED
       use swap_array_dimensions, only: maho
-      use variables, only: &                                               ! [SS-GR-FINAL B6] residuals — all DEFERRED
-                            ! DEFERRED: gird/irrigevent/schedule/swirfix — irrigation schedule state; Phase C3
-                            irrigevent, swirfix,                     &  ! gird/schedule retired
-                            ! DEFERRED: irdate/nirri/irdepth/irconc/irtype — irrigation event arrays; Phase C3
-                            ! [GR-SOL 2026-05-24] cirr retired — see state%solute%cirr
-                            irdate, nirri, irdepth, irconc, irtype,        &
-                            ! DEFERRED: isua/noddrz/swsolu/swcirrthres — crop/soil state; Phase C3; dvs/rd retired
-                            isua, noddrz, swsolu, swcirrthres,    &
-                            ! DEFERRED: cirrthres/perirrsurp/raithreshold/dayfix — irrigation config; Phase C3
+      use variables, only: &
+                            ! Runtime state — locally consumed; retire in cluster commits
+                            irrigevent,                                    &
+                            ! Fixed-irrigation event arrays — populated by config_to_variables%apply_irrigation
+                            irdate, nirri, irdepth, irconc, irtype, isua,  &
+                            ! Dead-branch scheduled-irrigation reads (schedule==1 path is gated by
+                            ! state%crop%common%schedule which is always 0 on TOML path; cropfixed/wofost/grass
+                            ! init reject schedule=1 via fatalerr). Retired-zero in cluster commit.
+                            swsolu, swcirrthres,                           &
                             cirrthres, perirrsurp, raithreshold, dayfix,   &
-                            ! DEFERRED: flCropCalendar/flCropHarvest — crop flags; Phase C3
-                            ! [SS-GR-FINAL D1] flIrrigationOutput dropped from use clause — W-global retired
-                            flCropCalendar, flCropHarvest, &
-                            ! DEFERRED: tstairrig/tendirrig — irrigation timing; Phase C3
                             tstairrig, tendirrig,                          &
-                            ! DEFERRED: treltab/rawtab/tawtab/dwatab/hcritab/tcritab — scheduling tables; Phase C3
                             treltab, rawtab, tawtab, dwatab, hcritab, tcritab, &
-                            ! DEFERRED: ditab/fidtab/cirrs/isuas — scheduling tables; Phase C3
                             ditab, fidtab, cirrs, isuas
       use array_utils, only: afgen
       use soilhydraulics_utils, only: watcon
@@ -107,14 +100,15 @@
 
       ! [GR-CROP 2026-05-25] sub-record associate aliases.
       associate( &
-         crop => state%crop,             &
-         soil => state%soilwater,        &
-         time => state%timecontrol,      &
-         atmo => state%atmosphere,       &
-         solu => state%solute,           &
-         mesh => state%mesh              )
+         crop    => state%crop,             &
+         soil    => state%soilwater,        &
+         time    => state%timecontrol,      &
+         atmo    => state%atmosphere,       &
+         solu    => state%solute,           &
+         mesh    => state%mesh,             &
+         cfg_irr => state%cfg%irrigation    )
 
-! ---    reset intermediate soil water fluxes — [SS-SWC S-2.12B] handled by state%soilwater%reset_intermediate()
+! ---    reset intermediate soil water fluxes — handled by state%soilwater%reset_intermediate()
          ! igird/inird/cgird/cnird zeroed via state%soilwater%reset_intermediate() in SoilWater(2)
          ! and state%soilwater%reset_cumulative() in same path.
 
@@ -122,7 +116,7 @@
          irrigevent = 0
 
 ! ---    fixed irrigations events
-         if (swirfix .eq. 1) then
+         if (cfg_irr%swirfix .eq. 1) then
             if (abs(irdate(nirri) - time%t1900) .lt. 1.d-3) then
                crop%gird = irdepth(nirri)
                solu%cirr = irconc(nirri)
@@ -162,24 +156,25 @@
             end if
          end if
 
-         if (crop%common%schedule.eq.1 .and. irrigevent.eq.0 .and. flCropCalendar .and. .not. flCropHarvest .and. flIrriTime) then
+         if (crop%common%schedule.eq.1 .and. irrigevent.eq.0 .and. crop%common%flCropCalendar &
+                 .and. .not. crop%common%flCropHarvest .and. flIrriTime) then
             solu%cirr = cirrs
             isua = isuas
             atmo%isua = isua   ! [SS-GR-ATM A5.3] runtime dual-write
 
 ! ---       determine water holding capacity, readily available water,
 ! ---       actual available water and water deficit
-            frlow = (mesh%ztopcp(noddrz) + crop%common%rd) / mesh%dz(noddrz)
+            frlow = (mesh%ztopcp(crop%common%noddrz) + crop%common%rd) / mesh%dz(crop%common%noddrz)
             awlh = 0.0d0; awmh = 0.0d0; awah = 0.0d0; cdef = 0.0d0
-            do node = 1,noddrz
-               wclo = wclos(mesh%layer(node))*mesh%dz(node);       if (node.eq.noddrz) wclo = wclo*frlow
-               wcme = wcmes(mesh%layer(node))*mesh%dz(node);       if (node.eq.noddrz) wcme = wcme*frlow
-               wchi = wchis(mesh%layer(node))*mesh%dz(node);       if (node.eq.noddrz) wchi = wchi*frlow
+            do node = 1,crop%common%noddrz
+               wclo = wclos(mesh%layer(node))*mesh%dz(node);       if (node.eq.crop%common%noddrz) wclo = wclo*frlow
+               wcme = wcmes(mesh%layer(node))*mesh%dz(node);       if (node.eq.crop%common%noddrz) wcme = wcme*frlow
+               wchi = wchis(mesh%layer(node))*mesh%dz(node);       if (node.eq.crop%common%noddrz) wchi = wchi*frlow
                wcac = watcon(soil%h(node), &
                               soil%vg_params(node), &
                               soil%iHWCKmodel(soil%layer(node)), &
                               node, soil) * mesh%dz(node)
-               if (node.eq.noddrz) wcac = wcac*frlow
+               if (node.eq.crop%common%noddrz) wcac = wcac*frlow
                awlh = awlh+(wclo-wchi)
                awmh = awmh+(wcme-wchi)
                awah = awah+(wcac-wchi)
