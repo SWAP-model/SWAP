@@ -1018,12 +1018,17 @@ contains
       ! array, copy element-wise; otherwise broadcast the scalar to
       ! every soil-physical layer (legacy `rdsdor('ldis',...,ldis(1))`
       ! followed by an implicit broadcast in the dispersion solver).
+      if (.not. allocated(state%solute%ldis)) then
+         allocate(state%solute%ldis(maho)); state%solute%ldis = 0.0d0
+      end if
       if (allocated(config%solute%ldis_array)) then
          do i = 1, size(config%solute%ldis_array)
-            ldis(i) = config%solute%ldis_array(i)
+            ldis(i)              = config%solute%ldis_array(i)
+            state%solute%ldis(i) = config%solute%ldis_array(i)
          end do
       else if (config%solute%ldis > 0.0d0) then
-         ldis(1) = config%solute%ldis
+         ldis(1)              = config%solute%ldis
+         state%solute%ldis(1) = config%solute%ldis
       end if
 
       ! Phase 0 (ADR 0032) — dual-write to legacy global + state%solute (state
@@ -1040,29 +1045,46 @@ contains
       poros  = config%solute%poros;  state%solute%poros  = config%solute%poros
       swbr   = config%solute%swbr;   state%solute%swbr   = config%solute%swbr
 
+      if (.not. allocated(state%solute%kf)) then
+         allocate(state%solute%kf(maho));     state%solute%kf     = 0.0d0
+      end if
+      if (.not. allocated(state%solute%decpot)) then
+         allocate(state%solute%decpot(maho)); state%solute%decpot = 0.0d0
+      end if
+      if (.not. allocated(state%solute%fdepth)) then
+         allocate(state%solute%fdepth(maho)); state%solute%fdepth = 0.0d0
+      end if
       if (allocated(config%solute%kf)) then
          do i = 1, min(size(config%solute%kf), size(kf))
-            kf(i) = config%solute%kf(i)
+            kf(i)              = config%solute%kf(i)
+            state%solute%kf(i) = config%solute%kf(i)
          end do
       end if
       if (allocated(config%solute%decpot)) then
          do i = 1, min(size(config%solute%decpot), size(decpot))
-            decpot(i) = config%solute%decpot(i)
+            decpot(i)              = config%solute%decpot(i)
+            state%solute%decpot(i) = config%solute%decpot(i)
          end do
       end if
       if (allocated(config%solute%fdepth)) then
          do i = 1, min(size(config%solute%fdepth), size(fdepth))
-            fdepth(i) = config%solute%fdepth(i)
+            fdepth(i)              = config%solute%fdepth(i)
+            state%solute%fdepth(i) = config%solute%fdepth(i)
          end do
       end if
 
       ! cseeptab: flatten 2D typed config to the interleaved afgen layout.
       ! afgen(cseeptab, mabbc*2, time) reads pairs as (2*k-1)=time, (2*k)=value.
       ! Confirmed from: grep -n "cseeptab" src/solute/solute.f90 → line 107.
+      if (.not. allocated(state%solute%cseeptab)) then
+         allocate(state%solute%cseeptab(2*mabbc)); state%solute%cseeptab = 0.0d0
+      end if
       if (allocated(config%solute%cseeptab)) then
          do i = 1, min(size(config%solute%cseeptab, 1), size(cseeptab)/2)
-            cseeptab(2*i - 1) = config%solute%cseeptab(i, 1)   ! time
-            cseeptab(2*i)     = config%solute%cseeptab(i, 2)   ! concentration
+            cseeptab(2*i - 1)              = config%solute%cseeptab(i, 1)   ! time
+            cseeptab(2*i)                  = config%solute%cseeptab(i, 2)
+            state%solute%cseeptab(2*i - 1) = config%solute%cseeptab(i, 1)
+            state%solute%cseeptab(2*i)     = config%solute%cseeptab(i, 2)
          end do
       end if
 

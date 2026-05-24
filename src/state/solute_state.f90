@@ -21,7 +21,7 @@
 module solute_state_mod
    use, intrinsic :: iso_fortran_env, only: real64
    use iso_c_binding, only: c_double
-   use swap_array_dimensions, only: MABBC
+   use swap_array_dimensions, only: MABBC, MAHO
    implicit none
    private
    public :: solute_state_t
@@ -55,6 +55,13 @@ module solute_state_mod
       real(real64) :: cpre    = 0.0_real64  !! precipitation solute concentration (M/L3)
       ! Initial-condition config (legacy multi-depth init):
       integer      :: nconc   = 0           !! number of initial-concentration depth points
+
+      ! === per-layer config arrays (MAHO-sized) and the seepage time table ===
+      real(real64), allocatable :: kf(:)        !! Freundlich coefficient per layer (cm3/g)
+      real(real64), allocatable :: decpot(:)    !! potential decomposition rate per layer (1/d)
+      real(real64), allocatable :: fdepth(:)    !! depth-decomposition factor per layer (-)
+      real(real64), allocatable :: ldis(:)      !! dispersion length per layer (cm)
+      real(real64), allocatable :: cseeptab(:)  !! seepage solute concentration table (2*MABBC, time/value pairs)
 
       ! === scalar state updated during solute time-stepping (no flag-gated reset) ===
       real(real64) :: cpond   = 0.0_real64
