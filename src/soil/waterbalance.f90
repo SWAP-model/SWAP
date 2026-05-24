@@ -18,7 +18,9 @@ module soilwaterbalance_mod
    use swap_state_mod, only: swap_state_t
     implicit none
     private
-    public :: calcgwl, level, watertable, fluxes, integral, checkmassbal, watstor
+    ! [GR-SOIL 2026-05-24] `watertable` extracted to src/soil/dormant/watertable.f90 (no live callers).
+    ! `level` retained — calcgwl calls it.
+    public :: calcgwl, level, fluxes, integral, checkmassbal, watstor
 contains
       !> @brief Calculate groundwater level
       !>
@@ -187,22 +189,9 @@ contains
       !> @brief Calculate water level from pressure head
       !>
       !> @details
-      !> Calculates the water level (elevation head) from pressure head using one of two methods:
-      !> - Method 1 (swoptlev=1): Groundwater level equals elevation head where h = 0
-      !> - Method 2 (swoptlev=2): Groundwater level equals average of elevation heads at h = -1 and h = +1
-      !>
-      !> @param[in] swoptlev Option for level calculation method (1 or 2)
-      !> @param[in] node Node number for calculation
-      !> @param[in] nodheq1 Node number where h equals 1
-      !> @return Water level (elevation head) in cm
-      !>
-      !> @note
-      !> Date: April 2008
-      !> @endnote
-      ! SS-SWC S-2.4: state added as first arg so h reads come from soil%h
+      !> Method 1 (swoptlev=1): GWL = elevation head where h = 0.
+      !> Method 2 (swoptlev=2): GWL = average of elevation heads at h = -1 and h = +1.
       function level (state,swoptlev,node,nodheq1)
-      ! [SS-SWC S-2.12B] h retired from use clause; read via soil%h (associate below)
-      ! [GR-BH C4] mesh%numnod/mesh%disnod/mesh%dz/mesh%z/mesh%zbotcp migrated to mesh; use variables no longer needed here
       implicit none
 
       type(swap_state_t), intent(in) :: state
@@ -211,125 +200,44 @@ contains
       real(8) levm1, levp1
       real(8) level
 
-      ! S-2.4 ASSOCIATE: alias soil%h for reads inside level
-      ! [GR-BH C4] mesh globals aliased via mesh
       associate (mesh => state%mesh, soil => state%soilwater)
 
       if (swoptlev.eq.1) then
-         ! groundwater level equals elevation head where h = 0
-         if (soil%h(node+1).ge.0.0d0)then                     ! S-2.4 read cutover
-            level = mesh%z(node+1) + soil%h(node+1) / (soil%h(node+1)-soil%h(node)) * mesh%disnod(node+1)  ! S-2.4
+         if (soil%h(node+1).ge.0.0d0)then
+            level = mesh%z(node+1) + soil%h(node+1) / (soil%h(node+1)-soil%h(node)) * mesh%disnod(node+1)
          else
-            level = mesh%zbotcp(node) - soil%h(node)               ! S-2.4
+            level = mesh%zbotcp(node) - soil%h(node)
             level = min(mesh%z(node),max(mesh%zbotcp(node),level))
          end if
 
       elseif (swoptlev.eq.2) then
-         ! groundwater level equals average of elevation heads of h = -1 and h = +1
-         ! elevation head of h = +1
          i = nodheq1
          if (nodheq1.eq.mesh%numnod) then
             levp1 = mesh%z(i) - 0.5d0 * mesh%dz(i)
          else
-            levp1 = mesh%z(i) - (mesh%z(i) - mesh%z(i+1)) * (1.d0-soil%h(i)) / (soil%h(i+1)-soil%h(i))  ! S-2.4
+            levp1 = mesh%z(i) - (mesh%z(i) - mesh%z(i+1)) * (1.d0-soil%h(i)) / (soil%h(i+1)-soil%h(i))
          endif
-         ! elevation head of h = -1
          i = node
-         do while (soil%h(i).gt.-1.d0 .and. i.gt.1)          ! S-2.4 read cutover
+         do while (soil%h(i).gt.-1.d0 .and. i.gt.1)
             i = i - 1
          enddo
-         if (i.eq.1 .and. soil%h(1).gt.-1.d0 .and. node.gt.2) then   ! S-2.4
-            ! no compartment with pressure head < -1 cm in top of profile:
-            ! use elevation head of h = 0 as estimation for groundwater level
-            levm1 = mesh%z(node+1) + soil%h(node+1) / (soil%h(node+1)-soil%h(node)) * mesh%disnod(node+1)  ! S-2.4
+         if (i.eq.1 .and. soil%h(1).gt.-1.d0 .and. node.gt.2) then
+            levm1 = mesh%z(node+1) + soil%h(node+1) / (soil%h(node+1)-soil%h(node)) * mesh%disnod(node+1)
             levp1 = levm1
          else
-            levm1 = mesh%z(i+1) + (mesh%z(i) - mesh%z(i+1)) * (1.d0+soil%h(i+1)) / (soil%h(i+1)-soil%h(i))  ! S-2.4
+            levm1 = mesh%z(i+1) + (mesh%z(i) - mesh%z(i+1)) * (1.d0+soil%h(i+1)) / (soil%h(i+1)-soil%h(i))
          endif
-         ! groundwater level = average of levp1 and levm1
          level = (levp1 + levm1) / 2.d0
       endif
 
-      end associate  ! soil%h (S-2.4); mesh%numnod/mesh%disnod/mesh%dz/mesh%z/mesh%zbotcp [GR-BH C4]
+      end associate
 
       return
     end function level
 
-      !> @brief Search for watertable and perched watertable
-      !>
-      !> @details
-      !> Searches for the watertable and perched watertable (if existing) using
-      !> a criterion based on total unsaturated volume. An unsaturated zone embedded
-      !> in saturated soil must contain at least CritUndSatVol cm of air to be recognized
-      !> as truly unsaturated.
-      !>
-      !> @param[inout] node Starting node for search
-      !> @param[out] nodlev Node containing water level
-      !> @param[out] nodhlp Deepest unsaturated node
-      !> @param[in] nodheq1 Node where h equals 1
-      !> @param[in] CritUndSatVol Critical unsaturated volume threshold (cm)
-      !> @param[inout] flsat Saturation flag
-      !> @param[out] waterlevel Calculated water level (cm)
-      !>
-      !> @note
-      !> Date: April 2008
-      !>
-      !> NODGWL is NOT node with GWL, but DEEPEST UNSATURATED NODE
-      !> @endnote
-      ! SS-SWC S-2.4: state added as first arg so h/Theta/ThetaS reads come from soil
-      subroutine watertable (state,node,nodlev,nodhlp,nodheq1,CritUndSatVol,flsat,waterlevel)
-      ! [SS-SWC S-2.12B] h/Theta/ThetaS retired — read via soil (associate below)
-      ! [GR-BH C4] mesh%numnod/mesh%dz/mesh%z migrated to mesh; use variables no longer needed here
-      implicit none
-
-      type(swap_state_t), intent(in) :: state
-      integer node,nodhlp,nodheq1,nodlev
-      logical flsat
-      real(8) waterlevel
-      integer i
-      real(8) CritUndSatVol, TotUndSatVol
-      logical flsat2
-
-      ! S-2.4 ASSOCIATE: alias soil arrays for h/Theta/ThetaS reads
-      ! [GR-BH C4] mesh globals aliased via mesh
-      associate (mesh => state%mesh, soil => state%soilwater)
-
-      TotUndSatVol = 0.0d0
-      flsat2 = .false.
-      i = node
-      do while (TotUndSatVol.lt.CritUndSatVol .and. .not.flsat2 .and. i.ge.1)
-         TotUndSatVol = TotUndSatVol + (soil%thetas(i) - soil%theta(i)) * mesh%dz(i)  ! S-2.4 read cutover
-         if (soil%h(i).gt.-1.d-7) flsat2 = .true.                              ! S-2.4 read cutover
-         i = i - 1
-      enddo
-!
-      if (i.eq.0 .or. TotUndSatVol.gt.CritUndSatVol-1.d-8) then
-         flsat = .false.
-!!!!!!!! NODGWL is NOT node with GWL, but DEEPEST UNSATURATED NODE !!!!!!!!!!!!!
-         nodlev = node
-         nodhlp = i
-      elseif(flsat2) then
-         node   = i + 1
-      endif
-!
-      if (.not.flsat) then
-! find groundwater level containing node
-         if (CritUndSatVol.gt.0.d0) then
-            waterlevel = level(state,1,node,nodheq1)          ! S-2.4: pass state to level
-         else
-            waterlevel = level(state,2,node,nodheq1)          ! S-2.4: pass state to level
-         endif
-         i = max(node-2,1)
-         do while(mesh%z(i)-0.5d0*mesh%dz(i).gt.waterlevel .and. i.gt.2 .and. i.lt.mesh%numnod)
-            i = i + 1
-         enddo
-         nodlev = min(max(i,1),mesh%numnod)
-      endif
-
-      end associate  ! soil%h, soil%theta, soil%thetas (S-2.4); mesh%numnod/mesh%dz/mesh%z [GR-BH C4]
-
-      return
-    end subroutine watertable
+      ! [GR-SOIL 2026-05-24] `watertable` extracted to src/soil/dormant/watertable.f90
+      ! (no live callers; CritUndSatVol path was never ported to the TOML pipeline).
+      ! See dormant module header for reactivation checklist.
 
       !> @brief Calculate fluxes between compartments
       !>
