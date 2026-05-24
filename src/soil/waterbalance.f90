@@ -324,7 +324,9 @@ contains
       !> Date: November 2004
       !> @endnote
       subroutine integral (state)
-      Use Variables
+      ! [GR-SOIL 2026-05-24] Use Variables retired:
+      !   swsnow → state%cfg%meteo%snow%swsnow (direct config read)
+      !   qdraincomp → dropped (per-comp write with no reader; orphan)
       ! [SS-TC TC-6] dt and fldaystart reads cut over to time via tc_* aliases below
       use iso_fortran_env, only: real64        ! [SS-SWC S-2.12B] needed for 0.0_real64 literal below
       implicit none
@@ -405,8 +407,8 @@ contains
       ! SS-SWST Phase 2 Task 7: iqdra/inqdra* accumulated directly into state; global dropped.
       ! ADR 0031 Phase 2 Task 5: qdra global deleted; read from drai%qdra.
       surf%iqdra = surf%iqdra + qdrats + drai%QRapDra*time%dt  ! TC-6
+      ! [GR-SOIL 2026-05-24] per-comp qdraincomp write dropped (no reader anywhere in src/).
       do node = 1,mesh%numnod
-        qdraincomp(node) = 0.d0
         do level = 1,drai%nrlevs
           if (allocated(surf%inqdra) .and. allocated(drai%qdra)) then
             surf%inqdra(level,node) = surf%inqdra(level,node) + drai%qdra(level,node)*time%dt  ! TC-6
@@ -415,9 +417,6 @@ contains
             else
                surf%inqdra_in(level,node)  = surf%inqdra_in(level,node) - drai%qdra(level,node)*time%dt  ! TC-6
             end if
-          end if
-          if (allocated(drai%qdra)) then
-            qdraincomp(node) = drai%qdra(level,node) + qdraincomp(node)
           end if
         end do
       end do
@@ -511,7 +510,7 @@ contains
       ! SS-SWC S-2.4: cnird/crunon/crunoff/cqrot/cqbot/volini/volact/PondIni/pond/cqssdi/cqprai
       !               read cutover to soil flat fields
       ! [SS-SWC S-2.12B] write directly to soil%wbalance — legacy global retired
-      if (swsnow.eq.0) then
+      if (state%cfg%meteo%snow%swsnow.eq.0) then  ! [GR-SOIL 2026-05-24]
         soil%wbalance = atmo%cumu%cnrai + soil%cnird           &
      &        + soil%crunon - soil%crunoff                             &
      &        - soil%cqrot - atmo%cumu%cevap                              &

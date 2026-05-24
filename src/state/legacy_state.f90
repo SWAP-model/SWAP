@@ -290,7 +290,7 @@ module legacy_state_mod
       real(real64), allocatable :: paramvg(:,:)  !! Array with input values of soil hydraulic parameters according to Mualem - van Genuchten for each soil layer
       ! [GR-BND 2026-05-23] pondmxtab retired — see state%surfacewater%pondmxtab
       ! [GR-BND 2026-05-23] qbotab retired — see state%soilwater%qbotab
-      real(real64), allocatable :: qdraincomp(:)  !! Total lateral drainage flux (L/T) for each compartment
+      ! [GR-SOIL 2026-05-24] qdraincomp retired — orphan stub.
       ! [GR-DRA 2026-05-23] qdrtab retired — see state%drainage%qdrtab
       ! [GR-SOIL 2026-05-24] qimmob retired — orphan stub, fingered-flow flux retired-zero in waterbalance.f90.
       ! [GR-SOIL 2026-05-24] qssdi + qssdisum migrated to state%soilwater (orphan stubs).

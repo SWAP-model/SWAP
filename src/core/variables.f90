@@ -966,7 +966,7 @@
       ! real(8)   qbot_nonfrozen     ! Water flux through bottom of non-frozen soil column (L/T)
       ! real(8)   qdra(Madr,macp)    ! Moved to drainage_state_t%qdra (ADR 0031)
       ! real(8)   qdrain(Madr)       ! Moved to drainage_state_t%qdrain (ADR 0031)
-      real(8)   qdraincomp(macp)   ! Total lateral drainage flux (L/T) for each compartment
+      ! [GR-SOIL 2026-05-24] qdraincomp retired — orphan (written in integral, no reader).
       ! [GR-DRA 2026-05-23] qdrtab retired — see state%drainage%qdrtab
       ! SS-SWST Phase 2 Task 11 C2: qdrtot removed — state%surfacewater%qdrtot owns it.
       ! real(8)   qdrtot             ! Moved to surfacewater_state_t%qdrtot

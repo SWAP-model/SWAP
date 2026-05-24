@@ -309,7 +309,7 @@
       ! qbot_nonfrozen     = 0.0d0
       ! qdra               = 0.0d0   ! Moved to drainage_state_t — drainage_init handles (ADR 0031)
       ! qdrain             = 0.0d0   ! Moved to drainage_state_t — drainage_init handles (ADR 0031)
-      qdraincomp         = 0.0d0 
+      ! [GR-SOIL 2026-05-24] qdraincomp retired — orphan (written without reader).
       ! [GR-DRA 2026-05-23] qdrtab retired — see state%drainage%qdrtab
       ! SS-SWST Phase 2 Task 11 C3: qdrtot removed (state%surfacewater%qdrtot initialized in surfacewater_state_t).
       ! [GR-SOIL 2026-05-24] qimmob retired — fingered-flow flux retired-zero inline in waterbalance.f90.
