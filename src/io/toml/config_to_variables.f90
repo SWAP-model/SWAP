@@ -597,6 +597,7 @@ contains
                   call errs%abort_if_fatal()
                   nrows = size(tbl, 1)
                   nconc = nrows
+                  state%solute%nconc = nrows
                   do k = 1, nrows
                      zc(k)  = tbl(k, 1)
                      cml(k) = tbl(k, 2)
@@ -1005,12 +1006,13 @@ contains
       ! Solute (audit: 8 fields + 14 Phase 0 promoted fields)
       ! ---------------------------------------------------------------
       swsolu  = config%solute%swsolu
-      swbotbc = config%solute%swbotbc
+      swbotbc              = config%solute%swbotbc
+      state%solute%swbotbc = config%solute%swbotbc
       cdrain  = config%solute%cdrain
 !     cseep   = config%solute%cseep   ! global cseep removed (ADR 0032); state%solute%cseep written by solute task=2 via afgen(cseeptab)
-      tscf    = config%solute%tscf
-      rtheta  = config%solute%rtheta
-      bexp    = config%solute%bexp
+      tscf    = config%solute%tscf;    state%solute%tscf    = config%solute%tscf
+      rtheta  = config%solute%rtheta;  state%solute%rtheta  = config%solute%rtheta
+      bexp    = config%solute%bexp;    state%solute%bexp    = config%solute%bexp
       ! Phase 4f Task B5: per-layer dispersion length. Mirrors
       ! readswap.f90:1139-1143 — when the case authors `ldis` as an
       ! array, copy element-wise; otherwise broadcast the scalar to
@@ -1024,17 +1026,19 @@ contains
          ldis(1) = config%solute%ldis
       end if
 
-      ! Phase 0 (ADR 0032) — populate legacy globals from the 14 promoted fields.
-      cref   = config%solute%cref
-      cpre   = config%solute%cpre
-      ddif   = config%solute%ddif
-      frexp  = config%solute%frexp
-      gampar = config%solute%gampar
-      daquif = config%solute%daquif
-      kfsat  = config%solute%kfsat
-      decsat = config%solute%decsat
-      poros  = config%solute%poros
-      swbr   = config%solute%swbr
+      ! Phase 0 (ADR 0032) — dual-write to legacy global + state%solute (state
+      ! is the canonical read site; legacy globals retire when solute.f90's
+      ! Pattern 1 refactor lands).
+      cref   = config%solute%cref;   state%solute%cref   = config%solute%cref
+      cpre   = config%solute%cpre;   state%solute%cpre   = config%solute%cpre
+      ddif   = config%solute%ddif;   state%solute%ddif   = config%solute%ddif
+      frexp  = config%solute%frexp;  state%solute%frexp  = config%solute%frexp
+      gampar = config%solute%gampar; state%solute%gampar = config%solute%gampar
+      daquif = config%solute%daquif; state%solute%daquif = config%solute%daquif
+      kfsat  = config%solute%kfsat;  state%solute%kfsat  = config%solute%kfsat
+      decsat = config%solute%decsat; state%solute%decsat = config%solute%decsat
+      poros  = config%solute%poros;  state%solute%poros  = config%solute%poros
+      swbr   = config%solute%swbr;   state%solute%swbr   = config%solute%swbr
 
       if (allocated(config%solute%kf)) then
          do i = 1, min(size(config%solute%kf), size(kf))

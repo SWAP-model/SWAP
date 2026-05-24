@@ -121,7 +121,7 @@
          if (swirfix .eq. 1) then
             if (abs(irdate(nirri) - tc_t1900) .lt. 1.d-3) then  ! TC-12
                state%crop%gird = irdepth(nirri)
-               cirr = irconc(nirri)
+               cirr = irconc(nirri); state%solute%cirr = cirr
                isua = irtype(nirri)
                state%atmosphere%isua = isua   ! [SS-GR-ATM A5.3] runtime dual-write
                nirri = nirri + 1
@@ -159,7 +159,7 @@
          end if
 
          if (state%crop%common%schedule.eq.1 .and. irrigevent.eq.0 .and. flCropCalendar .and. .not. flCropHarvest .and. flIrriTime) then
-            cirr = cirrs
+            cirr = cirrs; state%solute%cirr = cirr
             isua = isuas
             state%atmosphere%isua = isua   ! [SS-GR-ATM A5.3] runtime dual-write
 

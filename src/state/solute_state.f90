@@ -21,6 +21,7 @@
 module solute_state_mod
    use, intrinsic :: iso_fortran_env, only: real64
    use iso_c_binding, only: c_double
+   use swap_array_dimensions, only: MABBC
    implicit none
    private
    public :: solute_state_t
@@ -30,6 +31,30 @@ module solute_state_mod
       ! === per-node arrays (macp-sized; allocated by caller from config) ===
       real(real64), allocatable :: cml(:)    !! soil solute concentration (M/L3 water) in mobile region
       real(real64), allocatable :: cmsy(:)   !! dissolved + adsorbed solute concentration (M/L3 soil volume)
+
+      ! === config-snapshot scalars (snapshotted from config%solute at config_to_variables) ===
+      ! Bottom BC / aquifer:
+      integer      :: swbotbc = 0           !! bottom-BC type for solute concentration
+      integer      :: swbr    = 0           !! mixed-reservoir breakthrough switch
+      real(real64) :: daquif  = 0.0_real64  !! aquifer thickness (cm)
+      real(real64) :: decsat  = 0.0_real64  !! saturated-zone decay rate (1/d)
+      real(real64) :: poros   = 0.0_real64  !! aquifer porosity (-)
+      ! Soil chemistry:
+      real(real64) :: cref    = 0.0_real64  !! reference concentration for Freundlich adsorption (M/L3)
+      real(real64) :: ddif    = 0.0_real64  !! diffusion coefficient (cm2/d)
+      real(real64) :: frexp   = 0.0_real64  !! Freundlich exponent (-)
+      real(real64) :: kfsat   = 0.0_real64  !! saturated-zone Freundlich coefficient (cm3/g)
+      ! Temperature/moisture corrections:
+      real(real64) :: gampar  = 0.0_real64  !! temperature decomposition coefficient (/C)
+      real(real64) :: bexp    = 0.0_real64  !! moisture-decomposition exponent (-)
+      real(real64) :: rtheta  = 0.0_real64  !! reference moisture content (-)
+      ! Plant uptake:
+      real(real64) :: tscf    = 0.0_real64  !! relative solute uptake by roots (-)
+      ! Boundary concentrations:
+      real(real64) :: cirr    = 0.0_real64  !! irrigation solute concentration (M/L3)
+      real(real64) :: cpre    = 0.0_real64  !! precipitation solute concentration (M/L3)
+      ! Initial-condition config (legacy multi-depth init):
+      integer      :: nconc   = 0           !! number of initial-concentration depth points
 
       ! === scalar state updated during solute time-stepping (no flag-gated reset) ===
       real(real64) :: cpond   = 0.0_real64
