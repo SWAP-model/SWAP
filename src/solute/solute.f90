@@ -16,9 +16,8 @@ contains
       ! Stragglers still bare-global; out of scope for this arc:
       !   bdens         — soil-side per-layer dry bulk density
       !   inpola/inpolb — numerical-grid interpolation arrays
-      !   swinco        — soil-side initial-condition switch
       !   cml/zc        — solute initial-condition table (task=1 input only)
-      use variables, only: bdens, inpola, inpolb, swinco, cml, zc
+      use variables, only: bdens, inpola, inpolb, cml, zc
       implicit none
 
       integer,            intent(in)    :: task
@@ -51,7 +50,7 @@ contains
             ! === Initialise solute rate/state variables ============================
 
             ! Determine initial solute profile from input concentrations.
-            if (swinco .ne. 3) then
+            if (soil%swinco .ne. 3) then
                do i = 1, sol%nconc
                   tab(i*2)     = cml(i)
                   tab(i*2 - 1) = abs(zc(i))

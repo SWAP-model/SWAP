@@ -58,7 +58,8 @@
       use variables, only: &                                             ! [SS-GR-CROPRT B1/B6] [GR-CROPWS B3]
         icrop, flCropCalendar, cropstart, cropend, flCropEmergence,         &
         flCropHarvest, flCropReadFile, flCropPrep, flCropSow, flCropGerm,   &
-        swinco, daycrop,         &  ! tsum/rd/lai/rdpot/wso/wst/wlv/cwdmpot/cwdm retired; croptype → state%crop%common
+        daycrop,                 &  ! [GR-SOL 2026-05-24] swinco retired — via state%soilwater%swinco
+
         swcrp,                                                             &  ! dvsend/swdrought/eff/amaxtb/tmpftb/tmnftb retired
         remoc, pld,                         &  ! swharv/q10 retired; swbulb removed (→state%crop%wofost%swbulb)
         flCropNut, nlue, anlv, anst, nmxlv, nmaxlv, nmaxst,               &
@@ -185,7 +186,7 @@
         ! check crop preparation, sowing and germination (of previous day)
         if (.not. flCropEmergence) then
           if (flCropPrep .and. flCropSow .and. flCropGerm) then
-            swinco          = -99
+            state%soilwater%swinco = -99
             flCropReadFile  = .true.
             state%crop%common%flCropReadFile = flCropReadFile   ! [SS-GR-CROPRT A5]
             flCropEmergence = .true.

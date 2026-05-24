@@ -232,7 +232,7 @@ module legacy_state_mod
       ! [GR-DRA 2026-05-23] swdislay/swtopdislay retired — see state%drainage%X
       integer :: swfrost  !! Switch for reduction of hydraulic conductivity in case of frost: 0 = no; 1 = yes
       integer :: swhyst  !! Switch for hysteresis of soil moisture retention function: 0 = no; 1 = yes
-      integer :: swinco  !! Switch for initial soil moisture condition: 1 = pressure heads; 2 = hydrostatic equilibrium;
+      ! [GR-SOL 2026-05-24] swinco retired — see state%soilwater%swinco
       ! [GR-DRA 2026-05-23] swliminf retired — see state%drainage%swliminf
       ! [GR-BND 2026-05-23] swpondmx retired — see state%surfacewater%swpondmx
       integer :: swqhbot  !! Switch for flux-groundwater level relationship: 1 = exponential function; 2 = tabular function

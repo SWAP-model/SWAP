@@ -125,7 +125,7 @@ subroutine test_config_to_variables_soil_with_layer_arrays()
    use swap_state_mod, only: swap_state_t
    ! [GR-FINAL C1] pondini/pond seeded in swap_mod after soilwater_init (pondini_init_buf/pond_init_buf retired)
    ! [GR-BH Task 36] cofani global retired — seeded via state%soilwater%cofani in swap_mod.f90
-   use variables, only: swhyst, swinco, gwli  ! swsophy/pondmx retired
+   use variables, only: swhyst, gwli  ! swsophy/pondmx/swinco retired
    implicit none
    type(swap_config_t) :: config
    type(swap_state_t)  :: state
@@ -143,7 +143,7 @@ subroutine test_config_to_variables_soil_with_layer_arrays()
 
    @assertEqual(1,        state%soilwater%swsophy)
    @assertEqual(2,        swhyst)
-   @assertEqual(2,        swinco)
+   @assertEqual(2,        state%soilwater%swinco)
    @assertEqual(-75.0d0,  gwli)
    ! [GR-FINAL C1] pondini/pond now seeded directly in swap_mod after soilwater_init;
    ! verify config source value is preserved.

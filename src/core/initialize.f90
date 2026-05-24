@@ -160,7 +160,7 @@
       ! [GR-DRA 2026-05-23] swdislay/swtopdislay retired — see state%drainage%X
       swfrost            = 0
       swhyst             = 0 
-      swinco             = 0 
+      ! [GR-SOL 2026-05-24] swinco retired — see state%soilwater%swinco
       ! [SS-GR-FINAL D5] swoutputmodflow zero-fill dropped — declaration retired
       ! [GR-BND 2026-05-23] swpondmx retired — see state%surfacewater%swpondmx
       swqhbot            = 0 

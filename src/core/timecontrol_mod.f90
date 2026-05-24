@@ -27,8 +27,9 @@ contains
                             swhea, swsolu, &
                             ! DEFERRED: swetsine/swrain/swmetdetail/nmetdetail — meteo switches; Phase C3
                             swetsine, &
-                            ! DEFERRED: nirri/swinco/icrop/cropstart/croptype/project — crop/run config; Phase C3
-                            nirri, swinco, icrop, &
+                            ! DEFERRED: nirri/icrop/cropstart/croptype/project — crop/run config; Phase C3
+                            ! [GR-SOL 2026-05-24] swinco retired — via state%soilwater%swinco
+                            nirri, icrop, &
                             cropstart, project   ! croptype → state%crop%common
       use timestep_control_mod, only: fldecdt
       use error_mod, only: fatalerr_collected
@@ -243,7 +244,7 @@ contains
           state%crop%common%flCropCalendar = flCropCalendar   ! [GR-CROP C1] dual-write
           if (flCropCalendar) then
             if (tstart - cropstart(icrop) .lt. -1.d-3 .and.             &
-     &                                              swinco .ne. 3) then
+     &                                              state%soilwater%swinco .ne. 3) then
               messag = 'The start of simulation (tstart) begins in '//  &
      &        'crop growing season with swinco 1 or 2'
               call fatalerr_collected ('readswap',messag)
@@ -289,7 +290,7 @@ contains
       tEvent = dtEvent
 
 ! --- initial time step
-      if (swinco.eq.3) then
+      if (state%soilwater%swinco.eq.3) then
         if (dt.lt.dtmin) then
           messag = 'Initial dt read from file (SWINCO=3)'//             &
      &    ' if absent, then default is assumed'

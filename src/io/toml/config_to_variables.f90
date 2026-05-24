@@ -445,7 +445,7 @@ contains
       ! ---------------------------------------------------------------
       state%soilwater%swsophy = config%soil%swsophy
       swhyst  = config%soil%swhyst
-      swinco  = config%soil%swinco
+      state%soilwater%swinco = config%soil%swinco
       ! [MACRO-RETIRE 2026-05-12] swmacro global retired (ADR 0040).
       ! soil.swmacro=1 is still rejected by soil_config validator stub.
       ! SS-B / ADR 0020: legacy globals use prefixed names (variables

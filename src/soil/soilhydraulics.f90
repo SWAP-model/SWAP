@@ -869,8 +869,7 @@ contains
 
          ! DEFERRED: swhyst — hysteresis switch; Phase C3
          swhyst, &
-         ! DEFERRED: swinco — initial conditions switch; Phase C3
-         swinco, &
+         ! [GR-SOL 2026-05-24] swinco retired — read via state%soilwater%swinco
          ! DEFERRED: swkmean — mean K averaging method; Phase C3
          ! DEFERRED: paramvg(21,maho) — VanGenuchten parameters table; Phase C3
          paramvg, &
@@ -937,7 +936,7 @@ contains
          sw%hatm = -2.75e5_real64                           ! [SS-SWC S-1.3/S-2.12B]
       state%atmosphere%nraidt = 0.0_real64
       state%atmosphere%nird   = 0.0_real64
-      if (swinco.ne.3) then
+      if (sw%swinco.ne.3) then
         state%atmosphere%ldwet = 0.0_real64
         state%atmosphere%spev  = 0.0_real64
         state%atmosphere%saev  = 0.0_real64
@@ -1059,7 +1058,7 @@ contains
         endif
       end do
 
-      if (swinco.eq.1) then
+      if (sw%swinco.eq.1) then
          ! Pressure head profile is input
          ! [SS-SWC S-2.12B] legacy h(:) reads/writes retargeted to state%soilwater%h
          do i = 1, nhead
@@ -1070,7 +1069,7 @@ contains
           sw%h(i) = afgen(tab,macp*2,abs(z(i)))            ! [SS-SWC S-1.3/S-2.12B]
         end do
       endif
-      if (swinco.eq.2 .and. swbotb.ne.8) then
+      if (sw%swinco.eq.2 .and. swbotb.ne.8) then
         if (abs(gwli-(z(numnod)-0.5d0*dz(numnod))) .lt.1.0d-4) then
           messag = 'Initial groundwaterlevel (SWINCO=2) is '//          &
      &    'too close to bottom of soil profile'//                       &
@@ -1078,7 +1077,7 @@ contains
           call fatalerr_collected ('soilwater',messag)
         endif
       endif
-      if (swinco.eq.3) then
+      if (sw%swinco.eq.3) then
         if (nhead.ne.numnod) then
           messag = 'Initial data are read from file (SWINCO=3) and '//  &
      &    'number of nodes/compartments is not consistent with NUMNOD'//&
@@ -1086,7 +1085,7 @@ contains
           call fatalerr_collected ('soilwater',messag)
         endif
       endif
-      if (swinco.eq.1.or.swinco.eq.3) then
+      if (sw%swinco.eq.1.or.sw%swinco.eq.3) then
          ! Determine groundwater level — [SS-SWC S-2.12B] all legacy half-writes dropped
          if (sw%h(numnod) .gt. -1.d-5) then
           i = numnod

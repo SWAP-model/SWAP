@@ -52,7 +52,7 @@
       use variables, only: &                                            ! [SS-GR-CROPRT B7] [GR-CROPWS B5]
         macp, magrs, rdmax, &  ! icrop/dvs/rd/rdpot/dvsend retired
         ! swrd/swdmi2rd/swrdc/swgc/swdrought/swinter/swcf retired
-        swbulb, swinco,                                      &  ! laiem/laiexp/laiexppot/laimax/lai/laipot retired
+        swbulb,                                              &  ! [GR-SOL 2026-05-24] swinco retired — via state%soilwater%swinco
         daycrop,                &  ! tsum/tbase/tsumea/tsumam/cfeic retired; daylp via state%atmosphere
         siccaplai, cropend,                               &  ! [GR-CROPWS B5] cropstart removed (→state%crop%common%cropstart)
         wrtmin, &  ! wso/wst/wlv/wrt/wrtmax retired
@@ -244,7 +244,7 @@
       endif
 
 ! --- skip next initialization if crop parameters are read from *.END file
-      if (tc_t1900 - tstart .gt. tiny .or. swinco .ne. 3 .or.           &
+      if (tc_t1900 - tstart .gt. tiny .or. state%soilwater%swinco .ne. 3 .or.           &
      &   dabs(tc_t1900 - state%crop%common%cropstart) .lt. tiny) then  ! [GR-CROPWS B5] cropstart(icrop) → state%crop%common%cropstart
 
         state%crop%common%dvs = 0.0d0

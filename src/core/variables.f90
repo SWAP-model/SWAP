@@ -757,7 +757,7 @@
                                    !                                            2 = simulate drainage and surface water
       integer   swfrost            ! Switch for reduction of hydraulic conductivity in case of frost: 0 = no; 1 = yes
       integer   swhyst             ! Switch for hysteresis of soil moisture retention function: 0 = no; 1 = yes
-      integer   swinco             ! Switch for initial soil moisture condition: 1 = pressure heads; 2 = hydrostatic equilibrium; 
+      ! [GR-SOL 2026-05-24] swinco retired — see state%soilwater%swinco
                                    !                                             3 = final pressure heads from previous simulation
       ! [GR-CROP-DVS] SWkmean retired — see state%cfg%simulation%numerical%swkmean
                                    !                                            3 = unweighted geometric mean,4 = weighted geometric mean

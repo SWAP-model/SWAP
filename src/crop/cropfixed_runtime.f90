@@ -35,7 +35,8 @@
                            siccaplai, w_root_ss, wiltpoint,   &
                            twilt, flhydrlift,                            &  ! cfeic retired; gc → state%crop%common%gc
                            mrftb, wrtb,                                  &  ! gctb/rdtb retired
-                           swinco, reltr
+                           ! [GR-SOL 2026-05-24] swinco retired — read via state%soilwater%swinco
+                           reltr
       use soilhydraulics_utils, only: watcon
       use array_utils, only: afgen
       use rootextraction_mod, only: MatricFlux
@@ -108,7 +109,7 @@
       endif
 
 ! --- skip next initialization if crop parameters are read from *.END file
-      if (tc_t1900 - tstart .gt. tiny .or. swinco .ne. 3 .or.           &
+      if (tc_t1900 - tstart .gt. tiny .or. state%soilwater%swinco .ne. 3 .or.           &
      &  dabs(tc_t1900 - state%crop%common%cropstart) .lt. tiny) then   ! [GR-CROPWS B1] cropstart(icrop) → state%crop%common%cropstart
 
         state%crop%common%dvs = 0.0d0

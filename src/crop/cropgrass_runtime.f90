@@ -48,7 +48,7 @@
       !   perdl, dateharvest, state%crop%grass%lsda: output + harvest tracking, no state home
       !   tsoil: config-staging buffer, renamed to avoid clash with dummy arg
       use variables, only: &                                            ! [SS-GR-CROPRT B8] [GR-CROPWS B4]
-        magrs, macp, rid, daycrop, swinco,       &  ! tdwi/[GR-CROPWS B4] icrop/dvs/tsum/wst/wlv/wrt/dw*/tbase retired
+        magrs, macp, rid, daycrop,               &  ! [GR-SOL 2026-05-24] swinco retired (via state%soilwater%swinco)
         wrtmin,                  &  ! wrtmax retired
         ! laiem/laiexp/laiexppot/laimax/lai/laipot/cfeic retired
         ! cftb/chtb/cfeictb/rdtb/rlwtb/slatb/rgrlai/rfsetb retired
@@ -207,7 +207,7 @@
       endif
 
 ! --- skip next initialization if crop parameters are read from *.END file
-      if (tc_t1900 - tstart .gt. tiny .or. swinco .ne. 3 .or.          &
+      if (tc_t1900 - tstart .gt. tiny .or. state%soilwater%swinco .ne. 3 .or.          &
      &   dabs(tc_t1900 - state%crop%common%cropstart) .lt. tiny) then   ! [GR-CROPWS B4] cropstart(icrop) → state%crop%common%cropstart
 
         state%crop%grass%iseqgm = 1

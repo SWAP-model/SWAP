@@ -197,6 +197,10 @@ module soilwater_state_mod
       logical                   :: flrunon  = .false.
       real(real64), allocatable :: runonarr(:)
 
+      ! Initial soil-water condition switch (snapshotted from config%soil%swinco).
+      ! 1 = pressure heads; 2 = hydrostatic equilibrium; 3 = warm-restart from CSV.
+      integer :: swinco = 1
+
       ! Cauchy bottom-boundary (swbotb=3) vertical-resistance switch.
       ! Dormant — no TOML writer; always 0 in the TOML pipeline.
       ! 0 = add the (modelled-profile) vertical resistance to rimlay; 1 = use rimlay alone.
