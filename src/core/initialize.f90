@@ -65,35 +65,25 @@
 
 ! --- irrigation variables
       ! [SS-GR-FINAL D1] irg zero-fill dropped — declaration retired
-      irrigevent         = 0
+      ! [GR-CROP 2026-05-25] irrigevent zero-fill dropped — runtime-local in irrigation.f90
       irtype             = 0
-      isua               = 0
-      isuas              = 0
+      ! [GR-CROP 2026-05-25] isua zero-fill dropped — canonical home is state%atmosphere%isua
+      ! [GR-CROP 2026-05-25] isuas zero-fill dropped — schedule==1 dead branch
       nirri              = 0
-      ! [SS-GR-FINAL D1] phormc zero-fill dropped — declaration retired 
-      swirfix            = 0 
-      cirrs              = 0.0d0 
-      dcrit              = 0.0d0 
-      ditab              = 0.0d0 
-      dwatab             = 0.0d0 
-      fidtab             = 0.0d0 
-      hcritab            = 0.0d0 
+      ! [SS-GR-FINAL D1] phormc zero-fill dropped — declaration retired
+      swirfix            = 0
+      ! [GR-CROP 2026-05-25] cirrs/ditab/dwatab/fidtab/hcritab/raithreshold/rawtab/tawtab/tcritab/
+      !                       tstairrig/tendirrig/treltab/dayfix zero-fills dropped — schedule==1 dead branch
+      dcrit              = 0.0d0
       ! [SS-SWC] igird/inird retired — soilwater_init handles init via state%soilwater
       ! igird              = 0.0d0
       ! inird              = 0.0d0
-      irconc             = 0.0d0 
-      irdate             = 0.0d0 
-      irdepth            = 0.0d0 
+      irconc             = 0.0d0
+      irdate             = 0.0d0
+      irdepth            = 0.0d0
       ! [GR-ATM 2026-05-23] nird retired — see state%atmosphere%nird
-      raithreshold       = 0.0d0 
-      rawtab             = 0.0d0 
-      tawtab             = 0.0d0 
-      tcritab            = 0.0d0 
-      tstairrig          = 0.0d0 
-      tendirrig          = 0.0d0 
-      treltab            = 0.0d0 
       ! [SS-TC] flheadirg/flirrigate/flIrg1Start retired to state%timecontrol (ADR 0041)
-      ! [SS-GR-FINAL D1] FlIrrigationOutput zero-fill dropped — declaration retired 
+      ! [SS-GR-FINAL D1] FlIrrigationOutput zero-fill dropped — declaration retired
 
 ! --- soilwater variables
       ! [SS-BMI2 Task 5] MaxIt retired 2026-05-13 — moved to state%timecontrol%MaxIt

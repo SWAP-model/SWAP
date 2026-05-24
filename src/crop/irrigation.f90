@@ -41,18 +41,8 @@
 ! --  global variables
       use swap_array_dimensions, only: maho
       use variables, only: &
-                            ! Runtime state — locally consumed; retire in cluster commits
-                            irrigevent,                                    &
                             ! Fixed-irrigation event arrays — populated by config_to_variables%apply_irrigation
-                            irdate, nirri, irdepth, irconc, irtype, isua,  &
-                            ! Dead-branch scheduled-irrigation reads (schedule==1 path is gated by
-                            ! state%crop%common%schedule which is always 0 on TOML path; cropfixed/wofost/grass
-                            ! init reject schedule=1 via fatalerr). Retired-zero in cluster commit.
-                            swsolu, swcirrthres,                           &
-                            cirrthres, perirrsurp, raithreshold, dayfix,   &
-                            tstairrig, tendirrig,                          &
-                            treltab, rawtab, tawtab, dwatab, hcritab, tcritab, &
-                            ditab, fidtab, cirrs, isuas
+                            irdate, nirri, irdepth, irconc, irtype
       use array_utils, only: afgen
       use soilhydraulics_utils, only: watcon
       implicit none
@@ -64,6 +54,7 @@
       integer ifnd,i,datea(6),irgdayfix
       integer endirr(2),startirr(2)
       integer yearendcrp, yearstacrp
+      integer :: irrigevent       ! [GR-CROP 2026-05-25] localized — consumed only within this call
       real(8) frlow,phlo,phhi,phme,awlh,awmh,awah,cdef
       real(8) wclo,wcme,wchi,wcac,tps1,tps2,tps3,tps4,tps5,depl,phcrit
       real(8) dps1,dps2,Tred
@@ -76,8 +67,31 @@
       character(len=80) filnam
       character(len=200) messag
 
-!     SAVE removed - persistent state now in variables.f90 module (dayfix)
-!     save    
+      ! [GR-CROP 2026-05-25] retired-zero — schedule==1 dead branch.
+      !   The crop%common%schedule==1 path is gated off in every TOML run
+      !   because cropfixed/cropwofost/cropgrass init reject schedule=1 via
+      !   fatalerr. These legacy globals were never written by the TOML
+      !   pipeline; reading the bare global returned zero. They are
+      !   therefore replaced by local zero-initialized values here so the
+      !   declarations in variables.f90/legacy_state.f90/initialize.f90 can
+      !   retire without changing runtime behaviour.
+      integer,   parameter :: swcirrthres = 0
+      integer,   parameter :: isuas       = 0
+      integer              :: dayfix      = 0
+      real(8),   parameter :: cirrs        = 0.0d0
+      real(8),   parameter :: cirrthres    = 0.0d0
+      real(8),   parameter :: perirrsurp   = 0.0d0
+      real(8),   parameter :: raithreshold = 0.0d0
+      real(8),   parameter :: tstairrig    = 0.0d0
+      real(8),   parameter :: tendirrig    = 0.0d0
+      real(8),   parameter :: treltab(14)  = 0.0d0
+      real(8),   parameter :: rawtab(14)   = 0.0d0
+      real(8),   parameter :: tawtab(14)   = 0.0d0
+      real(8),   parameter :: dwatab(14)   = 0.0d0
+      real(8),   parameter :: hcritab(14)  = 0.0d0
+      real(8),   parameter :: tcritab(14)  = 0.0d0
+      real(8),   parameter :: ditab(14)    = 0.0d0
+      real(8),   parameter :: fidtab(14)   = 0.0d0
 
 !     dcs(1)  = Amount of under- or over-irrigation (L) in case of a scheduled irrigation event
 !     dcs(2)  = Prescribed fixed irrigation depth (L) for each scheduled irrigation event
@@ -120,8 +134,7 @@
             if (abs(irdate(nirri) - time%t1900) .lt. 1.d-3) then
                crop%gird = irdepth(nirri)
                solu%cirr = irconc(nirri)
-               isua = irtype(nirri)
-               atmo%isua = isua   ! [SS-GR-ATM A5.3] runtime dual-write
+               atmo%isua = irtype(nirri)   ! [GR-CROP 2026-05-25] legacy isua retired; canonical home = atmo%isua
                nirri = nirri + 1
                irrigevent = 1
             end if
@@ -159,8 +172,7 @@
          if (crop%common%schedule.eq.1 .and. irrigevent.eq.0 .and. crop%common%flCropCalendar &
                  .and. .not. crop%common%flCropHarvest .and. flIrriTime) then
             solu%cirr = cirrs
-            isua = isuas
-            atmo%isua = isua   ! [SS-GR-ATM A5.3] runtime dual-write
+            atmo%isua = isuas   ! [GR-CROP 2026-05-25] legacy isua retired; canonical home = atmo%isua
 
 ! ---       determine water holding capacity, readily available water,
 ! ---       actual available water and water deficit
@@ -292,7 +304,7 @@
             end if
 
 ! ---       in case of solutes: allow overirrigation when conc exceeds concthreshold
-            if (swsolu.eq.1 .and.irrigevent.eq.2 .and.swcirrthres.eq.1) then
+            if (state%cfg%solute%swsolu.eq.1 .and.irrigevent.eq.2 .and.swcirrthres.eq.1) then
                if (solu%cml(nodsen).gt.cirrthres) then
                   crop%gird = crop%gird + 0.01d0*perirrsurp*crop%gird
                end if
@@ -323,17 +335,12 @@ subroutine SSDI_irrigation(iTask, state)
 ! SS-TC TC-12: t1900 retired from only-list; read via state%timecontrol.
 ! [SS-GR-FINAL B6] mairg → swap_array_dimensions; remainder DEFERRED
 use swap_array_dimensions, only: mairg
-use variables, only: &      ! [SS-GR-FINAL B6] DEFERRED — SSDI persistent state needs irrigation_state_t; Phase C3
-                     ! [GR-SOIL 2026-05-24] qssdi/qssdisum migrated to state%soilwater
-                     ! DEFERRED: irrigevent/dt_SSDI_event — SSDI runtime state; no state home yet
-                     irrigevent, dt_SSDI_event,                            &
-                     ! DEFERRED: swssdi_irr/nod_ssdi_irr/ssdi_schedule_irr/ssdi_sched_type_irr — SSDI config; Phase C3
+use variables, only: &      ! [GR-CROP 2026-05-25] dt_SSDI_event retained — cross-file consumer = src/core/timecontrol_mod.f90
+                     dt_SSDI_event,                                        &
+                     ! SSDI persistent state — populated by config_to_variables%apply_irrigation_ssdi (mode 0/1)
                      swssdi_irr, nod_ssdi_irr, ssdi_schedule_irr, ssdi_sched_type_irr, &
-                     ! DEFERRED: nod_ssdi_sensor_irr/ssdi_threshold_irr/ssdi_threshold_z_irr — SSDI config; Phase C3
-                     nod_ssdi_sensor_irr, ssdi_threshold_irr, ssdi_threshold_z_irr, &
-                     ! DEFERRED: ssdi_amount_irr/ssdi_appl_rate_irr/sw_interval_irr/days_interval_irr — SSDI config; Phase C3
+                     nod_ssdi_sensor_irr, ssdi_threshold_irr, ssdi_threshold_z_irr,    &
                      ssdi_amount_irr, ssdi_appl_rate_irr, sw_interval_irr, days_interval_irr, &
-                     ! DEFERRED: days_counter_irr/nirri_ssdi_irr/ssdi_date_irr/ssdi_rate_f_irr/ssdi_amount_f_irr — SSDI runtime; Phase C3
                      days_counter_irr, nirri_ssdi_irr, ssdi_date_irr, ssdi_rate_f_irr, ssdi_amount_f_irr
 use swap_state_mod, only: swap_state_t
 
@@ -362,6 +369,7 @@ real(8), dimension(mairg)       :: ssdi_amount_f
 
 ! local, help
 integer                         :: i, j
+integer                         :: irrigevent   ! [GR-CROP 2026-05-25] localized — consumed only within this call
 real(8)                         :: Tred
 
    ! Load state from module variables at entry

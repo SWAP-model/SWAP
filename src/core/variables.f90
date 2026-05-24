@@ -264,23 +264,23 @@
 ! --- irrigation variables
       ! [SS-GR-FINAL D1] swirg retired — IRG output deleted; 0 consumers
       ! [SS-GR-FINAL D1] irg retired — IRG file handle, never opened; 0 consumers
-      integer   irrigevent         ! Switch: 0 = no irrigation; 1 = fixed irrigation event; 2 = scheduled irrigation event
+      ! [GR-CROP 2026-05-25] irrigevent retired — runtime-local in src/crop/irrigation.f90
       integer   irtype(mairg)      ! Type of fixed irrigation: 0 = sprinkling irrigation; 1 = surface irrigation
-      integer   isua               ! Switch for type of irrigation: 0 = sprinkling irrigation, 1 = surface irrigation
-      integer   isuas              ! Switch for type of scheduled irrigation: 0 = sprinkling irrigation, 1 = surface irrigation
-      integer   nirri              ! Number of irrigation event
+      ! [GR-CROP 2026-05-25] isua retired — canonical home is state%atmosphere%isua
+      ! [GR-CROP 2026-05-25] isuas retired — schedule==1 branch dead (cropfixed/wofost/grass init reject schedule=1)
+      integer   nirri              ! Number of irrigation event — retained — still written by src/core/timecontrol_mod.f90
       ! [SS-GR-FINAL D1] phormc retired — 0 consumers
       ! [GR-CROPWS] schedule retired — see state%crop%common%schedule
-      integer   swirfix            ! Switch for fixed irrigation: 0 = no applications prescribed; 1 = applications are prescribed
-      integer   swcirrthres        ! Switch to allow over irrigation when a conc-threshold is exceeded: 0 = no; 1 = yes/allowed
-      real(8)   cirrs              ! Solute concentration of irrigation water (M/L3)
-      real(8)   cirrthres          ! Threshold value (M/L3) indicating the concentration that initiates over irrigation
+      integer   swirfix            ! retained — still consumed by src/core/timecontrol_mod.f90 (sets flIrrigate)
+      ! [GR-CROP 2026-05-25] swcirrthres retired — schedule==1 dead branch
+      ! [GR-CROP 2026-05-25] cirrs retired — schedule==1 dead branch
+      ! [GR-CROP 2026-05-25] cirrthres retired — schedule==1 dead branch
       real(8)   dcrit              ! Depth (L) of sensor for soil water pressure head or water content
-      real(8)   ditab(14)          ! Array with amount of under- or over-irrigation (L) as function of crop development stage
-      real(8)   dwatab(14)         ! Array with maximum amounts of water depleted as function of crop development stage
-      real(8)   fidtab(14)         ! Array with prescribed fixed irrigation depth (L) as function of crop development stage
+      ! [GR-CROP 2026-05-25] ditab retired — schedule==1 dead branch
+      ! [GR-CROP 2026-05-25] dwatab retired — schedule==1 dead branch
+      ! [GR-CROP 2026-05-25] fidtab retired — schedule==1 dead branch
       ! [GR-CROP-DVS] gird retired — see state%crop%gird
-      real(8)   hcritab(14)        ! Array with minimum soil water pressure heads (L) as function of crop development stage
+      ! [GR-CROP 2026-05-25] hcritab retired — schedule==1 dead branch
       ! [SS-SWC] retired 2026-05-12 — moved to state%soilwater (ADR 0038)
       ! real(8)   igird              ! Intermediate depth of gross irrigation (L)
       ! real(8)   inird              ! Intermediate depth of net irrigation (L)
@@ -288,20 +288,20 @@
       real(8)   irdate(mairg)      ! Array with fixed irrigation dates
       real(8)   irdepth(mairg)     ! Array with fixed irrigation depths (L)
       ! [GR-ATM 2026-05-23] nird retired — see state%atmosphere%nird
-      real(8)   perirrsurp         ! percentage (-) of the scheduled irrigation depths that may be over irrigated
-      real(8)   raithreshold       ! Threshold value (L) indicating the amount of rainfall which is substracted from scheduled irrigation depths
-      real(8)   rawtab(14)         ! Array with minimum of readily available water as function of crop development stage
-      real(8)   tawtab(14)         ! Array with minimum of totally available water as function of crop development stage
-      real(8)   tcritab(14)        ! Array with minimum volumetric soil water contents as function of crop development stage
-      real(8)   tstairrig          ! Date after which scheduled irrigation is allowed
-      real(8)   tendirrig          ! Date after which scheduled irrigation is NOT allowed
-      real(8)   treltab(14)        ! Array with minimum of ratio actual/potential transpiration as function of crop development stage
+      ! [GR-CROP 2026-05-25] perirrsurp retired — schedule==1 dead branch
+      ! [GR-CROP 2026-05-25] raithreshold retired — schedule==1 dead branch
+      ! [GR-CROP 2026-05-25] rawtab retired — schedule==1 dead branch
+      ! [GR-CROP 2026-05-25] tawtab retired — schedule==1 dead branch
+      ! [GR-CROP 2026-05-25] tcritab retired — schedule==1 dead branch
+      ! [GR-CROP 2026-05-25] tstairrig retired — schedule==1 dead branch
+      ! [GR-CROP 2026-05-25] tendirrig retired — schedule==1 dead branch
+      ! [GR-CROP 2026-05-25] treltab retired — schedule==1 dead branch
       ! [SS-TC] retired 2026-05-12 — moved to state%timecontrol%* (ADR 0041)
       ! logical   flheadirg          ! moved to state%timecontrol%flheadirg
       ! logical   flirrigate         ! moved to state%timecontrol%flIrrigate
       ! logical   flIrg1Start        ! moved to state%timecontrol%flIrg1Start
       ! [SS-GR-FINAL D1] FlIrrigationOutput retired — 0 consumers
-      integer   dayfix             ! days since last irrigation event
+      ! [GR-CROP 2026-05-25] dayfix retired — schedule==1 dead branch (local-only counter)
 
 ! --- start of growth grass      
       ! [GR-CROPWS] swtsum retired — see state%crop%grass%swtsum

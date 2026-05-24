@@ -70,33 +70,33 @@ module legacy_state_mod
       ! [GR-ATM 2026-05-23] tsunrise_atm/tsunset_atm retired — see state%atmosphere%tsun{rise,set}_atm
       integer :: nod10_cn  !! Node at -10cm for CN runoff method - from meteoday.f90 CNmethod
       integer :: icn_atm  !! Current position in CN time table - from meteoday.f90 CNmethod
-      integer :: irrigevent  !! Switch: 0 = no irrigation; 1 = fixed irrigation event; 2 = scheduled irrigation event
+      ! [GR-CROP 2026-05-25] irrigevent retired — runtime-local in src/crop/irrigation.f90
       integer, allocatable :: irtype(:)  !! Type of fixed irrigation: 0 = sprinkling irrigation; 1 = surface irrigation
-      integer :: isua  !! Switch for type of irrigation: 0 = sprinkling irrigation, 1 = surface irrigation
-      integer :: isuas  !! Switch for type of scheduled irrigation: 0 = sprinkling irrigation, 1 = surface irrigation
-      integer :: nirri  !! Number of irrigation event
-      integer :: swirfix  !! Switch for fixed irrigation: 0 = no applications prescribed; 1 = applications are prescribed
-      integer :: swcirrthres  !! Switch to allow over irrigation when a conc-threshold is exceeded: 0 = no; 1 = yes/allowed
-      real(real64) :: cirrs  !! Solute concentration of irrigation water (M/L3)
-      real(real64) :: cirrthres  !! Threshold value (M/L3) indicating the concentration that initiates over irrigation
+      ! [GR-CROP 2026-05-25] isua retired — canonical home is state%atmosphere%isua
+      ! [GR-CROP 2026-05-25] isuas retired — schedule==1 dead branch
+      integer :: nirri  !! retained — still written by src/core/timecontrol_mod.f90 (initial reset to 1)
+      integer :: swirfix  !! retained — still consumed by src/core/timecontrol_mod.f90 (sets flIrrigate)
+      ! [GR-CROP 2026-05-25] swcirrthres retired — schedule==1 dead branch
+      ! [GR-CROP 2026-05-25] cirrs retired — schedule==1 dead branch
+      ! [GR-CROP 2026-05-25] cirrthres retired — schedule==1 dead branch
       real(real64) :: dcrit  !! Depth (L) of sensor for soil water pressure head or water content
-      real(real64), allocatable :: ditab(:)  !! Array with amount of under- or over-irrigation (L) as function of crop development stage
-      real(real64), allocatable :: dwatab(:)  !! Array with maximum amounts of water depleted as function of crop development stage
-      real(real64), allocatable :: fidtab(:)  !! Array with prescribed fixed irrigation depth (L) as function of crop development stage
-      real(real64), allocatable :: hcritab(:)  !! Array with minimum soil water pressure heads (L) as function of crop development stage
+      ! [GR-CROP 2026-05-25] ditab retired — schedule==1 dead branch
+      ! [GR-CROP 2026-05-25] dwatab retired — schedule==1 dead branch
+      ! [GR-CROP 2026-05-25] fidtab retired — schedule==1 dead branch
+      ! [GR-CROP 2026-05-25] hcritab retired — schedule==1 dead branch
       real(real64), allocatable :: irconc(:)  !! Array with irrigation concentrations (M/L3) in case of fixed irrigation
       real(real64), allocatable :: irdate(:)  !! Array with fixed irrigation dates
       real(real64), allocatable :: irdepth(:)  !! Array with fixed irrigation depths (L)
       ! [GR-ATM 2026-05-23] nird retired — see state%atmosphere%nird
-      real(real64) :: perirrsurp  !! percentage (-) of the scheduled irrigation depths that may be over irrigated
-      real(real64) :: raithreshold  !! Threshold value (L) indicating the amount of rainfall which is substracted from scheduled irrigation depths
-      real(real64), allocatable :: rawtab(:)  !! Array with minimum of readily available water as function of crop development stage
-      real(real64), allocatable :: tawtab(:)  !! Array with minimum of totally available water as function of crop development stage
-      real(real64), allocatable :: tcritab(:)  !! Array with minimum volumetric soil water contents as function of crop development stage
-      real(real64) :: tstairrig  !! Date after which scheduled irrigation is allowed
-      real(real64) :: tendirrig  !! Date after which scheduled irrigation is NOT allowed
-      real(real64), allocatable :: treltab(:)  !! Array with minimum of ratio actual/potential transpiration as function of crop development stage
-      integer :: dayfix  !! days since last irrigation event
+      ! [GR-CROP 2026-05-25] perirrsurp retired — schedule==1 dead branch
+      ! [GR-CROP 2026-05-25] raithreshold retired — schedule==1 dead branch
+      ! [GR-CROP 2026-05-25] rawtab retired — schedule==1 dead branch
+      ! [GR-CROP 2026-05-25] tawtab retired — schedule==1 dead branch
+      ! [GR-CROP 2026-05-25] tcritab retired — schedule==1 dead branch
+      ! [GR-CROP 2026-05-25] tstairrig retired — schedule==1 dead branch
+      ! [GR-CROP 2026-05-25] tendirrig retired — schedule==1 dead branch
+      ! [GR-CROP 2026-05-25] treltab retired — schedule==1 dead branch
+      ! [GR-CROP 2026-05-25] dayfix retired — schedule==1 dead branch (local-only counter)
       integer :: tsumtime  !! time (nrs of sequential days) with temp above tsumtemp for grass growth [1..20 days, I]
       real(real64) :: tsumtemp  !! temperature limit to initiate grass growth  [0.0..20.0 grC, R]
       real(real64) :: tsumdepth  !! depth at which temp above tsumtemp for grass growth [0.0..100.0 cm below soil surface, R]
