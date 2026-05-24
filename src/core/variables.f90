@@ -933,7 +933,7 @@
       ! [GR-BH Task 36] retired 2026-05-13 — moved to state%soilwater%ksatfit/ksatexm (GR-BH arc)
       ! real(8)   ksatfit(maho)      ! Array with saturated hydraulic conductivity (L/T) for each soil layer: fitted on VG based on lab data
       ! real(8)   ksatexm(maho)      ! Array with saturated hydraulic conductivity (L/T) for each soil layer: examined in lab or field
-      real(8)   ksatthr(maho)      ! Array with saturated hydraulic conductivity (L/T) for each soil layer: to interpolate VG and Ksatexm
+      ! [GR-SOIL 2026-05-24] ksatthr retired — threshold-Ksat path not ported (always 0 in TOML pipeline); vg_params%ksatthr defaults to 0.
       real(8)   kstem              ! Conductance in the path from leaf to root xylem (/d)
       ! [GR-DRA 2026-05-23] kvbot retired — see state%drainage%kvbot
       ! [GR-DRA 2026-05-23] kvtop retired — see state%drainage%kvtop
@@ -947,7 +947,10 @@
       ! real(8)   mroot(macp)        ! Matrix flux head of a compartment at the root-soil interface (L2/T)
       real(8)   OxygenIntercept(6) ! Parameters of reproduction function for oxygen stress according to Bartholomeus
       real(8)   OxygenSlope(6)     ! Parameters of reproduction function for oxygen stress according to Bartholomeus
-      real(8)   paramvg(21,maho)   ! Array with input values of soil hydraulic parameters according to Mualem - van Genuchten for each soil layer
+      ! [GR-SOIL 2026-05-24] paramvg retained for tillage.f90 — tillage MUTATES per-layer VG params
+      !   on each tillage event (lines 242-264) before re-copying to vg_params(node). Other readers
+      !   (soilhydraulics, hysteresis) cut over to direct config reads via state%cfg%soil%hydraulics.
+      real(8)   paramvg(21,maho)   ! Mutable layer-keyed VG params; only tillage writes to it now.
       ! [SS-SWC] retired 2026-05-12 — moved to state%soilwater (ADR 0038)
       ! real(8)   pegwl              ! Perched groundwater level (L)
       ! real(8)   pond               ! Height of ponding layer (L)
@@ -1015,7 +1018,7 @@
       
       ! [SS-BND] retired 2026-05-11 — boundary subsystem migrated to state%soilwater (ADR 0035)
       ! real(8)   qtop               ! Water flux through soil surface (L/T)
-      real(8)   relsatthr(maho)    ! Array with relative saturation (-) for each soil layer: to interpolate VG and Ksatexm
+      ! [GR-SOIL 2026-05-24] relsatthr retired — threshold-Ksat path not ported; vg_params%relsatthr defaults to 0.
       ! [SS-GR-FINAL D1] ResultsOxygenStress retired — 0 consumers 
       ! [SS-BND] retired 2026-05-11 — boundary subsystem migrated to state%soilwater (ADR 0035)
       ! real(8)   reva               ! Actual soil evaporation rate (L/T)

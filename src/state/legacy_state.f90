@@ -279,13 +279,14 @@ module legacy_state_mod
       ! [GR-DRA 2026-05-23] khbot retired — see state%drainage%khbot
       ! [GR-DRA 2026-05-23] khtop retired — see state%drainage%khtop
       real(real64) :: Kroot  !! Hydraulic, radial conductivity of root tissue (L/T)
-      real(real64), allocatable :: ksatthr(:)  !! Array with saturated hydraulic conductivity (L/T) for each soil layer: to interpolate VG and Ksatexm
+      ! [GR-SOIL 2026-05-24] ksatthr retired — orphan stub; threshold-Ksat path not ported.
       real(real64) :: kstem  !! Conductance in the path from leaf to root xylem (/d)
       ! [GR-DRA 2026-05-23] kvbot retired — see state%drainage%kvbot
       ! [GR-DRA 2026-05-23] kvtop retired — see state%drainage%kvtop
       real(real64), allocatable :: OxygenIntercept(:)  !! Parameters of reproduction function for oxygen stress according to Bartholomeus
       real(real64), allocatable :: OxygenSlope(:)  !! Parameters of reproduction function for oxygen stress according to Bartholomeus
-      real(real64), allocatable :: paramvg(:,:)  !! Array with input values of soil hydraulic parameters according to Mualem - van Genuchten for each soil layer
+      ! [GR-SOIL 2026-05-24] paramvg retained — tillage still mutates the layer-keyed VG params.
+      real(real64), allocatable :: paramvg(:,:)  !! Orphan stub paralleling variables.f90 (paramvg(21,maho)); kept for symmetry.
       ! [GR-BND 2026-05-23] pondmxtab retired — see state%surfacewater%pondmxtab
       ! [GR-BND 2026-05-23] qbotab retired — see state%soilwater%qbotab
       ! [GR-SOIL 2026-05-24] qdraincomp retired — orphan stub.
@@ -309,7 +310,7 @@ module legacy_state_mod
       real(real64), allocatable :: ssdi_date_irr(:)  !! Fixed irrigation dates
       real(real64), allocatable :: ssdi_rate_f_irr(:)  !! Fixed irrigation rates (cm/d)
       real(real64), allocatable :: ssdi_amount_f_irr(:)  !! Fixed irrigation amounts (cm)
-      real(real64), allocatable :: relsatthr(:)  !! Array with relative saturation (-) for each soil layer: to interpolate VG and Ksatexm
+      ! [GR-SOIL 2026-05-24] relsatthr retired — orphan stub; threshold-Ksat path not ported.
       ! [GR-SOIL 2026-05-24] rimlay retired — orphan stub; read via state%cfg%bottom_boundary%rimlay.
       ! [GR-ATM 2026-05-23] rsigni retired — see state%atmosphere%rsigni
       ! [GR-ATM 2026-05-23] rsoil retired — see state%atmosphere%rsoil

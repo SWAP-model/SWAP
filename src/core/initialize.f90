@@ -284,7 +284,7 @@
       ! [GR-BH Task 36] ksatfit/ksatexm retired — seeded via state%soilwater in swap_mod.f90
       ! ksatfit            = 0.0d0
       ! ksatexm            = 0.0d0
-      ksatthr            = 0.0d0 
+      ! [GR-SOIL 2026-05-24] ksatthr retired — threshold-Ksat path not ported.
       ! [GR-DRA 2026-05-23] kvbot retired — see state%drainage%kvbot
       ! [GR-DRA 2026-05-23] kvtop retired — see state%drainage%kvtop
       ! [GR-BH Task 37] L retired to state%drainage%L
@@ -293,7 +293,7 @@
       ! mfluxtable         = 0.0d0
       ! [SS-CRP C-2.5] mflux retired — soilwater_init handles init via state%soilwater (ADR 0036)
       ! mflux              = 0.0d0
-      paramvg            = 0.0d0 
+      paramvg            = 0.0d0   ! [GR-SOIL 2026-05-24] retained for tillage.f90 mutator
       ! [SS-SWC] pegwl/pond/pondini/pondm1 retired — soilwater_init handles init via state%soilwater
       ! pegwl              = 0.0d0
       ! pond               = 0.0d0
@@ -326,7 +326,7 @@
       dt_SSDI_event      = 1.0d0
       ! [SS-BND B-2.7] qtop retired — soilwater_init handles init via state%soilwater
       ! qtop               = 0.0d0
-      relsatthr          = 0.0d0 
+      ! [GR-SOIL 2026-05-24] relsatthr retired — threshold-Ksat path not ported. 
       ! [SS-BND B-2.7] reva retired — soilwater_init handles init via state%soilwater
       ! reva               = 0.0d0
       ! [SS-HEAT] Task 9: rfcp retired to state%heat%rfcp

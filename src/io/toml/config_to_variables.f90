@@ -611,12 +611,11 @@ contains
          ! None of the regression cases set it; this matches.
          iHWCKmodel(1:size(config%soil%hydraulics%ores)) = 1
 
-         ! paramvg layout (legacy):
-         !   1 = ores         6 = npar
-         !   2 = osat         7 = 1 - 1/npar
-         !   3 = ksatfit      8 = alfa or alfaw (per swhyst)
-         !   4 = alfa         9 = h_enpr
-         !   5 = lexp        10 = ksatexm (-999 sentinel when absent)
+         ! [GR-SOIL 2026-05-24] paramvg mirror retained — tillage.f90 still consumes
+         ! the layer-keyed mutable VG params. soilhydraulics + hysteresis read
+         ! directly from `state%cfg%soil%hydraulics`; this mirror exists only for
+         ! tillage events. ksatexm threshold-Ksat path remains unported
+         ! (vg_params%ksatexm gets -999 sentinel in soilhydraulics).
          paramvg = 0.0d0
          do i = 1, size(config%soil%hydraulics%ores)
             paramvg(1, i)  = config%soil%hydraulics%ores(i)
@@ -632,13 +631,6 @@ contains
                paramvg(8, i) = config%soil%hydraulics%alfaw(i)
             end if
             paramvg(9, i)  = config%soil%hydraulics%h_enpr(i)
-            ! HACK Phase 4f-extend: ksatexm path ignores the legacy
-            ! flksatexm/relsatthr/ksatthr branch (readswap.f90:802-815).
-            ! For hupselbrook ksatexm == ksatfit, so flksatexm stays
-            ! false in the legacy path and paramvg(10,:) keeps the
-            ! -999 sentinel. Matches behaviour for the case at hand;
-            ! cases with ksatexm > ksatfit need the threshold-Ksat
-            ! computation ported.
             paramvg(10, i) = -999.0d0
          end do
       end if

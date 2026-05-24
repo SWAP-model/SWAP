@@ -825,18 +825,16 @@ contains
       use swap_array_dimensions, only: macp, mabbc, matabentries
       use variables, only: &
          ! [GR-SOIL 2026-05-24] cQMpLatSs retired (ADR 0040)
-         ! [GR-SOIL 2026-05-24] cfg_soil%swhyst/cfg_soil%gwli → state%cfg%soil (direct read)
-         ! [GR-SOIL 2026-05-24] h_enpr removed — was an unused import (shadowed by
-         !   the same-named struct field on soil%vg_params)
-         ! DEFERRED: swkmean — mean K averaging method; Phase C3
-         ! DEFERRED: paramvg(21,maho) — VanGenuchten parameters table; Phase C3
-         paramvg, &
-         ! DEFERRED: relsatthr/ksatthr(maho) — threshold saturations; Phase C3
-         relsatthr, ksatthr, &
-         ! DEFERRED: iHWCKmodel(maho) — hydraulic conductivity model switch per mesh%layer; Phase C3
-         iHWCKmodel, &
+         ! [GR-SOIL 2026-05-24] swhyst/gwli → state%cfg%soil (direct read via cfg_soil)
+         ! [GR-SOIL 2026-05-24] paramvg → state%cfg%soil%hydraulics (direct read via hyd)
+         ! [GR-SOIL 2026-05-24] relsatthr/ksatthr retired — readswap threshold-Ksat
+         !   path not ported; state defaults to 0.
+         ! [GR-SOIL 2026-05-24] h_enpr removed — was an unused import.
          ! [GR-SOIL 2026-05-24] numtab/numtablay/ientrytab/ientrytablay/sptab/sptablay
          !   retired with swsophy=1 → src/soil/dormant/sptabulated.f90
+         ! DEFERRED: iHWCKmodel(maho) — still the source for the legacy→state mirror
+         !   below; config_to_variables sets it before soilwater_init allocates state.
+         iHWCKmodel, &
          ! DEFERRED: zi/nhead — initial head table entries; Phase C3
          zi, nhead
       use swap_log, only: log_info, to_str
@@ -867,6 +865,7 @@ contains
                  atmo => state%atmosphere,   &
                  time => state%timecontrol,  &
                  cfg_soil => state%cfg%soil, &  ! [GR-SOIL 2026-05-24] cfg_soil%swhyst/cfg_soil%gwli direct config read
+                 hyd => state%cfg%soil%hydraulics, &  ! [GR-SOIL 2026-05-24] per-layer VG params (paramvg)
                  swbotb => state%soilwater%swbotb_runtime)
 
       select case (task)
@@ -903,6 +902,9 @@ contains
       do node = 1, mesh%numnod
          soil%layer(node) = mesh%layer(node)
       end do
+      ! [GR-SOIL 2026-05-24] iHWCKmodel is seeded directly into state%soilwater%iHWCKmodel
+      ! by config_to_variables (`apply_iHWCKmodel`/equivalent). The mirror loop here is
+      ! redundant; soilwater_init already zeroed the array and config sets it.
       do lay = 1, mesh%numlay
          soil%iHWCKmodel(lay) = iHWCKmodel(lay)
       end do
@@ -918,46 +920,53 @@ contains
          call fatalerr_collected('SoilHydraulics', &
             'swsophy=1 (tabulated soil hydraulics) is dormant — see src/soil/dormant/sptabulated.f90')
       end if
-      ! MvanG functions (formerly the `else` branch of the swsophy=0/1 split)
-         do node = 1,mesh%numnod
-          lay = mesh%layer(node)
-          ! Populate vg_params directly — [SS-GR-UTILS Task 15] cofgen removed
-          soil%vg_params(node)%thetar           = paramvg(1, lay)
-          soil%vg_params(node)%thetas           = paramvg(2, lay)
-          soil%vg_params(node)%ksat             = paramvg(3, lay)
-          soil%vg_params(node)%alpha            = paramvg(4, lay)
-          soil%vg_params(node)%lpar             = paramvg(5, lay)
-          soil%vg_params(node)%npar             = paramvg(6, lay)
-          soil%vg_params(node)%mpar             = paramvg(7, lay)
-          soil%vg_params(node)%alphaw_sentinel  = -9999.9_real64
-          soil%vg_params(node)%h_enpr           = paramvg(9, lay)
-          soil%vg_params(node)%ksatexm          = paramvg(10, lay)
-          if (soil%vg_params(node)%ksatexm > 0.0_real64) soil%fluseksatexm(node) = .true.
-          soil%vg_params(node)%relsatthr        = relsatthr(lay)
-          soil%vg_params(node)%ksatthr          = ksatthr(lay)
-          if (iHWCKmodel(lay) ==  3 .OR. iHWCKmodel(lay) ==  6 .OR. iHWCKmodel(lay) ==  7 .OR. &
-              iHWCKmodel(lay) == 10 .OR. iHWCKmodel(lay) == 11) then
-             soil%vg_params(node)%alpha_2  = paramvg(13, lay)
-             soil%vg_params(node)%npar_2   = paramvg(14, lay)
-             soil%vg_params(node)%mpar_2   = paramvg(15, lay)
-             soil%vg_params(node)%omega_1  = paramvg(16, lay)
-             soil%vg_params(node)%omega_2  = paramvg(17, lay)
-          end if
-          if (iHWCKmodel(lay) ==  5 .OR. iHWCKmodel(lay) ==  7) then
-             soil%vg_params(node)%h0 = paramvg(18, lay)
-          end if
-          if (iHWCKmodel(lay) ==  8 .OR. iHWCKmodel(lay) ==  9 .OR. &
-              iHWCKmodel(lay) == 10 .OR. iHWCKmodel(lay) == 11) then
-             soil%vg_params(node)%h0      = paramvg(18, lay)
-             soil%vg_params(node)%ha      = paramvg(19, lay)
-             soil%vg_params(node)%apar    = paramvg(20, lay)
-             soil%vg_params(node)%omega_k = paramvg(21, lay)
-          end if
-        end do
-        soil%thetsl = 0.0_real64                            ! [SS-SWC S-1.3/S-2.12B]
-        do lay = 1, mesh%numlay
-          soil%thetsl(lay) = paramvg(2,lay)                 ! [SS-SWC S-1.3/S-2.12B]
-        end do
+      ! MvanG functions — populate per-node `vg_params` directly from `hyd` (config) reads.
+      ! [GR-SOIL 2026-05-24] paramvg(N, lay) mirrors retired; `hyd => state%cfg%soil%hydraulics`.
+      !   paramvg(1,lay)=ores, (2)=osat, (3)=ksatfit, (4)=alfa, (5)=lexp, (6)=npar,
+      !   (7)=1-1/npar, (8)=alfaw (read by hysteresis only), (9)=h_enpr,
+      !   (10)=ksatexm sentinel, (11)=relsatthr (always 0 in TOML), (12)=ksatthr (always 0),
+      !   (13..21)=bi-modal/extended params (iHWCKmodel != 1 in TOML never fires).
+      do node = 1, mesh%numnod
+         lay = mesh%layer(node)
+         soil%vg_params(node)%thetar           = hyd%ores(lay)
+         soil%vg_params(node)%thetas           = hyd%osat(lay)
+         soil%vg_params(node)%ksat             = hyd%ksatfit(lay)
+         soil%vg_params(node)%alpha            = hyd%alfa(lay)
+         soil%vg_params(node)%lpar             = hyd%lexp(lay)
+         soil%vg_params(node)%npar             = hyd%npar(lay)
+         soil%vg_params(node)%mpar             = 1.0_real64 - 1.0_real64/hyd%npar(lay)
+         soil%vg_params(node)%alphaw_sentinel  = -9999.9_real64
+         soil%vg_params(node)%h_enpr           = hyd%h_enpr(lay)
+         ! ksatexm: HACK Phase 4f-extend left the legacy ksatexm path unported;
+         ! paramvg(10,:) was forced to the -999 sentinel. Match that here.
+         soil%vg_params(node)%ksatexm          = -999.0_real64
+         ! `relsatthr`/`ksatthr` (legacy paramvg(11,12)) are always 0 in the TOML
+         ! pipeline — the threshold-Ksat computation from readswap.f90:802-815 was
+         ! not ported. The state fields default to 0, so the mirror lines are dropped.
+         if (soil%iHWCKmodel(lay) == 3 .OR. soil%iHWCKmodel(lay) == 6 .OR. soil%iHWCKmodel(lay) == 7 .OR. &
+             soil%iHWCKmodel(lay) == 10 .OR. soil%iHWCKmodel(lay) == 11) then
+            ! [GR-SOIL 2026-05-24] bi-modal MvG (paramvg(13..17)) unreachable in TOML:
+            ! config_to_variables forces iHWCKmodel=1. Reactivation needs a config
+            ! sub-record for alfa_2/npar_2/mpar_2/omega_1/omega_2.
+            call fatalerr_collected('SoilHydraulics', &
+               'iHWCKmodel in {3,6,7,10,11} (bi-modal MvG) needs config wiring — see src/state/hydraulic_params_mod.f90')
+         end if
+         if (soil%iHWCKmodel(lay) == 5 .OR. soil%iHWCKmodel(lay) == 7) then
+            ! [GR-SOIL 2026-05-24] iHWCKmodel=5/7 (h0 air-entry) needs paramvg(18) config.
+            call fatalerr_collected('SoilHydraulics', &
+               'iHWCKmodel in {5,7} needs config wiring (h0 air-entry)')
+         end if
+         if (soil%iHWCKmodel(lay) == 8 .OR. soil%iHWCKmodel(lay) == 9 .OR. &
+             soil%iHWCKmodel(lay) == 10 .OR. soil%iHWCKmodel(lay) == 11) then
+            ! [GR-SOIL 2026-05-24] iHWCKmodel=8/9/10/11 needs paramvg(18..21) config.
+            call fatalerr_collected('SoilHydraulics', &
+               'iHWCKmodel in {8,9,10,11} needs config wiring (h0/ha/apar/omega_k)')
+         end if
+      end do
+      soil%thetsl = 0.0_real64
+      do lay = 1, mesh%numlay
+         soil%thetsl(lay) = hyd%osat(lay)
+      end do
 
 ! --- saturated and residual watercontent of each node; hysteresis parameters
       do node = 1,mesh%numnod
@@ -968,11 +977,11 @@ contains
         if (cfg_soil%swhyst.eq.1) then
            ! Wetting curve
            soil%indeks(node) = 1                            ! [SS-SWC S-1.3/S-2.12B]
-           soil%vg_params(node)%alpha = paramvg(8,lay)      ! [SS-GR-UTILS Task 15] hysteresis: wetting alpha
+           soil%vg_params(node)%alpha = hyd%alfaw(lay)      ! [GR-SOIL 2026-05-24] hysteresis: wetting alpha
         elseif (cfg_soil%swhyst.eq.0.or.cfg_soil%swhyst.eq.2) then
            ! Drying branch or simulation without hysteresis
            soil%indeks(node) = -1                           ! [SS-SWC S-1.3/S-2.12B]
-           soil%vg_params(node)%alpha = paramvg(4,lay)      ! [SS-GR-UTILS Task 15] hysteresis: drying alpha
+           soil%vg_params(node)%alpha = hyd%alfa(lay)       ! [GR-SOIL 2026-05-24] hysteresis: drying alpha
         endif
       end do
 
