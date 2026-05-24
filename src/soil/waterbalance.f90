@@ -37,15 +37,8 @@ contains
       !> (legacy code that was unnecessary)
       !> @endnote
       subroutine calcgwl (state)
-      ! [SS-SWC S-2.12B] retired globals removed from use clause; all reads/writes via soil
-      ! [GR-BH C4] mesh%numnod/mesh%z/mesh%disnod migrated to mesh
-      ! [GR-BH Audit 31] soil%swbotb_runtime removed from use-list; read via soil%swbotb_runtime
-      ! [SS-GR-FINAL B9] DEFERRED: logf/CritUndSatVol
-      !   logf: file unit; Phase C3
-      !   CritUndSatVol: passed as arg to watertable(); defined in variables; Phase C3
-      ! [SS-GR-CROPRT A2] flmacropore dropped from import — retired (ADR 0040)
-      use variables, only: CritUndSatVol
-      ! [SS-TC TC-6] t1900 read cut over to time%t1900
+      ! All bare-global imports retired — calcgwl reads/writes through the
+      ! sub-record associate (mesh/soil/time) below.
       use swap_log, only: log_debug, log_warn, to_str
       implicit none
       ! SS-BND B-2.7: state added to read soil%gwlinp (gwlinp global retired)
