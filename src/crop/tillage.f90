@@ -5,15 +5,14 @@ module tillage_mod
    use error_mod, only: fatalerr_collected
    use swap_state_mod, only: swap_state_t
 
-   ! [GR-CROP 2026-05-25] Group AB legacy globals (till_*) migrated to
-   ! state%tillage%X (read-only at runtime; populated by apply_soil_tillage
-   ! during config_to_variables). The use-list below shrinks to the
-   ! remaining 3 symbols (swsolu, ParamVG, SwDiscrvert) — these retire in
-   ! the next sub-arc commits.
-   use variables, only: &
-                        swsolu, &
-                        ParamVG, &
-                        SwDiscrvert
+   ! [GR-CROP 2026-05-25] swsolu/SwDiscrvert reads cut over to direct
+   ! config reads via cfg_soil/cfg_solute aliases. Declarations remain
+   ! alive in variables.f90 because other consumers exist:
+   !   swsolu — still consumed by src/crop/irrigation.f90,
+   !             src/core/timecontrol_mod.f90
+   !   SwDiscrvert — still consumed by src/soil/dormant/regrid.f90
+   ! ParamVG is the last bare global; retired in the next commit.
+   use variables, only: ParamVG
 
    implicit none
 
@@ -37,12 +36,13 @@ module tillage_mod
 
    ! Sub-record aliases (canonical associate pattern).
    associate( &
-      mesh     => state%mesh,             &
-      soil     => state%soilwater,        &
-      time     => state%timecontrol,      &
-      atmo     => state%atmosphere,       &
-      tl       => state%tillage,          &
-      cfg_soil => state%cfg%soil          )
+      mesh       => state%mesh,             &
+      soil       => state%soilwater,        &
+      time       => state%timecontrol,      &
+      atmo       => state%atmosphere,       &
+      tl         => state%tillage,          &
+      cfg_soil   => state%cfg%soil,         &
+      cfg_solute => state%cfg%solute        )
 
    if (iTask > 1 .and. cfg_soil%swtill == 0) return      ! no tillage to be considered: return immediately
 
@@ -56,11 +56,12 @@ module tillage_mod
 
       ! some checks: some combinations not (yet) allowed
       if (cfg_soil%swtill == 1) then
-         if (cfg_soil%swhyst == 1)            call fatalerr_collected ('DoTillage', 'swhyst = 1 not allowed')
-         if (swsolu == 1)                     call fatalerr_collected ('DoTillage', 'swsolu = 1 not (yet) allowed')
-         if (state%crop%common%swoxygen == 2) call fatalerr_collected ('DoTillage', 'swoxygen = 2 not (yet) allowed')
-         if (soil%flksatexm)                  call fatalerr_collected ('DoTillage', 'flksatexm not (yet) allowed')
-         if (SwDiscrvert == 1)                call fatalerr_collected ('DoTillage', 'SwDiscrvert = 1 not (yet) allowed')
+         if (cfg_soil%swhyst == 1)              call fatalerr_collected ('DoTillage', 'swhyst = 1 not allowed')
+         if (cfg_solute%swsolu == 1)            call fatalerr_collected ('DoTillage', 'swsolu = 1 not (yet) allowed')
+         if (state%crop%common%swoxygen == 2)   call fatalerr_collected ('DoTillage', 'swoxygen = 2 not (yet) allowed')
+         if (soil%flksatexm)                    call fatalerr_collected ('DoTillage', 'flksatexm not (yet) allowed')
+         if (cfg_soil%discretization%swdiscrvert == 1) &
+                                                call fatalerr_collected ('DoTillage', 'SwDiscrvert = 1 not (yet) allowed')
       end if
 
       ! currently: require all Z_tillage = Max_Z_tillage
