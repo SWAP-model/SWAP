@@ -476,41 +476,12 @@ contains
 
       ! sublay (legacy 'isublay') is a local in readswap, not a module
       ! global; calcgrid only consumes nsublay + isoillay + ncomp + hcomp
-      ! + hsublay, so we simply set nsublay here.
-      if (allocated(config%soil%sublay)) then
-         nsublay = size(config%soil%sublay)
-      end if
+      ! [GR-SOIL 2026-05-24] sublay/isoillay/hsublay/ncomp/hcomp bare-global writes
+      ! retired — CalcGrid reads them inline from config%soil%X.
       if (allocated(config%soil%isoillay)) then
-         do i = 1, size(config%soil%isoillay)
-            isoillay(i) = config%soil%isoillay(i)
-         end do
          state%mesh%numlay = config%soil%isoillay(size(config%soil%isoillay))
       end if
-      if (allocated(config%soil%hsublay)) then
-         do i = 1, size(config%soil%hsublay)
-            hsublay(i) = config%soil%hsublay(i)
-         end do
-      end if
-      if (allocated(config%soil%ncomp)) then
-         do i = 1, size(config%soil%ncomp)
-            ncomp(i) = config%soil%ncomp(i)
-         end do
-      end if
-      ! Derive hcomp = hsublay / ncomp (mirrors readswap.f90:613-619).
-      ! Skipped when the case authors hcomp explicitly (none yet do).
-      if (allocated(config%soil%hsublay) .and. allocated(config%soil%ncomp) &
-          .and. .not. allocated(config%soil%hcomp)) then
-         do i = 1, size(config%soil%hsublay)
-            if (config%soil%ncomp(i) > 0) then
-               hcomp(i) = config%soil%hsublay(i) / dble(config%soil%ncomp(i))
-            end if
-         end do
-      end if
-      if (allocated(config%soil%hcomp)) then
-         do i = 1, size(config%soil%hcomp)
-            hcomp(i) = config%soil%hcomp(i)
-         end do
-      end if
+      ! [GR-SOIL 2026-05-24] config%soil%hcomp ingest retired — CalcGrid reads inline.
       ! [GR-BH Task 36] orgmat global retired — seeded via state%soilwater%orgmat in swap_mod.f90
       ! config%soil%orgmat is consumed directly by swap_mod seeding block.
       if (allocated(config%soil%bdens)) then

@@ -21,24 +21,30 @@ contains
       !!
       !! [GR-BH Task 35] signature gained state arg; mesh globals written directly
       !! to state%mesh%X. Legacy globals numlay/botcom/inpola/inpolb/nod1lay kept.
-      subroutine calcgrid(state)
-      ! Soil discretisation config (per-sublayer arrays); still bare globals.
-      use variables, only: nsublay, hcomp, hsublay, ncomp, isoillay
+      subroutine calcgrid(state, config)
       use swap_state_mod,        only: swap_state_t
+      use swap_config_mod,       only: swap_config_t
       use swap_array_dimensions, only: macp, maho
       implicit none
 
-      type(swap_state_t), intent(inout) :: state
+      type(swap_state_t),  intent(inout) :: state
+      type(swap_config_t), intent(in)    :: config
 
-      integer :: i, j, lay, node, layold
+      integer :: i, j, lay, node, layold, nsublay
+      real(8) :: hcomp_i
       character(len=200) :: messag
       character(len=11)  :: tmp
 
-      associate (mesh => state%mesh)
+      associate (mesh => state%mesh, soil_cfg => config%soil)
+
+         ! sublay-derived counts come from the config arrays.
+         nsublay = 0
+         if (allocated(soil_cfg%sublay)) nsublay = size(soil_cfg%sublay)
 
          ! Check correct input of number and height of soil compartments.
          do i = 1, nsublay
-            if (abs(ncomp(i)*hcomp(i) - hsublay(i)) .gt. 1.d-5) then
+            hcomp_i = soil_cfg%hsublay(i) / dble(soil_cfg%ncomp(i))
+            if (abs(soil_cfg%ncomp(i)*hcomp_i - soil_cfg%hsublay(i)) .gt. 1.d-5) then
                write(tmp, '(i11)') i
                tmp = adjustl(tmp)
                messag = 'At the soil water section, part 4, at layer '//   &
@@ -73,17 +79,18 @@ contains
          ! Nodal positions and inter-node distances; layer of each node.
          node = 0
          do i = 1, nsublay
-            do j = 1, ncomp(i)
+            hcomp_i = soil_cfg%hsublay(i) / dble(soil_cfg%ncomp(i))
+            do j = 1, soil_cfg%ncomp(i)
                node = node + 1
-               mesh%dz(node) = hcomp(i)
+               mesh%dz(node) = hcomp_i
                if (node .eq. 1) then
                   mesh%z(node)      = -0.5d0 * mesh%dz(node)
                   mesh%disnod(node) = -mesh%z(node)
-                  mesh%layer(node)  = isoillay(i)
+                  mesh%layer(node)  = soil_cfg%isoillay(i)
                else
                   mesh%z(node)      = mesh%z(node-1) - 0.5d0*(mesh%dz(node-1) + mesh%dz(node))
                   mesh%disnod(node) = mesh%z(node-1) - mesh%z(node)
-                  mesh%layer(node)  = isoillay(i)
+                  mesh%layer(node)  = soil_cfg%isoillay(i)
                end if
             end do
          end do

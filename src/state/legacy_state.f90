@@ -207,12 +207,12 @@ module legacy_state_mod
       ! [GR-DRA 2026-05-23] dramet retired — see state%drainage%dramet
       integer :: inc  !! Internal number of output file *.INC with incremental water balance data
       ! [GR-DRA 2026-05-23] ipos retired — see state%drainage%ipos
-      integer, allocatable :: isoillay(:)  !! Number of soil layer, starting with 1 at the soil surface
-      integer, allocatable :: ncomp(:)  !! Array with number of compartments in each sublayer
+      ! [GR-SOIL 2026-05-24] isoillay retired — read inline from config%soil%isoillay
+      ! [GR-SOIL 2026-05-24] ncomp retired — read inline from config%soil%ncomp
       integer :: nhead  !! Number of initial soil water pressure heads as provided in the input
       ! [GR-SOIL 2026-05-24] nod1lay retired — see state%mesh%nod1lay
       integer :: nrstaring  !! Number of soil type [1..18] according to Staring series (Wosten et al., 2001)
-      integer :: nsublay  !! Number of sublayers in the soil profile
+      ! [GR-SOIL 2026-05-24] nsublay retired — derived inline from config%soil%sublay
       integer :: numbit  !! Iteration number for solving Richards equation
       ! [GR-SOIL 2026-05-24] numlay retired — see state%mesh%numlay
       integer :: numnodnew  !! Number of desired nodes for soil water quality models
@@ -271,10 +271,10 @@ module legacy_state_mod
       real(real64), allocatable :: h_enpr(:)  !! Soil water Entry Pressure head for Modified MualemVanGenuchten curve (L)
       ! [GR-BND 2026-05-23] haqtab retired — see state%soilwater%haqtab
       ! [GR-BND 2026-05-23] hbotab retired — see state%soilwater%hbotab
-      real(real64), allocatable :: hcomp(:)  !! Array with prescribed height of numerical compartments (L) for each sublayer
+      ! [GR-SOIL 2026-05-24] hcomp retired — derived inline from config%soil%hsublay/ncomp
       real(real64) :: hdrain  !! Mean drainage level (L) to derive regional average groundwater level for bottom boundary condition
       real(real64) :: hplate  !! Pressure head of ceramic plate below lysimeter
-      real(real64), allocatable :: hsublay(:)  !! Array with prescribed height of sublayers (L)
+      ! [GR-SOIL 2026-05-24] hsublay retired — read inline from config%soil%hsublay
       real(real64), allocatable :: infres(:)  !! Array with infiltration resistance (T) for each drainage level
       ! [GR-SOL 2026-05-24] inpola/inpolb retired — see state%mesh%{inpola,inpolb}
       real(real64) :: iqinfmax  !! [SS-GR-FINAL D1] qinfmax retired — 0 consumers

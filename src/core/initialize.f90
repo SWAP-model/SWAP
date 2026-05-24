@@ -123,10 +123,10 @@
       ! [SS-SWC] indeks retired — soilwater_init handles init via state%soilwater%indeks
       ! indeks             = 0
       ! [GR-DRA 2026-05-23] ipos retired — see state%drainage%ipos
-      isoillay           = 0 
+      ! [GR-SOIL 2026-05-24] isoillay retired — read inline from config%soil%isoillay
       ! [GR-BH Task 35] layer retired to state%mesh%layer
       ! [SS-BMI2 Task 5] msteps retired 2026-05-13 — moved to state%timecontrol%msteps
-      ncomp              = 0 
+      ! [GR-SOIL 2026-05-24] ncomp retired — read inline from config%soil%ncomp
       nhead              = 0 
       ! [SS-SWC] nodgwl retired — soilwater_init handles init via state%soilwater%nodgwl
       ! nodgwl             = 0
@@ -136,7 +136,7 @@
       ! [SS-SWC] npegwl retired — soilwater_init handles init via state%soilwater%npegwl
       ! npegwl             = 0
       ! [GR-BH Task 37] nrlevs retired to state%drainage%nrlevs
-      nsublay            = 0
+      ! [GR-SOIL 2026-05-24] nsublay retired — derived inline from config%soil%sublay
       numbit             = 0 
       ! [GR-SOIL 2026-05-24] numlay retired — see state%mesh%numlay
       ! [GR-BH Task 35] numnod retired to state%mesh%numnod
@@ -233,13 +233,13 @@
       ! [SS-BND B-2.7] hbot retired — soilwater_init handles init via state%soilwater
       ! hbot               = 0.0d0
       ! [GR-BND 2026-05-23] hbotab retired — soilwater_init zeros state%soilwater%hbotab
-      hcomp              = 0.0d0 
+      ! [GR-SOIL 2026-05-24] hcomp retired — derived inline from config%soil%hsublay/ncomp
       hdrain             = 0.0d0 
       ! [SS-SWC] hm1 retired — soilwater_init handles init via state%soilwater%hm1
       ! hm1                = 0.0d0
       ! [SS-CRP C-2.5] hroot retired — soilwater_init handles init via state%soilwater (ADR 0036)
       ! hroot              = 0.0d0
-      hsublay            = 0.0d0
+      ! [GR-SOIL 2026-05-24] hsublay retired — read inline from config%soil%hsublay
       ! [SS-BND B-2.7] hsurf retired — soilwater_init handles init via state%soilwater
       ! hsurf              = 0.0d0
       ! [SS-ATM A-2.6] igrai retired to state%atmosphere%intr%igrai

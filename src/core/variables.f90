@@ -705,11 +705,11 @@
       ! [SS-SWC] retired 2026-05-12 — moved to state%soilwater%indeks (ADR 0038)
       ! integer   indeks(macp)       ! Index denoting wetting or drying curve in case of hysteresis: 1 = wetting; -1 = drying
       ! [GR-DRA 2026-05-23] ipos retired — see state%drainage%ipos
-      integer   isoillay(maho)     ! Number of soil layer, starting with 1 at the soil surface
+      ! [GR-SOIL 2026-05-24] isoillay retired — read inline from config%soil%isoillay
       ! [GR-BH Task 35] layer(macp) retired — moved to state%mesh%layer
       ! [SS-BMI2 Task 5] retired 2026-05-13 — moved to state%timecontrol%msteps (ADR 0041)
       ! integer   msteps             ! moved to state%timecontrol%msteps
-      integer   ncomp(macp)        ! Array with number of compartments in each sublayer
+      ! [GR-SOIL 2026-05-24] ncomp retired — read inline from config%soil%ncomp
       integer   nhead              ! Number of initial soil water pressure heads as provided in the input
       ! [SS-SWC] retired 2026-05-12 — moved to state%soilwater%nodgwl (ADR 0038)
       ! integer   nodgwl             ! Node directly above groundwater level
@@ -720,7 +720,7 @@
       ! integer   npegwl             ! Node directly above perched groundwater level
       ! [GR-BH Task 37] nrlevs retired — moved to state%drainage%nrlevs
       integer   nrstaring          ! Number of soil type [1..18] according to Staring series (Wosten et al., 2001)
-      integer   nsublay            ! Number of sublayers in the soil profile
+      ! [GR-SOIL 2026-05-24] nsublay retired — derived inline from config%soil%sublay
       integer   numbit             ! Iteration number for solving Richards equation
       ! [GR-SOIL 2026-05-24] numlay retired — see state%mesh%numlay
       ! [GR-BH Task 35] numnod retired — moved to state%mesh%numnod
@@ -872,7 +872,7 @@
       ! [SS-BND] retired 2026-05-11 — boundary subsystem migrated to state%soilwater (ADR 0035)
       ! real(8)   hbot               ! Soil water pressure head (L) at bottom of soil column
       ! [GR-BND 2026-05-23] hbotab retired — see state%soilwater%hbotab
-      real(8)   hcomp(macp)        ! Array with prescribed height of numerical compartments (L) for each sublayer
+      ! [GR-SOIL 2026-05-24] hcomp retired — derived inline from config%soil%hsublay/ncomp
       real(8)   hdrain             ! Mean drainage level (L) to derive regional average groundwater level for bottom boundary condition
       ! [SS-CRP] retired 2026-05-11 — moved to state%soilwater%hleaf (ADR 0036)
       ! real(8)   hleaf              ! Pressure head inside leaves (cm)
@@ -881,7 +881,7 @@
       real(8)   hplate             ! Pressure head of ceramic plate below lysimeter
       ! [SS-CRP] retired 2026-05-11 — moved to state%soilwater%hroot (ADR 0036)
       ! real(8)   hroot(macp)        ! Pressure head of a compartment at the root-soil interface (L)
-      real(8)   hsublay(macp)      ! Array with prescribed height of sublayers (L)
+      ! [GR-SOIL 2026-05-24] hsublay retired — read inline from config%soil%hsublay
       ! [SS-BND] retired 2026-05-11 — boundary subsystem migrated to state%soilwater (ADR 0035)
       ! real(8)   hsurf              ! Soil water pressure head at the soil surface (cm)
       ! [SS-CRP] retired 2026-05-11 — moved to state%soilwater%Hxylem (ADR 0036)
