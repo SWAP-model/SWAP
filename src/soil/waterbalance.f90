@@ -257,7 +257,7 @@ contains
       ! [GR-BH C4] mesh%numnod/mesh%dz migrated to mesh
       ! [GR-BH Audit 31] soil%swbotb_runtime/drai%nrlevs removed from use-list; read via state%
       ! [GR-SOIL 2026-05-24] qimmob/QExcMpMtx/QMaPo retired as inline 0 — fingered-flow + ADR-0040 macropore terms.
-      use variables, only: qssdi, qssdisum
+      ! [GR-SOIL 2026-05-24] qssdi/qssdisum migrated to state%soilwater — no `use variables` needed.
       ! [SS-TC TC-6] dt read cut over to time%dt
       use swap_state_mod, only: swap_state_t
       implicit none
@@ -282,7 +282,7 @@ contains
      &    (soil%swbotb_runtime .eq. 1 .and. soil%fllowgwl)) then        ! S-2.4 read cutover: fllowgwl -> soil%fllowgwl
         ! SS-CRP Phase 2 Task C-2.2: qrosum -> soil%qrosum
         ! [GR-SOIL 2026-05-24] QMaPo retired-zero inlined (ADR 0040 macropore outflow term).
-        soil%qbot = soil%qtop + soil%qrosum + surf%qdrtot + (soil%volact-soil%volm1)/time%dt - qssdisum  ! S-2.4, TC-6
+        soil%qbot = soil%qtop + soil%qrosum + surf%qdrtot + (soil%volact-soil%volm1)/time%dt - soil%qssdisum  ! S-2.4, TC-6
       endif
 
       ! calculate fluxes (cm/d) from changes in volume per compartment
@@ -293,7 +293,7 @@ contains
       do i = mesh%numnod,1,-1
         ! [GR-SOIL 2026-05-24] qimmob (fingered-flow flux) and QExcMpMtx (ADR 0040 macropore exchange) retired-zero inlined.
         soil%q(i) = - (soil%theta(i)-soil%thetm1(i))*soil%FrArMtrx(i)*mesh%dz(i)/time%dt +  &
-     &                soil%q(i+1)-soil%qrot(i)+qssdi(i)        ! S-1.6/S-2.12B, TC-6
+     &                soil%q(i+1)-soil%qrot(i)+soil%qssdi(i)        ! S-1.6/S-2.12B, TC-6
 
         if (allocated(drai%qdra)) then
           do level=1,drai%nrlevs
@@ -386,8 +386,8 @@ contains
         soil%qredtot_day(node) = soil%qredtot_day(node) + (soil%qredwet(node) + soil%qreddry(node) + soil%qredsol(node) + soil%qredfrs(node)) * time%dt  ! S-2.12B, TC-6
       end do
       do node = 1,mesh%numnod
-        soil%inqssdi(node) = soil%inqssdi(node) + qssdi(node) * time%dt    ! S-2.12B, TC-6
-        soil%iqssdi = soil%iqssdi + qssdi(node) * time%dt                  ! S-2.12B, TC-6
+        soil%inqssdi(node) = soil%inqssdi(node) + soil%qssdi(node) * time%dt    ! S-2.12B, TC-6
+        soil%iqssdi = soil%iqssdi + soil%qssdi(node) * time%dt                  ! S-2.12B, TC-6
       end do
       soil%iqredwet = soil%iqredwet + soil%qredwetsum*time%dt   ! S-2.12B, TC-6
       soil%iqreddry = soil%iqreddry + soil%qreddrysum*time%dt   ! S-2.12B, TC-6
@@ -453,7 +453,7 @@ contains
       end do
 
       ! add time step fluxes to total cumulative values
-      soil%cqssdi = soil%cqssdi + qssdisum*time%dt                            ! S-2.12B, TC-6
+      soil%cqssdi = soil%cqssdi + soil%qssdisum*time%dt                       ! S-2.12B, TC-6
       soil%cqrot  = soil%cqrot  + qrotts                                 ! S-2.12B
       ! SS-SWST Phase 2 Task 7: cqdra accumulated directly into state; global dropped.
       surf%cqdra = surf%cqdra + qdrats

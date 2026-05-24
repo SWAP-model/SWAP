@@ -27,8 +27,7 @@ contains
       ! macp/mabbc → swap_array_dimensions (dimension constants); noddrz: crop root depth node
       use swap_array_dimensions, only: macp, mabbc
       use variables, only: &
-         ! DEFERRED: qssdi — SSDI source term; needs irrigation_state_t; Phase C3
-         qssdi, &
+         ! [GR-SOIL 2026-05-24] qssdi migrated to state%soilwater — read via soil%qssdi
          ! DEFERRED: swkmean/SwKimpl — hydraulic conductivity averaging switches; Phase C3
          ! DEFERRED: swcaprise — capillary rise prevention switch; Phase C3
          swcaprise, &
@@ -134,7 +133,7 @@ contains
             end do
          end if
       end do
-      source(1:mesh%numnod) = qssdi(1:mesh%numnod)
+      source(1:mesh%numnod) = soil%qssdi(1:mesh%numnod)  ! [GR-SOIL 2026-05-24]
 
       ArMpSs = 0.d0                                            ! macropore retired (ADR 0040)
 

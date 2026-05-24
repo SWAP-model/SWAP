@@ -972,7 +972,7 @@
       ! SS-SWST Phase 2 Task 11 C2: qdrtot removed — state%surfacewater%qdrtot owns it.
       ! real(8)   qdrtot             ! Moved to surfacewater_state_t%qdrtot
       ! [GR-SOIL 2026-05-24] qimmob retired — fingered-flow flux always zero in TOML pipeline; consumer inlined to 0.
-      real(8)   qssdisum           ! Total subsurface irrigation flux (L/T)
+      ! [GR-SOIL 2026-05-24] qssdisum migrated to state%soilwater%qssdisum.
       ! [SS-CRP] retired 2026-05-11 — moved to state%soilwater%qrosum (ADR 0036)
       ! real(8)   qrosum             ! Total root water extraction flux (L/T)
       ! [SS-CRP] retired 2026-05-11 — moved to state%soilwater%qredwetsum (ADR 0036)
@@ -995,7 +995,7 @@
       ! real(8)   qredsol(macp)      ! Array with reduction of root water extraction due to salt conditions for each compartment (L/T)
       ! [SS-CRP] retired 2026-05-11 — moved to state%soilwater%qredfrs (ADR 0036)
       ! real(8)   qredfrs(macp)      ! Array with reduction of root water extraction due to frost conditions for each compartment (L/T)
-      real(8)   qssdi(macp)        ! Array with water input via subsurface drip irrigation for each compartment (L/T)
+      ! [GR-SOIL 2026-05-24] qssdi migrated to state%soilwater%qssdi.
       real(8)   dt_SSDI_event      ! Length of SSDI irrigation event (T)
       
       ! SSDI persistent state (moved from irrigation.f90 local SAVE)

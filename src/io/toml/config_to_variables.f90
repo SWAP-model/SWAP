@@ -1447,7 +1447,8 @@ contains
       use irrigation_config_mod, only: irrigation_ssdi_t
       use error_mod, only: fatalerr_collected
       use swap_state_mod, only: swap_state_t
-      use variables, only: nod_ssdi_irr, qssdi, dt_SSDI_event
+      ! [GR-SOIL 2026-05-24] qssdi migrated to state%soilwater (zero-init via soilwater_init).
+      use variables, only: nod_ssdi_irr, dt_SSDI_event
       type(irrigation_ssdi_t), intent(in)    :: ssdi
       real(real64),            intent(in)    :: tstart, tend
       type(swap_state_t),      intent(inout) :: state   ! [GR-BH Task 35] replaces NumNod/zbotcp globals
@@ -1478,8 +1479,7 @@ contains
                                  'ssdi_z resolves to zero compartments — check ssdi_z vs grid')
       end if
 
-      ! Initialize qssdi to zero (mirrors irrigation.f90:403).
-      qssdi = 0.0_real64
+      ! [GR-SOIL 2026-05-24] qssdi zero-init handled by soilwater_init (state field).
       dt_SSDI_event = 1.0_real64
 
       select case (ssdi%schedule)

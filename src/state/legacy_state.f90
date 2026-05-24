@@ -294,8 +294,7 @@ module legacy_state_mod
       real(real64), allocatable :: qdraincomp(:)  !! Total lateral drainage flux (L/T) for each compartment
       ! [GR-DRA 2026-05-23] qdrtab retired — see state%drainage%qdrtab
       ! [GR-SOIL 2026-05-24] qimmob retired — orphan stub, fingered-flow flux retired-zero in waterbalance.f90.
-      real(real64) :: qssdisum  !! Total subsurface irrigation flux (L/T)
-      real(real64), allocatable :: qssdi(:)  !! Array with water input via subsurface drip irrigation for each compartment (L/T)
+      ! [GR-SOIL 2026-05-24] qssdi + qssdisum migrated to state%soilwater (orphan stubs).
       real(real64) :: dt_SSDI_event  !! Length of SSDI irrigation event (T)
       integer :: swssdi_irr  !! Switch: SSDI active (0=no, 1=yes)
       integer, allocatable :: nod_ssdi_irr(:)  !! Upper and lower nodes for SSDI

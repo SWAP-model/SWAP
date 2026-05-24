@@ -321,7 +321,7 @@
       ! qredsolsum         = 0.0d0
       ! qredfrssum         = 0.0d0
       ! qrot               = 0.0d0
-      qssdi              = 0.0d0
+      ! [GR-SOIL 2026-05-24] qssdi init handled by soilwater_init (state field).
       ! dt_SSDI_event = 1.0 means "no SSDI sub-day event in progress";
       ! timecontrol.f90:423,620 read this ungated by flSSDI, so the
       ! default must reflect the no-event state even when SSDI is off.

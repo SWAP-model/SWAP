@@ -328,8 +328,9 @@ subroutine SSDI_irrigation(iTask, state)
 ! [SS-GR-FINAL B6] mairg → swap_array_dimensions; remainder DEFERRED
 use swap_array_dimensions, only: mairg
 use variables, only: &      ! [SS-GR-FINAL B6] DEFERRED — SSDI persistent state needs irrigation_state_t; Phase C3
-                     ! DEFERRED: irrigevent/qssdi/qssdisum/dt_SSDI_event — SSDI runtime state; no state home yet
-                     irrigevent, qssdi, qssdisum, dt_SSDI_event,           &
+                     ! [GR-SOIL 2026-05-24] qssdi/qssdisum migrated to state%soilwater
+                     ! DEFERRED: irrigevent/dt_SSDI_event — SSDI runtime state; no state home yet
+                     irrigevent, dt_SSDI_event,                            &
                      ! DEFERRED: swssdi_irr/nod_ssdi_irr/ssdi_schedule_irr/ssdi_sched_type_irr — SSDI config; Phase C3
                      swssdi_irr, nod_ssdi_irr, ssdi_schedule_irr, ssdi_sched_type_irr, &
                      ! DEFERRED: nod_ssdi_sensor_irr/ssdi_threshold_irr/ssdi_threshold_z_irr — SSDI config; Phase C3
@@ -343,7 +344,7 @@ use swap_state_mod, only: swap_state_t
 implicit none
 ! global
 integer, intent(in) :: iTask
-type(swap_state_t), intent(in) :: state  ! [SS-SWC S-2.12B]
+type(swap_state_t), intent(inout) :: state  ! [GR-SOIL 2026-05-24] inout: writes state%soilwater%qssdi/qssdisum
 
 ! local aliases for module variables (for minimal code changes)
 integer                         :: swssdi
@@ -398,18 +399,18 @@ real(8)                         :: Tred
       ! SS-TC TC-12: t1900 read via state%timecontrol tc_* alias.
       associate(tc_t1900 => state%timecontrol%t1900)  ! TC-12
       irrigevent      = 0
-      qssdi(1:state%mesh%numnod) = 0.0d0  ! [GR-BH C7]
+      state%soilwater%qssdi(1:state%mesh%numnod) = 0.0d0  ! [GR-SOIL 2026-05-24]
       dt_SSDI_event   = 1.0d0
-      qssdisum        = 0.0d0
+      state%soilwater%qssdisum = 0.0d0
 
       if (ssdi_schedule == 0) then
          ! check if today is a day with ssdi
          if (abs(ssdi_date(nirri) - tc_t1900) .lt. 1.d-3) then  ! TC-12
             irrigevent                     = 2
             dt_SSDI_event                  = ssdi_amount_f(nirri) / ssdi_rate_f(nirri)
-            qssdi(nod_ssdi(1):nod_ssdi(2)) = ssdi_rate_f(nirri)
+            state%soilwater%qssdi(nod_ssdi(1):nod_ssdi(2)) = ssdi_rate_f(nirri)
             nirri                          = nirri + 1
-            qssdisum                       = qssdisum + sum(qssdi(nod_ssdi(1):nod_ssdi(2)))
+            state%soilwater%qssdisum = state%soilwater%qssdisum + sum(state%soilwater%qssdi(nod_ssdi(1):nod_ssdi(2)))
          end if
       else
          ! scheduling based on exceedance of a certain threshold
@@ -443,8 +444,8 @@ real(8)                         :: Tred
 
          if (irrigevent == 2) then
             dt_SSDI_event                  = ssdi_amount / ssdi_appl_rate
-            qssdi(nod_ssdi(1):nod_ssdi(2)) = ssdi_appl_rate
-            qssdisum                       = qssdisum + sum(qssdi(nod_ssdi(1):nod_ssdi(2)))
+            state%soilwater%qssdi(nod_ssdi(1):nod_ssdi(2)) = ssdi_appl_rate
+            state%soilwater%qssdisum = state%soilwater%qssdisum + sum(state%soilwater%qssdi(nod_ssdi(1):nod_ssdi(2)))
          end if
          
       end if
@@ -454,9 +455,9 @@ real(8)                         :: Tred
    case (9)
       ! special: reset scheduled irrigation at end of irrigation event
       irrigevent      = 0
-      qssdi(1:state%mesh%numnod) = 0.0d0  ! [GR-BH C7]
+      state%soilwater%qssdi(1:state%mesh%numnod) = 0.0d0  ! [GR-SOIL 2026-05-24]
       dt_SSDI_event   = 1.0d0
-      qssdisum        = 0.0d0
+      state%soilwater%qssdisum = 0.0d0
       
    case default
       call fatalerr_collected ('SSDI_irrigation', 'Illegal value for iTask')

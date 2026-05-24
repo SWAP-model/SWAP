@@ -136,6 +136,7 @@ module soilwater_state_mod
       real(real64), allocatable :: h(:)            !< pressure head per node (cm)
       real(real64), allocatable :: hm1(:)          !< h at previous time level (cm)
       real(real64), allocatable :: q(:)            !< inter-compartment flux per node (cm/d)
+      real(real64), allocatable :: qssdi(:)        !< per-node SSDI source flux (cm/d) — written by irrigation, read by waterbalance/headcalc
       real(real64), allocatable :: k(:)            !< hydraulic conductivity per node (cm/d)
       real(real64), allocatable :: kmean(:)        !< mean K at node interface (cm/d)
       real(real64), allocatable :: dimoca(:)       !< differential moisture capacity per node (1/cm)
@@ -189,6 +190,7 @@ module soilwater_state_mod
       real(real64) :: volini       = 0.0_real64   !< storage at cumu-period start (cm)
       real(real64) :: wbalance     = 0.0_real64   !< cumulative water balance error (cm)
       real(real64) :: runon        = 0.0_real64   !< runon flux this step (cm/d)
+      real(real64) :: qssdisum     = 0.0_real64   !< column-sum SSDI source flux (cm/d); set by irrigation alongside qssdi
       logical      :: fllowgwl     = .false.      !< flag: gwl is below the soil profile
 
       ! Runon feature (config-rooted switch + day-indexed time series).
@@ -422,6 +424,7 @@ contains
       ! Per-node arrays sized numnod+1 (flux arrays — one value per node boundary):
       ! Legacy: q(macp+1), k(macp+1), kmean(macp+1)
       allocate(sw%q(numnod+1));          sw%q            = 0.0_real64
+      allocate(sw%qssdi(numnod));        sw%qssdi        = 0.0_real64  ! [GR-SOIL 2026-05-24] migrated from variables.f90
       allocate(sw%k(numnod+1));          sw%k            = 0.0_real64
       allocate(sw%kmean(numnod+1));      sw%kmean        = 0.0_real64
 
