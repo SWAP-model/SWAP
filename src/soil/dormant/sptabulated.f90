@@ -1,10 +1,66 @@
-! File VersionID:
-!   $Id: sptabulated.f90 366 2018-01-10 11:12:43Z kroes006 $
-! ----------------------------------------------------------------------
-module doln
-!   logical, parameter :: do_ln_trans = .false.
-   logical, parameter :: do_ln_trans = .true.
-end module doln
+!> @file src/soil/dormant/sptabulated.f90
+!! @brief DORMANT — tabulated soil-hydraulics path (`swsophy=1`).
+!!
+!! ## Status: DORMANT
+!!
+!! Moved here from `src/soil/sptabulated.f90` on 2026-05-24. The
+!! tabulated soil-hydraulics path (`swsophy = 1`) has no live
+!! dispatch in the TOML pipeline — all 6 regression cases run with
+!! `swsophy = 0` (analytical Mualem-van Genuchten). The 5 call
+!! sites that previously invoked `EvalTabulatedFunction` from
+!! `src/utils/soilhydraulicsutils.f90` (inside `if (swsophy == 1)`
+!! branches in `watcon`, `moiscap` (×2), `dhconduc`, `hconduc`,
+!! `prhead`) have been replaced with `fatalerr_collected` stubs
+!! pointing at this file.
+!!
+!! Excluded from `meson.build` and `tests/unit/meson.build` —
+!! this file is NOT compiled.
+!!
+!! ## What it contains
+!!
+!! - `module doTSPACK` — TSPACK workspace constants and per-step
+!!   work arrays (Mt=1000, IER, ICFLG, B, WK2, …).
+!! - `module TSPACK` (~3,370 lines) — Renka's TSPACK library: tension
+!!   splines for monotone interpolation.
+!! - `EvalTabulatedFunction` — evaluates a per-node `sptab(7,*,*)`
+!!   table at a query pressure-head `xe` using the TSPACK splines.
+!! - `PreProcTabulatedFunction` — builds the spline coefficients
+!!   into `sptab` from raw (h, theta, K) input points. Called once
+!!   per node at init when `swsophy=1`. Currently has no live caller
+!!   either (the legacy `readswap.f90` path that called it was
+!!   retired).
+!!
+!! ## Reactivation checklist
+!!
+!! 1. Restore the 5 `call EvalTabulatedFunction` invocations in
+!!    `src/utils/soilhydraulicsutils.f90` (search for the
+!!    `[GR-SOIL 2026-05-24]` breadcrumbs). The signatures + arg
+!!    lists are preserved as comments at each call site.
+!! 2. Wire layer-keyed `numtablay`, `ientrytablay`, `sptablay`
+!!    through a new `soil_hydraulics_tab_t` sub-record on
+!!    `state%cfg%soil` (currently no config home — they were read
+!!    by the retired `.swp` reader path). Expand layer→node in
+!!    `config_to_variables` or `soilwater_init`, writing directly
+!!    to `state%soilwater%{numtab, ientrytab, sptab}`.
+!! 3. Drop the `fatalerr_collected('<func>', 'swsophy=1 dormant…')`
+!!    guards at the 5 stub sites.
+!! 4. Restore the `PreProcTabulatedFunction` dispatch site — likely
+!!    belongs in `soilwater_init` or a dedicated `swsophy=1` init
+!!    step after the layer-keyed tables are loaded.
+!! 5. Add this file to `meson.build` AND `tests/unit/meson.build`
+!!    source lists.
+!! 6. Decide whether `do_ln_trans` should be a runtime switch
+!!    rather than a compile-time parameter (currently lives in
+!!    `src/soil/do_ln_trans.f90` as the live extract).
+!!
+!! Original SVN revision:
+!!   $Id: sptabulated.f90 366 2018-01-10 11:12:43Z kroes006 $
+!!
+!! The `module doln` (single parameter `do_ln_trans`) that originally
+!! lived at the top of this file has been split out to
+!! `src/soil/do_ln_trans.f90` — it is consumed by the live MvG
+!! compute path and must remain compiled. This dormant file should
+!! NOT redeclare `doln`.
 
 module doTSPACK
 !   logical, parameter :: use_TSPACK = .false.

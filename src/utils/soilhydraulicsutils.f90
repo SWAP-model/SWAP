@@ -189,8 +189,11 @@ contains
          else if (dum < soilwater%sptab(1,node,1)) then
             theta = soilwater%sptab(2,node,1)
          else
-            call EvalTabulatedFunction(0, soilwater%numtab(node), 1, 2, 4, node, &
-                                       soilwater%sptab, soilwater%ientrytab, head, theta, moiscap_loc, 1)
+            ! [GR-SOIL 2026-05-24] swsophy=1 tabulated path dormant — see src/soil/dormant/sptabulated.f90.
+            !   call EvalTabulatedFunction(0, soilwater%numtab(node), 1, 2, 4, node, &
+            !                              soilwater%sptab, soilwater%ientrytab, head, theta, moiscap_loc, 1)
+            call fatalerr_collected('watcon', &
+               'swsophy=1 (tabulated soil hydraulics) is dormant — see src/soil/dormant/sptabulated.f90')
          end if
       end if
 
@@ -335,8 +338,11 @@ contains
          else if (dum < soilwater%sptab(1,node,1)) then
             c = 0.0_real64
          else
-            call EvalTabulatedFunction(0, soilwater%numtab(node), 1, 2, 4, node, &
-                                       soilwater%sptab, soilwater%ientrytab, h, dummy, c, 3)
+            ! [GR-SOIL 2026-05-24] swsophy=1 tabulated path dormant — see src/soil/dormant/sptabulated.f90.
+            !   call EvalTabulatedFunction(0, soilwater%numtab(node), 1, 2, 4, node, &
+            !                              soilwater%sptab, soilwater%ientrytab, h, dummy, c, 3)
+            call fatalerr_collected('moiscap', &
+               'swsophy=1 (tabulated soil hydraulics) is dormant — see src/soil/dormant/sptabulated.f90')
          end if
       end if
 
@@ -414,8 +420,11 @@ contains
          if (theta >= soilwater%sptab(2,node,soilwater%numtab(node)) - 1.0d-9) then
             dkdh = 1.0d+08
          else
-            call EvalTabulatedFunction(0, soilwater%numtab(node), 1, 3, 5, node, &
-                                       soilwater%sptab, soilwater%ientrytab, h, dummy, dkdh, 4)
+            ! [GR-SOIL 2026-05-24] swsophy=1 tabulated path dormant — see src/soil/dormant/sptabulated.f90.
+            !   call EvalTabulatedFunction(0, soilwater%numtab(node), 1, 3, 5, node, &
+            !                              soilwater%sptab, soilwater%ientrytab, h, dummy, dkdh, 4)
+            call fatalerr_collected('dhconduc', &
+               'swsophy=1 (tabulated soil hydraulics) is dormant — see src/soil/dormant/sptabulated.f90')
          end if
       end if
 
@@ -552,8 +561,11 @@ contains
             k = soilwater%sptab(3,node,1)
             if (do_ln_trans) k = dexp(k)
          else
-            call EvalTabulatedFunction(0, soilwater%numtab(node), 1, 3, 5, node, &
-                                       soilwater%sptab, soilwater%ientrytab, h, k, dummy, 2)
+            ! [GR-SOIL 2026-05-24] swsophy=1 tabulated path dormant — see src/soil/dormant/sptabulated.f90.
+            !   call EvalTabulatedFunction(0, soilwater%numtab(node), 1, 3, 5, node, &
+            !                              soilwater%sptab, soilwater%ientrytab, h, k, dummy, 2)
+            call fatalerr_collected('hconduc', &
+               'swsophy=1 (tabulated soil hydraulics) is dormant — see src/soil/dormant/sptabulated.f90')
          end if
       end if
 
@@ -656,9 +668,12 @@ contains
             h_out = dmax1(h_out, 0.0_real64)
          else
 
-            call EvalTabulatedFunction(1, soilwater%numtab(node), 1, 2, 4, node, &
-                                       soilwater%sptab, soilwater%ientrytab, prh, wcon, dummy, 1)
-            h_out = prh
+            ! [GR-SOIL 2026-05-24] swsophy=1 tabulated path dormant — see src/soil/dormant/sptabulated.f90.
+            !   call EvalTabulatedFunction(1, soilwater%numtab(node), 1, 2, 4, node, &
+            !                              soilwater%sptab, soilwater%ientrytab, prh, wcon, dummy, 1)
+            !   h_out = prh
+            call fatalerr_collected('prhead', &
+               'swsophy=1 (tabulated soil hydraulics) is dormant — see src/soil/dormant/sptabulated.f90')
          end if
       end if
 

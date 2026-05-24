@@ -128,9 +128,10 @@ if get_option('enable_pfunit')
         '../../src/io/toml/config_to_variables.f90',
         'io/toml/chdir_helper.f90',
         # swap_mod.f90 (added Task 3) needs the full compute-module chain compiled in the test binary
+        '../../src/soil/do_ln_trans.f90',  # [GR-SOIL 2026-05-24] doln module split from sptabulated
         '../../src/soil/WC_K_models_04_11.f90',
         '../../src/utils/soilhydraulicsutils.f90',
-        '../../src/soil/sptabulated.f90',
+        # [GR-SOIL 2026-05-24] sptabulated moved to src/soil/dormant/sptabulated.f90
         '../../src/crop/oxygenstress.f90',
         '../../src/utils/surfacewaterutils.f90',
         '../../src/state/surfacewater_state.f90',
