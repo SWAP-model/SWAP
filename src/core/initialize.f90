@@ -313,7 +313,7 @@
       qdraincomp         = 0.0d0 
       ! [GR-DRA 2026-05-23] qdrtab retired — see state%drainage%qdrtab
       ! SS-SWST Phase 2 Task 11 C3: qdrtot removed (state%surfacewater%qdrtot initialized in surfacewater_state_t).
-      qimmob             = 0.0d0 
+      ! [GR-SOIL 2026-05-24] qimmob retired — fingered-flow flux retired-zero inline in waterbalance.f90.
       ! [SS-CRP C-2.5] qrosum/qred*sum/qrot retired — soilwater_init handles init via state%soilwater (ADR 0036)
       ! qrosum             = 0.0d0
       ! qredwetsum         = 0.0d0
@@ -503,8 +503,7 @@
       VlMpStDm2            = 0.0d0
       ! [SS-GR-CROPRT A2] IcTopMP zero-fill dropped — declaration retired (ADR 0040)
       ! [SS-GR-FINAL D1] IDecMpRat zero-fill dropped — declaration retired
-      QExcMpMtx            = 0.0d0
-      QMaPo                = 0.0d0
+      ! [GR-SOIL 2026-05-24] QExcMpMtx + QMaPo retired — ADR 0040 macropore terms retired-zero inline in waterbalance.f90.
       ! [GR-DRA 2026-05-23] QRapDra retired — see state%drainage%QRapDra
       ! Drainage globals (NOT macropore — kept here next to retired set)
       ! [GR-DRA 2026-05-23] NumLevRapDra retired — see state%drainage%NumLevRapDra

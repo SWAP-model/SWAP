@@ -293,7 +293,7 @@ module legacy_state_mod
       ! [GR-BND 2026-05-23] qbotab retired — see state%soilwater%qbotab
       real(real64), allocatable :: qdraincomp(:)  !! Total lateral drainage flux (L/T) for each compartment
       ! [GR-DRA 2026-05-23] qdrtab retired — see state%drainage%qdrtab
-      real(real64), allocatable :: qimmob(:)  !! Soil water flux between mobile and immobile fraction in case of fingered flow (L/T)
+      ! [GR-SOIL 2026-05-24] qimmob retired — orphan stub, fingered-flow flux retired-zero in waterbalance.f90.
       real(real64) :: qssdisum  !! Total subsurface irrigation flux (L/T)
       real(real64), allocatable :: qssdi(:)  !! Array with water input via subsurface drip irrigation for each compartment (L/T)
       real(real64) :: dt_SSDI_event  !! Length of SSDI irrigation event (T)
@@ -406,8 +406,7 @@ module legacy_state_mod
       real(real64), allocatable :: iQOutDrRapCp(:)  !! [retired-zero] kept: soilgrid.f90 macropore redistribution
       real(real64), allocatable :: VlMpStDm1(:)  !! [retired-zero] kept: soilgrid refinement
       real(real64), allocatable :: VlMpStDm2(:)  !! [retired-zero] kept: soilgrid refinement
-      real(real64), allocatable :: QExcMpMtx(:)  !! [retired-zero] kept: waterbalance use clause
-      real(real64) :: QMaPo  !! [retired-zero] kept: waterbalance qbot term
+      ! [GR-SOIL 2026-05-24] QExcMpMtx + QMaPo retired — orphan stubs, ADR 0040 macropore terms inlined zero in waterbalance.f90.
       ! [GR-DRA 2026-05-23] QRapDra retired — see state%drainage%QRapDra
       ! [GR-DRA 2026-05-23] NumLevRapDra retired — see state%drainage%NumLevRapDra
       logical :: FlDecMpRat  !! [retired-zero] kept: soilhydraulics convergence sentinel

@@ -971,7 +971,7 @@
       ! [GR-DRA 2026-05-23] qdrtab retired — see state%drainage%qdrtab
       ! SS-SWST Phase 2 Task 11 C2: qdrtot removed — state%surfacewater%qdrtot owns it.
       ! real(8)   qdrtot             ! Moved to surfacewater_state_t%qdrtot
-      real(8)   qimmob(macp)       ! Soil water flux between mobile and immobile fraction in case of fingered flow (L/T)
+      ! [GR-SOIL 2026-05-24] qimmob retired — fingered-flow flux always zero in TOML pipeline; consumer inlined to 0.
       real(8)   qssdisum           ! Total subsurface irrigation flux (L/T)
       ! [SS-CRP] retired 2026-05-11 — moved to state%soilwater%qrosum (ADR 0036)
       ! real(8)   qrosum             ! Total root water extraction flux (L/T)
@@ -1280,8 +1280,7 @@
       real(8) VlMpStDm2(MaCp)      ! [retired-zero] kept: soilgrid refinement
       ! [SS-GR-CROPRT A2] IcTopMP retired — ADR 0040 (waterbalance macropore branch dropped)
       ! [SS-GR-FINAL D1] IDecMpRat retired — 0 consumers
-      real(8) QExcMpMtx(MaCp)      ! [retired-zero] kept: waterbalance use clause
-      real(8) QMaPo                ! [retired-zero] kept: waterbalance qbot term
+      ! [GR-SOIL 2026-05-24] QExcMpMtx + QMaPo retired — ADR 0040 macropore terms, retired-zero inlined in waterbalance.f90.
       ! [GR-DRA 2026-05-23] QRapDra retired — see state%drainage%QRapDra
       ! [MACRO-RETIRE 2026-05-12] note: NumLevRapDra/RapDraReaExp/RapDraResRef
       ! belong to the drainage subsystem (set by drainage_config), NOT

@@ -256,9 +256,8 @@ contains
       ! [SS-SWC S-2.12B] q, inq, thetm1, theta, volact, volm1, FrArMtrx, fllowgwl retired from variables
       ! [GR-BH C4] mesh%numnod/mesh%dz migrated to mesh
       ! [GR-BH Audit 31] soil%swbotb_runtime/drai%nrlevs removed from use-list; read via state%
-      ! [SS-GR-FINAL B9] DEFERRED: qimmob/QExcMpMtx/QMaPo — soil immobile water / macropore fluxes; Phase C3/D
-      !   qssdi/qssdisum — SSDI source term arrays; needs irrigation_state_t; Phase C3
-      use variables, only: qimmob, QExcMpMtx, QMaPo, qssdi, qssdisum
+      ! [GR-SOIL 2026-05-24] qimmob/QExcMpMtx/QMaPo retired as inline 0 — fingered-flow + ADR-0040 macropore terms.
+      use variables, only: qssdi, qssdisum
       ! [SS-TC TC-6] dt read cut over to time%dt
       use swap_state_mod, only: swap_state_t
       implicit none
@@ -282,7 +281,8 @@ contains
      &    soil%swbotb_runtime .eq. 8 .or. soil%swbotb_runtime .eq. -2 .or.                        &
      &    (soil%swbotb_runtime .eq. 1 .and. soil%fllowgwl)) then        ! S-2.4 read cutover: fllowgwl -> soil%fllowgwl
         ! SS-CRP Phase 2 Task C-2.2: qrosum -> soil%qrosum
-        soil%qbot = soil%qtop + soil%qrosum + surf%qdrtot - QMaPo + (soil%volact-soil%volm1)/time%dt - qssdisum  ! S-2.4, TC-6
+        ! [GR-SOIL 2026-05-24] QMaPo retired-zero inlined (ADR 0040 macropore outflow term).
+        soil%qbot = soil%qtop + soil%qrosum + surf%qdrtot + (soil%volact-soil%volm1)/time%dt - qssdisum  ! S-2.4, TC-6
       endif
 
       ! calculate fluxes (cm/d) from changes in volume per compartment
@@ -291,8 +291,9 @@ contains
       soil%q(i)              = soil%qbot               ! S-1.6/S-2.12B
       soil%inq(i)            = soil%inq(i) + soil%q(i)*time%dt             ! S-2.12B, TC-6
       do i = mesh%numnod,1,-1
-        soil%q(i) = - (soil%theta(i)-soil%thetm1(i)+qimmob(i))*soil%FrArMtrx(i)*mesh%dz(i)/time%dt +  &
-     &                soil%q(i+1)-soil%qrot(i)+QExcMpMtx(i)+qssdi(i)        ! S-1.6/S-2.12B, TC-6
+        ! [GR-SOIL 2026-05-24] qimmob (fingered-flow flux) and QExcMpMtx (ADR 0040 macropore exchange) retired-zero inlined.
+        soil%q(i) = - (soil%theta(i)-soil%thetm1(i))*soil%FrArMtrx(i)*mesh%dz(i)/time%dt +  &
+     &                soil%q(i+1)-soil%qrot(i)+qssdi(i)        ! S-1.6/S-2.12B, TC-6
 
         if (allocated(drai%qdra)) then
           do level=1,drai%nrlevs
