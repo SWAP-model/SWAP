@@ -105,26 +105,29 @@
 ! ===    determine irrigation rates and states  =============================================
 !        daily
 
-      ! SS-TC TC-12: t1900, t read via state%timecontrol tc_* aliases.
+      ! [GR-CROP 2026-05-25] sub-record associate aliases.
       associate( &
-         tc_t1900 => state%timecontrol%t1900,  &  ! TC-12
-         tc_t     => state%timecontrol%t        &  ! TC-12
-      )
+         crop => state%crop,             &
+         soil => state%soilwater,        &
+         time => state%timecontrol,      &
+         atmo => state%atmosphere,       &
+         solu => state%solute,           &
+         mesh => state%mesh              )
 
 ! ---    reset intermediate soil water fluxes — [SS-SWC S-2.12B] handled by state%soilwater%reset_intermediate()
          ! igird/inird/cgird/cnird zeroed via state%soilwater%reset_intermediate() in SoilWater(2)
          ! and state%soilwater%reset_cumulative() in same path.
 
-         state%crop%gird = 0.0d0
+         crop%gird = 0.0d0
          irrigevent = 0
 
 ! ---    fixed irrigations events
          if (swirfix .eq. 1) then
-            if (abs(irdate(nirri) - tc_t1900) .lt. 1.d-3) then  ! TC-12
-               state%crop%gird = irdepth(nirri)
-               state%solute%cirr = irconc(nirri)
+            if (abs(irdate(nirri) - time%t1900) .lt. 1.d-3) then
+               crop%gird = irdepth(nirri)
+               solu%cirr = irconc(nirri)
                isua = irtype(nirri)
-               state%atmosphere%isua = isua   ! [SS-GR-ATM A5.3] runtime dual-write
+               atmo%isua = isua   ! [SS-GR-ATM A5.3] runtime dual-write
                nirri = nirri + 1
                irrigevent = 1
             end if
@@ -133,7 +136,7 @@
 ! ---    scheduling mode - current timing and depth criterion
 
 !        scheduled timing within desired period ?
-         if (state%crop%common%schedule.eq.1) then
+         if (crop%common%schedule.eq.1) then
             !call dtdpar (cropstart(icrop),datea,fsec)
             !yearstacrp = datea(1)
             !call dtdpar (cropend(icrop),datea,fsec)
@@ -142,54 +145,53 @@
             if (yearendcrp.gt.yearstacrp) then
                !datea(1) = yearstacrp
                !datea(2) = startirr(2)
-               !datea(3) = startirr(1)        
+               !datea(3) = startirr(1)
                !fsec = 0.0
                !call dtardp (datea, fsec, tstairryrx)
                !datea(1) = yearendcrp
                !datea(2) = endirr(2)
-               !datea(3) = endirr(1)        
+               !datea(3) = endirr(1)
                !call dtardp (datea, fsec, tendirryrx)
-               if ( (tc_t1900-tstairryrx).gt.1.0d-3 .and. (tc_t1900-tendirryrx).le.1.0d-3 ) then  ! TC-12
+               if ( (time%t1900-tstairryrx).gt.1.0d-3 .and. (time%t1900-tendirryrx).le.1.0d-3 ) then
                   flIrriTime = .true.
                end if
             else
-               if ((tc_t-tstairrig).ge.-1.0d-3.and.(tc_t-tendirrig).le.1.0d-3) then  ! TC-12
+               if ((time%t-tstairrig).ge.-1.0d-3.and.(time%t-tendirrig).le.1.0d-3) then
                   flIrriTime = .true.
                end if
             end if
          end if
 
-         if (state%crop%common%schedule.eq.1 .and. irrigevent.eq.0 .and. flCropCalendar .and. .not. flCropHarvest .and. flIrriTime) then
-            state%solute%cirr = cirrs
+         if (crop%common%schedule.eq.1 .and. irrigevent.eq.0 .and. flCropCalendar .and. .not. flCropHarvest .and. flIrriTime) then
+            solu%cirr = cirrs
             isua = isuas
-            state%atmosphere%isua = isua   ! [SS-GR-ATM A5.3] runtime dual-write
+            atmo%isua = isua   ! [SS-GR-ATM A5.3] runtime dual-write
 
-! ---       determine water holding capacity, readily available water, 
+! ---       determine water holding capacity, readily available water,
 ! ---       actual available water and water deficit
-            frlow = (state%mesh%ztopcp(noddrz) + state%crop%common%rd) / state%mesh%dz(noddrz)  ! [GR-BH C7]
+            frlow = (mesh%ztopcp(noddrz) + crop%common%rd) / mesh%dz(noddrz)
             awlh = 0.0d0; awmh = 0.0d0; awah = 0.0d0; cdef = 0.0d0
             do node = 1,noddrz
-               wclo = wclos(state%mesh%layer(node))*state%mesh%dz(node);       if (node.eq.noddrz) wclo = wclo*frlow  ! [GR-BH C7]
-               wcme = wcmes(state%mesh%layer(node))*state%mesh%dz(node);       if (node.eq.noddrz) wcme = wcme*frlow  ! [GR-BH C7]
-               wchi = wchis(state%mesh%layer(node))*state%mesh%dz(node);       if (node.eq.noddrz) wchi = wchi*frlow  ! [GR-BH C7]
-               wcac = watcon(state%soilwater%h(node), &
-                              state%soilwater%vg_params(node), &
-                              state%soilwater%iHWCKmodel(state%soilwater%layer(node)), &
-                              node, state%soilwater) * state%mesh%dz(node)    ! [SS-SWC S-2.12B] [SS-GR-UTILS Task 5] [GR-BH Task 35]
+               wclo = wclos(mesh%layer(node))*mesh%dz(node);       if (node.eq.noddrz) wclo = wclo*frlow
+               wcme = wcmes(mesh%layer(node))*mesh%dz(node);       if (node.eq.noddrz) wcme = wcme*frlow
+               wchi = wchis(mesh%layer(node))*mesh%dz(node);       if (node.eq.noddrz) wchi = wchi*frlow
+               wcac = watcon(soil%h(node), &
+                              soil%vg_params(node), &
+                              soil%iHWCKmodel(soil%layer(node)), &
+                              node, soil) * mesh%dz(node)
                if (node.eq.noddrz) wcac = wcac*frlow
                awlh = awlh+(wclo-wchi)
                awmh = awmh+(wcme-wchi)
                awah = awah+(wcac-wchi)
-               cdef = cdef+(wclo-wcac) 
+               cdef = cdef+(wclo-wcac)
             end do
 
 ! -1-       timing - allowable daily stress - only under dry stress circumstances
             if (tcs.eq.1) then
-               tps1 = afgen(treltab,14,state%crop%common%dvs)
+               tps1 = afgen(treltab,14,crop%common%dvs)
 ! ---          transpiration fraction due to drought and salinity stress
-               ! [SS-SWC S-2.12B] iptra_day/iqreddry_day/iqredsol_day -> state%soilwater
-               if (state%soilwater%iptra_day .gt. 1.d-10) then
-                  Tred = 1.0d0 - (state%soilwater%iqreddry_day + state%soilwater%iqredsol_day) / state%soilwater%iptra_day
+               if (soil%iptra_day .gt. 1.d-10) then
+                  Tred = 1.0d0 - (soil%iqreddry_day + soil%iqredsol_day) / soil%iptra_day
                else
                   Tred = 1.0d0
                end if
@@ -199,24 +201,24 @@
 ! -2-       timing - depletion of readily available water (fraction)
             if (tcs.eq.2) then
 ! ---          compare readily available water and actual available water
-               tps2 = afgen(rawtab,14,state%crop%common%dvs)
+               tps2 = afgen(rawtab,14,crop%common%dvs)
                depl = tps2*(awlh-awmh)
-               if (depl.gt.awlh) depl=awlh 
+               if (depl.gt.awlh) depl=awlh
                if (awah .lt. (awlh-depl)) irrigevent = 2
             end if
 
 ! -3-       timing - depletion of totally available water (fraction)
             if (tcs.eq.3) then
 ! ---          compare totally available water and actual available water
-               tps3 = afgen(tawtab,14,state%crop%common%dvs)
+               tps3 = afgen(tawtab,14,crop%common%dvs)
                depl = tps3*awlh
                if (awah.lt.(awlh-depl)) irrigevent = 2
             end if
 
 ! -4-       timing - allowable amount of depletion
             if (tcs.eq.4) then
-! ---          check if depletion amount has been exceeded                
-               tps4 = afgen(dwatab,14,state%crop%common%dvs)
+! ---          check if depletion amount has been exceeded
+               tps4 = afgen(dwatab,14,crop%common%dvs)
                if ((awlh-awah).gt.(tps4*0.1d0)) irrigevent = 2
             end if
 
@@ -240,21 +242,21 @@
 ! -7-       timing - critical pressure head at dcrit (node=nodsen) exceeded
             if (tcs.eq.7) then
 ! ---          calculation of critical pressure head
-               tps5 = afgen(hcritab,14,state%crop%common%dvs)
+               tps5 = afgen(hcritab,14,crop%common%dvs)
 ! PG/JK start  15-feb-2010
 ! originally not intended to simulate paddy rice fields,
 ! but made applicable for paddy by changing the statement:
                phcrit = tps5        ! old statement was: phcrit = -abs(tps5)
 ! PG/JK end    15-feb-2010
 ! ---          compare critical pressure head and actual pressure head
-               if (state%soilwater%h(nodsen).le.phcrit) irrigevent = 2  ! [SS-SWC S-2.12B]
+               if (soil%h(nodsen).le.phcrit) irrigevent = 2
             end if
 
 ! -8-       timing - critical watercontent at dcrit (node=nodsen) exceeded
             if (tcs.eq.8) then
-               tps5 = afgen(tcritab,14,state%crop%common%dvs)
+               tps5 = afgen(tcritab,14,crop%common%dvs)
 ! ---          compare critical water content and actual water content
-               if (state%soilwater%theta(nodsen).le.tps5) irrigevent = 2  ! [SS-SWC S-2.12B]
+               if (soil%theta(nodsen).le.tps5) irrigevent = 2
                !phcrit = prhead(nodsen,disnod(nodsen),tps5,cofgen,h)
             end if
 
@@ -272,33 +274,32 @@
 ! ---       depth - back to field capacity [cm]
             if ((irrigevent.eq.2).and.(dcs.eq.1)) then
 ! ---       correct for over- or under irrigation
-               dps1 = afgen(ditab,14,state%crop%common%dvs)
+               dps1 = afgen(ditab,14,crop%common%dvs)
 ! PG/JK start  15-feb-2010
 ! option to reduce irrigation on rainy (> raithreshold) day
 ! raithreshold =     ! threshold (cm/d) to define rainy days;  used to reduce irrigation
                grai_red = 0.0d0
-               ! SS-ATM A-2.6: grai retired — read from state%atmosphere%grai
-               if (state%atmosphere%grai .gt. raithreshold) grai_red = state%atmosphere%grai
-               state%crop%gird = max (0.0d0,cdef+dps1*0.1d0-grai_red)
+               if (atmo%grai .gt. raithreshold) grai_red = atmo%grai
+               crop%gird = max (0.0d0,cdef+dps1*0.1d0-grai_red)
 ! PG/JK start  15-feb-2010
             end if
 
 ! ---       depth - fixed depth [cm]
             if ((irrigevent.eq.2).and.(dcs.eq.2)) then
-               dps2 = afgen(fidtab,14,state%crop%common%dvs)
-               state%crop%gird = dps2*0.1d0
+               dps2 = afgen(fidtab,14,crop%common%dvs)
+               crop%gird = dps2*0.1d0
             end if
 
 ! ---       depth - limited depth [cm]
             if ((irrigevent.eq.2).and.(dcslim.eq.1)) then
-               state%crop%gird = max(state%crop%gird,irgdepmin*0.1d0)
-               state%crop%gird = min(state%crop%gird,irgdepmax*0.1d0)
+               crop%gird = max(crop%gird,irgdepmin*0.1d0)
+               crop%gird = min(crop%gird,irgdepmax*0.1d0)
             end if
 
 ! ---       in case of solutes: allow overirrigation when conc exceeds concthreshold
             if (swsolu.eq.1 .and.irrigevent.eq.2 .and.swcirrthres.eq.1) then
-               if (state%solute%cml(nodsen).gt.cirrthres) then
-                  state%crop%gird = state%crop%gird + 0.01d0*perirrsurp*state%crop%gird
+               if (solu%cml(nodsen).gt.cirrthres) then
+                  crop%gird = crop%gird + 0.01d0*perirrsurp*crop%gird
                end if
             end if
 
@@ -306,7 +307,7 @@
 
          ! [SS-GR-FINAL D1] flIrrigationOutput write dropped — W-global retired (nothing reads it)
 
-      end associate  ! tc_t1900, tc_t (SS-TC TC-12)
+      end associate
 
       case default
          call fatalerr_collected ('Irrigation', 'Illegal value for TASK')
@@ -396,42 +397,44 @@ real(8)                         :: Tred
       return
       
    case (2)
-      ! SS-TC TC-12: t1900 read via state%timecontrol tc_* alias.
-      associate(tc_t1900 => state%timecontrol%t1900)  ! TC-12
+      ! [GR-CROP 2026-05-25] sub-record associate aliases.
+      associate( &
+         soil => state%soilwater,        &
+         time => state%timecontrol,      &
+         mesh => state%mesh              )
       irrigevent      = 0
-      state%soilwater%qssdi(1:state%mesh%numnod) = 0.0d0  ! [GR-SOIL 2026-05-24]
+      soil%qssdi(1:mesh%numnod) = 0.0d0
       dt_SSDI_event   = 1.0d0
-      state%soilwater%qssdisum = 0.0d0
+      soil%qssdisum = 0.0d0
 
       if (ssdi_schedule == 0) then
          ! check if today is a day with ssdi
-         if (abs(ssdi_date(nirri) - tc_t1900) .lt. 1.d-3) then  ! TC-12
+         if (abs(ssdi_date(nirri) - time%t1900) .lt. 1.d-3) then
             irrigevent                     = 2
             dt_SSDI_event                  = ssdi_amount_f(nirri) / ssdi_rate_f(nirri)
-            state%soilwater%qssdi(nod_ssdi(1):nod_ssdi(2)) = ssdi_rate_f(nirri)
+            soil%qssdi(nod_ssdi(1):nod_ssdi(2)) = ssdi_rate_f(nirri)
             nirri                          = nirri + 1
-            state%soilwater%qssdisum = state%soilwater%qssdisum + sum(state%soilwater%qssdi(nod_ssdi(1):nod_ssdi(2)))
+            soil%qssdisum = soil%qssdisum + sum(soil%qssdi(nod_ssdi(1):nod_ssdi(2)))
          end if
       else
          ! scheduling based on exceedance of a certain threshold
          if (ssdi_sched_type == 1) then
             ! transpiration fraction due to drought and salinity stress
-            ! [SS-SWC S-2.12B] iptra_day/iqreddry_day/iqredsol_day -> state%soilwater
-            if (state%soilwater%iptra_day .gt. 1.d-10) then
-               Tred = 1.0d0 - (state%soilwater%iqreddry_day + state%soilwater%iqredsol_day) / state%soilwater%iptra_day
+            if (soil%iptra_day .gt. 1.d-10) then
+               Tred = 1.0d0 - (soil%iqreddry_day + soil%iqredsol_day) / soil%iptra_day
             else
                Tred = 1.0d0
             end if
             if (Tred .lt. ssdi_threshold) irrigevent = 2
-            
+
          else if (ssdi_sched_type == 2) then
-            if (state%soilwater%h(nod_ssdi_sensor) <= ssdi_threshold) irrigevent = 2  ! [SS-SWC S-2.12B]
-            
+            if (soil%h(nod_ssdi_sensor) <= ssdi_threshold) irrigevent = 2
+
          else if (ssdi_sched_type == 3) then
-            if (state%soilwater%theta(nod_ssdi_sensor) <= ssdi_threshold) irrigevent = 2  ! [SS-SWC S-2.12B]
+            if (soil%theta(nod_ssdi_sensor) <= ssdi_threshold) irrigevent = 2
 
          end if
-         
+
          if (sw_interval == 1) then
             if (irrigevent == 2 .and. (days_counter >= days_interval)) then
                irrigevent   = 2
@@ -444,18 +447,18 @@ real(8)                         :: Tred
 
          if (irrigevent == 2) then
             dt_SSDI_event                  = ssdi_amount / ssdi_appl_rate
-            state%soilwater%qssdi(nod_ssdi(1):nod_ssdi(2)) = ssdi_appl_rate
-            state%soilwater%qssdisum = state%soilwater%qssdisum + sum(state%soilwater%qssdi(nod_ssdi(1):nod_ssdi(2)))
+            soil%qssdi(nod_ssdi(1):nod_ssdi(2)) = ssdi_appl_rate
+            soil%qssdisum = soil%qssdisum + sum(soil%qssdi(nod_ssdi(1):nod_ssdi(2)))
          end if
-         
+
       end if
 
-      end associate  ! tc_t1900 (SS-TC TC-12)
+      end associate
 
    case (9)
       ! special: reset scheduled irrigation at end of irrigation event
       irrigevent      = 0
-      state%soilwater%qssdi(1:state%mesh%numnod) = 0.0d0  ! [GR-SOIL 2026-05-24]
+      state%soilwater%qssdi(1:state%mesh%numnod) = 0.0d0
       dt_SSDI_event   = 1.0d0
       state%soilwater%qssdisum = 0.0d0
       
