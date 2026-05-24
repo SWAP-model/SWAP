@@ -13,9 +13,8 @@ contains
       use array_utils,           only: afgen
       use swap_state_mod,        only: swap_state_t
       use, intrinsic :: iso_fortran_env, only: real64
-      ! Stragglers still bare-global; out of scope for this arc:
-      !   cml/zc        — solute initial-condition table (task=1 input only)
-      use variables, only: cml, zc
+      ! [GR-SOL 2026-05-24] All `use variables` straggler imports retired —
+      ! everything reached via the sub-record associate / state%X.
       implicit none
 
       integer,            intent(in)    :: task
@@ -48,10 +47,10 @@ contains
             ! === Initialise solute rate/state variables ============================
 
             ! Determine initial solute profile from input concentrations.
-            if (soil%swinco .ne. 3) then
+            if (soil%swinco .ne. 3 .and. allocated(sol%cml_init) .and. allocated(sol%zc_init)) then
                do i = 1, sol%nconc
-                  tab(i*2)     = cml(i)
-                  tab(i*2 - 1) = abs(zc(i))
+                  tab(i*2)     = sol%cml_init(i)
+                  tab(i*2 - 1) = abs(sol%zc_init(i))
                end do
                do i = 1, mesh%numnod
                   sol%cml(i) = afgen(tab, macp*2, abs(mesh%z(i)))
@@ -286,15 +285,25 @@ contains
    subroutine solute_init(state)
       use, intrinsic :: iso_fortran_env, only: real64
       use swap_state_mod, only: swap_state_t
-      use variables,      only: cml, cmsy    ! transitional init buffers (config-side)
       implicit none
       type(swap_state_t), intent(inout) :: state
 
-      if (.not. allocated(state%solute%cml))  allocate(state%solute%cml(state%mesh%numnod))
-      if (.not. allocated(state%solute%cmsy)) allocate(state%solute%cmsy(state%mesh%numnod))
+      integer :: n
 
-      state%solute%cml(:)  = cml(1:state%mesh%numnod)
-      state%solute%cmsy(:) = cmsy(1:state%mesh%numnod)
+      n = state%mesh%numnod
+      if (.not. allocated(state%solute%cml))  allocate(state%solute%cml(n))
+      if (.not. allocated(state%solute%cmsy)) allocate(state%solute%cmsy(n))
+
+      ! swinco=3 (warm restart): cml_init holds the per-node initial profile
+      ! populated by config_to_variables. Other swinco values: solute task=1
+      ! interpolates from the (zc_init, cml_init) table; the initial cml here
+      ! is just the default zero.
+      if (allocated(state%solute%cml_init)) then
+         state%solute%cml(:)  = state%solute%cml_init(1:n)
+      else
+         state%solute%cml(:)  = 0.0_real64
+      end if
+      state%solute%cmsy(:) = 0.0_real64
    end subroutine solute_init
 
 end module solute_mod

@@ -1177,7 +1177,7 @@
       ! [GR-SOL 2026-05-24] bexp retired — see state%solute%bexp
       ! [GR-SOL 2026-05-24] cdrain retired — see state%solute%cdrain (AgeTracer dead-body deleted)
       ! [GR-SOL 2026-05-24] cirr retired — see state%solute%cirr
-      real(8)   cml(macp)          ! Array with solute concentration (M/L3 water) in mobile region
+      ! [GR-SOL 2026-05-24] cml retired — see state%solute%cml_init / state%solute%cml
       real(8)   cmsy(macp)         ! Array with dissolved + adsorbed solute concentration (M/L3 soil volume) in mobile region
 ! real(8)   cpond              ! Moved to solute_state_t%cpond (ADR 0032)
       ! [GR-SOL 2026-05-24] cpre retired — see state%solute%cpre
@@ -1226,7 +1226,7 @@
 ! real(8)   sqrap              ! Moved to solute_state_t%sqrap (ADR 0032)
 ! real(8)   sqsur              ! Moved to solute_state_t%sqsur (ADR 0032)
       ! [GR-SOL 2026-05-24] tscf retired — see state%solute%tscf
-      real(8)   zc(macp)           ! Array with soil depths (L) used to specify initial solute concentrations
+      ! [GR-SOL 2026-05-24] zc retired — see state%solute%zc_init
       ! [SS-TC] retired 2026-05-12 — moved to state%timecontrol%flSolute (ADR 0041)
       ! logical   flsolute           ! moved to state%timecontrol%flSolute
       ! [SS-GR-CROPRT A1] flAgeTracer retired — ADR 0032 (AgeTracer dead-code; always .false.)

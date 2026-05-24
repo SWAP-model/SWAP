@@ -361,7 +361,7 @@ module legacy_state_mod
       ! [GR-SOL 2026-05-24] bexp retired — see state%solute%bexp
       ! [GR-SOL 2026-05-24] cdrain retired — see state%solute%cdrain
       ! [GR-SOL 2026-05-24] cirr retired — see state%solute%cirr
-      real(real64), allocatable :: cml(:)  !! Array with solute concentration (M/L3 water) in mobile region
+      ! [GR-SOL 2026-05-24] cml retired — see state%solute%cml_init / state%solute%cml
       real(real64), allocatable :: cmsy(:)  !! Array with dissolved + adsorbed solute concentration (M/L3 soil volume) in mobile region
       ! [GR-SOL 2026-05-24] cpre retired — see state%solute%cpre
       ! [GR-SOL 2026-05-24] cref retired — see state%solute%cref
@@ -385,7 +385,7 @@ module legacy_state_mod
       ! [GR-SOL 2026-05-24] samini retired — see state%solute%samini
       ! [GR-SOL 2026-05-24] sqdra retired — see state%solute%sqdra
       ! [GR-SOL 2026-05-24] tscf retired — see state%solute%tscf
-      real(real64), allocatable :: zc(:)  !! Array with soil depths (L) used to specify initial solute concentrations
+      ! [GR-SOL 2026-05-24] zc retired — see state%solute%zc_init
       real(real64) :: Ageirr  !! Age of irrigation water (d)
       real(real64) :: Agedrain  !! Age of drainage water (d)
       real(real64) :: Agepre  !! Age of precipitation (d)

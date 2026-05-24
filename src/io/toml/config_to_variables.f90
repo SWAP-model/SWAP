@@ -601,9 +601,15 @@ contains
                   call errs%abort_if_fatal()
                   nrows = size(tbl, 1)
                   state%solute%nconc = nrows
+                  if (.not. allocated(state%solute%cml_init)) then
+                     allocate(state%solute%cml_init(macp)); state%solute%cml_init = 0.0d0
+                  end if
+                  if (.not. allocated(state%solute%zc_init)) then
+                     allocate(state%solute%zc_init(macp));  state%solute%zc_init  = 0.0d0
+                  end if
                   do k = 1, nrows
-                     zc(k)  = tbl(k, 1)
-                     cml(k) = tbl(k, 2)
+                     state%solute%zc_init(k)  = tbl(k, 1)
+                     state%solute%cml_init(k) = tbl(k, 2)
                   end do
                end block
             end if

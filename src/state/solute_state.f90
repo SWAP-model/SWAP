@@ -53,8 +53,10 @@ module solute_state_mod
       ! Boundary concentrations:
       real(real64) :: cirr    = 0.0_real64  !! irrigation solute concentration (M/L3)
       real(real64) :: cpre    = 0.0_real64  !! precipitation solute concentration (M/L3)
-      ! Initial-condition config (legacy multi-depth init):
+      ! Initial-condition config (legacy multi-depth init).
       integer      :: nconc   = 0           !! number of initial-concentration depth points
+      real(real64), allocatable :: cml_init(:)  !! initial mobile concentration table (M/L3) or per-node profile (swinco=3)
+      real(real64), allocatable :: zc_init(:)   !! depth column for cml_init table (cm)
 
       ! === per-layer config arrays (MAHO-sized) and the seepage time table ===
       real(real64), allocatable :: kf(:)        !! Freundlich coefficient per layer (cm3/g)

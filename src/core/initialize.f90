@@ -431,7 +431,7 @@
       ! [GR-SOL 2026-05-24] bexp retired — see state%solute%bexp
       ! [GR-SOL 2026-05-24] cdrain retired — see state%solute%cdrain
       ! [GR-SOL 2026-05-24] cirr retired — see state%solute%cirr
-      cml                = 0.0d0 
+      ! [GR-SOL 2026-05-24] cml retired — see state%solute%cml_init
       cmsy               = 0.0d0 
 !     cpond              = 0.0d0   ! moved to solute_state_t (ADR 0032)
       ! [GR-SOL 2026-05-24] cpre retired — see state%solute%cpre
@@ -473,7 +473,7 @@
 !     sqrap              = 0.0d0   ! moved to solute_state_t (ADR 0032)
 !     sqsur              = 0.0d0   ! moved to solute_state_t (ADR 0032)
       ! [GR-SOL 2026-05-24] tscf retired — see state%solute%tscf
-      zc                 = 0.0d0 
+      ! [GR-SOL 2026-05-24] zc retired — see state%solute%zc_init
       ! [SS-TC] flsolute retired to state%timecontrol%flSolute (ADR 0041)
       ! [SS-GR-CROPRT A1] flAgeTracer zero-fill dropped — declaration retired (ADR 0032)
 
