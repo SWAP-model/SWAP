@@ -484,7 +484,7 @@ contains
          do i = 1, size(config%soil%isoillay)
             isoillay(i) = config%soil%isoillay(i)
          end do
-         numlay = config%soil%isoillay(size(config%soil%isoillay))
+         state%mesh%numlay = config%soil%isoillay(size(config%soil%isoillay))
       end if
       if (allocated(config%soil%hsublay)) then
          do i = 1, size(config%soil%hsublay)

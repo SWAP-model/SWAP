@@ -59,7 +59,7 @@ contains
                             flCropHarvest, &   ! [SS-GR-CROPRT A5] initial zero mirror
                             ! [GR-FINAL C3] flirrigationoutput dropped: W-global (0 consumers; ADR 0009 deleted IrrigationOutput)
                             flTillage, flSSDI, &
-                            numlay, &
+                            ! [GR-SOIL 2026-05-24] numlay retired — see state%mesh%numlay
                             owltab, &  ! [GR-DRA 2026-05-23] nowltab retired
                             ! [GR-CROP-DVS] meteo arrays/scalars + CN runoff tables retired
                             !   (arad,atmn,atmx,ahum,awin,arai,aetr,wet,atav,epot,tpot,grain,nrain,
@@ -147,8 +147,8 @@ contains
 !  calculate grid parameters
    ! [GR-BH Task 35] CalcGrid now writes directly to state%mesh%X; state%mesh%init bridge retired
    call CalcGrid(state)
-   call soilwater_init(state%soilwater, state%mesh%numnod, numlay)   ! SS-CRP Phase 1 C-1.2: allocate per-node arrays + mfluxtable
-   call state%nutrients%init(numlay)                                ! [SS-GR-CROP A11] zero nutrients state
+   call soilwater_init(state%soilwater, state%mesh%numnod, state%mesh%numlay)  ! SS-CRP Phase 1 C-1.2
+   call state%nutrients%init(state%mesh%numlay)                                ! [SS-GR-CROP A11]
 
    ! [SS-GR-CROP A16] dual-write nutrients — WSN organic matter pools + N coupling
    ! Primary state pools (scalar or maxfn=8 array)
@@ -368,7 +368,7 @@ contains
       flSurfaceWater => state%timecontrol%flSurfaceWater, &
       flTemperature  => state%timecontrol%flTemperature )
 
-   call tillage_init(state%tillage, numlay)         ! SS-TIL T-2: allocate/zero tillage state unconditionally
+   call tillage_init(state%tillage, state%mesh%numlay)  ! SS-TIL T-2
    if (flTillage) call DoTillage(1, state)
    if (flSSDI)    call SSDI_irrigation(1, state)  ! [SS-SWC S-2.12B]
 

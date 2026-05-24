@@ -23,10 +23,9 @@ contains
       !! to state%mesh%X. Legacy globals numlay/botcom/inpola/inpolb/nod1lay kept.
       subroutine calcgrid(state)
       ! Soil discretisation config (per-sublayer arrays); still bare globals.
-      use variables, only: nsublay, hcomp, hsublay, ncomp, isoillay, &
-                           numlay, botcom, nod1lay
+      use variables, only: nsublay, hcomp, hsublay, ncomp, isoillay
       use swap_state_mod,        only: swap_state_t
-      use swap_array_dimensions, only: macp
+      use swap_array_dimensions, only: macp, maho
       implicit none
 
       type(swap_state_t), intent(inout) :: state
@@ -58,14 +57,18 @@ contains
          if (allocated(mesh%layer))  deallocate(mesh%layer)
          if (allocated(mesh%inpola)) deallocate(mesh%inpola)
          if (allocated(mesh%inpolb)) deallocate(mesh%inpolb)
+         if (allocated(mesh%botcom)) deallocate(mesh%botcom)
+         if (allocated(mesh%nod1lay)) deallocate(mesh%nod1lay)
          allocate(mesh%dz(macp))
          allocate(mesh%z(macp))
          allocate(mesh%disnod(macp+1))
          allocate(mesh%ztopcp(macp))
          allocate(mesh%zbotcp(macp))
          allocate(mesh%layer(macp))
-         allocate(mesh%inpola(macp));   mesh%inpola = 0.0d0
-         allocate(mesh%inpolb(macp));   mesh%inpolb = 0.0d0
+         allocate(mesh%inpola(macp));   mesh%inpola  = 0.0d0
+         allocate(mesh%inpolb(macp));   mesh%inpolb  = 0.0d0
+         allocate(mesh%botcom(maho));   mesh%botcom  = 0
+         allocate(mesh%nod1lay(maho));  mesh%nod1lay = 0
 
          ! Nodal positions and inter-node distances; layer of each node.
          node = 0
@@ -102,12 +105,12 @@ contains
          layold = 1
          do node = 1, mesh%numnod
             if (mesh%layer(node) .gt. layold) then
-               botcom(layold) = node - 1
+               mesh%botcom(layold) = node - 1
                layold = layold + 1
             end if
          end do
-         numlay = layold
-         botcom(numlay) = mesh%numnod
+         mesh%numlay = layold
+         mesh%botcom(mesh%numlay) = mesh%numnod
 
          ! Linear-interpolation weights between nodes (mesh-derived).
          mesh%inpolb(1) = 0.5d0*mesh%dz(1)/mesh%disnod(2)
@@ -118,12 +121,12 @@ contains
          mesh%inpola(mesh%numnod) = 0.5d0*mesh%dz(mesh%numnod)/mesh%disnod(mesh%numnod)
 
          ! First node of each soil layer.
-         do lay = 1, numlay
+         do lay = 1, mesh%numlay
             Node = 1
             do while (mesh%layer(Node) .ne. lay)
                Node = Node + 1
             end do
-            nod1lay(lay) = node
+            mesh%nod1lay(lay) = node
          end do
 
       end associate

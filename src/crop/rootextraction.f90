@@ -42,12 +42,8 @@ module rootextraction_mod
       use swap_array_dimensions, only: macp
       use swap_log, only: log_warn
       use variables, only: &                                               ! [SS-GR-FINAL B6] residuals — all DEFERRED
-                           ! DEFERRED: adcrh/adcrl/aeratecrit/alphacrit — O2/drought config; Phase C3
-                           ! adcrh/adcrl/aeratecrit/alphacrit retired
-                           ! DEFERRED: botcom/criterhr/cumdens/dcritrtz/flhydrlift — soil/crop config; Phase C3
-                           botcom, criterhr, flhydrlift,                   &  ! dcritrtz/cumdens retired
-                           ! DEFERRED: hlim1/hlim2l/hlim2u/hlim3h/hlim3l/hlim4 — drought stress limits; Phase C3
-                           ! hlim1/hlim2l/hlim2u/hlim3h/hlim3l/hlim4 retired
+                           ! [GR-SOIL 2026-05-24] botcom retired — read via state%mesh%botcom
+                           criterhr, flhydrlift,                   &
                            ! DEFERRED: kroot/kstem/noddrz/oxygenintercept — crop/log globals; Phase C3
                            kroot, kstem, noddrz, oxygenintercept,   &
                            ! DEFERRED: oxygenslope/rdctb/rootcoefa/rooteff — active crop state; Phase C3; rd/rdm retired
@@ -160,7 +156,7 @@ module rootextraction_mod
           ! Feddes linear reduction based on pressure head
           if (state%crop%common%swoxygen .eq. 1) then
 
-            if (node.gt.botcom(1)) then
+            if (node.gt.state%mesh%botcom(1)) then
               hlim2 = state%crop%common%hlim2l
             else
               hlim2 = state%crop%common%hlim2u
@@ -366,7 +362,8 @@ module rootextraction_mod
       use swap_log, only: log_warn
       use variables, only: &                                               ! [SS-GR-FINAL B6] residuals — all DEFERRED
                            ! adcrh/adcrl/aeratecrit/alphacrit retired  ! DEFERRED: crop stress config; Phase C3
-                           botcom, criterhr, flhydrlift,                   &  ! dcritrtz/cumdens retired  ! DEFERRED: soil/crop config
+                           ! [GR-SOIL 2026-05-24] botcom retired
+                           criterhr, flhydrlift,                   &  ! dcritrtz/cumdens retired  ! DEFERRED: soil/crop config
                            ! hlim1/hlim2l/hlim2u/hlim3h/hlim3l/hlim4 retired  ! DEFERRED: drought limits
                            kroot, kstem, noddrz, oxygenintercept,   &  ! DEFERRED: crop/log globals
                            oxygenslope, rootcoefa, rooteff, &  ! rdctb retired  ! rd retired  ! DEFERRED: active crop state
@@ -738,7 +735,8 @@ module rootextraction_mod
       use swap_log, only: log_warn
       use variables, only: &                                               ! [SS-GR-FINAL B6] residuals — all DEFERRED
                            ! adcrh/adcrl/aeratecrit/alphacrit retired  ! DEFERRED: crop stress config; Phase C3
-                           botcom, criterhr, flhydrlift,                   &  ! dcritrtz/cumdens retired  ! DEFERRED: soil/crop config
+                           ! [GR-SOIL 2026-05-24] botcom retired
+                           criterhr, flhydrlift,                   &  ! dcritrtz/cumdens retired  ! DEFERRED: soil/crop config
                            ! hlim1/hlim2l/hlim2u/hlim3h/hlim3l/hlim4 retired  ! DEFERRED: drought limits
                            kroot, kstem, noddrz, oxygenintercept,   &  ! DEFERRED: crop/log globals
                            oxygenslope, rootcoefa, rooteff, &  ! rdctb retired  ! rd retired  ! DEFERRED: active crop state
@@ -895,7 +893,8 @@ module rootextraction_mod
 !   task=2 reads state%soilwater%mfluxtable (state required).
 ! ----------------------------------------------------------------------
 
-      use Variables, only: numlay, nod1lay, wiltpoint  ! [GR-CROP Phase B/9b] narrow; swsalinity/salthead retired
+      ! [GR-SOIL 2026-05-24] numlay/nod1lay retired — read via state%mesh%{numlay,nod1lay}
+      use variables, only: wiltpoint
       use soilhydraulics_utils, only: watcon, hconduc
       implicit none
 
@@ -911,18 +910,18 @@ module rootextraction_mod
 ! === initialization =========================================================
 ! --- SS-CRP Phase 2 C-2.5: write state%soilwater%mfluxtable directly.
 
-      do lay = 1,numlay
+      do lay = 1,state%mesh%numlay
         do count = 1,801
           state%soilwater%mfluxtable(lay,count) = 0.0d0
         enddo
       enddo
 
       start = int(100.d0*log10(-wiltpoint))
-      do lay = 1,numlay
+      do lay = 1,state%mesh%numlay
         phead1 = -10.d0**(dble(start)/100.d0)
 
 !       find first Node of the Layer
-        i = nod1lay(lay)
+        i = state%mesh%nod1lay(lay)
 
         wcontent = watcon(phead1, &
                            state%soilwater%vg_params(i), &

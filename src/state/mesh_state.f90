@@ -22,6 +22,10 @@ module mesh_state_mod
       ! from dz/disnod). Filled by soilgrid; consumed by solute.
       real(real64), allocatable :: inpola(:)
       real(real64), allocatable :: inpolb(:)
+      ! Per-layer indices computed by soilgrid (mesh-derived runtime state).
+      integer :: numlay = 0                   !! number of physical soil layers
+      integer, allocatable :: botcom(:)       !! bottom compartment of each soil layer
+      integer, allocatable :: nod1lay(:)      !! first node of each soil layer
    contains
       procedure :: init => mesh_init
    end type mesh_state_t

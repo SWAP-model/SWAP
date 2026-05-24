@@ -17,8 +17,9 @@ module tillage_mod
                         ! [GR-SOL 2026-05-24] Bdens retired — read/written via state%soilwater%bdens
                         ! DEFERRED: ParamVG — soil hydraulic config; Phase C3
                         ParamVG, &
-                        ! DEFERRED: NumLay/botcom/SwDiscrvert — soil discretisation; Phase C3
-                        NumLay, botcom, SwDiscrvert, &  ! [GR-BH C7] flksatexm/zbotcp/NumNod/layer/dz/disnod/psilt/pclay->state%mesh/soilwater; [SS-BMI2 Task 5] tend removed — global retired
+                        ! [GR-SOIL 2026-05-24] NumLay/botcom retired — read via state%mesh
+                        ! DEFERRED: SwDiscrvert — soil discretisation switch; Phase C3
+                        SwDiscrvert, &
                         ! Tillage bridge variables with renaming (SAVE statements removed)
                         ! [SS-TIL T-5] Groups C/D/E retired from variables — reads via state%tillage
                         swtill => till_swtill, Ntill => till_Ntill, &
@@ -99,8 +100,8 @@ module tillage_mod
       ! TO ADD: CHECK THAT DEPTH OF EACH TILLAGE EVENT CORRESPONDS TO BOTTOM OF SOIL HORIZON; USER MAY NEED TO DEFINE MULTIPLE SUBS-HORIZONS WITHIN A SINGLE REAL SOIL HORIZON
       ! currently: require changes in horizon number (iSoilLayer) at depth Max_Z_tillage
       fine = .false.
-      do i = 1, NumLay
-         if (botcom(i) == state%tillage%MaxNumSoilCP) then
+      do i = 1, state%mesh%numlay
+         if (state%mesh%botcom(i) == state%tillage%MaxNumSoilCP) then
             fine = .true.
             exit
          end if

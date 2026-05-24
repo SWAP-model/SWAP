@@ -696,7 +696,7 @@
       ! [SS-GR-FINAL D1] bma retired — BMA macropore balance never opened; 0 consumers
       ! [SS-SWC] retired 2026-05-12 — moved to state%soilwater%bpegwl (ADR 0038)
       ! integer   bpegwl             ! Node at bottom of perched groundwater
-      integer   botcom(maho)       ! Array with number of bottom compartments in each soil layer
+      ! [GR-SOIL 2026-05-24] botcom retired — see state%mesh%botcom
       integer   dra                ! Internal number of drainage input file *.DRA
       ! [GR-DRA 2026-05-23] dramet retired — see state%drainage%dramet
                                    !                              3 = drainage/infiltration resistance
@@ -713,7 +713,7 @@
       integer   nhead              ! Number of initial soil water pressure heads as provided in the input
       ! [SS-SWC] retired 2026-05-12 — moved to state%soilwater%nodgwl (ADR 0038)
       ! integer   nodgwl             ! Node directly above groundwater level
-      integer   nod1lay(maho)      ! node nr of first node of each soil layer (from top to bottom)
+      ! [GR-SOIL 2026-05-24] nod1lay retired — see state%mesh%nod1lay
       ! [SS-HEAT] retired 2026-05-10 — moved to state%heat%nodfrostbot (ADR 0034)
       ! integer   nodfrostbot        ! Node nr of deepest node with frost conditions
       ! [SS-SWC] retired 2026-05-12 — moved to state%soilwater%npegwl (ADR 0038)
@@ -722,7 +722,7 @@
       integer   nrstaring          ! Number of soil type [1..18] according to Staring series (Wosten et al., 2001)
       integer   nsublay            ! Number of sublayers in the soil profile
       integer   numbit             ! Iteration number for solving Richards equation
-      integer   numlay             ! Number of (physical) soil layers
+      ! [GR-SOIL 2026-05-24] numlay retired — see state%mesh%numlay
       ! [GR-BH Task 35] numnod retired — moved to state%mesh%numnod
       integer   numnodnew          ! Number of desired nodes for soil water quality models
       integer   numtab(macp)       ! Number of table entries of soil physical values for each model compartment

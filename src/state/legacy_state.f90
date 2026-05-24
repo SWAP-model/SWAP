@@ -202,7 +202,7 @@ module legacy_state_mod
       integer :: iwarn_hc  !! Headcalc warning counter (previously SAVE variable)
       integer :: dev_cmb  !! Mass balance deviation file unit (previously SAVE in checkmassbal)
       logical :: swcaprise  !! flag to minimize cap.rise to rootzone (for experts only)
-      integer, allocatable :: botcom(:)  !! Array with number of bottom compartments in each soil layer
+      ! [GR-SOIL 2026-05-24] botcom retired — see state%mesh%botcom
       integer :: dra  !! Internal number of drainage input file *.DRA
       ! [GR-DRA 2026-05-23] dramet retired — see state%drainage%dramet
       integer :: inc  !! Internal number of output file *.INC with incremental water balance data
@@ -210,11 +210,11 @@ module legacy_state_mod
       integer, allocatable :: isoillay(:)  !! Number of soil layer, starting with 1 at the soil surface
       integer, allocatable :: ncomp(:)  !! Array with number of compartments in each sublayer
       integer :: nhead  !! Number of initial soil water pressure heads as provided in the input
-      integer, allocatable :: nod1lay(:)  !! node nr of first node of each soil layer (from top to bottom)
+      ! [GR-SOIL 2026-05-24] nod1lay retired — see state%mesh%nod1lay
       integer :: nrstaring  !! Number of soil type [1..18] according to Staring series (Wosten et al., 2001)
       integer :: nsublay  !! Number of sublayers in the soil profile
       integer :: numbit  !! Iteration number for solving Richards equation
-      integer :: numlay  !! Number of (physical) soil layers
+      ! [GR-SOIL 2026-05-24] numlay retired — see state%mesh%numlay
       integer :: numnodnew  !! Number of desired nodes for soil water quality models
       integer, allocatable :: numtab(:)  !! Number of table entries of soil physical values for each model compartment
       integer, allocatable :: numtablay(:)  !! Number of table entries of soil physical values for each soil layer

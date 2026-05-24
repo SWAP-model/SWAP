@@ -116,7 +116,7 @@
       ! [SS-GR-FINAL D1] afo/aun/bal/blc/bma zero-fills dropped — declarations retired 
       ! [SS-SWC] bpegwl retired — soilwater_init handles init via state%soilwater%bpegwl
       ! bpegwl             = 0
-      botcom             = 0 
+      ! [GR-SOIL 2026-05-24] botcom retired — see state%mesh%botcom
       dra                = 0 
       ! [GR-DRA 2026-05-23] dramet retired — see state%drainage%dramet
       inc                = 0 
@@ -130,7 +130,7 @@
       nhead              = 0 
       ! [SS-SWC] nodgwl retired — soilwater_init handles init via state%soilwater%nodgwl
       ! nodgwl             = 0
-      nod1lay            = 0 
+      ! [GR-SOIL 2026-05-24] nod1lay retired — see state%mesh%nod1lay
       ! [SS-HEAT] Task 9: nodfrostbot retired to state%heat%nodfrostbot
       ! nodfrostbot        = 0
       ! [SS-SWC] npegwl retired — soilwater_init handles init via state%soilwater%npegwl
@@ -138,7 +138,7 @@
       ! [GR-BH Task 37] nrlevs retired to state%drainage%nrlevs
       nsublay            = 0
       numbit             = 0 
-      numlay             = 0 
+      ! [GR-SOIL 2026-05-24] numlay retired — see state%mesh%numlay
       ! [GR-BH Task 35] numnod retired to state%mesh%numnod
       numnodnew          = 0 
       numtab             = 0 

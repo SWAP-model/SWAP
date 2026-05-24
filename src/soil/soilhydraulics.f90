@@ -860,10 +860,7 @@ contains
          ientrytab, ientrytablay, &
          ! DEFERRED: sptab/sptablay — soil property tables; Phase C3
          sptab, sptablay, &
-         ! DEFERRED: nod1lay(maho) — first node of each soil mesh%layer; Phase C3
-         nod1lay, &
-         ! DEFERRED: numlay — number of soil layers; Phase C3
-         numlay, &
+         ! [GR-SOIL 2026-05-24] nod1lay/numlay retired — read via state%mesh%{nod1lay,numlay}
          ! DEFERRED: gwli — initial groundwater level; Phase C3
          gwli, &
          ! DEFERRED: zi/nhead — initial head table entries; Phase C3
@@ -935,7 +932,7 @@ contains
       do node = 1, mesh%numnod
          soil%layer(node) = mesh%layer(node)
       end do
-      do lay = 1, numlay
+      do lay = 1, mesh%numlay
          soil%iHWCKmodel(lay) = iHWCKmodel(lay)
       end do
       ! BiModal/NoVap: only set via legacy readswap (not TOML path); stay .false.
@@ -970,9 +967,9 @@ contains
              end do
           end do
         end do
-        do lay = 1,numlay
-          soil%ksatfit(lay) = soil%vg_params(nod1lay(lay))%ksat   ! [SS-SWC S-2.3] [GR-BH Task 36] ksatfit global retired
-          soil%thetsl(lay) = soil%vg_params(nod1lay(lay))%thetas  ! [SS-SWC S-1.3/S-2.12B]
+        do lay = 1,mesh%numlay
+          soil%ksatfit(lay) = soil%vg_params(mesh%nod1lay(lay))%ksat   ! [SS-SWC S-2.3] [GR-BH Task 36] ksatfit global retired
+          soil%thetsl(lay) = soil%vg_params(mesh%nod1lay(lay))%thetas  ! [SS-SWC S-1.3/S-2.12B]
         end do
       else
          ! MvanG functions
@@ -1012,7 +1009,7 @@ contains
           end if
         end do
         soil%thetsl = 0.0_real64                            ! [SS-SWC S-1.3/S-2.12B]
-        do lay = 1, numlay
+        do lay = 1, mesh%numlay
           soil%thetsl(lay) = paramvg(2,lay)                 ! [SS-SWC S-1.3/S-2.12B]
         end do
       endif
@@ -1141,7 +1138,7 @@ contains
       call calcgwl (state)
 
       call log_info('soilwater', 'Soil state initialized: gwl=' // to_str(real(soil%gwl,4)) // &  ! [SS-SWC S-2.3]
-                    ' cm, mesh%numnod=' // to_str(mesh%numnod) // ', numlay=' // to_str(numlay) // &
+                    ' cm, numnod=' // to_str(mesh%numnod) // ', numlay=' // to_str(mesh%numlay) // &
                     ', volini=' // to_str(real(soil%volini,4)) // ' cm')              ! [SS-SWC S-2.3]
 
 
