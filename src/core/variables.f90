@@ -664,7 +664,7 @@
       ! integer   MaxIterTime        ! moved to state%timecontrol%MaxIterTime
       ! integer   MaxIt              ! moved to state%timecontrol%MaxIt
       ! [GR-CROP-DVS] MaxBackTr retired — see state%cfg%simulation%numerical%MaxBackTr
-      integer   Itnumb(100,2)      ! Iteration number statistics [soilhydraulics.f90, timecontrol_mod.f90]
+      ! [GR-SOIL 2026-05-24] Itnumb retired — now state%soilwater%Itnumb (100x2 allocatable).
       ! [GR-CROP-DVS] critdevh1cp retired — see state%cfg%simulation%numerical%critdevh1cp
       ! [GR-CROP-DVS] critdevh2cp retired — see state%cfg%simulation%numerical%critdevh2cp
       ! [GR-CROP-DVS] critdevponddt retired — see state%cfg%simulation%numerical%critdevponddt
@@ -720,7 +720,7 @@
       ! [GR-BH Task 37] nrlevs retired — moved to state%drainage%nrlevs
       integer   nrstaring          ! Number of soil type [1..18] according to Staring series (Wosten et al., 2001)
       ! [GR-SOIL 2026-05-24] nsublay retired — derived inline from config%soil%sublay
-      integer   numbit             ! Iteration number for solving Richards equation
+      ! [GR-SOIL 2026-05-24] numbit retired — now state%soilwater%numbit.
       ! [GR-SOIL 2026-05-24] numlay retired — see state%mesh%numlay
       ! [GR-BH Task 35] numnod retired — moved to state%mesh%numnod
       integer   numnodnew          ! Number of desired nodes for soil water quality models

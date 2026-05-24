@@ -26,14 +26,7 @@ contains
       ! [SS-GR-FINAL B9] blanket use variables → explicit only-list; all symbols DEFERRED
       ! macp/mabbc → swap_array_dimensions (dimension constants); noddrz: crop root depth node
       use swap_array_dimensions, only: macp, mabbc
-      use variables, only: &
-         ! [GR-SOIL 2026-05-24] qssdi → state%soilwater
-         ! [GR-SOIL 2026-05-24] hplate/rimlay/sw4/swbotb3impl → state%cfg%bottom_boundary
-         ! [GR-SOIL 2026-05-24] swcaprise/dump_convergence_diagnostics → state%cfg%simulation%numerical
-         ! [GR-SOIL 2026-05-24] noddrz → state%crop%common%noddrz (already canonical state field)
-         ! [GR-SOIL 2026-05-24] soil%flwarn_hc/soil%iwarn_hc → state%soilwater (runtime warning state)
-         ! DEFERRED: numbit/itnumb — Richards iteration counter/stats; Phase C3/D
-         numbit, itnumb
+      ! [GR-SOIL 2026-05-24] use variables retired — all consumers cut over to state%X.
       use timestep_control_mod, only: fldecdt
       use swap_log, only: log_warn, log_debug, to_str
       use boundbottom_mod, only: BoundBottom
@@ -66,6 +59,9 @@ contains
       logical   flboth
       integer   nodncr
       logical   flcaprise
+      ! [GR-SOIL 2026-05-24] local loop variable; copied to soil%numbit at top of loop body
+      ! (Fortran disallows derived-type components as loop variables).
+      integer   numbit_local
 
       ! Convergence criteria
       real(8) CritDevBalCp, CritDevBalTot, Critdz
@@ -331,7 +327,8 @@ contains
       end if
 
       sum= 0.d0   ! For Forcheck
-      Do numbit = 1,MaxIt1
+      Do numbit_local = 1, MaxIt1
+         soil%numbit = numbit_local  ! [GR-SOIL 2026-05-24] mirror to state for timecontrol_advance reader
 
          do i = 1, NN
             ! Save values of h
@@ -452,7 +449,7 @@ contains
             iBackTr = iBackTr + 1
             ! Factor reduces the change of h (difh) calculated as a full
             ! Newton Raphson step
-            if(time%fldtmin .and. numbit.gt.time%MaxIt)then              ! [TC-8]
+            if(time%fldtmin .and. soil%numbit.gt.time%MaxIt)then              ! [TC-8]
                factmax = 0.0d0
                do i = 1,NN
                   if(dabs( hold(i) ) .lt. 1.0d0 )then
@@ -728,8 +725,8 @@ contains
             endif
 
             ! Recording of number of iteration steps needed
-            itnumb(min(100,numbit),1)=itnumb(min(100,numbit),1)+1 
-            itnumb(min(100,numbit),2)=itnumb(min(100,numbit),2)+iBackTr 
+            soil%Itnumb(min(100,soil%numbit),1)=soil%Itnumb(min(100,soil%numbit),1)+1 
+            soil%Itnumb(min(100,soil%numbit),2)=soil%Itnumb(min(100,soil%numbit),2)+iBackTr 
 
             return
             

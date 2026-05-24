@@ -196,7 +196,7 @@ module legacy_state_mod
       integer, allocatable :: iHWCKmodel(:)  !! indicator what type of water retention and hydraulic conductivity model is used (per soil layer)
       logical, allocatable :: BiModal(:)  !! logical indicating whether chosen model is bi-modal or not
       logical, allocatable :: NoVap(:)  !! logical indicating that NO vapour flow is to be considered in PDI K-model
-      integer, allocatable :: Itnumb(:,:)  !! Iteration number statistics [soilhydraulics.f90, timecontrol_mod.f90]
+      ! [GR-SOIL 2026-05-24] Itnumb retired — orphan stub; now state%soilwater%Itnumb.
       ! [GR-SOIL 2026-05-24] fldumpconvcrit retired — orphan stub; now state%cfg%simulation%numerical%dump_convergence_diagnostics.
       ! [GR-SOIL 2026-05-24] flwarn_hc + iwarn_hc retired — orphan stubs; now state%soilwater.
       integer :: dev_cmb  !! Mass balance deviation file unit (previously SAVE in checkmassbal)
@@ -212,7 +212,7 @@ module legacy_state_mod
       ! [GR-SOIL 2026-05-24] nod1lay retired — see state%mesh%nod1lay
       integer :: nrstaring  !! Number of soil type [1..18] according to Staring series (Wosten et al., 2001)
       ! [GR-SOIL 2026-05-24] nsublay retired — derived inline from config%soil%sublay
-      integer :: numbit  !! Iteration number for solving Richards equation
+      ! [GR-SOIL 2026-05-24] numbit retired — orphan stub; now state%soilwater%numbit.
       ! [GR-SOIL 2026-05-24] numlay retired — see state%mesh%numlay
       integer :: numnodnew  !! Number of desired nodes for soil water quality models
       integer, allocatable :: numtab(:)  !! Number of table entries of soil physical values for each model compartment

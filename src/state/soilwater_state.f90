@@ -234,6 +234,14 @@ module soilwater_state_mod
       logical :: flwarn_hc = .true.   !! emit Richards non-convergence warning this day
       integer :: iwarn_hc  = 0        !! count of warnings emitted today (cap at 4)
 
+      ! [GR-SOIL 2026-05-24] Richards iteration counter + statistics (formerly bare globals).
+      ! `numbit` is the live iteration index inside headcalc's Newton-Raphson loop, read
+      ! by timecontrol_advance for dt adjustment. `Itnumb` is the (100×2) histogram of
+      ! iteration counts / back-tracking cycles, accumulated in headcalc and dumped at
+      ! end-of-run by itertime_close.
+      integer              :: numbit = 0
+      integer, allocatable :: Itnumb(:,:)
+
       ! ===========================================================================
       ! INTERMEDIATE accumulators (reset_intermediate / gate: flzerointr)
       !   subsumes the per-day subset, which has its own reset under flDayStart.
@@ -431,6 +439,9 @@ contains
       ! Legacy: q(macp+1), k(macp+1), kmean(macp+1)
       allocate(sw%q(numnod+1));          sw%q            = 0.0_real64
       allocate(sw%qssdi(numnod));        sw%qssdi        = 0.0_real64  ! [GR-SOIL 2026-05-24] migrated from variables.f90
+      if (.not. allocated(sw%Itnumb)) then
+         allocate(sw%Itnumb(100, 2));    sw%Itnumb       = 0            ! [GR-SOIL 2026-05-24] Richards iter stats
+      end if
       allocate(sw%k(numnod+1));          sw%k            = 0.0_real64
       allocate(sw%kmean(numnod+1));      sw%kmean        = 0.0_real64
 

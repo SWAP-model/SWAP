@@ -338,9 +338,9 @@ contains
                             ! DEFERRED: dt_SSDI_event — SSDI timing state; Phase C3
                             dt_SSDI_event, &
                             ! DEFERRED: flSSDI — SSDI feature gate; Phase C3
-                            flSSDI, &  ! [GR-CROP Phase B] raintimearray retired from here
-                            ! DEFERRED: numbit — Richards iteration counter; Phase C3
-                            numbit
+                            ! [GR-SOIL 2026-05-24] numbit dropped — now state%soilwater%numbit
+                            flSSDI  ! [GR-CROP Phase B] raintimearray retired from here
+
       use irrigation_mod, only: SSDI_irrigation
       use error_mod, only: fatalerr_collected
       implicit none
@@ -590,8 +590,8 @@ contains
         if(flprevious .eq. 2)then
            dt = dtprevious
         else
-           if (numbit.le.3)     dt = min(dt*2.0d0,DtMax)
-           if (numbit.ge.MaxIt) dt = max(dt*0.5d0,DtMin)
+           if (state%soilwater%numbit.le.3)     dt = min(dt*2.0d0,DtMax)  ! [GR-SOIL 2026-05-24]
+           if (state%soilwater%numbit.ge.MaxIt) dt = max(dt*0.5d0,DtMin)  ! [GR-SOIL 2026-05-24]
            dtprevious = dt
          endif
       endif
@@ -913,8 +913,7 @@ contains
    end subroutine itertime_check
 
    subroutine itertime_close(state)
-      ! [SS-GR-FINAL B8] DEFERRED: itnumb — Richards iteration counter (W category after Phase D)
-      use variables, only: itnumb
+      ! [GR-SOIL 2026-05-24] Itnumb migrated to state%soilwater%Itnumb.
       use swap_log,  only: log_info, to_str
       implicit none
       type(swap_state_t), intent(inout) :: state
@@ -923,10 +922,13 @@ contains
       call log_info('itertime', 'Iteration statistics')
       call log_info('itertime', 'Maximum number of iterations: ' // to_str(state%timecontrol%MaxIt))
       call log_info('itertime', 'It Numb  No of Hits  Tot BTr cycles')
-      do i = 1, 100
-         if (itnumb(i,1) > 0) &
-            call log_info('itertime', to_str(i) // '  ' // to_str(itnumb(i,1)) // '  ' // to_str(itnumb(i,2)))
-      end do
+      if (allocated(state%soilwater%Itnumb)) then
+         do i = 1, 100
+            if (state%soilwater%Itnumb(i,1) > 0) &
+               call log_info('itertime', to_str(i) // '  ' // to_str(state%soilwater%Itnumb(i,1)) &
+                  // '  ' // to_str(state%soilwater%Itnumb(i,2)))
+         end do
+      end if
 
       call cpu_time(state%timecontrol%tmptimeend)
       call log_info('itertime', 'Run-time: ' // &

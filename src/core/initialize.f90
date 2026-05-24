@@ -97,7 +97,7 @@
 
 ! --- soilwater variables
       ! [SS-BMI2 Task 5] MaxIt retired 2026-05-13 — moved to state%timecontrol%MaxIt
-      Itnumb             = 0
+      ! [GR-SOIL 2026-05-24] Itnumb init handled by soilwater_init.
       ! [GR-SOIL 2026-05-24] fldumpconvcrit retired — now state%cfg%simulation%numerical%dump_convergence_diagnostics.
       ! [GR-SOIL 2026-05-24] flwarn_hc/iwarn_hc init handled by state%soilwater defaults.
       ! [SS-GR-FINAL D1] nstep_hc zero-fill dropped — declaration retired 
@@ -136,7 +136,7 @@
       ! npegwl             = 0
       ! [GR-BH Task 37] nrlevs retired to state%drainage%nrlevs
       ! [GR-SOIL 2026-05-24] nsublay retired — derived inline from config%soil%sublay
-      numbit             = 0 
+      ! [GR-SOIL 2026-05-24] numbit init handled by state%soilwater defaults.
       ! [GR-SOIL 2026-05-24] numlay retired — see state%mesh%numlay
       ! [GR-BH Task 35] numnod retired to state%mesh%numnod
       numnodnew          = 0 
