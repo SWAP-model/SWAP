@@ -276,8 +276,7 @@ module legacy_state_mod
       real(real64) :: hplate  !! Pressure head of ceramic plate below lysimeter
       real(real64), allocatable :: hsublay(:)  !! Array with prescribed height of sublayers (L)
       real(real64), allocatable :: infres(:)  !! Array with infiltration resistance (T) for each drainage level
-      real(real64), allocatable :: inpola(:)  !! Weight for interpolation between current node and upper node
-      real(real64), allocatable :: inpolb(:)  !! Weight for interpolation between current node and lower node
+      ! [GR-SOL 2026-05-24] inpola/inpolb retired — see state%mesh%{inpola,inpolb}
       real(real64) :: iqinfmax  !! [SS-GR-FINAL D1] qinfmax retired — 0 consumers
       real(real64) :: issnowbeg  !! Amount of snow in soil water equivalent (L) at start of current intermediate period [snow.f90, waterbalance.f90]
       ! [GR-DRA 2026-05-23] khbot retired — see state%drainage%khbot

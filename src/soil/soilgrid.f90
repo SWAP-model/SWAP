@@ -26,9 +26,10 @@ contains
       ! [SS-GR-FINAL B9] DEFERRED: all symbols — soil discretisation config; Phase C3
       !   nsublay/hcomp/hsublay/ncomp/isoillay — soil layer subdivision; Phase C3
       !   numlay/botcom — layer count / bottom compartment; Phase C3
-      !   inpola/inpolb/nod1lay — interpolation / first-node tables; Phase C3
+      ! [GR-SOL 2026-05-24] inpola/inpolb retired — written to state%mesh
+      !   nod1lay — first-node tables; Phase C3
       use variables, only: nsublay, hcomp, hsublay, ncomp, isoillay, &
-                           numlay, botcom, inpola, inpolb, nod1lay
+                           numlay, botcom, nod1lay
       use swap_state_mod, only: swap_state_t
       use swap_array_dimensions, only: macp
       implicit none
@@ -59,12 +60,16 @@ contains
       if (allocated(state%mesh%ztopcp)) deallocate(state%mesh%ztopcp)
       if (allocated(state%mesh%zbotcp)) deallocate(state%mesh%zbotcp)
       if (allocated(state%mesh%layer))  deallocate(state%mesh%layer)
+      if (allocated(state%mesh%inpola)) deallocate(state%mesh%inpola)
+      if (allocated(state%mesh%inpolb)) deallocate(state%mesh%inpolb)
       allocate(state%mesh%dz(macp))
       allocate(state%mesh%z(macp))
       allocate(state%mesh%disnod(macp+1))
       allocate(state%mesh%ztopcp(macp))
       allocate(state%mesh%zbotcp(macp))
       allocate(state%mesh%layer(macp))
+      allocate(state%mesh%inpola(macp));   state%mesh%inpola = 0.0d0
+      allocate(state%mesh%inpolb(macp));   state%mesh%inpolb = 0.0d0
 
       ! position of nodal points and distances between them; also layer of each node
       node = 0
@@ -108,13 +113,13 @@ contains
       numlay = layold
       botcom(numlay) = state%mesh%numnod
 
-      ! linear interpolation values between nodes
-      inpolb(1) = 0.5d0*state%mesh%dz(1)/state%mesh%disnod(2)
-      do node = 2,state%mesh%numnod-1
-        inpola(node) = 0.5d0*state%mesh%dz(node)/state%mesh%disnod(node)
-        inpolb(node) = 0.5d0*state%mesh%dz(node)/state%mesh%disnod(node+1)
+      ! linear interpolation values between nodes (mesh-derived weights)
+      state%mesh%inpolb(1) = 0.5d0*state%mesh%dz(1)/state%mesh%disnod(2)
+      do node = 2, state%mesh%numnod-1
+        state%mesh%inpola(node) = 0.5d0*state%mesh%dz(node)/state%mesh%disnod(node)
+        state%mesh%inpolb(node) = 0.5d0*state%mesh%dz(node)/state%mesh%disnod(node+1)
       end do
-      inpola(state%mesh%numnod) = 0.5d0*state%mesh%dz(state%mesh%numnod)/state%mesh%disnod(state%mesh%numnod)
+      state%mesh%inpola(state%mesh%numnod) = 0.5d0*state%mesh%dz(state%mesh%numnod)/state%mesh%disnod(state%mesh%numnod)
 
       ! find first Node of the Layer
       do lay = 1,numlay

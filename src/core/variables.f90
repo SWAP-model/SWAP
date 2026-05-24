@@ -893,8 +893,7 @@
       ! real(8)   iew0               ! Intermediate potential transpiration rate from a wet crop [cm/d]
       ! real(8)   iintc              ! Intermediate amount of rainfall interception by vegetation (L)
       real(8)   infres(Madr)       ! Array with infiltration resistance (T) for each drainage level
-      real(8)   inpola(macp)       ! Weight for interpolation between current node and upper node
-      real(8)   inpolb(macp)       ! Weight for interpolation between current node and lower node
+      ! [GR-SOL 2026-05-24] inpola/inpolb retired — see state%mesh%{inpola,inpolb}
       ! [SS-SWC] retired 2026-05-12 — moved to state%soilwater%inq (ADR 0038)
       ! real(8)   inq(macp+1)        ! Array with intermediate amounts of water flow between current and upper compartment (L)
       ! SS-SWST Phase 2 Task 11 C2: inqdra/inqdra_in/inqdra_out removed — state%surfacewater owns them.

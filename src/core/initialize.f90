@@ -249,8 +249,7 @@
       ! iew0               = 0.0d0
       ! iintc              = 0.0d0
       infres             = 0.0d0 
-      inpola             = 0.0d0 
-      inpolb             = 0.0d0 
+      ! [GR-SOL 2026-05-24] inpola/inpolb retired — see state%mesh%{inpola,inpolb}
       ! [SS-SWC] inq retired — soilwater_init handles init via state%soilwater%inq
       ! inq                = 0.0d0
       ! SS-SWST Phase 2 Task 11 C3: inqdra/inqdra_in/inqdra_out removed (now in state%surfacewater).

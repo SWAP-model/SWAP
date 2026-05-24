@@ -15,9 +15,8 @@ contains
       use, intrinsic :: iso_fortran_env, only: real64
       ! Stragglers still bare-global; out of scope for this arc:
       !   bdens         — soil-side per-layer dry bulk density
-      !   inpola/inpolb — numerical-grid interpolation arrays
       !   cml/zc        — solute initial-condition table (task=1 input only)
-      use variables, only: bdens, inpola, inpolb, cml, zc
+      use variables, only: bdens, cml, zc
       implicit none
 
       integer,            intent(in)    :: task
@@ -102,7 +101,7 @@ contains
             ! Maximum solute time step.
             sol%dtsolu = time%dt
             do i = 1, mesh%numnod
-               thetav(i) = inpola(i + 1)*soil%theta(i) + inpolb(i)*soil%theta(i + 1)
+               thetav(i) = mesh%inpola(i + 1)*soil%theta(i) + mesh%inpolb(i)*soil%theta(i + 1)
                diffus(i) = ddiffwcs(i) * thetav(i)**2.33d0
                if (i .lt. mesh%numnod) then
                   vpore     = abs(soil%q(i + 1))/thetav(i)
@@ -140,7 +139,7 @@ contains
 
                   ! Convective + dispersive fluxes.
                   if (i .lt. mesh%numnod) then
-                     cmlav  = inpola(i + 1) * sol%cml(i) + inpolb(i) * sol%cml(i + 1)
+                     cmlav  = mesh%inpola(i + 1) * sol%cml(i) + mesh%inpolb(i) * sol%cml(i + 1)
                      dispr  = dispr1(i) + 0.5d0 * sol%dtsolu*vpore2(i)
                      cfluxb = (soil%q(i + 1)*cmlav +                                    &
                                thetav(i) * dispr * (sol%cml(i + 1) - sol%cml(i))/mesh%disnod(i + 1)) &

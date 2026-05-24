@@ -18,6 +18,10 @@ module mesh_state_mod
       real(real64), allocatable :: disnod(:)
       real(real64), allocatable :: ztopcp(:)
       real(real64), allocatable :: zbotcp(:)
+      ! Linear-interpolation weights between neighbouring nodes (derived
+      ! from dz/disnod). Filled by soilgrid; consumed by solute.
+      real(real64), allocatable :: inpola(:)
+      real(real64), allocatable :: inpolb(:)
    contains
       procedure :: init => mesh_init
    end type mesh_state_t
@@ -40,6 +44,8 @@ contains
       if (allocated(self%ztopcp)) deallocate(self%ztopcp)
       if (allocated(self%zbotcp)) deallocate(self%zbotcp)
       if (allocated(self%layer))  deallocate(self%layer)
+      if (allocated(self%inpola)) deallocate(self%inpola)
+      if (allocated(self%inpolb)) deallocate(self%inpolb)
 
       allocate(self%dz(numnod_in))
       allocate(self%z(numnod_in))
@@ -47,6 +53,8 @@ contains
       allocate(self%ztopcp(numnod_in))
       allocate(self%zbotcp(numnod_in))
       allocate(self%layer(numnod_in))
+      allocate(self%inpola(numnod_in));   self%inpola = 0.0_real64
+      allocate(self%inpolb(numnod_in));   self%inpolb = 0.0_real64
 
       self%dz(:)     = dz_in(1:numnod_in)
       self%z(:)      = z_in(1:numnod_in)
