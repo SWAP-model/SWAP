@@ -14,9 +14,8 @@ contains
       use swap_state_mod,        only: swap_state_t
       use, intrinsic :: iso_fortran_env, only: real64
       ! Stragglers still bare-global; out of scope for this arc:
-      !   bdens         — soil-side per-layer dry bulk density
       !   cml/zc        — solute initial-condition table (task=1 input only)
-      use variables, only: bdens, cml, zc
+      use variables, only: cml, zc
       implicit none
 
       integer,            intent(in)    :: task
@@ -62,9 +61,9 @@ contains
             ! Derived solute concentrations.
             sol%samini = 0.0d0
             do i = 1, mesh%numnod
-               bdenskf(i)         = bdens(mesh%layer(i))*sol%kf(mesh%layer(i))
+               bdenskf(i)         = soil%bdens(mesh%layer(i))*sol%kf(mesh%layer(i))
                bdenskfcref(i)     = bdenskf(i)*sol%cref
-               bdenskfsatporos(i) = bdens(mesh%layer(i))*sol%kfsat + sol%poros
+               bdenskfsatporos(i) = soil%bdens(mesh%layer(i))*sol%kfsat + sol%poros
                sol%cmsy(i)        = soil%theta(i)*sol%cml(i) +                          &
                                     bdenskfcref(i)*(sol%cml(i)/sol%cref)**sol%frexp
                sol%samini         = sol%samini + sol%cmsy(i) * mesh%dz(i)

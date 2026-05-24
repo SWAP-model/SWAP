@@ -14,8 +14,9 @@ module tillage_mod
    use variables, only: &
                         ! DEFERRED: swhyst/swsolu — soil switches; Phase C3; swoxygen retired
                         swhyst, swsolu, &
-                        ! DEFERRED: Bdens/ParamVG — soil hydraulic config; Phase C3
-                        Bdens, ParamVG, &
+                        ! [GR-SOL 2026-05-24] Bdens retired — read/written via state%soilwater%bdens
+                        ! DEFERRED: ParamVG — soil hydraulic config; Phase C3
+                        ParamVG, &
                         ! DEFERRED: NumLay/botcom/SwDiscrvert — soil discretisation; Phase C3
                         NumLay, botcom, SwDiscrvert, &  ! [GR-BH C7] flksatexm/zbotcp/NumNod/layer/dz/disnod/psilt/pclay->state%mesh/soilwater; [SS-BMI2 Task 5] tend removed — global retired
                         ! Tillage bridge variables with renaming (SAVE statements removed)
@@ -109,22 +110,22 @@ module tillage_mod
    case (2)
       ! RATE/STATE EVENT
       ! [SS-TIL T-5] legacy Rho_last dropped; canonical via state%tillage
-      state%tillage%Rho_last(1:state%tillage%MaxNumSoilHo) = Bdens(1:state%tillage%MaxNumSoilHo)
+      state%tillage%Rho_last(1:state%tillage%MaxNumSoilHo) = state%soilwater%bdens(1:state%tillage%MaxNumSoilHo)
 
       if (TEST) then
          ! for technical test
          call DTDPST ("YEAR-MONTHST-DAY", state%timecontrol%t1900, STRNG)  ! TC-12
          if (trim(STRNG) == "2016-Apr-05") then
-            BDENS(1) = 1000.0d0
+            state%soilwater%bdens(1) = 1000.0d0
             call Change_MvGpars(state)              ! [SS-SWC S-1.9]
             Call Adapt_WC_H (TEST, state)           ! [SS-SWC S-1.9]
          else if (trim(STRNG) == "2016-Apr-11") then
-            BDENS(1) = 1250.0d0
+            state%soilwater%bdens(1) = 1250.0d0
             call Change_MvGpars(state)              ! [SS-SWC S-1.9]
             Call Adapt_WC_H (TEST, state)           ! [SS-SWC S-1.9]
          else if (trim(STRNG) == "2016-Apr-18") then
-            BDENS(1) = 1325.0d0        ! no ponding occurs
-            !!!BDENS(1) = 1406.322d0   ! in this specific test this change causes ponding
+            state%soilwater%bdens(1) = 1325.0d0        ! no ponding occurs
+            !!!state%soilwater%bdens(1) = 1406.322d0   ! in this specific test this change causes ponding
             call Change_MvGpars(state)              ! [SS-SWC S-1.9]
             Call Adapt_WC_H (TEST, state)           ! [SS-SWC S-1.9]
          end if
@@ -190,7 +191,7 @@ module tillage_mod
       if (.not. state%timecontrol%headless) then
          if (TEST) then
             call DTDPST ("YEAR-MONTHST-DAY", state%timecontrol%t1900, STRNG)  ! TC-12
-            write (222,'(A,F15.5,10(I3,F15.5))') trim(state%timecontrol%date), state%atmosphere%nraida, (i, Bdens(i), i = 1, state%tillage%MaxNumSoilHo)
+            write (222,'(A,F15.5,10(I3,F15.5))') trim(state%timecontrol%date), state%atmosphere%nraida, (i, state%soilwater%bdens(i), i = 1, state%tillage%MaxNumSoilHo)
             write (224,'(A,10F15.5)') trim(state%timecontrol%date), state%soilwater%theta(5), state%soilwater%theta(10), state%soilwater%theta(20), state%soilwater%theta(27), state%soilwater%theta(35), state%atmosphere%nraida, state%tillage%sumDWC, state%tillage%sumAvail1, state%tillage%sumAvail2  ! [SS-SWC S-2.6]
             write (226,'(A,10F15.5)') trim(state%timecontrol%date), &  ! [SS-GR-UTILS Task 15]
      &         state%soilwater%vg_params(1)%thetar, state%soilwater%vg_params(1)%thetas, &
@@ -199,7 +200,7 @@ module tillage_mod
      &         state%soilwater%vg_params(1)%mpar,   state%soilwater%vg_params(1)%alphaw_sentinel, &
      &         state%soilwater%vg_params(1)%h_enpr, state%soilwater%vg_params(1)%ksatexm
          end if
-         write (222,'(A,F15.5,10(I3,F15.5))') trim(state%timecontrol%date), state%atmosphere%nraida, (i, Bdens(i), i = 1, state%tillage%MaxNumSoilHo)
+         write (222,'(A,F15.5,10(I3,F15.5))') trim(state%timecontrol%date), state%atmosphere%nraida, (i, state%soilwater%bdens(i), i = 1, state%tillage%MaxNumSoilHo)
          write (226,'(A,10F15.5)') trim(state%timecontrol%date), &  ! [SS-GR-UTILS Task 15]
      &      state%soilwater%vg_params(1)%thetar, state%soilwater%vg_params(1)%thetas, &
      &      state%soilwater%vg_params(1)%ksat,   state%soilwater%vg_params(1)%alpha,  &
@@ -236,13 +237,13 @@ module tillage_mod
 
       ! First, fill PARAMVG
       ! wcr
-      ParamVG(1,i) = ParamVG(1,i) * Bdens(i)/tl%Rho_last(i)
+      ParamVG(1,i) = ParamVG(1,i) * state%soilwater%bdens(i)/tl%Rho_last(i)
       ! wcs
-      ParamVG(2,i) = ParamVG(2,i) * (Rho_s - Bdens(i))/(Rho_s - tl%Rho_last(i))
+      ParamVG(2,i) = ParamVG(2,i) * (Rho_s - state%soilwater%bdens(i))/(Rho_s - tl%Rho_last(i))
       ! ks,fit
-      ParamVG(3,i) = ParamVG(3,i) * (ParamVG(2,i)/wcs_last)**3 * (Bdens(i)/tl%Rho_last(i))**DeltaMin7
+      ParamVG(3,i) = ParamVG(3,i) * (ParamVG(2,i)/wcs_last)**3 * (state%soilwater%bdens(i)/tl%Rho_last(i))**DeltaMin7
       ! alpha
-      ParamVG(4,i) = ParamVG(4,i) * (Bdens(i)/tl%Rho_last(i))**Omega
+      ParamVG(4,i) = ParamVG(4,i) * (state%soilwater%bdens(i)/tl%Rho_last(i))**Omega
       ! lambda: do not change
       !ParamVG(5,i) = ParamVG(5,i)
       ! n
@@ -252,9 +253,9 @@ module tillage_mod
          continue
       case(2)
          Epsilon = -0.97d0 + 1.28d0 * state%soilwater%psilt(i) / state%soilwater%pclay(i)  ! [GR-BH C7]
-         ParamVG(6,i) = 1.0d0 + (ParamVG(6,i) - 1.0d0) * (Bdens(i)/tl%Rho_last(i))**Epsilon
+         ParamVG(6,i) = 1.0d0 + (ParamVG(6,i) - 1.0d0) * (state%soilwater%bdens(i)/tl%Rho_last(i))**Epsilon
       case(3)
-         ParamVG(6,i) = dmax1(1.001d0, ParamVG(6,i) + (Bdens(i) - tl%Rho_last(i)) * tl%Slope_match(i))
+         ParamVG(6,i) = dmax1(1.001d0, ParamVG(6,i) + (state%soilwater%bdens(i) - tl%Rho_last(i)) * tl%Slope_match(i))
       end select
 
       ! m = 1-1/n
@@ -407,12 +408,12 @@ module tillage_mod
                                         ',', state%soilwater%theta(i)/wcs               ! [SS-SWC S-2.6]
       end do
    end if
-write(124,'(A,1P,12E12.5)') state%timecontrol%date, Bdens(1), ParamVG(2,state%mesh%layer(1)), state%soilwater%theta(1), state%soilwater%h(1), &  ! [SS-SWC S-2.6] [GR-BH C7]
+write(124,'(A,1P,12E12.5)') state%timecontrol%date, state%soilwater%bdens(1), ParamVG(2,state%mesh%layer(1)), state%soilwater%theta(1), state%soilwater%h(1), &  ! [SS-SWC S-2.6] [GR-BH C7]
    hconduc(state%soilwater%h(1),state%soilwater%theta(1),1.0d0,state%heat%tsoil(1), &                                  ! [SS-GR-UTILS Task 6]
            state%soilwater%vg_params(1), &
            state%soilwater%iHWCKmodel(state%soilwater%layer(1)), &
            state%soilwater%fluseksatexm(1), 1, state%soilwater), ParamVG(3,state%mesh%layer(1)),          & ! [SS-SWC S-2.6] [GR-BH C7]
-   Bdens(2), ParamVG(2,state%mesh%layer(2)), state%soilwater%theta(2), state%soilwater%h(2),                           & ! [SS-SWC S-2.6] [GR-BH C7]
+   state%soilwater%bdens(2), ParamVG(2,state%mesh%layer(2)), state%soilwater%theta(2), state%soilwater%h(2),                           & ! [SS-SWC S-2.6] [GR-BH C7]
    hconduc(state%soilwater%h(2),state%soilwater%theta(2),1.0d0,state%heat%tsoil(2), &                                  ! [SS-GR-UTILS Task 6]
            state%soilwater%vg_params(2), &
            state%soilwater%iHWCKmodel(state%soilwater%layer(2)), &
@@ -423,17 +424,18 @@ write(124,'(A,1P,12E12.5)') state%timecontrol%date, Bdens(1), ParamVG(2,state%me
    
 ! **************************************************** Consolidate_Bdens *********************************************************
    subroutine Consolidate_Bdens (state)
+   ! [GR-SOL 2026-05-24] writes to state%soilwater%bdens; intent(in) → intent(inout).
    ! [SS-ATM A-2.6] state added for retired nraida
    implicit none
-   type(swap_state_t), intent(in) :: state
+   type(swap_state_t), intent(inout) :: state
    integer :: i
 
    ! [SS-TIL T-5] iTill/MaxNumSoilHo/Rho_cons/Rho_last/K_R_cons read via state%tillage
    associate(tl => state%tillage)
    if (tl%iTill == 1) return        ! in the beginning before first tillage event: do nothing
 
-   forall (i=1:tl%MaxNumSoilHo) Bdens(i) = tl%Rho_cons(i) - (tl%Rho_cons(i) - tl%Rho_last(i)) * dexp(-tl%K_R_cons(i)*state%atmosphere%nraida*10.0d0)    ! 10: to transform nraida from cm to mm
-   write(123,'(A,1P,10E12.5)') state%timecontrol%date, state%atmosphere%nraida, Bdens(1:tl%MaxNumSoilHo)
+   forall (i=1:tl%MaxNumSoilHo) state%soilwater%bdens(i) = tl%Rho_cons(i) - (tl%Rho_cons(i) - tl%Rho_last(i)) * dexp(-tl%K_R_cons(i)*state%atmosphere%nraida*10.0d0)    ! 10: to transform nraida from cm to mm
+   write(123,'(A,1P,10E12.5)') state%timecontrol%date, state%atmosphere%nraida, state%soilwater%bdens(1:tl%MaxNumSoilHo)
    end associate
    end subroutine Consolidate_Bdens
    
@@ -441,7 +443,7 @@ write(124,'(A,1P,12E12.5)') state%timecontrol%date, Bdens(1), ParamVG(2,state%me
    subroutine Change_Bdens (state)
    ! [SS-TIL T-5] state added; iTill/Rho_last/Rho_tillage read via state%tillage
    implicit none
-   type(swap_state_t), intent(in) :: state
+   type(swap_state_t), intent(inout) :: state
    integer :: i, NumSoilHo
    ! to check: why this loop to determine NumSoilHo?
    NumSoilHo = 1
@@ -452,7 +454,7 @@ write(124,'(A,1P,12E12.5)') state%timecontrol%date, Bdens(1), ParamVG(2,state%me
          exit
       end if
    end do
-   forall (i=1:NumSoilHo) Bdens(i) = tl%Rho_last(i) - I_tillage(tl%iTill) * (tl%Rho_last(i) - tl%Rho_tillage(i))
+   forall (i=1:NumSoilHo) state%soilwater%bdens(i) = tl%Rho_last(i) - I_tillage(tl%iTill) * (tl%Rho_last(i) - tl%Rho_tillage(i))
    end associate
 
    end subroutine Change_Bdens

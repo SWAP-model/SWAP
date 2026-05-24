@@ -11,7 +11,8 @@
 !! only `BDENS`.
       Subroutine Wofost_SoilParameters
 !0    Declarations
-      use variables, only: BDENS  ! [SS-GR-FINAL B7] DEFERRED — BDENS: soil bulk density array, soil config; Phase C3
+      ! [GR-SOL 2026-05-24] BDENS retired — this subroutine has no callers in
+      ! the codebase (DEAD); the DryBD = BDENS(1) line below is unreachable.
       use Wofost_Soil_Declarations
 !0.3  intermediate local variables
       Integer :: fn
@@ -172,7 +173,7 @@
       iAmendTime = 1
 
       Temp_ref      = 9.5d0
-      DryBD         = BDENS(1)
+      DryBD         = 0.0d0   ! [GR-SOL 2026-05-24] was BDENS(1); subroutine is dead (no callers)
 
       return
       End Subroutine Wofost_SoilParameters

@@ -103,8 +103,9 @@ contains
       use variables, only: &                                               ! [SS-GR-FINAL B6] residuals — all DEFERRED
                            ! DEFERRED: icrop — active crop schedule global; Phase C3
                            icrop, max_resp_factor, &   ! croptype → state%crop%common
-                           ! DEFERRED: bdens/numtablay/sptab/iHWCKmodel/c_top — soil config, no state home yet; swsophy retired
-                           bdens, numtablay, sptab, iHWCKmodel, c_top, &
+                           ! DEFERRED: numtablay/sptab/iHWCKmodel/c_top — soil config, no state home yet; swsophy retired
+                           ! [GR-SOL 2026-05-24] bdens retired — read via state%soilwater%bdens
+                           numtablay, sptab, iHWCKmodel, c_top, &
                            ! SRL/swrootradius/dry_mat_cont_roots/air_filled_root_por/spec_weight_root_tissue/var_a/root_radiusO2 retired
                            ! DEFERRED: q10/rmr/rfsetb/rid/rdctb/w_root_ss — active crop state; Phase C3; dvs/wrt/rd/cumdens retired
                            rid, w_root_ss, &  ! q10/rmr/rfsetb/rdctb retired
@@ -215,7 +216,7 @@ contains
 ! --- extract a number of variables from Swap for local use in module OxygenStress
 
 ! --- set soil density [kg m-3]      
-      soil_density = bdens(lay) 
+      soil_density = state%soilwater%bdens(lay)
 ! --- set parameter n of soil hydraulic functions
       gen_n = state%soilwater%vg_params(node)%npar          ! [SS-GR-UTILS Task 15]
 ! --- set saturated water content [-]

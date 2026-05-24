@@ -246,7 +246,7 @@ module legacy_state_mod
       real(real64) :: aqper  !! Period of prescribed sine wave of hydraulic head in deep aquifer (T)
       real(real64) :: aqtmax  !! Time with maximum hydraulic head in deep aquifer (T)
       ! [GR-DRA 2026-05-23] basegw retired — see state%drainage%basegw
-      real(real64), allocatable :: bdens(:)  !! Array with dry bulk density for each soil layer (M/L3)
+      ! [GR-SOL 2026-05-24] bdens retired — see state%soilwater%bdens
       real(real64), allocatable :: c_top(:)  !! Oxygen concentration at top of compartment(kg/m3)
       real(real64), allocatable :: o2_d_soil_term1(:)  !! Pre-calculated soil diffusion term1 per node
       real(real64), allocatable :: o2_d_soil_term2(:)  !! Pre-calculated soil diffusion term2 per node

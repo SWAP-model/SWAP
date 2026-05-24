@@ -165,6 +165,7 @@ module soilwater_state_mod
       real(real64), allocatable :: cofani(:)     !! layer anisotropy coefficient
       logical                   :: flksatexm = .false.  !! global flag: Ksatexm present in input
       real(real64), allocatable :: orgmat(:)     !! layer gravimetric organic matter
+      real(real64), allocatable :: bdens(:)      !! layer dry bulk density (g/cm3)
       real(real64), allocatable :: psand(:)      !! layer sand fraction
       real(real64), allocatable :: psilt(:)      !! layer silt fraction
       real(real64), allocatable :: pclay(:)      !! layer clay fraction
@@ -453,6 +454,10 @@ contains
       allocate(sw%cofani(nlay));         sw%cofani       = 0.0_real64
       sw%flksatexm = .false.
       allocate(sw%orgmat(nlay));         sw%orgmat       = 0.0_real64
+      ! bdens: Pattern 9 guarded alloc (config_to_variables may have done it first).
+      if (.not. allocated(sw%bdens)) then
+         allocate(sw%bdens(nlay));       sw%bdens        = 0.0_real64
+      end if
       allocate(sw%psand(nlay));          sw%psand        = 0.0_real64
       allocate(sw%psilt(nlay));          sw%psilt        = 0.0_real64
       allocate(sw%pclay(nlay));          sw%pclay        = 0.0_real64

@@ -791,7 +791,7 @@
       real(8)   aqtmax             ! Time with maximum hydraulic head in deep aquifer (T)
       ! [SS-GR-FINAL D1] atop retired — reprofunctions array never read; 0 consumers
       ! [GR-DRA 2026-05-23] basegw retired — see state%drainage%basegw
-      real(8)   bdens(maho)        ! Array with dry bulk density for each soil layer (M/L3)
+      ! [GR-SOL 2026-05-24] bdens retired — see state%soilwater%bdens
       real(8)   c_top(macp)        ! Oxygen concentration at top of compartment(kg/m3)
       
       ! Oxygen stress per-node arrays (scaffolding from OxygenStress subroutine)

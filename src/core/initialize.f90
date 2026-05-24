@@ -172,7 +172,7 @@
       aqper              = 0.0d0 
       aqtmax             = 0.0d0 
       ! [GR-DRA 2026-05-23] basegw retired — see state%drainage%basegw
-      bdens              = 0.0d0 
+      ! [GR-SOL 2026-05-24] bdens retired — see state%soilwater%bdens
       ! [SS-SWC] cgird/cinund/cnird retired — soilwater_init handles init via state%soilwater
       ! cgird              = 0.0d0
       ! cinund             = 0.0d0

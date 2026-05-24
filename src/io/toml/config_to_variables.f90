@@ -514,8 +514,12 @@ contains
       ! [GR-BH Task 36] orgmat global retired — seeded via state%soilwater%orgmat in swap_mod.f90
       ! config%soil%orgmat is consumed directly by swap_mod seeding block.
       if (allocated(config%soil%bdens)) then
+         ! state%soilwater%bdens — Pattern 9 guarded alloc (soilwater_init runs later).
+         if (.not. allocated(state%soilwater%bdens)) then
+            allocate(state%soilwater%bdens(maho)); state%soilwater%bdens = 0.0d0
+         end if
          do i = 1, size(config%soil%bdens)
-            bdens(i) = config%soil%bdens(i)
+            state%soilwater%bdens(i) = config%soil%bdens(i)
          end do
       end if
       ! [GR-BH Task 36] cofani global retired — consumed via config%soil%cofani in swap_mod.f90
@@ -615,9 +619,12 @@ contains
       ! in variables.f90) since downstream code reads them. ksatfit/ksatexm
       ! retired from adapter — state%soilwater reads directly from config [SS-GR-BH A6].
       if (allocated(config%soil%hydraulics%ores)) then
+         if (.not. allocated(state%soilwater%bdens)) then
+            allocate(state%soilwater%bdens(maho)); state%soilwater%bdens = 0.0d0
+         end if
          do i = 1, size(config%soil%hydraulics%ores)
-            h_enpr(i)  = config%soil%hydraulics%h_enpr(i)
-            bdens(i)   = config%soil%hydraulics%bdens(i)
+            h_enpr(i)                = config%soil%hydraulics%h_enpr(i)
+            state%soilwater%bdens(i) = config%soil%hydraulics%bdens(i)
          end do
 
          ! Default analytical MvG model for every soil-physical layer.
