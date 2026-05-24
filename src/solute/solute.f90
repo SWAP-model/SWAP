@@ -18,8 +18,7 @@ contains
       !   inpola/inpolb — numerical-grid interpolation arrays
       !   swinco        — soil-side initial-condition switch
       !   cml/zc        — solute initial-condition table (task=1 input only)
-      !   Z_Tp/ArMpTp   — macropore retired-zero (kept for ArMpSs guard symmetry)
-      use variables, only: bdens, inpola, inpolb, swinco, cml, zc, Z_Tp, ArMpTp
+      use variables, only: bdens, inpola, inpolb, swinco, cml, zc
       implicit none
 
       integer,            intent(in)    :: task
