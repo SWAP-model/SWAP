@@ -37,8 +37,6 @@ contains
          fldumpconvcrit, &
          ! DEFERRED: numbit/itnumb — Richards iteration counter/stats; Phase C3/D
          numbit, itnumb, &
-         ! DEFERRED: swbotb3Impl — Cauchy BC option; Phase C3
-         swbotb3Impl, &
          ! DEFERRED: CritDevh1Cp/CritDevh2Cp/CritDevPondDt — convergence criteria; Phase C3
          ! DEFERRED: flwarn_hc/iwarn_hc — non-convergence warning state; Phase C3
          flwarn_hc, iwarn_hc, &
@@ -291,7 +289,7 @@ contains
          F(NN) = (soil%theta(NN) - soil%thetm1(NN))*soil%FrArMtrx(NN)*mesh%dz(NN)/time%dt        &  ! [SS-SWC S-2.3] [TC-8]
      &         - soil%kmean(NN) * hgrad(NN) + sink(NN) - source(NN) + soil%qrot(NN)
 
-         if(swbotb.eq.3.and.swbotb3Impl.eq.1)then ! Cauchy-relation, implemented as head boundary
+         if(swbotb.eq.3.and.cfg_bb%swbotb3impl.eq.1)then ! Cauchy-relation, implemented as head boundary
             if (soil%swbotb3resvert.eq.0) then
                soil%qbot = - (soil%h(NN)+mesh%z(NN)-soil%deepgw) / (mesh%disnod(NN+1)/soil%kmean(NN+1)+cfg_bb%rimlay)
             elseif (soil%swbotb3resvert.eq.1) then
@@ -388,7 +386,7 @@ contains
          dFdhM(NN) = soil%dimoca(NN)*soil%FrArMtrx(NN)*mesh%dz(NN)/time%dt - dFdhU(NN)  ! [SS-SWC S-2.3] [TC-8]
          if(swbotb.eq.1 .and. (.not.soil%fllowgwl))then
             dFdhM(NN) = dFdhM(NN) + soil%kmean(NN+1)/(mesh%z(NN)-soil%gwlinp)
-         else if(swbotb.eq.3.and.swbotb3Impl.eq.1)then ! Cauchy
+         else if(swbotb.eq.3.and.cfg_bb%swbotb3impl.eq.1)then ! Cauchy
             if (soil%swbotb3resvert.eq.0) then
                dFdhM(NN) = dFdhM(NN) + 1.0d0 /                          &
      &                              (mesh%disnod(NN+1)/soil%kmean(NN+1)+cfg_bb%rimlay)   
@@ -585,7 +583,7 @@ contains
                F(NN) = (soil%theta(NN) - soil%thetm1(NN))*soil%FrArMtrx(NN)*mesh%dz(NN)/time%dt  &  ! [SS-SWC S-2.3] [TC-8]
      &               - soil%kmean(NN) * hgrad(NN)                            &
      &               + sink(NN) - source(NN) + soil%qrot(NN)
-               if(swbotb.eq.3.and.swbotb3Impl.eq.1)then ! Cauchy
+               if(swbotb.eq.3.and.cfg_bb%swbotb3impl.eq.1)then ! Cauchy
                   if (soil%swbotb3resvert.eq.0) then
                      soil%qbot = - (soil%h(NN)+mesh%z(NN)-soil%deepgw) /       &
      &                                 (mesh%disnod(NN+1)/soil%kmean(NN+1)+cfg_bb%rimlay)

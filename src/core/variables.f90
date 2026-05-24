@@ -745,7 +745,7 @@
       ! [SS-GR-FINAL D1] swsba retired — SBA output deleted; 0 consumers
       ! [GR-BH Task 36] retired 2026-05-13 — moved to state%soilwater%swbotb_runtime (GR-BH arc)
       ! integer   swbotb             ! Switch for bottom boundary condition (see *.SWP input file for overview)
-      integer   swbotb3Impl        ! Switch for implicit solution with lower boundary option 3 (Cauchy): 0 = explicit, 1 = implicit
+      ! [GR-SOIL 2026-05-24] swbotb3Impl retired — read via state%cfg%bottom_boundary%swbotb3impl.
       ! [GR-BND 2026-05-23] SwBotb3ResVert retired — see state%soilwater%swbotb3resvert
       integer   swcfbs             ! Switch for use of coefficient CFBS to convert potential ET into potential E: 0 = no; 1 = yes
       integer   swdiscrvert        ! Switch to convert vertical discretization for soil water quality models: 0 = no; 1 = yes

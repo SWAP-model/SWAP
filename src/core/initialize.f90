@@ -151,7 +151,7 @@
       ! [GR-BH Task 36] swbotb retired — seeded via state%soilwater%swbotb_runtime in swap_mod.f90
       ! swbotb             = 0
       ! [GR-SOL 2026-05-24] swbotbc retired — see state%solute%swbotbc
-      swbotb3Impl        = 0 
+      ! [GR-SOIL 2026-05-24] swbotb3Impl retired — read via state%cfg%bottom_boundary%swbotb3impl.
       ! [GR-BND 2026-05-23] SwBotb3ResVert retired — see state%soilwater%swbotb3resvert
       swcfbs             = 0 
       swdiscrvert        = 0 

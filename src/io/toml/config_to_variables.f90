@@ -735,7 +735,7 @@ contains
          aqamp       = config%bottom_boundary%aqamp
          aqper       = config%bottom_boundary%aqper
          aqtmax      = config%bottom_boundary%aqtmax
-         swbotb3impl = config%bottom_boundary%swbotb3impl
+         ! [GR-SOIL 2026-05-24] swbotb3impl legacy mirror dropped — direct config read.
          sw3         = config%bottom_boundary%sw3
          ! [GR-SOIL 2026-05-24] sw4 legacy mirror dropped — direct config read.
          if (config%bottom_boundary%sw3 == 2) then

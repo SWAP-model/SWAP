@@ -225,7 +225,7 @@ module legacy_state_mod
       character(len=1024) :: InList_csv  !! character string with comma-separated list of variables for CSV output
       character(len=1024) :: InList_csv_tz  !! character string with comma-separated list of variables for CSV output
       real(real64), allocatable :: tz_z1_z2(:)  !! Depth range for time-depth CSV output (default: top soil profile, bottom soil profile)
-      integer :: swbotb3Impl  !! Switch for implicit solution with lower boundary option 3 (Cauchy): 0 = explicit, 1 = implicit
+      ! [GR-SOIL 2026-05-24] swbotb3Impl retired — orphan stub; read via state%cfg%bottom_boundary%swbotb3impl.
       ! [GR-BND 2026-05-23] SwBotb3ResVert retired — see state%soilwater%swbotb3resvert
       integer :: swcfbs  !! Switch for use of coefficient CFBS to convert potential ET into potential E: 0 = no; 1 = yes
       integer :: swdiscrvert  !! Switch to convert vertical discretization for soil water quality models: 0 = no; 1 = yes
