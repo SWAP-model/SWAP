@@ -241,13 +241,8 @@ module legacy_state_mod
       ! [GR-DRA 2026-05-23] basegw retired — see state%drainage%basegw
       ! [GR-SOL 2026-05-24] bdens retired — see state%soilwater%bdens
       real(real64), allocatable :: c_top(:)  !! Oxygen concentration at top of compartment(kg/m3)
-      real(real64), allocatable :: o2_d_soil_term1(:)  !! Pre-calculated soil diffusion term1 per node
-      real(real64), allocatable :: o2_d_soil_term2(:)  !! Pre-calculated soil diffusion term2 per node
-      real(real64), allocatable :: o2_gfp100(:)  !! Gas-filled porosity * 100 per node
-      real(real64), allocatable :: o2_capac_term(:)  !! Water capacity term per node
-      real(real64), allocatable :: o2_nmin1(:)  !! N-1 per node for VG equation
-      real(real64), allocatable :: o2_mplus1(:)  !! M+1 per node for VG equation
-      logical :: o2_ini_stress  !! O2 stress initialization flag (initialized to .true. via data statement)
+      ! [GR-CROP 2026-05-25] o2_d_soil_term1/term2/gfp100/capac_term/nmin1/mplus1/
+      ! ini_stress retired — see state%crop%oxygen (fixed-size macp arrays + flag).
       real(real64) :: cofqha  !! Coefficient A in exponential relationship between drainage flux and groundwater level (L/T)
       real(real64) :: cofqhb  !! Coefficient B in exponential relationship between drainage flux and groundwater level (/T)
       real(real64) :: cofqhc  !! Coefficient C (flux) in exponential relationship between drainage flux and groundwater level (L/T)

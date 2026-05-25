@@ -115,18 +115,19 @@ contains
                            tsoil, &
                            ! DEFERRED: c_mroot/f_senes/q10_root/q10_microbial/shape_factor_rootr/specific_resp_humus — O2 config; Phase C3
                            c_mroot, f_senes, q10_root, q10_microbial, &
-                           shape_factor_rootr, specific_resp_humus, &
-                           ! DEFERRED: o2_ini_stress/o2_d_soil_term1/o2_d_soil_term2/o2_gfp100/o2_capac_term/o2_nmin1/o2_mplus1 — O2 SAVE state; needs oxygenstress_state_t
-                           o2_ini_stress, o2_d_soil_term1, o2_d_soil_term2, &
-                           o2_gfp100, o2_capac_term, o2_nmin1, o2_mplus1
+                           shape_factor_rootr, specific_resp_humus
+                           ! [GR-CROP 2026-05-25] o2_ini_stress/o2_d_soil_term1/o2_d_soil_term2/o2_gfp100/
+                           ! o2_capac_term/o2_nmin1/o2_mplus1 — O2 SAVE state migrated to state%crop%oxygen.
       use O2_pars, only: w_root,w_root_z0, soil_temp, sat_water_cont,gas_filled_porosity, d_o2inwater,d_root,        &
                          perc_org_mat,soil_density,depth, shape_factor_microbialr,root_radius, waterfilm_thickness,  &
                          bunsencoeff, c_min_micro, c_macro,ctopnode,r_microbial_z0, d_soil
       use array_utils, only: afgen
       implicit none
 
-! --- SS-HEAT Phase 2 Task 6: optional state for reading tsoil from state%heat
-      type(swap_state_t), optional, intent(in) :: state
+! --- SS-HEAT Phase 2 Task 6: optional state for reading tsoil from state%heat.
+! --- [GR-CROP 2026-05-25] state is now intent(inout) — persisted SAVE-state
+!     and per-call workspace live on state%crop%oxygen.
+      type(swap_state_t), optional, intent(inout) :: state
 
 ! --- local
       integer glit,lay,node,i,j
@@ -155,28 +156,28 @@ contains
       real(8), dimension(macp)   :: d_soil_term1, d_soil_term2, gfp100
       real(8), dimension(macp)   :: Capac_term, Nmin1, Mplus1
 
-!## MH : some initial calculations      
-      if (o2_ini_stress) then
+!## MH : some initial calculations
+      if (state%crop%oxygen%ini_stress) then
          if (state%soilwater%iHWCKmodel(state%mesh%layer(node)) == 3) then  ! [GR-SOIL 2026-05-24]
             call fatalerr_collected ('OxygenStress', 'Combination of OxygenStress and bi-modal MvG (iHWCKmodel=3) is not (yet) possible!')
          end if
          call calc_ini_pars (state%mesh%numnod)  ! [GR-BH C7]
-         ! Save to module arrays after initialization
-         o2_d_soil_term1 = d_soil_term1
-         o2_d_soil_term2 = d_soil_term2
-         o2_gfp100 = gfp100
-         o2_capac_term = Capac_term
-         o2_nmin1 = Nmin1
-         o2_mplus1 = Mplus1
-         o2_ini_stress = .false.
+         ! [GR-CROP 2026-05-25] persist per-node tables on state%crop%oxygen
+         state%crop%oxygen%d_soil_term1 = d_soil_term1
+         state%crop%oxygen%d_soil_term2 = d_soil_term2
+         state%crop%oxygen%gfp100       = gfp100
+         state%crop%oxygen%capac_term   = Capac_term
+         state%crop%oxygen%nmin1        = Nmin1
+         state%crop%oxygen%mplus1       = Mplus1
+         state%crop%oxygen%ini_stress   = .false.
       else
-         ! Load module arrays at entry for scaffolding (after first call)
-         d_soil_term1 = o2_d_soil_term1
-         d_soil_term2 = o2_d_soil_term2
-         gfp100 = o2_gfp100
-         Capac_term = o2_capac_term
-         Nmin1 = o2_nmin1
-         Mplus1 = o2_mplus1
+         ! [GR-CROP 2026-05-25] reload per-node tables from state%crop%oxygen
+         d_soil_term1 = state%crop%oxygen%d_soil_term1
+         d_soil_term2 = state%crop%oxygen%d_soil_term2
+         gfp100       = state%crop%oxygen%gfp100
+         Capac_term   = state%crop%oxygen%capac_term
+         Nmin1        = state%crop%oxygen%nmin1
+         Mplus1       = state%crop%oxygen%mplus1
       end if
 !## MH: end
 

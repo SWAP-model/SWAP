@@ -774,15 +774,10 @@
       ! [GR-DRA 2026-05-23] basegw retired — see state%drainage%basegw
       ! [GR-SOL 2026-05-24] bdens retired — see state%soilwater%bdens
       real(8)   c_top(macp)        ! Oxygen concentration at top of compartment(kg/m3)
-      
-      ! Oxygen stress per-node arrays (scaffolding from OxygenStress subroutine)
-      real(8)   o2_d_soil_term1(macp)     ! Pre-calculated soil diffusion term1 per node
-      real(8)   o2_d_soil_term2(macp)     ! Pre-calculated soil diffusion term2 per node
-      real(8)   o2_gfp100(macp)           ! Gas-filled porosity * 100 per node
-      real(8)   o2_capac_term(macp)       ! Water capacity term per node
-      real(8)   o2_nmin1(macp)            ! N-1 per node for VG equation
-      real(8)   o2_mplus1(macp)           ! M+1 per node for VG equation
-      logical   o2_ini_stress             ! O2 stress initialization flag (initialized to .true. via data statement)
+
+      ! [GR-CROP 2026-05-25] Oxygen-stress per-node SAVE-state arrays migrated
+      ! to state%crop%oxygen (d_soil_term1, d_soil_term2, gfp100, capac_term,
+      ! nmin1, mplus1, ini_stress).
       
       ! [GR-CROP-DVS] cfbs retired — see state%crop%cfbs
       ! [SS-SWC] retired 2026-05-12 — moved to state%soilwater (ADR 0038)
@@ -1385,7 +1380,7 @@
       ! logical   flWrtNonox         ! Flag indicating whether root development is retatarded by oxygen stress 
       ! [GR-CROPWS] aeratecrit retired — see state%crop%common%aeratecrit
 
-      ! Initialize o2_ini_stress to .true. (needed for first call to OxygenStress)
-      data o2_ini_stress /.true./
+      ! [GR-CROP 2026-05-25] o2_ini_stress retired — see state%crop%oxygen%ini_stress
+      ! (default initializer .true. on the type definition).
 
       end module variables
