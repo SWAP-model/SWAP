@@ -115,7 +115,7 @@ contains
 !  iteration and timing statistics
    call itertime_init(state)
 
-!  config_to_variables seeds state%timecontrol from config (Task 5).
+!  config_to_variables seeds state%timecontrol from config (Task 1).
    call config_to_variables(config, state)
 
    ! [GR-FINAL C1] state%timecontrol%iyear/imonth/dt now written directly by
@@ -132,6 +132,9 @@ contains
    call CalcGrid(state, config)
    call soilwater_init(state%soilwater, state%mesh%numnod, state%mesh%numlay)  ! SS-CRP Phase 1 C-1.2
    call state%nutrients%init(state%mesh%numlay, config%nutrients, config%general%pathwork)  ! [SS-GR-CROP A11] [GR-SEED 2026-05-25 Task 4]
+   call state%crop%irrigation%init(config%irrigation, state%timecontrol%tstart, &
+                                   state%timecontrol%tend, state%mesh, &
+                                   config%general%pathwork)                  ! [GR-SEED 2026-05-25 Task 5]
 
    ! [SS-GR-CROP A16] dual-write nutrients — WSN organic matter pools + N coupling
    ! Primary state pools (scalar or maxfn=8 array)

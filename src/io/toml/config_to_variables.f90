@@ -43,10 +43,13 @@ module config_to_variables_mod
 
    public :: config_to_variables
    public :: apply_soil_tillage
-   public :: apply_irrigation_ssdi
    ! [GR-SEED 2026-05-25 Task 4] apply_nutrients + apply_nutrients_events removed:
    ! bodies moved to nutrients_state_mod as seed_nutrients_from_config +
    ! load_nutrients_events; called from state%nutrients%init in swap_mod.
+   ! [GR-SEED 2026-05-25 Task 5] apply_irrigation_ssdi + apply_ssdi_mode0 +
+   ! apply_ssdi_mode1 removed: bodies moved to crop_irrigation_state_mod as
+   ! apply_ssdi_seed (public) + apply_ssdi_mode0/mode1 (private); called from
+   ! state%crop%irrigation%init in swap_mod.
 
 contains
 
@@ -59,7 +62,7 @@ contains
       ! 1-2 (no remaining readers). Size parameters now come from the
       ! canonical swap_array_dimensions module; everything else writes
       ! directly to state%X / config%X.
-      use swap_array_dimensions, only: macp, madr, maho, mairg, mamp, mabbc
+      use swap_array_dimensions, only: macp, madr, maho, mamp, mabbc
       use swap_state_mod, only: swap_state_t
       use error_mod, only: fatalerr_collected
       type(swap_config_t), intent(inout), target :: config  ! [GR-SOIL 2026-05-24] inout: populates config%soil%initial%z_init from h_file CSV
@@ -255,19 +258,15 @@ contains
       ! subsystems never run.
       ! [GR-CROP 2026-05-25] till_swtill mirror retired — tillage reads
       ! state%cfg%soil%swtill directly.
-      state%crop%irrigation%swssdi = config%irrigation%swssdi   ! [GR-CROP 2026-05-25]
       ! [GR-IO 2026-05-25 Phase 5] flTillage bare global retired — swap_mod and
       ! this adapter now read (config%soil%swtill == 1) directly.
       ! [GR-TIME 2026-05-25] flSSDI bare global retired — swap_mod and
       ! timecontrol_mod now read (config%irrigation%swssdi == 1) directly.
       if (config%soil%swtill == 1) call apply_soil_tillage(config%soil%tillage, state%timecontrol%tend, state)
-      if (config%irrigation%swssdi == 1) &
-                     call apply_irrigation_ssdi(config%irrigation%ssdi, &
-                                               state%timecontrol%tstart, &
-                                               state%timecontrol%tend, state, &
-                                               config%general%pathwork)
+      ! [GR-SEED 2026-05-25 Task 5] Irrigation seeding (swssdi mirror + fixed events + SSDI)
+      ! moved to state%crop%irrigation%init (called from swap_mod after CalcGrid).
       ! [GR-SEED 2026-05-25 Task 4] apply_nutrients moved to state%nutrients%init
-      ! (called from swap_mod). Body now in nutrients_state_mod as private
+      ! (called from swap_mod). Body now in nutrients_state_mod as public
       ! seed_nutrients_from_config + load_nutrients_events helpers.
       ! [GR-SOIL 2026-05-24] gwli legacy mirror dropped — direct config read.
       ! [GR-FINAL C1] pondini/pond: config%soil%pondini read directly by swap_mod after soilwater_init
@@ -642,64 +641,9 @@ contains
       ! mirrors dropped — temperature.f90 reads cfg_heat%X directly.
 
       ! ---------------------------------------------------------------
-      ! Irrigation (audit: 8 fields, top-level only)
+      ! [GR-SEED 2026-05-25 Task 5] Irrigation seeding (fixed events + SSDI)
+      ! moved to state%crop%irrigation%init (called from swap_mod after CalcGrid).
       ! ---------------------------------------------------------------
-      ! [GR-TIME 2026-05-25] swirfix legacy mirror dropped — timecontrol_mod reads
-      ! config%irrigation%swirfix directly via state%cfg; the local
-      ! `else if` guard below uses config%irrigation%swirfix in place.
-      ! [GR-CROP 2026-05-25] Fixed-irrigation event arrays canonical home is
-      ! state%crop%irrigation%{irdate,irdepth,irconc,irtype}. Legacy globals
-      ! irdate/irdepth/irconc/irtype were retired in the same commit.
-      ! Inline fixed events: copy (date, depth, conc, type) rows from
-      ! the typed config table into the state arrays. The reader already
-      ! stored col 1 as days-since-1900, so this is a straight copy.
-      ! The /10.0 on irdepth mirrors readswap.f90:503 (mm -> cm).
-      if (allocated(config%irrigation%fixed_events)) then
-         n = size(config%irrigation%fixed_events, 1)
-         do i = 1, min(n, size(state%crop%irrigation%irdate))
-            state%crop%irrigation%irdate(i)  = config%irrigation%fixed_events(i, 1)
-            state%crop%irrigation%irdepth(i) = config%irrigation%fixed_events(i, 2) / 10.0d0
-            state%crop%irrigation%irconc(i)  = config%irrigation%fixed_events(i, 3)
-            state%crop%irrigation%irtype(i)  = nint(config%irrigation%fixed_events(i, 4))
-         end do
-      else if (config%irrigation%swirfix == 1 .and. allocated(config%irrigation%fixed_events_file)) then
-         ! Phase 4f cleanup: long-form fixed-irrigation events outsourced
-         ! to a CSV companion file (date, depth_mm, conc, type). The
-         ! reader emits days-since-1900 in column 1; the rest of the
-         ! unpack mirrors the inline-fixed_events path above (mm -> cm
-         ! on depth, nint() on type). Replaces the legacy .irg HACK.
-         if (len_trim(config%irrigation%fixed_events_file) > 0) then
-            block
-               use csv_reader_mod, only: read_csv_table
-               use error_mod, only: error_collection_t
-               use iso_fortran_env, only: real64
-               real(real64), allocatable :: csv_table(:,:)
-               type(error_collection_t) :: csv_errs
-               integer :: k_csv, nrows_csv
-               character(len=5) :: irrig_header(4)
-               irrig_header(1) = 'date '
-               irrig_header(2) = 'depth'
-               irrig_header(3) = 'conc '
-               irrig_header(4) = 'type '
-               call read_csv_table( &
-                  trim(config%general%pathwork)//trim(config%irrigation%fixed_events_file), &
-                  irrig_header, csv_table, csv_errs)
-               call csv_errs%abort_if_fatal()
-               if (allocated(csv_table)) then
-                  nrows_csv = size(csv_table, 1)
-                  do k_csv = 1, min(nrows_csv, size(state%crop%irrigation%irdate))
-                     state%crop%irrigation%irdate(k_csv)  = csv_table(k_csv, 1)
-                     state%crop%irrigation%irdepth(k_csv) = csv_table(k_csv, 2) / 10.0d0  ! mm -> cm
-                     state%crop%irrigation%irconc(k_csv)  = csv_table(k_csv, 3)
-                     state%crop%irrigation%irtype(k_csv)  = nint(csv_table(k_csv, 4))
-                  end do
-               end if
-            end block
-         end if
-      end if
-      ! [GR-CROP 2026-05-25] nirri_fixed canonical cursor. Type default = 1;
-      ! reaffirmed here so swap_mod re-entries get a consistent reset.
-      state%crop%irrigation%nirri_fixed = 1
       ! cirrs / cirrthres / dcrit / isuas / perirrsurp / raithreshold /
       ! swcirrthres live in irrigation_schedule_t (per-crop), not the
       ! top-level irrigation_config_t. They are populated per-rotation
@@ -1003,204 +947,13 @@ contains
    end subroutine apply_soil_tillage
 
 
-   !> Apply [irrigation.ssdi] config to legacy `variables` globals.
-   !! Called from config_to_variables when flSSDI is true. Resolves
-   !! ssdi_z to nod_ssdi_irr(1:2) layer indices via the zbotcp walk;
-   !! mode 0 reads the events CSV (column 1 auto-converts ISO dates to
-   !! days-since-1900); mode 1 copies the scheduled sub-block; both
-   !! modes apply legacy unit conversions (mm/h -> cm/d, mm -> cm
-   !! spread over the in-zone compartments) and initialize qssdi = 0.
-   !!
-   !! Replaces SSDI_irrigation(1) and read_ssdi_input (deletion in
-   !! Task 5).
-   subroutine apply_irrigation_ssdi(ssdi, tstart, tend, state, pathwork_in)
-      use, intrinsic :: iso_fortran_env, only: real64
-      use irrigation_config_mod, only: irrigation_ssdi_t
-      use error_mod, only: fatalerr_collected
-      use swap_state_mod, only: swap_state_t
-      ! [GR-SOIL 2026-05-24] qssdi migrated to state%soilwater (zero-init via soilwater_init).
-      ! [GR-CROP 2026-05-25] dt_SSDI_event migrated to state%crop%irrigation%dt_SSDI_event.
-      ! [GR-CROP 2026-05-25] pathwork passed as explicit arg (default './') so tests don't need state%cfg set up.
-      type(irrigation_ssdi_t), intent(in)    :: ssdi
-      real(real64),            intent(in)    :: tstart, tend
-      type(swap_state_t),      intent(inout) :: state   ! [GR-BH Task 35] replaces NumNod/zbotcp globals
-      character(len=*),        intent(in), optional :: pathwork_in
-
-      integer :: i, j, nod_top, nod_bot, ncomp
-
-      ! Resolve ssdi_z(1:2) -> layer indices via zbotcp walk.
-      ! Mirrors the legacy SSDI_irrigation(1) loop at irrigation.f90:387-393.
-      ! [GR-BH Task 35] zbotcp/NumNod globals replaced by state%mesh fields.
-      ! Guard: mesh not yet populated at config_to_variables call time;
-      ! state%crop%irrigation%nod_ssdi defaults to 0 if mesh not built
-      ! (resolved after CalcGrid).
-      state%crop%irrigation%nod_ssdi = 0
-      if (state%mesh%numnod > 0 .and. allocated(state%mesh%zbotcp)) then
-         do j = 1, 2
-            i = 1
-            do while (state%mesh%zbotcp(i) > (ssdi%ssdi_z(j) + 1.0e-5_real64))
-               i = i + 1
-               if (i > state%mesh%numnod) exit
-            end do
-            state%crop%irrigation%nod_ssdi(j) = i
-         end do
-      end if
-      nod_top = state%crop%irrigation%nod_ssdi(1)
-      nod_bot = state%crop%irrigation%nod_ssdi(2)
-      ncomp   = nod_bot - nod_top + 1
-      if (ncomp < 1) then
-         call fatalerr_collected('apply_irrigation_ssdi', &
-                                 'ssdi_z resolves to zero compartments — check ssdi_z vs grid')
-      end if
-
-      ! [GR-SOIL 2026-05-24] qssdi zero-init handled by soilwater_init (state field).
-      state%crop%irrigation%dt_SSDI_event = 1.0_real64
-
-      select case (ssdi%schedule)
-      case (0)
-         if (present(pathwork_in)) then
-            call apply_ssdi_mode0(ssdi, ncomp, tstart, tend, state, pathwork_in)
-         else
-            call apply_ssdi_mode0(ssdi, ncomp, tstart, tend, state, './')
-         end if
-      case (1)
-         call apply_ssdi_mode1(ssdi, ncomp, state)
-      end select
-   end subroutine apply_irrigation_ssdi
-
-
    ! [GR-SEED 2026-05-25 Task 4] apply_nutrients + apply_nutrients_events bodies
    ! relocated to nutrients_state_mod as seed_nutrients_from_config +
    ! load_nutrients_events. Called from state%nutrients%init in swap_mod.
 
-
-   !> Mode-0 (fixed-date): stage CSV; populate ssdi_*_f_irr; deferred
-   !! date-window validation; initial nirri_ssdi_irr entry-point from tstart.
-   subroutine apply_ssdi_mode0(ssdi, ncomp, tstart, tend, state, pathwork_in)
-      use, intrinsic :: iso_fortran_env, only: real64
-      use csv_reader_mod, only: read_csv_table
-      use error_mod, only: error_collection_t, fatalerr_collected
-      use irrigation_config_mod, only: irrigation_ssdi_t
-      use swap_state_mod, only: swap_state_t
-      ! [GR-CROP 2026-05-25] pathwork now explicit arg
-      ! [GR-IO 2026-05-25 Phase 4] mairg from canonical swap_array_dimensions module
-      use swap_array_dimensions, only: mairg
-      type(irrigation_ssdi_t), intent(in)    :: ssdi
-      integer,                 intent(in)    :: ncomp
-      real(real64),            intent(in)    :: tstart, tend
-      type(swap_state_t),      intent(inout) :: state
-      character(len=*),        intent(in)    :: pathwork_in
-
-      real(real64), allocatable :: tbl(:,:)
-      type(error_collection_t)  :: errs
-      character(len=300) :: csvpath
-      character(len=8)   :: hdr(3)
-      integer :: i, n, nirri_init
-      logical :: any_in_window, window_in_dates
-
-      hdr(1) = 'date    '
-      hdr(2) = 'rate_f  '
-      hdr(3) = 'amount_f'
-      csvpath = trim(pathwork_in) // trim(ssdi%fixed%events_file)
-      call read_csv_table(trim(csvpath), hdr, tbl, errs)
-      call errs%abort_if_fatal()
-
-      n = 0
-      if (allocated(tbl)) n = size(tbl, 1)
-      if (n < 1) then
-         call fatalerr_collected('apply_irrigation_ssdi', &
-                                 'mode 0: events CSV has no rows')
-         return
-      end if
-      if (n > mairg) then
-         call fatalerr_collected('apply_irrigation_ssdi', &
-                                 'mode 0: events CSV exceeds mairg rows')
-         return
-      end if
-
-      ! state%crop%irrigation%ssdi_date / ssdi_rate_f / ssdi_amount_f are
-      ! fixed-size arrays of size(mairg); zero them and fill from the CSV.
-      associate (irr => state%crop%irrigation)
-      irr%ssdi_date     = 0.0_real64
-      irr%ssdi_rate_f   = 0.0_real64
-      irr%ssdi_amount_f = 0.0_real64
-
-      do i = 1, n
-         irr%ssdi_date(i) = tbl(i, 1)
-         if (i > 1 .and. irr%ssdi_date(i) <= irr%ssdi_date(i-1)) then
-            call fatalerr_collected('apply_irrigation_ssdi', &
-                                    'mode 0: ssdi_date not strictly ascending')
-            return
-         end if
-         ! mm/h -> cm/d (mirrors irrigation.f90:514)
-         irr%ssdi_rate_f(i)   = tbl(i, 2) * 0.1_real64 * 24.0_real64
-         ! mm -> cm, then spread over `ncomp` compartments (mirrors irrigation.f90:397)
-         irr%ssdi_amount_f(i) = (tbl(i, 3) * 0.1_real64) / real(ncomp, real64)
-      end do
-
-      ! Date-window check: at least one date in [tstart, tend], OR
-      ! [tstart, tend] contained in [date(1), date(n)].
-      ! Replaces the deleted checkdate call (irrigation.f90:552).
-      any_in_window  = .false.
-      do i = 1, n
-         if (irr%ssdi_date(i) >= tstart - 1.0e-6_real64 .and. &
-             irr%ssdi_date(i) <= tend   + 1.0e-6_real64) then
-            any_in_window = .true.
-            exit
-         end if
-      end do
-      window_in_dates = (irr%ssdi_date(1) <= tstart + 1.0e-6_real64 .and. &
-                         irr%ssdi_date(n) >= tend   - 1.0e-6_real64)
-      if (.not. any_in_window .and. .not. window_in_dates) then
-         call fatalerr_collected('apply_irrigation_ssdi', &
-                                 'mode 0: no ssdi_date within simulation period')
-      end if
-
-      ! Determine initial entry point (mirrors irrigation.f90:368-373).
-      nirri_init = 1
-      do i = 1, n - 1
-         if (tstart >= irr%ssdi_date(i)) nirri_init = i
-      end do
-      if (tstart >= irr%ssdi_date(n)) nirri_init = n
-      irr%nirri = nirri_init
-      end associate
-   end subroutine apply_ssdi_mode0
-
-
-   !> Mode-1 (scheduled-trigger): copy scheduled sub-block to legacy
-   !! globals; set nirri_ssdi_irr/dt_SSDI_event/days_counter defaults
-   !! (preserves the d8a88d6 regression-fix invariant for
-   !! dt_SSDI_event = 1.0).
-   subroutine apply_ssdi_mode1(ssdi, ncomp, state)
-      use, intrinsic :: iso_fortran_env, only: real64
-      use irrigation_config_mod, only: irrigation_ssdi_t
-      use swap_state_mod, only: swap_state_t
-      type(irrigation_ssdi_t), intent(in)    :: ssdi
-      integer,                 intent(in)    :: ncomp
-      type(swap_state_t),      intent(inout) :: state
-
-      associate (irr => state%crop%irrigation)
-      irr%ssdi_sched_type  = ssdi%scheduled%sched_type
-      irr%ssdi_threshold   = ssdi%scheduled%threshold
-      irr%ssdi_threshold_z = ssdi%scheduled%threshold_depth
-
-      ! mm -> cm, then spread over ncomp compartments (mirrors irrigation.f90:399)
-      irr%ssdi_amount      = (ssdi%scheduled%ssdi_amount * 0.1_real64) / &
-                              real(ncomp, real64)
-      ! mm/h -> cm/d (mirrors irrigation.f90:546)
-      irr%ssdi_appl_rate   = ssdi%scheduled%ssdi_appl_rate * 0.1_real64 * 24.0_real64
-
-      irr%sw_interval      = ssdi%scheduled%sw_interval
-      ! mirrors irrigation.f90:535-538
-      if (ssdi%scheduled%sw_interval == 0) then
-         irr%days_interval = 1
-      else
-         irr%days_interval = ssdi%scheduled%days_interval
-      end if
-      irr%days_counter = 366   ! mirrors irrigation.f90:540
-
-      irr%nirri = 1
-      end associate
-   end subroutine apply_ssdi_mode1
+   ! [GR-SEED 2026-05-25 Task 5] apply_irrigation_ssdi + apply_ssdi_mode0 +
+   ! apply_ssdi_mode1 bodies relocated to crop_irrigation_state_mod as
+   ! apply_ssdi_seed (public) + apply_ssdi_mode0/mode1 (private). Called from
+   ! state%crop%irrigation%init in swap_mod.
 
 end module config_to_variables_mod
