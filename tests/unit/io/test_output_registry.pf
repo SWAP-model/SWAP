@@ -1,0 +1,62 @@
+! Tests for output_registry_mod.
+
+@test
+subroutine test_var_count_is_103()
+   use funit
+   use output_registry_mod, only: var_count
+   @assertEqual(103, var_count())
+end subroutine
+
+@test
+subroutine test_first_and_last_entries()
+   use funit
+   use output_registry_mod, only: var_name, var_kind, OUT_SCALAR, OUT_SUBREGION
+   @assertEqual('RAIN', trim(var_name(1)))
+   @assertEqual(OUT_SCALAR, var_kind(1))
+   @assertEqual('QDRAINOUT[', trim(var_name(103)))
+   @assertEqual(OUT_SUBREGION, var_kind(103))
+end subroutine
+
+@test
+subroutine test_resolve_inlist_filters_and_orders()
+   use funit
+   use output_registry_mod, only: resolve_inlist
+   use error_mod,           only: error_collection_t
+   integer, allocatable     :: sel(:)
+   type(error_collection_t) :: errors
+   ! RAIN is index 1, GWL is index 14; inlist order is reversed but the
+   ! result must be in canonical (registry) order.
+   call resolve_inlist('GWL, RAIN', sel, errors)
+   @assertFalse(errors%has_errors())
+   @assertEqual(2, size(sel))
+   @assertEqual(1,  sel(1))
+   @assertEqual(14, sel(2))
+end subroutine
+
+@test
+subroutine test_resolve_inlist_bracket_disambiguation()
+   use funit
+   use output_registry_mod, only: resolve_inlist, var_name, var_kind, &
+                                   OUT_SCALAR, OUT_SUBREGION
+   use error_mod,           only: error_collection_t
+   integer, allocatable     :: sel(:)
+   type(error_collection_t) :: errors
+   ! 'QTOPIN' (scalar) and 'QTOPIN[0:-30]' (subregion) must resolve to TWO
+   ! distinct entries of different kinds.
+   call resolve_inlist('QTOPIN, QTOPIN[0:-30]', sel, errors)
+   @assertFalse(errors%has_errors())
+   @assertEqual(2, size(sel))
+   @assertEqual(OUT_SCALAR,    var_kind(sel(1)))
+   @assertEqual(OUT_SUBREGION, var_kind(sel(2)))
+end subroutine
+
+@test
+subroutine test_resolve_inlist_unknown_name_errors()
+   use funit
+   use output_registry_mod, only: resolve_inlist
+   use error_mod,           only: error_collection_t
+   integer, allocatable     :: sel(:)
+   type(error_collection_t) :: errors
+   call resolve_inlist('RAIN, NOTAVAR', sel, errors)
+   @assertTrue(errors%has_errors())
+end subroutine
