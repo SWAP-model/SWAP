@@ -41,20 +41,12 @@ module rootextraction_mod
       ! [SS-GR-FINAL B6] macp → swap_array_dimensions; remainder DEFERRED
       use swap_array_dimensions, only: macp
       use swap_log, only: log_warn
-      use variables, only: &                                               ! [SS-GR-FINAL B6] residuals — all DEFERRED
-                           ! [GR-SOIL 2026-05-24] botcom retired — read via state%mesh%botcom
+      use variables, only: &                                               ! [SS-GR-FINAL B6] residuals
+                           ! [GR-CROP 2026-05-25] retained — dead-branch (swdrought=2/swoxygen=2 stub-errored)
                            criterhr, flhydrlift,                   &
-                           ! DEFERRED: kroot/kstem/oxygenintercept — crop/log globals; Phase C3
-                           kroot, kstem, oxygenintercept,   &  ! [GR-CROP 2026-05-25] noddrz retired
-                           ! DEFERRED: oxygenslope/rdctb/rootcoefa/rooteff — active crop state; Phase C3; rd/rdm retired
-                           oxygenslope, rootcoefa, rooteff, &  ! rdctb retired
-                           ! DEFERRED: rootradius/rxylem/saltmax/saltslope/stephr — crop/solute config; Phase C3
-                           rootradius, rxylem, stephr,                    &  ! saltmax/saltslope retired
-                           ! DEFERRED: swcompensate/swdrought/swfrost/swoxygen — crop stress switches; Phase C3
-                           swfrost,                                       &  ! swcompensate/swoxygen/swdrought retired
-                           ! DEFERRED: swoxygentype/swsalinity/swstressor/swwrtnonox — crop stress switches; Phase C3
-                           ! swsalinity/swwrtnonox/swstressor/swoxygentype retired
-                           ! DEFERRED: taccur/twilt/wiltpoint — soil convergence/stress params; Phase C3
+                           kroot, kstem, oxygenintercept,   &
+                           oxygenslope, rootcoefa, rooteff, &
+                           rootradius, rxylem, stephr,      &
                            twilt, wiltpoint
       use array_utils, only: afgen
       use oxygenstress_mod, only: OxygenStress, OxygenReproFunction
@@ -71,14 +63,15 @@ module rootextraction_mod
 
       parameter (vsmall = 1.0d-14)
 
-! --- [GR-CROP 2026-05-25] sub-record aliases (crop, soil, atmo, mesh, heat, sol).
+! --- [GR-CROP 2026-05-25] sub-record aliases (crop, soil, atmo, mesh, heat, sol, cfg_soil).
       associate( &
-         crop => state%crop,            &
-         soil => state%soilwater,       &
-         atmo => state%atmosphere,      &
-         mesh => state%mesh,            &
-         heat => state%heat,            &
-         sol  => state%solute           &
+         crop     => state%crop,                 &
+         soil     => state%soilwater,            &
+         atmo     => state%atmosphere,           &
+         mesh     => state%mesh,                 &
+         heat     => state%heat,                 &
+         sol      => state%solute,               &
+         cfg_soil => state%cfg%soil              &
       )
 
 ! --- reset writes — state-only.
@@ -210,7 +203,7 @@ module rootextraction_mod
 ! ---         in output file *.STR
 
 ! ----  reduction due to frost conditions
-        if (swfrost .eq.1 .and. heat%tsoil(node) .lt. 0.0d0) then
+        if (cfg_soil%frost%swfrost .eq.1 .and. heat%tsoil(node) .lt. 0.0d0) then
           alpfrs = 0.0d0
         endif
 
