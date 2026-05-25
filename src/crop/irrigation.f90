@@ -332,10 +332,9 @@
 !!   - 9: reset SSDI event state
 subroutine SSDI_irrigation(iTask, state)
 
-! [GR-CROP 2026-05-25] dt_SSDI_event retained on legacy global — cross-file
-! consumer = src/core/timecontrol_mod.f90 (outside this sub-arc's allow-list).
-! All other SSDI persistent state migrated to state%crop%irrigation.
-use variables, only: dt_SSDI_event
+! [GR-CROP 2026-05-25] dt_SSDI_event now lives on state%crop%irrigation —
+! cross-file consumer src/core/timecontrol_mod.f90 was migrated in the
+! irrigation.f90 sub-arc follow-up. SSDI_irrigation is now use-variables-free.
 use swap_state_mod, only: swap_state_t
 
 implicit none
@@ -365,14 +364,14 @@ real(8)                         :: Tred
          irr  => state%crop%irrigation   )
       irrigevent      = 0
       soil%qssdi(1:mesh%numnod) = 0.0d0
-      dt_SSDI_event   = 1.0d0
+      irr%dt_SSDI_event = 1.0d0
       soil%qssdisum = 0.0d0
 
       if (irr%ssdi_schedule == 0) then
          ! check if today is a day with ssdi
          if (abs(irr%ssdi_date(irr%nirri) - time%t1900) .lt. 1.d-3) then
             irrigevent                     = 2
-            dt_SSDI_event                  = irr%ssdi_amount_f(irr%nirri) / irr%ssdi_rate_f(irr%nirri)
+            irr%dt_SSDI_event              = irr%ssdi_amount_f(irr%nirri) / irr%ssdi_rate_f(irr%nirri)
             soil%qssdi(irr%nod_ssdi(1):irr%nod_ssdi(2)) = irr%ssdi_rate_f(irr%nirri)
             irr%nirri                      = irr%nirri + 1
             soil%qssdisum = soil%qssdisum + sum(soil%qssdi(irr%nod_ssdi(1):irr%nod_ssdi(2)))
@@ -407,7 +406,7 @@ real(8)                         :: Tred
          end if
 
          if (irrigevent == 2) then
-            dt_SSDI_event                  = irr%ssdi_amount / irr%ssdi_appl_rate
+            irr%dt_SSDI_event              = irr%ssdi_amount / irr%ssdi_appl_rate
             soil%qssdi(irr%nod_ssdi(1):irr%nod_ssdi(2)) = irr%ssdi_appl_rate
             soil%qssdisum = soil%qssdisum + sum(soil%qssdi(irr%nod_ssdi(1):irr%nod_ssdi(2)))
          end if
@@ -420,7 +419,7 @@ real(8)                         :: Tred
       ! special: reset scheduled irrigation at end of irrigation event
       irrigevent      = 0
       state%soilwater%qssdi(1:state%mesh%numnod) = 0.0d0
-      dt_SSDI_event   = 1.0d0
+      state%crop%irrigation%dt_SSDI_event = 1.0d0
       state%soilwater%qssdisum = 0.0d0
 
    case default

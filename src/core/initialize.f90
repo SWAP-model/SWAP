@@ -308,10 +308,11 @@
       ! qredfrssum         = 0.0d0
       ! qrot               = 0.0d0
       ! [GR-SOIL 2026-05-24] qssdi init handled by soilwater_init (state field).
-      ! dt_SSDI_event = 1.0 means "no SSDI sub-day event in progress";
-      ! timecontrol.f90:423,620 read this ungated by flSSDI, so the
-      ! default must reflect the no-event state even when SSDI is off.
-      dt_SSDI_event      = 1.0d0
+      ! [GR-CROP 2026-05-25] dt_SSDI_event init handled by crop_irrigation_state_t
+      ! default (1.0_real64 = "no SSDI sub-day event in progress").
+      ! timecontrol_mod.f90:607,884 read state%crop%irrigation%dt_SSDI_event
+      ! ungated by flSSDI, so the default must reflect the no-event state
+      ! even when SSDI is off.
       ! [SS-BND B-2.7] qtop retired — soilwater_init handles init via state%soilwater
       ! qtop               = 0.0d0
       ! [GR-SOIL 2026-05-24] relsatthr retired — threshold-Ksat path not ported. 

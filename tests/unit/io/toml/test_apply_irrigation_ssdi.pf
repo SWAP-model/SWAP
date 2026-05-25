@@ -98,9 +98,8 @@ end subroutine
 subroutine test_apply_mode1_copies_scheduled_block()
    use irrigation_config_mod, only: irrigation_ssdi_t
    use config_to_variables_mod, only: apply_irrigation_ssdi
-   ! [GR-CROP 2026-05-25] SSDI persistent state migrated to state%crop%irrigation
-   ! dt_SSDI_event retained on legacy (cross-file consumer = timecontrol_mod)
-   use variables, only: dt_SSDI_event
+   ! [GR-CROP 2026-05-25] SSDI persistent state (incl. dt_SSDI_event) migrated to
+   ! state%crop%irrigation; timecontrol_mod.f90 migrated in the follow-up commit.
    use swap_state_mod, only: swap_state_t
    use, intrinsic :: iso_fortran_env, only: real64
    use funit
@@ -143,7 +142,7 @@ subroutine test_apply_mode1_copies_scheduled_block()
    @assertEqual(0,     state%crop%irrigation%sw_interval)
 
    ! Regression-fix invariant from d8a88d6: dt_SSDI_event default is 1.0
-   @assertEqual(1.0d0, dt_SSDI_event,       tolerance=1.0d-12)
+   @assertEqual(1.0d0, state%crop%irrigation%dt_SSDI_event, tolerance=1.0d-12)
 
    ! nirri entry-point initialised to 1
    @assertEqual(1, state%crop%irrigation%nirri)

@@ -980,7 +980,7 @@
       ! [SS-CRP] retired 2026-05-11 — moved to state%soilwater%qredfrs (ADR 0036)
       ! real(8)   qredfrs(macp)      ! Array with reduction of root water extraction due to frost conditions for each compartment (L/T)
       ! [GR-SOIL 2026-05-24] qssdi migrated to state%soilwater%qssdi.
-      real(8)   dt_SSDI_event      ! retained — cross-file consumer = src/core/timecontrol_mod.f90
+      ! [GR-CROP 2026-05-25] dt_SSDI_event migrated to state%crop%irrigation%dt_SSDI_event.
 
       ! [GR-CROP 2026-05-25] SSDI persistent state migrated to state%crop%irrigation:
       !   swssdi_irr, nod_ssdi_irr, ssdi_schedule_irr, ssdi_sched_type_irr,

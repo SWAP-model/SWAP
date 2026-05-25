@@ -335,8 +335,7 @@ contains
                             flCropHarvest, &
                             ! DEFERRED: croptype/icrop — crop schedule globals; Phase C3
                             icrop, &   ! croptype → state%crop%common
-                            ! DEFERRED: dt_SSDI_event — SSDI timing state; Phase C3
-                            dt_SSDI_event, &
+                            ! [GR-CROP 2026-05-25] dt_SSDI_event migrated → state%crop%irrigation%dt_SSDI_event
                             ! DEFERRED: flSSDI — SSDI feature gate; Phase C3
                             ! [GR-SOIL 2026-05-24] numbit dropped — now state%soilwater%numbit
                             flSSDI  ! [GR-CROP Phase B] raintimearray retired from here
@@ -604,8 +603,8 @@ contains
       endif
 
 !     SSDI: adapt dt as to not pass dt_SSDI_event end time of the day
-      if (dt_SSDI_event < 1.0d0) then
-         dt = max(dtmin, min(dt, dble(int(tcum) + dt_SSDI_event) - tcum))
+      if (state%crop%irrigation%dt_SSDI_event < 1.0d0) then
+         dt = max(dtmin, min(dt, dble(int(tcum) + state%crop%irrigation%dt_SSDI_event) - tcum))
       end if
 
 ! 2.10  test last time step of the day: limit dt if it exceeds end of day
@@ -659,7 +658,7 @@ contains
       endif
 
 !     SSDI: end of subsurface irirgation event reached; reset
-      if (flSSDI .and. tcum - int(tcum) + dtCrit > dt_SSDI_event) then
+      if (flSSDI .and. tcum - int(tcum) + dtCrit > state%crop%irrigation%dt_SSDI_event) then
          call SSDI_irrigation(9, state)  ! [SS-SWC S-2.12B]
       end if
 
@@ -872,8 +871,7 @@ contains
    end subroutine timecontrol_reduce_dt
 
    subroutine timecontrol_day_end(state)
-      ! [SS-GR-FINAL B8] DEFERRED: dt_SSDI_event — SSDI timing runtime state; needs irrigation_state_t; Phase C3
-      use variables, only: dt_SSDI_event
+      ! [GR-CROP 2026-05-25] dt_SSDI_event migrated → state%crop%irrigation%dt_SSDI_event
       implicit none
       type(swap_state_t), intent(inout) :: state
 
@@ -881,8 +879,8 @@ contains
       associate( dt => state%timecontrol%dt )
 
 !        special: at end of day, the possible initial time step for next day may be too large: adapt if necessary
-         if (dt_SSDI_event < 1.0d0) then
-            dt = min(dt, dt_SSDI_event)
+         if (state%crop%irrigation%dt_SSDI_event < 1.0d0) then
+            dt = min(dt, state%crop%irrigation%dt_SSDI_event)
          end if
 
       end associate

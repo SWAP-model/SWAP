@@ -1411,8 +1411,7 @@ contains
       use error_mod, only: fatalerr_collected
       use swap_state_mod, only: swap_state_t
       ! [GR-SOIL 2026-05-24] qssdi migrated to state%soilwater (zero-init via soilwater_init).
-      ! [GR-CROP 2026-05-25] dt_SSDI_event retained — cross-file consumer = src/core/timecontrol_mod.f90
-      use variables, only: dt_SSDI_event
+      ! [GR-CROP 2026-05-25] dt_SSDI_event migrated to state%crop%irrigation%dt_SSDI_event.
       type(irrigation_ssdi_t), intent(in)    :: ssdi
       real(real64),            intent(in)    :: tstart, tend
       type(swap_state_t),      intent(inout) :: state   ! [GR-BH Task 35] replaces NumNod/zbotcp globals
@@ -1445,7 +1444,7 @@ contains
       end if
 
       ! [GR-SOIL 2026-05-24] qssdi zero-init handled by soilwater_init (state field).
-      dt_SSDI_event = 1.0_real64
+      state%crop%irrigation%dt_SSDI_event = 1.0_real64
 
       select case (ssdi%schedule)
       case (0)

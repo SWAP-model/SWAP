@@ -9,10 +9,9 @@
 !! globals in variables.f90 module). The corresponding `*_irr` legacy
 !! globals retire in the same commit.
 !!
-!! dt_SSDI_event lives on the legacy global side for now — cross-file
-!! consumer is src/core/timecontrol_mod.f90 which is outside the crop
-!! sub-arc's allow-list. A future timecontrol-side migration will rehome
-!! it here (state%crop%irrigation%dt_SSDI_event).
+!! dt_SSDI_event lives on this sub-record as of 2026-05-25 — the
+!! cross-file consumer src/core/timecontrol_mod.f90 was migrated as
+!! part of the irrigation.f90 sub-arc follow-up.
 module crop_irrigation_state_mod
    use, intrinsic :: iso_fortran_env, only: real64
    use swap_array_dimensions, only: mairg
@@ -39,6 +38,7 @@ module crop_irrigation_state_mod
       ! SSDI runtime cursor/counter state
       integer      :: days_counter      = 366        !! Days since previous application
       integer      :: nirri             = 1          !! SSDI counter / entry point into ssdi_date
+      real(real64) :: dt_SSDI_event     = 1.0_real64 !! Sub-day SSDI event end fraction (1.0 = no event)
 
       ! Fixed-date schedule tables (mode 0)
       real(real64) :: ssdi_date(mairg)     = 0.0_real64 !! Fixed irrigation dates (days-since-1900)

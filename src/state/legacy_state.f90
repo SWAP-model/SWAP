@@ -289,7 +289,7 @@ module legacy_state_mod
       ! [GR-DRA 2026-05-23] qdrtab retired — see state%drainage%qdrtab
       ! [GR-SOIL 2026-05-24] qimmob retired — orphan stub, fingered-flow flux retired-zero in waterbalance.f90.
       ! [GR-SOIL 2026-05-24] qssdi + qssdisum migrated to state%soilwater (orphan stubs).
-      real(real64) :: dt_SSDI_event  !! retained — cross-file consumer = src/core/timecontrol_mod.f90
+      ! [GR-CROP 2026-05-25] dt_SSDI_event migrated to state%crop%irrigation%dt_SSDI_event.
       ! [GR-CROP 2026-05-25] SSDI persistent state migrated to state%crop%irrigation
       ! (16 fields: swssdi_irr, nod_ssdi_irr, ssdi_schedule_irr, ssdi_sched_type_irr,
       !  nod_ssdi_sensor_irr, ssdi_threshold_irr, ssdi_threshold_z_irr, ssdi_amount_irr,
