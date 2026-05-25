@@ -470,11 +470,12 @@
       real(8)   wrttot, wrtdis(202), qrotdis(202), qreddis(202)
       logical   found
 
-      ! SS-TC TC-10: date read via state%timecontrol tc_date alias.
+      ! [GR-CROP 2026-05-25] sub-record associate style
       associate( &
-        tc_date  => state%timecontrol%date,     &  ! TC-10
-        cumdens  => state%crop%common%cumdens,  &  ! [SS-GR-CROPRT B9] alias for cumdens state read/write
-        noddrz   => state%crop%common%noddrz    &  ! [SS-GR-CROPRT B9] alias for noddrz state read
+        crop => state%crop%common,    &  ! crop runtime (cumdens, noddrz, ...)
+        soil => state%soilwater,      &  ! soil-water runtime (qredtot_day, qpotrot_day)
+        mesh => state%mesh,           &  ! mesh discretization (zbotcp, ztopcp)
+        time => state%timecontrol     &  ! time control (date)
       )
 
 ! --- update normalized cumulative root density based on root extraction or stress (cumdens)
@@ -483,37 +484,37 @@
         ! root extraction of each compartment since start of the day
         rel_qrot_day = 0.d0
         rel_qred_day = 0.d0
-        do node = 1,noddrz
-          rel_qrot_day = rel_qrot_day + 1 - state%soilwater%qredtot_day(node) / state%soilwater%qpotrot_day(node)
-          rel_qred_day = rel_qred_day + state%soilwater%qredtot_day(node)
+        do node = 1,crop%noddrz
+          rel_qrot_day = rel_qrot_day + 1 - soil%qredtot_day(node) / soil%qpotrot_day(node)
+          rel_qred_day = rel_qred_day + soil%qredtot_day(node)
         enddo
 
         if ((gwrt .gt. 0.d0 .and. rel_qrot_day .gt. 0.d0) .or. (gwrt .lt. 0.d0 .and. rel_qred_day .gt. 0.d0)) then
 
           ! distribution roots and root extraction at relative depth
           ! root extraction and root weight based on previous day
-          rd_noddrz = abs(state%mesh%zbotcp(noddrz))  ! [GR-BH C7]
+          rd_noddrz = abs(mesh%zbotcp(crop%noddrz))
           node = 1
           do i = 4,202,2
 
             ! root distribution of previous day
-            wrtdis(i) = (cumdens(i) - cumdens(i-2)) * (state%crop%wofost%wrt - gwrt)  ! [SS-GR-CROPRT B9] wrt via state
+            wrtdis(i) = (crop%cumdens(i) - crop%cumdens(i-2)) * (state%crop%wofost%wrt - gwrt)
 
             ! determine optimal extraction and maximum reduction at relative depth
             found = .false.
             qrotdis(i) = 0.d0
             qreddis(i) = 0.d0
-            top = - cumdens(i-3) * rd_noddrz
-            bot = - cumdens(i-1) * rd_noddrz
+            top = - crop%cumdens(i-3) * rd_noddrz
+            bot = - crop%cumdens(i-1) * rd_noddrz
             do while (.not. found)
-              if (bot .ge. state%mesh%zbotcp(node)) then  ! [GR-BH C7]
-                qrotdis(i) = qrotdis(i) + (1 - state%soilwater%qredtot_day(node) / state%soilwater%qpotrot_day(node)) / (state%mesh%ztopcp(node) - state%mesh%zbotcp(node)) * (top - bot)  ! [GR-BH C7]
-                qreddis(i) = qreddis(i) + state%soilwater%qredtot_day(node) / (state%mesh%ztopcp(node) - state%mesh%zbotcp(node)) * (top - bot)  ! [GR-BH C7]
+              if (bot .ge. mesh%zbotcp(node)) then
+                qrotdis(i) = qrotdis(i) + (1 - soil%qredtot_day(node) / soil%qpotrot_day(node)) / (mesh%ztopcp(node) - mesh%zbotcp(node)) * (top - bot)
+                qreddis(i) = qreddis(i) + soil%qredtot_day(node) / (mesh%ztopcp(node) - mesh%zbotcp(node)) * (top - bot)
                 found = .true.
               else
-                qrotdis(i) = qrotdis(i) + (1 - state%soilwater%qredtot_day(node) / state%soilwater%qpotrot_day(node)) / (state%mesh%ztopcp(node) - state%mesh%zbotcp(node)) * (top - state%mesh%zbotcp(node))  ! [GR-BH C7]
-                qreddis(i) = qreddis(i) + state%soilwater%qredtot_day(node) / (state%mesh%ztopcp(node) - state%mesh%zbotcp(node)) * (top - state%mesh%zbotcp(node))  ! [GR-BH C7]
-                top = state%mesh%zbotcp(node)  ! [GR-BH C7]
+                qrotdis(i) = qrotdis(i) + (1 - soil%qredtot_day(node) / soil%qpotrot_day(node)) / (mesh%ztopcp(node) - mesh%zbotcp(node)) * (top - mesh%zbotcp(node))
+                qreddis(i) = qreddis(i) + soil%qredtot_day(node) / (mesh%ztopcp(node) - mesh%zbotcp(node)) * (top - mesh%zbotcp(node))
+                top = mesh%zbotcp(node)
                 node = node + 1
               end if
             end do
@@ -534,29 +535,27 @@
           end if
 
           ! update normalized cumulative root density distribution
-          ! cumdens is now state%crop%common%cumdens via ASSOCIATE (B9)
           sum = 0.d0
           do i = 4,202,2
             sum = sum + wrtdis(i)
-            cumdens(i) = sum / wrttot  ! writes directly to state%crop%common%cumdens(i) [SS-GR-CROPRT B9]
+            crop%cumdens(i) = sum / wrttot
           end do
-          ! state%crop%common%cumdens(4:202:2) = cumdens(4:202:2) — removed: cumdens IS state [SS-GR-CROPRT B9]
 
         end if
 
         ! TEMPORARY OUTPUT  DELETE
         do i = 2,202,2
-          write(777,*) trim(tc_date), ",", cumdens(i-1), ",", cumdens(i)
+          write(777,*) trim(time%date), ",", crop%cumdens(i-1), ",", crop%cumdens(i)
         end do
 
-        do node = 1,noddrz
-          write(888,'(a11,",",i4,3(",",f15.5))') trim(tc_date), node, state%soilwater%qpotrot_day(node), state%soilwater%qredtot_day(node)
+        do node = 1,crop%noddrz
+          write(888,'(a11,",",i4,3(",",f15.5))') trim(time%date), node, soil%qpotrot_day(node), soil%qredtot_day(node)
         end do
         ! TEMPORARY OUTPUT  DELETE
 
 !      end if
 
-      end associate  ! tc_date, cumdens (→state%crop%common%), noddrz (→state%crop%common%) [SS-GR-CROPRT B9]
+      end associate  ! crop, soil, mesh, time
       return
       end subroutine update_rootdistribution
 
@@ -618,10 +617,10 @@
 
       save
 
-      ! SS-TC TC-10: t1900,date read via state%timecontrol tc_* aliases.
+      ! [GR-CROP 2026-05-25] sub-record associate style
       associate( &
-        tc_t1900 => state%timecontrol%t1900,  &  ! TC-10
-        tc_date  => state%timecontrol%date    &  ! TC-10
+        mesh => state%mesh,           &  ! mesh discretization (z, numnod)
+        time => state%timecontrol     &  ! time control (t1900, date)
       )
 
       comma = ','
@@ -634,8 +633,8 @@
           fltsimprev = .false.
           ! find depth of compartment with critical soil temperature
           cmpcrit = 1
-          do node = 1, state%mesh%numnod  ! [GR-BH C7]
-             if (state%mesh%z(node) .le. (-1.0d0*tsumdepth)) then  ! [GR-BH C7]
+          do node = 1, mesh%numnod
+             if (mesh%z(node) .le. (-1.0d0*tsumdepth)) then
                 cmpcrit = node
                 exit
              endif
@@ -684,7 +683,7 @@
           ! no growth as long as 3 criteria are not met
           flGrassGrowth = .false.
           if(fltsumtemp .and. fltsimprev .and. fltsimcount) then
-              call dtdpst ('year-month-day',tc_t1900,dateGrassGrowth)
+              call dtdpst ('year-month-day',time%t1900,dateGrassGrowth)
               flGrassGrowth = .true.
           endif
 
@@ -694,13 +693,13 @@
           endif
 
           ! === write output
-          write (uo,200) tc_date,comma,state%mesh%z(cmpcrit),comma,tsoil(cmpcrit), &  ! [GR-BH C7]
+          write (uo,200) time%date,comma,mesh%z(cmpcrit),comma,tsoil(cmpcrit), &
      &           comma,fltsumtemp,comma,fltsimprev,comma,fltsimcount
  200      format (a11,2(a1,f7.2),3(a1,i3))
 
       end select
 
-      end associate  ! tc_t1900, tc_date => state%timecontrol [TC-10]
+      end associate  ! mesh, time
       return
       end subroutine sumttd
 
