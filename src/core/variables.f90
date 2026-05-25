@@ -131,8 +131,7 @@
       ! [SS-TC] retired 2026-05-12 — moved to state%timecontrol%* (ADR 0041)
       ! integer   wrecord            ! moved to state%timecontrol%wrecord
       ! integer   yearmeteo          ! moved to state%timecontrol%yearmeteo
-      integer   ad(mrain)          ! Array with day numbers in meteo file
-      integer   am(mrain)          ! Array with month numbers in meteo file
+      ! [GR-IO 2026-05-25 Phase 3] ad/am retired — moved to state%atmosphere%{ad,am}
       real(8)   aetr(366)          ! Array with daily ETref input data (L/T)
       real(8)   ahum(366)          ! Array with daily humidity input data (M/L/T2)  
       ! ========================================================================
@@ -210,21 +209,11 @@
       ! logical   flmetdetail        ! moved to state%timecontrol%flmetdetail
       ! logical   flrainintens       ! moved to state%timecontrol%flrainintens
       ! logical   flupdmetdet        ! moved to state%timecontrol%flUpdMetDet
-      character(len=200) metfil    ! Name of meteorological input file
-      character(len=80) pathatm    ! Path to folder with meteorological input files
-      ! CSV meteo cache: pre-loaded by adapter, sliced per year by MeteoCSVYear.
-      ! Column layout (daily): 1=date, 2=rad(kJ/m2/d), 3=tmin, 4=tmax, 5=hum, 6=wind, 7=rain, 8=etref, 9=wet
-      integer :: nmetcsv = 0
-      real(8), dimension(:,:), allocatable :: metcsv_dat
-      ! Detail CSV cache (swmetdetail=1): 7 columns per ADR 0014.
-      ! 1=datetime(frac days since JD1900), 2=record, 3=rad(kJ/m2/d),
-      ! 4=temp(C), 5=hum(kPa), 6=wind(m/s), 7=rain(mm)
-      integer :: nmetcsv_det = 0
-      real(8), dimension(:,:), allocatable :: metcsv_det
-      ! Rain events CSV cache: pre-loaded by adapter, sliced per year by ReadRainEvents.
-      ! Column layout: 1=datetime (fractional days since JD2415020), 2=amount (mm)
-      integer :: nraincsv = 0
-      real(8), dimension(:,:), allocatable :: raincsv_dat
+      ! [GR-IO 2026-05-25 Phase 3] metfil retired — read from config%meteo%metfile
+      ! [GR-IO 2026-05-25 Phase 3] pathatm retired — read from config%general%pathatm
+      ! [GR-IO 2026-05-25 Phase 3] CSV meteo caches migrated to state%atmosphere:
+      !   nmetcsv/metcsv_dat (daily), nmetcsv_det/metcsv_det (sub-daily),
+      !   nraincsv/raincsv_dat (rain events).
 !   - atmosphere SAVE variable state (refactored from local SAVE)
       ! [GR-ATM 2026-05-23] tsunrise_atm/tsunset_atm retired — see state%atmosphere%tsun{rise,set}_atm  
       integer   nod10_cn           ! Node at -10cm for CN runoff method - from meteoday.f90 CNmethod

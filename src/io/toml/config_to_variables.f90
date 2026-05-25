@@ -66,7 +66,7 @@ contains
       ! ---------------------------------------------------------------
       if (allocated(config%general%project))   project   = config%general%project
       if (allocated(config%general%pathwork))  pathwork  = config%general%pathwork
-      if (allocated(config%general%pathatm))   pathatm   = config%general%pathatm
+      ! [GR-IO 2026-05-25 Phase 3] pathatm legacy mirror dropped — readers go through config%general%pathatm
       ! [GR-CROP 2026-05-25] pathcrop legacy write retired — bare global was orphan
       !   (config%general%pathcrop is the canonical read).
       if (allocated(config%general%pathdrain)) pathdrain = config%general%pathdrain
@@ -134,50 +134,55 @@ contains
       state%timecontrol%msteps        = config%simulation%numerical%msteps
       ! Meteorology (audit: 12 + evaporation + snow)
       ! ---------------------------------------------------------------
-      if (allocated(config%meteo%metfile))  metfil  = config%meteo%metfile
+      ! [GR-IO 2026-05-25 Phase 3] metfil/pathatm legacy mirror writes dropped —
+      ! readmeteo.f90/meteo_io.f90 read config%general%pathatm and
+      ! config%meteo%metfile directly. CSV pre-load now writes into
+      ! state%atmosphere%{metcsv_dat,nmetcsv,metcsv_det,nmetcsv_det,
+      ! raincsv_dat,nraincsv}.
       ! Legacy `rainfil` global removed (ADR 0014).
-      ! `config%meteo%rainfile` is no longer copied into a global because
-      ! the only consumer (the `.YYY` per-year rain reader in readmeteo.f90)
-      ! has been deleted; CSV rain events use `config%meteo%rain_events_file`.
-      ! [GR-TIME 2026-05-25] swetsine legacy mirror dropped — readers go through
-      ! config%meteo%swetsine (timecontrol_mod) and atmo%swetsine (atmosphere_state).
-      ! [GR-ATM 2026-05-23] angstroma/b retired — snapshotted in atmosphere_state%init
+      ! [GR-TIME 2026-05-25] swetsine legacy mirror dropped.
+      ! [GR-ATM 2026-05-23] angstroma/b retired.
 
       ! All metfile extensions other than .csv are rejected by
       ! meteorology_config_validate (ADR 0014). The `.csv` guard below
-      ! is defense-in-depth — the validator already enforced this before
-      ! the adapter ran.
-      call lowerc(metfil)
+      ! is defense-in-depth — local lowercase copy avoids mutating config.
+      block
+         character(len=300) :: metfile_lc
 
-      if (index(trim(metfil), '.csv') > 0) then
-         block
-            use csv_reader_mod,  only: read_csv_table
-            use error_mod,       only: error_collection_t
-            real(8), allocatable :: tbl(:,:)
-            type(error_collection_t) :: errs
-            character(len=9) :: hdr(9)
-            character(len=300) :: csvpath
-            integer :: r
-            hdr(1) = 'date     '
-            hdr(2) = 'rad      '
-            hdr(3) = 'tmin     '
-            hdr(4) = 'tmax     '
-            hdr(5) = 'hum      '
-            hdr(6) = 'wind     '
-            hdr(7) = 'rain     '
-            hdr(8) = 'etref    '
-            hdr(9) = 'wet      '
-            csvpath = trim(pathatm) // trim(metfil)
-            call read_csv_table(trim(csvpath), hdr, tbl, errs)
-            call errs%abort_if_fatal()
-            nmetcsv = size(tbl, 1)
-            if (allocated(metcsv_dat)) deallocate(metcsv_dat)
-            allocate(metcsv_dat(nmetcsv, 9))
-            do r = 1, nmetcsv
-               metcsv_dat(r, :) = tbl(r, :)
-            end do
-         end block
-      end if
+         metfile_lc = ''
+         if (allocated(config%meteo%metfile))  metfile_lc = config%meteo%metfile
+         call lowerc(metfile_lc)
+
+         if (index(trim(metfile_lc), '.csv') > 0) then
+            block
+               use csv_reader_mod,  only: read_csv_table
+               use error_mod,       only: error_collection_t
+               real(8), allocatable :: tbl(:,:)
+               type(error_collection_t) :: errs
+               character(len=9) :: hdr(9)
+               character(len=300) :: csvpath
+               integer :: r
+               hdr(1) = 'date     '
+               hdr(2) = 'rad      '
+               hdr(3) = 'tmin     '
+               hdr(4) = 'tmax     '
+               hdr(5) = 'hum      '
+               hdr(6) = 'wind     '
+               hdr(7) = 'rain     '
+               hdr(8) = 'etref    '
+               hdr(9) = 'wet      '
+               csvpath = trim(config%general%pathatm) // trim(metfile_lc)
+               call read_csv_table(trim(csvpath), hdr, tbl, errs)
+               call errs%abort_if_fatal()
+               state%atmosphere%nmetcsv = size(tbl, 1)
+               if (allocated(state%atmosphere%metcsv_dat)) deallocate(state%atmosphere%metcsv_dat)
+               allocate(state%atmosphere%metcsv_dat(state%atmosphere%nmetcsv, 9))
+               do r = 1, state%atmosphere%nmetcsv
+                  state%atmosphere%metcsv_dat(r, :) = tbl(r, :)
+               end do
+            end block
+         end if
+      end block
 
       ! Detail meteo CSV pre-load (swmetdetail=1 + detail_file provided).
       ! Metfile is always CSV here (validator rejects non-.csv per ADR
@@ -202,14 +207,14 @@ contains
                hdr(5) = 'hum     '
                hdr(6) = 'wind    '
                hdr(7) = 'rain    '
-               csvpath = trim(pathatm) // trim(config%meteo%detail_file)
+               csvpath = trim(config%general%pathatm) // trim(config%meteo%detail_file)
                call read_csv_table(trim(csvpath), hdr, tbl, errs)
                call errs%abort_if_fatal()
-               nmetcsv_det = size(tbl, 1)
-               if (allocated(metcsv_det)) deallocate(metcsv_det)
-               allocate(metcsv_det(nmetcsv_det, 7))
-               do r = 1, nmetcsv_det
-                  metcsv_det(r, :) = tbl(r, :)
+               state%atmosphere%nmetcsv_det = size(tbl, 1)
+               if (allocated(state%atmosphere%metcsv_det)) deallocate(state%atmosphere%metcsv_det)
+               allocate(state%atmosphere%metcsv_det(state%atmosphere%nmetcsv_det, 7))
+               do r = 1, state%atmosphere%nmetcsv_det
+                  state%atmosphere%metcsv_det(r, :) = tbl(r, :)
                end do
             end block
          end if
@@ -228,14 +233,14 @@ contains
                integer :: r
                hdr(1) = 'datetime'
                hdr(2) = 'amount  '
-               csvpath = trim(pathatm) // trim(config%meteo%rain_events_file)
+               csvpath = trim(config%general%pathatm) // trim(config%meteo%rain_events_file)
                call read_csv_table(trim(csvpath), hdr, tbl, errs)
                call errs%abort_if_fatal()
-               nraincsv = size(tbl, 1)
-               if (allocated(raincsv_dat)) deallocate(raincsv_dat)
-               allocate(raincsv_dat(nraincsv, 2))
-               do r = 1, nraincsv
-                  raincsv_dat(r, :) = tbl(r, :)
+               state%atmosphere%nraincsv = size(tbl, 1)
+               if (allocated(state%atmosphere%raincsv_dat)) deallocate(state%atmosphere%raincsv_dat)
+               allocate(state%atmosphere%raincsv_dat(state%atmosphere%nraincsv, 2))
+               do r = 1, state%atmosphere%nraincsv
+                  state%atmosphere%raincsv_dat(r, :) = tbl(r, :)
                end do
             end block
          end if

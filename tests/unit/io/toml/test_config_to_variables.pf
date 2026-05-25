@@ -16,7 +16,8 @@ subroutine test_config_to_variables_general_section()
    use config_to_variables_mod, only: config_to_variables
    use swap_state_mod, only: swap_state_t
    ! [GR-CROP 2026-05-25] pathcrop retired — only assertions on remaining legacy paths
-   use variables, only: project, pathwork, pathatm, pathdrain
+   ! [GR-IO 2026-05-25 Phase 3] pathatm legacy mirror retired — assert via config%general%pathatm
+   use variables, only: project, pathwork, pathdrain
    implicit none
    type(swap_config_t) :: config
    type(swap_state_t)  :: state
@@ -38,7 +39,7 @@ subroutine test_config_to_variables_general_section()
 
    @assertEqual("phase4f_unit", trim(project))
    @assertEqual("./work/",      trim(pathwork))
-   @assertEqual("./atm/",       trim(pathatm))
+   @assertEqual("./atm/",       trim(config%general%pathatm))
    ! [GR-CROP 2026-05-25] pathcrop assertion retired — bare global no longer written
    @assertEqual("./drain/",     trim(pathdrain))
    ! TimeControl config fields now go to state%timecontrol (SS-BMI2 Task 5)

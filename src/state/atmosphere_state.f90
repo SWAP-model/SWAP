@@ -267,6 +267,22 @@ module atmosphere_state_mod
       real(real64) :: rainfluxarray(mrain)      = 0.0_real64 !! Array with short duration rainfall intensities (L/T)
       real(real64) :: raintimearray(mrain)      = 0.0_real64 !! Array with times (T) at which rainfall intensity changes
 
+      ! [GR-IO 2026-05-25 Phase 3] Per-year meteo-file date columns.
+      ! Written by MeteoCSVYear / read_meteo_from_external_buffer_year,
+      ! read by ReadMeteoYear for validation + raintimearray init.
+      integer :: ad(mrain) = 0  !! day-of-month per meteo-file day
+      integer :: am(mrain) = 0  !! month per meteo-file day
+
+      ! [GR-IO 2026-05-25 Phase 3] Pre-loaded CSV data caches.
+      ! Adapter (config_to_variables) loads the CSV files once at init;
+      ! per-year extractors in readmeteo.f90 slice these caches by date.
+      integer :: nmetcsv = 0  !! row count of daily meteo CSV cache
+      real(real64), allocatable :: metcsv_dat(:,:)  !! daily meteo CSV cache (rows × 9 cols)
+      integer :: nmetcsv_det = 0  !! row count of detailed (sub-daily) meteo CSV cache
+      real(real64), allocatable :: metcsv_det(:,:)  !! detailed meteo CSV cache (rows × 7 cols)
+      integer :: nraincsv = 0  !! row count of rain events CSV cache
+      real(real64), allocatable :: raincsv_dat(:,:)  !! rain events CSV cache (rows × 2 cols)
+
    contains
       procedure :: init => atmosphere_state_init
    end type atmosphere_state_t

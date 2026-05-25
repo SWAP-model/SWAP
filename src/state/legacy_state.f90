@@ -26,8 +26,7 @@ module legacy_state_mod
       ! [GR-ATM 2026-05-23] detrecord/irectotal retired — see state%atmosphere%{detrecord,irectotal}
       ! [GR-CROP 2026-05-25] nofd retired — see state%atmosphere%nofd
       ! [GR-TIME 2026-05-25] swetsine retired — read from config%meteo%swetsine
-      integer, allocatable :: ad(:)  !! Array with day numbers in meteo file
-      integer, allocatable :: am(:)  !! Array with month numbers in meteo file
+      ! [GR-IO 2026-05-25 Phase 3] ad/am retired — moved to state%atmosphere%{ad,am}
       real(real64), allocatable :: aetr(:)  !! Array with daily ETref input data (L/T)
       real(real64), allocatable :: ahum(:)  !! Array with daily humidity input data (M/L/T2)
       ! [GR-ATM 2026-05-23] angstroma/b retired — see state%atmosphere%angstrom{a,b}
@@ -51,8 +50,8 @@ module legacy_state_mod
       ! [GR-ATM 2026-05-23] tmx retired — see state%atmosphere%tmx
       real(real64), allocatable :: tpot(:)  !! In case of detailed weather input, calculated Tpot of each weather record (L/T)
       real(real64), allocatable :: wet(:)  !! Fraction of each day the crop is wet (L)
-      character(len=200) :: metfil  !! Name of meteorological input file
-      character(len=80) :: pathatm  !! Path to folder with meteorological input files
+      ! [GR-IO 2026-05-25 Phase 3] metfil retired — read from config%meteo%metfile
+      ! [GR-IO 2026-05-25 Phase 3] pathatm retired — read from config%general%pathatm
       ! [GR-ATM 2026-05-23] tsunrise_atm/tsunset_atm retired — see state%atmosphere%tsun{rise,set}_atm
       integer :: nod10_cn  !! Node at -10cm for CN runoff method - from meteoday.f90 CNmethod
       integer :: icn_atm  !! Current position in CN time table - from meteoday.f90 CNmethod

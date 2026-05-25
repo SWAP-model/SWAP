@@ -13,13 +13,8 @@
 !     Last modified      : March 2014
 !     Purpose            : read meteorological data of one calendar year
 ! ----------------------------------------------------------------------
-      ! [SS-GR-FINAL B1] bare use variables retired; switches → config%meteo/heat/soil;
-      ! [SS-GR-FINAL B2] atmn/atmx/arai/wet retired — body reads via state%atmosphere%X;
-      ! remaining narrow imports cover symbols not yet in state/config:
-      !   pathatm, metfil  — filnam construction (error-message context only; ADR 0014 CSV-only path)
-      !   ad, am           — per-day date arrays (written by CSV subs to variables; read here for
-      !                      raintimearray init and date validation loops — deferred to body cutover)
-      use variables, only: pathatm, metfil, ad, am
+      ! [GR-IO 2026-05-25 Phase 3] pathatm/metfil → config%general/meteo;
+      ! ad/am → state%atmosphere%{ad,am}.
       use meteodt_mod, only: MeteoDT
       use swap_state_mod, only: swap_state_t
       use swap_config_mod, only: swap_config_t
@@ -45,12 +40,15 @@
       real(8)   tmeteo,tmnmax,tmnmin,tmxmax,tmxmin,winmax,winmin
 
       ! [SS-TC TC-14] alias TC fields so bare names resolve to state%timecontrol
+      ! [GR-IO 2026-05-25 Phase 3] ad/am aliased to state%atmosphere
       associate( &
         tc_t1900       => state%timecontrol%t1900,       &
         tc_flYearStart => state%timecontrol%flYearStart, &
         yearmeteo      => state%timecontrol%yearmeteo,   &
         timjan1        => state%timecontrol%timjan1,     &
-        swmeteo        => state%timecontrol%swmeteo )
+        swmeteo        => state%timecontrol%swmeteo,     &
+        ad             => state%atmosphere%ad,           &
+        am             => state%atmosphere%am )
 
 !========================= Read Meteo file =============================
 
@@ -105,7 +103,7 @@
 
 ! --- compose filename meteorological file
       write (ext,'(i3.3)') mod(yearmeteo,1000)
-      filnam = trim(pathatm)//trim(metfil)//'.'//trim(ext)
+      filnam = trim(config%general%pathatm)//trim(config%meteo%metfile)//'.'//trim(ext)
 
 
 ! --- get values from file; two options:
@@ -270,8 +268,7 @@
 ! ----------------------------------------------------------------------
       ! [SS-TC TC-14] yearmeteo retired — read via state%timecontrol
       ! [GR-CROP C11] nmrain/rainamount/raintimearray → write directly to state%atmosphere%X
-      ! [SS-GR-FINAL B1] raincsv_dat/nraincsv still in variables — data source cache, not output; deferred
-      use variables, only: raincsv_dat, nraincsv
+      ! [GR-IO 2026-05-25 Phase 3] raincsv_dat/nraincsv → state%atmosphere
 
       implicit none
       ! [SS-GR-CROP A5.5] changed to inout for rain timing dual-writes
@@ -298,13 +295,14 @@
       t_dec31 = real(jday(yearmeteo, 12, 31) - jd1900, 8) + 1.0d0
 
       ! [GR-CROP C11] write directly to state%atmosphere%X (legacy global writes dropped)
+      ! [GR-IO 2026-05-25 Phase 3] raincsv_dat/nraincsv read from state%atmosphere
       ifnd = 0
-      do i = 1, nraincsv
-         if (raincsv_dat(i,1) >= t_jan1 - 0.5d0 .and. &
-     &       raincsv_dat(i,1) <  t_dec31 + 0.5d0) then
+      do i = 1, state%atmosphere%nraincsv
+         if (state%atmosphere%raincsv_dat(i,1) >= t_jan1 - 0.5d0 .and. &
+     &       state%atmosphere%raincsv_dat(i,1) <  t_dec31 + 0.5d0) then
             ifnd = ifnd + 1
-            state%atmosphere%raintimearray(ifnd) = raincsv_dat(i,1)
-            state%atmosphere%rainamount(ifnd)    = raincsv_dat(i,2)
+            state%atmosphere%raintimearray(ifnd) = state%atmosphere%raincsv_dat(i,1)
+            state%atmosphere%rainamount(ifnd)    = state%atmosphere%raincsv_dat(i,2)
          end if
       end do
 
@@ -371,10 +369,7 @@ subroutine read_meteo_from_external_buffer_year(ifnd, state)
 use meteo_buffer_mod, only: get_external_meteo_value, get_external_meteo_n_days, &
                             get_external_meteo_n_cols
 use swap_state_mod,   only: swap_state_t
-! [SS-GR-FINAL B2] arad/atmn/atmx/ahum/awin/arai/aetr/wet + daynrfirst/daynrlast legacy writes dropped;
-!                  write state%atmosphere%X directly. ad/am still written to variables (consumed by
-!                  ReadMeteoYear validation + raintimearray loop — deferred to ReadMeteoYear body cutover).
-use variables,        only: ad, am
+! [GR-IO 2026-05-25 Phase 3] ad/am → state%atmosphere
 use swap_array_dimensions, only: NMETFILE
 implicit none
 integer,             intent(out)   :: ifnd
@@ -387,6 +382,11 @@ integer             :: datea(6)
 real(4)             :: fsec
 integer             :: jday
 external               jday
+
+! Alias state%atmosphere%ad/am for in-place writes (must run after declarations).
+associate( &
+  ad => state%atmosphere%ad, &
+  am => state%atmosphere%am)
 
 ! Year boundaries in days-since-jd1900 (same convention as metcsv_dat)
 t_jan1  = real(jday(state%timecontrol%yearmeteo,  1,  1) - jd1900, 8)
@@ -445,6 +445,7 @@ datea(2) = am(ifnd); datea(3) = ad(ifnd)
 call dtardp(datea, fsec, tval)
 state%atmosphere%daynrlast = nint(tval - state%timecontrol%timjan1 + 1.0d0)  ! [SS-GR-FINAL B2] write state directly
 
+end associate
 end subroutine read_meteo_from_external_buffer_year
 
 
@@ -457,12 +458,7 @@ end subroutine read_meteo_from_external_buffer_year
 subroutine MeteoCSVYear(ifnd, state)
 use error_mod, only: fatalerr_collected
 use swap_state_mod, only: swap_state_t
-! [SS-TC TC-14] yearmeteo/timjan1 retired — accessed via state%timecontrol
-! [SS-GR-FINAL B2] arad/atmn/atmx/ahum/awin/arai/aetr/wet + daynrfirst/daynrlast legacy writes dropped;
-!                  write state%atmosphere%X directly. ad/am still written to variables (consumed by
-!                  ReadMeteoYear validation + raintimearray loop — deferred to ReadMeteoYear body cutover).
-!                  metcsv_dat/nmetcsv are the CSV data source cache, not output — retained.
-use variables, only: ad, am, metcsv_dat, nmetcsv
+! [GR-IO 2026-05-25 Phase 3] ad/am/metcsv_dat/nmetcsv → state%atmosphere
 implicit none
 integer, intent(out) :: ifnd
 type(swap_state_t), intent(inout) :: state
@@ -476,6 +472,13 @@ integer, parameter :: jd1900 = 2415020
 ! Forward declaration: jday is defined later in this file.
 integer :: jday
 external jday
+
+! Alias state%atmosphere fields for clean read/write.
+associate( &
+  ad         => state%atmosphere%ad,         &
+  am         => state%atmosphere%am,         &
+  metcsv_dat => state%atmosphere%metcsv_dat, &
+  nmetcsv    => state%atmosphere%nmetcsv )
 
 ! Year boundaries in days-since-jd1900
 t_jan1  = real(jday(state%timecontrol%yearmeteo,  1,  1) - jd1900, 8)
@@ -531,6 +534,7 @@ datea(2) = am(n); datea(3) = ad(n)
 call dtardp(datea, fsec, tval)
 state%atmosphere%daynrlast = nint(tval - state%timecontrol%timjan1 + 1.0d0)  ! [SS-GR-FINAL B2] write state directly
 
+end associate
 end subroutine MeteoCSVYear
 
 
@@ -543,7 +547,7 @@ end subroutine MeteoCSVYear
 subroutine MeteoCSVDetYear(ifnd, state)
 use error_mod, only: fatalerr_collected
 use swap_state_mod, only: swap_state_t
-use variables, only: metcsv_det, nmetcsv_det
+! [GR-IO 2026-05-25 Phase 3] metcsv_det/nmetcsv_det → state%atmosphere
 use swap_array_dimensions, only: NMETFILE
 implicit none
 integer, intent(out) :: ifnd
@@ -556,6 +560,11 @@ external jday
 
 integer  :: i, i1, i2, n
 real(8)  :: t_jan1, t_jan1_next
+
+! Alias state%atmosphere detail-cache fields.
+associate( &
+  metcsv_det  => state%atmosphere%metcsv_det, &
+  nmetcsv_det => state%atmosphere%nmetcsv_det )
 
 ! Year boundaries in days-since-jd1900.
 ! All sub-daily timestamps for yearmeteo satisfy:
@@ -614,6 +623,7 @@ state%atmosphere%dethum(1:n)    = metcsv_det(i1:i2, 5)
 state%atmosphere%detwind(1:n)   = metcsv_det(i1:i2, 6)
 state%atmosphere%detrain(1:n)   = metcsv_det(i1:i2, 7)
 
+end associate
 end subroutine MeteoCSVDetYear
 
 
