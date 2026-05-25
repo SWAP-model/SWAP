@@ -459,17 +459,13 @@
 !              extraction or transpiration reduction (uncompensated).
 ! ----------------------------------------------------------------------
 
-      ! [SS-SWC S-2.12B] qpotrot_day/qredtot_day retired — read via state%soilwater
-      ! SS-TC TC-10: date read via state%timecontrol tc_date alias (removed from variables use).
-      ! [SS-GR-CROPRT B9] DEFERRED — update_rootdistribution:
-      !   gwrt: root growth rate (computed in wofost task=3), no state home
-      !   wrtmin: minimum root weight at relative depth, no state home
-      ! MIGRATED B9: noddrz → state%crop%common%noddrz (read-only loop bound)
-      ! MIGRATED B9: cumdens → state%crop%common%cumdens (full array in state after init;
-      !   odd/even indices all set at CropGrowth task=1 via full array copy line 195)
-      ! MIGRATED B9: wrt → state%crop%wofost%wrt (WOFOST root biomass; read prev-day value;
-      !   dual-write in wofost keeps state%crop%wofost%wrt current)
-      use variables, only: gwrt, wrtmin  ! [SS-GR-CROPRT B9] DEFERRED — no state home
+      ! [GR-CROP 2026-05-25] update_rootdistribution reads only.
+      !   gwrt/wrtmin: written by cropgrass_runtime.f90 and cropwofost_runtime.f90 — those
+      !     files own the cross-rotation last-consumer retirement; for now we keep the
+      !     bare-global imports here as a read-only window. state%crop%wofost has new
+      !     gwrt/wrtmin fields staged for the runtime cutover.
+      !   noddrz/cumdens/wrt: already on state%crop%common / state%crop%wofost.
+      use variables, only: gwrt, wrtmin
       use swap_state_mod, only: swap_state_t  ! [SS-SWC S-2.12B]
       ! local
       implicit none
@@ -594,17 +590,16 @@
 !   via grass's tsoil dummy arg. Global tsoil excluded via rename.
 ! SS-TC TC-10: state added (intent in); t1900,date read via state%timecontrol tc_* aliases.
 ! ----------------------------------------------------------------------
-      ! [SS-GR-CROPRT B10] DEFERRED — sumttd (stub-path: swtsum=2 is stub-errored):
-      !   tsumdepth, tsumtemp, tsumtime: grass growth start thresholds; config fields in
-      !     cropgrass_config%tsumdepth/tsumtemp/tsumtime; migration deferred because swtsum=2
-      !     path is stub-errored in cropgrass_config.f90 (line 290) — code is unreachable
-      !     until swtsum=2 is implemented; no state home needed until then
-      !   pathwork, outfil, project: file-path globals; [SS-GR-CROPRT B] DEFERRED file-path arc
-      !   tsoil: config-staging buffer, renamed to avoid clash with dummy arg.
-      use variables, only: tsumdepth, tsumtemp, tsumtime, &     ! [SS-GR-CROPRT B10] DEFERRED — stub-path (swtsum=2)
-                           pathwork, outfil, project,     &     ! [SS-GR-CROPRT B10] DEFERRED — file-path globals
-                           dummy_tsoil_sumttd_ => tsoil         ! config-staging buffer
-      use file_io_mod, only: file_open
+      ! [GR-CROP 2026-05-25] sumttd is dead-branch (Class E).
+      !   Called only from cropgrass_runtime.f90:299 when state%crop%grass%swtsum==2.
+      !   The cropgrass config validator (cropgrass_config.f90:290) stub-errors
+      !   swtsum=2, so this routine is unreachable in the TOML pipeline. The body
+      !   (which read tsumdepth/tsumtemp/tsumtime + pathwork/outfil/project legacy
+      !   globals plus a tsoil staging-buffer rename) has been replaced with a
+      !   fatalerr_collected stub. When swtsum=2 is restored, port the body's
+      !   threshold reads to cropgrass_config%tsumtemp/tsumtime/tsumdepth and the
+      !   I/O reads to state%cfg%general%X.
+      use error_mod, only: fatalerr_collected
       use swap_state_mod, only: swap_state_t
       implicit none
 
@@ -616,103 +611,22 @@
       !! Soil temperature array from state%heat%tsoil.
       type(swap_state_t), intent(in) :: state
 
-! --- local
-      integer    :: tsumtimecum      ! cumulative, from 1-jan, time (nrs of sequential days) with temp above tsumtemp for grass growth [1..20 days, I]
-      logical    :: fltsumtemp       ! flag to indicate if temperature criteria is met
-      logical    :: fltsimprev       ! flag to indicate if temperature criterion is met during simulated previous day
-      logical    :: fltsimcount      ! flag to indicate nr of contiuous simulated days that temperature criteria is met
-      integer    :: cmpcrit, node
-!     output
-      integer    :: uo   !, idum, ios
-      character(len=160)  :: filnam, filtext
-      character(len=1)  :: comma
-      logical    :: flexist, flopened
+      ! Suppress "unused dummy argument" warnings.
+      if (.false.) then
+         flGrassGrowth   = .false.
+         dateGrassGrowth = ''
+         if (size(tsoil) > 0 .or. associated(state%cfg)) continue
+      end if
 
-      save
+      call fatalerr_collected('sumttd', &
+        'sumttd is dead-branch (swtsum=2 stub-guarded in cropgrass_config.f90:290). ' // &
+        'Body retired in 2026-05-25 arc; restore via cropgrass_config thresholds + ' // &
+        'state%cfg%general I/O when swtsum=2 wiring is implemented.')
 
-      ! [GR-CROP 2026-05-25] sub-record associate style
-      associate( &
-        mesh => state%mesh,           &  ! mesh discretization (z, numnod)
-        time => state%timecontrol     &  ! time control (t1900, date)
-      )
-
-      comma = ','
-
-      select case(task)
-
-      case('initial')
-          tsumtimecum = 0
-          fltsumtemp = .false.
-          fltsimprev = .false.
-          ! find depth of compartment with critical soil temperature
-          cmpcrit = 1
-          do node = 1, mesh%numnod
-             if (mesh%z(node) .le. (-1.0d0*tsumdepth)) then
-                cmpcrit = node
-                exit
-             endif
-          enddo
-          ! no growth as long as 3 criteria are not met
-          flGrassGrowth = .false.
-          dateGrassGrowth = 'undefined'
-
-          ! === open output file and write headers
-          filnam = trim(pathwork)//trim(outfil)//'.ttd'
-          flopened = .false.
-          if(uo.gt.0) then
-              !  Inquiry by Unit
-              inquire (uo, opened=flopened, exist=flexist)
-          endif
-          if (.not.flexist .and. .not.flopened) then
-              call file_open(uo, filnam, 'replace', 'write')
-              filtext = 'output of subr sumttd'
-              call writehead (uo,1,filnam,filtext,project)
-              write (uo,100)
- 100          format (' Date,z(cmpcrit),tsoil(cmpcrit),',               &
-     &           'fltsumtemp,fltsimprev,fltsimcount')
-          endif
-
-      case('dynamic')
-          ! temperature and depth criterium
-          ! SS-HEAT pre-Task-8: tsoil read from dummy arg (state%heat%tsoil via caller chain).
-          if(tsoil(cmpcrit).ge.tsumtemp) then
-              fltsumtemp = .true.
-          else
-              fltsumtemp = .false.
-          endif
-          ! timing criterium: set flag for continuous days that exceed critical temperature
-          if(fltsumtemp .and. fltsimprev) then
-              tsumtimecum = tsumtimecum + 1
-          else
-              tsumtimecum = 0
-              fltsimprev = .false.
-          endif
-          !  timing criterium: count nr of days exceeding critical temperature
-          if(tsumtimecum.ge.tsumtime) then
-              fltsimcount = .true.
-          else
-              fltsimcount = .false.
-          endif
-          ! no growth as long as 3 criteria are not met
-          flGrassGrowth = .false.
-          if(fltsumtemp .and. fltsimprev .and. fltsimcount) then
-              call dtdpst ('year-month-day',time%t1900,dateGrassGrowth)
-              flGrassGrowth = .true.
-          endif
-
-          ! timing criteria for next timestep
-          if(fltsumtemp) then
-              fltsimprev = .true.
-          endif
-
-          ! === write output
-          write (uo,200) time%date,comma,mesh%z(cmpcrit),comma,tsoil(cmpcrit), &
-     &           comma,fltsumtemp,comma,fltsimprev,comma,fltsimcount
- 200      format (a11,2(a1,f7.2),3(a1,i3))
-
-      end select
-
-      end associate  ! mesh, time
+      ! Defensive defaults (never reached due to fatalerr above).
+      flGrassGrowth = .false.
+      dateGrassGrowth = 'undefined'
+      if (task == 'initial' .or. task == 'dynamic') return
       return
       end subroutine sumttd
 
