@@ -101,13 +101,14 @@ end subroutine
 subroutine test_apply_populates_legacy_globals()
    use, intrinsic :: iso_fortran_env, only: real64
    use cropwofost_config_mod, only: wofost_nutrient_t
-   use cropwofost_init_mod,   only: apply_cropwofost_nutrient,                  &
+   ! [GR-CROP 2026-05-25] All nutrient cluster scalars migrated from the
+   ! legacy `variables` module to cropwofost_init_mod cw_* module-level SAVE.
+   use cropwofost_init_mod,   only: apply_cropwofost_nutrient,                       &
                                     cw_tcnt, cw_dvsnlt, cw_dvsnt, cw_rdrns, cw_fntrt, &
-                                    cw_fraharlosorm_lv, cw_fraharlosorm_st, cw_fraharlosorm_so
-   ! [GR-CROP 2026-05-25] tcnt/dvsnlt/dvsnt/rdrns/fntrt + fraharlosorm_* migrated
-   ! from variables module to cropwofost_init_mod cw_* SAVE.
-   use variables, only: lrnr, lsnr, nlue, rnflv, rnfst, frnx, nmxlv,           &
-                        nlai, nmaxso, npart, nfixf, nsla, rnfrt, ilnmxl
+                                    cw_fraharlosorm_lv, cw_fraharlosorm_st, cw_fraharlosorm_so, &
+                                    cw_lrnr, cw_lsnr, cw_nlue, cw_rnflv, cw_rnfst, cw_frnx, &
+                                    cw_nlai, cw_nmaxso, cw_npart, cw_nfixf, cw_nsla, cw_rnfrt, &
+                                    cw_nmxlv, cw_ilnmxl
    use funit
    implicit none
    type(wofost_nutrient_t) :: cfg
@@ -138,31 +139,31 @@ subroutine test_apply_populates_legacy_globals()
 
    call apply_cropwofost_nutrient(cfg)
 
-   ! Module-level globals populated from cfg
-   @assertEqual(0.50_real64,   lrnr,   tolerance=1.0e-12_real64)
-   @assertEqual(0.50_real64,   lsnr,   tolerance=1.0e-12_real64)
-   @assertEqual(1.10_real64,   nlue,   tolerance=1.0e-12_real64)
-   @assertEqual(0.0040_real64, rnflv,  tolerance=1.0e-12_real64)
-   @assertEqual(0.0015_real64, rnfst,  tolerance=1.0e-12_real64)
-   @assertEqual(0.50_real64,   frnx,   tolerance=1.0e-12_real64)
+   ! Module-level cw_* scalars populated from cfg
+   @assertEqual(0.50_real64,   cw_lrnr,   tolerance=1.0e-12_real64)
+   @assertEqual(0.50_real64,   cw_lsnr,   tolerance=1.0e-12_real64)
+   @assertEqual(1.10_real64,   cw_nlue,   tolerance=1.0e-12_real64)
+   @assertEqual(0.0040_real64, cw_rnflv,  tolerance=1.0e-12_real64)
+   @assertEqual(0.0015_real64, cw_rnfst,  tolerance=1.0e-12_real64)
+   @assertEqual(0.50_real64,   cw_frnx,   tolerance=1.0e-12_real64)
 
-   @assertEqual(1.00_real64,   nlai,   tolerance=1.0e-12_real64)
-   @assertEqual(0.0176_real64, nmaxso, tolerance=1.0e-12_real64)
-   @assertEqual(1.00_real64,   npart,  tolerance=1.0e-12_real64)
-   @assertEqual(0.00_real64,   nfixf,  tolerance=1.0e-12_real64)
-   @assertEqual(0.50_real64,   nsla,   tolerance=1.0e-12_real64)
-   @assertEqual(0.0048_real64, rnfrt,  tolerance=1.0e-12_real64)
+   @assertEqual(1.00_real64,   cw_nlai,   tolerance=1.0e-12_real64)
+   @assertEqual(0.0176_real64, cw_nmaxso, tolerance=1.0e-12_real64)
+   @assertEqual(1.00_real64,   cw_npart,  tolerance=1.0e-12_real64)
+   @assertEqual(0.00_real64,   cw_nfixf,  tolerance=1.0e-12_real64)
+   @assertEqual(0.50_real64,   cw_nsla,   tolerance=1.0e-12_real64)
+   @assertEqual(0.0048_real64, cw_rnfrt,  tolerance=1.0e-12_real64)
    @assertEqual(10.00_real64,  cw_tcnt,   tolerance=1.0e-12_real64)
    @assertEqual(1.00_real64,   cw_dvsnlt, tolerance=1.0e-12_real64)
    @assertEqual(0.80_real64,   cw_dvsnt,  tolerance=1.0e-12_real64)
    @assertEqual(0.05_real64,   cw_rdrns,  tolerance=1.0e-12_real64)
    @assertEqual(0.15_real64,   cw_fntrt,  tolerance=1.0e-12_real64)
 
-   ! NMXLV(1:ilnmxl) populated; ILNMXL = size(cfg%nmxlv)
-   call assertEqual(3, ilnmxl, 'ilnmxl matches size(cfg%nmxlv)')
-   @assertEqual(0.06_real64, nmxlv(1), tolerance=1.0e-12_real64)
-   @assertEqual(0.04_real64, nmxlv(2), tolerance=1.0e-12_real64)
-   @assertEqual(0.02_real64, nmxlv(3), tolerance=1.0e-12_real64)
+   ! cw_nmxlv(1:cw_ilnmxl) populated; cw_ilnmxl = size(cfg%nmxlv)
+   call assertEqual(3, cw_ilnmxl, 'cw_ilnmxl matches size(cfg%nmxlv)')
+   @assertEqual(0.06_real64, cw_nmxlv(1), tolerance=1.0e-12_real64)
+   @assertEqual(0.04_real64, cw_nmxlv(2), tolerance=1.0e-12_real64)
+   @assertEqual(0.02_real64, cw_nmxlv(3), tolerance=1.0e-12_real64)
 
    ! Harvest fractions
    @assertEqual(0.50_real64, cw_fraharlosorm_lv, tolerance=1.0e-12_real64)

@@ -56,6 +56,32 @@ module cropwofost_init_mod
    real(real64), public, save :: cw_verndvs  = 0.0_real64
    real(real64), public, save :: cw_vernsat  = 0.0_real64
    real(real64), public, save :: cw_vernrtb(30) = 0.0_real64  ! 2-col table flat slice (size 30 to match legacy)
+   ! [GR-CROP 2026-05-25] Nutrient cluster (config snapshots + runtime SAVE).
+   ! Owned by the cropwofost init+runtime pair. Written by
+   ! apply_cropwofost_nutrient (from cfg) and by wofost() (runtime updates);
+   ! read by wofost() and wofost_apply_nstress (which lives in the runtime).
+   real(real64), public, save :: cw_nlue   = 0.0_real64
+   real(real64), public, save :: cw_lrnr   = 0.0_real64
+   real(real64), public, save :: cw_lsnr   = 0.0_real64
+   real(real64), public, save :: cw_rnflv  = 0.0_real64
+   real(real64), public, save :: cw_rnfst  = 0.0_real64
+   real(real64), public, save :: cw_rnfrt  = 0.0_real64
+   real(real64), public, save :: cw_frnx   = 0.0_real64
+   real(real64), public, save :: cw_nlai   = 0.0_real64
+   real(real64), public, save :: cw_nmaxso = 0.0_real64
+   real(real64), public, save :: cw_npart  = 0.0_real64
+   real(real64), public, save :: cw_nfixf  = 0.0_real64
+   real(real64), public, save :: cw_nsla   = 0.0_real64
+   real(real64), public, save :: cw_nmxlv(30) = 0.0_real64
+   integer,      public, save :: cw_ilnmxl  = 0
+   ! Runtime nutrient state (computed inside wofost; persists across task=1/2/3/4):
+   real(real64), public, save :: cw_anlv   = 0.0_real64
+   real(real64), public, save :: cw_anst   = 0.0_real64
+   real(real64), public, save :: cw_nni    = 0.0_real64
+   real(real64), public, save :: cw_fstr   = 0.0_real64
+   real(real64), public, save :: cw_nmaxlv = 0.0_real64
+   real(real64), public, save :: cw_nmaxst = 0.0_real64
+   real(real64), public, save :: cw_nmaxrt = 0.0_real64
 
 contains
 
@@ -490,46 +516,42 @@ contains
    !! See ADR 0025 ([nutrients] N1).
    subroutine apply_cropwofost_nutrient(cfg)
       use cropwofost_config_mod, only: wofost_nutrient_t
-      use variables, only: &
-                           lrnr, lsnr, nlue, rnflv, rnfst, frnx, nmxlv,            &
-                           nlai, nmaxso, npart, nfixf, nsla, rnfrt, ilnmxl
-      ! [GR-CROP 2026-05-25] tcnt/dvsnlt/dvsnt/rdrns/fntrt/fraharlosorm_* migrated
-      ! to module-level cw_* SAVE in this module (cropwofost_init_mod).
+      ! [GR-CROP 2026-05-25] tcnt/dvsnlt/dvsnt/rdrns/fntrt/fraharlosorm_*/
+      ! lrnr/lsnr/nlue/rnflv/rnfst/frnx/nlai/nmaxso/npart/nfixf/nsla/rnfrt/
+      ! nmxlv/ilnmxl all live as module-level cw_* SAVE in this module.
       type(wofost_nutrient_t), intent(in) :: cfg
 
       integer :: n
 
-      ! Module-level scalars (cross-file legacy: still consumed by cropgrowth)
-      lrnr   = cfg%lrnr
-      lsnr   = cfg%lsnr
-      nlue   = cfg%nlue
-      rnflv  = cfg%rnflv
-      rnfst  = cfg%rnfst
-      frnx   = cfg%frnx
+      ! Config-derived nutrient snapshots — module storage:
+      cw_lrnr   = cfg%lrnr
+      cw_lsnr   = cfg%lsnr
+      cw_nlue   = cfg%nlue
+      cw_rnflv  = cfg%rnflv
+      cw_rnfst  = cfg%rnfst
+      cw_frnx   = cfg%frnx
 
-      ! Newly-promoted module variables (cross-file legacy: still consumed by cropgrowth)
-      nlai   = cfg%nlai
-      nmaxso = cfg%nmaxso
-      npart  = cfg%npart
-      nfixf  = cfg%nfixf
-      nsla   = cfg%nsla
-      rnfrt  = cfg%rnfrt
+      cw_nlai   = cfg%nlai
+      cw_nmaxso = cfg%nmaxso
+      cw_npart  = cfg%npart
+      cw_nfixf  = cfg%nfixf
+      cw_nsla   = cfg%nsla
+      cw_rnfrt  = cfg%rnfrt
 
-      ! cropwofost-pair-internal nutrient snapshots — own storage in this module
       cw_tcnt   = cfg%tcnt
       cw_dvsnlt = cfg%dvsnlt
       cw_dvsnt  = cfg%dvsnt
       cw_rdrns  = cfg%rdrns
       cw_fntrt  = cfg%fntrt
 
-      ! NMXLV array — copy entries; ILNMXL records the active length
+      ! NMXLV array — copy entries; cw_ilnmxl records the active length
       n = 0
       if (allocated(cfg%nmxlv)) n = size(cfg%nmxlv)
-      ilnmxl = n
-      nmxlv  = 0.0_real64
-      if (n > 0) nmxlv(1:n) = cfg%nmxlv(1:n)
+      cw_ilnmxl = n
+      cw_nmxlv  = 0.0_real64
+      if (n > 0) cw_nmxlv(1:n) = cfg%nmxlv(1:n)
 
-      ! Harvest fractions — own storage in this module
+      ! Harvest fractions
       cw_fraharlosorm_lv = cfg%frahar_los_orm_lv
       cw_fraharlosorm_st = cfg%frahar_los_orm_st
       cw_fraharlosorm_so = cfg%frahar_los_orm_so

@@ -155,9 +155,8 @@ module legacy_state_mod
       ! [GR-CROP 2026-05-25] remoc retired — see crop_config_global%rotation_wofost(icrop)%bulb%remoc
       ! [GR-CROP-DVS] plwt retired — see state%crop%wofost%plwt
       logical :: flCropNut  !! Flag indicating simulation of crop nutrient stress
-      real(real64), allocatable :: nmxlv(:)
-      integer :: ilnmxl
-      real(real64) :: fstr  !! [SS-GR-FINAL D1] amFERT retired — 0 consumers
+      ! [GR-CROP 2026-05-25] nmxlv/ilnmxl/fstr retired — see cropwofost_init_mod cw_*
+      ! [SS-GR-FINAL D1] amFERT retired — 0 consumers
       ! [GR-CROP 2026-05-25] till_* Group AB stubs retired — migrated to
       !   state%tillage (Ntill/Ntypes/i_n_model/iRedist/Max_Z_tillage/...).
       !   swtill canonical home is state%cfg%soil%swtill.

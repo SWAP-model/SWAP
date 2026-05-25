@@ -571,19 +571,13 @@
       logical   flCropNut          ! Flag indicating simulation of crop nutrient stress
       logical :: flTillage = .false.   !! ADR 0020 call-site gate for DoTillage
       logical :: flSSDI    = .false.   !! ADR 0020 call-site gate for SSDI_irrigation
-      real(8)   nmxlv(30)
-      real(8)   nlue,anlv,anst,nmaxlv,nmaxst,nmaxrt
-      real(8)   lrnr,lsnr,nni,rnflv,rnfst,frnx
-      ! N-P-K nutrient parameters from cropwofost.nutrient (N1 of [nutrients] umbrella).
-      ! Promoted from local-to-wofost-subroutine after spec brainstorming
-      ! revealed they could not be reached from a config-load-time adapter
-      ! while declared as locals. See ADR 0025.
-      real(8)   nlai, nmaxso, npart, nfixf
-      real(8)   nsla, rnfrt
-      ! [GR-CROP 2026-05-25] tcnt/dvsnlt/dvsnt/rdrns/fntrt retired — see cropwofost_init_mod cw_*
-      ! [GR-CROP 2026-05-25] fraharlosorm_lv/st/so retired — see cropwofost_init_mod cw_*
-      integer   ilnmxl
-      real(8)   fstr
+      ! [GR-CROP 2026-05-25] Nutrient cluster retired — migrated to module-level
+      ! cw_* SAVE in cropwofost_init_mod (cropwofost init+runtime pair scope).
+      ! Retired symbols: nmxlv, nlue, anlv, anst, nmaxlv, nmaxst, nmaxrt,
+      !   lrnr, lsnr, nni, rnflv, rnfst, frnx, nlai, nmaxso, npart, nfixf,
+      !   nsla, rnfrt, ilnmxl, fstr,
+      !   tcnt/dvsnlt/dvsnt/rdrns/fntrt,
+      !   fraharlosorm_lv/st/so.
       ! [SS-GR-FINAL D1] amFERT retired — 0 consumers
 
 ! --- tillage variables: legacy bridge retired
