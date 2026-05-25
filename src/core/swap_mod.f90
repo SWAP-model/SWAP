@@ -131,7 +131,7 @@ contains
    ! [GR-BH Task 35] CalcGrid now writes directly to state%mesh%X; state%mesh%init bridge retired
    call CalcGrid(state, config)
    call soilwater_init(state%soilwater, state%mesh%numnod, state%mesh%numlay)  ! SS-CRP Phase 1 C-1.2
-   call state%nutrients%init(state%mesh%numlay)                                ! [SS-GR-CROP A11]
+   call state%nutrients%init(state%mesh%numlay, config%nutrients, config%general%pathwork)  ! [SS-GR-CROP A11] [GR-SEED 2026-05-25 Task 4]
 
    ! [SS-GR-CROP A16] dual-write nutrients — WSN organic matter pools + N coupling
    ! Primary state pools (scalar or maxfn=8 array)
