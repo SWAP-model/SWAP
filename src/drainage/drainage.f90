@@ -77,55 +77,8 @@ module drainage_mod
 
    public :: drainage
    public :: bocodrb, bocodre
-   public :: drainage_init
 
 contains
-
-   !> Allocate and initialise all per-level arrays in state%drainage.
-   !! Called from swap_main AFTER config_to_variables so that
-   !! config-sourced geometry (e.g. wetper for dramet==2) can be
-   !! seeded directly from config into state.
-   !! ADR 0031 Phase 2 Task 5: drainl/wetper/ztopdislay/qdrd globals
-   !! deleted; geometry is now seeded from config, flux arrays zeroed.
-   subroutine drainage_init(state, config)
-      use, intrinsic :: iso_fortran_env, only: real64
-      use swap_state_mod, only: swap_state_t
-      use swap_config_mod, only: swap_config_t
-      ! [GR-BH Task 35] drainage_init is called AFTER CalcGrid (swap_mod.f90 line 108 vs 185),
-      ! so state%mesh%numnod is already populated. numnod global deleted; use state%mesh%numnod.
-      ! [GR-BH Task 37] nrlevs global deleted; use config%drain%nrlevs (authoritative single source).
-      use swap_array_dimensions, only: MAOWL
-      type(swap_state_t),  intent(inout) :: state
-      type(swap_config_t), intent(in)    :: config
-      integer :: nr
-
-      nr = config%drain%nrlevs
-      if (.not. allocated(state%drainage%qdrain))     allocate(state%drainage%qdrain(nr))
-      if (.not. allocated(state%drainage%drainl))     allocate(state%drainage%drainl(nr))
-      if (.not. allocated(state%drainage%wetper))     allocate(state%drainage%wetper(nr))
-      if (.not. allocated(state%drainage%ztopdislay)) allocate(state%drainage%ztopdislay(nr))
-      if (.not. allocated(state%drainage%qdra))       allocate(state%drainage%qdra(nr, state%mesh%numnod))
-      if (.not. allocated(state%drainage%L))          allocate(state%drainage%L(nr))
-      if (.not. allocated(state%drainage%zbotdr))     allocate(state%drainage%zbotdr(nr))
-      if (.not. allocated(state%drainage%owltab))     allocate(state%drainage%owltab(nr, 2*MAOWL))
-
-      ! Geometry arrays: start at zero; seed state%drainage%wetper(1) from config when
-      ! dramet==2 (Hooghoudt/Ernst) — the only config-sourced geometry
-      ! value.  drainl/ztopdislay are computed each timestep by bocodre;
-      ! qdrd is computed by the secondary drainage block.
-      state%drainage%drainl     = 0.0_real64
-      state%drainage%wetper     = 0.0_real64
-      state%drainage%ztopdislay = 0.0_real64
-      state%drainage%qdrd       = 0.0_real64
-      if (config%drain%dramet == 2) then
-         state%drainage%wetper(1) = config%drain%wetper
-      end if
-
-      ! Flux arrays start at zero — computed each timestep.
-      state%drainage%qdrain = 0.0_real64
-      state%drainage%qdra   = 0.0_real64
-   end subroutine drainage_init
-
 
    subroutine bocodrb(dh, state)
       !> Calculate drainage flux using Hooghoudt/Ernst or resistance methods

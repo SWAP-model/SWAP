@@ -85,7 +85,7 @@ contains
       use Wofost_Soil_Interface,    only: NdemandSoil, NsupplySoil, Ndemand, Nsupply, LaiCritNupt
       use soilwater_state_mod, only: soilwater_init
       use tillage_state_mod, only: tillage_init
-      use drainage_mod, only: drainage_init
+      ! [GR-SEED 2026-05-25 Task 7] drainage_init retired → state%drainage%init; use line removed.
       use surfacewater_mod, only: SurfaceWater
       use tillage_mod,   only : DoTillage
       use swap_log, only: log_info
@@ -354,11 +354,10 @@ contains
    ! SS-ATM A-2.6: state added — CNmethod signature updated for retired nraidt/melt
    if (state%atmosphere%swusecn == 1) call cn_init(state)
 
-!  Allocate and initialise drainage state arrays.  Config is passed so
-!  drainage_init can seed state%drainage%wetper(1) from config%drain%wetper
-!  (dramet==2) without reading the now-deleted legacy global wetper.
+!  Allocate and initialise drainage state arrays.
+!  [GR-SEED 2026-05-25 Task 7] drainage_init retired → state%drainage%init (type-bound).
 !  ADR 0031 Phase 2 Task 5: drainl/wetper/ztopdislay/qdrd globals deleted.
-   call drainage_init(state, config)
+   call state%drainage%init(config%drain, state%mesh%numnod)
    ! [SS-GR-BH A9 / GR-BH Task 37] state%drainage scalars + geometry sourced directly from config.
    ! Bare globals nrlevs/swdivd/swnrsrf/swtopnrsrf/swdivdinf/FacDpthInf/L/zbotdr deleted from variables.f90.
    state%drainage%nrlevs     = config%drain%nrlevs

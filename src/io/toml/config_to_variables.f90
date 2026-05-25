@@ -62,7 +62,7 @@ contains
       ! 1-2 (no remaining readers). Size parameters now come from the
       ! canonical swap_array_dimensions module; everything else writes
       ! directly to state%X / config%X.
-      use swap_array_dimensions, only: macp, madr, maho, mamp, mabbc
+      use swap_array_dimensions, only: macp, maho, mamp, mabbc
       use swap_state_mod, only: swap_state_t
       use error_mod, only: fatalerr_collected
       type(swap_config_t), intent(inout), target :: config  ! [GR-SOIL 2026-05-24] inout: populates config%soil%initial%z_init from h_file CSV
@@ -90,159 +90,16 @@ contains
       ! compute reads from state, never from these legacy globals.
 
       ! ---------------------------------------------------------------
-      ! Drainage (audit: 20 fields + surface_runoff sub-section)
+      ! Drainage
+      ! [GR-SEED 2026-05-25 Task 7] Drainage seeding moved to state%drainage%init
+      ! (called from swap_mod after CalcGrid). owltab CSV pre-load now inside
+      ! drainage_state_init (Piece D); adapter block deleted.
+      !
+      ! EXCEPTION: state%surfacewater%swdra must remain here because
+      ! timecontrol_init (line ~170) reads it to set flDrain/flSurfaceWater —
+      ! which runs before state%drainage%init and state%surfacewater%init.
       ! ---------------------------------------------------------------
       state%surfacewater%swdra = config%drain%swdra
-      state%drainage%dramet    = config%drain%dramet
-      ! [GR-BH Task 37] swdivd global deleted — state%drainage%swdivd seeded in swap_mod.f90
-      state%drainage%swdislay  = config%drain%swdislay
-      ! [GR-BH Task 37] nrlevs global deleted — state%drainage%nrlevs seeded in swap_mod.f90
-      state%drainage%basegw = config%drain%basegw
-      state%drainage%entres = config%drain%entres
-
-      ! DRAMET=2 (Hooghoudt/Ernst). Mirrors readswap.f90:1850-1875.
-      ! lm is authored in metres; the legacy reader does the m->cm
-      ! conversion (`l(1) = 100*lm2`) so we replicate that here.
-      ! ADR 0031 Phase 2 Task 5: wetper(1) removed — state%drainage%wetper(1)
-      ! is seeded from config%drain%wetper in drainage_init instead.
-      ! zbotdr goes into the level-1 entry of the per-level array;
-      ! ipos / khtop / khbot / kvtop / kvbot / zintf / geofac are scalar globals.
-      if (config%drain%dramet == 2) then
-         ! [GR-BH Task 37] L(1)/zbotdr(1) bare globals deleted — seeded from config in swap_mod.f90
-         state%drainage%ipos    = config%drain%ipos
-         state%drainage%khtop   = config%drain%khtop
-         if (config%drain%ipos >= 3) then
-            state%drainage%khbot = config%drain%khbot
-            state%drainage%zintf = config%drain%zintf
-         end if
-         if (config%drain%ipos >= 4) then
-            state%drainage%kvtop = config%drain%kvtop
-            state%drainage%kvbot = config%drain%kvbot
-         end if
-         if (config%drain%ipos == 5) then
-            state%drainage%geofac = config%drain%geofac
-         end if
-      end if
-
-      ! [GR-BH Task 36] cofani global retired — precedence logic moved to swap_mod.f90
-      ! config%drain%cofani is consumed directly by swap_mod seeding block.
-
-      if (allocated(config%drain%swdtyp)) then
-         if (.not. allocated(state%drainage%swdtyp)) then
-            allocate(state%drainage%swdtyp(size(config%drain%swdtyp)))
-            state%drainage%swdtyp = 0
-         end if
-         do i = 1, size(config%drain%swdtyp)
-            state%drainage%swdtyp(i) = config%drain%swdtyp(i)
-         end do
-      end if
-      ! [GR-BH Task 37] zbotdr bare global deleted — seeded from config%drain in swap_mod.f90
-      ! [GR-DRAIN 2026-05-25] Per-level drainage arrays (drares, infres, gwlinf,
-      ! rdrain, rinfi, rentry, rexit, widthr, taludr) are read directly from
-      ! config%drain in src/drainage/drainage.f90; no mirror writes needed.
-      if (allocated(config%drain%swallo)) then
-         if (.not. allocated(state%drainage%swallo)) then
-            allocate(state%drainage%swallo(size(config%drain%swallo)))
-            state%drainage%swallo = 0
-         end if
-         do i = 1, size(config%drain%swallo)
-            state%drainage%swallo(i) = config%drain%swallo(i)
-         end do
-      end if
-
-      ! Channel water level tables (DATOWL/LEVEL in .dra). ASCII readswap
-      ! reads these per level into owltab(lev,1:2*nowltab(lev)). Without
-      ! them owltab=0 → afgen returns channel level = 0 (surface), which
-      ! causes spurious infiltration or drainage and changes water table
-      ! dynamics. Each drainage level may supply an owltab_file CSV with
-      ! header 'date,level'; col-1 is decoded as ISO date.
-      if (allocated(config%drain%owltab_file)) then
-         block
-            use iso_fortran_env, only: real64
-            use csv_reader_mod, only: read_csv_table
-            use error_mod, only: error_collection_t
-            use swap_array_dimensions, only: MAOWL
-            real(real64), allocatable :: csv_table(:,:)
-            type(error_collection_t)  :: csv_errs
-            integer :: lev, nrows, k
-            character(len=6) :: hdr(2)
-            hdr(1) = 'date  '
-            hdr(2) = 'level '
-            ! [GR-IO 2026-05-25 Phase 5] write directly to state%drainage%owltab —
-            ! bare-global `owltab` staging buffer retired. drainage_init allocates
-            ! state%drainage%owltab later in startup, but we need it now; pre-allocate
-            ! here on the first per-level CSV load.
-            if (.not. allocated(state%drainage%owltab)) then
-               allocate(state%drainage%owltab(config%drain%nrlevs, 2*MAOWL))
-               state%drainage%owltab = 0.0_real64
-            end if
-            do lev = 1, size(config%drain%owltab_file)
-               if (len_trim(config%drain%owltab_file(lev)) == 0) cycle
-               call read_csv_table(trim(config%drain%owltab_file(lev)), hdr, csv_table, csv_errs)
-               call csv_errs%abort_if_fatal()
-               if (csv_errs%count() == 0) then
-                  nrows = size(csv_table, 1)
-                  state%drainage%nowltab(lev) = nrows
-                  do k = 1, nrows
-                     state%drainage%owltab(lev, 2*k-1) = csv_table(k, 1)  ! date (days since 1900)
-                     state%drainage%owltab(lev, 2*k)   = csv_table(k, 2)  ! channel water level (cm)
-                  end do
-               end if
-            end do
-         end block
-      end if
-
-      state%drainage%swliminf = config%drain%swliminf
-
-      ! Drainage.surface_runoff sub-section: scalar switches + per-level
-      ! arrays. Legacy globals `swtopdislay`, `ftopdislay`, `RapDraResRef`
-      ! are arrays of size madr; copy element 1 of the (scalar) config
-      ! field as a uniform value across drainage levels until a per-level
-      ! schema lands in Phase 4f-extend.
-      ! [GR-BH Task 37] swnrsrf/SwTopnrsrf/swdivdinf/FacDpthInf bare globals deleted —
-      ! state%drainage%X seeded in swap_mod.f90
-      state%drainage%cofintfl = config%drain%surface_runoff%cofintfl
-      state%drainage%expintfl = config%drain%surface_runoff%expintfl
-      ! ADR 0031: gate the surface_runoff geofac write to avoid overwriting
-      ! the ipos==5 (Ernst geometry factor) write at line 306. Two distinct
-      ! TOML fields map to one legacy global; the gate preserves both
-      ! intended behaviors. Schema-level reconciliation deferred.
-      if (config%drain%ipos /= 5) then
-         state%drainage%geofac = config%drain%surface_runoff%geofac
-      end if
-      ! NOTE: do NOT write gwlconv from drainage.surface_runoff. Legacy
-      ! reads gwlconv exactly once (readswap.f90:960, in the .swp Part 13
-      ! numerical block) and there is no second read in the .dra reader.
-      ! The schema's drainage.surface_runoff.gwlconv is a misnamed/orphan
-      ! field with default 0.0; writing it here clobbered the proper
-      ! value just set from simulation.numerical.gwlconv (default 100 cm).
-      ! The clobber turns out to be benign in practice because gwlconv only
-      ! gates a warning (soilhydraulics.f90:724), not solver behaviour, but
-      ! the duplicate write is wrong on principle and could surprise future
-      ! cases if the warning ever becomes load-bearing.
-      ! [GR-DRAIN 2026-05-25] rsurfdeep/rsurfshallow legacy mirror writes
-      ! dropped — read directly from config%drain%surface_runoff in
-      ! src/drainage/drainage.f90.
-      ! [SS-GR-FINAL D1] RapDraReaExp write dropped — global retired
-      state%drainage%NumLevRapDra = config%drain%surface_runoff%numlevrapdra
-      ! swtopdislay(MADR) and ftopdislay(MADR): broadcast scalar config
-      ! field to all drain levels (currently no per-level schema slot).
-      ! Allocate to MADR to match legacy fixed-size globals.
-      if (.not. allocated(state%drainage%swtopdislay)) then
-         allocate(state%drainage%swtopdislay(madr))
-         state%drainage%swtopdislay = 0
-      end if
-      if (.not. allocated(state%drainage%ftopdislay)) then
-         allocate(state%drainage%ftopdislay(madr))
-         state%drainage%ftopdislay = 0.0d0
-      end if
-      do i = 1, size(state%drainage%swtopdislay)
-         state%drainage%swtopdislay(i) = config%drain%surface_runoff%swtopdislay
-      end do
-      do i = 1, size(state%drainage%ftopdislay)
-         state%drainage%ftopdislay(i) = config%drain%surface_runoff%ftopdislay
-      end do
-      ! [SS-GR-FINAL D1] RapDraResRef write dropped — global retired
 
       ! ---------------------------------------------------------------
       ! Soil (audit: 15 + discretization + frost)

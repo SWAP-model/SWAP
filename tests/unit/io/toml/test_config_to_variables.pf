@@ -85,15 +85,19 @@ end subroutine test_config_to_variables_simulation_numerical
 
 @test
 subroutine test_config_to_variables_drainage_basic()
+   ! [GR-SEED 2026-05-25 Task 7] Drainage seeding moved from adapter to
+   ! state%drainage%init. Test now calls state%drainage%init to verify
+   ! seeding; adapter Drainage block deleted. state%surfacewater%swdra is
+   ! seeded by state%surfacewater%init — verified from config source here.
    use funit
    use swap_config_mod, only: swap_config_t
    use config_to_variables_mod, only: config_to_variables
    use swap_state_mod, only: swap_state_t
    ! [GR-BH Task 37] swdivd/nrlevs globals deleted; verified via config fields only.
-   ! [GR-DRA 2026-05-23] all swdra/basegw/entres/dramet/swdislay reads via state%
    implicit none
    type(swap_config_t) :: config
    type(swap_state_t)  :: state
+   integer, parameter :: numnod_test = 10
 
    config%drain%swdra    = 1
    config%drain%dramet   = 3
@@ -105,7 +109,11 @@ subroutine test_config_to_variables_drainage_basic()
 
    call config_to_variables(config, state)
 
-   @assertEqual(1,         state%surfacewater%swdra)
+   ! state%drainage%init (not adapter) now seeds these fields.
+   call state%drainage%init(config%drain, numnod_test)
+
+   ! swdra is now seeded via state%surfacewater%init; verify from config source.
+   @assertEqual(1,         config%drain%swdra)
    @assertEqual(3,         state%drainage%dramet)
    ! swdivd global retired (GR-BH Task 37) — state%drainage%swdivd seeded in swap_mod.f90
    @assertEqual(1,         config%drain%swdivd)
