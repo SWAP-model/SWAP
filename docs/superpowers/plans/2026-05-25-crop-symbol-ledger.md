@@ -165,7 +165,7 @@
 | nni                       | cropwofost_runtime, cropgrowth           | 2 | C | state%crop% (new field)             | cross=Y |
 | nod_ssdi_irr              | irrigation                               | 1 | C | state%crop% (new field)             | cross=N |
 | nod_ssdi_sensor_irr       | irrigation                               | 1 | C | state%crop% (new field)             | cross=N |
-| noddrz                    | irrigation, rootextraction, cropgrowth   | 3 | A | state%crop% (exists)                | cross=Y |
+| noddrz                    | RETIRED                                  | 0 | A | state%crop%common%noddrz            | RETIRED 2026-05-25 (Task 3) |
 | nofd                      | cropwofost_init                          | 1 | C | state%crop% (new field)             | cross=N |
 | npart                     | cropwofost_init, cropwofost_runtime      | 2 | C | state%crop% (new field)             | cross=Y |
 | nsla                      | cropwofost_init, cropwofost_runtime      | 2 | C | state%crop% (new field)             | cross=Y |
@@ -358,7 +358,7 @@
 | nmaxst                    | cropwofost_runtime             | cropgrowth, cropwofost_runtime |
 | nmxlv                     | cropwofost_runtime             | cropgrowth, cropwofost_init, cropwofost_runtime |
 | nni                       | cropwofost_runtime             | cropgrowth, cropwofost_runtime |
-| noddrz                    | rootextraction                 | cropgrowth, irrigation, rootextraction |
+| noddrz                    | RETIRED (Task 3 2026-05-25)    | declaration removed; all reads/writes via state%crop%common%noddrz |
 | npart                     | cropwofost_runtime             | cropwofost_init, cropwofost_runtime |
 | nsla                      | cropwofost_runtime             | cropwofost_init, cropwofost_runtime |
 | outfil                    | cropwofost_runtime             | cropgrowth_helpers, cropwofost_runtime |

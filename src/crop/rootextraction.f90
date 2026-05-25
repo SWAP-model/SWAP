@@ -38,16 +38,11 @@ module rootextraction_mod
 !     purpose   : Calculate the root water extraction rate as function of soil
 !                 water pressure head and salinity concentration for each node
 ! ----------------------------------------------------------------------
-      ! [SS-GR-FINAL B6] macp → swap_array_dimensions; remainder DEFERRED
       use swap_array_dimensions, only: macp
       use swap_log, only: log_warn
-      use variables, only: &                                               ! [SS-GR-FINAL B6] residuals
-                           ! [GR-CROP 2026-05-25] retained — dead-branch (swdrought=2/swoxygen=2 stub-errored)
-                           criterhr, flhydrlift,                   &
-                           kroot, kstem, oxygenintercept,   &
-                           oxygenslope, rootcoefa, rooteff, &
-                           rootradius, rxylem, stephr,      &
-                           twilt, wiltpoint
+      ! [GR-CROP 2026-05-25] retained — dead-branch (swoxygen=2 stub-errored in TOML);
+      ! passed by reference to OxygenReproFunction.
+      use variables, only: oxygenintercept, oxygenslope
       use array_utils, only: afgen
       use oxygenstress_mod, only: OxygenStress, OxygenReproFunction
       implicit none
@@ -329,22 +324,13 @@ module rootextraction_mod
 !     date      : August 2016
 !     purpose   : Calculate the root water extraction rate according to
 !                 De Jong van Lier et al. (2013)
-! [GR-CROP Phase B/9] narrow use variables
 ! ----------------------------------------------------------------------
-      ! [SS-GR-FINAL B6] macp → swap_array_dimensions; remainder DEFERRED (same as RootExtraction)
       use swap_array_dimensions, only: macp
       use swap_log, only: log_warn
-      use variables, only: &                                               ! [SS-GR-FINAL B6] residuals — all DEFERRED
-                           ! adcrh/adcrl/aeratecrit/alphacrit retired  ! DEFERRED: crop stress config; Phase C3
-                           ! [GR-SOIL 2026-05-24] botcom retired
-                           criterhr, flhydrlift,                   &  ! dcritrtz/cumdens retired  ! DEFERRED: soil/crop config
-                           ! hlim1/hlim2l/hlim2u/hlim3h/hlim3l/hlim4 retired  ! DEFERRED: drought limits
-                           kroot, kstem, oxygenintercept,   &  ! [GR-CROP 2026-05-25] noddrz retired
-                           oxygenslope, rootcoefa, rooteff, &  ! rdctb retired  ! rd retired  ! DEFERRED: active crop state
-                           rootradius, rxylem, stephr,                    &  ! saltmax/saltslope retired  ! DEFERRED: crop/solute config
-                           swfrost,                                       &  ! swcompensate/swoxygen/swdrought retired  ! DEFERRED: stress switches
-                           ! swsalinity/swwrtnonox/swstressor/swoxygentype retired  ! DEFERRED: stress switches
-                           twilt, wiltpoint                          ! DEFERRED: convergence/stress params
+      ! [GR-CROP 2026-05-25] retained — dead-branch (swdrought=2 stub-errored in TOML)
+      use variables, only: kroot, kstem, rootcoefa,        &
+                           rootradius, rxylem, stephr,     &
+                           wiltpoint
       use array_utils, only: afgen
       implicit none
 
@@ -691,22 +677,13 @@ module rootextraction_mod
 ! ----------------------------------------------------------------------
 !     date      : August 2016
 !     purpose   : Calculate microscopic root water uptake using hleaf
-! [GR-CROP Phase B/9] narrow use variables
 ! ----------------------------------------------------------------------
-      ! [SS-GR-FINAL B6] macp → swap_array_dimensions; remainder DEFERRED (same as RootExtraction)
       use swap_array_dimensions, only: macp
       use swap_log, only: log_warn
-      use variables, only: &                                               ! [SS-GR-FINAL B6] residuals — all DEFERRED
-                           ! adcrh/adcrl/aeratecrit/alphacrit retired  ! DEFERRED: crop stress config; Phase C3
-                           ! [GR-SOIL 2026-05-24] botcom retired
-                           criterhr, flhydrlift,                   &  ! dcritrtz/cumdens retired  ! DEFERRED: soil/crop config
-                           ! hlim1/hlim2l/hlim2u/hlim3h/hlim3l/hlim4 retired  ! DEFERRED: drought limits
-                           kroot, kstem, oxygenintercept,   &  ! [GR-CROP 2026-05-25] noddrz retired
-                           oxygenslope, rootcoefa, rooteff, &  ! rdctb retired  ! rd retired  ! DEFERRED: active crop state
-                           rootradius, rxylem, stephr,                    &  ! saltmax/saltslope retired  ! DEFERRED: crop/solute config
-                           swfrost,                                       &  ! swcompensate/swoxygen/swdrought retired  ! DEFERRED: stress switches
-                           ! swsalinity/swwrtnonox/swstressor/swoxygentype retired  ! DEFERRED: stress switches
-                           twilt, wiltpoint                          ! DEFERRED: convergence/stress params
+      ! [GR-CROP 2026-05-25] retained — dead-branch (swdrought=2 stub-errored in TOML)
+      use variables, only: criterhr, flhydrlift, kroot,    &
+                           rootcoefa, rooteff, rootradius, &
+                           rxylem, stephr, twilt
       implicit none
 
       type(swap_state_t), intent(inout) :: state
@@ -842,12 +819,10 @@ module rootextraction_mod
 ! ----------------------------------------------------------------------
 !     Date               : February 2010
 !     Purpose            : Initialize and calculate matric flux potential
-! SS-CRP Phase 2 C-2.5: mfluxtable retired from variables.f90.
-!   task=1 writes state%soilwater%mfluxtable (state required).
-!   task=2 reads state%soilwater%mfluxtable (state required).
+! Note: task=1 writes state%soilwater%mfluxtable; task=2 reads it.
 ! ----------------------------------------------------------------------
 
-      ! [GR-SOIL 2026-05-24] numlay/nod1lay retired — read via state%mesh%{numlay,nod1lay}
+      ! [GR-CROP 2026-05-25] retained — dead-branch (swdrought=2 stub-errored in TOML)
       use variables, only: wiltpoint
       use soilhydraulics_utils, only: watcon, hconduc
       implicit none
@@ -862,7 +837,6 @@ module rootextraction_mod
       case (1)
 
 ! === initialization =========================================================
-! --- SS-CRP Phase 2 C-2.5: write state%soilwater%mfluxtable directly.
 
       do lay = 1,state%mesh%numlay
         do count = 1,801
