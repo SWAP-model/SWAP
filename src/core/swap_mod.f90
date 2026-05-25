@@ -13,6 +13,9 @@ module swap_mod
    implicit none
    private
    public :: swap_init, swap_run_step, swap_close, swap_init_from_loaded_config
+   ! swap_init_from_loaded_config: kept public for swap_capi_mod (loads config from
+   ! a string buffer rather than a file path, so cannot route through swap_init).
+   ! Body lives in the private swap_init_body helper; both wrappers delegate to it.
 
 contains
 
@@ -37,20 +40,32 @@ contains
 !  adapter wiring. The deeper follow-on (per ADR 0016) is the config-
 !  passing refactor — eliminate variables-module mutation by passing
 !  typed config + state to compute subs explicitly.
-   block
-      use error_mod, only: error_collection_t
-      type(error_collection_t) :: errors
-      call load_swap_config(config_file, config, errors)
-      call config%validate(errors)
-      call config%finalize(errors)
-      call errors%abort_if_fatal()
-   end block
 
-   call swap_init_from_loaded_config(state, config)
+      ! Phase 1: load + validate + finalize TOML
+      block
+         use error_mod, only: error_collection_t
+         type(error_collection_t) :: errors
+         call load_swap_config(config_file, config, errors)
+         call config%validate(errors)
+         call config%finalize(errors)
+         call errors%abort_if_fatal()
+      end block
+
+      ! Phase 2 + 3: seeding + first-day compute init
+      call swap_init_body(state, config)
 
    end subroutine swap_init
 
+   !> Public shim retained for swap_capi_mod: the CAPI path loads config from
+   !> a TOML string buffer (not a file path) and calls this directly after
+   !> validate/finalize. Delegates to the shared private swap_init_body.
    subroutine swap_init_from_loaded_config(state, config)
+      type(swap_state_t),          intent(out)   :: state
+      type(swap_config_t), target, intent(inout) :: config
+      call swap_init_body(state, config)
+   end subroutine swap_init_from_loaded_config
+
+   subroutine swap_init_body(state, config)
       ! [GR-CROP 2026-05-25] crop legacy globals cut over to state%crop%common (flCropCalendar/
       !   flHarvestDay/flCropOutput/swcrp/flCropHarvest/flCropEmergence/daycrop/icrop/flCropNut),
       !   state%crop%wofost%swbulb, state%crop%grass%swpotrelmf, state%cfg%soil%frost%swfrost,
@@ -441,7 +456,7 @@ contains
 
    call log_info('swap', 'Initialization complete for project: ' // trim(state%cfg%general%project))
 
-   end subroutine swap_init_from_loaded_config
+   end subroutine swap_init_body
 
    subroutine swap_run_step(state, config)
       ! [GR-CROP 2026-05-25] crop legacy reads cut to state%crop%common (flCropNut/
