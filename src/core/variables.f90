@@ -560,8 +560,8 @@
       ! [GR-CROP-DVS] dwbl retired — see state%crop%wofost%dwbl
       ! [GR-CROP-DVS] dwblpot retired — see state%crop%wofost%dwblpot
       ! [GR-CROPWS] fbltb retired — see state%crop%common%fbltb
-      real(8)   pld
-      real(8)   remoc
+      ! [GR-CROP 2026-05-25] pld retired — see crop_config_global%rotation_wofost(icrop)%bulb%pld
+      ! [GR-CROP 2026-05-25] remoc retired — see crop_config_global%rotation_wofost(icrop)%bulb%remoc
       ! [GR-CROP-DVS] plwt retired — see state%crop%wofost%plwt
       ! [GR-CROP-DVS] plwti retired — see state%crop%wofost%plwti
       ! [GR-CROP-DVS] wbl retired — see state%crop%wofost%wbl

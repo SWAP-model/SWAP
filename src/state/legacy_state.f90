@@ -151,8 +151,9 @@ module legacy_state_mod
       ! [GR-CROP 2026-05-25] verndvs/vernsat/vernbase/vernrtb retired — see cropwofost_init_mod cw_vern*
       integer :: swbulb  !! switch to enable simulation of bulb crops (-)
       ! [GR-CROP 2026-05-25] drbl/drblpot/fbl retired — local SAVE in cropwofost_runtime%wofost
-      real(real64) :: pld
-      real(real64) :: remoc  !! [GR-CROP-DVS] plwt retired — see state%crop%wofost%plwt
+      ! [GR-CROP 2026-05-25] pld retired — see crop_config_global%rotation_wofost(icrop)%bulb%pld
+      ! [GR-CROP 2026-05-25] remoc retired — see crop_config_global%rotation_wofost(icrop)%bulb%remoc
+      ! [GR-CROP-DVS] plwt retired — see state%crop%wofost%plwt
       logical :: flCropNut  !! Flag indicating simulation of crop nutrient stress
       real(real64), allocatable :: nmxlv(:)
       integer :: ilnmxl

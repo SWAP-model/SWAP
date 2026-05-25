@@ -67,7 +67,6 @@
         daycrop,                 &  ! [GR-SOL 2026-05-24] swinco retired — via state%soilwater%swinco
 
         swcrp,                                                             &  ! dvsend/swdrought/eff/amaxtb/tmpftb/tmnftb retired
-        remoc, pld,                                                        &  ! bulb config (read only when state%crop%wofost%swbulb=true)
         flHarvestDay,                                                      &  ! dispatcher writes legacy mirror; non-crop readers (swap_mod)
         pathcrop, cropfil,                                                 &  ! crop-file path/name (cross-file with cropgrowth_helpers/cropwofost_runtime)
         dummy_tsoil_cg_ => tsoil
@@ -394,25 +393,33 @@
 
         ! only for bulb crops (tulips etc..)
         if(state%crop%wofost%swbulb) then                                     ! [GR-CROPWS B3] swbulb → state%crop%wofost%swbulb
-          ! remobilisation of carbohydrates from planted material
-          if (state%crop%wofost%plwt.le.(0.0002d0*pld)) then                  ! [GR-CROPWS B3] state%crop%wofost%plwt → state%crop%wofost%plwt
-            ! no remobilisation at minimum weight motherbulb
-            respmo = 0.0d0
-            remo = 0.0d0
-          else
-            ! decrease weight mother organ starts at emergence.
-            ! decrease consists of respiration and remobilisation
-            decrmo = state%crop%wofost%plwt-(state%crop%wofost%plwt*(2.71828d0**remoc))  ! [GR-CROPWS B3]
-            respmo = 0.025d0*(state%crop%common%q10**((atmo%tavd-25.0d0)/10.0d0))*state%crop%wofost%plwt    ! [SS-GR-ATM B.5] [GR-CROPWS B3]
-            if(respmo.lt.decrmo) then
-              remo = decrmo - respmo
-            else
+          ! [GR-CROP 2026-05-25] pld/remoc read directly from rotation config
+          ! (swbulb=1 currently stub-errored in TOML pipeline; cfg path documented).
+          block
+            use crop_config_global_mod, only: crop_config_global
+            real(8) :: pld_cfg, remoc_cfg
+            pld_cfg   = crop_config_global%rotation_wofost(state%crop%common%icrop)%bulb%pld
+            remoc_cfg = crop_config_global%rotation_wofost(state%crop%common%icrop)%bulb%remoc
+            ! remobilisation of carbohydrates from planted material
+            if (state%crop%wofost%plwt.le.(0.0002d0*pld_cfg)) then
+              ! no remobilisation at minimum weight motherbulb
+              respmo = 0.0d0
               remo = 0.0d0
-              respmo = decrmo
-            end if
-            ! weight motherbulb decreases by remobilisation and respiration
-            state%crop%wofost%plwt = state%crop%wofost%plwt - remo - respmo                     ! [GR-CROPWS B3] RHS state%crop%wofost%plwt → state%crop%wofost%plwt
-          endif
+            else
+              ! decrease weight mother organ starts at emergence.
+              ! decrease consists of respiration and remobilisation
+              decrmo = state%crop%wofost%plwt-(state%crop%wofost%plwt*(2.71828d0**remoc_cfg))
+              respmo = 0.025d0*(state%crop%common%q10**((atmo%tavd-25.0d0)/10.0d0))*state%crop%wofost%plwt
+              if(respmo.lt.decrmo) then
+                remo = decrmo - respmo
+              else
+                remo = 0.0d0
+                respmo = decrmo
+              end if
+              ! weight motherbulb decreases by remobilisation and respiration
+              state%crop%wofost%plwt = state%crop%wofost%plwt - remo - respmo
+            endif
+          end block
         endif
 
         ! daily gross assimilation
