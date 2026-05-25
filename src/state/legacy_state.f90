@@ -25,7 +25,7 @@ module legacy_state_mod
       integer :: daynrfirst  !! First calendar day number for which meteorological data is available in current year
       integer :: daynrlast  !! Last calendar day number for which meteorological data is available in current year
       ! [GR-ATM 2026-05-23] detrecord/irectotal retired — see state%atmosphere%{detrecord,irectotal}
-      integer :: nofd  !! number of days for running average Tmin (-)
+      ! [GR-CROP 2026-05-25] nofd retired — see state%atmosphere%nofd
       integer :: swetsine  !! Switch: 0 = Tp and Ep uniform during a day; 1 = Tp and Ep are distributed as sine waves during a day
       integer, allocatable :: ad(:)  !! Array with day numbers in meteo file
       integer, allocatable :: am(:)  !! Array with month numbers in meteo file

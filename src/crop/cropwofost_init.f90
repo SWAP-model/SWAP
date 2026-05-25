@@ -76,7 +76,7 @@ contains
          ! Irrigation schedule — DEFERRED Phase C3
          ! schedule retired
          ! Active crop dynamics (written during init) — DEFERRED Phase C3; dvs/tsum retired
-         daycrop, nofd, flCropNut
+         daycrop, flCropNut  ! nofd retired — state%atmosphere%nofd canonical
       use array_utils, only: afgen
       use error_mod,   only: fatalerr_collected
       use swap_state_mod, only: swap_state_t
@@ -477,7 +477,7 @@ contains
       state%crop%common%dvs     = 0.0d0
       state%crop%common%tsum    = 0.0d0
       daycrop = 0
-      nofd    = 0
+      state%atmosphere%nofd    = 0  ! [GR-CROP 2026-05-25] nofd retired → state%atmosphere
       state%crop%common%daycrop = daycrop ! [SS-GR-CROP A5.2]
 
       ! [nutrients] N3: drive the legacy global flCropNut from the

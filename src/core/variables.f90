@@ -117,7 +117,7 @@
       ! [GR-CROP-DVS] nmetdetail retired — see state%cfg%meteo%nmetdetail
       ! [GR-CROP C12] retired 2026-05-14 — moved to state%atmosphere%nmrain (Arc 8)
       ! integer   nmrain             ! Number of rain event records (-)
-      integer   nofd               ! number of days for running average Tmin (-)
+      ! [GR-CROP 2026-05-25] nofd retired — see state%atmosphere%nofd
       ! [SS-TC] retired 2026-05-12 — moved to state%timecontrol%rainrec (ADR 0041)
       ! integer   rainrec            ! moved to state%timecontrol%rainrec
       ! [GR-CROP-DVS] swdivide retired — see state%cfg%meteo%swdivide
