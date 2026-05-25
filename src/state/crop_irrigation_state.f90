@@ -45,6 +45,14 @@ module crop_irrigation_state_mod
       real(real64) :: ssdi_rate_f(mairg)   = 0.0_real64 !! Fixed irrigation rates (cm/d)
       real(real64) :: ssdi_amount_f(mairg) = 0.0_real64 !! Fixed irrigation amounts (cm)
 
+      ! Surface fixed-irrigation events (populated by config_to_variables%apply_irrigation
+      ! from state%cfg%irrigation%fixed_events / fixed_events_file when swirfix == 1).
+      integer      :: nirri_fixed              = 1          !! Cursor into fixed-irrigation event arrays
+      real(real64) :: irdate(mairg)            = 0.0_real64 !! Fixed irrigation dates (days-since-1900)
+      real(real64) :: irdepth(mairg)           = 0.0_real64 !! Fixed irrigation depths (cm)
+      real(real64) :: irconc(mairg)            = 0.0_real64 !! Fixed irrigation concentrations (M/L3)
+      integer      :: irtype(mairg)            = 0          !! Fixed irrigation types (0=sprinkler, 1=surface)
+
    contains
       procedure :: init => crop_irrigation_state_init
    end type crop_irrigation_state_t

@@ -903,18 +903,20 @@ contains
       ! Irrigation (audit: 8 fields, top-level only)
       ! ---------------------------------------------------------------
       swirfix = config%irrigation%swirfix
+      ! [GR-CROP 2026-05-25] Fixed-irrigation event arrays canonical home is
+      ! state%crop%irrigation%{irdate,irdepth,irconc,irtype}. Legacy globals
+      ! irdate/irdepth/irconc/irtype were retired in the same commit.
       ! Inline fixed events: copy (date, depth, conc, type) rows from
-      ! the typed config table into the legacy parallel arrays. The
-      ! reader already stored col 1 as days-since-1900, so this is a
-      ! straight copy. The /10.0 on irdepth mirrors readswap.f90:503
-      ! (mm in input -> cm in legacy globals).
+      ! the typed config table into the state arrays. The reader already
+      ! stored col 1 as days-since-1900, so this is a straight copy.
+      ! The /10.0 on irdepth mirrors readswap.f90:503 (mm -> cm).
       if (allocated(config%irrigation%fixed_events)) then
          n = size(config%irrigation%fixed_events, 1)
-         do i = 1, min(n, size(irdate))
-            irdate(i)  = config%irrigation%fixed_events(i, 1)
-            irdepth(i) = config%irrigation%fixed_events(i, 2) / 10.0d0
-            irconc(i)  = config%irrigation%fixed_events(i, 3)
-            irtype(i)  = nint(config%irrigation%fixed_events(i, 4))
+         do i = 1, min(n, size(state%crop%irrigation%irdate))
+            state%crop%irrigation%irdate(i)  = config%irrigation%fixed_events(i, 1)
+            state%crop%irrigation%irdepth(i) = config%irrigation%fixed_events(i, 2) / 10.0d0
+            state%crop%irrigation%irconc(i)  = config%irrigation%fixed_events(i, 3)
+            state%crop%irrigation%irtype(i)  = nint(config%irrigation%fixed_events(i, 4))
          end do
       else if (swirfix == 1 .and. allocated(config%irrigation%fixed_events_file)) then
          ! Phase 4f cleanup: long-form fixed-irrigation events outsourced
@@ -941,16 +943,19 @@ contains
                call csv_errs%abort_if_fatal()
                if (allocated(csv_table)) then
                   nrows_csv = size(csv_table, 1)
-                  do k_csv = 1, min(nrows_csv, size(irdate))
-                     irdate(k_csv)  = csv_table(k_csv, 1)
-                     irdepth(k_csv) = csv_table(k_csv, 2) / 10.0d0  ! mm -> cm
-                     irconc(k_csv)  = csv_table(k_csv, 3)
-                     irtype(k_csv)  = nint(csv_table(k_csv, 4))
+                  do k_csv = 1, min(nrows_csv, size(state%crop%irrigation%irdate))
+                     state%crop%irrigation%irdate(k_csv)  = csv_table(k_csv, 1)
+                     state%crop%irrigation%irdepth(k_csv) = csv_table(k_csv, 2) / 10.0d0  ! mm -> cm
+                     state%crop%irrigation%irconc(k_csv)  = csv_table(k_csv, 3)
+                     state%crop%irrigation%irtype(k_csv)  = nint(csv_table(k_csv, 4))
                   end do
                end if
             end block
          end if
       end if
+      ! [GR-CROP 2026-05-25] nirri_fixed canonical cursor. Type default = 1;
+      ! reaffirmed here so swap_mod re-entries get a consistent reset.
+      state%crop%irrigation%nirri_fixed = 1
       ! cirrs / cirrthres / dcrit / isuas / perirrsurp / raithreshold /
       ! swcirrthres live in irrigation_schedule_t (per-crop), not the
       ! top-level irrigation_config_t. They are populated per-rotation

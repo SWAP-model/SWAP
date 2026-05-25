@@ -1,7 +1,5 @@
 ! File VersionID:
 !   $Id: irrigation.f90 372 2018-03-13 10:01:20Z heine003 $
-! [SS-GR-CROPWS A6]: Phase A audit — gird already has inline dual-writes (SS-GR-ATM A5.3);
-!   state already intent(inout); no optional/present guards. No changes required.
 ! ----------------------------------------------------------------------
 !> Irrigation routines for scheduled and subsurface drip irrigation.
 !!
@@ -40,14 +38,16 @@
 ! ----------------------------------------------------------------------
 ! --  global variables
       use swap_array_dimensions, only: maho
-      use variables, only: &
-                            ! Fixed-irrigation event arrays — populated by config_to_variables%apply_irrigation
-                            irdate, nirri, irdepth, irconc, irtype
+      ! [GR-CROP 2026-05-25] irrigation.f90 is `use variables`-free for the main subroutine.
+      ! All previously-imported globals were either:
+      !   - migrated to state (state%crop%irrigation, state%atmosphere%isua,
+      !     state%crop%common%X, state%cfg%irrigation%X, state%cfg%solute%swsolu), or
+      !   - retired-zero (schedule==1 dead branch — see local declarations below).
       use array_utils, only: afgen
       use soilhydraulics_utils, only: watcon
       implicit none
 
-      type(swap_state_t), intent(inout) :: state  ! [SS-GR-ATM A5.3] changed to inout for dual-write
+      type(swap_state_t), intent(inout) :: state
 
 ! --  local variables
       integer irr,node,nodsen,task,tcs,tcsfix,dcslim,dcs
@@ -131,13 +131,15 @@
 
 ! ---    fixed irrigations events
          if (cfg_irr%swirfix .eq. 1) then
-            if (abs(irdate(nirri) - time%t1900) .lt. 1.d-3) then
-               crop%gird = irdepth(nirri)
-               solu%cirr = irconc(nirri)
-               atmo%isua = irtype(nirri)   ! [GR-CROP 2026-05-25] legacy isua retired; canonical home = atmo%isua
-               nirri = nirri + 1
+            associate (irr => state%crop%irrigation)
+            if (abs(irr%irdate(irr%nirri_fixed) - time%t1900) .lt. 1.d-3) then
+               crop%gird = irr%irdepth(irr%nirri_fixed)
+               solu%cirr = irr%irconc(irr%nirri_fixed)
+               atmo%isua = irr%irtype(irr%nirri_fixed)
+               irr%nirri_fixed = irr%nirri_fixed + 1
                irrigevent = 1
             end if
+            end associate
          end if
 
 ! ---    scheduling mode - current timing and depth criterion
@@ -172,7 +174,7 @@
          if (crop%common%schedule.eq.1 .and. irrigevent.eq.0 .and. crop%common%flCropCalendar &
                  .and. .not. crop%common%flCropHarvest .and. flIrriTime) then
             solu%cirr = cirrs
-            atmo%isua = isuas   ! [GR-CROP 2026-05-25] legacy isua retired; canonical home = atmo%isua
+            atmo%isua = isuas
 
 ! ---       determine water holding capacity, readily available water,
 ! ---       actual available water and water deficit
@@ -312,7 +314,6 @@
 
          end if
 
-         ! [SS-GR-FINAL D1] flIrrigationOutput write dropped — W-global retired (nothing reads it)
 
       end associate
 
@@ -340,7 +341,7 @@ use swap_state_mod, only: swap_state_t
 implicit none
 ! global
 integer, intent(in) :: iTask
-type(swap_state_t), intent(inout) :: state  ! [GR-SOIL 2026-05-24] inout: writes state%soilwater%qssdi/qssdisum
+type(swap_state_t), intent(inout) :: state
 
 ! local, help
 integer                         :: irrigevent   ! [GR-CROP 2026-05-25] localized — consumed only within this call

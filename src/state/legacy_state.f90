@@ -71,7 +71,7 @@ module legacy_state_mod
       integer :: nod10_cn  !! Node at -10cm for CN runoff method - from meteoday.f90 CNmethod
       integer :: icn_atm  !! Current position in CN time table - from meteoday.f90 CNmethod
       ! [GR-CROP 2026-05-25] irrigevent retired — runtime-local in src/crop/irrigation.f90
-      integer, allocatable :: irtype(:)  !! Type of fixed irrigation: 0 = sprinkling irrigation; 1 = surface irrigation
+      ! [GR-CROP 2026-05-25] irtype retired — canonical home is state%crop%irrigation%irtype
       ! [GR-CROP 2026-05-25] isua retired — canonical home is state%atmosphere%isua
       ! [GR-CROP 2026-05-25] isuas retired — schedule==1 dead branch
       integer :: nirri  !! retained — still written by src/core/timecontrol_mod.f90 (initial reset to 1)
@@ -84,9 +84,9 @@ module legacy_state_mod
       ! [GR-CROP 2026-05-25] dwatab retired — schedule==1 dead branch
       ! [GR-CROP 2026-05-25] fidtab retired — schedule==1 dead branch
       ! [GR-CROP 2026-05-25] hcritab retired — schedule==1 dead branch
-      real(real64), allocatable :: irconc(:)  !! Array with irrigation concentrations (M/L3) in case of fixed irrigation
-      real(real64), allocatable :: irdate(:)  !! Array with fixed irrigation dates
-      real(real64), allocatable :: irdepth(:)  !! Array with fixed irrigation depths (L)
+      ! [GR-CROP 2026-05-25] irconc retired — canonical home is state%crop%irrigation%irconc
+      ! [GR-CROP 2026-05-25] irdate retired — canonical home is state%crop%irrigation%irdate
+      ! [GR-CROP 2026-05-25] irdepth retired — canonical home is state%crop%irrigation%irdepth
       ! [GR-ATM 2026-05-23] nird retired — see state%atmosphere%nird
       ! [GR-CROP 2026-05-25] perirrsurp retired — schedule==1 dead branch
       ! [GR-CROP 2026-05-25] raithreshold retired — schedule==1 dead branch

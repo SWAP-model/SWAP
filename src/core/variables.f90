@@ -265,7 +265,7 @@
       ! [SS-GR-FINAL D1] swirg retired — IRG output deleted; 0 consumers
       ! [SS-GR-FINAL D1] irg retired — IRG file handle, never opened; 0 consumers
       ! [GR-CROP 2026-05-25] irrigevent retired — runtime-local in src/crop/irrigation.f90
-      integer   irtype(mairg)      ! Type of fixed irrigation: 0 = sprinkling irrigation; 1 = surface irrigation
+      ! [GR-CROP 2026-05-25] irtype retired — canonical home is state%crop%irrigation%irtype
       ! [GR-CROP 2026-05-25] isua retired — canonical home is state%atmosphere%isua
       ! [GR-CROP 2026-05-25] isuas retired — schedule==1 branch dead (cropfixed/wofost/grass init reject schedule=1)
       integer   nirri              ! Number of irrigation event — retained — still written by src/core/timecontrol_mod.f90
@@ -284,9 +284,9 @@
       ! [SS-SWC] retired 2026-05-12 — moved to state%soilwater (ADR 0038)
       ! real(8)   igird              ! Intermediate depth of gross irrigation (L)
       ! real(8)   inird              ! Intermediate depth of net irrigation (L)
-      real(8)   irconc(mairg)      ! Array with irrigation concentrations (M/L3) in case of fixed irrigation
-      real(8)   irdate(mairg)      ! Array with fixed irrigation dates
-      real(8)   irdepth(mairg)     ! Array with fixed irrigation depths (L)
+      ! [GR-CROP 2026-05-25] irconc retired — canonical home is state%crop%irrigation%irconc
+      ! [GR-CROP 2026-05-25] irdate retired — canonical home is state%crop%irrigation%irdate
+      ! [GR-CROP 2026-05-25] irdepth retired — canonical home is state%crop%irrigation%irdepth
       ! [GR-ATM 2026-05-23] nird retired — see state%atmosphere%nird
       ! [GR-CROP 2026-05-25] perirrsurp retired — schedule==1 dead branch
       ! [GR-CROP 2026-05-25] raithreshold retired — schedule==1 dead branch

@@ -66,7 +66,7 @@
 ! --- irrigation variables
       ! [SS-GR-FINAL D1] irg zero-fill dropped — declaration retired
       ! [GR-CROP 2026-05-25] irrigevent zero-fill dropped — runtime-local in irrigation.f90
-      irtype             = 0
+      ! [GR-CROP 2026-05-25] irtype zero-fill dropped — canonical home is state%crop%irrigation%irtype
       ! [GR-CROP 2026-05-25] isua zero-fill dropped — canonical home is state%atmosphere%isua
       ! [GR-CROP 2026-05-25] isuas zero-fill dropped — schedule==1 dead branch
       nirri              = 0
@@ -78,9 +78,7 @@
       ! [SS-SWC] igird/inird retired — soilwater_init handles init via state%soilwater
       ! igird              = 0.0d0
       ! inird              = 0.0d0
-      irconc             = 0.0d0
-      irdate             = 0.0d0
-      irdepth            = 0.0d0
+      ! [GR-CROP 2026-05-25] irconc/irdate/irdepth zero-fills dropped — canonical home is state%crop%irrigation
       ! [GR-ATM 2026-05-23] nird retired — see state%atmosphere%nird
       ! [SS-TC] flheadirg/flirrigate/flIrg1Start retired to state%timecontrol (ADR 0041)
       ! [SS-GR-FINAL D1] FlIrrigationOutput zero-fill dropped — declaration retired
