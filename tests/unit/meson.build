@@ -194,7 +194,7 @@ if get_option('enable_pfunit')
         '../../src/crop/cropgrass_runtime.f90',
         '../../src/crop/cropfixed_runtime.f90',
         '../../src/crop/cropgrowth.f90',
-        '../../src/utils/sharedsimulation.f90',
+        # [GR-IO 2026-05-25 Phase 5] sharedsimulation.f90 dormant — no callers.
         '../../src/utils/numericalsolvers.f90',
         '../../src/core/swap_mod.f90',
         '../../src/crop/irrigation.f90',

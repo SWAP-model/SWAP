@@ -58,9 +58,9 @@ contains
       !   by config_to_variables; this file copies the buffer into state%drainage%owltab.
       ! [GR-IO 2026-05-25 Phase 5] flTillage → (state%cfg%soil%swtill == 1) inline.
       ! owltab → adapter writes directly to state%drainage%owltab (no bare global).
-      ! flSwapShared retained: hardcoded .false. flag gating SharedSimulation
-      ! calls (a feature-retirement candidate but out of scope for this arc).
-      use variables, only : flSwapShared
+      ! [GR-IO 2026-05-25 Phase 6] flSwapShared/SharedSimulation feature
+      !   retired — hardcoded-false flag had no TOML wiring; call sites
+      !   deleted, helper moved to src/utils/dormant/.
       ! [SS-GR-CROP A16] nutrient legacy globals — in WSN modules, not variables.f90
       use Wofost_Soil_Declarations, only: FOM_t, Bio_t, Hum_t, FOM_t0, Bio_t0, Hum_t0, &
                                           cNH4_t, cNO3_t, cNH4_t0, cNO3_t0, cNH4_av, cNO3_av, &
@@ -122,7 +122,7 @@ contains
    ! config_to_variables (tc_*_init_buf buffers retired).
 
 !  shared simulation
-   if (flSwapShared) call SharedSimulation(1)
+   ! [GR-IO 2026-05-25 Phase 6] SharedSimulation(1) deleted — flag was hardcoded false.
 
 !  initialize time variables and switches/flags
    call timecontrol_init(state)
@@ -434,8 +434,7 @@ contains
       ! [GR-CROP 2026-05-25] crop legacy reads cut to state%crop%common (flCropNut/
       !   flCropCalendar/flHarvestDay/flCropOutput/swcrp); swfrost via state%cfg%soil%frost.
       ! [GR-IO 2026-05-25 Phase 5] flTillage retired — read (state%cfg%soil%swtill == 1).
-      ! flSwapShared retained for SharedSimulation gating (always .false. in practice).
-      use variables, only : flSwapShared
+      ! [GR-IO 2026-05-25 Phase 6] flSwapShared/SharedSimulation feature retired.
       use cropgrowth_helpers_mod, only: CropOutput  ! GR-CROPWS Phase 0
       use timestep_control_mod, only: fldecdt
       use timecontrol_mod, only: timecontrol_advance, timecontrol_reduce_dt, &
@@ -515,7 +514,7 @@ contains
       if (flMeteoDt .or. flETSine) call MeteoDT(state)
 
 !     shared simulation
-      if (flSwapShared .and. tc_flDayStart) call SharedSimulation(2)  ! SS-TC TC-13
+      ! [GR-IO 2026-05-25 Phase 6] SharedSimulation(2) deleted — flag was hardcoded false.
 
 !     calculate Snow: MH+MM - probably to be moved within IF-block above, prior to call ProcessMeteoDay ...
       ! SS-HEAT Phase 2 Task 6: pass state so Snow reads tsoil from state%heat
@@ -635,7 +634,7 @@ contains
          ! [SS-GR-CROPRT C1] swend.eq.2 daily-dump branch dropped — ADR 0009: swend always 0
 
 !    shared simulation
-     if (flSwapShared .and. tc_flDayEnd) call SharedSimulation(3)  ! SS-TC TC-13
+     ! [GR-IO 2026-05-25 Phase 6] SharedSimulation(3) deleted — flag was hardcoded false.
 
    end associate  ! SS-TC TC-13: tc_flYearStart, tc_flDayStart, tc_flDayEnd, tc_daynr, tc_iyear
 
@@ -643,8 +642,7 @@ contains
 
    subroutine swap_close(state, config)
       ! [GR-CROP 2026-05-25] flcropnut/project/swcrp legacy reads cut to state%X
-      ! [GR-IO 2026-05-25 Phase 5] flSwapShared retained (SharedSimulation gating)
-      use variables, only : flSwapShared
+      ! [GR-IO 2026-05-25 Phase 6] flSwapShared/SharedSimulation feature retired.
       use swap_log,  only: log_info
       use management_soil_mod, only: SoilManagement
       use timecontrol_mod, only: itertime_close
@@ -656,7 +654,7 @@ contains
    call itertime_close(state)
 
 !  close output files (always run; iCaller branch retired)
-   if (flSwapShared) call SharedSimulation(4)
+   ! [GR-IO 2026-05-25 Phase 6] SharedSimulation(4) deleted — flag was hardcoded false.
    call SwapOutput(3, state)
    ! [SS-GR-CROPRT C1] swend.eq.1 end-sim-dump branch dropped — ADR 0009: swend always 0
    call SoilWaterOutput(4, state, config)   ! [SS-GR-CROPRT A3]

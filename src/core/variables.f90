@@ -98,7 +98,7 @@
       ! logical   flheader           ! moved to state%timecontrol%flheader
       ! logical   floutput           ! moved to state%timecontrol%floutput
       ! logical   flrunend           ! moved to state%timecontrol%flRunEnd
-      logical   flSwapShared       ! Flag to indicate the shared simultaneous simulation with other applications
+      ! [GR-IO 2026-05-25 Phase 6] flSwapShared retired — feature dormant (src/utils/dormant/sharedsimulation.f90)
       ! [SS-TC] retired 2026-05-12 — moved to state%timecontrol%flYearStart (ADR 0041)
       ! logical   flyearstart        ! moved to state%timecontrol%flYearStart
       ! [SS-TC] retired 2026-05-12 — moved to state%timecontrol%date (ADR 0041)

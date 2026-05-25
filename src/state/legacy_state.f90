@@ -17,7 +17,7 @@ module legacy_state_mod
       ! root_radius, r_microbial_z0, waterfilm_thickness, bunsencoeff,
       ! c_min_micro, c_macro, ctopnode).
       ! [GR-TIME 2026-05-25] outdat/outdatint retired — moved to state%timecontrol%{outdat,outdatint}
-      logical :: flSwapShared  !! Flag to indicate the shared simultaneous simulation with other applications
+      ! [GR-IO 2026-05-25 Phase 6] flSwapShared retired — feature dormant (src/utils/dormant/sharedsimulation.f90)
       character(len=16) :: outfil  !! Name of output file
       character(len=80) :: pathwork  !! Path to work directory
       character(len=80) :: project  !! Name of project

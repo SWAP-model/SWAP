@@ -18,7 +18,7 @@
       ! [GR-TIME 2026-05-25] outdat/outdatint retired — moved to
       ! state%timecontrol%{outdat,outdatint} (allocated + zeroed by
       ! config_to_variables before populate_outdatint_monthly).
-      flSwapShared       = .false.
+      ! [GR-IO 2026-05-25 Phase 6] flSwapShared retired — feature dormant
 
 ! --- crop variables (not crop specific, such as crop calendar)
       ! [GR-CROP 2026-05-25] crp retired — state%crop%common%file_unit_crp default 0.

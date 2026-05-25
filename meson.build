@@ -211,7 +211,9 @@ sources = [
     'src/state/swap_state.f90',
 
     # Utils
-    'src/utils/sharedsimulation.f90',
+    # [GR-IO 2026-05-25 Phase 5] sharedsimulation.f90 moved to src/utils/dormant/
+    #   — feature was hardcoded-disabled via flSwapShared (.false.) with no
+    #   TOML wiring; call sites in swap_mod.f90 deleted with this commit.
     'src/utils/arrayutils.f90',
     'src/utils/surfacewaterutils.f90',
     'src/utils/soilhydraulicsutils.f90',
