@@ -1559,7 +1559,8 @@ contains
       use irrigation_config_mod, only: irrigation_ssdi_t
       use swap_state_mod, only: swap_state_t
       ! [GR-CROP 2026-05-25] pathwork now explicit arg
-      use variables, only: mairg
+      ! [GR-IO 2026-05-25 Phase 4] mairg from canonical swap_array_dimensions module
+      use swap_array_dimensions, only: mairg
       type(irrigation_ssdi_t), intent(in)    :: ssdi
       integer,                 intent(in)    :: ncomp
       real(real64),            intent(in)    :: tstart, tend

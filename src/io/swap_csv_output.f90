@@ -21,8 +21,9 @@ module SWAP_csv_output
    ! [GR-CROP 2026-05-25] pathwork/outfil/project → state%cfg%general
    ! [GR-IO 2026-05-25 Phase 2] InList_csv migrated to state%cfg%output_csv%inlist;
    ! read sites take a local copy before make_userlist mutates it.
-   ! macp/madr are arrays.fi parameters (Phase 3).
-   use variables, only: macp, madr
+   ! [GR-IO 2026-05-25 Phase 4] macp/madr now imported from swap_array_dimensions
+   ! (the canonical home; the legacy `use variables` re-export is being phased out).
+   use swap_array_dimensions, only: macp, madr
    use swap_state_mod, only: swap_state_t
 
    implicit none
