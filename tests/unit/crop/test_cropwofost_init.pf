@@ -15,7 +15,7 @@ subroutine test_cropwofost_init_basic_globals()
    use cropwofost_config_mod, only: cropwofost_config_t
    use cropwofost_init_mod,   only: cropwofost_init_from_config
    use swap_state_mod, only: swap_state_t
-   use variables, only: swpotrelmf  ! many globals retired
+   ! [GR-CROP 2026-05-25] swpotrelmf retired — read via state%crop%grass%swpotrelmf
    type(cropwofost_config_t) :: cfg
    type(swap_state_t) :: state  ! [SS-GR-ATM A5.1] dual-write target
    real(real64) :: FraDeceasedLvToSoil
@@ -93,7 +93,7 @@ subroutine test_cropwofost_init_basic_globals()
    @assertEqual(1.2_real64,   state%crop%common%rri, 1.0e-12_real64)
    @assertEqual(50.0_real64,  state%crop%common%rdc, 1.0e-12_real64)
    @assertEqual(1,            state%crop%common%swdmi2rd)
-   @assertEqual(2,            swpotrelmf)
+   @assertEqual(2,            state%crop%grass%swpotrelmf)
    @assertEqual(0.8_real64,   state%crop%grass%relmf, 1.0e-12_real64)
    @assertEqual(0.35_real64,  FraDeceasedLvToSoil, 1.0e-12_real64)
 end subroutine

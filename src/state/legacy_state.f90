@@ -102,7 +102,7 @@ module legacy_state_mod
       ! [GR-ATM 2026-05-23] atmtr retired — see state%atmosphere%atmtr
       ! [GR-CROP 2026-05-25] agerm/bgerm/cgerm retired — read direct from
       ! crop_config_global%rotation_wofost(icrop)%germination (cgerm/bgerm derived locally).
-      integer :: swpotrelmf  !! Calculation of potential yield
+      ! [GR-CROP 2026-05-25] swpotrelmf retired — see state%crop%grass%swpotrelmf
       real(real64), allocatable :: avevaptb(:)  !! Gash interception model: average evaporation intensity during shower (-) as function of time (T)
       real(real64), allocatable :: avprectb(:)  !! Gash interception model: average rainfall intensity (-) as function of time (T)
       real(real64) :: c_mroot  !! Maintenance coefficient of root [0.0..1.0 kg O2/kg/d, R]

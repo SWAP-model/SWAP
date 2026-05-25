@@ -35,9 +35,7 @@ contains
       !   q10_microbial, specific_resp_humus: written here; oxygenstress
       !     seeds state%crop%oxygen from them on entry. Retirement requires
       !     oxygenstress to read cfg directly (out of scope for this task).
-      !   swpotrelmf: written here as legacy mirror; swap_mod still reads
-      !     the bare global to seed state%crop%grass%swpotrelmf.
-      use variables, only: q10_microbial, specific_resp_humus, swpotrelmf
+      use variables, only: q10_microbial, specific_resp_humus
       use array_utils,  only: afgen
       use error_mod,    only: fatalerr_collected
       use swap_state_mod, only: swap_state_t
@@ -256,8 +254,7 @@ contains
 
       ! Part 16: management factors (readgrass lines 3876-3885)
       state%crop%grass%relmf      = cfg%relmf
-      swpotrelmf = cfg%swpotrelmf
-      state%crop%grass%swpotrelmf = swpotrelmf
+      state%crop%grass%swpotrelmf = cfg%swpotrelmf
 
       ! Part 17: sequence of mowing / grazing (readgrass lines 3891-3905)
       ! SeqGrazMow is a fixed-size integer array in variables (size 366).

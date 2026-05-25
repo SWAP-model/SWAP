@@ -63,8 +63,7 @@ contains
       ! [GR-CROP 2026-05-25] crop-sweep: surviving legacy globals are cross-file with
       ! cropwofost_runtime / cropgrowth dispatcher; retired in Task 9.
       use variables, only: &
-         idsl, dlo, dlc,                                                    &  ! cross-file phenology with cropgrowth + runtime
-         swpotrelmf,                                                        &  ! cross-file with swap_mod (legacy InitSwap mirror)
+         idsl, dlo, dlc,                                                    &  ! cross-file phenology with cropwofost_runtime
          daycrop,                                                           &  ! cross-file with cropgrowth (InitializeCrop legacy zero)
          flCropNut                                                          ! cross-file with cropgrowth + runtime
       use array_utils, only: afgen
@@ -415,8 +414,7 @@ contains
 
       ! Management (readwofost lines 2979-2988)
       state%crop%grass%relmf      = cfg%management%relmf
-      swpotrelmf = cfg%management%swpotrelmf
-      state%crop%grass%swpotrelmf = swpotrelmf
+      state%crop%grass%swpotrelmf = cfg%management%swpotrelmf
 
       ! FraDeceasedLvToSoil — local SAVE in wofost(), returned via intent(out)
       ! so the dispatch block can assign it.  (FraHarLosOrm_* are set by

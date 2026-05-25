@@ -349,7 +349,7 @@
       ! [GR-CROPWS] amaxtb retired — see state%crop%common%amaxtb
       ! [GR-CROP-DVS] pgasspot retired — see state%crop%wofost%pgasspot
       ! [GR-CROP-DVS] pgass retired — see state%crop%wofost%pgass
-      integer   swpotrelmf         ! Calculation of potential yield
+      ! [GR-CROP 2026-05-25] swpotrelmf retired — see state%crop%grass%swpotrelmf
       ! [GR-CROP-DVS] relmf retired — see state%crop%grass%relmf
       real(8)   avevaptb(2*magrs)  ! Gash interception model: average evaporation intensity during shower (-) as function of time (T)
       real(8)   avprectb(2*magrs)  ! Gash interception model: average rainfall intensity (-) as function of time (T)
