@@ -126,7 +126,7 @@
       ! reset if new crop
       if (crop%common%flCropCalendar) then
         if (dabs(tc%t1900 - state%crop%common%cropstart) .lt. tiny) then  ! [GR-CROPWS B3]
-          call InitializeCrop
+          ! [GR-IO 2026-05-25 Phase 6] `call InitializeCrop` retired — initialize.f90 deleted.
           ! [GR-CROP 2026-05-25] crop-lifecycle reset: state fields are the
           ! canonical homes (legacy InitializeCrop was emptied; the only
           ! per-rotation crop scalars live here on state%crop).

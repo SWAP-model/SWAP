@@ -155,7 +155,7 @@ if get_option('enable_pfunit')
         '../../src/state/legacy_state.f90',
         '../../src/state/swap_state.f90',
         '../../src/core/timestep_control_mod.f90',
-        '../../src/core/initialize.f90',
+        # [GR-IO 2026-05-25 Phase 6 Step 6] initialize.f90 deleted.
         '../../src/soil/soilgrid.f90',
         '../../src/soil/waterbalance.f90',
         '../../src/soil/soilhydraulics.f90',

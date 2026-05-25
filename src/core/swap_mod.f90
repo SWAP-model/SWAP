@@ -103,9 +103,9 @@ contains
       type(swap_config_t), target, intent(inout) :: config  ! target: crop_config_global => config%crop (Task 3); inout: already loaded by caller
       logical :: request_smaller_dt   ! intent(out) dummy for SurfaceWater(1)
 
-!  Initialization of all variables in Module Variables
-   call Initialize
-   ! [GR-CROP 2026-05-25] flCropHarvest mirror retired — state default .false. matches Initialize zero-fill.
+   ! [GR-IO 2026-05-25 Phase 6] `call Initialize` retired — variables.f90
+   ! module is deleted; all defaults live in derived-type component
+   ! defaults on state%X / config%X. initialize.f90 itself is deleted.
 
    ! [GR-CROP-DVS] non-owning config pointer; lifetime matches state's.
    ! Top-level compute routines can now read switches via state%cfg%X%Y
