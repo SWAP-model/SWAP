@@ -18,6 +18,7 @@
 - **Fast gate:** `pixi run -e test check-fast` (build + pFUnit + 4 regression cases: hupselbrook, surfacewater, salinitystress, grassgrowth)
 - **Full gate:** `pixi run -e test check-full` (build + pFUnit + all 5 cases)
 - **Single pFUnit run:** `pixi run -e test test-pfunit` (whole unit-pfunit suite; there is no per-test target)
+- **pFUnit registration (load-bearing):** a new `tests/unit/*.pf` file must be added in THREE places or it compiles but never runs ("dark"): (1) the source-list and (2) the `pf_files` list in `tests/unit/meson.build`, AND (3) an `ADD_TEST_SUITE(test_<name>_suite)` line in `tests/unit/testSuites.inc`. After adding a test, confirm the printed pFUnit total (`OK (N tests)`) actually increased.
 - **Commits:** `development` branch only, one focused change each, message tagged `IO-OUT/<phase>`.
 - **State-schema rebuild:** any task that edits `src/state/*_state.f90` MUST `rm -rf builddir` before building (Meson does not propagate `.mod` deps across the swap_modern↔swap_legacy boundary). Only Phase E does this.
 - **Format invariant:** the CSV number formatter (E-notation when `|x| < 1e-4` or `> 1e4`, else fixed 5-decimal) is load-bearing for the `1e-2` regression tolerance. It must be carried verbatim, never re-derived.
@@ -485,12 +486,24 @@ git commit -m "feat(io): IO-OUT/B — output_registry catalogue + inlist resolve
 
 ### Task B2: Make `swap_csv_output` consume the registry
 
+**Scope note (refined during execution):** `make_userlist`/`merge`/`det_which_vars` do more than name-matching — they expand the `shorts` aliases (`WATBAL`→17 vars, etc.) and parse node/sub-region selectors (`H[-10.0,4,5]`). `resolve_inlist` knows neither. So B2 does NOT replace that machinery. B2 only single-sources the *catalogue* (`vars%name`/`vars%unit`) from the registry, deleting the duplicated `data` block. The selection machinery stays and continues to read `vars%name`. `resolve_inlist` remains tested registry infrastructure (alias/selector-aware validation is a separate future concern). Output must stay byte-identical.
+
 **Files:**
-- Modify: `src/io/swap_csv_output.f90` (header emission + inlist resolution + value-array indexing)
+- Modify: `src/io/swap_csv_output.f90` (replace the `data` catalogue block with a runtime registry fill)
 
-- [ ] **Step 1: Replace inline catalogue with registry use**
+- [ ] **Step 1: Replace the inline `data` catalogue with a registry fill**
 
-In `swap_csv_output.f90`: `use output_registry_mod, only: var_count, var_name, var_unit, var_kind, resolve_inlist, OUT_SCALAR, OUT_NODE, OUT_SUBREGION`. Replace the inline name/unit arrays (94-198) and the `make_userlist`/`merge`/`det_which_vars` selection so the set of active variables comes from `resolve_inlist(state%cfg%output_csv%inlist, …)`, and `makeheader` emits names/units from `var_name`/`var_unit`. Keep `vars%value` indexed by registry index.
+In `swap_csv_output.f90`: add `use output_registry_mod, only: var_count, var_name, var_unit`. Delete the `data (vars%name(i), vars%unit(i), i = 1, M) / … /` block (lines 94-198). In `csv_out` `case (1)`, before `make_userlist`, fill from the registry:
+
+```fortran
+if (var_count() /= M) call fatalerr_collected('csv_out', 'registry size /= M')
+do i = 1, M
+   vars%name(i) = var_name(i)   ! char(32) -> char(12): all names <= 12 chars
+   vars%unit(i) = var_unit(i)   ! char(16) -> char(12): all units <= 12 chars
+end do
+```
+
+`makeheader`, `merge`, `det_which_vars`, and the `shorts` alias table are unchanged — they keep reading `vars%name`/`vars%unit`, now sourced from the single registry.
 
 - [ ] **Step 2: Build**
 
