@@ -67,14 +67,12 @@
         daycrop,                 &  ! [GR-SOL 2026-05-24] swinco retired — via state%soilwater%swinco
 
         swcrp,                                                             &  ! dvsend/swdrought/eff/amaxtb/tmpftb/tmnftb retired
-        flHarvestDay,                                                      &  ! dispatcher writes legacy mirror; non-crop readers (swap_mod)
-        pathcrop, cropfil,                                                 &  ! crop-file path/name (cross-file with cropgrowth_helpers/cropwofost_runtime)
-        dummy_tsoil_cg_ => tsoil
+        flHarvestDay                                                          ! dispatcher writes legacy mirror; non-crop readers (swap_mod)
       ! [GR-CROP 2026-05-25] Nutrient cluster (NLUE/ANLV/ANST/NMXLV/NMAXLV/NMAXST/NMAXRT/
       !   LRNR/LSNR/NNI/RNFLV/RNFST/FRNX/FSTR + flCropNut) isolated in
       !   cropwofost_runtime_mod%wofost_apply_nstress — dispatcher calls the wrapper.
-      !! Rename config-staging tsoil to avoid clash with dummy arg tsoil.
-      !! [SS-HEAT] Task 9: tsoil retained as config-staging buffer; global is not compute state.
+      ! [GR-CROP 2026-05-25] pathcrop/cropfil dropped from use-list (only in comments here).
+      ! [GR-CROP 2026-05-25] tsoil config-staging buffer rename dropped (never consumed in body).
       use array_utils, only: afgen
       use rootextraction_mod, only: MatricFlux
       use swap_constants, only: tiny

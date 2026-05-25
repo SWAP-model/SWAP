@@ -67,7 +67,8 @@ contains
       if (allocated(config%general%project))   project   = config%general%project
       if (allocated(config%general%pathwork))  pathwork  = config%general%pathwork
       if (allocated(config%general%pathatm))   pathatm   = config%general%pathatm
-      if (allocated(config%general%pathcrop))  pathcrop  = config%general%pathcrop
+      ! [GR-CROP 2026-05-25] pathcrop legacy write retired — bare global was orphan
+      !   (config%general%pathcrop is the canonical read).
       if (allocated(config%general%pathdrain)) pathdrain = config%general%pathdrain
       state%timecontrol%swscre  = config%general%swscre
 

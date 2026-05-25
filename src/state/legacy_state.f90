@@ -143,7 +143,7 @@ module legacy_state_mod
       logical :: flanthesis  !! Flag indicating anthesis stage of a crop
       logical :: flHarvestDay  !! Flag indicating that current day is harvest day
       character(len=40), allocatable :: cropfil(:)  !! Array with names of crop files
-      character(len=80) :: pathcrop  !! Path to folder with crop input files
+      ! [GR-CROP 2026-05-25] pathcrop retired — config%general%pathcrop is the canonical read.
       real(real64) :: rdmax  !! Maximum rooting depth in soil profile (L)
       ! [GR-ATM 2026-05-23] flCO2 retired — see state%atmosphere%flco2
       ! [GR-CROP 2026-05-25] co2amaxtb/co2efftb/co2tratb/co2year/co2ppm retired —
