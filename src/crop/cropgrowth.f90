@@ -131,7 +131,9 @@
         if (dabs(tc%t1900 - state%crop%common%cropstart) .lt. tiny) then  ! [GR-CROPWS B3]
           call InitializeCrop
           ! [GR-CROP 2026-05-25] crop-lifecycle reset: state fields are the canonical
-          ! homes for flCropPrep/Sow/Germ/PrepDelay/SowDelay/tsumgerm.
+          ! homes for flCropPrep/Sow/Germ/PrepDelay/SowDelay/tsumgerm/daycrop.
+          ! daycrop must mirror the legacy InitializeCrop reset (legacy line 570).
+          state%crop%common%daycrop       = 0
           state%crop%common%flCropPrep    = .false.
           state%crop%common%flCropSow     = .false.
           state%crop%common%flCropGerm    = .false.

@@ -441,7 +441,7 @@
       ! [GR-CROP 2026-05-25] reltr retired — see state%crop%common%reltr
       ! [GR-CROPWS] rfsetb retired — see state%crop%common%rfsetb
       ! [GR-CROPWS] rgrlai retired — see state%crop%common%rgrlai
-      real(8)   rid                ! Real day number of detailed grass crop (d)
+      ! [GR-CROP 2026-05-25] rid retired — see state%crop%common%rid
       ! [GR-CROPWS] rml retired — see state%crop%common%rml
       ! [GR-CROPWS] rmo retired — see state%crop%common%rmo
       ! [GR-CROPWS] rmr retired — see state%crop%common%rmr

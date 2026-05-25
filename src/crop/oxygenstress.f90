@@ -100,8 +100,7 @@ contains
       !     cannot retire from oxygenstress without also touching the writer
       !     contract in src/io/swap_csv_output.f90). OxygenStress writes
       !     c_top(1) and c_top(node+1).
-      !   * `rid` — workspace; written by cropgrass_runtime, read here.
-      use variables, only: c_top, rid
+      use variables, only: c_top
       use O2_pars, only: current_state
       use array_utils, only: afgen
       implicit none
@@ -241,7 +240,7 @@ contains
           f_senes=afgen(state%crop%common%rfsetb,30,state%crop%common%dvs)
       endif
       if (state%crop%common%croptype(state%crop%common%icrop) .eq. 3) then
-          f_senes=afgen(state%crop%common%rfsetb,30,rid)
+          f_senes=afgen(state%crop%common%rfsetb,30,state%crop%common%rid)
       endif
    
 ! --- extract a number of variables from Swap for local use in module OxygenStress
@@ -568,9 +567,8 @@ contains
       ! now comes from state%crop%oxygen%max_resp_factor (seeded at OxygenStress
       ! entry from the legacy global written by cropfixed_init/runtime).
       ! [GR-CROP 2026-05-25] icrop migrated to state%crop%common%icrop.
-      ! `rid` and `daycrop` remain cross-file inbound (writers in
-      ! cropgrass_runtime.f90 / cropgrowth.f90); retire after Tasks 7/9.
-      use variables, only: rid, daycrop
+      ! [GR-CROP 2026-05-25] daycrop → state%crop%common%daycrop;
+      ! rid → state%crop%common%rid.
       use array_utils, only: afgen
       use swap_state_mod, only: swap_state_t
       implicit none
@@ -638,20 +636,20 @@ contains
         Max_resp_factor_gmrf = 1.0d0  !RB20140317
 ! --- skip in case of regrowth, equal to wofost detailed grass
 ! --- note: daycrop.ge.idregrpot (wofost) --> daycrop.gt.idregrpot, because idregrpot is result of wofost of previous day
-        if (daycrop.eq.0 .or.daycrop.gt.state%crop%grass%idregr) then
+        if (state%crop%common%daycrop.eq.0 .or. state%crop%common%daycrop.gt.state%crop%grass%idregr) then
 
 ! --- respiration and partitioning of carbohydrates between growth and
 ! --- maintenance respiration, based on actual plant state variables
-          rmres_gmrf = (state%crop%common%rmr*state%crop%wofost%wrt+state%crop%common%rml*state%crop%wofost%wlv+state%crop%common%rms*state%crop%wofost%wst)*afgen(state%crop%common%rfsetb,30,rid)
+          rmres_gmrf = (state%crop%common%rmr*state%crop%wofost%wrt+state%crop%common%rml*state%crop%wofost%wlv+state%crop%common%rms*state%crop%wofost%wst)*afgen(state%crop%common%rfsetb,30,state%crop%common%rid)
 !        teff_gmrf = q10**((tsoil(10)-25.0d0)/10.0d0) !TEMPORARY!!!! ONLY TO CHECK EFFECT OF USING TSOIL INSTEAD OF TAV; ## MH: /10=*0.1
           teff_gmrf = state%crop%common%q10**(0.1d0*(state%atmosphere%Tav-25.0d0))  ! [GR-CROP Phase B/8] tav → state%atmosphere%Tav
 
           mres_gmrf = min(state%crop%wofost%pgass,rmres_gmrf*teff_gmrf)  ! ## MM 2018-05-07
           asrc_gmrf = state%crop%wofost%pgass - mres_gmrf                ! ## MM 2018-05-07
 ! --- partitioning factors
-          fr_gmrf = afgen(state%crop%common%frtb,30,rid) !rid for grass, dvs for wofost
-          fl_gmrf = afgen(state%crop%common%fltb,30,rid)
-          fs_gmrf = afgen(state%crop%common%fstb,30,rid)
+          fr_gmrf = afgen(state%crop%common%frtb,30,state%crop%common%rid) !rid for grass, dvs for wofost
+          fl_gmrf = afgen(state%crop%common%fltb,30,state%crop%common%rid)
+          fs_gmrf = afgen(state%crop%common%fstb,30,state%crop%common%rid)
 ! --- dry matter increase, only part in which cvf is calculated
           cvf_gmrf = 1.0d0/((fl_gmrf /state%crop%common%cvl+fs_gmrf /state%crop%common%cvs)* &
      &        (1.0d0-fr_gmrf)+fr_gmrf/state%crop%common%cvr)
@@ -665,7 +663,7 @@ contains
           Rg_roots = Froots*(1.0d0-cvf_gmrf)*asrc_gmrf
 ! --- Rm_roots: maintenance respiration roots     
           Rm_roots = min(Froots*(1.0d0-cvf_gmrf)*state%crop%wofost%pgass,                &
-     &        state%crop%common%rmr*state%crop%wofost%wrt*afgen(state%crop%common%rfsetb,30,rid)*teff_gmrf)
+     &        state%crop%common%rmr*state%crop%wofost%wrt*afgen(state%crop%common%rfsetb,30,state%crop%common%rid)*teff_gmrf)
 ! --- Max_resp_factor: ratio total respiration / maintenance respiration        
           if (Rm_roots.gt.0.d0) then
               Max_resp_factor_gmrf = (Rg_roots+Rm_roots)/Rm_roots

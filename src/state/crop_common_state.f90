@@ -74,6 +74,11 @@ module crop_common_state_mod
       ! file's growth math + cross-rotation by the cropwofost nutrient pathway.
       real(real64) :: reltr           = 0.0_real64       !! relative transpiration factor reducing crop growth (-)
 
+      ! [GR-CROP 2026-05-25] Real day number of detailed grass crop (workspace).
+      ! Written by cropgrass_runtime task=1/3; read same-file + oxygenstress
+      ! (GET_MAX_RESP_FACTOR helper, dynamic-crop branch).
+      real(real64) :: rid             = 0.0_real64       !! real day number of detailed grass crop (d)
+
       ! [SS-GR-CROPRT A4] surface params
       real(real64) :: albedo         = 0.0_real64     !! crop reflection coefficient (-)
       real(real64) :: rsc            = 0.0_real64     !! minimum canopy resistance dry crop (T/L)

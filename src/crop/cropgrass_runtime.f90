@@ -24,11 +24,11 @@
 !     by the cropX_runtime task=3 selected by the dispatcher; read same-file).
 !   - wrtmin/gwrt migrated to state%crop%wofost (active-rotation only — read by
 !     cropgrowth_helpers%update_rootdistribution via state).
-!   - Remaining legacy globals (rid, daycrop): cross-file workspace with
-!     oxygenstress / cropgrowth dispatcher.
+!   - daycrop reads cut over to state%crop%common%daycrop.
+!   - rid migrated to state%crop%common%rid (workspace, active-rotation only).
+!   - File is now `use variables`-free.
 ! ----------------------------------------------------------------------
       use swap_array_dimensions, only: magrs, macp
-      use variables, only: rid, daycrop   ! workspace/scratch — cross-file readers (oxygenstress, cropgrowth)
       use array_utils, only: afgen
       use soilhydraulics_utils, only: watcon
       use rootextraction_mod, only: MatricFlux
@@ -179,15 +179,15 @@
         crop%grass%iseqgmpot = crop%grass%iseqgm
 
 ! ---   initial values of crop parameters
-        rid = dble(daycrop)
-        fr = afgen (crop%common%frtb,30,rid)
-        fl = afgen (crop%common%fltb,30,rid)
-        fs = afgen (crop%common%fstb,30,rid)
-        crop%common%sla(1) = afgen (crop%common%slatb,30,rid)
+        crop%common%rid = dble(crop%common%daycrop)
+        fr = afgen (crop%common%frtb,30,crop%common%rid)
+        fl = afgen (crop%common%fltb,30,crop%common%rid)
+        fs = afgen (crop%common%fstb,30,crop%common%rid)
+        crop%common%sla(1) = afgen (crop%common%slatb,30,crop%common%rid)
         crop%common%lvage(1) = 0.d0
         crop%common%ilvold = 1
         crop%grass%idregr = 0
-        crop%common%slapot(1) = afgen (crop%common%slatb,30,rid)
+        crop%common%slapot(1) = afgen (crop%common%slatb,30,crop%common%rid)
         crop%common%lvagepot(1) = 0.d0
         crop%common%ilvoldpot = 1
         crop%grass%idregrpot = 0
@@ -226,7 +226,7 @@
 
 ! ---   actual rooting depth
         if (crop%common%swrd.eq.1) then
-          crop%common%rd = afgen (crop%common%rdtb,22,rid)
+          crop%common%rd = afgen (crop%common%rdtb,22,crop%common%rid)
           crop%common%rd = min(crop%common%rd,crop%common%rdm)
         elseif (crop%common%swrd.eq.2) then
           crop%common%rd = min(crop%common%rdi,crop%common%rdm)
@@ -245,8 +245,8 @@
         crop%common%cuptgrazpot = 0.0d0
         crop%common%tsum = 0.0d0
         
-        crop%grass%cropstartpot     = rid
-        crop%grass%cropstartact     = rid
+        crop%grass%cropstartpot     = crop%common%rid
+        crop%grass%cropstartact     = crop%common%rid
         crop%grass%flhrvendpot      = .false.
         flearlyhrvendpot = .false.
         ! mirror grass init-time state
@@ -268,8 +268,8 @@
       endif
 
       if (crop%swcf.ne.3) then
-        crop%common%cf = afgen (crop%fixed%cftb,(2*magrs),rid)
-        crop%common%ch = afgen (crop%fixed%chtb,(2*magrs),rid)
+        crop%common%cf = afgen (crop%fixed%cftb,(2*magrs),crop%common%rid)
+        crop%common%ch = afgen (crop%fixed%chtb,(2*magrs),crop%common%rid)
       else
         crop%common%cf        = afgen (crop%fixed%cftb,(2*magrs),crop%lai)
         crop%fixed%cfeic = afgen (crop%fixed%cfeictb,(2*magrs),crop%lai)
@@ -341,14 +341,14 @@
 
 ! --- rates of change of the grass variables ---------------------------------------------
 
-      rid = dble(daycrop)
+      crop%common%rid = dble(crop%common%daycrop)
       
 ! --- check end of harvest
       if (crop%grass%flhrvendpot) then
         if (flearlyhrvendpot) then
-          crop%grass%cropstartpot  = rid - 1.d0
+          crop%grass%cropstartpot  = crop%common%rid - 1.d0
         else
-          crop%grass%cropstartpot  = rid
+          crop%grass%cropstartpot  = crop%common%rid
         endif
         crop%grass%pmowdm        = 0.d0
         crop%grass%pgrzdm        = 0.d0
@@ -377,14 +377,14 @@
       
         ! check if grass growth has started
         if (flGrassGrowth) then
-          crop%grass%cropstartpot = rid
-          crop%grass%cropstartact = rid
+          crop%grass%cropstartpot = crop%common%rid
+          crop%grass%cropstartact = crop%common%rid
         endif
 
       endif
       
 ! --- skip in case of: tsum<tsum200, or 3 criteria (tsummttd), or regrowth
-      if (flGrassGrowth .and. daycrop.ge.crop%grass%idregrpot) then
+      if (flGrassGrowth .and. crop%common%daycrop.ge.crop%grass%idregrpot) then
 
 ! ===   daily dry matter production ===
 
@@ -392,19 +392,19 @@
 
 ! ---   respiration and partitioning of carbohydrates between growth and
 ! ---   maintenance respiration
-        rmrespot=(crop%common%rmr*crop%wofost%wrtpot+crop%common%rml*crop%wofost%wlvpot+crop%common%rms*crop%wofost%wstpot)*afgen(crop%common%rfsetb,30,rid)
+        rmrespot=(crop%common%rmr*crop%wofost%wrtpot+crop%common%rml*crop%wofost%wlvpot+crop%common%rms*crop%wofost%wstpot)*afgen(crop%common%rfsetb,30,crop%common%rid)
         teff = crop%common%q10**((atmo%Tav-25.0d0)/10.0d0)
         mrespot = min (gasspot,rmrespot*teff)
         asrcpot = gasspot-mrespot
 
 ! ---   partitioning factors
-        fr = afgen(crop%common%frtb,30,rid)
-        fl = afgen(crop%common%fltb,30,rid)
-        fs = afgen(crop%common%fstb,30,rid)
+        fr = afgen(crop%common%frtb,30,crop%common%rid)
+        fl = afgen(crop%common%fltb,30,crop%common%rid)
+        fs = afgen(crop%common%fstb,30,crop%common%rid)
 ! ---   check on partitioning
         fcheck = fr+(fl+fs)*(1.0d0-fr) - 1.0d0
         if (dabs(fcheck).gt.0.0001d0) then
-          write(tmp,'(f6.3)') rid
+          write(tmp,'(f6.3)') crop%common%rid
           tmp = adjustl (tmp)
           Messag ='The sum of partitioning factors for leaves, stems'// &
      &    ' and storage organs is not equal to one at time '            &
@@ -434,9 +434,9 @@
         ! growth of the roots is balanced by the death of root tissue
         if (crop%common%swrd.eq.3 .and. crop%wofost%wrtpot.gt.crop%common%wrtmax) then
           drrtpot = grrtpot
-          drrtpot = max(drrtpot,crop%wofost%wrtpot*afgen (crop%common%rdrrtb,30,rid))
+          drrtpot = max(drrtpot,crop%wofost%wrtpot*afgen (crop%common%rdrrtb,30,crop%common%rid))
         else  
-          drrtpot = crop%wofost%wrtpot*afgen (crop%common%rdrrtb,30,rid)
+          drrtpot = crop%wofost%wrtpot*afgen (crop%common%rdrrtb,30,crop%common%rid)
         endif  
         gwrtpot = grrtpot - drrtpot
 
@@ -487,7 +487,7 @@
         drlvpot   = dslvpot+dalvpot
 
 ! ---   leaf area not to exceed exponential growth curve
-        slatpot = afgen (crop%common%slatb,30,rid)
+        slatpot = afgen (crop%common%slatb,30,crop%common%rid)
         if (crop%common%laiexppot.lt.6.0d0) then
           dteff = max (0.0d0,atmo%Tav-crop%common%tbase)
           crop%common%glaiexpot = crop%common%laiexppot*crop%common%rgrlai*dteff
@@ -503,7 +503,7 @@
 ! ---   death of stems due to water stress is zero in case of potential growth
         drst1pot = 0.0d0
 ! ---   death of stems due to ageing
-        drst2pot = afgen (crop%common%rdrstb,30,rid)*crop%wofost%wstpot
+        drst2pot = afgen (crop%common%rdrstb,30,crop%common%rid)*crop%wofost%wstpot
         drstpot = (drst1pot+drst2pot)/delt 
         gwstpot = grstpot-drstpot
 
@@ -529,7 +529,7 @@
 
             ! use of flexible threshold
             elseif (swdmmow .eq. 2) then
-              dmharvest = afgen(crop%grass%dmmowtb,20,rid)
+              dmharvest = afgen(crop%grass%dmmowtb,20,crop%common%rid)
               if (crop%wofost%tagppot .gt. dmharvest .or.                           &
      &                 (crop%grass%daygrowthpot .gt. maxdaymow .and. crop%grass%iseqgmpot .gt. 1)) then
                 crop%grass%flHarvestpot = .true.
@@ -546,9 +546,9 @@
 !         In case mowing is triggered: Growth is initialized again and the weight of the sward is stored
           if (crop%grass%flHarvestpot) then
             crop%grass%iseqgmpot = crop%grass%iseqgmpot + 1
-            crop%common%slapot(1) = afgen (crop%common%slatb,30,rid)
-            fl = afgen (crop%common%fltb,30,rid)
-            fs = afgen (crop%common%fstb,30,rid)
+            crop%common%slapot(1) = afgen (crop%common%slatb,30,crop%common%rid)
+            fl = afgen (crop%common%fltb,30,crop%common%rid)
+            fs = afgen (crop%common%fstb,30,crop%common%rid)
             crop%wofost%wlvpot = crop%grass%mowrest / (1.d0 + (fs/fl))
             crop%wofost%wstpot = fs/fl*crop%wofost%wlvpot
             crop%wofost%dwlvpot = 0.0d0
@@ -577,14 +577,14 @@
             tagpspot = max(0.0d0,(crop%wofost%tagppot-(crop%wofost%wlvpot+crop%wofost%dwlvpot+crop%wofost%wstpot+crop%wofost%dwstpot)))
             crop%wofost%tagptpot = crop%wofost%tagptpot + tagpspot * (1.d0 - FraLossMow)
 
-            crop%grass%cropendpot  = rid
+            crop%grass%cropendpot  = crop%common%rid
             crop%grass%flhrvendpot = .true.
             crop%grass%pmowdm      = tagpspot * (1.d0 - FraLossMow)
             crop%wofost%plossdm     = tagpspot * FraLossMow
             
 !           set regrowth delay
             idelaypot = int(afgen(crop%grass%DelayRegrowthTab,200,tagpspot))
-            crop%grass%idregrpot = daycrop + idelaypot
+            crop%grass%idregrpot = crop%common%daycrop + idelaypot
 
           endif          
           
@@ -606,7 +606,7 @@
               
               ! use of flexible threshold
               elseif (swdmgrz .eq. 2) then 
-                dmgrazing = afgen(crop%grass%dmgrztb,20,rid)
+                dmgrazing = afgen(crop%grass%dmgrztb,20,crop%common%rid)
                 if (crop%wofost%tagppot .gt. dmgrazing .or.                           &
      &                 (crop%grass%daygrowthpot .gt. maxdaygrz .and. crop%grass%iseqgmpot .gt. 1)) then
                   crop%grass%flHarvestpot = .true.
@@ -672,7 +672,7 @@
               enddo
           
 !             harvest during total grazing event
-              crop%grass%cropendpot = rid
+              crop%grass%cropendpot = crop%common%rid
               crop%grass%pgrzdm     = crop%grass%pgrzdm + uptgrazpot
               crop%wofost%plossdm    = crop%wofost%tagppot * fralossgrz
               
@@ -703,14 +703,14 @@
             endif
 
 !           Assumption: no delay in regrowth during and after grazing (without dewooling)
-            crop%grass%idregrpot = daycrop
+            crop%grass%idregrpot = crop%common%daycrop
 
 !           Dewooling after grazing event            
             if (flDewoolingpot) then
 
-              crop%common%slapot(1) = afgen (crop%common%slatb,30,rid)
-              fl = afgen (crop%common%fltb,30,rid)
-              fs = afgen (crop%common%fstb,30,rid)
+              crop%common%slapot(1) = afgen (crop%common%slatb,30,crop%common%rid)
+              fl = afgen (crop%common%fltb,30,crop%common%rid)
+              fs = afgen (crop%common%fstb,30,crop%common%rid)
               crop%wofost%wlvpot = crop%grass%dewrest / (1.d0 + (fs/fl))
               crop%wofost%wstpot = fs/fl*crop%wofost%wlvpot
               crop%wofost%dwlvpot = 0.0d0
@@ -728,7 +728,7 @@
               drrtpot = 0.0d0
               
 !             Assumption: one day delay in regrowth after grazing
-              crop%grass%idregrpot = daycrop + 1
+              crop%grass%idregrpot = crop%common%daycrop + 1
               
             endif
             
@@ -736,7 +736,7 @@
           
         endif
         
-        if (daycrop .ge. crop%grass%idregrpot) then
+        if (crop%common%daycrop .ge. crop%grass%idregrpot) then
 
 ! ---     physiologic ageing of leaves per time step
           fysdel = max (0.0d0,(atmo%Tav-crop%common%tbase)/(35.0d0-crop%common%tbase))
@@ -811,7 +811,7 @@
 
         ! root extension
         if (crop%common%swrd.eq.1) then
-          crop%common%rdpot = afgen (crop%common%rdtb,22,rid)
+          crop%common%rdpot = afgen (crop%common%rdtb,22,crop%common%rid)
           crop%common%rdpot = min(crop%common%rdpot,crop%common%rdm)
         elseif (crop%common%swrd.eq.2) then
           rrpot = min (crop%common%rdm-crop%common%rdpot,crop%common%rri)
@@ -836,9 +836,9 @@
 ! --- check end of harvest
       if (crop%grass%flhrvendact) then
         if (flearlyhrvendact) then
-          crop%grass%cropstartact  = rid - 1.d0
+          crop%grass%cropstartact  = crop%common%rid - 1.d0
         else
-          crop%grass%cropstartact  = rid
+          crop%grass%cropstartact  = crop%common%rid
         endif
         crop%grass%mowdm        = 0.d0
         crop%grass%grzdm        = 0.d0
@@ -850,7 +850,7 @@
 ! --- rates of change of the crop variables ---------------------------------------------
       
 ! --- skip in case of: tsum<tsum200, or 3 criteria (tsummttd), or regrowth
-      if (flGrassGrowth .and. daycrop .ge. crop%grass%idregr) then
+      if (flGrassGrowth .and. crop%common%daycrop .ge. crop%grass%idregr) then
 
 ! ===   daily dry matter production ===
 
@@ -865,15 +865,15 @@
 
 ! ---   respiration and partitioning of carbohydrates between growth and
 ! ---   maintenance respiration
-        rmres = (crop%common%rmr*crop%wofost%wrt+crop%common%rml*crop%wofost%wlv+crop%common%rms*crop%wofost%wst)*afgen(crop%common%rfsetb,30,rid)
+        rmres = (crop%common%rmr*crop%wofost%wrt+crop%common%rml*crop%wofost%wlv+crop%common%rms*crop%wofost%wst)*afgen(crop%common%rfsetb,30,crop%common%rid)
         teff = crop%common%q10**((atmo%Tav-25.0d0)/10.0d0)
         mres = min (gass,rmres*teff)
         asrc = gass-mres
 
 ! ---   partitioning factors (relevant for restart)
-        fr = afgen(crop%common%frtb,30,rid)
-        fl = afgen(crop%common%fltb,30,rid)
-        fs = afgen(crop%common%fstb,30,rid)
+        fr = afgen(crop%common%frtb,30,crop%common%rid)
+        fl = afgen(crop%common%fltb,30,crop%common%rid)
+        fs = afgen(crop%common%fstb,30,crop%common%rid)
 
 ! ---   dry matter increase
         cvf = 1.0d0/((fl/crop%common%cvl+fs/crop%common%cvs)*(1.0d0-fr)+fr/crop%common%cvr)
@@ -895,9 +895,9 @@
         if (crop%common%swrd.eq.3 .and. soil%flWrtNonox) grrt = 0.d0 
         if (crop%common%swrd.eq.3 .and. crop%wofost%wrt.gt.crop%common%wrtmax) then
           drrt = grrt
-          drrt = max(drrt,crop%wofost%wrt*afgen (crop%common%rdrrtb,30,rid))
+          drrt = max(drrt,crop%wofost%wrt*afgen (crop%common%rdrrtb,30,crop%common%rid))
         else  
-          drrt = crop%wofost%wrt*afgen (crop%common%rdrrtb,30,rid)
+          drrt = crop%wofost%wrt*afgen (crop%common%rdrrtb,30,crop%common%rid)
         endif  
         crop%wofost%gwrt = grrt-drrt
 
@@ -946,7 +946,7 @@
         drlv   = dslv+dalv
 
 ! ---   physiologic ageing of leaves per time step
-        slat = afgen (crop%common%slatb,30,rid)
+        slat = afgen (crop%common%slatb,30,crop%common%rid)
 
 ! ---   leaf area not to exceed exponential growth curve
         if (crop%common%laiexp.lt.6.0d0) then
@@ -964,7 +964,7 @@
 ! ---   death of stems due to water stress
         drst1 = crop%wofost%wst*(1.0d0-crop%common%reltr)*crop%common%perdl
 ! ---   death of stems due to ageing
-        drst2 = afgen (crop%common%rdrstb,30,rid)*crop%wofost%wst
+        drst2 = afgen (crop%common%rdrstb,30,crop%common%rid)*crop%wofost%wst
         drst = (drst1+drst2)/delt 
         gwst = grst-drst
 
@@ -990,7 +990,7 @@
 
             ! use of flexible threshold
             elseif (swdmmow .eq. 2) then
-              dmharvest = afgen(crop%grass%dmmowtb,20,rid)
+              dmharvest = afgen(crop%grass%dmmowtb,20,crop%common%rid)
               if (crop%wofost%tagp .gt. dmharvest .or.                           &
      &                 (crop%grass%daygrowth .gt. maxdaymow .and. crop%grass%iseqgm .gt. 1)) then
                 crop%grass%flHarvest = .true.
@@ -1008,9 +1008,9 @@
 !       In case mowing is triggered: Growth is initialized again and the weight of the sward is stored
         if (crop%grass%flHarvest) then
           crop%grass%iseqgm = crop%grass%iseqgm + 1
-          crop%common%sla(1) = afgen (crop%common%slatb,30,rid)
-          fl = afgen (crop%common%fltb,30,rid)
-          fs = afgen (crop%common%fstb,30,rid)
+          crop%common%sla(1) = afgen (crop%common%slatb,30,crop%common%rid)
+          fl = afgen (crop%common%fltb,30,crop%common%rid)
+          fs = afgen (crop%common%fstb,30,crop%common%rid)
           crop%wofost%wlv = crop%grass%mowrest / (1.d0 + (fs/fl))
           crop%wofost%wst = fs/fl*crop%wofost%wlv
           crop%wofost%dwlv = 0.0d0
@@ -1039,14 +1039,14 @@
           tagps = max (0.0d0,(crop%wofost%tagp-(crop%wofost%wlv+crop%wofost%dwlv+crop%wofost%wst+crop%wofost%dwst)))
           crop%wofost%tagpt = crop%wofost%tagpt + tagps * (1.d0 - fralossmow)
 
-          crop%grass%cropendact  = rid
+          crop%grass%cropendact  = crop%common%rid
           crop%grass%flhrvendact = .true.
           crop%grass%mowdm   = tagps * (1.d0 - FraLossMow)
           crop%wofost%lossdm  = tagps * FraLossMow
           
 ! ---     set regrowth delay
           idelay = int(afgen(crop%grass%DelayRegrowthTab,200,tagps))
-          crop%grass%idregr = daycrop + idelay
+          crop%grass%idregr = crop%common%daycrop + idelay
 
         endif
           
@@ -1068,7 +1068,7 @@
               
               ! use of flexible threshold
               elseif (swdmgrz .eq. 2) then 
-                dmgrazing = afgen(crop%grass%dmgrztb,20,rid)
+                dmgrazing = afgen(crop%grass%dmgrztb,20,crop%common%rid)
                 if (crop%wofost%tagp .gt. dmgrazing .or.                           &
      &            (crop%grass%daygrowth .gt. maxdaygrz .and. crop%grass%iseqgm .gt. 1)) then
                   crop%grass%flHarvest = .true.
@@ -1134,7 +1134,7 @@
               enddo
           
 !             harvest during total grazing event
-              crop%grass%cropendact = rid
+              crop%grass%cropendact = crop%common%rid
               crop%grass%grzdm      = crop%grass%grzdm + uptgraz
               crop%wofost%lossdm     = crop%wofost%tagp * fralossgrz
               
@@ -1165,14 +1165,14 @@
             endif
 
 !           Assumption: no delay in regrowth during and after grazing (without dewooling)
-            crop%grass%idregr = daycrop
+            crop%grass%idregr = crop%common%daycrop
 
 !           Dewooling after grazing event            
             if (flDewooling) then
 
-              crop%common%sla(1) = afgen (crop%common%slatb,30,rid)
-              fl = afgen (crop%common%fltb,30,rid)
-              fs = afgen (crop%common%fstb,30,rid)
+              crop%common%sla(1) = afgen (crop%common%slatb,30,crop%common%rid)
+              fl = afgen (crop%common%fltb,30,crop%common%rid)
+              fs = afgen (crop%common%fstb,30,crop%common%rid)
               crop%wofost%wlv = crop%grass%dewrest / (1.d0 + (fs/fl))
               crop%wofost%wst = fs/fl*crop%wofost%wlv
               crop%wofost%dwlv = 0.0d0
@@ -1190,7 +1190,7 @@
               drrt = 0.0d0
     
 !             Assumption: one day delay in regrowth after grazing
-              crop%grass%idregr = daycrop + 1
+              crop%grass%idregr = crop%common%daycrop + 1
 
             endif
             
@@ -1198,7 +1198,7 @@
           
         endif
 
-        if (daycrop .ge. crop%grass%idregr) then
+        if (crop%common%daycrop .ge. crop%grass%idregr) then
 
 ! ---     physiologic ageing of leaves per time step
           fysdel = max (0.0d0,(atmo%Tav-crop%common%tbase)/(35.0d0-crop%common%tbase))
@@ -1274,7 +1274,7 @@
         
         ! root extension
         if (crop%common%swrd.eq.1) then
-          crop%common%rd = afgen (crop%common%rdtb,22,rid)
+          crop%common%rd = afgen (crop%common%rdtb,22,crop%common%rid)
           crop%common%rd = min(crop%common%rd,crop%common%rdm)
         elseif (crop%common%swrd.eq.2) then
           rr = min (crop%common%rdm-crop%common%rd,crop%common%rri)
@@ -1289,8 +1289,8 @@
 
 ! ---   set crop height and cropfactor
         if (crop%swcf.ne.3) then
-          crop%common%cf = afgen (crop%fixed%cftb,(2*magrs),rid)
-          crop%common%ch = afgen (crop%fixed%chtb,(2*magrs),rid)
+          crop%common%cf = afgen (crop%fixed%cftb,(2*magrs),crop%common%rid)
+          crop%common%ch = afgen (crop%fixed%chtb,(2*magrs),crop%common%rid)
         else
           crop%common%cf = afgen (crop%fixed%cftb,(2*magrs),crop%lai)
           crop%fixed%cfeic = afgen (crop%fixed%cfeictb,(2*magrs),crop%lai)
