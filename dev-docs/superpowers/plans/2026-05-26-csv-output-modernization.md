@@ -28,7 +28,7 @@
 
 | File | Responsibility | Phase |
 |------|----------------|-------|
-| `src/io/csv_writer.f90` (new) | Generic CSV writer primitive: open / meta / header / row / close + `fmt_real`. Symmetric to `csv_reader.f90`. | A |
+| `src/io/csv_writer.f90` (new) | Generic CSV writer primitive: open / meta / header / row / flush / close + `fmt_real`. Symmetric to `csv_reader.f90`. | A |
 | `tests/unit/io/test_csv_writer.pf` (new) | Round-trip (write→read-back) + formatter golden-string tests. | A |
 | `src/io/output_registry.f90` (new) | `out_var_t` catalogue + `resolve_inlist` + accessors. Single source for value-array layout and header. | B |
 | `tests/unit/io/test_output_registry.pf` (new) | inlist resolution: filter/order, unknown-name error, default fallback. | B |
@@ -170,6 +170,7 @@ module csv_writer_mod
       procedure :: meta   => csv_writer_meta
       procedure :: header => csv_writer_header
       procedure :: row    => csv_writer_row
+      procedure :: flush  => csv_writer_flush
       procedure :: close  => csv_writer_close
    end type csv_writer_t
 
@@ -223,6 +224,14 @@ contains
       end do
       write(self%unit, '(A)') line
    end subroutine csv_writer_row
+
+   !> Drain the runtime I/O buffer to disk without closing. Called at year
+   !! boundaries so a crash mid-run leaves a near-complete file. No-op if
+   !! the writer is not open (e.g. headless mode never opened a unit).
+   subroutine csv_writer_flush(self)
+      class(csv_writer_t), intent(inout) :: self
+      if (self%unit /= -1) flush(self%unit)
+   end subroutine csv_writer_flush
 
    subroutine csv_writer_close(self)
       class(csv_writer_t), intent(inout) :: self
@@ -598,6 +607,17 @@ In `csv_out` (now part of `csv_output`): replace the `file_open`/`makeheader`/`w
 - [ ] **Step 3: Expose named entry points**
 
 Add public `csv_output_init(state, config)`, `csv_output_step(state)`, `csv_output_finalize(state)` that wrap the existing task=1/2/3 bodies (init opens both writers + resolves inlist; step samples + writes; finalize closes). Keep the old `csv_out`/`csv_out_tz` as thin internal shims for now if convenient, or update the one caller directly in the next step.
+
+At the end of `csv_output_step`, after writing both rows, add a per-year flush for crash resilience:
+
+```fortran
+if (state%timecontrol%flYearStart) then
+   call scalar_w%flush()
+   call profile_w%flush()
+end if
+```
+
+> Confirm the year-boundary flag name against `state%timecontrol` (the meteo path uses `flYearStart`); if the flag that fires on the first step of a new calendar year differs, use that one. `flush` is a no-op in headless mode (no unit open), so it is safe to call unconditionally on the flag.
 
 - [ ] **Step 4: Update the dispatch hub**
 
