@@ -73,7 +73,7 @@ if get_option('enable_pfunit')
     pfunit_extra_sources = [
         '../../src/atmosphere/atmosphere_constants.f90',
         '../../src/atmosphere/precipitation.f90',
-        '../../src/core/variables.f90',
+        # [GR-IO 2026-05-25 Phase 6 Step 5] src/core/variables.f90 deleted.
         '../../src/crop/wofost_soil_declarations.f90',
         '../../src/crop/wofost_soil_interface.f90',
         '../../src/atmosphere/et.f90',

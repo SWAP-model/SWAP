@@ -100,7 +100,10 @@ sources = [
     'src/crop/cropgrass_init.f90',
     'src/config/swap_config.f90',
     'src/core/timestep_control_mod.f90',
-    'src/core/variables.f90',
+    # [GR-IO 2026-05-25 Phase 6 Step 5] src/core/variables.f90 and src/core/arrays.fi
+    #   deleted — bare-globals module fully retired. Size parameters
+    #   live in src/core/arrays.f90 (swap_array_dimensions); state lives
+    #   on state%X / config%X; legacy_state.f90 is now also empty stubs.
     'src/core/initialize.f90',
     # Soil
     'src/soil/soilgrid.f90',
