@@ -1,8 +1,11 @@
 # Crop Subsystem Symbol Ledger — Pre-Flight Discovery (2026-05-25)
 
-> **Status**: pre-flight discovery completed  
-> **Commit**: [awaiting ledger commit]  
+> **Status**: arc COMPLETE 2026-05-25 — all 10 sub-arcs landed.
+> **Ledger commit**: 991db78 (pre-flight discovery baseline)
+> **Final-audit commit**: see git log for the docs(plans) audit commit.
 > **Purpose**: inventory of all symbols imported via `use variables` across 12 crop files for retirement sweep orchestration.
+>
+> **Final tally**: 52 arc commits, 53 RETIRED legacy globals, 4 new state sub-records / per-layer arrays, 12 module-level SAVE migrations (`cw_*` cluster), 2 dormant modules (`src/crop/dormant/{jongvanlier,oxygenrepro}.f90`). Non-crop residuals (9 dispatcher symbols + ~6 cross-crop clusters) blocked by external readers in `swap_mod` / `timecontrol_mod` / `swapoutput` / `config_to_variables`; documented inline in each remaining `use variables` block in `src/crop/*.f90`. See `~/.claude/projects/-home-zawadzkim-Code-swap/memory/project_crop_use_variables_sweep_2026-05-25.md` for the full project memory.
 
 ## Section 1: Per-File Summary
 
