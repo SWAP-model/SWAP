@@ -84,9 +84,8 @@ module legacy_state_mod
       ! [GR-CROP 2026-05-25] tendirrig retired — schedule==1 dead branch
       ! [GR-CROP 2026-05-25] treltab retired — schedule==1 dead branch
       ! [GR-CROP 2026-05-25] dayfix retired — schedule==1 dead branch (local-only counter)
-      integer :: tsumtime  !! time (nrs of sequential days) with temp above tsumtemp for grass growth [1..20 days, I]
-      real(real64) :: tsumtemp  !! temperature limit to initiate grass growth  [0.0..20.0 grC, R]
-      real(real64) :: tsumdepth  !! depth at which temp above tsumtemp for grass growth [0.0..100.0 cm below soil surface, R]
+      ! [GR-CROP 2026-05-25] tsumtime/tsumtemp/tsumdepth retired — orphan
+      !   (only consumer was cropgrass_init use-list, never read in body)
       logical :: flCropCalendar  !! Flag indicating that crop season is active (but currently might be bare or cropped)
       logical :: flCropEmergence  !! Flag indicating period from crop emergence until harvest
       logical :: flCropHarvest  !! Flag indicating period from crop harvest until the end of crop season

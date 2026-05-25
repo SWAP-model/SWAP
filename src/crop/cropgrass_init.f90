@@ -31,41 +31,13 @@ module cropgrass_init_mod
 contains
 
    subroutine cropgrass_init_from_config(cfg, icrop, tend_val, tstart_val, state)
-      ! [SS-GR-FINAL B7] DEFERRED: all symbols are config→globals copy targets.
-      !   Retirement requires Phase C3 adapter rewrite (config_to_variables.f90 dual-writes).
-      use variables, only: &
-         ! ET-related — DEFERRED Phase C3
-         ! cftb/chtb/albedo/rsc/rsw/swcf retired
-         ! Interception — DEFERRED Phase C3; swinter/cofab retired
-         ! Crop state — DEFERRED Phase C3
-         ! tdwi/laiem/rgrlai retired
-         ! Start-of-growth trigger — DEFERRED Phase C3
-         tsumtemp, tsumtime, tsumdepth,                                       &  ! swtsum retired
-         ! Green area — DEFERRED Phase C3; tbase retired
-         ! slatb/ssa/span retired
-         ! Assimilation — DEFERRED Phase C3
-         ! kdif/kdir/eff/amaxtb/tmpftb/tmnftb retired
-         ! Biomass conversion — DEFERRED Phase C3
-         ! cvl/cvr/cvs retired
-         ! Maintenance respiration — DEFERRED Phase C3
-         ! q10/rml/rmr/rms/rfsetb retired
-         ! Partitioning — DEFERRED Phase C3
-         ! frtb/fltb/fstb retired
-         ! Death rates — DEFERRED Phase C3
-         ! rdrrtb/rdrstb/perdl retired
-         ! Root depth and density — DEFERRED Phase C3; swrd/swdmi2rd/swrdc/rdi/rri/rdc retired
-         ! rdctb/rdtb/rlwtb/wrtmax/cumdens retired
-         ! Oxygen stress — DEFERRED Phase C3; swoxygen retired
-         ! swWrtNonox/aeratecrit retired
-         ! hlim1/hlim2u/hlim2l retired
-         q10_microbial, specific_resp_humus,                                  &  ! srl/swrootradius/dry_mat_cont_roots/air_filled_root_por/spec_weight_root_tissue/var_a/root_radiusO2/swoxygentype retired
-         ! Drought stress — DEFERRED Phase C3
-         ! hlim3h/hlim3l/hlim4/adcrh/adcrl/swdrought retired
-         ! Salinity stress (guarded; set to 0 only) — DEFERRED Phase C3; swsalinity retired
-         ! Compensation — DEFERRED Phase C3
-         ! swcompensate/swstressor/alphacrit/dcritrtz retired
-         ! Management — DEFERRED Phase C3
-         swpotrelmf  ! relmf/mowrest/seqgrazmow retired; dateharvest/dmmowtb/DelayRegrowthTab/flCO2 retired
+      ! [GR-CROP 2026-05-25] legacy globals remaining:
+      !   q10_microbial, specific_resp_humus: written here; oxygenstress
+      !     seeds state%crop%oxygen from them on entry. Retirement requires
+      !     oxygenstress to read cfg directly (out of scope for this task).
+      !   swpotrelmf: written here as legacy mirror; swap_mod still reads
+      !     the bare global to seed state%crop%grass%swpotrelmf.
+      use variables, only: q10_microbial, specific_resp_humus, swpotrelmf
       use array_utils,  only: afgen
       use error_mod,    only: fatalerr_collected
       use swap_state_mod, only: swap_state_t

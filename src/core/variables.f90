@@ -289,11 +289,12 @@
       ! [SS-GR-FINAL D1] FlIrrigationOutput retired — 0 consumers
       ! [GR-CROP 2026-05-25] dayfix retired — schedule==1 dead branch (local-only counter)
 
-! --- start of growth grass      
+! --- start of growth grass
       ! [GR-CROPWS] swtsum retired — see state%crop%grass%swtsum
-      integer   tsumtime           ! time (nrs of sequential days) with temp above tsumtemp for grass growth [1..20 days, I]
-      real(8)   tsumtemp           ! temperature limit to initiate grass growth  [0.0..20.0 grC, R]
-      real(8)   tsumdepth          ! depth at which temp above tsumtemp for grass growth [0.0..100.0 cm below soil surface, R]
+      ! [GR-CROP 2026-05-25] tsumtime/tsumtemp/tsumdepth retired — orphan
+      !   (only consumer was cropgrass_init use-list, never read in body).
+      !   Active runtime equivalents: cfg%tsumtemp/tsumdepth/tsumtime on the
+      !   cropgrass_config_t typed config (consumed via crop_config_global).
       
 ! --- crop variables
       ! [SS-GR-FINAL D1] swCrop retired — all callers use state%crop; 0 consumers
