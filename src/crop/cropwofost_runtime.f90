@@ -64,15 +64,13 @@
       !     dispatcher (Task 9) and cross-file consumers (cropgrass/cropfixed/
       !     oxygenstress/rootextraction); cannot retire here.
       use variables, only: &
-        cropend,                                             &  ! cross-file with cropfixed/cropgrass
+        cropend,                                             &  ! cross-file with dispatcher (writes), cropfixed/cropgrass
         wrtmin, gwrt,                                        &  ! cross-file with cropgrass_runtime/cropgrowth_helpers
         reltr,                                               &  ! cross-file with cropfixed_runtime/cropgrass_runtime
-        flCropHarvest, flCropNut, flHarvestDay,              &  ! cross-file lifecycle flags with cropgrowth
-        flhydrlift,                                          &  ! cross-file with cropfixed/cropgrass/rootextraction
+        flCropHarvest, flCropNut, flHarvestDay,              &  ! cross-file lifecycle flags with cropgrowth dispatcher
         flanthesis,                                          &  ! cross-file with cropgrowth dispatcher
-        dlc, dlo, idsl,                                      &  ! cross-file phenology config with cropgrowth
-        outfil, pathwork, project,                           &  ! cross-file output paths with cropgrowth_helpers
-        twilt, wiltpoint                                      ! cross-file with rootextraction/cropgrass/cropfixed
+        dlc, dlo, idsl,                                      &  ! cross-file phenology config with cropgrowth dispatcher
+        outfil, pathwork, project                              ! cross-file output paths with cropgrowth_helpers
       use wofost_soil_interface
       ! [GR-CROP 2026-05-25] cw_* snapshots — written by cropwofost_init_mod%apply_cropwofost_nutrient
       ! Nutrient cluster + harvest/vernalisation fractions. Single-file scope.
@@ -398,12 +396,13 @@
 !     init moved to CropGrowth dispatcher which has access to state).
       if (crop%common%swdrought .eq. 2) then
         if (swhydrlift .eq. 1) then
-          flhydrlift = .true.
+          crop%common%flhydrlift = .true.
         else
-          flhydrlift = .false.
+          crop%common%flhydrlift = .false.
         endif
+        if (.not. allocated(crop%common%twilt)) allocate(crop%common%twilt(mesh%numnod))
         do i = 1,mesh%numnod
-         twilt(i) = watcon(wiltpoint, &
+         crop%common%twilt(i) = watcon(crop%common%hlim4, &
                             soil%vg_params(i), &
                             soil%iHWCKmodel(soil%layer(i)), &
                             i, state%soilwater)

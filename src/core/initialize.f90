@@ -591,7 +591,7 @@
       ! [GR-CROP 2026-05-25] vernrtb retired — see cropwofost_init_mod cw_vernrtb
 
 ! --- only for bulb crops (tulips etc..)
-      wiltpoint          = 0.0d0
+      ! [GR-CROP 2026-05-25] wiltpoint retired — see state%crop%common%hlim4
       ! [GR-CROP 2026-05-25] wrtb retired — always-zero on TOML
       ! [GR-CROP 2026-05-25] zsow retired — see cropwofost_config%sowing%zsow
 ! --- interception

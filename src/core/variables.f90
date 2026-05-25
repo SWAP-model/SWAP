@@ -479,7 +479,7 @@
 
       ! [GR-CROPWS] var_a retired — see state%crop%common%var_a
       ! [GR-CROP 2026-05-25] w_root_ss retired — see state%crop%oxygen%w_root_ss
-      real(8)   wiltpoint          ! Minimum pressure head at interface soil-root (cm)
+      ! [GR-CROP 2026-05-25] wiltpoint retired — see state%crop%common%hlim4 (TOML-equivalent Feddes wilting-point head)
 
       ! [GR-CROP-DVS] wlv retired — see state%crop%wofost%wlv
       ! [GR-CROP-DVS] wlvpot retired — see state%crop%wofost%wlvpot
@@ -1004,7 +1004,7 @@
       ! real(8)   thetas(macp)       ! Saturated volumic soil water content (-) for each numerical compartment
       ! real(8)   thetm1(macp)       ! Volumic soil water content (-) at former time level
       ! real(8)   thetsl(maho)       ! Saturated volumic water content (-) for each soil layer
-      real(8)   twilt(macp)        ! Pressure head of a compartment at wilting point (L)
+      ! [GR-CROP 2026-05-25] twilt retired — see state%crop%common%twilt (drought-stress workspace, allocated when swdrought=2)
       ! [SS-SWC] retired 2026-05-12 — moved to state%soilwater (ADR 0038)
       ! real(8)   volact             ! Water storage (L) of soil column at current time level
       ! real(8)   volini             ! Water storage (L) of soil column at start of simulation

@@ -22,12 +22,14 @@
 !   - mrftb/wrtb tables always zero on TOML path (legacy reader removed);
 !     state%crop%oxygen%max_resp_factor / state%crop%oxygen%w_root_ss
 !     directly assigned 0.
-!   - Cross-file legacy globals still in use-list: wiltpoint/twilt/flhydrlift/reltr
-!     are written here and read by rootextraction/cropgrass/cropwofost/jongvanlier.
+!   - wiltpoint legacy retired — read via state%crop%common%hlim4 (TOML-equivalent
+!     Feddes wilting-point pressure head).
+!   - twilt/flhydrlift migrated to state%crop%common (drought-stress workspace).
+!   - reltr remains cross-file with cropgrass/cropwofost (single-file scope across
+!     the three crop-type runtimes; written here / read by them).
 ! ----------------------------------------------------------------------
       use swap_array_dimensions, only: magrs
-      use variables, only: wiltpoint, twilt, flhydrlift,    &  ! cross-file with rootextraction/cropgrass/cropwofost/jongvanlier
-                           reltr                              ! cross-file with cropgrass/cropwofost
+      use variables, only: reltr   ! cross-file with cropgrass/cropwofost
       use soilhydraulics_utils, only: watcon
       use array_utils, only: afgen
       use rootextraction_mod, only: MatricFlux
@@ -147,12 +149,13 @@
 !     init moved to CropGrowth dispatcher which has access to state).
       if (crop%common%swdrought .eq. 2) then
         if (swhydrlift .eq. 1) then
-          flhydrlift = .true.
+          crop%common%flhydrlift = .true.
         else
-          flhydrlift = .false.
+          crop%common%flhydrlift = .false.
         endif
+        if (.not. allocated(crop%common%twilt)) allocate(crop%common%twilt(mesh%numnod))
         do i = 1,mesh%numnod
-         twilt(i) = watcon(wiltpoint, &
+         crop%common%twilt(i) = watcon(crop%common%hlim4, &
                             soil%vg_params(i), &
                             soil%iHWCKmodel(soil%layer(i)), &
                             i, soil)

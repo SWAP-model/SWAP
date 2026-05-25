@@ -333,8 +333,10 @@ module rootextraction_mod
 ! Note: task=1 writes state%soilwater%mfluxtable; task=2 reads it.
 ! ----------------------------------------------------------------------
 
-      ! [GR-CROP 2026-05-25] retained — dead-branch (swdrought=2 stub-errored in TOML)
-      use variables, only: wiltpoint
+      ! [GR-CROP 2026-05-25] MatricFlux is reached only when swdrought=2 (stub-errored
+      ! on TOML path). The wiltpoint legacy global is always 0.0 on TOML — use
+      ! state%crop%common%hlim4 (Feddes wilting-point pressure head) as the
+      ! equivalent value. Code path stays dead at runtime.
       use soilhydraulics_utils, only: watcon, hconduc
       implicit none
 
@@ -355,7 +357,7 @@ module rootextraction_mod
         enddo
       enddo
 
-      start = int(100.d0*log10(-wiltpoint))
+      start = int(100.d0*log10(-state%crop%common%hlim4))   ! [GR-CROP 2026-05-25] wiltpoint → hlim4 (dead path)
       do lay = 1,state%mesh%numlay
         phead1 = -10.d0**(dble(start)/100.d0)
 
@@ -399,7 +401,7 @@ module rootextraction_mod
 
 ! --- matric flux potential based on soil water pressure head
         lay = state%mesh%layer(node)  ! [GR-BH C7]
-        if (phead .lt. wiltpoint) then
+        if (phead .lt. state%crop%common%hlim4) then   ! [GR-CROP 2026-05-25] wiltpoint → hlim4
 ! ---     very dry range
           outcome = 0.0d0
         elseif (phead .gt. -1.023293d0) then
@@ -421,7 +423,7 @@ module rootextraction_mod
           lay = state%mesh%layer(node)  ! [GR-BH C7]
 !         osmotic head in cm
           hosm = state%crop%common%salthead * state%solute%cml(node)
-          hsalt = wiltpoint + hosm
+          hsalt = state%crop%common%hlim4 + hosm   ! [GR-CROP 2026-05-25] wiltpoint → hlim4
           if (hosm .lt. 1.d-3) then
 ! ---       very dry range
             mfluxsalt = 0.0d0

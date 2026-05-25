@@ -62,6 +62,13 @@ module crop_common_state_mod
       integer      :: noddrz         = 0              !! compartment number at bottom root zone (-)
       real(real64) :: cumdens(202)   = 0.0_real64     !! cumul. root density as fn of rel. soil depth (-)
 
+      ! [GR-CROP 2026-05-25] drought-stress (swdrought=2 / De Jong van Lier) workspace.
+      ! Currently stub-errored on TOML path; populated by cropX_runtime task=1 and
+      ! consumed by the dormant src/crop/dormant/jongvanlier.f90 module.
+      ! Allocated lazily by the writer when swdrought=2 (currently never on TOML).
+      real(real64), allocatable :: twilt(:)              !! pressure head of compartment at wilting point (L)
+      logical      :: flhydrlift     = .false.           !! De Jong van Lier hydraulic-lift flag
+
       ! [SS-GR-CROPRT A4] surface params
       real(real64) :: albedo         = 0.0_real64     !! crop reflection coefficient (-)
       real(real64) :: rsc            = 0.0_real64     !! minimum canopy resistance dry crop (T/L)

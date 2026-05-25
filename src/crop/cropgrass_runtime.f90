@@ -18,17 +18,15 @@
 !   - magrs/macp sourced from swap_array_dimensions.
 !   - rdmax read via state%cfg%crop%rdmax (Class B direct read).
 !   - siccaplai*lai branches: swinter=3 stub-errored on TOML; replaced with 0.0d0.
-!   - Remaining legacy globals (rid, daycrop, wrtmin, gwrt, reltr,
-!     twilt, wiltpoint, flhydrlift): write or read targets feeding consumers
-!     in oxygenstress / cropwofost_runtime / cropfixed_runtime /
-!     dormant jongvanlier.
+!   - wiltpoint → state%crop%common%hlim4 (Feddes wilting-point head).
+!   - twilt/flhydrlift migrated to state%crop%common (drought-stress workspace).
+!   - Remaining legacy globals (rid, daycrop, wrtmin, gwrt, reltr): cross-file
+!     readers in oxygenstress / cropgrowth_helpers / cropwofost_runtime.
 ! ----------------------------------------------------------------------
       use swap_array_dimensions, only: magrs, macp
       use variables, only: rid, daycrop,        &  ! workspace/scratch — cross-file readers (oxygenstress, cropgrowth)
                            wrtmin, gwrt,        &  ! cross-file with cropgrowth_helpers/cropwofost_runtime
-                           reltr,               &  ! cross-file with cropwofost_runtime/cropfixed_runtime
-                           twilt, wiltpoint,    &  ! cross-file with rootextraction / dormant jongvanlier
-                           flhydrlift           ! cross-file with cropfixed_runtime/cropwofost_runtime/dormant jongvanlier
+                           reltr                  ! cross-file with cropwofost_runtime/cropfixed_runtime
       use array_utils, only: afgen
       use soilhydraulics_utils, only: watcon
       use rootextraction_mod, only: MatricFlux
@@ -286,12 +284,13 @@
 !     init moved to CropGrowth dispatcher which has access to state).
       if (crop%common%swdrought .eq. 2) then
         if (swhydrlift .eq. 1) then
-          flhydrlift = .true.
+          crop%common%flhydrlift = .true.
         else
-          flhydrlift = .false.
+          crop%common%flhydrlift = .false.
         endif
+        if (.not. allocated(crop%common%twilt)) allocate(crop%common%twilt(mesh%numnod))
         do i = 1,mesh%numnod
-         twilt(i) = watcon(wiltpoint, &
+         crop%common%twilt(i) = watcon(crop%common%hlim4, &
                             soil%vg_params(i), &
                             soil%iHWCKmodel(soil%layer(i)), &
                             i, soil)

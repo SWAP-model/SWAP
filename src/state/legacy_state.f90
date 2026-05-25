@@ -136,7 +136,7 @@ module legacy_state_mod
       ! [GR-CROP 2026-05-25] tsumemeopt/TBASEM/TEFFMX retired — see cropwofost_config_t%germination.
       ! [GR-CROP 2026-05-25] tsumgerm retired — see crop_common_state_t%tsumgerm.
       ! [GR-CROP 2026-05-25] w_root_ss retired — see state%crop%oxygen%w_root_ss
-      real(real64) :: wiltpoint  !! Minimum pressure head at interface soil-root (cm)
+      ! [GR-CROP 2026-05-25] wiltpoint retired — see state%crop%common%hlim4
       ! [GR-CROP 2026-05-25] wrtb retired — always-zero on TOML (legacy reader removed)
       real(real64) :: wrtmin  !! Minimum dry weight of plant root at relative depth (1% of the initial value)
       real(real64) :: gwrt  !! Growth of dry weight of plant root (kg/ha)
@@ -280,7 +280,7 @@ module legacy_state_mod
       ! [GR-CROP 2026-05-25] StepHr retired — JvL-only (swdrought=2);
       ! body extracted to src/crop/dormant/jongvanlier.f90.
       ! [GR-SOIL 2026-05-24] tau retired — orphan stub; read via state%cfg%soil%tau.
-      real(real64), allocatable :: twilt(:)  !! Pressure head of a compartment at wilting point (L)
+      ! [GR-CROP 2026-05-25] twilt retired — see state%crop%common%twilt
       ! [GR-SOIL 2026-05-24] zi retired — orphan stub; read via state%cfg%soil%initial%z_init.
       ! [GR-DRA 2026-05-23] zintf retired — see state%drainage%zintf
       logical :: FlHydrLift  !! Flag indicating release of water from root to soil is allowed
