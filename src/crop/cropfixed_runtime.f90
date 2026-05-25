@@ -21,22 +21,21 @@
 ! SS-GR-ATM A5.1: intent changed inout to allow dual-write in cropfixed_init_from_config.
 ! [SS-GR-CROPWS A2]: state optional removed — all callers pass state; all if(present(state)) guards dropped.
 ! [GR-CROP Phase B/6] narrow use variables
-! [GR-CROPWS B1]: reads migrated to state%crop%X — icrop, dvs, tsum, rd, rdpot, rdm,
-!   rdi, rri, rdc, ch, cf, cropstart, lai, swcf, cftb, chtb, cfeic, cfeictb.
-!   Remaining in variables (no state home): magrs, idev, max_resp_factor, swrd, swgc,
-!   swcf (keep for write), swinter, swdrought, swdmi2rd, tbase, tsumea, tsumam, rdmax,
-!   siccapact, siccaplai, W_root_ss, wiltpoint, twilt, flhydrlift, gc, cfeic (write),
-!   gctb, rdtb, mrftb, wrtb, swinco, reltr.
+! [GR-CROP 2026-05-25] crop-sweep:
+!   - magrs sourced directly from swap_array_dimensions (not variables).
+!   - rdmax read via state%cfg%crop%rdmax (Class B direct read).
+!   - Remaining legacy globals (max_resp_factor, w_root_ss, reltr,
+!     wiltpoint, twilt, flhydrlift, siccaplai, mrftb, wrtb): write or
+!     read targets feeding consumers in oxygenstress / cropgrass_runtime
+!     / cropwofost_runtime / dormant jongvanlier. Cannot retire here —
+!     other crop sub-arcs (Task 7/8/9) are last consumers.
 ! ----------------------------------------------------------------------
-      use variables, only: magrs, &               ! idev retired
-                           max_resp_factor,                        &  ! rd/rdpot/swrd retired
-                           ! swdmi2rd/swgc/swdrought/swinter/swcf retired
-                           rdmax,                                  &  ! tbase/tsumea/tsumam retired
-                           siccaplai, w_root_ss, wiltpoint,   &
-                           twilt, flhydrlift,                            &  ! cfeic retired; gc → state%crop%common%gc
-                           mrftb, wrtb,                                  &  ! gctb/rdtb retired
-                           ! [GR-SOL 2026-05-24] swinco retired — read via state%soilwater%swinco
-                           reltr
+      use swap_array_dimensions, only: magrs
+      use variables, only: max_resp_factor,                  &  ! writer; reseed → state%crop%oxygen in oxygenstress
+                           siccaplai, w_root_ss, wiltpoint,  &  ! cross-file with cropgrass/cropwofost/oxygenstress
+                           twilt, flhydrlift,                &  ! cross-file with cropgrass/cropwofost/jongvanlier
+                           mrftb, wrtb,                      &  ! tables; always-zero on TOML path (legacy reader removed)
+                           reltr                                ! cross-file with cropgrass/cropwofost
       use soilhydraulics_utils, only: watcon
       use array_utils, only: afgen
       use rootextraction_mod, only: MatricFlux
@@ -57,11 +56,12 @@
       save
 ! ----------------------------------------------------------------------
       ! [GR-CROP 2026-05-25] sub-record associate (crop-sweep convention).
-      associate( crop => state%crop,            &
-                 soil => state%soilwater,       &
-                 mesh => state%mesh,            &
-                 atmo => state%atmosphere,      &
-                 time => state%timecontrol      )
+      associate( crop     => state%crop,            &
+                 soil     => state%soilwater,       &
+                 mesh     => state%mesh,            &
+                 atmo     => state%atmosphere,      &
+                 time     => state%timecontrol,     &
+                 cfg_crop => state%cfg%crop         )
 
       select case (task)
       case (1)
@@ -102,9 +102,9 @@
 
 ! --- maximum rooting depth
       if (crop%common%swrd.eq.1) then
-        crop%common%rdm = rdmax
+        crop%common%rdm = cfg_crop%rdmax
       else
-        crop%common%rdm = min(rdmax,crop%common%rdc)
+        crop%common%rdm = min(cfg_crop%rdmax,crop%common%rdc)
       endif
 
 ! --- skip next initialization if crop parameters are read from *.END file
