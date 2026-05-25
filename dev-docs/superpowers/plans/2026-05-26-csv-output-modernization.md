@@ -631,7 +631,8 @@ Expected: compiles; 4/4 cases unchanged. The byte output of both CSVs should be 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add -A
+# scoped add — never `git add -A` (untracked subprojects/, tests/swap-cases must stay unstaged)
+git add src/io/csv_output.f90 src/io/swapoutput.f90 meson.build tests/unit/meson.build
 git commit -m "refactor(io): IO-OUT/C — csv_output writes via csv_writer; merge _tz; named init/step/finalize"
 ```
 
@@ -875,7 +876,9 @@ Expected: pass. Optionally verify `swap_get_output_row('swap_balance')` now retu
 - [ ] **Step 8: Commit**
 
 ```bash
-git add -A
+# git rm already staged the deletion; scoped add for the rest (never `git add -A`)
+git add meson.build src/core/swap_capi_mod.f90 \
+        src/state/heat_state.f90 src/state/solute_state.f90 src/state/surfacewater_state.f90
 git commit -m "refactor(io): IO-OUT/E — delete swapoutput.f90; drop 4 inert C-API streams"
 ```
 
