@@ -498,7 +498,7 @@
       ! [GR-CROPWS] flHarvestpot retired — see state%crop%grass%flHarvestpot
       ! [GR-CROPWS] flGrazing retired — see state%crop%grass%flGrazing
       ! [GR-CROPWS] flGrazingpot retired — see state%crop%grass%flGrazingpot
-      character(len=40) cropfil(macrop)   ! Array with names of crop files
+      ! [GR-CROP 2026-05-25] cropfil retired — see state%cfg%crop%rotation_file
       ! [GR-CROP 2026-05-25] pathcrop retired — config%general%pathcrop is the canonical read.
       ! [GR-CROP-DVS] inifil retired — dead (no readers, no writers)
 

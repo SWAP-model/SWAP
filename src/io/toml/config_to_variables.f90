@@ -1156,20 +1156,8 @@ contains
       ! [GR-CROP 2026-05-25] cropstart/cropend legacy global arrays retired —
       ! readers now consume config%crop%rotation_start/rotation_end directly via
       ! state%cfg%crop. No mirror copy needed.
-      if (allocated(config%crop%rotation_file)) then
-         n = size(config%crop%rotation_file)
-         do i = 1, min(n, size(cropfil))
-            ! Legacy cropfil is a stem (no extension): the cropgrowth
-            ! reader appends '.crp' itself. Our TOML authors the full
-            ! '<name>.crp.toml' path; strip both suffixes so the legacy
-            ! per-crop reader (still in use until Phase 4f-extend ports
-            ! it) reconstructs '<name>.crp' on disk.
-            ! HACK Phase 4f-extend: once read_cropfixed_toml et al. own
-            ! the per-crop init, the rotation_file should pass through
-            ! unchanged (the new readers will use the .toml path).
-            cropfil(i) = strip_crp_toml_suffix(config%crop%rotation_file(i))
-         end do
-      end if
+      ! [GR-CROP 2026-05-25] cropfil legacy array retired — readers consume
+      ! config%crop%rotation_file (state%cfg%crop%rotation_file) directly.
 
       ! Phase 1 (.crp port): expose the parsed crop config to runtime
       ! subs that need per-rotation cache access. Transitional — see

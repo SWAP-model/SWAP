@@ -142,7 +142,7 @@ module legacy_state_mod
       ! [GR-CROP 2026-05-25] gwrt retired — see state%crop%wofost%gwrt
       ! [GR-CROP 2026-05-25] flanthesis retired — see state%crop%wofost%flanthesis
       ! [GR-CROP 2026-05-25] flHarvestDay retired — see state%crop%common%flHarvestDay
-      character(len=40), allocatable :: cropfil(:)  !! Array with names of crop files
+      ! [GR-CROP 2026-05-25] cropfil retired — see state%cfg%crop%rotation_file
       ! [GR-CROP 2026-05-25] pathcrop retired — config%general%pathcrop is the canonical read.
       real(real64) :: rdmax  !! Maximum rooting depth in soil profile (L)
       ! [GR-ATM 2026-05-23] flCO2 retired — see state%atmosphere%flco2

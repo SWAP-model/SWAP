@@ -46,10 +46,10 @@
 
       ! [GR-CROP 2026-05-25] flCropOpenFile → state%crop%common%flCropOpenFile.
       ! outfil/pathwork/project read via state%cfg%general (this file's cfg snapshot).
-      ! cropfil/crp remain on the bare-global side: writers/readers exist outside
-      ! the crop subsystem (swapoutput.f90 reads crp, config_to_variables.f90
-      ! populates cropfil). Imported here from variables until the file-IO arc.
-      use variables, only: cropfil, crp
+      ! cropfil[(1)] now read directly from state%cfg%crop%rotation_file (Class B).
+      ! crp (output file unit) remains a bare-global — swapoutput.f90 outside the
+      ! crop allow-list still imports it for the CSV-output writers.
+      use variables, only: crp
       use error_mod, only: fatalerr_collected
       use file_io_mod, only: file_open
       use swap_state_mod, only: swap_state_t
@@ -63,9 +63,10 @@
       character(len=160) filnam,filtext
 
       associate( &
-        crop => state%crop%common,   &  ! crop runtime (croptype, icrop, flCropOpenFile)
-        time => state%timecontrol,   &  ! time control (headless, swheader)
-        cfg_gen => state%cfg%general &  ! general config (outfil, pathwork, project)
+        crop    => state%crop%common,   &  ! crop runtime (croptype, icrop, flCropOpenFile)
+        time    => state%timecontrol,   &  ! time control (headless, swheader)
+        cfg_gen => state%cfg%general,   &  ! general config (outfil, pathwork, project)
+        cfg_crop => state%cfg%crop      &  ! crop config (rotation_file)
       )
 
       select case (task)
@@ -81,12 +82,17 @@
 
          if (.not. time%headless) then
 ! ---   open crop output file and write general header (*.crp)
-            if (trim(cfg_gen%outfil).eq.trim(cropfil(1))) then
-               Messag = 'The name of the input crop-file (''//trim(cropfil'//&
-     &      '(icrop))//'') cannot be equal to the name of'                   &
-     &      //'the output crop-file '//trim(cfg_gen%outfil)//' Adjust a filename !'
-               call fatalerr_collected ('crops',messag)
-            endif
+            ! [GR-CROP 2026-05-25] cropfil(1) read directly from
+            ! state%cfg%crop%rotation_file (TOML-loaded); legacy global retired.
+            if (allocated(cfg_crop%rotation_file)) then
+               if (size(cfg_crop%rotation_file) >= 1 .and. &
+                   trim(cfg_gen%outfil).eq.trim(cfg_crop%rotation_file(1))) then
+                  Messag = 'The name of the input crop-file ('//trim(cfg_crop%rotation_file(1))// &
+                           ') cannot be equal to the name of the output crop-file '// &
+                           trim(cfg_gen%outfil)//' Adjust a filename !'
+                  call fatalerr_collected ('crops',messag)
+               end if
+            end if
             filnam = trim(cfg_gen%pathwork)//trim(cfg_gen%outfil)//'.crp'
             call file_open(crp, filnam, 'replace', 'write')
             filtext = 'output data of simple or detailed crop growth model'
