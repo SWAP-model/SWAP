@@ -418,3 +418,45 @@
 3. Confirm `tsoil` is dormant config-staging buffer (retire renaming only)
 4. Dispatch subagent sub-arcs bottom-up (tillage → irrigation → ... → cropgrowth)
 
+## Section 5: Task 9 dispatcher sub-arc summary (2026-05-25)
+
+**Retired in Task 9** (last-consumer; declaration removed):
+
+| Symbol | Notes |
+|---|---|
+| flCropReadFile     | Last consumer cropgrowth.f90 — state%crop%common%flCropReadFile |
+| flCropPrep         | Last consumer cropgrowth.f90 — state%crop%common%flCropPrep (helpers dual-write dropped) |
+| flCropSow          | Last consumer cropgrowth.f90 — state%crop%common%flCropSow (helpers dual-write dropped) |
+| flCropGerm         | Last consumer cropgrowth.f90 — state%crop%common%flCropGerm (helpers dual-write dropped) |
+| PrepDelay          | Last consumer cropgrowth.f90 — state%crop%common%PrepDelay |
+| SowDelay           | Last consumer cropgrowth.f90 — state%crop%common%SowDelay |
+| pld                | Last consumer cropgrowth.f90 — crop_config_global%rotation_wofost(icrop)%bulb%pld |
+| remoc              | Last consumer cropgrowth.f90 — crop_config_global%rotation_wofost(icrop)%bulb%remoc |
+| pathcrop           | Orphan — config%general%pathcrop is the canonical read; bare global was write-only (config_to_variables) |
+
+**Nutrient cluster isolated behind cropwofost_runtime_mod%wofost_apply_nstress wrapper**
+(legacy globals still declared, still consumed by cropwofost_runtime.f90; the dispatcher no longer
+imports any of them):
+
+`nlue, anlv, anst, nmxlv, nmaxlv, nmaxst, nmaxrt, lrnr, lsnr, nni, rnflv, rnfst, frnx, fstr, flCropNut`
+
+**Retained legacy globals in cropgrowth.f90 use-list** (non-crop external readers; expanding the
+allow-list to swap_mod.f90 / timecontrol_mod.f90 / meteo_orchestrator.f90 would be required to
+retire them):
+
+| Symbol | External readers blocking retirement |
+|---|---|
+| icrop                | swap_mod.f90, timecontrol_mod.f90 |
+| flCropCalendar       | swap_mod.f90, timecontrol_mod.f90, meteo_orchestrator.f90, irrigation.f90, management_soil.f90 |
+| cropstart            | swap_mod.f90, timecontrol_mod.f90, cropfixed_runtime.f90, cropgrass_runtime.f90, cropwofost_runtime.f90, irrigation.f90 |
+| cropend              | irrigation.f90, cropwofost_runtime.f90 |
+| flCropEmergence      | swap_mod.f90, meteo_orchestrator.f90, et.f90 |
+| flCropHarvest        | swap_mod.f90, timecontrol_mod.f90, meteo_orchestrator.f90, irrigation.f90, cropwofost_runtime.f90 |
+| daycrop              | swap_mod.f90, timecontrol_mod.f90, swapoutput.f90, cropgrass_runtime.f90, cropwofost_init.f90, cropwofost_runtime.f90, oxygenstress.f90 |
+| swcrp                | swap_mod.f90 |
+| flHarvestDay         | swap_mod.f90, cropwofost_runtime.f90 |
+
+**Status**: 9 symbols remain in cropgrowth.f90's use-list. All have explicit external-reader
+breadcrumbs documented in the file's header. The dispatcher cannot become fully
+`use variables`-free without expanding the allow-list to the cross-subsystem files listed above.
+
