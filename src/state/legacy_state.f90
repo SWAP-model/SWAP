@@ -113,13 +113,11 @@ module legacy_state_mod
       real(real64) :: dlo  !! Minimum day length (T) for optimal crop development
       ! [GR-ATM 2026-05-23] dsinbe retired — see state%atmosphere%dsinbe
       real(real64) :: f_senes  !! Reduction factor for senescence, used for maintenance respiration [0..1.0 -, R]
-      real(real64) :: gasst  !! Total gross assimilation for actual crop (kg/ha)
-      real(real64) :: gasstpot  !! Total gross assimilation for potential crop (kg/ha)
+      ! [GR-CROP 2026-05-25] gasst/gasstpot retired — local SAVE in cropwofost_runtime%wofost
       ! [GR-ATM 2026-05-23] gc retired — see state%crop%common%gc
       ! [GR-CROP 2026-05-25] hdrygerm/hwetgerm retired — see cropwofost_config_t%germination.
       real(real64) :: max_resp_factor  !! Ratio root total respiration / maintenance respiration [1..5.0 -, R]
-      real(real64) :: mrest  !! Total maintenance respiration for actual crop (kg/ha)
-      real(real64) :: mrestpot  !! Total maintenance respiration for potential crop (kg/ha)
+      ! [GR-CROP 2026-05-25] mrest/mrestpot retired — local SAVE in cropwofost_runtime%wofost
       real(real64), allocatable :: mrftb(:)  !! Array with ratio root total respiration / maintenance respiration as function of DVS (kg/m3)
       real(real64), allocatable :: pfreetb(:)  !! Gash interception model: free throughfall coefficient (-) as function of time (T)
       real(real64), allocatable :: pstemtb(:)  !! Gash interception model: stem flow coefficient (-) as function of time (T)
@@ -134,8 +132,7 @@ module legacy_state_mod
       real(real64), allocatable :: scanopytb(:)  !! Gash interception model: storage capacity of canopy (-) as function of time (T)
       real(real64) :: shape_factor_rootr  !! Shape factor for exponential decrease of root respiration rate with depth [0..1.0 -, R]
       real(real64) :: specific_resp_humus  !! Respiration rate of humus at 25 �C [0.0..1.0 kg O2/kg C/d, R]
-      real(real64) :: tadw  !! Dry weight of plant minus roots of actual growth (kg/ha)
-      real(real64) :: tadwpot  !! Dry weight of plant minus roots of potential growth (kg/ha)
+      ! [GR-CROP 2026-05-25] tadw/tadwpot retired — local SAVE in cropwofost_runtime%wofost
       ! [GR-CROP 2026-05-25] tsumemeopt/TBASEM/TEFFMX retired — see cropwofost_config_t%germination.
       ! [GR-CROP 2026-05-25] tsumgerm retired — see crop_common_state_t%tsumgerm.
       real(real64) :: w_root_ss  !! Dry weight of roots at soil surface [0.0..10.0 kg/m3, R]
@@ -156,9 +153,7 @@ module legacy_state_mod
       real(real64) :: vernbase  !! base vernalisation requirement [d]
       real(real64), allocatable :: vernrtb(:)  !! table with rate of vernalisation as function of tav [days/degrees]
       integer :: swbulb  !! switch to enable simulation of bulb crops (-)
-      real(real64) :: drbl  !! Death rate of actual bulb (kg/ha)
-      real(real64) :: drblpot  !! Death rate of potential bulb (kg/ha)
-      real(real64) :: fbl  !! Dry weight fraction partitioned to flowers (-)
+      ! [GR-CROP 2026-05-25] drbl/drblpot/fbl retired — local SAVE in cropwofost_runtime%wofost
       real(real64) :: pld
       real(real64) :: remoc  !! [GR-CROP-DVS] plwt retired — see state%crop%wofost%plwt
       logical :: flCropNut  !! Flag indicating simulation of crop nutrient stress

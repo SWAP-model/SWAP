@@ -51,8 +51,7 @@
       ! [GR-ATM 2026-05-23] rad retired — see state%atmosphere%rad
       ! [GR-CROP C12] rainamount/rainfluxarray/raintimearray retired from variables — state%atmosphere%X
       ! [GR-ATM C8] rh retired — state%atmosphere%rh written by meteoday
-      tadw               = 0.0d0
-      tadwpot            = 0.0d0
+      ! [GR-CROP 2026-05-25] tadw/tadwpot retired — local SAVE in cropwofost_runtime%wofost
       ! [GR-ATM 2026-05-23] tav retired — see state%atmosphere%Tav
       ! [GR-ATM C8] tavd retired — state%atmosphere%tavd written by meteoday
       ! [GR-ATM 2026-05-23] tmn retired — see state%atmosphere%tmn
@@ -579,10 +578,8 @@
       avprectb           = 0.0d0 
       dlc                = 0.0d0 
       dlo                = 0.0d0 
-      fbl                = 0.0d0 
-      gasstpot           = 0.0d0 
+      ! [GR-CROP 2026-05-25] fbl/gasstpot/mrestpot retired — local SAVE in cropwofost_runtime%wofost
       ! [GR-ATM 2026-05-23] gc retired — see state%crop%common%gc
-      mrestpot           = 0.0d0 
       mrftb              = 0.0d0
       pfreetb            = 0.0d0 
       pstemtb            = 0.0d0 

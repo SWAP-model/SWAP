@@ -62,9 +62,6 @@
         ! this allow-list so we keep alive until either we migrate to state
         ! or Task 9 retires after dispatcher cutover):
         swbulb,                                              &  ! always 0 on TOML path (cfg.bulb stub-errors swbulb=1); also mirrored to crop%wofost%swbulb
-        fbl, drbl, drblpot,                                  &  ! bulb working state (single-file; bulb code always-dead on TOML path)
-        gasst, gasstpot, mrest, mrestpot,                    &  ! wofost gross-assim + maint-resp totals (single-file SAVE-style)
-        tadw, tadwpot,                                       &  ! total above-ground DM working state (single-file SAVE)
         rdrns, dvsnlt, dvsnt, fntrt, tcnt,                   &  ! nutrient config snapshots (init→runtime within this pair)
         vernbase, verndvs, vernrtb, vernsat,                 &  ! vernalisation config snapshots (init→runtime within this pair)
         fraharlosorm_lv, fraharlosorm_so, fraharlosorm_st,   &  ! harvest-loss fractions (init→runtime within this pair)
@@ -98,6 +95,11 @@
 
       real(8)   asrc,ccheck,cvf
       real(8)   laicr,lasum,mres
+      ! [GR-CROP 2026-05-25] wofost working state migrated from legacy globals to local SAVE.
+      ! These are single-file persistent state across task=1/2/3/4 calls — module 'save' below.
+      real(8)   gasst, gasstpot, mrest, mrestpot
+      real(8)   tadw, tadwpot
+      real(8)   fbl, drbl, drblpot
       real(8)   dalv,delt,dmi
       real(8)   drrt,drst,dslv,dteff,dtsum,dvr
       real(8)   dvred,fl,fo,fr,fs,drlv

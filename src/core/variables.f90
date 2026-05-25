@@ -396,8 +396,7 @@
       ! [GR-CROPWS] fotb retired — see state%crop%common%fotb
       ! [GR-CROPWS] frtb retired — see state%crop%common%frtb
       ! [GR-CROPWS] fstb retired — see state%crop%common%fstb
-      real(8)   gasst              ! Total gross assimilation for actual crop (kg/ha)
-      real(8)   gasstpot           ! Total gross assimilation for potential crop (kg/ha)
+      ! [GR-CROP 2026-05-25] gasst/gasstpot retired — local SAVE in cropwofost_runtime%wofost
       ! [GR-ATM 2026-05-23] gc retired — see state%crop%common%gc
       ! [GR-CROP-DVS] HarLosOrm_tot retired — see state%crop%common%HarLosOrm_tot
       ! [GR-CROP 2026-05-25] hdrygerm/hwetgerm retired — see cropwofost_config%germination.
@@ -424,8 +423,7 @@
       real(8)   max_resp_factor    ! Ratio root total respiration / maintenance respiration [1..5.0 -, R]
       ! [GR-CROP-DVS] mowrest retired — see state%crop%grass%mowrest
       ! [GR-CROPWS] dewrest retired — see state%crop%grass%dewrest
-      real(8)   mrest              ! Total maintenance respiration for actual crop (kg/ha)
-      real(8)   mrestpot           ! Total maintenance respiration for potential crop (kg/ha)
+      ! [GR-CROP 2026-05-25] mrest/mrestpot retired — local SAVE in cropwofost_runtime%wofost
       real(8)   mrftb(2*magrs)     ! Array with ratio root total respiration / maintenance respiration as function of DVS (kg/m3)
       ! [GR-CROPWS] perdl retired — see state%crop%common%perdl
       real(8)   pfreetb(2*magrs)   ! Gash interception model: free throughfall coefficient (-) as function of time (T)
@@ -464,8 +462,7 @@
       real(8)   specific_resp_humus ! Respiration rate of humus at 25 �C [0.0..1.0 kg O2/kg C/d, R] 
       ! [GR-CROPWS] srl retired — see state%crop%common%srl
       ! [GR-CROPWS] ssa retired — see state%crop%common%ssa
-      real(8)   tadw               ! Dry weight of plant minus roots of actual growth (kg/ha)
-      real(8)   tadwpot            ! Dry weight of plant minus roots of potential growth (kg/ha)
+      ! [GR-CROP 2026-05-25] tadw/tadwpot retired — local SAVE in cropwofost_runtime%wofost
       ! [GR-CROP-DVS] tagp retired — see state%crop%wofost%tagp
       ! [GR-CROP-DVS] tagppot retired — see state%crop%wofost%tagppot
       ! [GR-CROP-DVS] tagpt retired — see state%crop%wofost%tagpt
@@ -562,11 +559,9 @@
       real(8)   vernrtb(30)        ! table with rate of vernalisation as function of tav [days/degrees]
 !     only for bulb crops (tulips etc..)
       integer   swbulb             ! switch to enable simulation of bulb crops (-)
-      real(8)   drbl               ! Death rate of actual bulb (kg/ha)
-      real(8)   drblpot            ! Death rate of potential bulb (kg/ha)
+      ! [GR-CROP 2026-05-25] drbl/drblpot/fbl retired — local SAVE in cropwofost_runtime%wofost
       ! [GR-CROP-DVS] dwbl retired — see state%crop%wofost%dwbl
       ! [GR-CROP-DVS] dwblpot retired — see state%crop%wofost%dwblpot
-      real(8)   fbl                ! Dry weight fraction partitioned to flowers (-)
       ! [GR-CROPWS] fbltb retired — see state%crop%common%fbltb
       real(8)   pld
       real(8)   remoc
