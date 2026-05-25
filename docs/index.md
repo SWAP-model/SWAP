@@ -5,37 +5,22 @@ author: SWAP Team
 
 # SWAP — Soil Water Atmosphere Plant
 
-SWAP is a one-dimensional vertical simulation model for transport processes (water, heat, solutes) in the soil–plant–atmosphere continuum at field scale. This repository holds the modernization of SWAP 4.2.0 under active rescue-and-stabilize work.
+SWAP is a one-dimensional vertical simulation model for transport processes
+(water, heat, solutes) in the soil–plant–atmosphere continuum at field scale.
+This site is the home of the modernization of SWAP 4.2.0.
 
-## Start here
+## For users
 
-1. [Architecture overview](architecture.html) — three-phase control flow, state aggregation, module boundaries.
-2. [Build and test](build-and-test.html) — build, fast/full test split, regression harness, fixture policy.
-3. [Contributing](contributing.html) — branch model, commit conventions, verification gates.
+- **[Tutorial](tutorial/index.html)** — work through a full SWAP run end to end.
+- **[Reference](reference/index.html)** — per-topic pages on configuration,
+  meteorology, and input formats.
 
-## Reference
+## For contributors
 
-- [State management](state-management.html) — `config_t` / `initial_t` / `state_t`, ASSOCIATE, lifecycle.
-- [Configuration schema](configuration-schema.html) — TOML input reference.
-- [TOML format guide](toml-format-guide.html) — how to author a SWAP TOML file: conventions, examples, gotchas.
-- [Error handling](error-handling.html) — error collection, calling convention, abort checkpoint.
-- [Validation](validation.html) — primitive checks, section validators, aggregate rules, testing.
-- [Coverage baseline](coverage-baseline.html) — Phase 3 line/branch coverage numbers and known gaps.
-- [Dependency management](dependency-management.html) — subprojects, pixi deps, pFUnit, how to bump.
-- [Code style](code-style.html) — Fortran 2008 conventions, names, intent; matched by `.fprettify.rc`.
-- [Logging](logging.html) — `swap_log` facility, levels, initialization, format, thread-safety constraints.
-- [Architecture decision records](adr/) — the non-obvious choices and why:
-  - [ADR 0001 — gfortran-first](adr/0001-gfortran-first.html)
-  - [ADR 0002 — single builddir](adr/0002-single-builddir.html)
-  - [ADR 0003 — aggregator state over compartments for now](adr/0003-aggregator-state-over-compartments-for-now.html)
-  - [ADR 0004 — pFUnit for unit tests](adr/0004-pfunit-for-unit-tests.html)
-  - [ADR 0005 — licensing audit](adr/0005-licensing-audit.html)
-  - [ADR 0006 — coverage tracked, not gated](adr/0006-coverage-tracked-not-gated.html)
-
-## Current status
-
-The Phase 4 / Phase 4f-extend modernization completed on 2026-05-05 (tags `rescue/phase-4f-extend-complete` and `rescue/phase-4f-extend-followups`). The capstone summary is [`PHASE-4-MODERNIZATION-SUMMARY.md`](PHASE-4-MODERNIZATION-SUMMARY.html). Frozen specs, plans, and per-reader audits live under [`docs/archive/2026-phase-4/`](archive/2026-phase-4/README.html). Status of the rescue is tracked in git tags named `rescue/phase-*`.
+- **[Developer](developer/index.html)** — architecture, contributing guide,
+  build/test, subsystem docs.
 
 ## API reference
 
-FORD-generated API reference at [api/index.html](api/index.html). Run `pixi run -e docs docs-build` to regenerate.
+The Fortran source is browsable at [api/index.html](api/index.html). Generated
+by FORD; rebuild with `pixi run -e docs docs-build`.
