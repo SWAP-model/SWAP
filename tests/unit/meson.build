@@ -125,7 +125,7 @@ if get_option('enable_pfunit')
         '../../src/io/toml/load_swap_config.f90',
         '../../src/io/toml/load_swap_config_string.f90',
         '../../src/io/toml/write_swap_config.f90',
-        '../../src/io/toml/config_to_variables.f90',
+        '../../src/io/toml/seed_state_from_config.f90',
         'io/toml/chdir_helper.f90',
         # swap_mod.f90 (added Task 3) needs the full compute-module chain compiled in the test binary
         '../../src/soil/do_ln_trans.f90',  # [GR-SOIL 2026-05-24] doln module split from sptabulated
@@ -249,7 +249,7 @@ if get_option('enable_pfunit')
         'io/toml/test_read_cropfixed_toml.pf',
         'io/toml/test_read_cropgrass_toml.pf',
         'io/toml/test_read_cropwofost_toml.pf',
-        'io/toml/test_config_to_variables.pf',
+        'io/toml/test_seed_state_from_config.pf',
         'io/toml/test_load_swap_config.pf',
         'io/toml/test_hupselbrook_loads.pf',
         'io/toml/test_hupselbrook_roundtrip.pf',

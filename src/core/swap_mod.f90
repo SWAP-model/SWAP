@@ -23,7 +23,7 @@ contains
       type(swap_config_t), target, intent(out) :: config  ! target: crop_config_global => config%crop (set inside body, Task 3)
 
 !  Phase 4f strangler-fig: read time-independent input via the TOML
-!  pipeline + config_to_variables adapter. The legacy readswap() entry
+!  pipeline + seed_state_from_config adapter. The legacy readswap() entry
 !  point is no longer called from the runtime path (see ADR 0007); it
 !  survives in src/io/readswap.f90 only as a parity-test fixture. The
 !  binary expects swap.toml in the current directory; abort_if_fatal
@@ -31,7 +31,7 @@ contains
 !  validate/finalize.
 !
 !  Remaining strangler-fig debt: ~10 individual HACK Phase 4f-extend
-!  slots in config_to_variables.f90 for legacy globals not yet covered
+!  slots in seed_state_from_config.f90 for legacy globals not yet covered
 !  by typed schema slots (SWREDU, RSIGNI, CFEVAPPOND, iHWCKmodel, RDS,
 !  ksatexm path, etc.). Each slot is a small typed-config extension +
 !  adapter wiring. The deeper follow-on (per ADR 0016) is the config-
@@ -55,7 +55,7 @@ contains
       !   flHarvestDay/flCropOutput/swcrp/flCropHarvest/flCropEmergence/daycrop/icrop/flCropNut),
       !   state%crop%wofost%swbulb, state%crop%grass%swpotrelmf, state%cfg%soil%frost%swfrost,
       !   state%cfg%general%project. `owltab` retained — still used as a CSV-staging buffer
-      !   by config_to_variables; this file copies the buffer into state%drainage%owltab.
+      !   by seed_state_from_config; this file copies the buffer into state%drainage%owltab.
       ! [GR-IO 2026-05-25 Phase 5] flTillage → (state%cfg%soil%swtill == 1) inline.
       ! owltab → adapter writes directly to state%drainage%owltab (no bare global).
       ! [GR-IO 2026-05-25 Phase 6] flSwapShared/SharedSimulation feature
@@ -96,7 +96,7 @@ contains
       ! src/solute/dormant/agetracer.f90 (dormant; no callers since ADR 0032).
       use soilgrid_mod, only: CalcGrid
       use soilhydraulics_mod, only: soilwater
-      use config_to_variables_mod, only: config_to_variables
+      use seed_state_from_config_mod, only: seed_state_from_config
       use irrigation_mod, only: SSDI_irrigation
       use timecontrol_mod, only: timecontrol_init, itertime_init
       type(swap_state_t),          intent(out)   :: state
@@ -115,11 +115,11 @@ contains
 !  iteration and timing statistics
    call itertime_init(state)
 
-!  config_to_variables seeds state%timecontrol from config (Task 1).
-   call config_to_variables(config, state)
+!  seed_state_from_config seeds state%timecontrol + cross-subsystem exceptions from config (Tasks 1-10).
+   call seed_state_from_config(config, state)
 
    ! [GR-FINAL C1] state%timecontrol%iyear/imonth/dt now written directly by
-   ! config_to_variables (tc_*_init_buf buffers retired).
+   ! seed_state_from_config (tc_*_init_buf buffers retired).
 
    ! [GR-SEED 2026-05-25 Task 10] Crop seeding must run BEFORE timecontrol_init
    ! because timecontrol_init reads state%crop%common%croptype(icrop) at line ~252.
@@ -254,7 +254,7 @@ contains
    state%nutrients%pcresbott  = Pcresbott
 
    ! [SS-GR-BH A6] soilwater layer flats — placed here because soilwater_init
-   ! allocates the state arrays (nlay-sized) AFTER config_to_variables runs.
+   ! allocates the state arrays (nlay-sized) AFTER seed_state_from_config runs.
    ! All layer flats sourced directly from config (legacy globals retired Task 36).
    if (allocated(config%soil%hydraulics%ksatexm)) &
       state%soilwater%ksatexm(:) = config%soil%hydraulics%ksatexm(1:size(state%soilwater%ksatexm))
@@ -389,7 +389,7 @@ contains
       state%drainage%zbotdr(1:size(config%drain%zbotdr)) = config%drain%zbotdr
    end if
    ! [GR-IO 2026-05-25 Phase 5] owltab bare-global staging buffer retired —
-   ! the adapter (config_to_variables.f90) now writes the per-level
+   ! the adapter (seed_state_from_config.f90) now writes the per-level
    ! channel water-level tables directly into state%drainage%owltab.
    ! [GR-SEED 2026-05-25 Task 3] solute_init retired → type-bound state%solute%init
    if (state%cfg%solute%swsolu == 1) call state%solute%init(config%solute, state%mesh%numnod)

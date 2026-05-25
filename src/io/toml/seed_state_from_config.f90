@@ -1,47 +1,24 @@
-!> Phase 4f Task A1 — config_to_variables adapter.
+!> seed_state_from_config — thin orchestrator that seeds swap_state_t from swap_config_t.
 !!
-!! Single public subroutine `config_to_variables(config)` that copies every
-!! (C)-classified field listed in `docs/phase-4f-config-to-variables-audit.md`
-!! from a populated `swap_config_t` to its corresponding `variables%`
-!! global. The body is a long sequence of mechanical assignments walking
-!! the audit doc section by section (general -> simulation -> meteorology
-!! -> drainage -> soil -> bottom_boundary -> heat -> irrigation -> solute
-!! -> surface_water -> crop), with `if (allocated(...))` guards on every
-!! allocatable array.
+!! After GR-SEED 2026-05-25 Tasks 1-10, all per-subsystem seeding has been
+!! absorbed into typed state%X%init methods. This orchestrator now only holds
+!! a handful of documented cross-subsystem exceptions:
 !!
-!! Per ADR 0009, the 18 RETIRED legacy output switches are zero-forced at
-!! the end so any residual code that checks them does the right thing.
+!!   - state%surfacewater%swdra   (must precede timecontrol_init / drainage_init)
+!!   - state%surfacewater%pondmx/rsro/rsroexp  (soil section cross-write)
+!!   - state%mesh%numlay          (from config%soil%isoillay)
+!!   - state%atmosphere%atmin7    (swinco==3 cross-write, cannot live in soilwater_init)
+!!   - state%solute%cml_init/zc_init/nconc  (swinco==3 cross-write)
 !!
-!! Per ADR 0010 + ADR 0011, macropore globals are NOT populated; case 3
-!! is excluded from check-full and uses the unchanged readswap path
-!! (through cropgrowth's per-rotation init only).
-!!
-!! Per Phase 4f Task A0, `croptype(:)` is a renamed alias for
-!! `crop_config_t.rotation_type(:)` — the adapter copies element-by-element.
-!!
-!! This adapter is the one place a bare `use variables` is OK; it touches
-!! many globals across nearly every section of the legacy module.
-!!
-!! ## PHASE4F-EXTEND HACKs
-!!
-!! When iteration through Phase 4f Task B2/B3/.../B6 surfaces a legacy
-!! global that the existing schema doesn't cover, the temporary fix lives
-!! HERE in the adapter rather than in the schema. Each such fix is marked
-!! with a comment line of the form:
-!!
-!!     ! HACK Phase 4f-extend: <one-line description of what's missing>
-!!
-!! Phase 4f-extend will walk this file, find every HACK marker via grep,
-!! and replace each one with a proper schema extension (typed config
-!! field + reader + per-case TOML population). After Phase 4f-extend
-!! closes, no HACK markers should remain in this file.
-module config_to_variables_mod
+!! All other assignment history is preserved as inline comments marking
+!! which Task absorbed each block.
+module seed_state_from_config_mod
    use iso_fortran_env, only: real64
    use swap_config_mod, only: swap_config_t
    implicit none
    private
 
-   public :: config_to_variables
+   public :: seed_state_from_config
    ! [GR-SEED 2026-05-25 Task 9] apply_soil_tillage retired: body moved to
    ! tillage_state_mod as tillage_state_init (type-bound). parse_iso_date_to_days1900
    ! also moved there as a private helper (single caller).
@@ -55,10 +32,10 @@ module config_to_variables_mod
 
 contains
 
-   !> Copy every (C)-classified field from `config` into the corresponding
-   !! `variables%` legacy global. Caller is responsible for having loaded,
-   !! validated, and finalized `config` first.
-   subroutine config_to_variables(config, state)
+   !> Seed swap_state_t from swap_config_t. Caller is responsible for having
+   !! loaded, validated, and finalized `config` first. Per-subsystem seeding
+   !! is delegated to state%X%init; only cross-subsystem exceptions live here.
+   subroutine seed_state_from_config(config, state)
       ! [GR-IO 2026-05-25 Phase 6 Step 3] bare `use variables` retired —
       ! every config→bare-global mirror write below was dead after Steps
       ! 1-2 (no remaining readers). Size parameters now come from the
@@ -286,7 +263,7 @@ contains
       ! [GR-ATM 2026-05-23] logf bare-global retired; swap_log opens
       ! 'swap_swap.log' via log_init() in swap_main.
 
-   end subroutine config_to_variables
+   end subroutine seed_state_from_config
 
    !> Strip a trailing '.crp.toml' (or '.toml') suffix from a rotation
    !! file path, leaving the stem the legacy per-crop reader expects in
@@ -322,4 +299,4 @@ contains
    ! apply_ssdi_seed (public) + apply_ssdi_mode0/mode1 (private). Called from
    ! state%crop%irrigation%init in swap_mod.
 
-end module config_to_variables_mod
+end module seed_state_from_config_mod

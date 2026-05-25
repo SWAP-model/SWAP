@@ -1,0 +1,1 @@
+/home/zawadzkim/Code/swap/.pixi/envs/docs/lib/python3.11/site-packages/ford

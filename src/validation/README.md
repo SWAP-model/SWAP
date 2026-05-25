@@ -2,10 +2,9 @@
 
 ## Responsibility
 
-Stateless validator primitives consumed by per-section config
-validators. Each primitive checks one invariant and appends an
-error on failure via an `error_collection_t` passed in. No shared
-state, no side effects beyond the append.
+Stateless validator primitives consumed by per-section config validators.
+Each primitive checks one invariant and appends an error on failure via an `error_collection_t` passed in.
+No shared state, no side effects beyond the append.
 
 ## Public interface
 

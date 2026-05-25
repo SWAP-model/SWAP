@@ -1,8 +1,8 @@
-! pFUnit tests for the Phase 4f Task A1 config_to_variables adapter.
+! pFUnit tests for seed_state_from_config (GR-SEED 2026-05-25 Task 11 rename).
 !!
 !! Each test constructs a minimal swap_config_t, populates the relevant
-!! fields, calls config_to_variables(config, state), and asserts that the
-!! corresponding globals carry the expected values.
+!! fields, calls seed_state_from_config(config, state), and asserts that the
+!! expected state fields carry the expected values.
 !!
 !! [SS-BMI2 Task 5]: 15 TimeControl config fields (tstart, tend, dtmin,
 !! dtmax, period, nprintday, flprintdt, swheader, swodat, swres, swscre,
@@ -10,10 +10,10 @@
 !! state%timecontrol directly instead of bare variables% globals.
 
 @test
-subroutine test_config_to_variables_general_section()
+subroutine test_seed_state_from_config_general_section()
    use funit
    use swap_config_mod, only: swap_config_t
-   use config_to_variables_mod, only: config_to_variables
+   use seed_state_from_config_mod, only: seed_state_from_config
    use swap_state_mod, only: swap_state_t
    ! [GR-IO 2026-05-25 Phase 6 Step 2] All path/project assertions now read
    ! directly from config%general — bare-global legacy mirrors retired.
@@ -34,7 +34,7 @@ subroutine test_config_to_variables_general_section()
    config%simulation%swres     = 1
    config%simulation%swodat    = 1
 
-   call config_to_variables(config, state)
+   call seed_state_from_config(config, state)
 
    @assertEqual("phase4f_unit", trim(config%general%project))
    @assertEqual("./work/",      trim(config%general%pathwork))
@@ -48,14 +48,14 @@ subroutine test_config_to_variables_general_section()
    @assertEqual(7,              state%timecontrol%period)
    @assertEqual(1,              state%timecontrol%swres)
    @assertEqual(1,              state%timecontrol%swodat)
-end subroutine test_config_to_variables_general_section
+end subroutine test_seed_state_from_config_general_section
 
 
 @test
-subroutine test_config_to_variables_simulation_numerical()
+subroutine test_seed_state_from_config_simulation_numerical()
    use funit
    use swap_config_mod, only: swap_config_t
-   use config_to_variables_mod, only: config_to_variables
+   use seed_state_from_config_mod, only: seed_state_from_config
    use swap_state_mod, only: swap_state_t
    ! [GR-FINAL C1] dt written directly to state%timecontrol%dt (tc_dt_init_buf retired)
    ! [SS-BMI2 Task 5] dtmin, dtmax, MaxIt, msteps moved to state%timecontrol
@@ -70,7 +70,7 @@ subroutine test_config_to_variables_simulation_numerical()
    config%simulation%numerical%MaxBackTr = 5
    config%simulation%numerical%taccur    = 5.0d-4
 
-   call config_to_variables(config, state)
+   call seed_state_from_config(config, state)
 
    ! [GR-FINAL C1] dt written directly to state%timecontrol%dt
    @assertEqual(0.1d0,   state%timecontrol%dt)
@@ -80,18 +80,18 @@ subroutine test_config_to_variables_simulation_numerical()
    @assertEqual(50,      state%timecontrol%MaxIt)
    @assertEqual(5,       config%simulation%numerical%MaxBackTr)
    @assertEqual(5.0d-4,  config%simulation%numerical%taccur)
-end subroutine test_config_to_variables_simulation_numerical
+end subroutine test_seed_state_from_config_simulation_numerical
 
 
 @test
-subroutine test_config_to_variables_drainage_basic()
+subroutine test_seed_state_from_config_drainage_basic()
    ! [GR-SEED 2026-05-25 Task 7] Drainage seeding moved from adapter to
    ! state%drainage%init. Test now calls state%drainage%init to verify
    ! seeding; adapter Drainage block deleted. state%surfacewater%swdra is
    ! seeded by state%surfacewater%init — verified from config source here.
    use funit
    use swap_config_mod, only: swap_config_t
-   use config_to_variables_mod, only: config_to_variables
+   use seed_state_from_config_mod, only: seed_state_from_config
    use swap_state_mod, only: swap_state_t
    ! [GR-BH Task 37] swdivd/nrlevs globals deleted; verified via config fields only.
    implicit none
@@ -107,7 +107,7 @@ subroutine test_config_to_variables_drainage_basic()
    config%drain%basegw   = -250.0d0
    config%drain%entres   = 30.0d0
 
-   call config_to_variables(config, state)
+   call seed_state_from_config(config, state)
 
    ! state%drainage%init (not adapter) now seeds these fields.
    call state%drainage%init(config%drain, numnod_test)
@@ -122,18 +122,18 @@ subroutine test_config_to_variables_drainage_basic()
    @assertEqual(4,         config%drain%nrlevs)
    @assertEqual(-250.0d0,  state%drainage%basegw)
    @assertEqual(30.0d0,    state%drainage%entres)
-end subroutine test_config_to_variables_drainage_basic
+end subroutine test_seed_state_from_config_drainage_basic
 
 
 @test
-subroutine test_config_to_variables_soil_with_layer_arrays()
+subroutine test_seed_state_from_config_soil_with_layer_arrays()
    use funit
    use swap_config_mod, only: swap_config_t
-   use config_to_variables_mod, only: config_to_variables
+   use seed_state_from_config_mod, only: seed_state_from_config
    use swap_state_mod, only: swap_state_t
    ! [GR-SEED 2026-05-25 Task 8] swsophy/swinco/bdens/swfrost seeding moved to
    ! state%soilwater%init (called from swap_mod after CalcGrid). This test now
-   ! verifies what config_to_variables STILL does for the soil section:
+   ! verifies what seed_state_from_config STILL does for the soil section:
    !   - surfacewater cross-writes (pondmx/rsro/rsroexp)
    !   - mesh%numlay derivation from isoillay
    !   - atmosphere%atmin7 and solute Cml writes (swinco=3 block, retained)
@@ -155,10 +155,10 @@ subroutine test_config_to_variables_soil_with_layer_arrays()
    allocate(config%soil%cofani(3))
    config%soil%cofani = [1.5d0, 2.0d0, 2.5d0]
 
-   call config_to_variables(config, state)
+   call seed_state_from_config(config, state)
 
    ! [GR-SEED 2026-05-25 Task 8] swsophy/swinco now seeded by state%soilwater%init,
-   ! not by config_to_variables — verify via config (canonical source).
+   ! not by seed_state_from_config — verify via config (canonical source).
    @assertEqual(1,        config%soil%swsophy)
    ! [GR-SOIL 2026-05-24] swhyst/gwli legacy mirrors retired — assert via config (canonical source).
    @assertEqual(2,        config%soil%swhyst)
@@ -167,18 +167,18 @@ subroutine test_config_to_variables_soil_with_layer_arrays()
    ! [GR-FINAL C1] pondini/pond now seeded directly in swap_mod after soilwater_init;
    ! verify config source value is preserved.
    @assertEqual(0.5d0,    config%soil%pondini)
-   ! surfacewater%pondmx is still written by config_to_variables.
+   ! surfacewater%pondmx is still written by seed_state_from_config.
    @assertEqual(1.0d0,    state%surfacewater%pondmx)
-   ! [GR-BH Task 36] cofani global retired: config_to_variables no longer writes to bare global.
+   ! [GR-BH Task 36] cofani global retired: seed_state_from_config no longer writes to bare global.
    ! state%soilwater%cofani is seeded from config in swap_mod.f90 (swap_init_from_loaded_config).
-end subroutine test_config_to_variables_soil_with_layer_arrays
+end subroutine test_seed_state_from_config_soil_with_layer_arrays
 
 
 @test
-subroutine test_config_to_variables_surface_water_with_management()
+subroutine test_seed_state_from_config_surface_water_with_management()
    use funit
    use swap_config_mod, only: swap_config_t
-   use config_to_variables_mod, only: config_to_variables
+   use seed_state_from_config_mod, only: seed_state_from_config
    use swap_state_mod, only: swap_state_t
    ! [GR-SEED 2026-05-25 Task 6] Management-period seeding moved to
    ! state%surfacewater%init — tested in test_surfacewater_state.pf.
@@ -205,19 +205,19 @@ subroutine test_config_to_variables_surface_water_with_management()
    config%surface_water%intwl  = [1, 7]
    config%surface_water%hbweir = [-50.0d0, -75.0d0]
 
-   call config_to_variables(config, state)
+   call seed_state_from_config(config, state)
 
    ! Config retains its typed values after adapter runs.
    @assertEqual(2, config%surface_water%swsrf)
    @assertEqual(2, config%surface_water%swsec)
-end subroutine test_config_to_variables_surface_water_with_management
+end subroutine test_seed_state_from_config_surface_water_with_management
 
 
 @test
-subroutine test_config_to_variables_zero_forces_retired_switches()
+subroutine test_seed_state_from_config_zero_forces_retired_switches()
    use funit
    use swap_config_mod, only: swap_config_t
-   use config_to_variables_mod, only: config_to_variables
+   use seed_state_from_config_mod, only: seed_state_from_config
    use swap_state_mod, only: swap_state_t
    ! [GR-SOIL 2026-05-24] swcaprise dropped from import — migrated to
    ! state%cfg%simulation%numerical%swcaprise (the adapter no longer
@@ -228,12 +228,12 @@ subroutine test_config_to_variables_zero_forces_retired_switches()
 
    ! [GR-FINAL C4] W-globals (swafo/swaun/swvap/swbal/swwba/swsba/swblc/swdrf/
    ! swstr/swirg/swini/swswb/swoutputmodflow/swcapriseoutput) no longer
-   ! explicitly zeroed by config_to_variables — they rely on Fortran module
+   ! explicitly zeroed by seed_state_from_config — they rely on Fortran module
    ! default (=0/.false.) or initialize.f90. Only the functional/C-category
    ! fields still explicitly forced are tested below.
 
-   call config_to_variables(config, state)
+   call seed_state_from_config(config, state)
 
    ! swheader now written to state%timecontrol%swheader — forced to 0 by ADR 0009 block
    @assertEqual(0, state%timecontrol%swheader)
-end subroutine test_config_to_variables_zero_forces_retired_switches
+end subroutine test_seed_state_from_config_zero_forces_retired_switches
