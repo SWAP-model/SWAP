@@ -140,6 +140,68 @@ The exact arg list per init is finalized during implementation. Some calls
 may take `config` whole instead of a sub-record where they need cross-section
 data (e.g. `state%atmosphere%init` already does this).
 
+### Call-chain flattening (Task 12)
+
+The current chain is **three deep** with two layers conflated:
+
+```
+swap_main → swap_init → swap_init_from_loaded_config → config_to_variables
+```
+
+`swap_init_from_loaded_config` (~330 lines) is two responsibilities mashed
+together:
+
+- **Layer A — config → state seeding.** Everything seed_state_from_config
+  absorbs: the big `config_to_variables` call, plus the explicit
+  `state%X%init(...)` calls already split out (atmosphere, heat, nutrients,
+  soilwater, tillage, drainage).
+- **Layer B — first-day compute init.** Work that must run *after* state is
+  fully seeded: `timecontrol_init` (derives day-1 flags from seeded
+  `tstart/iyear`), `CalcGrid` (builds mesh from layer config),
+  `SoilWater(1, state)`, `SwapOutput(1, state)`,
+  `SoilWaterOutput(1, state, config)`.
+
+After Tasks 1–11 collapse Layer A into `seed_state_from_config`,
+Layer B is ~5 inline calls. The `swap_init_from_loaded_config` wrapper
+becomes trivially small and can be deleted, with its remaining body
+folded directly into `swap_init`:
+
+```fortran
+subroutine swap_init(config_file, state, config)
+   ! Phase 1: load + validate + finalize TOML
+   call load_swap_config(config_file, config, errors)
+   call config%validate(errors)
+   call config%finalize(errors)
+   call errors%abort_if_fatal()
+
+   ! Phase 2: seed state from config (pure config→state, no compute)
+   call seed_state_from_config(config, state)
+
+   ! Phase 3: first-day compute init (needs state fully seeded)
+   call timecontrol_init(state)
+   call CalcGrid(state, config)
+   call SoilWater(1, state)
+   call SwapOutput(1, state)
+   call SoilWaterOutput(1, state, config)
+
+   call log_info('swap', &
+        'Initialization complete for project: ' // trim(config%general%project))
+end subroutine swap_init
+```
+
+End-state call chain:
+
+```
+swap_main → swap_init(config_file, state, config)
+              ├─ load + validate + finalize config
+              ├─ seed_state_from_config(config, state)   ← Layer A
+              └─ [Layer B: 5 inline calls]
+```
+
+Two routines instead of three; phases are explicit. `swap_init_from_loaded_config`
+retires (with a deprecation note if any external consumer of the public API
+needs warning).
+
 ### Phasing
 
 The decomposition is naturally per-subsystem. Each task is:
@@ -171,7 +233,8 @@ orchestrator above. Then a final commit:
 | 8 | `state%soilwater` (promote + extend) | High | Largest subsystem, plus bottom-boundary case dispatch. |
 | 9 | `state%tillage` (promote + extend) | Medium | Absorbs `apply_soil_tillage`. |
 | 10 | `state%crop` (extend) | Medium | Umbrella + croptype + global pointer. |
-| 11 | Final orchestrator rename + cleanup | Low | File/module rename, test update. |
+| 11 | Final orchestrator rename + cleanup | Low | `config_to_variables` → `seed_state_from_config`, file/module rename, test update. |
+| 12 | Flatten swap_init: retire `swap_init_from_loaded_config` | Low | Fold Layer B into `swap_init` directly. Call chain becomes 2-deep (`swap_main → swap_init → seed_state_from_config`). |
 
 Risk is mostly proportional to amount of moved code; high-risk items have
 non-trivial computations (CSVs, allocations, sort, dispatch).
