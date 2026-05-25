@@ -63,8 +63,8 @@
       !   - Remaining legacy globals: writer/reader targets feeding cropgrowth
       !     dispatcher (Task 9) and cross-file consumers (cropgrass/cropfixed/
       !     oxygenstress/rootextraction); cannot retire here.
-      use variables, only: &
-        outfil, pathwork, project   ! cross-file output paths with cropgrowth_helpers/swapoutput
+      ! [GR-CROP 2026-05-25] outfil/pathwork/project read via state%cfg%general
+      ! at each outbalcrop* call site; file is now `use variables`-free.
       use wofost_soil_interface
       ! [GR-CROP 2026-05-25] cw_* snapshots — written by cropwofost_init_mod%apply_cropwofost_nutrient
       ! Nutrient cluster + harvest/vernalisation fractions. Single-file scope.
@@ -223,12 +223,12 @@
 
 !        open output files and write header
          if (crop%common%icrop.eq.1) then
-            call outbalcropOM1(1,pathwork,outfil,project,time%date,crop%common%daycrop,  &
+            call outbalcropOM1(1,state%cfg%general%pathwork,state%cfg%general%outfil,state%cfg%general%project,time%date,crop%common%daycrop,  &
      &         time%t,crop%common%dvs,crop%common%tsum,gass,mres,fr,fl,fs,fo,dmi,cvf,ccheck)
-            call outbalcropOM2(1,pathwork,outfil,project,time%date,crop%common%daycrop,  &
+            call outbalcropOM2(1,state%cfg%general%pathwork,state%cfg%general%outfil,state%cfg%general%project,time%date,crop%common%daycrop,  &
      &         time%t,crop%common%dvs,crop%common%tsum,storagediff,crop%wofost%wlv,crop%wofost%wst,crop%wofost%wso,crop%wofost%wrt,delt,         &
      &         grlv,grst,grso,grrt,drlv,drst,drso,drrt,ombalan)
-            call outbalcropN(1,pathwork,outfil,project,time%date,crop%common%daycrop, &
+            call outbalcropN(1,state%cfg%general%pathwork,state%cfg%general%outfil,state%cfg%general%project,time%date,crop%common%daycrop, &
      &         time%t,crop%common%dvs,crop%common%tsum,nuptt,nfixtt,anlvi,ansti,anrti,ansoi,cw_anlv,&
      &         cw_anst,anrt,anso,nlossl,nlossr,nlosss,nbalan,cw_nni)
          endif
@@ -1095,7 +1095,7 @@
 ! ----- CHECK and WRITE MASS BALANCE: dry matter of crop
 
 !       output of OM balance1: from air to partitioning (kg/ha DM CH2O)
-        call outbalcropOM1(2,pathwork,outfil,project,time%date,crop%common%daycrop,   &
+        call outbalcropOM1(2,state%cfg%general%pathwork,state%cfg%general%outfil,state%cfg%general%project,time%date,crop%common%daycrop,   &
      &       time%t,crop%common%dvs,crop%common%tsum,gass,mres,fr,fl,fs,fo,dmi,cvf,ccheck)
 
 ! -     OM balance2: storage difference(kg/ha DM CH2O)
@@ -1114,7 +1114,7 @@
 !           call fatalerr ('wofost',messag)
         endif
 !       output of OM balance2
-        call outbalcropom2(2,pathwork,outfil,project,time%date,crop%common%daycrop,   &
+        call outbalcropom2(2,state%cfg%general%pathwork,state%cfg%general%outfil,state%cfg%general%project,time%date,crop%common%daycrop,   &
      &         time%t,crop%common%dvs,crop%common%tsum,storagediff,crop%wofost%wlv,crop%wofost%wst,crop%wofost%wso,crop%wofost%wrt,delt,         &
      &         grlv,grst,grso,grrt,drlv,drst,drso,drrt,ombalan)
 
@@ -1127,7 +1127,7 @@
      &      +  HarLosNit_dwlv + HarLosNit_dwst + HarLosNit_dwso
 
 !       output of N balance
-        call outbalcropN(2,pathwork,outfil,project,time%date,crop%common%daycrop,     &
+        call outbalcropN(2,state%cfg%general%pathwork,state%cfg%general%outfil,state%cfg%general%project,time%date,crop%common%daycrop,     &
      &         time%t,crop%common%dvs,crop%common%tsum,NUPTT,NFIXTT,ANLVI,ANSTI,ANRTI,ANSOI,cw_ANLV,&
      &         cw_ANST,ANRT,ANSO,NLOSSL,NLOSSR,NLOSSS,NBALAN,cw_nni)
         IF (dabs(NBALAN) .GE. 1.0d-03) then
