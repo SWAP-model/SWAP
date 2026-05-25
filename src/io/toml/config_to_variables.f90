@@ -62,10 +62,10 @@ contains
       ! 1-2 (no remaining readers). Size parameters now come from the
       ! canonical swap_array_dimensions module; everything else writes
       ! directly to state%X / config%X.
-      use swap_array_dimensions, only: macp, maho, mamp, mabbc
+      use swap_array_dimensions, only: macp
       use swap_state_mod, only: swap_state_t
       use error_mod, only: fatalerr_collected
-      type(swap_config_t), intent(inout), target :: config  ! [GR-SOIL 2026-05-24] inout: populates config%soil%initial%z_init from h_file CSV
+      type(swap_config_t), intent(inout), target :: config  ! inout: apply_soil_tillage may mutate config%soil%tillage; target: state%cfg => config pointer
       type(swap_state_t),  intent(inout)         :: state
 
       integer :: i, n
@@ -104,109 +104,53 @@ contains
       ! ---------------------------------------------------------------
       ! Soil (audit: 15 + discretization + frost)
       ! ---------------------------------------------------------------
-      state%soilwater%swsophy = config%soil%swsophy
-      ! [GR-SOIL 2026-05-24] swhyst legacy mirror dropped — direct config read.
-      state%soilwater%swinco = config%soil%swinco
+      ! [GR-SEED 2026-05-25 Task 8] soilwater scalar seeding (swsophy/swinco/flrunon/
+      ! bdens/swfrost) + swinco=3 h_file CSV (→ config%soil%initial%z_init) +
+      ! bottom_boundary CSV pre-loads (swbotb=1..5) moved to state%soilwater%init
+      ! (called from swap_mod after CalcGrid). Cross-subsystem writes retained below.
       ! [MACRO-RETIRE 2026-05-12] swmacro global retired (ADR 0040).
-      ! soil.swmacro=1 is still rejected by soil_config validator stub.
-      ! SS-B / ADR 0020: set the call-site gating flags. When flTillage /
-      ! flSSDI are false (default for every regression case), the call
-      ! sites in swap.f90 / timecontrol.f90 short-circuit and the
-      ! subsystems never run.
-      ! [GR-CROP 2026-05-25] till_swtill mirror retired — tillage reads
-      ! state%cfg%soil%swtill directly.
-      ! [GR-IO 2026-05-25 Phase 5] flTillage bare global retired — swap_mod and
-      ! this adapter now read (config%soil%swtill == 1) directly.
-      ! [GR-TIME 2026-05-25] flSSDI bare global retired — swap_mod and
-      ! timecontrol_mod now read (config%irrigation%swssdi == 1) directly.
+      ! [GR-CROP 2026-05-25] till_swtill mirror retired — tillage reads state%cfg%soil%swtill directly.
+      ! [GR-IO 2026-05-25 Phase 5] flTillage bare global retired — swap_mod/adapter read
+      ! (config%soil%swtill == 1) directly.
+      ! [GR-TIME 2026-05-25] flSSDI bare global retired — swap_mod/timecontrol_mod read
+      ! (config%irrigation%swssdi == 1) directly.
       if (config%soil%swtill == 1) call apply_soil_tillage(config%soil%tillage, state%timecontrol%tend, state)
-      ! [GR-SEED 2026-05-25 Task 5] Irrigation seeding (swssdi mirror + fixed events + SSDI)
-      ! moved to state%crop%irrigation%init (called from swap_mod after CalcGrid).
-      ! [GR-SEED 2026-05-25 Task 4] apply_nutrients moved to state%nutrients%init
-      ! (called from swap_mod). Body now in nutrients_state_mod as public
-      ! seed_nutrients_from_config + load_nutrients_events helpers.
+      ! [GR-SEED 2026-05-25 Task 5] Irrigation seeding moved to state%crop%irrigation%init.
+      ! [GR-SEED 2026-05-25 Task 4] apply_nutrients moved to state%nutrients%init.
       ! [GR-SOIL 2026-05-24] gwli legacy mirror dropped — direct config read.
-      ! [GR-FINAL C1] pondini/pond: config%soil%pondini read directly by swap_mod after soilwater_init
-      ! (pondini_init_buf/pond_init_buf retired; swap_mod seeding replaced with direct config reads)
+      ! [GR-FINAL C1] pondini/pond: read directly by swap_mod after soilwater_init.
       state%surfacewater%pondmx = config%soil%pondmx
       ! [GR-ATM 2026-05-23] rsoil retired — snapshotted in atmosphere_state%init
       state%surfacewater%rsro = config%soil%rsro
       state%surfacewater%rsroexp = config%soil%rsroexp
-      ! Legacy parses .swp `SWRUNON` into a local int; we mirror that mapping
-      ! into state%soilwater%flrunon (runonarr remains dormant — no TOML writer).
-      state%soilwater%flrunon = (config%soil%swrunon == 1)
       ! [GR-IO 2026-05-25 Phase 6 Step 3] nrstaring legacy mirror dropped
 
-      ! sublay (legacy 'isublay') is a local in readswap, not a module
-      ! global; calcgrid only consumes nsublay + isoillay + ncomp + hcomp
+      ! sublay (legacy 'isublay') is a local in readswap, not a module global;
+      ! calcgrid only consumes nsublay + isoillay + ncomp + hcomp.
       ! [GR-SOIL 2026-05-24] sublay/isoillay/hsublay/ncomp/hcomp bare-global writes
       ! retired — CalcGrid reads them inline from config%soil%X.
       if (allocated(config%soil%isoillay)) then
          state%mesh%numlay = config%soil%isoillay(size(config%soil%isoillay))
       end if
       ! [GR-SOIL 2026-05-24] config%soil%hcomp ingest retired — CalcGrid reads inline.
-      ! [GR-BH Task 36] orgmat global retired — seeded via state%soilwater%orgmat in swap_mod.f90
-      ! config%soil%orgmat is consumed directly by swap_mod seeding block.
-      if (allocated(config%soil%bdens)) then
-         ! state%soilwater%bdens — Pattern 9 guarded alloc (soilwater_init runs later).
-         if (.not. allocated(state%soilwater%bdens)) then
-            allocate(state%soilwater%bdens(maho)); state%soilwater%bdens = 0.0d0
-         end if
-         do i = 1, size(config%soil%bdens)
-            state%soilwater%bdens(i) = config%soil%bdens(i)
-         end do
-      end if
-      ! [GR-BH Task 36] cofani global retired — consumed via config%soil%cofani in swap_mod.f90
-      ! (soil.cofani overrides drain.cofani — precedence preserved in swap_mod seeding block)
+      ! [GR-BH Task 36] orgmat/cofani: consumed via config in swap_mod seeding block.
 
-      ! [soil.initial] CSV path for swinco=3 warm restart. The typed
-      ! soil.initial schema + per-profile CSV companions are the only
-      ! supported pathway (the legacy ASCII swap.ini reader has been
-      ! removed).
+      ! [soil.initial] swinco=3 cross-subsystem writes retained here:
+      !   state%atmosphere%atmin7 (atmosphere write — cannot go to soilwater%init).
+      !   state%solute%X (solute write — cannot go to soilwater%init).
+      ! soilwater%init absorbs the z_init CSV and soilwater scalar seeding.
       if (config%soil%swinco == 3) then
          if (allocated(config%soil%initial%h_file) .and. &
              len_trim(config%soil%initial%h_file) > 0) then
-            ! [SS-ATM A-2.6] ssnow/ldwet/slw retired to state%atmosphere; seeded in swap.f90 after atmosphere_init
-            ! [GR-FINAL C1] pond/pondini/dt (swinco=3): read directly by swap_mod after soilwater_init
-            ! (pond_init_buf/pondini_init_buf/tc_dt_init_buf retired)
             ! [GR-IO 2026-05-25 Phase 6 Step 3] atmin7 → state%atmosphere directly
             state%atmosphere%atmin7(:) = config%soil%initial%atmin7(:)
             ! [SS-ATM A-2.6] Legacy zeroes ssnow when swsnow != 1: now handled in swap.f90 during state seeding
-
-            ! Note: [soil.initial].pondini (pre-existing top-level field) is
-            ! NOT consumed by this swinco=3 path — only [soil.initial].pond
-            ! is, since pond is the warm-restart "saved final state" while
-            ! pondini was the swinco<3 "initial-from-scalars" input. They
-            ! can both be authored without conflict; only pond wins here.
-
-            ! Mandatory: initial pressure-head profile (z, h).
-            ! [GR-FINAL C1] zi(:) seeded here; h values read directly in swap_mod after soilwater_init
-            ! (h_init_buf retired; swap_mod now reads config%soil%initial%h_file inline).
-            block
-               use csv_reader_mod,  only: read_csv_table
-               use error_mod,       only: error_collection_t
-               real(8), allocatable     :: tbl(:,:)
-               type(error_collection_t) :: errs
-               character(len=2)         :: hdr(2)
-               integer :: nrows, k
-               hdr(1) = 'z '
-               hdr(2) = 'h '
-               call read_csv_table(trim(config%soil%initial%h_file), hdr, tbl, errs)
-               call errs%abort_if_fatal()
-               nrows = size(tbl, 1)
-               ! [GR-SOIL 2026-05-24] z_init in config; legacy zi/nhead mirror retained for compat.
-               if (allocated(config%soil%initial%z_init)) deallocate(config%soil%initial%z_init)
-               allocate(config%soil%initial%z_init(nrows))
-               do k = 1, nrows
-                  config%soil%initial%z_init(k) = tbl(k, 1)
-               end do
-            end block
 
             ! [GR-IO 2026-05-25 Phase 6 Step 3] Legacy tsoil_file CSV → zh/tsoil
             ! bare-global block dropped. temperature.f90:case(1) reads
             ! cfg_heat%tsoil_init directly (populated by read_heat_toml).
 
-            ! Optional: initial concentration profile (Cml).
+            ! Optional: initial concentration profile (Cml) — solute write, stays here.
             if (config%solute%swsolu == 1) then
                block
                   use csv_reader_mod,  only: read_csv_table
@@ -237,244 +181,29 @@ contains
       end if
 
       ! Per-soil-physical-layer Mualem-van Genuchten hydraulics.
-      ! Mirrors readswap.f90:786-825 conceptually, but most of the
-      ! per-array names (ores/osat/alfa/npar/lexp/alfaw) are *locals*
-      ! in readswap — not module globals — so they only matter as input
-      ! to paramvg(1..10, lay). We write paramvg directly here. The
-      ! globals we *do* need to set are bdens / h_enpr (real(8) :: ...(maho)
-      ! in variables.f90) since downstream code reads them. ksatfit/ksatexm
-      ! retired from adapter — state%soilwater reads directly from config [SS-GR-BH A6].
-      if (allocated(config%soil%hydraulics%ores)) then
-         if (.not. allocated(state%soilwater%bdens)) then
-            allocate(state%soilwater%bdens(maho)); state%soilwater%bdens = 0.0d0
-         end if
-         ! [GR-SOIL 2026-05-24] h_enpr legacy mirror dropped — vg_params carries the typed value.
-         do i = 1, size(config%soil%hydraulics%ores)
-            state%soilwater%bdens(i) = config%soil%hydraulics%bdens(i)
-         end do
-
-         ! [GR-SOIL 2026-05-24] iHWCKmodel legacy write retired — soilwater_init
-         !   seeds `sw%iHWCKmodel = 1` directly (HACK Phase 4f-extend constraint).
-         !   The legacy reader at readswap.f90:651-657 supported per-layer override
-         !   (1..11) but no TOML schema slot covers it yet.
-
-         ! [GR-CROP 2026-05-25] paramvg legacy mirror retired — tillage.f90 now
-         !   mutates the typed per-layer store state%soilwater%vg_params_layer(:),
-         !   populated by SoilHydraulics(1) from state%cfg%soil%hydraulics directly.
-      end if
+      ! [GR-SOIL 2026-05-24] h_enpr legacy mirror dropped — vg_params carries the typed value.
+      ! [GR-SOIL 2026-05-24] iHWCKmodel legacy write retired — soilwater_state_init seeds it directly.
+      ! [GR-CROP 2026-05-25] paramvg legacy mirror retired — tillage.f90 now
+      !   mutates state%soilwater%vg_params_layer(:) directly.
+      ! [GR-SEED 2026-05-25 Task 8] bdens writes moved to soilwater_state_init (Piece B).
 
       ! Soil.discretization
       ! [GR-IO 2026-05-25 Phase 6 Step 3] swdiscrvert legacy mirror dropped
       ! [GR-IO 2026-05-25] numnodnew/dznew legacy mirror dropped — swapoutput.f90:checkDiscrVert
       ! reads config%soil%discretization%{numnodnew,dznew} directly via state%cfg.
 
-      ! Soil.frost
-      ! [GR-IO 2026-05-25 Phase 6 Step 3] swfrost legacy mirror dropped — dual-write
-      ! collapsed to single state-side write.
-      state%soilwater%swfrost = config%soil%frost%swfrost
-      ! [GR-IO 2026-05-25 Phase 6 Step 3] swsublim legacy mirror dropped
-      ! tfroststa/tfrostend live in heat block per audit (and per legacy);
-      ! do not double-write here from soil%frost — heat block below owns it.
+      ! Soil.frost: swfrost moved to soilwater_state_init (Piece B) [GR-SEED 2026-05-25 Task 8].
+      ! [GR-IO 2026-05-25 Phase 6 Step 3] swsublim legacy mirror dropped.
+      ! tfroststa/tfrostend live in heat block per audit (and per legacy).
 
       ! ---------------------------------------------------------------
       ! Bottom boundary (audit: 9 fields, conditional per swbotb)
       ! ---------------------------------------------------------------
-      ! swbotb: legacy global write retired — state%soilwater%swbotb_runtime sourced directly
-      ! from config%bottom_boundary%swbotb in swap_mod.f90 [SS-GR-BH A7].
-      select case (config%bottom_boundary%swbotb)
-      case (1)
-         block
-            use iso_fortran_env, only: real64
-            use csv_reader_mod, only: read_csv_table
-            use error_mod, only: error_collection_t
-            real(real64), allocatable :: csv_table(:,:)
-            type(error_collection_t)  :: csv_errs
-            integer :: k, nrows
-            character(len=4) :: hdr(2)
-            hdr(1) = 'date'
-            hdr(2) = 'gwl '
-            call read_csv_table( &
-               trim(config%general%pathwork)//trim(config%bottom_boundary%gwl_file), &
-               hdr, csv_table, csv_errs)
-            call csv_errs%abort_if_fatal()
-            if (allocated(csv_table)) then
-               if (.not. allocated(state%soilwater%gwltab)) then
-                  allocate(state%soilwater%gwltab(2*mabbc))
-                  state%soilwater%gwltab = 0.0d0
-               end if
-               nrows = size(csv_table, 1)
-               do k = 1, nrows
-                  state%soilwater%gwltab(k*2 - 1) = csv_table(k, 1)
-                  state%soilwater%gwltab(k*2)     = csv_table(k, 2)
-               end do
-            end if
-         end block
-      case (2)
-         ! [GR-IO 2026-05-25 Phase 6 Step 3] sw2 legacy mirror dropped
-         ! Phase 0 B-0.1: populate sine-wave scalars regardless of sw2;
-         ! the gate in boundbottom.f90:104 protects the non-sine path.
-         ! [GR-IO 2026-05-25 Phase 6 Step 3] sinmax/sinamp/sinave legacy mirrors dropped
-         if (config%bottom_boundary%sw2 == 2) then
-            block
-               use iso_fortran_env, only: real64
-               use csv_reader_mod, only: read_csv_table
-               use error_mod, only: error_collection_t
-               real(real64), allocatable :: csv_table(:,:)
-               type(error_collection_t)  :: csv_errs
-               integer :: k, nrows
-               character(len=4) :: hdr(2)
-               hdr(1) = 'date'
-               hdr(2) = 'qbot'
-               call read_csv_table( &
-                  trim(config%general%pathwork)//trim(config%bottom_boundary%qbot2_file), &
-                  hdr, csv_table, csv_errs)
-               call csv_errs%abort_if_fatal()
-               if (allocated(csv_table)) then
-                  if (.not. allocated(state%soilwater%qbotab)) then
-                     allocate(state%soilwater%qbotab(2*mabbc))
-                     state%soilwater%qbotab = 0.0d0
-                  end if
-                  nrows = size(csv_table, 1)
-                  do k = 1, nrows
-                     state%soilwater%qbotab(k*2 - 1) = csv_table(k, 1)
-                     state%soilwater%qbotab(k*2)     = csv_table(k, 2)
-                  end do
-               end if
-            end block
-         end if
-      case (3)
-         ! [GR-DRAIN 2026-05-25] shape legacy mirror dropped — boundbottom.f90
-         ! reads bb%shape (= config%bottom_boundary%shape) directly.
-         ! [GR-IO 2026-05-25 Phase 6 Step 3] hdrain/aqave/aqamp/aqper/aqtmax/sw3
-         ! legacy mirrors dropped (boundbottom.f90 reads bb%X = config%bottom_boundary%X).
-         ! [GR-SOIL 2026-05-24] rimlay/swbotb3impl already dropped.
-         ! [GR-SOIL 2026-05-24] sw4 legacy mirror dropped — direct config read.
-         if (config%bottom_boundary%sw3 == 2) then
-            block
-               use iso_fortran_env, only: real64
-               use csv_reader_mod, only: read_csv_table
-               use error_mod, only: error_collection_t
-               real(real64), allocatable :: csv_table(:,:)
-               type(error_collection_t)  :: csv_errs
-               integer :: k, nrows
-               character(len=6) :: hdr(2)
-               hdr(1) = 'date  '
-               hdr(2) = 'haquif'
-               call read_csv_table( &
-                  trim(config%general%pathwork)//trim(config%bottom_boundary%haquif_file), &
-                  hdr, csv_table, csv_errs)
-               call csv_errs%abort_if_fatal()
-               if (allocated(csv_table)) then
-                  if (.not. allocated(state%soilwater%haqtab)) then
-                     allocate(state%soilwater%haqtab(2*mabbc))
-                     state%soilwater%haqtab = 0.0d0
-                  end if
-                  nrows = size(csv_table, 1)
-                  do k = 1, nrows
-                     state%soilwater%haqtab(k*2 - 1) = csv_table(k, 1)
-                     state%soilwater%haqtab(k*2)     = csv_table(k, 2)
-                  end do
-               end if
-            end block
-         end if
-         if (config%bottom_boundary%sw4 == 1) then
-            block
-               use iso_fortran_env, only: real64
-               use csv_reader_mod, only: read_csv_table
-               use error_mod, only: error_collection_t
-               real(real64), allocatable :: csv_table(:,:)
-               type(error_collection_t)  :: csv_errs
-               integer :: k, nrows
-               character(len=4) :: hdr(2)
-               hdr(1) = 'date'
-               hdr(2) = 'qbot'
-               call read_csv_table( &
-                  trim(config%general%pathwork)//trim(config%bottom_boundary%qbot4_file), &
-                  hdr, csv_table, csv_errs)
-               call csv_errs%abort_if_fatal()
-               if (allocated(csv_table)) then
-                  if (.not. allocated(state%soilwater%qbotab)) then
-                     allocate(state%soilwater%qbotab(2*mabbc))
-                     state%soilwater%qbotab = 0.0d0
-                  end if
-                  nrows = size(csv_table, 1)
-                  do k = 1, nrows
-                     state%soilwater%qbotab(k*2 - 1) = csv_table(k, 1)
-                     state%soilwater%qbotab(k*2)     = csv_table(k, 2)
-                  end do
-               end if
-            end block
-         end if
-      case (4)
-         ! [GR-IO 2026-05-25 Phase 6 Step 3] swqhbot/cofqha/cofqhb/cofqhc/swcofqhc
-         ! legacy mirrors dropped — boundbottom reads via bb%X.
-         if (config%bottom_boundary%swqhbot == 2) then
-            block
-               use iso_fortran_env, only: real64
-               use csv_reader_mod, only: read_csv_table
-               use error_mod, only: error_collection_t
-               real(real64), allocatable :: csv_table(:,:)
-               type(error_collection_t)  :: csv_errs
-               integer :: k, nrows
-               character(len=4) :: hdr(2)
-               hdr(1) = 'htab'
-               hdr(2) = 'qtab'
-               call read_csv_table( &
-                  trim(config%general%pathwork)//trim(config%bottom_boundary%qhbot_file), &
-                  hdr, csv_table, csv_errs)
-               call csv_errs%abort_if_fatal()
-               ! Legacy unpack pattern from readswap.f90:1418-1419 — for the
-               ! q(h) curve, qbotab(odd) = abs(htab) and qbotab(even) = qtab.
-               if (allocated(csv_table)) then
-                  if (.not. allocated(state%soilwater%qbotab)) then
-                     allocate(state%soilwater%qbotab(2*mabbc))
-                     state%soilwater%qbotab = 0.0d0
-                  end if
-                  nrows = size(csv_table, 1)
-                  do k = 1, nrows
-                     state%soilwater%qbotab(k*2 - 1) = abs(csv_table(k, 1))
-                     state%soilwater%qbotab(k*2)     = csv_table(k, 2)
-                  end do
-               end if
-            end block
-         end if
-      case (5)
-         ! [SS-BND B-2.7] hbot global retired; state%soilwater%hbot set by boundbottom each step.
-         ! hbot = config%bottom_boundary%hbot
-         ! NOTE: rhobot has no legacy SWAP-wide global; the plan's spec
-         ! line `rhobot = config%bottom_boundary%rhobot` was a defect.
-         ! The schema slot is read for future-proofing; consumers TBD.
-         block
-            use iso_fortran_env, only: real64
-            use csv_reader_mod, only: read_csv_table
-            use error_mod, only: error_collection_t
-            real(real64), allocatable :: csv_table(:,:)
-            type(error_collection_t)  :: csv_errs
-            integer :: k, nrows
-            character(len=4) :: hdr(2)
-            hdr(1) = 'date'
-            hdr(2) = 'hbot'
-            call read_csv_table( &
-               trim(config%general%pathwork)//trim(config%bottom_boundary%hbot5_file), &
-               hdr, csv_table, csv_errs)
-            call csv_errs%abort_if_fatal()
-            if (allocated(csv_table)) then
-               if (.not. allocated(state%soilwater%hbotab)) then
-                  allocate(state%soilwater%hbotab(2*mabbc))
-                  state%soilwater%hbotab = 0.0d0
-               end if
-               nrows = size(csv_table, 1)
-               do k = 1, nrows
-                  state%soilwater%hbotab(k*2 - 1) = csv_table(k, 1)
-                  state%soilwater%hbotab(k*2)     = csv_table(k, 2)
-               end do
-            end if
-         end block
-      case (6, 7)
-         ! No parameters to populate for modes 6 and 7.
-      case (8)
-         ! [GR-SOIL 2026-05-24] hplate legacy mirror dropped — direct config read.
-      end select
+      ! [GR-SEED 2026-05-25 Task 8] Bottom-boundary CSV pre-loads (swbotb=1..5
+      ! → gwltab/qbotab/haqtab/hbotab) moved to state%soilwater%init via
+      ! private seed_bottom_boundary helper (called from swap_mod after CalcGrid).
+      ! swbotb: legacy global write retired — state%soilwater%swbotb_runtime sourced
+      ! directly from config%bottom_boundary%swbotb in swap_mod.f90 [SS-GR-BH A7].
 
       ! ---------------------------------------------------------------
       ! Heat (audit: 10 fields + 6 Phase-0 promoted fields = 16 total)

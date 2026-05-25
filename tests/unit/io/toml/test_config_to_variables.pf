@@ -131,8 +131,15 @@ subroutine test_config_to_variables_soil_with_layer_arrays()
    use swap_config_mod, only: swap_config_t
    use config_to_variables_mod, only: config_to_variables
    use swap_state_mod, only: swap_state_t
-   ! [GR-FINAL C1] pondini/pond seeded in swap_mod after soilwater_init (pondini_init_buf/pond_init_buf retired)
-   ! [GR-BH Task 36] cofani global retired — seeded via state%soilwater%cofani in swap_mod.f90
+   ! [GR-SEED 2026-05-25 Task 8] swsophy/swinco/bdens/swfrost seeding moved to
+   ! state%soilwater%init (called from swap_mod after CalcGrid). This test now
+   ! verifies what config_to_variables STILL does for the soil section:
+   !   - apply_soil_tillage call (swtill=1)
+   !   - surfacewater cross-writes (pondmx/rsro/rsroexp)
+   !   - mesh%numlay derivation from isoillay
+   !   - atmosphere%atmin7 and solute Cml writes (swinco=3 block, retained)
+   ! [GR-FINAL C1] pondini/pond seeded in swap_mod after soilwater_init.
+   ! [GR-BH Task 36] cofani global retired — seeded via config in swap_mod.f90.
    ! [GR-SOIL 2026-05-24] swhyst/gwli no longer mirrored to variables — read via config.
    implicit none
    type(swap_config_t) :: config
@@ -149,14 +156,17 @@ subroutine test_config_to_variables_soil_with_layer_arrays()
 
    call config_to_variables(config, state)
 
-   @assertEqual(1,        state%soilwater%swsophy)
+   ! [GR-SEED 2026-05-25 Task 8] swsophy/swinco now seeded by state%soilwater%init,
+   ! not by config_to_variables — verify via config (canonical source).
+   @assertEqual(1,        config%soil%swsophy)
    ! [GR-SOIL 2026-05-24] swhyst/gwli legacy mirrors retired — assert via config (canonical source).
    @assertEqual(2,        config%soil%swhyst)
-   @assertEqual(2,        state%soilwater%swinco)
+   @assertEqual(2,        config%soil%swinco)
    @assertEqual(-75.0d0,  config%soil%gwli)
    ! [GR-FINAL C1] pondini/pond now seeded directly in swap_mod after soilwater_init;
    ! verify config source value is preserved.
    @assertEqual(0.5d0,    config%soil%pondini)
+   ! surfacewater%pondmx is still written by config_to_variables.
    @assertEqual(1.0d0,    state%surfacewater%pondmx)
    ! [GR-BH Task 36] cofani global retired: config_to_variables no longer writes to bare global.
    ! state%soilwater%cofani is seeded from config in swap_mod.f90 (swap_init_from_loaded_config).

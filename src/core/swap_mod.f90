@@ -83,7 +83,7 @@ contains
                                           DMcressur, Ncressurf, Pcressurf, &
                                           DMcresbott, Ncresbott, Pcresbott
       use Wofost_Soil_Interface,    only: NdemandSoil, NsupplySoil, Ndemand, Nsupply, LaiCritNupt
-      use soilwater_state_mod, only: soilwater_init
+      ! [GR-SEED 2026-05-25 Task 8] soilwater_init retired → state%soilwater%init (type-bound); use line removed.
       use tillage_state_mod, only: tillage_init
       ! [GR-SEED 2026-05-25 Task 7] drainage_init retired → state%drainage%init; use line removed.
       use surfacewater_mod, only: SurfaceWater
@@ -130,7 +130,9 @@ contains
 !  calculate grid parameters
    ! [GR-BH Task 35] CalcGrid now writes directly to state%mesh%X; state%mesh%init bridge retired
    call CalcGrid(state, config)
-   call soilwater_init(state%soilwater, state%mesh%numnod, state%mesh%numlay)  ! SS-CRP Phase 1 C-1.2
+   call state%soilwater%init(config%soil, config%bottom_boundary, &          ! [GR-SEED 2026-05-25 Task 8]
+                              config%general%pathwork, &
+                              state%mesh%numnod, state%mesh%numlay)           ! SS-CRP Phase 1 C-1.2
    call state%nutrients%init(state%mesh%numlay, config%nutrients, config%general%pathwork)  ! [SS-GR-CROP A11] [GR-SEED 2026-05-25 Task 4]
    call state%crop%irrigation%init(config%irrigation, state%timecontrol%tstart, &
                                    state%timecontrol%tend, state%mesh, &
