@@ -1,6 +1,4 @@
-! cropfixed_runtime.f90
-! GR-CROPWS Phase 0 Commit 0.4: cropfixed extracted from cropgrowth.f90.
-! Pure relocation — no behavior change.
+! cropfixed_runtime.f90 — type-1 (fixed/simple) crop runtime dispatcher.
 ! ----------------------------------------------------------------------
       module cropfixed_runtime_mod
       implicit none
@@ -10,19 +8,14 @@
 
       contains
 
-!
 ! ----------------------------------------------------------------------
       subroutine cropfixed (task, state)
 ! ----------------------------------------------------------------------
 !     date               : august 2004
 !     purpose            : simple crop growth routine for swap
-! SS-CRP C-2.5: state added (optional, intent in) to read flWrtNonox.
-! SS-TC TC-10: t1900 read via state%timecontrol tc_t1900 alias.
-! SS-GR-ATM A5.1: intent changed inout to allow dual-write in cropfixed_init_from_config.
-! [SS-GR-CROPWS A2]: state optional removed — all callers pass state; all if(present(state)) guards dropped.
-! [GR-CROP Phase B/6] narrow use variables
+!
 ! [GR-CROP 2026-05-25] crop-sweep:
-!   - magrs sourced directly from swap_array_dimensions (not variables).
+!   - magrs sourced from swap_array_dimensions.
 !   - rdmax read via state%cfg%crop%rdmax (Class B direct read).
 !   - Remaining legacy globals (max_resp_factor, w_root_ss, reltr,
 !     wiltpoint, twilt, flhydrlift, siccaplai, mrftb, wrtb): write or
@@ -44,7 +37,7 @@
       use swap_state_mod, only: swap_state_t
       implicit none
 
-      type(swap_state_t), intent(inout) :: state   ! [SS-GR-CROPWS A2] removed optional — all callers pass state
+      type(swap_state_t), intent(inout) :: state
 
 ! --- local variables
       integer   i,task,lcc,swhydrlift
