@@ -1,0 +1,67 @@
+! Tests for csv_writer_mod — symmetric counterpart of csv_reader_mod.
+
+@test
+subroutine test_roundtrip_numeric()
+   use funit
+   use iso_fortran_env, only: real64
+   use csv_writer_mod,  only: csv_writer_t
+   use csv_reader_mod,  only: read_csv_table
+   use error_mod,       only: error_collection_t
+   type(csv_writer_t)        :: w
+   real(real64), allocatable :: table(:,:)
+   type(error_collection_t)  :: errors
+   character(len=*), parameter :: path = 'test_csv_writer_rt.csv'
+
+   ! write a known 3x2 matrix (no meta, no units -> reader can parse it back)
+   call w%open(path, errors)
+   @assertFalse(errors%has_errors())
+   call w%header(['htab', 'qtab'])
+   call w%row([-100.0_real64, 0.0_real64])
+   call w%row([ -50.0_real64, 1.5_real64])
+   call w%row([   0.0_real64, 9.0_real64])
+   call w%close()
+
+   call read_csv_table(path, ['htab', 'qtab'], table, errors)
+   @assertFalse(errors%has_errors())
+   @assertEqual(3, size(table, 1))
+   @assertEqual(2, size(table, 2))
+   @assertEqual(-100.0_real64, table(1, 1), 1.0e-4_real64)
+   @assertEqual(   1.5_real64, table(2, 2), 1.0e-4_real64)
+   @assertEqual(   9.0_real64, table(3, 2), 1.0e-4_real64)
+end subroutine
+
+@test
+subroutine test_leading_string_and_trailing_comma()
+   use funit
+   use iso_fortran_env, only: real64
+   use csv_writer_mod,  only: csv_writer_t
+   use error_mod,       only: error_collection_t
+   type(csv_writer_t)       :: w
+   type(error_collection_t) :: errors
+   character(len=*), parameter :: path = 'test_csv_writer_lead.csv'
+   integer :: u, ios
+   character(len=256) :: hdr, rec
+
+   call w%open(path, errors)
+   call w%header(['DATETIME', 'RAIN    '])
+   call w%row([12.5_real64], leading='1980-04-24')
+   call w%close()
+
+   open(newunit=u, file=path, status='old', action='read')
+   read(u, '(A)', iostat=ios) hdr   ! header line
+   read(u, '(A)', iostat=ios) rec   ! data line
+   close(u)
+   ! no trailing comma, leading datetime present
+   @assertEqual('1980-04-24,12.50000', trim(adjustl(rec)))
+end subroutine
+
+@test
+subroutine test_fmt_real_switches_to_exponential()
+   use funit
+   use iso_fortran_env, only: real64
+   use csv_writer_mod,  only: fmt_real_for_test
+   ! |x|<1e-4 -> E-notation; mid-range -> 5-decimal F.
+   @assertTrue(index(trim(fmt_real_for_test(1.0e-6_real64)), 'E') > 0)
+   @assertTrue(index(trim(fmt_real_for_test(1.0e6_real64)),  'E') > 0)
+   @assertEqual('1.23450', trim(adjustl(fmt_real_for_test(1.2345_real64))))
+end subroutine
