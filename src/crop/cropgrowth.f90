@@ -67,11 +67,13 @@
         daycrop,                 &  ! [GR-SOL 2026-05-24] swinco retired — via state%soilwater%swinco
 
         swcrp,                                                             &  ! dvsend/swdrought/eff/amaxtb/tmpftb/tmnftb retired
-        remoc, pld,                         &  ! swharv/q10 retired; swbulb removed (→state%crop%wofost%swbulb)
-        flCropNut, nlue, anlv, anst, nmxlv, nmaxlv, nmaxst,               &
-        nmaxrt, lrnr, lsnr, nni, rnflv, rnfst, frnx, fstr, flHarvestDay,  &
-        pathcrop, cropfil,                                                 &  ! [GR-CROP 2026-05-25] germ params retired — config/state cutover
+        remoc, pld,                                                        &  ! bulb config (read only when state%crop%wofost%swbulb=true)
+        flHarvestDay,                                                      &  ! dispatcher writes legacy mirror; non-crop readers (swap_mod)
+        pathcrop, cropfil,                                                 &  ! crop-file path/name (cross-file with cropgrowth_helpers/cropwofost_runtime)
         dummy_tsoil_cg_ => tsoil
+      ! [GR-CROP 2026-05-25] Nutrient cluster (NLUE/ANLV/ANST/NMXLV/NMAXLV/NMAXST/NMAXRT/
+      !   LRNR/LSNR/NNI/RNFLV/RNFST/FRNX/FSTR + flCropNut) isolated in
+      !   cropwofost_runtime_mod%wofost_apply_nstress — dispatcher calls the wrapper.
       !! Rename config-staging tsoil to avoid clash with dummy arg tsoil.
       !! [SS-HEAT] Task 9: tsoil retained as config-staging buffer; global is not compute state.
       use array_utils, only: afgen
@@ -83,7 +85,9 @@
       use cropgrowth_helpers_mod, only: nocrop, ArableLandGerm, FacCO2, &
                                          CropOutput, update_rootdistribution
       ! GR-CROPWS Phase 0.2: wofost extracted to cropwofost_runtime_mod
-      use cropwofost_runtime_mod, only: wofost
+      ! [GR-CROP 2026-05-25] wofost_apply_nstress isolates the nutrient-cluster legacy
+      !   globals (NLUE/ANLV/.../FSTR + flCropNut) — keeps dispatcher use-variables-free.
+      use cropwofost_runtime_mod, only: wofost, wofost_apply_nstress
       ! GR-CROPWS Phase 0.3: grass extracted to cropgrass_runtime_mod
       use cropgrass_runtime_mod, only: grass
       ! GR-CROPWS Phase 0.4: cropfixed extracted to cropfixed_runtime_mod
@@ -458,10 +462,11 @@
         state%crop%wofost%pgass = state%crop%wofost%pgass * state%crop%grass%relmf  ! [SS-GR-CROPRT B1]
 
         ! nitrogen stress reduction of pgass
-        if (flCropNut) then
-          call NUTRIE (NLUE,state%crop%wofost%wlv,state%crop%wofost%wst,state%crop%common%dvs,ANLV,ANST,NMXLV,NMAXLV,NMAXST,  &
-     &      NMAXRT,LRNR,LSNR,NNI,RNFLV,RNFST,FRNX,FSTR)
-          state%crop%wofost%pgass = state%crop%wofost%pgass * FSTR
+        ! [GR-CROP 2026-05-25] Nutrient cluster (NLUE/ANLV/.../FSTR) is shared persistent
+        ! state with cropwofost_runtime; isolated behind wofost_apply_nstress wrapper so
+        ! the dispatcher stays use-variables-free.
+        if (state%crop%common%flCropNut) then
+          call wofost_apply_nstress(state)
         endif
 
       endif  

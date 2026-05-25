@@ -16,8 +16,34 @@
       private
 
       public :: wofost
+      public :: wofost_apply_nstress
 
       contains
+
+! ----------------------------------------------------------------------
+      subroutine wofost_apply_nstress(state)
+! ----------------------------------------------------------------------
+! Purpose: Apply WOFOST nitrogen-stress reduction to potential gross
+!          assimilation. Called by cropgrowth.f90 dispatcher when
+!          state%crop%common%flCropNut is true. The nutrient cluster
+!          (anlv/anst/nmxlv/nmaxlv/.../nlue/lrnr/lsnr/fstr/...) still
+!          lives in legacy_state — this wrapper isolates the bare-global
+!          access so the dispatcher can stay `use variables`-free.
+! ----------------------------------------------------------------------
+      use variables, only: nlue, anlv, anst, nmxlv, nmaxlv, nmaxst, &
+                           nmaxrt, lrnr, lsnr, nni, rnflv, rnfst,    &
+                           frnx, fstr
+      use swap_state_mod, only: swap_state_t
+      implicit none
+      type(swap_state_t), intent(inout) :: state
+
+      call NUTRIE(NLUE, state%crop%wofost%wlv, state%crop%wofost%wst, &
+                  state%crop%common%dvs, ANLV, ANST, NMXLV, NMAXLV,   &
+                  NMAXST, NMAXRT, LRNR, LSNR, NNI, RNFLV, RNFST, FRNX, FSTR)
+      state%crop%wofost%pgass = state%crop%wofost%pgass * FSTR
+
+      return
+      end subroutine wofost_apply_nstress
 
       subroutine wofost(task, state)
 ! ----------------------------------------------------------------------
