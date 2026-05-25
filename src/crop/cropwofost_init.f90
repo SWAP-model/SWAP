@@ -86,12 +86,9 @@ module cropwofost_init_mod
 contains
 
    subroutine cropwofost_init_from_config(cfg, icrop, FraDeceasedLvToSoil, state)
-      ! [GR-CROP 2026-05-25] crop-sweep: surviving legacy globals are cross-file with
-      ! cropwofost_runtime / cropgrowth dispatcher; retired in Task 9.
-      use variables, only: &
-         idsl, dlo, dlc,                                                    &  ! cross-file phenology with cropwofost_runtime
-         daycrop,                                                           &  ! cross-file with cropgrowth (InitializeCrop legacy zero)
-         flCropNut                                                          ! cross-file with cropgrowth + runtime
+      ! [GR-CROP 2026-05-25] cropwofost_init writes phenology config (idsl/dlo/dlc)
+      ! directly to state%crop%wofost; daycrop/flCropNut written to state%crop%common.
+      ! File is now `use variables`-free.
       use array_utils, only: afgen
       use error_mod,   only: fatalerr_collected
       use swap_state_mod, only: swap_state_t
@@ -190,12 +187,12 @@ contains
       end if
 
       ! Part 2: phenology (soybean=0 path; readwofost lines 2712-2721)
-      idsl   = cfg%phenology%idsl
+      state%crop%wofost%idsl = cfg%phenology%idsl
       state%crop%common%tsumea = cfg%phenology%tsumea
       state%crop%common%tsumam = cfg%phenology%tsumam
-      if (idsl == 1 .or. idsl == 2) then
-         dlo = cfg%phenology%dlo
-         dlc = cfg%phenology%dlc
+      if (state%crop%wofost%idsl == 1 .or. state%crop%wofost%idsl == 2) then
+         state%crop%wofost%dlo = cfg%phenology%dlo
+         state%crop%wofost%dlc = cfg%phenology%dlc
       end if
       if (allocated(cfg%phenology%dtsmtb)) then
          block
@@ -490,17 +487,15 @@ contains
       ! ----------------------------------------------------------------
       state%crop%common%dvs     = 0.0d0
       state%crop%common%tsum    = 0.0d0
-      daycrop = 0
-      state%atmosphere%nofd    = 0  ! [GR-CROP 2026-05-25] nofd retired → state%atmosphere
-      state%crop%common%daycrop = daycrop
+      state%crop%common%daycrop = 0
+      state%atmosphere%nofd     = 0  ! [GR-CROP 2026-05-25] nofd retired → state%atmosphere
 
       ! [nutrients] N3: drive the legacy global flCropNut from the
       ! per-rotation typed config. cropwofost_init_from_config runs at
       ! every rotation start, so a sequence of rotations with mixed
       ! flcropnut values toggles the gate correctly.
-      flCropNut = cfg%nutrient%flcropnut
-      state%crop%common%flCropNut = flCropNut
-      if (flCropNut) call apply_cropwofost_nutrient(cfg%nutrient)
+      state%crop%common%flCropNut = cfg%nutrient%flcropnut
+      if (state%crop%common%flCropNut) call apply_cropwofost_nutrient(cfg%nutrient)
 
    end subroutine cropwofost_init_from_config
 

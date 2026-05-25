@@ -317,7 +317,7 @@
       ! [GR-CROPWS] idev retired — see state%crop%common%idev
       ! [GR-CROPWS] idregr retired — see state%crop%grass%idregr
       ! [GR-CROPWS] idregrpot retired — see state%crop%grass%idregrpot
-      integer   idsl               ! Switch for crop development before anthesis: 0 = depends on temperature; 
+      ! [GR-CROP 2026-05-25] idsl retired — see state%crop%wofost%idsl
                                    !   1 = depends on temperature and day length; 2 = depends on temperature, day length and vernalisation factor
       ! [GR-CROPWS] iharvest retired — see state%crop%grass%iharvest
       ! [GR-CROPWS] ilvold retired — see state%crop%common%ilvold
@@ -374,8 +374,8 @@
       ! [GR-CROP-DVS] cwdm retired — see state%crop%wofost%cwdm
       ! [GR-CROP-DVS] cwdmpot retired — see state%crop%wofost%cwdmpot
       ! [GR-ATM 2026-05-23] difpp retired — see state%atmosphere%difpp
-      real(8)   dlc                ! Shortest day length (T) for any crop development
-      real(8)   dlo                ! Minimum day length (T) for optimal crop development
+      ! [GR-CROP 2026-05-25] dlc retired — see state%crop%wofost%dlc
+      ! [GR-CROP 2026-05-25] dlo retired — see state%crop%wofost%dlo
       ! [GR-CROPWS] dry_mat_cont_roots retired — see state%crop%common%dry_mat_cont_roots
       ! [GR-ATM 2026-05-23] dsinbe retired — see state%atmosphere%dsinbe
       ! [GR-CROPWS] dtsmtb retired — see state%crop%common%dtsmtb
@@ -492,7 +492,7 @@
       ! [GR-CROP-DVS] wsopot retired — see state%crop%wofost%wsopot
       ! [GR-CROP-DVS] wst retired — see state%crop%wofost%wst
       ! [GR-CROP-DVS] wstpot retired — see state%crop%wofost%wstpot
-      logical   flanthesis         ! Flag indicating anthesis stage of a crop
+      ! [GR-CROP 2026-05-25] flanthesis retired — see state%crop%wofost%flanthesis
       ! [GR-CROPWS] flHarvest retired — see state%crop%grass%flHarvest
       logical   flHarvestDay        ! Flag indicating that current day is harvest day
       ! [GR-CROPWS] flHarvestpot retired — see state%crop%grass%flHarvestpot
@@ -568,7 +568,7 @@
       ! [GR-CROP-DVS] wblpot retired — see state%crop%wofost%wblpot
 
 ! --- Nitrogen: crop and soil management
-      logical   flCropNut          ! Flag indicating simulation of crop nutrient stress
+      ! [GR-CROP 2026-05-25] flCropNut retired — see state%crop%common%flCropNut
       logical :: flTillage = .false.   !! ADR 0020 call-site gate for DoTillage
       logical :: flSSDI    = .false.   !! ADR 0020 call-site gate for SSDI_irrigation
       ! [GR-CROP 2026-05-25] Nutrient cluster retired — migrated to module-level

@@ -63,6 +63,13 @@ module crop_wofost_state_mod
       real(real64) :: fco2eff  = 1.0_real64  !! CO2 correction factor for EFF (-)
       real(real64) :: fco2tra  = 1.0_real64  !! CO2 correction factor for TRA (-)
 
+      ! [GR-CROP 2026-05-25] WOFOST phenology config snapshots (from cfg%phenology).
+      ! Written by cropwofost_init; read by cropwofost_runtime (wofost subroutine).
+      integer      :: idsl    = 0            !! photoperiod sensitivity flag (0/1/2)
+      real(real64) :: dlo     = 0.0_real64   !! daylength above which DVR=DVRMAX (h)
+      real(real64) :: dlc     = 0.0_real64   !! daylength below which DVR=0 (h)
+      logical      :: flanthesis = .false.   !! flag indicating anthesis stage reached
+
    contains
       procedure :: init => crop_wofost_state_init
    end type crop_wofost_state_t

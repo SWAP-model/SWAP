@@ -97,7 +97,7 @@ module legacy_state_mod
       integer :: crp  !! Internal number of crop output file *.CRP
       integer :: daycrop  !! Number of days that a crop exists
       integer :: icrop  !! Current crop number
-      integer :: idsl  !! Switch for crop development before anthesis: 0 = depends on temperature;
+      ! [GR-CROP 2026-05-25] idsl retired — see state%crop%wofost%idsl
       ! [GR-CROP 2026-05-25] noddrz retired — see crop_common_state_t%noddrz
       ! [GR-ATM 2026-05-23] atmtr retired — see state%atmosphere%atmtr
       ! [GR-CROP 2026-05-25] agerm/bgerm/cgerm retired — read direct from
@@ -109,8 +109,8 @@ module legacy_state_mod
       real(real64), allocatable :: cropend(:)  !! Array with crop end dates
       real(real64), allocatable :: cropstart(:)  !! Array with crop start dates
       ! [GR-ATM 2026-05-23] difpp retired — see state%atmosphere%difpp
-      real(real64) :: dlc  !! Shortest day length (T) for any crop development
-      real(real64) :: dlo  !! Minimum day length (T) for optimal crop development
+      ! [GR-CROP 2026-05-25] dlc retired — see state%crop%wofost%dlc
+      ! [GR-CROP 2026-05-25] dlo retired — see state%crop%wofost%dlo
       ! [GR-ATM 2026-05-23] dsinbe retired — see state%atmosphere%dsinbe
       ! [GR-CROP 2026-05-25] f_senes retired — see state%crop%oxygen%f_senes
       ! [GR-CROP 2026-05-25] gasst/gasstpot retired — local SAVE in cropwofost_runtime%wofost
@@ -140,7 +140,7 @@ module legacy_state_mod
       ! [GR-CROP 2026-05-25] wrtb retired — always-zero on TOML (legacy reader removed)
       ! [GR-CROP 2026-05-25] wrtmin retired — see state%crop%wofost%wrtmin
       ! [GR-CROP 2026-05-25] gwrt retired — see state%crop%wofost%gwrt
-      logical :: flanthesis  !! Flag indicating anthesis stage of a crop
+      ! [GR-CROP 2026-05-25] flanthesis retired — see state%crop%wofost%flanthesis
       logical :: flHarvestDay  !! Flag indicating that current day is harvest day
       character(len=40), allocatable :: cropfil(:)  !! Array with names of crop files
       ! [GR-CROP 2026-05-25] pathcrop retired — config%general%pathcrop is the canonical read.
@@ -154,7 +154,7 @@ module legacy_state_mod
       ! [GR-CROP 2026-05-25] pld retired — see crop_config_global%rotation_wofost(icrop)%bulb%pld
       ! [GR-CROP 2026-05-25] remoc retired — see crop_config_global%rotation_wofost(icrop)%bulb%remoc
       ! [GR-CROP-DVS] plwt retired — see state%crop%wofost%plwt
-      logical :: flCropNut  !! Flag indicating simulation of crop nutrient stress
+      ! [GR-CROP 2026-05-25] flCropNut retired — see state%crop%common%flCropNut
       ! [GR-CROP 2026-05-25] nmxlv/ilnmxl/fstr retired — see cropwofost_init_mod cw_*
       ! [SS-GR-FINAL D1] amFERT retired — 0 consumers
       ! [GR-CROP 2026-05-25] till_* Group AB stubs retired — migrated to

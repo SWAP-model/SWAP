@@ -64,11 +64,7 @@
       !     dispatcher (Task 9) and cross-file consumers (cropgrass/cropfixed/
       !     oxygenstress/rootextraction); cannot retire here.
       use variables, only: &
-        cropend,                                             &  ! cross-file with dispatcher (writes), cropfixed/cropgrass
-        flCropHarvest, flCropNut, flHarvestDay,              &  ! cross-file lifecycle flags with cropgrowth dispatcher
-        flanthesis,                                          &  ! cross-file with cropgrowth dispatcher
-        dlc, dlo, idsl,                                      &  ! cross-file phenology config with cropgrowth dispatcher
-        outfil, pathwork, project                              ! cross-file output paths with cropgrowth_helpers
+        outfil, pathwork, project   ! cross-file output paths with cropgrowth_helpers/swapoutput
       use wofost_soil_interface
       ! [GR-CROP 2026-05-25] cw_* snapshots — written by cropwofost_init_mod%apply_cropwofost_nutrient
       ! Nutrient cluster + harvest/vernalisation fractions. Single-file scope.
@@ -213,16 +209,16 @@
       end block
 
 ! --- if crop based on calendar is still active, but already harvested
-      if (flCropHarvest) return
+      if (crop%common%flCropHarvest) return
 
 ! --- n-p-k
-      if( flCropNut) then
+      if( crop%common%flCropNut) then
 !        Legacy nutrient parameters (cw_LRNR, cw_LSNR, cw_NLAI, cw_NLUE, cw_NMAXSO,
 !        cw_NPART, cw_NFIXF, cw_NSLA, cw_RNFLV/RT/ST, cw_tcnt, cw_dvsnlt, cw_dvsnt, RDRNS,
 !        cw_fntrt, cw_FRNX, cw_NMXLV, cw_fraharlosorm_lv/st/so) used to be read here
 !        from <cropfil>.crp via TTutil rdinit/rdsdou. Read block deleted
 !        as part of legacy readers physical deletion. These globals are
-!        now populated by apply_cropwofost_nutrient when flcropnut=true
+!        now populated by apply_cropwofost_nutrient when crop%common%flCropNut=true
 !        on the active rotation (ADR 0025 N1, ADR 0028 N3).
 
 !        open output files and write header
@@ -253,7 +249,7 @@
      &   dabs(time%t1900 - crop%common%cropstart) .lt. tiny) then
 
         crop%common%dvs = 0.0d0
-        flAnthesis = .false.
+        crop%wofost%flanthesis = .false.
         crop%common%tsum = 0.0d0
         fr = afgen (crop%common%frtb,30,crop%common%dvs)
         fl = afgen (crop%common%fltb,30,crop%common%dvs)
@@ -323,7 +319,7 @@
         crop%wofost%dwso = 0.0d0
         crop%wofost%dwst = 0.0d0
         crop%wofost%dwstpot = 0.0d0
-        if(flCropNut) then
+        if(crop%common%flCropNut) then
           WLVt0 = crop%wofost%wlv
           WSTt0 = crop%wofost%wst
           WSOt0 = crop%wofost%wso
@@ -331,7 +327,7 @@
         endif
         
 ! ---   n-p-k 
-        if( flCropNut) then
+        if( crop%common%flCropNut) then
 !******************************************************************
 !         initial maximum nutrient concentrations in plant organs 
 !         per kg biomass [kg N kg-1 dry biomass] at sowing added IS
@@ -408,7 +404,7 @@
       endif
 
 ! -      n-p-k 
-      if( flCropNut) then
+      if( crop%common%flCropNut) then
         call nutrinit    (nlossl,nlossr,nlosss,                         &
      &                    nuptt,rnlv,rnst,rnrt,rnso,                    &
      &                    rnldlv,rnldst,rnldrt,                         &
@@ -435,10 +431,10 @@
           dvred = 1.0d0
           vernfac = 1.0d0
           vernrate = 0.0d0
-          if (idsl.ge.1) then
-             dvred = max(0.0d0, min(1.0d0, (atmo%daylp - dlc) / (dlo - dlc)))
+          if (crop%wofost%idsl.ge.1) then
+             dvred = max(0.0d0, min(1.0d0, (atmo%daylp - crop%wofost%dlc) / (crop%wofost%dlo - crop%wofost%dlc)))
           endif
-          if (idsl.eq.2) then
+          if (crop%wofost%idsl.eq.2) then
 !            vernalisation rate,based on routines from pyWofost (Allard de Wit, 2015)
              if(.not.flvernalised) then
                 if(crop%common%dvs.lt.cw_verndvs) then
@@ -474,8 +470,8 @@
       endif
 
 !     adjust development stage for realistic TSUM
-      if (crop%common%dvs.ge.1.d0 .and. (.not. flAnthesis)) then
-        flAnthesis = .true.
+      if (crop%common%dvs.ge.1.d0 .and. (.not. crop%wofost%flanthesis)) then
+        crop%wofost%flanthesis = .true.
         crop%common%dvs = 1.0d0
       end if
       
@@ -716,7 +712,7 @@
 !      laipot = max(laipot, laiem)
 
 ! --- vernalisation state (d)
-      if(idsl.eq.2) then
+      if(crop%wofost%idsl.eq.2) then
           vern = vern + vernrate
           if(.not.flvernalised .and. vern.ge.cw_vernsat) then
               flvernalised = .true.
@@ -737,7 +733,7 @@
       case (3)
 
 ! === calculate actual rate and state variables =====================
-! === with optional calculation of (flCropNut) water AND nutrient stress
+! === with optional calculation of (crop%common%flCropNut) water AND nutrient stress
 
 ! --- rates of change of the crop variables ----------------------------
 
@@ -749,7 +745,7 @@
       endif
 
 ! --- nitrogen stress reduction of pgass to gass
-      if (flCropNut) then
+      if (crop%common%flCropNut) then
         crop%common%reltr = min(crop%common%reltr,cw_fstr)
         cw_fstr  = crop%common%reltr
       end if
@@ -780,7 +776,7 @@
 ! --- check on partitioning
       call chckprt(crop%common%dvs,fr,fl,fs,fo,fbl)    
 
-      if( flCropNut) then
+      if( crop%common%flCropNut) then
 !********************************************************************         
 !         partitioning correction as influenced by water and N stress
 !         Note: the partioning depends only on the Nitrogen stress,
@@ -809,7 +805,7 @@
       if (crop%common%swrd.eq.3 .and. soil%flWrtNonox) grrt = 0.d0
 
 ! --- death of leaves due to water stress or high lai or nitrogen stress
-      call deaths(flcropnut,crop%wofost%wlv,crop%kdif,crop%lai,cw_NNI,crop%common%perdl,cw_rdrns,crop%common%reltr,dslv)
+      call deaths(crop%common%flCropNut,crop%wofost%wlv,crop%kdif,crop%lai,cw_NNI,crop%common%perdl,cw_rdrns,crop%common%reltr,dslv)
 
 ! --- death of leaves due to exceeding life span:
       call deatha(dslv,delt,crop%common%ilvold,crop%common%lv,crop%common%lvage,crop%common%span,i1,dalv)
@@ -849,7 +845,7 @@
       endif
 
 ! --- specific leaf area valid for current timestep
-      if(flCropNut) then
+      if(crop%common%flCropNut) then
 !       nutrient and water stress
         slat = afgen (crop%common%slatb,30,crop%common%dvs)*EXP(-cw_NSLA * (1.0d0-cw_NNI))
       else
@@ -863,7 +859,7 @@
 ! --- leaf area not to exceed exponential growth curve
 ! --- cw_FSTR is actual stress: water and nutrient 
       Fstress = crop%common%reltr
-      if (flcropnut) then
+      if (crop%common%flCropNut) then
          Fstress = cw_FSTR
          if ((crop%common%dvs .LT. 0.2d0).AND.(crop%lai .LT. 0.75d0)) then
            Fstress = crop%common%reltr * EXP(-cw_NLAI* (1.0d0 - cw_NNI))
@@ -956,7 +952,7 @@
 
 !     Calling the subroutine for N losses of leaves, roots and stem storage
 !     organs (kg N ha-1 d-1)
-      if(flCropNut)then
+      if(crop%common%flCropNut)then
 
 !        Calling the subroutines for N demand of leaves, roots and stem storage
 !        organs (kg N ha-1 d-1)
@@ -982,7 +978,7 @@
 
       case (4)
 
-      if(flCropNut) then
+      if(crop%common%flCropNut) then
 
 !        Total N uptake (kg N ha-1 d-1) from soil and by biological N fixation         
          NUPTR = (MAX(0.d0, MIN(NdemandSoil, NsupplySoil) ))/DELT
@@ -1059,8 +1055,8 @@
          HarLosNit_dwst = 0.0d0; HarLosNit_dwso = 0.0d0; HarLosNit_dwlv = 0.0d0 
 !        during the last day of the crop period: add the weight of living roots 
 !        to the dead roots and reset living weight to zero
-         if (flHarvestDay .or. (crop%common%dvs.ge.crop%common%dvsend) .or. &
-     &                 dabs(time%t1900-1.0d0-cropend(crop%common%icrop)).lt.1.0d-3 ) then
+         if (crop%common%flHarvestDay .or. (crop%common%dvs.ge.crop%common%dvsend) .or. &
+     &                 dabs(time%t1900-1.0d0-cfg_crop%rotation_end(crop%common%icrop)).lt.1.0d-3 ) then
             HarLosOrm_rt = crop%wofost%wrt
             HarLosOrm_dwlv =  cw_fraharlosorm_lv * crop%wofost%dwlv
             HarLosOrm_lv   = cw_fraharlosorm_lv * crop%wofost%wlv + HarLosOrm_dwlv
@@ -1141,8 +1137,8 @@
            call log_warn('CropGrowth_Wofost', messag)
         endif
  
-        if (flHarvestDay .or. (crop%common%dvs.ge.crop%common%dvsend) .or. &
-     &                 dabs(time%t1900-1.0d0-cropend(crop%common%icrop)).lt.1.0d-3 ) then
+        if (crop%common%flHarvestDay .or. (crop%common%dvs.ge.crop%common%dvsend) .or. &
+     &                 dabs(time%t1900-1.0d0-cfg_crop%rotation_end(crop%common%icrop)).lt.1.0d-3 ) then
           gwst  = 0.0d0
           crop%wofost%gwrt  = 0.0d0
           gwso  = 0.0d0

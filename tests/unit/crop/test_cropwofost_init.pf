@@ -165,13 +165,13 @@ end subroutine
 @test
 subroutine test_flcropnut_true_propagates_to_global()
    ! N3: cfg%nutrient%flcropnut = .true. on a rotation must set the
-   ! legacy global flCropNut = .true. so the daily loop's gates open.
+   ! state%crop%common%flCropNut = .true. so the daily loop's gates open.
+   ! [GR-CROP 2026-05-25] flCropNut legacy global retired → state.
    use funit
    use iso_fortran_env, only: real64
    use cropwofost_config_mod, only: cropwofost_config_t
    use cropwofost_init_mod,   only: cropwofost_init_from_config
    use swap_state_mod, only: swap_state_t
-   use variables, only: flCropNut
    type(cropwofost_config_t) :: cfg
    type(swap_state_t) :: state  ! [SS-GR-ATM A5.1] dual-write target
    real(real64) :: FraDeceasedLvToSoil
@@ -223,26 +223,26 @@ subroutine test_flcropnut_true_propagates_to_global()
    allocate(cfg%nutrient%nmxlv(1))
    cfg%nutrient%nmxlv(1) = 60.0_real64
 
-   ! Pre-set the global to .false. to prove the assignment is doing the work.
-   flCropNut = .false.
+   ! Pre-set the state field to .false. to prove the assignment is doing the work.
+   state%crop%common%flCropNut = .false.
 
    call cropwofost_init_from_config(cfg, ICROP, FraDeceasedLvToSoil, state)  ! [SS-GR-ATM A5.1]
 
-   @assertTrue(flCropNut)
+   @assertTrue(state%crop%common%flCropNut)
 end subroutine test_flcropnut_true_propagates_to_global
 
 
 @test
 subroutine test_flcropnut_false_resets_global()
    ! N3 per-rotation toggle: a rotation with flcropnut=.false. must
-   ! drive the global to .false. even if a previous rotation left it
-   ! .true.. cropwofost_init_from_config runs at every rotation start.
+   ! drive state%crop%common%flCropNut to .false. even if a previous rotation
+   ! left it .true.. cropwofost_init_from_config runs at every rotation start.
+   ! [GR-CROP 2026-05-25] flCropNut legacy global retired → state.
    use funit
    use iso_fortran_env, only: real64
    use cropwofost_config_mod, only: cropwofost_config_t
    use cropwofost_init_mod,   only: cropwofost_init_from_config
    use swap_state_mod, only: swap_state_t
-   use variables, only: flCropNut
    type(cropwofost_config_t) :: cfg
    type(swap_state_t) :: state  ! [SS-GR-ATM A5.1] dual-write target
    real(real64) :: FraDeceasedLvToSoil
@@ -288,11 +288,11 @@ subroutine test_flcropnut_false_resets_global()
    cfg%root%rdctb(1,1) = 0.0_real64; cfg%root%rdctb(1,2) = 1.0_real64
    cfg%root%rdctb(2,1) = 1.0_real64; cfg%root%rdctb(2,2) = 0.0_real64
 
-   ! Pre-set the global to .true. — simulates a previous rotation that had
-   ! nutrients on. The current rotation must reset it.
-   flCropNut = .true.
+   ! Pre-set the state field to .true. — simulates a previous rotation that
+   ! had nutrients on. The current rotation must reset it.
+   state%crop%common%flCropNut = .true.
 
    call cropwofost_init_from_config(cfg, ICROP, FraDeceasedLvToSoil, state)  ! [SS-GR-ATM A5.1]
 
-   @assertFalse(flCropNut)
+   @assertFalse(state%crop%common%flCropNut)
 end subroutine test_flcropnut_false_resets_global

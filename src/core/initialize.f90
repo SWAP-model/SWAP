@@ -568,13 +568,12 @@
       ! flWrtNonox         = .false.
 
       daycrop            = 0
-      idsl               = 0
+      ! [GR-CROP 2026-05-25] idsl retired — see state%crop%wofost%idsl
       ! [GR-CROP 2026-05-25] noddrz retired — see state%crop%common%noddrz (default 0)
       atmin7             = 0.0d0
       avevaptb           = 0.0d0 
       avprectb           = 0.0d0 
-      dlc                = 0.0d0 
-      dlo                = 0.0d0 
+      ! [GR-CROP 2026-05-25] dlc/dlo retired — see state%crop%wofost%{dlc,dlo}
       ! [GR-CROP 2026-05-25] fbl/gasstpot/mrestpot retired — local SAVE in cropwofost_runtime%wofost
       ! [GR-ATM 2026-05-23] gc retired — see state%crop%common%gc
       ! [GR-CROP 2026-05-25] mrftb retired — always-zero on TOML
@@ -601,7 +600,7 @@
 
 ! --- harvest grassland
       
-      flanthesis         = .false.
+      ! [GR-CROP 2026-05-25] flanthesis retired — see state%crop%wofost%flanthesis
 
       return
       end subroutine
