@@ -25,6 +25,7 @@ module SWAP_csv_output
    ! (the canonical home; the legacy `use variables` re-export is being phased out).
    use swap_array_dimensions, only: macp, madr
    use swap_state_mod, only: swap_state_t
+   use output_registry_mod, only: var_count, var_name, var_unit
 
    implicit none
 
@@ -87,115 +88,6 @@ module SWAP_csv_output
 
    ! dummy
    integer                           :: i
-
-   ! initial; allowed list of input and units that apply; this sequence determines sequence in output file
-   ! MUST be uppercase
-   ! Sequence here determines sequence in output file
-   data (vars%name(i),  vars%unit(i), i = 1, M) /&
-         'RAIN',        '(cm)',        &
-         'RAIN_NET',    '(cm)',        &
-         'SNOW',        '(cm)',        &
-         'IRRIG',       '(cm)',        &
-         'IRRIG_NET',   '(cm)',        &
-         'INTERC',      '(cm)',        &
-         'RUNON',       '(cm)',        &
-         'RUNOFF',      '(cm)',        &
-         'EPOT',        '(cm)',        &
-         'EACT',        '(cm)',        &
-         'SUBLIM',      '(cm)',        &
-         'DRAINAGE',    '(cm)',        &
-         'QBOTTOM',     '(cm)',        &
-         'GWL',         '(cm)',        &
-         'POND',        '(cm)',        &
-         'SSNOW',       '(cm)',        &
-         'TPOT',        '(cm)',        &
-         'TACT',        '(cm)',        &
-         'TREDDRY',     '(cm)',        &
-         'TREDWET',     '(cm)',        &
-         'TREDSOL',     '(cm)',        &
-         'TREDFRS',     '(cm)',        &
-         'ES0',         '(cm)',        &
-         'ET0',         '(cm)',        &
-         'EW0',         '(cm)',        &
-         'DSTOR',       '(cm)',        &
-         'BALDEV',      '(cm)',        &
-         'VOLACT',      '(cm)',        &
-         'QSSDI',       '(cm)',        &
-         'TSUM',        '(deg C)',     &
-         'DVS',         '(-)',         &
-         'PGASSPOT',    '(kgch/ha)',   &
-         'PGASS',       '(kgch/ha)',   &
-         'CPWDM',       '(kg/ha)',     &
-         'CWDM',        '(kg/ha)',     &
-         'CPWSO',       '(kg/ha)',     &
-         'CWSO',        '(kg/ha)',     &
-         'PWLV',        '(kg/ha)',     &
-         'WLV',         '(kg/ha)',     &
-         'PWST',        '(kg/ha)',     &
-         'WST',         '(kg/ha)',     &
-         'PWRT',        '(kg/ha)',     &
-         'WRT',         '(kg/ha)',     &
-         'DWSO',        '(kg/ha)',     &
-         'DWLV',        '(kg/ha)',     &
-         'DWLVPOT',     '(kg/ha)',     &
-         'DWST',        '(kg/ha)',     &
-         'DWSTPOT',     '(kg/ha)',     &
-         'DWRT',        '(kg/ha)',     &
-         'DWRTPOT',     '(kg/ha)',     &
-         'HEIGHT',      '(cm)',        &
-         'CRPFAC',      '(-)',         &
-         'LAIPOT',      '(m2/m2)',     &
-         'LAI',         '(m2/m2)',     &
-         'RDPOT',       '(cm)',        &
-         'RD',          '(cm)',        &
-         'PGRASSDM',    '(kg/ha)',     &
-         'GRASSDM',     '(kg/ha)',     &
-         'PMOWDM',      '(kg/ha)',     &
-         'MOWDM',       '(kg/ha)',     &
-         'PGRAZDM',     '(kg/ha)',     &
-         'GRAZDM',      '(kg/ha)',     &
-         'PLOSSDM',     '(kg/ha)',     &
-         'LOSSDM',      '(kg/ha)',     &
-         'SQPREC',      '(g/cm2)',     &
-         'SQIRRIG',     '(g/cm2)',     &
-         'SQBOT',       '(g/cm2)',     &
-         'SQDRA',       '(g/cm2)',     &
-         'DECTOT',      '(g/cm2)',     &
-         'ROTTOT',      '(g/cm2)',     &
-         'SAMPRO',      '(g/cm2)',     &
-         'SOLBAL',      '(g/cm2)',     &
-         'WC10',        '(cm3/cm3)',   &
-         'RUNOFFCN',    '(cm) ',       &
-         'QTOPIN',      '(cm) ',       &
-         'QTOPOUT',     '(cm) ',       &
-         'QINFMAX',     '(cm)',        &
-         'H[',          '(cm)',        &
-         'WC[',         '(cm3/cm3)',   &
-         'TEMP[',       '(deg C)',     &
-         'K[',          '(cm/d)',      &
-         'CONC[',       '(g/cm3 w)',   &
-         'CONCADS[',    '(g/cm3)',     &
-         'O2TOP[',      '(kg/m3)',     &
-         'HEACAP[',     '(J/cm3/K)',   &
-         'HEACON[',     '(J/cm/K/d)',  &
-         'TETOP',       '(deg C)',     &
-         'TEBOT',       '(deg C)',     &
-         'DRAIN[',      '(cm)',        &
-         'RWU[',        '(cm)',        &
-         'FLUX[',       '(cm)',        &
-         'SSDI[',       '(cm)',        &
-         'WTOT[',       '(cm)',        &
-         'QTRANS[',     '(cm)',        &
-         'QTOP[',       '(cm)',        &
-         'QBOT[',       '(cm)',        &
-         'QDRA[',       '(cm)',        &
-         'QTOPIN[',     '(cm)',        &
-         'QTOPOUT[',    '(cm)',        &
-         'QBOTIN[',     '(cm)',        &
-         'QBOTOUT[',    '(cm)',        &
-         'QDRAININ[',   '(cm)',        &
-         'QDRAINOUT[',  '(cm)'         &
-         /
 
    ! must take care on number of items provided
    data shorts%nsn           /7/
@@ -386,6 +278,13 @@ module SWAP_csv_output
 
       ! Set format for output
       call what_form(1)
+
+      ! Fill vars%name/vars%unit from output_registry (single source of truth — IO-OUT/B)
+      if (var_count() /= M) call fatalerr_collected('csv_out', 'registry size /= M')
+      do i = 1, M
+         vars%name(i) = var_name(i)   ! char(32) -> char(12): all names fit (max 10 chars)
+         vars%unit(i) = var_unit(i)   ! char(16) -> char(12): all units fit
+      end do
 
       ! to be based on user input information
 !      InList = 'H[-10.0,4,5], RAIN, WC[2,3,6], H[4], WTOT[0:-15.0,4:6], Tact, WC[1], WC[-2], WC[1], rain,GWL, RWU[1,2,3,4,5,6], QTRANS[1:3,4:6], qtopin[0:-30]'
