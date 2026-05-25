@@ -463,9 +463,8 @@
       ! [GR-CROPWS] rmo retired — see state%crop%common%rmo
       ! [GR-CROPWS] rmr retired — see state%crop%common%rmr
       ! [GR-CROPWS] rms retired — see state%crop%common%rms
-      real(8)   rootcoefa          ! Defines relative distance at which mean soil water content occurs between roots
-      real(8)   rooteff            ! Root system efficiency factor [0..1.0 -, R]
-      real(8)   rootradius         ! Root radius drought stress (cm)
+      ! [GR-CROP 2026-05-25] rootcoefa/rooteff/rootradius retired — JvL-only (swdrought=2);
+      ! body extracted to src/crop/dormant/jongvanlier.f90 (zero live readers, zero writers).
       ! [GR-CROPWS] root_radiusO2 retired — see state%crop%common%root_radiusO2
       ! [GR-CROP-DVS] rsc retired — see state%crop%common%rsc
       ! [GR-CROPWS] rsw retired — see state%crop%common%rsw
@@ -814,7 +813,8 @@
       ! real(8)   cqtdo              ! Cumulative amount of water (L) passed through the soil surface in downward direction
       ! real(8)   cqtup              ! Cumulative amount of water (L) passed through the soil surface in upward direction
       real(8)   CritDevMasBal      ! Maximum error in water balance (L)
-      real(8)   CriterHr           ! Maximum difference of Hroot between iterations; convergence criterium  (L)
+      ! [GR-CROP 2026-05-25] CriterHr retired — JvL-only (swdrought=2);
+      ! body extracted to src/crop/dormant/jongvanlier.f90 (zero live readers, zero writers).
       ! [SS-SWC] retired 2026-05-12 — moved to state%soilwater (ADR 0038)
       ! real(8)   crunoff            ! Cumulative runoff (L)
       ! real(8)   crunon             ! Cumulative amount of runon (L)
@@ -914,12 +914,14 @@
       ! [GR-DRA 2026-05-23] khtop retired — see state%drainage%khtop
       ! [SS-SWC] retired 2026-05-12 — moved to state%soilwater%kmean (ADR 0038)
       ! real(8)   kmean(macp+1)      ! Array with mean soil hydraulic conductivity (L/T) at the interface of current and upper compartment
-      real(8)   Kroot              ! Hydraulic, radial conductivity of root tissue (L/T)
+      ! [GR-CROP 2026-05-25] Kroot retired — JvL-only (swdrought=2);
+      ! body extracted to src/crop/dormant/jongvanlier.f90 (zero live readers, zero writers).
       ! [GR-BH Task 36] retired 2026-05-13 — moved to state%soilwater%ksatfit/ksatexm (GR-BH arc)
       ! real(8)   ksatfit(maho)      ! Array with saturated hydraulic conductivity (L/T) for each soil layer: fitted on VG based on lab data
       ! real(8)   ksatexm(maho)      ! Array with saturated hydraulic conductivity (L/T) for each soil layer: examined in lab or field
       ! [GR-SOIL 2026-05-24] ksatthr retired — threshold-Ksat path not ported (always 0 in TOML pipeline); vg_params%ksatthr defaults to 0.
-      real(8)   kstem              ! Conductance in the path from leaf to root xylem (/d)
+      ! [GR-CROP 2026-05-25] kstem retired — JvL-only (swdrought=2);
+      ! body extracted to src/crop/dormant/jongvanlier.f90 (zero live readers, zero writers).
       ! [GR-DRA 2026-05-23] kvbot retired — see state%drainage%kvbot
       ! [GR-DRA 2026-05-23] kvtop retired — see state%drainage%kvtop
       ! [GR-BH Task 37] L(Madr) retired — moved to state%drainage%L
@@ -1012,7 +1014,8 @@
       ! [GR-CROP-DVS] wc_cor/CNrefTAB/CNtimTAB/iCNtab retired — see state%atmosphere
       ! [SS-SWC] retired 2026-05-12 — crunoffCN/irunoCN moved to state%soilwater (ADR 0038)
       ! [GR-ATM] retired 2026-05-23 — CNdry/CNwet/ThetaRef/wc10/Runoff_CN moved to state%atmosphere
-      real(8)   Rxylem             ! Mean radius of xylem tube inside roots (L)
+      ! [GR-CROP 2026-05-25] Rxylem retired — JvL-only (swdrought=2);
+      ! body extracted to src/crop/dormant/jongvanlier.f90 (zero live readers, zero writers).
       ! [SS-SWC] retired 2026-05-12 — moved to state%soilwater%runon (ADR 0038)
       ! real(8)   runon              ! Water runon flux (L/T)
       ! [GR-BND 2026-05-23] runonarr retired — see state%soilwater%runonarr
@@ -1025,7 +1028,8 @@
       real(8)   sinmax             ! Time of the year with maximum bottom flux in case of prescribed sine function
       ! real(8) :: spev          ! Cumulative potential evaporation (L) Boesten/Stroosnijder — [SS-ATM] retired 2026-05-11
       ! [GR-SOIL 2026-05-24] sptab/sptablay retired — swsophy=1 dormant.
-      real(8)   StepHr             ! Maximum difference of Hroot and Hxylem between iterations; convergence criterium  (L)
+      ! [GR-CROP 2026-05-25] StepHr retired — JvL-only (swdrought=2);
+      ! body extracted to src/crop/dormant/jongvanlier.f90 (zero live readers, zero writers).
       ! [GR-CROP-DVS] taccur retired — see state%cfg%simulation%numerical%taccur
       ! [SS-CRP] retired 2026-05-11 — moved to state%soilwater%Tactual (ADR 0036)
       ! real(8)   Tactual            ! Actual transpiration at former iteration in JongvanLier (cm/d)

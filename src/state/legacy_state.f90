@@ -145,9 +145,8 @@ module legacy_state_mod
       real(real64) :: q10_root  !! Relative increase in root respiration at temperature increase of 10 �C [1.0..4.0 -, R]
       real(real64) :: reltr  !! relative transpiration factor that reduces crop growth (-)
       real(real64) :: rid  !! Real day number of detailed grass crop (d)
-      real(real64) :: rootcoefa  !! Defines relative distance at which mean soil water content occurs between roots
-      real(real64) :: rooteff  !! Root system efficiency factor [0..1.0 -, R]
-      real(real64) :: rootradius  !! Root radius drought stress (cm)
+      ! [GR-CROP 2026-05-25] rootcoefa/rooteff/rootradius retired — JvL-only (swdrought=2);
+      ! body extracted to src/crop/dormant/jongvanlier.f90.
       real(real64), allocatable :: scanopytb(:)  !! Gash interception model: storage capacity of canopy (-) as function of time (T)
       real(real64) :: shape_factor_rootr  !! Shape factor for exponential decrease of root respiration rate with depth [0..1.0 -, R]
       real(real64) :: specific_resp_humus  !! Respiration rate of humus at 25 �C [0.0..1.0 kg O2/kg C/d, R]
@@ -254,7 +253,8 @@ module legacy_state_mod
       real(real64) :: cofqhc  !! Coefficient C (flux) in exponential relationship between drainage flux and groundwater level (L/T)
       ! [GR-ATM 2026-05-23] cofred retired — see state%atmosphere%cofred
       real(real64) :: CritDevMasBal  !! Maximum error in water balance (L)
-      real(real64) :: CriterHr  !! Maximum difference of Hroot between iterations; convergence criterium  (L)
+      ! [GR-CROP 2026-05-25] CriterHr retired — JvL-only (swdrought=2);
+      ! body extracted to src/crop/dormant/jongvanlier.f90.
       real(real64), allocatable :: drares(:)  !! Array with drainage resistance (T) for each drainage level
       real(real64), allocatable :: dznew(:)  !! Desired thickness of compartments for soil water quality models (L)
       ! [GR-DRA 2026-05-23] entres retired — see state%drainage%entres
@@ -275,9 +275,11 @@ module legacy_state_mod
       real(real64) :: issnowbeg  !! Amount of snow in soil water equivalent (L) at start of current intermediate period [snow.f90, waterbalance.f90]
       ! [GR-DRA 2026-05-23] khbot retired — see state%drainage%khbot
       ! [GR-DRA 2026-05-23] khtop retired — see state%drainage%khtop
-      real(real64) :: Kroot  !! Hydraulic, radial conductivity of root tissue (L/T)
+      ! [GR-CROP 2026-05-25] Kroot retired — JvL-only (swdrought=2);
+      ! body extracted to src/crop/dormant/jongvanlier.f90.
       ! [GR-SOIL 2026-05-24] ksatthr retired — orphan stub; threshold-Ksat path not ported.
-      real(real64) :: kstem  !! Conductance in the path from leaf to root xylem (/d)
+      ! [GR-CROP 2026-05-25] kstem retired — JvL-only (swdrought=2);
+      ! body extracted to src/crop/dormant/jongvanlier.f90.
       ! [GR-DRA 2026-05-23] kvbot retired — see state%drainage%kvbot
       ! [GR-DRA 2026-05-23] kvtop retired — see state%drainage%kvtop
       real(real64), allocatable :: OxygenIntercept(:)  !! Parameters of reproduction function for oxygen stress according to Bartholomeus
@@ -300,14 +302,16 @@ module legacy_state_mod
       ! [GR-ATM 2026-05-23] rsigni retired — see state%atmosphere%rsigni
       ! [GR-ATM 2026-05-23] rsoil retired — see state%atmosphere%rsoil
       ! [GR-ATM 2026-05-23] swuseCN retired — see state%atmosphere%swusecn
-      real(real64) :: Rxylem  !! Mean radius of xylem tube inside roots (L)
+      ! [GR-CROP 2026-05-25] Rxylem retired — JvL-only (swdrought=2);
+      ! body extracted to src/crop/dormant/jongvanlier.f90.
       ! [GR-BND 2026-05-23] runonarr retired — see state%soilwater%runonarr
       real(real64) :: shape  !! Shape factor: ratio between the mean and the maximum groundwater level elevation above the drainage base (-)
       real(real64) :: sinamp  !! Amplitude of prescribed bottom flux (L/T) in case of sine function
       real(real64) :: sinave  !! Average value of prescribed bottom flux (L/T) in case of sine function
       real(real64) :: sinmax  !! Time of the year with maximum bottom flux in case of prescribed sine function
       ! [GR-SOIL 2026-05-24] sptab/sptablay retired — orphan stubs; swsophy=1 dormant.
-      real(real64) :: StepHr  !! Maximum difference of Hroot and Hxylem between iterations; convergence criterium  (L)
+      ! [GR-CROP 2026-05-25] StepHr retired — JvL-only (swdrought=2);
+      ! body extracted to src/crop/dormant/jongvanlier.f90.
       ! [GR-SOIL 2026-05-24] tau retired — orphan stub; read via state%cfg%soil%tau.
       real(real64), allocatable :: twilt(:)  !! Pressure head of a compartment at wilting point (L)
       ! [GR-SOIL 2026-05-24] zi retired — orphan stub; read via state%cfg%soil%initial%z_init.
