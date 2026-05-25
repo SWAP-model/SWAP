@@ -53,7 +53,12 @@ contains
    !! `variables%` legacy global. Caller is responsible for having loaded,
    !! validated, and finalized `config` first.
    subroutine config_to_variables(config, state)
-      use variables   ! bare-use is intentional: many globals across sections
+      ! [GR-IO 2026-05-25 Phase 6 Step 3] bare `use variables` retired —
+      ! every config→bare-global mirror write below was dead after Steps
+      ! 1-2 (no remaining readers). Size parameters now come from the
+      ! canonical swap_array_dimensions module; everything else writes
+      ! directly to state%X / config%X.
+      use swap_array_dimensions, only: macp, madr, maho, mairg, mamp, maout, mabbc
       use swap_state_mod, only: swap_state_t
       use error_mod, only: fatalerr_collected
       type(swap_config_t), intent(inout), target :: config  ! [GR-SOIL 2026-05-24] inout: populates config%soil%initial%z_init from h_file CSV
@@ -64,12 +69,9 @@ contains
       ! ---------------------------------------------------------------
       ! General + simulation (audit: 11 fields)
       ! ---------------------------------------------------------------
-      if (allocated(config%general%project))   project   = config%general%project
-      if (allocated(config%general%pathwork))  pathwork  = config%general%pathwork
-      ! [GR-IO 2026-05-25 Phase 3] pathatm legacy mirror dropped — readers go through config%general%pathatm
-      ! [GR-CROP 2026-05-25] pathcrop legacy write retired — bare global was orphan
-      !   (config%general%pathcrop is the canonical read).
-      if (allocated(config%general%pathdrain)) pathdrain = config%general%pathdrain
+      ! [GR-IO 2026-05-25 Phase 6 Step 3] project/pathwork/pathdrain legacy mirrors
+      ! retired — readers go through config%general%X (test_config_to_variables
+      ! updated in Step 2). pathatm/pathcrop already dropped in earlier phases.
       state%timecontrol%swscre  = config%general%swscre
 
       state%timecontrol%tstart    = config%simulation%tstart
@@ -247,7 +249,7 @@ contains
       end if
 
       ! Evaporation sub-section
-      swcfbs = config%meteo%evaporation%swcfbs
+      ! [GR-IO 2026-05-25 Phase 6 Step 3] swcfbs legacy mirror dropped
       state%crop%cfbs = config%meteo%evaporation%cfbs
       ! [GR-ATM 2026-05-23] swredu/cofred/rsigni/cfevappond retired —
       ! snapshotted into state%atmosphere by atmosphere_state%init(config);
@@ -256,7 +258,7 @@ contains
       ! Snow sub-section
       ! [GR-TIME 2026-05-25] swsnow legacy mirror dropped — timecontrol_mod reads
       ! config%meteo%snow%swsnow directly via state%cfg.
-      snowcoef = config%meteo%snow%snowcoef
+      ! [GR-IO 2026-05-25 Phase 6 Step 3] snowcoef legacy mirror dropped
       state%atmosphere%TePrRain = config%meteo%snow%teprrain
       state%atmosphere%TePrSnow = config%meteo%snow%teprsnow
 
@@ -451,7 +453,7 @@ contains
       ! Legacy parses .swp `SWRUNON` into a local int; we mirror that mapping
       ! into state%soilwater%flrunon (runonarr remains dormant — no TOML writer).
       state%soilwater%flrunon = (config%soil%swrunon == 1)
-      nrstaring = config%soil%nrstaring
+      ! [GR-IO 2026-05-25 Phase 6 Step 3] nrstaring legacy mirror dropped
 
       ! sublay (legacy 'isublay') is a local in readswap, not a module
       ! global; calcgrid only consumes nsublay + isoillay + ncomp + hcomp
@@ -485,7 +487,8 @@ contains
             ! [SS-ATM A-2.6] ssnow/ldwet/slw retired to state%atmosphere; seeded in swap.f90 after atmosphere_init
             ! [GR-FINAL C1] pond/pondini/dt (swinco=3): read directly by swap_mod after soilwater_init
             ! (pond_init_buf/pondini_init_buf/tc_dt_init_buf retired)
-            atmin7(:) = config%soil%initial%atmin7(:)
+            ! [GR-IO 2026-05-25 Phase 6 Step 3] atmin7 → state%atmosphere directly
+            state%atmosphere%atmin7(:) = config%soil%initial%atmin7(:)
             ! [SS-ATM A-2.6] Legacy zeroes ssnow when swsnow != 1: now handled in swap.f90 during state seeding
 
             ! Note: [soil.initial].pondini (pre-existing top-level field) is
@@ -517,26 +520,9 @@ contains
                end do
             end block
 
-            ! Optional: initial soil temperature profile.
-            if (config%heat%swhea == 1 .and. config%heat%swcalt == 2) then
-               block
-                  use csv_reader_mod,  only: read_csv_table
-                  use error_mod,       only: error_collection_t
-                  real(8), allocatable     :: tbl(:,:)
-                  type(error_collection_t) :: errs
-                  character(len=5)         :: hdr(2)
-                  integer :: nrows, k
-                  hdr(1) = 'z    '
-                  hdr(2) = 'tsoil'
-                  call read_csv_table(trim(config%soil%initial%tsoil_file), hdr, tbl, errs)
-                  call errs%abort_if_fatal()
-                  nrows = size(tbl, 1)
-                  do k = 1, nrows
-                     zh(k)    = tbl(k, 1)
-                     tsoil(k) = tbl(k, 2)
-                  end do
-               end block
-            end if
+            ! [GR-IO 2026-05-25 Phase 6 Step 3] Legacy tsoil_file CSV → zh/tsoil
+            ! bare-global block dropped. temperature.f90:case(1) reads
+            ! cfg_heat%tsoil_init directly (populated by read_heat_toml).
 
             ! Optional: initial concentration profile (Cml).
             if (config%solute%swsolu == 1) then
@@ -596,14 +582,15 @@ contains
       end if
 
       ! Soil.discretization
-      swdiscrvert = config%soil%discretization%swdiscrvert
+      ! [GR-IO 2026-05-25 Phase 6 Step 3] swdiscrvert legacy mirror dropped
       ! [GR-IO 2026-05-25] numnodnew/dznew legacy mirror dropped — swapoutput.f90:checkDiscrVert
       ! reads config%soil%discretization%{numnodnew,dznew} directly via state%cfg.
 
       ! Soil.frost
-      swfrost   = config%soil%frost%swfrost
-      state%soilwater%swfrost = swfrost   ! [SS-GR-UTILS Task 4] dual-write
-      swsublim  = config%soil%frost%swsublim
+      ! [GR-IO 2026-05-25 Phase 6 Step 3] swfrost legacy mirror dropped — dual-write
+      ! collapsed to single state-side write.
+      state%soilwater%swfrost = config%soil%frost%swfrost
+      ! [GR-IO 2026-05-25 Phase 6 Step 3] swsublim legacy mirror dropped
       ! tfroststa/tfrostend live in heat block per audit (and per legacy);
       ! do not double-write here from soil%frost — heat block below owns it.
 
@@ -625,7 +612,7 @@ contains
             hdr(1) = 'date'
             hdr(2) = 'gwl '
             call read_csv_table( &
-               trim(pathwork)//trim(config%bottom_boundary%gwl_file), &
+               trim(config%general%pathwork)//trim(config%bottom_boundary%gwl_file), &
                hdr, csv_table, csv_errs)
             call csv_errs%abort_if_fatal()
             if (allocated(csv_table)) then
@@ -641,12 +628,10 @@ contains
             end if
          end block
       case (2)
-         sw2    = config%bottom_boundary%sw2
+         ! [GR-IO 2026-05-25 Phase 6 Step 3] sw2 legacy mirror dropped
          ! Phase 0 B-0.1: populate sine-wave scalars regardless of sw2;
          ! the gate in boundbottom.f90:104 protects the non-sine path.
-         sinmax = config%bottom_boundary%sinmax
-         sinamp = config%bottom_boundary%sinamp
-         sinave = config%bottom_boundary%sinave
+         ! [GR-IO 2026-05-25 Phase 6 Step 3] sinmax/sinamp/sinave legacy mirrors dropped
          if (config%bottom_boundary%sw2 == 2) then
             block
                use iso_fortran_env, only: real64
@@ -659,7 +644,7 @@ contains
                hdr(1) = 'date'
                hdr(2) = 'qbot'
                call read_csv_table( &
-                  trim(pathwork)//trim(config%bottom_boundary%qbot2_file), &
+                  trim(config%general%pathwork)//trim(config%bottom_boundary%qbot2_file), &
                   hdr, csv_table, csv_errs)
                call csv_errs%abort_if_fatal()
                if (allocated(csv_table)) then
@@ -678,14 +663,9 @@ contains
       case (3)
          ! [GR-DRAIN 2026-05-25] shape legacy mirror dropped — boundbottom.f90
          ! reads bb%shape (= config%bottom_boundary%shape) directly.
-         hdrain      = config%bottom_boundary%hdrain
-         ! [GR-SOIL 2026-05-24] rimlay legacy mirror dropped — direct config read.
-         aqave       = config%bottom_boundary%aqave
-         aqamp       = config%bottom_boundary%aqamp
-         aqper       = config%bottom_boundary%aqper
-         aqtmax      = config%bottom_boundary%aqtmax
-         ! [GR-SOIL 2026-05-24] swbotb3impl legacy mirror dropped — direct config read.
-         sw3         = config%bottom_boundary%sw3
+         ! [GR-IO 2026-05-25 Phase 6 Step 3] hdrain/aqave/aqamp/aqper/aqtmax/sw3
+         ! legacy mirrors dropped (boundbottom.f90 reads bb%X = config%bottom_boundary%X).
+         ! [GR-SOIL 2026-05-24] rimlay/swbotb3impl already dropped.
          ! [GR-SOIL 2026-05-24] sw4 legacy mirror dropped — direct config read.
          if (config%bottom_boundary%sw3 == 2) then
             block
@@ -699,7 +679,7 @@ contains
                hdr(1) = 'date  '
                hdr(2) = 'haquif'
                call read_csv_table( &
-                  trim(pathwork)//trim(config%bottom_boundary%haquif_file), &
+                  trim(config%general%pathwork)//trim(config%bottom_boundary%haquif_file), &
                   hdr, csv_table, csv_errs)
                call csv_errs%abort_if_fatal()
                if (allocated(csv_table)) then
@@ -727,7 +707,7 @@ contains
                hdr(1) = 'date'
                hdr(2) = 'qbot'
                call read_csv_table( &
-                  trim(pathwork)//trim(config%bottom_boundary%qbot4_file), &
+                  trim(config%general%pathwork)//trim(config%bottom_boundary%qbot4_file), &
                   hdr, csv_table, csv_errs)
                call csv_errs%abort_if_fatal()
                if (allocated(csv_table)) then
@@ -744,13 +724,8 @@ contains
             end block
          end if
       case (4)
-         swqhbot  = config%bottom_boundary%swqhbot
-         ! Phase 0 B-0.2: populate exponential q(h) scalars regardless of
-         ! swqhbot; the gate in boundbottom.f90:152-153 protects the tabular path.
-         cofqha   = config%bottom_boundary%cofqha
-         cofqhb   = config%bottom_boundary%cofqhb
-         cofqhc   = config%bottom_boundary%cofqhc
-         swcofqhc = config%bottom_boundary%swcofqhc
+         ! [GR-IO 2026-05-25 Phase 6 Step 3] swqhbot/cofqha/cofqhb/cofqhc/swcofqhc
+         ! legacy mirrors dropped — boundbottom reads via bb%X.
          if (config%bottom_boundary%swqhbot == 2) then
             block
                use iso_fortran_env, only: real64
@@ -763,7 +738,7 @@ contains
                hdr(1) = 'htab'
                hdr(2) = 'qtab'
                call read_csv_table( &
-                  trim(pathwork)//trim(config%bottom_boundary%qhbot_file), &
+                  trim(config%general%pathwork)//trim(config%bottom_boundary%qhbot_file), &
                   hdr, csv_table, csv_errs)
                call csv_errs%abort_if_fatal()
                ! Legacy unpack pattern from readswap.f90:1418-1419 — for the
@@ -798,7 +773,7 @@ contains
             hdr(1) = 'date'
             hdr(2) = 'hbot'
             call read_csv_table( &
-               trim(pathwork)//trim(config%bottom_boundary%hbot5_file), &
+               trim(config%general%pathwork)//trim(config%bottom_boundary%hbot5_file), &
                hdr, csv_table, csv_errs)
             call csv_errs%abort_if_fatal()
             if (allocated(csv_table)) then
@@ -824,57 +799,21 @@ contains
       ! ---------------------------------------------------------------
       ! [GR-TIME 2026-05-25] swhea legacy mirror dropped — timecontrol_mod reads
       ! config%heat%swhea directly via state%cfg.
-      swcalt    = config%heat%swcalt
-      swtopbhea = config%heat%swtopbhea
-      swbotbhea = config%heat%swbotbhea
-      tfroststa = config%heat%tfroststa
-      tfrostend = config%heat%tfrostend
+      ! [GR-IO 2026-05-25 Phase 6 Step 3] heat scalars legacy mirrors dropped —
+      ! temperature.f90 reads cfg_heat%X (= config%heat%X) directly.
 
       ! psand/psilt/pclay: legacy global writes retired — state%soilwater%psand/psilt/pclay
       ! now sourced directly from config%heat in swap_mod.f90 [SS-GR-BH A6].
       ! [GR-BH Task 36] orgmat global retired — heat.porg→orgmat backfill now handled in
       ! swap_mod.f90 seeding block (state%soilwater%orgmat). config%heat%porg consumed directly.
-      ! Initial soil temperature table tsoil_init(:,1:2) — column 1 (depth)
-      ! mirrors legacy `zh`, column 2 (temp) mirrors legacy `tsoil(1..nheat)`.
-      ! `nheat` is the number of (depth, temp) pairs; it gates the afgen
-      ! table-build in heat/temperature.f90 task=1 (lines 117-123). Without
-      ! `nheat` and `zh`, the table-build loop is skipped and every
-      ! compartment's tsoil(:) is interpolated against an empty afgen
-      ! table, yielding spurious zero initial soil temperatures across
-      ! the profile. (Hupselbrook iHWCKmodel<=3 path means no direct
-      ! water-flow feedback, so this fix is parity-correctness only and
-      ! does not by itself close the year-1 GWL gap.)
-      if (allocated(config%heat%tsoil_init)) then
-         n = size(config%heat%tsoil_init, 1)
-         ! [GR-FINAL C4] nheat write dropped (W-global; 0 consumers in temperature.f90 code)
-         do i = 1, min(n, size(tsoil))
-            zh(i)    = config%heat%tsoil_init(i, 1)
-            tsoil(i) = config%heat%tsoil_init(i, 2)
-         end do
-      end if
+      ! [GR-IO 2026-05-25 Phase 6 Step 3] tsoil_init → zh/tsoil mirror retired —
+      ! temperature.f90:case(1) builds the afgen depth-temp table directly
+      ! from cfg_heat%tsoil_init (= config%heat%tsoil_init). Same for
+      ! temtoptab/tembtab — temperature.f90 reads cfg_heat%X straight.
 
       ! Phase 0 (SS-HEAT) — swcalt=1 analytical method scalars.
-      ddamp  = config%heat%ddamp
-      tmean  = config%heat%tmean
-      tampli = config%heat%tampli
-      timref = config%heat%timref
-
-      ! Flatten 2D typed table → interleaved 1D afgen layout.
-      ! afgen(temtoptab, 2*mabbc, time) reads (2*k-1)=time, (2*k)=value.
-      ! Confirmed from temperature.f90:151 and 179.
-      if (allocated(config%heat%temtoptab)) then
-         do i = 1, min(size(config%heat%temtoptab, 1), size(temtoptab)/2)
-            temtoptab(2*i - 1) = config%heat%temtoptab(i, 1)   ! time
-            temtoptab(2*i)     = config%heat%temtoptab(i, 2)   ! temperature
-         end do
-      end if
-
-      if (allocated(config%heat%tembtab)) then
-         do i = 1, min(size(config%heat%tembtab, 1), size(tembtab)/2)
-            tembtab(2*i - 1) = config%heat%tembtab(i, 1)   ! time
-            tembtab(2*i)     = config%heat%tembtab(i, 2)   ! temperature
-         end do
-      end if
+      ! [GR-IO 2026-05-25 Phase 6 Step 3] ddamp/tmean/tampli/timref legacy
+      ! mirrors dropped — temperature.f90 reads cfg_heat%X directly.
 
       ! ---------------------------------------------------------------
       ! Irrigation (audit: 8 fields, top-level only)
@@ -917,7 +856,7 @@ contains
                irrig_header(3) = 'conc '
                irrig_header(4) = 'type '
                call read_csv_table( &
-                  trim(pathwork)//trim(config%irrigation%fixed_events_file), &
+                  trim(config%general%pathwork)//trim(config%irrigation%fixed_events_file), &
                   irrig_header, csv_table, csv_errs)
                call csv_errs%abort_if_fatal()
                if (allocated(csv_table)) then
@@ -1124,7 +1063,7 @@ contains
          state%crop%common%flCropOpenFile = .true.   ! [GR-CROP 2026-05-25] flCropOpenFile → state%crop%common
       end if
 
-      rdmax = config%crop%rdmax
+      ! [GR-IO 2026-05-25 Phase 6 Step 3] rdmax legacy mirror dropped
 
       if (allocated(config%crop%rotation_type)) then
          n = size(config%crop%rotation_type)
@@ -1161,7 +1100,7 @@ contains
       !   swafo, swaun, swvap, swbal, swwba, swsba, swblc, swdrf, swstr, swirg,
       !   swini, swcapriseoutput, swswb, swoutputmodflow
 
-      if (allocated(config%general%outfil)) outfil = config%general%outfil
+      ! [GR-IO 2026-05-25 Phase 6 Step 3] outfil legacy mirror dropped — readers use config%general%outfil
 
       ! [GR-IO 2026-05-25 Phase 2] CSV output — read directly from config%output_csv
       ! by swap_csv_output.f90; InList_csv/InList_csv_tz legacy mirror writes
