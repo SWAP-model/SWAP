@@ -337,7 +337,7 @@
       ! [GR-CROPWS] ilvoldpot retired — see state%crop%common%ilvoldpot
       ! [GR-CROPWS] iseqgm retired — see state%crop%grass%iseqgm
       ! [GR-CROPWS] iseqgmpot retired — see state%crop%grass%iseqgmpot
-      integer   noddrz             ! Compartment number at bottom root zone (-)
+      integer   noddrz             ! Compartment number at bottom root zone (-) ! [GR-CROP 2026-05-25] retained — last consumer rootextraction.f90 (Task 3 retires this)
       ! [GR-CROPWS] seqgrazmow retired — see state%crop%grass%seqgrazmow
       ! [GR-CROPWS] seqgrazmowpot retired — see state%crop%grass%seqgrazmowpot
       ! [GR-CROPWS] swcf retired — see state%crop%swcf
@@ -1143,7 +1143,7 @@
       ! [SS-GR-FINAL D1] sba retired — SBA output deleted; 0 consumers
       ! [GR-SOL 2026-05-24] swbr retired — see state%solute%swbr
       ! [GR-SOL 2026-05-24] swbotbc retired — see state%solute%swbotbc
-      integer   swsolu             ! Switch for simulation of solute transport: 0 = no; 1 = yes
+      integer   swsolu             ! Switch for simulation of solute transport: 0 = no; 1 = yes ! [GR-CROP 2026-05-25] retained — consumed by src/core/timecontrol_mod.f90
       ! [SS-GR-FINAL D3] swsp retired — 0 consumers; sorption switch never read outside init/c2v
       ! [SS-GR-CROPRT A1] AgeGwl1m retired — ADR 0032 (AgeTracer dead-code)
       ! [GR-SOL 2026-05-24] bexp retired — see state%solute%bexp
