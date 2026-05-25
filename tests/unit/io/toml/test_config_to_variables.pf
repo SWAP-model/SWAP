@@ -15,9 +15,8 @@ subroutine test_config_to_variables_general_section()
    use swap_config_mod, only: swap_config_t
    use config_to_variables_mod, only: config_to_variables
    use swap_state_mod, only: swap_state_t
-   ! [GR-CROP 2026-05-25] pathcrop retired — only assertions on remaining legacy paths
-   ! [GR-IO 2026-05-25 Phase 3] pathatm legacy mirror retired — assert via config%general%pathatm
-   use variables, only: project, pathwork, pathdrain
+   ! [GR-IO 2026-05-25 Phase 6 Step 2] All path/project assertions now read
+   ! directly from config%general — bare-global legacy mirrors retired.
    implicit none
    type(swap_config_t) :: config
    type(swap_state_t)  :: state
@@ -37,11 +36,10 @@ subroutine test_config_to_variables_general_section()
 
    call config_to_variables(config, state)
 
-   @assertEqual("phase4f_unit", trim(project))
-   @assertEqual("./work/",      trim(pathwork))
+   @assertEqual("phase4f_unit", trim(config%general%project))
+   @assertEqual("./work/",      trim(config%general%pathwork))
    @assertEqual("./atm/",       trim(config%general%pathatm))
-   ! [GR-CROP 2026-05-25] pathcrop assertion retired — bare global no longer written
-   @assertEqual("./drain/",     trim(pathdrain))
+   @assertEqual("./drain/",     trim(config%general%pathdrain))
    ! TimeControl config fields now go to state%timecontrol (SS-BMI2 Task 5)
    @assertEqual(2,              state%timecontrol%swscre)
    @assertEqual(365.0d0,        state%timecontrol%tstart)
