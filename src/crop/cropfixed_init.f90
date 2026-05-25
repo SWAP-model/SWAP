@@ -25,25 +25,18 @@ module cropfixed_init_mod
 contains
 
    subroutine cropfixed_init_from_config(cfg, icrop, lcc, state)
-      ! [SS-GR-FINAL B7] DEFERRED: all symbols are config→globals copy targets.
-      !   Retirement requires Phase C3 adapter rewrite (config_to_variables.f90 dual-writes).
-      use variables, only: &
-                            ! idev/tsumea/tsumam/tbase retired — state%crop%common
-                            ! DEFERRED: kdif/kdir/gctb/swgc — radiation/crop factor config; Phase C3
-                            ! kdif/kdir/swgc/gctb retired
-                            ! DEFERRED: cftb/chtb/cfeictb/swcf/albedo/rsc/rsw — crop factor config; Phase C3
-                            ! cftb/chtb/cfeictb/albedo/rsc/rsw/swcf retired
-                            ! DEFERRED: rdtb/rdctb — root config; Phase C3; swrd/swdmi2rd/swrdc/rdi/rri/rdc retired
-                            ! rdtb/rdctb retired
-                            ! DEFERRED: swoxygen/swWrtNonox/aeratecrit/max_resp_factor — O2 stress config; Phase C3
-                            max_resp_factor    ! many globals retired — swoxygen/swWrtNonox/aeratecrit/hlim*/adcr*/saltmax/saltslope/salthead/swcompensate/swstressor/alphacrit/dcritrtz/swsalinity/swinter/cofab/dvsend/swharv/schedule/cumdens
+      ! [GR-CROP 2026-05-25] only legacy global remaining: max_resp_factor.
+      ! Writer feeds the legacy-global → state%crop%oxygen%max_resp_factor
+      ! seeding in oxygenstress.f90 (line ~164). Cannot retire until
+      ! oxygenstress is updated to source max_resp_factor from cfg directly.
+      use variables, only: max_resp_factor
       use array_utils,  only: afgen
       use error_mod,    only: fatalerr_collected
       use swap_state_mod, only: swap_state_t
       type(cropfixed_config_t), intent(in)    :: cfg
       integer,                  intent(in)    :: icrop  ! reserved for swinco=3 inifil path (not yet ported)
       integer,                  intent(out)   :: lcc
-      type(swap_state_t),       intent(inout) :: state  ! [SS-GR-ATM A5.1] runtime dual-write target
+      type(swap_state_t),       intent(inout) :: state  ! state writes for crop runtime init
 
       integer      :: i
       real(real64) :: depth, rootdis(202), sum
