@@ -43,6 +43,7 @@ module crop_common_state_mod
 
       ! [SS-GR-CROPRT A4] lifecycle flags
       logical      :: flCropReadFile = .false.        !! reading of input .crp file occurred
+      logical      :: flCropOpenFile = .false.        !! [GR-CROP 2026-05-25] create output .crp (was bare global flCropOpenFile)
       logical      :: flCropPrep     = .false.        !! ploughing opportunity realized
       logical      :: flCropSow      = .false.        !! sowing opportunity realized
       logical      :: flCropGerm     = .false.        !! germination realized

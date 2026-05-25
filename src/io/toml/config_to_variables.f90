@@ -1141,7 +1141,7 @@ contains
       ! LAI/cf/rd remain 0, TPOT/TACT collapse, and EACT/DRAINAGE balloon.
       if (config%crop%swcrop == 1) then
          flCropReadFile = .true.
-         flCropOpenFile = .true.
+         state%crop%common%flCropOpenFile = .true.   ! [GR-CROP 2026-05-25] flCropOpenFile → state%crop%common
       end if
       state%crop%common%flCropReadFile = flCropReadFile   ! [SS-GR-CROPRT A5]
 

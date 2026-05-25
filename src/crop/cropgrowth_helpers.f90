@@ -35,15 +35,12 @@
 ! [GR-CROP Phase B/5] narrow use variables
 ! ----------------------------------------------------------------------
 
-      ! [SS-GR-CROPRT B3] DEFERRED — cropoutput:
-      !   flCropOpenFile: crop open-file flag, no state home
-      !   outfil, pathwork, project: file-path globals; [SS-GR-CROPRT B] DEFERRED file-path arc
-      !   crp: file unit number, no state home
-      !   cropfil: config array of input crop file names, no state home
-      !   croptype: per-rotation type array, no state home
-      ! MIGRATED B3: icrop → state%crop%common%icrop (read-only in cropoutput)
-      use variables, only: flCropOpenFile, outfil, cropfil, pathwork,   & ! [SS-GR-CROPRT B3] DEFERRED
-                           project, crp   ! croptype → state%crop%common
+      ! [GR-CROP 2026-05-25] flCropOpenFile → state%crop%common%flCropOpenFile.
+      ! outfil/pathwork/project read via state%cfg%general (this file's cfg snapshot).
+      ! cropfil/crp remain on the bare-global side: writers/readers exist outside
+      ! the crop subsystem (swapoutput.f90 reads crp, config_to_variables.f90
+      ! populates cropfil). Imported here from variables until the file-IO arc.
+      use variables, only: cropfil, crp
       use error_mod, only: fatalerr_collected
       use file_io_mod, only: file_open
       use swap_state_mod, only: swap_state_t
@@ -56,6 +53,12 @@
       character(len=200) messag
       character(len=160) filnam,filtext
 
+      associate( &
+        crop => state%crop%common,   &  ! crop runtime (croptype, icrop, flCropOpenFile)
+        time => state%timecontrol,   &  ! time control (headless, swheader)
+        cfg_gen => state%cfg%general &  ! general config (outfil, pathwork, project)
+      )
+
       select case (task)
       case (1)
 
@@ -65,50 +68,48 @@
       call init_crop_output_buffer(state)
 
 ! --- open crop output file
-      if (flCropOpenFile) then
+      if (crop%flCropOpenFile) then
 
-         if (.not. state%timecontrol%headless) then
+         if (.not. time%headless) then
 ! ---   open crop output file and write general header (*.crp)
-            if (trim(outfil).eq.trim(cropfil(1))) then
+            if (trim(cfg_gen%outfil).eq.trim(cropfil(1))) then
                Messag = 'The name of the input crop-file (''//trim(cropfil'//&
      &      '(icrop))//'') cannot be equal to the name of'                   &
-     &      //'the output crop-file '//trim(outfil)//' Adjust a filename !'
+     &      //'the output crop-file '//trim(cfg_gen%outfil)//' Adjust a filename !'
                call fatalerr_collected ('crops',messag)
             endif
-            filnam = trim(pathwork)//trim(outfil)//'.crp'
+            filnam = trim(cfg_gen%pathwork)//trim(cfg_gen%outfil)//'.crp'
             call file_open(crp, filnam, 'replace', 'write')
             filtext = 'output data of simple or detailed crop growth model'
-            call writehead (crp,1,filnam,filtext,project)
+            call writehead (crp,1,filnam,filtext,cfg_gen%project)
 
 ! ---   write header fixed crop growth
-            if (state%crop%common%croptype(state%crop%common%icrop) .eq. 1) call OutCropFixed(1, state)  ! [SS-GR-CROPRT B3]
+            if (crop%croptype(crop%icrop) .eq. 1) call OutCropFixed(1, state)
 
 ! ---   write header detailed crop growth
-            if (state%crop%common%croptype(state%crop%common%icrop) .eq. 2) call OutWofost(1, state)  ! [SS-GR-CROPRT B3]
+            if (crop%croptype(crop%icrop) .eq. 2) call OutWofost(1, state)
 
 ! ---   write header detailed grass growth
-            if (state%crop%common%croptype(state%crop%common%icrop) .eq. 3) call OutGrass(1, state)  ! [SS-GR-CROPRT B3]
+            if (crop%croptype(crop%icrop) .eq. 3) call OutGrass(1, state)
          end if
 
-         flCropOpenFile = .false.
+         crop%flCropOpenFile = .false.
 
       else
 
-         if (.not. state%timecontrol%headless) then
+         if (.not. time%headless) then
 ! ---   header for second and subsequent crops
 ! ---   write header fixed crop growth
-            if (state%crop%common%croptype(state%crop%common%icrop).eq.1 .and. state%timecontrol%swheader.eq.1) call OutCropFixed(1, state)  ! [SS-BMI2 Task 4] [SS-GR-CROPRT B3]
+            if (crop%croptype(crop%icrop).eq.1 .and. time%swheader.eq.1) call OutCropFixed(1, state)
 
 ! ---   write header detailed crop growth
-            if (state%crop%common%croptype(state%crop%common%icrop).eq.2 .and. state%timecontrol%swheader.eq.1) call OutWofost(1, state)  ! [SS-BMI2 Task 4] [SS-GR-CROPRT B3]
+            if (crop%croptype(crop%icrop).eq.2 .and. time%swheader.eq.1) call OutWofost(1, state)
 
 ! ---   write header detailed grass growth
-            if (state%crop%common%croptype(state%crop%common%icrop).eq.3 .and. state%timecontrol%swheader.eq.1) call OutGrass(1, state)  ! [SS-BMI2 Task 4] [SS-GR-CROPRT B3]
+            if (crop%croptype(crop%icrop).eq.3 .and. time%swheader.eq.1) call OutGrass(1, state)
          end if
 
       endif
-
-      return
 
       case (2)
 
@@ -116,24 +117,22 @@
 ! [SS-BMI2] build crop output row buffer (placeholder; full build deferred to crop output refactor arc)
       call build_crop_output_row(state)
 
-      if (.not. state%timecontrol%headless) then
+      if (.not. time%headless) then
 ! --- fixed crop file
-         if (state%crop%common%croptype(state%crop%common%icrop) .eq. 1) call OutCropFixed(2, state)  ! [SS-GR-CROPRT B3]
+         if (crop%croptype(crop%icrop) .eq. 1) call OutCropFixed(2, state)
 
 ! --- detailed crop growth
-         if (state%crop%common%croptype(state%crop%common%icrop) .eq. 2) call OutWofost(2, state)  ! [SS-GR-CROPRT B3]
+         if (crop%croptype(crop%icrop) .eq. 2) call OutWofost(2, state)
 
 ! --- detailed grass growth
-         if (state%crop%common%croptype(state%crop%common%icrop) .eq. 3) call OutGrass(2, state)  ! [SS-GR-CROPRT B3]
+         if (crop%croptype(crop%icrop) .eq. 3) call OutGrass(2, state)
       end if
-
-      return
 
       case (3)
 ! --- close crop output file ------------------------------------------------
 
       ! [SS-BMI2] headless guard: .crp file was only opened when not headless
-      if (.not. state%timecontrol%headless) close (crp)
+      if (.not. time%headless) close (crp)
 
       ! [SS-BMI2] deallocate crop output buffer
       call cleanup_crop_output_buffer(state)
@@ -142,6 +141,7 @@
          call fatalerr_collected ('CropOutput', 'Illegal value for TASK')
       end select
 
+      end associate
       return
       end subroutine cropoutput
 

@@ -28,7 +28,7 @@
       rdmax              = 0.0d0 
       flCropOutput       = .false. 
       flCropCalendar     = .false.
-      flCropOpenFile     = .false.
+      ! [GR-CROP 2026-05-25] flCropOpenFile retired — state%crop%common%flCropOpenFile default is .false.
       flCropReadFile     = .false.
       flCropEmergence    = .false.
       flCropHarvest      = .false.
