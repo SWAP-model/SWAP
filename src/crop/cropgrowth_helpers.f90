@@ -417,41 +417,32 @@
       !   co2amaxtb, co2efftb, co2tratb: CO2 correction tables in cropwofost_config co2%;
       !     migration deferred — not yet threaded via state or config arg
       !   mayrs: array dimension (could → swap_array_dimensions, deferred with rest)
-      ! MIGRATED B6: fco2amax/fco2eff/fco2tra → written directly to state%crop%wofost%X
-      !   (intent changed in→inout). Global write retained for backward compat; CropGrowth
-      !   redundant dual-write at lines 395-397 removed (B6 handles it). Reads in CropGrowth
-      !   body now use state%crop%wofost%X (removed from CropGrowth use variables).
-      use variables, only:                                              & ! [SS-GR-CROPRT B6] flco2 retired (→ state%atmosphere%flco2)
-                           co2year, mayrs, co2ppm,                       &
-                           co2amaxtb, co2efftb, co2tratb
-      use array_utils, only: afgen
-      use error_mod, only: fatalerr_collected
+      ! [GR-CROP 2026-05-25] FacCO2 dead-branch cluster (Class E).
+      !   state%atmosphere%flco2 is hard-coded .false. (atmosphere_state.f90:128 default,
+      !   no TOML wiring exists). The `if (flco2)` block is unreachable, so the entire
+      !   CO2 correction lookup (co2year/co2ppm/mayrs/co2amaxtb/co2efftb/co2tratb) is
+      !   dead. fco2amax/fco2eff/fco2tra remain 1.0 (no-op multipliers) every step.
+      !   When flco2 wiring is implemented, restore the lookup against
+      !   crop_config_global%rotation_wofost(icrop)%co2 tables (co2amaxtb/co2efftb/
+      !   co2tratb already exist on the config sub-record).
       use swap_state_mod, only: swap_state_t
+      use error_mod, only: fatalerr_collected
       implicit none
 
-      type(swap_state_t), intent(inout) :: state  ! [SS-GR-CROPRT B6] changed in→inout for fco2 state write
+      type(swap_state_t), intent(inout) :: state
 
-      integer   ifindi,indexyr
-      real(8)   CO2
-      character(len=200) messag
-
-      ! initialize CO2 impact
+      ! initialize CO2 impact (no-op while flco2=.false.)
       state%crop%wofost%fco2amax = 1.0d0  ! factor to correct AMAX for CO2
       state%crop%wofost%fco2eff  = 1.0d0  ! factor to correct EFF for CO2
       state%crop%wofost%fco2tra  = 1.0d0  ! factor to correct TRA for CO2
 
-      ! correction of CO2 impact
-      ! TC-10: iyear read via state%timecontrol%iyear directly (single site, no ASSOCIATE needed).
+      ! [GR-CROP 2026-05-25] flco2 is dormant — stub-error if it ever gets enabled
+      ! without rewiring the lookup against state%cfg%crop%wofost%co2 tables.
       if (state%atmosphere%flco2) then
-        indexyr = ifindi (CO2year, mayrs, 1, mayrs, state%timecontrol%iyear)  ! TC-10
-        if (indexyr.lt.1 .or. indexyr.gt.mayrs) then
-          Messag ='Input if CO2year or CO2ppm inconsistent, correct'
-          call fatalerr_collected ('wofost',messag)
-        endif
-        CO2 = CO2ppm(indexyr)
-        state%crop%wofost%fco2amax = afgen(CO2AMAXTB,30,CO2)
-        state%crop%wofost%fco2eff  = afgen(CO2EFFTB,30,CO2)
-        state%crop%wofost%fco2tra  = afgen(CO2TRATB,30,CO2)
+        call fatalerr_collected('FacCO2', &
+          'flco2=.true. encountered but CO2-correction lookup retired in 2026-05-25 ' // &
+          'arc (co2year/co2ppm/co2*tb bare globals removed). Re-wire against ' // &
+          'crop_config_global%rotation_wofost(icrop)%co2 before re-enabling.')
       endif
 
       return

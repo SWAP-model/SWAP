@@ -150,11 +150,8 @@ module legacy_state_mod
       character(len=80) :: pathcrop  !! Path to folder with crop input files
       real(real64) :: rdmax  !! Maximum rooting depth in soil profile (L)
       ! [GR-ATM 2026-05-23] flCO2 retired — see state%atmosphere%flco2
-      real(real64), allocatable :: co2amaxtb(:)  !! table with factors to correct AMAX for CO2
-      real(real64), allocatable :: co2efftb(:)  !! table with factors to correct EFF for CO2
-      real(real64), allocatable :: co2tratb(:)  !! table with factors to correct TRA for CO2
-      integer, allocatable :: co2year(:)  !! table with years for which CO2 concentrations are given
-      real(real64), allocatable :: co2ppm(:)  !! table with CO2 concentrations (ppm), for each year in co2year
+      ! [GR-CROP 2026-05-25] co2amaxtb/co2efftb/co2tratb/co2year/co2ppm retired —
+      ! see cropwofost_config%co2; flco2 dormant (no live consumer).
       real(real64) :: verndvs  !! critical development stage after which the effect of vernalisation is halted [-]
       real(real64) :: vernsat  !! saturated vernalisation requirement [d]
       real(real64) :: vernbase  !! base vernalisation requirement [d]

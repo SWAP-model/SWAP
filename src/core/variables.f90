@@ -550,11 +550,9 @@
       ! [GR-CROP-DVS] fco2amax retired — see state%crop%wofost%fco2amax
       ! [GR-CROP-DVS] fco2eff retired — see state%crop%wofost%fco2eff
       ! [GR-CROP-DVS] fco2tra retired — see state%crop%wofost%fco2tra
-      real(8)   co2amaxtb(30)      ! table with factors to correct AMAX for CO2
-      real(8)   co2efftb(30)       ! table with factors to correct EFF for CO2
-      real(8)   co2tratb(30)       ! table with factors to correct TRA for CO2
-      integer   co2year(mayrs)     ! table with years for which CO2 concentrations are given
-      real(8)   co2ppm(mayrs)      ! table with CO2 concentrations (ppm), for each year in co2year
+      ! [GR-CROP 2026-05-25] CO2 correction tables retired — atmosphere%flco2 is dormant
+      ! (no TOML wiring). co2amaxtb/co2efftb/co2tratb live on
+      ! cropwofost_config_t%co2; co2year/co2ppm have no consumer.
 
 ! --- vernalisation
       real(8)   verndvs            ! critical development stage after which the effect of vernalisation is halted [-]
