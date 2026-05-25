@@ -602,51 +602,98 @@ git add src/io/swap_csv_output.f90 tests/unit/io/test_csv_aggregates.pf tests/un
 git commit -m "refactor(io): IO-OUT/C — extract tested water_balance_dev helper"
 ```
 
-### Task C2: Route both writers through `csv_writer_t`; rename module
+**C2 split (refined during execution).** The original single C2 (rename + merge two modules + route both writers through `csv_writer` + new API + rewire) is too large a byte-sensitive blast radius for one commit. It is split into **C2a** (mechanical rename + named API + rewire; inline writes unchanged) and **C2b** (route writes through `csv_writer` + flush). The **physical module merge is dropped** as unnecessary risk: `module csv_output` owns the public API and delegates the time-depth output to a renamed `module csv_output_tz` helper in the same file. **Gate reality:** the regression harness keys columns by NAME and compares annual stats within `1e-2` — it does NOT enforce byte-identity. Aim for byte-identical output, but the acceptance criterion is check-fast 4/4 with the same column NAMES present; diff the header + first data rows against a pre-change baseline to catch cosmetic drift.
+
+### Task C2a: Rename to `csv_output` + named `init/step/finalize`; rewire caller
 
 **Files:**
-- Rename: `src/io/swap_csv_output.f90` → `src/io/csv_output.f90` (and module `SWAP_csv_output` + `SWAP_csv_output_tz` → one module `csv_output`)
-- Modify: `src/io/swapoutput.f90` (`soilwateroutput` calls the new procedures)
-- Modify: `meson.build` (source path), `tests/unit/meson.build` if the unit suite pulls it in
+- Rename: `src/io/swap_csv_output.f90` → `src/io/csv_output.f90`; rename module `SWAP_csv_output` → `csv_output` and `SWAP_csv_output_tz` → `csv_output_tz` (both stay in the file; NOT merged).
+- Modify: `src/io/swapoutput.f90` (`soilwateroutput` calls the new procedures).
+- Modify: `meson.build` (source path), `tests/unit/meson.build` (the unit suite lists this source — update the path).
 
-- [ ] **Step 1: Rename file + module, merge `_tz`**
+- [ ] **Step 1: Capture a baseline output for later diffing**
 
-`git mv src/io/swap_csv_output.f90 src/io/csv_output.f90`. Inside, merge `SWAP_csv_output` and `SWAP_csv_output_tz` into one `module csv_output`. Update `meson.build` line 143 to `'src/io/csv_output.f90',`.
+Build, run one case (e.g. hupselbrook) to produce a `result_output.csv` and (if enabled) `result_output_tz.csv`, and copy them aside (e.g. `/tmp/baseline_output.csv`). These are the byte-comparison reference for C2a and C2b.
 
-- [ ] **Step 2: Replace inline open/write with `csv_writer_t`**
+- [ ] **Step 2: `git mv` + rename both modules**
 
-In `csv_out` (now part of `csv_output`): replace the `file_open`/`makeheader`/`write(iuncsv,…)` block (`swap_csv_output.f90:402-463`) with two module-level `type(csv_writer_t), save :: scalar_w` / `profile_w` and calls `scalar_w%open / %meta / %header / %row / %close`. The leading datetime goes through `row(values, leading=trim(tc_date))`. Do the same for `csv_out_tz`'s writer.
+`git mv src/io/swap_csv_output.f90 src/io/csv_output.f90`. In the file rename `module SWAP_csv_output` → `module csv_output` (and its `end module`), and `module SWAP_csv_output_tz` → `module csv_output_tz`. Update `meson.build` (`'src/io/swap_csv_output.f90'` → `'src/io/csv_output.f90'`) and `tests/unit/meson.build` (same path in the unit source list). Do NOT merge the two module bodies. Do NOT change any procedure body.
 
-- [ ] **Step 3: Expose named entry points**
+- [ ] **Step 3: Add named entry points in `module csv_output`**
 
-Add public `csv_output_init(state, config)`, `csv_output_step(state)`, `csv_output_finalize(state)` that wrap the existing task=1/2/3 bodies (init opens both writers + resolves inlist; step samples + writes; finalize closes). Keep the old `csv_out`/`csv_out_tz` as thin internal shims for now if convenient, or update the one caller directly in the next step.
-
-At the end of `csv_output_step`, after writing both rows, add a per-year flush for crash resilience:
+Add three public procedures that wrap the existing task bodies, reading the enable flags from `state%cfg%output_csv` (as `csv_out` already reads `state%cfg%output_csv%inlist`). `csv_output_tz` is reached via `use csv_output_tz, only: csv_out_tz`:
 
 ```fortran
-if (state%timecontrol%flYearStart) then
-   call scalar_w%flush()
-   call profile_w%flush()
-end if
+public :: csv_output_init, csv_output_step, csv_output_finalize
+...
+subroutine csv_output_init(state)
+   type(swap_state_t), intent(inout) :: state
+   if (state%cfg%output_csv%enabled    == 1) call csv_out(1, state)
+   if (state%cfg%output_csv%enabled_tz == 1) call csv_out_tz(1, state)
+end subroutine
+subroutine csv_output_step(state)
+   type(swap_state_t), intent(inout) :: state
+   if (state%cfg%output_csv%enabled    == 1) call csv_out(2, state)
+   if (state%cfg%output_csv%enabled_tz == 1) call csv_out_tz(2, state)
+end subroutine
+subroutine csv_output_finalize(state)
+   type(swap_state_t), intent(inout) :: state
+   if (state%cfg%output_csv%enabled    == 1) call csv_out(3, state)
+   if (state%cfg%output_csv%enabled_tz == 1) call csv_out_tz(3, state)
+end subroutine
 ```
 
-> Confirm the year-boundary flag name against `state%timecontrol` (the meteo path uses `flYearStart`); if the flag that fires on the first step of a new calendar year differs, use that one. `flush` is a no-op in headless mode (no unit open), so it is safe to call unconditionally on the flag.
+Keep `csv_out`/`csv_out_tz` public for now (E-phase removes external callers). Add `use csv_output_tz, only: csv_out_tz` to `module csv_output`.
 
-- [ ] **Step 4: Update the dispatch hub**
+- [ ] **Step 4: Rewire the dispatch hub**
 
-In `swapoutput.f90` `soilwateroutput`, replace the `csv_out(1/2/3)` / `csv_out_tz(1/2/3)` calls with `csv_output_init` (task 1), `csv_output_step` (task 2), `csv_output_finalize` (task 4). Update the `use SWAP_csv_output`/`use SWAP_csv_output_tz` imports to `use csv_output`.
+In `swapoutput.f90` `soilwateroutput`: replace `use SWAP_csv_output` + `use SWAP_csv_output_tz` with `use csv_output, only: csv_output_init, csv_output_step, csv_output_finalize`. Replace the task-1 body's `csv_out(1)`/`csv_out_tz(1)` calls with `call csv_output_init(state)`, the task-2 body with `call csv_output_step(state)`, and the task-4 body's `csv_out(3)`/`csv_out_tz(3)` with `call csv_output_finalize(state)`. (The enable-flag `if`s now live inside the wrappers, so drop them from `soilwateroutput`.)
 
-- [ ] **Step 5: Build + regression**
+- [ ] **Step 5: Build + regression + byte-diff**
 
-Run: `pixi run -e test check-fast`
-Expected: compiles; 4/4 cases unchanged. The byte output of both CSVs should be identical to before — if a case drifts, diff the generated `result_output.csv` against a pre-change run; the most likely culprit is the trailing-comma handling or a datetime path difference in `csv_writer_row`.
+Run `pixi run -e test check-fast` → 4/4. Then re-run the baseline case and `diff` its `result_output.csv` against `/tmp/baseline_output.csv` → expect ZERO diff (pure rename, no write-path change). Confirm `pixi run -e test test-pfunit` still `OK (762 tests)`.
 
 - [ ] **Step 6: Commit**
 
 ```bash
-# scoped add — never `git add -A` (untracked subprojects/, tests/swap-cases must stay unstaged)
 git add src/io/csv_output.f90 src/io/swapoutput.f90 meson.build tests/unit/meson.build
-git commit -m "refactor(io): IO-OUT/C — csv_output writes via csv_writer; merge _tz; named init/step/finalize"
+git commit -m "refactor(io): IO-OUT/C — rename swap_csv_output->csv_output; named init/step/finalize"
+```
+
+### Task C2b: Route writes through `csv_writer_t` + per-year flush
+
+**Files:**
+- Modify: `src/io/csv_output.f90` (both `csv_out` and `csv_out_tz` write paths)
+
+- [ ] **Step 1: Route `csv_out`'s scalar write through `csv_writer_t`**
+
+Add `use csv_writer_mod, only: csv_writer_t` to `module csv_output`; add a module-level `type(csv_writer_t), save :: scalar_w`. In `csv_out` `case(1)`, replace the `file_open` + `makeheader` block with `scalar_w%open(filcsv, errors)` + `scalar_w%meta(meta_lines)` + `scalar_w%header(names, units)` — where `meta_lines`, `names`, `units` reproduce EXACTLY what `makeheader` wrote (read `makeheader` lines ~530-554 and build the same `*`-prefixed lines and the same column-name + unit rows from the active `vars`). In `case(2)`, replace the hand-built `line`/`write(iuncsv,…)` with: flatten the active `vars%value(1:Nnodes,j)` (for `j` with `iyes==1`) into a 1-D `real64` array in the SAME emission order, then `call scalar_w%row(values, leading=trim(tc_date_or_datetime))`. In `case(3)` replace `close(iuncsv)` with `scalar_w%close()`. Keep the headless guard (only open/write when `.not. headless`).
+
+- [ ] **Step 2: Route `csv_out_tz` through a second writer**
+
+Add module-level `type(csv_writer_t), save :: profile_w` and do the equivalent replacement in `csv_out_tz` (open/header in its init task, `row` per depth line in its write task, `close` in its close task).
+
+- [ ] **Step 3: Per-year flush**
+
+At the end of `csv_output_step` (in `module csv_output`), add:
+```fortran
+if (state%timecontrol%flYearStart) then
+   call scalar_w%flush()
+end if
+```
+(and `call profile_w%flush()` if the tz writer is module-accessible from `csv_output`; if `profile_w` lives in `csv_output_tz`, add a small public `csv_out_tz_flush()` there and call it). `flush` is a no-op when the unit was never opened (headless), so it is safe.
+
+> `flYearStart` confirmed to exist: `state%timecontrol%flYearStart` (`src/state/timecontrol_state.f90:147`).
+
+- [ ] **Step 4: Build + regression + byte-diff**
+
+Run `pixi run -e test check-fast` → 4/4. Re-run the baseline case and `diff result_output.csv /tmp/baseline_output.csv`. Aim for ZERO diff; if there is only cosmetic whitespace drift but column names + numeric values match within tol and check-fast is 4/4, that is acceptable — DOCUMENT any diff in the commit body. If a column NAME changed or a value moved beyond tol, it is a bug (likely the flatten order or a header-name mismatch).
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add src/io/csv_output.f90
+git commit -m "refactor(io): IO-OUT/C — route csv_output writes through csv_writer; per-year flush"
 ```
 
 ---
