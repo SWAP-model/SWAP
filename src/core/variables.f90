@@ -980,25 +980,14 @@
       ! [SS-CRP] retired 2026-05-11 — moved to state%soilwater%qredfrs (ADR 0036)
       ! real(8)   qredfrs(macp)      ! Array with reduction of root water extraction due to frost conditions for each compartment (L/T)
       ! [GR-SOIL 2026-05-24] qssdi migrated to state%soilwater%qssdi.
-      real(8)   dt_SSDI_event      ! Length of SSDI irrigation event (T)
-      
-      ! SSDI persistent state (moved from irrigation.f90 local SAVE)
-      integer   swssdi_irr         ! Switch: SSDI active (0=no, 1=yes)
-      integer   nod_ssdi_irr(2)    ! Upper and lower nodes for SSDI
-      integer   ssdi_schedule_irr  ! Schedule type (0=fixed dates, 1=internal)
-      integer   ssdi_sched_type_irr ! Internal schedule type (1=Tact/Tpot, 2=h, 3=theta)
-      integer   nod_ssdi_sensor_irr ! Sensor node (if ssdi_sched_type > 1)
-      real(8)   ssdi_threshold_irr ! Threshold value for scheduling
-      real(8)   ssdi_threshold_z_irr ! Depth for threshold value
-      real(8)   ssdi_amount_irr    ! Amount of scheduled irrigation (cm)
-      real(8)   ssdi_appl_rate_irr ! Application rate (cm/d)
-      integer   sw_interval_irr    ! Switch for minimum interval
-      integer   days_interval_irr  ! Minimum days between applications
-      integer   days_counter_irr   ! Days since previous application
-      integer   nirri_ssdi_irr     ! SSDI counter/entry point
-      real(8)   ssdi_date_irr(mairg)   ! Fixed irrigation dates
-      real(8)   ssdi_rate_f_irr(mairg) ! Fixed irrigation rates (cm/d)
-      real(8)   ssdi_amount_f_irr(mairg) ! Fixed irrigation amounts (cm)
+      real(8)   dt_SSDI_event      ! retained — cross-file consumer = src/core/timecontrol_mod.f90
+
+      ! [GR-CROP 2026-05-25] SSDI persistent state migrated to state%crop%irrigation:
+      !   swssdi_irr, nod_ssdi_irr, ssdi_schedule_irr, ssdi_sched_type_irr,
+      !   nod_ssdi_sensor_irr, ssdi_threshold_irr, ssdi_threshold_z_irr,
+      !   ssdi_amount_irr, ssdi_appl_rate_irr, sw_interval_irr, days_interval_irr,
+      !   days_counter_irr, nirri_ssdi_irr, ssdi_date_irr, ssdi_rate_f_irr,
+      !   ssdi_amount_f_irr — see src/state/crop_irrigation_state.f90.
       
       ! [SS-BND] retired 2026-05-11 — boundary subsystem migrated to state%soilwater (ADR 0035)
       ! real(8)   qtop               ! Water flux through soil surface (L/T)

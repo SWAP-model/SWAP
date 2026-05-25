@@ -454,7 +454,7 @@ contains
       ! subsystems never run.
       ! [GR-CROP 2026-05-25] till_swtill mirror retired — tillage reads
       ! state%cfg%soil%swtill directly.
-      swssdi_irr  = config%irrigation%swssdi
+      state%crop%irrigation%swssdi = config%irrigation%swssdi   ! [GR-CROP 2026-05-25]
       flTillage = (config%soil%swtill == 1)
       flSSDI    = (config%irrigation%swssdi == 1)
       if (flTillage) call apply_soil_tillage(config%soil%tillage, state%timecontrol%tend, state)
@@ -1406,7 +1406,8 @@ contains
       use error_mod, only: fatalerr_collected
       use swap_state_mod, only: swap_state_t
       ! [GR-SOIL 2026-05-24] qssdi migrated to state%soilwater (zero-init via soilwater_init).
-      use variables, only: nod_ssdi_irr, dt_SSDI_event
+      ! [GR-CROP 2026-05-25] dt_SSDI_event retained — cross-file consumer = src/core/timecontrol_mod.f90
+      use variables, only: dt_SSDI_event
       type(irrigation_ssdi_t), intent(in)    :: ssdi
       real(real64),            intent(in)    :: tstart, tend
       type(swap_state_t),      intent(inout) :: state   ! [GR-BH Task 35] replaces NumNod/zbotcp globals
@@ -1417,8 +1418,9 @@ contains
       ! Mirrors the legacy SSDI_irrigation(1) loop at irrigation.f90:387-393.
       ! [GR-BH Task 35] zbotcp/NumNod globals replaced by state%mesh fields.
       ! Guard: mesh not yet populated at config_to_variables call time;
-      ! nod_ssdi_irr defaults to 0 if mesh not built (resolved after CalcGrid).
-      nod_ssdi_irr = 0
+      ! state%crop%irrigation%nod_ssdi defaults to 0 if mesh not built
+      ! (resolved after CalcGrid).
+      state%crop%irrigation%nod_ssdi = 0
       if (state%mesh%numnod > 0 .and. allocated(state%mesh%zbotcp)) then
          do j = 1, 2
             i = 1
@@ -1426,11 +1428,11 @@ contains
                i = i + 1
                if (i > state%mesh%numnod) exit
             end do
-            nod_ssdi_irr(j) = i
+            state%crop%irrigation%nod_ssdi(j) = i
          end do
       end if
-      nod_top = nod_ssdi_irr(1)
-      nod_bot = nod_ssdi_irr(2)
+      nod_top = state%crop%irrigation%nod_ssdi(1)
+      nod_bot = state%crop%irrigation%nod_ssdi(2)
       ncomp   = nod_bot - nod_top + 1
       if (ncomp < 1) then
          call fatalerr_collected('apply_irrigation_ssdi', &
@@ -1442,9 +1444,9 @@ contains
 
       select case (ssdi%schedule)
       case (0)
-         call apply_ssdi_mode0(ssdi, ncomp, tstart, tend)
+         call apply_ssdi_mode0(ssdi, ncomp, tstart, tend, state)
       case (1)
-         call apply_ssdi_mode1(ssdi, ncomp)
+         call apply_ssdi_mode1(ssdi, ncomp, state)
       end select
    end subroutine apply_irrigation_ssdi
 
@@ -1593,18 +1595,17 @@ contains
 
    !> Mode-0 (fixed-date): stage CSV; populate ssdi_*_f_irr; deferred
    !! date-window validation; initial nirri_ssdi_irr entry-point from tstart.
-   subroutine apply_ssdi_mode0(ssdi, ncomp, tstart, tend)
+   subroutine apply_ssdi_mode0(ssdi, ncomp, tstart, tend, state)
       use, intrinsic :: iso_fortran_env, only: real64
       use csv_reader_mod, only: read_csv_table
       use error_mod, only: error_collection_t, fatalerr_collected
       use irrigation_config_mod, only: irrigation_ssdi_t
-      use variables, only: pathwork, mairg,                              &
-                           nirri_ssdi_irr,                               &
-                           ssdi_date_irr, ssdi_rate_f_irr,              &
-                           ssdi_amount_f_irr
-      type(irrigation_ssdi_t), intent(in) :: ssdi
-      integer,                 intent(in) :: ncomp
-      real(real64),            intent(in) :: tstart, tend
+      use swap_state_mod, only: swap_state_t
+      use variables, only: pathwork, mairg
+      type(irrigation_ssdi_t), intent(in)    :: ssdi
+      integer,                 intent(in)    :: ncomp
+      real(real64),            intent(in)    :: tstart, tend
+      type(swap_state_t),      intent(inout) :: state
 
       real(real64), allocatable :: tbl(:,:)
       type(error_collection_t)  :: errs
@@ -1633,23 +1634,24 @@ contains
          return
       end if
 
-      ! ssdi_date_irr / ssdi_rate_f_irr / ssdi_amount_f_irr are fixed-size
-      ! arrays of size(mairg); zero them and fill from the CSV.
-      ssdi_date_irr     = 0.0_real64
-      ssdi_rate_f_irr   = 0.0_real64
-      ssdi_amount_f_irr = 0.0_real64
+      ! state%crop%irrigation%ssdi_date / ssdi_rate_f / ssdi_amount_f are
+      ! fixed-size arrays of size(mairg); zero them and fill from the CSV.
+      associate (irr => state%crop%irrigation)
+      irr%ssdi_date     = 0.0_real64
+      irr%ssdi_rate_f   = 0.0_real64
+      irr%ssdi_amount_f = 0.0_real64
 
       do i = 1, n
-         ssdi_date_irr(i) = tbl(i, 1)
-         if (i > 1 .and. ssdi_date_irr(i) <= ssdi_date_irr(i-1)) then
+         irr%ssdi_date(i) = tbl(i, 1)
+         if (i > 1 .and. irr%ssdi_date(i) <= irr%ssdi_date(i-1)) then
             call fatalerr_collected('apply_irrigation_ssdi', &
                                     'mode 0: ssdi_date not strictly ascending')
             return
          end if
          ! mm/h -> cm/d (mirrors irrigation.f90:514)
-         ssdi_rate_f_irr(i)   = tbl(i, 2) * 0.1_real64 * 24.0_real64
+         irr%ssdi_rate_f(i)   = tbl(i, 2) * 0.1_real64 * 24.0_real64
          ! mm -> cm, then spread over `ncomp` compartments (mirrors irrigation.f90:397)
-         ssdi_amount_f_irr(i) = (tbl(i, 3) * 0.1_real64) / real(ncomp, real64)
+         irr%ssdi_amount_f(i) = (tbl(i, 3) * 0.1_real64) / real(ncomp, real64)
       end do
 
       ! Date-window check: at least one date in [tstart, tend], OR
@@ -1657,14 +1659,14 @@ contains
       ! Replaces the deleted checkdate call (irrigation.f90:552).
       any_in_window  = .false.
       do i = 1, n
-         if (ssdi_date_irr(i) >= tstart - 1.0e-6_real64 .and. &
-             ssdi_date_irr(i) <= tend   + 1.0e-6_real64) then
+         if (irr%ssdi_date(i) >= tstart - 1.0e-6_real64 .and. &
+             irr%ssdi_date(i) <= tend   + 1.0e-6_real64) then
             any_in_window = .true.
             exit
          end if
       end do
-      window_in_dates = (ssdi_date_irr(1) <= tstart + 1.0e-6_real64 .and. &
-                         ssdi_date_irr(n) >= tend   - 1.0e-6_real64)
+      window_in_dates = (irr%ssdi_date(1) <= tstart + 1.0e-6_real64 .and. &
+                         irr%ssdi_date(n) >= tend   - 1.0e-6_real64)
       if (.not. any_in_window .and. .not. window_in_dates) then
          call fatalerr_collected('apply_irrigation_ssdi', &
                                  'mode 0: no ssdi_date within simulation period')
@@ -1673,10 +1675,11 @@ contains
       ! Determine initial entry point (mirrors irrigation.f90:368-373).
       nirri_init = 1
       do i = 1, n - 1
-         if (tstart >= ssdi_date_irr(i)) nirri_init = i
+         if (tstart >= irr%ssdi_date(i)) nirri_init = i
       end do
-      if (tstart >= ssdi_date_irr(n)) nirri_init = n
-      nirri_ssdi_irr = nirri_init
+      if (tstart >= irr%ssdi_date(n)) nirri_init = n
+      irr%nirri = nirri_init
+      end associate
    end subroutine apply_ssdi_mode0
 
 
@@ -1684,37 +1687,36 @@ contains
    !! globals; set nirri_ssdi_irr/dt_SSDI_event/days_counter defaults
    !! (preserves the d8a88d6 regression-fix invariant for
    !! dt_SSDI_event = 1.0).
-   subroutine apply_ssdi_mode1(ssdi, ncomp)
+   subroutine apply_ssdi_mode1(ssdi, ncomp, state)
       use, intrinsic :: iso_fortran_env, only: real64
       use irrigation_config_mod, only: irrigation_ssdi_t
-      use variables, only: nirri_ssdi_irr, dt_SSDI_event,               &
-                           ssdi_sched_type_irr, ssdi_threshold_irr,     &
-                           ssdi_threshold_z_irr, ssdi_amount_irr,       &
-                           ssdi_appl_rate_irr, sw_interval_irr,         &
-                           days_interval_irr, days_counter_irr
-      type(irrigation_ssdi_t), intent(in) :: ssdi
-      integer,                 intent(in) :: ncomp
+      use swap_state_mod, only: swap_state_t
+      type(irrigation_ssdi_t), intent(in)    :: ssdi
+      integer,                 intent(in)    :: ncomp
+      type(swap_state_t),      intent(inout) :: state
 
-      ssdi_sched_type_irr  = ssdi%scheduled%sched_type
-      ssdi_threshold_irr   = ssdi%scheduled%threshold
-      ssdi_threshold_z_irr = ssdi%scheduled%threshold_depth
+      associate (irr => state%crop%irrigation)
+      irr%ssdi_sched_type  = ssdi%scheduled%sched_type
+      irr%ssdi_threshold   = ssdi%scheduled%threshold
+      irr%ssdi_threshold_z = ssdi%scheduled%threshold_depth
 
       ! mm -> cm, then spread over ncomp compartments (mirrors irrigation.f90:399)
-      ssdi_amount_irr      = (ssdi%scheduled%ssdi_amount * 0.1_real64) / &
+      irr%ssdi_amount      = (ssdi%scheduled%ssdi_amount * 0.1_real64) / &
                               real(ncomp, real64)
       ! mm/h -> cm/d (mirrors irrigation.f90:546)
-      ssdi_appl_rate_irr   = ssdi%scheduled%ssdi_appl_rate * 0.1_real64 * 24.0_real64
+      irr%ssdi_appl_rate   = ssdi%scheduled%ssdi_appl_rate * 0.1_real64 * 24.0_real64
 
-      sw_interval_irr      = ssdi%scheduled%sw_interval
+      irr%sw_interval      = ssdi%scheduled%sw_interval
       ! mirrors irrigation.f90:535-538
       if (ssdi%scheduled%sw_interval == 0) then
-         days_interval_irr = 1
+         irr%days_interval = 1
       else
-         days_interval_irr = ssdi%scheduled%days_interval
+         irr%days_interval = ssdi%scheduled%days_interval
       end if
-      days_counter_irr = 366   ! mirrors irrigation.f90:540
+      irr%days_counter = 366   ! mirrors irrigation.f90:540
 
-      nirri_ssdi_irr = 1
+      irr%nirri = 1
+      end associate
    end subroutine apply_ssdi_mode1
 
 end module config_to_variables_mod

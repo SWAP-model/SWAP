@@ -331,17 +331,10 @@
 !!   - 9: reset SSDI event state
 subroutine SSDI_irrigation(iTask, state)
 
-! [SS-SWC S-2.12B] h/theta/iptra_day/iqreddry_day/iqredsol_day retired — read via state%soilwater
-! SS-TC TC-12: t1900 retired from only-list; read via state%timecontrol.
-! [SS-GR-FINAL B6] mairg → swap_array_dimensions; remainder DEFERRED
-use swap_array_dimensions, only: mairg
-use variables, only: &      ! [GR-CROP 2026-05-25] dt_SSDI_event retained — cross-file consumer = src/core/timecontrol_mod.f90
-                     dt_SSDI_event,                                        &
-                     ! SSDI persistent state — populated by config_to_variables%apply_irrigation_ssdi (mode 0/1)
-                     swssdi_irr, nod_ssdi_irr, ssdi_schedule_irr, ssdi_sched_type_irr, &
-                     nod_ssdi_sensor_irr, ssdi_threshold_irr, ssdi_threshold_z_irr,    &
-                     ssdi_amount_irr, ssdi_appl_rate_irr, sw_interval_irr, days_interval_irr, &
-                     days_counter_irr, nirri_ssdi_irr, ssdi_date_irr, ssdi_rate_f_irr, ssdi_amount_f_irr
+! [GR-CROP 2026-05-25] dt_SSDI_event retained on legacy global — cross-file
+! consumer = src/core/timecontrol_mod.f90 (outside this sub-arc's allow-list).
+! All other SSDI persistent state migrated to state%crop%irrigation.
+use variables, only: dt_SSDI_event
 use swap_state_mod, only: swap_state_t
 
 implicit none
@@ -349,109 +342,73 @@ implicit none
 integer, intent(in) :: iTask
 type(swap_state_t), intent(inout) :: state  ! [GR-SOIL 2026-05-24] inout: writes state%soilwater%qssdi/qssdisum
 
-! local aliases for module variables (for minimal code changes)
-integer                         :: swssdi
-integer, dimension(2)           :: nod_ssdi
-integer                         :: ssdi_schedule
-integer                         :: ssdi_sched_type
-integer                         :: nod_ssdi_sensor
-real(8)                         :: ssdi_threshold
-real(8)                         :: ssdi_threshold_z
-real(8)                         :: ssdi_amount
-real(8)                         :: ssdi_appl_rate
-integer                         :: sw_interval
-integer                         :: days_interval
-integer                         :: days_counter
-integer                         :: nirri
-real(8), dimension(mairg)       :: ssdi_date
-real(8), dimension(mairg)       :: ssdi_rate_f
-real(8), dimension(mairg)       :: ssdi_amount_f
-
 ! local, help
-integer                         :: i, j
 integer                         :: irrigevent   ! [GR-CROP 2026-05-25] localized — consumed only within this call
 real(8)                         :: Tred
 
-   ! Load state from module variables at entry
-   swssdi = swssdi_irr
-   nod_ssdi = nod_ssdi_irr
-   ssdi_schedule = ssdi_schedule_irr
-   ssdi_sched_type = ssdi_sched_type_irr
-   nod_ssdi_sensor = nod_ssdi_sensor_irr
-   ssdi_threshold = ssdi_threshold_irr
-   ssdi_threshold_z = ssdi_threshold_z_irr
-   ssdi_amount = ssdi_amount_irr
-   ssdi_appl_rate = ssdi_appl_rate_irr
-   sw_interval = sw_interval_irr
-   days_interval = days_interval_irr
-   days_counter = days_counter_irr
-   nirri = nirri_ssdi_irr
-   ssdi_date = ssdi_date_irr
-   ssdi_rate_f = ssdi_rate_f_irr
-   ssdi_amount_f = ssdi_amount_f_irr
-
-   select case  (iTask)
+   select case (iTask)
    case (1)
       ! [irrigation.ssdi] init was performed at config-load time by
       ! apply_irrigation_ssdi (config_to_variables.f90). Per ADR 0022,
-      ! this case is now a no-op; the runtime reads the staged
-      ! _irr snapshots into per-day locals at the top of
-      ! SSDI_irrigation (above the select case).
+      ! this case is now a no-op; the runtime reads the staged state
+      ! fields under state%crop%irrigation directly each daily step.
       return
-      
+
    case (2)
-      ! [GR-CROP 2026-05-25] sub-record associate aliases.
+      ! [GR-CROP 2026-05-25] sub-record associate aliases; SSDI persistent
+      ! state now lives on state%crop%irrigation.
       associate( &
          soil => state%soilwater,        &
          time => state%timecontrol,      &
-         mesh => state%mesh              )
+         mesh => state%mesh,             &
+         irr  => state%crop%irrigation   )
       irrigevent      = 0
       soil%qssdi(1:mesh%numnod) = 0.0d0
       dt_SSDI_event   = 1.0d0
       soil%qssdisum = 0.0d0
 
-      if (ssdi_schedule == 0) then
+      if (irr%ssdi_schedule == 0) then
          ! check if today is a day with ssdi
-         if (abs(ssdi_date(nirri) - time%t1900) .lt. 1.d-3) then
+         if (abs(irr%ssdi_date(irr%nirri) - time%t1900) .lt. 1.d-3) then
             irrigevent                     = 2
-            dt_SSDI_event                  = ssdi_amount_f(nirri) / ssdi_rate_f(nirri)
-            soil%qssdi(nod_ssdi(1):nod_ssdi(2)) = ssdi_rate_f(nirri)
-            nirri                          = nirri + 1
-            soil%qssdisum = soil%qssdisum + sum(soil%qssdi(nod_ssdi(1):nod_ssdi(2)))
+            dt_SSDI_event                  = irr%ssdi_amount_f(irr%nirri) / irr%ssdi_rate_f(irr%nirri)
+            soil%qssdi(irr%nod_ssdi(1):irr%nod_ssdi(2)) = irr%ssdi_rate_f(irr%nirri)
+            irr%nirri                      = irr%nirri + 1
+            soil%qssdisum = soil%qssdisum + sum(soil%qssdi(irr%nod_ssdi(1):irr%nod_ssdi(2)))
          end if
       else
          ! scheduling based on exceedance of a certain threshold
-         if (ssdi_sched_type == 1) then
+         if (irr%ssdi_sched_type == 1) then
             ! transpiration fraction due to drought and salinity stress
             if (soil%iptra_day .gt. 1.d-10) then
                Tred = 1.0d0 - (soil%iqreddry_day + soil%iqredsol_day) / soil%iptra_day
             else
                Tred = 1.0d0
             end if
-            if (Tred .lt. ssdi_threshold) irrigevent = 2
+            if (Tred .lt. irr%ssdi_threshold) irrigevent = 2
 
-         else if (ssdi_sched_type == 2) then
-            if (soil%h(nod_ssdi_sensor) <= ssdi_threshold) irrigevent = 2
+         else if (irr%ssdi_sched_type == 2) then
+            if (soil%h(irr%nod_ssdi_sensor) <= irr%ssdi_threshold) irrigevent = 2
 
-         else if (ssdi_sched_type == 3) then
-            if (soil%theta(nod_ssdi_sensor) <= ssdi_threshold) irrigevent = 2
+         else if (irr%ssdi_sched_type == 3) then
+            if (soil%theta(irr%nod_ssdi_sensor) <= irr%ssdi_threshold) irrigevent = 2
 
          end if
 
-         if (sw_interval == 1) then
-            if (irrigevent == 2 .and. (days_counter >= days_interval)) then
-               irrigevent   = 2
-               days_counter = 1
+         if (irr%sw_interval == 1) then
+            if (irrigevent == 2 .and. (irr%days_counter >= irr%days_interval)) then
+               irrigevent       = 2
+               irr%days_counter = 1
             else
-               irrigevent   = 0
-               if (days_counter < days_interval) days_counter = days_counter + 1
+               irrigevent       = 0
+               if (irr%days_counter < irr%days_interval) irr%days_counter = irr%days_counter + 1
             end if
          end if
 
          if (irrigevent == 2) then
-            dt_SSDI_event                  = ssdi_amount / ssdi_appl_rate
-            soil%qssdi(nod_ssdi(1):nod_ssdi(2)) = ssdi_appl_rate
-            soil%qssdisum = soil%qssdisum + sum(soil%qssdi(nod_ssdi(1):nod_ssdi(2)))
+            dt_SSDI_event                  = irr%ssdi_amount / irr%ssdi_appl_rate
+            soil%qssdi(irr%nod_ssdi(1):irr%nod_ssdi(2)) = irr%ssdi_appl_rate
+            soil%qssdisum = soil%qssdisum + sum(soil%qssdi(irr%nod_ssdi(1):irr%nod_ssdi(2)))
          end if
 
       end if
@@ -464,29 +421,11 @@ real(8)                         :: Tred
       state%soilwater%qssdi(1:state%mesh%numnod) = 0.0d0
       dt_SSDI_event   = 1.0d0
       state%soilwater%qssdisum = 0.0d0
-      
+
    case default
       call fatalerr_collected ('SSDI_irrigation', 'Illegal value for iTask')
    end select
-   
-   ! Save state back to module variables at exit
-   swssdi_irr = swssdi
-   nod_ssdi_irr = nod_ssdi
-   ssdi_schedule_irr = ssdi_schedule
-   ssdi_sched_type_irr = ssdi_sched_type
-   nod_ssdi_sensor_irr = nod_ssdi_sensor
-   ssdi_threshold_irr = ssdi_threshold
-   ssdi_threshold_z_irr = ssdi_threshold_z
-   ssdi_amount_irr = ssdi_amount
-   ssdi_appl_rate_irr = ssdi_appl_rate
-   sw_interval_irr = sw_interval
-   days_interval_irr = days_interval
-   days_counter_irr = days_counter
-   nirri_ssdi_irr = nirri
-   ssdi_date_irr = ssdi_date
-   ssdi_rate_f_irr = ssdi_rate_f
-   ssdi_amount_f_irr = ssdi_amount_f
-   
+
 end subroutine SSDI_irrigation
 
 end module irrigation_mod

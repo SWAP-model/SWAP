@@ -5,10 +5,11 @@
 !! migrates all remaining crop readers.
 module crop_state_mod
    use, intrinsic :: iso_fortran_env, only: real64
-   use crop_common_state_mod, only: crop_common_state_t
-   use crop_fixed_state_mod,   only: crop_fixed_state_t
-   use crop_wofost_state_mod,  only: crop_wofost_state_t
-   use crop_grass_state_mod,   only: crop_grass_state_t
+   use crop_common_state_mod,      only: crop_common_state_t
+   use crop_fixed_state_mod,       only: crop_fixed_state_t
+   use crop_wofost_state_mod,      only: crop_wofost_state_t
+   use crop_grass_state_mod,       only: crop_grass_state_t
+   use crop_irrigation_state_mod,  only: crop_irrigation_state_t
    implicit none
    private
    public :: crop_state_t
@@ -34,6 +35,8 @@ module crop_state_mod
       type(crop_wofost_state_t) :: wofost
       ! [SS-GR-CROP A5] sub-record for grass-specific runtime fields
       type(crop_grass_state_t) :: grass
+      ! [GR-CROP 2026-05-25] SSDI persistent state — migrated from variables.f90 _irr globals
+      type(crop_irrigation_state_t) :: irrigation
    contains
       procedure :: init => crop_state_init
    end type crop_state_t

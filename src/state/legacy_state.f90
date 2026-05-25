@@ -289,23 +289,12 @@ module legacy_state_mod
       ! [GR-DRA 2026-05-23] qdrtab retired — see state%drainage%qdrtab
       ! [GR-SOIL 2026-05-24] qimmob retired — orphan stub, fingered-flow flux retired-zero in waterbalance.f90.
       ! [GR-SOIL 2026-05-24] qssdi + qssdisum migrated to state%soilwater (orphan stubs).
-      real(real64) :: dt_SSDI_event  !! Length of SSDI irrigation event (T)
-      integer :: swssdi_irr  !! Switch: SSDI active (0=no, 1=yes)
-      integer, allocatable :: nod_ssdi_irr(:)  !! Upper and lower nodes for SSDI
-      integer :: ssdi_schedule_irr  !! Schedule type (0=fixed dates, 1=internal)
-      integer :: ssdi_sched_type_irr  !! Internal schedule type (1=Tact/Tpot, 2=h, 3=theta)
-      integer :: nod_ssdi_sensor_irr  !! Sensor node (if ssdi_sched_type > 1)
-      real(real64) :: ssdi_threshold_irr  !! Threshold value for scheduling
-      real(real64) :: ssdi_threshold_z_irr  !! Depth for threshold value
-      real(real64) :: ssdi_amount_irr  !! Amount of scheduled irrigation (cm)
-      real(real64) :: ssdi_appl_rate_irr  !! Application rate (cm/d)
-      integer :: sw_interval_irr  !! Switch for minimum interval
-      integer :: days_interval_irr  !! Minimum days between applications
-      integer :: days_counter_irr  !! Days since previous application
-      integer :: nirri_ssdi_irr  !! SSDI counter/entry point
-      real(real64), allocatable :: ssdi_date_irr(:)  !! Fixed irrigation dates
-      real(real64), allocatable :: ssdi_rate_f_irr(:)  !! Fixed irrigation rates (cm/d)
-      real(real64), allocatable :: ssdi_amount_f_irr(:)  !! Fixed irrigation amounts (cm)
+      real(real64) :: dt_SSDI_event  !! retained — cross-file consumer = src/core/timecontrol_mod.f90
+      ! [GR-CROP 2026-05-25] SSDI persistent state migrated to state%crop%irrigation
+      ! (16 fields: swssdi_irr, nod_ssdi_irr, ssdi_schedule_irr, ssdi_sched_type_irr,
+      !  nod_ssdi_sensor_irr, ssdi_threshold_irr, ssdi_threshold_z_irr, ssdi_amount_irr,
+      !  ssdi_appl_rate_irr, sw_interval_irr, days_interval_irr, days_counter_irr,
+      !  nirri_ssdi_irr, ssdi_date_irr, ssdi_rate_f_irr, ssdi_amount_f_irr).
       ! [GR-SOIL 2026-05-24] relsatthr retired — orphan stub; threshold-Ksat path not ported.
       ! [GR-SOIL 2026-05-24] rimlay retired — orphan stub; read via state%cfg%bottom_boundary%rimlay.
       ! [GR-ATM 2026-05-23] rsigni retired — see state%atmosphere%rsigni
