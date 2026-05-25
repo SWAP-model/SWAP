@@ -276,11 +276,11 @@
 | treltab                   | irrigation                               | 1 | E | retire (orphan)                     | cross=N |
 | tsoil                     | oxygenstress, cropgrowth_helpers, cropgrass_runtime, +1 | 4 | C | state%crop% (new field)             | cross=Y |
 | tstairrig                 | irrigation                               | 1 | E | retire (orphan)                     | cross=N |
-| tsumdepth                 | cropgrowth_helpers, cropgrass_init       | 2 | D | state%cfg% (new config)             | cross=Y |
+| tsumdepth                 | RETIRED                                  | 0 | E | RETIRED 2026-05-25 (Task 7) — orphan, declaration removed | cross=N |
 | tsumemeopt                | cropgrowth_helpers, cropgrowth           | 2 | D | state%cfg% (new config)             | cross=Y |
 | tsumgerm                  | cropgrowth_helpers, cropgrowth           | 2 | D | state%cfg% (new config)             | cross=Y |
-| tsumtemp                  | cropgrowth_helpers, cropgrass_init       | 2 | D | state%cfg% (new config)             | cross=Y |
-| tsumtime                  | cropgrowth_helpers, cropgrass_init       | 2 | D | state%cfg% (new config)             | cross=Y |
+| tsumtemp                  | RETIRED                                  | 0 | E | RETIRED 2026-05-25 (Task 7) — orphan, declaration removed | cross=N |
+| tsumtime                  | RETIRED                                  | 0 | E | RETIRED 2026-05-25 (Task 7) — orphan, declaration removed | cross=N |
 | twilt                     | rootextraction, cropfixed_runtime, cropgrass_runtime, +1 | 4 | D | state%cfg% (new config)             | cross=Y |
 | vernbase                  | cropwofost_init, cropwofost_runtime      | 2 | D | state%cfg% (new config)             | cross=Y |
 | verndvs                   | cropwofost_init, cropwofost_runtime      | 2 | D | state%cfg% (new config)             | cross=Y |
@@ -378,11 +378,11 @@
 | swsolu                    | tillage                        | irrigation, tillage |
 | tcnt                      | cropwofost_runtime             | cropwofost_init, cropwofost_runtime |
 | tsoil                     | oxygenstress                   | cropgrass_runtime, cropgrowth, cropgrowth_helpers, oxygenstress |
-| tsumdepth                 | cropgrowth_helpers             | cropgrass_init, cropgrowth_helpers |
+| tsumdepth                 | RETIRED (Task 7 2026-05-25)    | declaration removed; orphan |
 | tsumemeopt                | cropgrowth_helpers             | cropgrowth, cropgrowth_helpers |
 | tsumgerm                  | cropgrowth_helpers             | cropgrowth, cropgrowth_helpers |
-| tsumtemp                  | cropgrowth_helpers             | cropgrass_init, cropgrowth_helpers |
-| tsumtime                  | cropgrowth_helpers             | cropgrass_init, cropgrowth_helpers |
+| tsumtemp                  | RETIRED (Task 7 2026-05-25)    | declaration removed; orphan |
+| tsumtime                  | RETIRED (Task 7 2026-05-25)    | declaration removed; orphan |
 | twilt                     | rootextraction                 | cropfixed_runtime, cropgrass_runtime, cropwofost_runtime, rootextraction |
 | vernbase                  | cropwofost_runtime             | cropwofost_init, cropwofost_runtime |
 | verndvs                   | cropwofost_runtime             | cropwofost_init, cropwofost_runtime |
