@@ -47,21 +47,21 @@
       !   pgass/pgasspot: state%crop%wofost homes (A4 dual-write) but written here — Phase C
       !   perdl, dateharvest, crop%grass%lsda: output + harvest tracking, no state home
       !   tsoil: config-staging buffer, renamed to avoid clash with dummy arg
-      use variables, only: &                                            ! [SS-GR-CROPRT B8] [GR-CROPWS B4]
-        magrs, macp, rid, daycrop,               &  ! [GR-SOL 2026-05-24] swinco retired (via soil%swinco)
-        wrtmin,                  &  ! wrtmax retired
-        ! laiem/laiexp/laiexppot/laimax/lai/laipot/cfeic retired
-        ! cftb/chtb/cfeictb/rdtb/rlwtb/slatb/rgrlai/rfsetb retired
-        ! frtb/fltb/fstb/rdrrtb/rdrstb retired
-        rdmax,                           &  ! rd/rdpot/swrd/swrdc/swdmi2rd retired
-        reltr,                                                           &  ! swgc/swdrought/swinter/swcf retired
-        ! glaiex/glaiexpot/cvl/cvr/cvs/q10/rmr/rml/rms/span/ssa retired
-        ! lv/lvpot/lvage/lvagepot/sla/slapot/ilvold/ilvoldpot retired
-        twilt, wiltpoint, gwrt, siccaplai,                   &  ! cropstartact/endact/startpot/endpot retired
-        flhydrlift,                                                      &  ! crop%grass%idaysgraz*/crop%grass%idregr*/crop%grass%flGrazing*/crop%grass%flHarvest*/flhrvend*/crop%grass%daygrowth*/crop%grass%grzdm/crop%grass%dewrest/crop%grass%swtsum/crop%grass%iseqgm*/crop%grass%iharvest/crop%grass%mowdm*/crop%grass%pgrzdm/crop%grass%pmowdm/crop%grass%lsda/crop%common%cuptgraz* retired
-        dummy_tsoil_gr_ => tsoil
-      !! Rename config-staging tsoil to avoid clash with dummy arg tsoil.
-      !! [SS-HEAT] Task 9: tsoil retained as config-staging buffer; global is not compute state.
+      ! [GR-CROP 2026-05-25] crop-sweep:
+      !   - magrs/macp sourced from swap_array_dimensions (pure parameter constants).
+      !   - rdmax read via state%cfg%crop%rdmax (Class B direct read).
+      !   - Remaining legacy globals (rid/daycrop/wrtmin/gwrt/reltr/twilt/
+      !     wiltpoint/siccaplai/flhydrlift): write or read targets feeding
+      !     consumers in oxygenstress / cropwofost_runtime / cropfixed_runtime
+      !     / dormant jongvanlier. Cannot retire here — other crop sub-arcs
+      !     (Tasks 8/9) are last consumers.
+      use swap_array_dimensions, only: magrs, macp
+      use variables, only: rid, daycrop,        &  ! workspace/scratch — cross-file readers (oxygenstress, cropgrowth)
+                           wrtmin, gwrt,        &  ! cross-file with cropgrowth_helpers/cropwofost_runtime
+                           reltr,               &  ! cross-file with cropwofost_runtime/cropfixed_runtime
+                           twilt, wiltpoint,    &  ! cross-file with rootextraction / dormant jongvanlier
+                           siccaplai,           &  ! cross-file with cropfixed_runtime/cropwofost_runtime
+                           flhydrlift           ! cross-file with cropfixed_runtime/cropwofost_runtime/dormant jongvanlier
       use array_utils, only: afgen
       use soilhydraulics_utils, only: watcon
       use rootextraction_mod, only: MatricFlux
@@ -196,12 +196,12 @@
 
 ! --- maximum rooting depth
       if (crop%common%swrd.eq.1) then
-        crop%common%rdm = rdmax
+        crop%common%rdm = cfg_crop%rdmax
       elseif (crop%common%swrd.eq.2) then
-        crop%common%rdm = min(rdmax,crop%common%rdc)
+        crop%common%rdm = min(cfg_crop%rdmax,crop%common%rdc)
       elseif (crop%common%swrd.eq.3) then
         crop%common%rdc = afgen (crop%common%rlwtb,22,crop%common%wrtmax)
-        crop%common%rdm = min(rdmax,crop%common%rdc)
+        crop%common%rdm = min(cfg_crop%rdmax,crop%common%rdc)
       endif
 
 ! --- skip next initialization if crop parameters are read from *.END file
