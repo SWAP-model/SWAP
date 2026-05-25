@@ -1,0 +1,241 @@
+{# ============================================================
+   SWAP · FORD base template (V2 · Atlas)
+   Replaces FORD's stock base.html. Provides the Atlas-styled
+   navbar + inline typeahead search on every generated page.
+   ============================================================ #}
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    {% if summary %}
+      <meta name="description" content="{{ summary|striptags }}">
+    {% else %}
+      <meta name="description" content="Documentation for {{ project }}">
+    {% endif %}
+    <meta name="author" content="{{ author }}" >
+    <link rel="icon" href="{{ project_url }}/favicon.png">
+
+    <title>{% block title %} {{ project }} {% endblock title %}</title>
+
+    <!-- Bootstrap (kept for FORD inner-page grid classes) -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"
+          integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+            integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+    <!-- Font Awesome -->
+    <link href="{{ project_url }}/css/fontawesome.min.css" rel="stylesheet">
+    <link href="{{ project_url }}/css/brands.min.css" rel="stylesheet">
+    <link href="{{ project_url }}/css/regular.min.css" rel="stylesheet">
+    <link href="{{ project_url }}/css/solid.min.css" rel="stylesheet">
+    <link href="{{ project_url }}/css/v4-font-face.min.css" rel="stylesheet">
+    <link href="{{ project_url }}/css/v4-shims.min.css" rel="stylesheet">
+    <!-- MathJax -->
+    <script type="text/x-mathjax-config">
+      MathJax.Hub.Config({ TeX: { equationNumbers: { autoNumber: "AMS" } } });
+    </script>
+    {% if mathjax_config %}
+      <script src="{{ project_url }}/js/MathJax-config/{{ path.basename(mathjax_config) }}"></script>
+    {% endif %}
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@2.7.9/MathJax.js?config=TeX-AMS-MML_HTMLorMML" async
+            integrity="sha256-DViIOMYdwlM/axqoGDPeUyf0urLoHMN4QACBKyB58Uw=" crossorigin="anonymous"></script>
+    <!-- FORD-provided styles -->
+    <link href="{{ project_url }}/css/local.css" rel="stylesheet">
+    <link href="{{ project_url }}/css/pygments.css" rel="stylesheet">
+    {% if css %}
+      <link href="{{ project_url }}/css/user.css" rel="stylesheet">
+    {% endif %}
+    <script src="{{ project_url }}/js/svg-pan-zoom.min.js"></script>
+
+    <!-- Atlas palette + fonts (inherited by all child pages) -->
+    <link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,500;1,400;1,500&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+      :root {
+        --paper:      #f6f1e7;
+        --paper-alt:  #efe8d8;
+        --card:       #fdfaf3;
+        --ink:        #1d1916;
+        --ink-soft:   #3a322b;
+        --muted:      #7a6f60;
+        --faint:      #a89e8c;
+        --rule:       #d9cfb8;
+        --rule-soft:  #e6dcc4;
+        --accent:     #b85535;
+        --serif: 'Spectral', 'Source Serif Pro', Georgia, 'Times New Roman', serif;
+        --sans:  'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+        --mono:  'JetBrains Mono', 'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace;
+      }
+      body { background: var(--paper); color: var(--ink); font-family: var(--sans); }
+
+      /* ---------- Atlas navbar ---------- */
+      .swap-nav {
+        position: sticky; top: 0; z-index: 100;
+        display: flex; align-items: center; gap: 24px;
+        padding: 14px 32px;
+        background: var(--paper);
+        border-bottom: 1px solid var(--rule);
+        font-family: var(--sans);
+      }
+      .swap-nav__brand {
+        font-family: var(--serif); font-size: 20px; font-weight: 500;
+        color: var(--ink); text-decoration: none; letter-spacing: -0.01em;
+      }
+      .swap-nav__brand:hover { color: var(--accent); }
+      .swap-nav__links {
+        list-style: none; margin: 0; padding: 0;
+        display: flex; align-items: center; gap: 4px;
+      }
+      .swap-nav__links a, .swap-nav__dropdown > button {
+        font-family: var(--sans); font-size: 14px; font-weight: 500;
+        color: var(--ink-soft); text-decoration: none;
+        padding: 6px 12px; border: none; background: transparent;
+        border-radius: 2px; cursor: pointer;
+      }
+      .swap-nav__links a:hover, .swap-nav__dropdown > button:hover {
+        color: var(--accent); background: var(--paper-alt);
+      }
+      .swap-nav__divider {
+        width: 1px; height: 16px; background: var(--rule); margin: 0 4px;
+      }
+      .swap-nav__dropdown { position: relative; }
+      .swap-nav__menu {
+        position: absolute; top: 100%; left: 0; margin-top: 4px;
+        background: var(--card); border: 1px solid var(--rule);
+        border-radius: 2px; min-width: 180px; padding: 6px 0;
+        display: none; box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+      }
+      .swap-nav__menu a {
+        display: block; padding: 8px 16px; font-size: 13px;
+        color: var(--ink-soft); text-decoration: none;
+      }
+      .swap-nav__menu a:hover { background: var(--paper-alt); color: var(--accent); }
+      .swap-nav__dropdown.is-open .swap-nav__menu { display: block; }
+
+      .swap-nav__search {
+        margin-left: auto; position: relative;
+        display: flex; align-items: center; gap: 8px;
+        padding: 6px 12px;
+        background: var(--card); border: 1px solid var(--rule);
+        border-radius: 2px; min-width: 280px;
+      }
+      .swap-nav__search:focus-within { border-color: var(--accent); }
+      .swap-nav__search input {
+        flex: 1; border: none; outline: none; background: transparent;
+        font-family: var(--sans); font-size: 14px; color: var(--ink);
+      }
+      .swap-nav__search input::placeholder { color: var(--muted); }
+      .swap-nav__search kbd {
+        font-family: var(--mono); font-size: 11px; color: var(--muted);
+        border: 1px solid var(--rule); border-radius: 3px;
+        padding: 2px 6px; background: var(--paper);
+      }
+      #swap-search-results {
+        position: absolute; top: 100%; left: 0; right: 0; margin-top: 4px;
+        background: var(--card); border: 1px solid var(--rule);
+        border-radius: 2px; max-height: 360px; overflow-y: auto;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+      }
+      #swap-search-results a {
+        display: block; padding: 10px 14px;
+        color: var(--ink); text-decoration: none;
+        border-bottom: 1px solid var(--rule-soft);
+        font-size: 13px;
+      }
+      #swap-search-results a:last-child { border-bottom: none; }
+      #swap-search-results a:hover, #swap-search-results a.is-active {
+        background: var(--paper-alt); color: var(--accent);
+      }
+      #swap-search-results .swap-search-title { font-weight: 500; }
+      #swap-search-results .swap-search-snippet {
+        font-size: 12px; color: var(--muted); margin-top: 2px;
+      }
+      #swap-search-results .swap-search-empty {
+        padding: 12px 14px; color: var(--muted); font-size: 13px;
+      }
+
+      /* ---------- Footer ---------- */
+      .swap-footer {
+        margin-top: 64px; padding: 24px 32px;
+        border-top: 1px solid var(--rule);
+        background: var(--paper-alt);
+        font-family: var(--mono); font-size: 11px; color: var(--muted);
+        letter-spacing: 0.06em;
+        display: flex; justify-content: space-between;
+      }
+      .swap-footer a { color: inherit; text-decoration: none; border-bottom: 1px solid var(--rule); }
+      .swap-footer a:hover { color: var(--accent); border-bottom-color: var(--accent); }
+
+      @media (max-width: 800px) {
+        .swap-nav { flex-wrap: wrap; padding: 12px 16px; gap: 12px; }
+        .swap-nav__search { order: 99; width: 100%; min-width: 0; }
+        .swap-footer { flex-direction: column; gap: 8px; padding: 16px; }
+      }
+    </style>
+  </head>
+
+  <body>
+    <nav class="swap-nav">
+      <a class="swap-nav__brand" href="{{ project_url }}/index.html">{{ project }}{% if version %} <small style="font-size:12px;color:var(--muted);">{{ version }}</small>{% endif %}</a>
+      <ul class="swap-nav__links">
+        <li><a href="{{ project_url }}/page/tutorial/index.html">Tutorial</a></li>
+        <li><a href="{{ project_url }}/page/reference/index.html">Reference</a></li>
+        <li><a href="{{ project_url }}/page/developer/index.html">Developer</a></li>
+        <li class="swap-nav__divider"></li>
+        <li class="swap-nav__dropdown" id="swap-api-dropdown">
+          <button type="button" aria-haspopup="true" aria-expanded="false">API ▾</button>
+          <div class="swap-nav__menu" role="menu">
+            {% if project.modules %}<a href="{{ project_url }}/lists/modules.html">Modules</a>{% endif %}
+            {% if project.procedures %}<a href="{{ project_url }}/lists/procedures.html">Procedures</a>{% endif %}
+            {% if project.types %}<a href="{{ project_url }}/lists/types.html">Derived Types</a>{% endif %}
+            {% if project.absinterfaces %}<a href="{{ project_url }}/lists/absint.html">Abstract Interfaces</a>{% endif %}
+            {% if project.namelists %}<a href="{{ project_url }}/lists/namelists.html">Namelists</a>{% endif %}
+            {% if incl_src %}<a href="{{ project_url }}/lists/files.html">Source Files</a>{% endif %}
+          </div>
+        </li>
+      </ul>
+      {% if search %}
+      <div class="swap-nav__search">
+        <input type="search" id="swap-search-input" placeholder="Search the docs…" autocomplete="off">
+        <kbd>/</kbd>
+        <div id="swap-search-results" hidden></div>
+      </div>
+      {% endif %}
+    </nav>
+
+    <div class="container">
+      {% block body %}
+      {% endblock body %}
+    </div>
+
+    <footer class="swap-footer">
+      <span>
+        {{ project }}{% if author %} · developed by {{ author }}{% endif %}
+        · &copy; {{ year }}{% if license %} {{ license }}{% endif %}
+      </span>
+      <span>
+        Generated by <a href="https://github.com/Fortran-FOSS-Programmers/ford">FORD</a>
+        {% if print_creation_date %}· {{ creation_date }}{% endif %}
+      </span>
+    </footer>
+
+    <script>
+      // API dropdown toggle
+      (function () {
+        var dd = document.getElementById('swap-api-dropdown');
+        if (!dd) return;
+        var btn = dd.querySelector('button');
+        btn.addEventListener('click', function (e) {
+          e.stopPropagation();
+          var open = dd.classList.toggle('is-open');
+          btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+        });
+        document.addEventListener('click', function () {
+          dd.classList.remove('is-open');
+          btn.setAttribute('aria-expanded', 'false');
+        });
+      })();
+    </script>
+
+  </body>
+</html>
