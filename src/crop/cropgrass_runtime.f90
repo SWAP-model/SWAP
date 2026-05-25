@@ -1,10 +1,4 @@
-! cropgrass_runtime.f90
-! GR-CROPWS Phase 0 Commit 0.3: grass extracted from cropgrowth.f90.
-! Pure relocation — no behavior change.
-! [GR-CROPWS B4]: icrop reads → crop%common%icrop (task-1 block, 5 sites);
-!   cropstart(icrop) at swinco=3 skip check → crop%common%cropstart.
-!   icrop and cropstart removed from use variables.
-!   daycrop NOT migrated (InitializeCrop zeroes global, state not mirrored there).
+! cropgrass_runtime.f90 — type-3 (grass / WOFOST grass) crop runtime dispatcher.
 ! ----------------------------------------------------------------------
       module cropgrass_runtime_mod
       implicit none
@@ -19,42 +13,16 @@
 ! ----------------------------------------------------------------------
 !     Date               : November 2004
 !     Purpose            : detailed grass growth routine
-! SS-HEAT pre-Task-8: tsoil(:) non-optional dummy arg; callers pass
-!   state%heat%tsoil. Threaded through to sumttd calls.
-! SS-CRP C-2.5: state added (optional, intent in) to read flWrtNonox.
-! SS-TC TC-10: t1900,daynr read via state%timecontrol tc_* aliases;
-!   state threaded to sumttd for its own TC reads.
-! SS-GR-ATM A5.1: intent changed inout to allow dual-write in cropgrass_init_from_config.
-! [SS-GR-CROPWS A4]: state optional removed — all callers pass state; all if(present(state)) guards dropped.
-! [GR-CROP Phase B/7] narrow use variables
+!
+! [GR-CROP 2026-05-25] crop-sweep:
+!   - magrs/macp sourced from swap_array_dimensions.
+!   - rdmax read via state%cfg%crop%rdmax (Class B direct read).
+!   - Remaining legacy globals (rid, daycrop, wrtmin, gwrt, reltr,
+!     twilt, wiltpoint, siccaplai, flhydrlift): write or read targets
+!     feeding consumers in oxygenstress / cropwofost_runtime /
+!     cropfixed_runtime / dormant jongvanlier. Cannot retire here —
+!     other crop sub-arcs (Tasks 8/9) are last consumers.
 ! ----------------------------------------------------------------------
-      ! [SS-GR-CROPRT B8] DEFERRED — grass: all remaining variables globals:
-      !   magrs, macp: array dims (could → swap_array_dimensions, deferred with rest)
-      !   icrop, dvs, tsum, daycrop: computed in grass loop; dual-write to crop%common%
-      !     but global canonical pending Phase C
-      !   rid, tbase, tdwi, swinco: config params, no state home
-      !   wlv/wst/wrt/wso pools + dwlv/dwst/dwrt: computed in grass loop (WOFOST biomass)
-      !   wrtmax, wrtmin: root biomass bounds, no state home
-      !   cf, ch, cfeic, lai, laipot, laiem, laiexp/pot, laimax: computed in grass loop
-      !   cftb/chtb/cfeictb: state%crop%fixed homes (A5.2 dual-write) but grass has optional
-      !     state — same constraint as wofost B7 / cropfixed B2; deferred to Phase C
-      !   rdtb, slatb, rgrlai etc.: no state home; rd/rdpot etc.: computed in loop
-      !   config switches (swrd etc.), physiology params (reltr, cvl etc.): no state home
-      !   leaf arrays (crop%common%lv/crop%common%lvpot etc.), JvL params (twilt etc.): no state home
-      !   cropstartact/endact/pot: state%crop%grass homes (A5) but written here — Phase C
-      !   crop%common%cuptgraz/pot, tagp/pot, tagpt/pot, seqgrazmow/pot, mowrest, dateharvest:
-      !     state%crop%grass/common homes (A5) but written in grass loop — Phase C
-      !   pgass/pgasspot: state%crop%wofost homes (A4 dual-write) but written here — Phase C
-      !   perdl, dateharvest, crop%grass%lsda: output + harvest tracking, no state home
-      !   tsoil: config-staging buffer, renamed to avoid clash with dummy arg
-      ! [GR-CROP 2026-05-25] crop-sweep:
-      !   - magrs/macp sourced from swap_array_dimensions (pure parameter constants).
-      !   - rdmax read via state%cfg%crop%rdmax (Class B direct read).
-      !   - Remaining legacy globals (rid/daycrop/wrtmin/gwrt/reltr/twilt/
-      !     wiltpoint/siccaplai/flhydrlift): write or read targets feeding
-      !     consumers in oxygenstress / cropwofost_runtime / cropfixed_runtime
-      !     / dormant jongvanlier. Cannot retire here — other crop sub-arcs
-      !     (Tasks 8/9) are last consumers.
       use swap_array_dimensions, only: magrs, macp
       use variables, only: rid, daycrop,        &  ! workspace/scratch — cross-file readers (oxygenstress, cropgrowth)
                            wrtmin, gwrt,        &  ! cross-file with cropgrowth_helpers/cropwofost_runtime
@@ -73,7 +41,7 @@
 
       implicit none
 
-      type(swap_state_t), intent(inout) :: state   ! [SS-GR-CROPWS A4] removed optional — all callers pass state
+      type(swap_state_t), intent(inout) :: state 
 
       integer   i1,task
       real(8), intent(in) :: tsoil(:)
@@ -150,19 +118,19 @@
          use_cache = .false.
          if (associated(crop_config_global)) then
             if (allocated(crop_config_global%rotation_loaded)) then
-               if (crop%common%icrop >= 1 .and. crop%common%icrop <= size(crop_config_global%rotation_loaded)) then  ! [GR-CROPWS B4] icrop → crop%common%icrop
-                  if (crop_config_global%rotation_loaded(crop%common%icrop)) then  ! [GR-CROPWS B4]
+               if (crop%common%icrop >= 1 .and. crop%common%icrop <= size(crop_config_global%rotation_loaded)) then
+                  if (crop_config_global%rotation_loaded(crop%common%icrop)) then
                      ! Defense-in-depth: only dispatch to cache when the schema
                      ! is fully authored (case 4 + case 2 have amaxtb; the
                      ! hupselbrook skeleton does not — Phase 4 will fill it).
-                     if (allocated(crop_config_global%rotation_grass(crop%common%icrop)%amaxtb)) &  ! [GR-CROPWS B4]
+                     if (allocated(crop_config_global%rotation_grass(crop%common%icrop)%amaxtb)) &
                         use_cache = .true.
                   end if
                end if
             end if
          end if
          if (use_cache) then
-            associate(cfg => crop_config_global%rotation_grass(crop%common%icrop))  ! [GR-CROPWS B4] icrop → crop%common%icrop
+            associate(cfg => crop_config_global%rotation_grass(crop%common%icrop))
                swharvest      = cfg%swharv
                dmharvest      = cfg%dmharvest
                daylastharvest = int(cfg%daylastharvest)
@@ -177,8 +145,8 @@
                LSDb           = 0.0d0   ! grazing stub-guarded; populated via daysgrazingtab/uptgrazingtab/lossgrazingtab by init
                tagprest       = cfg%tagprest
                swhydrlift     = 0       ! swdrought=2 stub-errored; mirror cropfixed/cropwofost default
-               call cropgrass_init_from_config(cfg, crop%common%icrop, &  ! [GR-CROPWS B4] icrop → crop%common%icrop
-                  time%tend, time%tstart, state)  ! [SS-BMI2 Task 4] [SS-GR-ATM A5.1]
+               call cropgrass_init_from_config(cfg, crop%common%icrop, &
+                  time%tend, time%tstart, state)
             end associate
          else
             ! ADR 0016 cache-miss: typed config required for type=3 rotations.
@@ -206,7 +174,7 @@
 
 ! --- skip next initialization if crop parameters are read from *.END file
       if (time%t1900 - time%tstart .gt. tiny .or. soil%swinco .ne. 3 .or.     &
-     &   dabs(time%t1900 - crop%common%cropstart) .lt. tiny) then   ! [GR-CROPWS B4] cropstart(icrop) → crop%common%cropstart
+     &   dabs(time%t1900 - crop%common%cropstart) .lt. tiny) then 
 
         crop%grass%iseqgm = 1
         crop%grass%iseqgmpot = crop%grass%iseqgm
@@ -282,7 +250,7 @@
         crop%grass%cropstartact     = rid
         crop%grass%flhrvendpot      = .false.
         flearlyhrvendpot = .false.
-        ! [SS-GR-CROP A5.1] mirror grass init-time state
+        ! mirror grass init-time state
         crop%common%cuptgraz    = crop%common%cuptgraz
         crop%common%cuptgrazpot = crop%common%cuptgrazpot
         
@@ -323,7 +291,7 @@
         else
           flhydrlift = .false.
         endif
-        do i = 1,mesh%numnod  ! [GR-BH C7]
+        do i = 1,mesh%numnod
          twilt(i) = watcon(wiltpoint, &
                             soil%vg_params(i), &
                             soil%iHWCKmodel(soil%layer(i)), &
@@ -345,10 +313,10 @@
          
         ! Find node for monitoring work-ability during mowing
         nodmow = 1
-        drz1       = -1.d0 * crop%grass%zmow - mesh%dz(nodmow)  ! [GR-BH C7]
+        drz1       = -1.d0 * crop%grass%zmow - mesh%dz(nodmow)
         do while (drz1 .gt. 0.d0)
           nodmow   = nodmow + 1
-          drz1 = drz1 - mesh%dz(nodmow)  ! [GR-BH C7]
+          drz1 = drz1 - mesh%dz(nodmow)
         enddo
       
       endif   
@@ -357,10 +325,10 @@
         
         ! Find node and layer for monitoring work-ability at start of grazing
         nodgrz = 1
-        drz1       = -1.d0 * crop%grass%zgrz - mesh%dz(nodgrz)  ! [GR-BH C7]
+        drz1       = -1.d0 * crop%grass%zgrz - mesh%dz(nodgrz)
         do while (drz1 .gt. 0.d0)
           nodgrz   = nodgrz + 1
-          drz1 = drz1 - mesh%dz(nodgrz)  ! [GR-BH C7]
+          drz1 = drz1 - mesh%dz(nodgrz)
         enddo
          
       endif
@@ -390,7 +358,7 @@
       flearlyhrvendpot = .false.
 
 ! --- grass growth initiated by tsum from 1st day of calendar year
-      crop%common%tsum = crop%common%tsum + max(0.0d0,atmo%Tav)  ! [SS-GR-ATM B.5]
+      crop%common%tsum = crop%common%tsum + max(0.0d0,atmo%Tav)
       if (.not. flGrassGrowth) then
         
         ! grass growth initiated by tsum
@@ -425,7 +393,7 @@
 ! ---   respiration and partitioning of carbohydrates between growth and
 ! ---   maintenance respiration
         rmrespot=(crop%common%rmr*crop%wofost%wrtpot+crop%common%rml*crop%wofost%wlvpot+crop%common%rms*crop%wofost%wstpot)*afgen(crop%common%rfsetb,30,rid)
-        teff = crop%common%q10**((atmo%Tav-25.0d0)/10.0d0)  ! [SS-GR-ATM B.5]
+        teff = crop%common%q10**((atmo%Tav-25.0d0)/10.0d0)
         mrespot = min (gasspot,rmrespot*teff)
         asrcpot = gasspot-mrespot
 
@@ -521,7 +489,7 @@
 ! ---   leaf area not to exceed exponential growth curve
         slatpot = afgen (crop%common%slatb,30,rid)
         if (crop%common%laiexppot.lt.6.0d0) then
-          dteff = max (0.0d0,atmo%Tav-crop%common%tbase)  ! [SS-GR-ATM B.5]
+          dteff = max (0.0d0,atmo%Tav-crop%common%tbase)
           crop%common%glaiexpot = crop%common%laiexppot*crop%common%rgrlai*dteff
 ! ---   source-limited increase in leaf area
           glasolpot = grlvpot*slatpot
@@ -602,7 +570,7 @@
 !           losses due to treading
             fralossmow = 0.d0
             if (swlossmow.eq.1) then
-              fralossmow = afgen(crop%grass%lossmowtab,200,soil%h(nodmow))  ! [SS-SWC S-2.7]
+              fralossmow = afgen(crop%grass%lossmowtab,200,soil%h(nodmow))
             end if
 
 !           harvest
@@ -667,7 +635,7 @@
 !           Extra losses due to treading in case pressure head is insufficient
             fralossgrz = 0.d0
             if (swlossgrz.eq.1) then
-              fralossgrz = afgen(crop%grass%lossgrztab,200,soil%h(nodgrz))  ! [SS-SWC S-2.7]
+              fralossgrz = afgen(crop%grass%lossgrztab,200,soil%h(nodgrz))
             end if
             lossgrazpot = lossgrazpot + crop%wofost%tagppot * fralossgrz
 
@@ -771,7 +739,7 @@
         if (daycrop .ge. crop%grass%idregrpot) then
 
 ! ---     physiologic ageing of leaves per time step
-          fysdel = max (0.0d0,(atmo%Tav-crop%common%tbase)/(35.0d0-crop%common%tbase))  ! [SS-GR-ATM B.5]
+          fysdel = max (0.0d0,(atmo%Tav-crop%common%tbase)/(35.0d0-crop%common%tbase))
 
 ! ---     leaf death is imposed on array untill no more leaves have to die or all leaves are gone
 
@@ -856,7 +824,7 @@
 
       endif
 
-      ! [SS-GR-CROP A5.1] mirror grass case(2) potential state
+      ! mirror grass case(2) potential state
       crop%common%cuptgrazpot   = crop%common%cuptgrazpot
 
       return
@@ -891,14 +859,14 @@
         if(dabs(atmo%ptra).lt.nihil) then
           reltr = 1.0d0
         else
-          reltr = max(0.0d0,min(1.0d0,soil%tra/atmo%ptra))  ! [SS-SWC S-2.7]
+          reltr = max(0.0d0,min(1.0d0,soil%tra/atmo%ptra))
         endif
         gass = crop%wofost%pgass * reltr
 
 ! ---   respiration and partitioning of carbohydrates between growth and
 ! ---   maintenance respiration
         rmres = (crop%common%rmr*crop%wofost%wrt+crop%common%rml*crop%wofost%wlv+crop%common%rms*crop%wofost%wst)*afgen(crop%common%rfsetb,30,rid)
-        teff = crop%common%q10**((atmo%Tav-25.0d0)/10.0d0)  ! [SS-GR-ATM B.5]
+        teff = crop%common%q10**((atmo%Tav-25.0d0)/10.0d0)
         mres = min (gass,rmres*teff)
         asrc = gass-mres
 
@@ -924,7 +892,7 @@
         ! in case of SWRD = 3: after reaching maximum live weight of wrtmax, the
         ! growth of the roots is balanced by the death of root tissue
         grrt = fr*dmi
-        if (crop%common%swrd.eq.3 .and. soil%flWrtNonox) grrt = 0.d0   ! [SS-GR-CROPWS A4] present(state) guard removed
+        if (crop%common%swrd.eq.3 .and. soil%flWrtNonox) grrt = 0.d0 
         if (crop%common%swrd.eq.3 .and. crop%wofost%wrt.gt.crop%common%wrtmax) then
           drrt = grrt
           drrt = max(drrt,crop%wofost%wrt*afgen (crop%common%rdrrtb,30,rid))
@@ -982,7 +950,7 @@
 
 ! ---   leaf area not to exceed exponential growth curve
         if (crop%common%laiexp.lt.6.0d0) then
-          dteff = max (0.0d0,atmo%Tav-crop%common%tbase)  ! [SS-GR-ATM B.5]
+          dteff = max (0.0d0,atmo%Tav-crop%common%tbase)
           crop%common%glaiex = crop%common%laiexp*crop%common%rgrlai*dteff
 ! ---     source-limited increase in leaf area
           glasol = grlv*slat
@@ -1064,7 +1032,7 @@
 !         losses due to treading
           FraLossMow = 0.d0
           if (swlossmow.eq.1) then
-            FraLossMow = afgen(crop%grass%lossmowtab,200,soil%h(nodmow))  ! [SS-SWC S-2.7]
+            FraLossMow = afgen(crop%grass%lossmowtab,200,soil%h(nodmow))
           end if
           
 !         harvest
@@ -1129,7 +1097,7 @@
 !           Extra losses due to treading in case pressure head is insufficient
             fralossgrz = 0.d0
             if (swlossgrz.eq.1) then
-              fralossgrz = afgen(crop%grass%lossgrztab,200,soil%h(nodgrz))  ! [SS-SWC S-2.7]
+              fralossgrz = afgen(crop%grass%lossgrztab,200,soil%h(nodgrz))
             end if
             lossgraz = lossgraz + crop%wofost%tagp * fralossgrz
 
@@ -1233,7 +1201,7 @@
         if (daycrop .ge. crop%grass%idregr) then
 
 ! ---     physiologic ageing of leaves per time step
-          fysdel = max (0.0d0,(atmo%Tav-crop%common%tbase)/(35.0d0-crop%common%tbase))  ! [SS-GR-ATM B.5]
+          fysdel = max (0.0d0,(atmo%Tav-crop%common%tbase)/(35.0d0-crop%common%tbase))
 
 ! ---     leaf death is imposed on array untill no more leaves have to die or all leaves are gone
 
@@ -1311,7 +1279,7 @@
         elseif (crop%common%swrd.eq.2) then
           rr = min (crop%common%rdm-crop%common%rd,crop%common%rri)
           if (fr.le.0.0d0 .or. crop%wofost%pgass.lt.1.0d0 .or.                    &
-     &        soil%flWrtNonox) rr = 0.0d0   ! [SS-GR-CROPWS A4] present(state) guard removed
+     &        soil%flWrtNonox) rr = 0.0d0 
           if (crop%common%swdmi2rd.eq.1 .and. crop%wofost%pgass.ge.1.0d0)              rr = rr * gass/crop%wofost%pgass
           crop%common%rd = crop%common%rd + rr
         elseif (crop%common%swrd.eq.3) then
@@ -1337,7 +1305,7 @@
 
       endif
 
-      ! [SS-GR-CROP A5.1] mirror grass case(3) actual state
+      ! mirror grass case(3) actual state
       crop%wofost%tagp        = crop%wofost%tagp
       crop%common%cuptgraz    = crop%common%cuptgraz
 

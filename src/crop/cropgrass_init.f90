@@ -45,9 +45,9 @@ contains
 
       type(cropgrass_config_t), intent(in)    :: cfg
       integer,                  intent(in)    :: icrop      ! rotation slot (reserved)
-      real(real64),             intent(in)    :: tend_val   ! [SS-BMI2 Task 4] state%timecontrol%tend
-      real(real64),             intent(in)    :: tstart_val ! [SS-BMI2 Task 4] state%timecontrol%tstart
-      type(swap_state_t),       intent(inout) :: state      ! [SS-GR-ATM A5.1] runtime dual-write target
+      real(real64),             intent(in)    :: tend_val   ! state%timecontrol%tend
+      real(real64),             intent(in)    :: tstart_val ! state%timecontrol%tstart
+      type(swap_state_t),       intent(inout) :: state
 
       integer      :: i
       real(real64) :: depth, sum_val
@@ -257,7 +257,7 @@ contains
       ! Part 16: management factors (readgrass lines 3876-3885)
       state%crop%grass%relmf      = cfg%relmf
       swpotrelmf = cfg%swpotrelmf
-      state%crop%grass%swpotrelmf = swpotrelmf  ! [SS-GR-CROP A5.2]
+      state%crop%grass%swpotrelmf = swpotrelmf
 
       ! Part 17: sequence of mowing / grazing (readgrass lines 3891-3905)
       ! SeqGrazMow is a fixed-size integer array in variables (size 366).
@@ -299,7 +299,7 @@ contains
          ! of each crop period.  populate_dateharvest anchors the DOY→t1900
          ! mapping to tstart (first simulation year), not yearmeteo, so the
          ! same full date sequence is reproduced correctly every time.
-         call populate_dateharvest(cfg, tend_val, tstart_val, state)  ! [SS-BMI2 Task 4]
+         call populate_dateharvest(cfg, tend_val, tstart_val, state) 
       end if
 
       ! Regrowth delay table (readgrass lines 4028-4035).
@@ -314,7 +314,7 @@ contains
 
       ! Part 20: CO2 correction (readgrass lines 4050-4083)
       ! swco2=1 is stub-guarded above; flco2 is always .false. (state default).
-      ! [GR-ATM 2026-05-23] flCO2 bare-global write retired — state%atmosphere%flco2 default is .false.
+     
 
       ! ================================================================
       ! Runtime init math — cumdens (readgrass lines 4091-4121)
@@ -378,8 +378,8 @@ contains
       implicit none
       type(cropgrass_config_t), intent(in)    :: cfg
       real(real64),             intent(in)    :: tend_val
-      real(real64),             intent(in)    :: tstart_val  ! [SS-BMI2 Task 4]
-      type(swap_state_t),       intent(inout) :: state       ! [GR-CROPWS] dateharvest moved to state%crop%grass
+      real(real64),             intent(in)    :: tstart_val 
+      type(swap_state_t),       intent(inout) :: state      
 
       integer      :: i, cur_year, start_year
       real(real64) :: t_jan1
@@ -391,7 +391,7 @@ contains
       ! This is stable across all crop rotations: mowing_dates span the
       ! entire simulation, so we always anchor the DOY→t1900 mapping to
       ! the first simulation year regardless of which rotation icrop we are.
-      start_year = year_from_t1900(int(tstart_val))  ! [SS-BMI2 Task 4]
+      start_year = year_from_t1900(int(tstart_val)) 
       cur_year   = start_year
       t_jan1     = real(t1900_from_year(cur_year), real64)
 
