@@ -31,7 +31,7 @@ Sample files in the tree contain aspirational keys for future phases; only the
 subset documented below actually reaches `swap_config_t`.
 
 **Phase 4f preparation:** see
-[`docs/archive/2026-phase-4/audits/phase-4f-config-to-variables-audit.md`](archive/2026-phase-4/audits/phase-4f-config-to-variables-audit.md)
+`dev-docs/archive/2026-phase-4/audits/phase-4f-config-to-variables-audit.md`
 for the field-by-field mapping between this schema and the legacy `variables`
 globals, plus the list of `G` (gap) entries that Phase 4f-prep will resolve
 before the strangler-fig replacement of `readswap()` lands.
@@ -1672,12 +1672,12 @@ Phase 4f strangler-fig of `readswap()`. Detail:
   `readcropfixed`, `readgrass`) take this as an argument.
 
 End-of-Phase-4f-prep state: 42 G entries reclassified to C; the
-audit at `docs/archive/2026-phase-4/audits/phase-4f-config-to-variables-audit.md` has the full
+audit at `dev-docs/archive/2026-phase-4/audits/phase-4f-config-to-variables-audit.md` has the full
 field-by-field breakdown.
 
 ## Deprecated keys (retired)
 
-Per [ADR 0009](adr/0009-discontinue-non-csv-outputs.md), the new TOML
+Per ADR 0009 (`dev-docs/adr/0009-discontinue-non-csv-outputs.md`), the new TOML
 schema supports CSV output only (`swcsv`, `swcsv_tz`). The following 18
 legacy `.swp` keys are **retired** — the new TOML reader has no schema
 slot for them and will append a non-fatal deprecation warning if any

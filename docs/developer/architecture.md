@@ -138,8 +138,8 @@ follow-on to ADR 0019. The case-1 init blocks they fed
 `ArableLandGerm(1)`) were collapsed to no-op returns or removed
 outright. Parity test suites under `tests/unit/io/toml/` switched to
 literal-value assertions and no longer drive any legacy reader. See
-ADR 0019's "Update 2026-05-06" section and the umbrella spec
-`docs/superpowers/specs/2026-05-05-legacy-readers-physical-deletion-design.md`
+ADR 0019's "Update 2026-05-06" section and the umbrella spec at
+`dev-docs/superpowers/specs/2026-05-05-legacy-readers-physical-deletion-design.md`
 for the deletion record.
 
 Two TTutil utility calls survive in the production runtime — they are
@@ -280,13 +280,7 @@ and follow-on rescue work continues. The legacy fixed-format reader
 code that previously lived in `src/io/readswap.f90` and the case-1
 init blocks it fed were physically deleted on 2026-05-06 (see ADR
 0019's closing update); the production runtime has been TOML-only
-since 2026-05-05. For the modernization
-capstone see [`PHASE-4-MODERNIZATION-SUMMARY.md`](PHASE-4-MODERNIZATION-SUMMARY.html);
-for the original rescue plan see
-[`docs/archive/2026-phase-4/specs/2026-04-22-rescue-and-stabilize-design.md`](archive/2026-phase-4/specs/2026-04-22-rescue-and-stabilize-design.md);
-for the per-phase plans and audits see
-[`docs/archive/2026-phase-4/`](archive/2026-phase-4/README.html);
-and for the architectural decisions that underpin the rescue see
-[`docs/adr/`](adr/) — currently ADR 0001 (gfortran-first) and
-ADR 0002 (single builddir), with further ADRs to follow as subsequent
-phases make new decisions.
+since 2026-05-05. For the full modernization history — capstone
+summary, original rescue plan, per-phase audits, and ADRs — see
+`dev-docs/` in the repository (`phase-4-modernization-summary.md`,
+`archive/2026-phase-4/`, `adr/`).

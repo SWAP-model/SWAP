@@ -34,7 +34,7 @@ main                ← release line; tagged when a version ships
 ## Why this convention
 
 The modernization (Phase 4 / Phase 4f-extend, completed 2026-05-05;
-see [`PHASE-4-MODERNIZATION-SUMMARY.md`](PHASE-4-MODERNIZATION-SUMMARY.md))
+see `dev-docs/phase-4-modernization-summary.md` in the repository)
 landed ~460 commits that retire the legacy fixed-format reader chain.
 The first push of those commits accidentally landed on `origin/main`
 on 2026-05-05 13:40 UTC+2; rather than reverting, we accepted `main`
@@ -48,7 +48,7 @@ the in-progress work and is the default push target.
 
 The `rescue/*` and `docs/*` tags annotate the modernization journey.
 The capstone summary
-([`PHASE-4-MODERNIZATION-SUMMARY.md`](PHASE-4-MODERNIZATION-SUMMARY.md))
+(`dev-docs/phase-4-modernization-summary.md` in the repository)
 lists each tag with its scope. The `v4.2.0` tag points at the
 pre-modernization legacy SHA (`7587ca3`) and is the canonical anchor
 for downstream consumers that need the legacy reference.
