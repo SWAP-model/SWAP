@@ -297,3 +297,57 @@ subroutine test_surfacewater_init_sets_zdrabas_for_swsec_2()
    @assertEqual(0.0_real64, sw%vtair,  1.0e-12_real64)
    @assertFalse(sw%flInitDraBas)
 end subroutine test_surfacewater_init_sets_zdrabas_for_swsec_2
+
+@test
+subroutine test_surfacewater_init_seeds_management_periods()
+   ! [GR-SEED 2026-05-25 Task 6] Verify that init copies management-period
+   ! arrays (osswlm/nmper/swqhr/impend/swman/wscap/wldip/intwl/hbweir)
+   ! from config_sw into the state record.
+   use funit
+   use iso_fortran_env, only: real64
+   use surfacewater_state_mod, only: surfacewater_state_t
+   use surface_water_config_mod, only: surface_water_config_t
+   use drainage_config_mod, only: drainage_config_t
+   type(surfacewater_state_t)   :: sw
+   type(surface_water_config_t) :: cfg_sw
+   type(drainage_config_t)      :: cfg_drain
+   integer, parameter :: nrlevs = 1
+   integer, parameter :: numnod = 10
+
+   cfg_sw%swsrf  = 2;  cfg_sw%swsec = 2;  cfg_sw%swqhr = 1
+   cfg_sw%osswlm = 0.05_real64
+   cfg_sw%nmper  = 2
+   cfg_sw%wlact  = -50.0_real64
+   allocate(cfg_sw%impend(2));  cfg_sw%impend = [365.0_real64, 730.0_real64]
+   allocate(cfg_sw%swman(2));   cfg_sw%swman  = [1, 1]   ! swman=2 rejected by init guard
+   allocate(cfg_sw%wscap(2));   cfg_sw%wscap  = [0.0_real64,  0.5_real64]
+   allocate(cfg_sw%wldip(2));   cfg_sw%wldip  = [10.0_real64, 15.0_real64]
+   allocate(cfg_sw%intwl(2));   cfg_sw%intwl  = [1, 7]
+   allocate(cfg_sw%hbweir(2));  cfg_sw%hbweir = [-50.0_real64, -75.0_real64]
+
+   cfg_drain%nrlevs = nrlevs
+   cfg_drain%altcu  = 0.0_real64
+   allocate(cfg_drain%zbotdr(nrlevs));  cfg_drain%zbotdr = -100.0_real64
+   allocate(cfg_drain%swdtyp(nrlevs));  cfg_drain%swdtyp = 0
+   allocate(cfg_drain%widthr(nrlevs));  cfg_drain%widthr = 1.0_real64
+   allocate(cfg_drain%taludr(nrlevs));  cfg_drain%taludr = 2.0_real64
+   allocate(cfg_drain%l(nrlevs));       cfg_drain%l      = 1000.0_real64
+
+   call sw%init(cfg_sw, cfg_drain, numnod)
+
+   @assertEqual(1,              sw%swqhr)
+   @assertEqual(0.05_real64,    sw%osswlm,    1.0e-12_real64)
+   @assertEqual(2,              sw%nmper)
+   @assertEqual(365.0_real64,   sw%impend(1), 1.0e-12_real64)
+   @assertEqual(730.0_real64,   sw%impend(2), 1.0e-12_real64)
+   @assertEqual(1,              sw%swman(1))
+   @assertEqual(1,              sw%swman(2))
+   @assertEqual(0.0_real64,     sw%wscap(1),  1.0e-12_real64)
+   @assertEqual(0.5_real64,     sw%wscap(2),  1.0e-12_real64)
+   @assertEqual(10.0_real64,    sw%wldip(1),  1.0e-12_real64)
+   @assertEqual(15.0_real64,    sw%wldip(2),  1.0e-12_real64)
+   @assertEqual(1,              sw%intwl(1))
+   @assertEqual(7,              sw%intwl(2))
+   @assertEqual(-50.0_real64,   sw%hbweir(1), 1.0e-12_real64)
+   @assertEqual(-75.0_real64,   sw%hbweir(2), 1.0e-12_real64)
+end subroutine test_surfacewater_init_seeds_management_periods

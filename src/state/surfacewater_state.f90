@@ -313,6 +313,59 @@ contains
       ! Read by bocodre via state%surfacewater%wlp; swsrf=3 (which would
       ! otherwise populate it from wlptab) is rejected by the validator.
 
+      ! [GR-SEED 2026-05-25 Task 6] Management-period seeding from config_sw.
+      ! Arrays are already allocated + zeroed in the Pattern-9 block above;
+      ! copy values from config where config has allocated its own arrays.
+      block
+         integer :: i
+
+         self%osswlm = config_sw%osswlm
+         self%nmper  = config_sw%nmper
+         self%swqhr  = config_sw%swqhr
+
+         if (allocated(config_sw%impend)) then
+            do i = 1, min(size(config_sw%impend), size(self%impend))
+               self%impend(i) = config_sw%impend(i)
+            end do
+         end if
+         if (allocated(config_sw%swman)) then
+            do i = 1, min(size(config_sw%swman), size(self%swman))
+               self%swman(i) = config_sw%swman(i)
+            end do
+         end if
+         if (allocated(config_sw%wscap)) then
+            do i = 1, min(size(config_sw%wscap), size(self%wscap))
+               self%wscap(i) = config_sw%wscap(i)
+            end do
+         end if
+         if (allocated(config_sw%wldip)) then
+            do i = 1, min(size(config_sw%wldip), size(self%wldip))
+               self%wldip(i) = config_sw%wldip(i)
+            end do
+         end if
+         if (allocated(config_sw%intwl)) then
+            do i = 1, min(size(config_sw%intwl), size(self%intwl))
+               self%intwl(i) = config_sw%intwl(i)
+            end do
+         end if
+         ! Note: alphaw/betaw carry post-finalize-normalized values.
+         if (allocated(config_sw%hbweir)) then
+            do i = 1, min(size(config_sw%hbweir), size(self%hbweir))
+               self%hbweir(i) = config_sw%hbweir(i)
+            end do
+         end if
+         if (allocated(config_sw%alphaw)) then
+            do i = 1, min(size(config_sw%alphaw), size(self%alphaw))
+               self%alphaw(i) = config_sw%alphaw(i)
+            end do
+         end if
+         if (allocated(config_sw%betaw)) then
+            do i = 1, min(size(config_sw%betaw), size(self%betaw))
+               self%betaw(i) = config_sw%betaw(i)
+            end do
+         end if
+      end block
+
    end subroutine surfacewater_state_init
 
    !> Zero the intermediate cohort — flzerointr gate.
