@@ -557,7 +557,7 @@
 
 ! --- Nitrogen: crop and soil management
       ! [GR-CROP 2026-05-25] flCropNut retired — see state%crop%common%flCropNut
-      logical :: flTillage = .false.   !! ADR 0020 call-site gate for DoTillage
+      ! [GR-IO 2026-05-25 Phase 5] flTillage retired — readers use (config%soil%swtill == 1)
       ! [GR-TIME 2026-05-25] flSSDI retired — readers use (config%irrigation%swssdi == 1)
       ! [GR-CROP 2026-05-25] Nutrient cluster retired — migrated to module-level
       ! cw_* SAVE in cropwofost_init_mod (cropwofost init+runtime pair scope).
@@ -1291,7 +1291,7 @@
       ! cwout removed  (surfacewater_state_t%cwout)
       ! wls removed    (surfacewater_state_t%wls)
       ! SS-SWST Phase 2 Task 11 C2: hwlman/wlsold removed — state%surfacewater owns them.
-      real(8) owltab(Madr,2*maowl)
+      ! [GR-IO 2026-05-25 Phase 5] owltab retired — adapter writes state%drainage%owltab directly
       ! real(8) qdrd                  ! Moved to drainage_state_t%qdrd (ADR 0031)
       ! hwlman removed (surfacewater_state_t%hwlman)
       ! wlsold removed (surfacewater_state_t%wlsold)

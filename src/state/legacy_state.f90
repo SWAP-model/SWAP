@@ -365,7 +365,7 @@ module legacy_state_mod
       ! [GR-DRA 2026-05-23] impend retired — see state%surfacewater%impend
       ! [GR-DRA 2026-05-23] wlsman retired — see state%surfacewater%wlsman
       ! [GR-DRA 2026-05-23] wlstab retired — see state%surfacewater%wlstab
-      real(real64), allocatable :: owltab(:,:)  !! real(8) qdrd                  !! Moved to drainage_state_t%qdrd (ADR 0031)
+      ! [GR-IO 2026-05-25 Phase 5] owltab retired — adapter writes state%drainage%owltab directly
       ! [GR-CROP 2026-05-25] flCropPrep retired — see state%crop%common%flCropPrep
       ! [GR-CROP 2026-05-25] zPrep/hPrep/MaxPrepDelay/dhPrep retired — see cropwofost_config_t%preparation.
       ! [GR-CROP 2026-05-25] PrepDelay retired — see state%crop%common%PrepDelay

@@ -56,7 +56,11 @@ contains
       !   state%crop%wofost%swbulb, state%crop%grass%swpotrelmf, state%cfg%soil%frost%swfrost,
       !   state%cfg%general%project. `owltab` retained — still used as a CSV-staging buffer
       !   by config_to_variables; this file copies the buffer into state%drainage%owltab.
-      use variables, only : flswapshared, flTillage, owltab
+      ! [GR-IO 2026-05-25 Phase 5] flTillage → (state%cfg%soil%swtill == 1) inline.
+      ! owltab → adapter writes directly to state%drainage%owltab (no bare global).
+      ! flSwapShared retained: hardcoded .false. flag gating SharedSimulation
+      ! calls (a feature-retirement candidate but out of scope for this arc).
+      use variables, only : flSwapShared
       ! [SS-GR-CROP A16] nutrient legacy globals — in WSN modules, not variables.f90
       use Wofost_Soil_Declarations, only: FOM_t, Bio_t, Hum_t, FOM_t0, Bio_t0, Hum_t0, &
                                           cNH4_t, cNO3_t, cNH4_t0, cNO3_t0, cNH4_av, cNO3_av, &
@@ -334,7 +338,7 @@ contains
       flTemperature  => state%timecontrol%flTemperature )
 
    call tillage_init(state%tillage, state%mesh%numlay)  ! SS-TIL T-2
-   if (flTillage) call DoTillage(1, state)
+   if (state%cfg%soil%swtill == 1) call DoTillage(1, state)
    if (state%cfg%irrigation%swssdi == 1) call SSDI_irrigation(1, state)  ! [SS-SWC S-2.12B]
 
 !  Allocate and initialise heat state arrays before SoilWater(1) so that
@@ -372,10 +376,9 @@ contains
    else if (allocated(config%drain%zbotdr)) then
       state%drainage%zbotdr(1:size(config%drain%zbotdr)) = config%drain%zbotdr
    end if
-   ! owltab: populated via CSV loop in config_to_variables.f90 (still uses bare global
-   ! as a staging buffer). nowltab now lives in state%drainage%nowltab.
-   state%drainage%owltab(:,:) = owltab(1:size(state%drainage%owltab,1), &
-                                       1:size(state%drainage%owltab,2))
+   ! [GR-IO 2026-05-25 Phase 5] owltab bare-global staging buffer retired —
+   ! the adapter (config_to_variables.f90) now writes the per-level
+   ! channel water-level tables directly into state%drainage%owltab.
    if (flSolute) call solute_init(state)   ! SS-SLST Phase 2 Task 7: seed state%solute from config-populated globals
 
 !  initialize SurfaceWater management variables
@@ -430,7 +433,9 @@ contains
    subroutine swap_run_step(state, config)
       ! [GR-CROP 2026-05-25] crop legacy reads cut to state%crop%common (flCropNut/
       !   flCropCalendar/flHarvestDay/flCropOutput/swcrp); swfrost via state%cfg%soil%frost.
-      use variables, only : flswapshared, flTillage
+      ! [GR-IO 2026-05-25 Phase 5] flTillage retired — read (state%cfg%soil%swtill == 1).
+      ! flSwapShared retained for SharedSimulation gating (always .false. in practice).
+      use variables, only : flSwapShared
       use cropgrowth_helpers_mod, only: CropOutput  ! GR-CROPWS Phase 0
       use timestep_control_mod, only: fldecdt
       use timecontrol_mod, only: timecontrol_advance, timecontrol_reduce_dt, &
@@ -502,7 +507,7 @@ contains
 
 !        process Meteo data
          call ProcessMeteoDay(state, config)  ! SS-GR-ATM B24: config added
-         if (flTillage) call DoTillage(2, state)
+         if (state%cfg%soil%swtill == 1) call DoTillage(2, state)
 
       end if
 
@@ -606,7 +611,7 @@ contains
          if (flOutput) then
             call SwapOutput(2, state)
             call SoilWaterOutput(2, state, config)   ! [SS-GR-CROPRT A3]
-            if (flTillage) call DoTillage(3, state)
+            if (state%cfg%soil%swtill == 1) call DoTillage(3, state)
             if (flTemperature)   call TemperatureOutput(2, state)
             if (flSolute)        call SoluteOutput(2, state)
             ! [SS-GR-CROPRT A1] AgeTracerOutput(2) dropped — flAgeTracer retired (ADR 0032)
@@ -638,7 +643,8 @@ contains
 
    subroutine swap_close(state, config)
       ! [GR-CROP 2026-05-25] flcropnut/project/swcrp legacy reads cut to state%X
-      use variables, only : flswapshared
+      ! [GR-IO 2026-05-25 Phase 5] flSwapShared retained (SharedSimulation gating)
+      use variables, only : flSwapShared
       use swap_log,  only: log_info
       use management_soil_mod, only: SoilManagement
       use timecontrol_mod, only: itertime_close

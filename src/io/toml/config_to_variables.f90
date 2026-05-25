@@ -332,12 +332,21 @@ contains
             use iso_fortran_env, only: real64
             use csv_reader_mod, only: read_csv_table
             use error_mod, only: error_collection_t
+            use swap_array_dimensions, only: MAOWL
             real(real64), allocatable :: csv_table(:,:)
             type(error_collection_t)  :: csv_errs
             integer :: lev, nrows, k
             character(len=6) :: hdr(2)
             hdr(1) = 'date  '
             hdr(2) = 'level '
+            ! [GR-IO 2026-05-25 Phase 5] write directly to state%drainage%owltab —
+            ! bare-global `owltab` staging buffer retired. drainage_init allocates
+            ! state%drainage%owltab later in startup, but we need it now; pre-allocate
+            ! here on the first per-level CSV load.
+            if (.not. allocated(state%drainage%owltab)) then
+               allocate(state%drainage%owltab(config%drain%nrlevs, 2*MAOWL))
+               state%drainage%owltab = 0.0_real64
+            end if
             do lev = 1, size(config%drain%owltab_file)
                if (len_trim(config%drain%owltab_file(lev)) == 0) cycle
                call read_csv_table(trim(config%drain%owltab_file(lev)), hdr, csv_table, csv_errs)
@@ -346,8 +355,8 @@ contains
                   nrows = size(csv_table, 1)
                   state%drainage%nowltab(lev) = nrows
                   do k = 1, nrows
-                     owltab(lev, 2*k-1) = csv_table(k, 1)  ! date (days since 1900)
-                     owltab(lev, 2*k)   = csv_table(k, 2)  ! channel water level (cm)
+                     state%drainage%owltab(lev, 2*k-1) = csv_table(k, 1)  ! date (days since 1900)
+                     state%drainage%owltab(lev, 2*k)   = csv_table(k, 2)  ! channel water level (cm)
                   end do
                end if
             end do
@@ -421,10 +430,11 @@ contains
       ! [GR-CROP 2026-05-25] till_swtill mirror retired — tillage reads
       ! state%cfg%soil%swtill directly.
       state%crop%irrigation%swssdi = config%irrigation%swssdi   ! [GR-CROP 2026-05-25]
-      flTillage = (config%soil%swtill == 1)
+      ! [GR-IO 2026-05-25 Phase 5] flTillage bare global retired — swap_mod and
+      ! this adapter now read (config%soil%swtill == 1) directly.
       ! [GR-TIME 2026-05-25] flSSDI bare global retired — swap_mod and
       ! timecontrol_mod now read (config%irrigation%swssdi == 1) directly.
-      if (flTillage) call apply_soil_tillage(config%soil%tillage, state%timecontrol%tend, state)
+      if (config%soil%swtill == 1) call apply_soil_tillage(config%soil%tillage, state%timecontrol%tend, state)
       if (config%irrigation%swssdi == 1) &
                      call apply_irrigation_ssdi(config%irrigation%ssdi, &
                                                state%timecontrol%tstart, &

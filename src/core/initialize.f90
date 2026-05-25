@@ -532,7 +532,7 @@
       ! [GR-DRA 2026-05-23] cofintfl/expintfl retired — see state%drainage%{cofintfl,expintfl}
       ! SS-SWST Phase 2 Task 11 C3: cqdrd/cwsupp/cwout/wls removed (state%surfacewater owns them).
       ! All default to 0 in surfacewater_state_t.
-      owltab                = 0.0d0
+      ! [GR-IO 2026-05-25 Phase 5] owltab retired — moved to state%drainage%owltab (allocated by adapter)
       ! SS-SWST Phase 2 Task 11 C3: hwlman/wlsold removed (state%surfacewater owns them, default=0).
       ! qdrd                  = 0.0d0  ! Moved to drainage_state_t — drainage_init handles (ADR 0031)
       ! [SS-TC] flsurfacewater retired to state%timecontrol%flSurfaceWater (ADR 0041)
