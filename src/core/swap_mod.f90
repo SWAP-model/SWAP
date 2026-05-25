@@ -428,12 +428,9 @@ contains
    end subroutine swap_init_from_loaded_config
 
    subroutine swap_run_step(state, config)
-      use variables, only : flswapshared, flcropnut, swfrost, &
-                            ! [SS-GR-CROPRT A1] flagetracer dropped — retired (ADR 0032; always .false.)
-                            flcropcalendar, &
-                            flharvestday, flcropoutput, swcrp, &
-                            ! [GR-FINAL C3] swend dropped: read via state%crop%common%swend (C category, inv. §C)
-                            flTillage, flSSDI
+      ! [GR-CROP 2026-05-25] crop legacy reads cut to state%crop%common (flCropNut/
+      !   flCropCalendar/flHarvestDay/flCropOutput/swcrp); swfrost via state%cfg%soil%frost.
+      use variables, only : flswapshared, flTillage, flSSDI
       use cropgrowth_helpers_mod, only: CropOutput  ! GR-CROPWS Phase 0
       use timestep_control_mod, only: fldecdt
       use timecontrol_mod, only: timecontrol_advance, timecontrol_reduce_dt, &
@@ -520,7 +517,7 @@ contains
       if (flSnow .and. tc_flDayStart) call snow_step(state)  ! SS-TC TC-13
 
 !     calculate reduction for conductivities for frozen conditions
-      if (SwFrost.eq.1) then
+      if (state%cfg%soil%frost%swfrost.eq.1) then
          call FrozenCond(state, config)
       end if
 
@@ -539,7 +536,7 @@ contains
          ! SS-SWST Phase 2: SurfaceWater sets request_smaller_dt; propagate to fldecdt here.
          if (.not.fldecdt .and. flSurfaceWater) call SurfaceWater(2, state, request_smaller_dt)
          if (request_smaller_dt) fldecdt = .true.
-         if (SwFrost.eq.1)                      call FrozenBounds(state, config)
+         if (state%cfg%soil%frost%swfrost.eq.1)                      call FrozenBounds(state, config)
 
 !        calculate SoilWater, incl macropores (headcalc inside may also set fldecdt on non-convergence)
          if (.not.fldecdt) call SoilWater(2, state)
@@ -578,7 +575,7 @@ contains
          if (state%crop%common%flCropNut) call SoilManagement(2, state)
 
 !        calculate potential crop growth
-         if (flCropCalendar) call CropGrowth(2, state%heat%tsoil, state)
+         if (state%crop%common%flCropCalendar) call CropGrowth(2, state%heat%tsoil, state)
 
 !        amendent of crop residues from previous day
          if (state%crop%common%flCropNut) call SoilManagement(5, state)
@@ -587,13 +584,13 @@ contains
          if (state%crop%common%flCropNut) call SoilManagement(3, state)
 
 !        calculate actual crop growth (calculation of actual crop rate and state variables)
-         if (flCropCalendar) call CropGrowth(3, state%heat%tsoil, state)
+         if (state%crop%common%flCropCalendar) call CropGrowth(3, state%heat%tsoil, state)
 
 !        Simulate Soil Nutrient processes
          if (state%crop%common%flCropNut) call SoilManagement(4, state)
 
 !        harvest of crop
-         if (flCropCalendar) call CropGrowth(4, state%heat%tsoil, state)
+         if (state%crop%common%flCropCalendar) call CropGrowth(4, state%heat%tsoil, state)
 
 !        timing statistics : prevent (near) endless simulations
          if (state%timecontrol%flMaxIterTime) call itertime_check(state)  ! [SS-BMI2 Task 4]
@@ -640,9 +637,8 @@ contains
    end subroutine swap_run_step
 
    subroutine swap_close(state, config)
-      use variables, only : flswapshared, flcropnut, project, swcrp
-                            ! [SS-GR-CROPRT A1] flagetracer dropped — retired (ADR 0032; always .false.)
-                            ! [SS-GR-CROPRT C1] swend dropped — global + state field retired (ADR 0009)
+      ! [GR-CROP 2026-05-25] flcropnut/project/swcrp legacy reads cut to state%X
+      use variables, only : flswapshared
       use swap_log,  only: log_info
       use management_soil_mod, only: SoilManagement
       use timecontrol_mod, only: itertime_close
@@ -670,9 +666,9 @@ contains
    if (state%crop%common%flCropNut)                        call SoilManagement(7, state)
 
 !  write okay file for external use
-   call WriteSwapOk(Project)
+   call WriteSwapOk(state%cfg%general%project)
 
-   call log_info('swap', 'Simulation complete for project: ' // trim(project))
+   call log_info('swap', 'Simulation complete for project: ' // trim(state%cfg%general%project))
 
    end subroutine swap_close
 
