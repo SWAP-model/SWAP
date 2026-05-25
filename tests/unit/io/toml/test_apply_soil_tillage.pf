@@ -40,11 +40,15 @@ subroutine build_tillage_test_mesh(state)
    call state%mesh%init(nn, dz_v, z_v, disnod_v, ztopcp_v, zbotcp_v, layer_v)
 end subroutine
 
+! [GR-SEED 2026-05-25 Task 9] apply_soil_tillage retired; tests now call
+! state%tillage%init(til, tend_val, numlay) directly (type-bound interface).
+! numlay=0 is used (Group C arrays unused in these config-seeding tests).
+
 @test
 subroutine test_apply_populates_per_event_globals()
-   ! [GR-CROP 2026-05-25] till_* legacy globals retired — read state%tillage.
+   ! [GR-CROP 2026-05-25] till_* legacy globals retired -- read state%tillage.
+   ! [GR-SEED 2026-05-25 Task 9] call rewritten to state%tillage%init.
    use soil_config_mod, only: soil_tillage_t, soil_tillage_event_t, soil_tillage_type_t
-   use config_to_variables_mod, only: apply_soil_tillage
    use swap_state_mod, only: swap_state_t
    use funit
    use iso_fortran_env, only: real64
@@ -53,8 +57,6 @@ subroutine test_apply_populates_per_event_globals()
    type(swap_state_t) :: state
    real(real64) :: tend_val
 
-   ! Minimal grid for the deferred z-range check via state%mesh.
-   call build_tillage_test_mesh(state)
    tend_val = 36898.0d0   ! 2004-12-31
 
    allocate(til%events(2))
@@ -66,7 +68,7 @@ subroutine test_apply_populates_per_event_globals()
    til%types(1) = soil_tillage_type_t(id=1, rho_cons=1500.0d0, &
                                       rho_tillage=1100.0d0, k_R=0.05d0)
 
-   call apply_soil_tillage(til, tend_val, state)
+   call state%tillage%init(til, tend_val, 0)
 
    @assertEqual(2, state%tillage%Ntill)
    @assertEqual(30.0d0, state%tillage%Z_tillage(1), tolerance=1.0d-9)
@@ -79,9 +81,9 @@ end subroutine
 
 @test
 subroutine test_apply_populates_per_type_globals()
-   ! [GR-CROP 2026-05-25] till_* legacy globals retired — read state%tillage.
+   ! [GR-CROP 2026-05-25] till_* legacy globals retired -- read state%tillage.
+   ! [GR-SEED 2026-05-25 Task 9] call rewritten to state%tillage%init.
    use soil_config_mod, only: soil_tillage_t, soil_tillage_event_t, soil_tillage_type_t
-   use config_to_variables_mod, only: apply_soil_tillage
    use swap_state_mod, only: swap_state_t
    use funit
    use iso_fortran_env, only: real64
@@ -90,7 +92,6 @@ subroutine test_apply_populates_per_type_globals()
    type(swap_state_t) :: state
    real(real64) :: tend_val
 
-   call build_tillage_test_mesh(state)
    tend_val = 36898.0d0
 
    allocate(til%events(1))
@@ -100,7 +101,7 @@ subroutine test_apply_populates_per_type_globals()
    til%types(1) = soil_tillage_type_t(id=1, rho_cons=1500.0d0, &
                                       rho_tillage=1100.0d0, k_R=0.05d0)
 
-   call apply_soil_tillage(til, tend_val, state)
+   call state%tillage%init(til, tend_val, 0)
 
    @assertEqual(1, state%tillage%iType_Tillage(1))
    @assertEqual(1500.0d0, state%tillage%TAB_Rho_cons(1),    tolerance=1.0d-9)
@@ -110,12 +111,12 @@ end subroutine
 
 @test
 subroutine test_apply_iTT1_iTT2_indices_when_two_types()
-   ! [GR-CROP 2026-05-25] till_* legacy globals retired — read state%tillage.
+   ! [GR-CROP 2026-05-25] till_* legacy globals retired -- read state%tillage.
+   ! [GR-SEED 2026-05-25 Task 9] call rewritten to state%tillage%init.
    ! Two events: event 1 is type 1, event 2 is type 2.
    ! Two type-table entries: iType_Tillage = [1, 2].
    ! After the iTT1/iTT2 loop: iTT1(1)=1, iTT2(1)=1, iTT1(2)=2, iTT2(2)=2.
    use soil_config_mod, only: soil_tillage_t, soil_tillage_event_t, soil_tillage_type_t
-   use config_to_variables_mod, only: apply_soil_tillage
    use swap_state_mod, only: swap_state_t
    use funit
    use iso_fortran_env, only: real64
@@ -124,7 +125,6 @@ subroutine test_apply_iTT1_iTT2_indices_when_two_types()
    type(swap_state_t) :: state
    real(real64) :: tend_val
 
-   call build_tillage_test_mesh(state)
    tend_val = 36898.0d0
 
    allocate(til%events(2))
@@ -138,7 +138,7 @@ subroutine test_apply_iTT1_iTT2_indices_when_two_types()
    til%types(2) = soil_tillage_type_t(id=2, rho_cons=1400.0d0, &
                                       rho_tillage=1050.0d0, k_R=0.03d0)
 
-   call apply_soil_tillage(til, tend_val, state)
+   call state%tillage%init(til, tend_val, 0)
 
    ! iTT1/iTT2 arrays are size Ntill (=2).
    ! For j=1 (type 1): iType_Tillage(1)=1, so iTT1(1)=1, iTT2(1)=1.
@@ -151,9 +151,9 @@ end subroutine
 
 @test
 subroutine test_apply_i_n_model_3_allocates_match_arrays()
-   ! [GR-CROP 2026-05-25] till_* legacy globals retired — read state%tillage.
+   ! [GR-CROP 2026-05-25] till_* legacy globals retired -- read state%tillage.
+   ! [GR-SEED 2026-05-25 Task 9] call rewritten to state%tillage%init.
    use soil_config_mod, only: soil_tillage_t, soil_tillage_event_t, soil_tillage_type_t
-   use config_to_variables_mod, only: apply_soil_tillage
    use swap_state_mod, only: swap_state_t
    use funit
    use iso_fortran_env, only: real64
@@ -162,7 +162,6 @@ subroutine test_apply_i_n_model_3_allocates_match_arrays()
    type(swap_state_t) :: state
    real(real64) :: tend_val
 
-   call build_tillage_test_mesh(state)
    tend_val = 36898.0d0
 
    til%i_n_model = 3
@@ -175,7 +174,7 @@ subroutine test_apply_i_n_model_3_allocates_match_arrays()
                                       rho_tillage=1100.0d0, k_R=0.05d0, &
                                       rho_match=1200.0d0, N_match=2.0d0)
 
-   call apply_soil_tillage(til, tend_val, state)
+   call state%tillage%init(til, tend_val, 0)
 
    @assertTrue(allocated(state%tillage%TAB_Rho_match), 'TAB_Rho_match allocated for i_n_model=3')
    @assertTrue(allocated(state%tillage%TAB_N_match),   'TAB_N_match allocated for i_n_model=3')

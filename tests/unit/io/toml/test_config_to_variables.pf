@@ -134,10 +134,11 @@ subroutine test_config_to_variables_soil_with_layer_arrays()
    ! [GR-SEED 2026-05-25 Task 8] swsophy/swinco/bdens/swfrost seeding moved to
    ! state%soilwater%init (called from swap_mod after CalcGrid). This test now
    ! verifies what config_to_variables STILL does for the soil section:
-   !   - apply_soil_tillage call (swtill=1)
    !   - surfacewater cross-writes (pondmx/rsro/rsroexp)
    !   - mesh%numlay derivation from isoillay
    !   - atmosphere%atmin7 and solute Cml writes (swinco=3 block, retained)
+   ! [GR-SEED 2026-05-25 Task 9] apply_soil_tillage also retired from adapter;
+   ! tillage seeding now in state%tillage%init (called from swap_mod).
    ! [GR-FINAL C1] pondini/pond seeded in swap_mod after soilwater_init.
    ! [GR-BH Task 36] cofani global retired — seeded via config in swap_mod.f90.
    ! [GR-SOIL 2026-05-24] swhyst/gwli no longer mirrored to variables — read via config.

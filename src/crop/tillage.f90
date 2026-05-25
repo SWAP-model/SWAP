@@ -6,7 +6,7 @@ module tillage_mod
    use swap_state_mod, only: swap_state_t
 
    ! [GR-CROP 2026-05-25] tillage_mod is `use variables`-free.
-   ! - till_* Group AB → state%tillage (apply_soil_tillage writer).
+   ! - till_* Group AB → state%tillage (seeded by state%tillage%init in swap_mod).
    ! - swtill → state%cfg%soil%swtill (config-direct).
    ! - swsolu → state%cfg%solute%swsolu (declaration retained — still
    !   consumed by src/crop/irrigation.f90 and src/core/timecontrol_mod.f90).

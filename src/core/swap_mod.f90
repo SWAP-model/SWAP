@@ -84,7 +84,7 @@ contains
                                           DMcresbott, Ncresbott, Pcresbott
       use Wofost_Soil_Interface,    only: NdemandSoil, NsupplySoil, Ndemand, Nsupply, LaiCritNupt
       ! [GR-SEED 2026-05-25 Task 8] soilwater_init retired → state%soilwater%init (type-bound); use line removed.
-      use tillage_state_mod, only: tillage_init
+      ! [GR-SEED 2026-05-25 Task 9] tillage_init retired → state%tillage%init (type-bound); use line removed.
       ! [GR-SEED 2026-05-25 Task 7] drainage_init retired → state%drainage%init; use line removed.
       use surfacewater_mod, only: SurfaceWater
       use tillage_mod,   only : DoTillage
@@ -342,7 +342,10 @@ contains
       flSurfaceWater => state%timecontrol%flSurfaceWater, &
       flTemperature  => state%timecontrol%flTemperature )
 
-   call tillage_init(state%tillage, state%mesh%numlay)  ! SS-TIL T-2
+   ! [GR-SEED 2026-05-25 Task 9] tillage_init retired; type-bound init absorbs
+   ! legacy zero-fill + apply_soil_tillage config seeding. The swtill gate is
+   ! inside tillage_state_init (skips Group AB if events not allocated).
+   call state%tillage%init(config%soil%tillage, state%timecontrol%tend, state%mesh%numlay)
    if (state%cfg%soil%swtill == 1) call DoTillage(1, state)
    if (state%cfg%irrigation%swssdi == 1) call SSDI_irrigation(1, state)  ! [SS-SWC S-2.12B]
 

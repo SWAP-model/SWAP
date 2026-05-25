@@ -42,7 +42,9 @@ module config_to_variables_mod
    private
 
    public :: config_to_variables
-   public :: apply_soil_tillage
+   ! [GR-SEED 2026-05-25 Task 9] apply_soil_tillage retired: body moved to
+   ! tillage_state_mod as tillage_state_init (type-bound). parse_iso_date_to_days1900
+   ! also moved there as a private helper (single caller).
    ! [GR-SEED 2026-05-25 Task 4] apply_nutrients + apply_nutrients_events removed:
    ! bodies moved to nutrients_state_mod as seed_nutrients_from_config +
    ! load_nutrients_events; called from state%nutrients%init in swap_mod.
@@ -65,7 +67,7 @@ contains
       use swap_array_dimensions, only: macp
       use swap_state_mod, only: swap_state_t
       use error_mod, only: fatalerr_collected
-      type(swap_config_t), intent(inout), target :: config  ! inout: apply_soil_tillage may mutate config%soil%tillage; target: state%cfg => config pointer
+      type(swap_config_t), intent(inout), target :: config  ! target: state%cfg => config pointer; inout retained for other callee mutations
       type(swap_state_t),  intent(inout)         :: state
 
       integer :: i, n
@@ -114,7 +116,8 @@ contains
       ! (config%soil%swtill == 1) directly.
       ! [GR-TIME 2026-05-25] flSSDI bare global retired — swap_mod/timecontrol_mod read
       ! (config%irrigation%swssdi == 1) directly.
-      if (config%soil%swtill == 1) call apply_soil_tillage(config%soil%tillage, state%timecontrol%tend, state)
+      ! [GR-SEED 2026-05-25 Task 9] Tillage seeding moved to state%tillage%init
+      ! (called from swap_mod after CalcGrid). The swtill==1 gate now lives inside the init.
       ! [GR-SEED 2026-05-25 Task 5] Irrigation seeding moved to state%crop%irrigation%init.
       ! [GR-SEED 2026-05-25 Task 4] apply_nutrients moved to state%nutrients%init.
       ! [GR-SOIL 2026-05-24] gwli legacy mirror dropped — direct config read.
@@ -336,119 +339,10 @@ contains
       end if
    end function strip_crp_toml_suffix
 
-   !> ISO 'YYYY-MM-DD' -> days since 1900 (real(real64)).
-   !! Constructs a toml_datetime from the parsed date components and delegates
-   !! to the existing parse_date_to_days1900 helper in toml_field_helpers_mod.
-   function parse_iso_date_to_days1900(s) result(t)
-      use, intrinsic :: iso_fortran_env, only: real64
-      use tomlf, only: toml_datetime
-      use toml_field_helpers_mod, only: parse_date_to_days1900
-      character(len=*), intent(in) :: s
-      real(real64) :: t
-      type(toml_datetime) :: dtv
-      integer :: y, m, d
-      read(s, '(i4,1x,i2,1x,i2)') y, m, d
-      dtv%date%year  = y
-      dtv%date%month = m
-      dtv%date%day   = d
-      ! Leave dtv%time fields at default (-1) so the conversion treats it as a date-only.
-      t = parse_date_to_days1900(dtv)
-   end function parse_iso_date_to_days1900
-
-   !> Apply [soil.tillage] config to legacy `variables` globals.
-   !! Called from config_to_variables when flTillage is true. Allocates
-   !! per-event and per-type arrays, populates them from the typed config,
-   !! parses event dates to days-since-1900, sets the Ntill+1 sentinel
-   !! (tend + 1), computes Max_Z_tillage and the iTT1/iTT2 first/last-position
-   !! indices. Replaces the deleted Read_Tillage subroutine (Task 5).
-   subroutine apply_soil_tillage(tillage, tend, state)
-      ! [GR-CROP 2026-05-25] writes redirected from variables.f90 till_* legacy
-      ! globals to state%tillage Group AB fields. The till_* declarations are
-      ! retired in this commit; this subroutine is the only writer.
-      use, intrinsic :: iso_fortran_env, only: real64
-      use soil_config_mod, only: soil_tillage_t
-      use error_mod, only: fatalerr_collected
-      use swap_state_mod, only: swap_state_t
-      type(soil_tillage_t), intent(in)    :: tillage
-      real(real64),         intent(in)    :: tend
-      type(swap_state_t),   intent(inout) :: state   ! [GR-BH Task 35] replaces NumNod/zbotcp globals
-
-      integer :: i, j
-
-      associate(tl => state%tillage)
-
-      tl%i_n_model = tillage%i_n_model
-      tl%iRedist   = tillage%iRedist
-
-      tl%Ntill  = size(tillage%events)
-      tl%Ntypes = size(tillage%types)
-
-      ! Per-event arrays (sentinel: Date_tillage(Ntill+1) = tend + 1).
-      if (allocated(tl%Date_tillage)) deallocate(tl%Date_tillage); allocate(tl%Date_tillage(tl%Ntill+1))
-      if (allocated(tl%Z_tillage))    deallocate(tl%Z_tillage);    allocate(tl%Z_tillage(tl%Ntill))
-      if (allocated(tl%I_tillage))    deallocate(tl%I_tillage);    allocate(tl%I_tillage(tl%Ntill))
-      if (allocated(tl%Type_Tillage)) deallocate(tl%Type_Tillage); allocate(tl%Type_Tillage(tl%Ntill))
-
-      do i = 1, tl%Ntill
-         tl%Z_tillage(i)    = tillage%events(i)%z
-         tl%I_tillage(i)    = tillage%events(i)%intensity
-         tl%Type_Tillage(i) = tillage%events(i)%type_id
-         tl%Date_tillage(i) = parse_iso_date_to_days1900(tillage%events(i)%date)
-      end do
-      tl%Date_tillage(tl%Ntill + 1) = tend + 1.0_real64
-
-      ! Deferred z-range check (validator can't see numnod / zbotcp).
-      ! [GR-BH Task 35] NumNod/zbotcp globals replaced by state%mesh fields.
-      ! Guard: mesh is not yet populated when called from config_to_variables
-      ! (CalcGrid runs after); skip z-range check until mesh is built.
-      if (state%mesh%numnod > 0 .and. allocated(state%mesh%zbotcp)) then
-         do i = 1, tl%Ntill
-            if (tl%Z_tillage(i) < 0.0_real64 .or. &
-                tl%Z_tillage(i) > abs(state%mesh%zbotcp(state%mesh%numnod))) then
-               call fatalerr_collected('apply_soil_tillage', &
-                  'Z_tillage value is outside the model grid depth range')
-            end if
-         end do
-      end if
-
-      ! Per-type arrays.
-      if (allocated(tl%iType_Tillage))   deallocate(tl%iType_Tillage);   allocate(tl%iType_Tillage(tl%Ntypes))
-      if (allocated(tl%TAB_Rho_cons))    deallocate(tl%TAB_Rho_cons);    allocate(tl%TAB_Rho_cons(tl%Ntypes))
-      if (allocated(tl%TAB_Rho_tillage)) deallocate(tl%TAB_Rho_tillage); allocate(tl%TAB_Rho_tillage(tl%Ntypes))
-      if (allocated(tl%TAB_K_R_cons))    deallocate(tl%TAB_K_R_cons);    allocate(tl%TAB_K_R_cons(tl%Ntypes))
-
-      do i = 1, tl%Ntypes
-         tl%iType_Tillage(i)   = tillage%types(i)%id
-         tl%TAB_Rho_cons(i)    = tillage%types(i)%rho_cons
-         tl%TAB_Rho_tillage(i) = tillage%types(i)%rho_tillage
-         tl%TAB_K_R_cons(i)    = tillage%types(i)%k_R
-      end do
-
-      if (tl%i_n_model == 3) then
-         if (allocated(tl%TAB_Rho_match)) deallocate(tl%TAB_Rho_match); allocate(tl%TAB_Rho_match(tl%Ntypes))
-         if (allocated(tl%TAB_N_match))   deallocate(tl%TAB_N_match);   allocate(tl%TAB_N_match(tl%Ntypes))
-         do i = 1, tl%Ntypes
-            tl%TAB_Rho_match(i) = tillage%types(i)%rho_match
-            tl%TAB_N_match(i)   = tillage%types(i)%N_match
-         end do
-      end if
-
-      tl%Max_Z_tillage = maxval(tl%Z_tillage(1:tl%Ntill))
-
-      ! iTT1 / iTT2: first/last position per tillage type in iType_Tillage.
-      ! Replicates the loop from the legacy Read_Tillage subroutine verbatim.
-      if (allocated(tl%iTT1)) deallocate(tl%iTT1); allocate(tl%iTT1(tl%Ntill)); tl%iTT1 = 0
-      if (allocated(tl%iTT2)) deallocate(tl%iTT2); allocate(tl%iTT2(tl%Ntill)); tl%iTT2 = 0
-      do j = 1, tl%Ntill
-         do i = 1, tl%Ntypes
-            if (tl%iTT1(j) == 0 .and. tl%iType_Tillage(i) == j) tl%iTT1(j) = i
-            if (tl%iTT1(j) >  0 .and. tl%iType_Tillage(i) == j) tl%iTT2(j) = i
-         end do
-      end do
-
-      end associate
-   end subroutine apply_soil_tillage
-
+   ! [GR-SEED 2026-05-25 Task 9] parse_iso_date_to_days1900 helper relocated to
+   ! tillage_state_mod as a private helper (single caller was apply_soil_tillage).
+   ! apply_soil_tillage body relocated to tillage_state_mod as tillage_state_init
+   ! (type-bound). Both are retired from this adapter.
 
    ! [GR-SEED 2026-05-25 Task 4] apply_nutrients + apply_nutrients_events bodies
    ! relocated to nutrients_state_mod as seed_nutrients_from_config +

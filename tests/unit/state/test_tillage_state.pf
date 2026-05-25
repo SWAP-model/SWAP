@@ -1,19 +1,23 @@
-! Tests for tillage_state_t — typed state record for the tillage
+! Tests for tillage_state_t -- typed state record for the tillage
 ! subsystem (ADR 0039, T-1).
 !
 ! Type layout:
 !   tillage_state_t:
-!     Group C — 7 per-layer allocatable real(real64) arrays (sized numlay)
-!     Group D — 3 per-step real(real64) scalars  (default 0.0)
-!     Group E — 3 init-once integer fields        (default 0)
+!     Group C -- 7 per-layer allocatable real(real64) arrays (sized numlay)
+!     Group D -- 3 per-step real(real64) scalars  (default 0.0)
+!     Group E -- 3 init-once integer fields        (default 0)
 !
-! tillage_init(tl, numlay) allocates Group C arrays, zeroes all fields.
+! [GR-SEED 2026-05-25 Task 9] tillage_init(tl, numlay) promoted to type-bound
+! tl%init(config_tillage, tend, numlay). Tests use a tl_init_minimal helper
+! (analogous to sw_init_minimal in test_soilwater_state.pf) that passes a
+! default soil_tillage_t (no events allocated) so only Group C/D/E are
+! initialised, matching the former zero-fill-only behaviour.
 !
 ! See docs/superpowers/specs/2026-05-12-state-migration-tillage-design.md
 !     docs/superpowers/plans/2026-05-12-tillage-state-migration.md
 
 ! =============================================================================
-! Test 1: Default values — scalars zero, allocatables NOT allocated
+! Test 1: Default values -- scalars zero, allocatables NOT allocated
 ! =============================================================================
 @test
 subroutine test_tillage_state_defaults()
@@ -32,7 +36,7 @@ subroutine test_tillage_state_defaults()
    @assertEqual(0, tl%MaxNumSoilCP)
    @assertEqual(0, tl%iTill)
 
-   ! Group C arrays must NOT be allocated before tillage_init
+   ! Group C arrays must NOT be allocated before init
    @assertFalse(allocated(tl%Rho_tillage))
    @assertFalse(allocated(tl%Rho_cons))
    @assertFalse(allocated(tl%Rho_last))
@@ -43,17 +47,17 @@ subroutine test_tillage_state_defaults()
 end subroutine test_tillage_state_defaults
 
 ! =============================================================================
-! Test 2: tillage_init allocates 7 arrays sized numlay, all zero-valued
+! Test 2: init allocates 7 arrays sized numlay, all zero-valued
 ! =============================================================================
 @test
 subroutine test_tillage_init_allocates_arrays()
    use funit
    use iso_fortran_env, only: real64
-   use tillage_state_mod, only: tillage_state_t, tillage_init
+   use tillage_state_mod, only: tillage_state_t
    type(tillage_state_t) :: tl
    integer, parameter :: N = 5
 
-   call tillage_init(tl, N)
+   call tl_init_minimal(tl, N)
 
    ! All Group C arrays must be allocated with size N
    @assertTrue(allocated(tl%Rho_tillage))
@@ -83,24 +87,24 @@ subroutine test_tillage_init_allocates_arrays()
 end subroutine test_tillage_init_allocates_arrays
 
 ! =============================================================================
-! Test 3: Re-calling tillage_init with different numlay reallocates correctly
+! Test 3: Re-calling init with different numlay reallocates correctly
 ! =============================================================================
 @test
 subroutine test_tillage_init_reallocation()
    use funit
    use iso_fortran_env, only: real64
-   use tillage_state_mod, only: tillage_state_t, tillage_init
+   use tillage_state_mod, only: tillage_state_t
    type(tillage_state_t) :: tl
 
    ! First init with 5
-   call tillage_init(tl, 5)
+   call tl_init_minimal(tl, 5)
    @assertEqual(5, size(tl%Rho_tillage))
 
    ! Seed one array with non-zero values to confirm reinit zeroes them
    tl%Rho_tillage = 1.5_real64
 
-   ! Re-init with 10 — must reallocate and zero
-   call tillage_init(tl, 10)
+   ! Re-init with 10 -- must reallocate and zero
+   call tl_init_minimal(tl, 10)
 
    @assertEqual(10, size(tl%Rho_tillage))
    @assertEqual(10, size(tl%Rho_cons))
@@ -116,7 +120,6 @@ subroutine test_tillage_state_aggregator_roundtrip()
    use funit
    use iso_fortran_env, only: real64
    use swap_state_mod,   only: swap_state_t
-   use tillage_state_mod, only: tillage_init
    type(swap_state_t) :: state
 
    ! Integer cursor round-trip
@@ -139,7 +142,7 @@ subroutine test_tillage_state_aggregator_roundtrip()
    @assertEqual(0.25_real64, state%tillage%sumAvail2, 1.0e-12_real64)
 
    ! Array round-trip via aggregator
-   call tillage_init(state%tillage, 4)
+   call tl_init_minimal(state%tillage, 4)
    state%tillage%Rho_tillage(2) = 1.3_real64
    state%tillage%K_R_cons(4)    = 0.05_real64
 
@@ -154,11 +157,11 @@ end subroutine test_tillage_state_aggregator_roundtrip
 subroutine test_tillage_state_two_instances_independent()
    use funit
    use iso_fortran_env, only: real64
-   use tillage_state_mod, only: tillage_state_t, tillage_init
+   use tillage_state_mod, only: tillage_state_t
    type(tillage_state_t) :: tl1, tl2
 
-   call tillage_init(tl1, 3)
-   call tillage_init(tl2, 3)
+   call tl_init_minimal(tl1, 3)
+   call tl_init_minimal(tl2, 3)
 
    ! Write to tl1
    tl1%iTill         = 5
@@ -180,17 +183,17 @@ subroutine test_tillage_state_two_instances_independent()
 end subroutine test_tillage_state_two_instances_independent
 
 ! =============================================================================
-! Test 6: tillage_init zeroes scalars even when pre-loaded non-zero
+! Test 6: init zeroes scalars even when pre-loaded non-zero
 ! =============================================================================
 @test
 subroutine test_tillage_init_zeroes_scalars()
    use funit
    use iso_fortran_env, only: real64
-   use tillage_state_mod, only: tillage_state_t, tillage_init
+   use tillage_state_mod, only: tillage_state_t
    type(tillage_state_t) :: tl
 
    ! Pre-load via first init then mutate
-   call tillage_init(tl, 4)
+   call tl_init_minimal(tl, 4)
    tl%sumDWC        = 3.7_real64
    tl%sumAvail1     = 0.6_real64
    tl%sumAvail2     = 0.4_real64
@@ -198,8 +201,8 @@ subroutine test_tillage_init_zeroes_scalars()
    tl%MaxNumSoilCP  = 8
    tl%iTill         = 2
 
-   ! Re-initialise — all scalars must be reset to zero
-   call tillage_init(tl, 4)
+   ! Re-initialise -- all scalars must be reset to zero
+   call tl_init_minimal(tl, 4)
 
    @assertEqual(0.0_real64, tl%sumDWC,    1.0e-12_real64)
    @assertEqual(0.0_real64, tl%sumAvail1, 1.0e-12_real64)
@@ -208,3 +211,19 @@ subroutine test_tillage_init_zeroes_scalars()
    @assertEqual(0, tl%MaxNumSoilCP)
    @assertEqual(0, tl%iTill)
 end subroutine test_tillage_init_zeroes_scalars
+
+! =============================================================================
+! Helper: minimal init that only exercises Group C/D/E (no config seeding).
+! Passes a default soil_tillage_t (events unallocated) so the Group AB block
+! in tillage_state_init is skipped. Analogous to sw_init_minimal.
+! =============================================================================
+subroutine tl_init_minimal(tl, numlay)
+   use tillage_state_mod, only: tillage_state_t
+   use soil_config_mod,   only: soil_tillage_t
+   use iso_fortran_env,   only: real64
+   type(tillage_state_t), intent(inout) :: tl
+   integer,               intent(in)    :: numlay
+   type(soil_tillage_t) :: cfg   ! defaults: events unallocated -> Group AB skipped
+   real(real64), parameter :: tend = 36524.0_real64   ! dummy: 2000-12-31
+   call tl%init(cfg, tend, numlay)
+end subroutine tl_init_minimal
