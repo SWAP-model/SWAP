@@ -60,26 +60,12 @@
 
       ! [SS-GR-FINAL D1] ex_tlast retired — handle_exchange dead; 0 consumers
       
-      ! Oxygen stress persistent state (moved from O2_pars module and OxygenStress subroutine)
-      real(8)   o2_w_root          ! Dry weight per root length (kg/m)
-      real(8)   o2_w_root_z0       ! Root weight at depth
-      real(8)   o2_soil_temp       ! Soil temperature (K)
-      real(8)   o2_sat_water_cont  ! Saturated water content
-      real(8)   o2_gas_filled_porosity ! Gas-filled porosity
-      real(8)   o2_d_o2inwater     ! O2 diffusion in water
-      real(8)   o2_d_root          ! Diffusion in root
-      real(8)   o2_d_soil          ! Soil diffusion
-      real(8)   o2_perc_org_mat    ! Organic matter percentage
-      real(8)   o2_soil_density    ! Soil density (kg/m3)
-      real(8)   o2_depth           ! Compartment thickness (m)
-      real(8)   o2_shape_factor_microbialr ! Shape factor microbial resp
-      real(8)   o2_root_radius     ! Root radius (m)
-      real(8)   o2_r_microbial_z0  ! Microbial respiration rate
-      real(8)   o2_waterfilm_thickness ! Water film thickness
-      real(8)   o2_bunsencoeff     ! Bunsen coefficient
-      real(8)   o2_c_min_micro     ! Min O2 for microbial resp
-      real(8)   o2_c_macro         ! Macropore O2 conc
-      real(8)   o2_ctopnode        ! Top node O2 conc
+      ! [GR-CROP 2026-05-25] O2_pars workspace cluster retired — w_root,
+      ! w_root_z0, soil_temp, sat_water_cont, gas_filled_porosity,
+      ! d_o2inwater, d_root, d_soil, perc_org_mat, soil_density, depth,
+      ! shape_factor_microbialr, root_radius, r_microbial_z0,
+      ! waterfilm_thickness, bunsencoeff, c_min_micro, c_macro, ctopnode
+      ! all live on state%crop%oxygen.
       ! [SS-GR-FINAL D1] o2_initialized retired — 0 consumers (o2_ini_stress is the one with consumers)
       
       ! [SS-BMI2 Task 5] retired 2026-05-13 — moved to state%timecontrol (ADR 0041)

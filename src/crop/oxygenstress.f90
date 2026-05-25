@@ -63,22 +63,20 @@
 !        in their calls. This has not yet been implemented.
     
 module O2_pars
-   ! ## MH: O2_pars module provides access to oxygen stress variables
-   ! Phase 1 scaffolding: variables now stored in variables module with o2_ prefix
-   ! This module provides the original names as aliases for backward compatibility
-   ! [SS-GR-FINAL B6] DEFERRED: O2_pars module aliases — all o2_* SAVE-state needs oxygenstress_state_t; Phase C3
-   use variables, only: c_mroot,f_senes,max_resp_factor,q10_root,q10_microbial,shape_factor_rootr,specific_resp_humus, &  ! [GR-BH C7] ztopcp->state%mesh%ztopcp; DEFERRED: o2_* SAVE state
-                        ! Oxygen stress persistent state aliases (original_name => module_name)
-                        w_root => o2_w_root, w_root_z0 => o2_w_root_z0, &
-                        soil_temp => o2_soil_temp, sat_water_cont => o2_sat_water_cont, &
-                        gas_filled_porosity => o2_gas_filled_porosity, d_o2inwater => o2_d_o2inwater, &
-                        d_root => o2_d_root, d_soil => o2_d_soil, perc_org_mat => o2_perc_org_mat, &
-                        soil_density => o2_soil_density, depth => o2_depth, &
-                        shape_factor_microbialr => o2_shape_factor_microbialr, root_radius => o2_root_radius, &
-                        r_microbial_z0 => o2_r_microbial_z0, waterfilm_thickness => o2_waterfilm_thickness, &
-                        bunsencoeff => o2_bunsencoeff, c_min_micro => o2_c_min_micro, &
-                        c_macro => o2_c_macro, ctopnode => o2_ctopnode
+   ! [GR-CROP 2026-05-25] O2_pars formerly aliased ~19 bare o2_* legacy
+   ! globals (workspace) plus 7 config-derived workspace globals via
+   ! `original_name => o2_*` renames inside variables.f90. All of those
+   ! were migrated to state%crop%oxygen — the workspace lives on the
+   ! crop_oxygen_state_t sub-record.
+   !
+   ! O2_pars now exposes a single module-level pointer to the active
+   ! state record so that SOLVE / ZBREND / myfunc can share state across
+   ! calls without rewriting the ZBREND function-pointer plumbing.
+   ! OxygenStress sets `current_state` at entry; myfunc reads workspace
+   ! via current_state%crop%oxygen%X.
+   use swap_state_mod, only: swap_state_t
    implicit none
+   type(swap_state_t), pointer :: current_state => null()
 end module O2_pars
 
 !> Oxygen stress routines and helpers.
@@ -113,21 +111,26 @@ contains
                            rid, w_root_ss, &  ! q10/rmr/rfsetb/rdctb retired
                            ! DEFERRED: tsoil — heat staging buffer; tsoil migration pending
                            tsoil, &
-                           ! DEFERRED: c_mroot/f_senes/q10_root/q10_microbial/shape_factor_rootr/specific_resp_humus — O2 config; Phase C3
+                           ! Cluster C — cross-file inbound legacy globals (writers in
+                           ! cropfixed_init/runtime, cropgrass_init); seeded into
+                           ! state%crop%oxygen%X at the top of OxygenStress and read
+                           ! from state thereafter until those sub-arcs migrate.
                            c_mroot, f_senes, q10_root, q10_microbial, &
                            shape_factor_rootr, specific_resp_humus
                            ! [GR-CROP 2026-05-25] o2_ini_stress/o2_d_soil_term1/o2_d_soil_term2/o2_gfp100/
                            ! o2_capac_term/o2_nmin1/o2_mplus1 — O2 SAVE state migrated to state%crop%oxygen.
-      use O2_pars, only: w_root,w_root_z0, soil_temp, sat_water_cont,gas_filled_porosity, d_o2inwater,d_root,        &
-                         perc_org_mat,soil_density,depth, shape_factor_microbialr,root_radius, waterfilm_thickness,  &
-                         bunsencoeff, c_min_micro, c_macro,ctopnode,r_microbial_z0, d_soil
+                           ! [GR-CROP 2026-05-25] O2_pars workspace aliases retired —
+                           ! all 19 fields live on state%crop%oxygen.
+      use O2_pars, only: current_state
       use array_utils, only: afgen
       implicit none
 
 ! --- SS-HEAT Phase 2 Task 6: optional state for reading tsoil from state%heat.
-! --- [GR-CROP 2026-05-25] state is now intent(inout) — persisted SAVE-state
-!     and per-call workspace live on state%crop%oxygen.
-      type(swap_state_t), optional, intent(inout) :: state
+! --- [GR-CROP 2026-05-25] state is now intent(inout), target — persisted
+!     SAVE-state and per-call workspace live on state%crop%oxygen, and the
+!     module-level O2_pars current_state pointer aliases this argument so
+!     SOLVE/ZBREND/myfunc can reach the workspace through the same record.
+      type(swap_state_t), optional, target, intent(inout) :: state
 
 ! --- local
       integer glit,lay,node,i,j
@@ -155,6 +158,55 @@ contains
       ! Local aliases are loaded from module variables with o2_ prefix after initialization
       real(8), dimension(macp)   :: d_soil_term1, d_soil_term2, gfp100
       real(8), dimension(macp)   :: Capac_term, Nmin1, Mplus1
+
+      ! [GR-CROP 2026-05-25] Workspace + cluster-C seeds for state%crop%oxygen.
+      ! Set the module-level state pointer so SOLVE/ZBREND/myfunc can reach
+      ! the same workspace without rewriting the ZBREND function-pointer ABI.
+      current_state => state
+      ! Cluster C (config-derived workspace) — cross-file legacy globals
+      ! are still written by cropfixed_init/cropfixed_runtime/cropgrass_init.
+      ! Seed the state copy at entry; in-routine reads use state%crop%oxygen.
+      state%crop%oxygen%max_resp_factor     = max_resp_factor
+      state%crop%oxygen%c_mroot             = c_mroot
+      state%crop%oxygen%f_senes             = f_senes
+      state%crop%oxygen%q10_root            = q10_root
+      state%crop%oxygen%q10_microbial       = q10_microbial
+      state%crop%oxygen%specific_resp_humus = specific_resp_humus
+      state%crop%oxygen%shape_factor_rootr  = shape_factor_rootr
+
+      ! [GR-CROP 2026-05-25] Workspace aliases mapped onto state%crop%oxygen.
+      ! Replaces the original `use O2_pars, only: w_root, ...` rename block
+      ! (which itself aliased o2_* bare globals in variables.f90). All
+      ! reads/writes route through state — the workspace travels with the
+      ! state record across calls.
+      associate( &
+         w_root              => state%crop%oxygen%w_root,              &
+         w_root_z0           => state%crop%oxygen%w_root_z0,           &
+         soil_temp           => state%crop%oxygen%soil_temp,           &
+         sat_water_cont      => state%crop%oxygen%sat_water_cont,      &
+         gas_filled_porosity => state%crop%oxygen%gas_filled_porosity, &
+         d_o2inwater         => state%crop%oxygen%d_o2inwater,         &
+         d_root              => state%crop%oxygen%d_root,              &
+         d_soil              => state%crop%oxygen%d_soil,              &
+         perc_org_mat        => state%crop%oxygen%perc_org_mat,        &
+         soil_density        => state%crop%oxygen%soil_density,        &
+         depth               => state%crop%oxygen%depth,               &
+         shape_factor_microbialr => state%crop%oxygen%shape_factor_microbialr, &
+         root_radius         => state%crop%oxygen%root_radius,         &
+         r_microbial_z0      => state%crop%oxygen%r_microbial_z0,      &
+         waterfilm_thickness => state%crop%oxygen%waterfilm_thickness, &
+         bunsencoeff         => state%crop%oxygen%bunsencoeff,         &
+         c_min_micro         => state%crop%oxygen%c_min_micro,         &
+         c_macro             => state%crop%oxygen%c_macro,             &
+         ctopnode            => state%crop%oxygen%ctopnode,            &
+         c_mroot             => state%crop%oxygen%c_mroot,             &
+         f_senes             => state%crop%oxygen%f_senes,             &
+         q10_root            => state%crop%oxygen%q10_root,            &
+         q10_microbial       => state%crop%oxygen%q10_microbial,       &
+         specific_resp_humus => state%crop%oxygen%specific_resp_humus, &
+         shape_factor_rootr  => state%crop%oxygen%shape_factor_rootr,  &
+         max_resp_factor     => state%crop%oxygen%max_resp_factor      &
+      )
 
 !## MH : some initial calculations
       if (state%crop%oxygen%ini_stress) then
@@ -373,11 +425,12 @@ contains
           endif
       
       endif !if (gas_filled_porosity .lt. 1.0d-6) !RB20131216 goto removed
-      
+
 ! --- store value for output results
       call FillOxygenStress2 ()
+      end associate     ! [GR-CROP 2026-05-25] state%crop%oxygen workspace aliases
       return
-      
+
    contains
    
    subroutine calc_ini_pars (numnod)
@@ -404,8 +457,8 @@ contains
                                 state%soilwater%vg_params(i), &
                                 state%soilwater%iHWCKmodel(state%soilwater%layer(i)), &
                                 i, state%soilwater)               ! [SS-GR-UTILS Task 5]
-      sat_water_cont  = state%soilwater%vg_params(i)%thetas                                           ! [SS-GR-UTILS Task 15]
-      gfp100(i)       = sat_water_cont - theta100
+      state%crop%oxygen%sat_water_cont = state%soilwater%vg_params(i)%thetas         ! [GR-CROP 2026-05-25]
+      gfp100(i)       = state%crop%oxygen%sat_water_cont - theta100                  ! [GR-CROP 2026-05-25]
       campbell_b      = (log10h500-log10h100) / (dlog10(theta100)-dlog10(theta500))
       d_soil_term1(i) = 2.0d0*(gfp100(i)**3)+0.04d0*gfp100(i)
       d_soil_term2(i) = 2.0d0+3.0d0/campbell_b
@@ -418,9 +471,9 @@ contains
       Mplus1(i)       = state%soilwater%vg_params(i)%mpar + 1.0d0                                        ! [SS-GR-UTILS Task 15]
    end do
 ! --- microbial respiration calculated from organic matter content in actual soil compartment; keep this value fixed
-   shape_factor_microbialr = 0.9d0 
+   state%crop%oxygen%shape_factor_microbialr = 0.9d0          ! [GR-CROP 2026-05-25]
 ! --- microbial respiration calculated from organic matter content in actual soil compartment; keep this value fixed
-   shape_factor_rootr = 0.9d0 
+   state%crop%oxygen%shape_factor_rootr      = 0.9d0          ! [GR-CROP 2026-05-25]
    return
    end subroutine calc_ini_pars
    
@@ -537,9 +590,12 @@ contains
       
       subroutine GET_MAX_RESP_FACTOR (max_resp_factor_gmrf, state)
       ! [GR-CROP Phase B/8] state arg added; tav → state%atmosphere%Tav (closes GR-ATM B.5 deferral).
+      ! [GR-CROP 2026-05-25] max_resp_factor read for the static-crop branch
+      ! now comes from state%crop%oxygen%max_resp_factor (seeded at OxygenStress
+      ! entry from the legacy global written by cropfixed_init/runtime).
       use variables, only: &                                               ! [SS-GR-FINAL B6] residuals — all DEFERRED
                            ! DEFERRED: icrop — active crop schedule global; Phase C3
-                           icrop, max_resp_factor, &   ! croptype → state%crop%common
+                           icrop, &
                            ! q10/rmr/rml/rms/rmo/rfsetb/cvl/cvs/cvo/cvr/frtb/fltb/fstb/fotb retired
                            ! DEFERRED: rid/idregr/daycrop — active crop dynamics; Phase C3; dvs retired
                            rid, daycrop  ! idregr retired
@@ -556,10 +612,10 @@ contains
       real(8) fr_gmrf,fl_gmrf,fs_gmrf,fo_gmrf   
       real(8) cvf_gmrf
       real(8) Froots, Rg_roots,Rm_roots,Max_resp_factor_gmrf        
-! --- static crop        
+! --- static crop
 ! --- static crop: max_resp_factor is given in the input file
       if (state%crop%common%croptype(icrop) .eq. 1) then
-        max_resp_factor_gmrf = max_resp_factor
+        max_resp_factor_gmrf = state%crop%oxygen%max_resp_factor          ! [GR-CROP 2026-05-25]
       endif !if (state%crop%common%croptype(icrop) .eq. 1)
 
 ! --- dynamic crop: max_resp_factor is calculated following the procedure
@@ -1156,10 +1212,10 @@ contains
       end
 
       real(8) function SOLVE (xi,accuracy)
-     
-      use O2_pars
+
+      use O2_pars, only: current_state
       implicit none
-      
+
       real(8) xiplus1,ximin1
       real(8) delta
       real(8) xi,accuracy
@@ -1171,7 +1227,39 @@ contains
 !      logical, parameter :: UseZBREND = .false.
       logical, parameter :: UseZBREND = .true.
       real(8)  :: a, b, Dif_a, Dif_b
-      
+
+      ! [GR-CROP 2026-05-25] Workspace aliases onto state%crop%oxygen (the
+      ! current_state pointer is set by OxygenStress at entry). Replaces the
+      ! original `use O2_pars` rename block that aliased o2_* bare globals.
+      associate( &
+         w_root              => current_state%crop%oxygen%w_root,              &
+         w_root_z0           => current_state%crop%oxygen%w_root_z0,           &
+         soil_temp           => current_state%crop%oxygen%soil_temp,           &
+         sat_water_cont      => current_state%crop%oxygen%sat_water_cont,      &
+         gas_filled_porosity => current_state%crop%oxygen%gas_filled_porosity, &
+         d_o2inwater         => current_state%crop%oxygen%d_o2inwater,         &
+         d_root              => current_state%crop%oxygen%d_root,              &
+         d_soil              => current_state%crop%oxygen%d_soil,              &
+         perc_org_mat        => current_state%crop%oxygen%perc_org_mat,        &
+         soil_density        => current_state%crop%oxygen%soil_density,        &
+         depth               => current_state%crop%oxygen%depth,               &
+         shape_factor_microbialr => current_state%crop%oxygen%shape_factor_microbialr, &
+         root_radius         => current_state%crop%oxygen%root_radius,         &
+         r_microbial_z0      => current_state%crop%oxygen%r_microbial_z0,      &
+         waterfilm_thickness => current_state%crop%oxygen%waterfilm_thickness, &
+         bunsencoeff         => current_state%crop%oxygen%bunsencoeff,         &
+         c_min_micro         => current_state%crop%oxygen%c_min_micro,         &
+         c_macro             => current_state%crop%oxygen%c_macro,             &
+         ctopnode            => current_state%crop%oxygen%ctopnode,            &
+         c_mroot             => current_state%crop%oxygen%c_mroot,             &
+         f_senes             => current_state%crop%oxygen%f_senes,             &
+         q10_root            => current_state%crop%oxygen%q10_root,            &
+         q10_microbial       => current_state%crop%oxygen%q10_microbial,       &
+         specific_resp_humus => current_state%crop%oxygen%specific_resp_humus, &
+         shape_factor_rootr  => current_state%crop%oxygen%shape_factor_rootr,  &
+         max_resp_factor     => current_state%crop%oxygen%max_resp_factor      &
+      )
+
       if (UseZBREND) then
 ! ## MH: start 
          a     = 0.0d0 ! 1.0d-6
@@ -1332,6 +1420,8 @@ contains
       return
 
       end if ! (UseZBREND)
+
+      end associate     ! [GR-CROP 2026-05-25] state%crop%oxygen workspace aliases
 
       end function SOLVE
 
@@ -1719,8 +1809,37 @@ contains
    END
 
    real(8) function myfunc(x)
-   use O2_pars
+   ! [GR-CROP 2026-05-25] Reads workspace via state%crop%oxygen through the
+   ! O2_pars current_state pointer (set by OxygenStress at entry).
+   use O2_pars, only: current_state
    real(8) :: x
+   associate( &
+      w_root              => current_state%crop%oxygen%w_root,              &
+      w_root_z0           => current_state%crop%oxygen%w_root_z0,           &
+      soil_temp           => current_state%crop%oxygen%soil_temp,           &
+      sat_water_cont      => current_state%crop%oxygen%sat_water_cont,      &
+      gas_filled_porosity => current_state%crop%oxygen%gas_filled_porosity, &
+      d_o2inwater         => current_state%crop%oxygen%d_o2inwater,         &
+      d_root              => current_state%crop%oxygen%d_root,              &
+      d_soil              => current_state%crop%oxygen%d_soil,              &
+      perc_org_mat        => current_state%crop%oxygen%perc_org_mat,        &
+      soil_density        => current_state%crop%oxygen%soil_density,        &
+      depth               => current_state%crop%oxygen%depth,               &
+      shape_factor_microbialr => current_state%crop%oxygen%shape_factor_microbialr, &
+      root_radius         => current_state%crop%oxygen%root_radius,         &
+      r_microbial_z0      => current_state%crop%oxygen%r_microbial_z0,      &
+      waterfilm_thickness => current_state%crop%oxygen%waterfilm_thickness, &
+      bunsencoeff         => current_state%crop%oxygen%bunsencoeff,         &
+      c_min_micro         => current_state%crop%oxygen%c_min_micro,         &
+      c_macro             => current_state%crop%oxygen%c_macro,             &
+      ctopnode            => current_state%crop%oxygen%ctopnode,            &
+      c_mroot             => current_state%crop%oxygen%c_mroot,             &
+      f_senes             => current_state%crop%oxygen%f_senes,             &
+      q10_root            => current_state%crop%oxygen%q10_root,            &
+      q10_microbial       => current_state%crop%oxygen%q10_microbial,       &
+      specific_resp_humus => current_state%crop%oxygen%specific_resp_humus, &
+      shape_factor_rootr  => current_state%crop%oxygen%shape_factor_rootr   &
+   )
       call MICRO (c_mroot,w_root,f_senes,q10_root,soil_temp,            &
      &                 sat_water_cont,gas_filled_porosity,              &
      &                 d_o2inwater,d_root,perc_org_mat,soil_density,    &
@@ -1733,6 +1852,7 @@ contains
      &           shape_factor_microbialr,shape_factor_rootr,            &
      &           r_microbial_z0,d_soil)
       myfunc = c_macro - c_min_micro
+   end associate
    end function myfunc
    
 !     Adapted: initial FA and FB are input

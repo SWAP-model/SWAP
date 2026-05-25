@@ -10,25 +10,12 @@ module legacy_state_mod
 
    type :: legacy_state_t
       ! [GR-ATM 2026-05-23] logf retired — swap_log owns the log-file unit
-      real(real64) :: o2_w_root  !! Dry weight per root length (kg/m)
-      real(real64) :: o2_w_root_z0  !! Root weight at depth
-      real(real64) :: o2_soil_temp  !! Soil temperature (K)
-      real(real64) :: o2_sat_water_cont  !! Saturated water content
-      real(real64) :: o2_gas_filled_porosity  !! Gas-filled porosity
-      real(real64) :: o2_d_o2inwater  !! O2 diffusion in water
-      real(real64) :: o2_d_root  !! Diffusion in root
-      real(real64) :: o2_d_soil  !! Soil diffusion
-      real(real64) :: o2_perc_org_mat  !! Organic matter percentage
-      real(real64) :: o2_soil_density  !! Soil density (kg/m3)
-      real(real64) :: o2_depth  !! Compartment thickness (m)
-      real(real64) :: o2_shape_factor_microbialr  !! Shape factor microbial resp
-      real(real64) :: o2_root_radius  !! Root radius (m)
-      real(real64) :: o2_r_microbial_z0  !! Microbial respiration rate
-      real(real64) :: o2_waterfilm_thickness  !! Water film thickness
-      real(real64) :: o2_bunsencoeff  !! Bunsen coefficient
-      real(real64) :: o2_c_min_micro  !! Min O2 for microbial resp
-      real(real64) :: o2_c_macro  !! Macropore O2 conc
-      real(real64) :: o2_ctopnode  !! Top node O2 conc
+      ! [GR-CROP 2026-05-25] o2_* workspace cluster retired — all 19 fields
+      ! migrated to state%crop%oxygen (w_root, w_root_z0, soil_temp,
+      ! sat_water_cont, gas_filled_porosity, d_o2inwater, d_root, d_soil,
+      ! perc_org_mat, soil_density, depth, shape_factor_microbialr,
+      ! root_radius, r_microbial_z0, waterfilm_thickness, bunsencoeff,
+      ! c_min_micro, c_macro, ctopnode).
       real(real64), allocatable :: outdat(:)  !! Array with output dates for water and solute balances
       real(real64), allocatable :: outdatint(:)  !! Array with intermediate output dates
       logical :: flSwapShared  !! Flag to indicate the shared simultaneous simulation with other applications
