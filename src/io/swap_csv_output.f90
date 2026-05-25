@@ -18,9 +18,8 @@ module SWAP_csv_output
    !   → state%crop%common%X / state%crop%wofost%X
    ! GR-ATM C2: lai/wc10/Runoff_CN → state%crop%lai/state%atmosphere%wc10/state%atmosphere%Runoff_CN
    ! [GR-CROP 2026-05-25] c_top → state%crop%oxygen%c_top
-   use variables, only: iqinfmax,                                                                                    &
-                        iqmpoutdrrap,                                                                                            &
-                        pathwork, outfil, project, InList_csv, macp, madr
+   ! [GR-CROP 2026-05-25] pathwork/outfil/project → state%cfg%general
+   use variables, only: iqinfmax, iqmpoutdrrap, InList_csv, macp, madr
    use swap_state_mod, only: swap_state_t
 
    implicit none
@@ -396,9 +395,9 @@ module SWAP_csv_output
 
       ! output file; write header (headless: skip file I/O)
       if (.not. state%timecontrol%headless) then
-         filcsv = trim(pathwork)//trim(outfil)//'_output.csv'
+         filcsv = trim(state%cfg%general%pathwork)//trim(state%cfg%general%outfil)//'_output.csv'
          call file_open(iuncsv, filcsv, 'unknown', 'readwrite')
-         call makeheader(iuncsv, filcsv)
+         call makeheader(iuncsv, filcsv, state)
       end if
 
       ! store inital values (always — needed for dstor computation in fill_values)
@@ -620,15 +619,16 @@ module SWAP_csv_output
    end do
    end subroutine fill_3
 
-   subroutine makeheader(iuncsv, filcsv)
+   subroutine makeheader(iuncsv, filcsv, state)
    implicit none
    integer, intent(in) :: iuncsv
    character(len=*), intent(in) :: filcsv
+   type(swap_state_t), intent(in) :: state
    character(len=1024) :: header_units, header_names
    integer :: il1, il2, j, k
 
    ! write universal SWAP header
-   call writehead (iuncsv, 1, filcsv, 'specified output data of SWAP', project)
+   call writehead (iuncsv, 1, filcsv, 'specified output data of SWAP', state%cfg%general%project)
 
    ! typical csv header lines: (units, names)
    header_units = "* (d)"; il1 = len_trim(header_units)
@@ -1091,7 +1091,8 @@ subroutine csv_out_tz (iTask, state)
 ! SS-SWC S-2.11: h,theta,K,inqrot removed (now via state%soilwater).
 ! SS-TC TC-13: flprintshort, date, t1900 dropped (read via state%timecontrol ASSOCIATE in case(2)).
 ! [GR-CROP 2026-05-25] c_top → state%crop%oxygen%c_top
-use variables, only: pathwork, outfil, project, InList_csv_tz, tz_z1_z2
+! [GR-CROP 2026-05-25] pathwork/outfil/project → state%cfg%general
+use variables, only: InList_csv_tz, tz_z1_z2
 use swap_state_mod, only: swap_state_t
 use file_io_mod, only: file_open
 
@@ -1192,7 +1193,7 @@ case (1)
    
    ! open file for output; existing file will be overwritten; formatted output
    !    to do: write some basic info at the top of the output file?
-   filnam = trim(pathwork)//trim(outfil)//'_output_tz.csv'
+   filnam = trim(state%cfg%general%pathwork)//trim(state%cfg%general%outfil)//'_output_tz.csv'
    call file_open(iuncsv, filnam, 'replace', 'write')
 
    ! column header
@@ -1201,7 +1202,7 @@ case (1)
    call make_header_tz (ListVars, Nvars, Header)
    call make_headerunits_tz (HeaderUnits)
    filtext = 'specified output data of SWAP'
-   call writehead (iuncsv,1,filnam,filtext,project)
+   call writehead (iuncsv,1,filnam,filtext,state%cfg%general%project)
    write (iuncsv,'(A)') trim(HeaderUnits)
    write (iuncsv,'(A)') trim(Header)
 

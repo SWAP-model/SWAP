@@ -143,8 +143,8 @@
       ! SS-SWC S-2.11: gwl,pond,volact,volini,PondIni,iqbot,iqrot,igird,iintc,irunon,iruno,irunoCN removed; reads via state%soilwater.
       ! SS-TC TC-7: daynr,daycum,t1900,date,flheader,flprintshort removed from only-list; reads via state%timecontrol.
       ! [SS-BMI2] inout: build_water_balance_row writes to state%water_balance_row
-      ! [GR-CROP 2026-05-25] DEFERRED — inc: file unit; outfil/pathwork/project: file-path globals; iQMpOutDrRap: legacy accumulator
-      use variables, only: inc,iQMpOutDrRap,outfil,pathwork,project
+      ! [GR-CROP 2026-05-25] outfil/pathwork/project → state%cfg%general; inc/iQMpOutDrRap retained (file-unit + legacy accumulator)
+      use variables, only: inc,iQMpOutDrRap
       use swap_state_mod, only: swap_state_t
       use file_io_mod, only: file_open
       implicit none
@@ -173,10 +173,10 @@
 
 ! --- open output file once (headless: skip file I/O, buffer already init by SwapOutput(1))
       if (.not. state%timecontrol%headless) then
-         filnam = trim(pathwork)//trim(outfil)//'.inc'
+         filnam = trim(state%cfg%general%pathwork)//trim(state%cfg%general%outfil)//'.inc'
          call file_open(inc,filnam,'replace','write')
          filtext = 'water balance increments (cm/day)'
-         call writehead (inc,1,filnam,filtext,project)
+         call writehead (inc,1,filnam,filtext,state%cfg%general%project)
 
 ! --- write header of inc file
          if (state%timecontrol%flprintshort) then  ! TC-7
@@ -407,7 +407,8 @@
       ! SS-TC TC-7: daynr,daycum,t1900,date,flprintshort removed from only-list; reads via state%timecontrol.
       ! [GR-CROP 2026-05-25] DEFERRED — rot: file unit; outfil/pathwork/project: file-path globals
       ! [GR-CROP 2026-05-25] noddrz retired — read via state%crop%common%noddrz
-      use variables, only: rot,outfil,pathwork,project
+      ! [GR-CROP 2026-05-25] outfil/pathwork/project → state%cfg%general
+      use variables, only: rot
       use swap_state_mod, only: swap_state_t
       use file_io_mod, only: file_open
       implicit none
@@ -431,10 +432,10 @@
 
 
 ! --- open output file
-      filnam = trim(pathwork)//trim(outfil)//'.rot'
+      filnam = trim(state%cfg%general%pathwork)//trim(state%cfg%general%outfil)//'.rot'
       call file_open(rot,filnam,'replace','write')
       filtext = 'microscopic root water uptake'
-      call writehead (rot,1,filnam,filtext,project)
+      call writehead (rot,1,filnam,filtext,state%cfg%general%project)
       write (rot,100)
 
 ! --- write header in rot file
@@ -933,7 +934,7 @@
       ! SS-TC TC-7: daynr,daycum,date,outper removed from only-list; reads via state%timecontrol.
       ! [SS-GR-FINAL B4] DEFERRED — project/outfil/pathwork: file-path globals
       ! [SS-GR-CROPRT A1] AgeGwl1m/icAge*/flAgeTracer dropped — declarations retired (ADR 0032)
-      use variables, only: project,outfil,pathwork
+      ! [GR-CROP 2026-05-25] project/outfil/pathwork → state%cfg%general
       use swap_state_mod, only: swap_state_t
       use swap_array_dimensions, only: madr
       use file_io_mod, only: file_open
@@ -961,21 +962,21 @@
 
 ! --- open output files -------------------------------------------------
 !     age of groundwater as profile
-      filnam = trim(pathwork)//trim(outfil)//'.ageProfile.csv'
+      filnam = trim(state%cfg%general%pathwork)//trim(state%cfg%general%outfil)//'.ageProfile.csv'
       reclngth = 50 + 12*state%mesh%numnod
       open(newunit=agep,file=filnam,status='unknown',recl=reclngth)
       filtext = 'Groundwater age profiles (all age-values in days)'
-      call writehead (agep,1,filnam,filtext,project)
+      call writehead (agep,1,filnam,filtext,state%cfg%general%project)
 !     age of groundwater in effluents: drains, transpiration, leaching, runoff
-      filnam = trim(pathwork)//trim(outfil)//'.ageEffluent.csv'
+      filnam = trim(state%cfg%general%pathwork)//trim(state%cfg%general%outfil)//'.ageEffluent.csv'
       call file_open(agee,filnam,'replace','write')
       filtext = 'Groundwater age effluent (all age-values in days)'
-      call writehead (agee,1,filnam,filtext,project)
+      call writehead (agee,1,filnam,filtext,state%cfg%general%project)
 !     effluent drain water fluxes
-      filnam = trim(pathwork)//trim(outfil)//'.ageEffluentqDrain.csv'
+      filnam = trim(state%cfg%general%pathwork)//trim(state%cfg%general%outfil)//'.ageEffluentqDrain.csv'
       call file_open(ageq,filnam,'replace','write')
       filtext = 'Drain water effluent (mm/day)'
-      call writehead (ageq,1,filnam,filtext,project)
+      call writehead (ageq,1,filnam,filtext,state%cfg%general%project)
 
 ! --- write headers of files
       write (agep,9) (state%mesh%z(node),node=1,state%mesh%numnod)
@@ -1202,7 +1203,8 @@
       ! SS-TC TC-7: date,daynr,daycum,flheader removed from only-list; reads via state%timecontrol.
       ! GR-ATM C2: tav removed; read via state%atmosphere%Tav.
       ! [SS-GR-FINAL B4] DEFERRED — tem: file unit; outfil/pathwork/project: file-path globals
-      use variables, only: tem,outfil,pathwork,project
+      ! [GR-CROP 2026-05-25] outfil/pathwork/project → state%cfg%general
+      use variables, only: tem
       use swap_state_mod, only: swap_state_t
       implicit none
 
@@ -1224,12 +1226,12 @@
 
 ! === open output file (headless: skip file I/O) ======================
       if (.not. state%timecontrol%headless) then
-         filnam = trim(pathwork)//trim(outfil)//'.tem'
+         filnam = trim(state%cfg%general%pathwork)//trim(state%cfg%general%outfil)//'.tem'
 !         reclngth = 36 + 7*numnod
          reclngth = 50 + 7*state%mesh%numnod
          open(newunit=tem,file=filnam,status='unknown',recl=reclngth)
          filtext = 'soil temperature profiles (oC)'
-         call writehead (tem,1,filnam,filtext,project)
+         call writehead (tem,1,filnam,filtext,state%cfg%general%project)
 
 ! --- write header
          if (state%mesh%numnod.le.9) then
@@ -1376,7 +1378,8 @@
       ! SS-ATM A-2.5: snrai,gsnow,ssnow,melt,subl reads migrated to state%atmosphere.
       ! SS-TC TC-7: date,daycum,flheader removed; reads via state%timecontrol.
       ! [SS-GR-FINAL B4] DEFERRED — pathwork/outfil/project: file-path globals; snw: file unit
-      use variables, only: pathwork,outfil,project,snw
+      ! [GR-CROP 2026-05-25] pathwork/outfil/project → state%cfg%general
+      use variables, only: snw
       use swap_state_mod, only: swap_state_t
       use file_io_mod, only: file_open
       implicit none
@@ -1401,10 +1404,10 @@
       call init_snow_output_buffer(state)
 
       if (.not. state%timecontrol%headless) then
-         filnam = trim(pathwork)//trim(outfil)//'.snw'
+         filnam = trim(state%cfg%general%pathwork)//trim(state%cfg%general%outfil)//'.snw'
          call file_open(snw,filnam,'replace','write')
          filtext = 'snow pack output data (cm/period)'
-         call writehead (snw,1,filnam,filtext,project)
+         call writehead (snw,1,filnam,filtext,state%cfg%general%project)
 
 ! --- write header
          write (snw,10)

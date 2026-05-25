@@ -49,7 +49,7 @@ subroutine test_apply_mode0_populates_globals_from_csv()
    use irrigation_config_mod, only: irrigation_ssdi_t
    use config_to_variables_mod, only: apply_irrigation_ssdi
    ! [GR-CROP 2026-05-25] SSDI persistent state migrated to state%crop%irrigation
-   use variables, only: pathwork
+   ! [GR-CROP 2026-05-25] pathwork passed as explicit arg to apply_irrigation_ssdi.
    use swap_state_mod, only: swap_state_t
    use, intrinsic :: iso_fortran_env, only: real64
    use funit
@@ -65,14 +65,14 @@ subroutine test_apply_mode0_populates_globals_from_csv()
    ! Simulation window covers the fixture dates (2003-04-15 .. 2003-06-10).
    tstart_val = 37621.0_real64   ! 2003-01-01 (days since 1900)
    tend_val   = 37985.0_real64   ! 2003-12-31
-   pathwork = 'tests/unit/io/toml/fixtures/'
+   ! [GR-CROP 2026-05-25] pathwork now passed via the call's 5th arg.
 
    ssdi%schedule = 0
    ssdi%ssdi_z   = [-25.0d0, -40.0d0]
    allocate(character(len=20) :: ssdi%fixed%events_file)
    ssdi%fixed%events_file = 'ssdi_events_small.csv'
 
-   call apply_irrigation_ssdi(ssdi, tstart_val, tend_val, state)
+   call apply_irrigation_ssdi(ssdi, tstart_val, tend_val, state, 'tests/unit/io/toml/fixtures/')
 
    ! nod_ssdi(1) should point to the node whose zbotcp <= -25 (node 2)
    ! nod_ssdi(2) should point to the node whose zbotcp <= -40 (node 3)
@@ -124,7 +124,7 @@ subroutine test_apply_mode1_copies_scheduled_block()
    ssdi%scheduled%sw_interval   = 0
    ssdi%scheduled%days_interval = 1
 
-   call apply_irrigation_ssdi(ssdi, tstart_val, tend_val, state)
+   call apply_irrigation_ssdi(ssdi, tstart_val, tend_val, state, 'tests/unit/io/toml/fixtures/')
 
    @assertEqual(2, state%crop%irrigation%nod_ssdi(1))
    @assertEqual(3, state%crop%irrigation%nod_ssdi(2))

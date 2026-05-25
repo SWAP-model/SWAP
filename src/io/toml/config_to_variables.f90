@@ -461,8 +461,9 @@ contains
       if (flTillage) call apply_soil_tillage(config%soil%tillage, state%timecontrol%tend, state)
       if (flSSDI)    call apply_irrigation_ssdi(config%irrigation%ssdi, &
                                                state%timecontrol%tstart, &
-                                               state%timecontrol%tend, state)
-      call apply_nutrients(config%nutrients)
+                                               state%timecontrol%tend, state, &
+                                               config%general%pathwork)
+      call apply_nutrients(config%nutrients, config%general%pathwork)
       ! [GR-SOIL 2026-05-24] gwli legacy mirror dropped — direct config read.
       ! [GR-FINAL C1] pondini/pond: config%soil%pondini read directly by swap_mod after soilwater_init
       ! (pondini_init_buf/pond_init_buf retired; swap_mod seeding replaced with direct config reads)
@@ -1384,16 +1385,18 @@ contains
    !!
    !! Replaces SSDI_irrigation(1) and read_ssdi_input (deletion in
    !! Task 5).
-   subroutine apply_irrigation_ssdi(ssdi, tstart, tend, state)
+   subroutine apply_irrigation_ssdi(ssdi, tstart, tend, state, pathwork_in)
       use, intrinsic :: iso_fortran_env, only: real64
       use irrigation_config_mod, only: irrigation_ssdi_t
       use error_mod, only: fatalerr_collected
       use swap_state_mod, only: swap_state_t
       ! [GR-SOIL 2026-05-24] qssdi migrated to state%soilwater (zero-init via soilwater_init).
       ! [GR-CROP 2026-05-25] dt_SSDI_event migrated to state%crop%irrigation%dt_SSDI_event.
+      ! [GR-CROP 2026-05-25] pathwork passed as explicit arg (default './') so tests don't need state%cfg set up.
       type(irrigation_ssdi_t), intent(in)    :: ssdi
       real(real64),            intent(in)    :: tstart, tend
       type(swap_state_t),      intent(inout) :: state   ! [GR-BH Task 35] replaces NumNod/zbotcp globals
+      character(len=*),        intent(in), optional :: pathwork_in
 
       integer :: i, j, nod_top, nod_bot, ncomp
 
@@ -1427,7 +1430,11 @@ contains
 
       select case (ssdi%schedule)
       case (0)
-         call apply_ssdi_mode0(ssdi, ncomp, tstart, tend, state)
+         if (present(pathwork_in)) then
+            call apply_ssdi_mode0(ssdi, ncomp, tstart, tend, state, pathwork_in)
+         else
+            call apply_ssdi_mode0(ssdi, ncomp, tstart, tend, state, './')
+         end if
       case (1)
          call apply_ssdi_mode1(ssdi, ncomp, state)
       end select
@@ -1443,11 +1450,13 @@ contains
    !! variable bug discovered during the [nutrients] N2 brainstorm.
    !!
    !! See ADR 0026 ([nutrients] N2a).
-   subroutine apply_nutrients(cfg)
+   subroutine apply_nutrients(cfg, pathwork_in)
       use nutrients_config_mod, only: nutrients_config_t
       use wofost_soil_declarations, only: FOM_t, Bio_t, Hum_t, &
                                            cNH4_t, cNO3_t, SorpCoef
       type(nutrients_config_t), intent(in) :: cfg
+      ! [GR-CROP 2026-05-25] pathwork explicit arg, forwarded to apply_nutrients_events
+      character(len=*), intent(in) :: pathwork_in
       integer :: i
 
       SorpCoef = cfg%sorp_coef
@@ -1460,7 +1469,7 @@ contains
       cNO3_t = cfg%initial%cno3
 
       ! N2b (ADR 0027): stage timed amendments from the CSV companion.
-      call apply_nutrients_events(cfg)
+      call apply_nutrients_events(cfg, pathwork_in)
    end subroutine apply_nutrients
 
 
@@ -1471,16 +1480,17 @@ contains
    !! Default (empty events_file or empty CSV): namend = 0, isme = 1.
    !!
    !! See ADR 0027 ([nutrients] N2b).
-   subroutine apply_nutrients_events(cfg)
+   subroutine apply_nutrients_events(cfg, pathwork_in)
       use, intrinsic :: iso_fortran_env, only: real64
       use csv_reader_mod, only: read_csv_table
       use error_mod, only: error_collection_t, fatalerr_collected
       use nutrients_config_mod, only: nutrients_config_t
-      use variables, only: pathwork
       use wofost_soil_declarations, only: MatNum, Amend, VolaFrac, &
                                             TimeAmend, NuAmend, iamend, &
                                             namend, isme, maxamn
       type(nutrients_config_t), intent(in) :: cfg
+      ! [GR-CROP 2026-05-25] pathwork now passed as explicit argument (was bare global)
+      character(len=*), intent(in) :: pathwork_in
 
       real(real64), allocatable :: tbl(:,:)
       type(error_collection_t)  :: errs
@@ -1503,7 +1513,7 @@ contains
       hdr(2) = 'material      '
       hdr(3) = 'amount_kgha   '
       hdr(4) = 'volat_fraction'
-      csvpath = trim(pathwork) // trim(cfg%events_file)
+      csvpath = trim(pathwork_in) // trim(cfg%events_file)
       call read_csv_table(trim(csvpath), hdr, tbl, errs)
       call errs%abort_if_fatal()
 
@@ -1578,17 +1588,19 @@ contains
 
    !> Mode-0 (fixed-date): stage CSV; populate ssdi_*_f_irr; deferred
    !! date-window validation; initial nirri_ssdi_irr entry-point from tstart.
-   subroutine apply_ssdi_mode0(ssdi, ncomp, tstart, tend, state)
+   subroutine apply_ssdi_mode0(ssdi, ncomp, tstart, tend, state, pathwork_in)
       use, intrinsic :: iso_fortran_env, only: real64
       use csv_reader_mod, only: read_csv_table
       use error_mod, only: error_collection_t, fatalerr_collected
       use irrigation_config_mod, only: irrigation_ssdi_t
       use swap_state_mod, only: swap_state_t
-      use variables, only: pathwork, mairg
+      ! [GR-CROP 2026-05-25] pathwork now explicit arg
+      use variables, only: mairg
       type(irrigation_ssdi_t), intent(in)    :: ssdi
       integer,                 intent(in)    :: ncomp
       real(real64),            intent(in)    :: tstart, tend
       type(swap_state_t),      intent(inout) :: state
+      character(len=*),        intent(in)    :: pathwork_in
 
       real(real64), allocatable :: tbl(:,:)
       type(error_collection_t)  :: errs
@@ -1600,7 +1612,7 @@ contains
       hdr(1) = 'date    '
       hdr(2) = 'rate_f  '
       hdr(3) = 'amount_f'
-      csvpath = trim(pathwork) // trim(ssdi%fixed%events_file)
+      csvpath = trim(pathwork_in) // trim(ssdi%fixed%events_file)
       call read_csv_table(trim(csvpath), hdr, tbl, errs)
       call errs%abort_if_fatal()
 
