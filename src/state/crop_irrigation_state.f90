@@ -246,12 +246,12 @@ contains
       n = 0
       if (allocated(tbl)) n = size(tbl, 1)
       if (n < 1) then
-         call fatalerr_collected('apply_irrigation_ssdi', &
+         call fatalerr_collected('apply_ssdi_mode0', &
                                  'mode 0: events CSV has no rows')
          return
       end if
       if (n > mairg) then
-         call fatalerr_collected('apply_irrigation_ssdi', &
+         call fatalerr_collected('apply_ssdi_mode0', &
                                  'mode 0: events CSV exceeds mairg rows')
          return
       end if
@@ -265,7 +265,7 @@ contains
       do i = 1, n
          self%ssdi_date(i) = tbl(i, 1)
          if (i > 1 .and. self%ssdi_date(i) <= self%ssdi_date(i-1)) then
-            call fatalerr_collected('apply_irrigation_ssdi', &
+            call fatalerr_collected('apply_ssdi_mode0', &
                                     'mode 0: ssdi_date not strictly ascending')
             return
          end if
@@ -289,7 +289,7 @@ contains
       window_in_dates = (self%ssdi_date(1) <= tstart + 1.0e-6_real64 .and. &
                          self%ssdi_date(n) >= tend   - 1.0e-6_real64)
       if (.not. any_in_window .and. .not. window_in_dates) then
-         call fatalerr_collected('apply_irrigation_ssdi', &
+         call fatalerr_collected('apply_ssdi_mode0', &
                                  'mode 0: no ssdi_date within simulation period')
       end if
 
