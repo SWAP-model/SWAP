@@ -221,7 +221,7 @@ module legacy_state_mod
       real(real64) :: CritDevMasBal  !! Maximum error in water balance (L)
       ! [GR-CROP 2026-05-25] CriterHr retired — JvL-only (swdrought=2);
       ! body extracted to src/crop/dormant/jongvanlier.f90.
-      real(real64), allocatable :: drares(:)  !! Array with drainage resistance (T) for each drainage level
+      ! [GR-DRAIN 2026-05-25] drares retired — read from config%drain%drares
       real(real64), allocatable :: dznew(:)  !! Desired thickness of compartments for soil water quality models (L)
       ! [GR-DRA 2026-05-23] entres retired — see state%drainage%entres
       ! [GR-DRA 2026-05-23] ftopdislay retired — see state%drainage%ftopdislay
@@ -235,7 +235,7 @@ module legacy_state_mod
       real(real64) :: hdrain  !! Mean drainage level (L) to derive regional average groundwater level for bottom boundary condition
       ! [GR-SOIL 2026-05-24] hplate retired — orphan stub; read via state%cfg%bottom_boundary%hplate.
       ! [GR-SOIL 2026-05-24] hsublay retired — read inline from config%soil%hsublay
-      real(real64), allocatable :: infres(:)  !! Array with infiltration resistance (T) for each drainage level
+      ! [GR-DRAIN 2026-05-25] infres retired — read from config%drain%infres
       ! [GR-SOL 2026-05-24] inpola/inpolb retired — see state%mesh%{inpola,inpolb}
       real(real64) :: iqinfmax  !! [SS-GR-FINAL D1] qinfmax retired — 0 consumers
       real(real64) :: issnowbeg  !! Amount of snow in soil water equivalent (L) at start of current intermediate period [snow.f90, waterbalance.f90]
@@ -272,7 +272,7 @@ module legacy_state_mod
       ! [GR-CROP 2026-05-25] Rxylem retired — JvL-only (swdrought=2);
       ! body extracted to src/crop/dormant/jongvanlier.f90.
       ! [GR-BND 2026-05-23] runonarr retired — see state%soilwater%runonarr
-      real(real64) :: shape  !! Shape factor: ratio between the mean and the maximum groundwater level elevation above the drainage base (-)
+      ! [GR-DRAIN 2026-05-25] shape retired — read via state%cfg%drain%shape and bb%shape
       real(real64) :: sinamp  !! Amplitude of prescribed bottom flux (L/T) in case of sine function
       real(real64) :: sinave  !! Average value of prescribed bottom flux (L/T) in case of sine function
       real(real64) :: sinmax  !! Time of the year with maximum bottom flux in case of prescribed sine function

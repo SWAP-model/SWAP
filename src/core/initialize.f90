@@ -189,7 +189,7 @@
       ! dimoca             = 0.0d0
       ! [GR-BH Task 35] disnod retired to state%mesh%disnod
       ! drainl             = 0.0d0  ! Moved to drainage_state_t — drainage_init handles (ADR 0031)
-      drares             = 0.0d0 
+      ! [GR-DRAIN 2026-05-25] drares retired — read directly from config%drain%drares
       ! [GR-BH Task 35] dz retired to state%mesh%dz
       dznew              = 0.0d0 
       ! [GR-DRA 2026-05-23] entres retired — see state%drainage%entres
@@ -230,7 +230,7 @@
       ! iet0               = 0.0d0
       ! iew0               = 0.0d0
       ! iintc              = 0.0d0
-      infres             = 0.0d0 
+      ! [GR-DRAIN 2026-05-25] infres retired — read directly from config%drain%infres
       ! [GR-SOL 2026-05-24] inpola/inpolb retired — see state%mesh%{inpola,inpolb}
       ! [SS-SWC] inq retired — soilwater_init handles init via state%soilwater%inq
       ! inq                = 0.0d0
@@ -326,7 +326,7 @@
       ! [SS-BND B-2.7] runots retired — soilwater_init handles init via state%soilwater
       ! runots             = 0.0d0
       ! [SS-ATM A-2.6] saev retired to state%atmosphere%saev
-      shape              = 0.0d0 
+      ! [GR-DRAIN 2026-05-25] shape retired — read via state%cfg%drain%shape (drainage) and bb%shape (bottom_boundary)
       sinamp             = 0.0d0 
       sinave             = 0.0d0 
       sinmax             = 0.0d0 
@@ -509,21 +509,15 @@
       ! [GR-DRA 2026-05-23] intwl retired — see state%surfacewater%intwl
       ! numadj=0, imper=1 set by surfacewater_state_t defaults.
       ! [GR-DRA 2026-05-23] nowltab retired — see state%drainage%nowltab
-      widthr                = 0.0d0
-      taludr                = 0.0d0
-      rdrain                = 0.0d0
-      rsurfdeep             = 0.0d0
-      rsurfshallow          = 0.0d0
-      rinfi                 = 0.0d0
-      rentry                = 0.0d0
-      rexit                 = 0.0d0
-      gwlinf                = 0.0d0
+      ! [GR-DRAIN 2026-05-25] widthr/taludr/rdrain/rsurfdeep/rsurfshallow/
+      ! rinfi/rentry/rexit/gwlinf retired — read directly from config%drain
+      ! (and config%drain%surface_runoff) in src/drainage/drainage.f90
       ! [GR-DRA 2026-05-23] wlptab retired — see state%surfacewater%wlptab
       ! [GR-DRA 2026-05-23] impend/wldip/wscap retired — see state%surfacewater%X
       ! [GR-DRA 2026-05-23] hbweir retired — see state%surfacewater%hbweir
       ! [GR-DRA 2026-05-23] osswlm retired — see state%surfacewater%osswlm
       ! SS-SWST Phase 2 Task 11 C3: wlstar removed (state%surfacewater%wlstar, default=0).
-      wlp                   = 0.0d0
+      ! [GR-DRAIN 2026-05-25] wlp retired — read from state%surfacewater%wlp
       ! [GR-DRA 2026-05-23] alphaw/betaw retired — see state%surfacewater%{alphaw,betaw}
       ! [GR-DRA 2026-05-23] dropr retired — see state%surfacewater%dropr
       hdepth                = 0.0d0

@@ -786,7 +786,7 @@
       ! real(8)   dimoca(macp)       ! Differential soil moisture capacity (/L)
       ! [GR-BH Task 35] disnod(macp+1) retired — moved to state%mesh%disnod
       ! real(8)   drainl(Madr)       ! Moved to drainage_state_t%drainl (ADR 0031)
-      real(8)   drares(Madr)       ! Array with drainage resistance (T) for each drainage level
+      ! [GR-DRAIN 2026-05-25] drares retired — read from config%drain%drares
       ! [GR-BH Task 35] dz(macp) retired — moved to state%mesh%dz
       real(8)   dznew(macp)        ! Desired thickness of compartments for soil water quality models (L)
       ! [GR-DRA 2026-05-23] entres retired — see state%drainage%entres
@@ -836,7 +836,7 @@
       ! real(8)   iet0               ! Intermediate potential transpiration rate from a dry crop [cm/d]
       ! real(8)   iew0               ! Intermediate potential transpiration rate from a wet crop [cm/d]
       ! real(8)   iintc              ! Intermediate amount of rainfall interception by vegetation (L)
-      real(8)   infres(Madr)       ! Array with infiltration resistance (T) for each drainage level
+      ! [GR-DRAIN 2026-05-25] infres retired — read from config%drain%infres
       ! [GR-SOL 2026-05-24] inpola/inpolb retired — see state%mesh%{inpola,inpolb}
       ! [SS-SWC] retired 2026-05-12 — moved to state%soilwater%inq (ADR 0038)
       ! real(8)   inq(macp+1)        ! Array with intermediate amounts of water flow between current and upper compartment (L)
@@ -986,7 +986,7 @@
       ! [SS-BND] retired 2026-05-11 — boundary subsystem migrated to state%soilwater (ADR 0035)
       ! real(8)   runots             ! Amount of runoff during a time step (L)
       ! real(8) :: saev          ! Cumulative actual evaporation (L) Boesten/Stroosnijder — [SS-ATM] retired 2026-05-11
-      real(8)   shape              ! Shape factor: ratio between the mean and the maximum groundwater level elevation above the drainage base (-)
+      ! [GR-DRAIN 2026-05-25] shape retired — read via state%cfg%drain%shape and bb%shape
       real(8)   sinamp             ! Amplitude of prescribed bottom flux (L/T) in case of sine function
       real(8)   sinave             ! Average value of prescribed bottom flux (L/T) in case of sine function
       real(8)   sinmax             ! Time of the year with maximum bottom flux in case of prescribed sine function
@@ -1270,9 +1270,9 @@
       ! [GR-DRA 2026-05-23] intwl retired — see state%surfacewater%intwl
       ! imper removed (surfacewater_state_t%imper)
       ! [GR-DRA 2026-05-23] nowltab retired — see state%drainage%nowltab
-      real(8) widthr(Madr),taludr(Madr),rdrain(Madr),rsurfdeep
-      real(8) rsurfshallow,rinfi(Madr),rentry(Madr),rexit(Madr)
-      real(8) gwlinf(Madr)
+      ! [GR-DRAIN 2026-05-25] widthr/taludr/rdrain/rsurfdeep/rsurfshallow/
+      ! rinfi/rentry/rexit/gwlinf retired — read from config%drain
+      ! (surface_runoff sub-record for rsurfdeep/rsurfshallow)
       ! [GR-DRA 2026-05-23] wlptab retired — see state%surfacewater%wlptab
       ! [GR-DRA 2026-05-23] impend retired — see state%surfacewater%impend
       ! [GR-DRA 2026-05-23] wldip/wscap retired — see state%surfacewater%{wldip,wscap}
@@ -1280,7 +1280,7 @@
       ! SS-SWST Phase 2 Task 11 C2: wlstar removed — state%surfacewater%wlstar owns it.
       ! [GR-DRA 2026-05-23] osswlm retired — see state%surfacewater%osswlm
       ! [GR-DRA 2026-05-23] alphaw/betaw retired — see state%surfacewater%{alphaw,betaw}
-      real(8) wlp
+      ! [GR-DRAIN 2026-05-25] wlp retired — read from state%surfacewater%wlp
       ! wlstar removed (surfacewater_state_t%wlstar)
       ! [SS-GR-FINAL D6] wls1_init retired — c2v write tombstoned in D4/C4; state%surfacewater owns it; 0 consumers
       ! [GR-DRA 2026-05-23] dropr retired — see state%surfacewater%dropr

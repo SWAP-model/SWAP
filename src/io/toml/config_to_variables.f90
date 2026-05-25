@@ -255,13 +255,6 @@ contains
       ! [GR-BH Task 37] nrlevs global deleted — state%drainage%nrlevs seeded in swap_mod.f90
       state%drainage%basegw = config%drain%basegw
       state%drainage%entres = config%drain%entres
-      ! Note: drainage%shape may collide with bottom_boundary%shape
-      ! at the legacy global `shape`. Bottom boundary is wired below
-      ! and overwrites for swbotb=3 cases (the documented audit alias).
-
-      if (config%drain%swdra >= 1 .and. allocated(config%drain%drfil)) then
-         drfil = config%drain%drfil
-      end if
 
       ! DRAMET=2 (Hooghoudt/Ernst). Mirrors readswap.f90:1850-1875.
       ! lm is authored in metres; the legacy reader does the m->cm
@@ -272,7 +265,6 @@ contains
       ! ipos / khtop / khbot / kvtop / kvbot / zintf / geofac are scalar globals.
       if (config%drain%dramet == 2) then
          ! [GR-BH Task 37] L(1)/zbotdr(1) bare globals deleted — seeded from config in swap_mod.f90
-         shape                  = config%drain%shape
          state%drainage%ipos    = config%drain%ipos
          state%drainage%khtop   = config%drain%khtop
          if (config%drain%ipos >= 3) then
@@ -301,52 +293,9 @@ contains
          end do
       end if
       ! [GR-BH Task 37] zbotdr bare global deleted — seeded from config%drain in swap_mod.f90
-      if (allocated(config%drain%drares)) then
-         do i = 1, size(config%drain%drares)
-            drares(i) = config%drain%drares(i)
-         end do
-      end if
-      if (allocated(config%drain%infres)) then
-         do i = 1, size(config%drain%infres)
-            infres(i) = config%drain%infres(i)
-         end do
-      end if
-      ! [GR-BH Task 37] L bare global deleted — seeded from config%drain in swap_mod.f90
-      if (allocated(config%drain%gwlinf)) then
-         do i = 1, size(config%drain%gwlinf)
-            gwlinf(i) = config%drain%gwlinf(i)
-         end do
-      end if
-      if (allocated(config%drain%rdrain)) then
-         do i = 1, size(config%drain%rdrain)
-            rdrain(i) = config%drain%rdrain(i)
-         end do
-      end if
-      if (allocated(config%drain%rinfi)) then
-         do i = 1, size(config%drain%rinfi)
-            rinfi(i) = config%drain%rinfi(i)
-         end do
-      end if
-      if (allocated(config%drain%rentry)) then
-         do i = 1, size(config%drain%rentry)
-            rentry(i) = config%drain%rentry(i)
-         end do
-      end if
-      if (allocated(config%drain%rexit)) then
-         do i = 1, size(config%drain%rexit)
-            rexit(i) = config%drain%rexit(i)
-         end do
-      end if
-      if (allocated(config%drain%widthr)) then
-         do i = 1, size(config%drain%widthr)
-            widthr(i) = config%drain%widthr(i)
-         end do
-      end if
-      if (allocated(config%drain%taludr)) then
-         do i = 1, size(config%drain%taludr)
-            taludr(i) = config%drain%taludr(i)
-         end do
-      end if
+      ! [GR-DRAIN 2026-05-25] Per-level drainage arrays (drares, infres, gwlinf,
+      ! rdrain, rinfi, rentry, rexit, widthr, taludr) are read directly from
+      ! config%drain in src/drainage/drainage.f90; no mirror writes needed.
       if (allocated(config%drain%swallo)) then
          if (.not. allocated(state%drainage%swallo)) then
             allocate(state%drainage%swallo(size(config%drain%swallo)))
@@ -418,8 +367,9 @@ contains
       ! gates a warning (soilhydraulics.f90:724), not solver behaviour, but
       ! the duplicate write is wrong on principle and could surprise future
       ! cases if the warning ever becomes load-bearing.
-      rsurfdeep    = config%drain%surface_runoff%rsurfdeep
-      rsurfshallow = config%drain%surface_runoff%rsurfshallow
+      ! [GR-DRAIN 2026-05-25] rsurfdeep/rsurfshallow legacy mirror writes
+      ! dropped — read directly from config%drain%surface_runoff in
+      ! src/drainage/drainage.f90.
       ! [SS-GR-FINAL D1] RapDraReaExp write dropped — global retired
       state%drainage%NumLevRapDra = config%drain%surface_runoff%numlevrapdra
       ! swtopdislay(MADR) and ftopdislay(MADR): broadcast scalar config
@@ -703,7 +653,8 @@ contains
             end block
          end if
       case (3)
-         shape       = config%bottom_boundary%shape
+         ! [GR-DRAIN 2026-05-25] shape legacy mirror dropped — boundbottom.f90
+         ! reads bb%shape (= config%bottom_boundary%shape) directly.
          hdrain      = config%bottom_boundary%hdrain
          ! [GR-SOIL 2026-05-24] rimlay legacy mirror dropped — direct config read.
          aqave       = config%bottom_boundary%aqave
