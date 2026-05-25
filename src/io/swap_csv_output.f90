@@ -17,8 +17,9 @@ module SWAP_csv_output
    !   ch/cf/laipot/rdpot/rd/tagppot/tagp/tagptpot/tagpt/cuptgrazpot/cuptgraz/plossdm/lossdm
    !   → state%crop%common%X / state%crop%wofost%X
    ! GR-ATM C2: lai/wc10/Runoff_CN → state%crop%lai/state%atmosphere%wc10/state%atmosphere%Runoff_CN
+   ! [GR-CROP 2026-05-25] c_top → state%crop%oxygen%c_top
    use variables, only: iqinfmax,                                                                                    &
-                        iqmpoutdrrap, c_top,                                                                                     &
+                        iqmpoutdrrap,                                                                                            &
                         pathwork, outfil, project, InList_csv, macp, madr
    use swap_state_mod, only: swap_state_t
 
@@ -528,7 +529,7 @@ module SWAP_csv_output
    if (lp_T%fldo)   lp_T%vals(1:vars%Nnodes(lp_T%jpos))     =   state%heat%tsoil(vars%nodes(1:vars%Nnodes(lp_T%jpos), lp_T%jpos))
    if (lp_C%fldo)   lp_C%vals(1:vars%Nnodes(lp_C%jpos))     =     state%solute%cml(vars%nodes(1:vars%Nnodes(lp_C%jpos), lp_C%jpos))
    if (lp_CA%fldo)  lp_CA%vals(1:vars%Nnodes(lp_CA%jpos))   =    state%solute%cmsy(vars%nodes(1:vars%Nnodes(lp_CA%jpos),lp_CA%jpos))
-   if (lp_O2%fldo)  lp_O2%vals(1:vars%Nnodes(lp_O2%jpos))   =   c_top(vars%nodes(1:vars%Nnodes(lp_O2%jpos),lp_O2%jpos))
+   if (lp_O2%fldo)  lp_O2%vals(1:vars%Nnodes(lp_O2%jpos))   =   state%crop%oxygen%c_top(vars%nodes(1:vars%Nnodes(lp_O2%jpos),lp_O2%jpos))
 
    ! HEACAP, HEACON, DRAIN, RWU, FLUX, SSDI
    ! SS-SWC S-2.11: inqrot,inq,inqssdi read from state%soilwater.
@@ -1089,8 +1090,8 @@ subroutine csv_out_tz (iTask, state)
 ! SS-HEAT Phase 1 Task 5: tsoil, HEACAP, HEACON removed (now via state%heat).
 ! SS-SWC S-2.11: h,theta,K,inqrot removed (now via state%soilwater).
 ! SS-TC TC-13: flprintshort, date, t1900 dropped (read via state%timecontrol ASSOCIATE in case(2)).
-use variables, only: pathwork, outfil, project, InList_csv_tz, tz_z1_z2, &
-                     c_top
+! [GR-CROP 2026-05-25] c_top → state%crop%oxygen%c_top
+use variables, only: pathwork, outfil, project, InList_csv_tz, tz_z1_z2
 use swap_state_mod, only: swap_state_t
 use file_io_mod, only: file_open
 
@@ -1237,7 +1238,7 @@ case (2)
     if (iCSV(4)  == 1) call do_write_csv_tz (state%soilwater%k(j))
     if (iCSV(5)  == 1) call do_write_csv_tz (state%solute%cml(j))
     if (iCSV(6)  == 1) call do_write_csv_tz (state%solute%cmsy(j))
-    if (iCSV(7)  == 1) call do_write_csv_tz (c_top(j))
+    if (iCSV(7)  == 1) call do_write_csv_tz (state%crop%oxygen%c_top(j))
     if (iCSV(8)  == 1) call do_write_csv_tz (state%heat%heacap(j)/1.0d-6)    ! from J/cm3/K  to J/m3/K
     if (iCSV(9)  == 1) call do_write_csv_tz (state%heat%heacon(j)/864.0d0)   ! from J/cm/K/d to W/m/K
     ! SS-SWC S-2.11: inqrot read from state%soilwater.

@@ -740,7 +740,7 @@
       ! [SS-GR-FINAL D1] atop retired — reprofunctions array never read; 0 consumers
       ! [GR-DRA 2026-05-23] basegw retired — see state%drainage%basegw
       ! [GR-SOL 2026-05-24] bdens retired — see state%soilwater%bdens
-      real(8)   c_top(macp)        ! Oxygen concentration at top of compartment(kg/m3)
+      ! [GR-CROP 2026-05-25] c_top retired — now state%crop%oxygen%c_top.
 
       ! [GR-CROP 2026-05-25] Oxygen-stress per-node SAVE-state arrays migrated
       ! to state%crop%oxygen (d_soil_term1, d_soil_term2, gfp100, capac_term,

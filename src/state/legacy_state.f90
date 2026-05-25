@@ -211,7 +211,7 @@ module legacy_state_mod
       real(real64) :: aqtmax  !! Time with maximum hydraulic head in deep aquifer (T)
       ! [GR-DRA 2026-05-23] basegw retired — see state%drainage%basegw
       ! [GR-SOL 2026-05-24] bdens retired — see state%soilwater%bdens
-      real(real64), allocatable :: c_top(:)  !! Oxygen concentration at top of compartment(kg/m3)
+      ! [GR-CROP 2026-05-25] c_top retired — now state%crop%oxygen%c_top.
       ! [GR-CROP 2026-05-25] o2_d_soil_term1/term2/gfp100/capac_term/nmin1/mplus1/
       ! ini_stress retired — see state%crop%oxygen (fixed-size macp arrays + flag).
       real(real64) :: cofqha  !! Coefficient A in exponential relationship between drainage flux and groundwater level (L/T)

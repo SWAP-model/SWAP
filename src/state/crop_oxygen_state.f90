@@ -98,6 +98,12 @@ module crop_oxygen_state_mod
       ! OxygenStress in the static-crop (croptype==1) branch.
       real(real64) :: w_root_ss           = 0.0_real64
 
+      ! [GR-CROP 2026-05-25] c_top: top-of-compartment oxygen concentration array.
+      ! Always zero in the TOML pipeline (no writer in src/); kept to match the
+      ! legacy interface for the .csv O2 output column and the OxygenStress reader
+      ! at oxygenstress.f90:360.
+      real(real64) :: c_top(macp)         = 0.0_real64
+
    contains
       procedure :: init => crop_oxygen_state_init
    end type crop_oxygen_state_t

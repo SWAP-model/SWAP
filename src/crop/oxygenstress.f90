@@ -96,11 +96,12 @@ contains
 ! ----------------------------------------------------------------------
       use swap_array_dimensions, only: macp, matab
       ! [GR-CROP 2026-05-25] Residual use-list after the oxygenstress sub-arc:
-      !   * `c_top` — array shared with swap_csv_output (CSV column wiring;
-      !     cannot retire from oxygenstress without also touching the writer
-      !     contract in src/io/swap_csv_output.f90). OxygenStress writes
-      !     c_top(1) and c_top(node+1).
-      use variables, only: c_top
+      !   * `c_top` — per-node oxygen concentration array. OxygenStress is the
+      !     writer (C_top(1) = o2_atmosphere; C_top(node+1) = C_macro). The
+      !     reader is swap_csv_output.f90 (CSV output wiring). swap_csv_output
+      !     is outside the crop allow-list, so c_top stays on the legacy module
+      !     for now; cleanup blocked by a future CSV-side sub-arc.
+      ! [GR-CROP 2026-05-25] c_top → state%crop%oxygen%c_top
       use O2_pars, only: current_state
       use array_utils, only: afgen
       implicit none
@@ -328,7 +329,7 @@ contains
           air_temp = state%atmosphere%Tav + 273.0d0
           o2_atmosphere = (672.0d0) / (8.314472d0 * air_temp)
 ! ---   PLAATS O2_atmosphere IN DE VECTOR VOOR C_TOP 
-          C_top(1) = o2_atmosphere
+          state%crop%oxygen%c_top(1) = o2_atmosphere
         endif    
 
 ! --- Calculate temperature dependent parameters
@@ -356,13 +357,13 @@ contains
 ! --- Define input for the solving procedure
         xi       = 0.5d0*max_resp_factor
         accuracy = 1.0d-4
-        ctopnode = c_top(node)
+        ctopnode = state%crop%oxygen%c_top(node)
 
 ! --- Calculate actual respiration factor from the solving procedure
         resp_factor =  SOLVE(xi,accuracy)
 
 ! --- PLAATS C_MACRO IN DE VECTOR VOOR C_TOP. BEREKENDE WAARDE IS INPUT VOOR VOLGENDE COMPARTIMENT
-       C_top(node+1) = C_macro
+       state%crop%oxygen%c_top(node+1) = C_macro
 
 ! --- Calculate the sink term (Root Water Uptake) variable due to oxygen stress.
 ! --- The decrease in root water uptake is assumed proportional to the decrease
