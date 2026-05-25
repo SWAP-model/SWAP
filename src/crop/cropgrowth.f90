@@ -110,7 +110,7 @@
       ! assimilation
       real(8) dayl, cosld, sinld
       ! [GR-ATM 2026-05-23] daylp/difpp/atmtr/dsinbe demoted from bare globals to locals;
-      ! astro() at line ~404 populates them for TOMORROW (tc_daynr+1), consumed by
+      ! astro() at line ~404 populates them for TOMORROW (tc%daynr+1), consumed by
       ! totass() calls below. Today's values live in state%atmosphere%X (cached by ReadMeteoDay).
       real(8) daylp, difpp, atmtr, dsinbe
       real(8) effc,amax
@@ -118,11 +118,10 @@
       ! only for bulb crops (tulips etc..)
       real(8) respmo,decrmo,remo,factblb
 
-      ! SS-TC TC-10: t1900, daynr read via state%timecontrol tc_* aliases.
+      ! Sub-record aliases — Task 9 dispatcher associate refactor.
       associate( &
-        tc_t1900 => state%timecontrol%t1900,  &  ! TC-10
-        tc_daynr => state%timecontrol%daynr,  &  ! TC-10
-        at_tavd  => state%atmosphere%tavd     &  ! [SS-GR-ATM B.5] daytime-mean temp read from state
+        tc   => state%timecontrol, &
+        atmo => state%atmosphere   &
       )
 
       select case (task)
@@ -138,8 +137,8 @@
 
         if (cropstart(icrop) .lt. 1.d0) exit
 
-        if (tc_t1900 - cropstart(icrop) .gt. -tiny                      &
-     &                 .and. tc_t1900 - cropend(icrop) .lt. tiny) then
+        if (tc%t1900 - cropstart(icrop) .gt. -tiny                      &
+     &                 .and. tc%t1900 - cropend(icrop) .lt. tiny) then
           flCropCalendar = .true.
         else
           icrop = icrop + 1
@@ -163,7 +162,7 @@
 
       ! reset if new crop
       if (flCropCalendar) then
-        if (dabs(tc_t1900 - state%crop%common%cropstart) .lt. tiny) then  ! [GR-CROPWS B3]
+        if (dabs(tc%t1900 - state%crop%common%cropstart) .lt. tiny) then  ! [GR-CROPWS B3]
           call InitializeCrop
           ! [SS-GR-CROPRT A5] mirror fields zeroed by InitializeCrop
           state%crop%common%flCropPrep    = flCropPrep
@@ -397,7 +396,7 @@
 ! check DAYNR during the day!!!!!!          
           
         ! phenological development rate 
-        call astro (tc_daynr+1,state%cfg%meteo%lat,state%atmosphere%rad,dayl,daylp,sinld,cosld,difpp,atmtr,dsinbe)
+        call astro (tc%daynr+1,state%cfg%meteo%lat,state%atmosphere%rad,dayl,daylp,sinld,cosld,difpp,atmtr,dsinbe)
 
         ! only for bulb crops (tulips etc..)
         if(state%crop%wofost%swbulb) then                                     ! [GR-CROPWS B3] swbulb → state%crop%wofost%swbulb
@@ -410,7 +409,7 @@
             ! decrease weight mother organ starts at emergence.
             ! decrease consists of respiration and remobilisation
             decrmo = state%crop%wofost%plwt-(state%crop%wofost%plwt*(2.71828d0**remoc))  ! [GR-CROPWS B3]
-            respmo = 0.025d0*(state%crop%common%q10**((at_tavd-25.0d0)/10.0d0))*state%crop%wofost%plwt    ! [SS-GR-ATM B.5] [GR-CROPWS B3]
+            respmo = 0.025d0*(state%crop%common%q10**((atmo%tavd-25.0d0)/10.0d0))*state%crop%wofost%plwt    ! [SS-GR-ATM B.5] [GR-CROPWS B3]
             if(respmo.lt.decrmo) then
               remo = decrmo - respmo
             else
@@ -424,8 +423,8 @@
 
         ! daily gross assimilation
         effc = state%crop%wofost%fco2eff * state%crop%common%eff  ! [SS-GR-CROPRT B6] state%crop%wofost%fco2eff via state
-        if (state%crop%common%croptype(state%crop%common%icrop) .eq. 2) amax = state%crop%wofost%fco2amax * afgen (state%crop%common%amaxtb,30,state%crop%common%dvs) * afgen (state%crop%common%tmpftb,30,at_tavd)  ! [SS-GR-ATM B.5] [SS-GR-CROPRT B6]
-        if (state%crop%common%croptype(state%crop%common%icrop) .eq. 3) amax = state%crop%wofost%fco2amax * afgen (state%crop%common%amaxtb,30,dble(daycrop)) * afgen (state%crop%common%tmpftb,30,at_tavd)  ! [SS-GR-ATM B.5] [SS-GR-CROPRT B6]
+        if (state%crop%common%croptype(state%crop%common%icrop) .eq. 2) amax = state%crop%wofost%fco2amax * afgen (state%crop%common%amaxtb,30,state%crop%common%dvs) * afgen (state%crop%common%tmpftb,30,atmo%tavd)  ! [SS-GR-ATM B.5] [SS-GR-CROPRT B6]
+        if (state%crop%common%croptype(state%crop%common%icrop) .eq. 3) amax = state%crop%wofost%fco2amax * afgen (state%crop%common%amaxtb,30,dble(daycrop)) * afgen (state%crop%common%tmpftb,30,atmo%tavd)  ! [SS-GR-ATM B.5] [SS-GR-CROPRT B6]
 
 
         ! potential assimilation
@@ -533,12 +532,12 @@
 
         ! Check flHarvestDay
         if (state%crop%common%swharv.eq.0) then
-          if (dabs(tc_t1900 - cropend(state%crop%common%icrop) - 1.d0) .lt. 1.0d-3) then  ! [GR-CROPWS B3] icrop → state%crop%common%icrop
+          if (dabs(tc%t1900 - cropend(state%crop%common%icrop) - 1.d0) .lt. 1.0d-3) then  ! [GR-CROPWS B3] icrop → state%crop%common%icrop
             flHarvestDay = .true.
             state%crop%common%flHarvestDay = flHarvestDay   ! [SS-GR-CROP A5.1]
           endif
         else
-          if (state%crop%common%dvs.ge.state%crop%common%dvsend .or. dabs(tc_t1900 - cropend(state%crop%common%icrop) - 1.d0) .lt. 1.0d-3) then  ! [GR-CROPWS B3] dvs/dvsend/icrop → state
+          if (state%crop%common%dvs.ge.state%crop%common%dvsend .or. dabs(tc%t1900 - cropend(state%crop%common%icrop) - 1.d0) .lt. 1.0d-3) then  ! [GR-CROPWS B3] dvs/dvsend/icrop → state
             flHarvestDay = .true.
             state%crop%common%flHarvestDay = flHarvestDay   ! [SS-GR-CROP A5.1]
           endif
@@ -579,7 +578,7 @@
 
 ! --- detailed grass growth ------------------------------------------------
       if (state%crop%common%croptype(state%crop%common%icrop).eq.3)then
-        if (dabs(tc_t1900 - cropend(state%crop%common%icrop) - 1.d0) .lt. 1.0d-3) then  ! [GR-CROPWS B3] icrop → state%crop%common%icrop
+        if (dabs(tc%t1900 - cropend(state%crop%common%icrop) - 1.d0) .lt. 1.0d-3) then  ! [GR-CROPWS B3] icrop → state%crop%common%icrop
           flCropEmergence = .false.
           state%crop%flCropEmergence = flCropEmergence   ! [SS-GR-ATM A5.2] dual-write
           flCropHarvest   = .true.
@@ -593,7 +592,7 @@
          call fatalerr_collected ('CropGrowth', 'Illegal value for TASK')
       end select
 
-      end associate  ! tc_t1900, tc_daynr => state%timecontrol [TC-10]
+      end associate  ! tc => state%timecontrol, atmo => state%atmosphere
       return
 
       end
