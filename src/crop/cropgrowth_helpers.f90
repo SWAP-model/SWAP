@@ -192,26 +192,20 @@
 ! SS-SWC S-2.7: state added (intent in) for soil-water-core h reader cutover.
 ! [GR-CROP Phase B/5] narrow use variables
 ! ----------------------------------------------------------------------
-      ! [SS-GR-CROPRT B5] DEFERRED — ArableLandGerm: all symbols are germination/prep
-      !   runtime state or config params with no clean read-cutover path:
-      !   dvs: state%crop%common%dvs home exists; ArableLandGerm writes via global; deferred
-      !   flCropPrep/flCropSow/flCropGerm: state%crop%common homes (A4) but these are WRITE
-      !     sites (subroutine sets flags); state dual-write is done in CropGrowth after ALG call
-      !   dhPrep, hPrep, zPrep, dhSow, hSow, zSow, zTempSow, dtempSow, TempSow: no state home
-      !   MaxPrepDelay, MaxSowDelay, PrepDelay, SowDelay: state%crop%common homes (A4) but written
-      !   tsumemeopt, tsumgerm, hdrygerm, hwetgerm, zgerm, TBASEM, TEFFMX: config thresholds,
-      !     no state home (come from crop .crp file or TOML germ block)
-      !   agerm, bgerm, cgerm: germination model coefficients, no state home
-      !   tsoil: config-staging buffer, renamed to avoid clash with dummy arg tsoil
-      use variables, only: &                                                 ! [SS-GR-CROPRT B5] DEFERRED; dvs retired
-        flCropPrep, flCropSow, flCropGerm, dhPrep, hPrep, zPrep,            &
-        dhSow, hSow, zSow, zTempSow, dtempSow, TempSow,                    &
-        MaxPrepDelay, MaxSowDelay, PrepDelay, SowDelay,                     &
-        tsumemeopt, tsumgerm, hdrygerm, hwetgerm, zgerm, TBASEM, TEFFMX,  &
-        agerm, bgerm, cgerm,                                               &
-        dummy_tsoil_alg_ => tsoil
-      !! Rename config-staging tsoil to avoid clash with dummy arg tsoil.
-      !! [SS-HEAT] Task 9: tsoil retained as config-staging buffer; global is not compute state.
+      ! [GR-CROP 2026-05-25] ArableLandGerm fully migrated off germ-param globals.
+      !   prep/sow params (hPrep/zPrep/MaxPrepDelay/hSow/zSow/zTempSow/TempSow/MaxSowDelay):
+      !     read via crop_config_global%rotation_wofost(icrop)%preparation/sowing.
+      !     dhPrep/dhSow/dtempSow become local scratch (Class E — case(2)/(3) are
+      !     unreachable; cropgrowth.f90:255 stub-errors swprep!=0 OR swsow!=0).
+      !   germ thresholds (tsumemeopt/tbasem/teffmx/hdrygerm/hwetgerm/zgerm/agerm):
+      !     read via crop_config_global%rotation_wofost(icrop)%germination.
+      !   bgerm/cgerm: derived locally from agerm/hdrygerm/hwetgerm/tsumemeopt.
+      !   tsumgerm: state%crop%common%tsumgerm (accumulated runtime).
+      !   flCropPrep/flCropSow/flCropGerm: legacy bare globals retained for cropgrowth.f90
+      !     dispatcher reads (still gated on legacy bare names); dual-write keeps them in
+      !     sync with state%crop%common.
+      use variables, only: flCropPrep, flCropSow, flCropGerm
+      use crop_config_global_mod, only: crop_config_global
       use swap_constants, only: small
       use error_mod, only: fatalerr_collected
       use swap_state_mod, only: swap_state_t
@@ -222,9 +216,19 @@
       !! Soil temperature array from state%heat%tsoil.
       type(swap_state_t), intent(inout) :: state
       !! State record; state%soilwater%h used for pressure-head reads. [SS-SWC S-2.7]
-      !! [SS-GR-CROP A5.1] intent changed in→inout to allow dvs dual-write.
       real(8)  drz1,hrz1,pFz1
       real(8)  tsumemesub
+      real(8)  dhPrep, dhSow, dtempSow      ! local scratch (former bare globals)
+      real(8)  l_agerm, l_bgerm, l_cgerm    ! local copies / derived
+      real(8)  l_tsumemeopt, l_hdrygerm, l_hwetgerm, l_zgerm
+      real(8)  l_TBASEM, l_TEFFMX
+
+      associate( &
+        crop => state%crop%common,    &
+        soil => state%soilwater,      &
+        mesh => state%mesh,           &
+        atmo => state%atmosphere      &
+      )
 
       select case (task)
 
@@ -235,139 +239,156 @@
 
       case (2)
 
+        ! [GR-CROP 2026-05-25] Dead branch: cropgrowth.f90:255 stub-errors swprep!=0,
+        ! so this case never fires in the TOML pipeline. Reads route directly to the
+        ! wofost preparation config sub-record for completeness.
+        associate(prep => crop_config_global%rotation_wofost(crop%icrop)%preparation)
         node   = 1
-        dhPrep = state%soilwater%h(node) - hPrep                          ! [SS-SWC S-2.7]
-        drz1   = -1.d0 * zPrep - state%mesh%dz(node)  ! [GR-BH C7]
+        dhPrep = soil%h(node) - prep%hprep
+        drz1   = -1.d0 * prep%zprep - mesh%dz(node)
         do while (drz1 .gt. 0.d0)
           node   = node + 1
-          dhPrep = max(dhPrep,state%soilwater%h(node) - hPrep)            ! [SS-SWC S-2.7]
-          drz1   = drz1 - state%mesh%dz(node)  ! [GR-BH C7]
+          dhPrep = max(dhPrep,soil%h(node) - prep%hprep)
+          drz1   = drz1 - mesh%dz(node)
         enddo
 
-        flCropPrep = .true.
+        crop%flCropPrep = .true.
         if (dhPrep .gt. 0.d0) then
-          if (state%crop%common%PrepDelay .lt. MaxPrepDelay) then      ! [GR-CROPWS B2] PrepDelay → state%crop%common%PrepDelay
-            state%crop%common%dvs = -0.3d0
-            flCropPrep = .false.
-            PrepDelay  = state%crop%common%PrepDelay + 1               ! [GR-CROPWS B2] RHS PrepDelay → state%crop%common%PrepDelay
+          if (crop%PrepDelay .lt. prep%maxprepdelay) then
+            crop%dvs = -0.3d0
+            crop%flCropPrep = .false.
+            crop%PrepDelay  = crop%PrepDelay + 1
           endif
         endif
-        state%crop%common%flCropPrep = flCropPrep   ! [SS-GR-CROPRT A5]
-        state%crop%common%PrepDelay  = PrepDelay    ! [SS-GR-CROPRT A5]
+        flCropPrep    = crop%flCropPrep    ! dual-write — dispatcher reads bare flCropPrep
 
-        SowDelay = state%crop%common%PrepDelay                         ! [GR-CROPWS B2] PrepDelay → state%crop%common%PrepDelay
-        state%crop%common%SowDelay = SowDelay   ! [SS-GR-CROPRT A5]
-
+        crop%SowDelay = crop%PrepDelay
+        end associate
         return
 
 ! === Sowing before crop growth ==========================================
 
       case (3)
 
+        ! [GR-CROP 2026-05-25] Dead branch: cropgrowth.f90:255 stub-errors swsow!=0,
+        ! so this case never fires in the TOML pipeline. Reads route directly to the
+        ! wofost sowing config sub-record for completeness.
+        associate(sow => crop_config_global%rotation_wofost(crop%icrop)%sowing)
         node   = 1
-        dhSow  = state%soilwater%h(node) - hSow                           ! [SS-SWC S-2.7]
-        drz1   = -1.d0 * zSow - state%mesh%dz(node)  ! [GR-BH C7]
+        dhSow  = soil%h(node) - sow%hsow
+        drz1   = -1.d0 * sow%zsow - mesh%dz(node)
         do while (drz1 .gt. 0.d0)
           node   = node + 1
-          dhSow  = max(dhSow,state%soilwater%h(node) - hSow)              ! [SS-SWC S-2.7]
-          drz1   = drz1 - state%mesh%dz(node)  ! [GR-BH C7]
+          dhSow  = max(dhSow,soil%h(node) - sow%hsow)
+          drz1   = drz1 - mesh%dz(node)
         enddo
 
         node     = 1
-        drz1     = -1.d0 * zTempSow - state%mesh%dz(node)  ! [GR-BH C7]
+        drz1     = -1.d0 * sow%ztempsow - mesh%dz(node)
         do while (drz1 .gt. 0.d0)
           node   = node + 1
-          drz1 = drz1 - state%mesh%dz(node)  ! [GR-BH C7]
+          drz1 = drz1 - mesh%dz(node)
         enddo
 
         ! SS-HEAT pre-Task-8: tsoil read from dummy arg (state%heat%tsoil via caller).
-        dtempSow = min(tsoil(node) - TempSow,0.d0)
+        dtempSow = min(tsoil(node) - sow%tempsow,0.d0)
 
-        flCropSow = .true.
+        crop%flCropSow = .true.
         if (dtempSow .lt. 0.d0 .or. dhSow.gt.0.d0) then
-          if (state%crop%common%SowDelay .lt. MaxSowDelay) then        ! [GR-CROPWS B2] SowDelay → state%crop%common%SowDelay
-            state%crop%common%dvs = -0.2d0
-            flCropSow = .false.
-            SowDelay  = state%crop%common%SowDelay + 1                 ! [GR-CROPWS B2] RHS SowDelay → state%crop%common%SowDelay
+          if (crop%SowDelay .lt. sow%maxsowdelay) then
+            crop%dvs = -0.2d0
+            crop%flCropSow = .false.
+            crop%SowDelay  = crop%SowDelay + 1
           endif
         endif
-        state%crop%common%flCropSow = flCropSow   ! [SS-GR-CROPRT A5]
-        state%crop%common%SowDelay  = SowDelay    ! [SS-GR-CROPRT A5]
-
+        flCropSow = crop%flCropSow    ! dual-write — dispatcher reads bare flCropSow
+        end associate
         return
 
 ! === Simulate germination ==============================================
 
       case (4)
 
+        associate(germ => crop_config_global%rotation_wofost(crop%icrop)%germination)
+        l_agerm      = germ%agerm
+        l_tsumemeopt = germ%tsumemeopt
+        l_hdrygerm   = germ%hdrygerm
+        l_hwetgerm   = germ%hwetgerm
+        l_zgerm      = germ%zgerm
+        if (l_zgerm == 0.0d0) l_zgerm = -10.0d0   ! legacy default; mirrors cropgrowth.f90:289-291
+        l_TBASEM     = germ%tbasem
+        l_TEFFMX     = germ%teffmx
+
         ! Optimal situation in case germination only depends on temperature (swgerm = 1)
-        if (agerm .lt. 0.d0) then
-
-          tsumemesub = tsumemeopt
-
-        ! Germination depends on temperature and hydrological conditions (swgerm = 2)
+        if (germ%swgerm == 1) then
+          tsumemesub = l_tsumemeopt
+          l_bgerm    = 0.0d0
+          l_cgerm    = 0.0d0
         else
+          ! swgerm == 2: temperature + hydrological conditions
+          l_cgerm = - (l_tsumemeopt - l_agerm * log10(-l_hdrygerm))
+          l_bgerm =   (l_tsumemeopt + l_agerm * log10(-l_hwetgerm))
 
           ! ---   calculate average pressure head of rootzone ---
-          if (dabs(zgerm-0.d0) .lt. small) then
-            hrz1 = state%soilwater%h(1)                                   ! [SS-SWC S-2.7]
+          if (dabs(l_zgerm-0.d0) .lt. small) then
+            hrz1 = soil%h(1)
           else
             node = 0
             hrz1 = 0.0d0
-            drz1 = zgerm * (-1.d0)
+            drz1 = l_zgerm * (-1.d0)
             do while (drz1 .gt. 0.d0)
               node = node + 1
-              if (drz1 - state%mesh%dz(node) .ge. 0.d0) then  ! [GR-BH C7]
-                hrz1 = hrz1+state%soilwater%h(node)*state%mesh%dz(node)/(zgerm*(-1.d0))  ! [SS-SWC S-2.7] [GR-BH C7]
+              if (drz1 - mesh%dz(node) .ge. 0.d0) then
+                hrz1 = hrz1+soil%h(node)*mesh%dz(node)/(l_zgerm*(-1.d0))
               else
-                hrz1 = hrz1+state%soilwater%h(node)*drz1/(zgerm*(-1.d0))      ! [SS-SWC S-2.7]
+                hrz1 = hrz1+soil%h(node)*drz1/(l_zgerm*(-1.d0))
               endif
-              drz1 = drz1 - state%mesh%dz(node)  ! [GR-BH C7]
+              drz1 = drz1 - mesh%dz(node)
             enddo
           endif
 
           ! --- simulate germination time ---
           pFz1 = DLOG10(MAX(1.0d0,-hrz1))
-          if (hrz1 .lt. hdrygerm) then
+          if (hrz1 .lt. l_hdrygerm) then
             ! Dry situation
-            tsumemesub = agerm * pFz1 - cgerm
-          elseif (hrz1 .ge. hdrygerm .and. hrz1 .le. hwetgerm) then
+            tsumemesub = l_agerm * pFz1 - l_cgerm
+          elseif (hrz1 .ge. l_hdrygerm .and. hrz1 .le. l_hwetgerm) then
             ! Optimal situation
-            tsumemesub = tsumemeopt
+            tsumemesub = l_tsumemeopt
           else
             ! Wet situation
-            tsumemesub = -agerm * pFz1 + bgerm
+            tsumemesub = -l_agerm * pFz1 + l_bgerm
           endif
 
         endif
 
         ! Update of tsumgerm, for the time step of 1 day
-        ! [SS-GR-ATM B.5] tav reads migrated to state%atmosphere%Tav
-        if (state%atmosphere%Tav .gt. TBASEM)then
-          if( state%atmosphere%Tav .lt. TEFFMX) then
+        if (atmo%Tav .gt. l_TBASEM)then
+          if (atmo%Tav .lt. l_TEFFMX) then
             if(tsumemesub.lt.0.1d0) then
-              tsumgerm = tsumgerm + (state%atmosphere%Tav-TBASEM)
+              crop%tsumgerm = crop%tsumgerm + (atmo%Tav-l_TBASEM)
             else
-              tsumgerm = tsumgerm +(tsumemeopt/tsumemesub)*(state%atmosphere%Tav-TBASEM)
+              crop%tsumgerm = crop%tsumgerm +(l_tsumemeopt/tsumemesub)*(atmo%Tav-l_TBASEM)
             endif
           else
             if(tsumemesub.lt.0.1d0) then
-              tsumgerm = tsumgerm + (TEFFMX-TBASEM)
+              crop%tsumgerm = crop%tsumgerm + (l_TEFFMX-l_TBASEM)
             else
-              tsumgerm = tsumgerm +(tsumemeopt/tsumemesub)*(TEFFMX-TBASEM)
+              crop%tsumgerm = crop%tsumgerm +(l_tsumemeopt/tsumemesub)*(l_TEFFMX-l_TBASEM)
             endif
           endif
         endif
 
         ! Delay growth until tsumgerm is reached
-        flCropGerm = .true.
-        if (tsumgerm .lt. tsumemeopt) then
-          state%crop%common%dvs = -0.1d0 * max(1.d0 - (tsumgerm / tsumemeopt), 0.d0)
-          flCropGerm = .false.
+        crop%flCropGerm = .true.
+        if (crop%tsumgerm .lt. l_tsumemeopt) then
+          crop%dvs = -0.1d0 * max(1.d0 - (crop%tsumgerm / l_tsumemeopt), 0.d0)
+          crop%flCropGerm = .false.
         else
-          state%crop%common%dvs = 0.d0
+          crop%dvs = 0.d0
         endif
-        state%crop%common%flCropGerm = flCropGerm   ! [SS-GR-CROPRT A5]
+        flCropGerm = crop%flCropGerm   ! dual-write — dispatcher reads bare flCropGerm
+        end associate
 
         return
 
@@ -375,6 +396,7 @@
         call fatalerr_collected ('ArableLandGerm', 'Illegal value for TASK')
       end select
 
+      end associate  ! crop, soil, mesh, atmo
       return
       end subroutine ArableLandGerm
 

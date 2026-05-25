@@ -45,9 +45,15 @@
       !     rnflv, rnfst, frnx, fstr: nutrient state/params, no nutrient_state home
       !   flHarvestDay: harvest flag (dual-write to state%crop%common%; global still needed)
       !   noddrz, pathcrop, cropfil: no state home
-      !   bgerm, cgerm, agerm, hprep, dhPrep, zPrep, hSow, dhSow, zSow, zTempSow,
-      !     dtempSow, TempSow, MaxPrepDelay, MaxSowDelay, PrepDelay, SowDelay: germ params
-      !   tsumemeopt, tsumgerm, hdrygerm, hwetgerm, zgerm, TBASEM, TEFFMX: germ thresholds
+      !   [GR-CROP 2026-05-25] germ-params + germ-thresholds retired:
+      !     prep/sow params (Class E unreachable) → direct read from
+      !       crop_config_global%rotation_wofost(icrop)%preparation/sowing.
+      !     germ thresholds (tsumemeopt/tbasem/teffmx/hdrygerm/hwetgerm/zgerm/agerm)
+      !       → direct read from crop_config_global%rotation_wofost(icrop)%germination.
+      !     bgerm/cgerm → derived locally in helpers.
+      !     tsumgerm → state%crop%common%tsumgerm.
+      !     PrepDelay/SowDelay legacy globals still written here (InitializeCrop init);
+      !     state mirror is the canonical reader.
       !   atmtr, daylp, difpp, dsinbe: astro outputs used by both CropGrowth and wofost
       !   dvsend: harvest DVS threshold, no state home
       !   tsoil: config-staging buffer, renamed to avoid clash with dummy arg
@@ -64,10 +70,8 @@
         remoc, pld,                         &  ! swharv/q10 retired; swbulb removed (→state%crop%wofost%swbulb)
         flCropNut, nlue, anlv, anst, nmxlv, nmaxlv, nmaxst,               &
         nmaxrt, lrnr, lsnr, nni, rnflv, rnfst, frnx, fstr, flHarvestDay,  &
-        pathcrop, cropfil, bgerm, cgerm,                                   &  ! [GR-CROP 2026-05-25] noddrz retired — via state%crop%common%noddrz
-        agerm, hprep, dhPrep, zPrep, hSow, dhSow, zSow, zTempSow,         &
-        dtempSow, TempSow, MaxPrepDelay, MaxSowDelay, PrepDelay, SowDelay, &
-        tsumemeopt, tsumgerm, hdrygerm, hwetgerm, zgerm, TBASEM, TEFFMX,  &
+        pathcrop, cropfil,                                                 &  ! [GR-CROP 2026-05-25] germ params retired — config/state cutover
+        PrepDelay, SowDelay,                                               &  ! still set on legacy mirror by InitializeCrop
         dummy_tsoil_cg_ => tsoil
       !! Rename config-staging tsoil to avoid clash with dummy arg tsoil.
       !! [SS-HEAT] Task 9: tsoil retained as config-staging buffer; global is not compute state.
@@ -168,6 +172,7 @@
           state%crop%common%flCropHarvest = flCropHarvest
           state%crop%common%PrepDelay     = PrepDelay
           state%crop%common%SowDelay      = SowDelay
+          state%crop%common%tsumgerm      = 0.0d0     ! [GR-CROP 2026-05-25] reset alongside legacy InitializeCrop()
           ! [GR-CROP 2026-05-25] noddrz mirror dropped — state field set in line 399
           flCropReadFile  = .true.
           state%crop%common%flCropReadFile = flCropReadFile   ! [SS-GR-CROPRT A5]
@@ -272,28 +277,16 @@
                         flCropEmergence = .true.
                         state%crop%flCropEmergence = flCropEmergence   ! [SS-GR-ATM A5.2] dual-write
                      else if (rot_type == 2) then
-                        ! type=2 with swgerm=1 or 2: copy germ params from cfg,
-                        ! mirror legacy readarablelandgerm:3322-3358.
+                        ! type=2 with swgerm=1 or 2: just set the runtime flags;
+                        ! ArableLandGerm reads germ params directly from gp via
+                        ! crop_config_global%rotation_wofost(icrop)%germination.
+                        ! [GR-CROP 2026-05-25] legacy mirror writes
+                        !   tsumemeopt/tbasem/teffmx/agerm/hdrygerm/hwetgerm/zgerm/cgerm/bgerm
+                        !   retired — readers cut over to direct config reads.
                         flCropGerm      = .false.
                         state%crop%common%flCropGerm = flCropGerm   ! [SS-GR-CROPRT A5]
                         flCropEmergence = .false.
                         state%crop%flCropEmergence = flCropEmergence   ! [SS-GR-ATM A5.2] dual-write
-                        tsumemeopt = gp%tsumemeopt
-                        tbasem     = gp%tbasem
-                        teffmx     = gp%teffmx
-                        agerm      = -99.0d0
-                        if (swgerm_cache == 2) then
-                           hdrygerm = gp%hdrygerm
-                           hwetgerm = gp%hwetgerm
-                           if (gp%zgerm /= 0.0d0) then
-                              zgerm = gp%zgerm
-                           else
-                              zgerm = -10.0d0   ! legacy default
-                           end if
-                           agerm = gp%agerm
-                           cgerm = - (tsumemeopt - agerm * log10(-hdrygerm))
-                           bgerm =   (tsumemeopt + agerm * log10(-hwetgerm))
-                        end if
                      else
                         ! type=1 cropfixed with swgerm > 0 — not yet supported.
                         call fatalerr_collected('cropgrowth/ArableLandGerm', &

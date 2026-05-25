@@ -337,9 +337,8 @@
       ! [GR-CROPWS] swrootradius retired — see state%crop%common%swrootradius
       ! [GR-CROPWS] swsalinity retired — see state%crop%common%swsalinity
       ! [GR-ATM 2026-05-23] atmtr retired — see state%atmosphere%atmtr
-      real(8)   agerm              ! Coefficient a  of germination
-      real(8)   cgerm              ! Coefficient c  of germination
-      real(8)   bgerm              ! Coefficient b  of germination
+      ! [GR-CROP 2026-05-25] agerm/bgerm/cgerm retired — read direct from
+      ! crop_config_global%rotation_wofost(icrop)%germination (bgerm/cgerm derived locally).
       ! [GR-CROPWS] adcrh retired — see state%crop%common%adcrh
       ! [GR-CROPWS] adcrl retired — see state%crop%common%adcrl
       ! [GR-CROPWS] air_filled_root_por retired — see state%crop%common%air_filled_root_por
@@ -400,8 +399,7 @@
       real(8)   gasstpot           ! Total gross assimilation for potential crop (kg/ha)
       ! [GR-ATM 2026-05-23] gc retired — see state%crop%common%gc
       ! [GR-CROP-DVS] HarLosOrm_tot retired — see state%crop%common%HarLosOrm_tot
-      real(8)   hdrygerm           ! Criterium Hdry of germination
-      real(8)   hwetgerm           ! Criterium Hwet of germination
+      ! [GR-CROP 2026-05-25] hdrygerm/hwetgerm retired — see cropwofost_config%germination.
       ! [GR-CROPWS] hlim1 retired — see state%crop%common%hlim1
       ! [GR-CROPWS] hlim2l retired — see state%crop%common%hlim2l
       ! [GR-CROPWS] hlim2u retired — see state%crop%common%hlim2u
@@ -478,10 +476,8 @@
       ! [GR-CROP-DVS] tsum retired — see state%crop%common%tsum
       ! [GR-CROPWS] tsumam retired — see state%crop%common%tsumam
       ! [GR-CROPWS] tsumea retired — see state%crop%common%tsumea
-      real(8)   tsumemeopt         ! Temperature sum for crop emergence under optimal conditions
-      real(8)   tsumgerm           ! Temperature sum during germination
-      real(8)   TBASEM             ! Lower threshold temp. for emergence (C)
-      real(8)   TEFFMX             ! max. eff. temp. for emergence (C)
+      ! [GR-CROP 2026-05-25] tsumemeopt/TBASEM/TEFFMX retired — see cropwofost_config%germination.
+      ! [GR-CROP 2026-05-25] tsumgerm retired — see state%crop%common%tsumgerm.
 
       ! [GR-CROPWS] var_a retired — see state%crop%common%var_a
       real(8)   w_root_ss          ! Dry weight of roots at soil surface [0.0..10.0 kg/m3, R]
@@ -1333,26 +1329,17 @@
 
       ! Preparation before crop growth
       logical   flCropPrep         ! Flag indicating if ploughing opportunity has been realized
-      real(8)   zPrep              ! z-level for monitoring work-ability for the crop     
-      real(8)   hPrep              ! maximum pressure head during preparation
-      integer   MaxPrepDelay       ! maximum delay of preparation (starting from begin of growing season)
       integer   PrepDelay          ! delay of preparation
-      real(8)   dhPrep             ! overshoot of pressure head for work-ability during preparation
-      
+      ! [GR-CROP 2026-05-25] zPrep/hPrep/MaxPrepDelay/dhPrep retired — see cropwofost_config%preparation.
+
       ! Sowing before crop growth
       logical   flCropSow          ! Flag indicating if sowing opportunity has been realized
-      real(8)   zSow               ! z-level for monitoring work-ability for the crop
-      real(8)   hSow               ! maximum pressure head during sowing
-      real(8)   zTempSow           ! z-level for monitoring temperature for sowing   
-      integer   MaxSowDelay        ! maximum delay of sowing (starting from begin of growing season)
       integer   SowDelay           ! delay of delay
-      real(8)   TempSow            ! temperature for sowing   
-      real(8)   dhSow              ! overshoot of pressure head for work-ability during sowing
-      real(8)   dtempSow           ! undershoot of temperature for sowing at end of available period
-      
+      ! [GR-CROP 2026-05-25] zSow/hSow/zTempSow/MaxSowDelay/TempSow/dhSow/dtempSow retired — see cropwofost_config%sowing.
+
       ! Germination before crop growth
       logical   flCropGerm         ! Flag indicating if germination has been realized
-      real(8)   zgerm              ! z-level for monitoring temperature for germination
+      ! [GR-CROP 2026-05-25] zgerm retired — see cropwofost_config%germination.
       ! [SS-GR-FINAL D1] DayGerm retired — 0 consumers
 
       ! Harvest of crop growth

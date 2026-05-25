@@ -101,9 +101,8 @@ module legacy_state_mod
       integer :: idsl  !! Switch for crop development before anthesis: 0 = depends on temperature;
       ! [GR-CROP 2026-05-25] noddrz retired — see crop_common_state_t%noddrz
       ! [GR-ATM 2026-05-23] atmtr retired — see state%atmosphere%atmtr
-      real(real64) :: agerm  !! Coefficient a  of germination
-      real(real64) :: cgerm  !! Coefficient c  of germination
-      real(real64) :: bgerm  !! Coefficient b  of germination
+      ! [GR-CROP 2026-05-25] agerm/bgerm/cgerm retired — read direct from
+      ! crop_config_global%rotation_wofost(icrop)%germination (cgerm/bgerm derived locally).
       integer :: swpotrelmf  !! Calculation of potential yield
       real(real64), allocatable :: avevaptb(:)  !! Gash interception model: average evaporation intensity during shower (-) as function of time (T)
       real(real64), allocatable :: avprectb(:)  !! Gash interception model: average rainfall intensity (-) as function of time (T)
@@ -118,8 +117,7 @@ module legacy_state_mod
       real(real64) :: gasst  !! Total gross assimilation for actual crop (kg/ha)
       real(real64) :: gasstpot  !! Total gross assimilation for potential crop (kg/ha)
       ! [GR-ATM 2026-05-23] gc retired — see state%crop%common%gc
-      real(real64) :: hdrygerm  !! Criterium Hdry of germination
-      real(real64) :: hwetgerm  !! Criterium Hwet of germination
+      ! [GR-CROP 2026-05-25] hdrygerm/hwetgerm retired — see cropwofost_config_t%germination.
       real(real64) :: max_resp_factor  !! Ratio root total respiration / maintenance respiration [1..5.0 -, R]
       real(real64) :: mrest  !! Total maintenance respiration for actual crop (kg/ha)
       real(real64) :: mrestpot  !! Total maintenance respiration for potential crop (kg/ha)
@@ -139,10 +137,8 @@ module legacy_state_mod
       real(real64) :: specific_resp_humus  !! Respiration rate of humus at 25 �C [0.0..1.0 kg O2/kg C/d, R]
       real(real64) :: tadw  !! Dry weight of plant minus roots of actual growth (kg/ha)
       real(real64) :: tadwpot  !! Dry weight of plant minus roots of potential growth (kg/ha)
-      real(real64) :: tsumemeopt  !! Temperature sum for crop emergence under optimal conditions
-      real(real64) :: tsumgerm  !! Temperature sum during germination
-      real(real64) :: TBASEM  !! Lower threshold temp. for emergence (C)
-      real(real64) :: TEFFMX  !! max. eff. temp. for emergence (C)
+      ! [GR-CROP 2026-05-25] tsumemeopt/TBASEM/TEFFMX retired — see cropwofost_config_t%germination.
+      ! [GR-CROP 2026-05-25] tsumgerm retired — see crop_common_state_t%tsumgerm.
       real(real64) :: w_root_ss  !! Dry weight of roots at soil surface [0.0..10.0 kg/m3, R]
       real(real64) :: wiltpoint  !! Minimum pressure head at interface soil-root (cm)
       real(real64), allocatable :: wrtb(:)  !! Array with dry weight of root at soil surface as function of DVS (kg/m3)
@@ -385,22 +381,13 @@ module legacy_state_mod
       ! [GR-DRA 2026-05-23] wlstab retired — see state%surfacewater%wlstab
       real(real64), allocatable :: owltab(:,:)  !! real(8) qdrd                  !! Moved to drainage_state_t%qdrd (ADR 0031)
       logical :: flCropPrep  !! Flag indicating if ploughing opportunity has been realized
-      real(real64) :: zPrep  !! z-level for monitoring work-ability for the crop
-      real(real64) :: hPrep  !! maximum pressure head during preparation
-      integer :: MaxPrepDelay  !! maximum delay of preparation (starting from begin of growing season)
+      ! [GR-CROP 2026-05-25] zPrep/hPrep/MaxPrepDelay/dhPrep retired — see cropwofost_config_t%preparation.
       integer :: PrepDelay  !! delay of preparation
-      real(real64) :: dhPrep  !! overshoot of pressure head for work-ability during preparation
       logical :: flCropSow  !! Flag indicating if sowing opportunity has been realized
-      real(real64) :: zSow  !! z-level for monitoring work-ability for the crop
-      real(real64) :: hSow  !! maximum pressure head during sowing
-      real(real64) :: zTempSow  !! z-level for monitoring temperature for sowing
-      integer :: MaxSowDelay  !! maximum delay of sowing (starting from begin of growing season)
+      ! [GR-CROP 2026-05-25] zSow/hSow/zTempSow/MaxSowDelay/TempSow/dhSow/dtempSow retired — see cropwofost_config_t%sowing.
       integer :: SowDelay  !! delay of delay
-      real(real64) :: TempSow  !! temperature for sowing
-      real(real64) :: dhSow  !! overshoot of pressure head for work-ability during sowing
-      real(real64) :: dtempSow  !! undershoot of temperature for sowing at end of available period
       logical :: flCropGerm  !! Flag indicating if germination has been realized
-      real(real64) :: zgerm  !! z-level for monitoring temperature for germination
+      ! [GR-CROP 2026-05-25] zgerm retired — see cropwofost_config_t%germination.
    end type legacy_state_t
 
 end module legacy_state_mod

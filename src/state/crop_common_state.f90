@@ -56,6 +56,7 @@ module crop_common_state_mod
       ! [SS-GR-CROPRT A4] germination delay scratch
       integer      :: PrepDelay      = 0              !! delay of preparation (d)
       integer      :: SowDelay       = 0              !! delay of sowing (d)
+      real(real64) :: tsumgerm       = 0.0_real64     !! [GR-CROP 2026-05-25] accumulated temp sum during germination
 
       ! [SS-GR-CROPRT A4] runtime root zone
       integer      :: noddrz         = 0              !! compartment number at bottom root zone (-)

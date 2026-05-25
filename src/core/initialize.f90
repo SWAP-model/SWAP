@@ -564,8 +564,7 @@
       
       PrepDelay          =  0
       SowDelay           =  0
-
-      tsumgerm           =  0.d0
+      ! [GR-CROP 2026-05-25] tsumgerm retired — see state%crop%common%tsumgerm (reset in cropgrowth.f90:175)
 
       flCropHarvest      = .false.
       flHarvestDay       = .false.
@@ -598,9 +597,9 @@
       vernrtb            = 0.0d0 
 
 ! --- only for bulb crops (tulips etc..)
-      wiltpoint          = 0.0d0 
+      wiltpoint          = 0.0d0
       wrtb               = 0.0d0
-      zsow               = 0.0d0
+      ! [GR-CROP 2026-05-25] zsow retired — see cropwofost_config%sowing%zsow
 ! --- interception
       ! [SS-ATM A-2.6] sicact retired to state%atmosphere%sicact
       
