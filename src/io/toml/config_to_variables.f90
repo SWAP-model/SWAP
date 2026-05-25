@@ -74,131 +74,16 @@ contains
 
       ! Meteorology (audit: 12 + evaporation + snow)
       ! ---------------------------------------------------------------
-      ! [GR-IO 2026-05-25 Phase 3] metfil/pathatm legacy mirror writes dropped —
-      ! readmeteo.f90/meteo_io.f90 read config%general%pathatm and
-      ! config%meteo%metfile directly. CSV pre-load now writes into
-      ! state%atmosphere%{metcsv_dat,nmetcsv,metcsv_det,nmetcsv_det,
-      ! raincsv_dat,nraincsv}.
-      ! Legacy `rainfil` global removed (ADR 0014).
-      ! [GR-TIME 2026-05-25] swetsine legacy mirror dropped.
-      ! [GR-ATM 2026-05-23] angstroma/b retired.
-
-      ! All metfile extensions other than .csv are rejected by
-      ! meteorology_config_validate (ADR 0014). The `.csv` guard below
-      ! is defense-in-depth — local lowercase copy avoids mutating config.
-      block
-         character(len=300) :: metfile_lc
-
-         metfile_lc = ''
-         if (allocated(config%meteo%metfile))  metfile_lc = config%meteo%metfile
-         call lowerc(metfile_lc)
-
-         if (index(trim(metfile_lc), '.csv') > 0) then
-            block
-               use csv_reader_mod,  only: read_csv_table
-               use error_mod,       only: error_collection_t
-               real(8), allocatable :: tbl(:,:)
-               type(error_collection_t) :: errs
-               character(len=9) :: hdr(9)
-               character(len=300) :: csvpath
-               integer :: r
-               hdr(1) = 'date     '
-               hdr(2) = 'rad      '
-               hdr(3) = 'tmin     '
-               hdr(4) = 'tmax     '
-               hdr(5) = 'hum      '
-               hdr(6) = 'wind     '
-               hdr(7) = 'rain     '
-               hdr(8) = 'etref    '
-               hdr(9) = 'wet      '
-               csvpath = trim(config%general%pathatm) // trim(metfile_lc)
-               call read_csv_table(trim(csvpath), hdr, tbl, errs)
-               call errs%abort_if_fatal()
-               state%atmosphere%nmetcsv = size(tbl, 1)
-               if (allocated(state%atmosphere%metcsv_dat)) deallocate(state%atmosphere%metcsv_dat)
-               allocate(state%atmosphere%metcsv_dat(state%atmosphere%nmetcsv, 9))
-               do r = 1, state%atmosphere%nmetcsv
-                  state%atmosphere%metcsv_dat(r, :) = tbl(r, :)
-               end do
-            end block
-         end if
-      end block
-
-      ! Detail meteo CSV pre-load (swmetdetail=1 + detail_file provided).
-      ! Metfile is always CSV here (validator rejects non-.csv per ADR
-      ! 0014). The detail_file required-when-swmetdetail=1 check moved
-      ! to meteorology_config_validate (SS-5 follow-up M2); the
-      ! allocation guard below is defense-in-depth only.
-      if (config%meteo%swmetdetail == 1) then
-         if (allocated(config%meteo%detail_file) .and. &
-             len_trim(config%meteo%detail_file) > 0) then
-            block
-               use csv_reader_mod,  only: read_csv_table
-               use error_mod,       only: error_collection_t
-               real(8), allocatable :: tbl(:,:)
-               type(error_collection_t) :: errs
-               character(len=8) :: hdr(7)
-               character(len=300) :: csvpath
-               integer :: r
-               hdr(1) = 'datetime'
-               hdr(2) = 'record  '
-               hdr(3) = 'rad     '
-               hdr(4) = 'temp    '
-               hdr(5) = 'hum     '
-               hdr(6) = 'wind    '
-               hdr(7) = 'rain    '
-               csvpath = trim(config%general%pathatm) // trim(config%meteo%detail_file)
-               call read_csv_table(trim(csvpath), hdr, tbl, errs)
-               call errs%abort_if_fatal()
-               state%atmosphere%nmetcsv_det = size(tbl, 1)
-               if (allocated(state%atmosphere%metcsv_det)) deallocate(state%atmosphere%metcsv_det)
-               allocate(state%atmosphere%metcsv_det(state%atmosphere%nmetcsv_det, 7))
-               do r = 1, state%atmosphere%nmetcsv_det
-                  state%atmosphere%metcsv_det(r, :) = tbl(r, :)
-               end do
-            end block
-         end if
-      end if
-
-      ! Rain events CSV pre-load (swrain=3, events_file set).
-      if (config%meteo%swrain == 3 .and. allocated(config%meteo%rain_events_file)) then
-         if (len_trim(config%meteo%rain_events_file) > 0) then
-            block
-               use csv_reader_mod,  only: read_csv_table
-               use error_mod,       only: error_collection_t
-               real(8), allocatable :: tbl(:,:)
-               type(error_collection_t) :: errs
-               character(len=8) :: hdr(2)
-               character(len=300) :: csvpath
-               integer :: r
-               hdr(1) = 'datetime'
-               hdr(2) = 'amount  '
-               csvpath = trim(config%general%pathatm) // trim(config%meteo%rain_events_file)
-               call read_csv_table(trim(csvpath), hdr, tbl, errs)
-               call errs%abort_if_fatal()
-               state%atmosphere%nraincsv = size(tbl, 1)
-               if (allocated(state%atmosphere%raincsv_dat)) deallocate(state%atmosphere%raincsv_dat)
-               allocate(state%atmosphere%raincsv_dat(state%atmosphere%nraincsv, 2))
-               do r = 1, state%atmosphere%nraincsv
-                  state%atmosphere%raincsv_dat(r, :) = tbl(r, :)
-               end do
-            end block
-         end if
-      end if
+      ! [GR-SEED 2026-05-25 Task 2] Meteorology CSV pre-loads + snow scalars
+      ! moved to state%atmosphere%init(config) (called from swap_mod).
 
       ! Evaporation sub-section
       ! [GR-IO 2026-05-25 Phase 6 Step 3] swcfbs legacy mirror dropped
+      ! [SS-T10] Deferred — will move into state%crop%init
       state%crop%cfbs = config%meteo%evaporation%cfbs
       ! [GR-ATM 2026-05-23] swredu/cofred/rsigni/cfevappond retired —
       ! snapshotted into state%atmosphere by atmosphere_state%init(config);
       ! compute reads from state, never from these legacy globals.
-
-      ! Snow sub-section
-      ! [GR-TIME 2026-05-25] swsnow legacy mirror dropped — timecontrol_mod reads
-      ! config%meteo%snow%swsnow directly via state%cfg.
-      ! [GR-IO 2026-05-25 Phase 6 Step 3] snowcoef legacy mirror dropped
-      state%atmosphere%TePrRain = config%meteo%snow%teprrain
-      state%atmosphere%TePrSnow = config%meteo%snow%teprsnow
 
       ! ---------------------------------------------------------------
       ! Drainage (audit: 20 fields + surface_runoff sub-section)
