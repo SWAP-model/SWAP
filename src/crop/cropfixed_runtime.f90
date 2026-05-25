@@ -56,12 +56,12 @@
 
       save
 ! ----------------------------------------------------------------------
-      ! TC-10: t1900 read via state%timecontrol tc_t1900 alias.
-      ! [SS-BMI2 Task 4] tstart added to associate
-      ! [SS-GR-ATM B.5] at_tav alias for tav read migration
-      associate( tc_t1900 => state%timecontrol%t1900, &  ! TC-10
-                 tstart   => state%timecontrol%tstart, &  ! [SS-BMI2 Task 4]
-                 at_tav   => state%atmosphere%Tav      )  ! [SS-GR-ATM B.5]
+      ! [GR-CROP 2026-05-25] sub-record associate (crop-sweep convention).
+      associate( crop => state%crop,            &
+                 soil => state%soilwater,       &
+                 mesh => state%mesh,            &
+                 atmo => state%atmosphere,      &
+                 time => state%timecontrol      )
 
       select case (task)
       case (1)
@@ -80,14 +80,13 @@
          use_cache = .false.
          if (associated(crop_config_global)) then
             if (allocated(crop_config_global%rotation_loaded)) then
-               if (state%crop%common%icrop >= 1 .and. state%crop%common%icrop <= size(crop_config_global%rotation_loaded)) then  ! [GR-CROPWS B1]
-                  if (crop_config_global%rotation_loaded(state%crop%common%icrop)) use_cache = .true.  ! [GR-CROPWS B1]
+               if (crop%common%icrop >= 1 .and. crop%common%icrop <= size(crop_config_global%rotation_loaded)) then
+                  if (crop_config_global%rotation_loaded(crop%common%icrop)) use_cache = .true.
                end if
             end if
          end if
          if (use_cache) then
-            call cropfixed_init_from_config(crop_config_global%rotation_fixed(state%crop%common%icrop), state%crop%common%icrop, lcc, state)  ! [GR-CROPWS B1]
-            ! [SS-GR-ATM A5.1] state passed for dual-write of kdif/kdir/swcf/cofab
+            call cropfixed_init_from_config(crop_config_global%rotation_fixed(crop%common%icrop), crop%common%icrop, lcc, state)
             ! swhydrlift is read by legacy readcropfixed only inside the
             ! swdrought=2 branch (stub-errored in Phase 1). Set to 0 here
             ! to mirror the default; Phase 2 (cropwofost) reuses this
@@ -102,68 +101,67 @@
       end block
 
 ! --- maximum rooting depth
-      if (state%crop%common%swrd.eq.1) then
-        state%crop%common%rdm = rdmax
+      if (crop%common%swrd.eq.1) then
+        crop%common%rdm = rdmax
       else
-        state%crop%common%rdm = min(rdmax,state%crop%common%rdc)   ! [GR-CROPWS B1] state%crop%common%rdc → state%crop%common%rdc
+        crop%common%rdm = min(rdmax,crop%common%rdc)
       endif
 
 ! --- skip next initialization if crop parameters are read from *.END file
-      if (tc_t1900 - tstart .gt. tiny .or. state%soilwater%swinco .ne. 3 .or.           &
-     &  dabs(tc_t1900 - state%crop%common%cropstart) .lt. tiny) then   ! [GR-CROPWS B1] cropstart(icrop) → state%crop%common%cropstart
+      if (time%t1900 - time%tstart .gt. tiny .or. soil%swinco .ne. 3 .or.           &
+     &  dabs(time%t1900 - crop%common%cropstart) .lt. tiny) then
 
-        state%crop%common%dvs = 0.0d0
+        crop%common%dvs = 0.0d0
 
 ! --- actual rooting depth
-        if (state%crop%common%swrd.eq.1) then
-          state%crop%common%rd = afgen (state%crop%common%rdtb,22,state%crop%common%dvs)                    ! dvs is 0.0 here (just assigned), no separate read needed
-          state%crop%common%rd = min(state%crop%common%rd,state%crop%common%rdm)                            ! [GR-CROPWS B1] state%crop%common%rdm → state%crop%common%rdm
+        if (crop%common%swrd.eq.1) then
+          crop%common%rd = afgen (crop%common%rdtb,22,crop%common%dvs)
+          crop%common%rd = min(crop%common%rd,crop%common%rdm)
         else
-          state%crop%common%rd = min(state%crop%common%rdi,state%crop%common%rdm)         ! [GR-CROPWS B1] state%crop%common%rdi, state%crop%common%rdm → state%crop%common%X
+          crop%common%rd = min(crop%common%rdi,crop%common%rdm)
         endif
-        state%crop%common%rdpot = state%crop%common%rd
+        crop%common%rdpot = crop%common%rd
 
       endif
 
 ! --- initial lai or sc
-      state%crop%lai = afgen (state%crop%fixed%gctb,(2*magrs),state%crop%common%dvs)               ! [GR-CROPWS B1] dvs → state%crop%common%dvs
-      if (state%crop%common%swgc.eq.2) then
-        state%crop%common%gc = state%crop%lai
-        state%crop%lai = state%crop%lai*3.0d0
+      crop%lai = afgen (crop%fixed%gctb,(2*magrs),crop%common%dvs)
+      if (crop%common%swgc.eq.2) then
+        crop%common%gc = crop%lai
+        crop%lai = crop%lai*3.0d0
       endif
 
 ! --- initial crop factor or crop height
-      state%crop%common%cf = afgen (state%crop%fixed%cftb,(2*magrs),state%crop%common%dvs)    ! [GR-CROPWS B1]
-      state%crop%common%ch = afgen (state%crop%fixed%chtb,(2*magrs),state%crop%common%dvs)    ! [GR-CROPWS B1]
-      if (state%crop%swcf.eq.3) then                                        ! [GR-CROPWS B1] swcf → state%crop%swcf
-        state%crop%fixed%cfeic = afgen (state%crop%fixed%cfeictb,(2*magrs),state%crop%common%dvs)  ! [GR-CROPWS B1]
+      crop%common%cf = afgen (crop%fixed%cftb,(2*magrs),crop%common%dvs)
+      crop%common%ch = afgen (crop%fixed%chtb,(2*magrs),crop%common%dvs)
+      if (crop%swcf.eq.3) then
+        crop%fixed%cfeic = afgen (crop%fixed%cfeictb,(2*magrs),crop%common%dvs)
       endif
-      ! cfeic write retired (was: state%crop%fixed%cfeic = cfeic)
 
 ! --- initial storage on canopy
-      if (state%crop%common%swinter.eq.3) then
-        state%atmosphere%siccapact = siccaplai*state%crop%lai                                      ! state%crop%lai local (just computed above)
+      if (crop%common%swinter.eq.3) then
+        atmo%siccapact = siccaplai*crop%lai
       endif
 
 ! --- initial dry weight of roots at soil surface; oxygen module
-      W_root_ss = afgen (wrtb,(2*magrs),state%crop%common%dvs)        ! [GR-CROPWS B1]
+      W_root_ss = afgen (wrtb,(2*magrs),crop%common%dvs)
 
 ! --- initial ratio root total respiration / maintenance respiration; oxygen module
-      max_resp_factor = afgen (mrftb,(2*magrs),state%crop%common%dvs) ! [GR-CROPWS B1]
+      max_resp_factor = afgen (mrftb,(2*magrs),crop%common%dvs)
 
 ! --- initialize matric flux potential (SS-CRP C-2.5: hroot/hleaf/mfluxtable
 !     init moved to CropGrowth dispatcher which has access to state).
-      if (state%crop%common%swdrought .eq. 2) then
+      if (crop%common%swdrought .eq. 2) then
         if (swhydrlift .eq. 1) then
           flhydrlift = .true.
         else
           flhydrlift = .false.
         endif
-        do i = 1,state%mesh%numnod  ! [GR-BH C7]
+        do i = 1,mesh%numnod
          twilt(i) = watcon(wiltpoint, &
-                            state%soilwater%vg_params(i), &
-                            state%soilwater%iHWCKmodel(state%soilwater%layer(i)), &
-                            i, state%soilwater)                    ! [SS-GR-UTILS Task 5]
+                            soil%vg_params(i), &
+                            soil%iHWCKmodel(soil%layer(i)), &
+                            i, soil)
         enddo
       endif
 
@@ -178,77 +176,73 @@
 ! === calculate actual rate and state variables ======================
 
 ! --- increase in temperature sum
-      dtsum = max (0.0d0,at_tav-state%crop%common%tbase)  ! [SS-GR-ATM B.5] tav→state%atmosphere%Tav
+      dtsum = max (0.0d0,atmo%Tav-crop%common%tbase)
 
 ! --- development rate
-      if (state%crop%common%idev.eq.1) then
+      if (crop%common%idev.eq.1) then
         dvr = 2.0/lcc
-      elseif (state%crop%common%idev.eq.2) then
-        if (state%crop%common%dvs.lt.1.0d0) then                       ! [GR-CROPWS B1] dvs → state%crop%common%dvs
-          dvr = dtsum/state%crop%common%tsumea
+      elseif (crop%common%idev.eq.2) then
+        if (crop%common%dvs.lt.1.0d0) then
+          dvr = dtsum/crop%common%tsumea
         else
-          dvr = dtsum/state%crop%common%tsumam
+          dvr = dtsum/crop%common%tsumam
         endif
       endif
 
 ! --- water stress
-      ! SS-ATM Phase 2 Task A-2.3: ptra read from state%atmosphere (atmosphere home).
-      if(dabs(state%atmosphere%ptra).lt.nihil) then
+      if(dabs(atmo%ptra).lt.nihil) then
         reltr = 1.0d0
       else
-        reltr = max(min(state%soilwater%tra/state%atmosphere%ptra,1.0d0),0.0d0)  ! [SS-SWC S-2.7]
+        reltr = max(min(soil%tra/atmo%ptra,1.0d0),0.0d0)
       endif
 
 ! ----integrals of the crop --------------------------------------------
 
 ! --- phenological development stage
-      state%crop%common%dvs = min(state%crop%common%dvs+dvr,2.d0)      ! [GR-CROPWS B1] RHS dvs → state%crop%common%dvs
-      state%crop%common%tsum = state%crop%common%tsum + dtsum          ! [GR-CROPWS B1]
+      crop%common%dvs = min(crop%common%dvs+dvr,2.d0)
+      crop%common%tsum = crop%common%tsum + dtsum
 
 ! --- leaf area index or soil cover fraction
-      state%crop%lai = afgen (state%crop%fixed%gctb,(2*magrs),state%crop%common%dvs)               ! [GR-CROPWS B1]
-      if (state%crop%common%swgc.eq.2) then
-        state%crop%common%gc = state%crop%lai
-        state%crop%lai = state%crop%lai*3.0d0
+      crop%lai = afgen (crop%fixed%gctb,(2*magrs),crop%common%dvs)
+      if (crop%common%swgc.eq.2) then
+        crop%common%gc = crop%lai
+        crop%lai = crop%lai*3.0d0
       endif
 
 ! --- crop factor or crop height
-      state%crop%common%cf        = afgen (state%crop%fixed%cftb,(2*magrs),state%crop%common%dvs)    ! [GR-CROPWS B1]
-      state%crop%common%ch        = afgen (state%crop%fixed%chtb,(2*magrs),state%crop%common%dvs)    ! [GR-CROPWS B1]
-      if (state%crop%swcf.eq.3) then                                              ! [GR-CROPWS B1]
-        state%crop%fixed%cfeic = afgen (state%crop%fixed%cfeictb,(2*magrs),state%crop%common%dvs)  ! [GR-CROPWS B1]
+      crop%common%cf        = afgen (crop%fixed%cftb,(2*magrs),crop%common%dvs)
+      crop%common%ch        = afgen (crop%fixed%chtb,(2*magrs),crop%common%dvs)
+      if (crop%swcf.eq.3) then
+        crop%fixed%cfeic = afgen (crop%fixed%cfeictb,(2*magrs),crop%common%dvs)
       endif
-      ! cfeic write retired (was: state%crop%fixed%cfeic = cfeic)
 
 ! --- update canopy storage capacity
-      if (state%crop%common%swinter.eq.3) then
-        state%atmosphere%siccapact = siccaplai*state%crop%lai                                      ! state%crop%lai local (just computed above)
+      if (crop%common%swinter.eq.3) then
+        atmo%siccapact = siccaplai*crop%lai
       endif
 
 ! --- dry weight of roots at soil surface; oxygen module
-      W_root_ss = afgen (wrtb,(2*magrs),state%crop%common%dvs)        ! [GR-CROPWS B1]
+      W_root_ss = afgen (wrtb,(2*magrs),crop%common%dvs)
 
 ! --- ratio root total respiration / maintenance respiration; oxygen module
-      max_resp_factor = afgen (mrftb,(2*magrs),state%crop%common%dvs) ! [GR-CROPWS B1]
+      max_resp_factor = afgen (mrftb,(2*magrs),crop%common%dvs)
 
       case (4)
-          
-! --- root extension
-      if (state%crop%common%swrd.eq.1) then
-        state%crop%common%rdpot = afgen (state%crop%common%rdtb,22,state%crop%common%dvs)                  ! [GR-CROPWS B1]
-        state%crop%common%rdpot = min(state%crop%common%rdpot,state%crop%common%rdm)                       ! [GR-CROPWS B1]
-        state%crop%common%rd    = state%crop%common%rdpot
-      else
-        rrpot = min (state%crop%common%rdm-state%crop%common%rdpot,state%crop%common%rri)  ! [GR-CROPWS B1]
-        ! SS-ATM Phase 2 Task A-2.3: ptra read from state%atmosphere (atmosphere home).
-        if (state%atmosphere%ptra.lt.nihil) rrpot = 0.0d0
-        state%crop%common%rdpot = state%crop%common%rdpot + rrpot                        ! [GR-CROPWS B1] RHS state%crop%common%rdpot → state%crop%common%rdpot
 
-        rr = min (state%crop%common%rdm-state%crop%common%rd,state%crop%common%rri)  ! [GR-CROPWS B1]
-        if (state%atmosphere%ptra.lt.nihil .or.             &
-     &      state%soilwater%flWrtNonox) rr = 0.0d0   ! [SS-GR-CROPWS A2] present(state) guard removed
-        if (state%crop%common%swdmi2rd.eq.1 .and. state%atmosphere%ptra.ge.nihil) rr = rr * state%soilwater%tra/state%atmosphere%ptra  ! [SS-SWC S-2.7]
-        state%crop%common%rd = state%crop%common%rd + rr                                 ! [GR-CROPWS B1]
+! --- root extension
+      if (crop%common%swrd.eq.1) then
+        crop%common%rdpot = afgen (crop%common%rdtb,22,crop%common%dvs)
+        crop%common%rdpot = min(crop%common%rdpot,crop%common%rdm)
+        crop%common%rd    = crop%common%rdpot
+      else
+        rrpot = min (crop%common%rdm-crop%common%rdpot,crop%common%rri)
+        if (atmo%ptra.lt.nihil) rrpot = 0.0d0
+        crop%common%rdpot = crop%common%rdpot + rrpot
+
+        rr = min (crop%common%rdm-crop%common%rd,crop%common%rri)
+        if (atmo%ptra.lt.nihil .or. soil%flWrtNonox) rr = 0.0d0
+        if (crop%common%swdmi2rd.eq.1 .and. atmo%ptra.ge.nihil) rr = rr * soil%tra/atmo%ptra
+        crop%common%rd = crop%common%rd + rr
       endif
 
       return
@@ -257,7 +251,7 @@
          call fatalerr_collected ('CropFixed', 'Illegal value for TASK')
       end select
 
-      end associate  ! tc_t1900 => state%timecontrol [TC-10]
+      end associate
       return
       end subroutine cropfixed
 
