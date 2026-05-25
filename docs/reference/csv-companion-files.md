@@ -1,3 +1,7 @@
+---
+title: CSV companion files
+---
+
 # CSV companion files
 
 The SWAP TOML pipeline keeps short tables (a handful of rows) inline; long tables

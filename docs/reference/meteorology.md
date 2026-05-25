@@ -1,3 +1,7 @@
+---
+title: Meteorology
+---
+
 # Meteorology
 
 The `[meteorology]` section of `swap.toml` controls weather input and the
