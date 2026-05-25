@@ -60,3 +60,30 @@ subroutine test_resolve_inlist_unknown_name_errors()
    call resolve_inlist('RAIN, NOTAVAR', sel, errors)
    @assertTrue(errors%has_errors())
 end subroutine
+
+@test
+subroutine test_resolve_inlist_empty_is_no_error()
+   use funit
+   use output_registry_mod, only: resolve_inlist
+   use error_mod,           only: error_collection_t
+   integer, allocatable     :: sel(:)
+   type(error_collection_t) :: errors
+   call resolve_inlist('', sel, errors)
+   @assertFalse(errors%has_errors())
+   @assertEqual(0, size(sel))
+end subroutine
+
+@test
+subroutine test_resolve_inlist_lowercase_matches()
+   use funit
+   use output_registry_mod, only: resolve_inlist
+   use error_mod,           only: error_collection_t
+   integer, allocatable     :: sel(:)
+   type(error_collection_t) :: errors
+   ! lowercase user input must resolve identically to uppercase (registry is uppercase)
+   call resolve_inlist('gwl, rain', sel, errors)
+   @assertFalse(errors%has_errors())
+   @assertEqual(2, size(sel))
+   @assertEqual(1,  sel(1))
+   @assertEqual(14, sel(2))
+end subroutine

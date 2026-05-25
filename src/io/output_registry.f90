@@ -3,7 +3,7 @@
 !! value index) and the emitted CSV header/units. Ported verbatim from the
 !! former inline `data` block in swap_csv_output.f90:94-198.
 module output_registry_mod
-   use error_mod, only: error_collection_t, ERR_PARSE_TYPE_MISMATCH
+   use error_mod, only: error_collection_t, ERR_VALIDATION_ENUM
    implicit none
    private
 
@@ -102,9 +102,9 @@ module output_registry_mod
       out_var_t('SAMPRO',     '(g/cm2)',   OUT_SCALAR), &
       out_var_t('SOLBAL',     '(g/cm2)',   OUT_SCALAR), &
       out_var_t('WC10',       '(cm3/cm3)', OUT_SCALAR), &
-      out_var_t('RUNOFFCN',   '(cm) ',     OUT_SCALAR), &
-      out_var_t('QTOPIN',     '(cm) ',     OUT_SCALAR), &
-      out_var_t('QTOPOUT',    '(cm) ',     OUT_SCALAR), &
+      out_var_t('RUNOFFCN',   '(cm) ',     OUT_SCALAR), &  ! trailing space preserved verbatim from legacy data block
+      out_var_t('QTOPIN',     '(cm) ',     OUT_SCALAR), &  ! trailing space preserved verbatim from legacy data block
+      out_var_t('QTOPOUT',    '(cm) ',     OUT_SCALAR), &  ! trailing space preserved verbatim from legacy data block
       out_var_t('QINFMAX',    '(cm)',       OUT_SCALAR), &
       ! -- Node templates 78-86 --
       out_var_t('H[',         '(cm)',       OUT_NODE), &
@@ -193,7 +193,7 @@ contains
          end if
          n = match(key)
          if (n == 0) then
-            call errors%append(ERR_PARSE_TYPE_MISMATCH, &
+            call errors%append(ERR_VALIDATION_ENUM, &
                "unknown output variable: '" // trim(tok) // "'", 'output_registry')
          else
             want(n) = .true.
@@ -204,13 +204,26 @@ contains
 
    pure integer function match(key)
       character(len=*), intent(in) :: key
+      character(len=len(key))      :: ukey
       integer :: i
+      ukey = to_upper(key)
       match = 0
       do i = 1, size(REGISTRY)
-         if (trim(REGISTRY(i)%name) == trim(key)) then
+         if (trim(REGISTRY(i)%name) == trim(ukey)) then
             match = i; return
          end if
       end do
    end function match
+
+   pure function to_upper(s) result(out)
+      character(len=*), intent(in) :: s
+      character(len=len(s)) :: out
+      integer :: i, c
+      do i = 1, len(s)
+         c = iachar(s(i:i))
+         if (c >= iachar('a') .and. c <= iachar('z')) c = c - 32
+         out(i:i) = achar(c)
+      end do
+   end function to_upper
 
 end module output_registry_mod
