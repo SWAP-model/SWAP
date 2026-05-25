@@ -64,7 +64,7 @@
         remoc, pld,                         &  ! swharv/q10 retired; swbulb removed (→state%crop%wofost%swbulb)
         flCropNut, nlue, anlv, anst, nmxlv, nmaxlv, nmaxst,               &
         nmaxrt, lrnr, lsnr, nni, rnflv, rnfst, frnx, fstr, flHarvestDay,  &
-        noddrz, pathcrop, cropfil, bgerm, cgerm,                           &
+        pathcrop, cropfil, bgerm, cgerm,                                   &  ! [GR-CROP 2026-05-25] noddrz retired — via state%crop%common%noddrz
         agerm, hprep, dhPrep, zPrep, hSow, dhSow, zSow, zTempSow,         &
         dtempSow, TempSow, MaxPrepDelay, MaxSowDelay, PrepDelay, SowDelay, &
         tsumemeopt, tsumgerm, hdrygerm, hwetgerm, zgerm, TBASEM, TEFFMX,  &
@@ -168,7 +168,7 @@
           state%crop%common%flCropHarvest = flCropHarvest
           state%crop%common%PrepDelay     = PrepDelay
           state%crop%common%SowDelay      = SowDelay
-          state%crop%common%noddrz        = noddrz
+          ! [GR-CROP 2026-05-25] noddrz mirror dropped — state field set in line 399
           flCropReadFile  = .true.
           state%crop%common%flCropReadFile = flCropReadFile   ! [SS-GR-CROPRT A5]
           flCropEmergence = .true.
@@ -396,8 +396,7 @@
       do while (state%mesh%zbotcp(node) .gt. (-state%crop%common%rd + 1.d-8))  ! [GR-BH C7] [GR-CROPWS B3]
         node = node + 1
       end do
-      noddrz = node
-      state%crop%common%noddrz = noddrz   ! [SS-GR-CROPRT A5]
+      state%crop%common%noddrz = node   ! [GR-CROP 2026-05-25] legacy noddrz retired
 
       ! calculate potential and actual assimilation
       if (flCropEmergence .and. state%crop%common%croptype(state%crop%common%icrop).ge.2) then

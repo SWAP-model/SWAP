@@ -337,7 +337,7 @@
       ! [GR-CROPWS] ilvoldpot retired — see state%crop%common%ilvoldpot
       ! [GR-CROPWS] iseqgm retired — see state%crop%grass%iseqgm
       ! [GR-CROPWS] iseqgmpot retired — see state%crop%grass%iseqgmpot
-      integer   noddrz             ! Compartment number at bottom root zone (-) ! [GR-CROP 2026-05-25] retained — last consumer rootextraction.f90 (Task 3 retires this)
+      ! [GR-CROP 2026-05-25] noddrz retired — see state%crop%common%noddrz
       ! [GR-CROPWS] seqgrazmow retired — see state%crop%grass%seqgrazmow
       ! [GR-CROPWS] seqgrazmowpot retired — see state%crop%grass%seqgrazmowpot
       ! [GR-CROPWS] swcf retired — see state%crop%swcf

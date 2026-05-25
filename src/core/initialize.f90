@@ -572,9 +572,9 @@
       ! [SS-CRP C-2.5] flWrtNonox retired — soilwater_init handles init via state%soilwater (ADR 0036)
       ! flWrtNonox         = .false.
 
-      daycrop            = 0 
-      idsl               = 0 
-      noddrz             = 0 
+      daycrop            = 0
+      idsl               = 0
+      ! [GR-CROP 2026-05-25] noddrz retired — see state%crop%common%noddrz (default 0)
       atmin7             = 0.0d0
       avevaptb           = 0.0d0 
       avprectb           = 0.0d0 

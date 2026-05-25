@@ -405,8 +405,9 @@
       !   removed from only-list; reads via state%soilwater.
       ! SS-SWC S-2.11: theta,hm1,q,inq,inqrot removed from only-list; reads via state%soilwater.
       ! SS-TC TC-7: daynr,daycum,t1900,date,flprintshort removed from only-list; reads via state%timecontrol.
-      ! [SS-GR-FINAL B3] DEFERRED — rot: file unit; noddrz: no state home yet; outfil/pathwork/project: file-path globals
-      use variables, only: rot,noddrz,outfil,pathwork,project
+      ! [SS-GR-FINAL B3] DEFERRED — rot: file unit; outfil/pathwork/project: file-path globals
+      ! [GR-CROP 2026-05-25] noddrz retired — read via state%crop%common%noddrz
+      use variables, only: rot,outfil,pathwork,project
       use swap_state_mod, only: swap_state_t
       use file_io_mod, only: file_open
       implicit none
@@ -473,7 +474,7 @@
       if (tc_flprintshort) then
 ! ---   determine date and date-time
         call dtdpst ('year-month-day,hour:minute:seconds',tc_t1900,datexti)  ! TC-7
-        do node = 1,noddrz
+        do node = 1,state%crop%common%noddrz  ! [GR-CROP 2026-05-25]
            write (rot,300) datexti,comma,state%mesh%z(node),comma,state%soilwater%hleaf,comma,  &
      &       state%soilwater%Hxylem,comma,                                            &
      &       state%soilwater%hroot(node),comma,state%soilwater%hm1(node),comma,state%soilwater%inqrot(node),comma, &
@@ -486,7 +487,7 @@
         end do
 
       else
-        do node = 1,noddrz
+        do node = 1,state%crop%common%noddrz  ! [GR-CROP 2026-05-25]
            write (rot,310) tc_date,comma,state%mesh%z(node),comma,state%soilwater%hleaf,comma,  &
      &       state%soilwater%Hxylem,comma,                                            &
      &       state%soilwater%hroot(node),comma,state%soilwater%hm1(node),comma,state%soilwater%inqrot(node),comma, &

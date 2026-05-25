@@ -112,7 +112,7 @@ module legacy_state_mod
       integer :: daycrop  !! Number of days that a crop exists
       integer :: icrop  !! Current crop number
       integer :: idsl  !! Switch for crop development before anthesis: 0 = depends on temperature;
-      integer :: noddrz  !! Compartment number at bottom root zone (-)
+      ! [GR-CROP 2026-05-25] noddrz retired — see crop_common_state_t%noddrz
       ! [GR-ATM 2026-05-23] atmtr retired — see state%atmosphere%atmtr
       real(real64) :: agerm  !! Coefficient a  of germination
       real(real64) :: cgerm  !! Coefficient c  of germination

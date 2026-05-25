@@ -44,8 +44,8 @@ module rootextraction_mod
       use variables, only: &                                               ! [SS-GR-FINAL B6] residuals — all DEFERRED
                            ! [GR-SOIL 2026-05-24] botcom retired — read via state%mesh%botcom
                            criterhr, flhydrlift,                   &
-                           ! DEFERRED: kroot/kstem/noddrz/oxygenintercept — crop/log globals; Phase C3
-                           kroot, kstem, noddrz, oxygenintercept,   &
+                           ! DEFERRED: kroot/kstem/oxygenintercept — crop/log globals; Phase C3
+                           kroot, kstem, oxygenintercept,   &  ! [GR-CROP 2026-05-25] noddrz retired
                            ! DEFERRED: oxygenslope/rdctb/rootcoefa/rooteff — active crop state; Phase C3; rd/rdm retired
                            oxygenslope, rootcoefa, rooteff, &  ! rdctb retired
                            ! DEFERRED: rootradius/rxylem/saltmax/saltslope/stephr — crop/solute config; Phase C3
@@ -102,8 +102,8 @@ module rootextraction_mod
 ! --- calculate potential root extraction of the compartments
         ! 22-10-2018: bug repair signalled by Paul van Walsum: division not by rd but by depth bottom of last compartment where roots are present
         !             rd replaced by (newly calculated) rd_noddrz
-        rd_noddrz = abs(mesh%zbotcp(noddrz))
-        do node = 1,noddrz
+        rd_noddrz = abs(mesh%zbotcp(crop%common%noddrz))
+        do node = 1,crop%common%noddrz
           top = abs(mesh%ztopcp(node) / rd_noddrz)
           bot = abs(mesh%zbotcp(node) / rd_noddrz)
           soil%qrot(node) = (afgen(crop%common%cumdens,202,bot)-afgen(crop%common%cumdens,202,top))* atmo%ptra
@@ -128,7 +128,7 @@ module rootextraction_mod
 
       soil%qrosum = 0.0d0
 
-      do 200 node = 1,noddrz
+      do 200 node = 1,crop%common%noddrz
         alpdry = 1.0d0
         alpwet = 1.0d0
         alpsol = 1.0d0
@@ -171,7 +171,7 @@ module rootextraction_mod
 !         WOFOST: root zone remain the aim, but biomass is increasing
 !         GRASS : stop root development
           soil%flWrtNonox = .false.
-          if (crop%common%swWrtNonox .eq. 1 .and. node .eq. noddrz) then
+          if (crop%common%swWrtNonox .eq. 1 .and. node .eq. crop%common%noddrz) then
             if (alpwet .lt. crop%common%aeratecrit) then
               soil%flWrtNonox = .true.
             end if
@@ -294,7 +294,7 @@ module rootextraction_mod
           endif
 
           ! Change the abstraction of the roots
-          do node = 1,noddrz
+          do node = 1,crop%common%noddrz
             soil%qrot(node) = soil%qrot(node) * alptotcom / alptot
           enddo
 
@@ -346,7 +346,7 @@ module rootextraction_mod
                            ! [GR-SOIL 2026-05-24] botcom retired
                            criterhr, flhydrlift,                   &  ! dcritrtz/cumdens retired  ! DEFERRED: soil/crop config
                            ! hlim1/hlim2l/hlim2u/hlim3h/hlim3l/hlim4 retired  ! DEFERRED: drought limits
-                           kroot, kstem, noddrz, oxygenintercept,   &  ! DEFERRED: crop/log globals
+                           kroot, kstem, oxygenintercept,   &  ! [GR-CROP 2026-05-25] noddrz retired
                            oxygenslope, rootcoefa, rooteff, &  ! rdctb retired  ! rd retired  ! DEFERRED: active crop state
                            rootradius, rxylem, stephr,                    &  ! saltmax/saltslope retired  ! DEFERRED: crop/solute config
                            swfrost,                                       &  ! swcompensate/swoxygen/swdrought retired  ! DEFERRED: stress switches
@@ -373,7 +373,8 @@ module rootextraction_mod
          soil    => state%soilwater,                  &
          atmo    => state%atmosphere,                 &
          mesh    => state%mesh,                       &
-         cfg_sim => state%cfg%simulation              &
+         cfg_sim => state%cfg%simulation,             &
+         noddrz  => state%crop%common%noddrz          &  ! [GR-CROP 2026-05-25] alias for state read
       )
 
 ! --- initialization
@@ -707,7 +708,7 @@ module rootextraction_mod
                            ! [GR-SOIL 2026-05-24] botcom retired
                            criterhr, flhydrlift,                   &  ! dcritrtz/cumdens retired  ! DEFERRED: soil/crop config
                            ! hlim1/hlim2l/hlim2u/hlim3h/hlim3l/hlim4 retired  ! DEFERRED: drought limits
-                           kroot, kstem, noddrz, oxygenintercept,   &  ! DEFERRED: crop/log globals
+                           kroot, kstem, oxygenintercept,   &  ! [GR-CROP 2026-05-25] noddrz retired
                            oxygenslope, rootcoefa, rooteff, &  ! rdctb retired  ! rd retired  ! DEFERRED: active crop state
                            rootradius, rxylem, stephr,                    &  ! saltmax/saltslope retired  ! DEFERRED: crop/solute config
                            swfrost,                                       &  ! swcompensate/swoxygen/swdrought retired  ! DEFERRED: stress switches
@@ -725,11 +726,12 @@ module rootextraction_mod
 
 ! --- [GR-CROP 2026-05-25] sub-record aliases (crop, soil, atmo, mesh, time).
       associate( &
-         crop => state%crop,                          &
-         soil => state%soilwater,                     &
-         atmo => state%atmosphere,                    &
-         mesh => state%mesh,                          &
-         time => state%timecontrol                    &
+         crop   => state%crop,                        &
+         soil   => state%soilwater,                   &
+         atmo   => state%atmosphere,                  &
+         mesh   => state%mesh,                        &
+         time   => state%timecontrol,                 &
+         noddrz => state%crop%common%noddrz           &  ! [GR-CROP 2026-05-25] alias for state read
       )
 
 ! --  initialisatie
