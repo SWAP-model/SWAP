@@ -66,7 +66,6 @@
       use variables, only: &
         cropend,                                             &  ! cross-file with dispatcher (writes), cropfixed/cropgrass
         wrtmin, gwrt,                                        &  ! cross-file with cropgrass_runtime/cropgrowth_helpers
-        reltr,                                               &  ! cross-file with cropfixed_runtime/cropgrass_runtime
         flCropHarvest, flCropNut, flHarvestDay,              &  ! cross-file lifecycle flags with cropgrowth dispatcher
         flanthesis,                                          &  ! cross-file with cropgrowth dispatcher
         dlc, dlo, idsl,                                      &  ! cross-file phenology config with cropgrowth dispatcher
@@ -745,17 +744,17 @@
 
 ! --- water stress reduction of pgass to gass
       if(dabs(atmo%ptra).lt.nihil) then
-        reltr = 1.0d0
+        crop%common%reltr = 1.0d0
       else
-        reltr = max(0.0d0,min(1.0d0,soil%tra/atmo%ptra))
+        crop%common%reltr = max(0.0d0,min(1.0d0,soil%tra/atmo%ptra))
       endif
 
 ! --- nitrogen stress reduction of pgass to gass
       if (flCropNut) then
-        reltr = min(reltr,cw_fstr)
-        cw_fstr  = reltr
+        crop%common%reltr = min(crop%common%reltr,cw_fstr)
+        cw_fstr  = crop%common%reltr
       end if
-      gass = crop%wofost%pgass * reltr
+      gass = crop%wofost%pgass * crop%common%reltr
 
 ! --- respiration and partitioning of carbohydrates between growth and
 ! --- maintenance respiration
@@ -789,7 +788,7 @@
 !         not on the P and K stress. Personal communication Joost Wolf        
 !         added IS
 !******************************************************************** 
-          CALL SUBPAR (reltr,cw_NPART,cw_NNI,FR,FL,FS,FO)
+          CALL SUBPAR (crop%common%reltr,cw_NPART,cw_NNI,FR,FL,FS,FO)
       endif
       
 ! --- conversion factor 
@@ -811,7 +810,7 @@
       if (crop%common%swrd.eq.3 .and. soil%flWrtNonox) grrt = 0.d0
 
 ! --- death of leaves due to water stress or high lai or nitrogen stress
-      call deaths(flcropnut,crop%wofost%wlv,crop%kdif,crop%lai,cw_NNI,crop%common%perdl,cw_rdrns,reltr,dslv)
+      call deaths(flcropnut,crop%wofost%wlv,crop%kdif,crop%lai,cw_NNI,crop%common%perdl,cw_rdrns,crop%common%reltr,dslv)
 
 ! --- death of leaves due to exceeding life span:
       call deatha(dslv,delt,crop%common%ilvold,crop%common%lv,crop%common%lvage,crop%common%span,i1,dalv)
@@ -864,11 +863,11 @@
 ! --- calculation of specific leaf area in case of exponential growth:
 ! --- leaf area not to exceed exponential growth curve
 ! --- cw_FSTR is actual stress: water and nutrient 
-      Fstress = reltr
+      Fstress = crop%common%reltr
       if (flcropnut) then
          Fstress = cw_FSTR
          if ((crop%common%dvs .LT. 0.2d0).AND.(crop%lai .LT. 0.75d0)) then
-           Fstress = reltr * EXP(-cw_NLAI* (1.0d0 - cw_NNI))
+           Fstress = crop%common%reltr * EXP(-cw_NLAI* (1.0d0 - cw_NNI))
          endif
       endif
       call GLAI(Fstress,crop%common%LAIEXP,crop%common%GLAIEX,atmo%Tav,crop%common%tbase,crop%common%rgrlai,GRLV,SLAT,GLA)
@@ -973,7 +972,7 @@
 !        Nutrient uptake limiting factor (-) at low moisture conditions in the
 !        rooted soil layer before anthesis. After anthesis/cw_dvsnlt there is no
 !        nutrient uptake from the soil
-         NLIMIT = INSW(crop%common%dvs-cw_dvsnlt,INSW(reltr-0.01d0,0.0d0,1.0d0),0.d0)
+         NLIMIT = INSW(crop%common%dvs-cw_dvsnlt,INSW(crop%common%reltr-0.01d0,0.0d0,1.0d0),0.d0)
          NdemandSoil = (1.d0-cw_NFIXF) * NDEMTO * NLIMIT
          NdemandBioFix =  cw_NFIXF * NDEMTO * NLIMIT
 

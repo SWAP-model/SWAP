@@ -580,7 +580,7 @@
       ! [GR-CROP 2026-05-25] mrftb retired — always-zero on TOML
       pfreetb            = 0.0d0
       pstemtb            = 0.0d0 
-      reltr              = 0.0d0 
+      ! [GR-CROP 2026-05-25] reltr retired — see state%crop%common%reltr
       ! [GR-CROP 2026-05-25] rootcoefa/rootradius retired — JvL-only (swdrought=2);
       ! body extracted to src/crop/dormant/jongvanlier.f90.
       ! [SS-CRP C-2.5] rootrho retired — soilwater_init handles init via state%soilwater (ADR 0036)

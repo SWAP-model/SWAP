@@ -20,13 +20,14 @@
 !   - siccaplai*lai branches: swinter=3 stub-errored on TOML; replaced with 0.0d0.
 !   - wiltpoint → state%crop%common%hlim4 (Feddes wilting-point head).
 !   - twilt/flhydrlift migrated to state%crop%common (drought-stress workspace).
-!   - Remaining legacy globals (rid, daycrop, wrtmin, gwrt, reltr): cross-file
-!     readers in oxygenstress / cropgrowth_helpers / cropwofost_runtime.
+!   - reltr migrated to state%crop%common%reltr (active rotation only — written
+!     by the cropX_runtime task=3 selected by the dispatcher; read same-file).
+!   - Remaining legacy globals (rid, daycrop, wrtmin, gwrt): cross-file readers
+!     in oxygenstress / cropgrowth_helpers / cropwofost_runtime.
 ! ----------------------------------------------------------------------
       use swap_array_dimensions, only: magrs, macp
       use variables, only: rid, daycrop,        &  ! workspace/scratch — cross-file readers (oxygenstress, cropgrowth)
-                           wrtmin, gwrt,        &  ! cross-file with cropgrowth_helpers/cropwofost_runtime
-                           reltr                  ! cross-file with cropwofost_runtime/cropfixed_runtime
+                           wrtmin, gwrt           ! cross-file with cropgrowth_helpers/cropwofost_runtime
       use array_utils, only: afgen
       use soilhydraulics_utils, only: watcon
       use rootextraction_mod, only: MatricFlux
@@ -855,11 +856,11 @@
 ! ---   water stress reduction of pgass to gass
         ! SS-ATM Phase 2 Task A-2.3: ptra read from state%atmosphere (atmosphere home).
         if(dabs(atmo%ptra).lt.nihil) then
-          reltr = 1.0d0
+          crop%common%reltr = 1.0d0
         else
-          reltr = max(0.0d0,min(1.0d0,soil%tra/atmo%ptra))
+          crop%common%reltr = max(0.0d0,min(1.0d0,soil%tra/atmo%ptra))
         endif
-        gass = crop%wofost%pgass * reltr
+        gass = crop%wofost%pgass * crop%common%reltr
 
 ! ---   respiration and partitioning of carbohydrates between growth and
 ! ---   maintenance respiration
@@ -906,7 +907,7 @@
         grlv = fl*admi
 
 ! ---   death of leaves due to water stress or high lai
-        dslv1 = crop%wofost%wlv*(1.0d0-reltr)*crop%common%perdl
+        dslv1 = crop%wofost%wlv*(1.0d0-crop%common%reltr)*crop%common%perdl
         laicr = 3.2d0/crop%kdif
         dslv2 = crop%wofost%wlv*max(0.0d0,min(0.03d0,0.03d0*(crop%lai-laicr)/laicr))
         dslv = max (dslv1,dslv2) 
@@ -960,7 +961,7 @@
 ! ---   growth rate stems
         grst = fs*admi
 ! ---   death of stems due to water stress
-        drst1 = crop%wofost%wst*(1.0d0-reltr)*crop%common%perdl
+        drst1 = crop%wofost%wst*(1.0d0-crop%common%reltr)*crop%common%perdl
 ! ---   death of stems due to ageing
         drst2 = afgen (crop%common%rdrstb,30,rid)*crop%wofost%wst
         drst = (drst1+drst2)/delt 

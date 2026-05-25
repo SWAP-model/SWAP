@@ -69,6 +69,11 @@ module crop_common_state_mod
       real(real64), allocatable :: twilt(:)              !! pressure head of compartment at wilting point (L)
       logical      :: flhydrlift     = .false.           !! De Jong van Lier hydraulic-lift flag
 
+      ! [GR-CROP 2026-05-25] Relative transpiration factor — written by the
+      ! active cropX_runtime task=3 from soil%tra/atmo%ptra; read by the same
+      ! file's growth math + cross-rotation by the cropwofost nutrient pathway.
+      real(real64) :: reltr           = 0.0_real64       !! relative transpiration factor reducing crop growth (-)
+
       ! [SS-GR-CROPRT A4] surface params
       real(real64) :: albedo         = 0.0_real64     !! crop reflection coefficient (-)
       real(real64) :: rsc            = 0.0_real64     !! minimum canopy resistance dry crop (T/L)

@@ -125,7 +125,7 @@ module legacy_state_mod
       ! [GR-CROP 2026-05-25] siccaplai retired — Gash interception (swinter=3) stub-errored on TOML
       ! [GR-CROP 2026-05-25] q10_microbial retired — see state%crop%oxygen%q10_microbial
       ! [GR-CROP 2026-05-25] q10_root retired — see state%crop%oxygen%q10_root
-      real(real64) :: reltr  !! relative transpiration factor that reduces crop growth (-)
+      ! [GR-CROP 2026-05-25] reltr retired — see state%crop%common%reltr
       real(real64) :: rid  !! Real day number of detailed grass crop (d)
       ! [GR-CROP 2026-05-25] rootcoefa/rooteff/rootradius retired — JvL-only (swdrought=2);
       ! body extracted to src/crop/dormant/jongvanlier.f90.

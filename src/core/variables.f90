@@ -438,7 +438,7 @@
       ! [GR-CROP 2026-05-25] q10_root retired — see state%crop%oxygen%q10_root
       ! [GR-CROPWS] rdrrtb retired — see state%crop%common%rdrrtb
       ! [GR-CROPWS] rdrstb retired — see state%crop%common%rdrstb
-      real(8)   reltr              ! relative transpiration factor that reduces crop growth (-)
+      ! [GR-CROP 2026-05-25] reltr retired — see state%crop%common%reltr
       ! [GR-CROPWS] rfsetb retired — see state%crop%common%rfsetb
       ! [GR-CROPWS] rgrlai retired — see state%crop%common%rgrlai
       real(8)   rid                ! Real day number of detailed grass crop (d)

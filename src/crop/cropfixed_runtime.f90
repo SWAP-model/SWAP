@@ -25,11 +25,9 @@
 !   - wiltpoint legacy retired — read via state%crop%common%hlim4 (TOML-equivalent
 !     Feddes wilting-point pressure head).
 !   - twilt/flhydrlift migrated to state%crop%common (drought-stress workspace).
-!   - reltr remains cross-file with cropgrass/cropwofost (single-file scope across
-!     the three crop-type runtimes; written here / read by them).
+!   - reltr migrated to state%crop%common%reltr (active rotation only).
 ! ----------------------------------------------------------------------
       use swap_array_dimensions, only: magrs
-      use variables, only: reltr   ! cross-file with cropgrass/cropwofost
       use soilhydraulics_utils, only: watcon
       use array_utils, only: afgen
       use rootextraction_mod, only: MatricFlux
@@ -188,9 +186,9 @@
 
 ! --- water stress
       if(dabs(atmo%ptra).lt.nihil) then
-        reltr = 1.0d0
+        crop%common%reltr = 1.0d0
       else
-        reltr = max(min(soil%tra/atmo%ptra,1.0d0),0.0d0)
+        crop%common%reltr = max(min(soil%tra/atmo%ptra,1.0d0),0.0d0)
       endif
 
 ! ----integrals of the crop --------------------------------------------
