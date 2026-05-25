@@ -170,7 +170,7 @@ module legacy_state_mod
       ! [GR-SOIL 2026-05-24] botcom retired — see state%mesh%botcom
       integer :: dra  !! Internal number of drainage input file *.DRA
       ! [GR-DRA 2026-05-23] dramet retired — see state%drainage%dramet
-      integer :: inc  !! Internal number of output file *.INC with incremental water balance data
+      ! [GR-IO 2026-05-25] inc retired — moved to state%timecontrol%file_unit_inc
       ! [GR-DRA 2026-05-23] ipos retired — see state%drainage%ipos
       ! [GR-SOIL 2026-05-24] isoillay retired — read inline from config%soil%isoillay
       ! [GR-SOIL 2026-05-24] ncomp retired — read inline from config%soil%ncomp
@@ -182,7 +182,7 @@ module legacy_state_mod
       ! [GR-SOIL 2026-05-24] numlay retired — see state%mesh%numlay
       integer :: numnodnew  !! Number of desired nodes for soil water quality models
       ! [GR-SOIL 2026-05-24] numtab/numtablay retired — orphan stubs; swsophy=1 dormant.
-      integer :: rot  !! Internal number of output file *.ROT with microscopic root water extraction data
+      ! [GR-IO 2026-05-25] rot retired — moved to state%timecontrol%file_unit_rot
       integer :: sw2  !! Switch for prescribed bottom flux: 1 = sine function; 2 = table
       integer :: sw3  !! Switch for prescribed hydraulic head of deep aquifer: 1 = sine function; 2 = table
       ! [GR-SOIL 2026-05-24] sw4 retired — orphan stub; read via state%cfg%bottom_boundary%sw4.
@@ -221,7 +221,7 @@ module legacy_state_mod
       ! [GR-CROP 2026-05-25] CriterHr retired — JvL-only (swdrought=2);
       ! body extracted to src/crop/dormant/jongvanlier.f90.
       ! [GR-DRAIN 2026-05-25] drares retired — read from config%drain%drares
-      real(real64), allocatable :: dznew(:)  !! Desired thickness of compartments for soil water quality models (L)
+      ! [GR-IO 2026-05-25] dznew retired — read from config%soil%discretization%dznew
       ! [GR-DRA 2026-05-23] entres retired — see state%drainage%entres
       ! [GR-DRA 2026-05-23] ftopdislay retired — see state%drainage%ftopdislay
       ! [GR-DRA 2026-05-23] geofac retired — see state%drainage%geofac
@@ -236,7 +236,7 @@ module legacy_state_mod
       ! [GR-SOIL 2026-05-24] hsublay retired — read inline from config%soil%hsublay
       ! [GR-DRAIN 2026-05-25] infres retired — read from config%drain%infres
       ! [GR-SOL 2026-05-24] inpola/inpolb retired — see state%mesh%{inpola,inpolb}
-      real(real64) :: iqinfmax  !! [SS-GR-FINAL D1] qinfmax retired — 0 consumers
+      ! [GR-IO 2026-05-25] iqinfmax retired-zero — QINFMAX CSV column hard-coded to 0.0d0
       real(real64) :: issnowbeg  !! Amount of snow in soil water equivalent (L) at start of current intermediate period [snow.f90, waterbalance.f90]
       ! [GR-DRA 2026-05-23] khbot retired — see state%drainage%khbot
       ! [GR-DRA 2026-05-23] khtop retired — see state%drainage%khtop
@@ -290,7 +290,7 @@ module legacy_state_mod
       integer :: swtopbhea  !! Switch for top boundary condition: 1 = use air temperatures; 2 = read measured surface temperatures
       integer :: swcalt  !! Switch for method of soil water heat flow simulation: 1 = analytical method; 2 = numerical method
       ! [GR-TIME 2026-05-25] swhea retired — read from config%heat%swhea
-      integer :: tem  !! Internal number of output file *.TEM with soil temperatures
+      ! [GR-IO 2026-05-25] tem retired — moved to state%timecontrol%file_unit_tem
       real(real64) :: ddamp  !! Damping depth (L) of temperature wave in soil
       real(real64) :: tampli  !! Amplitude of prescribed annual temperature wave (�C) at soil surface
       real(real64), allocatable :: tembtab(:)  !! Array with specified bottom temperature (�C) as function of time (T)
@@ -301,7 +301,7 @@ module legacy_state_mod
       real(real64) :: tmean  !! Prescribed mean annual temperature (�C) at soil surface
       real(real64), allocatable :: tsoil(:)  !! Config-staging: nheat initial temperature profile entries (�C) for each compartment
       real(real64), allocatable :: zh(:)  !! Array with soil depths (L) used to specify initial soil temperatures
-      integer :: snw  !! Internal number of output file *.SNW with snow pack data
+      ! [GR-IO 2026-05-25] snw retired — moved to state%timecontrol%file_unit_snw
       ! [GR-TIME 2026-05-25] swsnow retired — read from config%meteo%snow%swsnow
       integer :: swsublim  !! Switch for suppressing simulation of sublimation of snow: 1 = suppress !! Adaptation 3 for PEARL-MACRO
       real(real64) :: snowcoef  !! Snow melt factor (-)
@@ -349,7 +349,7 @@ module legacy_state_mod
       real(real64) :: ArMpTp  !! [retired-zero] kept: ArMpSs assignment
       ! [GR-SOIL 2026-05-24] cQMpLatSs retired — orphan stub, ADR 0040 macropore.
       real(real64), allocatable :: DiPoCp(:)  !! [retired-zero] kept: soilgrid refinement
-      real(real64) :: iQMpOutDrRap  !! [retired-zero] kept: swap_csv/swapoutput DRAINAGE accumulator
+      ! [GR-IO 2026-05-25] iQMpOutDrRap retired — drainage term in water_balance_row collapses to state%surfacewater%iqdra
       real(real64), allocatable :: IAvFrMpWlWtDm1(:)  !! [retired-zero] kept: soilgrid refinement
       real(real64), allocatable :: IAvFrMpWlWtDm2(:)  !! [retired-zero] kept: soilgrid refinement
       real(real64), allocatable :: iQExcMtxDm1Cp(:)  !! [retired-zero] kept: soilgrid.f90 macropore redistribution

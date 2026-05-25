@@ -62,8 +62,8 @@
 ! ----------------------------------------------------------------------
 
       ! [SS-GR-CROPRT A3] swcsv/swcsv_tz/swdrought/swrum/swinc migrated to config or retired
-      ! inc file unit retained: Arc 9.5 pragmatic edge (file handle, not output switch)
-      use variables, only: inc
+      ! [GR-IO 2026-05-25] use variables, only: inc — was a dead import (only
+      ! commented-out outinc/swinc references remain in this routine).
       use SWAP_csv_output
       use SWAP_csv_output_tz
       use swap_state_mod, only: swap_state_t
@@ -143,8 +143,9 @@
       ! SS-SWC S-2.11: gwl,pond,volact,volini,PondIni,iqbot,iqrot,igird,iintc,irunon,iruno,irunoCN removed; reads via state%soilwater.
       ! SS-TC TC-7: daynr,daycum,t1900,date,flheader,flprintshort removed from only-list; reads via state%timecontrol.
       ! [SS-BMI2] inout: build_water_balance_row writes to state%water_balance_row
-      ! [GR-CROP 2026-05-25] outfil/pathwork/project → state%cfg%general; inc/iQMpOutDrRap retained (file-unit + legacy accumulator)
-      use variables, only: inc,iQMpOutDrRap
+      ! [GR-IO 2026-05-25] inc → state%timecontrol%file_unit_inc.
+      ! iQMpOutDrRap was a retired-zero accumulator (only zero-init, never
+      ! written elsewhere); reads replaced with 0.0d0 literal inline.
       use swap_state_mod, only: swap_state_t
       use file_io_mod, only: file_open
       implicit none
@@ -174,15 +175,15 @@
 ! --- open output file once (headless: skip file I/O, buffer already init by SwapOutput(1))
       if (.not. state%timecontrol%headless) then
          filnam = trim(state%cfg%general%pathwork)//trim(state%cfg%general%outfil)//'.inc'
-         call file_open(inc,filnam,'replace','write')
+         call file_open(state%timecontrol%file_unit_inc,filnam,'replace','write')
          filtext = 'water balance increments (cm/day)'
-         call writehead (inc,1,filnam,filtext,state%cfg%general%project)
+         call writehead (state%timecontrol%file_unit_inc,1,filnam,filtext,state%cfg%general%project)
 
 ! --- write header of inc file
          if (state%timecontrol%flprintshort) then  ! TC-7
-           write (inc,10)
+           write (state%timecontrol%file_unit_inc,10)
          else
-           write (inc,12)
+           write (state%timecontrol%file_unit_inc,12)
          endif
       end if
   10  format('*',/,                                                     &
@@ -243,7 +244,7 @@
 ! --- compute derived terms (always, for state buffer)
       dstor = (sw_volact + sw_pond + at_ssnow) - (VolOld + PondOld + SnowOld)
       baldev = (at_igrai+at_isnrai+at_igsnow+sw_igird+sw_irunon) - dstor -    &
-     & (sw_iintc+sw_iruno+sw_irunoCN+sw_iqrot+at_ievap+at_isubl+iQMpOutDrRap+state%surfacewater%iqdra+(-1.0d0*sw_iqbot))
+     & (sw_iintc+sw_iruno+sw_irunoCN+sw_iqrot+at_ievap+at_isubl+state%surfacewater%iqdra+(-1.0d0*sw_iqbot))
 
 ! --- [SS-BMI2] build water balance row into state buffer (always runs, headless-independent)
       call build_water_balance_row(state, dstor, baldev)
@@ -252,9 +253,9 @@
       if (.not. state%timecontrol%headless) then
          if (tc_flheader) then
            if (tc_flprintshort) then
-             write (inc,10)
+             write (state%timecontrol%file_unit_inc,10)
            else
-             write (inc,12)
+             write (state%timecontrol%file_unit_inc,12)
            endif
          endif
 
@@ -265,18 +266,18 @@
          gwlout = "          "
          if (sw_gwl.lt.998.0d0)  write(gwlout,'(f9.1)') sw_gwl
          if (tc_flprintshort) then
-           write (inc,20) datexti,comma,tc_daynr,comma,tc_daycum,comma,     &
+           write (state%timecontrol%file_unit_inc,20) datexti,comma,tc_daynr,comma,tc_daycum,comma,     &
      &       at_igrai+at_isnrai,comma,at_igsnow,comma,sw_igird,comma,sw_iintc, &
      &       comma,sw_irunon,comma,sw_iruno+sw_irunoCN,comma,at_iptra,comma,sw_iqrot, &
      &       comma,at_ipeva,comma,at_ievap,comma,                           &
-     &       (iQMpOutDrRap+state%surfacewater%iqdra),comma,sw_iqbot,&
+     &       state%surfacewater%iqdra,comma,sw_iqbot,&
      &       comma,gwlout,comma,dstor,comma,baldev            !comma,storage
          else
-           write (inc,22) tc_date,comma,tc_daynr,comma,tc_daycum,comma,     &
+           write (state%timecontrol%file_unit_inc,22) tc_date,comma,tc_daynr,comma,tc_daycum,comma,     &
      &       at_igrai+at_isnrai,comma,at_igsnow,comma,sw_igird,comma,sw_iintc, &
      &       comma,sw_irunon,comma,sw_iruno+sw_irunoCN,comma,at_iptra,comma,sw_iqrot, &
      &       comma,at_ipeva,comma,at_ievap,comma,                           &
-     &       (iQMpOutDrRap+state%surfacewater%iqdra),comma,sw_iqbot,&
+     &       state%surfacewater%iqdra,comma,sw_iqbot,&
      &       comma,gwlout,comma,dstor,comma,baldev           !comma,storage
          endif
       end if
@@ -347,8 +348,8 @@
 !     Column order matches init_water_balance_buffer column names exactly.
 ! ----------------------------------------------------------------------
       use swap_state_mod, only: swap_state_t
-      ! [GR-CROP 2026-05-25] DEFERRED — iQMpOutDrRap: legacy drainage accumulator, no state home
-      use variables,      only: iQMpOutDrRap
+      ! [GR-IO 2026-05-25] iQMpOutDrRap retired-zero (no writers anywhere);
+      ! drainage term collapses to state%surfacewater%iqdra alone.
       use iso_c_binding,  only: c_double
       implicit none
       type(swap_state_t), intent(inout) :: state
@@ -369,8 +370,7 @@
       state%water_balance_row(11) = real(state%soilwater%iqrot,         c_double)  ! tact
       state%water_balance_row(12) = real(state%atmosphere%intr%ipeva,   c_double)  ! epot
       state%water_balance_row(13) = real(state%atmosphere%intr%ievap,   c_double)  ! eact
-      state%water_balance_row(14) = real(iQMpOutDrRap                 + &
-                                         state%surfacewater%iqdra,     c_double)  ! drainage
+      state%water_balance_row(14) = real(state%surfacewater%iqdra,     c_double)  ! drainage
       state%water_balance_row(15) = real(state%soilwater%iqbot,         c_double)  ! qbottom
       state%water_balance_row(16) = real(state%soilwater%gwl,           c_double)  ! gwl (999.0 when not simulated)
       state%water_balance_row(17) = real(dstor,                          c_double)  ! dstorage
@@ -405,17 +405,18 @@
       !   removed from only-list; reads via state%soilwater.
       ! SS-SWC S-2.11: theta,hm1,q,inq,inqrot removed from only-list; reads via state%soilwater.
       ! SS-TC TC-7: daynr,daycum,t1900,date,flprintshort removed from only-list; reads via state%timecontrol.
-      ! [GR-CROP 2026-05-25] DEFERRED — rot: file unit; outfil/pathwork/project: file-path globals
+      ! [GR-IO 2026-05-25] rot → state%timecontrol%file_unit_rot.
       ! [GR-CROP 2026-05-25] noddrz retired — read via state%crop%common%noddrz
       ! [GR-CROP 2026-05-25] outfil/pathwork/project → state%cfg%general
-      use variables, only: rot
       use swap_state_mod, only: swap_state_t
       use file_io_mod, only: file_open
       implicit none
 
 ! --- global
       integer   task
-      type(swap_state_t), intent(in) :: state
+      ! [GR-IO 2026-05-25] intent changed to inout — file_open writes to
+      ! state%timecontrol%file_unit_rot during case(1).
+      type(swap_state_t), intent(inout) :: state
 
 ! --- local
       integer   node
@@ -433,18 +434,18 @@
 
 ! --- open output file
       filnam = trim(state%cfg%general%pathwork)//trim(state%cfg%general%outfil)//'.rot'
-      call file_open(rot,filnam,'replace','write')
+      call file_open(state%timecontrol%file_unit_rot,filnam,'replace','write')
       filtext = 'microscopic root water uptake'
-      call writehead (rot,1,filnam,filtext,state%cfg%general%project)
-      write (rot,100)
+      call writehead (state%timecontrol%file_unit_rot,1,filnam,filtext,state%cfg%general%project)
+      write (state%timecontrol%file_unit_rot,100)
 
 ! --- write header in rot file
       ! SS-TC TC-7: flprintshort,daynr,daycum,t1900,date read via state%timecontrol (tc_* below).
       if (state%timecontrol%swheader .eq. 0) then  ! [SS-BMI2 Task 4]
         if (state%timecontrol%flprintshort) then  ! TC-7
-          write (rot,200)
+          write (state%timecontrol%file_unit_rot,200)
         else
-          write (rot,210)
+          write (state%timecontrol%file_unit_rot,210)
         endif
       endif
 
@@ -462,7 +463,8 @@
         tc_t1900        => state%timecontrol%t1900,         &  ! TC-7
         tc_daynr        => state%timecontrol%daynr,         &  ! TC-7
         tc_daycum       => state%timecontrol%daycum,        &  ! TC-7
-        tc_date         => state%timecontrol%date           &  ! TC-7
+        tc_date         => state%timecontrol%date,          &  ! TC-7
+        rot             => state%timecontrol%file_unit_rot  &  ! [GR-IO 2026-05-25]
       )
       if (state%timecontrol%swheader .eq. 1) then  ! [SS-BMI2 Task 4]
         if (tc_flprintshort) then
@@ -1138,8 +1140,8 @@
 
 ! --- global variables ------------------
       ! [SS-GR-CROPRT A3] swtem retired (always 0; no config field); outtem calls dropped
-      ! tem: file unit retained — Arc 9.5 pragmatic edge
-      use variables, only: tem
+      ! [GR-IO 2026-05-25] use variables, only: tem — was a dead import (only
+      ! commented-out outtem/swtem references remain in this routine).
       use swap_state_mod, only: swap_state_t
 
       implicit none
@@ -1202,9 +1204,8 @@
       ! SS-HEAT Phase 1 Task 5: tsoil, tebot, tetop migrated to state%heat.
       ! SS-TC TC-7: date,daynr,daycum,flheader removed from only-list; reads via state%timecontrol.
       ! GR-ATM C2: tav removed; read via state%atmosphere%Tav.
-      ! [SS-GR-FINAL B4] DEFERRED — tem: file unit; outfil/pathwork/project: file-path globals
+      ! [GR-IO 2026-05-25] tem → state%timecontrol%file_unit_tem.
       ! [GR-CROP 2026-05-25] outfil/pathwork/project → state%cfg%general
-      use variables, only: tem
       use swap_state_mod, only: swap_state_t
       implicit none
 
@@ -1229,19 +1230,19 @@
          filnam = trim(state%cfg%general%pathwork)//trim(state%cfg%general%outfil)//'.tem'
 !         reclngth = 36 + 7*numnod
          reclngth = 50 + 7*state%mesh%numnod
-         open(newunit=tem,file=filnam,status='unknown',recl=reclngth)
+         open(newunit=state%timecontrol%file_unit_tem,file=filnam,status='unknown',recl=reclngth)
          filtext = 'soil temperature profiles (oC)'
-         call writehead (tem,1,filnam,filtext,state%cfg%general%project)
+         call writehead (state%timecontrol%file_unit_tem,1,filnam,filtext,state%cfg%general%project)
 
 ! --- write header
          if (state%mesh%numnod.le.9) then
-            write (tem,10) (i,i=1,state%mesh%numnod)
+            write (state%timecontrol%file_unit_tem,10) (i,i=1,state%mesh%numnod)
          else
-            write (tem,11) (i,i=1,9), (i,i=10,state%mesh%numnod)
+            write (state%timecontrol%file_unit_tem,11) (i,i=1,9), (i,i=10,state%mesh%numnod)
          endif
 
          ! SS-TC TC-7: daynr,daycum -> state%timecontrol (direct, case(1) only line).
-         write (tem,'(a11,a1,i3,a1,i6,1024(a1,f6.1:))') '    Initial'      &
+         write (state%timecontrol%file_unit_tem,'(a11,a1,i3,a1,i6,1024(a1,f6.1:))') '    Initial'      &
      &         ,comma,state%timecontrol%daynr,comma,state%timecontrol%daycum, &
      &         comma,state%atmosphere%Tav,comma,state%heat%tetop,             &
      &         (comma,state%heat%tsoil(i),i=1,state%mesh%numnod),comma,state%heat%tebot
@@ -1270,7 +1271,8 @@
            tc_flheader => state%timecontrol%flheader,  &  ! TC-7
            tc_date     => state%timecontrol%date,      &  ! TC-7
            tc_daynr    => state%timecontrol%daynr,     &  ! TC-7
-           tc_daycum   => state%timecontrol%daycum     &  ! TC-7
+           tc_daycum   => state%timecontrol%daycum,    &  ! TC-7
+           tem         => state%timecontrol%file_unit_tem &  ! [GR-IO 2026-05-25]
          )
 ! --- write header in case of new balance period
          if (tc_flheader) write (tem,10)
@@ -1377,9 +1379,8 @@
 ! ----------------------------------------------------------------------
       ! SS-ATM A-2.5: snrai,gsnow,ssnow,melt,subl reads migrated to state%atmosphere.
       ! SS-TC TC-7: date,daycum,flheader removed; reads via state%timecontrol.
-      ! [SS-GR-FINAL B4] DEFERRED — pathwork/outfil/project: file-path globals; snw: file unit
+      ! [GR-IO 2026-05-25] snw → state%timecontrol%file_unit_snw.
       ! [GR-CROP 2026-05-25] pathwork/outfil/project → state%cfg%general
-      use variables, only: snw
       use swap_state_mod, only: swap_state_t
       use file_io_mod, only: file_open
       implicit none
@@ -1405,12 +1406,12 @@
 
       if (.not. state%timecontrol%headless) then
          filnam = trim(state%cfg%general%pathwork)//trim(state%cfg%general%outfil)//'.snw'
-         call file_open(snw,filnam,'replace','write')
+         call file_open(state%timecontrol%file_unit_snw,filnam,'replace','write')
          filtext = 'snow pack output data (cm/period)'
-         call writehead (snw,1,filnam,filtext,state%cfg%general%project)
+         call writehead (state%timecontrol%file_unit_snw,1,filnam,filtext,state%cfg%general%project)
 
 ! --- write header
-         write (snw,10)
+         write (state%timecontrol%file_unit_snw,10)
       end if
 
  10   format ('*',/,                                                    &
@@ -1429,11 +1430,11 @@
       if (.not. state%timecontrol%headless) then
 ! --- write header in case of new balance period
          ! SS-TC TC-7: flheader,date,daycum -> state%timecontrol (direct refs, single-use).
-         if (state%timecontrol%flheader) write (snw,10)  ! TC-7
+         if (state%timecontrol%flheader) write (state%timecontrol%file_unit_snw,10)  ! TC-7
 
 ! --- write actual data
          ! SS-ATM A-2.5: snrai,gsnow,ssnow,melt,subl read from state%atmosphere (atmosphere home).
-         write (snw,20) state%timecontrol%date,comma,state%timecontrol%daycum, &  ! TC-7
+         write (state%timecontrol%file_unit_snw,20) state%timecontrol%date,comma,state%timecontrol%daycum, &  ! TC-7
      &                  comma,state%atmosphere%snrai,comma,state%atmosphere%gsnow, &
      &                  comma,state%atmosphere%ssnow,comma,state%atmosphere%melt,comma,state%atmosphere%subl
  20      format (a11,a1,i6,1x,5(a1,f10.4))
@@ -1447,7 +1448,7 @@
 
 ! --- close snw file
       ! [SS-BMI2] headless guard: .snw file was only opened when not headless
-      if (.not. state%timecontrol%headless) close (snw)
+      if (.not. state%timecontrol%headless) close (state%timecontrol%file_unit_snw)
 
       ! [SS-BMI2] deallocate snow output row buffer
       call cleanup_snow_output_buffer(state)
@@ -1746,8 +1747,7 @@
 !     dznew(macp)          ! Desired dz for soil water quality models (L) ......... i
 ! local
 ! ----------------------------------------------------------------------
-      ! [SS-GR-FINAL B4] DEFERRED — numnodnew/dznew: soil-quality model discretization, no state home
-      use variables, only: numnodnew,dznew
+      ! [GR-IO 2026-05-25] numnodnew/dznew read from state%cfg%soil%discretization.
       use swap_array_dimensions, only: macp
       use swap_state_mod, only: swap_state_t
 
@@ -1765,6 +1765,10 @@
       data      small     /0.0001d0/
 ! ----------------------------------------------------------------------
 
+
+      associate( &
+         numnodnew => state%cfg%soil%discretization%numnodnew, &
+         dznew     => state%cfg%soil%discretization%dznew)
 
 ! --  boundary of new compartments must equal boundaries of old compartmts
 !     or: new size is sum of old sizes
@@ -1795,6 +1799,8 @@
       do in = 1,numnodNew
          cumdzNew = cumdzNew + dznew(in)
       enddo
+
+      end associate
       if (abs(cumdzNew-cumdzOld).gt.small) then
         write(messag,'(a,f10.5)')                                       &
      &    'New discretization is wrong, total length differs >',small

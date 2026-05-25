@@ -103,7 +103,7 @@
       ! [GR-SOIL 2026-05-24] botcom retired — see state%mesh%botcom
       dra                = 0 
       ! [GR-DRA 2026-05-23] dramet retired — see state%drainage%dramet
-      inc                = 0 
+      ! [GR-IO 2026-05-25] inc retired — moved to state%timecontrol%file_unit_inc
       ! [SS-SWC] indeks retired — soilwater_init handles init via state%soilwater%indeks
       ! indeks             = 0
       ! [GR-DRA 2026-05-23] ipos retired — see state%drainage%ipos
@@ -124,7 +124,7 @@
       ! [GR-SOIL 2026-05-24] numbit init handled by state%soilwater defaults.
       ! [GR-SOIL 2026-05-24] numlay retired — see state%mesh%numlay
       ! [GR-BH Task 35] numnod retired to state%mesh%numnod
-      numnodnew          = 0 
+      ! [GR-IO 2026-05-25] numnodnew retired — read from config%soil%discretization%numnodnew
       ! [GR-SOIL 2026-05-24] numtab/numtablay retired — swsophy=1 dormant.
       ! [SS-GR-FINAL D1] str zero-fill dropped — declaration retired
       sw2                = 0
@@ -192,7 +192,7 @@
       ! drainl             = 0.0d0  ! Moved to drainage_state_t — drainage_init handles (ADR 0031)
       ! [GR-DRAIN 2026-05-25] drares retired — read directly from config%drain%drares
       ! [GR-BH Task 35] dz retired to state%mesh%dz
-      dznew              = 0.0d0 
+      ! [GR-IO 2026-05-25] dznew retired — read from config%soil%discretization%dznew
       ! [GR-DRA 2026-05-23] entres retired — see state%drainage%entres
       ! [SS-SWC] evp retired — soilwater_init handles init via state%soilwater%evp
       ! evp                = 0.0d0
@@ -371,7 +371,7 @@
       swcalt             = 0 
       ! [GR-TIME 2026-05-25] swhea retired — read from config%heat%swhea
       ! [SS-GR-CROPRT A3] swtem zero-fill dropped — declaration retired
-      tem                = 0 
+      ! [GR-IO 2026-05-25] tem retired — moved to state%timecontrol%file_unit_tem
       ddamp              = 0.0d0 
       ! [SS-HEAT] Task 9: fclay/forg/fquartz retired to state%heat
       ! fclay              = 0.0d0
@@ -398,7 +398,7 @@
       ! [SS-TC] fltemperature retired to state%timecontrol%flTemperature (ADR 0041)
 
 ! --- snow variables
-      snw                = 0
+      ! [GR-IO 2026-05-25] snw retired — moved to state%timecontrol%file_unit_snw
       ! [GR-TIME 2026-05-25] swsnow retired — read from config%meteo%snow%swsnow
       ! [SS-ATM A-2.6] cgsnow/cmelt/csnrai/csubl/gsnow/igsnow/isnrai/isubl/melt/
       !                snowinco/snrai/ssnow/slw/subl retired to state%atmosphere (cumu/intr/flat scalars)
@@ -473,7 +473,7 @@
       ArMpTp               = 0.0d0
       ! [GR-SOIL 2026-05-24] cQMpLatSs retired — ADR 0040 macropore.
       ! [SS-GR-FINAL D1] dFdhMp zero-fill dropped — declaration retired
-      iQMpOutDrRap         = 0.0d0
+      ! [GR-IO 2026-05-25] iQMpOutDrRap retired — retired-zero accumulator, no writers
       ! [SS-GR-CROPRT A2] iQInTopLatDm1/2/iQInTopVrtDm1/2 zero-fills dropped — declarations retired (ADR 0040)
       ! [SS-GR-CROPRT A2] IWaSrDm1/2Beg/WaSrDm1/2/WaSrDm1/2Ini zero-fills dropped — declarations retired (ADR 0040)
       DiPoCp               = 0.0d0

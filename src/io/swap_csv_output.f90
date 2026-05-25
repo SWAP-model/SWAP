@@ -19,7 +19,9 @@ module SWAP_csv_output
    ! GR-ATM C2: lai/wc10/Runoff_CN → state%crop%lai/state%atmosphere%wc10/state%atmosphere%Runoff_CN
    ! [GR-CROP 2026-05-25] c_top → state%crop%oxygen%c_top
    ! [GR-CROP 2026-05-25] pathwork/outfil/project → state%cfg%general
-   use variables, only: iqinfmax, iqmpoutdrrap, InList_csv, macp, madr
+   ! [GR-IO 2026-05-25] iqinfmax/iqmpoutdrrap retired-zero (no writers); read sites
+   ! replaced with 0.0d0 literal. InList_csv/macp/madr still imported (Phase 2/3).
+   use variables, only: InList_csv, macp, madr
    use swap_state_mod, only: swap_state_t
 
    implicit none
@@ -246,7 +248,8 @@ module SWAP_csv_output
       if (vars%name(i) == 'EPOT')        vars%value(1,i) = state%atmosphere%intr%ipeva
       if (vars%name(i) == 'EACT')        vars%value(1,i) = state%atmosphere%intr%ievap
       if (vars%name(i) == 'SUBLIM')      vars%value(1,i) = state%atmosphere%intr%isubl
-      if (vars%name(i) == 'DRAINAGE')    vars%value(1,i) = state%surfacewater%iqdra + iQMpOutDrRap
+      ! [GR-IO 2026-05-25] iQMpOutDrRap retired-zero — DRAINAGE collapses to state%surfacewater%iqdra
+      if (vars%name(i) == 'DRAINAGE')    vars%value(1,i) = state%surfacewater%iqdra
       ! SS-SWC S-2.11: iqbot,gwl,pond read from state%soilwater.
       if (vars%name(i) == 'QBOTTOM')     vars%value(1,i) = state%soilwater%iqbot
       if (vars%name(i) == 'GWL')         vars%value(1,i) = state%soilwater%gwl
@@ -317,7 +320,8 @@ module SWAP_csv_output
       ! SS-SWC S-2.11: iqtdo,iqtup read from state%soilwater.
       if (vars%name(i) == 'QTOPIN')      vars%value(1,i) = state%soilwater%iqtdo
       if (vars%name(i) == 'QTOPOUT')     vars%value(1,i) = state%soilwater%iqtup
-      if (vars%name(i) == 'QINFMAX')     vars%value(1,i) = iqinfmax
+      ! [GR-IO 2026-05-25] iqinfmax retired-zero — qinfmax has no writers; QINFMAX CSV column is always 0.
+      if (vars%name(i) == 'QINFMAX')     vars%value(1,i) = 0.0d0
       if (vars%name(i) == 'TETOP')       vars%value(1,i) = state%heat%tetop
       if (vars%name(i) == 'TEBOT')       vars%value(1,i) = state%heat%tebot
 
@@ -513,7 +517,7 @@ module SWAP_csv_output
                    state%soilwater%igird+state%soilwater%irunon + state%soilwater%iqssdi) - dstor -     &
                   (state%soilwater%iintc+state%soilwater%iruno+state%soilwater%irunoCN+                 &
                    state%soilwater%iqrot+state%atmosphere%intr%ievap+state%atmosphere%intr%isubl+                 &
-                   iQMpOutDrRap+state%surfacewater%iqdra+(-1.0d0*state%soilwater%iqbot))
+                   state%surfacewater%iqdra+(-1.0d0*state%soilwater%iqbot))
 
    ! replace Old values by current values (needed for next output moment)
    VolOld  = state%soilwater%volact

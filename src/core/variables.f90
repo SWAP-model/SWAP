@@ -650,7 +650,7 @@
       ! [GR-DRA 2026-05-23] dramet retired — see state%drainage%dramet
                                    !                              3 = drainage/infiltration resistance
       ! [SS-GR-CROPRT A3] swinc retired — always 0; outinc calls dropped (no config field)
-      integer   inc                ! Internal number of output file *.INC with incremental water balance data
+      ! [GR-IO 2026-05-25] inc retired — moved to state%timecontrol%file_unit_inc
       ! [SS-SWC] retired 2026-05-12 — moved to state%soilwater%indeks (ADR 0038)
       ! integer   indeks(macp)       ! Index denoting wetting or drying curve in case of hysteresis: 1 = wetting; -1 = drying
       ! [GR-DRA 2026-05-23] ipos retired — see state%drainage%ipos
@@ -673,9 +673,9 @@
       ! [GR-SOIL 2026-05-24] numbit retired — now state%soilwater%numbit.
       ! [GR-SOIL 2026-05-24] numlay retired — see state%mesh%numlay
       ! [GR-BH Task 35] numnod retired — moved to state%mesh%numnod
-      integer   numnodnew          ! Number of desired nodes for soil water quality models
+      ! [GR-IO 2026-05-25] numnodnew retired — read from config%soil%discretization%numnodnew
       ! [GR-SOIL 2026-05-24] numtab/numtablay retired — swsophy=1 dormant (see src/soil/dormant/sptabulated.f90).
-      integer   rot                ! Internal number of output file *.ROT with microscopic root water extraction data 
+      ! [GR-IO 2026-05-25] rot retired — moved to state%timecontrol%file_unit_rot
       ! [SS-GR-FINAL D1] swstr retired — STR output deleted; 0 consumers
       ! [SS-GR-FINAL D1] str retired — STR file handle; 0 consumers (swap_csv_output str is a local char var)
       integer   sw2                ! Switch for prescribed bottom flux: 1 = sine function; 2 = table
@@ -787,7 +787,7 @@
       ! real(8)   drainl(Madr)       ! Moved to drainage_state_t%drainl (ADR 0031)
       ! [GR-DRAIN 2026-05-25] drares retired — read from config%drain%drares
       ! [GR-BH Task 35] dz(macp) retired — moved to state%mesh%dz
-      real(8)   dznew(macp)        ! Desired thickness of compartments for soil water quality models (L)
+      ! [GR-IO 2026-05-25] dznew retired — read from config%soil%discretization%dznew
       ! [GR-DRA 2026-05-23] entres retired — see state%drainage%entres
       ! [GR-CROP-DVS] es0 retired — see state%crop%es0
       ! [GR-CROP-DVS] et0 retired — see state%crop%et0
@@ -852,7 +852,7 @@
       ! real(8)   iprec              ! Intermediate amount of gross precipitation + gross irrigation (L)
       ! real(8)   iqbot              ! Intermediate amount of water flow through bottom of simulated soil column (L)
       ! [SS-SWC] iqtdo/iqtup retired — iqinfmax stays (used in swap_csv_output); qinfmax retired
-      real(8)   iqinfmax
+      ! [GR-IO 2026-05-25] iqinfmax retired-zero — QINFMAX CSV column hard-coded to 0.0d0
       ! [SS-GR-FINAL D1] qinfmax retired — 0 consumers
       ! real(8)   iqdo(macp+1), iqup(macp+1)
       ! SS-SWST Phase 2 Task 11 C2: iqdra removed — state%surfacewater%iqdra owns it.
@@ -1042,7 +1042,7 @@
       integer   swcalt             ! Switch for method of soil water heat flow simulation: 1 = analytical method; 2 = numerical method
       ! [GR-TIME 2026-05-25] swhea retired — read from config%heat%swhea
       ! [SS-GR-CROPRT A3] swtem retired — always 0 (no config field); outtem calls dropped
-      integer   tem                ! Internal number of output file *.TEM with soil temperatures
+      ! [GR-IO 2026-05-25] tem retired — moved to state%timecontrol%file_unit_tem
       real(8)   ddamp              ! Damping depth (L) of temperature wave in soil
       ! [SS-HEAT] retired 2026-05-10 — moved to state%heat%fclay (ADR 0034)
       ! real(8)   fclay(macp)        ! Array with gravimetric content of clay (g/g mineral parts) of each numerical compartment
@@ -1078,7 +1078,7 @@
       ! logical   fltemperature      ! moved to state%timecontrol%flTemperature
 
 ! --- snow variables
-      integer   snw                ! Internal number of output file *.SNW with snow pack data
+      ! [GR-IO 2026-05-25] snw retired — moved to state%timecontrol%file_unit_snw
       ! [GR-TIME 2026-05-25] swsnow retired — read from config%meteo%snow%swsnow
       integer   swsublim           ! Switch for suppressing simulation of sublimation of snow: 1 = suppress ! Adaptation 3 for PEARL-MACRO
       ! ========================================================================
@@ -1199,7 +1199,7 @@
       ! [SS-TC] retired 2026-05-12 — moved to state%timecontrol%dtold (ADR 0041)
       ! real(8) dtold                ! moved to state%timecontrol%dtold
       real(8) DiPoCp(MaCp)         ! [retired-zero] kept: soilgrid refinement
-      real(8) iQMpOutDrRap         ! [retired-zero] kept: swap_csv/swapoutput DRAINAGE accumulator
+      ! [GR-IO 2026-05-25] iQMpOutDrRap retired — drainage term in water_balance_row collapses to state%surfacewater%iqdra
       ! [SS-GR-CROPRT A2] iQInTopLatDm1 retired — ADR 0040 (0 consumers; macropore BMA dead)
       ! [SS-GR-CROPRT A2] iQInTopLatDm2 retired — ADR 0040 (0 consumers; macropore BMA dead)
       ! [SS-GR-CROPRT A2] iQInTopVrtDm1 retired — ADR 0040 (0 consumers; macropore BMA dead)

@@ -120,6 +120,13 @@ module timecontrol_state_mod
       ! zero-allocated). Read by timecontrol_advance to trigger output dumps.
       real(real64), allocatable :: outdat(:)     !! Output dates for water/solute balances
       real(real64), allocatable :: outdatint(:)  !! Intermediate output dates
+      ! [GR-IO 2026-05-25] Output file units — assigned by file_open in
+      ! swapoutput.f90 and read by subsequent write() calls. Follow the
+      ! state%crop%common%file_unit_crp precedent.
+      integer :: file_unit_inc = 0  !! *.inc water-balance incremental output
+      integer :: file_unit_rot = 0  !! *.rot root-water-extraction output
+      integer :: file_unit_tem = 0  !! *.tem soil-temperature output
+      integer :: file_unit_snw = 0  !! *.snw snowpack output
       integer :: rainrec     = 0  !! rain-event record index (for sub-daily rain)
       integer :: wrecord     = 0  !! detailed meteo record index within day
 

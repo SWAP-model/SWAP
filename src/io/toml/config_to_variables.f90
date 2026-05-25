@@ -582,12 +582,8 @@ contains
 
       ! Soil.discretization
       swdiscrvert = config%soil%discretization%swdiscrvert
-      numnodnew   = config%soil%discretization%numnodnew
-      if (allocated(config%soil%discretization%dznew)) then
-         do i = 1, size(config%soil%discretization%dznew)
-            dznew(i) = config%soil%discretization%dznew(i)
-         end do
-      end if
+      ! [GR-IO 2026-05-25] numnodnew/dznew legacy mirror dropped — swapoutput.f90:checkDiscrVert
+      ! reads config%soil%discretization%{numnodnew,dznew} directly via state%cfg.
 
       ! Soil.frost
       swfrost   = config%soil%frost%swfrost
