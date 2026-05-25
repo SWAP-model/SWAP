@@ -1,7 +1,5 @@
 ! File VersionID:
 !   $Id: oxygenstress.f90 378 2018-05-08 13:50:52Z heine003 $
-! [SS-GR-CROPWS A6]: Phase A audit — zero write sites for any tracked crop symbol.
-!   No optional/present guards. No changes required.
 !
 ! ----------------------------------------------------------------------
 
@@ -96,41 +94,38 @@ contains
 !     Last modified      : January 2014
 !     Purpose            : calculates oxygen stress according to Bartholomeus et al. (2008)
 ! ----------------------------------------------------------------------
-      ! [SS-GR-FINAL B6] macp/matab → swap_array_dimensions (dimension constants)
       use swap_array_dimensions, only: macp, matab
-      use variables, only: &                                               ! [SS-GR-FINAL B6] residuals — all DEFERRED
-                           ! DEFERRED: icrop — active crop schedule global; Phase C3
-                           icrop, max_resp_factor, &   ! croptype → state%crop%common
-                           ! [GR-SOIL 2026-05-24] numtablay/sptab retired — swsophy=1 branches dormant;
-                           !   see src/soil/dormant/sptabulated.f90.
-                           ! [GR-SOIL 2026-05-24] iHWCKmodel → state%soilwater%iHWCKmodel.
-                           ! [GR-SOL 2026-05-24] bdens retired — read via state%soilwater%bdens
+      ! [GR-CROP 2026-05-25] Residual use-list after the oxygenstress sub-arc:
+      !   * `c_top` — array shared with swap_csv_output (CSV column wiring;
+      !     cannot retire from oxygenstress without also touching the writer
+      !     contract in src/io/swap_csv_output.f90). OxygenStress writes
+      !     c_top(1) and c_top(node+1).
+      !   * `rid`, `w_root_ss` — cross-file inbound. Writers in
+      !     cropgrass_runtime.f90 (rid) and cropfixed_runtime.f90 (w_root_ss).
+      !     Retire after Task 6/7 sub-arcs migrate their writers.
+      !   * `c_mroot`, `f_senes`, `q10_root`, `q10_microbial`,
+      !     `shape_factor_rootr`, `specific_resp_humus`, `max_resp_factor`
+      !     — cluster C, cross-file inbound config-derived workspace.
+      !     Seeded into state%crop%oxygen%X at OxygenStress entry; in-routine
+      !     reads route through state. Writers in cropfixed_init/runtime,
+      !     cropgrass_init — retire after Tasks 6/7.
+      use variables, only: &
                            c_top, &
-                           ! SRL/swrootradius/dry_mat_cont_roots/air_filled_root_por/spec_weight_root_tissue/var_a/root_radiusO2 retired
-                           ! DEFERRED: q10/rmr/rfsetb/rid/rdctb/w_root_ss — active crop state; Phase C3; dvs/wrt/rd/cumdens retired
-                           rid, w_root_ss, &  ! q10/rmr/rfsetb/rdctb retired
-                           ! DEFERRED: tsoil — heat staging buffer; tsoil migration pending
-                           tsoil, &
-                           ! Cluster C — cross-file inbound legacy globals (writers in
-                           ! cropfixed_init/runtime, cropgrass_init); seeded into
-                           ! state%crop%oxygen%X at the top of OxygenStress and read
-                           ! from state thereafter until those sub-arcs migrate.
+                           rid, w_root_ss, &
                            c_mroot, f_senes, q10_root, q10_microbial, &
-                           shape_factor_rootr, specific_resp_humus
-                           ! [GR-CROP 2026-05-25] o2_ini_stress/o2_d_soil_term1/o2_d_soil_term2/o2_gfp100/
-                           ! o2_capac_term/o2_nmin1/o2_mplus1 — O2 SAVE state migrated to state%crop%oxygen.
-                           ! [GR-CROP 2026-05-25] O2_pars workspace aliases retired —
-                           ! all 19 fields live on state%crop%oxygen.
+                           shape_factor_rootr, specific_resp_humus, &
+                           max_resp_factor
       use O2_pars, only: current_state
       use array_utils, only: afgen
       implicit none
 
-! --- SS-HEAT Phase 2 Task 6: optional state for reading tsoil from state%heat.
-! --- [GR-CROP 2026-05-25] state is now intent(inout), target — persisted
+! --- [GR-CROP 2026-05-25] state is intent(inout), target — persisted
 !     SAVE-state and per-call workspace live on state%crop%oxygen, and the
 !     module-level O2_pars current_state pointer aliases this argument so
 !     SOLVE/ZBREND/myfunc can reach the workspace through the same record.
-      type(swap_state_t), optional, target, intent(inout) :: state
+!     `optional` dropped — the only caller (rootextraction.f90) always passes
+!     state in the TOML pipeline.
+      type(swap_state_t), target, intent(inout) :: state
 
 ! --- local
       integer glit,lay,node,i,j
@@ -210,10 +205,10 @@ contains
 
 !## MH : some initial calculations
       if (state%crop%oxygen%ini_stress) then
-         if (state%soilwater%iHWCKmodel(state%mesh%layer(node)) == 3) then  ! [GR-SOIL 2026-05-24]
+         if (state%soilwater%iHWCKmodel(state%mesh%layer(node)) == 3) then
             call fatalerr_collected ('OxygenStress', 'Combination of OxygenStress and bi-modal MvG (iHWCKmodel=3) is not (yet) possible!')
          end if
-         call calc_ini_pars (state%mesh%numnod)  ! [GR-BH C7]
+         call calc_ini_pars (state%mesh%numnod)
          ! [GR-CROP 2026-05-25] persist per-node tables on state%crop%oxygen
          state%crop%oxygen%d_soil_term1 = d_soil_term1
          state%crop%oxygen%d_soil_term2 = d_soil_term2
@@ -242,7 +237,7 @@ contains
       resp_factor = 1.0d0
 
 ! --- soil layer in SWAP
-      lay = state%mesh%layer(node)  ! [GR-BH C7]
+      lay = state%mesh%layer(node)
 
 ! --- dry weight of root per unit length of root [kg/m]
       w_root = 1.0d0/state%crop%common%srl
@@ -257,14 +252,14 @@ contains
       endif
 
 ! --- RB20140117 get wofost parameters
-      if ((state%crop%common%croptype(icrop) .eq. 2).or.(state%crop%common%croptype(icrop) .eq. 3)) then
+      if ((state%crop%common%croptype(state%crop%common%icrop) .eq. 2).or.(state%crop%common%croptype(state%crop%common%icrop) .eq. 3)) then
           q10_root = state%crop%common%q10
           c_mroot = state%crop%common%rmr*Fac3230 !CH2O --> O2
       endif
-      if (state%crop%common%croptype(icrop) .eq. 2) then
+      if (state%crop%common%croptype(state%crop%common%icrop) .eq. 2) then
           f_senes=afgen(state%crop%common%rfsetb,30,state%crop%common%dvs)
       endif
-      if (state%crop%common%croptype(icrop) .eq. 3) then
+      if (state%crop%common%croptype(state%crop%common%icrop) .eq. 3) then
           f_senes=afgen(state%crop%common%rfsetb,30,rid)
       endif
    
@@ -273,36 +268,34 @@ contains
 ! --- set soil density [kg m-3]      
       soil_density = state%soilwater%bdens(lay)
 ! --- set parameter n of soil hydraulic functions
-      gen_n = state%soilwater%vg_params(node)%npar          ! [SS-GR-UTILS Task 15]
+      gen_n = state%soilwater%vg_params(node)%npar
 ! --- set saturated water content [-]
-      sat_water_cont = state%soilwater%vg_params(node)%thetas ! [SS-GR-UTILS Task 15]
+      sat_water_cont = state%soilwater%vg_params(node)%thetas
 ! --- set parameter alpha [1/Pa] of soil hydraulic functions, so divide main swap alpha by 100     ## MH: =0.01*
-      alpha = 0.01d0*state%soilwater%vg_params(node)%alpha   ! [SS-GR-UTILS Task 15]
+      alpha = 0.01d0*state%soilwater%vg_params(node)%alpha
 ! --- set percentage organic matter [%]
-      perc_org_mat = state%soilwater%orgmat(lay)*100.0d0   ! [GR-BH C7]
+      perc_org_mat = state%soilwater%orgmat(lay)*100.0d0
 ! --- set percentage sand in % of total soil
-      percentage_sand = (state%soilwater%psand(lay)*(1.0d0-state%soilwater%orgmat(lay)))*100.0d0   ! [GR-BH C7]
+      percentage_sand = (state%soilwater%psand(lay)*(1.0d0-state%soilwater%orgmat(lay)))*100.0d0
 ! --- get soil moisture content as defined in further calculations within this routine [-]
-      theta0 = state%soilwater%theta(node)              ! [SS-SWC S-2.7]
+      theta0 = state%soilwater%theta(node)
 ! --- gas filled porosity
       gas_filled_porosity = sat_water_cont-theta0
       if (state%soilwater%h(node) >= 0.0d0) gas_filled_porosity = 0.0d0  ! [SS-SWC S-2.7] be sure when saturated that gas_filled_porosity = 0
 
 ! --- thickness of the soil compartment [m]     ## MH: =0.01* 
-      depth = 0.01d0*state%mesh%dz(node)  ! [GR-BH C7]
+      depth = 0.01d0*state%mesh%dz(node)
 ! --- temperature in the soil compartment [K]
-      ! SS-HEAT Phase 2 Task 6: read tsoil from state%heat when available
-      if (present(state)) then
-         soil_temp = state%heat%tsoil(node)+273.d0
-      else
-         soil_temp = tsoil(node)+273.d0
-      end if
+      ! [GR-CROP 2026-05-25] tsoil read unconditionally from state%heat — the
+      ! legacy `tsoil(node)` fallback was dead in the TOML pipeline (the only
+      ! caller, rootextraction.f90, always passes state).
+      soil_temp = state%heat%tsoil(node)+273.d0
 ! --- dry weight of roots at nodal depth
 !RB20140109 start new calculation of w_root_z0
 !previous:  w_root_z0 = w_root_ss * exp(0.01*z(node)/shape_factor_rootr)  
 !new:  
 ! --- static crop. w_root_z0 relative to value of top layer              
-      if (state%crop%common%croptype(icrop) .eq. 1) then
+      if (state%crop%common%croptype(state%crop%common%icrop) .eq. 1) then
             rdepth_top = -state%mesh%ztopcp(1)/state%crop%common%rd ! (-z(1)-0.5d0*dz(1))/state%crop%common%rd  [GR-BH C7]
             rdens_top  = afgen(state%crop%common%rdctb,22,rdepth_top)
             rdepth     = -state%mesh%ztopcp(node)/state%crop%common%rd ! (-z(node)-0.5d0*dz(node))/state%crop%common%rd  [GR-BH C7]
@@ -311,7 +304,7 @@ contains
       endif
 ! --- calculate wrootz0 [kg/m3] at top of the compartments !adj RB 20171201
 ! --- dynamic crop. wrt [kg/ha] = 10-4 kg/m2; 
-      if ((state%crop%common%croptype(icrop) .eq. 2) .or. (state%crop%common%croptype(icrop) .eq. 3)) then
+      if ((state%crop%common%croptype(state%crop%common%icrop) .eq. 2) .or. (state%crop%common%croptype(state%crop%common%icrop) .eq. 3)) then
         top1 = dabs(state%mesh%ztopcp(node) / state%crop%common%rd) ! relative depth top  [GR-BH C7]
         top2 = top1 + 1.0d-6 ! define 'infinite' thin layer; fraction
         
@@ -326,7 +319,7 @@ contains
 
 
 ! --- Calculate matric potential [Pa]
-       matric_potential = -100.0d0 * state%soilwater%h(node)   ! [SS-SWC S-2.7]
+       matric_potential = -100.0d0 * state%soilwater%h(node)
 ! --- if gas filled porosity = 0, then root water uptake = 0. Store results and go to end of routine.        
       if (gas_filled_porosity .lt. 1.0d-4) then !RB20131106 .eq. 0
          ! RB 20140106 start if statement added; if max_resp_factor = 1 then no stress so rwufactor = 1        
@@ -352,7 +345,7 @@ contains
 ! --- atmosphere oxygen concentration [kg/m3] according to general gas law
         if (node.eq.1) then
 ! ---   atmospheric temperature [K]
-          air_temp = state%atmosphere%Tav + 273.0d0  ! [SS-GR-ATM B.5] tav→state%atmosphere%Tav
+          air_temp = state%atmosphere%Tav + 273.0d0
           o2_atmosphere = (672.0d0) / (8.314472d0 * air_temp)
 ! ---   PLAATS O2_atmosphere IN DE VECTOR VOOR C_TOP 
           C_top(1) = o2_atmosphere
@@ -452,11 +445,11 @@ contains
       theta100        = watcon(h100, &
                                 state%soilwater%vg_params(i), &
                                 state%soilwater%iHWCKmodel(state%soilwater%layer(i)), &
-                                i, state%soilwater)               ! [SS-GR-UTILS Task 5]
+                                i, state%soilwater)
       theta500        = watcon(h500, &
                                 state%soilwater%vg_params(i), &
                                 state%soilwater%iHWCKmodel(state%soilwater%layer(i)), &
-                                i, state%soilwater)               ! [SS-GR-UTILS Task 5]
+                                i, state%soilwater)
       state%crop%oxygen%sat_water_cont = state%soilwater%vg_params(i)%thetas         ! [GR-CROP 2026-05-25]
       gfp100(i)       = state%crop%oxygen%sat_water_cont - theta100                  ! [GR-CROP 2026-05-25]
       campbell_b      = (log10h500-log10h100) / (dlog10(theta100)-dlog10(theta500))
@@ -464,11 +457,11 @@ contains
       d_soil_term2(i) = 2.0d0+3.0d0/campbell_b
 !     for use in FUNC — vg_params fields: thetar, thetas, ksat, alpha, lpar, npar, mpar, ...
 !     Calculate (sat_water_cont - res_water_cont) * alpha * gen_m * gen_n
-      Capac_term(i)   = (state%soilwater%vg_params(i)%thetas - state%soilwater%vg_params(i)%thetar) * &  ! [SS-GR-UTILS Task 15]
-     &                  0.01d0*state%soilwater%vg_params(i)%alpha *                                   &  ! [SS-GR-UTILS Task 15]
-     &                  state%soilwater%vg_params(i)%npar * state%soilwater%vg_params(i)%mpar            ! [SS-GR-UTILS Task 15]
-      Nmin1(i)        = state%soilwater%vg_params(i)%npar - 1.0d0                                        ! [SS-GR-UTILS Task 15]
-      Mplus1(i)       = state%soilwater%vg_params(i)%mpar + 1.0d0                                        ! [SS-GR-UTILS Task 15]
+      Capac_term(i)   = (state%soilwater%vg_params(i)%thetas - state%soilwater%vg_params(i)%thetar) * &
+     &                  0.01d0*state%soilwater%vg_params(i)%alpha *                                   &
+     &                  state%soilwater%vg_params(i)%npar * state%soilwater%vg_params(i)%mpar
+      Nmin1(i)        = state%soilwater%vg_params(i)%npar - 1.0d0
+      Mplus1(i)       = state%soilwater%vg_params(i)%mpar + 1.0d0
    end do
 ! --- microbial respiration calculated from organic matter content in actual soil compartment; keep this value fixed
    state%crop%oxygen%shape_factor_microbialr = 0.9d0          ! [GR-CROP 2026-05-25]
@@ -578,7 +571,7 @@ contains
 !!!!!! --- Max resp factor RB20140115
 !!!!!      ResultsOxStr(18,node)=max_resp_factor    
 !!!!!! --- wrt from wofost RBf20140120
-!!!!!      if ((state%crop%common%croptype(icrop) .eq. 2).or.(state%crop%common%croptype(icrop) .eq. 3)) then
+!!!!!      if ((state%crop%common%croptype(state%crop%common%icrop) .eq. 2).or.(state%crop%common%croptype(state%crop%common%icrop) .eq. 3)) then
 !!!!!        ResultsOxStr(19,node)=wrt    
 !!!!!      endif
    return
@@ -593,12 +586,10 @@ contains
       ! [GR-CROP 2026-05-25] max_resp_factor read for the static-crop branch
       ! now comes from state%crop%oxygen%max_resp_factor (seeded at OxygenStress
       ! entry from the legacy global written by cropfixed_init/runtime).
-      use variables, only: &                                               ! [SS-GR-FINAL B6] residuals — all DEFERRED
-                           ! DEFERRED: icrop — active crop schedule global; Phase C3
-                           icrop, &
-                           ! q10/rmr/rml/rms/rmo/rfsetb/cvl/cvs/cvo/cvr/frtb/fltb/fstb/fotb retired
-                           ! DEFERRED: rid/idregr/daycrop — active crop dynamics; Phase C3; dvs retired
-                           rid, daycrop  ! idregr retired
+      ! [GR-CROP 2026-05-25] icrop migrated to state%crop%common%icrop.
+      ! `rid` and `daycrop` remain cross-file inbound (writers in
+      ! cropgrass_runtime.f90 / cropgrowth.f90); retire after Tasks 7/9.
+      use variables, only: rid, daycrop
       use array_utils, only: afgen
       use swap_state_mod, only: swap_state_t
       implicit none
@@ -614,15 +605,15 @@ contains
       real(8) Froots, Rg_roots,Rm_roots,Max_resp_factor_gmrf        
 ! --- static crop
 ! --- static crop: max_resp_factor is given in the input file
-      if (state%crop%common%croptype(icrop) .eq. 1) then
+      if (state%crop%common%croptype(state%crop%common%icrop) .eq. 1) then
         max_resp_factor_gmrf = state%crop%oxygen%max_resp_factor          ! [GR-CROP 2026-05-25]
-      endif !if (state%crop%common%croptype(icrop) .eq. 1)
+      endif !if (state%crop%common%croptype(state%crop%common%icrop) .eq. 1)
 
 ! --- dynamic crop: max_resp_factor is calculated following the procedure
 ! --- for the calculation of root maintenance respiration and root growth respiration as 
 ! --- used in WOFOST.
 ! --- dynamic crop, not grass 
-      if (state%crop%common%croptype(icrop) .eq. 2) then
+      if (state%crop%common%croptype(state%crop%common%icrop) .eq. 2) then
 
 ! --- respiration and partitioning of carbohydrates between growth and
 ! --- maintenance respiration, based on actual plant state variables
@@ -659,10 +650,10 @@ contains
         else 
             Max_resp_factor_gmrf = 1.0d0  
         endif         
-      endif !if (state%crop%common%croptype(icrop) .eq. 2)
+      endif !if (state%crop%common%croptype(state%crop%common%icrop) .eq. 2)
         
 ! --- dynamic crop, grass 
-      if (state%crop%common%croptype(icrop) .eq. 3) then        
+      if (state%crop%common%croptype(state%crop%common%icrop) .eq. 3) then        
         Max_resp_factor_gmrf = 1.0d0  !RB20140317
 ! --- skip in case of regrowth, equal to wofost detailed grass
 ! --- note: daycrop.ge.idregrpot (wofost) --> daycrop.gt.idregrpot, because idregrpot is result of wofost of previous day
@@ -701,7 +692,7 @@ contains
               Max_resp_factor_gmrf = 1.0d0  
           endif                  
         endif !RB20140317 #skip in case of regrowth                   
-      endif !if (state%crop%common%croptype(icrop) .eq. 3)
+      endif !if (state%crop%common%croptype(state%crop%common%icrop) .eq. 3)
 
       return
       end
