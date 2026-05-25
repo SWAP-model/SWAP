@@ -51,33 +51,12 @@ contains
    end subroutine swap_init
 
    subroutine swap_init_from_loaded_config(state, config)
-      use variables, only : flswapshared, flcropnut, swfrost, &
-                            ! [SS-GR-CROPRT A1] flagetracer dropped — retired (ADR 0032; always .false.)
-                            flcropcalendar, &
-                            flharvestday, flcropoutput, swcrp, project, &
-                            ! [SS-GR-CROPRT C1] swend dropped — global + state field retired (ADR 0009; always 0)
-                            flCropHarvest, &   ! [SS-GR-CROPRT A5] initial zero mirror
-                            ! [GR-FINAL C3] flirrigationoutput dropped: W-global (0 consumers; ADR 0009 deleted IrrigationOutput)
-                            flTillage, flSSDI, &
-                            ! [GR-SOIL 2026-05-24] numlay retired — see state%mesh%numlay
-                            owltab, &  ! [GR-DRA 2026-05-23] nowltab retired
-                            ! [GR-CROP-DVS] meteo arrays/scalars + CN runoff tables retired
-                            !   (arad,atmn,atmx,ahum,awin,arai,aetr,wet,atav,epot,tpot,grain,nrain,
-                            !    tav,daynrfirst,daynrlast,atmin7,nofd,isua,avevaptb,avprectb,
-                            !    pfreetb,pstemtb,scanopytb,CNdry,CNwet,ThetaRef,Runoff_CN,
-                            !    wc_cor,wc10,iCNtab,CNtimTAB,CNrefTAB) → state%atmosphere
-
-                            ! [GR-ATM C8] out_tmn/tmx/hum/win/etr/wet/rad retired from import (state written by meteoday)
-                            swcfbs, flCropEmergence, &  ! lai/swcf retired
-                            ! [SS-GR-CROP A14] crop_common legacy globals; dvs/tsum retired
-                            daycrop, icrop, &
-                            ! rd/rdpot/rdm/rdi/rri/rdc/HarLosOrm_tot/cuptgraz/cuptgrazpot retired
-                            ! [SS-GR-CROP A15] crop_wofost/grass/fixed legacy globals; biomass+dw*+plossdm/lossdm retired
-                            swbulb, &
-                            ! mowrest/seqgrazmow/seqgrazmowpot/dateharvest retired
-                            swpotrelmf  ! cropstart/end act/pot retired; cftb/chtb/cfeic/cfeictb retired
-                            ! [GR-CROP C11] nmrain/rainamount/rainfluxarray/raintimearray retired from import:
-                            !   readmeteo now writes directly to state%atmosphere%X
+      ! [GR-CROP 2026-05-25] crop legacy globals cut over to state%crop%common (flCropCalendar/
+      !   flHarvestDay/flCropOutput/swcrp/flCropHarvest/flCropEmergence/daycrop/icrop/flCropNut),
+      !   state%crop%wofost%swbulb, state%crop%grass%swpotrelmf, state%cfg%soil%frost%swfrost,
+      !   state%cfg%general%project. `owltab` retained — still used as a CSV-staging buffer
+      !   by config_to_variables; this file copies the buffer into state%drainage%owltab.
+      use variables, only : flswapshared, flTillage, flSSDI, owltab
       ! [SS-GR-CROP A16] nutrient legacy globals — in WSN modules, not variables.f90
       use Wofost_Soil_Declarations, only: FOM_t, Bio_t, Hum_t, FOM_t0, Bio_t0, Hum_t0, &
                                           cNH4_t, cNO3_t, cNH4_t0, cNO3_t0, cNH4_av, cNO3_av, &
@@ -122,8 +101,7 @@ contains
 
 !  Initialization of all variables in Module Variables
    call Initialize
-   ! [SS-GR-CROPRT A5] mirror flCropHarvest zero-init (Initialize has no state arg)
-   state%crop%common%flCropHarvest = flCropHarvest
+   ! [GR-CROP 2026-05-25] flCropHarvest mirror retired — state default .false. matches Initialize zero-fill.
 
    ! [GR-CROP-DVS] non-owning config pointer; lifetime matches state's.
    ! Top-level compute routines can now read switches via state%cfg%X%Y
@@ -342,24 +320,10 @@ contains
 
    ! [GR-ATM C8] out_tmn/tmx/hum/win/etr/wet/rad seeding dropped: legacy globals retired; state%atmosphere%X written by meteoday
 
-   ! [SS-GR-ATM A12] seed state%crop from legacy crop globals; lai retired
-   state%crop%swcfbs          = swcfbs
-   state%crop%flCropEmergence = flCropEmergence
-   ! [SS-GR-CROP A14] dual-write crop_common; dvs/tsum retired (writes target state directly)
-   state%crop%common%daycrop        = daycrop
-   state%crop%common%swcrp          = swcrp
-   state%crop%common%icrop          = icrop
-   state%crop%common%flCropCalendar = flCropCalendar
-   state%crop%common%flCropOutput   = flCropOutput
-   state%crop%common%flCropNut      = flCropNut
-   state%crop%common%flHarvestDay   = flHarvestDay
-   ! [SS-GR-CROPRT C1] swend dual-write dropped — state%crop%common%swend retired; ADR 0009: always 0
-   ! [SS-GR-CROP A15] dual-write crop_wofost
-   state%crop%wofost%swbulb   = (swbulb == 1)   ! integer→logical conversion
-   ! [SS-GR-CROP A15] dual-write crop_grass
-   ! seqgrazmow/seqgrazmowpot/dateharvest dual-writes retired — see state%crop%grass
-   state%crop%grass%swpotrelmf    = swpotrelmf
-   ! [SS-GR-CROP A15] dual-write crop_fixed retired — see state%crop%fixed%X
+   ! [GR-CROP 2026-05-25] legacy→state mirror block retired — at swap_init time these legacy
+   ! globals all hold their Initialize zero-fill values; state defaults match. Subsequent
+   ! writers (cropwofost_init/cropfixed_init/cropgrass_init/cropgrowth/timecontrol) now
+   ! write directly to state%X. Mirror was a no-op.
 
    ! [SS-TC TC-14] alias TC fields used in init block
    block
@@ -459,7 +423,7 @@ contains
    end associate
    end block
 
-   call log_info('swap', 'Initialization complete for project: ' // trim(project))
+   call log_info('swap', 'Initialization complete for project: ' // trim(state%cfg%general%project))
 
    end subroutine swap_init_from_loaded_config
 
@@ -611,22 +575,22 @@ contains
       if (tc_flDayEnd) then  ! SS-TC TC-13
 
 !        update Soil nutrient status variables
-         if (flCropNut) call SoilManagement(2, state)
+         if (state%crop%common%flCropNut) call SoilManagement(2, state)
 
 !        calculate potential crop growth
          if (flCropCalendar) call CropGrowth(2, state%heat%tsoil, state)
 
 !        amendent of crop residues from previous day
-         if (flCropNut) call SoilManagement(5, state)
+         if (state%crop%common%flCropNut) call SoilManagement(5, state)
 
 !        amendent of fertilizers of current day
-         if (flCropNut) call SoilManagement(3, state)
+         if (state%crop%common%flCropNut) call SoilManagement(3, state)
 
 !        calculate actual crop growth (calculation of actual crop rate and state variables)
          if (flCropCalendar) call CropGrowth(3, state%heat%tsoil, state)
 
 !        Simulate Soil Nutrient processes
-         if (flCropNut) call SoilManagement(4, state)
+         if (state%crop%common%flCropNut) call SoilManagement(4, state)
 
 !        harvest of crop
          if (flCropCalendar) call CropGrowth(4, state%heat%tsoil, state)
@@ -659,13 +623,13 @@ contains
          else
             if (flOutputShort)   call SoilWaterOutput(2, state, config)   ! [SS-GR-CROPRT A3]
          end if
-         if (tc_flDayEnd .and. (flOutput .or. flHarvestDay)) then  ! SS-TC TC-13
-            if (flCropCalendar .and. flCropOutput) then
-               if (swcrp.eq.1) call CropOutput(2, state)
+         if (tc_flDayEnd .and. (flOutput .or. state%crop%common%flHarvestDay)) then  ! SS-TC TC-13
+            if (state%crop%common%flCropCalendar .and. state%crop%common%flCropOutput) then
+               if (state%crop%common%swcrp.eq.1) call CropOutput(2, state)
             end if
          end if
 !        ADR 0009 Phase 5+: IrrigationOutput deleted (swirg=0).
-         if (tc_flDayEnd .and. flCropNut)    call SoilManagement(6, state)   ! SS-TC TC-13
+         if (tc_flDayEnd .and. state%crop%common%flCropNut)    call SoilManagement(6, state)   ! SS-TC TC-13
          ! [SS-GR-CROPRT C1] swend.eq.2 daily-dump branch dropped — ADR 0009: swend always 0
 
 !    shared simulation
@@ -694,7 +658,7 @@ contains
    call SwapOutput(3, state)
    ! [SS-GR-CROPRT C1] swend.eq.1 end-sim-dump branch dropped — ADR 0009: swend always 0
    call SoilWaterOutput(4, state, config)   ! [SS-GR-CROPRT A3]
-   if (swcrp.eq.1) call CropOutput(3, state)
+   if (state%crop%common%swcrp.eq.1) call CropOutput(3, state)
    ! [SS-TC TC-14] flag reads via state%timecontrol
    if (state%timecontrol%flTemperature)  call TemperatureOutput(3, state)
    if (state%timecontrol%flSolute)       call SoluteOutput(3, state)
@@ -703,7 +667,7 @@ contains
    if (state%timecontrol%flSnow)         call SnowOutput(3, state)
    ! [MACRO-RETIRE 2026-05-12] MacroPoreOutput retired (ADR 0040).
    if (state%timecontrol%flSurfaceWater) call SurfaceWaterOutput(3, state)
-   if (flCropNut)                        call SoilManagement(7, state)
+   if (state%crop%common%flCropNut)                        call SoilManagement(7, state)
 
 !  write okay file for external use
    call WriteSwapOk(Project)
