@@ -1,21 +1,6 @@
 ! File VersionID:
 !   $Id: cropgrowth.f90 380 2018-05-28 14:01:08Z heine003 $
 !
-! Phase 4e Task A2 audit: all `call fatalerr` sites in this file are in
-! surviving physics dispatchers (CropGrowth, cropfixed, cropoutput,
-! ArableLandGerm, FacCO2, wofost, grass, astro, outbalcrop*, chckcbl).
-! The crop sub-readers (readwofost, readcropfixed, readgrass) live in
-! src/io/readswap.f90 — none of them are here. Phase 4e Task A4/A5
-! replaces all of this file's calls via fatalerr_collected (singleton).
-! [SS-GR-CROPWS A1]: cropgrowth.f90 audit — state already intent(inout) non-optional;
-!   all tracked write sites carry dual-writes from prior arcs; no optional/present guards.
-!   No file changes required for Phase A.
-! [GR-CROPWS B3]: reads migrated — state%crop%common%croptype(state%crop%common%icrop), icrop (block section),
-!   cropstart (post-mirror), cropend (task 4), rd (root loop), dvs (task 4, post-task-3 mirror),
-!   swbulb→state%crop%wofost%swbulb, plwt→state%crop%wofost%plwt, kdif→state%crop%kdif.
-!   daycrop NOT migrated: InitializeCrop zeroes legacy global but does not mirror to state,
-!     so state%crop%common%daycrop would be stale on first crop day.
-!   lai/laipot NOT migrated (ordering not confirmed safe for all crop types).
 ! ----------------------------------------------------------------------
       subroutine CropGrowth(task, tsoil, state)
 ! ----------------------------------------------------------------------
@@ -23,56 +8,37 @@
 !     Date               : Aug 2004
 !     Purpose            : Call proper crop routines for initialization,
 !                          calculation of rate/state variables and output
-! SS-HEAT pre-Task-8: tsoil passed as non-optional arg (from state%heat%tsoil
-!   at caller); threaded down to ArableLandGerm / grass / sumttd.
-! SS-CRP Phase 1 C-1.3: state added (intent inout) for dual-write of
-!   hroot/hleaf/mfluxtable into state%soilwater on task=1.
-!   tsoil retained: still threaded to ArableLandGerm / grass / sumttd.
+!
+! tsoil is passed as a non-optional dummy arg (from state%heat%tsoil at
+! caller) and threaded down to ArableLandGerm / grass / sumttd.
+! state is intent(inout); reads and writes use state%* sub-records.
+!
+! [GR-CROP 2026-05-25] Task 9 dispatcher use-variables sweep summary:
+!   Retired in this sub-arc:
+!     - flCropReadFile (last consumer) → state%crop%common%flCropReadFile
+!     - flCropPrep/Sow/Germ (last consumer) → state%crop%common%X
+!     - PrepDelay/SowDelay (last consumer) → state%crop%common%X
+!     - pld/remoc (last consumer) → crop_config_global%rotation_wofost(icrop)%bulb%X
+!     - pathcrop (orphan; declaration retired) → config%general%pathcrop
+!     - Nutrient cluster (NLUE/ANLV/ANST/NMXLV/NMAXLV/NMAXST/NMAXRT/
+!       LRNR/LSNR/NNI/RNFLV/RNFST/FRNX/FSTR + flCropNut) → isolated
+!       behind cropwofost_runtime_mod%wofost_apply_nstress wrapper.
+!   Retained legacy globals (have non-crop external readers; cannot
+!   retire from cropgrowth.f90 without touching swap_mod.f90 /
+!   timecontrol_mod.f90 / meteo_orchestrator.f90 — out of scope):
+!     - icrop, flCropCalendar, cropstart, cropend, flCropEmergence,
+!       flCropHarvest, daycrop, swcrp, flHarvestDay
+!   The dispatcher continues to dual-write these (legacy + state mirror).
 ! ----------------------------------------------------------------------
-
-      ! [SS-GR-CROPRT B1] DEFERRED — all remaining variables globals for CropGrowth:
-      !   icrop, flCropCalendar, cropstart, cropend, flCropEmergence, flCropHarvest,
-      !   flCropReadFile, flCropPrep, flCropSow, flCropGerm: crop calendar flags, no state home
-      !   swinco, croptype, swcrp, swdrought, swharv: config switches, no state home [swbulb→state B3]
-      !   daycrop, rdpot, lai, laipot, cf, ch, tsum, dvs: runtime crop state (dual-write
-      !     to state%crop%common%; global still needed pending Phase C global retirement)
-      !   [daycrop: NOT migrated — InitializeCrop zeroes global but not state mirror]
-      !   cwdmpot, cwdm, wsopot, wso, wlvpot, wlv, wstpot, wst, wrtpot, wrt: WOFOST pools
-      !   tmn, lat, rad: meteo scalars, no state%atmosphere scalar home
-      !   eff, amaxtb, tmpftb, tmnftb: physiology params/tables, no state home [kdif→state B3]
-      !   remoc, pld, q10, pgasspot, pgass: physiology params [plwt→state B3; swbulb→state B3]
-      !   flCropNut, nlue, anlv, anst, nmxlv, nmaxlv, nmaxst, nmaxrt, lrnr, lsnr, nni,
-      !     rnflv, rnfst, frnx, fstr: nutrient state/params, no nutrient_state home
-      !   flHarvestDay: harvest flag (dual-write to state%crop%common%; global still needed)
-      !   noddrz, pathcrop, cropfil: no state home
-      !   [GR-CROP 2026-05-25] germ-params + germ-thresholds retired:
-      !     prep/sow params (Class E unreachable) → direct read from
-      !       crop_config_global%rotation_wofost(icrop)%preparation/sowing.
-      !     germ thresholds (tsumemeopt/tbasem/teffmx/hdrygerm/hwetgerm/zgerm/agerm)
-      !       → direct read from crop_config_global%rotation_wofost(icrop)%germination.
-      !     bgerm/cgerm → derived locally in helpers.
-      !     tsumgerm → state%crop%common%tsumgerm.
-      !     PrepDelay/SowDelay legacy globals still written here (InitializeCrop init);
-      !     state mirror is the canonical reader.
-      !   atmtr, daylp, difpp, dsinbe: astro outputs used by both CropGrowth and wofost
-      !   dvsend: harvest DVS threshold, no state home
-      !   tsoil: config-staging buffer, renamed to avoid clash with dummy arg
-      ! MIGRATED B1: relmf → state%crop%grass%relmf (read-only in CropGrowth)
-      ! MIGRATED B1: swpotrelmf → state%crop%grass%swpotrelmf (read-only in CropGrowth)
-      ! MIGRATED B6: fco2amax/fco2eff/fco2tra → state%crop%wofost%X (FacCO2 now writes to state;
-      !   body reads at lines 459-461 use state; redundant dual-writes at old-395-397 removed)
-      use variables, only: &                                             ! [SS-GR-CROPRT B1/B6] [GR-CROPWS B3]
+      use variables, only: &
+        ! Retained: non-crop consumers (swap_mod.f90 / timecontrol_mod.f90 /
+        ! meteo_orchestrator.f90) still read the bare legacy globals. The
+        ! dispatcher writes both legacy + state%crop%common%X.
         icrop, flCropCalendar, cropstart, cropend, flCropEmergence,         &
-        flCropHarvest,                                                      &  ! flCropReadFile/Prep/Sow/Germ retired — state-only
-        daycrop,                 &  ! [GR-SOL 2026-05-24] swinco retired — via state%soilwater%swinco
-
-        swcrp,                                                             &  ! dvsend/swdrought/eff/amaxtb/tmpftb/tmnftb retired
-        flHarvestDay                                                          ! dispatcher writes legacy mirror; non-crop readers (swap_mod)
-      ! [GR-CROP 2026-05-25] Nutrient cluster (NLUE/ANLV/ANST/NMXLV/NMAXLV/NMAXST/NMAXRT/
-      !   LRNR/LSNR/NNI/RNFLV/RNFST/FRNX/FSTR + flCropNut) isolated in
-      !   cropwofost_runtime_mod%wofost_apply_nstress — dispatcher calls the wrapper.
-      ! [GR-CROP 2026-05-25] pathcrop/cropfil dropped from use-list (only in comments here).
-      ! [GR-CROP 2026-05-25] tsoil config-staging buffer rename dropped (never consumed in body).
+        flCropHarvest,                                                      &
+        daycrop,                                                            &
+        swcrp,                                                              &
+        flHarvestDay
       use array_utils, only: afgen
       use rootextraction_mod, only: MatricFlux
       use swap_constants, only: tiny
