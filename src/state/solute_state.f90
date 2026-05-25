@@ -116,11 +116,124 @@ module solute_state_mod
       integer                        :: agetracer_n_cols = 0
 
    contains
+      procedure :: init               => solute_state_init
       procedure :: reset_intermediate => solute_reset_intermediate
       procedure :: reset_cumulative   => solute_reset_cumulative
    end type solute_state_t
 
 contains
+
+   !> Seed solute state from typed config + runtime dimension args.
+   !!
+   !! [GR-SEED 2026-05-25 Task 3] Absorbs:
+   !!   - Scalar config-snapshot assignments previously in config_to_variables.f90
+   !!     (Solute block, ~75 lines).
+   !!   - Per-layer array broadcasts (ldis scalar→layer(1), kf/decpot/fdepth element copy).
+   !!   - 2D cseeptab → interleaved afgen layout flatten.
+   !!   - Runtime per-node cml/cmsy allocation + zero-fill formerly in the free
+   !!     solute_init(state) in src/solute/solute.f90.
+   subroutine solute_state_init(self, config_solute, numlay)
+      use solute_config_mod, only: solute_config_t
+      class(solute_state_t), intent(inout) :: self
+      type(solute_config_t), intent(in)    :: config_solute
+      integer,               intent(in)    :: numlay
+
+      integer :: i, n
+
+      ! ------------------------------------------------------------------
+      ! Runtime zero-fill (formerly free solute_init in solute.f90):
+      ! allocate per-node arrays sized to numnod and seed initial profiles.
+      ! ------------------------------------------------------------------
+      n = numlay
+      if (.not. allocated(self%cml))  allocate(self%cml(n))
+      if (.not. allocated(self%cmsy)) allocate(self%cmsy(n))
+
+      ! swinco=3 (warm restart): cml_init holds the per-node initial profile
+      ! populated by config_to_variables. Other swinco values: solute task=1
+      ! interpolates from the (zc_init, cml_init) table; the initial cml here
+      ! is just the default zero.
+      if (allocated(self%cml_init)) then
+         self%cml(:)  = self%cml_init(1:n)
+      else
+         self%cml(:)  = 0.0_real64
+      end if
+      self%cmsy(:) = 0.0_real64
+
+      ! ------------------------------------------------------------------
+      ! Config-snapshot scalars (formerly adapter Solute block):
+      ! ------------------------------------------------------------------
+      self%swbotbc = config_solute%swbotbc
+      self%cdrain  = config_solute%cdrain
+      self%tscf    = config_solute%tscf
+      self%rtheta  = config_solute%rtheta
+      self%bexp    = config_solute%bexp
+      self%cref    = config_solute%cref
+      self%cpre    = config_solute%cpre
+      self%ddif    = config_solute%ddif
+      self%frexp   = config_solute%frexp
+      self%gampar  = config_solute%gampar
+      self%daquif  = config_solute%daquif
+      self%kfsat   = config_solute%kfsat
+      self%decsat  = config_solute%decsat
+      self%poros   = config_solute%poros
+      self%swbr    = config_solute%swbr
+
+      ! ------------------------------------------------------------------
+      ! Per-layer arrays (MAHO-sized):
+      ! ------------------------------------------------------------------
+      ! Dispersion length: element-wise copy when array; otherwise broadcast
+      ! scalar to layer(1) (legacy rdsdor 'ldis' single-value behaviour).
+      if (.not. allocated(self%ldis)) then
+         allocate(self%ldis(MAHO)); self%ldis = 0.0_real64
+      end if
+      if (allocated(config_solute%ldis_array)) then
+         do i = 1, size(config_solute%ldis_array)
+            self%ldis(i) = config_solute%ldis_array(i)
+         end do
+      else if (config_solute%ldis > 0.0_real64) then
+         self%ldis(1) = config_solute%ldis
+      end if
+
+      if (.not. allocated(self%kf)) then
+         allocate(self%kf(MAHO));     self%kf     = 0.0_real64
+      end if
+      if (.not. allocated(self%decpot)) then
+         allocate(self%decpot(MAHO)); self%decpot = 0.0_real64
+      end if
+      if (.not. allocated(self%fdepth)) then
+         allocate(self%fdepth(MAHO)); self%fdepth = 0.0_real64
+      end if
+      if (allocated(config_solute%kf)) then
+         do i = 1, min(size(config_solute%kf), size(self%kf))
+            self%kf(i) = config_solute%kf(i)
+         end do
+      end if
+      if (allocated(config_solute%decpot)) then
+         do i = 1, min(size(config_solute%decpot), size(self%decpot))
+            self%decpot(i) = config_solute%decpot(i)
+         end do
+      end if
+      if (allocated(config_solute%fdepth)) then
+         do i = 1, min(size(config_solute%fdepth), size(self%fdepth))
+            self%fdepth(i) = config_solute%fdepth(i)
+         end do
+      end if
+
+      ! ------------------------------------------------------------------
+      ! cseeptab: flatten 2D typed config to the interleaved afgen layout.
+      ! afgen(cseeptab, mabbc*2, time) reads pairs as (2*k-1)=time, (2*k)=value.
+      ! ------------------------------------------------------------------
+      if (.not. allocated(self%cseeptab)) then
+         allocate(self%cseeptab(2*MABBC)); self%cseeptab = 0.0_real64
+      end if
+      if (allocated(config_solute%cseeptab)) then
+         do i = 1, min(size(config_solute%cseeptab, 1), size(self%cseeptab)/2)
+            self%cseeptab(2*i - 1) = config_solute%cseeptab(i, 1)   ! time
+            self%cseeptab(2*i)     = config_solute%cseeptab(i, 2)   ! concentration
+         end do
+      end if
+
+   end subroutine solute_state_init
 
    !> Zero the 6 intermediate fields. Called under flzerointr.
    subroutine solute_reset_intermediate(self)

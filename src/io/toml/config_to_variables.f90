@@ -704,80 +704,10 @@ contains
       ! the strangler adapter does not touch them.
 
       ! ---------------------------------------------------------------
-      ! Solute (audit: 8 fields + 14 Phase 0 promoted fields)
+      ! [GR-SEED 2026-05-25 Task 3] Solute seeding moved to state%solute%init
+      ! (called from swap_mod). Scalars, per-layer arrays (ldis/kf/decpot/fdepth)
+      ! and cseeptab flatten are all performed there.
       ! ---------------------------------------------------------------
-      ! [GR-TIME 2026-05-25] swsolu legacy mirror dropped — timecontrol_mod and
-      ! tillage_mod read config%solute%swsolu directly via state%cfg.
-      state%solute%swbotbc = config%solute%swbotbc
-      state%solute%cdrain = config%solute%cdrain
-!     cseep   = config%solute%cseep   ! global cseep removed (ADR 0032); state%solute%cseep written by solute task=2 via afgen(cseeptab)
-      state%solute%tscf    = config%solute%tscf
-      state%solute%rtheta  = config%solute%rtheta
-      state%solute%bexp    = config%solute%bexp
-      ! Phase 4f Task B5: per-layer dispersion length. Mirrors
-      ! readswap.f90:1139-1143 — when the case authors `ldis` as an
-      ! array, copy element-wise; otherwise broadcast the scalar to
-      ! every soil-physical layer (legacy `rdsdor('ldis',...,ldis(1))`
-      ! followed by an implicit broadcast in the dispersion solver).
-      if (.not. allocated(state%solute%ldis)) then
-         allocate(state%solute%ldis(maho)); state%solute%ldis = 0.0d0
-      end if
-      if (allocated(config%solute%ldis_array)) then
-         do i = 1, size(config%solute%ldis_array)
-            state%solute%ldis(i) = config%solute%ldis_array(i)
-         end do
-      else if (config%solute%ldis > 0.0d0) then
-         state%solute%ldis(1) = config%solute%ldis
-      end if
-
-      state%solute%cref   = config%solute%cref
-      state%solute%cpre   = config%solute%cpre
-      state%solute%ddif   = config%solute%ddif
-      state%solute%frexp  = config%solute%frexp
-      state%solute%gampar = config%solute%gampar
-      state%solute%daquif = config%solute%daquif
-      state%solute%kfsat  = config%solute%kfsat
-      state%solute%decsat = config%solute%decsat
-      state%solute%poros  = config%solute%poros
-      state%solute%swbr   = config%solute%swbr
-
-      if (.not. allocated(state%solute%kf)) then
-         allocate(state%solute%kf(maho));     state%solute%kf     = 0.0d0
-      end if
-      if (.not. allocated(state%solute%decpot)) then
-         allocate(state%solute%decpot(maho)); state%solute%decpot = 0.0d0
-      end if
-      if (.not. allocated(state%solute%fdepth)) then
-         allocate(state%solute%fdepth(maho)); state%solute%fdepth = 0.0d0
-      end if
-      if (allocated(config%solute%kf)) then
-         do i = 1, min(size(config%solute%kf), size(state%solute%kf))
-            state%solute%kf(i) = config%solute%kf(i)
-         end do
-      end if
-      if (allocated(config%solute%decpot)) then
-         do i = 1, min(size(config%solute%decpot), size(state%solute%decpot))
-            state%solute%decpot(i) = config%solute%decpot(i)
-         end do
-      end if
-      if (allocated(config%solute%fdepth)) then
-         do i = 1, min(size(config%solute%fdepth), size(state%solute%fdepth))
-            state%solute%fdepth(i) = config%solute%fdepth(i)
-         end do
-      end if
-
-      ! cseeptab: flatten 2D typed config to the interleaved afgen layout.
-      ! afgen(cseeptab, mabbc*2, time) reads pairs as (2*k-1)=time, (2*k)=value.
-      ! Confirmed from: grep -n "cseeptab" src/solute/solute.f90 → line 107.
-      if (.not. allocated(state%solute%cseeptab)) then
-         allocate(state%solute%cseeptab(2*mabbc)); state%solute%cseeptab = 0.0d0
-      end if
-      if (allocated(config%solute%cseeptab)) then
-         do i = 1, min(size(config%solute%cseeptab, 1), size(state%solute%cseeptab)/2)
-            state%solute%cseeptab(2*i - 1) = config%solute%cseeptab(i, 1)   ! time
-            state%solute%cseeptab(2*i)     = config%solute%cseeptab(i, 2)   ! concentration
-         end do
-      end if
 
       ! ---------------------------------------------------------------
       ! Surface water (audit: 12 + per-period management arrays)

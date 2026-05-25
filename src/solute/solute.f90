@@ -4,7 +4,6 @@ module solute_mod
    implicit none
    private
    public :: solute
-   public :: solute_init
 
 contains
 
@@ -274,36 +273,5 @@ contains
 
       return
    end subroutine solute
-
-   !> Lifecycle init for the solute typed state.
-   !!
-   !! Allocates per-node arrays from numnod and seeds them from the
-   !! config-time-populated legacy globals (cml/cmsy). The two-stage cml
-   !! seeding is preserved: config-time seed in the legacy global persists;
-   !! this routine copies it into typed state at run init. Solute task=1
-   !! overwrites state%solute%cml from the (zc, cml_init) table.
-   subroutine solute_init(state)
-      use, intrinsic :: iso_fortran_env, only: real64
-      use swap_state_mod, only: swap_state_t
-      implicit none
-      type(swap_state_t), intent(inout) :: state
-
-      integer :: n
-
-      n = state%mesh%numnod
-      if (.not. allocated(state%solute%cml))  allocate(state%solute%cml(n))
-      if (.not. allocated(state%solute%cmsy)) allocate(state%solute%cmsy(n))
-
-      ! swinco=3 (warm restart): cml_init holds the per-node initial profile
-      ! populated by config_to_variables. Other swinco values: solute task=1
-      ! interpolates from the (zc_init, cml_init) table; the initial cml here
-      ! is just the default zero.
-      if (allocated(state%solute%cml_init)) then
-         state%solute%cml(:)  = state%solute%cml_init(1:n)
-      else
-         state%solute%cml(:)  = 0.0_real64
-      end if
-      state%solute%cmsy(:) = 0.0_real64
-   end subroutine solute_init
 
 end module solute_mod

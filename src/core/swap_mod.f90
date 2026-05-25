@@ -91,7 +91,7 @@ contains
       use swap_log, only: log_info
       use runoff_mod, only: cn_init
       use temperature_mod, only: Temperature
-      use solute_mod, only: solute, solute_init
+      use solute_mod, only: solute
       ! [GR-SOLUTE 2026-05-24] agetracer_mod dropped — module retired to
       ! src/solute/dormant/agetracer.f90 (dormant; no callers since ADR 0032).
       use soilgrid_mod, only: CalcGrid
@@ -379,7 +379,8 @@ contains
    ! [GR-IO 2026-05-25 Phase 5] owltab bare-global staging buffer retired —
    ! the adapter (config_to_variables.f90) now writes the per-level
    ! channel water-level tables directly into state%drainage%owltab.
-   if (flSolute) call solute_init(state)   ! SS-SLST Phase 2 Task 7: seed state%solute from config-populated globals
+   ! [GR-SEED 2026-05-25 Task 3] solute_init retired → type-bound state%solute%init
+   if (state%cfg%solute%swsolu == 1) call state%solute%init(config%solute, state%mesh%numnod)
 
 !  initialize SurfaceWater management variables
    ! S4 state init for surfacewater (spec docs/superpowers/specs/2026-05-13-state-init-pilot-surfacewater-design.md).
