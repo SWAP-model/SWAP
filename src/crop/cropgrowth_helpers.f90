@@ -1,15 +1,26 @@
 ! cropgrowth_helpers.f90
-! GR-CROPWS Phase 0 Commit 0.1: leaf-level helpers extracted from cropgrowth.f90.
+! Leaf-level crop helpers extracted from cropgrowth.f90.
 ! Subroutines: nocrop, ArableLandGerm, FacCO2, cropoutput, update_rootdistribution,
 !              sumttd, init_crop_output_buffer, build_crop_output_row,
-!              cleanup_crop_output_buffer
-! Pure relocation — no behavior change.
-! [SS-GR-CROPWS A5]: Phase A audit — ArableLandGerm already intent(inout) with inline
-!   writes; FacCO2 already writes state directly (B6); nocrop() has no state arg
-!   (DEFERRED). No optional/present guards. No changes required.
-! [GR-CROPWS B2]: reads migrated — PrepDelay + SowDelay compound reads in ArableLandGerm.
-!   All other read sites in this file were already migrated (B3/B6/B9) or are mirror-line
-!   RHS reads (stays). icrop already via state%crop%common%icrop.
+!              cleanup_crop_output_buffer.
+!
+! [GR-CROP 2026-05-25] use-variables sweep:
+!   - cropoutput          → state%crop%common (flCropOpenFile, croptype, icrop),
+!                            state%cfg%general (outfil/pathwork/project);
+!                            cropfil + crp file unit retained on the bare-global
+!                            side pending the file-IO arc.
+!   - ArableLandGerm      → crop_config_global%rotation_wofost(icrop)%X (germ
+!                            params; case(2)/(3) prep/sow are dead-branch); state
+!                            tsumgerm + dual-write of flCropPrep/Sow/Germ.
+!   - FacCO2              → dead-branch (state%atmosphere%flco2 is dormant);
+!                            fco2*amax/eff/tra remain 1.0; fatalerr stub if flco2
+!                            is ever re-enabled without restored config wiring.
+!   - update_rootdistribution → state%crop%common (cumdens, noddrz);
+!                            gwrt/wrtmin still bare globals (writers in
+!                            cropgrass_runtime + cropwofost_runtime out of scope).
+!   - sumttd              → dead-branch (swtsum=2 stub-guarded in
+!                            cropgrass_config.f90:290); body retired to
+!                            fatalerr stub.
 ! ----------------------------------------------------------------------
       module cropgrowth_helpers_mod
       implicit none
@@ -28,11 +39,9 @@
       subroutine cropoutput(task, state)
 ! ----------------------------------------------------------------------
 !     Date               : Aug 2004
-!     Purpose            : open and write crop output files
-! SS-TC TC-10: state added (intent in); threaded to OutCropFixed /
-!   OutWofost / OutGrass so they can read date,t via state%timecontrol.
-! [SS-BMI2] inout: init/cleanup of crop_output_row buffer at top-level state.
-! [GR-CROP Phase B/5] narrow use variables
+!     Purpose            : open and write crop output files; state threads through
+!                          to OutCropFixed / OutWofost / OutGrass for the per-task
+!                          row build + buffer init/cleanup.
 ! ----------------------------------------------------------------------
 
       ! [GR-CROP 2026-05-25] flCropOpenFile → state%crop%common%flCropOpenFile.
@@ -148,11 +157,8 @@
 ! ----------------------------------------------------------------------
       subroutine nocrop (state)
 ! ----------------------------------------------------------------------
-
-      ! [SS-GR-CROPRT B4] DEFERRED — nocrop: pure write site (sets globals to zero defaults).
-      !   dvs now writes directly to state%crop%common%dvs (legacy global retired in dvs pilot).
-      !   Other symbols still legacy; CropGrowth mirrors them to state immediately after the call.
-      ! [SS-GR-CROPRT B4] nocrop now writes only to state (no variables imports needed)
+!     Purpose: zero-out crop runtime fields when no crop is active.
+! ----------------------------------------------------------------------
       use swap_state_mod, only: swap_state_t
       implicit none
       type(swap_state_t), intent(inout) :: state
@@ -184,13 +190,12 @@
 ! ----------------------------------------------------------------------
       subroutine ArableLandGerm(task, tsoil, state)
 ! ----------------------------------------------------------------------
-!     update             : December 2017
-!     date               : December 2017
-!     purpose            : Crop growth
-! SS-HEAT pre-Task-8: tsoil(:) non-optional dummy arg; callers pass
-!   state%heat%tsoil. Global tsoil excluded via rename.
-! SS-SWC S-2.7: state added (intent in) for soil-water-core h reader cutover.
-! [GR-CROP Phase B/5] narrow use variables
+!     Last update          : December 2017
+!     Purpose              : Drive crop preparation / sowing / germination
+!                            up to the emergence event. Reads soil pressure
+!                            heads from state%soilwater, soil temperatures
+!                            from the tsoil dummy arg, and germination
+!                            config from crop_config_global.
 ! ----------------------------------------------------------------------
       ! [GR-CROP 2026-05-25] ArableLandGerm fully migrated off germ-param globals.
       !   prep/sow params (hPrep/zPrep/MaxPrepDelay/hSow/zSow/zTempSow/TempSow/MaxSowDelay):
@@ -215,7 +220,7 @@
       real(8), intent(in) :: tsoil(:)
       !! Soil temperature array from state%heat%tsoil.
       type(swap_state_t), intent(inout) :: state
-      !! State record; state%soilwater%h used for pressure-head reads. [SS-SWC S-2.7]
+      !! State record; state%soilwater%h used for pressure-head reads.
       real(8)  drz1,hrz1,pFz1
       real(8)  tsumemesub
       real(8)  dhPrep, dhSow, dtempSow      ! local scratch (former bare globals)
@@ -403,28 +408,18 @@
 ! ----------------------------------------------------------------------
       subroutine FacCO2(state)
 ! ----------------------------------------------------------------------
-!     update             : February 2018
-!     date               : ?
-!     purpose            : Assimilation correction for CO2 changes in
-!                          atmosphere (Lintul4) added by Iwan Supit
-! SS-TC TC-10: state added (intent in); iyear read via state%timecontrol
-!   tc_iyear alias.
-! [GR-CROP Phase B/5] narrow use variables
+!     Last update          : February 2018
+!     Purpose              : Assimilation correction for CO2 changes in
+!                            atmosphere (Lintul4, Iwan Supit).
 ! ----------------------------------------------------------------------
-      ! [SS-GR-CROPRT B6] DEFERRED — FacCO2:
-      !   flco2: logical flag (maps to cropwofost_config co2%swco2); no state home
-      !   co2year, co2ppm: legacy CO2 table arrays, not yet in config; need migration
-      !   co2amaxtb, co2efftb, co2tratb: CO2 correction tables in cropwofost_config co2%;
-      !     migration deferred — not yet threaded via state or config arg
-      !   mayrs: array dimension (could → swap_array_dimensions, deferred with rest)
       ! [GR-CROP 2026-05-25] FacCO2 dead-branch cluster (Class E).
       !   state%atmosphere%flco2 is hard-coded .false. (atmosphere_state.f90:128 default,
-      !   no TOML wiring exists). The `if (flco2)` block is unreachable, so the entire
-      !   CO2 correction lookup (co2year/co2ppm/mayrs/co2amaxtb/co2efftb/co2tratb) is
-      !   dead. fco2amax/fco2eff/fco2tra remain 1.0 (no-op multipliers) every step.
-      !   When flco2 wiring is implemented, restore the lookup against
-      !   crop_config_global%rotation_wofost(icrop)%co2 tables (co2amaxtb/co2efftb/
-      !   co2tratb already exist on the config sub-record).
+      !   no TOML wiring). The `if (flco2)` block is unreachable, so the entire CO2
+      !   correction lookup (co2year/co2ppm/mayrs/co2amaxtb/co2efftb/co2tratb) is dead.
+      !   fco2amax/fco2eff/fco2tra remain 1.0 (no-op multipliers). When flco2 wiring is
+      !   restored, point the lookup at
+      !   crop_config_global%rotation_wofost(icrop)%co2 (co2amaxtb/co2efftb/co2tratb
+      !   already exist on the wofost_co2_t config sub-record).
       use swap_state_mod, only: swap_state_t
       use error_mod, only: fatalerr_collected
       implicit none
@@ -466,11 +461,10 @@
       !     gwrt/wrtmin fields staged for the runtime cutover.
       !   noddrz/cumdens/wrt: already on state%crop%common / state%crop%wofost.
       use variables, only: gwrt, wrtmin
-      use swap_state_mod, only: swap_state_t  ! [SS-SWC S-2.12B]
-      ! local
+      use swap_state_mod, only: swap_state_t
       implicit none
 
-      type(swap_state_t), intent(inout) :: state  ! [SS-SWC S-2.12B] inout for cumdens dual-write [SS-GR-CROPRT A5]
+      type(swap_state_t), intent(inout) :: state  ! inout: cumdens written via state alias
 
       integer   node, i
       real(8)   top,bot
@@ -586,9 +580,6 @@
 !       I    R8  z         depth of a node (L)
 !       I    R8  tsoil     Array with soil temperatures (oC) for each compartment
 !       O    L   flGrassGrowth flag indicating grass growth (suppressed=.false. when criteria are not met) [.true .or. .false. -, L]
-! SS-HEAT pre-Task-8: tsoil now non-optional dummy arg; callers pass state%heat%tsoil
-!   via grass's tsoil dummy arg. Global tsoil excluded via rename.
-! SS-TC TC-10: state added (intent in); t1900,date read via state%timecontrol tc_* aliases.
 ! ----------------------------------------------------------------------
       ! [GR-CROP 2026-05-25] sumttd is dead-branch (Class E).
       !   Called only from cropgrass_runtime.f90:299 when state%crop%grass%swtsum==2.
