@@ -307,7 +307,7 @@
 
       ! [GR-ATM 2026-05-23] croptype retired — see state%crop%common%croptype
       ! [GR-CROP 2026-05-25] swcrp retired — see state%crop%common%swcrp
-      integer   crp                ! Internal number of crop output file *.CRP
+      ! [GR-CROP 2026-05-25] crp retired — now state%crop%common%file_unit_crp.
       ! [GR-CROP 2026-05-25] daycrop retired — see state%crop%common%daycrop
       ! [GR-CROP 2026-05-25] icrop retired — see state%crop%common%icrop
       ! [GR-CROPWS] daygrowth retired — see state%crop%grass%daygrowth

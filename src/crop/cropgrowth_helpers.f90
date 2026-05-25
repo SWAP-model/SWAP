@@ -47,9 +47,7 @@
       ! [GR-CROP 2026-05-25] flCropOpenFile → state%crop%common%flCropOpenFile.
       ! outfil/pathwork/project read via state%cfg%general (this file's cfg snapshot).
       ! cropfil[(1)] now read directly from state%cfg%crop%rotation_file (Class B).
-      ! crp (output file unit) remains a bare-global — swapoutput.f90 outside the
-      ! crop allow-list still imports it for the CSV-output writers.
-      use variables, only: crp
+      ! [GR-CROP 2026-05-25] crp (output file unit) → state%crop%common%file_unit_crp
       use error_mod, only: fatalerr_collected
       use file_io_mod, only: file_open
       use swap_state_mod, only: swap_state_t
@@ -94,9 +92,9 @@
                end if
             end if
             filnam = trim(cfg_gen%pathwork)//trim(cfg_gen%outfil)//'.crp'
-            call file_open(crp, filnam, 'replace', 'write')
+            call file_open(crop%file_unit_crp, filnam, 'replace', 'write')
             filtext = 'output data of simple or detailed crop growth model'
-            call writehead (crp,1,filnam,filtext,cfg_gen%project)
+            call writehead (crop%file_unit_crp,1,filnam,filtext,cfg_gen%project)
 
 ! ---   write header fixed crop growth
             if (crop%croptype(crop%icrop) .eq. 1) call OutCropFixed(1, state)
@@ -147,7 +145,7 @@
 ! --- close crop output file ------------------------------------------------
 
       ! [SS-BMI2] headless guard: .crp file was only opened when not headless
-      if (.not. time%headless) close (crp)
+      if (.not. time%headless) close (crop%file_unit_crp)
 
       ! [SS-BMI2] deallocate crop output buffer
       call cleanup_crop_output_buffer(state)

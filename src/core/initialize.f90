@@ -20,7 +20,7 @@
       flSwapShared       = .false.
 
 ! --- crop variables (not crop specific, such as crop calendar)
-      crp                = 0
+      ! [GR-CROP 2026-05-25] crp retired — state%crop%common%file_unit_crp default 0.
       ! [GR-CROP 2026-05-25] icrop/cropend/cropstart retired — see state%crop%common%icrop, state%cfg%crop%rotation_{start,end}
       rdmax              = 0.0d0
       flCropOutput       = .false.

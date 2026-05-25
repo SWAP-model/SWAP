@@ -143,7 +143,7 @@
       ! SS-SWC S-2.11: gwl,pond,volact,volini,PondIni,iqbot,iqrot,igird,iintc,irunon,iruno,irunoCN removed; reads via state%soilwater.
       ! SS-TC TC-7: daynr,daycum,t1900,date,flheader,flprintshort removed from only-list; reads via state%timecontrol.
       ! [SS-BMI2] inout: build_water_balance_row writes to state%water_balance_row
-      ! [SS-GR-FINAL B3] DEFERRED — inc: file unit; outfil/pathwork/project: file-path globals; iQMpOutDrRap: legacy accumulator
+      ! [GR-CROP 2026-05-25] DEFERRED — inc: file unit; outfil/pathwork/project: file-path globals; iQMpOutDrRap: legacy accumulator
       use variables, only: inc,iQMpOutDrRap,outfil,pathwork,project
       use swap_state_mod, only: swap_state_t
       use file_io_mod, only: file_open
@@ -347,7 +347,7 @@
 !     Column order matches init_water_balance_buffer column names exactly.
 ! ----------------------------------------------------------------------
       use swap_state_mod, only: swap_state_t
-      ! [SS-GR-FINAL B3] DEFERRED — iQMpOutDrRap: legacy drainage accumulator, no state home
+      ! [GR-CROP 2026-05-25] DEFERRED — iQMpOutDrRap: legacy drainage accumulator, no state home
       use variables,      only: iQMpOutDrRap
       use iso_c_binding,  only: c_double
       implicit none
@@ -405,7 +405,7 @@
       !   removed from only-list; reads via state%soilwater.
       ! SS-SWC S-2.11: theta,hm1,q,inq,inqrot removed from only-list; reads via state%soilwater.
       ! SS-TC TC-7: daynr,daycum,t1900,date,flprintshort removed from only-list; reads via state%timecontrol.
-      ! [SS-GR-FINAL B3] DEFERRED — rot: file unit; outfil/pathwork/project: file-path globals
+      ! [GR-CROP 2026-05-25] DEFERRED — rot: file unit; outfil/pathwork/project: file-path globals
       ! [GR-CROP 2026-05-25] noddrz retired — read via state%crop%common%noddrz
       use variables, only: rot,outfil,pathwork,project
       use swap_state_mod, only: swap_state_t
@@ -554,8 +554,8 @@
 ! [GR-CROP C2] daycrop/dvs/tsum/cf/rd/ch → state%crop%common%X
 ! ----------------------------------------------------------------------
       ! GR-ATM C2: lai → state%crop%lai.
-      ! [SS-GR-FINAL B3] DEFERRED — crp: crop output file unit, Arc 9 edge
-      use variables, only: crp
+      ! [GR-CROP 2026-05-25] DEFERRED — crp: crop output file unit, Arc 9 edge
+      ! [GR-CROP 2026-05-25] crp → state%crop%common%file_unit_crp
       use swap_state_mod, only: swap_state_t
       implicit none
 
@@ -577,7 +577,7 @@
       case (1)
 
 ! --- write header of new crop ----------------------------------------------
-      write (crp,100)
+      write (state%crop%common%file_unit_crp,100)
  100  format ('*',/,                                                    &
      & '*             day     day      -    grC       -      -      cm',&
      & '       -       cm    cm ',                                      &
@@ -598,7 +598,7 @@
 ! --- write actual data ------------------------------------------------------
 
 ! --- write output record
-      write (crp,200) tc_date,comma,nint(tc_t),comma,state%crop%common%daycrop,comma,state%crop%common%dvs,comma, &
+      write (state%crop%common%file_unit_crp,200) tc_date,comma,nint(tc_t),comma,state%crop%common%daycrop,comma,state%crop%common%dvs,comma, &
      & state%crop%common%tsum,comma,"       ",comma,state%crop%lai,comma,state%crop%common%ch,comma,state%crop%common%cf,    &
      & comma,"       ",comma,nint(state%crop%common%rd),                  &
      & comma,comma,comma,comma,comma,comma,comma,comma,comma,comma,     &
@@ -630,8 +630,8 @@
 !   → state%crop%common%X / state%crop%wofost%X
 ! ----------------------------------------------------------------------
       ! GR-ATM C2: lai → state%crop%lai.
-      ! [SS-GR-FINAL B3] DEFERRED — crp: crop output file unit, Arc 9 edge
-      use variables, only: crp
+      ! [GR-CROP 2026-05-25] DEFERRED — crp: crop output file unit, Arc 9 edge
+      ! [GR-CROP 2026-05-25] crp → state%crop%common%file_unit_crp
       use swap_state_mod, only: swap_state_t
       implicit none
 
@@ -655,9 +655,9 @@
 ! --- write header of new crop ----------------------------------------------
 
       if(.not. state%crop%wofost%swbulb) then
-         write (crp,100)
+         write (state%crop%common%file_unit_crp,100)
       else
-         write (crp,200)
+         write (state%crop%common%file_unit_crp,200)
       endif
  100  format ('*',/,                                                    &
      & '*             day     day      -    grC       -      -      cm',&
@@ -693,7 +693,7 @@
 ! --- write actual data ------------------------------------------------------
 
       if(.not. state%crop%wofost%swbulb) then
-         write (crp,300) tc_date,comma,nint(tc_t),comma,state%crop%common%daycrop,comma,state%crop%common%dvs,       &
+         write (state%crop%common%file_unit_crp,300) tc_date,comma,nint(tc_t),comma,state%crop%common%daycrop,comma,state%crop%common%dvs,       &
      &    comma,state%crop%common%tsum,comma,state%crop%common%laipot,comma,state%crop%lai,comma,state%crop%common%ch,comma,state%crop%common%cf,comma,   &
      &    nint(state%crop%common%rdpot),comma,nint(state%crop%common%rd),comma,nint(state%crop%wofost%wlvpot),comma,nint(state%crop%wofost%wlv),          &
      &    comma,nint(state%crop%wofost%wstpot),comma,nint(state%crop%wofost%wst),comma,nint(state%crop%wofost%wrtpot),                  &
@@ -702,7 +702,7 @@
      &    comma,comma,state%crop%wofost%dwlvCrop,comma,state%crop%wofost%dwlvSoil,comma,state%crop%wofost%dwst,comma,state%crop%wofost%dwrt,              &
      &    comma,state%crop%wofost%dwso,comma,state%crop%common%HarLosOrm_tot
       else
-         write (crp,400) tc_date,comma,nint(tc_t),comma,state%crop%common%daycrop,comma,state%crop%common%dvs,       &
+         write (state%crop%common%file_unit_crp,400) tc_date,comma,nint(tc_t),comma,state%crop%common%daycrop,comma,state%crop%common%dvs,       &
      &    comma,state%crop%common%tsum,comma,state%crop%common%laipot,comma,state%crop%lai,comma,state%crop%common%ch,comma,state%crop%common%cf,comma,   &
      &    nint(state%crop%common%rdpot),comma,nint(state%crop%common%rd),comma,nint(state%crop%wofost%wlvpot),comma,nint(state%crop%wofost%wlv),&
      &    comma,nint(state%crop%wofost%wstpot),comma,nint(state%crop%wofost%wst),comma,nint(state%crop%wofost%wrtpot),        &
@@ -742,7 +742,7 @@
 ! ----------------------------------------------------------------------
       ! GR-ATM C2: lai → state%crop%lai.
       ! [SS-GR-FINAL B4] DEFERRED — crp: crop output file unit, Arc 9 edge
-      use variables, only: crp
+      ! [GR-CROP 2026-05-25] crp → state%crop%common%file_unit_crp
       use swap_state_mod, only: swap_state_t
       implicit none
 
@@ -765,7 +765,7 @@
 
 ! --- write header of new crop ----------------------------------------------
 
-      write (crp,100)
+      write (state%crop%common%file_unit_crp,100)
  100  format ('*',/,                                                    &
      & '*             day     day      -    grC       -      -      cm',&
      & '       -       cm    cm ',                                      &
@@ -786,7 +786,7 @@
 ! --- write actual data ------------------------------------------------------
 
 ! --- write output record
-      write (crp,200) tc_date,comma,nint(tc_t),comma,state%crop%common%daycrop,comma,state%crop%common%dvs,comma, &
+      write (state%crop%common%file_unit_crp,200) tc_date,comma,nint(tc_t),comma,state%crop%common%daycrop,comma,state%crop%common%dvs,comma, &
      & state%crop%common%tsum,comma,state%crop%common%laipot,comma,state%crop%lai,comma,state%crop%common%ch,comma,state%crop%common%cf,        &
      & comma,nint(state%crop%common%rdpot),comma,nint(state%crop%common%rd),                                &
      & comma,nint(state%crop%wofost%wlvpot),comma,nint(state%crop%wofost%wlv),comma,nint(state%crop%wofost%wstpot),           &
