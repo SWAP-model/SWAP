@@ -63,7 +63,7 @@
       !   body reads at lines 459-461 use state; redundant dual-writes at old-395-397 removed)
       use variables, only: &                                             ! [SS-GR-CROPRT B1/B6] [GR-CROPWS B3]
         icrop, flCropCalendar, cropstart, cropend, flCropEmergence,         &
-        flCropHarvest, flCropReadFile, flCropPrep, flCropSow, flCropGerm,   &
+        flCropHarvest, flCropPrep, flCropSow, flCropGerm,                   &  ! flCropReadFile retired — state-only
         daycrop,                 &  ! [GR-SOL 2026-05-24] swinco retired — via state%soilwater%swinco
 
         swcrp,                                                             &  ! dvsend/swdrought/eff/amaxtb/tmpftb/tmnftb retired
@@ -173,8 +173,7 @@
           state%crop%common%SowDelay      = SowDelay
           state%crop%common%tsumgerm      = 0.0d0     ! [GR-CROP 2026-05-25] reset alongside legacy InitializeCrop()
           ! [GR-CROP 2026-05-25] noddrz mirror dropped — state field set in line 399
-          flCropReadFile  = .true.
-          state%crop%common%flCropReadFile = flCropReadFile   ! [SS-GR-CROPRT A5]
+          state%crop%common%flCropReadFile = .true.
           flCropEmergence = .true.
           state%crop%flCropEmergence = flCropEmergence   ! [SS-GR-ATM A5.2] dual-write
           if (state%crop%common%croptype(state%crop%common%icrop) .le. 2) then
@@ -191,8 +190,7 @@
         if (.not. flCropEmergence) then
           if (flCropPrep .and. flCropSow .and. flCropGerm) then
             state%soilwater%swinco = -99
-            flCropReadFile  = .true.
-            state%crop%common%flCropReadFile = flCropReadFile   ! [SS-GR-CROPRT A5]
+            state%crop%common%flCropReadFile = .true.
             flCropEmergence = .true.
             state%crop%flCropEmergence = flCropEmergence   ! [SS-GR-ATM A5.2] dual-write
           endif
@@ -200,7 +198,7 @@
         
         ! Initialize preparation, sowing and germination
         if (.not. flCropEmergence) then
-          if (flCropReadFile) then
+          if (state%crop%common%flCropReadFile) then
             ! ADR 0017: sibling-reader dispatch around legacy ArableLandGerm
             ! (which opens pathcrop//cropfil(icrop)//'.crp' via
             ! readarablelandgerm). Cache-hit path sets flCrop* flags from
@@ -327,9 +325,9 @@
 
 ! --- Initialization crop conditions ------------------------------------------
       
-      if (flCropCalendar .and. .not. flCropHarvest) then            
-        
-        if (flCropReadFile) then
+      if (flCropCalendar .and. .not. flCropHarvest) then
+
+        if (state%crop%common%flCropReadFile) then
           
           ! fixed crop development
           if (state%crop%common%croptype(state%crop%common%icrop) .eq. 1 .and. flCropEmergence) call CropFixed(1, state)
@@ -349,8 +347,7 @@
             call MatricFlux(1, state%soilwater%h(1), 1, dummy_mf_, state)  ! [SS-SWC S-2.7]
           endif
 
-          flCropReadFile = .false.
-          state%crop%common%flCropReadFile = flCropReadFile   ! [SS-GR-CROPRT A5]
+          state%crop%common%flCropReadFile = .false.
 
         endif
 

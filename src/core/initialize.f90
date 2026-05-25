@@ -29,7 +29,7 @@
       flCropOutput       = .false. 
       flCropCalendar     = .false.
       ! [GR-CROP 2026-05-25] flCropOpenFile retired — state%crop%common%flCropOpenFile default is .false.
-      flCropReadFile     = .false.
+      ! [GR-CROP 2026-05-25] flCropReadFile retired — state%crop%common%flCropReadFile default is .false.
       flCropEmergence    = .false.
       flCropHarvest      = .false.
       

@@ -301,7 +301,7 @@
       logical   flCropCalendar     ! Flag indicating that crop season is active (but currently might be bare or cropped)
       logical   flCropEmergence    ! Flag indicating period from crop emergence until harvest
       logical   flCropHarvest      ! Flag indicating period from crop harvest until the end of crop season
-      logical   flCropReadFile     ! Flag indicating reading of input.crp
+      ! [GR-CROP 2026-05-25] flCropReadFile retired — see state%crop%common%flCropReadFile
       ! [GR-CROP 2026-05-25] flCropOpenFile retired — see state%crop%common%flCropOpenFile
       logical   flCropOutput       ! Flag indicating writing of output.crp
 

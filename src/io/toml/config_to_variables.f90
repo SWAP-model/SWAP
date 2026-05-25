@@ -1140,10 +1140,9 @@ contains
       ! Initialize() default) and every rotation is treated as bare soil:
       ! LAI/cf/rd remain 0, TPOT/TACT collapse, and EACT/DRAINAGE balloon.
       if (config%crop%swcrop == 1) then
-         flCropReadFile = .true.
+         state%crop%common%flCropReadFile = .true.   ! [GR-CROP 2026-05-25] flCropReadFile retired
          state%crop%common%flCropOpenFile = .true.   ! [GR-CROP 2026-05-25] flCropOpenFile → state%crop%common
       end if
-      state%crop%common%flCropReadFile = flCropReadFile   ! [SS-GR-CROPRT A5]
 
       rdmax = config%crop%rdmax
 
