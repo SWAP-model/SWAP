@@ -25,11 +25,8 @@ module cropfixed_init_mod
 contains
 
    subroutine cropfixed_init_from_config(cfg, icrop, lcc, state)
-      ! [GR-CROP 2026-05-25] only legacy global remaining: max_resp_factor.
-      ! Writer feeds the legacy-global → state%crop%oxygen%max_resp_factor
-      ! seeding in oxygenstress.f90 (line ~164). Cannot retire until
-      ! oxygenstress is updated to source max_resp_factor from cfg directly.
-      use variables, only: max_resp_factor
+      ! [GR-CROP 2026-05-25] cropfixed_init writes max_resp_factor directly to
+      ! state%crop%oxygen%max_resp_factor (the only reader); legacy global retired.
       use array_utils,  only: afgen
       use error_mod,    only: fatalerr_collected
       use swap_state_mod, only: swap_state_t
@@ -74,7 +71,7 @@ contains
       state%crop%common%swoxygen = cfg%swoxygen
       state%crop%common%swWrtNonox = cfg%swwrtnonox
       state%crop%common%aeratecrit = cfg%aeratecrit
-      max_resp_factor = cfg%max_resp_factor
+      state%crop%oxygen%max_resp_factor = cfg%max_resp_factor
       state%crop%common%hlim1  = cfg%hlim1
       state%crop%common%hlim2u = cfg%hlim2u
       state%crop%common%hlim2l = cfg%hlim2l

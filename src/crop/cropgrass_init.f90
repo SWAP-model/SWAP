@@ -31,11 +31,8 @@ module cropgrass_init_mod
 contains
 
    subroutine cropgrass_init_from_config(cfg, icrop, tend_val, tstart_val, state)
-      ! [GR-CROP 2026-05-25] legacy globals remaining:
-      !   q10_microbial, specific_resp_humus: written here; oxygenstress
-      !     seeds state%crop%oxygen from them on entry. Retirement requires
-      !     oxygenstress to read cfg directly (out of scope for this task).
-      use variables, only: q10_microbial, specific_resp_humus
+      ! [GR-CROP 2026-05-25] cropgrass_init writes q10_microbial/specific_resp_humus
+      ! directly to state%crop%oxygen%X (the only readers); legacy globals retired.
       use array_utils,  only: afgen
       use error_mod,    only: fatalerr_collected
       use swap_state_mod, only: swap_state_t
@@ -192,8 +189,8 @@ contains
       else if (cfg%swoxygen == 2) then
          ! swoxygentype=1 physical path (swoxygentype=2 stub-guarded above)
          state%crop%common%swoxygentype = cfg%swoxygentype
-         q10_microbial       = cfg%q10_microbial
-         specific_resp_humus = cfg%specific_resp_humus
+         state%crop%oxygen%q10_microbial       = cfg%q10_microbial
+         state%crop%oxygen%specific_resp_humus = cfg%specific_resp_humus
          state%crop%common%srl                 = cfg%srl
          state%crop%common%swrootradius        = cfg%swrootradius
          if (cfg%swrootradius == 1) then

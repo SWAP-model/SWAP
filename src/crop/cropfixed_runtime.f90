@@ -17,18 +17,17 @@
 ! [GR-CROP 2026-05-25] crop-sweep:
 !   - magrs sourced from swap_array_dimensions.
 !   - rdmax read via state%cfg%crop%rdmax (Class B direct read).
-!   - Remaining legacy globals (max_resp_factor, w_root_ss, reltr,
-!     wiltpoint, twilt, flhydrlift, siccaplai, mrftb, wrtb): write or
-!     read targets feeding consumers in oxygenstress / cropgrass_runtime
-!     / cropwofost_runtime / dormant jongvanlier. Cannot retire here —
-!     other crop sub-arcs (Task 7/8/9) are last consumers.
+!   - siccaplai*lai branches: swinter=3 stub-errored on TOML path, siccaplai
+!     always 0; replaced with 0.0d0 inline.
+!   - mrftb/wrtb tables always zero on TOML path (legacy reader removed);
+!     state%crop%oxygen%max_resp_factor / state%crop%oxygen%w_root_ss
+!     directly assigned 0.
+!   - Cross-file legacy globals still in use-list: wiltpoint/twilt/flhydrlift/reltr
+!     are written here and read by rootextraction/cropgrass/cropwofost/jongvanlier.
 ! ----------------------------------------------------------------------
       use swap_array_dimensions, only: magrs
-      use variables, only: max_resp_factor,                  &  ! writer; reseed → state%crop%oxygen in oxygenstress
-                           siccaplai, w_root_ss, wiltpoint,  &  ! cross-file with cropgrass/cropwofost/oxygenstress
-                           twilt, flhydrlift,                &  ! cross-file with cropgrass/cropwofost/jongvanlier
-                           mrftb, wrtb,                      &  ! tables; always-zero on TOML path (legacy reader removed)
-                           reltr                                ! cross-file with cropgrass/cropwofost
+      use variables, only: wiltpoint, twilt, flhydrlift,    &  ! cross-file with rootextraction/cropgrass/cropwofost/jongvanlier
+                           reltr                              ! cross-file with cropgrass/cropwofost
       use soilhydraulics_utils, only: watcon
       use array_utils, only: afgen
       use rootextraction_mod, only: MatricFlux
@@ -133,14 +132,16 @@
 
 ! --- initial storage on canopy
       if (crop%common%swinter.eq.3) then
-        atmo%siccapact = siccaplai*crop%lai
+        atmo%siccapact = 0.0d0   ! [GR-CROP 2026-05-25] swinter=3 (Gash) stub-errored on TOML; siccaplai always 0
       endif
 
 ! --- initial dry weight of roots at soil surface; oxygen module
-      W_root_ss = afgen (wrtb,(2*magrs),crop%common%dvs)
+!     [GR-CROP 2026-05-25] wrtb always-zero on TOML (legacy reader removed) → 0
+      state%crop%oxygen%w_root_ss = 0.0d0
 
 ! --- initial ratio root total respiration / maintenance respiration; oxygen module
-      max_resp_factor = afgen (mrftb,(2*magrs),crop%common%dvs)
+!     [GR-CROP 2026-05-25] mrftb always-zero on TOML (legacy reader removed) → 0
+      state%crop%oxygen%max_resp_factor = 0.0d0
 
 ! --- initialize matric flux potential (SS-CRP C-2.5: hroot/hleaf/mfluxtable
 !     init moved to CropGrowth dispatcher which has access to state).
@@ -211,14 +212,16 @@
 
 ! --- update canopy storage capacity
       if (crop%common%swinter.eq.3) then
-        atmo%siccapact = siccaplai*crop%lai
+        atmo%siccapact = 0.0d0   ! [GR-CROP 2026-05-25] swinter=3 (Gash) stub-errored on TOML; siccaplai always 0
       endif
 
 ! --- dry weight of roots at soil surface; oxygen module
-      W_root_ss = afgen (wrtb,(2*magrs),crop%common%dvs)
+!     [GR-CROP 2026-05-25] wrtb always-zero on TOML (legacy reader removed) → 0
+      state%crop%oxygen%w_root_ss = 0.0d0
 
 ! --- ratio root total respiration / maintenance respiration; oxygen module
-      max_resp_factor = afgen (mrftb,(2*magrs),crop%common%dvs)
+!     [GR-CROP 2026-05-25] mrftb always-zero on TOML (legacy reader removed) → 0
+      state%crop%oxygen%max_resp_factor = 0.0d0
 
       case (4)
 

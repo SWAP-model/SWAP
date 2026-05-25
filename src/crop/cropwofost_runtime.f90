@@ -64,7 +64,7 @@
       !     dispatcher (Task 9) and cross-file consumers (cropgrass/cropfixed/
       !     oxygenstress/rootextraction); cannot retire here.
       use variables, only: &
-        siccaplai, cropend,                                  &  ! cross-file with cropfixed/cropgrass
+        cropend,                                             &  ! cross-file with cropfixed/cropgrass
         wrtmin, gwrt,                                        &  ! cross-file with cropgrass_runtime/cropgrowth_helpers
         reltr,                                               &  ! cross-file with cropfixed_runtime/cropgrass_runtime
         flCropHarvest, flCropNut, flHarvestDay,              &  ! cross-file lifecycle flags with cropgrowth
@@ -391,7 +391,7 @@
 
 ! --- initial storage on canopy
       if (crop%common%swinter.eq.3) then
-        atmo%siccapact = siccaplai*crop%lai
+        atmo%siccapact = 0.0d0   ! [GR-CROP 2026-05-25] swinter=3 stub-errored on TOML; siccaplai always 0
       endif
 
 ! --- initialize matric flux potential (SS-CRP C-2.5: hroot/hleaf/mfluxtable
@@ -1197,7 +1197,7 @@
 
 ! --- update canopy storage capacity
       if (crop%common%swinter.eq.3) then
-        atmo%siccapact = siccaplai*crop%lai
+        atmo%siccapact = 0.0d0   ! [GR-CROP 2026-05-25] swinter=3 stub-errored on TOML; siccaplai always 0
       endif
 
 ! --- update states of dry matter organs

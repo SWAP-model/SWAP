@@ -360,7 +360,7 @@
       ! [GR-CROPWS] cfeictb retired — see state%crop%fixed%cfeictb
       ! [GR-CROP-DVS] ch retired — see state%crop%common%ch
       ! [GR-CROPWS] chtb retired — see state%crop%fixed%chtb
-      real(8)   c_mroot            ! Maintenance coefficient of root [0.0..1.0 kg O2/kg/d, R]
+      ! [GR-CROP 2026-05-25] c_mroot retired — see state%crop%oxygen%c_mroot
       ! [GR-CROP-DVS] cofab retired — see state%crop%cofab
       real(8)   cropend(macrop)    ! Array with crop end dates
       real(8)   cropstart(macrop)  ! Array with crop start dates
@@ -391,7 +391,7 @@
       ! [GR-CROP-DVS] dwst retired — see state%crop%wofost%dwst
       ! [GR-CROP-DVS] dwstpot retired — see state%crop%wofost%dwstpot
       ! [GR-CROPWS] eff retired — see state%crop%common%eff
-      real(8)   f_senes            ! Reduction factor for senescence, used for maintenance respiration [0..1.0 -, R]
+      ! [GR-CROP 2026-05-25] f_senes retired — see state%crop%oxygen%f_senes
       ! [GR-CROPWS] fltb retired — see state%crop%common%fltb
       ! [GR-CROPWS] fotb retired — see state%crop%common%fotb
       ! [GR-CROPWS] frtb retired — see state%crop%common%frtb
@@ -420,11 +420,11 @@
       ! [GR-CROPWS] lvpot retired — see state%crop%common%lvpot
       ! [GR-CROPWS] lvage retired — see state%crop%common%lvage
       ! [GR-CROPWS] lvagepot retired — see state%crop%common%lvagepot
-      real(8)   max_resp_factor    ! Ratio root total respiration / maintenance respiration [1..5.0 -, R]
+      ! [GR-CROP 2026-05-25] max_resp_factor retired — see state%crop%oxygen%max_resp_factor
       ! [GR-CROP-DVS] mowrest retired — see state%crop%grass%mowrest
       ! [GR-CROPWS] dewrest retired — see state%crop%grass%dewrest
       ! [GR-CROP 2026-05-25] mrest/mrestpot retired — local SAVE in cropwofost_runtime%wofost
-      real(8)   mrftb(2*magrs)     ! Array with ratio root total respiration / maintenance respiration as function of DVS (kg/m3)
+      ! [GR-CROP 2026-05-25] mrftb retired — always-zero on TOML (legacy reader removed)
       ! [GR-CROPWS] perdl retired — see state%crop%common%perdl
       real(8)   pfreetb(2*magrs)   ! Gash interception model: free throughfall coefficient (-) as function of time (T)
       real(8)   pstemtb(2*magrs)   ! Gash interception model: stem flow coefficient (-) as function of time (T)
@@ -432,10 +432,10 @@
       ! [GR-CROP-DVS] fimin retired — see state%atmosphere%fimin
       ! [GR-CROP-DVS] siccapact retired — see state%atmosphere%siccapact
       ! real(8) :: sicact        ! amount of water stored on canopy (cm) — [SS-ATM] retired 2026-05-11
-      real(8)   siccaplai          ! interception storage per unit of LAI (cm/LAI)
+      ! [GR-CROP 2026-05-25] siccaplai retired — Gash interception (swinter=3) stub-errored on TOML; always 0
       ! [GR-CROPWS] q10 retired — see state%crop%common%q10
-      real(8)   q10_microbial      ! Relative increase in microbial respiration at temperature increase of 10 �C [1.0..4.0 -, R]
-      real(8)   q10_root           ! Relative increase in root respiration at temperature increase of 10 �C [1.0..4.0 -, R]
+      ! [GR-CROP 2026-05-25] q10_microbial retired — see state%crop%oxygen%q10_microbial
+      ! [GR-CROP 2026-05-25] q10_root retired — see state%crop%oxygen%q10_root
       ! [GR-CROPWS] rdrrtb retired — see state%crop%common%rdrrtb
       ! [GR-CROPWS] rdrstb retired — see state%crop%common%rdrstb
       real(8)   reltr              ! relative transpiration factor that reduces crop growth (-)
@@ -452,14 +452,14 @@
       ! [GR-CROP-DVS] rsc retired — see state%crop%common%rsc
       ! [GR-CROPWS] rsw retired — see state%crop%common%rsw
       real(8)   scanopytb(2*magrs) ! Gash interception model: storage capacity of canopy (-) as function of time (T)
-      real(8)   shape_factor_rootr ! Shape factor for exponential decrease of root respiration rate with depth [0..1.0 -, R]
+      ! [GR-CROP 2026-05-25] shape_factor_rootr retired — see state%crop%oxygen%shape_factor_rootr
       ! [GR-CROPWS] sla retired — see state%crop%common%sla
       ! [GR-CROPWS] slapot retired — see state%crop%common%slapot
       ! [GR-CROPWS] slatb retired — see state%crop%common%slatb
       ! [GR-CROPWS] spa retired — see state%crop%common%spa
       ! [GR-CROPWS] span retired — see state%crop%common%span
       ! [GR-CROPWS] spec_weight_root_tissue retired — see state%crop%common%spec_weight_root_tissue
-      real(8)   specific_resp_humus ! Respiration rate of humus at 25 �C [0.0..1.0 kg O2/kg C/d, R] 
+      ! [GR-CROP 2026-05-25] specific_resp_humus retired — see state%crop%oxygen%specific_resp_humus
       ! [GR-CROPWS] srl retired — see state%crop%common%srl
       ! [GR-CROPWS] ssa retired — see state%crop%common%ssa
       ! [GR-CROP 2026-05-25] tadw/tadwpot retired — local SAVE in cropwofost_runtime%wofost
@@ -478,12 +478,12 @@
       ! [GR-CROP 2026-05-25] tsumgerm retired — see state%crop%common%tsumgerm.
 
       ! [GR-CROPWS] var_a retired — see state%crop%common%var_a
-      real(8)   w_root_ss          ! Dry weight of roots at soil surface [0.0..10.0 kg/m3, R]
+      ! [GR-CROP 2026-05-25] w_root_ss retired — see state%crop%oxygen%w_root_ss
       real(8)   wiltpoint          ! Minimum pressure head at interface soil-root (cm)
 
       ! [GR-CROP-DVS] wlv retired — see state%crop%wofost%wlv
       ! [GR-CROP-DVS] wlvpot retired — see state%crop%wofost%wlvpot
-      real(8)   wrtb(2*magrs)      ! Array with dry weight of root at soil surface as function of DVS (kg/m3)
+      ! [GR-CROP 2026-05-25] wrtb retired — always-zero on TOML (legacy reader removed)
       ! [GR-CROP-DVS] wrt retired — see state%crop%wofost%wrt
       ! [GR-CROP-DVS] wrtpot retired — see state%crop%wofost%wrtpot
       real(8)   wrtmin             ! Minimum dry weight of plant root at relative depth (1% of the initial value)

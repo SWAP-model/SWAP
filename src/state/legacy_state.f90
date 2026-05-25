@@ -105,39 +105,39 @@ module legacy_state_mod
       ! [GR-CROP 2026-05-25] swpotrelmf retired — see state%crop%grass%swpotrelmf
       real(real64), allocatable :: avevaptb(:)  !! Gash interception model: average evaporation intensity during shower (-) as function of time (T)
       real(real64), allocatable :: avprectb(:)  !! Gash interception model: average rainfall intensity (-) as function of time (T)
-      real(real64) :: c_mroot  !! Maintenance coefficient of root [0.0..1.0 kg O2/kg/d, R]
+      ! [GR-CROP 2026-05-25] c_mroot retired — see state%crop%oxygen%c_mroot
       real(real64), allocatable :: cropend(:)  !! Array with crop end dates
       real(real64), allocatable :: cropstart(:)  !! Array with crop start dates
       ! [GR-ATM 2026-05-23] difpp retired — see state%atmosphere%difpp
       real(real64) :: dlc  !! Shortest day length (T) for any crop development
       real(real64) :: dlo  !! Minimum day length (T) for optimal crop development
       ! [GR-ATM 2026-05-23] dsinbe retired — see state%atmosphere%dsinbe
-      real(real64) :: f_senes  !! Reduction factor for senescence, used for maintenance respiration [0..1.0 -, R]
+      ! [GR-CROP 2026-05-25] f_senes retired — see state%crop%oxygen%f_senes
       ! [GR-CROP 2026-05-25] gasst/gasstpot retired — local SAVE in cropwofost_runtime%wofost
       ! [GR-ATM 2026-05-23] gc retired — see state%crop%common%gc
       ! [GR-CROP 2026-05-25] hdrygerm/hwetgerm retired — see cropwofost_config_t%germination.
-      real(real64) :: max_resp_factor  !! Ratio root total respiration / maintenance respiration [1..5.0 -, R]
+      ! [GR-CROP 2026-05-25] max_resp_factor retired — see state%crop%oxygen%max_resp_factor
       ! [GR-CROP 2026-05-25] mrest/mrestpot retired — local SAVE in cropwofost_runtime%wofost
-      real(real64), allocatable :: mrftb(:)  !! Array with ratio root total respiration / maintenance respiration as function of DVS (kg/m3)
+      ! [GR-CROP 2026-05-25] mrftb retired — always-zero on TOML (legacy reader removed)
       real(real64), allocatable :: pfreetb(:)  !! Gash interception model: free throughfall coefficient (-) as function of time (T)
       real(real64), allocatable :: pstemtb(:)  !! Gash interception model: stem flow coefficient (-) as function of time (T)
       ! [GR-ATM 2026-05-23] siccaptb retired — see state%crop%common%siccaptb
-      real(real64) :: siccaplai  !! interception storage per unit of LAI (cm/LAI)
-      real(real64) :: q10_microbial  !! Relative increase in microbial respiration at temperature increase of 10 �C [1.0..4.0 -, R]
-      real(real64) :: q10_root  !! Relative increase in root respiration at temperature increase of 10 �C [1.0..4.0 -, R]
+      ! [GR-CROP 2026-05-25] siccaplai retired — Gash interception (swinter=3) stub-errored on TOML
+      ! [GR-CROP 2026-05-25] q10_microbial retired — see state%crop%oxygen%q10_microbial
+      ! [GR-CROP 2026-05-25] q10_root retired — see state%crop%oxygen%q10_root
       real(real64) :: reltr  !! relative transpiration factor that reduces crop growth (-)
       real(real64) :: rid  !! Real day number of detailed grass crop (d)
       ! [GR-CROP 2026-05-25] rootcoefa/rooteff/rootradius retired — JvL-only (swdrought=2);
       ! body extracted to src/crop/dormant/jongvanlier.f90.
       real(real64), allocatable :: scanopytb(:)  !! Gash interception model: storage capacity of canopy (-) as function of time (T)
-      real(real64) :: shape_factor_rootr  !! Shape factor for exponential decrease of root respiration rate with depth [0..1.0 -, R]
-      real(real64) :: specific_resp_humus  !! Respiration rate of humus at 25 �C [0.0..1.0 kg O2/kg C/d, R]
+      ! [GR-CROP 2026-05-25] shape_factor_rootr retired — see state%crop%oxygen%shape_factor_rootr
+      ! [GR-CROP 2026-05-25] specific_resp_humus retired — see state%crop%oxygen%specific_resp_humus
       ! [GR-CROP 2026-05-25] tadw/tadwpot retired — local SAVE in cropwofost_runtime%wofost
       ! [GR-CROP 2026-05-25] tsumemeopt/TBASEM/TEFFMX retired — see cropwofost_config_t%germination.
       ! [GR-CROP 2026-05-25] tsumgerm retired — see crop_common_state_t%tsumgerm.
-      real(real64) :: w_root_ss  !! Dry weight of roots at soil surface [0.0..10.0 kg/m3, R]
+      ! [GR-CROP 2026-05-25] w_root_ss retired — see state%crop%oxygen%w_root_ss
       real(real64) :: wiltpoint  !! Minimum pressure head at interface soil-root (cm)
-      real(real64), allocatable :: wrtb(:)  !! Array with dry weight of root at soil surface as function of DVS (kg/m3)
+      ! [GR-CROP 2026-05-25] wrtb retired — always-zero on TOML (legacy reader removed)
       real(real64) :: wrtmin  !! Minimum dry weight of plant root at relative depth (1% of the initial value)
       real(real64) :: gwrt  !! Growth of dry weight of plant root (kg/ha)
       logical :: flanthesis  !! Flag indicating anthesis stage of a crop

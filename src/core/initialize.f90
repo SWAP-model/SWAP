@@ -577,8 +577,8 @@
       dlo                = 0.0d0 
       ! [GR-CROP 2026-05-25] fbl/gasstpot/mrestpot retired — local SAVE in cropwofost_runtime%wofost
       ! [GR-ATM 2026-05-23] gc retired — see state%crop%common%gc
-      mrftb              = 0.0d0
-      pfreetb            = 0.0d0 
+      ! [GR-CROP 2026-05-25] mrftb retired — always-zero on TOML
+      pfreetb            = 0.0d0
       pstemtb            = 0.0d0 
       reltr              = 0.0d0 
       ! [GR-CROP 2026-05-25] rootcoefa/rootradius retired — JvL-only (swdrought=2);
@@ -592,7 +592,7 @@
 
 ! --- only for bulb crops (tulips etc..)
       wiltpoint          = 0.0d0
-      wrtb               = 0.0d0
+      ! [GR-CROP 2026-05-25] wrtb retired — always-zero on TOML
       ! [GR-CROP 2026-05-25] zsow retired — see cropwofost_config%sowing%zsow
 ! --- interception
       ! [SS-ATM A-2.6] sicact retired to state%atmosphere%sicact

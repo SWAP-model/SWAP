@@ -100,21 +100,8 @@ contains
       !     cannot retire from oxygenstress without also touching the writer
       !     contract in src/io/swap_csv_output.f90). OxygenStress writes
       !     c_top(1) and c_top(node+1).
-      !   * `rid`, `w_root_ss` — cross-file inbound. Writers in
-      !     cropgrass_runtime.f90 (rid) and cropfixed_runtime.f90 (w_root_ss).
-      !     Retire after Task 6/7 sub-arcs migrate their writers.
-      !   * `c_mroot`, `f_senes`, `q10_root`, `q10_microbial`,
-      !     `shape_factor_rootr`, `specific_resp_humus`, `max_resp_factor`
-      !     — cluster C, cross-file inbound config-derived workspace.
-      !     Seeded into state%crop%oxygen%X at OxygenStress entry; in-routine
-      !     reads route through state. Writers in cropfixed_init/runtime,
-      !     cropgrass_init — retire after Tasks 6/7.
-      use variables, only: &
-                           c_top, &
-                           rid, w_root_ss, &
-                           c_mroot, f_senes, q10_root, q10_microbial, &
-                           shape_factor_rootr, specific_resp_humus, &
-                           max_resp_factor
+      !   * `rid` — workspace; written by cropgrass_runtime, read here.
+      use variables, only: c_top, rid
       use O2_pars, only: current_state
       use array_utils, only: afgen
       implicit none
@@ -154,20 +141,14 @@ contains
       real(8), dimension(macp)   :: d_soil_term1, d_soil_term2, gfp100
       real(8), dimension(macp)   :: Capac_term, Nmin1, Mplus1
 
-      ! [GR-CROP 2026-05-25] Workspace + cluster-C seeds for state%crop%oxygen.
-      ! Set the module-level state pointer so SOLVE/ZBREND/myfunc can reach
-      ! the same workspace without rewriting the ZBREND function-pointer ABI.
+      ! [GR-CROP 2026-05-25] Set the module-level state pointer so
+      ! SOLVE/ZBREND/myfunc can reach the workspace without rewriting the
+      ! ZBREND function-pointer ABI. Config-derived workspace
+      ! (max_resp_factor/c_mroot/f_senes/q10_root/q10_microbial/
+      ! specific_resp_humus/shape_factor_rootr) is now written directly to
+      ! state%crop%oxygen by cropfixed_init/runtime and cropgrass_init —
+      ! no seed copy needed at OxygenStress entry.
       current_state => state
-      ! Cluster C (config-derived workspace) — cross-file legacy globals
-      ! are still written by cropfixed_init/cropfixed_runtime/cropgrass_init.
-      ! Seed the state copy at entry; in-routine reads use state%crop%oxygen.
-      state%crop%oxygen%max_resp_factor     = max_resp_factor
-      state%crop%oxygen%c_mroot             = c_mroot
-      state%crop%oxygen%f_senes             = f_senes
-      state%crop%oxygen%q10_root            = q10_root
-      state%crop%oxygen%q10_microbial       = q10_microbial
-      state%crop%oxygen%specific_resp_humus = specific_resp_humus
-      state%crop%oxygen%shape_factor_rootr  = shape_factor_rootr
 
       ! [GR-CROP 2026-05-25] Workspace aliases mapped onto state%crop%oxygen.
       ! Replaces the original `use O2_pars, only: w_root, ...` rename block
@@ -300,7 +281,7 @@ contains
             rdens_top  = afgen(state%crop%common%rdctb,22,rdepth_top)
             rdepth     = -state%mesh%ztopcp(node)/state%crop%common%rd ! (-z(node)-0.5d0*dz(node))/state%crop%common%rd  [GR-BH C7]
             rdens      = afgen(state%crop%common%rdctb,22,rdepth)
-            w_root_z0  = w_root_ss * rdens/rdens_top !static crop
+            w_root_z0  = state%crop%oxygen%w_root_ss * rdens/rdens_top !static crop
       endif
 ! --- calculate wrootz0 [kg/m3] at top of the compartments !adj RB 20171201
 ! --- dynamic crop. wrt [kg/ha] = 10-4 kg/m2; 

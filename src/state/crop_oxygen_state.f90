@@ -93,6 +93,10 @@ module crop_oxygen_state_mod
       real(real64) :: q10_microbial       = 0.0_real64
       real(real64) :: specific_resp_humus = 0.0_real64
       real(real64) :: shape_factor_rootr  = 0.0_real64
+      ! [GR-CROP 2026-05-25] w_root_ss: dry weight of roots at soil surface
+      ! [kg/m3]. Written by cropfixed_runtime (afgen of wrtb table); read by
+      ! OxygenStress in the static-crop (croptype==1) branch.
+      real(real64) :: w_root_ss           = 0.0_real64
 
    contains
       procedure :: init => crop_oxygen_state_init

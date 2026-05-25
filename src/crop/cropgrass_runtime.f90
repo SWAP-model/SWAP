@@ -17,18 +17,17 @@
 ! [GR-CROP 2026-05-25] crop-sweep:
 !   - magrs/macp sourced from swap_array_dimensions.
 !   - rdmax read via state%cfg%crop%rdmax (Class B direct read).
+!   - siccaplai*lai branches: swinter=3 stub-errored on TOML; replaced with 0.0d0.
 !   - Remaining legacy globals (rid, daycrop, wrtmin, gwrt, reltr,
-!     twilt, wiltpoint, siccaplai, flhydrlift): write or read targets
-!     feeding consumers in oxygenstress / cropwofost_runtime /
-!     cropfixed_runtime / dormant jongvanlier. Cannot retire here —
-!     other crop sub-arcs (Tasks 8/9) are last consumers.
+!     twilt, wiltpoint, flhydrlift): write or read targets feeding consumers
+!     in oxygenstress / cropwofost_runtime / cropfixed_runtime /
+!     dormant jongvanlier.
 ! ----------------------------------------------------------------------
       use swap_array_dimensions, only: magrs, macp
       use variables, only: rid, daycrop,        &  ! workspace/scratch — cross-file readers (oxygenstress, cropgrowth)
                            wrtmin, gwrt,        &  ! cross-file with cropgrowth_helpers/cropwofost_runtime
                            reltr,               &  ! cross-file with cropwofost_runtime/cropfixed_runtime
                            twilt, wiltpoint,    &  ! cross-file with rootextraction / dormant jongvanlier
-                           siccaplai,           &  ! cross-file with cropfixed_runtime/cropwofost_runtime
                            flhydrlift           ! cross-file with cropfixed_runtime/cropwofost_runtime/dormant jongvanlier
       use array_utils, only: afgen
       use soilhydraulics_utils, only: watcon
@@ -280,7 +279,7 @@
 
 ! --- initial storage on canopy
       if (crop%common%swinter.eq.3) then
-        atmo%siccapact = siccaplai*crop%lai
+        atmo%siccapact = 0.0d0   ! [GR-CROP 2026-05-25] swinter=3 stub-errored on TOML; siccaplai always 0
       endif
 
 ! --- initialize matric flux potential (SS-CRP C-2.5: hroot/hleaf/mfluxtable
@@ -1300,7 +1299,7 @@
 
 ! ---   update canopy storage capacity
         if (crop%common%swinter.eq.3) then
-          atmo%siccapact = siccaplai*crop%lai
+          atmo%siccapact = 0.0d0   ! [GR-CROP 2026-05-25] swinter=3 stub-errored on TOML; siccaplai always 0
         endif
 
       endif
