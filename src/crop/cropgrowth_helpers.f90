@@ -450,12 +450,10 @@
 ! ----------------------------------------------------------------------
 
       ! [GR-CROP 2026-05-25] update_rootdistribution reads only.
-      !   gwrt/wrtmin: written by cropgrass_runtime.f90 and cropwofost_runtime.f90 — those
-      !     files own the cross-rotation last-consumer retirement; for now we keep the
-      !     bare-global imports here as a read-only window. state%crop%wofost has new
-      !     gwrt/wrtmin fields staged for the runtime cutover.
+      !   gwrt/wrtmin: read from state%crop%wofost%gwrt and state%crop%wofost%wrtmin.
+      !     The active rotation's cropX_runtime task=3 populates them; the dispatcher
+      !     selects a single rotation per step so no cross-rotation contention.
       !   noddrz/cumdens/wrt: already on state%crop%common / state%crop%wofost.
-      use variables, only: gwrt, wrtmin
       use swap_state_mod, only: swap_state_t
       implicit none
 
@@ -471,6 +469,7 @@
       ! [GR-CROP 2026-05-25] sub-record associate style
       associate( &
         crop => state%crop%common,    &  ! crop runtime (cumdens, noddrz, ...)
+        wof  => state%crop%wofost,    &  ! crop wofost runtime (wrt, gwrt, wrtmin)
         soil => state%soilwater,      &  ! soil-water runtime (qredtot_day, qpotrot_day)
         mesh => state%mesh,           &  ! mesh discretization (zbotcp, ztopcp)
         time => state%timecontrol     &  ! time control (date)
@@ -487,7 +486,7 @@
           rel_qred_day = rel_qred_day + soil%qredtot_day(node)
         enddo
 
-        if ((gwrt .gt. 0.d0 .and. rel_qrot_day .gt. 0.d0) .or. (gwrt .lt. 0.d0 .and. rel_qred_day .gt. 0.d0)) then
+        if ((wof%gwrt .gt. 0.d0 .and. rel_qrot_day .gt. 0.d0) .or. (wof%gwrt .lt. 0.d0 .and. rel_qred_day .gt. 0.d0)) then
 
           ! distribution roots and root extraction at relative depth
           ! root extraction and root weight based on previous day
@@ -496,7 +495,7 @@
           do i = 4,202,2
 
             ! root distribution of previous day
-            wrtdis(i) = (crop%cumdens(i) - crop%cumdens(i-2)) * (state%crop%wofost%wrt - gwrt)
+            wrtdis(i) = (crop%cumdens(i) - crop%cumdens(i-2)) * (wof%wrt - wof%gwrt)
 
             ! determine optimal extraction and maximum reduction at relative depth
             found = .false.
@@ -520,14 +519,14 @@
 
           ! update relative root weight
           wrttot = 0.d0
-          if (gwrt .gt. 0.d0) then
+          if (wof%gwrt .gt. 0.d0) then
             do i = 4,202,2
-              wrtdis(i) = max(wrtmin, wrtdis(i) + (qrotdis(i) / rel_qrot_day) * gwrt)
+              wrtdis(i) = max(wof%wrtmin, wrtdis(i) + (qrotdis(i) / rel_qrot_day) * wof%gwrt)
               wrttot = wrttot + wrtdis(i)
             end do
-          elseif (gwrt .lt. 0.d0) then
+          elseif (wof%gwrt .lt. 0.d0) then
             do i = 4,202,2
-              wrtdis(i) = max(wrtmin, wrtdis(i) + (qreddis(i) / rel_qred_day) * gwrt)
+              wrtdis(i) = max(wof%wrtmin, wrtdis(i) + (qreddis(i) / rel_qred_day) * wof%gwrt)
               wrttot = wrttot + wrtdis(i)
             end do
           end if

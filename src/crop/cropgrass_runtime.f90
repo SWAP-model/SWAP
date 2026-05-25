@@ -22,12 +22,13 @@
 !   - twilt/flhydrlift migrated to state%crop%common (drought-stress workspace).
 !   - reltr migrated to state%crop%common%reltr (active rotation only — written
 !     by the cropX_runtime task=3 selected by the dispatcher; read same-file).
-!   - Remaining legacy globals (rid, daycrop, wrtmin, gwrt): cross-file readers
-!     in oxygenstress / cropgrowth_helpers / cropwofost_runtime.
+!   - wrtmin/gwrt migrated to state%crop%wofost (active-rotation only — read by
+!     cropgrowth_helpers%update_rootdistribution via state).
+!   - Remaining legacy globals (rid, daycrop): cross-file workspace with
+!     oxygenstress / cropgrowth dispatcher.
 ! ----------------------------------------------------------------------
       use swap_array_dimensions, only: magrs, macp
-      use variables, only: rid, daycrop,        &  ! workspace/scratch — cross-file readers (oxygenstress, cropgrowth)
-                           wrtmin, gwrt           ! cross-file with cropgrowth_helpers/cropwofost_runtime
+      use variables, only: rid, daycrop   ! workspace/scratch — cross-file readers (oxygenstress, cropgrowth)
       use array_utils, only: afgen
       use soilhydraulics_utils, only: watcon
       use rootextraction_mod, only: MatricFlux
@@ -193,7 +194,7 @@
 
 ! ---   initial state variables of the crop
         crop%wofost%wrt = fr*crop%common%tdwi
-        wrtmin = crop%wofost%wrt / 10000 ! minimum root weigth at relative depth is set to 1% of the initial value
+        crop%wofost%wrtmin = crop%wofost%wrt / 10000 ! minimum root weigth at relative depth is set to 1% of the initial value
         crop%wofost%wrtpot = crop%wofost%wrt
         crop%wofost%wst = fs*(1.0d0-fr)*crop%common%tdwi
         crop%wofost%wstpot = crop%wofost%wst
@@ -898,7 +899,7 @@
         else  
           drrt = crop%wofost%wrt*afgen (crop%common%rdrrtb,30,rid)
         endif  
-        gwrt = grrt-drrt
+        crop%wofost%gwrt = grrt-drrt
 
 ! ---   growth rate leaves
 
@@ -1021,7 +1022,7 @@
           crop%common%lv(1) = crop%wofost%wlv
 
           gwst = 0.0d0
-          gwrt = 0.0d0
+          crop%wofost%gwrt = 0.0d0
           drlv = 0.0d0
           drst = 0.0d0
           drrt = 0.0d0
@@ -1183,7 +1184,7 @@
               crop%common%lv(1) = crop%wofost%wlv
     
               gwst = 0.0d0
-              gwrt = 0.0d0
+              crop%wofost%gwrt = 0.0d0
               drlv = 0.0d0
               drst = 0.0d0
               drrt = 0.0d0
@@ -1251,7 +1252,7 @@
         endif
 
 ! ---   dry weight of living plant organs
-        crop%wofost%wrt = crop%wofost%wrt+gwrt*delt
+        crop%wofost%wrt = crop%wofost%wrt+crop%wofost%gwrt*delt
         crop%wofost%wst = crop%wofost%wst+gwst*delt
 
 ! ---   dry weight of dead plant organs (roots,leaves & stems)

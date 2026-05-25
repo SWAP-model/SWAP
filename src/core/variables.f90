@@ -486,8 +486,8 @@
       ! [GR-CROP 2026-05-25] wrtb retired — always-zero on TOML (legacy reader removed)
       ! [GR-CROP-DVS] wrt retired — see state%crop%wofost%wrt
       ! [GR-CROP-DVS] wrtpot retired — see state%crop%wofost%wrtpot
-      real(8)   wrtmin             ! Minimum dry weight of plant root at relative depth (1% of the initial value)
-      real(8)   gwrt               ! Growth of dry weight of plant root (kg/ha)
+      ! [GR-CROP 2026-05-25] wrtmin retired — see state%crop%wofost%wrtmin
+      ! [GR-CROP 2026-05-25] gwrt retired — see state%crop%wofost%gwrt
       ! [GR-CROP-DVS] wso retired — see state%crop%wofost%wso
       ! [GR-CROP-DVS] wsopot retired — see state%crop%wofost%wsopot
       ! [GR-CROP-DVS] wst retired — see state%crop%wofost%wst

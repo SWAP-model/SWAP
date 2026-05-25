@@ -138,8 +138,8 @@ module legacy_state_mod
       ! [GR-CROP 2026-05-25] w_root_ss retired — see state%crop%oxygen%w_root_ss
       ! [GR-CROP 2026-05-25] wiltpoint retired — see state%crop%common%hlim4
       ! [GR-CROP 2026-05-25] wrtb retired — always-zero on TOML (legacy reader removed)
-      real(real64) :: wrtmin  !! Minimum dry weight of plant root at relative depth (1% of the initial value)
-      real(real64) :: gwrt  !! Growth of dry weight of plant root (kg/ha)
+      ! [GR-CROP 2026-05-25] wrtmin retired — see state%crop%wofost%wrtmin
+      ! [GR-CROP 2026-05-25] gwrt retired — see state%crop%wofost%gwrt
       logical :: flanthesis  !! Flag indicating anthesis stage of a crop
       logical :: flHarvestDay  !! Flag indicating that current day is harvest day
       character(len=40), allocatable :: cropfil(:)  !! Array with names of crop files

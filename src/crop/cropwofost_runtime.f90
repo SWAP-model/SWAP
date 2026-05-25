@@ -65,7 +65,6 @@
       !     oxygenstress/rootextraction); cannot retire here.
       use variables, only: &
         cropend,                                             &  ! cross-file with dispatcher (writes), cropfixed/cropgrass
-        wrtmin, gwrt,                                        &  ! cross-file with cropgrass_runtime/cropgrowth_helpers
         flCropHarvest, flCropNut, flHarvestDay,              &  ! cross-file lifecycle flags with cropgrowth dispatcher
         flanthesis,                                          &  ! cross-file with cropgrowth dispatcher
         dlc, dlo, idsl,                                      &  ! cross-file phenology config with cropgrowth dispatcher
@@ -274,7 +273,7 @@
 
 ! ---   initial state variables of the crop
         crop%wofost%wrt = fr*crop%common%tdwi
-        wrtmin = crop%wofost%wrt / 10000 ! minimum root weigth at relative depth is set to 1% of the initial value
+        crop%wofost%wrtmin = crop%wofost%wrt / 10000 ! minimum root weigth at relative depth is set to 1% of the initial value
         crop%wofost%wrtpot = crop%wofost%wrt
         tadw = (1.0d0-fr)*crop%common%tdwi
         tadwpot = tadw
@@ -834,7 +833,7 @@
 
 ! --- net growth rate stems, roots, storage organs
       gwst = grst - drst
-      gwrt = grrt - drrt
+      crop%wofost%gwrt = grrt - drrt
       drso = 0.0d0    ! death rate of storage organs is assumed to be 0
       gwso = grso - drso
 
@@ -898,7 +897,7 @@
       crop%common%laiexp = crop%common%laiexp+crop%common%glaiex*delt
       
 ! --- dry weight of living plant organs
-      crop%wofost%wrt = crop%wofost%wrt+gwrt*delt
+      crop%wofost%wrt = crop%wofost%wrt+crop%wofost%gwrt*delt
       crop%wofost%wst = crop%wofost%wst+gwst*delt
       crop%wofost%wso = crop%wofost%wso+gwso*delt
 ! --- only for bulb crops (tulips etc..)
@@ -1145,7 +1144,7 @@
         if (flHarvestDay .or. (crop%common%dvs.ge.crop%common%dvsend) .or. &
      &                 dabs(time%t1900-1.0d0-cropend(crop%common%icrop)).lt.1.0d-3 ) then
           gwst  = 0.0d0
-          gwrt  = 0.0d0
+          crop%wofost%gwrt  = 0.0d0
           gwso  = 0.0d0
           grlv  = 0.0d0
           NdemandSoil = 0.0d0
