@@ -86,17 +86,17 @@ module legacy_state_mod
       ! [GR-CROP 2026-05-25] dayfix retired — schedule==1 dead branch (local-only counter)
       ! [GR-CROP 2026-05-25] tsumtime/tsumtemp/tsumdepth retired — orphan
       !   (only consumer was cropgrass_init use-list, never read in body)
-      logical :: flCropCalendar  !! Flag indicating that crop season is active (but currently might be bare or cropped)
-      logical :: flCropEmergence  !! Flag indicating period from crop emergence until harvest
-      logical :: flCropHarvest  !! Flag indicating period from crop harvest until the end of crop season
+      ! [GR-CROP 2026-05-25] flCropCalendar retired — see state%crop%common%flCropCalendar
+      ! [GR-CROP 2026-05-25] flCropEmergence retired — see state%crop%flCropEmergence
+      ! [GR-CROP 2026-05-25] flCropHarvest retired — see state%crop%common%flCropHarvest
       ! [GR-CROP 2026-05-25] flCropReadFile retired — see state%crop%common%flCropReadFile
       ! [GR-CROP 2026-05-25] flCropOpenFile retired — see state%crop%common%flCropOpenFile
       logical :: flCropOutput  !! Flag indicating writing of output.crp
       ! [GR-ATM 2026-05-23] croptype retired — see state%crop%common%croptype
-      integer :: swcrp  !! Switch for output file *.CRP with daily crop output: 0 = no; 1 = yes
+      ! [GR-CROP 2026-05-25] swcrp retired — see state%crop%common%swcrp
       integer :: crp  !! Internal number of crop output file *.CRP
-      integer :: daycrop  !! Number of days that a crop exists
-      integer :: icrop  !! Current crop number
+      ! [GR-CROP 2026-05-25] daycrop retired — see state%crop%common%daycrop
+      ! [GR-CROP 2026-05-25] icrop retired — see state%crop%common%icrop
       ! [GR-CROP 2026-05-25] idsl retired — see state%crop%wofost%idsl
       ! [GR-CROP 2026-05-25] noddrz retired — see crop_common_state_t%noddrz
       ! [GR-ATM 2026-05-23] atmtr retired — see state%atmosphere%atmtr
@@ -106,8 +106,8 @@ module legacy_state_mod
       real(real64), allocatable :: avevaptb(:)  !! Gash interception model: average evaporation intensity during shower (-) as function of time (T)
       real(real64), allocatable :: avprectb(:)  !! Gash interception model: average rainfall intensity (-) as function of time (T)
       ! [GR-CROP 2026-05-25] c_mroot retired — see state%crop%oxygen%c_mroot
-      real(real64), allocatable :: cropend(:)  !! Array with crop end dates
-      real(real64), allocatable :: cropstart(:)  !! Array with crop start dates
+      ! [GR-CROP 2026-05-25] cropend retired — see state%cfg%crop%rotation_end
+      ! [GR-CROP 2026-05-25] cropstart retired — see state%cfg%crop%rotation_start
       ! [GR-ATM 2026-05-23] difpp retired — see state%atmosphere%difpp
       ! [GR-CROP 2026-05-25] dlc retired — see state%crop%wofost%dlc
       ! [GR-CROP 2026-05-25] dlo retired — see state%crop%wofost%dlo
@@ -141,7 +141,7 @@ module legacy_state_mod
       ! [GR-CROP 2026-05-25] wrtmin retired — see state%crop%wofost%wrtmin
       ! [GR-CROP 2026-05-25] gwrt retired — see state%crop%wofost%gwrt
       ! [GR-CROP 2026-05-25] flanthesis retired — see state%crop%wofost%flanthesis
-      logical :: flHarvestDay  !! Flag indicating that current day is harvest day
+      ! [GR-CROP 2026-05-25] flHarvestDay retired — see state%crop%common%flHarvestDay
       character(len=40), allocatable :: cropfil(:)  !! Array with names of crop files
       ! [GR-CROP 2026-05-25] pathcrop retired — config%general%pathcrop is the canonical read.
       real(real64) :: rdmax  !! Maximum rooting depth in soil profile (L)

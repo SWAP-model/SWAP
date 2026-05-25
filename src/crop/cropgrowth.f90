@@ -30,15 +30,12 @@
 !       flCropHarvest, daycrop, swcrp, flHarvestDay
 !   The dispatcher continues to dual-write these (legacy + state mirror).
 ! ----------------------------------------------------------------------
-      use variables, only: &
-        ! Retained: non-crop consumers (swap_mod.f90 / timecontrol_mod.f90 /
-        ! meteo_orchestrator.f90) still read the bare legacy globals. The
-        ! dispatcher writes both legacy + state%crop%common%X.
-        icrop, flCropCalendar, cropstart, cropend, flCropEmergence,         &
-        flCropHarvest,                                                      &
-        daycrop,                                                            &
-        swcrp,                                                              &
-        flHarvestDay
+      ! [GR-CROP 2026-05-25] Dispatcher is now `use variables`-free. The
+      ! lifecycle/calendar legacy globals (icrop, flCropCalendar, cropstart,
+      ! cropend, flCropEmergence, flCropHarvest, daycrop, swcrp, flHarvestDay)
+      ! were dual-written to state earlier in the arc; this dispatcher's
+      ! reads/writes route through state via the `crop` and `cfg_crop`
+      ! associate aliases.
       use array_utils, only: afgen
       use rootextraction_mod, only: MatricFlux
       use swap_constants, only: tiny
@@ -86,8 +83,10 @@
 
       ! Sub-record aliases — Task 9 dispatcher associate refactor.
       associate( &
-        tc   => state%timecontrol, &
-        atmo => state%atmosphere   &
+        tc       => state%timecontrol,            &
+        atmo     => state%atmosphere,             &
+        crop     => state%crop,                   &  ! crop sub-state (common, wofost, grass, ...)
+        cfg_crop => state%cfg%crop                &  ! crop config (rotation_start/end)
       )
 
       select case (task)
@@ -97,29 +96,27 @@
 ! === initialization ==========================================================
 
       ! find active crop
-      icrop = 1
-      flCropCalendar = .false.
-      do while (.not. flCropCalendar)
+      crop%common%icrop = 1
+      crop%common%flCropCalendar = .false.
+      do while (.not. crop%common%flCropCalendar)
 
-        if (cropstart(icrop) .lt. 1.d0) exit
+        if (cfg_crop%rotation_start(crop%common%icrop) .lt. 1.d0) exit
 
-        if (tc%t1900 - cropstart(icrop) .gt. -tiny                      &
-     &                 .and. tc%t1900 - cropend(icrop) .lt. tiny) then
-          flCropCalendar = .true.
+        if (tc%t1900 - cfg_crop%rotation_start(crop%common%icrop) .gt. -tiny                      &
+     &                 .and. tc%t1900 - cfg_crop%rotation_end(crop%common%icrop) .lt. tiny) then
+          crop%common%flCropCalendar = .true.
         else
-          icrop = icrop + 1
+          crop%common%icrop = crop%common%icrop + 1
         endif
       enddo
-      state%crop%common%icrop        = icrop           ! [SS-GR-CROP A5.1]
-      state%crop%common%flCropCalendar = flCropCalendar  ! [SS-GR-CROP A5.1]
       ! [SS-GR-CROPRT A5] mirror current-crop window scalars
-      if (flCropCalendar) then
-        state%crop%common%cropstart = cropstart(icrop)
-        state%crop%common%cropend   = cropend(icrop)
+      if (crop%common%flCropCalendar) then
+        state%crop%common%cropstart = cfg_crop%rotation_start(crop%common%icrop)
+        state%crop%common%cropend   = cfg_crop%rotation_end(crop%common%icrop)
       end if
 
 ! --- bare soil condition  ----------------------------------------------------
-      if (.not. flCropEmergence .or. flCropHarvest) then
+      if (.not. crop%flCropEmergence .or. crop%common%flCropHarvest) then
         call nocrop (state)
         ! [SS-GR-CROP A5.1] nocrop writes state%crop%common%dvs/rd directly; mirror remaining legacy zeros
       endif
@@ -127,48 +124,46 @@
 ! --- check crop emergence ----------------------------------------------------
 
       ! reset if new crop
-      if (flCropCalendar) then
+      if (crop%common%flCropCalendar) then
         if (dabs(tc%t1900 - state%crop%common%cropstart) .lt. tiny) then  ! [GR-CROPWS B3]
           call InitializeCrop
-          ! [GR-CROP 2026-05-25] crop-lifecycle reset: state fields are the canonical
-          ! homes for flCropPrep/Sow/Germ/PrepDelay/SowDelay/tsumgerm/daycrop.
-          ! daycrop must mirror the legacy InitializeCrop reset (legacy line 570).
+          ! [GR-CROP 2026-05-25] crop-lifecycle reset: state fields are the
+          ! canonical homes (legacy InitializeCrop was emptied; the only
+          ! per-rotation crop scalars live here on state%crop).
           state%crop%common%daycrop       = 0
           state%crop%common%flCropPrep    = .false.
           state%crop%common%flCropSow     = .false.
           state%crop%common%flCropGerm    = .false.
-          state%crop%common%flCropHarvest = flCropHarvest   ! legacy still has external readers
+          state%crop%common%flCropHarvest = .false.
+          state%crop%common%flHarvestDay  = .false.
           state%crop%common%PrepDelay     = 0
           state%crop%common%SowDelay      = 0
           state%crop%common%tsumgerm      = 0.0d0
           state%crop%common%flCropReadFile = .true.
-          flCropEmergence = .true.
-          state%crop%flCropEmergence = flCropEmergence   ! [SS-GR-ATM A5.2] dual-write
+          crop%flCropEmergence = .true.
           if (state%crop%common%croptype(state%crop%common%icrop) .le. 2) then
-            flCropEmergence = .false.
-            state%crop%flCropEmergence = flCropEmergence   ! [SS-GR-ATM A5.2] dual-write
+            crop%flCropEmergence = .false.
           endif
         endif
       endif
 
 ! --- Preparation, Sowing and Germination of arable crop growth ---------------
-      if (flCropCalendar .and. .not. flCropHarvest .and. state%crop%common%croptype(state%crop%common%icrop) .le. 2) then
+      if (crop%common%flCropCalendar .and. .not. crop%common%flCropHarvest .and. state%crop%common%croptype(state%crop%common%icrop) .le. 2) then
 
         ! check crop preparation, sowing and germination (of previous day)
-        if (.not. flCropEmergence) then
+        if (.not. crop%flCropEmergence) then
           if (state%crop%common%flCropPrep .and. state%crop%common%flCropSow .and. state%crop%common%flCropGerm) then
             state%soilwater%swinco = -99
             state%crop%common%flCropReadFile = .true.
-            flCropEmergence = .true.
-            state%crop%flCropEmergence = flCropEmergence   ! [SS-GR-ATM A5.2] dual-write
+            crop%flCropEmergence = .true.
           endif
         endif
         
         ! Initialize preparation, sowing and germination
-        if (.not. flCropEmergence) then
+        if (.not. crop%flCropEmergence) then
           if (state%crop%common%flCropReadFile) then
             ! ADR 0017: sibling-reader dispatch around legacy ArableLandGerm
-            ! (which opens pathcrop//cropfil(icrop)//'.crp' via
+            ! (which opens pathcrop//cropfil(crop%common%icrop)//'.crp' via
             ! readarablelandgerm). Cache-hit path sets flCrop* flags from
             ! the typed config. Cache-miss path falls back to legacy.
             ! Phase 2 extends to type=2 (Wofost) in addition to type=1.
@@ -234,18 +229,16 @@
                      if (swgerm_cache == 0) then
                         ! swgerm=0: germination and emergence are immediate.
                         state%crop%common%flCropGerm = .true.
-                        flCropEmergence = .true.
-                        state%crop%flCropEmergence = flCropEmergence   ! [SS-GR-ATM A5.2] dual-write
+                        crop%flCropEmergence = .true.
                      else if (rot_type == 2) then
                         ! type=2 with swgerm=1 or 2: just set the runtime flags;
                         ! ArableLandGerm reads germ params directly from gp via
-                        ! crop_config_global%rotation_wofost(icrop)%germination.
+                        ! crop_config_global%rotation_wofost(crop%common%icrop)%germination.
                         ! [GR-CROP 2026-05-25] legacy mirror writes
                         !   tsumemeopt/tbasem/teffmx/agerm/hdrygerm/hwetgerm/zgerm/cgerm/bgerm
                         !   retired — readers cut over to direct config reads.
                         state%crop%common%flCropGerm = .false.
-                        flCropEmergence = .false.
-                        state%crop%flCropEmergence = flCropEmergence   ! [SS-GR-ATM A5.2] dual-write
+                        crop%flCropEmergence = .false.
                      else
                         ! type=1 cropfixed with swgerm > 0 — not yet supported.
                         call fatalerr_collected('cropgrowth/ArableLandGerm', &
@@ -264,7 +257,7 @@
           endif
         endif
 
-        if (.not. flCropEmergence .and. .not. flCropHarvest) then
+        if (.not. crop%flCropEmergence .and. .not. crop%common%flCropHarvest) then
 
           ! Preparation before crop growth
           if (.not. state%crop%common%flCropPrep) then
@@ -287,15 +280,15 @@
 
 ! --- Initialization crop conditions ------------------------------------------
       
-      if (flCropCalendar .and. .not. flCropHarvest) then
+      if (crop%common%flCropCalendar .and. .not. crop%common%flCropHarvest) then
 
         if (state%crop%common%flCropReadFile) then
           
           ! fixed crop development
-          if (state%crop%common%croptype(state%crop%common%icrop) .eq. 1 .and. flCropEmergence) call CropFixed(1, state)
+          if (state%crop%common%croptype(state%crop%common%icrop) .eq. 1 .and. crop%flCropEmergence) call CropFixed(1, state)
 
           ! detailed crop growth
-          if (state%crop%common%croptype(state%crop%common%icrop) .eq. 2 .and. flCropEmergence) call Wofost(1, state)
+          if (state%crop%common%croptype(state%crop%common%icrop) .eq. 2 .and. crop%flCropEmergence) call Wofost(1, state)
 
           ! detailed grass growth
           if (state%crop%common%croptype(state%crop%common%icrop) .eq. 3) call Grass(1, tsoil, state)
@@ -314,11 +307,10 @@
         endif
 
         ! update crop daynumber
-        daycrop = daycrop + 1
-        state%crop%common%daycrop = daycrop   ! [SS-GR-CROP A5.1]
+        crop%common%daycrop = crop%common%daycrop + 1
 
         ! open crp-file
-        if (swcrp.eq.1) call CropOutput(1, state)
+        if (crop%common%swcrp.eq.1) call CropOutput(1, state)
 
         ! set correction of CO2 impact — FacCO2 now writes directly to state%crop%wofost%fco2*
         call FacCO2(state)  ! [SS-GR-CROPRT B6] FacCO2 handles state write; redundant dual-write removed
@@ -327,7 +319,7 @@
 
       ! set running average of minimum temperature (only for detailed crop growth)
       ! [SS-GR-FINAL B5] nofd/atmin7 read/written via state%atmosphere directly
-      if (flCropEmergence .and. state%crop%common%croptype(state%crop%common%icrop).ge.2) then
+      if (crop%flCropEmergence .and. state%crop%common%croptype(state%crop%common%icrop).ge.2) then
         state%atmosphere%nofd = min(state%atmosphere%nofd+1, 7)
         sumtmin = 0.0d0
         do i = state%atmosphere%nofd,2,-1
@@ -350,7 +342,7 @@
       state%crop%common%noddrz = node   ! [GR-CROP 2026-05-25] legacy noddrz retired
 
       ! calculate potential and actual assimilation
-      if (flCropEmergence .and. state%crop%common%croptype(state%crop%common%icrop).ge.2) then
+      if (crop%flCropEmergence .and. state%crop%common%croptype(state%crop%common%icrop).ge.2) then
           
 ! check DAYNR during the day!!!!!!          
           
@@ -391,7 +383,7 @@
         ! daily gross assimilation
         effc = state%crop%wofost%fco2eff * state%crop%common%eff  ! [SS-GR-CROPRT B6] state%crop%wofost%fco2eff via state
         if (state%crop%common%croptype(state%crop%common%icrop) .eq. 2) amax = state%crop%wofost%fco2amax * afgen (state%crop%common%amaxtb,30,state%crop%common%dvs) * afgen (state%crop%common%tmpftb,30,atmo%tavd)  ! [SS-GR-ATM B.5] [SS-GR-CROPRT B6]
-        if (state%crop%common%croptype(state%crop%common%icrop) .eq. 3) amax = state%crop%wofost%fco2amax * afgen (state%crop%common%amaxtb,30,dble(daycrop)) * afgen (state%crop%common%tmpftb,30,atmo%tavd)  ! [SS-GR-ATM B.5] [SS-GR-CROPRT B6]
+        if (state%crop%common%croptype(state%crop%common%icrop) .eq. 3) amax = state%crop%wofost%fco2amax * afgen (state%crop%common%amaxtb,30,dble(crop%common%daycrop)) * afgen (state%crop%common%tmpftb,30,atmo%tavd)  ! [SS-GR-ATM B.5] [SS-GR-CROPRT B6]
 
 
         ! potential assimilation
@@ -450,11 +442,11 @@
 
 ! === calculation of potential crop rate and state variables =================
 
-      if (flCropHarvest) return
+      if (crop%common%flCropHarvest) return
 
 ! --- detailed crop growth -------------------------------------------------
       if (state%crop%common%croptype(state%crop%common%icrop) .eq. 2) then
-        if (flCropEmergence) then
+        if (crop%flCropEmergence) then
           call Wofost(2, state)
         endif
       endif
@@ -469,17 +461,17 @@
 
 ! === calculation of actual crop rate and state variables ==================
 
-      if (flCropHarvest) return
+      if (crop%common%flCropHarvest) return
 
 ! --- fixed crop development -----------------------------------------------
       if (state%crop%common%croptype(state%crop%common%icrop).eq.1) then
-        if(flCropEmergence) then
+        if(crop%flCropEmergence) then
           call CropFixed(3, state)
         endif
       endif
 ! --- detailed crop growth -------------------------------------------------
       if (state%crop%common%croptype(state%crop%common%icrop).eq.2) then
-        if (flCropEmergence) then
+        if (crop%flCropEmergence) then
           call Wofost(3, state)
          endif
       endif
@@ -494,24 +486,22 @@
 
 ! === harvest of crop ======================================================
       
-      if (flCropHarvest) return
+      if (crop%common%flCropHarvest) return
      
-      if (state%crop%common%croptype(state%crop%common%icrop).le.2 .and. flCropEmergence)then
+      if (state%crop%common%croptype(state%crop%common%icrop).le.2 .and. crop%flCropEmergence)then
 
-        ! Check flHarvestDay
+        ! Check crop%common%flHarvestDay
         if (state%crop%common%swharv.eq.0) then
-          if (dabs(tc%t1900 - cropend(state%crop%common%icrop) - 1.d0) .lt. 1.0d-3) then  ! [GR-CROPWS B3] icrop → state%crop%common%icrop
-            flHarvestDay = .true.
-            state%crop%common%flHarvestDay = flHarvestDay   ! [SS-GR-CROP A5.1]
+          if (dabs(tc%t1900 - cfg_crop%rotation_end(state%crop%common%icrop) - 1.d0) .lt. 1.0d-3) then  ! [GR-CROPWS B3] crop%common%icrop → state%crop%common%icrop
+            crop%common%flHarvestDay = .true.
           endif
         else
-          if (state%crop%common%dvs.ge.state%crop%common%dvsend .or. dabs(tc%t1900 - cropend(state%crop%common%icrop) - 1.d0) .lt. 1.0d-3) then  ! [GR-CROPWS B3] dvs/dvsend/icrop → state
-            flHarvestDay = .true.
-            state%crop%common%flHarvestDay = flHarvestDay   ! [SS-GR-CROP A5.1]
+          if (state%crop%common%dvs.ge.state%crop%common%dvsend .or. dabs(tc%t1900 - cfg_crop%rotation_end(state%crop%common%icrop) - 1.d0) .lt. 1.0d-3) then  ! [GR-CROPWS B3] dvs/dvsend/crop%common%icrop → state
+            crop%common%flHarvestDay = .true.
           endif
         endif
         
-        if (flCropEmergence .or. flHarvestDay) then
+        if (crop%flCropEmergence .or. crop%common%flHarvestDay) then
           if (state%crop%common%croptype(state%crop%common%icrop).eq.1) then
             call CropFixed(4, state)
           endif
@@ -526,31 +516,25 @@
       
 ! --- fixed crop development -----------------------------------------------
       if (state%crop%common%croptype(state%crop%common%icrop).eq.1)then
-        if (flHarvestDay) then
-          flCropEmergence = .false.
-          state%crop%flCropEmergence = flCropEmergence   ! [SS-GR-ATM A5.2] dual-write
-          flCropHarvest   = .true.
-          state%crop%common%flCropHarvest = flCropHarvest   ! [SS-GR-CROPRT A5]
+        if (crop%common%flHarvestDay) then
+          crop%flCropEmergence = .false.
+          crop%common%flCropHarvest   = .true.
         endif
       endif
 
 ! --- detailed crop growth -------------------------------------------------
       if (state%crop%common%croptype(state%crop%common%icrop).eq.2)then
-        if (flHarvestDay) then
-          flCropEmergence = .false.
-          state%crop%flCropEmergence = flCropEmergence   ! [SS-GR-ATM A5.2] dual-write
-          flCropHarvest   = .true.
-          state%crop%common%flCropHarvest = flCropHarvest   ! [SS-GR-CROPRT A5]
+        if (crop%common%flHarvestDay) then
+          crop%flCropEmergence = .false.
+          crop%common%flCropHarvest   = .true.
         endif
       endif
 
 ! --- detailed grass growth ------------------------------------------------
       if (state%crop%common%croptype(state%crop%common%icrop).eq.3)then
-        if (dabs(tc%t1900 - cropend(state%crop%common%icrop) - 1.d0) .lt. 1.0d-3) then  ! [GR-CROPWS B3] icrop → state%crop%common%icrop
-          flCropEmergence = .false.
-          state%crop%flCropEmergence = flCropEmergence   ! [SS-GR-ATM A5.2] dual-write
-          flCropHarvest   = .true.
-          state%crop%common%flCropHarvest = flCropHarvest   ! [SS-GR-CROPRT A5]
+        if (dabs(tc%t1900 - cfg_crop%rotation_end(state%crop%common%icrop) - 1.d0) .lt. 1.0d-3) then  ! [GR-CROPWS B3] crop%common%icrop → state%crop%common%icrop
+          crop%flCropEmergence = .false.
+          crop%common%flCropHarvest   = .true.
         endif
       endif
 

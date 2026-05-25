@@ -298,18 +298,18 @@
       
 ! --- crop variables
       ! [SS-GR-FINAL D1] swCrop retired — all callers use state%crop; 0 consumers
-      logical   flCropCalendar     ! Flag indicating that crop season is active (but currently might be bare or cropped)
-      logical   flCropEmergence    ! Flag indicating period from crop emergence until harvest
-      logical   flCropHarvest      ! Flag indicating period from crop harvest until the end of crop season
+      ! [GR-CROP 2026-05-25] flCropCalendar retired — see state%crop%common%flCropCalendar
+      ! [GR-CROP 2026-05-25] flCropEmergence retired — see state%crop%flCropEmergence
+      ! [GR-CROP 2026-05-25] flCropHarvest retired — see state%crop%common%flCropHarvest
       ! [GR-CROP 2026-05-25] flCropReadFile retired — see state%crop%common%flCropReadFile
       ! [GR-CROP 2026-05-25] flCropOpenFile retired — see state%crop%common%flCropOpenFile
       logical   flCropOutput       ! Flag indicating writing of output.crp
 
       ! [GR-ATM 2026-05-23] croptype retired — see state%crop%common%croptype
-      integer   swcrp              ! Switch for output file *.CRP with daily crop output: 0 = no; 1 = yes
+      ! [GR-CROP 2026-05-25] swcrp retired — see state%crop%common%swcrp
       integer   crp                ! Internal number of crop output file *.CRP
-      integer   daycrop            ! Number of days that a crop exists
-      integer   icrop              ! Current crop number
+      ! [GR-CROP 2026-05-25] daycrop retired — see state%crop%common%daycrop
+      ! [GR-CROP 2026-05-25] icrop retired — see state%crop%common%icrop
       ! [GR-CROPWS] daygrowth retired — see state%crop%grass%daygrowth
       ! [GR-CROPWS] daygrowthpot retired — see state%crop%grass%daygrowthpot
       ! [GR-CROPWS] idaysgraz retired — see state%crop%grass%idaysgraz
@@ -362,8 +362,8 @@
       ! [GR-CROPWS] chtb retired — see state%crop%fixed%chtb
       ! [GR-CROP 2026-05-25] c_mroot retired — see state%crop%oxygen%c_mroot
       ! [GR-CROP-DVS] cofab retired — see state%crop%cofab
-      real(8)   cropend(macrop)    ! Array with crop end dates
-      real(8)   cropstart(macrop)  ! Array with crop start dates
+      ! [GR-CROP 2026-05-25] cropend retired — see state%cfg%crop%rotation_end
+      ! [GR-CROP 2026-05-25] cropstart retired — see state%cfg%crop%rotation_start
       ! [GR-CROPWS] cumdens retired — see state%crop%common%cumdens
       ! [GR-CROPWS] cuptgraz retired — see state%crop%common%cuptgraz
       ! [GR-CROPWS] cuptgrazpot retired — see state%crop%common%cuptgrazpot
@@ -494,7 +494,7 @@
       ! [GR-CROP-DVS] wstpot retired — see state%crop%wofost%wstpot
       ! [GR-CROP 2026-05-25] flanthesis retired — see state%crop%wofost%flanthesis
       ! [GR-CROPWS] flHarvest retired — see state%crop%grass%flHarvest
-      logical   flHarvestDay        ! Flag indicating that current day is harvest day
+      ! [GR-CROP 2026-05-25] flHarvestDay retired — see state%crop%common%flHarvestDay
       ! [GR-CROPWS] flHarvestpot retired — see state%crop%grass%flHarvestpot
       ! [GR-CROPWS] flGrazing retired — see state%crop%grass%flGrazing
       ! [GR-CROPWS] flGrazingpot retired — see state%crop%grass%flGrazingpot

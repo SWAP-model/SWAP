@@ -20,18 +20,15 @@
       flSwapShared       = .false.
 
 ! --- crop variables (not crop specific, such as crop calendar)
-      crp                = 0 
-      icrop              = 0 
-      ! [GR-ATM 2026-05-23] croptype retired — see state%crop%common%croptype
-      cropend            = 0.0d0 
-      cropstart          = 0.0d0 
-      rdmax              = 0.0d0 
-      flCropOutput       = .false. 
-      flCropCalendar     = .false.
+      crp                = 0
+      ! [GR-CROP 2026-05-25] icrop/cropend/cropstart retired — see state%crop%common%icrop, state%cfg%crop%rotation_{start,end}
+      rdmax              = 0.0d0
+      flCropOutput       = .false.
+      ! [GR-CROP 2026-05-25] flCropCalendar retired — see state%crop%common%flCropCalendar
       ! [GR-CROP 2026-05-25] flCropOpenFile retired — state%crop%common%flCropOpenFile default is .false.
       ! [GR-CROP 2026-05-25] flCropReadFile retired — state%crop%common%flCropReadFile default is .false.
-      flCropEmergence    = .false.
-      flCropHarvest      = .false.
+      ! [GR-CROP 2026-05-25] flCropEmergence retired — see state%crop%flCropEmergence
+      ! [GR-CROP 2026-05-25] flCropHarvest retired — see state%crop%common%flCropHarvest
       
 ! --- meteo variables
       ! [SS-TC] daymeteo/rainrec/swmeteo/wrecord/yearmeteo retired to state%timecontrol (ADR 0041)
@@ -562,12 +559,9 @@
       ! [GR-CROP 2026-05-25] PrepDelay/SowDelay retired — see state%crop%common%X
       ! [GR-CROP 2026-05-25] tsumgerm retired — see state%crop%common%tsumgerm (reset in cropgrowth.f90:175)
 
-      flCropHarvest      = .false.
-      flHarvestDay       = .false.
+      ! [GR-CROP 2026-05-25] flCropHarvest/flHarvestDay/daycrop retired — state
+      ! resets happen in cropgrowth.f90 on new-rotation (call to InitializeCrop_state).
       ! [SS-CRP C-2.5] flWrtNonox retired — soilwater_init handles init via state%soilwater (ADR 0036)
-      ! flWrtNonox         = .false.
-
-      daycrop            = 0
       ! [GR-CROP 2026-05-25] idsl retired — see state%crop%wofost%idsl
       ! [GR-CROP 2026-05-25] noddrz retired — see state%crop%common%noddrz (default 0)
       atmin7             = 0.0d0

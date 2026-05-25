@@ -1153,18 +1153,9 @@ contains
          allocate(state%crop%common%croptype(n))
          state%crop%common%croptype = config%crop%rotation_type
       end if
-      if (allocated(config%crop%rotation_start)) then
-         n = size(config%crop%rotation_start)
-         do i = 1, min(n, size(cropstart))
-            cropstart(i) = config%crop%rotation_start(i)
-         end do
-      end if
-      if (allocated(config%crop%rotation_end)) then
-         n = size(config%crop%rotation_end)
-         do i = 1, min(n, size(cropend))
-            cropend(i) = config%crop%rotation_end(i)
-         end do
-      end if
+      ! [GR-CROP 2026-05-25] cropstart/cropend legacy global arrays retired —
+      ! readers now consume config%crop%rotation_start/rotation_end directly via
+      ! state%cfg%crop. No mirror copy needed.
       if (allocated(config%crop%rotation_file)) then
          n = size(config%crop%rotation_file)
          do i = 1, min(n, size(cropfil))
