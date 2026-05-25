@@ -79,8 +79,7 @@
       ! [SS-BMI2 Task 5] retired 2026-05-13 — moved to state%timecontrol (ADR 0041)
       ! real(8)   dtmax              ! moved to state%timecontrol%dtmax
       ! real(8)   dtmin              ! moved to state%timecontrol%dtmin
-      real(8)   outdat(maout)      ! Array with output dates for water and solute balances
-      real(8)   outdatint(maout)   ! Array with intermediate output dates
+      ! [GR-TIME 2026-05-25] outdat/outdatint retired — now state%timecontrol%{outdat,outdatint}
       ! [SS-TC] retired 2026-05-12 — moved to state%timecontrol%* (ADR 0041)
       ! real(8)   outper             ! moved to state%timecontrol%outper
       ! real(8)   t                  ! moved to state%timecontrol%t
@@ -122,7 +121,7 @@
       ! integer   rainrec            ! moved to state%timecontrol%rainrec
       ! [GR-CROP-DVS] swdivide retired — see state%cfg%meteo%swdivide
       ! [GR-CROP-DVS] swetr retired — see state%cfg%meteo%swetr
-      integer   swetsine           ! Switch: 0 = Tp and Ep uniform during a day; 1 = Tp and Ep are distributed as sine waves during a day
+      ! [GR-TIME 2026-05-25] swetsine retired — read from config%meteo%swetsine
       ! [GR-CROPWS] swinter retired — see state%crop%common%swinter
       ! [GR-CROP-DVS] swmetdetail retired — see state%cfg%meteo%swmetdetail
       ! [SS-TC] retired 2026-05-12 — moved to state%timecontrol%swmeteo (ADR 0041)
@@ -254,10 +253,10 @@
       ! [GR-CROP 2026-05-25] irtype retired — canonical home is state%crop%irrigation%irtype
       ! [GR-CROP 2026-05-25] isua retired — canonical home is state%atmosphere%isua
       ! [GR-CROP 2026-05-25] isuas retired — schedule==1 branch dead (cropfixed/wofost/grass init reject schedule=1)
-      integer   nirri              ! Number of irrigation event — retained — still written by src/core/timecontrol_mod.f90
+      ! [GR-TIME 2026-05-25] nirri retired — state%crop%irrigation%nirri is canonical
       ! [SS-GR-FINAL D1] phormc retired — 0 consumers
       ! [GR-CROPWS] schedule retired — see state%crop%common%schedule
-      integer   swirfix            ! retained — still consumed by src/core/timecontrol_mod.f90 (sets flIrrigate)
+      ! [GR-TIME 2026-05-25] swirfix retired — read from config%irrigation%swirfix
       ! [GR-CROP 2026-05-25] swcirrthres retired — schedule==1 dead branch
       ! [GR-CROP 2026-05-25] cirrs retired — schedule==1 dead branch
       ! [GR-CROP 2026-05-25] cirrthres retired — schedule==1 dead branch
@@ -570,7 +569,7 @@
 ! --- Nitrogen: crop and soil management
       ! [GR-CROP 2026-05-25] flCropNut retired — see state%crop%common%flCropNut
       logical :: flTillage = .false.   !! ADR 0020 call-site gate for DoTillage
-      logical :: flSSDI    = .false.   !! ADR 0020 call-site gate for SSDI_irrigation
+      ! [GR-TIME 2026-05-25] flSSDI retired — readers use (config%irrigation%swssdi == 1)
       ! [GR-CROP 2026-05-25] Nutrient cluster retired — migrated to module-level
       ! cw_* SAVE in cropwofost_init_mod (cropwofost init+runtime pair scope).
       ! Retired symbols: nmxlv, nlue, anlv, anst, nmaxlv, nmaxst, nmaxrt,
@@ -1041,7 +1040,7 @@
       integer   swbotbhea          ! Switch for bottom boundary condition: 1 = heat flux is zero; 2 = prescribed temperature
       integer   swtopbhea          ! Switch for top boundary condition: 1 = use air temperatures; 2 = read measured surface temperatures
       integer   swcalt             ! Switch for method of soil water heat flow simulation: 1 = analytical method; 2 = numerical method
-      integer   swhea              ! Switch for simulation of soil heat flow: 0 = no; 1 = yes
+      ! [GR-TIME 2026-05-25] swhea retired — read from config%heat%swhea
       ! [SS-GR-CROPRT A3] swtem retired — always 0 (no config field); outtem calls dropped
       integer   tem                ! Internal number of output file *.TEM with soil temperatures
       real(8)   ddamp              ! Damping depth (L) of temperature wave in soil
@@ -1080,7 +1079,7 @@
 
 ! --- snow variables
       integer   snw                ! Internal number of output file *.SNW with snow pack data
-      integer   swsnow             ! Switch for simulation of snow accumulation and melt: 0 = no; 1 = yes
+      ! [GR-TIME 2026-05-25] swsnow retired — read from config%meteo%snow%swsnow
       integer   swsublim           ! Switch for suppressing simulation of sublimation of snow: 1 = suppress ! Adaptation 3 for PEARL-MACRO
       ! ========================================================================
       ! [SS-ATM] retired 2026-05-11 — snow scalars migrated to state%atmosphere (flat) / %cumu / %intr
@@ -1111,7 +1110,7 @@
       ! [SS-GR-FINAL D1] sba retired — SBA output deleted; 0 consumers
       ! [GR-SOL 2026-05-24] swbr retired — see state%solute%swbr
       ! [GR-SOL 2026-05-24] swbotbc retired — see state%solute%swbotbc
-      integer   swsolu             ! Switch for simulation of solute transport: 0 = no; 1 = yes ! [GR-CROP 2026-05-25] retained — consumed by src/core/timecontrol_mod.f90
+      ! [GR-TIME 2026-05-25] swsolu retired — read from config%solute%swsolu
       ! [SS-GR-FINAL D3] swsp retired — 0 consumers; sorption switch never read outside init/c2v
       ! [SS-GR-CROPRT A1] AgeGwl1m retired — ADR 0032 (AgeTracer dead-code)
       ! [GR-SOL 2026-05-24] bexp retired — see state%solute%bexp
@@ -1228,7 +1227,7 @@
       ! [GR-DRA 2026-05-23] NumLevRapDra retired — see state%drainage%NumLevRapDra
       ! [SS-GR-FINAL D1] RapDraReaExp retired — only c2v writes; 0 consumers
       ! [SS-GR-FINAL D1] RapDraResRef retired — only c2v writes; 0 consumers
-      logical FlDecMpRat           ! [retired-zero] kept: soilhydraulics convergence sentinel
+      ! [GR-TIME 2026-05-25] FlDecMpRat retired — dead code, no readers anywhere
       ! [SS-GR-CROPRT A2] flmacropore retired — ADR 0040 (always .false.; all guarded branches dropped)
       ! [SS-BND] retired 2026-05-11 — boundary subsystem migrated to state%soilwater (ADR 0035)
       ! [MACRO-RETIRE 2026-05-12] All other macropore globals retired.

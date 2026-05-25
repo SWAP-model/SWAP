@@ -104,10 +104,18 @@ contains
       ! only the sampling cadence differed. swmonth/swyrvar themselves are
       ! locals in readswap (readswap.f90:16), no module global exists.
       ! Must run AFTER iyear/imonth derivation above.
+      ! [GR-TIME 2026-05-25] outdat/outdatint moved into state%timecontrol.
+      ! Allocate to legacy MAOUT cap and zero so timecontrol_advance can
+      ! read them safely whether populate_outdatint_monthly fires or not.
+      if (.not. allocated(state%timecontrol%outdat))    allocate(state%timecontrol%outdat(maout))
+      if (.not. allocated(state%timecontrol%outdatint)) allocate(state%timecontrol%outdatint(maout))
+      state%timecontrol%outdat    = 0.0_real64
+      state%timecontrol%outdatint = 0.0_real64
       if (config%simulation%swmonth == 1) then
          call populate_outdatint_monthly(state%timecontrol%tend, &
                                          state%timecontrol%iyear, &
-                                         state%timecontrol%imonth)
+                                         state%timecontrol%imonth, &
+                                         state%timecontrol%outdatint)
          state%timecontrol%period = 0
          state%timecontrol%swres  = 0
          state%timecontrol%swodat = 0
@@ -131,7 +139,8 @@ contains
       ! `config%meteo%rainfile` is no longer copied into a global because
       ! the only consumer (the `.YYY` per-year rain reader in readmeteo.f90)
       ! has been deleted; CSV rain events use `config%meteo%rain_events_file`.
-      swetsine    = config%meteo%swetsine
+      ! [GR-TIME 2026-05-25] swetsine legacy mirror dropped — readers go through
+      ! config%meteo%swetsine (timecontrol_mod) and atmo%swetsine (atmosphere_state).
       ! [GR-ATM 2026-05-23] angstroma/b retired — snapshotted in atmosphere_state%init
 
       ! All metfile extensions other than .csv are rejected by
@@ -240,7 +249,8 @@ contains
       ! compute reads from state, never from these legacy globals.
 
       ! Snow sub-section
-      swsnow   = config%meteo%snow%swsnow
+      ! [GR-TIME 2026-05-25] swsnow legacy mirror dropped — timecontrol_mod reads
+      ! config%meteo%snow%swsnow directly via state%cfg.
       snowcoef = config%meteo%snow%snowcoef
       state%atmosphere%TePrRain = config%meteo%snow%teprrain
       state%atmosphere%TePrSnow = config%meteo%snow%teprsnow
@@ -407,9 +417,11 @@ contains
       ! state%cfg%soil%swtill directly.
       state%crop%irrigation%swssdi = config%irrigation%swssdi   ! [GR-CROP 2026-05-25]
       flTillage = (config%soil%swtill == 1)
-      flSSDI    = (config%irrigation%swssdi == 1)
+      ! [GR-TIME 2026-05-25] flSSDI bare global retired — swap_mod and
+      ! timecontrol_mod now read (config%irrigation%swssdi == 1) directly.
       if (flTillage) call apply_soil_tillage(config%soil%tillage, state%timecontrol%tend, state)
-      if (flSSDI)    call apply_irrigation_ssdi(config%irrigation%ssdi, &
+      if (config%irrigation%swssdi == 1) &
+                     call apply_irrigation_ssdi(config%irrigation%ssdi, &
                                                state%timecontrol%tstart, &
                                                state%timecontrol%tend, state, &
                                                config%general%pathwork)
@@ -799,7 +811,8 @@ contains
       ! ---------------------------------------------------------------
       ! Heat (audit: 10 fields + 6 Phase-0 promoted fields = 16 total)
       ! ---------------------------------------------------------------
-      swhea     = config%heat%swhea
+      ! [GR-TIME 2026-05-25] swhea legacy mirror dropped — timecontrol_mod reads
+      ! config%heat%swhea directly via state%cfg.
       swcalt    = config%heat%swcalt
       swtopbhea = config%heat%swtopbhea
       swbotbhea = config%heat%swbotbhea
@@ -855,7 +868,9 @@ contains
       ! ---------------------------------------------------------------
       ! Irrigation (audit: 8 fields, top-level only)
       ! ---------------------------------------------------------------
-      swirfix = config%irrigation%swirfix
+      ! [GR-TIME 2026-05-25] swirfix legacy mirror dropped — timecontrol_mod reads
+      ! config%irrigation%swirfix directly via state%cfg; the local
+      ! `else if` guard below uses config%irrigation%swirfix in place.
       ! [GR-CROP 2026-05-25] Fixed-irrigation event arrays canonical home is
       ! state%crop%irrigation%{irdate,irdepth,irconc,irtype}. Legacy globals
       ! irdate/irdepth/irconc/irtype were retired in the same commit.
@@ -871,7 +886,7 @@ contains
             state%crop%irrigation%irconc(i)  = config%irrigation%fixed_events(i, 3)
             state%crop%irrigation%irtype(i)  = nint(config%irrigation%fixed_events(i, 4))
          end do
-      else if (swirfix == 1 .and. allocated(config%irrigation%fixed_events_file)) then
+      else if (config%irrigation%swirfix == 1 .and. allocated(config%irrigation%fixed_events_file)) then
          ! Phase 4f cleanup: long-form fixed-irrigation events outsourced
          ! to a CSV companion file (date, depth_mm, conc, type). The
          ! reader emits days-since-1900 in column 1; the rest of the
@@ -918,7 +933,8 @@ contains
       ! ---------------------------------------------------------------
       ! Solute (audit: 8 fields + 14 Phase 0 promoted fields)
       ! ---------------------------------------------------------------
-      swsolu  = config%solute%swsolu
+      ! [GR-TIME 2026-05-25] swsolu legacy mirror dropped — timecontrol_mod and
+      ! tillage_mod read config%solute%swsolu directly via state%cfg.
       state%solute%swbotbc = config%solute%swbotbc
       state%solute%cdrain = config%solute%cdrain
 !     cseep   = config%solute%cseep   ! global cseep removed (ADR 0032); state%solute%cseep written by solute task=2 via afgen(cseeptab)
@@ -1153,22 +1169,24 @@ contains
 
    end subroutine config_to_variables
 
-   !> Populate `variables%outdatint(:)` with the end-of-month dates
-   !! between `tstart` and `tend`. Mirrors `readswap.f90:181-204` (the
-   !! `swmonth == 1` branch). Bare `use variables` for parity with the
-   !! parent adapter.
-   subroutine populate_outdatint_monthly(tend, iyear, imonth)
-      use variables
-      real(8), intent(in) :: tend
-      integer, intent(in) :: iyear   !! start year (from state%timecontrol%iyear, [GR-FINAL C1])
-      integer, intent(in) :: imonth  !! start month (from state%timecontrol%imonth, [GR-FINAL C1])
+   !> Populate `outdatint(:)` with the end-of-month dates between
+   !! `tstart` and `tend`. Mirrors `readswap.f90:181-204` (the
+   !! `swmonth == 1` branch). [GR-TIME 2026-05-25] outdatint now
+   !! passed explicitly as the array to write into (was the bare
+   !! `variables%outdatint`); the caller hands in
+   !! `state%timecontrol%outdatint`.
+   subroutine populate_outdatint_monthly(tend, iyear, imonth, outdatint)
+      real(real64), intent(in)    :: tend
+      integer,      intent(in)    :: iyear   !! start year
+      integer,      intent(in)    :: imonth  !! start month
+      real(real64), intent(inout) :: outdatint(:)
       integer  :: datea_om(6), i_om
       real     :: fsec_om
-      real(8)  :: outdate_om
+      real(real64) :: outdate_om
 
       datea_om = 0
-      datea_om(1) = iyear   ! [GR-FINAL C1] replaced tc_iyear_init_buf
-      datea_om(2) = imonth  ! [GR-FINAL C1] replaced tc_imonth_init_buf
+      datea_om(1) = iyear
+      datea_om(2) = imonth
       if (datea_om(2) < 12) then
          datea_om(2) = datea_om(2) + 1
       else

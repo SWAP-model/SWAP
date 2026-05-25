@@ -16,8 +16,7 @@ module legacy_state_mod
       ! perc_org_mat, soil_density, depth, shape_factor_microbialr,
       ! root_radius, r_microbial_z0, waterfilm_thickness, bunsencoeff,
       ! c_min_micro, c_macro, ctopnode).
-      real(real64), allocatable :: outdat(:)  !! Array with output dates for water and solute balances
-      real(real64), allocatable :: outdatint(:)  !! Array with intermediate output dates
+      ! [GR-TIME 2026-05-25] outdat/outdatint retired — moved to state%timecontrol%{outdat,outdatint}
       logical :: flSwapShared  !! Flag to indicate the shared simultaneous simulation with other applications
       character(len=16) :: outfil  !! Name of output file
       character(len=80) :: pathwork  !! Path to work directory
@@ -26,7 +25,7 @@ module legacy_state_mod
       integer :: daynrlast  !! Last calendar day number for which meteorological data is available in current year
       ! [GR-ATM 2026-05-23] detrecord/irectotal retired — see state%atmosphere%{detrecord,irectotal}
       ! [GR-CROP 2026-05-25] nofd retired — see state%atmosphere%nofd
-      integer :: swetsine  !! Switch: 0 = Tp and Ep uniform during a day; 1 = Tp and Ep are distributed as sine waves during a day
+      ! [GR-TIME 2026-05-25] swetsine retired — read from config%meteo%swetsine
       integer, allocatable :: ad(:)  !! Array with day numbers in meteo file
       integer, allocatable :: am(:)  !! Array with month numbers in meteo file
       real(real64), allocatable :: aetr(:)  !! Array with daily ETref input data (L/T)
@@ -61,8 +60,8 @@ module legacy_state_mod
       ! [GR-CROP 2026-05-25] irtype retired — canonical home is state%crop%irrigation%irtype
       ! [GR-CROP 2026-05-25] isua retired — canonical home is state%atmosphere%isua
       ! [GR-CROP 2026-05-25] isuas retired — schedule==1 dead branch
-      integer :: nirri  !! retained — still written by src/core/timecontrol_mod.f90 (initial reset to 1)
-      integer :: swirfix  !! retained — still consumed by src/core/timecontrol_mod.f90 (sets flIrrigate)
+      ! [GR-TIME 2026-05-25] nirri retired — state%crop%irrigation%nirri is canonical
+      ! [GR-TIME 2026-05-25] swirfix retired — read from config%irrigation%swirfix
       ! [GR-CROP 2026-05-25] swcirrthres retired — schedule==1 dead branch
       ! [GR-CROP 2026-05-25] cirrs retired — schedule==1 dead branch
       ! [GR-CROP 2026-05-25] cirrthres retired — schedule==1 dead branch
@@ -290,7 +289,7 @@ module legacy_state_mod
       integer :: swbotbhea  !! Switch for bottom boundary condition: 1 = heat flux is zero; 2 = prescribed temperature
       integer :: swtopbhea  !! Switch for top boundary condition: 1 = use air temperatures; 2 = read measured surface temperatures
       integer :: swcalt  !! Switch for method of soil water heat flow simulation: 1 = analytical method; 2 = numerical method
-      integer :: swhea  !! Switch for simulation of soil heat flow: 0 = no; 1 = yes
+      ! [GR-TIME 2026-05-25] swhea retired — read from config%heat%swhea
       integer :: tem  !! Internal number of output file *.TEM with soil temperatures
       real(real64) :: ddamp  !! Damping depth (L) of temperature wave in soil
       real(real64) :: tampli  !! Amplitude of prescribed annual temperature wave (�C) at soil surface
@@ -303,13 +302,13 @@ module legacy_state_mod
       real(real64), allocatable :: tsoil(:)  !! Config-staging: nheat initial temperature profile entries (�C) for each compartment
       real(real64), allocatable :: zh(:)  !! Array with soil depths (L) used to specify initial soil temperatures
       integer :: snw  !! Internal number of output file *.SNW with snow pack data
-      integer :: swsnow  !! Switch for simulation of snow accumulation and melt: 0 = no; 1 = yes
+      ! [GR-TIME 2026-05-25] swsnow retired — read from config%meteo%snow%swsnow
       integer :: swsublim  !! Switch for suppressing simulation of sublimation of snow: 1 = suppress !! Adaptation 3 for PEARL-MACRO
       real(real64) :: snowcoef  !! Snow melt factor (-)
       ! [GR-SOL 2026-05-24] nconc retired — see state%solute%nconc
       ! [GR-SOL 2026-05-24] swbr retired — see state%solute%swbr
       ! [GR-SOL 2026-05-24] swbotbc retired — see state%solute%swbotbc
-      integer :: swsolu  !! Switch for simulation of solute transport: 0 = no; 1 = yes
+      ! [GR-TIME 2026-05-25] swsolu retired — read from config%solute%swsolu
       ! [GR-SOL 2026-05-24] bexp retired — see state%solute%bexp
       ! [GR-SOL 2026-05-24] cdrain retired — see state%solute%cdrain
       ! [GR-SOL 2026-05-24] cirr retired — see state%solute%cirr
@@ -361,7 +360,7 @@ module legacy_state_mod
       ! [GR-SOIL 2026-05-24] QExcMpMtx + QMaPo retired — orphan stubs, ADR 0040 macropore terms inlined zero in waterbalance.f90.
       ! [GR-DRA 2026-05-23] QRapDra retired — see state%drainage%QRapDra
       ! [GR-DRA 2026-05-23] NumLevRapDra retired — see state%drainage%NumLevRapDra
-      logical :: FlDecMpRat  !! [retired-zero] kept: soilhydraulics convergence sentinel
+      ! [GR-TIME 2026-05-25] FlDecMpRat retired — dead code, no readers anywhere
       ! [GR-DRA 2026-05-23] intwl retired — see state%surfacewater%intwl
       ! [GR-DRA 2026-05-23] nowltab retired — see state%drainage%nowltab
       ! [GR-DRA 2026-05-23] impend retired — see state%surfacewater%impend

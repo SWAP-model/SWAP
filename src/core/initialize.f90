@@ -15,8 +15,9 @@
       ! [SS-TC] retired 2026-05-12 — TimeControl runtime fields default to zero in state%timecontrol (ADR 0041)
       ! [GR-ATM 2026-05-23] logf retired — swap_log owns the log-file unit
       ! [SS-GR-FINAL D1] ex_tlast zero-fill dropped — declaration retired
-      outdat             = 0.0d0
-      outdatint          = 0.0d0
+      ! [GR-TIME 2026-05-25] outdat/outdatint retired — moved to
+      ! state%timecontrol%{outdat,outdatint} (allocated + zeroed by
+      ! config_to_variables before populate_outdatint_monthly).
       flSwapShared       = .false.
 
 ! --- crop variables (not crop specific, such as crop calendar)
@@ -32,7 +33,7 @@
       
 ! --- meteo variables
       ! [SS-TC] daymeteo/rainrec/swmeteo/wrecord/yearmeteo retired to state%timecontrol (ADR 0041)
-      swetsine           = 0
+      ! [GR-TIME 2026-05-25] swetsine retired — read from config%meteo%swetsine
       ! [SS-ATM A-2.6] aintcdt/atmdem/caintc/cevap/cgrai/cnrai/cpeva/cptra retired to state%atmosphere
       ! [GR-ATM 2026-05-23] daylp retired — see state%atmosphere%daylp
 
@@ -65,9 +66,9 @@
       ! [GR-CROP 2026-05-25] irtype zero-fill dropped — canonical home is state%crop%irrigation%irtype
       ! [GR-CROP 2026-05-25] isua zero-fill dropped — canonical home is state%atmosphere%isua
       ! [GR-CROP 2026-05-25] isuas zero-fill dropped — schedule==1 dead branch
-      nirri              = 0
+      ! [GR-TIME 2026-05-25] nirri retired — state%crop%irrigation%nirri (default 1) is canonical
       ! [SS-GR-FINAL D1] phormc zero-fill dropped — declaration retired
-      swirfix            = 0
+      ! [GR-TIME 2026-05-25] swirfix retired — read from config%irrigation%swirfix
       ! [GR-CROP 2026-05-25] cirrs/ditab/dwatab/fidtab/hcritab/raithreshold/rawtab/tawtab/tcritab/
       !                       tstairrig/tendirrig/treltab/dayfix zero-fills dropped — schedule==1 dead branch
       dcrit              = 0.0d0
@@ -368,7 +369,7 @@
       swbotbhea          = 0 
       swtopbhea          = 0 
       swcalt             = 0 
-      swhea              = 0 
+      ! [GR-TIME 2026-05-25] swhea retired — read from config%heat%swhea
       ! [SS-GR-CROPRT A3] swtem zero-fill dropped — declaration retired
       tem                = 0 
       ddamp              = 0.0d0 
@@ -398,7 +399,7 @@
 
 ! --- snow variables
       snw                = 0
-      swsnow             = 0
+      ! [GR-TIME 2026-05-25] swsnow retired — read from config%meteo%snow%swsnow
       ! [SS-ATM A-2.6] cgsnow/cmelt/csnrai/csubl/gsnow/igsnow/isnrai/isubl/melt/
       !                snowinco/snrai/ssnow/slw/subl retired to state%atmosphere (cumu/intr/flat scalars)
       snowcoef           = 0.0d0
@@ -408,7 +409,7 @@
       ! [GR-SOL 2026-05-24] nconc retired — see state%solute%nconc
       ! [SS-GR-FINAL D1] sba zero-fill dropped — declaration retired 
       ! [GR-SOL 2026-05-24] swbr retired — see state%solute%swbr
-      swsolu             = 0 
+      ! [GR-TIME 2026-05-25] swsolu retired — read from config%solute%swsolu
       ! [SS-GR-CROPRT A1] AgeGwl1m zero-fill dropped — declaration retired (ADR 0032)
       ! [GR-SOL 2026-05-24] bexp retired — see state%solute%bexp
       ! [GR-SOL 2026-05-24] cdrain retired — see state%solute%cdrain
@@ -490,7 +491,7 @@
       ! Drainage globals (NOT macropore — kept here next to retired set)
       ! [GR-DRA 2026-05-23] NumLevRapDra retired — see state%drainage%NumLevRapDra
       ! [SS-GR-FINAL D1] RapDraReaExp/RapDraResRef zero-fills dropped — declarations retired
-      FlDecMpRat           = .false.
+      ! [GR-TIME 2026-05-25] FlDecMpRat retired — dead code, no readers anywhere
       ! [SS-GR-CROPRT A2] flmacropore zero-fill dropped — declaration retired (ADR 0040)
 
 ! --- surface water variables

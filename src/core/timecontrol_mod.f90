@@ -20,8 +20,8 @@ contains
       ! [SS-GR-FINAL B8] DEFERRED: all symbols — init-path config/flags; no state home yet; Phase C3
       use swap_log, only: log_warn
       ! [GR-CROP 2026-05-25] flCropCalendar/icrop/cropstart/project → state/config reads.
-      ! DEFERRED: swirfix/swsnow/swhea/swsolu/swetsine/nirri — model-feature switches; Phase C3
-      use variables, only: swirfix, swsnow, swhea, swsolu, swetsine, nirri
+      ! [GR-TIME 2026-05-25] swirfix/swsnow/swhea/swsolu/swetsine/nirri now read
+      ! from state%cfg/state%crop%irrigation; bare-global use-variables retired.
       use timestep_control_mod, only: fldecdt
       use error_mod, only: fatalerr_collected
       implicit none
@@ -67,6 +67,8 @@ contains
            isteps => state%timecontrol%isteps, &
            ioutdat => state%timecontrol%ioutdat, &
            ioutdatint => state%timecontrol%ioutdatint, &
+           outdat => state%timecontrol%outdat, &
+           outdatint => state%timecontrol%outdatint, &
            nprintcount => state%timecontrol%nprintcount, &
            rainrec => state%timecontrol%rainrec, &
            wrecord => state%timecontrol%wrecord, &
@@ -163,21 +165,22 @@ contains
          flmeteodt = .false.
       endif
       fletsine = .false.
-      if (swetsine .eq. 1) fletsine = .true.
-      if (swirfix.eq.1) flIrrigate = .true.
+      if (state%cfg%meteo%swetsine .eq. 1) fletsine = .true.
+      if (state%cfg%irrigation%swirfix .eq. 1) flIrrigate = .true.
       flDrain = .false.
       if (state%surfacewater%swdra .eq. 1) flDrain = .true.
       flSurfaceWater = .false.
       if (state%surfacewater%swdra .eq. 2) flSurfaceWater = .true.
       flTemperature = .false.
-      if (swhea .eq. 1) flTemperature = .true.
+      if (state%cfg%heat%swhea .eq. 1) flTemperature = .true.
       flSnow = .false.
-      if (swsnow .eq. 1) flSnow = .true.
+      if (state%cfg%meteo%snow%swsnow .eq. 1) flSnow = .true.
       flSolute = .false.
-      if (swsolu .eq. 1) flSolute = .true.
+      if (state%cfg%solute%swsolu .eq. 1) flSolute = .true.
 
 ! --- initialize counters ----------------------------
-      nirri = 1
+      ! [GR-TIME 2026-05-25] bare `nirri = 1` retired — state%crop%irrigation%nirri
+      ! default is already 1, and that is the only field anyone reads.
       isteps = 0
       ioutdat = 1
       ioutdatint = 1
@@ -313,8 +316,8 @@ contains
       ! [GR-CROP C1] flCropCalendar/flCropOutput/icrop: reads from state%crop%common%X; writes dual to state+legacy
       ! [SS-GR-FINAL B8] DEFERRED: all residual symbols; Phase C3
       ! [GR-CROP 2026-05-25] flCropCalendar/flCropOutput/flCropHarvest/icrop → state%crop%common.
-      ! DEFERRED: outdat/outdatint — output date arrays still in variables; Phase C3
-      use variables, only: outdat, outdatint, flSSDI
+      ! [GR-TIME 2026-05-25] outdat/outdatint migrated to state%timecontrol;
+      ! flSSDI bare global replaced with `state%cfg%irrigation%swssdi == 1`.
 
       use irrigation_mod, only: SSDI_irrigation
       use error_mod, only: fatalerr_collected
@@ -359,6 +362,8 @@ contains
            isteps => state%timecontrol%isteps, &
            ioutdat => state%timecontrol%ioutdat, &
            ioutdatint => state%timecontrol%ioutdatint, &
+           outdat => state%timecontrol%outdat, &
+           outdatint => state%timecontrol%outdatint, &
            nprintcount => state%timecontrol%nprintcount, &
            rainrec => state%timecontrol%rainrec, &
            wrecord => state%timecontrol%wrecord, &
@@ -632,7 +637,7 @@ contains
       endif
 
 !     SSDI: end of subsurface irirgation event reached; reset
-      if (flSSDI .and. tcum - int(tcum) + dtCrit > state%crop%irrigation%dt_SSDI_event) then
+      if (state%cfg%irrigation%swssdi == 1 .and. tcum - int(tcum) + dtCrit > state%crop%irrigation%dt_SSDI_event) then
          call SSDI_irrigation(9, state)  ! [SS-SWC S-2.12B]
       end if
 
@@ -736,9 +741,10 @@ contains
    end subroutine timecontrol_advance
 
    subroutine timecontrol_reduce_dt(state)
-      ! [SS-GR-FINAL B8] FlDecMpRat — retired-zero sentinel; soilhydraulics convergence; Phase D
+      ! [GR-TIME 2026-05-25] FlDecMpRat dead-code import retired — it was imported
+      ! but never referenced (no readers anywhere in src/); declaration retired
+      ! alongside in variables.f90/legacy_state.f90/initialize.f90.
       ! [SS-GR-CROPRT A2] flMacroPore dropped from import — retired (ADR 0040)
-      use variables, only: FlDecMpRat
       use timestep_control_mod, only: fldecdt
       implicit none
       type(swap_state_t), intent(inout) :: state
@@ -774,6 +780,8 @@ contains
            isteps => state%timecontrol%isteps, &
            ioutdat => state%timecontrol%ioutdat, &
            ioutdatint => state%timecontrol%ioutdatint, &
+           outdat => state%timecontrol%outdat, &
+           outdatint => state%timecontrol%outdatint, &
            nprintcount => state%timecontrol%nprintcount, &
            rainrec => state%timecontrol%rainrec, &
            wrecord => state%timecontrol%wrecord, &

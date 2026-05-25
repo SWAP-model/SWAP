@@ -56,7 +56,7 @@ contains
       !   state%crop%wofost%swbulb, state%crop%grass%swpotrelmf, state%cfg%soil%frost%swfrost,
       !   state%cfg%general%project. `owltab` retained — still used as a CSV-staging buffer
       !   by config_to_variables; this file copies the buffer into state%drainage%owltab.
-      use variables, only : flswapshared, flTillage, flSSDI, owltab
+      use variables, only : flswapshared, flTillage, owltab
       ! [SS-GR-CROP A16] nutrient legacy globals — in WSN modules, not variables.f90
       use Wofost_Soil_Declarations, only: FOM_t, Bio_t, Hum_t, FOM_t0, Bio_t0, Hum_t0, &
                                           cNH4_t, cNO3_t, cNH4_t0, cNO3_t0, cNH4_av, cNO3_av, &
@@ -335,7 +335,7 @@ contains
 
    call tillage_init(state%tillage, state%mesh%numlay)  ! SS-TIL T-2
    if (flTillage) call DoTillage(1, state)
-   if (flSSDI)    call SSDI_irrigation(1, state)  ! [SS-SWC S-2.12B]
+   if (state%cfg%irrigation%swssdi == 1) call SSDI_irrigation(1, state)  ! [SS-SWC S-2.12B]
 
 !  Allocate and initialise heat state arrays before SoilWater(1) so that
 !  hconduc can read state%heat%tsoil(node) during hydraulic-conductivity init.
@@ -430,7 +430,7 @@ contains
    subroutine swap_run_step(state, config)
       ! [GR-CROP 2026-05-25] crop legacy reads cut to state%crop%common (flCropNut/
       !   flCropCalendar/flHarvestDay/flCropOutput/swcrp); swfrost via state%cfg%soil%frost.
-      use variables, only : flswapshared, flTillage, flSSDI
+      use variables, only : flswapshared, flTillage
       use cropgrowth_helpers_mod, only: CropOutput  ! GR-CROPWS Phase 0
       use timestep_control_mod, only: fldecdt
       use timecontrol_mod, only: timecontrol_advance, timecontrol_reduce_dt, &
@@ -597,7 +597,7 @@ contains
 
 !        Better here: check if subsurface irrigation is required for next day,
 !                     and determine if time step needs to be changed due to dt_SSDI_event
-         if (flSSDI) call SSDI_irrigation(2, state)  ! [SS-SWC S-2.12B]
+         if (state%cfg%irrigation%swssdi == 1) call SSDI_irrigation(2, state)  ! [SS-SWC S-2.12B]
          call timecontrol_day_end(state)
 
       end if

@@ -115,6 +115,11 @@ module timecontrol_state_mod
       integer :: cntper      = 0  !! day number within current output period
       integer :: ioutdat     = 0  !! counter for balance output dates
       integer :: ioutdatint  = 0  !! counter for intermediate output dates
+      ! [GR-TIME 2026-05-25] Output-date schedules — populated by the config
+      ! adapter (populate_outdatint_monthly for swmonth=1; otherwise stay
+      ! zero-allocated). Read by timecontrol_advance to trigger output dumps.
+      real(real64), allocatable :: outdat(:)     !! Output dates for water/solute balances
+      real(real64), allocatable :: outdatint(:)  !! Intermediate output dates
       integer :: rainrec     = 0  !! rain-event record index (for sub-daily rain)
       integer :: wrecord     = 0  !! detailed meteo record index within day
 
