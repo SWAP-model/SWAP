@@ -7,10 +7,13 @@ subroutine test_roundtrip_numeric()
    use csv_writer_mod,  only: csv_writer_t
    use csv_reader_mod,  only: read_csv_table
    use error_mod,       only: error_collection_t
+   use file_io_mod,     only: file_delete
    type(csv_writer_t)        :: w
    real(real64), allocatable :: table(:,:)
    type(error_collection_t)  :: errors
    character(len=*), parameter :: path = 'test_csv_writer_rt.csv'
+
+   call file_delete(path)
 
    ! write a known 3x2 matrix (no meta, no units -> reader can parse it back)
    call w%open(path, errors)
@@ -28,19 +31,24 @@ subroutine test_roundtrip_numeric()
    @assertEqual(-100.0_real64, table(1, 1), 1.0e-4_real64)
    @assertEqual(   1.5_real64, table(2, 2), 1.0e-4_real64)
    @assertEqual(   9.0_real64, table(3, 2), 1.0e-4_real64)
+
+   call file_delete(path)
 end subroutine
 
 @test
-subroutine test_leading_string_and_trailing_comma()
+subroutine test_leading_string_no_trailing_comma()
    use funit
    use iso_fortran_env, only: real64
    use csv_writer_mod,  only: csv_writer_t
    use error_mod,       only: error_collection_t
+   use file_io_mod,     only: file_delete
    type(csv_writer_t)       :: w
    type(error_collection_t) :: errors
    character(len=*), parameter :: path = 'test_csv_writer_lead.csv'
    integer :: u, ios
    character(len=256) :: hdr, rec
+
+   call file_delete(path)
 
    call w%open(path, errors)
    call w%header(['DATETIME', 'RAIN    '])
@@ -53,6 +61,8 @@ subroutine test_leading_string_and_trailing_comma()
    close(u)
    ! no trailing comma, leading datetime present
    @assertEqual('1980-04-24,12.50000', trim(adjustl(rec)))
+
+   call file_delete(path)
 end subroutine
 
 @test
@@ -64,4 +74,17 @@ subroutine test_fmt_real_switches_to_exponential()
    @assertTrue(index(trim(fmt_real_for_test(1.0e-6_real64)), 'E') > 0)
    @assertTrue(index(trim(fmt_real_for_test(1.0e6_real64)),  'E') > 0)
    @assertEqual('1.23450', trim(adjustl(fmt_real_for_test(1.2345_real64))))
+end subroutine
+
+@test
+subroutine test_open_failure()
+   use funit
+   use csv_writer_mod,  only: csv_writer_t
+   use error_mod,       only: error_collection_t, ERR_IO_OPEN_FAILED
+   type(csv_writer_t)       :: w
+   type(error_collection_t) :: errors
+
+   call w%open('/no/such/dir/csvw.csv', errors)
+   @assertTrue(errors%has_errors())
+   @assertEqual(ERR_IO_OPEN_FAILED, errors%items(1)%code)
 end subroutine

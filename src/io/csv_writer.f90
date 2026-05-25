@@ -39,7 +39,7 @@ contains
       character(len=*),         intent(in)    :: path
       type(error_collection_t), intent(inout) :: errors
       integer :: ios
-      call file_open(self%unit, path, 'unknown', 'readwrite', iostat=ios)
+      call file_open(self%unit, path, 'replace', 'write', iostat=ios)
       if (ios /= 0) then
          call errors%append(ERR_IO_OPEN_FAILED, &
             "cannot open CSV for write: " // trim(path), 'csv_writer')
@@ -52,6 +52,7 @@ contains
       class(csv_writer_t), intent(inout) :: self
       character(len=*),    intent(in)    :: lines(:)
       integer :: i
+      if (self%unit == -1) return
       do i = 1, size(lines)
          write(self%unit, '(A)') '* ' // trim(lines(i))
       end do
@@ -62,6 +63,7 @@ contains
       class(csv_writer_t), intent(inout) :: self
       character(len=*),    intent(in)    :: names(:)
       character(len=*),    intent(in), optional :: units(:)
+      if (self%unit == -1) return
       self%ncols = size(names)
       write(self%unit, '(A)') join(names)
       if (present(units)) write(self%unit, '(A)') join(units)
@@ -74,6 +76,7 @@ contains
       character(len=*),    intent(in), optional :: leading
       character(len=:), allocatable :: line
       integer :: j
+      if (self%unit == -1) return
       line = ''
       if (present(leading)) line = trim(leading) // ','
       do j = 1, size(values)
