@@ -237,5 +237,111 @@
       })();
     </script>
 
+    {% if search %}
+    <script src="https://unpkg.com/lunr@2.3.9/lunr.min.js"
+            integrity="sha384-jHjQy43yPI0lvtq28QhFAehv4OmtPq2VxlfFwkQbvjbflnpKAEhmJgsg5SADQyrf"
+            crossorigin="anonymous"></script>
+    <script>
+      // Inline typeahead search backed by FORD's existing search_database.json.
+      (function () {
+        var input   = document.getElementById('swap-search-input');
+        var results = document.getElementById('swap-search-results');
+        if (!input || !results) return;
+
+        var idx = null, pageMap = null, loaded = false, loading = false;
+        var dbUrl = '{{ project_url }}/search/search_database.json';
+
+        function loadDb() {
+          if (loaded || loading) return;
+          loading = true;
+          fetch(dbUrl).then(function (r) { return r.text(); }).then(function (txt) {
+            var data = JSON.parse(txt.replace(/^var tipuesearch\s*=\s*/, ''));
+            pageMap = data.pages;
+            idx = lunr(function () {
+              this.ref('id');
+              this.field('title', { boost: 10 });
+              this.field('text');
+              this.field('tags', { boost: 5 });
+              var self = this;
+              pageMap.forEach(function (p, i) {
+                self.add({
+                  id:    i,
+                  title: p.title || '',
+                  text:  p.text  || '',
+                  tags:  p.tags  || ''
+                });
+              });
+            });
+            loaded = true; loading = false;
+            // If the user typed something while we were loading, re-query.
+            if (input.value) run(input.value);
+          }).catch(function (err) {
+            loading = false;
+            console.error('search db load failed:', err);
+          });
+        }
+
+        function escapeHtml(s) {
+          return String(s).replace(/[&<>"']/g, function (c) {
+            return ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c];
+          });
+        }
+
+        function snippet(text, query) {
+          if (!text) return '';
+          var i = text.toLowerCase().indexOf(query.toLowerCase());
+          if (i < 0) return text.slice(0, 100) + (text.length > 100 ? '…' : '');
+          var start = Math.max(0, i - 40);
+          var end   = Math.min(text.length, i + query.length + 60);
+          return (start > 0 ? '…' : '') + text.slice(start, end) + (end < text.length ? '…' : '');
+        }
+
+        function run(q) {
+          if (!loaded) return;
+          q = q.trim();
+          if (!q) { hide(); return; }
+          var hits;
+          try { hits = idx.search(q + '*'); }
+          catch (e) { hits = []; }
+          hits = hits.slice(0, 8);
+          if (!hits.length) {
+            results.innerHTML = '<div class="swap-search-empty">No matches for "' + escapeHtml(q) + '"</div>';
+          } else {
+            results.innerHTML = hits.map(function (h, i) {
+              var p = pageMap[parseInt(h.ref, 10)];
+              return '<a href="' + escapeHtml(p.url) + '"' + (i === 0 ? ' class="is-active"' : '') + '>' +
+                       '<div class="swap-search-title">' + escapeHtml(p.title || p.url) + '</div>' +
+                       '<div class="swap-search-snippet">' + escapeHtml(snippet(p.text, q)) + '</div>' +
+                     '</a>';
+            }).join('');
+          }
+          results.hidden = false;
+        }
+
+        function hide() { results.hidden = true; }
+
+        input.addEventListener('focus',  loadDb);
+        input.addEventListener('input',  function () { run(input.value); });
+        input.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter') {
+            var first = results.querySelector('a');
+            if (first) { e.preventDefault(); window.location.href = first.href; }
+          } else if (e.key === 'Escape') {
+            hide(); input.blur();
+          }
+        });
+        document.addEventListener('click', function (e) {
+          if (!results.contains(e.target) && e.target !== input) hide();
+        });
+        document.addEventListener('keydown', function (e) {
+          if (e.key === '/' && !/^(input|textarea|select)$/i.test(document.activeElement.tagName)) {
+            e.preventDefault();
+            input.focus();
+          }
+        });
+      })();
+    </script>
+    {% endif %}
+
   </body>
 </html>
