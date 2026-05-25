@@ -264,8 +264,9 @@ module legacy_state_mod
       ! body extracted to src/crop/dormant/jongvanlier.f90.
       ! [GR-DRA 2026-05-23] kvbot retired — see state%drainage%kvbot
       ! [GR-DRA 2026-05-23] kvtop retired — see state%drainage%kvtop
-      real(real64), allocatable :: OxygenIntercept(:)  !! Parameters of reproduction function for oxygen stress according to Bartholomeus
-      real(real64), allocatable :: OxygenSlope(:)  !! Parameters of reproduction function for oxygen stress according to Bartholomeus
+      ! [GR-CROP 2026-05-25] OxygenIntercept/OxygenSlope retired —
+      ! consumed only by OxygenReproFunction, now dormant
+      ! (src/crop/dormant/oxygenrepro.f90); zero live readers/writers.
       ! [GR-CROP 2026-05-25] paramvg retired — tillage now mutates state%soilwater%vg_params_layer(:).
       ! [GR-BND 2026-05-23] pondmxtab retired — see state%surfacewater%pondmxtab
       ! [GR-BND 2026-05-23] qbotab retired — see state%soilwater%qbotab

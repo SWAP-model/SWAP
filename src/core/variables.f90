@@ -913,8 +913,10 @@
       ! real(8)   mflux(macp)        ! Actual matric flux potential of each node (L2/T)
       ! [SS-CRP] retired 2026-05-11 — moved to state%soilwater%mroot (ADR 0036)
       ! real(8)   mroot(macp)        ! Matrix flux head of a compartment at the root-soil interface (L2/T)
-      real(8)   OxygenIntercept(6) ! Parameters of reproduction function for oxygen stress according to Bartholomeus
-      real(8)   OxygenSlope(6)     ! Parameters of reproduction function for oxygen stress according to Bartholomeus
+      ! [GR-CROP 2026-05-25] OxygenIntercept(6)/OxygenSlope(6) retired —
+      ! they fed only `OxygenReproFunction` (the swoxygen=2/swoxygentype=2
+      ! reproduction-function path) which is now dormant
+      ! (src/crop/dormant/oxygenrepro.f90); zero live readers/writers.
       ! [GR-CROP 2026-05-25] paramvg retired — tillage.f90 now mutates the typed
       !   per-layer store state%soilwater%vg_params_layer(:) (vanGenuchten_params_t)
       !   directly and rebuilds per-node vg_params(:) from it after each event.
