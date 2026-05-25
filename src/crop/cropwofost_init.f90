@@ -60,43 +60,13 @@ module cropwofost_init_mod
 contains
 
    subroutine cropwofost_init_from_config(cfg, icrop, FraDeceasedLvToSoil, state)
-      ! [SS-GR-FINAL B7] DEFERRED: all symbols are config→globals copy targets.
-      !   Retirement requires Phase C3 adapter rewrite (config_to_variables.f90 dual-writes).
+      ! [GR-CROP 2026-05-25] crop-sweep: surviving legacy globals are cross-file with
+      ! cropwofost_runtime / cropgrowth dispatcher; retired in Task 9.
       use variables, only: &
-         ! ET / crop factor — DEFERRED Phase C3
-         ! cftb/chtb/albedo/rsc/rsw/swcf retired
-         ! Development — DEFERRED Phase C3; tsumea/tsumam retired
-         idsl, dlo, dlc,                                                    &  ! dtsmtb retired
-         ! [GR-CROP 2026-05-25] vern* migrated to cw_vern* module SAVE in this file.
-         ! Initial crop state — DEFERRED Phase C3
-         ! tdwi/laiem/rgrlai retired
-         ! Green area / assimilation — DEFERRED Phase C3; tbase retired
-         ! slatb/spa/ssa/span retired
-         ! kdif/kdir/eff/amaxtb/tmpftb/tmnftb retired
-         ! Biomass conversion — DEFERRED Phase C3
-         ! cvl/cvo/cvr/cvs retired
-         ! Maintenance respiration — DEFERRED Phase C3
-         ! q10/rml/rmo/rmr/rms/rfsetb retired
-         ! Partitioning / death rates — DEFERRED Phase C3
-         ! frtb/fltb/fstb/fotb retired
-         ! rdrrtb/rdrstb/perdl retired
-         ! Oxygen stress — DEFERRED Phase C3; swoxygen retired
-         ! hlim1/hlim2u/hlim2l/swWrtNonox/aeratecrit retired
-         ! Drought stress — DEFERRED Phase C3
-         ! hlim3h/hlim3l/hlim4/adcrh/adcrl/swdrought retired
-         ! Salinity — DEFERRED Phase C3; swsalinity retired
-         ! saltmax/saltslope/salthead retired — state%crop%common
-         ! Compensation — DEFERRED Phase C3
-         ! swcompensate/swstressor retired
-         ! Interception — DEFERRED Phase C3; swinter/cofab retired
-         ! Root depth — DEFERRED Phase C3
-         ! rdctb/rdtb/rlwtb/wrtmax/swrd/swdmi2rd/swrdc/cumdens retired
-         ! Harvest — DEFERRED Phase C3; dvsend/swharv retired
-         swpotrelmf,                                                          &  ! relmf retired
-         ! Irrigation schedule — DEFERRED Phase C3
-         ! schedule retired
-         ! Active crop dynamics (written during init) — DEFERRED Phase C3; dvs/tsum retired
-         daycrop, flCropNut  ! nofd retired — state%atmosphere%nofd canonical
+         idsl, dlo, dlc,                                                    &  ! cross-file phenology with cropgrowth + runtime
+         swpotrelmf,                                                        &  ! cross-file with swap_mod (legacy InitSwap mirror)
+         daycrop,                                                           &  ! cross-file with cropgrowth (InitializeCrop legacy zero)
+         flCropNut                                                          ! cross-file with cropgrowth + runtime
       use array_utils, only: afgen
       use error_mod,   only: fatalerr_collected
       use swap_state_mod, only: swap_state_t
@@ -105,7 +75,7 @@ contains
       type(cropwofost_config_t), intent(in)    :: cfg
       integer,                   intent(in)    :: icrop  ! rotation slot (reserved)
       real(real64),              intent(out)   :: FraDeceasedLvToSoil
-      type(swap_state_t),        intent(inout) :: state  ! [SS-GR-ATM A5.1] runtime dual-write target
+      type(swap_state_t),        intent(inout) :: state
 
       integer      :: i
       real(real64) :: depth, sum_dens
@@ -446,7 +416,7 @@ contains
       ! Management (readwofost lines 2979-2988)
       state%crop%grass%relmf      = cfg%management%relmf
       swpotrelmf = cfg%management%swpotrelmf
-      state%crop%grass%swpotrelmf = swpotrelmf ! [SS-GR-CROP A5.2]
+      state%crop%grass%swpotrelmf = swpotrelmf
 
       ! FraDeceasedLvToSoil — local SAVE in wofost(), returned via intent(out)
       ! so the dispatch block can assign it.  (FraHarLosOrm_* are set by
@@ -498,14 +468,14 @@ contains
       state%crop%common%tsum    = 0.0d0
       daycrop = 0
       state%atmosphere%nofd    = 0  ! [GR-CROP 2026-05-25] nofd retired → state%atmosphere
-      state%crop%common%daycrop = daycrop ! [SS-GR-CROP A5.2]
+      state%crop%common%daycrop = daycrop
 
       ! [nutrients] N3: drive the legacy global flCropNut from the
       ! per-rotation typed config. cropwofost_init_from_config runs at
       ! every rotation start, so a sequence of rotations with mixed
       ! flcropnut values toggles the gate correctly.
       flCropNut = cfg%nutrient%flcropnut
-      state%crop%common%flCropNut = flCropNut ! [SS-GR-CROP A5.2]
+      state%crop%common%flCropNut = flCropNut
       if (flCropNut) call apply_cropwofost_nutrient(cfg%nutrient)
 
    end subroutine cropwofost_init_from_config
