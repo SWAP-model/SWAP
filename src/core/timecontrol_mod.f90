@@ -19,18 +19,9 @@ contains
       ! [GR-CROP C1] flCropCalendar/icrop: dual-write to both legacy global + state%crop%common%X
       ! [SS-GR-FINAL B8] DEFERRED: all symbols — init-path config/flags; no state home yet; Phase C3
       use swap_log, only: log_warn
-      use variables, only: &
-                            ! DEFERRED: flCropCalendar — crop flag dual-write; Phase C3
-                            flCropCalendar, &
-                            ! DEFERRED: swirfix/swsnow/swhea/swsolu — model-feature switches; Phase C3; swdra retired
-                            swirfix, swsnow, &
-                            swhea, swsolu, &
-                            ! DEFERRED: swetsine/swrain/swmetdetail/nmetdetail — meteo switches; Phase C3
-                            swetsine, &
-                            ! DEFERRED: nirri/icrop/cropstart/croptype/project — crop/run config; Phase C3
-                            ! [GR-SOL 2026-05-24] swinco retired — via state%soilwater%swinco
-                            nirri, icrop, &
-                            cropstart, project   ! croptype → state%crop%common
+      ! [GR-CROP 2026-05-25] flCropCalendar/icrop/cropstart/project → state/config reads.
+      ! DEFERRED: swirfix/swsnow/swhea/swsolu/swetsine/nirri — model-feature switches; Phase C3
+      use variables, only: swirfix, swsnow, swhea, swsolu, swetsine, nirri
       use timestep_control_mod, only: fldecdt
       use error_mod, only: fatalerr_collected
       implicit none
@@ -224,7 +215,7 @@ contains
 ! --- output to screen
       if (swscre .eq. 2) then
         filtext = 'Screen output of daynumbers'
-        call writehead (5,1,'screen',filtext,project)
+        call writehead (5,1,'screen',filtext,state%cfg%general%project)
         call dtdpst ('year-month-day',tstart,date)
         write (*,'(2x,2a)') 'First day of simulation:  ',date
         call dtdpst ('year-month-day',tend,date)
@@ -232,35 +223,30 @@ contains
         write (*,'(/,a,/)') '            date  daynr  daycum'
       endif
 
-! -   set crop number
-      icrop = 1
-      state%crop%common%icrop = icrop   ! [GR-CROP C1] dual-write
-      do while (.not. flCropCalendar)
+! -   set crop number [GR-CROP 2026-05-25] state-only writes; cropstart from config
+      state%crop%common%icrop = 1
+      do while (.not. state%crop%common%flCropCalendar)
 
-        if (cropstart(icrop) .lt. 1.d0) exit
+        if (state%cfg%crop%rotation_start(state%crop%common%icrop) .lt. 1.d0) exit
 
-        if (abs(tstart - cropstart(icrop)) .lt. 1.d-3) then
-          flCropCalendar = .true.
-          state%crop%common%flCropCalendar = flCropCalendar   ! [GR-CROP C1] dual-write
-          if (flCropCalendar) then
-            if (tstart - cropstart(icrop) .lt. -1.d-3 .and.             &
+        if (abs(tstart - state%cfg%crop%rotation_start(state%crop%common%icrop)) .lt. 1.d-3) then
+          state%crop%common%flCropCalendar = .true.
+          if (tstart - state%cfg%crop%rotation_start(state%crop%common%icrop) .lt. -1.d-3 .and. &
      &                                              state%soilwater%swinco .ne. 3) then
-              messag = 'The start of simulation (tstart) begins in '//  &
-     &        'crop growing season with swinco 1 or 2'
-              call fatalerr_collected ('readswap',messag)
-            endif
-          end if
+            messag = 'The start of simulation (tstart) begins in '//  &
+     &      'crop growing season with swinco 1 or 2'
+            call fatalerr_collected ('readswap',messag)
+          endif
         else
-          icrop = icrop + 1
-          state%crop%common%icrop = icrop   ! [GR-CROP C1] dual-write
+          state%crop%common%icrop = state%crop%common%icrop + 1
         end if
       enddo
 
 ! --- detailed meteo data needed for crop growth?
       swmeteo = 1
-      if (flCropCalendar) then
-        if (icrop .gt. 0) then
-          if(state%crop%common%croptype(icrop).ge.2) then
+      if (state%crop%common%flCropCalendar) then
+        if (state%crop%common%icrop .gt. 0) then
+          if(state%crop%common%croptype(state%crop%common%icrop).ge.2) then
              swmeteo = 2
           endif
         endif
@@ -326,19 +312,9 @@ contains
       ! [GR-CROP Phase B] raintimearray migrated → state%atmosphere%raintimearray via associate.
       ! [GR-CROP C1] flCropCalendar/flCropOutput/icrop: reads from state%crop%common%X; writes dual to state+legacy
       ! [SS-GR-FINAL B8] DEFERRED: all residual symbols; Phase C3
-      use variables, only: &
-                            ! DEFERRED: outdat/outdatint — output date arrays, still in variables; Phase C3
-                            outdat, outdatint, &
-                            ! DEFERRED: flCropCalendar/flCropOutput/flCropHarvest — crop flags dual-write; Phase C3
-                            flCropCalendar, flCropOutput, &
-                            ! DEFERRED: swrain/swmetdetail — meteo switches; Phase C3
-                            flCropHarvest, &
-                            ! DEFERRED: croptype/icrop — crop schedule globals; Phase C3
-                            icrop, &   ! croptype → state%crop%common
-                            ! [GR-CROP 2026-05-25] dt_SSDI_event migrated → state%crop%irrigation%dt_SSDI_event
-                            ! DEFERRED: flSSDI — SSDI feature gate; Phase C3
-                            ! [GR-SOIL 2026-05-24] numbit dropped — now state%soilwater%numbit
-                            flSSDI  ! [GR-CROP Phase B] raintimearray retired from here
+      ! [GR-CROP 2026-05-25] flCropCalendar/flCropOutput/flCropHarvest/icrop → state%crop%common.
+      ! DEFERRED: outdat/outdatint — output date arrays still in variables; Phase C3
+      use variables, only: outdat, outdatint, flSSDI
 
       use irrigation_mod, only: SSDI_irrigation
       use error_mod, only: fatalerr_collected
@@ -453,13 +429,11 @@ contains
 
       if (flDayStart) then
 
-! ---   set crop conditions
-        if (flCropCalendar) then
-          flCropOutput = .true.                               ! legacy global
-          state%crop%common%flCropOutput = .true.            ! [GR-CROP C1] state mirror
-          if (flCropHarvest) then
-            flCropOutput = .false.                           ! legacy global
-            state%crop%common%flCropOutput = .false.         ! [GR-CROP C1] state mirror
+! ---   set crop conditions  [GR-CROP 2026-05-25] state-only
+        if (state%crop%common%flCropCalendar) then
+          state%crop%common%flCropOutput = .true.
+          if (state%crop%common%flCropHarvest) then
+            state%crop%common%flCropOutput = .false.
           endif
         endif
 
@@ -745,9 +719,9 @@ contains
           daymeteo = 1
 ! ---     detailed meteo data needed for crop growth?
           swmeteo = 1
-          if (flCropCalendar) then
-            if (icrop .gt. 0) then
-              if (state%crop%common%croptype(icrop).ge.2) then
+          if (state%crop%common%flCropCalendar) then
+            if (state%crop%common%icrop .gt. 0) then
+              if (state%crop%common%croptype(state%crop%common%icrop).ge.2) then
                 swmeteo = 2
               endif
             endif
