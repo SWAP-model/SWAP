@@ -47,12 +47,45 @@ module crop_state_mod
 
 contains
 
-   subroutine crop_state_init(self, crop_cfg)
-      use crop_config_mod, only: crop_config_t
-      class(crop_state_t),  intent(inout) :: self
-      type(crop_config_t),  intent(in)    :: crop_cfg
-      ! Defaults retained from type initializers; runtime seeders update
-      ! each timestep. crop_cfg arg reserved for future seed migration.
+   subroutine crop_state_init(self, crop_cfg, meteo_cfg, pathwork_in)
+      use crop_config_mod,              only: crop_config_t
+      use crop_config_global_mod,       only: crop_config_global
+      use meteorology_config_mod,       only: meteorology_config_t
+      class(crop_state_t),         intent(inout) :: self
+      type(crop_config_t), target, intent(in)    :: crop_cfg
+      type(meteorology_config_t),  intent(in)    :: meteo_cfg
+      character(len=*),            intent(in)    :: pathwork_in
+      integer :: i
+
+      ! [GR-SEED 2026-05-25 Task 10] Absorbed from config_to_variables adapter:
+
+      ! 1. swcrop==1 flags: arm per-rotation reader gates so cropgrowth.f90's
+      !    per-crop init (ArableLandGerm/CropFixed/Wofost/Grass) actually fires.
+      !    Without this, flCropReadFile stays .false. and every rotation is treated
+      !    as bare soil: LAI/cf/rd remain 0, TPOT/TACT collapse.
+      if (crop_cfg%swcrop == 1) then
+         self%common%flCropReadFile = .true.
+         self%common%flCropOpenFile = .true.
+      end if
+
+      ! 2. rotation_type → state%crop%common%croptype
+      if (allocated(crop_cfg%rotation_type)) then
+         if (.not. allocated(self%common%croptype)) then
+            allocate(self%common%croptype(size(crop_cfg%rotation_type)))
+         end if
+         do i = 1, size(crop_cfg%rotation_type)
+            self%common%croptype(i) = crop_cfg%rotation_type(i)
+         end do
+      end if
+
+      ! 3. Evaporation cfbs (deferred from Task 2)
+      self%cfbs = meteo_cfg%evaporation%cfbs
+
+      ! 4. Legacy crop_config_global pointer (transitional — ADR 0016)
+      crop_config_global => crop_cfg
+
+      ! pathwork_in reserved for future CSV seed migration (consistency with sibling inits).
+      ! Not consumed yet; gfortran does not warn on unused dummy args by default.
    end subroutine crop_state_init
 
 end module crop_state_mod

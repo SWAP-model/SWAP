@@ -121,6 +121,11 @@ contains
    ! [GR-FINAL C1] state%timecontrol%iyear/imonth/dt now written directly by
    ! config_to_variables (tc_*_init_buf buffers retired).
 
+   ! [GR-SEED 2026-05-25 Task 10] Crop seeding must run BEFORE timecontrol_init
+   ! because timecontrol_init reads state%crop%common%croptype(icrop) at line ~252.
+   ! (croptype, flCropReadFile/flCropOpenFile, cfbs, crop_config_global all set here.)
+   call state%crop%init(config%crop, config%meteo, config%general%pathwork)  ! [GR-SEED 2026-05-25 Task 10]
+
 !  shared simulation
    ! [GR-IO 2026-05-25 Phase 6] SharedSimulation(1) deleted — flag was hardcoded false.
 

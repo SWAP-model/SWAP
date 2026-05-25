@@ -70,8 +70,6 @@ contains
       type(swap_config_t), intent(inout), target :: config  ! target: state%cfg => config pointer; inout retained for other callee mutations
       type(swap_state_t),  intent(inout)         :: state
 
-      integer :: i, n
-
       ! ---------------------------------------------------------------
       ! General + simulation + numerical (audit: 18 fields)
       ! [GR-SEED 2026-05-25] Task 1 — absorbed by state%timecontrol%init.
@@ -85,8 +83,7 @@ contains
 
       ! Evaporation sub-section
       ! [GR-IO 2026-05-25 Phase 6 Step 3] swcfbs legacy mirror dropped
-      ! [SS-T10] Deferred — will move into state%crop%init
-      state%crop%cfbs = config%meteo%evaporation%cfbs
+      ! [GR-SEED 2026-05-25 Task 10] cfbs moved to state%crop%init (called from swap_mod).
       ! [GR-ATM 2026-05-23] swredu/cofred/rsigni/cfevappond retired —
       ! snapshotted into state%atmosphere by atmosphere_state%init(config);
       ! compute reads from state, never from these legacy globals.
@@ -252,45 +249,17 @@ contains
       ! moved to state%surfacewater%init (called from swap_mod).
 
       ! ---------------------------------------------------------------
-      ! Crop (audit: ~110 fields). The strangler adapter only handles
-      ! the rotation table globals that readswap reads at startup —
-      ! per-rotation type-specific fields go into legacy globals during
-      ! cropgrowth.f90's per-rotation init (Phase 4g territory).
       ! ---------------------------------------------------------------
-      ! [GR-FINAL C4] swCrop write dropped (W-global; 0 external consumers).
-      ! Mirror readswap.f90:479-480 — when crop simulation is enabled,
-      ! arm the per-rotation reader gates so cropgrowth.f90's per-crop
-      ! init (ArableLandGerm/CropFixed/Wofost/Grass at lines 91 / 121)
-      ! actually fires. Without this, flCropReadFile stays .false. (the
-      ! Initialize() default) and every rotation is treated as bare soil:
-      ! LAI/cf/rd remain 0, TPOT/TACT collapse, and EACT/DRAINAGE balloon.
-      if (config%crop%swcrop == 1) then
-         state%crop%common%flCropReadFile = .true.   ! [GR-CROP 2026-05-25] flCropReadFile retired
-         state%crop%common%flCropOpenFile = .true.   ! [GR-CROP 2026-05-25] flCropOpenFile → state%crop%common
-      end if
-
+      ! Crop (audit: ~110 fields)
+      ! ---------------------------------------------------------------
+      ! [GR-SEED 2026-05-25 Task 10] Crop seeding (cfbs, swcrop flags, croptype,
+      ! crop_config_global pointer) moved to state%crop%init (called from swap_mod).
       ! [GR-IO 2026-05-25 Phase 6 Step 3] rdmax legacy mirror dropped
-
-      if (allocated(config%crop%rotation_type)) then
-         n = size(config%crop%rotation_type)
-         ! [GR-ATM 2026-05-23] allocate + populate state%crop%common%croptype
-         allocate(state%crop%common%croptype(n))
-         state%crop%common%croptype = config%crop%rotation_type
-      end if
       ! [GR-CROP 2026-05-25] cropstart/cropend legacy global arrays retired —
       ! readers now consume config%crop%rotation_start/rotation_end directly via
       ! state%cfg%crop. No mirror copy needed.
       ! [GR-CROP 2026-05-25] cropfil legacy array retired — readers consume
       ! config%crop%rotation_file (state%cfg%crop%rotation_file) directly.
-
-      ! Phase 1 (.crp port): expose the parsed crop config to runtime
-      ! subs that need per-rotation cache access. Transitional — see
-      ! ADR 0016. The pointer targets the caller's local config; valid
-      ! for the duration of the simulation init.
-      block
-         use crop_config_global_mod, only: crop_config_global
-         crop_config_global => config%crop
-      end block
 
       ! ---------------------------------------------------------------
       ! ADR 0009 retired output switches — W-globals zeroed by initialize.f90
