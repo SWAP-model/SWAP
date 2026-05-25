@@ -209,6 +209,111 @@ module timecontrol_state_mod
       logical :: flZeroIntr     = .false.  !! reset gate: intermediate accumulators
       logical :: flZeroCumu     = .false.  !! reset gate: cumulative accumulators
 
+   contains
+      procedure :: init => timecontrol_state_init
    end type timecontrol_state_t
+
+contains
+
+   !> Seed runtime time-control state from typed config.
+   !!
+   !! Computes iyear/imonth from tstart via dtdpar() (mirrors readswap.f90:126-128).
+   !! Allocates outdat/outdatint to MAOUT and zero-fills (consumed by
+   !! timecontrol_advance to gate output dumps). When config_simulation%swmonth==1,
+   !! populates outdatint with end-of-month dates via populate_outdatint_monthly
+   !! and forces period/swres/swodat = 0 (legacy behaviour).
+   subroutine timecontrol_state_init(self, config_simulation, config_general)
+      use simulation_config_mod, only: simulation_config_t
+      use general_config_mod,    only: general_config_t
+      use swap_array_dimensions, only: maout
+      class(timecontrol_state_t),  intent(inout) :: self
+      type(simulation_config_t),   intent(in)    :: config_simulation
+      type(general_config_t),      intent(in)    :: config_general
+      integer :: datea_init(6)
+      real    :: fsec_init
+
+      ! General — screen-/result-file switches
+      self%swscre = config_general%swscre
+
+      ! Simulation — clock window + output cadence + numerical solver
+      self%tstart    = config_simulation%tstart
+      self%tend      = config_simulation%tend
+      self%nprintday = config_simulation%nprintday
+      self%period    = config_simulation%period
+      self%swres     = config_simulation%swres
+      self%swodat    = config_simulation%swodat
+
+      ! Numerical (sub-record)
+      self%dt    = config_simulation%numerical%dt
+      self%dtmin = config_simulation%numerical%dtmin
+      self%dtmax = config_simulation%numerical%dtmax
+      self%MaxIt = config_simulation%numerical%MaxIt
+      self%msteps = config_simulation%numerical%msteps
+      ! Not in schema — defaults match legacy.
+      self%MaxIterTime   = 0
+      self%flMaxIterTime = .false.
+
+      ! Derive iyear/imonth from tstart (mirrors readswap.f90:126-128).
+      call dtdpar(self%tstart + 0.1d0, datea_init, fsec_init)
+      self%iyear  = datea_init(1)
+      self%imonth = datea_init(2)
+
+      ! Output-date schedules — allocate to legacy cap, zero-fill.
+      if (.not. allocated(self%outdat))    allocate(self%outdat(maout))
+      if (.not. allocated(self%outdatint)) allocate(self%outdatint(maout))
+      self%outdat    = 0.0_real64
+      self%outdatint = 0.0_real64
+
+      ! Monthly output: populate end-of-month dates + clobber daily-period switches.
+      if (config_simulation%swmonth == 1) then
+         call populate_outdatint_monthly(self%tend, self%iyear, self%imonth, &
+                                         self%outdatint)
+         self%period = 0
+         self%swres  = 0
+         self%swodat = 0
+      end if
+
+      ! Output switches: legacy forced to 0 by ADR 0009.
+      self%swheader = 0
+   end subroutine timecontrol_state_init
+
+   !> Populate `outdatint(:)` with the end-of-month dates between
+   !! `tstart` and `tend`. Mirrors `readswap.f90:181-204` (the
+   !! `swmonth == 1` branch). Relocated from config_to_variables_mod
+   !! as a module-private helper [GR-SEED 2026-05-25].
+   subroutine populate_outdatint_monthly(tend, iyear, imonth, outdatint)
+      real(real64), intent(in)    :: tend
+      integer,      intent(in)    :: iyear   !! start year
+      integer,      intent(in)    :: imonth  !! start month
+      real(real64), intent(inout) :: outdatint(:)
+      integer  :: datea_om(6), i_om
+      real     :: fsec_om
+      real(real64) :: outdate_om
+
+      datea_om = 0
+      datea_om(1) = iyear
+      datea_om(2) = imonth
+      if (datea_om(2) < 12) then
+         datea_om(2) = datea_om(2) + 1
+      else
+         datea_om(1) = datea_om(1) + 1
+         datea_om(2) = 1
+      end if
+      datea_om(3) = 1
+      fsec_om = 0.0
+      call dtardp(datea_om, fsec_om, outdate_om)
+      i_om = 0
+      do while ((outdate_om - 1.0d0) < (tend + 0.1d0))
+         i_om = i_om + 1
+         outdatint(i_om) = outdate_om - 1.0d0
+         if (datea_om(2) < 12) then
+            datea_om(2) = datea_om(2) + 1
+         else
+            datea_om(1) = datea_om(1) + 1
+            datea_om(2) = 1
+         end if
+         call dtardp(datea_om, fsec_om, outdate_om)
+      end do
+   end subroutine populate_outdatint_monthly
 
 end module timecontrol_state_mod

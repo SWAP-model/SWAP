@@ -58,7 +58,7 @@ contains
       ! 1-2 (no remaining readers). Size parameters now come from the
       ! canonical swap_array_dimensions module; everything else writes
       ! directly to state%X / config%X.
-      use swap_array_dimensions, only: macp, madr, maho, mairg, mamp, maout, mabbc
+      use swap_array_dimensions, only: macp, madr, maho, mairg, mamp, mabbc
       use swap_state_mod, only: swap_state_t
       use error_mod, only: fatalerr_collected
       type(swap_config_t), intent(inout), target :: config  ! [GR-SOIL 2026-05-24] inout: populates config%soil%initial%z_init from h_file CSV
@@ -67,73 +67,11 @@ contains
       integer :: i, n
 
       ! ---------------------------------------------------------------
-      ! General + simulation (audit: 11 fields)
+      ! General + simulation + numerical (audit: 18 fields)
+      ! [GR-SEED 2026-05-25] Task 1 — absorbed by state%timecontrol%init.
       ! ---------------------------------------------------------------
-      ! [GR-IO 2026-05-25 Phase 6 Step 3] project/pathwork/pathdrain legacy mirrors
-      ! retired — readers go through config%general%X (test_config_to_variables
-      ! updated in Step 2). pathatm/pathcrop already dropped in earlier phases.
-      state%timecontrol%swscre  = config%general%swscre
+      call state%timecontrol%init(config%simulation, config%general)
 
-      state%timecontrol%tstart    = config%simulation%tstart
-      state%timecontrol%tend      = config%simulation%tend
-      state%timecontrol%nprintday = config%simulation%nprintday
-      state%timecontrol%period    = config%simulation%period
-      state%timecontrol%swres     = config%simulation%swres
-      state%timecontrol%swodat    = config%simulation%swodat
-      ! flprintdt not in config schema — default to .false.
-      state%timecontrol%flprintdt = .false.
-
-      ! Derive iyear/imonth from tstart, matching legacy readswap.f90:126-128.
-      ! TimeControl(1) reads these as state (not as inputs) so the adapter
-      ! must populate them before TimeControl runs. Without this, dtardp
-      ! aborts with "year 0 or partial date not allowed" because iyear
-      ! was zero-initialized by Initialize().
-      block
-         integer :: datea_init(6)
-         real    :: fsec_init
-         call dtdpar(state%timecontrol%tstart + 0.1d0, datea_init, fsec_init)
-         state%timecontrol%iyear  = datea_init(1)  ! [GR-FINAL C1] written directly (tc_iyear_init_buf retired)
-         state%timecontrol%imonth = datea_init(2)  ! [GR-FINAL C1] written directly (tc_imonth_init_buf retired)
-      end block
-
-      ! Legacy finalize for swmonth=1 (mirrors readswap.f90:181-207):
-      ! when monthly output is on, populate outdatint(:) with end-of-month
-      ! dates and clobber the daily-period output fields. Without this the
-      ! CSV runs daily even though the .swp said "monthly", and the
-      ! regression aggregator averages state_vars (e.g. GWL) over 365
-      ! samples instead of 12 — producing a non-physical year-1 mean diff
-      ! ~2 cm. The simulation state is identical at every monthly endpoint;
-      ! only the sampling cadence differed. swmonth/swyrvar themselves are
-      ! locals in readswap (readswap.f90:16), no module global exists.
-      ! Must run AFTER iyear/imonth derivation above.
-      ! [GR-TIME 2026-05-25] outdat/outdatint moved into state%timecontrol.
-      ! Allocate to legacy MAOUT cap and zero so timecontrol_advance can
-      ! read them safely whether populate_outdatint_monthly fires or not.
-      if (.not. allocated(state%timecontrol%outdat))    allocate(state%timecontrol%outdat(maout))
-      if (.not. allocated(state%timecontrol%outdatint)) allocate(state%timecontrol%outdatint(maout))
-      state%timecontrol%outdat    = 0.0_real64
-      state%timecontrol%outdatint = 0.0_real64
-      if (config%simulation%swmonth == 1) then
-         call populate_outdatint_monthly(state%timecontrol%tend, &
-                                         state%timecontrol%iyear, &
-                                         state%timecontrol%imonth, &
-                                         state%timecontrol%outdatint)
-         state%timecontrol%period = 0
-         state%timecontrol%swres  = 0
-         state%timecontrol%swodat = 0
-      end if
-
-      ! ---------------------------------------------------------------
-      ! Simulation.numerical (audit: 6 fields)
-      ! ---------------------------------------------------------------
-      state%timecontrol%dt = config%simulation%numerical%dt  ! [GR-FINAL C1] written directly (tc_dt_init_buf retired)
-      state%timecontrol%dtmin = config%simulation%numerical%dtmin
-      state%timecontrol%dtmax = config%simulation%numerical%dtmax
-      state%timecontrol%MaxIt = config%simulation%numerical%MaxIt
-      ! MaxIterTime / flMaxIterTime not in config schema — default to 0 / .false.
-      state%timecontrol%MaxIterTime   = 0
-      state%timecontrol%flMaxIterTime = .false.
-      state%timecontrol%msteps        = config%simulation%numerical%msteps
       ! Meteorology (audit: 12 + evaporation + snow)
       ! ---------------------------------------------------------------
       ! [GR-IO 2026-05-25 Phase 3] metfil/pathatm legacy mirror writes dropped —
@@ -1093,7 +1031,7 @@ contains
       ! R-category (swrum, still read by swapoutput.f90).
       ! [SS-GR-CROPRT C1] swend (C-category) write dropped — global + state field retired (ADR 0009: always 0)
       ! ---------------------------------------------------------------
-      state%timecontrol%swheader = 0
+      ! [GR-SEED 2026-05-25] swheader = 0 moved into state%timecontrol%init.
       ! [GR-SOIL 2026-05-24] swcaprise legacy mirror dropped — now state%cfg%simulation%numerical%swcaprise.
       ! [SS-GR-CROPRT A3] swrum adapter write dropped — global retired (always 0; outrume calls dropped)
       ! [GR-FINAL C4] dropped W-globals (all zero by init.f90 or Fortran default):
@@ -1112,47 +1050,6 @@ contains
       ! 'swap_swap.log' via log_init() in swap_main.
 
    end subroutine config_to_variables
-
-   !> Populate `outdatint(:)` with the end-of-month dates between
-   !! `tstart` and `tend`. Mirrors `readswap.f90:181-204` (the
-   !! `swmonth == 1` branch). [GR-TIME 2026-05-25] outdatint now
-   !! passed explicitly as the array to write into (was the bare
-   !! `variables%outdatint`); the caller hands in
-   !! `state%timecontrol%outdatint`.
-   subroutine populate_outdatint_monthly(tend, iyear, imonth, outdatint)
-      real(real64), intent(in)    :: tend
-      integer,      intent(in)    :: iyear   !! start year
-      integer,      intent(in)    :: imonth  !! start month
-      real(real64), intent(inout) :: outdatint(:)
-      integer  :: datea_om(6), i_om
-      real     :: fsec_om
-      real(real64) :: outdate_om
-
-      datea_om = 0
-      datea_om(1) = iyear
-      datea_om(2) = imonth
-      if (datea_om(2) < 12) then
-         datea_om(2) = datea_om(2) + 1
-      else
-         datea_om(1) = datea_om(1) + 1
-         datea_om(2) = 1
-      end if
-      datea_om(3) = 1
-      fsec_om = 0.0
-      call dtardp(datea_om, fsec_om, outdate_om)
-      i_om = 0
-      do while ((outdate_om - 1.0d0) < (tend + 0.1d0))
-         i_om = i_om + 1
-         outdatint(i_om) = outdate_om - 1.0d0
-         if (datea_om(2) < 12) then
-            datea_om(2) = datea_om(2) + 1
-         else
-            datea_om(1) = datea_om(1) + 1
-            datea_om(2) = 1
-         end if
-         call dtardp(datea_om, fsec_om, outdate_om)
-      end do
-   end subroutine populate_outdatint_monthly
 
    !> Strip a trailing '.crp.toml' (or '.toml') suffix from a rotation
    !! file path, leaving the stem the legacy per-crop reader expects in
