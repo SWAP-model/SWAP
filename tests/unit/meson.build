@@ -149,6 +149,7 @@ if get_option('enable_pfunit')
         '../../src/state/crop_wofost_state.f90',
         '../../src/state/crop_grass_state.f90',
         '../../src/state/crop_irrigation_state.f90',
+        '../../src/state/crop_oxygen_state.f90',
         '../../src/state/crop_state.f90',
         '../../src/state/nutrients_state.f90',
         '../../src/state/legacy_state.f90',

@@ -10,6 +10,7 @@ module crop_state_mod
    use crop_wofost_state_mod,      only: crop_wofost_state_t
    use crop_grass_state_mod,       only: crop_grass_state_t
    use crop_irrigation_state_mod,  only: crop_irrigation_state_t
+   use crop_oxygen_state_mod,      only: crop_oxygen_state_t
    implicit none
    private
    public :: crop_state_t
@@ -37,6 +38,9 @@ module crop_state_mod
       type(crop_grass_state_t) :: grass
       ! [GR-CROP 2026-05-25] SSDI persistent state — migrated from variables.f90 _irr globals
       type(crop_irrigation_state_t) :: irrigation
+      ! [GR-CROP 2026-05-25] Bartholomeus oxygen-stress workspace + SAVE state
+      ! migrated from O2_pars module + o2_* legacy globals
+      type(crop_oxygen_state_t) :: oxygen
    contains
       procedure :: init => crop_state_init
    end type crop_state_t
