@@ -22,6 +22,7 @@ creation_date: %Y-%m-%d %H:%M %z
 md_extensions: markdown.extensions.toc
                markdown.extensions.smarty
 graph: true
+max_frontpage_items: 0
 html_template_dir: ./docs/templates
 ---
 
