@@ -368,13 +368,13 @@ module legacy_state_mod
       ! [GR-DRA 2026-05-23] wlsman retired — see state%surfacewater%wlsman
       ! [GR-DRA 2026-05-23] wlstab retired — see state%surfacewater%wlstab
       real(real64), allocatable :: owltab(:,:)  !! real(8) qdrd                  !! Moved to drainage_state_t%qdrd (ADR 0031)
-      logical :: flCropPrep  !! Flag indicating if ploughing opportunity has been realized
+      ! [GR-CROP 2026-05-25] flCropPrep retired — see state%crop%common%flCropPrep
       ! [GR-CROP 2026-05-25] zPrep/hPrep/MaxPrepDelay/dhPrep retired — see cropwofost_config_t%preparation.
-      integer :: PrepDelay  !! delay of preparation
-      logical :: flCropSow  !! Flag indicating if sowing opportunity has been realized
+      ! [GR-CROP 2026-05-25] PrepDelay retired — see state%crop%common%PrepDelay
+      ! [GR-CROP 2026-05-25] flCropSow retired — see state%crop%common%flCropSow
       ! [GR-CROP 2026-05-25] zSow/hSow/zTempSow/MaxSowDelay/TempSow/dhSow/dtempSow retired — see cropwofost_config_t%sowing.
-      integer :: SowDelay  !! delay of delay
-      logical :: flCropGerm  !! Flag indicating if germination has been realized
+      ! [GR-CROP 2026-05-25] SowDelay retired — see state%crop%common%SowDelay
+      ! [GR-CROP 2026-05-25] flCropGerm retired — see state%crop%common%flCropGerm
       ! [GR-CROP 2026-05-25] zgerm retired — see cropwofost_config_t%germination.
    end type legacy_state_t
 

@@ -557,12 +557,9 @@
 ! --- Initialize all crop variables 
 
 !     date calendar starts is date of workability or crop start
-      flCropPrep         = .false.
-      flCropSow          = .false.
-      flCropGerm         = .false.
-      
-      PrepDelay          =  0
-      SowDelay           =  0
+      ! [GR-CROP 2026-05-25] flCropPrep/flCropSow/flCropGerm retired —
+      !   see state%crop%common%X (cropgrowth.f90 sets directly on new-crop reset)
+      ! [GR-CROP 2026-05-25] PrepDelay/SowDelay retired — see state%crop%common%X
       ! [GR-CROP 2026-05-25] tsumgerm retired — see state%crop%common%tsumgerm (reset in cropgrowth.f90:175)
 
       flCropHarvest      = .false.

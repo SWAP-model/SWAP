@@ -63,7 +63,7 @@
       !   body reads at lines 459-461 use state; redundant dual-writes at old-395-397 removed)
       use variables, only: &                                             ! [SS-GR-CROPRT B1/B6] [GR-CROPWS B3]
         icrop, flCropCalendar, cropstart, cropend, flCropEmergence,         &
-        flCropHarvest, flCropPrep, flCropSow, flCropGerm,                   &  ! flCropReadFile retired — state-only
+        flCropHarvest,                                                      &  ! flCropReadFile/Prep/Sow/Germ retired — state-only
         daycrop,                 &  ! [GR-SOL 2026-05-24] swinco retired — via state%soilwater%swinco
 
         swcrp,                                                             &  ! dvsend/swdrought/eff/amaxtb/tmpftb/tmnftb retired
@@ -71,7 +71,6 @@
         flCropNut, nlue, anlv, anst, nmxlv, nmaxlv, nmaxst,               &
         nmaxrt, lrnr, lsnr, nni, rnflv, rnfst, frnx, fstr, flHarvestDay,  &
         pathcrop, cropfil,                                                 &  ! [GR-CROP 2026-05-25] germ params retired — config/state cutover
-        PrepDelay, SowDelay,                                               &  ! still set on legacy mirror by InitializeCrop
         dummy_tsoil_cg_ => tsoil
       !! Rename config-staging tsoil to avoid clash with dummy arg tsoil.
       !! [SS-HEAT] Task 9: tsoil retained as config-staging buffer; global is not compute state.
@@ -164,15 +163,15 @@
       if (flCropCalendar) then
         if (dabs(tc%t1900 - state%crop%common%cropstart) .lt. tiny) then  ! [GR-CROPWS B3]
           call InitializeCrop
-          ! [SS-GR-CROPRT A5] mirror fields zeroed by InitializeCrop
-          state%crop%common%flCropPrep    = flCropPrep
-          state%crop%common%flCropSow     = flCropSow
-          state%crop%common%flCropGerm    = flCropGerm
-          state%crop%common%flCropHarvest = flCropHarvest
-          state%crop%common%PrepDelay     = PrepDelay
-          state%crop%common%SowDelay      = SowDelay
-          state%crop%common%tsumgerm      = 0.0d0     ! [GR-CROP 2026-05-25] reset alongside legacy InitializeCrop()
-          ! [GR-CROP 2026-05-25] noddrz mirror dropped — state field set in line 399
+          ! [GR-CROP 2026-05-25] crop-lifecycle reset: state fields are the canonical
+          ! homes for flCropPrep/Sow/Germ/PrepDelay/SowDelay/tsumgerm.
+          state%crop%common%flCropPrep    = .false.
+          state%crop%common%flCropSow     = .false.
+          state%crop%common%flCropGerm    = .false.
+          state%crop%common%flCropHarvest = flCropHarvest   ! legacy still has external readers
+          state%crop%common%PrepDelay     = 0
+          state%crop%common%SowDelay      = 0
+          state%crop%common%tsumgerm      = 0.0d0
           state%crop%common%flCropReadFile = .true.
           flCropEmergence = .true.
           state%crop%flCropEmergence = flCropEmergence   ! [SS-GR-ATM A5.2] dual-write
@@ -188,7 +187,7 @@
 
         ! check crop preparation, sowing and germination (of previous day)
         if (.not. flCropEmergence) then
-          if (flCropPrep .and. flCropSow .and. flCropGerm) then
+          if (state%crop%common%flCropPrep .and. state%crop%common%flCropSow .and. state%crop%common%flCropGerm) then
             state%soilwater%swinco = -99
             state%crop%common%flCropReadFile = .true.
             flCropEmergence = .true.
@@ -259,18 +258,13 @@
                         'swprep /= 0 or swsow /= 0 not yet supported in TOML pipeline.')
                   else
                      ! Prep and sow done (both switches are 0).
-                     flCropPrep = .true.
-                     flCropSow  = .true.
-                     PrepDelay  = 0
-                     SowDelay   = 0
-                     state%crop%common%flCropPrep = flCropPrep   ! [SS-GR-CROPRT A5]
-                     state%crop%common%flCropSow  = flCropSow    ! [SS-GR-CROPRT A5]
-                     state%crop%common%PrepDelay  = PrepDelay    ! [SS-GR-CROPRT A5]
-                     state%crop%common%SowDelay   = SowDelay     ! [SS-GR-CROPRT A5]
+                     state%crop%common%flCropPrep = .true.
+                     state%crop%common%flCropSow  = .true.
+                     state%crop%common%PrepDelay  = 0
+                     state%crop%common%SowDelay   = 0
                      if (swgerm_cache == 0) then
                         ! swgerm=0: germination and emergence are immediate.
-                        flCropGerm      = .true.
-                        state%crop%common%flCropGerm = flCropGerm   ! [SS-GR-CROPRT A5]
+                        state%crop%common%flCropGerm = .true.
                         flCropEmergence = .true.
                         state%crop%flCropEmergence = flCropEmergence   ! [SS-GR-ATM A5.2] dual-write
                      else if (rot_type == 2) then
@@ -280,8 +274,7 @@
                         ! [GR-CROP 2026-05-25] legacy mirror writes
                         !   tsumemeopt/tbasem/teffmx/agerm/hdrygerm/hwetgerm/zgerm/cgerm/bgerm
                         !   retired — readers cut over to direct config reads.
-                        flCropGerm      = .false.
-                        state%crop%common%flCropGerm = flCropGerm   ! [SS-GR-CROPRT A5]
+                        state%crop%common%flCropGerm = .false.
                         flCropEmergence = .false.
                         state%crop%flCropEmergence = flCropEmergence   ! [SS-GR-ATM A5.2] dual-write
                      else
@@ -303,19 +296,19 @@
         endif
 
         if (.not. flCropEmergence .and. .not. flCropHarvest) then
-          
+
           ! Preparation before crop growth
-          if (.not. flCropPrep) then
+          if (.not. state%crop%common%flCropPrep) then
             call ArableLandGerm(2, tsoil, state)  ! [SS-SWC S-2.7]
           endif
 
           ! Sowing before crop growth
-          if (flCropPrep .and. .not. flCropSow) then
+          if (state%crop%common%flCropPrep .and. .not. state%crop%common%flCropSow) then
             call ArableLandGerm(3, tsoil, state)  ! [SS-SWC S-2.7]
           endif
 
           ! Germination of arable crop growth
-          if (flCropPrep .and. flCropSow) then
+          if (state%crop%common%flCropPrep .and. state%crop%common%flCropSow) then
             call ArableLandGerm(4, tsoil, state)  ! [SS-SWC S-2.7]
           endif
 

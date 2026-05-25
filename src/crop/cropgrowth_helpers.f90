@@ -11,7 +11,7 @@
 !                            side pending the file-IO arc.
 !   - ArableLandGerm      → crop_config_global%rotation_wofost(icrop)%X (germ
 !                            params; case(2)/(3) prep/sow are dead-branch); state
-!                            tsumgerm + dual-write of flCropPrep/Sow/Germ.
+!                            tsumgerm + state-only writes of flCropPrep/Sow/Germ.
 !   - FacCO2              → dead-branch (state%atmosphere%flco2 is dormant);
 !                            fco2*amax/eff/tra remain 1.0; fatalerr stub if flco2
 !                            is ever re-enabled without restored config wiring.
@@ -206,10 +206,8 @@
       !     read via crop_config_global%rotation_wofost(icrop)%germination.
       !   bgerm/cgerm: derived locally from agerm/hdrygerm/hwetgerm/tsumemeopt.
       !   tsumgerm: state%crop%common%tsumgerm (accumulated runtime).
-      !   flCropPrep/flCropSow/flCropGerm: legacy bare globals retained for cropgrowth.f90
-      !     dispatcher reads (still gated on legacy bare names); dual-write keeps them in
-      !     sync with state%crop%common.
-      use variables, only: flCropPrep, flCropSow, flCropGerm
+      !   [GR-CROP 2026-05-25] flCropPrep/flCropSow/flCropGerm fully retired —
+      !     state-only via state%crop%common; dispatcher reads from state.
       use crop_config_global_mod, only: crop_config_global
       use swap_constants, only: small
       use error_mod, only: fatalerr_collected
@@ -265,7 +263,6 @@
             crop%PrepDelay  = crop%PrepDelay + 1
           endif
         endif
-        flCropPrep    = crop%flCropPrep    ! dual-write — dispatcher reads bare flCropPrep
 
         crop%SowDelay = crop%PrepDelay
         end associate
@@ -306,7 +303,6 @@
             crop%SowDelay  = crop%SowDelay + 1
           endif
         endif
-        flCropSow = crop%flCropSow    ! dual-write — dispatcher reads bare flCropSow
         end associate
         return
 
@@ -392,7 +388,6 @@
         else
           crop%dvs = 0.d0
         endif
-        flCropGerm = crop%flCropGerm   ! dual-write — dispatcher reads bare flCropGerm
         end associate
 
         return
