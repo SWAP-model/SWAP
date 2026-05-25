@@ -101,11 +101,13 @@ end subroutine
 subroutine test_apply_populates_legacy_globals()
    use, intrinsic :: iso_fortran_env, only: real64
    use cropwofost_config_mod, only: wofost_nutrient_t
-   use cropwofost_init_mod,   only: apply_cropwofost_nutrient
+   use cropwofost_init_mod,   only: apply_cropwofost_nutrient,                  &
+                                    cw_tcnt, cw_dvsnlt, cw_dvsnt, cw_rdrns, cw_fntrt, &
+                                    cw_fraharlosorm_lv, cw_fraharlosorm_st, cw_fraharlosorm_so
+   ! [GR-CROP 2026-05-25] tcnt/dvsnlt/dvsnt/rdrns/fntrt + fraharlosorm_* migrated
+   ! from variables module to cropwofost_init_mod cw_* SAVE.
    use variables, only: lrnr, lsnr, nlue, rnflv, rnfst, frnx, nmxlv,           &
-                        nlai, nmaxso, npart, nfixf, nsla, rnfrt, tcnt,          &
-                        dvsnlt, dvsnt, rdrns, fntrt, ilnmxl,                    &
-                        fraharlosorm_lv, fraharlosorm_st, fraharlosorm_so
+                        nlai, nmaxso, npart, nfixf, nsla, rnfrt, ilnmxl
    use funit
    implicit none
    type(wofost_nutrient_t) :: cfg
@@ -150,11 +152,11 @@ subroutine test_apply_populates_legacy_globals()
    @assertEqual(0.00_real64,   nfixf,  tolerance=1.0e-12_real64)
    @assertEqual(0.50_real64,   nsla,   tolerance=1.0e-12_real64)
    @assertEqual(0.0048_real64, rnfrt,  tolerance=1.0e-12_real64)
-   @assertEqual(10.00_real64,  tcnt,   tolerance=1.0e-12_real64)
-   @assertEqual(1.00_real64,   dvsnlt, tolerance=1.0e-12_real64)
-   @assertEqual(0.80_real64,   dvsnt,  tolerance=1.0e-12_real64)
-   @assertEqual(0.05_real64,   rdrns,  tolerance=1.0e-12_real64)
-   @assertEqual(0.15_real64,   fntrt,  tolerance=1.0e-12_real64)
+   @assertEqual(10.00_real64,  cw_tcnt,   tolerance=1.0e-12_real64)
+   @assertEqual(1.00_real64,   cw_dvsnlt, tolerance=1.0e-12_real64)
+   @assertEqual(0.80_real64,   cw_dvsnt,  tolerance=1.0e-12_real64)
+   @assertEqual(0.05_real64,   cw_rdrns,  tolerance=1.0e-12_real64)
+   @assertEqual(0.15_real64,   cw_fntrt,  tolerance=1.0e-12_real64)
 
    ! NMXLV(1:ilnmxl) populated; ILNMXL = size(cfg%nmxlv)
    call assertEqual(3, ilnmxl, 'ilnmxl matches size(cfg%nmxlv)')
@@ -163,7 +165,7 @@ subroutine test_apply_populates_legacy_globals()
    @assertEqual(0.02_real64, nmxlv(3), tolerance=1.0e-12_real64)
 
    ! Harvest fractions
-   @assertEqual(0.50_real64, fraharlosorm_lv, tolerance=1.0e-12_real64)
-   @assertEqual(0.50_real64, fraharlosorm_st, tolerance=1.0e-12_real64)
-   @assertEqual(0.00_real64, fraharlosorm_so, tolerance=1.0e-12_real64)
+   @assertEqual(0.50_real64, cw_fraharlosorm_lv, tolerance=1.0e-12_real64)
+   @assertEqual(0.50_real64, cw_fraharlosorm_st, tolerance=1.0e-12_real64)
+   @assertEqual(0.00_real64, cw_fraharlosorm_so, tolerance=1.0e-12_real64)
 end subroutine

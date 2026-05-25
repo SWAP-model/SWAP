@@ -553,10 +553,7 @@
       ! cropwofost_config_t%co2; co2year/co2ppm have no consumer.
 
 ! --- vernalisation
-      real(8)   verndvs            ! critical development stage after which the effect of vernalisation is halted [-]
-      real(8)   vernsat            ! saturated vernalisation requirement [d]
-      real(8)   vernbase           ! base vernalisation requirement [d]
-      real(8)   vernrtb(30)        ! table with rate of vernalisation as function of tav [days/degrees]
+      ! [GR-CROP 2026-05-25] verndvs/vernsat/vernbase/vernrtb retired — see cropwofost_init_mod cw_vern*
 !     only for bulb crops (tulips etc..)
       integer   swbulb             ! switch to enable simulation of bulb crops (-)
       ! [GR-CROP 2026-05-25] drbl/drblpot/fbl retired — local SAVE in cropwofost_runtime%wofost
@@ -582,10 +579,10 @@
       ! revealed they could not be reached from a config-load-time adapter
       ! while declared as locals. See ADR 0025.
       real(8)   nlai, nmaxso, npart, nfixf
-      real(8)   nsla, rnfrt, tcnt
-      real(8)   dvsnlt, dvsnt, rdrns, fntrt
+      real(8)   nsla, rnfrt
+      ! [GR-CROP 2026-05-25] tcnt/dvsnlt/dvsnt/rdrns/fntrt retired — see cropwofost_init_mod cw_*
+      ! [GR-CROP 2026-05-25] fraharlosorm_lv/st/so retired — see cropwofost_init_mod cw_*
       integer   ilnmxl
-      real(8)   fraharlosorm_lv, fraharlosorm_st, fraharlosorm_so
       real(8)   fstr
       ! [SS-GR-FINAL D1] amFERT retired — 0 consumers
 

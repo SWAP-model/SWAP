@@ -36,6 +36,27 @@ module cropwofost_init_mod
    public :: cropwofost_init_from_config
    public :: apply_cropwofost_nutrient
 
+   ! [GR-CROP 2026-05-25] cropwofost shared per-rotation config snapshots.
+   ! Written here by apply_cropwofost_nutrient / cropwofost_init_from_config;
+   ! read by cropwofost_runtime_mod%wofost (which `use`s this module).
+   ! Migrated out of the legacy `variables` module — single-file scope across
+   ! the cropwofost init+runtime pair.
+   ! Nutrient cluster:
+   real(real64), public, save :: cw_rdrns   = 0.0_real64
+   real(real64), public, save :: cw_dvsnlt  = 0.0_real64
+   real(real64), public, save :: cw_dvsnt   = 0.0_real64
+   real(real64), public, save :: cw_fntrt   = 0.0_real64
+   real(real64), public, save :: cw_tcnt    = 0.0_real64
+   ! Harvest losses cluster:
+   real(real64), public, save :: cw_fraharlosorm_lv = 0.0_real64
+   real(real64), public, save :: cw_fraharlosorm_so = 0.0_real64
+   real(real64), public, save :: cw_fraharlosorm_st = 0.0_real64
+   ! Vernalisation cluster:
+   real(real64), public, save :: cw_vernbase = 0.0_real64
+   real(real64), public, save :: cw_verndvs  = 0.0_real64
+   real(real64), public, save :: cw_vernsat  = 0.0_real64
+   real(real64), public, save :: cw_vernrtb(30) = 0.0_real64  ! 2-col table flat slice (size 30 to match legacy)
+
 contains
 
    subroutine cropwofost_init_from_config(cfg, icrop, FraDeceasedLvToSoil, state)
@@ -46,8 +67,7 @@ contains
          ! cftb/chtb/albedo/rsc/rsw/swcf retired
          ! Development — DEFERRED Phase C3; tsumea/tsumam retired
          idsl, dlo, dlc,                                                    &  ! dtsmtb retired
-         ! Vernalisation — DEFERRED Phase C3
-         verndvs, vernsat, vernbase, vernrtb,                                &
+         ! [GR-CROP 2026-05-25] vern* migrated to cw_vern* module SAVE in this file.
          ! Initial crop state — DEFERRED Phase C3
          ! tdwi/laiem/rgrlai retired
          ! Green area / assimilation — DEFERRED Phase C3; tbase retired
@@ -502,18 +522,16 @@ contains
    !! See ADR 0025 ([nutrients] N1).
    subroutine apply_cropwofost_nutrient(cfg)
       use cropwofost_config_mod, only: wofost_nutrient_t
-      ! [SS-GR-FINAL B7] DEFERRED: nutrient config globals — config→globals copy; Phase C3
       use variables, only: &
-                           ! DEFERRED: nutrient parameters; Phase C3 (nutrients_state_t migration)
                            lrnr, lsnr, nlue, rnflv, rnfst, frnx, nmxlv,            &
-                           nlai, nmaxso, npart, nfixf, nsla, rnfrt, tcnt,           &
-                           dvsnlt, dvsnt, rdrns, fntrt, ilnmxl,                     &
-                           fraharlosorm_lv, fraharlosorm_st, fraharlosorm_so
+                           nlai, nmaxso, npart, nfixf, nsla, rnfrt, ilnmxl
+      ! [GR-CROP 2026-05-25] tcnt/dvsnlt/dvsnt/rdrns/fntrt/fraharlosorm_* migrated
+      ! to module-level cw_* SAVE in this module (cropwofost_init_mod).
       type(wofost_nutrient_t), intent(in) :: cfg
 
       integer :: n
 
-      ! Module-level scalars (already exist in module variables)
+      ! Module-level scalars (cross-file legacy: still consumed by cropgrowth)
       lrnr   = cfg%lrnr
       lsnr   = cfg%lsnr
       nlue   = cfg%nlue
@@ -521,18 +539,20 @@ contains
       rnfst  = cfg%rnfst
       frnx   = cfg%frnx
 
-      ! Newly-promoted module variables (Task 1)
+      ! Newly-promoted module variables (cross-file legacy: still consumed by cropgrowth)
       nlai   = cfg%nlai
       nmaxso = cfg%nmaxso
       npart  = cfg%npart
       nfixf  = cfg%nfixf
       nsla   = cfg%nsla
       rnfrt  = cfg%rnfrt
-      tcnt   = cfg%tcnt
-      dvsnlt = cfg%dvsnlt
-      dvsnt  = cfg%dvsnt
-      rdrns  = cfg%rdrns
-      fntrt  = cfg%fntrt
+
+      ! cropwofost-pair-internal nutrient snapshots — own storage in this module
+      cw_tcnt   = cfg%tcnt
+      cw_dvsnlt = cfg%dvsnlt
+      cw_dvsnt  = cfg%dvsnt
+      cw_rdrns  = cfg%rdrns
+      cw_fntrt  = cfg%fntrt
 
       ! NMXLV array — copy entries; ILNMXL records the active length
       n = 0
@@ -541,10 +561,10 @@ contains
       nmxlv  = 0.0_real64
       if (n > 0) nmxlv(1:n) = cfg%nmxlv(1:n)
 
-      ! Harvest fractions
-      fraharlosorm_lv = cfg%frahar_los_orm_lv
-      fraharlosorm_st = cfg%frahar_los_orm_st
-      fraharlosorm_so = cfg%frahar_los_orm_so
+      ! Harvest fractions — own storage in this module
+      cw_fraharlosorm_lv = cfg%frahar_los_orm_lv
+      cw_fraharlosorm_st = cfg%frahar_los_orm_st
+      cw_fraharlosorm_so = cfg%frahar_los_orm_so
    end subroutine apply_cropwofost_nutrient
 
 end module cropwofost_init_mod

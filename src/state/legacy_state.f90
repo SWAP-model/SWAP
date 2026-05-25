@@ -148,10 +148,7 @@ module legacy_state_mod
       ! [GR-ATM 2026-05-23] flCO2 retired — see state%atmosphere%flco2
       ! [GR-CROP 2026-05-25] co2amaxtb/co2efftb/co2tratb/co2year/co2ppm retired —
       ! see cropwofost_config%co2; flco2 dormant (no live consumer).
-      real(real64) :: verndvs  !! critical development stage after which the effect of vernalisation is halted [-]
-      real(real64) :: vernsat  !! saturated vernalisation requirement [d]
-      real(real64) :: vernbase  !! base vernalisation requirement [d]
-      real(real64), allocatable :: vernrtb(:)  !! table with rate of vernalisation as function of tav [days/degrees]
+      ! [GR-CROP 2026-05-25] verndvs/vernsat/vernbase/vernrtb retired — see cropwofost_init_mod cw_vern*
       integer :: swbulb  !! switch to enable simulation of bulb crops (-)
       ! [GR-CROP 2026-05-25] drbl/drblpot/fbl retired — local SAVE in cropwofost_runtime%wofost
       real(real64) :: pld

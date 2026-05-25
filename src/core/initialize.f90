@@ -591,7 +591,7 @@
 
       scanopytb          = 0.0d0 
       ! [GR-ATM 2026-05-23] siccaptb retired — see state%crop%common%siccaptb
-      vernrtb            = 0.0d0 
+      ! [GR-CROP 2026-05-25] vernrtb retired — see cropwofost_init_mod cw_vernrtb
 
 ! --- only for bulb crops (tulips etc..)
       wiltpoint          = 0.0d0

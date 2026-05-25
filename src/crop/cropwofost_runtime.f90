@@ -44,8 +44,8 @@
 !   cftb/chtb/cfeictb: crop%fixed homes (A5.2 dual-write) but wofost has optional state
 !     — same constraint as cropfixed B2; deferred to Phase C non-optional refactor
 !   rdtb–rdrstb, crop%common%lv/crop%common%lvpot–idsl arrays, dwlv–gasstpot, tadw–harlosorm: computed in wofost
-!   rdrns, perdl, outfil, pathwork, project, dvsnlt, dvsnt: output/path globals, no state home
-!   twilt, wiltpoint, tcnt, vernbase–vernsat: JvL + vernalisation, no state home
+!   cw_rdrns, perdl, outfil, pathwork, project, dvsnlt, dvsnt: output/path globals, no state home
+!   twilt, wiltpoint, tcnt, cw_vernbase–cw_vernsat: JvL + vernalisation, no state home
 !   daycrop: runtime (dual-write to crop%common%daycrop), computed in CropGrowth
 ! ----------------------------------------------------------------------
       use swap_log, only: log_warn
@@ -62,9 +62,6 @@
         ! this allow-list so we keep alive until either we migrate to state
         ! or Task 9 retires after dispatcher cutover):
         swbulb,                                              &  ! always 0 on TOML path (cfg.bulb stub-errors swbulb=1); also mirrored to crop%wofost%swbulb
-        rdrns, dvsnlt, dvsnt, fntrt, tcnt,                   &  ! nutrient config snapshots (init→runtime within this pair)
-        vernbase, verndvs, vernrtb, vernsat,                 &  ! vernalisation config snapshots (init→runtime within this pair)
-        fraharlosorm_lv, fraharlosorm_so, fraharlosorm_st,   &  ! harvest-loss fractions (init→runtime within this pair)
         ! cross-file with cropgrowth.f90 dispatcher (retired in Task 9):
         siccaplai, cropend,                                  &  ! cross-file with cropfixed/cropgrass/cropgrowth
         wrtmin, gwrt,                                        &  ! cross-file with cropgrass_runtime/cropgrowth_helpers
@@ -79,6 +76,11 @@
         outfil, pathwork, project,                           &  ! cross-file output paths with cropgrowth_helpers
         twilt, wiltpoint                                      ! cross-file with rootextraction/cropgrass/cropfixed
       use wofost_soil_interface
+      ! [GR-CROP 2026-05-25] cw_* snapshots — written by cropwofost_init_mod%apply_cropwofost_nutrient
+      ! (cw_rdrns/dvsnlt/dvsnt/fntrt/tcnt + cw_fraharlosorm_lv/so/st). Single-file scope.
+      use cropwofost_init_mod, only: cw_rdrns, cw_dvsnlt, cw_dvsnt, cw_fntrt, cw_tcnt,            &
+                                     cw_fraharlosorm_lv, cw_fraharlosorm_so, cw_fraharlosorm_st, &
+                                     cw_vernbase, cw_verndvs, cw_vernsat, cw_vernrtb
       use array_utils, only: interpol, afgen, insw
       use soilhydraulics_utils, only: watcon
       use rootextraction_mod, only: MatricFlux
@@ -218,8 +220,8 @@
 ! --- n-p-k
       if( flCropNut) then
 !        Legacy nutrient parameters (LRNR, LSNR, NLAI, NLUE, NMAXSO,
-!        NPART, NFIXF, NSLA, RNFLV/RT/ST, TCNT, DVSNLT, DVSNT, RDRNS,
-!        FNTRT, FRNX, NMXLV, FraHarLosOrm_lv/st/so) used to be read here
+!        NPART, NFIXF, NSLA, RNFLV/RT/ST, cw_tcnt, cw_dvsnlt, cw_dvsnt, RDRNS,
+!        cw_fntrt, FRNX, NMXLV, cw_fraharlosorm_lv/st/so) used to be read here
 !        from <cropfil>.crp via TTutil rdinit/rdsdou. Read block deleted
 !        as part of legacy readers physical deletion. These globals are
 !        now populated by apply_cropwofost_nutrient when flcropnut=true
@@ -440,9 +442,9 @@
           if (idsl.eq.2) then
 !            vernalisation rate,based on routines from pyWofost (Allard de Wit, 2015)
              if(.not.flvernalised) then
-                if(crop%common%dvs.lt.verndvs) then
-                   vernrate = afgen (vernrtb,30,atmo%Tav)  ! [SS-GR-ATM B.5]
-                   r = (vern - vernbase) / (vernsat - vernbase)
+                if(crop%common%dvs.lt.cw_verndvs) then
+                   vernrate = afgen (cw_vernrtb,30,atmo%Tav)  ! [SS-GR-ATM B.5]
+                   r = (vern - cw_vernbase) / (cw_vernsat - cw_vernbase)
                    vernfac = interpol(0.0d0,1.0d0,r)
                 else
                    flvernalised = .true.
@@ -717,10 +719,10 @@
 ! --- vernalisation state (d)
       if(idsl.eq.2) then
           vern = vern + vernrate
-          if(.not.flvernalised .and. vern.ge.vernsat) then
+          if(.not.flvernalised .and. vern.ge.cw_vernsat) then
               flvernalised = .true.
           else
-              if(flvernalised .and. vern.lt.vernsat) then
+              if(flvernalised .and. vern.lt.cw_vernsat) then
                  write(messag,'(2a,i6,2a)') ' critical DVS,',           &
      &           ' for vernalised reached, day = ', time%daycum,          &
      &           ' but vernalisation requirements not yet fulfilled ',  &
@@ -810,7 +812,7 @@
       if (crop%common%swrd.eq.3 .and. soil%flWrtNonox) grrt = 0.d0   ! [SS-GR-CROPWS A3] present(state) guard removed
 
 ! --- death of leaves due to water stress or high lai or nitrogen stress
-      call deaths(flcropnut,crop%wofost%wlv,crop%kdif,crop%lai,NNI,crop%common%perdl,rdrns,reltr,dslv)
+      call deaths(flcropnut,crop%wofost%wlv,crop%kdif,crop%lai,NNI,crop%common%perdl,cw_rdrns,reltr,dslv)
 
 ! --- death of leaves due to exceeding life span:
       call deatha(dslv,delt,crop%common%ilvold,crop%common%lv,crop%common%lvage,crop%common%span,i1,dalv)
@@ -963,16 +965,16 @@
 !        organs (kg N ha-1 d-1)
          CALL NDEMND(crop%wofost%wlv,crop%wofost%wst,crop%wofost%wrt,crop%wofost%wso,NMAXLV,NMAXST,                     &
      &                               NMAXRT,NMAXSO,ANLV,ANST,ANRT,ANSO, &
-     &                               TCNT,NDEML,NDEMS,NDEMR,NDEMSO)
+     &                               cw_tcnt,NDEML,NDEMS,NDEMR,NDEMSO)
 
 !        Total N demand (kg N ha-1)
 
          NDEMTO = MAX (0.0d0,(NDEML + NDEMS + NDEMR))
 
 !        Nutrient uptake limiting factor (-) at low moisture conditions in the
-!        rooted soil layer before anthesis. After anthesis/DVSNLT there is no
+!        rooted soil layer before anthesis. After anthesis/cw_dvsnlt there is no
 !        nutrient uptake from the soil
-         NLIMIT = INSW(crop%common%dvs-DVSNLT,INSW(reltr-0.01d0,0.0d0,1.0d0),0.d0)
+         NLIMIT = INSW(crop%common%dvs-cw_dvsnlt,INSW(reltr-0.01d0,0.0d0,1.0d0),0.d0)
          NdemandSoil = (1.d0-NFIXF) * NDEMTO * NLIMIT
          NdemandBioFix =  NFIXF * NDEMTO * NLIMIT
 
@@ -993,10 +995,10 @@
 !        Calling the subroutine to estimate the translocatable nutrients in leaves, stem, roots and
 !        storage organs (kg N ha-1)
          CALL NTRLOC(ANLV,ANST,ANRT,crop%wofost%wlv,crop%wofost%wst,crop%wofost%wrt,RNFLV,RNFST,RNFRT,      &
-     &                  FNTRT,ATNLV,ATNST,ATNRT,ATN)
+     &                  cw_fntrt,ATNLV,ATNST,ATNRT,ATN)
 
 !        N supply to the storage organs (kg N ha-1 d-1)      
-         NSUPSO = INSW (crop%common%dvs-DVSNT,0.0d0,ATN/TCNT)
+         NSUPSO = INSW (crop%common%dvs-cw_dvsnt,0.0d0,ATN/cw_tcnt)
 
 !        Rate of N uptake in grains (kg N ha-1 d-1)
          RNSO =  MIN (NDEMSO,NSUPSO)
@@ -1064,37 +1066,37 @@
          if (flHarvestDay .or. (crop%common%dvs.ge.crop%common%dvsend) .or. &
      &                 dabs(time%t1900-1.0d0-cropend(crop%common%icrop)).lt.1.0d-3 ) then  ! [GR-CROPWS B5] icrop → crop%common%icrop
             HarLosOrm_rt = crop%wofost%wrt
-            HarLosOrm_dwlv =  FraHarLosOrm_lv * crop%wofost%dwlv
-            HarLosOrm_lv   = FraHarLosOrm_lv * crop%wofost%wlv + HarLosOrm_dwlv
-            HarLosOrm_dwst =  FraHarLosOrm_st * crop%wofost%dwst
-            HarLosOrm_st   = FraHarLosOrm_st * crop%wofost%wst + HarLosOrm_dwst
-            HarLosOrm_dwso =  FraHarLosOrm_so * crop%wofost%dwso
-            HarLosOrm_so   = FraHarLosOrm_so * crop%wofost%wso + HarLosOrm_dwso
-            crop%common%HarLosOrm_tot = HarLosOrm_rt + FraHarLosOrm_lv * crop%wofost%wlv +      &
-     &             FraHarLosOrm_st * crop%wofost%wst + FraHarLosOrm_so * crop%wofost%wso
+            HarLosOrm_dwlv =  cw_fraharlosorm_lv * crop%wofost%dwlv
+            HarLosOrm_lv   = cw_fraharlosorm_lv * crop%wofost%wlv + HarLosOrm_dwlv
+            HarLosOrm_dwst =  cw_fraharlosorm_st * crop%wofost%dwst
+            HarLosOrm_st   = cw_fraharlosorm_st * crop%wofost%wst + HarLosOrm_dwst
+            HarLosOrm_dwso =  cw_fraharlosorm_so * crop%wofost%dwso
+            HarLosOrm_so   = cw_fraharlosorm_so * crop%wofost%wso + HarLosOrm_dwso
+            crop%common%HarLosOrm_tot = HarLosOrm_rt + cw_fraharlosorm_lv * crop%wofost%wlv +      &
+     &             cw_fraharlosorm_st * crop%wofost%wst + cw_fraharlosorm_so * crop%wofost%wso
 !ckro_sup_20170714 : suppressed because it will happen after harvest
 !            wrt = wrt - HarLosOrm_rt
-!            wlv = wlv - FraHarLosOrm_lv * wlv
-!            wst = wst - FraHarLosOrm_st * wst
-!            wso = wso - FraHarLosOrm_so * wso
+!            wlv = wlv - cw_fraharlosorm_lv * wlv
+!            wst = wst - cw_fraharlosorm_st * wst
+!            wso = wso - cw_fraharlosorm_so * wso
             idwrt = idwrt + HarLosOrm_rt
             idwlv = idwlv + HarLosOrm_lv
             idwst = idwst + HarLosOrm_st
             idwso = idwso + HarLosOrm_so
             HarLosNit_rt = ANRT
-            HarLosNit_dwlv = FraHarLosOrm_lv * NLOSSL 
-            HarLosNit_lv = FraHarLosOrm_lv * ANLV + HarLosNit_dwlv 
-            HarLosNit_dwst = FraHarLosOrm_st * NLOSSS 
-            HarLosNit_st = FraHarLosOrm_st * ANST + HarLosNit_dwst 
-            HarLosNit_dwso = FraHarLosOrm_so * 0.0d0 
-            HarLosNit_so = FraHarLosOrm_so * ANSO + HarLosNit_dwso 
+            HarLosNit_dwlv = cw_fraharlosorm_lv * NLOSSL 
+            HarLosNit_lv = cw_fraharlosorm_lv * ANLV + HarLosNit_dwlv 
+            HarLosNit_dwst = cw_fraharlosorm_st * NLOSSS 
+            HarLosNit_st = cw_fraharlosorm_st * ANST + HarLosNit_dwst 
+            HarLosNit_dwso = cw_fraharlosorm_so * 0.0d0 
+            HarLosNit_so = cw_fraharlosorm_so * ANSO + HarLosNit_dwso 
             iNLOSSL = iNLOSSL + HarLosNit_lv
             iNLOSSS = iNLOSSS + HarLosNit_st
             iNLOSSO = iNLOSSO + HarLosNit_so
             iNLOSSR = iNLOSSR + HarLosNit_rt
-            ANLV = ANLV - FraHarLosOrm_lv * ANLV
-            ANST = ANST - FraHarLosOrm_st * ANST
-            ANSO = ANSO - FraHarLosOrm_so * ANSO
+            ANLV = ANLV - cw_fraharlosorm_lv * ANLV
+            ANST = ANST - cw_fraharlosorm_st * ANST
+            ANSO = ANSO - cw_fraharlosorm_so * ANSO
             ANRT = ANRT - HarLosNit_rt
         end if
 
