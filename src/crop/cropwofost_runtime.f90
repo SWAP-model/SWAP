@@ -49,29 +49,38 @@
 !   daycrop: runtime (dual-write to crop%common%daycrop), computed in CropGrowth
 ! ----------------------------------------------------------------------
       use swap_log, only: log_warn
-      use variables, only: &                                            ! [SS-GR-CROPRT B7] [GR-CROPWS B5]
-        macp, magrs, rdmax, &  ! icrop/dvs/rd/rdpot/dvsend retired
-        ! swrd/swdmi2rd/swrdc/swgc/swdrought/swinter/swcf retired
-        swbulb,                                              &  ! [GR-SOL 2026-05-24] swinco retired — via soil%swinco
-        daycrop,                &  ! tsum/tbase/tsumea/tsumam/cfeic retired; daylp via state%atmosphere
-        siccaplai, cropend,                               &  ! [GR-CROPWS B5] cropstart removed (→crop%common%cropstart)
-        wrtmin, &  ! wso/wst/wlv/wrt/wrtmax retired
-        reltr, lrnr, lsnr, nni,           &
-        anlv, anst, nmxlv, nmaxlv, nmaxst, nmaxrt, nmaxso, nlai,          &
-        rnflv, rnfst, rnfrt, fstr, fntrt, npart, nfixf, nsla,             &
-        ! cvl/cvo/cvr/cvs retired
-        flCropHarvest, flCropNut, flHarvestDay, flhydrlift, flanthesis,    &
-        ! q10/rmr/rml/rms/rmo/rfsetb/frtb/fltb/fstb/fotb/fbltb retired
-        fbl, drbl, drblpot,                   &
-        ! cftb/chtb/cfeictb/rdtb/rlwtb/slatb/rgrlai/dtsmtb/rdrrtb/rdrstb retired
-        dlc, dlo,                                            &  ! tdwi/span/spa/ssa retired
-        idsl,                                                              &  ! lv/lvpot/lvage/lvagepot/sla/slapot/ilvold/ilvoldpot retired
-        gasst, gasstpot,                              &  ! dw* retired
-        mrest, mrestpot,                                                  &  ! glaiex/glaiexpot retired
-        tadw, tadwpot, gwrt, fraharlosorm_lv, fraharlosorm_so, &
-        fraharlosorm_st,                                                   &
-        rdrns, outfil, pathwork, project, dvsnlt, dvsnt,                  &  ! perdl retired
-        twilt, wiltpoint, tcnt, vernbase, verndvs, vernrtb, vernsat
+      use swap_array_dimensions, only: macp, magrs
+      ! [GR-CROP 2026-05-25] crop-sweep:
+      !   - macp/magrs sourced from swap_array_dimensions.
+      !   - rdmax read via cfg_crop%rdmax (Class B direct read).
+      !   - daycrop read via crop%common%daycrop (Class A state-rebind).
+      !   - Remaining legacy globals: writer/reader targets feeding cropgrowth
+      !     dispatcher (Task 9) and cross-file consumers (cropgrass/cropfixed/
+      !     oxygenstress/rootextraction); cannot retire here.
+      use variables, only: &
+        ! single-file workspace (init writes + runtime reads; both files in
+        ! this allow-list so we keep alive until either we migrate to state
+        ! or Task 9 retires after dispatcher cutover):
+        swbulb,                                              &  ! always 0 on TOML path (cfg.bulb stub-errors swbulb=1); also mirrored to crop%wofost%swbulb
+        fbl, drbl, drblpot,                                  &  ! bulb working state (single-file; bulb code always-dead on TOML path)
+        gasst, gasstpot, mrest, mrestpot,                    &  ! wofost gross-assim + maint-resp totals (single-file SAVE-style)
+        tadw, tadwpot,                                       &  ! total above-ground DM working state (single-file SAVE)
+        rdrns, dvsnlt, dvsnt, fntrt, tcnt,                   &  ! nutrient config snapshots (init→runtime within this pair)
+        vernbase, verndvs, vernrtb, vernsat,                 &  ! vernalisation config snapshots (init→runtime within this pair)
+        fraharlosorm_lv, fraharlosorm_so, fraharlosorm_st,   &  ! harvest-loss fractions (init→runtime within this pair)
+        ! cross-file with cropgrowth.f90 dispatcher (retired in Task 9):
+        siccaplai, cropend,                                  &  ! cross-file with cropfixed/cropgrass/cropgrowth
+        wrtmin, gwrt,                                        &  ! cross-file with cropgrass_runtime/cropgrowth_helpers
+        reltr,                                               &  ! cross-file with cropfixed_runtime/cropgrass_runtime
+        lrnr, lsnr, nni,                                     &  ! cross-file nutrient state with cropgrowth
+        anlv, anst, nmxlv, nmaxlv, nmaxst, nmaxrt, nmaxso, nlai, &  ! cross-file nutrient state with cropgrowth
+        rnflv, rnfst, rnfrt, fstr, npart, nfixf, nsla,       &  ! cross-file nutrient state with cropgrowth
+        flCropHarvest, flCropNut, flHarvestDay,              &  ! cross-file lifecycle flags with cropgrowth
+        flhydrlift,                                          &  ! cross-file with cropfixed/cropgrass/rootextraction
+        flanthesis,                                          &  ! cross-file with cropgrowth dispatcher
+        dlc, dlo, idsl,                                      &  ! cross-file phenology config with cropgrowth
+        outfil, pathwork, project,                           &  ! cross-file output paths with cropgrowth_helpers
+        twilt, wiltpoint                                      ! cross-file with rootextraction/cropgrass/cropfixed
       use wofost_soil_interface
       use array_utils, only: interpol, afgen, insw
       use soilhydraulics_utils, only: watcon
@@ -216,12 +225,12 @@
 
 !        open output files and write header
          if (crop%common%icrop.eq.1) then  ! [GR-CROPWS B5] icrop → crop%common%icrop
-            call outbalcropOM1(1,pathwork,outfil,project,time%date,daycrop,  &
+            call outbalcropOM1(1,pathwork,outfil,project,time%date,crop%common%daycrop,  &
      &         time%t,crop%common%dvs,crop%common%tsum,gass,mres,fr,fl,fs,fo,dmi,cvf,ccheck)
-            call outbalcropOM2(1,pathwork,outfil,project,time%date,daycrop,  &
+            call outbalcropOM2(1,pathwork,outfil,project,time%date,crop%common%daycrop,  &
      &         time%t,crop%common%dvs,crop%common%tsum,storagediff,crop%wofost%wlv,crop%wofost%wst,crop%wofost%wso,crop%wofost%wrt,delt,         &
      &         grlv,grst,grso,grrt,drlv,drst,drso,drrt,ombalan)
-            call outbalcropN(1,pathwork,outfil,project,time%date,daycrop, &
+            call outbalcropN(1,pathwork,outfil,project,time%date,crop%common%daycrop, &
      &         time%t,crop%common%dvs,crop%common%tsum,nuptt,nfixtt,anlvi,ansti,anrti,ansoi,anlv,&
      &         anst,anrt,anso,nlossl,nlossr,nlosss,nbalan,nni)
          endif
@@ -229,12 +238,12 @@
 
 ! --- maximum rooting depth
       if (crop%common%swrd.eq.1) then
-        crop%common%rdm = rdmax
+        crop%common%rdm = cfg_crop%rdmax
       elseif (crop%common%swrd.eq.2) then
-        crop%common%rdm = min(rdmax,crop%common%rdc)
+        crop%common%rdm = min(cfg_crop%rdmax,crop%common%rdc)
       elseif (crop%common%swrd.eq.3) then
         crop%common%rdc = afgen (crop%common%rlwtb,22,crop%common%wrtmax)
-        crop%common%rdm = min(rdmax,crop%common%rdc)
+        crop%common%rdm = min(cfg_crop%rdmax,crop%common%rdc)
       endif
 
 ! --- skip next initialization if crop parameters are read from *.END file
@@ -1090,7 +1099,7 @@
 ! ----- CHECK and WRITE MASS BALANCE: dry matter of crop
 
 !       output of OM balance1: from air to partitioning (kg/ha DM CH2O)
-        call outbalcropOM1(2,pathwork,outfil,project,time%date,daycrop,   &
+        call outbalcropOM1(2,pathwork,outfil,project,time%date,crop%common%daycrop,   &
      &       time%t,crop%common%dvs,crop%common%tsum,gass,mres,fr,fl,fs,fo,dmi,cvf,ccheck)
 
 ! -     OM balance2: storage difference(kg/ha DM CH2O)
@@ -1109,7 +1118,7 @@
 !           call fatalerr ('wofost',messag)
         endif
 !       output of OM balance2
-        call outbalcropom2(2,pathwork,outfil,project,time%date,daycrop,   &
+        call outbalcropom2(2,pathwork,outfil,project,time%date,crop%common%daycrop,   &
      &         time%t,crop%common%dvs,crop%common%tsum,storagediff,crop%wofost%wlv,crop%wofost%wst,crop%wofost%wso,crop%wofost%wrt,delt,         &
      &         grlv,grst,grso,grrt,drlv,drst,drso,drrt,ombalan)
 
@@ -1122,7 +1131,7 @@
      &      +  HarLosNit_dwlv + HarLosNit_dwst + HarLosNit_dwso
 
 !       output of N balance
-        call outbalcropN(2,pathwork,outfil,project,time%date,daycrop,     &
+        call outbalcropN(2,pathwork,outfil,project,time%date,crop%common%daycrop,     &
      &         time%t,crop%common%dvs,crop%common%tsum,NUPTT,NFIXTT,ANLVI,ANSTI,ANRTI,ANSOI,ANLV,&
      &         ANST,ANRT,ANSO,NLOSSL,NLOSSR,NLOSSS,NBALAN,nni)
         IF (dabs(NBALAN) .GE. 1.0d-03) then
