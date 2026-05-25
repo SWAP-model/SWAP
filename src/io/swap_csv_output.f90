@@ -26,6 +26,7 @@ module SWAP_csv_output
    use swap_array_dimensions, only: macp, madr
    use swap_state_mod, only: swap_state_t
    use output_registry_mod, only: var_count, var_name, var_unit
+   use csv_aggregates_mod, only: water_balance_dev
 
    implicit none
 
@@ -413,12 +414,14 @@ module SWAP_csv_output
    ! change in storage and deviation in mass balance
    ! SS-ATM A-2.5: ssnow,igrai,isnrai,igsnow,ievap,isubl from state%atmosphere.
    ! SS-SWC S-2.11: volact,pond,igird,irunon,iqssdi,iintc,iruno,irunoCN,iqrot,iqbot read from state%soilwater.
-   dstor        = (state%soilwater%volact + state%soilwater%pond + state%atmosphere%ssnow) - (VolOld + PondOld + SnowOld)
-   baldev       = (state%atmosphere%intr%igrai+state%atmosphere%intr%isnrai+state%atmosphere%intr%igsnow+               &
-                   state%soilwater%igird+state%soilwater%irunon + state%soilwater%iqssdi) - dstor -     &
-                  (state%soilwater%iintc+state%soilwater%iruno+state%soilwater%irunoCN+                 &
-                   state%soilwater%iqrot+state%atmosphere%intr%ievap+state%atmosphere%intr%isubl+                 &
-                   state%surfacewater%iqdra+(-1.0d0*state%soilwater%iqbot))
+   call water_balance_dev( &
+      state%soilwater%volact, state%soilwater%pond, state%atmosphere%ssnow, &
+      VolOld, PondOld, SnowOld, &
+      state%atmosphere%intr%igrai, state%atmosphere%intr%isnrai, state%atmosphere%intr%igsnow, &
+      state%soilwater%igird, state%soilwater%irunon, state%soilwater%iqssdi, &
+      state%soilwater%iintc, state%soilwater%iruno, state%soilwater%irunoCN, &
+      state%soilwater%iqrot, state%atmosphere%intr%ievap, state%atmosphere%intr%isubl, &
+      state%surfacewater%iqdra, state%soilwater%iqbot, dstor, baldev)
 
    ! replace Old values by current values (needed for next output moment)
    VolOld  = state%soilwater%volact

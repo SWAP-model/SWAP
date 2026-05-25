@@ -1,0 +1,45 @@
+! Tests for the water-balance aggregates extracted from fill_values.
+
+@test
+subroutine test_dstor_and_baldev_balanced()
+   use funit
+   use iso_fortran_env, only: real64
+   use csv_aggregates_mod, only: water_balance_dev
+   real(real64) :: dstor, baldev
+   ! storage: (10+1+0) - (9+1+0) = 1.0
+   ! inputs:  igrai+isnrai+igsnow+igird+irunon+iqssdi = 2.0
+   ! outputs: iintc+iruno+irunoCN+iqrot+ievap+isubl+iqdra + (-1*iqbot)
+   !          = 0.2+0+0+0.5+0.3+0+0 + 0 = 1.0
+   ! baldev = 2.0 - 1.0 - 1.0 = 0.0
+   call water_balance_dev( &
+      volact=10.0_real64, pond=1.0_real64, ssnow=0.0_real64, &
+      vol_old=9.0_real64, pond_old=1.0_real64, snow_old=0.0_real64, &
+      igrai=2.0_real64, isnrai=0.0_real64, igsnow=0.0_real64, &
+      igird=0.0_real64, irunon=0.0_real64, iqssdi=0.0_real64, &
+      iintc=0.2_real64, iruno=0.0_real64, irunocn=0.0_real64, &
+      iqrot=0.5_real64, ievap=0.3_real64, isubl=0.0_real64, &
+      iqdra=0.0_real64, iqbot=0.0_real64, &
+      dstor=dstor, baldev=baldev)
+   @assertEqual(1.0_real64, dstor,  1.0e-9_real64)
+   @assertEqual(0.0_real64, baldev, 1.0e-9_real64)
+end subroutine
+
+@test
+subroutine test_baldev_qbot_sign()
+   use funit
+   use iso_fortran_env, only: real64
+   use csv_aggregates_mod, only: water_balance_dev
+   real(real64) :: dstor, baldev
+   ! same as above but iqbot=0.4: outputs = 1.0 + (-1*0.4) = 0.6
+   ! baldev = 2.0 - 1.0 - 0.6 = 0.4  (locks the qbot sign convention)
+   call water_balance_dev( &
+      volact=10.0_real64, pond=1.0_real64, ssnow=0.0_real64, &
+      vol_old=9.0_real64, pond_old=1.0_real64, snow_old=0.0_real64, &
+      igrai=2.0_real64, isnrai=0.0_real64, igsnow=0.0_real64, &
+      igird=0.0_real64, irunon=0.0_real64, iqssdi=0.0_real64, &
+      iintc=0.2_real64, iruno=0.0_real64, irunocn=0.0_real64, &
+      iqrot=0.5_real64, ievap=0.3_real64, isubl=0.0_real64, &
+      iqdra=0.0_real64, iqbot=0.4_real64, &
+      dstor=dstor, baldev=baldev)
+   @assertEqual(0.4_real64, baldev, 1.0e-9_real64)
+end subroutine
