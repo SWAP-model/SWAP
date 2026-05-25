@@ -1148,17 +1148,11 @@ contains
 
       if (allocated(config%general%outfil)) outfil = config%general%outfil
 
-      ! CSV output — read from [output.csv] schema section.
-      ! Defaults (enabled=1, enabled_tz=0, inlist=water-balance, inlist_tz=wc,h,conc)
-      ! are applied by output_csv_config_finalize prior to this adapter.
-      ! [SS-GR-CROPRT A3] swcsv adapter write dropped — global retired; readers use config directly
-      if (allocated(config%output_csv%inlist)) then
-         InList_csv = config%output_csv%inlist
-      end if
-      ! [SS-GR-CROPRT A3] swcsv_tz adapter write dropped — global retired; readers use config directly
-      if (allocated(config%output_csv%inlist_tz)) then
-         InList_csv_tz = config%output_csv%inlist_tz
-      end if
+      ! [GR-IO 2026-05-25 Phase 2] CSV output — read directly from config%output_csv
+      ! by swap_csv_output.f90; InList_csv/InList_csv_tz legacy mirror writes
+      ! dropped along with their bare-global declarations.
+      ! Defaults (enabled=1, enabled_tz=0, inlist=water-balance, inlist_tz=wc,h,conc,
+      ! tz_z1_z2=[0,0]) are applied by output_csv_config_finalize prior to this adapter.
 
       ! [GR-ATM 2026-05-23] logf bare-global retired; swap_log opens
       ! 'swap_swap.log' via log_init() in swap_main.

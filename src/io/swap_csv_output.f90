@@ -19,9 +19,10 @@ module SWAP_csv_output
    ! GR-ATM C2: lai/wc10/Runoff_CN → state%crop%lai/state%atmosphere%wc10/state%atmosphere%Runoff_CN
    ! [GR-CROP 2026-05-25] c_top → state%crop%oxygen%c_top
    ! [GR-CROP 2026-05-25] pathwork/outfil/project → state%cfg%general
-   ! [GR-IO 2026-05-25] iqinfmax/iqmpoutdrrap retired-zero (no writers); read sites
-   ! replaced with 0.0d0 literal. InList_csv/macp/madr still imported (Phase 2/3).
-   use variables, only: InList_csv, macp, madr
+   ! [GR-IO 2026-05-25 Phase 2] InList_csv migrated to state%cfg%output_csv%inlist;
+   ! read sites take a local copy before make_userlist mutates it.
+   ! macp/madr are arrays.fi parameters (Phase 3).
+   use variables, only: macp, madr
    use swap_state_mod, only: swap_state_t
 
    implicit none
@@ -387,7 +388,7 @@ module SWAP_csv_output
 
       ! to be based on user input information
 !      InList = 'H[-10.0,4,5], RAIN, WC[2,3,6], H[4], WTOT[0:-15.0,4:6], Tact, WC[1], WC[-2], WC[1], rain,GWL, RWU[1,2,3,4,5,6], QTRANS[1:3,4:6], qtopin[0:-30]'
-      Inlist = InList_csv
+      Inlist = state%cfg%output_csv%inlist   ! [GR-IO 2026-05-25 Phase 2]
 
       ! extract all individual vars from InList; remove double entries; merge same vars with [] in single var with []; determine which vars are require
       call make_userlist(InList)
@@ -1096,7 +1097,9 @@ subroutine csv_out_tz (iTask, state)
 ! SS-TC TC-13: flprintshort, date, t1900 dropped (read via state%timecontrol ASSOCIATE in case(2)).
 ! [GR-CROP 2026-05-25] c_top → state%crop%oxygen%c_top
 ! [GR-CROP 2026-05-25] pathwork/outfil/project → state%cfg%general
-use variables, only: InList_csv_tz, tz_z1_z2
+! [GR-IO 2026-05-25 Phase 2] InList_csv_tz/tz_z1_z2 → state%cfg%output_csv.
+! InList_csv_tz consumers mutate via upperc/sort_list_tz, so we take a local
+! copy of the config string (`inList_tz_local`) before mutating.
 use swap_state_mod, only: swap_state_t
 use file_io_mod, only: file_open
 
@@ -1128,6 +1131,10 @@ character(len=20),                     save        :: formZ, form_rea_E
 character(len=1024)                                :: Header, HeaderUnits
 character(len=20),   dimension(ilw)                :: listVars
 character(len=19)                                  :: datexti
+! [GR-IO 2026-05-25 Phase 2] Local mutable copy of the config string; upperc /
+! sort_list_tz rewrite it in place. `save` keeps the sorted value between
+! case(1) and case(2) calls (sort_list_tz only runs in case(1)).
+character(len=1024),                  save         :: inList_tz_local
 
 ! when to automatically swith from F to E formatting
 integer,             parameter                     :: num_d = 5         ! # of decimals; later: user input?
@@ -1160,13 +1167,17 @@ case (1)
    ! counter for number of records
    !Nlines = 0
 
+   ! [GR-IO 2026-05-25 Phase 2] Snapshot the config list into a local mutable
+   ! buffer before upper-casing and sorting.
+   inList_tz_local = state%cfg%output_csv%inlist_tz
+
    ! make user-supplied list UPPERCASE
-   call upperc (InList_csv_tz)
+   call upperc (inList_tz_local)
 
    ! Nvars en ListVars
-   call words (InList_csv_tz, ilw, ', ', iWbeg, iWend, Nvars)
+   call words (inList_tz_local, ilw, ', ', iWbeg, iWend, Nvars)
    do i = 1, Nvars
-      ListVars(i) = InList_csv_tz(iWbeg(i):iWend(i))
+      ListVars(i) = inList_tz_local(iWbeg(i):iWend(i))
    end do
 
    ! check if ListVars contains valid data; determine iCSV and iPOS
@@ -1174,9 +1185,10 @@ case (1)
 
    ! sort position in inList_csv in same way as in Allowed; ListVars is changed accordingly
    ! this needed since sequence in output columns are fixed by appearance in Allowed
-   call sort_list_tz (InList_csv_tz, ListVars, Nvars)
+   call sort_list_tz (inList_tz_local, ListVars, Nvars)
 
    ! depth interval to consider
+   associate (tz_z1_z2 => state%cfg%output_csv%tz_z1_z2)
    if (tz_z1_z2(1) > 0.0d0) then
       nod_1 = 1
       nod_2 = state%mesh%numnod
@@ -1194,6 +1206,7 @@ case (1)
       end do
       nod_2 = i
    end if
+   end associate
    
    ! open file for output; existing file will be overwritten; formatted output
    !    to do: write some basic info at the top of the output file?

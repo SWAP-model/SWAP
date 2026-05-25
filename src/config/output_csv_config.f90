@@ -1,5 +1,6 @@
 !> [output.csv] section config: CSV output switches and column lists.
 module output_csv_config_mod
+   use iso_fortran_env, only: real64
    use error_mod, only: error_collection_t
    use validation_mod, only: check_int_enum
    implicit none
@@ -18,6 +19,10 @@ module output_csv_config_mod
       !> Comma-separated column list for depth-profile CSV (legacy INLIST_CSV_TZ).
       !! Default: volumetric water content, pressure head, solute concentration.
       character(len=:), allocatable :: inlist_tz
+      !> Depth range [z_top, z_bottom] for depth-profile CSV output (cm).
+      !! Default [0.0, 0.0] preserves legacy behaviour (output limited to
+      !! the topmost compartment via the `else` branch in csv_out_tz).
+      real(real64) :: tz_z1_z2(2) = [0.0_real64, 0.0_real64]
    contains
       procedure :: validate => output_csv_config_validate
       procedure :: finalize => output_csv_config_finalize

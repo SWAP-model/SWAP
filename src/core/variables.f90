@@ -682,10 +682,10 @@
       integer   sw3                ! Switch for prescribed hydraulic head of deep aquifer: 1 = sine function; 2 = table
       ! [GR-SOIL 2026-05-24] sw4 retired — read directly via state%cfg%bottom_boundary%sw4.
       ! [SS-GR-CROPRT A3] swcsv retired — migrated to config%output_csv%enabled (readers use config now)
-      character(len=1024) InList_csv   ! character string with comma-separated list of variables for CSV output
+      ! [GR-IO 2026-05-25 Phase 2] InList_csv retired — read from config%output_csv%inlist
       ! [SS-GR-CROPRT A3] swcsv_tz retired — migrated to config%output_csv%enabled_tz
-      character(len=1024) InList_csv_tz   ! character string with comma-separated list of variables for CSV output
-      real(8)   tz_z1_z2(2)        ! Depth range for time-depth CSV output (default: top soil profile, bottom soil profile)
+      ! [GR-IO 2026-05-25 Phase 2] InList_csv_tz retired — read from config%output_csv%inlist_tz
+      ! [GR-IO 2026-05-25 Phase 2] tz_z1_z2 retired — read from config%output_csv%tz_z1_z2
       ! [SS-GR-FINAL D1] swafo retired — AFO output deleted; 0 consumers
       ! [SS-GR-FINAL D1] swaun retired — AUN output deleted; 0 consumers
       ! [SS-GR-FINAL D1] swbal retired — BAL output deleted; 0 consumers

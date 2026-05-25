@@ -1,6 +1,7 @@
 !> Reader for the [output.csv] section of a SWAP TOML.
 module read_output_csv_toml_mod
-   use tomlf, only: toml_table
+   use iso_fortran_env, only: real64
+   use tomlf, only: toml_table, toml_array, len
    use output_csv_config_mod, only: output_csv_config_t
    use toml_field_helpers_mod, only: get_table, &
                                      get_optional_int_with_default, &
@@ -35,6 +36,22 @@ contains
          'output.csv.inlist', errors)
       call get_optional_string_with_default(csv_sec, 'inlist_tz', config%inlist_tz, &
          'wc,h,conc', 'output.csv.inlist_tz', errors)
+      ! tz_z1_z2 = [z_top, z_bottom] cm; default [0.0, 0.0] preserves legacy
+      ! csv_out_tz behaviour (top compartment only).
+      call read_tz_z1_z2(csv_sec, config%tz_z1_z2)
    end subroutine read_output_csv_toml
+
+   subroutine read_tz_z1_z2(sec, tz_z1_z2)
+      use tomlf, only: get_value
+      type(toml_table), pointer, intent(in)    :: sec
+      real(real64),              intent(inout) :: tz_z1_z2(2)
+      type(toml_array), pointer :: arr
+      integer :: stat
+
+      call get_value(sec, 'tz_z1_z2', arr, requested=.false.)
+      if (.not. associated(arr)) return
+      if (len(arr) >= 1) call get_value(arr, 1, tz_z1_z2(1), stat=stat)
+      if (len(arr) >= 2) call get_value(arr, 2, tz_z1_z2(2), stat=stat)
+   end subroutine read_tz_z1_z2
 
 end module read_output_csv_toml_mod

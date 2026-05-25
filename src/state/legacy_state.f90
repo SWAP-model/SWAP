@@ -186,9 +186,9 @@ module legacy_state_mod
       integer :: sw2  !! Switch for prescribed bottom flux: 1 = sine function; 2 = table
       integer :: sw3  !! Switch for prescribed hydraulic head of deep aquifer: 1 = sine function; 2 = table
       ! [GR-SOIL 2026-05-24] sw4 retired — orphan stub; read via state%cfg%bottom_boundary%sw4.
-      character(len=1024) :: InList_csv  !! character string with comma-separated list of variables for CSV output
-      character(len=1024) :: InList_csv_tz  !! character string with comma-separated list of variables for CSV output
-      real(real64), allocatable :: tz_z1_z2(:)  !! Depth range for time-depth CSV output (default: top soil profile, bottom soil profile)
+      ! [GR-IO 2026-05-25 Phase 2] InList_csv retired — read from config%output_csv%inlist
+      ! [GR-IO 2026-05-25 Phase 2] InList_csv_tz retired — read from config%output_csv%inlist_tz
+      ! [GR-IO 2026-05-25 Phase 2] tz_z1_z2 retired — read from config%output_csv%tz_z1_z2
       ! [GR-SOIL 2026-05-24] swbotb3Impl retired — orphan stub; read via state%cfg%bottom_boundary%swbotb3impl.
       ! [GR-BND 2026-05-23] SwBotb3ResVert retired — see state%soilwater%swbotb3resvert
       integer :: swcfbs  !! Switch for use of coefficient CFBS to convert potential ET into potential E: 0 = no; 1 = yes
