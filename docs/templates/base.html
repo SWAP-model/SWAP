@@ -237,6 +237,35 @@
       })();
     </script>
 
+    <script type="module">
+      // Mermaid auto-rendering. FORD's markdown pipeline pygments-highlights
+      // every fenced block, so ```mermaid lands as
+      // <div class="codehilite"><pre><code>flowchart …</code></pre></div>
+      // with no language class. Detect by leading keyword and unwrap into
+      // <div class="mermaid"> so the Mermaid runtime picks it up.
+      import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+      var MERMAID_KEYWORDS = /^(flowchart|graph|sequenceDiagram|gantt|pie|erDiagram|classDiagram|stateDiagram(-v2)?|journey|mindmap|timeline|gitGraph|requirementDiagram|C4Context|quadrantChart)\b/;
+      function unwrap(el, text) {
+        var div = document.createElement('div');
+        div.className = 'mermaid';
+        div.textContent = text;
+        el.replaceWith(div);
+      }
+      // 1) Pre-existing convention: <pre><code class="language-mermaid">…</code></pre>
+      document.querySelectorAll('pre > code.language-mermaid').forEach(function (code) {
+        unwrap(code.parentElement, code.textContent);
+      });
+      // 2) FORD/codehilite case: detect by content of the inner <code>.
+      document.querySelectorAll('div.codehilite pre code, pre > code').forEach(function (code) {
+        var text = code.textContent.trim();
+        if (MERMAID_KEYWORDS.test(text)) {
+          var container = code.closest('div.codehilite') || code.parentElement;
+          unwrap(container, text);
+        }
+      });
+      mermaid.initialize({ startOnLoad: true, theme: 'neutral' });
+    </script>
+
     {% if search %}
     <script src="https://unpkg.com/lunr@2.3.9/lunr.min.js"
             integrity="sha384-jHjQy43yPI0lvtq28QhFAehv4OmtPq2VxlfFwkQbvjbflnpKAEhmJgsg5SADQyrf"

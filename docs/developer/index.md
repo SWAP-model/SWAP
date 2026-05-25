@@ -10,6 +10,8 @@ For contributors to the SWAP modernization.
 
 - **[Architecture](architecture.html)** — three-phase control flow, state
   aggregation, module boundaries.
+- **[Execution flow](execution-flow.html)** — mermaid diagrams of init →
+  daily run loop → close, with the actual call chain.
 - **[Contributing](contributing.html)** — branch model, commit conventions,
   verification gates.
 - **[Build and test](build-and-test.html)** — building locally, fast/full
