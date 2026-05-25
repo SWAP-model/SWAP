@@ -132,11 +132,11 @@ contains
    !!   - 2D cseeptab → interleaved afgen layout flatten.
    !!   - Runtime per-node cml/cmsy allocation + zero-fill formerly in the free
    !!     solute_init(state) in src/solute/solute.f90.
-   subroutine solute_state_init(self, config_solute, numlay)
+   subroutine solute_state_init(self, config_solute, numnod)
       use solute_config_mod, only: solute_config_t
       class(solute_state_t), intent(inout) :: self
       type(solute_config_t), intent(in)    :: config_solute
-      integer,               intent(in)    :: numlay
+      integer,               intent(in)    :: numnod
 
       integer :: i, n
 
@@ -144,7 +144,7 @@ contains
       ! Runtime zero-fill (formerly free solute_init in solute.f90):
       ! allocate per-node arrays sized to numnod and seed initial profiles.
       ! ------------------------------------------------------------------
-      n = numlay
+      n = numnod
       if (.not. allocated(self%cml))  allocate(self%cml(n))
       if (.not. allocated(self%cmsy)) allocate(self%cmsy(n))
 
