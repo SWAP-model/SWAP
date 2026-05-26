@@ -20,7 +20,6 @@
 
 module solute_state_mod
    use, intrinsic :: iso_fortran_env, only: real64
-   use iso_c_binding, only: c_double
    use swap_array_dimensions, only: MABBC, MAHO
    implicit none
    private
@@ -102,18 +101,6 @@ module solute_state_mod
       real(real64) :: rottot  = 0.0_real64
       real(real64) :: csurf   = 0.0_real64
       real(real64) :: samini  = 0.0_real64
-
-      !> [SS-BMI2] Solute output row buffer (SoluteOutput stream).
-      !! Currently placeholder only — SoluteOutput body was deleted by ADR 0009 Phase 5+.
-      real(c_double),    allocatable :: output_row(:)
-      character(len=32), allocatable :: output_columns(:)
-      integer                        :: output_n_cols = 0
-
-      !> [SS-BMI2] AgeTracer output row buffer (AgeTracerOutput stream).
-      !! Currently inert — flAgeTracer is always false (ADR 0032).
-      real(c_double),    allocatable :: agetracer_row(:)
-      character(len=32), allocatable :: agetracer_columns(:)
-      integer                        :: agetracer_n_cols = 0
 
    contains
       procedure :: init               => solute_state_init

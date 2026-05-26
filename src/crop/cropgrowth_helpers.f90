@@ -1,8 +1,7 @@
 ! cropgrowth_helpers.f90
 ! Leaf-level crop helpers extracted from cropgrowth.f90.
 ! Subroutines: nocrop, ArableLandGerm, FacCO2, update_rootdistribution,
-!              sumttd, init_crop_output_buffer, build_crop_output_row,
-!              cleanup_crop_output_buffer.
+!              sumttd.
 !
 ! [GR-CROP 2026-05-25] use-variables sweep:
 !   - ArableLandGerm      → crop_config_global%rotation_wofost(icrop)%X (germ
@@ -490,60 +489,5 @@
       if (task == 'initial' .or. task == 'dynamic') return
       return
       end subroutine sumttd
-
-! ----------------------------------------------------------------------
-! [SS-BMI2] Crop output buffer helpers (canonical output-sink pattern)
-! Buffer lives at top-level swap_state_t (no crop_state_t today).
-! N is dynamic — varies by croptype; placeholder N=1 until full crop
-! output migration arc populates the row from OutCropFixed/OutWofost/OutGrass.
-! ----------------------------------------------------------------------
-
-      subroutine init_crop_output_buffer(state)
-! ----------------------------------------------------------------------
-!     Allocate state%crop_output_row and set column names.
-!     Called from cropoutput(1) — always runs, headless-independent.
-!     Currently: N=1 placeholder. Full migration deferred to crop arc.
-! ----------------------------------------------------------------------
-      use swap_state_mod, only: swap_state_t
-      use iso_c_binding,  only: c_double
-      implicit none
-      type(swap_state_t), intent(inout) :: state
-      integer, parameter :: N = 1
-
-      state%crop_output_n_cols = N
-      if (.not. allocated(state%crop_output_row))     allocate(state%crop_output_row(N))
-      if (.not. allocated(state%crop_output_columns)) allocate(state%crop_output_columns(N))
-      state%crop_output_row     = 0.0_c_double
-      state%crop_output_columns(1) = 'placeholder'
-      end subroutine init_crop_output_buffer
-
-
-      subroutine build_crop_output_row(state)
-! ----------------------------------------------------------------------
-!     Fill state%crop_output_row(:) — currently a no-op placeholder.
-!     Called from cropoutput(2) — always runs, headless-independent.
-!     Full build (OutCropFixed/OutWofost/OutGrass values) deferred to
-!     the crop output migration arc.
-! ----------------------------------------------------------------------
-      use swap_state_mod, only: swap_state_t
-      implicit none
-      type(swap_state_t), intent(inout) :: state
-      ! No-op: buffer populated when crop output migration arc runs.
-      end subroutine build_crop_output_row
-
-
-      subroutine cleanup_crop_output_buffer(state)
-! ----------------------------------------------------------------------
-!     Deallocate state%crop_output_row and reset counter.
-!     Called from cropoutput(3) — always runs, headless-independent.
-! ----------------------------------------------------------------------
-      use swap_state_mod, only: swap_state_t
-      implicit none
-      type(swap_state_t), intent(inout) :: state
-
-      if (allocated(state%crop_output_row))     deallocate(state%crop_output_row)
-      if (allocated(state%crop_output_columns)) deallocate(state%crop_output_columns)
-      state%crop_output_n_cols = 0
-      end subroutine cleanup_crop_output_buffer
 
       end module cropgrowth_helpers_mod

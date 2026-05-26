@@ -146,7 +146,7 @@ sources = [
     'src/io/csv_output.f90',
     'src/io/meteo_buffer_mod.f90',
     'src/io/readmeteo.f90',
-    'src/io/swapoutput.f90',
+    'src/io/file_headers.f90',
 
     # Atmosphere & Heat
     'src/atmosphere/atmosphere_constants.f90',

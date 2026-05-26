@@ -33,7 +33,6 @@
 
 module atmosphere_state_mod
    use, intrinsic :: iso_fortran_env, only: real64
-   use iso_c_binding, only: c_double
    use swap_array_dimensions, only: magrs, mayrs, mrain
    implicit none
    private
@@ -165,15 +164,6 @@ module atmosphere_state_mod
       ! -----------------------------------------------------------------------
       type(atmosphere_intermediate_t) :: intr  !< intermediate accumulators (flzerointr-reset)
       type(atmosphere_cumulative_t)   :: cumu  !< cumulative accumulators (flzerocumu-reset)
-
-      ! -----------------------------------------------------------------------
-      ! [SS-BMI2] Snow output row buffer (SnowOutput stream).
-      ! Prefix snow_output_ used to namespace for future atmosphere output streams.
-      ! N = 7: t1900, daycum, snrai, gsnow, ssnow, melt, subl
-      ! -----------------------------------------------------------------------
-      real(c_double),    allocatable :: snow_output_row(:)
-      character(len=32), allocatable :: snow_output_columns(:)
-      integer                        :: snow_output_n_cols = 0
 
       ! [SS-GR-ATM A3] Block 1: daily meteo input arrays (366-sized fixed)
       real(real64) :: arad(366) = 0.0_real64    !! daily radiation input

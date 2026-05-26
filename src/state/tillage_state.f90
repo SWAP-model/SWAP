@@ -45,7 +45,6 @@
 
 module tillage_state_mod
    use, intrinsic :: iso_fortran_env, only: real64
-   use iso_c_binding, only: c_double
    implicit none
    private
    public :: tillage_state_t
@@ -99,13 +98,6 @@ module tillage_state_mod
       real(real64), allocatable :: TAB_K_R_cons(:)     !! Consolidation rate constant per type
       real(real64), allocatable :: TAB_Rho_match(:)    !! Matching-point density per type (i_n_model=3 only)
       real(real64), allocatable :: TAB_N_match(:)      !! Matching-point n per type (i_n_model=3 only)
-
-      !> [SS-BMI2] Tillage output row buffer (DoTillage task=3 stream).
-      !! N = 5: t1900, nraida, sumDWC, sumAvail1, sumAvail2.
-      !! Debug writes to units 222/226 are gated by headless.
-      real(c_double),    allocatable :: output_row(:)
-      character(len=32), allocatable :: output_columns(:)
-      integer                        :: output_n_cols = 0
 
    contains
       procedure :: init => tillage_state_init

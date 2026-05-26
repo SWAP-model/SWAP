@@ -1,6 +1,6 @@
-!> Water-balance aggregates for CSV/BMI output. Extracted verbatim from the
+!> Water-balance aggregates for CSV output. Extracted verbatim from the
 !! former inline arithmetic in swap_csv_output.f90's fill_values so it can be
-!! unit-tested and reused by the BMI water_balance_row builder (IO-OUT/E).
+!! unit-tested.
 module csv_aggregates_mod
    use iso_fortran_env, only: real64
    implicit none

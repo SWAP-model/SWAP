@@ -165,7 +165,7 @@ if get_option('enable_pfunit')
         '../../src/io/csv_output.f90',
         '../../src/io/meteo_buffer_mod.f90',
         '../../src/io/readmeteo.f90',
-        '../../src/io/swapoutput.f90',
+        '../../src/io/file_headers.f90',
         '../../src/atmosphere/interception.f90',
         '../../src/atmosphere/runoff.f90',
         '../../src/atmosphere/meteo_io.f90',

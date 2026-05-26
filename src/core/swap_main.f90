@@ -12,6 +12,7 @@ program swap_main
 
    type(swap_state_t)           :: state
    type(swap_config_t), target  :: config  ! target: crop_config_global pointer set inside swap_init
+   logical                      :: fileopen
 
    call log_init(log_level=LOGLEVEL_INFO, log_file='swap_swap.log')
 
@@ -23,7 +24,13 @@ program swap_main
 
    write(*,'(a)')' Swap normal completion!'
    call log_close()
-   call CloseTempFil   ! deletes unit-20 scratch file; retirement candidate (see swapoutput.f90)
+
+   ! IO-OUT/E: CloseTempFil inlined here (swapoutput.f90 deleted). The
+   ! unit-20 close-with-DELETE is the project's own scratch-file cleanup
+   ! (TTutil scratch retired with ADR 0023); no other code opens unit 20.
+   inquire(unit=20, opened=fileopen)
+   if (fileopen) close(20, status='DELETE')
+
    stop 100
 
 end program swap_main

@@ -45,7 +45,6 @@
 
 module soilwater_state_mod
    use, intrinsic :: iso_fortran_env, only: real64
-   use iso_c_binding, only: c_double
    use hydraulic_params_mod, only: vanGenuchten_params_t
    use swap_array_dimensions, only: MADAY, MABBC
    implicit none
@@ -312,15 +311,6 @@ module soilwater_state_mod
       real(real64) :: cqprai    = 0.0_real64
       real(real64) :: cgird     = 0.0_real64
       real(real64) :: cnird     = 0.0_real64
-
-      ! ===========================================================================
-      ! [SS-BMI2] SOILWATER OUTPUT STREAM (Task 9)
-      ! ===========================================================================
-      !> Row buffer filled by build_soilwater_output_row; sized to the number
-      !! of active columns in the user-defined csv output (swcsv=1 path).
-      real(c_double),    allocatable :: output_row(:)
-      character(len=32), allocatable :: output_columns(:)
-      integer                        :: output_n_cols = 0
 
    contains
       procedure :: init                       => soilwater_state_init

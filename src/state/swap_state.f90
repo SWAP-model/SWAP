@@ -8,7 +8,6 @@
 !! replacing the implicit shared state held in `variables.f90`.
 
 module swap_state_mod
-   use iso_c_binding,           only: c_double
    use surfacewater_state_mod,  only: surfacewater_state_t
    use drainage_state_mod,      only: drainage_state_t
    use solute_state_mod,        only: solute_state_t
@@ -45,18 +44,6 @@ module swap_state_mod
       type(crop_state_t)         :: crop
       type(nutrients_state_t)    :: nutrients
       type(legacy_state_t)       :: legacy   !! [Sweep 3] transitional bag for remaining variables.f90 globals
-
-      ! [SS-BMI2] water balance output stream (was: written directly to .inc from outinc)
-      real(c_double),    allocatable :: water_balance_row(:)
-      character(len=32), allocatable :: water_balance_columns(:)
-      integer                        :: water_balance_n_cols = 0
-
-      ! [SS-BMI2] crop output stream (cropoutput/OutCropFixed/OutWofost/OutGrass).
-      ! Lives at top-level swap_state_t; no crop_state_t exists today.
-      ! N is dynamic: varies by croptype (fixed/wofost/grass) and user config.
-      real(c_double),    allocatable :: crop_output_row(:)
-      character(len=32), allocatable :: crop_output_columns(:)
-      integer                        :: crop_output_n_cols = 0
    end type swap_state_t
 
 end module swap_state_mod

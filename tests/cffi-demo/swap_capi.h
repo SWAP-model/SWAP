@@ -15,10 +15,6 @@ int swap_view_array(const char *name, double **ptr, int *n);
 int swap_get_scalar(const char *name, double *value);
 int swap_set_scalar(const char *name, double value);
 
-/* Output rows */
-int swap_get_output_row(const char *stream, double **row_ptr,
-                        char ***names_ptr, int *n);
-
 /* Derived summaries */
 typedef struct {
     double rain;
