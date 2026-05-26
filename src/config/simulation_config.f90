@@ -50,7 +50,6 @@ module simulation_config_mod
       integer :: swres     = 0
       integer :: swodat    = 0
       integer :: swyrvar   = 0
-      integer :: swcrp     = 0     !! [IO-OUT/D] 0=no .crp output, 1=write legacy .crp crop output file
       type(simulation_numerical_t) :: numerical
    contains
       procedure :: validate => simulation_config_validate
@@ -69,7 +68,6 @@ contains
       call check_int_enum(self%swres,   [0, 1], "simulation.swres",    errors)
       call check_int_enum(self%swodat,  [0, 1], "simulation.swodat",   errors)
       call check_int_enum(self%swyrvar, [0, 1], "simulation.swyrvar",  errors)
-      call check_int_enum(self%swcrp,   [0, 1], "simulation.output.swcrp", errors)
       call check_ordered_pair(self%tstart, self%tend, &
                               "tstart", "tend", "simulation", errors)
       call self%numerical%validate(errors)

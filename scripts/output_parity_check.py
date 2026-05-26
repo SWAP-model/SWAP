@@ -9,6 +9,17 @@ and root-depth columns before writing; the CSV stores the unrounded float.
 The expected max deviation for nint-rounded columns is therefore 0.5 (half an
 integer unit).
 
+NOTE — one-time evidence tool, not expected to re-run after IO-OUT Phase E
+-----------------------------------------------------------------------
+This script required a temporary ``simulation.output.swcrp`` config knob
+(wired in e55996f) to activate the legacy .crp writer on the TOML path so
+the parity comparison could be performed.  That knob was reverted in the
+immediately following commit because the .crp/.snw writers are being retired
+entirely in IO-OUT Phase E (tasks E3–E4).  The parity results captured in
+commit e55996f (all 22 columns PASS) justify that deletion; this script is
+retained as documentation of that evidence and will not function after the
+.crp/.snw writers are removed.
+
 Usage
 -----
   # Grass .crp parity (case must have swcrop=1 + crop type=3)
