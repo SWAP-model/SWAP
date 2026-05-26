@@ -22,7 +22,9 @@ For contributors to the SWAP modernization.
 ## Subsystems
 
 - **[State management](state-management.html)** — `config_t` / `initial_t`
-  / `state_t` lifecycle and the ASSOCIATE pattern.
+  / `state_t` lifecycle and the aggregator composition.
+- **[Sub-state aliasing with ASSOCIATE](state-aliasing.html)** — canonical
+  short aliases (`soil`, `drai`, `time`, …) for `swap_state_t` sub-records.
 - **[Error handling](error-handling.html)** — error collection, calling
   convention, abort checkpoint.
 - **[Logging](logging.html)** — `swap_log` facility, levels, format.

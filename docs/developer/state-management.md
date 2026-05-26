@@ -161,29 +161,16 @@ minimal rather than passing "all of the state to all of the routines."
 
 ## Scoped aliasing with ASSOCIATE
 
-Long `%`-chains through the aggregator read poorly and are tiring to type.
-Fortran's `ASSOCIATE` construct gives scoped aliases without pointer
-overhead. `src/core/timecontrol.f90` uses this pattern to bind the legacy
-`SAVE` locals to the corresponding fields on `time_state_t`:
+Long `%`-chains through the aggregator read poorly. Ported physics
+routines open an `associate` block at the top of the body and bind each
+sub-record they touch to a short canonical alias (`soil`, `drai`, `time`,
+`atmo`, …). The same name is used for the same sub-record across every
+file, so `soil%gwl` means `state%soilwater%gwl` no matter which routine
+you are reading.
 
-```fortran
-associate( datea    => tc_datea, &
-           nextyear => tc_nextyear, &
-           flTnext  => tc_flTnext, &
-           tchange  => tc_tchange, &
-           dtEvent  => tc_dtEvent )
-    ! ... body reads/writes datea, nextyear, ... as if they were locals
-end associate
-```
-
-The associate-names exist only inside the block. They do **not** persist
-across subroutine calls: once control returns from a routine called inside
-the `associate` block, the callee sees only the underlying state fields,
-not the local names. `ASSOCIATE` is also not a substitute for extracting a
-helper routine — if a block is long enough to justify aliases, it is
-usually long enough to benefit from being its own subroutine with an
-explicit argument list. Use `ASSOCIATE` for short, intensively-used inner
-loops or for the kind of SAVE-to-state rebinding shown above.
+See [state-aliasing.md](state-aliasing.html) for the canonical alias
+table, a worked drainage example, and the rules on when to use the
+pattern versus extracting a helper subroutine.
 
 ## Lifecycle contract
 

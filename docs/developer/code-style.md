@@ -134,27 +134,16 @@ easier to spot.
 
 ## ASSOCIATE
 
-Use `ASSOCIATE` for scoped aliasing when a block repeatedly references
-fields of a state type. Example from `src/core/timecontrol.f90`:
-
-```fortran
-associate( datea     => tc_datea,     &
-           nextyear  => tc_nextyear,  &
-           tchange   => tc_tchange,   &
-           dtEvent   => tc_dtEvent,   &
-           tEvent    => tc_tEvent )
-    ! ... use datea, nextyear, tchange, dtEvent, tEvent here ...
-end associate
-```
-
-The alias names exist only inside the `associate` block. They are not
-persistent aliases and they do not change the storage of the underlying
-variables; they are a local readability affordance.
-
-`ASSOCIATE` is not a substitute for extracting a helper subroutine. If a
-block is long enough to need many aliases, it is usually long enough to
-be its own routine that takes the state as an argument — pull the block
-out first and use `ASSOCIATE` inside the new routine if it still helps.
+Use `ASSOCIATE` for scoped aliasing when a routine repeatedly references
+sub-records of `swap_state_t` or `swap_config_t`. The convention is to
+open one block near the top of the routine and bind each sub-record to
+its short canonical alias (`soil => state%soilwater`,
+`drai => state%drainage`, `time => state%timecontrol`,
+`drain_cfg => state%cfg%drain`, …). The same alias is used for the same
+sub-record across every file. See
+[state-aliasing.md](state-aliasing.html) for the full alias table, a
+worked drainage example, and the rules on scope, intent, and when to
+extract a helper subroutine instead.
 
 ## Comments and docstrings
 
