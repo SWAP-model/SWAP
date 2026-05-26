@@ -199,14 +199,14 @@ end type
 ## What is preserved
 
 - The two result CSVs and their formats (extended with folded-in crop/snow columns, not changed in shape).
-- The `inlist` user-selection feature (now registry-validated).
-- The `dstor`/`baldev`/subregion aggregation math.
-- The live C-API streams: `swap_balance` (now actually filled), `soilwater`, `crop`, `tillage`, `snow`.
+- The `inlist` user-selection feature (the `output_registry` adds a validated, bracket-aware resolver staged for a follow-on; the live selection still flows through `make_userlist`/`det_which_vars`).
+- The `dstor`/`baldev`/subregion aggregation math (extracted to the tested `csv_aggregates_mod`).
+- The orthogonal C-API accessors actually used by the POC: `swap_get_water_balance` (reads cumulative state directly), `swap_view_array`, `swap_get_scalar`.
 
 ## What is retired
 
-- `swapoutput.f90` in full, and with it the `.inc`/`.rot`/`.tem`/`.snw`/`.crp` legacy text writers and the dead `outage` path.
-- The four inert C-API streams `temperature/solute/surfacewater/agetracer` and their state buffer fields.
+- `swapoutput.f90` in full, and with it the `.inc`/`.rot`/`.tem`/`.snw`/`.crp` legacy text writers, the dead `outage` path, and the `.crp` `CropOutput`/`cropoutput` dispatch. (The 3 still-live free-standing procs — `writehead`, `WriteSwapOk` — were relocated verbatim to `src/io/file_headers.f90`; `CloseTempFil` inlined into `swap_main`.)
+- **The entire per-subsystem `output_row` C-API mechanism** (per the REVISED decision above): the `swap_get_output_row` function + all 9 stream cases, every `*_output_row`/`*_columns`/`*_n_cols` field across 8 state files, and all `build_*_output_row`/`init|cleanup_*_buffer` helpers. Unused by every consumer; the unified in-memory results accessor is future work on the registry/`csv_output`.
 
 ## Out of scope / follow-on (separate arc: IO-IN cleanup)
 
