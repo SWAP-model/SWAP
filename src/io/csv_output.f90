@@ -348,16 +348,6 @@ do i = 1, N
 end do
 end function STRinARSTR
 
-subroutine writeheader(iun)
-implicit none
-integer, intent(in) :: iun
-write(iun,'(A)') '* Project:       '
-write(iun,'(A)') '* File content:  '
-write(iun,'(A)') '* File name:     '
-write(iun,'(A)') '* Model version: '
-write(iun,'(A)') '* Generated at:  '
-end subroutine writeheader
-
 SUBROUTINE my_piksrt(n,arr,brr)
 ! adapted after Numerical Recipes routine piksr2 (inputs now 1 integer and 1 char arrays)
    implicit none
@@ -387,7 +377,6 @@ END
 module csv_output
 
    use error_mod, only: fatalerr_collected
-   use iso_c_binding, only: c_double
    ! SS-SLST Phase 1 Task 5: cml,cmsy,imsqprec,imsqirrig,imsqbot,imsqdra,imdectot,imrottot,sampro,solbal
    !   removed from module-level use variables (now via state%solute in set_values/fill_values).
    ! SS-HEAT Phase 1 Task 5: TeTop,TeBot,Tsoil,heacap,heacon removed from module-level use variables
@@ -419,7 +408,6 @@ module csv_output
    implicit none
 
    private
-   public :: csv_out
    public :: csv_output_init, csv_output_step, csv_output_finalize
 
    ! IO-OUT/C2b: scalar result_output.csv file writes routed through csv_writer_t.

@@ -172,6 +172,13 @@ contains
       var_kind = REGISTRY(i)%kind
    end function var_kind
 
+   !> STAGED FOR FOLLOW-ON ARC: resolve_inlist (and var_kind) are the intended
+   !! foundation for a future unification that will retire the legacy
+   !! make_userlist / det_which_vars name-validation path in csv_output.f90.
+   !! They are currently exercised only by their unit tests. Do NOT delete them.
+   !! The follow-on arc must also model the shorts alias expansion and
+   !! node/subregion selector parsing that the legacy path still handles.
+   !!
    !> Parse a comma-separated inlist, match each token against the registry,
    !! return matched indices in REGISTRY order. Bracket-aware: a token
    !! containing '[' matches a templated entry whose stored name is

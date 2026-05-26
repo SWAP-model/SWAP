@@ -6,9 +6,10 @@ All persistent I/O. Input readers: the TOML configuration reader
 (`readswaptoml.f90`) and its drainage sibling (`readdrainagetoml.f90`),
 the legacy fixed-format reader kept for backwards compatibility
 (`readswap.f90`), and the meteo reader (`readmeteo.f90`). Output
-writers: the CSV output backend (`swap_csv_output.f90`), the main
-SWAP output dispatcher (`swapoutput.f90`), and the macropore-specific
-output (`macroporeoutput.f90`). The TOML readers use the `toml-f`
+writers: the CSV output backend (`csv_output.f90`, writing via the
+`csv_writer.f90` primitive, variable schema from `output_registry.f90`),
+and the macropore-specific output (`macroporeoutput.f90`). The legacy
+`swapoutput.f90` has been removed. The TOML readers use the `toml-f`
 subproject.
 
 ## Public interface
@@ -16,11 +17,13 @@ subproject.
 - `ReadSwapToml_state` — TOML main-input reader entry point.
 - `ReadDrainageToml_state` — drainage TOML reader entry point.
 - `MacroPoreOutput` — macropore-output writer.
-- `csv_out`, `csv_out_tz` — CSV output writer and its time-zone variant.
+- `csv_output_init`, `csv_output_step`, `csv_output_finalize` — CSV
+  output entry points (scalar `result_output.csv` and time-depth
+  `result_output_tz.csv`).
 
-The legacy `readswap.f90` and `swapoutput.f90` use traditional Fortran
-fixed-form style without explicit `public ::` lists; their entry points
-are called from `src/core/swap.f90`.
+The legacy `readswap.f90` uses traditional Fortran fixed-form style
+without an explicit `public ::` list; its entry points are called from
+`src/core/swap.f90`.
 
 ## Dependencies
 
