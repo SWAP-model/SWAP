@@ -1,10 +1,25 @@
 module csv_output_tz
 
-use error_mod, only: fatalerr_collected
+use error_mod, only: fatalerr_collected, error_collection_t
+use csv_writer_mod, only: csv_writer_t
 private
 public :: csv_out_tz
+public :: csv_out_tz_flush
+
+! IO-OUT/C2b: time-depth result_output_tz.csv file writes routed through
+! csv_writer_t for open/close/flush. The per-depth row writes keep the legacy
+! raw-Fortran formatting (F0.3 depth + un-trimmed 1P,E12.5 fields finalized
+! with list-directed write) by targeting profile_w%unit directly — these
+! formats are NOT byte-compatible with csv_writer_t%row (which trims values),
+! so the proven inline write code is preserved verbatim.
+type(csv_writer_t), save :: profile_w
 
 contains
+
+!> IO-OUT/C2b: drain the tz writer's runtime buffer. No-op if never opened.
+subroutine csv_out_tz_flush()
+   call profile_w%flush()
+end subroutine csv_out_tz_flush
 
 subroutine csv_out_tz (iTask, state)
 ! Routine designed for CSV output of user-selected vaiables (provided matching defined variables in this routine).
@@ -22,7 +37,6 @@ subroutine csv_out_tz (iTask, state)
 ! InList_csv_tz consumers mutate via upperc/sort_list_tz, so we take a local
 ! copy of the config string (`inList_tz_local`) before mutating.
 use swap_state_mod, only: swap_state_t
-use file_io_mod, only: file_open
 
 implicit none
 ! global
@@ -42,8 +56,9 @@ integer,             dimension(Mlist), save        :: iCSV, iPOS
 
 integer,             parameter                     :: ilw = Mlist
 integer,             dimension(ilw)                :: iWbeg, iWend
-integer,                               save        :: iuncsv, Nvars, nod_1, nod_2
+integer,                               save        :: Nvars, nod_1, nod_2
 integer                                            :: i, j
+type(error_collection_t)                           :: errs
 character(len=*),    parameter                     :: comma   = ','
 character(len=300)                                 :: filnam
 character(len=160)                                 :: filtext
@@ -131,8 +146,10 @@ case (1)
    
    ! open file for output; existing file will be overwritten; formatted output
    !    to do: write some basic info at the top of the output file?
+   ! IO-OUT/C2b: open via csv_writer_t (status='replace',action='write' —
+   ! matches the previous file_open call exactly).
    filnam = trim(state%cfg%general%pathwork)//trim(state%cfg%general%outfil)//'_output_tz.csv'
-   call file_open(iuncsv, filnam, 'replace', 'write')
+   call profile_w%open(filnam, errs)
 
    ! column header
    Header = 'DATE,DEPTH'
@@ -140,9 +157,9 @@ case (1)
    call make_header_tz (ListVars, Nvars, Header)
    call make_headerunits_tz (HeaderUnits)
    filtext = 'specified output data of SWAP'
-   call writehead (iuncsv,1,filnam,filtext,state%cfg%general%project)
-   write (iuncsv,'(A)') trim(HeaderUnits)
-   write (iuncsv,'(A)') trim(Header)
+   call writehead (profile_w%unit,1,filnam,filtext,state%cfg%general%project)
+   write (profile_w%unit,'(A)') trim(HeaderUnits)
+   write (profile_w%unit,'(A)') trim(Header)
 
 case (2)
 
@@ -155,15 +172,15 @@ case (2)
 
     ! date and time
     if (.not. tc_flprintshort) then                                      ! SS-TC TC-13
-       write (iuncsv,'(2A)',advance='no') trim(tc_date)                  ! SS-TC TC-13
+       write (profile_w%unit,'(2A)',advance='no') trim(tc_date)          ! SS-TC TC-13
     else
        ! determine date-time
        call dtdpst ('year-month-day hour:minute:seconds',tc_t1900,datexti)  ! SS-TC TC-13
-       write (iuncsv,'(2A)',advance='no') trim(datexti)
+       write (profile_w%unit,'(2A)',advance='no') trim(datexti)
     end if
 
     ! depth
-    write (iuncsv,formZ,advance='no') comma, state%mesh%z(j)
+    write (profile_w%unit,formZ,advance='no') comma, state%mesh%z(j)
 
     ! all other variables
     ! programmer is responsible for correct correspondence between Names (and their position) in Allowed and
@@ -184,14 +201,15 @@ case (2)
     if (iCSV(10) == 1) call do_write_csv_tz (state%soilwater%inqrot(j))
 
     ! finalize record (advance to next line)
-    write (iuncsv,*)
+    write (profile_w%unit,*)
 
   end do
   end associate  ! SS-TC TC-13: tc_flprintshort, tc_date, tc_t1900
 
 case (3)
 
-   close (unit=iuncsv)
+   ! IO-OUT/C2b: close via csv_writer_t.
+   call profile_w%close()
 
 case default
 
@@ -207,7 +225,7 @@ subroutine do_write_csv_tz (var)
 implicit none
 real(8),          intent(in)  :: var
 
-write (iuncsv,form_rea_E,advance='no') comma, real(var)
+write (profile_w%unit,form_rea_E,advance='no') comma, real(var)
 
 end subroutine do_write_csv_tz
 
@@ -394,12 +412,17 @@ module csv_output
    use swap_state_mod, only: swap_state_t
    use output_registry_mod, only: var_count, var_name, var_unit
    use csv_aggregates_mod, only: water_balance_dev
+   use csv_writer_mod, only: csv_writer_t
+   use error_mod, only: error_collection_t
 
    implicit none
 
    private
    public :: csv_out
    public :: csv_output_init, csv_output_step, csv_output_finalize
+
+   ! IO-OUT/C2b: scalar result_output.csv file writes routed through csv_writer_t.
+   type(csv_writer_t), save :: scalar_w
 
    ! local list
    integer,              parameter           :: M      = 103            ! total number of variables present in predefined list
@@ -620,7 +643,6 @@ module csv_output
    end subroutine set_values
 
    subroutine csv_out(iTask, state)
-   use file_io_mod, only: file_open
    implicit none
 
    ! global
@@ -629,13 +651,12 @@ module csv_output
    type(swap_state_t), intent(inout) :: state
 
    ! local
-   integer              :: j, il, iuncsv
+   integer              :: j, n, ncount
    character(len=19)    :: datexti
-   character(len=1024)  :: line
    character(len=300)   :: filcsv
-   character(len=20)    :: form
-   character(len=30)    :: myval
-   save                 :: iuncsv
+   ! IO-OUT/C2b: flattened data-row values for csv_writer_t%row.
+   real(8)              :: vals(Mnodes*M)
+   type(error_collection_t) :: errs
 
    select case (iTask)
    case (1)
@@ -668,10 +689,13 @@ module csv_output
       call init_soilwater_output_buffer(state)
 
       ! output file; write header (headless: skip file I/O)
+      ! IO-OUT/C2b: open via csv_writer_t; header reuses proven makeheader code
+      ! verbatim by writing to scalar_w%unit (pragmatic fallback — guarantees
+      ! byte-identity for the universal SWAP header + units/names rows).
       if (.not. state%timecontrol%headless) then
          filcsv = trim(state%cfg%general%pathwork)//trim(state%cfg%general%outfil)//'_output.csv'
-         call file_open(iuncsv, filcsv, 'unknown', 'readwrite')
-         call makeheader(iuncsv, filcsv, state)
+         call scalar_w%open(filcsv, errs)
+         call makeheader(scalar_w%unit, filcsv, state)
       end if
 
       ! store inital values (always — needed for dstor computation in fill_values)
@@ -691,43 +715,43 @@ module csv_output
       call build_soilwater_output_row(state)
 
       ! write to CSV (headless: skip)
+      ! IO-OUT/C2b: flatten active vars (same emission order as before) into a
+      ! 1-D array and emit via csv_writer_t%row. row() prepends the leading
+      ! datetime string + comma, joins values with commas, and writes NO
+      ! trailing comma — byte-identical to the previous hand-built line that
+      ! stripped its trailing comma via line(1:il-1). fmt_real == what_form.
       if (.not. state%timecontrol%headless) then
-         ! line contains results in comma-separated format; il is its length
-         ! time is first value
-         line = ""; il = 0
          associate( &                                                    ! SS-TC TC-13
             tc_flprintshort => state%timecontrol%flprintshort, &         ! SS-TC TC-13
             tc_date         => state%timecontrol%date,         &         ! SS-TC TC-13
             tc_t1900        => state%timecontrol%t1900          &        ! SS-TC TC-13
          )
-         if (.not. tc_flprintshort) then                                 ! SS-TC TC-13
-            call addstr(line, il, trim(tc_date)); call addstr(line, il, ",")  ! SS-TC TC-13
-         else
-            ! determine date-time
-            call dtdpst ('year-month-day hour:minute:seconds', tc_t1900, datexti)  ! SS-TC TC-13
-            call addstr(line, il, trim(datexti)); call addstr(line, il, ",")
-         end if
-
-         ! next: add all desired values
+         ! flatten the active values in emission order
+         ncount = 0
          do j = 1, M
             if (vars%iyes(j) == 1) then
-               do i = 1, vars%Nnodes(j)
-                  call what_form(2, vars%value(i,j), form)
-                  write (myval, form) vars%value(i,j)
-                  line = line(1:il) // trim(adjustl(myval)); il = len_trim(line)
+               do n = 1, vars%Nnodes(j)
+                  ncount = ncount + 1
+                  vals(ncount) = vars%value(n,j)
                end do
             end if
          end do
 
-         ! write result (skip last character which is a comma)
-         write(iuncsv,'(A)') line(1:il-1)
+         if (.not. tc_flprintshort) then                                 ! SS-TC TC-13
+            call scalar_w%row(vals(1:ncount), leading=trim(tc_date))     ! SS-TC TC-13
+         else
+            ! determine date-time
+            call dtdpst ('year-month-day hour:minute:seconds', tc_t1900, datexti)  ! SS-TC TC-13
+            call scalar_w%row(vals(1:ncount), leading=trim(datexti))
+         end if
          end associate  ! SS-TC TC-13: tc_flprintshort, tc_date, tc_t1900
       end if
 
    case (3)
       ! [SS-BMI2] headless guard: file was only opened when not headless
+      ! IO-OUT/C2b: close via csv_writer_t.
       if (.not. state%timecontrol%headless) then
-         close (unit=iuncsv)
+         call scalar_w%close()
       end if
       call cleanup_soilwater_output_buffer(state)
 
@@ -1354,10 +1378,17 @@ module csv_output
    end subroutine csv_output_init
 
    subroutine csv_output_step(state)
-      use csv_output_tz, only: csv_out_tz
+      use csv_output_tz, only: csv_out_tz, csv_out_tz_flush
       type(swap_state_t), intent(inout) :: state
       if (state%cfg%output_csv%enabled    == 1) call csv_out(2, state)
       if (state%cfg%output_csv%enabled_tz == 1) call csv_out_tz(2, state)
+      ! IO-OUT/C2b: drain runtime buffer at each year boundary so partial
+      ! results survive a crash/kill. flush is a no-op when the writer was
+      ! never opened (headless / tz disabled), so calling on the flag is safe.
+      if (state%timecontrol%flYearStart) then
+         call scalar_w%flush()
+         call csv_out_tz_flush()
+      end if
    end subroutine csv_output_step
 
    subroutine csv_output_finalize(state)
