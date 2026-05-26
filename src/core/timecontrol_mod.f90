@@ -35,278 +35,195 @@ contains
       dtCrit = 1.d-8
       dtfletsine = 0.05d0
 
-      ! Associate block — copied verbatim from timecontrol.f90:54-114.
-      ! Each TC field aliased; bare names below resolve to state%timecontrol%*.
-      associate( datea => state%timecontrol%datea, &
-           nextyear => state%timecontrol%nextyear, &
-           flprevious => state%timecontrol%flprevious, &
-           flTnext => state%timecontrol%flTnext, &
-           fsec => state%timecontrol%fsec, &
-           tchange => state%timecontrol%tchange, &
-           dtEvent => state%timecontrol%dtEvent, &
-           tEvent => state%timecontrol%tEvent, &
-           tcumold => state%timecontrol%tcumold, &
-           dtprevious => state%timecontrol%dtprevious, &
-           tmptimestart => state%timecontrol%tmptimestart, &
-           tmptimeend => state%timecontrol%tmptimeend, &
-           iyear => state%timecontrol%iyear, &
-           iyearm1 => state%timecontrol%iyearm1, &
-           imonth => state%timecontrol%imonth, &
-           dt => state%timecontrol%dt, &
-           dtold => state%timecontrol%dtold, &
-           daynr => state%timecontrol%daynr, &
-           daycum => state%timecontrol%daycum, &
-           daymeteo => state%timecontrol%daymeteo, &
-           yearmeteo => state%timecontrol%yearmeteo, &
-           t => state%timecontrol%t, &
-           t1900 => state%timecontrol%t1900, &
-           tcum => state%timecontrol%tcum, &
-           timjan1 => state%timecontrol%timjan1, &
-           outper => state%timecontrol%outper, &
-           cntper => state%timecontrol%cntper, &
-           isteps => state%timecontrol%isteps, &
-           ioutdat => state%timecontrol%ioutdat, &
-           ioutdatint => state%timecontrol%ioutdatint, &
-           outdat => state%timecontrol%outdat, &
-           outdatint => state%timecontrol%outdatint, &
-           nprintcount => state%timecontrol%nprintcount, &
-           rainrec => state%timecontrol%rainrec, &
-           wrecord => state%timecontrol%wrecord, &
-           swmeteo => state%timecontrol%swmeteo, &
-           date => state%timecontrol%date, &
-           metperiod => state%timecontrol%metperiod, &
-           flDayStart => state%timecontrol%flDayStart, &
-           flDayEnd => state%timecontrol%flDayEnd, &
-           flRunEnd => state%timecontrol%flRunEnd, &
-           flYearStart => state%timecontrol%flYearStart, &
-           floutput => state%timecontrol%floutput, &
-           floutputshort => state%timecontrol%floutputshort, &
-           flbaloutput => state%timecontrol%flbaloutput, &
-           flheader => state%timecontrol%flheader, &
-           flheadirg => state%timecontrol%flheadirg, &
-           flIrg1Start => state%timecontrol%flIrg1Start, &
-           flUpdMetDet => state%timecontrol%flUpdMetDet, &
-           fldecdtmin => state%timecontrol%fldecdtmin, &
-           fldtmin => state%timecontrol%fldtmin, &
-           fldtreduce => state%timecontrol%fldtreduce, &
-           flprintshort => state%timecontrol%flprintshort, &
-           flmetdetail => state%timecontrol%flmetdetail, &
-           flmeteodt => state%timecontrol%flmeteodt, &
-           flrainintens => state%timecontrol%flrainintens, &
-           fletsine => state%timecontrol%fletsine, &
-           flIrrigate => state%timecontrol%flIrrigate, &
-           flDrain => state%timecontrol%flDrain, &
-           flSurfaceWater => state%timecontrol%flSurfaceWater, &
-           flTemperature => state%timecontrol%flTemperature, &
-           flSnow => state%timecontrol%flSnow, &
-           flSolute => state%timecontrol%flSolute, &
-           tstart => state%timecontrol%tstart, &
-           tend => state%timecontrol%tend, &
-           dtmin => state%timecontrol%dtmin, &
-           dtmax => state%timecontrol%dtmax, &
-           period => state%timecontrol%period, &
-           nprintday => state%timecontrol%nprintday, &
-           flprintdt => state%timecontrol%flprintdt, &
-           swheader => state%timecontrol%swheader, &
-           swodat => state%timecontrol%swodat, &
-           swres => state%timecontrol%swres, &
-           swscre => state%timecontrol%swscre, &
-           MaxIt => state%timecontrol%MaxIt, &
-           MaxIterTime => state%timecontrol%MaxIterTime, &
-           msteps => state%timecontrol%msteps, &
-           flMaxIterTime => state%timecontrol%flMaxIterTime )
+      associate (time      => state%timecontrol,   &
+                 soil      => state%soilwater,     &
+                 crop      => state%crop,          &
+                 surf      => state%surfacewater,  &
+                 meteo_cfg => state%cfg%meteo,     &
+                 crop_cfg  => state%cfg%crop)
 
 ! === initialization ===================================================
 
-! [GR-FINAL C1] iyear/imonth written directly by config_to_variables into
-!   state%timecontrol; dt written by config_to_variables (numerical.dt) and
-!   overridden in swap_mod for swinco=3 (soil.initial.dt). tc_*_init_buf retired.
-
 ! --- initialize flags ----------------------------
       fldecdt = .false.
-      fldecdtmin = .false.
-      flRunEnd = .false.
-      flDayStart = .true.
-      fldtmin = .false.
-      state%timecontrol%flZeroIntr = .true.   ! reset gate: intermediate accumulators
-      state%timecontrol%flZeroCumu = .true.   ! reset gate: cumulative accumulators
-      floutput = .false.
-      flbaloutput = .false.
-      flheader = .false.
-      flheadirg = .false.
-      flIrg1Start = .true.
-      flUpdMetDet = .true.
-      flYearStart = .true.
+      time%fldecdtmin = .false.
+      time%flRunEnd = .false.
+      time%flDayStart = .true.
+      time%fldtmin = .false.
+      time%flZeroIntr = .true.   ! reset gate: intermediate accumulators
+      time%flZeroCumu = .true.   ! reset gate: cumulative accumulators
+      time%floutput = .false.
+      time%flbaloutput = .false.
+      time%flheader = .false.
+      time%flheadirg = .false.
+      time%flIrg1Start = .true.
+      time%flUpdMetDet = .true.
+      time%flYearStart = .true.
 
-! [SS-BMI2 Task 5] state%timecontrol fields populated by config_to_variables before
-! timecontrol_init runs. Transitional seed block removed.
-
-      if (nprintday .gt. 1 .or. flprintdt) then
-        flprintshort = .true.
-        period = 1
+      if (time%nprintday .gt. 1 .or. time%flprintdt) then
+        time%flprintshort = .true.
+        time%period = 1
       else
-        flprintshort = .false.
+        time%flprintshort = .false.
       endif
-      if (state%cfg%meteo%swmetdetail .eq. 1) then
-        flmetdetail = .true.
-        metperiod = 1.0d0 / dble(state%cfg%meteo%nmetdetail)
-        wrecord = 0
+      if (meteo_cfg%swmetdetail .eq. 1) then
+        time%flmetdetail = .true.
+        time%metperiod = 1.0d0 / dble(meteo_cfg%nmetdetail)
+        time%wrecord = 0
       else
-        flmetdetail = .false.
+        time%flmetdetail = .false.
       endif
-      if (state%cfg%meteo%swrain.gt.0) then
-         flrainintens = .true.
+      if (meteo_cfg%swrain.gt.0) then
+         time%flrainintens = .true.
       else
-         flrainintens = .false.
+         time%flrainintens = .false.
       endif
-      if (flmetdetail .or. flrainintens) then
-         flmeteodt = .true.
+      if (time%flmetdetail .or. time%flrainintens) then
+         time%flmeteodt = .true.
       else
-         flmeteodt = .false.
+         time%flmeteodt = .false.
       endif
-      fletsine = .false.
-      if (state%cfg%meteo%swetsine .eq. 1) fletsine = .true.
-      if (state%cfg%irrigation%swirfix .eq. 1) flIrrigate = .true.
-      flDrain = .false.
-      if (state%surfacewater%swdra .eq. 1) flDrain = .true.
-      flSurfaceWater = .false.
-      if (state%surfacewater%swdra .eq. 2) flSurfaceWater = .true.
-      flTemperature = .false.
-      if (state%cfg%heat%swhea .eq. 1) flTemperature = .true.
-      flSnow = .false.
-      if (state%cfg%meteo%snow%swsnow .eq. 1) flSnow = .true.
-      flSolute = .false.
-      if (state%cfg%solute%swsolu .eq. 1) flSolute = .true.
+      time%fletsine = .false.
+      if (meteo_cfg%swetsine .eq. 1) time%fletsine = .true.
+      if (state%cfg%irrigation%swirfix .eq. 1) time%flIrrigate = .true.
+      time%flDrain = .false.
+      if (surf%swdra .eq. 1) time%flDrain = .true.
+      time%flSurfaceWater = .false.
+      if (surf%swdra .eq. 2) time%flSurfaceWater = .true.
+      time%flTemperature = .false.
+      if (state%cfg%heat%swhea .eq. 1) time%flTemperature = .true.
+      time%flSnow = .false.
+      if (meteo_cfg%snow%swsnow .eq. 1) time%flSnow = .true.
+      time%flSolute = .false.
+      if (state%cfg%solute%swsolu .eq. 1) time%flSolute = .true.
 
 ! --- initialize counters ----------------------------
-      ! [GR-TIME 2026-05-25] bare `nirri = 1` retired — state%crop%irrigation%nirri
-      ! default is already 1, and that is the only field anyone reads.
-      isteps = 0
-      ioutdat = 1
-      ioutdatint = 1
-      cntper = 0
-      outper = 0.0d0
-      tcumold = 0.0d0
-      nprintcount = 1
+      time%isteps = 0
+      time%ioutdat = 1
+      time%ioutdatint = 1
+      time%cntper = 0
+      time%outper = 0.0d0
+      time%tcumold = 0.0d0
+      time%nprintcount = 1
 
 ! --- set main time variable of SWAP ------------------------
-      t1900 = tstart
+      time%t1900 = time%tstart
 
 ! --- determine time from beginning of calendar year
-      call dtdpar (t1900, datea, fsec)
-      datea(1) = iyear
-      datea(2) = 1
-      datea(3) = 1
-      fsec = 0.0
-      call dtardp (datea,fsec,timjan1)
-      t = tstart - timjan1
-      tEvent = 0.0d0
-      tcum = 0.d0
-      daynr = nint(t)
-      daycum = 0
-      daymeteo = daynr + 1
+      call dtdpar (time%t1900, time%datea, time%fsec)
+      time%datea(1) = time%iyear
+      time%datea(2) = 1
+      time%datea(3) = 1
+      time%fsec = 0.0
+      call dtardp (time%datea, time%fsec, time%timjan1)
+      time%t = time%tstart - time%timjan1
+      time%tEvent = 0.0d0
+      time%tcum = 0.d0
+      time%daynr = nint(time%t)
+      time%daycum = 0
+      time%daymeteo = time%daynr + 1
 
 ! --- determine year,month and day number of current day
-      call dtdpar (t1900+0.1d0, datea, fsec)
-      iyear = datea(1)
-      imonth = datea(2)
-      yearmeteo = iyear
+      call dtdpar (time%t1900+0.1d0, time%datea, time%fsec)
+      time%iyear = time%datea(1)
+      time%imonth = time%datea(2)
+      time%yearmeteo = time%iyear
 
 ! --- determine date of current day
-      call dtdpst ('year-month-day',t1900+0.1d0,date)
+      call dtdpst ('year-month-day', time%t1900+0.1d0, time%date)
 
 ! --- output to screen
-      if (swscre .eq. 2) then
+      if (time%swscre .eq. 2) then
         filtext = 'Screen output of daynumbers'
         call writehead (5,1,'screen',filtext,state%cfg%general%project)
-        call dtdpst ('year-month-day',tstart,date)
-        write (*,'(2x,2a)') 'First day of simulation:  ',date
-        call dtdpst ('year-month-day',tend,date)
-        write (*,'(2x,2a)') 'Last day of simulation:   ',date
+        call dtdpst ('year-month-day', time%tstart, time%date)
+        write (*,'(2x,2a)') 'First day of simulation:  ', time%date
+        call dtdpst ('year-month-day', time%tend, time%date)
+        write (*,'(2x,2a)') 'Last day of simulation:   ', time%date
         write (*,'(/,a,/)') '            date  daynr  daycum'
       endif
 
-! -   set crop number [GR-CROP 2026-05-25] state-only writes; cropstart from config
-      state%crop%common%icrop = 1
-      do while (.not. state%crop%common%flCropCalendar)
+! -   set crop number
+      crop%common%icrop = 1
+      do while (.not. crop%common%flCropCalendar)
 
-        if (state%cfg%crop%rotation_start(state%crop%common%icrop) .lt. 1.d0) exit
+        if (crop_cfg%rotation_start(crop%common%icrop) .lt. 1.d0) exit
 
-        if (abs(tstart - state%cfg%crop%rotation_start(state%crop%common%icrop)) .lt. 1.d-3) then
-          state%crop%common%flCropCalendar = .true.
-          if (tstart - state%cfg%crop%rotation_start(state%crop%common%icrop) .lt. -1.d-3 .and. &
-     &                                              state%soilwater%swinco .ne. 3) then
+        if (abs(time%tstart - crop_cfg%rotation_start(crop%common%icrop)) .lt. 1.d-3) then
+          crop%common%flCropCalendar = .true.
+          if (time%tstart - crop_cfg%rotation_start(crop%common%icrop) .lt. -1.d-3 .and. &
+     &                                              soil%swinco .ne. 3) then
             messag = 'The start of simulation (tstart) begins in '//  &
      &      'crop growing season with swinco 1 or 2'
             call fatalerr_collected ('readswap',messag)
           endif
         else
-          state%crop%common%icrop = state%crop%common%icrop + 1
+          crop%common%icrop = crop%common%icrop + 1
         end if
       enddo
 
 ! --- detailed meteo data needed for crop growth?
-      swmeteo = 1
-      if (state%crop%common%flCropCalendar) then
-        if (state%crop%common%icrop .gt. 0) then
-          if(state%crop%common%croptype(state%crop%common%icrop).ge.2) then
-             swmeteo = 2
+      time%swmeteo = 1
+      if (crop%common%flCropCalendar) then
+        if (crop%common%icrop .gt. 0) then
+          if (crop%common%croptype(crop%common%icrop).ge.2) then
+             time%swmeteo = 2
           endif
         endif
       endif
 
 ! --- initialize
-      dtEvent = 1.0d0
+      time%dtEvent = 1.0d0
 
 ! --- limit initial dt in case of short time interval
-      if (flprintshort .and. .not.flprintdt) then
-        if (dtEvent .gt. dble(nprintcount)/dble(nprintday))then
-           dtEvent = dble(nprintcount)/dble(nprintday)
+      if (time%flprintshort .and. .not.time%flprintdt) then
+        if (time%dtEvent .gt. dble(time%nprintcount)/dble(time%nprintday))then
+           time%dtEvent = dble(time%nprintcount)/dble(time%nprintday)
          end if
       endif
 
 ! --- intial timestep for rainfall intensities
-      if (state%cfg%meteo%swmetdetail.eq.0 .and. state%cfg%meteo%swrain.gt.0) then
-         dtEvent = min(dtEvent, dtmin)
+      if (meteo_cfg%swmetdetail.eq.0 .and. meteo_cfg%swrain.gt.0) then
+         time%dtEvent = min(time%dtEvent, time%dtmin)
       endif
 
 ! --- limit initial dt in case of detailed meteorological input
-       if (flmetdetail) then
-        if (dtEvent .gt. metperiod)then
-           dtEvent = min(dtEvent, metperiod)
+       if (time%flmetdetail) then
+        if (time%dtEvent .gt. time%metperiod)then
+           time%dtEvent = min(time%dtEvent, time%metperiod)
          end if
       endif
-      tEvent = dtEvent
+      time%tEvent = time%dtEvent
 
 ! --- initial time step
-      if (state%soilwater%swinco.eq.3) then
-        if (dt.lt.dtmin) then
+      if (soil%swinco.eq.3) then
+        if (time%dt.lt.time%dtmin) then
           messag = 'Initial dt read from file (SWINCO=3)'//             &
      &    ' if absent, then default is assumed'
           call log_warn('soilwater', messag)
-          dt = dsqrt(dtmin*dtmax)
+          time%dt = dsqrt(time%dtmin*time%dtmax)
         endif
       else
-        dt = dsqrt(dtmin*dtmax)
+        time%dt = dsqrt(time%dtmin*time%dtmax)
       endif
-      dtprevious = dt
-      if(dt+dtCrit .gt. dtEvent)then
-         flprevious = 2
-         dt = dtEvent
-         flTnext = .true.
+      time%dtprevious = time%dt
+      if (time%dt + dtCrit .gt. time%dtEvent) then
+         time%flprevious = 2
+         time%dt = time%dtEvent
+         time%flTnext = .true.
       else
-         flprevious = 1
-         flTnext = .false.
+         time%flprevious = 1
+         time%flTnext = .false.
       end if
 
 ! --- in case of sine wave of ET, limit dt and dtmax
-      if (fletsine) then
-        dt = min(dt, dtfletsine)
-        dtmax = min(dtmax, dtfletsine)
+      if (time%fletsine) then
+        time%dt = min(time%dt, dtfletsine)
+        time%dtmax = min(time%dtmax, dtfletsine)
       endif
 
 ! --- set value for dtold, used in headcalc for macropore-iteration
-      dtold = dt
+      time%dtold = time%dt
 
       end associate
    end subroutine timecontrol_init
@@ -331,91 +248,18 @@ contains
 
       dtCrit = 1.d-8
 
-      ! Associate block — copied verbatim from timecontrol.f90:54-114
-      associate( datea => state%timecontrol%datea, &
-           nextyear => state%timecontrol%nextyear, &
-           flprevious => state%timecontrol%flprevious, &
-           flTnext => state%timecontrol%flTnext, &
-           fsec => state%timecontrol%fsec, &
-           tchange => state%timecontrol%tchange, &
-           dtEvent => state%timecontrol%dtEvent, &
-           tEvent => state%timecontrol%tEvent, &
-           tcumold => state%timecontrol%tcumold, &
-           dtprevious => state%timecontrol%dtprevious, &
-           tmptimestart => state%timecontrol%tmptimestart, &
-           tmptimeend => state%timecontrol%tmptimeend, &
-           iyear => state%timecontrol%iyear, &
-           iyearm1 => state%timecontrol%iyearm1, &
-           imonth => state%timecontrol%imonth, &
-           dt => state%timecontrol%dt, &
-           dtold => state%timecontrol%dtold, &
-           daynr => state%timecontrol%daynr, &
-           daycum => state%timecontrol%daycum, &
-           daymeteo => state%timecontrol%daymeteo, &
-           yearmeteo => state%timecontrol%yearmeteo, &
-           t => state%timecontrol%t, &
-           t1900 => state%timecontrol%t1900, &
-           tcum => state%timecontrol%tcum, &
-           timjan1 => state%timecontrol%timjan1, &
-           outper => state%timecontrol%outper, &
-           cntper => state%timecontrol%cntper, &
-           isteps => state%timecontrol%isteps, &
-           ioutdat => state%timecontrol%ioutdat, &
-           ioutdatint => state%timecontrol%ioutdatint, &
-           outdat => state%timecontrol%outdat, &
-           outdatint => state%timecontrol%outdatint, &
-           nprintcount => state%timecontrol%nprintcount, &
-           rainrec => state%timecontrol%rainrec, &
-           wrecord => state%timecontrol%wrecord, &
-           swmeteo => state%timecontrol%swmeteo, &
-           date => state%timecontrol%date, &
-           metperiod => state%timecontrol%metperiod, &
-           flDayStart => state%timecontrol%flDayStart, &
-           flDayEnd => state%timecontrol%flDayEnd, &
-           flRunEnd => state%timecontrol%flRunEnd, &
-           flYearStart => state%timecontrol%flYearStart, &
-           floutput => state%timecontrol%floutput, &
-           floutputshort => state%timecontrol%floutputshort, &
-           flbaloutput => state%timecontrol%flbaloutput, &
-           flheader => state%timecontrol%flheader, &
-           flheadirg => state%timecontrol%flheadirg, &
-           flIrg1Start => state%timecontrol%flIrg1Start, &
-           flUpdMetDet => state%timecontrol%flUpdMetDet, &
-           fldecdtmin => state%timecontrol%fldecdtmin, &
-           fldtmin => state%timecontrol%fldtmin, &
-           fldtreduce => state%timecontrol%fldtreduce, &
-           flprintshort => state%timecontrol%flprintshort, &
-           flmetdetail => state%timecontrol%flmetdetail, &
-           flmeteodt => state%timecontrol%flmeteodt, &
-           flrainintens => state%timecontrol%flrainintens, &
-           fletsine => state%timecontrol%fletsine, &
-           flIrrigate => state%timecontrol%flIrrigate, &
-           flDrain => state%timecontrol%flDrain, &
-           flSurfaceWater => state%timecontrol%flSurfaceWater, &
-           flTemperature => state%timecontrol%flTemperature, &
-           flSnow => state%timecontrol%flSnow, &
-           flSolute => state%timecontrol%flSolute, &
-           tstart => state%timecontrol%tstart, &
-           tend => state%timecontrol%tend, &
-           dtmin => state%timecontrol%dtmin, &
-           dtmax => state%timecontrol%dtmax, &
-           period => state%timecontrol%period, &
-           nprintday => state%timecontrol%nprintday, &
-           flprintdt => state%timecontrol%flprintdt, &
-           swheader => state%timecontrol%swheader, &
-           swodat => state%timecontrol%swodat, &
-           swres => state%timecontrol%swres, &
-           swscre => state%timecontrol%swscre, &
-           MaxIt => state%timecontrol%MaxIt, &
-           msteps => state%timecontrol%msteps, &
-           raintimearray => state%atmosphere%raintimearray )  ! [GR-CROP Phase B]
+      associate (time      => state%timecontrol,   &
+                 soil      => state%soilwater,     &
+                 crop      => state%crop,          &
+                 atmo      => state%atmosphere,    &
+                 meteo_cfg => state%cfg%meteo)
 
 ! === next time step ===================================================
 
 ! 2.1  check maximum number of time steps during this day
-      isteps = isteps + 1
-      if (isteps .gt. msteps) then
-        write(tmp,'(i11)') daynr
+      time%isteps = time%isteps + 1
+      if (time%isteps .gt. time%msteps) then
+        write(tmp,'(i11)') time%daynr
         tmp = adjustl(tmp)
         messag ='The maximum number of time steps for a day is exceeded'&
      &    //' at daynumber '//trim(tmp)//'. Check input for numerical'  &
@@ -426,19 +270,19 @@ contains
 
 ! 2.2 update time variables
 
-      t = t + dt             ! relative to yyyy0101:00:00:00
-      tcum = tcum + dt
-      t1900 = tstart + tcum
+      time%t = time%t + time%dt           ! relative to yyyy0101:00:00:00
+      time%tcum = time%tcum + time%dt
+      time%t1900 = time%tstart + time%tcum
 
 ! 2.3  flag assignments after first time step of a day
 
-      if (flDayStart) then
+      if (time%flDayStart) then
 
 ! ---   set crop conditions  [GR-CROP 2026-05-25] state-only
-        if (state%crop%common%flCropCalendar) then
-          state%crop%common%flCropOutput = .true.
-          if (state%crop%common%flCropHarvest) then
-            state%crop%common%flCropOutput = .false.
+        if (crop%common%flCropCalendar) then
+          crop%common%flCropOutput = .true.
+          if (crop%common%flCropHarvest) then
+            crop%common%flCropOutput = .false.
           endif
         endif
 
@@ -448,51 +292,51 @@ contains
 !        endif
 
 ! ---   set flags for reset intermediate and cumulative fluxes
-        state%timecontrol%flZeroCumu = .false.
-        if (state%timecontrol%flZeroIntr) then
-          outper = 0.0d0
-          state%timecontrol%flZeroIntr = .false.
+        time%flZeroCumu = .false.
+        if (time%flZeroIntr) then
+          time%outper = 0.0d0
+          time%flZeroIntr = .false.
         endif
 
 ! ---   set flags for output
-        if (floutput) then
-         floutput = .false.
-         if (swheader .eq. 1) then
-           flheader = .false.
+        if (time%floutput) then
+         time%floutput = .false.
+         if (time%swheader .eq. 1) then
+           time%flheader = .false.
          endif
         endif
-        if (flbaloutput) then
-         flbaloutput = .false.
-         if (swheader .eq. 1) then
-           flheader = .true.
-           flheadirg = .true.
+        if (time%flbaloutput) then
+         time%flbaloutput = .false.
+         if (time%swheader .eq. 1) then
+           time%flheader = .true.
+           time%flheadirg = .true.
          endif
         endif
 
 ! 2.4  determine year,month and day number (only during first time step of a day)
-        call dtdpar (t1900, datea, fsec)
-        iyearm1 = iyear
-        iyear = datea(1)
-        imonth = datea(2)
+        call dtdpar (time%t1900, time%datea, time%fsec)
+        time%iyearm1 = time%iyear
+        time%iyear = time%datea(1)
+        time%imonth = time%datea(2)
 
 ! ---   determine date of current day
-        call dtdpst ('year-month-day',t1900,date)
+        call dtdpst ('year-month-day', time%t1900, time%date)
 
 ! ---   update day numbers
-        daynr = daynr+1
-        daycum = daycum + 1
-        cntper = cntper + 1
+        time%daynr = time%daynr + 1
+        time%daycum = time%daycum + 1
+        time%cntper = time%cntper + 1
 
 ! 2.5  in case of detailed meteorological input, reset weather record
 
-        if (iyear .ne. iyearm1) then
+        if (time%iyear .ne. time%iyearm1) then
 ! ---     reset daynumber and time because new calender year has started
-          daynr = 1
-          t = dt
+          time%daynr = 1
+          time%t = time%dt
 
 ! ---     in case SWRES = 1 reset counter for periodic output to 1
-          if (swres.eq.1 .and. period.ne.0) then
-            cntper = 1
+          if (time%swres.eq.1 .and. time%period.ne.0) then
+            time%cntper = 1
           endif
         endif
 
@@ -501,154 +345,155 @@ contains
 
 
 ! 2.6  update  logicals for indication of start / end of day
-      if ( dble(daycum) - tcum .lt. dtCrit) then
-        flDayEnd = .true.
-        flDayStart = .true.
-        flTnext = .true.
-        if (flmetdetail) then
-          wrecord = 1
+      if (dble(time%daycum) - time%tcum .lt. dtCrit) then
+        time%flDayEnd = .true.
+        time%flDayStart = .true.
+        time%flTnext = .true.
+        if (time%flmetdetail) then
+          time%wrecord = 1
         endif
       else
-        flDayEnd = .false.
-        flDayStart = .false.
+        time%flDayEnd = .false.
+        time%flDayStart = .false.
       endif
 
 
 ! 2.7  maximum size of time interval (dtEvent)
 
-      if(flTnext)then
+      if (time%flTnext) then
 
 ! 2.7.1  remaining part of a day
-        dtEvent = dble(int(tcum+1.0d0+dtCrit)) - tcum
+        time%dtEvent = dble(int(time%tcum+1.0d0+dtCrit)) - time%tcum
 
 ! 2.7.2  printing more than one times a day may limit timestep
-         if (flprintshort  .and. .not.flprintdt) then
-           if (dble(nprintcount)/dble(nprintday)-tcum .lt. dtCrit) then
-              dtEvent = min(dtEvent,1.0d0/dble(nprintday))
+         if (time%flprintshort .and. .not.time%flprintdt) then
+           if (dble(time%nprintcount)/dble(time%nprintday) - time%tcum .lt. dtCrit) then
+              time%dtEvent = min(time%dtEvent, 1.0d0/dble(time%nprintday))
            else
-              dtEvent = min(dtEvent,                                    &
-     &                   (dble(nprintcount)/dble(nprintday)) - tcum)
+              time%dtEvent = min(time%dtEvent,                                    &
+     &                   (dble(time%nprintcount)/dble(time%nprintday)) - time%tcum)
            endif
          endif
 
 ! 2.7.3  input of detailed meteo may limit timestep
-         if (flmetdetail) then
-            tchange = dble(int(t + dtCrit)) + dble(wrecord) * metperiod
-            if ((t+dtEvent) .gt. tchange) dtEvent = tchange - t
+         if (time%flmetdetail) then
+            time%tchange = dble(int(time%t + dtCrit)) + dble(time%wrecord) * time%metperiod
+            if ((time%t + time%dtEvent) .gt. time%tchange) time%dtEvent = time%tchange - time%t
          end if
 
 ! 2.7.4  precipitation event may limit timestep
-         if (state%cfg%meteo%swmetdetail.eq.0 .and. state%cfg%meteo%swrain.gt.0) then
+         if (meteo_cfg%swmetdetail.eq.0 .and. meteo_cfg%swrain.gt.0) then
 
 !        next rainevent! Set new values
-           if (raintimearray(rainrec).lt.tcum+dtCrit) then
+           if (atmo%raintimearray(time%rainrec) .lt. time%tcum + dtCrit) then
 !        new rain event valid
-             rainrec = rainrec + 1
+             time%rainrec = time%rainrec + 1
            endif
 
-           dtEvent = min(dtevent, state%atmosphere%dtEventRain)
-           dtEvent = max(dtEvent,dtmin)
+           time%dtEvent = min(time%dtEvent, atmo%dtEventRain)
+           time%dtEvent = max(time%dtEvent, time%dtmin)
          endif
 
 ! 2.8  set end of time interval (determined by I/O)
-         tEvent = tEvent + dtEvent
-         flTnext = .false.
+         time%tEvent = time%tEvent + time%dtEvent
+         time%flTnext = .false.
 
       endif
 
 ! 2.9 determine next time step, based on numerical performance
-      if (flDayStart) then
-        if(flprevious.eq.2)then
-           dt = max(dt, dsqrt(dtmin*dtmax),dtprevious)
+      if (time%flDayStart) then
+        if (time%flprevious .eq. 2) then
+           time%dt = max(time%dt, dsqrt(time%dtmin*time%dtmax), time%dtprevious)
         else
-           dt = max(dt, dsqrt(dtmin*dtmax))
+           time%dt = max(time%dt, dsqrt(time%dtmin*time%dtmax))
         end if
-        dtprevious = dt
+        time%dtprevious = time%dt
       else
-        if(flprevious .eq. 2)then
-           dt = dtprevious
+        if (time%flprevious .eq. 2) then
+           time%dt = time%dtprevious
         else
-           if (state%soilwater%numbit.le.3)     dt = min(dt*2.0d0,DtMax)  ! [GR-SOIL 2026-05-24]
-           if (state%soilwater%numbit.ge.MaxIt) dt = max(dt*0.5d0,DtMin)  ! [GR-SOIL 2026-05-24]
-           dtprevious = dt
+           if (soil%numbit.le.3)        time%dt = min(time%dt*2.0d0, time%DtMax)  ! [GR-SOIL 2026-05-24]
+           if (soil%numbit.ge.time%MaxIt) time%dt = max(time%dt*0.5d0, time%DtMin)  ! [GR-SOIL 2026-05-24]
+           time%dtprevious = time%dt
          endif
       endif
-      flprevious = 1
+      time%flprevious = 1
 
-      if ( tcum + dt - tEvent .gt. dtCrit) then
-         dt = tEvent - tcum
-         flprevious = 2
-         flTnext = .true.
+      if (time%tcum + time%dt - time%tEvent .gt. dtCrit) then
+         time%dt = time%tEvent - time%tcum
+         time%flprevious = 2
+         time%flTnext = .true.
       endif
 
 !     SSDI: adapt dt as to not pass dt_SSDI_event end time of the day
-      if (state%crop%irrigation%dt_SSDI_event < 1.0d0) then
-         dt = max(dtmin, min(dt, dble(int(tcum) + state%crop%irrigation%dt_SSDI_event) - tcum))
+      if (crop%irrigation%dt_SSDI_event < 1.0d0) then
+         time%dt = max(time%dtmin, min(time%dt, dble(int(time%tcum) + crop%irrigation%dt_SSDI_event) - time%tcum))
       end if
 
 ! 2.10  test last time step of the day: limit dt if it exceeds end of day
-      dtRestDay = dble(int(tcum+1.0d0+dtCrit)) - tcum
-      if (dtRestDay-dt.lt.1.d-6) then
-        dt = dtRestDay
+      dtRestDay = dble(int(time%tcum+1.0d0+dtCrit)) - time%tcum
+      if (dtRestDay - time%dt .lt. 1.d-6) then
+        time%dt = dtRestDay
       endif
 
 ! JK20131230: when dtmin is large then the timestep-closure may not be correct and errors may occur
 ! resulting in water balance errors see email Paul v Walsum 210131225. Elimination of next statement
 ! is not the correct solution
-      dt = max(dt,dtmin)
-      dt = min(dt,dtmax)
+      time%dt = max(time%dt, time%dtmin)
+      time%dt = min(time%dt, time%dtmax)
 
 ! 2.11 set flags and variables
 
 ! --- in case of output during a day
-      if (flprintshort) then
-        floutputshort = .false.
-        state%timecontrol%flZeroIntr = .false.
+      if (time%flprintshort) then
+        time%floutputshort = .false.
+        time%flZeroIntr = .false.
 ! ---   determine whether output is required
-        if (flprintdt) then
-           outper = tcum - tcumold
-           tcumold = tcum
-           if (abs(outdatint(ioutdatint) - t1900 + 1.d0).lt.1.d-3) then
-              floutputshort = .true.
-              state%timecontrol%flZeroIntr = .true.
+        if (time%flprintdt) then
+           time%outper = time%tcum - time%tcumold
+           time%tcumold = time%tcum
+           if (abs(time%outdatint(time%ioutdatint) - time%t1900 + 1.d0).lt.1.d-3) then
+              time%floutputshort = .true.
+              time%flZeroIntr = .true.
            endif
         else
-           if (tcum+dtCrit .gt. dble(nprintcount)/dble(nprintday)) then
-              floutputshort = .true.
-              state%timecontrol%flZeroIntr = .true.
-              outper = tcum - tcumold
-              tcumold = tcum
+           if (time%tcum + dtCrit .gt. dble(time%nprintcount)/dble(time%nprintday)) then
+              time%floutputshort = .true.
+              time%flZeroIntr = .true.
+              time%outper = time%tcum - time%tcumold
+              time%tcumold = time%tcum
            endif
 ! ---      update counter nprintcount for printing
-           do while (tcum+dtCrit .gt. dble(nprintcount)/dble(nprintday))
-              nprintcount = nprintcount + 1
+           do while (time%tcum + dtCrit .gt. dble(time%nprintcount)/dble(time%nprintday))
+              time%nprintcount = time%nprintcount + 1
            end do
          endif
       endif
 
 ! --- in case of detailed meteorological input
-      if (flmetdetail) then
-        tchange = dble(int(t + dtCrit)) + dble(wrecord) * metperiod
-        if ((tchange - t) .lt. dtCrit) then
+      if (time%flmetdetail) then
+        time%tchange = dble(int(time%t + dtCrit)) + dble(time%wrecord) * time%metperiod
+        if ((time%tchange - time%t) .lt. dtCrit) then
 ! ---     update actual weather record and fluxes
 
-          flUpdMetDet = .true.
+          time%flUpdMetDet = .true.
         endif
       endif
 
 !     SSDI: end of subsurface irirgation event reached; reset
-      if (state%cfg%irrigation%swssdi == 1 .and. tcum - int(tcum) + dtCrit > state%crop%irrigation%dt_SSDI_event) then
+      if (state%cfg%irrigation%swssdi == 1 .and. &
+          time%tcum - int(time%tcum) + dtCrit > crop%irrigation%dt_SSDI_event) then
          call SSDI_irrigation(9, state)  ! [SS-SWC S-2.12B]
       end if
 
 ! --- update fldtmin
-      if (dt .gt. (1.0d0+dtCrit)*dtmin) then
-        fldtmin = .false.
+      if (time%dt .gt. (1.0d0+dtCrit)*time%dtmin) then
+        time%fldtmin = .false.
       endif
 
 
 ! --- procedure when day is finished ----------------------------------------------
-      if (flDayEnd) then
+      if (time%flDayEnd) then
 
 !! --    length crop
 !        if (flCropCalendar) then
@@ -656,78 +501,78 @@ contains
 !        endif
 
 ! ---   length output period
-        if (.not.flprintshort) then
-          outper = outper + 1.0d0
+        if (.not.time%flprintshort) then
+          time%outper = time%outper + 1.0d0
         endif
 
 ! ---   write daynumber to screen
-        if (swscre .eq. 2) then
-          write(*,'("+ ",4x,a11,i6,i8)') date,daynr,daycum
+        if (time%swscre .eq. 2) then
+          write(*,'("+ ",4x,a11,i6,i8)') time%date, time%daynr, time%daycum
         endif
 
 ! ---   end of run?
-        if ((tend - t1900 + 1.d0) .lt. 1.d-3) then
-          flRunEnd = .true.
-          floutput = .true.
-          flbaloutput = .true.
-          ioutdat = ioutdat + 1
+        if ((time%tend - time%t1900 + 1.d0) .lt. 1.d-3) then
+          time%flRunEnd = .true.
+          time%floutput = .true.
+          time%flbaloutput = .true.
+          time%ioutdat = time%ioutdat + 1
           return
         endif
 
 ! ---   in case no end of run, determine whether today output should be written
-        if (cntper .eq. period .and. .not.flprintdt) then
-          cntper = 0
-          floutput = .true.
-          state%timecontrol%flZeroIntr = .true.
+        if (time%cntper .eq. time%period .and. .not.time%flprintdt) then
+          time%cntper = 0
+          time%floutput = .true.
+          time%flZeroIntr = .true.
         endif
 
-        if(flprintdt) then
-          if (abs(outdatint(ioutdatint) - t1900 + dt) .lt. 1.d-3) then
-            floutput = .true.
-            state%timecontrol%flZeroIntr = .true.
-            ioutdatint = ioutdatint + 1
+        if (time%flprintdt) then
+          if (abs(time%outdatint(time%ioutdatint) - time%t1900 + time%dt) .lt. 1.d-3) then
+            time%floutput = .true.
+            time%flZeroIntr = .true.
+            time%ioutdatint = time%ioutdatint + 1
           endif
         else
-          if (abs(outdatint(ioutdatint) - t1900 + 1.d0) .lt. 1.d-3) then
-            floutput = .true.
-            state%timecontrol%flZeroIntr = .true.
-            ioutdatint = ioutdatint + 1
+          if (abs(time%outdatint(time%ioutdatint) - time%t1900 + 1.d0) .lt. 1.d-3) then
+            time%floutput = .true.
+            time%flZeroIntr = .true.
+            time%ioutdatint = time%ioutdatint + 1
           endif
         endif
-        if (abs(outdat(ioutdat) - t1900 + 1.d0) .lt. 1.d-3) then
+        if (abs(time%outdat(time%ioutdat) - time%t1900 + 1.d0) .lt. 1.d-3) then
 ! ---     output of water and solute balances
-          floutput = .true.
-          flbaloutput = .true.
-          state%timecontrol%flZeroIntr = .true.
-          state%timecontrol%flZeroCumu = .true.
-          ioutdat = ioutdat + 1
+          time%floutput = .true.
+          time%flbaloutput = .true.
+          time%flZeroIntr = .true.
+          time%flZeroCumu = .true.
+          time%ioutdat = time%ioutdat + 1
         endif
 
 
 ! ---   reset flags for next day
-        fldtmin = .false.
+        time%fldtmin = .false.
 
 ! ---   reset counters for next day
-        isteps = 0
+        time%isteps = 0
 
 ! ---   determine daynumber and switch for reading meteorological data
-        call dtdpar (t1900 + 0.1d0, datea, fsec)
+        call dtdpar (time%t1900 + 0.1d0, time%datea, time%fsec)
 !        call dtdpar (t1900 , datea, fsec)
-        nextyear = datea(1)
-        if (nextyear .eq. iyear) then
-          daymeteo = daynr + 1
+        time%nextyear = time%datea(1)
+        if (time%nextyear .eq. time%iyear) then
+          time%daymeteo = time%daynr + 1
         else
-          yearmeteo = nextyear
+          time%yearmeteo = time%nextyear
 ! ---     set flag for new meteo year
-          flYearStart = .true.
+          time%flYearStart = .true.
 
-          daymeteo = 1
+          time%daymeteo = 1
 ! ---     detailed meteo data needed for crop growth?
-          swmeteo = 1
-          if (state%crop%common%flCropCalendar) then
-            if (state%crop%common%icrop .gt. 0) then
-              if (state%crop%common%croptype(state%crop%common%icrop).ge.2) then
-                swmeteo = 2
+          time%swmeteo = 1
+          if (crop%common%flCropCalendar) then
+            if (crop%common%icrop .gt. 0) then
+              if (crop%common%croptype(crop%common%icrop).ge.2) then
+                time%swmeteo = 2
               endif
             endif
           endif
@@ -735,137 +580,59 @@ contains
 
       endif
 
-      dtprevious = dt
+      time%dtprevious = time%dt
 
       end associate
    end subroutine timecontrol_advance
 
    subroutine timecontrol_reduce_dt(state)
-      ! [GR-TIME 2026-05-25] FlDecMpRat dead-code import retired — it was imported
-      ! but never referenced (no readers anywhere in src/); declaration retired
-      ! alongside in variables.f90/legacy_state.f90/initialize.f90.
-      ! [SS-GR-CROPRT A2] flMacroPore dropped from import — retired (ADR 0040)
       use timestep_control_mod, only: fldecdt
       implicit none
       type(swap_state_t), intent(inout) :: state
 
-      ! Associate block — full alias list for consistency with timecontrol_init / _advance.
-      associate( datea => state%timecontrol%datea, &
-           nextyear => state%timecontrol%nextyear, &
-           flprevious => state%timecontrol%flprevious, &
-           flTnext => state%timecontrol%flTnext, &
-           fsec => state%timecontrol%fsec, &
-           tchange => state%timecontrol%tchange, &
-           dtEvent => state%timecontrol%dtEvent, &
-           tEvent => state%timecontrol%tEvent, &
-           tcumold => state%timecontrol%tcumold, &
-           dtprevious => state%timecontrol%dtprevious, &
-           tmptimestart => state%timecontrol%tmptimestart, &
-           tmptimeend => state%timecontrol%tmptimeend, &
-           iyear => state%timecontrol%iyear, &
-           iyearm1 => state%timecontrol%iyearm1, &
-           imonth => state%timecontrol%imonth, &
-           dt => state%timecontrol%dt, &
-           dtold => state%timecontrol%dtold, &
-           daynr => state%timecontrol%daynr, &
-           daycum => state%timecontrol%daycum, &
-           daymeteo => state%timecontrol%daymeteo, &
-           yearmeteo => state%timecontrol%yearmeteo, &
-           t => state%timecontrol%t, &
-           t1900 => state%timecontrol%t1900, &
-           tcum => state%timecontrol%tcum, &
-           timjan1 => state%timecontrol%timjan1, &
-           outper => state%timecontrol%outper, &
-           cntper => state%timecontrol%cntper, &
-           isteps => state%timecontrol%isteps, &
-           ioutdat => state%timecontrol%ioutdat, &
-           ioutdatint => state%timecontrol%ioutdatint, &
-           outdat => state%timecontrol%outdat, &
-           outdatint => state%timecontrol%outdatint, &
-           nprintcount => state%timecontrol%nprintcount, &
-           rainrec => state%timecontrol%rainrec, &
-           wrecord => state%timecontrol%wrecord, &
-           swmeteo => state%timecontrol%swmeteo, &
-           date => state%timecontrol%date, &
-           metperiod => state%timecontrol%metperiod, &
-           flDayStart => state%timecontrol%flDayStart, &
-           flDayEnd => state%timecontrol%flDayEnd, &
-           flRunEnd => state%timecontrol%flRunEnd, &
-           flYearStart => state%timecontrol%flYearStart, &
-           floutput => state%timecontrol%floutput, &
-           floutputshort => state%timecontrol%floutputshort, &
-           flbaloutput => state%timecontrol%flbaloutput, &
-           flheader => state%timecontrol%flheader, &
-           flheadirg => state%timecontrol%flheadirg, &
-           flIrg1Start => state%timecontrol%flIrg1Start, &
-           flUpdMetDet => state%timecontrol%flUpdMetDet, &
-           fldecdtmin => state%timecontrol%fldecdtmin, &
-           fldtmin => state%timecontrol%fldtmin, &
-           fldtreduce => state%timecontrol%fldtreduce, &
-           flprintshort => state%timecontrol%flprintshort, &
-           flmetdetail => state%timecontrol%flmetdetail, &
-           flmeteodt => state%timecontrol%flmeteodt, &
-           flrainintens => state%timecontrol%flrainintens, &
-           fletsine => state%timecontrol%fletsine, &
-           flIrrigate => state%timecontrol%flIrrigate, &
-           flDrain => state%timecontrol%flDrain, &
-           flSurfaceWater => state%timecontrol%flSurfaceWater, &
-           flTemperature => state%timecontrol%flTemperature, &
-           flSnow => state%timecontrol%flSnow, &
-           flSolute => state%timecontrol%flSolute, &
-           dtmin => state%timecontrol%dtmin, &
-           dtmax => state%timecontrol%dtmax )
+      associate (time => state%timecontrol)
 
 ! === reduce time step ===================================================
 
 ! --- decrease time step in case of no convergence in headcalc
       if (fldecdt) then
-        if (dt .gt. 3.0*dtmin) then
-          dt = dt / 3.0
+        if (time%dt .gt. 3.0*time%dtmin) then
+          time%dt = time%dt / 3.0
 !         force dt to equal multiple dtmin to prevent very small dt-values at end of day
 !          dt = dtmin * dble(max(1,int(dt/dtmin)))
         else
-          dt = dtmin
-          fldtmin = .true.
+          time%dt = time%dtmin
+          time%fldtmin = .true.
         endif
         fldecdt = .false.
-        flprevious = 1
-        dtprevious = dt
-        flTnext = .false.
+        time%flprevious = 1
+        time%dtprevious = time%dt
+        time%flTnext = .false.
 
         return
       endif
 
 ! --- decrease time step to dtmin if required by boundtop
-      if (fldecdtmin) then
-        dt = dtmin
-        fldtmin = .true.
-        fldecdtmin = .false.
-        flprevious = 1
-        dtprevious = dt
+      if (time%fldecdtmin) then
+        time%dt = time%dtmin
+        time%fldtmin = .true.
+        time%fldecdtmin = .false.
+        time%flprevious = 1
+        time%dtprevious = time%dt
         return
       endif
-
-! --- [SS-GR-CROPRT A2] macropore dt-decrease block dropped (ADR 0040; flMacroPore always .false.)
-      ! FlDecMpRat still used as convergence sentinel by soilhydraulics; kept for now
 
       end associate
    end subroutine timecontrol_reduce_dt
 
    subroutine timecontrol_day_end(state)
-      ! [GR-CROP 2026-05-25] dt_SSDI_event migrated → state%crop%irrigation%dt_SSDI_event
       implicit none
       type(swap_state_t), intent(inout) :: state
 
-      ! Minimal associate block — only `dt` is referenced.
-      associate( dt => state%timecontrol%dt )
-
-!        special: at end of day, the possible initial time step for next day may be too large: adapt if necessary
-         if (state%crop%irrigation%dt_SSDI_event < 1.0d0) then
-            dt = min(dt, state%crop%irrigation%dt_SSDI_event)
-         end if
-
-      end associate
+!     Special: at end of day, the possible initial time step for next day may be too large; adapt if necessary.
+      if (state%crop%irrigation%dt_SSDI_event < 1.0d0) then
+         state%timecontrol%dt = min(state%timecontrol%dt, state%crop%irrigation%dt_SSDI_event)
+      end if
    end subroutine timecontrol_day_end
 
    subroutine itertime_init(state)
@@ -893,26 +660,30 @@ contains
    end subroutine itertime_check
 
    subroutine itertime_close(state)
-      ! [GR-SOIL 2026-05-24] Itnumb migrated to state%soilwater%Itnumb.
       use swap_log,  only: log_info, to_str
       implicit none
       type(swap_state_t), intent(inout) :: state
-      integer :: i, j
+      integer :: i
 
-      call log_info('itertime', 'Iteration statistics')
-      call log_info('itertime', 'Maximum number of iterations: ' // to_str(state%timecontrol%MaxIt))
-      call log_info('itertime', 'It Numb  No of Hits  Tot BTr cycles')
-      if (allocated(state%soilwater%Itnumb)) then
-         do i = 1, 100
-            if (state%soilwater%Itnumb(i,1) > 0) &
-               call log_info('itertime', to_str(i) // '  ' // to_str(state%soilwater%Itnumb(i,1)) &
-                  // '  ' // to_str(state%soilwater%Itnumb(i,2)))
-         end do
-      end if
+      associate (time => state%timecontrol, &
+                 soil => state%soilwater)
 
-      call cpu_time(state%timecontrol%tmptimeend)
-      call log_info('itertime', 'Run-time: ' // &
-                    to_str(state%timecontrol%tmptimeend - state%timecontrol%tmptimestart) // ' sec')
+         call log_info('itertime', 'Iteration statistics')
+         call log_info('itertime', 'Maximum number of iterations: ' // to_str(time%MaxIt))
+         call log_info('itertime', 'It Numb  No of Hits  Tot BTr cycles')
+         if (allocated(soil%Itnumb)) then
+            do i = 1, 100
+               if (soil%Itnumb(i,1) > 0) &
+                  call log_info('itertime', to_str(i) // '  ' // to_str(soil%Itnumb(i,1)) &
+                     // '  ' // to_str(soil%Itnumb(i,2)))
+            end do
+         end if
+
+         call cpu_time(time%tmptimeend)
+         call log_info('itertime', 'Run-time: ' // &
+                       to_str(time%tmptimeend - time%tmptimestart) // ' sec')
+
+      end associate
    end subroutine itertime_close
 
 end module timecontrol_mod
