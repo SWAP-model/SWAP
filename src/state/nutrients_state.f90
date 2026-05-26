@@ -194,9 +194,22 @@ contains
       self%ndemand     = 0.0_real64 ;  self%nsupply     = 0.0_real64
       self%laicritnupt = 0.0_real64
 
-      ! [GR-SEED 2026-05-25 Task 4] Seed WSN globals from typed config.
-      ! Body relocated from config_to_variables_mod (apply_nutrients).
+      ! Seed legacy WSN compute globals (Wofost_Soil_Declarations) from
+      ! typed config. The body lives below; relocated from the deleted
+      ! config_to_variables_mod (apply_nutrients).
       call seed_nutrients_from_config(config_nut, pathwork_in)
+
+      ! Mirror the same five config-derived initial pools onto the typed
+      ! state fields. Replaces the WSN dual-write block previously in
+      ! swap_init_body, which copied the just-seeded globals back onto
+      ! state. The legacy WSN compute path still reads the globals; the
+      ! state fields are the typed mirror for future readers and the
+      ! management_soil.f90 runtime dual-writes.
+      self%fom_t(:) = config_nut%initial%fom(:)
+      self%bio_t    = config_nut%initial%bio
+      self%hum_t    = config_nut%initial%hum
+      self%cnh4_t   = config_nut%initial%cnh4
+      self%cno3_t   = config_nut%initial%cno3
    end subroutine nutrients_state_init
 
 
