@@ -61,17 +61,16 @@
 !        in their calls. This has not yet been implemented.
     
 module O2_pars
-   ! [GR-CROP 2026-05-25] O2_pars formerly aliased ~19 bare o2_* legacy
-   ! globals (workspace) plus 7 config-derived workspace globals via
-   ! `original_name => o2_*` renames inside variables.f90. All of those
-   ! were migrated to state%crop%oxygen — the workspace lives on the
-   ! crop_oxygen_state_t sub-record.
+   ! Module-level pointer to the active state record so that SOLVE /
+   ! ZBREND / myfunc can share workspace across calls without rewriting
+   ! the ZBREND function-pointer ABI. OxygenStress sets `current_state`
+   ! at entry; SOLVE and myfunc read the workspace via
+   ! current_state%crop%oxygen.
    !
-   ! O2_pars now exposes a single module-level pointer to the active
-   ! state record so that SOLVE / ZBREND / myfunc can share state across
-   ! calls without rewriting the ZBREND function-pointer plumbing.
-   ! OxygenStress sets `current_state` at entry; myfunc reads workspace
-   ! via current_state%crop%oxygen%X.
+   ! Follow-up: a cleaner design would pass state%crop%oxygen as an
+   ! explicit argument to SOLVE/myfunc and drop this module-level
+   ! pointer, but that requires reworking the ZBREND function-pointer
+   ! plumbing.
    use swap_state_mod, only: swap_state_t
    implicit none
    type(swap_state_t), pointer :: current_state => null()
@@ -141,48 +140,11 @@ contains
       real(8), dimension(macp)   :: d_soil_term1, d_soil_term2, gfp100
       real(8), dimension(macp)   :: Capac_term, Nmin1, Mplus1
 
-      ! [GR-CROP 2026-05-25] Set the module-level state pointer so
-      ! SOLVE/ZBREND/myfunc can reach the workspace without rewriting the
-      ! ZBREND function-pointer ABI. Config-derived workspace
-      ! (max_resp_factor/c_mroot/f_senes/q10_root/q10_microbial/
-      ! specific_resp_humus/shape_factor_rootr) is now written directly to
-      ! state%crop%oxygen by cropfixed_init/runtime and cropgrass_init —
-      ! no seed copy needed at OxygenStress entry.
+      ! Set the module-level state pointer so SOLVE/ZBREND/myfunc reach
+      ! the same workspace.
       current_state => state
 
-      ! [GR-CROP 2026-05-25] Workspace aliases mapped onto state%crop%oxygen.
-      ! Replaces the original `use O2_pars, only: w_root, ...` rename block
-      ! (which itself aliased o2_* bare globals in variables.f90). All
-      ! reads/writes route through state — the workspace travels with the
-      ! state record across calls.
-      associate( &
-         w_root              => state%crop%oxygen%w_root,              &
-         w_root_z0           => state%crop%oxygen%w_root_z0,           &
-         soil_temp           => state%crop%oxygen%soil_temp,           &
-         sat_water_cont      => state%crop%oxygen%sat_water_cont,      &
-         gas_filled_porosity => state%crop%oxygen%gas_filled_porosity, &
-         d_o2inwater         => state%crop%oxygen%d_o2inwater,         &
-         d_root              => state%crop%oxygen%d_root,              &
-         d_soil              => state%crop%oxygen%d_soil,              &
-         perc_org_mat        => state%crop%oxygen%perc_org_mat,        &
-         soil_density        => state%crop%oxygen%soil_density,        &
-         depth               => state%crop%oxygen%depth,               &
-         shape_factor_microbialr => state%crop%oxygen%shape_factor_microbialr, &
-         root_radius         => state%crop%oxygen%root_radius,         &
-         r_microbial_z0      => state%crop%oxygen%r_microbial_z0,      &
-         waterfilm_thickness => state%crop%oxygen%waterfilm_thickness, &
-         bunsencoeff         => state%crop%oxygen%bunsencoeff,         &
-         c_min_micro         => state%crop%oxygen%c_min_micro,         &
-         c_macro             => state%crop%oxygen%c_macro,             &
-         ctopnode            => state%crop%oxygen%ctopnode,            &
-         c_mroot             => state%crop%oxygen%c_mroot,             &
-         f_senes             => state%crop%oxygen%f_senes,             &
-         q10_root            => state%crop%oxygen%q10_root,            &
-         q10_microbial       => state%crop%oxygen%q10_microbial,       &
-         specific_resp_humus => state%crop%oxygen%specific_resp_humus, &
-         shape_factor_rootr  => state%crop%oxygen%shape_factor_rootr,  &
-         max_resp_factor     => state%crop%oxygen%max_resp_factor      &
-      )
+      associate (oxy => state%crop%oxygen)
 
 !## MH : some initial calculations
       if (state%crop%oxygen%ini_stress) then
@@ -210,67 +172,67 @@ contains
 !## MH: end
 
 ! --- Get max_resp_factor, i.e. the ratio between total respiration and maintenance respiration
-      if (node.eq.1) call GET_MAX_RESP_FACTOR(max_resp_factor, state)  ! [GR-CROP Phase B/8] state arg added
+      if (node.eq.1) call GET_MAX_RESP_FACTOR(oxy%max_resp_factor, state)  ! [GR-CROP Phase B/8] state arg added
 
 ! --- initialize
-      c_min_micro = 0.1d0
-      c_macro     = 0.2d0
+      oxy%c_min_micro = 0.1d0
+      oxy%c_macro     = 0.2d0
       resp_factor = 1.0d0
 
 ! --- soil layer in SWAP
       lay = state%mesh%layer(node)
 
 ! --- dry weight of root per unit length of root [kg/m]
-      w_root = 1.0d0/state%crop%common%srl
+      oxy%w_root = 1.0d0/state%crop%common%srl
 ! --- root radius [m]                  ## MH: ()**0.5 replaced by dsqrt()
       if (state%crop%common%swrootradius .eq. 1) then
-        root_radius = dsqrt((w_root/(pi*state%crop%common%dry_mat_cont_roots* &
+        oxy%root_radius = dsqrt((oxy%w_root/(pi*state%crop%common%dry_mat_cont_roots* &
      &              (1-state%crop%common%air_filled_root_por)*state%crop%common%spec_weight_root_tissue))- &
      &              (state%crop%common%var_a))
       endif
       if (state%crop%common%swrootradius .eq. 2) then
-        root_radius = state%crop%common%root_radiusO2
+        oxy%root_radius = state%crop%common%root_radiusO2
       endif
 
 ! --- RB20140117 get wofost parameters
       if ((state%crop%common%croptype(state%crop%common%icrop) .eq. 2).or.(state%crop%common%croptype(state%crop%common%icrop) .eq. 3)) then
-          q10_root = state%crop%common%q10
-          c_mroot = state%crop%common%rmr*Fac3230 !CH2O --> O2
+          oxy%q10_root = state%crop%common%q10
+          oxy%c_mroot = state%crop%common%rmr*Fac3230 !CH2O --> O2
       endif
       if (state%crop%common%croptype(state%crop%common%icrop) .eq. 2) then
-          f_senes=afgen(state%crop%common%rfsetb,30,state%crop%common%dvs)
+          oxy%f_senes=afgen(state%crop%common%rfsetb,30,state%crop%common%dvs)
       endif
       if (state%crop%common%croptype(state%crop%common%icrop) .eq. 3) then
-          f_senes=afgen(state%crop%common%rfsetb,30,state%crop%common%rid)
+          oxy%f_senes=afgen(state%crop%common%rfsetb,30,state%crop%common%rid)
       endif
    
 ! --- extract a number of variables from Swap for local use in module OxygenStress
 
 ! --- set soil density [kg m-3]      
-      soil_density = state%soilwater%bdens(lay)
+      oxy%soil_density = state%soilwater%bdens(lay)
 ! --- set parameter n of soil hydraulic functions
       gen_n = state%soilwater%vg_params(node)%npar
 ! --- set saturated water content [-]
-      sat_water_cont = state%soilwater%vg_params(node)%thetas
+      oxy%sat_water_cont = state%soilwater%vg_params(node)%thetas
 ! --- set parameter alpha [1/Pa] of soil hydraulic functions, so divide main swap alpha by 100     ## MH: =0.01*
       alpha = 0.01d0*state%soilwater%vg_params(node)%alpha
 ! --- set percentage organic matter [%]
-      perc_org_mat = state%soilwater%orgmat(lay)*100.0d0
+      oxy%perc_org_mat = state%soilwater%orgmat(lay)*100.0d0
 ! --- set percentage sand in % of total soil
       percentage_sand = (state%soilwater%psand(lay)*(1.0d0-state%soilwater%orgmat(lay)))*100.0d0
 ! --- get soil moisture content as defined in further calculations within this routine [-]
       theta0 = state%soilwater%theta(node)
 ! --- gas filled porosity
-      gas_filled_porosity = sat_water_cont-theta0
-      if (state%soilwater%h(node) >= 0.0d0) gas_filled_porosity = 0.0d0  ! [SS-SWC S-2.7] be sure when saturated that gas_filled_porosity = 0
+      oxy%gas_filled_porosity = oxy%sat_water_cont-theta0
+      if (state%soilwater%h(node) >= 0.0d0) oxy%gas_filled_porosity = 0.0d0  ! [SS-SWC S-2.7] be sure when saturated that gas_filled_porosity = 0
 
 ! --- thickness of the soil compartment [m]     ## MH: =0.01* 
-      depth = 0.01d0*state%mesh%dz(node)
+      oxy%depth = 0.01d0*state%mesh%dz(node)
 ! --- temperature in the soil compartment [K]
       ! [GR-CROP 2026-05-25] tsoil read unconditionally from state%heat — the
       ! legacy `tsoil(node)` fallback was dead in the TOML pipeline (the only
       ! caller, rootextraction.f90, always passes state).
-      soil_temp = state%heat%tsoil(node)+273.d0
+      oxy%soil_temp = state%heat%tsoil(node)+273.d0
 ! --- dry weight of roots at nodal depth
 !RB20140109 start new calculation of w_root_z0
 !previous:  w_root_z0 = w_root_ss * exp(0.01*z(node)/shape_factor_rootr)  
@@ -281,7 +243,7 @@ contains
             rdens_top  = afgen(state%crop%common%rdctb,22,rdepth_top)
             rdepth     = -state%mesh%ztopcp(node)/state%crop%common%rd ! (-z(node)-0.5d0*dz(node))/state%crop%common%rd  [GR-BH C7]
             rdens      = afgen(state%crop%common%rdctb,22,rdepth)
-            w_root_z0  = state%crop%oxygen%w_root_ss * rdens/rdens_top !static crop
+            oxy%w_root_z0  = state%crop%oxygen%w_root_ss * rdens/rdens_top !static crop
       endif
 ! --- calculate wrootz0 [kg/m3] at top of the compartments !adj RB 20171201
 ! --- dynamic crop. wrt [kg/ha] = 10-4 kg/m2; 
@@ -289,7 +251,7 @@ contains
         top1 = dabs(state%mesh%ztopcp(node) / state%crop%common%rd) ! relative depth top  [GR-BH C7]
         top2 = top1 + 1.0d-6 ! define 'infinite' thin layer; fraction
         
-        w_root_z0 = 1.0d6*                                   & ! rescale fraction to 1 (top 2)
+        oxy%w_root_z0 = 1.0d6*                                   & ! rescale fraction to 1 (top 2)
      &   (afgen(state%crop%common%cumdens,202,top2)-afgen(state%crop%common%cumdens,202,top1)) * & ! fraction
      &            (state%crop%wofost%wrt*0.0001d0*(1.0d0/(0.01d0*state%crop%common%rd)))           ! wrt kg/ha --> kg/m2; state%crop%common%rd cm -> m
       endif
@@ -302,14 +264,14 @@ contains
 ! --- Calculate matric potential [Pa]
        matric_potential = -100.0d0 * state%soilwater%h(node)
 ! --- if gas filled porosity = 0, then root water uptake = 0. Store results and go to end of routine.        
-      if (gas_filled_porosity .lt. 1.0d-4) then !RB20131106 .eq. 0
+      if (oxy%gas_filled_porosity .lt. 1.0d-4) then !RB20131106 .eq. 0
          ! RB 20140106 start if statement added; if max_resp_factor = 1 then no stress so rwufactor = 1        
-          if (max_resp_factor .gt. 1.0d0) then
+          if (oxy%max_resp_factor .gt. 1.0d0) then
             rwu_factor = 0.0d0
           else
             rwu_factor = 1.0d0
           endif
-          c_macro = 0.d0 !RB20140825 added
+          oxy%c_macro = 0.d0 !RB20140825 added
 ! --- store value for output results
           call FillOxygenStress1 ()
       
@@ -333,46 +295,46 @@ contains
         endif    
 
 ! --- Calculate temperature dependent parameters
-        call TEMP_DEPENDENT_PARAMETERS (d_o2inwater,d_root,             &
-            d_gassfreeair,surface_tension_water,bunsencoeff,soil_temp)
+        call TEMP_DEPENDENT_PARAMETERS (oxy%d_o2inwater,oxy%d_root,             &
+            d_gassfreeair,surface_tension_water,oxy%bunsencoeff,oxy%soil_temp)
 
 ! --- Calculate diffusivity Dsoil
 !## MH: d_soil_term1, d_soil_term2 and gfp100 were initially calculated and stored per node
-        d_soil = d_gassfreeair*d_soil_term1(node) *                     &
-     &          ((gas_filled_porosity/gfp100(node))**d_soil_term2(node))
+        oxy%d_soil = d_gassfreeair*d_soil_term1(node) *                     &
+     &          ((oxy%gas_filled_porosity/gfp100(node))**d_soil_term2(node))
 !## MH: end
         
 ! --- Calculate the thickness of the water film that surrounds the roots      
-        call waterfilmthickness (waterfilm_thickness,                   &
+        call waterfilmthickness (oxy%waterfilm_thickness,                   &
      &    matric_potential,Capac_term(node),Nmin1(node),Mplus1(node),   &
      &       alpha,gen_n,surface_tension_water,glit,                    &
      &          soilphystab,diff_water_cap_actual,numrec_tab,state%soilwater%swsophy)
 
 ! --- Calculate microbial respiration rate
-        call microbial_resp (r_microbial_z0,soil_temp,perc_org_mat,     &
-     &      soil_density,percentage_sand,matric_potential,              &
-     &         specific_resp_humus,q10_microbial)
+        call microbial_resp (oxy%r_microbial_z0,oxy%soil_temp,oxy%perc_org_mat,     &
+     &      oxy%soil_density,percentage_sand,matric_potential,              &
+     &         oxy%specific_resp_humus,oxy%q10_microbial)
 
 ! --- Calculate sink term variable
 ! --- Define input for the solving procedure
-        xi       = 0.5d0*max_resp_factor
+        xi       = 0.5d0*oxy%max_resp_factor
         accuracy = 1.0d-4
-        ctopnode = state%crop%oxygen%c_top(node)
+        oxy%ctopnode = state%crop%oxygen%c_top(node)
 
 ! --- Calculate actual respiration factor from the solving procedure
         resp_factor =  SOLVE(xi,accuracy)
 
 ! --- PLAATS C_MACRO IN DE VECTOR VOOR C_TOP. BEREKENDE WAARDE IS INPUT VOOR VOLGENDE COMPARTIMENT
-       state%crop%oxygen%c_top(node+1) = C_macro
+       state%crop%oxygen%c_top(node+1) = oxy%C_macro
 
 ! --- Calculate the sink term (Root Water Uptake) variable due to oxygen stress.
 ! --- The decrease in root water uptake is assumed proportional to the decrease
 ! --- in respiration (given by the maximum and actual respiration factor).
 
 ! RB 20140106 start if statement added; if max_resp_factor = 1 then no stress so rwufactor = 1        
-          if (max_resp_factor .gt. 1.0d0) then
-            rwu_factor = (1.0d0/(max_resp_factor-1.0d0)) * resp_factor  &
-     &                 - (1.0d0/(max_resp_factor-1.0d0))
+          if (oxy%max_resp_factor .gt. 1.0d0) then
+            rwu_factor = (1.0d0/(oxy%max_resp_factor-1.0d0)) * resp_factor  &
+     &                 - (1.0d0/(oxy%max_resp_factor-1.0d0))
           else
 ! Ruud Bartholomeus: 19-12-2017
 ! Wat betreft zuurstofstress als er geen enkele groei van de wortels meer is:
@@ -402,7 +364,7 @@ contains
 
 ! --- store value for output results
       call FillOxygenStress2 ()
-      end associate     ! [GR-CROP 2026-05-25] state%crop%oxygen workspace aliases
+      end associate
       return
 
    contains
@@ -1199,43 +1161,13 @@ contains
       logical, parameter :: UseZBREND = .true.
       real(8)  :: a, b, Dif_a, Dif_b
 
-      ! [GR-CROP 2026-05-25] Workspace aliases onto state%crop%oxygen (the
-      ! current_state pointer is set by OxygenStress at entry). Replaces the
-      ! original `use O2_pars` rename block that aliased o2_* bare globals.
-      associate( &
-         w_root              => current_state%crop%oxygen%w_root,              &
-         w_root_z0           => current_state%crop%oxygen%w_root_z0,           &
-         soil_temp           => current_state%crop%oxygen%soil_temp,           &
-         sat_water_cont      => current_state%crop%oxygen%sat_water_cont,      &
-         gas_filled_porosity => current_state%crop%oxygen%gas_filled_porosity, &
-         d_o2inwater         => current_state%crop%oxygen%d_o2inwater,         &
-         d_root              => current_state%crop%oxygen%d_root,              &
-         d_soil              => current_state%crop%oxygen%d_soil,              &
-         perc_org_mat        => current_state%crop%oxygen%perc_org_mat,        &
-         soil_density        => current_state%crop%oxygen%soil_density,        &
-         depth               => current_state%crop%oxygen%depth,               &
-         shape_factor_microbialr => current_state%crop%oxygen%shape_factor_microbialr, &
-         root_radius         => current_state%crop%oxygen%root_radius,         &
-         r_microbial_z0      => current_state%crop%oxygen%r_microbial_z0,      &
-         waterfilm_thickness => current_state%crop%oxygen%waterfilm_thickness, &
-         bunsencoeff         => current_state%crop%oxygen%bunsencoeff,         &
-         c_min_micro         => current_state%crop%oxygen%c_min_micro,         &
-         c_macro             => current_state%crop%oxygen%c_macro,             &
-         ctopnode            => current_state%crop%oxygen%ctopnode,            &
-         c_mroot             => current_state%crop%oxygen%c_mroot,             &
-         f_senes             => current_state%crop%oxygen%f_senes,             &
-         q10_root            => current_state%crop%oxygen%q10_root,            &
-         q10_microbial       => current_state%crop%oxygen%q10_microbial,       &
-         specific_resp_humus => current_state%crop%oxygen%specific_resp_humus, &
-         shape_factor_rootr  => current_state%crop%oxygen%shape_factor_rootr,  &
-         max_resp_factor     => current_state%crop%oxygen%max_resp_factor      &
-      )
+      associate (oxy => current_state%crop%oxygen)
 
       if (UseZBREND) then
 ! ## MH: start 
          a     = 0.0d0 ! 1.0d-6
          Dif_a = myfunc(a)
-         b     = max_resp_factor
+         b     = oxy%max_resp_factor
          Dif_b = myfunc(b)
       
          if (Dif_a*Dif_b < 0.0d0) then
@@ -1245,7 +1177,7 @@ contains
             ! same sign
             if (Dif_a > 0.0d0) then
                if (Dif_b < Dif_a) then
-                  xx = max_resp_factor
+                  xx = oxy%max_resp_factor
                else
                   xx = 0.0d0
                end if
@@ -1253,14 +1185,14 @@ contains
                if (Dif_b < Dif_a) then
                   xx = 0.0d0
                else
-                  xx = max_resp_factor
+                  xx = oxy%max_resp_factor
                end if
             end if
 
-            call MACRO (c_macro,depth,xx,                               &
-     &           c_mroot,w_root_z0,f_senes,q10_root,soil_temp,ctopnode, &
-     &           shape_factor_microbialr,shape_factor_rootr,            &
-     &           r_microbial_z0,d_soil)
+            call MACRO (oxy%c_macro,oxy%depth,xx,                               &
+     &           oxy%c_mroot,oxy%w_root_z0,oxy%f_senes,oxy%q10_root,oxy%soil_temp,oxy%ctopnode, &
+     &           oxy%shape_factor_microbialr,oxy%shape_factor_rootr,            &
+     &           oxy%r_microbial_z0,oxy%d_soil)
             SOLVE = xx
             return
          end if
@@ -1274,10 +1206,10 @@ contains
 ! --- Newton-Raphson method
 
 ! --- speed up simulations: cut of if ctop = 0 and if waterfilm_thickness is extremely high (due to very low gas filled porosity)     !RB20140826
-      if (dabs(ctopnode) .lt. 1.0d-6 .OR.                               &
-     &    waterfilm_thickness .gt. 1.d0) then 
+      if (dabs(oxy%ctopnode) .lt. 1.0d-6 .OR.                               &
+     &    oxy%waterfilm_thickness .gt. 1.d0) then 
          xx = 0.d0
-         C_macro = 0.0d0
+         oxy%C_macro = 0.0d0
          SOLVE = xx
          return
       endif
@@ -1286,18 +1218,18 @@ contains
       fxi = 100.d0
       counterSolve = 1
       do while (fxi .gt. accuracy)
-         call MICRO (c_mroot,w_root,f_senes,q10_root,soil_temp,         &
-     &                 sat_water_cont,gas_filled_porosity,              &
-     &                 d_o2inwater,d_root,perc_org_mat,soil_density,    &
-     &                 specific_resp_humus,q10_microbial,depth,         &
-     &                 shape_factor_microbialr,root_radius,             &
-     &                 waterfilm_thickness,bunsencoeff,                 &
-     &                 c_min_micro, xi)
-         call MACRO (c_macro,depth,xi,                                  &
-     &           c_mroot,w_root_z0,f_senes,q10_root,soil_temp,ctopnode,     &
-     &           shape_factor_microbialr,shape_factor_rootr,            &
-     &           r_microbial_z0,d_soil)
-         fxi = dabs(C_min_micro-C_macro)
+         call MICRO (oxy%c_mroot,oxy%w_root,oxy%f_senes,oxy%q10_root,oxy%soil_temp,         &
+     &                 oxy%sat_water_cont,oxy%gas_filled_porosity,              &
+     &                 oxy%d_o2inwater,oxy%d_root,oxy%perc_org_mat,oxy%soil_density,    &
+     &                 oxy%specific_resp_humus,oxy%q10_microbial,oxy%depth,         &
+     &                 oxy%shape_factor_microbialr,oxy%root_radius,             &
+     &                 oxy%waterfilm_thickness,oxy%bunsencoeff,                 &
+     &                 oxy%c_min_micro, xi)
+         call MACRO (oxy%c_macro,oxy%depth,xi,                                  &
+     &           oxy%c_mroot,oxy%w_root_z0,oxy%f_senes,oxy%q10_root,oxy%soil_temp,oxy%ctopnode,     &
+     &           oxy%shape_factor_microbialr,oxy%shape_factor_rootr,            &
+     &           oxy%r_microbial_z0,oxy%d_soil)
+         fxi = dabs(oxy%C_min_micro-oxy%C_macro)
          xiplusdelta = xi + delta
          ximindelta = xi - delta
          
@@ -1306,32 +1238,32 @@ contains
             ximindelta = xi - 1.d-6
          endif
          
-         call MICRO (c_mroot,w_root,f_senes,q10_root,soil_temp,         &
-     &                 sat_water_cont,gas_filled_porosity,              &
-     &                 d_o2inwater,d_root,perc_org_mat,soil_density,    &
-     &                 specific_resp_humus,q10_microbial,depth,         &
-     &                 shape_factor_microbialr,root_radius,             &
-     &                 waterfilm_thickness,bunsencoeff,                 &
-     &                 c_min_micro, xiplusdelta)
-         call MACRO (c_macro,depth,xiplusdelta,                         &
-     &           c_mroot,w_root_z0,f_senes,q10_root,soil_temp,ctopnode,     &
-     &           shape_factor_microbialr,shape_factor_rootr,            &
-     &           r_microbial_z0,d_soil)
+         call MICRO (oxy%c_mroot,oxy%w_root,oxy%f_senes,oxy%q10_root,oxy%soil_temp,         &
+     &                 oxy%sat_water_cont,oxy%gas_filled_porosity,              &
+     &                 oxy%d_o2inwater,oxy%d_root,oxy%perc_org_mat,oxy%soil_density,    &
+     &                 oxy%specific_resp_humus,oxy%q10_microbial,oxy%depth,         &
+     &                 oxy%shape_factor_microbialr,oxy%root_radius,             &
+     &                 oxy%waterfilm_thickness,oxy%bunsencoeff,                 &
+     &                 oxy%c_min_micro, xiplusdelta)
+         call MACRO (oxy%c_macro,oxy%depth,xiplusdelta,                         &
+     &           oxy%c_mroot,oxy%w_root_z0,oxy%f_senes,oxy%q10_root,oxy%soil_temp,oxy%ctopnode,     &
+     &           oxy%shape_factor_microbialr,oxy%shape_factor_rootr,            &
+     &           oxy%r_microbial_z0,oxy%d_soil)
      
-         fxiplusdelta = dabs(C_min_micro-C_macro)
-         call MICRO (c_mroot,w_root,f_senes,q10_root,soil_temp,         &
-     &                 sat_water_cont,gas_filled_porosity,              &
-     &                 d_o2inwater,d_root,perc_org_mat,soil_density,    &
-     &                 specific_resp_humus,q10_microbial,depth,         &
-     &                 shape_factor_microbialr,root_radius,             &
-     &                 waterfilm_thickness,bunsencoeff,                 &
-     &                 c_min_micro, ximindelta)
-         call MACRO (c_macro,depth,ximindelta,                          &
-     &           c_mroot,w_root_z0,f_senes,q10_root,soil_temp,ctopnode,     &
-     &           shape_factor_microbialr,shape_factor_rootr,            &
-     &           r_microbial_z0,d_soil)    
+         fxiplusdelta = dabs(oxy%C_min_micro-oxy%C_macro)
+         call MICRO (oxy%c_mroot,oxy%w_root,oxy%f_senes,oxy%q10_root,oxy%soil_temp,         &
+     &                 oxy%sat_water_cont,oxy%gas_filled_porosity,              &
+     &                 oxy%d_o2inwater,oxy%d_root,oxy%perc_org_mat,oxy%soil_density,    &
+     &                 oxy%specific_resp_humus,oxy%q10_microbial,oxy%depth,         &
+     &                 oxy%shape_factor_microbialr,oxy%root_radius,             &
+     &                 oxy%waterfilm_thickness,oxy%bunsencoeff,                 &
+     &                 oxy%c_min_micro, ximindelta)
+         call MACRO (oxy%c_macro,oxy%depth,ximindelta,                          &
+     &           oxy%c_mroot,oxy%w_root_z0,oxy%f_senes,oxy%q10_root,oxy%soil_temp,oxy%ctopnode,     &
+     &           oxy%shape_factor_microbialr,oxy%shape_factor_rootr,            &
+     &           oxy%r_microbial_z0,oxy%d_soil)    
      
-         fximindelta = dabs(C_min_micro-C_macro)  
+         fximindelta = dabs(oxy%C_min_micro-oxy%C_macro)  
 
          dfxi = (fxiplusdelta - fximindelta) / (xiplusdelta-ximindelta)
          
@@ -1348,10 +1280,10 @@ contains
 !D      write(*,*) counterSolve,xi,ximin1,xiplus1 !DEBUG
       if (dabs(xiplus1-ximin1) .lt. 1.d-6) then  !no change in xi value, than take average of both values between which is iterated
         xx = (xi+xiplus1)*0.5d0
-        call MACRO (c_macro,depth,xx,                                   &
-     &       c_mroot,w_root_z0,f_senes,q10_root,soil_temp,ctopnode,         &
-     &       shape_factor_microbialr,shape_factor_rootr,                &
-     &       r_microbial_z0,d_soil)     
+        call MACRO (oxy%c_macro,oxy%depth,xx,                                   &
+     &       oxy%c_mroot,oxy%w_root_z0,oxy%f_senes,oxy%q10_root,oxy%soil_temp,oxy%ctopnode,         &
+     &       oxy%shape_factor_microbialr,oxy%shape_factor_rootr,                &
+     &       oxy%r_microbial_z0,oxy%d_soil)     
         SOLVE = xx
         return
       endif
@@ -1359,16 +1291,16 @@ contains
 ! --- speed up simulations: cut of if RWU_factor will be >1 or <1e-6 (=0)       
          if (xi .lt. 1.0d-6 .AND. xi .gt. 0.0d0) then !RB20131106 greater than 0 is required
             xx = 0.d0
-            C_macro = 0.0d0
+            oxy%C_macro = 0.0d0
             SOLVE = xx
             return
          endif
-         if (xi .gt. max_resp_factor) then
-            xx = max_resp_factor
-            call MACRO (c_macro,depth,xx,                               &
-     &           c_mroot,w_root_z0,f_senes,q10_root,soil_temp,ctopnode,     &
-     &           shape_factor_microbialr,shape_factor_rootr,            &
-     &           r_microbial_z0,d_soil)     
+         if (xi .gt. oxy%max_resp_factor) then
+            xx = oxy%max_resp_factor
+            call MACRO (oxy%c_macro,oxy%depth,xx,                               &
+     &           oxy%c_mroot,oxy%w_root_z0,oxy%f_senes,oxy%q10_root,oxy%soil_temp,oxy%ctopnode,     &
+     &           oxy%shape_factor_microbialr,oxy%shape_factor_rootr,            &
+     &           oxy%r_microbial_z0,oxy%d_soil)     
             SOLVE = xx
             return
          endif
@@ -1392,7 +1324,7 @@ contains
 
       end if ! (UseZBREND)
 
-      end associate     ! [GR-CROP 2026-05-25] state%crop%oxygen workspace aliases
+      end associate
 
       end function SOLVE
 
@@ -1547,45 +1479,19 @@ contains
    ! O2_pars current_state pointer (set by OxygenStress at entry).
    use O2_pars, only: current_state
    real(8) :: x
-   associate( &
-      w_root              => current_state%crop%oxygen%w_root,              &
-      w_root_z0           => current_state%crop%oxygen%w_root_z0,           &
-      soil_temp           => current_state%crop%oxygen%soil_temp,           &
-      sat_water_cont      => current_state%crop%oxygen%sat_water_cont,      &
-      gas_filled_porosity => current_state%crop%oxygen%gas_filled_porosity, &
-      d_o2inwater         => current_state%crop%oxygen%d_o2inwater,         &
-      d_root              => current_state%crop%oxygen%d_root,              &
-      d_soil              => current_state%crop%oxygen%d_soil,              &
-      perc_org_mat        => current_state%crop%oxygen%perc_org_mat,        &
-      soil_density        => current_state%crop%oxygen%soil_density,        &
-      depth               => current_state%crop%oxygen%depth,               &
-      shape_factor_microbialr => current_state%crop%oxygen%shape_factor_microbialr, &
-      root_radius         => current_state%crop%oxygen%root_radius,         &
-      r_microbial_z0      => current_state%crop%oxygen%r_microbial_z0,      &
-      waterfilm_thickness => current_state%crop%oxygen%waterfilm_thickness, &
-      bunsencoeff         => current_state%crop%oxygen%bunsencoeff,         &
-      c_min_micro         => current_state%crop%oxygen%c_min_micro,         &
-      c_macro             => current_state%crop%oxygen%c_macro,             &
-      ctopnode            => current_state%crop%oxygen%ctopnode,            &
-      c_mroot             => current_state%crop%oxygen%c_mroot,             &
-      f_senes             => current_state%crop%oxygen%f_senes,             &
-      q10_root            => current_state%crop%oxygen%q10_root,            &
-      q10_microbial       => current_state%crop%oxygen%q10_microbial,       &
-      specific_resp_humus => current_state%crop%oxygen%specific_resp_humus, &
-      shape_factor_rootr  => current_state%crop%oxygen%shape_factor_rootr   &
-   )
-      call MICRO (c_mroot,w_root,f_senes,q10_root,soil_temp,            &
-     &                 sat_water_cont,gas_filled_porosity,              &
-     &                 d_o2inwater,d_root,perc_org_mat,soil_density,    &
-     &                 specific_resp_humus,q10_microbial,depth,         &
-     &                 shape_factor_microbialr,root_radius,             &
-     &                 waterfilm_thickness,bunsencoeff,                 &
-     &                 c_min_micro,x)
-      call MACRO (c_macro,depth,x,                                      &
-     &           c_mroot,w_root_z0,f_senes,q10_root,soil_temp,ctopnode, &
-     &           shape_factor_microbialr,shape_factor_rootr,            &
-     &           r_microbial_z0,d_soil)
-      myfunc = c_macro - c_min_micro
+   associate (oxy => current_state%crop%oxygen)
+      call MICRO (oxy%c_mroot,oxy%w_root,oxy%f_senes,oxy%q10_root,oxy%soil_temp,            &
+     &                 oxy%sat_water_cont,oxy%gas_filled_porosity,              &
+     &                 oxy%d_o2inwater,oxy%d_root,oxy%perc_org_mat,oxy%soil_density,    &
+     &                 oxy%specific_resp_humus,oxy%q10_microbial,oxy%depth,         &
+     &                 oxy%shape_factor_microbialr,oxy%root_radius,             &
+     &                 oxy%waterfilm_thickness,oxy%bunsencoeff,                 &
+     &                 oxy%c_min_micro,x)
+      call MACRO (oxy%c_macro,oxy%depth,x,                                      &
+     &           oxy%c_mroot,oxy%w_root_z0,oxy%f_senes,oxy%q10_root,oxy%soil_temp,oxy%ctopnode, &
+     &           oxy%shape_factor_microbialr,oxy%shape_factor_rootr,            &
+     &           oxy%r_microbial_z0,oxy%d_soil)
+      myfunc = oxy%c_macro - oxy%c_min_micro
    end associate
    end function myfunc
    
