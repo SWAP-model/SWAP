@@ -19,13 +19,14 @@ module output_registry_mod
 
    public :: var_count, var_name, var_unit, var_kind, resolve_inlist
 
-   ! 103 entries — verbatim port of swap_csv_output.f90:94-198.
+   ! 112 entries — verbatim port of swap_csv_output.f90:94-198 + IO-OUT/D additions.
    ! Scalars (indices 1-77): RAIN … QINFMAX
    ! Node templates (indices 78-86): H[ … HEACON[
    ! Scalars (indices 87-88): TETOP, TEBOT
    ! Node templates (indices 89-92): DRAIN[ … SSDI[
    ! Subregion templates (indices 93-103): WTOT[ … QDRAINOUT[
-   type(out_var_t), parameter :: REGISTRY(103) = [ &
+   ! IO-OUT/D scalars (indices 104-112): MELT … PLWT
+   type(out_var_t), parameter :: REGISTRY(112) = [ &
       ! -- Scalars 1-29 --
       out_var_t('RAIN',       '(cm)',       OUT_SCALAR), &
       out_var_t('RAIN_NET',   '(cm)',       OUT_SCALAR), &
@@ -135,7 +136,17 @@ module output_registry_mod
       out_var_t('QBOTIN[',    '(cm)',       OUT_SUBREGION), &
       out_var_t('QBOTOUT[',   '(cm)',       OUT_SUBREGION), &
       out_var_t('QDRAININ[',  '(cm)',       OUT_SUBREGION), &
-      out_var_t('QDRAINOUT[', '(cm)',       OUT_SUBREGION)  &
+      out_var_t('QDRAINOUT[', '(cm)',       OUT_SUBREGION), &
+      ! -- IO-OUT/D: crop/snow parity scalars 104-112 --
+      out_var_t('MELT',      '(cm)',       OUT_SCALAR), &
+      out_var_t('DWLVCROP',  '(kg/ha)',    OUT_SCALAR), &
+      out_var_t('DWLVSOIL',  '(kg/ha)',    OUT_SCALAR), &
+      out_var_t('HARLOSORM', '(kg/ha)',    OUT_SCALAR), &
+      out_var_t('WBLPOT',    '(kg/ha)',    OUT_SCALAR), &
+      out_var_t('WBL',       '(kg/ha)',    OUT_SCALAR), &
+      out_var_t('DWBLPOT',   '(kg/ha)',    OUT_SCALAR), &
+      out_var_t('DWBL',      '(kg/ha)',    OUT_SCALAR), &
+      out_var_t('PLWT',      '(kg/ha)',    OUT_SCALAR)  &
       ]
 
 contains

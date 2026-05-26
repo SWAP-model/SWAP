@@ -426,7 +426,7 @@ module csv_output
    type(csv_writer_t), save :: scalar_w
 
    ! local list
-   integer,              parameter           :: M      = 103            ! total number of variables present in predefined list
+   integer,              parameter           :: M      = 112            ! total number of variables present in predefined list
    integer,              parameter           :: Mnodes =  10            ! Maximum number of nodes (Mnodes) or sub-regions (Mnodes/2; since lower and upper node are needed); MUST BE EVEN !!!
 
    type output
@@ -611,6 +611,16 @@ module csv_output
       if (vars%name(i) == 'QINFMAX')     vars%value(1,i) = 0.0d0
       if (vars%name(i) == 'TETOP')       vars%value(1,i) = state%heat%tetop
       if (vars%name(i) == 'TEBOT')       vars%value(1,i) = state%heat%tebot
+      ! IO-OUT/D: crop/snow parity columns (indices 104-112)
+      if (vars%name(i) == 'MELT')        vars%value(1,i) = state%atmosphere%melt
+      if (vars%name(i) == 'DWLVCROP')    vars%value(1,i) = state%crop%wofost%dwlvCrop
+      if (vars%name(i) == 'DWLVSOIL')    vars%value(1,i) = state%crop%wofost%dwlvSoil
+      if (vars%name(i) == 'HARLOSORM')   vars%value(1,i) = state%crop%common%HarLosOrm_tot
+      if (vars%name(i) == 'WBLPOT')      vars%value(1,i) = state%crop%wofost%wblpot
+      if (vars%name(i) == 'WBL')         vars%value(1,i) = state%crop%wofost%wbl
+      if (vars%name(i) == 'DWBLPOT')     vars%value(1,i) = state%crop%wofost%dwblpot
+      if (vars%name(i) == 'DWBL')        vars%value(1,i) = state%crop%wofost%dwbl
+      if (vars%name(i) == 'PLWT')        vars%value(1,i) = state%crop%wofost%plwt
 
       ! vars per layer
       if (vars%name(i) == 'H[')          vars%value(1:Mnodes,i) = lp_H%vals(1:Mnodes)

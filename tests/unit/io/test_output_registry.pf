@@ -1,10 +1,10 @@
 ! Tests for output_registry_mod.
 
 @test
-subroutine test_var_count_is_103()
+subroutine test_var_count_is_112()
    use funit
    use output_registry_mod, only: var_count
-   @assertEqual(103, var_count())
+   @assertEqual(112, var_count())
 end subroutine
 
 @test
@@ -13,8 +13,8 @@ subroutine test_first_and_last_entries()
    use output_registry_mod, only: var_name, var_kind, OUT_SCALAR, OUT_SUBREGION
    @assertEqual('RAIN', trim(var_name(1)))
    @assertEqual(OUT_SCALAR, var_kind(1))
-   @assertEqual('QDRAINOUT[', trim(var_name(103)))
-   @assertEqual(OUT_SUBREGION, var_kind(103))
+   @assertEqual('PLWT', trim(var_name(112)))
+   @assertEqual(OUT_SCALAR, var_kind(112))
 end subroutine
 
 @test
