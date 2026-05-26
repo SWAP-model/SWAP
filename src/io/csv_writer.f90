@@ -39,6 +39,7 @@ contains
       character(len=*),         intent(in)    :: path
       type(error_collection_t), intent(inout) :: errors
       integer :: ios
+      if (self%unit /= -1) close(self%unit)
       call file_open(self%unit, path, 'replace', 'write', iostat=ios)
       if (ios /= 0) then
          call errors%append(ERR_IO_OPEN_FAILED, &

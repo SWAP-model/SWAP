@@ -150,6 +150,7 @@ case (1)
    ! matches the previous file_open call exactly).
    filnam = trim(state%cfg%general%pathwork)//trim(state%cfg%general%outfil)//'_output_tz.csv'
    call profile_w%open(filnam, errs)
+   if (errs%has_errors()) call fatalerr_collected('csv_out_tz', 'cannot open output_tz CSV: ' // trim(filnam))
 
    ! column header
    Header = 'DATE,DEPTH'
@@ -666,9 +667,6 @@ module csv_output
       vars%Nnodes(1:M)         =    1
       vars%nodes(1:Mnodes,1:M) =    0
 
-      ! Set format for output
-      call what_form(1)
-
       ! Fill vars%name/vars%unit from output_registry (single source of truth — IO-OUT/B)
       if (var_count() /= M) call fatalerr_collected('csv_out', 'registry size /= M')
       do i = 1, M
@@ -689,12 +687,12 @@ module csv_output
       call init_soilwater_output_buffer(state)
 
       ! output file; write header (headless: skip file I/O)
-      ! IO-OUT/C2b: open via csv_writer_t; header reuses proven makeheader code
-      ! verbatim by writing to scalar_w%unit (pragmatic fallback — guarantees
-      ! byte-identity for the universal SWAP header + units/names rows).
+      ! IO-OUT/C2b: open via csv_writer_t (status='replace', action='write' — output
+      ! is always written fresh; the prior 'unknown'/'readwrite' was a generic fallback).
       if (.not. state%timecontrol%headless) then
          filcsv = trim(state%cfg%general%pathwork)//trim(state%cfg%general%outfil)//'_output.csv'
          call scalar_w%open(filcsv, errs)
+         if (errs%has_errors()) call fatalerr_collected('csv_out', 'cannot open output CSV: ' // trim(filcsv))
          call makeheader(scalar_w%unit, filcsv, state)
       end if
 
@@ -761,42 +759,6 @@ module csv_output
    end select
 
    end subroutine csv_out
-
-   subroutine what_form(iTask, var, form)
-   implicit none
-   ! global
-   integer,          intent(in)            :: iTask
-   real(8),          intent(in),  optional :: var
-   character(len=*), intent(out), optional :: form
-   ! local
-   ! when to automatically swith from F to E formatting
-   integer,           parameter           :: num_d = 5         ! # of decimals; later: user input?
-   integer,           parameter           :: num_w = num_d+7   ! total width of format, for E-formatting: 7 positions are needed for "-x."at start and "E+00" at end
-   integer,           parameter           :: expo = 4
-   real(8),           parameter           :: t1 = 1.0d0/(10.0d0**expo)
-   real(8),           parameter           :: t2 = 10.0d0**expo
-   character(len=2)                       :: cval1, cval2
-   character(len=20),           save      :: form_rea_F1, form_rea_E1,form_rea_F0
-
-   if (iTask == 1) then
-      ! some basic info
-      !  Note: field width of zero in I and F edit descriptors is allowed as of Fortran95 to ensure as little space usage
-      !        in output file as possible (Metcalf et al., 2004, Fortran 95/2003 explained, Oxford Univ. Prrss, p. 199)
-      write (cval1,'(I0)') num_d
-      write (cval2,'(I0)') num_w
-      form_rea_F0 = '(F0.0,",")'
-      form_rea_F1 = '(F0.' // trim(cval1) // ',",")'
-      form_rea_E1 = '(1P,E' // trim(cval2) // '.' // trim(cval1) // ',",")'
-   else
-      if (abs(var) < 1.0D-10) then
-         form = form_rea_F0
-      else if (abs(var) < t1 .OR. abs(var) > t2) then
-         form = form_rea_E1
-      else
-         form = form_rea_F1
-      end if
-   end if
-   end subroutine what_form
 
    subroutine fill_values(state)
    implicit none
