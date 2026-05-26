@@ -457,7 +457,6 @@ contains
       ! [GR-IO 2026-05-25 Phase 5] flTillage retired — read (state%cfg%soil%swtill == 1).
       ! [GR-IO 2026-05-25 Phase 6] flSwapShared/SharedSimulation feature retired.
       use csv_output,            only: csv_output_step
-      use timestep_control_mod, only: fldecdt
       use timecontrol_mod, only: timecontrol_advance, timecontrol_reduce_dt, &
                                   timecontrol_day_end, itertime_check
       use surfacewater_mod, only: SurfaceWater, surfacewater_year_reset
@@ -509,7 +508,8 @@ contains
       flDrain        => state%timecontrol%flDrain,     &
       flSurfaceWater => state%timecontrol%flSurfaceWater,&
       flIrrigate     => state%timecontrol%flIrrigate,  &
-      fldtreduce     => state%timecontrol%fldtreduce )
+      fldtreduce     => state%timecontrol%fldtreduce,  &
+      fldecdt        => state%timecontrol%fldecdt )
 
 !     get Meteo data
    if (tc_flYearStart) call ReadMeteoYear(state, config)  ! SS-TC TC-13 / SS-GR-FINAL B1

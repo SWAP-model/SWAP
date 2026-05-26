@@ -158,6 +158,7 @@ module timecontrol_state_mod
       logical :: flUpdMetDet    = .false.  !! detailed meteo record needs refresh
 
       ! Timestep-control flags
+      logical :: fldecdt        = .false.  !! decrease-timestep signal (SurfaceWater oscillation, Richards non-convergence)
       logical :: fldecdtmin     = .false.  !! timestep should be reset to dtmin
       logical :: fldtmin        = .false.  !! current dt equals dtmin
       logical :: fldtreduce     = .false.  !! timestep reduction flagged by swap.f90

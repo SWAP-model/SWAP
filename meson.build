@@ -99,7 +99,6 @@ sources = [
     'src/crop/cropwofost_init.f90',
     'src/crop/cropgrass_init.f90',
     'src/config/swap_config.f90',
-    'src/core/timestep_control_mod.f90',
     # [GR-IO 2026-05-25 Phase 6 Steps 5-6] variables.f90, arrays.fi, and
     #   initialize.f90 all deleted — bare-globals module + its zero-init
     #   shim are fully retired. All defaults live in derived-type component

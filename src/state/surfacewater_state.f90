@@ -1,7 +1,7 @@
 !> @file surfacewater_state.f90
 !! Typed state record for the surface-water subsystem.
 !! Excluded fields: `l(Madr)` (drainage config), `fldecdt`
-!! (request_smaller_dt argument), `qdra(:,:)` (drainage_state_t).
+!! (now on time_state_t), `qdra(:,:)` (drainage_state_t).
 !! See ADR 0030, ADR 0033, ADR 0042-flatten-reset-cohorts.
 
 module surfacewater_state_mod

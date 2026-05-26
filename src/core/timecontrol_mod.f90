@@ -22,7 +22,6 @@ contains
       ! [GR-CROP 2026-05-25] flCropCalendar/icrop/cropstart/project → state/config reads.
       ! [GR-TIME 2026-05-25] swirfix/swsnow/swhea/swsolu/swetsine/nirri now read
       ! from state%cfg/state%crop%irrigation; bare-global use-variables retired.
-      use timestep_control_mod, only: fldecdt
       use error_mod, only: fatalerr_collected
       implicit none
       type(swap_state_t), intent(inout) :: state
@@ -45,7 +44,7 @@ contains
 ! === initialization ===================================================
 
 ! --- initialize flags ----------------------------
-      fldecdt = .false.
+      time%fldecdt = .false.
       time%fldecdtmin = .false.
       time%flRunEnd = .false.
       time%flDayStart = .true.
@@ -586,7 +585,6 @@ contains
    end subroutine timecontrol_advance
 
    subroutine timecontrol_reduce_dt(state)
-      use timestep_control_mod, only: fldecdt
       implicit none
       type(swap_state_t), intent(inout) :: state
 
@@ -595,7 +593,7 @@ contains
 ! === reduce time step ===================================================
 
 ! --- decrease time step in case of no convergence in headcalc
-      if (fldecdt) then
+      if (time%fldecdt) then
         if (time%dt .gt. 3.0*time%dtmin) then
           time%dt = time%dt / 3.0
 !         force dt to equal multiple dtmin to prevent very small dt-values at end of day
@@ -604,7 +602,7 @@ contains
           time%dt = time%dtmin
           time%fldtmin = .true.
         endif
-        fldecdt = .false.
+        time%fldecdt = .false.
         time%flprevious = 1
         time%dtprevious = time%dt
         time%flTnext = .false.

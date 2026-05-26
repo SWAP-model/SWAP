@@ -27,7 +27,6 @@ contains
       ! macp/mabbc → swap_array_dimensions (dimension constants); noddrz: crop root depth node
       use swap_array_dimensions, only: macp, mabbc
       ! [GR-SOIL 2026-05-24] use variables retired — all consumers cut over to state%X.
-      use timestep_control_mod, only: fldecdt
       use swap_log, only: log_warn, log_debug, to_str
       use boundbottom_mod, only: BoundBottom
       use boundtop_mod, only: boundtop, PONDRUNOFF
@@ -748,7 +747,7 @@ contains
          soil%pond = soil%pondm1                        ! [SS-SWC S-2.12B]
 
          ! Reset and continue iteration with smaller timestep!
-         fldecdt = .true.
+         time%fldecdt = .true.
 
          return
 
