@@ -140,6 +140,8 @@ contains
    ! because timecontrol_init reads state%crop%common%croptype(icrop) at line ~252.
    ! (croptype, flCropReadFile/flCropOpenFile, cfbs, crop_config_global all set here.)
    call state%crop%init(config%crop, config%meteo, config%general%pathwork)  ! [GR-SEED 2026-05-25 Task 10]
+   ! [IO-OUT/D] swcrp from simulation.output: 1 enables legacy *.crp crop output writer.
+   if (config%crop%swcrop == 1) state%crop%common%swcrp = config%simulation%swcrp
 
 !  shared simulation
    ! [GR-IO 2026-05-25 Phase 6] SharedSimulation(1) deleted — flag was hardcoded false.

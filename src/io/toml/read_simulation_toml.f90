@@ -54,6 +54,8 @@ contains
          call get_optional_int_with_default(timing, 'swres',   config%swres,   0, 'simulation.output.swres',   errors)
          call get_optional_int_with_default(timing, 'swodat',  config%swodat,  0, 'simulation.output.swodat',  errors)
          call get_optional_int_with_default(timing, 'swyrvar', config%swyrvar, 0, 'simulation.output.swyrvar', errors)
+         ! [IO-OUT/D] swcrp=1 enables the legacy *.crp crop output file writer.
+         call get_optional_int_with_default(timing, 'swcrp',  config%swcrp,  0, 'simulation.output.swcrp',  errors)
       end if
 
       call get_table(sec, 'numerical', num, 'simulation.numerical', errors)
