@@ -28,7 +28,7 @@ module meteo_mod
   use et_mod, only: PenMon, reduceva_daily, pm_inputs_t, pm_outputs_t
   use runoff_mod, only: cn_step
   use swap_state_mod, only: swap_state_t
-  use swap_config_mod, only: swap_config_t   ! [SS-GR-ATM B24] config added for meteo switches
+  use swap_config_mod, only: swap_config_t
 
   implicit none
 
@@ -78,7 +78,6 @@ contains
   !! Single ET record per day. Body is the daily-only slice of the former
   !! ProcessMeteoDay: Sections 3, 4, 5(daily branch), 6, 7, 9.
   subroutine process_meteo_day_daily(state, config)
-    ! [GR-ATM 2026-05-23] use variables retired — crop scalars via state%crop%common
     use swap_constants, only: nihil, small
     type(swap_state_t),  intent(inout) :: state
     type(swap_config_t), intent(in)    :: config
@@ -90,21 +89,15 @@ contains
     real(8) :: wfrac, netrainflux, rainflux
     real(8) :: Edirect, Tdirect, Tdirectwet, Edirectpond
 
-    associate( &
-       at_peva     => state%atmosphere%peva,     &
-       at_ptra     => state%atmosphere%ptra,     &
-       at_atmdem   => state%atmosphere%atmdem,   &
-       at_pevaday  => state%atmosphere%pevaday,  &
-       at_ptraday  => state%atmosphere%ptraday,  &
-       tc_fletsine => state%timecontrol%fletsine, &
-       tc_daymeteo => state%timecontrol%daymeteo  )
+    associate (time => state%timecontrol,   &
+               atmo => state%atmosphere)
 
-    ! [GR-ATM-CLEAN D.2] Daily-mode meteo scratch values were previously
+    ! Daily-mode meteo scratch values were previously
     ! supplied via module-level MeteoVars from ReadMeteoDay. Now read
     ! directly from state%atmosphere arrays — same index as meteo_io.f90.
-    hum = state%atmosphere%ahum(tc_daymeteo+1-state%atmosphere%daynrfirst)
-    win = state%atmosphere%awin(tc_daymeteo+1-state%atmosphere%daynrfirst)
-    etr = state%atmosphere%aetr(tc_daymeteo+1-state%atmosphere%daynrfirst)
+    hum = atmo%ahum(time%daymeteo+1-atmo%daynrfirst)
+    win = atmo%awin(time%daymeteo+1-atmo%daynrfirst)
+    etr = atmo%aetr(time%daymeteo+1-atmo%daynrfirst)
 
     ! === Section 3: Interception calculations ===
     call apply_interception_step(state, config, aintc)
@@ -121,20 +114,20 @@ contains
     ! === Section 5: Interception option NHI (adapted Rutter model) ===
     ! Daily branch only — siccapact is set in cropgrowth module for daily mode.
     if (state%crop%common%swinter .eq. 3) then
-      if (state%crop%common%croptype(state%crop%common%icrop).eq.1 .and. state%crop%common%swgc.eq.2) then   ! [GR-CROP C3]
+      if (state%crop%common%croptype(state%crop%common%icrop).eq.1 .and. state%crop%common%swgc.eq.2) then
         gctp  = state%crop%common%gc
       else
         gctp  = 1.0d0 - exp(-1.0d0*state%crop%kdir*state%crop%kdif*state%crop%lai)
         if (gctp .lt. 1.0d-5) then
-          state%atmosphere%siccapact = 0.0d0   ! [SS-GR-ATM B24] direct state write
+          atmo%siccapact = 0.0d0
         endif
       endif
       dttp = 1.0d0  ! value of 1 d required for the daily meteo option
 
       ! Calculate interception, method Rutter
-      call ruttervw(gctp, state%timecontrol%dt, state%atmosphere%siccapact, &
-                    state%atmosphere%fimin, state%crop%ew0, state%atmosphere%grai, &
-                    state%atmosphere%sicact, aintc, eintc)
+      call ruttervw(gctp, time%dt, atmo%siccapact, &
+                    atmo%fimin, state%crop%ew0, atmo%grai, &
+                    atmo%sicact, aintc, eintc)
 
       ! Divide interception into rain part and irrigation part and
       ! calculate net rain (nraida) and net sprinkling irrigation (nird)
@@ -150,41 +143,40 @@ contains
     ! === Section 9: Actual daily rain/snow fluxes and soil evaporation for Daily Meteo ===
 
     ! Finterception: ratio net / gross rain flux; net rainflux = gross - interception
-    if (state%atmosphere%grai.gt.1.d-5) then
+    if (atmo%grai.gt.1.d-5) then
       ! finterception is exclusively meant for dividing rain flux into interception part
       ! and net rain part; not for sprinkler irrigation!
-      state%atmosphere%finterception = state%atmosphere%nraida / state%atmosphere%grai
-      if (aintc.lt.1.0d-5) state%atmosphere%finterception = 1.0d0
+      atmo%finterception = atmo%nraida / atmo%grai
+      if (aintc.lt.1.0d-5) atmo%finterception = 1.0d0
     else
-      state%atmosphere%finterception = 1.0d0
+      atmo%finterception = 1.0d0
     endif
 
     ! In case of daily precipitation sum: set actual gross and net rainflux,
     ! and interception on TIMESTEP basis
     if (config%meteo%swrain.eq.0) then
-      rainflux    = state%atmosphere%fprecnosnow * state%atmosphere%grai
-      netrainflux = state%atmosphere%finterception * rainflux
-      state%atmosphere%graidt  = rainflux
-      state%atmosphere%nraidt  = netrainflux
-      if (state%atmosphere%swusecn == 1) then
-        ! SS-ATM A-2.6: state added — CNmethod needs nraidt/melt from state%atmosphere
+      rainflux    = atmo%fprecnosnow * atmo%grai
+      netrainflux = atmo%finterception * rainflux
+      atmo%graidt  = rainflux
+      atmo%nraidt  = netrainflux
+      if (atmo%swusecn == 1) then
         call cn_step(state)
-        state%atmosphere%nraidt = state%atmosphere%nraidt - state%atmosphere%Runoff_CN   ! [SS-GR-ATM B24]
+        atmo%nraidt = atmo%nraidt - atmo%Runoff_CN
       end if
-      state%atmosphere%aintcdt = rainflux - state%atmosphere%nraidt  ! aintcdt involves ONLY interception of RAIN
+      atmo%aintcdt = rainflux - atmo%nraidt  ! aintcdt involves ONLY interception of RAIN
     endif
 
     ! Soil evaporation rate of today
-    if (.not. tc_fletsine) then
-      call reduceva_daily(state%atmosphere%nraida, state)
+    if (.not. time%fletsine) then
+      call reduceva_daily(atmo%nraida, state)
     endif
 
     ! Save daily potential values for use in ETSine
-    at_ptraday = at_ptra
-    at_pevaday = at_peva
+    atmo%ptraday = atmo%ptra
+    atmo%pevaday = atmo%peva
 
     ! Calculate atmospheric demand [cm]
-    at_atmdem = state%crop%et0*0.1d0
+    atmo%atmdem = state%crop%et0*0.1d0
 
     end associate
 
@@ -195,7 +187,6 @@ contains
   !! ProcessMeteoDay: Section 3 (once); per-record Sections 4, 5(subdaily branch),
   !! 6, 7, 8; then Section 10 (daily totals).
   subroutine process_meteo_day_subdaily(state, config)
-    ! gc + siccaptb migrated to state%crop%common
     use swap_array_dimensions, only: magrs
     use array_utils, only: afgen
     use swap_constants, only: nihil
@@ -210,13 +201,8 @@ contains
     real(8) :: wfrac, sumtav
     real(8) :: Edirect, Tdirect, Tdirectwet, Edirectpond
 
-    associate( &
-       at_peva   => state%atmosphere%peva,   &
-       at_ptra   => state%atmosphere%ptra,   &
-       at_atmdem => state%atmosphere%atmdem, &
-       tc_t      => state%timecontrol%t,     &
-       tc_dt     => state%timecontrol%dt,    &
-       metperiod => state%timecontrol%metperiod )
+    associate (time => state%timecontrol,   &
+               atmo => state%atmosphere)
 
     ! Sub-daily mode: hum/win/etr come from the per-record refresh inside
     ! compute_reference_et; etr is unused for swmetdetail==1.
@@ -229,8 +215,8 @@ contains
     do irecord = 1, config%meteo%nmetdetail
       ! Refresh caller-local hum/win so that the value left after the loop
       ! reflects the last record (consumed by Section 10's rh computation).
-      hum = state%atmosphere%ahum(irecord)
-      win = state%atmosphere%awind_subdaily(irecord)
+      hum = atmo%ahum(irecord)
+      win = atmo%awind_subdaily(irecord)
 
       ! === Section 4: Calculate evapotranspiration (et0, ew0, es0) ===
       call compute_reference_et(state, config, irecord, 0.0d0, hum, win, rcs, pmo)
@@ -242,21 +228,21 @@ contains
       ! === Section 5: Interception option NHI (adapted Rutter model) ===
       ! Sub-daily branch only.
       if (state%crop%common%swinter .eq. 3) then
-        state%atmosphere%siccapact = afgen(state%crop%common%siccaptb, (2*magrs), tc_t)
+        atmo%siccapact = afgen(state%crop%common%siccaptb, (2*magrs), time%t)
         if (state%crop%common%croptype(state%crop%common%icrop).eq.1 .and. state%crop%common%swgc.eq.2) then
           gctp  = state%crop%common%gc
         elseif (state%crop%common%croptype(state%crop%common%icrop).eq.1 .and. state%crop%common%swgc.eq.1) then
           gctp  = 1.0d0 - exp(-1.0d0*state%crop%kdir*state%crop%kdif*state%crop%lai)
         endif
         if (gctp .lt. 1.0d-5) then
-          state%atmosphere%siccapact = 0.0d0   ! [SS-GR-ATM B24] direct state write
+          atmo%siccapact = 0.0d0
         endif
-        dttp = tc_dt
+        dttp = time%dt
 
         ! Calculate interception, method Rutter
-        call ruttervw(gctp, state%timecontrol%dt, state%atmosphere%siccapact, &
-                      state%atmosphere%fimin, state%crop%ew0, state%atmosphere%grai, &
-                      state%atmosphere%sicact, aintc, eintc)
+        call ruttervw(gctp, time%dt, atmo%siccapact, &
+                      atmo%fimin, state%crop%ew0, atmo%grai, &
+                      atmo%sicact, aintc, eintc)
 
         ! Divide interception into rain part and irrigation part and
         ! calculate net rain (nraida) and net sprinkling irrigation (nird)
@@ -270,14 +256,14 @@ contains
       call partition_peva_ptra(state, config, wfrac, Edirect, Tdirect, Edirectpond)
 
       ! === Section 8: Results for detailed weather records ===
-      state%atmosphere%tpot(irecord) = at_ptra
-      state%atmosphere%epot(irecord) = at_peva
-      if (state%atmosphere%grai .lt. 1.0d-12) then
-        state%atmosphere%grain(irecord) = 0.0d0
-        state%atmosphere%nrain(irecord) = 0.0d0
+      atmo%tpot(irecord) = atmo%ptra
+      atmo%epot(irecord) = atmo%peva
+      if (atmo%grai .lt. 1.0d-12) then
+        atmo%grain(irecord) = 0.0d0
+        atmo%nrain(irecord) = 0.0d0
       else
-        state%atmosphere%grain(irecord) = state%atmosphere%arain_subdaily(irecord) / metperiod
-        state%atmosphere%nrain(irecord) = state%atmosphere%arain_subdaily(irecord) / metperiod * state%atmosphere%nraida / state%atmosphere%grai
+        atmo%grain(irecord) = atmo%arain_subdaily(irecord) / time%metperiod
+        atmo%nrain(irecord) = atmo%arain_subdaily(irecord) / time%metperiod * atmo%nraida / atmo%grai
       endif
     enddo
 
@@ -286,49 +272,49 @@ contains
     ! Average temperature of today
     sumtav = 0.d0
     do i = 1, config%meteo%nmetdetail
-      sumtav = sumtav + state%atmosphere%atav(i)
+      sumtav = sumtav + atmo%atav(i)
     enddo
-    state%atmosphere%Tav = sumtav * metperiod
+    atmo%Tav = sumtav * time%metperiod
 
     ! Minimum and maximum temperature of today
-    state%atmosphere%tmx = -50.d0
-    state%atmosphere%tmn = 99.d0
+    atmo%tmx = -50.d0
+    atmo%tmn = 99.d0
     do i = 1, config%meteo%nmetdetail
-      state%atmosphere%tmx = max(state%atmosphere%tmx, state%atmosphere%atav(i))
-      state%atmosphere%tmn = min(state%atmosphere%tmn, state%atmosphere%atav(i))
+      atmo%tmx = max(atmo%tmx, atmo%atav(i))
+      atmo%tmn = min(atmo%tmn, atmo%atav(i))
     enddo
 
     ! Calculate saturated vapour pressure [kpa]
-    svp = 0.3055d0*(exp(17.27d0*state%atmosphere%tmn/(state%atmosphere%tmn+237.3d0)) + &
-                    exp(17.27d0*state%atmosphere%tmx/(state%atmosphere%tmx+237.3d0)))
+    svp = 0.3055d0*(exp(17.27d0*atmo%tmn/(atmo%tmn+237.3d0)) + &
+                    exp(17.27d0*atmo%tmx/(atmo%tmx+237.3d0)))
     ! Calculate relative humidity [fraction]
-    state%atmosphere%rh = min(hum/svp, 1.0d0)
+    atmo%rh = min(hum/svp, 1.0d0)
 
     ! Average temperature between 6 and 18 hour
     sumtav = 0.d0
     count = 0
-    first = int(0.25/metperiod) + 1
-    last = int(0.75/metperiod)
+    first = int(0.25/time%metperiod) + 1
+    last = int(0.75/time%metperiod)
     do i = first, last
-      sumtav = sumtav + state%atmosphere%atav(i)
+      sumtav = sumtav + atmo%atav(i)
       count = count + 1
     enddo
-    state%atmosphere%tavd = sumtav / count
+    atmo%tavd = sumtav / count
 
     ! Daily radiation (J/m2/d) and atmospheric demand (cm/d)
-    state%atmosphere%rad = 0.d0
-    at_atmdem = 0.d0
+    atmo%rad = 0.d0
+    atmo%atmdem = 0.d0
     do i = 1, config%meteo%nmetdetail
-      state%atmosphere%rad = state%atmosphere%rad + state%atmosphere%arad(i)
-      at_atmdem            = at_atmdem            + state%atmosphere%tpot(i)
+      atmo%rad = atmo%rad + atmo%arad(i)
+      atmo%atmdem            = atmo%atmdem            + atmo%tpot(i)
     enddo
 
     ! Fluxes of current time step (start of the day)
-    at_ptra = state%atmosphere%tpot(1)
-    at_peva = state%atmosphere%epot(1)
-    state%atmosphere%graidt  = state%atmosphere%grain(1)
-    state%atmosphere%nraidt  = state%atmosphere%nrain(1)
-    state%atmosphere%aintcdt = state%atmosphere%graidt - state%atmosphere%nraidt  ! aintcdt involves ONLY interception of RAIN
+    atmo%ptra = atmo%tpot(1)
+    atmo%peva = atmo%epot(1)
+    atmo%graidt  = atmo%grain(1)
+    atmo%nraidt  = atmo%nrain(1)
+    atmo%aintcdt = atmo%graidt - atmo%nraidt  ! aintcdt involves ONLY interception of RAIN
 
     end associate
 
@@ -385,8 +371,6 @@ contains
   !! Writes state%crop%es0/et0/ew0 and returns pmo for caller to unpack
   !! Edirect/Tdirect/Tdirectwet/Edirectpond.
   subroutine compute_reference_et(state, config, irecord, etr, hum_in, win_in, rcs, pmo)
-    ! Astro outputs (daylp, difpp, atmtr, dsinbe) cached in state%atmosphere
-    ! by ReadMeteoDay — read directly via atmo%X in the pmi pack below.
     type(swap_state_t),  intent(inout) :: state
     type(swap_config_t), intent(in)    :: config
     integer, intent(in) :: irecord
@@ -396,10 +380,7 @@ contains
     type(pm_inputs_t) :: pmi
     real(8) :: rad_loc
 
-    associate( &
-       tc_daynr       => state%timecontrol%daynr,       &
-       tc_flmetdetail => state%timecontrol%flmetdetail, &
-       metperiod      => state%timecontrol%metperiod    )
+    associate (time => state%timecontrol)
 
     ! Reference evapotranspiration has been specified
     if (config%meteo%swmetdetail.eq.0 .and. config%meteo%swetr.eq.1) then
@@ -430,7 +411,7 @@ contains
         ! Define weather variables of current record. hum/win come from the
         ! caller (sub-daily orchestrator already indexed by irecord); rad and
         ! Tav are refreshed here because they are written into state.
-        rad_loc = state%atmosphere%arad(irecord) / metperiod     ! from j/m2/period to j/m2/d
+        rad_loc = state%atmosphere%arad(irecord) / time%metperiod     ! from j/m2/period to j/m2/d
         state%atmosphere%Tav = state%atmosphere%atav(irecord)
       else
         rad_loc = state%atmosphere%rad
@@ -439,10 +420,10 @@ contains
       ! Calculate evapotranspiration using Penman-Monteith: et0, ew0, es0 (mm/d)
       ! in case of daily meteo (swmetdetail = 0) irecord is always 1
       ! Pack PM inputs.
-      pmi%daynr           = tc_daynr
+      pmi%daynr           = time%daynr
       pmi%irecord         = irecord
       pmi%nmetdetail      = config%meteo%nmetdetail
-      pmi%flmetdetail     = tc_flmetdetail
+      pmi%flmetdetail     = time%flmetdetail
       pmi%flCropEmergence = state%crop%flCropEmergence
       pmi%swcf            = state%crop%swcf
       pmi%swdivide        = state%cfg%meteo%swdivide
@@ -537,7 +518,7 @@ contains
     integer, intent(in)    :: irecord
     real(8), intent(out)   :: wfrac
 
-    associate( metperiod => state%timecontrol%metperiod )
+    associate (time => state%timecontrol)
 
     ! Calculate fraction of the day or period the crop is wet
     if (config%meteo%swmetdetail.eq.0) then
@@ -574,14 +555,14 @@ contains
           wfrac = 0.0d0
         else
           if (state%crop%swcf.ne.3) then
-            wfrac = max(min(interc*10.0d0/state%crop%ew0/metperiod,1.d0),0.d0)
+            wfrac = max(min(interc*10.0d0/state%crop%ew0/time%metperiod,1.d0),0.d0)
           else
             wfrac = max(min(eintc/state%crop%ew0,1.0d0),0.0d0)
           endif
         endif
       endif
       ! Remaining amount of interception for swmetdetail = 1
-      state%atmosphere%restint = max(interc - wfrac * metperiod * state%crop%ew0 * 0.1d0, 0.d0)
+      state%atmosphere%restint = max(interc - wfrac * time%metperiod * state%crop%ew0 * 0.1d0, 0.d0)
     endif
 
     end associate
@@ -593,27 +574,24 @@ contains
   !! and CO2 correction. Writes state%atmosphere%peva and state%atmosphere%ptra.
   subroutine partition_peva_ptra(state, config, wfrac, Edirect, Tdirect, Edirectpond)
     use swap_constants, only: nihil, small
-    ! [GR-ATM 2026-05-23] use variables retired — crop scalars via state%crop%common
     type(swap_state_t),  intent(inout) :: state
     type(swap_config_t), intent(in)    :: config
     real(8), intent(in) :: wfrac, Edirect, Tdirect, Edirectpond
 
-    associate( &
-       at_peva => state%atmosphere%peva, &
-       at_ptra => state%atmosphere%ptra )
+    associate (atmo => state%atmosphere)
 
     ! Potential soil evaporation (peva) [cm/d]
-    at_peva = max(0.0d0, (state%crop%es0*exp(-1.0d0*state%crop%kdir*state%crop%kdif*state%crop%lai)*0.1d0))
+    atmo%peva = max(0.0d0, (state%crop%es0*exp(-1.0d0*state%crop%kdir*state%crop%kdif*state%crop%lai)*0.1d0))
     if (state%crop%swcf.ne.3 .or. (config%meteo%swmetdetail.eq.0 .and. state%crop%common%swinter.ne.3)) then
-      at_peva = max(0.0d0,(1.0d0-wfrac)*at_peva)
+      atmo%peva = max(0.0d0,(1.0d0-wfrac)*atmo%peva)
     end if
 
     ! Alternative for peva (simple model, soil cover fraction specified)
     if (state%crop%common%flCropCalendar .and. .not. state%crop%common%flCropHarvest) then
       if (state%crop%common%croptype(state%crop%common%icrop).eq.1 .and. state%crop%common%swgc.eq.2) then
-        at_peva = (1.0d0 - state%crop%common%gc)*state%crop%es0*0.1d0
+        atmo%peva = (1.0d0 - state%crop%common%gc)*state%crop%es0*0.1d0
         if (state%crop%swcf.ne.3 .or. (config%meteo%swmetdetail.eq.0 .and. state%crop%common%swinter.ne.3)) then
-          at_peva = (1.0d0-wfrac)*at_peva
+          atmo%peva = (1.0d0-wfrac)*atmo%peva
         end if
       endif
     endif
@@ -621,42 +599,42 @@ contains
     ! Adapt peva in case of ponding — [SS-SWC S-2.12B] state%soilwater%pond
     if (state%soilwater%pond .gt. 1.0d-10) then
       if (config%meteo%swetr.eq.0 .and. state%crop%es0.gt.1.0d-8) then
-        at_peva = state%crop%ew0/state%crop%es0 * at_peva
+        atmo%peva = state%crop%ew0/state%crop%es0 * atmo%peva
       elseif (state%crop%es0.gt.1.0d-8) then
         if (state%crop%swcfbs .eq. 1 .and. state%crop%cfbs .gt. small) then
-          at_peva = state%atmosphere%cfevappond * at_peva / state%crop%cfbs
+          atmo%peva = atmo%cfevappond * atmo%peva / state%crop%cfbs
         else
-          at_peva = state%atmosphere%cfevappond * at_peva
+          atmo%peva = atmo%cfevappond * atmo%peva
         endif
       endif
     endif
 
     ! Potential soil evaporation [cm/d] according to PMdirect
     if (state%cfg%meteo%swdivide .eq. 1) then
-      if (state%soilwater%pond .gt. 1.0d-10) then  ! [SS-SWC S-2.12B]
-        at_peva = Edirectpond*0.1d0
+      if (state%soilwater%pond .gt. 1.0d-10) then
+        atmo%peva = Edirectpond*0.1d0
       else
-        at_peva = Edirect*0.1d0
+        atmo%peva = Edirect*0.1d0
       endif
     endif
 
     ! Potential transpiration (ptra) [cm/d]
     if (state%crop%swcf .ne. 3) then
-      at_ptra = ((1.0d0-wfrac)*state%crop%et0-at_peva*10.0d0)*0.1d0
+      atmo%ptra = ((1.0d0-wfrac)*state%crop%et0-atmo%peva*10.0d0)*0.1d0
     else
-      at_ptra = (1.0d0-wfrac)*state%crop%et0*0.1d0
+      atmo%ptra = (1.0d0-wfrac)*state%crop%et0*0.1d0
     endif
-    at_ptra = max(at_ptra,(1.01d0*nihil))
+    atmo%ptra = max(atmo%ptra,(1.01d0*nihil))
 
     ! Potential transpiration [cm/d] according to PMdirect
     if (state%cfg%meteo%swdivide .eq. 1) then
-      at_ptra = (1.0d0-wfrac) * Tdirect * 0.1d0
-      at_ptra = max(at_ptra,(1.01d0*nihil))
+      atmo%ptra = (1.0d0-wfrac) * Tdirect * 0.1d0
+      atmo%ptra = max(atmo%ptra,(1.01d0*nihil))
     endif
 
     ! Correction of potential transpiration as a function of atmospheric CO2 concentration
-    if (state%atmosphere%flco2 .and. state%crop%flCropEmergence) then
-      at_ptra = state%crop%wofost%fco2tra * at_ptra
+    if (atmo%flco2 .and. state%crop%flCropEmergence) then
+      atmo%ptra = state%crop%wofost%fco2tra * atmo%ptra
     endif
 
     end associate
