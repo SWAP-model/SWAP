@@ -114,6 +114,7 @@ contains
       use seed_state_from_config_mod, only: seed_state_from_config
       use irrigation_mod, only: SSDI_irrigation
       use timecontrol_mod, only: timecontrol_init, itertime_init
+      use csv_output,    only: csv_output_init
       type(swap_state_t),          intent(out)   :: state
       type(swap_config_t), target, intent(inout) :: config  ! target: crop_config_global => config%crop (Task 3); inout: already loaded by caller
       logical :: request_smaller_dt   ! intent(out) dummy for SurfaceWater(1)
@@ -442,15 +443,7 @@ contains
 !  call sites below run when a rotation has flcropnut=true.
 
 !  open Output files and write headers (always run; iCaller branch retired)
-   call SwapOutput(1, state)
-   call SoilWaterOutput(1, state, config)   ! [SS-GR-CROPRT A3] config threaded for swcsv/swcsv_tz
-!  ADR 0009 Phase 5+: IrrigationOutput deleted (swirg=0).
-   if (flTemperature)  call TemperatureOutput(1, state)
-   if (flSolute)       call SoluteOutput(1, state)
-   ! [SS-GR-CROPRT A1] AgeTracerOutput(1) dropped — flAgeTracer retired (ADR 0032)
-   if (flSnow)         call SnowOutput(1, state)
-   ! [MACRO-RETIRE 2026-05-12] MacroPoreOutput retired (ADR 0040).
-   if (flSurfaceWater) call SurfaceWaterOutput(1, state)
+   call csv_output_init(state)
    end associate
    end block
 
@@ -463,7 +456,7 @@ contains
       !   flCropCalendar/flHarvestDay/flCropOutput/swcrp); swfrost via state%cfg%soil%frost.
       ! [GR-IO 2026-05-25 Phase 5] flTillage retired — read (state%cfg%soil%swtill == 1).
       ! [GR-IO 2026-05-25 Phase 6] flSwapShared/SharedSimulation feature retired.
-      use cropgrowth_helpers_mod, only: CropOutput  ! GR-CROPWS Phase 0
+      use csv_output,            only: csv_output_step
       use timestep_control_mod, only: fldecdt
       use timecontrol_mod, only: timecontrol_advance, timecontrol_reduce_dt, &
                                   timecontrol_day_end, itertime_check
@@ -636,26 +629,14 @@ contains
 
 !     output section
          if (flOutput) then
-            call SwapOutput(2, state)
-            call SoilWaterOutput(2, state, config)   ! [SS-GR-CROPRT A3]
+            call csv_output_step(state)
             if (state%cfg%soil%swtill == 1) call DoTillage(3, state)
-            if (flTemperature)   call TemperatureOutput(2, state)
-            if (flSolute)        call SoluteOutput(2, state)
-            ! [SS-GR-CROPRT A1] AgeTracerOutput(2) dropped — flAgeTracer retired (ADR 0032)
-            if (flSnow)          call SnowOutput(2, state)
-            ! [MACRO-RETIRE 2026-05-12] MacroPoreOutput retired (ADR 0040).
             if (flSurfaceWater) then
                if (tc_daynr == merge(366, 365, dtleap(tc_iyear))) &  ! SS-TC TC-13
                   call surfacewater_year_reset(state%surfacewater)
-               call SurfaceWaterOutput(2, state)
             end if
          else
-            if (flOutputShort)   call SoilWaterOutput(2, state, config)   ! [SS-GR-CROPRT A3]
-         end if
-         if (tc_flDayEnd .and. (flOutput .or. state%crop%common%flHarvestDay)) then  ! SS-TC TC-13
-            if (state%crop%common%flCropCalendar .and. state%crop%common%flCropOutput) then
-               if (state%crop%common%swcrp.eq.1) call CropOutput(2, state)
-            end if
+            if (flOutputShort)   call csv_output_step(state)
          end if
 !        ADR 0009 Phase 5+: IrrigationOutput deleted (swirg=0).
          if (tc_flDayEnd .and. state%crop%common%flCropNut)    call SoilManagement(6, state)   ! SS-TC TC-13
@@ -674,7 +655,7 @@ contains
       use swap_log,  only: log_info
       use management_soil_mod, only: SoilManagement
       use timecontrol_mod, only: itertime_close
-      use cropgrowth_helpers_mod, only: CropOutput  ! GR-CROPWS Phase 0
+      use csv_output,    only: csv_output_finalize
       type(swap_state_t),  intent(inout) :: state
       type(swap_config_t), intent(in)    :: config  ! unused: kept for parallel signature with swap_init/swap_run_step
 
@@ -682,19 +663,7 @@ contains
    call itertime_close(state)
 
 !  close output files (always run; iCaller branch retired)
-   ! [GR-IO 2026-05-25 Phase 6] SharedSimulation(4) deleted — flag was hardcoded false.
-   call SwapOutput(3, state)
-   ! [SS-GR-CROPRT C1] swend.eq.1 end-sim-dump branch dropped — ADR 0009: swend always 0
-   call SoilWaterOutput(4, state, config)   ! [SS-GR-CROPRT A3]
-   if (state%crop%common%swcrp.eq.1) call CropOutput(3, state)
-   ! [SS-TC TC-14] flag reads via state%timecontrol
-   if (state%timecontrol%flTemperature)  call TemperatureOutput(3, state)
-   if (state%timecontrol%flSolute)       call SoluteOutput(3, state)
-   ! [SS-GR-CROPRT A1] AgeTracerOutput(3) dropped — flAgeTracer retired (ADR 0032)
-!  ADR 0009 Phase 5+: IrrigationOutput deleted (swirg=0).
-   if (state%timecontrol%flSnow)         call SnowOutput(3, state)
-   ! [MACRO-RETIRE 2026-05-12] MacroPoreOutput retired (ADR 0040).
-   if (state%timecontrol%flSurfaceWater) call SurfaceWaterOutput(3, state)
+   call csv_output_finalize(state)
    if (state%crop%common%flCropNut)                        call SoilManagement(7, state)
 
 !  write okay file for external use
