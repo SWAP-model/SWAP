@@ -2,7 +2,7 @@
 !
 ! [GR-CROP 2026-05-25] crop-sweep:
 !   - macp/magrs sourced from swap_array_dimensions.
-!   - rdmax read via cfg_crop%rdmax (Class B); daycrop read via crop%common%daycrop (Class A).
+!   - rdmax read via crop_cfg%rdmax (Class B); daycrop read via crop%common%daycrop (Class A).
 !   - swbulb reads → state%crop%wofost%swbulb (logical mirror; default false; cfg.bulb=1 stub-errored on TOML).
 !   - Wofost working state (gasst/gasstpot/mrest/mrestpot/tadw/tadwpot/fbl/drbl/drblpot)
 !     migrated from legacy globals to local SAVE (module-level `save` carries state across task=1..4).
@@ -58,7 +58,7 @@
       use swap_array_dimensions, only: macp, magrs
       ! [GR-CROP 2026-05-25] crop-sweep:
       !   - macp/magrs sourced from swap_array_dimensions.
-      !   - rdmax read via cfg_crop%rdmax (Class B direct read).
+      !   - rdmax read via crop_cfg%rdmax (Class B direct read).
       !   - daycrop read via crop%common%daycrop (Class A state-rebind).
       !   - Remaining legacy globals: writer/reader targets feeding cropgrowth
       !     dispatcher (Task 9) and cross-file consumers (cropgrass/cropfixed/
@@ -169,7 +169,7 @@
                  mesh     => state%mesh,            &
                  atmo     => state%atmosphere,      &
                  time     => state%timecontrol,     &
-                 cfg_crop => state%cfg%crop         )
+                 crop_cfg => state%cfg%crop         )
 
       select case (task)
 
@@ -236,12 +236,12 @@
 
 ! --- maximum rooting depth
       if (crop%common%swrd.eq.1) then
-        crop%common%rdm = cfg_crop%rdmax
+        crop%common%rdm = crop_cfg%rdmax
       elseif (crop%common%swrd.eq.2) then
-        crop%common%rdm = min(cfg_crop%rdmax,crop%common%rdc)
+        crop%common%rdm = min(crop_cfg%rdmax,crop%common%rdc)
       elseif (crop%common%swrd.eq.3) then
         crop%common%rdc = afgen (crop%common%rlwtb,22,crop%common%wrtmax)
-        crop%common%rdm = min(cfg_crop%rdmax,crop%common%rdc)
+        crop%common%rdm = min(crop_cfg%rdmax,crop%common%rdc)
       endif
 
 ! --- skip next initialization if crop parameters are read from *.END file
@@ -1056,7 +1056,7 @@
 !        during the last day of the crop period: add the weight of living roots 
 !        to the dead roots and reset living weight to zero
          if (crop%common%flHarvestDay .or. (crop%common%dvs.ge.crop%common%dvsend) .or. &
-     &                 dabs(time%t1900-1.0d0-cfg_crop%rotation_end(crop%common%icrop)).lt.1.0d-3 ) then
+     &                 dabs(time%t1900-1.0d0-crop_cfg%rotation_end(crop%common%icrop)).lt.1.0d-3 ) then
             HarLosOrm_rt = crop%wofost%wrt
             HarLosOrm_dwlv =  cw_fraharlosorm_lv * crop%wofost%dwlv
             HarLosOrm_lv   = cw_fraharlosorm_lv * crop%wofost%wlv + HarLosOrm_dwlv
@@ -1138,7 +1138,7 @@
         endif
  
         if (crop%common%flHarvestDay .or. (crop%common%dvs.ge.crop%common%dvsend) .or. &
-     &                 dabs(time%t1900-1.0d0-cfg_crop%rotation_end(crop%common%icrop)).lt.1.0d-3 ) then
+     &                 dabs(time%t1900-1.0d0-crop_cfg%rotation_end(crop%common%icrop)).lt.1.0d-3 ) then
           gwst  = 0.0d0
           crop%wofost%gwrt  = 0.0d0
           gwso  = 0.0d0

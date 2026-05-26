@@ -235,7 +235,7 @@
          call MeteoDT(state)
       endif
 
-      end associate  ! tc_t1900, tc_flYearStart => state%timecontrol [TC-9]
+      end associate
 
       return
       end subroutine ReadMeteoYear

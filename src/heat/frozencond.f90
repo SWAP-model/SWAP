@@ -82,20 +82,20 @@ contains
 
     associate (heat => state%heat,         &
                mesh => state%mesh,         &
-               cfg_heat => config%heat)
+               heat_cfg => config%heat)
 
       ! Calculate reduction factor for each node.
       do node = 1, mesh%numnod
          heat%rfcp(node) = 1.0d0
          if (config%soil%frost%swfrost .eq. 1) then
-            if (heat%tsoil(node) .ge. cfg_heat%tfroststa) then
+            if (heat%tsoil(node) .ge. heat_cfg%tfroststa) then
                heat%rfcp(node) = 1.0d0
-            else if (heat%tsoil(node) .le. cfg_heat%tfrostend) then
+            else if (heat%tsoil(node) .le. heat_cfg%tfrostend) then
                heat%rfcp(node) = 0.0d0
-            else if (heat%tsoil(node) .lt. cfg_heat%tfroststa .and. &
-                     heat%tsoil(node) .gt. cfg_heat%tfrostend) then
-               heat%rfcp(node) = (heat%tsoil(node) - cfg_heat%tfrostend) / &
-                                 (cfg_heat%tfroststa - cfg_heat%tfrostend)
+            else if (heat%tsoil(node) .lt. heat_cfg%tfroststa .and. &
+                     heat%tsoil(node) .gt. heat_cfg%tfrostend) then
+               heat%rfcp(node) = (heat%tsoil(node) - heat_cfg%tfrostend) / &
+                                 (heat_cfg%tfroststa - heat_cfg%tfrostend)
             end if
          end if
       end do
@@ -110,9 +110,9 @@ contains
       node = mesh%numnod
       do while (flthaw .and. node .gt. 1)
          node = node - 1
-         if (heat%tsoil(node) .le. cfg_heat%tfrostend + 1.0d-6) then
+         if (heat%tsoil(node) .le. heat_cfg%tfrostend + 1.0d-6) then
             heat%zfrostbot = mesh%z(node + 1) + mesh%disnod(node + 1) * &
-                             (cfg_heat%tfrostend - heat%tsoil(node + 1)) / &
+                             (heat_cfg%tfrostend - heat%tsoil(node + 1)) / &
                              (heat%tsoil(node) - heat%tsoil(node + 1))
             flthaw            = .false.
             heat%nodfrostbot  = node
@@ -125,19 +125,19 @@ contains
          node   = 0
          do while (flthaw .and. node .lt. heat%nodfrostbot)
             node = node + 1
-            if (heat%tsoil(node) .le. cfg_heat%tfrostend + 1.0d-6) then
+            if (heat%tsoil(node) .le. heat_cfg%tfrostend + 1.0d-6) then
                if (node .eq. 1) then
-                  if (heat%tetop .le. cfg_heat%tfrostend) then
+                  if (heat%tetop .le. heat_cfg%tfrostend) then
                      heat%zfrosttop = 0.0d0
                   else
                      heat%zfrosttop = mesh%z(node) -                        &
                                       (mesh%z(node) - 0.0d0) *              &
-                                      (heat%tsoil(node) - cfg_heat%tfrostend) / &
+                                      (heat%tsoil(node) - heat_cfg%tfrostend) / &
                                       (heat%tsoil(node) - heat%tetop)
                   end if
                else
                   heat%zfrosttop = mesh%z(node) + mesh%disnod(node) *       &
-                                   (heat%tsoil(node) - cfg_heat%tfrostend) / &
+                                   (heat%tsoil(node) - heat_cfg%tfrostend) / &
                                    (heat%tsoil(node) - heat%tsoil(node - 1))
                end if
                heat%zfrosttop = min(0.0d0, heat%zfrosttop)

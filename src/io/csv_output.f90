@@ -164,19 +164,15 @@ case (1)
 
 case (2)
 
-  associate( &                                                           ! SS-TC TC-13
-     tc_flprintshort => state%timecontrol%flprintshort, &                ! SS-TC TC-13
-     tc_date         => state%timecontrol%date,         &                ! SS-TC TC-13
-     tc_t1900        => state%timecontrol%t1900          &               ! SS-TC TC-13
-  )
+  associate (time => state%timecontrol)
   do j = nod_1, nod_2
 
     ! date and time
-    if (.not. tc_flprintshort) then                                      ! SS-TC TC-13
-       write (profile_w%unit,'(2A)',advance='no') trim(tc_date)          ! SS-TC TC-13
+    if (.not. time%flprintshort) then                                      ! SS-TC TC-13
+       write (profile_w%unit,'(2A)',advance='no') trim(time%date)          ! SS-TC TC-13
     else
        ! determine date-time
-       call dtdpst ('year-month-day hour:minute:seconds',tc_t1900,datexti)  ! SS-TC TC-13
+       call dtdpst ('year-month-day hour:minute:seconds',time%t1900,datexti)  ! SS-TC TC-13
        write (profile_w%unit,'(2A)',advance='no') trim(datexti)
     end if
 
@@ -205,7 +201,7 @@ case (2)
     write (profile_w%unit,*)
 
   end do
-  end associate  ! SS-TC TC-13: tc_flprintshort, tc_date, tc_t1900
+  end associate
 
 case (3)
 
@@ -710,11 +706,7 @@ module csv_output
       ! trailing comma — byte-identical to the previous hand-built line that
       ! stripped its trailing comma via line(1:il-1). fmt_real == what_form.
       if (.not. state%timecontrol%headless) then
-         associate( &                                                    ! SS-TC TC-13
-            tc_flprintshort => state%timecontrol%flprintshort, &         ! SS-TC TC-13
-            tc_date         => state%timecontrol%date,         &         ! SS-TC TC-13
-            tc_t1900        => state%timecontrol%t1900          &        ! SS-TC TC-13
-         )
+         associate (time => state%timecontrol)
          ! flatten the active values in emission order
          ncount = 0
          do j = 1, M
@@ -726,14 +718,14 @@ module csv_output
             end if
          end do
 
-         if (.not. tc_flprintshort) then                                 ! SS-TC TC-13
-            call scalar_w%row(vals(1:ncount), leading=trim(tc_date))     ! SS-TC TC-13
+         if (.not. time%flprintshort) then                                 ! SS-TC TC-13
+            call scalar_w%row(vals(1:ncount), leading=trim(time%date))     ! SS-TC TC-13
          else
             ! determine date-time
-            call dtdpst ('year-month-day hour:minute:seconds', tc_t1900, datexti)  ! SS-TC TC-13
+            call dtdpst ('year-month-day hour:minute:seconds', time%t1900, datexti)  ! SS-TC TC-13
             call scalar_w%row(vals(1:ncount), leading=trim(datexti))
          end if
-         end associate  ! SS-TC TC-13: tc_flprintshort, tc_date, tc_t1900
+         end associate
       end if
 
    case (3)

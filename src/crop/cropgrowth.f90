@@ -34,7 +34,7 @@
       ! lifecycle/calendar legacy globals (icrop, flCropCalendar, cropstart,
       ! cropend, flCropEmergence, flCropHarvest, daycrop, swcrp, flHarvestDay)
       ! were dual-written to state earlier in the arc; this dispatcher's
-      ! reads/writes route through state via the `crop` and `cfg_crop`
+      ! reads/writes route through state via the `crop` and `crop_cfg`
       ! associate aliases.
       use array_utils, only: afgen
       use rootextraction_mod, only: MatricFlux
@@ -86,7 +86,7 @@
         tc       => state%timecontrol,            &
         atmo     => state%atmosphere,             &
         crop     => state%crop,                   &  ! crop sub-state (common, wofost, grass, ...)
-        cfg_crop => state%cfg%crop                &  ! crop config (rotation_start/end)
+        crop_cfg => state%cfg%crop                &  ! crop config (rotation_start/end)
       )
 
       select case (task)
@@ -100,10 +100,10 @@
       crop%common%flCropCalendar = .false.
       do while (.not. crop%common%flCropCalendar)
 
-        if (cfg_crop%rotation_start(crop%common%icrop) .lt. 1.d0) exit
+        if (crop_cfg%rotation_start(crop%common%icrop) .lt. 1.d0) exit
 
-        if (tc%t1900 - cfg_crop%rotation_start(crop%common%icrop) .gt. -tiny                      &
-     &                 .and. tc%t1900 - cfg_crop%rotation_end(crop%common%icrop) .lt. tiny) then
+        if (tc%t1900 - crop_cfg%rotation_start(crop%common%icrop) .gt. -tiny                      &
+     &                 .and. tc%t1900 - crop_cfg%rotation_end(crop%common%icrop) .lt. tiny) then
           crop%common%flCropCalendar = .true.
         else
           crop%common%icrop = crop%common%icrop + 1
@@ -111,8 +111,8 @@
       enddo
       ! [SS-GR-CROPRT A5] mirror current-crop window scalars
       if (crop%common%flCropCalendar) then
-        state%crop%common%cropstart = cfg_crop%rotation_start(crop%common%icrop)
-        state%crop%common%cropend   = cfg_crop%rotation_end(crop%common%icrop)
+        state%crop%common%cropstart = crop_cfg%rotation_start(crop%common%icrop)
+        state%crop%common%cropend   = crop_cfg%rotation_end(crop%common%icrop)
       end if
 
 ! --- bare soil condition  ----------------------------------------------------
@@ -489,11 +489,11 @@
 
         ! Check crop%common%flHarvestDay
         if (state%crop%common%swharv.eq.0) then
-          if (dabs(tc%t1900 - cfg_crop%rotation_end(state%crop%common%icrop) - 1.d0) .lt. 1.0d-3) then  ! [GR-CROPWS B3] crop%common%icrop → state%crop%common%icrop
+          if (dabs(tc%t1900 - crop_cfg%rotation_end(state%crop%common%icrop) - 1.d0) .lt. 1.0d-3) then  ! [GR-CROPWS B3] crop%common%icrop → state%crop%common%icrop
             crop%common%flHarvestDay = .true.
           endif
         else
-          if (state%crop%common%dvs.ge.state%crop%common%dvsend .or. dabs(tc%t1900 - cfg_crop%rotation_end(state%crop%common%icrop) - 1.d0) .lt. 1.0d-3) then  ! [GR-CROPWS B3] dvs/dvsend/crop%common%icrop → state
+          if (state%crop%common%dvs.ge.state%crop%common%dvsend .or. dabs(tc%t1900 - crop_cfg%rotation_end(state%crop%common%icrop) - 1.d0) .lt. 1.0d-3) then  ! [GR-CROPWS B3] dvs/dvsend/crop%common%icrop → state
             crop%common%flHarvestDay = .true.
           endif
         endif
@@ -529,7 +529,7 @@
 
 ! --- detailed grass growth ------------------------------------------------
       if (state%crop%common%croptype(state%crop%common%icrop).eq.3)then
-        if (dabs(tc%t1900 - cfg_crop%rotation_end(state%crop%common%icrop) - 1.d0) .lt. 1.0d-3) then  ! [GR-CROPWS B3] crop%common%icrop → state%crop%common%icrop
+        if (dabs(tc%t1900 - crop_cfg%rotation_end(state%crop%common%icrop) - 1.d0) .lt. 1.0d-3) then  ! [GR-CROPWS B3] crop%common%icrop → state%crop%common%icrop
           crop%flCropEmergence = .false.
           crop%common%flCropHarvest   = .true.
         endif

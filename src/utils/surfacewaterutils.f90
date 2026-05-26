@@ -185,31 +185,25 @@ contains
 
       ! SS-TC TC-12: dt read via state%timecontrol tc_* alias.
       ! GR-UTILS Task 12: swdra, pondmx, rsro, rsroexp read from state%surfacewater.
-      associate(tc_dt    => state%timecontrol%dt,              &  ! TC-12
-                sw_wls   => state%surfacewater%wls,            &
-                sw_swst  => state%surfacewater%swst,           &
-                sw_swdra => state%surfacewater%swdra,          &
-                sw_pondmx => state%surfacewater%pondmx,        &
-                sw_rsro  => state%surfacewater%rsro,           &
-                sw_rsroexp => state%surfacewater%rsroexp,      &
-                ! SS-SWC Phase 2 S-2.8: pond read from state%soilwater
-                pond     => state%soilwater%pond)
+      associate (time => state%timecontrol, &
+                 surf => state%surfacewater, &
+                 soil => state%soilwater)
 
       runoff = 0.0_real64
 
-      if (pond - sw_pondmx > 0.0_real64 .and. sw_swdra /= 2) then
-         if (sw_rsro < 1.0d-3) then
-            runoff = pond - sw_pondmx
+      if (soil%pond - surf%pondmx > 0.0_real64 .and. surf%swdra /= 2) then
+         if (surf%rsro < 1.0d-3) then
+            runoff = soil%pond - surf%pondmx
          else
-            runoff = tc_dt / sw_rsro * (pond - sw_pondmx)**sw_rsroexp  ! TC-12
+            runoff = time%dt / surf%rsro * (soil%pond - surf%pondmx)**surf%rsroexp  ! TC-12
          end if
 
-      else if (sw_swdra == 2) then
-         if (pond > sw_pondmx .and. pond > sw_wls) then
-            runoff = tc_dt / sw_rsro * (pond - max(sw_pondmx, sw_wls))**sw_rsroexp  ! TC-12
-         else if (pond < sw_wls) then
-            inun_max = sw_swst - swstlev(state, pond)
-            runoff = -min(inun_max, sw_wls - max(pond, sw_pondmx))
+      else if (surf%swdra == 2) then
+         if (soil%pond > surf%pondmx .and. soil%pond > surf%wls) then
+            runoff = time%dt / surf%rsro * (soil%pond - max(surf%pondmx, surf%wls))**surf%rsroexp  ! TC-12
+         else if (soil%pond < surf%wls) then
+            inun_max = surf%swst - swstlev(state, soil%pond)
+            runoff = -min(inun_max, surf%wls - max(soil%pond, surf%pondmx))
          end if
       end if
 

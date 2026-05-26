@@ -89,8 +89,8 @@ contains
                  heat => state%heat,         &
                  atmo => state%atmosphere,   &
                  time => state%timecontrol,  &
-                 cfg_bb => state%cfg%bottom_boundary,  &  ! [GR-SOIL 2026-05-24] hplate/rimlay/sw4/swbotb3impl direct config read
-                 cfg_num => state%cfg%simulation%numerical, &  ! [GR-SOIL 2026-05-24] swcaprise/dump_convergence_diagnostics
+                 bb_cfg => state%cfg%bottom_boundary,  &  ! [GR-SOIL 2026-05-24] hplate/rimlay/sw4/swbotb3impl direct config read
+                 num_cfg => state%cfg%simulation%numerical, &  ! [GR-SOIL 2026-05-24] swcaprise/dump_convergence_diagnostics
                  swbotb => state%soilwater%swbotb_runtime)
 
       if (time%flDayStart) then  ! [TC-8]
@@ -187,7 +187,7 @@ contains
       ! Reset conductivities to time level t
 
       ! Node nr of compartment with minimized flux of capillary rise
-      if (cfg_num%swcaprise) then
+      if (num_cfg%swcaprise) then
          nodncr    = max(5, state%crop%common%noddrz)  ! [GR-SOIL 2026-05-24]
          flcaprise = .false.
       endif
@@ -198,7 +198,7 @@ contains
                            soil%fluseksatexm(i), &
                            i, soil)                                 ! [SS-GR-UTILS Task 6]
 
-         if (cfg_num%swcaprise) then
+         if (num_cfg%swcaprise) then
             ! Prevent capillary rise into the root zone !! special for experts only
             if (i .eq. nodncr) then
                if ((soil%h(i) + mesh%z(i)) .lt. (soil%h(i+1) + mesh%z(i+1))) then  ! negative potential gradient upwards
@@ -251,8 +251,8 @@ contains
          hgrad(NN+1) = soil%h(NN)/(mesh%z(nn)-soil%gwlinp) + 1.0d0
       else if(swbotb.eq.5 .or. (swbotb.eq.1 .and. soil%fllowgwl))then
          hgrad(NN+1) = (soil%h(NN) - soil%hbot) / mesh%disnod(NN+1)  + 1.0d0
-      else if(swbotb.eq.8 .and. soil%h(NN).gt. Critdz - mesh%disnod(NN+1) + cfg_bb%hplate) then
-         hgrad(NN+1) = (soil%h(NN) - cfg_bb%hplate) / mesh%disnod(NN+1)  + 1.0d0
+      else if(swbotb.eq.8 .and. soil%h(NN).gt. Critdz - mesh%disnod(NN+1) + bb_cfg%hplate) then
+         hgrad(NN+1) = (soil%h(NN) - bb_cfg%hplate) / mesh%disnod(NN+1)  + 1.0d0
          flboth = .true.
       else
          flboth = .false.
@@ -277,14 +277,14 @@ contains
          F(NN) = (soil%theta(NN) - soil%thetm1(NN))*soil%FrArMtrx(NN)*mesh%dz(NN)/time%dt        &  ! [SS-SWC S-2.3] [TC-8]
      &         - soil%kmean(NN) * hgrad(NN) + sink(NN) - source(NN) + soil%qrot(NN)
 
-         if(swbotb.eq.3.and.cfg_bb%swbotb3impl.eq.1)then ! Cauchy-relation, implemented as head boundary
+         if(swbotb.eq.3.and.bb_cfg%swbotb3impl.eq.1)then ! Cauchy-relation, implemented as head boundary
             if (soil%swbotb3resvert.eq.0) then
-               soil%qbot = - (soil%h(NN)+mesh%z(NN)-soil%deepgw) / (mesh%disnod(NN+1)/soil%kmean(NN+1)+cfg_bb%rimlay)
+               soil%qbot = - (soil%h(NN)+mesh%z(NN)-soil%deepgw) / (mesh%disnod(NN+1)/soil%kmean(NN+1)+bb_cfg%rimlay)
             elseif (soil%swbotb3resvert.eq.1) then
-               soil%qbot = - (soil%h(NN)+mesh%z(NN)-soil%deepgw) / cfg_bb%rimlay
+               soil%qbot = - (soil%h(NN)+mesh%z(NN)-soil%deepgw) / bb_cfg%rimlay
             endif
 ! ---       extra groundwater flux might be added
-            if (cfg_bb%sw4 .eq. 1) soil%qbot = soil%qbot + afgen(soil%qbotab,mabbc*2,time%t1900+time%dt)  ! [TC-8]
+            if (bb_cfg%sw4 .eq. 1) soil%qbot = soil%qbot + afgen(soil%qbotab,mabbc*2,time%t1900+time%dt)  ! [TC-8]
             F(NN) = F(NN) - soil%qbot
          else if(swbotb.eq.5 .or. (swbotb.eq.1 .and. soil%fllowgwl))then ! pressure head at lower boundary specified
             F(NN) = F(NN) + soil%kmean(NN+1) * hgrad(NN+1)
@@ -299,7 +299,7 @@ contains
          ! Lysimeter option
          else if(swbotb.eq.8)then
             if (flboth) then
-               soil%hbot = cfg_bb%hplate
+               soil%hbot = bb_cfg%hplate
                F(NN) = F(NN) + soil%kmean(NN+1) * hgrad(NN+1)
             else
                soil%qbot = 0.0d0
@@ -357,7 +357,7 @@ contains
             end do
          end if
 
-         if (cfg_num%swcaprise .and. flcaprise) then
+         if (num_cfg%swcaprise .and. flcaprise) then
            dkdh(nodncr+1) = 1.0D-30
          endif
 
@@ -375,12 +375,12 @@ contains
          dFdhM(NN) = soil%dimoca(NN)*soil%FrArMtrx(NN)*mesh%dz(NN)/time%dt - dFdhU(NN)  ! [SS-SWC S-2.3] [TC-8]
          if(swbotb.eq.1 .and. (.not.soil%fllowgwl))then
             dFdhM(NN) = dFdhM(NN) + soil%kmean(NN+1)/(mesh%z(NN)-soil%gwlinp)
-         else if(swbotb.eq.3.and.cfg_bb%swbotb3impl.eq.1)then ! Cauchy
+         else if(swbotb.eq.3.and.bb_cfg%swbotb3impl.eq.1)then ! Cauchy
             if (soil%swbotb3resvert.eq.0) then
                dFdhM(NN) = dFdhM(NN) + 1.0d0 /                          &
-     &                              (mesh%disnod(NN+1)/soil%kmean(NN+1)+cfg_bb%rimlay)   
+     &                              (mesh%disnod(NN+1)/soil%kmean(NN+1)+bb_cfg%rimlay)   
             elseif (soil%swbotb3resvert.eq.1) then
-               dFdhM(NN) = dFdhM(NN) + 1.0d0 / cfg_bb%rimlay
+               dFdhM(NN) = dFdhM(NN) + 1.0d0 / bb_cfg%rimlay
             endif
          else if(swbotb.eq.5 .or. (swbotb.eq.1 .and. soil%fllowgwl))then
             dFdhM(NN) = dFdhM(NN) + soil%kmean(NN+1)/mesh%disnod(NN+1)         
@@ -498,7 +498,7 @@ contains
             end if
 
             ! Prevent capillary rise into the root zone !! special for experts
-            if (cfg_num%swcaprise) then
+            if (num_cfg%swcaprise) then
                flcaprise = .false.
                i = nodncr
                if ((soil%h(i) + mesh%z(i)) .lt. (soil%h(i+1) + mesh%z(i+1))) then  ! negative potential gradient upwards
@@ -547,7 +547,7 @@ contains
            else if(swbotb.eq.5 .or. (swbotb.eq.1 .and. soil%fllowgwl))then
                hgrad(NN+1) = (soil%h(NN) - soil%hbot) / mesh%disnod(NN+1)  + 1.0d0
             else if(swbotb.eq.8 .and. flboth)then
-               hgrad(NN+1) = (soil%h(NN) - cfg_bb%hplate) / mesh%disnod(NN+1)  + 1.0d0
+               hgrad(NN+1) = (soil%h(NN) - bb_cfg%hplate) / mesh%disnod(NN+1)  + 1.0d0
             end if
 
             if(swbotb.eq.1 .and. (.not.soil%fllowgwl))then
@@ -572,15 +572,15 @@ contains
                F(NN) = (soil%theta(NN) - soil%thetm1(NN))*soil%FrArMtrx(NN)*mesh%dz(NN)/time%dt  &  ! [SS-SWC S-2.3] [TC-8]
      &               - soil%kmean(NN) * hgrad(NN)                            &
      &               + sink(NN) - source(NN) + soil%qrot(NN)
-               if(swbotb.eq.3.and.cfg_bb%swbotb3impl.eq.1)then ! Cauchy
+               if(swbotb.eq.3.and.bb_cfg%swbotb3impl.eq.1)then ! Cauchy
                   if (soil%swbotb3resvert.eq.0) then
                      soil%qbot = - (soil%h(NN)+mesh%z(NN)-soil%deepgw) /       &
-     &                                 (mesh%disnod(NN+1)/soil%kmean(NN+1)+cfg_bb%rimlay)
+     &                                 (mesh%disnod(NN+1)/soil%kmean(NN+1)+bb_cfg%rimlay)
                   elseif (soil%swbotb3resvert.eq.1) then
-                     soil%qbot = - (soil%h(NN)+mesh%z(NN)-soil%deepgw) / cfg_bb%rimlay
+                     soil%qbot = - (soil%h(NN)+mesh%z(NN)-soil%deepgw) / bb_cfg%rimlay
                   endif
                   ! Extra groundwater flux might be added
-                  if (cfg_bb%sw4 .eq. 1) then
+                  if (bb_cfg%sw4 .eq. 1) then
                      soil%qbot = soil%qbot + afgen(soil%qbotab,mabbc*2,time%t1900+time%dt)  ! [TC-8]
                   end if
                   F(NN) = F(NN) - soil%qbot
@@ -599,7 +599,7 @@ contains
                ! Lysimeter option
                else if(swbotb.eq.8)then
                   if (flboth) then
-                     soil%hbot = cfg_bb%hplate
+                     soil%hbot = bb_cfg%hplate
                      F(NN) = F(NN) + soil%kmean(NN+1) * hgrad(NN+1)
                   else
                      soil%qbot = 0.0d0
@@ -766,7 +766,7 @@ contains
             endif
          endif
 
-         if (cfg_num%dump_convergence_diagnostics) then
+         if (num_cfg%dump_convergence_diagnostics) then
            call log_debug('Headcalc', 'Datetime = ' // datetime)
            call log_debug('Headcalc', 't1900    = ' // to_str(time%t1900))
            call log_debug('Headcalc', 'time%dtmin = ' // to_str(time%dtmin))
@@ -860,7 +860,7 @@ contains
                  heat => state%heat,         &
                  atmo => state%atmosphere,   &
                  time => state%timecontrol,  &
-                 cfg_soil => state%cfg%soil, &  ! [GR-SOIL 2026-05-24] cfg_soil%swhyst/cfg_soil%gwli direct config read
+                 soil_cfg => state%cfg%soil, &  ! [GR-SOIL 2026-05-24] soil_cfg%swhyst/soil_cfg%gwli direct config read
                  hyd => state%cfg%soil%hydraulics, &  ! [GR-SOIL 2026-05-24] per-layer VG params (paramvg)
                  swbotb => state%soilwater%swbotb_runtime)
 
@@ -978,12 +978,12 @@ contains
         lay = mesh%layer(node)
         soil%thetar(node) = soil%vg_params(node)%thetar        ! [SS-SWC S-1.3/S-2.12B]
         soil%thetas(node) = soil%vg_params(node)%thetas        ! [SS-SWC S-1.3/S-2.12B]
-        !!! Kroes: disable combi of swsophy=1 and cfg_soil%swhyst=1
-        if (cfg_soil%swhyst.eq.1) then
+        !!! Kroes: disable combi of swsophy=1 and soil_cfg%swhyst=1
+        if (soil_cfg%swhyst.eq.1) then
            ! Wetting curve
            soil%indeks(node) = 1                            ! [SS-SWC S-1.3/S-2.12B]
            soil%vg_params(node)%alpha = hyd%alfaw(lay)      ! [GR-SOIL 2026-05-24] hysteresis: wetting alpha
-        elseif (cfg_soil%swhyst.eq.0.or.cfg_soil%swhyst.eq.2) then
+        elseif (soil_cfg%swhyst.eq.0.or.soil_cfg%swhyst.eq.2) then
            ! Drying branch or simulation without hysteresis
            soil%indeks(node) = -1                           ! [SS-SWC S-1.3/S-2.12B]
            soil%vg_params(node)%alpha = hyd%alfa(lay)       ! [GR-SOIL 2026-05-24] hysteresis: drying alpha
@@ -1005,7 +1005,7 @@ contains
          end if
       endif
       if (soil%swinco.eq.2 .and. swbotb.ne.8) then
-        if (abs(cfg_soil%gwli-(mesh%z(mesh%numnod)-0.5d0*mesh%dz(mesh%numnod))) .lt.1.0d-4) then
+        if (abs(soil_cfg%gwli-(mesh%z(mesh%numnod)-0.5d0*mesh%dz(mesh%numnod))) .lt.1.0d-4) then
           messag = 'Initial groundwaterlevel (SWINCO=2) is '//          &
      &    'too close to bottom of soil profile'//                       &
      &    ' must be corrected!'
@@ -1050,7 +1050,7 @@ contains
             call fatalerr_collected ('soilwater',messag)
           endif
         else
-          soil%gwl = cfg_soil%gwli                                   ! [SS-SWC S-1.3/S-2.12B]
+          soil%gwl = soil_cfg%gwli                                   ! [SS-SWC S-1.3/S-2.12B]
         endif
         if (soil%gwl.gt.0.0d0) then
           soil%pond = soil%gwl                                ! [SS-SWC S-1.3/S-2.12B]
@@ -1178,7 +1178,7 @@ contains
       call integral (state)
 
       ! Update parameters for soil water hystereses
-      if (cfg_soil%swhyst.ne.0) call hysteresis (state)
+      if (soil_cfg%swhyst.ne.0) call hysteresis (state)
 
       case default
          call fatalerr_collected ('SoilWater', 'Illegal value for TASK')

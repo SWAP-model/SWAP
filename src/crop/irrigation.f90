@@ -120,7 +120,7 @@
          atmo    => state%atmosphere,       &
          solu    => state%solute,           &
          mesh    => state%mesh,             &
-         cfg_irr => state%cfg%irrigation    )
+         irrig_cfg => state%cfg%irrigation    )
 
 ! ---    reset intermediate soil water fluxes — handled by state%soilwater%reset_intermediate()
          ! igird/inird/cgird/cnird zeroed via state%soilwater%reset_intermediate() in SoilWater(2)
@@ -130,7 +130,7 @@
          irrigevent = 0
 
 ! ---    fixed irrigations events
-         if (cfg_irr%swirfix .eq. 1) then
+         if (irrig_cfg%swirfix .eq. 1) then
             associate (irr => state%crop%irrigation)
             if (abs(irr%irdate(irr%nirri_fixed) - time%t1900) .lt. 1.d-3) then
                crop%gird = irr%irdepth(irr%nirri_fixed)

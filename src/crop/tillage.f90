@@ -44,10 +44,10 @@ module tillage_mod
       time       => state%timecontrol,      &
       atmo       => state%atmosphere,       &
       tl         => state%tillage,          &
-      cfg_soil   => state%cfg%soil,         &
-      cfg_solute => state%cfg%solute        )
+      soil_cfg   => state%cfg%soil,         &
+      solute_cfg => state%cfg%solute        )
 
-   if (iTask > 1 .and. cfg_soil%swtill == 0) return      ! no tillage to be considered: return immediately
+   if (iTask > 1 .and. soil_cfg%swtill == 0) return      ! no tillage to be considered: return immediately
 
    ! handle iTask
    select case (iTask)
@@ -55,12 +55,12 @@ module tillage_mod
       ! INITIALIZE
 
       ! some checks: some combinations not (yet) allowed
-      if (cfg_soil%swtill == 1) then
-         if (cfg_soil%swhyst == 1)              call fatalerr_collected ('DoTillage', 'swhyst = 1 not allowed')
-         if (cfg_solute%swsolu == 1)            call fatalerr_collected ('DoTillage', 'swsolu = 1 not (yet) allowed')
+      if (soil_cfg%swtill == 1) then
+         if (soil_cfg%swhyst == 1)              call fatalerr_collected ('DoTillage', 'swhyst = 1 not allowed')
+         if (solute_cfg%swsolu == 1)            call fatalerr_collected ('DoTillage', 'swsolu = 1 not (yet) allowed')
          if (state%crop%common%swoxygen == 2)   call fatalerr_collected ('DoTillage', 'swoxygen = 2 not (yet) allowed')
          if (soil%flksatexm)                    call fatalerr_collected ('DoTillage', 'flksatexm not (yet) allowed')
-         if (cfg_soil%discretization%swdiscrvert == 1) &
+         if (soil_cfg%discretization%swdiscrvert == 1) &
                                                 call fatalerr_collected ('DoTillage', 'SwDiscrvert = 1 not (yet) allowed')
       end if
 

@@ -99,7 +99,7 @@
                  mesh     => state%mesh,            &
                  atmo     => state%atmosphere,      &
                  time     => state%timecontrol,     &
-                 cfg_crop => state%cfg%crop         )
+                 crop_cfg => state%cfg%crop         )
 
       select case (task)
       case (1)
@@ -163,12 +163,12 @@
 
 ! --- maximum rooting depth
       if (crop%common%swrd.eq.1) then
-        crop%common%rdm = cfg_crop%rdmax
+        crop%common%rdm = crop_cfg%rdmax
       elseif (crop%common%swrd.eq.2) then
-        crop%common%rdm = min(cfg_crop%rdmax,crop%common%rdc)
+        crop%common%rdm = min(crop_cfg%rdmax,crop%common%rdc)
       elseif (crop%common%swrd.eq.3) then
         crop%common%rdc = afgen (crop%common%rlwtb,22,crop%common%wrtmax)
-        crop%common%rdm = min(cfg_crop%rdmax,crop%common%rdc)
+        crop%common%rdm = min(crop_cfg%rdmax,crop%common%rdc)
       endif
 
 ! --- skip next initialization if crop parameters are read from *.END file

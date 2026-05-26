@@ -110,28 +110,28 @@ contains
                soil => state%soilwater,     &
                atmo => state%atmosphere,    &
                time => state%timecontrol,   &
-               cfg_heat => config%heat)
+               heat_cfg => config%heat)
 
       select case (task)
       case (1)
          ! === Initialization ===
 
          ! Initial temperature profile.
-         if (cfg_heat%swcalt .eq. 1) then
+         if (heat_cfg%swcalt .eq. 1) then
             ! Analytical solution.
             do i = 1, mesh%numnod
-               heat%tsoil(i) = cfg_heat%tmean + cfg_heat%tampli *                       &
-                               (dsin(0.0172d0*(time%daynr - cfg_heat%timref + 91.0d0) + &
-                                     mesh%z(i)/cfg_heat%ddamp))                         &
-                               / dexp(-mesh%z(i)/cfg_heat%ddamp)
+               heat%tsoil(i) = heat_cfg%tmean + heat_cfg%tampli *                       &
+                               (dsin(0.0172d0*(time%daynr - heat_cfg%timref + 91.0d0) + &
+                                     mesh%z(i)/heat_cfg%ddamp))                         &
+                               / dexp(-mesh%z(i)/heat_cfg%ddamp)
             end do
          else
             ! Numerical solution: use specified initial soil temperatures.
-            if (config%soil%swinco .ne. 3 .and. allocated(cfg_heat%tsoil_init)) then
-               nheat_loc = size(cfg_heat%tsoil_init, 1)
+            if (config%soil%swinco .ne. 3 .and. allocated(heat_cfg%tsoil_init)) then
+               nheat_loc = size(heat_cfg%tsoil_init, 1)
                do i = 1, nheat_loc
-                  tab(i*2)     = cfg_heat%tsoil_init(i, 2)         ! temp — col 2
-                  tab(i*2 - 1) = dabs(cfg_heat%tsoil_init(i, 1))   ! depth — col 1
+                  tab(i*2)     = heat_cfg%tsoil_init(i, 2)         ! temp — col 2
+                  tab(i*2 - 1) = dabs(heat_cfg%tsoil_init(i, 1))   ! depth — col 1
                end do
                do i = 1, mesh%numnod
                   heat%tsoil(i) = afgen(tab, macp*2, dabs(mesh%z(i)))
@@ -139,7 +139,7 @@ contains
             end if
          end if
 
-         if (cfg_heat%swcalt .eq. 2) then
+         if (heat_cfg%swcalt .eq. 2) then
             ! Initialise dry bulk density and volume fractions (sand, clay, OM).
             do i = 1, mesh%numnod
                lay      = mesh%layer(i)
@@ -156,17 +156,17 @@ contains
       case (2)
          ! === Soil temperature rate and state variables ===
 
-         if (cfg_heat%swcalt .eq. 2) then
+         if (heat_cfg%swcalt .eq. 2) then
             ! Numerical solution.
 
             ! Top boundary condition.
-            if (cfg_heat%swtopbhea .eq. 2) then
+            if (heat_cfg%swtopbhea .eq. 2) then
                ! Use prescribed soil-surface temperatures.
                ttab = 0.0d0
-               if (allocated(cfg_heat%temtoptab)) then
-                  do i = 1, min(size(cfg_heat%temtoptab, 1), mabbc)
-                     ttab(2*i - 1) = cfg_heat%temtoptab(i, 1)
-                     ttab(2*i)     = cfg_heat%temtoptab(i, 2)
+               if (allocated(heat_cfg%temtoptab)) then
+                  do i = 1, min(size(heat_cfg%temtoptab, 1), mabbc)
+                     ttab(2*i - 1) = heat_cfg%temtoptab(i, 1)
+                     ttab(2*i)     = heat_cfg%temtoptab(i, 2)
                   end do
                end if
                heat%tetop = afgen(ttab, 2*mabbc, time%t1900 + time%dt)
@@ -192,16 +192,16 @@ contains
             end if
 
             ! Bottom boundary condition.
-            if (cfg_heat%swbotbhea .eq. 1) then
+            if (heat_cfg%swbotbhea .eq. 1) then
                ! Zero heat flow through profile bottom.
                heat%tebot = heat%tsoil(mesh%numnod)
-            elseif (cfg_heat%swbotbhea .eq. 2) then
+            elseif (heat_cfg%swbotbhea .eq. 2) then
                ! Prescribed bottom temperature.
                btab = 0.0d0
-               if (allocated(cfg_heat%tembtab)) then
-                  do i = 1, min(size(cfg_heat%tembtab, 1), mabbc)
-                     btab(2*i - 1) = cfg_heat%tembtab(i, 1)
-                     btab(2*i)     = cfg_heat%tembtab(i, 2)
+               if (allocated(heat_cfg%tembtab)) then
+                  do i = 1, min(size(heat_cfg%tembtab, 1), mabbc)
+                     btab(2*i - 1) = heat_cfg%tembtab(i, 1)
+                     btab(2*i)     = heat_cfg%tembtab(i, 2)
                   end do
                end if
                heat%tebot = afgen(btab, 2*mabbc, time%t1900 + time%dt)
@@ -242,13 +242,13 @@ contains
 
             ! node = numnod.
             i = mesh%numnod
-            if (cfg_heat%swbotbhea .eq. 1) then
+            if (heat_cfg%swbotbhea .eq. 1) then
                ! Zero heat flux through bottom.
                qhbot    = 0.0d0
                thoma(i) = -time%dt * heat%heacon(i) / (mesh%dz(i) * mesh%disnod(i))
                thomb(i) = heat%heacap(i) - thoma(i)
                thomf(i) = heat%heacap(i) * tmpold(i) - (qhbot * time%dt)/mesh%dz(i)
-            elseif (cfg_heat%swbotbhea .eq. 2) then
+            elseif (heat_cfg%swbotbhea .eq. 2) then
                ! Prescribed bottom temperature.
                heaconBot = heacnd(i)
                thoma(i)  = -time%dt * heat%heacon(i) / (mesh%dz(i) * mesh%disnod(i))
@@ -266,10 +266,10 @@ contains
          else
             ! Analytical solution profile.
             do i = 1, mesh%numnod
-               heat%tsoil(i) = cfg_heat%tmean + cfg_heat%tampli *                       &
-                               (dsin(0.0172d0*(time%daynr - cfg_heat%timref + 91.0d0) + &
-                                     mesh%z(i)/cfg_heat%ddamp))                         &
-                               / dexp(-mesh%z(i)/cfg_heat%ddamp)
+               heat%tsoil(i) = heat_cfg%tmean + heat_cfg%tampli *                       &
+                               (dsin(0.0172d0*(time%daynr - heat_cfg%timref + 91.0d0) + &
+                                     mesh%z(i)/heat_cfg%ddamp))                         &
+                               / dexp(-mesh%z(i)/heat_cfg%ddamp)
             end do
          end if
 
