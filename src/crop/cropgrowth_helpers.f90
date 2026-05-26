@@ -1,14 +1,10 @@
 ! cropgrowth_helpers.f90
 ! Leaf-level crop helpers extracted from cropgrowth.f90.
-! Subroutines: nocrop, ArableLandGerm, FacCO2, cropoutput, update_rootdistribution,
+! Subroutines: nocrop, ArableLandGerm, FacCO2, update_rootdistribution,
 !              sumttd, init_crop_output_buffer, build_crop_output_row,
 !              cleanup_crop_output_buffer.
 !
 ! [GR-CROP 2026-05-25] use-variables sweep:
-!   - cropoutput          → state%crop%common (flCropOpenFile, croptype, icrop),
-!                            state%cfg%general (outfil/pathwork/project);
-!                            cropfil + crp file unit retained on the bare-global
-!                            side pending the file-IO arc.
 !   - ArableLandGerm      → crop_config_global%rotation_wofost(icrop)%X (germ
 !                            params; case(2)/(3) prep/sow are dead-branch); state
 !                            tsumgerm + state-only writes of flCropPrep/Sow/Germ.
@@ -29,134 +25,10 @@
       public :: nocrop
       public :: ArableLandGerm
       public :: FacCO2
-      public :: cropoutput
       public :: update_rootdistribution
       public :: sumttd
 
       contains
-
-! ----------------------------------------------------------------------
-      subroutine cropoutput(task, state)
-! ----------------------------------------------------------------------
-!     Date               : Aug 2004
-!     Purpose            : open and write crop output files; state threads through
-!                          to OutCropFixed / OutWofost / OutGrass for the per-task
-!                          row build + buffer init/cleanup.
-! ----------------------------------------------------------------------
-
-      ! [GR-CROP 2026-05-25] flCropOpenFile → state%crop%common%flCropOpenFile.
-      ! outfil/pathwork/project read via state%cfg%general (this file's cfg snapshot).
-      ! cropfil[(1)] now read directly from state%cfg%crop%rotation_file (Class B).
-      ! [GR-CROP 2026-05-25] crp (output file unit) → state%crop%common%file_unit_crp
-      use error_mod, only: fatalerr_collected
-      use file_io_mod, only: file_open
-      use swap_state_mod, only: swap_state_t
-      implicit none
-
-! --- local variables ------------------
-      integer task   !,numcrop
-      ! [SS-BMI2] inout: init/cleanup of crop_output_row buffer at top-level state.
-      type(swap_state_t), intent(inout) :: state
-      character(len=200) messag
-      character(len=160) filnam,filtext
-
-      associate( &
-        crop    => state%crop%common,   &  ! crop runtime (croptype, icrop, flCropOpenFile)
-        time    => state%timecontrol,   &  ! time control (headless, swheader)
-        cfg_gen => state%cfg%general,   &  ! general config (outfil, pathwork, project)
-        cfg_crop => state%cfg%crop      &  ! crop config (rotation_file)
-      )
-
-      select case (task)
-      case (1)
-
-! === open crop output file and write headers =====================
-
-      ! [SS-BMI2] allocate crop output buffer (builder always runs; dynamic by croptype)
-      call init_crop_output_buffer(state)
-
-! --- open crop output file
-      if (crop%flCropOpenFile) then
-
-         if (.not. time%headless) then
-! ---   open crop output file and write general header (*.crp)
-            ! [GR-CROP 2026-05-25] cropfil(1) read directly from
-            ! state%cfg%crop%rotation_file (TOML-loaded); legacy global retired.
-            if (allocated(cfg_crop%rotation_file)) then
-               if (size(cfg_crop%rotation_file) >= 1 .and. &
-                   trim(cfg_gen%outfil).eq.trim(cfg_crop%rotation_file(1))) then
-                  Messag = 'The name of the input crop-file ('//trim(cfg_crop%rotation_file(1))// &
-                           ') cannot be equal to the name of the output crop-file '// &
-                           trim(cfg_gen%outfil)//' Adjust a filename !'
-                  call fatalerr_collected ('crops',messag)
-               end if
-            end if
-            filnam = trim(cfg_gen%pathwork)//trim(cfg_gen%outfil)//'.crp'
-            call file_open(crop%file_unit_crp, filnam, 'replace', 'write')
-            filtext = 'output data of simple or detailed crop growth model'
-            call writehead (crop%file_unit_crp,1,filnam,filtext,cfg_gen%project)
-
-! ---   write header fixed crop growth
-            if (crop%croptype(crop%icrop) .eq. 1) call OutCropFixed(1, state)
-
-! ---   write header detailed crop growth
-            if (crop%croptype(crop%icrop) .eq. 2) call OutWofost(1, state)
-
-! ---   write header detailed grass growth
-            if (crop%croptype(crop%icrop) .eq. 3) call OutGrass(1, state)
-         end if
-
-         crop%flCropOpenFile = .false.
-
-      else
-
-         if (.not. time%headless) then
-! ---   header for second and subsequent crops
-! ---   write header fixed crop growth
-            if (crop%croptype(crop%icrop).eq.1 .and. time%swheader.eq.1) call OutCropFixed(1, state)
-
-! ---   write header detailed crop growth
-            if (crop%croptype(crop%icrop).eq.2 .and. time%swheader.eq.1) call OutWofost(1, state)
-
-! ---   write header detailed grass growth
-            if (crop%croptype(crop%icrop).eq.3 .and. time%swheader.eq.1) call OutGrass(1, state)
-         end if
-
-      endif
-
-      case (2)
-
-! --- write actual data ----------------------------------------------------
-! [SS-BMI2] build crop output row buffer (placeholder; full build deferred to crop output refactor arc)
-      call build_crop_output_row(state)
-
-      if (.not. time%headless) then
-! --- fixed crop file
-         if (crop%croptype(crop%icrop) .eq. 1) call OutCropFixed(2, state)
-
-! --- detailed crop growth
-         if (crop%croptype(crop%icrop) .eq. 2) call OutWofost(2, state)
-
-! --- detailed grass growth
-         if (crop%croptype(crop%icrop) .eq. 3) call OutGrass(2, state)
-      end if
-
-      case (3)
-! --- close crop output file ------------------------------------------------
-
-      ! [SS-BMI2] headless guard: .crp file was only opened when not headless
-      if (.not. time%headless) close (crop%file_unit_crp)
-
-      ! [SS-BMI2] deallocate crop output buffer
-      call cleanup_crop_output_buffer(state)
-
-      case default
-         call fatalerr_collected ('CropOutput', 'Illegal value for TASK')
-      end select
-
-      end associate
-      return
-      end subroutine cropoutput
 
 ! ----------------------------------------------------------------------
       subroutine nocrop (state)

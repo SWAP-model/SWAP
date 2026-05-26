@@ -43,7 +43,7 @@
       use swap_state_mod, only: swap_state_t
       ! GR-CROPWS Phase 0: helpers extracted to cropgrowth_helpers_mod
       use cropgrowth_helpers_mod, only: nocrop, ArableLandGerm, FacCO2, &
-                                         CropOutput, update_rootdistribution
+                                         update_rootdistribution
       ! GR-CROPWS Phase 0.2: wofost extracted to cropwofost_runtime_mod
       ! [GR-CROP 2026-05-25] wofost_apply_nstress isolates the nutrient-cluster legacy
       !   globals (NLUE/ANLV/.../FSTR + flCropNut) — keeps dispatcher use-variables-free.
@@ -308,9 +308,6 @@
 
         ! update crop daynumber
         crop%common%daycrop = crop%common%daycrop + 1
-
-        ! open crp-file
-        if (crop%common%swcrp.eq.1) call CropOutput(1, state)
 
         ! set correction of CO2 impact — FacCO2 now writes directly to state%crop%wofost%fco2*
         call FacCO2(state)  ! [SS-GR-CROPRT B6] FacCO2 handles state write; redundant dual-write removed
