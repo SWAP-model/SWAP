@@ -798,149 +798,57 @@ git commit -m "test(io): IO-OUT/D — parity script proving CSV reproduces .crp/
 
 ---
 
-## Phase E — retire the graveyard
+## Phase E — retire the graveyard (REVISED 2026-05-26: unify-strongly)
 
-Removes `swapoutput.f90`, drops the 4 inert C-API streams, re-homes the live BMI rows, fixes `water_balance_row`, rewires the main loop. **State-schema change → `rm -rf builddir`. Gate is `check-full`, not `check-fast`.**
+**Revision.** Investigation found the `output_row` per-subsystem stream mechanism is unused by every consumer (BMI tests, cffi-demo POC, file path) — the POC reads results via `swap_view_array`/`swap_get_scalar`/`swap_get_water_balance` (the last reads cumulative state directly, NOT the buffers). Product direction: Python is batch (seed→run→read), per-step BMI is later, unify strongly. So Phase E **retires the whole `output_row` mechanism** rather than re-homing/keeping any of it. E1 (re-home/fix buffers) is therefore **dropped**. Sequence: E2 rewire main loop → E3 drop `.crp` path → E4 delete `swapoutput.f90` + the entire `output_row` mechanism. **State-schema changes → `rm -rf builddir`; final gate is `check-full`.** Kept (orthogonal, used): `swap_view_array`, `swap_get_scalar`, `swap_get_water_balance`. Future (separate arc): one unified in-memory results accessor on the registry/`csv_output`.
 
-### Task E1: Re-home live BMI rows + fix `water_balance_row` in `csv_output`
+### Task E1 — DROPPED (superseded by the unify decision)
 
-**Files:**
-- Modify: `src/io/csv_output.f90`
+No buffer re-homing or `water_balance_row` fix; the buffers are deleted wholesale in E4.
 
-- [ ] **Step 1: Fill `water_balance_row` from `compute_aggregates`**
+### Task E2: Rewire the main loop to `csv_output_*`
 
-In `csv_output_step`, after computing the aggregates, populate `state%water_balance_row(:)` with the same 18 fields the dead `outinc`/`build_water_balance_row` defined (date, day, dcum, rain, snow, irrig, interc, runon, runoff, tpot, tact, epot, eact, drainage, qbottom, gwl, dstorage, baldev). Allocate it in `csv_output_init`, deallocate in `csv_output_finalize`. (This fixes the `swap_balance` stream that returns zeros today.)
+**Files:** `src/core/swap_mod.f90`, and the `swcrp`-gated `CropOutput` call in `src/crop/cropgrowth.f90`.
 
-- [ ] **Step 2: Move `build_snow_output_row` into `csv_output_step`**
+- [ ] **Step 1** — In `swap_mod.f90`, replace the output dispatch with the three named calls:
+  - Init block (≈445-453): replace `call SwapOutput(1,…)` + `call SoilWaterOutput(1,…,config)` + the `if (flTemperature/flSolute/flSnow/flSurfaceWater) call *Output(1,…)` lines with a single `call csv_output_init(state)`.
+  - Per-step block (≈639-657): replace `SwapOutput(2)`/`SoilWaterOutput(2)`/the `flTemperature/flSolute/flSnow/flSurfaceWater` `*Output(2)` lines/the `flOutputShort` `SoilWaterOutput(2)`/the `if (swcrp==1) call CropOutput(2)` with a single `call csv_output_step(state)`.
+  - Close block (≈686-697): replace `SwapOutput(3)`/`SoilWaterOutput(4)`/`*Output(3)`/`if (swcrp==1) call CropOutput(3)` with `call csv_output_finalize(state)`.
+  - `use csv_output, only: csv_output_init, csv_output_step, csv_output_finalize`; remove the now-unused externals.
+- [ ] **Step 2** — `pixi run -e test build-linux` (swapoutput.f90 still present but uncalled from swap_mod — link OK).
+- [ ] **Step 3** — `pixi run -e test check-fast` → 4/4 unchanged.
+- [ ] **Step 4** — Commit: `refactor(core): IO-OUT/E — main loop calls csv_output_init/step/finalize`.
 
-Copy the 7-field assignment from `swapoutput.f90:1495-1513` into `csv_output_step`, gated on `state%timecontrol%flSnow`. Allocate `state%atmosphere%snow_output_row` in `csv_output_init` (gated on flSnow), deallocate in `csv_output_finalize`.
+### Task E3: Drop the `.crp` path entirely
 
-- [ ] **Step 3: Build + regression**
+`.crp` is produced only via `CropOutput` (defined in `cropgrowth_helpers.f90:39`, opens `.crp` + calls `OutCropFixed/OutWofost/OutGrass`), reached only from 3 `swcrp`-gated sites: `cropgrowth.f90:313`, `swap_mod.f90:657`, `swap_mod.f90:689` (the latter two removed in E2).
 
-Run: `pixi run -e test check-fast`
-Expected: 4/4 unchanged (CSV output untouched; only buffers now filled here).
+**Files:** `src/crop/cropgrowth_helpers.f90`, `src/crop/cropgrowth.f90`.
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 1** — Delete the `call CropOutput(1, state)` (and its `if (swcrp==1)` guard) at `cropgrowth.f90:313`.
+- [ ] **Step 2** — Delete the `cropoutput` subroutine (`cropgrowth_helpers.f90:39-159`) in full — including its `.crp` `file_open`/`writehead`, the `OutCropFixed/OutWofost/OutGrass` calls, and the `init_crop_output_buffer`/`build_crop_output_row`/`cleanup_crop_output_buffer` calls it makes (those builders are part of the doomed mechanism; the buffer fields are removed in E4). Remove any now-orphaned `crop%file_unit_crp`/`flCropOpenFile` references this leaves dangling (grep and clean).
+- [ ] **Step 3** — `pixi run -e test build-linux` then `check-fast` → 4/4. (`OutCrop*` defs still exist in swapoutput.f90 until E4 but are now uncalled.)
+- [ ] **Step 4** — Commit: `refactor(crop): IO-OUT/E — delete dead .crp output path`.
 
-```bash
-git add src/io/csv_output.f90
-git commit -m "refactor(io): IO-OUT/E — fill water_balance + snow BMI rows in csv_output"
-```
+### Task E4: Delete `swapoutput.f90` + retire the entire `output_row` mechanism
 
-### Task E2: Rewire the main loop to call `csv_output_*` directly
+**Files:** delete `src/io/swapoutput.f90`; `src/core/swap_capi_mod.f90` (remove `swap_get_output_row` + its struct/decls); the per-subsystem buffer fields + builders across `src/state/{heat,solute,surfacewater,soilwater,atmosphere,tillage}_state.f90`, `src/io/csv_output.f90` (build_soilwater_output_row), `src/crop/tillage.f90` (build_tillage_output_row), `src/state/swap_state.f90` (water_balance_row, crop_output_row); the C headers `tests/cffi-demo/swap_capi.h` + `swap_bmi.h`; `meson.build`.
 
-**Files:**
-- Modify: `src/core/swap_mod.f90` (≈ lines 421, 615-629, 662-664)
-
-- [ ] **Step 1: Replace the output dispatch calls**
-
-- Init block (≈421-429): replace `call SwapOutput(1,…)` + `call SoilWaterOutput(1,…)` + the `if (flSnow) call SnowOutput(1,…)` etc. with a single `call csv_output_init(state, config)`.
-- Per-step block (≈615-629): replace `SwapOutput(2)`/`SoilWaterOutput(2)`/`SnowOutput(2)`/… (incl. the `flOutputShort` path) with `call csv_output_step(state)`.
-- Close block (≈662-673): replace `SwapOutput(3)`/`SoilWaterOutput(4)`/… with `call csv_output_finalize(state)`.
-- Add `use csv_output, only: csv_output_init, csv_output_step, csv_output_finalize`; remove the `*Output` externals.
-
-- [ ] **Step 2: Build**
-
-Run: `pixi run -e test build-linux`
-Expected: compiles; `swapoutput.f90` still present (deleted in E4) but no longer called — link still succeeds.
-
-- [ ] **Step 3: Regression**
-
-Run: `pixi run -e test check-fast`
-Expected: 4/4 unchanged.
-
-- [ ] **Step 4: Commit**
-
-```bash
-git add src/core/swap_mod.f90
-git commit -m "refactor(core): IO-OUT/E — main loop calls csv_output_init/step/finalize"
-```
-
-### Task E3: Drop `.crp` writer call sites
-
-**Files:**
-- Modify: `src/crop/cropgrowth_helpers.f90` (≈100-141)
-
-- [ ] **Step 1: Remove the calls**
-
-Delete the `call OutCropFixed/OutWofost/OutGrass(1|2, state)` lines at `cropgrowth_helpers.f90:100-141`. Crop data remains in `result_output.csv` (verified Phase D) and the `crop` C-API stream (`crop_output_row`, built elsewhere in this file — leave that).
-
-- [ ] **Step 2: Build + regression**
-
-Run: `pixi run -e test check-fast`
-Expected: compiles (the `OutCrop*` subroutines still exist until E4); 4/4 unchanged. `.crp` files simply stop being produced.
-
-- [ ] **Step 3: Commit**
-
-```bash
-git add src/crop/cropgrowth_helpers.f90
-git commit -m "refactor(crop): IO-OUT/E — stop writing legacy .crp files"
-```
-
-### Task E4: Delete `swapoutput.f90`; drop 4 inert streams + state fields
-
-**Files:**
-- Delete: `src/io/swapoutput.f90`
-- Modify: `src/core/swap_capi_mod.f90` (remove `temperature`/`solute`/`surfacewater`/`agetracer` cases, ≈240-260)
-- Modify: `src/state/heat_state.f90` (remove `output_row`/`output_columns`/`output_n_cols`)
-- Modify: `src/state/solute_state.f90` (remove `output_row`/`agetracer_row` + their columns/n_cols)
-- Modify: `src/state/surfacewater_state.f90` (remove `output_row`/columns/n_cols)
-- Modify: `meson.build` (drop line 146 `'src/io/swapoutput.f90',`)
-
-- [ ] **Step 1: Pre-flight — confirm no consumer of the dropped streams**
-
-Run:
-```bash
-grep -rniE "'temperature'|'solute'|'surfacewater'|'agetracer'|get_output_row" tests/bmi tests/cffi-demo
-```
-Expected: no test asserts success on these four streams (they return zeros today). If one does, stop and report — do not delete that stream.
-
-- [ ] **Step 2: Delete the file + meson entry**
-
-```bash
-git rm src/io/swapoutput.f90
-```
-Remove `'src/io/swapoutput.f90',` (line 146) from `meson.build`.
-
-- [ ] **Step 3: Drop the four stream cases**
-
-In `swap_capi_mod.f90`, delete the `case ('temperature')`, `case ('solute')`, `case ('agetracer')`, `case ('surfacewater')` arms (≈240-274). Keep `swap_balance`, `soilwater`, `snow`, `crop`, `tillage`.
-
-- [ ] **Step 4: Remove the now-unused state fields**
-
-In `heat_state.f90`, `solute_state.f90`, `surfacewater_state.f90`, delete the `output_row`/`agetracer_row`/`*_columns`/`*_n_cols` declarations and any `init_*_buffer`/`cleanup_*_buffer` helpers that lived in the deleted `swapoutput.f90` and referenced them. Grep to confirm no remaining references:
-```bash
-grep -rniE "heat%output_row|solute%output_row|solute%agetracer_row|surfacewater%output_row" src/
-```
-Expected: no hits.
-
-- [ ] **Step 5: Clean rebuild (state schema changed)**
-
-Run:
-```bash
-rm -rf builddir
-pixi run -e test build-linux
-```
-Expected: compiles clean.
-
-- [ ] **Step 6: Full gate**
-
-Run: `pixi run -e test check-full`
-Expected: 5/5 `regression ok` + pFUnit green.
-
-- [ ] **Step 7: C-API smoke check**
-
-Run: `pixi run -e test test-cffi-demo` and `pixi run -e test test-bmi`
-Expected: pass. Optionally verify `swap_get_output_row('swap_balance')` now returns a non-zero, correctly-sized row, and the four dropped streams return `ierr=1`.
-
-- [ ] **Step 8: Commit**
-
-```bash
-# git rm already staged the deletion; scoped add for the rest (never `git add -A`)
-git add meson.build src/core/swap_capi_mod.f90 \
-        src/state/heat_state.f90 src/state/solute_state.f90 src/state/surfacewater_state.f90
-git commit -m "refactor(io): IO-OUT/E — delete swapoutput.f90; drop 4 inert C-API streams"
-```
+- [ ] **Step 1: Inventory** — grep the full surface so nothing dangles:
+  ```bash
+  grep -rniE "output_row|output_columns|output_n_cols|agetracer_row|water_balance_row|crop_output_row|snow_output_row|build_[a-z]+_output_row|init_[a-z]+_output_buffer|cleanup_[a-z]+_output_buffer|swap_get_output_row" --include=*.f90 --include=*.h src/ tests/
+  ```
+  This is the deletion checklist. (Keep `swap_get_water_balance`, `swap_view_array`, `swap_get_scalar` — they are NOT in this set.)
+- [ ] **Step 2** — `git rm src/io/swapoutput.f90`; remove its line from `meson.build`.
+- [ ] **Step 3** — In `swap_capi_mod.f90` delete the whole `swap_get_output_row` function (all 9 stream cases). Leave `swap_get_water_balance` and the other accessors intact.
+- [ ] **Step 4** — Delete every `*_output_row`/`*_columns`/`*_n_cols` field and every `init_*_output_buffer`/`build_*_output_row`/`cleanup_*_output_buffer` helper + their call sites (in `csv_output.f90` csv_out tasks, `tillage.f90` DoTillage, and any residual swap_mod/cropgrowth references; the cropoutput caller was already removed in E3). Re-grep with Step 1's command → ZERO hits.
+- [ ] **Step 5** — Update C headers `tests/cffi-demo/swap_capi.h` and `swap_bmi.h`: remove the `swap_get_output_row` declaration. Confirm `run_ensemble.py` does not reference it (it doesn't).
+- [ ] **Step 6** — `rm -rf builddir && pixi run -e test build-linux` (state schema changed).
+- [ ] **Step 7** — `pixi run -e test check-full` → 5/5 + pFUnit green. Then `pixi run -e test test-cffi-demo` and `pixi run -e test test-bmi` → pass (they use the kept accessors).
+- [ ] **Step 8** — Commit (scoped add; `git rm` already staged the deletion):
+  ```
+  refactor(io): IO-OUT/E — delete swapoutput.f90; retire entire output_row C-API mechanism
+  ```
 
 ---
 
