@@ -143,7 +143,7 @@ sources = [
     'src/io/toml/write_swap_config.f90',
     'src/io/toml/seed_state_from_config.f90',
     'src/io/csv_aggregates.f90',
-    'src/io/swap_csv_output.f90',
+    'src/io/csv_output.f90',
     'src/io/meteo_buffer_mod.f90',
     'src/io/readmeteo.f90',
     'src/io/swapoutput.f90',

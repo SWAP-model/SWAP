@@ -64,8 +64,7 @@
       ! [SS-GR-CROPRT A3] swcsv/swcsv_tz/swdrought/swrum/swinc migrated to config or retired
       ! [GR-IO 2026-05-25] use variables, only: inc — was a dead import (only
       ! commented-out outinc/swinc references remain in this routine).
-      use SWAP_csv_output
-      use SWAP_csv_output_tz
+      use csv_output, only: csv_output_init, csv_output_step, csv_output_finalize
       use swap_state_mod, only: swap_state_t
       use swap_config_mod, only: swap_config_t
       implicit none
@@ -84,9 +83,7 @@
 ! OutputModflow/capriseoutput deleted (sw* switches forced to 0).
 
 ! --     user-defined variables in CSV file
-         if (config%output_csv%enabled == 1) call csv_out(1, state)              ! [SS-GR-CROPRT A3] swcsv → config
-! --     user-defined variables in CSV file
-         if (config%output_csv%enabled_tz == 1) call csv_out_tz(1, state)        ! [SS-GR-CROPRT A3] swcsv_tz → config
+         call csv_output_init(state)
 
 ! --     inc file [SS-GR-CROPRT A3] swinc always 0 — outinc(1) dropped
 ! --     rot file [SS-GR-CROPRT A3] swdrought.eq.2 always false (stub-errored) — outrot(1) dropped
@@ -98,9 +95,7 @@
 ! capriseoutput deleted (sw* switches forced to 0).
 
 ! --     user-defined variables in CSV file
-         if (config%output_csv%enabled == 1) call csv_out(2, state)              ! [SS-GR-CROPRT A3] swcsv → config
-! --     user-defined variables in CSV file
-         if (config%output_csv%enabled_tz == 1) call csv_out_tz(2, state)        ! [SS-GR-CROPRT A3] swcsv_tz → config
+         call csv_output_step(state)
 
 ! --     inc file [SS-GR-CROPRT A3] swinc always 0 — outinc(2) dropped
 ! --     rot file [SS-GR-CROPRT A3] swdrought.eq.2 always false (stub-errored) — outrot(2) dropped
@@ -116,9 +111,7 @@
 ! OutputModflow / capriseoutput close branches removed.
 
 ! --     user-defined variables in CSV file
-         if (config%output_csv%enabled == 1) call csv_out(3, state)              ! [SS-GR-CROPRT A3] swcsv → config
-! --     user-defined variables in CSV file
-         if (config%output_csv%enabled_tz == 1) call csv_out_tz(3, state)        ! [SS-GR-CROPRT A3] swcsv_tz → config
+         call csv_output_finalize(state)
 
          ! [SS-GR-CROPRT A3] swinc always 0 — inc close dropped (inc file never opened)
          ! [SS-GR-CROPRT A3] swrum always 0 — outrume(3) dropped

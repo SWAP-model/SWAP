@@ -162,7 +162,7 @@ if get_option('enable_pfunit')
         '../../src/soil/waterbalance.f90',
         '../../src/soil/soilhydraulics.f90',
         '../../src/io/csv_aggregates.f90',
-        '../../src/io/swap_csv_output.f90',
+        '../../src/io/csv_output.f90',
         '../../src/io/meteo_buffer_mod.f90',
         '../../src/io/readmeteo.f90',
         '../../src/io/swapoutput.f90',
