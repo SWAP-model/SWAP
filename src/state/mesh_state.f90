@@ -55,7 +55,7 @@ contains
       type(soil_config_t), intent(in) :: soil_config
 
       integer :: i, nsublay
-      real(8) :: hcomp_i
+      real(real64) :: hcomp_i
       character(len=200) :: messag
       character(len=11)  :: tmp
 
@@ -110,7 +110,7 @@ contains
       type(soil_config_t), intent(in)    :: soil_config
 
       integer :: i, j, node, nsublay
-      real(8) :: hcomp_i
+      real(real64) :: hcomp_i
 
       nsublay = 0
       if (allocated(soil_config%sublay)) nsublay = size(soil_config%sublay)
@@ -174,9 +174,9 @@ contains
 
       ! First node of each soil layer.
       do lay = 1, self%numlay
-         Node = 1
-         do while (self%layer(Node) .ne. lay)
-            Node = Node + 1
+         node = 1
+         do while (self%layer(node) .ne. lay)
+            node = node + 1
          end do
          self%nod1lay(lay) = node
       end do

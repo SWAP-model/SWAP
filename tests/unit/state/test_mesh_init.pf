@@ -63,4 +63,7 @@ subroutine test_mesh_init_grid()
    @assertEqual(5.0_real64, m%disnod(5), 1.0e-12_real64)
 
    @assertEqual(0.5_real64, m%inpolb(1), 1.0e-12_real64)
+   @assertEqual(0.5_real64, m%inpola(2), 1.0e-12_real64)
+   @assertEqual(0.5_real64*5.0_real64/7.5_real64, m%inpolb(2), 1.0e-12_real64)
+   @assertEqual(0.5_real64, m%inpola(4), 1.0e-12_real64)
 end subroutine test_mesh_init_grid
