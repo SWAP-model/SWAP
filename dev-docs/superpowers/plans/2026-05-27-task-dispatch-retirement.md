@@ -122,27 +122,38 @@ git commit -m "refactor(crop): irrigation — drop task dispatch, irrigation_ste
 ## Task 3: `SSDI_irrigation` — delete dead init stub, rename step
 
 **Files:**
-- Modify: `src/crop/irrigation.f90` (subroutine `SSDI_irrigation(iTask, state)` ~`:340`; `public :: SSDI_irrigation` at `:22`)
+- Modify: `src/crop/irrigation.f90` (subroutine `SSDI_irrigation(iTask, state)` ~`:331`; `public :: SSDI_irrigation` at `:22`)
 - Modify: `src/core/swap_mod.f90` (init call `:212` `SSDI_irrigation(1, …)`; step call `:393` `SSDI_irrigation(2, …)`; `use irrigation_mod` blocks)
+- Modify: `src/core/timecontrol_mod.f90` (`:238` `use irrigation_mod, only: SSDI_irrigation`; `:485` `call SSDI_irrigation(9, state)`)
 
-`case(1)` is a dead stub (`return`); `case(2)` is the live "decide for next day" step.
+`SSDI_irrigation` has **three** cases: `case(1)` dead stub (`return`); `case(2)` the live "decide for next day / adjust dt" step (called from `swap_run_step`); `case(9)` a small event-reset (zeroes `qssdi`/`qssdisum`, resets `dt_SSDI_event`) called from `timecontrol_mod.f90:485`. To fully retire the dispatch, extract `case(2)` **and** `case(9)`.
 
-- [ ] **Step 1: Replace the dispatcher**
+- [ ] **Step 1: Replace the dispatcher with two procedures**
 
 ```fortran
 subroutine ssdi_irrigation_step(state)
    type(swap_state_t), intent(inout) :: state
    ! <body of the old case(2)>  (move verbatim)
 end subroutine ssdi_irrigation_step
+
+subroutine ssdi_irrigation_reset(state)
+   type(swap_state_t), intent(inout) :: state
+   ! <body of the old case(9)>  (move verbatim:
+   !   irrigevent = 0; state%soilwater%qssdi(1:numnod) = 0; 
+   !   state%crop%irrigation%dt_SSDI_event = 1; state%soilwater%qssdisum = 0)
+end subroutine ssdi_irrigation_reset
 ```
 
-- [ ] **Step 2: Update the public list** — `:22` `public :: SSDI_irrigation` → `public :: ssdi_irrigation_step`.
+Delete `case default`/`end select`/the `iTask` arg + declaration.
 
-- [ ] **Step 3: Rewire call sites in `swap_mod.f90`**
+- [ ] **Step 2: Update the public list** — `:22` `public :: SSDI_irrigation` → `public :: ssdi_irrigation_step, ssdi_irrigation_reset`.
 
-- `use irrigation_mod, only:` lists: replace `SSDI_irrigation` with `ssdi_irrigation_step`.
+- [ ] **Step 3: Rewire call sites**
+
+- `swap_mod.f90` `use irrigation_mod, only:` lists: replace `SSDI_irrigation` with `ssdi_irrigation_step`.
 - `swap_init_body` `:212`: **delete** the line `if (state%cfg%irrigation%swssdi == 1) call SSDI_irrigation(1, state)` (dead init stub).
-- `swap_run_step` `:393`: `if (state%cfg%irrigation%swssdi == 1) call SSDI_irrigation(2, state)` → `… call ssdi_irrigation_step(state)`.
+- `swap_run_step` `:393`: `… call SSDI_irrigation(2, state)` → `… call ssdi_irrigation_step(state)` (keep guard).
+- `timecontrol_mod.f90` `:238`: `use irrigation_mod, only: SSDI_irrigation` → `… only: ssdi_irrigation_reset`; `:485`: `call SSDI_irrigation(9, state)` → `call ssdi_irrigation_reset(state)`.
 
 - [ ] **Step 4: Build** — `pixi run -e test build-linux`.
 - [ ] **Step 5: Regression** — `pixi run -e test check-fast` → 4/4 byte-identical.
