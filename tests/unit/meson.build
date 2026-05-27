@@ -96,7 +96,6 @@ if get_option('enable_pfunit')
         '../../src/config/cropwofost_config.f90',
         '../../src/config/crop_config.f90',
         '../../src/config/output_csv_config.f90',
-        '../../src/crop/crop_config_global.f90',
         '../../src/crop/cropfixed_init.f90',
         '../../src/crop/cropwofost_init.f90',
         '../../src/crop/cropgrass_init.f90',

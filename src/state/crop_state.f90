@@ -49,7 +49,6 @@ contains
 
    subroutine crop_state_init(self, crop_cfg, meteo_cfg, pathwork_in)
       use crop_config_mod,              only: crop_config_t
-      use crop_config_global_mod,       only: crop_config_global
       use meteorology_config_mod,       only: meteorology_config_t
       class(crop_state_t),         intent(inout) :: self
       type(crop_config_t), target, intent(in)    :: crop_cfg
@@ -80,9 +79,6 @@ contains
 
       ! 3. Evaporation cfbs (deferred from Task 2)
       self%cfbs = meteo_cfg%evaporation%cfbs
-
-      ! 4. Legacy crop_config_global pointer (transitional — ADR 0016)
-      crop_config_global => crop_cfg
 
       ! pathwork_in reserved for future CSV seed migration (consistency with sibling inits).
       ! Not consumed yet; gfortran does not warn on unused dummy args by default.
