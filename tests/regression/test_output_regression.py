@@ -215,13 +215,15 @@ def compare(expected, actual_years, actual_totals, actual_means):
                             "diff": abs(act_val - exp_val) if act_val is not None else None
                         })
             else:
+                # total/mean blocks are flat {var: value} (no per-year nesting),
+                # so year_or_key IS the variable name; there is no specific year.
                 act_val = act_block.get(year_or_key)
                 matches = act_val is not None and math.isclose(act_val, exp_vals, abs_tol=TOL)
                 if not matches:
                     mismatches.append({
                         "block": block_name,
-                        "year": year_or_key,
-                        "var": "-",
+                        "year": "-",
+                        "var": year_or_key,
                         "expected": exp_vals,
                         "actual": act_val,
                         "diff": abs(act_val - exp_vals) if act_val is not None else None
@@ -234,16 +236,21 @@ def compare(expected, actual_years, actual_totals, actual_means):
         check_block("mean", expected["mean"], actual_means)
 
     if mismatches:
-        # Build comparison table
-        lines = ["\n  Mismatches found (tolerance={:.0e}):".format(TOL)]
-        lines.append("  {:>6} {:>12} {:>14} {:>14} {:>12}".format(
-            "Year", "Variable", "Expected", "Actual", "Diff"))
-        lines.append("  " + "-" * 60)
+        # Build comparison table. Columns: Block (years/total/mean), Year
+        # (calendar year for the years block, "-" for run-level total/mean),
+        # Variable, Expected, Actual, Diff.
+        row_fmt = "  {:<6} {:>6} {:>13} {:>14} {:>14} {:>12}"
+        header = row_fmt.format("Block", "Year", "Variable",
+                                "Expected", "Actual", "Diff")
+        lines = ["\n  Mismatches found (tolerance={:.0e}):".format(TOL),
+                 header,
+                 "  " + "-" * (len(header) - 2)]
         for m in mismatches:
-            diff_str = f"{m['diff']:.4f}" if m['diff'] is not None else "N/A"
+            exp_str = f"{m['expected']:.4f}"
             act_str = f"{m['actual']:.4f}" if m['actual'] is not None else "None"
-            lines.append("  {:>6} {:>12} {:>14.4f} {:>14} {:>12}".format(
-                m['year'], m['var'], m['expected'], act_str, diff_str))
+            diff_str = f"{m['diff']:.4f}" if m['diff'] is not None else "N/A"
+            lines.append(row_fmt.format(
+                m['block'], str(m['year']), m['var'], exp_str, act_str, diff_str))
 
         raise AssertionError("\n".join(lines))
 
