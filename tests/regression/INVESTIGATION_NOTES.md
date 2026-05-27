@@ -26,11 +26,40 @@ This is **physics, not compiler**: 4.2.0-ifx ≡ 4.2.0-gfortran (0.000 drift) on
 while 4.2.0-gfortran vs modern-gfortran diverges on 18/54 aggregated values.
 
 The `hysteresis` subroutine itself (`src/soil/soilhydraulics.f90`) is a faithful
-line-by-line transcription of 4.2.0's `hysteresis.f90`. The divergence is therefore
-suspected in the **shared helpers** it calls, which were rewritten with new signatures:
-`prhead` (pressure-head recovery after a wetting/drying reversal) and `moiscap`. Root-cause
-and fix deferred. The case is registered with `known_divergence=` so the harness reports
-it as an expected divergence (xfail) without failing the suite.
+line-by-line transcription of 4.2.0's `hysteresis.f90`. The case is registered with
+`known_divergence=` so the harness reports it as an expected divergence (xfail).
+
+### ROOT CAUSE (traced 2026-05-27) — adaptive-`dt` desync, NOT hysteresis
+
+Full systematic trace (against `swap420gf`, base hupselbrook with daily output):
+
+1. **Not hysteresis.** Driver, `prhead`, `moiscap`, `indeks` init, `hm1` save/reset, and
+   the timestep call order are all faithful transcriptions.
+2. **Not the compiler.** `swap420` (ifx) ≡ `swap420gf` (gfortran) to 6 decimals every day.
+3. **Localized to GWL/DRAINAGE/DSTOR.** In the base (no-hysteresis) case these diverge
+   ~1e-5/day from day 1 (max ~0.26 cm daily); `RAIN/EPOT/EACT/INTERC/RUNOFF/QBOTTOM/TPOT`
+   match exactly. So the seed is in the saturated-zone / lateral-drainage path, and it
+   exists in **every** case — averaged away in the 5 aggregated regression fixtures,
+   accumulated to ~1.9 cm only under hysteresis threshold amplification.
+4. **Fixed `dt` ⇒ bit-identical.** With `DTMIN=DTMAX` fixed, modern and `swap420gf` are
+   bit-identical (modern just has one extra no-op step at the front). The divergence
+   appears **only with adaptive `dt`**. So all spatial/flux/hysteresis code is faithful;
+   the seed is the adaptive timestep controller.
+5. **First-step `numbit` desync.** On the very first timestep (tcum=0, dt=2e-4, identical
+   hydrostatic init), `swap420gf` solves in `numbit=4` (gwl moves −75.0→−75.055) while
+   modern solves in `numbit=1` (gwl unchanged). The `dt` controller (faithful to 4.2.0)
+   doubles `dt` when `numbit≤3`, so modern doubles `dt` prematurely and the two builds
+   walk different timestep sequences thereafter → the pervasive ~1e-5 drift.
+6. **Init is identical and correct.** The initial `h`-profile is bit-identical between the
+   builds AND at exact hydrostatic equilibrium (`h = gwl − z`, deviation 0.0). So the
+   `numbit` difference is **not** an init bug; it is a sub-tolerance difference in the
+   first solve's residual flipping the `Fmax < CritDevBalCp (1e-6)` convergence threshold.
+
+**Conclusion:** the modern build is faithful to 4.2.0 in all physics and (with fixed `dt`)
+bit-identical. The divergence is numerical-threshold sensitivity in the *adaptive-`dt`
+first-step convergence*, amplified only under hysteresis. Fixing it to match 4.2.0 would
+mean perturbing the core solver to replicate a sub-1e-6 4.2.0 behaviour — high risk to the
+5 passing cases for a <2 cm effect. Decision pending; documented as xfail meanwhile.
 
 **New finding — frost-path drift (`8.winter`, SWSNOW+SWFROST+SWSUBLIM).** The winter case
 shows the **snow path reproduces 4.2.0 exactly** (SNOW peak 0.574 cm in both builds), but
