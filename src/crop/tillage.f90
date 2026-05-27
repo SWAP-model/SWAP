@@ -22,13 +22,11 @@ module tillage_mod
 !  by default: all in this module is private (local)
    private
 !  except for these public routines/functions
-   public :: DoTillage
+   public :: tillage_seed, tillage_step, tillage_output
 
    contains
 
-   subroutine DoTillage (iTask, state)
-   ! global
-   integer, intent(in)                          :: iTask                               ! Task
+   subroutine tillage_seed (state)
    type(swap_state_t), intent(inout)            :: state
    ! local (not to be saved)
    integer                                   :: i
@@ -47,11 +45,6 @@ module tillage_mod
       soil_cfg   => state%cfg%soil,         &
       solute_cfg => state%cfg%solute        )
 
-   if (iTask > 1 .and. soil_cfg%swtill == 0) return      ! no tillage to be considered: return immediately
-
-   ! handle iTask
-   select case (iTask)
-   case (1)
       ! INITIALIZE
 
       ! some checks: some combinations not (yet) allowed
@@ -89,7 +82,30 @@ module tillage_mod
       end do
       if (.not. fine) call fatalerr_collected ('DoTillage', 'Bottom of soil horizon does not coincide with tillage depth(s)')
 
-   case (2)
+   end associate
+   end subroutine tillage_seed
+
+   subroutine tillage_step (state)
+   type(swap_state_t), intent(inout)            :: state
+   ! local (not to be saved)
+   integer                                   :: i
+   character(len=20)                         :: STRNG
+   logical                                   :: fine
+   logical, parameter                        :: TEST = .false.
+   logical, parameter                        :: TEST2 = .false.
+
+   ! Sub-record aliases (canonical associate pattern).
+   associate( &
+      mesh       => state%mesh,             &
+      soil       => state%soilwater,        &
+      time       => state%timecontrol,      &
+      atmo       => state%atmosphere,       &
+      tl         => state%tillage,          &
+      soil_cfg   => state%cfg%soil,         &
+      solute_cfg => state%cfg%solute        )
+
+   if (soil_cfg%swtill == 0) return      ! no tillage to be considered: return immediately
+
       ! RATE/STATE EVENT
       tl%Rho_last(1:tl%MaxNumSoilHo) = soil%bdens(1:tl%MaxNumSoilHo)
 
@@ -150,8 +166,30 @@ module tillage_mod
 
       end if
 
+   end associate
+   end subroutine tillage_step
 
-   case (3)
+   subroutine tillage_output (state)
+   type(swap_state_t), intent(inout)            :: state
+   ! local (not to be saved)
+   integer                                   :: i
+   character(len=20)                         :: STRNG
+   logical                                   :: fine
+   logical, parameter                        :: TEST = .false.
+   logical, parameter                        :: TEST2 = .false.
+
+   ! Sub-record aliases (canonical associate pattern).
+   associate( &
+      mesh       => state%mesh,             &
+      soil       => state%soilwater,        &
+      time       => state%timecontrol,      &
+      atmo       => state%atmosphere,       &
+      tl         => state%tillage,          &
+      soil_cfg   => state%cfg%soil,         &
+      solute_cfg => state%cfg%solute        )
+
+   if (soil_cfg%swtill == 0) return      ! no tillage to be considered: return immediately
+
       ! OUTPUT
 
       ! [SS-BMI2] headless guard: debug writes to units 222/224/226 gated
@@ -176,15 +214,8 @@ module tillage_mod
      &      soil%vg_params(1)%h_enpr, soil%vg_params(1)%ksatexm
       end if
 
-   case (4)
-      ! CLOSURE
-
-   case default
-      call fatalerr_collected ('DoTillage','Illegal value for iTask')
-   end select
-
    end associate
-   end subroutine DoTillage
+   end subroutine tillage_output
 
 ! **************************************************** Change_MvGpars *********************************************************
    subroutine Change_MvGpars (state)

@@ -80,7 +80,7 @@ contains
       !     only as a parity-test fixture (ADR 0007); not called at runtime.
       !
       use surfacewater_mod,           only: SurfaceWater
-      use tillage_mod,                only: DoTillage
+      use tillage_mod,                only: tillage_seed
       use swap_log,                   only: log_info
       use runoff_mod,                 only: cn_init
       use temperature_mod,            only: temperature_seed
@@ -207,7 +207,7 @@ contains
          call state%tillage%init(config%soil%tillage, time%tend, state%mesh%numlay)
 
          ! LEGACY-INIT — magic-int dispatchers. Migrate to type-bound init.
-         if (state%cfg%soil%swtill == 1)       call DoTillage(1, state)
+         if (state%cfg%soil%swtill == 1)       call tillage_seed(state)
 
          ! Heat must init BEFORE SoilWater(1) so hconduc can read
          ! state%heat%tsoil(node) during hydraulic-conductivity init.
@@ -277,7 +277,7 @@ contains
       use timecontrol_mod,    only: timecontrol_advance, timecontrol_reduce_dt, &
                                     timecontrol_day_end, itertime_check
       use surfacewater_mod,   only: SurfaceWater, surfacewater_year_reset
-      use tillage_mod,        only: DoTillage
+      use tillage_mod,        only: tillage_step, tillage_output
       use boundbottom_mod,    only: BoundBottom
       use meteo_mod,          only: ProcessMeteoDay
       use meteo_process_mod,  only: ReadMeteoDay
@@ -317,7 +317,7 @@ contains
             call CropGrowth(1, state%heat%tsoil, state)
             if (time%flIrrigate) call irrigation_step(state)
             call ProcessMeteoDay(state, config)
-            if (state%cfg%soil%swtill == 1) call DoTillage(2, state)
+            if (state%cfg%soil%swtill == 1) call tillage_step(state)
          end if
 
          if (time%flmeteodt .or. time%fletsine) call MeteoDT(state)
@@ -393,7 +393,7 @@ contains
          ! Output.
          if (time%floutput) then
             call csv_output_step(state)
-            if (state%cfg%soil%swtill == 1) call DoTillage(3, state)
+            if (state%cfg%soil%swtill == 1) call tillage_output(state)
             if (time%flSurfaceWater) then
                if (time%daynr == merge(366, 365, dtleap(time%iyear))) &
                   call surfacewater_year_reset(state%surfacewater)
