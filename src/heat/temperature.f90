@@ -469,45 +469,19 @@ contains
 
       ! (3.1) Dry conditions (include empirical correction factor 1.25)
       if (theta(Node).LE.thetaDry) Then
-        HeaCon(Node) = 1.25d0 * &
-                       (fquartz_in(Node)*kqaXkQuartz + &
-                        fclay_in(Node)*kcaXkClay + &
-                        fAir(Node)*kaaXkAir + &
-                        forg_in(Node)*koaXkOrg + &
-                        theta(Node)*kwaXkWat) / &
-                       (kqa * fquartz_in(Node) + kca * fclay_in(Node) + kaa * fAir(Node) + &
-                        koa * forg_in(Node) + kwa * theta(Node))
+        HeaCon(Node) = heacon_dry(theta(Node), fquartz_in(Node), fclay_in(Node), fAir(Node), forg_in(Node))
 
       ! (3.2) Wet conditions
       else if (theta(Node).GE.thetaWet) Then
-        HeaCon(Node) = (fquartz_in(Node)*kqwXkQuartz + &
-                        fclay_in(Node)*kcwXkClay + &
-                        fAir(Node)*kaw*kAir + &
-                        forg_in(Node)*kowXkOrg + &
-                        theta(Node)*kwwXkWat) / &
-                       (kqw * fquartz_in(Node) + kcw * fclay_in(Node) + kaw * fAir(Node) + &
-                        kow * forg_in(Node) + kww * theta(Node))
+        HeaCon(Node) = heacon_wet(theta(Node), fquartz_in(Node), fclay_in(Node), fAir(Node), forg_in(Node), kaw)
 
       ! (3.3) Intermediate conditions (interpolate between dry and wet)
       else
         ! (3.3.1) Conductivity for theta = 0.02
-        HeaConDry = 1.25d0 * &
-                       (fquartz_in(Node)*kqaXkQuartz + &
-                        fclay_in(Node)*kcaXkClay + &
-                        fAir(Node)*kaaXkAir + &
-                        forg_in(Node)*koaXkOrg + &
-                        thetaDry*kwaXkWat) / &
-                       (kqa * fquartz_in(Node) + kca * fclay_in(Node) + kaa * fAir(Node) + &
-                        koa * forg_in(Node) + kwa * thetaDry)
+        HeaConDry = heacon_dry(thetaDry, fquartz_in(Node), fclay_in(Node), fAir(Node), forg_in(Node))
 
         ! (3.3.2) Conductivity for theta = 0.05
-        HeaConWet = (fquartz_in(Node)*kqwXkQuartz + &
-                     fclay_in(Node)*kcwXkClay + &
-                     fAir(Node)*kaw*kAir + &
-                     forg_in(Node)*kowXkOrg + &
-                     thetaWet*kwwXkWat) / &
-                    (kqw * fquartz_in(Node) + kcw * fclay_in(Node) + kaw * fAir(Node) + &
-                     kow * forg_in(Node) + kww * thetaWet)
+        HeaConWet = heacon_wet(thetaWet, fquartz_in(Node), fclay_in(Node), fAir(Node), forg_in(Node), kaw)
 
         ! (3.3.3) Interpolate
         HeaCon(Node) = HeaConDry + (theta(Node)-thetaDry) * &
@@ -524,6 +498,24 @@ contains
     end do
 
     return
+
+  contains
+
+    !> de Vries weighted conductivity, dry-soil weights (incl. 1.25 correction).
+    real(8) function heacon_dry(theta_val, fq, fc, fa, fo)
+       real(8), intent(in) :: theta_val, fq, fc, fa, fo
+       heacon_dry = 1.25d0 * &
+                    (fq*kqaXkQuartz + fc*kcaXkClay + fa*kaaXkAir + fo*koaXkOrg + theta_val*kwaXkWat) / &
+                    (kqa*fq + kca*fc + kaa*fa + koa*fo + kwa*theta_val)
+    end function heacon_dry
+
+    !> de Vries weighted conductivity, wet-soil weights (kaw is node-specific air-water weight).
+    real(8) function heacon_wet(theta_val, fq, fc, fa, fo, kaw_val)
+       real(8), intent(in) :: theta_val, fq, fc, fa, fo, kaw_val
+       heacon_wet = (fq*kqwXkQuartz + fc*kcwXkClay + fa*kaw_val*kAir + fo*kowXkOrg + theta_val*kwwXkWat) / &
+                    (kqw*fq + kcw*fc + kaw_val*fa + kow*fo + kww*theta_val)
+    end function heacon_wet
+
   end subroutine Devries
 
   !> Analytical soil-temperature profile: damped sinusoidal wave with depth.
