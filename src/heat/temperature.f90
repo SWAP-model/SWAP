@@ -58,7 +58,6 @@ contains
       use swap_state_mod,        only: swap_state_t
       use swap_config_mod,       only: swap_config_t
       use array_utils,           only: afgen
-      use numericalsolvers_mod,  only: tridag
       use swap_array_dimensions, only: macp, mabbc
       implicit none
 
@@ -69,13 +68,8 @@ contains
     !! Typed simulation configuration
 
     ! Local variables
-    integer i,lay, ierror, nheat_loc
-    real(8) tmpold(macp),tab(mabbc*2),ttab(mabbc*2),btab(mabbc*2),dummy,gmineral
-    real(8) thoma(macp),thomb(macp),thomc(macp),thomf(macp)
-    real(8) theave(macp),heacnd(macp),heacap_loc(macp)
-    real(8) heaconbot,qhbot
-    real(8) apar, dzsnw, heaconsnw, Rosnw
-    character(len=200) messag
+    integer i,lay, nheat_loc
+    real(8) tab(mabbc*2),dummy,gmineral
 
     associate (heat => state%heat,           &
                mesh => state%mesh,           &
@@ -89,12 +83,7 @@ contains
          ! Initial temperature profile.
          if (heat_cfg%swcalt .eq. 1) then
             ! Analytical solution.
-            do i = 1, mesh%numnod
-               heat%tsoil(i) = heat_cfg%tmean + heat_cfg%tampli *                       &
-                               (dsin(0.0172d0*(time%daynr - heat_cfg%timref + 91.0d0) + &
-                                     mesh%z(i)/heat_cfg%ddamp))                         &
-                               / dexp(-mesh%z(i)/heat_cfg%ddamp)
-            end do
+            call heat_analytical_profile(state, config)
          else
             ! Numerical solution: use specified initial soil temperatures.
             if (config%soil%swinco .ne. 3 .and. allocated(heat_cfg%tsoil_init)) then
@@ -278,12 +267,7 @@ contains
             end if
          else
             ! Analytical solution profile.
-            do i = 1, mesh%numnod
-               heat%tsoil(i) = heat_cfg%tmean + heat_cfg%tampli *                       &
-                               (dsin(0.0172d0*(time%daynr - heat_cfg%timref + 91.0d0) + &
-                                     mesh%z(i)/heat_cfg%ddamp))                         &
-                               / dexp(-mesh%z(i)/heat_cfg%ddamp)
-            end do
+            call heat_analytical_profile(state, config)
          end if
 
     end associate
@@ -541,6 +525,25 @@ contains
 
     return
   end subroutine Devries
+
+  !> Analytical soil-temperature profile: damped sinusoidal wave with depth.
+  subroutine heat_analytical_profile(state, config)
+     use swap_state_mod,  only: swap_state_t
+     use swap_config_mod, only: swap_config_t
+     implicit none
+     type(swap_state_t),  intent(inout) :: state
+     type(swap_config_t), intent(in)    :: config
+     integer :: i
+     associate (heat => state%heat, mesh => state%mesh, &
+                time => state%timecontrol, heat_cfg => config%heat)
+        do i = 1, mesh%numnod
+           heat%tsoil(i) = heat_cfg%tmean + heat_cfg%tampli *                       &
+                           (dsin(0.0172d0*(time%daynr - heat_cfg%timref + 91.0d0) + &
+                                 mesh%z(i)/heat_cfg%ddamp))                         &
+                           / dexp(-mesh%z(i)/heat_cfg%ddamp)
+        end do
+     end associate
+  end subroutine heat_analytical_profile
 
 end module temperature_mod
 
