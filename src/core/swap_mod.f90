@@ -71,7 +71,7 @@ contains
       !       * swinco==3 warm-restart h-profile CSV re-read
       !       * atmosphere snow handshake (snowinco ↔ ssnow)
       !     Each should fold into the relevant state%X%init.
-      !   - Legacy magic-int dispatchers (DoTillage(1), SSDI_irrigation(1),
+      !   - Legacy magic-int dispatchers (DoTillage(1),
       !     SoilWater(1), SurfaceWater(1), Temperature(1), Solute(1)) should
       !     migrate to type-bound state%X%init matching the surrounding
       !     modern calls. SurfaceWater(1) is already a no-op stub — the
@@ -88,7 +88,6 @@ contains
       use soilgrid_mod,               only: CalcGrid
       use soilhydraulics_mod,         only: soilwater
       use seed_state_from_config_mod, only: seed_state_from_config
-      use irrigation_mod,             only: SSDI_irrigation
       use timecontrol_mod,            only: timecontrol_init, itertime_init
       use csv_output,                 only: csv_output_init
 
@@ -209,7 +208,6 @@ contains
 
          ! LEGACY-INIT — magic-int dispatchers. Migrate to type-bound init.
          if (state%cfg%soil%swtill == 1)       call DoTillage(1, state)
-         if (state%cfg%irrigation%swssdi == 1) call SSDI_irrigation(1, state)
 
          ! Heat must init BEFORE SoilWater(1) so hconduc can read
          ! state%heat%tsoil(node) during hydraulic-conductivity init.
@@ -292,7 +290,7 @@ contains
       use temperature_mod,    only: Temperature
       use solute_mod,         only: solute
       use soilhydraulics_mod, only: soilwater, SoilWaterStateVar
-      use irrigation_mod,     only: irrigation_step, SSDI_irrigation
+      use irrigation_mod,     only: irrigation_step, ssdi_irrigation_step
       use management_soil_mod, only: SoilManagement
       use drainage_mod,       only: drainage
 
@@ -390,7 +388,7 @@ contains
             if (time%flMaxIterTime) call itertime_check(state)
 
             ! Subsurface irrigation: decide for next day, adjust dt for dt_SSDI_event.
-            if (state%cfg%irrigation%swssdi == 1) call SSDI_irrigation(2, state)
+            if (state%cfg%irrigation%swssdi == 1) call ssdi_irrigation_step(state)
             call timecontrol_day_end(state)
          end if
 

@@ -19,7 +19,7 @@
    private
 
    public :: irrigation_step
-   public :: SSDI_irrigation
+   public :: ssdi_irrigation_step, ssdi_irrigation_reset
 
    contains
 
@@ -307,13 +307,8 @@
       return
    end subroutine irrigation_step
 
-!> Compute subsurface drip irrigation (SSDI) scheduling and rates.
-!!
-!! @param[in] iTask Task selector:
-!!   - 1: initialization/read SSDI settings
-!!   - 2: daily SSDI scheduling and rate assignment
-!!   - 9: reset SSDI event state
-subroutine SSDI_irrigation(iTask, state)
+!> Daily SSDI scheduling and rate assignment (named replacement for case(2)).
+subroutine ssdi_irrigation_step(state)
 
 ! [GR-CROP 2026-05-25] dt_SSDI_event now lives on state%crop%irrigation —
 ! cross-file consumer src/core/timecontrol_mod.f90 was migrated in the
@@ -321,23 +316,12 @@ subroutine SSDI_irrigation(iTask, state)
 use swap_state_mod, only: swap_state_t
 
 implicit none
-! global
-integer, intent(in) :: iTask
 type(swap_state_t), intent(inout) :: state
 
 ! local, help
 integer                         :: irrigevent   ! [GR-CROP 2026-05-25] localized — consumed only within this call
 real(8)                         :: Tred
 
-   select case (iTask)
-   case (1)
-      ! [irrigation.ssdi] init was performed at config-load time by
-      ! apply_irrigation_ssdi (config_to_variables.f90). Per ADR 0022,
-      ! this case is now a no-op; the runtime reads the staged state
-      ! fields under state%crop%irrigation directly each daily step.
-      return
-
-   case (2)
       ! [GR-CROP 2026-05-25] sub-record associate aliases; SSDI persistent
       ! state now lives on state%crop%irrigation.
       associate( &
@@ -398,17 +382,25 @@ real(8)                         :: Tred
 
       end associate
 
-   case (9)
+end subroutine ssdi_irrigation_step
+
+!> Reset SSDI event state (named replacement for case(9)).
+subroutine ssdi_irrigation_reset(state)
+
+use swap_state_mod, only: swap_state_t
+
+implicit none
+type(swap_state_t), intent(inout) :: state
+
+! local, help
+integer                         :: irrigevent   ! consumed only within this call
+
       ! special: reset scheduled irrigation at end of irrigation event
       irrigevent      = 0
       state%soilwater%qssdi(1:state%mesh%numnod) = 0.0d0
       state%crop%irrigation%dt_SSDI_event = 1.0d0
       state%soilwater%qssdisum = 0.0d0
 
-   case default
-      call fatalerr_collected ('SSDI_irrigation', 'Illegal value for iTask')
-   end select
-
-end subroutine SSDI_irrigation
+end subroutine ssdi_irrigation_reset
 
 end module irrigation_mod

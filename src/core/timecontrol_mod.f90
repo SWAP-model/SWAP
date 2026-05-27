@@ -235,7 +235,7 @@ contains
       ! [GR-TIME 2026-05-25] outdat/outdatint migrated to state%timecontrol;
       ! flSSDI bare global replaced with `state%cfg%irrigation%swssdi == 1`.
 
-      use irrigation_mod, only: SSDI_irrigation
+      use irrigation_mod, only: ssdi_irrigation_reset
       use error_mod, only: fatalerr_collected
       implicit none
       type(swap_state_t), intent(inout) :: state
@@ -482,7 +482,7 @@ contains
 !     SSDI: end of subsurface irirgation event reached; reset
       if (state%cfg%irrigation%swssdi == 1 .and. &
           time%tcum - int(time%tcum) + dtCrit > crop%irrigation%dt_SSDI_event) then
-         call SSDI_irrigation(9, state)  ! [SS-SWC S-2.12B]
+         call ssdi_irrigation_reset(state)  ! [SS-SWC S-2.12B]
       end if
 
 ! --- update fldtmin
