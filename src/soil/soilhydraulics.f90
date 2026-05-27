@@ -216,91 +216,9 @@ contains
          end do
       end if
 
-      do i=2,NN
-         hgrad(i) = (soil%h(i-1)-soil%h(i))/mesh%disnod(i) + 1.0d0
-      end do
+      flboth = (swbotb .eq. 8 .and. soil%h(NN) .gt. Critdz - mesh%disnod(NN+1) + bb_cfg%hplate)
 
-      F(1) = (soil%theta(1)-soil%thetm1(1))*soil%FrArMtrx(1)*mesh%dz(1)/time%dt + sink(1) - source(1) + soil%qrot(1) + soil%kmean(2) * hgrad(2)
-
-      call boundtop(state)
-
-      if (soil%FlRunoff) call pondrunoff (state)
-
-      if(soil%ftoph)then
-         hgrad(1) = (soil%hsurf-soil%h(1))/mesh%disnod(1) + 1.d0
-         F(1)     = F(1) - soil%kmean(1) * hgrad(1)
-      else
-         F(1) = F(1) + soil%qtop
-      end if
-
-      do i=2,NN-1
-         F(i) = (soil%theta(i)-soil%thetm1(i))*soil%FrArMtrx(i)*mesh%dz(i)/time%dt + sink(i) - source(i) +     &
-     &          soil%qrot(i) - soil%kmean(i) * hgrad(i) + soil%kmean(i+1) * hgrad(i+1)
-      end do
-
-      if(swbotb.eq.1 .and. (.not.soil%fllowgwl))then
-         hgrad(NN+1) = soil%h(NN)/(mesh%z(nn)-soil%gwlinp) + 1.0d0
-      else if(swbotb.eq.5 .or. (swbotb.eq.1 .and. soil%fllowgwl))then
-         hgrad(NN+1) = (soil%h(NN) - soil%hbot) / mesh%disnod(NN+1)  + 1.0d0
-      else if(swbotb.eq.8 .and. soil%h(NN).gt. Critdz - mesh%disnod(NN+1) + bb_cfg%hplate) then
-         hgrad(NN+1) = (soil%h(NN) - bb_cfg%hplate) / mesh%disnod(NN+1)  + 1.0d0
-         flboth = .true.
-      else
-         flboth = .false.
-      end if
-
-      if(swbotb.eq.1 .and. (.not.soil%fllowgwl))then
-         soil%theta(NN)= watcon(soil%h(NN), &
-                              soil%vg_params(NN), &
-                              soil%iHWCKmodel(soil%layer(NN)), &
-                              NN, soil)
-         soil%k(NN)    = hconduc(soil%h(NN),soil%theta(NN),heat%rfcp(NN),heat%tsoil(NN), &
-                              soil%vg_params(NN), &
-                              soil%iHWCKmodel(soil%layer(NN)), &
-                              soil%fluseksatexm(NN), &
-                              NN, soil)
-         soil%kmean(NN+1) = hcomean(state%cfg%simulation%numerical%swkmean,soil%k(NN),soil%vg_params(NN+1)%ksat, &
-     &                        mesh%dz(NN),mesh%dz(NN+1))
-         F(NN) = (soil%theta(NN) - soil%thetm1(NN))*soil%FrArMtrx(NN)*mesh%dz(NN)/time%dt +      &
-     &           sink(NN)-source(NN)+soil%qrot(NN)-soil%kmean(NN)*hgrad(NN) +soil%kmean(NN+1)*hgrad(NN+1)
-      else
-
-         F(NN) = (soil%theta(NN) - soil%thetm1(NN))*soil%FrArMtrx(NN)*mesh%dz(NN)/time%dt        &
-     &         - soil%kmean(NN) * hgrad(NN) + sink(NN) - source(NN) + soil%qrot(NN)
-
-         if(swbotb.eq.3.and.bb_cfg%swbotb3impl.eq.1)then ! Cauchy-relation, implemented as head boundary
-            if (soil%swbotb3resvert.eq.0) then
-               soil%qbot = - (soil%h(NN)+mesh%z(NN)-soil%deepgw) / (mesh%disnod(NN+1)/soil%kmean(NN+1)+bb_cfg%rimlay)
-            elseif (soil%swbotb3resvert.eq.1) then
-               soil%qbot = - (soil%h(NN)+mesh%z(NN)-soil%deepgw) / bb_cfg%rimlay
-            endif
-! ---       extra groundwater flux might be added
-            if (bb_cfg%sw4 .eq. 1) soil%qbot = soil%qbot + afgen(soil%qbotab,mabbc*2,time%t1900+time%dt)
-            F(NN) = F(NN) - soil%qbot
-         else if(swbotb.eq.5 .or. (swbotb.eq.1 .and. soil%fllowgwl))then ! pressure head at lower boundary specified
-            F(NN) = F(NN) + soil%kmean(NN+1) * hgrad(NN+1)
-         else if(swbotb.eq.7 .or. swbotb .eq. -2)then ! free drainage option
-            soil%kmean(mesh%numnod+1) = hconduc(soil%h(mesh%numnod),soil%theta(mesh%numnod),heat%rfcp(mesh%numnod),heat%tsoil(mesh%numnod), &
-                                         soil%vg_params(mesh%numnod), &
-                                         soil%iHWCKmodel(soil%layer(mesh%numnod)), &
-                                         soil%fluseksatexm(mesh%numnod), &
-                                         mesh%numnod, soil)
-            soil%qbot = -1.0d0 * soil%kmean(mesh%numnod+1)
-            F(NN) = F(NN) - soil%qbot
-         ! Lysimeter option
-         else if(swbotb.eq.8)then
-            if (flboth) then
-               soil%hbot = bb_cfg%hplate
-               F(NN) = F(NN) + soil%kmean(NN+1) * hgrad(NN+1)
-            else
-               soil%qbot = 0.0d0
-            end if
-         ! Flux bottom boundary
-         else
-            F(NN) = F(NN) - soil%qbot
-         end if
-
-      end if
+      call headcalc_residual(state, NN, sink, source, flboth, hgrad, F)
 
       ! Initial estimate of F inner product
       sumold    = 0.0d0
@@ -459,10 +377,6 @@ contains
                                    soil%iHWCKmodel(soil%layer(i)), &
                                    i, soil)
             enddo
-            do i=2,NN
-               hgrad(i) = (soil%h(i-1)-soil%h(i))/mesh%disnod(i) + 1.0d0
-            end do
-
 
             if(state%cfg%simulation%numerical%swkimpl.eq.1)then
                call Rootextraction(state)
@@ -496,94 +410,8 @@ contains
                end if
             endif
 
-            ! Calculate F-function
-            F(1) = (soil%theta(1) - soil%thetm1(1))*soil%FrArMtrx(1)*mesh%dz(1)/time%dt + sink(1) - source(1) &
-     &           + soil%qrot(1) + soil%kmean(2) * hgrad(2)
-
-            ! FlMacropore QMpLatSsSav save retired (ADR 0040).
-
-            call boundtop(state)
-
-            ! MACROPORE(2,...) retired (ADR 0040).
-
-            if (soil%FlRunoff) call pondrunoff (state)
-
-            if(soil%ftoph)then
-               hgrad(1) = (soil%hsurf-soil%h(1))/mesh%disnod(1) + 1.d0
-               F(1) = F(1) - soil%kmean(1) * hgrad(1)
-            else
-               F(1) = F(1) + soil%qtop
-            end if
-
-            do i=2,NN-1
-               F(i) = (soil%theta(i)-soil%thetm1(i))*soil%FrArMtrx(i)*mesh%dz(i)/time%dt + sink(i) - source(i) &
-     &              + soil%qrot(i) - soil%kmean(i)*hgrad(i)+soil%kmean(i+1)*hgrad(i+1)
-            end do
-
-            if(swbotb.eq.1 .and. (.not.soil%fllowgwl))then
-               hgrad(NN+1) = soil%h(NN)/(mesh%z(nn)-soil%gwlinp) + 1.0d0
-           else if(swbotb.eq.5 .or. (swbotb.eq.1 .and. soil%fllowgwl))then
-               hgrad(NN+1) = (soil%h(NN) - soil%hbot) / mesh%disnod(NN+1)  + 1.0d0
-            else if(swbotb.eq.8 .and. flboth)then
-               hgrad(NN+1) = (soil%h(NN) - bb_cfg%hplate) / mesh%disnod(NN+1)  + 1.0d0
-            end if
-
-            if(swbotb.eq.1 .and. (.not.soil%fllowgwl))then
-               soil%theta(NN) = watcon(soil%h(NN), &
-                                     soil%vg_params(NN), &
-                                     soil%iHWCKmodel(soil%layer(NN)), &
-                                     NN, soil)
-               soil%k(NN)     = hconduc(soil%h(NN),soil%theta(NN),heat%rfcp(NN),heat%tsoil(NN), &
-                                      soil%vg_params(NN), &
-                                      soil%iHWCKmodel(soil%layer(NN)), &
-                                      soil%fluseksatexm(NN), &
-                                      NN, soil)
-               soil%kmean(NN+1) = hcomean(state%cfg%simulation%numerical%swkmean,soil%k(NN),soil%vg_params(NN+1)%ksat &
-     &                       ,mesh%dz(NN),mesh%dz(NN+1))
-               F(NN) = (soil%theta(NN) - soil%thetm1(NN))*soil%FrArMtrx(NN)*mesh%dz(NN)/time%dt  &
-     &            - soil%kmean(NN) * hgrad(NN) + soil%kmean(NN+1) * hgrad(NN+1)   &
-     &            + sink(NN) - source(NN) + soil%qrot(NN)
-            else
-               F(NN) = (soil%theta(NN) - soil%thetm1(NN))*soil%FrArMtrx(NN)*mesh%dz(NN)/time%dt  &
-     &               - soil%kmean(NN) * hgrad(NN)                            &
-     &               + sink(NN) - source(NN) + soil%qrot(NN)
-               if(swbotb.eq.3.and.bb_cfg%swbotb3impl.eq.1)then ! Cauchy
-                  if (soil%swbotb3resvert.eq.0) then
-                     soil%qbot = - (soil%h(NN)+mesh%z(NN)-soil%deepgw) /       &
-     &                                 (mesh%disnod(NN+1)/soil%kmean(NN+1)+bb_cfg%rimlay)
-                  elseif (soil%swbotb3resvert.eq.1) then
-                     soil%qbot = - (soil%h(NN)+mesh%z(NN)-soil%deepgw) / bb_cfg%rimlay
-                  endif
-                  ! Extra groundwater flux might be added
-                  if (bb_cfg%sw4 .eq. 1) then
-                     soil%qbot = soil%qbot + afgen(soil%qbotab,mabbc*2,time%t1900+time%dt)
-                  end if
-                  F(NN) = F(NN) - soil%qbot
-               else if(swbotb.eq.5 .or.(swbotb.eq.1 .and. soil%fllowgwl))then
-                  ! Pressure head at lower boundary specified
-                  F(NN) = F(NN) + soil%kmean(NN+1) * hgrad(NN+1)
-               else if(swbotb.eq.7.or. swbotb .eq. -2)then ! free drainage option
-                  soil%kmean(mesh%numnod+1) = hconduc(soil%h(mesh%numnod),soil%theta(mesh%numnod),heat%rfcp(mesh%numnod),heat%tsoil(mesh%numnod), &
-                                               soil%vg_params(mesh%numnod), &
-                                               soil%iHWCKmodel(soil%layer(mesh%numnod)), &
-                                               soil%fluseksatexm(mesh%numnod), &
-                                               mesh%numnod, soil)
-                  soil%qbot = -1.0d0 * soil%kmean(mesh%numnod+1)
-                  F(NN) = F(NN) - soil%qbot
-               ! Lysimeter option
-               else if(swbotb.eq.8)then
-                  if (flboth) then
-                     soil%hbot = bb_cfg%hplate
-                     F(NN) = F(NN) + soil%kmean(NN+1) * hgrad(NN+1)
-                  else
-                     soil%qbot = 0.0d0
-                  end if
-               ! Flux bottom boundary
-               else
-                  F(NN) = F(NN) - soil%qbot
-               end if
-
-            end if
+            ! Calculate F-function (residual + hgrad + bottom-boundary dispatch)
+            call headcalc_residual(state, NN, sink, source, flboth, hgrad, F)
 
             ! Calculate maximum deviation per compartment and new inner product
             Fmax   = 0.0d0
@@ -770,6 +598,130 @@ contains
       end associate
 
    end subroutine headcalc
+
+   !> Compute the Richards residual vector F (+ hgrad and bottom-boundary dispatch)
+   !!
+   !! Shared by headcalc's initial estimate and its back-tracking iteration loop.
+   !! Computes hgrad(2..NN), the surface residual F(1) (via boundtop / pondrunoff
+   !! / ftoph), the interior residual F(2..NN-1), the lower-boundary gradient
+   !! hgrad(NN+1) and the bottom-boundary residual F(NN) for the selected swbotb.
+   !! The lysimeter plate-contact flag flboth is decided by the caller and passed
+   !! in (it depends on the pre-iteration h(NN), which boundtop does not change).
+   !!
+   subroutine headcalc_residual(state, NN, sink, source, flboth, hgrad, F)
+
+      use boundtop_mod, only: boundtop, PONDRUNOFF
+      use array_utils, only: afgen
+      use soilhydraulics_utils, only: watcon, hconduc, hcomean
+      use swap_array_dimensions, only: mabbc
+      use swap_state_mod, only: swap_state_t
+      implicit none
+
+      type(swap_state_t), intent(inout) :: state
+      integer,            intent(in)    :: NN
+      real(8),            intent(in)    :: sink(:), source(:)
+      logical,            intent(in)    :: flboth
+      real(8),            intent(inout) :: hgrad(:)
+      real(8),            intent(out)   :: F(:)
+
+      integer :: i
+
+      associate (mesh => state%mesh,         &
+                 soil => state%soilwater,    &
+                 drai => state%drainage,     &
+                 heat => state%heat,         &
+                 atmo => state%atmosphere,   &
+                 time => state%timecontrol,  &
+                 bb_cfg => state%cfg%bottom_boundary,  &
+                 swbotb => state%soilwater%swbotb_runtime)
+
+      do i=2,NN
+         hgrad(i) = (soil%h(i-1)-soil%h(i))/mesh%disnod(i) + 1.0d0
+      end do
+
+      F(1) = (soil%theta(1)-soil%thetm1(1))*soil%FrArMtrx(1)*mesh%dz(1)/time%dt + sink(1) - source(1) + soil%qrot(1) + soil%kmean(2) * hgrad(2)
+
+      call boundtop(state)
+
+      if (soil%FlRunoff) call pondrunoff (state)
+
+      if(soil%ftoph)then
+         hgrad(1) = (soil%hsurf-soil%h(1))/mesh%disnod(1) + 1.d0
+         F(1)     = F(1) - soil%kmean(1) * hgrad(1)
+      else
+         F(1) = F(1) + soil%qtop
+      end if
+
+      do i=2,NN-1
+         F(i) = (soil%theta(i)-soil%thetm1(i))*soil%FrArMtrx(i)*mesh%dz(i)/time%dt + sink(i) - source(i) +     &
+     &          soil%qrot(i) - soil%kmean(i) * hgrad(i) + soil%kmean(i+1) * hgrad(i+1)
+      end do
+
+      if(swbotb.eq.1 .and. (.not.soil%fllowgwl))then
+         hgrad(NN+1) = soil%h(NN)/(mesh%z(nn)-soil%gwlinp) + 1.0d0
+      else if(swbotb.eq.5 .or. (swbotb.eq.1 .and. soil%fllowgwl))then
+         hgrad(NN+1) = (soil%h(NN) - soil%hbot) / mesh%disnod(NN+1)  + 1.0d0
+      else if(swbotb.eq.8 .and. flboth)then
+         hgrad(NN+1) = (soil%h(NN) - bb_cfg%hplate) / mesh%disnod(NN+1)  + 1.0d0
+      end if
+
+      if(swbotb.eq.1 .and. (.not.soil%fllowgwl))then
+         soil%theta(NN)= watcon(soil%h(NN), &
+                              soil%vg_params(NN), &
+                              soil%iHWCKmodel(soil%layer(NN)), &
+                              NN, soil)
+         soil%k(NN)    = hconduc(soil%h(NN),soil%theta(NN),heat%rfcp(NN),heat%tsoil(NN), &
+                              soil%vg_params(NN), &
+                              soil%iHWCKmodel(soil%layer(NN)), &
+                              soil%fluseksatexm(NN), &
+                              NN, soil)
+         soil%kmean(NN+1) = hcomean(state%cfg%simulation%numerical%swkmean,soil%k(NN),soil%vg_params(NN+1)%ksat, &
+     &                        mesh%dz(NN),mesh%dz(NN+1))
+         F(NN) = (soil%theta(NN) - soil%thetm1(NN))*soil%FrArMtrx(NN)*mesh%dz(NN)/time%dt +   &
+                 sink(NN) - source(NN) + soil%qrot(NN) - soil%kmean(NN)*hgrad(NN) +           &
+                 soil%kmean(NN+1)*hgrad(NN+1)
+      else
+
+         F(NN) = (soil%theta(NN) - soil%thetm1(NN))*soil%FrArMtrx(NN)*mesh%dz(NN)/time%dt        &
+     &         - soil%kmean(NN) * hgrad(NN) + sink(NN) - source(NN) + soil%qrot(NN)
+
+         if(swbotb.eq.3.and.bb_cfg%swbotb3impl.eq.1)then ! Cauchy-relation, implemented as head boundary
+            if (soil%swbotb3resvert.eq.0) then
+               soil%qbot = - (soil%h(NN)+mesh%z(NN)-soil%deepgw) / (mesh%disnod(NN+1)/soil%kmean(NN+1)+bb_cfg%rimlay)
+            elseif (soil%swbotb3resvert.eq.1) then
+               soil%qbot = - (soil%h(NN)+mesh%z(NN)-soil%deepgw) / bb_cfg%rimlay
+            endif
+! ---       extra groundwater flux might be added
+            if (bb_cfg%sw4 .eq. 1) soil%qbot = soil%qbot + afgen(soil%qbotab,mabbc*2,time%t1900+time%dt)
+            F(NN) = F(NN) - soil%qbot
+         else if(swbotb.eq.5 .or. (swbotb.eq.1 .and. soil%fllowgwl))then ! pressure head at lower boundary specified
+            F(NN) = F(NN) + soil%kmean(NN+1) * hgrad(NN+1)
+         else if(swbotb.eq.7 .or. swbotb .eq. -2)then ! free drainage option
+            soil%kmean(mesh%numnod+1) = hconduc(soil%h(mesh%numnod),soil%theta(mesh%numnod),heat%rfcp(mesh%numnod),heat%tsoil(mesh%numnod), &
+                                         soil%vg_params(mesh%numnod), &
+                                         soil%iHWCKmodel(soil%layer(mesh%numnod)), &
+                                         soil%fluseksatexm(mesh%numnod), &
+                                         mesh%numnod, soil)
+            soil%qbot = -1.0d0 * soil%kmean(mesh%numnod+1)
+            F(NN) = F(NN) - soil%qbot
+         ! Lysimeter option
+         else if(swbotb.eq.8)then
+            if (flboth) then
+               soil%hbot = bb_cfg%hplate
+               F(NN) = F(NN) + soil%kmean(NN+1) * hgrad(NN+1)
+            else
+               soil%qbot = 0.0d0
+            end if
+         ! Flux bottom boundary
+         else
+            F(NN) = F(NN) - soil%qbot
+         end if
+
+      end if
+
+      end associate
+
+   end subroutine headcalc_residual
 
    !> Calculate soil water state variables
    !!
