@@ -104,7 +104,6 @@ sources = [
     #   defaults on state%X / config%X. Size parameters live in
     #   src/core/arrays.f90 (swap_array_dimensions).
     # Soil
-    'src/soil/soilgrid.f90',
     'src/soil/waterbalance.f90',
     'src/soil/soilhydraulics.f90',
     'src/soil/do_ln_trans.f90',  # [GR-SOIL 2026-05-24] doln module split from sptabulated

@@ -156,7 +156,6 @@ if get_option('enable_pfunit')
         '../../src/state/legacy_state.f90',
         '../../src/state/swap_state.f90',
         # [GR-IO 2026-05-25 Phase 6 Step 6] initialize.f90 deleted.
-        '../../src/soil/soilgrid.f90',
         '../../src/soil/waterbalance.f90',
         '../../src/soil/soilhydraulics.f90',
         '../../src/io/csv_aggregates.f90',
@@ -206,6 +205,7 @@ if get_option('enable_pfunit')
     pfunit_base_sources = test_base_sources + pfunit_extra_sources
 
     pf_files = [
+        'state/test_mesh_init.pf',
         'core/test_swap_log.pf',
         'utils/test_arrayutils.pf',
         'atmosphere/test_precipitation.pf',

@@ -85,7 +85,6 @@ contains
       use runoff_mod,                 only: cn_init
       use temperature_mod,            only: temperature_seed
       use solute_mod,                 only: solute_seed
-      use soilgrid_mod,               only: CalcGrid
       use soilhydraulics_mod,         only: soilwater_seed
       use seed_state_from_config_mod, only: seed_state_from_config
       use timecontrol_mod,            only: timecontrol_init, itertime_init
@@ -114,7 +113,7 @@ contains
       call timecontrol_init(state)
 
       ! Grid parameters (writes directly to state%mesh).
-      call CalcGrid(state, config)
+      call state%mesh%init(config%soil)
 
       ! Modern type-bound state init.
       call state%soilwater%init(config%soil, config%bottom_boundary, &

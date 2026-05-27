@@ -1,0 +1,66 @@
+! Tests for mesh_state_t%init (formerly the free subroutine calcgrid).
+!
+! Builds the vertical discretization from a soil_config_t and asserts the
+! hand-computed grid geometry + layer/node maps. Inputs:
+!   sublay   = [1, 2]
+!   hsublay  = [10.0, 20.0]   (cm)
+!   ncomp    = [2, 2]
+!   isoillay = [1, 2]
+! yields 4 nodes in 2 physical layers:
+!   layer 1: 2 compartments of dz = 10/2 = 5 cm
+!   layer 2: 2 compartments of dz = 20/2 = 10 cm
+
+@test
+subroutine test_mesh_init_grid()
+   use funit
+   use iso_fortran_env, only: real64
+   use mesh_state_mod, only: mesh_state_t
+   use soil_config_mod, only: soil_config_t
+   type(mesh_state_t)  :: m
+   type(soil_config_t) :: sc
+
+   sc%sublay   = [1, 2]
+   sc%hsublay  = [10.0_real64, 20.0_real64]
+   sc%ncomp    = [2, 2]
+   sc%isoillay = [1, 2]
+
+   call m%init(sc)
+
+   @assertEqual(4, m%numnod)
+   @assertEqual(2, m%numlay)
+
+   @assertEqual(5.0_real64,  m%dz(1), 1.0e-12_real64)
+   @assertEqual(5.0_real64,  m%dz(2), 1.0e-12_real64)
+   @assertEqual(10.0_real64, m%dz(3), 1.0e-12_real64)
+   @assertEqual(10.0_real64, m%dz(4), 1.0e-12_real64)
+
+   @assertEqual(-2.5_real64,  m%z(1), 1.0e-12_real64)
+   @assertEqual(-7.5_real64,  m%z(2), 1.0e-12_real64)
+   @assertEqual(-15.0_real64, m%z(3), 1.0e-12_real64)
+   @assertEqual(-25.0_real64, m%z(4), 1.0e-12_real64)
+
+   @assertEqual(1, m%layer(1))
+   @assertEqual(1, m%layer(2))
+   @assertEqual(2, m%layer(3))
+   @assertEqual(2, m%layer(4))
+
+   @assertEqual(0.0_real64,   m%ztopcp(1), 1.0e-12_real64)
+   @assertEqual(-5.0_real64,  m%ztopcp(2), 1.0e-12_real64)
+   @assertEqual(-10.0_real64, m%ztopcp(3), 1.0e-12_real64)
+   @assertEqual(-20.0_real64, m%ztopcp(4), 1.0e-12_real64)
+
+   @assertEqual(-5.0_real64,  m%zbotcp(1), 1.0e-12_real64)
+   @assertEqual(-10.0_real64, m%zbotcp(2), 1.0e-12_real64)
+   @assertEqual(-20.0_real64, m%zbotcp(3), 1.0e-12_real64)
+   @assertEqual(-30.0_real64, m%zbotcp(4), 1.0e-12_real64)
+
+   @assertEqual(2, m%botcom(1))
+   @assertEqual(4, m%botcom(2))
+
+   @assertEqual(1, m%nod1lay(1))
+   @assertEqual(3, m%nod1lay(2))
+
+   @assertEqual(5.0_real64, m%disnod(5), 1.0e-12_real64)
+
+   @assertEqual(0.5_real64, m%inpolb(1), 1.0e-12_real64)
+end subroutine test_mesh_init_grid

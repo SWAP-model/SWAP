@@ -15,33 +15,20 @@ subroutine test_irrigation_ssdi_default_init()
 end subroutine
 
 ! Helper: build a minimal mesh state for ssdi_z resolution tests.
-! 4-node grid with zbotcp: -10, -25, -40, -60 cm.
+! 4-node grid with dz=[10,15,15,20], zbotcp: -10, -25, -40, -60 cm. Driven
+! through the soil config: three sub-layers (10 / 2x15 / 20 cm) all mapped
+! to a single physical layer to reproduce the non-uniform dz profile.
 subroutine build_test_mesh(state)
    use swap_state_mod, only: swap_state_t
+   use soil_config_mod, only: soil_config_t
    use, intrinsic :: iso_fortran_env, only: real64
    type(swap_state_t), intent(inout) :: state
-   integer,      parameter :: nn = 4
-   real(real64), parameter :: dz_v(nn) = [10.d0, 15.d0, 15.d0, 20.d0]
-   real(real64) :: z_v(nn), disnod_v(nn+1), ztopcp_v(nn), zbotcp_v(nn)
-   integer :: layer_v(nn), i
-   ! Build z from dz
-   z_v(1) = -0.5d0 * dz_v(1)
-   do i = 2, nn
-      z_v(i) = z_v(i-1) - 0.5d0*(dz_v(i-1)+dz_v(i))
-   end do
-   disnod_v(1) = -z_v(1)
-   do i = 2, nn
-      disnod_v(i) = z_v(i-1) - z_v(i)
-   end do
-   disnod_v(nn+1) = 0.5d0*dz_v(nn)
-   ztopcp_v(1) = 0.d0
-   zbotcp_v(1) = -dz_v(1)
-   do i = 2, nn
-      ztopcp_v(i) = zbotcp_v(i-1)
-      zbotcp_v(i) = zbotcp_v(i-1) - dz_v(i)
-   end do
-   layer_v = 1
-   call state%mesh%init(nn, dz_v, z_v, disnod_v, ztopcp_v, zbotcp_v, layer_v)
+   type(soil_config_t) :: sc
+   sc%sublay   = [1, 2, 3]
+   sc%hsublay  = [10.0_real64, 30.0_real64, 20.0_real64]
+   sc%ncomp    = [1, 2, 1]
+   sc%isoillay = [1, 1, 1]
+   call state%mesh%init(sc)
 end subroutine
 
 @test
