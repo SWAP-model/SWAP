@@ -12,8 +12,9 @@ contains
       use array_utils,           only: afgen
       use swap_state_mod,        only: swap_state_t
       use, intrinsic :: iso_fortran_env, only: real64
-      ! [GR-SOL 2026-05-24] All `use variables` straggler imports retired —
-      ! everything reached via the sub-record associate / state%X.
+      use solute_kernels_mod,    only: bdenskf_coeff, bdenskfsatporos_coeff, &
+                                       ddiffwcs_coeff, decpotfdepth_coeff
+
       implicit none
 
       type(swap_state_t), intent(inout) :: state
@@ -25,9 +26,6 @@ contains
       real(8) :: tcumsol
       real(8) :: ArMpSs   ! macropore-retired (always 0; ADR 0040)
       logical :: differ
-      real(8), dimension(macp) :: thetav, diffus, dispr1, vpore2, ddiffwcs, &
-                                  bdenskf, bdenskfcref, bdenskfsatporos, decpotfdepth
-
       real(8), parameter :: rer    = 1.0d-3
       real(8), parameter :: vsmall = 1.0d-15
 
@@ -53,17 +51,17 @@ contains
             end do
          end if
 
-         ! Derived solute concentrations.
+         ! Derived solute concentrations + time-invariant coefficients.
          sol%samini = 0.0d0
          do i = 1, mesh%numnod
-            bdenskf(i)         = soil%bdens(mesh%layer(i))*sol%kf(mesh%layer(i))
-            bdenskfcref(i)     = bdenskf(i)*sol%cref
-            bdenskfsatporos(i) = soil%bdens(mesh%layer(i))*sol%kfsat + sol%poros
-            sol%cmsy(i)        = soil%theta(i)*sol%cml(i) +                          &
-                                 bdenskfcref(i)*(sol%cml(i)/sol%cref)**sol%frexp
-            sol%samini         = sol%samini + sol%cmsy(i) * mesh%dz(i)
-            ddiffwcs(i)        = sol%ddif / (soil%thetsl(mesh%layer(i))**2)
-            decpotfdepth(i)    = sol%decpot(mesh%layer(i))*sol%fdepth(mesh%layer(i))
+            sol%bdenskf(i)         = bdenskf_coeff(soil%bdens(mesh%layer(i)), sol%kf(mesh%layer(i)))
+            sol%bdenskfcref(i)     = sol%bdenskf(i)*sol%cref
+            sol%bdenskfsatporos(i) = bdenskfsatporos_coeff(soil%bdens(mesh%layer(i)), sol%kfsat, sol%poros)
+            sol%cmsy(i)            = soil%theta(i)*sol%cml(i) +                          &
+                                     sol%bdenskfcref(i)*(sol%cml(i)/sol%cref)**sol%frexp
+            sol%samini             = sol%samini + sol%cmsy(i) * mesh%dz(i)
+            sol%ddiffwcs(i)        = ddiffwcs_coeff(sol%ddif, soil%thetsl(mesh%layer(i)))
+            sol%decpotfdepth(i)    = decpotfdepth_coeff(sol%decpot(mesh%layer(i)), sol%fdepth(mesh%layer(i)))
          end do
          sol%sampro = sol%samini
 
@@ -77,8 +75,7 @@ contains
       use array_utils,           only: afgen
       use swap_state_mod,        only: swap_state_t
       use, intrinsic :: iso_fortran_env, only: real64
-      ! [GR-SOL 2026-05-24] All `use variables` straggler imports retired —
-      ! everything reached via the sub-record associate / state%X.
+      
       implicit none
 
       type(swap_state_t), intent(inout) :: state
@@ -90,8 +87,7 @@ contains
       real(8) :: tcumsol
       real(8) :: ArMpSs   ! macropore-retired (always 0; ADR 0040)
       logical :: differ
-      real(8), dimension(macp) :: thetav, diffus, dispr1, vpore2, ddiffwcs, &
-                                  bdenskf, bdenskfcref, bdenskfsatporos, decpotfdepth
+      real(8), dimension(macp) :: thetav, diffus, dispr1, vpore2
 
       real(8), parameter :: rer    = 1.0d-3
       real(8), parameter :: vsmall = 1.0d-15
@@ -133,7 +129,7 @@ contains
          sol%dtsolu = time%dt
          do i = 1, mesh%numnod
             thetav(i) = mesh%inpola(i + 1)*soil%theta(i) + mesh%inpolb(i)*soil%theta(i + 1)
-            diffus(i) = ddiffwcs(i) * thetav(i)**2.33d0
+            diffus(i) = sol%ddiffwcs(i) * thetav(i)**2.33d0
             if (i .lt. mesh%numnod) then
                vpore     = abs(soil%q(i + 1))/thetav(i)
                dispr1(i) = diffus(i) + sol%ldis(mesh%layer(i)) * vpore
@@ -194,9 +190,9 @@ contains
                   ftemp = 0.0d0
                end if
                ftheta = min(1.0d0, (soil%theta(i)/sol%rtheta)**sol%bexp)
-               decact = decpotfdepth(i) * ftemp * ftheta
+               decact = sol%decpotfdepth(i) * ftemp * ftheta
                ctrans = decact*soil%theta(i)*sol%cml(i) +                            &
-                        decact*bdenskfcref(i)*((sol%cml(i)/sol%cref)**sol%frexp)
+                        decact*sol%bdenskfcref(i)*((sol%cml(i)/sol%cref)**sol%frexp)
                sol%dectot   = sol%dectot   + ctrans*sol%dtsolu*mesh%dz(i)
                sol%imdectot = sol%imdectot + ctrans*sol%dtsolu*mesh%dz(i)
 
@@ -233,12 +229,12 @@ contains
                   sol%cml(i)  = 0.0d0
                else
                   if (abs(sol%frexp - 1.0d0) .lt. 0.001d0) then
-                     sol%cml(i) = sol%cmsy(i) / (soil%theta(i) + bdenskf(i))
+                     sol%cml(i) = sol%cmsy(i) / (soil%theta(i) + sol%bdenskf(i))
                   else
                      if (sol%cml(i) .lt. vsmall) sol%cml(i) = vsmall
                      do while (differ)
                         old        = sol%cml(i)
-                        dummy      = bdenskf(i)*(sol%cml(i)/sol%cref)**(sol%frexp - 1.0d0)
+                        dummy      = sol%bdenskf(i)*(sol%cml(i)/sol%cref)**(sol%frexp - 1.0d0)
                         sol%cml(i) = sol%cmsy(i)/(soil%theta(i) + dummy)
                         if (abs(sol%cml(i) - old) .lt. rer*sol%cml(i)) differ = .false.
                      end do
@@ -251,12 +247,12 @@ contains
             ! Aquifer breakthrough.
             if (sol%swbr .eq. 1) then
                if (surf%qdrtot .gt. 0.0d0) then
-                  sol%cdrain = sol%cdrain + sol%dtsolu/bdenskfsatporos(i) *          &
+                  sol%cdrain = sol%cdrain + sol%dtsolu/sol%bdenskfsatporos(i) *          &
                                ((isqdra - surf%qdrtot*sol%cdrain)/sol%daquif -       &
-                                sol%decsat*sol%cdrain*bdenskfsatporos(i))
+                                sol%decsat*sol%cdrain*sol%bdenskfsatporos(i))
                else
-                  sol%cdrain = sol%cdrain + sol%dtsolu/bdenskfsatporos(i) *          &
-                               (isqdra/sol%daquif - sol%decsat*sol%cdrain*bdenskfsatporos(i))
+                  sol%cdrain = sol%cdrain + sol%dtsolu/sol%bdenskfsatporos(i) *          &
+                               (isqdra/sol%daquif - sol%decsat*sol%cdrain*sol%bdenskfsatporos(i))
                end if
                sol%cseep = sol%cdrain
             end if

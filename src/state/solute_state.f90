@@ -31,6 +31,13 @@ module solute_state_mod
       real(real64), allocatable :: cml(:)    !! soil solute concentration (M/L3 water) in mobile region
       real(real64), allocatable :: cmsy(:)   !! dissolved + adsorbed solute concentration (M/L3 soil volume)
 
+      ! Derived time-invariant coefficients (filled once in solute_seed).
+      real(real64), allocatable :: bdenskf(:)          !! bdens*kf per node (-)
+      real(real64), allocatable :: bdenskfcref(:)      !! bdenskf*cref per node (M/L3)
+      real(real64), allocatable :: bdenskfsatporos(:)  !! bdens*kfsat+poros per node (-)
+      real(real64), allocatable :: ddiffwcs(:)         !! ddif/thetsl**2 per node (cm2/d)
+      real(real64), allocatable :: decpotfdepth(:)     !! decpot*fdepth per node (1/d)
+
       ! === config-snapshot scalars (snapshotted from config%solute at config_to_variables) ===
       ! Bottom BC / aquifer:
       integer      :: swbotbc = 0           !! bottom-BC type for solute concentration
@@ -134,6 +141,16 @@ contains
       n = numnod
       if (.not. allocated(self%cml))  allocate(self%cml(n))
       if (.not. allocated(self%cmsy)) allocate(self%cmsy(n))
+      if (.not. allocated(self%bdenskf))         allocate(self%bdenskf(n))
+      if (.not. allocated(self%bdenskfcref))     allocate(self%bdenskfcref(n))
+      if (.not. allocated(self%bdenskfsatporos)) allocate(self%bdenskfsatporos(n))
+      if (.not. allocated(self%ddiffwcs))        allocate(self%ddiffwcs(n))
+      if (.not. allocated(self%decpotfdepth))    allocate(self%decpotfdepth(n))
+      self%bdenskf(:)         = 0.0_real64
+      self%bdenskfcref(:)     = 0.0_real64
+      self%bdenskfsatporos(:) = 0.0_real64
+      self%ddiffwcs(:)        = 0.0_real64
+      self%decpotfdepth(:)    = 0.0_real64
 
       ! swinco=3 (warm restart): cml_init holds the per-node initial profile
       ! populated by config_to_variables. Other swinco values: solute task=1
