@@ -734,12 +734,12 @@ contains
    !! Date: Aug 2004
    !! @endnote
    !!
+   !> Narrative orchestrator for soil water initialization. Each phase is
+   !> delegated to a named private helper; the storage/groundwater finalize
+   !> is kept inline.
    subroutine soilwater_seed(state)
-      use swap_array_dimensions, only: macp, mabbc, matabentries
       use swap_log, only: log_info, to_str
-      use array_utils, only: afgen
-      use soilhydraulics_utils, only: watcon, hconduc, moiscap, hcomean
-      use soilwaterbalance_mod, only: calcgwl, watstor, integral, fluxes
+      use soilwaterbalance_mod, only: calcgwl, watstor
       use swap_state_mod, only: swap_state_t
       use, intrinsic :: iso_fortran_env, only: real64
       implicit none
@@ -748,20 +748,50 @@ contains
       type(swap_state_t), intent(inout) :: state
 
       ! Local variables
-      integer lay,node,i,j
+      integer i
 
-      real(8) tab(mabbc*2)
-      character(len=200) messag
+      call init_soil_misc(state)
+      call populate_hydraulic_params(state)
+      call apply_soil_initial_conditions(state)
+      call compute_initial_node_hydraulics(state)
+
+      associate (mesh => state%mesh,         &
+                 soil => state%soilwater)
+
+      ! Initial soil water storage
+      do i = 1, mesh%numnod
+         soil%FrArMtrx(i) = 1.0_real64
+      enddo
+      soil%volact = 0.0_real64
+      call watstor (state)
+      soil%volini = soil%volact
+      soil%pondini = soil%pond
+
+      ! Initial groundwater level
+      call calcgwl (state)
+
+      call log_info('soilwater', 'Soil state initialized: gwl=' // to_str(real(soil%gwl,4)) // &
+                    ' cm, numnod=' // to_str(mesh%numnod) // ', numlay=' // to_str(mesh%numlay) // &
+                    ', volini=' // to_str(real(soil%volini,4)) // ' cm')
+
+      end associate
+
+      return
+      end subroutine soilwater_seed
+
+   !> Initialize miscellaneous soil water rate/state variables.
+   subroutine init_soil_misc(state)
+      use swap_state_mod, only: swap_state_t
+      use, intrinsic :: iso_fortran_env, only: real64
+      implicit none
+      type(swap_state_t), intent(inout) :: state
+
+      integer i
 
       associate (mesh => state%mesh,         &
                  soil => state%soilwater,    &
-                 drai => state%drainage,     &
                  heat => state%heat,         &
-                 atmo => state%atmosphere,   &
-                 time => state%timecontrol,  &
-                 soil_cfg => state%cfg%soil, &
-                 hyd => state%cfg%soil%hydraulics, &
-                 swbotb => state%soilwater%swbotb_runtime)
+                 atmo => state%atmosphere)
 
          ! Initialize Soilwater rate/state variables
 
@@ -784,6 +814,24 @@ contains
       if (allocated(heat%rfcp)) heat%rfcp = 1.0d0
       state%surfacewater%vtair = 0.0d0
       ! cQMpLatSs retired-zero write dropped (ADR 0040 macropore).
+
+      end associate
+      end subroutine init_soil_misc
+
+   !> Populate per-layer and per-node Van Genuchten hydraulic parameters,
+   !> saturated/residual water contents, and hysteresis branch selection.
+   subroutine populate_hydraulic_params(state)
+      use swap_state_mod, only: swap_state_t
+      use, intrinsic :: iso_fortran_env, only: real64
+      implicit none
+      type(swap_state_t), intent(inout) :: state
+
+      integer lay, node
+
+      associate (mesh => state%mesh,         &
+                 soil => state%soilwater,    &
+                 soil_cfg => state%cfg%soil, &
+                 hyd => state%cfg%soil%hydraulics)
 
       ! Soil physics: tabulated or MualemVanGenuchten functions
       ! Mirror mesh%layer into state.
@@ -884,6 +932,29 @@ contains
         endif
       end do
 
+      end associate
+      end subroutine populate_hydraulic_params
+
+   !> Apply initial conditions per SWINCO: input pressure-head profile,
+   !> initial groundwater level, or profile derived from groundwater level.
+   subroutine apply_soil_initial_conditions(state)
+      use swap_array_dimensions, only: macp, mabbc
+      use array_utils, only: afgen
+      use swap_state_mod, only: swap_state_t
+      use, intrinsic :: iso_fortran_env, only: real64
+      implicit none
+      type(swap_state_t), intent(inout) :: state
+
+      integer i, j
+      real(8) tab(mabbc*2)
+      character(len=200) messag
+
+      associate (mesh => state%mesh,         &
+                 soil => state%soilwater,    &
+                 time => state%timecontrol,  &
+                 soil_cfg => state%cfg%soil, &
+                 swbotb => state%soilwater%swbotb_runtime)
+
       if (soil%swinco.eq.1) then
          ! Pressure head profile is input
          ! z_init from state%cfg%soil%initial; h values already in soil%h
@@ -956,6 +1027,25 @@ contains
         end do
       endif
 
+      end associate
+      end subroutine apply_soil_initial_conditions
+
+   !> Compute initial water contents, differential moisture capacities, and
+   !> hydraulic conductivities (incl. internodal means) for each node.
+   subroutine compute_initial_node_hydraulics(state)
+      use soilhydraulics_utils, only: watcon, hconduc, moiscap, hcomean
+      use swap_state_mod, only: swap_state_t
+      use, intrinsic :: iso_fortran_env, only: real64
+      implicit none
+      type(swap_state_t), intent(inout) :: state
+
+      integer i, node
+
+      associate (mesh => state%mesh,         &
+                 soil => state%soilwater,    &
+                 heat => state%heat,         &
+                 time => state%timecontrol)
+
       ! In case of preferential flow, adjust Van Genuchten parameters
       do i = 1, mesh%numnod
         soil%theta(i) = watcon(soil%h(i), &
@@ -984,26 +1074,8 @@ contains
       end do
       soil%kmean(mesh%numnod+1) = soil%k(mesh%numnod)
 
-      ! Initial soil water storage
-      do i = 1, mesh%numnod
-         soil%FrArMtrx(i) = 1.0_real64
-      enddo
-      soil%volact = 0.0_real64
-      call watstor (state)
-      soil%volini = soil%volact
-      soil%pondini = soil%pond
-
-      ! Initial groundwater level
-      call calcgwl (state)
-
-      call log_info('soilwater', 'Soil state initialized: gwl=' // to_str(real(soil%gwl,4)) // &
-                    ' cm, numnod=' // to_str(mesh%numnod) // ', numlay=' // to_str(mesh%numlay) // &
-                    ', volini=' // to_str(real(soil%volini,4)) // ' cm')
-
       end associate
-
-      return
-      end subroutine soilwater_seed
+      end subroutine compute_initial_node_hydraulics
 
    subroutine soilwater_step(state)
       use swap_array_dimensions, only: macp, mabbc, matabentries
