@@ -27,9 +27,8 @@ contains
       use swap_array_dimensions, only: macp, mabbc
       use swap_log, only: log_warn, log_debug, to_str
       use boundbottom_mod, only: BoundBottom
-      use boundtop_mod, only: boundtop, PONDRUNOFF
+      use boundtop_mod, only: PONDRUNOFF
       use rootextraction_mod, only: RootExtraction
-      use array_utils, only: afgen
       use soilhydraulics_utils, only: watcon, hconduc, moiscap, hcomean, dhconduc
       use swap_constants, only: nihil
       use swap_state_mod, only: swap_state_t
@@ -216,6 +215,7 @@ contains
          end do
       end if
 
+      ! Lysimeter plate-contact flag: based on pre-iteration h(NN); computed here (not in the helper) so boundtop cannot change it mid-step.
       flboth = (swbotb .eq. 8 .and. soil%h(NN) .gt. Critdz - mesh%disnod(NN+1) + bb_cfg%hplate)
 
       call headcalc_residual(state, NN, sink, source, flboth, hgrad, F)
@@ -628,9 +628,7 @@ contains
 
       associate (mesh => state%mesh,         &
                  soil => state%soilwater,    &
-                 drai => state%drainage,     &
                  heat => state%heat,         &
-                 atmo => state%atmosphere,   &
                  time => state%timecontrol,  &
                  bb_cfg => state%cfg%bottom_boundary,  &
                  swbotb => state%soilwater%swbotb_runtime)
@@ -665,6 +663,7 @@ contains
          hgrad(NN+1) = (soil%h(NN) - bb_cfg%hplate) / mesh%disnod(NN+1)  + 1.0d0
       end if
 
+      ! NB: term order unified from the two original residual blocks; SWBOTB=1 is dark in the regression suite, so this is byte-identical there (algebraically identical regardless).
       if(swbotb.eq.1 .and. (.not.soil%fllowgwl))then
          soil%theta(NN)= watcon(soil%h(NN), &
                               soil%vg_params(NN), &
