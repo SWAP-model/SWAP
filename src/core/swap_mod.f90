@@ -280,7 +280,7 @@ contains
       use frozencond_mod,     only: FrozenCond, FrozenBounds
       use temperature_mod,    only: temperature_step
       use solute_mod,         only: solute_step
-      use soilhydraulics_mod, only: soilwater_step, soilwater_update, SoilWaterStateVar
+      use soilhydraulics_mod, only: soilwater_step, soilwater_update, soilwater_restore_state
       use irrigation_mod,     only: irrigation_step, ssdi_irrigation_step
       use management_soil_mod, only: SoilManagement
       use drainage_mod,       only: drainage
@@ -350,7 +350,7 @@ contains
             if (request_smaller_dt) time%fldecdt = .true.
 
             if (time%fldecdt) then
-               call SoilWaterStateVar(2, state)
+               call soilwater_restore_state(state)
                call timecontrol_reduce_dt(state)
                time%fldtreduce = .true.
             end if

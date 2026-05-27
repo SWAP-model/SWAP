@@ -9,7 +9,7 @@ module soilhydraulics_mod
    ! Core hydraulic calculations
    implicit none
    private
-   public :: headcalc, soilwater_seed, soilwater_step, soilwater_update, soilwaterstatevar, hysteresis
+   public :: headcalc, soilwater_seed, soilwater_step, soilwater_update, soilwater_save_state, soilwater_restore_state, hysteresis
 contains
 
    !> Calculate pressure heads, water contents, and conductivities for next time step
@@ -1183,7 +1183,7 @@ contains
       endif
 
       ! Save state variables of time = t
-      call SoilWaterStateVar(1, state)
+      call soilwater_save_state(state)
 
       ! Calculate new soil water state variables
       call headcalc(state)
@@ -1279,52 +1279,58 @@ contains
    !! Manages state variable storage for time stepping. Can save current state
    !! or reset to previous state (useful for adaptive time stepping).
    !!
-   !! @param[in] task Task selector: 1=save state, 2=reset state
-   !!
    !! @note
    !! Date: January 2007
    !! @endnote
    !!
-   subroutine SoilWaterStateVar(task, state)
+   subroutine soilwater_save_state(state)
       use swap_state_mod, only: swap_state_t
       use, intrinsic :: iso_fortran_env, only: real64
       implicit none
 
-      integer,            intent(in)    :: task
       type(swap_state_t), intent(inout) :: state
 
       integer :: i
 
       associate (mesh => state%mesh, soil => state%soilwater)
 
-         select case (task)
-         case (1)
-            ! Save state variables at time = t.
-            do i = 1, mesh%numnod
-               soil%hm1(i)    = soil%h(i)
-               soil%thetm1(i) = soil%theta(i)
-            end do
-            soil%gwlm1  = soil%gwl
-            soil%pondm1 = soil%pond
-
-         case (2)
-            ! Reset soil state variables.
-            do i = 1, mesh%numnod
-               soil%h(i)     = soil%hm1(i)
-               soil%theta(i) = soil%thetm1(i)
-            end do
-            soil%kmean(mesh%numnod + 1) = soil%k(mesh%numnod)
-            soil%gwl  = soil%gwlm1
-            soil%pond = soil%pondm1
-
-         case default
-            call fatalerr_collected('SoilWaterStateVar', 'Illegal value for TASK')
-         end select
+         ! Save state variables at time = t.
+         do i = 1, mesh%numnod
+            soil%hm1(i)    = soil%h(i)
+            soil%thetm1(i) = soil%theta(i)
+         end do
+         soil%gwlm1  = soil%gwl
+         soil%pondm1 = soil%pond
 
       end associate
 
       return
-      end subroutine SoilWaterStateVar
+      end subroutine soilwater_save_state
+
+   subroutine soilwater_restore_state(state)
+      use swap_state_mod, only: swap_state_t
+      use, intrinsic :: iso_fortran_env, only: real64
+      implicit none
+
+      type(swap_state_t), intent(inout) :: state
+
+      integer :: i
+
+      associate (mesh => state%mesh, soil => state%soilwater)
+
+         ! Reset soil state variables.
+         do i = 1, mesh%numnod
+            soil%h(i)     = soil%hm1(i)
+            soil%theta(i) = soil%thetm1(i)
+         end do
+         soil%kmean(mesh%numnod + 1) = soil%k(mesh%numnod)
+         soil%gwl  = soil%gwlm1
+         soil%pond = soil%pondm1
+
+      end associate
+
+      return
+      end subroutine soilwater_restore_state
 
    !> Check for hysteretic reversal and update model parameters
    !!
