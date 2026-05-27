@@ -331,7 +331,6 @@ contains
                                     soil%iHWCKmodel(soil%layer(i)), &
                                     time%dt, &
                                     i, soil)
-            soil%dimoca(i) = soil%dimoca(i)
 
          enddo
 
@@ -437,23 +436,21 @@ contains
             iBackTr = iBackTr + 1
             ! Factor reduces the change of h (difh) calculated as a full
             ! Newton Raphson step
-            if(time%fldtmin .and. soil%numbit.gt.time%MaxIt)then            
+            if(time%fldtmin .and. soil%numbit.gt.time%MaxIt)then
                factmax = 0.0d0
                do i = 1,NN
                   if(dabs( hold(i) ) .lt. 1.0d0 )then
-                     factmax = max( factmax, dabs( difh(i) ) ) 
+                     factmax = max( factmax, dabs( difh(i) ) )
                   else
                      factmax = max( factmax, dabs( difh(i) / hold(i) ) )
                   end if
                end do
                do i = 1,NN
                   soil%h(i) = hold(i) - difh(i) * min(1.0d0, 1.0d0 / factmax)
-                  soil%h(i) = soil%h(i)
                end do
             else
                do i = 1,NN
                   soil%h(i) = hold(i) - factor * difh(i)
-                  soil%h(i) = soil%h(i)
                end do
             end if
             do i = 1,NN
@@ -461,7 +458,6 @@ contains
                                    soil%vg_params(i), &
                                    soil%iHWCKmodel(soil%layer(i)), &
                                    i, soil)
-              soil%theta(i) = soil%theta(i)
             enddo
             do i=2,NN
                hgrad(i) = (soil%h(i-1)-soil%h(i))/mesh%disnod(i) + 1.0d0
@@ -476,13 +472,10 @@ contains
                                     soil%iHWCKmodel(soil%layer(i)), &
                                     soil%fluseksatexm(i), &
                                     i, soil)
-                  soil%k(i) = soil%k(i)
                   if(i.gt.1)then
                      soil%kmean(i)=hcomean(state%cfg%simulation%numerical%swkmean,soil%k(i-1),soil%k(i),mesh%dz(i-1),mesh%dz(i))
-                     soil%kmean(i) = soil%kmean(i)
                   end if
                end do
-               soil%kmean(NN+1) = soil%k(NN)
                soil%kmean(NN+1) = soil%k(NN)
             end if
 
@@ -499,12 +492,8 @@ contains
                endif
                if(i.gt.1)then
                  soil%kmean(i)=hcomean(state%cfg%simulation%numerical%swkmean,soil%k(i-1),soil%k(i),mesh%dz(i-1),mesh%dz(i))
-                 soil%kmean(i) = soil%kmean(i)
                  soil%kmean(i+1)=hcomean(state%cfg%simulation%numerical%swkmean,soil%k(i),soil%k(i+1),mesh%dz(i),mesh%dz(i+1))
-                 soil%kmean(i+1) = soil%kmean(i+1)
                end if
-               soil%k(i) = soil%k(i)
-               if (flcaprise) soil%k(i+1) = soil%k(i+1)
             endif
 
             ! Calculate F-function
@@ -544,16 +533,13 @@ contains
                                      soil%vg_params(NN), &
                                      soil%iHWCKmodel(soil%layer(NN)), &
                                      NN, soil)
-               soil%theta(NN) = soil%theta(NN)
                soil%k(NN)     = hconduc(soil%h(NN),soil%theta(NN),heat%rfcp(NN),heat%tsoil(NN), &
                                       soil%vg_params(NN), &
                                       soil%iHWCKmodel(soil%layer(NN)), &
                                       soil%fluseksatexm(NN), &
                                       NN, soil)
-               soil%k(NN) = soil%k(NN)
                soil%kmean(NN+1) = hcomean(state%cfg%simulation%numerical%swkmean,soil%k(NN),soil%vg_params(NN+1)%ksat &
      &                       ,mesh%dz(NN),mesh%dz(NN+1))
-               soil%kmean(NN+1) = soil%kmean(NN+1)
                F(NN) = (soil%theta(NN) - soil%thetm1(NN))*soil%FrArMtrx(NN)*mesh%dz(NN)/time%dt  &
      &            - soil%kmean(NN) * hgrad(NN) + soil%kmean(NN+1) * hgrad(NN+1)   &
      &            + sink(NN) - source(NN) + soil%qrot(NN)
@@ -582,7 +568,6 @@ contains
                                                soil%iHWCKmodel(soil%layer(mesh%numnod)), &
                                                soil%fluseksatexm(mesh%numnod), &
                                                mesh%numnod, soil)
-                  soil%kmean(mesh%numnod+1) = soil%kmean(mesh%numnod+1)
                   soil%qbot = -1.0d0 * soil%kmean(mesh%numnod+1)
                   F(NN) = F(NN) - soil%qbot
                ! Lysimeter option
@@ -637,7 +622,6 @@ contains
             flnonconv2(i) = .false.
          end do
          flnonconv3 = .false.
-         flnonconv1(1) = flnonconv1(1) ! for Forcheck
 
          ! Apply performance criteria per compartment
          do i = 1,NN
@@ -656,7 +640,6 @@ contains
                   flnonconv2(i) = .true. ; flnonconv   = .true.
                endif
             end if
-            flnonconv2(1) = flnonconv2(1) ! for Forcheck
 
          enddo
 
@@ -668,7 +651,6 @@ contains
      &                - soil%runon*time%dt  +  soil%runots  - soil%qtop * time%dt
                if( abs(deviat) .gt. state%cfg%simulation%numerical%critdevponddt) then
                   flnonconv3 = .true. ; flnonconv   = .true.
-                  flnonconv3 = flnonconv3 ! for Forcheck
                end if
             end if
          end if
@@ -686,7 +668,6 @@ contains
                qv(1) = soil%qtop
                do i=NN+1,mesh%numnod
                   soil%theta(i) = soil%vg_params(i)%thetas
-                  soil%theta(i) = soil%theta(i)
                end do
                do i=1,mesh%numnod
                  qv(i+1) = qv(i) +mesh%dz(i)*soil%FrArMtrx(i)*(soil%theta(i)-soil%thetm1(i))&
@@ -696,7 +677,6 @@ contains
 
                do i=NN+1,mesh%numnod
                   soil%h(i) = soil%h(i-1) + mesh%disnod(i)*(qv(i)/soil%kmean(i)+1.0d0)
-                  soil%h(i) = soil%h(i)
                end do
 
             end if
@@ -726,11 +706,8 @@ contains
          ! Reset soil state variables
          do j = 1,mesh%numnod
             soil%h(j) = soil%hm1(j)
-            soil%h(j) = soil%h(j)
             soil%theta(j) = soil%thetm1(j)
-            soil%theta(j) = soil%theta(j)
          enddo
-         soil%kmean(mesh%numnod+1) = soil%k(mesh%numnod)
          soil%kmean(mesh%numnod+1) = soil%k(mesh%numnod)
          soil%gwl  = soil%gwlm1
          soil%pond = soil%pondm1
