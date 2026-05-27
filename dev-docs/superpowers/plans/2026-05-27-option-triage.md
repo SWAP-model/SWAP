@@ -41,7 +41,34 @@ swbotbc, swbotbhea, swsrf, swsec, swallo, swcompensate, swcirrthres.
 table filenames (`FILENAMESOPHY`). The triage `core=7` counted the dormant module. The
 soil-tabulated cluster is dropped.
 
-## Finalized cluster set
+## 2026-05-27 RE-TRIAGE — stub-guard reality (binding constraint)
+
+The grep-based support classification above **over-counted**: it credited dormant modules
+and config fields as "supported." The real gate is the modern build's **runtime
+stub-error guards** on the TOML path (`*_init.f90`, mirrored by config validators). A
+switch-value is buildable only if it is enum-allowed AND not stub-guarded AND has a TOML
+input path.
+
+**Stub-guarded / unsupported on the TOML path (crop subsystem — all crop types):**
+`swdrought=2`, `swco2=1`, `swharv=1`, `swcompensate/=0`, `swinter=2/3`, `swrd=1`,
+`swcf=3`, `swrdc=1`, `swtsum=2`, `swsalinity=2` (wofost; grass rejects swsalinity/=0
+entirely), grazing (`seqgrazmow/=2`/`schedule=1`), `swlossmow=1`, `swlossgrz=1`,
+`swsoybean`, `swbulb`, `swoxygen=2`. Plus `swsophy` (dormant). ⇒ **These clusters are
+DEAD:** drought-vanlier, grass-management, salinity-osmotic, soil-tabulated, and most of
+crop-calendar.
+
+**Genuinely supported (enum-allowed, NOT stub-guarded) — the realistic buildable set:**
+- Non-crop (no stub-guards in drainage/surfacewater/soil/bottom/heat/meteo init):
+  `swqhbot=1`, `swqhr=2`, `swbotbhea=2`, `swnrsrf=1/2`, `swdislay=1`, `swsec=1`,
+  `swsrf` variants, `swrain=1`, `swinco=1`, `swetsine=1`. (Caveat: `swmetdetail=1` forces
+  ssnow=0 — incompatible with snow; needs sub-daily meteo input.)
+- Crop (not in any stub-guard list): `swgc=2` (soil cover fraction), `swgerm=1`.
+
+Revised remaining clusters: **bottom-boundary** (swqhbot=1), **heat-bottom** (swbotbhea=2),
+**extended-drainage** (swnrsrf, swdislay), **surface-water-variants** (swsec=1, swqhr=2,
+swsrf), **meteo** (swrain=1, swinco=1, swetsine), **crop-modes** (swgc=2, swgerm=1).
+
+## Finalized cluster set (SUPERSEDED by the re-triage above for clusters 4–8)
 
 | # | Cluster | Base | Switches | Asserted columns |
 |---|---|---|---|---|
