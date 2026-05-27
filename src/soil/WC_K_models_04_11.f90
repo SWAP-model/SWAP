@@ -1,21 +1,33 @@
 module WC_K_models_04_11
    use error_mod, only: fatalerr_collected
    use iso_fortran_env, only: real64
+   use hydraulic_params_mod, only: vanGenuchten_params_t
 
 implicit none
 
-! curve parameters
-real(8)  :: WCr, WCs, Alpha1, Npar1, Mpar1, Alpha2, Npar2, Mpar2, Lpar, Ksat
-real(8)  :: ha, h0, Apar
-real(8)  :: Omega1, Omega2, OmegaK
-
-! local help variables
-real(8) :: nn, x, xa, x0, bb, t1, t2, t3, SSad
-real(8) :: Scap, Scap1, Scap2
-real(8) :: Gamh1, Gamh2, Gam01, Gam02
-real(8) :: Kcap, Kfilm, Kvap
-
-logical :: L_BiModal, L_NoVap
+!***************************************************************************************************************************
+! Soil hydraulic property library (Mualem-van Genuchten + PDI model variants, models 4-11).
+!
+! Given a pressure head h (cm), functionvalue_04_11 returns one of:
+!   iType=1 : water content            theta(h)
+!   iType=2 : hydraulic conductivity   K(h)
+!   iType=3 : differential moisture capacity  C(h) = d(theta)/dh
+!
+! for the following parameterisations (selected by `model`):
+!   4  MvG uni-modal              5  MvG uni-modal, saturation-corrected (_s)
+!   6  MvG bi-modal               7  MvG bi-modal, saturation-corrected
+!   8  PDI uni-modal              9  PDI uni-modal, saturation-corrected
+!   10 PDI bi-modal               11 PDI bi-modal, saturation-corrected
+! The PDI variants add an adsorptive water term (Sad) plus film and vapour
+! conductivity contributions on top of the capillary (MvG) term.
+!
+! This routine is called per node per Newton iteration via watcon/hconduc/moiscap.
+!
+! REENTRANT / THREAD-SAFE: all curve parameters travel through `vg`
+! (vanGenuchten_params_t, the dispatcher's input) and the model flags
+! is_bimodal/no_vap are passed explicitly; intermediate "help" quantities are
+! function-local. The module holds NO mutable state.
+!***************************************************************************************************************************
 
 ! functionvalue_04_11 is the sole public symbol
 private
@@ -24,7 +36,6 @@ public    :: functionvalue_04_11
 contains
 
 function functionvalue_04_11(iType, h, vg, model, is_bimodal, no_vap, wc, temp) result(val)
-   use hydraulic_params_mod, only: vanGenuchten_params_t
    implicit none
 
    integer,                     intent(in)           :: iType
@@ -39,129 +50,73 @@ function functionvalue_04_11(iType, h, vg, model, is_bimodal, no_vap, wc, temp) 
 ! local
 real(8), parameter :: dummy = 0.0d0
 
-! local information
-L_BiModal = is_bimodal
-L_NoVap   = no_vap
-
-! for all cases
-WCr    = vg%thetar
-WCs    = vg%thetas
-Ksat   = vg%ksat
-Alpha1 = vg%alpha
-Lpar   = vg%lpar
-Npar1  = vg%npar
-Mpar1  = vg%mpar
-
-select case (model)
-
-   case (4)
-      ! no additional settings needed
-      continue
-
-   case (5)
-      h0 = vg%h0
-
-   case (6)
-      Alpha2 = vg%alpha_2
-      Npar2  = vg%npar_2
-      Mpar2  = vg%mpar_2
-      Omega1 = vg%omega_1
-      Omega2 = vg%omega_2
-
-   case (7)
-      Alpha2 = vg%alpha_2
-      Npar2  = vg%npar_2
-      Mpar2  = vg%mpar_2
-      Omega1 = vg%omega_1
-      Omega2 = vg%omega_2
-      h0     = vg%h0
-
-   case (8,9)
-      h0     = vg%h0
-      ha     = vg%ha
-      Apar   = vg%apar
-      OmegaK = vg%omega_k
-
-   case (10,11)
-      Alpha2 = vg%alpha_2
-      Npar2  = vg%npar_2
-      Mpar2  = vg%mpar_2
-      Omega1 = vg%omega_1
-      Omega2 = vg%omega_2
-      h0     = vg%h0
-      ha     = vg%ha
-      Apar   = vg%apar
-      OmegaK = vg%omega_k
-
-end select
-
 select case (iType)
 case (1)
    select case (model)
-      case (4);  val = WC_MvG (h)
-      case (5);  val = WC_MvG_s (h)
-      case (6);  val = WC_MvG_2 (h)
-      case (7);  val = WC_MvG_2_s (h)
-      case (8);  val = WC_PDI (h)
-      case (9);  val = WC_PDI_s (h)
-      case (10); val = WC_PDI_2 (h)
-      case (11); val = WC_PDI_2_s (h)
+      case (4);  val = WC_MvG (h, vg)
+      case (5);  val = WC_MvG_s (h, vg)
+      case (6);  val = WC_MvG_2 (h, vg)
+      case (7);  val = WC_MvG_2_s (h, vg)
+      case (8);  val = WC_PDI (h, vg, is_bimodal)
+      case (9);  val = WC_PDI_s (h, vg, is_bimodal)
+      case (10); val = WC_PDI_2 (h, vg, is_bimodal)
+      case (11); val = WC_PDI_2_s (h, vg, is_bimodal)
    end select
 
 case (2)
    select case (model)
-      case (4);  val = K_MvG (h)
-      case (5);  val = K_MvG_s (h)
-      case (6);  val = K_MvG_2 (h)
-      case (7);  val = K_MvG_2_s (h)
+      case (4);  val = K_MvG (h, vg)
+      case (5);  val = K_MvG_s (h, vg)
+      case (6);  val = K_MvG_2 (h, vg)
+      case (7);  val = K_MvG_2_s (h, vg)
       case (8)
-         if (L_NoVap) then
-            val = K_PDI (h,dummy,dummy)
+         if (no_vap) then
+            val = K_PDI (h,dummy,dummy, vg, is_bimodal, no_vap)
          else
             ! both wc and temp must be present as input
             if (.not.present(wc) .or. .not.present(temp)) call fatalerr_collected ('functionvalue_04_11','For Kvap both WC and TEMP must be given as arguments')
-            val = K_PDI (h,wc,temp)
+            val = K_PDI (h,wc,temp, vg, is_bimodal, no_vap)
          end if
 
       case (9)
-         if (L_NoVap) then
-            val = K_PDI_s (h,dummy,dummy)
+         if (no_vap) then
+            val = K_PDI_s (h,dummy,dummy, vg, is_bimodal, no_vap)
          else
             ! both wc and temp must be present as input
             if (.not.present(wc) .or. .not.present(temp)) call fatalerr_collected ('functionvalue_04_11','For Kvap both WC and TEMP must be given as arguments')
-            val = K_PDI_s (h,wc,temp)
+            val = K_PDI_s (h,wc,temp, vg, is_bimodal, no_vap)
          end if
 
       case (10)
-         if (L_NoVap) then
-            val = K_PDI_2 (h,dummy,dummy)
+         if (no_vap) then
+            val = K_PDI_2 (h,dummy,dummy, vg, is_bimodal, no_vap)
          else
             ! both wc and temp must be present as input
             if (.not.present(wc) .or. .not.present(temp)) call fatalerr_collected ('functionvalue_04_11','For Kvap both WC and TEMP must be given as arguments')
-            val = K_PDI_2 (h,wc,temp)
+            val = K_PDI_2 (h,wc,temp, vg, is_bimodal, no_vap)
          end if
 
       case (11)
-         if (L_NoVap) then
-            val = K_PDI_2_s (h,dummy,dummy)
+         if (no_vap) then
+            val = K_PDI_2_s (h,dummy,dummy, vg, is_bimodal, no_vap)
          else
             ! both wc and temp must be present as input
             if (.not.present(wc) .or. .not.present(temp)) call fatalerr_collected ('functionvalue_04_11','For Kvap both WC and TEMP must be given as arguments')
-            val = K_PDI_2_s (h,wc,temp)
+            val = K_PDI_2_s (h,wc,temp, vg, is_bimodal, no_vap)
          end if
 
    end select
 
 case (3)
    select case (model)
-      case (4);  val = C_MvG (h)
-      case (5);  val = C_MvG_s (h)
-      case (6);  val = C_MvG_2 (h)
-      case (7);  val = C_MvG_2_s (h)
-      case (8);  val = C_PDI (h)
-      case (9);  val = C_PDI_s (h)
-      case (10); val = C_PDI_2 (h)
-      case (11); val = C_PDI_2_s (h)
+      case (4);  val = C_MvG (h, vg)
+      case (5);  val = C_MvG_s (h, vg)
+      case (6);  val = C_MvG_2 (h, vg)
+      case (7);  val = C_MvG_2_s (h, vg)
+      case (8);  val = C_PDI (h, vg, is_bimodal)
+      case (9);  val = C_PDI_s (h, vg, is_bimodal)
+      case (10); val = C_PDI_2 (h, vg, is_bimodal)
+      case (11); val = C_PDI_2_s (h, vg, is_bimodal)
    end select
 
 case default
@@ -176,48 +131,60 @@ end function functionvalue_04_11
 ! There are 7 help functions (Gamm1, Gamm2, b, Sad, Kvap_func, C1, C2)
 !***************************************************************************************************************************
 
-function Gamma1 (h)
+function Gamma1 (h, vg)
 real(8) :: h, Gamma1
-Gamma1 = (1.0d0 + (Alpha1*h)**(Npar1))**(-Mpar1)
+type(vanGenuchten_params_t), intent(in) :: vg
+Gamma1 = (1.0d0 + (vg%alpha*h)**(vg%npar))**(-vg%mpar)
 end function Gamma1
 
-function Gamma2 (h)
+function Gamma2 (h, vg)
 real(8) :: h, Gamma2
-Gamma2 = (1.0d0 + (Alpha2*h)**(Npar2))**(-Mpar2)
+type(vanGenuchten_params_t), intent(in) :: vg
+Gamma2 = (1.0d0 + (vg%alpha_2*h)**(vg%npar_2))**(-vg%mpar_2)
 end function Gamma2
 
-function b ()
+function b (vg, is_bimodal)
 real(8) :: b
-if (.not. L_BiModal) then
-   b  = 0.1d0 + 0.2d0/Npar1**2 * (1.0d0 - dexp(-((WCr/(WCs-WCr))**2)))
+type(vanGenuchten_params_t), intent(in) :: vg
+logical, intent(in) :: is_bimodal
+real(8) :: nn
+if (.not. is_bimodal) then
+   b  = 0.1d0 + 0.2d0/vg%npar**2 * (1.0d0 - dexp(-((vg%thetar/(vg%thetas-vg%thetar))**2)))
 else
-   nn = Npar1
-   if (Alpha2 > Alpha1) nn = Npar2
-   b  = 0.1d0 + 0.2d0/nn**2 * (1.0d0 - dexp(-((WCr/(WCs-WCr))**2)))
+   nn = vg%npar
+   if (vg%alpha_2 > vg%alpha) nn = vg%npar_2
+   b  = 0.1d0 + 0.2d0/nn**2 * (1.0d0 - dexp(-((vg%thetar/(vg%thetas-vg%thetar))**2)))
 end if
 end function b
 
-function Sad (h)
+function Sad (h, vg, is_bimodal)
 real(8) :: Sad, h
-xa = dlog10(ha)
-x0 = dlog10(h0)
+type(vanGenuchten_params_t), intent(in) :: vg
+logical, intent(in) :: is_bimodal
+real(8) :: x, xa, x0, bb
+xa = dlog10(vg%ha)
+x0 = dlog10(vg%h0)
 x  = dlog10(h)
-bb = b()
+bb = b(vg, is_bimodal)
 Sad = 1.0d0 + (x - xa + bb*dlog(1.0d0 + dexp((xa-x)/bb))) / (xa - x0)
 end function Sad
 
-function dSad_dh (h)
+function dSad_dh (h, vg, is_bimodal)
 real(8) :: dSad_dh, h
-xa = dlog10(ha)
-x0 = dlog10(h0)
+type(vanGenuchten_params_t), intent(in) :: vg
+logical, intent(in) :: is_bimodal
+real(8) :: x, xa, x0, bb
+xa = dlog10(vg%ha)
+x0 = dlog10(vg%h0)
 x  = dlog10(h)
-bb = b()
+bb = b(vg, is_bimodal)
 dSad_dh = -1.0d0/(h*dlog(10.0d0)*(xa-x0) * (1.0d0 + dexp((xa-x)/bb)))
 end function dSad_dh
 
-function Kvap_func (WC, h, Temp)
+function Kvap_func (WC, h, Temp, vg)
 ! Temp in degree Celsius
 real(8), intent(in)    :: WC, h, Temp
+type(vanGenuchten_params_t), intent(in) :: vg
 real(8)                :: Kvap_func, ksi, D, Hr
 real(8)                :: fKvap, Da, MgRT, Rho_sv
 real(8), parameter     :: p = 7.0d0/3.0d0
@@ -231,402 +198,462 @@ MgRT      = MgR/(Temp+273.15d0)
 Da        = 2.14d-5*((Temp+273.15d0)/273.15d0)**2                                ! diffusivity of water vapor in air; m2/s
 Rho_sv    = 1.0d-3*dexp(31.3716d0 - 6014.79d0/Temp - 7.92495d-3*Temp)/Temp       ! saturated vapor density; kg/m3
 fKvap     = Rho_sv/Rho_w * MgRT
-ksi       = (WCs-WC)**p/WCs**2
-D         = ksi*(WCs-WC)*Da
+ksi       = (vg%thetas-WC)**p/vg%thetas**2
+D         = ksi*(vg%thetas-WC)*Da
 Hr        = dexp(h/100.0d0*MgRT)     ! h must be in m, thus h (cm) is idvided by 100
 Kvap_func = fKvap*D*Hr
 end function Kvap_func
 
-function C1 (h)
+function C1 (h, vg)
 real(8) :: h, C1
-C1 = Alpha1*Npar1*Mpar1*(Alpha1*dabs(h))**(Npar1-1.0d0)*(1.0d0+(Alpha1*dabs(h))**Npar1)**(-Mpar1-1.0d0)
+type(vanGenuchten_params_t), intent(in) :: vg
+C1 = vg%alpha*vg%npar*vg%mpar*(vg%alpha*dabs(h))**(vg%npar-1.0d0)*(1.0d0+(vg%alpha*dabs(h))**vg%npar)**(-vg%mpar-1.0d0)
 end function C1
 
-function C2 (h)
+function C2 (h, vg)
 real(8) :: h, C2
-C2 = Alpha2*Npar2*Mpar2*(Alpha2*dabs(h))**(Npar2-1.0d0)*(1.0d0+(Alpha2*dabs(h))**Npar2)**(-Mpar2-1.0d0)
+type(vanGenuchten_params_t), intent(in) :: vg
+C2 = vg%alpha_2*vg%npar_2*vg%mpar_2*(vg%alpha_2*dabs(h))**(vg%npar_2-1.0d0)*(1.0d0+(vg%alpha_2*dabs(h))**vg%npar_2)**(-vg%mpar_2-1.0d0)
 end function C2
-   
-function WC_MvG (h)
+
+function WC_MvG (h, vg)
 real(8), intent(in)    :: h
+type(vanGenuchten_params_t), intent(in) :: vg
 real(8)                :: WC_MvG
+real(8)                :: Scap
 
 if (h >= 0.0d0) then
-   WC_MvG = WCs
+   WC_MvG = vg%thetas
 else
-   Scap = Gamma1 (dabs(h))
-   WC_MvG = WCr + Scap*(WCs-WCr)
+   Scap = Gamma1 (dabs(h), vg)
+   WC_MvG = vg%thetar + Scap*(vg%thetas-vg%thetar)
 end if
 
 end function WC_MvG
 
-function WC_MvG_s (h)
+function WC_MvG_s (h, vg)
 real(8), intent(in)    :: h
+type(vanGenuchten_params_t), intent(in) :: vg
 real(8)                :: WC_MvG_s
+real(8)                :: Gam01, Gamh1, Scap
 
 if (h >= 0.0d0) then
-   WC_MvG_s = WCs
+   WC_MvG_s = vg%thetas
 else
-   Gam01 = Gamma1 (dabs(h0))
-   Gamh1 = Gamma1 (dabs(h))
+   Gam01 = Gamma1 (dabs(vg%h0), vg)
+   Gamh1 = Gamma1 (dabs(h), vg)
    Scap = (Gamh1 - Gam01) / (1.0d0 - Gam01)
-   WC_MvG_s = WCr + Scap*(WCs-WCr)
+   WC_MvG_s = vg%thetar + Scap*(vg%thetas-vg%thetar)
 end if
 
 end function WC_MvG_s
 
-function WC_MvG_2 (h)
+function WC_MvG_2 (h, vg)
 real(8), intent(in)    :: h
+type(vanGenuchten_params_t), intent(in) :: vg
 real(8)                :: WC_MvG_2
+real(8)                :: Gamh1, Gamh2, Scap
 
 if (h >= 0.0d0) then
-   WC_MvG_2 = WCs
+   WC_MvG_2 = vg%thetas
 else
-   Gamh1 = Gamma1 (dabs(h))
-   Gamh2 = Gamma2 (dabs(h))
-   Scap = Omega1 * Gamh1 + Omega2 * Gamh2
-   WC_MvG_2 = WCr + Scap*(WCs-WCr)
+   Gamh1 = Gamma1 (dabs(h), vg)
+   Gamh2 = Gamma2 (dabs(h), vg)
+   Scap = vg%omega_1 * Gamh1 + vg%omega_2 * Gamh2
+   WC_MvG_2 = vg%thetar + Scap*(vg%thetas-vg%thetar)
 end if
 
 end function WC_MvG_2
 
-function WC_MvG_2_s (h)
+function WC_MvG_2_s (h, vg)
 real(8), intent(in)    :: h
+type(vanGenuchten_params_t), intent(in) :: vg
 real(8)                :: WC_MvG_2_s
+real(8)                :: Gam01, Gamh1, Gam02, Gamh2, Scap
 
 if (h >= 0.0d0) then
-   WC_MvG_2_s = WCs
+   WC_MvG_2_s = vg%thetas
 else
-   Gam01 = Omega1 * Gamma1 (dabs(h0))
-   Gamh1 = Omega1 * Gamma1 (dabs(h))
-   Gam02 = Omega2 * Gamma2 (dabs(h0))
-   Gamh2 = Omega2 * Gamma2 (dabs(h))
+   Gam01 = vg%omega_1 * Gamma1 (dabs(vg%h0), vg)
+   Gamh1 = vg%omega_1 * Gamma1 (dabs(h), vg)
+   Gam02 = vg%omega_2 * Gamma2 (dabs(vg%h0), vg)
+   Gamh2 = vg%omega_2 * Gamma2 (dabs(h), vg)
    Scap = (Gamh1 + Gamh2 - Gam01 - Gam02) / (1.0d0 - Gam01 - Gam02)
-   WC_MvG_2_s = WCr + Scap*(WCs-WCr)
+   WC_MvG_2_s = vg%thetar + Scap*(vg%thetas-vg%thetar)
 end if
 
 end function WC_MvG_2_s
 
-function K_MvG (h)
+function K_MvG (h, vg)
 implicit none
 real(8), intent(in)          :: h
+type(vanGenuchten_params_t), intent(in) :: vg
 real(8)                      :: K_MvG
+real(8)                      :: Scap
 
 if (h >= 0.0d0) then
-   K_MvG = Ksat
+   K_MvG = vg%ksat
 else
-   Scap = Gamma1 (dabs(h))
-   K_MvG = Ksat * Scap**Lpar * (1.0d0 - (1.0d0 - Scap**(1.0d0/Mpar1))**Mpar1)**2
+   Scap = Gamma1 (dabs(h), vg)
+   K_MvG = vg%ksat * Scap**vg%lpar * (1.0d0 - (1.0d0 - Scap**(1.0d0/vg%mpar))**vg%mpar)**2
 end if
 
 end function K_MvG
 
-function K_MvG_s (h)
+function K_MvG_s (h, vg)
 implicit none
 real(8), intent(in)          :: h
+type(vanGenuchten_params_t), intent(in) :: vg
 real(8)                      :: K_MvG_s
+real(8)                      :: Gam01, Gamh1, Scap
 
 if (h >= 0.0d0) then
-   K_MvG_s = Ksat
+   K_MvG_s = vg%ksat
 else
-   Gam01 = Gamma1 (dabs(h0))
-   Gamh1 = Gamma1 (dabs(h))
+   Gam01 = Gamma1 (dabs(vg%h0), vg)
+   Gamh1 = Gamma1 (dabs(h), vg)
    Scap = (Gamh1 - Gam01) / (1.0d0 - Gam01)
-   K_MvG_s = Ksat*Scap**Lpar * (1.0d0 - ((1.0d0-Gamh1**(1.0d0/Mpar1))/(1.0d0-Gam01**(1.0d0/Mpar1)))**Mpar1)**2
+   K_MvG_s = vg%ksat*Scap**vg%lpar * (1.0d0 - ((1.0d0-Gamh1**(1.0d0/vg%mpar))/(1.0d0-Gam01**(1.0d0/vg%mpar)))**vg%mpar)**2
 end if
 
 end function K_MvG_s
 
-function K_MvG_2 (h)
+function K_MvG_2 (h, vg)
 implicit none
 real(8), intent(in)          :: h
+type(vanGenuchten_params_t), intent(in) :: vg
 real(8)                      :: K_MvG_2
+real(8)                      :: Gamh1, Gamh2, t1, t2, t3
 
 if (h >= 0.0d0) then
-   K_MvG_2 = Ksat
+   K_MvG_2 = vg%ksat
 else
-   Gamh1 = Gamma1 (dabs(h))
-   Gamh2 = Gamma2 (dabs(h))
-   t1 = (Omega1*Gamh1 + Omega2*Gamh2)**Lpar
-   t2 = Omega1*Alpha1*(1.0d0-Gamh1**(1.0d0/Mpar1))**Mpar1 + Omega2*Alpha2*(1.0d0-Gamh2**(1.0d0/Mpar2))**Mpar2
-   t3 = Omega1*Alpha1 + Omega2*Alpha2
-   K_MvG_2 = Ksat*t1*(1.0d0-t2/t3)**2
+   Gamh1 = Gamma1 (dabs(h), vg)
+   Gamh2 = Gamma2 (dabs(h), vg)
+   t1 = (vg%omega_1*Gamh1 + vg%omega_2*Gamh2)**vg%lpar
+   t2 = vg%omega_1*vg%alpha*(1.0d0-Gamh1**(1.0d0/vg%mpar))**vg%mpar + vg%omega_2*vg%alpha_2*(1.0d0-Gamh2**(1.0d0/vg%mpar_2))**vg%mpar_2
+   t3 = vg%omega_1*vg%alpha + vg%omega_2*vg%alpha_2
+   K_MvG_2 = vg%ksat*t1*(1.0d0-t2/t3)**2
 end if
 
 end function K_MvG_2
 
-function K_MvG_2_s (h)
+function K_MvG_2_s (h, vg)
 implicit none
 real(8), intent(in)          :: h
+type(vanGenuchten_params_t), intent(in) :: vg
 real(8)                      :: K_MvG_2_s
+real(8)                      :: Gam01, Gamh1, Gam02, Gamh2, Scap1, Scap2, t1, t2, t3
 
 if (h >= 0.0d0) then
-   K_MvG_2_s = Ksat
+   K_MvG_2_s = vg%ksat
 else
-   Gam01 = Gamma1 (dabs(h0))
-   Gamh1 = Gamma1 (dabs(h))
-   Gam02 = Gamma2 (dabs(h0))
-   Gamh2 = Gamma2 (dabs(h))
+   Gam01 = Gamma1 (dabs(vg%h0), vg)
+   Gamh1 = Gamma1 (dabs(h), vg)
+   Gam02 = Gamma2 (dabs(vg%h0), vg)
+   Gamh2 = Gamma2 (dabs(h), vg)
    Scap1 = (Gamh1 - Gam01) / (1.0d0 - Gam01)
    Scap2 = (Gamh2 - Gam02) / (1.0d0 - Gam02)
-   t1 = (Omega1*Scap1 + Omega2*Scap2)**Lpar
-   t2 = Omega1*Alpha1*(1.0d0-Gamh1**(1.0d0/Mpar1))**Mpar1 + Omega2*Alpha2*(1.0d0-Gamh2**(1.0d0/Mpar2))**Mpar2
-   t3 = Omega1*Alpha1*(1.0d0-Gam01**(1.0d0/Mpar1))**Mpar1 + Omega2*Alpha2*(1.0d0-Gam02**(1.0d0/Mpar2))**Mpar2
-   K_MvG_2_s = Ksat*t1*(1.0d0-t2/t3)**2
+   t1 = (vg%omega_1*Scap1 + vg%omega_2*Scap2)**vg%lpar
+   t2 = vg%omega_1*vg%alpha*(1.0d0-Gamh1**(1.0d0/vg%mpar))**vg%mpar + vg%omega_2*vg%alpha_2*(1.0d0-Gamh2**(1.0d0/vg%mpar_2))**vg%mpar_2
+   t3 = vg%omega_1*vg%alpha*(1.0d0-Gam01**(1.0d0/vg%mpar))**vg%mpar + vg%omega_2*vg%alpha_2*(1.0d0-Gam02**(1.0d0/vg%mpar_2))**vg%mpar_2
+   K_MvG_2_s = vg%ksat*t1*(1.0d0-t2/t3)**2
 end if
 
 end function K_MvG_2_s
 
-function WC_PDI (h)
+function WC_PDI (h, vg, is_bimodal)
 real(8), intent(in)    :: h
+type(vanGenuchten_params_t), intent(in) :: vg
+logical, intent(in)    :: is_bimodal
 real(8)                :: WC_PDI
+real(8)                :: Scap
 
 if (h >= 0.0d0) then
-   WC_PDI = WCs
+   WC_PDI = vg%thetas
 else
-   Scap = Gamma1 (dabs(h))
-   WC_PDI = Sad(dabs(h))*WCr + Scap*(WCs-WCr)
+   Scap = Gamma1 (dabs(h), vg)
+   WC_PDI = Sad(dabs(h), vg, is_bimodal)*vg%thetar + Scap*(vg%thetas-vg%thetar)
 end if
 
 end function WC_PDI
 
-function WC_PDI_s (h)
+function WC_PDI_s (h, vg, is_bimodal)
 real(8), intent(in)    :: h
+type(vanGenuchten_params_t), intent(in) :: vg
+logical, intent(in)    :: is_bimodal
 real(8)                :: WC_PDI_s
+real(8)                :: Gamh1, Gam01, Scap
 
 if (h >= 0.0d0) then
-   WC_PDI_s = WCs
+   WC_PDI_s = vg%thetas
 else
-   Gamh1 = Gamma1 (dabs(h))
-   Gam01 = Gamma1 (dabs(h0))
+   Gamh1 = Gamma1 (dabs(h), vg)
+   Gam01 = Gamma1 (dabs(vg%h0), vg)
    Scap = (Gamh1 - Gam01) / (1.0d0 - Gam01)
-   WC_PDI_s = Sad(dabs(h))*WCr + Scap*(WCs-WCr)
+   WC_PDI_s = Sad(dabs(h), vg, is_bimodal)*vg%thetar + Scap*(vg%thetas-vg%thetar)
 end if
 
 end function WC_PDI_s
 
-function WC_PDI_2 (h)
+function WC_PDI_2 (h, vg, is_bimodal)
 real(8), intent(in)    :: h
+type(vanGenuchten_params_t), intent(in) :: vg
+logical, intent(in)    :: is_bimodal
 real(8)                :: WC_PDI_2
+real(8)                :: Gamh1, Gamh2, Scap
 
 if (h >= 0.0d0) then
-   WC_PDI_2 = WCs
+   WC_PDI_2 = vg%thetas
 else
-   Gamh1 = Gamma1 (dabs(h))
-   Gamh2 = Gamma2 (dabs(h))
-   Scap = Omega1 * Gamh1 + Omega2 * Gamh2
-   WC_PDI_2 = Sad(dabs(h))*WCr + Scap*(WCs-WCr)
+   Gamh1 = Gamma1 (dabs(h), vg)
+   Gamh2 = Gamma2 (dabs(h), vg)
+   Scap = vg%omega_1 * Gamh1 + vg%omega_2 * Gamh2
+   WC_PDI_2 = Sad(dabs(h), vg, is_bimodal)*vg%thetar + Scap*(vg%thetas-vg%thetar)
 end if
 
 end function WC_PDI_2
 
-function WC_PDI_2_s (h)
+function WC_PDI_2_s (h, vg, is_bimodal)
 real(8), intent(in)    :: h
+type(vanGenuchten_params_t), intent(in) :: vg
+logical, intent(in)    :: is_bimodal
 real(8)                :: WC_PDI_2_s
+real(8)                :: Gam01, Gamh1, Gam02, Gamh2, Scap
 
 if (h >= 0.0d0) then
-   WC_PDI_2_s = WCs
+   WC_PDI_2_s = vg%thetas
 else
-   Gam01 = Omega1*Gamma1 (dabs(h0))
-   Gamh1 = Omega1*Gamma1 (dabs(h))
-   Gam02 = Omega2*Gamma2 (dabs(h0))
-   Gamh2 = Omega2*Gamma2 (dabs(h))
+   Gam01 = vg%omega_1*Gamma1 (dabs(vg%h0), vg)
+   Gamh1 = vg%omega_1*Gamma1 (dabs(h), vg)
+   Gam02 = vg%omega_2*Gamma2 (dabs(vg%h0), vg)
+   Gamh2 = vg%omega_2*Gamma2 (dabs(h), vg)
    Scap = (Gamh1 + Gamh2 - (Gam01 + Gam02)) / (1.0d0 - (Gam01 + Gam02))
-   WC_PDI_2_s = Sad(dabs(h))*WCr + Scap*(WCs-WCr)
+   WC_PDI_2_s = Sad(dabs(h), vg, is_bimodal)*vg%thetar + Scap*(vg%thetas-vg%thetar)
 end if
 
 end function WC_PDI_2_s
 
-function K_PDI (h, WC, Temp)
+function K_PDI (h, WC, Temp, vg, is_bimodal, no_vap)
 implicit none
 real(8), intent(in)          :: h, WC, Temp
+type(vanGenuchten_params_t), intent(in) :: vg
+logical, intent(in)          :: is_bimodal, no_vap
 real(8)                      :: K_PDI
+real(8)                      :: Scap, Kcap, Kfilm, Kvap
 real(8), parameter           :: Conv = 100.0d0 * 86400.0d0    ! to convert m/s to cm/d; 100 cm in 1 m, 86400 sec in 1 day
 
 if (h >= 0.0d0) then
-   K_PDI = Ksat
+   K_PDI = vg%ksat
 else
-   Scap = Gamma1 (dabs(h))
-   Kcap = Scap**Lpar*(1.0d0 - (1.0d0 - Scap**(1.0d0/Mpar1))**Mpar1)**2
-   Kfilm = (h0/ha)**(Apar*(1.0d0-Sad(dabs(h))))
-   if (L_NoVap) then
+   Scap = Gamma1 (dabs(h), vg)
+   Kcap = Scap**vg%lpar*(1.0d0 - (1.0d0 - Scap**(1.0d0/vg%mpar))**vg%mpar)**2
+   Kfilm = (vg%h0/vg%ha)**(vg%apar*(1.0d0-Sad(dabs(h), vg, is_bimodal)))
+   if (no_vap) then
       Kvap = 0.0d0
    else
-      Kvap = Kvap_func (WC, dabs(h), Temp) * Conv
+      Kvap = Kvap_func (WC, dabs(h), Temp, vg) * Conv
    end if
-   K_PDI = Ksat*((1.0d0-OmegaK)*Kcap + OmegaK*Kfilm) + Kvap
+   K_PDI = vg%ksat*((1.0d0-vg%omega_k)*Kcap + vg%omega_k*Kfilm) + Kvap
 end if
 
 end function K_PDI
 
-function K_PDI_s (h, WC, Temp)
+function K_PDI_s (h, WC, Temp, vg, is_bimodal, no_vap)
 implicit none
 real(8), intent(in)          :: h, WC, Temp
+type(vanGenuchten_params_t), intent(in) :: vg
+logical, intent(in)          :: is_bimodal, no_vap
 real(8)                      :: K_PDI_s
+real(8)                      :: Gamh1, Gam01, Scap, Kcap, Kfilm, Kvap
 real(8), parameter           :: Conv = 100.0d0 * 86400.0d0    ! to convert m/s to cm/d; 100 cm in 1 m, 86400 sec in 1 day
 
 if (h >= 0.0d0) then
-   K_PDI_s = Ksat
+   K_PDI_s = vg%ksat
 else
-   Gamh1 = Gamma1 (dabs(h))
-   Gam01 = Gamma1 (dabs(h0))
+   Gamh1 = Gamma1 (dabs(h), vg)
+   Gam01 = Gamma1 (dabs(vg%h0), vg)
    Scap = (Gamh1 - Gam01) / (1.0d0 - Gam01)
-   Kcap = Scap**Lpar*(1.0d0 - ((1.0d0-Gamh1**(1.0d0/Mpar1))/(1.0d0-Gam01**(1.0d0/Mpar1)))**Mpar1)**2
-   Kfilm = (h0/ha)**(Apar*(1.0d0-Sad(dabs(h))))
-   if (L_NoVap) then
+   Kcap = Scap**vg%lpar*(1.0d0 - ((1.0d0-Gamh1**(1.0d0/vg%mpar))/(1.0d0-Gam01**(1.0d0/vg%mpar)))**vg%mpar)**2
+   Kfilm = (vg%h0/vg%ha)**(vg%apar*(1.0d0-Sad(dabs(h), vg, is_bimodal)))
+   if (no_vap) then
       Kvap = 0.0d0
    else
-      Kvap = Kvap_func (WC, dabs(h), Temp) * Conv
+      Kvap = Kvap_func (WC, dabs(h), Temp, vg) * Conv
    end if
-   K_PDI_s = Ksat*((1.0d0-OmegaK)*Kcap + OmegaK*Kfilm) + Kvap
+   K_PDI_s = vg%ksat*((1.0d0-vg%omega_k)*Kcap + vg%omega_k*Kfilm) + Kvap
 end if
 
 end function K_PDI_s
 
-function K_PDI_2 (h, WC, Temp)
+function K_PDI_2 (h, WC, Temp, vg, is_bimodal, no_vap)
 implicit none
 real(8), intent(in)          :: h, WC, Temp
+type(vanGenuchten_params_t), intent(in) :: vg
+logical, intent(in)          :: is_bimodal, no_vap
 real(8)                      :: K_PDI_2
+real(8)                      :: Gamh1, Gamh2, t1, t2, t3, Kcap, Kfilm, Kvap
 real(8), parameter           :: Conv = 100.0d0 * 86400.0d0    ! to convert m/s to cm/d; 100 cm in 1 m, 86400 sec in 1 day
 
 if (h >= 0.0d0) then
-   K_PDI_2 = Ksat
+   K_PDI_2 = vg%ksat
 else
-   Gamh1 = Gamma1 (dabs(h))
-   Gamh2 = Gamma2 (dabs(h))
-   t1 = (Omega1*Gamh1 + Omega2*Gamh2)**Lpar
-   t2 = Omega1*Alpha1*(1.0d0-Gamh1**(1/Mpar1))**Mpar1 + Omega2*Alpha2*(1.0d0-Gamh2**(1/Mpar2))**Mpar2
-   t3 = Omega1*Alpha1 + Omega2*Alpha2
+   Gamh1 = Gamma1 (dabs(h), vg)
+   Gamh2 = Gamma2 (dabs(h), vg)
+   t1 = (vg%omega_1*Gamh1 + vg%omega_2*Gamh2)**vg%lpar
+   t2 = vg%omega_1*vg%alpha*(1.0d0-Gamh1**(1/vg%mpar))**vg%mpar + vg%omega_2*vg%alpha_2*(1.0d0-Gamh2**(1/vg%mpar_2))**vg%mpar_2
+   t3 = vg%omega_1*vg%alpha + vg%omega_2*vg%alpha_2
    Kcap = t1*(1.0d0-t2/t3)**2
-   Kfilm = (h0/ha)**(Apar*(1.0d0-Sad(dabs(h))))
-   if (L_NoVap) then
+   Kfilm = (vg%h0/vg%ha)**(vg%apar*(1.0d0-Sad(dabs(h), vg, is_bimodal)))
+   if (no_vap) then
       Kvap = 0.0d0
    else
-      Kvap = Kvap_func (WC, dabs(h), Temp) * Conv
+      Kvap = Kvap_func (WC, dabs(h), Temp, vg) * Conv
    end if
-   K_PDI_2 = Ksat*((1.0d0-OmegaK)*Kcap + OmegaK*Kfilm) + Kvap
+   K_PDI_2 = vg%ksat*((1.0d0-vg%omega_k)*Kcap + vg%omega_k*Kfilm) + Kvap
 end if
 
 end function K_PDI_2
 
-function K_PDI_2_s (h, WC, Temp)
+function K_PDI_2_s (h, WC, Temp, vg, is_bimodal, no_vap)
 implicit none
 real(8), intent(in)          :: h, WC, Temp
+type(vanGenuchten_params_t), intent(in) :: vg
+logical, intent(in)          :: is_bimodal, no_vap
 real(8)                      :: K_PDI_2_s
+real(8)                      :: Gam01, Gamh1, Gam02, Gamh2, Scap1, Scap2, t1, t2, t3, Kcap, Kfilm, Kvap
 real(8), parameter           :: Conv = 100.0d0 * 86400.0d0    ! to convert m/s to cm/d; 100 cm in 1 m, 86400 sec in 1 day
 
 if (h >= 0.0d0) then
-   K_PDI_2_s = Ksat
+   K_PDI_2_s = vg%ksat
 else
-   Gam01 = Gamma1 (dabs(h0))
-   Gamh1 = Gamma1 (dabs(h))
-   Gam02 = Gamma2 (dabs(h0))
-   Gamh2 = Gamma2 (dabs(h))
+   Gam01 = Gamma1 (dabs(vg%h0), vg)
+   Gamh1 = Gamma1 (dabs(h), vg)
+   Gam02 = Gamma2 (dabs(vg%h0), vg)
+   Gamh2 = Gamma2 (dabs(h), vg)
    Scap1 = (Gamh1 - Gam01) / (1.0d0 - Gam01)
    Scap2 = (Gamh2 - Gam02) / (1.0d0 - Gam02)
-   t1 = (Omega1*Scap1 + Omega2*Scap2)**Lpar
-   t2 = Omega1*Alpha1*(1.0d0-Gamh1**(1.0d0/Mpar1))**Mpar1 + Omega2*Alpha2*(1.0d0-Gamh2**(1.0d0/Mpar2))**Mpar2
-   t3 = Omega1*Alpha1*(1.0d0-Gam01**(1.0d0/Mpar1))**Mpar1 + Omega2*Alpha2*(1.0d0-Gam02**(1.0d0/Mpar2))**Mpar2
+   t1 = (vg%omega_1*Scap1 + vg%omega_2*Scap2)**vg%lpar
+   t2 = vg%omega_1*vg%alpha*(1.0d0-Gamh1**(1.0d0/vg%mpar))**vg%mpar + vg%omega_2*vg%alpha_2*(1.0d0-Gamh2**(1.0d0/vg%mpar_2))**vg%mpar_2
+   t3 = vg%omega_1*vg%alpha*(1.0d0-Gam01**(1.0d0/vg%mpar))**vg%mpar + vg%omega_2*vg%alpha_2*(1.0d0-Gam02**(1.0d0/vg%mpar_2))**vg%mpar_2
    Kcap = t1*(1.0d0-t2/t3)**2
-   Kfilm = (h0/ha)**(Apar*(1.0d0-Sad(dabs(h))))
-   if (L_NoVap) then
+   Kfilm = (vg%h0/vg%ha)**(vg%apar*(1.0d0-Sad(dabs(h), vg, is_bimodal)))
+   if (no_vap) then
       Kvap = 0.0d0
    else
-      Kvap = Kvap_func (WC, dabs(h), Temp) * Conv
+      Kvap = Kvap_func (WC, dabs(h), Temp, vg) * Conv
    end if
-   K_PDI_2_s = Ksat*((1.0d0-OmegaK)*Kcap + OmegaK*Kfilm) + Kvap
+   K_PDI_2_s = vg%ksat*((1.0d0-vg%omega_k)*Kcap + vg%omega_k*Kfilm) + Kvap
 end if
 
 end function K_PDI_2_s
 
-function C_MvG (h)
+function C_MvG (h, vg)
 real(8), intent(in)    :: h
+type(vanGenuchten_params_t), intent(in) :: vg
 real(8)                :: C_MvG
 if (h >= 0.0d0) then
    C_MvG = 0.0d0
 else
-   C_MvG = (WCs-WCr) * C1(h)
+   C_MvG = (vg%thetas-vg%thetar) * C1(h, vg)
 end if
 end function C_MvG
 
-function C_MvG_s (h)
+function C_MvG_s (h, vg)
 real(8), intent(in)    :: h
+type(vanGenuchten_params_t), intent(in) :: vg
 real(8)                :: C_MvG_s
+real(8)                :: Gam01
 if (h >= 0.0d0) then
    C_MvG_s = 0.0d0
 else
-   Gam01 = Gamma1 (dabs(h0))
-   C_MvG_s = (WCs-WCr)/(1.0d0-Gam01) * C1(h)
+   Gam01 = Gamma1 (dabs(vg%h0), vg)
+   C_MvG_s = (vg%thetas-vg%thetar)/(1.0d0-Gam01) * C1(h, vg)
 end if
 end function C_MvG_s
 
-function C_MvG_2 (h)
+function C_MvG_2 (h, vg)
 real(8), intent(in)    :: h
+type(vanGenuchten_params_t), intent(in) :: vg
 real(8)                :: C_MvG_2
 if (h >= 0.0d0) then
    C_MvG_2 = 0.0d0
 else
-   C_MvG_2 = (WCs-WCr)*(Omega1*C1(h) + Omega2*C2(h))
+   C_MvG_2 = (vg%thetas-vg%thetar)*(vg%omega_1*C1(h, vg) + vg%omega_2*C2(h, vg))
 end if
 end function C_MvG_2
 
-function C_MvG_2_s (h)
+function C_MvG_2_s (h, vg)
 real(8), intent(in)    :: h
+type(vanGenuchten_params_t), intent(in) :: vg
 real(8)                :: C_MvG_2_s
+real(8)                :: Gam01, Gam02
 if (h >= 0.0d0) then
    C_MvG_2_s = 0.0d0
 else
-   Gam01 = Gamma1 (dabs(h0))
-   Gam02 = Gamma2 (dabs(h0))
-   C_MvG_2_s = (WCs-WCr)*(Omega1*C1(h)/(1.0d0-Gam01) + Omega2*C2(h)/(1.0d0-Gam02))
+   Gam01 = Gamma1 (dabs(vg%h0), vg)
+   Gam02 = Gamma2 (dabs(vg%h0), vg)
+   C_MvG_2_s = (vg%thetas-vg%thetar)*(vg%omega_1*C1(h, vg)/(1.0d0-Gam01) + vg%omega_2*C2(h, vg)/(1.0d0-Gam02))
 end if
 end function C_MvG_2_s
 
-function C_PDI (h)
+function C_PDI (h, vg, is_bimodal)
 real(8), intent(in)    :: h
+type(vanGenuchten_params_t), intent(in) :: vg
+logical, intent(in)    :: is_bimodal
 real(8)                :: C_PDI
+real(8)                :: SSad
 if (h >= 0.0d0) then
    C_PDI = 0.0d0
 else
-   SSad = dSad_dh (dabs(h))
-   C_PDI = (WCs-WCr)*C1(h) + WCr*SSad
+   SSad = dSad_dh (dabs(h), vg, is_bimodal)
+   C_PDI = (vg%thetas-vg%thetar)*C1(h, vg) + vg%thetar*SSad
 end if
 end function C_PDI
 
-function C_PDI_s (h)
+function C_PDI_s (h, vg, is_bimodal)
 real(8), intent(in)    :: h
+type(vanGenuchten_params_t), intent(in) :: vg
+logical, intent(in)    :: is_bimodal
 real(8)                :: C_PDI_s
+real(8)                :: Gam01, SSad
 if (h >= 0.0d0) then
    C_PDI_s = 0.0d0
 else
-   Gam01 = Gamma1 (dabs(h0))
-   SSad  = dSad_dh (dabs(h))
-   C_PDI_s = (WCs-WCr)/(1.0d0-Gam01)*C1(h) + WCr*SSad
+   Gam01 = Gamma1 (dabs(vg%h0), vg)
+   SSad  = dSad_dh (dabs(h), vg, is_bimodal)
+   C_PDI_s = (vg%thetas-vg%thetar)/(1.0d0-Gam01)*C1(h, vg) + vg%thetar*SSad
 end if
 end function C_PDI_s
 
-function C_PDI_2 (h)
+function C_PDI_2 (h, vg, is_bimodal)
 real(8), intent(in)    :: h
+type(vanGenuchten_params_t), intent(in) :: vg
+logical, intent(in)    :: is_bimodal
 real(8)                :: C_PDI_2
+real(8)                :: SSad
 if (h >= 0.0d0) then
    C_PDI_2 = 0.0d0
 else
-   SSad = dSad_dh (dabs(h))
-   C_PDI_2 = (WCs-WCr)*(Omega1*C1(h) + Omega2*C2(h)) + WCr*SSad
+   SSad = dSad_dh (dabs(h), vg, is_bimodal)
+   C_PDI_2 = (vg%thetas-vg%thetar)*(vg%omega_1*C1(h, vg) + vg%omega_2*C2(h, vg)) + vg%thetar*SSad
 end if
 end function C_PDI_2
 
-function C_PDI_2_s (h)
+function C_PDI_2_s (h, vg, is_bimodal)
 real(8), intent(in)    :: h
+type(vanGenuchten_params_t), intent(in) :: vg
+logical, intent(in)    :: is_bimodal
 real(8)                :: C_PDI_2_s, Gam0
+real(8)                :: Gam01, Gam02, SSad
 if (h >= 0.0d0) then
    C_PDI_2_s = 0.0d0
 else
-   Gam01 = Omega1*Gamma1 (dabs(h0))
-   Gam02 = Omega2*Gamma2 (dabs(h0))
+   Gam01 = vg%omega_1*Gamma1 (dabs(vg%h0), vg)
+   Gam02 = vg%omega_2*Gamma2 (dabs(vg%h0), vg)
    Gam0  = Gam01 + Gam02
-   SSad  = dSad_dh (dabs(h))
-   C_PDI_2_s = (WCs-WCr)*(Omega1*C1(h)/(1.0d0-Gam0) + Omega2*C2(h)/(1.0d0-Gam0)) + WCr*SSad
+   SSad  = dSad_dh (dabs(h), vg, is_bimodal)
+   C_PDI_2_s = (vg%thetas-vg%thetar)*(vg%omega_1*C1(h, vg)/(1.0d0-Gam0) + vg%omega_2*C2(h, vg)/(1.0d0-Gam0)) + vg%thetar*SSad
 end if
 end function C_PDI_2_s
 
