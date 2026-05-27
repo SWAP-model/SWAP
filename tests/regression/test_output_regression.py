@@ -110,6 +110,22 @@ CASES = {
         known_divergence="hysteresis physics regression vs 4.2.0 "
                          "(~1.9cm GWL); see INVESTIGATION_NOTES.md",
     ),
+    # Winter cluster: snow accumulation/melt (SWSNOW=1) + frost-reduced soil
+    # water flow (SWFROST=1) + snow sublimation (SWSUBLIM=1). Clone of
+    # hupselbrook; SNOWINCO=0 so snow accumulates from sub-zero precip days.
+    # Asserts SNOW/SSNOW (snow storage) alongside the water balance.
+    "winter": CaseConfig(
+        name="winter",
+        case_dir="8.winter",
+        fixture="winter_reference_gf.json",
+        flux_vars=["RAIN", "INTERC", "RUNOFF", "EPOT", "EACT",
+                   "DRAINAGE", "QBOTTOM", "TPOT", "TACT", "DSTOR"],
+        state_vars=["GWL", "SNOW"],  # SSNOW is identically 0 here — not asserted
+        # Snow path reproduces 4.2.0 exactly (SNOW max 0.574 both). Frost path
+        # (SWFROST=1) diverges minutely: 2003 DRAINAGE/RUNOFF ~0.03-0.04 cm.
+        known_divergence="frost-path drift vs 4.2.0 (~0.04cm DRAINAGE/RUNOFF, "
+                         "2003); snow path matches exactly; see INVESTIGATION_NOTES.md",
+    ),
 }
 
 

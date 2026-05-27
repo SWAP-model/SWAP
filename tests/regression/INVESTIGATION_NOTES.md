@@ -32,6 +32,17 @@ suspected in the **shared helpers** it calls, which were rewritten with new sign
 and fix deferred. The case is registered with `known_divergence=` so the harness reports
 it as an expected divergence (xfail) without failing the suite.
 
+**New finding — frost-path drift (`8.winter`, SWSNOW+SWFROST+SWSUBLIM).** The winter case
+shows the **snow path reproduces 4.2.0 exactly** (SNOW peak 0.574 cm in both builds), but
+the **frost path (SWFROST=1) drifts minutely**: 2003 DRAINAGE/RUNOFF differ by ~0.03–0.04
+cm (total DRAINAGE 74.10 vs 74.14). Much smaller than hysteresis, but real (base case has
+0.000 drift). Suspected in the frost soil-water-flow reduction factor. Registered xfail.
+
+Note on output columns: the modern build sources its CSV column list from TOML
+`[output.csv] inlist`, **not** from the staged `swap.swp` `INLIST_CSV` (which only
+`swap420gf` reads). New-physics columns (e.g. `snow`) must be added to BOTH for an
+apples-to-apples comparison.
+
 ---
 
 ## What changed
