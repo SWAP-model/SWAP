@@ -73,3 +73,45 @@ subroutine test_cml_from_cmsy_nonlinear_satisfies_fixedpoint()
    @assertEqual(0.0_real64, residual, 1.0e-3_real64)
    @assertTrue(cml > 0.0_real64)
 end subroutine test_cml_from_cmsy_nonlinear_satisfies_fixedpoint
+
+@test
+subroutine test_solute_ftemp()
+   use funit
+   use iso_fortran_env, only: real64
+   use solute_kernels_mod, only: solute_ftemp
+   real(real64) :: capped
+   ! tsoil=20 -> exp(gampar*0)=1
+   @assertEqual(1.0_real64, solute_ftemp(20.0_real64, 0.1_real64, .true.), 1.0e-12_real64)
+   ! tsoil>=35 capped at exp(gampar*15)
+   capped = solute_ftemp(40.0_real64, 0.1_real64, .true.)
+   @assertEqual(exp(0.1_real64*15.0_real64), capped, 1.0e-12_real64)
+   ! temperature switch off -> 0
+   @assertEqual(0.0_real64, solute_ftemp(10.0_real64, 0.0693_real64, .false.), 1.0e-12_real64)
+end subroutine test_solute_ftemp
+
+@test
+subroutine test_solute_ftheta()
+   use funit
+   use iso_fortran_env, only: real64
+   use solute_kernels_mod, only: solute_ftheta
+   ! theta=rtheta -> ratio 1 -> 1
+   @assertEqual(1.0_real64, solute_ftheta(0.3_real64, 0.3_real64, 0.7_real64), 1.0e-12_real64)
+   ! half of rtheta, bexp=1 -> 0.5
+   @assertEqual(0.5_real64, solute_ftheta(0.15_real64, 0.3_real64, 1.0_real64), 1.0e-12_real64)
+   ! above rtheta -> clamped at 1
+   @assertEqual(1.0_real64, solute_ftheta(0.6_real64, 0.3_real64, 1.0_real64), 1.0e-12_real64)
+end subroutine test_solute_ftheta
+
+@test
+subroutine test_solute_decomp_ctrans()
+   use funit
+   use iso_fortran_env, only: real64
+   use solute_kernels_mod, only: solute_decomp_ctrans
+   real(real64) :: ctrans
+   ! bdenskfcref=0: ctrans = decact*theta*cml = 0.5*0.3*2.0 = 0.3
+   ctrans = solute_decomp_ctrans(0.5_real64, 0.3_real64, 2.0_real64, 0.0_real64, 1.0_real64, 1.0_real64)
+   @assertEqual(0.3_real64, ctrans, 1.0e-12_real64)
+   ! bdenskfcref=0.4, frexp=1, cref=1: + 0.5*0.4*(2.0)**1 = 0.4 -> total 0.7
+   ctrans = solute_decomp_ctrans(0.5_real64, 0.3_real64, 2.0_real64, 0.4_real64, 1.0_real64, 1.0_real64)
+   @assertEqual(0.7_real64, ctrans, 1.0e-12_real64)
+end subroutine test_solute_decomp_ctrans

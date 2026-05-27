@@ -75,7 +75,7 @@ contains
       use array_utils,           only: afgen
       use swap_state_mod,        only: swap_state_t
       use, intrinsic :: iso_fortran_env, only: real64
-      use solute_kernels_mod,    only: solute_cml_from_cmsy
+      use solute_kernels_mod,    only: solute_cml_from_cmsy, solute_ftemp, solute_ftheta, solute_decomp_ctrans
 
       implicit none
 
@@ -179,19 +179,11 @@ contains
                end if
 
                ! Solute decomposition.
-               if (time%flTemperature) then
-                  if (heat%tsoil(i) .lt. 35.0d0) then
-                     ftemp = exp(sol%gampar*(heat%tsoil(i) - 20.0d0))
-                  else
-                     ftemp = exp(sol%gampar*15.0d0)
-                  end if
-               else
-                  ftemp = 0.0d0
-               end if
-               ftheta = min(1.0d0, (soil%theta(i)/sol%rtheta)**sol%bexp)
+               ftemp  = solute_ftemp(heat%tsoil(i), sol%gampar, time%flTemperature)
+               ftheta = solute_ftheta(soil%theta(i), sol%rtheta, sol%bexp)
                decact = sol%decpotfdepth(i) * ftemp * ftheta
-               ctrans = decact*soil%theta(i)*sol%cml(i) +                            &
-                        decact*sol%bdenskfcref(i)*((sol%cml(i)/sol%cref)**sol%frexp)
+               ctrans = solute_decomp_ctrans(decact, soil%theta(i), sol%cml(i), &
+                                             sol%bdenskfcref(i), sol%cref, sol%frexp)
                sol%dectot   = sol%dectot   + ctrans*sol%dtsolu*mesh%dz(i)
                sol%imdectot = sol%imdectot + ctrans*sol%dtsolu*mesh%dz(i)
 

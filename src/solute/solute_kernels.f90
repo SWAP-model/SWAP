@@ -7,6 +7,7 @@ module solute_kernels_mod
    private
    public :: bdenskf_coeff, bdenskfsatporos_coeff, ddiffwcs_coeff, decpotfdepth_coeff
    public :: solute_cml_from_cmsy
+   public :: solute_ftemp, solute_ftheta, solute_decomp_ctrans
 
 contains
 
@@ -75,5 +76,44 @@ contains
          end do
       end if
    end function solute_cml_from_cmsy
+
+   !> Temperature reduction factor for decomposition. Capped above 35 degC;
+   !> zero when the temperature switch is off.
+   pure function solute_ftemp(tsoil, gampar, fl_temperature) result(ftemp)
+      real(real64), intent(in) :: tsoil           ! soil temperature (degC)
+      real(real64), intent(in) :: gampar          ! temperature coefficient (/C)
+      logical,      intent(in) :: fl_temperature  ! temperature simulation on/off
+      real(real64)             :: ftemp
+      if (fl_temperature) then
+         if (tsoil .lt. 35.0d0) then
+            ftemp = exp(gampar*(tsoil - 20.0d0))
+         else
+            ftemp = exp(gampar*15.0d0)
+         end if
+      else
+         ftemp = 0.0d0
+      end if
+   end function solute_ftemp
+
+   !> Moisture reduction factor for decomposition, clamped to 1.
+   pure function solute_ftheta(theta, rtheta, bexp) result(ftheta)
+      real(real64), intent(in) :: theta   ! volumetric water content (-)
+      real(real64), intent(in) :: rtheta  ! reference moisture content (-)
+      real(real64), intent(in) :: bexp    ! moisture-decomposition exponent (-)
+      real(real64)             :: ftheta
+      ftheta = min(1.0d0, (theta/rtheta)**bexp)
+   end function solute_ftheta
+
+   !> Solute transformation (decomposition) rate per node.
+   pure function solute_decomp_ctrans(decact, theta, cml, bdenskfcref, cref, frexp) result(ctrans)
+      real(real64), intent(in) :: decact       ! actual decomposition rate (1/d)
+      real(real64), intent(in) :: theta        ! volumetric water content (-)
+      real(real64), intent(in) :: cml          ! mobile concentration (M/L3)
+      real(real64), intent(in) :: bdenskfcref  ! bdens*kf*cref (M/L3)
+      real(real64), intent(in) :: cref         ! reference concentration (M/L3)
+      real(real64), intent(in) :: frexp        ! Freundlich exponent (-)
+      real(real64)             :: ctrans
+      ctrans = decact*theta*cml + decact*bdenskfcref*((cml/cref)**frexp)
+   end function solute_decomp_ctrans
 
 end module solute_kernels_mod
