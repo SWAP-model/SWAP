@@ -293,6 +293,7 @@ if get_option('enable_pfunit')
         'core/test_timecontrol_mod.pf',
         'solute/test_solute_cml.pf',
         'solute/test_solute_seed.pf',
+        'solute/test_solute_dispersion.pf',
     ]
 
     # When pf_files is non-empty, build and register the unit-swap-tests

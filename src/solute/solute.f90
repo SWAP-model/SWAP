@@ -4,6 +4,9 @@ module solute_mod
    implicit none
    private
    public :: solute_seed, solute_step, solute_cml_from_cmsy
+   ! prepare_solute_dispersion is exposed for the state-grain unit test
+   ! (test_solute_dispersion.pf); the other step phase helpers remain private.
+   public :: prepare_solute_dispersion
 
 contains
 
@@ -16,34 +19,27 @@ contains
       call derive_solute_concentrations(state)
    end subroutine solute_seed
 
+   !> Narrative orchestrator for one solute transport step. Each phase of the
+   !> sub-stepped time loop is delegated to a named private helper; per-substep
+   !> working arrays are passed explicitly.
    subroutine solute_step(state)
       use swap_array_dimensions, only: mabbc, macp
       use array_utils,           only: afgen
       use swap_state_mod,        only: swap_state_t
-      use, intrinsic :: iso_fortran_env, only: real64
 
       implicit none
 
       type(swap_state_t), intent(inout) :: state
 
-      integer :: level, i
-      real(8) :: cmlav, ftemp, ftheta, decact, cfluxt, cfluxb
-      real(8) :: cdrtot, ctrans, crot, dispr, dummy, vpore
-      real(8) :: isqdra, tab(mabbc*2)
+      real(8) :: cfluxt
+      real(8) :: isqdra
       real(8) :: tcumsol
-      real(8) :: ArMpSs   ! macropore-retired (always 0; ADR 0040)
-      real(8), dimension(macp) :: thetav, diffus, dispr1, vpore2
-
-      real(8), parameter :: vsmall = 1.0d-15
+      real(8), dimension(macp) :: thetav, dispr1, vpore2
 
       associate (sol  => state%solute,        &
-                 soil => state%soilwater,     &
                  mesh => state%mesh,          &
-                 time => state%timecontrol,   &
-                 drai => state%drainage,      &
-                 surf => state%surfacewater,  &
-                 atmo => state%atmosphere,    &
-                 heat => state%heat)
+                 soil => state%soilwater,     &
+                 time => state%timecontrol)
 
          ! === Solute rate variables =============================================
 
@@ -79,13 +75,57 @@ contains
          sol%isqtop = 0.0d0
          isqdra     = 0.0d0
 
-         ! Macropore-area at the surface (ADR 0040: always 0).
-         ArMpSs = 0.d0
-
          ! Boundary concentration (afgen table).
          if (sol%swbotbc .eq. 2) then
             sol%cseep = afgen(sol%cseeptab, mabbc*2, time%t1900 + time%dt)
          end if
+
+         call prepare_solute_dispersion(state, thetav, dispr1, vpore2)
+
+         tcumsol = 0.0d0
+         do while ((time%dt - tcumsol) .gt. 1.0d-8)
+
+            sol%dtsolu = min(sol%dtsolu, (time%dt - tcumsol))
+            sol%dtsolu = max(sol%dtsolu, time%dtmin)
+            tcumsol    = tcumsol + sol%dtsolu
+
+            call solute_surface_flux(state, cfluxt)
+            call update_solute_compartments(state, thetav, dispr1, vpore2, cfluxt, isqdra)
+            call solute_aquifer_breakthrough(state)
+            call solute_bottom_flux(state)
+
+         end do
+
+         ! Current solute flux at bottom of soil column.
+         if (soil%q(mesh%numnod + 1) .gt. 0.0d0) then
+            sol%isqbot = soil%q(mesh%numnod + 1) * sol%cseep
+         else
+            sol%isqbot = soil%q(mesh%numnod + 1) * sol%cml(mesh%numnod)
+         end if
+
+         call solute_balance(state)
+
+      end associate
+
+      return
+   end subroutine solute_step
+
+   !> Maximum solute time step + per-node dispersion working arrays.
+   subroutine prepare_solute_dispersion(state, thetav, dispr1, vpore2)
+      use swap_array_dimensions, only: macp
+      use swap_state_mod,        only: swap_state_t
+      implicit none
+      type(swap_state_t), intent(inout) :: state
+      real(8), intent(out) :: thetav(:), dispr1(:), vpore2(:)
+
+      integer :: i
+      real(8) :: dispr, vpore, dummy
+      real(8), dimension(macp) :: diffus
+
+      associate (sol  => state%solute,        &
+                 soil => state%soilwater,     &
+                 mesh => state%mesh,          &
+                 time => state%timecontrol)
 
          ! Maximum solute time step.
          sol%dtsolu = time%dt
@@ -104,137 +144,220 @@ contains
             sol%dtsolu = min(sol%dtsolu, dummy)
          end do
 
-         tcumsol = 0.0d0
-         do while ((time%dt - tcumsol) .gt. 1.0d-8)
+      end associate
+   end subroutine prepare_solute_dispersion
 
-            sol%dtsolu = min(sol%dtsolu, (time%dt - tcumsol))
-            sol%dtsolu = max(sol%dtsolu, time%dtmin)
-            tcumsol    = tcumsol + sol%dtsolu
+   !> Solute flux at the soil surface (ponded reservoir mixing).
+   subroutine solute_surface_flux(state, cfluxt)
+      use swap_state_mod, only: swap_state_t
+      implicit none
+      type(swap_state_t), intent(inout) :: state
+      real(8), intent(out) :: cfluxt
 
-            ! Solute flux at the soil surface.
-            sol%csurf = (atmo%nird*sol%cirr + atmo%nraidt*sol%cpre)*sol%dtsolu + sol%csurf
-            if (soil%qtop .lt. -1.d-6) then
-               sol%cpond  = sol%csurf / (soil%pond - soil%qtop*sol%dtsolu)
-               cfluxt     = soil%qtop*(1.0d0 - ArMpSs)*sol%cpond*sol%dtsolu
-               sol%csurf  = sol%csurf + cfluxt
-               sol%isqtop = soil%qtop*(1.0d0 - ArMpSs)*sol%cpond
+      real(8) :: ArMpSs   ! macropore-retired (always 0; ADR 0040)
+
+      associate (sol  => state%solute,        &
+                 soil => state%soilwater,     &
+                 atmo => state%atmosphere)
+
+         ! Macropore-area at the surface (ADR 0040: always 0).
+         ArMpSs = 0.d0
+
+         ! Solute flux at the soil surface.
+         sol%csurf = (atmo%nird*sol%cirr + atmo%nraidt*sol%cpre)*sol%dtsolu + sol%csurf
+         if (soil%qtop .lt. -1.d-6) then
+            sol%cpond  = sol%csurf / (soil%pond - soil%qtop*sol%dtsolu)
+            cfluxt     = soil%qtop*(1.0d0 - ArMpSs)*sol%cpond*sol%dtsolu
+            sol%csurf  = sol%csurf + cfluxt
+            sol%isqtop = soil%qtop*(1.0d0 - ArMpSs)*sol%cpond
+         else
+            sol%cpond = 0.0d0
+            cfluxt    = 0.0d0
+         end if
+
+      end associate
+   end subroutine solute_surface_flux
+
+   !> Per-compartment mass balance: convection/dispersion, decomposition, root
+   !> uptake, lateral drainage, conservation + isotherm recovery.
+   subroutine update_solute_compartments(state, thetav, dispr1, vpore2, cfluxt, isqdra)
+      use swap_state_mod, only: swap_state_t
+      implicit none
+      type(swap_state_t), intent(inout) :: state
+      real(8), intent(in)    :: thetav(:), dispr1(:), vpore2(:)
+      real(8), intent(inout) :: cfluxt
+      real(8), intent(inout) :: isqdra
+
+      integer :: i, level
+      real(8) :: cmlav, cfluxb, cdrtot, ctrans, crot, dispr
+      real(8) :: ftemp, ftheta, decact
+
+      real(8), parameter :: vsmall = 1.0d-15
+
+      associate (sol  => state%solute,        &
+                 soil => state%soilwater,     &
+                 mesh => state%mesh,          &
+                 time => state%timecontrol,   &
+                 drai => state%drainage,      &
+                 heat => state%heat)
+
+         ! Per-compartment mass balance.
+         do i = 1, mesh%numnod
+
+            ! Convective + dispersive fluxes.
+            if (i .lt. mesh%numnod) then
+               cmlav  = mesh%inpola(i + 1) * sol%cml(i) + mesh%inpolb(i) * sol%cml(i + 1)
+               dispr  = dispr1(i) + 0.5d0 * sol%dtsolu*vpore2(i)
+               cfluxb = (soil%q(i + 1)*cmlav +                                    &
+                         thetav(i) * dispr * (sol%cml(i + 1) - sol%cml(i))/mesh%disnod(i + 1)) &
+                        * sol%dtsolu
             else
-               sol%cpond = 0.0d0
-               cfluxt    = 0.0d0
+               if (soil%q(i + 1) .gt. 0.0d0) then
+                  cfluxb = soil%q(i + 1)*sol%cseep*sol%dtsolu
+               else
+                  cfluxb = soil%q(i + 1)*sol%cml(i)*sol%dtsolu
+               end if
             end if
 
-            ! Per-compartment mass balance.
-            do i = 1, mesh%numnod
-
-               ! Convective + dispersive fluxes.
-               if (i .lt. mesh%numnod) then
-                  cmlav  = mesh%inpola(i + 1) * sol%cml(i) + mesh%inpolb(i) * sol%cml(i + 1)
-                  dispr  = dispr1(i) + 0.5d0 * sol%dtsolu*vpore2(i)
-                  cfluxb = (soil%q(i + 1)*cmlav +                                    &
-                            thetav(i) * dispr * (sol%cml(i + 1) - sol%cml(i))/mesh%disnod(i + 1)) &
-                           * sol%dtsolu
+            ! Solute decomposition. NB (faithful to SWAP 4.2.0): with no soil-
+            ! temperature model (flTemperature=.false.) the temperature factor is
+            ! 0, which disables decomposition entirely (not a reference-temp rate).
+            if (time%flTemperature) then
+               if (heat%tsoil(i) .lt. 35.0d0) then
+                  ftemp = exp(sol%gampar*(heat%tsoil(i) - 20.0d0))
                else
-                  if (soil%q(i + 1) .gt. 0.0d0) then
-                     cfluxb = soil%q(i + 1)*sol%cseep*sol%dtsolu
-                  else
-                     cfluxb = soil%q(i + 1)*sol%cml(i)*sol%dtsolu
-                  end if
+                  ftemp = exp(sol%gampar*15.0d0)
                end if
-
-               ! Solute decomposition. NB (faithful to SWAP 4.2.0): with no soil-
-               ! temperature model (flTemperature=.false.) the temperature factor is
-               ! 0, which disables decomposition entirely (not a reference-temp rate).
-               if (time%flTemperature) then
-                  if (heat%tsoil(i) .lt. 35.0d0) then
-                     ftemp = exp(sol%gampar*(heat%tsoil(i) - 20.0d0))
-                  else
-                     ftemp = exp(sol%gampar*15.0d0)
-                  end if
-               else
-                  ftemp = 0.0d0
-               end if
-               ftheta = min(1.0d0, (soil%theta(i)/sol%rtheta)**sol%bexp)
-               decact = sol%decpotfdepth(i) * ftemp * ftheta
-               ctrans = decact*soil%theta(i)*sol%cml(i) +                            &
-                        decact*sol%bdenskfcref(i)*((sol%cml(i)/sol%cref)**sol%frexp)
-               sol%dectot   = sol%dectot   + ctrans*sol%dtsolu*mesh%dz(i)
-               sol%imdectot = sol%imdectot + ctrans*sol%dtsolu*mesh%dz(i)
-
-               ! Solute uptake by plant roots.
-               crot         = sol%tscf*soil%qrot(i)*sol%cml(i)/mesh%dz(i)
-               sol%rottot   = sol%rottot   + sol%tscf*soil%qrot(i)*sol%cml(i)*sol%dtsolu
-               sol%imrottot = sol%imrottot + sol%tscf*soil%qrot(i)*sol%cml(i)*sol%dtsolu
-
-               ! Lateral drainage.
-               cdrtot = 0.0d0
-               if (allocated(drai%qdra)) then
-                  do level = 1, drai%nrlevs
-                     if (drai%qdra(level, i) .gt. 0.0d0) then
-                        cdrtot = cdrtot + drai%qdra(level, i)*sol%cml(i)/mesh%dz(i)
-                     else
-                        cdrtot = cdrtot + drai%qdra(level, i)*sol%cdrain/mesh%dz(i)
-                     end if
-                  end do
-               end if
-
-               ! Cumulative solute to lateral drainage.
-               isqdra      = isqdra      + cdrtot*mesh%dz(i)*sol%dtsolu
-               sol%sqdra   = sol%sqdra   + cdrtot*mesh%dz(i)*sol%dtsolu
-               sol%imsqdra = sol%imsqdra + cdrtot*mesh%dz(i)*sol%dtsolu
-
-               ! Conservation equation for the substance.
-               sol%cmsy(i) = sol%cmsy(i) + (cfluxb - cfluxt) / mesh%dz(i) +          &
-                             (-ctrans - crot - cdrtot) * sol%dtsolu
-
-               ! Iterate to recover cml from cmsy with the Freundlich isotherm.
-               if (sol%cmsy(i) .lt. vsmall) then
-                  sol%cmsy(i) = 0.0d0
-                  sol%cml(i)  = 0.0d0
-               else
-                  sol%cml(i) = solute_cml_from_cmsy(sol%cmsy(i), soil%theta(i), &
-                                  sol%bdenskf(i), sol%frexp, sol%cref, sol%cml(i))
-               end if
-
-               cfluxt = cfluxb
-            end do
-
-            ! Aquifer breakthrough.
-            ! FIXME(swbr): quarantined — unreachable; solute_step fatal-errors on
-            ! SWBR=1 above. sol%bdenskfsatporos(i) here reads i==numnod+1 (OOB).
-            if (sol%swbr .eq. 1) then
-               if (surf%qdrtot .gt. 0.0d0) then
-                  sol%cdrain = sol%cdrain + sol%dtsolu/sol%bdenskfsatporos(i) *          &
-                               ((isqdra - surf%qdrtot*sol%cdrain)/sol%daquif -       &
-                                sol%decsat*sol%cdrain*sol%bdenskfsatporos(i))
-               else
-                  sol%cdrain = sol%cdrain + sol%dtsolu/sol%bdenskfsatporos(i) *          &
-                               (isqdra/sol%daquif - sol%decsat*sol%cdrain*sol%bdenskfsatporos(i))
-               end if
-               sol%cseep = sol%cdrain
-            end if
-
-            ! Flux to surface water from the aquifer.
-            if (sol%swbr .eq. 1) then
-               sol%sqsur = sol%sqsur + surf%qdrtot*sol%cdrain*sol%dtsolu
-            end if
-
-            ! Flux through bottom of soil profile.
-            if (soil%qbot .gt. 0.0d0) then
-               sol%sqbot   = sol%sqbot   + soil%qbot*sol%cseep*sol%dtsolu
-               sol%imsqbot = sol%imsqbot + soil%qbot*sol%cseep*sol%dtsolu
             else
-               sol%sqbot   = sol%sqbot   + soil%qbot*sol%cml(mesh%numnod)*sol%dtsolu
-               sol%imsqbot = sol%imsqbot + soil%qbot*sol%cml(mesh%numnod)*sol%dtsolu
+               ftemp = 0.0d0
+            end if
+            ftheta = min(1.0d0, (soil%theta(i)/sol%rtheta)**sol%bexp)
+            decact = sol%decpotfdepth(i) * ftemp * ftheta
+            ctrans = decact*soil%theta(i)*sol%cml(i) +                            &
+                     decact*sol%bdenskfcref(i)*((sol%cml(i)/sol%cref)**sol%frexp)
+            sol%dectot   = sol%dectot   + ctrans*sol%dtsolu*mesh%dz(i)
+            sol%imdectot = sol%imdectot + ctrans*sol%dtsolu*mesh%dz(i)
+
+            ! Solute uptake by plant roots.
+            crot         = sol%tscf*soil%qrot(i)*sol%cml(i)/mesh%dz(i)
+            sol%rottot   = sol%rottot   + sol%tscf*soil%qrot(i)*sol%cml(i)*sol%dtsolu
+            sol%imrottot = sol%imrottot + sol%tscf*soil%qrot(i)*sol%cml(i)*sol%dtsolu
+
+            ! Lateral drainage.
+            cdrtot = 0.0d0
+            if (allocated(drai%qdra)) then
+               do level = 1, drai%nrlevs
+                  if (drai%qdra(level, i) .gt. 0.0d0) then
+                     cdrtot = cdrtot + drai%qdra(level, i)*sol%cml(i)/mesh%dz(i)
+                  else
+                     cdrtot = cdrtot + drai%qdra(level, i)*sol%cdrain/mesh%dz(i)
+                  end if
+               end do
             end if
 
+            ! Cumulative solute to lateral drainage.
+            isqdra      = isqdra      + cdrtot*mesh%dz(i)*sol%dtsolu
+            sol%sqdra   = sol%sqdra   + cdrtot*mesh%dz(i)*sol%dtsolu
+            sol%imsqdra = sol%imsqdra + cdrtot*mesh%dz(i)*sol%dtsolu
+
+            ! Conservation equation for the substance.
+            sol%cmsy(i) = sol%cmsy(i) + (cfluxb - cfluxt) / mesh%dz(i) +          &
+                          (-ctrans - crot - cdrtot) * sol%dtsolu
+
+            ! Iterate to recover cml from cmsy with the Freundlich isotherm.
+            if (sol%cmsy(i) .lt. vsmall) then
+               sol%cmsy(i) = 0.0d0
+               sol%cml(i)  = 0.0d0
+            else
+               sol%cml(i) = solute_cml_from_cmsy(sol%cmsy(i), soil%theta(i), &
+                               sol%bdenskf(i), sol%frexp, sol%cref, sol%cml(i))
+            end if
+
+            cfluxt = cfluxb
          end do
 
-         ! Current solute flux at bottom of soil column.
-         if (soil%q(mesh%numnod + 1) .gt. 0.0d0) then
-            sol%isqbot = soil%q(mesh%numnod + 1) * sol%cseep
-         else
-            sol%isqbot = soil%q(mesh%numnod + 1) * sol%cml(mesh%numnod)
+      end associate
+   end subroutine update_solute_compartments
+
+   !> Aquifer breakthrough + flux to surface water (SWBR=1). QUARANTINED.
+   subroutine solute_aquifer_breakthrough(state)
+      use swap_state_mod, only: swap_state_t
+      implicit none
+      type(swap_state_t), intent(inout) :: state
+
+      ! i replicates the original post-loop counter value (numnod+1). The
+      ! sol%bdenskfsatporos(i) reads below are the documented OOB/div-by-zero bug;
+      ! this helper is unreachable at runtime — solute_step fatal-errors on
+      ! SWBR=1 before the time loop. Kept verbatim for a future, validated fix.
+      integer :: i
+      ! isqdra was the cumulative lateral-drainage accumulator local to the time
+      ! loop; in this unreachable helper it is an uninitialised local (the SWBR=1
+      ! breakthrough math is quarantined dead code, kept verbatim for a future fix).
+      real(8) :: isqdra
+
+      associate (sol  => state%solute,        &
+                 mesh => state%mesh,          &
+                 surf => state%surfacewater)
+
+         i = mesh%numnod + 1
+
+         ! Aquifer breakthrough.
+         ! FIXME(swbr): quarantined — unreachable; solute_step fatal-errors on
+         ! SWBR=1 above. sol%bdenskfsatporos(i) here reads i==numnod+1 (OOB).
+         if (sol%swbr .eq. 1) then
+            if (surf%qdrtot .gt. 0.0d0) then
+               sol%cdrain = sol%cdrain + sol%dtsolu/sol%bdenskfsatporos(i) *          &
+                            ((isqdra - surf%qdrtot*sol%cdrain)/sol%daquif -       &
+                             sol%decsat*sol%cdrain*sol%bdenskfsatporos(i))
+            else
+               sol%cdrain = sol%cdrain + sol%dtsolu/sol%bdenskfsatporos(i) *          &
+                            (isqdra/sol%daquif - sol%decsat*sol%cdrain*sol%bdenskfsatporos(i))
+            end if
+            sol%cseep = sol%cdrain
          end if
+
+         ! Flux to surface water from the aquifer.
+         if (sol%swbr .eq. 1) then
+            sol%sqsur = sol%sqsur + surf%qdrtot*sol%cdrain*sol%dtsolu
+         end if
+
+      end associate
+   end subroutine solute_aquifer_breakthrough
+
+   !> Flux through bottom of soil profile.
+   subroutine solute_bottom_flux(state)
+      use swap_state_mod, only: swap_state_t
+      implicit none
+      type(swap_state_t), intent(inout) :: state
+
+      associate (sol  => state%solute,        &
+                 soil => state%soilwater,     &
+                 mesh => state%mesh)
+
+         ! Flux through bottom of soil profile.
+         if (soil%qbot .gt. 0.0d0) then
+            sol%sqbot   = sol%sqbot   + soil%qbot*sol%cseep*sol%dtsolu
+            sol%imsqbot = sol%imsqbot + soil%qbot*sol%cseep*sol%dtsolu
+         else
+            sol%sqbot   = sol%sqbot   + soil%qbot*sol%cml(mesh%numnod)*sol%dtsolu
+            sol%imsqbot = sol%imsqbot + soil%qbot*sol%cml(mesh%numnod)*sol%dtsolu
+         end if
+
+      end associate
+   end subroutine solute_bottom_flux
+
+   !> Solute mass-balance components (profile mass + flux totals + residual).
+   subroutine solute_balance(state)
+      use swap_state_mod, only: swap_state_t
+      implicit none
+      type(swap_state_t), intent(inout) :: state
+
+      integer :: i
+
+      associate (sol  => state%solute,        &
+                 mesh => state%mesh,          &
+                 time => state%timecontrol,   &
+                 atmo => state%atmosphere)
 
          ! Solute balance components.
          sol%sampro = 0.0d0
@@ -252,9 +375,7 @@ contains
                       sol%sqdra + sol%dectot + sol%rottot - sol%samini
 
       end associate
-
-      return
-   end subroutine solute_step
+   end subroutine solute_balance
 
    !> Recover mobile concentration cml from total cmsy via the Freundlich
    !> isotherm. Linear shortcut when frexp ~ 1; otherwise fixed-point iterate

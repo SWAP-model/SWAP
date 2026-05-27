@@ -1,0 +1,56 @@
+! State-grain test for prepare_solute_dispersion (a solute_step phase helper).
+! Builds a minimal numnod=2 state and asserts the per-node dispersion working
+! arrays + sol%dtsolu. Expected values are hand-computed from the verbatim
+! formulas (see comments) so the test pins the arithmetic, not just runs it.
+@test
+subroutine test_prepare_solute_dispersion_numnod2()
+   use funit
+   use iso_fortran_env, only: real64
+   use swap_state_mod,  only: swap_state_t
+   use solute_mod,      only: prepare_solute_dispersion
+   implicit none
+
+   type(swap_state_t) :: state
+   integer, parameter :: numnod = 2
+   integer, parameter :: nlayer = 1
+   real(real64) :: thetav(numnod), dispr1(numnod), vpore2(numnod)
+
+   ! --- mesh ---
+   state%mesh%numnod = numnod
+   allocate(state%mesh%layer(numnod));      state%mesh%layer  = [1, 1]
+   allocate(state%mesh%dz(numnod));         state%mesh%dz     = [10.0_real64, 10.0_real64]
+   ! inpola is sized numnod+1, inpolb numnod (read at i and i+1 in the helper).
+   allocate(state%mesh%inpola(numnod + 1)); state%mesh%inpola = [1.0_real64, 0.5_real64, 0.5_real64]
+   allocate(state%mesh%inpolb(numnod));     state%mesh%inpolb = [0.5_real64, 0.5_real64]
+
+   ! --- soilwater: theta read at i and i+1 (size numnod+1); q at i and i+1 ---
+   allocate(state%soilwater%theta(numnod + 1)); state%soilwater%theta = [0.3_real64, 0.3_real64, 0.3_real64]
+   allocate(state%soilwater%q(numnod + 1));     state%soilwater%q     = [2.0_real64, 1.0_real64, 0.5_real64]
+
+   ! --- solute per-node / per-layer arrays + dtsolu ---
+   allocate(state%solute%ddiffwcs(numnod)); state%solute%ddiffwcs = [0.1_real64, 0.1_real64]
+   allocate(state%solute%ldis(nlayer));     state%solute%ldis     = [2.0_real64]
+   state%solute%dtsolu = 0.0_real64
+
+   ! --- timecontrol ---
+   state%timecontrol%dt = 10.0_real64
+
+   call prepare_solute_dispersion(state, thetav, dispr1, vpore2)
+
+   ! thetav(i) = inpola(i+1)*theta(i) + inpolb(i)*theta(i+1) = 0.5*0.3 + 0.5*0.3 = 0.3
+   @assertEqual(0.3_real64, thetav(1), 1.0e-12_real64)
+   @assertEqual(0.3_real64, thetav(2), 1.0e-12_real64)
+
+   ! Only i < numnod sets dispr1/vpore2.
+   ! vpore = |q(2)|/thetav(1) = 1.0/0.3 = 3.3333...; vpore2 = vpore**2 = 11.1111...
+   @assertEqual(11.111111111111112_real64, vpore2(1), 1.0e-9_real64)
+   ! diffus(1) = ddiffwcs(1)*thetav(1)**2.33 = 0.1*0.3**2.33 = 0.006049124506541051
+   ! dispr1(1) = diffus(1) + ldis(1)*vpore = 0.006049... + 2.0*3.3333... = 6.672715791173208
+   @assertEqual(6.672715791173208_real64, dispr1(1), 1.0e-9_real64)
+
+   ! dtsolu = min over nodes of dz**2 / (2*dispr), dispr = diffus + ldis*|q(i)|/theta(i)
+   !   node1: dispr = 0.006049... + 2.0*2.0/0.3 = 13.3393...; dummy = 100/(2*13.3393) = 3.74829945...
+   !   node2: dispr = 0.006049... + 2.0*1.0/0.3 = 6.6727...; dummy = 100/(2*6.6727) = 7.4924...
+   ! min(dt=10, 3.7482..., 7.4924...) = 3.7482994552430573
+   @assertEqual(3.7482994552430573_real64, state%solute%dtsolu, 1.0e-9_real64)
+end subroutine test_prepare_solute_dispersion_numnod2
