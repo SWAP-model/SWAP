@@ -35,7 +35,11 @@ swbotbc, swbotbhea, swsrf, swsec, swallo, swcompensate, swcirrthres.
   grazing events in `cropgrass_config.f90`. Includable in grass-management; verify it
   produces grazing output when activated, else drop.
 
-**Unsupported (excluded):** `swsp` (solute adsorption, `core=0`); macropore (ADR 0040).
+**Unsupported (excluded):** `swsp` (solute adsorption, `core=0`); macropore (ADR 0040);
+`swsophy` (tabulated soil physics) — **discovered 2026-05-27**: `sptabulated.f90` is in
+`src/soil/dormant/` (not compiled) and there is no TOML input path for the soil-physical
+table filenames (`FILENAMESOPHY`). The triage `core=7` counted the dormant module. The
+soil-tabulated cluster is dropped.
 
 ## Finalized cluster set
 
