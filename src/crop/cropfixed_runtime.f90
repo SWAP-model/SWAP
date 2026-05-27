@@ -65,19 +65,16 @@
 !     ported (Phase 1: only type=1 cropfixed; Phases 2/3 add types
 !     2 and 3). Teardown: end of Phase 4 removes the else-branch.
       block
-         use crop_config_global_mod, only: crop_config_global
          use cropfixed_init_mod, only: cropfixed_init_from_config
          logical :: use_cache
          use_cache = .false.
-         if (associated(crop_config_global)) then
-            if (allocated(crop_config_global%rotation_loaded)) then
-               if (crop%common%icrop >= 1 .and. crop%common%icrop <= size(crop_config_global%rotation_loaded)) then
-                  if (crop_config_global%rotation_loaded(crop%common%icrop)) use_cache = .true.
-               end if
+         if (allocated(crop_cfg%rotation_loaded)) then
+            if (crop%common%icrop >= 1 .and. crop%common%icrop <= size(crop_cfg%rotation_loaded)) then
+               if (crop_cfg%rotation_loaded(crop%common%icrop)) use_cache = .true.
             end if
          end if
          if (use_cache) then
-            call cropfixed_init_from_config(crop_config_global%rotation_fixed(crop%common%icrop), crop%common%icrop, lcc, state)
+            call cropfixed_init_from_config(crop_cfg%rotation_fixed(crop%common%icrop), crop%common%icrop, lcc, state)
             ! swhydrlift is read by legacy readcropfixed only inside the
             ! swdrought=2 branch (stub-errored in Phase 1). Set to 0 here
             ! to mirror the default; Phase 2 (cropwofost) reuses this
