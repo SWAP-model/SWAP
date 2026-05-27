@@ -72,14 +72,12 @@ contains
       !       * atmosphere snow handshake (snowinco ↔ ssnow)
       !     Each should fold into the relevant state%X%init.
       !   - Legacy magic-int dispatchers (DoTillage(1),
-      !     SoilWater(1), SurfaceWater(1), Temperature(1), Solute(1)) should
+      !     SoilWater(1), Temperature(1), Solute(1)) should
       !     migrate to type-bound state%X%init matching the surrounding
-      !     modern calls. SurfaceWater(1) is already a no-op stub — the
-      !     dispatcher case is the remaining work.
+      !     modern calls. SurfaceWater task dispatch retired (Task 9).
       !   - The legacy readswap() entry point survives in src/io/readswap.f90
       !     only as a parity-test fixture (ADR 0007); not called at runtime.
       !
-      use surfacewater_mod,           only: SurfaceWater
       use tillage_mod,                only: tillage_seed
       use swap_log,                   only: log_info
       use runoff_mod,                 only: cn_init
@@ -93,7 +91,6 @@ contains
 
       type(swap_state_t),          intent(out)   :: state
       type(swap_config_t), target, intent(inout) :: config  ! target: crop_config_global => config%crop
-      logical :: request_smaller_dt   ! intent(out) dummy for SurfaceWater(1)
 
       ! Non-owning config pointer; lifetime matches state's. Top-level
       ! compute routines read switches via state%cfg%X%Y without needing
@@ -244,10 +241,6 @@ contains
 
          ! Modern surfacewater init (gated).
          if (time%flSurfaceWater) call state%surfacewater%init(config%surface_water, config%drain, state%mesh%numnod)
-         ! LEGACY-INIT — SurfaceWater(1) is a no-op stub after init was
-         ! hoisted to state%surfacewater%init above; the dispatcher case
-         ! itself is the remaining cleanup.
-         if (time%flSurfaceWater) call SurfaceWater(1, state, request_smaller_dt)
 
          if (time%flTemperature) call temperature_seed(state, config)
 
@@ -276,7 +269,7 @@ contains
       use csv_output,         only: csv_output_step
       use timecontrol_mod,    only: timecontrol_advance, timecontrol_reduce_dt, &
                                     timecontrol_day_end, itertime_check
-      use surfacewater_mod,   only: SurfaceWater, surfacewater_year_reset
+      use surfacewater_mod,   only: surfacewater_lateral, surfacewater_balance, surfacewater_year_reset
       use tillage_mod,        only: tillage_step, tillage_output
       use boundbottom_mod,    only: BoundBottom
       use meteo_mod,          only: ProcessMeteoDay
@@ -346,14 +339,14 @@ contains
 
             if (time%flDrain) call Drainage(state)
 
-            if (.not.time%fldecdt .and. time%flSurfaceWater) call SurfaceWater(2, state, request_smaller_dt)
+            if (.not.time%fldecdt .and. time%flSurfaceWater) call surfacewater_lateral(state, request_smaller_dt)
             if (request_smaller_dt) time%fldecdt = .true.
 
             if (state%cfg%soil%frost%swfrost == 1) call FrozenBounds(state, config)
 
             if (.not.time%fldecdt) call soilwater_step(state)
 
-            if (.not.time%fldecdt .and. time%flSurfaceWater) call SurfaceWater(3, state, request_smaller_dt)
+            if (.not.time%fldecdt .and. time%flSurfaceWater) call surfacewater_balance(state, request_smaller_dt)
             if (request_smaller_dt) time%fldecdt = .true.
 
             if (time%fldecdt) then

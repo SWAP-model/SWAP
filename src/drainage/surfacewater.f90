@@ -18,27 +18,19 @@ module surfacewater_mod
       use distribute_drainage, only: DIVDRA
       use drainage_mod, only: bocodre
       implicit none
-      public :: SurfaceWater, surfacewater_year_reset
+      public :: surfacewater_lateral, surfacewater_balance, surfacewater_year_reset
       contains
 
-subroutine SurfaceWater(task, state, request_smaller_dt)
-      !! Main driver subroutine for surface water calculations
+subroutine surfacewater_lateral(state, request_smaller_dt)
+      !! Calculate lateral drainage fluxes to surface water.
       !!
-      !! This subroutine is called with different task numbers to perform
-      !! different stages of the surface water calculation:
-      !!
-      !! * Task 1: Initialization - read drainage input data and initialize variables
-      !! * Task 2: Calculate lateral drainage fluxes to surface water
-      !! * Task 3: Calculate surface water balance
-      !!
-      !! The subroutine manages the partitioning of drainage fluxes over soil
-      !! compartments and handles both primary and secondary drainage systems.
+      !! Resets intermediate/cumulative cohorts as appropriate, calls bocodre
+      !! for lateral drainage, then partitions the flux over soil compartments.
       use swap_array_dimensions, only: madr, mawlp
       use array_utils,           only: afgen
       use swap_state_mod,        only: swap_state_t
       implicit none
 
-      integer,            intent(in)    :: task
       type(swap_state_t), intent(inout) :: state
       logical,            intent(out)   :: request_smaller_dt
 
@@ -56,122 +48,139 @@ subroutine SurfaceWater(task, state, request_smaller_dt)
                  time => state%timecontrol,  &
                  sw_cfg => state%cfg%surface_water)
 
-         select case (task)
-         case (1)
-            ! Init — hoisted: state%surfacewater%init(...) called directly from swap_init
-            ! (spec 2026-05-13-state-init-pilot-surfacewater-design.md). Stub kept to
-            ! preserve dispatcher signature; case removal is a separate cleanup.
-            return
+         ! Lateral drainage fluxes to surface water.
 
-         case (2)
-            ! Lateral drainage fluxes to surface water.
+         ! Reset intermediate surface-water and drainage fluxes (cohort-owned).
+         if (time%flZeroIntr) call surf%reset_intermediate()
 
-            ! Reset intermediate surface-water and drainage fluxes (cohort-owned).
-            if (time%flZeroIntr) call surf%reset_intermediate()
+         ! Reset cumulative cohorts (ADR 0042). surfacewater_lateral is the canonical
+         ! owner for both cohorts under swdra=2 (the only swdra value at which
+         ! this code runs — see flSurfaceWater wiring in timecontrol).
+         if (time%flZeroCumu) then
+            call surf%reset_cumulative_drainage()
+            call surf%reset_cumulative_reservoir()
+         end if
 
-            ! Reset cumulative cohorts (ADR 0042). SurfaceWater(2) is the canonical
-            ! owner for both cohorts under swdra=2 (the only swdra value at which
-            ! this code runs — see flSurfaceWater wiring in timecontrol).
-            if (time%flZeroCumu) then
-               call surf%reset_cumulative_drainage()
-               call surf%reset_cumulative_reservoir()
-            end if
+         ! Lateral drainage.
+         call bocodre(dh, state)
 
-            ! Lateral drainage.
-            call bocodre(dh, state)
-
-            ! Partition drainage flux over compartments.
-            do level = 1, drai%nrlevs
-               do node = 1, mesh%numnod
-                  drai%qdra(level, node) = 0.0d0
-               end do
+         ! Partition drainage flux over compartments.
+         do level = 1, drai%nrlevs
+            do node = 1, mesh%numnod
+               drai%qdra(level, node) = 0.0d0
             end do
+         end do
 
-            if (drai%swdivd .eq. 1) then
-               call divdra(mesh%numnod, drai%nrlevs, mesh%dz, soil%ksatfit, soil%ksatexm, &
-                           soil%fluseksatexm, mesh%layer, soil%cofani, soil%gwl,          &
-                           drai%L, drai%qdrain, drai%qdra,                                &
-                           drai%swdivdinf, drai%swnrsrf, drai%swtopnrsrf, drai%zbotdr,    &
-                           time%dt, drai%FacDpthInf, drai%owltab, drai%nowltab, time%t1900)
+         if (drai%swdivd .eq. 1) then
+            call divdra(mesh%numnod, drai%nrlevs, mesh%dz, soil%ksatfit, soil%ksatexm, &
+                        soil%fluseksatexm, mesh%layer, soil%cofani, soil%gwl,          &
+                        drai%L, drai%qdrain, drai%qdra,                                &
+                        drai%swdivdinf, drai%swnrsrf, drai%swtopnrsrf, drai%zbotdr,    &
+                        time%dt, drai%FacDpthInf, drai%owltab, drai%nowltab, time%t1900)
 
-               ! Redistribute qdrain with the new top boundary for discharge layers.
-               if (drai%swdislay .eq. 2) then
-                  do level = 1, drai%nrlevs
-                     if (drai%swtopdislay(level) .eq. 1) then
-                        zTopDisLay(level) = drai%fTopDisLay(level) * soil%gwl + &
-                                            (1.0d0 - drai%fTopDisLay(level)) * (soil%gwl - dh)
-                     end if
-                  end do
-               end if
-               if (drai%swdislay .eq. 1 .or. drai%swdislay .eq. 2) then
-                  do level = 1, drai%nrlevs
-                     if (drai%swtopdislay(level) .eq. 1) then
-                        ! Find node number of the new top of the discharge layer.
-                        nodeTopDisLay(level) = 1
-                        zCum = -mesh%dz(1)
-                        do while (zTopDisLay(level) .lt. zCum)
-                           nodeTopDisLay(level) = nodeTopDisLay(level) + 1
-                           zCum = zCum - mesh%dz(nodeTopDisLay(level))
-                        end do
-                        ! Saturated fraction of the partial compartment.
-                        difzTopDisLay(level) = zTopDisLay(level) - zCum
-                        ratiodz = difzTopDisLay(level)/mesh%dz(nodeTopDisLay(level))
-                        sumqdr(level) = ratiodz * drai%qdra(level, nodeTopDisLay(level))
-                        do node = nodeTopDisLay(level) + 1, mesh%numnod
-                           sumqdr(level) = sumqdr(level) + drai%qdra(level, node)
-                        end do
-                        if (dabs(sumqdr(level)) .lt. 1.0d-8) then
-                           ratio = 1.0d0
-                        else
-                           ratio = drai%qdrain(level)/sumqdr(level)
-                        end if
-                        ! Redistribute drain-water fluxes.
-                        do node = 1, nodeTopDisLay(level) - 1
-                           drai%qdra(level, node) = 0.0d0
-                        end do
-                        drai%qdra(level, nodeTopDisLay(level)) = &
-                           drai%qdra(level, nodeTopDisLay(level)) * ratio * ratiodz
-                        do node = nodeTopDisLay(level) + 1, mesh%numnod
-                           drai%qdra(level, node) = drai%qdra(level, node) * ratio
-                        end do
-                     end if
-                  end do
-               end if
-            else
-               ! Drainage flux through lowest compartment only.
+            ! Redistribute qdrain with the new top boundary for discharge layers.
+            if (drai%swdislay .eq. 2) then
                do level = 1, drai%nrlevs
-                  drai%qdra(level, mesh%numnod) = drai%qdrain(level)
+                  if (drai%swtopdislay(level) .eq. 1) then
+                     zTopDisLay(level) = drai%fTopDisLay(level) * soil%gwl + &
+                                         (1.0d0 - drai%fTopDisLay(level)) * (soil%gwl - dh)
+                  end if
                end do
             end if
-
-            surf%qdrtot = 0.0d0
+            if (drai%swdislay .eq. 1 .or. drai%swdislay .eq. 2) then
+               do level = 1, drai%nrlevs
+                  if (drai%swtopdislay(level) .eq. 1) then
+                     ! Find node number of the new top of the discharge layer.
+                     nodeTopDisLay(level) = 1
+                     zCum = -mesh%dz(1)
+                     do while (zTopDisLay(level) .lt. zCum)
+                        nodeTopDisLay(level) = nodeTopDisLay(level) + 1
+                        zCum = zCum - mesh%dz(nodeTopDisLay(level))
+                     end do
+                     ! Saturated fraction of the partial compartment.
+                     difzTopDisLay(level) = zTopDisLay(level) - zCum
+                     ratiodz = difzTopDisLay(level)/mesh%dz(nodeTopDisLay(level))
+                     sumqdr(level) = ratiodz * drai%qdra(level, nodeTopDisLay(level))
+                     do node = nodeTopDisLay(level) + 1, mesh%numnod
+                        sumqdr(level) = sumqdr(level) + drai%qdra(level, node)
+                     end do
+                     if (dabs(sumqdr(level)) .lt. 1.0d-8) then
+                        ratio = 1.0d0
+                     else
+                        ratio = drai%qdrain(level)/sumqdr(level)
+                     end if
+                     ! Redistribute drain-water fluxes.
+                     do node = 1, nodeTopDisLay(level) - 1
+                        drai%qdra(level, node) = 0.0d0
+                     end do
+                     drai%qdra(level, nodeTopDisLay(level)) = &
+                        drai%qdra(level, nodeTopDisLay(level)) * ratio * ratiodz
+                     do node = nodeTopDisLay(level) + 1, mesh%numnod
+                        drai%qdra(level, node) = drai%qdra(level, node) * ratio
+                     end do
+                  end if
+               end do
+            end if
+         else
+            ! Drainage flux through lowest compartment only.
             do level = 1, drai%nrlevs
-               surf%qdrtot = surf%qdrtot + drai%qdrain(level)
+               drai%qdra(level, mesh%numnod) = drai%qdrain(level)
             end do
+         end if
 
-            return
-
-         case (3)
-            ! Surface water balance.
-            if (sw_cfg%swsrf .eq. 3) then
-               surf%wlp = afgen(surf%wlptab, 2*mawlp, time%t1900 - 1.0d0 + time%dt)
-            end if
-            if (sw_cfg%swsec .eq. 2) then
-               ! Secondary system: water level is simulated.
-               call wlevbal(state, request_smaller_dt)
-            elseif (sw_cfg%swsec .eq. 1) then
-               ! Secondary system: water level is input.
-               call wballev(state)
-            end if
-
-         case default
-            call fatalerr_collected('SurfaceWater', 'Illegal value for TASK')
-         end select
+         surf%qdrtot = 0.0d0
+         do level = 1, drai%nrlevs
+            surf%qdrtot = surf%qdrtot + drai%qdrain(level)
+         end do
 
       end associate
 
       return
-      end subroutine SurfaceWater
+      end subroutine surfacewater_lateral
+
+subroutine surfacewater_balance(state, request_smaller_dt)
+      !! Calculate surface water balance.
+      !!
+      !! Updates wlp from table (swsrf=3), then dispatches to wlevbal (simulated
+      !! level, swsec=2) or wballev (input level, swsec=1).
+      use swap_array_dimensions, only: madr, mawlp
+      use array_utils,           only: afgen
+      use swap_state_mod,        only: swap_state_t
+      implicit none
+
+      type(swap_state_t), intent(inout) :: state
+      logical,            intent(out)   :: request_smaller_dt
+
+      integer :: level, node
+      real(8) :: zCum, zTopDisLay(madr), difzTopDisLay(madr), ratio, ratiodz, sumqdr(madr), dh
+      integer :: nodeTopDisLay(madr)
+      character(len=300) :: messag
+
+      request_smaller_dt = .false.
+
+      associate (mesh => state%mesh,         &
+                 drai => state%drainage,     &
+                 soil => state%soilwater,    &
+                 surf => state%surfacewater, &
+                 time => state%timecontrol,  &
+                 sw_cfg => state%cfg%surface_water)
+
+         ! Surface water balance.
+         if (sw_cfg%swsrf .eq. 3) then
+            surf%wlp = afgen(surf%wlptab, 2*mawlp, time%t1900 - 1.0d0 + time%dt)
+         end if
+         if (sw_cfg%swsec .eq. 2) then
+            ! Secondary system: water level is simulated.
+            call wlevbal(state, request_smaller_dt)
+         elseif (sw_cfg%swsec .eq. 1) then
+            ! Secondary system: water level is input.
+            call wballev(state)
+         end if
+
+      end associate
+
+      return
+      end subroutine surfacewater_balance
 
       SUBROUTINE WLEVBAL (state, request_smaller_dt)
       !! Calculate surface water level from water balance (simulated level)
