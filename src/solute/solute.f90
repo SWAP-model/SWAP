@@ -8,64 +8,12 @@ module solute_mod
 contains
 
    subroutine solute_seed(state)
-      use swap_array_dimensions, only: mabbc, macp
-      use array_utils,           only: afgen
-      use swap_state_mod,        only: swap_state_t
-      use, intrinsic :: iso_fortran_env, only: real64
-
+      use swap_state_mod, only: swap_state_t
       implicit none
-
       type(swap_state_t), intent(inout) :: state
 
-      integer :: level, i
-      real(8) :: cmlav, ftemp, ftheta, decact, cfluxt, cfluxb
-      real(8) :: cdrtot, ctrans, crot, dispr, old, dummy, vpore
-      real(8) :: isqdra, tab(mabbc*2)
-      real(8) :: tcumsol
-      real(8) :: ArMpSs   ! macropore-retired (always 0; ADR 0040)
-      logical :: differ
-      real(8), parameter :: rer    = 1.0d-3
-      real(8), parameter :: vsmall = 1.0d-15
-
-      associate (sol  => state%solute,        &
-                 soil => state%soilwater,     &
-                 mesh => state%mesh,          &
-                 time => state%timecontrol,   &
-                 drai => state%drainage,      &
-                 surf => state%surfacewater,  &
-                 atmo => state%atmosphere,    &
-                 heat => state%heat)
-
-         ! === Initialise solute rate/state variables ============================
-
-         ! Determine initial solute profile from input concentrations.
-         if (soil%swinco .ne. 3 .and. allocated(sol%cml_init) .and. allocated(sol%zc_init)) then
-            do i = 1, sol%nconc
-               tab(i*2)     = sol%cml_init(i)
-               tab(i*2 - 1) = abs(sol%zc_init(i))
-            end do
-            do i = 1, mesh%numnod
-               sol%cml(i) = afgen(tab, macp*2, abs(mesh%z(i)))
-            end do
-         end if
-
-         ! Derived solute concentrations + time-invariant coefficients.
-         sol%samini = 0.0d0
-         do i = 1, mesh%numnod
-            sol%bdenskf(i)         = soil%bdens(mesh%layer(i))*sol%kf(mesh%layer(i))
-            sol%bdenskfcref(i)     = sol%bdenskf(i)*sol%cref
-            sol%bdenskfsatporos(i) = soil%bdens(mesh%layer(i))*sol%kfsat + sol%poros
-            sol%cmsy(i)            = soil%theta(i)*sol%cml(i) +                          &
-                                     sol%bdenskfcref(i)*(sol%cml(i)/sol%cref)**sol%frexp
-            sol%samini             = sol%samini + sol%cmsy(i) * mesh%dz(i)
-            sol%ddiffwcs(i)        = sol%ddif / (soil%thetsl(mesh%layer(i))**2)
-            sol%decpotfdepth(i)    = sol%decpot(mesh%layer(i))*sol%fdepth(mesh%layer(i))
-         end do
-         sol%sampro = sol%samini
-
-      end associate
-
-      return
+      call determine_initial_solute_profile(state)
+      call derive_solute_concentrations(state)
    end subroutine solute_seed
 
    subroutine solute_step(state)
@@ -340,5 +288,49 @@ contains
          end do
       end if
    end function solute_cml_from_cmsy
+
+   !> Initial solute profile from input concentrations (AFGEN table).
+   subroutine determine_initial_solute_profile(state)
+      use swap_array_dimensions, only: mabbc, macp
+      use array_utils,           only: afgen
+      use swap_state_mod,        only: swap_state_t
+      implicit none
+      type(swap_state_t), intent(inout) :: state
+      integer :: i
+      real(8) :: tab(mabbc*2)
+      associate (sol => state%solute, soil => state%soilwater, mesh => state%mesh)
+         if (soil%swinco .ne. 3 .and. allocated(sol%cml_init) .and. allocated(sol%zc_init)) then
+            do i = 1, sol%nconc
+               tab(i*2)     = sol%cml_init(i)
+               tab(i*2 - 1) = abs(sol%zc_init(i))
+            end do
+            do i = 1, mesh%numnod
+               sol%cml(i) = afgen(tab, macp*2, abs(mesh%z(i)))
+            end do
+         end if
+      end associate
+   end subroutine determine_initial_solute_profile
+
+   !> Per-node derived coefficients + initial cmsy / mass-balance baseline.
+   subroutine derive_solute_concentrations(state)
+      use swap_state_mod, only: swap_state_t
+      implicit none
+      type(swap_state_t), intent(inout) :: state
+      integer :: i
+      associate (sol => state%solute, soil => state%soilwater, mesh => state%mesh)
+         sol%samini = 0.0d0
+         do i = 1, mesh%numnod
+            sol%bdenskf(i)         = soil%bdens(mesh%layer(i))*sol%kf(mesh%layer(i))
+            sol%bdenskfcref(i)     = sol%bdenskf(i)*sol%cref
+            sol%bdenskfsatporos(i) = soil%bdens(mesh%layer(i))*sol%kfsat + sol%poros
+            sol%cmsy(i)            = soil%theta(i)*sol%cml(i) +                          &
+                                     sol%bdenskfcref(i)*(sol%cml(i)/sol%cref)**sol%frexp
+            sol%samini             = sol%samini + sol%cmsy(i) * mesh%dz(i)
+            sol%ddiffwcs(i)        = sol%ddif / (soil%thetsl(mesh%layer(i))**2)
+            sol%decpotfdepth(i)    = sol%decpot(mesh%layer(i))*sol%fdepth(mesh%layer(i))
+         end do
+         sol%sampro = sol%samini
+      end associate
+   end subroutine derive_solute_concentrations
 
 end module solute_mod

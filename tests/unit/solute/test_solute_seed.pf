@@ -1,0 +1,79 @@
+! Unit tests for solute_seed via the derive_solute_concentrations logic.
+! swinco=3 skips the profile-interpolation block; only the derive phase runs.
+! Setup: numnod=2, single layer, hand-computed expected values.
+@test
+subroutine test_solute_seed_derive_coefficients()
+   use funit
+   use iso_fortran_env, only: real64
+   use swap_state_mod,  only: swap_state_t
+   use solute_mod,      only: solute_seed
+   implicit none
+
+   type(swap_state_t) :: state
+   integer, parameter :: numnod = 2
+   integer, parameter :: nlayer = 1
+
+   ! --- mesh ---
+   state%mesh%numnod = numnod
+   allocate(state%mesh%layer(numnod));   state%mesh%layer = [1, 1]
+   allocate(state%mesh%dz(numnod));      state%mesh%dz    = [10.0_real64, 10.0_real64]
+
+   ! --- soilwater: swinco=3 skips profile interpolation ---
+   state%soilwater%swinco = 3
+   allocate(state%soilwater%bdens(nlayer));  state%soilwater%bdens  = [1.5_real64]
+   allocate(state%soilwater%theta(numnod));  state%soilwater%theta  = [0.3_real64, 0.3_real64]
+   allocate(state%soilwater%thetsl(nlayer)); state%soilwater%thetsl = [0.4_real64]
+
+   ! --- solute scalars ---
+   state%solute%kfsat = 0.0_real64
+   state%solute%poros = 0.4_real64
+   state%solute%cref  = 1.0_real64
+   state%solute%frexp = 1.0_real64
+   state%solute%ddif  = 0.5_real64
+
+   ! --- solute per-layer arrays ---
+   allocate(state%solute%kf(nlayer));      state%solute%kf     = [2.0_real64]
+   allocate(state%solute%decpot(nlayer));  state%solute%decpot = [0.1_real64]
+   allocate(state%solute%fdepth(nlayer));  state%solute%fdepth = [0.8_real64]
+
+   ! --- solute per-node arrays ---
+   allocate(state%solute%cml(numnod));             state%solute%cml = [1.0_real64, 1.0_real64]
+   allocate(state%solute%cmsy(numnod));            state%solute%cmsy             = 0.0_real64
+   allocate(state%solute%bdenskf(numnod));         state%solute%bdenskf          = 0.0_real64
+   allocate(state%solute%bdenskfcref(numnod));     state%solute%bdenskfcref      = 0.0_real64
+   allocate(state%solute%bdenskfsatporos(numnod)); state%solute%bdenskfsatporos  = 0.0_real64
+   allocate(state%solute%ddiffwcs(numnod));        state%solute%ddiffwcs         = 0.0_real64
+   allocate(state%solute%decpotfdepth(numnod));    state%solute%decpotfdepth     = 0.0_real64
+
+   ! cml_init / zc_init must NOT be allocated so the profile block is skipped
+   ! (swinco=3 already guards it, but leave unallocated for clarity).
+
+   call solute_seed(state)
+
+   ! bdenskf(1) = bdens(1)*kf(1) = 1.5*2.0 = 3.0
+   @assertEqual(3.0_real64, state%solute%bdenskf(1), 1.0e-12_real64)
+   @assertEqual(3.0_real64, state%solute%bdenskf(2), 1.0e-12_real64)
+
+   ! bdenskfcref(1) = bdenskf(1)*cref = 3.0*1.0 = 3.0
+   @assertEqual(3.0_real64, state%solute%bdenskfcref(1), 1.0e-12_real64)
+
+   ! bdenskfsatporos(1) = bdens(1)*kfsat + poros = 1.5*0.0 + 0.4 = 0.4
+   @assertEqual(0.4_real64, state%solute%bdenskfsatporos(1), 1.0e-12_real64)
+
+   ! ddiffwcs(1) = ddif / thetsl(1)**2 = 0.5 / 0.16 = 3.125
+   @assertEqual(3.125_real64, state%solute%ddiffwcs(1), 1.0e-12_real64)
+
+   ! decpotfdepth(1) = decpot(1)*fdepth(1) = 0.1*0.8 = 0.08
+   @assertEqual(0.08_real64, state%solute%decpotfdepth(1), 1.0e-12_real64)
+
+   ! cmsy(1) = theta(1)*cml(1) + bdenskfcref(1)*(cml(1)/cref)**frexp
+   !         = 0.3*1.0 + 3.0*(1.0/1.0)**1.0 = 0.3 + 3.0 = 3.3
+   @assertEqual(3.3_real64, state%solute%cmsy(1), 1.0e-12_real64)
+   @assertEqual(3.3_real64, state%solute%cmsy(2), 1.0e-12_real64)
+
+   ! samini = sum(cmsy(i)*dz(i)) = 3.3*10 + 3.3*10 = 66.0
+   @assertEqual(66.0_real64, state%solute%samini, 1.0e-12_real64)
+
+   ! sampro mirrors samini after seed
+   @assertEqual(66.0_real64, state%solute%sampro, 1.0e-12_real64)
+end subroutine test_solute_seed_derive_coefficients
