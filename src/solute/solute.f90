@@ -102,6 +102,24 @@ contains
 
          ! === Solute rate variables =============================================
 
+         ! FIXME(swbr): SWBR=1 (mixed-reservoir aquifer breakthrough) is BROKEN and
+         ! unsupported. The breakthrough blocks below read sol%bdenskfsatporos(i) with
+         ! i == numnod+1 (the do-loop counter's terminal value, used outside the loop)
+         ! — an out-of-range index: the array is only filled 1..numnod, so the term
+         ! divides by zero and every concentration becomes NaN. This bug is present in
+         ! SWAP 4.2.0 itself (confirmed: swap420gf emits NaN for all CONC columns under
+         ! SWBR=1), so there is no valid parity reference to port against. The
+         ! breakthrough math is kept below for a future fix, but is quarantined here.
+         ! Fixing it (likely a single aquifer coefficient bdens*kfsat+poros, not a
+         ! soil-node array element) and validating against the SWAP theory manual is
+         ! required before SWBR=1 can be re-enabled.
+         if (sol%swbr .eq. 1) then
+            call fatalerr_collected('solute_step',                                   &
+               'SWBR=1 (mixed-reservoir aquifer breakthrough) is not supported: '//  &
+               'broken in SWAP 4.2.0 (out-of-range bdenskfsatporos read -> division '// &
+               'by zero -> NaN concentrations). See FIXME in solute_step.')
+         end if
+
          ! Cohort resets (ADR 0033).
          if (time%flZeroIntr) call sol%reset_intermediate()
          if (time%flZeroCumu) then
@@ -226,6 +244,8 @@ contains
             end do
 
             ! Aquifer breakthrough.
+            ! FIXME(swbr): quarantined — unreachable; solute_step fatal-errors on
+            ! SWBR=1 above. sol%bdenskfsatporos(i) here reads i==numnod+1 (OOB).
             if (sol%swbr .eq. 1) then
                if (surf%qdrtot .gt. 0.0d0) then
                   sol%cdrain = sol%cdrain + sol%dtsolu/sol%bdenskfsatporos(i) *          &
