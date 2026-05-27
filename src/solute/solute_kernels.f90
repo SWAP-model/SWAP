@@ -6,6 +6,7 @@ module solute_kernels_mod
    implicit none
    private
    public :: bdenskf_coeff, bdenskfsatporos_coeff, ddiffwcs_coeff, decpotfdepth_coeff
+   public :: solute_cml_from_cmsy
 
 contains
 
@@ -42,5 +43,37 @@ contains
       real(real64)             :: v
       v = decpot*fdepth
    end function decpotfdepth_coeff
+
+   !> Recover mobile concentration cml from total cmsy via the Freundlich
+   !> isotherm. Linear shortcut when frexp ~ 1; otherwise fixed-point iterate
+   !> seeded from cml_guess. Caller handles the cmsy < vsmall zeroing.
+   pure function solute_cml_from_cmsy(cmsy, theta, bdenskf, frexp, cref, cml_guess) result(cml)
+      real(real64), intent(in) :: cmsy       ! total (dissolved+adsorbed) conc (M/L3 soil)
+      real(real64), intent(in) :: theta      ! volumetric water content (-)
+      real(real64), intent(in) :: bdenskf    ! bdens*kf (-)
+      real(real64), intent(in) :: frexp      ! Freundlich exponent (-)
+      real(real64), intent(in) :: cref       ! reference concentration (M/L3)
+      real(real64), intent(in) :: cml_guess  ! previous cml, iteration seed (M/L3)
+      real(real64)             :: cml
+
+      real(real64), parameter :: rer    = 1.0d-3
+      real(real64), parameter :: vsmall = 1.0d-15
+      real(real64) :: old, dummy
+      logical      :: differ
+
+      if (abs(frexp - 1.0d0) .lt. 0.001d0) then
+         cml = cmsy / (theta + bdenskf)
+      else
+         cml = cml_guess
+         if (cml .lt. vsmall) cml = vsmall
+         differ = .true.
+         do while (differ)
+            old   = cml
+            dummy = bdenskf*(cml/cref)**(frexp - 1.0d0)
+            cml   = cmsy/(theta + dummy)
+            if (abs(cml - old) .lt. rer*cml) differ = .false.
+         end do
+      end if
+   end function solute_cml_from_cmsy
 
 end module solute_kernels_mod

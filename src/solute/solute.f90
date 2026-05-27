@@ -75,6 +75,7 @@ contains
       use array_utils,           only: afgen
       use swap_state_mod,        only: swap_state_t
       use, intrinsic :: iso_fortran_env, only: real64
+      use solute_kernels_mod,    only: solute_cml_from_cmsy
 
       implicit none
 
@@ -82,14 +83,12 @@ contains
 
       integer :: level, i
       real(8) :: cmlav, ftemp, ftheta, decact, cfluxt, cfluxb
-      real(8) :: cdrtot, ctrans, crot, dispr, old, dummy, vpore
+      real(8) :: cdrtot, ctrans, crot, dispr, dummy, vpore
       real(8) :: isqdra, tab(mabbc*2)
       real(8) :: tcumsol
       real(8) :: ArMpSs   ! macropore-retired (always 0; ADR 0040)
-      logical :: differ
       real(8), dimension(macp) :: thetav, diffus, dispr1, vpore2
 
-      real(8), parameter :: rer    = 1.0d-3
       real(8), parameter :: vsmall = 1.0d-15
 
       associate (sol  => state%solute,        &
@@ -223,22 +222,12 @@ contains
                              (-ctrans - crot - cdrtot) * sol%dtsolu
 
                ! Iterate to recover cml from cmsy with the Freundlich isotherm.
-               differ = .true.
                if (sol%cmsy(i) .lt. vsmall) then
                   sol%cmsy(i) = 0.0d0
                   sol%cml(i)  = 0.0d0
                else
-                  if (abs(sol%frexp - 1.0d0) .lt. 0.001d0) then
-                     sol%cml(i) = sol%cmsy(i) / (soil%theta(i) + sol%bdenskf(i))
-                  else
-                     if (sol%cml(i) .lt. vsmall) sol%cml(i) = vsmall
-                     do while (differ)
-                        old        = sol%cml(i)
-                        dummy      = sol%bdenskf(i)*(sol%cml(i)/sol%cref)**(sol%frexp - 1.0d0)
-                        sol%cml(i) = sol%cmsy(i)/(soil%theta(i) + dummy)
-                        if (abs(sol%cml(i) - old) .lt. rer*sol%cml(i)) differ = .false.
-                     end do
-                  end if
+                  sol%cml(i) = solute_cml_from_cmsy(sol%cmsy(i), soil%theta(i), &
+                                  sol%bdenskf(i), sol%frexp, sol%cref, sol%cml(i))
                end if
 
                cfluxt = cfluxb

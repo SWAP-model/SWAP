@@ -40,3 +40,32 @@ subroutine test_decpotfdepth_coeff()
    ! decpot=0 (no decay): correct value is 0 — masked case today.
    @assertEqual(0.0_real64, decpotfdepth_coeff(0.0_real64, 0.8_real64), 1.0e-12_real64)
 end subroutine test_decpotfdepth_coeff
+
+@test
+subroutine test_cml_from_cmsy_linear_branch()
+   use funit
+   use iso_fortran_env, only: real64
+   use solute_kernels_mod, only: solute_cml_from_cmsy
+   real(real64) :: cml
+   ! |frexp-1|<0.001 -> linear: cml = cmsy/(theta+bdenskf) = 4.0/(0.3+0.5) = 5.0
+   cml = solute_cml_from_cmsy(4.0_real64, 0.3_real64, 0.5_real64, 1.0_real64, 1.0_real64, 0.0_real64)
+   @assertEqual(5.0_real64, cml, 1.0e-12_real64)
+   ! frexp=1.0005 still inside the linear threshold
+   cml = solute_cml_from_cmsy(4.0_real64, 0.3_real64, 0.5_real64, 1.0005_real64, 1.0_real64, 0.0_real64)
+   @assertEqual(5.0_real64, cml, 1.0e-12_real64)
+end subroutine test_cml_from_cmsy_linear_branch
+
+@test
+subroutine test_cml_from_cmsy_nonlinear_satisfies_fixedpoint()
+   use funit
+   use iso_fortran_env, only: real64
+   use solute_kernels_mod, only: solute_cml_from_cmsy
+   real(real64) :: cml, theta, bdenskf, frexp, cref, cmsy, residual
+   theta = 0.25_real64; bdenskf = 1.2_real64; frexp = 0.7_real64
+   cref = 1.0_real64;   cmsy = 3.0_real64
+   cml = solute_cml_from_cmsy(cmsy, theta, bdenskf, frexp, cref, 1.0_real64)
+   ! Converged cml must satisfy cml = cmsy / (theta + bdenskf*(cml/cref)**(frexp-1))
+   residual = cml - cmsy/(theta + bdenskf*(cml/cref)**(frexp-1.0_real64))
+   @assertEqual(0.0_real64, residual, 1.0e-3_real64)
+   @assertTrue(cml > 0.0_real64)
+end subroutine test_cml_from_cmsy_nonlinear_satisfies_fixedpoint
