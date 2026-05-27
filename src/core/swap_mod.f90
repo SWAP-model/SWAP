@@ -86,7 +86,7 @@ contains
       use temperature_mod,            only: temperature_seed
       use solute_mod,                 only: solute_seed
       use soilgrid_mod,               only: CalcGrid
-      use soilhydraulics_mod,         only: soilwater
+      use soilhydraulics_mod,         only: soilwater_seed
       use seed_state_from_config_mod, only: seed_state_from_config
       use timecontrol_mod,            only: timecontrol_init, itertime_init
       use csv_output,                 only: csv_output_init
@@ -213,8 +213,8 @@ contains
          ! state%heat%tsoil(node) during hydraulic-conductivity init.
          call state%heat%init(config%heat, state%mesh%numnod)
 
-         ! LEGACY-INIT — SoilWater(1) magic-int dispatcher.
-         call SoilWater(1, state)
+         ! Phase-2 runtime seed: hatm, initial h/theta, initial fluxes.
+         call soilwater_seed(state)
          if (state%atmosphere%swusecn == 1) call cn_init(state)
 
          ! Modern drainage init.
@@ -287,7 +287,7 @@ contains
       use frozencond_mod,     only: FrozenCond, FrozenBounds
       use temperature_mod,    only: temperature_step
       use solute_mod,         only: solute_step
-      use soilhydraulics_mod, only: soilwater, SoilWaterStateVar
+      use soilhydraulics_mod, only: soilwater_step, soilwater_update, SoilWaterStateVar
       use irrigation_mod,     only: irrigation_step, ssdi_irrigation_step
       use management_soil_mod, only: SoilManagement
       use drainage_mod,       only: drainage
@@ -351,7 +351,7 @@ contains
 
             if (state%cfg%soil%frost%swfrost == 1) call FrozenBounds(state, config)
 
-            if (.not.time%fldecdt) call SoilWater(2, state)
+            if (.not.time%fldecdt) call soilwater_step(state)
 
             if (.not.time%fldecdt .and. time%flSurfaceWater) call SurfaceWater(3, state, request_smaller_dt)
             if (request_smaller_dt) time%fldecdt = .true.
@@ -364,7 +364,7 @@ contains
          end do
 
          ! SoilWater rate/state variables.
-         call SoilWater(3, state)
+         call soilwater_update(state)
 
          if (time%flTemperature) call temperature_step(state, config)
          if (time%flSolute)      call solute_step(state)

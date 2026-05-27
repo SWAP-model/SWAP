@@ -9,7 +9,7 @@ module soilhydraulics_mod
    ! Core hydraulic calculations
    implicit none
    private
-   public :: headcalc, soilwater, soilwaterstatevar, hysteresis
+   public :: headcalc, soilwater_seed, soilwater_step, soilwater_update, soilwaterstatevar, hysteresis
 contains
 
    !> Calculate pressure heads, water contents, and conductivities for next time step
@@ -817,7 +817,7 @@ contains
    !! Date: Aug 2004
    !! @endnote
    !!
-   subroutine soilwater(task, state)
+   subroutine soilwater_seed(state)
      use doln  ! provides do_ln_trans (parameter)
       ! [SS-GR-FINAL B9] blanket use Variables → explicit only-list; all symbols DEFERRED
       ! macp/mabbc/matabentries → swap_array_dimensions (dimension constants)
@@ -843,7 +843,6 @@ contains
       implicit none
 
       ! Arguments
-      integer task
       type(swap_state_t), intent(inout) :: state
 
       ! Local variables
@@ -863,9 +862,6 @@ contains
                  soil_cfg => state%cfg%soil, &  ! [GR-SOIL 2026-05-24] soil_cfg%swhyst/soil_cfg%gwli direct config read
                  hyd => state%cfg%soil%hydraulics, &  ! [GR-SOIL 2026-05-24] per-layer VG params (paramvg)
                  swbotb => state%soilwater%swbotb_runtime)
-
-      select case (task)
-      case (1)
 
          ! Initialize Soilwater rate/state variables
 
@@ -1106,10 +1102,56 @@ contains
                     ' cm, numnod=' // to_str(mesh%numnod) // ', numlay=' // to_str(mesh%numlay) // &
                     ', volini=' // to_str(real(soil%volini,4)) // ' cm')              ! [SS-SWC S-2.3]
 
+      end associate  ! mesh%numnod/mesh%dz/mesh%z/mesh%layer [GR-BH C4]; swbotb [GR-BH Audit 31]
 
       return
+      end subroutine soilwater_seed
 
-      case (2)
+   subroutine soilwater_step(state)
+     use doln  ! provides do_ln_trans (parameter)
+      ! [SS-GR-FINAL B9] blanket use Variables → explicit only-list; all symbols DEFERRED
+      ! macp/mabbc/matabentries → swap_array_dimensions (dimension constants)
+      use swap_array_dimensions, only: macp, mabbc, matabentries
+      ! [GR-SOIL 2026-05-24] soilwater() is now `use variables`-free. All consumers
+      !   moved to state/config:
+      !     cQMpLatSs retired (ADR 0040)
+      !     swhyst/gwli → state%cfg%soil
+      !     paramvg → state%cfg%soil%hydraulics (hyd alias)
+      !     h_enpr was an unused import
+      !     numtab/numtablay/ientrytab/ientrytablay/sptab/sptablay retired with
+      !       swsophy=1 → src/soil/dormant/sptabulated.f90
+      !     zi/nhead → state%cfg%soil%initial%z_init
+      !     relsatthr/ksatthr retired (threshold-Ksat path not ported; state defaults 0)
+      !     iHWCKmodel → state%soilwater%iHWCKmodel (default 1 via soilwater_init)
+      use swap_log, only: log_info, to_str
+      use array_utils, only: afgen
+      use soilhydraulics_utils, only: watcon, hconduc, moiscap, hcomean
+      ! [MACRO-RETIRE 2026-05-12] macropore_mod retired (ADR 0040).
+      use soilwaterbalance_mod, only: calcgwl, watstor, integral, fluxes
+      use swap_state_mod, only: swap_state_t
+      use, intrinsic :: iso_fortran_env, only: real64  ! [SS-ATM] for atmosphere state dual-writes
+      implicit none
+
+      ! Arguments
+      type(swap_state_t), intent(inout) :: state
+
+      ! Local variables
+      integer lay,node,i,j
+
+      real(8) tab(mabbc*2)
+      character(len=200) messag
+
+      ! [GR-BH C4] mesh globals aliased via mesh for all cases
+      ! [GR-BH Audit 31] swbotb aliased via soil%swbotb_runtime
+      associate (mesh => state%mesh,         &
+                 soil => state%soilwater,    &
+                 drai => state%drainage,     &
+                 heat => state%heat,         &
+                 atmo => state%atmosphere,   &
+                 time => state%timecontrol,  &
+                 soil_cfg => state%cfg%soil, &  ! [GR-SOIL 2026-05-24] soil_cfg%swhyst/soil_cfg%gwli direct config read
+                 hyd => state%cfg%soil%hydraulics, &  ! [GR-SOIL 2026-05-24] per-layer VG params (paramvg)
+                 swbotb => state%soilwater%swbotb_runtime)
 
          ! Calculate Soilwater rate/state variables
 
@@ -1146,9 +1188,56 @@ contains
       ! Calculate new soil water state variables
       call headcalc(state)
 
-      return
+      end associate  ! mesh%numnod/mesh%dz/mesh%z/mesh%layer [GR-BH C4]; swbotb [GR-BH Audit 31]
 
-      case (3)
+      return
+      end subroutine soilwater_step
+
+   subroutine soilwater_update(state)
+     use doln  ! provides do_ln_trans (parameter)
+      ! [SS-GR-FINAL B9] blanket use Variables → explicit only-list; all symbols DEFERRED
+      ! macp/mabbc/matabentries → swap_array_dimensions (dimension constants)
+      use swap_array_dimensions, only: macp, mabbc, matabentries
+      ! [GR-SOIL 2026-05-24] soilwater() is now `use variables`-free. All consumers
+      !   moved to state/config:
+      !     cQMpLatSs retired (ADR 0040)
+      !     swhyst/gwli → state%cfg%soil
+      !     paramvg → state%cfg%soil%hydraulics (hyd alias)
+      !     h_enpr was an unused import
+      !     numtab/numtablay/ientrytab/ientrytablay/sptab/sptablay retired with
+      !       swsophy=1 → src/soil/dormant/sptabulated.f90
+      !     zi/nhead → state%cfg%soil%initial%z_init
+      !     relsatthr/ksatthr retired (threshold-Ksat path not ported; state defaults 0)
+      !     iHWCKmodel → state%soilwater%iHWCKmodel (default 1 via soilwater_init)
+      use swap_log, only: log_info, to_str
+      use array_utils, only: afgen
+      use soilhydraulics_utils, only: watcon, hconduc, moiscap, hcomean
+      ! [MACRO-RETIRE 2026-05-12] macropore_mod retired (ADR 0040).
+      use soilwaterbalance_mod, only: calcgwl, watstor, integral, fluxes
+      use swap_state_mod, only: swap_state_t
+      use, intrinsic :: iso_fortran_env, only: real64  ! [SS-ATM] for atmosphere state dual-writes
+      implicit none
+
+      ! Arguments
+      type(swap_state_t), intent(inout) :: state
+
+      ! Local variables
+      integer lay,node,i,j
+
+      real(8) tab(mabbc*2)
+      character(len=200) messag
+
+      ! [GR-BH C4] mesh globals aliased via mesh for all cases
+      ! [GR-BH Audit 31] swbotb aliased via soil%swbotb_runtime
+      associate (mesh => state%mesh,         &
+                 soil => state%soilwater,    &
+                 drai => state%drainage,     &
+                 heat => state%heat,         &
+                 atmo => state%atmosphere,   &
+                 time => state%timecontrol,  &
+                 soil_cfg => state%cfg%soil, &  ! [GR-SOIL 2026-05-24] soil_cfg%swhyst/soil_cfg%gwli direct config read
+                 hyd => state%cfg%soil%hydraulics, &  ! [GR-SOIL 2026-05-24] per-layer VG params (paramvg)
+                 swbotb => state%soilwater%swbotb_runtime)
 
          ! Update hydraulic conductivities to time level t+1
          ! [SS-SWC S-2.12B] all legacy half-writes dropped
@@ -1180,14 +1269,10 @@ contains
       ! Update parameters for soil water hystereses
       if (soil_cfg%swhyst.ne.0) call hysteresis (state)
 
-      case default
-         call fatalerr_collected ('SoilWater', 'Illegal value for TASK')
-      end select
-
       end associate  ! mesh%numnod/mesh%dz/mesh%z/mesh%layer [GR-BH C4]; swbotb [GR-BH Audit 31]
 
       return
-      end subroutine soilwater
+      end subroutine soilwater_update
 
    !> Save and reset soil water state variables
    !!
