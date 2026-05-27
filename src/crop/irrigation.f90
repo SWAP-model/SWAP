@@ -18,17 +18,15 @@
    implicit none
    private
 
-   public :: irrigation
+   public :: irrigation_step
    public :: SSDI_irrigation
 
    contains
 
-!> Evaluate and schedule surface irrigation.
+!> Evaluate and schedule surface irrigation (daily step).
 !!
-!! @param[in] task Task selector:
-!!   - 1: initialization for current crop
-!!   - 2: daily irrigation decision and depth
-   subroutine irrigation(task, state)
+!! Named replacement for the former irrigation(task=2, state) dispatch path.
+   subroutine irrigation_step(state)
 ! ----------------------------------------------------------------------
 !     Date               : November 2004
 !     Purpose            : evaluate and schedule irrigations
@@ -50,7 +48,7 @@
       type(swap_state_t), intent(inout) :: state
 
 ! --  local variables
-      integer irr,node,nodsen,task,tcs,tcsfix,dcslim,dcs
+      integer irr,node,nodsen,tcs,tcsfix,dcslim,dcs
       integer ifnd,i,datea(6),irgdayfix
       integer endirr(2),startirr(2)
       integer yearendcrp, yearstacrp
@@ -97,17 +95,6 @@
 !     dcs(2)  = Prescribed fixed irrigation depth (L) for each scheduled irrigation event
 
 ! ----------------------------------------------------------------------
-      select case (task)
-      case (1)
-      ! Legacy fixed-/calculated-irrigation init body deleted as
-      ! part of legacy readers physical deletion. The only callers
-      ! of irrigation(1) live in src/io/readswap.f90, which itself
-      ! has zero callers in src/ or tests/ (parity tests use
-      ! literal-value assertions per ADR 0019/SS-A). Modern flow
-      ! reaches irrigation(2) only, gated by flIrrigate.
-      return
-
-      case (2)
 
 ! ===    determine irrigation rates and states  =============================================
 !        daily
@@ -317,12 +304,8 @@
 
       end associate
 
-      case default
-         call fatalerr_collected ('Irrigation', 'Illegal value for TASK')
-      end select
-
       return
-   end subroutine irrigation
+   end subroutine irrigation_step
 
 !> Compute subsurface drip irrigation (SSDI) scheduling and rates.
 !!

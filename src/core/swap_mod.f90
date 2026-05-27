@@ -292,7 +292,7 @@ contains
       use temperature_mod,    only: Temperature
       use solute_mod,         only: solute
       use soilhydraulics_mod, only: soilwater, SoilWaterStateVar
-      use irrigation_mod,     only: irrigation, SSDI_irrigation
+      use irrigation_mod,     only: irrigation_step, SSDI_irrigation
       use management_soil_mod, only: SoilManagement
       use drainage_mod,       only: drainage
 
@@ -319,7 +319,7 @@ contains
          if (time%flDayStart) then
             call ReadMeteoDay(state, config)
             call CropGrowth(1, state%heat%tsoil, state)
-            if (time%flIrrigate) call irrigation(2, state)
+            if (time%flIrrigate) call irrigation_step(state)
             call ProcessMeteoDay(state, config)
             if (state%cfg%soil%swtill == 1) call DoTillage(2, state)
          end if
