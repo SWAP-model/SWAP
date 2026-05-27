@@ -84,7 +84,7 @@ contains
       use swap_log,                   only: log_info
       use runoff_mod,                 only: cn_init
       use temperature_mod,            only: temperature_seed
-      use solute_mod,                 only: solute
+      use solute_mod,                 only: solute_seed
       use soilgrid_mod,               only: CalcGrid
       use soilhydraulics_mod,         only: soilwater
       use seed_state_from_config_mod, only: seed_state_from_config
@@ -261,8 +261,7 @@ contains
             end if
          end if
 
-         ! LEGACY-INIT — Solute(1) magic-int dispatcher.
-         if (time%flSolute) call Solute(1, state)
+         if (time%flSolute) call solute_seed(state)
 
          ! Open output files and write headers.
          call csv_output_init(state)
@@ -287,7 +286,7 @@ contains
       use rootextraction_mod, only: RootExtraction
       use frozencond_mod,     only: FrozenCond, FrozenBounds
       use temperature_mod,    only: temperature_step
-      use solute_mod,         only: solute
+      use solute_mod,         only: solute_step
       use soilhydraulics_mod, only: soilwater, SoilWaterStateVar
       use irrigation_mod,     only: irrigation_step, ssdi_irrigation_step
       use management_soil_mod, only: SoilManagement
@@ -368,7 +367,7 @@ contains
          call SoilWater(3, state)
 
          if (time%flTemperature) call temperature_step(state, config)
-         if (time%flSolute)      call Solute(2, state)
+         if (time%flSolute)      call solute_step(state)
 
          ! Update time variables and switches/flags.
          call timecontrol_advance(state)
