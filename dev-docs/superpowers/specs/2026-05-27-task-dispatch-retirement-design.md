@@ -51,33 +51,61 @@ own design.
 
 ## 3. Target convention (the recipe)
 
+Reading the bodies revealed that initialization is genuinely **two phases**,
+already latent in the code:
+
+| Phase | What it does | Ordering | Mechanism |
+|---|---|---|---|
+| 1 — construct | allocate arrays, zero-fill, snapshot config scalars/tables into state | order-free (idempotent, takes no sibling state) | type-bound `state%X%init(cfg, …)` — **already exists** |
+| 2 — seed | compute derived initial state from **sibling subsystems that must already be seeded** | ordered (soilwater → heat → solute) | the old `case (1)` body |
+
+Evidence the seed is a distinct phase, not a duplicate init:
+`Solute(1)` computes `cmsy`/`samini` from `soil%theta`, `soil%bdens`,
+`mesh%z`; `Temperature(1)` sets the tsoil *profile* and `fquartz/fclay/forg`
+from `soil%thetas`/`soil%orgmat` and is deliberately ordered *after*
+`SoilWater(1)`; `heat_state_init` cannot do this (it takes no `soil` and its
+`heat_cfg` arg is explicitly "reserved for future seed migration"). Folding
+the seed into the type-bound init would either drop the derived computation
+or break the ordering, so it stays a separate phase.
+
 For each dispatcher `X(task, …)`:
 
-- **init case → free `x_init(state)` facade.** The facade internally
-  `call state%X%init(state%cfg%Y, …)` (the typed, testable core) **and** runs
-  the old `case (1)` runtime-seed logic. The orchestrator calls
-  `call x_init(state)`. `state%cfg` is a `type(swap_config_t), pointer`
-  associated at `swap_mod.f90:102` (before all inits), so the facade reaches
-  every config subtree via `state%cfg%…` while taking only `state`.
-
-  Rationale: a uniform free-proc API per subsystem
-  (`x_init` / `x_step` / `x_finalize`) makes the orchestrator self-documenting
-  and hides config-argument plumbing, while the type-bound `init` remains the
-  typed core. The facade is a deliberate strangler layer — if it ever becomes
-  a pure pass-through, deleting it is a trivial later step.
-
+- **Phase 1 stays put.** The type-bound `state%X%init(...)` call in
+  `swap_init_body` is left exactly where it is. We *commit to it* as the
+  canonical, order-free constructor.
+- **init case → free `x_seed(state)`** (Phase 2): the old `case (1)` body,
+  integer dropped, called at the *same site* `X(1)` is called today (so the
+  cross-subsystem ordering is preserved byte-for-byte). It takes the whole
+  `state` because it reads sibling subsystems.
 - **step / sub-step cases → free `x_step(state)`** (plus `x_update`, etc. for
   genuinely distinct phases), integer dropped.
-
 - **finalize case → free `x_finalize(state)`.**
-
 - **save/restore & lazy-table (Tier 2) → named pairs**, not lifecycle verbs.
 
-The `x_init`-wraps-type-bound facade is the standard **only** for the
-subsystems that have both a real init case and a partner type-bound init:
-SoilWater, Temperature(heat), Solute, DoTillage(tillage). Stub-only inits
-(irrigation, SSDI) get **no** facade — their init was already migrated to
-config-load time, so only the step procedure remains.
+This is uniform across all subsystems: every one ends as
+`state%X%init(...)` (Phase 1) + `x_seed(state)` (Phase 2) +
+`x_step`/`x_update`/`x_finalize`. Stub-only inits (irrigation, SSDI) had
+their Phase-1 work migrated to config-load time and have no Phase-2 seed, so
+they contribute only a step procedure.
+
+### Multi-instance invariant
+
+In-process parallel multi-instance execution (multiple `swap_state_t` running
+concurrently) is on the near-term roadmap. The decisive enabler is that
+**every procedure takes `state` explicitly and touches nothing outside it —
+no module-level variables, no `SAVE` locals** — so N instances each mutate
+only their own `state` and the procedures are re-entrant. The Tier 1 + Tier 2
+files already satisfy this (verified: no module vars, no `SAVE` in
+`soilhydraulics`, `solute`, `temperature`, `tillage`, `irrigation`); the
+de-multiplexing into `proc(state)` keeps them there. This invariant is
+recorded in ADR 0043 and binds all future work.
+
+> **Out-of-scope blocker (flagged, not fixed here):** the real obstacle to
+> parallel in-process runs lives in the deferred crop cluster —
+> `crop_config_global` (a module-global `pointer`, `crop/crop_config_global.f90:23`,
+> reassigned on every `crop_state_init`, `crop_state.f90:85`) and `SAVE` locals
+> in `cropgrowth.f90:601,678` / `cropgrass_runtime.f90:94`. These are tracked
+> for the Tier 3 / globals effort, not this arc.
 
 ## 4. Per-dispatcher migration map
 
@@ -86,15 +114,18 @@ implementation but must drop the integer and read as named phases.
 
 ### Tier 1 — pure lifecycle dispatch
 
-| # | Dispatcher | File | New free procedures | Init fold |
-|---|---|---|---|---|
-| 1 | `irrigation(task)` | `crop/irrigation.f90:31` | delete dead `case(1)` (no-op `return`); `case(2)` → `irrigation_step` | none (config-load init) |
-| 2 | `SSDI_irrigation(iTask)` | `crop/irrigation.f90:~340` | delete dead `case(1)`; `case(2)` → `ssdi_irrigation_step` | none |
-| 3 | `csv_out` / `csv_out_tz(iTask)` | `io/csv_output.f90:644 / :24` | inline the three cases into the existing `csv_output_init` / `csv_output_step` / `csv_output_finalize` wrappers; delete both dispatchers | n/a (output) |
-| 4 | `Temperature(task)` | `heat/temperature.f90:82` | `temperature_init` (wraps `state%heat%init` + seed), `temperature_step` | yes |
-| 5 | `Solute(task)` | `solute/solute.f90:10` | `solute_init` (wraps `state%solute%init` + seed), `solute_step` | yes |
-| 6 | `DoTillage(iTask)` | `crop/tillage.f90:53` | `tillage_init` (wraps `state%tillage%init`), `tillage_step`, `tillage_output` (`case(3)`); **resolve `case(4)` liveness** (only 1/2/3 are called from the orchestrator) | yes |
-| 7 | `SoilWater(task)` | `soil/soilhydraulics.f90:820` | `soilwater_init` (wraps `state%soilwater%init` + the large `case(1)` seed), `soilwater_step` (Richards/headcalc, `case(2)`), `soilwater_update` (rate+state, `case(3)`) | yes |
+Phase-1 (`state%X%init`) is unchanged in every row; the table lists the
+Phase-2+ procedures extracted from the dispatcher.
+
+| # | Dispatcher | File | New free procedures |
+|---|---|---|---|
+| 1 | `irrigation(task)` | `crop/irrigation.f90:31` | delete dead `case(1)` (no-op `return`); `case(2)` → `irrigation_step` (no seed — Phase-1 done at config load) |
+| 2 | `SSDI_irrigation(iTask)` | `crop/irrigation.f90:~340` | delete dead `case(1)`; `case(2)` → `ssdi_irrigation_step` (no seed) |
+| 3 | `csv_out` / `csv_out_tz(iTask)` | `io/csv_output.f90:644 / :24` | inline the three cases into the existing `csv_output_init` / `csv_output_step` / `csv_output_finalize` wrappers; delete both dispatchers |
+| 4 | `Temperature(task)` | `heat/temperature.f90:82` | `temperature_seed` (`case(1)`), `temperature_step` (`case(2)`) |
+| 5 | `Solute(task)` | `solute/solute.f90:10` | `solute_seed` (`case(1)`), `solute_step` (`case(2)`) |
+| 6 | `DoTillage(iTask)` | `crop/tillage.f90:53` | `tillage_seed` (`case(1)`), `tillage_step` (`case(2)`), `tillage_output` (`case(3)`); **resolve `case(4)` liveness** (only 1/2/3 called from the orchestrator; `case(4)` body is empty `! CLOSURE`) |
+| 7 | `SoilWater(task)` | `soil/soilhydraulics.f90:820` | `soilwater_seed` (`case(1)`), `soilwater_step` (Richards/headcalc, `case(2)`), `soilwater_update` (rate+state, `case(3)`) |
 
 ### Tier 2 — two-distinct-operations dispatch (looks like lifecycle, isn't)
 
@@ -125,15 +156,14 @@ Each step is its own commit so any regression bisects to a single dispatcher.
   ends with `check-fast` (per standing per-task regression-gate convention) —
   not deferred to an end-of-arc gate.
 
-- **Init-order risk (#4–7).** Wrapping `state%X%init` inside the `x_init`
-  facade and calling the facade at a single point *relocates* the type-bound
-  init call from its current early position in `swap_init_body` to the old
-  `X(1)` call site (or vice-versa). Each fold must verify:
-  (a) nothing initialized between the two points is read by the relocated
-  seed, and (b) nothing after the new position depends on the relocated
-  type-bound init. **Fallback:** if a fold is unsafe, keep `x_init` doing
-  *only* the seed and leave the type-bound `state%X%init` call where it is —
-  the magic int is still eliminated, which is the actual goal.
+- **Init-order is preserved by construction.** Because Phase-1
+  (`state%X%init`) is left untouched and each `x_seed` is called at the exact
+  site its `X(1)` was, no init is relocated — the extraction is a pure rename
+  + signature change, byte-identical by construction. The earlier
+  "wrap-into-init" relocation risk is designed out. (Reason it would have been
+  unsafe is documented in §3: e.g. `Temperature(1)` must run after
+  `SoilWater(1)`, and soilwater arrays allocated early at `swap_mod.f90:122`
+  are read before `:219`.)
 
 - **MatricFlux (#9).** Dead at runtime, so regression cannot exercise it.
   Rely on compilation + careful structural split; flag the limited
@@ -149,10 +179,15 @@ Each step is its own commit so any regression bisects to a single dispatcher.
 ## 7. Deliverables
 
 - This spec.
-- **ADR 0043** — *Retire integer task-dispatch lifecycle multiplexing*:
-  records the convention (init → `x_init` facade over type-bound `init`;
-  step/finalize/sub-phases → named free procedures; option-switches
-  explicitly excluded). Written alongside the first implementation commit.
+- **ADR 0043** — *Retire integer task-dispatch lifecycle multiplexing*. Records:
+  (a) the two-phase init model — type-bound `state%X%init` (construct) +
+  free `x_seed(state)` (derived seed); (b) step/finalize/sub-phases → named
+  free `proc(state)`; (c) the **multi-instance invariant** (procedures take
+  `state`, touch nothing global); (d) option-switches explicitly excluded;
+  (e) a forward note flagging `crop_config_global` + crop `SAVE` locals as the
+  parallel-execution blocker, and a possible future top-level
+  `state%init(config)` wrapping all phases. Written alongside the first
+  implementation commit.
 - An implementation plan (via writing-plans) with 9 tasks following §5.
 
 ## 8. Success criteria
