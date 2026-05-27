@@ -31,3 +31,17 @@ subroutine test_cml_from_cmsy_nonlinear_satisfies_fixedpoint()
    @assertEqual(0.0_real64, residual, 1.0e-3_real64)
    @assertTrue(cml > 0.0_real64)
 end subroutine test_cml_from_cmsy_nonlinear_satisfies_fixedpoint
+
+@test
+subroutine test_cml_from_cmsy_superlinear_satisfies_fixedpoint()
+   use funit
+   use iso_fortran_env, only: real64
+   use solute_mod, only: solute_cml_from_cmsy
+   real(real64) :: cml, theta, bdenskf, frexp, cref, cmsy, residual
+   theta = 0.25_real64; bdenskf = 1.2_real64; frexp = 1.5_real64
+   cref = 1.0_real64;   cmsy = 3.0_real64
+   cml = solute_cml_from_cmsy(cmsy, theta, bdenskf, frexp, cref, 1.0_real64)
+   residual = cml - cmsy/(theta + bdenskf*(cml/cref)**(frexp-1.0_real64))
+   @assertEqual(0.0_real64, residual, 1.0e-3_real64)
+   @assertTrue(cml > 0.0_real64)
+end subroutine test_cml_from_cmsy_superlinear_satisfies_fixedpoint

@@ -193,7 +193,9 @@ contains
                   end if
                end if
 
-               ! Solute decomposition.
+               ! Solute decomposition. NB (faithful to SWAP 4.2.0): with no soil-
+               ! temperature model (flTemperature=.false.) the temperature factor is
+               ! 0, which disables decomposition entirely (not a reference-temp rate).
                if (time%flTemperature) then
                   if (heat%tsoil(i) .lt. 35.0d0) then
                      ftemp = exp(sol%gampar*(heat%tsoil(i) - 20.0d0))
