@@ -83,7 +83,6 @@
       !   tsumgerm: state%crop%common%tsumgerm (accumulated runtime).
       !   [GR-CROP 2026-05-25] flCropPrep/flCropSow/flCropGerm fully retired —
       !     state-only via state%crop%common; dispatcher reads from state.
-      use crop_config_global_mod, only: crop_config_global
       use swap_constants, only: small
       use error_mod, only: fatalerr_collected
       use swap_state_mod, only: swap_state_t
@@ -120,7 +119,7 @@
         ! [GR-CROP 2026-05-25] Dead branch: cropgrowth.f90:255 stub-errors swprep!=0,
         ! so this case never fires in the TOML pipeline. Reads route directly to the
         ! wofost preparation config sub-record for completeness.
-        associate(prep => crop_config_global%rotation_wofost(crop%icrop)%preparation)
+        associate(prep => state%cfg%crop%rotation_wofost(crop%icrop)%preparation)
         node   = 1
         dhPrep = soil%h(node) - prep%hprep
         drz1   = -1.d0 * prep%zprep - mesh%dz(node)
@@ -150,7 +149,7 @@
         ! [GR-CROP 2026-05-25] Dead branch: cropgrowth.f90:255 stub-errors swsow!=0,
         ! so this case never fires in the TOML pipeline. Reads route directly to the
         ! wofost sowing config sub-record for completeness.
-        associate(sow => crop_config_global%rotation_wofost(crop%icrop)%sowing)
+        associate(sow => state%cfg%crop%rotation_wofost(crop%icrop)%sowing)
         node   = 1
         dhSow  = soil%h(node) - sow%hsow
         drz1   = -1.d0 * sow%zsow - mesh%dz(node)
@@ -185,7 +184,7 @@
 
       case (4)
 
-        associate(germ => crop_config_global%rotation_wofost(crop%icrop)%germination)
+        associate(germ => state%cfg%crop%rotation_wofost(crop%icrop)%germination)
         l_agerm      = germ%agerm
         l_tsumemeopt = germ%tsumemeopt
         l_hdrygerm   = germ%hdrygerm
