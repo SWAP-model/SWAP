@@ -91,7 +91,7 @@ contains
 
             call solute_surface_flux(state, cfluxt)
             call update_solute_compartments(state, thetav, dispr1, vpore2, cfluxt, isqdra)
-            call solute_aquifer_breakthrough(state)
+            call solute_aquifer_breakthrough(state, isqdra)
             call solute_bottom_flux(state)
 
          end do
@@ -280,20 +280,17 @@ contains
    end subroutine update_solute_compartments
 
    !> Aquifer breakthrough + flux to surface water (SWBR=1). QUARANTINED.
-   subroutine solute_aquifer_breakthrough(state)
+   subroutine solute_aquifer_breakthrough(state, isqdra)
       use swap_state_mod, only: swap_state_t
       implicit none
       type(swap_state_t), intent(inout) :: state
+      real(8), intent(in) :: isqdra
 
       ! i replicates the original post-loop counter value (numnod+1). The
       ! sol%bdenskfsatporos(i) reads below are the documented OOB/div-by-zero bug;
       ! this helper is unreachable at runtime — solute_step fatal-errors on
       ! SWBR=1 before the time loop. Kept verbatim for a future, validated fix.
       integer :: i
-      ! isqdra was the cumulative lateral-drainage accumulator local to the time
-      ! loop; in this unreachable helper it is an uninitialised local (the SWBR=1
-      ! breakthrough math is quarantined dead code, kept verbatim for a future fix).
-      real(8) :: isqdra
 
       associate (sol  => state%solute,        &
                  mesh => state%mesh,          &
