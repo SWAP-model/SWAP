@@ -75,7 +75,7 @@ contains
       use array_utils,           only: afgen
       use swap_state_mod,        only: swap_state_t
       use, intrinsic :: iso_fortran_env, only: real64
-      
+
       implicit none
 
       type(swap_state_t), intent(inout) :: state

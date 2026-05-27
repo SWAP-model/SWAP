@@ -97,4 +97,6 @@ subroutine test_solute_state_init_allocates_coeffs()
    @assertTrue(allocated(sl%decpotfdepth))
    @assertEqual(numnod, size(sl%bdenskf))
    @assertEqual(numnod, size(sl%decpotfdepth))
+   @assertEqual(0.0_real64, sl%ddiffwcs(3),    1.0e-12_real64)
+   @assertEqual(0.0_real64, sl%bdenskfcref(1), 1.0e-12_real64)
 end subroutine test_solute_state_init_allocates_coeffs
