@@ -38,48 +38,22 @@ module temperature_mod
    use error_mod, only: fatalerr_collected
   implicit none
   private
-  public :: temperature, devries
+  public :: temperature_seed, temperature_step, devries
 
 contains
 
-  !> Calculate soil temperature profile
+  !> Seed (initialize) soil temperature profile
   !!
-  !! Main driver routine for soil temperature simulation. Operates in two modes:
-  !! - Task 1: Initialization (set initial temperature profile)
-  !! - Task 2: Dynamic calculation (update temperatures at each time step)
-  !!
-  !! ## Initialization (task=1)
-  !!
-  !! Sets initial temperature profile using:
-  !! - **Analytical method** (swcalt=1): Sinusoidal wave with depth damping
-  !! - **Numerical method** (swcalt=2): Interpolation from specified depths (zh, tsoil)
-  !!
-  !! For numerical method, also initializes soil composition:
-  !! - Dry bulk density
-  !! - Volume fractions of quartz, clay, and organic matter
-  !!
-  !! ## Dynamic Calculation (task=2)
-  !!
-  !! **Analytical method:**
-  !! Updates temperature using sinusoidal function based on day number
-  !!
-  !! **Numerical method:**
-  !! 1. Set boundary conditions (top and bottom temperatures)
-  !! 2. Calculate thermal properties using de Vries model
-  !! 3. Set up tridiagonal system of equations
-  !! 4. Solve for new temperature profile using Thomas algorithm
-  !!
-  !! The numerical solution accounts for:
-  !! - Time-varying soil water content
-  !! - Snow layer insulation (if present)
-  !! - Spatial variability in thermal properties
+  !! Phase-2 initialization: computes initial tsoil profile and (for numerical
+  !! method) fquartz/fclay/forg from the soilwater sub-state.  Called once after
+  !! SoilWater(1) so that soil%thetas/psand/psilt/pclay/orgmat are available.
   !!
   !! @note
   !! **Original documentation:**
   !! Date: November 2004
-  !! Purpose: Calculate soil temperatures
+  !! Purpose: Calculate soil temperatures (initialization)
   !! @endnote
-  subroutine temperature(task, state, config)
+  subroutine temperature_seed(state, config)
       ! GR-ATM C4: Tav/atav → state%atmosphere; use variables dropped.
       use swap_state_mod,        only: swap_state_t
       use swap_config_mod,       only: swap_config_t
@@ -89,8 +63,6 @@ contains
       implicit none
 
     ! Arguments
-    integer,             intent(in)    :: task
-    !! Task selector: 1=initialization, 2=calculation
     type(swap_state_t),  intent(inout) :: state
     !! Typed simulation state — heat compute writes only state%heat%* (Task 8: dual-write dropped)
     type(swap_config_t), intent(in)    :: config
@@ -112,8 +84,6 @@ contains
                time => state%timecontrol,   &
                heat_cfg => config%heat)
 
-      select case (task)
-      case (1)
          ! === Initialization ===
 
          ! Initial temperature profile.
@@ -151,9 +121,52 @@ contains
             end do
          end if
 
-         return
+    end associate
 
-      case (2)
+    return
+  end subroutine temperature_seed
+
+  !> Advance soil temperature one time step
+  !!
+  !! Dynamic calculation: updates tsoil at each time step using either the
+  !! analytical sinusoidal solution or the de Vries numerical heat transport.
+  !!
+  !! @note
+  !! **Original documentation:**
+  !! Date: November 2004
+  !! Purpose: Calculate soil temperatures (time step)
+  !! @endnote
+  subroutine temperature_step(state, config)
+      ! GR-ATM C4: Tav/atav → state%atmosphere; use variables dropped.
+      use swap_state_mod,        only: swap_state_t
+      use swap_config_mod,       only: swap_config_t
+      use array_utils,           only: afgen
+      use numericalsolvers_mod,  only: tridag
+      use swap_array_dimensions, only: macp, mabbc
+      implicit none
+
+    ! Arguments
+    type(swap_state_t),  intent(inout) :: state
+    !! Typed simulation state — heat compute writes only state%heat%* (Task 8: dual-write dropped)
+    type(swap_config_t), intent(in)    :: config
+    !! Typed simulation configuration
+
+    ! Local variables
+    integer i,lay, ierror, nheat_loc
+    real(8) tmpold(macp),tab(mabbc*2),ttab(mabbc*2),btab(mabbc*2),dummy,gmineral
+    real(8) thoma(macp),thomb(macp),thomc(macp),thomf(macp)
+    real(8) theave(macp),heacnd(macp),heacap_loc(macp)
+    real(8) heaconbot,qhbot
+    real(8) apar, dzsnw, heaconsnw, Rosnw
+    character(len=200) messag
+
+    associate (heat => state%heat,           &
+               mesh => state%mesh,           &
+               soil => state%soilwater,     &
+               atmo => state%atmosphere,    &
+               time => state%timecontrol,   &
+               heat_cfg => config%heat)
+
          ! === Soil temperature rate and state variables ===
 
          if (heat_cfg%swcalt .eq. 2) then
@@ -273,14 +286,10 @@ contains
             end do
          end if
 
-      case default
-         call fatalerr_collected('Temperature', 'Illegal value for TASK')
-      end select
-
     end associate
 
     return
-  end subroutine Temperature
+  end subroutine temperature_step
 
   !> Calculate soil heat capacity and conductivity using de Vries model
   !!

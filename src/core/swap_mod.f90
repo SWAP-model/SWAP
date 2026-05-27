@@ -83,7 +83,7 @@ contains
       use tillage_mod,                only: DoTillage
       use swap_log,                   only: log_info
       use runoff_mod,                 only: cn_init
-      use temperature_mod,            only: Temperature
+      use temperature_mod,            only: temperature_seed
       use solute_mod,                 only: solute
       use soilgrid_mod,               only: CalcGrid
       use soilhydraulics_mod,         only: soilwater
@@ -249,8 +249,7 @@ contains
          ! itself is the remaining cleanup.
          if (time%flSurfaceWater) call SurfaceWater(1, state, request_smaller_dt)
 
-         ! LEGACY-INIT — Temperature(1) magic-int dispatcher.
-         if (time%flTemperature) call Temperature(1, state, config)
+         if (time%flTemperature) call temperature_seed(state, config)
 
          ! STRANGLER — snow handshake (snowinco ↔ ssnow). Fold into
          ! state%atmosphere%init or a dedicated snow_init that reads swinco.
@@ -287,7 +286,7 @@ contains
       use meteodt_mod,        only: MeteoDT
       use rootextraction_mod, only: RootExtraction
       use frozencond_mod,     only: FrozenCond, FrozenBounds
-      use temperature_mod,    only: Temperature
+      use temperature_mod,    only: temperature_step
       use solute_mod,         only: solute
       use soilhydraulics_mod, only: soilwater, SoilWaterStateVar
       use irrigation_mod,     only: irrigation_step, ssdi_irrigation_step
@@ -368,7 +367,7 @@ contains
          ! SoilWater rate/state variables.
          call SoilWater(3, state)
 
-         if (time%flTemperature) call Temperature(2, state, config)
+         if (time%flTemperature) call temperature_step(state, config)
          if (time%flSolute)      call Solute(2, state)
 
          ! Update time variables and switches/flags.
