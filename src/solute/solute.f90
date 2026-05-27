@@ -116,7 +116,11 @@ contains
       use swap_state_mod,        only: swap_state_t
       implicit none
       type(swap_state_t), intent(inout) :: state
-      real(8), intent(out) :: thetav(:), dispr1(:), vpore2(:)
+      ! thetav is fully filled 1..numnod; dispr1/vpore2 only 1..numnod-1 (the
+      ! i<numnod guard below), so they take intent(inout) rather than the
+      ! full-definition intent(out) contract.
+      real(8), intent(out)   :: thetav(:)
+      real(8), intent(inout) :: dispr1(:), vpore2(:)
 
       integer :: i
       real(8) :: dispr, vpore, dummy
@@ -284,7 +288,7 @@ contains
       use swap_state_mod, only: swap_state_t
       implicit none
       type(swap_state_t), intent(inout) :: state
-      real(8), intent(in) :: isqdra
+      real(8), intent(in) :: isqdra   ! cumulative solute-to-drainage from start-of-step through current substep (NOT a per-substep rate)
 
       ! i replicates the original post-loop counter value (numnod+1). The
       ! sol%bdenskfsatporos(i) reads below are the documented OOB/div-by-zero bug;
