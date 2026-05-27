@@ -27,6 +27,7 @@ contains
    end function bdenskfsatporos_coeff
 
    !> Tortuosity-scaled diffusion base: ddif / thetsl**2  (cm2/d).
+   !> Precondition: thetsl > 0 (saturated water content; a positive soil property).
    elemental function ddiffwcs_coeff(ddif, thetsl) result(v)
       real(real64), intent(in) :: ddif    ! molecular diffusion coefficient (cm2/d)
       real(real64), intent(in) :: thetsl  ! saturated water content (-)
