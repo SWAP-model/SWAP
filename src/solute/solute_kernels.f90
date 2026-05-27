@@ -79,7 +79,7 @@ contains
 
    !> Temperature reduction factor for decomposition. Capped above 35 degC;
    !> zero when the temperature switch is off.
-   pure function solute_ftemp(tsoil, gampar, fl_temperature) result(ftemp)
+   elemental function solute_ftemp(tsoil, gampar, fl_temperature) result(ftemp)
       real(real64), intent(in) :: tsoil           ! soil temperature (degC)
       real(real64), intent(in) :: gampar          ! temperature coefficient (/C)
       logical,      intent(in) :: fl_temperature  ! temperature simulation on/off
@@ -96,7 +96,8 @@ contains
    end function solute_ftemp
 
    !> Moisture reduction factor for decomposition, clamped to 1.
-   pure function solute_ftheta(theta, rtheta, bexp) result(ftheta)
+   !> Precondition: rtheta > 0 (reference moisture content).
+   elemental function solute_ftheta(theta, rtheta, bexp) result(ftheta)
       real(real64), intent(in) :: theta   ! volumetric water content (-)
       real(real64), intent(in) :: rtheta  ! reference moisture content (-)
       real(real64), intent(in) :: bexp    ! moisture-decomposition exponent (-)
@@ -105,7 +106,7 @@ contains
    end function solute_ftheta
 
    !> Solute transformation (decomposition) rate per node.
-   pure function solute_decomp_ctrans(decact, theta, cml, bdenskfcref, cref, frexp) result(ctrans)
+   elemental function solute_decomp_ctrans(decact, theta, cml, bdenskfcref, cref, frexp) result(ctrans)
       real(real64), intent(in) :: decact       ! actual decomposition rate (1/d)
       real(real64), intent(in) :: theta        ! volumetric water content (-)
       real(real64), intent(in) :: cml          ! mobile concentration (M/L3)

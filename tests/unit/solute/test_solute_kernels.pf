@@ -85,6 +85,8 @@ subroutine test_solute_ftemp()
    ! tsoil>=35 capped at exp(gampar*15)
    capped = solute_ftemp(40.0_real64, 0.1_real64, .true.)
    @assertEqual(exp(0.1_real64*15.0_real64), capped, 1.0e-12_real64)
+   ! tsoil=35 exactly -> capped branch (condition is tsoil<35)
+   @assertEqual(exp(0.1_real64*15.0_real64), solute_ftemp(35.0_real64, 0.1_real64, .true.), 1.0e-12_real64)
    ! temperature switch off -> 0
    @assertEqual(0.0_real64, solute_ftemp(10.0_real64, 0.0693_real64, .false.), 1.0e-12_real64)
 end subroutine test_solute_ftemp
