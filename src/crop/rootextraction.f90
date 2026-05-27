@@ -10,7 +10,7 @@ module rootextraction_mod
    use swap_state_mod, only: swap_state_t
   implicit none
   private
-  public :: RootExtraction, MatricFlux
+  public :: RootExtraction, matricflux_build_table, matric_flux
 
   contains
 
@@ -326,11 +326,11 @@ module rootextraction_mod
 !! Date: February 2010
 !! Purpose: Initialize and calculate matric flux potential
 !! @endnote
-  subroutine MatricFlux(task,phead,node,outcome,state)
+  subroutine matricflux_build_table(state)
 ! ----------------------------------------------------------------------
 !     Date               : February 2010
-!     Purpose            : Initialize and calculate matric flux potential
-! Note: task=1 writes state%soilwater%mfluxtable; task=2 reads it.
+!     Purpose            : Initialize matric flux potential lookup table
+! Note: reached only when swdrought=2 (stub-errored on TOML path — dead path at runtime).
 ! ----------------------------------------------------------------------
 
       ! [GR-CROP 2026-05-25] MatricFlux is reached only when swdrought=2 (stub-errored
@@ -340,14 +340,11 @@ module rootextraction_mod
       use soilhydraulics_utils, only: watcon, hconduc
       implicit none
 
-! --- local variables
-      integer task,lay,count,start,node,i
-      real(8) phead1,phead2,wcontent,conduc1,conduc2
-      real(8) logphead,hosm,hsalt,mfluxsalt,phead,outcome
-      type(swap_state_t), intent(inout), optional :: state
+      type(swap_state_t), intent(inout) :: state
 
-      select case (task)
-      case (1)
+! --- local variables
+      integer lay,count,start,i
+      real(8) phead1,phead2,wcontent,conduc1,conduc2
 
 ! === initialization =========================================================
 
@@ -394,8 +391,24 @@ module rootextraction_mod
       enddo
 
       return
+  end subroutine matricflux_build_table
 
-      case (2)
+  subroutine matric_flux(phead, node, outcome, state)
+! ----------------------------------------------------------------------
+!     Date               : February 2010
+!     Purpose            : Calculate matric flux potential
+! Note: reached only when swdrought=2 (stub-errored on TOML path — dead path at runtime).
+! ----------------------------------------------------------------------
+      implicit none
+
+      real(8),            intent(in)    :: phead
+      integer,            intent(in)    :: node
+      real(8),            intent(out)   :: outcome
+      type(swap_state_t), intent(inout) :: state
+
+! --- local variables
+      integer lay,count
+      real(8) logphead,hosm,hsalt,mfluxsalt
 
 ! === calculation of matric flux potential ===================================
 
@@ -443,11 +456,7 @@ module rootextraction_mod
           outcome = max(0.d0,outcome)
       endif
 
-      case default
-         call fatalerr_collected ('MatricFlux', 'Illegal value for TASK')
-      end select
-
       return
-  end subroutine MatricFlux
+  end subroutine matric_flux
 
 end module rootextraction_mod

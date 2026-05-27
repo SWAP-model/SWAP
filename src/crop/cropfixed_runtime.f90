@@ -30,7 +30,6 @@
       use swap_array_dimensions, only: magrs
       use soilhydraulics_utils, only: watcon
       use array_utils, only: afgen
-      use rootextraction_mod, only: MatricFlux
       use swap_constants, only: tiny, nihil
       use error_mod, only: fatalerr_collected
       use swap_state_mod, only: swap_state_t

@@ -78,7 +78,7 @@
 module jongvanlier_dormant_mod
    use error_mod, only: fatalerr_collected
    use swap_state_mod, only: swap_state_t
-   use rootextraction_mod, only: MatricFlux
+   use rootextraction_mod, only: matric_flux
    implicit none
    private
    public :: JongvanLier, JongvanLierLoop
@@ -180,7 +180,7 @@ module jongvanlier_dormant_mod
 ! --- calculate current matric flux potential in soil water
       do node = 1,noddrz
         soil%h(node) = min(1.0d3,max(soil%h(node),1.0d-8))
-        call MatricFlux(2,soil%h(node),node,soil%mflux(node),state)
+        call matric_flux(soil%h(node),node,soil%mflux(node),state)
       enddo
 
 ! --- interpolate matric flux potential in lowest compartment that is partly filled with roots
@@ -500,8 +500,8 @@ module jongvanlier_dormant_mod
             Step = min(abs(x3-x1),StepHr*log10(max(abs(x3),1.d0)))
             x1 = x3
             x2 = x1 - Step
-            call MatricFlux(2,x1,node,mflux1,state)
-            call MatricFlux(2,x2,node,mflux2,state)
+            call matric_flux(x1,node,mflux1,state)
+            call matric_flux(x2,node,mflux2,state)
             Fx1 = soil%Hxylem -x1 + soil%rootphi(node)*(soil%mflux(node)-mflux1)
             Fx2 = soil%Hxylem -x2 + soil%rootphi(node)*(soil%mflux(node)-mflux2)
             if (abs(Fx2-Fx1).lt.1.d-10) then
@@ -524,7 +524,7 @@ module jongvanlier_dormant_mod
           counter = 0
           soil%hroot(node) = x3
         endif
-        call MatricFlux(2,soil%hroot(node),node,soil%mroot(node),state)
+        call matric_flux(soil%hroot(node),node,soil%mroot(node),state)
 ! ---   calculate root water extraction flux
         if (node .lt. noddrz) then
           soil%qrot(node) = rooteff * soil%rootrho(node) *                        &

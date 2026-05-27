@@ -78,7 +78,6 @@
                                      cw_nmaxlv, cw_nmaxst, cw_nmaxrt
       use array_utils, only: interpol, afgen, insw
       use soilhydraulics_utils, only: watcon
-      use rootextraction_mod, only: MatricFlux
         use swap_constants, only: tiny, nihil
       use error_mod, only: fatalerr_collected
       use swap_state_mod, only: swap_state_t

@@ -37,7 +37,7 @@
       ! reads/writes route through state via the `crop` and `crop_cfg`
       ! associate aliases.
       use array_utils, only: afgen
-      use rootextraction_mod, only: MatricFlux
+      use rootextraction_mod, only: matricflux_build_table
       use swap_constants, only: tiny
       use error_mod, only: fatalerr_collected
       use swap_state_mod, only: swap_state_t
@@ -68,7 +68,7 @@
       integer i, node
       real(8) sumtmin
       real(8) tmnr          ! running 7-day average of min temperature; local (not global) [SS-GR-FINAL B5]
-      real(8) dummy_mf_   ! dummy outcome arg for MatricFlux(1) init call
+      real(8) dummy_mf_   ! unused after MatricFlux(1) → matricflux_build_table split
 
       ! assimilation
       real(8) dayl, cosld, sinld
@@ -299,7 +299,7 @@
           if (state%crop%common%swdrought .eq. 2) then
             state%soilwater%hleaf = -2000.d0
             state%soilwater%hroot(1:state%mesh%numnod) = state%soilwater%h(1:state%mesh%numnod)  ! [SS-SWC S-2.7] [GR-BH Task 35]
-            call MatricFlux(1, state%soilwater%h(1), 1, dummy_mf_, state)  ! [SS-SWC S-2.7]
+            call matricflux_build_table(state)  ! [SS-SWC S-2.7]
           endif
 
           state%crop%common%flCropReadFile = .false.
