@@ -177,7 +177,6 @@ if get_option('enable_pfunit')
         '../../src/drainage/drainage.f90',
         '../../src/drainage/divdra.f90',
         '../../src/drainage/surfacewater.f90',
-        '../../src/solute/solute_kernels.f90',
         '../../src/solute/solute.f90',
         # [GR-SOLUTE 2026-05-24] agetracer dropped — body moved to src/solute/dormant/ (not compiled)
         '../../src/crop/wofost_soil_parameters.f90',
@@ -292,7 +291,7 @@ if get_option('enable_pfunit')
         'crop/test_cropgrass_init.pf',
         'core/test_swap_mod.pf',
         'core/test_timecontrol_mod.pf',
-        'solute/test_solute_kernels.pf',
+        'solute/test_solute_cml.pf',
     ]
 
     # When pf_files is non-empty, build and register the unit-swap-tests

@@ -3,7 +3,7 @@ module solute_mod
    use error_mod, only: fatalerr_collected
    implicit none
    private
-   public :: solute_seed, solute_step
+   public :: solute_seed, solute_step, solute_cml_from_cmsy
 
 contains
 
@@ -12,8 +12,6 @@ contains
       use array_utils,           only: afgen
       use swap_state_mod,        only: swap_state_t
       use, intrinsic :: iso_fortran_env, only: real64
-      use solute_kernels_mod,    only: bdenskf_coeff, bdenskfsatporos_coeff, &
-                                       ddiffwcs_coeff, decpotfdepth_coeff
 
       implicit none
 
@@ -54,14 +52,14 @@ contains
          ! Derived solute concentrations + time-invariant coefficients.
          sol%samini = 0.0d0
          do i = 1, mesh%numnod
-            sol%bdenskf(i)         = bdenskf_coeff(soil%bdens(mesh%layer(i)), sol%kf(mesh%layer(i)))
+            sol%bdenskf(i)         = soil%bdens(mesh%layer(i))*sol%kf(mesh%layer(i))
             sol%bdenskfcref(i)     = sol%bdenskf(i)*sol%cref
-            sol%bdenskfsatporos(i) = bdenskfsatporos_coeff(soil%bdens(mesh%layer(i)), sol%kfsat, sol%poros)
+            sol%bdenskfsatporos(i) = soil%bdens(mesh%layer(i))*sol%kfsat + sol%poros
             sol%cmsy(i)            = soil%theta(i)*sol%cml(i) +                          &
                                      sol%bdenskfcref(i)*(sol%cml(i)/sol%cref)**sol%frexp
             sol%samini             = sol%samini + sol%cmsy(i) * mesh%dz(i)
-            sol%ddiffwcs(i)        = ddiffwcs_coeff(sol%ddif, soil%thetsl(mesh%layer(i)))
-            sol%decpotfdepth(i)    = decpotfdepth_coeff(sol%decpot(mesh%layer(i)), sol%fdepth(mesh%layer(i)))
+            sol%ddiffwcs(i)        = sol%ddif / (soil%thetsl(mesh%layer(i))**2)
+            sol%decpotfdepth(i)    = sol%decpot(mesh%layer(i))*sol%fdepth(mesh%layer(i))
          end do
          sol%sampro = sol%samini
 
@@ -75,7 +73,6 @@ contains
       use array_utils,           only: afgen
       use swap_state_mod,        only: swap_state_t
       use, intrinsic :: iso_fortran_env, only: real64
-      use solute_kernels_mod,    only: solute_cml_from_cmsy, solute_ftemp, solute_ftheta, solute_decomp_ctrans
 
       implicit none
 
@@ -197,11 +194,19 @@ contains
                end if
 
                ! Solute decomposition.
-               ftemp  = solute_ftemp(heat%tsoil(i), sol%gampar, time%flTemperature)
-               ftheta = solute_ftheta(soil%theta(i), sol%rtheta, sol%bexp)
+               if (time%flTemperature) then
+                  if (heat%tsoil(i) .lt. 35.0d0) then
+                     ftemp = exp(sol%gampar*(heat%tsoil(i) - 20.0d0))
+                  else
+                     ftemp = exp(sol%gampar*15.0d0)
+                  end if
+               else
+                  ftemp = 0.0d0
+               end if
+               ftheta = min(1.0d0, (soil%theta(i)/sol%rtheta)**sol%bexp)
                decact = sol%decpotfdepth(i) * ftemp * ftheta
-               ctrans = solute_decomp_ctrans(decact, soil%theta(i), sol%cml(i), &
-                                             sol%bdenskfcref(i), sol%cref, sol%frexp)
+               ctrans = decact*soil%theta(i)*sol%cml(i) +                            &
+                        decact*sol%bdenskfcref(i)*((sol%cml(i)/sol%cref)**sol%frexp)
                sol%dectot   = sol%dectot   + ctrans*sol%dtsolu*mesh%dz(i)
                sol%imdectot = sol%imdectot + ctrans*sol%dtsolu*mesh%dz(i)
 
@@ -300,5 +305,38 @@ contains
 
       return
    end subroutine solute_step
+
+   !> Recover mobile concentration cml from total cmsy via the Freundlich
+   !> isotherm. Linear shortcut when frexp ~ 1; otherwise fixed-point iterate
+   !> seeded from cml_guess. Caller handles the cmsy < vsmall zeroing.
+   pure function solute_cml_from_cmsy(cmsy, theta, bdenskf, frexp, cref, cml_guess) result(cml)
+      use, intrinsic :: iso_fortran_env, only: real64
+      real(real64), intent(in) :: cmsy       ! total (dissolved+adsorbed) conc (M/L3 soil)
+      real(real64), intent(in) :: theta      ! volumetric water content (-)
+      real(real64), intent(in) :: bdenskf    ! bdens*kf (-)
+      real(real64), intent(in) :: frexp      ! Freundlich exponent (-)
+      real(real64), intent(in) :: cref       ! reference concentration (M/L3)
+      real(real64), intent(in) :: cml_guess  ! previous cml, iteration seed (M/L3)
+      real(real64)             :: cml
+
+      real(real64), parameter :: rer    = 1.0d-3
+      real(real64), parameter :: vsmall = 1.0d-15
+      real(real64) :: old, dummy
+      logical      :: differ
+
+      if (abs(frexp - 1.0d0) .lt. 0.001d0) then
+         cml = cmsy / (theta + bdenskf)
+      else
+         cml = cml_guess
+         if (cml .lt. vsmall) cml = vsmall
+         differ = .true.
+         do while (differ)
+            old   = cml
+            dummy = bdenskf*(cml/cref)**(frexp - 1.0d0)
+            cml   = cmsy/(theta + dummy)
+            if (abs(cml - old) .lt. rer*cml) differ = .false.
+         end do
+      end if
+   end function solute_cml_from_cmsy
 
 end module solute_mod
