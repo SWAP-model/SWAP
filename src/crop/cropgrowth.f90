@@ -171,7 +171,6 @@
             ! mirroring legacy readarablelandgerm:3322-3358.
             ! Teardown: end of Phase 4 removes the else-branch.
             block
-               use crop_config_global_mod, only: crop_config_global
                use cropwofost_config_mod, only: wofost_germination_t
                use error_mod, only: fatalerr_collected
                logical :: use_cache
@@ -183,35 +182,33 @@
                swgerm_cache = 0
                rot_type     = 0
                nullify(gp)
-               if (associated(crop_config_global)) then
-                  if (allocated(crop_config_global%rotation_loaded) .and. &
-                      allocated(crop_config_global%rotation_type)) then
-                     if (state%crop%common%icrop >= 1 .and. state%crop%common%icrop <= size(crop_config_global%rotation_loaded)) then  ! [GR-CROPWS B3]
-                        if (crop_config_global%rotation_loaded(state%crop%common%icrop)) then  ! [GR-CROPWS B3]
-                           rot_type = crop_config_global%rotation_type(state%crop%common%icrop)  ! [GR-CROPWS B3]
-                           select case (rot_type)
-                           case (1)
-                              ! type=1 cropfixed
-                              if (allocated(crop_config_global%rotation_fixed)) then
-                                 use_cache    = .true.
-                                 swprep_cache = crop_config_global%rotation_fixed(state%crop%common%icrop)%swprep   ! [GR-CROPWS B3]
-                                 swsow_cache  = crop_config_global%rotation_fixed(state%crop%common%icrop)%swsow    ! [GR-CROPWS B3]
-                                 swgerm_cache = crop_config_global%rotation_fixed(state%crop%common%icrop)%swgerm   ! [GR-CROPWS B3]
+               if (allocated(crop_cfg%rotation_loaded) .and. &
+                   allocated(crop_cfg%rotation_type)) then
+                  if (state%crop%common%icrop >= 1 .and. state%crop%common%icrop <= size(crop_cfg%rotation_loaded)) then  ! [GR-CROPWS B3]
+                     if (crop_cfg%rotation_loaded(state%crop%common%icrop)) then  ! [GR-CROPWS B3]
+                        rot_type = crop_cfg%rotation_type(state%crop%common%icrop)  ! [GR-CROPWS B3]
+                        select case (rot_type)
+                        case (1)
+                           ! type=1 cropfixed
+                           if (allocated(crop_cfg%rotation_fixed)) then
+                              use_cache    = .true.
+                              swprep_cache = crop_cfg%rotation_fixed(state%crop%common%icrop)%swprep   ! [GR-CROPWS B3]
+                              swsow_cache  = crop_cfg%rotation_fixed(state%crop%common%icrop)%swsow    ! [GR-CROPWS B3]
+                              swgerm_cache = crop_cfg%rotation_fixed(state%crop%common%icrop)%swgerm   ! [GR-CROPWS B3]
+                           end if
+                        case (2)
+                           ! type=2 wofost: cache-hit when swprep=0 AND swsow=0.
+                           ! swgerm=0/1/2 are all handled in the cache body below.
+                           if (allocated(crop_cfg%rotation_wofost)) then
+                              swprep_cache = crop_cfg%rotation_wofost(state%crop%common%icrop)%preparation%swprep  ! [GR-CROPWS B3]
+                              swsow_cache  = crop_cfg%rotation_wofost(state%crop%common%icrop)%sowing%swsow         ! [GR-CROPWS B3]
+                              swgerm_cache = crop_cfg%rotation_wofost(state%crop%common%icrop)%germination%swgerm   ! [GR-CROPWS B3]
+                              if (swprep_cache == 0 .and. swsow_cache == 0) then
+                                 use_cache = .true.
+                                 gp => crop_cfg%rotation_wofost(state%crop%common%icrop)%germination   ! [GR-CROPWS B3]
                               end if
-                           case (2)
-                              ! type=2 wofost: cache-hit when swprep=0 AND swsow=0.
-                              ! swgerm=0/1/2 are all handled in the cache body below.
-                              if (allocated(crop_config_global%rotation_wofost)) then
-                                 swprep_cache = crop_config_global%rotation_wofost(state%crop%common%icrop)%preparation%swprep  ! [GR-CROPWS B3]
-                                 swsow_cache  = crop_config_global%rotation_wofost(state%crop%common%icrop)%sowing%swsow         ! [GR-CROPWS B3]
-                                 swgerm_cache = crop_config_global%rotation_wofost(state%crop%common%icrop)%germination%swgerm   ! [GR-CROPWS B3]
-                                 if (swprep_cache == 0 .and. swsow_cache == 0) then
-                                    use_cache = .true.
-                                    gp => crop_config_global%rotation_wofost(state%crop%common%icrop)%germination   ! [GR-CROPWS B3]
-                                 end if
-                              end if
-                           end select
-                        end if
+                           end if
+                        end select
                      end if
                   end if
                end if
@@ -351,10 +348,9 @@
           ! [GR-CROP 2026-05-25] pld/remoc read directly from rotation config
           ! (swbulb=1 currently stub-errored in TOML pipeline; cfg path documented).
           block
-            use crop_config_global_mod, only: crop_config_global
             real(8) :: pld_cfg, remoc_cfg
-            pld_cfg   = crop_config_global%rotation_wofost(state%crop%common%icrop)%bulb%pld
-            remoc_cfg = crop_config_global%rotation_wofost(state%crop%common%icrop)%bulb%remoc
+            pld_cfg   = crop_cfg%rotation_wofost(state%crop%common%icrop)%bulb%pld
+            remoc_cfg = crop_cfg%rotation_wofost(state%crop%common%icrop)%bulb%remoc
             ! remobilisation of carbohydrates from planted material
             if (state%crop%wofost%plwt.le.(0.0002d0*pld_cfg)) then
               ! no remobilisation at minimum weight motherbulb
