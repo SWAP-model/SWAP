@@ -3,7 +3,9 @@ module csv_output_tz
 use error_mod, only: fatalerr_collected, error_collection_t
 use csv_writer_mod, only: csv_writer_t
 private
-public :: csv_out_tz
+public :: csv_out_tz_header
+public :: csv_out_tz_write
+public :: csv_out_tz_close
 public :: csv_out_tz_flush
 
 ! IO-OUT/C2b: time-depth result_output_tz.csv file writes routed through
@@ -14,6 +16,28 @@ public :: csv_out_tz_flush
 ! so the proven inline write code is preserved verbatim.
 type(csv_writer_t), save :: profile_w
 
+! allowed variable names: number of items in Allowed must be exactly equal to Mlist
+! Since Forcheck reports an error when elements have different number of characters, all now have same length
+! Must be UPPERCASE
+integer,                               parameter   :: Mlist   = 10
+character(len=10),   dimension(Mlist), save        :: Allowed = &
+   ['H         ', 'WC        ', 'TEMP      ', 'K         ', 'CONC      ', &
+    'CONCADS   ', 'O2TOP     ', 'HEACAP    ', 'HEACON    ', 'RWU       ']
+character(len=10),   dimension(Mlist), save        :: Units = &
+   ['(cm)      ', '(cm3/cm3) ', '(deg C)   ', '(cm/d)    ', '(g/cm3 w) ', &
+    '(g/cm3)   ', '(kg/m3)   ', '(J/m3/K)  ', '(W/m/K)   ', '(cm/d)    ']
+
+integer,             dimension(Mlist), save        :: iCSV, iPOS
+
+integer,             parameter                     :: ilw = Mlist
+
+integer,                               save        :: Nvars, nod_1, nod_2
+character(len=20),                     save        :: formZ, form_rea_E
+! [GR-IO 2026-05-25 Phase 2] Local mutable copy of the config string; upperc /
+! sort_list_tz rewrite it in place. `save` keeps the sorted value between
+! csv_out_tz_header and csv_out_tz_write calls (sort_list_tz only runs in header).
+character(len=1024),                  save         :: inList_tz_local
+
 contains
 
 !> IO-OUT/C2b: drain the tz writer's runtime buffer. No-op if never opened.
@@ -21,7 +45,7 @@ subroutine csv_out_tz_flush()
    call profile_w%flush()
 end subroutine csv_out_tz_flush
 
-subroutine csv_out_tz (iTask, state)
+subroutine csv_out_tz_header (state)
 ! Routine designed for CSV output of user-selected vaiables (provided matching defined variables in this routine).
 ! Specifically for selected time-depth variables
 ! Contains help routines: do_write_csv; check_list; remove_sqbr; det_node; Make_Header
@@ -40,57 +64,22 @@ use swap_state_mod, only: swap_state_t
 
 implicit none
 ! global
-integer,          intent(in)        :: iTask
 type(swap_state_t), intent(in)      :: state
 
 ! local (some need to be saved)
 
-! allowed variable names: number of items in Allowed must be exactly equal to Mlist
-! Since Forcheck reports an error when elements have different number of characters, all now have same length
-! Must be UPPERCASE
-integer,                               parameter   :: Mlist   = 10
-character(len=10),   dimension(Mlist)              :: Allowed
-character(len=10),   dimension(Mlist)              :: Units
-
-integer,             dimension(Mlist), save        :: iCSV, iPOS
-
-integer,             parameter                     :: ilw = Mlist
 integer,             dimension(ilw)                :: iWbeg, iWend
-integer,                               save        :: Nvars, nod_1, nod_2
-integer                                            :: i, j
+integer                                            :: i
 type(error_collection_t)                           :: errs
-character(len=*),    parameter                     :: comma   = ','
 character(len=300)                                 :: filnam
 character(len=160)                                 :: filtext
 character(len=2)                                   :: cval1, cval2
-character(len=20),                     save        :: formZ, form_rea_E
 character(len=1024)                                :: Header, HeaderUnits
 character(len=20),   dimension(ilw)                :: listVars
-character(len=19)                                  :: datexti
-! [GR-IO 2026-05-25 Phase 2] Local mutable copy of the config string; upperc /
-! sort_list_tz rewrite it in place. `save` keeps the sorted value between
-! case(1) and case(2) calls (sort_list_tz only runs in case(1)).
-character(len=1024),                  save         :: inList_tz_local
 
 ! when to automatically swith from F to E formatting
 integer,             parameter                     :: num_d = 5         ! # of decimals; later: user input?
 integer,             parameter                     :: num_w = num_d+7   ! total width of format, for E-formatting: 7 positions are needed for "-x."at start and "E+00" at end
-
-data (Allowed(i), Units(i), i = 1, Mlist) / &
-      'H',        '(cm)',        &
-      'WC',       '(cm3/cm3)',   &
-      'TEMP',     '(deg C)',     &
-      'K',        '(cm/d)',      &
-      'CONC',     '(g/cm3 w)',   &
-      'CONCADS',  '(g/cm3)',     &
-      'O2TOP',    '(kg/m3)',     &
-      'HEACAP',   '(J/m3/K)',    &
-      'HEACON',   '(W/m/K)',     &
-      'RWU',      '(cm/d)'       &
-   /
-
-select case (iTask)
-case (1)
 
    ! some basic info
    !  Note: field width of zero in I and F edit descriptors is allowed as of Fortran95 to ensure as little space usage
@@ -143,7 +132,7 @@ case (1)
       nod_2 = i
    end if
    end associate
-   
+
    ! open file for output; existing file will be overwritten; formatted output
    !    to do: write some basic info at the top of the output file?
    ! IO-OUT/C2b: open via csv_writer_t (status='replace',action='write' —
@@ -162,69 +151,9 @@ case (1)
    write (profile_w%unit,'(A)') trim(HeaderUnits)
    write (profile_w%unit,'(A)') trim(Header)
 
-case (2)
-
-  associate (time => state%timecontrol)
-  do j = nod_1, nod_2
-
-    ! date and time
-    if (.not. time%flprintshort) then                                      ! SS-TC TC-13
-       write (profile_w%unit,'(2A)',advance='no') trim(time%date)          ! SS-TC TC-13
-    else
-       ! determine date-time
-       call dtdpst ('year-month-day hour:minute:seconds',time%t1900,datexti)  ! SS-TC TC-13
-       write (profile_w%unit,'(2A)',advance='no') trim(datexti)
-    end if
-
-    ! depth
-    write (profile_w%unit,formZ,advance='no') comma, state%mesh%z(j)
-
-    ! all other variables
-    ! programmer is responsible for correct correspondence between Names (and their position) in Allowed and
-    ! actual SWAP variables as used below
-
-    ! SS-SWC S-2.11: h,theta read from state%soilwater.
-    if (iCSV(1)  == 1) call do_write_csv_tz (state%soilwater%h(j))
-    if (iCSV(2)  == 1) call do_write_csv_tz (state%soilwater%theta(j))
-    if (iCSV(3)  == 1) call do_write_csv_tz (state%heat%tsoil(j))
-    ! SS-SWC S-2.11: k read from state%soilwater.
-    if (iCSV(4)  == 1) call do_write_csv_tz (state%soilwater%k(j))
-    if (iCSV(5)  == 1) call do_write_csv_tz (state%solute%cml(j))
-    if (iCSV(6)  == 1) call do_write_csv_tz (state%solute%cmsy(j))
-    if (iCSV(7)  == 1) call do_write_csv_tz (state%crop%oxygen%c_top(j))
-    if (iCSV(8)  == 1) call do_write_csv_tz (state%heat%heacap(j)/1.0d-6)    ! from J/cm3/K  to J/m3/K
-    if (iCSV(9)  == 1) call do_write_csv_tz (state%heat%heacon(j)/864.0d0)   ! from J/cm/K/d to W/m/K
-    ! SS-SWC S-2.11: inqrot read from state%soilwater.
-    if (iCSV(10) == 1) call do_write_csv_tz (state%soilwater%inqrot(j))
-
-    ! finalize record (advance to next line)
-    write (profile_w%unit,*)
-
-  end do
-  end associate
-
-case (3)
-
-   ! IO-OUT/C2b: close via csv_writer_t.
-   call profile_w%close()
-
-case default
-
-    call fatalerr_collected ('csv_write_tz','Illegal iTask value; range allowed: [1-3]')
-
-end select
-
 return
 
 contains
-
-subroutine do_write_csv_tz (var)
-implicit none
-real(8),          intent(in)  :: var
-
-write (profile_w%unit,form_rea_E,advance='no') comma, real(var)
-
-end subroutine do_write_csv_tz
 
 subroutine check_list_tz ()
 implicit none
@@ -260,6 +189,7 @@ character(len=*), dimension(Nvars), intent(inout)  :: ListVars
 ! local
 integer              :: il, i, j
 character(len=1024)  :: temp
+character(len=*),    parameter                     :: comma   = ','
 
 il = 0
 ! iPOS contains for each of the Allowed names the position in the user-supplied list ListVars,
@@ -318,7 +248,94 @@ end do
 
 end subroutine make_headerunits_tz
 
-end subroutine csv_out_tz
+end subroutine csv_out_tz_header
+
+subroutine csv_out_tz_write (state)
+! Routine designed for CSV output of user-selected vaiables (provided matching defined variables in this routine).
+! Specifically for selected time-depth variables
+
+! SS-SLST Phase 1 Task 5: cml,cmsy migrated to state%solute.
+! SS-HEAT Phase 1 Task 5: tsoil, HEACAP, HEACON removed (now via state%heat).
+! SS-SWC S-2.11: h,theta,K,inqrot removed (now via state%soilwater).
+! SS-TC TC-13: flprintshort, date, t1900 dropped (read via state%timecontrol ASSOCIATE).
+! [GR-CROP 2026-05-25] c_top → state%crop%oxygen%c_top
+use swap_state_mod, only: swap_state_t
+
+implicit none
+! global
+type(swap_state_t), intent(in)      :: state
+
+! local
+integer                                            :: j
+character(len=19)                                  :: datexti
+character(len=*),    parameter                     :: comma   = ','
+
+  associate (time => state%timecontrol)
+  do j = nod_1, nod_2
+
+    ! date and time
+    if (.not. time%flprintshort) then                                      ! SS-TC TC-13
+       write (profile_w%unit,'(2A)',advance='no') trim(time%date)          ! SS-TC TC-13
+    else
+       ! determine date-time
+       call dtdpst ('year-month-day hour:minute:seconds',time%t1900,datexti)  ! SS-TC TC-13
+       write (profile_w%unit,'(2A)',advance='no') trim(datexti)
+    end if
+
+    ! depth
+    write (profile_w%unit,formZ,advance='no') comma, state%mesh%z(j)
+
+    ! all other variables
+    ! programmer is responsible for correct correspondence between Names (and their position) in Allowed and
+    ! actual SWAP variables as used below
+
+    ! SS-SWC S-2.11: h,theta read from state%soilwater.
+    if (iCSV(1)  == 1) call do_write_csv_tz (state%soilwater%h(j))
+    if (iCSV(2)  == 1) call do_write_csv_tz (state%soilwater%theta(j))
+    if (iCSV(3)  == 1) call do_write_csv_tz (state%heat%tsoil(j))
+    ! SS-SWC S-2.11: k read from state%soilwater.
+    if (iCSV(4)  == 1) call do_write_csv_tz (state%soilwater%k(j))
+    if (iCSV(5)  == 1) call do_write_csv_tz (state%solute%cml(j))
+    if (iCSV(6)  == 1) call do_write_csv_tz (state%solute%cmsy(j))
+    if (iCSV(7)  == 1) call do_write_csv_tz (state%crop%oxygen%c_top(j))
+    if (iCSV(8)  == 1) call do_write_csv_tz (state%heat%heacap(j)/1.0d-6)    ! from J/cm3/K  to J/m3/K
+    if (iCSV(9)  == 1) call do_write_csv_tz (state%heat%heacon(j)/864.0d0)   ! from J/cm/K/d to W/m/K
+    ! SS-SWC S-2.11: inqrot read from state%soilwater.
+    if (iCSV(10) == 1) call do_write_csv_tz (state%soilwater%inqrot(j))
+
+    ! finalize record (advance to next line)
+    write (profile_w%unit,*)
+
+  end do
+  end associate
+
+return
+
+contains
+
+subroutine do_write_csv_tz (var)
+implicit none
+real(8),          intent(in)  :: var
+
+write (profile_w%unit,form_rea_E,advance='no') comma, real(var)
+
+end subroutine do_write_csv_tz
+
+end subroutine csv_out_tz_write
+
+subroutine csv_out_tz_close (state)
+! Routine designed for CSV output of user-selected vaiables (provided matching defined variables in this routine).
+! Specifically for selected time-depth variables
+use swap_state_mod, only: swap_state_t
+
+implicit none
+! global
+type(swap_state_t), intent(in)      :: state
+
+   ! IO-OUT/C2b: close via csv_writer_t.
+   call profile_w%close()
+
+end subroutine csv_out_tz_close
 
 end module csv_output_tz
 
@@ -637,23 +654,17 @@ module csv_output
    end do
    end subroutine set_values
 
-   subroutine csv_out(iTask, state)
+   subroutine csv_out_header(state)
    implicit none
 
    ! global
-   integer,               intent(in)    :: iTask
    type(swap_state_t), intent(inout) :: state
 
    ! local
-   integer              :: j, n, ncount
-   character(len=19)    :: datexti
    character(len=300)   :: filcsv
    ! IO-OUT/C2b: flattened data-row values for csv_writer_t%row.
-   real(8)              :: vals(Mnodes*M)
    type(error_collection_t) :: errs
 
-   select case (iTask)
-   case (1)
       ! initial values in vars
       vars%iyes(1:M)           =    0
       vars%value(1:Mnodes,1:M) = -999.9d0
@@ -693,7 +704,20 @@ module csv_output
       PondOld = state%soilwater%pond
       SnowOld = state%atmosphere%ssnow
 
-   case (2)
+   end subroutine csv_out_header
+
+   subroutine csv_out_write(state)
+   implicit none
+
+   ! global
+   type(swap_state_t), intent(inout) :: state
+
+   ! local
+   integer              :: j, n, ncount
+   character(len=19)    :: datexti
+   ! IO-OUT/C2b: flattened data-row values for csv_writer_t%row.
+   real(8)              :: vals(Mnodes*M)
+
       ! dynamic
       ! some local pointers must be filled here first; then values are transferred to vars%values
       call fill_values(state)
@@ -728,19 +752,21 @@ module csv_output
          end associate
       end if
 
-   case (3)
+   end subroutine csv_out_write
+
+   subroutine csv_out_close(state)
+   implicit none
+
+   ! global
+   type(swap_state_t), intent(inout) :: state
+
       ! [SS-BMI2] headless guard: file was only opened when not headless
       ! IO-OUT/C2b: close via csv_writer_t.
       if (.not. state%timecontrol%headless) then
          call scalar_w%close()
       end if
 
-   case default
-      call fatalerr_collected("csv_out","Illegal iTask")
-
-   end select
-
-   end subroutine csv_out
+   end subroutine csv_out_close
 
    subroutine fill_values(state)
    implicit none
@@ -1032,9 +1058,9 @@ module csv_output
    InListShort = ""
    call words(trim(InList), ilw, ",", iwbeg, iwend, nlist)
    do i = 1, nlist
-     
+
      str_item = Inlist(iwbeg(i):iwend(i))
-     
+
      ! check for brackets
      bracket = .false.
      ipos1 = index(str_item, "[")
@@ -1043,15 +1069,15 @@ module csv_output
        str_sqr = str_item(ipos1:len_trim(str_item))
        str_item = str_item(1:(ipos1 - 1))
      end if
-     
+
      ! check all shortnames
      do j = 1, shorts%nsn
-       
+
        ipos1 = index(trim(str_item), trim(shorts%alias(j)))
        if (ipos1 == 1 .and. len_trim(str_item) == len_trim(shorts%alias(j))) then
-         
+
          iwbeg(i) = 0
-           
+
          ! replacement string
          str_insert = ""; il = len_trim(str_insert)
          do k = 1, shorts%n(j)
@@ -1059,7 +1085,7 @@ module csv_output
            if (bracket) call addstr(str_insert, il, str_sqr)
            if (k < shorts%n(j)) call addstr(str_insert, il, ",")
          end do
-         
+
          ! add items to InlistShort
          if (first) then
            first = .false.
@@ -1067,11 +1093,11 @@ module csv_output
          else
            InListShort = trim(InListShort) // "," // trim(str_insert)
          end if
-       
+
        end if
      end do
    end do
-   
+
    ! combine Inlist and InlistShort (if needed)
    if (.not. first) then
      first = .true.
@@ -1089,10 +1115,10 @@ module csv_output
      end do
      InList = trim(InListTmp) // "," // trim(InListShort)
    end if
-   
-   
-   
-   
+
+
+
+
 !   do j = 1, shorts%nsn
 !      ipos1 = index(trim(InList), trim(shorts%alias(j)))
 !      if (ipos1 > 0) then
@@ -1235,17 +1261,17 @@ module csv_output
    end function nodenumber
 
    subroutine csv_output_init(state)
-      use csv_output_tz, only: csv_out_tz
+      use csv_output_tz, only: csv_out_tz_header
       type(swap_state_t), intent(inout) :: state
-      if (state%cfg%output_csv%enabled    == 1) call csv_out(1, state)
-      if (state%cfg%output_csv%enabled_tz == 1) call csv_out_tz(1, state)
+      if (state%cfg%output_csv%enabled    == 1) call csv_out_header(state)
+      if (state%cfg%output_csv%enabled_tz == 1) call csv_out_tz_header(state)
    end subroutine csv_output_init
 
    subroutine csv_output_step(state)
-      use csv_output_tz, only: csv_out_tz, csv_out_tz_flush
+      use csv_output_tz, only: csv_out_tz_write, csv_out_tz_flush
       type(swap_state_t), intent(inout) :: state
-      if (state%cfg%output_csv%enabled    == 1) call csv_out(2, state)
-      if (state%cfg%output_csv%enabled_tz == 1) call csv_out_tz(2, state)
+      if (state%cfg%output_csv%enabled    == 1) call csv_out_write(state)
+      if (state%cfg%output_csv%enabled_tz == 1) call csv_out_tz_write(state)
       ! IO-OUT/C2b: drain runtime buffer at each year boundary so partial
       ! results survive a crash/kill. flush is a no-op when the writer was
       ! never opened (headless / tz disabled), so calling on the flag is safe.
@@ -1256,10 +1282,10 @@ module csv_output
    end subroutine csv_output_step
 
    subroutine csv_output_finalize(state)
-      use csv_output_tz, only: csv_out_tz
+      use csv_output_tz, only: csv_out_tz_close
       type(swap_state_t), intent(inout) :: state
-      if (state%cfg%output_csv%enabled    == 1) call csv_out(3, state)
-      if (state%cfg%output_csv%enabled_tz == 1) call csv_out_tz(3, state)
+      if (state%cfg%output_csv%enabled    == 1) call csv_out_close(state)
+      if (state%cfg%output_csv%enabled_tz == 1) call csv_out_tz_close(state)
    end subroutine csv_output_finalize
 
 end module csv_output
