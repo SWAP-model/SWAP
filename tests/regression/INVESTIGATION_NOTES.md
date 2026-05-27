@@ -3,6 +3,37 @@
 **Status:** open, bumped to a follow-on spec
 **Opened:** 2026-04-22 (Rescue Phase 1, Task 1)
 
+---
+
+## 2026-05-27 — Reference basis switched to gfortran-4.2.0; hysteresis regression found
+
+**Reference basis change.** The regression now compares the modern build against
+`tests/reference/swap420gf` — the *unmodified* SWAP 4.2.0 source recompiled with the
+modern build's gfortran flags (`-O2 -ffree-line-length-none -std=legacy -finit-local-zero`,
+**no source edits**). Previously the harness compared the modern build against its own
+golden-master snapshot (`*_expected_gfortran.json`); it now compares against
+`*_reference_gf.json` produced by `regen_reference.py`. This makes the suite a *physics*
+fidelity check rather than a self-consistency check, because the compiler is held constant.
+
+Verification that compiler is not a confound: on all five pre-existing cases, the Intel
+`swap420` and gfortran `swap420gf` builds of 4.2.0 agree to the fixtures' 2-decimal
+precision. So any modern-vs-`swap420gf` divergence is a genuine code difference.
+
+**New finding — hysteresis (`SWHYST=1`) regression.** The new `soilhysteresis` case
+(clone of hupselbrook, hysteresis on) reveals that the modern hysteresis path diverges
+from 4.2.0: up to **1.86 cm GWL** (2003), **1.46 cm** on total DRAINAGE, ~1.3 cm DSTOR.
+This is **physics, not compiler**: 4.2.0-ifx ≡ 4.2.0-gfortran (0.000 drift) on this case,
+while 4.2.0-gfortran vs modern-gfortran diverges on 18/54 aggregated values.
+
+The `hysteresis` subroutine itself (`src/soil/soilhydraulics.f90`) is a faithful
+line-by-line transcription of 4.2.0's `hysteresis.f90`. The divergence is therefore
+suspected in the **shared helpers** it calls, which were rewritten with new signatures:
+`prhead` (pressure-head recovery after a wetting/drying reversal) and `moiscap`. Root-cause
+and fix deferred. The case is registered with `known_divergence=` so the harness reports
+it as an expected divergence (xfail) without failing the suite.
+
+---
+
 ## What changed
 
 The rescue committed to **gfortran-only** during Phases 1–4 (see `docs/adr/0001-gfortran-first.md` — written in Task 8 of the Phase 1 plan). Phase 0's baseline regression numbers were recorded under **ifx** (Intel), because `pixi.toml` silently hardcoded `FC=ifx` in the production configure tasks and `meson.build` had an Intel-specific flag path including `-init=zero`.

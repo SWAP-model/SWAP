@@ -34,6 +34,13 @@ class CaseConfig(NamedTuple):
     state_vars: list[str]  # averaged annually
     cumul_vars: list[str] = []  # last value per year (for cumulative outputs)
 
+    # Non-empty => the modern build is KNOWN to diverge from the 4.2.0
+    # reference for this case (a documented, not-yet-fixed physics regression).
+    # The harness reports it as an expected-divergence (xfail): it does not
+    # fail the suite, but prints the mismatch so the gap stays visible. The
+    # string is a short reason / pointer to INVESTIGATION_NOTES.md.
+    known_divergence: str = ""
+
     input_files: dict[str, str] = {}
 
 
@@ -42,7 +49,7 @@ CASES = {
     "hupselbrook": CaseConfig(
         name="hupselbrook",
         case_dir="1.hupselbrook",
-        fixture="hupselbrook_expected_gfortran.json",
+        fixture="hupselbrook_reference_gf.json",
         flux_vars=["RAIN", "IRRIG", "INTERC", "RUNOFF", "EPOT", "EACT",
                    "DRAINAGE", "QBOTTOM", "TPOT", "TACT", "DSTOR"],
         state_vars=["GWL"],
@@ -61,7 +68,7 @@ CASES = {
     "grassgrowth": CaseConfig(
         name="grassgrowth",
         case_dir="2.grassgrowth",
-        fixture="grassgrowth_expected_gfortran.json",
+        fixture="grassgrowth_reference_gf.json",
         flux_vars=[],
         state_vars=[],
         cumul_vars=["PGRASSDM", "GRASSDM", "PMOWDM", "MOWDM"],
@@ -69,7 +76,7 @@ CASES = {
     "oxygenstress": CaseConfig(
         name="oxygenstress",
         case_dir="4.oxygenstress",
-        fixture="oxygenstress_expected_gfortran.json",
+        fixture="oxygenstress_reference_gf.json",
         flux_vars=[],
         state_vars=["TREDDRY", "TREDWET"],
         cumul_vars=["PGRASSDM", "GRASSDM", "PMOWDM", "MOWDM"],
@@ -77,7 +84,7 @@ CASES = {
     "salinitystress": CaseConfig(
         name="salinitystress",
         case_dir="5.salinitystress",
-        fixture="salinitystress_expected_gfortran.json",
+        fixture="salinitystress_reference_gf.json",
         flux_vars=[],
         state_vars=["TREDDRY", "TREDWET", "TREDSOL", "CPWSO", "CWSO",
                     "CONC[-5.0]", "CONC[-25.0]", "CONC[-55.0]"],
@@ -85,9 +92,23 @@ CASES = {
     "surfacewater": CaseConfig(
         name="surfacewater",
         case_dir="6.surfacewater",
-        fixture="surfacewater_expected_gfortran.json",
+        fixture="surfacewater_reference_gf.json",
         flux_vars=[],
         state_vars=["GWL", "POND"],
+    ),
+    # Clone of hupselbrook with hysteresis active (SWHYST=1). Exercises the
+    # soil-water-retention hysteresis path, dormant in all 6 base cases.
+    # Hysteresis shifts GWL/DRAINAGE/storage vs the base, so the standard
+    # water-balance columns assert the feature (see option-triage 2026-05-27).
+    "soilhysteresis": CaseConfig(
+        name="soilhysteresis",
+        case_dir="7.soilhysteresis",
+        fixture="soilhysteresis_reference_gf.json",
+        flux_vars=["RAIN", "INTERC", "RUNOFF", "EPOT", "EACT",
+                   "DRAINAGE", "QBOTTOM", "TPOT", "TACT", "DSTOR"],
+        state_vars=["GWL"],
+        known_divergence="hysteresis physics regression vs 4.2.0 "
+                         "(~1.9cm GWL); see INVESTIGATION_NOTES.md",
     ),
 }
 
@@ -323,16 +344,24 @@ def _run_and_aggregate(case: CaseConfig):
         return aggregate(csv_path, case.flux_vars, case.state_vars, cumul_vars)
 
 
-def run_case(case: CaseConfig) -> tuple[bool, float]:
-    """Run a single test case. Returns (success, execution_time) tuple."""
+def run_case(case: CaseConfig) -> tuple[str, float]:
+    """Run a single test case.
+
+    Returns ``(status, execution_time)`` where ``status`` is one of:
+      - ``"pass"``  — modern output matches the 4.2.0 reference.
+      - ``"fail"``  — unexpected mismatch / error (fails the suite).
+      - ``"xfail"`` — expected divergence (case.known_divergence set and it
+                      diverged): reported, but does NOT fail the suite.
+      - ``"xpass"`` — case.known_divergence set but the case now MATCHES; the
+                      flag should be removed. Treated as a non-fatal warning.
+    """
     start_time = time.perf_counter()
 
     fixture_path = TESTS_DIR / "regression" / case.fixture
 
     if not fixture_path.exists():
         print(f"✗ {case.name}: fixture not found at {fixture_path}")
-        elapsed = time.perf_counter() - start_time
-        return False, elapsed
+        return "fail", time.perf_counter() - start_time
 
     expected = load_fixture(fixture_path)
 
@@ -340,26 +369,38 @@ def run_case(case: CaseConfig) -> tuple[bool, float]:
         annual, totals, means = _run_and_aggregate(case)
     except RuntimeError as exc:
         print(f"✗ {case.name}: {exc}")
-        elapsed = time.perf_counter() - start_time
-        return False, elapsed
+        return "fail", time.perf_counter() - start_time
 
     try:
         compare(expected, annual, totals, means)
     except AssertionError as e:
-        print(f"✗ {case.name}: {e}")
         elapsed = time.perf_counter() - start_time
-        return False, elapsed
+        if case.known_divergence:
+            print(f"⚠ {case.name}: KNOWN DIVERGENCE — {case.known_divergence} "
+                  f"[xfail, not a suite failure]{e}")
+            return "xfail", elapsed
+        print(f"✗ {case.name}: {e}")
+        return "fail", elapsed
 
     elapsed = time.perf_counter() - start_time
+    if case.known_divergence:
+        print(f"⚠ {case.name}: now MATCHES 4.2.0 but known_divergence is still "
+              f"set — remove the flag. [xpass] [{elapsed:.2f}s]")
+        return "xpass", elapsed
     print(f"✓ {case.name}: regression ok (annual stats match fixture) [{elapsed:.2f}s]")
-    return True, elapsed
+    return "pass", elapsed
 
 
 def _regen_one_case(case: CaseConfig) -> Path:
-    """Regenerate a gfortran-baseline fixture for a single case.
+    """Snapshot the *modern* build's output as a golden-master baseline.
 
-    Writes ``{case.name}_expected_gfortran.json`` next to the other fixtures
-    and returns the output path.
+    DIAGNOSTIC ONLY. Writes ``{case.name}_expected_gfortran.json`` (the modern
+    build's own output). This is NOT the regression reference — the harness
+    compares against ``{case.name}_reference_gf.json``, generated from the
+    gfortran-compiled SWAP 4.2.0 by ``regen_reference.py``. Regenerating the
+    reference from the modern build would make the fidelity check trivially
+    pass, so the two are kept distinct. Use this only to record where the
+    modern build currently stands relative to 4.2.0.
     """
     annual, totals, means = _run_and_aggregate(case)
     payload = {
@@ -426,16 +467,22 @@ def main():
         
         passed = 0
         failed = 0
+        xfailed = 0
+        xpassed = 0
         timings = []
-        
+
         # Process results as they complete
         for future in concurrent.futures.as_completed(future_to_case):
             case = future_to_case[future]
             try:
-                success, elapsed = future.result()
+                status, elapsed = future.result()
                 timings.append((case.name, elapsed))
-                if success:
+                if status == "pass":
                     passed += 1
+                elif status == "xfail":
+                    xfailed += 1
+                elif status == "xpass":
+                    xpassed += 1
                 else:
                     failed += 1
             except Exception as exc:
@@ -443,10 +490,15 @@ def main():
                 failed += 1
 
     overall_elapsed = time.perf_counter() - overall_start
-    
+
     # Print summary with timing information
     print(f"\n{'='*60}")
-    print(f"Results: {passed} passed, {failed} failed")
+    summary = f"Results: {passed} passed, {failed} failed"
+    if xfailed:
+        summary += f", {xfailed} known-divergence (xfail)"
+    if xpassed:
+        summary += f", {xpassed} unexpectedly-matching (xpass — remove flag)"
+    print(summary)
     print(f"Total execution time: {overall_elapsed:.2f}s")
     
     if timings:
