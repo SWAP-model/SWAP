@@ -89,15 +89,28 @@ State schema change in `src/state/solute_state.f90`:
   `cml`/`cmsy` allocation (init allocates; seed fills — the established
   two-phase pattern).
 
-Kernel: a `pure` builder in `solute_kernels_mod` that computes the five
-coefficients from explicit per-node inputs (`bdens`, `kf`, `cref`, `kfsat`,
-`poros`, `ddif`, `thetsl`, `decpot`, `fdepth`). Layer→node gathering of
-layer-indexed soil/solute properties happens at the call site (in
-`solute_seed`), so the kernel receives plain per-node arrays. Exact signature
-(single builder vs. per-coefficient `elemental` functions) is a plan-level
-detail; either is acceptable provided it is `pure` and state-free.
+Kernels (Shape B — per-coefficient `elemental` functions, chosen over a single
+builder for test granularity, call-site readability, and a strictly state/mesh-
+free contract; closest to the `interception.f90` precedent). In
+`solute_kernels_mod`:
 
-`solute_seed` calls the builder once and stores results into `state%solute`.
+- `elemental function bdenskf_coeff(bdens, kf) result(v)` — `bdens*kf`
+- `elemental function bdenskfsatporos_coeff(bdens, kfsat, poros) result(v)`
+  — `bdens*kfsat + poros` (scalars `kfsat`/`poros` broadcast over `bdens`)
+- `elemental function ddiffwcs_coeff(ddif, thetsl) result(v)` — `ddif/thetsl**2`
+- `elemental function decpotfdepth_coeff(decpot, fdepth) result(v)`
+  — `decpot*fdepth`
+
+The trivial derived product is **not** wrapped: `solute_seed` computes
+`sol%bdenskfcref = sol%bdenskf * cref` as a plain line after `bdenskf`.
+
+Layer→node gathering of layer-indexed soil/solute properties happens at the
+call site (in `solute_seed`) — the elemental kernels only ever see per-node (or
+scalar) values, so they stay genuinely state- and mesh-free. `solute_seed`
+assigns each result into `state%solute` (e.g.
+`sol%bdenskf = bdenskf_coeff(bdens_node, kf_node)`), reading as a narrative
+sequence of named formulas.
+
 `solute_step` reads `sol%bdenskf(i)` etc. The dead local declarations are
 **deleted** from both routines.
 
@@ -139,9 +152,11 @@ solute_step (loop)  : read sol%<coeff>(i); per node call
 
 Populate `tests/unit/solute/` with the first solute physics unit tests:
 
-- **Coefficients:** golden products from the formulas; explicit zero-input
-  cases that reproduce today's masked-to-zero behavior; a non-trivial
-  `bdenskfsatporos` (poros>0) case that the current code never exercises.
+- **Coefficients:** per-function scalar golden values (`bdenskf_coeff(2,3)==6`
+  etc.); explicit zero-input cases (`kf=0`, `decpot=0`, `ddif=0`) that reproduce
+  today's masked-to-zero behavior; a non-trivial `bdenskfsatporos_coeff`
+  (`poros>0`) case that the current code never exercises; `ddiffwcs_coeff`
+  exercised with `thetsl>0`.
 - **Freundlich:** linear branch (`frexp≈1`), sub-`vsmall` zeroing, a
   convergence case with a hand-computed fixed point, and `frexp≠1` with known
   inputs.
