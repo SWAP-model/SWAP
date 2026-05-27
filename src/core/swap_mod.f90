@@ -53,9 +53,9 @@ contains
    subroutine swap_init_body(state, config)
       !
       ! Init pipeline: TOML load (in swap_init) → seed_state_from_config
-      ! adapter → modern type-bound state%X%init calls → a handful of
-      ! legacy magic-int dispatchers (X(1, state)) that have not yet been
-      ! converted.
+      ! adapter → Phase-1 type-bound state%X%init calls (construct) →
+      ! Phase-2 free x_seed(state) procedures (derived initial state from
+      ! sibling subsystems; see ADR 0043).
       !
       ! Strangler-fig follow-ups (the code still works; these are tracked
       ! debt, not bugs):
@@ -71,10 +71,12 @@ contains
       !       * swinco==3 warm-restart h-profile CSV re-read
       !       * atmosphere snow handshake (snowinco ↔ ssnow)
       !     Each should fold into the relevant state%X%init.
-      !   - Legacy magic-int dispatchers (DoTillage(1),
-      !     SoilWater(1), Temperature(1), Solute(1)) should
-      !     migrate to type-bound state%X%init matching the surrounding
-      !     modern calls. SurfaceWater task dispatch retired (Task 9).
+      !   - Phase-2 seed procedures (tillage_seed, soilwater_seed,
+      !     temperature_seed, solute_seed) — per ADR 0043 these are named
+      !     free procs, deliberately distinct from the type-bound Phase-1
+      !     init because they read sibling subsystems in a fixed order.
+      !     Folding them into type-bound init is gated on untangling that
+      !     init-order coupling (future work).
       !   - The legacy readswap() entry point survives in src/io/readswap.f90
       !     only as a parity-test fixture (ADR 0007); not called at runtime.
       !
@@ -203,10 +205,10 @@ contains
          ! state%tillage%init (skips Group AB if events not allocated).
          call state%tillage%init(config%soil%tillage, time%tend, state%mesh%numlay)
 
-         ! LEGACY-INIT — magic-int dispatchers. Migrate to type-bound init.
+         ! Phase-2 tillage seed (validation + setup), gated on swtill.
          if (state%cfg%soil%swtill == 1)       call tillage_seed(state)
 
-         ! Heat must init BEFORE SoilWater(1) so hconduc can read
+         ! Heat must init BEFORE soilwater_seed so hconduc can read
          ! state%heat%tsoil(node) during hydraulic-conductivity init.
          call state%heat%init(config%heat, state%mesh%numnod)
 
