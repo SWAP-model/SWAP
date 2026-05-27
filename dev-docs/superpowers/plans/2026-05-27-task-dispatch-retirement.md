@@ -26,6 +26,16 @@ pixi run -e test check-fast
 per-task regression gate; do not defer it to the end. The final task runs the
 broader `check-full` (all six cases).
 
+> **Known pre-existing xfails — do NOT treat as task regressions.** The
+> `soilhysteresis` and `winter` fixtures currently fail against `swap420gf`
+> due to an adaptive-dt desync (root-caused as *not physics* in commit
+> `cfc447e`), unrelated to this arc. They are **not** in `check-fast`'s four
+> cases (`hupselbrook surfacewater salinitystress grassgrowth`), so **every
+> per-task `check-fast` must be fully clean (4/4)**. They WILL appear as
+> failures in Task 12's `check-full` — that is expected and pre-existing. A
+> task is only a regression if it breaks one of the four `check-fast` cases,
+> or adds a *new* `check-full` failure beyond `soilhysteresis`/`winter`.
+
 **Moving code:** when a step says "move the `case(N)` body", move the existing
 lines **verbatim** (cut, don't retype) into the new procedure. Retyping a
 200-line numerical body invites transcription drift and a regression you'll
@@ -501,7 +511,10 @@ git commit -m "refactor(crop): MatricFlux — split into matricflux_build_table/
 - [ ] **Step 1: Full regression gate**
 
 Run: `pixi run -e test check-full`
-Expected: all six cases byte-identical against `swap420gf`; pFUnit `OK (N tests)`.
+Expected: the four `check-fast` cases byte-identical against `swap420gf`;
+pFUnit `OK (N tests)`. **`soilhysteresis` and `winter` are expected to fail
+(known pre-existing adaptive-dt xfails, commit `cfc447e`) — confirm those are
+the *only* failures and that this arc introduced no new ones.**
 
 - [ ] **Step 2: Confirm no Tier-1/2 task dispatch remains**
 
