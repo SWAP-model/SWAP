@@ -55,7 +55,7 @@ contains
       logical   flboth
       integer   nodncr
       logical   flcaprise
-      ! [GR-SOIL 2026-05-24] local loop variable; copied to soil%numbit at top of loop body
+      ! local loop variable; copied to soil%numbit at top of loop body
       ! (Fortran disallows derived-type components as loop variables).
       integer   numbit_local
 
@@ -499,23 +499,23 @@ contains
                endif
                if(i.gt.1)then
                  soil%kmean(i)=hcomean(state%cfg%simulation%numerical%swkmean,soil%k(i-1),soil%k(i),mesh%dz(i-1),mesh%dz(i))
-                 soil%kmean(i) = soil%kmean(i)                            ! [SS-SWC S-1.4b]
+                 soil%kmean(i) = soil%kmean(i)
                  soil%kmean(i+1)=hcomean(state%cfg%simulation%numerical%swkmean,soil%k(i),soil%k(i+1),mesh%dz(i),mesh%dz(i+1))
-                 soil%kmean(i+1) = soil%kmean(i+1)                        ! [SS-SWC S-1.4b]
+                 soil%kmean(i+1) = soil%kmean(i+1)
                end if
-               soil%k(i) = soil%k(i)                                      ! [SS-SWC S-1.4b] soil%k(nodncr)
-               if (flcaprise) soil%k(i+1) = soil%k(i+1)                   ! [SS-SWC S-1.4b] soil%k(nodncr+1)
+               soil%k(i) = soil%k(i)
+               if (flcaprise) soil%k(i+1) = soil%k(i+1)
             endif
 
             ! Calculate F-function
             F(1) = (soil%theta(1) - soil%thetm1(1))*soil%FrArMtrx(1)*mesh%dz(1)/time%dt + sink(1) - source(1) &
      &           + soil%qrot(1) + soil%kmean(2) * hgrad(2)
 
-            ! [MACRO-RETIRE 2026-05-12] FlMacropore QMpLatSsSav save retired (ADR 0040).
+            ! FlMacropore QMpLatSsSav save retired (ADR 0040).
 
-            call boundtop(state)  ! [SS-HEAT] Task 9: state passed for rfcp access
+            call boundtop(state)
 
-            ! [MACRO-RETIRE 2026-05-12] MACROPORE(2,...) retired (ADR 0040).
+            ! MACROPORE(2,...) retired (ADR 0040).
 
             if (soil%FlRunoff) call pondrunoff (state)
 
@@ -543,17 +543,17 @@ contains
                soil%theta(NN) = watcon(soil%h(NN), &
                                      soil%vg_params(NN), &
                                      soil%iHWCKmodel(soil%layer(NN)), &
-                                     NN, soil)          ! [SS-GR-UTILS Task 5]
-               soil%theta(NN) = soil%theta(NN)                         ! [SS-SWC S-1.4a]
+                                     NN, soil)
+               soil%theta(NN) = soil%theta(NN)
                soil%k(NN)     = hconduc(soil%h(NN),soil%theta(NN),heat%rfcp(NN),heat%tsoil(NN), &
                                       soil%vg_params(NN), &
                                       soil%iHWCKmodel(soil%layer(NN)), &
                                       soil%fluseksatexm(NN), &
-                                      NN, soil)                     ! [SS-GR-UTILS Task 6]
-               soil%k(NN) = soil%k(NN)                                 ! [SS-SWC S-1.4b]
-               soil%kmean(NN+1) = hcomean(state%cfg%simulation%numerical%swkmean,soil%k(NN),soil%vg_params(NN+1)%ksat &  ! [SS-GR-UTILS Task 15]
+                                      NN, soil)
+               soil%k(NN) = soil%k(NN)
+               soil%kmean(NN+1) = hcomean(state%cfg%simulation%numerical%swkmean,soil%k(NN),soil%vg_params(NN+1)%ksat &
      &                       ,mesh%dz(NN),mesh%dz(NN+1))
-               soil%kmean(NN+1) = soil%kmean(NN+1)                     ! [SS-SWC S-1.4b]
+               soil%kmean(NN+1) = soil%kmean(NN+1)
                F(NN) = (soil%theta(NN) - soil%thetm1(NN))*soil%FrArMtrx(NN)*mesh%dz(NN)/time%dt  &
      &            - soil%kmean(NN) * hgrad(NN) + soil%kmean(NN+1) * hgrad(NN+1)   &
      &            + sink(NN) - source(NN) + soil%qrot(NN)
@@ -581,8 +581,8 @@ contains
                                                soil%vg_params(mesh%numnod), &
                                                soil%iHWCKmodel(soil%layer(mesh%numnod)), &
                                                soil%fluseksatexm(mesh%numnod), &
-                                               mesh%numnod, soil)        ! [SS-GR-UTILS Task 6]
-                  soil%kmean(mesh%numnod+1) = soil%kmean(mesh%numnod+1)          ! [SS-SWC S-1.4b]
+                                               mesh%numnod, soil)
+                  soil%kmean(mesh%numnod+1) = soil%kmean(mesh%numnod+1)
                   soil%qbot = -1.0d0 * soil%kmean(mesh%numnod+1)
                   F(NN) = F(NN) - soil%qbot
                ! Lysimeter option
@@ -664,7 +664,7 @@ contains
          if (soil%ftoph) then
             soil%qtop = -soil%kmean(1)*((soil%hsurf - soil%h(1))/mesh%disnod(1)+1.0d0)
             if(.not.flnonconv) then
-               deviat = soil%pond - soil%pondm1 + soil%reva*time%dt - (atmo%nraidt+atmo%nird+atmo%melt)*time%dt &  ! [SS-SWC S-2.12B] [TC-8]
+               deviat = soil%pond - soil%pondm1 + soil%reva*time%dt - (atmo%nraidt+atmo%nird+atmo%melt)*time%dt &
      &                - soil%runon*time%dt  +  soil%runots  - soil%qtop * time%dt
                if( abs(deviat) .gt. state%cfg%simulation%numerical%critdevponddt) then
                   flnonconv3 = .true. ; flnonconv   = .true.
@@ -685,18 +685,18 @@ contains
                ! system
                qv(1) = soil%qtop
                do i=NN+1,mesh%numnod
-                  soil%theta(i) = soil%vg_params(i)%thetas ! [SS-GR-UTILS Task 15]
-                  soil%theta(i) = soil%theta(i)                        ! [SS-SWC S-1.4a]
+                  soil%theta(i) = soil%vg_params(i)%thetas
+                  soil%theta(i) = soil%theta(i)
                end do
                do i=1,mesh%numnod
-                 qv(i+1) = qv(i) +mesh%dz(i)*soil%FrArMtrx(i)*(soil%theta(i)-soil%thetm1(i))&  ! [SS-SWC S-2.3]
+                 qv(i+1) = qv(i) +mesh%dz(i)*soil%FrArMtrx(i)*(soil%theta(i)-soil%thetm1(i))&
      &                          / time%dt + sink(i) - source(i) + soil%qrot(i)
                end do
                soil%qbot = qv(mesh%numnod+1)
 
                do i=NN+1,mesh%numnod
                   soil%h(i) = soil%h(i-1) + mesh%disnod(i)*(qv(i)/soil%kmean(i)+1.0d0)
-                  soil%h(i) = soil%h(i)                                ! [SS-SWC S-1.4a]
+                  soil%h(i) = soil%h(i)
                end do
 
             end if
@@ -704,8 +704,8 @@ contains
             ! Calculate new groundwater level
             call calcgwl (state)
 
-            if(swbotb.ne.1.and.abs(soil%gwl-soil%gwlm1).ge.state%cfg%simulation%numerical%gwlconv .AND.          &  ! [SS-SWC S-2.12B]
-     &         abs(soil%gwl-999d0).gt.1.d0.and.abs(soil%gwlm1-999d0).gt.1.d0) then  ! [SS-SWC S-2.12B]
+            if(swbotb.ne.1.and.abs(soil%gwl-soil%gwlm1).ge.state%cfg%simulation%numerical%gwlconv .AND.          &
+     &         abs(soil%gwl-999d0).gt.1.d0.and.abs(soil%gwlm1-999d0).gt.1.d0) then
                call dtdpst ('year-month-day',time%t1900+1.001d0,datetmp)
                  messag = ' Change of groundwater level exceeds'//      &
      &           ' criterion at '//datetmp//'. Consider reduction of dtMin'
@@ -725,15 +725,15 @@ contains
       if (.not.time%fldtmin ) then
          ! Reset soil state variables
          do j = 1,mesh%numnod
-            soil%h(j) = soil%hm1(j)                                    ! [SS-SWC S-2.3]
-            soil%h(j) = soil%h(j)                                      ! [SS-SWC S-1.4a]
-            soil%theta(j) = soil%thetm1(j)                             ! [SS-SWC S-2.3]
-            soil%theta(j) = soil%theta(j)                              ! [SS-SWC S-1.4a]
+            soil%h(j) = soil%hm1(j)
+            soil%h(j) = soil%h(j)
+            soil%theta(j) = soil%thetm1(j)
+            soil%theta(j) = soil%theta(j)
          enddo
          soil%kmean(mesh%numnod+1) = soil%k(mesh%numnod)
-         soil%kmean(mesh%numnod+1) = soil%k(mesh%numnod)                          ! [SS-SWC S-1.4b]
-         soil%gwl  = soil%gwlm1                         ! [SS-SWC S-2.12B]
-         soil%pond = soil%pondm1                        ! [SS-SWC S-2.12B]
+         soil%kmean(mesh%numnod+1) = soil%k(mesh%numnod)
+         soil%gwl  = soil%gwlm1
+         soil%pond = soil%pondm1
 
          ! Reset and continue iteration with smaller timestep!
          time%fldecdt = .true.
@@ -790,7 +790,7 @@ contains
 
       endif
 
-      end associate  ! soil%theta/.../soil%gwlm1 => soil [SS-SWC S-1.4a/b/S-2.3]; mesh%numnod/mesh%dz/mesh%z/mesh%disnod [GR-BH C4]; drai%nrlevs/swbotb [GR-BH Audit 31]
+      end associate
 
    end subroutine headcalc
 
@@ -807,27 +807,13 @@ contains
    !! @endnote
    !!
    subroutine soilwater_seed(state)
-      ! [SS-GR-FINAL B9] blanket use Variables → explicit only-list; all symbols DEFERRED
-      ! macp/mabbc/matabentries → swap_array_dimensions (dimension constants)
       use swap_array_dimensions, only: macp, mabbc, matabentries
-      ! [GR-SOIL 2026-05-24] soilwater() is now `use variables`-free. All consumers
-      !   moved to state/config:
-      !     cQMpLatSs retired (ADR 0040)
-      !     swhyst/gwli → state%cfg%soil
-      !     paramvg → state%cfg%soil%hydraulics (hyd alias)
-      !     h_enpr was an unused import
-      !     numtab/numtablay/ientrytab/ientrytablay/sptab/sptablay retired with
-      !       swsophy=1 → src/soil/dormant/sptabulated.f90
-      !     zi/nhead → state%cfg%soil%initial%z_init
-      !     relsatthr/ksatthr retired (threshold-Ksat path not ported; state defaults 0)
-      !     iHWCKmodel → state%soilwater%iHWCKmodel (default 1 via soilwater_init)
       use swap_log, only: log_info, to_str
       use array_utils, only: afgen
       use soilhydraulics_utils, only: watcon, hconduc, moiscap, hcomean
-      ! [MACRO-RETIRE 2026-05-12] macropore_mod retired (ADR 0040).
       use soilwaterbalance_mod, only: calcgwl, watstor, integral, fluxes
       use swap_state_mod, only: swap_state_t
-      use, intrinsic :: iso_fortran_env, only: real64  ! [SS-ATM] for atmosphere state dual-writes
+      use, intrinsic :: iso_fortran_env, only: real64
       implicit none
 
       ! Arguments
@@ -839,24 +825,21 @@ contains
       real(8) tab(mabbc*2)
       character(len=200) messag
 
-      ! [GR-BH C4] mesh globals aliased via mesh for all cases
-      ! [GR-BH Audit 31] swbotb aliased via soil%swbotb_runtime
       associate (mesh => state%mesh,         &
                  soil => state%soilwater,    &
                  drai => state%drainage,     &
                  heat => state%heat,         &
                  atmo => state%atmosphere,   &
                  time => state%timecontrol,  &
-                 soil_cfg => state%cfg%soil, &  ! [GR-SOIL 2026-05-24] soil_cfg%swhyst/soil_cfg%gwli direct config read
-                 hyd => state%cfg%soil%hydraulics, &  ! [GR-SOIL 2026-05-24] per-layer VG params (paramvg)
+                 soil_cfg => state%cfg%soil, &
+                 hyd => state%cfg%soil%hydraulics, &
                  swbotb => state%soilwater%swbotb_runtime)
 
          ! Initialize Soilwater rate/state variables
 
 
          ! Initialize miscellaneous
-         ! [SS-SWC S-2.12B] legacy half-writes dropped — soil is canonical
-         soil%hatm = -2.75e5_real64                           ! [SS-SWC S-1.3/S-2.12B]
+         soil%hatm = -2.75e5_real64
       atmo%nraidt = 0.0_real64
       atmo%nird   = 0.0_real64
       if (soil%swinco.ne.3) then
@@ -864,27 +847,26 @@ contains
         atmo%spev  = 0.0_real64
         atmo%saev  = 0.0_real64
       endif
-      soil%runon = 0.0_real64                                 ! [SS-SWC S-1.3/S-2.12B]
+      soil%runon = 0.0_real64
       soil%qtop = 0.d0
       do i = 1,mesh%numnod+1
-        soil%q(i) = 0.0_real64                               ! [SS-SWC S-1.3/S-2.12B]
+        soil%q(i) = 0.0_real64
       enddo
-      soil%evp = 0.0_real64                                  ! [SS-SWC S-1.3/S-2.12B] state sized mesh%numnod; blanket zero
-      ! [SS-HEAT] Task 9: legacy rfcp global retired; heat%rfcp is authoritative
+      soil%evp = 0.0_real64                                  ! state sized mesh%numnod; blanket zero
       if (allocated(heat%rfcp)) heat%rfcp = 1.0d0
       state%surfacewater%vtair = 0.0d0
-      ! [GR-SOIL 2026-05-24] cQMpLatSs retired-zero write dropped (ADR 0040 macropore).
+      ! cQMpLatSs retired-zero write dropped (ADR 0040 macropore).
 
       ! Soil physics: tabulated or MualemVanGenuchten functions
-      ! [SS-GR-UTILS Task 4] Mirror mesh%layer into state.
-      ! [GR-SOIL 2026-05-24] iHWCKmodel mirror loop retired — soilwater_init seeds
+      ! Mirror mesh%layer into state.
+      ! iHWCKmodel mirror loop retired — soilwater_init seeds
       !   `sw%iHWCKmodel = 1` (HACK Phase 4f-extend: TOML pipeline forces uni-modal MvG).
       do node = 1, mesh%numnod
          soil%layer(node) = mesh%layer(node)
       end do
       ! BiModal/NoVap: only set via legacy readswap (not TOML path); stay .false.
 
-      ! [GR-SOIL 2026-05-24] swsophy=1 init block retired (TSPACK + tabulated dispatch dormant).
+      ! swsophy=1 init block retired (TSPACK + tabulated dispatch dormant).
       ! See src/soil/dormant/sptabulated.f90 for the original layer→node + sptab/numtab/
       ! ientrytab population logic. Reactivation requires: layer-keyed `numtablay`/
       ! `ientrytablay`/`sptablay` config wiring, restoring the state fields
@@ -895,12 +877,12 @@ contains
             'swsophy=1 (tabulated soil hydraulics) is dormant — see src/soil/dormant/sptabulated.f90')
       end if
       ! MvanG functions — populate per-node `vg_params` directly from `hyd` (config) reads.
-      ! [GR-SOIL 2026-05-24] paramvg(N, lay) mirrors retired; `hyd => state%cfg%soil%hydraulics`.
+      ! paramvg index layout (legacy reference):
       !   paramvg(1,lay)=ores, (2)=osat, (3)=ksatfit, (4)=alfa, (5)=lexp, (6)=npar,
       !   (7)=1-1/npar, (8)=alfaw (read by hysteresis only), (9)=h_enpr,
       !   (10)=ksatexm sentinel, (11)=relsatthr (always 0 in TOML), (12)=ksatthr (always 0),
       !   (13..21)=bi-modal/extended params (iHWCKmodel != 1 in TOML never fires).
-      ! [GR-CROP 2026-05-25] populate the per-layer VG store (soil%vg_params_layer)
+      ! Populate the per-layer VG store (soil%vg_params_layer)
       !   first. This is the canonical layer-keyed source used both by the per-node
       !   init below and by the tillage mutator (tillage.f90 Change_MvGpars).
       do lay = 1, mesh%numlay
@@ -934,20 +916,20 @@ contains
          ! not ported. The state fields default to 0, so the mirror lines are dropped.
          if (soil%iHWCKmodel(lay) == 3 .OR. soil%iHWCKmodel(lay) == 6 .OR. soil%iHWCKmodel(lay) == 7 .OR. &
              soil%iHWCKmodel(lay) == 10 .OR. soil%iHWCKmodel(lay) == 11) then
-            ! [GR-SOIL 2026-05-24] bi-modal MvG (paramvg(13..17)) unreachable in TOML:
+            ! bi-modal MvG (paramvg(13..17)) unreachable in TOML:
             ! config_to_variables forces iHWCKmodel=1. Reactivation needs a config
             ! sub-record for alfa_2/npar_2/mpar_2/omega_1/omega_2.
             call fatalerr_collected('SoilHydraulics', &
                'iHWCKmodel in {3,6,7,10,11} (bi-modal MvG) needs config wiring — see src/state/hydraulic_params_mod.f90')
          end if
          if (soil%iHWCKmodel(lay) == 5 .OR. soil%iHWCKmodel(lay) == 7) then
-            ! [GR-SOIL 2026-05-24] iHWCKmodel=5/7 (h0 air-entry) needs paramvg(18) config.
+            ! iHWCKmodel=5/7 (h0 air-entry) needs paramvg(18) config.
             call fatalerr_collected('SoilHydraulics', &
                'iHWCKmodel in {5,7} needs config wiring (h0 air-entry)')
          end if
          if (soil%iHWCKmodel(lay) == 8 .OR. soil%iHWCKmodel(lay) == 9 .OR. &
              soil%iHWCKmodel(lay) == 10 .OR. soil%iHWCKmodel(lay) == 11) then
-            ! [GR-SOIL 2026-05-24] iHWCKmodel=8/9/10/11 needs paramvg(18..21) config.
+            ! iHWCKmodel=8/9/10/11 needs paramvg(18..21) config.
             call fatalerr_collected('SoilHydraulics', &
                'iHWCKmodel in {8,9,10,11} needs config wiring (h0/ha/apar/omega_k)')
          end if
@@ -960,23 +942,23 @@ contains
 ! --- saturated and residual watercontent of each node; hysteresis parameters
       do node = 1,mesh%numnod
         lay = mesh%layer(node)
-        soil%thetar(node) = soil%vg_params(node)%thetar        ! [SS-SWC S-1.3/S-2.12B]
-        soil%thetas(node) = soil%vg_params(node)%thetas        ! [SS-SWC S-1.3/S-2.12B]
+        soil%thetar(node) = soil%vg_params(node)%thetar
+        soil%thetas(node) = soil%vg_params(node)%thetas
         !!! Kroes: disable combi of swsophy=1 and soil_cfg%swhyst=1
         if (soil_cfg%swhyst.eq.1) then
            ! Wetting curve
-           soil%indeks(node) = 1                            ! [SS-SWC S-1.3/S-2.12B]
-           soil%vg_params(node)%alpha = hyd%alfaw(lay)      ! [GR-SOIL 2026-05-24] hysteresis: wetting alpha
+           soil%indeks(node) = 1
+           soil%vg_params(node)%alpha = hyd%alfaw(lay)      ! hysteresis: wetting alpha
         elseif (soil_cfg%swhyst.eq.0.or.soil_cfg%swhyst.eq.2) then
            ! Drying branch or simulation without hysteresis
-           soil%indeks(node) = -1                           ! [SS-SWC S-1.3/S-2.12B]
-           soil%vg_params(node)%alpha = hyd%alfa(lay)       ! [GR-SOIL 2026-05-24] hysteresis: drying alpha
+           soil%indeks(node) = -1
+           soil%vg_params(node)%alpha = hyd%alfa(lay)       ! hysteresis: drying alpha
         endif
       end do
 
       if (soil%swinco.eq.1) then
          ! Pressure head profile is input
-         ! [GR-SOIL 2026-05-24] z_init from state%cfg%soil%initial; h values already in soil%h
+         ! z_init from state%cfg%soil%initial; h values already in soil%h
          !   (seeded by swap_mod after soilwater_init reads h_file directly).
          if (allocated(state%cfg%soil%initial%z_init)) then
             do i = 1, size(state%cfg%soil%initial%z_init)
@@ -984,7 +966,7 @@ contains
               tab(i*2-1) = abs(state%cfg%soil%initial%z_init(i))
             end do
             do i = 1, mesh%numnod
-              soil%h(i) = afgen(tab,macp*2,abs(mesh%z(i)))            ! [SS-SWC S-1.3/S-2.12B]
+              soil%h(i) = afgen(tab,macp*2,abs(mesh%z(i)))
             end do
          end if
       endif
@@ -997,7 +979,7 @@ contains
         endif
       endif
       if (soil%swinco.eq.3) then
-        ! [GR-SOIL 2026-05-24] consistency gate uses size(z_init) via config.
+        ! consistency gate uses size(z_init) via config.
         if (allocated(state%cfg%soil%initial%z_init)) then
            if (size(state%cfg%soil%initial%z_init).ne.mesh%numnod) then
              messag = 'Initial data are read from file (SWINCO=3) and '//  &
@@ -1008,24 +990,24 @@ contains
         endif
       endif
       if (soil%swinco.eq.1.or.soil%swinco.eq.3) then
-         ! Determine groundwater level — [SS-SWC S-2.12B] all legacy half-writes dropped
+         ! Determine groundwater level
          if (soil%h(mesh%numnod) .gt. -1.d-5) then
           i = mesh%numnod
           do while ((soil%h(i) .gt. -1.d-5) .and. (i .gt. 1))
               i = i - 1
           end do
           if (soil%h(i) .lt. -1.d-5) then
-            soil%gwl = mesh%z(i+1) + soil%h(i+1) / (soil%h(i+1) - soil%h(i)) * (mesh%z(i) - mesh%z(i+1))  ! [SS-SWC S-1.3/S-2.12B]
+            soil%gwl = mesh%z(i+1) + soil%h(i+1) / (soil%h(i+1) - soil%h(i)) * (mesh%z(i) - mesh%z(i+1))
             ! Assume hydrostatic equilibrium in saturated part
             do j = i+1, mesh%numnod
-              soil%h(j) = soil%gwl - mesh%z(j)                     ! [SS-SWC S-1.3/S-2.12B]
+              soil%h(j) = soil%gwl - mesh%z(j)
             end do
           endif
         endif
       else
          ! Pressure head profile is calculated from groundwater level
          if (swbotb.eq.1) then
-          soil%gwl = afgen (soil%gwltab,mabbc*2,time%t1900+time%dt-1.d0)   ! [SS-SWC S-1.3/S-2.12B] [TC-8]
+          soil%gwl = afgen (soil%gwltab,mabbc*2,time%t1900+time%dt-1.d0)
 
           if(abs(soil%gwl-(mesh%z(mesh%numnod)-0.5d0*mesh%dz(mesh%numnod))) .lt.1.0d-4) then
           messag = 'Groundwaterlevel as bottom boundary (SWBOTB=1) is'//&
@@ -1034,15 +1016,15 @@ contains
             call fatalerr_collected ('soilwater',messag)
           endif
         else
-          soil%gwl = soil_cfg%gwli                                   ! [SS-SWC S-1.3/S-2.12B]
+          soil%gwl = soil_cfg%gwli
         endif
         if (soil%gwl.gt.0.0d0) then
-          soil%pond = soil%gwl                                ! [SS-SWC S-1.3/S-2.12B]
+          soil%pond = soil%gwl
         else
-          soil%pond = 0.0_real64                            ! [SS-SWC S-1.3/S-2.12B]
+          soil%pond = 0.0_real64
         endif
         do i = 1,mesh%numnod
-          soil%h(i) = soil%gwl - mesh%z(i)                         ! [SS-SWC S-1.3/S-2.12B]
+          soil%h(i) = soil%gwl - mesh%z(i)
         end do
       endif
 
@@ -1051,7 +1033,7 @@ contains
         soil%theta(i) = watcon(soil%h(i), &
                               soil%vg_params(i), &
                               soil%iHWCKmodel(soil%layer(i)), &
-                              i, soil)                  ! [SS-SWC S-1.3/S-2.12B] [SS-GR-UTILS Task 5]
+                              i, soil)
       end do
 
       ! Hydraulic conductivities, differential moisture capacities
@@ -1061,62 +1043,48 @@ contains
                                   soil%vg_params(node), &
                                   soil%iHWCKmodel(soil%layer(node)), &
                                   time%dt, &
-                                  node, soil)             ! [SS-SWC S-1.3/S-2.12B] [SS-GR-UTILS Task 7]
+                                  node, soil)
 
-        soil%FrArMtrx(node) = 1.0_real64                    ! [SS-SWC S-1.3/S-2.12B]
+        soil%FrArMtrx(node) = 1.0_real64
         soil%k(node) = hconduc(soil%h(node),soil%theta(node),heat%rfcp(node),heat%tsoil(node), &
                              soil%vg_params(node), &
                              soil%iHWCKmodel(soil%layer(node)), &
                              soil%fluseksatexm(node), &
-                             node, soil)                            ! [SS-SWC S-1.3/S-2.12B] [SS-GR-UTILS Task 6]
+                             node, soil)
 
-        if(node.gt.1) soil%kmean(node) = hcomean(state%cfg%simulation%numerical%swkmean,soil%k(node-1),soil%k(node),mesh%dz(node-1),mesh%dz(node))  ! [SS-SWC S-1.3/S-2.12B]
+        if(node.gt.1) soil%kmean(node) = hcomean(state%cfg%simulation%numerical%swkmean,soil%k(node-1),soil%k(node),mesh%dz(node-1),mesh%dz(node))
       end do
-      soil%kmean(mesh%numnod+1) = soil%k(mesh%numnod)                   ! [SS-SWC S-1.3/S-2.12B]
+      soil%kmean(mesh%numnod+1) = soil%k(mesh%numnod)
 
       ! Initial soil water storage
       do i = 1, mesh%numnod
-         soil%FrArMtrx(i) = 1.0_real64                      ! [SS-SWC S-1.3/S-2.12B]
+         soil%FrArMtrx(i) = 1.0_real64
       enddo
-      soil%volact = 0.0_real64                              ! [SS-SWC S-1.3/S-2.12B]
-      call watstor (state)                                ! [SS-SWC S-1.6] state arg added
-      soil%volini = soil%volact                               ! [SS-SWC S-1.3/S-2.12B]
-      soil%pondini = soil%pond                                ! [SS-SWC S-1.3/S-2.12B]
+      soil%volact = 0.0_real64
+      call watstor (state)
+      soil%volini = soil%volact
+      soil%pondini = soil%pond
 
       ! Initial groundwater level
       call calcgwl (state)
 
-      call log_info('soilwater', 'Soil state initialized: gwl=' // to_str(real(soil%gwl,4)) // &  ! [SS-SWC S-2.3]
+      call log_info('soilwater', 'Soil state initialized: gwl=' // to_str(real(soil%gwl,4)) // &
                     ' cm, numnod=' // to_str(mesh%numnod) // ', numlay=' // to_str(mesh%numlay) // &
-                    ', volini=' // to_str(real(soil%volini,4)) // ' cm')              ! [SS-SWC S-2.3]
+                    ', volini=' // to_str(real(soil%volini,4)) // ' cm')
 
-      end associate  ! mesh%numnod/mesh%dz/mesh%z/mesh%layer [GR-BH C4]; swbotb [GR-BH Audit 31]
+      end associate
 
       return
       end subroutine soilwater_seed
 
    subroutine soilwater_step(state)
-      ! [SS-GR-FINAL B9] blanket use Variables → explicit only-list; all symbols DEFERRED
-      ! macp/mabbc/matabentries → swap_array_dimensions (dimension constants)
       use swap_array_dimensions, only: macp, mabbc, matabentries
-      ! [GR-SOIL 2026-05-24] soilwater() is now `use variables`-free. All consumers
-      !   moved to state/config:
-      !     cQMpLatSs retired (ADR 0040)
-      !     swhyst/gwli → state%cfg%soil
-      !     paramvg → state%cfg%soil%hydraulics (hyd alias)
-      !     h_enpr was an unused import
-      !     numtab/numtablay/ientrytab/ientrytablay/sptab/sptablay retired with
-      !       swsophy=1 → src/soil/dormant/sptabulated.f90
-      !     zi/nhead → state%cfg%soil%initial%z_init
-      !     relsatthr/ksatthr retired (threshold-Ksat path not ported; state defaults 0)
-      !     iHWCKmodel → state%soilwater%iHWCKmodel (default 1 via soilwater_init)
       use swap_log, only: log_info, to_str
       use array_utils, only: afgen
       use soilhydraulics_utils, only: watcon, hconduc, moiscap, hcomean
-      ! [MACRO-RETIRE 2026-05-12] macropore_mod retired (ADR 0040).
       use soilwaterbalance_mod, only: calcgwl, watstor, integral, fluxes
       use swap_state_mod, only: swap_state_t
-      use, intrinsic :: iso_fortran_env, only: real64  ! [SS-ATM] for atmosphere state dual-writes
+      use, intrinsic :: iso_fortran_env, only: real64
       implicit none
 
       ! Arguments
@@ -1134,37 +1102,37 @@ contains
                  heat => state%heat,         &
                  atmo => state%atmosphere,   &
                  time => state%timecontrol,  &
-                 soil_cfg => state%cfg%soil, &  ! [GR-SOIL 2026-05-24] soil_cfg%swhyst/soil_cfg%gwli direct config read
-                 hyd => state%cfg%soil%hydraulics, &  ! [GR-SOIL 2026-05-24] per-layer VG params (paramvg)
+                 soil_cfg => state%cfg%soil, &
+                 hyd => state%cfg%soil%hydraulics, &
                  swbotb => state%soilwater%swbotb_runtime)
 
          ! Calculate Soilwater rate/state variables
 
-         ! Reset intermediate soil water fluxes — [SS-SWC S-2.12B] reset() handles all
+         ! Reset intermediate soil water fluxes
          if (time%flDayStart) then
-          call soil%reset_intermediate_per_day()              ! [SS-SWC S-2.1]
+          call soil%reset_intermediate_per_day()
       end if
 
       if (time%flZeroIntr) then
-        call soil%reset_intermediate()                        ! [SS-SWC S-2.1]
+        call soil%reset_intermediate()
 
-        soil%IPondBeg = soil%pond     ! [SS-SWC S-1.4b/S-2.3/S-2.12B]
+        soil%IPondBeg = soil%pond
         do node = 1, mesh%numnod
-          soil%IThetaBeg(node) = soil%theta(node)  ! [SS-SWC S-1.4b/S-2.3/S-2.12B]
+          soil%IThetaBeg(node) = soil%theta(node)
         enddo
 
-        ! [MACRO-RETIRE 2026-05-12] macropore(5,...) retired (ADR 0040).
+        ! macropore(5,...) retired (ADR 0040).
       endif
 
-      ! Reset cumulative soil water fluxes — [SS-SWC S-2.12B] reset() handles all
+      ! Reset cumulative soil water fluxes
       if (time%flZeroCumu) then
-        call soil%reset_cumulative()                         ! [SS-SWC S-2.1]
+        call soil%reset_cumulative()
 
-        ! [MACRO-RETIRE 2026-05-12] macropore(6,...) retired (ADR 0040).
+        ! macropore(6,...) retired (ADR 0040).
 
         ! Reset initial water storage and ponding
-        soil%volini = soil%volact          ! [SS-SWC S-2.12B]
-        soil%pondini = soil%pond           ! [SS-SWC S-2.12B]
+        soil%volini = soil%volact
+        soil%pondini = soil%pond
       endif
 
       ! Save state variables of time = t
@@ -1173,33 +1141,19 @@ contains
       ! Calculate new soil water state variables
       call headcalc(state)
 
-      end associate  ! mesh%numnod/mesh%dz/mesh%z/mesh%layer [GR-BH C4]; swbotb [GR-BH Audit 31]
+      end associate
 
       return
       end subroutine soilwater_step
 
    subroutine soilwater_update(state)
-      ! [SS-GR-FINAL B9] blanket use Variables → explicit only-list; all symbols DEFERRED
-      ! macp/mabbc/matabentries → swap_array_dimensions (dimension constants)
       use swap_array_dimensions, only: macp, mabbc, matabentries
-      ! [GR-SOIL 2026-05-24] soilwater() is now `use variables`-free. All consumers
-      !   moved to state/config:
-      !     cQMpLatSs retired (ADR 0040)
-      !     swhyst/gwli → state%cfg%soil
-      !     paramvg → state%cfg%soil%hydraulics (hyd alias)
-      !     h_enpr was an unused import
-      !     numtab/numtablay/ientrytab/ientrytablay/sptab/sptablay retired with
-      !       swsophy=1 → src/soil/dormant/sptabulated.f90
-      !     zi/nhead → state%cfg%soil%initial%z_init
-      !     relsatthr/ksatthr retired (threshold-Ksat path not ported; state defaults 0)
-      !     iHWCKmodel → state%soilwater%iHWCKmodel (default 1 via soilwater_init)
       use swap_log, only: log_info, to_str
       use array_utils, only: afgen
       use soilhydraulics_utils, only: watcon, hconduc, moiscap, hcomean
-      ! [MACRO-RETIRE 2026-05-12] macropore_mod retired (ADR 0040).
       use soilwaterbalance_mod, only: calcgwl, watstor, integral, fluxes
       use swap_state_mod, only: swap_state_t
-      use, intrinsic :: iso_fortran_env, only: real64  ! [SS-ATM] for atmosphere state dual-writes
+      use, intrinsic :: iso_fortran_env, only: real64
       implicit none
 
       ! Arguments
@@ -1211,41 +1165,37 @@ contains
       real(8) tab(mabbc*2)
       character(len=200) messag
 
-      ! [GR-BH C4] mesh globals aliased via mesh for all cases
-      ! [GR-BH Audit 31] swbotb aliased via soil%swbotb_runtime
       associate (mesh => state%mesh,         &
                  soil => state%soilwater,    &
                  drai => state%drainage,     &
                  heat => state%heat,         &
                  atmo => state%atmosphere,   &
                  time => state%timecontrol,  &
-                 soil_cfg => state%cfg%soil, &  ! [GR-SOIL 2026-05-24] soil_cfg%swhyst/soil_cfg%gwli direct config read
-                 hyd => state%cfg%soil%hydraulics, &  ! [GR-SOIL 2026-05-24] per-layer VG params (paramvg)
+                 soil_cfg => state%cfg%soil, &
+                 hyd => state%cfg%soil%hydraulics, &
                  swbotb => state%soilwater%swbotb_runtime)
 
          ! Update hydraulic conductivities to time level t+1
-         ! [SS-SWC S-2.12B] all legacy half-writes dropped
          do i = 1,mesh%numnod
          soil%k(i) = hconduc(soil%h(i),soil%theta(i), &
                                         heat%rfcp(i),heat%tsoil(i), &
                                         soil%vg_params(i), &
                                         soil%iHWCKmodel(soil%layer(i)), &
                                         soil%fluseksatexm(i), &
-                                        i, soil)                    ! [SS-SWC S-1.4b/S-2.12B] [SS-GR-UTILS Task 6]
+                                        i, soil)
          if(i.gt.1)then
-            soil%kmean(i) = hcomean(state%cfg%simulation%numerical%swkmean,soil%k(i-1),soil%k(i),mesh%dz(i-1),mesh%dz(i))  ! [SS-SWC S-1.4b/S-2.12B]
+            soil%kmean(i) = hcomean(state%cfg%simulation%numerical%swkmean,soil%k(i-1),soil%k(i),mesh%dz(i-1),mesh%dz(i))
          end if
       enddo
-      soil%kmean(mesh%numnod+1) = soil%k(mesh%numnod)  ! [SS-SWC S-1.4b/S-2.12B]
+      soil%kmean(mesh%numnod+1) = soil%k(mesh%numnod)
 
       ! Calculate actual water content of profile
-      call watstor (state)                                ! [SS-SWC S-1.6] state arg added
+      call watstor (state)
 
       ! Calculate water fluxes between soil compartments
-      ! SS-SWST Phase 2 Task 11: state passed so fluxes() reads qdra/qdrtot from state.
       call fluxes (state)
 
-      ! [MACRO-RETIRE 2026-05-12] macropore(4,...) retired (ADR 0040).
+      ! macropore(4,...) retired (ADR 0040).
 
       ! Calculate cumulative fluxes
       call integral (state)
@@ -1253,7 +1203,7 @@ contains
       ! Update parameters for soil water hystereses
       if (soil_cfg%swhyst.ne.0) call hysteresis (state)
 
-      end associate  ! mesh%numnod/mesh%dz/mesh%z/mesh%layer [GR-BH C4]; swbotb [GR-BH Audit 31]
+      end associate
 
       return
       end subroutine soilwater_update
@@ -1326,9 +1276,6 @@ contains
    !! @endnote
    !!
    subroutine hysteresis(state)
-      ! [GR-SOIL 2026-05-24] tau → state%cfg%soil%tau (direct config read).
-      ! [GR-SOIL 2026-05-24] paramvg → state%cfg%soil%hydraulics (direct read; the
-      !   8 layer-keyed VG fields used here have config homes).
       use soilhydraulics_utils,  only: moiscap, prhead
       use swap_array_dimensions, only: macp
       use swap_state_mod,        only: swap_state_t
@@ -1362,7 +1309,7 @@ contains
          do 100 node = 1, mesh%numnod
             lay = mesh%layer(node)
 
-            ! [GR-SOIL 2026-05-24] Layer-keyed VG params read directly from config.
+            ! Layer-keyed VG params read directly from config.
             pvg_thetar   = hyd%ores(lay)            ! paramvg(1, lay)
             pvg_thetas   = hyd%osat(lay)            ! paramvg(2, lay)
             pvg_alfa     = hyd%alfa(lay)            ! paramvg(4, lay)  drying alpha
