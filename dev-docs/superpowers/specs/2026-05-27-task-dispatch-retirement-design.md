@@ -1,12 +1,20 @@
 ---
 title: "Task-Dispatch Retirement — Tier 1 + Tier 2 (init/step/finalize de-multiplexing)"
 date: 2026-05-27
-status: approved
+status: complete
 branch: development
 scope: Tier 1 + Tier 2 dispatchers (crop cluster / Tier 3 deferred)
 ---
 
 # Task-Dispatch Retirement — Tier 1 + Tier 2
+
+> **COMPLETE (2026-05-27).** All 10 in-scope dispatchers retired over 11 commits
+> (`6122a8d` ADR → `2e3768a`). `check-full`: 5 passed, 0 failed, 2 known xfails
+> (`soilhysteresis`/`winter`, pre-existing adaptive-dt divergence per `cfc447e`)
+> — zero new regressions; `oxygenstress` also byte-identical.
+> **Note:** `SurfaceWater` was inadvertently omitted from the §4 table during
+> design; it is a textbook Tier-1 dispatcher and was folded in as plan Task 9
+> (`surfacewater_lateral` / `surfacewater_balance`, init stub deleted).
 
 ## 1. Problem
 
@@ -126,6 +134,7 @@ Phase-2+ procedures extracted from the dispatcher.
 | 5 | `Solute(task)` | `solute/solute.f90:10` | `solute_seed` (`case(1)`), `solute_step` (`case(2)`) |
 | 6 | `DoTillage(iTask)` | `crop/tillage.f90:53` | `tillage_seed` (`case(1)`), `tillage_step` (`case(2)`), `tillage_output` (`case(3)`); **resolve `case(4)` liveness** (only 1/2/3 called from the orchestrator; `case(4)` body is empty `! CLOSURE`) |
 | 7 | `SoilWater(task)` | `soil/soilhydraulics.f90:820` | `soilwater_seed` (`case(1)`), `soilwater_step` (Richards/headcalc, `case(2)`), `soilwater_update` (rate+state, `case(3)`) |
+| 7b | `SurfaceWater(task)` | `drainage/surfacewater.f90:24` | delete `case(1)` init stub; `surfacewater_lateral` (`case(2)`), `surfacewater_balance` (`case(3)`); keeps `request_smaller_dt` out-arg *(added post-design as plan Task 9)* |
 
 ### Tier 2 — two-distinct-operations dispatch (looks like lifecycle, isn't)
 
