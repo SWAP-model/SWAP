@@ -813,7 +813,6 @@ contains
      &         soilphystab,diff_water_cap_actual,numrec_tab,swsophy_arg)
 ! --- calculate water film thickness. method according to simojoki 2000
       use swap_array_dimensions, only: matab
-      use doln
       implicit none
       integer, intent(in) :: swsophy_arg
       

@@ -50,17 +50,26 @@
 !! 5. Add this file to `meson.build` AND `tests/unit/meson.build`
 !!    source lists.
 !! 6. Decide whether `do_ln_trans` should be a runtime switch
-!!    rather than a compile-time parameter (currently lives in
-!!    `src/soil/do_ln_trans.f90` as the live extract).
+!!    rather than a compile-time parameter (currently declared as
+!!    `logical, parameter` in `module doln` at the top of this file).
 !!
 !! Original SVN revision:
 !!   $Id: sptabulated.f90 366 2018-01-10 11:12:43Z kroes006 $
 !!
-!! The `module doln` (single parameter `do_ln_trans`) that originally
-!! lived at the top of this file has been split out to
-!! `src/soil/do_ln_trans.f90` — it is consumed by the live MvG
-!! compute path and must remain compiled. This dormant file should
-!! NOT redeclare `doln`.
+!! `module doln` (single parameter `do_ln_trans`) is declared at the
+!! top of THIS file (see below), before `module doTSPACK`. It was
+!! temporarily extracted to `src/soil/do_ln_trans.f90` on 2026-05-24
+!! because the live MvG compute path (`soilhydraulics.f90`,
+!! `soilhydraulicsutils.f90`, `oxygenstress.f90`) imported it — but
+!! none of those consumers ever referenced the VALUE; the `use doln`
+!! statements were vestigial. The standalone extract was removed on
+!! 2026-05-27 and `doln` folded back here, its only real consumer.
+!! The reactivation step 6 below is now moot (the parameter is already
+!! here for future runtime-switch consideration).
+
+module doln
+   logical, parameter :: do_ln_trans = .true.
+end module doln
 
 module doTSPACK
 !   logical, parameter :: use_TSPACK = .false.

@@ -106,8 +106,8 @@ sources = [
     # Soil
     'src/soil/waterbalance.f90',
     'src/soil/soilhydraulics.f90',
-    'src/soil/do_ln_trans.f90',  # [GR-SOIL 2026-05-24] doln module split from sptabulated
     # [GR-SOIL 2026-05-24] sptabulated moved to src/soil/dormant/sptabulated.f90 (TSPACK + EvalTabulatedFunction)
+    # [GR-SOIL 2026-05-27] do_ln_trans.f90 deleted; module doln folded back into dormant sptabulated.f90
     'src/soil/WC_K_models_04_11.f90',
 
     # I/O

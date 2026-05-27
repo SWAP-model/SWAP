@@ -14,7 +14,6 @@ module soilhydraulics_utils
    !! @date February 2026 (modularization)
    use iso_fortran_env, only: real64
    ! [SS-HEAT] Task 9: tsoil global retired; hconduc fallback removed (iHWCKmodel 4-11 path unreachable in regression)
-   use doln
    use WC_K_models_04_11, only: functionvalue_04_11
 
    implicit none

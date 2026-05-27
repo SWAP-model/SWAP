@@ -23,10 +23,8 @@ contains
    !! @endnote
    !!
    subroutine headcalc(state)
-      ! [SS-GR-FINAL B9] blanket use variables → explicit only-list; all symbols DEFERRED
-      ! macp/mabbc → swap_array_dimensions (dimension constants); noddrz: crop root depth node
+
       use swap_array_dimensions, only: macp, mabbc
-      ! [GR-SOIL 2026-05-24] use variables retired — all consumers cut over to state%X.
       use swap_log, only: log_warn, log_debug, to_str
       use boundbottom_mod, only: BoundBottom
       use boundtop_mod, only: boundtop, PONDRUNOFF
@@ -34,7 +32,6 @@ contains
       use array_utils, only: afgen
       use soilhydraulics_utils, only: watcon, hconduc, moiscap, hcomean, dhconduc
       use swap_constants, only: nihil
-      ! [MACRO-RETIRE 2026-05-12] macropore_mod retired (ADR 0040).
       use swap_state_mod, only: swap_state_t
       use soilhydraulics_utils, only: dkmean
       use soilwaterbalance_mod, only: calcgwl, fluxes
@@ -75,13 +72,9 @@ contains
       ! Function and solver variables
       integer indx(macp), ierror
       real(8) a(macp,3), a1(macp,1), b(macp), d, q1
-      ! [GR-BH Task 36] q0 and ArMpSs retired from variables.f90 — made local (ADR 0040 complete)
       real(8) q0       ! surface flux for boundary (local; used only in swbotb=1 branch)
       real(8) ArMpSs   ! macropore area fraction at soil surface (local; always 0.d0, ADR 0040)
       logical flok
-
-      ! Note: soil%flwarn_hc, soil%iwarn_hc, nstep_hc moved to variables.f90 module
-      ! (previously local SAVE variables - now global for multi-instance support)
 
       associate (mesh => state%mesh,         &
                  soil => state%soilwater,    &
@@ -89,62 +82,62 @@ contains
                  heat => state%heat,         &
                  atmo => state%atmosphere,   &
                  time => state%timecontrol,  &
-                 bb_cfg => state%cfg%bottom_boundary,  &  ! [GR-SOIL 2026-05-24] hplate/rimlay/sw4/swbotb3impl direct config read
-                 num_cfg => state%cfg%simulation%numerical, &  ! [GR-SOIL 2026-05-24] swcaprise/dump_convergence_diagnostics
+                 bb_cfg => state%cfg%bottom_boundary,  &
+                 num_cfg => state%cfg%simulation%numerical, &
                  swbotb => state%soilwater%swbotb_runtime)
 
-      if (time%flDayStart) then  ! [TC-8]
+      if (time%flDayStart) then
          soil%flwarn_hc = .true.
          soil%iwarn_hc = 0
       endif
       call dtdpst                                                       &
-     &        ('year-month-day,hour:minute:seconds',time%t1900,datetime)  ! [TC-8]
+     &        ('year-month-day,hour:minute:seconds',time%t1900,datetime)
 
       ! Summation of sink terms (constant for the current time step)
       iBackTr   = 0
       flunsatok(1) = .false.
       flunsatok(2) = .false.
       flunsatok(3) = .false.
-      ! SS-DRST Task 3: read qdra from state%drainage (loop bound = drai%nrlevs, not ndr=5)
+
       do i=1,mesh%numnod
-         sink(i) = soil%evp(i)                                    ! [SS-SWC S-2.3] read from state
+         sink(i) = soil%evp(i)
          if (allocated(drai%qdra)) then
             do j=1,drai%nrlevs
                sink(i) = sink(i) + drai%qdra(j,i)
             end do
          end if
       end do
-      source(1:mesh%numnod) = soil%qssdi(1:mesh%numnod)  ! [GR-SOIL 2026-05-24]
+      source(1:mesh%numnod) = soil%qssdi(1:mesh%numnod)
 
       ArMpSs = 0.d0                                            ! macropore retired (ADR 0040)
 
-      ! Groundwater level specified — [SS-SWC S-2.12B] all legacy half-writes dropped
+      ! Groundwater level specified
       if(swbotb.eq.1)then
-         soil%fllowgwl = .false.               ! [SS-SWC S-1.6/S-2.12B]
+         soil%fllowgwl = .false.
          if(soil%gwlinp.ge.mesh%z(1)-1.0d-4)then
 
-            q0 = (atmo%nraidt+atmo%nird+atmo%melt)*(1.0d0-ArMpSs) + soil%runon - soil%reva  ! [SS-ATM/SS-SWC S-2.12B]
+            q0 = (atmo%nraidt+atmo%nird+atmo%melt)*(1.0d0-ArMpSs) + soil%runon - soil%reva
             call pondrunoff (state)
-            q1 = - q0 + (soil%pond - soil%pondm1)/time%dt + soil%runots / time%dt  ! [SS-SWC S-2.12B] [TC-8]
+            q1 = - q0 + (soil%pond - soil%pondm1)/time%dt + soil%runots / time%dt
             soil%theta(1) = watcon(soil%gwlinp, &
                                   soil%vg_params(1), &
                                   soil%iHWCKmodel(soil%layer(1)), &
-                                  1, soil)                         ! [SS-SWC S-1.4a/S-2.12B] [SS-GR-UTILS Task 5]
+                                  1, soil)
             soil%kmean(1) = hconduc(soil%gwlinp,soil%theta(1),heat%rfcp(1),heat%tsoil(1), &
                                   soil%vg_params(1), &
                                   soil%iHWCKmodel(soil%layer(1)), &
                                   soil%fluseksatexm(1), &
-                                  1, soil)                          ! [SS-SWC S-1.4b/S-2.12B] [SS-GR-UTILS Task 6]
+                                  1, soil)
 
             qv(1) = q1
             do i=1,mesh%numnod
-               qv(i+1) = qv(i) +mesh%dz(i)*soil%FrArMtrx(i)*(soil%theta(i)-soil%thetm1(i))  &  ! [SS-SWC S-2.12B]
-     &                          / time%dt+ sink(i) - source(i) + soil%qrot(i)  ! [TC-8]
+               qv(i+1) = qv(i) +mesh%dz(i)*soil%FrArMtrx(i)*(soil%theta(i)-soil%thetm1(i))  &
+     &                          / time%dt+ sink(i) - source(i) + soil%qrot(i)
             end do
             soil%qbot = qv(mesh%numnod+1)
-            soil%h(1) = soil%gwlinp + mesh%disnod(1)*(qv(1)/soil%kmean(1)+1.0d0)  ! [SS-SWC S-1.4a/S-2.12B]
+            soil%h(1) = soil%gwlinp + mesh%disnod(1)*(qv(1)/soil%kmean(1)+1.0d0)
             do i=2,mesh%numnod
-               soil%h(i) = soil%h(i-1) + mesh%disnod(i)*(qv(i)/soil%kmean(i)+1.0d0)    ! [SS-SWC S-1.4a/S-2.12B]
+               soil%h(i) = soil%h(i-1) + mesh%disnod(i)*(qv(i)/soil%kmean(i)+1.0d0)  
             end do
 
             if(state%cfg%simulation%numerical%swkimpl.eq.1)then
@@ -153,12 +146,12 @@ contains
                                     soil%vg_params(i), &
                                     soil%iHWCKmodel(soil%layer(i)), &
                                     soil%fluseksatexm(i), &
-                                    i, soil)                        ! [SS-SWC S-1.4b/S-2.12B] [SS-GR-UTILS Task 6]
+                                    i, soil)
                   if(i.gt.1)then
-                     soil%kmean(i) = hcomean(state%cfg%simulation%numerical%swkmean,soil%k(i-1),soil%k(i),mesh%dz(i-1),mesh%dz(i))  ! [SS-SWC S-1.4b/S-2.12B]
+                     soil%kmean(i) = hcomean(state%cfg%simulation%numerical%swkmean,soil%k(i-1),soil%k(i),mesh%dz(i-1),mesh%dz(i))
                   end if
                end do
-               soil%kmean(mesh%numnod+1) = soil%k(mesh%numnod)                              ! [SS-SWC S-1.4b/S-2.12B]
+               soil%kmean(mesh%numnod+1) = soil%k(mesh%numnod)
             end if
             call calcgwl (state)
             return
@@ -176,7 +169,7 @@ contains
                endif
             else
                ! Groundwater below soil profile
-               soil%fllowgwl = .true.          ! [SS-SWC S-1.6/S-2.12B]
+               soil%fllowgwl = .true.
                soil%hbot = soil%gwlinp - mesh%z(mesh%numnod) + 0.5*mesh%dz(mesh%numnod)
             endif
          end if
@@ -188,7 +181,7 @@ contains
 
       ! Node nr of compartment with minimized flux of capillary rise
       if (num_cfg%swcaprise) then
-         nodncr    = max(5, state%crop%common%noddrz)  ! [GR-SOIL 2026-05-24]
+         nodncr    = max(5, state%crop%common%noddrz)
          flcaprise = .false.
       endif
       do i = 1,mesh%numnod
@@ -196,7 +189,7 @@ contains
                            soil%vg_params(i), &
                            soil%iHWCKmodel(soil%layer(i)), &
                            soil%fluseksatexm(i), &
-                           i, soil)                                 ! [SS-GR-UTILS Task 6]
+                           i, soil)
 
          if (num_cfg%swcaprise) then
             ! Prevent capillary rise into the root zone !! special for experts only
@@ -227,11 +220,9 @@ contains
          hgrad(i) = (soil%h(i-1)-soil%h(i))/mesh%disnod(i) + 1.0d0
       end do
 
-      F(1) = (soil%theta(1)-soil%thetm1(1))*soil%FrArMtrx(1)*mesh%dz(1)/time%dt + sink(1) - source(1) + soil%qrot(1) + soil%kmean(2) * hgrad(2)  ! [SS-SWC S-2.3] [TC-8]
+      F(1) = (soil%theta(1)-soil%thetm1(1))*soil%FrArMtrx(1)*mesh%dz(1)/time%dt + sink(1) - source(1) + soil%qrot(1) + soil%kmean(2) * hgrad(2)
 
-      call boundtop(state)  ! [SS-HEAT] Task 9: state passed for rfcp access
-
-      ! [MACRO-RETIRE 2026-05-12] MACROPORE(2,...) retired (ADR 0040).
+      call boundtop(state)
 
       if (soil%FlRunoff) call pondrunoff (state)
 
@@ -243,7 +234,7 @@ contains
       end if
 
       do i=2,NN-1
-         F(i) = (soil%theta(i)-soil%thetm1(i))*soil%FrArMtrx(i)*mesh%dz(i)/time%dt + sink(i) - source(i) +     &  ! [SS-SWC S-2.3] [TC-8]
+         F(i) = (soil%theta(i)-soil%thetm1(i))*soil%FrArMtrx(i)*mesh%dz(i)/time%dt + sink(i) - source(i) +     &
      &          soil%qrot(i) - soil%kmean(i) * hgrad(i) + soil%kmean(i+1) * hgrad(i+1)
       end do
 
@@ -262,19 +253,19 @@ contains
          soil%theta(NN)= watcon(soil%h(NN), &
                               soil%vg_params(NN), &
                               soil%iHWCKmodel(soil%layer(NN)), &
-                              NN, soil)                            ! [SS-GR-UTILS Task 5]
+                              NN, soil)
          soil%k(NN)    = hconduc(soil%h(NN),soil%theta(NN),heat%rfcp(NN),heat%tsoil(NN), &
                               soil%vg_params(NN), &
                               soil%iHWCKmodel(soil%layer(NN)), &
                               soil%fluseksatexm(NN), &
-                              NN, soil)                             ! [SS-GR-UTILS Task 6]
-         soil%kmean(NN+1) = hcomean(state%cfg%simulation%numerical%swkmean,soil%k(NN),soil%vg_params(NN+1)%ksat, &  ! [SS-GR-UTILS Task 15]
+                              NN, soil)
+         soil%kmean(NN+1) = hcomean(state%cfg%simulation%numerical%swkmean,soil%k(NN),soil%vg_params(NN+1)%ksat, &
      &                        mesh%dz(NN),mesh%dz(NN+1))
-         F(NN) = (soil%theta(NN) - soil%thetm1(NN))*soil%FrArMtrx(NN)*mesh%dz(NN)/time%dt +      &  ! [SS-SWC S-2.3] [TC-8]
+         F(NN) = (soil%theta(NN) - soil%thetm1(NN))*soil%FrArMtrx(NN)*mesh%dz(NN)/time%dt +      &
      &           sink(NN)-source(NN)+soil%qrot(NN)-soil%kmean(NN)*hgrad(NN) +soil%kmean(NN+1)*hgrad(NN+1)
       else
 
-         F(NN) = (soil%theta(NN) - soil%thetm1(NN))*soil%FrArMtrx(NN)*mesh%dz(NN)/time%dt        &  ! [SS-SWC S-2.3] [TC-8]
+         F(NN) = (soil%theta(NN) - soil%thetm1(NN))*soil%FrArMtrx(NN)*mesh%dz(NN)/time%dt        &
      &         - soil%kmean(NN) * hgrad(NN) + sink(NN) - source(NN) + soil%qrot(NN)
 
          if(swbotb.eq.3.and.bb_cfg%swbotb3impl.eq.1)then ! Cauchy-relation, implemented as head boundary
@@ -284,7 +275,7 @@ contains
                soil%qbot = - (soil%h(NN)+mesh%z(NN)-soil%deepgw) / bb_cfg%rimlay
             endif
 ! ---       extra groundwater flux might be added
-            if (bb_cfg%sw4 .eq. 1) soil%qbot = soil%qbot + afgen(soil%qbotab,mabbc*2,time%t1900+time%dt)  ! [TC-8]
+            if (bb_cfg%sw4 .eq. 1) soil%qbot = soil%qbot + afgen(soil%qbotab,mabbc*2,time%t1900+time%dt)
             F(NN) = F(NN) - soil%qbot
          else if(swbotb.eq.5 .or. (swbotb.eq.1 .and. soil%fllowgwl))then ! pressure head at lower boundary specified
             F(NN) = F(NN) + soil%kmean(NN+1) * hgrad(NN+1)
@@ -293,7 +284,7 @@ contains
                                          soil%vg_params(mesh%numnod), &
                                          soil%iHWCKmodel(soil%layer(mesh%numnod)), &
                                          soil%fluseksatexm(mesh%numnod), &
-                                         mesh%numnod, soil)              ! [SS-GR-UTILS Task 6]
+                                         mesh%numnod, soil)
             soil%qbot = -1.0d0 * soil%kmean(mesh%numnod+1)
             F(NN) = F(NN) - soil%qbot
          ! Lysimeter option
@@ -319,7 +310,7 @@ contains
       sumold = 0.5d0 * sumold
 
       ! Start iteration loop, time%MaxIt specified in the input
-      if(time%fldtmin)then  ! [TC-8]
+      if(time%fldtmin)then
          MaxIt1 = 2*time%MaxIt
       else
          MaxIt1 = time%MaxIt
@@ -327,7 +318,7 @@ contains
 
       sum= 0.d0   ! For Forcheck
       Do numbit_local = 1, MaxIt1
-         soil%numbit = numbit_local  ! [GR-SOIL 2026-05-24] mirror to state for timecontrol_advance reader
+         soil%numbit = numbit_local
 
          do i = 1, NN
             ! Save values of h
@@ -339,8 +330,8 @@ contains
                                     soil%vg_params(i), &
                                     soil%iHWCKmodel(soil%layer(i)), &
                                     time%dt, &
-                                    i, soil)              ! [SS-GR-UTILS Task 7]
-            soil%dimoca(i) = soil%dimoca(i)                              ! [SS-SWC S-1.4b]
+                                    i, soil)
+            soil%dimoca(i) = soil%dimoca(i)
 
          enddo
 
@@ -349,7 +340,7 @@ contains
                dkdh(i) = dhconduc(soil%h(i),soil%theta(i),soil%dimoca(i),heat%rfcp(i), &
                                    soil%vg_params(i), &
                                    soil%iHWCKmodel(soil%layer(i)), &
-                                   i, soil)                         ! [SS-GR-UTILS Task 6]
+                                   i, soil)
             enddo
             do i=2,NN
                dFdhU(i)   = - soil%kmean(i)  /mesh%disnod(i)
@@ -362,17 +353,17 @@ contains
          endif
 
          ! Jacobian matrix elements
-         dFdhM(1) = soil%dimoca(1)*soil%FrArMtrx(1)*mesh%dz(1)/time%dt - dFdhL(1)  ! [SS-SWC S-2.3] [TC-8]
+         dFdhM(1) = soil%dimoca(1)*soil%FrArMtrx(1)*mesh%dz(1)/time%dt - dFdhL(1)
          ! If the head boundary condition applies: add the k1/(0.5*dz1) term
          ! to the first element of the main diagonal
          if(soil%ftoph) dFdhM(1) = dFdhM(1) + soil%kmean(1)/mesh%disnod(1)
 
          do i=2,NN-1
-            dFdhM(i) = soil%dimoca(i)*soil%FrArMtrx(i)*mesh%dz(i)/time%dt - dFdhU(i)        &  ! [SS-SWC S-2.3] [TC-8]
+            dFdhM(i) = soil%dimoca(i)*soil%FrArMtrx(i)*mesh%dz(i)/time%dt - dFdhU(i)        &
      &                                                - dFdhL(i)
          end do
 
-         dFdhM(NN) = soil%dimoca(NN)*soil%FrArMtrx(NN)*mesh%dz(NN)/time%dt - dFdhU(NN)  ! [SS-SWC S-2.3] [TC-8]
+         dFdhM(NN) = soil%dimoca(NN)*soil%FrArMtrx(NN)*mesh%dz(NN)/time%dt - dFdhU(NN)
          if(swbotb.eq.1 .and. (.not.soil%fllowgwl))then
             dFdhM(NN) = dFdhM(NN) + soil%kmean(NN+1)/(mesh%z(NN)-soil%gwlinp)
          else if(swbotb.eq.3.and.bb_cfg%swbotb3impl.eq.1)then ! Cauchy
@@ -417,13 +408,11 @@ contains
             end if
          end if
 
-         ! [MACRO-RETIRE 2026-05-12] MACROPORE(3,...) retired (ADR 0040).
-
          ! Solve the tridiagonal matrix
          call tridag(NN, dFdhU, dFdhM, dFdhL, F, difh, ierror)
 
          if(ierror.ne.0)then
-            call dtdpst ('year-month-day',time%t1900+1.001d0,datetmp)  ! [TC-8]
+            call dtdpst ('year-month-day',time%t1900+1.001d0,datetmp)
             messag = ' Tri-band matrix in HeadCalc appeared to be'//    &
      &               ' singular at '//datetmp//                            &
      &               '   Alternative SOLVER chosen'
@@ -448,7 +437,7 @@ contains
             iBackTr = iBackTr + 1
             ! Factor reduces the change of h (difh) calculated as a full
             ! Newton Raphson step
-            if(time%fldtmin .and. soil%numbit.gt.time%MaxIt)then              ! [TC-8]
+            if(time%fldtmin .and. soil%numbit.gt.time%MaxIt)then            
                factmax = 0.0d0
                do i = 1,NN
                   if(dabs( hold(i) ) .lt. 1.0d0 )then
@@ -459,20 +448,20 @@ contains
                end do
                do i = 1,NN
                   soil%h(i) = hold(i) - difh(i) * min(1.0d0, 1.0d0 / factmax)
-                  soil%h(i) = soil%h(i)                                ! [SS-SWC S-1.4a]
+                  soil%h(i) = soil%h(i)
                end do
             else
                do i = 1,NN
                   soil%h(i) = hold(i) - factor * difh(i)
-                  soil%h(i) = soil%h(i)                                ! [SS-SWC S-1.4a]
+                  soil%h(i) = soil%h(i)
                end do
             end if
             do i = 1,NN
               soil%theta(i) = watcon(soil%h(i), &
                                    soil%vg_params(i), &
                                    soil%iHWCKmodel(soil%layer(i)), &
-                                   i, soil)            ! [SS-GR-UTILS Task 5]
-              soil%theta(i) = soil%theta(i)                            ! [SS-SWC S-1.4a]
+                                   i, soil)
+              soil%theta(i) = soil%theta(i)
             enddo
             do i=2,NN
                hgrad(i) = (soil%h(i-1)-soil%h(i))/mesh%disnod(i) + 1.0d0
@@ -486,15 +475,15 @@ contains
                                     soil%vg_params(i), &
                                     soil%iHWCKmodel(soil%layer(i)), &
                                     soil%fluseksatexm(i), &
-                                    i, soil)                        ! [SS-GR-UTILS Task 6]
-                  soil%k(i) = soil%k(i)                                  ! [SS-SWC S-1.4b]
+                                    i, soil)
+                  soil%k(i) = soil%k(i)
                   if(i.gt.1)then
                      soil%kmean(i)=hcomean(state%cfg%simulation%numerical%swkmean,soil%k(i-1),soil%k(i),mesh%dz(i-1),mesh%dz(i))
-                     soil%kmean(i) = soil%kmean(i)                        ! [SS-SWC S-1.4b]
+                     soil%kmean(i) = soil%kmean(i)
                   end if
                end do
                soil%kmean(NN+1) = soil%k(NN)
-               soil%kmean(NN+1) = soil%k(NN)                              ! [SS-SWC S-1.4b]
+               soil%kmean(NN+1) = soil%k(NN)
             end if
 
             ! Prevent capillary rise into the root zone !! special for experts
@@ -519,7 +508,7 @@ contains
             endif
 
             ! Calculate F-function
-            F(1) = (soil%theta(1) - soil%thetm1(1))*soil%FrArMtrx(1)*mesh%dz(1)/time%dt + sink(1) - source(1) &  ! [SS-SWC S-2.3] [TC-8]
+            F(1) = (soil%theta(1) - soil%thetm1(1))*soil%FrArMtrx(1)*mesh%dz(1)/time%dt + sink(1) - source(1) &
      &           + soil%qrot(1) + soil%kmean(2) * hgrad(2)
 
             ! [MACRO-RETIRE 2026-05-12] FlMacropore QMpLatSsSav save retired (ADR 0040).
@@ -538,7 +527,7 @@ contains
             end if
 
             do i=2,NN-1
-               F(i) = (soil%theta(i)-soil%thetm1(i))*soil%FrArMtrx(i)*mesh%dz(i)/time%dt + sink(i) - source(i) &  ! [SS-SWC S-2.3] [TC-8]
+               F(i) = (soil%theta(i)-soil%thetm1(i))*soil%FrArMtrx(i)*mesh%dz(i)/time%dt + sink(i) - source(i) &
      &              + soil%qrot(i) - soil%kmean(i)*hgrad(i)+soil%kmean(i+1)*hgrad(i+1)
             end do
 
@@ -565,11 +554,11 @@ contains
                soil%kmean(NN+1) = hcomean(state%cfg%simulation%numerical%swkmean,soil%k(NN),soil%vg_params(NN+1)%ksat &  ! [SS-GR-UTILS Task 15]
      &                       ,mesh%dz(NN),mesh%dz(NN+1))
                soil%kmean(NN+1) = soil%kmean(NN+1)                     ! [SS-SWC S-1.4b]
-               F(NN) = (soil%theta(NN) - soil%thetm1(NN))*soil%FrArMtrx(NN)*mesh%dz(NN)/time%dt  &  ! [SS-SWC S-2.3] [TC-8]
+               F(NN) = (soil%theta(NN) - soil%thetm1(NN))*soil%FrArMtrx(NN)*mesh%dz(NN)/time%dt  &
      &            - soil%kmean(NN) * hgrad(NN) + soil%kmean(NN+1) * hgrad(NN+1)   &
      &            + sink(NN) - source(NN) + soil%qrot(NN)
             else
-               F(NN) = (soil%theta(NN) - soil%thetm1(NN))*soil%FrArMtrx(NN)*mesh%dz(NN)/time%dt  &  ! [SS-SWC S-2.3] [TC-8]
+               F(NN) = (soil%theta(NN) - soil%thetm1(NN))*soil%FrArMtrx(NN)*mesh%dz(NN)/time%dt  &
      &               - soil%kmean(NN) * hgrad(NN)                            &
      &               + sink(NN) - source(NN) + soil%qrot(NN)
                if(swbotb.eq.3.and.bb_cfg%swbotb3impl.eq.1)then ! Cauchy
@@ -581,7 +570,7 @@ contains
                   endif
                   ! Extra groundwater flux might be added
                   if (bb_cfg%sw4 .eq. 1) then
-                     soil%qbot = soil%qbot + afgen(soil%qbotab,mabbc*2,time%t1900+time%dt)  ! [TC-8]
+                     soil%qbot = soil%qbot + afgen(soil%qbotab,mabbc*2,time%t1900+time%dt)
                   end if
                   F(NN) = F(NN) - soil%qbot
                else if(swbotb.eq.5 .or.(swbotb.eq.1 .and. soil%fllowgwl))then
@@ -676,7 +665,7 @@ contains
             soil%qtop = -soil%kmean(1)*((soil%hsurf - soil%h(1))/mesh%disnod(1)+1.0d0)
             if(.not.flnonconv) then
                deviat = soil%pond - soil%pondm1 + soil%reva*time%dt - (atmo%nraidt+atmo%nird+atmo%melt)*time%dt &  ! [SS-SWC S-2.12B] [TC-8]
-     &                - soil%runon*time%dt  +  soil%runots  - soil%qtop * time%dt  ! [TC-8]
+     &                - soil%runon*time%dt  +  soil%runots  - soil%qtop * time%dt
                if( abs(deviat) .gt. state%cfg%simulation%numerical%critdevponddt) then
                   flnonconv3 = .true. ; flnonconv   = .true.
                   flnonconv3 = flnonconv3 ! for Forcheck
@@ -701,7 +690,7 @@ contains
                end do
                do i=1,mesh%numnod
                  qv(i+1) = qv(i) +mesh%dz(i)*soil%FrArMtrx(i)*(soil%theta(i)-soil%thetm1(i))&  ! [SS-SWC S-2.3]
-     &                          / time%dt + sink(i) - source(i) + soil%qrot(i)  ! [TC-8]
+     &                          / time%dt + sink(i) - source(i) + soil%qrot(i)
                end do
                soil%qbot = qv(mesh%numnod+1)
 
@@ -717,7 +706,7 @@ contains
 
             if(swbotb.ne.1.and.abs(soil%gwl-soil%gwlm1).ge.state%cfg%simulation%numerical%gwlconv .AND.          &  ! [SS-SWC S-2.12B]
      &         abs(soil%gwl-999d0).gt.1.d0.and.abs(soil%gwlm1-999d0).gt.1.d0) then  ! [SS-SWC S-2.12B]
-               call dtdpst ('year-month-day',time%t1900+1.001d0,datetmp)  ! [TC-8]
+               call dtdpst ('year-month-day',time%t1900+1.001d0,datetmp)
                  messag = ' Change of groundwater level exceeds'//      &
      &           ' criterion at '//datetmp//'. Consider reduction of dtMin'
                call log_warn('Headcalc', messag)
@@ -733,7 +722,7 @@ contains
       End Do
 
       ! Convergence could not been reached
-      if (.not.time%fldtmin ) then  ! [TC-8]
+      if (.not.time%fldtmin ) then
          ! Reset soil state variables
          do j = 1,mesh%numnod
             soil%h(j) = soil%hm1(j)                                    ! [SS-SWC S-2.3]
@@ -756,7 +745,7 @@ contains
          if (soil%flwarn_hc .and. soil%iwarn_hc.lt.5) then
             soil%iwarn_hc = soil%iwarn_hc + 1
             call dtdpst                                                 &
-     &        ('year-month-day,hour:minute:seconds',time%t1900,datetime)  ! [TC-8]
+     &        ('year-month-day,hour:minute:seconds',time%t1900,datetime)
             messag = ' No convergence was reached of Richards'//        &
      &        ' equation at '//datetime//                               &
      &        ' no more than 4 warnings per date - SWAP did continue !'
@@ -818,7 +807,6 @@ contains
    !! @endnote
    !!
    subroutine soilwater_seed(state)
-     use doln  ! provides do_ln_trans (parameter)
       ! [SS-GR-FINAL B9] blanket use Variables → explicit only-list; all symbols DEFERRED
       ! macp/mabbc/matabentries → swap_array_dimensions (dimension constants)
       use swap_array_dimensions, only: macp, mabbc, matabentries
@@ -1108,7 +1096,6 @@ contains
       end subroutine soilwater_seed
 
    subroutine soilwater_step(state)
-     use doln  ! provides do_ln_trans (parameter)
       ! [SS-GR-FINAL B9] blanket use Variables → explicit only-list; all symbols DEFERRED
       ! macp/mabbc/matabentries → swap_array_dimensions (dimension constants)
       use swap_array_dimensions, only: macp, mabbc, matabentries
@@ -1141,8 +1128,6 @@ contains
       real(8) tab(mabbc*2)
       character(len=200) messag
 
-      ! [GR-BH C4] mesh globals aliased via mesh for all cases
-      ! [GR-BH Audit 31] swbotb aliased via soil%swbotb_runtime
       associate (mesh => state%mesh,         &
                  soil => state%soilwater,    &
                  drai => state%drainage,     &
@@ -1156,7 +1141,7 @@ contains
          ! Calculate Soilwater rate/state variables
 
          ! Reset intermediate soil water fluxes — [SS-SWC S-2.12B] reset() handles all
-         if (time%flDayStart) then  ! [TC-8]
+         if (time%flDayStart) then
           call soil%reset_intermediate_per_day()              ! [SS-SWC S-2.1]
       end if
 
@@ -1194,7 +1179,6 @@ contains
       end subroutine soilwater_step
 
    subroutine soilwater_update(state)
-     use doln  ! provides do_ln_trans (parameter)
       ! [SS-GR-FINAL B9] blanket use Variables → explicit only-list; all symbols DEFERRED
       ! macp/mabbc/matabentries → swap_array_dimensions (dimension constants)
       use swap_array_dimensions, only: macp, mabbc, matabentries
