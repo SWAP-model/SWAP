@@ -1,0 +1,41 @@
+! Unit tests for solute_kernels_mod — pure/elemental solute physics.
+@test
+subroutine test_bdenskf_coeff()
+   use funit
+   use iso_fortran_env, only: real64
+   use solute_kernels_mod, only: bdenskf_coeff
+   @assertEqual(6.0_real64, bdenskf_coeff(2.0_real64, 3.0_real64), 1.0e-12_real64)
+   ! kf=0 (conservative salt): correct value is 0 — the masked case today.
+   @assertEqual(0.0_real64, bdenskf_coeff(1.5_real64, 0.0_real64), 1.0e-12_real64)
+end subroutine test_bdenskf_coeff
+
+@test
+subroutine test_bdenskfsatporos_coeff()
+   use funit
+   use iso_fortran_env, only: real64
+   use solute_kernels_mod, only: bdenskfsatporos_coeff
+   @assertEqual(3.4_real64, bdenskfsatporos_coeff(1.5_real64, 2.0_real64, 0.4_real64), 1.0e-12_real64)
+   ! kfsat=0: reduces to porosity — a non-zero value the current code never exercises.
+   @assertEqual(0.35_real64, bdenskfsatporos_coeff(1.3_real64, 0.0_real64, 0.35_real64), 1.0e-12_real64)
+end subroutine test_bdenskfsatporos_coeff
+
+@test
+subroutine test_ddiffwcs_coeff()
+   use funit
+   use iso_fortran_env, only: real64
+   use solute_kernels_mod, only: ddiffwcs_coeff
+   ! 0.5 / 0.4**2 = 0.5 / 0.16 = 3.125
+   @assertEqual(3.125_real64, ddiffwcs_coeff(0.5_real64, 0.4_real64), 1.0e-12_real64)
+   ! ddif=0 (no molecular diffusion): correct value is 0 — masked case today.
+   @assertEqual(0.0_real64, ddiffwcs_coeff(0.0_real64, 0.4_real64), 1.0e-12_real64)
+end subroutine test_ddiffwcs_coeff
+
+@test
+subroutine test_decpotfdepth_coeff()
+   use funit
+   use iso_fortran_env, only: real64
+   use solute_kernels_mod, only: decpotfdepth_coeff
+   @assertEqual(0.08_real64, decpotfdepth_coeff(0.1_real64, 0.8_real64), 1.0e-12_real64)
+   ! decpot=0 (no decay): correct value is 0 — masked case today.
+   @assertEqual(0.0_real64, decpotfdepth_coeff(0.0_real64, 0.8_real64), 1.0e-12_real64)
+end subroutine test_decpotfdepth_coeff

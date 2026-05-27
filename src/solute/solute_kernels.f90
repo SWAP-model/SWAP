@@ -1,0 +1,45 @@
+!> Pure solute physics kernels — explicit args, no swap_state_t dependency.
+!> Pilot extraction from solute_step (see spec 2026-05-27). Mirrors the
+!> interception.f90 / et.f90 "pure function — explicit args" pattern.
+module solute_kernels_mod
+   use, intrinsic :: iso_fortran_env, only: real64
+   implicit none
+   private
+   public :: bdenskf_coeff, bdenskfsatporos_coeff, ddiffwcs_coeff, decpotfdepth_coeff
+
+contains
+
+   !> Freundlich bulk sorption coefficient: bdens * kf  [-].
+   elemental function bdenskf_coeff(bdens, kf) result(v)
+      real(real64), intent(in) :: bdens   ! dry soil bulk density (g/cm3)
+      real(real64), intent(in) :: kf      ! Freundlich coefficient (cm3/g)
+      real(real64)             :: v
+      v = bdens*kf
+   end function bdenskf_coeff
+
+   !> Saturated-zone sorption + porosity: bdens * kfsat + poros  [-].
+   elemental function bdenskfsatporos_coeff(bdens, kfsat, poros) result(v)
+      real(real64), intent(in) :: bdens   ! dry soil bulk density (g/cm3)
+      real(real64), intent(in) :: kfsat   ! saturated-zone Freundlich coeff (cm3/g)
+      real(real64), intent(in) :: poros   ! aquifer porosity (-)
+      real(real64)             :: v
+      v = bdens*kfsat + poros
+   end function bdenskfsatporos_coeff
+
+   !> Tortuosity-scaled diffusion base: ddif / thetsl**2  (cm2/d).
+   elemental function ddiffwcs_coeff(ddif, thetsl) result(v)
+      real(real64), intent(in) :: ddif    ! molecular diffusion coefficient (cm2/d)
+      real(real64), intent(in) :: thetsl  ! saturated water content (-)
+      real(real64)             :: v
+      v = ddif / (thetsl**2)
+   end function ddiffwcs_coeff
+
+   !> Depth-weighted potential decomposition: decpot * fdepth  (1/d).
+   elemental function decpotfdepth_coeff(decpot, fdepth) result(v)
+      real(real64), intent(in) :: decpot  ! potential decomposition rate (1/d)
+      real(real64), intent(in) :: fdepth  ! depth-decomposition factor (-)
+      real(real64)             :: v
+      v = decpot*fdepth
+   end function decpotfdepth_coeff
+
+end module solute_kernels_mod
