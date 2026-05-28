@@ -11,6 +11,9 @@ module crop_state_mod
    use crop_grass_state_mod,       only: crop_grass_state_t
    use crop_irrigation_state_mod,  only: crop_irrigation_state_t
    use crop_oxygen_state_mod,      only: crop_oxygen_state_t
+   use cropfixed_config_mod,       only: cropfixed_config_t
+   use cropgrass_config_mod,       only: cropgrass_config_t
+   use cropwofost_config_mod,      only: cropwofost_config_t
    implicit none
    private
    public :: crop_state_t
@@ -45,6 +48,13 @@ module crop_state_mod
       real(real64), allocatable :: rotation_start(:)  !! crop season start (days since 1900), per rotation; snapshotted from config%crop%rotation_start
       real(real64), allocatable :: rotation_end(:)    !! crop season end (days since 1900), per rotation; snapshotted from config%crop%rotation_end
       logical,      allocatable :: rotation_loaded(:) !! per-rotation typed-config cache available flag; snapshotted from config%crop%rotation_loaded
+
+      ! [state%cfg-retirement mop-up] per-rotation typed-config sub-arrays; snapshotted in crop_state_init.
+      ! Compute paths in cropgrowth_helpers / cropwofost_runtime / cropgrass_runtime /
+      ! cropfixed_runtime / cropgrowth read these via state%crop instead of state%cfg%crop.
+      type(cropfixed_config_t),  allocatable :: rotation_fixed(:)   !! cropfixed parameters per rotation
+      type(cropgrass_config_t),  allocatable :: rotation_grass(:)   !! cropgrass parameters per rotation
+      type(cropwofost_config_t), allocatable :: rotation_wofost(:)  !! cropwofost parameters per rotation
    contains
       procedure :: init => crop_state_init
    end type crop_state_t
@@ -107,6 +117,27 @@ contains
             allocate(self%rotation_loaded(size(crop_cfg%rotation_loaded)))
          end if
          self%rotation_loaded(:) = crop_cfg%rotation_loaded(:)
+      end if
+
+      ! [state%cfg-retirement mop-up] Snapshot typed rotation sub-arrays so compute
+      ! paths can read state%crop%rotation_{wofost,fixed,grass} without touching state%cfg.
+      if (allocated(crop_cfg%rotation_wofost)) then
+         if (.not. allocated(self%rotation_wofost)) then
+            allocate(self%rotation_wofost(size(crop_cfg%rotation_wofost)))
+         end if
+         self%rotation_wofost(:) = crop_cfg%rotation_wofost(:)
+      end if
+      if (allocated(crop_cfg%rotation_fixed)) then
+         if (.not. allocated(self%rotation_fixed)) then
+            allocate(self%rotation_fixed(size(crop_cfg%rotation_fixed)))
+         end if
+         self%rotation_fixed(:) = crop_cfg%rotation_fixed(:)
+      end if
+      if (allocated(crop_cfg%rotation_grass)) then
+         if (.not. allocated(self%rotation_grass)) then
+            allocate(self%rotation_grass(size(crop_cfg%rotation_grass)))
+         end if
+         self%rotation_grass(:) = crop_cfg%rotation_grass(:)
       end if
 
       ! pathwork_in reserved for future CSV seed migration (consistency with sibling inits).

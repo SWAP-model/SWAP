@@ -51,8 +51,7 @@
                  soil     => state%soilwater,       &
                  mesh     => state%mesh,            &
                  atmo     => state%atmosphere,      &
-                 time     => state%timecontrol,     &
-                 crop_cfg => state%cfg%crop         )  ! [state%cfg-retirement cluster 6 DEFERRED] rotation_fixed/loaded — typed config sub-arrays; defer full snapshot to later arc
+                 time     => state%timecontrol      )
 
       select case (task)
       case (1)
@@ -68,13 +67,13 @@
          use cropfixed_init_mod, only: cropfixed_init_from_config
          logical :: use_cache
          use_cache = .false.
-         if (allocated(crop_cfg%rotation_loaded)) then
-            if (crop%common%icrop >= 1 .and. crop%common%icrop <= size(crop_cfg%rotation_loaded)) then
-               if (crop_cfg%rotation_loaded(crop%common%icrop)) use_cache = .true.
+         if (allocated(crop%rotation_loaded)) then
+            if (crop%common%icrop >= 1 .and. crop%common%icrop <= size(crop%rotation_loaded)) then
+               if (crop%rotation_loaded(crop%common%icrop)) use_cache = .true.
             end if
          end if
          if (use_cache) then
-            call cropfixed_init_from_config(crop_cfg%rotation_fixed(crop%common%icrop), crop%common%icrop, lcc, state)
+            call cropfixed_init_from_config(crop%rotation_fixed(crop%common%icrop), crop%common%icrop, lcc, state)
             ! swhydrlift is read by legacy readcropfixed only inside the
             ! swdrought=2 branch (stub-errored in Phase 1). Set to 0 here
             ! to mirror the default; Phase 2 (cropwofost) reuses this

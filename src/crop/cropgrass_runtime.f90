@@ -97,8 +97,7 @@
                  soil     => state%soilwater,       &
                  mesh     => state%mesh,            &
                  atmo     => state%atmosphere,      &
-                 time     => state%timecontrol,     &
-                 crop_cfg => state%cfg%crop         )  ! [state%cfg-retirement cluster 6 DEFERRED] rotation_grass/loaded/type — typed config sub-arrays; defer full snapshot to later arc
+                 time     => state%timecontrol      )
 
       select case (task)
       case (1)
@@ -113,19 +112,19 @@
          use cropgrass_init_mod,     only: cropgrass_init_from_config
          logical :: use_cache
          use_cache = .false.
-         if (allocated(crop_cfg%rotation_loaded)) then
-            if (crop%common%icrop >= 1 .and. crop%common%icrop <= size(crop_cfg%rotation_loaded)) then
-               if (crop_cfg%rotation_loaded(crop%common%icrop)) then
+         if (allocated(crop%rotation_loaded)) then
+            if (crop%common%icrop >= 1 .and. crop%common%icrop <= size(crop%rotation_loaded)) then
+               if (crop%rotation_loaded(crop%common%icrop)) then
                   ! Defense-in-depth: only dispatch to cache when the schema
                   ! is fully authored (case 4 + case 2 have amaxtb; the
                   ! hupselbrook skeleton does not — Phase 4 will fill it).
-                  if (allocated(crop_cfg%rotation_grass(crop%common%icrop)%amaxtb)) &
+                  if (allocated(crop%rotation_grass(crop%common%icrop)%amaxtb)) &
                      use_cache = .true.
                end if
             end if
          end if
          if (use_cache) then
-            associate(cfg => crop_cfg%rotation_grass(crop%common%icrop))
+            associate(cfg => crop%rotation_grass(crop%common%icrop))
                swharvest      = cfg%swharv
                dmharvest      = cfg%dmharvest
                daylastharvest = int(cfg%daylastharvest)

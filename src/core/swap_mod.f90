@@ -163,7 +163,7 @@ contains
          call state%heat%init(config%heat, state%mesh%numnod)
 
          ! Phase-2 runtime seed: hatm, initial h/theta, initial fluxes.
-         call soilwater_seed(state)
+         call soilwater_seed(state, config%soil%hydraulics)
          if (state%atmosphere%swusecn == 1) call cn_init(state)
 
          ! Modern drainage init (absorbs scalar seeding, L/zbotdr, surface_runoff fields).

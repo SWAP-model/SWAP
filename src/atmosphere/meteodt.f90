@@ -130,14 +130,13 @@ contains
       vsmall = 1.0d-8
 
       associate (atmo  => state%atmosphere,    &
-                 time  => state%timecontrol,   &
-                 meteo => state%cfg%meteo)
+                 time  => state%timecontrol)
 
       ! === Process rain events on yearly basis ===
 
       ! For rain options 1 and 2: convert daily rain quantities and intensities or durations
       ! into rain events by creating raintime and rainflux arrays conform rain option 3
-      if (meteo%swrain .eq. 1 .or. meteo%swrain .eq. 2) then
+      if (time%swrain .eq. 1 .or. time%swrain .eq. 2) then
          time%rainrec = 1
          do i = 1, atmo%nmrain
             if (atmo%raintimearray(i + 1) .gt. time%tstart - vsmall) then
@@ -159,11 +158,11 @@ contains
          time%rainrec = 0
          do i = 2, atmo%nmrain
             if (rainam(i) .gt. vsmall) then
-               if (meteo%swrain .eq. 1) then
+               if (time%swrain .eq. 1) then
                   ! Mean rainfall intensities are specified
-                  rainflux = afgen(meteo%raintab, 60, day(i))
+                  rainflux = afgen(atmo%raintab, 60, day(i))
                   raintime = min(0.99d0, rainam(i)/rainflux)
-               elseif (meteo%swrain .eq. 2) then
+               elseif (time%swrain .eq. 2) then
                   ! Rainfall durations are specified
                   raintime = wwet(i)
                end if
@@ -188,7 +187,7 @@ contains
          atmo%raintimearray(time%rainrec + 2) = time%tcum + tendyear + time%dtmin
          atmo%rainfluxarray(time%rainrec + 2) = 0.d0
 
-      elseif (meteo%swrain .eq. 3) then
+      elseif (time%swrain .eq. 3) then
          ! Rain events: 1) calculate daily values, 2) fill raintimearray and rainfluxarray
 
          ! Total amount of rain per meteo day arai — init array with sum of rain

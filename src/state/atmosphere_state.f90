@@ -274,6 +274,10 @@ module atmosphere_state_mod
       type(meteo_detail_table_t) :: meteo_detail  !! sub-daily meteo CSV cache (swmetdetail=1)
       type(rain_events_table_t)  :: rain_events   !! rain events CSV cache (swrain=3)
 
+      ! [state%cfg-retirement mop-up] rain intensity lookup table (swrain==1).
+      ! Fixed-size 60-element table; snapshotted from config%meteo%raintab at init.
+      real(real64) :: raintab(60) = 0.0_real64   !! rain intensity (cm/d) vs time (T) table
+
    contains
       procedure :: init => atmosphere_state_init
    end type atmosphere_state_t
@@ -377,6 +381,10 @@ contains
             end if
          end if
       end block
+
+      ! [state%cfg-retirement mop-up] rain intensity table — ProcessRainEvents reads
+      ! this via atmo%raintab (swrain==1 path).
+      self%raintab(:) = config%meteo%raintab(:)
 
       ! Snow scalars.
       self%TePrRain = config%meteo%snow%teprrain

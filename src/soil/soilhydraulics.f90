@@ -733,21 +733,23 @@ contains
    !> Narrative orchestrator for soil water initialization. Each phase is
    !> delegated to a named private helper; the storage/groundwater finalize
    !> is kept inline.
-   subroutine soilwater_seed(state)
+   subroutine soilwater_seed(state, hyd)
       use swap_log, only: log_info, to_str
       use soilwaterbalance_mod, only: calcgwl, watstor
       use swap_state_mod, only: swap_state_t
+      use soil_config_mod, only: soil_hydraulics_t
       use, intrinsic :: iso_fortran_env, only: real64
       implicit none
 
       ! Arguments
-      type(swap_state_t), intent(inout) :: state
+      type(swap_state_t),      intent(inout) :: state
+      type(soil_hydraulics_t), intent(in)    :: hyd
 
       ! Local variables
       integer i
 
       call init_soil_misc(state)
-      call populate_hydraulic_params(state)
+      call populate_hydraulic_params(state, hyd)
       call apply_soil_initial_conditions(state)
       call compute_initial_node_hydraulics(state)
 
@@ -816,21 +818,18 @@ contains
 
    !> Populate per-layer and per-node Van Genuchten hydraulic parameters,
    !> saturated/residual water contents, and hysteresis branch selection.
-   subroutine populate_hydraulic_params(state)
+   subroutine populate_hydraulic_params(state, hyd)
       use swap_state_mod, only: swap_state_t
+      use soil_config_mod, only: soil_hydraulics_t
       use, intrinsic :: iso_fortran_env, only: real64
       implicit none
-      type(swap_state_t), intent(inout) :: state
+      type(swap_state_t),      intent(inout) :: state
+      type(soil_hydraulics_t), intent(in)    :: hyd
 
       integer lay, node
 
-      ! [state%cfg-retirement cluster 7 DEFERRED] hyd => state%cfg%soil%hydraulics:
-      ! populate_hydraulic_params is an init-time seeding routine that copies
-      ! hyd%X(lay) into soil%vg_params_layer/vg_params. Migration path: move the
-      ! layer-param loop into soilwater_state_init and read hyd fields there.
       associate (mesh => state%mesh,         &
-                 soil => state%soilwater,    &
-                 hyd => state%cfg%soil%hydraulics)
+                 soil => state%soilwater)
 
       ! Soil physics: tabulated or MualemVanGenuchten functions
       ! Mirror mesh%layer into state.

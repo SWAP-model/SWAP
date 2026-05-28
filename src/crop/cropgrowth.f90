@@ -85,8 +85,7 @@
       associate( &
         tc       => state%timecontrol,            &
         atmo     => state%atmosphere,             &
-        crop     => state%crop,                   &  ! crop sub-state (common, wofost, grass, ...)
-        crop_cfg => state%cfg%crop                &  ! [state%cfg-retirement cluster 6 DEFERRED] rotation_fixed/wofost typed sub-arrays
+        crop     => state%crop                    &  ! crop sub-state (common, wofost, grass, ...)
       )
 
       select case (task)
@@ -171,17 +170,14 @@
             ! mirroring legacy readarablelandgerm:3322-3358.
             ! Teardown: end of Phase 4 removes the else-branch.
             block
-               use cropwofost_config_mod, only: wofost_germination_t
                use error_mod, only: fatalerr_collected
                logical :: use_cache
                integer :: swprep_cache, swsow_cache, swgerm_cache, rot_type
-               type(wofost_germination_t), pointer :: gp
                use_cache = .false.
                swprep_cache = 0
                swsow_cache  = 0
                swgerm_cache = 0
                rot_type     = 0
-               nullify(gp)
                if (allocated(crop%rotation_loaded) .and. &
                    allocated(crop%common%croptype)) then
                   if (state%crop%common%icrop >= 1 .and. state%crop%common%icrop <= size(crop%rotation_loaded)) then  ! [GR-CROPWS B3]
@@ -191,23 +187,22 @@
                         case (1)
                            ! type=1 cropfixed
                            ! [state%cfg-retirement cluster 6 DEFERRED] rotation_fixed typed sub-array
-                           if (allocated(crop_cfg%rotation_fixed)) then
+                           if (allocated(crop%rotation_fixed)) then
                               use_cache    = .true.
-                              swprep_cache = crop_cfg%rotation_fixed(state%crop%common%icrop)%swprep   ! [GR-CROPWS B3]
-                              swsow_cache  = crop_cfg%rotation_fixed(state%crop%common%icrop)%swsow    ! [GR-CROPWS B3]
-                              swgerm_cache = crop_cfg%rotation_fixed(state%crop%common%icrop)%swgerm   ! [GR-CROPWS B3]
+                              swprep_cache = crop%rotation_fixed(state%crop%common%icrop)%swprep   ! [GR-CROPWS B3]
+                              swsow_cache  = crop%rotation_fixed(state%crop%common%icrop)%swsow    ! [GR-CROPWS B3]
+                              swgerm_cache = crop%rotation_fixed(state%crop%common%icrop)%swgerm   ! [GR-CROPWS B3]
                            end if
                         case (2)
                            ! type=2 wofost: cache-hit when swprep=0 AND swsow=0.
                            ! swgerm=0/1/2 are all handled in the cache body below.
                            ! [state%cfg-retirement cluster 6 DEFERRED] rotation_wofost typed sub-array
-                           if (allocated(crop_cfg%rotation_wofost)) then
-                              swprep_cache = crop_cfg%rotation_wofost(state%crop%common%icrop)%preparation%swprep  ! [GR-CROPWS B3]
-                              swsow_cache  = crop_cfg%rotation_wofost(state%crop%common%icrop)%sowing%swsow         ! [GR-CROPWS B3]
-                              swgerm_cache = crop_cfg%rotation_wofost(state%crop%common%icrop)%germination%swgerm   ! [GR-CROPWS B3]
+                           if (allocated(crop%rotation_wofost)) then
+                              swprep_cache = crop%rotation_wofost(state%crop%common%icrop)%preparation%swprep  ! [GR-CROPWS B3]
+                              swsow_cache  = crop%rotation_wofost(state%crop%common%icrop)%sowing%swsow         ! [GR-CROPWS B3]
+                              swgerm_cache = crop%rotation_wofost(state%crop%common%icrop)%germination%swgerm   ! [GR-CROPWS B3]
                               if (swprep_cache == 0 .and. swsow_cache == 0) then
                                  use_cache = .true.
-                                 gp => crop_cfg%rotation_wofost(state%crop%common%icrop)%germination   ! [GR-CROPWS B3]
                               end if
                            end if
                         end select
@@ -352,8 +347,8 @@
           ! [state%cfg-retirement cluster 6 DEFERRED] rotation_wofost typed sub-array
           block
             real(8) :: pld_cfg, remoc_cfg
-            pld_cfg   = crop_cfg%rotation_wofost(state%crop%common%icrop)%bulb%pld
-            remoc_cfg = crop_cfg%rotation_wofost(state%crop%common%icrop)%bulb%remoc
+            pld_cfg   = crop%rotation_wofost(state%crop%common%icrop)%bulb%pld
+            remoc_cfg = crop%rotation_wofost(state%crop%common%icrop)%bulb%remoc
             ! remobilisation of carbohydrates from planted material
             if (state%crop%wofost%plwt.le.(0.0002d0*pld_cfg)) then
               ! no remobilisation at minimum weight motherbulb

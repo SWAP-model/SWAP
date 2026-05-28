@@ -119,8 +119,7 @@
         ! [GR-CROP 2026-05-25] Dead branch: cropgrowth.f90:255 stub-errors swprep!=0,
         ! so this case never fires in the TOML pipeline. Reads route directly to the
         ! wofost preparation config sub-record for completeness.
-        ! [state%cfg-retirement cluster 6 DEFERRED] rotation_wofost typed sub-array; dead branch
-        associate(prep => state%cfg%crop%rotation_wofost(crop%icrop)%preparation)
+        associate(prep => state%crop%rotation_wofost(crop%icrop)%preparation)
         node   = 1
         dhPrep = soil%h(node) - prep%hprep
         drz1   = -1.d0 * prep%zprep - mesh%dz(node)
@@ -150,8 +149,7 @@
         ! [GR-CROP 2026-05-25] Dead branch: cropgrowth.f90:255 stub-errors swsow!=0,
         ! so this case never fires in the TOML pipeline. Reads route directly to the
         ! wofost sowing config sub-record for completeness.
-        ! [state%cfg-retirement cluster 6 DEFERRED] rotation_wofost typed sub-array; dead branch
-        associate(sow => state%cfg%crop%rotation_wofost(crop%icrop)%sowing)
+        associate(sow => state%crop%rotation_wofost(crop%icrop)%sowing)
         node   = 1
         dhSow  = soil%h(node) - sow%hsow
         drz1   = -1.d0 * sow%zsow - mesh%dz(node)
@@ -186,8 +184,7 @@
 
       case (4)
 
-        ! [state%cfg-retirement cluster 6 DEFERRED] rotation_wofost typed sub-array (live germination case)
-        associate(germ => state%cfg%crop%rotation_wofost(crop%icrop)%germination)
+        associate(germ => state%crop%rotation_wofost(crop%icrop)%germination)
         l_agerm      = germ%agerm
         l_tsumemeopt = germ%tsumemeopt
         l_hdrygerm   = germ%hdrygerm
