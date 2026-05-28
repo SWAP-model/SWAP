@@ -83,11 +83,6 @@ contains
       type(swap_state_t),          intent(out)   :: state
       type(swap_config_t), target, intent(inout) :: config  ! target: crop_config_global => config%crop
 
-      ! Non-owning config pointer; lifetime matches state's. Top-level
-      ! compute routines read switches via state%cfg%X%Y without needing
-      ! a separate config arg.
-      state%cfg => config
-
       ! Iteration / timing statistics.
       call itertime_init(state)
 

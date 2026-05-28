@@ -474,13 +474,13 @@
       if (.false.) then
          flGrassGrowth   = .false.
          dateGrassGrowth = ''
-         if (size(tsoil) > 0 .or. associated(state%cfg)) continue
+         if (size(tsoil) > 0 .or. state%crop%common%swcrp >= 0) continue
       end if
 
       call fatalerr_collected('sumttd', &
         'sumttd is dead-branch (swtsum=2 stub-guarded in cropgrass_config.f90:290). ' // &
         'Body retired in 2026-05-25 arc; restore via cropgrass_config thresholds + ' // &
-        'state%cfg%general I/O when swtsum=2 wiring is implemented.')
+        'config%general I/O when swtsum=2 wiring is implemented.')
 
       ! Defensive defaults (never reached due to fatalerr above).
       flGrassGrowth = .false.
