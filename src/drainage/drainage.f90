@@ -155,16 +155,15 @@ contains
          //' impervious layer is higher than the level of the' &
          //' drain bottom. Adapt drain input!'
 
-      associate (drai      => state%drainage,    &
-                 soil      => state%soilwater,   &
-                 time      => state%timecontrol, &
-                 drain_cfg => state%cfg%drain)
+      associate (drai => state%drainage,    &
+                 soil => state%soilwater,   &
+                 time => state%timecontrol)
 
          gwldra = soil%gwl
 
          ! --- drainage flux according to hooghoudt or ernst
          if (drai%dramet .eq. 2) then
-            if (drain_cfg%shape .gt. small) dh = (gwldra - drai%zbotdr(1))/drain_cfg%shape
+            if (drai%shape .gt. small) dh = (gwldra - drai%zbotdr(1))/drai%shape
 
             ! --- contributing layer below drains limited to 1/4 l
             zimp = max(drai%basegw, drai%zbotdr(1) - 0.25*drai%l(1))
@@ -244,7 +243,7 @@ contains
                   if ((lev .eq. drai%nrlevs) .and. (drai%swnrsrf .eq. 1)) then
                      drai%qdrain(lev) = drai%cofintfl*dh**drai%expintfl
                   else
-                     drai%qdrain(lev) = dh/drain_cfg%drares(lev)
+                     drai%qdrain(lev) = dh/drai%drares(lev)
                      if (drai%swallo(lev) .eq. 2) drai%qdrain(lev) = 0.0d0
                   end if
 
@@ -254,7 +253,7 @@ contains
                   if (drai%swdtyp(lev) .eq. 2) then
                      if (drai%swliminf .eq. 1) dh = max(dh, (drai%zbotdr(lev) - x))
                   end if
-                  drai%qdrain(lev) = dh/drain_cfg%infres(lev)
+                  drai%qdrain(lev) = dh/drai%infres(lev)
                   if (drai%swallo(lev) .eq. 3 .or. fldry) drai%qdrain(lev) = 0.0d0
                end if
             end do
@@ -507,10 +506,9 @@ contains
 
       integer :: level
 
-      associate (drai   => state%drainage,    &
-                 soil   => state%soilwater,   &
-                 surf   => state%surfacewater, &
-                 sw_cfg => state%cfg%surface_water)
+      associate (drai => state%drainage,    &
+                 soil => state%soilwater,   &
+                 surf => state%surfacewater)
 
          ! Spec D7: zero drainage when groundwater is dry.
          if (soil%gwl .gt. 998.0d0) then
@@ -525,7 +523,7 @@ contains
          do level = 1, drai%nrlevs
             call compute_drainage_level_flux(state, level, dh)
             ! qdrd: total flux to/from secondary system.
-            if (sw_cfg%swsrf .ge. 2 .and. level .gt. surf%nrpri) then
+            if (surf%swsrf .ge. 2 .and. level .gt. surf%nrpri) then
                drai%qdrd = drai%qdrd + drai%qdrain(level)
             end if
          end do
@@ -533,12 +531,12 @@ contains
          ! [GR-SOIL …] Macropore rapid-drainage basis block deleted (ADR 0040).
 
          ! Check for system falling dry (only for swsec = 2):
-         if (sw_cfg%swsec .eq. 1) return
-         if (sw_cfg%swsrf .eq. 1) then
+         if (surf%swsec .eq. 1) return
+         if (surf%swsrf .eq. 1) then
             do level = 1, drai%nrlevs
                if (drai%qdrain(level) .lt. 0.0d0) drai%qdrain(level) = 0.0d0
             end do
-         elseif (sw_cfg%swsrf .ge. 2) then
+         elseif (surf%swsrf .ge. 2) then
             call apply_storage_dry_check(state)
          end if
 
@@ -560,15 +558,12 @@ contains
 
       real(8) :: wl, swdepth, swexbrd, rd, re
 
-      associate (drai       => state%drainage,    &
-                 soil       => state%soilwater,   &
-                 surf       => state%surfacewater, &
-                 sw_cfg     => state%cfg%surface_water, &
-                 drain_cfg  => state%cfg%drain, &
-                 runoff_cfg => state%cfg%drain%surface_runoff)
+      associate (drai => state%drainage,    &
+                 soil => state%soilwater,   &
+                 surf => state%surfacewater)
 
          ! Surface-water level for this drainage level.
-         if (sw_cfg%swsrf .ge. 2) then
+         if (surf%swsrf .ge. 2) then
             if (level .gt. surf%nrpri) then
                wl = surf%wls
             else
@@ -584,20 +579,20 @@ contains
             ! Channel is active if either gwl or surface water is above bottom.
             if (soil%gwl .gt. (drai%zbotdr(level) + 0.001d0) .or.        &
         &       wl       .gt. (drai%zbotdr(level) + 0.001d0)) then
-               if (wl .le. (drai%zbotdr(level) + 0.001d0) .or. sw_cfg%swsrf .eq. 1) then
+               if (wl .le. (drai%zbotdr(level) + 0.001d0) .or. surf%swsrf .eq. 1) then
 
                   ! Only groundwater above channel bottom: bottom is drainage base.
                   drai%drainl(level) = drai%zbotdr(level)
                   if (drai%swdtyp(level) .eq. 0) then
-                     drai%wetper(level) = drain_cfg%widthr(level)
+                     drai%wetper(level) = drai%widthr(level)
                   end if
                else
                   ! Surface-water level above channel bottom.
                   drai%drainl(level) = wl
                   if (drai%swdtyp(level) .eq. 0) then
                      swdepth = wl - drai%zbotdr(level)
-                     swexbrd = (wl - drai%zbotdr(level))/drain_cfg%taludr(level)
-                     drai%wetper(level) = drain_cfg%widthr(level) +           &
+                     swexbrd = (wl - drai%zbotdr(level))/drai%taludr(level)
+                     drai%wetper(level) = drai%widthr(level) +           &
                                           2*dsqrt(swdepth**2 + swexbrd**2)
                   end if
                end if
@@ -605,24 +600,24 @@ contains
                ! Drainage flux (cm/d): head difference.
                dh = soil%gwl - drai%drainl(level)
                if (soil%gwl .gt. -0.1d0) dh = dh + soil%pond
-               if (dh .lt. 0.0d0 .and. soil%gwl .lt. drain_cfg%gwlinf(level)) then
-                  dh = drain_cfg%gwlinf(level) - drai%drainl(level)
+               if (dh .lt. 0.0d0 .and. soil%gwl .lt. drai%gwlinf(level)) then
+                  dh = drai%gwlinf(level) - drai%drainl(level)
                end if
                ! Interflow as power function.
                if ((level .eq. drai%nrlevs) .and. (drai%swnrsrf .eq. 2)) then
                   drai%qdrain(level) = drai%cofintfl*dh**drai%expintfl
                else
                   if (dh .gt. 0.0d0) then
-                     rd = drain_cfg%rdrain(level)
-                     re = drain_cfg%rentry(level)
+                     rd = drai%rdrain(level)
+                     re = drai%rentry(level)
                      ! Surface drainage (vacuum cleaner).
                      if ((level .eq. drai%nrlevs) .and. (drai%swnrsrf .eq. 1)) then
-                        rd = runoff_cfg%rsurfdeep - dh
-                        rd = max(rd, runoff_cfg%rsurfshallow)
+                        rd = drai%rsurfdeep - dh
+                        rd = max(rd, drai%rsurfshallow)
                      end if
                   else
-                     rd = drain_cfg%rinfi(level)
-                     re = drain_cfg%rexit(level)
+                     rd = drai%rinfi(level)
+                     re = drai%rexit(level)
                   end if
                   if (drai%swdtyp(level) .eq. 0) then
                      drai%qdrain(level) = dh/((rd + re*drai%L(level)/drai%wetper(level)))

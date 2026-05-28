@@ -108,6 +108,7 @@ contains
 
       ! Modern type-bound state init.
       call state%soilwater%init(config%soil, config%drain, config%heat, config%bottom_boundary, &
+                                config%simulation, &
                                 state%mesh%numnod, state%mesh%numlay, &
                                 config%general%pathwork)
       call state%nutrients%init(state%mesh%numlay, config%nutrients, config%general%pathwork)

@@ -87,6 +87,24 @@ module drainage_state_mod
       ! (legacy [retired-zero] tag). Consumed by surfacewater task=2/3 and waterbalance.
       real(real64) :: QRapDra = 0.0_real64
 
+      ! Per-level drainage resistance arrays (cluster 4 retirement).
+      ! Snapshotted from config%drain at init so that compute_drainage_level_flux
+      ! and bocodrb no longer need state%cfg%drain access.
+      real(real64), allocatable :: drares(:)   !! drainage resistance per level (d)
+      real(real64), allocatable :: infres(:)   !! infiltration resistance per level (d)
+      real(real64), allocatable :: widthr(:)   !! channel bottom width per level (cm)
+      real(real64), allocatable :: taludr(:)   !! channel side slope per level (-)
+      real(real64), allocatable :: gwlinf(:)   !! gwl limit for infiltration per level (cm)
+      real(real64), allocatable :: rdrain(:)   !! drainage resistance per level (d) — ext.drain
+      real(real64), allocatable :: rinfi(:)    !! infiltration resistance per level (d) — ext.drain
+      real(real64), allocatable :: rentry(:)   !! entry resistance per level (d) — ext.drain
+      real(real64), allocatable :: rexit(:)    !! exit resistance per level (d) — ext.drain
+
+      ! Scalar drainage config snapshots (cluster 4 retirement).
+      real(real64) :: shape        = 0.0_real64  !! trapezoidal shape factor
+      real(real64) :: rsurfdeep    = 0.0_real64  !! surface resistance deep (d)
+      real(real64) :: rsurfshallow = 0.0_real64  !! surface resistance shallow (d)
+
    contains
       procedure :: init => drainage_state_init
    end type drainage_state_t
@@ -243,6 +261,49 @@ contains
       do i = 1, size(self%ftopdislay)
          self%ftopdislay(i) = config_drain%surface_runoff%ftopdislay
       end do
+
+      ! ---- [Piece G] Per-level drainage resistance arrays (cluster 4 retirement) ----
+      ! Snapshotted from config_drain so that compute_drainage_level_flux and bocodrb
+      ! no longer need state%cfg%drain.
+      if (allocated(config_drain%drares)) then
+         if (.not. allocated(self%drares)) allocate(self%drares(nr))
+         self%drares(1:size(config_drain%drares)) = config_drain%drares
+      end if
+      if (allocated(config_drain%infres)) then
+         if (.not. allocated(self%infres)) allocate(self%infres(nr))
+         self%infres(1:size(config_drain%infres)) = config_drain%infres
+      end if
+      if (allocated(config_drain%widthr)) then
+         if (.not. allocated(self%widthr)) allocate(self%widthr(nr))
+         self%widthr(1:size(config_drain%widthr)) = config_drain%widthr
+      end if
+      if (allocated(config_drain%taludr)) then
+         if (.not. allocated(self%taludr)) allocate(self%taludr(nr))
+         self%taludr(1:size(config_drain%taludr)) = config_drain%taludr
+      end if
+      if (allocated(config_drain%gwlinf)) then
+         if (.not. allocated(self%gwlinf)) allocate(self%gwlinf(nr))
+         self%gwlinf(1:size(config_drain%gwlinf)) = config_drain%gwlinf
+      end if
+      if (allocated(config_drain%rdrain)) then
+         if (.not. allocated(self%rdrain)) allocate(self%rdrain(nr))
+         self%rdrain(1:size(config_drain%rdrain)) = config_drain%rdrain
+      end if
+      if (allocated(config_drain%rinfi)) then
+         if (.not. allocated(self%rinfi)) allocate(self%rinfi(nr))
+         self%rinfi(1:size(config_drain%rinfi)) = config_drain%rinfi
+      end if
+      if (allocated(config_drain%rentry)) then
+         if (.not. allocated(self%rentry)) allocate(self%rentry(nr))
+         self%rentry(1:size(config_drain%rentry)) = config_drain%rentry
+      end if
+      if (allocated(config_drain%rexit)) then
+         if (.not. allocated(self%rexit)) allocate(self%rexit(nr))
+         self%rexit(1:size(config_drain%rexit)) = config_drain%rexit
+      end if
+      self%shape        = config_drain%shape
+      self%rsurfdeep    = config_drain%surface_runoff%rsurfdeep
+      self%rsurfshallow = config_drain%surface_runoff%rsurfshallow
 
       ! ---- [Piece F] L / zbotdr seeding (orchestrator-dissolution arc step 4) ----
       ! dramet=2: scalar lm (m) converted to cm for L(1); zbotdr_basic for zbotdr(1).

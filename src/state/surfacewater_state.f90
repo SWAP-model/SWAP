@@ -73,6 +73,12 @@ module surfacewater_state_mod
       real(real64)                  :: rsro       = 0.0_real64  !< runoff resistance (d)
       real(real64)                  :: rsroexp    = 0.0_real64  !< runoff exponent (-)
 
+      ! Surface-water system mode switches, snapshotted from config%surface_water
+      ! at init (cluster 4 retirement). Consumed by bocodre / surfacewater_balance /
+      ! surfacewater_lateral so those callers no longer need state%cfg access.
+      integer                       :: swsrf      = 0        !< surface-water routing switch (0/1/2/3)
+      integer                       :: swsec      = 0        !< secondary system switch (0/1/2)
+
       ! Time-dependent max-ponding feature (dormant — no TOML writer).
       ! When swpondmx=1, boundtop reads pondmxtab via afgen each step;
       ! currently always swpondmx=0 in the TOML pipeline.
@@ -139,10 +145,14 @@ contains
       ! ---- Unconditional scalar snapshots (consumed regardless of swdra) ----
       ! pondmx/rsro/rsroexp: used by boundtop (runoff equation) for all swdra values.
       ! swdra: used by drainage subsystem and surface-water utils for all paths.
+      ! swsrf/swsec: snapshotted here (cluster 4) so bocodre/surfacewater_balance/
+      !   surfacewater_lateral no longer read state%cfg%surface_water.
       self%swdra   = config_drain%swdra
       self%pondmx  = config_soil%pondmx
       self%rsro    = config_soil%rsro
       self%rsroexp = config_soil%rsroexp
+      self%swsrf   = config_sw%swsrf
+      self%swsec   = config_sw%swsec
 
       ! The heavy work (array allocations, sttab math, management-period seeding)
       ! only applies when swdra=2 (surface-water reservoir active).

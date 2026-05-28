@@ -1173,12 +1173,14 @@ subroutine sw_init_minimal(sw, numnod, nlay)
    use drainage_config_mod,        only: drainage_config_t
    use heat_config_mod,            only: heat_config_t
    use bottom_boundary_config_mod, only: bottom_boundary_config_t
+   use simulation_config_mod,      only: simulation_config_t
    type(soilwater_state_t),        intent(inout) :: sw
    integer,                        intent(in)    :: numnod
    integer,                        intent(in)    :: nlay
-   type(soil_config_t)            :: cfg_soil   ! defaults: swinco=1, no h_file CSV
-   type(drainage_config_t)        :: cfg_drain  ! defaults: no cofani
-   type(heat_config_t)            :: cfg_heat   ! defaults: no porg/psand/psilt/pclay
-   type(bottom_boundary_config_t) :: cfg_bb     ! defaults: swbotb=0, no CSV reads
-   call sw%init(cfg_soil, cfg_drain, cfg_heat, cfg_bb, numnod, nlay, '')
+   type(soil_config_t)            :: cfg_soil        ! defaults: swinco=1, no h_file CSV
+   type(drainage_config_t)        :: cfg_drain       ! defaults: no cofani
+   type(heat_config_t)            :: cfg_heat        ! defaults: no porg/psand/psilt/pclay
+   type(bottom_boundary_config_t) :: cfg_bb          ! defaults: swbotb=0, no CSV reads
+   type(simulation_config_t)      :: cfg_simulation  ! defaults: swkmean=1
+   call sw%init(cfg_soil, cfg_drain, cfg_heat, cfg_bb, cfg_simulation, numnod, nlay, '')
 end subroutine sw_init_minimal

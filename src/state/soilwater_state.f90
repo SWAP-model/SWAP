@@ -258,6 +258,12 @@ module soilwater_state_mod
       integer              :: numbit = 0
       integer, allocatable :: Itnumb(:,:)
 
+      ! Hydraulic-conductivity averaging method, snapshotted from
+      ! config%simulation%numerical%swkmean at init. Default 1 mirrors the
+      ! simulation_numerical_t default. Consumed by hcomean() in boundtop
+      ! (cluster 4) and soilhydraulics (cluster 7).
+      integer :: swkmean = 1
+
       ! ===========================================================================
       ! INTERMEDIATE accumulators (reset_intermediate / gate: flzerointr)
       !   subsumes the per-day subset, which has its own reset under flDayStart.
@@ -352,27 +358,30 @@ contains
    !!   state%mesh%numlay  (isoillay derivation)
    !!   state%surfacewater%pondmx/rsro/rsroexp  (soil section)
    !!
-   !! Signature: (self, config_soil, config_drain, config_heat, config_bb, numnod, numlay, pathwork)
-   !!   config_soil  — intent(in):  read-only after W3 fix (swinco=3 h_file now → self%h_init).
-   !!   config_drain — intent(in):  drainage config (cofani source 1).
-   !!   config_heat  — intent(in):  heat config (porg/psand/psilt/pclay sources).
-   !!   config_bb    — intent(in):  bottom_boundary switches + file names.
+   !! Signature: (self, config_soil, config_drain, config_heat, config_bb, config_simulation, numnod, numlay, pathwork)
+   !!   config_soil        — intent(in):  read-only after W3 fix (swinco=3 h_file now → self%h_init).
+   !!   config_drain       — intent(in):  drainage config (cofani source 1).
+   !!   config_heat        — intent(in):  heat config (porg/psand/psilt/pclay sources).
+   !!   config_bb          — intent(in):  bottom_boundary switches + file names.
+   !!   config_simulation  — intent(in):  numerical solver config (swkmean snapshot).
    !!   numnod       — number of soil nodes (from CalcGrid).
    !!   numlay       — number of soil layers (from CalcGrid).
    !!   pathwork     — intent(in):  working directory prefix for CSV paths.
    !!
    !! Called from swap_mod immediately after CalcGrid(), before DoTillage(1).
-   subroutine soilwater_state_init(self, config_soil, config_drain, config_heat, config_bb, numnod, numlay, pathwork)
+   subroutine soilwater_state_init(self, config_soil, config_drain, config_heat, config_bb, config_simulation, numnod, numlay, pathwork)
       use soil_config_mod,            only: soil_config_t
       use drainage_config_mod,        only: drainage_config_t
       use heat_config_mod,            only: heat_config_t
       use bottom_boundary_config_mod, only: bottom_boundary_config_t
+      use simulation_config_mod,      only: simulation_config_t
       use swap_array_dimensions,      only: maho
       class(soilwater_state_t),       intent(inout) :: self
       type(soil_config_t),            intent(in)    :: config_soil  ! intent(in) after W3 fix: no longer mutated
       type(drainage_config_t),        intent(in)    :: config_drain
       type(heat_config_t),            intent(in)    :: config_heat
       type(bottom_boundary_config_t), intent(in)    :: config_bb
+      type(simulation_config_t),      intent(in)    :: config_simulation
       integer,                        intent(in)    :: numnod
       integer,                        intent(in)    :: numlay
       character(len=*),               intent(in)    :: pathwork
@@ -612,6 +621,10 @@ contains
       self%q0    = 0.0d0
       self%k1max = 0.0d0
       self%H0max = 0.0d0
+
+      ! Numerical solver control — snapshotted for boundtop (cluster 4) and
+      ! soilhydraulics (cluster 7). Default 1 matches simulation_numerical_t.
+      self%swkmean = config_simulation%numerical%swkmean
 
    end subroutine soilwater_state_init
 

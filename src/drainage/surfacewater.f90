@@ -43,8 +43,7 @@ subroutine surfacewater_lateral(state, request_smaller_dt)
                  drai => state%drainage,     &
                  soil => state%soilwater,    &
                  surf => state%surfacewater, &
-                 time => state%timecontrol,  &
-                 sw_cfg => state%cfg%surface_water)
+                 time => state%timecontrol)
 
          ! Lateral drainage fluxes to surface water.
 
@@ -111,17 +110,16 @@ subroutine surfacewater_balance(state, request_smaller_dt)
       request_smaller_dt = .false.
 
       associate (surf => state%surfacewater, &
-                 time => state%timecontrol,  &
-                 sw_cfg => state%cfg%surface_water)
+                 time => state%timecontrol)
 
          ! Surface water balance.
-         if (sw_cfg%swsrf .eq. 3) then
+         if (surf%swsrf .eq. 3) then
             surf%wlp = afgen(surf%wlptab, 2*mawlp, time%t1900 - 1.0d0 + time%dt)
          end if
-         if (sw_cfg%swsec .eq. 2) then
+         if (surf%swsec .eq. 2) then
             ! Secondary system: water level is simulated.
             call wlevbal(state, request_smaller_dt)
-         elseif (sw_cfg%swsec .eq. 1) then
+         elseif (surf%swsec .eq. 1) then
             ! Secondary system: water level is input.
             call wballev(state)
          end if

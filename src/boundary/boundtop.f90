@@ -75,7 +75,7 @@ contains
             ! Only reached if RH is 100% in SWAPS; never used for SWAP.
             kSurf = soil%k(1)
          endif
-         k1Atm = hcomean(state%cfg%simulation%numerical%swkmean, &
+         k1Atm = hcomean(soil%swkmean, &
                          kSurf, soil%k(1), mesh%dz(1), mesh%dz(1))
 
          ! Maximum evaporation rate according to Darcy
@@ -114,7 +114,7 @@ contains
             ks = heat%rfcp(1) * soil%ksatfit(mesh%layer(1)) &
                  + (1.0d0 - heat%rfcp(1)) * hconode_vsmall
          endif
-         soil%k1max = hcomean(state%cfg%simulation%numerical%swkmean, &
+         soil%k1max = hcomean(soil%swkmean, &
                               ks, soil%k(1), mesh%dz(1), mesh%dz(1))
 
          ! Will applying flux=q1 yield a pressure head >0 at the surface?
