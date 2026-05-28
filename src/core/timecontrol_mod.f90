@@ -85,7 +85,7 @@ contains
       if (meteo_cfg%swetsine .eq. 1) time%fletsine = .true.
       if (state%cfg%irrigation%swirfix .eq. 1) time%flIrrigate = .true.
       ! flDrain and flSurfaceWater are seeded by timecontrol_state_init
-      ! (called from seed_state_from_config via state%timecontrol%init) which
+      ! (called from swap_init_body via state%timecontrol%init) which
       ! reads config_drain%swdra directly — no state%cfg read needed here.
       time%flTemperature = .false.
       if (state%cfg%heat%swhea .eq. 1) time%flTemperature = .true.

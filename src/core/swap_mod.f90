@@ -52,25 +52,16 @@ contains
 
    subroutine swap_init_body(state, config)
       !
-      ! Init pipeline: TOML load (in swap_init) → seed_state_from_config
-      ! adapter → Phase-1 type-bound state%X%init calls (construct) →
-      ! Phase-2 free x_seed(state) procedures (derived initial state from
-      ! sibling subsystems; see ADR 0043).
+      ! Init pipeline: TOML load (in swap_init) → Phase-1 type-bound state%X%init
+      ! calls (construct) → Phase-2 free x_seed(state) procedures (derived initial
+      ! state from sibling subsystems; see ADR 0043).
       !
-      ! Strangler-fig follow-ups (the code still works; these are tracked
-      ! debt, not bugs):
-      !   - seed_state_from_config has ~10 HACK Phase 4f-extend slots for
-      !     legacy globals not yet covered by typed schema (SWREDU, RSIGNI,
-      !     CFEVAPPOND, iHWCKmodel, RDS, ksatexm path, …). Each slot is a
-      !     small typed-config extension + adapter wiring. Per ADR 0016
-      !     the deeper follow-on is the config-passing refactor.
-      !   - Several per-subsystem post-init seeding blocks live here because
-      !     state%X%init allocates the arrays the seeding writes into:
-      !       * soilwater layer flats (ksatexm/ksatfit/cofani/orgmat/…)
-      !       * drainage scalars + L/zbotdr per-level geometry
-      !       * swinco==3 warm-restart h-profile CSV re-read
-      !     Each should fold into the relevant state%X%init.
-      !     (atmosphere warm-restart + snow handshake folded in OD Steps 6+7)
+      ! seed_state_from_config.f90 dissolved (OD Step 9, 2026-05-28): the strangler-
+      ! pattern adapter held zero live writes after OD Steps 1-8 folded every
+      ! cross-subsystem seeding into the respective state%X%init. The one remaining
+      ! line (state%timecontrol%init call) is now inlined directly below.
+      !
+      ! Tracked debt (still works; not bugs):
       !   - Phase-2 seed procedures (tillage_seed, soilwater_seed,
       !     temperature_seed, solute_seed) — per ADR 0043 these are named
       !     free procs, deliberately distinct from the type-bound Phase-1
@@ -86,7 +77,6 @@ contains
       use temperature_mod,            only: temperature_seed
       use solute_mod,                 only: solute_seed
       use soilhydraulics_mod,         only: soilwater_seed
-      use seed_state_from_config_mod, only: seed_state_from_config
       use timecontrol_mod,            only: timecontrol_init, itertime_init
       use csv_output,                 only: csv_output_init
 
@@ -101,9 +91,10 @@ contains
       ! Iteration / timing statistics.
       call itertime_init(state)
 
-      ! STRANGLER — bulk seeding adapter (state%timecontrol + cross-subsystem
-      ! exceptions). Shrinks as typed schema slots cover more fields.
-      call seed_state_from_config(config, state)
+      ! Timecontrol seeding (formerly the last live line in seed_state_from_config).
+      ! Must run BEFORE crop%init and timecontrol_init; crop%init provides croptype
+      ! which timecontrol_init reads.
+      call state%timecontrol%init(config%simulation, config%general, config%drain)
 
       ! Crop seeding must run BEFORE timecontrol_init because
       ! timecontrol_init reads state%crop%common%croptype(icrop).

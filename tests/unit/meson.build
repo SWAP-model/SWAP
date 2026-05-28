@@ -127,7 +127,6 @@ if get_option('enable_pfunit')
         '../../src/io/toml/load_swap_config.f90',
         '../../src/io/toml/load_swap_config_string.f90',
         '../../src/io/toml/write_swap_config.f90',
-        '../../src/io/toml/seed_state_from_config.f90',
         'io/toml/chdir_helper.f90',
         # swap_mod.f90 (added Task 3) needs the full compute-module chain compiled in the test binary
         # [GR-SOIL 2026-05-27] do_ln_trans.f90 deleted; module doln folded back into dormant sptabulated.f90
@@ -266,7 +265,6 @@ if get_option('enable_pfunit')
         'io/toml/test_read_cropfixed_toml.pf',
         'io/toml/test_read_cropgrass_toml.pf',
         'io/toml/test_read_cropwofost_toml.pf',
-        'io/toml/test_seed_state_from_config.pf',
         'io/toml/test_load_swap_config.pf',
         'io/toml/test_hupselbrook_loads.pf',
         'io/toml/test_hupselbrook_roundtrip.pf',
