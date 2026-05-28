@@ -34,6 +34,7 @@
 module atmosphere_state_mod
    use, intrinsic :: iso_fortran_env, only: real64
    use swap_array_dimensions, only: magrs, mayrs, mrain
+   use meteo_csv_mod, only: meteo_daily_table_t, meteo_detail_table_t, rain_events_table_t
    implicit none
    private
    public :: atmosphere_state_t
@@ -263,15 +264,12 @@ module atmosphere_state_mod
       integer :: ad(mrain) = 0  !! day-of-month per meteo-file day
       integer :: am(mrain) = 0  !! month per meteo-file day
 
-      ! [GR-IO 2026-05-25 Phase 3] Pre-loaded CSV data caches.
-      ! Adapter (config_to_variables) loads the CSV files once at init;
-      ! per-year extractors in readmeteo.f90 slice these caches by date.
-      integer :: nmetcsv = 0  !! row count of daily meteo CSV cache
-      real(real64), allocatable :: metcsv_dat(:,:)  !! daily meteo CSV cache (rows × 9 cols)
-      integer :: nmetcsv_det = 0  !! row count of detailed (sub-daily) meteo CSV cache
-      real(real64), allocatable :: metcsv_det(:,:)  !! detailed meteo CSV cache (rows × 7 cols)
-      integer :: nraincsv = 0  !! row count of rain events CSV cache
-      real(real64), allocatable :: raincsv_dat(:,:)  !! rain events CSV cache (rows × 2 cols)
+      ! [METEO-TYPED-CSV 2026-05-28] Typed CSV table records replace the
+      ! raw (:,:) caches. Per-year extractors in readmeteo.f90 use
+      ! %year_window(year, i1, i2) + %rows(i1:i2)%field accessors.
+      type(meteo_daily_table_t)  :: meteo         !! daily meteo CSV cache
+      type(meteo_detail_table_t) :: meteo_detail  !! sub-daily meteo CSV cache (swmetdetail=1)
+      type(rain_events_table_t)  :: rain_events   !! rain events CSV cache (swrain=3)
 
    contains
       procedure :: init => atmosphere_state_init
@@ -339,105 +337,41 @@ contains
       self%cfevappond = config%meteo%evaporation%cfevappond
       self%rsoil      = config%soil%rsoil
 
-      ! [GR-SEED 2026-05-25 Task 2] Meteo CSV caches — pre-load once at init.
-      ! All metfile extensions other than .csv are rejected by
-      ! meteorology_config_validate (ADR 0014). The `.csv` guard below
-      ! is defense-in-depth — local lowercase copy avoids mutating config.
+      ! [METEO-TYPED-CSV 2026-05-28] Three typed table loads. Each owns
+      ! its schema; validation is inline in load(); is_loaded flag
+      ! distinguishes "not requested" from "empty".
       block
-         use csv_reader_mod, only: read_csv_table
-         use error_mod,      only: error_collection_t
+         use error_mod, only: error_collection_t
          character(len=300) :: metfile_lc, csvpath
-         character(len=9)   :: hdr(9)
-         real(8), allocatable :: tbl(:,:)
          type(error_collection_t) :: errs
-         integer :: r
 
          metfile_lc = ''
-         if (allocated(config%meteo%metfile))  metfile_lc = config%meteo%metfile
+         if (allocated(config%meteo%metfile)) metfile_lc = config%meteo%metfile
          call lowerc(metfile_lc)
 
          if (index(trim(metfile_lc), '.csv') > 0) then
-            hdr(1) = 'date     '
-            hdr(2) = 'rad      '
-            hdr(3) = 'tmin     '
-            hdr(4) = 'tmax     '
-            hdr(5) = 'hum      '
-            hdr(6) = 'wind     '
-            hdr(7) = 'rain     '
-            hdr(8) = 'etref    '
-            hdr(9) = 'wet      '
             csvpath = trim(config%general%pathatm) // trim(metfile_lc)
-            call read_csv_table(trim(csvpath), hdr, tbl, errs)
+            call self%meteo%load(trim(csvpath), errs)
             call errs%abort_if_fatal()
-            self%nmetcsv = size(tbl, 1)
-            if (allocated(self%metcsv_dat)) deallocate(self%metcsv_dat)
-            allocate(self%metcsv_dat(self%nmetcsv, 9))
-            do r = 1, self%nmetcsv
-               self%metcsv_dat(r, :) = tbl(r, :)
-            end do
+         end if
+
+         if (config%meteo%swmetdetail == 1) then
+            if (allocated(config%meteo%detail_file) .and. &
+                len_trim(config%meteo%detail_file) > 0) then
+               csvpath = trim(config%general%pathatm) // trim(config%meteo%detail_file)
+               call self%meteo_detail%load(trim(csvpath), errs)
+               call errs%abort_if_fatal()
+            end if
+         end if
+
+         if (config%meteo%swrain == 3 .and. allocated(config%meteo%rain_events_file)) then
+            if (len_trim(config%meteo%rain_events_file) > 0) then
+               csvpath = trim(config%general%pathatm) // trim(config%meteo%rain_events_file)
+               call self%rain_events%load(trim(csvpath), errs)
+               call errs%abort_if_fatal()
+            end if
          end if
       end block
-
-      ! Detail meteo CSV (swmetdetail=1 + detail_file allocated).
-      ! The detail_file required-when-swmetdetail=1 check is in
-      ! meteorology_config_validate (SS-5 follow-up M2); the allocation
-      ! guard below is defense-in-depth only.
-      if (config%meteo%swmetdetail == 1) then
-         if (allocated(config%meteo%detail_file) .and. &
-             len_trim(config%meteo%detail_file) > 0) then
-            block
-               use csv_reader_mod, only: read_csv_table
-               use error_mod,      only: error_collection_t
-               character(len=300) :: csvpath
-               character(len=8)   :: hdr(7)
-               real(8), allocatable :: tbl(:,:)
-               type(error_collection_t) :: errs
-               integer :: r
-               hdr(1) = 'datetime'
-               hdr(2) = 'record  '
-               hdr(3) = 'rad     '
-               hdr(4) = 'temp    '
-               hdr(5) = 'hum     '
-               hdr(6) = 'wind    '
-               hdr(7) = 'rain    '
-               csvpath = trim(config%general%pathatm) // trim(config%meteo%detail_file)
-               call read_csv_table(trim(csvpath), hdr, tbl, errs)
-               call errs%abort_if_fatal()
-               self%nmetcsv_det = size(tbl, 1)
-               if (allocated(self%metcsv_det)) deallocate(self%metcsv_det)
-               allocate(self%metcsv_det(self%nmetcsv_det, 7))
-               do r = 1, self%nmetcsv_det
-                  self%metcsv_det(r, :) = tbl(r, :)
-               end do
-            end block
-         end if
-      end if
-
-      ! Rain events CSV (swrain=3 + rain_events_file allocated).
-      if (config%meteo%swrain == 3 .and. allocated(config%meteo%rain_events_file)) then
-         if (len_trim(config%meteo%rain_events_file) > 0) then
-            block
-               use csv_reader_mod, only: read_csv_table
-               use error_mod,      only: error_collection_t
-               character(len=300) :: csvpath
-               character(len=8)   :: hdr(2)
-               real(8), allocatable :: tbl(:,:)
-               type(error_collection_t) :: errs
-               integer :: r
-               hdr(1) = 'datetime'
-               hdr(2) = 'amount  '
-               csvpath = trim(config%general%pathatm) // trim(config%meteo%rain_events_file)
-               call read_csv_table(trim(csvpath), hdr, tbl, errs)
-               call errs%abort_if_fatal()
-               self%nraincsv = size(tbl, 1)
-               if (allocated(self%raincsv_dat)) deallocate(self%raincsv_dat)
-               allocate(self%raincsv_dat(self%nraincsv, 2))
-               do r = 1, self%nraincsv
-                  self%raincsv_dat(r, :) = tbl(r, :)
-               end do
-            end block
-         end if
-      end if
 
       ! Snow scalars.
       self%TePrRain = config%meteo%snow%teprrain

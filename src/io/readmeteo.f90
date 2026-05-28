@@ -264,30 +264,26 @@
       character(len=300) messag
       integer   i,ic,ifnd
       real(8)   vsmall
-      ! CSV-path locals
-      integer  :: jday
-      external    jday
-      integer, parameter :: jd1900 = 2415020
-      real(8)  :: t_jan1, t_dec31, tfrac
+      real(8)   tfrac
 
       vsmall = 1.0d-8
       yearmeteo = state%timecontrol%yearmeteo
 
 !========================= CSV path (only supported, ADR 0014) =========
       ! Extract current year's events from the pre-loaded cache.
-      t_jan1  = real(jday(yearmeteo,  1,  1) - jd1900, 8)
-      t_dec31 = real(jday(yearmeteo, 12, 31) - jd1900, 8) + 1.0d0
-
       ! Store daily precipitation amount in rainamount and timing in raintimearray.
       ifnd = 0
-      do i = 1, state%atmosphere%nraincsv
-         if (state%atmosphere%raincsv_dat(i,1) >= t_jan1 - 0.5d0 .and. &
-     &       state%atmosphere%raincsv_dat(i,1) <  t_dec31 + 0.5d0) then
-            ifnd = ifnd + 1
-            state%atmosphere%raintimearray(ifnd) = state%atmosphere%raincsv_dat(i,1)
-            state%atmosphere%rainamount(ifnd)    = state%atmosphere%raincsv_dat(i,2)
+      block
+         integer :: i1, i2, k
+         call state%atmosphere%rain_events%year_window(yearmeteo, i1, i2)
+         if (i1 > 0) then
+            do k = i1, i2
+               ifnd = ifnd + 1
+               state%atmosphere%raintimearray(ifnd) = state%atmosphere%rain_events%rows(k)%datetime
+               state%atmosphere%rainamount(ifnd)    = state%atmosphere%rain_events%rows(k)%amount
+            end do
          end if
-      end do
+      end block
 
       if (ifnd == 0) then
          call fatalerr_collected('ReadRainEvents', &
@@ -337,7 +333,7 @@
 ! contract: arad/atmn/atmx/ahum/awin/arai/aetr/ad/am/daynrfirst/daynrlast/
 ! timjan1/ifnd are all set so ReadMeteoYear's post-call validation is unaffected.
 ! Canonical buffer column order (1-based):
-!   1: date (days since JD 1900, same convention as metcsv_dat col 1)
+!   1: date (days since JD 1900, csv_reader epoch — see meteo_daily_table_t)
 !   2: rain        (mm/d  → arai)
 !   3: tmin        (deg C → atmn)
 !   4: tmax        (deg C → atmx)
@@ -367,7 +363,7 @@ external               jday
 associate (atmo => state%atmosphere, &
            time => state%timecontrol)
 
-! Year boundaries in days-since-jd1900 (same convention as metcsv_dat)
+! Year boundaries in days-since-jd1900 (csv_reader epoch — see meteo_daily_table_t)
 t_jan1  = real(jday(time%yearmeteo,  1,  1) - jd1900, 8)
 t_dec31 = real(jday(time%yearmeteo, 12, 31) - jd1900, 8)
 
@@ -428,7 +424,7 @@ end subroutine read_meteo_from_external_buffer_year
 
 
 ! SUBROUTINE: MeteoCSVYear
-! Extract one year's daily meteo from the pre-loaded metcsv_dat cache.
+! Extract one year's daily meteo from the typed meteo table.
 ! Called unconditionally by ReadMeteoYear (the only supported daily path
 ! after ADR 0014). After return, arad/atmn/atmx/
 ! ahum/awin/arai/aetr/wet/ad/am are populated so that the validation and
@@ -443,29 +439,12 @@ type(swap_state_t), intent(inout) :: state
 integer  :: i, i1, i2, n
 integer  :: datea(6)
 real(4)  :: fsec
-real(8)  :: t_jan1, t_dec31, tval
-! Julian-day epoch used by csv_reader: JD - 2415020
-integer, parameter :: jd1900 = 2415020
-! Forward declaration: jday is defined later in this file.
-integer :: jday
-external jday
+real(8)  :: t_jan1, tval
 
 associate (atmo => state%atmosphere, &
            time => state%timecontrol)
 
-! Year boundaries in days-since-jd1900
-t_jan1  = real(jday(time%yearmeteo,  1,  1) - jd1900, 8)
-t_dec31 = real(jday(time%yearmeteo, 12, 31) - jd1900, 8)
-
-! Find row range for this year (metcsv_dat is sorted by date).
-i1 = 0; i2 = 0
-do i = 1, atmo%nmetcsv
-   if (atmo%metcsv_dat(i, 1) >= t_jan1 - 0.5d0 .and. &
-       atmo%metcsv_dat(i, 1) <= t_dec31 + 0.5d0) then
-      if (i1 == 0) i1 = i
-      i2 = i
-   end if
-end do
+call atmo%meteo%year_window(time%yearmeteo, i1, i2)
 
 if (i1 == 0) then
    call fatalerr_collected('MeteoCSVYear', &
@@ -476,23 +455,24 @@ end if
 n = i2 - i1 + 1
 ifnd = n
 
-! Populate per-day arrays.
-atmo%arad(1:n) = atmo%metcsv_dat(i1:i2, 2) * 1000.0d0   ! kJ/m2/d → J/m2/d
-atmo%atmn(1:n) = atmo%metcsv_dat(i1:i2, 3)
-atmo%atmx(1:n) = atmo%metcsv_dat(i1:i2, 4)
-atmo%ahum(1:n) = atmo%metcsv_dat(i1:i2, 5)
-atmo%awin(1:n) = atmo%metcsv_dat(i1:i2, 6)
-atmo%arai(1:n) = atmo%metcsv_dat(i1:i2, 7)
-atmo%aetr(1:n) = atmo%metcsv_dat(i1:i2, 8)
-atmo%wet(1:n)  = atmo%metcsv_dat(i1:i2, 9)
-
-! Backfill ad/am from the date column (days-since-jd1900 → month/day).
-! ReadMeteoYear's validation code uses am(i)/ad(i) to build raintimearray.
+! Populate per-day arrays from typed rows.
 do i = 1, n
-   call days1900_to_md(nint(atmo%metcsv_dat(i1+i-1, 1)), atmo%am(i), atmo%ad(i))
+   atmo%arad(i) = atmo%meteo%rows(i1+i-1)%rad * 1000.0d0   ! kJ/m2/d → J/m2/d
+   atmo%atmn(i) = atmo%meteo%rows(i1+i-1)%tmin
+   atmo%atmx(i) = atmo%meteo%rows(i1+i-1)%tmax
+   atmo%ahum(i) = atmo%meteo%rows(i1+i-1)%hum
+   atmo%awin(i) = atmo%meteo%rows(i1+i-1)%wind
+   atmo%arai(i) = atmo%meteo%rows(i1+i-1)%rain
+   atmo%aetr(i) = atmo%meteo%rows(i1+i-1)%etref
+   atmo%wet(i)  = atmo%meteo%rows(i1+i-1)%wet
 end do
 
-! daynrfirst / daynrlast via existing DTARDP, matching ReadMeteoYear logic.
+! Backfill ad/am from the date column.
+do i = 1, n
+   call days1900_to_md(nint(atmo%meteo%rows(i1+i-1)%date), atmo%am(i), atmo%ad(i))
+end do
+
+! daynrfirst / daynrlast (unchanged logic).
 datea = 0; fsec = 0.0
 datea(1) = time%yearmeteo; datea(2) = 1; datea(3) = 1
 call dtardp(datea, fsec, t_jan1)
@@ -511,7 +491,7 @@ end subroutine MeteoCSVYear
 
 
 ! SUBROUTINE: MeteoCSVDetYear
-! Extract one year's sub-daily meteo from the pre-loaded metcsv_det cache.
+! Extract one year's sub-daily meteo from the typed meteo_detail table.
 ! Called by ReadMeteoYear when swmetdetail==1 (the only supported sub-daily
 ! path after ADR 0014).
 ! Populates dettime, detrecord, detrad, dettav, dethum, detwind, detrain.
@@ -524,35 +504,12 @@ implicit none
 integer, intent(out) :: ifnd
 type(swap_state_t), intent(inout) :: state
 
-integer, parameter :: jd1900 = 2415020
-integer :: jday
-external jday
-
 integer  :: i, i1, i2, n
-real(8)  :: t_jan1, t_jan1_next
 
 associate (atmo => state%atmosphere, &
            time => state%timecontrol)
 
-! Year boundaries in days-since-jd1900.
-! All sub-daily timestamps for yearmeteo satisfy:
-!   t_jan1 <= timestamp < t_jan1_next
-t_jan1      = real(jday(time%yearmeteo,   1, 1) - jd1900, 8)
-t_jan1_next = real(jday(time%yearmeteo+1, 1, 1) - jd1900, 8)
-
-! Scan cache for this year (cache is sorted by datetime).
-! Half-open interval [t_jan1, t_jan1_next) — sub-daily timestamps are
-! continuous fractional days, not whole-day integers, so MeteoCSVYear's
-! ±0.5-day slack would mis-bucket Dec 31 noon-to-midnight into the next
-! year. Timestamps are derived from exact integer-second arithmetic in
-! parse_iso_datetime, so no FP slack is needed.
-i1 = 0; i2 = 0
-do i = 1, atmo%nmetcsv_det
-   if (atmo%metcsv_det(i,1) >= t_jan1 .and. atmo%metcsv_det(i,1) < t_jan1_next) then
-      if (i1 == 0) i1 = i
-      i2 = i
-   end if
-end do
+call atmo%meteo_detail%year_window(time%yearmeteo, i1, i2)
 
 if (i1 == 0) then
    call fatalerr_collected('MeteoCSVDetYear', &
@@ -568,8 +525,7 @@ if (n > NMETFILE) then
 end if
 ifnd = n
 
-! Allocate state-side detail arrays on first use (NMETFILE-sized for parity
-! with the retired bare globals).
+! Allocate state-side detail arrays on first use (NMETFILE-sized for parity).
 if (.not. allocated(atmo%dettime)) then
    allocate(atmo%dettime(NMETFILE))
    allocate(atmo%detrecord(NMETFILE))
@@ -580,15 +536,15 @@ if (.not. allocated(atmo%dettime)) then
    allocate(atmo%detrain(NMETFILE))
 end if
 
-! Populate per-slot arrays.
-! metcsv_det columns: 1=datetime, 2=record, 3=rad(kJ), 4=temp, 5=hum, 6=wind, 7=rain
-atmo%dettime(1:n)   = atmo%metcsv_det(i1:i2, 1)
-atmo%detrecord(1:n) = nint(atmo%metcsv_det(i1:i2, 2))
-atmo%detrad(1:n)    = atmo%metcsv_det(i1:i2, 3) * 1000.0d0   ! kJ/m2 → J/m2
-atmo%dettav(1:n)    = atmo%metcsv_det(i1:i2, 4)
-atmo%dethum(1:n)    = atmo%metcsv_det(i1:i2, 5)
-atmo%detwind(1:n)   = atmo%metcsv_det(i1:i2, 6)
-atmo%detrain(1:n)   = atmo%metcsv_det(i1:i2, 7)
+do i = 1, n
+   atmo%dettime(i)   = atmo%meteo_detail%rows(i1+i-1)%datetime
+   atmo%detrecord(i) = atmo%meteo_detail%rows(i1+i-1)%record
+   atmo%detrad(i)    = atmo%meteo_detail%rows(i1+i-1)%rad * 1000.0d0   ! kJ → J
+   atmo%dettav(i)    = atmo%meteo_detail%rows(i1+i-1)%temp
+   atmo%dethum(i)    = atmo%meteo_detail%rows(i1+i-1)%hum
+   atmo%detwind(i)   = atmo%meteo_detail%rows(i1+i-1)%wind
+   atmo%detrain(i)   = atmo%meteo_detail%rows(i1+i-1)%rain
+end do
 
 end associate
 end subroutine MeteoCSVDetYear
