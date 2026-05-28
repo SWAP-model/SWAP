@@ -100,6 +100,7 @@ if get_option('enable_pfunit')
         '../../src/crop/cropwofost_init.f90',
         '../../src/crop/cropgrass_init.f90',
         '../../src/config/swap_config.f90',
+        '../../src/io/csv/csv_common.f90',
         '../../src/io/csv_reader.f90',
         '../../src/io/csv_writer.f90',
         '../../src/io/output_registry.f90',

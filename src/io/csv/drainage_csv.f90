@@ -41,7 +41,7 @@ contains
       type(error_collection_t),  intent(inout) :: errors
 
       real(real64), allocatable :: tbl(:,:)
-      character(len=8) :: hdr(2)
+      character(len=14) :: hdr(2)
       integer :: n, r
       character(len=200) :: msg
 
@@ -49,7 +49,7 @@ contains
       ! leave a stale .true. flag from a previous successful load.
       self%is_loaded = .false.
 
-      hdr = [character(len=8) :: 'date    ', 'level   ']
+      hdr = [character(len=14) :: 'date          ', 'level         ']
       call read_csv_table(trim(path), hdr, tbl, errors)
       if (errors%has_fatals()) return
 

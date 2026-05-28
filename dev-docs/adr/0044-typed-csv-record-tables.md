@@ -56,3 +56,31 @@ Six more CSV families to migrate using this template:
 
 Each migration closes a chunk of `state%cfg%X` reads in its subsystem,
 contributing to the broader `state%cfg` retirement arc.
+
+## Status update 2026-05-28
+
+- All 7 originally-scoped CSV families now using the pattern: meteo
+  (daily + detail + rain), drainage (owl), irrigation (fixed + ssdi),
+  nutrients (amendment), boundary (gwl + qbot + haquif + qhbot + hbot),
+  soil initial (h_profile + cml_profile). Note: `tsoil` was descoped
+  from the soil-initial family because the heat subsystem already handles
+  its initial profile via `read_heat_toml` (`cfg_heat%tsoil_init`), not
+  as a separate CSV file.
+- 14 typed table types across 6 modules
+  (`src/io/csv/{meteo,drainage,irrigation,nutrients,boundary,soil_init}_csv.f90`).
+- `days_since_1900` helper extracted to `src/io/csv/csv_common.f90` and
+  reused across all loaders; `days1900_to_md` likewise. Previously
+  duplicated in `meteo_csv`, `csv_reader`, `readmeteo`, and
+  `toml_field_helpers` (4 copies of the forward formula, 1 of the inverse).
+- Header-array length normalized to `character(len=14)` across all loaders
+  (longest column name across all families is 14: `volat_fraction` in
+  nutrients_csv; padding shorter names is safe because
+  `csv_reader_mod%validate_header` trims before comparison).
+- W3 fix (config-mutation in soilwater_state_init) landed in Family 5:
+  `config_soil` now `intent(in)`, `state%soilwater%h_init` typed table
+  owns the swinco=3 h-profile.
+- W4 fix (duplicate h_file CSV read) landed in Family 5.
+- Next arc: `state%cfg` pointer retirement — typed CSV tables on state
+  make this tractable.
+- Several `seed_state_from_config.f90` residuals (~10 cross-subsystem
+  writes) still standing — also part of the `state%cfg` retirement arc.

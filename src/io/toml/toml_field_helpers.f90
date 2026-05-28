@@ -9,6 +9,7 @@ module toml_field_helpers_mod
    use error_mod, only: error_collection_t,            &
                         ERR_PARSE_TYPE_MISMATCH,       &
                         ERR_PARSE_MISSING_REQUIRED
+   use csv_common_mod, only: days_since_1900
    implicit none
    private
 
@@ -193,25 +194,12 @@ contains
 
    !> Convert a TOML datetime to days-since-1900 (the legacy time axis).
    !! 1900-01-01 is JD 2415021 (but we use 2415020 for 1-based indexing).
+   !! Delegates to csv_common_mod%days_since_1900 (single source of truth).
    function parse_date_to_days1900(dtv) result(days)
       type(toml_datetime), intent(in) :: dtv
       real(real64) :: days
-      integer :: y, m, d, jd, jd1900
-      y = dtv%date%year
-      m = dtv%date%month
-      d = dtv%date%day
-      jd     = julian_day(y, m, d)
-      jd1900 = 2415020
-      days   = real(jd - jd1900, kind=real64)
+      days = real(days_since_1900(dtv%date%year, dtv%date%month, dtv%date%day), &
+                  kind=real64)
    end function parse_date_to_days1900
-
-   pure function julian_day(y, m, d) result(jd)
-      integer, intent(in) :: y, m, d
-      integer :: jd, a, yy, mm
-      a  = (14 - m) / 12
-      yy = y + 4800 - a
-      mm = m + 12 * a - 3
-      jd = d + (153 * mm + 2) / 5 + 365 * yy + yy / 4 - yy / 100 + yy / 400 - 32045
-   end function julian_day
 
 end module toml_field_helpers_mod

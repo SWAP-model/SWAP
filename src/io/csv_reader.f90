@@ -15,6 +15,7 @@ module csv_reader_mod
                         ERR_PARSE_MISSING_HEADER,   &
                         ERR_PARSE_HEADER_MISMATCH,  &
                         ERR_PARSE_ROW_SHAPE
+   use csv_common_mod,  only: days_since_1900
    implicit none
    private
 
@@ -264,7 +265,7 @@ contains
       character(len=*), intent(in)  :: s
       real(real64),     intent(out) :: days
       logical :: ok
-      integer :: y, m, d, ios, jd, jd1900
+      integer :: y, m, d, ios
       days = 0.0_real64
       ok = .false.
       if (len_trim(s) < 10) return
@@ -274,9 +275,7 @@ contains
       read(s(9:10), '(I2)', iostat=ios) d; if (ios /= 0) return
       if (m < 1 .or. m > 12) return
       if (d < 1 .or. d > 31) return
-      jd     = julian_day(y, m, d)
-      jd1900 = 2415020
-      days   = real(jd - jd1900, kind=real64)
+      days = real(days_since_1900(y, m, d), kind=real64)
       ok = .true.
    end function parse_iso_date
 
@@ -303,14 +302,5 @@ contains
       days = date_days + hh / 24.0_real64 + mi / 1440.0_real64 + ss / 86400.0_real64
       ok = .true.
    end function parse_iso_datetime
-
-   pure function julian_day(y, m, d) result(jd)
-      integer, intent(in) :: y, m, d
-      integer :: jd, a, yy, mm
-      a  = (14 - m) / 12
-      yy = y + 4800 - a
-      mm = m + 12 * a - 3
-      jd = d + (153 * mm + 2) / 5 + 365 * yy + yy / 4 - yy / 100 + yy / 400 - 32045
-   end function julian_day
 
 end module csv_reader_mod

@@ -70,13 +70,13 @@ contains
       type(error_collection_t), intent(inout) :: errors
 
       real(real64), allocatable :: tbl(:,:)
-      character(len=8) :: hdr(2)
+      character(len=14) :: hdr(2)
       integer :: n, r
 
       ! Reset so a failed load on a reused instance doesn't leave stale .true.
       self%is_loaded = .false.
 
-      hdr = [character(len=8) :: 'z       ', 'h       ']
+      hdr = [character(len=14) :: 'z             ', 'h             ']
       call read_csv_table(trim(path), hdr, tbl, errors)
       if (errors%has_fatals()) return
 
@@ -98,13 +98,13 @@ contains
       type(error_collection_t),   intent(inout) :: errors
 
       real(real64), allocatable :: tbl(:,:)
-      character(len=8) :: hdr(2)
+      character(len=14) :: hdr(2)
       integer :: n, r
 
       ! Reset so a failed load on a reused instance doesn't leave stale .true.
       self%is_loaded = .false.
 
-      hdr = [character(len=8) :: 'z       ', 'cml     ']
+      hdr = [character(len=14) :: 'z             ', 'cml           ']
       call read_csv_table(trim(path), hdr, tbl, errors)
       if (errors%has_fatals()) return
 

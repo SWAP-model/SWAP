@@ -349,24 +349,22 @@ use meteo_buffer_mod, only: get_external_meteo_value, get_external_meteo_n_days,
                             get_external_meteo_n_cols
 use swap_state_mod,   only: swap_state_t
 use swap_array_dimensions, only: NMETFILE
+use csv_common_mod,   only: days_since_1900, days1900_to_md
 implicit none
 integer,             intent(out)   :: ifnd
 type(swap_state_t),  intent(inout) :: state
 
-integer,  parameter :: jd1900 = 2415020
 integer             :: i, i1, i2, n, n_buf
 real(8)             :: t_jan1, t_dec31, tval, col1_val
 integer             :: datea(6)
 real(4)             :: fsec
-integer             :: jday
-external               jday
 
 associate (atmo => state%atmosphere, &
            time => state%timecontrol)
 
 ! Year boundaries in days-since-jd1900 (csv_reader epoch — see meteo_daily_table_t)
-t_jan1  = real(jday(time%yearmeteo,  1,  1) - jd1900, 8)
-t_dec31 = real(jday(time%yearmeteo, 12, 31) - jd1900, 8)
+t_jan1  = real(days_since_1900(time%yearmeteo,  1,  1), 8)
+t_dec31 = real(days_since_1900(time%yearmeteo, 12, 31), 8)
 
 n_buf = get_external_meteo_n_days()
 
@@ -431,8 +429,9 @@ end subroutine read_meteo_from_external_buffer_year
 ! ahum/awin/arai/aetr/wet/ad/am are populated so that the validation and
 ! rain-array init code in ReadMeteoYear works unchanged.
 subroutine MeteoCSVYear(ifnd, state)
-use error_mod, only: fatalerr_collected
+use error_mod,      only: fatalerr_collected
 use swap_state_mod, only: swap_state_t
+use csv_common_mod, only: days1900_to_md
 implicit none
 integer, intent(out) :: ifnd
 type(swap_state_t), intent(inout) :: state
@@ -551,32 +550,5 @@ end associate
 end subroutine MeteoCSVDetYear
 
 
-! Helper: convert days-since-jd1900 to (month, day) via inverse Julian Day.
-subroutine days1900_to_md(d1900, mm, dd)
-implicit none
-integer, intent(in)  :: d1900
-integer, intent(out) :: mm, dd
-integer :: jd, a, b, c, d, e, m
-integer, parameter :: jd1900 = 2415020
-jd = d1900 + jd1900
-a = jd + 32044
-b = (4*a + 3) / 146097
-c = a - (146097*b) / 4
-d = (4*c + 3) / 1461
-e = c - (1461*d) / 4
-m = (5*e + 2) / 153
-dd = e - (153*m + 2)/5 + 1
-mm = m + 3 - 12*(m/10)
-end subroutine days1900_to_md
-
-
-! Pure Julian Day Number for use inside MeteoCSVYear (avoids dependency on
-! csv_reader_mod's private julian_day).
-pure function jday(y, m, d) result(jd)
-integer, intent(in) :: y, m, d
-integer :: jd, a, yy, mm
-a  = (14 - m) / 12
-yy = y + 4800 - a
-mm = m + 12*a - 3
-jd = d + (153*mm + 2)/5 + 365*yy + yy/4 - yy/100 + yy/400 - 32045
-end function jday
+! days1900_to_md and jday relocated to csv_common_mod (src/io/csv/csv_common.f90).
+! All callers in this file use csv_common_mod via explicit use statements.

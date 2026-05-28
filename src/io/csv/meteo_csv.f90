@@ -14,6 +14,7 @@
 module meteo_csv_mod
    use iso_fortran_env, only: real64
    use error_mod,       only: error_collection_t
+   use csv_common_mod,  only: days_since_1900
    implicit none
    private
 
@@ -89,7 +90,7 @@ contains
       type(error_collection_t),   intent(inout) :: errors
 
       real(real64), allocatable :: tbl(:,:)
-      character(len=5) :: hdr(9)
+      character(len=14) :: hdr(9)
       integer :: n, r
       character(len=200) :: msg
 
@@ -97,8 +98,8 @@ contains
       ! leave a stale .true. flag from a previous successful load.
       self%is_loaded = .false.
 
-      hdr = [character(len=5) :: 'date ', 'rad  ', 'tmin ', 'tmax ', &
-             'hum  ', 'wind ', 'rain ', 'etref', 'wet  ']
+      hdr = [character(len=14) :: 'date          ', 'rad           ', 'tmin          ', 'tmax          ', &
+             'hum           ', 'wind          ', 'rain          ', 'etref         ', 'wet           ']
       call read_csv_table(trim(path), hdr, tbl, errors)
       if (errors%has_fatals()) return
 
@@ -169,15 +170,15 @@ contains
       type(error_collection_t),    intent(inout) :: errors
 
       real(real64), allocatable :: tbl(:,:)
-      character(len=8) :: hdr(7)
+      character(len=14) :: hdr(7)
       integer :: n, r
 
       ! Reset is_loaded so a failed load on a reused instance doesn't
       ! leave a stale .true. flag from a previous successful load.
       self%is_loaded = .false.
 
-      hdr = [character(len=8) :: 'datetime', 'record  ', 'rad     ', &
-             'temp    ', 'hum     ', 'wind    ', 'rain    ']
+      hdr = [character(len=14) :: 'datetime      ', 'record        ', 'rad           ', &
+             'temp          ', 'hum           ', 'wind          ', 'rain          ']
       call read_csv_table(trim(path), hdr, tbl, errors)
       if (errors%has_fatals()) return
 
@@ -233,14 +234,14 @@ contains
       type(error_collection_t),   intent(inout) :: errors
 
       real(real64), allocatable :: tbl(:,:)
-      character(len=8) :: hdr(2)
+      character(len=14) :: hdr(2)
       integer :: n, r
 
       ! Reset is_loaded so a failed load on a reused instance doesn't
       ! leave a stale .true. flag from a previous successful load.
       self%is_loaded = .false.
 
-      hdr = [character(len=8) :: 'datetime', 'amount  ']
+      hdr = [character(len=14) :: 'datetime      ', 'amount        ']
       call read_csv_table(trim(path), hdr, tbl, errors)
       if (errors%has_fatals()) return
 
@@ -292,19 +293,5 @@ contains
          end if
       end do
    end subroutine rain_events_table_year_window
-
-   ! Private helper — same epoch and convention as csv_reader's date col.
-   ! Fliegel/Van Flandern formula (JD), then subtract jd1900 = 2415020.
-   pure function days_since_1900(year, month, day) result(d)
-      integer, intent(in) :: year, month, day
-      integer :: d
-      integer :: a, y, m, jd
-      integer, parameter :: jd1900 = 2415020
-      a = (14 - month) / 12
-      y = year + 4800 - a
-      m = month + 12*a - 3
-      jd = day + (153*m + 2)/5 + 365*y + y/4 - y/100 + y/400 - 32045
-      d = jd - jd1900
-   end function days_since_1900
 
 end module meteo_csv_mod

@@ -111,6 +111,7 @@ sources = [
     'src/soil/WC_K_models_04_11.f90',
 
     # I/O
+    'src/io/csv/csv_common.f90',
     'src/io/csv/meteo_csv.f90',
     'src/io/csv/drainage_csv.f90',
     'src/io/csv/irrigation_csv.f90',

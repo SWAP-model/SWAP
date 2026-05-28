@@ -74,7 +74,7 @@ contains
       type(error_collection_t),    intent(inout) :: errors
 
       real(real64), allocatable :: tbl(:,:)
-      character(len=8) :: hdr(4)
+      character(len=14) :: hdr(4)
       integer :: n, r
       character(len=200) :: msg
 
@@ -82,7 +82,7 @@ contains
       ! leave a stale .true. flag from a previous successful load.
       self%is_loaded = .false.
 
-      hdr = [character(len=8) :: 'date    ', 'depth   ', 'conc    ', 'type    ']
+      hdr = [character(len=14) :: 'date          ', 'depth         ', 'conc          ', 'type          ']
       call read_csv_table(trim(path), hdr, tbl, errors)
       if (errors%has_fatals()) return
 
@@ -119,7 +119,7 @@ contains
       type(error_collection_t),   intent(inout) :: errors
 
       real(real64), allocatable :: tbl(:,:)
-      character(len=8) :: hdr(3)
+      character(len=14) :: hdr(3)
       integer :: n, r
       character(len=200) :: msg
 
@@ -127,7 +127,7 @@ contains
       ! leave a stale .true. flag from a previous successful load.
       self%is_loaded = .false.
 
-      hdr = [character(len=8) :: 'date    ', 'rate_f  ', 'amount_f']
+      hdr = [character(len=14) :: 'date          ', 'rate_f        ', 'amount_f      ']
       call read_csv_table(trim(path), hdr, tbl, errors)
       if (errors%has_fatals()) return
 
