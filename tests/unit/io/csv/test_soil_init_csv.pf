@@ -1,0 +1,78 @@
+! Tests for typed CSV record tables for soil initial-condition profiles.
+! Family 5 of the CSV-families arc (ADR 0044).
+
+@test
+subroutine test_h_profile_load_happy()
+   use funit
+   use iso_fortran_env,    only: real64
+   use soil_init_csv_mod,  only: h_profile_table_t
+   use error_mod,          only: error_collection_t
+
+   type(h_profile_table_t) :: tbl
+   type(error_collection_t) :: errors
+
+   call tbl%load('tests/unit/io/fixtures/csv_soil_h_profile.csv', errors)
+
+   @assertFalse(errors%has_errors())
+   @assertTrue(tbl%is_loaded)
+   @assertTrue(allocated(tbl%rows))
+   @assertEqual(3, size(tbl%rows))
+
+   ! Row 2: z=-30.0, h=-150.0
+   @assertEqual(-30.0_real64,  tbl%rows(2)%z, 1.0e-6_real64)
+   @assertEqual(-150.0_real64, tbl%rows(2)%h, 1.0e-6_real64)
+end subroutine test_h_profile_load_happy
+
+@test
+subroutine test_h_profile_load_missing_file()
+   use funit
+   use soil_init_csv_mod,  only: h_profile_table_t
+   use error_mod,          only: error_collection_t
+
+   type(h_profile_table_t) :: tbl
+   type(error_collection_t) :: errors
+
+   call tbl%load('tests/unit/io/fixtures/does_not_exist_h_profile.csv', errors)
+
+   @assertTrue(errors%has_errors())
+   @assertFalse(tbl%is_loaded)
+   @assertFalse(allocated(tbl%rows))
+end subroutine test_h_profile_load_missing_file
+
+@test
+subroutine test_cml_profile_load_happy()
+   use funit
+   use iso_fortran_env,    only: real64
+   use soil_init_csv_mod,  only: cml_profile_table_t
+   use error_mod,          only: error_collection_t
+
+   type(cml_profile_table_t) :: tbl
+   type(error_collection_t) :: errors
+
+   call tbl%load('tests/unit/io/fixtures/csv_soil_cml_profile.csv', errors)
+
+   @assertFalse(errors%has_errors())
+   @assertTrue(tbl%is_loaded)
+   @assertTrue(allocated(tbl%rows))
+   @assertEqual(3, size(tbl%rows))
+
+   ! Row 2: z=-30.0, cml=1.2
+   @assertEqual(-30.0_real64, tbl%rows(2)%z,   1.0e-6_real64)
+   @assertEqual(1.2_real64,   tbl%rows(2)%cml, 1.0e-6_real64)
+end subroutine test_cml_profile_load_happy
+
+@test
+subroutine test_cml_profile_load_missing_file()
+   use funit
+   use soil_init_csv_mod,  only: cml_profile_table_t
+   use error_mod,          only: error_collection_t
+
+   type(cml_profile_table_t) :: tbl
+   type(error_collection_t) :: errors
+
+   call tbl%load('tests/unit/io/fixtures/does_not_exist_cml_profile.csv', errors)
+
+   @assertTrue(errors%has_errors())
+   @assertFalse(tbl%is_loaded)
+   @assertFalse(allocated(tbl%rows))
+end subroutine test_cml_profile_load_missing_file

@@ -161,10 +161,8 @@ contains
       ! swinco==3 warm-restart: pond/pondini/dt/h-profile/atmosphere read
       ! from soil.initial. swinco<3: pondini/pond from soil.pondini;
       ! atmosphere already zero-init from %init above.
-      ! STRANGLER — the h-profile CSV re-read inside this branch depends
-      ! on state%soilwater%init having allocated state%soilwater%h above.
-      ! Fold into state%soilwater%init (pass h_file path through) or
-      ! split out a dedicated warm-restart helper.
+      ! [W4 fix 2026-05-28] h-profile no longer re-reads the CSV here;
+      ! state%soilwater%h_init is already populated by soilwater_state_init.
       if (config%soil%swinco == 3 .and. &
           allocated(config%soil%initial%h_file) .and. &
           len_trim(config%soil%initial%h_file) > 0) then
@@ -172,21 +170,16 @@ contains
          state%soilwater%pond    = config%soil%initial%pond
          ! soil.initial.dt supersedes simulation%numerical%dt for swinco=3
          state%timecontrol%dt = config%soil%initial%dt
+         ! [W4 fix 2026-05-28] No duplicate CSV read: h_profile already loaded into
+         ! state%soilwater%h_init by soilwater_state_init (Piece B). Copy h values here.
          block
-            use csv_reader_mod, only: read_csv_table
-            use error_mod,      only: error_collection_t
-            real(8), allocatable     :: tbl(:,:)
-            type(error_collection_t) :: errs
-            character(len=2)         :: hdr(2)
-            integer :: nrows, ki
-            hdr(1) = 'z '
-            hdr(2) = 'h '
-            call read_csv_table(trim(config%soil%initial%h_file), hdr, tbl, errs)
-            call errs%abort_if_fatal()
-            nrows = size(tbl, 1)
-            do ki = 1, min(nrows, size(state%soilwater%h))
-               state%soilwater%h(ki) = tbl(ki, 2)
-            end do
+            integer :: ki, nrows
+            if (state%soilwater%h_init%is_loaded) then
+               nrows = size(state%soilwater%h_init%rows)
+               do ki = 1, min(nrows, size(state%soilwater%h))
+                  state%soilwater%h(ki) = state%soilwater%h_init%rows(ki)%h
+               end do
+            end if
          end block
          ! atmosphere warm-restart fields (spev/saev not in config; stay zero).
          state%atmosphere%ssnow = config%soil%initial%ssnow

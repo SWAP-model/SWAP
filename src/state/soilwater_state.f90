@@ -47,6 +47,7 @@ module soilwater_state_mod
    use, intrinsic :: iso_fortran_env, only: real64
    use hydraulic_params_mod, only: vanGenuchten_params_t
    use swap_array_dimensions, only: MADAY, MABBC
+   use soil_init_csv_mod,     only: h_profile_table_t
    implicit none
    private
    public :: soilwater_state_t
@@ -208,6 +209,17 @@ module soilwater_state_mod
       ! 1 = pressure heads; 2 = hydrostatic equilibrium; 3 = warm-restart from CSV.
       integer :: swinco = 1
 
+      ! [W3 fix 2026-05-28] Typed initial pressure-head profile table.
+      ! Populated by soilwater_state_init from the h_file CSV ONLY when swinco == 3;
+      ! is_loaded == .false. for all other swinco values.  Replaces the former
+      ! mutation of config%soil%initial%z_init.  Consumed by:
+      !   swap_mod%swap_init_body  — copies h values into state%soilwater%h(:) (W4 fix).
+      !   soilhydraulics.f90      — uses rows(i)%z for the afgen depth axis (swinco=3
+      !                             consistency gate); the swinco=1 consumer of this
+      !                             table is currently unreachable (dead code, see
+      !                             W3/W4 comment there).
+      type(h_profile_table_t) :: h_init
+
       ! Cauchy bottom-boundary (swbotb=3) vertical-resistance switch.
       ! Dormant — no TOML writer; always 0 in the TOML pipeline.
       ! 0 = add the (modelled-profile) vertical resistance to rimlay; 1 = use rimlay alone.
@@ -329,8 +341,8 @@ contains
    !!   [Piece B] Soil scalar seeding from config_soil:
    !!     swsophy, swinco, flrunon (swrunon→bool), bdens (from soil.bdens or
    !!     soil.hydraulics.bdens, guarded alloc), swfrost;
-   !!     swinco=3 warm-restart h_file CSV → populates config_soil%initial%z_init
-   !!     (mutation of inout config_soil; consumed later by soilhydraulics.f90).
+   !!     swinco=3 warm-restart h_file CSV → self%h_init (W3 fix 2026-05-28:
+   !!     config_soil is now intent(in); config_soil%initial%z_init no longer written).
    !!   [Piece C] Bottom-boundary case dispatch (swbotb=1..5 CSV pre-loads)
    !!     via private seed_bottom_boundary(self, config_bb, pathwork) helper.
    !!
@@ -341,9 +353,9 @@ contains
    !!   state%surfacewater%pondmx/rsro/rsroexp  (soil section)
    !!
    !! Signature: (self, config_soil, config_bb, pathwork, numnod, numlay)
-   !!   config_soil — intent(inout): swinco=3 h_file CSV populates z_init.
-   !!   config_bb   — intent(in):   bottom_boundary switches + file names.
-   !!   pathwork    — intent(in):   working directory prefix for CSV paths.
+   !!   config_soil — intent(in):  read-only after W3 fix (swinco=3 h_file now → self%h_init).
+   !!   config_bb   — intent(in):  bottom_boundary switches + file names.
+   !!   pathwork    — intent(in):  working directory prefix for CSV paths.
    !!   numnod      — number of soil nodes (from CalcGrid).
    !!   numlay      — number of soil layers (from CalcGrid).
    !!
@@ -353,7 +365,7 @@ contains
       use bottom_boundary_config_mod, only: bottom_boundary_config_t
       use swap_array_dimensions,      only: maho
       class(soilwater_state_t),       intent(inout) :: self
-      type(soil_config_t),            intent(inout) :: config_soil  ! inout: swinco=3 h_file CSV populates config_soil%initial%z_init
+      type(soil_config_t),            intent(in)    :: config_soil  ! intent(in) after W3 fix: no longer mutated
       type(bottom_boundary_config_t), intent(in)    :: config_bb
       character(len=*),               intent(in)    :: pathwork
       integer,                        intent(in)    :: numnod
@@ -544,31 +556,19 @@ contains
          end do
       end if
 
-      ! [soil.initial] swinco=3 warm-restart: h_file CSV → config_soil%initial%z_init.
-      ! z_init is consumed later by soilhydraulics.f90 via state%cfg%soil%initial%z_init.
+      ! [W3 fix 2026-05-28] swinco=3 warm-restart: h_file CSV → self%h_init.
+      ! No longer mutates config_soil%initial%z_init (config is now read-only here).
+      ! Consumers: swap_mod copies h values; soilhydraulics.f90 reads rows(i)%z.
       ! Cross-subsystem writes retained in adapter (state%atmosphere%atmin7,
       ! state%solute%X). See [GR-SEED 2026-05-25 Task 8] adapter comment.
       if (config_soil%swinco == 3) then
          if (allocated(config_soil%initial%h_file) .and. &
              len_trim(config_soil%initial%h_file) > 0) then
             block
-               use csv_reader_mod,  only: read_csv_table
-               use error_mod,       only: error_collection_t
-               real(8), allocatable     :: tbl(:,:)
+               use error_mod, only: error_collection_t
                type(error_collection_t) :: errs
-               character(len=2)         :: hdr(2)
-               integer :: nrows, k
-               hdr(1) = 'z '
-               hdr(2) = 'h '
-               call read_csv_table(trim(config_soil%initial%h_file), hdr, tbl, errs)
+               call self%h_init%load(trim(config_soil%initial%h_file), errs)
                call errs%abort_if_fatal()
-               nrows = size(tbl, 1)
-               ! [GR-SOIL 2026-05-24] z_init in config; consumed by soilhydraulics.f90 via state%cfg.
-               if (allocated(config_soil%initial%z_init)) deallocate(config_soil%initial%z_init)
-               allocate(config_soil%initial%z_init(nrows))
-               do k = 1, nrows
-                  config_soil%initial%z_init(k) = tbl(k, 1)
-               end do
             end block
          end if
       end if

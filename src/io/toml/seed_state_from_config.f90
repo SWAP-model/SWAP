@@ -128,19 +128,21 @@ contains
             ! cfg_heat%tsoil_init directly (populated by read_heat_toml).
 
             ! Optional: initial concentration profile (Cml) — solute write, stays here.
+            ! [ADR 0044 Family 5] typed cml_profile_table_t (loader-only intermediate).
             if (config%solute%swsolu == 1) then
-               block
-                  use csv_reader_mod,  only: read_csv_table
-                  use error_mod,       only: error_collection_t
-                  real(8), allocatable     :: tbl(:,:)
-                  type(error_collection_t) :: errs
-                  character(len=3)         :: hdr(2)
-                  integer :: nrows, k
-                  hdr(1) = 'z  '
-                  hdr(2) = 'cml'
-                  call read_csv_table(trim(config%soil%initial%cml_file), hdr, tbl, errs)
+               cml_load: block
+                  use soil_init_csv_mod, only: cml_profile_table_t
+                  use error_mod,         only: error_collection_t
+                  type(cml_profile_table_t) :: cml_tbl
+                  type(error_collection_t)  :: errs
+                  integer :: k, nrows
+                  call cml_tbl%load(trim(config%soil%initial%cml_file), errs)
                   call errs%abort_if_fatal()
-                  nrows = size(tbl, 1)
+                  ! abort_if_fatal() returns only on success, so cml_tbl%is_loaded
+                  ! must be .true. here. Guard anyway as defense-in-depth in case
+                  ! the error model softens later (e.g. non-fatal recoverable errors).
+                  if (.not. cml_tbl%is_loaded) exit cml_load
+                  nrows = size(cml_tbl%rows)
                   state%solute%nconc = nrows
                   if (.not. allocated(state%solute%cml_init)) then
                      allocate(state%solute%cml_init(macp)); state%solute%cml_init = 0.0d0
@@ -149,10 +151,10 @@ contains
                      allocate(state%solute%zc_init(macp));  state%solute%zc_init  = 0.0d0
                   end if
                   do k = 1, nrows
-                     state%solute%zc_init(k)  = tbl(k, 1)
-                     state%solute%cml_init(k) = tbl(k, 2)
+                     state%solute%zc_init(k)  = cml_tbl%rows(k)%z
+                     state%solute%cml_init(k) = cml_tbl%rows(k)%cml
                   end do
-               end block
+               end block cml_load
             end if
          end if
       end if

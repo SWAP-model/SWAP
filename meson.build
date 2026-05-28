@@ -116,6 +116,7 @@ sources = [
     'src/io/csv/irrigation_csv.f90',
     'src/io/csv/nutrients_csv.f90',
     'src/io/csv/boundary_csv.f90',
+    'src/io/csv/soil_init_csv.f90',
     'src/io/csv_reader.f90',
     'src/io/csv_writer.f90',
     'src/io/output_registry.f90',

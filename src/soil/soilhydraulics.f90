@@ -956,13 +956,17 @@ contains
                  swbotb => state%soilwater%swbotb_runtime)
 
       if (soil%swinco.eq.1) then
-         ! Pressure head profile is input
-         ! z_init from state%cfg%soil%initial; h values already in soil%h
-         !   (seeded by swap_mod after soilwater_init reads h_file directly).
-         if (allocated(state%cfg%soil%initial%z_init)) then
-            do i = 1, size(state%cfg%soil%initial%z_init)
+         ! Pressure head profile is input.
+         ! [W3/W4 fix 2026-05-28] Migrated from state%cfg%soil%initial%z_init to
+         ! state%soilwater%h_init (typed h_profile_table_t). This block is inside
+         ! a `swinco.eq.1` branch but h_init is only populated when `swinco == 3`,
+         ! so it is unreachable today — preserved as-is for byte-identical
+         ! regression. Investigate / retire in a follow-up arc once the swinco
+         ! switch ladder is being refactored.
+         if (soil%h_init%is_loaded) then
+            do i = 1, size(soil%h_init%rows)
               tab(i*2)   = soil%h(i)
-              tab(i*2-1) = abs(state%cfg%soil%initial%z_init(i))
+              tab(i*2-1) = abs(soil%h_init%rows(i)%z)
             end do
             do i = 1, mesh%numnod
               soil%h(i) = afgen(tab,macp*2,abs(mesh%z(i)))
@@ -978,9 +982,9 @@ contains
         endif
       endif
       if (soil%swinco.eq.3) then
-        ! consistency gate uses size(z_init) via config.
-        if (allocated(state%cfg%soil%initial%z_init)) then
-           if (size(state%cfg%soil%initial%z_init).ne.mesh%numnod) then
+        ! [W3/W4 fix 2026-05-28] consistency gate now uses state%soilwater%h_init%rows.
+        if (soil%h_init%is_loaded) then
+           if (size(soil%h_init%rows).ne.mesh%numnod) then
              messag = 'Initial data are read from file (SWINCO=3) and '//  &
        &      'number of nodes/compartments is not consistent with NUMNOD'//&
        &      'must be corrected!'
