@@ -77,6 +77,7 @@ module drainage_mod
 
    public :: drainage
    public :: bocodrb, bocodre
+   public :: redistribute_qdra_over_discharge_layers
 
 contains
 
@@ -351,8 +352,7 @@ contains
       type(swap_state_t), intent(inout) :: state
 
       integer :: node, level
-      real(8) :: zCum, zTopDisLay(madr), difzTopDisLay(madr), ratio, ratiodz, sumqdr(madr), dh
-      integer :: nodeTopDisLay(madr)
+      real(8) :: dh
       character(len=33) :: messag
 
       associate (mesh => state%mesh,         &
@@ -430,48 +430,7 @@ contains
                               time%dt, drai%FacDpthInf, drai%owltab, drai%nowltab, time%t1900)
 
                   ! Redistribute qdrain with the new top boundary for discharge layers.
-                  if (drai%swdislay .eq. 2) then
-                     do level = 1, drai%nrlevs
-                        if (drai%swtopdislay(level) .eq. 1) then
-                           zTopDisLay(level) = drai%fTopDisLay(level)*soil%gwl +     &
-                                               (1.0d0 - drai%fTopDisLay(level))*(soil%gwl - dh)
-                        end if
-                     end do
-                  end if
-                  if (drai%swdislay .eq. 1 .or. drai%swdislay .eq. 2) then
-                     do level = 1, drai%nrlevs
-                        if (drai%swtopdislay(level) .eq. 1) then
-                           ! Find node number of the new top of the discharge layer.
-                           nodeTopDisLay(level) = 1
-                           zCum = -mesh%dz(1)
-                           do while (zTopDisLay(level) .lt. zCum)
-                              nodeTopDisLay(level) = nodeTopDisLay(level) + 1
-                              zCum = zCum - mesh%dz(nodeTopDisLay(level))
-                           end do
-                           ! Saturated fraction of the partial compartment at the water level.
-                           difzTopDisLay(level) = zTopDisLay(level) - zCum
-                           ratiodz       = difzTopDisLay(level)/mesh%dz(nodeTopDisLay(level))
-                           sumqdr(level) = ratiodz*drai%qdra(level, nodeTopDisLay(level))
-                           do node = nodeTopDisLay(level) + 1, mesh%numnod
-                              sumqdr(level) = sumqdr(level) + drai%qdra(level, node)
-                           end do
-                           if (dabs(sumqdr(level)) .lt. 1.0d-8) then
-                              ratio = 1.0d0
-                           else
-                              ratio = drai%qdrain(level)/sumqdr(level)
-                           end if
-                           ! Redistribute drain-water fluxes.
-                           do node = 1, nodeTopDisLay(level) - 1
-                              drai%qdra(level, node) = 0.0d0
-                           end do
-                           drai%qdra(level, nodeTopDisLay(level)) =                    &
-                              drai%qdra(level, nodeTopDisLay(level))*ratio*ratiodz
-                           do node = nodeTopDisLay(level) + 1, mesh%numnod
-                              drai%qdra(level, node) = drai%qdra(level, node)*ratio
-                           end do
-                        end if
-                     end do
-                  end if
+                  call redistribute_qdra_over_discharge_layers(state, dh)
                else
                   ! Drainage flux through lowest compartment only.
                   do level = 1, drai%nrlevs
@@ -721,5 +680,64 @@ contains
 
       end associate
     end subroutine bocodre
+
+   !> Redistribute drai%qdra over compartments for moving discharge-layer tops.
+   !! Mutates drai%qdra in place based on swdislay (1=user-specified top,
+   !! 2=dynamic from gwl and dh). No-op when swtopdislay(level) /= 1.
+   subroutine redistribute_qdra_over_discharge_layers(state, dh)
+      use swap_array_dimensions, only: madr
+      use swap_state_mod,        only: swap_state_t
+      implicit none
+      type(swap_state_t), intent(inout) :: state
+      real(8),            intent(in)    :: dh
+
+      integer :: level, node, nodeTopDisLay(madr)
+      real(8) :: zCum, zTopDisLay(madr), difzTopDisLay(madr), ratio, ratiodz, sumqdr(madr)
+
+      associate (mesh => state%mesh, drai => state%drainage, soil => state%soilwater)
+         if (drai%swdislay .eq. 2) then
+            do level = 1, drai%nrlevs
+               if (drai%swtopdislay(level) .eq. 1) then
+                  zTopDisLay(level) = drai%fTopDisLay(level)*soil%gwl +     &
+                                      (1.0d0 - drai%fTopDisLay(level))*(soil%gwl - dh)
+               end if
+            end do
+         end if
+         if (drai%swdislay .eq. 1 .or. drai%swdislay .eq. 2) then
+            do level = 1, drai%nrlevs
+               if (drai%swtopdislay(level) .eq. 1) then
+                  ! Find node number of the new top of the discharge layer.
+                  nodeTopDisLay(level) = 1
+                  zCum = -mesh%dz(1)
+                  do while (zTopDisLay(level) .lt. zCum)
+                     nodeTopDisLay(level) = nodeTopDisLay(level) + 1
+                     zCum = zCum - mesh%dz(nodeTopDisLay(level))
+                  end do
+                  ! Saturated fraction of the partial compartment at the water level.
+                  difzTopDisLay(level) = zTopDisLay(level) - zCum
+                  ratiodz       = difzTopDisLay(level)/mesh%dz(nodeTopDisLay(level))
+                  sumqdr(level) = ratiodz*drai%qdra(level, nodeTopDisLay(level))
+                  do node = nodeTopDisLay(level) + 1, mesh%numnod
+                     sumqdr(level) = sumqdr(level) + drai%qdra(level, node)
+                  end do
+                  if (dabs(sumqdr(level)) .lt. 1.0d-8) then
+                     ratio = 1.0d0
+                  else
+                     ratio = drai%qdrain(level)/sumqdr(level)
+                  end if
+                  ! Redistribute drain-water fluxes.
+                  do node = 1, nodeTopDisLay(level) - 1
+                     drai%qdra(level, node) = 0.0d0
+                  end do
+                  drai%qdra(level, nodeTopDisLay(level)) =                    &
+                     drai%qdra(level, nodeTopDisLay(level))*ratio*ratiodz
+                  do node = nodeTopDisLay(level) + 1, mesh%numnod
+                     drai%qdra(level, node) = drai%qdra(level, node)*ratio
+                  end do
+               end if
+            end do
+         end if
+      end associate
+   end subroutine redistribute_qdra_over_discharge_layers
 
 end module drainage_mod
