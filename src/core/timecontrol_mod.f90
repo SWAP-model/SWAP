@@ -6,7 +6,8 @@
 !! flZeroCumu are owned by state%timecontrol; bare globals
 !! flzerointr/flzerocumu retire in Task 12 (variables.f90/initialize.f90).
 module timecontrol_mod
-   use swap_state_mod, only: swap_state_t
+   use swap_state_mod,  only: swap_state_t
+   use swap_config_mod, only: swap_config_t
    implicit none
    private
    public :: timecontrol_init, timecontrol_advance, &
@@ -15,16 +16,19 @@ module timecontrol_mod
 
 contains
 
-   subroutine timecontrol_init(state)
+   subroutine timecontrol_init(state, config)
       ! [GR-CROP C1] flCropCalendar/icrop: dual-write to both legacy global + state%crop%common%X
       ! [SS-GR-FINAL B8] DEFERRED: all symbols — init-path config/flags; no state home yet; Phase C3
       use swap_log, only: log_warn
       ! [GR-CROP 2026-05-25] flCropCalendar/icrop/cropstart/project → state/config reads.
       ! [GR-TIME 2026-05-25] swirfix/swsnow/swhea/swsolu/swetsine/nirri now read
       ! from state%cfg/state%crop%irrigation; bare-global use-variables retired.
+      ! [state%cfg retirement 2026-05-28] config arg added; all state%cfg reads
+      ! replaced with direct config%X reads; swmetdetail/swrain/swssdi snapshotted.
       use error_mod, only: fatalerr_collected
       implicit none
-      type(swap_state_t), intent(inout) :: state
+      type(swap_state_t),          intent(inout) :: state
+      type(swap_config_t), target, intent(in)    :: config
 
       ! local variables
       character(len=200) :: messag
@@ -37,8 +41,8 @@ contains
       associate (time      => state%timecontrol,   &
                  soil      => state%soilwater,     &
                  crop      => state%crop,          &
-                 meteo_cfg => state%cfg%meteo,     &
-                 crop_cfg  => state%cfg%crop)
+                 meteo_cfg => config%meteo,        &
+                 crop_cfg  => config%crop)
 
 ! === initialization ===================================================
 
@@ -83,16 +87,21 @@ contains
       endif
       time%fletsine = .false.
       if (meteo_cfg%swetsine .eq. 1) time%fletsine = .true.
-      if (state%cfg%irrigation%swirfix .eq. 1) time%flIrrigate = .true.
+      if (config%irrigation%swirfix .eq. 1) time%flIrrigate = .true.
       ! flDrain and flSurfaceWater are seeded by timecontrol_state_init
       ! (called from swap_init_body via state%timecontrol%init) which
       ! reads config_drain%swdra directly — no state%cfg read needed here.
       time%flTemperature = .false.
-      if (state%cfg%heat%swhea .eq. 1) time%flTemperature = .true.
+      if (config%heat%swhea .eq. 1) time%flTemperature = .true.
       time%flSnow = .false.
       if (meteo_cfg%snow%swsnow .eq. 1) time%flSnow = .true.
       time%flSolute = .false.
-      if (state%cfg%solute%swsolu .eq. 1) time%flSolute = .true.
+      if (config%solute%swsolu .eq. 1) time%flSolute = .true.
+
+! --- snapshot config switches for runtime reads in timecontrol_advance
+      time%swmetdetail = config%meteo%swmetdetail
+      time%swrain      = config%meteo%swrain
+      time%swssdi      = config%irrigation%swssdi
 
 ! --- initialize counters ----------------------------
       time%isteps = 0
@@ -132,7 +141,7 @@ contains
 ! --- output to screen
       if (time%swscre .eq. 2) then
         filtext = 'Screen output of daynumbers'
-        call writehead (5,1,'screen',filtext,state%cfg%general%project)
+        call writehead (5,1,'screen',filtext,config%general%project)
         call dtdpst ('year-month-day', time%tstart, time%date)
         write (*,'(2x,2a)') 'First day of simulation:  ', time%date
         call dtdpst ('year-month-day', time%tend, time%date)
@@ -248,8 +257,7 @@ contains
       associate (time      => state%timecontrol,   &
                  soil      => state%soilwater,     &
                  crop      => state%crop,          &
-                 atmo      => state%atmosphere,    &
-                 meteo_cfg => state%cfg%meteo)
+                 atmo      => state%atmosphere)
 
 ! === next time step ===================================================
 
@@ -379,7 +387,7 @@ contains
          end if
 
 ! 2.7.4  precipitation event may limit timestep
-         if (meteo_cfg%swmetdetail.eq.0 .and. meteo_cfg%swrain.gt.0) then
+         if (time%swmetdetail.eq.0 .and. time%swrain.gt.0) then
 
 !        next rainevent! Set new values
            if (atmo%raintimearray(time%rainrec) .lt. time%tcum + dtCrit) then
@@ -478,7 +486,7 @@ contains
       endif
 
 !     SSDI: end of subsurface irirgation event reached; reset
-      if (state%cfg%irrigation%swssdi == 1 .and. &
+      if (time%swssdi == 1 .and. &
           time%tcum - int(time%tcum) + dtCrit > crop%irrigation%dt_SSDI_event) then
          call ssdi_irrigation_reset(state)  ! [SS-SWC S-2.12B]
       end if

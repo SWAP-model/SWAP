@@ -210,6 +210,12 @@ module timecontrol_state_mod
       logical :: flZeroIntr     = .false.  !! reset gate: intermediate accumulators
       logical :: flZeroCumu     = .false.  !! reset gate: cumulative accumulators
 
+      ! [state%cfg retirement 2026-05-28] Config snapshots for runtime reads
+      ! in timecontrol_advance. Snapshotted once at init; not changed during run.
+      integer :: swmetdetail = 0  !! snapshot of config%meteo%swmetdetail
+      integer :: swrain      = 0  !! snapshot of config%meteo%swrain
+      integer :: swssdi      = 0  !! snapshot of config%irrigation%swssdi
+
    contains
       procedure :: init => timecontrol_state_init
    end type timecontrol_state_t

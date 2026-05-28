@@ -101,7 +101,7 @@ contains
       call state%crop%init(config%crop, config%meteo, config%general%pathwork)
 
       ! Time variables and switches/flags.
-      call timecontrol_init(state)
+      call timecontrol_init(state, config)
 
       ! Grid parameters (writes directly to state%mesh).
       call state%mesh%init(config%soil)
