@@ -590,28 +590,21 @@ contains
       select case (config_bb%swbotb)
       case (1)
          block
-            use iso_fortran_env, only: real64
-            use csv_reader_mod, only: read_csv_table
+            use boundary_csv_mod, only: gwl_table_t
             use error_mod, only: error_collection_t
-            real(real64), allocatable :: csv_table(:,:)
-            type(error_collection_t)  :: csv_errs
-            integer :: k, nrows
-            character(len=4) :: hdr(2)
-            hdr(1) = 'date'
-            hdr(2) = 'gwl '
-            call read_csv_table( &
-               trim(pathwork)//trim(config_bb%gwl_file), &
-               hdr, csv_table, csv_errs)
+            type(gwl_table_t)        :: loader
+            type(error_collection_t) :: csv_errs
+            integer :: k
+            call loader%load(trim(pathwork)//trim(config_bb%gwl_file), csv_errs)
             call csv_errs%abort_if_fatal()
-            if (allocated(csv_table)) then
+            if (loader%is_loaded) then
                if (.not. allocated(self%gwltab)) then
                   allocate(self%gwltab(2*MABBC))
                   self%gwltab = 0.0d0
                end if
-               nrows = size(csv_table, 1)
-               do k = 1, nrows
-                  self%gwltab(k*2 - 1) = csv_table(k, 1)
-                  self%gwltab(k*2)     = csv_table(k, 2)
+               do k = 1, min(size(loader%rows), MABBC)
+                  self%gwltab(k*2 - 1) = loader%rows(k)%date
+                  self%gwltab(k*2)     = loader%rows(k)%gwl
                end do
             end if
          end block
@@ -622,28 +615,21 @@ contains
          ! [GR-IO 2026-05-25 Phase 6 Step 3] sinmax/sinamp/sinave legacy mirrors dropped
          if (config_bb%sw2 == 2) then
             block
-               use iso_fortran_env, only: real64
-               use csv_reader_mod, only: read_csv_table
+               use boundary_csv_mod, only: qbot_table_t
                use error_mod, only: error_collection_t
-               real(real64), allocatable :: csv_table(:,:)
-               type(error_collection_t)  :: csv_errs
-               integer :: k, nrows
-               character(len=4) :: hdr(2)
-               hdr(1) = 'date'
-               hdr(2) = 'qbot'
-               call read_csv_table( &
-                  trim(pathwork)//trim(config_bb%qbot2_file), &
-                  hdr, csv_table, csv_errs)
+               type(qbot_table_t)       :: loader
+               type(error_collection_t) :: csv_errs
+               integer :: k
+               call loader%load(trim(pathwork)//trim(config_bb%qbot2_file), csv_errs)
                call csv_errs%abort_if_fatal()
-               if (allocated(csv_table)) then
+               if (loader%is_loaded) then
                   if (.not. allocated(self%qbotab)) then
                      allocate(self%qbotab(2*MABBC))
                      self%qbotab = 0.0d0
                   end if
-                  nrows = size(csv_table, 1)
-                  do k = 1, nrows
-                     self%qbotab(k*2 - 1) = csv_table(k, 1)
-                     self%qbotab(k*2)     = csv_table(k, 2)
+                  do k = 1, min(size(loader%rows), MABBC)
+                     self%qbotab(k*2 - 1) = loader%rows(k)%date
+                     self%qbotab(k*2)     = loader%rows(k)%qbot
                   end do
                end if
             end block
@@ -657,56 +643,42 @@ contains
          ! [GR-SOIL 2026-05-24] sw4 legacy mirror dropped — direct config read.
          if (config_bb%sw3 == 2) then
             block
-               use iso_fortran_env, only: real64
-               use csv_reader_mod, only: read_csv_table
+               use boundary_csv_mod, only: haquif_table_t
                use error_mod, only: error_collection_t
-               real(real64), allocatable :: csv_table(:,:)
-               type(error_collection_t)  :: csv_errs
-               integer :: k, nrows
-               character(len=6) :: hdr(2)
-               hdr(1) = 'date  '
-               hdr(2) = 'haquif'
-               call read_csv_table( &
-                  trim(pathwork)//trim(config_bb%haquif_file), &
-                  hdr, csv_table, csv_errs)
+               type(haquif_table_t)     :: loader
+               type(error_collection_t) :: csv_errs
+               integer :: k
+               call loader%load(trim(pathwork)//trim(config_bb%haquif_file), csv_errs)
                call csv_errs%abort_if_fatal()
-               if (allocated(csv_table)) then
+               if (loader%is_loaded) then
                   if (.not. allocated(self%haqtab)) then
                      allocate(self%haqtab(2*MABBC))
                      self%haqtab = 0.0d0
                   end if
-                  nrows = size(csv_table, 1)
-                  do k = 1, nrows
-                     self%haqtab(k*2 - 1) = csv_table(k, 1)
-                     self%haqtab(k*2)     = csv_table(k, 2)
+                  do k = 1, min(size(loader%rows), MABBC)
+                     self%haqtab(k*2 - 1) = loader%rows(k)%date
+                     self%haqtab(k*2)     = loader%rows(k)%haquif
                   end do
                end if
             end block
          end if
          if (config_bb%sw4 == 1) then
             block
-               use iso_fortran_env, only: real64
-               use csv_reader_mod, only: read_csv_table
+               use boundary_csv_mod, only: qbot_table_t
                use error_mod, only: error_collection_t
-               real(real64), allocatable :: csv_table(:,:)
-               type(error_collection_t)  :: csv_errs
-               integer :: k, nrows
-               character(len=4) :: hdr(2)
-               hdr(1) = 'date'
-               hdr(2) = 'qbot'
-               call read_csv_table( &
-                  trim(pathwork)//trim(config_bb%qbot4_file), &
-                  hdr, csv_table, csv_errs)
+               type(qbot_table_t)       :: loader
+               type(error_collection_t) :: csv_errs
+               integer :: k
+               call loader%load(trim(pathwork)//trim(config_bb%qbot4_file), csv_errs)
                call csv_errs%abort_if_fatal()
-               if (allocated(csv_table)) then
+               if (loader%is_loaded) then
                   if (.not. allocated(self%qbotab)) then
                      allocate(self%qbotab(2*MABBC))
                      self%qbotab = 0.0d0
                   end if
-                  nrows = size(csv_table, 1)
-                  do k = 1, nrows
-                     self%qbotab(k*2 - 1) = csv_table(k, 1)
-                     self%qbotab(k*2)     = csv_table(k, 2)
+                  do k = 1, min(size(loader%rows), MABBC)
+                     self%qbotab(k*2 - 1) = loader%rows(k)%date
+                     self%qbotab(k*2)     = loader%rows(k)%qbot
                   end do
                end if
             end block
@@ -716,30 +688,23 @@ contains
          ! legacy mirrors dropped — boundbottom reads via bb%X.
          if (config_bb%swqhbot == 2) then
             block
-               use iso_fortran_env, only: real64
-               use csv_reader_mod, only: read_csv_table
+               use boundary_csv_mod, only: qhbot_table_t
                use error_mod, only: error_collection_t
-               real(real64), allocatable :: csv_table(:,:)
-               type(error_collection_t)  :: csv_errs
-               integer :: k, nrows
-               character(len=4) :: hdr(2)
-               hdr(1) = 'htab'
-               hdr(2) = 'qtab'
-               call read_csv_table( &
-                  trim(pathwork)//trim(config_bb%qhbot_file), &
-                  hdr, csv_table, csv_errs)
+               type(qhbot_table_t)      :: loader
+               type(error_collection_t) :: csv_errs
+               integer :: k
+               call loader%load(trim(pathwork)//trim(config_bb%qhbot_file), csv_errs)
                call csv_errs%abort_if_fatal()
                ! Legacy unpack pattern from readswap.f90:1418-1419 — for the
                ! q(h) curve, qbotab(odd) = abs(htab) and qbotab(even) = qtab.
-               if (allocated(csv_table)) then
+               if (loader%is_loaded) then
                   if (.not. allocated(self%qbotab)) then
                      allocate(self%qbotab(2*MABBC))
                      self%qbotab = 0.0d0
                   end if
-                  nrows = size(csv_table, 1)
-                  do k = 1, nrows
-                     self%qbotab(k*2 - 1) = abs(csv_table(k, 1))
-                     self%qbotab(k*2)     = csv_table(k, 2)
+                  do k = 1, min(size(loader%rows), MABBC)
+                     self%qbotab(k*2 - 1) = abs(loader%rows(k)%htab)
+                     self%qbotab(k*2)     = loader%rows(k)%qtab
                   end do
                end if
             end block
@@ -751,28 +716,21 @@ contains
          ! line `rhobot = config%bottom_boundary%rhobot` was a defect.
          ! The schema slot is read for future-proofing; consumers TBD.
          block
-            use iso_fortran_env, only: real64
-            use csv_reader_mod, only: read_csv_table
+            use boundary_csv_mod, only: hbot_table_t
             use error_mod, only: error_collection_t
-            real(real64), allocatable :: csv_table(:,:)
-            type(error_collection_t)  :: csv_errs
-            integer :: k, nrows
-            character(len=4) :: hdr(2)
-            hdr(1) = 'date'
-            hdr(2) = 'hbot'
-            call read_csv_table( &
-               trim(pathwork)//trim(config_bb%hbot5_file), &
-               hdr, csv_table, csv_errs)
+            type(hbot_table_t)       :: loader
+            type(error_collection_t) :: csv_errs
+            integer :: k
+            call loader%load(trim(pathwork)//trim(config_bb%hbot5_file), csv_errs)
             call csv_errs%abort_if_fatal()
-            if (allocated(csv_table)) then
+            if (loader%is_loaded) then
                if (.not. allocated(self%hbotab)) then
                   allocate(self%hbotab(2*MABBC))
                   self%hbotab = 0.0d0
                end if
-               nrows = size(csv_table, 1)
-               do k = 1, nrows
-                  self%hbotab(k*2 - 1) = csv_table(k, 1)
-                  self%hbotab(k*2)     = csv_table(k, 2)
+               do k = 1, min(size(loader%rows), MABBC)
+                  self%hbotab(k*2 - 1) = loader%rows(k)%date
+                  self%hbotab(k*2)     = loader%rows(k)%hbot
                end do
             end if
          end block

@@ -1,0 +1,241 @@
+! Tests for typed CSV record tables for bottom-boundary condition files.
+! Family 4 of the CSV-families arc (ADR 0044).
+
+! ---- gwl_table_t ----
+
+@test
+subroutine test_gwl_table_load_happy()
+   use funit
+   use iso_fortran_env,   only: real64
+   use boundary_csv_mod,  only: gwl_table_t
+   use error_mod,         only: error_collection_t
+
+   type(gwl_table_t)        :: tbl
+   type(error_collection_t) :: errors
+
+   call tbl%load('tests/unit/io/fixtures/csv_bb_gwl.csv', errors)
+
+   @assertFalse(errors%has_errors())
+   @assertTrue(tbl%is_loaded)
+   @assertTrue(allocated(tbl%rows))
+   @assertEqual(3, size(tbl%rows))
+
+   ! Row 2 = 1981-06-15.  days_since_1900(1981,6,15) ~ 29751.
+   @assertEqual(29751.0_real64, tbl%rows(2)%date, 1.0_real64)
+   @assertEqual(-30.0_real64,   tbl%rows(2)%gwl,  1.0e-6_real64)
+end subroutine test_gwl_table_load_happy
+
+@test
+subroutine test_gwl_table_load_missing_file()
+   use funit
+   use boundary_csv_mod,  only: gwl_table_t
+   use error_mod,         only: error_collection_t
+
+   type(gwl_table_t)        :: tbl
+   type(error_collection_t) :: errors
+
+   call tbl%load('tests/unit/io/fixtures/does_not_exist_bb_gwl.csv', errors)
+
+   @assertTrue(errors%has_errors())
+   @assertFalse(tbl%is_loaded)
+   @assertFalse(allocated(tbl%rows))
+end subroutine test_gwl_table_load_missing_file
+
+@test
+subroutine test_gwl_table_load_unsorted()
+   use funit
+   use boundary_csv_mod,  only: gwl_table_t
+   use error_mod,         only: error_collection_t
+
+   type(gwl_table_t)        :: tbl
+   type(error_collection_t) :: errors
+
+   call tbl%load('tests/unit/io/fixtures/csv_bb_gwl_unsorted.csv', errors)
+
+   @assertTrue(errors%has_errors())
+   @assertFalse(tbl%is_loaded)
+   @assertFalse(allocated(tbl%rows))
+end subroutine test_gwl_table_load_unsorted
+
+! ---- qbot_table_t ----
+
+@test
+subroutine test_qbot_table_load_happy()
+   use funit
+   use iso_fortran_env,   only: real64
+   use boundary_csv_mod,  only: qbot_table_t
+   use error_mod,         only: error_collection_t
+
+   type(qbot_table_t)       :: tbl
+   type(error_collection_t) :: errors
+
+   call tbl%load('tests/unit/io/fixtures/csv_bb_qbot.csv', errors)
+
+   @assertFalse(errors%has_errors())
+   @assertTrue(tbl%is_loaded)
+   @assertTrue(allocated(tbl%rows))
+   @assertEqual(3, size(tbl%rows))
+
+   ! Row 1 = 1981-01-01.  days_since_1900(1981,1,1) ~ 29586.
+   @assertEqual(29586.0_real64, tbl%rows(1)%date, 1.0_real64)
+   @assertEqual(0.10_real64,    tbl%rows(1)%qbot,  1.0e-6_real64)
+end subroutine test_qbot_table_load_happy
+
+@test
+subroutine test_qbot_table_load_missing_file()
+   use funit
+   use boundary_csv_mod,  only: qbot_table_t
+   use error_mod,         only: error_collection_t
+
+   type(qbot_table_t)       :: tbl
+   type(error_collection_t) :: errors
+
+   call tbl%load('tests/unit/io/fixtures/does_not_exist_bb_qbot.csv', errors)
+
+   @assertTrue(errors%has_errors())
+   @assertFalse(tbl%is_loaded)
+   @assertFalse(allocated(tbl%rows))
+end subroutine test_qbot_table_load_missing_file
+
+! ---- haquif_table_t ----
+
+@test
+subroutine test_haquif_table_load_happy()
+   use funit
+   use iso_fortran_env,   only: real64
+   use boundary_csv_mod,  only: haquif_table_t
+   use error_mod,         only: error_collection_t
+
+   type(haquif_table_t)     :: tbl
+   type(error_collection_t) :: errors
+
+   call tbl%load('tests/unit/io/fixtures/csv_bb_haquif.csv', errors)
+
+   @assertFalse(errors%has_errors())
+   @assertTrue(tbl%is_loaded)
+   @assertTrue(allocated(tbl%rows))
+   @assertEqual(3, size(tbl%rows))
+
+   ! Row 2 = 1981-06-15.  days_since_1900(1981,6,15) ~ 29751.
+   @assertEqual(29751.0_real64,  tbl%rows(2)%date,   1.0_real64)
+   @assertEqual(-150.0_real64,   tbl%rows(2)%haquif, 1.0e-6_real64)
+end subroutine test_haquif_table_load_happy
+
+@test
+subroutine test_haquif_table_load_missing_file()
+   use funit
+   use boundary_csv_mod,  only: haquif_table_t
+   use error_mod,         only: error_collection_t
+
+   type(haquif_table_t)     :: tbl
+   type(error_collection_t) :: errors
+
+   call tbl%load('tests/unit/io/fixtures/does_not_exist_bb_haquif.csv', errors)
+
+   @assertTrue(errors%has_errors())
+   @assertFalse(tbl%is_loaded)
+   @assertFalse(allocated(tbl%rows))
+end subroutine test_haquif_table_load_missing_file
+
+! ---- qhbot_table_t ----
+
+@test
+subroutine test_qhbot_table_load_happy()
+   use funit
+   use iso_fortran_env,   only: real64
+   use boundary_csv_mod,  only: qhbot_table_t
+   use error_mod,         only: error_collection_t
+
+   type(qhbot_table_t)      :: tbl
+   type(error_collection_t) :: errors
+
+   call tbl%load('tests/unit/io/fixtures/csv_bb_qhbot.csv', errors)
+
+   @assertFalse(errors%has_errors())
+   @assertTrue(tbl%is_loaded)
+   @assertTrue(allocated(tbl%rows))
+   @assertEqual(3, size(tbl%rows))
+
+   ! Row 1: htab=-100.0, qtab=0.10  (raw-descending = abs-ascending for afgen)
+   @assertEqual(-100.0_real64, tbl%rows(1)%htab, 1.0e-6_real64)
+   @assertEqual(0.10_real64,   tbl%rows(1)%qtab, 1.0e-6_real64)
+
+   ! Row 3: htab=-300.0, qtab=0.50
+   @assertEqual(-300.0_real64, tbl%rows(3)%htab, 1.0e-6_real64)
+   @assertEqual(0.50_real64,   tbl%rows(3)%qtab, 1.0e-6_real64)
+end subroutine test_qhbot_table_load_happy
+
+@test
+subroutine test_qhbot_table_load_missing_file()
+   use funit
+   use boundary_csv_mod,  only: qhbot_table_t
+   use error_mod,         only: error_collection_t
+
+   type(qhbot_table_t)      :: tbl
+   type(error_collection_t) :: errors
+
+   call tbl%load('tests/unit/io/fixtures/does_not_exist_bb_qhbot.csv', errors)
+
+   @assertTrue(errors%has_errors())
+   @assertFalse(tbl%is_loaded)
+   @assertFalse(allocated(tbl%rows))
+end subroutine test_qhbot_table_load_missing_file
+
+@test
+subroutine test_qhbot_table_load_unsorted()
+   ! Regression pin: qhbot validates ascending abs(htab), not raw htab.
+   ! A physically realistic file with all-negative htab values has
+   ! abs-ascending = raw-descending. The validation must reject files
+   ! where abs(htab) does not strictly increase.
+   use funit
+   use boundary_csv_mod, only: qhbot_table_t
+   use error_mod,        only: error_collection_t
+
+   type(qhbot_table_t)      :: tbl
+   type(error_collection_t) :: errors
+
+   call tbl%load('tests/unit/io/fixtures/csv_bb_qhbot_unsorted.csv', errors)
+   @assertTrue(errors%has_errors())
+   @assertFalse(tbl%is_loaded)
+   @assertFalse(allocated(tbl%rows))
+end subroutine test_qhbot_table_load_unsorted
+
+! ---- hbot_table_t ----
+
+@test
+subroutine test_hbot_table_load_happy()
+   use funit
+   use iso_fortran_env,   only: real64
+   use boundary_csv_mod,  only: hbot_table_t
+   use error_mod,         only: error_collection_t
+
+   type(hbot_table_t)       :: tbl
+   type(error_collection_t) :: errors
+
+   call tbl%load('tests/unit/io/fixtures/csv_bb_hbot.csv', errors)
+
+   @assertFalse(errors%has_errors())
+   @assertTrue(tbl%is_loaded)
+   @assertTrue(allocated(tbl%rows))
+   @assertEqual(3, size(tbl%rows))
+
+   ! Row 2 = 1981-06-15.  days_since_1900(1981,6,15) ~ 29751.
+   @assertEqual(29751.0_real64, tbl%rows(2)%date, 1.0_real64)
+   @assertEqual(-80.0_real64,   tbl%rows(2)%hbot, 1.0e-6_real64)
+end subroutine test_hbot_table_load_happy
+
+@test
+subroutine test_hbot_table_load_missing_file()
+   use funit
+   use boundary_csv_mod,  only: hbot_table_t
+   use error_mod,         only: error_collection_t
+
+   type(hbot_table_t)       :: tbl
+   type(error_collection_t) :: errors
+
+   call tbl%load('tests/unit/io/fixtures/does_not_exist_bb_hbot.csv', errors)
+
+   @assertTrue(errors%has_errors())
+   @assertFalse(tbl%is_loaded)
+   @assertFalse(allocated(tbl%rows))
+end subroutine test_hbot_table_load_missing_file
