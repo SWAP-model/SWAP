@@ -208,27 +208,8 @@ contains
          call soilwater_seed(state)
          if (state%atmosphere%swusecn == 1) call cn_init(state)
 
-         ! Modern drainage init.
+         ! Modern drainage init (absorbs scalar seeding, L/zbotdr, surface_runoff fields).
          call state%drainage%init(config%drain, state%mesh%numnod)
-
-         ! STRANGLER — drainage scalar/L/zbotdr seeding. Fold into
-         ! state%drainage%init. Multi-source rules: dramet==2 uses scalars
-         ! (lm in m → cm, zbotdr_basic); per-level uses arrays (already cm).
-         state%drainage%nrlevs     = config%drain%nrlevs
-         state%drainage%swdivd     = config%drain%swdivd
-         state%drainage%swnrsrf    = config%drain%surface_runoff%swnrsrf
-         state%drainage%swtopnrsrf = config%drain%surface_runoff%swtopnrsrf
-         state%drainage%swdivdinf  = config%drain%surface_runoff%swdivdinf
-         state%drainage%FacDpthInf = config%drain%surface_runoff%facdpthinf
-         if (config%drain%dramet == 2) then
-            state%drainage%L(1)      = 100.0d0 * config%drain%lm
-            state%drainage%zbotdr(1) = config%drain%zbotdr_basic
-         else
-            if (allocated(config%drain%L)) &
-               state%drainage%L(1:size(config%drain%L)) = config%drain%L
-            if (allocated(config%drain%zbotdr)) &
-               state%drainage%zbotdr(1:size(config%drain%zbotdr)) = config%drain%zbotdr
-         end if
 
          ! Modern solute init (gated).
          if (state%cfg%solute%swsolu == 1) call state%solute%init(config%solute, state%mesh%numnod)

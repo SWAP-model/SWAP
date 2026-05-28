@@ -136,6 +136,9 @@ contains
       self%qdra   = 0.0_real64
 
       ! ---- [Piece B] Scalar seeding + DRAMET=2 ipos chain ----
+      self%nrlevs   = config_drain%nrlevs
+      self%swdivd   = config_drain%swdivd
+      self%swnrsrf  = config_drain%surface_runoff%swnrsrf
       self%dramet   = config_drain%dramet
       self%swdislay = config_drain%swdislay
       self%basegw   = config_drain%basegw
@@ -213,8 +216,11 @@ contains
       end if
 
       ! ---- [Piece E] surface_runoff sub-section ----
-      self%cofintfl = config_drain%surface_runoff%cofintfl
-      self%expintfl = config_drain%surface_runoff%expintfl
+      self%cofintfl    = config_drain%surface_runoff%cofintfl
+      self%expintfl    = config_drain%surface_runoff%expintfl
+      self%swtopnrsrf  = config_drain%surface_runoff%swtopnrsrf
+      self%swdivdinf   = config_drain%surface_runoff%swdivdinf
+      self%FacDpthInf  = config_drain%surface_runoff%facdpthinf
       ! ADR 0031: gate the surface_runoff geofac write to avoid overwriting
       ! the ipos==5 (Ernst geometry factor) write from Piece B above.
       if (config_drain%ipos /= 5) then
@@ -237,6 +243,19 @@ contains
       do i = 1, size(self%ftopdislay)
          self%ftopdislay(i) = config_drain%surface_runoff%ftopdislay
       end do
+
+      ! ---- [Piece F] L / zbotdr seeding (orchestrator-dissolution arc step 4) ----
+      ! dramet=2: scalar lm (m) converted to cm for L(1); zbotdr_basic for zbotdr(1).
+      ! Otherwise: copy from per-level config arrays when allocated.
+      if (config_drain%dramet == 2) then
+         self%L(1)      = 100.0d0 * config_drain%lm
+         self%zbotdr(1) = config_drain%zbotdr_basic
+      else
+         if (allocated(config_drain%L)) &
+            self%L(1:size(config_drain%L)) = config_drain%L
+         if (allocated(config_drain%zbotdr)) &
+            self%zbotdr(1:size(config_drain%zbotdr)) = config_drain%zbotdr
+      end if
 
    end subroutine drainage_state_init
 
