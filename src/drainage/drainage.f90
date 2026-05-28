@@ -143,13 +143,17 @@ contains
       real(8) dh
       type(swap_state_t), intent(inout) :: state
 
-      integer :: i, lev
-      real(8) :: zimp, dbot, pi, totres, x, fx, eqd, rver, rhor, rrad
+      integer :: lev
+      real(8) :: zimp, dbot, pi, totres, x, eqd, rver, rhor, rrad
       real(8) :: gwldra
       logical :: fldry
       character(len=200) :: messag
 
       parameter(pi=3.14159d0)
+      character(len=*), parameter :: imp_above_drain_msg = &
+         'At the drainage section, the level of the'       &
+         //' impervious layer is higher than the level of the' &
+         //' drain bottom. Adapt drain input!'
 
       associate (drai      => state%drainage,    &
                  soil      => state%soilwater,   &
@@ -166,9 +170,7 @@ contains
             zimp = max(drai%basegw, drai%zbotdr(1) - 0.25*drai%l(1))
             dbot = (drai%zbotdr(1) - zimp)
             if (dbot .lt. 0.0d0) then
-               messag = 'At the drainage section, the level of the'          &
-          &       //' impervious layer is higher than the level of the'      &
-          &       //' drain bottom. Adapt drain input!'
+               messag = imp_above_drain_msg
                call fatalerr_collected('Bocodrb', messag)
             end if
 
@@ -186,23 +188,8 @@ contains
             ! --- case 2,3: in homogeneous profile or at interface of 2 layers
             elseif (drai%ipos .eq. 2 .or. drai%ipos .eq. 3) then
 
-               ! --- equivalent depth
-               x = 2*pi*dbot/drai%l(1)
-               if (x .gt. 0.5d0) then
-                  fx = 0.0d0
-                  do i = 1, 5, 2
-                     fx = fx + (4*exp(-2*i*x))/(i*(1.0d0 - exp(-2*i*x)))
-                  end do
-                  eqd = pi*drai%l(1)/8/(log(drai%l(1)/drai%wetper(1)) + fx)
-               else
-                  if (x .lt. 1.0d-6) then
-                     eqd = dbot
-                  else
-                     fx = pi**2/(4*x) + log(x/(2*pi))
-                     eqd = pi*drai%l(1)/8/(log(drai%l(1)/drai%wetper(1)) + fx)
-                  end if
-               end if
-               if (eqd .gt. dbot) eqd = dbot
+               ! --- equivalent depth (Hooghoudt)
+               eqd = equivalent_depth_hooghoudt(dbot, drai%l(1), drai%wetper(1))
 
                if (drai%ipos .eq. 2) then
                   totres = drai%l(1)*drai%l(1)/(8*drai%khtop*eqd + 4*drai%khtop*abs(dh)) + drai%entres
@@ -214,9 +201,7 @@ contains
             ! --- case 4: drain in bottom layer
             elseif (drai%ipos .eq. 4) then
                if (drai%zbotdr(1) .gt. drai%zintf) then
-                  messag = 'At the drainage section, the level of the'        &
-           &         //' impervious layer is higher than the level of the'    &
-           &         //' drain bottom. Adapt drain input!'
+                  messag = imp_above_drain_msg
                   call fatalerr_collected('bocodrb', messag)
                end if
                rver = max(gwldra - drai%zintf, 0.0d0)/drai%kvtop +                   &
@@ -229,9 +214,7 @@ contains
             ! --- case 5: drain in top layer
             elseif (drai%ipos .eq. 5) then
                if (drai%zbotdr(1) .lt. drai%zintf) then
-                  messag = 'At the drainage section, the level of the'        &
-           &         //' impervious layer is higher than the level of the'    &
-           &         //' drain bottom. Adapt drain input!'
+                  messag = imp_above_drain_msg
                   call fatalerr_collected('bocodrb', messag)
                end if
                rver = (gwldra - drai%zbotdr(1))/drai%kvtop
@@ -736,5 +719,37 @@ contains
          end if
       end associate
    end subroutine redistribute_qdra_over_discharge_layers
+
+   !> Hooghoudt's equivalent depth for drainage radial-flow resistance.
+   !!
+   !! Given the thickness `dbot` of the saturated zone below the drains,
+   !! drain spacing `L`, and wetted perimeter `wetper`, returns the
+   !! equivalent depth `eqd` (clamped to `dbot`). Uses a series expansion
+   !! for x = 2*pi*dbot/L > 0.5 and a logarithmic approximation otherwise;
+   !! degenerate small-x case returns dbot directly.
+   pure function equivalent_depth_hooghoudt(dbot, L, wetper) result(eqd)
+      implicit none
+      real(8), intent(in) :: dbot, L, wetper
+      real(8)             :: eqd
+      real(8) :: x, fx
+      integer :: i
+      real(8), parameter :: pi = 3.14159d0   ! matches bocodrb's pi for byte-identity
+      x = 2*pi*dbot/L
+      if (x .gt. 0.5d0) then
+         fx = 0.0d0
+         do i = 1, 5, 2
+            fx = fx + (4*exp(-2*i*x))/(i*(1.0d0 - exp(-2*i*x)))
+         end do
+         eqd = pi*L/8/(log(L/wetper) + fx)
+      else
+         if (x .lt. 1.0d-6) then
+            eqd = dbot
+         else
+            fx = pi**2/(4*x) + log(x/(2*pi))
+            eqd = pi*L/8/(log(L/wetper) + fx)
+         end if
+      end if
+      if (eqd .gt. dbot) eqd = dbot
+   end function equivalent_depth_hooghoudt
 
 end module drainage_mod
