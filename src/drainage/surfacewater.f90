@@ -146,9 +146,6 @@ subroutine surfacewater_balance(state, request_smaller_dt)
       !! The routine uses an iterative procedure to balance incoming drainage
       !! with discharge through weirs or open channels.
       !!
-      !! @warning May trigger timestep reduction if water level oscillations
-      !! exceed threshold or if ponding becomes excessive.
-      !! @endwarning
       !! @note
       !! ----------------------------------------------------------------------
       !!     UpDate             : 20080109
@@ -208,27 +205,20 @@ subroutine surfacewater_balance(state, request_smaller_dt)
       !!     File usage         :
       !!@endnote
       use swap_state_mod,      only: swap_state_t
-      use surfacewater_utils,  only: wlevst, swstlev, qhtab
-      use swap_log,            only: log_warn
+      use surfacewater_utils,  only: swstlev
       implicit none
 
       type(swap_state_t), intent(inout) :: state
       logical,            intent(inout) :: request_smaller_dt
 
-      integer :: iphase, node, intday, imper
-      real(8) :: wlstx, swsttar, dvmax, swstmax, wsupp, wdis, wlstarb
-      real(8) :: wover, discap, wlsl, wlsu, wlsi, swsti, wdisi, swstn
-      real(8) :: wprod1, wprod2, oscil, wlstara
-      real(8) :: swsttara, rday, wsmax
+      integer :: imper
+      real(8) :: wlstarb, swsttar, wlstara, swsttara, wsmax, wsupp, wdis
       character(len=200) :: messag
-      character(len=19)  :: datetime
       logical :: fl_early_return
 
       fl_early_return = .false.
 
-      associate (mesh => state%mesh,         &
-                 drai => state%drainage,     &
-                 soil => state%soilwater,    &
+      associate (drai => state%drainage,     &
                  surf => state%surfacewater, &
                  time => state%timecontrol)
 
@@ -251,6 +241,59 @@ subroutine surfacewater_balance(state, request_smaller_dt)
 
             if (time%t1900 - 1.d0 + 0.1d-10 .le. surf%impend(imper)) exit
          end do
+
+         ! Target surface-water level (swman 1 fixed weir / swman 2 automatic + drop-rate cap).
+         call wlevbal_target_level(state, wlstarb)
+
+         ! Storage at target + max-supply level.
+         swsttar = swstlev(state, surf%wlstar)
+         wlstara = surf%wlstar - surf%wldip(imper)
+         if (wlstara .gt. (drai%zbotdr(1 + surf%nrpri) + 1.d-4)) then
+            swsttara = swstlev(state, wlstara)
+            wsmax    = surf%wscap(imper)
+         else
+            swsttara = 0.0d0
+            wsmax    = 0.0d0
+         end if
+
+         ! 3-way balance-outcome dispatch (falls-dry / not-full / full + bisection).
+         call wlevbal_dispatch_outcome(state, swsttar, wlstara, swsttara, wsmax, wsupp, wdis)
+
+         ! Ponding + oscillation stability check.
+         call wlevbal_check_stability(state, fl_early_return, request_smaller_dt)
+
+         ! Cumulative balance terms.
+         if (.not. fl_early_return) then
+            surf%cqdrd  = surf%cqdrd  + drai%qdrd*time%dt
+            surf%cwsupp = surf%cwsupp + wsupp*time%dt
+            surf%cwout  = surf%cwout  + wdis*time%dt
+         end if
+
+      end associate
+
+      return
+      end subroutine WLEVBAL
+
+! ----------------------------------------------------------------------
+      subroutine wlevbal_target_level(state, wlstarb)
+      !! Determine the target surface-water level (swman 1 fixed weir,
+      !! swman 2 automatic weir with iphase walk + drop-rate cap), and
+      !! bump the target-level adjustment counter.
+      use swap_state_mod, only: swap_state_t
+      implicit none
+
+      type(swap_state_t), intent(inout) :: state
+      real(8),            intent(in)    :: wlstarb
+
+      integer :: iphase, intday, node, imper
+      real(8) :: wlstx, rday
+
+      associate (mesh => state%mesh,         &
+                 soil => state%soilwater,    &
+                 surf => state%surfacewater, &
+                 time => state%timecontrol)
+
+         imper = surf%imper
 
          ! Determine the target surface-water level.
          if (surf%swman(imper) .eq. 1) then
@@ -304,18 +347,33 @@ subroutine surfacewater_balance(state, request_smaller_dt)
          ! Counter of target-level adjustments.
          if (abs(surf%wlstar - wlstarb) .gt. 0.00001d0) surf%numadj = surf%numadj + 1
 
-         ! Storage at the target level.
-         swsttar = swstlev(state, surf%wlstar)
+      end associate
 
-         ! Level and storage for "max. level for supply".
-         wlstara = surf%wlstar - surf%wldip(imper)
-         if (wlstara .gt. (drai%zbotdr(1 + surf%nrpri) + 1.d-4)) then
-            swsttara = swstlev(state, wlstara)
-            wsmax    = surf%wscap(imper)
-         else
-            swsttara = 0.0d0
-            wsmax    = 0.0d0
-         end if
+      end subroutine wlevbal_target_level
+
+! ----------------------------------------------------------------------
+      subroutine wlevbal_dispatch_outcome(state, swsttar, wlstara, swsttara, wsmax, wsupp, wdis)
+      !! Three-way storage-outcome dispatch: falls-dry / not-full / full.
+      !! The full branch handles the swman=2 discap-vs-wdis test and (for
+      !! swman=1 or overflow) the overflow check + bisection invocation.
+      use swap_state_mod,     only: swap_state_t
+      use surfacewater_utils, only: wlevst, swstlev, qhtab
+      implicit none
+
+      type(swap_state_t), intent(inout) :: state
+      real(8), intent(in)    :: swsttar, wlstara, swsttara, wsmax
+      real(8), intent(out)   :: wsupp, wdis
+
+      integer :: imper
+      real(8) :: dvmax, swstmax, wover, discap, swstn, wlsl, wlsu
+      character(len=200) :: messag
+
+      associate (drai => state%drainage,     &
+                 soil => state%soilwater,    &
+                 surf => state%surfacewater, &
+                 time => state%timecontrol)
+
+         imper = surf%imper
 
          ! Determine whether the system becomes full (target / weir crest).
          dvmax   = (drai%qdrd + drai%QRapDra + wsmax)*time%dt + soil%runots
@@ -399,28 +457,85 @@ subroutine surfacewater_balance(state, request_smaller_dt)
                   wlsl = surf%hbweir(imper)
                   wlsu = surf%sttab(1, 1)
 
-                  do
-                     wlsi  = (wlsl + wlsu) * 0.5
-                     swsti = swstlev(state, wlsi)
-                     if (surf%swqhr .eq. 1) then
-                        wdisi = surf%alphaw(imper)*(wlsi - surf%hbweir(imper))**surf%betaw(imper)
-                     else
-                        wdisi = qhtab(surf, wlsi, imper)
-                     end if
-                     swstn = surf%swst + (drai%qdrd + drai%QRapDra - wdisi)*time%dt + soil%runots
-                     if (swstn .lt. swsti) then
-                        wlsu = wlsi
-                     else
-                        wlsl = wlsi
-                     end if
-                     if ((wlsu - wlsl) .le. 0.001d0) exit
-                  end do
-                  surf%wls  = wlsi
-                  surf%swst = swstn
-                  wdis      = wdisi
+                  call bisect_surface_water_level(state, wlsl, wlsu, wdis)
                end if
             end if
          end if
+
+      end associate
+
+      end subroutine wlevbal_dispatch_outcome
+
+! ----------------------------------------------------------------------
+      subroutine bisect_surface_water_level(state, wlsl, wlsu, wdis)
+      !! Bisection iteration to find the new surface-water level, storage,
+      !! and discharge such that the storage at the midpoint level matches
+      !! the storage implied by the discharge there. Commits surf%wls,
+      !! surf%swst and returns wdis.
+      use swap_state_mod,     only: swap_state_t
+      use surfacewater_utils, only: swstlev, qhtab
+      implicit none
+
+      type(swap_state_t), intent(inout) :: state
+      real(8), intent(in)    :: wlsl, wlsu
+      real(8), intent(out)   :: wdis
+
+      integer :: imper
+      real(8) :: wlsi, swsti, wdisi, swstn, wlsl_local, wlsu_local
+
+      associate (drai => state%drainage,     &
+                 soil => state%soilwater,    &
+                 surf => state%surfacewater, &
+                 time => state%timecontrol)
+
+         imper = surf%imper
+         wlsl_local = wlsl
+         wlsu_local = wlsu
+
+         do
+            wlsi  = (wlsl_local + wlsu_local) * 0.5
+            swsti = swstlev(state, wlsi)
+            if (surf%swqhr .eq. 1) then
+               wdisi = surf%alphaw(imper)*(wlsi - surf%hbweir(imper))**surf%betaw(imper)
+            else
+               wdisi = qhtab(surf, wlsi, imper)
+            end if
+            swstn = surf%swst + (drai%qdrd + drai%QRapDra - wdisi)*time%dt + soil%runots
+            if (swstn .lt. swsti) then
+               wlsu_local = wlsi
+            else
+               wlsl_local = wlsi
+            end if
+            if ((wlsu_local - wlsl_local) .le. 0.001d0) exit
+         end do
+         surf%wls  = wlsi
+         surf%swst = swstn
+         wdis      = wdisi
+
+      end associate
+
+      end subroutine bisect_surface_water_level
+
+! ----------------------------------------------------------------------
+      subroutine wlevbal_check_stability(state, fl_early_return, request_smaller_dt)
+      !! Ponding limit + four-step oscillation detection. May request a
+      !! smaller timestep and short-circuit the rest of the balance update
+      !! by setting fl_early_return.
+      use swap_state_mod, only: swap_state_t
+      use swap_log,       only: log_warn
+      implicit none
+
+      type(swap_state_t), intent(inout) :: state
+      logical, intent(inout) :: fl_early_return
+      logical, intent(inout) :: request_smaller_dt
+
+      real(8) :: wprod1, wprod2, oscil
+      character(len=200) :: messag
+      character(len=19)  :: datetime
+
+      associate (soil => state%soilwater,    &
+                 surf => state%surfacewater, &
+                 time => state%timecontrol)
 
          ! Ponding in extended drainage may limit the timestep.
          if (surf%wls .gt. surf%pondmx .or. soil%pond .gt. surf%pondmx) then
@@ -454,17 +569,9 @@ subroutine surfacewater_balance(state, request_smaller_dt)
             end if
          end if
 
-         if (.not. fl_early_return) then
-            ! Cumulative terms.
-            surf%cqdrd  = surf%cqdrd  + drai%qdrd*time%dt
-            surf%cwsupp = surf%cwsupp + wsupp*time%dt
-            surf%cwout  = surf%cwout  + wdis*time%dt
-         end if
-
       end associate
 
-      return
-      end subroutine WLEVBAL
+      end subroutine wlevbal_check_stability
 
 ! ----------------------------------------------------------------------
       subroutine WBALLEV (state)
