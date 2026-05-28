@@ -20,7 +20,7 @@
 
 module solute_state_mod
    use, intrinsic :: iso_fortran_env, only: real64
-   use swap_array_dimensions, only: MABBC, MAHO
+   use swap_array_dimensions, only: MABBC, MAHO, macp
    implicit none
    private
    public :: solute_state_t
@@ -126,10 +126,15 @@ contains
    !!   - 2D cseeptab → interleaved afgen layout flatten.
    !!   - Runtime per-node cml/cmsy allocation + zero-fill formerly in the free
    !!     solute_init(state) in src/solute/solute.f90.
-   subroutine solute_state_init(self, config_solute, numnod)
+   !! [OD Step 8 2026-05-28] Absorbs:
+   !!   - swinco=3 + swsolu=1 warm-restart cml profile load from
+   !!     seed_state_from_config orchestrator (final cross-subsystem write).
+   subroutine solute_state_init(self, config_solute, config_soil, numnod)
       use solute_config_mod, only: solute_config_t
+      use soil_config_mod,   only: soil_config_t
       class(solute_state_t), intent(inout) :: self
       type(solute_config_t), intent(in)    :: config_solute
+      type(soil_config_t),   intent(in)    :: config_soil
       integer,               intent(in)    :: numnod
 
       integer :: i, n
@@ -152,10 +157,41 @@ contains
       self%ddiffwcs(:)        = 0.0_real64
       self%decpotfdepth(:)    = 0.0_real64
 
-      ! swinco=3 (warm restart): cml_init holds the per-node initial profile
-      ! populated by config_to_variables. Other swinco values: solute task=1
-      ! interpolates from the (zc_init, cml_init) table; the initial cml here
-      ! is just the default zero.
+      ! swinco=3 (warm restart): load the per-node initial concentration profile
+      ! from the cml_file CSV (OD Step 8: folded from seed_state_from_config).
+      ! Other swinco values: solute task=1 interpolates from the (zc_init, cml_init)
+      ! table; the initial cml here is just the default zero.
+      if (config_soil%swinco == 3 .and. config_solute%swsolu == 1) then
+         if (allocated(config_soil%initial%cml_file) .and. &
+             len_trim(config_soil%initial%cml_file) > 0) then
+            cml_load: block
+               use soil_init_csv_mod, only: cml_profile_table_t
+               use error_mod,         only: error_collection_t
+               type(cml_profile_table_t) :: cml_tbl
+               type(error_collection_t)  :: errs
+               integer :: k, nrows
+               call cml_tbl%load(trim(config_soil%initial%cml_file), errs)
+               call errs%abort_if_fatal()
+               ! abort_if_fatal() returns only on success, so cml_tbl%is_loaded
+               ! must be .true. here. Guard anyway as defense-in-depth in case
+               ! the error model softens later (e.g. non-fatal recoverable errors).
+               if (.not. cml_tbl%is_loaded) exit cml_load
+               nrows = size(cml_tbl%rows)
+               self%nconc = nrows
+               if (.not. allocated(self%cml_init)) then
+                  allocate(self%cml_init(macp)); self%cml_init = 0.0_real64
+               end if
+               if (.not. allocated(self%zc_init)) then
+                  allocate(self%zc_init(macp));  self%zc_init  = 0.0_real64
+               end if
+               do k = 1, nrows
+                  self%zc_init(k)  = cml_tbl%rows(k)%z
+                  self%cml_init(k) = cml_tbl%rows(k)%cml
+               end do
+            end block cml_load
+         end if
+      end if
+
       if (allocated(self%cml_init)) then
          self%cml(:)  = self%cml_init(1:n)
       else

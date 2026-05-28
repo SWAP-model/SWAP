@@ -84,11 +84,13 @@ subroutine test_solute_state_init_allocates_coeffs()
    use iso_fortran_env, only: real64
    use solute_state_mod,  only: solute_state_t
    use solute_config_mod, only: solute_config_t
+   use soil_config_mod,   only: soil_config_t
    type(solute_state_t)  :: sl
    type(solute_config_t) :: cfg
+   type(soil_config_t)   :: soil_cfg   ! swinco defaults to 0; no cml_file path needed
    integer, parameter :: numnod = 5
 
-   call sl%init(cfg, numnod)
+   call sl%init(cfg, soil_cfg, numnod)
 
    @assertTrue(allocated(sl%bdenskf))
    @assertTrue(allocated(sl%bdenskfcref))

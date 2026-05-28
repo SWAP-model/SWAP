@@ -177,8 +177,9 @@ contains
          ! Modern drainage init (absorbs scalar seeding, L/zbotdr, surface_runoff fields).
          call state%drainage%init(config%drain, state%mesh%numnod)
 
-         ! Modern solute init (gated).
-         if (state%cfg%solute%swsolu == 1) call state%solute%init(config%solute, state%mesh%numnod)
+         ! Modern solute init (gated). Reads config%solute%swsolu directly
+         ! instead of via state%cfg (OD Step 8: state%cfg access retirement).
+         if (config%solute%swsolu == 1) call state%solute%init(config%solute, config%soil, state%mesh%numnod)
 
          ! Modern surfacewater init (unconditional). Always seeds lightweight scalars
          ! (pondmx/rsro/rsroexp/swdra); heavy work (allocations, sttab, management

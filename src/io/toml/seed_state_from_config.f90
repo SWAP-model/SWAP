@@ -1,10 +1,9 @@
 !> seed_state_from_config — thin orchestrator that seeds swap_state_t from swap_config_t.
 !!
 !! After GR-SEED 2026-05-25 Tasks 1-10, all per-subsystem seeding has been
-!! absorbed into typed state%X%init methods. This orchestrator now only holds
-!! a handful of documented cross-subsystem exceptions:
-!!
-!!   - state%solute%cml_init/zc_init/nconc  (swinco==3 cross-write)
+!! absorbed into typed state%X%init methods. This orchestrator now holds
+!! ZERO live cross-subsystem writes; only the state%timecontrol%init call
+!! remains (Step 9 will delete this file entirely).
 !!
 !! Folded by OD Steps 1-3 (2026-05-28):
 !!   - state%mesh%numlay          → mesh%init (already computed by map_layers_to_nodes)
@@ -15,6 +14,9 @@
 !!
 !! Folded by OD Steps 6+7 (2026-05-28):
 !!   - state%atmosphere%atmin7    → atmosphere_state_init (swinco==3 gate only; h_file gate dropped)
+!!
+!! Folded by OD Step 8 (2026-05-28):
+!!   - state%solute%cml_init/zc_init/nconc → solute_state_init (swinco==3 + swsolu==1)
 !!
 !! All other assignment history is preserved as inline comments marking
 !! which Task absorbed each block.
@@ -44,10 +46,10 @@ contains
    subroutine seed_state_from_config(config, state)
       ! [GR-IO 2026-05-25 Phase 6 Step 3] bare `use variables` retired —
       ! every config→bare-global mirror write below was dead after Steps
-      ! 1-2 (no remaining readers). Size parameters now come from the
-      ! canonical swap_array_dimensions module; everything else writes
-      ! directly to state%X / config%X.
-      use swap_array_dimensions, only: macp
+      ! 1-2 (no remaining readers). Everything else writes directly to
+      ! state%X / config%X.
+      ! [OD Step 8] swap_array_dimensions no longer needed here (macp was
+      ! only used by the cml_load block, now folded into solute_state_init).
       use swap_state_mod, only: swap_state_t
       use error_mod, only: fatalerr_collected
       type(swap_config_t), intent(inout), target :: config  ! target: state%cfg => config pointer; inout retained for other callee mutations
@@ -114,48 +116,10 @@ contains
       ! [GR-SOIL 2026-05-24] config%soil%hcomp ingest retired — CalcGrid reads inline.
       ! [GR-BH Task 36] orgmat/cofani: consumed via config in swap_mod seeding block.
 
-      ! [soil.initial] swinco=3 cross-subsystem writes retained here:
-      !   state%solute%X (solute write — cannot go to soilwater%init).
+      ! [soil.initial] swinco=3 cross-subsystem writes — all folded into typed init methods:
+      ! state%solute%cml_init/zc_init/nconc folded into solute%init (OD Step 8).
       ! state%atmosphere%atmin7 folded into atmosphere_state_init (OD Steps 6+7).
       ! soilwater%init absorbs the z_init CSV and soilwater scalar seeding.
-      if (config%soil%swinco == 3) then
-         if (allocated(config%soil%initial%h_file) .and. &
-             len_trim(config%soil%initial%h_file) > 0) then
-            ! [GR-IO 2026-05-25 Phase 6 Step 3] Legacy tsoil_file CSV → zh/tsoil
-            ! bare-global block dropped. temperature.f90:case(1) reads
-            ! cfg_heat%tsoil_init directly (populated by read_heat_toml).
-
-            ! Optional: initial concentration profile (Cml) — solute write, stays here.
-            ! [ADR 0044 Family 5] typed cml_profile_table_t (loader-only intermediate).
-            if (config%solute%swsolu == 1) then
-               cml_load: block
-                  use soil_init_csv_mod, only: cml_profile_table_t
-                  use error_mod,         only: error_collection_t
-                  type(cml_profile_table_t) :: cml_tbl
-                  type(error_collection_t)  :: errs
-                  integer :: k, nrows
-                  call cml_tbl%load(trim(config%soil%initial%cml_file), errs)
-                  call errs%abort_if_fatal()
-                  ! abort_if_fatal() returns only on success, so cml_tbl%is_loaded
-                  ! must be .true. here. Guard anyway as defense-in-depth in case
-                  ! the error model softens later (e.g. non-fatal recoverable errors).
-                  if (.not. cml_tbl%is_loaded) exit cml_load
-                  nrows = size(cml_tbl%rows)
-                  state%solute%nconc = nrows
-                  if (.not. allocated(state%solute%cml_init)) then
-                     allocate(state%solute%cml_init(macp)); state%solute%cml_init = 0.0d0
-                  end if
-                  if (.not. allocated(state%solute%zc_init)) then
-                     allocate(state%solute%zc_init(macp));  state%solute%zc_init  = 0.0d0
-                  end if
-                  do k = 1, nrows
-                     state%solute%zc_init(k)  = cml_tbl%rows(k)%z
-                     state%solute%cml_init(k) = cml_tbl%rows(k)%cml
-                  end do
-               end block cml_load
-            end if
-         end if
-      end if
 
       ! Per-soil-physical-layer Mualem-van Genuchten hydraulics.
       ! [GR-SOIL 2026-05-24] h_enpr legacy mirror dropped — vg_params carries the typed value.
