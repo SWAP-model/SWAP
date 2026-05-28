@@ -1,0 +1,122 @@
+! Tests for typed CSV record tables for irrigation event files.
+! Family 2 of the CSV-families arc (ADR 0044).
+
+@test
+subroutine test_fixed_events_load_happy()
+   use funit
+   use iso_fortran_env,      only: real64
+   use irrigation_csv_mod,   only: fixed_events_table_t
+   use error_mod,            only: error_collection_t
+
+   type(fixed_events_table_t) :: tbl
+   type(error_collection_t)   :: errors
+
+   call tbl%load('tests/unit/io/fixtures/csv_irrigation_fixed.csv', errors)
+
+   @assertFalse(errors%has_errors())
+   @assertTrue(tbl%is_loaded)
+   @assertTrue(allocated(tbl%rows))
+   @assertEqual(3, size(tbl%rows))
+
+   ! Row 1 = 2012-04-17.  days_since_1900(2012,4,17) = 41015.
+   ! depth=14.40 mm, conc=0.401, irtype=1 (surface)
+   @assertEqual(41015.0_real64, tbl%rows(1)%date,   1.0_real64)
+   @assertEqual(14.40_real64,   tbl%rows(1)%depth,  1.0e-6_real64)
+   @assertEqual(0.401_real64,   tbl%rows(1)%conc,   1.0e-6_real64)
+   @assertEqual(1.0_real64,     tbl%rows(1)%irtype, 1.0e-6_real64)
+
+   ! Row 2 = 2012-05-01 (sprinkler, type=0)
+   @assertEqual(41029.0_real64, tbl%rows(2)%date,   1.0_real64)
+   @assertEqual(0.0_real64,     tbl%rows(2)%irtype, 1.0e-6_real64)
+end subroutine test_fixed_events_load_happy
+
+@test
+subroutine test_fixed_events_load_missing_file()
+   use funit
+   use irrigation_csv_mod, only: fixed_events_table_t
+   use error_mod,          only: error_collection_t
+
+   type(fixed_events_table_t) :: tbl
+   type(error_collection_t)   :: errors
+
+   call tbl%load('tests/unit/io/fixtures/does_not_exist_irrigation_fixed.csv', errors)
+
+   @assertTrue(errors%has_errors())
+   @assertFalse(tbl%is_loaded)
+   @assertFalse(allocated(tbl%rows))
+end subroutine test_fixed_events_load_missing_file
+
+@test
+subroutine test_ssdi_events_load_happy()
+   use funit
+   use iso_fortran_env,    only: real64
+   use irrigation_csv_mod, only: ssdi_events_table_t
+   use error_mod,          only: error_collection_t
+
+   type(ssdi_events_table_t) :: tbl
+   type(error_collection_t)  :: errors
+
+   call tbl%load('tests/unit/io/fixtures/csv_irrigation_ssdi.csv', errors)
+
+   @assertFalse(errors%has_errors())
+   @assertTrue(tbl%is_loaded)
+   @assertTrue(allocated(tbl%rows))
+   @assertEqual(3, size(tbl%rows))
+
+   ! Row 1 = 2012-04-01.  days_since_1900(2012,4,1) = 40999.
+   ! rate_f=2.5 mm/h, amount_f=30.0 mm
+   @assertEqual(40999.0_real64, tbl%rows(1)%date,     1.0_real64)
+   @assertEqual(2.5_real64,     tbl%rows(1)%rate_f,   1.0e-6_real64)
+   @assertEqual(30.0_real64,    tbl%rows(1)%amount_f, 1.0e-6_real64)
+
+   ! Row 3 = 2012-06-20.  days_since_1900(2012,6,20) = 41079.
+   @assertEqual(41079.0_real64, tbl%rows(3)%date,   1.0_real64)
+end subroutine test_ssdi_events_load_happy
+
+@test
+subroutine test_ssdi_events_load_missing_file()
+   use funit
+   use irrigation_csv_mod, only: ssdi_events_table_t
+   use error_mod,          only: error_collection_t
+
+   type(ssdi_events_table_t) :: tbl
+   type(error_collection_t)  :: errors
+
+   call tbl%load('tests/unit/io/fixtures/does_not_exist_irrigation_ssdi.csv', errors)
+
+   @assertTrue(errors%has_errors())
+   @assertFalse(tbl%is_loaded)
+   @assertFalse(allocated(tbl%rows))
+end subroutine test_ssdi_events_load_missing_file
+
+@test
+subroutine test_ssdi_events_load_unsorted()
+   use funit
+   use irrigation_csv_mod, only: ssdi_events_table_t
+   use error_mod,          only: error_collection_t
+
+   type(ssdi_events_table_t) :: tbl
+   type(error_collection_t)  :: errors
+
+   call tbl%load('tests/unit/io/fixtures/csv_irrigation_ssdi_unsorted.csv', errors)
+
+   @assertTrue(errors%has_errors())
+   @assertFalse(tbl%is_loaded)
+   @assertFalse(allocated(tbl%rows))
+end subroutine test_ssdi_events_load_unsorted
+
+@test
+subroutine test_fixed_events_load_bad_irtype()
+   use funit
+   use irrigation_csv_mod, only: fixed_events_table_t
+   use error_mod,          only: error_collection_t
+
+   type(fixed_events_table_t) :: tbl
+   type(error_collection_t)   :: errors
+
+   call tbl%load('tests/unit/io/fixtures/csv_irrigation_fixed_bad_type.csv', errors)
+
+   @assertTrue(errors%has_errors())
+   @assertFalse(tbl%is_loaded)
+   @assertFalse(allocated(tbl%rows))
+end subroutine test_fixed_events_load_bad_irtype

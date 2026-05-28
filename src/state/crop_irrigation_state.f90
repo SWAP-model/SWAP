@@ -116,33 +116,27 @@ contains
       else if (config_irrigation%swirfix == 1 .and. allocated(config_irrigation%fixed_events_file)) then
          ! Phase 4f cleanup: long-form fixed-irrigation events outsourced
          ! to a CSV companion file (date, depth_mm, conc, type). The
-         ! reader emits days-since-1900 in column 1; the rest of the
+         ! typed loader emits days-since-1900 in %date; the rest of the
          ! unpack mirrors the inline-fixed_events path above (mm -> cm
          ! on depth, nint() on type). Replaces the legacy .irg HACK.
          if (len_trim(config_irrigation%fixed_events_file) > 0) then
             block
-               use csv_reader_mod, only: read_csv_table
+               use irrigation_csv_mod, only: fixed_events_table_t
                use error_mod, only: error_collection_t
-               use iso_fortran_env, only: real64
-               real(real64), allocatable :: csv_table(:,:)
-               type(error_collection_t) :: csv_errs
+               type(fixed_events_table_t) :: csv_fixed
+               type(error_collection_t)   :: csv_errs
                integer :: k_csv, nrows_csv
-               character(len=5) :: irrig_header(4)
-               irrig_header(1) = 'date '
-               irrig_header(2) = 'depth'
-               irrig_header(3) = 'conc '
-               irrig_header(4) = 'type '
-               call read_csv_table( &
+               call csv_fixed%load( &
                   trim(pathwork_in)//trim(config_irrigation%fixed_events_file), &
-                  irrig_header, csv_table, csv_errs)
+                  csv_errs)
                call csv_errs%abort_if_fatal()
-               if (allocated(csv_table)) then
-                  nrows_csv = size(csv_table, 1)
+               if (csv_fixed%is_loaded) then
+                  nrows_csv = size(csv_fixed%rows)
                   do k_csv = 1, min(nrows_csv, size(self%irdate))
-                     self%irdate(k_csv)  = csv_table(k_csv, 1)
-                     self%irdepth(k_csv) = csv_table(k_csv, 2) / 10.0d0  ! mm -> cm
-                     self%irconc(k_csv)  = csv_table(k_csv, 3)
-                     self%irtype(k_csv)  = nint(csv_table(k_csv, 4))
+                     self%irdate(k_csv)  = csv_fixed%rows(k_csv)%date
+                     self%irdepth(k_csv) = csv_fixed%rows(k_csv)%depth  / 10.0d0  ! mm -> cm
+                     self%irconc(k_csv)  = csv_fixed%rows(k_csv)%conc
+                     self%irtype(k_csv)  = nint(csv_fixed%rows(k_csv)%irtype)
                   end do
                end if
             end block
@@ -218,7 +212,7 @@ contains
    !! Formerly apply_ssdi_mode0 in config_to_variables.f90.
    subroutine apply_ssdi_mode0(ssdi, ncomp, tstart, tend, self, pathwork_in)
       use, intrinsic :: iso_fortran_env, only: real64
-      use csv_reader_mod, only: read_csv_table
+      use irrigation_csv_mod, only: ssdi_events_table_t
       use error_mod, only: error_collection_t, fatalerr_collected
       use irrigation_config_mod, only: irrigation_ssdi_t
       ! [GR-IO 2026-05-25 Phase 4] mairg from canonical swap_array_dimensions module
@@ -229,22 +223,18 @@ contains
       type(crop_irrigation_state_t), intent(inout) :: self
       character(len=*),              intent(in)    :: pathwork_in
 
-      real(real64), allocatable :: tbl(:,:)
+      type(ssdi_events_table_t) :: ssdi_tbl
       type(error_collection_t)  :: errs
       character(len=300) :: csvpath
-      character(len=8)   :: hdr(3)
       integer :: i, n, nirri_init
       logical :: any_in_window, window_in_dates
 
-      hdr(1) = 'date    '
-      hdr(2) = 'rate_f  '
-      hdr(3) = 'amount_f'
       csvpath = trim(pathwork_in) // trim(ssdi%fixed%events_file)
-      call read_csv_table(trim(csvpath), hdr, tbl, errs)
+      call ssdi_tbl%load(trim(csvpath), errs)
       call errs%abort_if_fatal()
 
       n = 0
-      if (allocated(tbl)) n = size(tbl, 1)
+      if (ssdi_tbl%is_loaded) n = size(ssdi_tbl%rows)
       if (n < 1) then
          call fatalerr_collected('apply_ssdi_mode0', &
                                  'mode 0: events CSV has no rows')
@@ -257,22 +247,24 @@ contains
       end if
 
       ! self%ssdi_date / ssdi_rate_f / ssdi_amount_f are
-      ! fixed-size arrays of size(mairg); zero them and fill from the CSV.
+      ! fixed-size arrays of size(mairg); zero them and fill from the typed table.
       self%ssdi_date     = 0.0_real64
       self%ssdi_rate_f   = 0.0_real64
       self%ssdi_amount_f = 0.0_real64
 
       do i = 1, n
-         self%ssdi_date(i) = tbl(i, 1)
+         self%ssdi_date(i) = ssdi_tbl%rows(i)%date
+         ! Ascending-date check: the typed loader already validates this, but the
+         ! fatalerr path here is kept as an in-process guard for robustness.
          if (i > 1 .and. self%ssdi_date(i) <= self%ssdi_date(i-1)) then
             call fatalerr_collected('apply_ssdi_mode0', &
                                     'mode 0: ssdi_date not strictly ascending')
             return
          end if
          ! mm/h -> cm/d (mirrors irrigation.f90:514)
-         self%ssdi_rate_f(i)   = tbl(i, 2) * 0.1_real64 * 24.0_real64
+         self%ssdi_rate_f(i)   = ssdi_tbl%rows(i)%rate_f * 0.1_real64 * 24.0_real64
          ! mm -> cm, then spread over `ncomp` compartments (mirrors irrigation.f90:397)
-         self%ssdi_amount_f(i) = (tbl(i, 3) * 0.1_real64) / real(ncomp, real64)
+         self%ssdi_amount_f(i) = (ssdi_tbl%rows(i)%amount_f * 0.1_real64) / real(ncomp, real64)
       end do
 
       ! Date-window check: at least one date in [tstart, tend], OR

@@ -113,6 +113,7 @@ sources = [
     # I/O
     'src/io/csv/meteo_csv.f90',
     'src/io/csv/drainage_csv.f90',
+    'src/io/csv/irrigation_csv.f90',
     'src/io/csv_reader.f90',
     'src/io/csv_writer.f90',
     'src/io/output_registry.f90',
