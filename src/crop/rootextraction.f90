@@ -55,15 +55,16 @@ module rootextraction_mod
 
       parameter (vsmall = 1.0d-14)
 
-! --- [GR-CROP 2026-05-25] sub-record aliases (crop, soil, atmo, mesh, heat, sol, soil_cfg).
+! --- [GR-CROP 2026-05-25] sub-record aliases (crop, soil, atmo, mesh, heat, sol).
+! --- [state%cfg-retirement cluster 6] soil_cfg dropped — only field accessed was
+!     soil_cfg%frost%swfrost, now snapshotted as state%soilwater%swfrost.
       associate( &
          crop     => state%crop,                 &
          soil     => state%soilwater,            &
          atmo     => state%atmosphere,           &
          mesh     => state%mesh,                 &
          heat     => state%heat,                 &
-         sol      => state%solute,               &
-         soil_cfg => state%cfg%soil              &
+         sol      => state%solute                &
       )
 
 ! --- reset writes — state-only.
@@ -200,7 +201,7 @@ module rootextraction_mod
 ! ---         in output file *.STR
 
 ! ----  reduction due to frost conditions
-        if (soil_cfg%frost%swfrost .eq.1 .and. heat%tsoil(node) .lt. 0.0d0) then
+        if (soil%swfrost .eq.1 .and. heat%tsoil(node) .lt. 0.0d0) then
           alpfrs = 0.0d0
         endif
 

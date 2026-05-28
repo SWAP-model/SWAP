@@ -41,6 +41,10 @@ module crop_state_mod
       ! [GR-CROP 2026-05-25] Bartholomeus oxygen-stress workspace + SAVE state
       ! migrated from O2_pars module + o2_* legacy globals
       type(crop_oxygen_state_t) :: oxygen
+      ! [state%cfg-retirement cluster 6] per-rotation metadata; snapshotted in crop_state_init.
+      real(real64), allocatable :: rotation_start(:)  !! crop season start (days since 1900), per rotation; snapshotted from config%crop%rotation_start
+      real(real64), allocatable :: rotation_end(:)    !! crop season end (days since 1900), per rotation; snapshotted from config%crop%rotation_end
+      logical,      allocatable :: rotation_loaded(:) !! per-rotation typed-config cache available flag; snapshotted from config%crop%rotation_loaded
    contains
       procedure :: init => crop_state_init
    end type crop_state_t
@@ -79,6 +83,31 @@ contains
 
       ! 3. Evaporation cfbs (deferred from Task 2)
       self%cfbs = meteo_cfg%evaporation%cfbs
+
+      ! 4. rdmax — single config scalar consumed by cropgrass/cropfixed init (task=1)
+      self%common%rdmax = crop_cfg%rdmax
+
+      ! 5. rotation_start / rotation_end — per-rotation time windows (days since 1900).
+      !    Used by cropgrowth.f90 task=1 to find the active rotation and task=2
+      !    for harvest detection.
+      if (allocated(crop_cfg%rotation_start)) then
+         if (.not. allocated(self%rotation_start)) then
+            allocate(self%rotation_start(size(crop_cfg%rotation_start)))
+         end if
+         self%rotation_start(:) = crop_cfg%rotation_start(:)
+      end if
+      if (allocated(crop_cfg%rotation_end)) then
+         if (.not. allocated(self%rotation_end)) then
+            allocate(self%rotation_end(size(crop_cfg%rotation_end)))
+         end if
+         self%rotation_end(:) = crop_cfg%rotation_end(:)
+      end if
+      if (allocated(crop_cfg%rotation_loaded)) then
+         if (.not. allocated(self%rotation_loaded)) then
+            allocate(self%rotation_loaded(size(crop_cfg%rotation_loaded)))
+         end if
+         self%rotation_loaded(:) = crop_cfg%rotation_loaded(:)
+      end if
 
       ! pathwork_in reserved for future CSV seed migration (consistency with sibling inits).
       ! Not consumed yet; gfortran does not warn on unused dummy args by default.

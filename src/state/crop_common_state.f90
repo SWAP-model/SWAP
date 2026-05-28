@@ -30,6 +30,7 @@ module crop_common_state_mod
       real(real64) :: rri            = 0.0_real64     !! max daily root depth increase (L/T)
       real(real64) :: rdi            = 0.0_real64     !! initial rooting depth (L)
       real(real64) :: rdc            = 0.0_real64     !! max crop rooting depth (L)
+      real(real64) :: rdmax          = 200.0_real64   !! maximum rooting depth for soil profile (L); snapshotted from config%crop%rdmax
 
       ! Crop physiology summary
       real(real64) :: ch             = 0.0_real64     !! crop height (cm)

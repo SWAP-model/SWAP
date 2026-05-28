@@ -157,6 +157,10 @@ module soilwater_state_mod
       integer,         allocatable  :: iHWCKmodel(:)    !< per-layer hydraulic-K model selector
       integer,         allocatable  :: layer(:)         !< per-node soil-layer index
       integer                       :: swfrost    = 0   !< frost-reduction switch (0=no, 1=yes)
+      ! [state%cfg-retirement cluster 6] config-snapshot switches for tillage compatibility checks
+      integer                       :: swtill     = 0   !< tillage-event simulation switch (0=off, 1=on); snapshotted from config%soil%swtill
+      integer                       :: swhyst     = 0   !< hysteresis switch (0=off, 1=on, 2=...); snapshotted from config%soil%swhyst
+      integer                       :: swdiscrvert = 0  !< vertical re-discretization switch (0=no, 1=yes); snapshotted from config%soil%discretization%swdiscrvert
       logical,         allocatable  :: BiModal(:)       !< per-layer bi-modal flag
       logical,         allocatable  :: NoVap(:)         !< per-layer no-vapor flag
       real(real64), allocatable :: FrArMtrx(:)    !< matrix-area fraction per node (-)
@@ -544,9 +548,12 @@ contains
 
       ! ---- [Piece B] Soil scalar seeding from config_soil ----
 
-      self%swsophy = config_soil%swsophy
-      self%swinco  = config_soil%swinco
-      self%swfrost = config_soil%frost%swfrost
+      self%swsophy     = config_soil%swsophy
+      self%swinco      = config_soil%swinco
+      self%swfrost     = config_soil%frost%swfrost
+      self%swtill      = config_soil%swtill
+      self%swhyst      = config_soil%swhyst
+      self%swdiscrvert = config_soil%discretization%swdiscrvert
       ! Legacy parses .swp `SWRUNON` into a local int; we mirror that mapping
       ! into self%flrunon (runonarr remains dormant — no TOML writer).
       self%flrunon = (config_soil%swrunon == 1)

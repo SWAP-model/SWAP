@@ -39,8 +39,10 @@
       ! [GR-CROP 2026-05-25] irrigation.f90 is `use variables`-free for the main subroutine.
       ! All previously-imported globals were either:
       !   - migrated to state (state%crop%irrigation, state%atmosphere%isua,
-      !     state%crop%common%X, state%cfg%irrigation%X, state%cfg%solute%swsolu), or
+      !     state%crop%common%X), or
       !   - retired-zero (schedule==1 dead branch — see local declarations below).
+      ! [state%cfg-retirement cluster 6] irrig_cfg (state%cfg%irrigation) retired;
+      !   swirfix → state%crop%irrigation%swirfix; swsolu → state%solute%swsolu.
       use array_utils, only: afgen
       use soilhydraulics_utils, only: watcon
       implicit none
@@ -107,7 +109,7 @@
          atmo    => state%atmosphere,       &
          solu    => state%solute,           &
          mesh    => state%mesh,             &
-         irrig_cfg => state%cfg%irrigation    )
+         irrig   => state%crop%irrigation   )  ! [state%cfg-retirement cluster 6] irrig_cfg → irrig (state%crop%irrigation)
 
 ! ---    reset intermediate soil water fluxes — handled by state%soilwater%reset_intermediate()
          ! igird/inird/cgird/cnird zeroed via state%soilwater%reset_intermediate() in SoilWater(2)
@@ -117,7 +119,7 @@
          irrigevent = 0
 
 ! ---    fixed irrigations events
-         if (irrig_cfg%swirfix .eq. 1) then
+         if (irrig%swirfix .eq. 1) then
             associate (irr => state%crop%irrigation)
             if (abs(irr%irdate(irr%nirri_fixed) - time%t1900) .lt. 1.d-3) then
                crop%gird = irr%irdepth(irr%nirri_fixed)
@@ -293,7 +295,7 @@
             end if
 
 ! ---       in case of solutes: allow overirrigation when conc exceeds concthreshold
-            if (state%cfg%solute%swsolu.eq.1 .and.irrigevent.eq.2 .and.swcirrthres.eq.1) then
+            if (solu%swsolu.eq.1 .and.irrigevent.eq.2 .and.swcirrthres.eq.1) then
                if (solu%cml(nodsen).gt.cirrthres) then
                   crop%gird = crop%gird + 0.01d0*perirrsurp*crop%gird
                end if

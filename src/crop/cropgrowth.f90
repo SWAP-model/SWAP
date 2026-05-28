@@ -86,7 +86,7 @@
         tc       => state%timecontrol,            &
         atmo     => state%atmosphere,             &
         crop     => state%crop,                   &  ! crop sub-state (common, wofost, grass, ...)
-        crop_cfg => state%cfg%crop                &  ! crop config (rotation_start/end)
+        crop_cfg => state%cfg%crop                &  ! [state%cfg-retirement cluster 6 DEFERRED] rotation_fixed/wofost typed sub-arrays
       )
 
       select case (task)
@@ -100,10 +100,10 @@
       crop%common%flCropCalendar = .false.
       do while (.not. crop%common%flCropCalendar)
 
-        if (crop_cfg%rotation_start(crop%common%icrop) .lt. 1.d0) exit
+        if (crop%rotation_start(crop%common%icrop) .lt. 1.d0) exit
 
-        if (tc%t1900 - crop_cfg%rotation_start(crop%common%icrop) .gt. -tiny                      &
-     &                 .and. tc%t1900 - crop_cfg%rotation_end(crop%common%icrop) .lt. tiny) then
+        if (tc%t1900 - crop%rotation_start(crop%common%icrop) .gt. -tiny                      &
+     &                 .and. tc%t1900 - crop%rotation_end(crop%common%icrop) .lt. tiny) then
           crop%common%flCropCalendar = .true.
         else
           crop%common%icrop = crop%common%icrop + 1
@@ -111,8 +111,8 @@
       enddo
       ! [SS-GR-CROPRT A5] mirror current-crop window scalars
       if (crop%common%flCropCalendar) then
-        state%crop%common%cropstart = crop_cfg%rotation_start(crop%common%icrop)
-        state%crop%common%cropend   = crop_cfg%rotation_end(crop%common%icrop)
+        state%crop%common%cropstart = crop%rotation_start(crop%common%icrop)
+        state%crop%common%cropend   = crop%rotation_end(crop%common%icrop)
       end if
 
 ! --- bare soil condition  ----------------------------------------------------
@@ -182,14 +182,15 @@
                swgerm_cache = 0
                rot_type     = 0
                nullify(gp)
-               if (allocated(crop_cfg%rotation_loaded) .and. &
-                   allocated(crop_cfg%rotation_type)) then
-                  if (state%crop%common%icrop >= 1 .and. state%crop%common%icrop <= size(crop_cfg%rotation_loaded)) then  ! [GR-CROPWS B3]
-                     if (crop_cfg%rotation_loaded(state%crop%common%icrop)) then  ! [GR-CROPWS B3]
-                        rot_type = crop_cfg%rotation_type(state%crop%common%icrop)  ! [GR-CROPWS B3]
+               if (allocated(crop%rotation_loaded) .and. &
+                   allocated(crop%common%croptype)) then
+                  if (state%crop%common%icrop >= 1 .and. state%crop%common%icrop <= size(crop%rotation_loaded)) then  ! [GR-CROPWS B3]
+                     if (crop%rotation_loaded(state%crop%common%icrop)) then  ! [GR-CROPWS B3]
+                        rot_type = crop%common%croptype(state%crop%common%icrop)  ! [GR-CROPWS B3]
                         select case (rot_type)
                         case (1)
                            ! type=1 cropfixed
+                           ! [state%cfg-retirement cluster 6 DEFERRED] rotation_fixed typed sub-array
                            if (allocated(crop_cfg%rotation_fixed)) then
                               use_cache    = .true.
                               swprep_cache = crop_cfg%rotation_fixed(state%crop%common%icrop)%swprep   ! [GR-CROPWS B3]
@@ -199,6 +200,7 @@
                         case (2)
                            ! type=2 wofost: cache-hit when swprep=0 AND swsow=0.
                            ! swgerm=0/1/2 are all handled in the cache body below.
+                           ! [state%cfg-retirement cluster 6 DEFERRED] rotation_wofost typed sub-array
                            if (allocated(crop_cfg%rotation_wofost)) then
                               swprep_cache = crop_cfg%rotation_wofost(state%crop%common%icrop)%preparation%swprep  ! [GR-CROPWS B3]
                               swsow_cache  = crop_cfg%rotation_wofost(state%crop%common%icrop)%sowing%swsow         ! [GR-CROPWS B3]
@@ -341,12 +343,13 @@
 ! check DAYNR during the day!!!!!!          
           
         ! phenological development rate 
-        call astro (tc%daynr+1,state%cfg%meteo%lat,state%atmosphere%rad,dayl,daylp,sinld,cosld,difpp,atmtr,dsinbe)
+        call astro (tc%daynr+1,state%atmosphere%lat,state%atmosphere%rad,dayl,daylp,sinld,cosld,difpp,atmtr,dsinbe)
 
         ! only for bulb crops (tulips etc..)
         if(state%crop%wofost%swbulb) then                                     ! [GR-CROPWS B3] swbulb → state%crop%wofost%swbulb
           ! [GR-CROP 2026-05-25] pld/remoc read directly from rotation config
           ! (swbulb=1 currently stub-errored in TOML pipeline; cfg path documented).
+          ! [state%cfg-retirement cluster 6 DEFERRED] rotation_wofost typed sub-array
           block
             real(8) :: pld_cfg, remoc_cfg
             pld_cfg   = crop_cfg%rotation_wofost(state%crop%common%icrop)%bulb%pld
@@ -485,11 +488,11 @@
 
         ! Check crop%common%flHarvestDay
         if (state%crop%common%swharv.eq.0) then
-          if (dabs(tc%t1900 - crop_cfg%rotation_end(state%crop%common%icrop) - 1.d0) .lt. 1.0d-3) then  ! [GR-CROPWS B3] crop%common%icrop → state%crop%common%icrop
+          if (dabs(tc%t1900 - crop%rotation_end(state%crop%common%icrop) - 1.d0) .lt. 1.0d-3) then  ! [GR-CROPWS B3] crop%common%icrop → state%crop%common%icrop
             crop%common%flHarvestDay = .true.
           endif
         else
-          if (state%crop%common%dvs.ge.state%crop%common%dvsend .or. dabs(tc%t1900 - crop_cfg%rotation_end(state%crop%common%icrop) - 1.d0) .lt. 1.0d-3) then  ! [GR-CROPWS B3] dvs/dvsend/crop%common%icrop → state
+          if (state%crop%common%dvs.ge.state%crop%common%dvsend .or. dabs(tc%t1900 - crop%rotation_end(state%crop%common%icrop) - 1.d0) .lt. 1.0d-3) then  ! [GR-CROPWS B3] dvs/dvsend/crop%common%icrop → state
             crop%common%flHarvestDay = .true.
           endif
         endif
@@ -525,7 +528,7 @@
 
 ! --- detailed grass growth ------------------------------------------------
       if (state%crop%common%croptype(state%crop%common%icrop).eq.3)then
-        if (dabs(tc%t1900 - crop_cfg%rotation_end(state%crop%common%icrop) - 1.d0) .lt. 1.0d-3) then  ! [GR-CROPWS B3] crop%common%icrop → state%crop%common%icrop
+        if (dabs(tc%t1900 - crop%rotation_end(state%crop%common%icrop) - 1.d0) .lt. 1.0d-3) then  ! [GR-CROPWS B3] crop%common%icrop → state%crop%common%icrop
           crop%flCropEmergence = .false.
           crop%common%flCropHarvest   = .true.
         endif

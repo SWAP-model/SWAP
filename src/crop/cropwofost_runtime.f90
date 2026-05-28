@@ -219,12 +219,12 @@
 
 !        open output files and write header
          if (crop%common%icrop.eq.1) then
-            call outbalcropOM1(1,state%cfg%general%pathwork,state%cfg%general%outfil,state%cfg%general%project,time%date,crop%common%daycrop,  &
+            call outbalcropOM1(1,time%pathwork,time%outfil,time%project,time%date,crop%common%daycrop,  &
      &         time%t,crop%common%dvs,crop%common%tsum,gass,mres,fr,fl,fs,fo,dmi,cvf,ccheck)
-            call outbalcropOM2(1,state%cfg%general%pathwork,state%cfg%general%outfil,state%cfg%general%project,time%date,crop%common%daycrop,  &
+            call outbalcropOM2(1,time%pathwork,time%outfil,time%project,time%date,crop%common%daycrop,  &
      &         time%t,crop%common%dvs,crop%common%tsum,storagediff,crop%wofost%wlv,crop%wofost%wst,crop%wofost%wso,crop%wofost%wrt,delt,         &
      &         grlv,grst,grso,grrt,drlv,drst,drso,drrt,ombalan)
-            call outbalcropN(1,state%cfg%general%pathwork,state%cfg%general%outfil,state%cfg%general%project,time%date,crop%common%daycrop, &
+            call outbalcropN(1,time%pathwork,time%outfil,time%project,time%date,crop%common%daycrop, &
      &         time%t,crop%common%dvs,crop%common%tsum,nuptt,nfixtt,anlvi,ansti,anrti,ansoi,cw_anlv,&
      &         cw_anst,anrt,anso,nlossl,nlossr,nlosss,nbalan,cw_nni)
          endif
@@ -232,12 +232,12 @@
 
 ! --- maximum rooting depth
       if (crop%common%swrd.eq.1) then
-        crop%common%rdm = crop_cfg%rdmax
+        crop%common%rdm = crop%common%rdmax
       elseif (crop%common%swrd.eq.2) then
-        crop%common%rdm = min(crop_cfg%rdmax,crop%common%rdc)
+        crop%common%rdm = min(crop%common%rdmax,crop%common%rdc)
       elseif (crop%common%swrd.eq.3) then
         crop%common%rdc = afgen (crop%common%rlwtb,22,crop%common%wrtmax)
-        crop%common%rdm = min(crop_cfg%rdmax,crop%common%rdc)
+        crop%common%rdm = min(crop%common%rdmax,crop%common%rdc)
       endif
 
 ! --- skip next initialization if crop parameters are read from *.END file
@@ -451,7 +451,7 @@
       else if (swsoybean.eq.1) then
 ! ---   soybean
         call mgtemprf(atmo%Tav,toptdvr,tmindvr,tmaxdvr,rfmgtemp)
-        call mgphotoprf(mg,time%daynr,state%cfg%meteo%lat,popt,pcrt,flphenodayl,rfmgphotop)
+        call mgphotoprf(mg,time%daynr,atmo%lat,popt,pcrt,flphenodayl,rfmgphotop)
         if (crop%common%dvs.lt.1.0d0) then 
 ! ---     vegetative phase
           if(flrfphotoveg) then
@@ -1052,7 +1052,7 @@
 !        during the last day of the crop period: add the weight of living roots 
 !        to the dead roots and reset living weight to zero
          if (crop%common%flHarvestDay .or. (crop%common%dvs.ge.crop%common%dvsend) .or. &
-     &                 dabs(time%t1900-1.0d0-crop_cfg%rotation_end(crop%common%icrop)).lt.1.0d-3 ) then
+     &                 dabs(time%t1900-1.0d0-crop%rotation_end(crop%common%icrop)).lt.1.0d-3 ) then
             HarLosOrm_rt = crop%wofost%wrt
             HarLosOrm_dwlv =  cw_fraharlosorm_lv * crop%wofost%dwlv
             HarLosOrm_lv   = cw_fraharlosorm_lv * crop%wofost%wlv + HarLosOrm_dwlv
@@ -1091,7 +1091,7 @@
 ! ----- CHECK and WRITE MASS BALANCE: dry matter of crop
 
 !       output of OM balance1: from air to partitioning (kg/ha DM CH2O)
-        call outbalcropOM1(2,state%cfg%general%pathwork,state%cfg%general%outfil,state%cfg%general%project,time%date,crop%common%daycrop,   &
+        call outbalcropOM1(2,time%pathwork,time%outfil,time%project,time%date,crop%common%daycrop,   &
      &       time%t,crop%common%dvs,crop%common%tsum,gass,mres,fr,fl,fs,fo,dmi,cvf,ccheck)
 
 ! -     OM balance2: storage difference(kg/ha DM CH2O)
@@ -1110,7 +1110,7 @@
 !           call fatalerr ('wofost',messag)
         endif
 !       output of OM balance2
-        call outbalcropom2(2,state%cfg%general%pathwork,state%cfg%general%outfil,state%cfg%general%project,time%date,crop%common%daycrop,   &
+        call outbalcropom2(2,time%pathwork,time%outfil,time%project,time%date,crop%common%daycrop,   &
      &         time%t,crop%common%dvs,crop%common%tsum,storagediff,crop%wofost%wlv,crop%wofost%wst,crop%wofost%wso,crop%wofost%wrt,delt,         &
      &         grlv,grst,grso,grrt,drlv,drst,drso,drrt,ombalan)
 
@@ -1123,7 +1123,7 @@
      &      +  HarLosNit_dwlv + HarLosNit_dwst + HarLosNit_dwso
 
 !       output of N balance
-        call outbalcropN(2,state%cfg%general%pathwork,state%cfg%general%outfil,state%cfg%general%project,time%date,crop%common%daycrop,     &
+        call outbalcropN(2,time%pathwork,time%outfil,time%project,time%date,crop%common%daycrop,     &
      &         time%t,crop%common%dvs,crop%common%tsum,NUPTT,NFIXTT,ANLVI,ANSTI,ANRTI,ANSOI,cw_ANLV,&
      &         cw_ANST,ANRT,ANSO,NLOSSL,NLOSSR,NLOSSS,NBALAN,cw_nni)
         IF (dabs(NBALAN) .GE. 1.0d-03) then
@@ -1134,7 +1134,7 @@
         endif
  
         if (crop%common%flHarvestDay .or. (crop%common%dvs.ge.crop%common%dvsend) .or. &
-     &                 dabs(time%t1900-1.0d0-crop_cfg%rotation_end(crop%common%icrop)).lt.1.0d-3 ) then
+     &                 dabs(time%t1900-1.0d0-crop%rotation_end(crop%common%icrop)).lt.1.0d-3 ) then
           gwst  = 0.0d0
           crop%wofost%gwrt  = 0.0d0
           gwso  = 0.0d0

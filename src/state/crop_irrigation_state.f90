@@ -29,6 +29,7 @@ module crop_irrigation_state_mod
       ! SSDI configuration (init-once from state%cfg%irrigation%ssdi via
       ! state%crop%irrigation%init called after CalcGrid in swap_mod)
       integer      :: swssdi            = 0          !! SSDI active (0=no, 1=yes)
+      integer      :: swirfix           = 0          !! fixed-irrigation active (0=no, 1=yes); snapshotted from config%irrigation%swirfix
       integer      :: nod_ssdi(2)       = 0          !! Upper and lower nodes for SSDI
       integer      :: ssdi_schedule     = 0          !! Schedule type (0=fixed dates, 1=internal)
       integer      :: ssdi_sched_type   = 0          !! Internal schedule type (1=Tact/Tpot, 2=h, 3=theta)
@@ -77,8 +78,9 @@ contains
       character(len=*),               intent(in)    :: pathwork_in
 
       ! Defaults are already set on the type declaration; mirror top-level flags.
-      self%swssdi = config_irrigation%swssdi
-      self%nirri  = 1
+      self%swssdi  = config_irrigation%swssdi
+      self%swirfix = config_irrigation%swirfix
+      self%nirri   = 1
 
       ! Fixed-irrigation events seeding (formerly adapter Irrigation block).
       call seed_fixed_irrigation(self, config_irrigation, pathwork_in)

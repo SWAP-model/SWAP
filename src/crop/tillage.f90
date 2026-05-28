@@ -7,15 +7,12 @@ module tillage_mod
 
    ! [GR-CROP 2026-05-25] tillage_mod is `use variables`-free.
    ! - till_* Group AB → state%tillage (seeded by state%tillage%init in swap_mod).
-   ! - swtill → state%cfg%soil%swtill (config-direct).
-   ! - swsolu → state%cfg%solute%swsolu (declaration retained — still
-   !   consumed by src/crop/irrigation.f90 and src/core/timecontrol_mod.f90).
-   ! - SwDiscrvert → state%cfg%soil%discretization%swdiscrvert (declaration
-   !   retained — still consumed by src/soil/dormant/regrid.f90).
    ! - ParamVG → state%soilwater%vg_params_layer(:) (typed per-layer VG
    !   store). Tillage mutates the layer-keyed store and rebuilds per-node
    !   vg_params(:) from it after each event. Legacy paramvg(21, maho)
    !   retired (this file was its last consumer).
+   ! [state%cfg-retirement cluster 6] swtill/swhyst/swdiscrvert → state%soilwater%X;
+   !   swsolu → state%solute%swsolu. All soil_cfg/solute_cfg associates retired.
 
    implicit none
 
@@ -36,24 +33,25 @@ module tillage_mod
    logical, parameter                        :: TEST2 = .false.
 
    ! Sub-record aliases (canonical associate pattern).
+   ! [state%cfg-retirement cluster 6] soil_cfg/solute_cfg aliases dropped;
+   ! swtill/swhyst/swdiscrvert now on state%soilwater, swsolu now on state%solute.
    associate( &
       mesh       => state%mesh,             &
       soil       => state%soilwater,        &
+      solu       => state%solute,           &
       time       => state%timecontrol,      &
       atmo       => state%atmosphere,       &
-      tl         => state%tillage,          &
-      soil_cfg   => state%cfg%soil,         &
-      solute_cfg => state%cfg%solute        )
+      tl         => state%tillage           )
 
       ! INITIALIZE
 
       ! some checks: some combinations not (yet) allowed
-      if (soil_cfg%swtill == 1) then
-         if (soil_cfg%swhyst == 1)              call fatalerr_collected ('DoTillage', 'swhyst = 1 not allowed')
-         if (solute_cfg%swsolu == 1)            call fatalerr_collected ('DoTillage', 'swsolu = 1 not (yet) allowed')
+      if (soil%swtill == 1) then
+         if (soil%swhyst == 1)                  call fatalerr_collected ('DoTillage', 'swhyst = 1 not allowed')
+         if (solu%swsolu == 1)                  call fatalerr_collected ('DoTillage', 'swsolu = 1 not (yet) allowed')
          if (state%crop%common%swoxygen == 2)   call fatalerr_collected ('DoTillage', 'swoxygen = 2 not (yet) allowed')
          if (soil%flksatexm)                    call fatalerr_collected ('DoTillage', 'flksatexm not (yet) allowed')
-         if (soil_cfg%discretization%swdiscrvert == 1) &
+         if (soil%swdiscrvert == 1) &
                                                 call fatalerr_collected ('DoTillage', 'SwDiscrvert = 1 not (yet) allowed')
       end if
 
@@ -95,16 +93,15 @@ module tillage_mod
    logical, parameter                        :: TEST2 = .false.
 
    ! Sub-record aliases (canonical associate pattern).
+   ! [state%cfg-retirement cluster 6] soil_cfg/solute_cfg aliases dropped; swtill on state%soilwater.
    associate( &
       mesh       => state%mesh,             &
       soil       => state%soilwater,        &
       time       => state%timecontrol,      &
       atmo       => state%atmosphere,       &
-      tl         => state%tillage,          &
-      soil_cfg   => state%cfg%soil,         &
-      solute_cfg => state%cfg%solute        )
+      tl         => state%tillage           )
 
-   if (soil_cfg%swtill == 0) return      ! no tillage to be considered: return immediately
+   if (soil%swtill == 0) return      ! no tillage to be considered: return immediately
 
       ! RATE/STATE EVENT
       tl%Rho_last(1:tl%MaxNumSoilHo) = soil%bdens(1:tl%MaxNumSoilHo)
@@ -179,16 +176,15 @@ module tillage_mod
    logical, parameter                        :: TEST2 = .false.
 
    ! Sub-record aliases (canonical associate pattern).
+   ! [state%cfg-retirement cluster 6] soil_cfg/solute_cfg aliases dropped; swtill on state%soilwater.
    associate( &
       mesh       => state%mesh,             &
       soil       => state%soilwater,        &
       time       => state%timecontrol,      &
       atmo       => state%atmosphere,       &
-      tl         => state%tillage,          &
-      soil_cfg   => state%cfg%soil,         &
-      solute_cfg => state%cfg%solute        )
+      tl         => state%tillage           )
 
-   if (soil_cfg%swtill == 0) return      ! no tillage to be considered: return immediately
+   if (soil%swtill == 0) return      ! no tillage to be considered: return immediately
 
       ! OUTPUT
 

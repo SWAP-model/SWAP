@@ -39,6 +39,8 @@ module solute_state_mod
       real(real64), allocatable :: decpotfdepth(:)     !! decpot*fdepth per node (1/d)
 
       ! === config-snapshot scalars (snapshotted from config%solute at config_to_variables) ===
+      ! Top-level solute enable switch (snapshotted here so compute routines read state, not state%cfg).
+      integer      :: swsolu  = 0           !! solute simulation enable (0=off, 1=on); snapshotted from config%solute%swsolu
       ! Bottom BC / aquifer:
       integer      :: swbotbc = 0           !! bottom-BC type for solute concentration
       integer      :: swbr    = 0           !! mixed-reservoir breakthrough switch
@@ -202,6 +204,7 @@ contains
       ! ------------------------------------------------------------------
       ! Config-snapshot scalars (formerly adapter Solute block):
       ! ------------------------------------------------------------------
+      self%swsolu  = config_solute%swsolu
       self%swbotbc = config_solute%swbotbc
       self%cdrain  = config_solute%cdrain
       self%tscf    = config_solute%tscf

@@ -112,6 +112,7 @@ module atmosphere_state_mod
       real(real64) :: angstromb  = 0.50_real64 !< Ångström b coefficient (-)
       real(real64) :: cfevappond = 1.25_real64 !< pond-evap / ETref ratio (-)
       real(real64) :: rsoil      = 0.0_real64  !< soil resistance of wet soil for PMdirect (s/m)
+      real(real64) :: lat        = 0.0_real64  !< geographic latitude (degrees N); snapshotted from config%meteo%lat
 
       ! Today's astro outputs — cached once per day in ReadMeteoDay (daily mode)
       real(real64) :: daylp        = 12.0_real64  !< photoperiodic daylength (h)
@@ -336,6 +337,7 @@ contains
       self%angstromb  = config%meteo%angstromb
       self%cfevappond = config%meteo%evaporation%cfevappond
       self%rsoil      = config%soil%rsoil
+      self%lat        = config%meteo%lat
 
       ! [METEO-TYPED-CSV 2026-05-28] Three typed table loads. Each owns
       ! its schema; validation is inline in load(); is_loaded flag
