@@ -19,3 +19,97 @@ subroutine test_types_exist_and_default()
    @assertFalse(allocated(detail%rows))
    @assertFalse(allocated(rain%rows))
 end subroutine test_types_exist_and_default
+
+@test
+subroutine test_daily_load_happy()
+   use funit
+   use iso_fortran_env, only: real64
+   use meteo_csv_mod, only: meteo_daily_table_t
+   use error_mod,     only: error_collection_t
+
+   type(meteo_daily_table_t) :: daily
+   type(error_collection_t)  :: errors
+
+   call daily%load('tests/unit/io/fixtures/csv_meteo_daily.csv', errors)
+
+   @assertFalse(errors%has_errors())
+   @assertTrue(daily%is_loaded)
+   @assertTrue(allocated(daily%rows))
+   @assertEqual(5, size(daily%rows))
+
+   ! Row 3 = 1981-01-01.  csv_reader returns days-since-1900 = JD - 2415020.
+   ! JD(1981-01-01) = 2444606 → 29586.
+   @assertEqual(29586.0_real64, daily%rows(3)%date,  1.0_real64)
+   @assertEqual(7.0_real64,     daily%rows(3)%rad,   1.0e-6_real64)
+   @assertEqual(0.5_real64,     daily%rows(3)%tmin,  1.0e-6_real64)
+   @assertEqual(6.0_real64,     daily%rows(3)%tmax,  1.0e-6_real64)
+   @assertEqual(3.4_real64,     daily%rows(3)%rain,  1.0e-6_real64)
+   @assertEqual(1.0_real64,     daily%rows(3)%wet,   1.0e-6_real64)
+end subroutine test_daily_load_happy
+
+@test
+subroutine test_daily_validate_tmin_gt_tmax()
+   use funit
+   use meteo_csv_mod, only: meteo_daily_table_t
+   use error_mod,     only: error_collection_t
+
+   type(meteo_daily_table_t) :: daily
+   type(error_collection_t)  :: errors
+
+   call daily%load('tests/unit/io/fixtures/csv_meteo_daily_bad_temp.csv', errors)
+
+   @assertTrue(errors%has_errors())
+   @assertFalse(daily%is_loaded)
+   @assertFalse(allocated(daily%rows))
+end subroutine test_daily_validate_tmin_gt_tmax
+
+@test
+subroutine test_daily_year_window_1981()
+   use funit
+   use meteo_csv_mod, only: meteo_daily_table_t
+   use error_mod,     only: error_collection_t
+
+   type(meteo_daily_table_t) :: daily
+   type(error_collection_t)  :: errors
+   integer :: i1, i2
+
+   call daily%load('tests/unit/io/fixtures/csv_meteo_daily.csv', errors)
+   @assertFalse(errors%has_errors())
+
+   call daily%year_window(1981, i1, i2)
+   ! 1981 rows are #3, #4, #5 in the fixture.
+   @assertEqual(3, i1)
+   @assertEqual(5, i2)
+end subroutine test_daily_year_window_1981
+
+@test
+subroutine test_daily_year_window_missing_year()
+   use funit
+   use meteo_csv_mod, only: meteo_daily_table_t
+   use error_mod,     only: error_collection_t
+
+   type(meteo_daily_table_t) :: daily
+   type(error_collection_t)  :: errors
+   integer :: i1, i2
+
+   call daily%load('tests/unit/io/fixtures/csv_meteo_daily.csv', errors)
+   call daily%year_window(1999, i1, i2)
+   ! No 1999 rows — sentinel (0, 0).
+   @assertEqual(0, i1)
+   @assertEqual(0, i2)
+end subroutine test_daily_year_window_missing_year
+
+@test
+subroutine test_daily_load_missing_file()
+   use funit
+   use meteo_csv_mod, only: meteo_daily_table_t
+   use error_mod,     only: error_collection_t
+
+   type(meteo_daily_table_t) :: daily
+   type(error_collection_t)  :: errors
+
+   call daily%load('tests/unit/io/fixtures/does_not_exist.csv', errors)
+   @assertTrue(errors%has_errors())
+   @assertFalse(daily%is_loaded)
+   @assertFalse(allocated(daily%rows))
+end subroutine test_daily_load_missing_file

@@ -81,19 +81,81 @@ module meteo_csv_mod
 
 contains
 
-   ! Stubs — real implementations land in Tasks 2-4.
    subroutine meteo_daily_table_load(self, path, errors)
+      use csv_reader_mod, only: read_csv_table
+      use error_mod,      only: ERR_VALIDATION_CROSS_FIELD, ERR_VALIDATION_OUT_OF_RANGE
       class(meteo_daily_table_t), intent(inout) :: self
       character(len=*),           intent(in)    :: path
       type(error_collection_t),   intent(inout) :: errors
-      ! TASK 2
+
+      real(real64), allocatable :: tbl(:,:)
+      character(len=5) :: hdr(9)
+      integer :: n, r
+      character(len=200) :: msg
+
+      hdr = [character(len=5) :: 'date ', 'rad  ', 'tmin ', 'tmax ', &
+             'hum  ', 'wind ', 'rain ', 'etref', 'wet  ']
+      call read_csv_table(trim(path), hdr, tbl, errors)
+      if (errors%has_fatals()) return
+
+      n = size(tbl, 1)
+      if (allocated(self%rows)) deallocate(self%rows)
+      allocate(self%rows(n))
+      do r = 1, n
+         self%rows(r)%date  = tbl(r, 1)
+         self%rows(r)%rad   = tbl(r, 2)
+         self%rows(r)%tmin  = tbl(r, 3)
+         self%rows(r)%tmax  = tbl(r, 4)
+         self%rows(r)%hum   = tbl(r, 5)
+         self%rows(r)%wind  = tbl(r, 6)
+         self%rows(r)%rain  = tbl(r, 7)
+         self%rows(r)%etref = tbl(r, 8)
+         self%rows(r)%wet   = tbl(r, 9)
+      end do
+
+      ! Inline validate — load owns this, never call separately.
+      do r = 1, n
+         if (self%rows(r)%tmin > self%rows(r)%tmax) then
+            write(msg, '("meteo daily row ", I0, ": tmin > tmax")') r
+            call errors%append(ERR_VALIDATION_CROSS_FIELD, trim(msg), 'meteo_csv')
+            deallocate(self%rows)
+            return
+         end if
+         if (self%rows(r)%rain < 0.0_real64) then
+            write(msg, '("meteo daily row ", I0, ": rain < 0")') r
+            call errors%append(ERR_VALIDATION_OUT_OF_RANGE, trim(msg), 'meteo_csv')
+            deallocate(self%rows)
+            return
+         end if
+      end do
+
+      self%is_loaded = .true.
    end subroutine meteo_daily_table_load
 
    subroutine meteo_daily_table_year_window(self, year, i1, i2)
       class(meteo_daily_table_t), intent(in)  :: self
       integer,                    intent(in)  :: year
       integer,                    intent(out) :: i1, i2
-      i1 = 0; i2 = 0  ! TASK 2
+
+      integer  :: i
+      real(real64) :: t_jan1, t_dec31
+
+      i1 = 0; i2 = 0
+      if (.not. self%is_loaded) return
+      if (.not. allocated(self%rows)) return
+
+      t_jan1  = real(days_since_1900(year,  1,  1), real64)
+      t_dec31 = real(days_since_1900(year, 12, 31), real64)
+
+      ! Assumes rows are sorted ascending by date (guaranteed by csv_reader's
+      ! sequential read). i1 = first in-window index, i2 = last.
+      do i = 1, size(self%rows)
+         if (self%rows(i)%date >= t_jan1 - 0.5_real64 .and. &
+             self%rows(i)%date <= t_dec31 + 0.5_real64) then
+            if (i1 == 0) i1 = i
+            i2 = i
+         end if
+      end do
    end subroutine meteo_daily_table_year_window
 
    subroutine meteo_detail_table_load(self, path, errors)
@@ -123,5 +185,19 @@ contains
       integer,                    intent(out) :: i1, i2
       i1 = 0; i2 = 0  ! TASK 4
    end subroutine rain_events_table_year_window
+
+   ! Private helper — same epoch and convention as csv_reader's date col.
+   ! Fliegel/Van Flandern formula (JD), then subtract jd1900 = 2415020.
+   pure function days_since_1900(year, month, day) result(d)
+      integer, intent(in) :: year, month, day
+      integer :: d
+      integer :: a, y, m, jd
+      integer, parameter :: jd1900 = 2415020
+      a = (14 - month) / 12
+      y = year + 4800 - a
+      m = month + 12*a - 3
+      jd = day + (153*m + 2)/5 + 365*y + y/4 - y/100 + y/400 - 32045
+      d = jd - jd1900
+   end function days_since_1900
 
 end module meteo_csv_mod
