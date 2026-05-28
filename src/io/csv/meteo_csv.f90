@@ -93,6 +93,10 @@ contains
       integer :: n, r
       character(len=200) :: msg
 
+      ! Reset is_loaded so a failed load on a reused instance doesn't
+      ! leave a stale .true. flag from a previous successful load.
+      self%is_loaded = .false.
+
       hdr = [character(len=5) :: 'date ', 'rad  ', 'tmin ', 'tmax ', &
              'hum  ', 'wind ', 'rain ', 'etref', 'wet  ']
       call read_csv_table(trim(path), hdr, tbl, errors)
@@ -168,6 +172,10 @@ contains
       character(len=8) :: hdr(7)
       integer :: n, r
 
+      ! Reset is_loaded so a failed load on a reused instance doesn't
+      ! leave a stale .true. flag from a previous successful load.
+      self%is_loaded = .false.
+
       hdr = [character(len=8) :: 'datetime', 'record  ', 'rad     ', &
              'temp    ', 'hum     ', 'wind    ', 'rain    ']
       call read_csv_table(trim(path), hdr, tbl, errors)
@@ -227,6 +235,10 @@ contains
       real(real64), allocatable :: tbl(:,:)
       character(len=8) :: hdr(2)
       integer :: n, r
+
+      ! Reset is_loaded so a failed load on a reused instance doesn't
+      ! leave a stale .true. flag from a previous successful load.
+      self%is_loaded = .false.
 
       hdr = [character(len=8) :: 'datetime', 'amount  ']
       call read_csv_table(trim(path), hdr, tbl, errors)

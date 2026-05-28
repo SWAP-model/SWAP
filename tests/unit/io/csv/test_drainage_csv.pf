@@ -1,0 +1,56 @@
+! Tests for typed CSV record table for drainage open-water-level tables.
+! Family 1 of the CSV-families arc (ADR 0044).
+
+@test
+subroutine test_owltab_load_happy()
+   use funit
+   use iso_fortran_env,  only: real64
+   use drainage_csv_mod, only: owl_events_table_t
+   use error_mod,        only: error_collection_t
+
+   type(owl_events_table_t) :: tbl
+   type(error_collection_t) :: errors
+
+   call tbl%load('tests/unit/io/fixtures/csv_drainage_owltab.csv', errors)
+
+   @assertFalse(errors%has_errors())
+   @assertTrue(tbl%is_loaded)
+   @assertTrue(allocated(tbl%rows))
+   @assertEqual(3, size(tbl%rows))
+
+   ! Row 2 = 1981-06-15.  days_since_1900(1981,6,15) = 29751.
+   @assertEqual(29751.0_real64, tbl%rows(2)%date,  1.0_real64)
+   @assertEqual(-30.0_real64,   tbl%rows(2)%level, 1.0e-6_real64)
+end subroutine test_owltab_load_happy
+
+@test
+subroutine test_owltab_load_unsorted()
+   use funit
+   use drainage_csv_mod, only: owl_events_table_t
+   use error_mod,        only: error_collection_t
+
+   type(owl_events_table_t) :: tbl
+   type(error_collection_t) :: errors
+
+   call tbl%load('tests/unit/io/fixtures/csv_drainage_owltab_unsorted.csv', errors)
+
+   @assertTrue(errors%has_errors())
+   @assertFalse(tbl%is_loaded)
+   @assertFalse(allocated(tbl%rows))
+end subroutine test_owltab_load_unsorted
+
+@test
+subroutine test_owltab_load_missing_file()
+   use funit
+   use drainage_csv_mod, only: owl_events_table_t
+   use error_mod,        only: error_collection_t
+
+   type(owl_events_table_t) :: tbl
+   type(error_collection_t) :: errors
+
+   call tbl%load('tests/unit/io/fixtures/does_not_exist_drainage.csv', errors)
+
+   @assertTrue(errors%has_errors())
+   @assertFalse(tbl%is_loaded)
+   @assertFalse(allocated(tbl%rows))
+end subroutine test_owltab_load_missing_file

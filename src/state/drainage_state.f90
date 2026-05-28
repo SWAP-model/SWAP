@@ -180,35 +180,32 @@ contains
       end if
       self%swliminf = config_drain%swliminf
 
-      ! ---- [Piece D] owltab CSV pre-load ----
-      ! owltab may already be allocated (the adapter ran config_to_variables
-      ! before this init fires). Guard with if (.not. allocated) to avoid
-      ! double-allocation; if already allocated the data is already in place.
+      ! ---- [Piece D] owltab CSV pre-load (typed loader — ADR 0044 Family 1) ----
+      ! owl_events_table_t validates strictly-ascending dates (required by afgen).
+      ! One fresh error_collection_t per level so errors don't accumulate across
+      ! levels (per meteo-pilot lesson: don't share an accumulator across loads).
+      ! Legacy interleaved layout preserved: owltab(lev, 2k-1) = date,
+      ! owltab(lev, 2k) = level; nowltab(lev) = nrows for afgen extents.
       if (allocated(config_drain%owltab_file)) then
          block
-            use csv_reader_mod, only: read_csv_table
-            use error_mod, only: error_collection_t
-            real(real64), allocatable :: csv_table(:,:)
-            type(error_collection_t)  :: csv_errs
+            use drainage_csv_mod, only: owl_events_table_t
+            use error_mod,        only: error_collection_t
+            type(owl_events_table_t) :: owl_tbl
+            type(error_collection_t) :: lev_errs
             integer :: lev, nrows, k
-            character(len=6) :: hdr(2)
-            hdr(1) = 'date  '
-            hdr(2) = 'level '
-            ! Allocate only if not already done (Piece A guard covers this).
-            if (.not. allocated(self%owltab)) then
-               allocate(self%owltab(config_drain%nrlevs, 2*MAOWL))
-               self%owltab = 0.0_real64
-            end if
             do lev = 1, size(config_drain%owltab_file)
                if (len_trim(config_drain%owltab_file(lev)) == 0) cycle
-               call read_csv_table(trim(config_drain%owltab_file(lev)), hdr, csv_table, csv_errs)
-               call csv_errs%abort_if_fatal()
-               if (csv_errs%count() == 0) then
-                  nrows = size(csv_table, 1)
+               lev_errs = error_collection_t()
+               call owl_tbl%load(trim(config_drain%owltab_file(lev)), lev_errs)
+               call lev_errs%abort_if_fatal()
+               if (owl_tbl%is_loaded) then
+                  nrows = size(owl_tbl%rows)
+                  ! Cap at MAOWL pairs (afgen table bound).
+                  if (nrows > MAOWL) nrows = MAOWL
                   self%nowltab(lev) = nrows
                   do k = 1, nrows
-                     self%owltab(lev, 2*k-1) = csv_table(k, 1)
-                     self%owltab(lev, 2*k)   = csv_table(k, 2)
+                     self%owltab(lev, 2*k-1) = owl_tbl%rows(k)%date
+                     self%owltab(lev, 2*k)   = owl_tbl%rows(k)%level
                   end do
                end if
             end do
