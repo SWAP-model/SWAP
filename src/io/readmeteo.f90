@@ -251,7 +251,8 @@
 !     Last modified      : February 2014
 !     Purpose            : read rainfall data (events) of one calendar year
 !     Interface:
-!       I   - logf,yearmeteo (via state%timecontrol),pathatm,raincsv_dat,nraincsv
+!       I   - logf,yearmeteo (via state%timecontrol),pathatm,
+!             state%atmosphere%rain_events (typed rain_events_table_t, loaded at init)
 !       O   - nmrain,rainamount,raintimearray
 ! ----------------------------------------------------------------------
       implicit none

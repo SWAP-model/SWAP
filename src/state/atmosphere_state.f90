@@ -343,7 +343,7 @@ contains
       block
          use error_mod, only: error_collection_t
          character(len=300) :: metfile_lc, csvpath
-         type(error_collection_t) :: errs
+         type(error_collection_t) :: errs_daily, errs_detail, errs_rain
 
          metfile_lc = ''
          if (allocated(config%meteo%metfile)) metfile_lc = config%meteo%metfile
@@ -351,24 +351,24 @@ contains
 
          if (index(trim(metfile_lc), '.csv') > 0) then
             csvpath = trim(config%general%pathatm) // trim(metfile_lc)
-            call self%meteo%load(trim(csvpath), errs)
-            call errs%abort_if_fatal()
+            call self%meteo%load(trim(csvpath), errs_daily)
+            call errs_daily%abort_if_fatal()
          end if
 
          if (config%meteo%swmetdetail == 1) then
             if (allocated(config%meteo%detail_file) .and. &
                 len_trim(config%meteo%detail_file) > 0) then
                csvpath = trim(config%general%pathatm) // trim(config%meteo%detail_file)
-               call self%meteo_detail%load(trim(csvpath), errs)
-               call errs%abort_if_fatal()
+               call self%meteo_detail%load(trim(csvpath), errs_detail)
+               call errs_detail%abort_if_fatal()
             end if
          end if
 
          if (config%meteo%swrain == 3 .and. allocated(config%meteo%rain_events_file)) then
             if (len_trim(config%meteo%rain_events_file) > 0) then
                csvpath = trim(config%general%pathatm) // trim(config%meteo%rain_events_file)
-               call self%rain_events%load(trim(csvpath), errs)
-               call errs%abort_if_fatal()
+               call self%rain_events%load(trim(csvpath), errs_rain)
+               call errs_rain%abort_if_fatal()
             end if
          end if
       end block

@@ -1,4 +1,4 @@
-!> Typed CSV record tables for meteorological forcing files.
+!> Typed CSV record tables for meteorological forcing files. (ADR 0044)
 !!
 !! Three families:
 !!   * meteo_daily_table_t   — 9-column daily meteo (ADR 0014 canonical schema)
