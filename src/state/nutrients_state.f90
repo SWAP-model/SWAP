@@ -249,22 +249,21 @@ contains
    !! See ADR 0027 ([nutrients] N2b).
    subroutine load_nutrients_events(cfg, pathwork_in)
       use, intrinsic :: iso_fortran_env, only: real64
-      use csv_reader_mod, only: read_csv_table
       use error_mod, only: error_collection_t, fatalerr_collected
       use nutrients_config_mod, only: nutrients_config_t
+      use nutrients_csv_mod, only: amendment_events_table_t
       use wofost_soil_declarations, only: MatNum, Amend, VolaFrac, &
                                             TimeAmend, NuAmend, iamend, &
                                             namend, isme, maxamn
       type(nutrients_config_t), intent(in) :: cfg
       character(len=*),         intent(in) :: pathwork_in
 
-      real(real64), allocatable :: tbl(:,:)
-      type(error_collection_t)  :: errs
+      type(amendment_events_table_t) :: typed_tbl
+      type(error_collection_t)       :: errs
       character(len=300) :: csvpath
-      character(len=14)  :: hdr(4)
       integer :: i, j, n
       real(real64) :: tmp_date, tmp_amount, tmp_volat
-      real(real64) :: tmp_mat_real
+      integer :: tmp_mat
 
       ! Default: no amendments. Reset legacy globals to a known state.
       namend = 0
@@ -275,16 +274,15 @@ contains
       if (.not. allocated(cfg%events_file)) return
       if (len_trim(cfg%events_file) == 0)   return
 
-      hdr(1) = 'date          '
-      hdr(2) = 'material      '
-      hdr(3) = 'amount_kgha   '
-      hdr(4) = 'volat_fraction'
+      ! Typed loader: parse + validate (material 1..20, amount [0,5e5], volat [0,1]).
+      ! Range/enum validation is owned by the loader; this site only handles
+      ! the post-load conversion and global population.
       csvpath = trim(pathwork_in) // trim(cfg%events_file)
-      call read_csv_table(trim(csvpath), hdr, tbl, errs)
+      call typed_tbl%load(trim(csvpath), errs)
       call errs%abort_if_fatal()
 
       n = 0
-      if (allocated(tbl)) n = size(tbl, 1)
+      if (typed_tbl%is_loaded) n = size(typed_tbl%rows)
       if (n < 1) return     ! Empty CSV: no amendments. Not an error.
       if (n > maxamn) then
          call fatalerr_collected('load_nutrients_events', &
@@ -292,19 +290,22 @@ contains
          return
       end if
 
-      ! Per-row validation
+      ! Defense-in-depth validation (parallel to the loader checks; keeps
+      ! the existing fatalerr contract for callers that bypass the typed path).
       do i = 1, n
-         if (nint(tbl(i, 2)) < 1 .or. nint(tbl(i, 2)) > 20) then
+         if (typed_tbl%rows(i)%material < 1 .or. typed_tbl%rows(i)%material > 20) then
             call fatalerr_collected('load_nutrients_events', &
                'material out of range [1, 20]')
             return
          end if
-         if (tbl(i, 3) < 0.0_real64 .or. tbl(i, 3) > 500000.0_real64) then
+         if (typed_tbl%rows(i)%amount_kgha < 0.0_real64 .or. &
+             typed_tbl%rows(i)%amount_kgha > 500000.0_real64) then
             call fatalerr_collected('load_nutrients_events', &
                'amount_kgha out of range [0, 500000]')
             return
          end if
-         if (tbl(i, 4) < 0.0_real64 .or. tbl(i, 4) > 1.0_real64) then
+         if (typed_tbl%rows(i)%volat_fraction < 0.0_real64 .or. &
+             typed_tbl%rows(i)%volat_fraction > 1.0_real64) then
             call fatalerr_collected('load_nutrients_events', &
                'volat_fraction out of range [0, 1]')
             return
@@ -315,34 +316,43 @@ contains
       ! Acceptable O(n^2) given n <= 1000 and this runs once at config-load.
       do i = 1, n - 1
          do j = i + 1, n
-            if (tbl(i, 1) > tbl(j, 1)) then
-               tmp_date     = tbl(i, 1); tbl(i, 1) = tbl(j, 1); tbl(j, 1) = tmp_date
-               tmp_mat_real = tbl(i, 2); tbl(i, 2) = tbl(j, 2); tbl(j, 2) = tmp_mat_real
-               tmp_amount   = tbl(i, 3); tbl(i, 3) = tbl(j, 3); tbl(j, 3) = tmp_amount
-               tmp_volat    = tbl(i, 4); tbl(i, 4) = tbl(j, 4); tbl(j, 4) = tmp_volat
+            if (typed_tbl%rows(i)%date > typed_tbl%rows(j)%date) then
+               tmp_date                    = typed_tbl%rows(i)%date
+               typed_tbl%rows(i)%date      = typed_tbl%rows(j)%date
+               typed_tbl%rows(j)%date      = tmp_date
+               tmp_mat                     = typed_tbl%rows(i)%material
+               typed_tbl%rows(i)%material  = typed_tbl%rows(j)%material
+               typed_tbl%rows(j)%material  = tmp_mat
+               tmp_amount                       = typed_tbl%rows(i)%amount_kgha
+               typed_tbl%rows(i)%amount_kgha    = typed_tbl%rows(j)%amount_kgha
+               typed_tbl%rows(j)%amount_kgha    = tmp_amount
+               tmp_volat                         = typed_tbl%rows(i)%volat_fraction
+               typed_tbl%rows(i)%volat_fraction  = typed_tbl%rows(j)%volat_fraction
+               typed_tbl%rows(j)%volat_fraction  = tmp_volat
             end if
          end do
       end do
 
-      ! Populate per-event legacy globals
+      ! Populate per-event legacy globals.
+      ! Unit conversion: kg/ha -> kg/m^2 via ×1e-4 applied at the copy site.
       do i = 1, n
-         MatNum(i)   = nint(tbl(i, 2))
-         Amend(i)    = 1.0e-4_real64 * tbl(i, 3)   ! kg/ha -> kg/m^2
-         VolaFrac(i) = tbl(i, 4)
+         MatNum(i)   = typed_tbl%rows(i)%material
+         Amend(i)    = 1.0e-4_real64 * typed_tbl%rows(i)%amount_kgha   ! kg/ha -> kg/m^2
+         VolaFrac(i) = typed_tbl%rows(i)%volat_fraction
       end do
 
       ! Group dosages per date (mirrors deleted SoilManagement(1)).
       j = 1
       NuAmend(j)   = 1
-      TimeAmend(j) = tbl(1, 1)
+      TimeAmend(j) = typed_tbl%rows(1)%date
       iamend(1, 1) = 1
       do i = 2, n
-         if (abs(tbl(i, 1) - tbl(i - 1, 1)) < 1.0e-3_real64) then
+         if (abs(typed_tbl%rows(i)%date - typed_tbl%rows(i - 1)%date) < 1.0e-3_real64) then
             NuAmend(j) = NuAmend(j) + 1
          else
             j = j + 1
             NuAmend(j)   = 1
-            TimeAmend(j) = tbl(i, 1)
+            TimeAmend(j) = typed_tbl%rows(i)%date
          end if
          iamend(j, NuAmend(j)) = i
       end do
