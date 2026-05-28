@@ -100,7 +100,7 @@ subroutine surfacewater_balance(state, request_smaller_dt)
       !!
       !! Updates wlp from table (swsrf=3), then dispatches to wlevbal (simulated
       !! level, swsec=2) or wballev (input level, swsec=1).
-      use swap_array_dimensions, only: madr, mawlp
+      use swap_array_dimensions, only: mawlp
       use array_utils,           only: afgen
       use swap_state_mod,        only: swap_state_t
       implicit none
@@ -108,17 +108,9 @@ subroutine surfacewater_balance(state, request_smaller_dt)
       type(swap_state_t), intent(inout) :: state
       logical,            intent(out)   :: request_smaller_dt
 
-      integer :: level, node
-      real(8) :: zCum, zTopDisLay(madr), difzTopDisLay(madr), ratio, ratiodz, sumqdr(madr), dh
-      integer :: nodeTopDisLay(madr)
-      character(len=300) :: messag
-
       request_smaller_dt = .false.
 
-      associate (mesh => state%mesh,         &
-                 drai => state%drainage,     &
-                 soil => state%soilwater,    &
-                 surf => state%surfacewater, &
+      associate (surf => state%surfacewater, &
                  time => state%timecontrol,  &
                  sw_cfg => state%cfg%surface_water)
 
@@ -248,17 +240,17 @@ subroutine surfacewater_balance(state, request_smaller_dt)
          ! Determine the management period the model is in.
          imper = 0
          surf%imper = 0
-100      imper = imper + 1
-         surf%imper = imper
+         do
+            imper = imper + 1
+            surf%imper = imper
 
-         if (imper .gt. surf%nmper) then
-            messag = ' sw-level oscillation at '//datetime//                &
-       &           '       advise: reduction of dtmax !'
-            messag = 'error sw-management periods(IMPER), more than defined'
-            call fatalerr_collected('Wlevbal', messag)
-         end if
+            if (imper .gt. surf%nmper) then
+               messag = 'error sw-management periods(IMPER), more than defined'
+               call fatalerr_collected('Wlevbal', messag)
+            end if
 
-         if (time%t1900 - 1.d0 + 0.1d-10 .gt. surf%impend(imper)) goto 100
+            if (time%t1900 - 1.d0 + 0.1d-10 .le. surf%impend(imper)) exit
+         end do
 
          ! Determine the target surface-water level.
          if (surf%swman(imper) .eq. 1) then
@@ -407,26 +399,25 @@ subroutine surfacewater_balance(state, request_smaller_dt)
                   wlsl = surf%hbweir(imper)
                   wlsu = surf%sttab(1, 1)
 
-700               wlsi  = (wlsl + wlsu) * 0.5
-                  swsti = swstlev(state, wlsi)
-                  if (surf%swqhr .eq. 1) then
-                     wdisi = surf%alphaw(imper)*(wlsi - surf%hbweir(imper))**surf%betaw(imper)
-                  else
-                     wdisi = qhtab(surf, wlsi, imper)
-                  end if
-                  swstn = surf%swst + (drai%qdrd + drai%QRapDra - wdisi)*time%dt + soil%runots
-                  if (swstn .lt. swsti) then
-                     wlsu = wlsi
-                  else
-                     wlsl = wlsi
-                  end if
-                  if ((wlsu - wlsl) .gt. 0.001d0) then
-                     goto 700
-                  else
-                     surf%wls  = wlsi
-                     surf%swst = swstn
-                     wdis      = wdisi
-                  end if
+                  do
+                     wlsi  = (wlsl + wlsu) * 0.5
+                     swsti = swstlev(state, wlsi)
+                     if (surf%swqhr .eq. 1) then
+                        wdisi = surf%alphaw(imper)*(wlsi - surf%hbweir(imper))**surf%betaw(imper)
+                     else
+                        wdisi = qhtab(surf, wlsi, imper)
+                     end if
+                     swstn = surf%swst + (drai%qdrd + drai%QRapDra - wdisi)*time%dt + soil%runots
+                     if (swstn .lt. swsti) then
+                        wlsu = wlsi
+                     else
+                        wlsl = wlsi
+                     end if
+                     if ((wlsu - wlsl) .le. 0.001d0) exit
+                  end do
+                  surf%wls  = wlsi
+                  surf%swst = swstn
+                  wdis      = wdisi
                end if
             end if
          end if

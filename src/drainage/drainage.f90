@@ -190,9 +190,9 @@ contains
                x = 2*pi*dbot/drai%l(1)
                if (x .gt. 0.5d0) then
                   fx = 0.0d0
-                  do 10 i = 1, 5, 2
+                  do i = 1, 5, 2
                      fx = fx + (4*exp(-2*i*x))/(i*(1.0d0 - exp(-2*i*x)))
-10                continue
+                  end do
                   eqd = pi*drai%l(1)/8/(log(drai%l(1)/drai%wetper(1)) + fx)
                else
                   if (x .lt. 1.0d-6) then
@@ -503,10 +503,6 @@ contains
     !! Periods are defined by `impend` array.
     !!@endnote
     !!
-    !!@warning
-    !! Uses GOTO statement for management period search (line 800).
-    !! This is legacy code structure that should be refactored to DO/IF constructs.
-    !!@endwarning
     !!
     !!@note
     !! ----------------------------------------------------------------------
@@ -550,7 +546,7 @@ contains
          ! Summate fluxes for swballev / swlevbal.
          drai%qdrd = 0.0d0
 
-         do 500 level = 1, drai%nrlevs
+         do level = 1, drai%nrlevs
 
             ! Surface-water level for this drainage level.
             if (sw_cfg%swsrf .ge. 2) then
@@ -633,7 +629,7 @@ contains
                drai%qdrd = drai%qdrd + drai%qdrain(level)
             end if
 
-500      continue
+         end do
 
          ! Macropore rapid-drainage basis block deleted (ADR 0040).
 
@@ -641,20 +637,21 @@ contains
          ! Check for system falling dry (only for swsec = 2):
          if (sw_cfg%swsec .eq. 1) return
          if (sw_cfg%swsrf .eq. 1) then
-            do 10 level = 1, drai%nrlevs
+            do level = 1, drai%nrlevs
                if (drai%qdrain(level) .lt. 0.0d0) drai%qdrain(level) = 0.0d0
-10          continue
+            end do
          elseif (sw_cfg%swsrf .ge. 2) then
 
             ! Determine which management period the model is in.
             imper = 0
-800         imper = imper + 1
-
-            if (imper .gt. surf%nmper) then
-               messag = 'sw-management periods(IMPER), more than defined'
-               call fatalerr_collected('Bocodre', messag)
-            end if
-            if (time%t1900 - 1.d0 + 0.1d-10 .gt. surf%impend(imper)) goto 800
+            do
+               imper = imper + 1
+               if (imper .gt. surf%nmper) then
+                  messag = 'sw-management periods(IMPER), more than defined'
+                  call fatalerr_collected('Bocodre', messag)
+               end if
+               if (time%t1900 - 1.d0 + 0.1d-10 .le. surf%impend(imper)) exit
+            end do
 
             ! Will the system become empty?
             dvmax   = (drai%qdrd + surf%wscap(imper))*time%dt
@@ -671,9 +668,9 @@ contains
                   call fatalerr_collected('Bocodre', messag)
                end if
 
-               do 820 level = 1 + surf%nrpri, drai%nrlevs
+               do level = 1 + surf%nrpri, drai%nrlevs
                   drai%qdrain(level) = drai%qdrain(level)*qdratio
-820            continue
+               end do
                drai%qdrd = qdrdm
             end if
          end if
