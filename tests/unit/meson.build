@@ -158,6 +158,7 @@ if get_option('enable_pfunit')
         # [GR-IO 2026-05-25 Phase 6 Step 6] initialize.f90 deleted.
         '../../src/soil/waterbalance.f90',
         '../../src/soil/soilhydraulics.f90',
+        '../../src/io/csv/meteo_csv.f90',
         '../../src/io/csv_aggregates.f90',
         '../../src/io/csv_output.f90',
         '../../src/io/meteo_buffer_mod.f90',
@@ -231,6 +232,7 @@ if get_option('enable_pfunit')
         'config/test_cropfixed_config.pf',
         'config/test_cropgrass_config.pf',
         'config/test_cropwofost_config.pf',
+        'io/csv/test_meteo_csv.pf',
         'io/test_csv_reader.pf',
         'io/test_csv_writer.pf',
         'io/test_output_registry.pf',

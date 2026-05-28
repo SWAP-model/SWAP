@@ -1,6 +1,7 @@
 ! pFUnit test-suite registry. Drift-era state suites removed in Phase 4b Task 4.
 ADD_TEST_SUITE(test_swap_log_suite)
 ADD_TEST_SUITE(test_arrayutils_suite)
+ADD_TEST_SUITE(test_meteo_csv_suite)
 ADD_TEST_SUITE(test_csv_reader_suite)
 ADD_TEST_SUITE(test_csv_writer_suite)
 ADD_TEST_SUITE(test_output_registry_suite)

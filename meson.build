@@ -7,7 +7,7 @@ fc = meson.get_compiler('fortran')
 fs = import('fs')
 
 src_inc = include_directories(
-    'src', 'src/core', 'src/io', 'src/io/toml', 'src/soil', 'src/atmosphere',
+    'src', 'src/core', 'src/io', 'src/io/csv', 'src/io/toml', 'src/soil', 'src/atmosphere',
     'src/crop', 'src/drainage', 'src/boundary',
     'src/solute', 'src/heat', 'src/utils', 'src/config', 'src/state'
 )

@@ -1,0 +1,21 @@
+! Tests for typed CSV record tables in meteo_csv_mod.
+! Pilot for the typed-CSV-records pattern; six more families to follow.
+
+@test
+subroutine test_types_exist_and_default()
+   use funit
+   use iso_fortran_env, only: real64
+   use meteo_csv_mod, only: meteo_daily_table_t, meteo_detail_table_t, rain_events_table_t
+
+   type(meteo_daily_table_t)  :: daily
+   type(meteo_detail_table_t) :: detail
+   type(rain_events_table_t)  :: rain
+
+   ! is_loaded defaults to false; rows unallocated.
+   @assertFalse(daily%is_loaded)
+   @assertFalse(detail%is_loaded)
+   @assertFalse(rain%is_loaded)
+   @assertFalse(allocated(daily%rows))
+   @assertFalse(allocated(detail%rows))
+   @assertFalse(allocated(rain%rows))
+end subroutine test_types_exist_and_default
