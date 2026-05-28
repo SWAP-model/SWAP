@@ -159,17 +159,63 @@ contains
    end subroutine meteo_daily_table_year_window
 
    subroutine meteo_detail_table_load(self, path, errors)
+      use csv_reader_mod, only: read_csv_table
       class(meteo_detail_table_t), intent(inout) :: self
       character(len=*),            intent(in)    :: path
       type(error_collection_t),    intent(inout) :: errors
-      ! TASK 3
+
+      real(real64), allocatable :: tbl(:,:)
+      character(len=8) :: hdr(7)
+      integer :: n, r
+
+      hdr = [character(len=8) :: 'datetime', 'record  ', 'rad     ', &
+             'temp    ', 'hum     ', 'wind    ', 'rain    ']
+      call read_csv_table(trim(path), hdr, tbl, errors)
+      if (errors%has_fatals()) return
+
+      n = size(tbl, 1)
+      if (allocated(self%rows)) deallocate(self%rows)
+      allocate(self%rows(n))
+      do r = 1, n
+         self%rows(r)%datetime = tbl(r, 1)
+         self%rows(r)%record   = nint(tbl(r, 2))
+         self%rows(r)%rad      = tbl(r, 3)
+         self%rows(r)%temp     = tbl(r, 4)
+         self%rows(r)%hum      = tbl(r, 5)
+         self%rows(r)%wind     = tbl(r, 6)
+         self%rows(r)%rain     = tbl(r, 7)
+      end do
+
+      self%is_loaded = .true.
    end subroutine meteo_detail_table_load
 
    subroutine meteo_detail_table_year_window(self, year, i1, i2)
       class(meteo_detail_table_t), intent(in)  :: self
       integer,                     intent(in)  :: year
       integer,                     intent(out) :: i1, i2
-      i1 = 0; i2 = 0  ! TASK 3
+
+      integer :: i
+      real(real64) :: t_jan1, t_jan1_next
+
+      i1 = 0; i2 = 0
+      if (.not. self%is_loaded) return
+      if (.not. allocated(self%rows)) return
+
+      ! Half-open interval [t_jan1, t_jan1_next) — sub-daily timestamps are
+      ! fractional days, so the daily ±0.5 slack would mis-bucket Dec 31
+      ! noon-to-midnight into the next year (mirrors legacy MeteoCSVDetYear).
+      t_jan1      = real(days_since_1900(year,     1, 1), real64)
+      t_jan1_next = real(days_since_1900(year + 1, 1, 1), real64)
+
+      ! Assumes rows are sorted ascending by datetime (guaranteed by csv_reader's
+      ! sequential read). i1 = first in-window index, i2 = last.
+      do i = 1, size(self%rows)
+         if (self%rows(i)%datetime >= t_jan1 .and. &
+             self%rows(i)%datetime <  t_jan1_next) then
+            if (i1 == 0) i1 = i
+            i2 = i
+         end if
+      end do
    end subroutine meteo_detail_table_year_window
 
    subroutine rain_events_table_load(self, path, errors)

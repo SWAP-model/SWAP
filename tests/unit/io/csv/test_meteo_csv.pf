@@ -113,3 +113,56 @@ subroutine test_daily_load_missing_file()
    @assertFalse(daily%is_loaded)
    @assertFalse(allocated(daily%rows))
 end subroutine test_daily_load_missing_file
+
+@test
+subroutine test_detail_load_happy()
+   use funit
+   use iso_fortran_env, only: real64
+   use meteo_csv_mod, only: meteo_detail_table_t
+   use error_mod,     only: error_collection_t
+
+   type(meteo_detail_table_t) :: detail
+   type(error_collection_t)   :: errors
+
+   call detail%load('tests/unit/io/fixtures/csv_meteo_detail.csv', errors)
+
+   @assertFalse(errors%has_errors())
+   @assertTrue(detail%is_loaded)
+   @assertTrue(allocated(detail%rows))
+   @assertEqual(3, size(detail%rows))
+   @assertEqual(2,    detail%rows(2)%record)
+   @assertEqual(2.5_real64, detail%rows(2)%rad,  1.0e-6_real64)
+   @assertEqual(3.5_real64, detail%rows(2)%temp, 1.0e-6_real64)
+end subroutine test_detail_load_happy
+
+@test
+subroutine test_detail_year_window_half_open()
+   use funit
+   use meteo_csv_mod, only: meteo_detail_table_t
+   use error_mod,     only: error_collection_t
+
+   type(meteo_detail_table_t) :: detail
+   type(error_collection_t)   :: errors
+   integer :: i1, i2
+
+   call detail%load('tests/unit/io/fixtures/csv_meteo_detail.csv', errors)
+   call detail%year_window(1981, i1, i2)
+
+   @assertEqual(1, i1)
+   @assertEqual(3, i2)
+end subroutine test_detail_year_window_half_open
+
+@test
+subroutine test_detail_load_missing_file()
+   use funit
+   use meteo_csv_mod, only: meteo_detail_table_t
+   use error_mod,     only: error_collection_t
+
+   type(meteo_detail_table_t) :: detail
+   type(error_collection_t)   :: errors
+
+   call detail%load('tests/unit/io/fixtures/does_not_exist.csv', errors)
+   @assertTrue(errors%has_errors())
+   @assertFalse(detail%is_loaded)
+   @assertFalse(allocated(detail%rows))
+end subroutine test_detail_load_missing_file
