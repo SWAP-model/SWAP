@@ -130,7 +130,7 @@ contains
 
       integer NumComDpthInf, NumComSrfLev
       real(8) CumKD, DpthInflay, FDisInf(Madr), FDisInfmin
-      real(8) FluxComWatLev, KD(Macp), RQmax, SurfLev   !, temptab(2*maowl)
+      real(8) FluxComWatLev, KD(Macp), RQmax, SurfLev
       real(8) ThickCompAbvDpthInf, ThickCompBlwSrfLev
       real(8) ThickCompUnsWatLev, TransmisSat, TransmisTot
       real(8) TransmisUns
@@ -147,7 +147,7 @@ contains
       WatLevAv = -1.0d0*MIN(GWLEV, 0.0d0)
 
 ! --- calculation of CondSatHor and CondSatVer
-      do 10 icomp = 1, NumComp
+      do icomp = 1, NumComp
          if (fluseksatexm(icomp)) then
             CondSatHor(icomp) = ksatexm(LAYER(icomp))*COFANI(LAYER(icomp))
             CondSatVer(icomp) = ksatexm(LAYER(icomp))
@@ -155,7 +155,7 @@ contains
             CondSatHor(icomp) = ksatfit(LAYER(icomp))*COFANI(LAYER(icomp))
             CondSatVer(icomp) = ksatfit(LAYER(icomp))
          end if
-10       continue
+      end do
 
 ! --- Initialisation and test whether any drainflux exists
          NonExistFluxDr = .true.
@@ -321,29 +321,10 @@ contains
 ! --- correction of BotDisLay(1) if D1 < 0.25 L \/(kv/kh)
          if (abs(FluxDr(idr)) .gt. Small) then
             if (BotDisLay(idr) .gt. MaxDepthDislay(idr)) then
-               BotDisLay(idr) = MaxDepthDislay(idr)
-! ---       determine adjusted transmissivity and compartment
-! ---       number which contains bottom of discharge layer
-               NumComBotDislay(idr) = NumComWatLev
-               HelpTh = ThickCompSatWatLev
-               Transmissivity(idr) = ThickCompSatWatLev*                 &
-        &                             CondSatHor(NumComWatLev)
-               ThickDislay = BotDisLay(idr) - WatlevAv
-               do while (ThickDislay .gt. HelpTh)
-                  NumComBotDislay(idr) = NumComBotDislay(idr) + 1
-                  HelpTh = HelpTh +                          &
-        &                                ThickComp(NumComBotDislay(idr))
-                  Transmissivity(idr) = Transmissivity(idr) +             &
-        &                                ThickComp(NumComBotDislay(idr))* &
-        &                                CondSatHor(NumComBotDislay(idr))
-               end do
-
-               Transmissivity(idr) = Transmissivity(idr) -                 &
-        &                          (HelpTh - ThickDislay)*                &
-        &                          CondSatHor(NumComBotDislay(idr))
-! ---       thickness of part of bottom compartment
-               ThickCompBotDislay(idr) = ThickComp(NumComBotDislay(idr)) - &
-        &                              (HelpTh - ThickDislay)
+               call correct_dislay_for_max_depth(idr, NumComWatLev, ThickCompSatWatLev, &
+                                                 ThickComp, CondSatHor, MaxDepthDislay, &
+                                                 WatLevAv, BotDisLay, NumComBotDislay,  &
+                                                 Transmissivity, ThickCompBotDislay)
             end if
          else
             BotDisLay(idr) = WatLevAv
@@ -378,28 +359,10 @@ contains
 ! --- paragraph 9
 !     correction of BotDisLay(idr) if D(idr) < 0.25 L(idr) \/(kv/kh)
             if (BotDisLay(idr) .gt. MaxDepthDislay(idr)) then
-               BotDisLay(idr) = MaxDepthDislay(idr)
-
-! --- transmissivity of order i, thickness
-!     of bottom compartment, and number
-!     of bottom compartment
-               NumComBotDislay(idr) = NumComWatLev
-               HelpTh = ThickCompSatWatLev
-               Transmissivity(idr) = ThickCompSatWatLev*                 &
-        &                             CondSatHor(NumComWatLev)
-               ThickDislay = BotDisLay(idr) - WatlevAv
-               do while (ThickDislay .gt. HelpTh)
-                  NumComBotDislay(idr) = NumComBotDislay(idr) + 1
-                  HelpTh = HelpTh + ThickComp(NumComBotDislay(idr))
-                  Transmissivity(idr) = Transmissivity(idr) +             &
-        &                               ThickComp(NumComBotDislay(idr))*  &
-        &                               CondSatHor(NumComBotDislay(idr))
-               end do
-               Transmissivity(idr) = Transmissivity(idr) -                 &
-        &                            (HelpTh - ThickDislay)*              &
-        &                            CondSatHor(NumComBotDislay(idr))
-               ThickCompBotDislay(idr) = ThickComp(NumComBotDislay(idr)) - &
-        &                            (HelpTh - ThickDislay)
+               call correct_dislay_for_max_depth(idr, NumComWatLev, ThickCompSatWatLev, &
+                                                 ThickComp, CondSatHor, MaxDepthDislay, &
+                                                 WatLevAv, BotDisLay, NumComBotDislay,  &
+                                                 Transmissivity, ThickCompBotDislay)
             end if
          end do
 
@@ -439,11 +402,6 @@ contains
                if (FluxDr(idr) .lt. -small) then
 
 ! --- Find surface water level
-!     - first copy to 1-dimensional table temptab
-                  !do i = 1,2*maowl
-                  !   temptab(i) = owltab(idr,i)
-                  !end do
-                  !SurfLev = afgen(temptab,2*maowl,t1900+dt-1.d0)
                   SurfLev = afgen(owltab(idr, 1:2*nowltab(idr)), 2*nowltab(idr), t1900 + dt - 1.d0)
 ! --- Search for compartment with surface water level: NumComSrfLev
 !   - part of NumComSrfLev below SurfLev
@@ -543,6 +501,46 @@ contains
 
 ! File VersionID:
 !   $Id: divdra.f90 370 2018-02-09 13:29:10Z heine003 $
+! ----------------------------------------------------------------------
+
+   !> Recompute discharge-layer bottom + transmissivity when capped by MaxDepthDislay.
+   !!
+   !! Walks compartments from NumComWatLev accumulating thickness and
+   !! transmissivity until ThickDislay is reached, then backs out the
+   !! partial bottom-compartment correction. Called by paragraphs 7 and 9
+   !! of divdra to apply the D < 0.25·L·sqrt(Kv/Kh) constraint.
+   subroutine correct_dislay_for_max_depth(idr, NumComWatLev, ThickCompSatWatLev, &
+                                           ThickComp, CondSatHor, MaxDepthDislay, &
+                                           WatLevAv, BotDisLay, NumComBotDislay,  &
+                                           Transmissivity, ThickCompBotDislay)
+      use swap_array_dimensions, only: macp, madr
+      implicit none
+      integer, intent(in)    :: idr, NumComWatLev
+      real(8), intent(in)    :: ThickCompSatWatLev, WatLevAv
+      real(8), intent(in)    :: ThickComp(macp), CondSatHor(macp), MaxDepthDislay(madr)
+      real(8), intent(inout) :: BotDisLay(madr), Transmissivity(madr), ThickCompBotDislay(madr)
+      integer, intent(inout) :: NumComBotDislay(madr)
+      real(8) :: HelpTh, ThickDislay
+
+      BotDisLay(idr) = MaxDepthDislay(idr)
+      NumComBotDislay(idr) = NumComWatLev
+      HelpTh = ThickCompSatWatLev
+      Transmissivity(idr) = ThickCompSatWatLev*CondSatHor(NumComWatLev)
+      ThickDislay = BotDisLay(idr) - WatLevAv
+      do while (ThickDislay .gt. HelpTh)
+         NumComBotDislay(idr) = NumComBotDislay(idr) + 1
+         HelpTh = HelpTh + ThickComp(NumComBotDislay(idr))
+         Transmissivity(idr) = Transmissivity(idr) +                  &
+                               ThickComp(NumComBotDislay(idr))*       &
+                               CondSatHor(NumComBotDislay(idr))
+      end do
+      Transmissivity(idr) = Transmissivity(idr) -                     &
+                            (HelpTh - ThickDislay)*                   &
+                            CondSatHor(NumComBotDislay(idr))
+      ThickCompBotDislay(idr) = ThickComp(NumComBotDislay(idr)) -     &
+                                (HelpTh - ThickDislay)
+   end subroutine correct_dislay_for_max_depth
+
 ! ----------------------------------------------------------------------
          SUBROUTINE Lev2Comp(NumComp, Level, ThickComp, NumCom2Lev,  &
         &                    ThickCum, ThickCompAbvLev, ThickCompBlwLev)
