@@ -94,7 +94,7 @@ contains
       ! Timecontrol seeding (formerly the last live line in seed_state_from_config).
       ! Must run BEFORE crop%init and timecontrol_init; crop%init provides croptype
       ! which timecontrol_init reads.
-      call state%timecontrol%init(config%simulation, config%general, config%drain)
+      call state%timecontrol%init(config%simulation, config%general, config%drain, config%output_csv)
 
       ! Crop seeding must run BEFORE timecontrol_init because
       ! timecontrol_init reads state%crop%common%croptype(icrop).

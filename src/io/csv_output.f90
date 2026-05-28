@@ -94,7 +94,7 @@ integer,             parameter                     :: num_w = num_d+7   ! total 
 
    ! [GR-IO 2026-05-25 Phase 2] Snapshot the config list into a local mutable
    ! buffer before upper-casing and sorting.
-   inList_tz_local = state%cfg%output_csv%inlist_tz
+   inList_tz_local = state%timecontrol%csv_inlist_tz
 
    ! make user-supplied list UPPERCASE
    call upperc (inList_tz_local)
@@ -113,7 +113,7 @@ integer,             parameter                     :: num_w = num_d+7   ! total 
    call sort_list_tz (inList_tz_local, ListVars, Nvars)
 
    ! depth interval to consider
-   associate (tz_z1_z2 => state%cfg%output_csv%tz_z1_z2)
+   associate (tz_z1_z2 => state%timecontrol%csv_tz_z1_z2)
    if (tz_z1_z2(1) > 0.0d0) then
       nod_1 = 1
       nod_2 = state%mesh%numnod
@@ -137,7 +137,7 @@ integer,             parameter                     :: num_w = num_d+7   ! total 
    !    to do: write some basic info at the top of the output file?
    ! IO-OUT/C2b: open via csv_writer_t (status='replace',action='write' —
    ! matches the previous file_open call exactly).
-   filnam = trim(state%cfg%general%pathwork)//trim(state%cfg%general%outfil)//'_output_tz.csv'
+   filnam = trim(state%timecontrol%pathwork)//trim(state%timecontrol%outfil)//'_output_tz.csv'
    call profile_w%open(filnam, errs)
    if (errs%has_errors()) call fatalerr_collected('csv_out_tz', 'cannot open output_tz CSV: ' // trim(filnam))
 
@@ -147,7 +147,7 @@ integer,             parameter                     :: num_w = num_d+7   ! total 
    call make_header_tz (ListVars, Nvars, Header)
    call make_headerunits_tz (HeaderUnits)
    filtext = 'specified output data of SWAP'
-   call writehead (profile_w%unit,1,filnam,filtext,state%cfg%general%project)
+   call writehead (profile_w%unit,1,filnam,filtext,state%timecontrol%project)
    write (profile_w%unit,'(A)') trim(HeaderUnits)
    write (profile_w%unit,'(A)') trim(Header)
 
@@ -680,7 +680,7 @@ module csv_output
 
       ! to be based on user input information
 !      InList = 'H[-10.0,4,5], RAIN, WC[2,3,6], H[4], WTOT[0:-15.0,4:6], Tact, WC[1], WC[-2], WC[1], rain,GWL, RWU[1,2,3,4,5,6], QTRANS[1:3,4:6], qtopin[0:-30]'
-      Inlist = state%cfg%output_csv%inlist   ! [GR-IO 2026-05-25 Phase 2]
+      Inlist = state%timecontrol%csv_inlist   ! [cluster 5 2026-05-28]
 
       ! extract all individual vars from InList; remove double entries; merge same vars with [] in single var with []; determine which vars are require
       call make_userlist(InList)
@@ -691,7 +691,7 @@ module csv_output
       ! IO-OUT/C2b: open via csv_writer_t (status='replace', action='write' — output
       ! is always written fresh; the prior 'unknown'/'readwrite' was a generic fallback).
       if (.not. state%timecontrol%headless) then
-         filcsv = trim(state%cfg%general%pathwork)//trim(state%cfg%general%outfil)//'_output.csv'
+         filcsv = trim(state%timecontrol%pathwork)//trim(state%timecontrol%outfil)//'_output.csv'
          call scalar_w%open(filcsv, errs)
          if (errs%has_errors()) call fatalerr_collected('csv_out', 'cannot open output CSV: ' // trim(filcsv))
          call makeheader(scalar_w%unit, filcsv, state)
@@ -898,7 +898,7 @@ module csv_output
    integer :: il1, il2, j, k
 
    ! write universal SWAP header
-   call writehead (iuncsv, 1, filcsv, 'specified output data of SWAP', state%cfg%general%project)
+   call writehead (iuncsv, 1, filcsv, 'specified output data of SWAP', state%timecontrol%project)
 
    ! typical csv header lines: (units, names)
    header_units = "* (d)"; il1 = len_trim(header_units)
@@ -1263,15 +1263,15 @@ module csv_output
    subroutine csv_output_init(state)
       use csv_output_tz, only: csv_out_tz_header
       type(swap_state_t), intent(inout) :: state
-      if (state%cfg%output_csv%enabled    == 1) call csv_out_header(state)
-      if (state%cfg%output_csv%enabled_tz == 1) call csv_out_tz_header(state)
+      if (state%timecontrol%csv_enabled    == 1) call csv_out_header(state)
+      if (state%timecontrol%csv_enabled_tz == 1) call csv_out_tz_header(state)
    end subroutine csv_output_init
 
    subroutine csv_output_step(state)
       use csv_output_tz, only: csv_out_tz_write, csv_out_tz_flush
       type(swap_state_t), intent(inout) :: state
-      if (state%cfg%output_csv%enabled    == 1) call csv_out_write(state)
-      if (state%cfg%output_csv%enabled_tz == 1) call csv_out_tz_write(state)
+      if (state%timecontrol%csv_enabled    == 1) call csv_out_write(state)
+      if (state%timecontrol%csv_enabled_tz == 1) call csv_out_tz_write(state)
       ! IO-OUT/C2b: drain runtime buffer at each year boundary so partial
       ! results survive a crash/kill. flush is a no-op when the writer was
       ! never opened (headless / tz disabled), so calling on the flag is safe.
@@ -1284,8 +1284,8 @@ module csv_output
    subroutine csv_output_finalize(state)
       use csv_output_tz, only: csv_out_tz_close
       type(swap_state_t), intent(inout) :: state
-      if (state%cfg%output_csv%enabled    == 1) call csv_out_close(state)
-      if (state%cfg%output_csv%enabled_tz == 1) call csv_out_tz_close(state)
+      if (state%timecontrol%csv_enabled    == 1) call csv_out_close(state)
+      if (state%timecontrol%csv_enabled_tz == 1) call csv_out_tz_close(state)
    end subroutine csv_output_finalize
 
 end module csv_output

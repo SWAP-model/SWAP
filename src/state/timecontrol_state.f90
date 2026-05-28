@@ -215,6 +215,19 @@ module timecontrol_state_mod
       integer :: swmetdetail = 0  !! snapshot of config%meteo%swmetdetail
       integer :: swrain      = 0  !! snapshot of config%meteo%swrain
       integer :: swssdi      = 0  !! snapshot of config%irrigation%swssdi
+      ! [state%cfg retirement cluster 5 2026-05-28] Output paths + CSV config —
+      ! snapshotted from config at init so csv_output.f90 can read without state%cfg.
+      ! Fixed-length (not allocatable): other state types use fixed-length chars
+      ! (e.g., `character(len=11) :: date`). A clean rebuild is required after
+      ! any change to this type's layout (see project memory: state-schema feedback).
+      character(len=256) :: pathwork       = ''  !! snapshot of config%general%pathwork
+      character(len=64)  :: outfil         = ''  !! snapshot of config%general%outfil
+      character(len=64)  :: project        = ''  !! snapshot of config%general%project
+      integer :: csv_enabled    = 0  !! snapshot of config%output_csv%enabled
+      integer :: csv_enabled_tz = 0  !! snapshot of config%output_csv%enabled_tz
+      character(len=256) :: csv_inlist     = ''  !! snapshot of config%output_csv%inlist
+      character(len=256) :: csv_inlist_tz  = ''  !! snapshot of config%output_csv%inlist_tz
+      real(real64) :: csv_tz_z1_z2(2) = 0.0_real64  !! snapshot of config%output_csv%tz_z1_z2
 
    contains
       procedure :: init => timecontrol_state_init
@@ -229,15 +242,17 @@ contains
    !! timecontrol_advance to gate output dumps). When config_simulation%swmonth==1,
    !! populates outdatint with end-of-month dates via populate_outdatint_monthly
    !! and forces period/swres/swodat = 0 (legacy behaviour).
-   subroutine timecontrol_state_init(self, config_simulation, config_general, config_drain)
-      use simulation_config_mod, only: simulation_config_t
-      use general_config_mod,    only: general_config_t
-      use drainage_config_mod,   only: drainage_config_t
-      use swap_array_dimensions, only: maout
+   subroutine timecontrol_state_init(self, config_simulation, config_general, config_drain, config_output_csv)
+      use simulation_config_mod,  only: simulation_config_t
+      use general_config_mod,     only: general_config_t
+      use drainage_config_mod,    only: drainage_config_t
+      use output_csv_config_mod,  only: output_csv_config_t
+      use swap_array_dimensions,  only: maout
       class(timecontrol_state_t),  intent(inout) :: self
       type(simulation_config_t),   intent(in)    :: config_simulation
       type(general_config_t),      intent(in)    :: config_general
       type(drainage_config_t),     intent(in)    :: config_drain
+      type(output_csv_config_t),   intent(in)    :: config_output_csv
       integer :: datea_init(6)
       real    :: fsec_init
 
@@ -290,6 +305,18 @@ contains
       ! value directly rather than going through state%cfg%drain%swdra.
       self%flDrain        = (config_drain%swdra == 1)
       self%flSurfaceWater = (config_drain%swdra == 2)
+
+      ! [cluster 5 2026-05-28] Output path + CSV config snapshots.
+      ! allocated() guards: pathwork/project optional in schema; inlist/inlist_tz
+      ! always have defaults from finalize() but guarded for safety.
+      if (allocated(config_general%pathwork))     self%pathwork      = config_general%pathwork
+      if (allocated(config_general%outfil))       self%outfil        = config_general%outfil
+      if (allocated(config_general%project))      self%project       = config_general%project
+      self%csv_enabled    = config_output_csv%enabled
+      self%csv_enabled_tz = config_output_csv%enabled_tz
+      if (allocated(config_output_csv%inlist))    self%csv_inlist    = config_output_csv%inlist
+      if (allocated(config_output_csv%inlist_tz)) self%csv_inlist_tz = config_output_csv%inlist_tz
+      self%csv_tz_z1_z2   = config_output_csv%tz_z1_z2
    end subroutine timecontrol_state_init
 
    !> Populate `outdatint(:)` with the end-of-month dates between
