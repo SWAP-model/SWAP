@@ -1165,16 +1165,20 @@ end subroutine test_swcore_init_hatm_overrides_preloaded_value
 
 !> Minimal wrapper around the type-bound state%soilwater%init for unit tests.
 !! [GR-SEED 2026-05-25 Task 8] Replaces the retired free soilwater_init in tests.
-!! Constructs default soil_config_t and bottom_boundary_config_t (swbotb=0,
-!! swinco=1 — no CSV reads) and delegates to the type-bound init.
+!! Constructs default config objects (swbotb=0, swinco=1 — no CSV reads) and
+!! delegates to the type-bound init.
 subroutine sw_init_minimal(sw, numnod, nlay)
    use soilwater_state_mod,        only: soilwater_state_t
    use soil_config_mod,            only: soil_config_t
+   use drainage_config_mod,        only: drainage_config_t
+   use heat_config_mod,            only: heat_config_t
    use bottom_boundary_config_mod, only: bottom_boundary_config_t
    type(soilwater_state_t),        intent(inout) :: sw
    integer,                        intent(in)    :: numnod
    integer,                        intent(in)    :: nlay
    type(soil_config_t)            :: cfg_soil   ! defaults: swinco=1, no h_file CSV
+   type(drainage_config_t)        :: cfg_drain  ! defaults: no cofani
+   type(heat_config_t)            :: cfg_heat   ! defaults: no porg/psand/psilt/pclay
    type(bottom_boundary_config_t) :: cfg_bb     ! defaults: swbotb=0, no CSV reads
-   call sw%init(cfg_soil, cfg_bb, '', numnod, nlay)
+   call sw%init(cfg_soil, cfg_drain, cfg_heat, cfg_bb, numnod, nlay, '')
 end subroutine sw_init_minimal

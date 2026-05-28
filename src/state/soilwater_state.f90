@@ -352,24 +352,30 @@ contains
    !!   state%mesh%numlay  (isoillay derivation)
    !!   state%surfacewater%pondmx/rsro/rsroexp  (soil section)
    !!
-   !! Signature: (self, config_soil, config_bb, pathwork, numnod, numlay)
-   !!   config_soil — intent(in):  read-only after W3 fix (swinco=3 h_file now → self%h_init).
-   !!   config_bb   — intent(in):  bottom_boundary switches + file names.
-   !!   pathwork    — intent(in):  working directory prefix for CSV paths.
-   !!   numnod      — number of soil nodes (from CalcGrid).
-   !!   numlay      — number of soil layers (from CalcGrid).
+   !! Signature: (self, config_soil, config_drain, config_heat, config_bb, numnod, numlay, pathwork)
+   !!   config_soil  — intent(in):  read-only after W3 fix (swinco=3 h_file now → self%h_init).
+   !!   config_drain — intent(in):  drainage config (cofani source 1).
+   !!   config_heat  — intent(in):  heat config (porg/psand/psilt/pclay sources).
+   !!   config_bb    — intent(in):  bottom_boundary switches + file names.
+   !!   numnod       — number of soil nodes (from CalcGrid).
+   !!   numlay       — number of soil layers (from CalcGrid).
+   !!   pathwork     — intent(in):  working directory prefix for CSV paths.
    !!
    !! Called from swap_mod immediately after CalcGrid(), before DoTillage(1).
-   subroutine soilwater_state_init(self, config_soil, config_bb, pathwork, numnod, numlay)
+   subroutine soilwater_state_init(self, config_soil, config_drain, config_heat, config_bb, numnod, numlay, pathwork)
       use soil_config_mod,            only: soil_config_t
+      use drainage_config_mod,        only: drainage_config_t
+      use heat_config_mod,            only: heat_config_t
       use bottom_boundary_config_mod, only: bottom_boundary_config_t
       use swap_array_dimensions,      only: maho
       class(soilwater_state_t),       intent(inout) :: self
       type(soil_config_t),            intent(in)    :: config_soil  ! intent(in) after W3 fix: no longer mutated
+      type(drainage_config_t),        intent(in)    :: config_drain
+      type(heat_config_t),            intent(in)    :: config_heat
       type(bottom_boundary_config_t), intent(in)    :: config_bb
-      character(len=*),               intent(in)    :: pathwork
       integer,                        intent(in)    :: numnod
       integer,                        intent(in)    :: numlay
+      character(len=*),               intent(in)    :: pathwork
       integer :: i
 
       ! ---- [Piece A] Legacy soilwater_init body — allocation + zero-fill ----
@@ -575,6 +581,37 @@ contains
 
       ! ---- [Piece C] Bottom-boundary CSV pre-loads ----
       call seed_bottom_boundary(self, config_bb, pathwork)
+
+      ! ---- [Piece D] Layer-flats from multiple config sources ----
+      ! Folded from swap_init_body STRANGLER block (W1 closure, orchestrator-
+      ! dissolution arc step 5). Multi-source resolution rules:
+      !   * cofani: config_drain%cofani first, config_soil%cofani overrides (soil wins).
+      !   * orgmat: config_soil%orgmat first; config_heat%porg backfills when soil absent.
+      if (allocated(config_soil%hydraulics%ksatexm)) &
+         self%ksatexm(:) = config_soil%hydraulics%ksatexm(1:size(self%ksatexm))
+      if (allocated(config_soil%hydraulics%ksatfit)) &
+         self%ksatfit(:) = config_soil%hydraulics%ksatfit(1:size(self%ksatfit))
+      if (allocated(config_drain%cofani)) &
+         self%cofani(1:size(config_drain%cofani)) = config_drain%cofani
+      if (allocated(config_soil%cofani)) &
+         self%cofani(1:size(config_soil%cofani))  = config_soil%cofani   ! soil wins
+      self%flksatexm = .false.
+      if (allocated(config_soil%orgmat)) then
+         self%orgmat(1:size(config_soil%orgmat)) = config_soil%orgmat
+      else if (allocated(config_heat%porg)) then
+         self%orgmat(1:min(size(config_heat%porg), size(self%orgmat))) = &
+            config_heat%porg(1:min(size(config_heat%porg), size(self%orgmat)))
+      end if
+      if (allocated(config_heat%psand)) &
+         self%psand(:) = config_heat%psand(1:size(self%psand))
+      if (allocated(config_heat%psilt)) &
+         self%psilt(:) = config_heat%psilt(1:size(self%psilt))
+      if (allocated(config_heat%pclay)) &
+         self%pclay(:) = config_heat%pclay(1:size(self%pclay))
+      self%swbotb_runtime = config_bb%swbotb
+      self%q0    = 0.0d0
+      self%k1max = 0.0d0
+      self%H0max = 0.0d0
 
    end subroutine soilwater_state_init
 

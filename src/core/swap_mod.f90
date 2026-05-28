@@ -116,43 +116,13 @@ contains
       call state%mesh%init(config%soil)
 
       ! Modern type-bound state init.
-      call state%soilwater%init(config%soil, config%bottom_boundary, &
-                                config%general%pathwork, &
-                                state%mesh%numnod, state%mesh%numlay)
+      call state%soilwater%init(config%soil, config%drain, config%heat, config%bottom_boundary, &
+                                state%mesh%numnod, state%mesh%numlay, &
+                                config%general%pathwork)
       call state%nutrients%init(state%mesh%numlay, config%nutrients, config%general%pathwork)
       call state%crop%irrigation%init(config%irrigation, state%timecontrol%tstart, &
                                       state%timecontrol%tend, state%mesh, &
                                       config%general%pathwork)
-
-      ! STRANGLER — soilwater layer flats. Seeded here because
-      ! state%soilwater%init allocates the nlay-sized arrays. Fold into
-      ! state%soilwater%init (multi-source rules below would move with it).
-      ! cofani: drain.cofani first, soil.cofani overrides (soil wins).
-      ! orgmat: soil.orgmat first; heat.porg backfills when absent.
-      if (allocated(config%soil%hydraulics%ksatexm)) &
-         state%soilwater%ksatexm(:) = config%soil%hydraulics%ksatexm(1:size(state%soilwater%ksatexm))
-      if (allocated(config%soil%hydraulics%ksatfit)) &
-         state%soilwater%ksatfit(:) = config%soil%hydraulics%ksatfit(1:size(state%soilwater%ksatfit))
-      if (allocated(config%drain%cofani)) &
-         state%soilwater%cofani(1:size(config%drain%cofani)) = config%drain%cofani
-      if (allocated(config%soil%cofani)) &
-         state%soilwater%cofani(1:size(config%soil%cofani))  = config%soil%cofani
-      state%soilwater%flksatexm = .false.   ! never set in adapter
-      if (allocated(config%soil%orgmat)) &
-         state%soilwater%orgmat(1:size(config%soil%orgmat))  = config%soil%orgmat
-      if (.not. allocated(config%soil%orgmat) .and. allocated(config%heat%porg)) &
-         state%soilwater%orgmat(1:min(size(config%heat%porg), size(state%soilwater%orgmat))) = &
-            config%heat%porg(1:min(size(config%heat%porg), size(state%soilwater%orgmat)))
-      if (allocated(config%heat%psand)) &
-         state%soilwater%psand(:) = config%heat%psand(1:size(state%soilwater%psand))
-      if (allocated(config%heat%psilt)) &
-         state%soilwater%psilt(:) = config%heat%psilt(1:size(state%soilwater%psilt))
-      if (allocated(config%heat%pclay)) &
-         state%soilwater%pclay(:) = config%heat%pclay(1:size(state%soilwater%pclay))
-      state%soilwater%swbotb_runtime = config%bottom_boundary%swbotb
-      state%soilwater%q0    = 0.0d0
-      state%soilwater%k1max = 0.0d0
-      state%soilwater%H0max = 0.0d0
 
       ! Modern atmosphere init (zero flat scalars + cohorts + snapshot
       ! config-derived params: snowcoef/swsublim/swetsine).
