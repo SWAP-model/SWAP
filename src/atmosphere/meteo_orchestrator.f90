@@ -426,11 +426,11 @@ contains
       pmi%flmetdetail     = time%flmetdetail
       pmi%flCropEmergence = state%crop%flCropEmergence
       pmi%swcf            = state%crop%swcf
-      pmi%swdivide        = state%cfg%meteo%swdivide
+      pmi%swdivide        = config%meteo%swdivide
 
-      pmi%lat  = state%cfg%meteo%lat
-      pmi%alt  = state%cfg%meteo%alt
-      pmi%altw = state%cfg%meteo%altw
+      pmi%lat  = config%meteo%lat
+      pmi%alt  = config%meteo%alt
+      pmi%altw = config%meteo%altw
       pmi%a    = state%atmosphere%angstroma
       pmi%b    = state%atmosphere%angstromb
       pmi%rcs  = rcs
@@ -530,7 +530,7 @@ contains
           wfrac = 0.0d0
         else
           if (state%crop%common%swinter .ne. 3) then
-            if (state%cfg%meteo%swdivide .eq. 0) then
+            if (config%meteo%swdivide .eq. 0) then
               wfrac = max(min(aintc*10.0d0/state%crop%ew0,1.0d0),0.0d0)
             else
               if(tdirectwet.gt.nihil) then
@@ -610,7 +610,7 @@ contains
     endif
 
     ! Potential soil evaporation [cm/d] according to PMdirect
-    if (state%cfg%meteo%swdivide .eq. 1) then
+    if (config%meteo%swdivide .eq. 1) then
       if (state%soilwater%pond .gt. 1.0d-10) then
         atmo%peva = Edirectpond*0.1d0
       else
@@ -627,7 +627,7 @@ contains
     atmo%ptra = max(atmo%ptra,(1.01d0*nihil))
 
     ! Potential transpiration [cm/d] according to PMdirect
-    if (state%cfg%meteo%swdivide .eq. 1) then
+    if (config%meteo%swdivide .eq. 1) then
       atmo%ptra = (1.0d0-wfrac) * Tdirect * 0.1d0
       atmo%ptra = max(atmo%ptra,(1.01d0*nihil))
     endif

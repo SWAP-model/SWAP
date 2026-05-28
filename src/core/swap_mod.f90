@@ -155,7 +155,7 @@ contains
          call state%tillage%init(config%soil%tillage, time%tend, state%mesh%numlay)
 
          ! Phase-2 tillage seed (validation + setup), gated on swtill.
-         if (state%cfg%soil%swtill == 1)       call tillage_seed(state)
+         if (config%soil%swtill == 1)       call tillage_seed(state)
 
          ! Heat must init BEFORE soilwater_seed so hconduc can read
          ! state%heat%tsoil(node) during hydraulic-conductivity init.
@@ -186,7 +186,7 @@ contains
 
       end associate
 
-      call log_info('swap', 'Initialization complete for project: ' // trim(state%cfg%general%project))
+      call log_info('swap', 'Initialization complete for project: ' // trim(config%general%project))
 
    end subroutine swap_init_body
 
@@ -235,7 +235,7 @@ contains
             call CropGrowth(1, state%heat%tsoil, state)
             if (time%flIrrigate) call irrigation_step(state)
             call ProcessMeteoDay(state, config)
-            if (state%cfg%soil%swtill == 1) call tillage_step(state)
+            if (config%soil%swtill == 1) call tillage_step(state)
          end if
 
          if (time%flmeteodt .or. time%fletsine) call MeteoDT(state)
@@ -245,7 +245,7 @@ contains
          if (time%flSnow .and. time%flDayStart) call snow_step(state)
 
          ! Conductivity reduction for frozen conditions.
-         if (state%cfg%soil%frost%swfrost == 1) call FrozenCond(state, config)
+         if (config%soil%frost%swfrost == 1) call FrozenCond(state, config)
 
          ! Potential and actual root water extraction profile.
          call RootExtraction(state)
@@ -267,7 +267,7 @@ contains
             if (.not.time%fldecdt .and. time%flSurfaceWater) call surfacewater_lateral(state, request_smaller_dt)
             if (request_smaller_dt) time%fldecdt = .true.
 
-            if (state%cfg%soil%frost%swfrost == 1) call FrozenBounds(state, config)
+            if (config%soil%frost%swfrost == 1) call FrozenBounds(state, config)
 
             if (.not.time%fldecdt) call soilwater_step(state)
 
@@ -304,14 +304,14 @@ contains
             if (time%flMaxIterTime) call itertime_check(state)
 
             ! Subsurface irrigation: decide for next day, adjust dt for dt_SSDI_event.
-            if (state%cfg%irrigation%swssdi == 1) call ssdi_irrigation_step(state)
+            if (config%irrigation%swssdi == 1) call ssdi_irrigation_step(state)
             call timecontrol_day_end(state)
          end if
 
          ! Output.
          if (time%floutput) then
             call csv_output_step(state)
-            if (state%cfg%soil%swtill == 1) call tillage_output(state)
+            if (config%soil%swtill == 1) call tillage_output(state)
             if (time%flSurfaceWater) then
                if (time%daynr == merge(366, 365, dtleap(time%iyear))) &
                   call surfacewater_year_reset(state%surfacewater)
@@ -339,9 +339,9 @@ contains
       if (state%crop%common%flCropNut) call SoilManagement(7, state)
 
       ! Okay-file for external runners.
-      call WriteSwapOk(state%cfg%general%project)
+      call WriteSwapOk(config%general%project)
 
-      call log_info('swap', 'Simulation complete for project: ' // trim(state%cfg%general%project))
+      call log_info('swap', 'Simulation complete for project: ' // trim(config%general%project))
 
    end subroutine swap_close
 
