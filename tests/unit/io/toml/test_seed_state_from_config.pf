@@ -167,8 +167,9 @@ subroutine test_seed_state_from_config_soil_with_layer_arrays()
    ! [GR-FINAL C1] pondini/pond now seeded directly in swap_mod after soilwater_init;
    ! verify config source value is preserved.
    @assertEqual(0.5d0,    config%soil%pondini)
-   ! surfacewater%pondmx is still written by seed_state_from_config.
-   @assertEqual(1.0d0,    state%surfacewater%pondmx)
+   ! [OD Steps 1-3] surfacewater%pondmx/rsro/rsroexp folded into surfacewater%init
+   ! (config_soil parameter) — verify via config (canonical source).
+   @assertEqual(1.0d0,    config%soil%pondmx)
    ! [GR-BH Task 36] cofani global retired: seed_state_from_config no longer writes to bare global.
    ! state%soilwater%cofani is seeded from config in swap_mod.f90 (swap_init_from_loaded_config).
 end subroutine test_seed_state_from_config_soil_with_layer_arrays

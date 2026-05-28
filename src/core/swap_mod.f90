@@ -233,8 +233,10 @@ contains
          ! Modern solute init (gated).
          if (state%cfg%solute%swsolu == 1) call state%solute%init(config%solute, state%mesh%numnod)
 
-         ! Modern surfacewater init (gated).
-         if (time%flSurfaceWater) call state%surfacewater%init(config%surface_water, config%drain, state%mesh%numnod)
+         ! Modern surfacewater init (unconditional). Always seeds lightweight scalars
+         ! (pondmx/rsro/rsroexp/swdra); heavy work (allocations, sttab, management
+         ! periods) is gated on swdra==2 internally.
+         call state%surfacewater%init(config%surface_water, config%drain, config%soil, state%mesh%numnod)
 
          if (time%flTemperature) call temperature_seed(state, config)
 

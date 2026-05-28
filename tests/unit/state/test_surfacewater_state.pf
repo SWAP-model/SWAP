@@ -115,9 +115,11 @@ subroutine test_surfacewater_init_allocates_cohort_arrays()
    use surfacewater_state_mod, only: surfacewater_state_t
    use surface_water_config_mod, only: surface_water_config_t
    use drainage_config_mod, only: drainage_config_t
+   use soil_config_mod, only: soil_config_t
    type(surfacewater_state_t)   :: sw
    type(surface_water_config_t) :: cfg_sw
    type(drainage_config_t)      :: cfg_drain
+   type(soil_config_t)          :: cfg_soil
    integer, parameter :: nrlevs = 3
    integer, parameter :: numnod = 50
 
@@ -130,6 +132,7 @@ subroutine test_surfacewater_init_allocates_cohort_arrays()
    cfg_sw%wlact = -50.0_real64
 
    cfg_drain%nrlevs = nrlevs
+   cfg_drain%swdra  = 2
    cfg_drain%altcu  = 0.0_real64
    allocate(cfg_drain%zbotdr(nrlevs));   cfg_drain%zbotdr = [-100.0_real64, -120.0_real64, -150.0_real64]
    allocate(cfg_drain%swdtyp(nrlevs));   cfg_drain%swdtyp = 0     ! open channels
@@ -137,7 +140,7 @@ subroutine test_surfacewater_init_allocates_cohort_arrays()
    allocate(cfg_drain%taludr(nrlevs));   cfg_drain%taludr = 2.0_real64
    allocate(cfg_drain%l(nrlevs));        cfg_drain%l      = 1000.0_real64
 
-   call sw%init(cfg_sw, cfg_drain, numnod)
+   call sw%init(cfg_sw, cfg_drain, cfg_soil, numnod)
 
    @assertTrue(allocated(sw%cqdrain))
    @assertTrue(allocated(sw%cqdrainin))
@@ -158,9 +161,11 @@ subroutine test_surfacewater_init_sets_wls_from_config()
    use surfacewater_state_mod, only: surfacewater_state_t
    use surface_water_config_mod, only: surface_water_config_t
    use drainage_config_mod, only: drainage_config_t
+   use soil_config_mod, only: soil_config_t
    type(surfacewater_state_t)   :: sw
    type(surface_water_config_t) :: cfg_sw
    type(drainage_config_t)      :: cfg_drain
+   type(soil_config_t)          :: cfg_soil
    integer, parameter :: nrlevs = 1
    integer, parameter :: numnod = 10
 
@@ -170,6 +175,7 @@ subroutine test_surfacewater_init_sets_wls_from_config()
    cfg_sw%wlact = -75.0_real64
 
    cfg_drain%nrlevs = nrlevs
+   cfg_drain%swdra  = 2
    cfg_drain%altcu  = 0.0_real64
    allocate(cfg_drain%zbotdr(nrlevs));  cfg_drain%zbotdr = -100.0_real64
    allocate(cfg_drain%swdtyp(nrlevs));  cfg_drain%swdtyp = 0
@@ -177,7 +183,7 @@ subroutine test_surfacewater_init_sets_wls_from_config()
    allocate(cfg_drain%taludr(nrlevs));  cfg_drain%taludr = 2.0_real64
    allocate(cfg_drain%l(nrlevs));       cfg_drain%l      = 1000.0_real64
 
-   call sw%init(cfg_sw, cfg_drain, numnod)
+   call sw%init(cfg_sw, cfg_drain, cfg_soil, numnod)
 
    @assertEqual(-75.0_real64, sw%wls,    1.0e-12_real64)
    @assertEqual(-75.0_real64, sw%wlstar, 1.0e-12_real64)
@@ -192,9 +198,11 @@ subroutine test_surfacewater_init_builds_sttab()
    use surfacewater_state_mod, only: surfacewater_state_t
    use surface_water_config_mod, only: surface_water_config_t
    use drainage_config_mod, only: drainage_config_t
+   use soil_config_mod, only: soil_config_t
    type(surfacewater_state_t)   :: sw
    type(surface_water_config_t) :: cfg_sw
    type(drainage_config_t)      :: cfg_drain
+   type(soil_config_t)          :: cfg_soil
    integer, parameter :: nrlevs = 1
    integer, parameter :: numnod = 10
    real(real64), parameter :: zbot = -100.0_real64
@@ -206,6 +214,7 @@ subroutine test_surfacewater_init_builds_sttab()
    cfg_sw%wlact = -50.0_real64
 
    cfg_drain%nrlevs = nrlevs
+   cfg_drain%swdra  = 2
    cfg_drain%altcu  = 0.0_real64
    allocate(cfg_drain%zbotdr(nrlevs));  cfg_drain%zbotdr = zbot
    allocate(cfg_drain%swdtyp(nrlevs));  cfg_drain%swdtyp = 0
@@ -213,7 +222,7 @@ subroutine test_surfacewater_init_builds_sttab()
    allocate(cfg_drain%taludr(nrlevs));  cfg_drain%taludr = 2.0_real64
    allocate(cfg_drain%l(nrlevs));       cfg_drain%l      = 1000.0_real64
 
-   call sw%init(cfg_sw, cfg_drain, numnod)
+   call sw%init(cfg_sw, cfg_drain, cfg_soil, numnod)
 
    ! Row 1 = +100, row 2 = 0, rows 3..22 divide [0, zbot] = [0, -100] into 20 compartments.
    ! Row 3 = zbot * (3-2)/20 = -100*1/20 = -5. Row 22 = zbot * (22-2)/20 = -100.
@@ -236,10 +245,12 @@ subroutine test_surfacewater_init_computes_swst_from_sttab()
    use surfacewater_state_mod, only: surfacewater_state_t
    use surface_water_config_mod, only: surface_water_config_t
    use drainage_config_mod, only: drainage_config_t
+   use soil_config_mod, only: soil_config_t
    use surfacewater_utils, only: swstlev_from_table
    type(surfacewater_state_t)   :: sw
    type(surface_water_config_t) :: cfg_sw
    type(drainage_config_t)      :: cfg_drain
+   type(soil_config_t)          :: cfg_soil
    integer, parameter :: nrlevs = 1
    integer, parameter :: numnod = 10
 
@@ -249,6 +260,7 @@ subroutine test_surfacewater_init_computes_swst_from_sttab()
    cfg_sw%wlact = -50.0_real64
 
    cfg_drain%nrlevs = nrlevs
+   cfg_drain%swdra  = 2
    cfg_drain%altcu  = 0.0_real64
    allocate(cfg_drain%zbotdr(nrlevs));  cfg_drain%zbotdr = -100.0_real64
    allocate(cfg_drain%swdtyp(nrlevs));  cfg_drain%swdtyp = 0
@@ -256,7 +268,7 @@ subroutine test_surfacewater_init_computes_swst_from_sttab()
    allocate(cfg_drain%taludr(nrlevs));  cfg_drain%taludr = 2.0_real64
    allocate(cfg_drain%l(nrlevs));       cfg_drain%l      = 1000.0_real64
 
-   call sw%init(cfg_sw, cfg_drain, numnod)
+   call sw%init(cfg_sw, cfg_drain, cfg_soil, numnod)
 
    ! swst and swstini must equal the table-lookup at wls=-50.
    @assertEqual(swstlev_from_table(sw%sttab, sw%wls), sw%swst,    1.0e-12_real64)
@@ -270,9 +282,11 @@ subroutine test_surfacewater_init_sets_zdrabas_for_swsec_2()
    use surfacewater_state_mod, only: surfacewater_state_t
    use surface_water_config_mod, only: surface_water_config_t
    use drainage_config_mod, only: drainage_config_t
+   use soil_config_mod, only: soil_config_t
    type(surfacewater_state_t)   :: sw
    type(surface_water_config_t) :: cfg_sw
    type(drainage_config_t)      :: cfg_drain
+   type(soil_config_t)          :: cfg_soil
    integer, parameter :: nrlevs = 1
    integer, parameter :: numnod = 10
 
@@ -282,6 +296,7 @@ subroutine test_surfacewater_init_sets_zdrabas_for_swsec_2()
    cfg_sw%wlact = -25.0_real64
 
    cfg_drain%nrlevs = nrlevs
+   cfg_drain%swdra  = 2
    cfg_drain%altcu  = 0.0_real64
    allocate(cfg_drain%zbotdr(nrlevs));  cfg_drain%zbotdr = -100.0_real64
    allocate(cfg_drain%swdtyp(nrlevs));  cfg_drain%swdtyp = 0
@@ -289,7 +304,7 @@ subroutine test_surfacewater_init_sets_zdrabas_for_swsec_2()
    allocate(cfg_drain%taludr(nrlevs));  cfg_drain%taludr = 2.0_real64
    allocate(cfg_drain%l(nrlevs));       cfg_drain%l      = 1000.0_real64
 
-   call sw%init(cfg_sw, cfg_drain, numnod)
+   call sw%init(cfg_sw, cfg_drain, cfg_soil, numnod)
 
    ! swsec=2 → ZDraBas = wlstar = wls = -25.
    @assertEqual(-25.0_real64, sw%ZDraBas, 1.0e-12_real64)
@@ -308,9 +323,11 @@ subroutine test_surfacewater_init_seeds_management_periods()
    use surfacewater_state_mod, only: surfacewater_state_t
    use surface_water_config_mod, only: surface_water_config_t
    use drainage_config_mod, only: drainage_config_t
+   use soil_config_mod, only: soil_config_t
    type(surfacewater_state_t)   :: sw
    type(surface_water_config_t) :: cfg_sw
    type(drainage_config_t)      :: cfg_drain
+   type(soil_config_t)          :: cfg_soil
    integer, parameter :: nrlevs = 1
    integer, parameter :: numnod = 10
 
@@ -326,6 +343,7 @@ subroutine test_surfacewater_init_seeds_management_periods()
    allocate(cfg_sw%hbweir(2));  cfg_sw%hbweir = [-50.0_real64, -75.0_real64]
 
    cfg_drain%nrlevs = nrlevs
+   cfg_drain%swdra  = 2
    cfg_drain%altcu  = 0.0_real64
    allocate(cfg_drain%zbotdr(nrlevs));  cfg_drain%zbotdr = -100.0_real64
    allocate(cfg_drain%swdtyp(nrlevs));  cfg_drain%swdtyp = 0
@@ -333,7 +351,7 @@ subroutine test_surfacewater_init_seeds_management_periods()
    allocate(cfg_drain%taludr(nrlevs));  cfg_drain%taludr = 2.0_real64
    allocate(cfg_drain%l(nrlevs));       cfg_drain%l      = 1000.0_real64
 
-   call sw%init(cfg_sw, cfg_drain, numnod)
+   call sw%init(cfg_sw, cfg_drain, cfg_soil, numnod)
 
    @assertEqual(1,              sw%swqhr)
    @assertEqual(0.05_real64,    sw%osswlm,    1.0e-12_real64)

@@ -37,7 +37,6 @@ contains
       associate (time      => state%timecontrol,   &
                  soil      => state%soilwater,     &
                  crop      => state%crop,          &
-                 surf      => state%surfacewater,  &
                  meteo_cfg => state%cfg%meteo,     &
                  crop_cfg  => state%cfg%crop)
 
@@ -85,10 +84,9 @@ contains
       time%fletsine = .false.
       if (meteo_cfg%swetsine .eq. 1) time%fletsine = .true.
       if (state%cfg%irrigation%swirfix .eq. 1) time%flIrrigate = .true.
-      time%flDrain = .false.
-      if (surf%swdra .eq. 1) time%flDrain = .true.
-      time%flSurfaceWater = .false.
-      if (surf%swdra .eq. 2) time%flSurfaceWater = .true.
+      ! flDrain and flSurfaceWater are seeded by timecontrol_state_init
+      ! (called from seed_state_from_config via state%timecontrol%init) which
+      ! reads config_drain%swdra directly — no state%cfg read needed here.
       time%flTemperature = .false.
       if (state%cfg%heat%swhea .eq. 1) time%flTemperature = .true.
       time%flSnow = .false.

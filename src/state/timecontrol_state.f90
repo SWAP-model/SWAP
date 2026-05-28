@@ -223,13 +223,15 @@ contains
    !! timecontrol_advance to gate output dumps). When config_simulation%swmonth==1,
    !! populates outdatint with end-of-month dates via populate_outdatint_monthly
    !! and forces period/swres/swodat = 0 (legacy behaviour).
-   subroutine timecontrol_state_init(self, config_simulation, config_general)
+   subroutine timecontrol_state_init(self, config_simulation, config_general, config_drain)
       use simulation_config_mod, only: simulation_config_t
       use general_config_mod,    only: general_config_t
+      use drainage_config_mod,   only: drainage_config_t
       use swap_array_dimensions, only: maout
       class(timecontrol_state_t),  intent(inout) :: self
       type(simulation_config_t),   intent(in)    :: config_simulation
       type(general_config_t),      intent(in)    :: config_general
+      type(drainage_config_t),     intent(in)    :: config_drain
       integer :: datea_init(6)
       real    :: fsec_init
 
@@ -276,6 +278,12 @@ contains
 
       ! Output switches: legacy forced to 0 by ADR 0009.
       self%swheader = 0
+
+      ! Drainage/surface-water flags derived from config_drain%swdra.
+      ! Set here so timecontrol_init (timecontrol_mod.f90) reads the typed
+      ! value directly rather than going through state%cfg%drain%swdra.
+      self%flDrain        = (config_drain%swdra == 1)
+      self%flSurfaceWater = (config_drain%swdra == 2)
    end subroutine timecontrol_state_init
 
    !> Populate `outdatint(:)` with the end-of-month dates between

@@ -8,6 +8,7 @@ module surfacewater_state_mod
    use, intrinsic :: iso_fortran_env, only: real64
    use surface_water_config_mod, only: surface_water_config_t
    use drainage_config_mod,      only: drainage_config_t
+   use soil_config_mod,          only: soil_config_t
    use error_mod,                only: fatalerr_collected
    use swap_array_dimensions,    only: MAIRG, MAWLP, MAWLS, MAMP, MAMTE
    implicit none
@@ -128,11 +129,24 @@ contains
    !! Scope: swsrf=2, swsec=2, swqhr=1, swman=1, drainage.altcu=0 only.
    !! Other branches are guarded with fatalerr_collected (defense in
    !! depth — surface_water_config_validate rejects them upstream too).
-   subroutine surfacewater_state_init(self, config_sw, config_drain, numnod)
+   subroutine surfacewater_state_init(self, config_sw, config_drain, config_soil, numnod)
       class(surfacewater_state_t),  intent(inout) :: self
       type(surface_water_config_t), intent(in)    :: config_sw
       type(drainage_config_t),      intent(in)    :: config_drain
+      type(soil_config_t),          intent(in)    :: config_soil
       integer,                      intent(in)    :: numnod
+
+      ! ---- Unconditional scalar snapshots (consumed regardless of swdra) ----
+      ! pondmx/rsro/rsroexp: used by boundtop (runoff equation) for all swdra values.
+      ! swdra: used by drainage subsystem and surface-water utils for all paths.
+      self%swdra   = config_drain%swdra
+      self%pondmx  = config_soil%pondmx
+      self%rsro    = config_soil%rsro
+      self%rsroexp = config_soil%rsroexp
+
+      ! The heavy work (array allocations, sttab math, management-period seeding)
+      ! only applies when swdra=2 (surface-water reservoir active).
+      if (config_drain%swdra /= 2) return
 
       ! Defensive guards mirroring surface_water_config_validate.
       ! swman is allocatable; slice 1:nmper covers the active management periods.

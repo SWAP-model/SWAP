@@ -4,11 +4,15 @@
 !! absorbed into typed state%X%init methods. This orchestrator now only holds
 !! a handful of documented cross-subsystem exceptions:
 !!
-!!   - state%surfacewater%swdra   (must precede timecontrol_init / drainage_init)
-!!   - state%surfacewater%pondmx/rsro/rsroexp  (soil section cross-write)
-!!   - state%mesh%numlay          (from config%soil%isoillay)
 !!   - state%atmosphere%atmin7    (swinco==3 cross-write, cannot live in soilwater_init)
 !!   - state%solute%cml_init/zc_init/nconc  (swinco==3 cross-write)
+!!
+!! Folded by OD Steps 1-3 (2026-05-28):
+!!   - state%mesh%numlay          → mesh%init (already computed by map_layers_to_nodes)
+!!   - state%surfacewater%pondmx/rsro/rsroexp → swap_mod STRANGLER block
+!!     (unconditional; needed for swdra=0/1 where surfacewater%init is not called)
+!!   - state%surfacewater%swdra   → swap_mod STRANGLER block; timecontrol_init
+!!     now reads state%cfg%drain%swdra directly
 !!
 !! All other assignment history is preserved as inline comments marking
 !! which Task absorbed each block.
@@ -51,7 +55,7 @@ contains
       ! General + simulation + numerical (audit: 18 fields)
       ! [GR-SEED 2026-05-25] Task 1 — absorbed by state%timecontrol%init.
       ! ---------------------------------------------------------------
-      call state%timecontrol%init(config%simulation, config%general)
+      call state%timecontrol%init(config%simulation, config%general, config%drain)
 
       ! Meteorology (audit: 12 + evaporation + snow)
       ! ---------------------------------------------------------------
@@ -71,11 +75,10 @@ contains
       ! (called from swap_mod after CalcGrid). owltab CSV pre-load now inside
       ! drainage_state_init (Piece D); adapter block deleted.
       !
-      ! EXCEPTION: state%surfacewater%swdra must remain here because
-      ! timecontrol_init (line ~170) reads it to set flDrain/flSurfaceWater —
-      ! which runs before state%drainage%init and state%surfacewater%init.
+      ! [OD Steps 1-3] swdra: timecontrol_init (timecontrol_mod.f90) now reads
+      ! state%cfg%drain%swdra directly; surfacewater%init still writes
+      ! state%surfacewater%swdra for downstream physics consumers.
       ! ---------------------------------------------------------------
-      state%surfacewater%swdra = config%drain%swdra
 
       ! ---------------------------------------------------------------
       ! Soil (audit: 15 + discretization + frost)
@@ -96,19 +99,16 @@ contains
       ! [GR-SEED 2026-05-25 Task 4] apply_nutrients moved to state%nutrients%init.
       ! [GR-SOIL 2026-05-24] gwli legacy mirror dropped — direct config read.
       ! [GR-FINAL C1] pondini/pond: read directly by swap_mod after soilwater_init.
-      state%surfacewater%pondmx = config%soil%pondmx
       ! [GR-ATM 2026-05-23] rsoil retired — snapshotted in atmosphere_state%init
-      state%surfacewater%rsro = config%soil%rsro
-      state%surfacewater%rsroexp = config%soil%rsroexp
+      ! [OD Steps 1-3] pondmx/rsro/rsroexp + swdra folded into swap_mod STRANGLER block
+      !   (unconditional write; needed for swdra=0/1 where surfacewater%init is not called).
       ! [GR-IO 2026-05-25 Phase 6 Step 3] nrstaring legacy mirror dropped
 
       ! sublay (legacy 'isublay') is a local in readswap, not a module global;
       ! calcgrid only consumes nsublay + isoillay + ncomp + hcomp.
       ! [GR-SOIL 2026-05-24] sublay/isoillay/hsublay/ncomp/hcomp bare-global writes
       ! retired — CalcGrid reads them inline from config%soil%X.
-      if (allocated(config%soil%isoillay)) then
-         state%mesh%numlay = config%soil%isoillay(size(config%soil%isoillay))
-      end if
+      ! [OD Steps 1-3] mesh%numlay derivation folded into mesh%init (map_layers_to_nodes).
       ! [GR-SOIL 2026-05-24] config%soil%hcomp ingest retired — CalcGrid reads inline.
       ! [GR-BH Task 36] orgmat/cofani: consumed via config in swap_mod seeding block.
 
