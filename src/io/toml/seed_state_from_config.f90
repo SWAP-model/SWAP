@@ -4,7 +4,6 @@
 !! absorbed into typed state%X%init methods. This orchestrator now only holds
 !! a handful of documented cross-subsystem exceptions:
 !!
-!!   - state%atmosphere%atmin7    (swinco==3 cross-write, cannot live in soilwater_init)
 !!   - state%solute%cml_init/zc_init/nconc  (swinco==3 cross-write)
 !!
 !! Folded by OD Steps 1-3 (2026-05-28):
@@ -13,6 +12,9 @@
 !!     (unconditional; needed for swdra=0/1 where surfacewater%init is not called)
 !!   - state%surfacewater%swdra   → swap_mod STRANGLER block; timecontrol_init
 !!     now reads state%cfg%drain%swdra directly
+!!
+!! Folded by OD Steps 6+7 (2026-05-28):
+!!   - state%atmosphere%atmin7    → atmosphere_state_init (swinco==3 gate only; h_file gate dropped)
 !!
 !! All other assignment history is preserved as inline comments marking
 !! which Task absorbed each block.
@@ -113,16 +115,12 @@ contains
       ! [GR-BH Task 36] orgmat/cofani: consumed via config in swap_mod seeding block.
 
       ! [soil.initial] swinco=3 cross-subsystem writes retained here:
-      !   state%atmosphere%atmin7 (atmosphere write — cannot go to soilwater%init).
       !   state%solute%X (solute write — cannot go to soilwater%init).
+      ! state%atmosphere%atmin7 folded into atmosphere_state_init (OD Steps 6+7).
       ! soilwater%init absorbs the z_init CSV and soilwater scalar seeding.
       if (config%soil%swinco == 3) then
          if (allocated(config%soil%initial%h_file) .and. &
              len_trim(config%soil%initial%h_file) > 0) then
-            ! [GR-IO 2026-05-25 Phase 6 Step 3] atmin7 → state%atmosphere directly
-            state%atmosphere%atmin7(:) = config%soil%initial%atmin7(:)
-            ! [SS-ATM A-2.6] Legacy zeroes ssnow when swsnow != 1: now handled in swap.f90 during state seeding
-
             ! [GR-IO 2026-05-25 Phase 6 Step 3] Legacy tsoil_file CSV → zh/tsoil
             ! bare-global block dropped. temperature.f90:case(1) reads
             ! cfg_heat%tsoil_init directly (populated by read_heat_toml).

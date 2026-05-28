@@ -69,8 +69,8 @@ contains
       !       * soilwater layer flats (ksatexm/ksatfit/cofani/orgmat/…)
       !       * drainage scalars + L/zbotdr per-level geometry
       !       * swinco==3 warm-restart h-profile CSV re-read
-      !       * atmosphere snow handshake (snowinco ↔ ssnow)
       !     Each should fold into the relevant state%X%init.
+      !     (atmosphere warm-restart + snow handshake folded in OD Steps 6+7)
       !   - Phase-2 seed procedures (tillage_seed, soilwater_seed,
       !     temperature_seed, solute_seed) — per ADR 0043 these are named
       !     free procs, deliberately distinct from the type-bound Phase-1
@@ -124,13 +124,14 @@ contains
                                       state%timecontrol%tend, state%mesh, &
                                       config%general%pathwork)
 
-      ! Modern atmosphere init (zero flat scalars + cohorts + snapshot
-      ! config-derived params: snowcoef/swsublim/swetsine).
+      ! Modern atmosphere init: zero flat scalars + cohorts + snapshot
+      ! config-derived params + swinco==3 warm-restart (ssnow/ldwet/slw/atmin7)
+      ! + snow handshake (snowinco ↔ ssnow). All folded here (OD Steps 6+7).
       call state%atmosphere%init(config)
 
-      ! swinco==3 warm-restart: pond/pondini/dt/h-profile/atmosphere read
-      ! from soil.initial. swinco<3: pondini/pond from soil.pondini;
-      ! atmosphere already zero-init from %init above.
+      ! swinco==3 warm-restart: pond/pondini/dt/h-profile from soil.initial.
+      ! swinco<3: pondini/pond from soil.pondini.
+      ! atmosphere warm-restart fields are handled inside state%atmosphere%init above.
       ! [W4 fix 2026-05-28] h-profile no longer re-reads the CSV here;
       ! state%soilwater%h_init is already populated by soilwater_state_init.
       if (config%soil%swinco == 3 .and. &
@@ -151,11 +152,6 @@ contains
                end do
             end if
          end block
-         ! atmosphere warm-restart fields (spev/saev not in config; stay zero).
-         state%atmosphere%ssnow = config%soil%initial%ssnow
-         state%atmosphere%ldwet = config%soil%initial%ldwet
-         state%atmosphere%slw   = config%soil%initial%slw
-         if (config%meteo%snow%swsnow /= 1) state%atmosphere%ssnow = 0.0d0
       else
          state%soilwater%pondini = config%soil%pondini
          state%soilwater%pond    = config%soil%pondini   ! legacy alias for swinco<3
@@ -190,16 +186,6 @@ contains
          call state%surfacewater%init(config%surface_water, config%drain, config%soil, state%mesh%numnod)
 
          if (time%flTemperature) call temperature_seed(state, config)
-
-         ! STRANGLER — snow handshake (snowinco ↔ ssnow). Fold into
-         ! state%atmosphere%init or a dedicated snow_init that reads swinco.
-         if (time%flSnow) then
-            if (config%soil%swinco == 3) then
-               state%atmosphere%snowinco = state%atmosphere%ssnow
-            else
-               state%atmosphere%ssnow = state%atmosphere%snowinco
-            end if
-         end if
 
          if (time%flSolute) call solute_seed(state)
 

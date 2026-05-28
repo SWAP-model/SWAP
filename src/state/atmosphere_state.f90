@@ -377,6 +377,32 @@ contains
       self%TePrRain = config%meteo%snow%teprrain
       self%TePrSnow = config%meteo%snow%teprsnow
 
+      ! ---------------------------------------------------------------
+      ! Warm-restart (swinco==3) fields. Folded from swap_init_body's
+      ! orchestrator-dissolution arc (Steps 6+7).
+      ! atmin7 is a fixed-size array in config; no allocated() guard needed.
+      ! ---------------------------------------------------------------
+      if (config%soil%swinco == 3) then
+         self%ssnow = config%soil%initial%ssnow
+         self%ldwet = config%soil%initial%ldwet
+         self%slw   = config%soil%initial%slw
+         self%atmin7(:) = config%soil%initial%atmin7(:)
+      end if
+
+      ! Snow override: ssnow=0 when snow physics disabled.
+      if (config%meteo%snow%swsnow /= 1) self%ssnow = 0.0_real64
+
+      ! Snow handshake: when snow physics on, snowinco mirrors ssnow at init.
+      ! Under swinco==3, snowinco := ssnow (loaded value). Else ssnow := snowinco
+      ! (which is 0 from the type-default since no other writer exists at init time).
+      if (config%meteo%snow%swsnow == 1) then
+         if (config%soil%swinco == 3) then
+            self%snowinco = self%ssnow
+         else
+            self%ssnow = self%snowinco
+         end if
+      end if
+
    end subroutine atmosphere_state_init
 
    !> Zero all 8 intermediate cohort fields.
