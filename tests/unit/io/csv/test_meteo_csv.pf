@@ -166,3 +166,80 @@ subroutine test_detail_load_missing_file()
    @assertFalse(detail%is_loaded)
    @assertFalse(allocated(detail%rows))
 end subroutine test_detail_load_missing_file
+
+@test
+subroutine test_rain_load_happy()
+   use funit
+   use iso_fortran_env, only: real64
+   use meteo_csv_mod, only: rain_events_table_t
+   use error_mod,     only: error_collection_t
+
+   type(rain_events_table_t) :: rain
+   type(error_collection_t)  :: errors
+
+   call rain%load('tests/unit/io/fixtures/csv_meteo_rain_events.csv', errors)
+
+   @assertFalse(errors%has_errors())
+   @assertTrue(rain%is_loaded)
+   @assertTrue(allocated(rain%rows))
+   @assertEqual(5, size(rain%rows))
+   @assertEqual(1.2_real64,  rain%rows(3)%amount, 1.0e-6_real64)
+   @assertEqual(12.0_real64, rain%rows(5)%amount, 1.0e-6_real64)
+end subroutine test_rain_load_happy
+
+@test
+subroutine test_rain_year_window_1981()
+   use funit
+   use meteo_csv_mod, only: rain_events_table_t
+   use error_mod,     only: error_collection_t
+
+   type(rain_events_table_t) :: rain
+   type(error_collection_t)  :: errors
+   integer :: i1, i2
+
+   call rain%load('tests/unit/io/fixtures/csv_meteo_rain_events.csv', errors)
+   call rain%year_window(1981, i1, i2)
+   ! Legacy ReadRainEvents bucketing: 1980-12-31T18:00 is within 12h of
+   ! the 1981 boundary and lands in 1981 (NOT 1980). i1=2 not i1=3.
+   @assertEqual(2, i1)
+   @assertEqual(5, i2)
+end subroutine test_rain_year_window_1981
+
+@test
+subroutine test_rain_year_window_legacy_leak_dec31_evening()
+   ! Regression pin: legacy ReadRainEvents includes a Dec-31-evening event of
+   ! year-1 in year's window via the ±0.5d slack. This is the "intentionally
+   ! weird" semantic preserved for byte-identical regression with the consumer
+   ! in src/io/readmeteo.f90's ReadRainEvents. Do not tighten this to a
+   ! half-open interval without updating the consumer simultaneously.
+   use funit
+   use iso_fortran_env, only: real64
+   use meteo_csv_mod, only: rain_events_table_t
+   use error_mod,     only: error_collection_t
+
+   type(rain_events_table_t) :: rain
+   type(error_collection_t)  :: errors
+   integer :: i1, i2
+
+   call rain%load('tests/unit/io/fixtures/csv_meteo_rain_events.csv', errors)
+   call rain%year_window(1981, i1, i2)
+   ! Row 2 = 1980-12-31T18:00 (within 12h of year boundary).
+   @assertEqual(2, i1)
+   ! And confirm row 2's amount specifically — to catch any silent off-by-one.
+   @assertEqual(0.1_real64, rain%rows(i1)%amount, 1.0e-6_real64)
+end subroutine test_rain_year_window_legacy_leak_dec31_evening
+
+@test
+subroutine test_rain_load_missing_file()
+   use funit
+   use meteo_csv_mod, only: rain_events_table_t
+   use error_mod,     only: error_collection_t
+
+   type(rain_events_table_t) :: rain
+   type(error_collection_t)  :: errors
+
+   call rain%load('tests/unit/io/fixtures/does_not_exist.csv', errors)
+   @assertTrue(errors%has_errors())
+   @assertFalse(rain%is_loaded)
+   @assertFalse(allocated(rain%rows))
+end subroutine test_rain_load_missing_file

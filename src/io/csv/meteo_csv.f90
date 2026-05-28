@@ -219,17 +219,66 @@ contains
    end subroutine meteo_detail_table_year_window
 
    subroutine rain_events_table_load(self, path, errors)
+      use csv_reader_mod, only: read_csv_table
       class(rain_events_table_t), intent(inout) :: self
       character(len=*),           intent(in)    :: path
       type(error_collection_t),   intent(inout) :: errors
-      ! TASK 4
+
+      real(real64), allocatable :: tbl(:,:)
+      character(len=8) :: hdr(2)
+      integer :: n, r
+
+      hdr = [character(len=8) :: 'datetime', 'amount  ']
+      call read_csv_table(trim(path), hdr, tbl, errors)
+      if (errors%has_fatals()) return
+
+      n = size(tbl, 1)
+      if (allocated(self%rows)) deallocate(self%rows)
+      allocate(self%rows(n))
+      do r = 1, n
+         self%rows(r)%datetime = tbl(r, 1)
+         self%rows(r)%amount   = tbl(r, 2)
+      end do
+
+      ! No validation by design: legacy ReadRainEvents does not enforce
+      ! amount >= 0 or monotonic timestamps. Defer to a post-byte-identical arc.
+      self%is_loaded = .true.
    end subroutine rain_events_table_load
 
    subroutine rain_events_table_year_window(self, year, i1, i2)
       class(rain_events_table_t), intent(in)  :: self
       integer,                    intent(in)  :: year
       integer,                    intent(out) :: i1, i2
-      i1 = 0; i2 = 0  ! TASK 4
+
+      integer :: i
+      real(real64) :: t_jan1, t_dec31
+
+      i1 = 0; i2 = 0
+      if (.not. self%is_loaded) return
+      if (.not. allocated(self%rows)) return
+
+      ! Preserves legacy ReadRainEvents bucketing exactly (byte-identical
+      ! regression). t_dec31 here = days_since_1900(year,12,31) + 1.0 is the
+      ! integer value of the FIRST INSTANT of Jan 1 year+1, not midnight Dec 31.
+      ! The ±0.5 slack on both bounds means the effective window is:
+      !   [noon Dec 31 year-1, noon Jan 1 year+1)
+      ! i.e. any event within 12 h of a year boundary is assigned to the
+      ! NEARER year. This is intentionally weird: a Dec 31 evening event of
+      ! year-1 lands in year's bucket, and a Jan 1 morning event of year+1
+      ! also lands in year's bucket. Do not "fix" without updating the
+      ! consumer in ReadRainEvents (Task 6 of the meteo-csv arc).
+      t_jan1  = real(days_since_1900(year,  1,  1), real64)
+      t_dec31 = real(days_since_1900(year, 12, 31), real64) + 1.0_real64
+
+      ! Assumes rows are sorted ascending by datetime (guaranteed by csv_reader's
+      ! sequential read). i1 = first in-window index, i2 = last.
+      do i = 1, size(self%rows)
+         if (self%rows(i)%datetime >= t_jan1 - 0.5_real64 .and. &
+             self%rows(i)%datetime <  t_dec31 + 0.5_real64) then
+            if (i1 == 0) i1 = i
+            i2 = i
+         end if
+      end do
    end subroutine rain_events_table_year_window
 
    ! Private helper — same epoch and convention as csv_reader's date col.
