@@ -268,6 +268,33 @@ module soilwater_state_mod
       ! (cluster 4) and soilhydraulics (cluster 7).
       integer :: swkmean = 1
 
+      ! [state%cfg-retirement cluster 7] Numerical solver control snapshots.
+      ! Snapshotted from config%simulation%numerical at soilwater_state_init.
+      integer      :: swkimpl                   = 0             !! K-averaging scheme: 0=explicit, 1=implicit
+      integer      :: MaxBackTr                 = 3             !! max back-tracking steps per Newton iteration
+      real(real64) :: gwlconv                   = 100.0_real64  !! GWL change convergence criterion (cm)
+      real(real64) :: critdevh1cp               = 0.01_real64   !! relative head convergence criterion (-)
+      real(real64) :: critdevh2cp               = 0.1_real64    !! absolute head convergence criterion (cm)
+      real(real64) :: critdevponddt             = 1.0e-4_real64 !! pond water balance convergence criterion (cm)
+      logical      :: swcaprise                 = .false.       !! cap capillary rise into root zone
+      logical      :: dump_convergence_diagnostics = .false.    !! emit Richards convergence diagnostics
+
+      ! [state%cfg-retirement cluster 7] Soil config scalar snapshots.
+      real(real64) :: gwli  = 0.0_real64  !! initial groundwater level (cm); snapshotted from config%soil%gwli
+      real(real64) :: tau   = 0.0_real64  !! hysteresis scanning-curve coefficient; snapshotted from config%soil%tau
+
+      ! [state%cfg-retirement cluster 7] Bottom-boundary config snapshots.
+      ! Snapshotted from config%bottom_boundary at soilwater_state_init.
+      real(real64) :: hplate      = 0.0_real64  !! lysimeter plate pressure head (cm)
+      real(real64) :: rimlay      = 0.0_real64  !! Cauchy bottom-boundary vertical resistance (d)
+      integer      :: swbotb3impl = 0           !! swbotb=3 implementation flag (0=explicit, 1=implicit)
+      integer      :: sw4         = 0           !! swbotb=3 extra groundwater flux switch (0=no, 1=yes)
+
+      ! [state%cfg-retirement cluster 7] Per-layer wetting-curve alpha for hysteresis.
+      ! Snapshotted from config%soil%hydraulics%alfaw(lay) at soilwater_state_init.
+      ! Consumed by hysteresis() to determine the wetting-branch alpha per layer.
+      real(real64), allocatable :: alfaw_layer(:)  !! per-layer wetting alpha for hysteresis (1/cm)
+
       ! ===========================================================================
       ! INTERMEDIATE accumulators (reset_intermediate / gate: flzerointr)
       !   subsumes the per-day subset, which has its own reset under flDayStart.
@@ -632,6 +659,34 @@ contains
       ! Numerical solver control — snapshotted for boundtop (cluster 4) and
       ! soilhydraulics (cluster 7). Default 1 matches simulation_numerical_t.
       self%swkmean = config_simulation%numerical%swkmean
+
+      ! [state%cfg-retirement cluster 7] Numerical solver snapshots (soilhydraulics).
+      self%swkimpl                   = config_simulation%numerical%swkimpl
+      self%MaxBackTr                 = config_simulation%numerical%MaxBackTr
+      self%gwlconv                   = config_simulation%numerical%gwlconv
+      self%critdevh1cp               = config_simulation%numerical%critdevh1cp
+      self%critdevh2cp               = config_simulation%numerical%critdevh2cp
+      self%critdevponddt             = config_simulation%numerical%critdevponddt
+      self%swcaprise                 = config_simulation%numerical%swcaprise
+      self%dump_convergence_diagnostics = config_simulation%numerical%dump_convergence_diagnostics
+
+      ! [state%cfg-retirement cluster 7] Soil config scalar snapshots.
+      self%gwli = config_soil%gwli
+      self%tau  = config_soil%tau
+
+      ! [state%cfg-retirement cluster 7] Bottom-boundary scalar snapshots.
+      self%hplate      = config_bb%hplate
+      self%rimlay      = config_bb%rimlay
+      self%swbotb3impl = config_bb%swbotb3impl
+      self%sw4         = config_bb%sw4
+
+      ! [state%cfg-retirement cluster 7] Per-layer wetting alpha for hysteresis.
+      if (allocated(config_soil%hydraulics%alfaw)) then
+         if (.not. allocated(self%alfaw_layer)) then
+            allocate(self%alfaw_layer(size(config_soil%hydraulics%alfaw)))
+         end if
+         self%alfaw_layer(:) = config_soil%hydraulics%alfaw(:)
+      end if
 
    end subroutine soilwater_state_init
 

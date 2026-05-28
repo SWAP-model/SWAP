@@ -461,7 +461,7 @@ contains
 
       ! compensate water balance error of this time step during remaining day part
       ! cumulative water balance error
-      if (state%cfg%meteo%snow%swsnow.eq.0) then
+      if (atmo%swsnow.eq.0) then
         soil%wbalance = atmo%cumu%cnrai + soil%cnird           &
      &        + soil%crunon - soil%crunoff                             &
      &        - soil%cqrot - atmo%cumu%cevap                              &

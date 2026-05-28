@@ -104,6 +104,8 @@ module atmosphere_state_mod
       ! Config-derived parameters/switches (copied from config at init; compute reads from state only)
       real(real64) :: snowcoef = 0.0_real64  !< snow-melt temperature coefficient (cm/d/degC)
       integer      :: swsublim = 0           !< suppress sublimation of snow (1) or compute it (0)
+      ! [state%cfg-retirement cluster 7] snow physics switch; snapshotted from config%meteo%snow%swsnow
+      integer      :: swsnow   = 0           !< snow physics switch: 0=off, 1=on
       integer      :: swetsine = 0           !< Tp/Ep distribution: 0=uniform, 1=sine-wave during day
       integer      :: swredu     = 1           !< ET reduction method: 1=Black, 2=Boesten-Stroosnijder
       real(real64) :: cofred     = 0.35_real64 !< ET reduction coefficient β (Black: cofredbl, B-S: cofredbo)
@@ -323,6 +325,7 @@ contains
       ! Config-derived snapshot — compute routines read these via state, not state%cfg.
       self%snowcoef = config%meteo%snow%snowcoef
       self%swsublim = config%soil%frost%swsublim
+      self%swsnow   = config%meteo%snow%swsnow
       self%swetsine = config%meteo%swetsine
       self%swredu   = config%meteo%evaporation%swredu
       self%rsigni   = config%meteo%evaporation%rsigni
