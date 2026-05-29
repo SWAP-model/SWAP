@@ -50,23 +50,39 @@ contains
    !> Shared post-parse pipeline: takes a parsed toml_table and calls
    !! every section reader. Used by both file-based and string-based
    !! load entry points.
+   !!
+   !! Execution order is load-bearing: read_general_toml must run first so
+   !! that config%general%pathwork is populated before read_crop_toml and
+   !! read_drainage_toml use it as their subfile base path.
    subroutine apply_section_readers(doc_ptr, base_dir, config, errors)
+      use path_helpers_mod, only: directory_of
       type(toml_table), pointer,           intent(in)    :: doc_ptr
       character(len=*),                    intent(in)    :: base_dir
       type(swap_config_t),                 intent(inout) :: config
       type(error_collection_t),            intent(inout) :: errors
 
-      call read_general_toml    (doc_ptr, config%general,    errors)
+      character(len=:), allocatable :: pathwork_eff
+
+      call read_general_toml    (doc_ptr, config%general,    errors, base_dir=base_dir)
       call read_simulation_toml (doc_ptr, config%simulation, errors)
       call read_meteorology_toml(doc_ptr, config%meteo,      errors)
-      call read_drainage_toml   (doc_ptr, config%drain,      errors, base_path=base_dir)
+
+      ! Guard: if [general] was absent or returned early, pathwork is not
+      ! allocated; fall back to base_dir so the subfile readers still work.
+      if (allocated(config%general%pathwork)) then
+         pathwork_eff = config%general%pathwork
+      else
+         pathwork_eff = base_dir
+      end if
+
+      call read_drainage_toml   (doc_ptr, config%drain,      errors, base_path=pathwork_eff)
       call read_soil_toml       (doc_ptr, config%soil,       errors)
       call read_bottom_boundary_toml(doc_ptr, config%bottom_boundary, errors)
       call read_heat_toml       (doc_ptr, config%heat,       errors)
       call read_irrigation_toml (doc_ptr, config%irrigation, errors)
       call read_solute_toml     (doc_ptr, config%solute,     errors)
       call read_surface_water_toml(doc_ptr, config%surface_water, errors)
-      call read_crop_toml       (doc_ptr, config%crop,       errors, base_path=base_dir)
+      call read_crop_toml       (doc_ptr, config%crop,       errors, base_path=pathwork_eff)
       call read_output_csv_toml (doc_ptr, config%output_csv, errors)
       call read_nutrients_toml  (doc_ptr, config%nutrients,  errors)
    end subroutine apply_section_readers

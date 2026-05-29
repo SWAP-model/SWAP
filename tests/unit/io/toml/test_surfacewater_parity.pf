@@ -30,10 +30,10 @@ subroutine test_surfacewater_general_parity()
    @assertFalse(errors%has_fatals())
 
    @assertEqual('wildenborch', trim(config%general%project))
-   @assertEqual('./',          trim(config%general%pathwork))
-   @assertEqual('./',          trim(config%general%pathatm))
-   @assertEqual('./',          trim(config%general%pathcrop))
-   @assertEqual('./',          trim(config%general%pathdrain))
+   @assertEqual('tests/swap-cases/toml/6.surfacewater/', trim(config%general%pathwork))
+   @assertEqual('tests/swap-cases/toml/6.surfacewater/', trim(config%general%pathatm))
+   @assertEqual('tests/swap-cases/toml/6.surfacewater/', trim(config%general%pathcrop))
+   @assertEqual('tests/swap-cases/toml/6.surfacewater/', trim(config%general%pathdrain))
    @assertEqual(0,             config%general%swscre)
 end subroutine
 

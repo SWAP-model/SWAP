@@ -32,10 +32,10 @@ subroutine test_grassgrowth_general_parity()
    @assertFalse(errors%has_fatals())
 
    @assertEqual('ruurlo', trim(config%general%project))
-   @assertEqual('./',     trim(config%general%pathwork))
-   @assertEqual('./',     trim(config%general%pathatm))
-   @assertEqual('./',     trim(config%general%pathcrop))
-   @assertEqual('./',     trim(config%general%pathdrain))
+   @assertEqual('tests/swap-cases/toml/2.grassgrowth/', trim(config%general%pathwork))
+   @assertEqual('tests/swap-cases/toml/2.grassgrowth/', trim(config%general%pathatm))
+   @assertEqual('tests/swap-cases/toml/2.grassgrowth/', trim(config%general%pathcrop))
+   @assertEqual('tests/swap-cases/toml/2.grassgrowth/', trim(config%general%pathdrain))
    @assertEqual(0,        config%general%swscre)
 end subroutine
 
