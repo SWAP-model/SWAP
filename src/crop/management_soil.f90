@@ -111,9 +111,9 @@ contains
 
       case (3)
          ! Timed soil-management events (amendments).
-         if (abs(TimeAmend(isme) + 1.0d0 - time%t1900) .lt. 1.d-3) then
-            call Wofost_SoilAmendents
-            isme = isme + 1
+         if (abs(state%nutrients%timeamend(state%nutrients%isme) + 1.0d0 - time%t1900) .lt. 1.d-3) then
+            call Wofost_SoilAmendents(state)
+            state%nutrients%isme = state%nutrients%isme + 1
          endif
          return
 

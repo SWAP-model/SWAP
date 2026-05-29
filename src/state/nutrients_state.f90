@@ -19,6 +19,10 @@ module nutrients_state_mod
    !! Mirrors Wofost_Soil_Declarations maxfn = 8.
    integer, parameter :: maxfn_ns = 8
 
+   !> Maximum number of soil amendment events.
+   !! Mirrors Wofost_Soil_Declarations maxamn = 1000.
+   integer, parameter :: maxamn_ns = 1000
+
    type :: nutrients_state_t
 
       ! -----------------------------------------------------------------------
@@ -140,6 +144,20 @@ module nutrients_state_mod
       real(real64) :: no3n_cres  = 0.0_real64
       real(real64) :: nh4n_volat = 0.0_real64
 
+      ! -----------------------------------------------------------------------
+      ! Amendment events (CSV-loaded at init; consumed by wofost_soil_amendments
+      ! during the time-step loop). Replaces the dual-write to legacy
+      ! Wofost_Soil_Declarations globals (W10 2026-05-29).
+      ! -----------------------------------------------------------------------
+      integer      :: namend                              = 0   !! total amendment event count
+      integer      :: isme                               = 1   !! current event-bucket cursor (runtime, mutated each step)
+      real(real64) :: amend(maxamn_ns)                   = 0.0_real64  !! amendment amounts (kg/m²)
+      integer      :: matnum(maxamn_ns)                  = 0            !! material number per event
+      real(real64) :: volafrac(maxamn_ns)                = 0.0_real64  !! volatilisation fraction per event
+      real(real64) :: timeamend(maxamn_ns)               = 0.0_real64  !! JD timestamp per event bucket
+      integer      :: nuamend(maxamn_ns)                 = 0            !! event count per timestamp bucket
+      integer      :: iamend(maxamn_ns, maxamn_ns)       = 0            !! event index lookup
+
       ! — Previous-period crop residue DM and N losses (for ANIMO cropext output)
       real(real64) :: idwrt_1   = 0.0_real64  !! root DM at previous harvest
       real(real64) :: idwlv_1   = 0.0_real64  !! leaf DM at previous harvest
@@ -197,7 +215,7 @@ contains
       ! Seed legacy WSN compute globals (Wofost_Soil_Declarations) from
       ! typed config. The body lives below; relocated from the deleted
       ! config_to_variables_mod (apply_nutrients).
-      call seed_nutrients_from_config(config_nut, pathwork_in)
+      call seed_nutrients_from_config(self, config_nut, pathwork_in)
 
       ! Mirror the same five config-derived initial pools onto the typed
       ! state fields. Replaces the WSN dual-write block previously in
@@ -217,10 +235,11 @@ contains
    !! Body relocated from src/io/toml/config_to_variables.f90 (apply_nutrients).
    !! The destination is a separate legacy module (WSN); migrating those
    !! globals is out of scope for this arc.
-   subroutine seed_nutrients_from_config(cfg, pathwork_in)
+   subroutine seed_nutrients_from_config(self, cfg, pathwork_in)
       use nutrients_config_mod, only: nutrients_config_t
       use wofost_soil_declarations, only: FOM_t, Bio_t, Hum_t, &
                                            cNH4_t, cNO3_t, SorpCoef
+      type(nutrients_state_t), intent(inout) :: self
       type(nutrients_config_t), intent(in) :: cfg
       character(len=*),         intent(in) :: pathwork_in
       integer :: i
@@ -235,28 +254,26 @@ contains
       cNO3_t = cfg%initial%cno3
 
       ! N2b (ADR 0027): stage timed amendments from the CSV companion.
-      call load_nutrients_events(cfg, pathwork_in)
+      call load_nutrients_events(self, cfg, pathwork_in)
    end subroutine seed_nutrients_from_config
 
 
    !> Stage timed soil management events from the CSV companion
-   !! at cfg%events_file. Sets the legacy globals consumed by
-   !! SoilManagement(3) and Wofost_SoilAmendents.
+   !! at cfg%events_file. Populates state%nutrients amendment-event fields
+   !! (namend, isme, amend, matnum, volafrac, timeamend, nuamend, iamend).
    !!
    !! Default (empty events_file or empty CSV): namend = 0, isme = 1.
    !!
    !! Body relocated from src/io/toml/config_to_variables.f90 (apply_nutrients_events).
-   !! See ADR 0027 ([nutrients] N2b).
-   subroutine load_nutrients_events(cfg, pathwork_in)
+   !! See ADR 0027 ([nutrients] N2b). W10 2026-05-29: global dual-write retired.
+   subroutine load_nutrients_events(self, cfg, pathwork_in)
       use, intrinsic :: iso_fortran_env, only: real64
       use error_mod, only: error_collection_t, fatalerr_collected
       use nutrients_config_mod, only: nutrients_config_t
       use nutrients_csv_mod, only: amendment_events_table_t
-      use wofost_soil_declarations, only: MatNum, Amend, VolaFrac, &
-                                            TimeAmend, NuAmend, iamend, &
-                                            namend, isme, maxamn
-      type(nutrients_config_t), intent(in) :: cfg
-      character(len=*),         intent(in) :: pathwork_in
+      type(nutrients_state_t), intent(inout) :: self
+      type(nutrients_config_t), intent(in)   :: cfg
+      character(len=*),         intent(in)   :: pathwork_in
 
       type(amendment_events_table_t) :: typed_tbl
       type(error_collection_t)       :: errs
@@ -265,9 +282,9 @@ contains
       real(real64) :: tmp_date, tmp_amount, tmp_volat
       integer :: tmp_mat
 
-      ! Default: no amendments. Reset legacy globals to a known state.
-      namend = 0
-      isme   = 1
+      ! Default: no amendments. Reset state fields to a known state.
+      self%namend = 0
+      self%isme   = 1
 
       ! events_file is always allocated by get_optional_string_with_default
       ! (defaults to empty string on missing key), so check len_trim instead.
@@ -276,7 +293,7 @@ contains
 
       ! Typed loader: parse + validate (material 1..20, amount [0,5e5], volat [0,1]).
       ! Range/enum validation is owned by the loader; this site only handles
-      ! the post-load conversion and global population.
+      ! the post-load conversion and state population.
       csvpath = trim(pathwork_in) // trim(cfg%events_file)
       call typed_tbl%load(trim(csvpath), errs)
       call errs%abort_if_fatal()
@@ -284,9 +301,9 @@ contains
       n = 0
       if (typed_tbl%is_loaded) n = size(typed_tbl%rows)
       if (n < 1) return     ! Empty CSV: no amendments. Not an error.
-      if (n > maxamn) then
+      if (n > maxamn_ns) then
          call fatalerr_collected('load_nutrients_events', &
-            'CSV row count exceeds maxamn (1000)')
+            'CSV row count exceeds maxamn_ns (1000)')
          return
       end if
 
@@ -333,32 +350,32 @@ contains
          end do
       end do
 
-      ! Populate per-event legacy globals.
+      ! Populate per-event state fields.
       ! Unit conversion: kg/ha -> kg/m^2 via ×1e-4 applied at the copy site.
       do i = 1, n
-         MatNum(i)   = typed_tbl%rows(i)%material
-         Amend(i)    = 1.0e-4_real64 * typed_tbl%rows(i)%amount_kgha   ! kg/ha -> kg/m^2
-         VolaFrac(i) = typed_tbl%rows(i)%volat_fraction
+         self%matnum(i)   = typed_tbl%rows(i)%material
+         self%amend(i)    = 1.0e-4_real64 * typed_tbl%rows(i)%amount_kgha   ! kg/ha -> kg/m^2
+         self%volafrac(i) = typed_tbl%rows(i)%volat_fraction
       end do
 
       ! Group dosages per date (mirrors deleted SoilManagement(1)).
       j = 1
-      NuAmend(j)   = 1
-      TimeAmend(j) = typed_tbl%rows(1)%date
-      iamend(1, 1) = 1
+      self%nuamend(j)   = 1
+      self%timeamend(j) = typed_tbl%rows(1)%date
+      self%iamend(1, 1) = 1
       do i = 2, n
          if (abs(typed_tbl%rows(i)%date - typed_tbl%rows(i - 1)%date) < 1.0e-3_real64) then
-            NuAmend(j) = NuAmend(j) + 1
+            self%nuamend(j) = self%nuamend(j) + 1
          else
             j = j + 1
-            NuAmend(j)   = 1
-            TimeAmend(j) = typed_tbl%rows(i)%date
+            self%nuamend(j)   = 1
+            self%timeamend(j) = typed_tbl%rows(i)%date
          end if
-         iamend(j, NuAmend(j)) = i
+         self%iamend(j, self%nuamend(j)) = i
       end do
 
-      namend = j
-      isme   = 1
+      self%namend = j
+      self%isme   = 1
    end subroutine load_nutrients_events
 
 end module nutrients_state_mod

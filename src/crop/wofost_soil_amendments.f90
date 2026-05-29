@@ -1,28 +1,35 @@
 ! File VersionID:
 !   $Id: wofost_soil_amendments.f90 298 2016-07-25 20:07:31Z kroes006 $
+! W10 2026-05-29: signature expanded to take state; reads
+! state%nutrients%amend/matnum/volafrac/nuamend/iamend instead of
+! the retired Wofost_Soil_Declarations globals.
 ! ----------------------------------------------------------------------
-      Subroutine Wofost_SoilAmendents
+      Subroutine Wofost_SoilAmendents(state)
 
 !0    Declarations
       use Wofost_Soil_Declarations
+      use swap_state_mod, only: swap_state_t
 !0.3  intermediate local variables
+      type(swap_state_t), intent(inout) :: state
       integer :: im, matno, fn, ii
       real(8) :: Am_NH4, Am_NO3, Am_OM, Age, fDPM, fRPM, Asfa,          &
      &           OrgNFr, fOrgN1, fOrgN2, FHum, fAsfa1, fAsfa2
       real(8) :: cf, ff(8), help
 !     Materials
 
-      do ii = 1,NuAmend(isme)
-         im = iamend(isme,ii)
-             matno = MatNum(im)
-         Am_NH4 = NH4NFrac(matno) * (1.0d0 - VolaFrac(im)) * Amend(im)    ! kg/m2
-         Am_NO3 = NO3NFrac(matno) * Amend(im)                           ! kg/m2
+      associate (ns => state%nutrients)
+
+      do ii = 1, ns%nuamend(ns%isme)
+         im    = ns%iamend(ns%isme, ii)
+         matno = ns%matnum(im)
+         Am_NH4 = NH4NFrac(matno) * (1.0d0 - ns%volafrac(im)) * ns%amend(im)    ! kg/m2
+         Am_NO3 = NO3NFrac(matno) * ns%amend(im)                                 ! kg/m2
 
          cf = WFrac_t0 + DryBD * SorpCoef
          cNH4_t0 = (cf * dz_WSN * cNH4_t0 + Am_NH4) /(cf* dz_WSN )
          cNO3_t0 = (WFrac_t0 * dz_WSN*cNO3_t0+Am_NO3)/(WFrac_t0*dz_WSN)
 
-         Am_OM = OrgMatFrac(matno) * Amend(im)
+         Am_OM = OrgMatFrac(matno) * ns%amend(im)
          if( Am_OM .ge.1.0d-6 )then
             Age    = AppAge(matno)
             fDPM   = exp(-0.59d0*(Age-0.67d0))
@@ -32,11 +39,11 @@
             Asfa   = 0.25d0 /(1.0d0+exp(-2.7d0*(Age-2.0d0))) + 0.03d0
             fAsfa1 = (AsfaMax - Asfa) / (AsfaMax-AsfaMin)
             fAsfa2 = 1.0d0 - fAsfa1
-             
+
             OrgNFr = (OrgNFrac(matno) - fHum * NFracHum) / (1.0d0-fHum)
             fOrgN1 = (OrgNFr - NFracFOMmin)/(NFracFOMmax - NFracFOMmin)
             fOrgN2 = 1.0d0 - fOrgN1
-      
+
             ff(1) = fDPM * fAsfa1 * fOrgN1
             ff(2) = fDPM * fAsfa1 * fOrgN2
             ff(3) = fDPM * fAsfa2 * fOrgN1
@@ -57,12 +64,13 @@
                NFOM_add   = NFOM_add + NFracFOM(fn) * ff(fn) * Am_OM    ! kg/m2
             end do
          end if
-         NH4N_amend = NH4N_amend + NH4NFrac(matno) * Amend(im)          ! kg/m2
-         NO3N_amend = NO3N_amend + NO3NFrac(matno) * Amend(im)          ! kg/m2
-         NH4N_volat = NH4N_volat +  NH4NFrac(matno) * VolaFrac(im)      &
-     &                           * Amend(im)                            ! kg/m2
+         NH4N_amend = NH4N_amend + NH4NFrac(matno) * ns%amend(im)          ! kg/m2
+         NO3N_amend = NO3N_amend + NO3NFrac(matno) * ns%amend(im)          ! kg/m2
+         NH4N_volat = NH4N_volat +  NH4NFrac(matno) * ns%volafrac(im)      &
+     &                           * ns%amend(im)                            ! kg/m2
       end do
+
+      end associate
 
       return
       End Subroutine Wofost_SoilAmendents
-

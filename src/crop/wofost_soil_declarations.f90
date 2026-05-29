@@ -58,19 +58,17 @@
       real(8) :: dt_WSN
 
 !     Materials involved in soil amendments
-      integer      :: iamend(maxamn,maxamn), nuamend(maxamn), namend
-      integer      :: MatNum(maxamn)
+!     W10 2026-05-29: iamend/nuamend/namend/MatNum/Amend/VolaFrac/TimeAmend/isme
+!     retired to state%nutrients (nutrients_state_t). Only the per-material
+!     property tables and compute accumulators remain here.
       integer      :: iAmendTime
 
       character(len=25) :: MatName(maxmat)
-      real(8)      :: Amend(maxamn)
       real(8)      :: AppAge(maxmat), OrgMatFrac(maxmat),               &
      &              OrgNFrac(maxmat), NH4NFrac(maxmat), NO3NFrac(maxmat)
-      real(8)      :: VolaFrac(maxamn), NH4N_volat
+      real(8)      :: NH4N_volat
       real(8)      ::  NH4N_amend, NO3N_amend
       real(8)      ::  NH4N_cres, NO3N_cres
-      real(8)      ::  TimeAmend(maxamn)
-      integer      :: isme
 
 !     Crop residues amendment
       real(8):: iNLOSSL_1, iNLOSSR_1, iNLOSSS_1, iNLOSSO_1

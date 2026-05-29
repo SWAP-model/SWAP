@@ -221,12 +221,13 @@ end subroutine
 subroutine test_apply_nutrients_populates_globals()
    use, intrinsic :: iso_fortran_env, only: real64
    use nutrients_config_mod, only: nutrients_config_t
-   use nutrients_state_mod, only: seed_nutrients_from_config
+   use nutrients_state_mod, only: nutrients_state_t, seed_nutrients_from_config
    use wofost_soil_declarations, only: FOM_t, Bio_t, Hum_t, &
                                         cNH4_t, cNO3_t, SorpCoef
    use funit
    implicit none
    type(nutrients_config_t) :: cfg
+   type(nutrients_state_t)  :: ns
    integer :: i
 
    cfg%present   = .true.
@@ -238,7 +239,7 @@ subroutine test_apply_nutrients_populates_globals()
    cfg%initial%cnh4 = 0.001_real64
    cfg%initial%cno3 = 0.005_real64
 
-   call seed_nutrients_from_config(cfg, "./")
+   call seed_nutrients_from_config(ns, cfg, "./")
 
    @assertEqual(0.005_real64, SorpCoef, tolerance=1.0e-12_real64)
    do i = 1, 8
@@ -304,12 +305,13 @@ end subroutine
 subroutine test_apply_nutrients_defaults_zero()
    use, intrinsic :: iso_fortran_env, only: real64
    use nutrients_config_mod, only: nutrients_config_t
-   use nutrients_state_mod, only: seed_nutrients_from_config
+   use nutrients_state_mod, only: nutrients_state_t, seed_nutrients_from_config
    use wofost_soil_declarations, only: FOM_t, Bio_t, Hum_t, &
                                         cNH4_t, cNO3_t, SorpCoef
    use funit
    implicit none
    type(nutrients_config_t) :: cfg
+   type(nutrients_state_t)  :: ns
    integer :: i
 
    ! Non-zero pre-existing values to detect overwrite-with-zero.
@@ -321,7 +323,7 @@ subroutine test_apply_nutrients_defaults_zero()
    SorpCoef = 99.0_real64
 
    ! cfg%present = .false. (default); seed_nutrients_from_config still runs and resets.
-   call seed_nutrients_from_config(cfg, "./")
+   call seed_nutrients_from_config(ns, cfg, "./")
 
    @assertEqual(0.0_real64, SorpCoef, tolerance=1.0e-12_real64)
    do i = 1, 8
@@ -334,120 +336,119 @@ subroutine test_apply_nutrients_defaults_zero()
 end subroutine
 
 @test
-subroutine test_apply_events_csv_populates_legacy_globals()
+subroutine test_apply_events_csv_populates_state()
+   ! W10 2026-05-29: tests against state%nutrients fields, not legacy globals.
    use, intrinsic :: iso_fortran_env, only: real64
    use nutrients_config_mod, only: nutrients_config_t
-   use nutrients_state_mod, only: load_nutrients_events
-   use wofost_soil_declarations, only: MatNum, Amend, VolaFrac, &
-                                         TimeAmend, NuAmend, iamend, &
-                                         namend, isme
+   use nutrients_state_mod, only: nutrients_state_t, load_nutrients_events
    use funit
    implicit none
    type(nutrients_config_t) :: cfg
+   type(nutrients_state_t)  :: ns
    integer :: dy_apr15, dy_jun20
 
    cfg%events_file = 'nutrients_events_small.csv'
 
-   call load_nutrients_events(cfg, "tests/unit/io/toml/fixtures/")
+   call load_nutrients_events(ns, cfg, "tests/unit/io/toml/fixtures/")
 
    ! 3 rows, two share the date 2003-06-20 → 2 amendment groups.
-   call assertEqual(2, namend, 'two distinct amendment dates')
-   call assertEqual(1, isme,   'isme reset to 1')
+   call assertEqual(2, ns%namend, 'two distinct amendment dates')
+   call assertEqual(1, ns%isme,   'isme reset to 1')
 
    ! After sort: 2003-04-15 first (mat 10), 2003-06-20 second group (mat 1, mat 3).
-   ! NuAmend(1) = 1 (just the 2003-04-15 event)
-   ! NuAmend(2) = 2 (the two 2003-06-20 events)
-   call assertEqual(1, NuAmend(1))
-   call assertEqual(2, NuAmend(2))
+   ! nuamend(1) = 1 (just the 2003-04-15 event)
+   ! nuamend(2) = 2 (the two 2003-06-20 events)
+   call assertEqual(1, ns%nuamend(1))
+   call assertEqual(2, ns%nuamend(2))
 
    ! Sorted order: row 1 = mat 10, row 2 = mat 1, row 3 = mat 3
-   call assertEqual(10, MatNum(1))
-   call assertEqual(1,  MatNum(2))
-   call assertEqual(3,  MatNum(3))
+   call assertEqual(10, ns%matnum(1))
+   call assertEqual(1,  ns%matnum(2))
+   call assertEqual(3,  ns%matnum(3))
 
-   ! Amend = kg/ha * 1.0e-4 = kg/m^2  (100*1e-4=0.01, 25000*1e-4=2.5, 500*1e-4=0.05)
-   @assertEqual(0.01_real64,    Amend(1), tolerance=1.0e-12_real64)
-   @assertEqual(2.5_real64,     Amend(2), tolerance=1.0e-12_real64)
-   @assertEqual(0.05_real64,    Amend(3), tolerance=1.0e-12_real64)
+   ! amend = kg/ha * 1.0e-4 = kg/m^2  (100*1e-4=0.01, 25000*1e-4=2.5, 500*1e-4=0.05)
+   @assertEqual(0.01_real64,    ns%amend(1), tolerance=1.0e-12_real64)
+   @assertEqual(2.5_real64,     ns%amend(2), tolerance=1.0e-12_real64)
+   @assertEqual(0.05_real64,    ns%amend(3), tolerance=1.0e-12_real64)
 
-   ! VolaFrac round-trips exactly
-   @assertEqual(0.05_real64, VolaFrac(1), tolerance=1.0e-12_real64)
-   @assertEqual(0.10_real64, VolaFrac(2), tolerance=1.0e-12_real64)
-   @assertEqual(0.02_real64, VolaFrac(3), tolerance=1.0e-12_real64)
+   ! volafrac round-trips exactly
+   @assertEqual(0.05_real64, ns%volafrac(1), tolerance=1.0e-12_real64)
+   @assertEqual(0.10_real64, ns%volafrac(2), tolerance=1.0e-12_real64)
+   @assertEqual(0.02_real64, ns%volafrac(3), tolerance=1.0e-12_real64)
 
    ! Days-since-1900 for 2003-04-15 and 2003-06-20.
    ! Verify by checking the SSDI adapter test for 2003-04-15's value.
    dy_apr15 = 37725
    dy_jun20 = dy_apr15 + 66   ! 2003-06-20 = 2003-04-15 + 66 days
-   @assertEqual(real(dy_apr15, real64), TimeAmend(1), tolerance=1.0e-6_real64)
-   @assertEqual(real(dy_jun20, real64), TimeAmend(2), tolerance=1.0e-6_real64)
+   @assertEqual(real(dy_apr15, real64), ns%timeamend(1), tolerance=1.0e-6_real64)
+   @assertEqual(real(dy_jun20, real64), ns%timeamend(2), tolerance=1.0e-6_real64)
 
    ! iamend pointers
-   call assertEqual(1, iamend(1, 1), 'group 1: row 1')
-   call assertEqual(2, iamend(2, 1), 'group 2: row 2')
-   call assertEqual(3, iamend(2, 2), 'group 2: row 3')
+   call assertEqual(1, ns%iamend(1, 1), 'group 1: row 1')
+   call assertEqual(2, ns%iamend(2, 1), 'group 2: row 2')
+   call assertEqual(3, ns%iamend(2, 2), 'group 2: row 3')
 end subroutine
 
 @test
 subroutine test_apply_events_no_file_zero_amendments()
    use nutrients_config_mod, only: nutrients_config_t
-   use nutrients_state_mod, only: load_nutrients_events
-   use wofost_soil_declarations, only: namend, isme
+   use nutrients_state_mod, only: nutrients_state_t, load_nutrients_events
    use funit
    implicit none
    type(nutrients_config_t) :: cfg
+   type(nutrients_state_t)  :: ns
 
-   ! Pre-existing non-zero values to detect overwrite.
-   namend = 99
-   isme   = 99
+   ! Pre-seed non-zero values to detect overwrite.
+   ns%namend = 99
+   ns%isme   = 99
 
    ! cfg%events_file is unallocated by default OR allocated to empty string
    ! (depending on whether read_nutrients_toml has run; in this isolated test,
    ! it's unallocated until something assigns it). The helper handles both.
-   call load_nutrients_events(cfg, "tests/unit/io/toml/fixtures/")
+   call load_nutrients_events(ns, cfg, "tests/unit/io/toml/fixtures/")
 
-   call assertEqual(0, namend, 'namend reset to 0')
-   call assertEqual(1, isme,   'isme reset to 1')
+   call assertEqual(0, ns%namend, 'namend reset to 0')
+   call assertEqual(1, ns%isme,   'isme reset to 1')
 end subroutine
 
 @test
 subroutine test_apply_events_empty_file()
    use nutrients_config_mod, only: nutrients_config_t
-   use nutrients_state_mod, only: load_nutrients_events
-   use wofost_soil_declarations, only: namend, isme
+   use nutrients_state_mod, only: nutrients_state_t, load_nutrients_events
    use funit
    implicit none
    type(nutrients_config_t) :: cfg
+   type(nutrients_state_t)  :: ns
 
    ! Empty-string events_file is treated like absent.
    cfg%events_file = ''
-   namend = 99
-   isme   = 99
+   ns%namend = 99
+   ns%isme   = 99
 
-   call load_nutrients_events(cfg, "tests/unit/io/toml/fixtures/")
+   call load_nutrients_events(ns, cfg, "tests/unit/io/toml/fixtures/")
 
-   call assertEqual(0, namend)
-   call assertEqual(1, isme)
+   call assertEqual(0, ns%namend)
+   call assertEqual(1, ns%isme)
 end subroutine
 
 @test
 subroutine test_apply_events_explicit_state_after_run()
    use, intrinsic :: iso_fortran_env, only: real64
    use nutrients_config_mod, only: nutrients_config_t
-   use nutrients_state_mod, only: load_nutrients_events
-   use wofost_soil_declarations, only: namend, isme
+   use nutrients_state_mod, only: nutrients_state_t, load_nutrients_events
    use funit
    implicit none
    type(nutrients_config_t) :: cfg
+   type(nutrients_state_t)  :: ns
 
    ! Run on the fixture, then re-run with deallocated events_file — verify reset.
    cfg%events_file = 'nutrients_events_small.csv'
-   call load_nutrients_events(cfg, "tests/unit/io/toml/fixtures/")
-   call assertEqual(2, namend, 'after fixture run: 2 groups')
+   call load_nutrients_events(ns, cfg, "tests/unit/io/toml/fixtures/")
+   call assertEqual(2, ns%namend, 'after fixture run: 2 groups')
 
    ! Re-init: deallocate events_file, expect reset.
    if (allocated(cfg%events_file)) deallocate(cfg%events_file)
-   call load_nutrients_events(cfg, "tests/unit/io/toml/fixtures/")
-   call assertEqual(0, namend, 'after no-file run: namend reset to 0')
-   call assertEqual(1, isme,   'after no-file run: isme reset to 1')
+   call load_nutrients_events(ns, cfg, "tests/unit/io/toml/fixtures/")
+   call assertEqual(0, ns%namend, 'after no-file run: namend reset to 0')
+   call assertEqual(1, ns%isme,   'after no-file run: isme reset to 1')
 end subroutine
