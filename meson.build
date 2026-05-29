@@ -218,7 +218,6 @@ sources = [
     'src/state/crop_oxygen_state.f90',
     'src/state/crop_state.f90',
     'src/state/nutrients_state.f90',
-    'src/state/legacy_state.f90',
     'src/state/swap_state.f90',
 
     # Utils
