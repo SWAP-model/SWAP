@@ -106,10 +106,12 @@ module rootextraction_mod
       endif
 
 ! --- DROUGHT REDUCTION ACCORDING TO DE JONG VAN LIER ET AL. (2012)
-      ! [GR-CROP 2026-05-25] swdrought=2 (de Jong van Lier microscopic uptake)
-      ! dormant — body extracted to src/crop/dormant/jongvanlier.f90.
+      ! [GR-CROP 2026-05-25] swdrought=2 (de Jong van Lier microscopic uptake) is retired.
+      ! See git history for the legacy implementation.
       if (crop%common%swdrought .eq. 2) then
-        call fatalerr_collected('RootExtraction', 'swdrought=2 (de Jong van Lier) path is dormant — see src/crop/dormant/jongvanlier.f90')
+        call fatalerr_collected('RootExtraction', &
+          'swdrought=2 (Jong van Lier microscopic uptake) is retired. ' // &
+          'See git history for the legacy implementation.')
       endif
 
 ! === COMBINATION OF OXYGEN, DROUGHT, SALT AND FROST STRESS ====

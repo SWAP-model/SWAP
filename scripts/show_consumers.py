@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""show_consumers.py — locate every reference to a legacy global symbol.
+"""show_consumers.py — locate every reference to a symbol across src/ and tests/.
 
 Categorizes each reference so a human can manually edit each site with
 informed eyes. Does NOT modify any files.
@@ -8,20 +8,22 @@ Usage:
     python3 scripts/show_consumers.py <SYMBOL>
 
 Output sections:
-  1) declaration  — where the legacy global lives (variables.f90, initialize.f90)
-  2) adapter      — config_to_variables.f90 lines (X = config%path%X etc.)
-  3) init         — crop*init.f90 lines (X = cfg%X)
-  4) use-clauses  — files that `use variables, only: ..., X, ...`
-  5) signatures   — subroutine/function lines where sym appears as a dummy arg
-  6) locals       — files where sym is declared as a local var or intent arg
-  7) reads/writes — every other reference, grouped by file with line context
+  1) declaration  — type declaration lines
+  2) zero-init    — zero-initialisation in initialize.f90
+  3) adapter      — legacy config_to_variables adapter writes (historical; bucket
+                    will be empty now that config_to_variables.f90 is gone)
+  4) init         — crop*init.f90 lines (X = cfg%X)
+  5) use-clauses  — files that `use variables, only: ..., X, ...` (historical;
+                    bucket will be empty now that variables.f90 is gone)
+  6) signatures   — subroutine/function lines where sym appears as a dummy arg
+  7) locals       — files where sym is declared as a local var or intent arg
+  8) reads/writes — every other reference, grouped by file with line context
+  9) tests        — references in tests/
 
 Rule of thumb for manual editing:
-  - Items in (5) and (6) are LOCAL to that subroutine — DO NOT replace.
-  - Items in (3) become `state%crop%common%X = cfg%X` (or state%cfg path).
-  - Items in (4) get sym dropped from the `use` list.
-  - Items in (7) become `state%crop%common%X` (or relevant state path),
-    EXCEPT inside subroutines that appear in (5)/(6) for that file.
+  - Items in (6) and (7) are LOCAL to that subroutine — DO NOT replace.
+  - Items in (8) become `state%<path>%X` (or relevant state path),
+    EXCEPT inside subroutines that appear in (6)/(7) for that file.
 """
 
 import argparse
