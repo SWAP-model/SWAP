@@ -18,6 +18,7 @@ module read_solute_toml_mod
    use toml_field_helpers_mod, only: get_table,                         &
                                      get_optional_int_with_default,     &
                                      get_optional_real_with_default
+   use toml_array_helpers_mod, only: read_table_2d
    use error_mod, only: error_collection_t, ERR_PARSE_TYPE_MISMATCH
    implicit none
    private
@@ -114,6 +115,9 @@ contains
    !> Decode a flat TOML real array at sec[key] into a 1-D real(real64)
    !! allocatable. Absent key (or scalar value at the same key) leaves
    !! arr unallocated, letting the caller fall back to a scalar reader.
+   !! Distinguished from toml_array_helpers_mod%read_real_array_1d by its
+   !! absent context parameter — the error message embeds the key name
+   !! directly (solute-specific scalar-fallback pattern).
    subroutine read_real_array(sec, key, arr, errors)
       type(toml_table), pointer, intent(in)    :: sec
       character(len=*),          intent(in)    :: key
@@ -149,71 +153,5 @@ contains
          arr(i) = val
       end do
    end subroutine read_real_array
-
-   !> Decode a TOML array-of-arrays at sec[key] into a (nrows, ncols)
-   !! real(real64) allocatable. Absent key leaves table unallocated.
-   !! Empty array (`key = []`) yields a 0-row allocation. Ragged or
-   !! wrong-width inner arrays append a parse-type-mismatch error and
-   !! leave the table unallocated.
-   !!
-   !! Local copy of the helper from read_bottom_boundary_toml /
-   !! read_heat_toml — those helpers are private to their modules, so
-   !! duplicating here keeps the readers decoupled (per Phase 4d
-   !! pattern; see Task 7's note on read_heat_toml).
-   subroutine read_table_2d(sec, key, table, expected_cols, context, errors)
-      type(toml_table), pointer, intent(in)    :: sec
-      character(len=*),          intent(in)    :: key
-      real(real64), allocatable, intent(out)   :: table(:,:)
-      integer,                   intent(in)    :: expected_cols
-      character(len=*),          intent(in)    :: context
-      type(error_collection_t),  intent(inout) :: errors
-
-      type(toml_array), pointer :: outer, inner
-      integer :: nrows, i, j, stat, n_inner
-      real(real64) :: val
-
-      if (.not. associated(sec)) return
-
-      outer => null()
-      call get_value(sec, key, outer, requested=.false., stat=stat)
-      if (.not. associated(outer)) return
-
-      nrows = len(outer)
-      if (nrows == 0) then
-         allocate(table(0, expected_cols))
-         return
-      end if
-
-      allocate(table(nrows, expected_cols))
-      table = 0.0_real64
-
-      do i = 1, nrows
-         inner => null()
-         call get_value(outer, i, inner, stat=stat)
-         if (stat /= 0 .or. .not. associated(inner)) then
-            call errors%append(ERR_PARSE_TYPE_MISMATCH, &
-                               "row not an array", context)
-            if (allocated(table)) deallocate(table)
-            return
-         end if
-         n_inner = len(inner)
-         if (n_inner /= expected_cols) then
-            call errors%append(ERR_PARSE_TYPE_MISMATCH, &
-                               "row width mismatch", context)
-            if (allocated(table)) deallocate(table)
-            return
-         end if
-         do j = 1, expected_cols
-            call get_value(inner, j, val, stat=stat)
-            if (stat /= 0) then
-               call errors%append(ERR_PARSE_TYPE_MISMATCH, &
-                                  "non-real cell", context)
-               if (allocated(table)) deallocate(table)
-               return
-            end if
-            table(i, j) = val
-         end do
-      end do
-   end subroutine read_table_2d
 
 end module read_solute_toml_mod

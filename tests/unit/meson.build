@@ -106,6 +106,7 @@ if get_option('enable_pfunit')
         '../../src/io/output_registry.f90',
         '../../src/io/toml/path_helpers.f90',
         '../../src/io/toml/toml_field_helpers.f90',
+        '../../src/io/toml/toml_array_helpers.f90',
         '../../src/io/toml/read_general_toml.f90',
         '../../src/io/toml/read_simulation_toml.f90',
         '../../src/io/toml/read_meteorology_toml.f90',

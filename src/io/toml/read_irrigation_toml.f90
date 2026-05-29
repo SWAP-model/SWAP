@@ -26,6 +26,7 @@ module read_irrigation_toml_mod
                                      get_optional_real_with_default,    &
                                      get_optional_string_with_default,  &
                                      parse_date_to_days1900
+   use toml_array_helpers_mod, only: read_table_2d
    use error_mod, only: error_collection_t, ERR_PARSE_TYPE_MISMATCH
    implicit none
    private
@@ -234,70 +235,5 @@ contains
       call get_optional_real_with_default(section, 'irgdepmax',    schedule%irgdepmax,    0.0_real64, &
                                           'irrigation_schedule.irgdepmax', errors)
    end subroutine read_irrigation_schedule_from_section
-
-   !> Decode a TOML array-of-arrays at sec[key] into a (nrows, ncols)
-   !! real(real64) allocatable. Absent key leaves table unallocated.
-   !! Empty array (`key = []`) yields a 0-row allocation. Ragged or
-   !! wrong-width inner arrays append a parse-type-mismatch error and
-   !! leave the table unallocated.
-   !!
-   !! Local copy of the helper from read_bottom_boundary_toml /
-   !! read_heat_toml — those copies are private to their modules, so
-   !! duplicating here keeps the readers decoupled (Phase 4d Task 11).
-   subroutine read_table_2d(sec, key, table, expected_cols, context, errors)
-      type(toml_table), pointer, intent(in)    :: sec
-      character(len=*),          intent(in)    :: key
-      real(real64), allocatable, intent(out)   :: table(:,:)
-      integer,                   intent(in)    :: expected_cols
-      character(len=*),          intent(in)    :: context
-      type(error_collection_t),  intent(inout) :: errors
-
-      type(toml_array), pointer :: outer, inner
-      integer :: nrows, i, j, stat, n_inner
-      real(real64) :: val
-
-      if (.not. associated(sec)) return
-
-      outer => null()
-      call get_value(sec, key, outer, requested=.false., stat=stat)
-      if (.not. associated(outer)) return
-
-      nrows = len(outer)
-      if (nrows == 0) then
-         allocate(table(0, expected_cols))
-         return
-      end if
-
-      allocate(table(nrows, expected_cols))
-      table = 0.0_real64
-
-      do i = 1, nrows
-         inner => null()
-         call get_value(outer, i, inner, stat=stat)
-         if (stat /= 0 .or. .not. associated(inner)) then
-            call errors%append(ERR_PARSE_TYPE_MISMATCH, &
-                               "row not an array", context)
-            if (allocated(table)) deallocate(table)
-            return
-         end if
-         n_inner = len(inner)
-         if (n_inner /= expected_cols) then
-            call errors%append(ERR_PARSE_TYPE_MISMATCH, &
-                               "row width mismatch", context)
-            if (allocated(table)) deallocate(table)
-            return
-         end if
-         do j = 1, expected_cols
-            call get_value(inner, j, val, stat=stat)
-            if (stat /= 0) then
-               call errors%append(ERR_PARSE_TYPE_MISMATCH, &
-                                  "non-real cell", context)
-               if (allocated(table)) deallocate(table)
-               return
-            end if
-            table(i, j) = val
-         end do
-      end do
-   end subroutine read_table_2d
 
 end module read_irrigation_toml_mod

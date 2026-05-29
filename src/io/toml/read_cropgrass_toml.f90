@@ -18,6 +18,7 @@ module read_cropgrass_toml_mod
    use toml_field_helpers_mod, only: get_table,                    &
                                      get_optional_int_with_default, &
                                      get_optional_real_with_default
+   use toml_array_helpers_mod, only: read_real_array_1d
    use read_irrigation_toml_mod, only: read_irrigation_schedule_from_section
    use error_mod, only: error_collection_t, ERR_PARSE_TYPE_MISMATCH
    implicit none
@@ -74,7 +75,7 @@ contains
       if (associated(ga)) then
          call get_optional_real_with_default(ga, 'ssa',  config%ssa,  0.0_real64,  'green_area.ssa',  errors)
          call get_optional_real_with_default(ga, 'span', config%span, 30.0_real64, 'green_area.span', errors)
-         call read_array_1d(ga, 'slatb', config%slatb, 'green_area.slatb', errors)
+         call read_real_array_1d(ga, 'slatb', config%slatb, 'green_area.slatb', errors)
       end if
 
       ! [assimilation] — Phase 3 new section (light interception, biomass conversion,
@@ -93,15 +94,15 @@ contains
          call get_optional_real_with_default(assim, 'rmr',   config%rmr,   0.015_real64,  'assimilation.rmr',   errors)
          call get_optional_real_with_default(assim, 'rms',   config%rms,   0.015_real64,  'assimilation.rms',   errors)
          call get_optional_real_with_default(assim, 'perdl', config%perdl, 0.05_real64,   'assimilation.perdl', errors)
-         call read_array_1d(assim, 'amaxtb',  config%amaxtb,  'assimilation.amaxtb',  errors)
-         call read_array_1d(assim, 'tmpftb',  config%tmpftb,  'assimilation.tmpftb',  errors)
-         call read_array_1d(assim, 'tmnftb',  config%tmnftb,  'assimilation.tmnftb',  errors)
-         call read_array_1d(assim, 'rfsetb',  config%rfsetb,  'assimilation.rfsetb',  errors)
-         call read_array_1d(assim, 'frtb',    config%frtb,    'assimilation.frtb',    errors)
-         call read_array_1d(assim, 'fltb',    config%fltb,    'assimilation.fltb',    errors)
-         call read_array_1d(assim, 'fstb',    config%fstb,    'assimilation.fstb',    errors)
-         call read_array_1d(assim, 'rdrrtb',  config%rdrrtb,  'assimilation.rdrrtb',  errors)
-         call read_array_1d(assim, 'rdrstb',  config%rdrstb,  'assimilation.rdrstb',  errors)
+         call read_real_array_1d(assim, 'amaxtb',  config%amaxtb,  'assimilation.amaxtb',  errors)
+         call read_real_array_1d(assim, 'tmpftb',  config%tmpftb,  'assimilation.tmpftb',  errors)
+         call read_real_array_1d(assim, 'tmnftb',  config%tmnftb,  'assimilation.tmnftb',  errors)
+         call read_real_array_1d(assim, 'rfsetb',  config%rfsetb,  'assimilation.rfsetb',  errors)
+         call read_real_array_1d(assim, 'frtb',    config%frtb,    'assimilation.frtb',    errors)
+         call read_real_array_1d(assim, 'fltb',    config%fltb,    'assimilation.fltb',    errors)
+         call read_real_array_1d(assim, 'fstb',    config%fstb,    'assimilation.fstb',    errors)
+         call read_real_array_1d(assim, 'rdrrtb',  config%rdrrtb,  'assimilation.rdrrtb',  errors)
+         call read_real_array_1d(assim, 'rdrstb',  config%rdrstb,  'assimilation.rdrstb',  errors)
       end if
 
       ! [crop_factor] — Phase 3 new section
@@ -111,9 +112,9 @@ contains
          call get_optional_real_with_default(cf_sec, 'albedo', config%albedo, 0.23_real64, 'crop_factor.albedo', errors)
          call get_optional_real_with_default(cf_sec, 'rsw',    config%rsw,    0.0_real64,  'crop_factor.rsw',    errors)
          call get_optional_int_with_default(cf_sec,  'swinter', config%swinter, 1, 'crop_factor.swinter', errors)
-         call read_array_1d(cf_sec, 'cftb',  config%cftb,  'crop_factor.cftb',  errors)
-         call read_array_1d(cf_sec, 'chtb',  config%chtb,  'crop_factor.chtb',  errors)
-         call read_array_1d(cf_sec, 'rdctb', config%rdctb, 'crop_factor.rdctb', errors)
+         call read_real_array_1d(cf_sec, 'cftb',  config%cftb,  'crop_factor.cftb',  errors)
+         call read_real_array_1d(cf_sec, 'chtb',  config%chtb,  'crop_factor.chtb',  errors)
+         call read_real_array_1d(cf_sec, 'rdctb', config%rdctb, 'crop_factor.rdctb', errors)
       end if
 
       ! [root] — pre-existing scalars + Phase 3 extensions
@@ -127,8 +128,8 @@ contains
          call get_optional_int_with_default(root,  'swdmi2rd', config%swdmi2rd, 0,             'root.swdmi2rd', errors)
          call get_optional_int_with_default(root,  'swrdc',    config%swrdc,    0,             'root.swrdc',    errors)
          call get_optional_real_with_default(root, 'wrtmax',   config%wrtmax,   3000.0_real64, 'root.wrtmax',   errors)
-         call read_array_1d(root, 'rdtb',  config%rdtb,  'root.rdtb',  errors)
-         call read_array_1d(root, 'rlwtb', config%rlwtb, 'root.rlwtb', errors)
+         call read_real_array_1d(root, 'rdtb',  config%rdtb,  'root.rdtb',  errors)
+         call read_real_array_1d(root, 'rlwtb', config%rlwtb, 'root.rlwtb', errors)
       end if
 
       ! [water_stress] — pre-existing
@@ -205,13 +206,13 @@ contains
          call get_optional_real_with_default(mgmt, 'relmf',      config%relmf,      1.0_real64,   'management.relmf',      errors)
          call read_array_1d_int(mgmt, 'seqgrazmow', config%seqgrazmow, config%nseqgrazmow, &
                                 'management.seqgrazmow', errors)
-         call read_array_1d(mgmt, 'dmmowtb',     config%dmmowtb,     'management.dmmowtb',     errors)
-         call read_array_1d(mgmt, 'dmmowdelay',  config%dmmowdelay,  'management.dmmowdelay',  errors)
-         call read_array_1d(mgmt, 'dmgrztb',     config%dmgrztb,     'management.dmgrztb',     errors)
-         call read_array_1d(mgmt, 'lsda',        config%lsda,        'management.lsda',        errors)
-         call read_array_1d(mgmt, 'daysgrazing', config%daysgrazing, 'management.daysgrazing', errors)
-         call read_array_1d(mgmt, 'uptgrazing',  config%uptgrazing,  'management.uptgrazing',  errors)
-         call read_array_1d(mgmt, 'lossgrazing', config%lossgrazing, 'management.lossgrazing', errors)
+         call read_real_array_1d(mgmt, 'dmmowtb',     config%dmmowtb,     'management.dmmowtb',     errors)
+         call read_real_array_1d(mgmt, 'dmmowdelay',  config%dmmowdelay,  'management.dmmowdelay',  errors)
+         call read_real_array_1d(mgmt, 'dmgrztb',     config%dmgrztb,     'management.dmgrztb',     errors)
+         call read_real_array_1d(mgmt, 'lsda',        config%lsda,        'management.lsda',        errors)
+         call read_real_array_1d(mgmt, 'daysgrazing', config%daysgrazing, 'management.daysgrazing', errors)
+         call read_real_array_1d(mgmt, 'uptgrazing',  config%uptgrazing,  'management.uptgrazing',  errors)
+         call read_real_array_1d(mgmt, 'lossgrazing', config%lossgrazing, 'management.lossgrazing', errors)
          call get_optional_int_with_default(mgmt, 'swlossmow', config%swlossmow, 0, 'management.swlossmow', errors)
          call get_optional_int_with_default(mgmt, 'swlossgrz', config%swlossgrz, 0, 'management.swlossgrz', errors)
       end if
@@ -232,8 +233,8 @@ contains
          call get_optional_real_with_default(mow, 'dmharvest',      config%dmharvest,      0.0_real64, 'mowing.dmharvest',      errors)
          call get_optional_real_with_default(mow, 'daylastharvest', config%daylastharvest, 0.0_real64, 'mowing.daylastharvest', errors)
          call get_optional_real_with_default(mow, 'dmlastharvest',  config%dmlastharvest,  0.0_real64, 'mowing.dmlastharvest',  errors)
-         call read_array_1d(mow, 'mowing_dates',   config%mowing_dates,   'mowing.mowing_dates',   errors)
-         call read_array_1d(mow, 'mowing_heights', config%mowing_heights, 'mowing.mowing_heights', errors)
+         call read_real_array_1d(mow, 'mowing_dates',   config%mowing_dates,   'mowing.mowing_dates',   errors)
+         call read_real_array_1d(mow, 'mowing_heights', config%mowing_heights, 'mowing.mowing_heights', errors)
       end if
 
       ! [grazing] — pre-existing
@@ -246,7 +247,7 @@ contains
          call get_optional_int_with_default(graz, 'swdmgrz',     config%swdmgrz,     0,          'grazing.swdmgrz',     errors)
          call get_optional_real_with_default(graz, 'dmgrazing',  config%dmgrazing,   0.0_real64, 'grazing.dmgrazing',   errors)
          call get_optional_real_with_default(graz, 'tagprest',   config%tagprest,    0.0_real64, 'grazing.tagprest',    errors)
-         call read_array_1d(graz, 'lsdb', config%lsdb, 'grazing.lsdb', errors)
+         call read_real_array_1d(graz, 'lsdb', config%lsdb, 'grazing.lsdb', errors)
       end if
 
       ! [irrigation_schedule] — pre-existing
@@ -299,51 +300,5 @@ contains
          arr(i) = val
       end do
    end subroutine read_array_1d_int
-
-   !> Decode a flat TOML array at sec[key] into a 1-D real(real64)
-   !! allocatable. Absent key leaves arr unallocated. Empty array
-   !! (`key = []`) yields a 0-element allocation. Non-real cells append
-   !! a parse-type-mismatch error and leave arr unallocated.
-   !!
-   !! Local copy of the helper from read_heat_toml — that helper is
-   !! private to its module, so duplicating here keeps the readers
-   !! decoupled (Phase 4d Task 16).
-   subroutine read_array_1d(sec, key, arr, context, errors)
-      type(toml_table), pointer, intent(in)    :: sec
-      character(len=*),          intent(in)    :: key
-      real(real64), allocatable, intent(out)   :: arr(:)
-      character(len=*),          intent(in)    :: context
-      type(error_collection_t),  intent(inout) :: errors
-
-      type(toml_array), pointer :: outer
-      integer :: n, i, stat
-      real(real64) :: val
-
-      if (.not. associated(sec)) return
-
-      outer => null()
-      call get_value(sec, key, outer, requested=.false., stat=stat)
-      if (.not. associated(outer)) return
-
-      n = len(outer)
-      if (n == 0) then
-         allocate(arr(0))
-         return
-      end if
-
-      allocate(arr(n))
-      arr = 0.0_real64
-
-      do i = 1, n
-         call get_value(outer, i, val, stat=stat)
-         if (stat /= 0) then
-            call errors%append(ERR_PARSE_TYPE_MISMATCH, &
-                               "non-real cell", context)
-            if (allocated(arr)) deallocate(arr)
-            return
-         end if
-         arr(i) = val
-      end do
-   end subroutine read_array_1d
 
 end module read_cropgrass_toml_mod

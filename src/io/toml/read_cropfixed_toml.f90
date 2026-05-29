@@ -13,46 +13,15 @@ module read_cropfixed_toml_mod
    use toml_field_helpers_mod, only: get_table,                    &
                                      get_optional_int_with_default, &
                                      get_optional_real_with_default
+   use toml_array_helpers_mod, only: read_real_pair_array
    use read_irrigation_toml_mod, only: read_irrigation_schedule_from_section
-   use error_mod, only: error_collection_t, ERR_PARSE_TYPE_MISMATCH, ERR_PARSE_ROW_SHAPE
+   use error_mod, only: error_collection_t
    implicit none
    private
 
    public :: read_cropfixed_toml
 
 contains
-
-   subroutine read_pair_array(tbl, key, arr, label, errors)
-      use tomlf, only: toml_array, get_value, len
-      type(toml_table), pointer, intent(in)    :: tbl
-      character(len=*),          intent(in)    :: key
-      real(real64), allocatable, intent(out)   :: arr(:)
-      character(len=*),          intent(in)    :: label
-      type(error_collection_t),  intent(inout) :: errors
-      type(toml_array), pointer :: a
-      integer :: stat, i, n
-      real(real64) :: v
-      if (.not. associated(tbl)) return
-      call get_value(tbl, key, a, requested=.false., stat=stat)
-      if (stat /= 0 .or. .not. associated(a)) return
-      n = len(a)
-      if (mod(n, 2) /= 0) then
-         call errors%append(ERR_PARSE_ROW_SHAPE, &
-            'expected even-length (dvs,value) pair array', label)
-         return
-      end if
-      allocate(arr(n))
-      do i = 1, n
-         call get_value(a, i, v, stat=stat)
-         if (stat /= 0) then
-            call errors%append(ERR_PARSE_TYPE_MISMATCH, &
-               'non-real cell in pair array', label)
-            deallocate(arr)
-            return
-         end if
-         arr(i) = v
-      end do
-   end subroutine read_pair_array
 
    subroutine read_cropfixed_toml(doc, config, errors)
       type(toml_table), pointer,  intent(in)    :: doc
@@ -98,15 +67,15 @@ contains
       call get_table(doc, 'lai', lai, 'lai', errors)
       if (associated(lai)) then
          call get_optional_int_with_default(lai, 'swgc', config%swgc, 1, 'lai.swgc', errors)
-         call read_pair_array(lai, 'gctb', config%gctb, 'lai.gctb', errors)
+         call read_real_pair_array(lai, 'gctb', config%gctb, 'lai.gctb', errors)
       end if
 
       ! Crop factor / height
       call get_table(doc, 'crop_factor', cf, 'crop_factor', errors)
       if (associated(cf)) then
          call get_optional_int_with_default(cf, 'swcf', config%swcf, 1, 'crop_factor.swcf', errors)
-         call read_pair_array(cf, 'cftb', config%cftb, 'crop_factor.cftb', errors)
-         call read_pair_array(cf, 'chtb', config%chtb, 'crop_factor.chtb', errors)
+         call read_real_pair_array(cf, 'cftb', config%cftb, 'crop_factor.cftb', errors)
+         call read_real_pair_array(cf, 'chtb', config%chtb, 'crop_factor.chtb', errors)
          call get_optional_real_with_default(cf, 'albedo', config%albedo, 0.23_real64, 'crop_factor.albedo', errors)
          call get_optional_real_with_default(cf, 'rsc',    config%rsc,    0.0_real64,  'crop_factor.rsc',    errors)
          call get_optional_real_with_default(cf, 'rsw',    config%rsw,    0.0_real64,  'crop_factor.rsw',    errors)
@@ -118,8 +87,8 @@ contains
          call get_optional_int_with_default (root, 'swrd',     config%swrd,     1,           'root.swrd',     errors)
          call get_optional_int_with_default (root, 'swdmi2rd', config%swdmi2rd, 0,           'root.swdmi2rd', errors)
          call get_optional_int_with_default (root, 'swrdc',    config%swrdc,    0,           'root.swrdc',    errors)
-         call read_pair_array(root, 'rdtb',  config%rdtb,  'root.rdtb',  errors)
-         call read_pair_array(root, 'rdctb', config%rdctb, 'root.rdctb', errors)
+         call read_real_pair_array(root, 'rdtb',  config%rdtb,  'root.rdtb',  errors)
+         call read_real_pair_array(root, 'rdctb', config%rdctb, 'root.rdctb', errors)
          call get_optional_real_with_default(root, 'rdi', config%rdi, 0.0_real64, 'root.rdi', errors)
          call get_optional_real_with_default(root, 'rri', config%rri, 0.0_real64, 'root.rri', errors)
          call get_optional_real_with_default(root, 'rdc', config%rdc, 0.0_real64, 'root.rdc', errors)

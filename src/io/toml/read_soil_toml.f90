@@ -15,7 +15,8 @@ module read_soil_toml_mod
                                      get_optional_int_with_default, &
                                      get_optional_real_with_default, &
                                      get_optional_string_with_default
-   use error_mod, only: error_collection_t, ERR_PARSE_TYPE_MISMATCH
+   use toml_array_helpers_mod, only: read_real_array_1d, read_int_array_1d
+   use error_mod, only: error_collection_t
    use read_soil_tillage_toml_mod, only: read_soil_tillage_toml
    implicit none
    private
@@ -51,7 +52,7 @@ contains
       call get_optional_int_with_default(sec, 'nrstaring', config%nrstaring, 0, 'soil.nrstaring', errors)
 
       ! Top-level per-layer anisotropy ratios.
-      call read_array_1d(sec, 'cofani', config%cofani, 'soil.cofani', errors)
+      call read_real_array_1d(sec, 'cofani', config%cofani, 'soil.cofani', errors)
 
       call get_table(sec, 'initial', initial, 'soil.initial', errors)
       if (associated(initial)) then
@@ -102,7 +103,7 @@ contains
                                             'soil.discretization.swdiscrvert', errors)
          call get_optional_int_with_default(discr, 'numnodnew',   config%discretization%numnodnew,   0, &
                                             'soil.discretization.numnodnew',   errors)
-         call read_array_1d(discr, 'dznew', config%discretization%dznew, &
+         call read_real_array_1d(discr, 'dznew', config%discretization%dznew, &
                             'soil.discretization.dznew', errors)
       end if
 
@@ -120,7 +121,7 @@ contains
       ! disnod / layer.
       call read_int_array_1d (sec, 'sublay',   config%sublay,   'soil.sublay',   errors)
       call read_int_array_1d (sec, 'isoillay', config%isoillay, 'soil.isoillay', errors)
-      call read_array_1d     (sec, 'hsublay',  config%hsublay,  'soil.hsublay',  errors)
+      call read_real_array_1d(sec, 'hsublay',  config%hsublay,  'soil.hsublay',  errors)
       call read_int_array_1d (sec, 'ncomp',    config%ncomp,    'soil.ncomp',    errors)
       ! hcomp is derived as hsublay/ncomp by the adapter; do not author
       ! it directly. (See readswap.f90:613-619 for the legacy derivation.)
@@ -142,6 +143,7 @@ contains
    !! the validator does not enforce presence (the runtime aborts later
    !! if needed). Section absence is silent.
    subroutine read_hydraulics(soil_sec, config, errors)
+
       type(toml_table), pointer, intent(in)    :: soil_sec
       type(soil_config_t),       intent(inout) :: config
       type(error_collection_t),  intent(inout) :: errors
@@ -151,97 +153,16 @@ contains
       call get_table(soil_sec, 'hydraulics', hyd, 'soil.hydraulics', errors)
       if (.not. associated(hyd)) return
 
-      call read_array_1d(hyd, 'ores',    config%hydraulics%ores,    'soil.hydraulics.ores',    errors)
-      call read_array_1d(hyd, 'osat',    config%hydraulics%osat,    'soil.hydraulics.osat',    errors)
-      call read_array_1d(hyd, 'alfa',    config%hydraulics%alfa,    'soil.hydraulics.alfa',    errors)
-      call read_array_1d(hyd, 'npar',    config%hydraulics%npar,    'soil.hydraulics.npar',    errors)
-      call read_array_1d(hyd, 'ksatfit', config%hydraulics%ksatfit, 'soil.hydraulics.ksatfit', errors)
-      call read_array_1d(hyd, 'lexp',    config%hydraulics%lexp,    'soil.hydraulics.lexp',    errors)
-      call read_array_1d(hyd, 'alfaw',   config%hydraulics%alfaw,   'soil.hydraulics.alfaw',   errors)
-      call read_array_1d(hyd, 'h_enpr',  config%hydraulics%h_enpr,  'soil.hydraulics.h_enpr',  errors)
-      call read_array_1d(hyd, 'ksatexm', config%hydraulics%ksatexm, 'soil.hydraulics.ksatexm', errors)
-      call read_array_1d(hyd, 'bdens',   config%hydraulics%bdens,   'soil.hydraulics.bdens',   errors)
+      call read_real_array_1d(hyd, 'ores',    config%hydraulics%ores,    'soil.hydraulics.ores',    errors)
+      call read_real_array_1d(hyd, 'osat',    config%hydraulics%osat,    'soil.hydraulics.osat',    errors)
+      call read_real_array_1d(hyd, 'alfa',    config%hydraulics%alfa,    'soil.hydraulics.alfa',    errors)
+      call read_real_array_1d(hyd, 'npar',    config%hydraulics%npar,    'soil.hydraulics.npar',    errors)
+      call read_real_array_1d(hyd, 'ksatfit', config%hydraulics%ksatfit, 'soil.hydraulics.ksatfit', errors)
+      call read_real_array_1d(hyd, 'lexp',    config%hydraulics%lexp,    'soil.hydraulics.lexp',    errors)
+      call read_real_array_1d(hyd, 'alfaw',   config%hydraulics%alfaw,   'soil.hydraulics.alfaw',   errors)
+      call read_real_array_1d(hyd, 'h_enpr',  config%hydraulics%h_enpr,  'soil.hydraulics.h_enpr',  errors)
+      call read_real_array_1d(hyd, 'ksatexm', config%hydraulics%ksatexm, 'soil.hydraulics.ksatexm', errors)
+      call read_real_array_1d(hyd, 'bdens',   config%hydraulics%bdens,   'soil.hydraulics.bdens',   errors)
    end subroutine read_hydraulics
-
-   !> Decode a flat TOML int array at sec[key] into a 1-D integer
-   !! allocatable. Mirrors `read_array_1d` semantics for ints.
-   subroutine read_int_array_1d(sec, key, arr, context, errors)
-      type(toml_table), pointer, intent(in)    :: sec
-      character(len=*),          intent(in)    :: key
-      integer, allocatable,      intent(out)   :: arr(:)
-      character(len=*),          intent(in)    :: context
-      type(error_collection_t),  intent(inout) :: errors
-
-      type(toml_array), pointer :: outer
-      integer :: n, i, stat, val
-
-      if (.not. associated(sec)) return
-
-      outer => null()
-      call get_value(sec, key, outer, requested=.false., stat=stat)
-      if (.not. associated(outer)) return
-
-      n = len(outer)
-      if (n == 0) then
-         allocate(arr(0))
-         return
-      end if
-
-      allocate(arr(n))
-      arr = 0
-
-      do i = 1, n
-         call get_value(outer, i, val, stat=stat)
-         if (stat /= 0) then
-            call errors%append(ERR_PARSE_TYPE_MISMATCH, &
-                               "non-int cell", context)
-            if (allocated(arr)) deallocate(arr)
-            return
-         end if
-         arr(i) = val
-      end do
-   end subroutine read_int_array_1d
-
-   !> Decode a flat TOML real array at sec[key] into a 1-D real(real64)
-   !! allocatable. Absent key leaves arr unallocated. Empty array yields
-   !! a 0-element allocation. Non-real cells append a parse-type-mismatch
-   !! error and leave arr unallocated. Mirrors read_heat_toml's local helper.
-   subroutine read_array_1d(sec, key, arr, context, errors)
-      type(toml_table), pointer, intent(in)    :: sec
-      character(len=*),          intent(in)    :: key
-      real(real64), allocatable, intent(out)   :: arr(:)
-      character(len=*),          intent(in)    :: context
-      type(error_collection_t),  intent(inout) :: errors
-
-      type(toml_array), pointer :: outer
-      integer :: n, i, stat
-      real(real64) :: val
-
-      if (.not. associated(sec)) return
-
-      outer => null()
-      call get_value(sec, key, outer, requested=.false., stat=stat)
-      if (.not. associated(outer)) return
-
-      n = len(outer)
-      if (n == 0) then
-         allocate(arr(0))
-         return
-      end if
-
-      allocate(arr(n))
-      arr = 0.0_real64
-
-      do i = 1, n
-         call get_value(outer, i, val, stat=stat)
-         if (stat /= 0) then
-            call errors%append(ERR_PARSE_TYPE_MISMATCH, &
-                               "non-real cell", context)
-            if (allocated(arr)) deallocate(arr)
-            return
-         end if
-         arr(i) = val
-      end do
-   end subroutine read_array_1d
 
 end module read_soil_toml_mod
