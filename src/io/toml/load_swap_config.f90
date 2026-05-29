@@ -15,6 +15,7 @@ module load_swap_config_mod
    use read_crop_toml_mod,         only: read_crop_toml
    use read_output_csv_toml_mod,   only: read_output_csv_toml
    use read_nutrients_toml_mod,    only: read_nutrients_toml
+   use load_crop_rotation_files_mod, only: load_crop_rotation_files
    use error_mod, only: error_collection_t, ERR_PARSE_MALFORMED_TOML
    implicit none
    private
@@ -45,6 +46,12 @@ contains
       base_dir = directory_of(trim(path))
 
       call apply_section_readers(doc_ptr, base_dir, config, errors)
+
+      ! Load per-rotation .crp.toml subfiles. Separate phase because:
+      ! (1) general%pathwork must be populated first (by read_general_toml).
+      ! (2) The per-crop readers are I/O — separated from pure config parsing
+      !     per interpretation A of W5.
+      call load_crop_rotation_files(config%general, config%crop, errors)
    end subroutine load_swap_config
 
    !> Shared post-parse pipeline: takes a parsed toml_table and calls
@@ -52,8 +59,9 @@ contains
    !! load entry points.
    !!
    !! Execution order is load-bearing: read_general_toml must run first so
-   !! that config%general%pathwork is populated before read_crop_toml and
-   !! read_drainage_toml use it as their subfile base path.
+   !! that config%general%pathwork is populated before read_drainage_toml
+   !! uses it as its subfile base path and before load_crop_rotation_files
+   !! (called from load_swap_config) follows .crp.toml file references.
    subroutine apply_section_readers(doc_ptr, base_dir, config, errors)
       use path_helpers_mod, only: directory_of
       type(toml_table), pointer,           intent(in)    :: doc_ptr
@@ -82,7 +90,7 @@ contains
       call read_irrigation_toml (doc_ptr, config%irrigation, errors)
       call read_solute_toml     (doc_ptr, config%solute,     errors)
       call read_surface_water_toml(doc_ptr, config%surface_water, errors)
-      call read_crop_toml       (doc_ptr, config%crop,       errors, base_path=pathwork_eff)
+      call read_crop_toml       (doc_ptr, config%crop,       errors)
       call read_output_csv_toml (doc_ptr, config%output_csv, errors)
       call read_nutrients_toml  (doc_ptr, config%nutrients,  errors)
    end subroutine apply_section_readers

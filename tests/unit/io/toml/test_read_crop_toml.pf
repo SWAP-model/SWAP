@@ -47,16 +47,21 @@ subroutine test_read_crop_dispatches_wofost_type2()
    use funit
    use tomlf, only: toml_table, toml_load
    use crop_config_mod
+   use general_config_mod
    use read_crop_toml_mod
+   use load_crop_rotation_files_mod
    use error_mod
    type(toml_table), allocatable, target :: doc
    type(toml_table), pointer     :: doc_ptr
    type(crop_config_t)           :: c
+   type(general_config_t)        :: gen
    type(error_collection_t)      :: errors
 
    call toml_load(doc, 'tests/unit/io/toml/fixtures/crop_wofost_via_file.toml')
    doc_ptr => doc
-   call read_crop_toml(doc_ptr, c, errors, base_path='tests/unit/io/toml/fixtures/')
+   call read_crop_toml(doc_ptr, c, errors)
+   gen%pathwork = 'tests/unit/io/toml/fixtures/'
+   call load_crop_rotation_files(gen, c, errors)
 
    @assertFalse(errors%has_errors())
    @assertEqual(2, c%rotation_type(1))

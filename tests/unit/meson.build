@@ -123,6 +123,7 @@ if get_option('enable_pfunit')
         '../../src/io/toml/read_cropgrass_toml.f90',
         '../../src/io/toml/read_cropwofost_toml.f90',
         '../../src/io/toml/read_crop_toml.f90',
+        '../../src/io/toml/load_crop_rotation_files.f90',
         '../../src/io/toml/read_output_csv_toml.f90',
         '../../src/io/toml/read_nutrients_toml.f90',
         '../../src/io/toml/load_swap_config.f90',
