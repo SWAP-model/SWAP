@@ -156,7 +156,7 @@ module nutrients_state_mod
       real(real64) :: volafrac(maxamn_ns)                = 0.0_real64  !! volatilisation fraction per event
       real(real64) :: timeamend(maxamn_ns)               = 0.0_real64  !! JD timestamp per event bucket
       integer      :: nuamend(maxamn_ns)                 = 0            !! event count per timestamp bucket
-      integer      :: iamend(maxamn_ns, maxamn_ns)       = 0            !! event index lookup
+      integer, allocatable :: iamend(:,:)                               !! event index lookup
 
       ! — Previous-period crop residue DM and N losses (for ANIMO cropext output)
       real(real64) :: idwrt_1   = 0.0_real64  !! root DM at previous harvest
@@ -211,6 +211,16 @@ contains
       self%ndemandsoil = 0.0_real64 ;  self%nsupplysoil = 0.0_real64
       self%ndemand     = 0.0_real64 ;  self%nsupply     = 0.0_real64
       self%laicritnupt = 0.0_real64
+
+      ! Allocate iamend on the heap.  The (maxamn_ns, maxamn_ns) = (1000,1000)
+      ! dimension is 4 MB; keeping it as a static member of swap_state_t
+      ! (stack-allocated in swap_main.f90) blows the stack on systems with
+      ! ulimit -s <= 8192 (Linux/WSL/SSH/container default).
+      ! Right-sizing the array to actual usage is a separate cleanup task.
+      if (.not. allocated(self%iamend)) then
+         allocate(self%iamend(maxamn_ns, maxamn_ns))
+      end if
+      self%iamend = 0
 
       ! Seed legacy WSN compute globals (Wofost_Soil_Declarations) from
       ! typed config. The body lives below; relocated from the deleted
@@ -357,6 +367,13 @@ contains
          self%amend(i)    = 1.0e-4_real64 * typed_tbl%rows(i)%amount_kgha   ! kg/ha -> kg/m^2
          self%volafrac(i) = typed_tbl%rows(i)%volat_fraction
       end do
+
+      ! Ensure iamend is allocated (may be called directly in tests without
+      ! going through nutrients_state_init).
+      if (.not. allocated(self%iamend)) then
+         allocate(self%iamend(maxamn_ns, maxamn_ns))
+      end if
+      self%iamend = 0
 
       ! Group dosages per date (mirrors deleted SoilManagement(1)).
       j = 1
