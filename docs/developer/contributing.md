@@ -164,13 +164,13 @@ focused lets readers skip categories they do not care about.
 
 ## Running agents
 
-The `.github/agents/swap-fortran.agent.md` file specifies the context an
-automated agent should load before making changes: the rescue spec, the
-baseline record, the current phase plan, the ADR directory, and the
-build/test guide. If you invoke an agent that does not follow these
-conventions (for example, an agent that starts modifying code without
-reading the rescue spec), stop it and point it at the agent definition
-file.
+`CLAUDE.md` (repo root) is the operating contract for any automated agent:
+non-negotiables, build/test commands, the current architecture, commit
+conventions, and where to look (ADRs, the modernization summaries, and the
+deep `.github/DEVELOPMENT_GUIDE.md`). If you invoke an agent that ignores
+these conventions — for example, one that starts changing code without
+running `check-fast` or that edits physics formulas — stop it and point it
+at `CLAUDE.md`.
 
 ## When in doubt
 

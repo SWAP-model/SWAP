@@ -13,6 +13,22 @@ This document defines how to modernize and extend the SWAP (Soil Water – Atmos
 
 All contributors (human and AI) must follow these guidelines.
 
+> **Status (2026-05).** The hardest part of this plan is **done**: the
+> strangler-fig migration to `TOML → typed config → typed state` is complete,
+> the bare-globals module (`variables.f90`/`arrays.fi`) and the legacy output
+> C-API (`swapoutput.f90`) are deleted, and ten subsystems plus the globals
+> sweeps have moved onto typed `state%X` / `config%X` records. The SAVE/COMMON
+> elimination below therefore describes a pattern that is now the *norm* for
+> existing code; the live frontier is keeping new code SAVE-free and reaching
+> in-process multi-instance + BMI/Python execution. See
+> `dev-docs/post-phase-4-modernization-summary.md` for the full arc.
+
+> **This is the deep reference.** For the day-to-day operating contract
+> (non-negotiables, exact build/test commands, current architecture, commit
+> conventions, where-to-look), see **`CLAUDE.md`** in the repo root. This guide
+> is the depth behind that summary: detailed Fortran style, in-memory/Python
+> design, parallelization patterns, and the code-review checklist.
+
 
 ## 2. Project Management and Tooling
 
@@ -81,17 +97,24 @@ integer(int32):: n_layers
 
 ### 3.2 Eliminating SAVE and Hidden State
 
-Legacy SWAP code uses `SAVE`, `DATA`, and `COMMON` for persistent state. These patterns are problematic for:
+Legacy SWAP code used `SAVE`, `DATA`, and `COMMON` for persistent state. These
+patterns are problematic for testability, parallel execution (multicore, GPU),
+and interfacing from Python with independent runs and parameter changes.
 
-- Testability.
-- Parallel execution (multicore, GPU).
-- Interfacing from Python with independent runs and parameter changes.
+This was the central work of the modernization and is **largely complete** —
+the bare-globals module is gone and persistent state lives on typed
+`*_state_t` records (see `src/state/`). The rules below are now the standing
+norm: keep new code free of hidden state, and when you touch a surviving
+legacy pocket, migrate it the same way.
 
 **Principles:**
 
-- Replace `SAVE` + `DATA` with explicit state passing via derived types.
-- Use module‑level configuration only when a value is truly global and mostly read‑only.
-- Keep computational kernels as stateless as possible (good candidates for `pure`/`elemental`).
+- Replace `SAVE` + `DATA` with explicit state passing via derived types
+  (one `*_state_t` per subsystem, aggregated under `swap_state_t`).
+- Use module‑level configuration only when a value is truly global and mostly
+  read‑only — and prefer a field on `swap_config_t` over a module global.
+- Keep computational kernels as stateless as possible (good candidates for
+  `pure`/`elemental`).
 
 **Bad example (legacy style):**
 
@@ -511,7 +534,8 @@ Use this checklist for all MRs/PRs and major commits.
 - [ ] Each change is small and logically cohesive.
 - [ ] New or changed behavior is covered by unit tests and/or regression tests.
 - [ ] Baseline outputs (where available) have been compared and are within acceptable tolerance.
-- [ ] Tests are runnable via `pixi run test-linux-[name-of-the-test]`.
+- [ ] `pixi run -e test check-fast` is green (pFUnit + regression); a new
+      `.pf` suite is registered in `tests/unit/testSuites.inc`.
 
 ### 7.5 AI‑Related Checks
 
@@ -523,9 +547,12 @@ Use this checklist for all MRs/PRs and major commits.
 
 ## 8. Document Maintenance
 
-- Keep this file in the repository root.
+- This guide lives at `.github/DEVELOPMENT_GUIDE.md`; the operating-contract
+  summary lives at `CLAUDE.md` in the repo root. Keep the two consistent — if
+  a non-negotiable or command changes, update `CLAUDE.md`; if a style/design
+  rule changes, update this guide.
 - Update when:
-  - Python interface requirements change.
+  - Python/BMI interface requirements change.
   - GPU or parallelization strategy evolves.
   - New patterns for low‑I/O, in‑memory operation are adopted.
 - Discuss and review changes to this guide like any other code change.
