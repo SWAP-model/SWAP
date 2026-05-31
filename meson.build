@@ -59,6 +59,7 @@ add_project_arguments(gfortran_flags, language: 'fortran')
 # compiled, not what it can `use`.
 modern_sources = [
     'src/core/swap_mod.f90',
+    'src/core/swap_ensemble_mod.f90',
     'src/core/timecontrol_mod.f90',
     'src/core/swap_capi_mod.f90',
     'src/core/swap_bmi_mod.f90',
