@@ -7,7 +7,7 @@ fc = meson.get_compiler('fortran')
 fs = import('fs')
 
 src_inc = include_directories(
-    'src', 'src/core', 'src/driver', 'src/bindings', 'src/io', 'src/io/csv', 'src/io/toml',
+    'src', 'src/core', 'src/timecontrol', 'src/driver', 'src/bindings', 'src/io', 'src/io/csv', 'src/io/toml',
     'src/soilwater', 'src/atmosphere',
     'src/crop', 'src/drainage',
     'src/solute', 'src/heat', 'src/config', 'src/state'
@@ -66,7 +66,7 @@ modern_core_sources = [
     'src/driver/swap_mod.f90',
     'src/driver/swap_ensemble_mod.f90',
     'src/bindings/bmi_constants_mod.f90',
-    'src/core/timecontrol_mod.f90',
+    'src/timecontrol/timecontrol_mod.f90',
 ]
 
 # Standalone-BMI facade: singleton (capi_state) backed. Drives libswap_bmi.so

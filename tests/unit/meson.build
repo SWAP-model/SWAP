@@ -207,7 +207,7 @@ if get_option('enable_pfunit')
         '../../src/driver/swap_ensemble_mod.f90',
         '../../src/crop/irrigation.f90',
         '../../src/io/file_io.f90',
-        '../../src/core/timecontrol_mod.f90',
+        '../../src/timecontrol/timecontrol_mod.f90',
     ]
 
     pfunit_base_sources = test_base_sources + pfunit_extra_sources
