@@ -177,8 +177,7 @@ output. For the full TOML schema — every section and key that
 - `src/boundary/` — Top and bottom boundary conditions for the soil
   column: `boundtop.f90` (surface fluxes consistent with ponding and
   runoff logic) and `boundbottom.f90` (groundwater/pressure-head or
-  free-drainage options). Exports `boundary_state_t` alongside
-  constants in `boundary_constants.f90`.
+  free-drainage options). Exports `boundary_state_t`.
 
 - `src/core/` — Entry points and cross-cutting infrastructure. The
   driver `swap_main.f90`, the three-phase entry point `swap.f90`, the
@@ -239,13 +238,11 @@ output. For the full TOML schema — every section and key that
   `solute.f90`, `solute_state.f90`. Exports `solute_state_t`.
 
 - `src/utils/` — Cross-cutting low-level helpers that multiple domains
-  depend on: array utilities (`arrayutils.f90`), I/O utilities
-  (`ioutils.f90`), numerical solvers (`numericalsolvers.f90`, including
-  the Thomas tridiagonal algorithm `tridag` and the band-matrix routines
-  `bandec` / `banbks`), soil-hydraulics helpers
-  (`soilhydraulicsutils.f90`), surface-water helpers
-  (`surfacewaterutils.f90`), and the shared simulation / exchange
-  helpers (`sharedsimulation.f90`, `sharedexchange.f90`).
+  depend on: array utilities (`arrayutils.f90`), numerical solvers
+  (`numericalsolvers.f90`, including the Thomas tridiagonal algorithm
+  `tridag` and the band-matrix routines `bandec` / `banbks`),
+  soil-hydraulics helpers (`soilhydraulicsutils.f90`), and surface-water
+  helpers (`surfacewaterutils.f90`).
 
 ## Dependency direction
 

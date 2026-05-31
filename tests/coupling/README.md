@@ -188,6 +188,21 @@ The validated MODFLOW 6 BMI addresses (model `swapmf`):
 
 ---
 
+## Known limitations / future work
+
+- **Storage exchange is currently inert.** The SWAP &rarr; MF6 `storage_coef`
+  exchange writes the `0.15` placeholder into MF6 `STO/SS` (**specific
+  storage**, `SS`). But this demo's unconfined NEWTON model governs
+  water-table storage through **specific yield (`SY`)**, not `SS` — so writing
+  `SS` has effectively no influence on the simulated water table. The exchange
+  is therefore inert as wired (inherited as-is from upstream imod_coupler).
+  This is acceptable for the qualitative smoke (the head/recharge coupling is
+  what drives the water-table shape), but it **must be revisited** before any
+  quantitative coupling claim: either route the SWAP-derived storage into `SY`,
+  or drop the storage exchange and let MF6 own a fixed `SY`.
+
+---
+
 ## Files
 
 - `build_modflow.py` -- flopy two-channel CHD + RCHA MODFLOW 6 builder.

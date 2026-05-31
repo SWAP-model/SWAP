@@ -11,7 +11,7 @@ program swap_main
    implicit none
 
    type(swap_state_t)           :: state
-   type(swap_config_t), target  :: config  ! target: crop_config_global pointer set inside swap_init
+   type(swap_config_t), target  :: config  ! target retained for callers that take a pointer into config (crop_config_global retired)
    logical                      :: fileopen
 
    call log_init(log_level=LOGLEVEL_INFO, log_file='swap_swap.log')

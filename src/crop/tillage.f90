@@ -89,10 +89,8 @@ module tillage_mod
    ! Sub-record aliases (canonical associate pattern).
    ! [state%cfg-retirement cluster 6] soil_cfg/solute_cfg aliases dropped; swtill on state%soilwater.
    associate( &
-      mesh       => state%mesh,             &
       soil       => state%soilwater,        &
       time       => state%timecontrol,      &
-      atmo       => state%atmosphere,       &
       tl         => state%tillage           )
 
    if (soil%swtill == 0) return      ! no tillage to be considered: return immediately
@@ -211,7 +209,7 @@ module tillage_mod
 
 ! **************************************************** Adapt_WC_H *********************************************************
    subroutine Adapt_WC_H (TEST, state)
-   use soilhydraulics_utils, only: watcon, hconduc, prhead
+   use soilhydraulics_utils, only: watcon, prhead
    implicit none
 
    type(swap_state_t), intent(inout) :: state
@@ -223,8 +221,6 @@ module tillage_mod
    associate( &
       mesh => state%mesh,         &
       soil => state%soilwater,    &
-      heat => state%heat,         &
-      time => state%timecontrol,  &
       tl   => state%tillage)
 
    select case (tl%iRedist)
@@ -320,17 +316,6 @@ module tillage_mod
 
    end select
 
-write(124,'(A,1P,12E12.5)') time%date, soil%bdens(1), soil%vg_params_layer(mesh%layer(1))%thetas, soil%theta(1), soil%h(1), &
-   hconduc(soil%h(1),soil%theta(1),1.0d0,heat%tsoil(1), &
-           soil%vg_params(1), &
-           soil%iHWCKmodel(soil%layer(1)), &
-           soil%fluseksatexm(1), 1, soil), soil%vg_params_layer(mesh%layer(1))%ksat,    &
-   soil%bdens(2), soil%vg_params_layer(mesh%layer(2))%thetas, soil%theta(2), soil%h(2), &
-   hconduc(soil%h(2),soil%theta(2),1.0d0,heat%tsoil(2), &
-           soil%vg_params(2), &
-           soil%iHWCKmodel(soil%layer(2)), &
-           soil%fluseksatexm(2), 2, soil), soil%vg_params_layer(mesh%layer(2))%ksat
-
    end associate
    end subroutine Adapt_WC_H
 
@@ -344,12 +329,10 @@ write(124,'(A,1P,12E12.5)') time%date, soil%bdens(1), soil%vg_params_layer(mesh%
    associate( &
       soil => state%soilwater,    &
       atmo => state%atmosphere,   &
-      time => state%timecontrol,  &
       tl   => state%tillage)
    if (tl%iTill == 1) return        ! in the beginning before first tillage event: do nothing
 
    forall (i=1:tl%MaxNumSoilHo) soil%bdens(i) = tl%Rho_cons(i) - (tl%Rho_cons(i) - tl%Rho_last(i)) * dexp(-tl%K_R_cons(i)*atmo%nraida*10.0d0)    ! 10: to transform nraida from cm to mm
-   write(123,'(A,1P,10E12.5)') time%date, atmo%nraida, soil%bdens(1:tl%MaxNumSoilHo)
    end associate
    end subroutine Consolidate_Bdens
 

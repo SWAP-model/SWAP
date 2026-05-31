@@ -85,7 +85,7 @@ contains
     real(8), parameter :: rcs = 0.15d0
     type(pm_outputs_t) :: pmo
 
-    real(8) :: aintc, interc, eintc, dttp, gctp, etr, hum, win
+    real(8) :: aintc, interc, eintc, etr, hum, win
     real(8) :: wfrac, netrainflux, rainflux
     real(8) :: Edirect, Tdirect, Tdirectwet, Edirectpond
 
@@ -179,7 +179,7 @@ contains
     type(pm_outputs_t) :: pmo
 
     integer :: i, irecord, count, first, last
-    real(8) :: aintc, interc, eintc, dttp, gctp, hum, win, svp
+    real(8) :: aintc, interc, eintc, hum, win, svp
     real(8) :: wfrac, sumtav
     real(8) :: Edirect, Tdirect, Tdirectwet, Edirectpond
 
