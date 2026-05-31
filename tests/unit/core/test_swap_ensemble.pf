@@ -29,6 +29,9 @@ subroutine test_ensemble_init_and_step()
    ! qbot_volume must be finite (a NaN is not equal to itself)
    q = ensemble_qbot_volume(1)
    @assertTrue(q == q)
+   ! ... and a physically plausible daily recharge depth: a single Hupselbrook
+   ! day percolates at most mm-to-cm scale, so |qbot_volume| < 1 m/day.
+   @assertTrue(abs(q) < 1.0d0)
 
    rc = ensemble_finalize()
    @assertEqual(0, rc)

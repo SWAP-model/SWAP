@@ -68,16 +68,51 @@ contains
       if (.not. ensemble_all_swbotb1()) rc = 3
    end function ensemble_init
 
+   !> Advance every column by exactly ONE day and report the per-day recharge
+   !! depth (metres) into qbot_volume. This matches the MODFLOW coupler, which
+   !! calls solve() once per DAILY stress period and reads qbot_volume as the
+   !! recharge over that day (then divides by delt to get a rate).
+   !!
+   !! swap_run_step advances ONE Richards SUBSTEP (dt ~ 0.04 d here), not a full
+   !! day: timecontrol_advance at the end of each step sets time%flDayEnd .true.
+   !! only on the last substep of the day. So we loop swap_run_step until the
+   !! day boundary and integrate the bottom flux over the substeps ourselves as
+   !! sum(qbot*dt). dt MUST be read BEFORE swap_run_step: timecontrol_advance
+   !! (at the end of the step) overwrites time%dt with the NEXT substep's dt,
+   !! and qbot is the flux that applied over the dt that was current at entry.
+   !! Integrating per-substep with each substep's own dt is exactly how
+   !! waterbalance accumulates soil%cqbot; we replicate it locally so the result
+   !! is immune to cqbot's flZeroCumu reset gating (cqbot is zeroed at the start
+   !! of balance-output days, which would corrupt a naive cqbot delta).
+   !!
+   !! Sign convention: soil%qbot (cm/d) is NEGATIVE for downward percolation
+   !! (water leaving the column into groundwater). We sum qbot*dt (negative for
+   !! a recharging day) then flip the sign, so positive qbot_volume = recharge
+   !! INTO groundwater, in metres.
    integer function ensemble_step_day() result(rc)
       integer      :: i
-      real(real64) :: dt_days
+      real(real64) :: qbot_cm_day, dt_days
       rc = 0
       do i = 1, ncol
+         ! Drive the whole day with the injected head (gwl_injected persists
+         ! across substeps; BoundBottom reads it every substep).
          columns(i)%soilwater%gwl_injected = gwl(i) * 100.0_real64   ! m -> cm
-         call swap_run_step(columns(i), configs(column_config(i)))
-         if (library_fatal_raised()) then; rc = 1; return; end if
-         dt_days = columns(i)%timecontrol%dt
-         qbot_volume(i) = (-columns(i)%soilwater%qbot) * 0.01_real64 * dt_days   ! cm/d -> m depth, sign flip
+         qbot_cm_day = 0.0_real64                                     ! cm, this day
+
+         ! Advance exactly one day: run substeps until the day boundary
+         ! (flDayEnd) or the simulation end (flRunEnd), integrating qbot*dt
+         ! with the dt that was current for each substep (read before the step).
+         do
+            dt_days = columns(i)%timecontrol%dt
+            call swap_run_step(columns(i), configs(column_config(i)))
+            if (library_fatal_raised()) then; rc = 1; return; end if
+            qbot_cm_day = qbot_cm_day + columns(i)%soilwater%qbot * dt_days
+            if (columns(i)%timecontrol%flDayEnd) exit
+            if (columns(i)%timecontrol%flRunEnd) exit
+         end do
+
+         ! cm -> m, sign flip so positive qbot_volume = recharge into groundwater.
+         qbot_volume(i) = -qbot_cm_day * 0.01_real64
       end do
    end function ensemble_step_day
 
