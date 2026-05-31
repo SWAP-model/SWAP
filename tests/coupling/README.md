@@ -77,7 +77,20 @@ dir in `RUN_DIR/swap`, writes `RUN_DIR/imod_coupler.toml` with the discovered
 absolute DLL paths, runs the loop, saves `heads.npy`, and plots the final water
 table to `coupled_gwl.png`.
 
-### Smoke test
+### Smoke tests
+
+The quickest way is the dedicated pixi tasks (no args needed — the scripts
+discover `libswap_xmi.so`, `libmf6.so`, and the case dir automatically):
+
+```bash
+pixi run -e test test-xmi        # SWAP-only XMI contract smoke (no MODFLOW)
+pixi run -e test test-coupling   # full SWAP<->MODFLOW6 coupled smoke (short run)
+```
+
+Both depend on `build-linux` and are also included in `pixi run -e test test-all`.
+
+Equivalently, run the scripts directly. They take optional positional overrides
+`[LIBSWAP_XMI [LIBMF6 [CASE_DIR]]]` (LIBMF6 only for the coupled smoke):
 
 ```bash
 pixi run -e test python tests/coupling/test_coupled_smoke.py \

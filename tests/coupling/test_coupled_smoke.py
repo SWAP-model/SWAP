@@ -9,10 +9,10 @@ A short coupled run (ncol=10, nper=30) must:
 The definition of done is qualitative (sensible, nonzero exchange + a
 recharge-shaped water table), not a strict numeric assertion.
 
-Run directly:
-    pixi run -e test python tests/coupling/test_coupled_smoke.py \\
-        builddir/libswap_xmi.so .pixi/envs/test/lib/libmf6.so \\
-        tests/coupling/hupselbrook_coupled
+Runs with zero args (pixi run -e test test-coupling); positional args override
+the defaults (used by the meson registration / manual invocation):
+
+    python test_coupled_smoke.py [LIBSWAP_XMI [LIBMF6 [CASE_DIR]]]
 
 Or as a meson test (libmf6 path discovered at configure time): `coupled-smoke`.
 """
@@ -24,7 +24,8 @@ from pathlib import Path
 
 import numpy as np
 
-sys.path.insert(0, str(Path(__file__).parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _defaults import default_case_dir, default_libmf6, default_libswap  # noqa: E402
 from run_coupled import main  # noqa: E402
 
 
@@ -46,8 +47,7 @@ def run_smoke(libswap: Path, libmf6: Path, case_dir: Path) -> None:
 
 
 if __name__ == "__main__":
-    run_smoke(
-        Path(sys.argv[1]).resolve(),
-        Path(sys.argv[2]).resolve(),
-        Path(sys.argv[3]).resolve(),
-    )
+    libswap = Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else default_libswap()
+    libmf6 = Path(sys.argv[2]).resolve() if len(sys.argv) > 2 else default_libmf6()
+    case_dir = Path(sys.argv[3]).resolve() if len(sys.argv) > 3 else default_case_dir()
+    run_smoke(libswap, libmf6, case_dir)

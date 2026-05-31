@@ -1,14 +1,24 @@
 """SWAP-only XMI contract smoke test (no MODFLOW). Loads libswap_xmi via xmipy,
 runs a few coupled-style steps, exercises get_value_ptr on the 3 exchange
-arrays, asserts shapes and finite values."""
-import sys, shutil
+arrays, asserts shapes and finite values.
+
+Runs with zero args (pixi run -e test test-xmi); positional args override the
+defaults (used by the meson registration / manual invocation):
+
+    python test_swap_xmi_smoke.py [LIBSWAP_XMI [CASE_DIR [WORKDIR]]]
+"""
+import sys, shutil, tempfile
 from pathlib import Path
 import numpy as np
 from xmipy import XmiWrapper
 
-lib_path = Path(sys.argv[1])           # libswap_xmi.so
-case_dir = Path(sys.argv[2])           # .../tests/coupling/hupselbrook_coupled
-work     = Path(sys.argv[3])           # writable work dir (meson build dir)
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _defaults import default_case_dir, default_libswap  # noqa: E402
+
+lib_path = Path(sys.argv[1]) if len(sys.argv) > 1 else default_libswap()
+case_dir = Path(sys.argv[2]) if len(sys.argv) > 2 else default_case_dir()
+work     = (Path(sys.argv[3]) if len(sys.argv) > 3
+            else Path(tempfile.mkdtemp(prefix="swap_xmi_smoke_")))
 
 work.mkdir(parents=True, exist_ok=True)
 # The case is self-contained: stage every file in it (swap.toml + meteo + crop
