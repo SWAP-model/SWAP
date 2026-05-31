@@ -193,7 +193,7 @@ contains
       ! rejected: the Maas-Hoffman kernel is intact, but enabling it for a
       ! simple crop fails byte-identical regression against swap420gf — the
       ! salinity→uptake→solute-concentration feedback loop diverges (the only
-      ! stress whose magnitude reads sol%cml). See dev-docs investigation note.
+      ! stress whose magnitude reads sol%cml). See INVESTIGATION_NOTES.md 2026-05-31.
       if (self%swsalinity == 1 .or. self%swsalinity == 2) then
          call errors%append(ERR_VALIDATION_CROSS_FIELD, &
             'cropfixed.swsalinity != 0 (Maas-Hoffman / osmotic head) not ' // &

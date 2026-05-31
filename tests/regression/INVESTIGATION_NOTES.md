@@ -105,3 +105,53 @@ None of these block the rescue. They are tracked here as open items to revisit d
 ## Reproducing the ifx reference (if needed for an investigation)
 
 The legacy SWAP 4.2.0 Intel-compiled Linux binary is preserved at `tests/reference/swap420`. Running it via `pixi run swap-ref` generates output comparable to the historical `*_expected.json` fixtures (modulo the MOWDM deviation the fixtures themselves encode).
+
+---
+
+## 2026-05-31 — cropfixed (type-1) switch re-enablement: two divergences surfaced
+
+Re-enabling the switches that legacy `readcropfixed` supports but the modern
+cropfixed TOML path stub-errored (ADR 0015 shortcuts). Most were over-broad
+guards over intact compute: **swrd=2, swharv=1, swcompensate=1/2, swcf=3,
+swinter=2** all reproduce `swap420gf` byte-for-byte on a maizes (type-1)
+variant and were shipped. Two switches surfaced genuine modern-vs-4.2.0
+divergences and were **kept gated / flagged**:
+
+### swsalinity=1 (Maas-Hoffman) — kept gated
+
+The reduction kernel (`rootextraction.f90`, `if swsalinity==1 ...`) is identical
+to legacy and the config/state plumbing already exists, but enabling it for a
+simple crop diverges from `swap420gf`: on hupselbrook maize (SWSOLU=1,
+saltmax=3.0, saltslope=0.1) **TACT differs ~3.4 cm/yr**, with matching shifts in
+DRAINAGE/GWL.
+
+Diagnostic: with **saltslope=0** (the branch executes but produces zero
+reduction) modern ≡ legacy byte-for-byte. So enabling the switch does **not**
+perturb init — the divergence appears only when the reduction is non-zero.
+Salinity is the only stress whose magnitude reads the solute concentration
+`sol%cml`, so it closes a feedback loop *salinity → reduced uptake → cml →
+salinity*. Drought/oxygen depend on pressure head, not solute — which is why the
+baseline (those stresses + solute, salinity off) matches but this does not. The
+likely cause is a timestep-ordering difference in when `cml` is refreshed
+relative to the salinity evaluation, introduced in the solute refactor and
+invisible until `swsalinity=1` (the only in-`rootextraction` consumer of `cml`).
+Note the WOFOST `salinitystress` regression case passes — so either its
+concentrations stay below threshold or its orchestration path refreshes `cml`
+differently from the simple-crop path; not yet isolated.
+
+### swcf=1/3 + swetr=0 (crop-factor ET under Penman-Monteith) — pre-existing 0.01 cm GWL
+
+swcf=3 (wet-crop factor) was shipped: byte-identical on every water flux and all
+ET terms vs `swap420gf`. The lone difference is the **annual-average GWL, off by
+one output unit (0.01 cm)**. This is **pre-existing and not introduced by the
+wet-crop work**: the already-allowed **swcf=1** path shows the identical 0.01 cm
+GWL delta on the same maize case. It is a floating-point rounding property of the
+crop-factor ET path combined with Penman-Monteith (swetr=0) — a combination no
+regression case exercises (cases pair swcf=2 with swetr=0, or swcf=1 with
+swetr=1). All water-balance fluxes are byte-identical; only the GWL daily
+interpolation rounds differently. Tracked as an open FP-sensitivity item, not a
+blocker.
+
+Validation tool: `tests/regression/_switch_validate.py` runs a maizes (type-1)
+variant through both `swap420gf` (legacy ASCII) and the modern build (TOML) per
+switch and compares the harness's aggregated flux/state vars.
