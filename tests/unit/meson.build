@@ -132,7 +132,7 @@ if get_option('enable_pfunit')
         'io/toml/chdir_helper.f90',
         # swap_mod.f90 (added Task 3) needs the full compute-module chain compiled in the test binary
         # [GR-SOIL 2026-05-27] do_ln_trans.f90 deleted; module doln folded back into dormant sptabulated.f90
-        '../../src/soil/WC_K_models_04_11.f90',
+        '../../src/soilwater/WC_K_models_04_11.f90',
         '../../src/utils/soilhydraulicsutils.f90',
         # [GR-SOIL 2026-05-24] sptabulated moved to src/soil/dormant/sptabulated.f90
         '../../src/crop/oxygenstress.f90',
@@ -157,8 +157,8 @@ if get_option('enable_pfunit')
         '../../src/state/nutrients_state.f90',
         '../../src/state/swap_state.f90',
         # [GR-IO 2026-05-25 Phase 6 Step 6] initialize.f90 deleted.
-        '../../src/soil/waterbalance.f90',
-        '../../src/soil/soilhydraulics.f90',
+        '../../src/soilwater/waterbalance.f90',
+        '../../src/soilwater/soilhydraulics.f90',
         '../../src/io/csv/meteo_csv.f90',
         '../../src/io/csv/drainage_csv.f90',
         '../../src/io/csv/irrigation_csv.f90',
@@ -178,8 +178,8 @@ if get_option('enable_pfunit')
         '../../src/atmosphere/snow.f90',
         '../../src/heat/temperature.f90',
         '../../src/heat/frozencond.f90',
-        '../../src/boundary/boundtop.f90',
-        '../../src/boundary/boundbottom.f90',
+        '../../src/soilwater/boundtop.f90',
+        '../../src/soilwater/boundbottom.f90',
         '../../src/drainage/drainage.f90',
         '../../src/drainage/divdra.f90',
         '../../src/drainage/surfacewater.f90',

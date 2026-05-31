@@ -8,8 +8,8 @@ fs = import('fs')
 
 src_inc = include_directories(
     'src', 'src/core', 'src/driver', 'src/bindings', 'src/io', 'src/io/csv', 'src/io/toml',
-    'src/soil', 'src/atmosphere',
-    'src/crop', 'src/drainage', 'src/boundary',
+    'src/soilwater', 'src/atmosphere',
+    'src/crop', 'src/drainage',
     'src/solute', 'src/heat', 'src/utils', 'src/config', 'src/state'
 )
 
@@ -124,11 +124,11 @@ sources = [
     #   defaults on state%X / config%X. Size parameters live in
     #   src/core/arrays.f90 (swap_array_dimensions).
     # Soil
-    'src/soil/waterbalance.f90',
-    'src/soil/soilhydraulics.f90',
+    'src/soilwater/waterbalance.f90',
+    'src/soilwater/soilhydraulics.f90',
     # [GR-SOIL 2026-05-24] sptabulated moved to src/soil/dormant/sptabulated.f90 (TSPACK + EvalTabulatedFunction)
     # [GR-SOIL 2026-05-27] do_ln_trans.f90 deleted; module doln folded back into dormant sptabulated.f90
-    'src/soil/WC_K_models_04_11.f90',
+    'src/soilwater/WC_K_models_04_11.f90',
 
     # I/O
     'src/io/csv/csv_common.f90',
@@ -187,8 +187,8 @@ sources = [
     'src/heat/frozencond.f90',
 
     # Boundaries & Drainage
-    'src/boundary/boundtop.f90',
-    'src/boundary/boundbottom.f90',
+    'src/soilwater/boundtop.f90',
+    'src/soilwater/boundbottom.f90',
     'src/drainage/drainage.f90',
     'src/drainage/divdra.f90',
     'src/drainage/surfacewater.f90',
