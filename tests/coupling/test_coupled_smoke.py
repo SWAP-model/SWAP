@@ -12,7 +12,7 @@ recharge-shaped water table), not a strict numeric assertion.
 Run directly:
     pixi run -e test python tests/coupling/test_coupled_smoke.py \\
         builddir/libswap_xmi.so .pixi/envs/test/lib/libmf6.so \\
-        tests/swap-cases/toml/1.hupselbrook
+        tests/coupling/hupselbrook_coupled
 
 Or as a meson test (libmf6 path discovered at configure time): `coupled-smoke`.
 """

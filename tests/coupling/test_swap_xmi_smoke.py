@@ -7,20 +7,18 @@ import numpy as np
 from xmipy import XmiWrapper
 
 lib_path = Path(sys.argv[1])           # libswap_xmi.so
-case_dir = Path(sys.argv[2])           # .../1.hupselbrook
+case_dir = Path(sys.argv[2])           # .../tests/coupling/hupselbrook_coupled
 work     = Path(sys.argv[3])           # writable work dir (meson build dir)
 
 work.mkdir(parents=True, exist_ok=True)
-# Stage a work dir: coupled config + meteo + crop files + gwl csv + ensemble.txt
-for f in ["swap_coupled.toml", "swap_coupled.gwl.csv", "283.csv",
-          "grassd.crp.toml", "maizes.crp.toml", "potatod.crp.toml"]:
-    src = case_dir / f
-    if src.exists():
-        shutil.copy(src, work / f)
-(work / "ensemble.txt").write_text("3\n")
+# The case is self-contained: stage every file in it (swap.toml + meteo + crop
+# files + gwl csv + ensemble.txt). ensemble.txt ships =3 in the case dir.
+for src in case_dir.iterdir():
+    if src.is_file():
+        shutil.copy(src, work / src.name)
 
 swap = XmiWrapper(lib_path=str(lib_path), working_directory=str(work))
-swap.initialize(str(work / "swap_coupled.toml"))
+swap.initialize(str(work / "swap.toml"))
 
 gwl          = swap.get_value_ptr("gwl")
 qbot_volume  = swap.get_value_ptr("qbot_volume")

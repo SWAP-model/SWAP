@@ -9,7 +9,7 @@ from xmipy import XmiWrapper
 #: Default coupled SWAP config filename staged in the SWAP working dir. The
 #: SWAP XMI kernel reads its ensemble column count from ``ensemble.txt`` next
 #: to this config; both live in the kernel's working_directory.
-DEFAULT_SWAP_CONFIG = "swap_coupled.toml"
+DEFAULT_SWAP_CONFIG = "swap.toml"
 
 
 class SwapWrapper(XmiWrapper):

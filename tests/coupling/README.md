@@ -63,13 +63,13 @@ pixi run build-linux
 pixi run -e test python tests/coupling/run_coupled.py \
     builddir/libswap_xmi.so \
     .pixi/envs/test/lib/libmf6.so \
-    tests/swap-cases/toml/1.hupselbrook \
+    tests/coupling/hupselbrook_coupled \
     /tmp/swapmf_run 10 30
 
 # full run (2002-2004, 1096 days):
 pixi run -e test python tests/coupling/run_coupled.py \
     builddir/libswap_xmi.so .pixi/envs/test/lib/libmf6.so \
-    tests/swap-cases/toml/1.hupselbrook /tmp/swapmf_full 10 1096
+    tests/coupling/hupselbrook_coupled /tmp/swapmf_full 10 1096
 ```
 
 `run_coupled.py` builds the MODFLOW model in `RUN_DIR/mf`, stages the SWAP work
@@ -82,7 +82,7 @@ table to `coupled_gwl.png`.
 ```bash
 pixi run -e test python tests/coupling/test_coupled_smoke.py \
     builddir/libswap_xmi.so .pixi/envs/test/lib/libmf6.so \
-    tests/swap-cases/toml/1.hupselbrook
+    tests/coupling/hupselbrook_coupled
 ```
 
 It is also registered as the meson test `coupled-smoke` (suite `coupling`),
@@ -129,8 +129,13 @@ between the two channels.
 
 ## SWAP coupled config deltas
 
-`tests/swap-cases/toml/1.hupselbrook/swap_coupled.toml` is the standalone
-hupselbrook config with two deltas for coupling:
+The coupled case is a **self-contained main-repo case** at
+`tests/coupling/hupselbrook_coupled/` (no `tests/swap-cases` submodule
+dependency): `swap.toml` + `swap.gwl.csv` + the meteo (`283.csv`) and crop
+(`*.crp.toml`) files + an `ensemble.txt` (=3). Companion `file=` references in
+`swap.toml` resolve relative to the config file's own directory, so the case
+runs from any CWD. It is the standalone hupselbrook config with two deltas for
+coupling:
 
 - `[bottom_boundary] swbotb = 1` -- prescribed groundwater level; in coupled
   mode `flcoupled_gwl` makes BoundBottom use the injected `gwl` instead of the
@@ -156,7 +161,7 @@ writes `ensemble.txt` automatically.
 
 - `swap_wrapper.py` -- `SwapWrapper(XmiWrapper)` with SWAP-native exchange
   names (`gwl` / `qbot_volume` / `storage_coef`), and an `initialize()` that
-  defaults to `swap_coupled.toml` (the driver calls `initialize()` with no
+  defaults to `swap.toml` (the driver calls `initialize()` with no
   argument).
 - `swapmod.py` -- `SwapMod(Driver)` plus a minimal `Mf6Wrapper`. Fork-specific
   adaptations validated against this `libmf6` (7.x) build:
@@ -211,4 +216,5 @@ The validated MODFLOW 6 BMI addresses (model `swapmf`):
 - `test_coupled_smoke.py` -- coupled qualitative smoke (`coupled-smoke`).
 - `imod_coupler.toml` -- coupler config (DLL paths rewritten at runtime).
 - `imod_coupler_fork/` -- vendored driver + wrappers + config models.
-- `ensemble.txt` -- example column-count sidecar.
+- `hupselbrook_coupled/` -- self-contained coupled SWAP case (`swap.toml`,
+  `swap.gwl.csv`, `283.csv`, `*.crp.toml`, `ensemble.txt`=3).

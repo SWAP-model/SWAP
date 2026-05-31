@@ -14,7 +14,7 @@ subroutine test_ensemble_init_and_step()
    integer :: rc
    real(real64) :: q
    character(len=*), parameter :: cfg = &
-      'tests/swap-cases/toml/1.hupselbrook/swap_coupled.toml'
+      'tests/coupling/hupselbrook_coupled/swap.toml'
 
    rc = ensemble_init(cfg, ncol_in=3)
    @assertEqual(0, rc)

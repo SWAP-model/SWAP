@@ -10,8 +10,8 @@ Usage:
 
   LIBSWAP_XMI : path to libswap_xmi.so  (the XMI kernel; NOT libswap_bmi.so)
   LIBMF6      : path to libmf6.so
-  CASE_DIR    : .../tests/swap-cases/toml/1.hupselbrook (source of the SWAP
-                coupled config + meteo + crop files)
+  CASE_DIR    : .../tests/coupling/hupselbrook_coupled (self-contained source
+                of the SWAP coupled config + meteo + crop files + gwl csv)
   RUN_DIR     : writable run directory (created)
   NCOL        : MODFLOW columns (default 10); interior recharge cells = NCOL-2
   NPER        : daily stress periods (default 1096 = full 2002-2004)
@@ -43,8 +43,8 @@ from config import BaseConfig, SwapModConfig  # noqa: E402  (vendored fork)
 from swapmod import SwapMod  # noqa: E402  (vendored fork)
 
 SWAP_STAGE_FILES = [
-    "swap_coupled.toml",
-    "swap_coupled.gwl.csv",
+    "swap.toml",
+    "swap.gwl.csv",
     "283.csv",
     "grassd.crp.toml",
     "maizes.crp.toml",
