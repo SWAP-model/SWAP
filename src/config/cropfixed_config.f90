@@ -101,7 +101,14 @@ module cropfixed_config_mod
       real(real64) :: dcritrtz  = 0.0_real64
 
       ! Part 14 — interception
-      integer :: swinter = 1   !! 0=none, 1=Von Hoyningen-Hune (supported), 2=Gash (stub-errored), 3=storage-cap (stub-errored)
+      integer :: swinter = 1   !! 0=none, 1=Von Hoyningen-Hune (supported), 2=Gash (supported), 3=storage-cap (stub-errored)
+      ! Gash forest-interception tables (swinter=2), each a flat (t, value) pair
+      ! list. Plumbed at init into the matching state%atmosphere arrays.
+      real(real64), allocatable :: pfreetb(:)    !! free throughfall coefficient vs time
+      real(real64), allocatable :: pstemtb(:)    !! stem flow coefficient vs time
+      real(real64), allocatable :: scanopytb(:)  !! canopy storage capacity vs time
+      real(real64), allocatable :: avprectb(:)   !! average rainfall intensity vs time
+      real(real64), allocatable :: avevaptb(:)   !! average wet-canopy evaporation vs time
 
       ! Part 15 — irrigation scheduling top-level switch
       integer :: schedule_switch = 0   !! 0=no scheduling, 1=apply (stub-errored)
@@ -159,11 +166,19 @@ contains
             'cropfixed.swoxygen=2 (Bartholomeus) not yet supported in ' // &
             'the TOML pipeline; use the legacy executable.', 'cropfixed')
       end if
-      if (self%swinter == 2 .or. self%swinter == 3) then
+      ! swinter=2 (Gash forest interception) is supported. swinter=3
+      ! (storage-capacity / adapted-Rutter) compute was removed during
+      ! migration, so it stays rejected.
+      if (self%swinter == 3) then
          call errors%append(ERR_VALIDATION_CROSS_FIELD, &
-            'cropfixed.swinter=2 or 3 (Gash / storage-cap interception) ' // &
-            'not yet supported in the TOML pipeline; use the legacy ' // &
-            'executable.', 'cropfixed')
+            'cropfixed.swinter=3 (storage-cap interception) not yet ' // &
+            'supported in the TOML pipeline; use the legacy executable.', &
+            'cropfixed')
+      end if
+      if (self%swinter == 2 .and. .not. allocated(self%pfreetb)) then
+         call errors%append(ERR_VALIDATION_CROSS_FIELD, &
+            'cropfixed.swinter=2 (Gash) requires the interception tables ' // &
+            'pfreetb/pstemtb/scanopytb/avprectb/avevaptb.', 'cropfixed')
       end if
       ! swrd=1 (DVS table) and swrd=2 (max daily increase) are both supported.
       ! swrd=3 (root extension from available root biomass) is not possible

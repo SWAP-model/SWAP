@@ -144,6 +144,12 @@ contains
       if (associated(inter)) then
          call get_optional_int_with_default (inter, 'swinter', config%swinter, 1,           'interception.swinter', errors)
          call get_optional_real_with_default(inter, 'cofab',   config%cofab,   0.0_real64,  'interception.cofab',   errors)
+         ! Gash tables (swinter=2); absent for swinter=0/1, left unallocated.
+         call read_real_pair_array(inter, 'pfreetb',   config%pfreetb,   'interception.pfreetb',   errors)
+         call read_real_pair_array(inter, 'pstemtb',   config%pstemtb,   'interception.pstemtb',   errors)
+         call read_real_pair_array(inter, 'scanopytb', config%scanopytb, 'interception.scanopytb', errors)
+         call read_real_pair_array(inter, 'avprectb',  config%avprectb,  'interception.avprectb',  errors)
+         call read_real_pair_array(inter, 'avevaptb',  config%avevaptb,  'interception.avevaptb',  errors)
       end if
 
       ! Scheduling top-level switch

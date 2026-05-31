@@ -179,8 +179,13 @@ subroutine test_cropfixed_swharv_one_accepted()
 end subroutine
 
 @test
-subroutine test_cropfixed_swinter_two_rejected()
+subroutine test_cropfixed_swinter_two_accepted()
+   ! swinter=2 (Gash forest interception) is now supported on the TOML path —
+   ! the Gash kernel + dispatch are intact and the reader/init now wire the
+   ! pfreetb/pstemtb/... tables into state%atmosphere. With the tables present
+   ! there is no stub error.
    use funit
+   use iso_fortran_env, only: real64
    use cropfixed_config_mod, only: cropfixed_config_t
    use error_mod, only: error_collection_t, ERR_VALIDATION_CROSS_FIELD
    type(cropfixed_config_t) :: c
@@ -188,13 +193,18 @@ subroutine test_cropfixed_swinter_two_rejected()
    integer :: i
    logical :: found
    c%swinter = 2
+   c%pfreetb   = [0.0_real64, 0.9_real64, 365.0_real64, 0.9_real64]
+   c%pstemtb   = [0.0_real64, 0.05_real64, 365.0_real64, 0.05_real64]
+   c%scanopytb = [0.0_real64, 0.4_real64, 365.0_real64, 0.4_real64]
+   c%avprectb  = [0.0_real64, 6.0_real64, 365.0_real64, 6.0_real64]
+   c%avevaptb  = [0.0_real64, 1.5_real64, 365.0_real64, 1.5_real64]
    call c%validate(errors)
    found = .false.
    do i = 1, errors%count()
       if (errors%items(i)%code == ERR_VALIDATION_CROSS_FIELD .and. &
-          index(errors%items(i)%message, 'swinter=2') > 0) found = .true.
+          index(errors%items(i)%message, 'swinter') > 0) found = .true.
    end do
-   @assertTrue(found)
+   @assertFalse(found)
 end subroutine
 
 @test

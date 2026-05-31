@@ -40,7 +40,7 @@ contains
 
       ! ---- Defense-in-depth: stub-error gates mirror cropfixed_config_validate.
       if (cfg%swdrought == 2 .or. cfg%swoxygen == 2 .or.                    &
-          cfg%swinter == 2  .or. cfg%swinter == 3 .or.                      &
+          cfg%swinter == 3 .or.                                            &
           cfg%swrd == 3     .or. cfg%swsalinity /= 0 .or. cfg%schedule_switch == 1) then
          call fatalerr_collected('cropfixed_init_from_config', &
             'Unsupported runtime branch reached on the TOML path. The validator ' // &
@@ -122,6 +122,14 @@ contains
       if (allocated(cfg%chtb))    call copy_pair_table(cfg%chtb,    state%crop%fixed%chtb)
       if (allocated(cfg%cfeictb)) call copy_pair_table(cfg%cfeictb, state%crop%fixed%cfeictb)
       if (allocated(cfg%rdtb))  call copy_pair_table(cfg%rdtb, state%crop%common%rdtb)
+
+      ! Gash forest-interception tables (swinter=2) live on the atmosphere
+      ! state; legacy readcropfixed wrote the matching globals. Mirror that.
+      if (allocated(cfg%pfreetb))   call copy_pair_table(cfg%pfreetb,   state%atmosphere%pfreetb)
+      if (allocated(cfg%pstemtb))   call copy_pair_table(cfg%pstemtb,   state%atmosphere%pstemtb)
+      if (allocated(cfg%scanopytb)) call copy_pair_table(cfg%scanopytb, state%atmosphere%scanopytb)
+      if (allocated(cfg%avprectb))  call copy_pair_table(cfg%avprectb,  state%atmosphere%avprectb)
+      if (allocated(cfg%avevaptb))  call copy_pair_table(cfg%avevaptb,  state%atmosphere%avevaptb)
 
       ! rdctb is sized 22 in legacy; we always copy.
       if (allocated(cfg%rdctb)) then
