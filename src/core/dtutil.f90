@@ -345,6 +345,7 @@ END SUBROUTINE UPPERC
 !! (mirrors TTutil addstr.for; ISTART inlined)
 ! ============================================================================
 SUBROUTINE ADDSTR(STRING, SIGLEN, TMP)
+   use error_mod, only: fatalerr_collected
    IMPLICIT NONE
    CHARACTER(LEN=*), INTENT(INOUT) :: STRING
    INTEGER,          INTENT(INOUT) :: SIGLEN
@@ -365,7 +366,8 @@ SUBROUTINE ADDSTR(STRING, SIGLEN, TMP)
    IF (IL > 0 .AND. IS > 0) THEN
       L = IL - IS + 1
       IF (SIGLEN + L > LEN(STRING)) THEN
-         error stop 'ADDSTR: string buffer overflow'
+         call fatalerr_collected('ADDSTR', 'string buffer overflow')
+         RETURN
       END IF
       STRING(SIGLEN+1:SIGLEN+L) = TMP(IS:IL)
       SIGLEN = SIGLEN + L
