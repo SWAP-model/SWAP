@@ -110,7 +110,7 @@ pixi run clean                # rm -rf builddir  (see clean-rebuild rule below)
 - `dev-docs/phase-4-modernization-summary.md` +
   `dev-docs/post-phase-4-modernization-summary.md` — **what** was done, arc by
   arc.
-- `.github/DEVELOPMENT_GUIDE.md` — the **deep** style/design reference: modern
+- `dev-docs/DEVELOPMENT_GUIDE.md` — the **deep** style/design reference: modern
   Fortran rules, in-memory/BMI/Python design, multicore/GPU patterns, and the
   full code-review checklist. CLAUDE.md is the summary; that guide is the depth.
 - `tests/regression/INVESTIGATION_NOTES.md` — open fixture-divergence questions.

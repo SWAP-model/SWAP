@@ -167,7 +167,7 @@ focused lets readers skip categories they do not care about.
 `CLAUDE.md` (repo root) is the operating contract for any automated agent:
 non-negotiables, build/test commands, the current architecture, commit
 conventions, and where to look (ADRs, the modernization summaries, and the
-deep `.github/DEVELOPMENT_GUIDE.md`). If you invoke an agent that ignores
+deep `dev-docs/DEVELOPMENT_GUIDE.md`). If you invoke an agent that ignores
 these conventions — for example, one that starts changing code without
 running `check-fast` or that edits physics formulas — stop it and point it
 at `CLAUDE.md`.

@@ -38,15 +38,16 @@ All contributors (human and AI) must follow these guidelines.
 - All commands (build, test, format, benchmarks, regression) must be runnable via `pixi run …`.
 - Do not introduce ad‑hoc commands in docs that bypass Pixi; always show `pixi run <task>`.
 
-**Example Pixi tasks:**
+**Core Pixi tasks** (see `pixi.toml` for the full list; the build/test gate
+is also summarized in `CLAUDE.md`):
 
-```toml
-[tasks]
-setup = "meson setup --prefix=$(pwd) --libdir=bin builddir"
-build = "meson install -C builddir"
-test  = "meson test -C builddir"
-clean = "rm -rf builddir"
-fmt   = "fprettify src"
+```bash
+pixi run build-linux          # meson compile (auto-configures builddir)
+pixi run -e test check-fast   # pFUnit + 4 regression cases
+pixi run -e test check-full   # pFUnit + all regression cases
+pixi run -e test test-pfunit  # unit suite only
+pixi run lint                 # fprettify (lint-check for a dry-run diff)
+pixi run clean                # rm -rf builddir
 ```
 
 If you add new tooling (formatters, linters, test runners), expose them as new Pixi tasks and briefly document them.
@@ -59,9 +60,8 @@ If you add new tooling (formatters, linters, test runners), expose them as new P
 **Typical workflow:**
 
 ```bash
-pixi run setup
-pixi run build
-pixi run test
+pixi run build-linux
+pixi run -e test check-fast
 ```
 
 **Meson conventions:**
@@ -547,7 +547,7 @@ Use this checklist for all MRs/PRs and major commits.
 
 ## 8. Document Maintenance
 
-- This guide lives at `.github/DEVELOPMENT_GUIDE.md`; the operating-contract
+- This guide lives at `dev-docs/DEVELOPMENT_GUIDE.md`; the operating-contract
   summary lives at `CLAUDE.md` in the repo root. Keep the two consistent — if
   a non-negotiable or command changes, update `CLAUDE.md`; if a style/design
   rule changes, update this guide.

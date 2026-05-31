@@ -10,6 +10,13 @@ scan this directory.
 
 ## Contents
 
+### Developer guide
+
+- `DEVELOPMENT_GUIDE.md` — the deep style/design reference: modern-Fortran
+  rules, SAVE/globals elimination, in-memory/BMI/Python design, multicore/GPU
+  patterns, and the code-review checklist. The operating-contract summary
+  (non-negotiables, commands, conventions) is `CLAUDE.md` in the repo root.
+
 ### Architecture decisions
 
 - `adr/` — 47 Architecture Decision Records (start at `adr/index.md`). Each ADR
