@@ -341,3 +341,4 @@ endif
 
 subdir('tests/bmi')
 subdir('tests/cffi-demo')
+subdir('tests/coupling')
