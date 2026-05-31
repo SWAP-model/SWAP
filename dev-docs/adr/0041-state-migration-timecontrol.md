@@ -199,9 +199,6 @@ lesson #2).
 
 ## Cross-references
 
-- Discovery: `docs/superpowers/specs/2026-05-12-state-migration-timecontrol-discovery.md`
-- Design: `docs/superpowers/specs/2026-05-12-state-migration-timecontrol-design.md`
-- Plan: `docs/superpowers/plans/2026-05-12-timecontrol-state-migration.md`
 - Predecessors:
   - ADR 0035 (boundary — flat-layout precedent)
   - ADR 0037 (atmosphere — pre-flight dual-write coverage check lesson)

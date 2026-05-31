@@ -114,7 +114,6 @@ The cohort pattern is now part of the migration playbook. Future subsystem migra
 
 ## References
 
-- Plan: `docs/superpowers/plans/2026-05-10-cumulative-reset-refactor.md`
 - Phase A commit chain: `50ad0a2` → `55fa08f` → `45d4514` → `e43fac3` → `e5b8f7d` → `fba1288`
 - Phase B commit chain: `8208382` → `d4c0cb5` → `ed30706` → `fea3cf4`
 - Predecessor state migrations: ADR 0030 (surfacewater), ADR 0031 (drainage), ADR 0032 (solute).

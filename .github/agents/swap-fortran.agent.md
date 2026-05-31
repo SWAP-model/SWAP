@@ -12,12 +12,10 @@ Use this agent to work on the SWAP modernization. It operates under the rescue-a
 
 Read these before making any change:
 
-1. `docs/superpowers/specs/2026-04-22-rescue-and-stabilize-design.md` — the rescue spec.
-2. `docs/superpowers/specs/2026-04-22-baseline-record.md` — what was observed at the green baseline `e256bc0`.
-3. The current Phase's plan under `docs/superpowers/plans/`.
-4. `docs/adr/` — every ADR (architecture decision record). They record the non-obvious choices.
-5. `tests/regression/INVESTIGATION_NOTES.md` — open questions about macropore / oxygenstress fixture divergences.
-6. `docs/build-and-test.md` — build/test workflow, fast-vs-full gates, pFUnit gitlink peculiarity and rebuild steps.
+1. `dev-docs/adr/` — every ADR (architecture decision record); start at `dev-docs/adr/index.md`. They record the non-obvious choices.
+2. `dev-docs/phase-4-modernization-summary.md` and `dev-docs/post-phase-4-modernization-summary.md` — capstone narratives of the modernization arcs (what was done and why).
+3. `tests/regression/INVESTIGATION_NOTES.md` — open questions about macropore / oxygenstress fixture divergences.
+4. `docs/developer/build-and-test.md` — build/test workflow, fast-vs-full gates, pFUnit gitlink peculiarity and rebuild steps.
 
 ## Non-negotiables
 

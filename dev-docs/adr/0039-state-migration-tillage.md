@@ -120,9 +120,6 @@ stays as legacy globals.
 
 ## References
 
-- Discovery: `docs/superpowers/specs/2026-05-12-state-migration-tillage-discovery.md`
-- Design: `docs/superpowers/specs/2026-05-12-state-migration-tillage-design.md`
-- Plan: `docs/superpowers/plans/2026-05-12-tillage-state-migration.md`
 - Predecessors: ADR 0034 (heat — flat-layout precedent), ADR 0035 (boundary — first
   coupling-surface arc), ADR 0036 (crop-uptake), ADR 0037 (atmosphere — state-arg windfalls
   that pre-plumbed DoTillage/Change_MvGpars/Adapt_WC_H/Consolidate_Bdens), ADR 0038

@@ -100,8 +100,7 @@ Files removed/restored:
 
 This shim exists only because TTutil is still linked in. The umbrella
 "legacy reader retirement" spec
-(`docs/archive/2026-phase-4/specs/2026-05-04-legacy-reader-retirement-design.md`,
-SS-11 closeout) phases TTutil out of the runtime. When that work
+(SS-11 closeout) phases TTutil out of the runtime. When that work
 completes:
 
 1. No production `.f90` under `src/` calls TTutil routines (`rdinit`,

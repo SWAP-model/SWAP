@@ -66,7 +66,7 @@ Otherwise, the port:
   alive in `readswap.f90` / `cropgrowth.f90` for the parity test fixtures.
   The reader is never called from the runtime path; only the parity tests
   exercise it.
-- Documents the deferred branches in the port's design spec (`docs/archive/2026-phase-4/specs/`)
+- Documents the deferred branches in the port's design spec
   and / or the migration history section of `docs/csv-companion-files.md`.
 
 ## Consequences

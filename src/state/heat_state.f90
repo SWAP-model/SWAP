@@ -20,7 +20,7 @@
 !! caller at init time (heat_init, Task 3). The type carries no default
 !! initializer for it because it is allocatable.
 !!
-!! See ADR 0034 and docs/superpowers/specs/2026-05-10-state-migration-heat-design.md.
+!! See ADR 0034.
 
 module heat_state_mod
    use, intrinsic :: iso_fortran_env, only: real64

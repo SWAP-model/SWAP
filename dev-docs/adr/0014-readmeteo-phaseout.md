@@ -178,9 +178,6 @@ legacy `.swp` pipeline is no longer invoked by working source code (umbrella
 spec `2026-05-04-legacy-reader-retirement-design.md`), so no separate
 `readmeteo_legacy.f90` is needed. Steps 2 and 3 may proceed.
 
-Audit doc: `docs/archive/2026-phase-4/audits/phase-4f-readmeteo-ttutil-audit.md`.
-Plan: `docs/archive/2026-phase-4/plans/2026-05-05-ss5-readmeteo-ttutil-deletion.md`.
-
 ## Progress note 2026-05-05 — Step 2 complete (SS-5 Commit 2)
 
 `readmeteo.f90` no longer contains TTutil calls. `MeteoInOneFile` deleted.
@@ -214,5 +211,3 @@ in `ReadMeteoYear` pruned.
 ADR 0014 phase-out is now complete. The TTutil library remains a
 build-time dependency of the legacy `.swp` target only (if that target is
 retained); the TOML-only build target no longer needs it.
-
-Plan: `docs/archive/2026-phase-4/plans/2026-05-05-ss5-readmeteo-ttutil-deletion.md`.

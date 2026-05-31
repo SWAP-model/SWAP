@@ -125,5 +125,3 @@ under the same path-collapse rule.
 - ADR 0032 — state-migration solute
 - ADR 0033 — cumulative reset cohorts (the pattern this arc walks back)
 - ADR 0038 — state-migration soilwater core
-- Design spec: `docs/superpowers/specs/2026-05-12-flatten-reset-cohorts-design.md`
-- Plan: `docs/superpowers/plans/2026-05-12-flatten-reset-cohorts.md`

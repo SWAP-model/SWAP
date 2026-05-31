@@ -64,8 +64,8 @@
 !!    re-homed on state too if they have been retired by the time
 !!    you reactivate this.
 !!
-!! See `docs/superpowers/specs/2026-05-10-state-migration-solute-discovery.md`
-!! Section 8 hazard #4 + the 2026-05-10 design spec D5.
+!! See ADR 0032 (solute state migration) — AgeTracer was extracted to this
+!! dormant module with a stub-error guard during that arc.
 
 module agetracer_dormant_mod
    use error_mod, only: fatalerr_collected

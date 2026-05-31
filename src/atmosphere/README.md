@@ -30,8 +30,6 @@ model through `state` aliases — no module-level globals are exported.
   shared-state bag, split `ProcessMeteoDay` into daily + sub-daily
   orchestrators with four private helpers, and swept the F77 intrinsics
   (`dexp`/`dlog`/`dmin1`/`dble`) to F90 generics.
-  See `docs/superpowers/specs/2026-05-22-atmosphere-cleanup-arc-design.md`
-  and `docs/superpowers/plans/2026-05-22-atmosphere-cleanup-arc.md`.
 - **2026-05-22 — PenMon derived-type refactor** (commit `c29408b`): wrapped
   `PenMon` arguments in `pm_inputs_t` / `pm_outputs_t`.
 

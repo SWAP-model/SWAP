@@ -39,9 +39,7 @@
 !!     (heat ADR 0034 precedent; future grid_t arc territory).
 !!   - cQMpLatSs — macropore arc territory (ADR 0038 D11).
 !!
-!! See docs/superpowers/specs/2026-05-10-state-migration-boundary-design.md (ADR 0035)
-!!     docs/superpowers/specs/2026-05-10-state-migration-crop-uptake-design.md (ADR 0036)
-!!     docs/superpowers/specs/2026-05-11-state-migration-soilwater-core-design.md (ADR 0038)
+!! See ADR 0035 (boundary), ADR 0036 (crop-uptake), ADR 0038 (soilwater-core).
 
 module soilwater_state_mod
    use, intrinsic :: iso_fortran_env, only: real64

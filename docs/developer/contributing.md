@@ -8,9 +8,11 @@ author: SWAP modernization team
 ## You are here
 
 This repository was rescued through Phase 4 / Phase 4f-extend (completed
-2026-05-05); see `dev-docs/phase-4-modernization-summary.md` for the
-capstone overview and `dev-docs/archive/2026-phase-4/` for the frozen
-specs, plans, and audits. Trivial typo fixes and documentation edits
+2026-05-05) and then modernized further; see
+`dev-docs/phase-4-modernization-summary.md` and
+`dev-docs/post-phase-4-modernization-summary.md` for the capstone
+overviews, and `dev-docs/adr/` for the architecture decision records.
+Trivial typo fixes and documentation edits
 do not need the full context; anything touching source, build, tests,
 or fixtures does.
 
@@ -173,8 +175,7 @@ file.
 ## When in doubt
 
 In order: look at adjacent similar code, read the relevant ADR, check
-the relevant spec or plan under `dev-docs/archive/2026-phase-4/` (or for
-new modernization arcs, the active spec/plan), and open a
+the capstone modernization summaries under `dev-docs/`, and open a
 discussion (GitHub issue or direct conversation) before guessing in a
 commit. The rescue has enough moving pieces that undocumented decisions
 are expensive — explicit disagreement is cheaper than silent drift.

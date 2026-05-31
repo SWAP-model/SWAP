@@ -12,26 +12,27 @@ scan this directory.
 
 ### Architecture decisions
 
-- `adr/` — 42+ Architecture Decision Records. Each ADR captures a non-obvious
-  choice made during the modernization arcs and the reasoning behind it. The
-  ADR carries custom metadata keys (`status:`, `supersedes:`,
-  `supersedes-portion-of:`) that FORD doesn't recognise — that's why these
-  files don't belong on the public site.
+- `adr/` — 47 Architecture Decision Records (start at `adr/index.md`). Each ADR
+  captures a non-obvious choice made during the modernization arcs and the
+  reasoning behind it. The ADR carries custom metadata keys (`status:`,
+  `supersedes:`, `supersedes-portion-of:`) that FORD doesn't recognise — that's
+  why these files don't belong on the public site. ADRs are the durable record:
+  a reversed decision gets a new superseding ADR rather than an edit.
 
-### Plans, specs, and notes
+### Capstone summaries
 
-- `superpowers/specs/` — design documents brainstormed before implementation.
-- `superpowers/plans/` — implementation plans corresponding to each spec.
-- `superpowers/notes/` — ad-hoc per-arc notes.
-
-### Phase 4 archive
-
-- `archive/2026-phase-4/` — frozen specs, plans, and per-reader audits from
-  the Phase 4 / Phase 4f-extend modernization (completed 2026-05-05; tags
-  `rescue/phase-4f-extend-complete` and `rescue/phase-4f-extend-followups`).
+- `phase-4-modernization-summary.md` — the Phase 4 arc (input-pipeline
+  modernization: TTutil readers → typed TOML, 2026-04-22 → 2026-05-05).
+- `post-phase-4-modernization-summary.md` — everything after Phase 4
+  (typed-state migrations, globals retirement, `variables.f90` deletion,
+  orchestrator/`state%cfg` retirement, polish; 2026-05-12 → 2026-05-31).
 
 ### Historical reports
 
-- `phase-4-modernization-summary.md` — capstone summary of the Phase 4 arc.
 - `coverage-baseline.md` — Phase 3 line/branch coverage snapshot. Coverage
   is tracked, not gated (see `adr/0006-coverage-tracked-not-gated.md`).
+
+> The per-arc working docs (brainstorm specs, implementation plans, per-reader
+> audits) that used to live under `superpowers/` and `archive/2026-phase-4/`
+> were retired on 2026-05-31. Their substance is consolidated into the two
+> capstone summaries above; the originals remain recoverable from git history.

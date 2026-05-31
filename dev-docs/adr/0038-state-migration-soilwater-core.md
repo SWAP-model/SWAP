@@ -118,9 +118,6 @@ This eliminates the "which-file-first" ordering problem that caused the prior tw
 
 ## References
 
-- Discovery: `docs/superpowers/specs/2026-05-11-state-migration-soilwater-core-discovery.md`
-- Design: `docs/superpowers/specs/2026-05-11-state-migration-soilwater-core-design.md`
-- Plan: `docs/superpowers/plans/2026-05-11-soilwater-core-state-migration.md`
 - Predecessors: ADR 0030 (surfacewater — cohort retrofit pilot), ADR 0031 (drainage), ADR 0032 (solute), ADR 0033 (cumulative reset cohorts), ADR 0034 (heat — flat-layout precedent), ADR 0035 (boundary — first coupling-surface arc; D5/D6/D7 deferrals resolved here), ADR 0036 (crop-uptake — per-node arrays), ADR 0037 (atmosphere — third arc; state-arg windfalls)
 - Phase 0: documentation-only audit (no new config fields)
 - Phase 1: `fd26432` (soilwater_state_t + 2 cohorts) → `8ded56d` (soilwater_init growth) → `ef32b31` (SoilWater(1) init) → `23239a9` (headcalc theta/h) → `63273a5` (headcalc q/k/kmean/dimoca + cohort reset) → `a6c64da` (waterbalance cumu+intr) → `cb35737` (waterbalance fluxes/calcgwl) → `4a59dc4` (boundtop pond+kmean(1)) → `5a63a54` (boundbottom kmean(NN+1)) → `583d88f` (tillage pond/cofgen/theta/h) → `48ece46` (macropore FrArMtrx)

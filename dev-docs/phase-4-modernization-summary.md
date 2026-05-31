@@ -150,8 +150,6 @@ If you've just landed in this codebase:
    the TOML schema reference.
 4. **Browse [`adr/`](adr/)** if you wonder *why* the code looks the
    way it does.
-5. **Pop into [`archive/2026-phase-4/`](archive/2026-phase-4/README.html)**
-   only when investigating a specific historical decision.
 
 The legacy fixed-format readers (`src/io/readswap.f90`, the case-1
 init blocks in `irrigation.f90` / `management_soil.f90` /
@@ -159,6 +157,5 @@ init blocks in `irrigation.f90` / `management_soil.f90` /
 2026-05-06 along with `tests/unit/run_pfunit.sh`. The production
 runtime is TOML-only; parity test suites cross-check the typed config
 against captured literal values rather than driving any legacy reader.
-See ADR 0019's "Update 2026-05-06: physical deletion executed" and
-the umbrella spec
-[`docs/superpowers/specs/2026-05-05-legacy-readers-physical-deletion-design.md`](superpowers/specs/2026-05-05-legacy-readers-physical-deletion-design.md).
+See ADR 0019's "Update 2026-05-06: physical deletion executed" for the
+deletion record.

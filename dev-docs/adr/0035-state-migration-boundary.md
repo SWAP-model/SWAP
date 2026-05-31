@@ -122,9 +122,6 @@ Dual-write installed in both home tree (`boundtop.f90`, `boundbottom.f90`) and c
 
 ## References
 
-- Discovery: `docs/superpowers/specs/2026-05-10-state-migration-boundary-discovery.md`
-- Design: `docs/superpowers/specs/2026-05-10-state-migration-boundary-design.md`
-- Plan: `docs/superpowers/plans/2026-05-10-boundary-state-migration.md`
 - Predecessors: ADR 0030 (surfacewater pilot), ADR 0031 (drainage), ADR 0032 (solute), ADR 0033 (cumulative reset cohorts), ADR 0034 (heat — flat-layout precedent)
 - Phase 0: `38004c6` (sinmax/amp/ave) → `3071b70` (cofqha/b/c + swcofqhc) → `e857103` (hplate) → `5f5d2ed` (coverage-gap doc)
 - Phase 1: `897171a` (soilwater_state_t) → `cc1b9a3` (soilwater_init) → `5dfa294` (home dual-write) → `e52938d` (co-writer dual-write)

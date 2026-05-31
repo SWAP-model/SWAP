@@ -18,7 +18,7 @@ The plan is to migrate subsystem-by-subsystem onto typed state types, threaded a
 
 Surface-water was chosen as the pilot subsystem because it's peripheral (bottom-of-column, outside the crop/water-balance feedback loops), has dedicated home files (~1433 LoC), and was small enough to be tractable while being substantial enough to validate the playbook.
 
-The discovery doc (`docs/superpowers/specs/2026-05-08-state-migration-surfacewater-discovery.md`) cataloged 29 owned globals, 54 borrowed globals, 6 entry points, and 8 cross-subsystem hazards. The design doc (`docs/superpowers/specs/2026-05-09-state-migration-surfacewater-design.md`) resolved the hazards and split the work into two phases.
+The discovery doc cataloged 29 owned globals, 54 borrowed globals, 6 entry points, and 8 cross-subsystem hazards. The design doc resolved the hazards and split the work into two phases.
 
 ## Decision
 
@@ -37,7 +37,7 @@ Phase 0 (promote 12 missing config fields for `swman=2` / `swqhr=2` / `swsec=1` 
 
 The migration produced a four-phase template for subsequent subsystems:
 
-1. **Discovery** — populate the discovery template (`docs/superpowers/specs/2026-05-08-state-migration-surfacewater-discovery.md` is the worked example): source files, owned globals, borrowed globals, entry points, internal call graph, output coupling, config inputs, hazards, test surface, summary statistics.
+1. **Discovery** — populate the discovery template: source files, owned globals, borrowed globals, entry points, internal call graph, output coupling, config inputs, hazards, test surface, summary statistics.
 2. **Design** — resolve each hazard, define the state-type fields, define the lifecycle, decide phasing.
 3. **Plan** — mechanical task decomposition with check-full as the integration gate at every commit. Dual-write transitional pattern.
 4. **Execute** — subagent-driven implementation, two-stage review, byte-identical check-full proves the migration is functionally complete.
@@ -96,9 +96,6 @@ The discovery template needs one extension: a "Section 3.5: external readers of 
 
 ## References
 
-- Discovery: `docs/superpowers/specs/2026-05-08-state-migration-surfacewater-discovery.md`
-- Design: `docs/superpowers/specs/2026-05-09-state-migration-surfacewater-design.md`
-- Plan (Phase 1): `docs/superpowers/plans/2026-05-09-surfacewater-state-phase1.md`
 - ADR 0024 — `dtutil.f90` as TTutil-API compatibility shim (the predecessor cleanup that established subsystem boundaries)
 - ADR 0029 — `dtutil` de-shim from physics layer (pending; orthogonal cleanup)
 - Phase 1 commit chain: `acae2af` (state type) → `62d8347` (aggregator) → `8da337e` (init dual-write) → `eb8adde` (entry refactor) → `a8ee668` (output reads round 1) → `0c16410` (output reads round 2 / waterbalance dual-write add) → `846a7d7` (drop dual-write from surface-water home files)

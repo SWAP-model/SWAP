@@ -28,8 +28,7 @@
 !!   - Orchestration structure of meteoday.f90/meteodt.f90 — future
 !!     atmosphere REFACTOR arc.
 !!
-!! See ADR 0037, docs/superpowers/specs/2026-05-11-state-migration-atmosphere-design.md
-!!     docs/superpowers/plans/2026-05-11-atmosphere-state-migration.md
+!! See ADR 0037.
 
 module atmosphere_state_mod
    use, intrinsic :: iso_fortran_env, only: real64

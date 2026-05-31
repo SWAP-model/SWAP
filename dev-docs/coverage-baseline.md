@@ -408,12 +408,12 @@ Net test-side LoC delta in Phase 4e: ≈ +320.
 
 Phase 4e produced two doc artifacts that drive Phase 4f's design:
 
-- `docs/archive/2026-phase-4/audits/phase-4f-config-to-variables-audit.md` — every `variables%`
-  field referenced by execution paths classified as C (covered) /
+- The Phase 4f config-to-variables audit (since retired) classified every
+  `variables%` field referenced by execution paths as C (covered) /
   R (runtime) / G (gap) / RETIRED (output switches retired per
   ADR 0009). Final counts: **C=203 / R=806 / G=189 / RETIRED=18**.
-- `docs/archive/2026-phase-4/audits/phase-4e-macroporeflow-audit.md` — case-3-specific quirks
-  and macropore-physics keys deferred to Phase 4f-prep.
+- The Phase 4e macroporeflow audit (since retired) catalogued case-3-specific
+  quirks and macropore-physics keys deferred to Phase 4f-prep.
 
 The remaining **189 G entries** are the input for Phase 4f-prep
 (opens after this phase). Excluding the heuristic "Other /

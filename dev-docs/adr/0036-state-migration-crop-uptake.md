@@ -73,9 +73,6 @@ Three phases matching the standard playbook shape. Phase 0 was a documentation-o
 
 ## References
 
-- Discovery: `docs/superpowers/specs/2026-05-10-state-migration-crop-uptake-discovery.md`
-- Design: `docs/superpowers/specs/2026-05-10-state-migration-crop-uptake-design.md`
-- Plan: `docs/superpowers/plans/2026-05-10-crop-uptake-state-migration.md`
 - Predecessors: ADR 0030 (surfacewater pilot), ADR 0031 (drainage), ADR 0032 (solute), ADR 0033 (cumulative reset cohorts), ADR 0034 (heat — flat-layout precedent), ADR 0035 (boundary — first coupling-surface arc + soilwater_state_t definition)
 - Phase 0: `fd5c39d` (coverage audit) → `6c047a5` (design + plan)
 - Phase 1: `0f0dc44` (soilwater_state_t extension) → `da7cf01` (soilwater_init signature bump) → `1c89ba3` (CropGrowth plumbing) → `9d5a2dd` (rootextraction dual-write)

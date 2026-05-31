@@ -63,4 +63,3 @@ them.
 - ADR 0023 / 0024 — TTutil retirement context
 - ADR 0016 — per-rotation crop config cache (the precedent for the
   per-rotation assignment pattern)
-- Spec: docs/superpowers/specs/2026-05-08-nutrients-N3-runtime-activation-design.md

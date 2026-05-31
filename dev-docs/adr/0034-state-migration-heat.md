@@ -91,9 +91,6 @@ Closes the `swcalt=1` (analytical method) silent-zero-defaults correctness gap. 
 
 ## References
 
-- Discovery: `docs/superpowers/specs/2026-05-10-state-migration-heat-discovery.md`
-- Design: `docs/superpowers/specs/2026-05-10-state-migration-heat-design.md`
-- Plan: `docs/superpowers/plans/2026-05-10-heat-state-migration.md`
 - Predecessors: ADR 0030 (surfacewater pilot), ADR 0031 (drainage), ADR 0032 (solute), ADR 0033 (cumulative reset cohorts)
 - Phase 0: `c1ed4c3` (config promotion)
 - Phase 1: `38e82b3` (state type) → `08c785d` (Temperature plumbed) → `b03f8f1` (dual-write) → `918ba82` (output reads + outheapar fix)

@@ -40,8 +40,7 @@
 !!   till_N_match     -> N_match        till_iTill         -> iTill
 !!   till_Slope_match -> Slope_match
 !!
-!! See ADR 0039, docs/superpowers/specs/2026-05-12-state-migration-tillage-design.md
-!!     docs/superpowers/plans/2026-05-12-tillage-state-migration.md
+!! See ADR 0039.
 
 module tillage_state_mod
    use, intrinsic :: iso_fortran_env, only: real64

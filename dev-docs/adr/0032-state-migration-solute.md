@@ -75,9 +75,6 @@ Three-phase migration on a single branch:
 
 ## References
 
-- Discovery: `docs/superpowers/specs/2026-05-10-state-migration-solute-discovery.md`
-- Design: `docs/superpowers/specs/2026-05-10-state-migration-solute-design.md`
-- Plan: `docs/superpowers/plans/2026-05-10-solute-state-migration.md`
 - Predecessors: ADR 0030 (surfacewater pilot), ADR 0031 (drainage)
 - Phase 0: `86fb4f5` (config + reader + adapter + tests)
 - Phase 1: `4c7b6d8` (state type + aggregator) → `0678200` (AgeTracer extract) → `8460dd4` (dual-write) → `e3b7e58` (output reads)

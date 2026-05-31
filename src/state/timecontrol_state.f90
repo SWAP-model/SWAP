@@ -48,9 +48,7 @@
 !!   tc_tmptimestart-> tmptimestart
 !!   tc_tmptimeend  -> tmptimeend
 !!
-!! See ADR 0041 (pending),
-!!     docs/superpowers/specs/2026-05-12-state-migration-timecontrol-design.md
-!!     docs/superpowers/plans/2026-05-12-timecontrol-state-migration.md
+!! See ADR 0041.
 
 module timecontrol_state_mod
    use, intrinsic :: iso_fortran_env, only: real64

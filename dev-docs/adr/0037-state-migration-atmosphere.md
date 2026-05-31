@@ -88,9 +88,6 @@ Three phases following the standard playbook shape. Phase 0 was a documentation-
 
 ## References
 
-- Discovery: `docs/superpowers/specs/2026-05-11-state-migration-atmosphere-discovery.md`
-- Design: `docs/superpowers/specs/2026-05-11-state-migration-atmosphere-design.md`
-- Plan: `docs/superpowers/plans/2026-05-11-atmosphere-state-migration.md`
 - Predecessors: ADR 0030 (surfacewater pilot — cohort retrofit), ADR 0031 (drainage), ADR 0032 (solute), ADR 0033 (cumulative reset cohorts — pattern debuted here at creation), ADR 0034 (heat — flat-layout precedent), ADR 0035 (boundary — first coupling-surface arc), ADR 0036 (crop-uptake — second coupling-surface arc)
 - Phase 0: `4731129` (audit)
 - Phase 1: `d191f4b` (atmosphere_state_t + cohorts) → `b114d77` (aggregate + init) → `4583d68` (snow intent bump) → `b8cd862` (et dual-write) → `03f6731` (interception) → `69bf0a0` (precipitation) → `bda8918` (snow) → `eb83767` (meteoday) → `99e467e` (meteodt)

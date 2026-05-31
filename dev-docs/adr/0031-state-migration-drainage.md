@@ -17,7 +17,7 @@ The surface-water state-type migration (ADR 0030) established the playbook: disc
 
 ADR 0030 acknowledged a piece of technical debt: `qdra` and `qdrain` were temporarily classified into `surfacewater_state_t` because surfacewater compute writes them. The drainage subsystem is the architecturally correct owner — surfacewater consumes the result. Drainage is the natural next migration; it inherits this cleanup task plus its own owned globals.
 
-The drainage discovery doc (`docs/superpowers/specs/2026-05-09-state-migration-drainage-discovery.md`) cataloged 6 owned globals (`qdrd`, `qdrain`, `qdra`, `drainl`, `wetper`, `ztopdislay`), 52 borrowed globals, 6 external reader files, 9 cross-subsystem hazards. The owned set is much smaller than surface-water's (29 owned), but the migration is more involved because of the `qdra`/`qdrain` re-classification and `divdra`'s explicit-shape `(Madr, macp)` argument constraint that has kept the legacy `qdra` global alive.
+The drainage discovery doc cataloged 6 owned globals (`qdrd`, `qdrain`, `qdra`, `drainl`, `wetper`, `ztopdislay`), 52 borrowed globals, 6 external reader files, 9 cross-subsystem hazards. The owned set is much smaller than surface-water's (29 owned), but the migration is more involved because of the `qdra`/`qdrain` re-classification and `divdra`'s explicit-shape `(Madr, macp)` argument constraint that has kept the legacy `qdra` global alive.
 
 ## Decision
 
@@ -81,10 +81,6 @@ The catch was Task 5's verification step doing the grep and discovering the issu
 
 ## References
 
-- Discovery: `docs/superpowers/specs/2026-05-09-state-migration-drainage-discovery.md`
-- Design: `docs/superpowers/specs/2026-05-10-state-migration-drainage-design.md`
-- Plan (Phase 1): `docs/superpowers/plans/2026-05-10-drainage-state-phase1.md`
 - Predecessor: ADR 0030 (surface-water pilot established the playbook)
 - Phase 1 commit chain: `406b55e` (state type) → `c3472e2` (aggregator) → `f66509e` (qdra move) → `4b29b3b` (divdra modernized) → `c07bb7b` (dual-write) → `53d2776` (drop dual-write) → `469252d` (ADR draft)
-- Phase 2 plan: `docs/superpowers/plans/2026-05-10-drainage-state-phase2.md`
 - Phase 2 commit chain: `a1180f9` (frozencond) → `1d06be5` (surfacewater + waterbalance + qdrain dual-write add) → `723fb7c` (drainage divdra call) → `d3644a3` (drop qdra/qdrain dual-write) → `d248cbb` (delete globals + geofac fix)

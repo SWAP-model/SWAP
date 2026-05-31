@@ -30,11 +30,11 @@ regardless of whether it appears in example files under `tests/swap-cases/`.
 Sample files in the tree contain aspirational keys for future phases; only the
 subset documented below actually reaches `swap_config_t`.
 
-**Phase 4f preparation:** see
-`dev-docs/archive/2026-phase-4/audits/phase-4f-config-to-variables-audit.md`
-for the field-by-field mapping between this schema and the legacy `variables`
-globals, plus the list of `G` (gap) entries that Phase 4f-prep will resolve
-before the strangler-fig replacement of `readswap()` lands.
+**History:** this schema originally mapped field-by-field onto the legacy
+`variables` globals via a `config_to_variables` adapter. The strangler-fig
+replacement is now complete — `variables.f90` was deleted and every field
+flows into typed `swap_config_t` / `state%X` records. See
+`dev-docs/post-phase-4-modernization-summary.md` for the full arc.
 
 **See also:**
 - `docs/toml-format-guide.md` — general TOML conventions used in SWAP.
@@ -1671,9 +1671,9 @@ Phase 4f strangler-fig of `readswap()`. Detail:
   switch. Default 0; legacy crop sub-readers (`readwofost`,
   `readcropfixed`, `readgrass`) take this as an argument.
 
-End-of-Phase-4f-prep state: 42 G entries reclassified to C; the
-audit at `dev-docs/archive/2026-phase-4/audits/phase-4f-config-to-variables-audit.md` has the full
-field-by-field breakdown.
+End-of-Phase-4f-prep state: 42 G (gap) entries were reclassified to C
+(covered); the strangler-fig replacement has since completed and the
+`variables` globals layer has been removed entirely.
 
 ## Deprecated keys (retired)
 

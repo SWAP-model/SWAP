@@ -9,7 +9,6 @@ status: accepted
 ## Context
 
 Phase 4f-extend's umbrella spec
-(`docs/archive/2026-phase-4/specs/2026-05-04-legacy-reader-retirement-design.md`)
 defined eleven sub-specs (SS-1 … SS-11) to retire the legacy
 fixed-format `.swp` / `.dra` / `.crp` / `.YYY` / `.met` input readers
 in favour of a single typed TOML pipeline. SS-1 through SS-10 are now
@@ -136,8 +135,7 @@ be physically deleted from `src/`:
 ## Update 2026-05-06: physical deletion executed
 
 The "retirement gate" forward-look above was executed in a follow-on
-spec (`docs/superpowers/specs/2026-05-05-legacy-readers-physical-deletion-design.md`),
-landed across SS-A → SS-D on the `development` branch:
+spec, landed across SS-A → SS-D on the `development` branch:
 
 - **SS-A** — All five parity suites (hupselbrook, grassgrowth,
   oxygenstress, salinitystress, surfacewater) converted to literal-value
