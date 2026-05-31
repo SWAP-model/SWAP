@@ -22,7 +22,7 @@ test_base_sources = [
     '../../src/core/constants.f90',
     '../../src/core/swap_log.f90',
     '../../src/core/dtutil.f90',
-    '../../src/utils/arrayutils.f90',
+    '../../src/core/arrayutils.f90',
 ]
 
 # ============================================================================
@@ -133,10 +133,10 @@ if get_option('enable_pfunit')
         # swap_mod.f90 (added Task 3) needs the full compute-module chain compiled in the test binary
         # [GR-SOIL 2026-05-27] do_ln_trans.f90 deleted; module doln folded back into dormant sptabulated.f90
         '../../src/soilwater/WC_K_models_04_11.f90',
-        '../../src/utils/soilhydraulicsutils.f90',
+        '../../src/soilwater/soilhydraulicsutils.f90',
         # [GR-SOIL 2026-05-24] sptabulated moved to src/soil/dormant/sptabulated.f90
         '../../src/crop/oxygenstress.f90',
-        '../../src/utils/surfacewaterutils.f90',
+        '../../src/drainage/surfacewaterutils.f90',
         '../../src/state/surfacewater_state.f90',
         '../../src/state/drainage_state.f90',
         '../../src/state/solute_state.f90',
@@ -202,7 +202,7 @@ if get_option('enable_pfunit')
         '../../src/crop/cropfixed_runtime.f90',
         '../../src/crop/cropgrowth.f90',
         # [GR-IO 2026-05-25 Phase 5] sharedsimulation.f90 dormant — no callers.
-        '../../src/utils/numericalsolvers.f90',
+        '../../src/core/numericalsolvers.f90',
         '../../src/driver/swap_mod.f90',
         '../../src/driver/swap_ensemble_mod.f90',
         '../../src/crop/irrigation.f90',

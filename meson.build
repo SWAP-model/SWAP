@@ -10,7 +10,7 @@ src_inc = include_directories(
     'src', 'src/core', 'src/driver', 'src/bindings', 'src/io', 'src/io/csv', 'src/io/toml',
     'src/soilwater', 'src/atmosphere',
     'src/crop', 'src/drainage',
-    'src/solute', 'src/heat', 'src/utils', 'src/config', 'src/state'
+    'src/solute', 'src/heat', 'src/config', 'src/state'
 )
 
 # Platform detection. The rescue spec locks the supported compiler
@@ -244,10 +244,10 @@ sources = [
     # [GR-IO 2026-05-25 Phase 5] sharedsimulation.f90 moved to src/utils/dormant/
     #   — feature was hardcoded-disabled via flSwapShared (.false.) with no
     #   TOML wiring; call sites in swap_mod.f90 deleted with this commit.
-    'src/utils/arrayutils.f90',
-    'src/utils/surfacewaterutils.f90',
-    'src/utils/soilhydraulicsutils.f90',
-    'src/utils/numericalsolvers.f90',
+    'src/core/arrayutils.f90',
+    'src/drainage/surfacewaterutils.f90',
+    'src/soilwater/soilhydraulicsutils.f90',
+    'src/core/numericalsolvers.f90',
 ]
 
 # ============================================================================
