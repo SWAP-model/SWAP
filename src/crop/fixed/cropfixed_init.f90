@@ -40,7 +40,7 @@ contains
 
       ! ---- Defense-in-depth: stub-error gates mirror cropfixed_config_validate.
       if (cfg%swdrought == 2 .or. cfg%swoxygen == 2 .or. cfg%swcf == 3 .or. &
-          cfg%swharv == 1   .or. cfg%swcompensate /= 0 .or.                 &
+          cfg%swcompensate /= 0 .or.                                        &
           cfg%swinter == 2  .or. cfg%swinter == 3 .or.                      &
           cfg%swrd == 3     .or. cfg%swsalinity /= 0 .or. cfg%schedule_switch == 1) then
          call fatalerr_collected('cropfixed_init_from_config', &
